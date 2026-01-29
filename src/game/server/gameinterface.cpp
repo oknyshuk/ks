@@ -137,13 +137,9 @@
 #include "dota/dota_bot_commander.h"
 #endif
 
-#include "dedicated_server_ugc_manager.h"
-
 #ifdef _WIN32
 #include "IGameUIFuncs.h"
 #endif
-
-#include "CegClientWrapper.h"
 
 extern IToolFrameworkServer *g_pToolFrameworkServer;
 extern IParticleSystemQuery *g_pParticleSystemQuery;
@@ -615,7 +611,7 @@ void DrawAllDebugOverlays( void )
 // enable threading of init functions on x360
 static ConVar sv_threaded_init("sv_threaded_init", IsGameConsole() ? "1" : "0");
 
-CEG_NOINLINE static bool InitGameSystems( CreateInterfaceFn appSystemFactory )
+static bool InitGameSystems( CreateInterfaceFn appSystemFactory )
 {
 	// The string system must init first + shutdown last
 	IGameSystem::Add( GameStringSystem() );
@@ -686,8 +682,6 @@ CEG_NOINLINE static bool InitGameSystems( CreateInterfaceFn appSystemFactory )
 	return true;
 }
 
-CEG_PROTECT_FUNCTION( InitGameSystems );
-
 CServerGameDLL g_ServerGameDLL;
 EXPOSE_SINGLE_INTERFACE_GLOBALVAR(CServerGameDLL, IServerGameDLL, INTERFACEVERSION_SERVERGAMEDLL, g_ServerGameDLL);
 
@@ -723,23 +717,14 @@ bool CServerGameDLL::DLLInit( CreateInterfaceFn appSystemFactory,
 	if ( (engine = (IVEngineServer*)appSystemFactory(INTERFACEVERSION_VENGINESERVER, NULL)) == NULL )
 		return false;
 
- 	if( !STEAMWORKS_INITCEGLIBRARY() )
- 	{
- 		return false;
- 	}
- 
 #if !defined(NO_STEAM)
 	#ifndef _PS3
 	if( SteamAPI_RestartAppIfNecessary( engine->GetAppID() ) )
 	{
-		STEAMWORKS_TERMCEGLIBRARY();
 		return false;
 	}
 	#endif
 #endif
-
- 	STEAMWORKS_TESTSECRETALWAYS();
- 	STEAMWORKS_SELFCHECK();
 
 	if ( (g_pVoiceServer = (IVoiceServer*)appSystemFactory(INTERFACEVERSION_VOICESERVER, NULL)) == NULL )
 		return false;
@@ -938,8 +923,6 @@ void CServerGameDLL::PostInit()
 {
 	IGameSystem::PostInitAllSystems();
 
-	Init_GCVs();
-
 #ifdef SERVER_USES_VGUI
 	if ( !engine->IsDedicatedServer() && enginevgui )
 	{
@@ -1018,8 +1001,6 @@ void CServerGameDLL::DLLShutdown( void )
 	DisconnectTier2Libraries();
 	ConVar_Unregister();
 	DisconnectTier1Libraries();
-
-	STEAMWORKS_TERMCEGLIBRARY();
 }
 
 
@@ -1060,7 +1041,7 @@ float CServerGameDLL::GetTickInterval( void ) const
 }
 
 // This is called when a new game is started. (restart, map)
-CEG_NOINLINE bool CServerGameDLL::GameInit( void )
+bool CServerGameDLL::GameInit( void )
 {
 	ResetGlobalState();
 
@@ -1076,8 +1057,6 @@ CEG_NOINLINE bool CServerGameDLL::GameInit( void )
 
 	engine->ServerExecute( );
 	CBaseEntity::sm_bAccurateTriggerBboxChecks = true;
-
-	CEG_PROTECT_VIRTUAL_FUNCTION( CServerGameDLL_GameInit );
 	
 	IGameEvent *event = gameeventmanager->CreateEvent( "game_init" );
 	if ( event )
@@ -1090,10 +1069,8 @@ CEG_NOINLINE bool CServerGameDLL::GameInit( void )
 
 // This is called when a game ends (server disconnect, death, restart, load)
 // NOT on level transitions within a game
-CEG_NOINLINE void CServerGameDLL::GameShutdown( void )
+void CServerGameDLL::GameShutdown( void )
 {
-	CEG_PROTECT_VIRTUAL_FUNCTION( CServerGameDLL_GameShutdown );
-
 	ResetGlobalState();
 }
 
@@ -1147,7 +1124,7 @@ void EndRestoreEntities()
 	CBaseEntity::SetAllowPrecache( false );
 }
 
-CEG_NOINLINE void BeginRestoreEntities()
+void BeginRestoreEntities()
 {
 	if ( g_InRestore )
 	{
@@ -1162,8 +1139,6 @@ CEG_NOINLINE void BeginRestoreEntities()
 	// No calls to GetAbsOrigin until the entire hierarchy is restored!
 	//CBaseEntity::SetAbsQueriesValid( false );
 }
-
-CEG_PROTECT_FUNCTION( BeginRestoreEntities );
 
 //-----------------------------------------------------------------------------
 // Purpose: This prevents sv.tickcount/gpGlobals->tickcount from advancing during restore which
@@ -1185,13 +1160,11 @@ bool CServerGameDLL::SupportsSaveRestore()
 }
 
 // Called any time a new level is started (after GameInit() also on level transitions within a game)
-CEG_NOINLINE bool CServerGameDLL::LevelInit( const char *pMapName, char const *pMapEntities, char const *pOldLevel, char const *pLandmarkName, bool loadGame, bool background )
+bool CServerGameDLL::LevelInit( const char *pMapName, char const *pMapEntities, char const *pOldLevel, char const *pLandmarkName, bool loadGame, bool background )
 {
 	VPROF("CServerGameDLL::LevelInit");
 	ResetWindspeed();
 	UpdateChapterRestrictions( pMapName );
-
-	CEG_PROTECT_MEMBER_FUNCTION( CServerGameDLL_LevelInit );
 
 	// IGameSystem::LevelInitPreEntityAllSystems() is called when the world is precached
 	// That happens either in LoadGameState() or in MapEntity_ParseAllEntities()
@@ -1219,8 +1192,6 @@ CEG_NOINLINE bool CServerGameDLL::LevelInit( const char *pMapName, char const *p
 				return false;
 			}
 		}
-
-		STEAMWORKS_SELFCHECK();
 
 		if ( pOldLevel )
 		{
@@ -1258,8 +1229,6 @@ CEG_NOINLINE bool CServerGameDLL::LevelInit( const char *pMapName, char const *p
 			gpGlobals->eLoadType = MapLoad_NewGame;
 		}
 
-		STEAMWORKS_SELFCHECK();
-
 		// Clear out entity references, and parse the entities into it.
 		g_MapEntityRefs.Purge();
 		CMapLoadEntityFilter filter;
@@ -1277,8 +1246,6 @@ CEG_NOINLINE bool CServerGameDLL::LevelInit( const char *pMapName, char const *p
 	// Now that all of the active entities have been loaded in, precache any entities who need point_template parameters
 	//  to be parsed (the above code has loaded all point_template entities)
 	PrecachePointTemplates();
-
-	STEAMWORKS_TESTSECRET();
 
 	// load MOTD from file into stringtable
 	LoadMessageOfTheDay();
@@ -1331,7 +1298,7 @@ bool g_bCheckForChainedActivate;
 #define EndCheckChainedActivate( bCheck )	((void)0)
 #endif
 
-CEG_NOINLINE void CServerGameDLL::ServerActivate( edict_t *pEdictList, int edictCount, int clientMax )
+void CServerGameDLL::ServerActivate( edict_t *pEdictList, int edictCount, int clientMax )
 {
 	// HACKHACK: UNDONE: We need to redesign the main loop with respect to save/load/server activate
 	if ( g_InRestore )
@@ -1355,8 +1322,6 @@ CEG_NOINLINE void CServerGameDLL::ServerActivate( edict_t *pEdictList, int edict
 			EndCheckChainedActivate( !( pClass->GetEFlags() & EFL_KILLME ) ); 
 		}
 	}
-
-	CEG_PROTECT_VIRTUAL_FUNCTION( CServerGameDLL_ServerActivate );
 
 	IGameSystem::LevelInitPostEntityAllSystems();
 	// No more precaching after PostEntityAllSystems!!!
@@ -1607,12 +1572,6 @@ void CServerGameDLL::Think( bool finalTick )
 		m_fAutoSaveDangerousTime = 0.0f;
 		m_fAutoSaveDangerousMinHealthToCommit = 0.0f;
 	}
-
-	// TODO: would have liked this to be totally event driven... currently needs a tick.
-	if ( engine->IsDedicatedServer() && steamgameserverapicontext->SteamHTTP() )
-	{
-		DedicatedServerWorkshop().Update();	
-	}
 }
 
 void CServerGameDLL::OnQueryCvarValueFinished( QueryCvarCookie_t iCookie, edict_t *pPlayerEntity, EQueryCvarValueStatus eStatus, const char *pCvarName, const char *pCvarValue )
@@ -1634,8 +1593,6 @@ void CServerGameDLL::LevelShutdown( void )
 	gEntList.Clear();
 
 	InvalidateQueryCache();
-
-	STEAMWORKS_SELFCHECK();
 
 	IGameSystem::LevelShutdownPostEntityAllSystems();
 
@@ -1668,10 +1625,8 @@ const char *CServerGameDLL::GetGameDescription( void )
 	return ::GetGameDescription();
 }
 
-CEG_NOINLINE void CServerGameDLL::CreateNetworkStringTables( void )
+void CServerGameDLL::CreateNetworkStringTables( void )
 {
-	CEG_PROTECT_VIRTUAL_FUNCTION( CServerGameDLL_CreateNetworksStringTables );
-
 	// Create any shared string tables here (and only here!)
 	// E.g.:  xxx = networkstringtable->CreateStringTable( "SceneStrings", 512 );
 	g_pStringTableExtraParticleFiles = networkstringtable->CreateStringTable( "ExtraParticleFilesTable", MAX_PARTICLESYSTEMS_STRINGS, 0, 0, NSF_DICTIONARY_ENABLED );
@@ -1763,12 +1718,10 @@ void CServerGameDLL::Save( CSaveRestoreData *s )
 	g_pGameSaveRestoreBlockSet->Save( &saveHelper );
 }
 
-CEG_NOINLINE void CServerGameDLL::Restore( CSaveRestoreData *s, bool b)
+void CServerGameDLL::Restore( CSaveRestoreData *s, bool b)
 {
 	if ( engine->IsOverrideLoadGameEntsOn() )
 		FoundryHelpers_ClearEntityHighlightEffects();
-
-	CEG_PROTECT_VIRTUAL_FUNCTION( CServerGameDLL_Restore );
 
 	CRestore restore(s);
 	g_pGameSaveRestoreBlockSet->Restore( &restore, b );
@@ -2005,12 +1958,10 @@ void CServerGameDLL::WriteSaveHeaders( CSaveRestoreData *s )
 	g_pGameSaveRestoreBlockSet->PostSave();
 }
 
-CEG_NOINLINE void CServerGameDLL::ReadRestoreHeaders( CSaveRestoreData *s )
+void CServerGameDLL::ReadRestoreHeaders( CSaveRestoreData *s )
 {
 	CRestore restoreHelper( s );
 	g_pGameSaveRestoreBlockSet->PreRestore();
-
-	CEG_PROTECT_VIRTUAL_FUNCTION( CServerGameDLL_ReadRestoreHeaders );
 
 	g_pGameSaveRestoreBlockSet->ReadRestoreHeaders( &restoreHelper );
 }
@@ -2302,9 +2253,8 @@ void LoadServerImageFile( const char *stringname )
 }
 
 
-CEG_NOINLINE void CServerGameDLL::LoadMessageOfTheDay()
+void CServerGameDLL::LoadMessageOfTheDay()
 {
-	STEAMWORKS_TESTSECRET();
 	LoadMOTDFile( "motd", &motdfile );
 	LoadMOTDFile( "hostfile", &hostfile );
 	LoadServerImageFile( sv_server_graphic1.GetString() );
@@ -2313,23 +2263,22 @@ CEG_NOINLINE void CServerGameDLL::LoadMessageOfTheDay()
 
 PublishedFileId_t CServerGameDLL::GetUGCMapFileID( const char* szMapPath )
 {
-	return DedicatedServerWorkshop().GetUGCMapPublishedFileID( szMapPath );
+	return 0;
 }
 
 bool CServerGameDLL::GetNewestSubscribedFiles( void )
 {
-	DedicatedServerWorkshop().GetNewestSubscribedFiles();
 	return true;
 }
 
 void CServerGameDLL::UpdateUGCMap( PublishedFileId_t id )
 {
-	DedicatedServerWorkshop().CheckForNewVersion( id );
+
 }
 
 bool CServerGameDLL::HasPendingMapDownloads( void ) const
 {
-	return DedicatedServerWorkshop().HasPendingMapDownloads();
+	return false;
 }
 
 // keeps track of which chapters the user has unlocked
@@ -2338,7 +2287,7 @@ ConVar sv_unlockedchapters( "sv_unlockedchapters", "1", FCVAR_ARCHIVE );
 //-----------------------------------------------------------------------------
 // Purpose: Updates which chapters are unlocked
 //-----------------------------------------------------------------------------
-CEG_NOINLINE void UpdateChapterRestrictions( const char *mapname )
+void UpdateChapterRestrictions( const char *mapname )
 {
 	// look at the chapter for this map
 	char chapterTitle[64];
@@ -2426,8 +2375,6 @@ CEG_NOINLINE void UpdateChapterRestrictions( const char *mapname )
 		g_nCurrentChapterIndex = nNewChapter;
 	}
 }
-
-CEG_PROTECT_FUNCTION( UpdateChapterRestrictions );
 
 //-----------------------------------------------------------------------------
 // Precaches a vgui screen overlay material
@@ -3104,10 +3051,8 @@ EXPOSE_SINGLE_INTERFACE_GLOBALVAR(CServerGameClients, IServerGameClients, INTERF
 //			the player was not allowed to connect.
 // Output : Returns TRUE if player is allowed to join, FALSE if connection is denied.
 //-----------------------------------------------------------------------------
-CEG_NOINLINE bool CServerGameClients::ClientConnect( edict_t *pEdict, const char *pszName, const char *pszAddress, char *reject, int maxrejectlen )
-{	
-	CEG_PROTECT_VIRTUAL_FUNCTION( CServerGameClient_ClientConnect );
-
+bool CServerGameClients::ClientConnect( edict_t *pEdict, const char *pszName, const char *pszAddress, char *reject, int maxrejectlen )
+{
 	if ( !g_pGameRules )
 		return false;
 	
@@ -3118,7 +3063,7 @@ CEG_NOINLINE bool CServerGameClients::ClientConnect( edict_t *pEdict, const char
 // Purpose: Called when a player is fully active (i.e. ready to receive messages)
 // Input  : *pEntity - the player
 //-----------------------------------------------------------------------------
-CEG_NOINLINE void CServerGameClients::ClientActive( edict_t *pEdict, bool bLoadGame )
+void CServerGameClients::ClientActive( edict_t *pEdict, bool bLoadGame )
 {
 	MDLCACHE_CRITICAL_SECTION();
 	
@@ -3135,8 +3080,6 @@ CEG_NOINLINE void CServerGameClients::ClientActive( edict_t *pEdict, bool bLoadG
 			pEntity->PostClientActive();
 		}
 	}
-
-	CEG_PROTECT_VIRTUAL_FUNCTION( CServerGameClients_ClientActive );
 
 	// Tell the sound controller to check looping sounds
 	CBasePlayer *pPlayer = ( CBasePlayer * )CBaseEntity::Instance( pEdict );

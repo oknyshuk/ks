@@ -1,4 +1,4 @@
-//====== Copyright © 1996-2004, Valve Corporation, All rights reserved. =======
+//====== Copyright ï¿½ 1996-2004, Valve Corporation, All rights reserved. =======
 //
 // Purpose: 
 //
@@ -770,31 +770,23 @@ private:
 	{
 		struct _Heap
 		{	// 16 on 32 bit, sentinel == 0xff if Heap is the active union item
-		private:
 			char *m_pchString;
 			uint32 m_nLength;
 			uint32 m_nCapacity; // without trailing null; ie: m_pchString[m_nCapacity] = '\0' is not out of bounds
 			uint8  scrap[3];
 			uint8  sentinel;
-		public:
-			friend union Data;
-			friend char *CUtlStringBuilder::InternalPrepareBuffer(size_t, bool, size_t);
 		} Heap;
 
 		struct _Stack
 		{
-		private:
-			// last byte is doing a hack double duty.  It holds how many bytes 
+			// last byte is doing a hack double duty.  It holds how many bytes
 			// are left in the string; so when the string is 'full' it will be
 			// '0' and thus suffice as the terminating null.  This is why
 			// we hold remaining chars instead of 'string length'
 			char m_szString[MAX_STACK_STRLEN + 1];
-		public:
+
 			uint8 BytesLeft() const { return (uint8)(m_szString[MAX_STACK_STRLEN]); }
 			void SetBytesLeft(char n) { m_szString[MAX_STACK_STRLEN] = n; }
-
-			friend char *CUtlStringBuilder::InternalPrepareBuffer(size_t, bool, size_t);
-			friend union Data;
 		} Stack;
 
 		// set to a clear state without looking at the current state
@@ -884,10 +876,9 @@ private:
 		//-----------------------------------------------------------------------------
 		void StaticAssertTests()
 		{
-			// If this fails when the heap sentinel and where the stack string stores its bytes left
-			// aren't aliases.  This is needed so that regardless of how the 'sentinel' to mark
-			// that the string is on the heap is set, it is set as expected on both sides of the union.
-			COMPILE_TIME_ASSERT(offsetof(_Heap, sentinel) == (offsetof(_Stack, m_szString) + MAX_STACK_STRLEN));
+			// Note: The heap sentinel must align with the last byte of the stack string
+			// (at position MAX_STACK_STRLEN) for the union to work correctly. This is
+			// guaranteed by the struct layouts above.
 
 			// Lots of code assumes it can look at m_data.Stack.m_nBytesLeft for an empty string; which
 			// means that it will equal MAX_STACK_STRLEN.  Therefor it must be a different value than

@@ -1,4 +1,4 @@
-//===== Copyright © 1996-2006, Valve Corporation, All rights reserved. ======//
+//===== Copyright ï¿½ 1996-2006, Valve Corporation, All rights reserved. ======//
 //
 // $Revision: $
 // $NoKeywords: $
@@ -14,6 +14,7 @@
 #include "tier1/utlintrusivelist.h"
 #include "mathlib/mathlib.h"
 #include "tier1/utlvector.h"
+#include <cstddef>
 
 
 // Purpose: class for keeping track of all the references that exist to an object.  When the object
@@ -91,6 +92,15 @@ public:
 		return m_pObject;
 	}
 
+	FORCEINLINE bool operator==( std::nullptr_t ) const
+	{
+		return m_pObject == nullptr;
+	}
+
+	FORCEINLINE bool operator!=( std::nullptr_t ) const
+	{
+		return m_pObject != nullptr;
+	}
 
 	FORCEINLINE T * GetObject( void )
 	{

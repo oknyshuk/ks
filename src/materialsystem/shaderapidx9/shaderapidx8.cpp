@@ -13677,7 +13677,18 @@ void CShaderAPIDx8::SetupSelectionModeVisualizationState()
 	D3DXMatrixIdentity( &ident );
 	SetVertexShaderConstantInternal( VERTEX_SHADER_VIEWPROJ, ident, 4 );
 	SetVertexShaderConstantInternal( VERTEX_SHADER_MODELVIEWPROJ, ident, 4 );
-	SetVertexShaderConstantInternal( VERTEX_SHADER_MODEL, ident, 3 * NUM_MODEL_TRANSFORMS );
+
+	// Model transforms are 3x4 matrices (3 vectors each). Initialize all to identity.
+	float modelTransforms[3 * NUM_MODEL_TRANSFORMS * 4];
+	for ( int i = 0; i < NUM_MODEL_TRANSFORMS; ++i )
+	{
+		float *pMatrix = &modelTransforms[i * 12];
+		// Identity 3x4 matrix: rows of a 4x4 identity (excluding last row)
+		pMatrix[0] = 1.0f; pMatrix[1] = 0.0f; pMatrix[2] = 0.0f; pMatrix[3] = 0.0f;   // row 0
+		pMatrix[4] = 0.0f; pMatrix[5] = 1.0f; pMatrix[6] = 0.0f; pMatrix[7] = 0.0f;   // row 1
+		pMatrix[8] = 0.0f; pMatrix[9] = 0.0f; pMatrix[10] = 1.0f; pMatrix[11] = 0.0f; // row 2
+	}
+	SetVertexShaderConstantInternal( VERTEX_SHADER_MODEL, modelTransforms, 3 * NUM_MODEL_TRANSFORMS );
 }
 
 

@@ -38,7 +38,6 @@
 #include "GameEventManager.h"
 #include "host_saverestore.h"
 #include "ivideomode.h"
-#include "host_phonehome.h"
 #include "decal.h"
 #include "sv_rcon.h"
 #include "cl_rcon.h"
@@ -595,7 +594,6 @@ void CL_ClearState ( void )
 		{
 			char mapname[256];
 			CL_SetupMapName( modelloader->GetName( host_state.worldmodel ), mapname, sizeof( mapname ) );
-			phonehome->Message( IPhoneHome::PHONE_MSG_MAPEND, mapname );
 		}
 		audiosourcecache->LevelShutdown();
 		g_ClientDLL->LevelShutdown();
@@ -1581,14 +1579,17 @@ void CL_RegisterResources( void )
 	videomode->InvalidateWindow();
 }
 
-#if !defined( DEDICATED ) && !defined( NO_STEAM )
+#ifndef DEDICATED
 class CEngineReliableAvatarCallback_t
 {
 public:
-	CEngineReliableAvatarCallback_t() : m_steamID( Steam3Client().SteamUser()->GetSteamID() )
-		, m_CallbackPersonaStateChanged( this, &CEngineReliableAvatarCallback_t::Steam_OnPersonaStateChanged )
+	CEngineReliableAvatarCallback_t()
+		: m_CallbackPersonaStateChanged( this, &CEngineReliableAvatarCallback_t::Steam_OnPersonaStateChanged )
 		, m_CallbackAvatarImageLoaded( this, &CEngineReliableAvatarCallback_t::Steam_OnAvatarImageLoaded )
 	{
+		ISteamUser *pSteamUser = Steam3Client().SteamUser();
+		if ( pSteamUser )
+			m_steamID = pSteamUser->GetSteamID();
 	}
 
 	void UploadMyOwnAvatarToGameServer();
@@ -1844,7 +1845,7 @@ void CL_FullyConnected( void )
 		engineClient->ClientCmd( "cameraman_request" );
 	}
 
-#if !defined( DEDICATED ) && !defined( NO_STEAM )
+#ifndef DEDICATED
 	// Register a listener that will be uploading our own avatar data to the game server
 	static CEngineReliableAvatarCallback_t s_EngineReliableAvatarCallback;
 	s_EngineReliableAvatarCallback.UploadMyOwnAvatarToGameServer();
@@ -2834,7 +2835,6 @@ void CL_Move(float accumulated_extra_samples, bool bFinalTick )
 	// show warning message/UI
 	if ( hasProblem )
 	{
-#if !defined( CSTRIKE15 )
 		con_nprint_t np;
 		np.time_to_live = 1.0;
 		np.index = 2;
@@ -2844,7 +2844,6 @@ void CL_Move(float accumulated_extra_samples, bool bFinalTick )
 		np.color[ 2 ] = 0.2;
 		
 		Con_NXPrintf( &np, "WARNING:  Connection Problem" );
-#endif
 
 		if ( bAllowTimeout )
 		{
@@ -2855,10 +2854,8 @@ void CL_Move(float accumulated_extra_samples, bool bFinalTick )
 			// write time until connection is dropped to a convar
 			cl_connection_trouble_info.SetValue( CFmtStr( "disconnect(%0.3f)", flRemainingTime ) );
 
-#if !defined( CSTRIKE15 )
 			np.index = 3;
 			Con_NXPrintf( &np, "Auto-disconnect in %.1f seconds", flRemainingTime );
-#endif
 
 			EngineVGui()->NeedConnectionProblemWaitScreen();
 		}
@@ -2987,10 +2984,14 @@ CON_COMMAND_F( cl_showents, "Dump entity list to console.", FCVAR_CHEAT )
 //-----------------------------------------------------------------------------
 bool CL_ShouldLoadBackgroundLevel( const CCommand &args )
 {
+#ifdef PORTAL2
 	// portal2 is not using a background map
 	return false;
+#endif
 
-	if ( CommandLine()->CheckParm( "-nostartupmenu" ) )
+	if ( CommandLine()->CheckParm("-console") )
+		return false;
+	if ( CommandLine()->CheckParm("-nostartupmenu") )
 		return false;
 	if ( CommandLine()->CheckParm("-makereslists") )
 		return false;

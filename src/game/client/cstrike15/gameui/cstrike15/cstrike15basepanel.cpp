@@ -152,9 +152,7 @@ CCStrike15BasePanel::~CCStrike15BasePanel()
 	StopListeningForAllEvents();
 
 	// [jason] Release any screens that may still be active on shutdown so we don't leak memory
-#if defined(INCLUDE_SCALEFORM)
 	DismissAllMainMenuScreens();
-#endif
 }
 
 #if defined( _X360 )
@@ -398,6 +396,25 @@ CON_COMMAND_F( cl_avatar_convert_rgb, "Converts all png avatars in the avatars d
 	g_pFullFileSystem->FindClose( hFind );
 }
 
+void CCStrike15BasePanel::OnOpenServerBrowser()
+{
+#if !defined(_GAMECONSOLE)
+#if defined(INCLUDE_SCALEFORM)
+	if (!m_bCommunityServerWarningIssued && player_nevershow_communityservermessage.GetBool() == 0)
+	{
+		OnOpenMessageBoxThreeway("#SFUI_MainMenu_ServerBrowserWarning_Title", "#SFUI_MainMenu_ServerBrowserWarning_Text2", "#SFUI_MainMenu_ServerBrowserWarning_Legend", "#SFUI_MainMenu_ServerBrowserWarning_NeverShow", (MESSAGEBOX_FLAG_OK | MESSAGEBOX_FLAG_CANCEL | MESSAGEBOX_FLAG_TERTIARY), this);
+		m_bServerBrowserWarningRaised = true;
+	}
+	else
+	{
+		g_VModuleLoader.ActivateModule("Servers");
+	}
+#else // !INCLUDE_SCALEFORM
+	g_VModuleLoader.ActivateModule("Servers");
+#endif // INCLUDE_SCALEFORM
+#endif // !_GAMECONSOLE
+}
+
 // lwss- Overrides for the basepanel if either of these systems are enabled.
 #if defined(INCLUDE_SCALEFORM)
 
@@ -568,21 +585,6 @@ void CCStrike15BasePanel::DoCommunityQuickPlay( void )
 {
 	/* Removed for partner depot */
 	return;
-}
-
-void CCStrike15BasePanel::OnOpenServerBrowser()
-{
-#if !defined(_GAMECONSOLE)
-	if ( !m_bCommunityServerWarningIssued && player_nevershow_communityservermessage.GetBool() == 0 )
-	{
-		OnOpenMessageBoxThreeway( "#SFUI_MainMenu_ServerBrowserWarning_Title", "#SFUI_MainMenu_ServerBrowserWarning_Text2", "#SFUI_MainMenu_ServerBrowserWarning_Legend", "#SFUI_MainMenu_ServerBrowserWarning_NeverShow", ( MESSAGEBOX_FLAG_OK  |  MESSAGEBOX_FLAG_CANCEL | MESSAGEBOX_FLAG_TERTIARY ), this );
-		m_bServerBrowserWarningRaised = true;
-	}
-	else
-	{
-		g_VModuleLoader.ActivateModule("Servers");
-	}
-#endif
 }
 
 void CCStrike15BasePanel::OnOpenCreateLobbyScreen( bool bIsHost )

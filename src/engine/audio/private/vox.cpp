@@ -638,7 +638,7 @@ char * VOX_LookupRndVirtual( char *pGroupName )
 
 // given groupname, get pointer to first word of n'th sentence in group
 
-char *VOX_LookupSentenceByIndex( char *pGroupname, int ipick, int *pipicknext )
+char *VOX_LookupSentenceByIndex( const char *pGroupname, int ipick, int *pipicknext )
 {
 	// get group index
 
@@ -1633,7 +1633,7 @@ void VOX_LoadSound( channel_t *pchan, const char *pszin )
 		{
 			if ( emitcaption )
 			{
-				if ( captionSymbol.IsValid() )
+				if ( captionSymbol != UTL_INVAL_SYMBOL )
 				{
 					g_pSoundServices->EmitCloseCaption( captionSymbol.String(), duration );
 

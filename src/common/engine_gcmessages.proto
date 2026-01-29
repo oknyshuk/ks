@@ -82,6 +82,7 @@ message CEngineGotvSyncPacket
 	optional float rtdelay = 8;				// delay of this fragment from real-time, seconds
 	optional float rcvage = 9;				// Receive age: how many seconds since relay last received data from game server
 	optional float keyframe_interval = 10;	// the interval between full keyframes, in seconds
+	optional uint32 cdndelay = 11; //lwss- November 17th 2020 - this is the only new member.
 }; 
 
 

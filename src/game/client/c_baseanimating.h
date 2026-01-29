@@ -772,14 +772,14 @@ private:
 	int m_nPrevBody;
 	int m_nPrevSkin;
 
-	float							m_flOldModelScale;
-	int								m_nOldSequence;
-	CBoneMergeCache					*m_pBoneMergeCache;	// This caches the strcmp lookups that it has to do
+	float							m_flOldModelScale = 0.0f;
+	int								m_nOldSequence = 0;
+	CBoneMergeCache					*m_pBoneMergeCache = nullptr;	// This caches the strcmp lookups that it has to do
 														// when merg
-	
+
 	CUtlVector< matrix3x4a_t, CUtlMemoryAligned<matrix3x4a_t,16> >		m_CachedBoneData; // never access this directly. Use m_BoneAccessor.
-	float							m_flLastBoneSetupTime;
-	CJiggleBones					*m_pJiggleBones;
+	float							m_flLastBoneSetupTime = 0.0f;
+	CJiggleBones					*m_pJiggleBones = nullptr;
 	bool							m_isJiggleBonesEnabled;
 
 	// Calculated attachment points

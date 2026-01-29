@@ -57,7 +57,6 @@
 #include "tier1/tier1.h"
 #include "tier2/tier2.h"
 #include "tier3/tier3.h"
-#include "p4lib/ip4.h"
 #include "inputsystem/iinputsystem.h"
 #include "filesystem/IQueuedLoader.h"
 #include "filesystem/IXboxInstaller.h"
@@ -808,19 +807,6 @@ bool CSourceAppSystemGroup::Create()
 			return false;	
 	}
 #endif // INCLUDE_SCALEFORM
-		
-	// Hook in datamodel and p4 control if we're running with -tools
-	if ( IsPC() && ( ( CommandLine()->FindParm( "-tools" ) && !CommandLine()->FindParm( "-nop4" ) ) || CommandLine()->FindParm( "-p4" ) ) )
-	{
-		AppModule_t p4libModule = LoadModule( "p4lib.dll" );
-		IP4 *p4 = (IP4*)AddSystem( p4libModule, P4_INTERFACE_VERSION );
-		
-		// If we are running with -steam then that means the tools are being used by an SDK user. Don't exit in this case!
-		if ( !p4 && !CommandLine()->FindParm( "-steam" ) )
-		{
-			return false;
-		}
-	}
 
 	if ( IsPC() && IsPlatformWindows() )
 	{
@@ -1087,6 +1073,12 @@ bool GrabSourceMutex()
 #ifdef WIN32
 	if ( IsPC() )
 	{
+		// Don't allocate if in multirun mode
+		if( CommandLine()->FindParm( "-allowmultiple" ) || CommandLine()->FindParm( "-multirun" ) )
+		{
+			return true;
+		}
+
 		// don't allow more than one instance to run
 		g_hMutex = ::CreateMutex(NULL, FALSE, TEXT("hl2_singleton_mutex"));
 
@@ -1098,13 +1090,6 @@ bool GrabSourceMutex()
 
 		// couldn't get the mutex, we must be running another instance
 		::CloseHandle(g_hMutex);
-
-		// If there is a VPROJECT defined, we assume you are a developer and know the risks
-		// of running multiple copies of the engine
-		if ( getenv( "VPROJECT" ) && CommandLine()->FindParm( "-allowmultiple" ) )
-		{
-			return true;
-		}
 
 		return false;
 	}
@@ -1122,7 +1107,7 @@ bool GrabSourceMutex()
 	 */
 
 	// Check TMPDIR environment variable for temp directory.
-	char *tmpdir = getenv( "TMPDIR" );
+	const char *tmpdir = getenv( "TMPDIR" );
 
 	// If it's NULL, or it doesn't exist, or it isn't a directory, fallback to /tmp.
 	struct stat buf;
@@ -1191,6 +1176,12 @@ bool GrabSourceMutex()
 
 void ReleaseSourceMutex()
 {
+	// Don't allocate if in multirun mode
+	if( CommandLine()->FindParm( "-allowmultiple" ) || CommandLine()->FindParm( "-multirun" ) )
+	{
+		return;
+	}
+
 #ifdef WIN32
 	if ( IsPC() && g_hMutex )
 	{
@@ -1509,14 +1500,6 @@ extern "C" DLL_EXPORT int LauncherMain( int argc, char **argv )
 
 	// Hook the debug output stuff.
 	LoggingSystem_RegisterLoggingListener( &g_LauncherLoggingListener );
-
-#ifndef _PS3
-	// Quickly check the hardware key, essentially a warning shot.  
-	if ( !Plat_VerifyHardwareKeyPrompt() )
-	{
-		return -1;
-	}
-#endif // !_PS3
 
 #ifdef WIN32
 	CommandLine()->CreateCmdLine( IsPC() ? GetCommandLine() : lpCmdLine );

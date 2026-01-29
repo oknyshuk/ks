@@ -41,7 +41,7 @@
 #define M_PI		3.14159265358979323846	// matches value in gcc v2 math.h
 #endif
 
-//static ConVar mat_debug_material_reference_name( "mat_debug_material_reference_name", "/eq_grenades/smoke_grenade", FCVAR_RELEASE, "Substring to debug material references" );
+//static ConVar mat_debug_material_reference_name( "mat_debug_material_reference_name", "", FCVAR_RELEASE, "Substring to debug material references (e.g., 'particle/' to trace particle materials)" );
 
 //-----------------------------------------------------------------------------
 // Material implementation
@@ -2561,21 +2561,11 @@ void CMaterial::GetMaterialScale( float *pScale )
 //-----------------------------------------------------------------------------
 void CMaterial::IncrementReferenceCount()
 {
-//	if ( *mat_debug_material_reference_name.GetString() && Q_stristr( m_Name.String(), mat_debug_material_reference_name.GetString() ) )
-//	{
-//		Msg("%s ++REF(%d)\n", m_Name.String(), m_RefCount );
-//	}
-	
 	++m_RefCount;
 }
 
 void CMaterial::DecrementReferenceCount()
 {
-//	if ( *mat_debug_material_reference_name.GetString() && Q_stristr( m_Name.String(), mat_debug_material_reference_name.GetString() ) )
-//	{
-//		Msg("%s --REF(%d)\n", m_Name.String(), m_RefCount );
-//	}
-
 	--m_RefCount;
 }
 

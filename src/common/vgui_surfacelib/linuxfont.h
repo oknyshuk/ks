@@ -142,7 +142,7 @@ private:
 	
 	int m_rgiBitmapSize[2];
 	unsigned char *m_pBuf;	// pointer to buffer for use when generated bitmap versions of a texture
-	
+
 	FT_Face face;
 
 	struct font_name_entry

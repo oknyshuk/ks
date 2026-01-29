@@ -1,6 +1,6 @@
 //========= Copyright 1996-2005, Valve Corporation, All rights reserved. ============//
 //
-// Purpose: 
+// Purpose:
 //
 // $NoKeywords: $
 //=============================================================================//
@@ -56,10 +56,10 @@ CON_COMMAND( showinfo, "Shows a info panel: <type> <title> <message> [<command n
 {
 	if ( !GetViewPortInterface() )
 		return;
-	
+
 	if ( args.ArgC() < 4 )
 		return;
-		
+
 	IViewPortPanel * panel = GetViewPortInterface()->FindPanelByName( PANEL_INFO );
 
 	 if ( panel )
@@ -116,13 +116,13 @@ CTextWindow::CTextWindow(IViewPort *pViewPort) : Frame(NULL, PANEL_INFO	)
 	//=============================================================================
 	// HPE_END
 	//=============================================================================
-	
+
 	// load the new scheme early!!
 	SetScheme("ClientScheme");
 	SetMoveable(false);
 	SetSizeable(false);
 	SetProportional(true);
-	
+
 	// hide the system buttons
 	SetTitleBarVisible( false );
 
@@ -144,7 +144,7 @@ CTextWindow::CTextWindow(IViewPort *pViewPort) : Frame(NULL, PANEL_INFO	)
 }
 
 //-----------------------------------------------------------------------------
-// Purpose: 
+// Purpose:
 //-----------------------------------------------------------------------------
 void CTextWindow::ApplySchemeSettings( IScheme *pScheme )
 {
@@ -334,7 +334,7 @@ void CTextWindow::ShowIndex( const char *entry)
 		return;
 
 	int index = g_pStringTableInfoPanel->FindStringIndex( m_szMessage );
-		
+
 	if ( index != ::INVALID_STRING_INDEX )
 		data = (const char *)g_pStringTableInfoPanel->GetStringUserData( index, &length );
 
@@ -398,7 +398,7 @@ void CTextWindow::ShowFile( const char *filename )
 		// it's a local HTML file
 		char localURL[ _MAX_PATH + 7 ];
 		Q_strncpy( localURL, "file://", sizeof( localURL ) );
-		
+
 		char pPathData[ _MAX_PATH ];
 		g_pFullFileSystem->GetLocalPath( filename, pPathData, sizeof(pPathData) );
 		Q_strncat( localURL, pPathData, sizeof( localURL ), COPY_ALL_CHARACTERS );
@@ -414,7 +414,7 @@ void CTextWindow::ShowFile( const char *filename )
 			return;
 
 		char buffer[2048];
-			
+
 		int size = MIN( g_pFullFileSystem->Size( f ), sizeof(buffer)-1 ); // just allow 2KB
 
 		g_pFullFileSystem->Read( buffer, size, f );
@@ -443,7 +443,7 @@ void CTextWindow::Update( void )
 	}
 	else if ( m_nContentType == TYPE_URL )
 	{
-		// Only allow "http://" and "https://" URLs. Filter out other types. 
+		// Only allow "http://" and "https://" URLs. Filter out other types.
 		// "javascript:" URLs, for example, provide a way of executing arbitrary javascript on whatever page is currently loaded
 		if ( !( StringHasPrefix( m_szMessage, "http://" ) || StringHasPrefix( m_szMessage, "https://" ) || StringHasPrefix( m_szMessage, "about:blank" ) ) )
 		{
@@ -554,7 +554,7 @@ void CTextWindow::OnCommand( const char *command )
 		//=============================================================================
 		// HPE_END
 		//=============================================================================
-		
+
 		m_pViewPort->ShowPanel( this, false );
 	}
 
@@ -600,7 +600,7 @@ void CTextWindow::SetData( int type, const char *title, const char *message, con
 	Q_strncpy(  m_szTitle, "", sizeof( m_szTitle ) );
 	Q_strncpy(  m_szMessage, message, sizeof( m_szMessage ) );
 	Q_strncpy(  m_szMessageFallback, message_fallback, sizeof( m_szMessageFallback ) );
-	
+
 	m_nExitCommand = command;
 
 	m_nContentType = type;
@@ -615,7 +615,7 @@ void CTextWindow::SetData( int type, const char *title, const char *message, con
 // Some HTML used to direct the browser control to a benign HTML file
 //
 
-static char sBrowserClose [] = 
+static char sBrowserClose [] =
 	"<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.01 Transitional//EN\" \"http://www.w3.org/TR/1999/REC-html401-19991224/loose.dtd\">"
 	"<html>"
 	"<head><title>CSGO MOTD</title>"
@@ -633,7 +633,7 @@ void CTextWindow::ShowPanel( bool bShow )
 {
 	g_pInputSystem->SetSteamControllerMode( bShow ? "MenuControls" : NULL, this );
 
-	if (bShow) 
+	if (bShow)
 		return;
 
 	if ( BaseClass::IsVisible() == bShow )

@@ -40,6 +40,12 @@
 #undef TYPE_BOOL
 #endif
 
+// lwss - eliminates a conflict with "Status" in protobuf
+#ifdef Status
+#undef Status
+#endif
+// lwss end
+
 #include "netmessages.pb.h"
 
 #if !defined( _X360 )

@@ -7,7 +7,6 @@
 
 #ifndef CDLL_CLIENT_INT_H
 #define CDLL_CLIENT_INT_H
-
 #ifdef _WIN32
 #pragma once
 #endif
@@ -20,8 +19,6 @@
 #include "tier3/tier3.h"
 #include "tier2/tier2_logging.h"
 #include "videocfg/videocfg.h"
-
-#include "google/protobuf/message.h"
 
 #if defined( INCLUDE_SCALEFORM )
 #include "scaleformui/scaleformui.h"
@@ -105,11 +102,8 @@ extern CSteamAPIContext *steamapicontext;
 #endif
 extern ISoundEmitterSystemBase *soundemitterbase;
 
-#include "CegClientWrapper.h"
-
 #if defined( CSTRIKE15 )
 extern IGameTypes *g_pGameTypes;
-extern IP4 *p4;
 #endif
 
 #if defined( INCLUDE_SCALEFORM )
@@ -281,7 +275,7 @@ FORCEINLINE uint32 ComputeSplitscreenRenderingFlags( IClientRenderable *pRendera
 #else
 
 #define VGUI_SCREENSIZE_SPLITSCREEN_GUARD( slot ) CVGuiScreenSizeSplitScreenPlayerGuard s_VGuiSSGuard( slot, engine->GetActiveSplitScreenPlayerSlot() );
-#define ACTIVE_SPLITSCREEN_PLAYER_GUARD( slot )	CSetActiveSplitScreenPlayerGuard g_SSGuard( __FILE__, __LINE__, slot, engine->GetActiveSplitScreenPlayerSlot(), false );  RANDOM_CEG_TEST_SECRET();
+#define ACTIVE_SPLITSCREEN_PLAYER_GUARD( slot )	CSetActiveSplitScreenPlayerGuard g_SSGuard( __FILE__, __LINE__, slot, engine->GetActiveSplitScreenPlayerSlot(), false );
 #define ACTIVE_SPLITSCREEN_PLAYER_GUARD_ENT( entity )	CSetActiveSplitScreenPlayerGuard g_SSEGuard( __FILE__, __LINE__, entity, engine->GetActiveSplitScreenPlayerSlot(), false );
 
 #define ACTIVE_SPLITSCREEN_PLAYER_GUARD_VGUI( slot )	CSetActiveSplitScreenPlayerGuard g_SSGuardNoVgui( __FILE__, __LINE__, slot, engine->GetActiveSplitScreenPlayerSlot(), true );
@@ -293,7 +287,6 @@ FORCEINLINE uint32 ComputeSplitscreenRenderingFlags( IClientRenderable *pRendera
 #define VGUI_ABSPOS_SPLITSCREEN_GUARD_INVERT( slot ) CVGuiAbsPosSplitScreenPlayerGuard s_VGuiAbsPosGuard( slot, engine->GetActiveSplitScreenPlayerSlot(), true );
 
 #define FOR_EACH_VALID_SPLITSCREEN_PLAYER( iteratorName )						\
-	RANDOM_CEG_TEST_SECRET() \
 	for ( int iteratorName = FirstValidSplitScreenSlot();				\
 				iteratorName != -1;												\
 				iteratorName = NextValidSplitScreenSlot( iteratorName ) )	

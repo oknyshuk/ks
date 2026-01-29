@@ -563,6 +563,11 @@ C_BasePlayer::C_BasePlayer() : m_iv_vecViewOffset( "C_BasePlayer::m_iv_vecViewOf
 	m_vecLastPositionAtFullCrouchSpeed = vec2_origin;
 
 	m_bHasWalkMovedSinceLastJump = false;
+
+	// Initialize physics pointers to NULL - these are created later in PostDataUpdate
+	m_pPhysicsController = NULL;
+	m_pShadowStand = NULL;
+	m_pShadowCrouch = NULL;
 }
 
 //-----------------------------------------------------------------------------
@@ -634,8 +639,6 @@ void C_BasePlayer::Spawn( void )
 	Precache();
 
 	SetThink(NULL);
-
-	RANDOM_CEG_TEST_SECRET_LINE_PERIOD( 17, 0, 41, 0 );
 
 	SharedSpawn();
 

@@ -220,10 +220,7 @@ ConVar			sv_tags( "sv_tags", "", FCVAR_NOTIFY | FCVAR_RELEASE, "Server tags. Use
 ConVar			sv_visiblemaxplayers( "sv_visiblemaxplayers", "-1",  FCVAR_RELEASE, "Overrides the max players reported to prospective clients" );
 ConVar			sv_alternateticks( "sv_alternateticks", ( IsX360() ) ? "1" : "0", FCVAR_RELEASE, "If set, server only simulates entities on even numbered ticks.\n" );
 ConVar			sv_allow_wait_command( "sv_allow_wait_command", "1", FCVAR_REPLICATED | FCVAR_RELEASE, "Allow or disallow the wait command on clients connected to this server." );
-#if !defined( CSTRIKE15 )
-// We are switching CStrike to always have lobbies associated with servers for community matchmaking
-ConVar			sv_allow_lobby_connect_only( "sv_allow_lobby_connect_only", "1",  FCVAR_RELEASE, "If set, players may only join this server from matchmaking lobby, may not connect directly." );
-#endif
+ConVar			sv_allow_lobby_connect_only( "sv_allow_lobby_connect_only", "0",  FCVAR_RELEASE, "If set, players may only join this server from matchmaking lobby, may not connect directly." );
 static ConVar   sv_reservation_timeout( "sv_reservation_timeout", "45", FCVAR_RELEASE, "Time in seconds before lobby reservation expires.", true, 5.0f, true, 180.0f );
 static ConVar   sv_reservation_grace( "sv_reservation_grace", "5", 0, "Time in seconds given for a lobby reservation.", true, 3.0f, true, 30.0f );
 
@@ -1701,23 +1698,6 @@ void CBaseServer::ReplyChallenge( const ns_address &adr, bf_read &inmsg )
 		bool bAllowDC = !serverGameDLL->IsValveDS();	// Official DS direct connect disabled
 		if ( bAllowDC )
 			bAllowDC = serverGameDLL->ShouldAllowDirectConnect();	// let the ongoing game overrule direct connect
-
-		if ( bAllowDC )
-		{
-			//
-			// Game server must be logged on with a persistent GSLT unless LAN case
-			//
-			static const bool s_bAllowLanWhitelist = !CommandLine()->FindParm( "-ignorelanwhitelist" );
-			bool bWhitelistedClient = bIsLocalConnection															// localhost/loopback
-				|| ( s_bAllowLanWhitelist && (
-					adr.IsReservedAdr()																				// LAN RFC 1918
-				|| ( ( adr.GetAddressType() == NSAT_NETADR ) && ( adr.GetIP() == Steam3Server().GetPublicIP() ) )	// same public IP (pinhole NAT or same host in DMZ)
-				) );	
-			bool bPersistentGameServerAccount = !sv_lan.GetBool() && !Steam3Server().BLanOnly()
-				&& Steam3Server().GetGSSteamID().IsValid() && Steam3Server().GetGSSteamID().BPersistentGameServerAccount();
-			if ( IsDedicated() && !bWhitelistedClient && !bPersistentGameServerAccount )
-				bAllowDC = false;	// just fail direct connect
-		}
 
 		if ( IsExclusiveToLobbyConnections() && !GetReservationCookie() )
 		{
@@ -4261,7 +4241,7 @@ void CBaseServer::AddTagString( CUtlString &dest, char const *pchString )
 	if ( !pchString || !*pchString )
 		return;
 
-	char *chDelim = ",";
+	const char *chDelim = ",";
 
 	if ( Q_strstr( pchString, chDelim ) )
 	{
@@ -4371,7 +4351,7 @@ void CBaseServer::UpdateGameData()
 	const char *pszGroupName = sv_steamgroup.GetString();
 	{
 		CUtlVector< CUtlString > list;
-		char *chDelim = ",";
+		const char *chDelim = ",";
 		BuildTokenList( pszGroupName, *chDelim, list );
 
 		for ( int i = 0; i < list.Count(); ++i )
@@ -4433,11 +4413,9 @@ bool CBaseServer::IsExclusiveToLobbyConnections() const
 	if ( !IsDedicated() )
 		return false;
 
-#if !defined( CSTRIKE15 )
 	// We are switching CStrike to always have lobbies associated with servers for community matchmaking
 	if ( !sv_allow_lobby_connect_only.GetBool() )
 		return false;
-#endif
 
 	if ( sv_lan.GetBool() )
 		return false;

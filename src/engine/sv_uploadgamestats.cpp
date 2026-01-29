@@ -1,6 +1,6 @@
 //========= Copyright 1996-2005, Valve Corporation, All rights reserved. ============//
 //
-// Purpose: 
+// Purpose:
 //
 // $NoKeywords: $
 //
@@ -36,7 +36,6 @@
 #include "net.h"
 #include "quakedef.h"
 #include "host.h"
-#include "host_phonehome.h"
 #include "mathlib/IceKey.H"
 #include "bitbuf.h"
 #include "tier0/icommandline.h"
@@ -96,7 +95,7 @@ namespace GameStatsHarvester
 
 using namespace GameStatsHarvester;
 
-// TODO: cut protocol version down to u8 if possible, to reduce bandwidth usage 
+// TODO: cut protocol version down to u8 if possible, to reduce bandwidth usage
 // for very frequent but tiny commands.
 typedef u32		ProtocolVersion_t;
 
@@ -110,24 +109,24 @@ typedef u32		ClientSessionHandle_t;
 
 typedef u32		NetworkTransactionId_t;
 
-// Command codes are intentionally as small as possible to minimize bandwidth usage 
+// Command codes are intentionally as small as possible to minimize bandwidth usage
 // for very frequent but tiny commands (e.g. GDS 'FindServer' commands).
 typedef u8		Command_t;
 
-// ... likewise response codes are as small as possible - we use this when we 
+// ... likewise response codes are as small as possible - we use this when we
 // ... can and revert to large types on a case by case basis.
 typedef u8		CommandResponse_t;
 
 
-// This define our standard type for length prefix for variable length messages 
+// This define our standard type for length prefix for variable length messages
 // in wire protocols.
 // This is specifically used by CWSABUFWrapper::PrepareToReceiveLengthPrefixedMessage()
 // and its supporting functions.
-// It is defined here for generic (portable) network code to use when constructing 
+// It is defined here for generic (portable) network code to use when constructing
 // messages to be sent to peers that use the above function.
 // e.g. SteamValidateUserIDTickets.dll uses this for that purpose.
 
-// We support u16 or u32 (obviously switching between them breaks existing protocols 
+// We support u16 or u32 (obviously switching between them breaks existing protocols
 // unless all components are switched simultaneously).
 typedef	u32		NetworkMessageLengthPrefix_t;
 
@@ -154,10 +153,10 @@ typedef u32								ContextID_t;
 // This is the version of the protocol used by latest-build clients.
 const ProtocolVersion_t			cuCurrentProtocolVersion		= 1;
 
-// This is the minimum protocol version number that the client must 
+// This is the minimum protocol version number that the client must
 // be able to speak in order to communicate with the server.
-// The client sends its protocol version this before every command, and if we 
-// don't support that version anymore then we tell it nicely.  The client 
+// The client sends its protocol version this before every command, and if we
+// don't support that version anymore then we tell it nicely.  The client
 // should respond by doing an auto-update.
 const ProtocolVersion_t			cuRequiredProtocolVersion		= 1;
 
@@ -197,7 +196,7 @@ namespace HarvestFileCommand
 // Class declaration:	CWin32UploadGameStats
 //
 //#############################################################################
-// 
+//
 // Authors:
 //
 //		Yahn Bernier
@@ -236,13 +235,13 @@ typedef void ( *GAMESTATSREPORTPROGRESSFUNC )( u32 uContext, const TGameStatsPro
 
 struct TGameStatsParameters
 {
-	TGameStatsParameters() : 
+	TGameStatsParameters() :
 		m_uAppId( 0 )
 	{
 	}
 
 	// IP Address of the CSERServer to send the report to
-	netadr_t				m_ipCSERServer;		
+	netadr_t				m_ipCSERServer;
 
 	// Source Control Id (or build_number) of the product
 	u32						m_uEngineBuildNumber;
@@ -267,7 +266,7 @@ struct TGameStatsParameters
 
 // Note that this API is blocking, though the callback, if passed, can occur during execution.
 EGameStatsUploadStatus Win32UploadGameStatsBlocking
-( 
+(
 	const TGameStatsParameters & rGameStatsParameters	// Input
 );
 
@@ -324,7 +323,7 @@ public:
 		if ( unIP == 0 )
 		{
 			m_flNextConnectAttempt = curTime + GAMESTATSUPLOADER_CONNECT_RETRY_TIME;
-			return; 
+			return;
 		}
 		else
 		{
@@ -394,7 +393,7 @@ public:
 		return true;
 #endif
 	}
-    
+
 	// Gets a non-personally identifiable unique ID for this steam user, used for tracking total gameplay time across
 	//  multiple stats sessions, but isn't trackable back to their Steam account or id.
 	// Buffer should be 16 bytes, ID will come back as a hexadecimal string version of a GUID
@@ -491,7 +490,7 @@ public:
 		}
 
 
-#endif		
+#endif
 
 		if ( ( buf[0] == 0 ) && sv.IsDedicated() )
 		{
@@ -553,9 +552,9 @@ void UpdateProgress( const TGameStatsParameters & params, char const *fmt, ... )
 class CWin32UploadGameStats
 {
 public:
-	explicit CWin32UploadGameStats( 
-		const netadr_t & harvester, 
-		const TGameStatsParameters & rGameStatsParameters, 
+	explicit CWin32UploadGameStats(
+		const netadr_t & harvester,
+		const TGameStatsParameters & rGameStatsParameters,
 		u32 contextid );
 	~CWin32UploadGameStats();
 
@@ -613,9 +612,9 @@ private:
 	u32								m_ContextID;
 };
 
-CWin32UploadGameStats::CWin32UploadGameStats( 
-	const netadr_t & harvester, 
-	const TGameStatsParameters & rGameStatsParameters, 
+CWin32UploadGameStats::CWin32UploadGameStats(
+	const netadr_t & harvester,
+	const TGameStatsParameters & rGameStatsParameters,
 	u32 contextid ) :
 	m_States(),
 	m_uCurrentState( eCreateTCPSocket ),
@@ -648,9 +647,9 @@ CWin32UploadGameStats::~CWin32UploadGameStats()
 }
 
 //-----------------------------------------------------------------------------
-// 
+//
 // Function:	DoBlockingReceive()
-// 
+//
 //-----------------------------------------------------------------------------
 bool CWin32UploadGameStats::DoBlockingReceive( uint bytesExpected, CUtlBuffer& buf )
 {
@@ -791,7 +790,7 @@ bool CWin32UploadGameStats::SendUploadCommand( EGameStatsUploadStatus& status, C
 	UpdateProgress( m_rCrashParameters, "Sending harvesting protocol upload request." );
 // Send upload command
 	buf.Purge();
-	
+
 	NetworkMessageLengthPrefix_t messageSize
 		(
 				sizeof( Command_t )
@@ -802,7 +801,7 @@ bool CWin32UploadGameStats::SendUploadCommand( EGameStatsUploadStatus& status, C
 		);
 
 	// Prefix the length to the command
-	buf.PutInt( (int)messageSize ); 
+	buf.PutInt( (int)messageSize );
 	buf.PutChar( Commands::cuSendGameStats );
 	buf.PutInt( (int)m_ContextID );
 
@@ -859,7 +858,7 @@ bool CWin32UploadGameStats::ReceiveOKToSendFile( EGameStatsUploadStatus& status,
 		status = eGameStatsUploadFailed;
 		return false;
 	}
-	
+
 	SetNextState( eSendWholeFile );
 	return true;
 }
@@ -949,7 +948,7 @@ bool CWin32UploadGameStats::CloseTCPSocket( EGameStatsUploadStatus& status, CUtl
 }
 
 EGameStatsUploadStatus Win32UploadGameStatsBlocking
-( 
+(
 	const TGameStatsParameters & rGameStatsParameters
 )
 {
@@ -977,7 +976,7 @@ EGameStatsUploadStatus Win32UploadGameStatsBlocking
 		buf.PutString( rGameStatsParameters.m_sExecutableName );  // exe name
 		buf.PutString( rGameStatsParameters.m_sGameDirectory );	 // gamedir
 		buf.PutString( rGameStatsParameters.m_sMapName );
-	
+
 		buf.PutInt( (int)rGameStatsParameters.m_uStatsBlobVersion ); // game stats blob version
 		buf.PutInt( (int)rGameStatsParameters.m_uStatsBlobSize );  // game stats blob size
 	}
@@ -1134,7 +1133,7 @@ CAsyncUploaderThread::DataEntry * CAsyncUploaderThread::DataEntry::AllocCopy() c
 
 	pNew->uiBlobVersion = uiBlobVersion;
 	pNew->uiBlobSize = uiBlobSize;
-	
+
 	char *pbWriteMapName = ( char * )( pNew + 1 );
 	pNew->szMapName = pbWriteMapName;
 	memcpy( pbWriteMapName, szMapName, lenMapName );
@@ -1217,4 +1216,3 @@ void AsyncUpload_QueueData( char const *szMapName, uint uiBlobVersion, uint uiBl
 }
 
 #endif
-

@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
+//========= Copyright ï¿½ 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose:
 //
@@ -27,9 +27,9 @@ ConVar rr_followup_maxdist( "rr_followup_maxdist", "1800", FCVAR_CHEAT, "'then A
 CResponseQueue::CResponseQueue( int queueSize ) : m_Queue(queueSize), m_ExpresserTargets(8,8)
 {};
 
-/// Add a deferred response. 
-void CResponseQueue::Add( const AIConcept_t &AIconcept,  ///< concept to dispatch
-		 const AI_CriteriaSet * RESTRICT contexts, 
+/// Add a deferred response.
+void CResponseQueue::Add( const AIConcept_t &conc,  ///< concept to dispatch
+		 const AI_CriteriaSet * RESTRICT contexts,
 		 float time,					 ///< when to dispatch it. You can specify a time of zero to mean "immediately."
 		 const CFollowupTargetSpec_t &targetspec,
 		 CBaseEntity *pIssuer
@@ -38,12 +38,12 @@ void CResponseQueue::Add( const AIConcept_t &AIconcept,  ///< concept to dispatc
 	// Add a response.
 	AssertMsg( m_Queue.Count() < AI_RESPONSE_QUEUE_SIZE, "AI Response queue overfilled." );
 	QueueType_t::IndexLocalType_t idx = m_Queue.AddToTail();
-	m_Queue[idx].Init( AIconcept, contexts, time, targetspec, pIssuer );
+	m_Queue[idx].Init( conc, contexts, time, targetspec, pIssuer );
 }
 
 
-/// Remove a deferred response matching the concept and issuer. 
-void CResponseQueue::Remove( const AIConcept_t &AIconcept,  ///< concept to dispatch
+/// Remove a deferred response matching the concept and issuer.
+void CResponseQueue::Remove( const AIConcept_t &conc,  ///< concept to dispatch
 			CBaseEntity * const RESTRICT pIssuer		  ///< the entity issuing the response, if one exists.
 			) RESTRICT
 {
@@ -54,7 +54,7 @@ void CResponseQueue::Remove( const AIConcept_t &AIconcept,  ///< concept to disp
 		CDeferredResponse &response = m_Queue[idx];
 		QueueType_t::IndexLocalType_t previdx = idx; // advance the index immediately because we may be deleting the "current" element
 		idx = m_Queue.Next(idx); // is now the next index
-		if ( CompareConcepts( response.m_concept, AIconcept ) && // if concepts match and 
+		if ( CompareConcepts( response.m_concept, conc ) && // if concepts match and
 			( !pIssuer || ( response.m_hIssuer.Get() == pIssuer ) ) // issuer is null, or matches the one in the response
 			)
 		{

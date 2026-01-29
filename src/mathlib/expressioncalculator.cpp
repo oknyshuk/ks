@@ -530,7 +530,7 @@ bool CExpressionCalculator::Parse1ArgFunc( const char *&expr )
 {
 	ParseState_t ps( m_stack, expr );
 
-	const char *pFuncs[] = 
+	const char *pFuncs[] =
 	{
 		"abs", "sqr", "sqrt", "sin", "asin", "cos", "acos", "tan",
 		"exp", "log", "dtor", "rtod", "floor", "ceiling", "round", "sign"
@@ -807,4 +807,3 @@ float EvaluateExpression( char const *pExpr, float flValueToReturnIfFailure )
 	bool bSuccess = myEvaluator.Evaluate( flResult );
 	return ( bSuccess ) ? flResult : flValueToReturnIfFailure;
 }
-

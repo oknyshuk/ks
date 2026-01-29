@@ -29,8 +29,6 @@
 #include "materialsystem/imaterial.h"
 #include "toolframework/itoolframework.h"
 #include "toolframework/itoolsystem.h"
-#include "tier2/p4helpers.h"
-#include "p4lib/ip4.h"
 #include "vgui/ISystem.h"
 #include <vgui_controls/Controls.h>
 #include "paint.h"
@@ -138,53 +136,6 @@ CON_COMMAND_F( mat_crosshair, "Display the name of the material under the crossh
 		ConMsg ("hit material \"%s\"\n", pMaterial->GetName());
 }
 
-//-----------------------------------------------------------------------------
-// A console command to open the material under the crosshair in the associated editor.
-//-----------------------------------------------------------------------------
-CON_COMMAND_F( mat_crosshair_edit, "open the material under the crosshair in the editor defined by mat_crosshair_edit_editor", FCVAR_CHEAT )
-{
-	IMaterial* pMaterial = GetMaterialAtCrossHair();
-	if (!pMaterial)
-	{
-		ConMsg ("no/bad material\n");
-	}
-	else
-	{
-		char chResolveName[ 256 ] = {0}, chResolveNameArg[ 256 ] = {0};
-		Q_snprintf( chResolveNameArg, sizeof( chResolveNameArg ) - 1, "materials/%s.vmt", pMaterial->GetName() );
-		char const *szResolvedName = g_pFileSystem->RelativePathToFullPath( chResolveNameArg, "game", chResolveName, sizeof( chResolveName ) - 1 );
-		if ( p4 )
-		{
-			CP4AutoEditAddFile autop4( szResolvedName );
-		}
-		else
-		{
-			Warning( "run with -p4 to get p4 operations upon mat_crosshair_edit\n" );
-		}
-		vgui::system()->ShellExecute( "open", szResolvedName );
-	}
-}
-
-//-----------------------------------------------------------------------------
-// A console command to open the material under the crosshair in the associated editor.
-//-----------------------------------------------------------------------------
-CON_COMMAND_F( mat_crosshair_explorer, "open the material under the crosshair in explorer and highlight the vmt file", FCVAR_CHEAT )
-{
-	IMaterial* pMaterial = GetMaterialAtCrossHair();
-	if (!pMaterial)
-	{
-		ConMsg ("no/bad material\n");
-	}
-	else
-	{
-		char chResolveName[ 256 ] = {0}, chResolveNameArg[ 256 ] = {0};
-		Q_snprintf( chResolveNameArg, sizeof( chResolveNameArg ) - 1, "materials/%s.vmt", pMaterial->GetName() );
-		char const *szResolvedName = g_pFileSystem->RelativePathToFullPath( chResolveNameArg, "game", chResolveName, sizeof( chResolveName ) - 1 );
-		char params[256];
-		Q_snprintf( params, sizeof( params ) - 1, "/E,/SELECT,%s", szResolvedName );
-		vgui::system()->ShellExecuteEx( "open", "explorer.exe", params );
-	}
-}
 
 //-----------------------------------------------------------------------------
 // A console command to open the material under the crosshair in the associated editor.
@@ -1015,7 +966,7 @@ IMaterial *GetMaterialAtCrossHair( void )
 extern void DrawLightmapPage( int lightmapPageID );
 
 static float textureS, textureT;
-static SurfaceHandle_t s_CrossHairSurfID;;
+static SurfaceHandle_t s_CrossHairSurfID;
 static Vector crossHairDiffuseLightColor;
 static Vector crossHairBaseColor;
 static float lightmapCoords[2];

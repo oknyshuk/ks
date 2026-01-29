@@ -204,7 +204,7 @@ void EXPORT F( IEngineAPI **api )
 
 extern bool cs_initialized;
 extern int			lowshift;
-static char	*empty_string = "";
+static const char	*empty_string = "";
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -782,6 +782,53 @@ bool CEngineAPI::SetStartupInfo( StartupInfo_t &info )
 	}
 #endif // !NO_STEAM && !_GAMECONSOLE
 
+	// turn on the Steam3 API early so we can query app data up front
+#if !defined( DEDICATED ) && !defined( NO_STEAM )
+	TRACEINIT( Steam3Client().Activate(), Steam3Client().Shutdown() );
+	if ( IsPS3() )
+	{
+#if !defined( CSTRIKE15 )
+		// TODO: PS3_BUILDFIX: We probably want to turn this back on after we get the steam client working for CStrike15
+		// this is only relevant for PS3
+		if ( !Steam3Client().IsInitialized() )
+		{
+			return false;
+		}
+#endif // CSTRIKE15
+	}
+
+	if ( !Steam3Client().IsInitialized() || !Steam3Client().SteamUser() ||
+		!Steam3Client().SteamUser()->GetSteamID().IsValid() || !Steam3Client().SteamUser()->GetSteamID().BIndividualAccount() || !Steam3Client().SteamUser()->GetSteamID().GetAccountID() )
+	{
+		Error( "FATAL ERROR: Failed to connect with local Steam Client process!\n\nPlease make sure that you are running latest version of Steam Client.\nYou can check for Steam Client updates using Steam main menu:\n             Steam > Check for Steam Client Updates..." );
+		return false;
+	}
+
+	//
+	// Setup a search path for USRLOCAL data (configs / save games / etc.) that isn't intended to be shared across multiple accounts
+	//
+	if ( g_pFileSystem )
+	{
+		char chUserLocalDataFolder[ MAX_PATH ] = {};
+		if ( char const * pszLocalOverride = getenv( "USRLOCAL" DLLExtTokenPaste2( VPCGAMECAPS ) ) )
+		{
+			Msg( "USRLOCAL path using environment setting '%s':\n%s\n", "USRLOCAL" DLLExtTokenPaste2( VPCGAMECAPS ), pszLocalOverride );
+			g_pFileSystem->AddSearchPath( pszLocalOverride, "USRLOCAL" );
+		}
+		else if ( Steam3Client().SteamUser()->GetUserDataFolder( chUserLocalDataFolder, sizeof( chUserLocalDataFolder ) ) )
+		{
+			Msg( "USRLOCAL path using Steam profile data folder:\n%s\n", chUserLocalDataFolder );
+			g_pFileSystem->AddSearchPath( chUserLocalDataFolder, "USRLOCAL" );
+		}
+		else
+		{
+			// Fallback to game directory if Steam user data folder is not available
+			Warning( "USRLOCAL path not found, falling back to game directory\n" );
+			g_pFileSystem->AddSearchPath( com_gamedir, "USRLOCAL" );
+		}
+	}
+#endif
+
 	return true;
 }
 
@@ -801,6 +848,14 @@ InitReturnVal_t CEngineAPI::Init()
 		return nRetVal;
 
 	m_bRunningSimulation = false;
+
+	// Initialize the FPU control word
+#if !defined( DEDICATED ) && !defined( _X360 ) && !defined( _PS3 ) && !defined( PLATFORM_64BITS ) && !defined( LINUX ) && !defined(__clang__)
+	_asm
+	{
+		fninit
+	}
+#endif
 
 	SetupFPUControlWord();
 
@@ -2375,13 +2430,11 @@ void CModAppSystemGroup::PostShutdown()
 {
 }
 
-void CModAppSystemGroup::Destroy() 
+void CModAppSystemGroup::Destroy()
 {
-	if ( g_pMatchFramework )
-	{
-		TRACESHUTDOWN( g_pMatchFramework->Shutdown() );
-		g_pMatchFramework = NULL;
-	}
+	// Note: g_pMatchFramework->Shutdown() TRACESHUTDOWN is handled in Host_Shutdown()
+	// to match the TRACEINIT in Host_Init(). Just clear the pointer here.
+	g_pMatchFramework = NULL;
 
 	// unload game and client .dlls
 	ServerDLL_Unload();

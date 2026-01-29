@@ -169,7 +169,9 @@ void CProfileTree::InvalidateLayout( bool layoutNow, bool reloadScheme )
 	BaseClass::InvalidateLayout( layoutNow, reloadScheme );
 	if ( GetParent() )
 	{
-		GetParent()->InvalidateLayout( layoutNow, reloadScheme );
+		// Don't pass reloadScheme to parent - this causes infinite recursion
+		// because parent will invalidate all children including us
+		GetParent()->InvalidateLayout( layoutNow, false );
 	}
 }
 

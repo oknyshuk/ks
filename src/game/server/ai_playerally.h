@@ -53,7 +53,7 @@
 #define TLK_ALYX_ENEMY_DEAD "TLK_ALYX_ENEMY_DEAD"
 #define TLK_SELECTED		"TLK_SELECTED"	// selected by player in command mode.
 #define TLK_COMMANDED		"TLK_COMMANDED" // received orders from player in command mode
-#define TLK_COMMAND_FAILED	"TLK_COMMAND_FAILED" 
+#define TLK_COMMAND_FAILED	"TLK_COMMAND_FAILED"
 #define TLK_DENY_COMMAND	"TLK_DENY_COMMAND" // designer has asked this NPC to politely deny player commands to move the squad
 #define TLK_BETRAYED		"TLK_BETRAYED"	// player killed an ally in front of me.
 #define TLK_ALLY_KILLED		"TLK_ALLY_KILLED" // witnessed an ally die some other way.
@@ -171,11 +171,11 @@ enum AIConceptFlags_t
 	AICF_TARGET_PLAYER		= 0x04,
 	AICF_QUESTION			= 0x08,
 	AICF_ANSWER				= 0x10,
-}; 
+};
 
 struct ConceptInfo_t
 {
-	AIConcept_t			AIconcept;
+	AIConcept_t			conc;
 	ConceptCategory_t   category;
 	float				minGlobalCategoryDelay;
 	float				maxGlobalCategoryDelay;
@@ -194,17 +194,17 @@ class CAI_AllySpeechManager : public CLogicalEntity
 public:
 	CAI_AllySpeechManager();
 	~CAI_AllySpeechManager();
-	
+
 	void Spawn();
 
 	void AddCustomConcept( const ConceptInfo_t &conceptInfo );
 	ConceptCategoryInfo_t *GetConceptCategoryInfo( ConceptCategory_t category );
-	ConceptInfo_t *GetConceptInfo( AIConcept_t AIconcept );
-	void OnSpokeConcept( CAI_PlayerAlly *pPlayerAlly, AIConcept_t AIconcept, AI_Response *response  );
+	ConceptInfo_t *GetConceptInfo( AIConcept_t conc );
+	void OnSpokeConcept( CAI_PlayerAlly *pPlayerAlly, AIConcept_t conc, AI_Response *response  );
 
 	void SetCategoryDelay( ConceptCategory_t category, float minDelay, float maxDelay = 0.0 );
 	bool CategoryDelayExpired( ConceptCategory_t category );
-	bool ConceptDelayExpired( AIConcept_t AIconcept );
+	bool ConceptDelayExpired( AIConcept_t conc );
 
 private:
 
@@ -245,11 +245,11 @@ struct AISpeechSelection_t
 	 :	response()
 	{
 	}
-	
+
 	void Set( AIConcept_t newConcept, AI_Response &nuResponse, CBaseEntity *pTarget = NULL )
 	{
 		response = nuResponse;
-		AIconcept = newConcept;
+		conc = newConcept;
 		hSpeechTarget = pTarget;
 	}
 
@@ -257,13 +257,13 @@ struct AISpeechSelection_t
 	void Set( AIConcept_t newConcept, CBaseEntity *pTarget  )
 	{
 		Assert( !response.IsEmpty() );
-		AIconcept = newConcept;
+		conc = newConcept;
 		hSpeechTarget = pTarget;
 	}
-	
-	std::string 		AIconcept;
+
+	std::string 		conc;
 	AI_Response 		response;
-	EHANDLE			hSpeechTarget;				
+	EHANDLE			hSpeechTarget;
 };
 
 //-------------------------------------
@@ -276,7 +276,7 @@ public:
 	//---------------------------------
 
 	int			ObjectCaps( void ) { return UsableNPCObjectCaps(BaseClass::ObjectCaps()); }
-	void		TalkInit( void );				
+	void		TalkInit( void );
 
 	//---------------------------------
 	// Behavior
@@ -323,15 +323,15 @@ public:
 
 	CBaseEntity *FindSpeechTarget( int flags );
 	virtual bool IsValidSpeechTarget( int flags, CBaseEntity *pEntity );
-	
+
 	CBaseEntity *GetSpeechTarget()								{ return m_hTalkTarget.Get(); }
 	void		SetSpeechTarget( CBaseEntity *pSpeechTarget ) 	{ m_hTalkTarget = pSpeechTarget; }
-	
+
 	void		SetSpeechFilter( CAI_SpeechFilter *pFilter )	{ m_hSpeechFilter = pFilter; }
 	CAI_SpeechFilter *GetSpeechFilter( void )					{ return m_hSpeechFilter; }
 
 	//---------------------------------
-	
+
 	virtual bool SelectIdleSpeech( AISpeechSelection_t *pSelection );
 	virtual bool SelectAlertSpeech( AISpeechSelection_t *pSelection );
 
@@ -341,43 +341,43 @@ public:
 	//---------------------------------
 
 	virtual bool SelectQuestionAndAnswerSpeech( AISpeechSelection_t *pSelection );
-	virtual void PostSpeakDispatchResponse( AIConcept_t AIconcept, AI_Response *response );
+	virtual void PostSpeakDispatchResponse( AIConcept_t conc, AI_Response *response );
 	bool		 SelectQuestionFriend( CBaseEntity *pFriend, AISpeechSelection_t *pSelection );
 	bool		 SelectAnswerFriend( CBaseEntity *pFriend, AISpeechSelection_t *pSelection, bool bRespondingToHello );
 
 	//---------------------------------
 
-	bool 		SelectSpeechResponse( AIConcept_t AIconcept, const char *pszModifiers, CBaseEntity *pTarget, AISpeechSelection_t *pSelection );
-	void		SetPendingSpeech( AIConcept_t AIconcept, AI_Response *pResponse );
+	bool 		SelectSpeechResponse( AIConcept_t conc, const char *pszModifiers, CBaseEntity *pTarget, AISpeechSelection_t *pSelection );
+	void		SetPendingSpeech( AIConcept_t conc, AI_Response *pResponse );
 	void 		ClearPendingSpeech();
 	bool		HasPendingSpeech()	{ return !m_PendingConcept.empty(); }
 
 	//---------------------------------
-	
+
 	bool		CanPlaySentence( bool fDisregardState );
 	int			PlayScriptedSentence( const char *pszSentence, float delay, float volume, soundlevel_t soundlevel, bool bConcurrent, CBaseEntity *pListener );
 
 	//---------------------------------
-	
+
 	void		DeferAllIdleSpeech( float flDelay = -1, CAI_BaseNPC *pIgnore = NULL );
 
 	//---------------------------------
-	
+
 	bool		IsOkToSpeak( ConceptCategory_t category, bool fRespondingToPlayer = false );
-	
+
 	//---------------------------------
-	
+
 	bool		IsOkToSpeak( void );
 	bool		IsOkToCombatSpeak( void );
 	virtual bool IsOkToSpeakInResponseToPlayer( void );
-	
-	bool		ShouldSpeakRandom( AIConcept_t AIconcept, int iChance );
-	bool		IsAllowedToSpeak( AIConcept_t AIconcept, bool bRespondingToPlayer = false );
-	virtual bool SpeakIfAllowed( AIConcept_t AIconcept, const char *modifiers = NULL, bool bRespondingToPlayer = false, char *pszOutResponseChosen = NULL, size_t bufsize = 0 );
+
+	bool		ShouldSpeakRandom( AIConcept_t conc, int iChance );
+	bool		IsAllowedToSpeak( AIConcept_t conc, bool bRespondingToPlayer = false );
+	virtual bool SpeakIfAllowed( AIConcept_t conc, const char *modifiers = NULL, bool bRespondingToPlayer = false, char *pszOutResponseChosen = NULL, size_t bufsize = 0 );
 	void		ModifyOrAppendCriteria( AI_CriteriaSet& set );
 
 	//---------------------------------
-	
+
 	float		GetTimePlayerStaring()		{ return ( m_flTimePlayerStartStare != 0 ) ? gpGlobals->curtime - m_flTimePlayerStartStare : 0; }
 
 	//---------------------------------
@@ -387,7 +387,7 @@ public:
 
 	//---------------------------------
 
-	void		OnSpokeConcept( AIConcept_t AIconcept, AI_Response *response );
+	void		OnSpokeConcept( AIConcept_t conc, AI_Response *response );
 	void		OnStartSpeaking();
 
 	// Inputs
@@ -403,11 +403,11 @@ public:
 	void			InputAnswerQuestionHello( inputdata_t &inputdata );
 	void			InputEnableSpeakWhileScripting( inputdata_t &inputdata );
 	void			InputDisableSpeakWhileScripting( inputdata_t &inputdata );
-	
+
 	void			AnswerQuestion( CAI_PlayerAlly *pQuestioner, int iQARandomNum, bool bAnsweringHello );
 
 protected:
-	
+
 #ifdef HL2_DLL
 	// Health regeneration for friendly allies
 	virtual bool ShouldRegenerateHealth( void ) { return ( Classify() == CLASS_PLAYER_ALLY_VITAL ); }
@@ -415,10 +415,10 @@ protected:
 
 	inline bool CanSpeakWhileScripting();
 
-	// Whether we are a vital ally (useful for wrting Classify() for classes that are only sometimes vital, 
+	// Whether we are a vital ally (useful for wrting Classify() for classes that are only sometimes vital,
 	// such as the Lone Vort in Ep2.) The usual means by which any other function should determine if a character
 	// is vital is to determine Classify() == CLASS_PLAYER_ALLY_VITAL. Do not use this function outside that
-	// context. 
+	// context.
 	inline bool IsGameEndAlly( void ) { return m_bGameEndAlly; }
 
 	//-----------------------------------------------------
@@ -430,10 +430,10 @@ protected:
 		SCHED_TALKER_SPEAK_PENDING_ALERT,
 		SCHED_TALKER_SPEAK_PENDING_COMBAT,
 		NEXT_SCHEDULE,
-		
+
 		TASK_TALKER_SPEAK_PENDING = BaseClass::NEXT_TASK,
 		NEXT_TASK,
-		
+
 		COND_TALKER_CLIENTUNSEEN = BaseClass::NEXT_CONDITION,
 		COND_TALKER_PLAYER_DEAD,
 		COND_TALKER_PLAYER_STARING,
@@ -447,13 +447,13 @@ private:
 	friend class CAI_AllySpeechManager;
 
 	//---------------------------------
-	
+
 	AI_Response		m_PendingResponse;
 	std::string		m_PendingConcept;
 	float			m_TimePendingSet;
 
 	//---------------------------------
-	
+
 	EHANDLE			m_hTalkTarget;	// who to look at while talking
 	float			m_flNextRegenTime;
 	float			m_flTimePlayerStartStare;
@@ -464,9 +464,9 @@ private:
 	//---------------------------------
 
 	CSimpleSimTimer	m_ConceptCategoryTimers[3];
-	
+
 	//---------------------------------
-	
+
 	CHandle<CAI_SpeechFilter>	m_hSpeechFilter;
 
 	bool m_bGameEndAlly;

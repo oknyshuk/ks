@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
+//========= Copyright ï¿½ 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -39,6 +39,9 @@ public:
 
 	// use this with the "open" command to launch web browsers/explorer windows, eg. ShellExecute("open", "www.valvesoftware.com")
 	virtual void ShellExecute(const char *command, const char *file) = 0;
+
+	// lwss: safer URL opening function
+	virtual void OpenURL( const char *szURL ) = 0;
 
 	// returns the time at the start of the frame, in seconds
 	virtual double GetFrameTime() = 0;

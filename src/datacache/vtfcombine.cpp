@@ -510,7 +510,7 @@ void CTextureCombine::Cleanup( )
 
 void CTextureCombine::FreeCombinedMaterials( )
 {
-	for ( int nGroup = 0; nGroup <= COMBINER_MAX_ATLAS_GROUPS; nGroup++ )
+	for ( int nGroup = 0; nGroup < COMBINER_MAX_ATLAS_GROUPS; nGroup++ )
 	{
 		if ( m_AtlasGroups[ nGroup ].m_pCombinedMaterialKVs != NULL )
 		{

@@ -16,6 +16,13 @@
 #pragma once
 #endif
 
+// Suppress GCC warning about offsetof with non-standard-layout types
+// This is used in CON_COMMAND_MEMBER_F and is conditionally-supported behavior
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+#endif
+
 #include "tier0/dbg.h"
 #include "tier1/iconvar.h"
 #include "tier1/utlvector.h"
@@ -1164,6 +1171,10 @@ private:
 		FORCEINLINE_CVAR int GetInt() { return cvvalue; } \
 		FORCEINLINE_CVAR float GetFloat() { return cvvalue; } \
 	} cvname
+#endif
+
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC diagnostic pop
 #endif
 
 #endif // CONVAR_H

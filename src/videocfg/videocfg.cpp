@@ -27,13 +27,19 @@
 #define VIDEOCONFIG_FILENAME_BACKUP		"cfg\\video.bak"
 #endif
 
-#define VIDEOCONFIG_PATHID				"USRLOCAL"
+#define VIDEOCONFIG_PATHID				"MOD"
+
+static const char *GetVideoCfgPathID()
+{
+	// Always use MOD path for video config - USRLOCAL may not be available
+	return VIDEOCONFIG_PATHID;
+}
 
 static void WriteVideoCfgDataToFile( char const *pszFile, CUtlBuffer &buf )
 {
-	// Video defaults and video settings detection runs very early, so we need to create cfg path in USRLOCAL storage
-	g_pFullFileSystem->CreateDirHierarchy( "cfg", "USRLOCAL" );
-	g_pFullFileSystem->WriteFile( pszFile, VIDEOCONFIG_PATHID, buf );
+	const char *pPathID = GetVideoCfgPathID();
+	g_pFullFileSystem->CreateDirHierarchy( "cfg", pPathID );
+	g_pFullFileSystem->WriteFile( pszFile, pPathID, buf );
 }
 
 enum AspectRatioMode_t
@@ -611,7 +617,7 @@ static bool VerifyVideoConfigSettingRequired( char const *szSetting )
 bool VerifyDefaultVideoConfig( VidMatConfigData_t &configData )
 {
 	// Make sure the file exists to verify.
-	bool bFileExists = g_pFullFileSystem->FileExists( VIDEOCONFIG_DEFAULT_FILENAME, VIDEOCONFIG_PATHID );
+	bool bFileExists = g_pFullFileSystem->FileExists( VIDEOCONFIG_DEFAULT_FILENAME, GetVideoCfgPathID() );
 	if ( !bFileExists )
 		return false;
 
@@ -620,7 +626,7 @@ bool VerifyDefaultVideoConfig( VidMatConfigData_t &configData )
 	if ( !pDefaultKeys )
 		return false;
 
-	if ( !pDefaultKeys->LoadFromFile( g_pFullFileSystem, VIDEOCONFIG_DEFAULT_FILENAME, VIDEOCONFIG_PATHID ) )
+	if ( !pDefaultKeys->LoadFromFile( g_pFullFileSystem, VIDEOCONFIG_DEFAULT_FILENAME, GetVideoCfgPathID() ) )
 	{
 		pDefaultKeys->deleteThis();
 		return false;
@@ -701,7 +707,7 @@ bool VerifyDefaultVideoConfig( VidMatConfigData_t &configData )
 		// Upgrade user's video preferences with new default autoconfig
 		//
 		KeyValues *kvPreviousVideoCfg = new KeyValues( "videocfg" );
-		if ( kvPreviousVideoCfg->LoadFromFile( g_pFullFileSystem, VIDEOCONFIG_FILENAME, VIDEOCONFIG_PATHID ) )
+		if ( kvPreviousVideoCfg->LoadFromFile( g_pFullFileSystem, VIDEOCONFIG_FILENAME, GetVideoCfgPathID() ) )
 		{
 			// Preserve all settings that support auto, but user had on a custom setting
 			for ( int k = 0; k < Q_ARRAYSIZE( s_pVideoConfigSettingsWhitelist ); ++ k )
@@ -763,7 +769,7 @@ bool VerifyDefaultVideoConfig( VidMatConfigData_t &configData )
 #if !defined( _GAMECONSOLE )
 bool CopyDefaultVideoToCurrentVideoConfig( const char *pszDefaultFileName, const char *pszCurrentFileName )
 {
-	bool bFileExists = g_pFullFileSystem->FileExists( pszDefaultFileName, VIDEOCONFIG_PATHID );
+	bool bFileExists = g_pFullFileSystem->FileExists( pszDefaultFileName, GetVideoCfgPathID() );
 	if ( !bFileExists )
 		return false;
 
@@ -772,7 +778,7 @@ bool CopyDefaultVideoToCurrentVideoConfig( const char *pszDefaultFileName, const
 	if ( !pDefaultKeys )
 		return false;
 
-	if ( !pDefaultKeys->LoadFromFile( g_pFullFileSystem, pszDefaultFileName, VIDEOCONFIG_PATHID ) )
+	if ( !pDefaultKeys->LoadFromFile( g_pFullFileSystem, pszDefaultFileName, GetVideoCfgPathID() ) )
 	{
 		pDefaultKeys->deleteThis();
 		return false;
@@ -841,12 +847,12 @@ bool BLoadUserVideoConfigFileFromDisk( KeyValues *pConfigKeys )
 {
 	// Parse current video file, note that some settings will be on AUTO with setauto
 	// their values are ensured by code above to match the default autoconfig values
-	if ( !pConfigKeys->LoadFromFile( g_pFullFileSystem, VIDEOCONFIG_FILENAME, VIDEOCONFIG_PATHID ) )
+	if ( !pConfigKeys->LoadFromFile( g_pFullFileSystem, VIDEOCONFIG_FILENAME, GetVideoCfgPathID() ) )
 		return false;
 
 	// load the default config as well to expand setauto. fields
 	KeyValues *kvDefaultSettings = new KeyValues( "default" );
-	if ( !kvDefaultSettings->LoadFromFile( g_pFullFileSystem, VIDEOCONFIG_DEFAULT_FILENAME, VIDEOCONFIG_PATHID ) )
+	if ( !kvDefaultSettings->LoadFromFile( g_pFullFileSystem, VIDEOCONFIG_DEFAULT_FILENAME, GetVideoCfgPathID() ) )
 	{
 		kvDefaultSettings->deleteThis();
 		kvDefaultSettings = NULL;
@@ -878,7 +884,7 @@ bool BLoadUserVideoConfigFileFromDisk( KeyValues *pConfigKeys )
 bool RecommendedVideoConfig( VidMatConfigData_t &configData )
 {
 	// Get the default video config file if it exists, create it otherwise.
-	bool bFileExists = g_pFullFileSystem->FileExists( VIDEOCONFIG_DEFAULT_FILENAME, VIDEOCONFIG_PATHID );
+	bool bFileExists = g_pFullFileSystem->FileExists( VIDEOCONFIG_DEFAULT_FILENAME, GetVideoCfgPathID() );
 	if ( !bFileExists )
 	{
 		if ( !CreateDefaultVideoConfig( configData ) )
@@ -927,7 +933,7 @@ bool ResetVideoConfigToDefaults( KeyValues *pConfigKeys )
 	// Copy the new key values if there the config keys exist.
 	if ( pConfigKeys )
 	{
-		return pConfigKeys->LoadFromFile( g_pFullFileSystem, VIDEOCONFIG_FILENAME, VIDEOCONFIG_PATHID );
+		return pConfigKeys->LoadFromFile( g_pFullFileSystem, VIDEOCONFIG_FILENAME, GetVideoCfgPathID() );
 	}
 	
 	return true;
@@ -1145,7 +1151,7 @@ bool ReadCurrentVideoConfig( KeyValues *pConfigKeys, bool bDefault )
 	if ( !bDefault )
 	{
 		// Do we have a current video config file?  If not, copy the defaults file.
-		if ( !g_pFullFileSystem->FileExists( VIDEOCONFIG_FILENAME, VIDEOCONFIG_PATHID ) )
+		if ( !g_pFullFileSystem->FileExists( VIDEOCONFIG_FILENAME, GetVideoCfgPathID() ) )
 			return false;
 
 		// Parse current video file.
@@ -1154,11 +1160,11 @@ bool ReadCurrentVideoConfig( KeyValues *pConfigKeys, bool bDefault )
 	else
 	{
 		// Do we have a current video config file?  If not, copy the defaults file.
-		if ( !g_pFullFileSystem->FileExists( VIDEOCONFIG_DEFAULT_FILENAME, VIDEOCONFIG_PATHID ) )
+		if ( !g_pFullFileSystem->FileExists( VIDEOCONFIG_DEFAULT_FILENAME, GetVideoCfgPathID() ) )
 			return false;
 
 		// Parse current video file.
-		return pConfigKeys->LoadFromFile( g_pFullFileSystem, VIDEOCONFIG_DEFAULT_FILENAME, VIDEOCONFIG_PATHID );
+		return pConfigKeys->LoadFromFile( g_pFullFileSystem, VIDEOCONFIG_DEFAULT_FILENAME, GetVideoCfgPathID() );
 	}
 }
 #endif

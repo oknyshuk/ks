@@ -63,6 +63,7 @@ class CGamestatsData;
 class CSteamID;
 class ISPSharedMemory;
 class CGamestatsData;
+class CEngineGotvSyncPacket;	// forward declare protobuf message here
 
 typedef struct player_info_s player_info_t;
 
@@ -711,6 +712,9 @@ public:
 
 	// Network channel notification from engine to game server code
 	virtual void OnEngineClientNetworkEvent( edict_t *edictClient, uint64 ullSteamID, int nEventType, void *pvParam ) = 0;
+
+	// Engine notifying GC with a message
+	virtual void EngineGotvSyncPacket( const CEngineGotvSyncPacket *pPkt ) = 0;
 
 	// GOTV client attempt redirect over SDR
 	virtual bool OnEngineClientProxiedRedirect( uint64 ullClient, const char *adrProxiedRedirect, const char *adrRegular ) = 0;

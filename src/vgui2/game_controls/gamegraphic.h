@@ -25,7 +25,8 @@ class CGameUIScript;
 class CGameUIDefinition;
 class CAnimData;
 class CDmxElement;
-enum EScriptExecution;
+//enum EScriptExecution; lwss- this enum is unavailable. Replacing with int
+typedef int EScriptExecution;
 
 
 struct StageRenderInfo_t

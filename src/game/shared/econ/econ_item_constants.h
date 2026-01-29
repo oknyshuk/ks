@@ -658,7 +658,7 @@ inline unacknowledged_item_inventory_positions_t GetUnacknowledgedReason( uint32
 
 inline uint32 GetUnacknowledgedPositionFor( unacknowledged_item_inventory_positions_t iMethod )
 {
-	return ( iMethod | kBackendPosition_Unacked | kBackendPosition_Reserved );
+	return ( static_cast<uint32>(iMethod) | kBackendPosition_Unacked | kBackendPosition_Reserved );
 }
 
 //-----------------------------------------------------------------------------

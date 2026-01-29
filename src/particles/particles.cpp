@@ -396,12 +396,16 @@ bool CParticleSystemDefinition::ShouldAlwaysPrecache() const
 //-----------------------------------------------------------------------------
 // Precache/uncache
 //-----------------------------------------------------------------------------
+static int s_nPrecacheCount = 0;
+static int s_nUncacheCount = 0;
+
 void CParticleSystemDefinition::Precache()
 {
 	if ( m_bIsPrecached )
 		return;
 
 	m_bIsPrecached = true;
+	s_nPrecacheCount++;
 #ifndef DEDICATED
 	if ( !UTIL_IsDedicatedServer() &&  g_pMaterialSystem )
 	{
@@ -458,13 +462,16 @@ void CParticleSystemDefinition::Precache()
 
 void CParticleSystemDefinition::Uncache()
 {
+	// Always release material reference if held, regardless of precache state.
+	// This ensures proper cleanup at shutdown even if tracking state got out of sync.
+	m_Material.Shutdown();
+
 	if ( !m_bIsPrecached )
 		return;
 
+	s_nUncacheCount++;
 	m_bIsPrecached = false;
-	m_Material.Shutdown();	
-//	m_Material.Init( "debug/particleerror", TEXTURE_GROUP_OTHER, true );
-//	m_vecMaterialModulation.Init( 1.0f, 1.0f, 1.0f, 1.0f );
+
 	if ( HasFallback() )
 	{
 		CParticleSystemDefinition *pFallback = GetFallbackReplacementDefinition();
@@ -3751,8 +3758,12 @@ void CParticleSystemMgr::LevelShutdown( void )
 #endif
 }
 
+extern int s_nDestructorCount;
 void CParticleSystemMgr::UncacheAllParticleSystems()
 {
+	FILE *f = fopen("/tmp/particle_debug.txt", "a");
+	if (f) { fprintf(f, "UncacheAllParticleSystems: Precache=%d, Uncache=%d, Destructors=%d (before)\n", s_nPrecacheCount, s_nUncacheCount, s_nDestructorCount); fclose(f); }
+
 	m_PrecacheLookup.RemoveAll();
 	m_ClientPrecacheLookup.RemoveAll();
 
@@ -3761,15 +3772,26 @@ void CParticleSystemMgr::UncacheAllParticleSystems()
 		int nCount = m_pParticleSystemDictionary->Count();
 		for ( int i = 0; i < nCount; ++i )
 		{
-			m_pParticleSystemDictionary->GetParticleSystem( i )->Uncache();
+			CParticleSystemDefinition *pDef = m_pParticleSystemDictionary->GetParticleSystem( i );
+			if ( pDef )
+			{
+				pDef->Uncache();
+			}
 		}
 
 		nCount = m_pParticleSystemDictionary->NameCount();
 		for ( ParticleSystemHandle_t h = 0; h < nCount; ++h )
 		{
-			m_pParticleSystemDictionary->FindParticleSystem( h )->Uncache();
+			CParticleSystemDefinition *pDef = m_pParticleSystemDictionary->FindParticleSystem( h );
+			if ( pDef )
+			{
+				pDef->Uncache();
+			}
 		}
 	}
+
+	f = fopen("/tmp/particle_debug.txt", "a");
+	if (f) { fprintf(f, "UncacheAllParticleSystems done: Uncache=%d, Destructors=%d (after)\n", s_nUncacheCount, s_nDestructorCount); fclose(f); }
 
 	// Flush sheets, as they can accumulate several MB of memory per map
 	FlushAllSheets();

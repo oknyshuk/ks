@@ -1363,27 +1363,29 @@ void CPlayerInventory::PreSOUpdate(const CSteamID &steamIDOwner, GCSDK::ESOCache
 //-----------------------------------------------------------------------------
 void CPlayerInventory::SOUpdated( const CSteamID & steamIDOwner, const GCSDK::CSharedObject *pObject, GCSDK::ESOCacheEvent eEvent )
 {
-    GCSDK::SOID_t owner( steamIDOwner ); //lwss hack
-
-	if ( owner != m_OwnerID )
-		return;
-
 #ifdef _DEBUG
-	static CSteamID spewSteamID;
-	static GCSDK::ESOCacheEvent spewEvent;
-	static double spewTime = 0;
-	if ( spewSteamID.IsValid() && spewSteamID == steamIDOwner && spewEvent == eEvent && Plat_FloatTime() - spewTime < 3.0f )
 	{
-		; // same event
-	}
-	else
-	{
-		spewSteamID = steamIDOwner;
-		spewEvent = eEvent;
-		spewTime = Plat_FloatTime();
-		Msg("CPlayerInventory::SOUpdated %s [event = %u]\n", steamIDOwner.Render(), eEvent );
+		CSteamID steamIDOwner( owner.ID() );
+
+		static CSteamID spewSteamID;
+		static GCSDK::ESOCacheEvent spewEvent;
+		static double spewTime = 0;
+		if ( spewSteamID.IsValid() && spewSteamID == steamIDOwner && spewEvent == eEvent && Plat_FloatTime() - spewTime < 3.0f )
+		{
+			; // same event
+		}
+		else
+		{
+			spewSteamID = steamIDOwner;
+			spewEvent = eEvent;
+			spewTime = Plat_FloatTime();
+			Msg("CPlayerInventory::SOUpdated %s [event = %u]\n", steamIDOwner.Render(), eEvent );
+		}
 	}
 #endif
+    GCSDK::SOID_t owner( steamIDOwner ); //lwss hack
+	if ( owner != m_OwnerID )
+		return;
 
 	// We shouldn't get these notifications unless we're subscribed, right?
 	if ( m_pSOCache == NULL)

@@ -113,7 +113,6 @@
 #include "replayhistorymanager.h"
 #endif
 #include "sys_mainwind.h"
-#include "host_phonehome.h"
 #ifndef DEDICATED
 #include "vgui_baseui_interface.h"
 #include "cl_steamauth.h"
@@ -139,7 +138,9 @@
 #if defined( _X360 )
 #include "xbox/xbox_win32stubs.h"
 #endif
+#if defined( _PS3 )
 #include "engine/ips3frontpanelled.h"
+#endif
 #include "audio_pch.h"
 #include "platforminputdevice.h"
 #include "status.h"
@@ -186,6 +187,12 @@ extern char	*CM_EntityString( void );
 bool XBX_SetProfileDefaultSettings( int iController );
 extern ConVar host_map;
 extern ConVar sv_cheats;
+
+// tyabus: came from enginethreads.cpp
+bool g_bThreadedEngine = false;
+int g_nMaterialSystemThread = 0;
+int g_nServerThread = 1;
+// enginethreads.cpp end
 
 bool g_bDedicatedServerBenchmarkMode = false;
 
@@ -635,6 +642,9 @@ enum HostThreadMode
 ConVar host_thread_mode( "host_thread_mode", ( IsPlatformX360() || IsPlatformPS3() ) ? "1" : "0", FCVAR_DEVELOPMENTONLY, "Run the host in threaded mode, (0 == off, 1 == if multicore, 2 == force)" );
 ConVar host_threaded_sound( "host_threaded_sound", ( IsPlatformX360() || IsPlatformPS3()) ? "1" : "0", 0, "Run the sound on a thread (independent of mix)" );
 ConVar host_threaded_sound_simplethread( "host_threaded_sound_simplethread", ( IsPlatformPS3()) ? "1" : "0", 0, "Run the sound on a simple thread not a jobthread" );
+
+// Threadpool affinity is no more in newer csgo
+#if defined( _X360 ) || defined( _PS3 )
 extern ConVar threadpool_affinity;
 void OnChangeThreadAffinity( IConVar *var, const char *pOldValue, float flOldValue )
 {
@@ -645,6 +655,7 @@ void OnChangeThreadAffinity( IConVar *var, const char *pOldValue, float flOldVal
 }
 
 ConVar threadpool_affinity( "threadpool_affinity", "1", 0, "Enable setting affinity", 0, 0, 0, 0, &OnChangeThreadAffinity );
+#endif
 
 extern ConVar threadpool_reserve;
 CThreadEvent g_ReleaseThreadReservation( true );
@@ -1543,6 +1554,13 @@ Writes key bindings and archived cvars to config.cfg
 ===============
 */
 
+// Helper to get config storage path
+// USRLOCAL may not be registered or may not be writable, so always use MOD
+static const char *GetConfigPathID()
+{
+	return "MOD";
+}
+
 void Host_WriteConfiguration( const int iController, const char *filename )
 {
 	// Set the joystick being force disabled just as we write the config
@@ -1601,8 +1619,8 @@ void Host_WriteConfiguration( const int iController, const char *filename )
 		CUtlBuffer	configBuff( 0, 0, CUtlBuffer::TEXT_BUFFER);
 
 		Q_snprintf( szFileName, sizeof(szFileName), "cfg/%s", filename );
-		g_pFileSystem->CreateDirHierarchy( "cfg", "USRLOCAL" );
-		if ( g_pFileSystem->FileExists( szFileName, "USRLOCAL" ) && !g_pFileSystem->IsFileWritable( szFileName, "USRLOCAL" ) )
+		g_pFileSystem->CreateDirHierarchy( "cfg", GetConfigPathID() );
+		if ( g_pFileSystem->FileExists( szFileName, GetConfigPathID() ) && !g_pFileSystem->IsFileWritable( szFileName, GetConfigPathID() ) )
 		{
 			ConMsg( "Config file %s is read-only!!\n", szFileName );
 			return;
@@ -1658,7 +1676,7 @@ void Host_WriteConfiguration( const int iController, const char *filename )
 						{
 							// Refresh local copy so that on next game boot Host_ReadPreStartupConfiguration() will avoid loading the stale config.cfg
 							// which will only get downloaded & refreshed later during Host_ReadConfiguration()
-							GetFileFromRemoteStorage( pRemoteStorage, "cfg/config.cfg", "cfg/config.cfg", "USRLOCAL" );
+							GetFileFromRemoteStorage( pRemoteStorage, "cfg/config.cfg", "cfg/config.cfg", GetConfigPathID() );
 
 							DevMsg( "[Cloud]: SUCCEESS saving %s in remote storage\n", szFileName );
 						}
@@ -1682,7 +1700,7 @@ void Host_WriteConfiguration( const int iController, const char *filename )
 
 		// async write the buffer, and then free it
 		char		szFileNameToWriteLocal[MAX_PATH] = {};
-		g_pFileSystem->GetSearchPath( "USRLOCAL", false, szFileNameToWriteLocal, sizeof( szFileNameToWriteLocal ) );
+		g_pFileSystem->GetSearchPath( GetConfigPathID(), false, szFileNameToWriteLocal, sizeof( szFileNameToWriteLocal ) );
 		V_strcat_safe( szFileNameToWriteLocal, szFileName );
 		g_pFileSystem->AsyncWrite( szFileNameToWriteLocal, tempBlock, configBuff.TellMaxPut(), true );
 
@@ -2037,7 +2055,7 @@ void Host_ReadConfiguration( const int iController, const bool readDefault )
 		{
 			// config files are run through the exec command which got pretty complicated with all the splitscreen
 			// stuff. Steam UFS doens't support split screen well (2 users ?)
-			GetFileFromRemoteStorage( pRemoteStorage, "cfg/config.cfg", "cfg/config.cfg", "USRLOCAL" );
+			GetFileFromRemoteStorage( pRemoteStorage, "cfg/config.cfg", "cfg/config.cfg", GetConfigPathID() );
 		}
 	}
 
@@ -2455,14 +2473,12 @@ void Host_AccumulateTime( float dt )
 float g_fFramesPerSecond = 0.0f;
 
 // temporarily a constant until I bother to hook it to a cvar
+#if defined( _PS3 )
 inline static bool cl_ps3ledframerate()  // should i make the front LEDs show the framerate (divided by two)
 {
-#ifdef _PS3
 	return (CPS3FrontPanelLED::GetSwitches() & CPS3FrontPanelLED::kPS3SWITCH3) == 0;
-#else
-	return false;
-#endif
 }
+#endif
 
 /*
 ==================
@@ -2476,7 +2492,9 @@ void Host_PostFrameRate( float frameTime )
 
 	float fps = 1.0f / frameTime;
 	g_fFramesPerSecond = g_fFramesPerSecond * FPS_AVG_FRAC + ( 1.0f - FPS_AVG_FRAC ) * fps;
-	if ( IsPS3() && !IsCert() )
+
+#if defined( _PS3 )
+	if ( !IsCert() )
 	{
 		if ( cl_ps3ledframerate() )
 		{
@@ -2503,6 +2521,7 @@ void Host_PostFrameRate( float frameTime )
 			CPS3FrontPanelLED::SetLEDs( 0 );
 		}
 	}
+#endif // _PS3
 }
 
 /*
@@ -3098,8 +3117,10 @@ void CFrameTimer::ComputeFrameVariability()
 	variance = devSquaredFrameStartTime / ( double ) ( count );
 	m_flFPSStdDeviationFrameStartTimeSeconds = sqrt( variance );
 
-	tmPlot( TELEMETRY_LEVEL0, TMPT_NONE, 0, m_flFPSStdDeviationSeconds * 1000.0f, "m_flFPSStdDeviationSeconds(ms)" );
+#ifdef RAD_TELEMETRY_ENABLED
+    tmPlot( TELEMETRY_LEVEL0, TMPT_NONE, 0, m_flFPSStdDeviationSeconds * 1000.0f, "m_flFPSStdDeviationSeconds(ms)" );
 	tmPlot( TELEMETRY_LEVEL0, TMPT_NONE, 0, m_flFPSStdDeviationFrameStartTimeSeconds * 1000.0f, "m_flFPSStdDeviationFrameStartTimeMS(ms)" );
+#endif
 
 //	printf("var: %.2f avg:%.6f frametime:%f\n", m_flFPSStdDeviationSeconds * 1000.0f, avg, frametime);
 }
@@ -3737,8 +3758,11 @@ CON_COMMAND( host_runofftime, "Run off some time without rendering/updating soun
 	SCR_UpdateScreen ();
 }
 
+#if !defined( _GAMECONSOLE )
+S_API int SteamGameServer_GetIPCCallCount();
+#else
 S_API int SteamGameServer_GetIPCCallCount() { return 0; }
-
+#endif
 void Host_ShowIPCCallCount()
 {
 	// If set to 0 then get out.
@@ -4869,7 +4893,7 @@ void Host_InitProcessor( void )
 	const CPUInformation& pi = GetCPUInformation();
 
 	// Compute Frequency in Mhz: 
-	char* szFrequencyDenomination = "Mhz";
+	const char* szFrequencyDenomination = "Mhz";
 	double fFrequency = pi.m_Speed / 1000000.0;
 
 	// Adjust to Ghz if nessecary:
@@ -5511,12 +5535,13 @@ void Host_Init( bool bDedicated )
 #endif
 
 	//////// DISABLE FOR SHIP! //////////
-	if ( !IsCert() || CommandLine()->FindParm( "-dbginput" ) )
-	{
-		g_pDebugInputThread = new CDebugInputThread();
-		g_pDebugInputThread->SetName( "Debug Input" );
-		g_pDebugInputThread->Start( 0, TP_PRIORITY_HIGH );
-	}
+	//lwss- comment this out
+	//if ( !IsCert() || CommandLine()->FindParm( "-dbginput" ) )
+	//{
+	//	g_pDebugInputThread = new CDebugInputThread();
+	//	g_pDebugInputThread->SetName( "Debug Input" );
+	//	g_pDebugInputThread->Start( 0, TP_PRIORITY_HIGH );
+	//}
 
 #ifndef _CERT
 	if ( CommandLine()->FindParm( "-tslist" ) )
@@ -5760,7 +5785,9 @@ void Host_Init( bool bDedicated )
 	// Mark DLL as active
 	//	eng->SetNextState( InEditMode() ? IEngine::DLL_PAUSED : IEngine::DLL_ACTIVE );
 
-	TelemetryTick();
+#ifdef RAD_TELEMETRY_ENABLED
+    TelemetryTick();
+#endif
 
 	// Initialize processor subsystem, and print relevant information:
 	Host_InitProcessor();
@@ -5807,17 +5834,6 @@ void Host_Init( bool bDedicated )
 	if ( CommandLine()->FindParm( "-makedevshots" ) )
 	{
 		DevShotGenerator().StartDevShotGeneration();
-	}
-
-	// if running outside of steam and NOT a dedicated server then phone home (or if "-phonehome" is passed on the command line)
-	if ( !sv.IsDedicated() || CommandLine()->FindParm( "-phonehome" ) )
-	{
-		// In debug, only run this check if -phonehome is on the command line (so a debug build will "just work").
-		if ( IsDebug() && CommandLine()->FindParm( "-phonehome" ) )
-		{
-			phonehome->Init();
-			phonehome->Message( IPhoneHome::PHONE_MSG_ENGINESTART, NULL );
-		}
 	}
 
 	Host_PostInit();
@@ -6428,9 +6444,6 @@ void Host_Shutdown(void)
 		delete g_pDebugInputThread;
 	}
 
-	phonehome->Message( IPhoneHome::PHONE_MSG_ENGINEEND, NULL );
-	phonehome->Shutdown();
-
 #ifndef DEDICATED
 	// Store active configuration settings
 	Host_WriteConfiguration( -1, "config.cfg" ); 
@@ -6606,11 +6619,13 @@ void Host_Shutdown(void)
 //-----------------------------------------------------------------------------
 bool Host_AllowQueuedMaterialSystem( bool bAllow )
 {
-#if !defined DEDICATED
+#if !defined( DEDICATED )
 	g_bAllowThreadedSound = bAllow;
 	// NOTE: Moved this to materialsystem for integrating with other mqm changes
 	return g_pMaterialSystem->AllowThreading( bAllow, g_nMaterialSystemThread );
 #endif
+	//lwss fix- THIS DID NOT RETURN A VALUE ON DEDICATED BUILDS, MESSING UP THE STACK AND CAUSING ME MUCH GRIEF!
+	return false;
 }
 
 void Host_EnsureHostNameSet()

@@ -427,7 +427,7 @@ void CAppSystemGroup::ComputeDependencies( LibraryDependencies_t &depend )
 				{
 					// Don't bother if we already contain the secondary dependency
 					const char *pSecondaryDependency = depend[nIndex].String( k );
-					if ( depend[i].Find( pSecondaryDependency ).IsValid() )
+					if ( depend[i].Find( pSecondaryDependency ) != UTL_INVAL_SYMBOL )
 						continue;
 
 					// Check for circular dependency
@@ -455,7 +455,7 @@ bool CAppSystemGroup::SortLessFunc( const int &left, const int &right )
 {
 	const char *pLeftInterface = sm_pSortDependencies->String( left );
 	const char *pRightInterface = sm_pSortDependencies->String( right );
-	bool bRightDependsOnLeft = ( (*sm_pSortDependencies)[pRightInterface].Find( pLeftInterface ).IsValid() );
+	bool bRightDependsOnLeft = ( (*sm_pSortDependencies)[pRightInterface].Find( pLeftInterface ) != UTL_INVAL_SYMBOL );
 	return ( bRightDependsOnLeft );
 }
 
@@ -509,10 +509,10 @@ void CAppSystemGroup::SortDependentLibraries( LibraryDependencies_t &depend )
 
 			const char *pLeftInterface = depend.String( nLeft );
 			const char *pRightInterface = depend.String( nRight );
-			bool bRightDependsOnLeft = ( depend[pRightInterface].Find( pLeftInterface ).IsValid() );
+			bool bRightDependsOnLeft = ( depend[pRightInterface].Find( pLeftInterface ) != UTL_INVAL_SYMBOL );
 			if ( bRightDependsOnLeft )
 				continue;
-			Assert ( !depend[pRightInterface].Find( pLeftInterface ).IsValid() );
+			Assert ( UTL_INVAL_SYMBOL == depend[pRightInterface].Find( pLeftInterface ) );
 			V_swap( pIndices[i], pIndices[i-1] );
 			bDone = false;
 		}

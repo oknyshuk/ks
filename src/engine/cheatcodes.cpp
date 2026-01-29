@@ -43,7 +43,7 @@ void ClearCheatCommands( void )
 	s_CheatCodeCommands.RemoveAll();
 }
 
-void ReadCheatCommandsFromFile( char *pchFileName )
+void ReadCheatCommandsFromFile( const char *pchFileName )
 {
 #if defined( _CERT )
 	return;

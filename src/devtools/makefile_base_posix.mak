@@ -116,9 +116,9 @@ endif
 CFLAGS = $(ARCH_FLAGS) $(CPPFLAGS) $(WARN_FLAGS) -fvisibility=$(SymbolVisibility) $(OptimizerLevel) -ffast-math -pipe $(GCC_ExtraCompilerFlags) -Usprintf -Ustrncpy -UPROTECTED_THINGS_ENABLE
 # In -std=gnu++11 mode we get lots of errors about "error: narrowing conversion". -fpermissive
 # turns these into warnings in gcc, and -Wno-c++11-narrowing suppresses them entirely in clang 3.1+.
-
+# lwss - added -Wno-narrowing to get rid of narrowing conversion errors.(similar to above)
 ifeq ($(OS),Linux)
-	CXXFLAGS = $(CFLAGS) -std=gnu++0x -fpermissive
+	CXXFLAGS = $(CFLAGS) -std=gnu++0x -fpermissive -Wno-narrowing
 else
 	CXXFLAGS = $(CFLAGS) -std=gnu++11 -stdlib=libc++ -Wno-c++11-narrowing -Wno-dangling-else
 endif

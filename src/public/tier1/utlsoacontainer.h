@@ -1,4 +1,4 @@
-//====== Copyright © 1996-2007, Valve Corporation, All rights reserved. =======//
+//====== Copyright ï¿½ 1996-2007, Valve Corporation, All rights reserved. =======//
 //
 // Purpose: 
 //
@@ -15,6 +15,11 @@
 #pragma once
 #endif
 
+// Suppress GCC warning about SIMD type attributes in templates
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wignored-attributes"
+#endif
 
 #include "tier0/platform.h"
 #include "tier0/dbg.h"
@@ -901,6 +906,8 @@ FORCEINLINE FourVectors Compress4SIMD( FourVectors const &a, FourVectors const &
 	return ret;
 }
 
-
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC diagnostic pop
+#endif
 
 #endif

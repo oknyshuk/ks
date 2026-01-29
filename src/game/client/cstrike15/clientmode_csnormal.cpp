@@ -134,6 +134,7 @@ ConVar cl_draw_only_deathnotices( "cl_draw_only_deathnotices", "0", FCVAR_CHEAT,
 ConVar cl_radar_square_with_scoreboard( "cl_radar_square_with_scoreboard", "1", FCVAR_ARCHIVE | FCVAR_RELEASE, "If set, the radar will toggle to square when the scoreboard is visible." );
 
 ConVar default_fov( "default_fov", "90", FCVAR_CHEAT );
+ConVar fov_desired( "fov_desired", "90", FCVAR_ARCHIVE | FCVAR_USERINFO, "Sets the base field-of-view.", true, MIN_FOV, true, MAX_FOV );
 
 static IClientMode *g_pClientMode[ MAX_SPLITSCREEN_PLAYERS ];
 IClientMode *GetClientMode()
@@ -2599,8 +2600,6 @@ void ClientModeCSNormal::FireGameEvent( IGameEvent *event )
 		// show centerprint message when not in training
 		if ( !CSGameRules()->IsPlayingTraining() && !CSGameRules()->IsPlayingCooperativeGametype() )
 		{
-			STEAMWORKS_TESTSECRET_AMORTIZE(5);
-
 			wchar_t wszLocalized[100];
 			wchar_t seconds[4];
 
@@ -3832,7 +3831,7 @@ void ClientModeCSFullscreen::Init( void )
 
 bool g_bClientIsAllowedToPlayOnSecureServers = true;
 
-CEG_NOINLINE void ClientModeCSFullscreen::OnEvent( KeyValues *pEvent )
+void ClientModeCSFullscreen::OnEvent( KeyValues *pEvent )
 {
 	BaseClass::OnEvent( pEvent );
 
@@ -3881,12 +3880,6 @@ CEG_NOINLINE void ClientModeCSFullscreen::OnEvent( KeyValues *pEvent )
 			{ NULL, NULL, RemapText_t::MATCH_FULL }
 		};
 
-		// For any disconnection reason other than unknown:
-		if ( szReason && !StringHasPrefix( szReason, "#SFUI_DisconnectReason_Unknown" ) )
-		{
-			STEAMWORKS_SELFCHECK();
-		}
-
 		szReason = RemapText_t::RemapRawText( arrText, szReason );
 
 		const char *okCommand = NULL;
@@ -3900,7 +3893,6 @@ CEG_NOINLINE void ClientModeCSFullscreen::OnEvent( KeyValues *pEvent )
 	}
 	else if ( !Q_stricmp( pEventName, "OnClientInsecureBlocked" ) )
 	{
-		STEAMWORKS_SELFCHECK();
 		g_bClientIsAllowedToPlayOnSecureServers = false;
 #if defined( INCLUDE_SCALEFORM )
         CMessageBoxScaleform::UnloadAllDialogs();
@@ -3918,12 +3910,12 @@ CEG_NOINLINE void ClientModeCSFullscreen::OnEvent( KeyValues *pEvent )
 
 CON_COMMAND_F( error_message_explain_vac, "Take user to Steam support article", FCVAR_CLIENTCMD_CAN_EXECUTE | FCVAR_HIDDEN )
 {
-	vgui::system()->ShellExecute( "open", "https://support.steampowered.com/kb_article.php?ref=2117-ILZV-2837" );
+	vgui::system()->OpenURL("https://support.steampowered.com/kb_article.php?ref=2117-ILZV-2837" );
 }
 
 CON_COMMAND_F( error_message_explain_pure, "Take user to Steam support article", FCVAR_CLIENTCMD_CAN_EXECUTE | FCVAR_HIDDEN )
 {
-	vgui::system()->ShellExecute( "open", "https://support.steampowered.com/kb_article.php?ref=8285-YOAZ-6049" );
+	vgui::system()->OpenURL("https://support.steampowered.com/kb_article.php?ref=8285-YOAZ-6049" );
 }
 
 void ClientModeCSFullscreen::FireGameEvent( IGameEvent *event )

@@ -31,8 +31,9 @@
 #include "tier0/icommandline.h"
 #include "matchmaking/imatchframework.h"
 #include "cl_steamauth.h"
-
+#if defined( INCLUDE_SCALEFORM )
 #include "scaleformui/scaleformui.h"
+#endif
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -187,12 +188,10 @@ void SCR_EndLoadingPlaque( void )
 	}
 	else if ( gfExtendedError )
 	{
-#if !defined( CSTRIKE15 )
 		if ( IsPC() )
 		{
 			EngineVGui()->ShowErrorMessage();
 		}
-#endif
 	}
 
 	if ( scr_engineevent_loadingstarted )
@@ -264,6 +263,10 @@ void SCR_UpdateScreen( void )
 
 	CMatRenderContextPtr pRenderContext;
 	pRenderContext.GetFrom( materials );
+#if defined( INCLUDE_SCALEFORM )
+	pRenderContext->RenderScaleformSlot(SF_RESERVED_BEGINFRAME_SLOT);
+#endif
+
 
 	if( EngineVGui()->IsGameUIVisible() || IsSteam3ClientGameOverlayActive() )
 	{
@@ -298,10 +301,11 @@ void SCR_UpdateScreen( void )
 
 	// Draw world, etc.
 	V_RenderView();
-
+#if defined( INCLUDE_SCALEFORM )
 	pRenderContext.GetFrom( materials );
+	pRenderContext->RenderScaleformSlot(SF_RESERVED_ENDFRAME_SLOT);
 	pRenderContext.SafeRelease();
-
+#endif
 	CL_TakeSnapshotAndSwap();	   
 
 	ClientDLL_FrameStageNotify( FRAME_RENDER_END );

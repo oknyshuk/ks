@@ -5,6 +5,10 @@
 //
 // Do not #include other files here
 
+#if _MSC_VER >= 1900 // vs 2015 or higher
+#include <memory> // auto_ptr is deprecated
+#endif
+
 #ifndef _PS3
 // this is defined in the .cpp for the PS3 to avoid introducing a dependency for files including the header
 CTHREADLOCALPTR(CThread) g_pCurThread;
@@ -172,7 +176,11 @@ INLINE_ON_PS3 bool CThread::Start( unsigned nBytesStack, ThreadPriorityEnum_t nP
 	pthread_attr_t attr;
 	pthread_attr_init( &attr );
 	pthread_attr_setstacksize( &attr, MAX( nBytesStack, 1024u*1024 ) );
-	if ( pthread_create( &m_threadId, &attr, (void *(*)(void *))GetThreadProc(), new ThreadInit_t( init ) ) != 0 )
+	//lwss - fix memory leak here
+	m_threadInit = ThreadInit_t( init );
+	//if ( pthread_create( &m_threadId, &attr, (void *(*)(void *))GetThreadProc(), new ThreadInit_t( init ) ) != 0 )
+	if ( pthread_create( &m_threadId, &attr, (void *(*)(void *))GetThreadProc(), &m_threadInit ) != 0 )
+	//lwss end
 	{
 		AssertMsg1( 0, "Failed to create thread (error 0x%x)", GetLastError() );
 		return false;
@@ -447,6 +455,7 @@ INLINE_ON_PS3 void CThread::Yield()
 	sys_timer_usleep( 60 );
 #elif defined(POSIX)
 	sched_yield();
+	//pthread_yield(); // tyabus: marked as deprecated 
 #endif
 }
 

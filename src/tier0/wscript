@@ -38,7 +38,6 @@ def build(bld):
 		'platform_independent.cpp',
 		'platwindow.cpp',
 		'progressbar.cpp',
-		'security.cpp',
 		'stackstats.cpp',
 		'stacktools.cpp',
 		'systeminformation.cpp',

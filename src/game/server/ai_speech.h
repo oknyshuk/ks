@@ -38,10 +38,10 @@ public:
 	{
 		m_hCurrentTalker = NULL;
 	}
-	
+
 	void Acquire( float time, CBaseEntity *pTalker )		{ m_ReleaseTime = gpGlobals->curtime + time; m_hCurrentTalker = pTalker; }
 	void Release()					{ m_ReleaseTime = 0; m_hCurrentTalker = NULL; }
-	
+
 	// Current owner of the semaphore is always allowed to talk
 	bool IsAvailable( CBaseEntity *pTalker ) const		{ return ((gpGlobals->curtime > m_ReleaseTime) || (m_hCurrentTalker == pTalker)); }
 	float GetReleaseTime() const 	{ return m_ReleaseTime; }
@@ -91,18 +91,18 @@ const soundlevel_t AIS_DEF_SNDLVL 	 	= SNDLVL_TALKING;
 //-------------------------------------
 
 //-------------------------------------
-// An id that represents the core meaning of a spoken phrase, 
+// An id that represents the core meaning of a spoken phrase,
 // eventually to be mapped to a sentence group or scene
 
 #if AI_CONCEPTS_ARE_STRINGS
 typedef const char *AIConcept_t;
-inline bool CompareConcepts( AIConcept_t c1, AIConcept_t c2 ) 
+inline bool CompareConcepts( AIConcept_t c1, AIConcept_t c2 )
 {
 	return ( (void *)c1 == (void *)c2 || ( c1 && c2 && Q_stricmp( c1, c2 ) == 0 ) );
 }
 #else
 typedef CAI_Concept AIConcept_t;
-inline bool CompareConcepts( AIConcept_t c1, AIConcept_t c2 ) 
+inline bool CompareConcepts( AIConcept_t c1, AIConcept_t c2 )
 {
 	return c1.m_iConcept == c2.m_iConcept;
 }
@@ -122,7 +122,7 @@ inline bool CompareConcepts( AIConcept_t c1, AIConcept_t c2 )
 class CAI_ExpresserSink
 {
 public:
-	virtual void OnSpokeConcept( AIConcept_t AIconcept, AI_Response *response )	{};
+	virtual void OnSpokeConcept( AIConcept_t conc, AI_Response *response )	{};
 	virtual void OnStartSpeaking()						{}
 	virtual bool UseSemaphore()							{ return true; }
 };
@@ -140,7 +140,7 @@ struct ConceptHistory_t
 	ConceptHistory_t& operator = ( const ConceptHistory_t& src );
 
 	~ConceptHistory_t();
-	
+
 	float		timeSpoken;
 	AI_Response m_response;
 };
@@ -153,32 +153,32 @@ public:
 	~CAI_Expresser();
 
 	// --------------------------------
-	
+
 	bool Connect( CAI_ExpresserSink *pSink )		{ m_pSink = pSink; return true; }
 	bool Disconnect( CAI_ExpresserSink *pSink )	{ m_pSink = NULL; return true;}
 
 	void TestAllResponses();
 
 	// --------------------------------
-	
-	bool Speak( AIConcept_t &AIconcept, const char *modifiers = NULL, char *pszOutResponseChosen = NULL, size_t bufsize = 0, IRecipientFilter *filter = NULL );
-	bool Speak( AIConcept_t &AIconcept, AI_CriteriaSet *criteria, char *pszOutResponseChosen = NULL, size_t bufsize = 0, IRecipientFilter *filter = NULL );
 
-	// Given modifiers (which are colon-delimited strings), fill out a criteria set including this 
+	bool Speak( AIConcept_t &conc, const char *modifiers = NULL, char *pszOutResponseChosen = NULL, size_t bufsize = 0, IRecipientFilter *filter = NULL );
+	bool Speak( AIConcept_t &conc, AI_CriteriaSet *criteria, char *pszOutResponseChosen = NULL, size_t bufsize = 0, IRecipientFilter *filter = NULL );
+
+	// Given modifiers (which are colon-delimited strings), fill out a criteria set including this
 	// character's contexts and the ones in the modifier. This lets us hang on to them after a call
 	// to SpeakFindResponse.
-	void GatherCriteria( AI_CriteriaSet *outputCritera, const AIConcept_t &AIconcept, const char *modifiers );
+	void GatherCriteria( AI_CriteriaSet *outputCritera, const AIConcept_t &conc, const char *modifiers );
 	// These two methods allow looking up a response and dispatching it to be two different steps
-	// AI_Response *SpeakFindResponse( AIConcept_t AIconcept, const char *modifiers = NULL );
-	// AI_Response *SpeakFindResponse( AIConcept_t &AIconcept, AI_CriteriaSet *criteria );
+	// AI_Response *SpeakFindResponse( AIConcept_t conc, const char *modifiers = NULL );
+	// AI_Response *SpeakFindResponse( AIConcept_t &conc, AI_CriteriaSet *criteria );
 	// Find the appropriate response for the given concept. Return false if none found.
 	// Fills out the response object that you provide.
-	bool FindResponse( AI_Response &outResponse, AIConcept_t &AIconcept, AI_CriteriaSet *modifiers = NULL );
-	virtual bool SpeakDispatchResponse( AIConcept_t &AIconcept, AI_Response *response, AI_CriteriaSet *criteria, IRecipientFilter *filter = NULL );
+	bool FindResponse( AI_Response &outResponse, AIConcept_t &conc, AI_CriteriaSet *modifiers = NULL );
+	virtual bool SpeakDispatchResponse( AIConcept_t &conc, AI_Response *response, AI_CriteriaSet *criteria, IRecipientFilter *filter = NULL );
 	float GetResponseDuration( AI_Response *response );
 
 	virtual int SpeakRawSentence( const char *pszSentence, float delay, float volume = VOL_NORM, soundlevel_t soundlevel = SNDLVL_TALKING, CBaseEntity *pListener = NULL );
-	
+
 	bool SemaphoreIsAvailable( CBaseEntity *pTalker );
 	float GetSemaphoreAvailableTime( CBaseEntity *pTalker );
 
@@ -188,7 +188,7 @@ public:
 	static bool IsSpeechGloballySuppressed();
 
 	// --------------------------------
-	
+
 	virtual bool IsSpeaking();
 	bool CanSpeak();
 	bool CanSpeakAfterMyself();
@@ -196,15 +196,15 @@ public:
 	void  BlockSpeechUntil( float time );
 
 	// --------------------------------
-	
-	bool CanSpeakConcept( AIConcept_t AIconcept );
-	bool SpokeConcept( AIConcept_t AIconcept );
-	float GetTimeSpokeConcept( AIConcept_t AIconcept ); // returns -1 if never
-	void SetSpokeConcept( AIConcept_t AIconcept, AI_Response *response, bool bCallback = true );
-	void ClearSpokeConcept( AIConcept_t AIconcept );
-	
+
+	bool CanSpeakConcept( AIConcept_t conc );
+	bool SpokeConcept( AIConcept_t conc );
+	float GetTimeSpokeConcept( AIConcept_t conc ); // returns -1 if never
+	void SetSpokeConcept( AIConcept_t conc, AI_Response *response, bool bCallback = true );
+	void ClearSpokeConcept( AIConcept_t conc );
+
 	// --------------------------------
-	
+
 	void SetVoicePitch( int voicePitch )	{ m_voicePitch = voicePitch; }
 	int GetVoicePitch() const;
 
@@ -217,7 +217,7 @@ public:
 	// response is the output of AI_Response::GetName
 	// note: the response string will get stomped on (by strtok)
 	// returns false on failure (eg, couldn't match parse contents)
-	static bool FireEntIOFromResponse( char *response, CBaseEntity *pInitiator ); 
+	static bool FireEntIOFromResponse( char *response, CBaseEntity *pInitiator );
 
 protected:
 	CAI_TimedSemaphore *GetMySpeechSemaphore( CBaseEntity *pNpc );
@@ -231,7 +231,7 @@ protected:
 	void SpeechMsg( CBaseEntity *pFlex, const char *pszFormat, ... );
 
 	// --------------------------------
-	
+
 	CAI_ExpresserSink *GetSink() { return m_pSink; }
 
 private:
@@ -240,16 +240,16 @@ private:
 	virtual bool IsValidResponse( ResponseType_t type, const char *pszValue );
 
 	// --------------------------------
-	
+
 	CAI_ExpresserSink *m_pSink;
-	
+
 	// --------------------------------
 	//
 	// Speech concept data structures
 	//
 
 	CUtlDict< ConceptHistory_t, int > m_ConceptHistories;
-	
+
 	// --------------------------------
 	//
 	// Speaking states
@@ -260,13 +260,13 @@ private:
 	float				m_flBlockedTalkTime;
 	int					m_voicePitch;					// pitch of voice for this head
 	float				m_flLastTimeAcceptedSpeak;		// because speech may not be blocked until NoteSpeaking called by scene ent, this handles in-think blocking
-	
+
 	DECLARE_SIMPLE_DATADESC();
 
 	// --------------------------------
 	//
 public:
-	void SetOuter( CBaseFlex *pOuter );	
+	void SetOuter( CBaseFlex *pOuter );
 
 	CBaseFlex *		GetOuter() 			{ return m_pOuter; }
 	const CBaseFlex *	GetOuter() const 	{ return m_pOuter; }
@@ -289,21 +289,21 @@ class CAI_ExpresserHost : public BASE_NPC, protected CAI_ExpresserSink
 public:
 	virtual void	NoteSpeaking( float duration, float delay );
 
-	virtual bool 	Speak( AIConcept_t AIconcept, const char *modifiers = NULL, char *pszOutResponseChosen = NULL, size_t bufsize = 0, IRecipientFilter *filter = NULL );
-	virtual bool 	Speak( AIConcept_t AIconcept, AI_CriteriaSet *pCriteria, char *pszOutResponseChosen = NULL, size_t bufsize = 0, IRecipientFilter *filter = NULL );
+	virtual bool 	Speak( AIConcept_t conc, const char *modifiers = NULL, char *pszOutResponseChosen = NULL, size_t bufsize = 0, IRecipientFilter *filter = NULL );
+	virtual bool 	Speak( AIConcept_t conc, AI_CriteriaSet *pCriteria, char *pszOutResponseChosen = NULL, size_t bufsize = 0, IRecipientFilter *filter = NULL );
 
 
-	void GatherCriteria( AI_CriteriaSet *outputCritera, const AIConcept_t &AIconcept, const char *modifiers );
+	void GatherCriteria( AI_CriteriaSet *outputCritera, const AIConcept_t &conc, const char *modifiers );
 	// These two methods allow looking up a response and dispatching it to be two different steps
-	// AI_Response *	SpeakFindResponse( AIConcept_t AIconcept, const char *modifiers = NULL );
-	// AI_Response *SpeakFindResponse( AIConcept_t AIconcept, AI_CriteriaSet *criteria );
-	// AI_Response *SpeakFindResponse( AIConcept_t AIconcept );
+	// AI_Response *	SpeakFindResponse( AIConcept_t conc, const char *modifiers = NULL );
+	// AI_Response *SpeakFindResponse( AIConcept_t conc, AI_CriteriaSet *criteria );
+	// AI_Response *SpeakFindResponse( AIConcept_t conc );
 	// Find the appropriate response for the given concept. Return false if none found.
 	// Fills out the response object that you provide.
-	bool FindResponse( AI_Response &outResponse, AIConcept_t &AIconcept, AI_CriteriaSet *criteria = NULL );
+	bool FindResponse( AI_Response &outResponse, AIConcept_t &conc, AI_CriteriaSet *criteria = NULL );
 
-	bool 			SpeakDispatchResponse( AIConcept_t AIconcept, AI_Response *response,  AI_CriteriaSet *criteria = NULL );
-	virtual void	PostSpeakDispatchResponse( AIConcept_t AIconcept, AI_Response *response ) { return; }
+	bool 			SpeakDispatchResponse( AIConcept_t conc, AI_Response *response,  AI_CriteriaSet *criteria = NULL );
+	virtual void	PostSpeakDispatchResponse( AIConcept_t conc, AI_Response *response ) { return; }
 	float 			GetResponseDuration( AI_Response *response );
 
 	float GetTimeSpeechComplete() const 	{ return this->GetExpresser()->GetTimeSpeechComplete(); }
@@ -312,9 +312,9 @@ public:
 	bool CanSpeak()					{ return this->GetExpresser()->CanSpeak(); }
 	bool CanSpeakAfterMyself()		{ return this->GetExpresser()->CanSpeakAfterMyself(); }
 
-	void SetSpokeConcept( AIConcept_t AIconcept, AI_Response *response, bool bCallback = true ) 		{ this->GetExpresser()->SetSpokeConcept( AIconcept, response, bCallback ); }
-	float GetTimeSpokeConcept( AIConcept_t AIconcept )												{ return this->GetExpresser()->GetTimeSpokeConcept( AIconcept ); }
-	bool SpokeConcept( AIConcept_t AIconcept )														{ return this->GetExpresser()->SpokeConcept( AIconcept ); }
+	void SetSpokeConcept( AIConcept_t conc, AI_Response *response, bool bCallback = true ) 		{ this->GetExpresser()->SetSpokeConcept( conc, response, bCallback ); }
+	float GetTimeSpokeConcept( AIConcept_t conc )												{ return this->GetExpresser()->GetTimeSpokeConcept( conc ); }
+	bool SpokeConcept( AIConcept_t conc )														{ return this->GetExpresser()->SpokeConcept( conc ); }
 
 protected:
 	int 			PlaySentence( const char *pszSentence, float delay, float volume = VOL_NORM, soundlevel_t soundlevel = SNDLVL_TALKING, CBaseEntity *pListener = NULL );
@@ -329,31 +329,31 @@ protected:
 //-----------------------------------------------------------------------------
 template <class BASE_NPC>
 inline void CAI_ExpresserHost<BASE_NPC>::NoteSpeaking( float duration, float delay )
-{ 
-	this->GetExpresser()->NoteSpeaking( duration, delay ); 
+{
+	this->GetExpresser()->NoteSpeaking( duration, delay );
 }
 
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
 template <class BASE_NPC>
-inline bool CAI_ExpresserHost<BASE_NPC>::Speak( AIConcept_t AIconcept, const char *modifiers /*= NULL*/, char *pszOutResponseChosen /*=NULL*/, size_t bufsize /* = 0 */, IRecipientFilter *filter /* = NULL */ ) 
+inline bool CAI_ExpresserHost<BASE_NPC>::Speak( AIConcept_t conc, const char *modifiers /*= NULL*/, char *pszOutResponseChosen /*=NULL*/, size_t bufsize /* = 0 */, IRecipientFilter *filter /* = NULL */ )
 {
 	AssertOnce( this->GetExpresser()->GetOuter() == this );
-	return this->GetExpresser()->Speak( AIconcept, modifiers, pszOutResponseChosen, bufsize, filter ); 
+	return this->GetExpresser()->Speak( conc, modifiers, pszOutResponseChosen, bufsize, filter );
 }
 
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
 template <class BASE_NPC>
-inline bool CAI_ExpresserHost<BASE_NPC>::Speak( AIConcept_t AIconcept, AI_CriteriaSet *pCriteria, char *pszOutResponseChosen /*=NULL*/, size_t bufsize /* = 0 */, IRecipientFilter *filter /* = NULL */ ) 
+inline bool CAI_ExpresserHost<BASE_NPC>::Speak( AIConcept_t conc, AI_CriteriaSet *pCriteria, char *pszOutResponseChosen /*=NULL*/, size_t bufsize /* = 0 */, IRecipientFilter *filter /* = NULL */ )
 {
 	AssertOnce( this->GetExpresser()->GetOuter() == this );
 	CAI_Expresser * const RESTRICT pExpresser = this->GetExpresser();
-	AIconcept.SetSpeaker( this );
+	conc.SetSpeaker( this );
 	// add in any local criteria to the one passed on the command line.
-	pExpresser->GatherCriteria( pCriteria, AIconcept, NULL );
+	pExpresser->GatherCriteria( pCriteria, conc, NULL );
 	// call the "I have aleady gathered criteria" version of Expresser::Speak
-	return pExpresser->Speak( AIconcept, pCriteria, pszOutResponseChosen, bufsize, filter ); 
+	return pExpresser->Speak( conc, pCriteria, pszOutResponseChosen, bufsize, filter );
 }
 
 
@@ -397,63 +397,28 @@ inline ResponseRules::IResponseSystem *CAI_ExpresserHost<BASE_NPC>::GetResponseS
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
 template <class BASE_NPC>
-inline void CAI_ExpresserHost<BASE_NPC>::GatherCriteria( AI_CriteriaSet *outputCriteria, const AIConcept_t &AIconcept, const char *modifiers )
+inline void CAI_ExpresserHost<BASE_NPC>::GatherCriteria( AI_CriteriaSet *outputCriteria, const AIConcept_t &conc, const char *modifiers )
 {
-	return this->GetExpresser()->GatherCriteria( outputCriteria, AIconcept, modifiers );
+	return this->GetExpresser()->GatherCriteria( outputCriteria, conc, modifiers );
 }
-
-
-#if 0
-//-----------------------------------------------------------------------------
-//-----------------------------------------------------------------------------
-template <class BASE_NPC>
-inline AI_Response *CAI_ExpresserHost<BASE_NPC>::SpeakFindResponse( AIConcept_t AIconcept, const char *modifiers /*= NULL*/ )
-{
-	return this->GetExpresser()->SpeakFindResponse( AIconcept, modifiers );
-}
-#endif
-
-#if 0
-//-----------------------------------------------------------------------------
-//-----------------------------------------------------------------------------
-template <class BASE_NPC>
-inline AI_Response *CAI_ExpresserHost<BASE_NPC>::SpeakFindResponse( AIConcept_t AIconcept, AI_CriteriaSet *criteria /*= NULL*/ )
-{
-	return this->GetExpresser()->SpeakFindResponse( AIconcept, criteria );
-}
-
-
-//-----------------------------------------------------------------------------
-// In this case we clearly don't care to hang on to the criteria, so make a convenience
-// class that generates a one off.
-//-----------------------------------------------------------------------------
-template <class BASE_NPC>
-inline AI_Response * CAI_ExpresserHost<BASE_NPC>::SpeakFindResponse( AIConcept_t AIconcept )
-{
-	AI_CriteriaSet criteria;
-	GatherCriteria( &criteria, AIconcept, NULL );
-	return this->GetExpresser()->SpeakFindResponse( AIconcept, &criteria );
-}
-#endif
-
 
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
 template <class BASE_NPC>
-inline bool CAI_ExpresserHost<BASE_NPC>::FindResponse( AI_Response &outResponse, AIConcept_t &AIconcept, AI_CriteriaSet *criteria )
+inline bool CAI_ExpresserHost<BASE_NPC>::FindResponse( AI_Response &outResponse, AIConcept_t &conc, AI_CriteriaSet *criteria )
 {
-	return this->GetExpresser()->FindResponse( outResponse, AIconcept, criteria );
+	return this->GetExpresser()->FindResponse( outResponse, conc, criteria );
 }
 
 
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
 template <class BASE_NPC>
-inline bool CAI_ExpresserHost<BASE_NPC>::SpeakDispatchResponse( AIConcept_t AIconcept, AI_Response *response,  AI_CriteriaSet *criteria )
+inline bool CAI_ExpresserHost<BASE_NPC>::SpeakDispatchResponse( AIConcept_t conc, AI_Response *response,  AI_CriteriaSet *criteria )
 {
-	if ( this->GetExpresser()->SpeakDispatchResponse( AIconcept, response, criteria ) )
+	if ( this->GetExpresser()->SpeakDispatchResponse( conc, response, criteria ) )
 	{
-		PostSpeakDispatchResponse( AIconcept, response );
+		PostSpeakDispatchResponse( conc, response );
 		return true;
 	}
 
@@ -482,7 +447,7 @@ inline void CAI_ExpresserHost<BASE_NPC>::DispatchResponse( const char *conceptNa
 /// A shim under CAI_ExpresserHost you can use when deriving a new expresser
 /// host type under CAI_BaseNPC. This does the extra step of declaring an m_pExpresser
 /// member and initializing it from CreateComponents(). If your BASE_NPC class isn't
-/// actually an NPC, then CreateComponents() never gets called and you won't have 
+/// actually an NPC, then CreateComponents() never gets called and you won't have
 /// an expresser created.
 /// Note: you still need to add m_pExpresser to the Datadesc for your derived type.
 /// This is because I couldn't figure out how to make a templatized datadesc declaration
@@ -498,8 +463,8 @@ public:
 	virtual CAI_Expresser *GetExpresser() { return m_pExpresser; }
 	const CAI_Expresser *GetExpresser() const { return m_pExpresser; }
 
-	virtual bool 			CreateComponents() 
-	{ 
+	virtual bool 			CreateComponents()
+	{
 		return BaseClass::CreateComponents() &&	( CreateExpresser() != NULL );
 	}
 
@@ -520,7 +485,7 @@ protected:
 
 	virtual ~CAI_ExpresserHostWithData( void )
 	{
-		delete m_pExpresser; 
+		delete m_pExpresser;
 		m_pExpresser = NULL;
 	}
 
@@ -539,20 +504,20 @@ namespace RR
 	public:
 		inline CApplyContextOperator( int nSkipChars ) : m_nSkipChars(nSkipChars) {};
 
-		/// perform whatever this operator does upon the given context value. 
+		/// perform whatever this operator does upon the given context value.
 		/// Default op is simply to copy old to new.
 		/// pOldValue should be the currently set value of the context. May be NULL meaning no prior value.
 		/// pOperator the value that applycontext says to set
 		/// pNewValue a pointer to a buffer where the real new value will be writ.
-		/// returns true on success; false on failure (eg, tried to increment a 
-		/// non-numeric value). 
+		/// returns true on success; false on failure (eg, tried to increment a
+		/// non-numeric value).
 		virtual bool Apply( const char *pOldValue, const char *pOperator, char *pNewValue, int pNewValBufSize );
 
-		/// This is the function that should be called from outside, 
-		/// fed the input string, it'll select the right operator 
+		/// This is the function that should be called from outside,
+		/// fed the input string, it'll select the right operator
 		/// to apply.
 		static CApplyContextOperator *FindOperator( const char *pContextString );
-	
+
 	protected:
 		int m_nSkipChars; // how many chars to "skip" in the value string to get past the op specifier to the actual value
 						  // eg, "++3" has a m_nSkipChars of 2, because the op string "++" is two characters.
@@ -598,17 +563,17 @@ class CAI_ExpresserWithFollowup : public CAI_Expresser
 {
 public:
 	CAI_ExpresserWithFollowup( CBaseFlex *pOuter = NULL ) : CAI_Expresser(pOuter),
-		m_pPostponedFollowup(NULL) 
+		m_pPostponedFollowup(NULL)
 		{};
-	virtual bool Speak( AIConcept_t &AIconcept, const char *modifiers = NULL, char *pszOutResponseChosen = NULL, size_t bufsize = 0, IRecipientFilter *filter = NULL );
-	virtual bool SpeakDispatchResponse( AIConcept_t &AIconcept, AI_Response *response,  AI_CriteriaSet *criteria, IRecipientFilter *filter = NULL );
+	virtual bool Speak( AIConcept_t &conc, const char *modifiers = NULL, char *pszOutResponseChosen = NULL, size_t bufsize = 0, IRecipientFilter *filter = NULL );
+	virtual bool SpeakDispatchResponse( AIConcept_t &conc, AI_Response *response,  AI_CriteriaSet *criteria, IRecipientFilter *filter = NULL );
 	virtual void SpeakDispatchFollowup( AI_ResponseFollowup &followup );
 
 	virtual void OnSpeechFinished();
 
 	typedef CAI_Expresser BaseClass;
 protected:
-	static void DispatchFollowupThroughQueue( const AIConcept_t &AIconcept,
+	static void DispatchFollowupThroughQueue( const AIConcept_t &conc,
 		const char *criteriaStr,
 		const CResponseQueue::CFollowupTargetSpec_t &target,
 		float delay,

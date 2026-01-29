@@ -1,6 +1,6 @@
 //========= Copyright � 1996-2005, Valve Corporation, All rights reserved. ============//
 //
-// Purpose: 
+// Purpose:
 //
 // $NoKeywords: $
 //
@@ -48,7 +48,7 @@
 #define HOSTAGE_CARRY_VIEW_MODEL		"models/hostage/v_hostage_arm.mdl"
 
 // amount of time a player is forced to continue defusing after not USEing. this effects other player's ability to interrupt
-const float GRAB_HOSTAGE_LOCKIN_PERIOD = 0.05f;	
+const float GRAB_HOSTAGE_LOCKIN_PERIOD = 0.05f;
 
 ConVar mp_hostagepenalty( "mp_hostagepenalty", "10", FCVAR_NOTIFY, "Terrorist are kicked for killing too much hostages" );
 ConVar hostage_debug( "hostage_debug", "0", FCVAR_CHEAT, "Show hostage AI debug information" );
@@ -111,10 +111,10 @@ BEGIN_DATADESC( CHostage )
 
 	DEFINE_INPUTFUNC( FIELD_VOID, "OnRescueZoneTouch", HostageRescueZoneTouch ),
 
-	DEFINE_USEFUNC( HostageUse ), 
+	DEFINE_USEFUNC( HostageUse ),
 	DEFINE_THINKFUNC( HostageThink ),
 
-	//Outputs	
+	//Outputs
 	DEFINE_OUTPUT( m_OnHostageBeginGrab, "OnHostageBeginGrab" ),
 	DEFINE_OUTPUT( m_OnFirstPickedUp, "OnFirstPickedUp" ),
 	DEFINE_OUTPUT( m_OnDroppedNotRescued, "OnDroppedNotRescued" ),
@@ -125,14 +125,14 @@ END_DATADESC()
 //-----------------------------------------------------------------------------------------------------
 IMPLEMENT_SERVERCLASS_ST( CHostage, DT_CHostage )
 	SendPropExclude( "DT_BaseAnimating", "m_flPoseParameter" ),
-	SendPropExclude( "DT_BaseAnimating", "m_flPlaybackRate" ),	
+	SendPropExclude( "DT_BaseAnimating", "m_flPlaybackRate" ),
 	SendPropExclude( "DT_BaseAnimating", "m_nSequence" ),
 	SendPropExclude( "DT_BaseAnimating", "m_nNewSequenceParity" ),
 	SendPropExclude( "DT_BaseAnimating", "m_nResetEventsParity" ),
 	SendPropExclude( "DT_BaseAnimatingOverlay", "overlay_vars" ),
-	
+
 	// cs_playeranimstate and clientside animation takes care of these on the client
-	SendPropExclude( "DT_ServerAnimationData" , "m_flCycle" ),	
+	SendPropExclude( "DT_ServerAnimationData" , "m_flCycle" ),
 	SendPropExclude( "DT_AnimTimeMustBeFirst" , "m_flAnimTime" ),
 
 	SendPropBool( SENDINFO(m_isRescued) ),
@@ -190,7 +190,7 @@ CHostage::~CHostage()
 }
 
 //-----------------------------------------------------------------------------
-// Purpose: 
+// Purpose:
 //-----------------------------------------------------------------------------
 CAI_Expresser *CHostage::CreateExpresser( void )
 {
@@ -267,7 +267,7 @@ void CHostage::Spawn( void )
 	const char *mapName = ( gpGlobals ? STRING( gpGlobals->mapname ) : NULL );
 	if ( mapName )
 	{
-		const CUtlStringList *pHostageModelNames = g_pGameTypes->GetHostageModelsForMap( mapName );	
+		const CUtlStringList *pHostageModelNames = g_pGameTypes->GetHostageModelsForMap( mapName );
 		if ( NULL != pHostageModelNames )
 		{
 			int count = pHostageModelNames->Count();
@@ -301,11 +301,11 @@ void CHostage::Spawn( void )
 
 	SetGravity( 1.0 );
 
-	m_iHealth = 100;	
+	m_iHealth = 100;
 	m_iMaxHealth = m_iHealth;
 	m_takedamage = DAMAGE_YES;
 
-	InitBoneControllers( ); 
+	InitBoneControllers( );
 
 	// we must set this, because its zero by default thus putting their eyes in their feet
 	SetViewOffset( Vector( 0, 0, 35 ) );
@@ -350,7 +350,7 @@ void CHostage::Spawn( void )
 	m_inhibitObstacleAvoidanceTimer.Invalidate();
 
 	m_isWaitingForLeader = false;
-	
+
 	m_isAdjusted = false;
 
 	m_lastLeaderID = 0;
@@ -377,12 +377,12 @@ void CHostage::Spawn( void )
 void CHostage::Precache()
 {
 	const char *mapName = ( gpGlobals ? STRING( gpGlobals->mapname ) : NULL );
-	
+
 	int numHostageModelsForMap = 0;
 
 	if ( mapName )
 	{
-		const CUtlStringList *pHostageModelNames = g_pGameTypes->GetHostageModelsForMap( mapName );	
+		const CUtlStringList *pHostageModelNames = g_pGameTypes->GetHostageModelsForMap( mapName );
 		if ( NULL != pHostageModelNames )
 		{
 			numHostageModelsForMap = pHostageModelNames->Count();
@@ -431,7 +431,7 @@ void CHostage::Precache()
 }
 
 //-----------------------------------------------------------------------------
-// Purpose: 
+// Purpose:
 //-----------------------------------------------------------------------------
 void CHostage::ModifyOrAppendCriteria( AI_CriteriaSet& set )
 {
@@ -448,8 +448,8 @@ int CHostage::OnTakeDamage_Alive( const CTakeDamageInfo &info )
 	// say something
 	if ( hostage_is_silent.GetBool() == false )
 	{
-		AIConcept_t AIconcept( "Pain" );
-		GetExpresser()->Speak( AIconcept );
+		AIConcept_t conc( "Pain" );
+		GetExpresser()->Speak( conc );
 	}
 
 	CCSPlayer *player = ToCSPlayer( info.GetAttacker() );
@@ -501,7 +501,7 @@ float CHostage::GetModifiedDamage( float flDamage, int nHitGroup )
 	case HITGROUP_LEFTLEG:	flDamage *=	0.6;	break;
 	case HITGROUP_RIGHTLEG:	flDamage *=	0.6;	break;
 	default:				flDamage *=	1.5;	break;
-	} 
+	}
 
 	return flDamage;
 }
@@ -606,7 +606,7 @@ void CHostage::Event_Killed( const CTakeDamageInfo &info )
 
 	m_lastLeaderID = 0;
 
-	SetUse( NULL );	
+	SetUse( NULL );
 	BaseClass::Event_Killed( info );
 
 	IGameEvent *event = gameeventmanager->CreateEvent("hostage_killed");
@@ -645,7 +645,7 @@ void CHostage::HostageRescueZoneTouch( inputdata_t &inputdata )
 
 			m_OnRescued.FireOutput(this, player);
 
-			if ( HOSTAGE_RULE_CAN_PICKUP == 1 )
+			if ( !mp_hostages_moveable.GetBool() )
 			{
 				// Put him a short distance in front of the player.
 				Vector vecTarget;
@@ -706,7 +706,7 @@ void CHostage::HostageRescueZoneTouch( inputdata_t &inputdata )
 		if (announceTimer.IsElapsed())
 		{
 			CSGameRules()->BroadcastSound( "Event.HostageRescued" );
-			
+
 			// avoid having the announcer talk over himself
 			announceTimer.Start( 2.0f );
 		}
@@ -740,10 +740,10 @@ void CHostage::HostageRescueZoneTouch( inputdata_t &inputdata )
 		if ( CSGameRules()->CheckWinConditions() && player )
 		{
 			//Check hostage rescue achievements
-			if ( !CSGameRules()->WasHostageKilled() && ( HOSTAGE_RULE_CAN_PICKUP || ( CSGameRules()->m_arrRescuers.Count() == 1 ) ) )
+			if ( !CSGameRules()->WasHostageKilled() && (!mp_hostages_moveable.GetBool() || ( CSGameRules()->m_arrRescuers.Count() == 1 ) ) )
 			{
 				//check for unrescued hostages
-				bool allHostagesRescued = true;				
+				bool allHostagesRescued = true;
 				CHostage* hostage = NULL;
 				int iNumHostages = g_Hostages.Count();
 
@@ -766,7 +766,7 @@ void CHostage::HostageRescueZoneTouch( inputdata_t &inputdata )
 							pRoundRescuer->AwardAchievement(CSRescueAllHostagesInARound);
 					}
 
-					//[tj] fast version                
+					//[tj] fast version
 					if (gpGlobals->curtime - CSGameRules()->GetRoundStartTime() < AchievementConsts::FastHostageRescue_Time)
 					{
 						FOR_EACH_VEC( CSGameRules()->m_arrRescuers, iRescuer )
@@ -833,7 +833,7 @@ void CHostage::Touch( CBaseEntity *other )
 {
 	BaseClass::Touch( other );
 
-	if ( HOSTAGE_RULE_CAN_PICKUP == 1 )
+	if (!mp_hostages_moveable.GetBool())
 		return;
 
 	// allow players and other hostages to push me around
@@ -843,7 +843,7 @@ void CHostage::Touch( CBaseEntity *other )
 		Vector to = GetAbsOrigin() - other->GetAbsOrigin();
 		to.z = 0.0f;
 		to.NormalizeInPlace();
-		
+
 		const float pushForce = 500.0f;
 		ApplyForce( pushForce * to );
 	}
@@ -863,7 +863,7 @@ void CHostage::Touch( CBaseEntity *other )
 
 
 //-----------------------------------------------------------------------------------------------------
-/** 
+/**
  * Hostage is stuck - attempt to wiggle out
  */
 void CHostage::Wiggle( void )
@@ -912,14 +912,14 @@ void CHostage::Wiggle( void )
  */
 void CHostage::UpdateFollowing( float deltaT )
 {
-	if ( HOSTAGE_RULE_CAN_PICKUP && IsFollowingSomeone() && GetLeader()  )
+	if ( !mp_hostages_moveable.GetBool() && IsFollowingSomeone() && GetLeader()  )
 	{
 		if ( m_nHostageState != k_EHostageStates_GettingPickedUp )
 		{
 			// only set the origin when we are carrying and not just when we are in the process of "getting picked up"
-			SetAbsOrigin( GetLeader()->GetAbsOrigin() );	
+			SetAbsOrigin( GetLeader()->GetAbsOrigin() );
 		}
-	
+
 		return;
 	}
 
@@ -949,14 +949,14 @@ void CHostage::UpdateFollowing( float deltaT )
 			return;
 		}
 
-		if ( HOSTAGE_RULE_CAN_PICKUP == 0 )
+		if ( mp_hostages_moveable.GetBool() )
 			m_nHostageState = k_EHostageStates_FollowingPlayer;
 
 		// if leader has moved, repath
 		if (m_path.IsValid())
 		{
 			Vector pathError = leader->GetAbsOrigin() - m_path.GetEndpoint();
-			
+
 			const float repathRange = 100.0f;
 			if (pathError.IsLengthGreaterThan( repathRange ))
 			{
@@ -992,7 +992,7 @@ void CHostage::UpdateFollowing( float deltaT )
 			return;
 		}
 
-		
+
 		// don't crowd the leader
 		if (m_isWaitingForLeader)
 		{
@@ -1047,7 +1047,7 @@ void CHostage::UpdateFollowing( float deltaT )
 //-----------------------------------------------------------------------------------------------------
 void CHostage::AvoidPhysicsProps( void )
 {
-	if ( m_lifeState == LIFE_DEAD || HOSTAGE_RULE_CAN_PICKUP )
+	if ( m_lifeState == LIFE_DEAD || !mp_hostages_moveable.GetBool() )
 		return;
 
 	CBaseEntity *props[512];
@@ -1117,7 +1117,7 @@ void CHostage::AvoidPhysicsProps( void )
  */
 void CHostage::PushawayThink( void )
 {
-	if ( HOSTAGE_RULE_CAN_PICKUP )
+	if ( !mp_hostages_moveable.GetBool() )
 		return;
 
 	PerformObstaclePushaway( this );
@@ -1153,12 +1153,12 @@ void CHostage::HostageThink( void )
 		SetCollisionBounds( HOSTAGE_BBOX_VEC_MIN, HOSTAGE_BBOX_VEC_MAX );
 	}
 
-	const float deltaT = ( HOSTAGE_RULE_CAN_PICKUP && IsFollowingSomeone() ) ? HOSTAGE_THINK_CARRIED_INTERVAL : HOSTAGE_THINK_INTERVAL;
+	const float deltaT = ( !mp_hostages_moveable.GetBool() && IsFollowingSomeone() ) ? HOSTAGE_THINK_CARRIED_INTERVAL : HOSTAGE_THINK_INTERVAL;
 
 	SetNextThink( gpGlobals->curtime + deltaT );
 
 	//if the defusing process has started
-	if ( HOSTAGE_RULE_CAN_PICKUP && m_nHostageState == k_EHostageStates_BeingUntied  && (m_pHostageGrabber != NULL))
+	if ( !mp_hostages_moveable.GetBool() && m_nHostageState == k_EHostageStates_BeingUntied  && (m_pHostageGrabber != NULL))
 	{
 		//if the defusing process has not ended yet
 		if ( gpGlobals->curtime < m_flGrabSuccessTime )
@@ -1263,7 +1263,7 @@ void CHostage::HostageThink( void )
 		const float DAMPING = 2.0f;
 		vel += deltaT * (m_accel - DAMPING * vel);
 	}
-	
+
 	// leave Z component untouched
 	vel.z = GetAbsVelocity().z;
 	m_vel = vel;
@@ -1274,7 +1274,7 @@ void CHostage::HostageThink( void )
 	StudioFrameAdvance();
 
 	int sequence = SelectWeightedSequence( ACT_IDLE );
-	
+
 	if (GetSequence() != sequence)
 	{
 		SetSequence( sequence );
@@ -1320,11 +1320,11 @@ void CHostage::HostageThink( void )
 	{
 		// finished fading - remove us completely
 // 		RemoveEffects( EF_NODRAW );
-// 
+//
 // 		SetSolid( SOLID_BBOX );
 // 		SetCollisionGroup( COLLISION_GROUP_PLAYER );
 // 		SetUse( &CHostage::HostageUse );
-// 
+//
 // 		AddSolidFlags( FSOLID_NOT_STANDABLE );
 
 		SetSolid( SOLID_NONE );
@@ -1422,8 +1422,8 @@ void CHostage::Follow( CCSPlayer *leader )
 		// say something
 		if ( hostage_is_silent.GetBool() == false )
 		{
-			AIConcept_t AIconcept( "StartFollowing" );
-			GetExpresser()->Speak( AIconcept, "leaderteam:CT" );		
+			AIConcept_t conc( "StartFollowing" );
+			GetExpresser()->Speak( conc, "leaderteam:CT" );
 		}
 
 		// emit hostage_follows event
@@ -1441,7 +1441,7 @@ void CHostage::Follow( CCSPlayer *leader )
 	m_isWaitingForLeader = false;
 	m_lastLeaderID = (leader) ? leader->GetUserID() : 0;
 
-	if ( leader && HOSTAGE_RULE_CAN_PICKUP )
+	if ( leader && !mp_hostages_moveable.GetBool() )
 	{
 		leader->GiveCarriedHostage( this );
 	}
@@ -1486,7 +1486,7 @@ void CHostage::HostageUse( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TY
 		return;
 	}
 
-	if ( HOSTAGE_RULE_CAN_PICKUP == 1 )
+	if ( !mp_hostages_moveable.GetBool() )
 	{
 		if ( pPlayer->m_hCarriedHostage != NULL )
 		{
@@ -1541,14 +1541,14 @@ void CHostage::HostageUse( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TY
 					EmitSound( filter, entindex(), "Hostage.CutFreeWithoutDefuser" );
 					m_flGrabbingLength = 4;
 				}
-				
+
 				m_flGrabSuccessTime = gpGlobals->curtime + m_flGrabbingLength;
 				pPlayer->SetProgressBarTime( m_flGrabbingLength );
 
 				m_pHostageGrabber = pPlayer;
 				m_nHostageState = k_EHostageStates_BeingUntied;
 				pPlayer->m_bIsGrabbingHostage = true;
-			
+
 				m_fLastGrabTime = gpGlobals->curtime;
 
 				//start the progress bar
@@ -1635,8 +1635,8 @@ void CHostage::SetHostageStartFollowingPlayer( CCSPlayer *pPlayer )
 		if ( hostage_is_silent.GetBool() == false )
 		{
 			// say something
-			AIConcept_t AIconcept( "StopFollowing" );
-			GetExpresser()->Speak( AIconcept, "leaderteam:CT" );
+			AIConcept_t conc( "StopFollowing" );
+			GetExpresser()->Speak( conc, "leaderteam:CT" );
 		}
 	}
 	else
@@ -1673,7 +1673,7 @@ void CHostage::SmoothlyDropHostageToGround( Vector vecPosition )
 		}
 		else
 			GroundPos = vecPosition;
-		
+
 		SetAbsOrigin( GroundPos );
 	}
 	else if ( ( m_flDropStartTime > 0 ) && ( m_nHostageSpawnRandomFactor != k_EHostageStates_GettingDropped ) )
@@ -1708,14 +1708,14 @@ void CHostage::DropHostage( Vector vecPosition, bool bIsRescued )
 		// say something
 		if ( hostage_is_silent.GetBool() == false )
 		{
-			AIConcept_t AIconcept( "StopFollowing" );
-			GetExpresser()->Speak( AIconcept, "leaderteam:CT" );
+			AIConcept_t conc( "StopFollowing" );
+			GetExpresser()->Speak( conc, "leaderteam:CT" );
 		}
 
 		m_nHostageState = k_EHostageStates_GettingDropped;
 		m_flDropStartTime = gpGlobals->curtime;
 
-		
+
 	}
 
 	//Vector soundPosition = GetAbsOrigin() + Vector( 0, 0, 5 );
@@ -1761,7 +1761,7 @@ void CHostage::FaceTowards( const Vector &target, float deltaT )
 const Vector &CHostage::GetCentroid( void ) const
 {
 	static Vector centroid;
-	
+
 	centroid = GetFeet();
 	centroid.z += HalfHumanHeight;
 
@@ -1775,7 +1775,7 @@ const Vector &CHostage::GetCentroid( void ) const
 const Vector &CHostage::GetFeet( void ) const
 {
 	static Vector feet;
-	
+
 	feet = GetAbsOrigin();
 
 	return feet;
@@ -1785,7 +1785,7 @@ const Vector &CHostage::GetFeet( void ) const
 const Vector &CHostage::GetEyes( void ) const
 {
 	static Vector eyes;
-	
+
 	eyes = EyePosition();
 
 	return eyes;
@@ -1981,4 +1981,3 @@ unsigned int CHostage::PhysicsSolidMaskForEntity() const
 {
 	return MASK_PLAYERSOLID;
 }
-

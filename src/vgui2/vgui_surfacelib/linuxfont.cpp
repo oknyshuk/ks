@@ -82,6 +82,7 @@ m_ExtendedKernedABCWidthsCache( 256, 0, &ExtendedKernedABCWidthsCacheLessFunc )
 	m_iScanLines = 0;
 	m_bRotary = false;
 	m_bAdditive = false;
+	face = nullptr;
 	if ( !ms_bSetFriendlyNameCacheLessFunc )
 	{
 		ms_bSetFriendlyNameCacheLessFunc = true;
@@ -94,6 +95,16 @@ m_ExtendedKernedABCWidthsCache( 256, 0, &ExtendedKernedABCWidthsCacheLessFunc )
 //-----------------------------------------------------------------------------
 CLinuxFont::~CLinuxFont()
 {
+	if ( face )
+	{
+		FT_Done_Face( face );
+		face = nullptr;
+	}
+	if ( m_pGaussianDistribution )
+	{
+		delete[] m_pGaussianDistribution;
+		m_pGaussianDistribution = nullptr;
+	}
 }
 
 
@@ -146,25 +157,21 @@ bool CLinuxFont::Create(const char *windowsFontName, int tall, int weight, int b
 	m_bRotary = flags & FONTFLAG_ROTARY;
 	m_bAdditive = flags & FONTFLAG_ADDITIVE;
 
-	const char *pchFontName = windowsFontName;
-	if ( !Q_stricmp( pchFontName, "Tahoma" ) )
-		pchFontName = "Bitstream Vera Sans";
-
-	const char *filename;
-
-	if( FONTFLAG_ITALIC )
-		filename = "csgo/linux-fonts/LiberationSans-Italic.ttf";
+	// All fonts map to Liberation Sans on Linux
+	const char *fontPath;
+	if ( flags & FONTFLAG_ITALIC )
+		fontPath = "csgo/linux-fonts/LiberationSans-Italic.ttf";
 	else
-		filename = "csgo/linux-fonts/LiberationSans-Regular.ttf";
+		fontPath = "csgo/linux-fonts/LiberationSans-Regular.ttf";
 
-	FT_Error error = FT_New_Face( FontManager().GetFontLibraryHandle(), filename, 0, &face );
+	FT_Error error = FT_New_Face( FontManager().GetFontLibraryHandle(), fontPath, 0, &face );
 
 	if ( error == FT_Err_Unknown_File_Format )
 	{
 		return false;
-	} 
-	else if ( error ) 
-	{ 
+	}
+	else if ( error )
+	{
 		return false;
 	} 
 

@@ -1,6 +1,6 @@
 //========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
 //
-// Purpose: 
+// Purpose:
 //
 // $NoKeywords: $
 //=============================================================================//
@@ -52,7 +52,7 @@ void CCSBot::RespondToRadioCommands( void )
 			return;
 		}
 	}
-	
+
 	if (m_lastRadioCommand == RADIO_INVALID)
 		return;
 
@@ -145,7 +145,7 @@ void CCSBot::RespondToRadioCommands( void )
 
 		case RADIO_HOLD_THIS_POSITION:
 		{
-			// find the leader's area 
+			// find the leader's area
 			SetTask( HOLD_POSITION );
 			StopFollowing();
 			player->InhibitAutoFollow( inhibitAutoFollowDuration );
@@ -173,7 +173,7 @@ void CCSBot::RespondToRadioCommands( void )
 
 		case RADIO_SECTOR_CLEAR:
 		{
-			// if this is a defusal scenario, and the bomb is planted, 
+			// if this is a defusal scenario, and the bomb is planted,
 			// and a human player cleared a bombsite, check it off our list too
 			if (TheCSBots()->GetScenario() == CCSBotManager::SCENARIO_DEFUSE_BOMB)
 			{
@@ -192,7 +192,7 @@ void CCSBot::RespondToRadioCommands( void )
 						canDo = true;
 					}
 				}
-			}			
+			}
 			break;
 		}
 
@@ -265,7 +265,7 @@ bool CCSBot::RespondToHelpRequest( CCSPlayer *them, Place place, float maxRange 
 			return true;
 
 		// go to where help is needed
-		Vector pos;		
+		Vector pos;
 		if ( GetRandomSpotAtPlace( place, &pos ) )
 		{
 			MoveTo( pos, FASTEST_ROUTE );
@@ -340,7 +340,7 @@ void CCSBot::SpeakAudio( const char *voiceFilename, float duration, int pitch )
 	msg.set_duration( duration );
 	msg.set_voice_filename( voiceFilename );
 
-	SendUserMessage ( filter, CS_UM_RawAudio, msg );		
+	SendUserMessage ( filter, CS_UM_RawAudio, msg );
 
 	GetChatter()->ResetRadioSilenceDuration();
 
@@ -366,8 +366,8 @@ bool CCSBot::SpeakAudioResponseRules( const char *pConcept, AI_CriteriaSet *crit
 	if ( !criteria )
 		criteria = &local;
 
-	AIConcept_t AIconcept( pConcept );
-	if ( Speak( AIconcept, criteria, NULL, 0, &filter ) )
+	AIConcept_t conc( pConcept );
+	if ( Speak( conc, criteria, NULL, 0, &filter ) )
 	{
 		GetChatter()->ResetRadioSilenceDuration();
 		m_voiceEndTimestamp = gpGlobals->curtime + duration;
@@ -376,5 +376,3 @@ bool CCSBot::SpeakAudioResponseRules( const char *pConcept, AI_CriteriaSet *crit
 
 	return false;
 }
-
-

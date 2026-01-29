@@ -32,6 +32,8 @@
 #include <Carbon/Carbon.h>
 #elif defined(LINUX)
 #include <sys/vfs.h>
+#include <sys/stat.h> // stat()
+#include <unistd.h> // execl()
 #endif
 
 #ifdef USE_SDL
@@ -68,7 +70,9 @@ public:
 	// returns the current time
 	virtual double GetCurrentTime();
 
-	virtual void ShellExecute(const char *command, const char *file);
+    virtual void ShellExecute(const char *command, const char *file);
+    virtual void ShellExecuteEx( const char *command, const char *file, const char *pParams );
+    virtual void OpenURL( const char *szURL );
 
 	virtual int GetClipboardTextCount();
 	virtual void SetClipboardText(const char *text, int textLen);
@@ -112,7 +116,6 @@ public:
 	virtual const char *GetAllUserDesktopFolderPath();
 	virtual const char *GetAllUserStartMenuFolderPath();
 
-	virtual void ShellExecuteEx( const char *command, const char *file, const char *pParams );
 #ifdef DBGFLAG_VALIDATE
 	virtual void Validate( CValidator &validator, char *pchName );
 #endif
@@ -267,27 +270,49 @@ long CSystem::GetTimeMillis()
 
 
 //-----------------------------------------------------------------------------
-// Purpose: does a windows shell execute
+// Purpose: ShellExecute - delegates to OpenURL for "open" commands
 //-----------------------------------------------------------------------------
 void CSystem::ShellExecute(const char *command, const char *file)
 {
-#ifdef OSX
-	command = "open ";
-	char const *szSuffix = "";
-#else
-#define ESCAPE_STEAM_RUNTIME "STEAM_RUNTIME=0 LD_LIBRARY_PATH=\"$SYSTEM_LD_LIBRARY_PATH\" PATH=\"$SYSTEM_PATH\" "
-	command = ESCAPE_STEAM_RUNTIME "xdg-open '";
-	char const *szSuffix = "'";
-#endif
-	char szRealCommand[ 1024 ];
-	Q_snprintf( szRealCommand, sizeof( szRealCommand ), "%s%s%s", command, file, szSuffix );
-	system( szRealCommand );
+    if (command && file && !V_stricmp(command, "open"))
+    {
+        OpenURL(file);
+    }
 }
 
-void CSystem::ShellExecuteEx( const char *command, const char *file, const char *pParams )
+//-----------------------------------------------------------------------------
+// Purpose: ShellExecuteEx - delegates to OpenURL for "open" commands
+//-----------------------------------------------------------------------------
+void CSystem::ShellExecuteEx(const char *command, const char *file, const char *pParams)
 {
-	NOTE_UNUSED( pParams );
-	ShellExecute( command, file );
+    if (command && file && !V_stricmp(command, "open"))
+    {
+        OpenURL(file);
+    }
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: opens a URL on Linux
+//-----------------------------------------------------------------------------
+void CSystem::OpenURL(const char *szURL)
+{
+    struct stat buffer;
+    static const char *xdgPath = "/usr/bin/xdg-open";
+    if( stat( xdgPath, &buffer ) != 0 )
+    {
+        Warning( "Couldn't open URL! It seems your %s doesn't exist!\n", xdgPath );
+        return;
+    }
+
+    // has to start with one of these.
+    if( V_strnicmp( szURL, "https://", 8 ) && V_strnicmp( szURL, "http://", 7 ) && V_strnicmp( szURL, "steam://", 8 ) )
+    {
+        Warning( "OpenURL failed. Invalid input(%s)\n", szURL );
+        return;
+    }
+
+    if( !fork() )
+        execlp("xdg-open", "xdg-open", szURL, NULL );
 }
 
 void CSystem::SetClipboardText(const char *text, int textLen)

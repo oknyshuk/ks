@@ -51,7 +51,11 @@ public:
 	// operator==
 	bool operator==( CUtlSymbol const& src ) const { return m_Id == src.m_Id; }
 	bool operator==( const char* pStr ) const;
-	
+
+	// operator!= (explicit for C++20 compatibility)
+	bool operator!=( CUtlSymbol const& src ) const { return m_Id != src.m_Id; }
+	bool operator!=( UtlSymId_t src ) const { return m_Id != src; }
+
 	// Is valid?
 	bool IsValid() const { return m_Id != UTL_INVAL_SYMBOL; }
 	
@@ -118,7 +122,7 @@ public:
 
 	inline bool HasElement(const char* pStr) const
 	{
-		return Find(pStr).IsValid();
+		return Find(pStr) != UTL_INVAL_SYMBOL;
 	}
 	
 	// Remove all symbols in the table.

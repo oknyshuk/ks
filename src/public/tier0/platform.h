@@ -1193,6 +1193,14 @@ PLATFORM_INTERFACE void Plat_MessageBox( const char *pTitle, const tchar *pMessa
 #define _wtoi(arg) wcstol(arg, NULL, 10)
 #define _wtoi64(arg) wcstoll(arg, NULL, 10)
 
+#ifndef _PS3
+#ifndef HMODULE
+typedef void *HMODULE;
+#endif
+#endif
+#ifndef HANDLE
+typedef void *HANDLE;
+#endif
 #define __cdecl
 
 #if !defined( _snprintf )	// some vpc's define this on the command line
@@ -1205,7 +1213,6 @@ PLATFORM_INTERFACE void Plat_MessageBox( const char *pTitle, const tchar *pMessa
 #include <errno.h>
 #endif
 
-#include <windows.h>
 
 #endif // PLATFORM_POSIX
 
@@ -1741,7 +1748,6 @@ struct CPUInformation
 		 m_bFCMOV : 1,  // Is FCMOV supported?
 		 m_bSSE	  : 1,	// Is SSE supported?
 		 m_bSSE2  : 1,	// Is SSE2 Supported?
-		 m_b3DNow : 1,	// Is 3DNow! Supported?
 		 m_bMMX   : 1,	// Is MMX supported?
 		 m_bHT	  : 1;	// Is HyperThreading supported?
 
@@ -1760,6 +1766,12 @@ struct CPUInformation
 
 	uint32 m_nModel;
 	uint32 m_nFeatures[ 3 ];
+	uint32 m_nL1CacheSizeKb;
+	uint32 m_nL1CacheDesc;
+	uint32 m_nL2CacheSizeKb;
+	uint32 m_nL2CacheDesc;
+	uint32 m_nL3CacheSizeKb;
+	uint32 m_nL3CacheDesc;
 
 	CPUInformation(): m_Size(0){}
 };
@@ -1775,28 +1787,6 @@ PLATFORM_INTERFACE void GetCurrentDayOfTheYear( int *pDay );  // 0 = Jan 1
 // ---------------------------------------------------------------------------------- //
 PLATFORM_INTERFACE void InitPME();
 PLATFORM_INTERFACE void ShutdownPME();
-
-
-//-----------------------------------------------------------------------------
-// Security related functions
-//-----------------------------------------------------------------------------
-// Ensure that the hardware key's drivers have been installed.
-PLATFORM_INTERFACE bool Plat_VerifyHardwareKeyDriver();
-
-// Ok, so this isn't a very secure way to verify the hardware key for now.  It
-// is primarially depending on the fact that all the binaries have been wrapped
-// with the secure wrapper provided by the hardware keys vendor.
-PLATFORM_INTERFACE bool Plat_VerifyHardwareKey();
-
-// The same as above, but notifies user with a message box when the key isn't in
-// and gives him an opportunity to correct the situation.
-PLATFORM_INTERFACE bool Plat_VerifyHardwareKeyPrompt();
-
-// Can be called in real time, doesn't perform the verify every frame.  Mainly just
-// here to allow the game to drop out quickly when the key is removed, rather than
-// allowing the wrapper to pop up it's own blocking dialog, which the engine doesn't
-// like much.
-PLATFORM_INTERFACE bool Plat_FastVerifyHardwareKey();
 
 //-----------------------------------------------------------------------------
 // The following are low-level OS-independent wrappers around actual OS file calls.

@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
+//========= Copyright ï¿½ 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose:
 //
@@ -184,7 +184,7 @@ private:
 	bool GetClosestPointOnRoute( const Vector &targetPos, Vector *pVecClosestPoint );
 	bool PlayerIsAheadOfMe( bool bForce = false );
 
-	bool Speak( AIConcept_t AIconcept );
+	bool Speak( AIConcept_t conc );
 	bool IsSpeaking();
 
 	// --------------------------------

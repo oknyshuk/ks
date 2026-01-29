@@ -11,8 +11,6 @@
 #define _WIN32_WINNT 0x0502		// ReadDirectoryChangesW
 #endif
 
-#include "platform.h"
-
 #include <sys/stat.h>
 
 #if defined(OSX)
@@ -53,7 +51,12 @@
 #include <sys/statvfs.h>
 #endif
 #include <sched.h>
+
+//lwss - Add tier0/platform.h to get this to build. Should be ok since it is header-only.
+#include "tier0/platform.h"
 #define int64 int64_t
+//lwss end
+
 
 // On OSX the native API file offset is always 64-bit
 // and things like stat64 are deprecated.

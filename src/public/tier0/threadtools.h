@@ -17,10 +17,18 @@
 #if defined( POSIX ) && !defined( _PS3 ) && !defined( _X360 )
 #include <pthread.h>
 #include <errno.h>
-#define WAIT_OBJECT_0 0
+#ifndef WAIT_OBJECT_0
+#define WAIT_OBJECT_0 0x00000000
+#endif
+#ifndef WAIT_TIMEOUT
 #define WAIT_TIMEOUT 0x00000102
-#define WAIT_FAILED -1
+#endif
+#ifndef WAIT_FAILED
+#define WAIT_FAILED 0xFFFFFFFF
+#endif
+#ifndef THREAD_PRIORITY_HIGHEST
 #define THREAD_PRIORITY_HIGHEST 2
+#endif
 #endif
 
 #if !defined( _X360 ) && !defined( _PS3 ) && defined(COMPILER_MSVC)
@@ -1865,6 +1873,9 @@ private:
 #elif defined(POSIX)
 	pthread_t m_threadId;
 	volatile pthread_t	m_threadZombieId;
+	//lwss add - Thread params. These were previously allocated on the heap and leaked.
+    ThreadInit_t m_threadInit;
+    //lwss end
 #endif
 	int		m_result;
 	char	m_szName[32];

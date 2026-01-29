@@ -1023,7 +1023,7 @@ void CParticleMgr::Term(bool bCanReferenceOtherStaticObjects)
 	m_NewEffects.Purge();
 
 	for( int i = m_SubTextures.First(); i != m_SubTextures.InvalidIndex(); i = m_SubTextures.Next( i ) )
-	{	
+	{
 		IMaterial *pMaterial = m_SubTextures[i]->m_pMaterial;
 		if ( pMaterial )
 			pMaterial->Release();
@@ -1319,27 +1319,19 @@ void CParticleMgr::RemoveAllEffects()
 
 	RemoveAllNewEffects();
 
+	// Don't release materials here - handles are kept alive for reuse across levels,
+	// and RepairPMaterial() will re-acquire them. Materials are released once in Term().
+	// Just clear the pointers so RepairPMaterial() knows to re-acquire.
 	for( int i = m_SubTextures.First(); i != m_SubTextures.InvalidIndex(); i = m_SubTextures.Next( i ) )
-	{	
-		IMaterial *pMaterial = m_SubTextures[i]->m_pMaterial;
-		if ( pMaterial )
-			pMaterial->Release();
-
+	{
 		m_SubTextures[i]->m_pMaterial = NULL;
+		m_SubTextures[i]->m_DefaultGroup.m_pPageMaterial = NULL;
 	}
-	//HACKHACK: commented out because we need to keep leaking handles until every piece of code that grabs one ditches it at level end
-	//m_SubTextures.PurgeAndDeleteElements();
 
 	for( int i = m_SubTextureGroups.Count(); --i >= 0; )
-	{	
-		IMaterial *pMaterial = m_SubTextureGroups[i]->m_pPageMaterial;
-		if ( pMaterial )
-			pMaterial->Release();
-
+	{
 		m_SubTextureGroups[i]->m_pPageMaterial = NULL;
 	}
-	//HACKHACK: commented out because we need to keep leaking handles until every piece of code that grabs one ditches it at level end
-	//m_SubTextureGroups.PurgeAndDeleteElements();
 }
 
 CNewParticleEffect *CParticleMgr::FirstNewEffect()
@@ -2101,8 +2093,8 @@ PMaterialHandle CParticleMgr::GetPMaterial( const char *pMaterialName )
 }
 
 
-//HACKHACK: The old system would leak handles and materials until shutdown. The new system still needs to leak handles until every piece of code that grabs one ditches it at level end.
-//This function takes a leaked handle from a previous level and reacquires necessary materials.
+// Re-associate a material handle with its material after level change.
+// Materials keep their ref count across levels - we just need to re-acquire the pointer.
 void CParticleMgr::RepairPMaterial( PMaterialHandle hMaterial )
 {
 	if( hMaterial->m_pMaterial != NULL )
@@ -2123,7 +2115,8 @@ void CParticleMgr::RepairPMaterial( PMaterialHandle hMaterial )
 	hMaterial->m_pMaterial = pIMaterial;
 	if ( pIMaterial != NULL )
 	{
-		pIMaterial->AddRef();
+		// No AddRef needed - material keeps its ref from initial GetPMaterial() call.
+		// Refs are only released once in Term() at shutdown.
 		CMatRenderContextPtr pRenderContext( m_pMaterialSystem );
 		pRenderContext->Bind( pIMaterial, this );
 
@@ -2133,7 +2126,7 @@ void CParticleMgr::RepairPMaterial( PMaterialHandle hMaterial )
 			if ( hMaterial->m_pGroup->m_pPageMaterial == NULL )
 			{
 				hMaterial->m_pGroup->m_pPageMaterial = pPageMaterial;
-				pPageMaterial->AddRef();
+				// No AddRef for page material either
 			}
 		}
 		else

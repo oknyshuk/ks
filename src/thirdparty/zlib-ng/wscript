@@ -43,6 +43,7 @@ def build(bld):
         'arch/generic/chunkset_c.c',
         'arch/generic/compare256_c.c',
         'arch/generic/crc32_braid_c.c',
+        'arch/generic/crc32_chorba_c.c',
         'arch/generic/crc32_fold_c.c',
         'arch/generic/slide_hash_c.c',
     ]
@@ -87,9 +88,6 @@ def build(bld):
         'X86_SSE42',
         'X86_PCLMULQDQ',
         'X86_AVX2',
-        'X86_AVX512',
-        'X86_AVX512VNNI',
-        'X86_VPCLMULQDQ',
     ]
 
     # Build core + generic + x86 base
@@ -99,6 +97,7 @@ def build(bld):
         features = 'c',
         includes = includes,
         defines  = x86_defines,
+        cflags   = ['-fPIC'],
         idx = bld.get_taskgen_count()
     )
 
@@ -114,7 +113,7 @@ def build(bld):
         features = 'c',
         includes = includes,
         defines  = x86_defines,
-        cflags   = ['-msse2'],
+        cflags   = ['-fPIC', '-msse2'],
         idx = bld.get_taskgen_count()
     )
 
@@ -128,7 +127,7 @@ def build(bld):
         features = 'c',
         includes = includes,
         defines  = x86_defines,
-        cflags   = ['-mssse3'],
+        cflags   = ['-fPIC', '-mssse3'],
         idx = bld.get_taskgen_count()
     )
 
@@ -139,7 +138,7 @@ def build(bld):
         features = 'c',
         includes = includes,
         defines  = x86_defines,
-        cflags   = ['-msse4.1'],
+        cflags   = ['-fPIC', '-msse4.1'],
         idx = bld.get_taskgen_count()
     )
 
@@ -150,7 +149,7 @@ def build(bld):
         features = 'c',
         includes = includes,
         defines  = x86_defines,
-        cflags   = ['-msse4.2'],
+        cflags   = ['-fPIC', '-msse4.2'],
         idx = bld.get_taskgen_count()
     )
 
@@ -161,7 +160,7 @@ def build(bld):
         features = 'c',
         includes = includes,
         defines  = x86_defines,
-        cflags   = ['-mpclmul', '-msse4.2'],
+        cflags   = ['-fPIC', '-mpclmul', '-msse4.2'],
         idx = bld.get_taskgen_count()
     )
 
@@ -177,34 +176,7 @@ def build(bld):
         features = 'c',
         includes = includes,
         defines  = x86_defines,
-        cflags   = ['-mavx2'],
-        idx = bld.get_taskgen_count()
-    )
-
-    # AVX512 sources
-    bld.objects(
-        source   = [
-            'arch/x86/adler32_avx512.c',
-            'arch/x86/adler32_avx512_vnni.c',
-            'arch/x86/chunkset_avx512.c',
-            'arch/x86/compare256_avx512.c',
-        ],
-        target   = 'zlib_avx512',
-        features = 'c',
-        includes = includes,
-        defines  = x86_defines,
-        cflags   = ['-mavx512f', '-mavx512dq', '-mavx512bw', '-mavx512vl'],
-        idx = bld.get_taskgen_count()
-    )
-
-    # VPCLMUL sources
-    bld.objects(
-        source   = ['arch/x86/crc32_vpclmulqdq.c'],
-        target   = 'zlib_vpclmul',
-        features = 'c',
-        includes = includes,
-        defines  = x86_defines,
-        cflags   = ['-mvpclmulqdq', '-mavx512f'],
+        cflags   = ['-fPIC', '-mavx2'],
         idx = bld.get_taskgen_count()
     )
 
@@ -214,7 +186,6 @@ def build(bld):
         target   = 'zlib',
         features = 'c',
         use      = ['zlib_core', 'zlib_sse2', 'zlib_ssse3', 'zlib_sse41',
-                    'zlib_sse42', 'zlib_pclmul', 'zlib_avx2', 'zlib_avx512',
-                    'zlib_vpclmul'],
+                    'zlib_sse42', 'zlib_pclmul', 'zlib_avx2'],
         idx = bld.get_taskgen_count()
     )

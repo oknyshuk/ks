@@ -37,7 +37,6 @@ static inline uint64 diff(uint64 v1, uint64 v2)
 }
 
 #ifdef OSX
-#include <sys/sysctl.h>
 uint64 GetCPUFreqFromPROC()
 {
         int mib[2] = {CTL_HW, HW_CPU_FREQ};

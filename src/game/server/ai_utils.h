@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
+//========= Copyright ï¿½ 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: Simple, small, free-standing tools for building AIs
 //
@@ -122,11 +122,8 @@ public:
 	Vector GetMarkPos() { return m_vMark; }
 	
 private:
-	enum
-	{
-		NO_MARK = -1
-	};
-	
+	static constexpr float NO_MARK = -1.0f;
+
 	Vector			   m_vMark;
 	float			   m_flMarkTolerance;
 

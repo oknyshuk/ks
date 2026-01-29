@@ -14,14 +14,6 @@
 #include "tier0/memdbgon.h"
 
 //-----------------------------------------------------------------------------
-
-inline float V_round( float f )
-{
-	return (float)( (int)( f + 0.5 ) );
-}
-#define round( f ) V_round( f )
-
-//-----------------------------------------------------------------------------
 // CAI_MoveSolver
 //-----------------------------------------------------------------------------
 
@@ -147,7 +139,7 @@ bool CAI_MoveSolver::Solve( const AI_MoveSuggestion_t *pSuggestions, int nSugges
 		// Sweep from left to right, summing the bias. For positive suggestions,
 		// the bias is further weighted to favor the center of the arc.
 		const float positiveDegradePer180 = 0.05; // i.e., lose 5% of weight by the time hit 180 degrees off center
-		const float positiveDegrade       = ( positiveDegradePer180 / ( NUM_SOLUTIONS * 0.5 ) ); 
+		const float positiveDegrade       = ( positiveDegradePer180 / ( NUM_SOLUTIONS * 0.5 ) );
 
 		for ( int i = 0; i < left + 1; ++i )
 		{
@@ -158,7 +150,7 @@ bool CAI_MoveSolver::Solve( const AI_MoveSuggestion_t *pSuggestions, int nSugges
 				int	iOffset = center - i;
 				float degrade = abs( iOffset ) * positiveDegrade;
 
-				if ( ( (current.flags & AIMS_FAVOR_LEFT ) && i > center ) || 
+				if ( ( (current.flags & AIMS_FAVOR_LEFT ) && i > center ) ||
 					 ( (current.flags & AIMS_FAVOR_RIGHT) && i < center ) )
 				{
 					degrade *= 0.9;
@@ -408,4 +400,3 @@ CON_COMMAND(ai_test_move_solver, "Tests the AI move solver system")
 #endif
 
 //=============================================================================
-

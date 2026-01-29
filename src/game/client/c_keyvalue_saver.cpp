@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2008, Valve Corporation, All rights reserved. ============//
+//========= Copyright ï¿½ 1996-2008, Valve Corporation, All rights reserved. ============//
 //
 // Purpose:		Client handler implementations for instruction players how to play
 //
@@ -60,8 +60,11 @@ void C_KeyValueSaver::Shutdown( void )
 
 	for ( int i = 0; i < m_KeyValueData.Count(); ++i )
 	{
-		m_KeyValueData[ i ].pKeyValues->deleteThis();
-		m_KeyValueData[ i ].pKeyValues = NULL;
+		if ( m_KeyValueData[ i ].pKeyValues )
+		{
+			m_KeyValueData[ i ].pKeyValues->deleteThis();
+			m_KeyValueData[ i ].pKeyValues = NULL;
+		}
 	}
 
 	m_KeyValueData.RemoveAll();

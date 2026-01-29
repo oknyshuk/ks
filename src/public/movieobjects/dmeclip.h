@@ -10,12 +10,13 @@
 #pragma once
 #endif
 
+#include "dmechannel.h" // lwss - add include for ChannelMode_t
 #include "datamodel/dmelement.h"
 #include "datamodel/dmattribute.h"
 #include "datamodel/dmattributevar.h"
 #include "datamodel/dmehandle.h"
 #include "avi/iavi.h"
-#include "materialsystem/materialsystemutil.h"
+#include "materialsystem/MaterialSystemUtil.h"
 #include "tier1/utlmap.h"
 #include "videocache/iremotevideomaterial.h"
 

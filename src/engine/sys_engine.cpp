@@ -1,6 +1,6 @@
 //===== Copyright 1996-2005, Valve Corporation, All rights reserved. ======//
 //
-// Purpose: 
+// Purpose:
 //
 //===========================================================================//
 
@@ -50,7 +50,7 @@
 // Forward declarations
 //-----------------------------------------------------------------------------
 void Sys_ShutdownGame( void );
-int Sys_InitGame( CreateInterfaceFn appSystemFactory, 
+int Sys_InitGame( CreateInterfaceFn appSystemFactory,
 			char const* pBaseDir, void *pwnd, int bIsDedicated );
 
 // sleep time when not focus
@@ -131,7 +131,7 @@ CON_COMMAND( host_filtered_time_report, "Dumps time spent idle in previous frame
 }
 
 //-----------------------------------------------------------------------------
-// Purpose: 
+// Purpose:
 //-----------------------------------------------------------------------------
 class CEngine : public IEngine
 {
@@ -149,7 +149,7 @@ public:
 
 	float			GetFrameTime( void );
 	float			GetCurTime( void );
-	
+
 	bool			TrapKey_Event( ButtonCode_t key, bool down );
 	void			TrapMouse_Event( int buttons, bool down );
 
@@ -213,14 +213,14 @@ CEngine::CEngine( void )
 }
 
 //-----------------------------------------------------------------------------
-// Purpose: 
+// Purpose:
 //-----------------------------------------------------------------------------
 CEngine::~CEngine( void )
 {
 }
 
 //-----------------------------------------------------------------------------
-// Purpose: 
+// Purpose:
 //-----------------------------------------------------------------------------
 void CEngine::Unload( void )
 {
@@ -231,7 +231,7 @@ void CEngine::Unload( void )
 }
 
 //-----------------------------------------------------------------------------
-// Purpose: 
+// Purpose:
 // Output : Returns true on success, false on failure.
 //-----------------------------------------------------------------------------
 bool CEngine::Load( bool dedicated, const char *rootdir )
@@ -242,10 +242,10 @@ bool CEngine::Load( bool dedicated, const char *rootdir )
 	// NOTE: We must bypass the 'next state' block here for initialization to work properly.
 	m_nDLLState = m_nNextDLLState = DLL_ACTIVE;
 
-	if ( Sys_InitGame( 
+	if ( Sys_InitGame(
 		g_AppSystemFactory,
-		rootdir, 
-		game->GetMainWindowAddress(), 
+		rootdir,
+		game->GetMainWindowAddress(),
 		dedicated ) )
 	{
 		success = true;
@@ -257,8 +257,8 @@ bool CEngine::Load( bool dedicated, const char *rootdir )
 }
 
 //-----------------------------------------------------------------------------
-// Purpose: 
-// Input  : dt - 
+// Purpose:
+// Input  : dt -
 // Output : Returns true on success, false on failure.
 //-----------------------------------------------------------------------------
 bool CEngine::FilterTime( float dt )
@@ -336,7 +336,7 @@ bool CEngine::FilterTime( float dt )
 // due to the inaccuracy of fps_max
 //
 //		if ( flRefreshRate > 49 )
-//		{	
+//		{
 //			float fpsMax = flRefreshRate / 2.0f, fpsSplitscreenMax = flRefreshRate / 2.0f;
 //			DevMsg( "Setting fps_max to %f and fps_splitscreen_max to %f (from defaults of %f/%f ) to match refresh rate of %f\n", fpsMax, fpsSplitscreenMax, fps_max.GetFloat(), fps_max_splitscreen.GetFloat(), flRefreshRate );
 //			fps_max.SetValue( fpsMax );
@@ -392,14 +392,14 @@ bool CEngine::FilterTime( float dt )
 		fps = MIN( MAX_FPS, fps );
 
 		float minframetime = 1.0 / fps;
-		
+
 		m_flMinFrameTime = minframetime;
 
 		if (
 #if !defined(DEDICATED)
-		    !demoplayer->IsPlayingTimeDemo() && 
+		    !demoplayer->IsPlayingTimeDemo() &&
 #endif
-			!g_bDedicatedServerBenchmarkMode && 
+			!g_bDedicatedServerBenchmarkMode &&
 			dt < minframetime )
 		{
 			// framerate is too high
@@ -412,20 +412,22 @@ bool CEngine::FilterTime( float dt )
 
 extern void PS3_PollSaveSystem();
 //-----------------------------------------------------------------------------
-// Purpose: 
+// Purpose:
 // Output : int
 //-----------------------------------------------------------------------------
 void CEngine::Frame( void )
 {
 	// yield the CPU for a little while when paused, minimized, or not the focus
 	// FIXME:  Move this to main windows message pump?
-	static ConVarRef cl_embedded_stream_video_playing( "cl_embedded_stream_video_playing" );
-	if ( IsPC() && !game->IsActiveApp() && !sv.IsDedicated()
-		&& !( cl_embedded_stream_video_playing.IsValid() && cl_embedded_stream_video_playing.GetBool() )
-		&& engine_no_focus_sleep.GetInt() > 0 )
-	{
-		g_pInputSystem->SleepUntilInput( engine_no_focus_sleep.GetInt() );
-	}
+	// lwss - This convar is completely missing, commenting this out
+	//static ConVarRef cl_embedded_stream_video_playing( "cl_embedded_stream_video_playing" );
+	//if ( IsPC() && !game->IsActiveApp() && !sv.IsDedicated()
+	//	&& !( cl_embedded_stream_video_playing.IsValid() && cl_embedded_stream_video_playing.GetBool() )
+	//	&& engine_no_focus_sleep.GetInt() > 0 )
+	//{
+	//	g_pInputSystem->SleepUntilInput( engine_no_focus_sleep.GetInt() );
+	//}
+	// lwss end
 
 	// Get current time
 	m_flCurrentTime	= Sys_FloatTime();
@@ -445,7 +447,7 @@ void CEngine::Frame( void )
 	if ( sv.IsDedicated() && ( dt < 0 ) )
 	{
 		// ... but if the clock ever went backwards due to a bug,
-		// we'd have no idea how much time has elapsed, so just 
+		// we'd have no idea how much time has elapsed, so just
 		// catch up to the next scheduled server tick.
 		dt = host_nexttick;
 	}
@@ -469,7 +471,7 @@ void CEngine::Frame( void )
 	// Accumulate current time delta into the true "frametime"
 	m_flFrameTime += dt;
 
-	// If the time is < 0, that means we've restarted. 
+	// If the time is < 0, that means we've restarted.
 	// Set the new time high enough so the engine will run a frame
 	if ( m_flFrameTime < 0.0f )
 		return;
@@ -498,7 +500,7 @@ void CEngine::Frame( void )
 		return;
 	}
 
-    TM_ZONE( TELEMETRY_LEVEL0, TMZF_NONE, "%s", __PRETTY_FUNCTION__ );
+    TM_ZONE( TELEMETRY_LEVEL0, TMZF_NONE, __PRETTY_FUNCTION__ );
 
 	if ( ShouldSerializeAsync() )
 	{
@@ -520,7 +522,7 @@ void CEngine::Frame( void )
 #ifdef VPROF_ENABLED
 	PreUpdateProfile( m_flFilteredTime );
 #endif
-	
+
 	// Record previous swallowed time counts.
 	host_filtered_time_history[ host_filtered_time_history_pos ] = m_flFilteredTime;
 	host_filtered_time_history_pos = ( host_filtered_time_history_pos + 1 ) % ARRAYSIZE(host_filtered_time_history);
@@ -538,7 +540,9 @@ void CEngine::Frame( void )
 	PostUpdateProfile();
 #endif
 
+#ifdef RAD_TELEMETRY_ENABLED
 	TelemetryTick();
+#endif
 
 	ETWRenderFrameMark( sv.IsDedicated() );
 
@@ -579,7 +583,7 @@ void CEngine::Frame( void )
 			break;
 		}
 	}
-	
+
 #ifdef RAD_TELEMETRY_ENABLED
 	float time = ( tmFastTime() - time0 ) * g_Telemetry.flRDTSCToMilliSeconds;
 	if( time > 0.5f )
@@ -606,7 +610,7 @@ void CEngine::Frame( void )
 
 
 //-----------------------------------------------------------------------------
-// Purpose: 
+// Purpose:
 //-----------------------------------------------------------------------------
 CEngine::EngineState_t CEngine::GetState( void )
 {
@@ -615,7 +619,7 @@ CEngine::EngineState_t CEngine::GetState( void )
 
 
 //-----------------------------------------------------------------------------
-// Purpose: 
+// Purpose:
 //-----------------------------------------------------------------------------
 void CEngine::SetNextState( EngineState_t iNextState )
 {
@@ -624,7 +628,7 @@ void CEngine::SetNextState( EngineState_t iNextState )
 
 
 //-----------------------------------------------------------------------------
-// Purpose: 
+// Purpose:
 //-----------------------------------------------------------------------------
 float CEngine::GetFrameTime( void )
 {
@@ -633,7 +637,7 @@ float CEngine::GetFrameTime( void )
 
 
 //-----------------------------------------------------------------------------
-// Purpose: 
+// Purpose:
 //-----------------------------------------------------------------------------
 float CEngine::GetCurTime( void )
 {
@@ -660,10 +664,10 @@ int CEngine::GetQuitting( void )
 
 #if WITH_OVERLAY_CURSOR_VISIBILITY_WORKAROUND
 //-----------------------------------------------------------------------------
-// Purpose: The overlay doesn't properly work on OS X 64-bit because a bunch of 
+// Purpose: The overlay doesn't properly work on OS X 64-bit because a bunch of
 // Cocoa functions that we hook were never ported to 64-bit. Until that is fixed,
-// we basically have to work around this by making sure the cursor is visible 
-// and set to something that is reasonable for usage in the overlay. 
+// we basically have to work around this by making sure the cursor is visible
+// and set to something that is reasonable for usage in the overlay.
 //-----------------------------------------------------------------------------
 void CEngine::OnGameOverlayActivated( GameOverlayActivated_t *pGameOverlayActivated )
 {

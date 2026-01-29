@@ -166,7 +166,7 @@ void CMapReslistGenerator::BuildMapList()
 	}
 }
 
-bool BuildGeneralMapList( CUtlVector<maplist_map_t> *aMaps, bool bUseMapListFile, const char *pMapFile, char *pSystemMsg, int *iCurrentMap )
+bool BuildGeneralMapList( CUtlVector<maplist_map_t> *aMaps, bool bUseMapListFile, const char *pMapFile, const char *pSystemMsg, int *iCurrentMap )
 {
 	if ( !bUseMapListFile )
 	{
@@ -945,7 +945,7 @@ void CMapReslistGenerator::TrackDeletions( const char *fullPathFileName )
 	Q_strlower( test );
 
 	CUtlSymbol sym = m_DeletionList.Find( test );
-	if ( sym.IsValid() )
+	if ( UTL_INVAL_SYMBOL != sym )
 	{
 		CUtlSymbol warningSymbol = m_DeletionListWarningsSymbols.AddString( test );
 

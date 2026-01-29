@@ -1,9 +1,6 @@
 #include "platform.h"
 #include "box_buoyancy.h"
 #include "mathlib/vector4d.h"
-#include "hardware_clock_fast.h"
-
-
 
 inline const Vector ToVector( const fltx4 & f4 )
 {
@@ -164,17 +161,15 @@ void BenchmarkBoxBuoyancy4x3( const fltx4& f4a, const fltx4& f4b, const fltx4&f4
 	int start, end;
 	const int nIterations = 1000000;
 
-	start = GetHardwareClockFast();
+	start = Plat_Rdtsc();
 	for ( int i = 0; i < nIterations; ++i )
 	{
 		result = result + GetBoxBuoyancy3x4( box );
 		box.x = AndSIMD( box.x, box.x );
 	}
-	end = GetHardwareClockFast();
+	end = Plat_Rdtsc();
 	Msg( "Box Buoyancy 4x3 Benchmark: %d ticks/box, volume %g \n", int32( ( end - start ) ) / nIterations, SubFloat( result, 3 ) / nIterations );
 }
-
-
 
 /*
 inline fltx4 operator - ( const fltx4 & a, const fltx4 & b )
@@ -343,7 +338,7 @@ fltx4 GetBoxBuoyancy3x4( const FourVectors &box_in )
 	box.z = AndNotSIMD( f4SignMask, box_in.z );
 	fltx4 boxCenterZ = SplatWSIMD( box_in.z ); // the height of the center of the box above the water level
 	fltx4 boxCenterXY = AndSIMD( SetYSIMD( SplatWSIMD( box_in.x ), SplatWSIMD( box_in.y ) ), LoadAlignedSIMD( g_SIMD_SkipTailMask[2] ) );
-	
+
 	// there are a lot of scheduling holes on this stage, so we might as well precompute something
 	// high point of the box, a+b+c
 	fltx4 boxTopX = Sum3SIMD( box.x );
@@ -379,7 +374,7 @@ fltx4 GetBoxBuoyancy3x4( const FourVectors &box_in )
 	boxB.x = PermYZZW( box.x );
 	boxB.y = PermYZZW( box.y );
 	boxB.z = PermYZZW( box.z );
-	FourVectors boxC; // "c" maps to ±c,b,a
+	FourVectors boxC; // "c" maps to \B1c,b,a
 	boxC.x = PermZYXW( box.x );
 	boxC.y = PermZYXW( box.y );
 	boxC.z = PermZYXW( box.z );
@@ -420,28 +415,28 @@ fltx4 GetBoxBuoyancy3x4( const FourVectors &box_in )
 
 	// here's the center-of-mass and total volume integral solution:
 	//		{{4/3 (3 x0 z0 + xA zA + xB zB), 4/3 (3 y0 z0 + yA zA + yB zB), 2/3 (3 z0^2 + zA^2 + zB^2), 4 z0},
-	//		{1/24 (4 x0 (3 z0 + zA + zB) + xA (4 z0 + 2 zA + zB) + xB (4 z0 + zA + 2 zB)), 
-	// 		 1/24 (4 y0 (3 z0 + zA + zB) + yA (4 z0 + 2 zA + zB) + yB (4 z0 + zA + 2 zB)), 
-	// 		 1/24 (6 z0^2 + zA^2 + zA zB + zB^2 + 4 z0 (zA + zB)), 
+	//		{1/24 (4 x0 (3 z0 + zA + zB) + xA (4 z0 + 2 zA + zB) + xB (4 z0 + zA + 2 zB)),
+	// 		 1/24 (4 y0 (3 z0 + zA + zB) + yA (4 z0 + 2 zA + zB) + yB (4 z0 + zA + 2 zB)),
+	// 		 1/24 (6 z0^2 + zA^2 + zA zB + zB^2 + 4 z0 (zA + zB)),
 	// 		 1/6 (3 z0 + zA + zB)}}
 	//fltx4 f4FullZ0_Cpos = boxCenterZ + boxC.z, f4FullZ0_Cneg = boxCenterZ - boxC.z;
-	
+
 	// 4/3 (3 x0 z0 + xA zA + xB zB) type of integral : take x0 z0 + (xA zA + xB zB) / 3
-	// consider that x0 = ± boxC.x and z0 = boxCenterZ ± boxC.z, we're left with
-	// ± boxCenter boxC.x + boxC.x boxC.z + (xA zA + xB zB) / 3
-	// Again, the only part that changes is (± boxCenterZ boxC.x)
+	// consider that x0 = \B1 boxC.x and z0 = boxCenterZ \B1 boxC.z, we're left with
+	// \B1 boxCenter boxC.x + boxC.x boxC.z + (xA zA + xB zB) / 3
+	// Again, the only part that changes is (\B1 boxCenterZ boxC.x)
 
 	fltx4 f4Full_X_common = boxC.x * boxC.z + Four_Thirds * ( boxA.x * boxA.z + boxB.x * boxB.z );
-	fltx4 f4Full_X_Cpos = Four_Fours * (boxCenterZ * boxC.x + f4Full_X_common); 
-	fltx4 f4Full_X_Cneg = Four_Fours * (f4Full_X_common - boxCenterZ * boxC.x);  
+	fltx4 f4Full_X_Cpos = Four_Fours * (boxCenterZ * boxC.x + f4Full_X_common);
+	fltx4 f4Full_X_Cneg = Four_Fours * (f4Full_X_common - boxCenterZ * boxC.x);
 
 	// y is the same as x
 
 	fltx4 f4Full_Y_common = boxC.y * boxC.z + Four_Thirds * ( boxA.y * boxA.z + boxB.y * boxB.z );
-	fltx4 f4Full_Y_Cpos = Four_Fours * ( boxCenterZ * boxC.y + f4Full_Y_common ) ;  
-	fltx4 f4Full_Y_Cneg = Four_Fours * ( f4Full_Y_common - boxCenterZ * boxC.y ) ;  
+	fltx4 f4Full_Y_Cpos = Four_Fours * ( boxCenterZ * boxC.y + f4Full_Y_common ) ;
+	fltx4 f4Full_Y_Cneg = Four_Fours * ( f4Full_Y_common - boxCenterZ * boxC.y ) ;
 
-	// z is different: 2/3 (3 z0^2 + zA^2 + zB^2) ;  z0 = boxCenterZ ± boxC.z, 
+	// z is different: 2/3 (3 z0^2 + zA^2 + zB^2) ;  z0 = boxCenterZ \B1 boxC.z,
 	// so we can just add the difference of 4 * boxCenterZ * boxC.z to get from Cneg to Cpos
 	fltx4 f4Full_Z_common = Four_TwoThirds * ( Sqr( boxA.z ) + Sqr( boxB.z ) );
 	fltx4 f4Full_Z_Cpos = MaddSIMD( Four_Twos, Sqr( boxCenterZ + boxC.z ), f4Full_Z_common );
@@ -479,20 +474,20 @@ fltx4 GetBoxBuoyancy3x4( const FourVectors &box_in )
 	// to find the fraction of right side of rectangle (the +b side) that has z=0
 	// this is different for +C and -C sides
 	//
-	//              (a+b) ± c + p	   a+b ± c + p
-	// computed as --------------  == ------------                // note: ± is typed by Alt + 0177
+	//              (a+b) \B1 c + p	   a+b \B1 c + p
+	// computed as --------------  == ------------                // note: \B1 is typed by Alt + 0177
 	//			   (a+b)-(b-a)	       2 a
-	// 
+	//
 	// Warning: I take special care in cases of flat faces (z=const, when rcpAz is undefined)
 	//          in these cases, submerged faces must have water<=0 and faces above water (z>0) must have water >= 1 + cut
-	// Note:    If I take care not to compute fully-submerged or fully-above-water polytopes, I only need to check 
+	// Note:    If I take care not to compute fully-submerged or fully-above-water polytopes, I only need to check
 	//          below-water case for Cneg faces and above-water case for Cpos faces
-	//     
+	//
 	// The trick I'm using here to account for everything is perturb the face's slope slightly to effectively divide by epsilon
 
 	fltx4 rcp2AzSpecial = MaskedAssign( isSideFlat, g_f4AlmostInifiniteSlope, rcp2Az );
 	fltx4 f4WaterPart_Cpos = boxTopZabs * rcp2AzSpecial, f4WaterPart_Cneg = MaddSIMD( boxBotZ, rcp2AzSpecial, f4CutPart )  + Four_Ones;
-	
+
 	// on the central piece, we need to integrate along axes (a,m = b - cut*a) and ranges {-1+cut...max(-1+cut,1-max(w,cut)) , -1...1}
 	// even cut and w have the same denominator: it's cut=2b/2a  and  water=topZ/2a
 
@@ -511,18 +506,18 @@ fltx4 GetBoxBuoyancy3x4( const FourVectors &box_in )
 	fltx4 f4CenterRangeSqr_Cneg = f4CenterRange_Cneg * f4CenterRange_Cneg;
 
 
-	// to integrate the central piece, we need the center point (pos±(c-a*q)), q = ; and m=b-cut a
+	// to integrate the central piece, we need the center point (pos\B1(c-a*q)), q = ; and m=b-cut a
 	// because it cancels out lots of terms in the integral
 
 	FourVectors boxM = MsubSIMD( boxA, f4CutPart, boxB ); // m=b-ra, replacement for b in the integrals
-	
+
 		// here's the center-of-mass and total volume integral solution. M is our B in this case.
 		//		{{4/3 (3 x0 z0 + xA zA + xM zM), 4/3 (3 y0 z0 + yA zA + yM zM), 2/3 (3 z0^2 + zA^2 + zM^2), 4 z0},
 		//
 		// and for triangles it would be this:
-		//		{1/24 (4 x0 (3 z0 + zA + zM) + xA (4 z0 + 2 zA + zM) + xM (4 z0 + zA + 2 zM)), 
-		// 		 1/24 (4 y0 (3 z0 + zA + zM) + yA (4 z0 + 2 zA + zM) + yM (4 z0 + zA + 2 zM)), 
-		// 		 1/24 (6 z0^2 + zA^2 + zA zM + zM^2 + 4 z0 (zA + zM)), 
+		//		{1/24 (4 x0 (3 z0 + zA + zM) + xA (4 z0 + 2 zA + zM) + xM (4 z0 + zA + 2 zM)),
+		// 		 1/24 (4 y0 (3 z0 + zA + zM) + yA (4 z0 + 2 zA + zM) + yM (4 z0 + zA + 2 zM)),
+		// 		 1/24 (6 z0^2 + zA^2 + zA zM + zM^2 + 4 z0 (zA + zM)),
 		// 		 1/6 (3 z0 + zA + zM)}}
 		// ... but we only use the rectangular integral right now
 
@@ -535,17 +530,17 @@ fltx4 GetBoxBuoyancy3x4( const FourVectors &box_in )
 
 		//fltx4 f4Center_X_common = Four_Thirds * (boxA.x * boxA.z + boxM.x * boxM.z );
 		fltx4 boxMxz = boxM.x * boxM.z, boxAxz = boxA.x * boxA.z;
-		fltx4 f4Center_X_Cpos = Four_Fours * MaddSIMD( f4CenterX0_Cpos, f4CenterZ0_Cpos, Four_Thirds * MaddSIMD( boxAxz, f4CenterRangeSqr_Cpos, boxMxz ) ); 
-		fltx4 f4Center_X_Cneg = Four_Fours * MaddSIMD( f4CenterX0_Cneg, f4CenterZ0_Cneg, Four_Thirds * MaddSIMD( boxAxz, f4CenterRangeSqr_Cneg, boxMxz ) ); 
+		fltx4 f4Center_X_Cpos = Four_Fours * MaddSIMD( f4CenterX0_Cpos, f4CenterZ0_Cpos, Four_Thirds * MaddSIMD( boxAxz, f4CenterRangeSqr_Cpos, boxMxz ) );
+		fltx4 f4Center_X_Cneg = Four_Fours * MaddSIMD( f4CenterX0_Cneg, f4CenterZ0_Cneg, Four_Thirds * MaddSIMD( boxAxz, f4CenterRangeSqr_Cneg, boxMxz ) );
 
 		// y is the same as x
 
 		//fltx4 f4Center_Y_common = Four_Thirds * (boxA.y * boxA.z + boxM.y * boxM.z );
 		fltx4 boxMyz = boxM.y * boxM.z, boxAyz  = boxA.y * boxA.z;
-		fltx4 f4Center_Y_Cpos = Four_Fours * MaddSIMD( f4CenterY0_Cpos, f4CenterZ0_Cpos, Four_Thirds * MaddSIMD(boxAyz, f4CenterRangeSqr_Cpos, boxMyz ) ); 
-		fltx4 f4Center_Y_Cneg = Four_Fours * MaddSIMD( f4CenterY0_Cneg, f4CenterZ0_Cneg, Four_Thirds * MaddSIMD(boxAyz, f4CenterRangeSqr_Cneg, boxMyz ) ); 
+		fltx4 f4Center_Y_Cpos = Four_Fours * MaddSIMD( f4CenterY0_Cpos, f4CenterZ0_Cpos, Four_Thirds * MaddSIMD(boxAyz, f4CenterRangeSqr_Cpos, boxMyz ) );
+		fltx4 f4Center_Y_Cneg = Four_Fours * MaddSIMD( f4CenterY0_Cneg, f4CenterZ0_Cneg, Four_Thirds * MaddSIMD(boxAyz, f4CenterRangeSqr_Cneg, boxMyz ) );
 
-		// z is a bit different: 2/3 (3 z0^2 + zA^2 + zB^2) 
+		// z is a bit different: 2/3 (3 z0^2 + zA^2 + zB^2)
 		// so we can just add the difference of 4 * boxCenterZ * boxC.z to get from Cneg to Cpos
 		//fltx4 f4Center_Z_common = Four_TwoThirds * ( Sqr( boxA.z ) + Sqr( boxM.z ) );
 		fltx4 boxMzz = boxM.z * boxM.z, boxAzz  = boxA.z * boxA.z;
@@ -559,7 +554,7 @@ fltx4 GetBoxBuoyancy3x4( const FourVectors &box_in )
 		fltx4 f4CenterLeverX = Dot3SIMD( f4Center_X_Cpos, f4CenterProj_Cpos ) - Dot3SIMD( f4Center_X_Cneg, f4CenterProj_Cneg );
 		fltx4 f4CenterLeverY = Dot3SIMD( f4Center_Y_Cpos, f4CenterProj_Cpos ) - Dot3SIMD( f4Center_Y_Cneg, f4CenterProj_Cneg );
 		fltx4 f4CenterLeverZ = Dot3SIMD( f4Center_Z_Cpos, f4CenterProj_Cpos ) - Dot3SIMD( f4Center_Z_Cneg, f4CenterProj_Cneg );
-		
+
 		// this is the condenced result of previous integration
 		fltx4 f4CenterComponent = CombineSIMD( f4CenterLeverX, f4CenterLeverY, f4CenterLeverZ, f4CenterVolume );(void)f4CenterComponent;
 #endif
@@ -597,13 +592,13 @@ fltx4 GetBoxBuoyancy3x4( const FourVectors &box_in )
 	fltx4 f4BotTriProj_Cpos = fabs( CrossZ( boxBotTriA_Cpos, boxBotTriB_Cpos ) ), f4BotTriProj_Cneg = fabs( CrossZ( boxBotTriA_Cneg, boxBotTriB_Cneg ) );
 
 	// let's integrate along topTriA (0..-2) and topTriB (0..-2), a triangle . Here's the solved integral:
-	// 	2/3 (xA (-2 z0 + 2 zA + zB) + xB (-2 z0 + zA + 2 zB) + x0 (3 z0 - 2 (zA + zB))), 
-	// 	2/3 (yA (-2 z0 + 2 zA + zB) + yB (-2 z0 + zA + 2 zB) + y0 (3 z0 - 2 (zA + zB))), 
-	// 	1/3 (3 z0^2 - 4 z0 (zA + zB) + 2 (zA^2 + zA zB + zB^2)), 
+	// 	2/3 (xA (-2 z0 + 2 zA + zB) + xB (-2 z0 + zA + 2 zB) + x0 (3 z0 - 2 (zA + zB))),
+	// 	2/3 (yA (-2 z0 + 2 zA + zB) + yB (-2 z0 + zA + 2 zB) + y0 (3 z0 - 2 (zA + zB))),
+	// 	1/3 (3 z0^2 - 4 z0 (zA + zB) + 2 (zA^2 + zA zB + zB^2)),
 	// 	2/3 (3 z0 - 2 (zA + zB))
 	//
 	// here's collected by x0,y0,z0
-	// 	2/3 (-2 xA - 2 xB) z0 + 2/3 (2 xA zA + xB zA + xA zB + 2 xB zB) + x0 (2 z0 - (4 (zA + zB))/3), 
+	// 	2/3 (-2 xA - 2 xB) z0 + 2/3 (2 xA zA + xB zA + xA zB + 2 xB zB) + x0 (2 z0 - (4 (zA + zB))/3),
 	// 	2/3 (-2 yA - 2 yB) z0 + 2/3 (2 yA zA + yB zA + yA zB + 2 yB zB) + y0 (2 z0 - (4 (zA + zB))/3),
 	// 	z0^2 - 4/3 z0 (zA + zB) + 2/3 (zA^2 + zA zB + zB^2),
 	// 	2 z0 - (4 (zA + zB))/3
@@ -613,77 +608,77 @@ fltx4 GetBoxBuoyancy3x4( const FourVectors &box_in )
 	fltx4 f4TopTriY0_Cneg = MsubSIMD( Four_Twos, boxC.y, boxTopY );
 	fltx4 f4TopTriZ0_Cneg = MsubSIMD( Four_Twos, boxC.z, boxTopZabs );
 
-	fltx4 f4TopTri_X_Cpos = Four_TwoThirds * (boxTopTriA_Cpos.x * ( Four_Twos * ( boxTopTriA_Cpos.z - boxTopZabs ) + boxTopTriB_Cpos.z ) + 
-		boxTopTriB_Cpos.x * ( boxTopTriA_Cpos.z + 
-		Four_Twos * ( boxTopTriB_Cpos.z - boxTopZabs ) ) + 
+	fltx4 f4TopTri_X_Cpos = Four_TwoThirds * (boxTopTriA_Cpos.x * ( Four_Twos * ( boxTopTriA_Cpos.z - boxTopZabs ) + boxTopTriB_Cpos.z ) +
+		boxTopTriB_Cpos.x * ( boxTopTriA_Cpos.z +
+		Four_Twos * ( boxTopTriB_Cpos.z - boxTopZabs ) ) +
 		boxTopX * (Four_Threes * boxTopZabs - Four_Twos * ( boxTopTriA_Cpos.z + boxTopTriB_Cpos.z ) ) );
 
-	fltx4 f4TopTri_Y_Cpos = Four_TwoThirds * (boxTopTriA_Cpos.y * ( Four_Twos * ( boxTopTriA_Cpos.z - boxTopZabs ) + boxTopTriB_Cpos.z ) + 
-		boxTopTriB_Cpos.y * ( boxTopTriA_Cpos.z + 
-		Four_Twos * ( boxTopTriB_Cpos.z - boxTopZabs ) ) + 
+	fltx4 f4TopTri_Y_Cpos = Four_TwoThirds * (boxTopTriA_Cpos.y * ( Four_Twos * ( boxTopTriA_Cpos.z - boxTopZabs ) + boxTopTriB_Cpos.z ) +
+		boxTopTriB_Cpos.y * ( boxTopTriA_Cpos.z +
+		Four_Twos * ( boxTopTriB_Cpos.z - boxTopZabs ) ) +
 		boxTopY * (Four_Threes * boxTopZabs - Four_Twos * ( boxTopTriA_Cpos.z + boxTopTriB_Cpos.z ) ) );
 
-	fltx4 f4TopTri_Z_Cpos = Four_Thirds * (Four_Threes * boxTopZabs * boxTopZabs - 
-		Four_Fours * boxTopZabs * (boxTopTriA_Cpos.z + boxTopTriB_Cpos.z) + 
-		Four_Twos * (boxTopTriA_Cpos.z * boxTopTriA_Cpos.z + 
+	fltx4 f4TopTri_Z_Cpos = Four_Thirds * (Four_Threes * boxTopZabs * boxTopZabs -
+		Four_Fours * boxTopZabs * (boxTopTriA_Cpos.z + boxTopTriB_Cpos.z) +
+		Four_Twos * (boxTopTriA_Cpos.z * boxTopTriA_Cpos.z +
 		boxTopTriA_Cpos.z * boxTopTriB_Cpos.z + boxTopTriB_Cpos.z*boxTopTriB_Cpos.z));
 
 	fltx4 f4TopTri_W_Cpos = Four_TwoThirds * ( Four_Threes * boxTopZabs - Four_Twos * ( boxTopTriA_Cpos.z + boxTopTriB_Cpos.z ) );
 
-	fltx4 f4TopTri_X_Cneg = Four_TwoThirds * (boxTopTriA_Cneg.x * ( Four_Twos * ( boxTopTriA_Cneg.z - f4TopTriZ0_Cneg ) + boxTopTriB_Cneg.z ) + 
-		boxTopTriB_Cneg.x * ( boxTopTriA_Cneg.z + 
-		Four_Twos * ( boxTopTriB_Cneg.z - f4TopTriZ0_Cneg ) ) + 
+	fltx4 f4TopTri_X_Cneg = Four_TwoThirds * (boxTopTriA_Cneg.x * ( Four_Twos * ( boxTopTriA_Cneg.z - f4TopTriZ0_Cneg ) + boxTopTriB_Cneg.z ) +
+		boxTopTriB_Cneg.x * ( boxTopTriA_Cneg.z +
+		Four_Twos * ( boxTopTriB_Cneg.z - f4TopTriZ0_Cneg ) ) +
 		f4TopTriX0_Cneg * (Four_Threes * f4TopTriZ0_Cneg - Four_Twos * ( boxTopTriA_Cneg.z + boxTopTriB_Cneg.z ) ) );
 
-	fltx4 f4TopTri_Y_Cneg = Four_TwoThirds * (boxTopTriA_Cneg.y * ( Four_Twos * ( boxTopTriA_Cneg.z - f4TopTriZ0_Cneg ) + boxTopTriB_Cneg.z ) + 
-		boxTopTriB_Cneg.y * ( boxTopTriA_Cneg.z + 
-		Four_Twos * ( boxTopTriB_Cneg.z - f4TopTriZ0_Cneg ) ) + 
+	fltx4 f4TopTri_Y_Cneg = Four_TwoThirds * (boxTopTriA_Cneg.y * ( Four_Twos * ( boxTopTriA_Cneg.z - f4TopTriZ0_Cneg ) + boxTopTriB_Cneg.z ) +
+		boxTopTriB_Cneg.y * ( boxTopTriA_Cneg.z +
+		Four_Twos * ( boxTopTriB_Cneg.z - f4TopTriZ0_Cneg ) ) +
 		f4TopTriY0_Cneg * (Four_Threes * f4TopTriZ0_Cneg - Four_Twos * ( boxTopTriA_Cneg.z + boxTopTriB_Cneg.z ) ) );
 
-	fltx4 f4TopTri_Z_Cneg = Four_Thirds * (Four_Threes * f4TopTriZ0_Cneg * f4TopTriZ0_Cneg - 
-		Four_Fours * f4TopTriZ0_Cneg * (boxTopTriA_Cneg.z + boxTopTriB_Cneg.z) + 
-		Four_Twos * (boxTopTriA_Cneg.z * boxTopTriA_Cneg.z + 
+	fltx4 f4TopTri_Z_Cneg = Four_Thirds * (Four_Threes * f4TopTriZ0_Cneg * f4TopTriZ0_Cneg -
+		Four_Fours * f4TopTriZ0_Cneg * (boxTopTriA_Cneg.z + boxTopTriB_Cneg.z) +
+		Four_Twos * (boxTopTriA_Cneg.z * boxTopTriA_Cneg.z +
 		boxTopTriA_Cneg.z * boxTopTriB_Cneg.z + boxTopTriB_Cneg.z*boxTopTriB_Cneg.z));
 
 	fltx4 f4TopTri_W_Cneg = Four_TwoThirds * ( Four_Threes * f4TopTriZ0_Cneg - Four_Twos * ( boxTopTriA_Cneg.z + boxTopTriB_Cneg.z ) );
-	
-	
-	
+
+
+
 	fltx4 f4BotTriX0_Cpos = boxC.x - boxA.x - boxB.x;
 	fltx4 f4BotTriY0_Cpos = boxC.y - boxA.y - boxB.y;
 	fltx4 f4BotTriZ0_Cpos = boxC.z - boxA.z - boxB.z + boxCenterZ;
 
-	fltx4 f4BotTri_X_Cpos = Four_TwoThirds * (boxBotTriA_Cpos.x * ( Four_Twos * ( boxBotTriA_Cpos.z - f4BotTriZ0_Cpos ) + boxBotTriB_Cpos.z ) + 
-		boxBotTriB_Cpos.x * ( boxBotTriA_Cpos.z + 
-		Four_Twos * ( boxBotTriB_Cpos.z - f4BotTriZ0_Cpos ) ) + 
+	fltx4 f4BotTri_X_Cpos = Four_TwoThirds * (boxBotTriA_Cpos.x * ( Four_Twos * ( boxBotTriA_Cpos.z - f4BotTriZ0_Cpos ) + boxBotTriB_Cpos.z ) +
+		boxBotTriB_Cpos.x * ( boxBotTriA_Cpos.z +
+		Four_Twos * ( boxBotTriB_Cpos.z - f4BotTriZ0_Cpos ) ) +
 		f4BotTriX0_Cpos * (Four_Threes * f4BotTriZ0_Cpos - Four_Twos * ( boxBotTriA_Cpos.z + boxBotTriB_Cpos.z ) ) );
 
-	fltx4 f4BotTri_Y_Cpos = Four_TwoThirds * (boxBotTriA_Cpos.y * ( Four_Twos * ( boxBotTriA_Cpos.z - f4BotTriZ0_Cpos ) + boxBotTriB_Cpos.z ) + 
-		boxBotTriB_Cpos.y * ( boxBotTriA_Cpos.z + 
-		Four_Twos * ( boxBotTriB_Cpos.z - f4BotTriZ0_Cpos ) ) + 
+	fltx4 f4BotTri_Y_Cpos = Four_TwoThirds * (boxBotTriA_Cpos.y * ( Four_Twos * ( boxBotTriA_Cpos.z - f4BotTriZ0_Cpos ) + boxBotTriB_Cpos.z ) +
+		boxBotTriB_Cpos.y * ( boxBotTriA_Cpos.z +
+		Four_Twos * ( boxBotTriB_Cpos.z - f4BotTriZ0_Cpos ) ) +
 		f4BotTriY0_Cpos * (Four_Threes * f4BotTriZ0_Cpos - Four_Twos * ( boxBotTriA_Cpos.z + boxBotTriB_Cpos.z ) ) );
 
-	fltx4 f4BotTri_Z_Cpos = Four_Thirds * (Four_Threes * f4BotTriZ0_Cpos * f4BotTriZ0_Cpos - 
-		Four_Fours * f4BotTriZ0_Cpos * (boxBotTriA_Cpos.z + boxBotTriB_Cpos.z) + 
-		Four_Twos * (boxBotTriA_Cpos.z * boxBotTriA_Cpos.z + 
+	fltx4 f4BotTri_Z_Cpos = Four_Thirds * (Four_Threes * f4BotTriZ0_Cpos * f4BotTriZ0_Cpos -
+		Four_Fours * f4BotTriZ0_Cpos * (boxBotTriA_Cpos.z + boxBotTriB_Cpos.z) +
+		Four_Twos * (boxBotTriA_Cpos.z * boxBotTriA_Cpos.z +
 		boxBotTriA_Cpos.z * boxBotTriB_Cpos.z + boxBotTriB_Cpos.z*boxBotTriB_Cpos.z));
 
 	fltx4 f4BotTri_W_Cpos = Four_TwoThirds * ( Four_Threes * f4BotTriZ0_Cpos - Four_Twos * ( boxBotTriA_Cpos.z + boxBotTriB_Cpos.z ) );
 
 	fltx4 f4BotTriZ0_Cneg = boxCenterZ - boxTopZrel;
-	fltx4 f4BotTri_X_Cneg = Four_TwoThirds * (boxBotTriA_Cneg.x * ( Four_Twos * ( boxBotTriA_Cneg.z - f4BotTriZ0_Cneg ) + boxBotTriB_Cneg.z ) + 
-		boxBotTriB_Cneg.x * ( boxBotTriA_Cneg.z + 
-		Four_Twos * ( boxBotTriB_Cneg.z - f4BotTriZ0_Cneg ) ) 
+	fltx4 f4BotTri_X_Cneg = Four_TwoThirds * (boxBotTriA_Cneg.x * ( Four_Twos * ( boxBotTriA_Cneg.z - f4BotTriZ0_Cneg ) + boxBotTriB_Cneg.z ) +
+		boxBotTriB_Cneg.x * ( boxBotTriA_Cneg.z +
+		Four_Twos * ( boxBotTriB_Cneg.z - f4BotTriZ0_Cneg ) )
 		-boxTopX * (Four_Threes * f4BotTriZ0_Cneg - Four_Twos * ( boxBotTriA_Cneg.z + boxBotTriB_Cneg.z ) ) );
 
-	fltx4 f4BotTri_Y_Cneg = Four_TwoThirds * (boxBotTriA_Cneg.y * ( Four_Twos * ( boxBotTriA_Cneg.z - f4BotTriZ0_Cneg ) + boxBotTriB_Cneg.z ) + 
-		boxBotTriB_Cneg.y * ( boxBotTriA_Cneg.z + 
-		Four_Twos * ( boxBotTriB_Cneg.z - f4BotTriZ0_Cneg ) ) 
+	fltx4 f4BotTri_Y_Cneg = Four_TwoThirds * (boxBotTriA_Cneg.y * ( Four_Twos * ( boxBotTriA_Cneg.z - f4BotTriZ0_Cneg ) + boxBotTriB_Cneg.z ) +
+		boxBotTriB_Cneg.y * ( boxBotTriA_Cneg.z +
+		Four_Twos * ( boxBotTriB_Cneg.z - f4BotTriZ0_Cneg ) )
 		-boxTopY * (Four_Threes * f4BotTriZ0_Cneg - Four_Twos * ( boxBotTriA_Cneg.z + boxBotTriB_Cneg.z ) ) );
 
-	fltx4 f4BotTri_Z_Cneg = Four_Thirds * (Four_Threes * f4BotTriZ0_Cneg * f4BotTriZ0_Cneg - 
-		Four_Fours * f4BotTriZ0_Cneg * (boxBotTriA_Cneg.z + boxBotTriB_Cneg.z) + 
-		Four_Twos * (boxBotTriA_Cneg.z * boxBotTriA_Cneg.z + 
+	fltx4 f4BotTri_Z_Cneg = Four_Thirds * (Four_Threes * f4BotTriZ0_Cneg * f4BotTriZ0_Cneg -
+		Four_Fours * f4BotTriZ0_Cneg * (boxBotTriA_Cneg.z + boxBotTriB_Cneg.z) +
+		Four_Twos * (boxBotTriA_Cneg.z * boxBotTriA_Cneg.z +
 		boxBotTriA_Cneg.z * boxBotTriB_Cneg.z + boxBotTriB_Cneg.z*boxBotTriB_Cneg.z));
 
 	fltx4 f4BotTri_W_Cneg = Four_TwoThirds * ( Four_Threes * f4BotTriZ0_Cneg - Four_Twos * ( boxBotTriA_Cneg.z + boxBotTriB_Cneg.z ) );
@@ -704,13 +699,13 @@ fltx4 GetBoxBuoyancy3x4( const FourVectors &box_in )
 	// it affects neither force nor torque exerted by the said force. Not computing it here reduces this routine from 1188 ticks to 900 ticks per run
 	(void)f4All_Z_Cpos;
 	(void)f4All_Z_Cneg;
-	fltx4 f4All_Z = Four_Zeros;//Sum3SIMD( f4All_Z_Cpos - f4All_Z_Cneg ); 
-	
+	fltx4 f4All_Z = Four_Zeros;//Sum3SIMD( f4All_Z_Cpos - f4All_Z_Cneg );
+
 	fltx4 f4All_W = Sum3SIMD( f4All_W_Cpos - f4All_W_Cneg );
 #if 1
 	// <Sergiy> again, to be brutally honest, I don't care about the actual lever of archimedes force.
 	// I can just as well use lever * displaced_volume to compute the torque, and it'll actually be more precise, although less understandable.
-	// 
+	//
 
 	// this variant returns XYZ of the center of mass of displaced fluid multiplied by W, and W = volume of displaced fluid
 	fltx4 f4All = CombineSIMD( f4All_X, f4All_Y, f4All_Z, f4All_W ) + f4All_W * boxCenterXY;
@@ -816,7 +811,7 @@ Vector4D GetPyramidBuoyancy( const Vector &pos, const Vector &a, const Vector &b
 	float flAreaXIntegral = acrossb.x * 4 * ( pos.x + n.x );
 	float flAreaYIntegral = acrossb.y * 4 * ( pos.y + n.y );
 	float flAreaZIntegral = acrossb.z * 4 * ( pos.z + n.z );
-	
+
 	Vector4D vecIntegral;
 	vecIntegral.w = flAreaZIntegral;
 	Vector center = pos + n;
@@ -862,7 +857,7 @@ Vector4D GetBuoyancy( const Vector &pos, Vector box[3] )
 
 
 
-	
+
 	uint numVerts = 4, numVerts2 = 0;
 
 	Vector acrossb = CrossProduct( a, b );
@@ -915,14 +910,14 @@ void BenchmarkBoxBuoyancy( Vector a, const Vector& b, const Vector& c, const Vec
 	const int nIterations = 100000;
 	Vector4D result;
 
-	start = GetHardwareClockFast();
+	start = Plat_Rdtsc();
 	result.Init(0,0,0,0);
 	for ( int i = 0; i < nIterations; ++i )
 	{
 		result = result % (GetPyramidBuoyancy( pos, a, b, c ) % GetPyramidBuoyancy( pos, b, a, -c ) % GetPyramidBuoyancy( pos, c, a, b ) % GetPyramidBuoyancy( pos, a, c, -b ) % GetPyramidBuoyancy( pos, b, c, a ) % GetPyramidBuoyancy( pos, c, b, -a )) ;
 		a += Vector(1e-24f, 1e-25f, 1e-26f);
 	}
-	end = GetHardwareClockFast();
+	end = Plat_Rdtsc();
 	Msg( "Box Buoyancy Scalar Benchmark: %d ticks/box, volume %g \n", int32( ( end - start ) ) / nIterations, result.w / nIterations );
 }
 

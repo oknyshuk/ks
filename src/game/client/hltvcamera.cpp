@@ -696,7 +696,7 @@ void C_HLTVCamera::Accelerate( Vector& wishdir, float wishspeed, float accel )
 	}
 }
 
-extern ConVar fov_cs_debug; 
+static ConVar fov_cs_debug( "fov_cs_debug", "0", FCVAR_CHEAT, "Debug FOV override for spectator camera" ); 
 // movement code is a copy of CGameMovement::FullNoClipMove()
 void C_HLTVCamera::CalcRoamingView(Vector& eyeOrigin, QAngle& eyeAngles, float& fov)
 {

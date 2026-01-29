@@ -638,6 +638,11 @@ void Host_PrintStatus( cmd_source_t commandSource, void ( *print )(const char *f
 			}
 		}
 		print( "udp/ip  : %s:%i%s\n", net_local_adr.ToString(true), sv.GetUDPPort(), sPublicIPInfo.String() );
+		static ConVarRef sv_steamdatagramtransport_port( "sv_steamdatagramtransport_port" );
+		if ( bWithAddresses && sv_steamdatagramtransport_port.GetInt() > 0 )
+		{
+			print( "sdt     : =%s on port %d\n", Steam3Server().GetGSSteamID().Render(), sv_steamdatagramtransport_port.GetInt() );
+		}
 
 		const char *osType =
 #if defined( WIN32 )
@@ -1363,7 +1368,6 @@ void Host_SplitScreen_Map_f( const CCommand &args )
 {
 #ifndef _DEMO
 	Host_Map_Helper( args, EMAP_SPLITSCREEN );
-	host_state.max_splitscreen_players = 2;
 #endif
 }
 
@@ -1536,10 +1540,6 @@ void Host_Changelevel_f( const CCommand &args )
 	Q_StripExtension( args[ 1 ], mapname, sizeof( mapname ) );
 
 	bool bMapMustExist = true;
-	static ConVarRef sv_workshop_allow_other_maps( "sv_workshop_allow_other_maps" );
-	if ( StringHasPrefix( mapname, "workshop" ) && ( ( mapname[8] == '/' ) || ( mapname[8] == '\\' ) ) &&
-		sv_workshop_allow_other_maps.GetBool() )
-		bMapMustExist = false;
 
 	if ( bMapMustExist && !modelloader->Map_IsValid( mapname, true ) )
 	{
@@ -2005,7 +2005,7 @@ CON_COMMAND( kickid, "Kick a player by userid or uniqueid, with a message." )
 void PerformKick( cmd_source_t commandSource, int iSearchIndex, char* szSearchString, bool bForceKick, const char* pszMessage )
 {
 	IClient		*client = NULL;
-	char		*who = "Console";
+	const char	*who = "Console";
 
 	// find this client
 	int i;
@@ -2091,7 +2091,7 @@ Kicks a user off of the server using their name
 */
 CON_COMMAND( kick, "Kick a player by name." )
 {
-	char		*who = "Console";
+	const char	*who = "Console";
 	char		*pszName = NULL;
 	IClient		*client = NULL;
 	int			i = 0;

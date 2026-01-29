@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
+//========= Copyright ï¿½ 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -181,6 +181,7 @@ CVProfGraphPanel::CVProfGraphPanel( vgui::VPANEL parent ) : BaseClass( NULL, "CV
 //-----------------------------------------------------------------------------
 CVProfGraphPanel::~CVProfGraphPanel( void )
 {
+	m_WhiteMaterial.Shutdown();
 }
 
 void CVProfGraphPanel::ApplySchemeSettings(vgui::IScheme *pScheme)

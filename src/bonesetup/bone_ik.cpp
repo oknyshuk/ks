@@ -1,4 +1,4 @@
-//===== Copyright © 1996-2005, Valve Corporation, All rights reserved. ======//
+//===== Copyright ï¿½ 1996-2005, Valve Corporation, All rights reserved. ======//
 //
 // Purpose: 
 //
@@ -100,14 +100,14 @@ public:
          X[i] = P[i];
       normalize(X);
 
-// Its y axis is perpendicular to P, so Y = unit( E - X(E·X) ).
+// Its y axis is perpendicular to P, so Y = unit( E - X(Eï¿½X) ).
 
       float dDOTx = dot(D,X);
       for (i = 0 ; i < 3 ; i++)
          Y[i] = D[i] - dDOTx * X[i];
       normalize(Y);
 
-// Its z axis is perpendicular to both X and Y, so Z = X×Y.
+// Its z axis is perpendicular to both X and Y, so Z = Xï¿½Y.
 
       cross(X,Y,Z);
 
@@ -872,6 +872,12 @@ void CIKContext::AddDependencies( mstudioseqdesc_t &seqdesc, int iSequence, floa
 			ClearTargets();
 		}
 
+		// Validate chain index to prevent out-of-bounds access
+		if ( ikrule.chain < 0 || ikrule.chain >= m_ikChainRule.Count() )
+		{
+			continue;
+		}
+
 		ikrule.flRuleWeight = flWeight;
 
 		if (ikrule.flRuleWeight * ikrule.flWeight > 0.999)
@@ -928,6 +934,12 @@ void CIKContext::AddAllDependencies_PS3( ikcontextikrule_t *ikRules, int numRule
 			m_target.SetSize(12);
 			memset( m_target.Base(), 0, sizeof(m_target[0])*m_target.Count() );
 			ClearTargets();
+		}
+
+		// Validate chain index to prevent out-of-bounds access
+		if ( ikrule.chain < 0 || ikrule.chain >= m_ikChainRule.Count() )
+		{
+			continue;
 		}
 
 		//ikrule.flRuleWeight = flWeight;

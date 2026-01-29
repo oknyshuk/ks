@@ -734,7 +734,7 @@ void Button::FireActionSignal()
 				&& strstr(szCommand, "://") )
 			{
 				// it's a command to launch a url, run it
-				system()->ShellExecute("open", _actionMessage->GetString("command", "      ") + 4);
+				system()->OpenURL(_actionMessage->GetString("command", "      ") + 4);
 			}
 			if ( szCommand[0] == '#' && szCommand[1] == '#' )
 			{

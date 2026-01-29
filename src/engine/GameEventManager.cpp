@@ -1,6 +1,6 @@
 //========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
 //
-// Purpose: 
+// Purpose:
 //
 // $NoKeywords: $
 //
@@ -31,26 +31,26 @@ static CGameEventManager s_GameEventManager;
 CGameEventManager &g_GameEventManager = s_GameEventManager;
 
 static const tokenset_t< int > s_GameListenerTypeMap[] =
-{						 
-	{ "SERVERSIDE",     CGameEventManager::SERVERSIDE     }, // this is a server side listener, event logger etc                             
-	{ "CLIENTSIDE",     CGameEventManager::CLIENTSIDE     }, // this is a client side listenet, HUD element etc                              
-	{ "CLIENTSTUB",     CGameEventManager::CLIENTSTUB     }, // this is a serverside stub for a remote client listener (used by engine only) 
-	{ "SERVERSIDE_OLD", CGameEventManager::SERVERSIDE_OLD }, // legacy support for old server event listeners                                
-	{ "CLIENTSIDE_OLD", CGameEventManager::CLIENTSIDE_OLD }, // legecy support for old client event listeners                                
+{
+	{ "SERVERSIDE",     CGameEventManager::SERVERSIDE     }, // this is a server side listener, event logger etc
+	{ "CLIENTSIDE",     CGameEventManager::CLIENTSIDE     }, // this is a client side listenet, HUD element etc
+	{ "CLIENTSTUB",     CGameEventManager::CLIENTSTUB     }, // this is a serverside stub for a remote client listener (used by engine only)
+	{ "SERVERSIDE_OLD", CGameEventManager::SERVERSIDE_OLD }, // legacy support for old server event listeners
+	{ "CLIENTSIDE_OLD", CGameEventManager::CLIENTSIDE_OLD }, // legecy support for old client event listeners
 	{ NULL,             -1                                }
 };
 
 static const tokenset_t< int > s_GameEventTypesMap[] =
 {
-	{ "local",    CGameEventManager::TYPE_LOCAL   }, // 0 : don't network this field     
-	{ "string",   CGameEventManager::TYPE_STRING  }, // 1 : zero terminated ASCII string 
-	{ "float",    CGameEventManager::TYPE_FLOAT   }, // 2 : float 32 bit                 
-	{ "long",     CGameEventManager::TYPE_LONG    }, // 3 : signed int 32 bit            
-	{ "short",    CGameEventManager::TYPE_SHORT   }, // 4 : signed int 16 bit            
-	{ "byte",     CGameEventManager::TYPE_BYTE    }, // 5 : unsigned int 8 bit           
-	{ "bool",     CGameEventManager::TYPE_BOOL    }, // 6 : unsigned int 1 bit           
-	{ "uint64",   CGameEventManager::TYPE_UINT64  }, // 7 : unsigned int 64 bit           
-	{ "wstring",  CGameEventManager::TYPE_WSTRING }, // 8 : zero terminated wide char string 
+	{ "local",    CGameEventManager::TYPE_LOCAL   }, // 0 : don't network this field
+	{ "string",   CGameEventManager::TYPE_STRING  }, // 1 : zero terminated ASCII string
+	{ "float",    CGameEventManager::TYPE_FLOAT   }, // 2 : float 32 bit
+	{ "long",     CGameEventManager::TYPE_LONG    }, // 3 : signed int 32 bit
+	{ "short",    CGameEventManager::TYPE_SHORT   }, // 4 : signed int 16 bit
+	{ "byte",     CGameEventManager::TYPE_BYTE    }, // 5 : unsigned int 8 bit
+	{ "bool",     CGameEventManager::TYPE_BOOL    }, // 6 : unsigned int 1 bit
+	{ "uint64",   CGameEventManager::TYPE_UINT64  }, // 7 : unsigned int 64 bit
+	{ "wstring",  CGameEventManager::TYPE_WSTRING }, // 8 : zero terminated wide char string
 	{ NULL,       -1                             }
 };
 
@@ -247,7 +247,7 @@ void CGameEventManager::Reset()
 	m_EventFileNames.RemoveAll();
 	m_EventMap.Purge();
 	m_bClientListenersChanged = true;
-	
+
 	Assert( m_GameEvents.Count() == 0 );
 }
 
@@ -279,7 +279,7 @@ void CGameEventManager::WriteEventList(CSVCMsg_GameEventList *msg)
 		pDescriptor->set_eventid( descriptor.eventid );
 		pDescriptor->set_name( pName );
 
-		KeyValues *key = descriptor.keys->GetFirstSubKey(); 
+		KeyValues *key = descriptor.keys->GetFirstSubKey();
 
 		while ( key )
 		{
@@ -310,7 +310,7 @@ bool CGameEventManager::ParseEventList(const CSVCMsg_GameEventList& msg)
 		descriptor.eventid = -1;
 	}
 
-	// map server event IDs 
+	// map server event IDs
 	int nNumEvents = msg.descriptors_size();
 	for (i = 0; i<nNumEvents; i++)
 	{
@@ -346,7 +346,7 @@ bool CGameEventManager::ParseEventList(const CSVCMsg_GameEventList& msg)
 
 	return true;
 }
-	
+
 void CGameEventManager::WriteListenEventList(CCLCMsg_ListenEvents *msg)
 {
 	CBitVec<MAX_EVENT_NUMBER> EventArray;
@@ -425,7 +425,7 @@ IGameEvent *CGameEventManager::CreateEvent( const char *name, bool bForce, int *
 		return NULL;
 	}
 
-	// create & return the new event 
+	// create & return the new event
 	return new CGameEvent ( descriptor, name );
 }
 
@@ -472,7 +472,7 @@ void CGameEventManager::ConPrintEvent( IGameEvent *event)
 	if ( !descriptor )
 		return;
 
-	KeyValues *key = descriptor->keys->GetFirstSubKey(); 
+	KeyValues *key = descriptor->keys->GetFirstSubKey();
 
 	while ( key )
 	{
@@ -500,7 +500,7 @@ bool CGameEventManager::FireEventIntern( IGameEvent *event, bool bServerOnly, bo
 
 	Assert( !(bServerOnly && bClientOnly) ); // it can't be both
 
-	VPROF_("CGameEventManager::FireEvent", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 
+	VPROF_("CGameEventManager::FireEvent", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false,
 		bClientOnly ? BUDGETFLAG_CLIENT : ( bServerOnly ? BUDGETFLAG_SERVER : BUDGETFLAG_OTHER ) );
 
 	CGameEventDescriptor *descriptor = GetEventDescriptor( event );
@@ -530,13 +530,13 @@ bool CGameEventManager::FireEventIntern( IGameEvent *event, bool bServerOnly, bo
 			ConPrintEvent( event );
 		}
 
-		
+
 	}
 
 	for ( int i = 0; i < descriptor->listeners.Count(); i++ )
 	{
 		CGameEventCallback *listener = descriptor->listeners.Element( i );
-		
+
 		Assert ( listener );
 
 		// don't trigger server listners for clientside only events
@@ -547,7 +547,7 @@ bool CGameEventManager::FireEventIntern( IGameEvent *event, bool bServerOnly, bo
 
         // don't trigger clientside events, if not explicit a clientside event
 		if ( ( listener->m_nListenerType == CLIENTSIDE ||
-			   listener->m_nListenerType == CLIENTSIDE_OLD ) &&  
+			   listener->m_nListenerType == CLIENTSIDE_OLD ) &&
 			   !bClientOnly  )
 			continue;
 
@@ -577,7 +577,7 @@ bool CGameEventManager::FireEventIntern( IGameEvent *event, bool bServerOnly, bo
 			IGameEventListener2 *pCallback =  static_cast<IGameEventListener2*>(listener->m_pCallback);
 			Assert( pCallback );
 			if ( pCallback )
-			{			
+			{
 				if ( pCallback->GetEventDebugID() != EVENT_DEBUG_ID_INIT )
 				{
 					Msg( "GameEventListener2 callback in list that should NOT be - %s!\n", event->GetName() );
@@ -592,7 +592,7 @@ bool CGameEventManager::FireEventIntern( IGameEvent *event, bool bServerOnly, bo
 			{
 				Warning( "Callback for event \"%s\" is NULL!!!\n", event->GetName() );
 			}
-		}	 
+		}
 	}
 
 	if ( bClientOnly || ( !Q_stricmp( "portal2", COM_GetModDirectory() ) ) )
@@ -655,13 +655,13 @@ bool CGameEventManager::SerializeEvent( IGameEvent *event, CSVCMsg_GameEvent *ev
 			case TYPE_SHORT	: pKey->set_val_short( event->GetInt( keyName, 0) ); break;
 			case TYPE_BYTE	: pKey->set_val_byte( event->GetInt( keyName, 0) ); break;
 			case TYPE_BOOL	: pKey->set_val_bool( !!event->GetInt( keyName, 0) ); break;
-			case TYPE_UINT64: pKey->set_val_uint64( event->GetUint64( keyName, 0) ); break;				
-			case TYPE_WSTRING: 
+			case TYPE_UINT64: pKey->set_val_uint64( event->GetUint64( keyName, 0) ); break;
+			case TYPE_WSTRING:
 				{
 					const wchar_t *pStr = event->GetWString( keyName, L"");
 					pKey->set_val_wstring( pStr, wcslen( pStr ) + 1 );
 				}
-				break;				
+				break;
 			default: DevMsg(1, "CGameEventManager: unknown type %i for key '%s'.\n", type, key->GetName() ); break;
 			}
 		}
@@ -709,7 +709,7 @@ IGameEvent *CGameEventManager::UnserializeEvent( const CSVCMsg_GameEvent& eventM
 	}
 
 	int nNumKeys = eventMsg.keys_size();
-	KeyValues * key = descriptor->keys->GetFirstSubKey(); 
+	KeyValues * key = descriptor->keys->GetFirstSubKey();
 
 	for( int i = 0; key && ( i < nNumKeys ); i++, key = key->GetNextKey() )
 	{
@@ -720,7 +720,7 @@ IGameEvent *CGameEventManager::UnserializeEvent( const CSVCMsg_GameEvent& eventM
 
 		switch ( type )
 		{
-		case TYPE_LOCAL		: break; // ignore 
+		case TYPE_LOCAL		: break; // ignore
 		case TYPE_STRING	: event->SetString( keyName, KeyEvent.val_string().c_str() ); break;
 		case TYPE_FLOAT		: event->SetFloat( keyName, KeyEvent.val_float() ); break;
 		case TYPE_LONG		: event->SetInt( keyName, KeyEvent.val_long() ); break;
@@ -789,13 +789,13 @@ void CGameEventManager::RemoveListener(IGameEventListener2 *listener)
 {
 	AUTO_LOCK_FM( m_mutex );
 	CGameEventCallback *pCallback = FindEventListener( listener );
-	
+
 	if ( pCallback == NULL )
 	{
 		return;
 	}
 
-	// remove reference from events 
+	// remove reference from events
 	for (int i=0; i < m_GameEvents.Count(); i++ )
 	{
 		CGameEventDescriptor &et = m_GameEvents.Element( i );
@@ -912,7 +912,7 @@ bool CGameEventManager::AddListener( void *listener, CGameEventDescriptor *descr
 
 	if ( pCallback == NULL )
 	{
-		// add new callback 
+		// add new callback
 		pCallback = new CGameEventCallback;
 		m_Listeners.AddToTail( pCallback );
 
@@ -934,8 +934,8 @@ bool CGameEventManager::AddListener( void *listener, CGameEventDescriptor *descr
 		if ( net_showeventlisteners.GetBool() )
 		{
 			const char *name = m_EventMap.GetElementName( descriptor->elementIndex );
-			Msg("[GAMEEVENT] Event '%s' added %s listener %p\n", 
-				name ? name : "UNKNOWN", 
+			Msg("[GAMEEVENT] Event '%s' added %s listener %p\n",
+				name ? name : "UNKNOWN",
 				s_GameListenerTypeMap->GetNameByToken( nListenerType ),
 				listener );
 		}
@@ -981,7 +981,7 @@ bool CGameEventManager::RegisterEvent( KeyValues * event)
 
 	// create new descriptor keys
 	descriptor->keys = new KeyValues("descriptor");
-	
+
 	KeyValues *subkey = event->GetFirstSubKey();
 
 	// interate through subkeys
@@ -994,7 +994,7 @@ bool CGameEventManager::RegisterEvent( KeyValues * event)
 		const char * type = subkey->GetString();
 
 		if ( !Q_strcmp( "local", keyName) )
-		{	
+		{
 			descriptor->local = Q_atoi( type ) != 0;
 		}
 		else if ( !Q_strcmp( "reliable", keyName) )
@@ -1016,10 +1016,10 @@ bool CGameEventManager::RegisterEvent( KeyValues * event)
 				descriptor->keys->SetInt( keyName, i );	// set data type
 			}
 		}
-		
+
 		subkey = subkey->GetNextKey();
 	}
-	
+
 	return true;
 }
 
@@ -1115,7 +1115,7 @@ void CGameEventManager::RemoveListenerOld( void *listener)
 		return;
 	}
 
-	// remove reference from events 
+	// remove reference from events
 	for (int i=0; i < m_GameEvents.Count(); i++ )
 	{
 		CGameEventDescriptor &et = m_GameEvents.Element( i );
@@ -1162,7 +1162,7 @@ void CGameEventManager::VerifyListenerList( void )
 				Msg( "VerifyListenerList-Bug: Bad callback in list! (%s)\n", pName );
 				continue;
 			}
-		}		
+		}
 	}
 }
 
@@ -1186,9 +1186,9 @@ void CGameEventManager::DumpEventNetworkStats( void )
 		}
 	}
 
-	//        ----- ----- ------- ------- ------- ------- 
+	//        ----- ----- ------- ------- ------- -------
 	Msg( "%*s  Out    In  OutBits InBits  OutSize InSize  Notes\n", len, "Name" );
-	//            %5d %5d %7d %7d %7d %7d 
+	//            %5d %5d %7d %7d %7d %7d
 
 
 	for ( int i = 0; i < m_GameEvents.Count(); ++i )

@@ -1749,7 +1749,10 @@ public:
 	void (CBaseEntity ::*m_pfnUse)( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
 	void (CBaseEntity ::*m_pfnBlocked)( CBaseEntity *pOther );
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
 	static uint GetOriginPrefetchOffset() { return offsetof(CBaseEntity,m_vecAbsOrigin); }
+#pragma GCC diagnostic pop
 	CNetworkVarForDerived( bool, m_bClientSideRagdoll );
 	CNetworkVarForDerived( char, m_lifeState );
 	CNetworkVarForDerived( char , m_takedamage );

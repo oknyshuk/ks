@@ -1,46 +1,48 @@
 #! /usr/bin/env python
 
+
 def options(opt):
-	return
+    return
+
 
 def configure(conf):
-	return
+    return
+
 
 def build(bld):
-	libs = []
+    libs = []
 
-	includes = ['../public/tier2']
+    includes = ["../public/tier2"]
 
-	source = [
-		'beamsegdraw.cpp',
-		'defaultfilesystem.cpp',
-		'fileutils.cpp',
-		'keybindings.cpp',
-		'../public/map_utils.cpp',
-		'../public/materialsystem/MaterialSystemUtil.cpp',
-		'meshutils.cpp',
-		'p4helpers.cpp',
-		'renderutils.cpp',
-		'riff.cpp',
-		'soundutils.cpp',
-		'tier2.cpp',
-		'tier2_logging.cpp',
-		'tokenreader.cpp',
-		'util_init.cpp',
-		'utlstreambuffer.cpp',
-		'vconfig.cpp',
-		'schemaclassbinding.cpp',
-		'socketcreator.cpp',
-		'resourceprecacher.cpp',
-		'interval.cpp'
-	]
+    source = [
+        "beamsegdraw.cpp",
+        "defaultfilesystem.cpp",
+        "fileutils.cpp",
+        "keybindings.cpp",
+        "../public/map_utils.cpp",
+        "../public/materialsystem/MaterialSystemUtil.cpp",
+        "meshutils.cpp",
+        "renderutils.cpp",
+        "riff.cpp",
+        "soundutils.cpp",
+        "tier2.cpp",
+        "tier2_logging.cpp",
+        "tokenreader.cpp",
+        "util_init.cpp",
+        "utlstreambuffer.cpp",
+        "vconfig.cpp",
+        "schemaclassbinding.cpp",
+        "socketcreator.cpp",
+        "resourceprecacher.cpp",
+        "interval.cpp",
+    ]
 
-	bld.stlib(
-		source   = source,
-		target   = 'tier2',
-		features = 'cxx',
-		includes = includes,
-		use      = libs,
-		subsystem = bld.env.MSVC_SUBSYSTEM,
-		idx = bld.get_taskgen_count()
-	)
+    bld.stlib(
+        source=source,
+        target="tier2",
+        features="cxx",
+        includes=includes,
+        use=libs,
+        subsystem=bld.env.MSVC_SUBSYSTEM,
+        idx=bld.get_taskgen_count(),
+    )

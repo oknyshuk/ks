@@ -335,6 +335,7 @@ CNetGraphPanel::CNetGraphPanel( VPANEL parent )
 //-----------------------------------------------------------------------------
 CNetGraphPanel::~CNetGraphPanel( void )
 {
+	m_WhiteMaterial.Shutdown();
 	g_pNetGraphPanel = NULL;
 }
 

@@ -88,7 +88,7 @@ void URLLabel::OnMousePressed(MouseCode code)
     {
         if (m_pszURL)
 		{
-	        system()->ShellExecute("open", m_pszURL);
+	        system()->OpenURL(m_pszURL);
 		}
     }
 }

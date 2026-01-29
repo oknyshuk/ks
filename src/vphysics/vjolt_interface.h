@@ -93,8 +93,8 @@ public:
 	IPhysicsObjectPairHash *CreateObjectPairHash() override;
 	void DestroyObjectPairHash( IPhysicsObjectPairHash *pHash ) override;
 
-	IPhysicsCollisionSet *FindOrCreateCollisionSet( unsigned int id, int maxElementCount ) override;
-	IPhysicsCollisionSet *FindCollisionSet( unsigned int id ) override;
+	IPhysicsCollisionSet *FindOrCreateCollisionSet( uintptr_t id, int maxElementCount ) override;
+	IPhysicsCollisionSet *FindCollisionSet( uintptr_t id ) override;
 	void DestroyAllCollisionSets() override;
 
 public:
@@ -109,7 +109,7 @@ private:
 	static void OnTrace( const char *fmt, ... );
 	static bool OnAssert( const char *inExpression, const char *inMessage, const char *inFile, uint inLine );
 
-	std::unordered_map< unsigned int, JoltPhysicsCollisionSet > m_CollisionSets;
+	std::unordered_map< uintptr_t, JoltPhysicsCollisionSet > m_CollisionSets;
 
 	// We need a temp allocator for temporary allocations during the physics update. We're
 	// pre-allocating 10 MB to avoid having to do allocations during the physics update. 

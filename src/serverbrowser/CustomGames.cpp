@@ -87,7 +87,7 @@ void TagInfoLabel::DoOpenCustomServerInfoURL( void )
 {
 	if ( GetURL() )
 	{
-		system()->ShellExecute("open", GetURL() );
+		system()->OpenURL( GetURL() );
 	}
 }
 
@@ -189,7 +189,7 @@ bool CCustomGames::CheckTagFilter( gameserveritem_t &server )
 		CSplitString TagList( m_szTagFilter, "," );
 		for ( int i = 0; i < TagList.Count(); i++ )
 		{
-			if ( ( Q_strnistr( server.m_szGameTags, TagList[i], MAX_TAG_CHARACTERS ) > (const char *)0 ) == TagsExclude() )
+			if ( ( Q_strnistr( server.m_szGameTags, TagList[i], MAX_TAG_CHARACTERS ) != 0 ) == TagsExclude() )
 			{
 				bRetVal = false;
 				break;

@@ -41,7 +41,7 @@ public:
 
 	void				GetPhysicsParameters( int surfaceDataIndex, surfacephysicsparams_t *pParamsOut ) const override;
 
-	ISaveRestoreOps		*GetMaterialIndexDataOps() const override_portal2;
+	//ISaveRestoreOps		*GetMaterialIndexDataOps() const override_portal2;
 
 	// GMod-specific internal gubbins that was exposed in the public interface.
 	void				*GetIVPMaterial( int nIndex ) override_gmod;

@@ -43,7 +43,7 @@
 #include "tier0/memdbgon.h"
 
 
-#define BLINK_INTERVAL 2.0
+#define BLINK_INTERVAL 2.5
 #define PLANTED_C4_MODEL "models/weapons/w_ied_dropped.mdl"
 #define HEIST_MODE_C4_TIME 25
 
@@ -1506,9 +1506,9 @@ void CC4::PhysicsTouchTriggers(const Vector *pPrevAbsOrigin)
 
 bool CC4::Deploy( )
 {
-	//m_bShowC4LED = true;
+	m_bShowC4LED = true;
 #ifdef CLIENT_DLL
-	//CreateLEDEffect();
+	CreateLEDEffect();
 #endif
 
 	return BaseClass::Deploy();
@@ -1527,10 +1527,10 @@ bool CC4::Holster( CBaseCombatWeapon *pSwitchingTo )
 		AbortBombPlant();
 	}
 #else
-	//RemoveLEDEffect();
+	RemoveLEDEffect();
 #endif
 
-	//m_bShowC4LED = false;
+	m_bShowC4LED = false;
 
 	return BaseClass::Holster( pSwitchingTo );
 }
@@ -1635,18 +1635,10 @@ void CC4::PrimaryAttack()
 				if ( !pPlayer->m_bInBombZone )
 				{
 					ClientPrint( pPlayer, HUD_PRINTCENTER, "#SFUI_Notice_C4_Plant_At_Bomb_Spot");
-
-#if defined( CLIENT_DLL )
-					STEAMWORKS_TESTSECRET_AMORTIZE(5);
-#endif
 				}
 				else
 				{
 					ClientPrint( pPlayer, HUD_PRINTCENTER, "#SFUI_Notice_C4_Plant_Must_Be_On_Ground");
-
-#if defined( CLIENT_DLL )
-					STEAMWORKS_TESTSECRET_AMORTIZE(7);
-#endif
 				}
 			}
 
@@ -1665,10 +1657,6 @@ void CC4::PrimaryAttack()
 			else
 			{
 				ClientPrint( pPlayer, HUD_PRINTCENTER, "#SFUI_Notice_C4_Plant_Must_Be_On_Ground" );
-
-#if defined( CLIENT_DLL )
-				STEAMWORKS_TESTSECRET_AMORTIZE(9);
-#endif
 			}
 
 			AbortBombPlant();
@@ -2073,10 +2061,6 @@ void CC4::Drop( const Vector &vecVelocity )
 			}
 		}
 	}
-#endif
-
-#if defined( CLIENT_DLL )
-	STEAMWORKS_TESTSECRET_AMORTIZE( 13 );
 #endif
 
 	if ( m_bStartedArming )

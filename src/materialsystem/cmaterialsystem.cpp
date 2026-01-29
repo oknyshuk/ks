@@ -84,7 +84,7 @@ static ConVar gpu_mem_level( "gpu_mem_level", "2", 0, "Memory Level - Default: H
 
 static ConVar mat_picmip( "mat_picmip", "0", FCVAR_NONE, "", true, -10, true, 4 );
 
-ConVar csm_quality_level( "csm_quality_level", "0", 0, "Cascaded shadow map quality level, [0,3], 0=VERY_LOW, 3=HIGHEST" );
+ConVar csm_quality_level( "csm_quality_level", "0", FCVAR_ARCHIVE, "Cascaded shadow map quality level, [0,3], 0=VERY_LOW, 3=HIGHEST", true, 0, true, 3 );
 
 // Moving this here (instead of in viewpostprocess.cpp) so videocfg.cpp can modify its value early during init based off whatever setting is in video.txt
 #if defined( CSTRIKE15 )
@@ -1136,6 +1136,11 @@ void CMaterialSystem::Shutdown( )
 	g_pOcclusionQueryMgr->FreeOcclusionQueryObjects();
 
 	GetLightmaps()->Shutdown();
+
+	// Release any materials that only have our own reference before destroying them
+	// This helps reduce warnings about non-zero reference counts during shutdown
+	UncacheUnusedMaterials( true );
+
 	m_MaterialDict.Shutdown();
 
 	CleanUpErrorMaterial();
@@ -4167,11 +4172,15 @@ void CMaterialSystem::EndFrame( void )
 
 					if ( !m_pActiveAsyncJob->IsFinished() )
 						DevMsg( "CMaterialSystem::EndFrame - waiting on additional threaded work for MatQueuedThreaded.\n" );
-
-					if ( !IsPC() && mat_forcehardwaresync.GetBool() )
+//lwss: ifdef out this console check
+#if !IsPC()
+					//if ( !IsPC() && mat_forcehardwaresync.GetBool() )
+					if ( mat_forcehardwaresync.GetBool() )
 					{
 						g_pShaderAPI->ForceHardwareSync();
 					}
+#endif
+//lwss end
 				}
 			}
 			SafeRelease( m_pActiveAsyncJob );

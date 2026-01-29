@@ -456,7 +456,10 @@ CUtlSortVector< DLCContent_t, CDLCLess > CBaseFileSystem::m_DLCContents;
 CUtlVector< DLCCorrupt_t > CBaseFileSystem::m_CorruptDLC;
 
 CUtlBuffer	g_UpdateZipBuffer;
+
+#ifdef _X360
 CUtlBuffer	g_XLSPPatchZipBuffer;
+#endif
 
 class CStoreIDEntry
 {
@@ -2877,16 +2880,8 @@ void CBaseFileSystem::AddSearchPath( const char *pPath, const char *pathID, Sear
 		V_strncpy( szPathHead, pPath, sizeof( szPathHead ) );
 		V_StripLastDir( szPathHead, sizeof( szPathHead ) );
 
-		// xlsppatch trumps all
-		V_ComposeFileName( szPathHead, "xlsppatch", szUpdatePath, sizeof( szUpdatePath ) );
-		struct _stat buf;
-		if ( FS_stat( szUpdatePath, &buf ) != -1 )
-		{
-			// found
-			AddSearchPathInternal( szUpdatePath, pathID, addType, true );
-		}
-
 		// followed by update
+		struct _stat buf;
 		V_ComposeFileName( szPathHead, "update", szUpdatePath, sizeof( szUpdatePath ) );
 		if ( FS_stat( szUpdatePath, &buf ) != -1 )
 		{
@@ -3258,7 +3253,7 @@ int CBaseFileSystem::GetSearchPathID( char *pPath, int nMaxLen )
 	for ( int i = 0 ; i < m_SearchPaths.Count(); i++ )
 	{
 		CUtlSymbol pathID = m_SearchPaths[i].GetPathID();
-		if ( pathID.IsValid() && list.Find( pathID ) == -1 )
+		if ( pathID != UTL_INVAL_SYMBOL && list.Find( pathID ) == -1 )
 		{
 			list.AddToTail( pathID );
 			V_strncat( pPath, m_SearchPaths[i].GetPathIDString(), nMaxLen );
@@ -3796,6 +3791,16 @@ void CBaseFileSystem::RemoveAllSearchPaths( void )
 		m_SearchPaths.Remove( m_SearchPaths.Count() - 1 );
 	}
 	//m_PackFileHandles.Purge();
+
+	// Clean up all VPK files - their destructors will close opened file handles
+#ifdef SUPPORT_VPK
+	for ( int i = 0; i < m_VPKFiles.Count(); i++ )
+	{
+		delete m_VPKFiles[i];
+	}
+	m_VPKFiles.Purge();
+	m_VPKDirectories.Purge();
+#endif
 }
 
 
@@ -6834,7 +6839,7 @@ void CBaseFileSystem::RemoveFile( char const* pRelativePath, const char *pathID 
 		ComputeFullWritePath( szScratchFileName, sizeof( szScratchFileName ), pRelativePath, pathID );
 	}
 	int fail = unlink( szScratchFileName );
-	if ( fail != 0 )
+	if ( fail != 0 && errno != ENOENT )
 	{
 		FileSystemWarning( FILESYSTEM_WARNING, "Unable to remove %s! (errno %x)\n", szScratchFileName, errno );
 	}
@@ -7247,14 +7252,30 @@ CSysModule *CBaseFileSystem::LoadModule( const char *pFileName, const char *pPat
 {
 	CHECK_DOUBLE_SLASHES( pFileName );
 
+	bool bPathIsGameBin = false; bPathIsGameBin; // Touch the var for !Win64 build compiler warnings.
 	LogFileAccess( pFileName );
 	if ( !pPathID )
 	{
 		pPathID = "EXECUTABLE_PATH"; // default to the bin dir
 	}
+	else if ( IsPlatformWindowsPC64() )
+	{
+		bPathIsGameBin = V_strcmp( "GAMEBIN", pPathID ) == 0;
+	}
+
+#if defined(POSIX) && defined(PLATFORM_64BITS)
+	bPathIsGameBin = V_strcmp( "GAMEBIN", pPathID ) == 0;
+#endif
 
 	char tempPathID[ MAX_PATH ];
 	ParsePathID( pFileName, pPathID, tempPathID );
+
+#if defined(POSIX)
+	// On POSIX, shared libraries have 'lib' prefix (e.g., libmatchmaking.so)
+	char szPosixFileName[ MAX_PATH ];
+	Q_snprintf( szPosixFileName, sizeof(szPosixFileName), "lib%s", pFileName );
+	pFileName = szPosixFileName;
+#endif
 
 	CUtlSymbol lookup = g_PathIDTable.AddString( pPathID );
 
@@ -7269,17 +7290,40 @@ CSysModule *CBaseFileSystem::LoadModule( const char *pFileName, const char *pPat
 		if ( FilterByPathID( &m_SearchPaths[i], lookup ) )
 			continue;
 
-#ifdef POSIX
-		Q_snprintf( tempPathID, sizeof(tempPathID), "%slib%s", m_SearchPaths[i].GetPathString(), pFileName ); // append the path to this dir.
-#else
 		Q_snprintf( tempPathID, sizeof(tempPathID), "%s%s", m_SearchPaths[i].GetPathString(), pFileName ); // append the path to this dir.
-#endif
 		CSysModule *pModule = Sys_LoadModule( tempPathID );
 		if ( pModule ) 
 		{
 			// we found the binary in one of our search paths
 			return pModule;
 		}
+		else if ( IsPlatformWindowsPC64() && bPathIsGameBin )
+		{
+			Q_snprintf( tempPathID, sizeof( tempPathID ), "%s%s%s%s", m_SearchPaths[ i ].GetPathString(), "x64", CORRECT_PATH_SEPARATOR_S, pFileName ); // append the path to this dir.
+			pModule = Sys_LoadModule( tempPathID );
+			if ( pModule )
+			{
+				// we found the binary in a 64-bit location.
+				return pModule;
+			}
+		}
+#if defined(POSIX) && defined(PLATFORM_64BITS)
+		else if ( bPathIsGameBin )
+		{
+#if defined(LINUX)
+			const char* plat_dir = "linux64";
+#else
+			const char* plat_dir = "osx64";
+#endif
+			Q_snprintf( tempPathID, sizeof( tempPathID ), "%s%s%s%s", m_SearchPaths[ i ].GetPathString(), plat_dir, CORRECT_PATH_SEPARATOR_S, pFileName ); // append the path to this dir.
+			pModule = Sys_LoadModule( tempPathID );
+			if ( pModule )
+			{
+				// we found the binary in a 64-bit location.
+				return pModule;
+			}
+		}
+#endif
 	}
 
 	// couldn't load it from any of the search paths, let LoadLibrary try
@@ -8367,11 +8411,7 @@ void CBaseFileSystem::PrintDLCInfo()
 
 bool CBaseFileSystem::AddXLSPUpdateSearchPath( const void *pData, int nSize )
 {
-	if ( IsPC() )
-	{
-		return false;
-	}
-
+#ifdef _X360
 	const char *targetPathIDs[] = { "PLATFORM", "GAME", "MOD" };
 	for ( int i = 0; i <ARRAYSIZE( targetPathIDs ); i++ )
 	{
@@ -8468,6 +8508,10 @@ bool CBaseFileSystem::AddXLSPUpdateSearchPath( const void *pData, int nSize )
 	}
 
 	return bXLSPPatchValid;
+#else
+	Assert( 0 ); // should not be reached on pc
+	return false;
+#endif
 }
 
 void CBaseFileSystem::MarkLocalizedPath( CSearchPath *sp )

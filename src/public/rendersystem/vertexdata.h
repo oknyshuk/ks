@@ -11,6 +11,7 @@
 #pragma once
 #endif
 
+#include "irendercontext.h" //lwss - add include for LockDesc_t
 #include "tier0/platform.h"
 #include "rendersystem/irenderdevice.h"
 

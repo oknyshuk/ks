@@ -3,9 +3,44 @@
 
 import os
 import shutil
-import subprocess
 
-from waflib import Configure, Context
+from waflib import Configure, Context, TaskGen
+
+
+@TaskGen.feature("cxxprogram", "cprogram", "cxxshlib", "cshlib")
+@TaskGen.after_method("apply_link")
+def add_rpath_for_install(self):
+    """Automatically add RPATH based on install_path so libraries find each other."""
+    if self.env.DEST_OS == "win32":
+        return
+
+    install_path = getattr(self, "install_path", None)
+    if not install_path:
+        return
+
+    # Don't override if rpath is explicitly set
+    if getattr(self, "rpath", None):
+        return
+
+    # Determine RPATH based on install location
+    prefix = self.env.PREFIX
+    binpath = self.env.BINPATH
+    gamebin = self.env.GAMEBIN
+
+    rpath = []
+    if install_path == prefix:
+        # Executable in game/ - needs bin/ and csgo/bin/
+        rpath = ["$ORIGIN/bin", "$ORIGIN/csgo/bin"]
+    elif install_path == binpath:
+        # Library in game/bin/ - needs to find other libs in same dir
+        rpath = ["$ORIGIN"]
+    elif install_path == gamebin:
+        # Library in game/csgo/bin/ - needs bin/ and same dir
+        rpath = ["$ORIGIN", "$ORIGIN/../../bin"]
+
+    if rpath:
+        self.env.append_unique("RPATH", rpath)
+
 
 VERSION = "0.01"
 APPNAME = "CSGO"
@@ -120,10 +155,6 @@ def options(opt):
 
 
 def configure(conf):
-    if conf.options.BUILD_TYPE == "fast":
-        conf.options.LTO = True
-        conf.options.POLLY = True
-
     conf.load("fwgslib reconfigure ndk compiler_optimizations")
     conf.env.MSVC_TARGETS = ["x64"]
     conf.env.MSVC_SUBSYSTEM = "WINDOWS"
@@ -145,20 +176,23 @@ def configure(conf):
 
     # Configure ccache for optimal performance (per-project config)
     if conf.options.CCACHE:
+        base_dir = conf.srcnode.abspath()
         ccache_conf_path = conf.srcnode.make_node("ccache.conf").abspath()
         ccache_config = {
-            "base_dir": conf.srcnode.abspath(),
-            "sloppiness": "include_file_mtime,include_file_ctime,time_macros,pch_defines,file_stat_matches,clang_index_store,locale",
+            "base_dir": base_dir,
+            "sloppiness": "include_file_mtime,include_file_ctime,time_macros,pch_defines,file_stat_matches,clang_index_store,locale,random_seed",
             "hash_dir": "false",
             "max_size": "30G",
             "hard_link": "true",
             "compression_level": "1",
             "depend_mode": "true",
+            "inode_cache": "true",
         }
         with open(ccache_conf_path, "w") as f:
             for key, val in ccache_config.items():
                 f.write(f"{key} = {val}\n")
         os.environ["CCACHE_CONFIGPATH"] = ccache_conf_path
+        os.environ["CCACHE_BASEDIR"] = base_dir
 
     # HACKHACK: override msvc DEST_CPU value by something that we understand
     if conf.env.DEST_CPU == "amd64":
@@ -209,6 +243,10 @@ def configure(conf):
     elif conf.env.COMPILER_CC == "gcc":
         opt_flags += ["-fdiagnostics-color=always"]
 
+    # Use mold linker for faster link times (if available)
+    if conf.env.DEST_OS != "win32" and shutil.which("mold"):
+        conf.env.append_unique("LINKFLAGS", ["-fuse-ld=mold"])
+
     if conf.env.COMPILER_CC == "msvc":
         opt_cxxflags += ["/std:c++20"]
     elif conf.env.COMPILER_CC in ["gcc", "clang"]:
@@ -220,16 +258,12 @@ def configure(conf):
     conf.env.append_unique("CFLAGS", cflags)
     conf.env.append_unique("CXXFLAGS", cxxflags)
 
-    # if conf.env.DEST_OS == 'win32':
-    # a = []
-    # if conf.env.COMPILER_CC == 'msvc':
-    # for i in a:
-    # conf.start_msg('Checking for MSVC library')
-    # conf.check_lib_msvc(i)
-    # conf.end_msg(i)
-    # else:
-    # for i in a:
-    # conf.check_cc(lib = i)
+    # Add flags that shouldn't go through filter_cxxflags (which tests with -Werror)
+    if conf.env.COMPILER_CC in ["gcc", "clang"]:
+        # Suppress offsetof warning for non-standard-layout types (Source Engine uses this extensively)
+        conf.env.append_unique("CXXFLAGS", ["-Wno-invalid-offsetof"])
+        # Suppress false positive from GCC inlining protobuf code (FunctionClosure0 with self_deleting=false)
+        conf.env.append_unique("CXXFLAGS", ["-Wno-free-nonheap-object"])
 
     includes = [
         os.path.abspath("public"),
@@ -302,8 +336,10 @@ def configure(conf):
 
 
 def build(bld):
-    # Set per-project ccache config path
+    # Set per-project ccache config path and base directory
+    base_dir = bld.srcnode.abspath()
     ccache_conf_path = bld.srcnode.make_node("ccache.conf").abspath()
     if os.path.exists(ccache_conf_path):
         os.environ["CCACHE_CONFIGPATH"] = ccache_conf_path
+        os.environ["CCACHE_BASEDIR"] = base_dir
     bld.add_subproject(PROJECTS)

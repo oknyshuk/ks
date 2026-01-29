@@ -3,6 +3,14 @@
 
 #if defined(DX_TO_VK_ABSTRACTION)
 
+// Undefine Source Engine macros that DXVK's windows_base.h will redefine
+#undef TRUE
+#undef FALSE
+#undef WAIT_OBJECT_0
+#undef WAIT_ABANDONED
+#undef WAIT_TIMEOUT
+#undef WAIT_FAILED
+
 #include <d3d9.h>
 #include "togl/dxabstract.h"
 #include "togl/dxabstract_types.h"

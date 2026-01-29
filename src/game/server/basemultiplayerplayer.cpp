@@ -1,6 +1,6 @@
-//========= Copyright © 1996-2001, Valve LLC, All rights reserved. ============
+//========= Copyright ï¿½ 1996-2001, Valve LLC, All rights reserved. ============
 //
-// Purpose:		
+// Purpose:
 //
 // $NoKeywords: $
 //=============================================================================
@@ -42,7 +42,7 @@ END_SCRIPTDESC();
 
 
 //-----------------------------------------------------------------------------
-// Purpose: 
+// Purpose:
 //-----------------------------------------------------------------------------
 CAI_Expresser *CBaseMultiplayerPlayer::CreateExpresser( void )
 {
@@ -55,7 +55,7 @@ CAI_Expresser *CBaseMultiplayerPlayer::CreateExpresser( void )
 }
 
 //-----------------------------------------------------------------------------
-// Purpose: 
+// Purpose:
 //-----------------------------------------------------------------------------
 void CBaseMultiplayerPlayer::PostConstructor( const char *szClassname )
 {
@@ -64,7 +64,7 @@ void CBaseMultiplayerPlayer::PostConstructor( const char *szClassname )
 }
 
 //-----------------------------------------------------------------------------
-// Purpose: 
+// Purpose:
 //-----------------------------------------------------------------------------
 void CBaseMultiplayerPlayer::ModifyOrAppendCriteria( AI_CriteriaSet& criteriaSet )
 {
@@ -74,15 +74,15 @@ void CBaseMultiplayerPlayer::ModifyOrAppendCriteria( AI_CriteriaSet& criteriaSet
 }
 
 //-----------------------------------------------------------------------------
-// Purpose: 
+// Purpose:
 //-----------------------------------------------------------------------------
-bool CBaseMultiplayerPlayer::SpeakIfAllowed( AIConcept_t AIconcept, SpeechPriorityType priority, const char *modifiers, char *pszOutResponseChosen, size_t bufsize, IRecipientFilter *filter ) 
-{ 
+bool CBaseMultiplayerPlayer::SpeakIfAllowed( AIConcept_t conc, SpeechPriorityType priority, const char *modifiers, char *pszOutResponseChosen, size_t bufsize, IRecipientFilter *filter )
+{
 	if ( !IsAlive() )
 		return false;
 
-	//if ( IsAllowedToSpeak( AIconcept, bRespondingToPlayer ) )
-	return Speak( AIconcept, modifiers, pszOutResponseChosen, bufsize, filter );
+	//if ( IsAllowedToSpeak( conc, bRespondingToPlayer ) )
+	return Speak( conc, modifiers, pszOutResponseChosen, bufsize, filter );
 }
 
 //-----------------------------------------------------------------------------
@@ -91,13 +91,13 @@ bool CBaseMultiplayerPlayer::SpeakIfAllowed( AIConcept_t AIconcept, SpeechPriori
 void CBaseMultiplayerPlayer::SpeakConcept( AI_Response &outResponse, int iConcept )
 {
 	m_iCurrentConcept = iConcept;
-	AIConcept_t AIconcept( g_pszMPConcepts[iConcept] );
-	FindResponse( outResponse, AIconcept );
+	AIConcept_t conc( g_pszMPConcepts[iConcept] );
+	FindResponse( outResponse, conc );
 }
 
 
 //-----------------------------------------------------------------------------
-// Purpose: 
+// Purpose:
 //-----------------------------------------------------------------------------
 bool CBaseMultiplayerPlayer::SpeakConceptIfAllowed( int iConcept, const char *modifiers, char *pszOutResponseChosen, size_t bufsize, IRecipientFilter *filter )
 {
@@ -107,7 +107,7 @@ bool CBaseMultiplayerPlayer::SpeakConceptIfAllowed( int iConcept, const char *mo
 }
 
 //-----------------------------------------------------------------------------
-// Purpose: 
+// Purpose:
 //-----------------------------------------------------------------------------
 bool CBaseMultiplayerPlayer::CanHearAndReadChatFrom( CBasePlayer *pPlayer )
 {
@@ -274,7 +274,7 @@ void CBaseMultiplayerPlayer::EscortScoringThink( void )
 
 	if ( m_flCapPointScoreRate > 0 )
 	{
-		float flTimeForOnePoint = 1.0f / m_flCapPointScoreRate; 
+		float flTimeForOnePoint = 1.0f / m_flCapPointScoreRate;
 
 		int iPoints = 0;
 
@@ -296,7 +296,7 @@ void CBaseMultiplayerPlayer::EscortScoringThink( void )
 		}
 	}
 
-	SetContextThink( &CBaseMultiplayerPlayer::EscortScoringThink, gpGlobals->curtime + ESCORT_SCORE_INTERVAL, ESCORT_SCORE_CONTEXT );	
+	SetContextThink( &CBaseMultiplayerPlayer::EscortScoringThink, gpGlobals->curtime + ESCORT_SCORE_INTERVAL, ESCORT_SCORE_CONTEXT );
 }
 
 //-----------------------------------------------------------------------------
@@ -319,7 +319,7 @@ void CBaseMultiplayerPlayer::StopScoringEscortPoints( void )
 
 #if !defined(NO_STEAM)
 //-----------------------------------------------------------------------------
-// Purpose: 
+// Purpose:
 //-----------------------------------------------------------------------------
 bool CBaseMultiplayerPlayer::GetSteamID( CSteamID *pID ) const
 {
@@ -334,7 +334,7 @@ bool CBaseMultiplayerPlayer::GetSteamID( CSteamID *pID ) const
 }
 
 //-----------------------------------------------------------------------------
-// Purpose: 
+// Purpose:
 //-----------------------------------------------------------------------------
 uint64 CBaseMultiplayerPlayer::GetSteamIDAsUInt64( void ) const
 {

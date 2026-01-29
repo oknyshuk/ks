@@ -379,7 +379,7 @@ void URLButton::FireActionSignal()
 			&& strstr(_actionMessage->GetString("command", ""), "://"))
 		{
 			// it's a command to launch a url, run it
-			system()->ShellExecute("open", _actionMessage->GetString("command", "      ") + 4);
+			system()->OpenURL(_actionMessage->GetString("command", "      ") + 4);
 		}
 		PostActionSignal(_actionMessage->MakeCopy());
 	}

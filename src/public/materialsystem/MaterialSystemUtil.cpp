@@ -105,12 +105,27 @@ void CMaterialReference::Init( CMaterialReference& ref )
 //-----------------------------------------------------------------------------
 void CMaterialReference::Shutdown( bool bDeleteIfUnreferenced /*=false*/ )
 {
-	if ( m_pMaterial && materials )
+	if ( m_pMaterial )
 	{
-		m_pMaterial->DecrementReferenceCount();
-		if ( bDeleteIfUnreferenced )
+		if ( materials )
 		{
-			m_pMaterial->DeleteIfUnreferenced();
+			m_pMaterial->DecrementReferenceCount();
+			if ( bDeleteIfUnreferenced )
+			{
+				m_pMaterial->DeleteIfUnreferenced();
+			}
+		}
+		else
+		{
+			// materials is NULL - can't release ref properly
+			static int s_nLeakedRefs = 0;
+			s_nLeakedRefs++;
+			FILE *f = fopen("/tmp/material_leaks.txt", "a");
+			if (f)
+			{
+				fprintf(f, "Leaked ref #%d: %s\n", s_nLeakedRefs, m_pMaterial->GetName());
+				fclose(f);
+			}
 		}
 		m_pMaterial = NULL;
 	}

@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
+//========= Copyright ï¿½ 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -12,6 +12,7 @@
 #endif
 
 #include "GameUI/IGameConsole.h"
+#include <vgui/vgui.h>
 
 class CGameConsoleDialog;
 
@@ -42,7 +43,7 @@ public:
 	// activates the console after a delay
 	void ActivateDelayed(float time);
 
-	void SetParent( int parent );
+	void SetParent( vgui::VPANEL parent );
 
 	// hides and deletes panel
 	void Shutdown( void );

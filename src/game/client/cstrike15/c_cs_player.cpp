@@ -192,8 +192,7 @@ ConVar cl_show_equipment_value( "cl_show_equipment_value", "0" );
 
 ConVar cl_show_clan_in_death_notice("cl_show_clan_in_death_notice", "1", FCVAR_CLIENTDLL | FCVAR_RELEASE | FCVAR_ARCHIVE, "Is set, the clan name will show next to player names in the death notices.");
 
-//ConVar cl_violent_ragdolls( "cl_violent_ragdolls", "1", FCVAR_RELEASE, "Allows ragdolls to bleed out and react to gun shots.");
-#define USE_VIOLENT_RAGDOLLS 0
+ConVar cl_violent_ragdolls( "cl_violent_ragdolls", "1", FCVAR_RELEASE, "Allows ragdolls to bleed out and react to gun shots.");
 
 ConVar cl_dm_buyrandomweapons( "cl_dm_buyrandomweapons", "1", FCVAR_CLIENTDLL | FCVAR_RELEASE | FCVAR_ARCHIVE, "Player will automatically receive a random weapon on spawn in deathmatch if this is set to 1 (otherwise, they will receive the last weapon)" );
 
@@ -229,10 +228,6 @@ extern ConVar mp_playerid_delay;
 extern ConVar mp_playerid_hold;
 
 ConVar cl_camera_height_restriction_debug( "cl_camera_height_restriction_debug", "0", FCVAR_CHEAT | FCVAR_REPLICATED, "" );
-
-//ConVar  *sv_cheats = NULL;
-
-ConVar fov_cs_debug( "fov_cs_debug", "0", FCVAR_REPLICATED | FCVAR_CHEAT, "Sets the view fov if cheats are on." );
 
 #define FREEZECAM_LONGCAM_DIST	320  // over this amount, the camera will zoom close on target
 
@@ -781,14 +776,14 @@ void C_CSRagdoll::ApplyRandomTaserForce( void )
 
 void C_CSRagdoll::ImpactTrace( trace_t *pTrace, int iDamageType, const char *pCustomImpactName )
 {
-
-#if USE_VIOLENT_RAGDOLLS
-
 	static const float RAGDOLL_IMPACT_MAGNITUDE = 8000.0f;
 
 	IPhysicsObject *pPhysicsObject = VPhysicsGetObject();
 
 	if( !pPhysicsObject )
+		return;
+
+	if( !cl_violent_ragdolls.GetBool() )
 		return;
 
 	Vector dir = pTrace->endpos - pTrace->startpos;
@@ -823,9 +818,6 @@ void C_CSRagdoll::ImpactTrace( trace_t *pTrace, int iDamageType, const char *pCu
 	}
 
 	m_pRagdoll->ResetRagdollSleepAfterTime();
-
-#endif //USE_VIOLENT_RAGDOLLS
-
 }
 
 void C_CSRagdoll::ValidateModelIndex( void )
@@ -1053,9 +1045,9 @@ void C_CSRagdoll::CreateCSRagdoll()
 			const float boneDt = 0.05f;
 		
 			bool bleedOut = false;
-#if USE_VIOLENT_RAGDOLLS
-			bleedOut = ( pPlayer ? !pPlayer->m_bKilledByTaser : true );
-#endif
+
+			if( cl_violent_ragdolls.GetBool() )
+				bleedOut = ( pPlayer ? !pPlayer->m_bKilledByTaser : true );
 
 			if ( pCachedRagdoll && pCachedRagdoll->nBones == GetModelPtr()->numbones() )
 			{
@@ -2606,7 +2598,6 @@ void C_CSPlayer::FireGameEvent( IGameEvent *event )
 					C_RecipientFilter filter;
 					filter.AddRecipient( this );
 					C_BaseEntity::EmitSound( filter, entindex(), "Music.GG_Revenge" );
-					STEAMWORKS_TESTSECRETALWAYS_AMORTIZE( 7 );
 				}
 				if ( event->GetInt( "bonus" ) != 0 )
 				{
@@ -2642,8 +2633,6 @@ void C_CSPlayer::FireGameEvent( IGameEvent *event )
 			// Play an audio cue corresponding to getting the final weapon
 			//EmitSound( "GunGameWeapon.AchievedFinalWeapon" );
 			GetCenterPrint()->Print( "#SFUI_Notice_Knife_Level_You" );
-
-			STEAMWORKS_TESTSECRETALWAYS_AMORTIZE( 13 );
 		}
 		else
 		{
@@ -2668,8 +2657,6 @@ void C_CSPlayer::FireGameEvent( IGameEvent *event )
 			{
 				// Play the bonus grenade voiceover after next round start
 				m_StartOfRoundSoundEvents.AddSound( this, "GunGameWeapon.AchievedBonusGrenade", 2.0f );
-
-				STEAMWORKS_TESTSECRETALWAYS_AMORTIZE( 23 );
 			}
 		}
 	}
@@ -2679,7 +2666,6 @@ void C_CSPlayer::FireGameEvent( IGameEvent *event )
 		if ( PlayerUserID == EventUserID )
 		{
 			// Play the voiceover for receiving the c4
-			STEAMWORKS_TESTSECRETALWAYS_AMORTIZE( 13 );
 		}
 	}
 	else if ( Q_strcmp( "item_pickup", name ) == 0 )
@@ -2691,8 +2677,6 @@ void C_CSPlayer::FireGameEvent( IGameEvent *event )
 			// if we aren't playing the sound on the server, play a "silent" version on the client
 			if ( event->GetBool( "silent" ) )
 				EmitSound( "Player.PickupWeaponSilent" );
-
-			STEAMWORKS_TESTSECRET_AMORTIZE( 67 );
 		}
 	}
 	else if ( Q_strcmp( "ammo_pickup", name ) == 0 )
@@ -2723,9 +2707,7 @@ void C_CSPlayer::FireGameEvent( IGameEvent *event )
 		if ( CSGameRules()->IsPlayingGunGameProgressive() || CSGameRules()->IsPlayingGunGameDeathmatch() )
 		{	
 			if ( GetUserID() == event->GetInt("playerid" ) )
-			{		
-				STEAMWORKS_TESTSECRETALWAYS_AMORTIZE( 11 );
-
+			{
 				/*
 				if ( !m_isCurrentGunGameLeader )
 				{
@@ -7339,19 +7321,6 @@ bool C_CSPlayer::HasC4( void )
 float C_CSPlayer::GetFOV( void ) const
 {
 	float flCurFOV = BaseClass::GetFOV();
-
-	if ( flCurFOV == GetDefaultFOV() )
-	{
-		if ( !sv_cheats )
-		{
-			sv_cheats = cvar->FindVar( "sv_cheats" );
-		}
-
-		if ( sv_cheats->GetBool() && fov_cs_debug.GetInt() > 0 )
-		{
-			return fov_cs_debug.GetInt();
-		}
-	}
 
 #ifdef IRONSIGHT
 	CWeaponCSBase *pWeapon = GetActiveCSWeapon();

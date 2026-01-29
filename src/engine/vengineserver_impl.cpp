@@ -1,6 +1,6 @@
 //===== Copyright 1996-2005, Valve Corporation, All rights reserved. ======//
 //
-// Purpose: 
+// Purpose:
 //
 // $Workfile:     $
 // $NoKeywords: $
@@ -39,7 +39,6 @@
 #include "networkstringtableserver.h"
 #include "networkstringtable.h"
 #include "LocalNetworkBackdoor.h"
-#include "host_phonehome.h"
 #include "sv_plugin.h"
 #include "singleplayersharedmemory.h"
 #include "MapReslistGenerator.h"
@@ -122,7 +121,7 @@ struct MsgData
 
 	IRecipientFilter	*filter;		// clients who get this message
 	bool				reliable;
-	
+
 	bool				started;			// IS THERE A MESSAGE IN THE PROCESS OF BEING SENT?
 
 	CSVCMsg_EntityMsg_t entityMsg;
@@ -311,20 +310,20 @@ public:
 	virtual void ChangeLevel( const char* s1, const char* s2)
 	{
 		static	int	last_spawncount;
-		
+
 		// make sure we don't issue two changelevels
 		if (sv.GetSpawnCount() == last_spawncount)
 			return;
 
 		last_spawncount = sv.GetSpawnCount();
-		
+
 		if ( !s1 )
 		{
 			Sys_Error( "CVEngineServer::Changelevel with NULL s1\n" );
 		}
-		
+
 		char cmd[ 256 ];
-		
+
 		if ( !s2 ) // no indication of where they are coming from;  so just do a standard old changelevel
 		{
 			Q_snprintf( cmd, sizeof( cmd ), "changelevel %s\n", s1 );
@@ -333,16 +332,16 @@ public:
 		{
 			Q_snprintf( cmd, sizeof( cmd ), "changelevel2 %s %s\n", s1, s2 );
 		}
-		
+
 		Cbuf_AddText( CBUF_SERVER, cmd );
 	}
-	
-	
+
+
 	virtual int	IsMapValid( const char *filename )
 	{
 		return modelloader->Map_IsValid( filename );
 	}
-	
+
 	virtual bool IsDedicatedServer( void )
 	{
 		return sv.IsDedicated();
@@ -364,7 +363,7 @@ public:
 		return 0;
 #endif
 	}
-	
+
 	virtual int IsInEditMode( void )
 	{
 #ifdef DEDICATED
@@ -387,12 +386,12 @@ public:
 	{
 		return g_pLaunchOptions;
 	}
-	
+
 	virtual bool IsLevelMainMenuBackground( void )
 	{
 		return sv.IsLevelMainMenuBackground();
 	}
-	
+
 	virtual void NotifyEdictFlagsChange( int iEdict )
 	{
 		if ( g_pLocalNetworkBackdoor )
@@ -407,11 +406,11 @@ public:
 			Error( "Invalid client specified in GetPrevCheckTransmitInfo\n" );
 			return NULL;
 		}
-		
+
 		CGameClient *client = sv.Client( entnum-1 );
-		return client->GetPrevPackInfo();		
+		return client->GetPrevPackInfo();
 	}
-	
+
 	virtual int PrecacheDecal( const char *name, bool preload /*=false*/ )
 	{
 		PR_CheckEmptyString( name );
@@ -420,11 +419,11 @@ public:
 		{
 			return i;
 		}
-		
+
 		Host_Error( "CVEngineServer::PrecacheDecal: '%s' overflow, too many decals", name );
 		return 0;
 	}
-	
+
 	virtual int PrecacheModel( const char *s, bool preload /*= false*/ )
 	{
 		PR_CheckEmptyString (s);
@@ -433,27 +432,27 @@ public:
 		{
 			return i;
 		}
-		
+
 		Host_Error( "CVEngineServer::PrecacheModel: '%s' overflow, too many models", s );
 		return 0;
 	}
-	
-	
+
+
 	virtual int PrecacheGeneric(const char *s, bool preload /*= false*/ )
 	{
 		int		i;
-		
+
 		PR_CheckEmptyString (s);
 		i = SV_FindOrAddGeneric( s, preload );
 		if (i >= 0)
 		{
 			return i;
 		}
-		
+
 		Host_Error ("CVEngineServer::PrecacheGeneric: '%s' overflow", s);
 		return 0;
 	}
-	
+
 	virtual bool IsModelPrecached( char const *s ) const
 	{
 		int idx = SV_ModelIndex( s );
@@ -492,7 +491,10 @@ public:
 
 	virtual bool IsInternalBuild( void )
 	{
-		return !phonehome->IsExternalBuild();
+		if ( CommandLine()->FindParm("-phonehome") )
+			return true;
+		else
+			return false;
 	}
 
 	//-----------------------------------------------------------------------------
@@ -502,13 +504,13 @@ public:
 	virtual int PrecacheSentenceFile( const char *s, bool preload /*= false*/ )
 	{
 		// UNDONE:  Set up preload flag
-		
+
 		// UNDONE: Send this data to the client to support multiple sentence files
 		VOX_ReadSentenceFile( s );
-		
+
 		return 0;
 	}
-	
+
 	//-----------------------------------------------------------------------------
 	// Purpose: Retrieves the pvs for an origin into the specified array
 	// Input  : *org - origin
@@ -520,11 +522,11 @@ public:
 	{
 		return CM_LeafCluster( CM_PointLeafnum( org ) );
 	}
-	
+
 	virtual int GetPVSForCluster( int clusterIndex, int outputpvslength, unsigned char *outputpvs )
 	{
 		int length = (CM_NumClusters()+7)>>3;
-		
+
 		if ( outputpvs )
 		{
 			if ( outputpvslength < length )
@@ -532,27 +534,27 @@ public:
 				Sys_Error( "GetPVSForOrigin called with inusfficient sized pvs array, need %i bytes!", length );
 				return length;
 			}
-			
+
 			CM_Vis( outputpvs, outputpvslength, clusterIndex, DVIS_PVS );
 		}
-		
+
 		return length;
 	}
-	
+
 	//-----------------------------------------------------------------------------
 	// Purpose: Test origin against pvs array retreived from GetPVSForOrigin
 	// Input  : *org - origin to chec
 	//			checkpvslength - length of pvs array
-	//			*checkpvs - 
+	//			*checkpvs -
 	// Output : bool - true if entity is visible
 	//-----------------------------------------------------------------------------
 	virtual bool CheckOriginInPVS( const Vector& org, const unsigned char *checkpvs, int checkpvssize )
 	{
 		int clusterIndex = CM_LeafCluster( CM_PointLeafnum( org ) );
-		
+
 		if ( clusterIndex < 0 )
 			return false;
-		
+
 		int offset = clusterIndex>>3;
 		if ( offset > checkpvssize )
 		{
@@ -560,20 +562,20 @@ public:
 				offset, checkpvssize );
 			return false;
 		}
-		
+
 		if ( !(checkpvs[offset] & (1<<(clusterIndex&7)) ) )
 		{
 			return false;
 		}
-		
+
 		return true;
 	}
-	
+
 	//-----------------------------------------------------------------------------
 	// Purpose: Test origin against pvs array retreived from GetPVSForOrigin
 	// Input  : *org - origin to chec
 	//			checkpvslength - length of pvs array
-	//			*checkpvs - 
+	//			*checkpvs -
 	// Output : bool - true if entity is visible
 	//-----------------------------------------------------------------------------
 	virtual bool CheckBoxInPVS( const Vector& mins, const Vector& maxs, const unsigned char *checkpvs, int checkpvssize )
@@ -582,25 +584,25 @@ public:
 		{
 			return false;
 		}
-		
+
 		return true;
 	}
-	
+
 	virtual int GetPlayerUserId( const edict_t *e )
 	{
 		if ( !sv.IsActive() || !e)
 			return -1;
-		
+
 		for ( int i = 0; i < sv.GetClientCount(); i++ )
 		{
 			CGameClient *cl = sv.Client(i);
-			
+
 			if ( cl->edict == e )
 			{
 				return cl->m_UserID;
 			}
 		}
-		
+
 		// Couldn't find it
 		return -1;
 	}
@@ -609,17 +611,17 @@ public:
 	{
 		if ( !sv.IsActive() || !e)
 			return NULL;
-		
+
 		for ( int i = 0; i < sv.GetClientCount(); i++ )
 		{
 			CGameClient *cl = sv.Client(i);
-			
+
 			if ( cl->edict == e )
 			{
 				return cl->GetNetworkIDString();
 			}
 		}
-		
+
 		// Couldn't find it
 		return NULL;
 
@@ -668,8 +670,8 @@ public:
 	{
 		return sv.num_edicts;
 	}
-	
-	
+
+
 
 	virtual INetChannelInfo* GetPlayerNetInfo( int playerIndex )
 	{
@@ -677,7 +679,7 @@ public:
 			return NULL;
 
 		CGameClient *client = sv.Client( playerIndex - 1 );
-		
+
 		return client->m_NetChannel;
 	}
 
@@ -690,8 +692,8 @@ public:
 		}
 		return pedict;
 	}
-	
-	
+
+
 	virtual void RemoveEdict(edict_t* ed)
 	{
 		if ( g_pServerPluginHandler )
@@ -700,7 +702,7 @@ public:
 		}
 		ED_Free(ed);
 	}
-	
+
 	//
 	// Request engine to allocate "cb" bytes on the entity's private data pointer.
 	//
@@ -708,8 +710,8 @@ public:
 	{
 		return calloc( 1, cb );
 	}
-	
-	
+
+
 	//
 	// Release the private data memory, if any.
 	//
@@ -719,14 +721,14 @@ public:
 		// set the memory to a known value
 		int size = _msize( pEntity );
 		memset( pEntity, 0xDD, size );
-#endif		
-		
+#endif
+
 		if ( pEntity )
 		{
 			free( pEntity );
 		}
 	}
-	
+
 	virtual void		*SaveAllocMemory( size_t num, size_t size )
 	{
 #ifndef DEDICATED
@@ -735,26 +737,26 @@ public:
 		return NULL;
 #endif
 	}
-	
+
 	virtual void		SaveFreeMemory( void *pSaveMem )
 	{
 #ifndef DEDICATED
 		::SaveFreeMemory(pSaveMem);
 #endif
 	}
-	
+
 	/*
 	=================
 	EmitAmbientSound
-	
+
 	  =================
 	*/
-	virtual void EmitAmbientSound( int entindex, const Vector& pos, const char *samp, float vol, 
+	virtual void EmitAmbientSound( int entindex, const Vector& pos, const char *samp, float vol,
 		soundlevel_t soundlevel, int fFlags, int pitch, float soundtime /*=0.0f*/ )
 	{
-		SoundInfo_t sound; 
+		SoundInfo_t sound;
 		sound.SetDefault();
-		
+
 		sound.nEntityIndex = entindex;
 		sound.fVolume = vol;
 		sound.Soundlevel = soundlevel;
@@ -765,15 +767,15 @@ public:
 		sound.bIsAmbient = true;
 
 		ASSERT_COORD( sound.vOrigin );
-		
+
 		// set sound delay
-		
+
 		if ( soundtime != 0.0f )
 		{
 			sound.fDelay = soundtime - sv.GetTime();
 			sound.nFlags |= SND_DELAY;
 		}
-		
+
 		// if this is a sentence, get sentence number
 		if ( TestSoundChar(samp, CHAR_SENTENCE) )
 		{
@@ -803,7 +805,7 @@ public:
 
 			sndmsg.set_reliable_sound( true );
 			sound.WriteDelta( NULL, sndmsg, sv.GetFinalTickTime() );
-			
+
 			 // write into signon buffer
 			if ( !sndmsg.WriteToBuffer( sv.m_Signon ) )
 			{
@@ -825,111 +827,111 @@ public:
 			sv.BroadcastSound( sound, filter );
 		}
 	}
-	
-	
+
+
 	virtual void FadeClientVolume(const edict_t *clientent,
 		float fadePercent, float fadeOutSeconds, float holdTime, float fadeInSeconds)
 	{
 		int entnum = NUM_FOR_EDICT(clientent);
-		
+
 		if (entnum < 1 || entnum > sv.GetClientCount() )
 		{
 			ConMsg ("tried to DLL_FadeClientVolume a non-client\n");
 			return;
 		}
-		
+
 		IClient	*client = sv.Client(entnum-1);
 
 		CNETMsg_StringCmd_t sndMsg( va("soundfade	%.1f %.1f %.1f %.1f", fadePercent, holdTime, fadeOutSeconds, fadeInSeconds ) );
-				
+
 		client->SendNetMsg( sndMsg );
 	}
-	
-	
+
+
 	//-----------------------------------------------------------------------------
 	//
 	// Sentence API
 	//
 	//-----------------------------------------------------------------------------
-	
+
 	virtual int SentenceGroupPick( int groupIndex, char *name, int nameLen )
 	{
 		if ( !name )
 		{
 			Sys_Error( "SentenceGroupPick with NULL name\n" );
 		}
-		
+
 		Assert( nameLen > 0 );
-		
+
 		return VOX_GroupPick( groupIndex, name, nameLen );
 	}
-	
-	
+
+
 	virtual int SentenceGroupPickSequential( int groupIndex, char *name, int nameLen, int sentenceIndex, int reset )
 	{
 		if ( !name )
 		{
 			Sys_Error( "SentenceGroupPickSequential with NULL name\n" );
 		}
-		
+
 		Assert( nameLen > 0 );
-		
+
 		return VOX_GroupPickSequential( groupIndex, name, nameLen, sentenceIndex, reset );
 	}
-	
+
 	virtual int SentenceIndexFromName( const char *pSentenceName )
 	{
 		if ( !pSentenceName )
 		{
 			Sys_Error( "SentenceIndexFromName with NULL pSentenceName\n" );
 		}
-		
+
 		int sentenceIndex = -1;
-		
+
 		VOX_LookupString( pSentenceName, &sentenceIndex );
-		
+
 		return sentenceIndex;
 	}
-	
+
 	virtual const char *SentenceNameFromIndex( int sentenceIndex )
 	{
 		return VOX_SentenceNameFromIndex( sentenceIndex );
 	}
-	
-	
+
+
 	virtual int SentenceGroupIndexFromName( const char *pGroupName )
 	{
 		if ( !pGroupName )
 		{
 			Sys_Error( "SentenceGroupIndexFromName with NULL pGroupName\n" );
 		}
-		
+
 		return VOX_GroupIndexFromName( pGroupName );
 	}
-	
+
 	virtual const char *SentenceGroupNameFromIndex( int groupIndex )
 	{
 		return VOX_GroupNameFromIndex( groupIndex );
 	}
-	
-	
+
+
 	virtual float SentenceLength( int sentenceIndex )
 	{
 		return VOX_SentenceLength( sentenceIndex );
 	}
 	//-----------------------------------------------------------------------------
-	
+
 	virtual int			CheckHeadnodeVisible( int nodenum, const byte *visbits, int vissize )
 	{
 		return CM_HeadnodeVisible(nodenum, visbits, vissize );
 	}
-	
+
 	/*
 	=================
 	ServerCommand
-	
+
 	  Sends text to servers execution buffer
-	  
+
 		localcmd (string)
 		=================
 	*/
@@ -948,14 +950,14 @@ public:
 			ConMsg( "Error, bad server command %s\n", str );
 		}
 	}
-	
-	
+
+
 	/*
 	=================
 	ServerExecute
-	
+
 	  Executes all commands in server buffer
-	  
+
 		localcmd (string)
 		=================
 	*/
@@ -963,22 +965,22 @@ public:
 	{
 		Cbuf_Execute();
 	}
-	
-	
+
+
 	/*
 	=================
 	ClientCommand
-	
+
 	  Sends text over to the client's execution buffer
-	  
+
 		stuffcmd (clientent, value)
 		=================
 	*/
 	virtual void ClientCommand(edict_t* pEdict, const char* szFmt, ...)
 	{
-		va_list		argptr; 
+		va_list		argptr;
 		static char	szOut[1024];
-		
+
 		va_start(argptr, szFmt);
 		Q_vsnprintf(szOut, sizeof( szOut ), szFmt, argptr);
 		va_end(argptr);
@@ -990,17 +992,17 @@ public:
 		}
 
 		int entnum = NUM_FOR_EDICT( pEdict );
-		
+
 		if ( ( entnum < 1 ) || ( entnum >  sv.GetClientCount() ) )
 		{
 			ConMsg("\n!!!\n\nStuffCmd:  Some entity tried to stuff '%s' to console buffer of entity %i when maxclients was set to %i, ignoring\n\n",
 				szOut, entnum, sv.GetMaxClients() );
 			return;
 		}
-		
+
 		CNETMsg_StringCmd_t string( szOut );
 		sv.GetClient(entnum-1)->SendNetMsg( string );
-		
+
 	}
 
 	// Send a client command keyvalues
@@ -1009,7 +1011,7 @@ public:
 	{
 		if ( !pCommand )
 			return;
-		
+
 		// Ensure the contract of deleting the key values here
 		KeyValues::AutoDelete autodelete_pCommand( pCommand );
 
@@ -1024,13 +1026,13 @@ public:
 
 		CSVCMsg_CmdKeyValues_t cmd;
 		CmdKeyValuesHelper::SVCMsg_SetKeyValues( cmd, pCommand );
-		sv.GetClient(entnum-1)->SendNetMsg( cmd );	
+		sv.GetClient(entnum-1)->SendNetMsg( cmd );
 	}
-	
+
 	/*
 	===============
 	LightStyle
-	
+
 	  void(float style, string value) lightstyle
 	  ===============
 	*/
@@ -1047,8 +1049,8 @@ public:
 
 		stringTable->SetStringUserData( style, Q_strlen(val)+1, val );
 	}
-		
-		
+
+
 	virtual void StaticDecal( const Vector& origin, int decalIndex, int entityIndex, int modelIndex, bool lowpriority )
 	{
 		CSVCMsg_BSPDecal_t decal;
@@ -1075,15 +1077,15 @@ public:
 	{
 		SV_DetermineMulticastRecipients( usepas, origin, playerbits );
 	}
-	
+
 	/*
 	===============================================================================
-	
+
 	  MESSAGE WRITING
-	  
+
 		===============================================================================
 	*/
-	
+
 	virtual bf_write *EntityMessageBegin( int ent_index, ServerClass * ent_class, bool reliable )
 	{
 		if ( s_MsgData.started )
@@ -1091,39 +1093,39 @@ public:
 			Sys_Error( "EntityMessageBegin:  New message started before matching call to EndMessage.\n " );
 			return NULL;
 		}
-		
+
 		s_MsgData.Reset();
-		
+
 		Assert( ent_class );
-				
+
 		s_MsgData.filter = NULL;
 		s_MsgData.reliable = reliable;
-		
+
 		s_MsgData.started = true;
-		
+
 		s_MsgData.entityMsg.set_ent_index( ent_index );
 		s_MsgData.entityMsg.set_class_id( ent_class->m_ClassID );
-		s_MsgData.m_DataOut.Reset();	
-				
+		s_MsgData.m_DataOut.Reset();
+
 		return &s_MsgData.m_DataOut;
 	}
-	
+
 	// Validates user message type and checks to see if it's variable length
 	// returns true if variable length
 	int Message_CheckMessageLength()
 	{
 		int bytesWritten = s_MsgData.m_DataOut.GetNumBytesWritten();
-			
+
 		if ( bytesWritten > MAX_ENTITY_MSG_DATA )	// TODO use a define or so
 		{
 			Warning( "Entity Message to %i, %i bytes written (max is %d)\n",
 				s_MsgData.entityMsg.ent_index(), bytesWritten, MAX_ENTITY_MSG_DATA );
 			return -1;
 		}
-			
+
 		return bytesWritten; // all checks passed, estimated final length
 	}
-	
+
 	virtual void MessageEnd( void )
 	{
 		if ( !s_MsgData.started )
@@ -1131,9 +1133,9 @@ public:
 			Sys_Error( "MESSAGE_END called with no active message\n" );
 			return;
 		}
-		
+
 		int length = Message_CheckMessageLength();
-		
+
 		// check to see if it's a valid message
 		if ( length < 0 )
 		{
@@ -1150,13 +1152,13 @@ public:
 		}
 		else
 		{
-			// send entity messages to all full connected clients 
+			// send entity messages to all full connected clients
 			sv.BroadcastMessage( s_MsgData.entityMsg, true, s_MsgData.reliable );
 		}
-		
+
 		s_MsgData.Reset(); // clear message data
 	}
-	
+
 	virtual void SendUserMessage( IRecipientFilter& filter, int message, const ::google::protobuf::Message &msg )
 	{
 		CSVCMsg_UserMessage_t _userMsg;
@@ -1190,16 +1192,16 @@ public:
 	virtual void ClientPrintf( edict_t *pEdict, const char *szMsg )
 	{
 		int entnum = NUM_FOR_EDICT( pEdict );
-		
+
 		if (entnum < 1 || entnum > sv.GetClientCount() )
 		{
 			ConMsg ("tried to sprint to a non-client\n");
 			return;
 		}
-		
+
 		sv.Client(entnum-1)->ClientPrintf( "%s", szMsg );
 	}
-	
+
 #ifdef DEDICATED
 	void Con_NPrintf( int pos, const char *fmt, ... )
 	{
@@ -1244,24 +1246,24 @@ public:
 		int clientnum = NUM_FOR_EDICT( clientent );
 		if (clientnum < 1 || clientnum > sv.GetClientCount() )
 			Host_Error ("DLL_SetView: not a client");
-		
+
 		CGameClient *client = sv.Client(clientnum-1);
 
 		client->m_pViewEntity = viewent;
-		
+
 		CSVCMsg_SetView_t view;
 		view.set_entity_index( NUM_FOR_EDICT(viewent) );
 
 		client->SendNetMsg( view );
 	}
-	
+
 	virtual void CrosshairAngle(const edict_t *clientent, float pitch, float yaw)
 	{
 		int clientnum = NUM_FOR_EDICT( clientent );
 
 		if (clientnum < 1 || clientnum > sv.GetClientCount() )
 			Host_Error ("DLL_Crosshairangle: not a client");
-		
+
 		IClient *client = sv.Client(clientnum-1);
 
 		if (pitch > 180)
@@ -1272,7 +1274,7 @@ public:
 			yaw -= 360;
 		if (yaw < -180)
 			yaw += 360;
-		
+
 		CSVCMsg_CrosshairAngle_t crossHairMsg;
 
 		crossHairMsg.mutable_angle()->set_x( pitch );
@@ -1281,18 +1283,18 @@ public:
 
 		client->SendNetMsg( crossHairMsg );
 	}
-	
-	
+
+
 	virtual void GetGameDir( char *szGetGameDir, int maxlength )
 	{
 		COM_GetGameDir(szGetGameDir, maxlength );
-	}		
-	
+	}
+
 	virtual int CompareFileTime( const char *filename1, const char *filename2, int *iCompare)
 	{
 		return COM_CompareFileTime(filename1, filename2, iCompare);
 	}
-	
+
 	virtual bool LockNetworkStringTables( bool lock )
 	{
 		return networkStringTableContainerServer->Lock( lock );
@@ -1305,15 +1307,15 @@ public:
 		if ( !fcl )
 		{
 			// server is full
-			return NULL;		
+			return NULL;
 		}
 
 		fcl->UpdateUserSettings();
 
 		return fcl->edict;
-		
+
 	}
-	
+
 	// Get a keyvalue for s specified client
 	virtual const char *GetClientConVarValue( int clientIndex, const char *name )
 	{
@@ -1325,7 +1327,7 @@ public:
 
 		return sv.GetClient( clientIndex - 1 )->GetUserSetting( name );
 	}
-	
+
 	virtual const char *ParseFile(const char *data, char *token, int maxlen)
 	{
 		return ::COM_ParseFile(data, token, maxlen );
@@ -1335,17 +1337,17 @@ public:
 	{
 		return ::COM_CopyFile( source, destination );
 	}
-	
+
 	virtual void AddOriginToPVS( const Vector& origin )
 	{
 		::SV_AddOriginToPVS(origin);
 	}
-	
+
 	virtual void ResetPVS( byte* pvs, int pvssize )
 	{
 		::SV_ResetPVS( pvs, pvssize );
 	}
-	
+
 	virtual void		SetAreaPortalState( int portalNumber, int isOpen )
 	{
 		CM_SetAreaPortalState(portalNumber, isOpen);
@@ -1471,13 +1473,13 @@ public:
 	{
 		ED_AllowImmediateReuse();
 	}
-			
+
 	virtual void SetAchievementMgr( IAchievementMgr *pAchievementMgr )
 	{
 		g_pAchievementMgr = pAchievementMgr;
 	}
-	
-	virtual IAchievementMgr *GetAchievementMgr() 
+
+	virtual IAchievementMgr *GetAchievementMgr()
 	{
 		return g_pAchievementMgr;
 	}
@@ -1486,7 +1488,7 @@ public:
 	{
 		return GetSteamAppID();
 	}
-	
+
 	virtual bool IsLowViolence();
 
 	virtual bool IsAnyClientLowViolence();
@@ -1494,9 +1496,9 @@ public:
 	/*
 	=================
 	InsertServerCommand
-	
+
 	  Sends text to servers execution buffer
-	  
+
 		localcmd (string)
 		=================
 	*/
@@ -1535,7 +1537,7 @@ public:
 
 		return false;
 	}
-	
+
 	virtual ISPSharedMemory *GetSinglePlayerSharedMemorySpace( const char *szName, int ent_num = MAX_EDICTS )
 	{
 		return g_pSinglePlayerSharedMemoryManager->GetSharedMemory( szName, ent_num );
@@ -1616,7 +1618,7 @@ public:
 
 		info.m_bBroadcastActive = true;
 		info.m_bMasterProxy = !hltv->IsDemoPlayback() && hltv->IsMasterProxy();
-		
+
 		if ( info.m_bMasterProxy )
 			info.m_flDelay = hltv->GetDirector()->GetDelay();
 
@@ -1710,7 +1712,7 @@ public:
 
 		return c;
 	}
-	
+
 	edict_t *GetSplitScreenPlayerForEdict( int ent_num, int nSlot )
 	{
 		if (ent_num < 1 || ent_num > sv.GetClientCount() )
@@ -1828,7 +1830,7 @@ public:
 	{
 		TracePaintSphere( pModel, vPosition, vContactNormal, flSphereRadius, surfColors );
 	}
-	
+
 	virtual void RemoveAllPaint()
 	{
 		g_PaintManager.RemoveAllPaint();
@@ -1867,7 +1869,7 @@ public:
 
 		CUtlVector< uint32 > data;
 		g_PaintManager.GetPaintmapDataRLE( data );
-		
+
 		AssertMsg2( data.Count() < NET_MAX_PAYLOAD, "Sending paint data with size [%d bytes] to client, max payload is [%d bytes]\n", data.Count(), NET_MAX_PAYLOAD );
 
 		if ( data.Count() > 0 )
@@ -1880,7 +1882,7 @@ public:
 			CSVCMsg_PaintmapData_t svcPaintmap;
 			int nBytes = data.Count() * sizeof( data.Base()[0] );
 			svcPaintmap.set_paintmap( (void*)data.Base(), nBytes );
-			
+
 			client->SendNetMsg( svcPaintmap, true );
 		}
 	}
@@ -1957,7 +1959,7 @@ public:
 	}
 
 private:
-	
+
 	// Purpose: Sends a temp entity to the client ( follows the format of the original MESSAGE_BEGIN stuff from HL1
 	virtual void PlaybackTempEntity( IRecipientFilter& filter, float delay, const void *pSender, const SendTable *pST, int classID  );
 	virtual int	CheckAreasConnected( int area1, int area2 );
@@ -2021,7 +2023,7 @@ private:
 		}
 		return 0;
 	}
-	
+
 	virtual bool ClientCanStartHltvReplay( int nClientIndex ) OVERRIDE
 	{
 		if ( IClient* pClient = sv.GetClient( nClientIndex ) )
@@ -2071,10 +2073,10 @@ static CUtlMemoryPool s_PVSInfoAllocator( 128, 128 * 64, CUtlMemoryPool::GROW_SL
 
 //-----------------------------------------------------------------------------
 // Purpose: Sends a temp entity to the client, using the reliable data stream
-// Input  : delay - 
-//			*pSender - 
-//			*pST - 
-//			classID - 
+// Input  : delay -
+//			*pSender -
+//			*pST -
+//			classID -
 //-----------------------------------------------------------------------------
 static void WriteReliableEvent( const SendTable *pST, float delay, int classID, SerializedEntityHandle_t handle, IClient *client, bf_write *buf )
 {
@@ -2084,14 +2086,14 @@ static void WriteReliableEvent( const SendTable *pST, float delay, int classID, 
 
 	// special case 0 signals single reliable event
 	eventMsg.set_num_entries( 0 );
-	
+
 	eventMsg.mutable_entity_data()->resize( CEventInfo::MAX_EVENT_DATA );
 	bf_write buffer( &(*eventMsg.mutable_entity_data())[0], eventMsg.entity_data().size() );
 
 	if ( delay == 0.0f )
 	{
 		buffer.WriteOneBit( 0 ); // no delay
-	} 
+	}
 	else
 	{
 		buffer.WriteOneBit( 1 );
@@ -2100,7 +2102,7 @@ static void WriteReliableEvent( const SendTable *pST, float delay, int classID, 
 
 	buffer.WriteOneBit( 1 ); // full update
 
-	buffer.WriteUBitLong( classID, sv.serverclassbits ); // classID 
+	buffer.WriteUBitLong( classID, sv.serverclassbits ); // classID
 
 	// write event properties
 	SendTable_WritePropList( pST, handle, &buffer, -1, NULL );
@@ -2119,13 +2121,13 @@ static void WriteReliableEvent( const SendTable *pST, float delay, int classID, 
 
 //-----------------------------------------------------------------------------
 // Purpose: Sends a temp entity to the client ( follows the format of the original MESSAGE_BEGIN stuff from HL1
-// Input  : msg_dest - 
-//			delay - 
-//			*origin - 
-//			*recipient - 
-//			*pSender - 
-//			*pST - 
-//			classID - 
+// Input  : msg_dest -
+//			delay -
+//			*origin -
+//			*recipient -
+//			*pSender -
+//			*pST -
+//			classID -
 //-----------------------------------------------------------------------------
 void CVEngineServer::PlaybackTempEntity( IRecipientFilter& filter, float delay, const void *pSender, const SendTable *pST, int classID  )
 {
@@ -2135,10 +2137,10 @@ void CVEngineServer::PlaybackTempEntity( IRecipientFilter& filter, float delay, 
 	if ( sv.m_TempEntities.Count() >= ((1<<CEventInfo::EVENT_INDEX_BITS)-1) )
 	{
 		// remove oldest effect
-		delete sv.m_TempEntities[0]; 
+		delete sv.m_TempEntities[0];
 		sv.m_TempEntities.Remove( 0 );
 	}
-	
+
 	// Make this start at 1
 	classID = classID + 1;
 
@@ -2150,7 +2152,7 @@ void CVEngineServer::PlaybackTempEntity( IRecipientFilter& filter, float delay, 
 		Host_Error( "PlaybackTempEntity: SendTable_Encode returned false (ent %d), overflow?\n", classID );
 		return;
 	}
-	
+
 	bool bSendReliable = filter.IsReliable();
 
 	// Reliable events are sent one by one to each recipient
@@ -2197,9 +2199,9 @@ int	CVEngineServer::CheckAreasConnected( int area1, int area2 )
 
 
 //-----------------------------------------------------------------------------
-// Purpose: 
-// Input  : *origin - 
-//			*bits - 
+// Purpose:
+// Input  : *origin -
+//			*bits -
 // Output : void
 //-----------------------------------------------------------------------------
 int CVEngineServer::GetArea( const Vector& origin )
@@ -2355,7 +2357,7 @@ void CVEngineServer::BuildEntityClusterList( edict_t *pEdict, PVSInfo_t *pPVSInf
 
 	if ( bAreaCheck )
 	{
-		// make sure the area of your center is being tested, otherwise just pick the first ones 
+		// make sure the area of your center is being tested, otherwise just pick the first ones
 		// in the list
 		int leaf = CM_PointLeafnum( center );
 		int area = CM_LeafArea(leaf);
@@ -2381,8 +2383,8 @@ void CVEngineServer::BuildEntityClusterList( edict_t *pEdict, PVSInfo_t *pPVSInf
 	pPVSInfo->m_pClusters = pPVSInfo->m_pClustersInline;
 	if ( leafCount >= 16 )
 	{
-		std::make_heap( clusters, clusters + leafCount, SortClusterLessFunc ); 
-		std::sort_heap( clusters, clusters + leafCount, SortClusterLessFunc ); 
+		std::make_heap( clusters, clusters + leafCount, SortClusterLessFunc );
+		std::sort_heap( clusters, clusters + leafCount, SortClusterLessFunc );
 		for ( i = 0; i < leafCount; i++ )
 		{
 			if ( clusters[i] == -1 )
@@ -2545,4 +2547,3 @@ float CVEngineServer::GetLatencyForChoreoSounds()
 	return fResult;
 #endif
 }
-

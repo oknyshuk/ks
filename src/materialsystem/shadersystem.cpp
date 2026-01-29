@@ -541,7 +541,7 @@ void CShaderSystem::UnloadShaderDLL( const char *pFullPath )
 //-----------------------------------------------------------------------------
 // Make sure these match the bits in imaterial.h
 //-----------------------------------------------------------------------------
-static char* s_pShaderStateString[] =
+static const char* s_pShaderStateString[] =
 {
 	"$debug",
 	"$no_fullbright",
@@ -699,7 +699,7 @@ int CShaderSystem::GetShaders( int nFirstShader, int nMaxCount, IShader **ppShad
 		{
 			// Don't add shaders twice
 			const char *pShaderName = info.m_ShaderDict.GetElementName( j );
-			if ( uniqueNames.Find( pShaderName ).IsValid() )
+			if ( uniqueNames.Find( pShaderName ) != UTL_INVAL_SYMBOL )
 				continue;
 
 			// Indicate we've seen this shader

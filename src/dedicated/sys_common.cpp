@@ -1,11 +1,11 @@
 //===== Copyright 1996-2005, Valve Corporation, All rights reserved. ======//
 //
-// Purpose: 
+// Purpose:
 //
 // $NoKeywords: $
 //===========================================================================//
 #ifdef _WIN32
-#include <windows.h> 
+#include <windows.h>
 #elif POSIX
 #include <unistd.h>
 #else
@@ -29,7 +29,7 @@ static long		hDLLThirdParty	= 0L;
 //-----------------------------------------------------------------------------
 // Modules...
 //-----------------------------------------------------------------------------
-CSysModule *s_hMatSystemModule = NULL;	
+CSysModule *s_hMatSystemModule = NULL;
 CSysModule *s_hEngineModule = NULL;
 CSysModule *s_hSoundEmitterModule = NULL;
 
@@ -52,7 +52,7 @@ void Load3rdParty( void )
 {
 	// Only do this if the server operator wants the support.
 	// ( In case of malicious code, too )
-	if ( CommandLine()->CheckParm( "-usegh" ) )   
+	if ( CommandLine()->CheckParm( "-usegh" ) )
 	{
 		hDLLThirdParty = sys->LoadLibrary( "ghostinj.dll" );
 	}
@@ -127,7 +127,7 @@ extern bool g_bVGui;
 class CDedicatedExports : public CBaseAppSystem<IDedicatedExports>
 {
 public:
-	virtual void Sys_Printf( char *text )
+	virtual void Sys_Printf( const char *text )
 	{
 		if ( sys )
 		{
@@ -260,9 +260,9 @@ const char *UTIL_GetExecutableDir( )
 	// Return the bin directory as the executable dir if it's not in there
 	// because that's really where we're running from...
 	int exeLen = strlen(exedir);
-	if ( 	exedir[exeLen-4] != CORRECT_PATH_SEPARATOR || 
-		exedir[exeLen-3] != 'b' || 
-		exedir[exeLen-2] != 'i' || 
+	if ( 	exedir[exeLen-4] != CORRECT_PATH_SEPARATOR ||
+		exedir[exeLen-3] != 'b' ||
+		exedir[exeLen-2] != 'i' ||
 		exedir[exeLen-1] != 'n' )
 	{
 		Q_strncat( exedir, "\\bin", sizeof( exedir ), COPY_ALL_CHARACTERS );

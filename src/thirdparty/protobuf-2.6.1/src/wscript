@@ -50,12 +50,18 @@ def build(bld):
 		'google/protobuf/compiler/parser.cc'
 	]
 
+	cxxflags = []
+	if bld.env.DEST_OS != 'win32':
+		# Suppress false positive from GCC LTO analysis
+		cxxflags = ['-Wno-free-nonheap-object']
+
 	bld.stlib(
 		source   = source,
 		target   = 'protobuf',
 		features = 'cxx',
 		includes = includes,
 		use      = libs,
+		cxxflags = cxxflags,
 		subsystem = bld.env.MSVC_SUBSYSTEM,
 		idx = bld.get_taskgen_count()
 	)

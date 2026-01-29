@@ -254,8 +254,8 @@ public:
 protected:
 	CBaseFileSystem		*m_fs;
 
-#if 1
-// FOURCCs generate a warning
+#ifdef _PS3
+// FOURCCs generate a warning on PS3
 	enum
 	{
 		MAGIC = 0xABCDABCD,
@@ -264,8 +264,10 @@ protected:
 #else // !_PS3
 	enum
 	{
-		MAGIC = 'CFHa',
-		FREE_MAGIC = 'FreM'
+	    // lwss: fix compiler warning with multi-char character constants.
+	    // tested and these were the same order, although still not portable.
+		MAGIC = 0x43464861, // 'CFHa',
+		FREE_MAGIC = 0x4672654D // 'FreM'
 	};
 #endif // _PS3
 	unsigned int	m_nMagic;
@@ -337,7 +339,7 @@ public:
 
 	// Path management:
 	void SetPath( const CUtlSymbol &path ) { m_Path = path; }
-	const CUtlSymbol& GetPath() const	{ Assert( m_Path.IsValid() ); return m_Path; }
+	const CUtlSymbol& GetPath() const	{ Assert( m_Path != UTL_INVAL_SYMBOL ); return m_Path; }
 	CUtlSymbol			m_Path;
 
 	// possibly embedded pack
@@ -1308,7 +1310,7 @@ inline CPackFile::~CPackFile()
 
 	if ( m_hPackFileHandleFS )
 	{
-		m_fs->FS_fclose( m_hPackFileHandleFS );
+		m_fs->Trace_FClose( m_hPackFileHandleFS );
 		m_hPackFileHandleFS = NULL;
 	}
 

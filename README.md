@@ -2,8 +2,6 @@
 
 ## Build:
 
-###### install gcc or clang and python on your linux
-
 ```bash
 ./waf configure [-h] [...]
 ./waf install

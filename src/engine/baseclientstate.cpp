@@ -2265,7 +2265,6 @@ void CBaseClientState::HandleDeferredConnection()
 #endif
 	}
 #endif
-
 	SendConnectPacket ( dc.m_adrServerAddress, dc.m_nChallenge, dc.m_nAuthprotocol, dc.m_unGSSteamID, dc.m_bGSSecure );
 }
 

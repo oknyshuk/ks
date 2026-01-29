@@ -23,7 +23,8 @@
 
 class CGameLayer;
 class CGameUIScript;
-enum EScriptExecution;
+//enum EScriptExecution; lwss- this enum is unavailable. Replacing with int
+typedef int EScriptExecution;
 struct GameUIEvent_t;
 
 struct GameGraphicMap_t 

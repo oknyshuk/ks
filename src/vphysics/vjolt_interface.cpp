@@ -152,7 +152,7 @@ void JoltPhysicsInterface::DestroyObjectPairHash( IPhysicsObjectPairHash *pHash 
 
 //-------------------------------------------------------------------------------------------------
 
-IPhysicsCollisionSet *JoltPhysicsInterface::FindOrCreateCollisionSet( unsigned int id, int maxElementCount )
+IPhysicsCollisionSet *JoltPhysicsInterface::FindOrCreateCollisionSet( uintptr_t id, int maxElementCount )
 {
 	if ( maxElementCount > 32 )
 		return nullptr;
@@ -164,7 +164,7 @@ IPhysicsCollisionSet *JoltPhysicsInterface::FindOrCreateCollisionSet( unsigned i
 	return &result.first->second;
 }
 
-IPhysicsCollisionSet *JoltPhysicsInterface::FindCollisionSet( unsigned int id )
+IPhysicsCollisionSet *JoltPhysicsInterface::FindCollisionSet( uintptr_t id )
 {
 	auto iter = m_CollisionSets.find( id );
 	if ( iter != m_CollisionSets.end() )

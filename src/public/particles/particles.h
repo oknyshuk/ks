@@ -10,6 +10,12 @@
 #pragma once
 #endif
 
+// Suppress GCC warning about SIMD type attributes in templates
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wignored-attributes"
+#endif
+
 #include "mathlib/mathlib.h"
 #include "mathlib/vector.h"
 #include "mathlib/ssemath.h"
@@ -1800,7 +1806,7 @@ public:
 	// the camera objetc may be compared for equality against control point objects
 	void Render( int nViewRecursionLevel, IMatRenderContext *pRenderContext, const Vector4D &vecDiffuseModulation, bool bTranslucentOnly = false, void *pCameraObject = NULL );
 
-	bool IsValid( void ) const { return m_pDef; }
+	bool IsValid( void ) const { return m_pDef != NULL; }
 
 	// this system and all children are valid
 	bool IsFullyValid( void ) const;
@@ -2884,7 +2890,7 @@ FORCEINLINE void CParticleCollection::KillParticle( int nPidx, unsigned int nKil
 
 	COMPILE_TIME_ASSERT( ( sizeof( KillListItem_t ) == 4 ) && ( MAX_PARTICLES_IN_A_SYSTEM < ( 1 << KILL_LIST_INDEX_BITS ) ) );
 	Assert( !( nPidx & ~KILL_LIST_INDEX_MASK ) && !( nKillFlags & ~KILL_LIST_FLAGS_MASK ) );
-	KillListItem_t killItem = { nPidx, nKillFlags };
+	KillListItem_t killItem = { (unsigned int)nPidx, nKillFlags };
 
 	Assert( m_nNumParticlesToKill < MAX_PARTICLES_IN_A_SYSTEM );
 	m_pParticleKillList[ m_nNumParticlesToKill++ ] = killItem;
@@ -3230,8 +3236,15 @@ inline CParticleSystemDefinition::CParticleSystemDefinition( void )
 	m_nPerParticleOutlineMaterialVarToken = 0;
 }
 
+static int s_nDestructorCount = 0;
 inline CParticleSystemDefinition::~CParticleSystemDefinition( void )
 {
+	s_nDestructorCount++;
+	// Ensure material ref is released before destruction
+	// (CMaterialReference destructor also calls Shutdown, but this ensures
+	// the ref is released even if called during early init when materials global might be NULL)
+	m_Material.Shutdown();
+
 	UnlinkAllCollections();
 	m_Operators.PurgeAndDeleteElements();
 	m_Renderers.PurgeAndDeleteElements();
@@ -3386,5 +3399,8 @@ FORCEINLINE CParticleSnapshot *CParticleCollection::GetControlPointSnapshot( int
 	return ControlPoint( nControlPoint ).m_pSnapshot;
 }
 
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC diagnostic pop
+#endif
 
 #endif	// PARTICLES_H

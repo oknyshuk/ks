@@ -213,13 +213,6 @@ void JoltPhysicsSurfaceProps::GetPhysicsParameters( int surfaceDataIndex, surfac
 
 //-------------------------------------------------------------------------------------------------
 
-ISaveRestoreOps *JoltPhysicsSurfaceProps::GetMaterialIndexDataOps() const
-{
-	return &JoltPhysicsMaterialIndexSaveOps::GetInstance();
-}
-
-//-------------------------------------------------------------------------------------------------
-
 unsigned short JoltPhysicsSurfaceProps::RegisterSound( const char *pName )
 {
 	return m_SoundStrings.AddString( pName );

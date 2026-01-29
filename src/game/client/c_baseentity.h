@@ -499,7 +499,7 @@ public:
 
 	HSCRIPT GetScriptInstance();
 
-	HSCRIPT			m_hScriptInstance;
+	HSCRIPT			m_hScriptInstance = nullptr;
 	string_t		m_iszScriptId;
 
 	float m_flLastMadeNoiseTime;
