@@ -1,9 +1,11 @@
 #! /usr/bin/env python
 # a1batross, mittorn, nn-firc
 
-import os.path
+import os
+import shutil
+import subprocess
 
-from waflib import Configure, Context, Logs
+from waflib import Configure, Context
 
 VERSION = "0.01"
 APPNAME = "CSGO"
@@ -62,7 +64,7 @@ PROJECTS = [
     "thirdparty/mojoAL",
     "thirdparty/protobuf-2.6.1/src",
     "thirdparty/quickhull",
-    "thirdparty/zlib-1.2.5",
+    "thirdparty/zlib-ng",
     "tier0",
     "tier1",
     "tier2",
@@ -99,14 +101,6 @@ def options(opt):
     grp = opt.add_option_group("Common options")
 
     grp.add_option(
-        "-8",
-        "--64bits",
-        action="store_true",
-        dest="ALLOW64",
-        default=True,
-        help="allow targetting 64-bit engine [default: %default]",
-    )
-    grp.add_option(
         "-w",
         "--no-warnings",
         action="store_true",
@@ -131,15 +125,8 @@ def configure(conf):
         conf.options.POLLY = True
 
     conf.load("fwgslib reconfigure ndk compiler_optimizations")
-    conf.env.MSVC_TARGETS = ["x86" if not conf.options.ALLOW64 else "x64"]
-
-    # Force XP compatibility, all build targets should add subsystem=bld.env.MSVC_SUBSYSTEM
-    if conf.env.MSVC_TARGETS[0] == "x86":
-        conf.env.MSVC_SUBSYSTEM = "WINDOWS,5.01"
-    else:
-        conf.env.MSVC_SUBSYSTEM = "WINDOWS"
-
-    conf.env.ALLOW64 = conf.options.ALLOW64
+    conf.env.MSVC_TARGETS = ["x64"]
+    conf.env.MSVC_SUBSYSTEM = "WINDOWS"
     conf.env.DEDICATED = conf.options.DEDICATED
 
     if conf.env.DEST_OS == "android":
@@ -149,7 +136,29 @@ def configure(conf):
         conf.env.GAMEBIN = conf.env.PREFIX + "/csgo/bin"
 
     # Load compilers early
-    conf.load("compiler_c compiler_cxx ndk ccache")
+    conf.load("compiler_c compiler_cxx ndk")
+
+    # Auto-enable ccache if available
+    if not conf.options.CCACHE and shutil.which("ccache"):
+        conf.options.CCACHE = True
+    conf.load("ccache")
+
+    # Configure ccache for optimal performance (per-project config)
+    if conf.options.CCACHE:
+        ccache_conf_path = conf.srcnode.make_node("ccache.conf").abspath()
+        ccache_config = {
+            "base_dir": conf.srcnode.abspath(),
+            "sloppiness": "include_file_mtime,include_file_ctime,time_macros,pch_defines,file_stat_matches,clang_index_store,locale",
+            "hash_dir": "false",
+            "max_size": "30G",
+            "hard_link": "true",
+            "compression_level": "1",
+            "depend_mode": "true",
+        }
+        with open(ccache_conf_path, "w") as f:
+            for key, val in ccache_config.items():
+                f.write(f"{key} = {val}\n")
+        os.environ["CCACHE_CONFIGPATH"] = ccache_conf_path
 
     # HACKHACK: override msvc DEST_CPU value by something that we understand
     if conf.env.DEST_CPU == "amd64":
@@ -165,13 +174,6 @@ def configure(conf):
     enforce_pic = True  # modern defaults
     conf.check_pic(enforce_pic)
 
-    conf.env.BIT32_MANDATORY = not conf.options.ALLOW64
-    if conf.env.BIT32_MANDATORY:
-        Logs.info("WARNING: will build game for 32-bit target")
-    else:
-        Logs.info("WARNING: will build game for 64-bit target")
-    conf.load("force_32bit")
-
     cflags, linkflags = conf.get_optimization_flags()
     cxxflags = list(
         cflags
@@ -180,6 +182,9 @@ def configure(conf):
     if conf.env.COMPILER_CC in ["gcc", "clang"]:
         conf.env.append_unique("CFLAGS_cshlib", ["-fPIC"])
         conf.env.append_unique("CXXFLAGS_cxxshlib", ["-fPIC"])
+        # Generate dependency files for ccache depend_mode
+        conf.env.append_unique("CFLAGS", ["-MD"])
+        conf.env.append_unique("CXXFLAGS", ["-MD"])
 
     conf.check_cc(
         cflags=cflags, linkflags=linkflags, msg="Checking for required C flags"
@@ -236,10 +241,7 @@ def configure(conf):
     if conf.env.COMPILER_CC == "msvc":
         conf.define("COMPILER_MSVC", True)
         conf.define("_CRT_SECURE_NO_WARNINGS", True)
-        if conf.env.ALLOW64:
-            conf.define("COMPILER_MSVC64", True)
-        else:
-            conf.define("COMPILER_MSVC32", True)
+        conf.define("COMPILER_MSVC64", True)
     elif conf.env.COMPILER_CC in ["gcc", "clang"]:
         conf.define("COMPILER_GCC", True)
 
@@ -279,39 +281,29 @@ def configure(conf):
     else:
         conf.define("NDEBUG", 1)
 
-    if conf.env.ALLOW64:
-        conf.define("PLATFORM_64BITS", True)
+    conf.define("PLATFORM_64BITS", True)
 
     if conf.env.DEDICATED:
         conf.define("DEDICATED", True)
 
     conf.env.append_unique("INCLUDES", includes)
 
-    # set _FILE_OFFSET_BITS=64 for filesystems with 64-bit inodes
-    if conf.env.DEST_OS != "win32" and conf.env.DEST_SIZEOF_VOID_P == 4:
-        # check was borrowed from libarchive source code
-        file_offset_bits_usable = conf.check_cc(
-            fragment="""
-#define _FILE_OFFSET_BITS 64
-#include <sys/types.h>
-#define KB ((off_t)1024)
-#define MB ((off_t)1024 * KB)
-#define GB ((off_t)1024 * MB)
-#define TB ((off_t)1024 * GB)
-int t2[(((64 * GB -1) % 671088649) == 268434537)
-       && (((TB - (64 * GB -1) + 255) % 1792151290) == 305159546)? 1: -1];
-int main(void) { return 0; }""",
-            msg="Checking if _FILE_OFFSET_BITS can be defined to 64",
-            mandatory=False,
-            use="werror",
-        )
-        if file_offset_bits_usable:
-            conf.define("_FILE_OFFSET_BITS", 64)
-        else:
-            conf.undefine("_FILE_OFFSET_BITS")
+    # Mark thirdparty headers as system includes to suppress warnings
+    for sysinc in ["thirdparty/protobuf-2.6.1/src"]:
+        conf.env.append_unique("CFLAGS", ["-isystem", os.path.abspath(sysinc)])
+        conf.env.append_unique("CXXFLAGS", ["-isystem", os.path.abspath(sysinc)])
+
+    # Optimize for the current CPU
+    if conf.env.DEST_OS != "win32":
+        conf.env.append_unique("CFLAGS", ["-march=native"])
+        conf.env.append_unique("CXXFLAGS", ["-march=native"])
 
     conf.add_subproject(PROJECTS)
 
 
 def build(bld):
+    # Set per-project ccache config path
+    ccache_conf_path = bld.srcnode.make_node("ccache.conf").abspath()
+    if os.path.exists(ccache_conf_path):
+        os.environ["CCACHE_CONFIGPATH"] = ccache_conf_path
     bld.add_subproject(PROJECTS)

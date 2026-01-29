@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
+//========= Copyright ï¿½ 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose:
 //
@@ -49,10 +49,7 @@ struct AISightIterVal_t
 	char  array;
 	short iNext;
 	char  SeenArray;
-
-#ifdef PLATFORM_64BITS
 	uint32 unused;
-#endif
 };
 
 #pragma pack(pop)

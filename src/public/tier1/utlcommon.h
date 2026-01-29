@@ -1,4 +1,4 @@
-//========= Copyright © 2011, Valve Corporation, All rights reserved. ============//
+//========= Copyright ï¿½ 2011, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: common helpers for reuse among various Utl containers
 //
@@ -141,11 +141,7 @@ struct CaselessStringHashFunctor { unsigned int operator()( const char* s ) cons
 
 struct PointerLessFunctor { bool operator()( const void *a, const void *b ) const { return a < b; } };
 struct PointerEqualFunctor { bool operator()( const void *a, const void *b ) const { return a == b; } };
-#if defined( PLATFORM_64BITS )
 struct PointerHashFunctor { unsigned int operator()( const void* s ) const { return Mix64HashFunctor()( ( uintp ) s ); } };
-#else
-struct PointerHashFunctor { unsigned int operator()( const void* s ) const { return Mix32HashFunctor()( ( uintp ) s ); } };
-#endif
 
 
 // Generic implementation of Less and Equal functors
@@ -173,7 +169,7 @@ template <> struct DefaultHashFunctor<signed short> : Mix32HashFunctor { };
 template <> struct DefaultHashFunctor<unsigned short> : Mix32HashFunctor { };
 template <> struct DefaultHashFunctor<signed int> : Mix32HashFunctor { };
 template <> struct DefaultHashFunctor<unsigned int> : Mix32HashFunctor { };
-#if !defined(PLATFORM_64BITS) || defined(_WIN32)
+#if defined(_WIN32)
 template <> struct DefaultHashFunctor<signed long> : Mix32HashFunctor { };
 template <> struct DefaultHashFunctor<unsigned long> : Mix32HashFunctor { };
 #elif defined(POSIX)

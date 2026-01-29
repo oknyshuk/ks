@@ -230,7 +230,7 @@
 
 //-----------------------------------------------------------------------------
 // NOTE: All compiler defines are set up in the base VPC scripts
-// COMPILER_MSVC, COMPILER_MSVC32, COMPILER_MSVC64, COMPILER_MSVCX360
+// COMPILER_MSVC, COMPILER_MSVC64, COMPILER_MSVCX360
 // COMPILER_GCC
 // The rationale for this is that we need COMPILER_MSVC for the pragma blocks
 // #pragma once that occur at the top of all header files, therefore we can't
@@ -494,13 +494,8 @@ typedef signed char					int8;
 	typedef unsigned int			uint32;
 	typedef long long				int64;
 	typedef unsigned long long		uint64;
-	#ifdef PLATFORM_64BITS
-		typedef long long			intp;
-		typedef unsigned long long	uintp;
-	#else
-		typedef int					intp;
-		typedef unsigned int		uintp;
-	#endif
+	typedef long long			intp;
+	typedef unsigned long long	uintp;
 	typedef void *HWND;
 
     // [u]int64 are actually defined as 'long long' and gcc 64-bit
@@ -802,15 +797,8 @@ typedef void * HINSTANCE;
 
 #elif defined ( COMPILER_GCC ) || defined( COMPILER_SNC )
 
-	#if defined( COMPILER_SNC ) || defined( PLATFORM_64BITS )
-		#define  STDCALL
-		#define  __stdcall
-	#elif (CROSS_PLATFORM_VERSION >= 1) && !defined( PLATFORM_64BITS ) && !defined( COMPILER_PS3 )
-		#define  STDCALL			__attribute__ ((__stdcall__))
-	#else
-		#define  STDCALL
-		#define  __stdcall			__attribute__ ((__stdcall__))
-	#endif
+	#define  STDCALL
+	#define  __stdcall
 
 	#define  FASTCALL
 	#ifdef _LINUX_DEBUGGABLE
@@ -851,9 +839,6 @@ typedef void * HINSTANCE;
 	#define DLL_IMPORT				extern "C" 
 
 	// Can't use extern "C" when DLL exporting a class
-#if !defined( _PS3 ) && !defined( LINUX ) && !defined( PLATFORM_64BITS )
-	#define  __stdcall			__attribute__ ((__stdcall__))
-#endif
 	#define DLL_CLASS_EXPORT		DLL_DECLARATION_DEFAULT_VISIBILITY 
 	#define DLL_CLASS_IMPORT
 
@@ -1079,8 +1064,6 @@ typedef void * HINSTANCE;
 //-----------------------------------------------------------------------------
 #ifdef COMPILER_MSVC64
 	#define DebuggerBreak()		__debugbreak()
-#elif COMPILER_MSVC32
-	#define DebuggerBreak()		__asm { int 3 }
 #elif COMPILER_MSVCX360
 	#define DebuggerBreak()		DebugBreak()
 #elif COMPILER_GCC
@@ -1278,46 +1261,6 @@ typedef int socklen_t;
 	{
 	}
 
-#elif defined ( COMPILER_MSVC32 )
-
-	inline void SetupFPUControlWordForceExceptions()
-	{
-		// use local to get and store control word
-		uint16 tmpCtrlW;
-		__asm
-		{
-			fnclex						/* clear all current exceptions */
-			fnstcw word ptr [tmpCtrlW]	/* get current control word */
-			and [tmpCtrlW], 0FCC0h		/* Keep infinity control + rounding control */
-			or [tmpCtrlW], 0230h		/* set to 53-bit, mask only inexact, underflow */
-			fldcw word ptr [tmpCtrlW]	/* put new control word in FPU */
-		}
-	}
-
-	#ifdef CHECK_FLOAT_EXCEPTIONS
-
-		inline void SetupFPUControlWord()
-		{
-			SetupFPUControlWordForceExceptions();
-		}
-
-	#else
-
-		inline void SetupFPUControlWord()
-		{
-			// use local to get and store control word
-			uint16 tmpCtrlW;
-			__asm
-			{
-				fnstcw word ptr [tmpCtrlW]	/* get current control word */
-				and [tmpCtrlW], 0FCC0h		/* Keep infinity control + rounding control */
-				or [tmpCtrlW], 023Fh		/* set to 53-bit, mask only inexact, underflow */
-				fldcw word ptr [tmpCtrlW]	/* put new control word in FPU */
-			}
-		}
-
-	#endif
-
 #elif defined ( COMPILER_GCC )
 
 // Works for PS3 
@@ -1499,36 +1442,6 @@ inline T QWordSwapC( T dw )
 		__storewordbytereverse( dw, 0, &output );
 		return output;
 	}
-
-#elif defined( COMPILER_MSVC32 )
-
-	#define WordSwap  WordSwapAsm
-	#define DWordSwap DWordSwapAsm
-
-	#pragma warning(push)
-	#pragma warning (disable:4035) // no return value
-
-	template <typename T>
-	inline T WordSwapAsm( T w )
-	{
-	   __asm
-	   {
-		  mov ax, w
-		  xchg al, ah
-	   }
-	}
-
-	template <typename T>
-	inline T DWordSwapAsm( T dw )
-	{
-	   __asm
-	   {
-		  mov eax, dw
-		  bswap eax
-	   }
-	}
-
-	#pragma warning(pop)
 
 #else
 

@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
+//========= Copyright ï¿½ 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: linux dependant ASM code for CPU capability detection
 //
@@ -18,7 +18,6 @@
 
 static void cpuid(uint32 function, uint32& out_eax, uint32& out_ebx, uint32& out_ecx, uint32& out_edx)
 {
-#if defined(PLATFORM_64BITS)
 	asm("mov %%rbx, %%rsi\n\t"
 		"cpuid\n\t"
 		"xchg %%rsi, %%rbx"
@@ -26,19 +25,8 @@ static void cpuid(uint32 function, uint32& out_eax, uint32& out_ebx, uint32& out
 		  "=S" (out_ebx),
 		  "=c" (out_ecx),
 		  "=d" (out_edx)
-		: "a" (function) 
+		: "a" (function)
 	);
-#else
-	asm("mov %%ebx, %%esi\n\t"
-		"cpuid\n\t"
-		"xchg %%esi, %%ebx"
-		: "=a" (out_eax),
-		  "=S" (out_ebx),
-		  "=c" (out_ecx),
-		  "=d" (out_edx)
-		: "a" (function) 
-	);
-#endif
 }
 
 bool CheckMMXTechnology(void)

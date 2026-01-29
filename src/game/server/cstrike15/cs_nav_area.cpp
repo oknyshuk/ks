@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
+//========= Copyright ï¿½ 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -36,10 +36,6 @@
  */
 CCSNavArea::CCSNavArea( void )
 {
-#ifndef PLATFORM_64BITS // TODO64: this is probably just alignment for performance, but perhaps the sizes are hardcoded somewhere
-	COMPILE_TIME_ASSERT( sizeof( CNavAreaCriticalData ) == 128 );
- 	COMPILE_TIME_ASSERT( sizeof( CCSNavArea ) == 768 );
-#endif
 	m_approachCount = 0;
 }
 

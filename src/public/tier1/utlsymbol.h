@@ -280,22 +280,17 @@ class CUtlFilenameSymbolTable
 			COMPILE_TIME_ASSERT( sizeof( *this ) == sizeof( FileNameHandle_t ) );
 			COMPILE_TIME_ASSERT( sizeof( value ) == 4 );
 			value = 0;
-
-#ifdef PLATFORM_64BITS
 			pad = 0;
-#endif
 		}
 
 		// We pack the path and file values into a single 32 bit value.  We were running
 		// out of space with the two 16 bit values (more than 64k files) so instead of increasing
-		// the total size we split the underlying pool into two (paths and files) and 
+		// the total size we split the underlying pool into two (paths and files) and
 		// use a smaller path string pool and a larger file string pool.
 		unsigned int value;
 
-#ifdef PLATFORM_64BITS
-		// some padding to make sure we are the same size as FileNameHandle_t on 64 bit.
+		// padding to make sure we are the same size as FileNameHandle_t on 64 bit.
 		unsigned int pad;
-#endif
 
 		static const unsigned int cNumBitsInPath = 12;
 		static const unsigned int cNumBitsInFile = 32 - cNumBitsInPath;

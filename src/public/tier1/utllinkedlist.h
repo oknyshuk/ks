@@ -437,10 +437,6 @@ template <class T, class S, bool ML, class I, class M>
 CUtlLinkedList<T,S,ML,I,M>::CUtlLinkedList( int growSize, int initSize ) :
 	m_Memory( growSize, initSize ), m_LastAlloc( m_Memory.InvalidIterator() )
 {
-#if !defined( PLATFORM_WINDOWS_PC64 ) && !defined( PLATFORM_64BITS )
-	// Prevent signed non-int datatypes
-	COMPILE_TIME_ASSERT( sizeof(S) == 4 || ( ( (S)-1 ) > 0 ) );
-#endif
 	ConstructList();
 	ResetDbgInfo();
 }

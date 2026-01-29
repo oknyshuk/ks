@@ -37,15 +37,9 @@ inline unsigned long long GetTimebaseRegister( void ) { return ( unsigned long l
 
 inline unsigned long long GetTimebaseRegister( void )
 {
-#ifdef PLATFORM_64BITS
     unsigned long long Low, High;
     __asm__ __volatile__ ( "rdtsc" : "=a" (Low), "=d" (High) );
     return ( High << 32 ) | ( Low & 0xffffffff );
-#else
-    unsigned long long Val;
-    __asm__ __volatile__ ( "rdtsc" : "=A" (Val) );
-    return Val;
-#endif
 }
 
 #else

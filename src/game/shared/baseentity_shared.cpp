@@ -900,13 +900,11 @@ BASEPTR	CBaseEntity::ThinkSet( BASEPTR func, float thinkTime, const char *szCont
 {
 #if !defined( CLIENT_DLL )
 #if defined( _DEBUG )
-#if defined( __clang__ ) 
+#if defined( __clang__ )
 	COMPILE_TIME_ASSERT( sizeof( func ) == sizeof( m_pfnThink ) );
-#elif defined( GNUC ) || defined( COMPILER_PS3 ) || defined( PLATFORM_64BITS )
-	//lwss update: newer compilers will make class member pointers 2x the size of a pointer
-	COMPILE_TIME_ASSERT( sizeof(func) == 8 || sizeof(func) == 16 );
 #else
-	COMPILE_TIME_ASSERT( sizeof(func) == 4 || sizeof(func) == 8 );
+	// Member pointers can be 8 or 16 bytes on 64-bit
+	COMPILE_TIME_ASSERT( sizeof(func) == 8 || sizeof(func) == 16 );
 #endif
 #endif
 #endif

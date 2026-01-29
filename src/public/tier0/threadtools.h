@@ -168,11 +168,7 @@ extern bool gbCheckNotMultithreaded;
 
 const unsigned TT_INFINITE = 0xffffffff;
 
-#ifdef PLATFORM_64BITS
 typedef uint64 ThreadId_t;
-#else
-typedef uint32 ThreadId_t;
-#endif
 
 //-----------------------------------------------------------------------------
 //
@@ -240,8 +236,6 @@ inline void ThreadPause()
 	__asm __volatile( "pause" );
 #elif defined ( COMPILER_MSVC64 )
 	_mm_pause();
-#elif defined( COMPILER_MSVC32 )
-	__asm pause;
 #elif defined( COMPILER_MSVCX360 )
 	YieldProcessor(); 
 	__asm { or r0,r0,r0 } 
@@ -334,31 +328,6 @@ inline bool ThreadInterlockedAssignIf( int32 volatile *p, int32 value, int32 com
 	return __sync_bool_compare_and_swap( p, comperand, value );
 }
 
-#elif ( defined( COMPILER_MSVC32 ) && ( _MSC_VER >= 1310 ) )
-// windows 32 implemnetation using compiler intrinsics
-#define USE_INTRINSIC_INTERLOCKED
-
-extern "C"
-{
-	long __cdecl _InterlockedIncrement(volatile long*);
-	long __cdecl _InterlockedDecrement(volatile long*);
-	long __cdecl _InterlockedExchange(volatile long*, long);
-	long __cdecl _InterlockedExchangeAdd(volatile long*, long);
-	long __cdecl _InterlockedCompareExchange(volatile long*, long, long);
-}
-
-#pragma intrinsic( _InterlockedCompareExchange )
-#pragma intrinsic( _InterlockedDecrement )
-#pragma intrinsic( _InterlockedExchange )
-#pragma intrinsic( _InterlockedExchangeAdd ) 
-#pragma intrinsic( _InterlockedIncrement )
-
-inline int32 ThreadInterlockedIncrement( int32 volatile *p )										{ Assert( (size_t)p % 4 == 0 ); return _InterlockedIncrement( (volatile long*)p ); }
-inline int32 ThreadInterlockedDecrement( int32 volatile *p )										{ Assert( (size_t)p % 4 == 0 ); return _InterlockedDecrement( (volatile long*)p ); }
-inline int32 ThreadInterlockedExchange( int32 volatile *p, int32 value )							{ Assert( (size_t)p % 4 == 0 ); return _InterlockedExchange( (volatile long*)p, value ); }
-inline int32 ThreadInterlockedExchangeAdd( int32 volatile *p, int32 value )							{ Assert( (size_t)p % 4 == 0 ); return _InterlockedExchangeAdd( (volatile long*)p, value ); }
-inline int32 ThreadInterlockedCompareExchange( int32 volatile *p, int32 value, int32 comperand )	{ Assert( (size_t)p % 4 == 0 ); return _InterlockedCompareExchange( (volatile long*)p, value, comperand ); }
-inline bool ThreadInterlockedAssignIf( int32 volatile *p, int32 value, int32 comperand )			{ Assert( (size_t)p % 4 == 0 ); return ( _InterlockedCompareExchange( (volatile long*)p, value, comperand ) == comperand ); }
 #elif defined( _PS3 )
 PLATFORM_INTERFACE inline int32 ThreadInterlockedIncrement( int32 volatile * ea )											{ return cellAtomicIncr32( (uint32_t*)ea ) + 1; }
 PLATFORM_INTERFACE inline int32 ThreadInterlockedDecrement( int32 volatile * ea )											{ return cellAtomicDecr32( (uint32_t*)ea ) - 1; }
@@ -390,16 +359,9 @@ PLATFORM_INTERFACE bool ThreadInterlockedAssignIf( int32 volatile *, int32 value
 #endif
 
 
-#if defined( USE_INTRINSIC_INTERLOCKED ) && !defined( PLATFORM_64BITS )
-#define TIPTR()
-inline void *ThreadInterlockedExchangePointer( void * volatile *p, void *value )							{ return (void *)( ( intp )ThreadInterlockedExchange( reinterpret_cast<intp volatile *>(p), reinterpret_cast<intp>(value) ) ); }
-inline void *ThreadInterlockedCompareExchangePointer( void * volatile *p, void *value, void *comperand )	{ return (void *)( ( intp )ThreadInterlockedCompareExchange( reinterpret_cast<intp volatile *>(p), reinterpret_cast<intp>(value), reinterpret_cast<intp>(comperand) ) ); }
-inline bool ThreadInterlockedAssignPointerIf( void * volatile *p, void *value, void *comperand )			{ return ( ThreadInterlockedCompareExchange( reinterpret_cast<intp volatile *>(p), reinterpret_cast<intp>(value), reinterpret_cast<intp>(comperand) ) == reinterpret_cast<intp>(comperand) ); }
-#else
 PLATFORM_INTERFACE void *ThreadInterlockedExchangePointer( void * volatile *, void *value ) NOINLINE;
 PLATFORM_INTERFACE void *ThreadInterlockedCompareExchangePointer( void * volatile *, void *value, void *comperand ) NOINLINE;
 PLATFORM_INTERFACE bool ThreadInterlockedAssignPointerIf( void * volatile *, void *value, void *comperand ) NOINLINE;
-#endif
 
 
 inline unsigned ThreadInterlockedExchangeSubtract( int32 volatile *p, int32 value )	{ return ThreadInterlockedExchangeAdd( (int32 volatile *)p, -value ); }
@@ -416,11 +378,7 @@ PLATFORM_INTERFACE bool ThreadInterlockedAssignIf64( volatile int64 *pDest, int6
 
 PLATFORM_INTERFACE int64 ThreadInterlockedExchange64( int64 volatile *, int64 value ) NOINLINE;
 
-#ifdef COMPILER_MSVC32
-PLATFORM_INTERFACE int64 ThreadInterlockedIncrement64( int64 volatile * ) NOINLINE;
-PLATFORM_INTERFACE int64 ThreadInterlockedDecrement64( int64 volatile * ) NOINLINE;
-PLATFORM_INTERFACE int64 ThreadInterlockedExchangeAdd64( int64 volatile *, int64 value ) NOINLINE;
-#elif defined(POSIX)
+#if defined(POSIX)
 
 inline int64 ThreadInterlockedIncrement64( int64 volatile *p )
 {
@@ -430,7 +388,7 @@ inline int64 ThreadInterlockedIncrement64( int64 volatile *p )
 
 inline int64 ThreadInterlockedDecrement64( int64 volatile *p )
 {
-	AssertDbg( (size_t)p % 8 == 0 ); 
+	AssertDbg( (size_t)p % 8 == 0 );
 	return __sync_fetch_and_add( p, -1 ) - 1;
 }
 
@@ -556,46 +514,22 @@ private:
 	public:
 		CThreadLocal()
 		{
-#ifdef PLATFORM_64BITS
 			COMPILE_TIME_ASSERT( sizeof(T) <= sizeof(void *) );
-#else
-			COMPILE_TIME_ASSERT( sizeof(T) == sizeof(void *) );
-#endif
 		}
 
 		void operator=( T i ) { Set( i ); }
 
 		T Get() const
 		{
-#ifdef PLATFORM_64BITS
 			void *pData = CThreadLocalBase::Get();
 			return *reinterpret_cast<T*>( &pData );
-#else
-	#ifdef COMPILER_MSVC
-		#pragma warning ( disable : 4311 )
-	#endif
-			return reinterpret_cast<T>( CThreadLocalBase::Get() );
-	#ifdef COMPILER_MSVC
-		#pragma warning ( default : 4311 )
-	#endif
-#endif
 		}
 
 		void Set(T val)
 		{
-#ifdef PLATFORM_64BITS
 			void* pData = 0;
 			*reinterpret_cast<T*>( &pData ) = val;
 			CThreadLocalBase::Set( pData );
-#else
-	#ifdef COMPILER_MSVC
-		#pragma warning ( disable : 4312 )
-	#endif
-			CThreadLocalBase::Set( reinterpret_cast<void *>(val) );
-	#ifdef COMPILER_MSVC
-		#pragma warning ( default : 4312 )
-	#endif
-#endif
 		}
 	};
 
@@ -854,13 +788,8 @@ class CInterlockedPtr
 public:
 	CInterlockedPtr() : m_value( 0 )
 	{
-#ifdef PLATFORM_64BITS 
 		COMPILE_TIME_ASSERT( sizeof(T *) == sizeof(int64) );
 #define THREADINTERLOCKEDEXCHANGEADD( _dest, _value ) 	ThreadInterlockedExchangeAdd64( (int64 *)(_dest), _value )
-#else  // PLATFORM_64BITS
-		COMPILE_TIME_ASSERT( sizeof(T *) == sizeof(int32) );
-#define THREADINTERLOCKEDEXCHANGEADD( _dest, _value )	ThreadInterlockedExchangeAdd( (int32 *)_dest, _value )
-#endif // PLATFORM_64BITS
 	}
 
 	CInterlockedPtr( T *value ) : m_value( value ) 	{}

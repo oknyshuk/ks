@@ -1600,13 +1600,7 @@ FORCEINLINE int RoundFloatToInt(float f)
 #endif
 #else // !X360
 	int nResult;
-#if defined( COMPILER_MSVC32 )
-	__asm
-	{
-		fld f
-		fistp nResult
-	}
-#elif GNUC && !defined( __aarch64__ )
+#if GNUC && !defined( __aarch64__ )
 	__asm __volatile__ (
 		"fistpl %0;": "=m" (nResult): "t" (f) : "st"
 	);
@@ -1644,16 +1638,9 @@ FORCEINLINE unsigned char RoundFloatToByte(float f)
 	return __fctiw( f );
 #endif
 #else // !X360
-	
 	int nResult;
 
-#if defined( COMPILER_MSVC32 )
-	__asm
-	{
-		fld f
-		fistp nResult
-	}
-#elif GNUC && !defined( __aarch64__ )
+#if GNUC && !defined( __aarch64__ )
 	__asm __volatile__ (
 		"fistpl %0;": "=m" (nResult): "t" (f) : "st"
 	);
@@ -1663,7 +1650,7 @@ FORCEINLINE unsigned char RoundFloatToByte(float f)
 
 #ifdef Assert
 	Assert( nResult >= 0 && nResult <= 255 );
-#endif 
+#endif
 	return nResult;
 
 #endif
@@ -1691,16 +1678,7 @@ FORCEINLINE unsigned long RoundFloatToUnsignedLong(float f)
 	return __fctiw( f );
 #endif
 #else  // !X360
-	
-#if defined( COMPILER_MSVC32 )
-	unsigned char nResult[8];
-	__asm
-	{
-		fld f
-		fistp       qword ptr nResult
-	}
-	return *((unsigned long*)nResult);
-#elif defined( COMPILER_GCC ) && !defined( __aarch64__ )
+#if defined( COMPILER_GCC ) && !defined( __aarch64__ )
 	unsigned char nResult[8];
 	__asm __volatile__ (
 		"fistpl %0;": "=m" (nResult): "t" (f) : "st"
@@ -1709,7 +1687,6 @@ FORCEINLINE unsigned long RoundFloatToUnsignedLong(float f)
 #else
 	return static_cast<unsigned long>(f);
 #endif
-
 #endif
 }
 
@@ -1738,61 +1715,19 @@ FORCEINLINE int Float2Int( float a )
 	return __fctiwz( a );
 #endif
 #else  // !X360
-	
-	int RetVal;
-
-#if defined( COMPILER_MSVC32 )
-	int CtrlwdHolder;
-	int CtrlwdSetter;
-	__asm 
-	{
-		fld    a					// push 'a' onto the FP stack
-		fnstcw CtrlwdHolder		// store FPU control word
-		movzx  eax, CtrlwdHolder	// move and zero extend word into eax
-		and    eax, 0xFFFFF3FF	// set all bits except rounding bits to 1
-		or     eax, 0x00000C00	// set rounding mode bits to round towards zero
-		mov    CtrlwdSetter, eax	// Prepare to set the rounding mode -- prepare to enter plaid!
-		fldcw  CtrlwdSetter		// Entering plaid!
-		fistp  RetVal				// Store and converted (to int) result
-		fldcw  CtrlwdHolder		// Restore control word
-	}
-#else
-	RetVal = static_cast<int>( a );
-#endif
-
-	return RetVal;
+	return static_cast<int>( a );
 #endif
 }
 
 
 
-// Over 15x faster than: (int)floor(value)
 inline int Floor2Int( float a )
 {
-   int RetVal;
-
 #if defined( PLATFORM_PPC )
-	RetVal = (int)floor( a );
-#elif defined( COMPILER_MSVC32 )
-   int CtrlwdHolder;
-   int CtrlwdSetter;
-   __asm 
-   {
-      fld    a					// push 'a' onto the FP stack
-      fnstcw CtrlwdHolder		// store FPU control word
-      movzx  eax, CtrlwdHolder	// move and zero extend word into eax
-      and    eax, 0xFFFFF3FF	// set all bits except rounding bits to 1
-      or     eax, 0x00000400	// set rounding mode bits to round down
-      mov    CtrlwdSetter, eax	// Prepare to set the rounding mode -- prepare to enter plaid!
-      fldcw  CtrlwdSetter		// Entering plaid!
-      fistp  RetVal				// Store floored and converted (to int) result
-      fldcw  CtrlwdHolder		// Restore control word
-   }
+	return (int)floor( a );
 #else
-	RetVal = static_cast<int>( floor(a) );
+	return static_cast<int>( floor(a) );
 #endif
-
-	return RetVal;
 }
 
 //-----------------------------------------------------------------------------
@@ -1824,33 +1759,13 @@ inline float ClampToMsec( float in )
 	return msec / 1000.0f;
 }
 
-// Over 15x faster than: (int)ceil(value)
 inline int Ceil2Int( float a )
 {
-   int RetVal;
-
 #if defined( PLATFORM_PPC )
-	RetVal = (int)ceil( a );
-#elif defined( COMPILER_MSVC32 )
-   int CtrlwdHolder;
-   int CtrlwdSetter;
-   __asm 
-   {
-      fld    a					// push 'a' onto the FP stack
-      fnstcw CtrlwdHolder		// store FPU control word
-      movzx  eax, CtrlwdHolder	// move and zero extend word into eax
-      and    eax, 0xFFFFF3FF	// set all bits except rounding bits to 1
-      or     eax, 0x00000800	// set rounding mode bits to round down
-      mov    CtrlwdSetter, eax	// Prepare to set the rounding mode -- prepare to enter plaid!
-      fldcw  CtrlwdSetter		// Entering plaid!
-      fistp  RetVal				// Store floored and converted (to int) result
-      fldcw  CtrlwdHolder		// Restore control word
-   }
+	return (int)ceil( a );
 #else
-	RetVal = static_cast<int>( ceil(a) );
+	return static_cast<int>( ceil(a) );
 #endif
-
-	return RetVal;
 }
 
 
@@ -2733,7 +2648,7 @@ inline bool CloseEnough( const Vector &a, const Vector &b, float epsilon = EQUAL
 // Fast compare
 // maxUlps is the maximum error in terms of Units in the Last Place. This 
 // specifies how big an error we are willing to accept in terms of the value
-// of the least significant digit of the floating point number’s 
+// of the least significant digit of the floating point numberï¿½s 
 // representation. maxUlps can also be interpreted in terms of how many 
 // representable floats we are willing to accept between A and B. 
 // This function will allow maxUlps-1 floats between A and B.

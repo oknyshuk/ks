@@ -4424,6 +4424,11 @@ void CShaderManager::DestroyPixelShader( PixelShader_t pixelShader )
 HardwareShader_t CShaderManager::GetVertexShader( VertexShader_t vs, int dynIdx )
 {
 	ShaderLookup_t &vshLookup = m_VertexShaderDict[vs];
+	if ( !vshLookup.m_ShaderStaticCombos.m_pHardwareShaders )
+	{
+		Warning( "GetVertexShader: shader %s not loaded (m_pHardwareShaders is NULL)\n", m_ShaderSymbolTable.String( vshLookup.m_Name ) );
+		return INVALID_HARDWARE_SHADER;
+	}
 	HardwareShader_t dxshader = vshLookup.m_ShaderStaticCombos.m_pHardwareShaders[dynIdx];
 	return dxshader;
 }
@@ -4431,6 +4436,11 @@ HardwareShader_t CShaderManager::GetVertexShader( VertexShader_t vs, int dynIdx 
 HardwareShader_t CShaderManager::GetPixelShader( PixelShader_t ps, int dynIdx )
 {
 	ShaderLookup_t &pshLookup = m_PixelShaderDict[ps];
+	if ( !pshLookup.m_ShaderStaticCombos.m_pHardwareShaders )
+	{
+		Warning( "GetPixelShader: shader %s not loaded (m_pHardwareShaders is NULL)\n", m_ShaderSymbolTable.String( pshLookup.m_Name ) );
+		return INVALID_HARDWARE_SHADER;
+	}
 	HardwareShader_t dxshader = pshLookup.m_ShaderStaticCombos.m_pHardwareShaders[dynIdx];
 	return dxshader;
 }

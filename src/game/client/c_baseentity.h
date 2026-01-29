@@ -2058,15 +2058,15 @@ private:
 
 #if !defined( NO_ENTITY_PREDICTION )
 	// For storing prediction results and pristine network state
-	byte							*m_pIntermediateData[ MULTIPLAYER_BACKUP ];
-	byte							*m_pIntermediateData_FirstPredicted[ MULTIPLAYER_BACKUP + 1 ]; //we store just as much as m_pIntermediateData, but also hold onto the frame from our last received packet
-	byte							*m_pOriginalData;
-	int								m_nIntermediateDataCount;
+	byte							*m_pIntermediateData[ MULTIPLAYER_BACKUP ] = {};
+	byte							*m_pIntermediateData_FirstPredicted[ MULTIPLAYER_BACKUP + 1 ] = {};
+	byte							*m_pOriginalData = nullptr;
+	int								m_nIntermediateDataCount = -1;
 	static int						s_nIncomingPacketCommandsAcknowledged; //only set to a valid value during entity network update processing
-	int								m_nIntermediateData_FirstPredictedShiftMarker; //can't use predicted commands to optimize first predicted version of ShiftIntermediateDataForward(). Use this instead for its longer lifetime
-	bool							m_bEverHadPredictionErrorsForThisCommand;
+	int								m_nIntermediateData_FirstPredictedShiftMarker = -1; //can't use predicted commands to optimize first predicted version of ShiftIntermediateDataForward(). Use this instead for its longer lifetime
+	bool							m_bEverHadPredictionErrorsForThisCommand = false;
 
-	bool							m_bIsPlayerSimulated;
+	bool							m_bIsPlayerSimulated = false;
 #endif
 
 	CNetworkVar( bool, m_bSimulatedEveryTick );

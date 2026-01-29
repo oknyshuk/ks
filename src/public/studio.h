@@ -114,20 +114,14 @@ struct mstudiodata_t
 // right amount of space and work correctly across 32 and 64 bit. It also makes sure that there is no surprise about how large the structure
 // is when placed in the middle of another structure, and supports Intel's desired behavior on 64-bit that pointers are always 8-byte aligned.
 #pragma pack( push, 4 )
-template < class T > 
+template < class T >
 struct ALIGN4 serializedstudioptr_t
 {
 	T* m_pData;
-#ifndef PLATFORM_64BITS
-	int32 padding;
-#endif
 
-	serializedstudioptr_t() 
-	{ 
-		m_pData = nullptr; 
-		#if _DEBUG && !defined( PLATFORM_64BITS )
-			padding = 0; 
-		#endif
+	serializedstudioptr_t()
+	{
+		m_pData = nullptr;
 	}
 
 	inline operator       T*()             { return m_pData; }

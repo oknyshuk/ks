@@ -49,7 +49,6 @@ static bool cpuid( unsigned long function, CpuIdResult_t &out )
 	return false;
 #elif defined(GNUC)
 	unsigned long out_eax,out_ebx,out_ecx,out_edx;
-#ifdef PLATFORM_64BITS
 	asm("mov %%rbx, %%rsi\n\t"
 		"cpuid\n\t"
 		"xchg %%rsi, %%rbx"
@@ -57,19 +56,8 @@ static bool cpuid( unsigned long function, CpuIdResult_t &out )
 		  "=S" (out_ebx),
 		  "=c" (out_ecx),
 		  "=d" (out_edx)
-		: "a" (function) 
+		: "a" (function)
 	);
-#else
-	asm("mov %%ebx, %%esi\n\t"
-		"cpuid\n\t"
-		"xchg %%esi, %%ebx"
-		: "=a" (out_eax),
-		  "=S" (out_ebx),
-		  "=c" (out_ecx),
-		  "=d" (out_edx)
-		: "a" (function) 
-	);
-#endif
 	out.eax = out_eax;
 	out.ebx = out_ebx;
 	out.ecx = out_ecx;

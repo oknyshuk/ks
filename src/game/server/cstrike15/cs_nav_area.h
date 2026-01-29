@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
+//========= Copyright ï¿½ 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -95,9 +95,6 @@ private:
 
 inline void CCSNavArea::ClearPlayerCount( void )
 {
-#ifndef PLATFORM_64BITS
-	COMPILE_TIME_ASSERT( sizeof( CCSNavArea ) == 768 ); // legacy 32-bit struct was 768 bytes, preserving for compatibility
-#endif
 	for( int i=0; i<MAX_NAV_TEAMS; ++i )
 	{
 		m_playerCount[ i ] = 0;

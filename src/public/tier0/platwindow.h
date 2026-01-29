@@ -1,4 +1,4 @@
-//===== Copyright © 1996-2009, Valve Corporation, All rights reserved. ======//
+//===== Copyright ï¿½ 1996-2009, Valve Corporation, All rights reserved. ======//
 //
 // Purpose: 
 //
@@ -9,7 +9,7 @@
 #ifndef PLATWINDOW_H
 #define PLATWINDOW_H
 
-#ifdef COMPILER_MSVC32
+#ifdef COMPILER_MSVC
 #pragma once
 #endif
 

@@ -1,4 +1,4 @@
-//======= Copyright © 2005, , Valve Corporation, All rights reserved. =========
+//======= Copyright ï¿½ 2005, , Valve Corporation, All rights reserved. =========
 //
 // Purpose: Variant Pearson Hash general purpose hashing algorithm described
 //			by Cargill in C++ Report 1994. Generates a 16-bit result.
@@ -54,12 +54,8 @@ inline uint64 HashUint64( uint64 s )
 
 inline intp HashIntp( intp s )
 {
-#ifdef PLATFORM_64BITS
 	COMPILE_TIME_ASSERT( sizeof( s ) == sizeof( uint64 ) );
 	return ( intp )HashUint64( ( uint64 )s );
-#else
-	return HashInt( s );
-#endif
 }
 
 inline unsigned HashIntConventional( const int n ) // faster but less effective

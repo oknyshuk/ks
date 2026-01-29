@@ -305,7 +305,7 @@ public:
 	explicit CNumStr( int64 n64 )	{ SetInt64( n64 ); }
 	explicit CNumStr( uint64 un64 )	{ SetUint64( un64 ); }
 
-#if defined(COMPILER_GCC) && defined(PLATFORM_64BITS)
+#if defined(COMPILER_GCC)
 	explicit CNumStr( lint64 n64 )		{ SetInt64( (int64)n64 ); }
 	explicit CNumStr( ulint64 un64 )	{ SetUint64( (uint64)un64 ); }
 #endif

@@ -1381,11 +1381,8 @@ void ConstructStringVArgsInternal_Impl(T *unicodeOutput, int unicodeBufferSizeIn
 	//assume both are 0 terminated?
 	int formatLength = StringFuncs<T>::Length( formatString );
 
-#ifdef PLATFORM_64BITS
 	// On 64 bits, va_list does not just point to a contiguous blob of parameters
 	// so extract into an array here.
-	// TODO: this code is probably fast enough and efficient enough to use
-	// on all platforms, so consider enabling it everywhere.
 	T** arguments = (T**)stackalloc( sizeof(T*)*numFormatParameters );
 	if ( IsPC() )
 	{
@@ -1394,8 +1391,6 @@ void ConstructStringVArgsInternal_Impl(T *unicodeOutput, int unicodeBufferSizeIn
 			arguments[i] = va_arg( argList, T* );
 		}
 	}
-	
-#endif
 
 #ifdef _DEBUG
 	int curArgIdx = 0;
@@ -1422,11 +1417,7 @@ void ConstructStringVArgsInternal_Impl(T *unicodeOutput, int unicodeBufferSizeIn
 				if ( IsPC() )
 				{
 #if !defined( _PS3 )
-#ifdef PLATFORM_64BITS
 					param = arguments[ argindex ];
-#else
-					param = va_argByIndex( argList, T *, argindex );
-#endif
 #endif // !_PS3
 				}
 				else

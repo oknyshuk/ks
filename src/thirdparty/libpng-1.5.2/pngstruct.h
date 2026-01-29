@@ -24,7 +24,7 @@
  * in this structure and is required for decompressing the LZ compressed
  * data in PNG files.
  */
-#include "../zlib-1.2.5/zlib.h"
+#include "../zlib-ng/zlib.h"
 
 struct png_struct_def
 {

@@ -34,9 +34,7 @@
 
 //-----------------------------------------------------------------------------
 
-#if defined( PLATFORM_64BITS )
-
-#if defined (PLATFORM_WINDOWS) 
+#if defined (PLATFORM_WINDOWS)
 //typedef __m128i int128;
 //inline int128 int128_zero()	{ return _mm_setzero_si128(); }
 #else  // PLATFORM_WINDOWS
@@ -48,7 +46,7 @@ typedef __int128_t int128;
 #define TSLIST_NODE_ALIGNMENT 16
 
 #ifdef POSIX
-inline bool ThreadInterlockedAssignIf128( int128 volatile * pDest, const int128 &value, const int128 &comparand ) 
+inline bool ThreadInterlockedAssignIf128( int128 volatile * pDest, const int128 &value, const int128 &comparand )
 {
     // We do not want the original comparand modified by the swap
     // so operate on a local copy.
@@ -61,14 +59,6 @@ inline bool ThreadInterlockedAssignIf64x128( volatile int128 *pDest, const int12
 {
 	return ThreadInterlockedAssignIf128( pDest, value, comperand );
 }
-#else
-#define TSLIST_HEAD_ALIGNMENT 8
-#define TSLIST_NODE_ALIGNMENT 8
-inline bool ThreadInterlockedAssignIf64x128( volatile int64 *pDest, const int64 value, const int64 comperand )
-{
-	return ThreadInterlockedAssignIf64( pDest, value, comperand );
-}
-#endif
 
 #ifdef _MSC_VER
 #define TSLIST_HEAD_ALIGN DECL_ALIGN(TSLIST_HEAD_ALIGNMENT)
@@ -129,9 +119,7 @@ union TSLIST_HEAD_ALIGN TSLHead_t
 		int16   Depth;
 		int16	Sequence;
 #endif
-#ifdef PLATFORM_64BITS
 		int32   Padding;
-#endif
 	} value;
 
 	struct Value32_t
@@ -140,11 +128,7 @@ union TSLIST_HEAD_ALIGN TSLHead_t
 		int32   DepthAndSequence;
 	} value32;
 
-#ifdef PLATFORM_64BITS
 	int128 value64x128;
-#else
-	int64 value64x128;
-#endif
 } TSLIST_HEAD_ALIGN_POST;
 
 #endif
@@ -194,10 +178,8 @@ public:
 
 #ifdef USE_NATIVE_SLIST
 		InitializeSListHead( &m_Head );
-#elif defined(PLATFORM_64BITS)
-		m_Head.value64x128 = int128_zero();
 #else
-		m_Head.value64x128 = (int64)0;
+		m_Head.value64x128 = int128_zero();
 #endif
 	}
 
@@ -231,9 +213,7 @@ public:
 		__lwsync(); // write-release barrier
 #endif
 
-#ifdef PLATFORM_64BITS
 		newHead.value.Padding = 0;
-#endif
 		for ( ;; )
 		{
 			oldHead.value64x128 = m_Head.value64x128;
@@ -268,9 +248,7 @@ public:
 		TSLHead_t oldHead;
 		TSLHead_t newHead;
 
-#ifdef PLATFORM_64BITS
 		newHead.value.Padding = 0;
-#endif
 		for ( ;; )
 		{
 			oldHead.value64x128 = m_Head.value64x128;
@@ -307,9 +285,7 @@ public:
 		TSLHead_t oldHead;
 		TSLHead_t newHead;
 
-#ifdef PLATFORM_64BITS
 		newHead.value.Padding = 0;
-#endif
 		do
 		{
 			ThreadPause();
@@ -719,11 +695,7 @@ public:
 			intp	sequence;
 		} value;
 
-#ifdef PLATFORM_64BITS
 		int128 value64x128;
-#else
-		int64 value64x128;
-#endif
 	} TSLIST_HEAD_ALIGN_POST;
 
 	CTSQueue()

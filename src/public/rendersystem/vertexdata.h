@@ -1,4 +1,4 @@
-//==== Copyright © 1996-2008, Valve Corporation, All rights reserved. =======//
+//==== Copyright ï¿½ 1996-2008, Valve Corporation, All rights reserved. =======//
 //
 // Purpose: 
 //
@@ -243,68 +243,7 @@ inline void CVertexData<T>::AdvanceVertex()
 	T *pDest = &m_pMemory[ m_nVertexCount ];
 	T *pSrc = &m_Scratch;
 
-#if defined( COMPILER_MSVC32 )
-	if ( sizeof(T) == 16 )
-	{
-		__asm
-		{
-			mov esi, pSrc
-			mov edi, pDest
-
-			movaps xmm0, [esi + 0]
-			movntps [edi + 0], xmm0
-		}
-	}
-	else if ( sizeof(T) == 32 )
-	{
-		__asm
-		{
-			mov esi, pSrc
-			mov edi, pDest
-
-			movaps xmm0, [esi + 0]
-			movaps xmm1, [esi + 16]
-
-			movntps [edi + 0], xmm0
-			movntps [edi + 16], xmm1
-		}
-	}
-	else if ( sizeof(T) == 48 )
-	{
-		__asm
-		{
-			mov esi, pSrc
-			mov edi, pDest
-
-			movaps xmm0, [esi + 0]
-			movaps xmm1, [esi + 16]
-			movaps xmm2, [esi + 32]
-
-			movntps [edi + 0], xmm0
-			movntps [edi + 16], xmm1
-			movntps [edi + 32], xmm2
-		}
-	}
-	else if ( sizeof(T) == 64 )
-	{
-		__asm
-		{
-			mov esi, pSrc
-			mov edi, pDest
-
-			movaps xmm0, [esi + 0]
-			movaps xmm1, [esi + 16]
-			movaps xmm2, [esi + 32]
-			movaps xmm3, [esi + 48]
-
-			movntps [edi + 0], xmm0
-			movntps [edi + 16], xmm1
-			movntps [edi + 32], xmm2
-			movntps [edi + 48], xmm3
-		}
-	}
-	else
-#elif defined ( PLATFORM_X360 )
+#if defined ( PLATFORM_X360 )
 	if ( sizeof(T) == 16 )
 	{
 		__vector4 v4Read = __lvx( pSrc, 0 );

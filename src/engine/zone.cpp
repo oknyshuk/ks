@@ -1,4 +1,4 @@
-//===== Copyright © 1996-2005, Valve Corporation, All rights reserved. ======//
+//===== Copyright ï¿½ 1996-2005, Valve Corporation, All rights reserved. ======//
 //
 // Purpose: 
 //
@@ -235,13 +235,7 @@ void Hunk_OnMapStart( int nEstimatedBytes )
 void Memory_Init( void )
 {
 	MEM_ALLOC_CREDIT();
-#ifdef PLATFORM_64BITS
-	// Seems to need to be larger to not get exhausted on
-	// 64-bit. Perhaps because of larger pointer sizes.
 	int nMaxBytes = 128*MB;
-#else
-	int nMaxBytes = 64*MB;
-#endif
 	const int commitIncrement = 64*KB;
 #ifndef HUNK_USE_16MB_PAGE
 	const int nInitialCommit = MIN( HUNK_COMMIT_FLOOR, nMaxBytes );
