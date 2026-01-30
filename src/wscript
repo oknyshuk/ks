@@ -85,13 +85,13 @@ PROJECTS = [
     "soundsystem/lowlevel",
     "studiorender",
     "thirdparty/celt-v0.11.3",
-    "thirdparty/dxvk-native-1.9.2b/src/d3d9",
-    "thirdparty/dxvk-native-1.9.2b/src/dxso",
-    "thirdparty/dxvk-native-1.9.2b/src/dxvk",
-    "thirdparty/dxvk-native-1.9.2b/src/spirv",
-    "thirdparty/dxvk-native-1.9.2b/src/util",
-    "thirdparty/dxvk-native-1.9.2b/src/vulkan",
-    "thirdparty/dxvk-native-1.9.2b/src/wsi",
+    "thirdparty/dxvk-native-2.7.1-4bbe487/src/d3d9",
+    "thirdparty/dxvk-native-2.7.1-4bbe487/src/dxso",
+    "thirdparty/dxvk-native-2.7.1-4bbe487/src/dxvk",
+    "thirdparty/dxvk-native-2.7.1-4bbe487/src/spirv",
+    "thirdparty/dxvk-native-2.7.1-4bbe487/src/util",
+    "thirdparty/dxvk-native-2.7.1-4bbe487/src/vulkan",
+    "thirdparty/dxvk-native-2.7.1-4bbe487/src/wsi",
     "thirdparty/JoltPhysics-4.0.2/Jolt",
     "thirdparty/jpeg-8",
     "thirdparty/libpng-1.5.2",
@@ -305,8 +305,8 @@ def configure(conf):
     if conf.env.DEST_OS != "win32":
         conf.define("DX_TO_VK_ABSTRACTION", True)
         includes += [
-            os.path.abspath("thirdparty/dxvk-native-1.9.2b/include/native/windows"),
-            os.path.abspath("thirdparty/dxvk-native-1.9.2b/include/native/directx"),
+            os.path.abspath("thirdparty/dxvk-native-2.7.1-4bbe487/include/native/windows"),
+            os.path.abspath("thirdparty/dxvk-native-2.7.1-4bbe487/include/native/directx"),
         ]
     else:
         conf.define("USE_ACTUAL_DX", True)
