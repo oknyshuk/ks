@@ -3887,7 +3887,7 @@ void CMeshDX8::Draw( CPrimList *pLists, int nLists )
 
 void CMeshDX8::DrawInternal( const Vector4D *pDiffuseModulation, CPrimList *pLists, int nLists )
 {
-#ifdef DX_TO_GL_ABSTRACTION
+#if defined(DX_TO_GL_ABSTRACTION) || defined(DX_TO_VK_ABSTRACTION)
 	HandleLateCreation();
 #endif
 
@@ -4023,7 +4023,7 @@ void CMeshDX8::RenderPass( const unsigned char *pInstanceCommandBuffer )
 	LOCK_SHADERAPI();
 	VPROF( "CMeshDX8::RenderPass" );
 
-#ifdef DX_TO_GL_ABSTRACTION
+#if defined(DX_TO_GL_ABSTRACTION) || defined(DX_TO_VK_ABSTRACTION)
 	HandleLateCreation();
 #endif
 
@@ -4373,7 +4373,7 @@ void CDynamicMeshDX8::DrawInternal( const Vector4D *pVecDiffuseModulation, int n
 		( ( m_TotalVertices > 0 ) && ( m_TotalIndices > 0 || m_Type == MATERIAL_POINTS || m_Type == MATERIAL_INSTANCED_QUADS ) ) )
 	{
 		Assert( !m_IsDrawing );
-#ifdef DX_TO_GL_ABSTRACTION
+#if defined(DX_TO_GL_ABSTRACTION) || defined(DX_TO_VK_ABSTRACTION)
 		HandleLateCreation();
 #endif
 
@@ -6632,7 +6632,7 @@ void CMeshMgr::DrawInstancedPrims( const unsigned char *pInstanceCommandBuffer )
 			Warning( "CMeshMgr::DrawInstancedPrims: Vertex buffer in not setup properly, mesh will not be rendered." );
 			continue;
 		}
-#ifdef DX_TO_GL_ABSTRACTION
+#if defined(DX_TO_GL_ABSTRACTION) || defined(DX_TO_VK_ABSTRACTION)
 		pVertexMesh->HandleLateCreation();
 #endif
 
@@ -6654,7 +6654,7 @@ void CMeshMgr::DrawInstancedPrims( const unsigned char *pInstanceCommandBuffer )
 		if ( pIndexBuffer->GetMesh() )
 		{
 			CMeshDX8 *pMesh = static_cast<CMeshDX8*>( pIndexBuffer );
-#ifdef DX_TO_GL_ABSTRACTION
+#if defined(DX_TO_GL_ABSTRACTION) || defined(DX_TO_VK_ABSTRACTION)
 			pMesh->HandleLateCreation();
 #endif
 			pD3DIndexBuffer = pMesh->m_pIndexBuffer->GetInterface();				
@@ -6668,7 +6668,7 @@ void CMeshMgr::DrawInstancedPrims( const unsigned char *pInstanceCommandBuffer )
 		D3DSetIndices( pD3DIndexBuffer );
 
 		CMeshDX8 *pColorMesh = static_cast<CMeshDX8*>( const_cast<IVertexBuffer*>( instance.m_pColorBuffer ) );
-#ifdef DX_TO_GL_ABSTRACTION
+#if defined(DX_TO_GL_ABSTRACTION) || defined(DX_TO_VK_ABSTRACTION)
 		if (pColorMesh)
 		{
 			pColorMesh->HandleLateCreation();
@@ -6729,7 +6729,7 @@ void CMeshMgr::RenderPassForInstances( const unsigned char *pInstanceCommandBuff
 		// make sure the vertex format is a superset of the current material's
 		// vertex format...
 		CMeshDX8 *pVertexMesh = static_cast<CMeshDX8*>( const_cast<IVertexBuffer*>( instance.m_pVertexBuffer ) );
-#ifdef DX_TO_GL_ABSTRACTION
+#if defined(DX_TO_GL_ABSTRACTION) || defined(DX_TO_VK_ABSTRACTION)
 		pVertexMesh->HandleLateCreation();
 #endif
 
@@ -6752,7 +6752,7 @@ void CMeshMgr::RenderPassForInstances( const unsigned char *pInstanceCommandBuff
 		{
 			CMeshDX8 *pMesh = static_cast<CMeshDX8*>( pIndexBuffer );
 			Assert( pMesh );
-#ifdef DX_TO_GL_ABSTRACTION
+#if defined(DX_TO_GL_ABSTRACTION) || defined(DX_TO_VK_ABSTRACTION)
 			pMesh->HandleLateCreation();
 #endif
 			pMesh->SetIndexStreamState( 0 );
@@ -6765,7 +6765,7 @@ void CMeshMgr::RenderPassForInstances( const unsigned char *pInstanceCommandBuff
 		}
 
 		CMeshDX8 *pColorMesh = static_cast<CMeshDX8*>( const_cast<IVertexBuffer*>( instance.m_pColorBuffer ) );
-#ifdef DX_TO_GL_ABSTRACTION
+#if defined(DX_TO_GL_ABSTRACTION) || defined(DX_TO_VK_ABSTRACTION)
 		if ( pColorMesh )
 		{
 			pColorMesh->HandleLateCreation();

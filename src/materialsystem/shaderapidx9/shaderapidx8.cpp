@@ -243,12 +243,6 @@ ConVar mat_force_flush_texturecache( "mat_force_flush_texturecache", "0" );
 ConVar mat_hi_z_enable( "mat_hi_z_enable", "1", FCVAR_CHEAT, "Toggle Hi-Z on the Xbox 360" );
 ConVar mat_hi_stencil_enable( "mat_hi_stencil_enable", "1", FCVAR_CHEAT, "Toggle Hi-Stencil on the Xbox 360" );
 
-#if defined( CSTRIKE15 )
-static ConVar r_shader_srgbread( "r_shader_srgbread", "1", 0, "1 = use shader srgb texture reads, 0 = use HW" );
-#else
-static ConVar r_shader_srgbread( "r_shader_srgbread", "0", 0, "1 = use shader srgb texture reads, 0 = use HW" );
-#endif
-
 #endif
 
 extern ConVar mat_debugalttab;

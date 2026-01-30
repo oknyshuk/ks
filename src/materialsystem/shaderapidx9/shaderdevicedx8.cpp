@@ -389,6 +389,17 @@ void CShaderDeviceMgrDx8::CheckVendorDependentShadowMappingSupport( HardwareCaps
 	pCaps->m_bSupportsFetch4 = false;
 	pCaps->m_HighPrecisionShadowDepthTextureFormat = pCaps->m_ShadowDepthTextureFormat;
 	return;
+#elif defined ( DX_TO_VK_ABSTRACTION )
+	pCaps->m_ShadowDepthTextureFormat = IMAGE_FORMAT_D16_SHADOW;
+	pCaps->m_bSupportsShadowDepthTextures = true;
+	pCaps->m_bSupportsFetch4 = false;
+	pCaps->m_HighPrecisionShadowDepthTextureFormat = IMAGE_FORMAT_D16_SHADOW;
+	if ( m_pD3D->CheckDeviceFormat( nAdapter, DX8_DEVTYPE, D3DFMT_X8R8G8B8,
+		 D3DUSAGE_DEPTHSTENCIL, D3DRTYPE_TEXTURE, D3DFMT_D24S8 ) == S_OK )
+	{
+		pCaps->m_HighPrecisionShadowDepthTextureFormat = IMAGE_FORMAT_D24X8_SHADOW;
+	}
+	return;
 #endif
 
 	if ( IsPC() )
@@ -627,7 +638,7 @@ ConVar mat_hdr_level( "mat_hdr_level", "2" );
 #define SHADOWMAP_DEPTHBIAS_D24				"2500"
 #define SHADOWMAP_SLOPESCALEDEPTHBIAS	"2"
 #define SHADOWMAP_DEPTHBIAS				".25"
-#elif defined( DX_TO_GL_ABSTRACTION )
+#elif defined( DX_TO_GL_ABSTRACTION ) || defined( DX_TO_VK_ABSTRACTION )
 #define SHADOWMAP_SLOPESCALEDEPTHBIAS	"8"
 #define SHADOWMAP_DEPTHBIAS				"20"
 #elif defined ( _X360 )
@@ -1960,7 +1971,13 @@ void CShaderDeviceDx8::SetPresentParameters( void* hWnd, int nAdapter, const Sha
 	ZeroMemory( &m_PresentParameters, sizeof( m_PresentParameters ) );
 
 	m_PresentParameters.Windowed = info.m_bWindowed;
+#if defined( DX_TO_VK_ABSTRACTION )
+	// DXVK: Force COPY to preserve backbuffer content between frames.
+	// DISCARD with Vulkan swapchain rotation causes stale content (dirty rectangles bug).
+	m_PresentParameters.SwapEffect = D3DSWAPEFFECT_COPY;
+#else
 	m_PresentParameters.SwapEffect = info.m_bUsingMultipleWindows ? D3DSWAPEFFECT_COPY : D3DSWAPEFFECT_DISCARD;
+#endif
 
 	// for 360, we want to create it ourselves for hierarchical z support
 	m_PresentParameters.EnableAutoDepthStencil = IsX360() ? FALSE : TRUE; 
@@ -4049,7 +4066,22 @@ void CShaderDeviceDx8::Present()
 
 	if ( !IsDeactivated() )
 	{
-#ifndef DX_TO_GL_ABSTRACTION
+#if defined( DX_TO_VK_ABSTRACTION )
+		// DXVK: Clear backbuffer at frame start to prevent stale content from
+		// Vulkan swapchain rotation showing through (dirty rectangles bug).
+		// Similar to X360's EDRAM behavior where content doesn't persist after Present.
+		//
+		// TOGL avoided this by rendering to a separate texture (m_pDefaultColorSurface)
+		// that persisted between frames, then blitting it fully to the swapchain at Present.
+		// DXVK renders directly to the swapchain backbuffer, so we need this clear.
+		//
+		// Performance tradeoff: The clear itself is cheap (GPUs just set a flag), but this
+		// disables VGUI's dirty rectangle optimization - UI must redraw fully each frame
+		// instead of only changed parts. For gameplay this is negligible; complex menus
+		// may see minor impact. D3DSWAPEFFECT_COPY alone doesn't suffice because DXVK's
+		// Vulkan swapchain still rotates images underneath.
+		g_pShaderAPI->ClearBuffers( true, true, true, -1, -1 );
+#elif !defined( DX_TO_GL_ABSTRACTION )
 		if ( ( ShaderUtil()->GetConfig().bMeasureFillRate || ShaderUtil()->GetConfig().bVisualizeFillRate ) )
 		{
 			g_pShaderAPI->ClearBuffers( true, true, true, -1, -1 );

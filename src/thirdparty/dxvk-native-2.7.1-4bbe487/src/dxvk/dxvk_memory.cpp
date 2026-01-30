@@ -762,10 +762,11 @@ namespace dxvk {
     for (auto typeIndex : bit::BitMask(memoryTypeMask)) {
       auto& type = m_memTypes[typeIndex];
 
-      // Use correct memory pool depending on property flags. This way we avoid
-      // wasting address space on fallback allocations, or on UMA devices that
-      // only expose one memory type.
-      auto& selectedPool = (allocationInfo.properties & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT)
+      // Use correct memory pool depending on actual memory type property flags.
+      // This ensures consistency with chunk mapping (which uses actual properties)
+      // and the free path (which uses m_mapPtr). On UMA devices where all memory
+      // types are HOST_VISIBLE, everything goes to mappedPool.
+      auto& selectedPool = (type.properties.propertyFlags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT)
         ? type.mappedPool
         : type.devicePool;
 
@@ -1446,7 +1447,7 @@ namespace dxvk {
     if (!chunk.memory)
       return false;
 
-    mapDeviceMemory(chunk, properties);
+    mapDeviceMemory(chunk, type.properties.propertyFlags);
 
     // If we expect the application to require more memory in the
     // future, increase the chunk size for subsequent allocations.
@@ -1493,9 +1494,8 @@ namespace dxvk {
       allocation->m_mapPtr = reinterpret_cast<char*>(chunk.memory.mapPtr) + offset;
 
       if (unlikely(m_device->config().zeroMappedMemory)) {
-        // Some games will not write mapped buffers and will break if
-        // there is any stale data stored within. Clear when the allocation is
-        // freed, so that subsequent allocations will receive cleared buffers.
+        // Set ClearOnFree so cached allocations are zeroed when returned to pool.
+        // Chunks are already zeroed at creation time in mapDeviceMemory().
         allocation->m_flags.set(DxvkAllocationFlag::ClearOnFree);
       }
     }

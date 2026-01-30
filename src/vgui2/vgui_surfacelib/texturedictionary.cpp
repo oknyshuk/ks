@@ -453,6 +453,16 @@ void CMatSystemTexture::SetProcedural( bool proc )
 
 void CMatSystemTexture::CleanUpMaterial()
 {
+	// Don't try to clean up materials if the material system has already been destroyed.
+	// This can happen during static destruction (exit) when destruction order is undefined.
+	if ( !g_pMaterialSystem )
+	{
+		m_pMaterial = NULL;
+		m_pTexture = NULL;
+		ReleaseRegen();
+		return;
+	}
+
 	if ( m_pMaterial )
 	{
 		// causes the underlying texture (if unreferenced) to be deleted as well

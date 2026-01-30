@@ -58,7 +58,7 @@ namespace dxvk {
     bool hideIntegratedGraphics = false;
 
     /// Clears all mapped memory to zero.
-    bool zeroMappedMemory = false;
+    bool zeroMappedMemory = true;
 
     /// Allows full-screen exclusive mode on Windows
     bool allowFse = false;

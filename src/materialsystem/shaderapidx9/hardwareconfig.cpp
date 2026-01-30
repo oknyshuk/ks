@@ -788,11 +788,10 @@ int CHardwareConfig::GetMaxVertexTextureDimension() const
 
 HDRType_t CHardwareConfig::GetHDRType() const
 {
-	// On MacOS, this value comes down from the engine, which read it from the registry...which doesn't exist on Mac, so we're slamming to true here
-	if ( IsOpenGL() )
-	{
-		g_pHardwareConfig->SetHDREnabled( true );
-	}
+	// On MacOS / Linux, this value comes down from the engine, which read it from the registry...which doesn't exist, so we're slamming to true here
+#if defined( DX_TO_GL_ABSTRACTION ) || defined( DX_TO_VK_ABSTRACTION )
+	g_pHardwareConfig->SetHDREnabled( true );
+#endif
 
 	bool enabled = m_bHDREnabled;
 	int dxlev = GetDXSupportLevel();
@@ -920,6 +919,9 @@ CSMQualityMode_t CHardwareConfig::GetCSMQuality( void ) const
 
 bool CHardwareConfig::SupportsBilinearPCFSampling() const
 {
+#if defined( DX_TO_VK_ABSTRACTION )
+	return true;
+#endif
 	if( IsOpenGL() || IsPS3() || IsX360() )
 		return true;
 

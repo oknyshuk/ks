@@ -1071,6 +1071,12 @@ namespace dxvk {
       }
     });
 
+    // Force early synchronization to ensure backbuffers are fully initialized.
+    // This helps prevent vertex explosions and rendering artifacts during map
+    // loading by establishing a synchronization point before heavy resource
+    // allocation begins.
+    m_parent->Flush();
+
     return D3D_OK;
   }
 
