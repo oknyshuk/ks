@@ -1,0 +1,29 @@
+<rml>
+	<head>
+		<style>
+			body {
+				font-family: "Liberation Sans";
+				position: absolute;
+				left: 50%;
+				top: 50%;
+				width: 400dp;
+				margin-left: -200dp;
+				margin-top: -60dp;
+				background-color: rgba(20, 25, 30, 242);
+				border-width: 1dp;
+				border-color: rgba(255, 200, 80, 102);
+				border-radius: 4dp;
+				padding: 24dp 32dp;
+				text-align: center;
+			}
+			#text {
+				font-size: 16dp;
+				color: rgba(255, 255, 255, 229);
+			}
+		</style>
+	</head>
+	<body>
+		<div id="text">
+		</div>
+	</body>
+</rml>

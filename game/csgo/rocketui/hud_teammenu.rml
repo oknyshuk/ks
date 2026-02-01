@@ -1,0 +1,130 @@
+<rml>
+	<head>
+		<style>
+			div, p, button {
+				display: block;
+			}
+			span {
+				display: inline;
+			}
+			body {
+				font-family: "Liberation Sans";
+				width: 100vw;
+				height: 100vh;
+				position: absolute;
+				left: 0dp;
+				top: 0dp;
+				background-color: rgba(0, 0, 0, 217);
+			}
+			#modal {
+				position: absolute;
+				left: 50%;
+				top: 50%;
+				width: 520dp;
+				height: auto;
+				margin-left: -260dp;
+				margin-top: -180dp;
+				background-color: rgba(20, 25, 30, 242);
+				border-width: 1dp;
+				border-color: rgba(255, 255, 255, 25);
+				border-radius: 4dp;
+			}
+			#header {
+				background-color: rgba(255, 255, 255, 13);
+				padding: 16dp 24dp;
+				border-bottom-width: 1dp;
+				border-bottom-color: rgba(255, 255, 255, 25);
+			}
+			#header-title {
+				font-size: 18dp;
+				color: rgba(255, 255, 255, 229);
+				font-weight: bold;
+			}
+			#team-options {
+				padding: 24dp;
+				display: flex;
+				flex-direction: column;
+			}
+			.team-btn {
+				width: 100%;
+				padding: 20dp 24dp;
+				margin-bottom: 12dp;
+				border-radius: 3dp;
+				border-width: 1dp;
+				border-color: rgba(255, 255, 255, 25);
+				font-size: 15dp;
+				font-weight: bold;
+				text-align: left;
+				display: flex;
+				justify-content: space-between;
+				align-items: center;
+			}
+			#team_ct {
+				background-color: rgba(90, 140, 190, 76);
+				color: rgba(150, 200, 255, 255);
+			}
+			#team_ct:hover {
+				background-color: rgba(90, 140, 190, 127);
+				border-color: rgba(150, 200, 255, 127);
+			}
+			#team_t {
+				background-color: rgba(180, 140, 60, 76);
+				color: rgba(255, 200, 80, 255);
+			}
+			#team_t:hover {
+				background-color: rgba(180, 140, 60, 127);
+				border-color: rgba(255, 200, 80, 127);
+			}
+			#team_spec {
+				background-color: rgba(80, 80, 80, 76);
+				color: rgba(180, 180, 180, 255);
+			}
+			#team_spec:hover {
+				background-color: rgba(80, 80, 80, 127);
+				border-color: rgba(180, 180, 180, 127);
+			}
+			.team-label {
+				display: block;
+			}
+			.team-key {
+				font-size: 12dp;
+				color: rgba(255, 255, 255, 102);
+				font-weight: normal;
+			}
+			#footer {
+				padding: 12dp 24dp;
+				border-top-width: 1dp;
+				border-top-color: rgba(255, 255, 255, 13);
+				text-align: center;
+			}
+			#footer-hint {
+				font-size: 11dp;
+				color: rgba(255, 255, 255, 76);
+			}
+		</style>
+	</head>
+	<body>
+		<div id="modal">
+			<div id="header">
+				<div id="header-title">SELECT TEAM</div>
+			</div>
+			<div id="team-options">
+				<button id="team_ct" class="team-btn">
+					<span class="team-label">COUNTER-TERRORIST</span>
+					<span class="team-key">[1]</span>
+				</button>
+				<button id="team_t" class="team-btn">
+					<span class="team-label">TERRORIST</span>
+					<span class="team-key">[2]</span>
+				</button>
+				<button id="team_spec" class="team-btn">
+					<span class="team-label">SPECTATOR</span>
+					<span class="team-key">[3]</span>
+				</button>
+			</div>
+			<div id="footer">
+				<div id="footer-hint">Press ESC to cancel</div>
+			</div>
+		</div>
+	</body>
+</rml>

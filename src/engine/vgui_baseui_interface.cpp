@@ -104,9 +104,7 @@
 #include "vgui_askconnectpanel.h"
 #include "tier1/tokenset.h"
 
-#if defined( INCLUDE_SCALEFORM )
-#include "scaleformui/scaleformui.h"
-#endif
+#include "rocketui/rocketui.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -1049,13 +1047,11 @@ void CEngineVGui::Init()
 	COM_TimestampedLog( "ActivateGameUI()" );
 	ActivateGameUI();
 
-	if ( staticGameConsole && 
-		!CommandLine()->CheckParm( "-forcestartupmenu" ) && 
+	if ( !CommandLine()->CheckParm( "-forcestartupmenu" ) &&
 		!CommandLine()->CheckParm( "-hideconsole" ) &&
 		( CommandLine()->FindParm( "-toconsole" ) || CommandLine()->FindParm( "-console" ) || CommandLine()->FindParm( "-rpt" ) || CommandLine()->FindParm( "-allowdebug" ) ) )
 	{
-		// activate the console
-		staticGameConsole->Activate();
+		Cbuf_AddText( Cbuf_GetCurrentPlayer(), "rocket_console_show\n" );
 	}
 
 	m_bNoShaderAPI = CommandLine()->FindParm( "-noshaderapi" ) ? true : false;
@@ -1867,14 +1863,8 @@ void CEngineVGui::UpdateProgressBar( float progress, const char *pDesc, bool sho
 
 			if ( g_ClientGlobalVariables.frametime != 0.0f && g_ClientGlobalVariables.frametime != 0.1f)
 			{
-#if defined ( INCLUDE_SCALEFORM )
-				static ConVarRef host_timescale( "host_timescale" );
-				float timeScale = host_timescale.GetFloat() * sv.GetTimescale();
-				if ( timeScale <= 0.0f )
-					timeScale = 1.0f;
-
-				g_pScaleformUI->RunFrame( g_ClientGlobalVariables.frametime / timeScale );
-#endif
+				if ( g_pRocketUI )
+					g_pRocketUI->RunFrame( g_ClientGlobalVariables.realtime );
 			}
 			else
 			{
@@ -1884,9 +1874,8 @@ void CEngineVGui::UpdateProgressBar( float progress, const char *pDesc, bool sho
 	}
 	else if ( bUpdated )
 	{
-#if defined( INCLUDE_SCALEFORM )
-		g_pScaleformUI->RunFrame( 0 );
-#endif
+		if ( g_pRocketUI )
+			g_pRocketUI->RunFrame( g_ClientGlobalVariables.realtime );
 		// re-render vgui on screen
 		extern void V_RenderVGuiOnly();
 		V_RenderVGuiOnly();
@@ -1931,14 +1920,8 @@ void CEngineVGui::UpdateSecondaryProgressBar( float progress, const wchar_t *des
 
 			if ( g_ClientGlobalVariables.frametime != 0.0f && g_ClientGlobalVariables.frametime != 0.1f)
 			{
-#if defined ( INCLUDE_SCALEFORM )
-                static ConVarRef host_timescale( "host_timescale" );
-				float timeScale = host_timescale.GetFloat() * sv.GetTimescale();
-				if ( timeScale <= 0.0f )
-					timeScale = 1.0f;
-
-				g_pScaleformUI->RunFrame( g_ClientGlobalVariables.frametime / timeScale );
-#endif
+				if ( g_pRocketUI )
+					g_pRocketUI->RunFrame( g_ClientGlobalVariables.realtime );
 			}
 			else
 			{
@@ -1948,9 +1931,8 @@ void CEngineVGui::UpdateSecondaryProgressBar( float progress, const wchar_t *des
 	}
 	else if ( bUpdated )
 	{
-#if defined ( INCLUDE_SCALEFORM )
-        g_pScaleformUI->RunFrame( 0 );
-#endif
+		if ( g_pRocketUI )
+			g_pRocketUI->RunFrame( g_ClientGlobalVariables.realtime );
 		// re-render vgui on screen
 		extern void V_RenderVGuiOnly();
 		V_RenderVGuiOnly();

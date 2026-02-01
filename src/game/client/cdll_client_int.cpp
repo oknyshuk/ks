@@ -114,6 +114,7 @@
 #include "cs_gamerules.h"
 #include "c_cs_player.h"
 #include "cstrike15/fatdemo.h"
+#include "cstrike15/RocketUI/rkconsole.h"
 #endif
 
 #include "mumble.h"
@@ -1668,6 +1669,11 @@ void CHLClient::PostInit()
 	// allow sixnese input to perform post-init operations
 		g_pSixenseInput->PostInit();
 #endif
+
+#if defined( CSTRIKE15 )
+	// Initialize RocketUI console to capture console output
+	RkConsole().Initialize();
+#endif
 }
 
 //-----------------------------------------------------------------------------
@@ -1675,6 +1681,11 @@ void CHLClient::PostInit()
 //-----------------------------------------------------------------------------
 void CHLClient::Shutdown( void )
 {
+#if defined( CSTRIKE15 )
+	// Shutdown RocketUI console
+	RkConsole().Shutdown();
+#endif
+
 	if ( g_pRenderToRTHelper )
 	{
 		g_pRenderToRTHelper->Shutdown();

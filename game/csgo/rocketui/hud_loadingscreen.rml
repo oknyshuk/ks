@@ -1,0 +1,117 @@
+<rml>
+	<head>
+		<style>
+			div, p, h1, h2, h3 {
+				display: block;
+			}
+			span {
+				display: inline;
+			}
+			body {
+				font-family: "Liberation Sans";
+				width: 100vw;
+				height: 100vh;
+				position: absolute;
+				left: 0dp;
+				top: 0dp;
+				background-color: rgba(8, 12, 18, 255);
+				color: rgba(255, 255, 255, 229);
+			}
+			#backdrop {
+				width: 100%;
+				height: 100%;
+				position: absolute;
+				decorator: vertical-gradient(#141e2d #080c12);
+			}
+			#content {
+				width: 100%;
+				height: 100%;
+				display: flex;
+				flex-direction: column;
+				justify-content: center;
+				align-items: center;
+				position: relative;
+			}
+			#logo-area {
+				margin-bottom: 48dp;
+				text-align: center;
+			}
+			#title {
+				font-size: 42dp;
+				font-weight: bold;
+				color: rgba(255, 255, 255, 242);
+				margin-bottom: 8dp;
+			}
+			#subtitle {
+				font-size: 14dp;
+				color: rgba(180, 180, 180, 204);
+			}
+			#loading-info {
+				text-align: center;
+				margin-top: 24dp;
+			}
+			#map-name {
+				font-size: 24dp;
+				color: rgba(255, 200, 80, 229);
+				margin-bottom: 16dp;
+			}
+			#loading-bar-container {
+				width: 400dp;
+				height: 3dp;
+				background-color: rgba(255, 255, 255, 25);
+				border-radius: 2dp;
+				margin-bottom: 16dp;
+			}
+			#loading-bar {
+				width: 60%;
+				height: 100%;
+				background-color: rgba(255, 200, 80, 204);
+				border-radius: 2dp;
+			}
+			#loading-text {
+				font-size: 12dp;
+				color: rgba(150, 150, 150, 204);
+			}
+			#continue-prompt {
+				position: absolute;
+				bottom: 48dp;
+				text-align: center;
+				width: 100%;
+			}
+			button {
+				background-color: rgba(255, 200, 80, 229);
+				color: rgba(0, 0, 0, 229);
+				border-width: 0;
+				border-radius: 2dp;
+				padding: 12dp 48dp;
+				font-size: 14dp;
+				font-weight: bold;
+			}
+			button:hover {
+				background-color: rgba(255, 220, 120, 255);
+			}
+			button:active {
+				background-color: rgba(200, 160, 60, 255);
+			}
+		</style>
+	</head>
+	<body>
+		<div id="backdrop"/>
+		<div id="content">
+			<div id="logo-area">
+				<div id="title">COUNTER-STRIKE</div>
+				<div id="subtitle">GLOBAL OFFENSIVE</div>
+			</div>
+			<div id="loading-info">
+				<div id="map-name">LOADING MAP...</div>
+				<div id="loading-bar-container">
+					<div id="loading-bar"/>
+				</div>
+				<div id="loading-text">INITIALIZING</div>
+			</div>
+		</div>
+		<div id="continue-prompt">
+			<button id="continue">CONTINUE</button>
+		</div>
+	</body>
+</rml>

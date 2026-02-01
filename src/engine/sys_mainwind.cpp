@@ -67,9 +67,7 @@
 #include "characterset.h"
 #include "server.h"
 
-#if defined( INCLUDE_SCALEFORM )
-#include "scaleformui/scaleformui.h"
-#endif
+#include "rocketui/rocketui.h"
 
 #include <vgui/ILocalize.h>
 #include <vgui/ISystem.h>
@@ -439,14 +437,12 @@ void CGame::DispatchInputEvent( const InputEvent_t &event )
 				if ( g_pMatSystemSurface && g_pMatSystemSurface->HandleInputEvent( event ) )
 					break;
 
-#if defined( INCLUDE_SCALEFORM )
-				bool vguiActive = IsPC() && cv_vguipanel_active.GetBool();			
-			
-				// we filter input while the console is visible, to prevent scaleform from
+				bool vguiActive = IsPC() && cv_vguipanel_active.GetBool();
+
+				// we filter input while the console is visible, to prevent RocketUI from
 				//		handling anything underneath the console
-				if ( !vguiActive && g_pScaleformUI && g_pScaleformUI->HandleInputEvent( event ) )
+				if ( !vguiActive && g_pRocketUI && g_pRocketUI->HandleInputEvent( event ) )
 					break;
-#endif // INCLUDE_SCALEFORM
 			}
 
 			// Let GameUI have the next whack at events
@@ -483,14 +479,14 @@ void CGame::DispatchInputEvent( const InputEvent_t &event )
 		if ( g_pMatSystemSurface && g_pMatSystemSurface->HandleInputEvent( event ) )
 			break;
 
-#if defined( INCLUDE_SCALEFORM )
-		bool vguiActive = IsPC() && cv_vguipanel_active.GetBool();			
+		{
+			bool vguiActive = IsPC() && cv_vguipanel_active.GetBool();
 
-		// we filter all input while the console is visible, to prevent scaleform from
-		//		handling anything underneath the console
-		if ( !vguiActive && g_pScaleformUI && g_pScaleformUI->HandleInputEvent( event ) )
-			break;
-#endif // INCLUDE_SCALEFORM
+			// we filter all input while the console is visible, to prevent RocketUI from
+			//		handling anything underneath the console
+			if ( !vguiActive && g_pRocketUI && g_pRocketUI->HandleInputEvent( event ) )
+				break;
+		}
 
 		for ( int i=0; i < ARRAYSIZE( g_GameMessageHandlers ); i++ )
 		{

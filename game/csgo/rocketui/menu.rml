@@ -1,0 +1,132 @@
+<rml>
+	<head>
+		<title>Counter-Strike: Global Offensive</title>
+		<link type="text/template" href="templates/window.rml"/>
+		<style>
+			body.window {
+				font-family: "Liberation Sans";
+				width: 100vw;
+				height: 100vh;
+				min-width: 800dp;
+				min-height: 600dp;
+			}
+			div#window {
+				width: 100%;
+				height: 100%;
+			}
+			div#content {
+				width: 100%;
+				height: 100%;
+				position: relative;
+				decorator: vertical-gradient(#192332 #080c12);
+			}
+			#main-content {
+				width: 100%;
+				height: 100%;
+				display: block;
+			}
+			#header-bar {
+				height: 64dp;
+				background-color: rgba(0, 0, 0, 102);
+				display: block;
+				padding: 16dp 32dp;
+				border-bottom-width: 1dp;
+				border-bottom-color: rgba(255, 255, 255, 20);
+			}
+			#logo {
+				display: inline-block;
+				vertical-align: middle;
+			}
+			#logo-title {
+				font-size: 20dp;
+				font-weight: bold;
+				color: rgba(255, 255, 255, 242);
+				display: block;
+			}
+			#logo-subtitle {
+				font-size: 10dp;
+				color: rgba(255, 200, 80, 204);
+				display: block;
+			}
+			#nav-tabs {
+				display: inline-block;
+				margin-left: 48dp;
+				vertical-align: middle;
+			}
+			.nav-tab {
+				display: inline-block;
+				padding: 8dp 24dp;
+				font-size: 12dp;
+				color: rgba(255, 255, 255, 153);
+				border-radius: 2dp;
+			}
+			.nav-tab:hover {
+				color: rgba(255, 255, 255, 229);
+				background-color: rgba(255, 255, 255, 20);
+			}
+			.nav-tab-active {
+				color: rgba(255, 200, 80, 255);
+				background-color: rgba(255, 200, 80, 38);
+			}
+			#center-content {
+				position: absolute;
+				left: 50%;
+				top: 50%;
+				width: 600dp;
+				margin-left: -300dp;
+				margin-top: -150dp;
+				text-align: center;
+			}
+			.welcome-title {
+				font-size: 48dp;
+				font-weight: bold;
+				color: rgba(255, 255, 255, 242);
+				margin-bottom: 8dp;
+			}
+			.welcome-subtitle {
+				font-size: 16dp;
+				color: rgba(255, 200, 80, 229);
+				margin-bottom: 48dp;
+			}
+			.welcome-info {
+				font-size: 14dp;
+				color: rgba(180, 180, 180, 204);
+				margin-bottom: 16dp;
+			}
+			.welcome-hint {
+				font-size: 12dp;
+				color: rgba(120, 120, 120, 204);
+				margin-top: 24dp;
+			}
+			#version-info {
+				position: absolute;
+				bottom: 16dp;
+				left: 32dp;
+				font-size: 10dp;
+				color: rgba(255, 255, 255, 76);
+			}
+		</style>
+	</head>
+	<body template="window">
+		<div id="main-content">
+			<div id="header-bar">
+				<div id="logo">
+					<span id="logo-title">COUNTER-STRIKE</span>
+					<span id="logo-subtitle">GLOBAL OFFENSIVE</span>
+				</div>
+				<div id="nav-tabs">
+					<span class="nav-tab nav-tab-active">PLAY</span>
+					<span class="nav-tab" id="options-menu-btn">OPTIONS</span>
+				</div>
+			</div>
+			<div id="center-content">
+				<div class="welcome-title">COUNTER-STRIKE</div>
+				<div class="welcome-subtitle">GLOBAL OFFENSIVE</div>
+				<div class="welcome-info">Open-source Linux port powered by RmlUi</div>
+				<div class="welcome-info">Use the console to start a game</div>
+				<div class="welcome-hint">Example: map de_dust2</div>
+			</div>
+			<div id="version-info">Open CS:GO - RocketUI v2.0</div>
+		</div>
+	</body>
+</rml>

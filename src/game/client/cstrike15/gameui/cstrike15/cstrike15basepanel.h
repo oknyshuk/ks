@@ -18,10 +18,6 @@
 
 #include "basepanel.h"
 #include "matchmaking/imatchevents.h"
-#if defined( INCLUDE_SCALEFORM )
-#include "messagebox_scaleform.h"
-#include "splitscreensignon.h"
-#endif
 #include "GameEventListener.h"
 
 #ifdef _PS3
@@ -34,11 +30,7 @@ class SplitScreenSignonWidget;
 // Purpose: This is the panel at the top of the panel hierarchy for GameUI
 //			It handles all the menus, background images, and loading dialogs
 //-----------------------------------------------------------------------------
-#if defined( INCLUDE_SCALEFORM )
-class CCStrike15BasePanel: public CBaseModPanel, public IMessageBoxEventCallback, public IMatchEventsSink, public CGameEventListener
-#else
 class CCStrike15BasePanel: public CBaseModPanel, public IMatchEventsSink, public CGameEventListener
-#endif
 {
 	DECLARE_CLASS_SIMPLE( CCStrike15BasePanel, CBaseModPanel );
 
@@ -60,20 +52,23 @@ public:
 
 	virtual	void OnOpenServerBrowser();
 
-#if defined(INCLUDE_SCALEFORM)
-	virtual void OnOpenCreateStartScreen( void ); // [jason] provides the "Press Start" screen interface
+    virtual void OnOpenCreateStartScreen( void ); // [jason] provides the "Press Start" screen interface
 	virtual void DismissStartScreen( void );
 	virtual bool IsStartScreenActive( void );
 
-	virtual void OnOpenCreateMainMenuScreen( void ); 
+	virtual void OnOpenCreateMainMenuScreen( void );
 	virtual void DismissMainMenuScreen( void );
 	virtual void RestoreMainMenuScreen( void );
 	virtual void DismissAllMainMenuScreens( bool bHideMainMenuOnly = false );
 
 	void RestoreMPGameMenu( void );
 
-	virtual void ShowScaleformMainMenu( bool bShow );
-	virtual bool IsScaleformMainMenuActive( void );
+    virtual void ShowRocketMainMenu( bool bShow );
+	virtual bool IsRocketMainMenuActive( void );
+
+    virtual void ShowRocketPauseMenu( bool bShow );
+    virtual bool IsRocketPauseMenuActive( void );
+    virtual bool IsRocketPauseMenuVisible( void );
 
 	virtual void OnOpenCreateSingleplayerGameDialog( bool bMatchmakingFilter );
 	virtual void OnOpenCreateMultiplayerGameDialog( void );
@@ -87,17 +82,7 @@ public:
 	virtual void UpdateMainMenuScreen();
 	virtual void UpdateLobbyBrowser( void );
 
-	virtual void OnOpenMessageBox( char const *pszTitle, char const *pszMessage, char const *pszButtonLegend, DWORD dwFlags, IMessageBoxEventCallback *pEventCallback = NULL, CMessageBoxScaleform** ppInstance = NULL, wchar_t const *pszWideMessage = NULL );
-	virtual void OnOpenMessageBoxInSlot( int slot, char const *pszTitle, char const *pszMessage, char const *pszButtonLegend, DWORD dwFlags, IMessageBoxEventCallback *pEventCallback = NULL, CMessageBoxScaleform** ppInstance = NULL );
-	virtual void OnOpenMessageBoxThreeway( char const *pszTitle, char const *pszMessage, char const *pszButtonLegend, char const *pszThirdButtonLabel, DWORD dwFlags, IMessageBoxEventCallback *pEventCallback = NULL, CMessageBoxScaleform** ppInstance = NULL );
-
-	virtual void CreateCommandMsgBox( const char* pszTitle, const char* pszMessage, bool showOk = true, bool showCancel = false, const char* okCommand = NULL, const char* cancelCommand = NULL, const char* closedCommand = NULL, const char* pszLegend = NULL );
-	virtual void CreateCommandMsgBoxInSlot( ECommandMsgBoxSlot slot, const char* pszTitle, const char* pszMessage, bool showOk = true, bool showCancel = false, const char* okCommand = NULL, const char* cancelCommand = NULL, const char* closedCommand = NULL, const char* pszLegend = NULL );
-
 	virtual void ShowMatchmakingStatus( void );
-
-	// returns true if message box is displayed successfully
-	virtual bool ShowLockInput(  void );
 
 	virtual void OnOpenPauseMenu( void );
 	virtual void DismissPauseMenu( void );
@@ -116,14 +101,7 @@ public:
 
 	virtual void OnOpenUpsellDialog( void );
 
-	virtual void OnOpenHowToPlayDialog( void );	
-	
-
-	virtual void ShowScaleformPauseMenu( bool bShow );
-	virtual bool IsScaleformPauseMenuActive( void );
-	virtual bool IsScaleformPauseMenuVisible( void );
-
-	virtual bool OnMessageBoxEvent( MessageBoxFlags_t buttonPressed );
+	virtual void OnOpenHowToPlayDialog( void );
 
 	virtual void OnOpenMedalsDialog();
 	virtual void OnOpenStatsDialog();
@@ -144,14 +122,6 @@ public:
 protected:
 	virtual void LockInput( void );
 	virtual void UnlockInput( void );
-
-    virtual bool IsScaleformIntroMovieEnabled( void );
-    virtual void CreateScaleformIntroMovie( void );
-    virtual void DismissScaleformIntroMovie( void );
-   	virtual void OnPlayCreditsVideo( void );
-
-    void CheckIntroMovieStaticDependencies( void );
-#endif // INCLUDE_SCALEFORM
 
 protected:
 	enum CCSOnClosedCommand

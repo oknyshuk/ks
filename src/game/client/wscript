@@ -48,6 +48,7 @@ def build(bld):
         "zlib",
         "generated_proto",
         "protobuf",
+        "RmlCore",
     ]
 
     includes = [
@@ -55,6 +56,7 @@ def build(bld):
         "cstrike15",
         "cstrike15/gameui",
         "cstrike15/VGUI",
+        "cstrike15/RocketUI",
         "game_controls",
         "../shared",
         "../shared/cstrike15",
@@ -63,6 +65,8 @@ def build(bld):
         "../../gcsdk/steamextra",
         "../../generated_proto",
         "../../thirdparty/protobuf-2.6.1/src",
+        "../../thirdparty/RmlUi/Include",
+        "../../public/rocketui",
     ]
 
     source = [
@@ -700,6 +704,21 @@ def build(bld):
         "cstrike15/cs_gc_client.cpp",
         "../../common/imageutils.cpp",
         "../../public/tier0/memoverride.cpp",
+        # RocketUI game components
+        "cstrike15/RocketUI/rkconsole.cpp",
+        "cstrike15/RocketUI/rkhud_buymenu.cpp",
+        "cstrike15/RocketUI/rkhud_chat.cpp",
+        "cstrike15/RocketUI/rkhud_infobar.cpp",
+        "cstrike15/RocketUI/rkhud_killfeed.cpp",
+        "cstrike15/RocketUI/rkhud_loadingscreen.cpp",
+        "cstrike15/RocketUI/rkhud_pausemenu.cpp",
+        "cstrike15/RocketUI/rkhud_radar.cpp",
+        "cstrike15/RocketUI/rkhud_roundtimer.cpp",
+        "cstrike15/RocketUI/rkhud_scoreboard.cpp",
+        "cstrike15/RocketUI/rkhud_teammenu.cpp",
+        "cstrike15/RocketUI/rkmenu_main.cpp",
+        "cstrike15/RocketUI/rkpanel_options.cpp",
+        "cstrike15/RocketUI/rkpanel_popup.cpp",
     ]
 
     if bld.env.DEST_OS == "win32":

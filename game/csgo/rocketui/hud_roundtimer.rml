@@ -1,0 +1,67 @@
+<rml>
+	<head>
+		<style>
+			body {
+				font-family: "Liberation Sans";
+				position: absolute;
+				left: 50%;
+				top: 0dp;
+				width: 280dp;
+				margin-left: -140dp;
+				pointer-events: none;
+			}
+			#container {
+				display: flex;
+				flex-direction: row;
+				align-items: stretch;
+				height: 36dp;
+			}
+			#ct-score {
+				width: 60dp;
+				background-color: rgba(90, 140, 190, 217);
+				display: flex;
+				justify-content: center;
+				align-items: center;
+				border-radius: 0 0 0 4dp;
+			}
+			#t-score {
+				width: 60dp;
+				background-color: rgba(180, 140, 60, 217);
+				display: flex;
+				justify-content: center;
+				align-items: center;
+				border-radius: 0 0 4dp 0;
+			}
+			#timer-container {
+				flex: 1;
+				background-color: rgba(0, 0, 0, 217);
+				display: flex;
+				justify-content: center;
+				align-items: center;
+			}
+			.score {
+				font-size: 20dp;
+				font-weight: bold;
+				color: rgba(255, 255, 255, 242);
+			}
+			#timer {
+				font-size: 18dp;
+				font-weight: bold;
+				color: rgba(255, 255, 255, 229);
+			}
+		</style>
+	</head>
+	<body data-model="roundtimer_model">
+		<div id="container">
+			<div id="ct-score">
+				<span class="score">{{ ct_score }}</span>
+			</div>
+			<div id="timer-container">
+				<span id="timer">{{ minutes_left }}:{{ seconds_left }}</span>
+			</div>
+			<div id="t-score">
+				<span class="score">{{ t_score }}</span>
+			</div>
+		</div>
+	</body>
+</rml>

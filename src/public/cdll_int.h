@@ -71,7 +71,6 @@ struct WriteReplayScreenshotParams_t;
 class IMaterialProxy;
 struct InputEvent_t;
 struct SpatializationInfo_t;
-class IScaleformSlotInitController;
 class IConVar;
 class CJob;
 class CSVCMsg_HltvReplay;
@@ -1149,11 +1148,6 @@ public:
 	virtual bool ValidateSignedEvidenceHeader( char const *szKey, void const *pvHeader, CDemoPlaybackParameters_t *pPlaybackParameters ) = 0;
 	virtual void PrepareSignedEvidenceData( void *pvData, int numBytes, CDemoPlaybackParameters_t const *pPlaybackParameters ) = 0;
 	virtual bool ShouldSkipEvidencePlayback( CDemoPlaybackParameters_t const *pPlaybackParameters ) = 0;
-
-#if defined( INCLUDE_SCALEFORM )
-    // Scaleform slot controller
-	virtual IScaleformSlotInitController * GetScaleformSlotInitController() = 0;
-#endif
 
 	virtual bool IsConnectedUserInfoChangeAllowed( IConVar *pCvar ) = 0;
 

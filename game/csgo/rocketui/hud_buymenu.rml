@@ -1,0 +1,235 @@
+<rml>
+	<head>
+		<style>
+			div, p {
+				display: block;
+			}
+			span {
+				display: inline;
+			}
+			body {
+				font-family: "Liberation Sans";
+				width: 100vw;
+				height: 100vh;
+				position: absolute;
+				left: 0dp;
+				top: 0dp;
+				background-color: rgba(0, 0, 0, 229);
+			}
+			#main-container {
+				width: 100%;
+				height: 100%;
+				display: flex;
+				flex-direction: column;
+			}
+			#header {
+				height: 60dp;
+				background-color: rgba(20, 25, 30, 242);
+				display: flex;
+				flex-direction: row;
+				align-items: center;
+				justify-content: space-between;
+				padding: 0 32dp;
+				border-bottom-width: 1dp;
+				border-bottom-color: rgba(255, 255, 255, 25);
+			}
+			#player-info {
+				display: flex;
+				flex-direction: row;
+				align-items: center;
+			}
+			#money {
+				font-size: 28dp;
+				font-weight: bold;
+				color: rgba(100, 200, 100, 255);
+				margin-right: 24dp;
+			}
+			#buy-time {
+				font-size: 13dp;
+				color: rgba(255, 200, 80, 229);
+			}
+			#categories {
+				display: flex;
+				flex-direction: row;
+			}
+			.category-label {
+				font-size: 11dp;
+				color: rgba(255, 255, 255, 153);
+				padding: 8dp 16dp;
+			}
+			.category-label:hover {
+				color: rgba(255, 255, 255, 229);
+				background-color: rgba(255, 255, 255, 25);
+			}
+			#content-area {
+				flex: 1;
+				display: flex;
+				flex-direction: row;
+				padding: 24dp 32dp;
+				overflow: hidden;
+			}
+			.item-column {
+				flex: 1;
+				display: flex;
+				flex-direction: column;
+				max-height: 100%;
+				overflow-y: auto;
+				margin-right: 16dp;
+			}
+			.column-header {
+				font-size: 12dp;
+				color: rgba(255, 255, 255, 127);
+				padding-bottom: 8dp;
+				border-bottom-width: 1dp;
+				border-bottom-color: rgba(255, 255, 255, 25);
+				margin-bottom: 8dp;
+			}
+			.item {
+				background-color: rgba(30, 35, 40, 229);
+				border-width: 1dp;
+				border-color: rgba(255, 255, 255, 25);
+				border-radius: 3dp;
+				padding: 12dp 16dp;
+				margin-bottom: 8dp;
+				display: flex;
+				flex-direction: row;
+				justify-content: space-between;
+				align-items: center;
+			}
+			.item:hover {
+				background-color: rgba(50, 70, 50, 229);
+				border-color: rgba(100, 200, 100, 102);
+			}
+			.item-info {
+				display: flex;
+				flex-direction: column;
+			}
+			.item_name {
+				font-size: 13dp;
+				color: rgba(255, 255, 255, 229);
+				font-weight: bold;
+				margin-bottom: 2dp;
+			}
+			.item_price {
+				font-size: 12dp;
+				color: rgba(180, 180, 180, 204);
+			}
+			.item_price_affordable {
+				color: rgba(100, 200, 100, 255);
+			}
+			#footer {
+				height: 48dp;
+				background-color: rgba(20, 25, 30, 242);
+				display: flex;
+				flex-direction: row;
+				align-items: center;
+				justify-content: center;
+				border-top-width: 1dp;
+				border-top-color: rgba(255, 255, 255, 25);
+			}
+			.footer-hint {
+				font-size: 11dp;
+				color: rgba(255, 255, 255, 102);
+				margin: 0 16dp;
+			}
+			scrollbarvertical {
+				width: 4dp;
+				background-color: transparent;
+			}
+			scrollbarvertical sliderbar {
+				background-color: rgba(255, 255, 255, 38);
+				border-radius: 2dp;
+			}
+		</style>
+	</head>
+	<body data-model="buymenu_model">
+		<div id="main-container">
+			<div id="header">
+				<div id="player-info">
+					<span id="money">${{ player_cash }}</span>
+					<span id="buy-time">Buy Time: {{ buy_time_left }}</span>
+				</div>
+				<div id="categories">
+					<span class="category-label">GEAR</span>
+					<span class="category-label">GRENADES</span>
+					<span class="category-label">PISTOLS</span>
+					<span class="category-label">RIFLES</span>
+					<span class="category-label">SMGS</span>
+					<span class="category-label">HEAVY</span>
+				</div>
+			</div>
+			<div id="content-area">
+				<div class="item-column">
+					<div class="column-header">GEAR</div>
+					<div data-for="item : gear_list">
+						<div class="item">
+							<div class="item-info">
+								<span class="item_name">{{ item.item_name }}</span>
+								<span class="item_price" data-class-item_price_affordable="item.item_price <= player_cash">${{ item.item_price }}</span>
+							</div>
+						</div>
+					</div>
+				</div>
+				<div class="item-column">
+					<div class="column-header">GRENADES</div>
+					<div data-for="item : grenade_list">
+						<div class="item">
+							<div class="item-info">
+								<span class="item_name">{{ item.item_name }}</span>
+								<span class="item_price" data-class-item_price_affordable="item.item_price <= player_cash">${{ item.item_price }}</span>
+							</div>
+						</div>
+					</div>
+				</div>
+				<div class="item-column">
+					<div class="column-header">PISTOLS</div>
+					<div data-for="item : pistol_list">
+						<div class="item">
+							<div class="item-info">
+								<span class="item_name">{{ item.item_name }}</span>
+								<span class="item_price" data-class-item_price_affordable="item.item_price <= player_cash">${{ item.item_price }}</span>
+							</div>
+						</div>
+					</div>
+				</div>
+				<div class="item-column">
+					<div class="column-header">RIFLES</div>
+					<div data-for="item : rifle_list">
+						<div class="item">
+							<div class="item-info">
+								<span class="item_name">{{ item.item_name }}</span>
+								<span class="item_price" data-class-item_price_affordable="item.item_price <= player_cash">${{ item.item_price }}</span>
+							</div>
+						</div>
+					</div>
+				</div>
+				<div class="item-column">
+					<div class="column-header">SMGS</div>
+					<div data-for="item : smg_list">
+						<div class="item">
+							<div class="item-info">
+								<span class="item_name">{{ item.item_name }}</span>
+								<span class="item_price" data-class-item_price_affordable="item.item_price <= player_cash">${{ item.item_price }}</span>
+							</div>
+						</div>
+					</div>
+				</div>
+				<div class="item-column">
+					<div class="column-header">HEAVY</div>
+					<div data-for="item : heavy_list">
+						<div class="item">
+							<div class="item-info">
+								<span class="item_name">{{ item.item_name }}</span>
+								<span class="item_price" data-class-item_price_affordable="item.item_price <= player_cash">${{ item.item_price }}</span>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+			<div id="footer">
+				<span class="footer-hint">CLICK TO PURCHASE</span>
+				<span class="footer-hint">PRESS B TO CLOSE</span>
+			</div>
+		</div>
+	</body>
+</rml>

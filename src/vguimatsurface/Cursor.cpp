@@ -34,6 +34,7 @@
 
 #include "inputsystem/iinputsystem.h"
 #include "inputsystem/iinputstacksystem.h"
+#include "rocketui/rocketui.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -436,6 +437,10 @@ void ActivateCurrentCursor( InputContextHandle_t hContext )
 	else
 	{
 #if defined( USE_SDL )
+		// Don't hide cursor if RocketUI is consuming input (needs cursor for menus)
+		if ( g_pRocketUI && g_pRocketUI->IsConsumingInput() )
+			return;
+
 		if (s_hCurrentlySetCursor != s_pDefaultCursor[dc_none])
 		{
 			s_hCurrentlySetCursor = s_pDefaultCursor[dc_none];

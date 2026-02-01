@@ -1,6 +1,6 @@
 //========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
 //
-// Purpose: 
+// Purpose:
 //
 // $NoKeywords: $
 //=============================================================================//
@@ -25,7 +25,7 @@ public:
 
 private:
 	CHudChatLine( const CHudChatLine & ); // = delete; // not defined, not accessible
-	
+
 };
 
 //-----------------------------------------------------------------------------
@@ -34,7 +34,7 @@ private:
 class CHudChatInputLine : public CBaseHudChatInputLine
 {
 	DECLARE_CLASS_SIMPLE( CHudChatInputLine, CBaseHudChatInputLine );
-	
+
 public:
 	CHudChatInputLine( CBaseHudChat *parent, char const *panelName ) : CBaseHudChatInputLine( parent, panelName ) {}
 
@@ -66,13 +66,6 @@ public:
 	virtual Color	GetClientColor( int clientIndex );
 
 	virtual int GetFilterForString( const char *pString );
-
-#if !defined( INCLUDE_SCALEFORM ) && !defined( INCLUDE_ROCKETUI )
-	CUserMessageBinder m_UMCMsgSayText2;
-	CUserMessageBinder m_UMCMsgSayText;
-	CUserMessageBinder m_UMCMsgRadioText;
-	CUserMessageBinder m_UMCMsgTextMsg;
-#endif
 };
 
 #endif	//CS_HUD_CHAT_H

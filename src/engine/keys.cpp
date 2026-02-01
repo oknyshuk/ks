@@ -27,9 +27,7 @@
 #include "cl_splitscreen.h"
 #endif
 
-#if defined( INCLUDE_SCALEFORM )
-#include "scaleformui/scaleformui.h"
-#endif
+#include "rocketui/rocketui.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -44,7 +42,7 @@ enum KeyUpTarget_t
 	KEY_UP_TOOLS,
 	KEY_UP_CLIENT,
 	KEY_UP_GAMEUI,
-	KEY_UP_SCALEFORM,
+	KEY_UP_ROCKETUI,
 	KEY_UP_OVERLAY,
 
 	KEY_UP_TARGET_COUNT
@@ -139,12 +137,6 @@ void Key_SetBinding( ButtonCode_t keynum, const char *pBinding )
 	pNewBinding[l] = 0;
 	s_KeyContext.m_pKeyInfo[keynum].m_pKeyBinding = pNewBinding;	
 
-#if defined( INCLUDE_SCALEFORM )
-	if ( g_pScaleformUI )
-	{
-		g_pScaleformUI->UpdateBindingForButton( keynum, pBinding );
-	}
-#endif
 
 #ifndef DEDICATED
 	if ( g_ClientDLL )
@@ -988,79 +980,13 @@ static bool HandleVGuiKey( const InputEvent_t &event )
 }
 
 
-#if defined( INCLUDE_SCALEFORM )
 //-----------------------------------------------------------------------------
-// Lets scaleform have a whack at key events
+// Lets RocketUI have a whack at key events
 //-----------------------------------------------------------------------------
-static bool HandleScaleformKey( const InputEvent_t &event )
+static bool HandleRocketKey( const InputEvent_t &event )
 {
-	ButtonCode_t code = ( ButtonCode_t ) event.m_nData;
-
-	bool bDown = ( event.m_nType == IE_ButtonPressed ) || ( event.m_nType == IE_ButtonDoubleClicked );
-	if ( bDown )
-	{
-		if ( IsX360() )
-		{
-			LogKeyPress( code );
-			CheckCheatCodes();
-		}
-
-
-	#if defined ( CSTRIKE15 )
-
-		if ( !g_ClientDLL->IsLoadingScreenRaised() && !g_ClientDLL->IsChatRaised() && !g_ClientDLL->IsBindMenuRaised() && !g_ClientDLL->IsRadioPanelRaised() && !g_ClientDLL->IsTeamMenuRaised() )
-	#endif
-		{
-
-			const char * szBinding = s_KeyContext.m_pKeyInfo[ code ].m_pKeyBinding;
-	
-			if ( szBinding && szBinding[0] )
-			{
-				// Add entries to this list if you want to PREVENT scaleform from filtering them
-				static const char *szNoFilterList[] = 
-				{
-					"screenshot",
-				};
-
-				static const int kNumNoFilterEntries = sizeof( szNoFilterList ) / sizeof( szNoFilterList[0] );
-
-				for ( int idx=0; idx < kNumNoFilterEntries; ++idx )
-				{
-					if ( StringHasPrefix( szBinding, szNoFilterList[idx] ) )
-					{
-						return false;
-					}
-				}
-
-				// Only filter these binds when the GameUI is active
-				static const char *szNoFilterListGameUI[] = 
-				{
-					"messagemode",
-					"messagemode2",
-					"+showscores",
-					"togglescores",
-					"+voicerecord",
-				};
-
-				static const int kNumNoFilterEntriesGameUI = sizeof( szNoFilterListGameUI ) / sizeof( szNoFilterListGameUI[0] );
-
-				if ( !EngineVGui()->IsGameUIVisible() )
-				{
-					for ( int idx=0; idx < kNumNoFilterEntriesGameUI; ++idx )
-					{
-						if ( StringHasPrefix( szBinding, szNoFilterListGameUI[idx] ) )
-						{
-							return false;
-						}
-					}
-				}
-			}
-		}
-	}
-
-	return g_pScaleformUI->HandleInputEvent( event );
+	return g_pRocketUI->HandleInputEvent( event );
 }
-#endif
 
 //-----------------------------------------------------------------------------
 // Lets the client have a whack at key events
@@ -1303,9 +1229,27 @@ void Key_Event( const InputEvent_t &event )
 	if ( FilterKey( event, KEY_UP_TOOLS, HandleToolKey ) )
 		return;	
 
-	// Let vgui have a whack at keys
-	if ( FilterKey( event, KEY_UP_VGUI, HandleVGuiKey ) )
-		return;
+	// If we happen to be checking the MAGICAL ESC key then
+	// let's have the client check first since we do magical things
+	// with this key otherwise.
+	// [jason] Bypass the ButtonPress event for the BACKQUOTE key ("~") so that HandleGameUIKey can intercept it and bring up the Console Window
+	if ( !IsESC( event ) && !(event.m_nType == IE_ButtonPressed && code == KEY_BACKQUOTE) )
+	{
+		// Let vgui have a whack at keys
+		if ( FilterKey( event, KEY_UP_VGUI, HandleVGuiKey ) )
+			return;
+
+		// RocketUI goes first
+		if ( FilterKey( event, KEY_UP_ROCKETUI, HandleRocketKey ) )
+			return;
+	}
+#if defined ( CSTRIKE15 )
+	else if ( g_ClientDLL->IsChatRaised() || g_ClientDLL->IsBindMenuRaised() )
+	{
+		if ( FilterKey( event, KEY_UP_ROCKETUI, HandleRocketKey ) )
+			return;
+	}
+#endif
 
 	// Let the new GameUI system have a whack at keys
 	if ( FilterKey( event, KEY_UP_GAMEUI, HandleGameUIKey ) )
@@ -1314,6 +1258,18 @@ void Key_Event( const InputEvent_t &event )
 	// Let the client have a whack at keys
 	if ( FilterKey( event, KEY_UP_CLIENT, HandleClientKey ) )
 		return;
+
+	// Ok the client wants nothing to do with the magical ESC key
+	// let's see if RocketUI wants to do something with it.
+	if ( IsESC( event ) )
+	{
+		if ( FilterKey( event, KEY_UP_ROCKETUI, HandleRocketKey ) )
+			return;
+
+		// Let vgui have a whack at keys
+		if ( FilterKey( event, KEY_UP_VGUI, HandleVGuiKey ) )
+			return;
+	}
 
 	// Finally, let the engine deal. Here's where keybindings occur.
 	FilterKey( event, KEY_UP_ENGINE, HandleEngineKey );

@@ -3576,6 +3576,11 @@ void CViewRender::RenderView( const CViewSetup &view, const CViewSetup &hudViewS
 			pRenderContext->SetScaleformSlotViewport( SF_SS_SLOT( slot ), hudViewSetup.x, hudViewSetup.y, hudViewSetup.width, hudViewSetup.height );
 			pRenderContext->AdvanceAndRenderScaleformSlot( SF_SS_SLOT( slot ) );
 #endif
+			// RocketUI HUD rendering
+			pRenderContext->RenderRocketHUD();
+			// RocketUI Menu rendering (for console, pause menu, etc.)
+			pRenderContext->RenderRocketMenu();
+
 			pRenderContext->Flush();
 		}
 

@@ -1,0 +1,18 @@
+<rml>
+	<head>
+		<title>HUD</title>
+		<style>
+			body {
+				font-family: "Liberation Sans";
+				width: 100vw;
+				height: 100vh;
+				position: absolute;
+				left: 0dp;
+				top: 0dp;
+				pointer-events: none;
+			}
+		</style>
+	</head>
+	<body>
+	</body>
+</rml>

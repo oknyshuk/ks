@@ -1,0 +1,253 @@
+<rml>
+	<head>
+		<style>
+			body {
+				font-family: "Liberation Sans";
+				position: absolute;
+				left: 50%;
+				top: 50%;
+				width: 640dp;
+				height: 480dp;
+				margin-left: -320dp;
+				margin-top: -240dp;
+				background-color: rgba(15, 20, 25, 250);
+				border-width: 1dp;
+				border-color: rgba(255, 255, 255, 25);
+				border-radius: 4dp;
+				color: rgba(255, 255, 255, 229);
+			}
+			#header {
+				background-color: rgba(255, 255, 255, 13);
+				padding: 16dp 24dp;
+				border-bottom-width: 1dp;
+				border-bottom-color: rgba(255, 255, 255, 25);
+			}
+			#header-title {
+				font-size: 16dp;
+				font-weight: bold;
+			}
+			#content {
+				padding: 24dp;
+				max-height: 360dp;
+				overflow-y: auto;
+			}
+			.setting-row {
+				display: flex;
+				flex-direction: row;
+				align-items: center;
+				justify-content: space-between;
+				padding: 10dp 0;
+				border-bottom-width: 1dp;
+				border-bottom-color: rgba(255, 255, 255, 13);
+			}
+			.setting-label {
+				font-size: 13dp;
+				color: rgba(255, 255, 255, 204);
+			}
+			KisakConvarSettingEnum {
+				width: 180dp;
+			}
+			KisakConvarSettingSlider {
+				width: 180dp;
+			}
+			select {
+				background-color: rgba(40, 45, 50, 229);
+				border-width: 1dp;
+				border-color: rgba(255, 255, 255, 38);
+				border-radius: 2dp;
+				color: rgba(255, 255, 255, 229);
+			}
+			selectvalue {
+				font-family: "Liberation Sans";
+				padding: 6dp 10dp;
+				font-size: 12dp;
+			}
+			selectbox {
+				background-color: rgba(30, 35, 40, 250);
+				border-width: 1dp;
+				border-color: rgba(255, 255, 255, 51);
+			}
+			option {
+				padding: 6dp 10dp;
+				font-size: 12dp;
+				background-color: rgba(30, 35, 40, 250);
+			}
+			option:hover {
+				background-color: rgba(255, 200, 80, 76);
+			}
+			slidertrack {
+				height: 4dp;
+				background-color: rgba(255, 255, 255, 25);
+				border-radius: 2dp;
+			}
+			sliderbar {
+				width: 16dp;
+				height: 16dp;
+				background-color: rgba(255, 200, 80, 229);
+				border-radius: 8dp;
+			}
+			sliderbar:hover {
+				background-color: rgba(255, 220, 120, 255);
+			}
+			#footer {
+				position: absolute;
+				bottom: 0;
+				left: 0;
+				right: 0;
+				padding: 16dp 24dp;
+				border-top-width: 1dp;
+				border-top-color: rgba(255, 255, 255, 25);
+				display: flex;
+				flex-direction: row;
+				justify-content: space-between;
+				align-items: center;
+			}
+			#footer-hint {
+				font-size: 11dp;
+				color: rgba(255, 255, 255, 102);
+			}
+			#footer-buttons {
+				display: flex;
+				flex-direction: row;
+			}
+			button {
+				padding: 10dp 24dp;
+				margin-left: 8dp;
+				background-color: rgba(50, 55, 60, 204);
+				border-width: 1dp;
+				border-color: rgba(255, 255, 255, 25);
+				border-radius: 3dp;
+				font-size: 12dp;
+				color: rgba(255, 255, 255, 217);
+			}
+			button:hover {
+				background-color: rgba(70, 80, 90, 229);
+				border-color: rgba(255, 255, 255, 51);
+			}
+			#save {
+				background-color: rgba(80, 120, 80, 153);
+				color: rgba(150, 255, 150, 242);
+			}
+			#save:hover {
+				background-color: rgba(80, 140, 80, 204);
+			}
+			scrollbarvertical {
+				width: 6dp;
+				background-color: rgba(0, 0, 0, 76);
+			}
+			scrollbarvertical sliderbar {
+				width: 6dp;
+				height: auto;
+				background-color: rgba(255, 255, 255, 51);
+				border-radius: 3dp;
+			}
+		</style>
+	</head>
+	<body>
+		<div id="header">
+			<div id="header-title">VIDEO OPTIONS</div>
+		</div>
+		<div id="content">
+			<div class="setting-row">
+				<span class="setting-label">Shadow Quality</span>
+				<KisakConvarSettingEnum
+					convar="csm_quality_level"
+					enum-values-count="4"
+					enum-value-0="0" enum-name-0="Very Low"
+					enum-value-1="1" enum-name-1="Low"
+					enum-value-2="2" enum-name-2="Medium"
+					enum-value-3="3" enum-name-3="High"
+				/>
+			</div>
+			<div class="setting-row">
+				<span class="setting-label">GPU Memory</span>
+				<KisakConvarSettingEnum
+					convar="gpu_mem_level"
+					enum-values-count="3"
+					enum-value-0="0" enum-name-0="Low"
+					enum-value-1="1" enum-name-1="Medium"
+					enum-value-2="2" enum-name-2="High"
+				/>
+			</div>
+			<div class="setting-row">
+				<span class="setting-label">Effect Detail</span>
+				<KisakConvarSettingEnum
+					convar="cpu_level"
+					enum-values-count="3"
+					enum-value-0="0" enum-name-0="Low"
+					enum-value-1="1" enum-name-1="Medium"
+					enum-value-2="2" enum-name-2="High"
+				/>
+			</div>
+			<div class="setting-row">
+				<span class="setting-label">Shader Detail</span>
+				<KisakConvarSettingEnum
+					convar="gpu_level"
+					enum-values-count="4"
+					enum-value-0="0" enum-name-0="Low"
+					enum-value-1="1" enum-name-1="Medium"
+					enum-value-2="2" enum-name-2="High"
+					enum-value-3="3" enum-name-3="Very High"
+				/>
+			</div>
+			<div class="setting-row">
+				<span class="setting-label">Multi-Core Rendering</span>
+				<KisakConvarSettingEnum
+					convar="mat_queue_mode"
+					enum-values-count="2"
+					enum-value-0="-1" enum-name-0="Enabled"
+					enum-value-1="0" enum-name-1="Disabled"
+				/>
+			</div>
+			<div class="setting-row">
+				<span class="setting-label">Texture Quality</span>
+				<KisakConvarSettingEnum
+					convar="mat_picmip"
+					enum-values-count="5"
+					enum-value-0="0" enum-name-0="High"
+					enum-value-1="1" enum-name-1="Medium"
+					enum-value-2="2" enum-name-2="Low"
+					enum-value-3="3" enum-name-3="Very Low"
+					enum-value-4="4" enum-name-4="Lowest"
+				/>
+			</div>
+			<div class="setting-row">
+				<span class="setting-label">Texture Filtering</span>
+				<KisakConvarSettingEnum
+					convar="mat_forceaniso"
+					enum-values-count="6"
+					enum-value-0="0" enum-name-0="Bilinear"
+					enum-value-1="1" enum-name-1="Trilinear"
+					enum-value-2="2" enum-name-2="Aniso 2x"
+					enum-value-3="4" enum-name-3="Aniso 4x"
+					enum-value-4="8" enum-name-4="Aniso 8x"
+					enum-value-5="16" enum-name-5="Aniso 16x"
+				/>
+			</div>
+			<div class="setting-row">
+				<span class="setting-label">Anti-Aliasing</span>
+				<KisakConvarSettingEnum
+					convar="mat_antialias"
+					enum-values-count="3"
+					enum-value-0="0" enum-name-0="Disabled"
+					enum-value-1="4" enum-name-1="MSAA 4x"
+					enum-value-2="8" enum-name-2="MSAA 8x"
+				/>
+			</div>
+			<div class="setting-row">
+				<span class="setting-label">Brightness</span>
+				<KisakConvarSettingSlider
+					convar="mat_monitorgamma"
+					slider-min="1.6" slider-max="2.2" slider-step="0.05"
+				/>
+			</div>
+		</div>
+		<div id="footer">
+			<span id="footer-hint">Changes apply immediately</span>
+			<div id="footer-buttons">
+				<button id="save">SAVE</button>
+				<button id="close">CLOSE</button>
+			</div>
+		</div>
+	</body>
+</rml>

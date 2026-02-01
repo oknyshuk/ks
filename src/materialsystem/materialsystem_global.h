@@ -26,9 +26,7 @@
 #include "shaderapidx9/shadershadowdx8.h"
 #endif
 
-#if defined( INCLUDE_SCALEFORM )
-#include "scaleformui/scaleformui.h"
-#endif
+#include "rocketui/rocketui.h"
 
 //-----------------------------------------------------------------------------
 // Forward declarations
@@ -99,13 +97,6 @@ inline IHardwareConfigInternal *HardwareConfig()
 }
 #endif
 
-#if defined( INCLUDE_SCALEFORM )
-inline IScaleformUI* ScaleformUI()
-{
-	extern IScaleformUI* g_pScaleformUI;
-	return g_pScaleformUI;
-}
-#endif
 
 //-----------------------------------------------------------------------------
 // Accessor to get at the material system

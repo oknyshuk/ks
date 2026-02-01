@@ -69,6 +69,7 @@
 #include "tier1/fmtstr.h"
 #include "vjobs_interface.h"
 #include "vstdlib/jobthread.h"
+#include "rocketui/rocketui.h"
 
 #if defined( _PS3 )
 #include "sys/ppu_thread.h"
@@ -777,36 +778,17 @@ bool CSourceAppSystemGroup::Create()
 	if ( !AddSystems( appSystems ) ) 
 		return false;
 
-	// SF4 TODO
-	// Windows - See if we need to launch SF4 instead of SF3
-	// When we move entirely to SF4 this can go back in appsystems[] where it used to be
-#if defined( INCLUDE_SCALEFORM )
-   
-	if ( CommandLine()->FindParm( "-sf3" ) )
+	// Load RocketUI
 	{
-		AppSystemInfo_t scaleformInfo[] =
+		AppSystemInfo_t rocketuiInfo[] =
 		{
-			{ LAUNCHER_APPSYSTEM( "scaleformui_3" ),		SCALEFORMUI_INTERFACE_VERSION },
+			{ LAUNCHER_APPSYSTEM( "rocketui_client" ),		ROCKETUI_INTERFACE_VERSION },
 			{ "", "" }
 		};
 
-		if ( !AddSystems( scaleformInfo ) ) 
-		{
+		if ( !AddSystems( rocketuiInfo ) )
 			return false;
-		}			
 	}
-	else
-	{
-		AppSystemInfo_t scaleformInfo[] =
-		{
-			{ LAUNCHER_APPSYSTEM( "scaleformui" ),		SCALEFORMUI_INTERFACE_VERSION },
-			{ "", "" }
-		};
-
-		if ( !AddSystems( scaleformInfo ) ) 
-			return false;	
-	}
-#endif // INCLUDE_SCALEFORM
 
 	if ( IsPC() && IsPlatformWindows() )
 	{

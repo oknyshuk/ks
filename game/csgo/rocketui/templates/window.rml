@@ -1,0 +1,58 @@
+<template name="window" content="content">
+<head>
+	<style>
+		body {
+			color: white;
+			font-size: 15dp;
+		}
+		div {
+			display: block;
+		}
+		p {
+			display: block;
+		}
+		h1 {
+			display: block;
+		}
+		em {
+			font-style: italic;
+		}
+		strong {
+			font-weight: bold;
+		}
+		datagrid {
+			display: block;
+		}
+		select, dataselect, datacombo {
+			text-align: left;
+		}
+		tabset {
+			display: block;
+			width: 100%;
+			height: 100%;
+		}
+		tabset tabs {
+			display: block;
+		}
+		tabset panels {
+			display: block;
+		}
+		#window {
+			width: 100vw;
+			height: 100vh;
+			position: relative;
+		}
+		#content {
+			width: 100%;
+			height: 100%;
+			position: relative;
+		}
+	</style>
+</head>
+<body class="window">
+	<div id="window">
+		<div id="content">
+		</div>
+	</div>
+</body>
+</template>

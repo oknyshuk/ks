@@ -72,10 +72,7 @@ using namespace vgui;
 #endif
 #include "iachievementmgr.h"
 #include "customtabexplanationdialog.h"
-#if defined( INCLUDE_SCALEFORM )
-#include "loadingscreen_scaleform.h"
-#include "itempickup_scaleform.h"
-#endif
+#include "RocketUI/rkhud_loadingscreen.h"
 // dgoodenough - limit this to X360 only
 // PS3_BUILDFIX
 #if defined( _X360 )
@@ -578,10 +575,8 @@ CBaseModPanel::CBaseModPanel( const char *panelName ) : Panel(NULL, panelName )
 	// [jason] Flags to enable/disable scaleform screens during the startup sequence (start screen, mainmenu)
 	m_bForceStartScreen = false;
 	m_bShowStartScreen = true;
-#if defined( INCLUDE_SCALEFORM )
-    m_bScaleformMainMenuEnabled = true;
-	m_bScaleformPauseMenuEnabled = true;
-#endif
+    m_bRocketMainMenuEnabled = true;
+    m_bRocketPauseMenuEnabled = true;
 	m_bBypassStartScreen = false;
 
     m_iIntroMovieButtonPressed = -1;
@@ -886,8 +881,8 @@ void CBaseModPanel::PaintBackground()
 		m_bUseRenderTargetImage = false;
 	}
 
-	// [jason] Do not render the background alpha while Scaleform Menus are up
-	if ( !BasePanel()->IsScaleformMainMenuActive() && !BasePanel()->IsScaleformPauseMenuActive() )
+	// [jason] Do not render the background alpha while RocketUI is enabled
+	if ( !IsRocketMainMenuEnabled() )
 	{
 		if ( m_flBackgroundFillAlpha )
 		{
@@ -1177,44 +1172,16 @@ void CBaseModPanel::OnLevelLoadingStarted( const char *levelName, bool bShowProg
 		// frame buffer is about to be cleared, copy it off for ui backing purposes
 		m_bCopyFrameBuffer = true;
 	}
-#if defined( INCLUDE_SCALEFORM )
-	// kick off the scaleform screen load if it hasn't been opened yet
-	if ( !CLoadingScreenScaleform::IsOpen() )
-	{
-		if ( levelName )
-		{
-			if ( !levelName[0] )
-			{
-				levelName = engine->GetLevelNameShort();
-			}
 
-			char levelSettings[1024];
-
-			V_snprintf( levelSettings, ARRAYSIZE(levelSettings),
-				" Game { "
-					" type %s"
-					" mode %s" 
-					" map %s" 
-				" } "
-				,
-
-				g_pGameTypes->GetGameTypeFromInt( g_pGameTypes->GetCurrentGameType() ),
-				g_pGameTypes->GetGameModeFromInt( g_pGameTypes->GetCurrentGameType(), g_pGameTypes->GetCurrentGameMode() ),
-				levelName
-				);
-
-			KeyValues *pSettings = KeyValues::FromString( "Settings", levelSettings );
-			KeyValues::AutoDelete autodelete( pSettings );
-
-			CLoadingScreenScaleform::LoadDialogForKeyValues( pSettings );
-		}
-		else
-		{
-			// If we don't have a valid level name yet, just open the loading screen and await further info
-			CLoadingScreenScaleform::LoadDialog( );
-		}
-	}
-#endif
+    // kick off the rocketui screen load if it hasn't been opened yet
+	if( !RocketLoadingScreenDocument::IsVisible() )
+    {
+        if( levelName )
+        {
+            // TODO: some fancy stuff with the rocketui loading screen.
+        }
+        RocketLoadingScreenDocument::ShowPanel( true );
+    }
 }
 
 //-----------------------------------------------------------------------------
@@ -1247,6 +1214,10 @@ void CBaseModPanel::DrawBackgroundImage()
 {
 	// [jason] Only render background if the Scaleform main menu is inactive
 	if ( IsScaleformMainMenuEnabled() && IsScaleformMainMenuActive() )
+		return;
+
+	// Skip background image when RocketUI is enabled (it draws its own background)
+	if ( IsRocketMainMenuEnabled() )
 		return;
 
 	if ( IsGameConsole() && m_bCopyFrameBuffer )

@@ -955,11 +955,9 @@ void Panel::OnScreenSizeChanged(int nOldWide, int nOldTall)
 		SetBounds(0, 0, wide, tall);
 	}
 
-	// panel needs to re-get it's scheme settings
-	_flags.SetFlag( NEEDS_SCHEME_UPDATE );
-
-	// invalidate our settings
-	InvalidateLayout();
+	// panel needs to re-get it's scheme settings - pass reloadScheme=true
+	// to trigger PerformApplySchemeSettings() which refreshes border pointers
+	InvalidateLayout( false, true );
 }
 
 //-----------------------------------------------------------------------------

@@ -1,0 +1,59 @@
+#! /usr/bin/env python
+# RocketUI client library
+
+
+def options(opt):
+    return
+
+
+def configure(conf):
+    return
+
+
+def build(bld):
+    source = [
+        "rocketuiimpl.cpp",
+        "rocketsystem.cpp",
+        "rocketfilesystem.cpp",
+        "rocketrender_dxvk.cpp",
+    ]
+
+    includes = [
+        ".",
+        "../public",
+        "../public/rocketui",
+        "../thirdparty/RmlUi/Include",
+        "../thirdparty/dxvk-native-2.7.1-4bbe487/src/d3d9",
+        "../thirdparty/dxvk-native-2.7.1-4bbe487/include/native/windows",
+        "../thirdparty/dxvk-native-2.7.1-4bbe487/include/native/directx",
+        "../thirdparty/dxvk-native-2.7.1-4bbe487/include/vulkan/include",
+    ]
+
+    defines = [
+        # Disable RmlUi asserts to avoid macro conflict with Source engine's Assert
+        "RMLUI_USE_CUSTOM_ASSERT=1",
+    ]
+
+    libs = [
+        "tier0",
+        "tier1",
+        "tier2",
+        "tier3",
+        "vstdlib",
+        "interfaces",
+        "RmlCore",
+        "RmlDebugger",
+    ]
+
+    bld.shlib(
+        source=source,
+        target="rocketui_client",
+        features="cxx",
+        includes=includes,
+        defines=defines,
+        use=libs + ["SDL2", "FREETYPE", "FONTCONFIG"],
+        lib=["vulkan"],
+        install_path=bld.env.BINPATH,
+        subsystem=bld.env.MSVC_SUBSYSTEM,
+        idx=bld.get_taskgen_count(),
+    )

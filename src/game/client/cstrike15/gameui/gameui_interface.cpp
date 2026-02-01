@@ -67,9 +67,6 @@
 #include "matsys_controls/matsyscontrols.h"
 #include "steam/steam_api.h"
 #include "protocol.h"
-#ifdef INCLUDE_SCALEFORM
-#include "loadingscreen_scaleform.h"
-#endif
 #include "GameUI/IGameUI.h"
 #include "inputsystem/iinputsystem.h"
 
@@ -177,12 +174,10 @@ vgui::VPANEL g_hLoadingBackgroundDialog = NULL;
 
 static CGameUI g_GameUI;
 
-#if defined( INCLUDE_SCALEFORM )
-IScaleformUI* ScaleformUI()
-{
-	return g_pScaleformUI;
-}
-#endif
+//IRocketUI* RocketUI()
+//{
+//    return g_pRocketUI;
+//}
 
 
 static IGameClientExports *g_pGameClientExports = NULL;
@@ -283,9 +278,13 @@ void CGameUI::Initialize( CreateInterfaceFn factory )
 	vgui::VGui_InitInterfacesList( "GameUI", &factory, 1 );
 	vgui::VGui_InitMatSysInterfacesList( "GameUI", &factory, 1 );
 
-	// load localization files
+	// load localization file
 	g_pVGuiLocalize->AddFile( "resource/gameui_%language%.txt", "GAME", true );
-	g_pVGuiLocalize->AddFile( "resource/csgo_%language%.txt", "GAME", true );
+
+	// load mod info
+	ModInfo().LoadCurrentGameInfo();
+
+	// load localization file for kb_act.lst
 	g_pVGuiLocalize->AddFile( "resource/valve_%language%.txt", "GAME", true );
 
 	bool bFailed = false;

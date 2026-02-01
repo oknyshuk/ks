@@ -1,0 +1,70 @@
+<rml>
+	<head>
+		<style>
+			body {
+				font-family: "Liberation Sans";
+				width: 420dp;
+				position: absolute;
+				left: 8dp;
+				bottom: 180dp;
+				background-color: rgba(0, 0, 0, 178);
+				border-radius: 4dp;
+				border-width: 1dp;
+				border-color: rgba(255, 255, 255, 20);
+			}
+			#chat_lines {
+				max-height: 200dp;
+				padding: 8dp 12dp;
+				overflow-y: auto;
+				overflow-x: hidden;
+			}
+			.chat_line {
+				margin-bottom: 3dp;
+				font-size: 13dp;
+			}
+			.chat_username_server {
+				color: rgba(255, 255, 200, 255);
+				font-weight: bold;
+			}
+			.chat_username_friend {
+				color: rgba(150, 200, 255, 255);
+				font-weight: bold;
+			}
+			.chat_username_foe {
+				color: rgba(255, 200, 80, 255);
+				font-weight: bold;
+			}
+			.chat_message {
+				color: rgba(255, 255, 255, 217);
+			}
+			#chat_input {
+				width: 100%;
+				background-color: rgba(0, 0, 0, 127);
+				border-width: 1dp;
+				border-color: rgba(255, 255, 255, 38);
+				border-radius: 2dp;
+				padding: 6dp 10dp;
+				font-size: 13dp;
+				color: rgba(255, 255, 255, 229);
+				margin: 8dp;
+			}
+			#chat_input:focus {
+				border-color: rgba(255, 200, 80, 127);
+				background-color: rgba(0, 0, 0, 178);
+			}
+			scrollbarvertical {
+				width: 6dp;
+				background-color: rgba(0, 0, 0, 76);
+			}
+			scrollbarvertical sliderbar {
+				background-color: rgba(255, 255, 255, 51);
+				border-radius: 3dp;
+			}
+		</style>
+	</head>
+	<body>
+		<div id="chat_lines">
+		</div>
+		<input id="chat_input" type="text" maxlength="127"/>
+	</body>
+</rml>

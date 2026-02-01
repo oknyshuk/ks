@@ -1,0 +1,193 @@
+<rml>
+	<head>
+		<style>
+			body {
+				font-family: "Liberation Sans";
+				position: absolute;
+				left: 50%;
+				top: 50%;
+				width: 720dp;
+				margin-left: -360dp;
+				margin-top: -220dp;
+				background-color: rgba(15, 20, 25, 242);
+				border-width: 1dp;
+				border-color: rgba(255, 255, 255, 25);
+				border-radius: 4dp;
+				color: rgba(255, 255, 255, 229);
+			}
+			#header {
+				display: flex;
+				flex-direction: row;
+				height: 48dp;
+			}
+			#ct-header {
+				flex: 1;
+				background-color: rgba(90, 140, 190, 102);
+				display: flex;
+				align-items: center;
+				padding: 0 16dp;
+				border-radius: 4dp 0 0 0;
+			}
+			#t-header {
+				flex: 1;
+				background-color: rgba(180, 140, 60, 102);
+				display: flex;
+				align-items: center;
+				justify-content: flex-end;
+				padding: 0 16dp;
+				border-radius: 0 4dp 0 0;
+			}
+			.header-score {
+				font-size: 28dp;
+				font-weight: bold;
+			}
+			.header-label {
+				font-size: 12dp;
+				margin-left: 12dp;
+				margin-right: 12dp;
+				color: rgba(255, 255, 255, 178);
+			}
+			#legend {
+				display: flex;
+				flex-direction: row;
+				background-color: rgba(0, 0, 0, 102);
+				padding: 8dp 16dp;
+				font-size: 10dp;
+				color: rgba(255, 255, 255, 127);
+			}
+			.col-name { flex: 3; }
+			.col-cash { flex: 1; text-align: center; }
+			.col-k { width: 48dp; text-align: center; }
+			.col-d { width: 48dp; text-align: center; }
+			.col-a { width: 48dp; text-align: center; }
+			.col-ping { width: 56dp; text-align: center; }
+			#teams-container {
+				display: flex;
+				flex-direction: column;
+			}
+			#ct {
+				min-height: 140dp;
+				max-height: 180dp;
+				overflow: hidden;
+			}
+			#t {
+				min-height: 140dp;
+				max-height: 180dp;
+				border-top-width: 1dp;
+				border-top-color: rgba(255, 255, 255, 25);
+				overflow: hidden;
+			}
+			.playerrow {
+				display: flex;
+				flex-direction: row;
+				padding: 6dp 16dp;
+				align-items: center;
+				font-size: 13dp;
+			}
+			.ctplayer {
+				background-color: rgba(90, 140, 190, 38);
+				border-left-width: 3dp;
+				border-left-color: rgba(90, 140, 190, 153);
+			}
+			.ctplayer:hover {
+				background-color: rgba(90, 140, 190, 64);
+			}
+			.tplayer {
+				background-color: rgba(180, 140, 60, 38);
+				border-left-width: 3dp;
+				border-left-color: rgba(180, 140, 60, 153);
+			}
+			.tplayer:hover {
+				background-color: rgba(180, 140, 60, 64);
+			}
+			.namecol {
+				flex: 3;
+				font-weight: bold;
+			}
+			.cashcol {
+				flex: 1;
+				text-align: center;
+				color: rgba(100, 200, 100, 229);
+			}
+			.killscol {
+				width: 48dp;
+				text-align: center;
+			}
+			.deathscol {
+				width: 48dp;
+				text-align: center;
+				color: rgba(255, 255, 255, 153);
+			}
+			.assistscol {
+				width: 48dp;
+				text-align: center;
+				color: rgba(255, 255, 255, 153);
+			}
+			.pingcol {
+				width: 56dp;
+				text-align: center;
+				color: rgba(255, 255, 255, 127);
+			}
+			#footer {
+				display: flex;
+				flex-direction: row;
+				justify-content: space-between;
+				padding: 10dp 16dp;
+				border-top-width: 1dp;
+				border-top-color: rgba(255, 255, 255, 25);
+				font-size: 11dp;
+				color: rgba(255, 255, 255, 127);
+			}
+		</style>
+	</head>
+	<body data-model="scoreboard_model">
+		<div id="header">
+			<div id="ct-header">
+				<span class="header-score">{{ ct_score }}</span>
+				<span class="header-label">COUNTER-TERRORISTS</span>
+			</div>
+			<div id="t-header">
+				<span class="header-label">TERRORISTS</span>
+				<span class="header-score">{{ t_score }}</span>
+			</div>
+		</div>
+		<div id="legend">
+			<div class="col-name">PLAYER</div>
+			<div class="col-cash">$</div>
+			<div class="col-k">K</div>
+			<div class="col-d">D</div>
+			<div class="col-a">A</div>
+			<div class="col-ping">PING</div>
+		</div>
+		<div id="teams-container">
+			<div id="ct">
+				<div data-for="goodplayer : ctplayers">
+					<div class="playerrow ctplayer">
+						<div class="namecol">{{ goodplayer.name }}</div>
+						<div class="cashcol">${{ goodplayer.cash }}</div>
+						<div class="killscol">{{ goodplayer.kills }}</div>
+						<div class="deathscol">{{ goodplayer.deaths }}</div>
+						<div class="assistscol">{{ goodplayer.assists }}</div>
+						<div class="pingcol">{{ goodplayer.ping }}</div>
+					</div>
+				</div>
+			</div>
+			<div id="t">
+				<div data-for="badplayer : tplayers">
+					<div class="playerrow tplayer">
+						<div class="namecol">{{ badplayer.name }}</div>
+						<div class="cashcol">${{ badplayer.cash }}</div>
+						<div class="killscol">{{ badplayer.kills }}</div>
+						<div class="deathscol">{{ badplayer.deaths }}</div>
+						<div class="assistscol">{{ badplayer.assists }}</div>
+						<div class="pingcol">{{ badplayer.ping }}</div>
+					</div>
+				</div>
+			</div>
+		</div>
+		<div id="footer">
+			<span>Spectators: {{ num_specs }}</span>
+			<span>Press TAB to close</span>
+		</div>
+	</body>
+</rml>

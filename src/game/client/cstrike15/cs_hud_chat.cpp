@@ -25,13 +25,6 @@
 //DECLARE_HUDELEMENT_FLAGS( CHudChat, HUDELEMENT_SS_FULLSCREEN_ONLY );
 DECLARE_HUDELEMENT(CHudChat);
 
-#if !defined( INCLUDE_SCALEFORM ) && !defined( INCLUDE_ROCKETUI )
-DECLARE_HUD_MESSAGE(CHudChat, SayText);
-DECLARE_HUD_MESSAGE(CHudChat, SayText2);
-DECLARE_HUD_MESSAGE(CHudChat, RadioText);
-DECLARE_HUD_MESSAGE(CHudChat, TextMsg);
-#endif
-
 //=====================
 //CHudChatLine
 //=====================
@@ -86,13 +79,6 @@ void CHudChat::CreateChatLines( void )
 void CHudChat::Init( void )
 {
 	BaseClass::Init();
-
-#if !defined( INCLUDE_SCALEFORM ) && !defined( INCLUDE_ROCKETUI )
-	HOOK_HUD_MESSAGE(CHudChat, TextMsg);
-	HOOK_HUD_MESSAGE(CHudChat, RadioText);
-	HOOK_HUD_MESSAGE(CHudChat, SayText);
-	HOOK_HUD_MESSAGE(CHudChat, SayText2);
-#endif
 }
 
 //-----------------------------------------------------------------------------

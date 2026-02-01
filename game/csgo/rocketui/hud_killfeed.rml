@@ -1,0 +1,69 @@
+<rml>
+	<head>
+		<style>
+			body {
+				font-family: "Liberation Sans";
+				position: absolute;
+				top: 8dp;
+				right: 8dp;
+				width: 360dp;
+				max-height: 240dp;
+				pointer-events: none;
+				overflow: hidden;
+			}
+			#killfeed-lines {
+				display: flex;
+				flex-direction: column;
+				align-items: flex-end;
+			}
+			.killfeed-entry {
+				display: flex;
+				flex-direction: row;
+				align-items: center;
+				background-color: rgba(0, 0, 0, 178);
+				padding: 4dp 10dp;
+				margin-bottom: 2dp;
+				border-radius: 2dp;
+			}
+			.attacker-name {
+				font-size: 13dp;
+				font-weight: bold;
+				margin-right: 6dp;
+			}
+			.weapon {
+				font-size: 11dp;
+				color: rgba(255, 255, 255, 153);
+				padding: 0 4dp;
+			}
+			.headshot {
+				font-size: 10dp;
+				color: rgba(255, 80, 80, 255);
+				font-weight: bold;
+				margin-right: 4dp;
+			}
+			.wallbang {
+				font-size: 10dp;
+				color: rgba(200, 200, 200, 204);
+				margin-right: 4dp;
+			}
+			.victim-name {
+				font-size: 13dp;
+				font-weight: bold;
+				margin-left: 6dp;
+			}
+		</style>
+	</head>
+	<body>
+		<div id="killfeed-lines" data-model="killfeed_model">
+			<div data-for="entry : killfeed_entries">
+				<div class="killfeed-entry">
+					<span class="attacker-name">{{ entry.attacker_name }}</span>
+					<span class="weapon">[{{ entry.gun_name }}]</span>
+					<span class="headshot" data-if="entry.headshot">HS</span>
+					<span class="wallbang" data-if="entry.wallbang">WB</span>
+					<span class="victim-name">{{ entry.victim_name }}</span>
+				</div>
+			</div>
+		</div>
+	</body>
+</rml>

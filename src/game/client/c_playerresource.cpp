@@ -9,6 +9,7 @@
 #include "c_team.h"
 #include "gamestringpool.h"
 #include "hltvreplaysystem.h"
+#include "rocketui/rocketui.h"
 
 #if !defined( _X360 )
 #include "xbox/xboxstubs.h"
@@ -95,9 +96,7 @@ C_PlayerResource::C_PlayerResource()
 	}
 
 	g_PR = this;
-#if defined ( INCLUDE_SCALEFORM )
-	g_pScaleformUI->AddDeviceDependentObject( this );
-#endif
+    g_pRocketUI->AddDeviceDependentObject( this );
 }
 
 //-----------------------------------------------------------------------------
@@ -105,17 +104,7 @@ C_PlayerResource::C_PlayerResource()
 //-----------------------------------------------------------------------------
 C_PlayerResource::~C_PlayerResource()
 {
-#if defined( INCLUDE_SCALEFORM )
-	for ( int i = 1; i <= MAX_PLAYERS; i++ )
-	{
-		if ( m_Xuids[i] != INVALID_XUID )
-		{
-			g_pScaleformUI->AvatarImageRelease( m_Xuids[i] );
-		}
-	}
-
-	g_pScaleformUI->RemoveDeviceDependentObject( this );
-#endif
+    g_pRocketUI->RemoveDeviceDependentObject( this );
     g_PR = NULL;
 }
 

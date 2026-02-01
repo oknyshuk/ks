@@ -1,4 +1,4 @@
-//===== Copyright © 2005-2005, Valve Corporation, All rights reserved. ======//
+//===== Copyright ï¿½ 2005-2005, Valve Corporation, All rights reserved. ======//
 //
 // Purpose: A higher level link library for general use in the game and tools.
 //
@@ -7,6 +7,8 @@
 #include "tier0/platform.h"
 #include "tier0/dbg.h"
 #include "interfaces/interfaces.h"
+
+#include "rocketui/rocketui.h"
 
 
 //-----------------------------------------------------------------------------
@@ -61,9 +63,7 @@ IXboxInstaller *g_pXboxInstaller = 0;
 IMatchFramework *g_pMatchFramework = 0;
 IGameUISystemMgr *g_pGameUISystemMgr = 0;
 
-#if defined( INCLUDE_SCALEFORM )
-IScaleformUI *g_pScaleformUI = 0;
-#endif
+IRocketUI *g_pRocketUI = 0;
 
 //-----------------------------------------------------------------------------
 // Not exactly a global, but we're going to keep track of these here anyways
@@ -169,9 +169,7 @@ static InterfaceGlobals_t g_pInterfaceGlobals[] =
 	{ MATCHFRAMEWORK_INTERFACE_VERSION, &g_pMatchFramework },
 	{ GAMEUISYSTEMMGR_INTERFACE_VERSION, &g_pGameUISystemMgr },
 
-#if defined( INCLUDE_SCALEFORM )
-	{ SCALEFORMUI_INTERFACE_VERSION, &g_pScaleformUI },
-#endif
+	{ ROCKETUI_INTERFACE_VERSION, &g_pRocketUI },
 
 };
 

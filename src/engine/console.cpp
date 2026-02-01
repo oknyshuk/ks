@@ -19,6 +19,7 @@
 #include "toolframework/itoolframework.h"
 #include "netconsole.h"
 #include "host_cmd.h"
+#include "cmd.h"
 
 
 // memdbgon must be the last include file in a .cpp file!!!
@@ -203,11 +204,7 @@ void Con_HideConsole_f( void )
 	if ( IsX360() )
 		return;
 
-	if ( EngineVGui()->IsConsoleVisible() )
-	{
-		// hide the console
-		EngineVGui()->HideConsole();
-	}
+	Cbuf_AddText( Cbuf_GetCurrentPlayer(), "rocket_console_hide\n", kCommandSrcCode );
 }
 
 static bool Con_ConsoleAllowed( void )
@@ -226,11 +223,6 @@ void Con_ShowConsole_f( void )
 	if ( IsX360() )
 		return;
 
-	if ( vgui::input()->GetAppModalSurface() )
-	{
-		return;
-	}
-
 	// Allow the app to disable the console from the command-line, for demos.
 	if ( !Con_ConsoleAllowed() )
 		return;
@@ -238,15 +230,7 @@ void Con_ShowConsole_f( void )
 	// make sure we're allowed to see the console
 	if ( con_enable.GetBool() || developer.GetInt() || CommandLine()->CheckParm("-console") || CommandLine()->CheckParm("-rpt") )
 	{
-		// show the console
-		EngineVGui()->ShowConsole();
-
-		// [jason] Do not call this for CS:GO, since our loading screen is in Scaleform.  Additionally, this can
-		//	 cause a hang us during the load process since it prematurely fires OnEngineLevelLoadingFinished
-#if !defined( CSTRIKE15 )
-		// remove any loading screen
-		SCR_EndLoadingPlaque();
-#endif
+		Cbuf_AddText( Cbuf_GetCurrentPlayer(), "rocket_console_show\n", kCommandSrcCode );
 	}
 }
 
@@ -259,14 +243,7 @@ void Con_ToggleConsole_f( void )
 	if ( IsX360() )
 		return;
 
-	if (EngineVGui()->IsConsoleVisible())
-	{
-		Con_HideConsole_f();
-	}
-	else
-	{
-		Con_ShowConsole_f();
-	}
+	Cbuf_AddText( Cbuf_GetCurrentPlayer(), "rocket_console_toggle\n", kCommandSrcCode );
 }
 
 //-----------------------------------------------------------------------------
