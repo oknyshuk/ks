@@ -508,7 +508,6 @@ MAX_RELEASE_CHECK_RATE   default: 255 unless not HAVE_MMAP
 #define _XBOX
 #include <xtl.h>
 #undef _XBOX
-#include "xbox/xbox_win32stubs.h"
 #endif
 #define HAVE_MMAP 1
 #define HAVE_MORECORE 0

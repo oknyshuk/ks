@@ -21,11 +21,6 @@
 #include "vpuzzlemakeruilistitem.h"
 
 #include "FileSystem.h"
-
-#if !defined( _X360 ) && !defined( _PS3 )
-#include "gc_clientsystem.h"
-#include "econ_gcmessages.h"
-#endif
 #include "imageutils.h"
 
 // memdbgon must be the last include file in a .cpp file!!!

@@ -1,22 +1,16 @@
-//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
+//========= Copyright ï¿½ 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
 //=====================================================================================//
 
-#ifdef _GAMECONSOLE
-#define SUPPORT_NET_CONSOLE 0
-#else
 #define SUPPORT_NET_CONSOLE 1
-#endif
 
 #if SUPPORT_NET_CONSOLE
 
 #if defined(_WIN32)
-#if !defined(_X360)
 #include "winlite.h"
 #include <winsock2.h>
-#endif
 #undef SetPort // winsock screws with the SetPort string... *sigh*
 #define MSG_NOSIGNAL 0
 

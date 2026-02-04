@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
+//========= Copyright ï¿½ 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -496,7 +496,6 @@ static inline void SV_DetermineUpdateType( CEntityWriteInfo &u, CHLTVServer *hlt
 		return;
 	}
 
-#ifndef _X360
 	if ( !u.m_bCullProps )
 	{
 		int nBits = 0;
@@ -529,7 +528,6 @@ static inline void SV_DetermineUpdateType( CEntityWriteInfo &u, CHLTVServer *hlt
 			return; // we used the cache, great
 		}
 	}
-#endif
 
 	CalcDeltaResultsList_t checkProps;
 
@@ -564,7 +562,6 @@ static inline void SV_DetermineUpdateType( CEntityWriteInfo &u, CHLTVServer *hlt
 	}
 	else
 	{
-#ifndef _X360
 		if ( !u.m_bCullProps )
 		{
 			if ( hltv )
@@ -581,7 +578,6 @@ static inline void SV_DetermineUpdateType( CEntityWriteInfo &u, CHLTVServer *hlt
 			}
 #endif
 		}
-#endif
 		u.m_UpdateType = PreserveEnt;
 	}
 }

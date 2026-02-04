@@ -1,9 +1,15 @@
-//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
+//========= Copyright ï¿½ 1996-2005, Valve Corporation, All rights reserved. ============//
 //
-// Purpose: 
+// Purpose:
 //
 // $NoKeywords: $
 //=============================================================================//
+
+// Console GPU alignment stub (not used on PC)
+#ifndef GPU_RESOLVE_ALIGNMENT
+#define GPU_RESOLVE_ALIGNMENT 1
+#endif
+
 #include "cbase.h"
 #include "vgui_int.h"
 #include "ienginevgui.h"

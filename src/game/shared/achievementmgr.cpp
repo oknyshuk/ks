@@ -37,21 +37,6 @@
 
 #include "matchmaking/mm_helpers.h"
 
-#ifdef _X360
-#include "xbox/xbox_win32stubs.h"
-#endif
-
-#ifdef _PS3
-#include "ps3/ps3_core.h"
-#include "ps3/ps3_win32stubs.h"
-#endif
-
-#ifdef _GAMECONSOLE
-#include "gameui/igameui.h"
-#include "ixboxsystem.h"
-#include "ienginevgui.h"
-#endif  // _GAMECONSOLE
-
 #include "matchmaking/imatchframework.h"
 #include "tier0/vprof.h"
 #include "cs_weapon_parse.h"
@@ -99,29 +84,6 @@ static int AchievementOrderCompare( CBaseAchievement * const *ach1, CBaseAchieve
 	return (*ach1)->GetDisplayOrder() - (*ach2)->GetDisplayOrder();
 }
 
-#ifdef _X360
-static TitleAchievementsDescription_t const * FindTitleAchievementByName( TitleAchievementsDescription_t const *pMap, char const *szName )
-{
-	while ( pMap && pMap->m_szAchievementName )
-		if ( !Q_stricmp( pMap->m_szAchievementName, szName ) )
-			return pMap;
-		else
-			++ pMap;
-
-	return NULL;
-}
-static TitleAchievementsDescription_t const * FindTitleAchievementById( TitleAchievementsDescription_t const *pMap, int id )
-{
-	while ( pMap && pMap->m_szAchievementName )
-		if ( pMap->m_idAchievement == id )
-			return pMap;
-		else
-			++ pMap;
-
-	return NULL;
-}
-#endif
-
 //-----------------------------------------------------------------------------
 // Constructor
 //-----------------------------------------------------------------------------
@@ -150,10 +112,6 @@ CAchievementMgr::CAchievementMgr() : CAutoGameSystemPerFrame( "CAchievementMgr" 
 	m_bCheckSigninState = true;
 	m_bReadingFromTitleData = false;
 
-#ifdef _X360
-	// Mark that we're not waiting for an async call to finish
-	m_pendingAchievementState.Purge();
-#endif // _X360
 }
 
 //#if defined (_X360)
@@ -602,103 +560,11 @@ void CAchievementMgr::ReadAchievementsFromTitleData( int iController, int iSlot 
 void CAchievementMgr::UserConnected( int nUserSlot )
 {
 #ifdef CLIENT_DLL
-	if ( IsPC() || IsPS3() )
+	if ( IsPC() )
 	{
-#ifdef _PS3
-		if ( XBX_GetUserIsGuest( nUserSlot ) )
-			return;
-
-		const int iController = XBX_GetUserId( nUserSlot );
-
-		if ( iController == XBX_INVALID_USER_ID )
-			return;
-#endif
 		// ASSERT( STEAM_PLAYER_SLOT == nUserSlot )
 
 		m_bUserSlotActive[STEAM_PLAYER_SLOT] = true;
-	}
-	else if ( IsX360() )
-	{
-#if defined( _X360 )
-
-		if ( XBX_GetUserIsGuest( nUserSlot ) )
-			return;
-
-		const int iController = XBX_GetUserId( nUserSlot );
-
-		if ( iController == XBX_INVALID_USER_ID )
-			return;
-
-		if ( XUserGetSigninState( iController ) == eXUserSigninState_NotSignedIn )
-			return;
-
-		m_bUserSlotActive[nUserSlot] = true;
-
-		// Download achievements from XBox Live
-		const DWORD nTotalAchievements = GetAchievementCount();
-		DWORD nTotalX360AchsEnumerated = 0;
-		HANDLE hEnumerator = NULL;
-		DWORD bytes;
-		DWORD ret = XUserCreateAchievementEnumerator( 0, iController, INVALID_XUID, XACHIEVEMENT_DETAILS_ALL, 0, nTotalAchievements, &bytes, &hEnumerator );
-		if ( ret != ERROR_SUCCESS )
-		{
-			Warning( "Enumerate Achievements for controller %d failed! Failed to create enumerator with code %d.\n", iController, ret );
-			return;
-		}
-
-		// Allocate the buffer
-		CUtlVector< char > vBuffer;
-		vBuffer.SetCount( bytes );
-
-		// Enumerate the achievements from Live
-		ret = XEnumerate( hEnumerator, vBuffer.Base(), bytes, &nTotalX360AchsEnumerated, NULL );
-		CloseHandle( hEnumerator );
-		hEnumerator = NULL;
-
-		if ( ret != ERROR_SUCCESS )
-		{
-			Warning( "Enumerate Achievements for controller %d failed! Failed to enumerate with code %d.\n", iController, ret );
-			return;
-		}
-
-		if ( nTotalX360AchsEnumerated != nTotalAchievements )
-		{
-			Warning( "Enumerate achievements returned %d achievements != %d total registered achievements!\n",
-				nTotalX360AchsEnumerated, nTotalAchievements );
-		}
-
-#if !defined ( CSTRIKE15 )
-		// Give live a chance to mark achievements as unlocked, in case the achievement manager
-		// wasn't able to get that data (storage device missing, read failure, etc)
-		XACHIEVEMENT_DETAILS const *pXboxAchievements = ( XACHIEVEMENT_DETAILS const * ) vBuffer.Base();
-		TitleAchievementsDescription_t const *pTitleAchMap = g_pMatchFramework->GetMatchTitle()->DescribeTitleAchievements();
-		for ( DWORD i = 0; i < nTotalX360AchsEnumerated; ++i )
-		{
-			TitleAchievementsDescription_t const *pAchEntry = FindTitleAchievementById( pTitleAchMap, pXboxAchievements[i].dwId );
-			if ( !pAchEntry )
-			{
-				Warning( "X360 downloaded title achievement ID=%d is not in title achievement map, skipping!\n", pXboxAchievements[i].dwId );
-				continue;
-			}
-			
-			CBaseAchievement *pAchievement = GetAchievementByName( pAchEntry->m_szAchievementName, nUserSlot );
-			if ( !pAchievement )
-				continue;
-
-			// Give Live a chance to claim the achievement as unlocked
-			if ( AchievementEarned( pXboxAchievements[i].dwFlags ) )
-			{
-				pAchievement->SetAchieved( true );
-				pAchievement->CheckAssetAwards( nUserSlot );
-			}
-			else
-			{
-				pAchievement->SetAchieved( false );
-			}
-		}
-#endif
-
-#endif // X360
 	}
 #endif // CLIENT_DLL
 }
@@ -747,25 +613,13 @@ void CAchievementMgr::SaveGlobalState( )
 {
 	int iController = 0;
 
-#ifdef _X360
-	for ( int j = 0; j < MAX_SPLITSCREEN_PLAYERS; ++ j )
-	{
-		if ( !IsUserConnected( j ) )
-			continue;
-		iController = XBX_GetUserId( j );
-#else
 	int j = STEAM_PLAYER_SLOT;
 	VPROF_BUDGET( "CAchievementMgr::SaveGlobalState", "Achievements" );
 	{
-#endif
 
 		IPlayerLocal *pPlayer = g_pMatchFramework->GetMatchSystem()->GetPlayerManager()->GetLocalPlayer( iController );
 		if ( !pPlayer )
-#ifdef _X360
-			continue;
-#else
 			return;
-#endif
 
 		for ( int i = 0; i < m_vecAchievement[j].Count(); ++i )
 		{
@@ -785,7 +639,7 @@ void CAchievementMgr::SaveGlobalState( )
 			}
 		}
 
-		if ( IsPC() || IsPS3() )
+		if ( IsPC() )
 		{
 			m_bDirty[iController] = false;
 		}

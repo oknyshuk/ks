@@ -51,7 +51,8 @@ extern ISoundEmitterSystemBase *soundemitterbase;
 
 static bool GetDefaultSubtitlesState()
 {
-	return XBX_IsLocalized() && !XBX_IsAudioLocalized();
+	// XBX_IsLocalized() and XBX_IsAudioLocalized() are always false on PC
+	return false;
 }
 
 // Marked as FCVAR_USERINFO so that the server can cull CC messages before networking them down to us!!!

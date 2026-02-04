@@ -15,9 +15,6 @@
 #include "tier2/tier2.h"
 
 #ifdef _X360
-#include "xbox/xbox_win32stubs.h"
-#include "xbox/xbox_console.h"
-#include "xbox/xbox_launch.h"
 #endif
 
 // NOTE: This has to be the last file included!

@@ -626,8 +626,6 @@ void Cubemap_CreateDefaultCubemap( const char *pMapName, IBSPPack *iBSPPack )
 {
 	if ( IsGameConsole() )
 		return;
-
-#ifndef _GAMECONSOLE
 	// NOTE: This implementation depends on the fact that all VTF files contain
 	// all mipmap levels
 	ConVarRef skyboxBaseNameConVar( "sv_skyname" );
@@ -804,7 +802,6 @@ void Cubemap_CreateDefaultCubemap( const char *pMapName, IBSPPack *iBSPPack )
 		DestroyVTFTexture( pSrcVTFTextures[i] );
 	}
 	DestroyVTFTexture( pDstCubemap );
-#endif
 }	
 
 static void AddSampleToBSPFile( bool bHDR, mcubemapsample_t *pSample, const char *matDir, IBSPPack *iBSPPack, CCubemapCollection *pCC )

@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2009, Valve Corporation, All rights reserved. ============//
+//========= Copyright ï¿½ 1996-2009, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: Steam API context exposure
 //
@@ -21,11 +21,6 @@
 		#define _snprintf Q_snprintf
 	#endif
 #include "steam/steam_api.h"
-
-#ifndef NO_STEAM_GAMECOORDINATOR
-#include "gcsdk/gcclientsdk.h"
-GCSDK::CGCClient *GGCClient();
-#endif
 
 #endif
 

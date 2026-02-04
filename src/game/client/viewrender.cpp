@@ -535,15 +535,6 @@ struct ClientWorldListInfo_t : public CRefCounted1<WorldListInfo_t>
 		m_bPooledAlloc = false;
 	}
 
-#if defined(_PS3)
-	void Init()
-	{
-		memset( (WorldListInfo_t *)this, 0, sizeof(WorldListInfo_t) ); 
-		m_pOriginalLeafIndex = NULL;
-		m_bPooledAlloc = false;
-	}
-#endif
-
 	// Allocate a list intended for pruning
 	static ClientWorldListInfo_t *AllocPooled( const ClientWorldListInfo_t &exemplar );
 
@@ -1988,13 +1979,7 @@ void CViewRender::ViewDrawScene( bool bDrew3dSkybox, SkyboxVisibility_t nSkyboxV
 	{
 		g_CascadeLightManager.ComputeShadowDepthTextures( view );
 
-		// On the 360, we call this even when we don't have shadow depth textures enabled, so that
-		// the flashlight state gets set up properly
-#if defined(_PS3)
-		g_pClientShadowMgr->ComputeShadowDepthTextures( view, g_viewBuilder.GetPassFlags() & PASS_BUILDLISTS_PS3 );
-#else
 		g_pClientShadowMgr->ComputeShadowDepthTextures( view, ( g_viewBuilder.GetPassFlags() == PASS_BUILDLISTS ) );
-#endif
 	}
 
 	m_BaseDrawFlags = baseDrawFlags;
@@ -2935,22 +2920,11 @@ void CViewRender::RenderView( const CViewSetup &view, const CViewSetup &hudViewS
 
 	CMatRenderContextPtr pRenderContext( materials );
 
-#if defined(_PS3)
-	pRenderContext->AntiAliasingHint( AA_HINT_MESHES );
-
-	// init SPU render job data for buildworldlists, buildrenderables
-	InitSPUBuildRenderingJobs();
-
-	g_viewBuilder.SetPassFlags( PASS_BUILDLISTS_PS3 | PASS_DRAWLISTS_PS3 );
-#else
-
 	g_viewBuilder.Init();
 	g_viewBuilder.SetPassFlags( PASS_BUILDLISTS | PASS_DRAWLISTS );
 
 	// Update bounds of all renderables
 	ClientLeafSystem()->ComputeAllBounds();
-
-#endif
 
 	ITexture *saveRenderTarget = pRenderContext->GetRenderTarget();
 	pRenderContext.SafeRelease(); // don't want to hold for long periods in case in a locking active share thread mode
@@ -3041,77 +3015,6 @@ void CViewRender::RenderView( const CViewSetup &view, const CViewSetup &hudViewS
 			}
 			#endif
 
-#if defined(_PS3)
-
-			// Entry point for 2 pass rendering on PS3, for CSTRIKE15
-			// pass 1 - build - kick off build world and renderable lists on SPU
-			// pass 2 - draw - sync build jobs and draw
-			// 2 passes allows the building jobs to be kicked off asap, and the rendering can then
-			// be performed in parallel
-			// This path is still undergoing testing, and does not support all rendering paths (refraction, proper reflection, etc)
-
-			// sync points and other 2 pass macros near the top of this file - wrap code to be performed in on or other pass with a begin/end macro (see examples)
-			
-			if( r_PS3_2PassBuildDraw.GetInt() )
-			{
-				int numViews[2];
-
-				SNPROF("2PassBuildWRLists");
-
-				g_viewBuilder.Init();
-
-				// turn on SPU BuildWorld/Renderables jobs
-				g_viewBuilder.SPUBuildRWJobsOn( true );
-
-				// reset job view index
-				g_viewBuilder.ResetBuildViewID();
-
-				// Pass 1 - Build World and Renderables Lists
-				g_viewBuilder.SetPassFlags( PASS_BUILDLISTS_PS3 );
-				ViewDrawScene( bDrew3dSkybox, nSkyboxVisible, view, nClearFlags, VIEW_MAIN, whatToDraw & RENDERVIEW_DRAWVIEWMODEL );
-
-				numViews[0] = g_viewBuilder.GetBuildViewID();
-
-				// push all stored up buildrenderable jobs 
-				g_viewBuilder.PushBuildRenderableJobs();
-
-				
-				// kick off threaded audio here, this only does anything when running IsServer is true
-				// helps to hide any sync on buildworld/renderable jobs
-				engine->Sound_ServerUpdateSoundsPS3();
-
-				// reset job view index
-				g_viewBuilder.ResetBuildViewID();
-
-				// Pass 2 - Draw
-				g_viewBuilder.SetPassFlags( PASS_DRAWLISTS_PS3 );
-				ViewDrawScene( bDrew3dSkybox, nSkyboxVisible, view, nClearFlags, VIEW_MAIN, whatToDraw & RENDERVIEW_DRAWVIEWMODEL );
-
-				numViews[1] = g_viewBuilder.GetBuildViewID();
-
-				if( numViews[0] != numViews[1] )
-				{
-					Warning("PS3 2 pass draw error - numViews mismatch, p0:%d p1:%d\n", numViews[0], numViews[1]);
-				}
-
-				// turn off SPU BuildWorld/Renderables jobs
-				g_viewBuilder.SPUBuildRWJobsOn( false );
-
-				g_viewBuilder.Purge();
-			}
-			else
-			{
-				g_viewBuilder.Init();
-				g_viewBuilder.SPUBuildRWJobsOn( true );
-
-				g_viewBuilder.SetPassFlags( PASS_BUILDLISTS_PS3 | PASS_DRAWLISTS_PS3 );
-				ViewDrawScene( bDrew3dSkybox, nSkyboxVisible, view, nClearFlags, VIEW_MAIN, whatToDraw & RENDERVIEW_DRAWVIEWMODEL );
-
-				g_viewBuilder.SPUBuildRWJobsOn( false );
-				g_viewBuilder.Purge();
-			}
-
-#else
 			g_viewBuilder.Init();
 
 			// Entry point for 2 pass rendering for CSTRIKE15
@@ -3126,7 +3029,7 @@ void CViewRender::RenderView( const CViewSetup &view, const CViewSetup &hudViewS
 			if ( r_2PassBuildDraw.GetBool() )
 			{
 				g_viewBuilder.SetBuildWRThreaded( true );
-				
+
 				//
 				// First pass - Generate build world and renderables lists
 				//
@@ -3154,7 +3057,7 @@ void CViewRender::RenderView( const CViewSetup &view, const CViewSetup &hudViewS
 				}
 
 				g_viewBuilder.SetBuildWRThreaded( false );
-				
+
 			}
 			else
 			{
@@ -3170,7 +3073,6 @@ void CViewRender::RenderView( const CViewSetup &view, const CViewSetup &hudViewS
 			}
 
 			g_viewBuilder.Purge();
-#endif
 		}
 		else
 		{
@@ -3572,10 +3474,6 @@ void CViewRender::RenderView( const CViewSetup &view, const CViewSetup &hudViewS
 
 			GetClientMode()->PostRenderVGui();
 
-#if defined( INCLUDE_SCALEFORM )
-			pRenderContext->SetScaleformSlotViewport( SF_SS_SLOT( slot ), hudViewSetup.x, hudViewSetup.y, hudViewSetup.width, hudViewSetup.height );
-			pRenderContext->AdvanceAndRenderScaleformSlot( SF_SS_SLOT( slot ) );
-#endif
 			// RocketUI HUD rendering
 			pRenderContext->RenderRocketHUD();
 			// RocketUI Menu rendering (for console, pause menu, etc.)
@@ -3681,11 +3579,7 @@ void CViewRender::DetermineWaterRenderInfo( const VisibleFogVolumeInfo_t &fogVol
 		return;
 	}
 
-#ifdef _GAMECONSOLE
-	bool bForceExpensive = false;
-#else
 	bool bForceExpensive = r_waterforceexpensive.GetBool();
-#endif
 	bool bForceReflectEntities = r_waterforcereflectentities.GetBool();
 
 	bool bForceCheap = false;
@@ -3739,11 +3633,7 @@ void CViewRender::DetermineWaterRenderInfo( const VisibleFogVolumeInfo_t &fogVol
 
 	// Unless expensive water is active, reflections are off.
 	bool bLocalReflection;
-#ifdef _GAMECONSOLE
-	if( !r_WaterDrawReflection.GetBool() )
-#else
 	if( !bForceExpensive || !r_WaterDrawReflection.GetBool() )
-#endif
 	{
 		bLocalReflection = false;
 	}
@@ -3764,15 +3654,8 @@ void CViewRender::DetermineWaterRenderInfo( const VisibleFogVolumeInfo_t &fogVol
 	// Gary says: I'm reverting this change so that water LOD works on dx9 for ep2.
 
 	// Check if the water is out of the cheap water LOD range; if so, use cheap water
-#ifdef _GAMECONSOLE
-	if ( !bForceExpensive && ( bForceCheap || ( fogVolumeInfo.m_flDistanceToWater >= m_flCheapWaterEndDistance ) ) )
-	{
-		return;
-	}
-#else
 	if ( ( (fogVolumeInfo.m_flDistanceToWater >= m_flCheapWaterEndDistance) && !bLocalReflection ) || bForceCheap )
  		return;
-#endif
 	// Get the material that is for the water surface that is visible and check to see
 	// what render targets need to be rendered, if any.
 	if ( !r_WaterDrawRefraction.GetBool() )
@@ -4302,11 +4185,7 @@ void CViewRender::ViewDrawScene_Intro( const CViewSetup &view, int nClearFlags, 
 		// Shadowed flashlights supported on ps_2_b and up...
 		if ( r_flashlightdepthtexture.GetBool() )
 		{
-#if defined(_PS3)
-			g_pClientShadowMgr->ComputeShadowDepthTextures( playerView, g_viewBuilder.GetPassFlags() & PASS_BUILDLISTS_PS3 );
-#else
 			g_pClientShadowMgr->ComputeShadowDepthTextures( playerView, ( g_viewBuilder.GetPassFlags() == PASS_BUILDLISTS ) );
-#endif
 		}
 
 		SetupCurrentView( playerView.origin, playerView.angles, VIEW_INTRO_PLAYER );
@@ -4657,35 +4536,18 @@ VPlane* CBase3dView::GetFrustum()
 CObjectPool<ClientWorldListInfo_t> ClientWorldListInfo_t::gm_Pool;
 
 
-#if defined(_PS3)
-CClientRenderablesList g_RenderablesPool[ MAX_CONCURRENT_BUILDVIEWS ];
-ClientWorldListInfo_t  g_WorldListInfoPool[ MAX_CONCURRENT_BUILDVIEWS ];
-#endif
-
 //-----------------------------------------------------------------------------
 // Base class for 3d views
 //-----------------------------------------------------------------------------
 CRendering3dView::CRendering3dView(CViewRender *pMainView) :
 	CBase3dView( pMainView ),
-	m_pWorldRenderList( NULL ), 
-#if !defined(_PS3)
+	m_pWorldRenderList( NULL ),
 	m_pRenderables( NULL ),
-	m_pWorldListInfo( NULL ), 
-#endif
+	m_pWorldListInfo( NULL ),
 	m_pCustomVisibility( NULL ),
 	m_DrawFlags( 0 ),
 	m_ClearFlags( 0 )
 {
-
-#if defined( CSTRIKE15 ) && defined(_PS3)
-	BEGIN_2PASS_BUILD_BLOCK
-	for( int i = 0; i < MAX_CONCURRENT_BUILDVIEWS; i++ )
-	{
-		m_pRenderablesList[ i ] = NULL;
-		m_pWorldListInfo[ i ]   = NULL;
-	}
-	END_2PASS_BLOCK
-#endif
 
 }
 
@@ -4827,19 +4689,6 @@ void CRendering3dView::SetupRenderablesList( int viewID, bool bFastEntityRenderi
 	pJob->Release();
 }
 
-#if defined(_PS3)
-void CRendering3dView::SetupRenderablesList_PS3_Epilogue( void )
-{
-	ConVarRef r_PS3_SPU_buildrenderables( "r_PS3_SPU_buildrenderables" );
-
-	if( r_PS3_SPU_buildrenderables.GetInt() )
-	{
-		ClientLeafSystem()->BuildRenderablesList_PS3_Epilogue();
-	}
-}
-#endif
-
-
 //-----------------------------------------------------------------------------
 //
 //-----------------------------------------------------------------------------
@@ -4853,16 +4702,7 @@ void CRendering3dView::BuildWorldRenderLists( bool bDrawEntities, int iForceView
 	extern void UpdateClientRenderableInPVSStatus();
 	UpdateClientRenderableInPVSStatus();
 
-#if defined(_PS3)
-	int buildViewID = g_viewBuilder.GetBuildViewID();
-	Assert( !m_pWorldRenderList && !m_pWorldListInfo[ buildViewID ]);
-
-	g_viewBuilder.SetDrawFlags( m_DrawFlags );
-#else
-
 	Assert( !m_pWorldRenderList && !m_pWorldListInfo);
-
-#endif
 
 	m_pMainView->IncWorldListsNumber();
 	// Override vis data if specified this render, otherwise use default behavior with NULL

@@ -1,9 +1,10 @@
-//========= Copyright © Valve Corporation, All rights reserved. ============//
+//========= Copyright ï¿½ Valve Corporation, All rights reserved. ============//
 //
 // Purpose: Forward server log lines to remote listeners
 //
 //=============================================================================//
 #include "cbase.h"
+#include "tier1/fmtstr.h"
 #include "server_log_http_dispatcher.h"
 #include "gameinterface.h"
 #include "matchmaking/imatchframework.h"

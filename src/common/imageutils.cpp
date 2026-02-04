@@ -44,7 +44,6 @@ extern void longjmp( jmp_buf, int ) __attribute__((noreturn));
 	extern class IGameUIFuncs *gameuifuncs;
 	extern class IEngineSound *enginesound;
 	extern class IMatchmaking *matchmaking;
-	extern class IXboxSystem  *xboxsystem;
 	extern class IAchievementMgr *achievementmgr; 
 	extern class CSteamAPIContext *steamapicontext;
 #elif REPLAY_DLL
@@ -88,7 +87,6 @@ extern void longjmp( jmp_buf, int ) __attribute__((noreturn));
 #endif
 
 #if defined( _X360 )
-#include "xbox/xbox_win32stubs.h"
 #endif
 
 #if !defined( _GAMECONSOLE ) && ( defined(GAME_DLL) || defined(CLIENT_DLL) )

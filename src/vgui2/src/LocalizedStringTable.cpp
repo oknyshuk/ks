@@ -31,7 +31,6 @@
 #include "byteswap.h"
 
 #if defined( _X360 )
-#include "xbox/xbox_win32stubs.h"
 #endif
 
 // memdbgon must be the last include file in a .cpp file!!!
@@ -248,11 +247,13 @@ bool CLocalizedStringTable::AddFile( const char *szFileName, const char *pPathID
 		{
 			bValid = vgui::g_pSystem->GetRegistryString( "HKEY_CURRENT_USER\\Software\\Valve\\Steam\\Language", language, sizeof(language)-1 );
 		}
+#if defined( _X360 ) || defined( _PS3 )
 		else
 		{
 			Q_strncpy( language, XBX_GetLanguageString(), sizeof( language ) );
 			bValid = true;
 		}
+#endif
 
 		// LOAD THE LOCALIZED FILE IF IT'S NOT ENGLISH
 		// append the language

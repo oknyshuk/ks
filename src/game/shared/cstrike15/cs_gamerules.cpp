@@ -29,10 +29,10 @@
 #include "engine/inetsupport.h"
 #include "usermessages.h"
 #include "hegrenade_projectile.h"
+#include "cs_item_inventory.h"
 #ifndef CLIENT_DLL
 #include "Effects/inferno.h"
 #endif
-#include "econ_item_view_helpers.h"
 
 #ifdef CLIENT_DLL
     #include "networkstringtable_clientdll.h"
@@ -79,7 +79,6 @@
     #include "cs_entity_spotting.h"
     #include "props.h"
 	#include "hltvdirector.h"
-	#include "econ_gcmessages.h"
 	#include "env_cascade_light.h"
 	#include "world.h"
 	#include "items.h"
@@ -18206,103 +18205,9 @@ float CCSGameRules::CheckTotalSmokedLength( float flSmokeRadiusSq, Vector vecGre
 
 
 #ifdef GAME_DLL
-
-	class ClientJob_EMsgGCCStrike15_v2_ServerNotificationForUserPenalty : public GCSDK::CGCClientJob
-	{
-	public:
-		ClientJob_EMsgGCCStrike15_v2_ServerNotificationForUserPenalty( GCSDK::CGCClient *pGCClient ) : GCSDK::CGCClientJob( pGCClient )
-		{
-		}
-
-		virtual bool BYieldingRunJobFromMsg( GCSDK::IMsgNetPacket *pNetPacket )
-		{
-			GCSDK::CProtoBufMsg<CMsgGCCStrike15_v2_ServerNotificationForUserPenalty> msg( pNetPacket );
-			DevMsg( "Notification about user penalty: %u/%u (%u sec)\n", msg.Body().account_id(), msg.Body().reason(), msg.Body().seconds() );
-			if ( !engine->IsDedicatedServer() || !msg.Body().account_id() )
-				return true;
-
-			if ( !CCSGameRules::sm_mapGcBanInformation.Count() )
-				SetDefLessFunc( CCSGameRules::sm_mapGcBanInformation );
-			
-			{
-				CCSGameRules::CGcBanInformation_t baninfo = { msg.Body().reason(), Plat_FloatTime() + msg.Body().seconds() };
-				CCSGameRules::sm_mapGcBanInformation.InsertOrReplace( msg.Body().account_id(), baninfo );
-			}
-
-			return true;
-		}
-	};
-	GC_REG_CLIENT_JOB( ClientJob_EMsgGCCStrike15_v2_ServerNotificationForUserPenalty, k_EMsgGCCStrike15_v2_ServerNotificationForUserPenalty );
-
-	class ClientJob_EMsgGCCStrike15_v2_MatchEndRewardDropsNotification : public GCSDK::CGCClientJob
-	{
-	public:
-		ClientJob_EMsgGCCStrike15_v2_MatchEndRewardDropsNotification( GCSDK::CGCClient *pGCClient ) : GCSDK::CGCClientJob( pGCClient )
-		{
-		}
-
-		virtual bool BYieldingRunJobFromMsg( GCSDK::IMsgNetPacket *pNetPacket )
-		{
-			GCSDK::CProtoBufMsg<CMsgGCCStrike15_v2_MatchEndRewardDropsNotification> msg( pNetPacket );
-			if ( !msg.Body().has_iteminfo() )
-				return true;
-
-			DevMsg( "Notification about user drop: %u %llu (%u-%u-%u)\n", msg.Body().iteminfo().accountid(), msg.Body().iteminfo().itemid(),
-				msg.Body().iteminfo().defindex(), msg.Body().iteminfo().paintindex(), msg.Body().iteminfo().rarity() );
-
-			if ( msg.Body().iteminfo().accountid() && msg.Body().iteminfo().itemid() && CSGameRules() )
-			{
-				CSGameRules()->RecordPlayerItemDrop( msg.Body().iteminfo() );
-			}
-
-			return true;
-		}
-	};
-	GC_REG_CLIENT_JOB( ClientJob_EMsgGCCStrike15_v2_MatchEndRewardDropsNotification, k_EMsgGCCStrike15_v2_MatchEndRewardDropsNotification );
-
-	static CMsgGCCStrike15_v2_GiftsLeaderboardResponse g_dataGiftsLeaderboard;
-	static double g_dblGiftsLeaderboardReceived = 0;
 	void CCSGameRules::CheckForGiftsLeaderboardUpdate()
 	{
 	}
-
-	class ClientJob_EMsgGCCStrike15_v2_GiftsLeaderboardResponse : public GCSDK::CGCClientJob
-	{
-	public:
-		ClientJob_EMsgGCCStrike15_v2_GiftsLeaderboardResponse( GCSDK::CGCClient *pGCClient ) : GCSDK::CGCClientJob( pGCClient )
-		{
-		}
-
-		virtual bool BYieldingRunJobFromMsg( GCSDK::IMsgNetPacket *pNetPacket )
-		{
-			GCSDK::CProtoBufMsg<CMsgGCCStrike15_v2_GiftsLeaderboardResponse> msg( pNetPacket );
-			if ( !msg.Body().has_servertime() )
-				return true;
-
-			// Set our cached structure
-			g_dataGiftsLeaderboard = msg.Body();
-			g_dblGiftsLeaderboardReceived = Plat_FloatTime();
-
-			if ( CCSGameRules *pCSGR = CSGameRules() )
-			{	// Copy gifts
-				pCSGR->m_numGlobalGiftsGiven = g_dataGiftsLeaderboard.total_gifts_given();
-				pCSGR->m_numGlobalGifters = g_dataGiftsLeaderboard.total_givers();
-				pCSGR->m_numGlobalGiftsPeriodSeconds = g_dataGiftsLeaderboard.time_period_seconds();
-
-				for ( int j = 0; j < MAX_GIFT_GIVERS_FEATURED_COUNT; ++ j )
-				{
-					pCSGR->m_arrFeaturedGiftersAccounts.Set( j, ( j < g_dataGiftsLeaderboard.entries().size() ) ? g_dataGiftsLeaderboard.entries( j ).accountid() : 0 );
-					pCSGR->m_arrFeaturedGiftersGifts.Set( j, ( j < g_dataGiftsLeaderboard.entries().size() ) ? g_dataGiftsLeaderboard.entries( j ).gifts() : 0 );
-				}
-			}
-
-			return true;
-		}
-	};
-	GC_REG_CLIENT_JOB( ClientJob_EMsgGCCStrike15_v2_GiftsLeaderboardResponse, k_EMsgGCCStrike15_v2_GiftsLeaderboardResponse );
-
-	
-
 #endif // GAME_DLL
 
 #ifndef CLIENT_DLL

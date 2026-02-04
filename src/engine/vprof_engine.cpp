@@ -1,4 +1,4 @@
-//===== Copyright © 1996-2005, Valve Corporation, All rights reserved. ======//
+//===== Copyright ï¿½ 1996-2005, Valve Corporation, All rights reserved. ======//
 //
 // Purpose: VProf engine integration
 //
@@ -73,7 +73,6 @@ class ConsoleLogger
 public:
 	ConsoleLogger( void )
 	{
-#ifndef _X360
 #if !defined( DEDICATED )
 		m_condebugEnabled = con_debuglog;
 #else
@@ -97,19 +96,16 @@ public:
 				break;
 			}
 		}
-#endif
 	}
 
 	~ConsoleLogger()
 	{
-#ifndef _X360
 		if ( !m_condebugEnabled )
 		{
 #if !defined( DEDICATED )
 			con_logfile.SetValue( "" );
 #endif
 		}
-#endif
 	}
 
 private:
@@ -426,73 +422,6 @@ DEFERRED_CON_COMMAND( vprof, "Toggle VProf profiler" )
 	}
 }
 
-#ifdef _X360
-DEFERRED_CON_COMMAND( vprof_360_novsync_off, "Leaves vsync on when vxconsole brings up showbudget." )
-{
-	g_bVProfNoVSyncOff = !g_bVProfNoVSyncOff;
-	Msg("VProf novsync auto setting %s.\n", g_bVProfNoVSyncOff ? "disabled" : "enabled" );
-}
-
-DEFERRED_CON_COMMAND( vprof_360_show_time, "Shows time in vprof" )
-{
-	g_VProfCurrentProfile.VXConsoleReportMode( CVProfile::VXCONSOLE_REPORT_TIME );
-}
-
-DEFERRED_CON_COMMAND( vprof_360_show_cachemiss, "Shows cachemisses in vprof" )
-{
-	if ( !g_fVprofCacheMissOnByUI )
-	{
-		Msg("VProf cache miss enabled.\n");
-		g_VProfCurrentProfile.PMEEnable( true );
-		g_fVprofCacheMissOnByUI = true;
-	}
-
-	g_VProfCurrentProfile.VXConsoleReportMode( CVProfile::VXCONSOLE_REPORT_L2CACHE_MISSES );
-}
-
-DEFERRED_CON_COMMAND( vprof_360_show_loadhitstore, "Shows load-hit-stores in vprof" )
-{
-	if ( !g_fVprofCacheMissOnByUI )
-	{
-		Msg("VProf cache miss enabled.\n");
-		g_VProfCurrentProfile.PMEEnable( true );
-		g_fVprofCacheMissOnByUI = true;
-	}
-
-	g_VProfCurrentProfile.VXConsoleReportMode( CVProfile::VXCONSOLE_REPORT_LOAD_HIT_STORE );
-}
-
-DEFERRED_CON_COMMAND( vprof_360_time_scale, "Scale used when displaying time (0 = use default)" )
-{
-	float flScale = atof(g_szDefferedArg1);
-	if ( flScale <= 0.0f )
-	{
-		flScale = 1000.0f;
-	}
-	g_VProfCurrentProfile.VXConsoleReportScale( CVProfile::VXCONSOLE_REPORT_TIME, flScale );
-}
-
-DEFERRED_CON_COMMAND( vprof_360_cachemiss_scale, "Scale used when displaying cachemisses (0 = use default)" )
-{
-	float flScale = atof(g_szDefferedArg1);
-	if ( flScale <= 0.0f )
-	{
-		flScale = 1.0f;
-	}
-	g_VProfCurrentProfile.VXConsoleReportScale( CVProfile::VXCONSOLE_REPORT_L2CACHE_MISSES, flScale );
-}
-
-DEFERRED_CON_COMMAND( vprof_360_loadhitstore_scale, "Scale used when displaying load-hit-stores (0 = use default)" )
-{
-	float flScale = atof(g_szDefferedArg1);
-	if ( flScale <= 0.0f )
-	{
-		flScale = 0.1f;
-	}
-	g_VProfCurrentProfile.VXConsoleReportScale( CVProfile::VXCONSOLE_REPORT_LOAD_HIT_STORE, flScale );
-}
-#endif // 360
-
 DEFERRED_CON_COMMAND( vprof_on, "Turn on VProf profiler" )
 {
 	if ( !g_fVprofOnByUI )
@@ -538,18 +467,13 @@ DEFERRED_CON_COMMAND( vprof_off, "Turn off VProf profiler" )
 		g_VProfCurrentProfile.Stop();
 		g_fVprofOnByUI = false;
 
-		// alien swarm has special behavior for certain testing scenarios: 
+		// alien swarm has special behavior for certain testing scenarios:
 		// generate a report after turning off vprof
 		if ( g_szDefferedArg1[0] && stricmp("infested",g_szDefferedArg1) == 0 )
 		{
 			ConsoleLogger consoleLog;
 			g_VProfCurrentProfile.OutputReport( VPRT_FULL & ~VPRT_HIERARCHY, NULL );
 		}
-
-#if defined( _X360 )
-		// disable all updating
-		g_VProfCurrentProfile.VXEnableUpdateMode( 0xFFFFFFFF, false );
-#endif
 	}
 }
 
@@ -662,201 +586,6 @@ CON_COMMAND( vx_vprof_update, "" )
 CON_COMMAND( vx_vprof_nodeslist, "" )
 {
 	g_VProfCurrentProfile.VXSendNodes();
-}
-#endif
-
-#ifdef _X360
-DEFERRED_CON_COMMAND( vprof_360_enable_counters, "Enable 360 L2 and LHS counters for a node" )
-{
-	g_VProfCurrentProfile.Pause();
-	if ( g_VProfCurrentProfile.PMCEnableL2Upon(g_szDefferedArg1 ) )
-	{
-		g_VProfCurrentProfile.DumpEnabledPMCNodes();
-		// Msg("PMC enabled for only node %s\n", g_szDefferedArg1);
-	}
-	else
-	{
-		Warning( "Node not found.\n" );
-	}
-	g_VProfCurrentProfile.Resume();
-}
-
-DEFERRED_CON_COMMAND( vprof_360_enable_counters_recursive, "Enable 360 L2 and LHS counters for a node and all subnodes" )
-{
-	g_VProfCurrentProfile.Pause();
-	if ( g_VProfCurrentProfile.PMCEnableL2Upon( g_szDefferedArg1, true ) )
-	{
-		g_VProfCurrentProfile.DumpEnabledPMCNodes();
-		// Msg("PMC enabled for only node %s\n", g_szDefferedArg1);
-	}
-	else
-	{
-		Warning( "Node not found.\n" );
-	}
-	g_VProfCurrentProfile.Resume();
-}
-
-DEFERRED_CON_COMMAND( vprof_360_disable_counters, "Disable 360 L2 and LHS counters for a node. Specify 'all' to mean all nodes." )
-{
-	g_VProfCurrentProfile.Pause();
-	if ( stricmp( g_szDefferedArg1, "all" ) == 0 )
-	{
-		g_VProfCurrentProfile.PMCDisableAllNodes();
-	}
-	else
-	{
-		if ( g_VProfCurrentProfile.PMCDisableL2Upon( g_szDefferedArg1, false ) )
-		{
-			g_VProfCurrentProfile.DumpEnabledPMCNodes();
-			// Msg("PMC enabled for only node %s\n", g_szDefferedArg1);
-		}
-		else
-		{
-			Warning( "Node not found.\n" );
-		}
-	}
-	g_VProfCurrentProfile.Resume();
-}
-
-DEFERRED_CON_COMMAND( vprof_360_disable_counters_recursive, "Disable 360 L2 and LHS counters for a node and all children." )
-{
-	g_VProfCurrentProfile.Pause();
-
-	if ( g_VProfCurrentProfile.PMCDisableL2Upon( g_szDefferedArg1, true) )
-	{
-		g_VProfCurrentProfile.DumpEnabledPMCNodes();
-		// Msg("PMC enabled for only node %s\n", g_szDefferedArg1);
-	}
-	else
-	{
-		Warning( "Node not found.\n" );
-	}
-
-	g_VProfCurrentProfile.Resume();
-}
-
-DEFERRED_CON_COMMAND( vprof_360_report_counters, "Report L2/LHS info for specified node" )
-{
-	g_VProfCurrentProfile.Pause();
-	ConsoleLogger consoleLog;
-
-	CVProfNode *pNode = g_VProfCurrentProfile.FindNode( g_VProfCurrentProfile.GetRoot(), g_szDefferedArg1 );
-	if ( pNode )
-	{
-		Msg( "NODE %s\n\tL2 misses: %d\n\tLHS misses: %d\n", g_szDefferedArg1, pNode->GetL2CacheMisses(), pNode->GetLoadHitStores() );
-	}
-	else
-	{
-		Warning( "Node %s not found.", g_szDefferedArg1 );
-	}
-
-	g_VProfCurrentProfile.Resume();
-}
-
-DEFERRED_CON_COMMAND( vprof_360_cpu_trace_enable, "Usage: vprof_360_cpu_trace_enable <\"node\">. Enable CPU tracing during scope of node. Do this before calling vprof_360_cpu_trace_go." )
-{	
-	CVProfNode *RESTRICT upon = g_VProfCurrentProfile.CPUTraceEnableForNode( g_szDefferedArg1 );
-	if ( upon )
-	{
-		Msg( "%s will be traced from start to end. Make sure vprof is enabled, and enter \nvprof_360_cpu_trace_go <filename> to engage!\n", upon->GetName() );
-	}
-	else
-	{
-		Warning( "Missing node %s. Run VProf to instance the node and wrap in \"double-quotes\". \n", g_szDefferedArg1 );
-	}
-}
-
-DEFERRED_CON_COMMAND( vprof_360_cpu_trace_disable, "Disable CPU tracing on all nodes." )
-{
-	g_VProfCurrentProfile.CPUTraceDisableAllNodes();
-	g_VProfCurrentProfile.SetCPUTraceEnabled( CVProfile::kDisabled );
-}
-
-DEFERRED_CON_COMMAND( vprof_360_cpu_trace_go, "Usage: vprof_360_cpu_trace_go <filename>. Will record one CPU trace of the node specified in vprof_360_cpu_trace_enable, dumping it to e:/filename.pix2." )
-{
-	if ( !g_fVprofOnByUI )
-	{
-		Msg( "VProf enabled.\n" );
-		g_VProfCurrentProfile.Start();
-		g_fVprofOnByUI = true;
-
-		ConVarRef mat_vsyncref( "mat_vsync" );
-		if ( mat_vsyncref.GetBool() )
-		{
-			Warning( "Disabling vsync (via mat_vsync) to increase profiling accuracy.\n" );
-			mat_vsyncref.SetValue( false );
-		}
-	}
-
-	if ( g_VProfCurrentProfile.CPUTraceGetEnabledNode() == NULL || g_VProfCurrentProfile.CPUTraceGetEnabledNode() == g_VProfCurrentProfile.GetRoot() )
-	{
-		Msg( "Defaulting PIX trace node to CEngine::Frame\n" );
-		g_VProfCurrentProfile.CPUTraceEnableForNode( "CEngine::Frame" );
-	}
-
-	if ( g_VProfCurrentProfile.CPUTraceGetEnabledNode() != NULL )
-	{
-		if ( !g_szDefferedArg1[0] )
-		{
-			SYSTEMTIME systemTime;
-			GetLocalTime( &systemTime );
-			V_snprintf( g_szDefferedArg1, ARRAYSIZE(g_szDefferedArg1), "vprof_%d_%d_%d_%d_%d_%d", systemTime.wMonth, systemTime.wDay, systemTime.wHour, systemTime.wMinute, systemTime.wSecond, systemTime.wMilliseconds );
-		}
-		const char *filename = g_VProfCurrentProfile.SetCPUTraceFilename( g_szDefferedArg1 );
-		g_VProfCurrentProfile.SetCPUTraceEnabled( CVProfile::kFirstHitNode );
-		Msg( "Trace will be written to %s\n", filename );
-	}
-	else
-	{
-		Warning( "Usage: vprof_360_cpu_trace_enable <\"node\">.\n" );
-	}
-}
-
-DEFERRED_CON_COMMAND( vprof_360_cpu_trace_go_repeat, "Usage: vprof_360_cpu_trace_go_repeat <filename>. For each time the node specified in vprof_360_cpu_trace_enable is hit during the next frame, dump a CPU trace to e:/filenameXXXX.pix2." )
-{
-	if ( g_VProfCurrentProfile.CPUTraceGetEnabledNode() != NULL )
-	{
-		const char *filename = g_VProfCurrentProfile.SetCPUTraceFilename( g_szDefferedArg1 );
-		g_VProfCurrentProfile.SetCPUTraceEnabled( CVProfile::kAllNodesInFrame_WaitingForMark );
-		Msg( "Trace will be written to %s%.4d ... \n", filename, g_VProfCurrentProfile.GetMultiTraceIndex() );
-	}
-	else
-	{
-		Warning( "Usage: vprof_360_cpu_trace_enable <\"node\">.\n" );
-	}
-}
-
-
-DEFERRED_CON_COMMAND( vprof_360_cpu_trace_go_multiframe, "Usage: vprof_360_cpu_trace_go_multiframe <framecount> <filename>. For each time the node specified in vprof_360_cpu_trace_enable is hit during the next frame, dump a CPU trace to e:/filenameXXXX.pix2." )
-{
-	int nNumFrames = Q_atoi( g_szDefferedArg1 );
-	if ( nNumFrames >= 1 && nNumFrames < 1000 )
-	{
-		if ( g_VProfCurrentProfile.CPUTraceGetEnabledNode() != NULL )
-		{
-			const char *filename = g_VProfCurrentProfile.SetCPUTraceFilename( g_szDefferedArg2 );
-			g_VProfCurrentProfile.SetCPUTraceEnabled( CVProfile::kAllNodesInFrame_WaitingForMarkMultiFrame, true, nNumFrames );
-			Msg( "Trace will be written to %s%.4d ... \n", filename, g_VProfCurrentProfile.GetMultiTraceIndex() );
-			return;
-		}
-	}
-	
-	Warning( "Usage: vprof_360_cpu_trace_go_multiframe <framecount> <filename>.\n" );
-}
-
-
-DEFERRED_CON_COMMAND( vx_vprof_trace, "" )
-{
-	CVProfNode *RESTRICT pNode = g_VProfCurrentProfile.CPUTraceEnableForNode( g_szDefferedArg1 );
-	if ( !pNode )
-	{
-		Warning( "vx_vprof_trace: Missing Node %s\n", g_szDefferedArg1 );
-		return;
-	}
-
-	vprof_on_Impl();
-	g_VProfCurrentProfile.SetCPUTraceFilename( "capture" );
-	g_VProfCurrentProfile.SetCPUTraceEnabled( CVProfile::kFirstHitNode, true );
 }
 #endif
 

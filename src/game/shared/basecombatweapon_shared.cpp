@@ -13,8 +13,6 @@
 #include "datacache/imdlcache.h"
 #include "tier0/vprof.h"
 #include "collisionutils.h"
-#include "econ_entity.h"
-#include "econ_item_view.h"
 
 #if !defined( CLIENT_DLL )
 
@@ -3386,16 +3384,6 @@ END_NETWORK_TABLE()
 // {
 // 	return GetWpnData().GetAttributeBool( szAttribClassName, GetEconItemView() );
 // }
-
-const CEconItemView* CBaseCombatWeapon::GetEconItemView( void ) const
-{
-    return BaseClass::GetEconItemView();
-}
-
-CEconItemView* CBaseCombatWeapon::GetEconItemView( void )
-{
-    return (CEconItemView*)BaseClass::GetEconItemView();
-}
 
 int CBaseCombatWeapon::GetReserveAmmoCount( AmmoPosition_t nAmmoPosition, CBaseCombatCharacter * pForcedOwner/* = NULL*/  )
 {

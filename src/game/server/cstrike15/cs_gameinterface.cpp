@@ -65,30 +65,6 @@ void CServerGameDLL::LevelInit_ParseAllEntities( const char *pMapEntities )
 	}
 }
 
-//
-// Twitch.tv reservation updates
-//
-class ClientJob_EMsgGCCStrike15_v2_GC2ServerReservationUpdate : public GCSDK::CGCClientJob 
-{
-public:
-	ClientJob_EMsgGCCStrike15_v2_GC2ServerReservationUpdate( GCSDK::CGCClient *pGCClient ) 
-		: GCSDK::CGCClientJob( pGCClient )
-	{
-	}
-	virtual bool BYieldingRunJobFromMsg( GCSDK::IMsgNetPacket *pNetPacket )
-	{
-		GCSDK::CProtoBufMsg<CMsgGCCStrike15_v2_GC2ServerReservationUpdate> msg( pNetPacket );
-
-		uint32 numTotalViewers = msg.Body().viewers_external_total();
-		uint32 numSteamLinkedViewers = msg.Body().viewers_external_steam();
-		
-		engine->UpdateHltvExternalViewers( numTotalViewers, numSteamLinkedViewers );
-
-		return true;
-	}
-};
-GC_REG_CLIENT_JOB( ClientJob_EMsgGCCStrike15_v2_GC2ServerReservationUpdate, k_EMsgGCCStrike15_v2_GC2ServerReservationUpdate );
-
 void GCCStrikeWelcomeMessageReceived( CMsgCStrike15Welcome const &msgCStrike )
 {
 }

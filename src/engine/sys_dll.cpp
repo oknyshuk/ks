@@ -66,7 +66,6 @@
 #endif
 #include "toolframework/itoolframework.h"
 #if defined( _X360 )
-#include "xbox/xbox_win32stubs.h"
 #elif defined( _PS3 )
 #include "ps3/ps3_console.h"
 #include "sys/tty.h"

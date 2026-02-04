@@ -21,7 +21,6 @@
 #include "bitmap/tgaloader.h"
 #include "filesystem/IXboxInstaller.h"
 #ifdef _X360
-#include "xbox/xbox_launch.h"
 #elif defined(_PS3)
 #include "ps3/saverestore_ps3_api_ui.h"
 #include "sysutil/sysutil_savedata.h"

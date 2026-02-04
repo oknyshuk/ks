@@ -10,10 +10,6 @@
 #pragma once
 #endif
 
-#if !defined (_GAMECONSOLE)
-	#include "econ_item_view.h"
-#endif
-
 #include "cs_playeranimstate.h"
 #include "cs_weapon_parse.h"
 #include "cs_shareddefs.h"
@@ -202,6 +198,11 @@ public:
 	virtual CSWeaponType GetWeaponType( void ) const { return GetCSWpnData().GetWeaponType( GetEconItemView() ); }
 	virtual const char	*GetDefinitionName( void ) const { return GetEconItemView()->GetStaticData()->GetDefinitionName(); }
 
+	virtual const CEconItemView* GetEconItemView( void ) const OVERRIDE { return &m_EconItemView; }
+	virtual CEconItemView* GetEconItemView( void ) OVERRIDE { return &m_EconItemView; }
+	void InitializeEconItemView( const char *pszItemName );
+	void SetEconItemDefinition( CEconItemDefinition *pDef );
+
 	CCSPlayer* GetPlayerOwner() const;
 #ifdef CLIENT_DLL
 	C_BaseEntity *GetWeaponForEffect();
@@ -386,6 +387,10 @@ public:
 
 	CCSPlayer * GetOriginalOwner();
 
+	// Xuid methods stub (econ removed)
+	virtual uint64 GetOriginalOwnerXuid() const OVERRIDE { return 0; }
+	virtual void SetOriginalOwnerXuid( uint32, uint32 ) OVERRIDE {}
+
 	CNetworkVar( int, m_iOriginalTeamNumber );
 
 	int GetOriginalTeamNumber()	{ return m_iOriginalTeamNumber; }
@@ -406,6 +411,8 @@ protected:
 	bool m_bCanBePickedUp;
 
 private:
+	CEconItemView m_EconItemView;
+	CNetworkVar( int, m_nEconItemDefIndex );
 
 	CWeaponCSBase( const CWeaponCSBase & );
 

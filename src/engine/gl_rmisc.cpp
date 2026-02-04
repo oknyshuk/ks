@@ -1,4 +1,4 @@
-//===== Copyright © 1996-2005, Valve Corporation, All rights reserved. ======//
+//===== Copyright ï¿½ 1996-2005, Valve Corporation, All rights reserved. ======//
 //
 // Purpose: 
 //
@@ -37,11 +37,6 @@
 #include "ibsppack.h"
 #include "vprof.h"
 #include "paint.h"
-
-#if defined(_PS3)
-#include "buildindices_PS3.h"
-#include "buildworldlists_PS3.h"
-#endif
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"

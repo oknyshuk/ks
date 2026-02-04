@@ -904,23 +904,6 @@ void EncodeDataRLE( const uint32* pBuffer, uint32 nDwordCount, CUtlVector< uint3
 	// this is the size in dwords of the rle output buffer
 	uint32 nRLESize = 0;
 
-	// anything that defines _GAMECONSOLE should support prefetches
-#if defined(_GAMECONSOLE)
-	// prefetch the first 7 cache lines
-	for ( int i = 0; i < 7; i++ )
-	{
-		PREFETCH_128( pCurrent + (i * 32), 0 );
-	}
-#endif
-	// this is the next read that will trigger a prefetch (not every read should prefetch)
-	const uint32 *pNextPrefetch = pCurrent + 32;
-	// this is the end of the space we'd want to prefetch ahead of
-	const uint32 *pLastPrefetch = pEndOfData - (8 * 32);
-	// this is how far ahead of the current read to prefetch
-#if defined(_GAMECONSOLE)
-	const uint32 nPrefetchOffsetDwords = 7 * 32;		// will cause an error if your platform has prefetch but not _GAMECONSOLE
-#endif
-
 	while ( pCurrent < pEndOfData )
 	{
 		uint32 nSymbol2 = *pCurrent;
@@ -943,12 +926,6 @@ void EncodeDataRLE( const uint32* pBuffer, uint32 nDwordCount, CUtlVector< uint3
 			while ( pCurrent < pEndOfData && *pCurrent == nSymbol0 )
 			{
 				pCurrent++;
-				if ( pCurrent >= pNextPrefetch && pNextPrefetch < pLastPrefetch )
-				{
-					// schedule prefetches 128 bytes (32 dwords) apart
-					PREFETCH_128( pNextPrefetch + nPrefetchOffsetDwords, 0 );
-					pNextPrefetch += 32;
-				}
 			}
 			// write out the run
 			int nRunCount = pCurrent - pRunStart;
@@ -968,11 +945,6 @@ void EncodeDataRLE( const uint32* pBuffer, uint32 nDwordCount, CUtlVector< uint3
 		pCurrent++;
 		nSymbol0 = nSymbol1;
 		nSymbol1 = nSymbol2;
-		if ( pCurrent >= pNextPrefetch && pNextPrefetch < pLastPrefetch )
-		{
-			PREFETCH_128( pNextPrefetch + nPrefetchOffsetDwords, 0 );
-			pNextPrefetch += 32;
-		}
 	}
 	int nCopyOut = pEndOfData - pCopyStart;
 	if ( nCopyOut )

@@ -1,4 +1,4 @@
-//===== Copyright © 1996-2009, Valve Corporation, All rights reserved. ======//
+//===== Copyright ï¿½ 1996-2009, Valve Corporation, All rights reserved. ======//
 //
 // Purpose: 
 //
@@ -44,6 +44,7 @@ static void SetAllUsersProperty( DWORD dwPropertyId, DWORD cbValue, void const *
 
 KeyValues * MM_Title_RichPresence_PrepareForSessionCreate( KeyValues *pSettings )
 {
+#ifdef _X360
 	SetAllUsersContext( X_CONTEXT_GAME_MODE, CONTEXT_GAME_MODE_CSS_GAME_MODE_MULTIPLAYER, false );
 
 	// matchmaking version
@@ -54,6 +55,7 @@ KeyValues * MM_Title_RichPresence_PrepareForSessionCreate( KeyValues *pSettings 
 		SetAllUsersProperty( PROPERTY_CSS_MATCH_VERSION, sizeof( val ), &val );
 		DevMsg( "PrepareForSessionCreate: matchmaking version %d\n", val );
 	}
+#endif
 
 	return NULL;
 }

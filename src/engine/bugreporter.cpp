@@ -97,8 +97,6 @@
 #include "sv_remoteaccess.h"	// used for remote bug reporting
 
 #if defined( _X360 )
-#include "xbox/xbox_win32stubs.h"
-#include "xbox/xbox_console.h"
 #elif defined( _PS3 )
 #include "ps3/ps3_console.h"
 #endif
@@ -2495,11 +2493,7 @@ void NonFileSystem_CreatePath (const char *path)
 		{       // create the directory
 			char old = *ofs;
 			*ofs = 0;
-#ifdef _PS3
-			mkdir( temppath, PS3_FS_NORMAL_PERMISSIONS );
-#else
 			_mkdir (temppath);
-#endif
 			*ofs = old;
 		}
 	}
@@ -3294,7 +3288,7 @@ bool CBugUIPanel::CopyInfoFromRemoteBug()
 	// Remove the bug.txt file and directory
 	_unlink( m_strRemoteBugInfoPath + "\\bug.txt" );
 
-#if defined(_PS3) || defined(POSIX)
+#if defined(POSIX)
 	rmdir( m_strRemoteBugInfoPath );
 #else
 	_rmdir( m_strRemoteBugInfoPath );

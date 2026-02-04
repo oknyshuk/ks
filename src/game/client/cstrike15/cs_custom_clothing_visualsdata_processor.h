@@ -1,6 +1,6 @@
-//=========== Copyright © Valve Corporation, All rights reserved. =============//
+//=========== Copyright Â© Valve Corporation, All rights reserved. =============//
 //
-// Purpose:
+// Purpose: Stub - clothing skin visualization removed with econ
 //
 // $NoKeywords: $
 //=============================================================================//
@@ -49,17 +49,15 @@ struct CCSClothingData_t
 class CCSClothingVisualsDataCompare : public CBaseVisualsDataCompare
 {
 public:
-	// Need to declare default constructor here since we have declared a move constructor
 	CCSClothingVisualsDataCompare() = default;
 
-	// Unfortunately, VS2013 doesn't support default declaration of move functions.
-	CCSClothingVisualsDataCompare( CCSClothingVisualsDataCompare&& moveFrom ) // = default;
+	CCSClothingVisualsDataCompare( CCSClothingVisualsDataCompare&& moveFrom )
 	: CBaseVisualsDataCompare( Move( moveFrom ) )
 	, m_nTeamId( Move( moveFrom.m_nTeamId ) )
 	, m_bMirrorPattern( Move( moveFrom.m_bMirrorPattern ) )
 	, m_nMaterialId( Move( moveFrom.m_nMaterialId ) )
 	{}
-	CCSClothingVisualsDataCompare& operator=( CCSClothingVisualsDataCompare&& moveFrom ) // = default;
+	CCSClothingVisualsDataCompare& operator=( CCSClothingVisualsDataCompare&& moveFrom )
 	{
 		*(CBaseVisualsDataCompare*)this = Move( moveFrom );
 		m_nTeamId = Move( moveFrom.m_nTeamId );
@@ -78,7 +76,7 @@ public:
 class CCSClothingVisualsDataProcessor : public CBaseVisualsDataProcessor< CCSClothingVisualsDataCompare >
 {
 public:
-	CCSClothingVisualsDataProcessor( CCSClothingVisualsDataCompare &&compareObject, const WeaponPaintableMaterial_t *pWeaponPaintableMaterialDat, const char *szCompositingShaderName = NULL );
+	CCSClothingVisualsDataProcessor( CCSClothingVisualsDataCompare &&compareObject, const char *szCompositingShaderName = NULL );
 
 	virtual KeyValues* GenerateCustomMaterialKeyValues();
 	virtual KeyValues* GenerateCompositeMaterialKeyValues( int nMaterialParamId );
@@ -92,8 +90,6 @@ public:
 
 private:
 	virtual ~CCSClothingVisualsDataProcessor();
-
-	const WeaponPaintableMaterial_t *m_pWeaponPaintableMaterialData;
 
 	CCSClothingData_t m_visualsData;
 

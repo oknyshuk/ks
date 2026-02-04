@@ -19,7 +19,6 @@
 #include <GameUI/IGameUI.h>
 
 #if defined( _X360 )
-#include "xbox/xbox_win32stubs.h"
 #endif
 
 #if defined( _WIN32 ) && !defined( _X360 )

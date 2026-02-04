@@ -36,12 +36,6 @@
 #include "matchmaking/imatchframework.h"
 #include "tier2/tier2.h"
 #include "cl_steamauth.h"
-#ifdef _X360
-#include "xbox/xbox_launch.h"
-#elif defined(_PS3)
-#include "tls_ps3.h"
-#include "ps3_pathinfo.h"
-#endif
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"

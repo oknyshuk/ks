@@ -44,12 +44,8 @@
 #include <unistd.h> // for unlink
 #include <limits.h> // defines PATH_MAX
 #include <alloca.h> // 'cause we like smashing the stack
-#if defined( _PS3 )
-#include <fcntl.h>
-#else
 #include <sys/fcntl.h>
 #include <sys/statvfs.h>
-#endif
 #include <sched.h>
 
 //lwss - Add tier0/platform.h to get this to build. Should be ok since it is header-only.
@@ -60,8 +56,7 @@
 
 // On OSX the native API file offset is always 64-bit
 // and things like stat64 are deprecated.
-// PS3 doesn't have anything other than the native API.
-#if defined(OSX) || defined(_PS3)
+#if defined(OSX)
 typedef off_t offBig_t;
 typedef struct stat statBig_t;
 typedef struct statvfs statvfsBig_t;

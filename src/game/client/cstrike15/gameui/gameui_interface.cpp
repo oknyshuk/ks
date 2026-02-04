@@ -45,7 +45,6 @@
 #include "game/client/IGameClientExports.h"
 #include "materialsystem/imaterialsystem.h"
 #include "matchmaking/imatchframework.h"
-#include "ixboxsystem.h"
 #include "iachievementmgr.h"
 #include "IGameUIFuncs.h"
 #include "ienginevgui.h"
@@ -69,9 +68,6 @@
 #include "protocol.h"
 #include "GameUI/IGameUI.h"
 #include "inputsystem/iinputsystem.h"
-
-#include "cstrike15_item_inventory.h"
-
 
 #ifdef PANORAMA_ENABLE
 #include "panorama/controls/panel2d.h"
@@ -122,7 +118,6 @@ class IMatchExtPortal2 *g_pMatchExtPortal2 = &g_MatchExtPortal2;
 
 #include "basepanel.h"
 #include "../gameui/cstrike15/cstrike15basepanel.h"
-#include "../Scaleform/messagebox_scaleform.h"
 
 typedef CBaseModPanel UI_BASEMOD_PANEL_CLASS;
 inline UI_BASEMOD_PANEL_CLASS & GetUiBaseModPanelClass() { return *BasePanel(); }
@@ -144,7 +139,6 @@ inline UI_BASEMOD_PANEL_CLASS & ConstructUiBaseModPanelClass() { return *BasePan
 #include <cell/sysmodule.h>
 #endif
 #if defined( _X360 )
-#include "xbox/xbox_win32stubs.h"
 #endif
 
 #include "tier0/dbg.h"
@@ -291,7 +285,6 @@ void CGameUI::Initialize( CreateInterfaceFn factory )
 	enginevguifuncs = (IEngineVGui *)factory( VENGINE_VGUI_VERSION, NULL );
 	enginesurfacefuncs = (vgui::ISurface *)factory(VGUI_SURFACE_INTERFACE_VERSION, NULL);
 	gameuifuncs = (IGameUIFuncs *)factory( VENGINE_GAMEUIFUNCS_VERSION, NULL );
-	xboxsystem = (IXboxSystem *)factory( XBOXSYSTEM_INTERFACE_VERSION, NULL );
 // dgoodenough - xonline only exists on the 360.
 // PS3_BUILDFIX
 #ifdef _X360
@@ -301,7 +294,6 @@ void CGameUI::Initialize( CreateInterfaceFn factory )
 	g_pMatchExtSwarm = ( IMatchExtSwarm * ) factory( IMATCHEXT_SWARM_INTERFACE, NULL );
 #endif
 	bFailed = !enginesurfacefuncs || !gameuifuncs || !enginevguifuncs ||
-		!xboxsystem ||
 // dgoodenough - xonline only exists on the 360.
 // PS3_BUILDFIX
 #ifdef _X360
@@ -393,9 +385,6 @@ void CGameUI::SetLoadingBackgroundDialog( vgui::VPANEL panel )
 void CGameUI::Connect( CreateInterfaceFn gameFactory )
 {
 	g_pGameClientExports = (IGameClientExports *)gameFactory(GAMECLIENTEXPORTS_INTERFACE_VERSION, NULL);
-#if defined( INCLUDE_SCALEFORM )
-	g_pScaleformUI = ( IScaleformUI* ) gameFactory( SCALEFORMUI_INTERFACE_VERSION, NULL );
-#endif
 
 	achievementmgr = engine->GetAchievementMgr();
 
@@ -849,21 +838,12 @@ void CGameUI::OnDisconnectFromServer( uint8 eSteamLoginFailure )
 
 	if ( eSteamLoginFailure == STEAMLOGINFAILURE_NOSTEAMLOGIN )
 	{
-#if defined( INCLUDE_SCALEFORM )
-        CLoadingScreenScaleform::DisplayNoSteamConnectionError();
-#endif
 	}
 	else if ( eSteamLoginFailure == STEAMLOGINFAILURE_VACBANNED )
 	{
-#if defined( INCLUDE_SCALEFORM )
-        CLoadingScreenScaleform::DisplayVACBannedError();
-#endif
 	}
 	else if ( eSteamLoginFailure == STEAMLOGINFAILURE_LOGGED_IN_ELSEWHERE )
 	{
-#if defined( INCLUDE_SCALEFORM )
-        CLoadingScreenScaleform::DisplayLoggedInElsewhereError();
-#endif
 	}
 }
 
@@ -898,20 +878,6 @@ extern ConVar devCheatSkipInputLocking;
 void CGameUI::OnLevelLoadingFinished(bool bError, const char *failureReason, const char *extendedReason)
 {
 	StopProgressBar( bError, failureReason, extendedReason );
-
-#if defined( WIN32 ) && defined(INCLUDE_SCALEFORM)
-	if ( g_pScaleformUI && !devCheatSkipInputLocking.GetBool() )
-	{
-		if( g_pInputSystem->GetCurrentInputDevice( ) == INPUT_DEVICE_NONE )
-		{
-			g_pInputSystem->SetCurrentInputDevice( INPUT_DEVICE_KEYBOARD_MOUSE );
-			ConVarRef var( "joystick" );
-			if( var.IsValid( ) )
-				var.SetValue( 0 );
-		}
-		
-	}
-#endif
 
 	// notify all the modules
 	g_VModuleLoader.PostMessageToAllModules( new KeyValues( "LoadingFinished" ) );
@@ -992,10 +958,6 @@ void CGameUI::StartProgressBar()
 {
 	// open a loading dialog
 	m_szPreviousStatusText[0] = 0;
-#if defined( INCLUDE_SCALEFORM )
-    CLoadingScreenScaleform::SetProgressPoint( 0.0f );
-	CLoadingScreenScaleform::Open();
-#endif
 }
 
 //-----------------------------------------------------------------------------
@@ -1003,12 +965,7 @@ void CGameUI::StartProgressBar()
 //-----------------------------------------------------------------------------
 bool CGameUI::ContinueProgressBar( float progressFraction, bool showDialog )
 {
-#if defined( INCLUDE_SCALEFORM )
-    CLoadingScreenScaleform::Activate();
-	return CLoadingScreenScaleform::SetProgressPoint( progressFraction, showDialog );
-#else
 	return false;
-#endif
 }
 
 //-----------------------------------------------------------------------------
@@ -1016,16 +973,6 @@ bool CGameUI::ContinueProgressBar( float progressFraction, bool showDialog )
 //-----------------------------------------------------------------------------
 void CGameUI::StopProgressBar(bool bError, const char *failureReason, const char *extendedReason)
 {
-#if defined( INCLUDE_SCALEFORM )
-    if ( IsInLevel() )
-	{
-		CLoadingScreenScaleform::FinishLoading();			
-	}
-	else
-	{
-		CLoadingScreenScaleform::CloseLoadingScreen();
-	}
-#endif
 // CStrike15 handles error messages elsewhere. (ClientModeCSFullscreen::OnEvent)
 #if !defined( CSTRIKE15 )
 	if ( !IsGameConsole() && bError )
@@ -1046,9 +993,6 @@ bool CGameUI::SetProgressBarStatusText(const char *statusText, bool showDialog )
 	if (!stricmp(statusText, m_szPreviousStatusText))
 		return false;
 
-#if defined( INCLUDE_SCALEFORM )
-    CLoadingScreenScaleform::SetStatusText( statusText, showDialog );
-#endif
 	Q_strncpy(m_szPreviousStatusText, statusText, sizeof(m_szPreviousStatusText));
 	return true;
 }
@@ -1058,9 +1002,6 @@ bool CGameUI::SetProgressBarStatusText(const char *statusText, bool showDialog )
 //-----------------------------------------------------------------------------
 void CGameUI::SetSecondaryProgressBar(float progress /* range [0..1] */)
 {
-#if defined( INCLUDE_SCALEFORM )
-    CLoadingScreenScaleform::SetSecondaryProgress( progress );
-#endif
 }
 
 //-----------------------------------------------------------------------------
@@ -1070,9 +1011,6 @@ void CGameUI::SetSecondaryProgressBarText( const wchar_t *desc )
 {
 	if (!desc)
 		return;
-#if defined( INCLUDE_SCALEFORM )
-	CLoadingScreenScaleform::SetSecondaryProgressText( desc );
-#endif
 }
 
 //-----------------------------------------------------------------------------
@@ -1080,9 +1018,6 @@ void CGameUI::SetSecondaryProgressBarText( const wchar_t *desc )
 //-----------------------------------------------------------------------------
 bool CGameUI::SetShowProgressText( bool show )
 {
-#if defined( INCLUDE_SCALEFORM )
-    return CLoadingScreenScaleform::SetShowProgressText( show );
-#endif
     return false;
 }
 
@@ -1196,30 +1131,14 @@ void CGameUI::ShowMessageDialog( const uint nType, vgui::Panel *pOwner )
 
 void CGameUI::ShowMessageDialog( const char* messageID, const char* titleID )
 {
-#if defined( CSTRIKE15 )
-#if defined( INCLUDE_SCALEFORM )
-	( ( CCStrike15BasePanel* )BasePanel() )->OnOpenMessageBox( titleID, messageID, "#SFUI_Legend_Ok", MESSAGEBOX_FLAG_OK, NULL, NULL );
-#endif
-#endif
 }
 
 void CGameUI::CreateCommandMsgBox( const char* pszTitle, const char* pszMessage, bool showOk, bool showCancel, const char* okCommand, const char* cancelCommand, const char* closedCommand, const char* pszLegend )
 {
-#if defined( CSTRIKE15 )
-#if defined( INCLUDE_SCALEFORM )
-	( ( CCStrike15BasePanel* )BasePanel() )->CreateCommandMsgBox( pszTitle, pszMessage, showOk, showCancel, okCommand, cancelCommand, closedCommand, pszLegend );
-#endif
-#endif
-
 }
 
 void CGameUI::CreateCommandMsgBoxInSlot( ECommandMsgBoxSlot slot, const char* pszTitle, const char* pszMessage, bool showOk, bool showCancel, const char* okCommand, const char* cancelCommand, const char* closedCommand, const char* pszLegend )
 {
-#if defined( CSTRIKE15 )
-#if defined( INCLUDE_SCALEFORM )
-	( ( CCStrike15BasePanel* )BasePanel() )->CreateCommandMsgBoxInSlot( slot, pszTitle, pszMessage, showOk, showCancel, okCommand, cancelCommand, closedCommand, pszLegend );
-#endif
-#endif
 }
 
 
@@ -1264,16 +1183,10 @@ bool CGameUI::IsTransitionEffectEnabled()
 
 void CGameUI::StartLoadingScreenForCommand( const char* command )
 {
-#if defined( INCLUDE_SCALEFORM )
-    CLoadingScreenScaleform::LoadDialogForCommand( command );
-#endif
 }
 
 void CGameUI::StartLoadingScreenForKeyValues( KeyValues* keyValues )
 {
-#if defined( INCLUDE_SCALEFORM )
-    CLoadingScreenScaleform::LoadDialogForKeyValues( keyValues );
-#endif
 }
 
 
@@ -1314,11 +1227,7 @@ void CGameUI::UpdateBackgroundMusic( void )
 	if ( m_bBackgroundMusicDesired && !enginesound->GetPreventSound() )
 	{	
 		const char * pNewMusicExtension = "";
-		
-		CSteamID steamIDForPlayer = steamapicontext->SteamUser()->GetSteamID();
 
-		CEconItemView *pItemData = CSInventoryManager()->GetItemInLoadoutForTeam( 0, LOADOUT_POSITION_MUSICKIT, &steamIDForPlayer );
-		
 		uint32 unMusicID = 0;
 		bool bIsPreview = false;
 
@@ -1326,18 +1235,6 @@ void CGameUI::UpdateBackgroundMusic( void )
 		{
 			pNewMusicExtension = m_pPreviewMusicExtension;
 			bIsPreview = true;
-		}
-
-		else if ( pItemData && pItemData->IsValid() )
-		{
-			static const CEconItemAttributeDefinition *pAttr_MusicID = GetItemSchema()->GetAttributeDefinitionByName( "music id" );
-
-			if ( pItemData->FindAttribute( pAttr_MusicID, &unMusicID ) )
-			{
-				const CEconMusicDefinition *pMusicDef = GetItemSchema()->GetMusicDefinition( unMusicID );
-				if ( pMusicDef )
-					pNewMusicExtension = pMusicDef->GetName();
-			}
 		}
 
 		if ( !IsBackgroundMusicPlaying() && !enginesound->IsMoviePlaying() )

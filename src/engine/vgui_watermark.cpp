@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
+//========= Copyright ï¿½ 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -9,7 +9,6 @@
 #include <vgui/IVGui.h>
 #include <vgui/ILocalize.h>
 #include <vgui/ISurface.h>
-#include "../common/xbox/xboxstubs.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -79,13 +78,8 @@ void CWatermarkPanel::ComputeSize( void )
 	int wide, tall;
 	vgui::ipanel()->GetSize(GetVParent(), wide, tall );
 
-	int x = 0;;
+	int x = 0;
 	int y = 0;
-	if ( IsX360() )
-	{
-		x += XBOX_MINBORDERSAFE * wide;
-		y += XBOX_MINBORDERSAFE * tall;
-	}
 	SetPos( x, y );
 	SetSize( WATERMARK_PANEL_WIDTH, ( m_nLinesNeeded + 2 ) * vgui::surface()->GetFontTall( m_hFont ) + 4 );
 }

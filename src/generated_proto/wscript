@@ -16,8 +16,6 @@ def build(bld):
 		'cstrike15_gcmessages.pb.cc',
 		'cstrike15_usermessages.pb.cc',
 		'engine_gcmessages.pb.cc',
-		'gcsdk_gcmessages.pb.cc',
-		'gcsystemmsgs.pb.cc',
 		'netmessages.pb.cc',
 		'network_connection.pb.cc',
 		'steammessages.pb.cc'

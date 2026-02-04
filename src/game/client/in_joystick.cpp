@@ -37,12 +37,10 @@
 #endif
 
 #if defined( _X360 )
-#include "xbox/xbox_win32stubs.h"
 #elif defined( _PS3 )
 #include "ps3/ps3_core.h"
 #include "ps3/ps3_win32stubs.h"
 #else
-#include "../common/xbox/xboxstubs.h"
 #endif
 
 #ifdef PORTAL2
@@ -98,11 +96,7 @@ static ConVar joy_pitchsensitivity( "joy_pitchsensitivity", "-1", FCVAR_ARCHIVE 
 static ConVar joy_yawsensitivity( "joy_yawsensitivity", "-1", FCVAR_ARCHIVE | FCVAR_ARCHIVE_GAMECONSOLE | FCVAR_SS, "joystick yaw sensitivity", true, -5.0f, true, -0.1f );
 
 // Advanced sensitivity and response
-#ifdef _X360 //tmuaer
-static ConVar joy_response_move( "joy_response_move", "9", FCVAR_ARCHIVE, "'Movement' stick response mode: 0=Linear, 1=quadratic, 2=cubic, 3=quadratic extreme, 4=power function(i.e., pow(x,1/sensitivity)), 5=two-stage" );
-#else
 static ConVar joy_response_move( "joy_response_move", "1", FCVAR_ARCHIVE, "'Movement' stick response mode: 0=Linear, 1=quadratic, 2=cubic, 3=quadratic extreme, 4=power function(i.e., pow(x,1/sensitivity)), 5=two-stage" );
-#endif
 
 ConVar joy_response_move_vehicle("joy_response_move_vehicle", "6");
 static ConVar joy_response_look( "joy_response_look", "0", FCVAR_ARCHIVE, "'Look' stick response mode: 0=Default, 1=Acceleration Promotion" );
@@ -1587,16 +1581,6 @@ void CInput::MotionControllerMove( float frametime, CUserCmd *cmd )
 	int iObserverMode = pPlayer->GetObserverMode();
 	bool ignorePointerInput = ( iObserverMode == OBS_MODE_DEATHCAM || iObserverMode == OBS_MODE_FREEZECAM );
 
-#if defined( INCLUDE_SCALEFORM )
-
-	// If we're in the pause menu, then lock the cursor to the screen.
-	if ( g_pScaleformUI->SlotDeniesInputToGame( SF_SS_SLOT( nSlot ) )  )
-	{
-		ignorePointerInput = true;
-	}
-
-#endif
-	
 	// If we're in the pause menu, then lock the cursor to the screen.
 	if ( ignorePointerInput  )
 	{
@@ -1855,11 +1839,6 @@ void CInput::JoyStickMove( float frametime, CUserCmd *cmd )
 #endif
 
 	int nSlot = GET_ACTIVE_SPLITSCREEN_SLOT();
-
-#if defined( INCLUDE_SCALEFORM )
-	if ( g_pScaleformUI->SlotDeniesInputToGame( SF_SS_SLOT( nSlot ) ) )
-		return;
-#endif
 
 	PerUserInput_t &user = GetPerUser( nSlot );
 

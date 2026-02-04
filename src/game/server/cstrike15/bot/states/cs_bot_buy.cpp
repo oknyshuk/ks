@@ -8,6 +8,7 @@
 // Author: Michael S. Booth (mike@turtlerockstudios.com), 2003
 
 #include "cbase.h"
+#include "tier1/fmtstr.h"
 #include "cs_gamerules.h"
 #include "cs_bot.h"
 

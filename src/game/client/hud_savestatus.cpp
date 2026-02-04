@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
+//========= Copyright ï¿½ 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -16,10 +16,6 @@
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
-// Actually must access console primary user id
-#if defined( _GAMECONSOLE ) && defined( XBX_GetPrimaryUserId )
-#undef XBX_GetPrimaryUserId
-#endif
 
 using namespace vgui;
 
@@ -100,15 +96,6 @@ void CHudSaveStatus::SetSavingLabels( bool bIsGameSave )
 //-----------------------------------------------------------------------------
 bool CHudSaveStatus::ShouldDraw()
 {
-#ifdef _GAMECONSOLE
-	ASSERT_LOCAL_PLAYER_RESOLVABLE();
-	int nSlot = GET_ACTIVE_SPLITSCREEN_SLOT();
-	if ( XBX_GetUserId( nSlot ) != ( int )XBX_GetPrimaryUserId() )
-	{
-		return false;
-	}
-#endif
-
 	bool bNeedsDraw = false;
 
 	if ( m_flSaveStartedTime && Plat_FloatTime() < m_flSaveStartedTime + MIN_HOLD_TIME )
@@ -119,45 +106,12 @@ bool CHudSaveStatus::ShouldDraw()
 
 	// notify on autosaves, except autosavedangerous
 	// autosavedangerous notifications are suppressed until marked safe, and might get discarded
-	if ( engine->IsSaveInProgress() && 
-		!engine->IsAutoSaveDangerousInProgress() && 
-		!( IsPC() && engine->IsAutoSaveInProgress() ) ) 
+	if ( engine->IsSaveInProgress() &&
+		!engine->IsAutoSaveDangerousInProgress() &&
+		!( IsPC() && engine->IsAutoSaveInProgress() ) )
 	{
-		bool bPrimaryUserIsGuest = false;
-#if defined( _GAMECONSOLE )
-		bPrimaryUserIsGuest = ( XBX_GetPrimaryUserIsGuest() != 0 );
-#endif
-		int iController = XBX_GetActiveUserId();
-		DWORD nStorageDevice = XBX_GetStorageDeviceId( iController );
-		bool bHasStorageDevice = ( XBX_DescribeStorageDevice( nStorageDevice ) != 0 );
-
-		// a guest has no storage, the in-memory saves aren't shown to prevent player confusion as they have no access to the save
-		if ( !bPrimaryUserIsGuest && bHasStorageDevice )
-		{
-			bNeedsDraw = true;
-		}
+		bNeedsDraw = true;
 	}
-
-#if defined( _PS3 )
-	bool bIsSteamProfileSave = false;
-	bool bPS3SaveUtilBusy = ps3saveuiapi->IsSaveUtilBusy();
-	if ( bPS3SaveUtilBusy )
-	{
-		uint32 nOpTag = ps3saveuiapi->GetCurrentOpTag();
-		if ( nOpTag == kSAVE_TAG_WRITE_STEAMINFO )
-		{
-			bNeedsDraw = true;
-			bIsSteamProfileSave = true;
-		}
-	}
-
-	if ( bPS3SaveUtilBusy && ( m_bIsSteamProfileSave != bIsSteamProfileSave ) )
-	{
-		// change to correct label
-		m_bIsSteamProfileSave = bIsSteamProfileSave;
-		SetSavingLabels( !m_bIsSteamProfileSave );
-	}
-#endif
 
 	if ( m_bNeedsDraw != bNeedsDraw )
 	{
@@ -216,14 +170,6 @@ bool CHudSaveStatus::ShouldDraw()
 			m_flFadeOutTime = 0;
 		}
 	}
-
-#if defined( _PS3 )
-	if ( !bNeedsDraw && m_bIsSteamProfileSave )
-	{
-		m_bIsSteamProfileSave = false;
-		SetSavingLabels( !m_bIsSteamProfileSave );
-	}
-#endif
 
 	return bNeedsDraw;
 }

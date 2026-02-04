@@ -32,6 +32,7 @@
 #include "gameui/gameui_interface.h"
 #include "c_cs_playerresource.h"
 #include "smokegrenade_projectile.h"
+#include "cs_item_inventory.h"
 #endif //!CSTRIKE15
 #include "c_props.h"
 #include "c_baseplayer.h"
@@ -69,7 +70,6 @@
 #include "matchmaking/mm_helpers.h"
 #include "gameui/basepanel.h"
 #include "gameui/uigamedata.h"
-#include "Scaleform/messagebox_scaleform.h"
 #include "GameStats.h"
 #if defined ( _GAMECONSOLE )
 #include "GameUI/IGameUI.h"
@@ -80,16 +80,11 @@
 #include "hltvcamera.h"
 #include "basecsgrenade_projectile.h"
 #include "hud_chat.h"
-#if defined( INCLUDE_SCALEFORM )
-#include "Scaleform/HUD/sfhud_uniquealerts.h"
-#include "Scaleform/HUD/sfhud_rosettaselector.h"
-#endif
 #include "hltvreplaysystem.h"
 #include "netmessages.h"
 #include "playerdecals_signature.h"
 
 #if defined ( _X360 )
-#include "ixboxsystem.h"
 #endif
 
 // NOTE: This has to be the last file included!
@@ -687,13 +682,11 @@ void ClientModeCSNormal::Init()
 		hintBox->RegisterForRenderGroup("hide_for_round_panel");
 	}
 
-#if !defined( INCLUDE_SCALEFORM )
 	CHudElement* historyResource = (CHudElement*)GET_HUDELEMENT( CHudHistoryResource );
 	if (historyResource)
 	{
-		historyResource->RegisterForRenderGroup("hide_for_scoreboard");		
+		historyResource->RegisterForRenderGroup("hide_for_scoreboard");
 	}
-#endif
 
 	char szName[ MAX_PATH ] = "";
 
@@ -1210,21 +1203,6 @@ void ClientModeCSNormal::Update()
 						pChat->ChatPrintfW( 0, CHAT_FILTER_NONE, wchHudMessage );
 					}
 				}
-
-#if defined( INCLUDE_SCALEFORM )
-                // Quest notification alert
-				if (SFUniqueAlerts* pAlerts = (SFUniqueAlerts*)(GetHud(0).FindElement("SFUniqueAlerts")))
-				{
-					// REI: Not sure this is correct.  Need to understand why this is a vector, and which "points" from the
-					// vector the uncommitted quest progress is referring to
-					const CCopyableUtlVector< uint32 >& questPointsVec = pQuestDef->GetQuestPoints();
-					uint32 questPoints = 0;
-					if (questPointsVec.Count() > 0)
-						questPoints = questPointsVec[0];
-
-					pAlerts->ShowQuestProgress(numPointsEarned, questProgress.m_numNormalPoints, questPoints, "weapon_knife", "do the thing"); // TODO: Correctly extract the weapon icon to use
-				}
-#endif
 			}
 		}
 		questProgress.m_numNormalPointsProgressBaseline = questProgress.m_numNormalPoints;
@@ -1295,12 +1273,6 @@ CON_COMMAND_F(quest_ui_test, "Test quest ui", FCVAR_CLIENTCMD_CAN_EXECUTE)
 	{
 		maxPoints = Q_atoi(args.ArgV()[3]);
 	}
-#if defined( INCLUDE_SCALEFORM )
-	if (SFUniqueAlerts* pAlerts = (SFUniqueAlerts*)(GetHud(0).FindElement("SFUniqueAlerts")))
-	{
-		pAlerts->ShowQuestProgress(newPoints, totalPoints, maxPoints, "weapon_knife", "quest desc");
-	}
-#endif
 }
 #endif
 
@@ -3748,36 +3720,6 @@ bool __MsgFunc_PlayerDecalDigitalSignature( const CCSUsrMsg_PlayerDecalDigitalSi
 	return true;
 }
 
-class ClientJob_EMsgGCCStrike15_v2_ClientPlayerDecalSign : public GCSDK::CGCClientJob
-{
-public:
-	explicit ClientJob_EMsgGCCStrike15_v2_ClientPlayerDecalSign( GCSDK::CGCClient *pGCClient ) : GCSDK::CGCClientJob( pGCClient )
-	{
-	}
-
-	virtual bool BYieldingRunJobFromMsg( GCSDK::IMsgNetPacket *pNetPacket )
-	{
-		GCSDK::CProtoBufMsg<CMsgGCCStrike15_v2_ClientPlayerDecalSign> msg( pNetPacket );
-#ifdef _DEBUG
-		DevMsg( "Client decal signature (%llu) T%u = [%u b]\n", msg.Body().itemid(),
-			msg.Body().data().rtime(), msg.Body().data().signature().size() );
-#endif
-		if ( !msg.Body().data().signature().size() )
-			return false;
-		if ( !BValidateClientPlayerDecalSignature( msg.Body().data() ) )
-			return false;
-
-		CSVCMsg_UserMessage_t um;
-		CCSUsrMsg_PlayerDecalDigitalSignature gameMsg;
-		gameMsg.mutable_data()->CopyFrom( msg.Body().data() );
-		if ( BSerializeUserMessageToSVCMSG( um, CS_UM_PlayerDecalDigitalSignature, gameMsg ) )
-			engine->SendMessageToServer( &um );
-
-		return true;
-	}
-};
-GC_REG_CLIENT_JOB( ClientJob_EMsgGCCStrike15_v2_ClientPlayerDecalSign, k_EMsgGCCStrike15_v2_ClientPlayerDecalSign );
-
 void PlayerDecalDataSendActionSprayToServer( int nSlot )
 {
 	CCSPlayerInventory* pPlayerInv = CSInventoryManager()->GetLocalCSInventory();
@@ -3887,24 +3829,11 @@ void ClientModeCSFullscreen::OnEvent( KeyValues *pEvent )
 			okCommand = "error_message_explain_vac";
 		else if ( !V_strcmp( szReason, "#GameUI_Disconnect_PureServer_Mismatch" ) )
 			okCommand = "error_message_explain_pure";
-#if defined( INCLUDE_SCALEFORM )
-		CCommandMsgBox::CreateAndShow("#SFUI_Disconnect_Title", szReason, true, false, okCommand );
-#endif
 	}
 	else if ( !Q_stricmp( pEventName, "OnClientInsecureBlocked" ) )
 	{
 		g_bClientIsAllowedToPlayOnSecureServers = false;
-#if defined( INCLUDE_SCALEFORM )
-        CMessageBoxScaleform::UnloadAllDialogs();
-#endif
 		BasePanel()->RestoreMainMenuScreen();
-		char const *szSuffix = "";
-		if ( ( CommandLine()->FindParm( "-insecure" ) && !CommandLine()->FindParm( "-insecure_forced_by_launcher" ) ) || CommandLine()->FindParm( "-tools" ) )
-			szSuffix = "_cmd";
-#if defined( INCLUDE_SCALEFORM )
-        CCommandMsgBox::CreateAndShow( CFmtStr( "#SFUI_DisconnectReason_OnClientInsecureTitle_%s", pEvent->GetString( "reason" ) ),
-			CFmtStr( "#SFUI_DisconnectReason_OnClientInsecureBlocked_%s%s", pEvent->GetString( "reason" ), szSuffix ), true);
-#endif
 	}
 }
 

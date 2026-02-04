@@ -1,4 +1,4 @@
-//===== Copyright © 1996-2005, Valve Corporation, All rights reserved. ======//
+//===== Copyright ï¿½ 1996-2005, Valve Corporation, All rights reserved. ======//
 //
 // Purpose: 
 //
@@ -951,11 +951,7 @@ bool CGameClient::ProcessSignonStateMsg( int state, int spawncount )
 			return false;
 
 		// Allow long enough time-out to load a map
-		float flTimeout = SIGNON_TIME_OUT;
-		if ( sv.IsDedicatedForXbox() )
-			flTimeout = SIGNON_TIME_OUT_360;
-
-		m_NetChannel->SetTimeout( flTimeout );
+		m_NetChannel->SetTimeout( SIGNON_TIME_OUT );
 		m_NetChannel->SetFileTransmissionMode( false );
 		m_NetChannel->SetMaxBufferSize( true, NET_MAX_PAYLOAD );
 	}

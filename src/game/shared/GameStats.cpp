@@ -40,7 +40,6 @@ extern const ConVar *sv_cheats;
 #endif
 
 #if defined( _X360 )
-#include "xbox/xbox_win32stubs.h"
 #endif
 
 // NOTE: This has to be the last file included!

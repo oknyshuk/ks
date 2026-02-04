@@ -7,12 +7,7 @@
 #include "tier0/platform.h"
 
 #include "tier0/valve_off.h"
-#ifdef _X360
-#include "xbox/xbox_console.h"
-#include "xbox/xbox_vxconsole.h"
-#elif defined( _PS3 )
-#include "ps3/ps3_console.h"
-#elif defined( _WIN32 )
+#if defined( _WIN32 )
 #include <windows.h>
 #elif POSIX
 char *GetCommandLine();
@@ -75,12 +70,9 @@ static bool g_bAssertDialogEnabled = true;
 
 static CAssertDisable *g_pAssertDisables = NULL;
 
-#if ( defined( _WIN32 ) && !defined( _X360 ) )
+#if defined( _WIN32 )
 static int g_iLastLineRange = 5;
 static int g_nLastIgnoreNumTimes = 1;
-#endif
-#if defined( _X360 ) || defined( _PS3 )
-	static int g_VXConsoleAssertReturnValue = -1;
 #endif
 
 // Set to true if they want to break in the debugger.

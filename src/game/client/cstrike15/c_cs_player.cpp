@@ -7,6 +7,7 @@
 #include "cbase.h"
 #include "c_cs_player.h"
 #include "c_user_message_register.h"
+#include "vgui/ILocalize.h"
 #include "view.h"
 #include "iclientvehicle.h"
 #include "ivieweffects.h"
@@ -42,24 +43,14 @@
 #include "c_cs_hostage.h"
 #include "prediction.h"
 
-#if defined(INCLUDE_SCALEFORM)
-#include "HUD/sfweaponselection.h"
-#include "HUD/sfhudreticle.h"
-#include "HUD/sfweaponselection.h"
-#include "Scaleform/HUD/sfhudinfopanel.h"
-#endif
-
 #include "ragdoll_shared.h"
 #include "collisionutils.h"
 #include "engineinterface.h"
-#include "econ_gcmessages.h"
-#include "cstrike15_item_system.h"
 #include "hltvcamera.h"
 
 #include "steam/steam_api.h"
 
 #include "vguicenterprint.h"
-#include "ixboxsystem.h"
 #include "xlast_csgo/csgo.spa.h"
 
 #include "weapon_basecsgrenade.h"
@@ -68,6 +59,7 @@
 #include "vgui_controls/Controls.h"
 
 #include "cs_player_rank_mgr.h"
+#include "cs_item_inventory.h"
 #include "platforminputdevice.h"
 #include "cam_thirdperson.h"
 #include "inputsystem/iinputsystem.h"
@@ -203,13 +195,6 @@ ConVar cl_hud_color( "cl_hud_color", "0", FCVAR_CLIENTDLL | FCVAR_RELEASE | FCVA
 static void Hud_Radar_Scale_Callback( IConVar *pConVar, const char *pOldString, float flOldValue )
 {
 	// refresh here
-	//lwss - this convar is only in scaleform lib
-#if defined( INCLUDE_SCALEFORM )
-	ConVarRef m_hudscaling( "hud_scaling" );
-	float flScale = m_hudscaling.GetFloat();
-	m_hudscaling.SetValue( flScale + 1 );
-	m_hudscaling.SetValue( flScale );
-#endif
 }
 
 ConVar cl_hud_radar_scale( "cl_hud_radar_scale", "1", FCVAR_CLIENTDLL | FCVAR_RELEASE | FCVAR_ARCHIVE, "", true, 0.8, true, 1.3, Hud_Radar_Scale_Callback );
@@ -2432,29 +2417,6 @@ void C_CSPlayer::FireGameEvent( IGameEvent *event )
 	{
 		m_bShouldAutobuyNow = false;
 		m_bShouldAutobuyDMWeapons = false;
-#if defined( INCLUDE_SCALEFORM )
-        if ( IsLocalPlayer() )
-		{
-			CHudElement *pElement = GetHud().FindElement( "SFHudInfoPanel" );
-			C_CS_PlayerResource *pCSRes = GetCSResources();
-			CEconQuestDefinition *pQuest = CSGameRules()->GetActiveAssassinationQuest();
-			if ( pElement && pCSRes && pQuest )
-			{
-				wchar_t szBuf[ 512 ];
-				const char *szAlertToken = NULL;
-				if ( IsAssassinationTarget() )
-					szAlertToken = "#quest_assassination_you_are_target";
-				else if ( GetActiveQuestID() == pQuest->GetID() && (int)pQuest->GetTargetTeam() != GetTeamNumber() )
-					szAlertToken = "#quest_assassination_target_on_server_has_quest";
-				else
-					szAlertToken = "#quest_assassination_target_on_server";
-
-				g_pVGuiLocalize->ConstructString( szBuf, sizeof( szBuf ), g_pVGuiLocalize->Find( szAlertToken ), 1, g_pVGuiLocalize->Find( Helper_GetLocalPlayerAssassinationQuestLocToken( pQuest ) ) );
-
-				( ( SFHudInfoPanel * ) pElement )->SetPriorityHintText( szBuf );
-			}
-		}
-#endif
 	}
 	else if ( Q_strcmp( name, "cs_pre_restart" ) == 0 )
 	{
@@ -2682,25 +2644,6 @@ void C_CSPlayer::FireGameEvent( IGameEvent *event )
 	else if ( Q_strcmp( "ammo_pickup", name ) == 0 )
 	{
 		FirePerfStatsEvent( PERF_STATS_PLAYER );
-#if defined( INCLUDE_SCALEFORM )
-        // this is to catch the case where a grenade was just thrown and we picked up another grenade immediately before the one iun our inventory has a chance to remove itself
-		// what happens here is that the one we just picked up adds to the "ammo" of the one that we have and we then remove the one that we picked up
-		C_CSPlayer *pObservedPlayer = GetHudPlayer();
-
-		// check if weapon was dropped by local player or the player we are observing
-		if ( pLocalPlayer && pObservedPlayer->GetUserID() == EventUserID )
-		{
-			C_WeaponCSBase *pWeapon = dynamic_cast<C_WeaponCSBase*>( ClientEntityList().GetEnt( event->GetInt( "index" ) ) );
-			if ( pWeapon && pWeapon->ShouldDrawPickup() )
-			{
-				CBaseHudWeaponSelection *pHudSelection = GetHudWeaponSelection();
-				if ( pHudSelection )
-				{
-					pHudSelection->OnWeaponPickup( pWeapon );
-				}
-			}
-		}
-#endif
 	}
 	else if ( Q_strcmp( "gg_leader", name ) == 0 )
 	{
@@ -2803,25 +2746,6 @@ void C_CSPlayer::FireGameEvent( IGameEvent *event )
 
 			////  data collection for ammo remaining at death. OGS
 			RecordAmmoForRound();
-#if defined( INCLUDE_SCALEFORM )
-			if ( IsLocalPlayer() )
-			{
-				if ( CSGameRules() && CSGameRules()->GetActiveAssassinationQuest() && IsAssassinationTarget() )
-				{
-					CHudElement *pElement = GetHud().FindElement( "SFHudInfoPanel" );
-					C_CS_PlayerResource *pCSRes = GetCSResources();
-					if ( pElement && pCSRes )
-					{
-						wchar_t szBuf[ 512 ];
-						wchar_t wszName[ MAX_DECORATED_PLAYER_NAME_LENGTH ] = { };
-						pCSRes->GetDecoratedPlayerName( entindex(), wszName, sizeof( wszName ), k_EDecoratedPlayerNameFlag_Simple );
-						g_pVGuiLocalize->ConstructString( szBuf, sizeof( szBuf ), g_pVGuiLocalize->Find( "#quest_assassination_no_longer_target" ), 1, wszName );
-
-						( ( SFHudInfoPanel * )pElement )->SetPriorityHintText( szBuf );
-					}
-				}
-			}
-#endif
 		}
 		if( CSGameRules()->IsPlayingAnyCompetitiveStrictRuleset() && !g_HltvReplaySystem.GetHltvReplayDelay() )
 		{
@@ -2915,21 +2839,6 @@ void C_CSPlayer::FireGameEvent( IGameEvent *event )
 	}
 	else if ( Q_strcmp( "assassination_target_killed", name ) == 0 )
 	{
-#if defined( INCLUDE_SCALEFORM )
-        if ( CSGameRules() && CSGameRules()->GetActiveAssassinationQuest() && IsLocalPlayer() )
-		{
-			CHudElement *pElement = GetHud().FindElement( "SFHudInfoPanel" );
-			C_CS_PlayerResource *pCSRes = GetCSResources();
-			CEconQuestDefinition *pQuest = CSGameRules()->GetActiveAssassinationQuest();
-			wchar_t wszName[ MAX_DECORATED_PLAYER_NAME_LENGTH ] = {};
-			if ( pElement && pCSRes && Helper_GetDecoratedAssassinationTargetName( pQuest, wszName, ARRAYSIZE( wszName ) ) )
-			{
-				wchar_t szBuf[ 512 ];
-				g_pVGuiLocalize->ConstructString( szBuf, sizeof( szBuf ), g_pVGuiLocalize->Find( "#quest_assassination_target_killed" ), 1, wszName );
-				( ( SFHudInfoPanel * ) pElement )->SetPriorityHintText( szBuf );
-			}
-		}
-#endif
 	}
 	else if ( Q_strcmp( "add_bullet_hit_marker", name ) == 0 )
 	{
@@ -4745,26 +4654,6 @@ void C_CSPlayer::ClientThink()
 		UpdateTargetedWeapon();
 	}
 
-#if defined( INCLUDE_SCALEFORM )
-    if ( CSGameRules() && CSGameRules()->IsPlayingCoopGuardian() && IsLocalPlayer( this ) && !inSpecMode && IsAlive() )
-	{
-		if ( m_flGuardianTooFarDistFrac > 0.2 && m_flNextGuardianTooFarWarning <= gpGlobals->curtime )
-		{
-			CHudElement *pElement = GetHud().FindElement( "SFHudInfoPanel" );
-			if ( pElement )
-			{
-				if ( CSGameRules()->IsPlayingCoopGuardian() )
-				{
-					EmitSound( "UI.Guardian.TooFarWarning" );
-					( ( SFHudInfoPanel * )pElement )->SetPriorityHintText( g_pVGuiLocalize->Find( "#SFUI_Notice_GuardianModeTooFarFromBomb" ) );
-				}
-			}
-
-			m_flNextGuardianTooFarWarning = gpGlobals->curtime + MAX( 0.25, ( 1 - m_flGuardianTooFarDistFrac ) * 2 );
-		}
-	}
-#endif
-
 	////////////////////////////////////
 	// show player shot locations
 	bool bRenderForSpectator = CanSeeSpectatorOnlyTools() && spec_show_xray.GetInt();
@@ -4945,23 +4834,6 @@ void C_CSPlayer::ClientThink()
 			//wchar_t wzAutoBuyBind[32] = L"";
 			//UTIL_ReplaceKeyBindings( L"%autobuy%", 0, wzAutoBuyBind, sizeof( wzAutoBuyBind ) );
 
-			wchar_t wszLocalized[256];
-			//if ( flTimeLeft < 1.0f && m_bHasMovedSinceSpawn )
-			g_pVGuiLocalize->ConstructString( wszLocalized, sizeof( wszLocalized ), g_pVGuiLocalize->Find( "#SFUI_Notice_Guardian_BuyMenuAvailable" ), 3, wzBuyBind/*, wzTime, wzAutoBuyBind*/ );
-#if defined( INCLUDE_SCALEFORM )
-			CHudElement *pElement = GetHud().FindElement( "SFHudInfoPanel" );
-			if ( pElement )
-			{
-				( ( SFHudInfoPanel * )pElement )->SetPriorityHintText( wszLocalized );
-			}
-#endif
-
-			//GetCenterPrint()->Print( wszLocalized );
-			//UTIL_HudHintText( GetOwner(), hint.Access() );
-
-			//UTIL_ClientPrintAll( HUD_PRINTCENTER, "#SFUI_Notice_DM_OpenBuyMenu", wzFinal, wzTime );
-
-			//m_fImmuneToGunGameDamageTimeLast = m_fImmuneToGunGameDamageTime;
 		}
 	}
 	else if ( CSGameRules()->IsPlayingGunGameDeathmatch() && this == GetLocalPlayer() && IsAlive() && GetObserverMode() == OBS_MODE_NONE )
@@ -4969,66 +4841,11 @@ void C_CSPlayer::ClientThink()
 		float flTimeLeft = m_fImmuneToGunGameDamageTime - gpGlobals->curtime;
 		if ( m_fImmuneToGunGameDamageTimeLast != 0 || flTimeLeft >= 0 )
 		{
-			//wchar_t szNotice[64] = L"";
-			wchar_t wzTime[8] = L"";
-			int nMinLeft = (int)flTimeLeft / 60;
-			int nSecLeft = (int)flTimeLeft - ( nMinLeft * 60 ); 
-			int nMSecLeft = (flTimeLeft - ((float)(nMinLeft*60) + (float)nSecLeft)) * 10; 
-			V_swprintf_safe( wzTime, L"%d.%d", nSecLeft, nMSecLeft );
-
-			wchar_t wzBuyBind[32] = L"";
-			UTIL_ReplaceKeyBindings( L"%buymenu%", 0, wzBuyBind, sizeof( wzBuyBind ) );
-
-			wchar_t wzAutoBuyBind[32] = L"";
-			UTIL_ReplaceKeyBindings( L"%autobuy%", 0, wzAutoBuyBind, sizeof( wzAutoBuyBind ) );
-
-			wchar_t wszLocalized[256];
-			if ( cl_dm_buyrandomweapons.GetBool() )
-			{
-				if ( flTimeLeft < 1.0f && m_bHasMovedSinceSpawn )
-					g_pVGuiLocalize->ConstructString( wszLocalized, sizeof( wszLocalized ), g_pVGuiLocalize->Find( "#SFUI_Notice_DM_InvulnExpire_RandomON" ), 1, wzAutoBuyBind );
-				else if ( flTimeLeft < 0.1 )
-					g_pVGuiLocalize->ConstructString( wszLocalized, sizeof( wszLocalized ), g_pVGuiLocalize->Find( "#SFUI_Notice_DM_BuyMenuExpire_RandomON" ), 1, wzAutoBuyBind );
-				else
-					g_pVGuiLocalize->ConstructString( wszLocalized, sizeof( wszLocalized ), g_pVGuiLocalize->Find( "#SFUI_Notice_DM_BuyMenu_RandomON" ), 3, wzBuyBind, wzTime, wzAutoBuyBind );
-			}	
-			else
-			{	
-				if ( flTimeLeft < 1.0f && m_bHasMovedSinceSpawn )
-					g_pVGuiLocalize->ConstructString( wszLocalized, sizeof( wszLocalized ), g_pVGuiLocalize->Find( "#SFUI_Notice_DM_InvulnExpire_RandomOFF" ), 1, wzAutoBuyBind );
-				else if ( flTimeLeft < 0.1 )
-					g_pVGuiLocalize->ConstructString( wszLocalized, sizeof( wszLocalized ), g_pVGuiLocalize->Find( "#SFUI_Notice_DM_BuyMenuExpire_RandomOFF" ), 1, wzAutoBuyBind );
-				else	
-					g_pVGuiLocalize->ConstructString( wszLocalized, sizeof( wszLocalized ), g_pVGuiLocalize->Find( "#SFUI_Notice_DM_BuyMenu_RandomOFF" ), 3, wzBuyBind, wzTime, wzAutoBuyBind );
-			}
-#if defined( INCLUDE_SCALEFORM )
-			CHudElement *pElement = GetHud().FindElement( "SFHudInfoPanel" );
-			if ( pElement )														
-			{																	
-				((SFHudInfoPanel *)pElement)->SetPriorityHintText( wszLocalized );				
-			}
-#endif
-
-			//GetCenterPrint()->Print( wszLocalized );
-			//UTIL_HudHintText( GetOwner(), hint.Access() );
-
-			//UTIL_ClientPrintAll( HUD_PRINTCENTER, "#SFUI_Notice_DM_OpenBuyMenu", wzFinal, wzTime );
-
 			m_fImmuneToGunGameDamageTimeLast = m_fImmuneToGunGameDamageTime;
 		}
 	}
 	else if ( IsAlive() && m_hCarriedHostage != NULL && this == GetLocalPlayer() && IsAlive() && GetObserverMode() == OBS_MODE_NONE )
 	{
-		wchar_t wszLocalized[256];	
-		//g_pVGuiLocalize->ConstructString( wszLocalized, sizeof( wszLocalized ), g_pVGuiLocalize->Find( "#SFUI_Notice_DM_BuyMenu_RandomOFF" ), 3, wzBuyBind, wzTime, wzAutoBuyBind );
-		g_pVGuiLocalize->ConstructString( wszLocalized, sizeof( wszLocalized ), g_pVGuiLocalize->Find( "#Cstrike_TitlesTXT_CarryingHostage" ), 0 );
-#if defined( INCLUDE_SCALEFORM )
-		CHudElement *pElement = GetHud().FindElement( "SFHudInfoPanel" );
-		if ( pElement )														
-		{																	
-			((SFHudInfoPanel *)pElement)->SetPriorityHintText( wszLocalized );				
-		}
-#endif
 	}
 	else if ( !IsAlive() && mp_use_respawn_waves.GetBool() && CSGameRules() && IsAbleToInstantRespawn() && this == GetLocalPlayer() && GetObserverMode() > OBS_MODE_FREEZECAM )
 	{
@@ -5037,44 +4854,13 @@ void C_CSPlayer::ClientThink()
 			float flTimeLeft = CSGameRules()->GetNextRespawnWave( GetTeamNumber(), NULL ) - gpGlobals->curtime;
 			if ( flTimeLeft > CSGameRules()->GetRespawnWaveMaxLength( GetTeamNumber() ) )
 			{
-#if defined( INCLUDE_SCALEFORM )
-                CHudElement *pElement = GetHud().FindElement( "SFHudInfoPanel" );
-				if ( pElement )
-				{
-					( ( SFHudInfoPanel * )pElement )->SetPriorityHintText( g_pVGuiLocalize->Find( "#SFUI_Notice_WaitToRespawn" ) );
-				}
-#endif
             }
 			else if ( flTimeLeft > 1.0f )
 			{
-				wchar_t wzTime[8] = L"";
-				int nMinLeft = (int)flTimeLeft / 60;
-				int nSecLeft = (int)flTimeLeft - ( nMinLeft * 60 ); 
-				int nMSecLeft = (flTimeLeft - ((float)(nMinLeft*60) + (float)nSecLeft)) * 10; 
-				V_swprintf_safe( wzTime, L"%d.%d", nSecLeft, nMSecLeft );
-
-				wchar_t wszLocalized[256];
-				g_pVGuiLocalize->ConstructString( wszLocalized, sizeof( wszLocalized ), g_pVGuiLocalize->Find( "#SFUI_Notice_WaveRespawnIn" ), 1, wzTime );
-#if defined( INCLUDE_SCALEFORM )
-				CHudElement *pElement = GetHud().FindElement( "SFHudInfoPanel" );
-				if ( pElement )														
-				{																	
-					((SFHudInfoPanel *)pElement)->SetPriorityHintText( wszLocalized );				
-				}
-#endif
-
 				m_fImmuneToGunGameDamageTimeLast = m_fImmuneToGunGameDamageTime;
 			}
 			else if ( flTimeLeft > 0.75f )
 			{
-#if defined( INCLUDE_SCALEFORM )
-                CHudElement *pElement = GetHud().FindElement( "SFHudInfoPanel" );
-				if ( pElement )														
-				{																	
-					((SFHudInfoPanel *)pElement)->SetPriorityHintText( g_pVGuiLocalize->Find( "#SFUI_Notice_WaveRespawning" ) );				
-				}
-#endif
-
 				m_fImmuneToGunGameDamageTimeLast = m_fImmuneToGunGameDamageTime;
 			}
 		}
@@ -6778,17 +6564,6 @@ void C_CSPlayer::TeamChange( int iNewTeam )
 
 	if ( C_BasePlayer::IsLocalPlayer( this ) && !IsBot() )
 	{
-#if defined( INCLUDE_SCALEFORM )
-        // Apply the new HUD tint for our team
-        static const int g_CT_Tint	= 1;
-		static const int g_T_Tint	= 2;
-		ConVarRef sf_ui_tint( "sf_ui_tint" ); 
-
-		if ( iNewTeam == TEAM_TERRORIST )
-			sf_ui_tint.SetValue( g_T_Tint );
-		else 
-			sf_ui_tint.SetValue( g_CT_Tint );
-#endif
 		if ( CSGameRules() && CSGameRules()->IsPlayingGunGameDeathmatch())
 			m_bShouldAutobuyDMWeapons = true;
 	}
@@ -8284,45 +8059,6 @@ void C_CSPlayer::DisplayInventory( bool showPistol )
 {
 	if ( !C_BasePlayer::GetLocalPlayer() || !engine->IsLocalPlayerResolvable() )
 		return;
-#if defined( INCLUDE_SCALEFORM )
-	SFWeaponSelection *pHudWS = GET_HUDELEMENT( SFWeaponSelection );
-	if ( !pHudWS )
-	{
-		return;
-	}
-
-	for ( int i = 0; i < WeaponCount(); ++i )
-	{		
-		CWeaponCSBase *pWeapon = dynamic_cast< CWeaponCSBase* > ( GetWeapon( i ) );
-		
-
-		if ( pWeapon == NULL )
-			continue;
-
-		if ( pWeapon->IsKindOf( WEAPONTYPE_GRENADE )  && ( ( CBaseCSGrenade * ) pWeapon )->GetIsThrown() )
-		{
-			// don't include thrown grenades in inventory
-			continue;
-		}
-
-		CSWeaponID weaponId = pWeapon->GetCSWeaponID();
-
-		if ( showPistol || !IsSecondaryWeapon( weaponId )  )
-		{
-			// TODO: weapon selection does this job now
-			//pItemHistory->AddToHistory( pWeapon );
-
-			pHudWS->ShowAndUpdateSelection();
-		}
-	}
-
-	/*
-	if ( HasDefuser() )
-	{
-		pItemHistory->AddToHistory( "defuser", "#Cstrike_BMDefuser" );
-	}
-	*/
-#endif
 }
 
 MedalRank_t C_CSPlayer::GetRank( MedalCategory_t category )

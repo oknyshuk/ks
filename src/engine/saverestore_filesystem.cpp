@@ -1,4 +1,4 @@
-//===== Copyright © 1996-2006, Valve Corporation, All rights reserved. ======//
+//===== Copyright ï¿½ 1996-2006, Valve Corporation, All rights reserved. ======//
 //
 // Purpose: Filesystem abstraction for CSaveRestore - allows for storing temp save files
 //			either in memory or on disk.
@@ -16,13 +16,9 @@
 #include "tier1/utlbuffer.h"
 #include "tier1/lzss.h"
 #include "tier1/convar.h"
-#include "ixboxsystem.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
-
-extern IXboxSystem *g_pXboxSystem;
-
 
 #define MOD_DIR "DEFAULT_WRITE_PATH"
 
@@ -1006,66 +1002,6 @@ CON_COMMAND( audit_save_in_memory, "Audit the memory usage and files in the save
 	g_pSaveRestoreFileSystem->AuditFiles();
 }
 
-#ifdef _X360
-CON_COMMAND( dump_x360_data, "Dump X360 save games to disk" )
-{
-	int iController = args.FindArgInt( "-c", XBX_GetPrimaryUserId() );
-	char const *szDataType = args.FindArg( "-t" );
-	if ( !szDataType )
-		szDataType = XBX_USER_SETTINGS_CONTAINER_DRIVE;
-
-	if ( XBX_GetUserIsGuest( iController ) )
-		return;
-
-	DWORD nStorageDevice = XBX_GetStorageDeviceId( iController );
-	if ( !XBX_DescribeStorageDevice( nStorageDevice ) )
-	{
-		Warning( "No storage device for controller %d!\n", iController );
-		return;
-	}
-
-	char szInName[MAX_PATH]; // Read path from the container
-	char szOutName[MAX_PATH]; // Output path to the disk
-	char szFileNameBase[MAX_PATH]; // Name of the file minus directories or extensions
-	FileFindHandle_t findHandle;
-	
-	char szSearchPath[MAX_PATH];
-	
-	XBX_MakeStorageContainerRoot( iController, szDataType, szSearchPath, sizeof( szSearchPath ) );
-	int nLen = strlen( szSearchPath );
-
-	Q_snprintf( szSearchPath + nLen, sizeof( szSearchPath ) - nLen, ":\\*.*" );
-	
-	const char *pFileName = g_pFileSystem->FindFirst( szSearchPath, &findHandle );
-	while (pFileName)
-	{		
-		// Create the proper read path
-		XBX_MakeStorageContainerRoot( iController, szDataType, szInName, sizeof( szInName ) );
-		int nLen = strlen( szInName );
-		Q_snprintf( szInName + nLen, sizeof( szInName ) - nLen, ":\\%s", pFileName );
-		// Read the file and blat it out
-		CUtlBuffer buf( 0, 0, 0 );
-		if ( g_pFileSystem->ReadFile( szInName, NULL, buf ) )
-		{
-			// Strip us down to just our filename
-			Q_FileBase( pFileName, szFileNameBase, sizeof ( szFileNameBase ) );
-			Q_snprintf( szOutName, sizeof( szOutName ), "%s%d/%s", szDataType, iController, szFileNameBase );
-			g_pFileSystem->WriteFile( szOutName, NULL, buf );
-
-			Msg("Copied file: %s to %s\n", szInName, szOutName );
-		}
-		
-		// Clean up
-		buf.Clear();
-
-		// Any more save files
-		pFileName = g_pFileSystem->FindNext( findHandle );
-	}
-	
-	g_pFileSystem->FindClose( findHandle );
-}
-#endif
-
 
 
 
@@ -1074,11 +1010,7 @@ CON_COMMAND( dump_x360_data, "Dump X360 save games to disk" )
 static CSaveRestoreFileSystem				s_SaveRestoreFileSystem;
 static CSaveRestoreFileSystemPassthrough	s_SaveRestoreFileSystemPassthrough;
 
-#ifdef _X360
-ISaveRestoreFileSystem *g_pSaveRestoreFileSystem = &s_SaveRestoreFileSystem;
-#else
 ISaveRestoreFileSystem *g_pSaveRestoreFileSystem = &s_SaveRestoreFileSystemPassthrough;
-#endif // _X360
 
 //-----------------------------------------------------------------------------
 // Purpose: Called when switching between saving in memory and saving to disk.
@@ -1090,38 +1022,6 @@ void SaveInMemoryCallback( IConVar *pConVar, const char *pOldString, float flOld
 		Warning( "save_in_memory is compatible with only the Xbox 360!\n" );
 		return;
 	}
-
-#ifdef _X360
-	ConVarRef var( pConVar );
-	if ( var.GetFloat() == flOldValue )
-		return;
-
-	// *.hl? files are transferred between disk and memory when this cvar changes
-	char szPath[ MAX_PATH ];
-	Q_snprintf( szPath, sizeof( szPath ), "%s%s", saverestore->GetSaveDir(), "*.hl?" );
-	if ( var.GetBool() )
-	{
-		g_pSaveRestoreFileSystem = &s_SaveRestoreFileSystem;
-
-		// Clear memory and load
-		s_SaveRestoreFileSystem.DirectoryClear( "*.hl?", IsX360() );
-		s_SaveRestoreFileSystem.LoadSaveDirectoryFromDisk( szPath );
-
-		// Clear disk
-		s_SaveRestoreFileSystemPassthrough.DirectoryClear( szPath, IsX360() );
-	}
-	else
-	{
-		g_pSaveRestoreFileSystem = &s_SaveRestoreFileSystemPassthrough;
-
-		// Clear disk and write
-		s_SaveRestoreFileSystemPassthrough.DirectoryClear( szPath, IsX360() );
-		s_SaveRestoreFileSystem.WriteSaveDirectoryToDisk();
-
-		// Clear memory
-		s_SaveRestoreFileSystem.DirectoryClear( "*.hl?", IsX360() );
-	}
-#endif
 }
 
 //-----------------------------------------------------------------------------
@@ -1144,10 +1044,3 @@ void CSaveRestoreFileSystem::DumpSaveDirectory( void )
 	Msg( "Total Size: %.2f Mb (%d bytes)\n", totalCompressedSize / (1024.f*1024.f), totalCompressedSize );
 	Msg( "Compression: %.2f Mb to %.2f Mb (%.0f%%)\n", totalUncompressedSize/(1024.f*1024.f), totalCompressedSize/(1024.f*1024.f), percent );
 }
-
-#ifdef _X360
-CON_COMMAND( dumpsavedir, "List the contents of the save directory in memory" )
-{
-	s_SaveRestoreFileSystem.DumpSaveDirectory();
-}
-#endif

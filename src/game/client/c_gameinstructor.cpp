@@ -11,7 +11,6 @@
 #include "c_keyvalue_saver.h"
 #include "filesystem.h"
 #include "vprof.h"
-#include "ixboxsystem.h"
 #include "tier0/icommandline.h"
 #include "iclientmode.h"
 #include "isaverestore.h"

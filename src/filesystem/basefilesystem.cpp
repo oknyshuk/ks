@@ -16,18 +16,11 @@
 #include "generichash.h"
 #include "tier1/utllinkedlist.h"
 #include "filesystem/IQueuedLoader.h"
-#include "filesystem/IXboxInstaller.h"
 #include "tier2/tier2.h"
 #include "tier1/lzmaDecoder.h"
 #include "vstdlib/vstrtools.h"
 #include "zip_utils.h"
 #include "fmtstr.h"
-#ifdef _X360
-#include "xbox/xbox_launch.h"
-#include "xbox/xbox_console.h"
-#elif defined( _PS3 )
-#include <cell/sysmodule.h>
-#endif
 
 #ifndef DEDICATED
 #include "keyvaluescompiler.h"
@@ -40,68 +33,14 @@
 #include <shellapi.h>
 #endif
 
-#if defined( _X360 )
-#include "xbox\xbox_win32stubs.h"
-#undef GetCurrentDirectory
-#endif
+#define FS_DVDDEV_REMAP_ROOT ""
+#define FS_DVDDEV_ROOT "dvddev???:::"
+#define FS_EXCLUDE_PATHS_FILENAME "allbad_exclude_paths.txt"
 
-#ifdef _PS3
-
-#include "ps3/ps3_core.h"
-#include "ps3_pathinfo.h"
-#include "tls_ps3.h"
-#include <cell/fios.h>
-
-// extern bool g_bUseBdvdGameData;
-#ifndef PLATFORM_EXT
-#pragma message("PLATFORM_EXT define is missing, wtf?")
-#define PLATFORM_EXT ".ps3"
-#endif // ifndef PLATFORM_EXT
-
-void getcwd(...) { AssertMsg(false, "getcwd does not exist on PS3\n"); }
-bool SetupFios();
-bool TeardownFios();
-
-#endif // _PS3
-
-#ifdef _X360
-	#define FS_DVDDEV_REMAP_ROOT "d:"
-	#define FS_DVDDEV_ROOT "d:\\dvddev"
-	#define FS_EXCLUDE_PATHS_FILENAME "xbox_exclude_paths.txt"
-#elif defined( _PS3 )
-	#define FS_DVDDEV_REMAP_ROOT g_pPS3PathInfo->GameImagePath()
-	#define FS_DVDDEV_ROOT "/app_home/dvddev"
-	#define FS_EXCLUDE_PATHS_FILENAME "ps3_exclude_paths.txt"
-#else
-	#define FS_DVDDEV_REMAP_ROOT ""
-	#define FS_DVDDEV_ROOT "dvddev???:::"
-	#define FS_EXCLUDE_PATHS_FILENAME "allbad_exclude_paths.txt"
-#endif
-
-#ifdef _GAMECONSOLE
 static bool IsDvdDevPathString( char const *szPath )
 {
-	if ( IsGameConsole() && StringAfterPrefix( szPath, FS_DVDDEV_ROOT ) &&
-		szPath[ sizeof( FS_DVDDEV_ROOT ) - 1 ] == CORRECT_PATH_SEPARATOR )
-	{
-		return true;
-	}
-	else if ( IsX360() )
-	{
-		const char *pFirstDir = V_strstr( szPath, ":" );
-		if ( pFirstDir )
-		{
-			// skip past colon/slash
-			pFirstDir += 2;
-			return ( V_strnicmp( pFirstDir, "dvddev", 6 ) == false );
-		}
-	}
-
 	return false;
 }
-#else
-#define IsDvdDevPathString( x ) false
-#endif
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -130,41 +69,6 @@ static void AddSeperatorAndFixPath( char *str );
 CUtlSymbolTableMT g_PathIDTable( 0, 32, true );
 
 int g_iNextSearchPathID = 1;
-
-#if defined (_PS3)
-	
-	// Copied from zip_utils.cpp (we don't want to add the file to the project (for now))
-	BEGIN_BYTESWAP_DATADESC( ZIP_EndOfCentralDirRecord )
-		DEFINE_FIELD( signature, FIELD_INTEGER ),
-		DEFINE_FIELD( numberOfThisDisk, FIELD_SHORT ),
-		DEFINE_FIELD( numberOfTheDiskWithStartOfCentralDirectory, FIELD_SHORT ),
-		DEFINE_FIELD( nCentralDirectoryEntries_ThisDisk, FIELD_SHORT ),
-		DEFINE_FIELD( nCentralDirectoryEntries_Total, FIELD_SHORT ),
-		DEFINE_FIELD( centralDirectorySize, FIELD_INTEGER ),
-		DEFINE_FIELD( startOfCentralDirOffset, FIELD_INTEGER ),
-		DEFINE_FIELD( commentLength, FIELD_SHORT ),
-	END_BYTESWAP_DATADESC()
-
-	BEGIN_BYTESWAP_DATADESC( ZIP_FileHeader )
-		DEFINE_FIELD( signature, FIELD_INTEGER ),
-		DEFINE_FIELD( versionMadeBy, FIELD_SHORT ),
-		DEFINE_FIELD( versionNeededToExtract, FIELD_SHORT ),
-		DEFINE_FIELD( flags, FIELD_SHORT ),
-		DEFINE_FIELD( compressionMethod, FIELD_SHORT ),
-		DEFINE_FIELD( lastModifiedTime, FIELD_SHORT ),
-		DEFINE_FIELD( lastModifiedDate, FIELD_SHORT ),
-		DEFINE_FIELD( crc32, FIELD_INTEGER ),
-		DEFINE_FIELD( compressedSize, FIELD_INTEGER ),
-		DEFINE_FIELD( uncompressedSize, FIELD_INTEGER ),
-		DEFINE_FIELD( fileNameLength, FIELD_SHORT ),
-		DEFINE_FIELD( extraFieldLength, FIELD_SHORT ),
-		DEFINE_FIELD( fileCommentLength, FIELD_SHORT ),
-		DEFINE_FIELD( diskNumberStart, FIELD_SHORT ),
-		DEFINE_FIELD( internalFileAttribs, FIELD_SHORT ),
-		DEFINE_FIELD( externalFileAttribs, FIELD_INTEGER ),
-		DEFINE_FIELD( relativeOffsetOfLocalHeader, FIELD_INTEGER ),
-	END_BYTESWAP_DATADESC()
-#endif
 
 void FixUpPathCaseForPS3(const char* pFilePath)
 {
@@ -2765,6 +2669,7 @@ void CBaseFileSystem::AddSearchPathInternal( const char *pPath, const char *path
 		bAdded = m_SearchPaths.Count() != lastCount;
 	}
 
+#if defined( _X360 ) || defined( _PS3 )
 	if ( IsGameConsole() && addType == PATH_ADD_TO_TAIL_ATINDEX )
 	{
 		// isolated this specific pathadd hack behavior to not destablize existing state
@@ -2787,6 +2692,9 @@ void CBaseFileSystem::AddSearchPathInternal( const char *pPath, const char *path
 		}
 	}
 	else
+#else
+	// PC path - no console-specific DLC handling
+#endif
 	{
 		if ( addType == PATH_ADD_TO_HEAD )
 		{
@@ -8241,11 +8149,7 @@ bool CBaseFileSystem::IsSpecificDLCPresent( unsigned int nDLCPackage )
 
 bool CBaseFileSystem::AddDLCSearchPaths()
 {
-	if ( !IsX360() )
-	{
-		return false;
-	}
-
+#if defined( _X360 )
 	if ( !IsAnyDLCPresent() )
 	{
 		return false;
@@ -8281,7 +8185,7 @@ bool CBaseFileSystem::AddDLCSearchPaths()
 			}
 		}
 		if ( pLanguageString )
-		{		
+		{
 			V_strncpy( szDLCLanguagePath, CFmtStr( "%s_%s", szDLCPath, pLanguageString ), sizeof( szDLCLanguagePath ) );
 		}
 
@@ -8377,8 +8281,11 @@ bool CBaseFileSystem::AddDLCSearchPaths()
 	}
 
 	PrintSearchPaths();
-	
+
 	return true;
+#else
+	return false;
+#endif
 }
 
 void CBaseFileSystem::PrintDLCInfo()

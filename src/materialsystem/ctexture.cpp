@@ -4,11 +4,9 @@
 //
 //=====================================================================================//
 
-#ifndef _X360
-	#ifdef PROTECTED_THINGS_ENABLE
-		#undef PROTECTED_THINGS_ENABLE
-	#endif
-#endif 
+#ifdef PROTECTED_THINGS_ENABLE
+	#undef PROTECTED_THINGS_ENABLE
+#endif
 
 #include "platform.h"
 
@@ -34,9 +32,7 @@
 #endif
 #include "colorspace.h"
 #include "string.h"
-#ifndef _PS3
 #include <malloc.h>
-#endif
 #include <stdlib.h>
 #include "utlmemory.h"
 #include "IHardwareConfigInternal.h"
@@ -60,9 +56,7 @@
 #include "datacache/imdlcache.h"
 #include "tier0/vprof.h"
 
-#ifndef _PS3
 #define MATSYS_INTERNAL
-#endif
 
 #include "cmaterialsystem.h"
 
@@ -345,10 +339,6 @@ public:
 	void GetFilename( char *pOut, int maxLen ) const;
 	virtual void ReloadFilesInList( IFileList *pFilesToReload );
 
-#ifdef _PS3
-	virtual void Ps3gcmRawBufferAlias( char const *pRTName );
-#endif
-
 	virtual bool MarkAsTempExcluded( bool bSet, int nExcludedDimensionLimit );
 
 	virtual bool IsTempExcluded() const;
@@ -513,11 +503,7 @@ protected:
 	// lowresimage info - used for getting color data from a texture
 	// without having a huge system mem overhead.
 	// FIXME: We should keep this in compressed form. .is currently decompressed at load time.
-#if !defined( _GAMECONSOLE )
 	unsigned char *m_pLowResImage;
-#else
-	unsigned char m_LowResImageSample[4];
-#endif
 
 	ITextureRegenerator *m_pTextureRegenerator;
 
@@ -533,14 +519,6 @@ public:
 		unsigned int renderTargetFlags );
 	
 	virtual void DeleteIfUnreferenced();
-
-#if defined( _GAMECONSOLE )
-	virtual bool ClearTexture( int r, int g, int b, int a );
-#endif
-
-#if defined( _X360 )
-	virtual bool CreateRenderTargetSurface( int width, int height, ImageFormat format, bool bSameAsTexture, RTMultiSampleCount360_t multiSampleCount = RT_MULTISAMPLE_NONE );
-#endif
 
 	void FixupTexture( const void *pData, int nSize, LoaderError_t loaderError );
 
@@ -682,15 +660,6 @@ public:
 						debugName,
 						( m_nOriginalRenderTargetType == RENDER_TARGET_ONLY_DEPTH ) );
 				}
-
-
-#if defined( PLATFORM_X360 )
-				//if ( !( renderTargetFlags & CREATERENDERTARGETFLAGS_NOEDRAM ) )
-				{
-					// RT surface is expected at end of array
-					temp.surfaceHandle = g_pShaderAPI->CreateRenderTargetSurface( m_nActualWidth / iDownsizePow2, m_nActualHeight / iDownsizePow2, m_ImageFormat, RT_MULTISAMPLE_NONE, GetName(), TEXTURE_GROUP_RENDER_TARGET_SURFACE );
-				}
-#endif
 			}
 		}
 		else
@@ -834,23 +803,14 @@ public:
 				char debugName[128];
 				sprintf( debugName, "%s_ZBuffer", GetName() );
 
-				m_Targets[i].depthHandle = g_pShaderAPI->CreateDepthTexture( 
-					m_ImageFormat, 
-					m_nActualWidth / m_Targets[i].iDownSizePow2, 
+				m_Targets[i].depthHandle = g_pShaderAPI->CreateDepthTexture(
+					m_ImageFormat,
+					m_nActualWidth / m_Targets[i].iDownSizePow2,
 					m_nActualHeight / m_Targets[i].iDownSizePow2,
 					debugName,
 					( m_nOriginalRenderTargetType == RENDER_TARGET_ONLY_DEPTH ) );
 			}
-
-
-#if defined( PLATFORM_X360 )
-			//if ( !( renderTargetFlags & CREATERENDERTARGETFLAGS_NOEDRAM ) )
-			{
-				// RT surface is expected at end of array
-				m_Targets[i].surfaceHandle = g_pShaderAPI->CreateRenderTargetSurface( m_nActualWidth / m_Targets[i].iDownSizePow2, m_nActualHeight / m_Targets[i].iDownSizePow2, m_ImageFormat, RT_MULTISAMPLE_NONE, GetName(), TEXTURE_GROUP_RENDER_TARGET_SURFACE );
-			}
-#endif
-		}		
+		}
 
 		return true;
 	}
@@ -872,14 +832,6 @@ public:
 				g_pShaderAPI->DeleteTexture( m_Targets[i].depthHandle );
 				m_Targets[i].depthHandle = INVALID_SHADERAPI_TEXTURE_HANDLE;
 			}
-
-#if defined( PLATFORM_X360 )
-			if ( g_pShaderAPI->IsTexture( m_Targets[i].surfaceHandle ) )
-			{
-				g_pShaderAPI->DeleteTexture( m_Targets[i].surfaceHandle );
-				m_Targets[i].surfaceHandle = INVALID_SHADERAPI_TEXTURE_HANDLE;
-			}
-#endif
 		}
 
 		BaseClass::FreeShaderAPITextures();
@@ -911,16 +863,7 @@ public:
 		// Make sure we've actually allocated the texture handles
 		Assert( HasBeenAllocated() );
 
-		ShaderAPITextureHandle_t textureHandle;
-#if !defined( PLATFORM_X360 )
-		{
-			textureHandle = m_Targets[m_nActiveTarget].handle;
-		}
-#else
-		{
-			textureHandle = m_Targets[m_nActiveTarget].surfaceHandle;
-		}
-#endif
+		ShaderAPITextureHandle_t textureHandle = m_Targets[m_nActiveTarget].handle;
 		ShaderAPITextureHandle_t depthTextureHandle = (unsigned int)SHADER_RENDERTARGET_DEPTHBUFFER;
 
 		if ( m_Targets[m_nActiveTarget].bHasSeparateDepth )
@@ -976,9 +919,6 @@ public:
 		int iDownSizePow2;
 		ShaderAPITextureHandle_t handle;
 		ShaderAPITextureHandle_t depthHandle;
-#if defined( PLATFORM_X360 )
-		ShaderAPITextureHandle_t surfaceHandle;
-#endif
 		bool bHasSeparateDepth;
 	};
 
@@ -1097,10 +1037,6 @@ public:
 
 	virtual void ReloadFilesInList( IFileList *pFilesToReload ) {}
 
-#ifdef _PS3
-	virtual void Ps3gcmRawBufferAlias( char const *pRTName ) {}
-#endif
-
 	virtual void AddDownsizedSubTarget( const char *szName, int iDownsizePow2, MaterialRenderTargetDepth_t depth ) { NULL; }
 	virtual void SetActiveSubTarget( const char *szName ) { NULL; }
 	virtual bool IsMultiRenderTarget( void ) { return false; }
@@ -1140,14 +1076,6 @@ protected:
 
 public:
 	virtual void DeleteIfUnreferenced();
-
-#if defined( _GAMECONSOLE )
-	virtual bool ClearTexture( int r, int g, int b, int a ) { return false; }
-#endif
-
-#if defined( _X360 )	
-	virtual bool CreateRenderTargetSurface( int width, int height, ImageFormat format, bool bSameAsTexture, RTMultiSampleCount360_t multiSampleCount = RT_MULTISAMPLE_NONE ) { return false; }
-#endif
 
 	void FixupTexture( const void *pData, int nSize, LoaderError_t loaderError ) { NULL; }
 
@@ -1363,11 +1291,7 @@ CTexture::CTexture() : m_ImageFormat( IMAGE_FORMAT_UNKNOWN )
 
 	m_LowResImageWidth = 0;
 	m_LowResImageHeight = 0;
-#if !defined( _GAMECONSOLE )
 	m_pLowResImage = NULL;
-#else
-	*(unsigned int *)m_LowResImageSample = 0;
-#endif
 
 	m_nDesiredDimensionLimit = 0;
 	m_nDesiredTempDimensionLimit = 0;
@@ -1442,10 +1366,8 @@ void CTexture::Init( int w, int h, int d, ImageFormat fmt, int iFlags, int iFram
 void CTexture::Shutdown()
 {
 	// Clean up the low-res texture
-#if !defined( _GAMECONSOLE )
 	delete[] m_pLowResImage;
 	m_pLowResImage = 0;
-#endif
 
 	FreeResourceData();
 
@@ -1608,17 +1530,11 @@ void CTexture::ApplyRenderTargetSizeMode( int &width, int &height, ImageFormat f
 			int fbWidth, fbHeight;
 			MaterialSystem()->GetBackBufferDimensions( fbWidth, fbHeight );
 
-			// On 360, don't do this resizing for formats related to the shadow depth texture
-#if defined( _GAMECONSOLE )
-			if ( !( (fmt == IMAGE_FORMAT_D16) || (fmt == IMAGE_FORMAT_D24S8) || (fmt == IMAGE_FORMAT_D24FS8) || (fmt == IMAGE_FORMAT_BGR565) || (fmt == IMAGE_FORMAT_D24X8_SHADOW) || (fmt == IMAGE_FORMAT_D16_SHADOW) ) )
-#endif
+			// Shrink the buffer if it's bigger than back buffer.  Otherwise, don't mess with it.
+			while( (width > fbWidth) || (height > fbHeight) )
 			{
-				// Shrink the buffer if it's bigger than back buffer.  Otherwise, don't mess with it.
-				while( (width > fbWidth) || (height > fbHeight) )
-				{
-					width >>= 1;
-					height >>= 1;
-				}
+				width >>= 1;
+				height >>= 1;
 			}
 
 		}
@@ -1711,13 +1627,6 @@ void CTexture::InitRenderTarget(
 	{
 		nFlags  |= TEXTUREFLAGS_ONEBITALPHA;
 	}
-
-#ifdef _X360
-	if ( renderTargetFlags & CREATERENDERTARGETFLAGS_ALIASCOLORANDDEPTHSURFACES )
-	{
-		nFlags |= TEXTUREFLAGS_ALIAS_COLOR_AND_DEPTH_SURFACES;
-	}
-#endif
 
 	ApplyRenderTargetSizeMode( w, h, fmt );
 
@@ -2052,17 +1961,13 @@ bool CTexture::AllocateShaderAPITextures()
 		char debugName[128];
 		sprintf( debugName, "%s_ZBuffer", GetName() );
 
-		bool bAliasColorAndDepthSurfaces360 = false;
-#ifdef _X360
-		bAliasColorAndDepthSurfaces360 = ( m_nFlags & TEXTUREFLAGS_ALIAS_COLOR_AND_DEPTH_SURFACES ) != 0;
-#endif
-		m_pTextureHandles[1] = g_pShaderAPI->CreateDepthTexture( 
-				m_ImageFormat, 
-				m_nActualWidth, 
+		m_pTextureHandles[1] = g_pShaderAPI->CreateDepthTexture(
+				m_ImageFormat,
+				m_nActualWidth,
 				m_nActualHeight,
 				debugName,
 				( m_nOriginalRenderTargetType == RENDER_TARGET_ONLY_DEPTH ),
-				bAliasColorAndDepthSurfaces360 );
+				false );
 	}
 
 	m_nInternalFlags |= TEXTUREFLAGSINTERNAL_ALLOCATED;
@@ -2120,13 +2025,6 @@ ImageFormat CTexture::ComputeActualFormat( ImageFormat srcFormat )
 		// these are the right alpha formats for xbox
 		return IMAGE_FORMAT_A8;
 	}
-
-#if defined( _X360 )
-	if ( srcFormat == IMAGE_FORMAT_LINEAR_I8 )
-	{
-		return IMAGE_FORMAT_LINEAR_I8;
-	}
-#endif
 
 	// NOTE: Below this piece of code is only called when compressed textures are
 	// turned off, or if the source texture is not compressed.
@@ -2864,22 +2762,6 @@ void CTexture::Download( Rect_t *pRect, int nAdditionalCreationFlags /* = 0 */ )
 	}
 }
 
-#ifdef _PS3
-void CTexture::Ps3gcmRawBufferAlias( char const *pRTName )
-{
-	ComputeActualSize( true );
-	m_nActualDimensionLimit = m_nDesiredDimensionLimit;
-	m_nInternalFlags |= TEXTUREFLAGSINTERNAL_ALLOCATED;
-	extern ShaderAPITextureHandle_t Ps3gcmGetArtificialTextureHandle( int iHandle );
-	if ( !Q_strcmp( pRTName, "^PS3^BACKBUFFER" ) )
-		m_pTextureHandles[0] = Ps3gcmGetArtificialTextureHandle( PS3GCM_ARTIFICIAL_TEXTURE_HANDLE_INDEX_BACKBUFFER );
-	else if ( !Q_strcmp( pRTName, "^PS3^DEPTHBUFFER" ) )
-		m_pTextureHandles[0] = Ps3gcmGetArtificialTextureHandle( PS3GCM_ARTIFICIAL_TEXTURE_HANDLE_INDEX_DEPTHBUFFER );
-	else
-		Error( "<vitaliy> Unexpected raw buffer alias: %s!\n", pRTName );
-}
-#endif
-
 
 void CTexture::Bind( Sampler_t sampler, TextureBindFlags_t nBindFlags )
 {
@@ -3229,23 +3111,12 @@ void CTexture::Precache()
 	IVTFTexture *pVTFTexture = GetScratchVTFTexture();
 
 	// The texture name doubles as the relative file name
-	// It's assumed to have already been set by this point	
+	// It's assumed to have already been set by this point
 	// Compute the cache name
 	char pCacheFileName[MATERIAL_MAX_PATH];
 	Q_snprintf( pCacheFileName, sizeof( pCacheFileName ), "materials/%s" TEXTURE_FNAME_EXTENSION, m_Name.String() );
 
-#if defined( _GAMECONSOLE )
-	// generate native texture
-	pVTFTexture->UpdateOrCreate( pCacheFileName );
-#endif
-
-	int nVersion = -1;
-	if ( IsPC() )
-		nVersion = VTF_MAJOR_VERSION;
-	else if ( IsX360() )
-		nVersion = VTF_X360_MAJOR_VERSION;
-	else if ( IsPS3() )
-		nVersion = VTF_PS3_MAJOR_VERSION;
+	int nVersion = VTF_MAJOR_VERSION;
 
 	int nHeaderSize = VTFFileHeaderSize( nVersion );
 	unsigned char *pMem = (unsigned char *)stackalloc( nHeaderSize );
@@ -3256,11 +3127,7 @@ void CTexture::Precache()
 	}
 
 	// Unserialize the header only
-#if !defined( _GAMECONSOLE )
 	if ( !pVTFTexture->Unserialize( buf, true ) )
-#else
-	if ( !pVTFTexture->UnserializeFromBuffer( buf, true, true, true, 0 ) )
-#endif
 	{
 		Warning( "Error reading material \"%s\"\n", pCacheFileName );
 		goto precacheFailed;
@@ -3295,14 +3162,12 @@ precacheFailed:
 
 
 //-----------------------------------------------------------------------------
-// Loads the low-res image from the texture 
+// Loads the low-res image from the texture
 //-----------------------------------------------------------------------------
 void CTexture::LoadLowResTexture( IVTFTexture *pTexture )
 {
-#if !defined( _GAMECONSOLE )
 	delete [] m_pLowResImage;
 	m_pLowResImage = NULL;
-#endif
 
 	if ( pTexture->LowResWidth() == 0 || pTexture->LowResHeight() == 0 )
 	{
@@ -3313,18 +3178,14 @@ void CTexture::LoadLowResTexture( IVTFTexture *pTexture )
 	m_LowResImageWidth = pTexture->LowResWidth();
 	m_LowResImageHeight = pTexture->LowResHeight();
 
-#if !defined( _GAMECONSOLE )
 	m_pLowResImage = new unsigned char[m_LowResImageWidth * m_LowResImageHeight * 3];
 #ifdef _DEBUG
-	bool retVal = 
+	bool retVal =
 #endif
-		ImageLoader::ConvertImageFormat( pTexture->LowResImageData(), pTexture->LowResFormat(), 
+		ImageLoader::ConvertImageFormat( pTexture->LowResImageData(), pTexture->LowResFormat(),
 			m_pLowResImage, IMAGE_FORMAT_RGB888, m_LowResImageWidth, m_LowResImageHeight );
 #ifdef _DEBUG
 	Assert( retVal );
-#endif
-#else
-	*(unsigned int*)m_LowResImageSample = *(unsigned int*)pTexture->LowResImageSample();
 #endif
 }
 
@@ -3650,14 +3511,10 @@ void CTexture::CopyLowResImageToTexture( IVTFTexture *pTexture )
 
 	// Copy the row-res image into the VTF Texture
 	CPixelWriter pixelWriter;
-	pixelWriter.SetPixelMemory( pTexture->Format(), 
+	pixelWriter.SetPixelMemory( pTexture->Format(),
 		pTexture->ImageData( 0, 0, 0 ), pTexture->RowSizeInBytes( 0 ) );
 
-#if !defined( _GAMECONSOLE )
 	unsigned char *pLowResImage = m_pLowResImage;
-#else
-	unsigned char *pLowResImage = m_LowResImageSample;
-#endif
 	for ( int y = 0; y < m_LowResImageHeight; ++y )
 	{
 		pixelWriter.Seek( 0, y );
@@ -3871,10 +3728,6 @@ IVTFTexture *CTexture::LoadTextureBitsFromFile( char *pCacheFileName, char **ppR
 	{
 		while ( fileHandle == FILESYSTEM_INVALID_HANDLE )			// run until found a file or out of rules
 		{
-#if defined( _GAMECONSOLE )
-			// generate native texture
-			pVTFTexture->UpdateOrCreate( pCacheFileName );
-#endif
 			fileHandle = g_pFullFileSystem->OpenEx( pCacheFileName, "rb", 0, MaterialSystem()->GetForcedTextureLoadPathID(), ppResolvedFilename );
 			if ( fileHandle == FILESYSTEM_INVALID_HANDLE )
 			{
@@ -3907,13 +3760,7 @@ IVTFTexture *CTexture::LoadTextureBitsFromFile( char *pCacheFileName, char **ppR
 			return HandleFileLoadFailedTexture( pVTFTexture );
 		}
 
-		int nVersion = -1;
-		if ( IsPC() )
-			nVersion = VTF_MAJOR_VERSION;
-		else if ( IsX360() )
-			nVersion = VTF_X360_MAJOR_VERSION;
-		else if ( IsPS3() )
-			nVersion = VTF_PS3_MAJOR_VERSION;
+		int nVersion = VTF_MAJOR_VERSION;
 
 		nHeaderSize = VTFFileHeaderSize( nVersion );
 
@@ -3928,11 +3775,7 @@ IVTFTexture *CTexture::LoadTextureBitsFromFile( char *pCacheFileName, char **ppR
 
 	// Unserialize the header only
 	// need the header first to determine remainder of data
-#if !defined( _GAMECONSOLE )
 	if ( !pVTFTexture->Unserialize( buf, true ) )
-#else
-	if ( !pVTFTexture->UnserializeFromBuffer( buf, true, true, true, 0 ) )
-#endif
 	{
 		Warning( "Error reading texture header \"%s\"\n", pCacheFileName );
 		g_pFullFileSystem->Close( fileHandle );
@@ -3962,79 +3805,23 @@ IVTFTexture *CTexture::LoadTextureBitsFromFile( char *pCacheFileName, char **ppR
 	buf.SeekGet( CUtlBuffer::SEEK_HEAD, 0 );
 
 	// Initialize the texture class with vtf header data before operations
-	Init( 
-#if !defined( _GAMECONSOLE )
-		pVTFTexture->Width(), 
-		pVTFTexture->Height(), 
-		pVTFTexture->Depth(), 
-#else
-		// 360 texture might be pre-picmipped, setup as it's original dimensions
-		// so picmipping logic calculates correctly, and then fixup
-		pVTFTexture->MappingWidth(),
-		pVTFTexture->MappingHeight(),
-		pVTFTexture->MappingDepth(),
-#endif
-		pVTFTexture->Format(), 
-		pVTFTexture->Flags() | nHackExtraFlags, 
+	Init(
+		pVTFTexture->Width(),
+		pVTFTexture->Height(),
+		pVTFTexture->Depth(),
+		pVTFTexture->Format(),
+		pVTFTexture->Flags() | nHackExtraFlags,
 		pVTFTexture->FrameCount() );
 
 	VectorCopy( pVTFTexture->Reflectivity(), m_vecReflectivity );
 
-#if defined( _GAMECONSOLE )
-	m_nInternalFlags |= TEXTUREFLAGSINTERNAL_QUEUEDLOAD;
-	if ( !g_pQueuedLoader->IsMapLoading() || ( m_nFlags & ( TEXTUREFLAGS_PROCEDURAL|TEXTUREFLAGS_RENDERTARGET|TEXTUREFLAGS_DEPTHRENDERTARGET ) ) )
-	{
-		// explicitly disabled or not appropriate for texture type
-		m_nInternalFlags &= ~TEXTUREFLAGSINTERNAL_QUEUEDLOAD;
-	}
-	else
-	{
-		if ( pVTFTexture->FileSize( true, 0 ) >= pVTFTexture->FileSize( false, 0 ) )
-		{
-			// texture is a dwarf, entirely in preload, loads normally
-			m_nInternalFlags &= ~TEXTUREFLAGSINTERNAL_QUEUEDLOAD;
-		}
-	}
-#endif
-
 	// Compute the actual texture dimensions
 	int nMipSkipCount = ComputeActualSize( false, pVTFTexture );
 
-#if defined( _GAMECONSOLE )
-	bool bQueuedLoad = ( m_nInternalFlags & TEXTUREFLAGSINTERNAL_QUEUEDLOAD ) != 0;
-	nMipSkipCount -= pVTFTexture->MipSkipCount();
-	if ( nMipSkipCount < 0 || ( nMipSkipCount >= pVTFTexture->MipCount() ) )
-	{
-		// the 360 texture was already pre-picmipped or can't be picmipped
-		// clamp to the available dimensions
-		m_nActualWidth = pVTFTexture->Width();
-		m_nActualHeight = pVTFTexture->Height();
-		m_nActualDepth = pVTFTexture->Depth();
-		m_nActualMipCount = ComputeActualMipCount();
-		nMipSkipCount = 0;
-	}
-	if ( IsX360() && g_config.skipMipLevels == 0 && m_nActualMipCount > 1 && m_nFrameCount == 1 && !( m_nFlags & ( TEXTUREFLAGS_PROCEDURAL|TEXTUREFLAGS_RENDERTARGET|TEXTUREFLAGS_DEPTHRENDERTARGET ) ) )
-	{
-		// this file based texture is a good candidate for cacheing
-		m_nInternalFlags |= TEXTUREFLAGSINTERNAL_CACHEABLE;
-	}
-	if ( nMipSkipCount )
-	{
-		// track which textures had their dimensions forcefully reduced
-		m_nInternalFlags |= TEXTUREFLAGSINTERNAL_REDUCED;
-	}
-#endif
-	
 	m_nMipSkipCount = nMipSkipCount;
 
-#if !defined( _GAMECONSOLE )
 	// Determine how much of the file to read in
 	nFileSize = pVTFTexture->FileSize( nMipSkipCount );
-#else
-	// A queued loading texture just gets the preload section
-	// and does NOT unserialize the texture bits here
-	nFileSize = pVTFTexture->FileSize( bQueuedLoad, nMipSkipCount );
-#endif
 
 	// Read only the portion of the file that we care about
 	g_pFullFileSystem->Seek( fileHandle, 0, FILESYSTEM_SEEK_HEAD );
@@ -4044,11 +3831,7 @@ IVTFTexture *CTexture::LoadTextureBitsFromFile( char *pCacheFileName, char **ppR
 	buf.SeekPut( CUtlBuffer::SEEK_HEAD, nBytesRead );
 
 	// NOTE: Skipping mip levels here will cause the size to be changed...
-#if !defined( _GAMECONSOLE )
 	if ( !pVTFTexture->Unserialize( buf, false, nMipSkipCount ) )
-#else
-	if ( !pVTFTexture->UnserializeFromBuffer( buf, true, false, bQueuedLoad, nMipSkipCount ) )
-#endif
 	{
 		Warning( "Error reading material data \"%s\"\n", pCacheFileName );
 		return HandleFileLoadFailedTexture( pVTFTexture );
@@ -4061,20 +3844,12 @@ IVTFTexture *CTexture::LoadTextureBitsFromFile( char *pCacheFileName, char **ppR
 	LoadResourceData( pVTFTexture );
 
 	// Try to set up debugging textures, if we're in a debugging mode
-	if ( !IsProcedural() && !IsGameConsole() )
+	if ( !IsProcedural() )
 	{
 		SetupDebuggingTextures( pVTFTexture );
 	}
 
-	if ( ConvertToActualFormat( pVTFTexture ) )
-	{
-		if ( IsGameConsole() )
-		{
-			// 360 vtf are baked in final formats, no format conversion can or should have occurred
-			// otherwise track offender and ensure files are baked correctly
-			Error( "\"%s\" not in native format\n", pCacheFileName );
-		}
-	}
+	ConvertToActualFormat( pVTFTexture );
 
 	return pVTFTexture;
 }
@@ -4089,13 +3864,7 @@ IVTFTexture *CTexture::LoadTextureBitsFromData( char *pCacheFileName, void *pSou
 	CUtlBuffer buf;
 	buf.SetExternalBuffer( pSourceData, nSourceDataSize, nSourceDataSize, CUtlBuffer::READ_ONLY );
 
-	int nVersion = -1;
-	if ( IsPC() )
-		nVersion = VTF_MAJOR_VERSION;
-	else if ( IsX360() )
-		nVersion = VTF_X360_MAJOR_VERSION;
-	else if ( IsPS3() )
-		nVersion = VTF_PS3_MAJOR_VERSION;
+	int nVersion = VTF_MAJOR_VERSION;
 
 	int nHeaderSize = VTFFileHeaderSize( nVersion );
 	if ( nSourceDataSize < nHeaderSize )
@@ -4106,11 +3875,7 @@ IVTFTexture *CTexture::LoadTextureBitsFromData( char *pCacheFileName, void *pSou
 
 	// Unserialize the header only
 	// need the header first to determine remainder of data
-#if !defined( _GAMECONSOLE )
 	if ( !pVTFTexture->Unserialize( buf, true ) )
-#else
-	if ( !pVTFTexture->UnserializeFromBuffer( buf, true, true, true, 0 ) )
-#endif
 	{
 		Warning( "Error reading texture header \"%s\"\n", pCacheFileName );
 		return HandleFileLoadFailedTexture( pVTFTexture );
@@ -4144,20 +3909,12 @@ IVTFTexture *CTexture::LoadTextureBitsFromData( char *pCacheFileName, void *pSou
 	buf.SeekGet( CUtlBuffer::SEEK_HEAD, 0 );
 
 	// Initialize the texture class with vtf header data before operations
-	Init( 
-#if !defined( _GAMECONSOLE )
-		pVTFTexture->Width(), 
-		pVTFTexture->Height(), 
-		pVTFTexture->Depth(), 
-#else
-		// 360 texture might be pre-picmipped, setup as it's original dimensions
-		// so picmipping logic calculates correctly, and then fixup
-		pVTFTexture->MappingWidth(),
-		pVTFTexture->MappingHeight(),
-		pVTFTexture->MappingDepth(),
-#endif
-		pVTFTexture->Format(), 
-		pVTFTexture->Flags() | nHackExtraFlags, 
+	Init(
+		pVTFTexture->Width(),
+		pVTFTexture->Height(),
+		pVTFTexture->Depth(),
+		pVTFTexture->Format(),
+		pVTFTexture->Flags() | nHackExtraFlags,
 		pVTFTexture->FrameCount() );
 
 	VectorCopy( pVTFTexture->Reflectivity(), m_vecReflectivity );
@@ -4165,39 +3922,10 @@ IVTFTexture *CTexture::LoadTextureBitsFromData( char *pCacheFileName, void *pSou
 	// Compute the actual texture dimensions
 	int nMipSkipCount = ComputeActualSize( false, pVTFTexture );
 
-#if defined( _GAMECONSOLE )
-	bool bQueuedLoad = ( m_nInternalFlags & TEXTUREFLAGSINTERNAL_QUEUEDLOAD ) != 0;
-	nMipSkipCount -= pVTFTexture->MipSkipCount();
-	if ( nMipSkipCount < 0 || ( nMipSkipCount >= pVTFTexture->MipCount() ) )
-	{
-		// the 360 texture was already pre-picmipped or can't be picmipped
-		// clamp to the available dimensions
-		m_nActualWidth = pVTFTexture->Width();
-		m_nActualHeight = pVTFTexture->Height();
-		m_nActualDepth = pVTFTexture->Depth();
-		m_nActualMipCount = ComputeActualMipCount();
-		nMipSkipCount = 0;
-	}
-	if ( IsX360() && g_config.skipMipLevels == 0 && m_nActualMipCount > 1 && m_nFrameCount == 1 && !( m_nFlags & ( TEXTUREFLAGS_PROCEDURAL|TEXTUREFLAGS_RENDERTARGET|TEXTUREFLAGS_DEPTHRENDERTARGET ) ) )
-	{
-		// this file based texture is a good candidate for cacheing
-		m_nInternalFlags |= TEXTUREFLAGSINTERNAL_CACHEABLE;
-	}
-	if ( nMipSkipCount )
-	{
-		// track which textures had their dimensions forcefully reduced
-		m_nInternalFlags |= TEXTUREFLAGSINTERNAL_REDUCED;
-	}
-#endif
-
 	m_nMipSkipCount = nMipSkipCount;
 
 	// NOTE: Skipping mip levels here will cause the size to be changed...
-#if !defined( _GAMECONSOLE )
 	if ( !pVTFTexture->Unserialize( buf, false, nMipSkipCount ) )
-#else
-	if ( !pVTFTexture->UnserializeFromBuffer( buf, true, false, bQueuedLoad, nMipSkipCount ) )
-#endif
 	{
 		Warning( "Error reading texture data \"%s\"\n", pCacheFileName );
 		return HandleFileLoadFailedTexture( pVTFTexture );
@@ -4210,34 +3938,18 @@ IVTFTexture *CTexture::LoadTextureBitsFromData( char *pCacheFileName, void *pSou
 	LoadResourceData( pVTFTexture );
 
 	// Try to set up debugging textures, if we're in a debugging mode
-	if ( !IsProcedural() && !IsGameConsole() )
+	if ( !IsProcedural() )
 	{
 		SetupDebuggingTextures( pVTFTexture );
 	}
 
-	if ( ConvertToActualFormat( pVTFTexture ) )
-	{
-		if ( IsGameConsole() )
-		{
-			// 360 vtf are baked in final formats, no format conversion can or should have occurred
-			// otherwise track offender and ensure files are baked correctly
-			Error( "\"%s\" not in native format\n", pCacheFileName );
-		}
-	}
+	ConvertToActualFormat( pVTFTexture );
 
 	return pVTFTexture;
 }
 
 IVTFTexture *CTexture::HandleFileLoadFailedTexture( IVTFTexture *pVTFTexture )
 {
-	// create the error texture
-#if defined( _GAMECONSOLE )
-	// reset botched vtf, ensure checkerboard error texture is created now and maintains bgra8888 format
-	pVTFTexture->ReleaseImageMemory();
-	m_nInternalFlags &= ~TEXTUREFLAGSINTERNAL_QUEUEDLOAD;
-	m_nFlags |= TEXTUREFLAGS_EIGHTBITALPHA;
-#endif
-
 	// This will make a checkerboard texture to indicate failure
 	pVTFTexture->Init( 32, 32, 1, IMAGE_FORMAT_BGRA8888, m_nFlags, 1 );
 	Init( pVTFTexture->Width(), pVTFTexture->Height(), pVTFTexture->Depth(), pVTFTexture->Format(), 
@@ -4308,29 +4020,7 @@ void CTexture::FixupTexture( const void *pData, int nSize, LoaderError_t loaderE
 
 	// Make sure we've actually allocated the texture handles
 	Assert( HasBeenAllocated() );
-
-#if defined( _GAMECONSOLE )
-	// hand off the hires data down to the shaderapi to upload directly
-	// Purposely bypassing downloading through material system, which is non-reentrant
-	// for that operation, to avoid mutexing.
-
-	// NOTE: Strange refcount work here to keep it threadsafe
-	int nRefCount = m_nRefCount;
-	int nRefCountOld = nRefCount;
-	g_pShaderAPI->PostQueuedTexture( 
-					pData, 
-					nSize, 
-					m_pTextureHandles, 
-					m_nFrameCount,
-					m_nActualWidth,
-					m_nActualHeight,
-					m_nActualDepth,
-					m_nActualMipCount,
-					&nRefCount );
-	int nDelta = nRefCount - nRefCountOld;
-	m_nRefCount += nDelta;
-#endif
-} 
+}
 static void QueuedLoaderCallback( void *pContext, void *pContext2, const void *pData, int nSize, LoaderError_t loaderError )
 {
 	reinterpret_cast< CTexture * >( pContext )->FixupTexture( pData, nSize, loaderError );
@@ -4440,37 +4130,21 @@ void CTexture::ReconstructPartialTexture( const Rect_t *pRect )
 				pVTFTexture->ComputeMipLevelSubRect( &vtfRect, iMip, &mipRect );
 				nStride = pVTFTexture->RowSizeInBytes( iMip );
 				unsigned char *pBits = pVTFTexture->ImageData( iFrame, iFace + nFirstFace, iMip, mipRect.x, mipRect.y, 0 );
-				g_pShaderAPI->TexSubImage2D( 
-					iMip, 
-					iFace, 
-					mipRect.x, 
+				g_pShaderAPI->TexSubImage2D(
+					iMip,
+					iFace,
+					mipRect.x,
 					mipRect.y,
 					0,
-					mipRect.width, 
-					mipRect.height, 
-					pVTFTexture->Format(), 
-					nStride, 
-#if defined( _GAMECONSOLE )
-					pVTFTexture->IsPreTiled(),
-#else
+					mipRect.width,
+					mipRect.height,
+					pVTFTexture->Format(),
+					nStride,
 					false,
-#endif
 					pBits );
 			}
 		}
 	}
-
-#if defined( _GAMECONSOLE )
-	if ( IsProcedural() && m_pTextureRegenerator && m_pTextureRegenerator->HasPreallocatedScratchTexture() )
-	{
-		// nothing to free; we used the pre-allocated scratch texture
-	}
-	else
-	{
-		// hint the vtf system to release memory associated with its load
-		pVTFTexture->ReleaseImageMemory();
-	}
-#endif
 }
 
 
@@ -4481,12 +4155,6 @@ IVTFTexture *CTexture::ReconstructProceduralBits()
 {
 	// Figure out the actual size for this texture based on the current mode
 	ComputeActualSize();
-
-	if ( IsGameConsole() && !IsDebug() && !m_pTextureRegenerator )
-	{
-		// no checkerboards in 360 release
-		return NULL;
-	}
 
 	bool bUsePreallocatedScratchTexture = m_pTextureRegenerator && m_pTextureRegenerator->HasPreallocatedScratchTexture();
 
@@ -4604,8 +4272,6 @@ void CTexture::ReconstructTexture( void *pSourceData, int nSourceDataSize )
 	if ( IsRenderTarget() )
 	{
 		// Clear the render target to opaque black
-#if !defined( _GAMECONSOLE )
-
 		// Only clear if we're not a depth-stencil texture
 		if ( !IsDepthTextureFormat( m_ImageFormat ) )
 		{
@@ -4616,101 +4282,15 @@ void CTexture::ReconstructTexture( void *pSourceData, int nSourceDataSize )
 			g_pShaderAPI->ClearBuffers( true, false, false, m_nActualWidth, m_nActualHeight );	// Clear the target
 			pRenderContext->PopRenderTargetAndViewport();										// Pop back to previous target
 		}
-#else
-		// 360 may not have RT surface during init time
-		// avoid complex conditionalizing, just cpu clear it, which always works
-		ClearTexture( 0, 0, 0, 0xFF );
-#endif
 		// no upload
-		return;
-	}
-
-	if ( IsGameConsole() && IsProcedural() && !pVTFTexture )
-	{
-		// 360 explicitly inhibited this texture's procedural generation, so no upload needed
 		return;
 	}
 
 	// Blit down the texture faces, frames, and mips into the board memory
 	int nFirstFace, nFaceCount;
 	GetDownloadFaceCount( nFirstFace, nFaceCount );
-	
-	if ( IsPC() )
-	{
-		WriteDataToShaderAPITexture( m_nFrameCount, nFaceCount, nFirstFace, m_nActualMipCount, pVTFTexture, m_ImageFormat );
-	}
 
-#if defined( _GAMECONSOLE )
-	bool bDoUpload = true;
-	if ( m_nInternalFlags & TEXTUREFLAGSINTERNAL_QUEUEDLOAD )
-	{
-		// the vtf didn't load any d3d bits, the hires bits will arrive before gameplay
-		bDoUpload = false;
-	}
-
-	if ( bDoUpload )
-	{
-		for ( int iFrame = 0; iFrame < m_nFrameCount; ++iFrame )
-		{
-			Modify( iFrame );
-			for ( int iFace = 0; iFace < nFaceCount; ++iFace )
-			{
-				for ( int iMip = 0; iMip < m_nActualMipCount; ++iMip )
-				{
-					unsigned char *pBits;
-					int nWidth, nHeight, nDepth;
-					pVTFTexture->ComputeMipLevelDimensions( iMip, &nWidth, &nHeight, &nDepth );
-#ifdef _PS3
-					// PS3 textures are pre-swizzled at tool time
-					pBits = pVTFTexture->ImageData( iFrame, iFace + nFirstFace, iMip, 0, 0, 0 );
-					g_pShaderAPI->TexImage2D( iMip, iFace, m_ImageFormat, nDepth > 1 ? nDepth : 0, nWidth, nHeight,
-						pVTFTexture->Format(), false, pBits );
-#else // _PS3
-					pBits = pVTFTexture->ImageData( iFrame, iFace + nFirstFace, iMip, 0, 0, 0 );
-					g_pShaderAPI->TexImage2D( iMip, iFace, m_ImageFormat, 0, nWidth, nHeight, 
-						pVTFTexture->Format(), pVTFTexture->IsPreTiled(), pBits );
-#endif // !_PS3
-				}
-			}
-		}
-	}
-
-#ifdef _X360
-	if ( m_nInternalFlags & TEXTUREFLAGSINTERNAL_CACHEABLE )
-	{
-		// Make sure we've actually allocated the texture handles
-		Assert( HasBeenAllocated() );
-
-		// a cacheing texture needs to know how to get its bits back
-		g_pShaderAPI->SetCacheableTextureParams( m_pTextureHandles, m_nFrameCount, pResolvedFilename, m_nMipSkipCount );
-	}
-#endif // _X360
-
-	if ( m_nInternalFlags & TEXTUREFLAGSINTERNAL_QUEUEDLOAD )
-	{
-		// the empty hires version was setup
-		// the hires d3d bits will be delivered before gameplay (or render)
-		LoaderPriority_t priority = LOADERPRIORITY_BEFOREPLAY;
-		
-		// add the job 
-		LoaderJob_t loaderJob;
-		loaderJob.m_pFilename = pResolvedFilename;
-		loaderJob.m_pCallback = QueuedLoaderCallback;
-		loaderJob.m_pContext = (void *)this;
-		loaderJob.m_Priority =  priority;
-		g_pQueuedLoader->AddJob( &loaderJob );
-	}
-
-	if ( IsProcedural() && m_pTextureRegenerator && m_pTextureRegenerator->HasPreallocatedScratchTexture() )
-	{
-		// nothing to free; we used the pre-allocated scratch texture
-	}
-	else
-	{
-		// hint the vtf system to release memory associated with its load
-		pVTFTexture->ReleaseImageMemory();
-	}
-#endif // _GAMECONSOLE
+	WriteDataToShaderAPITexture( m_nFrameCount, nFaceCount, nFirstFace, m_nActualMipCount, pVTFTexture, m_ImageFormat );
 
 	//lwss - This is actually done with malloc(). Goes through about 15 function calls, unsure where exactly but it was flagged by ASAN
 	//delete [] pResolvedFilename;
@@ -4756,7 +4336,6 @@ void CTexture::GetLowResColorSample( float s, float t, float *color ) const
 		return;
 	}
 
-#if !defined( _GAMECONSOLE )
 	// force s and t into [0,1)
 	if ( s < 0.0f )
 	{
@@ -4768,17 +4347,17 @@ void CTexture::GetLowResColorSample( float s, float t, float *color ) const
 	}
 	s = s - ( float )( int )s;
 	t = t - ( float )( int )t;
-	
+
 	s *= m_LowResImageWidth;
 	t *= m_LowResImageHeight;
-	
+
 	int wholeS, wholeT;
 	wholeS = ( int )s;
 	wholeT = ( int )t;
 	float fracS, fracT;
 	fracS = s - ( float )( int )s;
 	fracT = t - ( float )( int )t;
-	
+
 	// filter twice in the s dimension.
 	float sColor[2][3];
 	int wholeSPlusOne = ( wholeS + 1 ) % m_LowResImageWidth;
@@ -4800,11 +4379,6 @@ void CTexture::GetLowResColorSample( float s, float t, float *color ) const
 	color[0] = sColor[0][0] * ( 1.0f - fracT ) + sColor[1][0] * fracT;
 	color[1] = sColor[0][1] * ( 1.0f - fracT ) + sColor[1][1] * fracT;
 	color[2] = sColor[0][2] * ( 1.0f - fracT ) + sColor[1][2] * fracT;
-#else
-	color[0] = (float)m_LowResImageSample[0] * 1.0f/255.0f;
-	color[1] = (float)m_LowResImageSample[1] * 1.0f/255.0f;
-	color[2] = (float)m_LowResImageSample[2] * 1.0f/255.0f;
-#endif
 }
 
 int CTexture::GetApproximateVidMemBytes( void ) const
@@ -4863,61 +4437,6 @@ ITexture *CTexture::GetEmbeddedTexture( int nIndex )
 {
 	return ( nIndex == 0 ) ? this : NULL;
 }
-
-//-----------------------------------------------------------------------------
-// Helper method to initialize texture bits in desired state.
-//-----------------------------------------------------------------------------
-#if defined( _GAMECONSOLE )
-bool CTexture::ClearTexture( int r, int g, int b, int a )
-{
-	Assert( IsProcedural() || IsRenderTarget() );
-	if( !HasBeenAllocated() )
-		return false;
-
-	if ( m_ImageFormat == IMAGE_FORMAT_D16 || m_ImageFormat == IMAGE_FORMAT_D24S8 || m_ImageFormat == IMAGE_FORMAT_D24FS8 || m_ImageFormat == IMAGE_FORMAT_R32F )
-	{
-		// not supporting non-rgba textures
-		return true;
-	}
-
-	CPixelWriter writer;
-	g_pShaderAPI->ModifyTexture( m_pTextureHandles[0] );
-	if ( !g_pShaderAPI->TexLock( 0, 0, 0, 0, m_nActualWidth, m_nActualHeight, writer ) )
-		return false;
-
-	writer.Seek( 0, 0 );
-	for ( int j = 0; j < m_nActualHeight; ++j )
-	{
-		for ( int k = 0; k < m_nActualWidth; ++k )
-		{
-			writer.WritePixel( r, g, b, a );
-		}
-	}
-	g_pShaderAPI->TexUnlock();
-
-	return true;
-}
-#endif
-
-#if defined( _X360 )
-bool CTexture::CreateRenderTargetSurface( int width, int height, ImageFormat format, bool bSameAsTexture, RTMultiSampleCount360_t multiSampleCount )
-{
-	Assert( IsRenderTarget() && m_nFrameCount > 1 );
-
-	if ( bSameAsTexture )
-	{
-		// use RT texture configuration
-		width = m_nActualWidth;
-		height = m_nActualHeight;
-		format = m_ImageFormat;
-	}
-
-	// RT surface is expected at end of array
-	m_pTextureHandles[m_nFrameCount-1] = g_pShaderAPI->CreateRenderTargetSurface( width, height, format, multiSampleCount, GetName(), TEXTURE_GROUP_RENDER_TARGET_SURFACE );
-
-	return ( m_pTextureHandles[m_nFrameCount-1] != INVALID_SHADERAPI_TEXTURE_HANDLE );
-}
-#endif
 
 void CTexture::DeleteIfUnreferenced()
 {

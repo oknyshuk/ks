@@ -31,7 +31,6 @@
 #include <math.h>
 
 #if defined( _X360 )
-#include "xbox/xbox_console.h"
 #endif
 
 #ifndef STEAM

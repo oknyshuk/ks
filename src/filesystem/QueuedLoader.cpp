@@ -54,7 +54,6 @@
 #include "characterset.h"
 #include "tier1/lzmaDecoder.h"
 #if !defined( _X360 )
-#include "xbox/xboxstubs.h"
 #endif
 #ifdef _PS3
 #include "tls_ps3.h"
@@ -1917,6 +1916,7 @@ bool CQueuedLoader::BeginMapLoading( const char *pMapName, bool bLoadForHDR, boo
 		return false;
 	}
 
+#if defined( _X360 ) || defined( _PS3 )
 	if ( XBX_IsLocalized() )
 	{
 		// find optional localized reslist fixup
@@ -1929,6 +1929,7 @@ bool CQueuedLoader::BeginMapLoading( const char *pMapName, bool bLoadForHDR, boo
 			resListBuffer.Put( localizedBuffer.PeekGet(), localizedBuffer.TellPut() );
 		}
 	}
+#endif
 
 	m_pProgress->UpdateProgress( PROGRESS_GOTRESLIST );
 

@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2009, Valve Corporation, All rights reserved. ============//
+//========= Copyright ï¿½ 1996-2009, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -6,14 +6,8 @@
 
 #include "mm_framework.h"
 
-#ifndef _X360
-#include "xbox/xboxstubs.h"
-#endif
-
 #include "smartptr.h"
 #include "utlvector.h"
-
-#include "x360_lobbyapi.h"
 #include "leaderboards.h"
 
 #include "igameevents.h"

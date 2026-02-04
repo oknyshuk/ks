@@ -10,7 +10,7 @@ def configure(conf):
     conf.define("VECTOR", True)
     conf.define("BOTS", True)
     conf.define("CSTRIKE_DLL", True)
-    conf.define("USE_ECONOMY_FEATURES", True)
+    conf.define("NO_STEAM_GAMECOORDINATOR", True)
 
 
 def build(bld):
@@ -21,7 +21,6 @@ def build(bld):
         "tier0",
         "responserules_runtime",
         "vgui_controls",
-        "gcsdk",
         "bonesetup",
         "particels",
         "mathlib_extended",
@@ -48,9 +47,7 @@ def build(bld):
         "../shared",
         "../shared/cstrike15",
         "../shared/cstrike15/bot",
-        "../shared/econ",
         "../../utils/common",
-        "../../gcsdk/steamextra",
         "../../generated_proto",
         "../../thirdparty/protobuf-2.6.1/src",
     ]
@@ -434,6 +431,7 @@ def build(bld):
         "../../public/map_utils.cpp",
         "../../public/networkvar.cpp",
         "../../common/randoverride.cpp",
+        "../../common/steamid.cpp",
         "../../public/registry.cpp",
         "../../public/rope_physics.cpp",
         "../../public/scratchpad3d.cpp",
@@ -518,10 +516,6 @@ def build(bld):
         "team_spawnpoint.cpp",
         "server_log_http_dispatcher.cpp",
         "../shared/teamplayroundbased_gamerules.cpp",
-        "../shared/cstrike15/cstrike15_item_inventory.cpp",
-        "../shared/cstrike15/cstrike15_item_system.cpp",
-        "../shared/cstrike15/cstrike15_item_schema.cpp",
-        "../shared/cstrike15/cs_econ_item_string_table.cpp",
         "../shared/cstrike15/achievements_cs.cpp",
         "../shared/cstrike15/basecsgrenade_projectile.cpp",
         "../shared/cstrike15/cs_ammodef.cpp",
@@ -539,11 +533,13 @@ def build(bld):
         "cstrike15/cs_player.cpp",
         "cstrike15/cs_player_resource.cpp",
         "../shared/cstrike15/cs_player_shared.cpp",
+        "../shared/cstrike15/cs_item_inventory.cpp",
         "../shared/cstrike15/cs_playeranimstate.cpp",
         "../shared/cstrike15/csgo_playeranimstate.cpp",
         "cstrike15/cs_playermove.cpp",
         "cstrike15/cs_pushentity.cpp",
         "../shared/cstrike15/cs_shareddefs.cpp",
+        "../shared/econ/econ_item_schema_minimal.cpp",
         "cstrike15/cs_team.cpp",
         "cstrike15/cs_vehicle_jeep.cpp",
         "../shared/cstrike15/cs_weapon_parse.cpp",
@@ -649,18 +645,6 @@ def build(bld):
         "cstrike15/cs_nav_generate.cpp",
         "cstrike15/cs_nav_mesh.cpp",
         "cstrike15/cs_nav_path.cpp",
-        "../shared/econ/econ_item_view.cpp",
-        "../shared/econ/econ_item_interface.cpp",
-        "../shared/econ/econ_item_system.cpp",
-        "../shared/econ/attribute_manager.cpp",
-        "../shared/econ/econ_entity.cpp",
-        "../shared/econ/econ_entity_creation.cpp",
-        "../shared/econ/econ_item_inventory.cpp",
-        "../shared/econ/econ_item.cpp",
-        "../shared/econ/econ_item_constants.cpp",
-        "../shared/econ/econ_item_schema.cpp",
-        "../shared/econ/item_selection_criteria.cpp",
-        "../shared/econ/localization_provider.cpp",
         "../../public/tier0/memoverride.cpp",
     ]
 

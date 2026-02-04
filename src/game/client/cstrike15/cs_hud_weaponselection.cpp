@@ -7,9 +7,6 @@
 #include "cbase.h"
 #include "cs_hud_weaponselection.h"
 #include "iclientmode.h"
-#if defined( INCLUDE_SCALEFORM )
-#include "HUD/sfweaponselection.h"
-#endif
 #include "iinput.h"
 #include "cs_gamerules.h"
 #include "cs_weapon_parse.h"
@@ -52,17 +49,10 @@ void CHudWeaponSelection::OnWeaponPickup( C_BaseCombatWeapon *pWeapon )
 	C_CSPlayer *pPlayer = GetHudPlayer();
 
 	if ( pCSWeapon && !pCSWeapon->IsMarkedForDeletion() && pPlayer )
-	{		
+	{
 		//const CCSWeaponInfo *pCSWeaponInfo = GetWeaponInfo( pCSWeapon->GetCSWeaponID() );
 		if ( pPlayer->State_Get() == STATE_ACTIVE )
 		{
-#if defined( INCLUDE_SCALEFORM )
-            SFWeaponSelection *pHudWS = GET_HUDELEMENT( SFWeaponSelection );
-			if ( pHudWS )
-			{
-				pHudWS->ShowAndUpdateSelection( WEPSELECT_PICKUP, pWeapon );
-			}
-#endif
 		}
 	}
 }
@@ -76,16 +66,9 @@ void CHudWeaponSelection::OnWeaponDrop( C_BaseCombatWeapon *pWeapon )
 	C_CSPlayer *pPlayer = GetHudPlayer();
 
 	if ( pCSWeapon && pPlayer )
-	{		
+	{
 		if ( pPlayer->State_Get() == STATE_ACTIVE )
 		{
-#if defined( INCLUDE_SCALEFORM )
-            SFWeaponSelection *pHudWS = GET_HUDELEMENT( SFWeaponSelection );
-			if ( pHudWS )
-			{
-				pHudWS->ShowAndUpdateSelection( WEPSELECT_DROP, pWeapon );
-			}
-#endif
 		}
 	}
 }
@@ -99,16 +82,9 @@ void CHudWeaponSelection::OnWeaponSwitch( C_BaseCombatWeapon *pWeapon )
 	C_CSPlayer *pPlayer = C_CSPlayer::GetLocalCSPlayer();
 
 	if ( pCSWeapon && pPlayer )
-	{		
+	{
 		if ( pPlayer->State_Get() == STATE_ACTIVE )
 		{
-#if defined( INCLUDE_SCALEFORM )
-			SFWeaponSelection *pHudWS = GET_HUDELEMENT( SFWeaponSelection );
-			if ( pHudWS )
-			{
-				pHudWS->ShowAndUpdateSelection( WEPSELECT_SWITCH, pWeapon );
-			}
-#endif
 		}
 	}
 }

@@ -41,7 +41,6 @@
 #include "snd_mixgroups.h"
 
 #if defined( _X360 )
-#include "xbox/xbox_console.h"
 #include "xmp.h"
 
 #include "avi/ibik.h"
@@ -623,14 +622,7 @@ ConVar snd_use_vmx("snd_use_vmx", "1");
 // Check in advance if ANY groups are solo'd
 void MXR_SetSoloActive(void)
 {
-#ifdef _X360
-	if (snd_use_vmx.GetBool())
-		MXR_AccumulateMasterMixLayerVMX();
-	else
-		MXR_AccumulateMasterMixLayer();
-#else
 	MXR_AccumulateMasterMixLayer();
-#endif
 
 	g_soloActive = 0.0;
 

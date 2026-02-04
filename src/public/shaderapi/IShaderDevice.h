@@ -1,4 +1,4 @@
-//===== Copyright © 1996-2005, Valve Corporation, All rights reserved. ======//
+//===== Copyright ï¿½ 1996-2005, Valve Corporation, All rights reserved. ======//
 //
 // Purpose: 
 //
@@ -153,7 +153,7 @@ public:
 typedef void (*ShaderModeChangeCallbackFunc_t)( void );
 
 //-----------------------------------------------------------------------------
-// Used by the scaleform UI to manage when then device is lost or reset, or when
+// Used by the UI to manage when the device is lost or reset, or when
 // the mode changes
 //-----------------------------------------------------------------------------
 

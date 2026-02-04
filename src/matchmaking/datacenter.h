@@ -1,6 +1,6 @@
 //========= Copyright © 1996-2009, Valve Corporation, All rights reserved. ============//
 //
-// Purpose: 
+// Purpose:
 //
 //=====================================================================================//
 
@@ -9,8 +9,6 @@
 
 #include "utlvector.h"
 #include "utlmap.h"
-
-#include "x360_xlsp_cmd.h"
 
 class CDatacenterCmdBatchImpl;
 
@@ -72,7 +70,7 @@ protected:
 	void RequestStart();
 	void RequestUpdate();
 	void RequestStop();
-	
+
 	void PushAwayNextUpdate();
 
 	void OnStorageDeviceAvailable( int iCtrlr );

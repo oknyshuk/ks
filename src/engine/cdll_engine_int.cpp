@@ -88,7 +88,6 @@
 #include "staticpropmgr.h"
 #include "sv_uploadgamestats.h"
 #include "host_cmd.h"
-#include "ixboxsystem.h"
 #include "matchmaking/imatchframework.h"
 #include "appframework/ilaunchermgr.h"
 #include "paint.h"
@@ -1954,28 +1953,20 @@ const char *CEngineClient::GetSaveDirName() // get a pointer to the path where s
 }
 
 
-extern IXboxSystem *g_pXboxSystem;
-
 //-----------------------------------------------------------------------------
-// Purpose: 
+// Purpose: Xbox storage device stubs (not used on PC/Linux)
 //-----------------------------------------------------------------------------
 uint CEngineClient::OnStorageDeviceAttached( int iController )
 {
-	return g_pXboxSystem->OpenContainers( iController );
+	return 0;
 }
 
-//-----------------------------------------------------------------------------
-// Purpose: 
-//-----------------------------------------------------------------------------
 void CEngineClient::OnStorageDeviceDetached( int iController )
 {
-	XBX_SetStorageDeviceId( iController, XBX_INVALID_STORAGE_ID );
-	g_pXboxSystem->CloseContainers( iController );
 }
 
 void CEngineClient::FinishContainerWrites( int iController )
 {
-	g_pXboxSystem->FinishContainerWrites( iController );
 }
 
 void CEngineClient::FinishAsyncSave()

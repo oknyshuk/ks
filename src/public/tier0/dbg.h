@@ -237,24 +237,18 @@ PLATFORM_INTERFACE struct SDL_Window * GetAssertDialogParent();
 #endif // DBGFLAG_ASSERTFATAL
 
 // lightweight assert macros: in theory, can be run in release without slowing it down
-#if defined(_CERT) || defined(_RETAIL) 
+#if defined(_CERT) || defined(_RETAIL)
 #define AssertAligned(PTR)
 #define AssertAlignedWidth(PTR, width)
 #define AssertAlignedConsole(PTR)
+#elif defined( DBGFLAG_ASSERT )
+#define  AssertAlignedWidth( adr, width )  Assert( ( ( ( intp ) ( adr ) ) & ( width - 1 ) ) == 0 )
+#define  AssertAligned( adr )           AssertAlignedWidth( adr, 16 )
+#define AssertAlignedConsole(adr)
 #else
-#  if defined( _X360 )
-#	 define AssertAlignedWidth( PTR, width ) __twnei( intp(PTR) & ( width - 1 ), 0 ) // trap if not equal to immediate value (from width mask); unsigned comparison
-#    define AssertAligned( PTR ) AssertAlignedWidth( PTR, 16 ) // Call above with 16 width defined
-#    define AssertAlignedConsole( PTR ) AssertAlignedWidth( PTR, 4 ) // Call above with 4 width defined (xbox only for now)
-#  elif defined( DBGFLAG_ASSERT )
-#	 define  AssertAlignedWidth( adr, width )  Assert( ( ( ( intp ) ( adr ) ) & ( width - 1 ) ) == 0 )
-#    define  AssertAligned( adr )           AssertAlignedWidth( adr, 16 )
-#    define AssertAlignedConsole(adr)     // XBox only for now.
-#  else
-#  define AssertAlignedWidth(PTR, width)
-#  define AssertAligned(PTR) 
-#  define AssertAlignedConsole(PTR)
-#  endif
+#define AssertAlignedWidth(PTR, width)
+#define AssertAligned(PTR)
+#define AssertAlignedConsole(PTR)
 #endif
 
 // Assert macros
@@ -406,19 +400,6 @@ PLATFORM_INTERFACE void Msg( PRINTF_FORMAT_STRING const tchar* pMsg, ... ) FMTFU
 PLATFORM_INTERFACE void Warning( PRINTF_FORMAT_STRING const tchar *pMsg, ... ) FMTFUNCTION( 1, 2 );
 PLATFORM_INTERFACE void Warning_SpewCallStack( int iMaxCallStackLength, PRINTF_FORMAT_STRING const tchar *pMsg, ... ) FMTFUNCTION( 2, 3 );
 
-#ifdef _PS3
-
-PLATFORM_OVERLOAD void DevMsg( int level, PRINTF_FORMAT_STRING const tchar* pMsg, ... ) FMTFUNCTION( 2, 3 );
-PLATFORM_OVERLOAD void DevWarning( int level, PRINTF_FORMAT_STRING const tchar *pMsg, ... ) FMTFUNCTION( 2, 3 );
-
-PLATFORM_INTERFACE void DevMsg( PRINTF_FORMAT_STRING const tchar* pMsg, ... ) FMTFUNCTION( 1, 2 );
-PLATFORM_INTERFACE void DevWarning( PRINTF_FORMAT_STRING const tchar *pMsg, ... ) FMTFUNCTION( 1, 2 );
-
-PLATFORM_INTERFACE void ConColorMsg( const Color& clr, PRINTF_FORMAT_STRING const tchar* pMsg, ... ) FMTFUNCTION( 2, 3 );
-PLATFORM_INTERFACE void ConMsg( PRINTF_FORMAT_STRING const tchar* pMsg, ... ) FMTFUNCTION( 1, 2 );
-
-#else // !_PS3
-
 PLATFORM_INTERFACE void DevMsg( int level, PRINTF_FORMAT_STRING const tchar* pMsg, ... ) FMTFUNCTION( 2, 3 );
 PLATFORM_INTERFACE void DevWarning( int level, PRINTF_FORMAT_STRING const tchar *pMsg, ... ) FMTFUNCTION( 2, 3 );
 
@@ -427,8 +408,6 @@ PLATFORM_OVERLOAD void DevWarning( PRINTF_FORMAT_STRING const tchar *pMsg, ... )
 
 PLATFORM_OVERLOAD void ConColorMsg( const Color& clr, PRINTF_FORMAT_STRING const tchar* pMsg, ... ) FMTFUNCTION( 2, 3 );
 PLATFORM_OVERLOAD void ConMsg( PRINTF_FORMAT_STRING const tchar* pMsg, ... ) FMTFUNCTION( 1, 2 );
-
-#endif // _PS3
 
 PLATFORM_INTERFACE void ConDMsg( PRINTF_FORMAT_STRING const tchar* pMsg, ... ) FMTFUNCTION( 1, 2 );
 
@@ -593,7 +572,7 @@ private:
 //
 // Purpose: Embed debug info in each file.
 //
-#if defined( _WIN32 ) && !defined( _X360 )
+#if defined( _WIN32 )
 
 	#ifdef _DEBUG
 		#pragma comment(compiler)

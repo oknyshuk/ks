@@ -8,6 +8,7 @@
 #include "netmessages.h"
 #include "cstrike15/c_cs_player.h"
 #include "ihltv.h"
+#include "steam/steam_api.h"
 
 ConVar snd_deathcam_replay_mix( "snd_deathcam_replay_mix", "0", 0, "When set to non-0, client switches to DeathCam_Replay_Mix mixgroup during deathcam replay" );
 ConVar spec_replay_review_sound( "spec_replay_review_sound", "1", FCVAR_CLIENTDLL, "When set to non-0, a sound effect is played during Killer Replay" );

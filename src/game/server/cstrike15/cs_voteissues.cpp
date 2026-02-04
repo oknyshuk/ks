@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============
+//========= Copyright ï¿½ 1996-2005, Valve Corporation, All rights reserved. ============
 //
 // Purpose:  CS-specific things to vote on
 //
@@ -17,12 +17,6 @@
 #include "gametypes.h"
 
 //[tj]removing this to get voting to compile
-//#include "cs_gcmessages.h"
-
-#ifdef CLIENT_DLL
-#include "gc_clientsystem.h"
-#endif // CLIENT_DLL
-
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 

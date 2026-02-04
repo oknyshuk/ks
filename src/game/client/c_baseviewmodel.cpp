@@ -1219,13 +1219,9 @@ void C_BaseViewModel::RemoveViewmodelStickers( void )
 	m_hStickerModelAddons.RemoveAll();
 }
 
-#if defined (_GAMECONSOLE)
-
-//C_ViewmodelAttachmentModel
-//C_ViewmodelAttachmentModel
-//C_ViewmodelAttachmentModel
-//C_ViewmodelAttachmentModel
-//--------------------------------------------------------------------------------------------------------  
+//--------------------------------------------------------------------------------------------------------
+// C_ViewmodelAttachmentModel - implementations moved from econ_entity.cpp
+//--------------------------------------------------------------------------------------------------------
 bool C_ViewmodelAttachmentModel::InitializeAsClientEntity( const char *pszModelName, bool bRenderWithViewModels )
 {
 	if ( !BaseClass::InitializeAsClientEntity( pszModelName, bRenderWithViewModels ) )
@@ -1233,37 +1229,27 @@ bool C_ViewmodelAttachmentModel::InitializeAsClientEntity( const char *pszModelN
 
 	AddEffects( EF_BONEMERGE );
 	AddEffects( EF_BONEMERGE_FASTCULL );
+
+	// Invisible by default, and made visible->drawn->made invisible when the viewmodel is drawn
 	AddEffects( EF_NODRAW );
 	return true;
+}
+
+int C_ViewmodelAttachmentModel::InternalDrawModel( int flags, const RenderableInstance_t &instance )
+{
+	CMatRenderContextPtr pRenderContext( materials );
+	C_BaseViewModel *pViewmodel = m_hViewmodel;
+	if ( pViewmodel && pViewmodel->ShouldFlipModel() )
+		pRenderContext->CullMode( MATERIAL_CULLMODE_CW );
+
+	int r = BaseClass::InternalDrawModel( flags, instance );
+
+	pRenderContext->CullMode( MATERIAL_CULLMODE_CCW );
+
+	return r;
 }
 
 void C_ViewmodelAttachmentModel::SetViewmodel( C_BaseViewModel *pVM )
 {
 	m_hViewmodel = pVM;
 }
-
-int C_ViewmodelAttachmentModel::InternalDrawModel( int flags, const RenderableInstance_t &instance )
-{
-	CMatRenderContextPtr pRenderContext( materials );
-
-	C_BaseViewModel *pViewmodel = m_hViewmodel;
-
-	if ( pViewmodel && pViewmodel->ShouldFlipModel() )
-		pRenderContext->CullMode( MATERIAL_CULLMODE_CW );
-
-	bool bValidMaterialOverride = (m_MaterialOverrides != NULL) && (m_MaterialOverrides->IsErrorMaterial() == false);
-
-	if (bValidMaterialOverride)
-		modelrender->ForcedMaterialOverride( m_MaterialOverrides );
-
-	int ret = BaseClass::InternalDrawModel( flags, instance );
-
-	if (bValidMaterialOverride)
-		modelrender->ForcedMaterialOverride( NULL );
-
-	pRenderContext->CullMode( MATERIAL_CULLMODE_CCW );
-
-	return ret;
-}
-
-#endif

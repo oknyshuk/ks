@@ -1016,11 +1016,13 @@ void CScheme::LoadFonts()
 	{
 		bValid = vgui::g_pSystem->GetRegistryString( "HKEY_CURRENT_USER\\Software\\Valve\\Steam\\Language", language, sizeof( language ) - 1 );
 	}
+#if defined( _X360 ) || defined( _PS3 )
 	else if ( IsGameConsole() )
 	{
 		Q_strncpy( language, XBX_GetLanguageString(), sizeof( language ) );
 		bValid = true;
 	}
+#endif
 
 	if ( !bValid )
 	{
@@ -1651,11 +1653,13 @@ int CScheme::GetMinimumFontHeightForCurrentLanguage( const char *pLanguage )
 			bValid = g_pSystem->GetRegistryString( "HKEY_CURRENT_USER\\Software\\Valve\\Steam\\Language", language, sizeof(language)-1 );
 		}
 	}
+#if defined( _X360 ) || defined( _PS3 )
 	else if ( IsGameConsole() )
 	{
 		Q_strncpy( language, XBX_GetLanguageString(), sizeof( language ) );
 		bValid = true;
 	}
+#endif
 
 	if ( bValid )
 	{

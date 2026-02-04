@@ -17,7 +17,6 @@
 #include "weapon_parse.h"
 #include "baseviewmodel_shared.h"
 #include "weapon_proficiency.h"
-#include "econ/econ_entity.h"
 
 #if defined( CLIENT_DLL )
 #undef CBaseCombatWeapon
@@ -121,7 +120,7 @@ namespace vgui2
 // Purpose: Base weapon class, shared on client and server
 //-----------------------------------------------------------------------------
 
-#define BASECOMBATWEAPON_DERIVED_FROM		CEconEntity
+#define BASECOMBATWEAPON_DERIVED_FROM		CBaseAnimating
 
 // temp states for modular weapon body groups
 #define MODULAR_BODYGROUPS_DEFAULT_NONE_SET		0
@@ -229,8 +228,12 @@ public:
 	// We might have to disable this code in main until we refactor all weapons to use this system, as it's a pretty good perf boost
 	virtual int GetWeaponID( void ) const		{ return 0; }
 
-	const CEconItemView*	GetEconItemView( void ) const;
-	CEconItemView*			GetEconItemView( void );
+	virtual const CEconItemView*	GetEconItemView( void ) const { static CEconItemView s_DummyEconItemView; return &s_DummyEconItemView; }
+	virtual CEconItemView*			GetEconItemView( void ) { static CEconItemView s_DummyEconItemView; return &s_DummyEconItemView; }
+
+	// Xuid methods stub (econ removed)
+	virtual uint64 GetOriginalOwnerXuid() const { return 0; }
+	virtual void SetOriginalOwnerXuid( uint32, uint32 ) {}
 
 	virtual bool			IsBaseCombatWeapon( void ) const { return true; }
 	virtual CBaseCombatWeapon *MyCombatWeaponPointer( void ) { return this; }
@@ -528,7 +531,7 @@ public:
 	virtual void			BoneMergeFastCullBloat( Vector &localMins, Vector &localMaxs, const Vector &thisEntityMins, const Vector &thisEntityMaxs  ) const;
 	virtual bool			OnFireEvent( C_BaseViewModel *pViewModel, const Vector& origin, const QAngle& angles, int event, const char *options )
 	{
-        return BaseClass::OnFireEvent( pViewModel, origin, angles, event, options );
+        return false;
     }
 
 	// Should this object cast shadows?

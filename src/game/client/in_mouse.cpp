@@ -32,7 +32,6 @@
 #include "inputsystem/iinputstacksystem.h"
 
 #if defined( _X360 )
-#include "xbox/xbox_win32stubs.h"
 #endif
 #if defined( _PS3 )
 #include "ps3/ps3_win32stubs.h"

@@ -62,7 +62,6 @@
 #include "cl_steamauth.h"
 #include "fmtstr.h"
 #if defined( _X360 )
-#include "xbox/xbox_win32stubs.h"
 #endif
 #include "mathlib/IceKey.H"
 #include "matchmaking/imatchframework.h"

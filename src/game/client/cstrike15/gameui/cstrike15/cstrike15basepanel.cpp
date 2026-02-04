@@ -44,7 +44,6 @@ static int s_nPs3TrophyStorageSizeKB = 0;
 
 #if defined( _X360 )
 #include "xparty.h" // For displaying the Party Voice -> Game Voice notification, per requirements
-#include "xbox/xbox_launch.h"
 #endif
 
 #include "cs_gamerules.h"
@@ -288,9 +287,6 @@ void CCStrike15BasePanel::OnEvent( KeyValues *pEvent )
 				pParameters->m_uiLockFirstPersonAccountID &&
 				pParameters->m_uiCaseID )
 			{
-#if defined( INCLUDE_SCALEFORM )
-				SFHudOverwatchResolutionPanel::LoadDialog();
-#endif
 			}
 		}
 		engine->ClientCmd_Unrestricted( "disconnect" );
@@ -323,9 +319,6 @@ void CCStrike15BasePanel::FireGameEvent( IGameEvent *event )
 			// Ensure we remove any pending dialogs as soon as we receive notification that the client is disconnecting
 			//	(fixes issue with the quit dialog staying up when you "disconnect" via console window)
 			//  Passing in false to indicate we do not wish to dismiss CCommandMsgBoxes, which indicate error codes/kick reasons/etc
-#if defined( INCLUDE_SCALEFORM )
-			CMessageBoxScaleform::UnloadAllDialogs( false );
-#endif
 		}
 	}
 }
@@ -384,19 +377,7 @@ CON_COMMAND_F( cl_avatar_convert_rgb, "Converts all png avatars in the avatars d
 void CCStrike15BasePanel::OnOpenServerBrowser()
 {
 #if !defined(_GAMECONSOLE)
-#if defined(INCLUDE_SCALEFORM)
-	if (!m_bCommunityServerWarningIssued && player_nevershow_communityservermessage.GetBool() == 0)
-	{
-		OnOpenMessageBoxThreeway("#SFUI_MainMenu_ServerBrowserWarning_Title", "#SFUI_MainMenu_ServerBrowserWarning_Text2", "#SFUI_MainMenu_ServerBrowserWarning_Legend", "#SFUI_MainMenu_ServerBrowserWarning_NeverShow", (MESSAGEBOX_FLAG_OK | MESSAGEBOX_FLAG_CANCEL | MESSAGEBOX_FLAG_TERTIARY), this);
-		m_bServerBrowserWarningRaised = true;
-	}
-	else
-	{
-		g_VModuleLoader.ActivateModule("Servers");
-	}
-#else // !INCLUDE_SCALEFORM
 	g_VModuleLoader.ActivateModule("Servers");
-#endif // INCLUDE_SCALEFORM
 #endif // !_GAMECONSOLE
 }
 

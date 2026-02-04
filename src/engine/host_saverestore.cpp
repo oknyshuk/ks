@@ -64,9 +64,7 @@
 #include "tier1/fmtstr.h"
 
 #if !defined( _X360 )
-#include "xbox/xboxstubs.h"
 #else
-#include "xbox/xbox_launch.h"
 #endif
 
 #if defined (_PS3)
@@ -78,9 +76,6 @@
 #if !defined( DEDICATED ) && !defined( NO_STEAM )
 #include "cl_steamauth.h"
 #endif
-
-#include "ixboxsystem.h"
-extern IXboxSystem *g_pXboxSystem;
 
 extern IVEngineClient *engineClient;
 
@@ -729,11 +724,13 @@ int CSaveRestore::SaveGameSlot( const char *pSaveName, const char *pSaveComment,
 	// @TODO: this async finish all writes has to go away, very expensive and will make game hitchy. switch to a wait on the last async op
 	g_AsyncSaveCallQueue.QueueCall( g_pFileSystem, &IFileSystem::AsyncFinishAllWrites );
 	
+#ifdef _X360
 	if ( IsXSave() && StorageDeviceValid() )
 	{
 		// Finish all pending I/O to the storage devices
 		g_AsyncSaveCallQueue.QueueCall( g_pXboxSystem, &IXboxSystem::FinishContainerWrites, iX360controller );
 	}
+#endif
 
 	S_ExtraUpdate();
 	Finish( pSaveData );
@@ -2837,10 +2834,12 @@ void CSaveRestore::AutoSaveDangerousIsSafe()
 #endif
 
 	// Finish off all writes
+#ifdef _X360
 	if ( IsXSave() )
 	{
 		g_pXboxSystem->FinishContainerWrites( iX360controller );
 	}
+#endif
 }
 
 static void SaveGame( const CCommand &args )

@@ -1,4 +1,4 @@
-//====== Copyright © 1996-2009, Valve Corporation, All rights reserved. =======//
+//====== Copyright ï¿½ 1996-2009, Valve Corporation, All rights reserved. =======//
 //
 // Purpose: 
 //
@@ -272,13 +272,7 @@ int CNetSupportImpl::SendPacket (
 	netadr_t inetAddr( to );
 	if ( !inetAddr.GetPort() && inetAddr.GetType() == NA_BROADCAST )
 	{
-		inetAddr.SetPort(
-#ifdef _X360
-			NET_GetUDPPort( NS_X360_SYSTEMLINK )
-#else
-			PORT_SERVER
-#endif
-			);
+		inetAddr.SetPort( PORT_SERVER );
 	}
 
 	return NET_SendPacket( chan, sock, inetAddr, ( const unsigned char * ) data, length, pVoicePayload, bUseCompression );

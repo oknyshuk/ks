@@ -22,10 +22,6 @@ class IMatchSession;
 #include "tier1/interface.h"
 #include "keyvalues.h"
 
-#if !defined( _X360 )
-#include "xbox/xboxstubs.h"
-#endif
-
 #include "inetchannel.h"
 
 #include "imatchasync.h"

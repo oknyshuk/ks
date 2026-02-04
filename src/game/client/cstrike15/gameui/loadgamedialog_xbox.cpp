@@ -12,7 +12,6 @@
 
 #include "engineinterface.h"
 #include "gameui_interface.h"
-#include "ixboxsystem.h"
 #include "filesystem.h"
 
 #include "savegamebrowserdialog.h"

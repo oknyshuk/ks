@@ -20,12 +20,7 @@
 #include "shaderapi/ishadershadow.h"
 #include "shaderapi_global.h"
 #include "videocfg/videocfg.h"
-#include "vjobs_interface.h"
 #include "winutils.h"
-
-#ifdef _X360
-#include "xbox/xbox_win32stubs.h"
-#endif
 
 // NOTE: This has to be the last file included!
 #include "tier0/memdbgon.h"
@@ -38,11 +33,8 @@ CShaderDeviceBase *g_pShaderDevice;
 CShaderAPIBase *g_pShaderAPI;
 CShaderDeviceMgrBase *g_pShaderDeviceMgr;
 IShaderShadow *g_pShaderShadow;
-#if !defined( _PS3 ) && !defined( _OSX )
+#if !defined( _OSX )
 IShaderUtil* g_pShaderUtil;		// The main shader utility interface
-IVJobs * g_pVJobs;
-#else
-extern IVJobs * g_pVJobs;
 #endif
 
 bool g_bUseShaderMutex = false;	// Shader mutex globals
@@ -83,9 +75,8 @@ static void InitShaderAPICVars( )
 //-----------------------------------------------------------------------------
 // Read dx support levels
 //-----------------------------------------------------------------------------
-#if defined( PLATFORM_POSIX ) && !defined( _PS3 )
+#if defined( PLATFORM_POSIX )
 #define SUPPORT_CFG_FILE "dxsupport_mac.cfg"
-// TODO: make this different for Mac?
 #define SUPPORT_CFG_OVERRIDE_FILE "dxsupport_override.cfg"
 #else
 #define SUPPORT_CFG_FILE "dxsupport.cfg"
@@ -99,7 +90,7 @@ static void InitShaderAPICVars( )
 CShaderDeviceMgrBase::CShaderDeviceMgrBase()
 {
 	m_pDXSupport = NULL;
-#if defined( _PS3 ) || defined( _OSX )
+#if defined( _OSX )
 	g_pShaderDeviceMgr = this;
 #endif
 }
@@ -142,7 +133,7 @@ bool CShaderDeviceMgrBase::Connect( CreateInterfaceFn factory )
 {
 	LOCK_SHADERAPI();
 
-	Assert( IsPS3() || IsOSX() || !g_pShaderDeviceMgr );
+	Assert( IsOSX() || !g_pShaderDeviceMgr );
 
 	s_TempFactory = factory;
 
@@ -151,13 +142,11 @@ bool CShaderDeviceMgrBase::Connect( CreateInterfaceFn factory )
 	ConnectTier1Libraries( &actualFactory, 1 );
 	InitShaderAPICVars();
 	ConnectTier2Libraries( &actualFactory, 1 );
-#if !defined( _PS3 ) && !defined( _OSX )
+#if !defined( _OSX )
 	if ( !g_pShaderUtil )
 		g_pShaderUtil = (IShaderUtil*)ShaderDeviceFactory( SHADER_UTIL_INTERFACE_VERSION, NULL );
 #endif
-	if ( !g_pVJobs )
-		g_pVJobs = (IVJobs *)ShaderDeviceFactory( VJOBS_INTERFACE_VERSION, NULL );
-	
+
 	g_pShaderDeviceMgr = this;
 
 	s_TempFactory = NULL;
@@ -177,7 +166,7 @@ void CShaderDeviceMgrBase::Disconnect()
 {
 	LOCK_SHADERAPI();
 
-#if !defined( _PS3 ) && !defined( _OSX )
+#if !defined( _OSX )
 	g_pShaderDeviceMgr = NULL;
 	g_pShaderUtil = NULL;
 #endif
@@ -309,12 +298,6 @@ KeyValues *CShaderDeviceMgrBase::FindDXLevelSpecificConfig( KeyValues *pKeyValue
 //-----------------------------------------------------------------------------
 KeyValues *CShaderDeviceMgrBase::FindDXLevelAndVendorSpecificConfig( KeyValues *pKeyValues, int nDxLevel, int nVendorID )
 {
-	if ( IsX360() )
-	{
-		// 360 unique dxlevel implies hw config, vendor variance not applicable
-		return NULL;
-	}
-
 	KeyValues *pGroup = pKeyValues->GetFirstSubKey();
 	for( pGroup = pKeyValues->GetFirstSubKey(); pGroup; pGroup = pGroup->GetNextKey() )
 	{
@@ -332,12 +315,6 @@ KeyValues *CShaderDeviceMgrBase::FindDXLevelAndVendorSpecificConfig( KeyValues *
 //-----------------------------------------------------------------------------
 KeyValues *CShaderDeviceMgrBase::FindCPUSpecificConfig( KeyValues *pKeyValues, int nCPUMhz, bool bAMD )
 {
-	if ( IsX360() )
-	{
-		// 360 unique dxlevel implies hw config, cpu variance not applicable
-		return NULL;
-	}
-
 	for( KeyValues *pGroup = pKeyValues->GetFirstSubKey(); pGroup; pGroup = pGroup->GetNextKey() )
 	{
 		const char *pName = pGroup->GetString( "name", NULL );
@@ -365,12 +342,6 @@ KeyValues *CShaderDeviceMgrBase::FindCPUSpecificConfig( KeyValues *pKeyValues, i
 //-----------------------------------------------------------------------------
 KeyValues *CShaderDeviceMgrBase::FindCardSpecificConfig( KeyValues *pKeyValues, int nVendorId, int nDeviceId )
 {
-	if ( IsX360() )
-	{
-		// 360 unique dxlevel implies hw config, vendor variance not applicable
-		return NULL;
-	}
-
 	KeyValues *pGroup = pKeyValues->GetFirstSubKey();
 	for( pGroup = pKeyValues->GetFirstSubKey(); pGroup; pGroup = pGroup->GetNextKey() )
 	{
@@ -390,12 +361,6 @@ KeyValues *CShaderDeviceMgrBase::FindCardSpecificConfig( KeyValues *pKeyValues, 
 //-----------------------------------------------------------------------------
 KeyValues *CShaderDeviceMgrBase::FindMemorySpecificConfig( KeyValues *pKeyValues, int nSystemRamMB )
 {
-	if ( IsX360() )
-	{
-		// 360 unique dxlevel implies hw config, memory variance not applicable
-		return NULL;
-	}
-
 	for( KeyValues *pGroup = pKeyValues->GetFirstSubKey(); pGroup; pGroup = pGroup->GetNextKey() )
 	{
 		// Used to help us debug this code
@@ -417,13 +382,7 @@ KeyValues *CShaderDeviceMgrBase::FindMemorySpecificConfig( KeyValues *pKeyValues
 // Finds if we have a texture mem size specific config
 //-----------------------------------------------------------------------------
 KeyValues *CShaderDeviceMgrBase::FindVidMemSpecificConfig( KeyValues *pKeyValues, int nVideoRamMB )
-{	
-	if ( IsX360() )
-	{
-		// 360 unique dxlevel implies hw config, vidmem variance not applicable
-		return NULL;
-	}
-
+{
 	for( KeyValues *pGroup = pKeyValues->GetFirstSubKey(); pGroup; pGroup = pGroup->GetNextKey() )
 	{
 		int nMinMB = pGroup->GetInt( "min megatexels", -1 );
@@ -452,11 +411,6 @@ KeyValues *CShaderDeviceMgrBase::ReadDXSupportKeyValues()
 	KeyValues *pCfg = new KeyValues( "dxsupport" );
 
 	const char *pPathID = "EXECUTABLE_PATH";
-	if ( IsX360() && g_pFullFileSystem->GetDVDMode() != DVDMODE_OFF )
-	{
-		// 360 dvd optimization, expect it inside the platform zip
-		pPathID = "PLATFORM";
-	}
 
 	// First try to read a game-specific config, if it exists
 	if ( !pCfg->LoadFromFile( g_pFullFileSystem, SUPPORT_CFG_FILE, pPathID ) )
@@ -526,7 +480,6 @@ void CShaderDeviceMgrBase::LoadHardwareCaps( KeyValues *pGroup, HardwareCaps_t &
 	if( !pGroup )
 		return;
 
-#ifndef _PS3
 	// don't just blanket kill clip planes on POSIX, only shoot them down if we're running ARB, or asked for nouserclipplanes.
 	//FIXME need to take into account the caps bit that GLM can now provide, so NV can use normal clipping and ATI can fall back to fastclip.
 	if ( CommandLine()->FindParm("-arbmode") || CommandLine()->CheckParm( "-nouserclip" ) )
@@ -537,7 +490,6 @@ void CShaderDeviceMgrBase::LoadHardwareCaps( KeyValues *pGroup, HardwareCaps_t &
 	{
 		caps.m_UseFastClipping = ReadBool( pGroup, "setting.NoUserClipPlanes", caps.m_UseFastClipping );
 	}
-#endif
 
 	caps.m_bNeedsATICentroidHack = ReadBool( pGroup, "setting.CentroidHack", caps.m_bNeedsATICentroidHack );
 	caps.m_bDisableShaderOptimizations = ReadBool( pGroup, "setting.DisableShaderOptimizations", caps.m_bDisableShaderOptimizations );
@@ -683,13 +635,11 @@ bool CShaderDeviceMgrBase::GetRecommendedVideoConfig( int nAdapter, int nVendorI
 		GetModeInfo( &configData.displayModes[i], nAdapter, i );
 	}
 	
-#if !defined( _X360 )
 	// Call into the video.cfg file to setup the video config cvars.
 	RecommendedConfig( configData );
 
 	// Update the convars.
 	UpdateVideoConfigConVars( configData.pConfigKeys );
-#endif
 
 	return true;
 //#endif
@@ -701,14 +651,8 @@ bool CShaderDeviceMgrBase::GetRecommendedVideoConfig( int nAdapter, int nVendorI
 // 3. Used by materialsystem.dll->cmaterialsystem.cpp->GenerateConfigFromConfigKeyValues to fill in material system data (MaterialSystem_Config_t)
 // 4. Used by materialsystem.dll->cmaterialsystem.cpp->WriteConfigurationInfoToConVars to write the material system data into ConVars
 //-----------------------------------------------------------------------------
-bool CShaderDeviceMgrBase::GetRecommendedConfigurationInfo( int nAdapter, int nDXLevel, int nVendorID, int nDeviceID, KeyValues *pConfiguration ) 
+bool CShaderDeviceMgrBase::GetRecommendedConfigurationInfo( int nAdapter, int nDXLevel, int nVendorID, int nDeviceID, KeyValues *pConfiguration )
 {
-	if ( IsX360() )
-	{
-		// this is not compatible with xbox
-		return false;
-	}
-
 	LOCK_SHADERAPI();
 
 	VidMatConfigData_t configData;
@@ -737,10 +681,8 @@ bool CShaderDeviceMgrBase::GetRecommendedConfigurationInfo( int nAdapter, int nD
 		GetModeInfo( &configData.displayModes[i], nAdapter, i );
 	}
 
-#if !defined( _X360 ) && !defined( _PS3 )
 	// Call into the video.cfg file to setup the video config cvars.
 	RecommendedConfig( configData );
-#endif
 
 	return true;
 }
@@ -773,9 +715,6 @@ bool CShaderDeviceMgrBase::GetRecommendedConfigurationInfo( int nAdapter, int nD
 //-----------------------------------------------------------------------------
 int CShaderDeviceMgrBase::GetClosestActualDXLevel( int nDxLevel ) const
 {
-	if ( IsX360() )
-		return 98;
-	
 	if ( nDxLevel < 92 )
 		return 90;
 	if ( nDxLevel < 95 )

@@ -129,10 +129,9 @@ static void BuildUploadDataMessage( bf_write& buf, char const *tablename, KeyVal
 //-----------------------------------------------------------------------------
 bool UploadData( char const *cserIP, char const *tablename, KeyValues *fields )
 {
-#ifndef _GAMECONSOLE
 	bf_write	buf;
 	byte		data[ 2048 ];
-		
+
 	buf.StartWriting( data, sizeof( data ) );
 
 	BuildUploadDataMessage( buf, tablename, fields );
@@ -156,9 +155,6 @@ bool UploadData( char const *cserIP, char const *tablename, KeyValues *fields )
 	}
 
 	return false;
-#else
-	return true;
-#endif
 }
 
 /*

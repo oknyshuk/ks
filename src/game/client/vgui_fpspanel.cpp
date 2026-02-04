@@ -17,7 +17,6 @@
 #include "materialsystem/imaterialsystemhardwareconfig.h"
 #include "filesystem.h"
 #include "steam/steam_api.h"
-#include "../common/xbox/xboxstubs.h"
 #include "engineinterface.h"
 #include "tier0/perfstats.h"
 #include "tier0/cpumonitoring.h"

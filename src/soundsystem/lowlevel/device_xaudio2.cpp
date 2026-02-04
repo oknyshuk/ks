@@ -1,7 +1,7 @@
 #include "basetypes.h"
 #include "commonmacros.h"
 
-#if !defined( _X360 ) && defined( WIN32 )
+#if defined( WIN32 )
 #define _WIN32_DCOM
 #include <windows.h>
 #endif

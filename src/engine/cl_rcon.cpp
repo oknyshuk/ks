@@ -27,7 +27,6 @@
 
 
 #if defined( _X360 )
-#include "xbox/xbox_win32stubs.h"
 #endif
 
 // memdbgon must be the last include file in a .cpp file!!!
@@ -570,12 +569,7 @@ void CRConClient::RunFrame()
 
 	// find out how much we have to read
 	unsigned long readLen = 0;
-#ifdef _PS3
-	ExecuteNTimes( 5, Warning( "CRConClient unsupported on PS3!\n" ) );
-	readLen = 0;
-#else
 	ioctlsocket( hSocket, FIONREAD, &readLen );
-#endif
 	if ( readLen <= sizeof(int) ) 
 		return;
 

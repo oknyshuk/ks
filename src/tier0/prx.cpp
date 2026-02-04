@@ -1,3 +1,6 @@
+// This entire file is PS3-specific PRX (Playstation 3 relocatable executable) exports
+#ifdef _PS3
+
 #include <string.h>
 #include <stdio.h>
 #include <cellstatus.h>
@@ -410,3 +413,5 @@ extern "C" int _tier0_ps3_prx_exit( unsigned int args, void *pArg )
 void _tier0_ps3_prx_required_for_linking()
 {
 }
+
+#endif // _PS3

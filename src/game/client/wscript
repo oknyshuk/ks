@@ -14,7 +14,7 @@ def configure(conf):
     conf.define("CSTRIKE_DLL", True)
     conf.define("GAMEUI_EMBEDDED", True)
     conf.define("GAMEUI_EXPORTS", True)
-    conf.define("USE_ECONOMY_FEATURES", True)
+    conf.define("NO_STEAM_GAMECOORDINATOR", True)
 
 
 def build(bld):
@@ -25,7 +25,6 @@ def build(bld):
         "tier0",
         "vgui_controls",
         "matsys_controls",
-        "gcsdk",
         "bonesetup",
         "particels",
         "raytrace",
@@ -61,8 +60,6 @@ def build(bld):
         "../shared",
         "../shared/cstrike15",
         "../shared/cstrike15/control",
-        "../shared/econ",
-        "../../gcsdk/steamextra",
         "../../generated_proto",
         "../../thirdparty/protobuf-2.6.1/src",
         "../../thirdparty/RmlUi/Include",
@@ -422,6 +419,7 @@ def build(bld):
         "../../public/interpolatortypes.cpp",
         "../../public/networkvar.cpp",
         "../../common/randoverride.cpp",
+        "../../common/steamid.cpp",
         "../../public/rope_physics.cpp",
         "../../public/scratchpad3d.cpp",
         "../../public/ScratchPadUtils.cpp",
@@ -530,11 +528,6 @@ def build(bld):
         "../../utils/common/scriplib.cpp",
         "../../public/lumpfiles.cpp",
         "../../public/zip_utils.cpp",
-        "../shared/cstrike15/cstrike15_item_inventory.cpp",
-        "../shared/cstrike15/cstrike15_item_system.cpp",
-        "../shared/cstrike15/cstrike15_item_schema.cpp",
-        "../shared/cstrike15/cs_econ_item_string_table.cpp",
-        "../shared/econ/econ_game_account_client.cpp",
         "../shared/cstrike15/achievements_cs.cpp",
         "../shared/cstrike15/basecsgrenade_projectile.cpp",
         "cstrike15/buy_presets/buy_preset.cpp",
@@ -559,10 +552,12 @@ def build(bld):
         "../shared/cstrike15/cs_gamestats_shared.cpp",
         "cstrike15/cs_in_main.cpp",
         "../shared/cstrike15/cs_player_shared.cpp",
+        "../shared/cstrike15/cs_item_inventory.cpp",
         "../shared/cstrike15/cs_playeranimstate.cpp",
         "../shared/cstrike15/csgo_playeranimstate.cpp",
         "cstrike15/cs_prediction.cpp",
         "../shared/cstrike15/cs_shareddefs.cpp",
+        "../shared/econ/econ_item_schema_minimal.cpp",
         "cstrike15/cs_client_gamestats.cpp",
         "steamworks_gamestats_client.cpp",
         "cstrike15/cs_view_scene.cpp",
@@ -687,21 +682,6 @@ def build(bld):
         "cstrike15/vgui_c4panel.cpp",
         "cstrike15/vgui_viewc4panel.cpp",
         "hltvreplaysystem.cpp",
-        "../shared/econ/econ_item_view.cpp",
-        "../shared/econ/econ_item_interface.cpp",
-        "../shared/econ/econ_item_description.cpp",
-        "../shared/econ/econ_item_system.cpp",
-        "../shared/econ/attribute_manager.cpp",
-        "../shared/econ/econ_entity.cpp",
-        "../shared/econ/econ_entity_creation.cpp",
-        "../shared/econ/econ_item_inventory.cpp",
-        "../shared/econ/econ_item.cpp",
-        "../shared/econ/econ_item_constants.cpp",
-        "../shared/econ/econ_item_schema.cpp",
-        "../shared/econ/item_selection_criteria.cpp",
-        "../shared/econ/localization_provider.cpp",
-        "../shared/gc_clientsystem.cpp",
-        "cstrike15/cs_gc_client.cpp",
         "../../common/imageutils.cpp",
         "../../public/tier0/memoverride.cpp",
         # RocketUI game components

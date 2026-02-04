@@ -11,7 +11,6 @@
 #if !defined( PLATFORM_X360 )
 #include <windows.h>
 #else
-#include "xbox/xbox_win32stubs.h"
 #endif
 #endif
 

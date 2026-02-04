@@ -12,6 +12,7 @@
 #include "in_buttons.h"
 #include "datacache/imdlcache.h"
 #include "GameStats.h"
+#include "cs_item_inventory.h"
 
 #include "commonmacros.h"
 

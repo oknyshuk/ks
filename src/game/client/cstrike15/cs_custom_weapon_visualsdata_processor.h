@@ -1,6 +1,6 @@
-//========= Copyright © 1996-2012, Valve Corporation, All rights reserved. ============//
+//========= Copyright Â© 1996-2012, Valve Corporation, All rights reserved. ============//
 //
-// Purpose:
+// Purpose: Stub - weapon skin visualization removed with econ
 //
 // $NoKeywords: $
 //=============================================================================//
@@ -8,31 +8,26 @@
 #ifndef CS_CUSTOM_WEAPON_VISUALSDATA_PROCESSOR_H
 #define CS_CUSTOM_WEAPON_VISUALSDATA_PROCESSOR_H
 
-
 #include "cs_shareddefs.h"
 #include "materialsystem/base_visuals_data_processor.h"
-
-//
-// Weapon specific Visuals Data & Processor
-//
 
 enum VisualsDataPaintStyle_t
 {
 	VISUALS_DATA_PAINTSTYLE_ORIGINAL = 0,
-	VISUALS_DATA_PAINTSTYLE_SOLID,			// solid color blocks
-	VISUALS_DATA_PAINTSTYLE_HYDROGRAPHIC,	// hydrodipped
-	VISUALS_DATA_PAINTSTYLE_SPRAY,			// spraypainted
-	VISUALS_DATA_PAINTSTYLE_ANODIZED,		// anodized color blocks
-	VISUALS_DATA_PAINTSTYLE_ANO_MULTI,		// anodized with a design
-	VISUALS_DATA_PAINTSTYLE_ANO_AIR,		// anodized and spraypainted with dyes
-	VISUALS_DATA_PAINTSTYLE_CUSTOM,			// custom paintjob
-	VISUALS_DATA_PAINTSTYLE_ANTIQUED,		// antiqued
-	VISUALS_DATA_PAINTSTYLE_GUNSMITH,		// half custom paintjob half antiqued
+	VISUALS_DATA_PAINTSTYLE_SOLID,
+	VISUALS_DATA_PAINTSTYLE_HYDROGRAPHIC,
+	VISUALS_DATA_PAINTSTYLE_SPRAY,
+	VISUALS_DATA_PAINTSTYLE_ANODIZED,
+	VISUALS_DATA_PAINTSTYLE_ANO_MULTI,
+	VISUALS_DATA_PAINTSTYLE_ANO_AIR,
+	VISUALS_DATA_PAINTSTYLE_CUSTOM,
+	VISUALS_DATA_PAINTSTYLE_ANTIQUED,
+	VISUALS_DATA_PAINTSTYLE_GUNSMITH,
 
 	VISUALS_DATA_PAINTSTYLE_COUNT
 };
 
-struct CCSSWeaponVisualsData_t 
+struct CCSSWeaponVisualsData_t
 {
 	char szOrigDiffuseVTFName[ MAX_PATH ];
 	char szOrigExpVTFName[ MAX_PATH ];
@@ -82,14 +77,14 @@ class CCSWeaponVisualsDataCompare : public CBaseVisualsDataCompare
 {
 public:
 	CCSWeaponVisualsDataCompare() = default;
-	CCSWeaponVisualsDataCompare( CCSWeaponVisualsDataCompare&& moveFrom ) // = default;
+	CCSWeaponVisualsDataCompare( CCSWeaponVisualsDataCompare&& moveFrom )
 		: CBaseVisualsDataCompare( Move( moveFrom ) )
 		, m_flWeaponLength( Move( moveFrom.m_flWeaponLength ) )
 		, m_flUVScale( Move( moveFrom.m_flUVScale ) )
 	{
 	}
 
-	CCSWeaponVisualsDataCompare& operator= (CCSWeaponVisualsDataCompare&& moveFrom) // = default;
+	CCSWeaponVisualsDataCompare& operator= (CCSWeaponVisualsDataCompare&& moveFrom)
 	{
 		*( CBaseVisualsDataCompare* )this = Move( moveFrom );
 		m_flWeaponLength = Move( moveFrom.m_flWeaponLength );
@@ -106,8 +101,8 @@ public:
 class CCSWeaponVisualsDataProcessor : public CBaseVisualsDataProcessor< CCSWeaponVisualsDataCompare >
 {
 public:
-	CCSWeaponVisualsDataProcessor( CCSWeaponVisualsDataCompare &&compareObject, const WeaponPaintableMaterial_t *pWeaponPaintableMaterialData, const char *pCompositingShaderName = NULL );
-	
+	CCSWeaponVisualsDataProcessor( CCSWeaponVisualsDataCompare &&compareObject, const char *pCompositingShaderName = NULL );
+
 	virtual void SetVisualsData( const char *pCompositingShaderName = NULL );
 	virtual KeyValues* GenerateCustomMaterialKeyValues();
 	virtual KeyValues* GenerateCompositeMaterialKeyValues( int nMaterialParamId );
@@ -119,8 +114,6 @@ public:
 
 private:
 	virtual ~CCSWeaponVisualsDataProcessor();
-
-	const WeaponPaintableMaterial_t *m_pWeaponPaintableMaterialData;
 
 	char *m_pCompositingShaderName;
 	CCSSWeaponVisualsData_t m_visualsData;

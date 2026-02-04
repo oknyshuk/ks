@@ -15,6 +15,7 @@
 #include "weapon_basecsgrenade.h"
 #include "platforminputdevice.h"
 #include "inputsystem/iinputsystem.h"
+#include "tier1/fmtstr.h"
 
 
 // CS-PRO TEST CHANGE: instant movement inaccuracy, curve exponent x^0.25
@@ -46,9 +47,6 @@
 	#include "cs_custom_material_swap.h"
 	#include "cs_custom_weapon_visualsdata_processor.h"
 	//#include "glow_outline_effect.h"
-#if defined( INCLUDE_SCALEFORM )
-	#include "HUD/sfhudreticle.h"
-#endif
 
 	extern IVModelInfoClient* modelinfo;
 
@@ -320,6 +318,7 @@ SendPropBool( SENDINFO( m_bReloadVisuallyComplete ) ),
 SendPropBool( SENDINFO( m_bSilencerOn ) ),
 SendPropTime( SENDINFO( m_flDoneSwitchingSilencer ) ),
 SendPropInt( SENDINFO( m_iOriginalTeamNumber ) ),
+SendPropInt( SENDINFO( m_nEconItemDefIndex ), 16, SPROP_UNSIGNED ),
 #if defined( WEAPON_FIRE_BULLETS_ACCURACY_FISHTAIL_FEATURE )
 SendPropFloat( SENDINFO( m_fAccuracyFishtail ) ),
 #endif
@@ -339,6 +338,7 @@ RecvPropBool( RECVINFO( m_bReloadVisuallyComplete ) ),
 RecvPropBool( RECVINFO( m_bSilencerOn ) ),
 RecvPropTime( RECVINFO( m_flDoneSwitchingSilencer ) ),
 RecvPropInt( RECVINFO( m_iOriginalTeamNumber ) ),
+RecvPropInt( RECVINFO( m_nEconItemDefIndex ) ),
 #if defined( WEAPON_FIRE_BULLETS_ACCURACY_FISHTAIL_FEATURE )
 RecvPropFloat( RECVINFO( m_fAccuracyFishtail ) ),
 #endif
@@ -498,6 +498,7 @@ CWeaponCSBase::CWeaponCSBase()
 
 #endif
 
+	m_nEconItemDefIndex = 0;
 	m_bReloadVisuallyComplete = false;
 
 	m_bSilencerOn = false;
@@ -2090,7 +2091,8 @@ void CWeaponCSBase::DrawCrosshair()
 	float flAngleToScreenPixel = 0;
 
 #ifdef CLIENT_DLL
-#if defined( INCLUDE_SCALEFORM )
+	const float VIEWPUNCH_COMPENSATE_MAGIC_SCALAR = 0.65f; // cl_flinch_scale.GetFloat()
+
 	// subtract a ratio of cam driver motion from crosshair according to cl_cam_driver_compensation_scale
 	if ( cl_cam_driver_compensation_scale.GetFloat() != 0 )
 	{
@@ -2110,7 +2112,6 @@ void CWeaponCSBase::DrawCrosshair()
 			}
 		}
 	}
-#endif
 #endif
 
 /*
@@ -2255,6 +2256,12 @@ void CWeaponCSBase::OnDataChanged( DataUpdateType_t type )
 	if ( type == DATA_UPDATE_CREATED )
 	{
 		m_nWeaponID = WeaponIdFromString( GetClassname() );
+	}
+
+	// Sync econ item view from networked def index
+	if ( m_nEconItemDefIndex > 0 && m_EconItemView.GetItemIndex() != (uint16)(int)m_nEconItemDefIndex )
+	{
+		m_EconItemView.Init( (uint16)(int)m_nEconItemDefIndex );
 	}
 
 	bool bChangedCarryState = false;
@@ -3055,11 +3062,32 @@ bool CWeaponCSBase::Reload()
 	return true;//BaseClass::Reload();
 }
 
+void CWeaponCSBase::SetEconItemDefinition( CEconItemDefinition *pDef )
+{
+	if ( !pDef )
+		return;
+
+	m_EconItemView.Init( pDef );
+#ifndef CLIENT_DLL
+	m_nEconItemDefIndex = pDef->GetDefinitionIndex();
+#endif
+}
+
+void CWeaponCSBase::InitializeEconItemView( const char *pszItemName )
+{
+	if ( m_EconItemView.IsValid() )
+		return;
+
+	CEconItemDefinition *pDef = GetItemSchema()->GetItemDefinitionByName( pszItemName );
+	if ( pDef )
+		SetEconItemDefinition( pDef );
+}
+
 void CWeaponCSBase::Spawn()
 {
 	m_nWeaponID = WeaponIdFromString( GetClassname() );
+	InitializeEconItemView( GetClassname() );
 
-	BaseClass::InitializeAttributes();
 	BaseClass::Spawn();
 
 	// Override the bloat that our base class sets as it's a little bit bigger than we want.
@@ -3647,20 +3675,9 @@ void CWeaponCSBase::OnPickedUp( CBaseCombatCharacter *pNewOwner )
 		// to find NPCs finding weapons dropped by the NPCs as well.
 		SetName( NULL_STRING );
 
-		CEconEntity *pEconEntity = dynamic_cast< CEconEntity* >( this );
-		if ( pEconEntity && m_hPrevOwner == NULL )
+		if ( m_hPrevOwner == NULL )
 		{
 			CCSPlayer *pPlayer = ToCSPlayer( pNewOwner );
-			// set the original owner XUID
-			if ( pPlayer && pEconEntity->GetOriginalOwnerXuid() == 0ull && !pPlayer->IsBot() )
-			{
-				CSteamID steamID;
-				pPlayer->GetSteamID( &steamID );
-
-				uint64 verylong = steamID.ConvertToUint64();
-				pEconEntity->SetOriginalOwnerXuid( (uint32)verylong, (uint32)(verylong >> 32) );
-			}
-
 			m_iOriginalTeamNumber = pPlayer ? pPlayer->GetTeamNumber() : 0;
 		}
 

@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
+//========= Copyright ï¿½ 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -14,7 +14,6 @@
 #include "filesystem.h"
 #include "modinfo.h"
 #include "engineinterface.h"
-#include "ixboxsystem.h"
 #include "keyvalues.h"
 #include "basepanel.h"
 #include "gameui_interface.h"
@@ -57,7 +56,9 @@ bool WriteBonusMapSavedData( KeyValues *data )
 
 	bool bWriteSuccess = g_pFullFileSystem->WriteFile( szFilename, MOD_DIR, buf );
 
+#ifdef _X360
 	xboxsystem->FinishContainerWrites(XBX_GetPrimaryUserId());
+#endif
 
 	return bWriteSuccess;
 }

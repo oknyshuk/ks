@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
+//========= Copyright ï¿½ 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -27,12 +27,7 @@
 #define DEFAULT_RATE	 196608
 #define MAX_RATE		 786432
 
-#ifdef _GAMECONSOLE
-#define SIGNON_TIME_OUT				75.0f  // signon disconnect timeout
-#else
 #define SIGNON_TIME_OUT				300.0f  // signon disconnect timeout
-#endif
-#define SIGNON_TIME_OUT_360			75.0f
 
 #define FRAGMENT_BITS		8
 #define FRAGMENT_SIZE		(1<<FRAGMENT_BITS)
@@ -71,11 +66,6 @@ enum ESocketIndex_t
 
 	NS_CLIENT = 0,	// client socket
 	NS_SERVER,	// server socket
-#ifdef _X360
-	NS_X360_SYSTEMLINK,
-	NS_X360_LOBBY,
-	NS_X360_TEAMLINK,
-#endif
 	NS_HLTV,
 	NS_HLTV1, // Note: NS_HLTV1 must follow NS_HLTV, NS_HLTV2 must follow NS_HLTV1, etc.
 #if defined( REPLAY_ENABLED )

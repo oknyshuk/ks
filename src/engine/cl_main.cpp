@@ -71,7 +71,6 @@
 #include "MapReslistGenerator.h"
 
 #ifdef _X360
-#include "xbox/xbox_launch.h"
 #endif
 #if defined( REPLAY_ENABLED )
 #include "replayhistorymanager.h"
@@ -3491,10 +3490,12 @@ void CL_InitLanguageCvar()
 		}
 #endif
 	}
+#if defined( _X360 ) || defined( _PS3 )
 	else
 	{
 		Q_strncpy( language, XBX_GetLanguageString(), sizeof( language ) );
 	}
+#endif
 	cl_language.SetValue( language );
 }
 

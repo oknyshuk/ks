@@ -47,7 +47,6 @@
 #include "DevShotGenerator.h"
 #include "gl_shader.h"
 #include "l_studio.h"
-#include "IHammer.h"
 #ifdef _WIN32
 #include "vgui/ILocalize.h"
 #endif
@@ -73,7 +72,6 @@
 #include "profile.h"
 #include "status.h"
 
-#include "vjobs_interface.h"
 
 #ifndef DEDICATED
 #include "sys_mainwind.h"
@@ -92,9 +90,7 @@
 #endif
 
 #if defined( _X360 )
-#include "xbox/xbox_win32stubs.h"
 #else
-#include "xbox/xboxstubs.h"
 #endif
 
 #if defined( _PS3 ) && !defined( NO_STEAM )
@@ -120,7 +116,6 @@ SteamPS3Params_t g_EngineSteamPS3Params;
 //-----------------------------------------------------------------------------
 IDedicatedExports *dedicated = NULL;
 extern CreateInterfaceFn g_AppSystemFactory;
-IHammer *g_pHammer = NULL;
 IPhysics *g_pPhysics = NULL;
 #if defined(OSX) || defined(LINUX) || (defined (WIN32) && defined( DX_TO_GL_ABSTRACTION ))
 ILauncherMgr *g_pLauncherMgr = NULL;
@@ -140,16 +135,6 @@ AppId_t g_unSteamAppID = k_uAppIdInvalid;
 
 CSysModule *g_pMatchmakingDllModule = NULL;
 CreateInterfaceFn g_pfnMatchmakingFactory = NULL;
-
-IVJobs * g_pVJobs = NULL;
-
-#ifdef ENGINE_MANAGES_VJOBS
-CSysModule *g_pVjobsDllModule = NULL;
-CreateInterfaceFn g_pfnVjobsFactory = NULL;
-bool g_bVjobsReload = false;
-bool g_bVjobsTest = false; // this is temporary, debug-only variable
-#endif
-
 
 IMatchFramework *g_pIfaceMatchFramework = NULL;
 bool s_bIsDedicatedServer = false;
@@ -545,12 +530,6 @@ bool CEngineAPI::Connect( CreateInterfaceFn factory )
 
 	g_pPhysics = (IPhysics*)factory( VPHYSICS_INTERFACE_VERSION, NULL );
 
-	if( IsPS3() )
-	{
-		// only PS/3 uses vjobs.prx
-		g_pVJobs = (IVJobs *)factory( VJOBS_INTERFACE_VERSION, NULL );
-	}
-
 	g_pSoundEmitterSystem = (ISoundEmitterSystemBase *)factory(SOUNDEMITTERSYSTEM_INTERFACE_VERSION, NULL);
 	
 	g_pRocketUI = ( IRocketUI* ) factory( ROCKETUI_INTERFACE_VERSION, NULL );
@@ -586,8 +565,6 @@ bool CEngineAPI::Connect( CreateInterfaceFn factory )
 		return false;
 	}
 
-	g_pHammer = (IHammer*)factory( INTERFACEVERSION_HAMMER, NULL );
-
 #if defined( USE_SDL )
 	g_pLauncherMgr = (ILauncherMgr *)factory( SDLMGR_INTERFACE_VERSION, NULL );
 #elif defined( OSX )
@@ -599,11 +576,10 @@ bool CEngineAPI::Connect( CreateInterfaceFn factory )
 	return true; 
 }
 
-void CEngineAPI::Disconnect() 
+void CEngineAPI::Disconnect()
 {
 	DisconnectMDLCacheNotify();
 
-	g_pHammer = NULL;
 	g_pPhysics = NULL;
 	g_pSoundEmitterSystem = NULL;
 
@@ -1008,108 +984,10 @@ void CEngineAPI::PumpMessages()
 }
 
 //-----------------------------------------------------------------------------
-// Purpose: Message pump when running stand-alone
-//-----------------------------------------------------------------------------
-void CEngineAPI::PumpMessagesEditMode( bool &bIdle, long &lIdleCount )
-{
-
-	if ( bIdle && !g_pHammer->HammerOnIdle( lIdleCount++ ) )
-	{
-		bIdle = false;
-	}
-
-#ifdef WIN32
-	MSG msg;
-	while ( PeekMessageW(&msg, NULL, 0, 0, PM_REMOVE) )
-	{
-		if ( msg.message == WM_QUIT )
-		{
-			eng->SetQuitting( IEngine::QUIT_TODESKTOP );
-			break;
-		}
-
-		if ( msg.hwnd == (HWND)game->GetMainWindow() )
-		{
-			TranslateMessage(&msg);
-			DispatchMessageW(&msg);
-		}
-		else
-		{
-			if ( !g_pHammer->HammerPreTranslateMessage(&msg) )
-			{
-				TranslateMessage(&msg);
-				DispatchMessageW(&msg);
-			}
-		}
-
-		// Reset idle state after pumping idle message.
-		if ( g_pHammer->HammerIsIdleMessage(&msg) )
-		{
-			bIdle = true;
-			lIdleCount = 0;
-		}
-	}
-#elif defined( OSX ) && defined( PLATFORM_64BITS )
-	// Do nothing, but let someone know we're doing nothing.
-	Assert( !"OSX-64 not implemented." );
-
-#elif defined( OSX )
-	EventRef theEvent;
-	EventTargetRef theTarget;
-	EventTime eventTimeout = kEventDurationNoWait;
-	
-	theTarget = GetEventDispatcherTarget();
-    while ( ReceiveNextEvent( 0, NULL, eventTimeout, true, &theEvent ) == noErr)		
-	{
-		OSErr ret = SendEventToEventTarget (theEvent, theTarget);
-		if ( ret != noErr )
-		{
-			EventRecord clevent;
-			ConvertEventRefToEventRecord( theEvent, &clevent);
-			if ( clevent.what==kHighLevelEvent ) 
-			{
-				AEProcessAppleEvent( &clevent );
-			}
-		}
-	 
-		ReleaseEvent(theEvent);
-	}
-#elif defined( _PS3 )
-#elif defined( LINUX )
-#else
-#error
-#endif
-
-
-	// NOTE: Under some implementations of Win9x, 
-	// dispatching messages can cause the FPU control word to change
-	SetupFPUControlWord();
-
-	game->DispatchAllStoredGameMessages();
-}
-
-//-----------------------------------------------------------------------------
-// Activate/deactivates edit mode shaders
-//-----------------------------------------------------------------------------
-void CEngineAPI::ActivateEditModeShaders( bool bActive )
-{
-	if ( InEditMode() && ( g_pMaterialSystemConfig->bEditMode != bActive ) )
-	{
-		MaterialSystem_Config_t config = *g_pMaterialSystemConfig;
-		config.bEditMode = bActive;
-		OverrideMaterialSystemConfig( config );
-	}
-}
-
-
-//-----------------------------------------------------------------------------
 // Purpose: Message pump
 //-----------------------------------------------------------------------------
 bool CEngineAPI::MainLoop()
 {
-	bool bIdle = true;
-	long lIdleCount = 0;
-
 	// Main message pump
 	while ( true )
 	{
@@ -1122,27 +1000,9 @@ bool CEngineAPI::MainLoop()
 		}
 
 		// Pump the message loop
-		if ( !InEditMode() )
-		{
-			PumpMessages();
-		}
-		else
-		{
-			PumpMessagesEditMode( bIdle, lIdleCount );
-		}
-
-		// Deactivate edit mode shaders
-		ActivateEditModeShaders( false );
+		PumpMessages();
 
 		eng->Frame();
-
-		// Reactivate edit mode shaders (in Edit mode only...)
-		ActivateEditModeShaders( true );
-
-		if ( InEditMode() )
-		{
-			g_pHammer->RunFrame();
-		}
 	}
 
 	return false;
@@ -1458,24 +1318,6 @@ CON_COMMAND_F( steam_login, "log into steam with an already linked account", FCV
 	Steam3Client().SteamUser()->LogOn( false );
 }
 #endif
-
-CON_COMMAND( reload_vjobs, "reload vjobs module" )
-{
-	const char * pModuleName = "vjobs" DLL_EXT_STRING;
-	extern CAppSystemGroup *s_pCurrentAppSystem;
-	if( g_pVJobs )
-	{
-		MaterialLock_t matlock = materials->Lock();
-		g_pVJobs->BeforeReload();
-		s_pCurrentAppSystem->ReloadModule( pModuleName );
-		g_pVJobs->AfterReload();
-		materials->Unlock( matlock );
-	}
-	else
-	{
-		Warning("vjobs interface not connected\n");
-	}		
-}
 
 CON_COMMAND( render_blanks, "render N blank frames" )
 {

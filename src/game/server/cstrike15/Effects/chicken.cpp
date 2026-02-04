@@ -2,6 +2,7 @@
 // An interactive, shootable chicken
 
 #include "cbase.h"
+#include "tier1/fmtstr.h"
 #include "chicken.h"
 #include "cs_player.h"
 #include "cs_gamerules.h"

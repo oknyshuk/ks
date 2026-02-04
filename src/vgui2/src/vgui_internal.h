@@ -15,7 +15,6 @@
 #include <vgui/vgui.h>
 #include "interface.h"
 #include "tier3/tier3.h"
-#include "xbox/xboxstubs.h"
 
 
 // <vgui/ISchemeSurface.h> header

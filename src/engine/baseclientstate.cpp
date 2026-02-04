@@ -209,10 +209,6 @@ ConVar  cl_decryptdata_key_pub( "cl_decryptdata_key_pub", "", FCVAR_RELEASE, "Ke
 ConVar	cl_hideserverip( "cl_hideserverip", "0", FCVAR_RELEASE, "If set to 1, server IPs will be hidden in the console (except when you type 'status')" );
 
 
-#ifdef _X360
-ConVar	cl_networkid_force ( "networkid_force", "", FCVAR_USERINFO | FCVAR_SS | FCVAR_PRINTABLEONLY | FCVAR_SERVER_CAN_EXECUTE | FCVAR_DEVELOPMENTONLY, "Forceful value for network id (e.g. XUID)" );
-#endif
-
 static ConVar cl_failremoteconnections( "cl_failremoteconnections", "0", FCVAR_DEVELOPMENTONLY, "Force connection attempts to time out" );
 
 static uint32 GetPrivateIPDelayMsecs()

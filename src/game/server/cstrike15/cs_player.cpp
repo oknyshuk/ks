@@ -43,7 +43,6 @@
 #include "bot.h"
 #include "studio.h"
 #include <coordsize.h>
-#include <econ/econ_entity_creation.h>
 #include "predicted_viewmodel.h"
 #include "props_shared.h"
 #include "tier0/icommandline.h"
@@ -79,7 +78,6 @@
 #include "cs_entity_spotting.h"
 #include "particle_parse.h"
 #include "mapinfo.h"
-#include "cstrike15_item_system.h"
 //#include "particle_parse.h"
 #include "../public/vstdlib/vstrtools.h"
 #include "../public/vgui/ILocalize.h"
@@ -88,25 +86,19 @@
 #include "teamplayroundbased_gamerules.h"
 #include "animation.h"
 #include "cs_team.h"
-#include "econ_game_account_client.h"
 #include "world.h"
 #include "item_healthshot.h"
 #include "hltvdirector.h"
 #include "ihltv.h"
 #include "netmessages.pb.h"
-#include "econ_item_view_helpers.h"
 #include "playerdecals_signature.h"
+#include "cs_item_inventory.h"
 
 #if defined( CLIENT_DLL )
 
 	#include "custom_material.h"
 	#include "cs_custom_clothing_visualsdata_processor.h"
 
-#endif
-
-#if !defined( NO_STEAM ) && !defined( NO_STEAM_GAMECOORDINATOR )
-	#include "econ_gcmessages.h"
-	#include "econ_entity_creation.h"
 #endif
 
 
@@ -937,6 +929,9 @@ void CCSPlayer::Precache()
 	Vector mins( -13, -13, -10 );
 	Vector maxs( 13, 13, 75 );
 	bool bPreload = true;
+
+	// Precache all item definition models (view/world/dropped) from the schema
+	GetItemSchema()->PrecacheItemDefinitionModels();
 
 	PlayerModelInfo::GetPtr()->InitializeForCurrentMap();
 
@@ -4310,29 +4305,8 @@ void CCSPlayer::PostThink()
 		}
 	}
 
-	if ( m_bNeedToUpdatePersonaDataPublicFromInventory )
-	{
-		m_bNeedToUpdatePersonaDataPublicFromInventory = false;
-		if ( CCSPlayerInventory *pInv = Inventory() )
-		{
-			if ( GCSDK::CGCClientSharedObjectCache *pSOC = pInv->GetSOC() )
-			{
-				if ( GCSDK::CGCClientSharedObjectTypeCache *pCacheType = pSOC->FindTypeCache( CEconPersonaDataPublic::k_nTypeID ) )
-				{
-					if ( pCacheType->GetCount() == 1 )
-					{
-						CEconPersonaDataPublic *pCacheData = ( CEconPersonaDataPublic * ) pCacheType->GetObject( 0 );
-						delete m_pPersonaDataPublic;
-						if ( pCacheData )
-						{
-							m_pPersonaDataPublic = new CEconPersonaDataPublic;
-							m_pPersonaDataPublic->Obj().CopyFrom( pCacheData->Obj() );
-						}
-					}
-				}
-			}
-		}
-	}
+	// Persona data update disabled - GC functionality removed
+	m_bNeedToUpdatePersonaDataPublicFromInventory = false;
 
 	if ( m_flFlinchStack < 1.0 )
 	{
@@ -7786,18 +7760,8 @@ BuyResult_e CCSPlayer::HandleCommand_Buy_Internal( const char * wpnName, int nPo
 	}
 	else
 	{
-		// Since the loadout pos we got is invalid, make sure that this item isn't in the item schema before giving it by name. Fixes exploit of bypassing loadout with "buy m4a1 1"
-		// and still allows buying of gear such as kevlar, assaultsuit, etc.
-		char wpnClassName[MAX_WEAPON_STRING];
-		wpnClassName[0] = '\0';
-		V_sprintf_safe( wpnClassName, "weapon_%s", wpnName );
-		V_strlower( wpnClassName );
-
-		if ( !GetItemSchema()->GetItemDefinitionByName( wpnClassName ) || !( CSGameRules() && CSGameRules()->IsPlayingClassic() ) )
-		{
-			weaponId = AliasToWeaponID(wpnName );
-			pWeaponInfo = GetWeaponInfo( weaponId );
-		}
+		weaponId = AliasToWeaponID( wpnName );
+		pWeaponInfo = GetWeaponInfo( weaponId );
 	}
 
 	if ( pWeaponInfo == NULL )
@@ -7938,118 +7902,10 @@ BuyResult_e CCSPlayer::HandleCommand_Buy_Internal( const char * wpnName, int nPo
 			if ( pWeaponInfo->iSlot == WEAPON_SLOT_PISTOL )
 				m_bUsingDefaultPistol = false;
 
-// 			if ( IsGrenadeWeapon( weaponId ) )
-// 			{
-//			CBroadcastRecipientFilter filter;
-// 				EmitSound( filter, entindex(), "Player.PickupWeapon" );
-// 			}
-
-			// when all is said and done, regardless of what weapon came down the pipe, give the player the one that
-			// is appropriate for the loadout slot that the player is attempting to purchase for.
-
-			int slot = -1;
-
-			// get the slot from the pItem directly or from the pWeaponInfo if there is no pItem
-			if ( !pItem || !pItem->IsValid() )
 			{
-				CEconItemDefinition * pItemDef = GetItemSchema()->GetItemDefinitionByName( pWeaponInfo->szClassName );
-
-				if ( pItemDef )
-					slot = ((CCStrike15ItemDefinition*)pItemDef)->GetLoadoutSlot( GetTeamNumber() ) ;
-				else
-					result = BUY_INVALID_ITEM;
-			}
-			else
-			{
-				slot = pItem->GetItemDefinition()->GetLoadoutSlot( GetTeamNumber() );
-			}
-
- 			CEconItemView *pResultItem = ( result == BUY_BOUGHT )
-				? Inventory()->GetItemInLoadoutFilteredByProhibition( GetTeamNumber(), slot ) : NULL;
-			if ( !pResultItem || !pResultItem->IsValid() )
-			{
-				result = BUY_INVALID_ITEM;
-			}
-			else
-			{
-				const char * szWeaponName = pResultItem->GetItemDefinition( )->GetDefinitionName( );
-
-				bool bWeaponMismatch = false;
-				const CEconItemDefinition * pOriginalItemDef = NULL;
-
-				///////////////////////////////////////////////////////////////////////////////////////////////////////////
-				// Use the cache of purchases to determine what item to give the player
-				// The cache guarantees that the inventory that the player starts with is the one that's guaranteed to them
-				// throughout the match
-				//
-				if ( CSGameRules()->IsPlayingAnyCompetitiveStrictRuleset() && !CSGameRules()->IsWarmupPeriod() )
-				{
-					if ( CCSGameRules::CQMMPlayerData_t *pQMM = CSGameRules()->QueuedMatchmakingPlayersDataFind( m_uiAccountId ) )
-					{
-						int nTeamArrayIndex = GetTeamNumber() - 2;
-
-						if ( ( nTeamArrayIndex != TEAM_TERRORIST_BASE0 ) && ( nTeamArrayIndex != TEAM_CT_BASE0 ) )
-						{
-							Assert( 0 );
-						}
-						else
-						{
-							CCSGameRules::CQMMPlayerData_t::LoadoutSlotToDefIndexMap_t::IndexType_t idx = pQMM->m_mapLoadoutSlotToItem[ nTeamArrayIndex ].Find( slot );
-							if ( idx != CCSGameRules::CQMMPlayerData_t::LoadoutSlotToDefIndexMap_t::InvalidIndex() )
-							{
-								item_definition_index_t un16DefIndex = pQMM->m_mapLoadoutSlotToItem[ nTeamArrayIndex ].Element( idx );
-
-								if ( pResultItem->GetItemDefinition()->GetDefinitionIndex() != un16DefIndex )
-								{
-									// cached item does not match attempted purchase. give the base item instead of the one asked for.
-									pResultItem = NULL;
-									pOriginalItemDef = GetItemSchema( )->GetItemDefinition( un16DefIndex );
-									szWeaponName = pOriginalItemDef ? pOriginalItemDef->GetDefinitionName( ) : "";
-									bWeaponMismatch = true;
-								}
-							}
-							else if ( Inventory()->InventoryRetrievedFromSteamAtLeastOnce() ) // player hasn't bought a weapon from this slot yet. Cache it (but only if we got valid inventory from Steam)
-							{
-								pQMM->m_mapLoadoutSlotToItem[ nTeamArrayIndex ].Insert( slot, pResultItem->GetItemDefinition()->GetDefinitionIndex() );
-							}
-						}
-					}
-				}
-
-				// if the item didn't match, first look up the price in the item definition
-
-				if ( bWeaponMismatch )
-				{
-					int price = 0;
-
-					if ( pOriginalItemDef )
-					{
-						KeyValues *pkvAttrib = pOriginalItemDef->GetRawDefinition( )->FindKey( "attributes" );
-						if ( pkvAttrib )
-						{
-							price = V_atoi( pkvAttrib->GetString( "in game price" ) );
-						}
-					}
-
-					// this item had no price override in schema attributes so use the legacy class price from weaponinfo
-					if ( price == 0 )
-						price = pWeaponInfo->GetWeaponPrice( );
-
-					if ( !BAttemptToBuyCheckSufficientBalance( price ) )
-					{
-						result = BUY_CANT_AFFORD;
-					}
-					else // essentially means: (  GetAccountBalance( ) >= price )
-					{
-						AddAccount( -price, true, true, szWeaponName );
-						GiveNamedItem( szWeaponName, 0 );
-					}
-				}
-				else
-				{
-					AddAccount( -pWeaponInfo->GetWeaponPrice( pItem ), true, true, szWeaponName );
-					GiveNamedItem( szWeaponName, 0, pResultItem );
-				}
+				const char *szWeaponName = pWeaponInfo->szClassName;
+				AddAccount( -pWeaponInfo->GetWeaponPrice(), true, true, szWeaponName );
+				GiveNamedItem( szWeaponName );
 			}
 		}
 	}
@@ -12428,13 +12284,16 @@ void CCSPlayer::StockPlayerAmmo( CBaseCombatWeapon *pNewWeapon )
 
 void CCSPlayer::FindMatchingWeaponsForTeamLoadout( const char *pchName, int nTeam, bool bMustBeTeamSpecific, CUtlVector< CEconItemView* > &matchingWeapons )
 {
-	/** Removed for partner depot **/
-	//lwss - rebuilt this function from reversing retail bins
-    const char *weaponName = pchName;
+	// Only process items that exist in the schema (weapons, not equipment like item_assaultsuit)
     CEconItemDefinition *itemDef = GEconItemSchema().GetItemDefinitionByName( pchName );
-    if( itemDef )
+    if( !itemDef )
+        return;
+
+    const char *weaponName = pchName;
+    KeyValues *pRawDef = itemDef->GetRawDefinition();
+    if( pRawDef )
     {
-        const char *slotName = itemDef->GetRawDefinition()->GetString( "item_slot" );
+        const char *slotName = pRawDef->GetString( "item_slot" );
         if( slotName && slotName[0] && !V_stricmp( slotName, "melee" ) )
         {
             if( nTeam == TEAM_TERRORIST )
@@ -12459,8 +12318,14 @@ void CCSPlayer::FindMatchingWeaponsForTeamLoadout( const char *pchName, int nTea
     while( true )
     {
         baseItemForSlot = CSInventoryManager()->GetBaseItemForTeam( nTeam, slot );
+        if( !baseItemForSlot || !baseItemForSlot->IsValid() )
+        {
+            if( ++slot >= 3 )
+                break;
+            continue;
+        }
+
         const GameItemDefinition_t *baseItemDef = baseItemForSlot->GetItemDefinition();
-        const char *defName = baseItemDef->GetDefinitionName();
         if( !V_strcmp(baseItemDef->GetItemBaseName(), weaponName) )
             break;
 
@@ -12478,7 +12343,6 @@ void CCSPlayer::FindMatchingWeaponsForTeamLoadout( const char *pchName, int nTea
                 if( !bMustBeTeamSpecific ||
                 (slotItrItem->GetStaticData()->GetUsedByTeam() == nTeam || slotItrItem->GetStaticData()->GetUsedByTeam() == TEAM_UNASSIGNED ) )
                 {
-                    Msg("%s is valid weapon for \"%s\" in slot %d\n", defName, weaponName, slotItr );
                     matchingWeapons.AddToTail( slotItrItem );
                 }
             }
@@ -12552,8 +12416,6 @@ CBaseEntity	*CCSPlayer::GiveNamedItem( const char *pchName, int iSubType /*= 0*/
 	if ( pItem == NULL )
 	{
 		// Trap for guns that 'exist' but never shipped.
-		// Doing this here rather than removing the entities
-		// so we don't disrupt demos.
 		if ( V_strcmp( pchName, "weapon_galil" ) &&
 			V_strcmp( pchName, "weapon_mp5navy" ) &&
 			V_strcmp( pchName, "weapon_p228" ) &&
@@ -12563,7 +12425,21 @@ CBaseEntity	*CCSPlayer::GiveNamedItem( const char *pchName, int iSubType /*= 0*/
 			V_strcmp( pchName, "weapon_tmp" ) &&
 			V_strcmp( pchName, "weapon_usp" ) )
 		{
-			pItem = CreateEntityByName( pchName );
+			CEconItemDefinition *pItemDef = GetItemSchema()->GetItemDefinitionByName( pchName );
+			const char *pszEntityClass = pItemDef ? pItemDef->GetItemClass() : pchName;
+			if ( !pszEntityClass || !*pszEntityClass )
+				pszEntityClass = pchName;
+
+			pItem = CreateEntityByName( pszEntityClass );
+
+			if ( pItem && pItemDef )
+			{
+				CWeaponCSBase *pWeapon = dynamic_cast<CWeaponCSBase*>( pItem );
+				if ( pWeapon )
+				{
+					pWeapon->SetEconItemDefinition( pItemDef );
+				}
+			}
 		}
 
 		if ( pItem == NULL )
@@ -12571,7 +12447,6 @@ CBaseEntity	*CCSPlayer::GiveNamedItem( const char *pchName, int iSubType /*= 0*/
 			Msg( "NULL Ent in GiveNamedItem!\n" );
 			return NULL;
 		}
-		Msg( "%s is missing an item definition in the schema.\n", pchName );
 	}
 
 	Vector pos = ( GetLocalOrigin() + Weapon_ShootPosition() ) * 0.5f;

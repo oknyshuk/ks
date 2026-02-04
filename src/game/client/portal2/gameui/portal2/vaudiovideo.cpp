@@ -14,7 +14,6 @@
 #include "VGenericConfirmation.h"
 #include "VHybridButton.h"
 #ifdef _X360
-#include "xbox/xbox_launch.h"
 #endif
 
 // memdbgon must be the last include file in a .cpp file!!!
@@ -43,10 +42,12 @@ BaseClass(parent, panelName)
 	m_bDirtyVideoConfig = false;
 
 	int nNumTilesTall = 4;
-	if ( IsX360() && XBX_IsAudioLocalized() )
+#if defined( _X360 )
+	if ( XBX_IsAudioLocalized() )
 	{
 		nNumTilesTall = 5;
 	}
+#endif
 
 	SetDialogTitle( "#L4D360UI_AudioVideo", NULL, false, 7, nNumTilesTall, 0 );
 
@@ -173,6 +174,7 @@ void AudioVideo::OnCommand(const char *command)
 		z_wound_client_disabled.SetValue( 1 );
 		m_bDirtyVideoConfig = true;
 	}
+#if defined( _X360 ) || defined( _PS3 )
 	else if ( !Q_stricmp( command, "CurrentXBXLanguage" ) )
 	{
 		CGameUIConVarRef force_audio_english( "force_audio_english" );
@@ -181,6 +183,7 @@ void AudioVideo::OnCommand(const char *command)
 		force_audio_english.SetValue( bIsEnglish );
 		m_bDirtyVideoConfig = true;
 	}
+#endif
 	else if ( !Q_stricmp( command, "CurrentXBXLanguage_English" ) )
 	{
 		CGameUIConVarRef force_audio_english( "force_audio_english" );
@@ -325,6 +328,7 @@ void AudioVideo::ApplySchemeSettings( vgui::IScheme *pScheme )
 
 	if ( m_drpLanguage )
 	{
+#if defined( _X360 ) || defined( _PS3 )
 		bool bIsLocalized = XBX_IsAudioLocalized();
 		if ( !bIsLocalized )
 		{
@@ -348,6 +352,10 @@ void AudioVideo::ApplySchemeSettings( vgui::IScheme *pScheme )
 			// Can't change language while in game
 			m_drpLanguage->SetEnabled( !engine->IsInGame() || GameUI().IsInBackgroundLevel() );
 		}
+#else
+		// On PC, XBX_IsAudioLocalized() is always false, so hide this dropdown
+		m_drpLanguage->SetVisible( false );
+#endif
 	}
 	
 	m_bDirtyVideoConfig = false;

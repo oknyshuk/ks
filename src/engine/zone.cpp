@@ -34,10 +34,7 @@
 #define MINIMUM_WIN_MEMORY			(48*MB)	// FIXME: copy from sys_dll.cpp, find a common header at some point
 
 // PORTAL 2 SHIPPING CHANGE
-// We're sacrificing a little perf (~1% in pathological case) for 12 MB of memory back on X360
-// #ifdef _X360
-// #define HUNK_USE_16MB_PAGE
-// #endif
+// We're sacrificing a little perf (~1% in pathological case) for 12 MB of memory back
 
 CMemoryStack g_HunkMemoryStack;
 #ifdef HUNK_USE_16MB_PAGE
@@ -132,11 +129,6 @@ void *Hunk_AllocName(int size, const char *name, bool bClear)
 		}
 	}
 	void *p = g_HunkMemoryStack.Alloc( size, bClear );
-#ifdef _GAMECONSOLE
-	int overflowAmt = g_HunkMemoryStack.GetCurrentAllocPoint() - HUNK_COMMIT_FLOOR;
-	if ( ( overflowAmt > 0 ) && ( overflowAmt <= size ) )
-		Warning( "HUNK OVERFLOW! Map BSP data consuming %d bytes more memory than expected...\n", overflowAmt );
-#endif
 	if ( p )
 		return p;
 #ifdef HUNK_USE_16MB_PAGE

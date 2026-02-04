@@ -38,7 +38,6 @@
 #include "vstdlib/random.h"
 #include "datacache/idatacache.h"
 #include "materialsystem/materialsystem_config.h"
-#include "IHammer.h"
 #if defined( _WIN32 ) && !defined( _X360 )
 #include <xmmintrin.h>
 #endif

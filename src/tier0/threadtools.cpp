@@ -18,16 +18,6 @@
 		#include <Mmsystem.h>
 		#pragma comment(lib, "winmm.lib")
 	#endif
-#elif PLATFORM_PS3
-	#include <sched.h>
-	#include <unistd.h>
-	#include <exception>
-	#include <errno.h>
-	#include <pthread.h>
-	#include <sys/time.h>
-	#include <sys/timer.h>
-	#define GetLastError() errno
-	typedef void *LPVOID;
 #elif PLATFORM_POSIX
 	#include <sched.h>
 	#include <exception>
@@ -51,32 +41,15 @@
 
 #endif
 
-#ifndef _PS3
 #include <memory.h>
-#endif
 #include "tier0/minidump.h"
 #include "tier0/threadtools.h"
 #include "tier0/dynfunction.h"
-
-#ifdef _X360
-#include "xbox/xbox_win32stubs.h"
-#endif
 
 #include <map>
 
 // Must be last header...
 #include "tier0/memdbgon.h"
-
-#ifdef _PS3
-#include "ps3/ps3_win32stubs.h"
-#define NEW_WAIT_FOR_MULTIPLE_OBJECTS
-bool gbCheckNotMultithreaded = true;
-
-extern "C" void(*g_pfnPushMarker)( const char * pName );
-extern "C" void(*g_pfnPopMarker)();
-
-
-#endif
 
 #define THREADS_DEBUG 1
 
@@ -210,55 +183,6 @@ static void* ThreadProcConvert( void *pParam )
 
 
 
-#if defined( _PS3 )
-
-/*******************************************************************************
-* Thread Local Storage globals and functions
-*******************************************************************************/
-#ifndef _PS3
-__thread void *gTLSValues[ MAX_TLS_VALUES ] = { NULL };
-__thread bool  gTLSFlags[ MAX_TLS_VALUES ] = { false };
-__thread bool gbWaitObjectsCreated = false;
-__thread sys_semaphore_t gWaitObjectsSemaphore;
-#endif // !_PS3
-
-static char gThreadName[28] = "";
-
-// Simple TLS allocator.  Linearly searches for a free slot.
-uint32 TlsAlloc()
-{
-	for ( int i = 0; i < MAX_TLS_VALUES; ++i )
-	{
-		if ( !gTLSFlags[i] )
-		{
-			gTLSFlags[i] = true;
-			return i;
-		}
-	}
-
-#ifdef _PS3
-	DEBUG_ERROR("TlsAlloc(): Out of TLS\n");
-#endif
-
-	return 0xFFFFFFFF;
-}
-
-void TlsFree( uint32 index )
-{
-	gTLSValues[ index ] = NULL;
-	gTLSFlags[ index ] = false;
-}
-
-void *TlsGetValue( uint32 index )
-{
-	return gTLSValues[ index ];
-}
-
-void TlsSetValue( uint32 index, void *pValue )
-{
-	gTLSValues[ index ] = pValue;
-}
-#endif //_PS3
 
 
 

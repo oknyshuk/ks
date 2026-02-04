@@ -18,23 +18,15 @@
 #include "vgui/ISurface.h"
 #include "engineinterface.h"
 #include "tier0/dbg.h"
-#include "ixboxsystem.h"
 #include "gameui_interface.h"
 #include "game/client/IGameClientExports.h"
 #include "fmtstr.h"
 #include "vstdlib/random.h"
 #include "utlbuffer.h"
-#include "filesystem/IXboxInstaller.h"
 #include "tier1/tokenset.h"
 #include "filesystem.h"
-#include "filesystem/IXboxInstaller.h"
 #include "inputsystem/iinputsystem.h"
 #include <time.h>
-#include <gc_clientsystem.h>
-
-#if defined( _PS3 )
-#include <cell/camera.h> // PS3 eye camera
-#endif
 
 // BaseModUI High-level windows
 
@@ -50,17 +42,10 @@
 //#include "VPasswordEntry.h"
 // vgui controls
 #include "vgui/ILocalize.h"
-
 #include "netmessages.h"
-
-#ifndef _GAMECONSOLE
 #include "steam/steam_api.h"
-#endif
-
 #include "gameui_util.h"
-
 #include "cdll_client_int.h"
-
 #include "cstrike15_gcmessages.pb.h"
 #include "cstrike15_gcconstants.h"
 #include "engine/inetsupport.h"
@@ -1447,152 +1432,7 @@ void CUIGameData::OnEvent( KeyValues *pEvent )
 			// DWenger - Pulled out temporarily - confirmation->SetUsageData(data);
 		}
 	}
-#if ENGINE_CONNECT_VIA_MMS
-#else
-	else if ( !Q_strcmp( "OnEngineLevelLoadingSession", szEvent ) )
-	{
-		/* Removed for partner depot */
-        //lwss- this section is responsible for sending a connect request to the GC
-
-		// only handle the "CreateSession" reason
-        if( strcmp( pEvent->GetString("reason"), "CreateSession" ) )
-            return;
-
-        uint64 *uiReservationCookiePtr = (uint64*)pEvent->GetPtr("ptr");
-        if( uiReservationCookiePtr )
-        {
-            INetSupport *pINetSupport = ( INetSupport * )g_pMatchFramework->GetMatchExtensions()->GetRegisteredExtensionInterface( INETSUPPORT_VERSION_STRING );
-            if( pINetSupport )
-            {
-                CGameUIConVarRef cl_session("cl_session");
-                pINetSupport->UpdateClientReservation( *uiReservationCookiePtr, 0 );
-                // unfinished....
-            }
-        }
-        else
-        {
-            netadr_t netadr;
-            netadr.SetIP( 0 );
-            netadr.SetPort( 0 );
-            netadr.SetType( NA_IP );
-            netadr.SetFromString( pEvent->GetString("adr" ) );
-            GCSDK::CProtoBufMsg<CMsgGCCStrike15_v2_ClientRequestJoinServerData> joinServerData( k_EMsgGCCStrike15_v2_ClientRequestJoinServerData );
-            INetSupport *pINetSupport = ( INetSupport * )g_pMatchFramework->GetMatchExtensions()->GetRegisteredExtensionInterface( INETSUPPORT_VERSION_STRING );
-            if( pINetSupport )
-            {
-                int buildNum = pINetSupport->GetEngineBuildNumber();
-                if( buildNum )
-                {
-                    joinServerData.Body().set_version( buildNum );
-                }
-
-                joinServerData.Body().set_account_id( steamapicontext->SteamUser()->GetSteamID().GetAccountID() );
-                joinServerData.Body().set_serverid( pEvent->GetUint64("gsid") );
-                joinServerData.Body().set_server_ip( netadr.GetIPHostByteOrder() );
-                joinServerData.Body().set_server_port( netadr.GetPort() );
-
-                GCClientSystem()->BSendMessage( joinServerData );
-                //g_xuidFriendWatchSessionJoiningXUID = (one of the above data, unsure)
-                //g_chFriendWatchSessionJoiningXUIDAction = 99;
-
-                //TODO: This is where the game pulls up a Panel "JoiningInvite" with CMatchMakingStatus
-                //CMatchMakingStatus::SetTimeToAutoCancel( Plat_FloatTime + 15.0 );
-            }
-        }
-
-
-	}
-#endif
 }
-
-class ClientJob_EMsgGCCStrike15_v2_ClientRequestJoinFriendData : public GCSDK::CGCClientJob
-{
-public:
-	explicit ClientJob_EMsgGCCStrike15_v2_ClientRequestJoinFriendData( GCSDK::CGCClient *pGCClient ) : GCSDK::CGCClientJob( pGCClient )
-	{
-	}
-
-	virtual bool BYieldingRunJobFromMsg( GCSDK::IMsgNetPacket *pNetPacket )
-	{
-		GCSDK::CProtoBufMsg<CMsgGCCStrike15_v2_ClientRequestJoinFriendData> msg( pNetPacket );
-
-		if ( msg.Body().has_errormsg() )
-		{
-			RemapText_t arrText[] = {
-				{ "Game is full", "#SFUI_DisconnectReason_LobbyFull", RemapText_t::MATCH_FULL },
-				{ "Certified server required", "#SFUI_DisconnectReason_CertifiedServerRequired", RemapText_t::MATCH_FULL },
-				{ "Certified server denied", "#SFUI_DisconnectReason_CertifiedServerDenied", RemapText_t::MATCH_FULL },
-				{ "PW server required", "#SFUI_DisconnectReason_PWServerRequired", RemapText_t::MATCH_FULL },
-				{ "PW server denied", "#SFUI_DisconnectReason_PWServerDenied", RemapText_t::MATCH_FULL },
-				{ NULL, NULL, RemapText_t::MATCH_FULL }
-			};
-			char const *szReason = RemapText_t::RemapRawText( arrText, msg.Body().errormsg().c_str() );
-
-			g_pMatchFramework->CloseSession();
-#if defined( INCLUDE_SCALEFORM )
-            CMessageBoxScaleform::UnloadAllDialogs( true );
-#endif
-            BasePanel()->RestoreMainMenuScreen();
-#if defined( INCLUDE_SCALEFORM )
-            CCommandMsgBox::CreateAndShow( "#SFUI_Disconnect_Title", szReason, true );
-#endif
-            return false;
-		}
-
-		if ( msg.Body().res().serverid() )
-		{
-			ServerCookie_t sc = { msg.Body().res().reservationid(), Plat_FloatTime() };
-			g_mapServerCookies.InsertOrReplace( msg.Body().res().serverid(), sc );
-		}
-
-		return true;
-	}
-};
-GC_REG_CLIENT_JOB( ClientJob_EMsgGCCStrike15_v2_ClientRequestJoinFriendData, k_EMsgGCCStrike15_v2_ClientRequestJoinFriendData );
-
-class ClientJob_EMsgGCCStrike15_v2_ClientRequestJoinServerData : public GCSDK::CGCClientJob
-{
-public:
-	explicit ClientJob_EMsgGCCStrike15_v2_ClientRequestJoinServerData( GCSDK::CGCClient *pGCClient ) : GCSDK::CGCClientJob( pGCClient )
-	{
-	}
-
-	virtual bool BYieldingRunJobFromMsg( GCSDK::IMsgNetPacket *pNetPacket )
-	{
-		GCSDK::CProtoBufMsg<CMsgGCCStrike15_v2_ClientRequestJoinServerData> msg( pNetPacket );
-
-		if ( msg.Body().has_errormsg() )
-		{
-			RemapText_t arrText[] = {
-				{ "Game is full", "#SFUI_DisconnectReason_LobbyFull", RemapText_t::MATCH_FULL },
-				{ "Certified server required", "#SFUI_DisconnectReason_CertifiedServerRequired", RemapText_t::MATCH_FULL },
-				{ "Certified server denied", "#SFUI_DisconnectReason_CertifiedServerDenied", RemapText_t::MATCH_FULL },
-				{ "PW server required", "#SFUI_DisconnectReason_PWServerRequired", RemapText_t::MATCH_FULL },
-				{ "PW server denied", "#SFUI_DisconnectReason_PWServerDenied", RemapText_t::MATCH_FULL },
-				{ NULL, NULL, RemapText_t::MATCH_FULL }
-			};
-			char const *szReason = RemapText_t::RemapRawText( arrText, msg.Body().errormsg().c_str() );
-
-			g_pMatchFramework->CloseSession();
-#if defined( INCLUDE_SCALEFORM )
-            CMessageBoxScaleform::UnloadAllDialogs( true );
-#endif
-            BasePanel()->RestoreMainMenuScreen();
-#if defined( INCLUDE_SCALEFORM )
-            CCommandMsgBox::CreateAndShow( "#SFUI_Disconnect_Title", szReason, true );
-#endif
-			return false;
-		}
-
-		ServerCookie_t sc = { msg.Body().res().reservationid(), Plat_FloatTime() };
-		g_mapServerCookies.InsertOrReplace( msg.Body().serverid(), sc );
-
-		return true;
-	}
-};
-GC_REG_CLIENT_JOB( ClientJob_EMsgGCCStrike15_v2_ClientRequestJoinServerData, k_EMsgGCCStrike15_v2_ClientRequestJoinServerData );
-
-
 
 #if !defined( NO_STEAM )
 

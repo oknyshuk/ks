@@ -1,4 +1,4 @@
-//===== Copyright © 1996-2005, Valve Corporation, All rights reserved. ======//
+//===== Copyright ï¿½ 1996-2005, Valve Corporation, All rights reserved. ======//
 //
 // Purpose: 
 //
@@ -10,9 +10,7 @@
 #pragma once
 #endif
 
-//#ifdef _X360
 #define DEMO_FILE_UTLBUFFER 1
-//#endif
 
 #include "demo.h"
 

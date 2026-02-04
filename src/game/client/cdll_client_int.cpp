@@ -5,8 +5,8 @@
 
 #include "cbase.h"
 #include "cdll_int.h"
+#include "tier1/fmtstr.h"
 #include <crtmemdebug.h>
-#include <econ/econ_item_system.h>
 #include "vgui_int.h"
 #include "clientmode.h"
 #include "iinput.h"
@@ -25,7 +25,6 @@
 #include "networkstringtable_clientdll.h"
 #include "voice_status.h"
 #include "filesystem.h"
-#include "filesystem/IXboxInstaller.h"
 #include "c_te_legacytempents.h"
 #include "c_rope.h"
 #include "engine/ishadowmgr.h"
@@ -97,7 +96,6 @@
 #include "qlimits.h"
 #include "engine/ireplayhistorymanager.h"
 #endif
-#include "ixboxsystem.h"
 #include "matchmaking/imatchframework.h"
 #include "cdll_bounded_cvars.h"
 #include "matsys_controls/matsyscontrols.h"
@@ -107,7 +105,6 @@
 #include "Sprite.h"
 #include "hud_savestatus.h"
 #include "vgui_video.h"
-#if defined( CSTRIKE15 )
 #include "gametypes/igametypes.h"
 #include "c_keyvalue_saver.h"
 #include "c_team.h"
@@ -115,7 +112,7 @@
 #include "c_cs_player.h"
 #include "cstrike15/fatdemo.h"
 #include "cstrike15/RocketUI/rkconsole.h"
-#endif
+#include "cs_item_inventory.h"
 
 #include "mumble.h"
 
@@ -143,12 +140,7 @@
 
 #include "game_controls/igameuisystemmgr.h"
 
-#ifdef DEMOPOLISH_ENABLED
-#include "demo_polish/demo_polish.h"
-#endif
-
 #include "imaterialproxydict.h"
-#include "vjobs_interface.h"
 #include "tier0/miniprofiler.h" 
 #include "engine/iblackbox.h"
 #include "c_rumble.h"
@@ -157,33 +149,9 @@
 
 #include "achievements_and_stats_interface.h"
 
-#if defined ( CSTRIKE15 )
-    #include "iachievementmgr.h"
-    #include "hud.h"
-    #include "hud_element_helper.h"
-    #if defined( INCLUDE_SCALEFORM )
-        #include "Scaleform/HUD/sfhud_chat.h"
-        #include "Scaleform/HUD/sfhud_radio.h"
-        #include "Scaleform/options_scaleform.h"
-        #include "Scaleform/loadingscreen_scaleform.h"
-        #include "Scaleform/HUD/sfhud_deathnotice.h"
-    #endif
-#endif
-
-#ifdef PORTAL
-#include "PortalRender.h"
-#endif
-
-#ifdef PORTAL2
-#include "portal_util_shared.h"
-#include "portal_base2d_shared.h"
-#include "c_keyvalue_saver.h"
-#include "portal2/gameui/portal2/steamoverlay/isteamoverlaymgr.h"
-extern void ProcessPortalTeleportations( void );
-#if defined( PORTAL2_PUZZLEMAKER )
-#include "puzzlemaker/puzzlemaker.h"
-#endif // PORTAL2_PUZZLEMAKER
-#endif
+#include "iachievementmgr.h"
+#include "hud.h"
+#include "hud_element_helper.h"
 
 #ifdef INFESTED_PARTICLES
 #include "c_asw_generic_emitter.h"
@@ -202,9 +170,6 @@ extern void ProcessPortalTeleportations( void );
 #include "sixense/in_sixense.h"
 #endif
 
-#if defined(_PS3)
-#include "buildrenderables_PS3.h"
-#endif
 #include "viewrender.h"
 
 #include "irendertorthelperobject.h"
@@ -244,16 +209,10 @@ IGameEventManager2 *gameeventmanager = NULL;
 ISoundEmitterSystemBase *soundemitterbase = NULL;
 IInputSystem *inputsystem = NULL;
 ISceneFileCache *scenefilecache = NULL;
-IXboxSystem *xboxsystem = NULL;	// Xbox 360 only
 IAvi *avi = NULL;
 IBik *bik = NULL;
 IQuickTime *pQuicktime = NULL;
-IVJobs * g_pVJobs = NULL;
 IRenderToRTHelper *g_pRenderToRTHelper = NULL;
-
-#if defined( INCLUDE_SCALEFORM )
-IScaleformUI* g_pScaleformUI = NULL;
-#endif
 
 IUploadGameStats *gamestatsuploader = NULL;
 IBlackBox *blackboxrecorder = NULL;
@@ -271,8 +230,6 @@ IScriptManager *scriptmanager = NULL;
 IGameSystem *SoundEmitterSystem();
 IGameSystem *ToolFrameworkClientSystem();
 IViewRender *GetViewRenderInstance();
-
-DEFINE_LOGGING_CHANNEL_NO_TAGS( LOG_VJOBS, "VJOBS" );
 
 bool g_bEngineIsHLTV = false;
 
@@ -985,22 +942,11 @@ public:
 	virtual bool			IsLoadingScreenRaised( void );
 #endif
 
-#if defined(_PS3)
-	virtual int				GetDrawFlags( void );
-	virtual int				GetBuildViewID( void );
-	virtual bool			IsSPUBuildWRJobsOn( void );
-	virtual void			CacheFrustumData( Frustum_t *pFrustum, Frustum_t *pAreaFrustum, void *pRenderAreaBits, int numArea, bool bViewerInSolidSpace );
-	virtual void			*GetBuildViewVolumeCuller( void );
-	virtual Frustum_t		*GetBuildViewFrustum( void );
-	virtual Frustum_t		*GetBuildViewAreaFrustum( void );
-	virtual unsigned char	*GetBuildViewRenderAreaBits( void );
-#else
 	virtual bool			IsBuildWRThreaded( void );
 	virtual void			QueueBuildWorldListJob( CJob* pJob );
 	virtual void			CacheFrustumData( const Frustum_t& frustum, const CUtlVector< Frustum_t, CUtlMemoryAligned< Frustum_t,16 > >& aeraFrustums );
 	virtual const Frustum_t* GetBuildViewFrustum( void ) const;
 	virtual const CUtlVector< Frustum_t, CUtlMemoryAligned< Frustum_t,16 > >* GetBuildViewAeraFrustums( void ) const;
-#endif
 
 	virtual bool IsSubscribedMap( const char *pchMapName, bool bOnlyOnDisk );
 	virtual bool IsFeaturedMap( const char *pchMapName, bool bOnlyOnDisk );
@@ -1022,11 +968,6 @@ public:
 	virtual bool ValidateSignedEvidenceHeader( char const *szKey, void const *pvHeader, CDemoPlaybackParameters_t *pPlaybackParameters );
 	virtual void PrepareSignedEvidenceData( void *pvData, int numBytes, CDemoPlaybackParameters_t const *pPlaybackParameters );
 	virtual bool ShouldSkipEvidencePlayback( CDemoPlaybackParameters_t const *pPlaybackParameters );
-
-#if defined( INCLUDE_SCALEFORM )
-    // Scaleform slot controller
-	virtual IScaleformSlotInitController * GetScaleformSlotInitController();
-#endif
 
 	virtual bool IsConnectedUserInfoChangeAllowed( IConVar *pCvar );
 	virtual void OnCommandDuringPlayback( char const *cmd );
@@ -1399,10 +1340,6 @@ int CHLClient::Connect( CreateInterfaceFn appSystemFactory, CGlobalVarsBase *pGl
 	ConnectTier2Libraries( &appSystemFactory, 1 );
 	ConnectTier3Libraries( &appSystemFactory, 1 );
 
-#if defined( INCLUDE_SCALEFORM )
-	g_pScaleformUI = ( IScaleformUI* ) appSystemFactory( SCALEFORMUI_INTERFACE_VERSION, NULL );
-#endif
-
 	// Initialize the console variables.
 	ConVar_Register( FCVAR_CLIENTDLL );
 
@@ -1481,8 +1418,6 @@ int CHLClient::Init( CreateInterfaceFn appSystemFactory, CGlobalVarsBase *pGloba
 		return false;
 	if ( (blackboxrecorder = (IBlackBox *)appSystemFactory(BLACKBOX_INTERFACE_VERSION, NULL)) == NULL )
 		return false;
-	if ( (xboxsystem = (IXboxSystem *)appSystemFactory( XBOXSYSTEM_INTERFACE_VERSION, NULL )) == NULL )
-		return false;
 
 	if ( (g_pRenderToRTHelper = (IRenderToRTHelper *)appSystemFactory( RENDER_TO_RT_HELPER_INTERFACE_VERSION, NULL )) == NULL )
 		return false;
@@ -1542,15 +1477,6 @@ int CHLClient::Init( CreateInterfaceFn appSystemFactory, CGlobalVarsBase *pGloba
 	if ( IMatchExtensions *pIMatchExtensions = g_pMatchFramework->GetMatchExtensions() )
 		pIMatchExtensions->RegisterExtensionInterface(
 		CLIENT_DLL_INTERFACE_VERSION, static_cast< IBaseClientDLL * >( this ) );
-
-#if defined(_PS3)
-	// VJOBS is used to spawn jobs on SPUs
-	if ( (g_pVJobs = (IVJobs *)appSystemFactory( VJOBS_INTERFACE_VERSION, NULL )) == NULL)
-		return false;
-
-	// init client SPURS jobs
-	g_pBuildRenderablesJob->Init();
-#endif
 
 	if ( !CommandLine()->CheckParm( "-noscripting") )
 	{
@@ -2455,12 +2381,7 @@ void CHLClient::LevelInitPreEntity( char const* pMapName )
 
 	IGameSystem::LevelInitPreEntityAllSystems(pMapName);
 
-    GameItemSchema_t *pItemSchema = ItemSystem()->GetItemSchema();
-    if ( pItemSchema )
-    {
-        //pItemSchema->BInit( "scripts/items/items_game.txt", "MOD" );
-        pItemSchema->BInitFromDelayedBuffer();
-    }
+    // Item system removed - no econ
 
 	ResetWindspeed();
 
@@ -3948,11 +3869,7 @@ vgui::VPANEL CHLClient::GetFullscreenClientDLLVPanel( void )
 	return VGui_GetFullscreenRootVPANEL();
 }
 
-int XBX_GetActiveUserId()
-{
-	ASSERT_LOCAL_PLAYER_RESOLVABLE();
-	return XBX_GetUserId( GET_ACTIVE_SPLITSCREEN_SLOT() );
-}
+// XBX_GetActiveUserId defined in platform.h
 
 //-----------------------------------------------------------------------------
 // Purpose: Marks entities as touching
@@ -4108,50 +4025,20 @@ void CHLClient::GetStatus( char *buffer, int bufsize )
 #if defined ( CSTRIKE15 )
 bool CHLClient::IsChatRaised( void )
 {
-#if defined( INCLUDE_SCALEFORM )
-    SFHudChat* pChat = GET_HUDELEMENT( SFHudChat );
-
-	if ( pChat == NULL )
-	{
-		return false;
-	}
-	else
-	{
-		return pChat->ChatRaised();
-	}
-#else
 	return false;
-#endif
 }
 
 bool CHLClient::IsRadioPanelRaised( void )
 {
-#if defined( INCLUDE_SCALEFORM )
-    SFHudRadio* pRadio = GET_HUDELEMENT( SFHudRadio );
-
-	if ( pRadio == NULL )
-	{
-		return false;
-	}
-	else
-	{
-		return pRadio->PanelRaised();
-	}
-#else
 	return false;
-#endif
 }
 
 
 bool CHLClient::IsBindMenuRaised( void )
 {
-#if defined( INCLUDE_SCALEFORM )
-    return COptionsScaleform::IsBindMenuRaised();
-#endif
     return false;
 }
 
-//rocketui note: This is only used in keys.cpp for scaleform
 bool CHLClient::IsTeamMenuRaised( void )
 {
 	if ( !GetViewPortInterface() )
@@ -4168,60 +4055,12 @@ bool CHLClient::IsTeamMenuRaised( void )
 	return false;
 }
 
-//rocketui note: This is only used in keys.cpp for scaleform
 bool CHLClient::IsLoadingScreenRaised( void )
 {
-#if defined( INCLUDE_SCALEFORM )
-	return CLoadingScreenScaleform::IsOpen();
-#endif
 	return false;
 }
 
 #endif // CSTRIKE15
-
-#if defined(_PS3)
-
-int CHLClient::GetDrawFlags( void )
-{
-	return g_viewBuilder.GetDrawFlags();
-}
-
-int CHLClient::GetBuildViewID( void )
-{
-	return g_viewBuilder.GetBuildViewID();
-}
-
-bool CHLClient::IsSPUBuildWRJobsOn( void )
-{
-	return g_viewBuilder.IsSPUBuildRWJobsOn();
-}
-
-void CHLClient::CacheFrustumData( Frustum_t *pFrustum, Frustum_t *pAreaFrustum, void *pRenderAreaBits, int numArea, bool bViewerInSolidSpace )
-{
-	g_viewBuilder.CacheFrustumData( pFrustum, pAreaFrustum, pRenderAreaBits, numArea, bViewerInSolidSpace );
-}
-
-void *CHLClient::GetBuildViewVolumeCuller( void )
-{
-	return g_viewBuilder.GetBuildViewVolumeCuller();
-}
-
-Frustum_t *CHLClient::GetBuildViewFrustum( void )
-{
-	return g_viewBuilder.GetBuildViewFrustum();
-}
-
-Frustum_t *CHLClient::GetBuildViewAreaFrustum( void )
-{
-	return g_viewBuilder.GetBuildViewAreaFrustum();
-}
-
-unsigned char *CHLClient::GetBuildViewRenderAreaBits( void )
-{
-	return g_viewBuilder.GetBuildViewRenderAreaBits();
-}
-
-#else
 
 bool CHLClient::IsBuildWRThreaded( void )
 {
@@ -4247,8 +4086,6 @@ const CUtlVector< Frustum_t, CUtlMemoryAligned< Frustum_t,16 > >* CHLClient::Get
 {
 	return g_viewBuilder.GetBuildViewAeraFrustums();
 }
-
-#endif // PS3, CConcurrentView helper fns
 
 
 bool CHLClient::IsSubscribedMap( const char *pchMapName, bool bOnlyOnDisk )
@@ -4721,14 +4558,6 @@ bool CHLClient::ShouldSkipEvidencePlayback( CDemoPlaybackParameters_t const *pPl
 	return true;
 }
 
-#if defined( INCLUDE_SCALEFORM )
-// Scaleform slot controller
-IScaleformSlotInitController * CHLClient::GetScaleformSlotInitController()
-{
-	/* Removed for partner depot */
-	return nullptr;
-}
-#endif
 bool CHLClient::IsConnectedUserInfoChangeAllowed( IConVar *pCvar )
 {
 	return CSGameRules() ? CSGameRules()->IsConnectedUserInfoChangeAllowed( NULL ) : true;
@@ -4766,35 +4595,6 @@ void CHLClient::OnTickPre( int tickcount )
 	g_pFatDemoRecorder->OnTickPre( tickcount );
 #endif
 }
-
-class ClientJob_EMsgGCCStrike15_GotvSyncPacket : public GCSDK::CGCClientJob
-{
-public:
-	explicit ClientJob_EMsgGCCStrike15_GotvSyncPacket( GCSDK::CGCClient *pGCClient ) : GCSDK::CGCClientJob( pGCClient )
-	{
-	}
-
-	virtual bool BYieldingRunJobFromMsg( GCSDK::IMsgNetPacket *pNetPacket )
-	{
-		GCSDK::CProtoBufMsg<CMsgGCCStrike15_GotvSyncPacket> msg( pNetPacket );
-		return engine->EngineGotvSyncPacket( &msg.Body().data() );
-	}
-};
-GC_REG_CLIENT_JOB( ClientJob_EMsgGCCStrike15_GotvSyncPacket, k_EMsgGCCStrike15_v2_GotvSyncPacket );
-
-
-
-//-----------------------------------------------------------------------------
-// Purpose: Spew application info (primarily for log file data mining)
-//-----------------------------------------------------------------------------
-void SpewInstallStatus( void )
-{
-#if defined( _X360 )
-	g_pXboxInstaller->SpewStatus();
-#endif
-}
-
-
 
 extern IViewRender *view;
 

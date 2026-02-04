@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
+//========= Copyright ï¿½ 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: Engine specific CRC functions
 //
@@ -63,11 +63,7 @@ byte COM_BlockSequenceCRCByte( byte *base, int length, int sequence )
 	return (byte)(crc & 0xFF);
 }
 
-#if defined(_X360)
-const int CRC_BUFSIZE = 16384;
-#else
 const int CRC_BUFSIZE = 65536;
-#endif
 
 // YWB:  5/18
 /*

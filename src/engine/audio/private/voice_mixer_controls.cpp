@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
+//========= Copyright ï¿½ 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -10,27 +10,6 @@
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
-
-#ifdef _PS3
-
-#include "voice_mixer_controls.h"
-
-IMixerControls* g_pMixerControls = NULL;
-void InitMixerControls()
-{
-	if ( !g_pMixerControls )
-	{
-		Warning( "InitMixerControls is not implemented on PS3\n" );
-	}
-}
-
-void ShutdownMixerControls()
-{
-	delete g_pMixerControls;
-	g_pMixerControls = NULL;
-}
-
-#else
 
 // NOTE: Vista deprecated these APIs
 // Under vista these settings are per-session (not persistent)
@@ -549,5 +528,3 @@ void ShutdownMixerControls()
 	delete g_pMixerControls;
 	g_pMixerControls = NULL;
 }
-
-#endif

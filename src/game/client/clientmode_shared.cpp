@@ -19,6 +19,7 @@
 #include <vgui/Cursor.h>
 #include <vgui/IPanel.h>
 #include <vgui/IInput.h>
+#include <vgui/ILocalize.h>
 #include "engine/IEngineSound.h"
 #include <keyvalues.h>
 #include <vgui_controls/AnimationController.h>
@@ -27,12 +28,6 @@
 #include "hltvcamera.h"
 #include "hud.h"
 #include "hud_element_helper.h"
-#if defined( INCLUDE_SCALEFORM )
-#include "Scaleform/HUD/sfhud_chat.h"
-#include "Scaleform/HUD/sfhudfreezepanel.h"
-#include "Scaleform/HUD/sfhud_teamcounter.h"
-#include "Scaleform/mapoverview.h"
-#endif
 #include "hltvreplaysystem.h"
 #include "netmessages.h"
 #if defined( REPLAY_ENABLED )
@@ -48,7 +43,6 @@
 #include "gameui_interface.h"
 #include "menu.h" // CHudMenu
 #if defined( _X360 )
-#include "xbox/xbox_console.h"
 #endif
 #include "matchmaking/imatchframework.h"
 #include "clientmode_csnormal.h"
@@ -761,13 +755,6 @@ void ClientModeShared::StartMessageMode( int iMessageModeType )
 	{
 		return;
 	}
-#if defined( INCLUDE_SCALEFORM )
-	SFHudChat* pChat = GET_HUDELEMENT( SFHudChat );
-	if ( pChat )
-	{
-		pChat->StartMessageMode( iMessageModeType );
-	}
-#endif
 }
 
 //-----------------------------------------------------------------------------

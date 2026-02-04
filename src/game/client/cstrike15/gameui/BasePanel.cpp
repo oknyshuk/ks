@@ -65,7 +65,6 @@ using namespace vgui;
 #include "bitbuf.h"
 #include "tier1/fmtstr.h"
 #include "inputsystem/iinputsystem.h"
-#include "ixboxsystem.h"
 #include "optionssubaudio.h"
 #if defined( _X360 )
 #include "../common/xlast_csgo/csgo.spa.h"
@@ -76,9 +75,7 @@ using namespace vgui;
 // dgoodenough - limit this to X360 only
 // PS3_BUILDFIX
 #if defined( _X360 )
-#include "xbox/xbox_launch.h"
 #else
-#include "xbox/xboxstubs.h"
 #endif
 
 #if defined( _PS3)
@@ -916,11 +913,7 @@ void CBaseModPanel::UpdateBackgroundState()
 	{
 		// 360 guarantees a progress bar
 		// level loading is truly completed when the progress bar is gone, then transition to main menu
-		if ( IsPC() || ( IsGameConsole()
-		#if defined( INCLUDE_SCALEFORM )
-		 && !CLoadingScreenScaleform::IsOpen()
-        #endif
-		) )
+		if ( IsPC() || IsGameConsole() )
 		{
 			SetBackgroundRenderState( BACKGROUND_MAINMENU );
 		}
@@ -933,25 +926,6 @@ void CBaseModPanel::UpdateBackgroundState()
 	{
 		SetBackgroundRenderState( BACKGROUND_DISCONNECTED );
 	}
-
-    #if defined( INCLUDE_SCALEFORM )
-	if ( GameUI().IsConsoleUI() )
-	{
-		if ( !m_ExitingFrameCount && !m_bLevelLoading && !CLoadingScreenScaleform::IsOpen() && GameUI().IsInLevel() )
-		{
-			// paused
-			if ( m_flBackgroundFillAlpha == 0.0f )
-				m_flBackgroundFillAlpha = 120.0f;
-		}
-		else
-		{
-			m_flBackgroundFillAlpha = 0;
-		}
-
-		// console ui has completely different menu/dialog/fill/fading behavior
-		return;
-	}
-    #endif
 
 	// don't evaluate the rest until we've initialized the menus
 	if ( !m_bPlatformMenuInitialized )
@@ -2639,7 +2613,9 @@ void CBaseModPanel::RunMenuCommand(const char *command)
 	else if ( !Q_stricmp( command, "ShowSigninUI" ) )
 	{
 		m_bWaitingForUserSignIn = true;
+#ifdef _X360
 		xboxsystem->ShowSigninUI( 1, 0 ); // One user, no special flags
+#endif
 	}
 	else if ( !Q_stricmp( command, "ShowDeviceSelector" ) )
 	{
@@ -3011,7 +2987,7 @@ bool CBaseModPanel::ValidateStorageDevice( void )
 {
 	if ( m_bUserRefusedStorageDevice == false )
 	{
-#if defined( _GAMECONSOLE )
+#if defined( _X360 )
 #pragma message( __FILE__ "(" __LINE__AS_STRING ") : warning custom: Slamming controller for xbox storage id to 0" )
 		if ( XBX_GetStorageDeviceId( 0 ) == XBX_INVALID_STORAGE_ID )
 		{
@@ -3893,7 +3869,9 @@ void CBaseModPanel::SignInFromStartScreen()
 {
 	m_bWaitingForUserSignIn = true;
 	m_bUserRefusedSignIn = true;
+#ifdef _X360
 	xboxsystem->ShowSigninUI( 1, 0 ); // One user, no special flags
+#endif
 }
 
 //-----------------------------------------------------------------------------
@@ -4370,6 +4348,7 @@ void CBaseModPanel::SystemNotification( const int notification )
 	{
 		m_bXUIVisible = false;
 
+#ifdef _X360
 		if ( m_bWaitingForStorageDeviceHandle )
 		{
 			DWORD ret = xboxsystem->GetOverlappedResult( m_hStorageDeviceChangeHandle, NULL, true );
@@ -4377,9 +4356,9 @@ void CBaseModPanel::SystemNotification( const int notification )
 			{
 				// Done waiting
 				xboxsystem->ReleaseAsyncHandle( m_hStorageDeviceChangeHandle );
-				
+
 				m_bWaitingForStorageDeviceHandle = false;
-				
+
 				// If we selected something, validate it
 				if ( m_iStorageID != XBX_INVALID_STORAGE_ID )
 				{
@@ -4421,7 +4400,8 @@ void CBaseModPanel::SystemNotification( const int notification )
 				}
 			}
 		}
-		
+#endif // _X360
+
 		// If we're waiting for the user to sign in, and check if they selected a usable profile
 		if ( m_bWaitingForUserSignIn )
 		{
@@ -4453,6 +4433,7 @@ void CBaseModPanel::SystemNotification( const int notification )
 //-----------------------------------------------------------------------------
 void CBaseModPanel::OnChangeStorageDevice( void )
 {
+#ifdef _X360
 	if ( m_bWaitingForStorageDeviceHandle == false )
 	{
 		m_bWaitingForStorageDeviceHandle = true;
@@ -4462,6 +4443,7 @@ void CBaseModPanel::OnChangeStorageDevice( void )
 		ACTIVE_SPLITSCREEN_PLAYER_GUARD( GET_ACTIVE_SPLITSCREEN_SLOT() );
 		xboxsystem->ShowDeviceSelector( XBX_GetActiveUserId(), true, &m_iStorageID, &m_hStorageDeviceChangeHandle );
 	}
+#endif
 }
 
 void CBaseModPanel::OnCreditsFinished( void )
@@ -5854,9 +5836,6 @@ void CBaseModPanel::ShowMainMenu( bool bShow )
 
 bool CBaseModPanel::LoadingProgressWantsIsolatedRender( bool bContextValid )
 {
-    #if defined( INCLUDE_SCALEFORM )
-	return CLoadingScreenScaleform::LoadingProgressWantsIsolatedRender( bContextValid );
-    #endif
 	return false;
 }
 

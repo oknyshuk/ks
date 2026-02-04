@@ -17,7 +17,6 @@
 #include "vgui/ISurface.h"
 #include "EngineInterface.h"
 #include "tier0/dbg.h"
-#include "ixboxsystem.h"
 #include "GameUI_Interface.h"
 #include "game/client/IGameClientExports.h"
 #include "fmtstr.h"
@@ -46,10 +45,6 @@
 #include "vgui/ILocalize.h"
 #include "vstartcoopgame.h"
 #include "gameconsole.h"
-
-#if !defined( NO_STEAM ) && !defined( NO_STEAM_GAMECOORDINATOR )
-	#include "econ_ui.h"
-#endif
 
 #include "netmessages.h"
 #include "cegclientwrapper.h"
@@ -325,12 +320,14 @@ void CUIGameData::OnSetStorageDeviceId( int iController, uint nDeviceId )
 		m_pSelectStorageClient->OnDeviceFail( ISelectStorageDeviceClient::FAIL_NOT_SELECTED );
 		m_pSelectStorageClient = NULL;
 	}
+#ifdef _X360
 	else if ( IsX360() && xboxsystem && !xboxsystem->DeviceCapacityAdequate( iController, nDeviceId, engine->GetModDirectory() ) )
 	{
 		CloseWaitScreen( NULL, "ReportDeviceFull" );
 		m_pSelectStorageClient->OnDeviceFail( ISelectStorageDeviceClient::FAIL_FULL );
 		m_pSelectStorageClient = NULL;
 	}
+#endif
 	else
 	{
 		// Set the storage device

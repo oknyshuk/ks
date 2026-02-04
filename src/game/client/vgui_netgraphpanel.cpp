@@ -30,10 +30,6 @@
 
 #include "cs_gamerules.h"
 
-#ifdef _PS3
-#include "ps3/ps3_core.h"
-#endif
-
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
@@ -1337,23 +1333,10 @@ void CNetGraphPanel::Paint()
 	int sw, sh;
 	surface()->GetScreenSize( sw, sh );
 
-	if ( IsGameConsole() )
-	{
-		// shrink for titlesafe
-		int insetX = XBOX_MINBORDERSAFE * (float)sw;
-		int insetY = XBOX_MINBORDERSAFE * (float)sh;
-		vrect.x = insetX;
-		vrect.y = insetY;
-		vrect.width = sw - 2 * insetX;
-		vrect.height = sh - 2 * insetY;
-	}
-	else
-	{
-		vrect.x = 0;
-		vrect.y = 0;
-		vrect.width  = sw;
-		vrect.height = sh;
-	}
+	vrect.x = 0;
+	vrect.y = 0;
+	vrect.width  = sw;
+	vrect.height = sh;
 
 	w = MIN( (int)TIMINGS, m_EstimatedWidth );
 	if ( vrect.width < w + 10 )

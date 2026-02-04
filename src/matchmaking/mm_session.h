@@ -1,6 +1,6 @@
 //===== Copyright © 1996-2009, Valve Corporation, All rights reserved. ======//
 //
-// Purpose: 
+// Purpose:
 //
 //===========================================================================//
 
@@ -32,7 +32,6 @@ public:
 #ifndef SWDS
 
 #include "sys_session.h"
-#include "x360_xlsp_cmd.h"
 #include "ds_searcher.h"
 #include "match_searcher.h"
 
@@ -48,11 +47,11 @@ void MatchSession_PrepareClientForConnect( KeyValues *pSettings, uint64 uiReserv
 struct MatchSessionServerInfo_t
 {
 	CDsSearcher::DsResult_t m_dsResult;
-	
+
 	char m_szConnectCmd[256];
-	
+
 	char const *m_szSecureServerAddress;
-	
+
 	XUID m_xuidJingle;
 	uint64 m_uiReservationCookie;
 

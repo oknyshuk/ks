@@ -553,12 +553,7 @@ int CAudioSourceWave::GetQuality()
 
 PathTypeFilter_t GetAudioPathFilter()
 {
-	if ( XBX_IsAudioLocalized() && force_audio_english.GetBool() )
-	{
-		// skip the localized search paths and fall through to the primary zips
-		return FILTER_CULLLOCALIZED;
-	}
-
+	// XBX_IsAudioLocalized() is always false on PC, no localized audio path filtering needed
 	// No audio exists outside of zips, all the audio is inside the zips
 	return FILTER_CULLNONPACK;
 }

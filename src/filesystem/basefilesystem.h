@@ -10,31 +10,21 @@
 
 #include "tier0/platform.h"
 
-#ifdef _PS3
-#include <sdk_version.h>
-	#if CELL_SDK_VERSION >= 0x085007
-		#define getenv(x) NULL   //TEMP REMOVE THIS - RP
-	#endif
-#endif
 #ifdef _WIN32
 #pragma once
 #endif
 
 #if defined( _WIN32 )
-
-#if !defined( _X360 ) && !defined( _PS3 ) && !defined(LINUX)
 	#include <io.h>
 	#include <direct.h>
 	#define WIN32_LEAN_AND_MEAN
 	#include <windows.h>
 	#define SUPPORT_VPK
-#endif
 #undef GetCurrentDirectory
 #undef GetJob
 #undef AddJob
 
-
-#elif defined( POSIX ) && !defined( _PS3 )
+#elif defined( POSIX )
 	#include <unistd.h> // unlink
 	#include "linux_support.h"
 	#define INVALID_HANDLE_VALUE (void *)-1
@@ -44,19 +34,8 @@
 	#define _stat stat
 	#define _alloca alloca
 	#define _S_IFDIR S_IFDIR
-	
+
 	#define SUPPORT_VPK
-
-
-#elif defined(_PS3)
-#include <unistd.h> // unlink
-#define INVALID_HANDLE_VALUE ( void * )-1
-
-// undo the prepended "_" 's
-#define _chmod chmod
-#define _stat stat
-#define _alloca alloca
-#define _S_IFDIR S_IFDIR
 
 #endif
 
@@ -64,9 +43,7 @@
 #include <stdio.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#ifndef _PS3
 #include <malloc.h>
-#endif // _PS3
 #include <string.h>
 #include "tier1/utldict.h"
 
@@ -91,12 +68,6 @@
 #include "threadsaferefcountedobject.h"
 #include "filetracker.h"
 
-#ifdef _PS3
-#include "ps3/ps3_platform.h"
-#include "ps3/ps3_core.h"
-#else
-#include "xbox/xboxstubs.h"
-#endif // _PS3
 
 #include "tier0/memdbgon.h"
 
@@ -114,28 +85,9 @@
 #define PATHSEPARATOR(c) ((c) == '/')
 #endif	//_WIN32
 
-#define MAX_FILEPATH 512 
+#define MAX_FILEPATH 512
 
-#if !defined( _X360 )
 #define SUPPORT_IODELAY_MONITORING
-#endif
-
-#ifdef _PS3
-#define FILE_ATTRIBUTE_DIRECTORY S_IFDIR
-
-typedef struct 
-{
-	// public data
-	int dwFileAttributes;
-	char cFileName[PATH_MAX]; // the file name returned from the call
-
-	int numMatches;
-	struct dirent **namelist;  
-} FIND_DATA;
-
-#define WIN32_FIND_DATA FIND_DATA
-
-#endif // _PS3
 
 extern CUtlSymbolTableMT g_PathIDTable;
 
@@ -174,14 +126,7 @@ enum FileType_t
 	FT_NORMAL,
 	FT_PACK_BINARY,
 	FT_PACK_TEXT,
-#if defined(_PS3)
-    FT_RUNTIME_PS3,
-#endif
 };
-
-#if defined(_PS3)
-void FixUpPathCaseForPS3( const char* pFilePath );
-#endif
 
 class IThreadPool;
 class CAsyncJobFuliller;
@@ -254,14 +199,6 @@ public:
 protected:
 	CBaseFileSystem		*m_fs;
 
-#ifdef _PS3
-// FOURCCs generate a warning on PS3
-	enum
-	{
-		MAGIC = 0xABCDABCD,
-		FREE_MAGIC = 0xDEADBEEF
-	};
-#else // !_PS3
 	enum
 	{
 	    // lwss: fix compiler warning with multi-char character constants.
@@ -269,7 +206,6 @@ protected:
 		MAGIC = 0x43464861, // 'CFHa',
 		FREE_MAGIC = 0x4672654D // 'FreM'
 	};
-#endif // _PS3
 	unsigned int	m_nMagic;
 
 	bool IsValid();
@@ -461,9 +397,6 @@ class CFileLoadInfo
 public:
 	bool	m_bSteamCacheOnly;			// If Steam and this is true, then the file is only looked for in the Steam caches.
 	bool	m_bLoadedFromSteamCache;	// If Steam, this tells whether the file was loaded off disk or the Steam cache.
-#ifdef _PS3
-    Ps3FileType_t m_ps3Filetype;
-#endif
 };
 
 
@@ -1105,15 +1038,6 @@ protected:
 
 	// Helper function for fs_log file logging
 	void LogFileAccess( const char *pFullFileName );
-#if IsPlatformPS3()
-	virtual bool PrefetchFile( const char *pFileName, int nPriority, bool bPersist );
-	virtual bool PrefetchFile( const char *pFileName, int nPriority, bool bPersist, int64 nOffset, int64 nSize );
-	virtual void FlushCache();
-	virtual void SuspendPrefetches( const char *pWhy );
-	virtual void ResumePrefetches( const char *pWhy );
-	virtual void OnSaveStateChanged( bool bSaving );
-	virtual bool IsPrefetchingDone();
-#endif
 
 	bool LookupKeyValuesRootKeyName( char const *filename, char const *pPathID, char *rootName, size_t bufsize );
 

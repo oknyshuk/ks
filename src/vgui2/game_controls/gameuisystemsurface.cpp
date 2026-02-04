@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
+//========= Copyright ï¿½ 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -29,9 +29,7 @@
 #include "GameLayer.h"
 
 #if defined( _X360 )
-#include "xbox/xbox_win32stubs.h"
 #endif
-#include "xbox/xboxstubs.h"
 
 #include "valvefont.h"
 
@@ -48,13 +46,15 @@ static void HelperGetLanguage( char *pLanguageBuf, int bufSize )
 	bool bValid = false;
 	if ( IsPC() )
 	{
-		bValid = vgui::system()->GetRegistryString( "HKEY_CURRENT_USER\\Software\\Valve\\Steam\\Language", pLanguageBuf, bufSize - 1 );	
+		bValid = vgui::system()->GetRegistryString( "HKEY_CURRENT_USER\\Software\\Valve\\Steam\\Language", pLanguageBuf, bufSize - 1 );
 	}
+#if defined( _X360 ) || defined( _PS3 )
 	else
 	{
 		Q_strncpy( pLanguageBuf, XBX_GetLanguageString(), bufSize );
 		bValid = true;
 	}
+#endif
 
 	if ( !bValid )
 	{

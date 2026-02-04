@@ -28,7 +28,6 @@
 #include "hltvreplaysystem.h"
 
 #if defined (_X360)
-#include "ixboxsystem.h"
 #include "../common/xlast_csgo/csgo.spa.h"
 #endif
 

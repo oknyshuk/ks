@@ -19,7 +19,6 @@
 #include "datacache/imdlcache.h"
 #include "tier0/vprof.h"
 #if defined( _X360 )
-#include "xbox/xbox_console.h"
 #endif
 #ifdef POSIX
 #include "net_ws_headers.h"									// need SOCKET

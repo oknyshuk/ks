@@ -14,13 +14,7 @@ class CSysSessionBase;
 class CSysSessionHost;
 class CSysSessionClient;
 
-#include "x360_lobbyapi.h"
-#include "x360_netmgr.h"
-
 class CSysSessionBase
-#ifdef _X360
-	: public IX360NetworkEvents
-#endif
 {
 	friend class CSysSessionHost;
 	friend class CSysSessionClient;
@@ -65,31 +59,6 @@ protected:
 	void PrintValue( KeyValues *val, char *chBuffer, int numBytesBuffer );
 
 #ifdef _X360
-
-	CX360LobbyObject m_lobby;
-	CX360NetworkMgr *m_pNetworkMgr;
-	IX360LobbyAsyncOperation *m_pAsyncOperation;
-
-	CX360LobbyMigrateHandle_t m_hLobbyMigrateCall;
-	CX360LobbyMigrateOperation_t m_MigrateCallState;
-
-	INetSupport::NetworkSocket_t GetX360NetSocket();
-
-	virtual void OnAsyncOperationFinished() = 0;
-	void ReleaseAsyncOperation();
-
-	// IX360NetworkEvents
-	virtual void OnX360NetPacket( KeyValues *msg );
-	virtual void OnX360NetDisconnected( XUID xuidRemote );
-
-	// Members management code
-	void OnX360AllSessionMembersJoinLeave( KeyValues *kv );
-
-	// Check whether host migration should be allowed
-	// on the session
-	virtual bool ShouldAllowX360HostMigration();
-
-	virtual bool UpdateMigrationCall();
 
 #elif !defined( NO_STEAM )
 public:

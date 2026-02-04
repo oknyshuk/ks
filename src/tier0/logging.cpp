@@ -12,11 +12,6 @@
 #include "threadtools.h"
 #include "tier0_strtools.h" // this is from tier1, but only included for inline definition of V_isspace
 
-#ifdef _PS3
-#include <sys/tty.h>
-#endif
-
-
 #define DBG_SPEW_ALL_WARNINGS_AND_ERRORS_ASSERT false
 
 
@@ -69,11 +64,7 @@ END_DEFINE_LOGGING_CHANNEL();
 // for the fact that there's no reason to have more than one in existence.
 bool g_bEnforceLoggingSystemSingleton = false;
 
-#ifdef _PS3
-#include "tls_ps3.h"
-#else // _PS3
 CTHREADLOCALINT g_nThreadLocalStateIndex;
-#endif // _PS3
 
 //////////////////////////////////////////////////////////////////////////
 // Implementation
@@ -103,17 +94,12 @@ m_nGlobalStateIndex( 0 )
 { 
 	Assert( !g_bEnforceLoggingSystemSingleton );
 	g_bEnforceLoggingSystemSingleton = true;
-#if !defined( _PS3 ) && !defined(POSIX) && !defined(PLATFORM_WINDOWS)
 	// Due to uncertain constructor ordering (g_nThreadLocalStateIndex
 	// may not be constructed yet so TLS index may not be available yet)
 	// we cannot initialize the state index here without risking
 	// AppVerifier errors and undefined behavior. Luckily TlsAlloc values
 	// are guaranteed to be zero-initialized so we don't need to zero-init,
 	// this, and in fact we can't for all threads.
-	// TLS on PS3 is zero-initialized in global ELF section
-	// TLS is also not accessible at this point before PRX entry point runs
-	g_nThreadLocalStateIndex = 0;
-#endif
 
 	m_LoggingStates[0].m_nPreviousStackEntry = -1;
 
@@ -415,14 +401,6 @@ LoggingResponse_t CLoggingSystem::LogDirect( LoggingChannelID_t channelID, Loggi
 		pState->m_RegisteredListeners[i]->Log( &context, pMessage );
 	}
 
-#if defined( _PS3 ) && !defined( _CERT )
-	if ( !pState->m_nListenerCount )
-	{
-		unsigned int unBytesWritten;
-		sys_tty_write( SYS_TTYP15, pMessage, strlen( pMessage ), &unBytesWritten );
-	}
-#endif
-	
 	LoggingResponse_t response = pState->m_pLoggingResponse->OnLog( &context );
 
 	if ( DBG_SPEW_ALL_WARNINGS_AND_ERRORS_ASSERT && severity != LS_MESSAGE )

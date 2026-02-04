@@ -8,7 +8,6 @@
 #include "mm_title_richpresence.h"
 #include "portal2.spa.h"
 #include "matchmaking/portal2/imatchext_portal2.h"
-#include "filesystem/ixboxinstaller.h"
 
 #include "filesystem.h"
 #include "vstdlib/random.h"

@@ -62,7 +62,6 @@ PROJECTS = [
     "filesystem",
     "game/client",
     "game/server",
-    "gcsdk",
     "generated_proto",
     "inputsystem",
     "interfaces",

@@ -841,12 +841,6 @@ void CPredictionCopy::DescribeFields( const CUtlVector< const datamap_t * > &vec
 
 	for ( i = 0; i < fieldCount; ++i, pField++ )
 	{
-#ifdef _GAMECONSOLE
-		if ( !(i & 0xF) )
-		{
-			PREFETCH360(pField, 128);
-		}
-#endif
 		flags = pField->flags;
 		int nFieldType = pField->fieldType;
 
@@ -1193,15 +1187,6 @@ static void BuildDataRuns( datamap_t *dmap )
 				run.m_nStartOffset[ TD_OFFSET_PACKED ] = flat.m_Flattened[ nRunStartField ].flatOffset[ TD_OFFSET_PACKED ];
 				run.m_nLength = nLastFieldEndOffset - nCurrentRunStartOffset;
 
-#ifdef _GAMECONSOLE 
-				if ( vecRuns.Count() > 0 )
-				{
-					for ( int td = 0; td < TD_OFFSET_COUNT; ++td )
-					{
-						vecRuns[ vecRuns.Count() - 1 ].m_nPrefetchOffset[ td ] = run.m_nStartOffset[ td ];
-					}
-				}
-#endif
 				vecRuns.AddToTail( run );
 
 				nRunStartField = i;
@@ -1221,15 +1206,6 @@ static void BuildDataRuns( datamap_t *dmap )
 			run.m_nStartOffset[ TD_OFFSET_PACKED ] = flat.m_Flattened[ nRunStartField ].flatOffset[ TD_OFFSET_PACKED ];
 			run.m_nLength = nLastFieldEndOffset - nCurrentRunStartOffset;
 
-#ifdef _GAMECONSOLE 
-			if ( vecRuns.Count() > 0 )
-			{
-				for ( int td = 0; td < TD_OFFSET_COUNT; ++td )
-				{
-					vecRuns[ vecRuns.Count() - 1 ].m_nPrefetchOffset[ td ] = run.m_nStartOffset[ td ];
-				}
-			}
-#endif
 			vecRuns.AddToTail( run );
 		}
 	}
@@ -1404,11 +1380,6 @@ void CPredictionCopy::CopyFlatFieldsUsingRuns( const datamap_t *pCurrentMap, int
 		pOutputData = pDest + fieldOffsetDest;
 		pInputData = pSrc + fieldOffsetSrc;
 
-#ifdef _GAMECONSOLE
-		PREFETCH360( pDest + run->m_nPrefetchOffset[ m_nDestOffsetIndex ], 0 );
-		PREFETCH360( pSrc + run->m_nPrefetchOffset[ m_nSrcOffsetIndex ], 0 );
-#endif
-
 		Q_memcpy( pOutputData, pInputData, run->m_nLength );
 	}
 }
@@ -1474,20 +1445,11 @@ void CPredictionCopy::ErrorCheckFlatFields_NoSpew( const datamap_t *pCurrentMap,
 		if ( flags & FTYPEDESC_NOERRORCHECK )
 			continue;
 
-#ifdef _GAMECONSOLE
-		if ( !(i & 0xF) )
-		{
-			PREFETCH360(pField, 128);
-		}
-#endif
-
 		fieldOffsetDest = pField->flatOffset[ m_nDestOffsetIndex ];
 		fieldOffsetSrc	= pField->flatOffset[ m_nSrcOffsetIndex ];
 
 		pOutputData = pDest + fieldOffsetDest;
-		PREFETCH360( pOutputData, 0 );
 		pInputData = pSrc + fieldOffsetSrc;
-		PREFETCH360( pInputData, 0 );
 
 		fieldSize = pField->fieldSize;
 		int nFieldType = pField->fieldType;
@@ -1526,20 +1488,11 @@ void CPredictionCopy::ErrorCheckFlatFields_Spew( const datamap_t *pCurrentMap, i
 		if ( flags & FTYPEDESC_NOERRORCHECK )
 			continue;
 
-#ifdef _GAMECONSOLE
-		if ( !(i & 0xF) )
-		{
-			PREFETCH360(pField, 128);
-		}
-#endif
-
 		fieldOffsetDest = pField->flatOffset[ m_nDestOffsetIndex ];
 		fieldOffsetSrc	= pField->flatOffset[ m_nSrcOffsetIndex ];
 
 		pOutputData = pDest + fieldOffsetDest;
-		PREFETCH360( pOutputData, 0 );
 		pInputData = pSrc + fieldOffsetSrc;
-		PREFETCH360( pInputData, 0 );
 
 		fieldSize = pField->fieldSize;
 		flags = pField->flags;

@@ -12,7 +12,6 @@
 #include "vgui_controls/Button.h"
 #include "tier1/utllinkedlist.h"
 #include "avi/ibik.h"
-#include "ixboxsystem.h"
 #include "matchmaking/imatchframework.h"
 
 namespace BaseModUI 

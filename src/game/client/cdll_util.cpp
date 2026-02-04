@@ -26,7 +26,6 @@
 #include <vgui/ISurface.h>
 #include <vgui/ILocalize.h>
 #include "view.h"
-#include "ixboxsystem.h"
 #include <ctype.h>
 #include <vgui_controls/EditablePanel.h>
 #include "vgui_int.h"

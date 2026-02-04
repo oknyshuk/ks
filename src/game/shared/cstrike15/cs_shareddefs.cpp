@@ -1,15 +1,60 @@
 //========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
 //
-// Purpose: 
+// Purpose:
 //
 //=============================================================================//
 
 #include "cbase.h"
 #include "cs_shareddefs.h"
 #include "gametypes/igametypes.h"
+#include "econ/econ_item_schema_minimal.h"
 
 // NOTE: This has to be the last file included!
 #include "tier0/memdbgon.h"
+
+// Item schema singleton
+static CEconItemSchema s_ItemSchema;
+static bool s_bSchemaInitialized = false;
+
+CEconItemSchema* GetItemSchema()
+{
+	// Initialize on first access
+	if ( !s_bSchemaInitialized )
+	{
+		s_bSchemaInitialized = true;
+		if ( !s_ItemSchema.BInit( "scripts/items/items_game.txt" ) )
+		{
+			Warning( "Failed to load item schema from scripts/items/items_game.txt\n" );
+		}
+	}
+	return &s_ItemSchema;
+}
+
+// Item found method strings stub
+const char *g_pszItemFoundMethodStrings[NUM_ITEM_FOUND_METHODS] = {
+	"#Item_Found",
+	"#Item_Crafted",
+	"#Item_Traded",
+	"#Item_Purchased",
+	"#Item_FoundInCrate",
+	"#Item_Gifted",
+	"#Item_Support",
+	"#Item_Promotion",
+	"#Item_Earned",
+	"#Item_Refunded",
+	"#Item_GiftWrapped",
+	"#Item_Foreign",
+	"#Item_CollectionReward",
+	"#Item_PreviewItem",
+	"#Item_PreviewItemPurchased",
+	"#Item_PeriodicScoreReward",
+	"#Item_Recycling",
+	"#Item_TournamentDrop",
+	"#Item_StockItem",
+	"#Item_QuestReward",
+	"#Item_LevelUpReward",
+	"#Item_Unknown",
+};
 
 const float CS_PLAYER_SPEED_RUN				= 260.0f;
 const float CS_PLAYER_SPEED_VIP				= 227.0f;

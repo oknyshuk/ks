@@ -24,6 +24,11 @@ unrelated to dx9:
 mat_fullbright 1 doesn't work properly on alpha materials in testroom_standards
 */
 
+// Console GPU alignment stub (not used on PC)
+#ifndef GPU_RESOLVE_ALIGNMENT
+#define GPU_RESOLVE_ALIGNMENT 1
+#endif
+
 #include "shaderapidx8.h"
 #include "shaderapidx8_global.h"
 #include "shadershadowdx8.h"
@@ -92,10 +97,6 @@ mat_fullbright 1 doesn't work properly on alpha materials in testroom_standards
 #include "togl/rendermechanism.h"
 
 #if defined( _X360 )
-#include "xbox/xbox_console.h"
-#include "xbox/xbox_vxconsole.h"
-#include "xbox/xbox_win32stubs.h"
-#include "xbox/xbox_launch.h"
 #endif
 #include "tier0/tslist.h"
 #ifndef _X360

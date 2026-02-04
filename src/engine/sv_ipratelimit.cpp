@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
+//========= Copyright ï¿½ 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: Handles all the functions for implementing remote access to the engine
 //
@@ -10,7 +10,7 @@
 #include "utlrbtree.h"
 #include "utlvector.h"
 #include "utlmap.h"
-#include "../gcsdk/steamextra/tier1/utlhashmaplarge.h"
+#include "tier1/utlhashmaplarge.h"
 #include "filesystem.h"
 #include "sv_log.h"
 #include "tier1/ns_address.h"

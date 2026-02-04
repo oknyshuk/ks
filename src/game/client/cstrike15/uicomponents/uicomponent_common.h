@@ -12,10 +12,6 @@
 #pragma once
 #endif
 
-#if defined( INCLUDE_SCALEFORM )
-#define USE_SCALEFORM_BINDINGS
-#endif
-
 #if defined ( PANORAMA_ENABLE )
 #define USE_PANORAMA_BINDINGS
 #endif // PANORAMA_ENABLE
@@ -394,20 +390,8 @@ ScaleformComponent_##category##_##eventname##_event SF_COMPONENT_EVENT_OBJECT_NA
 					{ "GetScaleformComponentEventParamString", reinterpret_cast<ScaleformUIFunctionHandler>( &T::ScaleformComponentHost_GetScaleformComponentEventParamString )} \
 
 
-		// Registration of GC job handler for scaleform components
-#define SF_COMPONENT_GC_REG_JOB( gcclientclass, cjobclass, cmsgclass, gcmsgid, ccomponentclass, ccomponentfn ) \
-class cjobclass : public GCSDK::CGCClientJob \
-				{ \
-public: \
-	cjobclass( GCSDK::CGCClient *pGCClient ) : GCSDK::CGCClientJob( pGCClient ) { } \
-	virtual bool BYieldingRunJobFromMsg( GCSDK::IMsgNetPacket *pNetPacket ) \
-					{ \
-	GCSDK::CProtoBufMsg<cmsgclass> msg( pNetPacket ); \
-	ccomponentclass::GetInstance()->ccomponentfn( msg.Body() ); \
-	return true; \
-					} \
-				}; \
-GC_REG_CLIENT_JOB( cjobclass, gcmsgid );
+		// Registration of GC job handler for scaleform components (disabled - GC removed)
+#define SF_COMPONENT_GC_REG_JOB( gcclientclass, cjobclass, cmsgclass, gcmsgid, ccomponentclass, ccomponentfn )
 
 inline char const * HelperSfGetStringParamSafe(SF_DEFAULT_PARAMS_DECL, int iParam, char const *szDefault = NULL)
 {
@@ -698,44 +682,9 @@ SF_COMPONENT_DEFINE_EVENT( category, eventname )
 				} \
 				}
 
-// Registration of GC job handler for ui component
-#define UI_COMPONENT_GC_REG_JOB( gcclientclass, cjobclass, cmsgclass, gcmsgid, ccomponentclass, ccomponentfn ) \
-class cjobclass : public GCSDK::CGCClientJob \
-{ \
-public: \
-	explicit cjobclass( GCSDK::CGCClient *pGCClient ) : GCSDK::CGCClientJob( pGCClient ) { } \
-	virtual bool BYieldingRunJobFromMsg( GCSDK::IMsgNetPacket *pNetPacket ) \
-				{ \
-	GCSDK::CProtoBufMsg<cmsgclass> msg( pNetPacket ); \
-	ccomponentclass::GetInstance()->ccomponentfn( msg.Body() ); \
-	return true; \
-				} \
-}; \
-GC_REG_CLIENT_JOB( cjobclass, gcmsgid );
+// Registration of GC job handler for ui component (disabled - GC removed)
+#define UI_COMPONENT_GC_REG_JOB( gcclientclass, cjobclass, cmsgclass, gcmsgid, ccomponentclass, ccomponentfn )
 
-
-// Function decl/impl helpers for ui component code that will be called by scaleform and/or javascript
-#if defined( INCLUDE_SCALEFORM )
-#define UI_COMPONENT_FUNCTION_NAME( fnname ) UiComponentFunction_##fnname
-#define UI_DEFAULT_PARAMS_DECL IUIMarshalHelper* pui, SFPARAMS obj
-#define UI_DEFAULT_PARAMS_PASS pui, obj
-
-#define UI_COMPONENT_FUNCTION( returntype, fnname ) \
-	void UI_COMPONENT_FUNCTION_NAME(fnname)( UI_DEFAULT_PARAMS_DECL )
-
-#define UI_COMPONENT_FUNCTION_IMPL( classname, fnname ) \
-	void classname::UI_COMPONENT_FUNCTION_NAME(fnname)( UI_DEFAULT_PARAMS_DECL )
-
-inline char const * HelperUiGetStringParamSafe( UI_DEFAULT_PARAMS_DECL, int iParam, char const *szDefault = NULL )
-{
-	if ( ( iParam >= 0 )
-		&& ( int( pui->Params_GetNumArgs( obj ) ) > iParam )
-		&& ( pui->Params_GetArgType( obj, iParam ) == IScaleformUI::VT_String ) )
-		return pui->Params_GetArgAsString( obj, iParam );
-	else
-		return szDefault;
-}
-#endif
 
 // Convert keyvalues to a json formatted string
 bool Helper_RecursiveKeyValuesToJSONString( const KeyValues* pKV, CUtlBuffer &outBuffer );

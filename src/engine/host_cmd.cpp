@@ -63,14 +63,11 @@
 #include "voice.h"
 #include "sv_rcon.h"
 #if defined( _X360 )
-#include "xbox/xbox_console.h"
-#include "xbox/xbox_launch.h"
 #elif defined( _PS3 )
 #include "ps3/ps3_console.h"
 #include "tls_ps3.h"
 #endif
 #include "filesystem/IQueuedLoader.h"
-#include "filesystem/IXboxInstaller.h"
 #include "toolframework/itoolframework.h"
 #include "fmtstr.h"
 #include "tier3/tier3.h"
@@ -88,9 +85,6 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #endif
-
-#include "ixboxsystem.h"
-extern IXboxSystem *g_pXboxSystem;
 
 extern IVEngineClient *engineClient;
 

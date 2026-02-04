@@ -4,10 +4,6 @@
 //
 //=====================================================================================//
 
-#ifndef _X360
-#include "xbox/xboxstubs.h"
-#endif
-
 #include "mm_framework.h"
 #include "match_searcher.h"
 

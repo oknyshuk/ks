@@ -45,7 +45,6 @@
 #include <vgui_controls/Controls.h>
 #include "GameEventManager.h"
 #if defined( _X360 )
-#include "xbox/xbox_launch.h"
 #endif
 
 extern IFileSystem *g_pFileSystem;

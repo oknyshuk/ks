@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
+//========= Copyright ï¿½ 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -14,9 +14,6 @@
 #include "icliententitylist.h"
 #include "enginesingleuserfilter.h"
 #include "snd_audio_source.h"
-#if defined(_X360)
-#include "xmp.h"
-#endif
 #include "tier0/vprof.h"
 #include "audio/private/snd_sfx.h"
 #include "cl_splitscreen.h"

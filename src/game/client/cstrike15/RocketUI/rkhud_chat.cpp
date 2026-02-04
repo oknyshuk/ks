@@ -5,6 +5,7 @@
 #include "hud_macros.h"
 #include "text_message.h"
 #include "c_cs_playerresource.h"
+#include <vgui/ILocalize.h>
 
 // min/max conflict handled by RMLUI_USE_CUSTOM_ASSERT
 

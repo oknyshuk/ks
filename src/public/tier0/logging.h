@@ -22,7 +22,6 @@
 
 // For XBX_** functions
 #if defined( _X360 )
-#include "xbox/xbox_console.h"
 #endif
 
 // Used by CColorizedLoggingListener

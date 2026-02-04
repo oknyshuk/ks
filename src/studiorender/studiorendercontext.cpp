@@ -19,11 +19,9 @@
 #include "tier1/callqueue.h"
 #include "cmodel.h"
 #include "tier0/vprof.h"
-#include <vjobs/ibmarkup_shared.h>
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
-
 
 // garymcthack - this should go elsewhere
 #define MAX_NUM_BONE_INDICES 4

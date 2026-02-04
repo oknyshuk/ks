@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
+//========= Copyright ï¿½ 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: Expose functions from sys_dll.cpp.
 //
@@ -18,7 +18,6 @@
 //-----------------------------------------------------------------------------
 // Forward declarations
 //-----------------------------------------------------------------------------
-class IHammer;
 class IDataCache;
 class IPhysics;
 class IMDLCache;
@@ -46,13 +45,9 @@ extern CreateInterfaceFn g_GameSystemFactory;
 //-----------------------------------------------------------------------------
 // Singleton interfaces
 //-----------------------------------------------------------------------------
-extern IHammer *g_pHammer;
 extern IPhysics *g_pPhysics;
 extern IAvi *avi;
 extern IBik *bik;
-#ifdef _PS3
-extern class IPS3SaveRestoreToUI *ps3saveuiapi;
-#endif
 extern IDedicatedExports *dedicated;
 
 //-----------------------------------------------------------------------------
@@ -63,7 +58,7 @@ extern AVIHandle_t g_hCurrentAVI;
 
 inline bool InEditMode()
 {
-	return g_pHammer != NULL;
+	return false;
 }
 
 

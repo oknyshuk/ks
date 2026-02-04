@@ -18,7 +18,6 @@
 #include "eiface.h"
 #include "igameevents.h"
 #ifdef _X360
-#include "ixboxsystem.h"
 #endif
 #include "eiface.h"
 

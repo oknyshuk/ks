@@ -10,11 +10,107 @@
 #pragma once
 #endif
 
-#if !defined (_GAMECONSOLE) && !defined( GC_DLL )
-	#include "econ_item_view.h"
-#endif
-
 #include "csgo_limits.h"
+
+//=============================================================================
+// Econ system type stubs (econ system removed)
+//=============================================================================
+typedef uint16 item_definition_index_t;
+#define INVALID_ITEM_DEF_INDEX ((item_definition_index_t)0)
+
+// Loadout slot positions
+enum loadout_positions_t
+{
+	LOADOUT_POSITION_INVALID = -1,
+	LOADOUT_POSITION_MELEE = 0,
+	LOADOUT_POSITION_C4,
+	LOADOUT_POSITION_SECONDARY0,
+	LOADOUT_POSITION_SECONDARY1,
+	LOADOUT_POSITION_SECONDARY2,
+	LOADOUT_POSITION_SECONDARY3,
+	LOADOUT_POSITION_SECONDARY4,
+	LOADOUT_POSITION_SMG0,
+	LOADOUT_POSITION_SMG1,
+	LOADOUT_POSITION_SMG2,
+	LOADOUT_POSITION_SMG3,
+	LOADOUT_POSITION_SMG4,
+	LOADOUT_POSITION_RIFLE0,
+	LOADOUT_POSITION_RIFLE1,
+	LOADOUT_POSITION_RIFLE2,
+	LOADOUT_POSITION_RIFLE3,
+	LOADOUT_POSITION_RIFLE4,
+	LOADOUT_POSITION_RIFLE5,
+	LOADOUT_POSITION_HEAVY0,
+	LOADOUT_POSITION_HEAVY1,
+	LOADOUT_POSITION_HEAVY2,
+	LOADOUT_POSITION_HEAVY3,
+	LOADOUT_POSITION_HEAVY4,
+	LOADOUT_POSITION_HEAVY5,
+	LOADOUT_POSITION_GRENADE0,
+	LOADOUT_POSITION_GRENADE1,
+	LOADOUT_POSITION_GRENADE2,
+	LOADOUT_POSITION_GRENADE3,
+	LOADOUT_POSITION_GRENADE4,
+	LOADOUT_POSITION_GRENADE5,
+	LOADOUT_POSITION_EQUIPMENT0,
+	LOADOUT_POSITION_EQUIPMENT1,
+	LOADOUT_POSITION_EQUIPMENT2,
+	LOADOUT_POSITION_EQUIPMENT3,
+	LOADOUT_POSITION_EQUIPMENT4,
+	LOADOUT_POSITION_CLOTHING_HANDS,
+	LOADOUT_POSITION_MUSICKIT,
+	LOADOUT_POSITION_FLAIR0,
+	LOADOUT_POSITION_SPRAY0,
+	LOADOUT_POSITION_COUNT,
+
+	// Cosmetic aliases (point to clothing_hands for now)
+	LOADOUT_POSITION_FIRST_COSMETIC = LOADOUT_POSITION_CLOTHING_HANDS,
+	LOADOUT_POSITION_LAST_COSMETIC = LOADOUT_POSITION_SPRAY0
+};
+
+// Loadout slot names for debugging
+static const char* g_szLoadoutStrings[] = {
+	"melee", "c4", "secondary0", "secondary1", "secondary2", "secondary3", "secondary4",
+	"smg0", "smg1", "smg2", "smg3", "smg4",
+	"rifle0", "rifle1", "rifle2", "rifle3", "rifle4", "rifle5",
+	"heavy0", "heavy1", "heavy2", "heavy3", "heavy4", "heavy5",
+	"grenade0", "grenade1", "grenade2", "grenade3", "grenade4", "grenade5",
+	"equipment0", "equipment1", "equipment2", "equipment3", "equipment4",
+	"clothing_hands", "musickit", "flair0", "spray0"
+};
+
+typedef uint64 itemid_t;
+typedef uint32 attrib_value_t;
+#define INVALID_ITEM_ID ((itemid_t)0)
+
+// Kill eater event types (StatTrak)
+enum kill_eater_event_t
+{
+	kKillEaterEvent_Kills = 0,
+	kKillEaterEvent_PlayerKill = 0,
+	kKillEaterEvent_MVPs,
+	kKillEaterEvent_COUNT
+};
+
+// Forward declarations for item schema stubs (defined in weapon_parse.h)
+class CEconItemDefinition;
+class CEconMusicDefinition;
+class CEconItemSchema;
+class CEconQuestDefinition;
+
+// CCStrike15ItemDefinition and GameItemDefinition_t are aliases for CEconItemDefinition
+typedef CEconItemDefinition CCStrike15ItemDefinition;
+typedef CEconItemDefinition GameItemDefinition_t;
+
+// Item found method strings (stub)
+#define NUM_ITEM_FOUND_METHODS 22
+extern const char *g_pszItemFoundMethodStrings[NUM_ITEM_FOUND_METHODS];
+
+// Econ attribute hook macros (stubs - econ system removed)
+#define CALL_ATTRIB_HOOK_FLOAT(value, name) ((void)0)
+#define CALL_ATTRIB_HOOK_INT(value, name) ((void)0)
+#define CALL_ATTRIB_HOOK_FLOAT_ON_OTHER(other, value, name) ((void)0)
+#define CALL_ATTRIB_HOOK_INT_ON_OTHER(other, value, name) ((void)0)
 
 /*======================*/
 //      Menu stuff      //

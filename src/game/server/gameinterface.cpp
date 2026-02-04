@@ -87,7 +87,6 @@
 #include "tier2/tier2.h"
 #include "particles/particles.h"
 #include "GameStats.h"
-#include "ixboxsystem.h"
 #include "matchmaking/imatchframework.h"
 #include "querycache.h"
 #include "particle_parse.h"
@@ -216,7 +215,6 @@ ISceneFileCache *scenefilecache = NULL;
 #ifdef SERVER_USES_VGUI
 IGameUIFuncs *gameuifuncs = NULL;
 #endif // SERVER_USES_VGUI
-IXboxSystem *xboxsystem = NULL;	// Xbox 360 only
 IScriptManager *scriptmanager = NULL;
 IBlackBox *blackboxrecorder = NULL;
 
@@ -762,8 +760,6 @@ bool CServerGameDLL::DLLInit( CreateInterfaceFn appSystemFactory,
 	if ( (scenefilecache = (ISceneFileCache *)appSystemFactory( SCENE_FILE_CACHE_INTERFACE_VERSION, NULL )) == NULL )
 		return false;
 	if ( (blackboxrecorder = (IBlackBox *)appSystemFactory(BLACKBOX_INTERFACE_VERSION, NULL)) == NULL )
-		return false;
-	if ( (xboxsystem = (IXboxSystem *)appSystemFactory( XBOXSYSTEM_INTERFACE_VERSION, NULL )) == NULL )
 		return false;
 
 	if ( !CommandLine()->CheckParm( "-noscripting") )
@@ -1354,17 +1350,9 @@ void CServerGameDLL::GameServerSteamAPIActivated( bool bActive )
 #if !defined( NO_STEAM )
 		steamgameserverapicontext->Init();
 #endif
-
-#if !defined( NO_STEAM ) && !defined( NO_STEAM_GAMECOORDINATOR )
-		GCClientSystem()->Activate();
-#endif //!defined( NO_STEAM ) && !defined( NO_STEAM_GAMECOORDINATOR )
 	}
 	else
 	{
-#if !defined( NO_STEAM ) && !defined( NO_STEAM_GAMECOORDINATOR )
-		GCClientSystem()->Shutdown();
-#endif //!defined( NO_STEAM ) && !defined( NO_STEAM_GAMECOORDINATOR )
-
 #if !defined( NO_STEAM )
 		steamgameserverapicontext->Clear();
 #endif
@@ -2761,12 +2749,6 @@ void CServerGameEnts::CheckTransmit( CCheckTransmitInfo *pInfo, const unsigned s
 	for ( int i=0; i < nEdicts; i++ )
 	{
 		int iEdict = pEdictIndices[i];
-#ifdef _GAMECONSOLE
-		if ( i < nEdicts-1 )
-		{
-			PREFETCH360(&pBaseEdict[pEdictIndices[i+1]],0);
-		}
-#endif
 
 		edict_t *pEdict = &pBaseEdict[iEdict];
 		int nFlags = pEdict->m_fStateFlags & (FL_EDICT_DONTSEND|FL_EDICT_ALWAYS|FL_EDICT_PVSCHECK|FL_EDICT_FULLCHECK);

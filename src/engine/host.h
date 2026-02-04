@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
+//========= Copyright ï¿½ 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -13,9 +13,6 @@
 #endif
 
 #include "convar.h"
-#ifdef _PS3
-#include "tls_ps3.h"
-#endif
 
 
 #define SCRIPT_DIR			"scripts/"
@@ -203,17 +200,13 @@ extern EUniverse GetSteamUniverse();
 // \return true iff PS3 (and only PS3) and Quitting (on user request or disk eject or other critical condition when we absolutely must quit within 10 seconds)
 //
 
-// 
+//
 // \return true iff PS3 (and only PS3) and Quitting (on user request or disk eject or other critical condition when we absolutely must quit within 10 seconds)
 //
 inline bool IsPS3QuitRequested()
 {
-#ifdef _PS3
-	return GetTLSGlobals()->bNormalQuitRequested;
-#else
 	// if not on PS3, do not disturb the old logic of host_state which has a lot of dependencies, because other platforms do not require the game to quit cleanly
-	return false; 
-#endif
+	return false;
 }
 
 

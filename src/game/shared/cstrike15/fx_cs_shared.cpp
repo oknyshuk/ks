@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
+//========= Copyright ï¿½ 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -25,6 +25,9 @@ ConVar snd_max_pitch_shift_inaccuracy("snd_max_pitch_shift_inaccuracy", "0.08", 
 #include "fx_impact.h"
 #include "c_rumble.h"
 #include "inputsystem/iinputsystem.h"
+
+// Steam API must be included before memdbgon.h
+#include "steam/steam_api.h"
 
 // NOTE: This has to be the last file included!
 #include "tier0/memdbgon.h"
@@ -398,11 +401,11 @@ void FX_FireBullets(
 			RumbleEffect( XBX_GetUserId( pPlayer->GetSplitScreenPlayerSlot() ), rumbleEffect, 0, RUMBLE_FLAG_RESTART );
 		}
 		
-		if ( rumbleEffect != RUMBLE_INVALID && rumbleEffect <= 6 && steam_controller_haptics.GetBool() && g_pInputSystem->IsSteamControllerActive() && steamapicontext->SteamController() )
+		if ( rumbleEffect != RUMBLE_INVALID && rumbleEffect <= 6 && steam_controller_haptics.GetBool() && g_pInputSystem->IsSteamControllerActive() && steamapicontext && steamapicontext->SteamController() )
 		{
-			ControllerHandle_t handles[MAX_STEAM_CONTROLLERS];
+			ControllerHandle_t handles[STEAM_CONTROLLER_MAX_COUNT];
 			int nControllers = steamapicontext->SteamController()->GetConnectedControllers( handles );
-	
+
 			for ( int i = 0; i < nControllers; ++i )
 			{
 				steamapicontext->SteamController()->TriggerHapticPulse( handles[ i ], k_ESteamControllerPad_Right, (2000*rumbleEffect)/5 );

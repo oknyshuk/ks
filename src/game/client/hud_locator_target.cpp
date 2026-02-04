@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2008, Valve Corporation, All rights reserved. ============//
+//========= Copyright ï¿½ 1996-2008, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: See header file
 //
@@ -35,7 +35,7 @@
 #define OFFSCREEN_ICON_POSITION_RADIUS 100
 
 #define CAPTION_FONT_HANDLE		( ( IsLocatorSplitscreen() ) ? ( m_hCaptionFont_ss ) : ( m_hCaptionFont ) )
-#define BUTTON_FONT_HANDLE		( g_pInputSystem->IsSteamControllerActive()?( m_hButtonFontSC ):( m_hButtonFont ) )
+#define BUTTON_FONT_HANDLE		( m_hButtonFont )
 
 #define ICON_DIST_TOO_FAR	(60.0f * 12.0f)
 
@@ -84,51 +84,6 @@ ConVar locator_screen_pos_y( "locator_screen_pos_y", "0.35", FCVAR_NONE, "Percen
 
 ConVar locator_split_maxwide_percent( "locator_split_maxwide_percent", "0.80f", FCVAR_CHEAT );
 ConVar locator_split_len( "locator_split_len", "0.5f", FCVAR_CHEAT );
-
-// This maps a controller origin to a localized string (like "GameUI_Icons_SC_L_Trigger"). That string
-// will then remap to a character (like 'L'), which will correspond to a character inside the SC button font file.
-static const char *g_SteamControllerOriginStrings[k_EControllerActionOrigin_Count] = 
-{
-	"SC_None",				// 	k_EControllerActionOrigin_None,
-	"SC_A_Button",			// 	k_EControllerActionOrigin_A,
-	"SC_B_Button",			// 	k_EControllerActionOrigin_B,
-	"SC_X_Button",			// 	k_EControllerActionOrigin_X,
-	"SC_Y_Button",			// 	k_EControllerActionOrigin_Y,
-	"SC_L_Shoulder",		// 	k_EControllerActionOrigin_LeftBumper,
-	"SC_R_Shoulder",		// 	k_EControllerActionOrigin_RightBumper,
-	"SC_L_Grip",			// 	k_EControllerActionOrigin_LeftGrip,
-	"SC_R_Grip",			// 	k_EControllerActionOrigin_RightGrip,
-	"SC_Start_Button",		// 	k_EControllerActionOrigin_Start,
-	"SC_Back_Button",		// 	k_EControllerActionOrigin_Back,
-	"SC_Left_Pad_Touch",	// 	k_EControllerActionOrigin_LeftPad_Touch,
-	"SC_Left_Pad_Swipe",	// 	k_EControllerActionOrigin_LeftPad_Swipe,
-	"SC_Left_Pad_Click",	// 	k_EControllerActionOrigin_LeftPad_Click,
-	"SC_Left_Pad_DPad_N",	// 	k_EControllerActionOrigin_LeftPad_DPadNorth,
-	"SC_Left_Pad_DPad_S",	// 	k_EControllerActionOrigin_LeftPad_DPadSouth,
-	"SC_Left_Pad_DPad_W",	// 	k_EControllerActionOrigin_LeftPad_DPadWest,
-	"SC_Left_Pad_DPad_E",	// 	k_EControllerActionOrigin_LeftPad_DPadEast,
-	"SC_Right_Pad_Touch",	// 	k_EControllerActionOrigin_RightPad_Touch,
-	"SC_Right_Pad_Swipe",	// 	k_EControllerActionOrigin_RightPad_Swipe,
-	"SC_Right_Pad_Click",	// 	k_EControllerActionOrigin_RightPad_Click,
-	"SC_Right_Pad_DPad_N",	// 	k_EControllerActionOrigin_RightPad_DPadNorth, // include dpad ones on right pad? 
-	"SC_Right_Pad_DPad_S",	// 	k_EControllerActionOrigin_RightPad_DPadSouth,
-	"SC_Right_Pad_DPad_W",	// 	k_EControllerActionOrigin_RightPad_DPadWest,
-	"SC_Right_Pad_DPad_E",	// 	k_EControllerActionOrigin_RightPad_DPadEast,
-	"SC_L_Trigger_Pull",	// 	k_EControllerActionOrigin_LeftTrigger_Pull,
-	"SC_L_Trigger_Click",	// 	k_EControllerActionOrigin_LeftTrigger_Click,
-	"SC_R_Trigger_Pull",	// 	k_EControllerActionOrigin_RightTrigger_Pull,
-	"SC_R_Trigger_Pull",	// 	k_EControllerActionOrigin_RightTrigger_Click,
-	"SC_L_Stick_Move",		// 	k_EControllerActionOrigin_LeftStick_Move,
-	"SC_L_Stick_Click",		// 	k_EControllerActionOrigin_LeftStick_Click,
-	"SC_Gyro_Move",			// 	k_EControllerActionOrigin_Gyro_Move,
-	"SC_Gyro_Pitch",		// 	k_EControllerActionOrigin_Gyro_Pitch,
-	"SC_Gyro_Yaw",			// 	k_EControllerActionOrigin_Gyro_Yaw,
-	"SC_Gyro_Roll"			// 	k_EControllerActionOrigin_Gyro_Roll,
-};
-
-#ifdef DEBUG
-ConVar sc_debug_origins( "sc_debug_origins", "0", FCVAR_ARCHIVE, "Debugging" );
-#endif
 
 bool IsLocatorSplitscreen( void )
 {
@@ -248,7 +203,7 @@ void CLocatorTarget::Deactivate( bool bNoFade )
 		m_wszCaption.RemoveAll();
 		m_wszCaption.AddToTail( (wchar_t)0 );
 
-		m_bWasControllerLast = m_bWasSteamControllerLast = false;
+		m_bWasControllerLast = false;
 	}
 	else if ( !( m_iEffectsFlags & LOCATOR_ICON_FX_FADE_OUT ) )
 	{
@@ -545,7 +500,7 @@ void CLocatorTarget::SetOffscreenIconTextureName( const char *pszTexture )
 }
 
 //------------------------------------
-void CLocatorTarget::SetBinding( const char *pszBinding )	
+void CLocatorTarget::SetBinding( const char *pszBinding )
 {
 	ASSERT_LOCAL_PLAYER_RESOLVABLE();
 	int nSlot = GET_ACTIVE_SPLITSCREEN_SLOT();
@@ -554,19 +509,12 @@ void CLocatorTarget::SetBinding( const char *pszBinding )
 	if ( !IsGameConsole() )
 	{
 		// Only show joystick binds if it's enabled and non-joystick if it's disabled
-		if ( g_pInputSystem->IsSteamControllerActive() )
-			nBindingLookupFlags = BINDINGLOOKUP_STEAMCONTROLLER_ONLY;
-		else
-			nBindingLookupFlags = input->ControllerModeActive() ? BINDINGLOOKUP_JOYSTICK_ONLY : BINDINGLOOKUP_KEYBOARD_ONLY;
+		nBindingLookupFlags = input->ControllerModeActive() ? BINDINGLOOKUP_JOYSTICK_ONLY : BINDINGLOOKUP_KEYBOARD_ONLY;
 	}
 
 	bool bIsControllerNow = ( nBindingLookupFlags != 0 );
 
-#ifdef DEBUG
-	if ( !sc_debug_origins.GetBool() && (m_bWasControllerLast == bIsControllerNow && m_bWasSteamControllerLast == g_pInputSystem->IsSteamControllerActive()) )
-#else
-	if ( m_bWasControllerLast == bIsControllerNow || m_bWasSteamControllerLast == g_pInputSystem->IsSteamControllerActive() )
-#endif
+	if ( m_bWasControllerLast == bIsControllerNow )
 	{
 		// We haven't toggled joystick enabled recently, so if it's the same bind, bail
 		if ( Q_strcmp( m_szBinding.String(), pszBinding ) == 0 )
@@ -576,7 +524,6 @@ void CLocatorTarget::SetBinding( const char *pszBinding )
 	}
 
 	m_bWasControllerLast = bIsControllerNow;
-	m_bWasSteamControllerLast = g_pInputSystem->IsSteamControllerActive();
 
 	m_szBinding = pszBinding;
 	m_pIcon_onscreen = NULL; // Dirty the onscreen icon so that the Locator will look up the new icon by name.
@@ -593,168 +540,27 @@ void CLocatorTarget::SetBinding( const char *pszBinding )
 
 	pchToken = nexttoken( szToken, pchToken, ';' );
 
-	// Get our steam controller handles ready
-	uint64 nSteamControllerHandles[STEAM_CONTROLLER_MAX_COUNT];
-	int nSteamControllerCount = 0;
-	if ( nBindingLookupFlags == BINDINGLOOKUP_STEAMCONTROLLER_ONLY )
-	{
-		if ( steamapicontext && steamapicontext->SteamController() )
-		{
-			nSteamControllerCount = steamapicontext->SteamController()->GetConnectedControllers( nSteamControllerHandles );
-		}
-	}
-
-// 	Msg("    m_bWasControllerLast     : %s\n", m_bWasControllerLast ? "TRUE" : "FALSE" );
-// 	Msg("    m_bWasSteamControllerLast: %s\n", m_bWasSteamControllerLast ? "TRUE" : "FALSE" );
-// 	Msg("    nSteamControllerCount    : %d\n", nSteamControllerCount );
-
 	while ( pchToken )
 	{
-		if ( nBindingLookupFlags == BINDINGLOOKUP_STEAMCONTROLLER_ONLY && nSteamControllerCount > 0 )
+		// Get the first parameter
+		int iTokenBindingCount = 0;
+		const char *pchBinding = engine->Key_LookupBindingEx( szToken, nSlot, iTokenBindingCount, nBindingLookupFlags );
+
+		while ( m_iBindingChoicesCount < MAX_LOCATOR_BINDINGS_SHOWN && pchBinding )
 		{
-			// What to do if they have multiple controllers connected?
-			uint64 nController = nSteamControllerHandles[0];
+			m_pchBindingChoices[ m_iBindingChoicesCount ] = pchBinding;
+			m_iBindChoicesOriginalToken[ m_iBindingChoicesCount ] = nOriginalToken;
+			++m_iBindingChoicesCount;
+			++iTokenBindingCount;
 
-			const char *pszSearchToken = szToken;
-			if ( pszSearchToken && pszSearchToken[0] == '+' )
-			{
-				pszSearchToken++;
-			}
-
-			const ControllerActionSetHandle_t handleActionSet = steamapicontext->SteamController()->GetActionSetHandle( "GameControls" );
-
-			// Get the handle for the game action matching the command.
-			ControllerDigitalActionHandle_t hDigitalAction = steamapicontext->SteamController()->GetDigitalActionHandle( pszSearchToken );
-			if ( hDigitalAction )
-			{
-				EControllerActionOrigin eOrigins[STEAM_CONTROLLER_MAX_ORIGINS];
-				memset( eOrigins, k_EControllerActionOrigin_None, sizeof( eOrigins ) );
-				steamapicontext->SteamController()->GetDigitalActionOrigins( nController, handleActionSet, hDigitalAction, eOrigins );
-				SetSteamControllerBindingToOrigin( eOrigins, nOriginalToken, pszSearchToken );
-			}
-			else
-			{
-				ControllerAnalogActionHandle_t hAnalogAction = steamapicontext->SteamController()->GetAnalogActionHandle( pszSearchToken );
-				if ( hAnalogAction )
-				{
-					EControllerActionOrigin eOrigins[STEAM_CONTROLLER_MAX_ORIGINS];
-					memset( eOrigins, k_EControllerActionOrigin_None, sizeof( eOrigins ) );
-					steamapicontext->SteamController()->GetDigitalActionOrigins( nController, handleActionSet, hAnalogAction, eOrigins );
-					SetSteamControllerBindingToOrigin( eOrigins, nOriginalToken, pszSearchToken );
-				}
-			}
-		}
-		else
-		{
-			// Get the first parameter
-			int iTokenBindingCount = 0;
-			const char *pchBinding = engine->Key_LookupBindingEx( szToken, nSlot, iTokenBindingCount, nBindingLookupFlags );
-
-			while ( m_iBindingChoicesCount < MAX_LOCATOR_BINDINGS_SHOWN && pchBinding )
-			{
-				m_pchBindingChoices[ m_iBindingChoicesCount ] = pchBinding;
-				m_iBindChoicesOriginalToken[ m_iBindingChoicesCount ] = nOriginalToken;
-				++m_iBindingChoicesCount;
-				++iTokenBindingCount;
-
-				pchBinding = engine->Key_LookupBindingEx( szToken, nSlot, iTokenBindingCount, nBindingLookupFlags );
-			}
+			pchBinding = engine->Key_LookupBindingEx( szToken, nSlot, iTokenBindingCount, nBindingLookupFlags );
 		}
 
 		nOriginalToken++;
 		pchToken = nexttoken( szToken, pchToken, ';' );
 	}
 
-	//Msg("    m_iBindingChoicesCount   : %d\n", m_iBindingChoicesCount );
-
-	if ( m_bWasSteamControllerLast && !m_iBindingChoicesCount )
-	{
-		// This is a hack until we can get origins in other game action sets.
-		// By setting this back to false, it'll force us to keep looking for origins until the
-		// game action set has switched from the main menu controls back to the FPS Controls.
-		m_bWasSteamControllerLast = false;
-	}
-
 	m_pulseStart = gpGlobals->curtime;
-}
-
-#ifdef DEBUG
-char *g_szControllerOrigins[] =
-{
-	"k_EControllerActionOrigin_None",
-	"k_EControllerActionOrigin_A",
-	"k_EControllerActionOrigin_B",
-	"k_EControllerActionOrigin_X",
-	"k_EControllerActionOrigin_Y",
-	"k_EControllerActionOrigin_LeftBumper",
-	"k_EControllerActionOrigin_RightBumper",
-	"k_EControllerActionOrigin_LeftGrip",
-	"k_EControllerActionOrigin_RightGrip",
-	"k_EControllerActionOrigin_Start",
-	"k_EControllerActionOrigin_Back",
-	"k_EControllerActionOrigin_LeftPad_Touch",
-	"k_EControllerActionOrigin_LeftPad_Swipe",
-	"k_EControllerActionOrigin_LeftPad_Click",
-	"k_EControllerActionOrigin_LeftPad_DPadNorth",
-	"k_EControllerActionOrigin_LeftPad_DPadSouth",
-	"k_EControllerActionOrigin_LeftPad_DPadWest",
-	"k_EControllerActionOrigin_LeftPad_DPadEast",
-	"k_EControllerActionOrigin_RightPad_Touch",
-	"k_EControllerActionOrigin_RightPad_Swipe",
-	"k_EControllerActionOrigin_RightPad_Click",
-	"k_EControllerActionOrigin_RightPad_DPadNorth", // include dpad ones on right pad? 
-	"k_EControllerActionOrigin_RightPad_DPadSouth",
-	"k_EControllerActionOrigin_RightPad_DPadWest",
-	"k_EControllerActionOrigin_RightPad_DPadEast",
-	"k_EControllerActionOrigin_LeftTrigger_Pull",
-	"k_EControllerActionOrigin_LeftTrigger_Click",
-	"k_EControllerActionOrigin_RightTrigger_Pull",
-	"k_EControllerActionOrigin_RightTrigger_Click",
-	"k_EControllerActionOrigin_LeftStick_Move",
-	"k_EControllerActionOrigin_LeftStick_Click",
-	"k_EControllerActionOrigin_Gyro_Move",
-	"k_EControllerActionOrigin_Gyro_Pitch",
-	"k_EControllerActionOrigin_Gyro_Yaw",
-	"k_EControllerActionOrigin_Gyro_Roll",
-};
-
-#endif
-
-//------------------------------------
-void CLocatorTarget::SetSteamControllerBindingToOrigin( EControllerActionOrigin *pOrigins, int nOriginalToken, const char *pszActionName )
-{
-#ifdef DEBUG
-	if ( sc_debug_origins.GetBool() )
-	{
-		bool bFound = false;
-		for( int i = 0; i < STEAM_CONTROLLER_MAX_ORIGINS; i++ )
-		{
-			if ( pOrigins[i] == k_EControllerActionOrigin_None )
-				break;
-
-			if ( !bFound )
-			{
-				bFound = true;
-				Msg("ORIGINS FOR %s\n", pszActionName);
-			}
-
-			Msg("   (%d) %s\n", pOrigins[i], g_szControllerOrigins[ pOrigins[i] ] );
-		}
-	}
-#endif
-
-	for( int i = 0; i < STEAM_CONTROLLER_MAX_ORIGINS; i++ )
-	{
-		if ( pOrigins[i] == k_EControllerActionOrigin_None )
-			break;
-
-		m_pchBindingChoices[ m_iBindingChoicesCount ] = g_SteamControllerOriginStrings[ pOrigins[i] ];
-		m_iBindChoicesOriginalToken[ m_iBindingChoicesCount ] = nOriginalToken;
-
-		m_iBindingChoicesCount++;
-		if ( m_iBindingChoicesCount >= MAX_LOCATOR_BINDINGS_SHOWN )
-			break;
-	}
 }
 
 //-----------------------------------------------------------------------------
@@ -784,14 +590,6 @@ const char *CLocatorTarget::UseBindingImage( char *pchIconTextureName, size_t bu
 	Assert( pchBinding );
 
 	if ( IsGameConsole() )
-	{
-		// Use a blank background for the button icons
-		Q_strncpy( pchIconTextureName, "icon_blank", bufSize );
-		return pchBinding;
-	}
-
-	// Steam controller overrides all actions now
-	if ( g_pInputSystem->IsSteamControllerActive() )
 	{
 		// Use a blank background for the button icons
 		Q_strncpy( pchIconTextureName, "icon_blank", bufSize );
@@ -976,8 +774,6 @@ private:
 	CPanelAnimationVar( vgui::HFont, m_hKeysFontSmall, "font", "InstructorKeyBindingsSmall" );
 #endif
 	
-	CPanelAnimationVar( vgui::HFont, m_hButtonFontSC, "font", "InstructorButtonsSteamController" );
-
 	CPanelAnimationVar( int, m_iShouldWrapStaticLocators, "WrapStaticLocators", "0" );
 
 

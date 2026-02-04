@@ -6,13 +6,8 @@
 
 
 #if defined(_WIN32)
-#if !defined(_X360)
 #include <winsock.h>
-#endif
 #undef SetPort // winsock screws with the SetPort string... *sigh*
-#define MSG_NOSIGNAL 0
-#elif defined( _PS3 )
-#include "net_ws_headers.h"
 #define MSG_NOSIGNAL 0
 #elif POSIX
 #include <sys/types.h>
@@ -37,7 +32,6 @@
 #include "cl_rcon.h"
 
 #if defined( _X360 )
-#include "xbox/xbox_win32stubs.h"
 #endif
 
 // memdbgon must be the last include file in a .cpp file!!!
@@ -278,12 +272,7 @@ void CRConServer::RunFrame()
 		}
 
 		// find out how much we have to read
-#ifdef _PS3
-		ExecuteNTimes( 5, Warning( "PS3 implementation of SV_RCON is disabled!\n" ) );
-		readLen = 0;
-#else
 		ioctlsocket( hSocket, FIONREAD, &readLen );
-#endif
 		if ( readLen > sizeof(int) ) // we have a command to process
 		{
 			CUtlBuffer & response = pData->packetbuffer;

@@ -10,7 +10,6 @@
 
 #if defined( WIN32 ) && !defined( _X360 ) && !defined( DX_TO_GL_ABSTRACTION )
 #include "winlite.h"
-#include "xbox/xboxstubs.h"
 #endif
 
 #if defined( IS_WINDOWS_PC ) && !defined( USE_SDL )
@@ -60,7 +59,6 @@
 #include "bink/bink.h"
 #endif
 #include "vgui/IVGui.h"
-#include "IHammer.h"
 #include "inputsystem/iinputstacksystem.h"
 #include "avi/ibik.h"
 #include "materialsystem/imaterial.h"
@@ -73,12 +71,8 @@
 #include <vgui/ISystem.h>
 
 #if defined( _X360 )
-#include "xbox/xbox_win32stubs.h"
 #include "snd_dev_xaudio.h"
 #include "xmp.h"
-#include "xbox/xbox_launch.h"
-#include "ixboxsystem.h"
-extern IXboxSystem *g_pXboxSystem;
 #endif
 
 #if defined( LINUX )
@@ -772,8 +766,6 @@ int CGame::WindowProc( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 #endif
 
 	case WM_SETFOCUS:
-		if ( g_pHammer )
-			g_pHammer->NoteEngineGotFocus();
 		break;
 	
 	case WM_SYSCHAR:

@@ -10,10 +10,8 @@
 #include "gamestringpool.h"
 #include "hltvreplaysystem.h"
 #include "rocketui/rocketui.h"
-
-#if !defined( _X360 )
-#include "xbox/xboxstubs.h"
-#endif
+#include "tier1/fmtstr.h"
+#include "vgui/ILocalize.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -147,20 +145,7 @@ void C_PlayerResource::UpdateXuids( void )
 
 		if ( newXuid != m_Xuids[i] )
 		{
-#if defined ( INCLUDE_SCALEFORM )
-            bool bAddRefSuccess = false;
-			if ( m_Xuids[i] != INVALID_XUID )
-			{
-				g_pScaleformUI->AvatarImageRelease( m_Xuids[i] );
-			}
-
-			if ( newXuid != INVALID_XUID )
-			{
-				bAddRefSuccess = g_pScaleformUI->AvatarImageAddRef( newXuid );
-			}
-#else
             bool bAddRefSuccess = true;
-#endif
             if ( bAddRefSuccess || ( newXuid == INVALID_XUID ) )
 			{
 				m_Xuids[i] = newXuid;
@@ -682,16 +667,6 @@ void C_PlayerResource::FillXuidText( int iIndex, char *buf, int bufSize )
 
 void C_PlayerResource::DeviceLost( void )
 {
-#if defined ( INCLUDE_SCALEFORM )
-    for ( int i = 1; i <= MAX_PLAYERS; i++ )
-	{
-		if ( m_Xuids[i] != INVALID_XUID )
-		{
-			g_pScaleformUI->AvatarImageRelease( m_Xuids[i] );
-			m_Xuids[i] = INVALID_XUID;
-		}
-	}
-#endif
 }
 
 void C_PlayerResource::DeviceReset( void *pDevice, void *pPresentParameters, void *pHWnd )

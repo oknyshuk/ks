@@ -1,16 +1,10 @@
-//========= Copyright © 1996-2009, Valve Corporation, All rights reserved. ============//
+//========= Copyright ï¿½ 1996-2009, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
 //=====================================================================================//
 
 #include "mm_framework.h"
-
-#ifdef _X360
-#include "xonline.h"
-#else
-#include "xbox/xboxstubs.h"
-#endif
 
 #include "matchsystem.h"
 #include "playermanager.h"

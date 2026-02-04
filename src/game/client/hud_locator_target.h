@@ -1,4 +1,4 @@
-//====== Copyright © 1996-2008, Valve Corporation, All rights reserved. =======
+//====== Copyright ï¿½ 1996-2008, Valve Corporation, All rights reserved. =======
 //
 // Purpose: Add entities to this system, and the Locator will maintain an arrow
 //			on the HUD that points to the entities when they are offscreen.
@@ -13,7 +13,7 @@
 
 
 #include "vgui_controls/PHandle.h"
-
+#include "steam/isteamcontroller.h"
 
 #define MAX_LOCATOR_BINDINGS_SHOWN	8
 #define MAX_LOCATOR_TARGETS			10

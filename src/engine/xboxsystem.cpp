@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
+//========= Copyright ï¿½ 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: Interface to Xbox 360 system functions. Helps deal with the async system and Live
 //			functions by either providing a handle for the caller to check results or handling
@@ -6,10 +6,12 @@
 //
 //=====================================================================================//
 
+// This entire file only compiles for Xbox 360
+#ifdef _X360
+
 #include "host.h"
 #include "tier3/tier3.h"
 #include "vgui/ILocalize.h"
-#include "ixboxsystem.h"
 
 #ifdef IS_WINDOWS_PC
 #include "winerror.h"
@@ -2554,4 +2556,4 @@ EXPOSE_SINGLE_INTERFACE_GLOBALVAR( CXOnline_Impl, IXOnline, XONLINE_INTERFACE_VE
 
 #endif
 
-
+#endif // _X360 - entire file guard

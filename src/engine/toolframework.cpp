@@ -1,4 +1,4 @@
-//====== Copyright © 1996-2005, Valve Corporation, All rights reserved. =======
+//====== Copyright ï¿½ 1996-2005, Valve Corporation, All rights reserved. =======
 //
 // Purpose: Engine system for loading and managing tools
 //
@@ -16,7 +16,6 @@
 #include "tier1/tier1.h"
 #include "filesystem_engine.h"
 #include "toolframework/itoolframework.h"
-#include "IHammer.h"
 #include "baseclientstate.h"
 #include "sys.h"
 #include "tier1/fmtstr.h"
@@ -26,7 +25,6 @@
 
 class IToolSystem;
 extern CreateInterfaceFn g_AppSystemFactory;
-extern IHammer *g_pHammer;
 typedef bool (*FnQuitHandler)( void *pvUserData );
 void EngineTool_InstallQuitHandler( void *pvUserData, FnQuitHandler func );
 
@@ -606,9 +604,6 @@ ToolModule_t *CToolFrameworkInternal::LoadToolsFromLibrary( const char *dllname 
 			tm->m_Systems.AddToTail( tool );
 		}
 	}
-
-	// If this is Hammer, get a pointer to the Hammer interface.
-	g_pHammer = (IHammer*)factory( INTERFACEVERSION_HAMMER, NULL );
 
 	return tm;
 }

@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
+//========= Copyright ï¿½ 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: BSP collision!
 //
@@ -3823,10 +3823,6 @@ bool FASTCALL IsBoxIntersectingRayNoLowest( fltx4 boxMin, fltx4  boxMax,
 	Assert( boxMin[1] <= boxMax[1] );
 	Assert( boxMin[2] <= boxMax[2] );
 	*/
-#if defined(_X360) && defined(DBGFLAG_ASSERT)
-	unsigned int r;
-	AssertMsg( (XMVectorGreaterOrEqualR(&r, SetWToZeroSIMD(boxMax),SetWToZeroSIMD(boxMin)), XMComparisonAllTrue(r)), "IsBoxIntersectingRay : boxmax < boxmin" );
-#endif
 
 	// test if delta is tiny along any dimension
 	bi32x4 bvDeltaTinyComponents = CmpInBoundsSIMD( delta, Four_Epsilons );

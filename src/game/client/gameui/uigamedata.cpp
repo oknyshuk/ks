@@ -17,7 +17,6 @@
 #include "vgui/ISurface.h"
 #include "EngineInterface.h"
 #include "tier0/dbg.h"
-#include "ixboxsystem.h"
 #include "GameUI_Interface.h"
 #include "game/client/IGameClientExports.h"
 #include "fmtstr.h"

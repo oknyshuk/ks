@@ -40,7 +40,6 @@
 #include "edict.h"
 #include "../../pure_server.h"
 #include "filesystem/IQueuedLoader.h"
-#include "filesystem/IXboxInstaller.h"
 #include "voice.h"
 #include "snd_dma.h"
 #include "snd_mixgroups.h"
@@ -53,20 +52,6 @@
 #include "cl_steamauth.h"
 
 #include <vgui/ISurface.h>
-
-
-#if defined( _X360 )
-#include "xbox/xbox_console.h"
-#include "xmp.h"
-#include "avi/ibik.h"
-extern IBik *bik;
-#elif defined( _PS3 )
-#include "ps3/ps3_console.h"
-#include "snd_ps3_mp3dec.h"
-void HandleRemainingFrameInfos( int nMp3DecoderSlot, bool bBlocking );
-#include "avi/ibik.h"
-extern IBik *bik;
-#endif
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"

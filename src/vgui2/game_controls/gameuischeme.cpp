@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
+//========= Copyright ï¿½ 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -22,9 +22,7 @@
 #include "vgui_controls/controls.h"  // has system() 
 
 #if defined( _X360 )
-#include "xbox/xbox_win32stubs.h"
 #endif
-#include "xbox/xboxstubs.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -44,13 +42,15 @@ static void HelperGetLanguage( char *pLanguageBuf, int bufSize )
 	bool bValid = false;
 	if ( IsPC() )
 	{
-		bValid = vgui::system()->GetRegistryString( "HKEY_CURRENT_USER\\Software\\Valve\\Steam\\Language", pLanguageBuf, bufSize - 1 );	
+		bValid = vgui::system()->GetRegistryString( "HKEY_CURRENT_USER\\Software\\Valve\\Steam\\Language", pLanguageBuf, bufSize - 1 );
 	}
+#if defined( _X360 ) || defined( _PS3 )
 	else
 	{
 		Q_strncpy( pLanguageBuf, XBX_GetLanguageString(), bufSize );
 		bValid = true;
 	}
+#endif
 
 	if ( !bValid )
 	{
@@ -845,11 +845,13 @@ int CGameUIScheme::GetMinimumFontHeightForCurrentLanguage( const char *pLanguage
 			bValid = vgui::system()->GetRegistryString( "HKEY_CURRENT_USER\\Software\\Valve\\Steam\\Language", language, sizeof(language)-1 );
 		}
 	}
+#if defined( _X360 ) || defined( _PS3 )
 	else
 	{
 		Q_strncpy( language, XBX_GetLanguageString(), sizeof( language ) );
 		bValid = true;
 	}
+#endif
 
 	if ( bValid )
 	{

@@ -8,7 +8,6 @@
 
 #include "c_keyvalue_saver.h"
 #include "filesystem.h"
-#include "ixboxsystem.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"

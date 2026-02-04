@@ -14,7 +14,6 @@
 #include "MapReslistGenerator.h"
 #include "tier2/socketcreator.h"
 #if defined( _X360 )
-#include "xbox/xbox_console.h"
 #endif
 #include "toolframework/itoolframework.h"
 #include "netconsole.h"
@@ -732,12 +731,7 @@ Handles cursor positioning, line wrapping, etc
 */
 static bool g_fColorPrintf = false;
 static bool g_bInColorPrint = false;
-#ifdef _PS3
-#include "tls_ps3.h"
-#define g_bInSpew GetTLSGlobals()->bEngineConsoleIsInSpew
-#else
 extern CTHREADLOCALINT g_bInSpew;
-#endif
 
 void Con_Printf( const char *fmt, ... );
 

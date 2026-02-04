@@ -11,6 +11,9 @@
 #pragma once
 #endif
 
+// AsyncHandle_t stub (was from Xbox async system)
+typedef void* AsyncHandle_t;
+
 #if !defined( NO_STEAM )
 	#include "utlvector.h"
 	#include "clientsteamcontext.h"
@@ -39,10 +42,8 @@ inline BaseModUI::CBaseModPanel * BasePanel() { return &BaseModUI::CBaseModPanel
 #include "tier1/commandbuffer.h"
 #include "vgui_controls/footerpanel.h"
 
-#include "ixboxsystem.h"
 
 #if !defined( _GAMECONSOLE )
-#include "xbox/xboxstubs.h"
 #endif
 
 enum

@@ -1,4 +1,4 @@
-//====== Copyright © 1996-2005, Valve Corporation, All rights reserved. =======
+//====== Copyright ï¿½ 1996-2005, Valve Corporation, All rights reserved. =======
 //
 // Purpose: Container that allows client & server access to data in player inventories & loadouts
 //
@@ -12,6 +12,7 @@
 
 #include "item_inventory.h"
 #include "cs_shareddefs.h"
+#include "weapon_parse.h"
 
 #define LOADOUT_SLOT_USE_BASE_ITEM		0
 
@@ -83,6 +84,20 @@ public:
 	// Used to reject items on the backend for inclusion into this inventory.
 	// Mostly used for division of bags into different in-game inventories.
 	virtual bool		ItemShouldBeIncluded( int iItemPosition );
+
+	// Stub for attribute value lookup
+	float				FindInventoryItemWithMaxAttributeValue( const char *szItemType, const char *szAttrClass ) { return -1.0f; }
+
+	// Stub for inventory item lookup
+	CEconItemView		*GetInventoryItemByItemID( uint64 itemID ) { return NULL; }
+
+	// Stub for active quest
+	uint32				GetActiveQuestID() const { return 0; }
+
+	// Stub for loadout item lookup
+	CEconItemView		*GetItemInLoadout( int iTeam, int iSlot ) { return NULL; }
+	CEconItemView		*GetItemInLoadoutFilteredByProhibition( int iTeam, int iSlot ) { return NULL; }
+	bool				InventoryRetrievedFromSteamAtLeastOnce() const { return false; }
 
 protected:
 	// Item movement functions that are called by the inventory manager
@@ -209,6 +224,7 @@ public:
 
 	// Returns the item data for the base item in the loadout slot for a given class
 	CScriptCreatedItem	*GetBaseItemForClass( int iSlot );
+	CEconItemView	*GetBaseItemForTeam( int iTeam, int iSlot ) { return NULL; }
 	void				GenerateBaseItems( void );
 
 	// Gets the specified inventory for the steam ID
@@ -216,6 +232,16 @@ public:
 
 	// Returns the item in the specified loadout slot for a given class
 	CScriptCreatedItem	*GetItemInLoadoutForClass( int iClass, int iSlot, CSteamID *pID = NULL );
+	CEconItemView		*GetItemInLoadoutForTeam( int iTeam, int iSlot, CSteamID *pID = NULL ) { return NULL; }
+
+	// Request inventory from Steam (stub - econ removed)
+	void				SteamRequestInventory( CCSPlayerInventory *pInventory, CSteamID steamID ) {}
+
+	// Stub for finding or creating reference items
+	CEconItemView		*FindOrCreateReferenceEconItem( uint64 itemID ) { return NULL; }
+
+	// Stub for inventory lookup by player
+	CCSPlayerInventory	*GetInventoryForPlayer( const CSteamID& steamID ) { return NULL; }
 
 private:
 	// Base items, returned for slots that the player doesn't have anything in
@@ -228,6 +254,7 @@ public:
 	virtual void		UpdateLocalInventory( void );
 	CPlayerInventory	*GetLocalInventory( void ) { return &m_LocalInventory; }
 	CCSPlayerInventory	*GetLocalTFInventory( void );
+	CCSPlayerInventory	*GetLocalCSInventory( void ) { return &m_LocalInventory; }
 
 	// Try and equip the specified item in the specified class's loadout slot
 	bool				EquipItemInLoadout( int iClass, int iSlot, globalindex_t iGlobalIndex );

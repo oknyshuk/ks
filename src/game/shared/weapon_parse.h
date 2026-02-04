@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
+//========= Copyright ï¿½ 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: Weapon data file parsing, shared by game & client dlls.
 //
@@ -15,13 +15,279 @@
 #include "GameEventListener.h"
 #include "tier1/utlsortvector.h"
 #include "gamestringpool.h"
+#include "econ/econ_item_schema_minimal.h"
 
 #ifdef CLIENT_DLL
 #define CEconItemView C_EconItemView
 #endif
 
 class IFileSystem;
-class CEconItemView;
+
+//=============================================================================
+// Econ item system stubs (econ system removed)
+//=============================================================================
+
+// Size constants
+const int k_nKiloByte = 1024;
+
+// CEconPersonaDataPublic stub
+class CEconPersonaDataPublic
+{
+public:
+	struct Commendation_t {
+		int cmd_leader() const { return 0; }
+		int cmd_teaching() const { return 0; }
+		int cmd_friendly() const { return 0; }
+	};
+	struct Data_t {
+		int player_level() const { return 0; }
+		Commendation_t commendation() const { return Commendation_t(); }
+	};
+	virtual ~CEconPersonaDataPublic() {}
+	const Data_t& Obj() const { static Data_t s; return s; }
+};
+
+// Item quality enums stub
+enum
+{
+	AE_NORMAL = 0,
+	AE_UNIQUE = 1,
+};
+
+// Operator enums stub
+enum
+{
+	k_EOperator_String_EQ = 0,
+};
+
+// Item generation stub
+class CItemSelectionCriteria
+{
+public:
+	void SetQuality( int ) {}
+	void BAddCondition( const char*, int, const char*, bool ) {}
+};
+
+class CItemGeneration
+{
+public:
+	CBaseEntity* GenerateItemFromScriptData( void*, const Vector&, const QAngle&, const char* ) { return NULL; }
+	CBaseEntity* GenerateRandomItem( void*, const Vector&, const QAngle& ) { return NULL; }
+};
+inline CItemGeneration* ItemGeneration() { static CItemGeneration s; return &s; }
+
+// Combined item ID stub
+inline uint64 CombinedItemIdMakeFromDefIndexAndPaint( uint16, int ) { return 0; }
+
+// Unacknowledged item reasons stub
+enum unacknowledged_item_inventory_positions_t
+{
+	UNACK_ITEM_DROPPED = 1,
+	UNACK_ITEM_CRAFTED,
+	UNACK_ITEM_TRADED,
+	UNACK_ITEM_PURCHASED,
+	UNACK_ITEM_FOUND_IN_CRATE,
+	UNACK_ITEM_GIFTED,
+	UNACK_ITEM_SUPPORT,
+	UNACK_ITEM_PROMOTION,
+	UNACK_ITEM_EARNED,
+	UNACK_ITEM_REFUNDED,
+};
+
+// Sticker attribute IDs stub
+enum EStickerAttributeType
+{
+	k_EStickerAttribute_ID = 0,
+	k_EStickerAttribute_Wear,
+	k_EStickerAttribute_Scale,
+	k_EStickerAttribute_Rotation,
+};
+
+// Locchar type
+typedef wchar_t locchar_t;
+
+// Get unacknowledged reason stub
+inline int GetUnacknowledgedReason( uint32 ) { return 0; }
+
+// Schema attribute handle stub
+class CSchemaAttributeDefHandle
+{
+public:
+	CSchemaAttributeDefHandle( const char* ) {}
+	operator bool() const { return false; }
+	bool operator!() const { return true; }
+};
+
+// Attribute definition stub
+class CEconItemAttributeDefinition
+{
+public:
+	const char *GetDefinitionName() const { return ""; }
+	uint16 GetDefinitionIndex() const { return 0; }
+};
+
+// Kill eater attribute pair stubs
+inline const CEconItemAttributeDefinition* GetKillEaterAttrPair_Score( int ) { return NULL; }
+inline const CEconItemAttributeDefinition* GetKillEaterAttrPair_Type( int ) { return NULL; }
+
+// Music definition stub
+class CEconMusicDefinition
+{
+public:
+	const char *GetName() const { return ""; }
+};
+
+// Forward declaration
+class CEconItemDefinition;
+class CEconQuestDefinition;
+
+// Quest definition stub
+class CEconQuestDefinition
+{
+public:
+	uint32 GetQuestID() const { return 0; }
+	const char* GetQuestExpression() const { return ""; }
+	const char* GetQuestConVars() const { return ""; }
+	const char* GetGameMode() const { return ""; }
+	const char* GetMapGroup() const { return ""; }
+	const char* GetMap() const { return ""; }
+	int GetTargetTeam() const { return 0; }
+	KeyValues* GetStringTokens() const { return NULL; }
+	const char* GetShortNameLocToken() const { return ""; }
+	const CUtlVector<int>& GetQuestPoints() const { static CUtlVector<int> empty; return empty; }
+};
+
+// Taunt definition stub
+class CEconTauntDefinition
+{
+public:
+	const char* GetName() const { return ""; }
+	const char* GetSequenceName() const { return ""; }
+};
+
+// Paint kit stub
+class CPaintKit
+{
+public:
+	const char* GetName() const { return ""; }
+	int nID;
+};
+
+// Sticker kit stub
+class CStickerKit
+{
+public:
+	CUtlString sMaterialPath;
+	CUtlString sMaterialPathNoDrips;
+	int nRarity;
+};
+
+// Graffiti tint definition stub
+class CEconGraffitiTintDefinition
+{
+public:
+	uint32 GetHexColorRGB() const { return 0xFFFFFF; }
+};
+
+// Combined tint ID helper stub
+inline uint8 CombinedTintIDGetHSVID( uint32 ) { return 0; }
+
+// Viewmodel hand activity translation stub
+inline int TranslateViewmodelHandActivity( int activity ) { return activity; }
+
+// Pro player data stub
+class CProPlayerData
+{
+public:
+	const char* GetName() const { return ""; }
+};
+
+// GetItemSchema() is defined in cs_shareddefs.cpp
+CEconItemSchema *GetItemSchema();
+// GEconItemSchema returns the same as GetItemSchema
+inline CEconItemSchema& GEconItemSchema() { return *GetItemSchema(); }
+
+// CEconItemView - Wrapper for item data with pointer to real definition
+class CEconItemView
+{
+public:
+	CEconItemView() : m_pItemDef( NULL ), m_nItemDefIndex( 0 ) {}
+
+	// Initialize from a definition name (looks up in schema)
+	void Init( const char *pszDefName )
+	{
+		m_pItemDef = GetItemSchema()->GetItemDefinitionByName( pszDefName );
+		if ( m_pItemDef )
+			m_nItemDefIndex = m_pItemDef->GetDefinitionIndex();
+	}
+
+	// Initialize from a definition index
+	void Init( uint16 nDefIndex )
+	{
+		m_nItemDefIndex = nDefIndex;
+		m_pItemDef = GetItemSchema()->GetItemDefinition( nDefIndex );
+	}
+
+	// Initialize from an existing definition pointer
+	void Init( CEconItemDefinition *pDef )
+	{
+		m_pItemDef = pDef;
+		if ( pDef )
+			m_nItemDefIndex = pDef->GetDefinitionIndex();
+	}
+
+	uint16 GetItemIndex() const { return m_nItemDefIndex; }
+	uint64 GetItemID() const { return m_nItemDefIndex; }
+	// Always returns non-NULL (fallback to static default for backwards compatibility with stubs)
+	CEconItemDefinition *GetItemDefinition() const;
+	CEconItemDefinition *GetStaticData() const;
+	const char *GetCustomDesc() const { return NULL; }
+	bool IsValid() const { return m_pItemDef != NULL; }
+	uint32 GetTauntID() const { return 0; }
+	const CPaintKit *GetCustomPaintKit() const { return NULL; }
+	int GetCustomPaintKitIndex() const { return 0; }
+	int GetRarity() const { return 0; }
+	const wchar_t *GetItemName() const { return L""; }
+	uint32 GetStickerAttributeBySlotIndexInt( int, int, uint32 defVal ) const { return defVal; }
+	const char *GetMagazineModel() const { return NULL; }
+	const char *GetScopeLensMaskModel() const { return NULL; }
+	const char *GetUidModel() const { return NULL; }
+	const char *GetStatTrakModelByType( int ) const { return NULL; }
+	const char *GetCustomName() const { return NULL; }
+	void GetKillEaterTypes( CUtlSortVector<uint32>& ) const {}
+	int GetKillEaterValueByType( int ) const { return -1; }
+	uint32 GetAccountID() const { return 0; }
+	int GetNumSupportedStickerSlots() const { return 0; }
+	bool ItemHasAnyStickersApplied() const { return false; }
+	IMaterial *GetStickerIMaterialBySlotIndex( int, bool ) const { return NULL; }
+	const char *GetStickerWorldModelBoneParentNameBySlotIndex( int ) const { return NULL; }
+	Vector GetStickerSlotWorldProjectionStartBySlotIndex( int ) const { return vec3_origin; }
+	Vector GetStickerSlotWorldProjectionEndBySlotIndex( int ) const { return vec3_origin; }
+	uint64 GetFauxItemIDFromDefinitionIndex() const { return m_nItemDefIndex; }
+	template<typename T>
+	bool FindAttribute( const CSchemaAttributeDefHandle&, T* ) const { return false; }
+	template<typename T>
+	bool FindAttribute( const CEconItemAttributeDefinition*, T* ) const { return false; }
+	// Single-argument FindAttribute (for existence check)
+	bool FindAttribute( const CSchemaAttributeDefHandle& ) const { return false; }
+	bool FindAttribute( const CEconItemAttributeDefinition* ) const { return false; }
+	// Update networked attributes stub
+	void UpdateNetworkedDynamicAttributesForDemos( uint16, float ) {}
+
+private:
+	CEconItemDefinition *m_pItemDef;
+	uint16 m_nItemDefIndex;
+};
+
+// Stub for FindAttribute_UnsafeBitwiseCast
+template<typename T, typename U, typename V>
+inline bool FindAttribute_UnsafeBitwiseCast( U*, const CSchemaAttributeDefHandle&, V* ) { return false; }
+template<typename T, typename U, typename V>
+inline bool FindAttribute_UnsafeBitwiseCast( U*, const CEconItemAttributeDefinition*, V* ) { return false; }
+
+#ifdef CLIENT_DLL
+typedef CEconItemView C_EconItemView;
+#endif
 
 typedef unsigned short WEAPON_FILE_INFO_HANDLE;
 

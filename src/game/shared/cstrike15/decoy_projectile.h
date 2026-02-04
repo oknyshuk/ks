@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
+//========= Copyright ï¿½ 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -12,6 +12,7 @@
 
 
 #include "basecsgrenade_projectile.h"
+#include "cs_shareddefs.h"
 
 
 #if defined( CLIENT_DLL )

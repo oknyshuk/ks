@@ -222,7 +222,6 @@ def build(bld):
         "networkstringtableclient.cpp",
         "../public/scratchpad3d.cpp",
         "servermsghandler.cpp",
-        "xboxsystem.cpp",
         "../common/SourceAppInfo.cpp",
         "../engine/paint.cpp",
         "../public/phonemeconverter.cpp",

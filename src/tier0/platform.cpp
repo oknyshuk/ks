@@ -19,7 +19,6 @@
 #include <assert.h>
 #include "tier0/platform.h"
 #if defined( _X360 )
-#include "xbox/xbox_console.h"
 #endif
 #include "tier0/threadtools.h"
 #include "tier0/minidump.h"
@@ -264,23 +263,12 @@ int32 Plat_daylight( void )
 void Platform_gmtime( uint64 nTime, struct tm *pTime )
 {
 	time_t tmtTime = nTime;
-#ifdef _PS3
-	struct tm * tmp = gmtime( &tmtTime );
-	* pTime = * tmp;
-#else
 	gmtime_s( pTime, &tmtTime );
-#endif
 }
 
 time_t Plat_timegm( struct tm *timeptr )
 {
-#ifndef _GAMECONSOLE
 	return _mkgmtime( timeptr );
-#else
-	int *pnCrashHereBecauseConsolesDontSupportMkGmTime = 0;
-	*pnCrashHereBecauseConsolesDontSupportMkGmTime = 0;
-	return 0;
-#endif
 }
 
 void Plat_GetModuleFilename( char *pOut, int nMaxBytes )
@@ -301,7 +289,7 @@ void Plat_GetModuleFilename( char *pOut, int nMaxBytes )
 
 void Plat_ExitProcess( int nCode )
 {
-#if defined( _WIN32 ) && !defined( _X360 )
+#if defined( _WIN32 )
 	// We don't want global destructors in our process OR in any DLL to get executed.
 	// _exit() avoids calling global destructors in our module, but not in other DLLs.
 	const char *pchCmdLineA = Plat_GetCommandLineA();
@@ -310,10 +298,7 @@ void Plat_ExitProcess( int nCode )
 		int *x = NULL; *x = 1; // cause a hard crash, GC is not allowed to exit voluntarily from gc.dll
 	}
 	TerminateProcess( GetCurrentProcess(), nCode );
-#elif defined(_PS3)
-	// We do not use this path to exit on PS3 (naturally), rather we want a clear crash:
-	int *x = NULL; *x = 1;
-#else	
+#else
 	_exit( nCode );
 #endif
 }
@@ -356,63 +341,43 @@ void GetCurrentDate( int *pDay, int *pMonth, int *pYear )
 	*pYear = long_time.tm_year + 1900;
 }
 
-// Wraps the thread-safe versions of asctime. buf must be at least 26 bytes 
+// Wraps the thread-safe versions of asctime. buf must be at least 26 bytes
 char *Plat_asctime( const struct tm *tm, char *buf, size_t bufsize )
 {
-#ifdef _PS3
-	snprintf( buf, bufsize, "%s", asctime(tm) );
-	return buf;
-#else
 	if ( EINVAL == asctime_s( buf, bufsize, tm ) )
 		return NULL;
 	else
 		return buf;
-#endif
 }
 
 
-// Wraps the thread-safe versions of ctime. buf must be at least 26 bytes 
+// Wraps the thread-safe versions of ctime. buf must be at least 26 bytes
 char *Plat_ctime( const time_t *timep, char *buf, size_t bufsize )
 {
-#ifdef _PS3
-	snprintf( buf, bufsize, "%s", ctime( timep ) );
-	return buf;
-#else
 	if ( EINVAL == ctime_s( buf, bufsize, timep ) )
 		return NULL;
 	else
 		return buf;
-#endif
 }
 
 
 // Wraps the thread-safe versions of gmtime
 struct tm *Platform_gmtime( const time_t *timep, struct tm *result )
 {
-#ifdef _PS3
-	*result = *gmtime( timep );
-	return result;
-#else
 	if ( EINVAL == gmtime_s( result, timep ) )
 		return NULL;
 	else
 		return result;
-#endif
 }
 
 
 // Wraps the thread-safe versions of localtime
 struct tm *Plat_localtime( const time_t *timep, struct tm *result )
 {
-#ifdef _PS3
-	*result = *localtime( timep );
-	return result;
-#else
 	if ( EINVAL == localtime_s( result, timep ) )
 		return NULL;
 	else
 		return result;
-#endif
 }
 
 bool vtune( bool resume )

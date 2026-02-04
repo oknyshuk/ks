@@ -5,11 +5,6 @@
 //=============================================================================//
 
 #include "client_pch.h"
-#ifdef _PS3
-void CL_CreateTextureListPanel( vgui::Panel * ) {}
-void CL_TextureListPanel_ClearState() {}
-void VGui_UpdateTextureListPanel() {}
-#else
 #include "ivideomode.h"
 #include "client_class.h"
 #include "icliententitylist.h"
@@ -3056,5 +3051,3 @@ void mat_texture_list_off_f()
 	mat_texture_list.SetValue( 0 );
 	s_eTxListPanelRequest = TXR_HIDE;
 }
-
-#endif

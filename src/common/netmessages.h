@@ -1,6 +1,6 @@
 //========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
 //
-// Purpose: 
+// Purpose:
 //
 //=============================================================================//
 
@@ -48,11 +48,7 @@
 
 #include "netmessages.pb.h"
 
-#if !defined( _X360 )
-#include "xbox/xboxstubs.h"
-#endif
-
-template< int msgType, typename PB_OBJECT_TYPE, int groupType = INetChannelInfo::GENERIC, bool bReliable = true > 
+template< int msgType, typename PB_OBJECT_TYPE, int groupType = INetChannelInfo::GENERIC, bool bReliable = true >
 class CNetMessagePB : public INetMessage, public PB_OBJECT_TYPE
 {
 public:
@@ -68,7 +64,7 @@ public:
 	virtual ~CNetMessagePB()
 	{
 	}
-	
+
 	virtual bool ReadFromBuffer( bf_read &buffer )
 	{
 		int size = buffer.ReadVarInt32();
@@ -166,9 +162,9 @@ public:
 		return m_toString.c_str();
 	}
 
-	virtual int GetType() const 
-	{ 
-		return msgType; 
+	virtual int GetType() const
+	{
+		return msgType;
 	}
 
 	virtual size_t GetSize() const
@@ -176,17 +172,17 @@ public:
 		return sizeof( *this );
 	}
 
-	virtual const char *GetName() const 
-	{ 
+	virtual const char *GetName() const
+	{
 		if ( s_typeName.empty() )
 		{
-			s_typeName = PB_OBJECT_TYPE::GetTypeName(); 
+			s_typeName = PB_OBJECT_TYPE::GetTypeName();
 		}
 		return s_typeName.c_str();
 	}
 
-	virtual int GetGroup() const 
-	{ 
+	virtual int GetGroup() const
+	{
 		return groupType;
 	}
 
@@ -195,9 +191,9 @@ public:
 		m_bReliable = state;
 	}
 
-	virtual bool IsReliable() const 
-	{ 
-		return m_bReliable; 
+	virtual bool IsReliable() const
+	{
+		return m_bReliable;
 	}
 
 	virtual INetMessage *Clone() const
@@ -215,7 +211,7 @@ protected:
 	static std::string s_typeName;
 };
 
-template< int msgType, typename PB_OBJECT_TYPE, int groupType , bool bReliable > 
+template< int msgType, typename PB_OBJECT_TYPE, int groupType , bool bReliable >
 std::string CNetMessagePB< msgType, PB_OBJECT_TYPE, groupType , bReliable >::s_typeName;
 
 class CNetMessageBinder
@@ -231,7 +227,7 @@ public:
 		delete m_pBind;
 	}
 
-	template< class _N > 
+	template< class _N >
 	void Bind( INetChannel *pNetChannel, CUtlDelegate< bool ( const typename _N::PBType_t & obj ) > handler )
 	{
 		delete m_pBind;
@@ -276,8 +272,8 @@ private:
 			return _N::sk_Type;
 		}
 
-		virtual void SetNetChannel(INetChannel * netchan) 
-		{ 
+		virtual void SetNetChannel(INetChannel * netchan)
+		{
 			if( m_NetChannel != netchan )
 			{
 				if( m_NetChannel )
@@ -302,7 +298,7 @@ private:
 		}
 
 		virtual bool Process( const INetMessage &src )
-		{	
+		{
 			const typename _N::MyType_t &typedSrc = static_cast< const typename _N::MyType_t & >( src );
 
 			Assert( m_handler );
@@ -318,7 +314,7 @@ private:
 	};
 
 	INetMessageBinder *m_pBind;
-}; 
+};
 
 ///////////////////////////////////////////////////////////////////////////////////////
 // bidirectional net messages:
@@ -380,7 +376,7 @@ public:
 inline void NetMsgSetCVarUsingDictionary( CMsg_CVars::CVar *convar, char const * name, char const * value )
 {
 	convar->set_value( value );
-	
+
 	if ( 0 ) ( void ) 0;
 	/** Removed for partner depot **/
 	else
@@ -461,7 +457,7 @@ public:
 	// Warning: These routines may use the va() function...
 	static void SetPath( CCLCMsg_FileCRCCheck& msg, const char *path );
 	static const char *GetPath( const CCLCMsg_FileCRCCheck& msg );
-	static void SetFileName( CCLCMsg_FileCRCCheck& msg, const char *fileName );	
+	static void SetFileName( CCLCMsg_FileCRCCheck& msg, const char *fileName );
 	static const char *GetFileName( const CCLCMsg_FileCRCCheck& msg );
 };
 
@@ -560,4 +556,3 @@ private:
 };
 
 #endif // NETMESSAGES_H
-

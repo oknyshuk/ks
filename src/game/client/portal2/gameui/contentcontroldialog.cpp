@@ -29,7 +29,6 @@
 #include <vgui_controls/TextEntry.h>
 
 #if defined( _X360 )
-#include "xbox/xbox_win32stubs.h"
 #endif
 
 #if defined( _PS3 )

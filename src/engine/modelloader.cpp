@@ -60,7 +60,6 @@
 #include "ifilelist.h"
 #include "LoadScreenUpdate.h"
 #if defined( _X360 )
-#include "xbox/xbox_console.h"
 #elif defined( _PS3 )
 #include "ps3/ps3_console.h"
 #endif
@@ -4088,11 +4087,6 @@ static void QueuedLoaderBeginMapLoadingCallback( int nStage )
 		// unload lightmap textures before loading the next map (PC does this in CMatLightmaps::BeginLightmapAllocation)
 		g_pMaterialSystem->CleanupLightmaps();
 	}
-
-#ifdef _PS3
-	// Reclaim the space from unloaded lightmaps and (if the queued loader ran) pre-purged assets not used by the next map
-	g_pMaterialSystem->CompactRsxLocalMemory( "BEGIN MAP LOADING" );
-#endif
 }
 
 //-----------------------------------------------------------------------------

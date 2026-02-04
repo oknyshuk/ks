@@ -10,7 +10,6 @@
 #include "EngineInterface.h"
 
 #if defined( _GAMECONSOLE )
-#include "xbox/xbox_win32stubs.h"
 #endif
 
 // memdbgon must be the last include file in a .cpp file!!!

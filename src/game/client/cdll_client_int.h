@@ -20,10 +20,6 @@
 #include "tier2/tier2_logging.h"
 #include "videocfg/videocfg.h"
 
-#if defined( INCLUDE_SCALEFORM )
-#include "scaleformui/scaleformui.h"
-#endif
-
 class IVModelRender;
 class IVEngineClient;
 class IVModelRender;
@@ -56,7 +52,6 @@ class C_BaseAnimating;
 class IColorCorrectionSystem;
 class IInputSystem;
 class ISceneFileCache;
-class IXboxSystem;	// Xbox 360 only
 class IAvi;
 class IBik;
 class CSteamAPIContext;
@@ -93,7 +88,6 @@ extern CGlobalVarsBase *gpGlobals;
 extern IClientTools *clienttools;
 extern IInputSystem *inputsystem;
 extern ISceneFileCache *scenefilecache;
-extern IXboxSystem *xboxsystem;	// Xbox 360 only
 extern IAvi *avi;
 extern IBik *bik;
 extern IUploadGameStats *gamestatsuploader;
@@ -104,10 +98,6 @@ extern ISoundEmitterSystemBase *soundemitterbase;
 
 #if defined( CSTRIKE15 )
 extern IGameTypes *g_pGameTypes;
-#endif
-
-#if defined( INCLUDE_SCALEFORM )
-extern IScaleformUI* g_pScaleformUI;
 #endif
 
 #ifdef INFESTED_DLL
@@ -174,11 +164,6 @@ const char *GetMovieNameFromIndex( int nIndex );
 // Precache-related methods for effects
 //-----------------------------------------------------------------------------
 void PrecacheEffect( const char *pEffectName );
-
-//-----------------------------------------------------------------------------
-// Spew application info (primarily for log file data mining)
-//-----------------------------------------------------------------------------
-void SpewInstallStatus( void );
 
 //-----------------------------------------------------------------------------
 // Called during bone setup to test perf

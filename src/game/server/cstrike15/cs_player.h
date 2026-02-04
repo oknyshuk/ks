@@ -19,8 +19,6 @@
 #include "utldict.h"
 #include "usermessages.h"
 
-#include "cstrike15_item_inventory.h"
-
 class CWeaponCSBase;
 class CMenu;
 class CHintMessageQueue;
@@ -35,6 +33,7 @@ class CCSUsrMsg_PlayerDecalDigitalSignature;
 #include "cs_player_rank_shared.h"
 
 #include "cs_player_shared.h"
+#include "cs_item_inventory.h"
 
 #include "csgo_playeranimstate.h"
 

@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2008, Valve Corporation, All rights reserved. ============//
+//========= Copyright ï¿½ 1996-2008, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -468,6 +468,7 @@ void CUIGameData::RunFrame_Storage()
 		m_pAsyncJob = NULL;
 	}
 
+#ifdef _X360
 	if( m_bWaitingForStorageDeviceHandle )
 	{
 		//the select device blade just closed, get the selected device
@@ -495,6 +496,7 @@ void CUIGameData::RunFrame_Storage()
 			}
 		}
 	}
+#endif // _X360
 
 #ifdef _PS3
 	GetPs3SaveSteamInfoProvider()->RunFrame();
@@ -678,6 +680,7 @@ bool CUIGameData::SelectStorageDevice( ISelectStorageDeviceClient *pSelectClient
 	// NOTE: this shouldn't have a 3 sec time-out as a new wait message is taking over
 	// the progress when container starts mounting
 
+#ifdef _X360
 	//open the dialog
 	m_bWaitingForStorageDeviceHandle = true;
 	m_hStorageDeviceChangeHandle = xboxsystem->CreateAsyncHandle();
@@ -685,7 +688,8 @@ bool CUIGameData::SelectStorageDevice( ISelectStorageDeviceClient *pSelectClient
 	m_iStorageController = iController;
 	m_pSelectStorageClient = pSelectClient;
 	xboxsystem->ShowDeviceSelector( iController, bForceDisplay, &m_iStorageID, &m_hStorageDeviceChangeHandle );
-#endif
+#endif // _X360
+#endif // _GAMECONSOLE
 	return false;
 }
 

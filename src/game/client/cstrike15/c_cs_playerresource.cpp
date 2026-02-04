@@ -14,7 +14,7 @@
 #include "cs_gamerules.h"
 #include "c_cs_player.h"
 #include "c_cs_team.h"
-
+#include "cs_item_inventory.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -646,18 +646,7 @@ const wchar_t* C_CS_PlayerResource::GetDecoratedPlayerName( int index, wchar_t* 
 
 		V_UTF8ToUnicode( nameBuf /*GetPlayerName( nameIndex )*/, wide_name, sizeof( wide_name ) );
 
-		wchar_t safe_wide_name[4 * MAX_DECORATED_PLAYER_NAME_LENGTH]; // add enough room to safely escape all 64 name characters
-		safe_wide_name[0] = L'\0';
 		wchar_t *pSafeWideName = wide_name;
-
-#if defined( INCLUDE_SCALEFORM )
-        if ( bMakeStringSafe )
-		{
-			g_pScaleformUI->MakeStringSafe( wide_name, safe_wide_name, sizeof( safe_wide_name ) );
-			pSafeWideName = safe_wide_name;
-		}
-#endif
-
 
 		if ( !nBotControlStringType ) // normal name
 		{

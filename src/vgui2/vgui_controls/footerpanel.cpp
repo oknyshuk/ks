@@ -13,12 +13,6 @@
 #include "vgui_controls/Label.h"
 #include "vgui_controls/ControllerMap.h"
 
-#if defined( _X360 )
-#include "xbox/xbox_launch.h"
-#else
-#include "xbox/xboxstubs.h"
-#endif
-
 
 #undef MessageBox	// Windows helpfully #define's this to MessageBoxA, we're using vgui::MessageBox
 
@@ -77,17 +71,8 @@ void CFooterPanel::ApplySchemeSettings( vgui::IScheme *pScheme )
 {
 	BaseClass::ApplySchemeSettings( pScheme );
 
-	// $FIXME(hpe) quick hack for PC fonts
-	if ( IsPC() )
-	{
-		m_hButtonFont = pScheme->GetFont( ( m_szButtonFont[0] != '\0' ) ? m_szButtonFont : "Default" );
-		m_hTextFont = pScheme->GetFont( ( m_szTextFont[0] != '\0' ) ? m_szTextFont : "Default" );
-	}
-	else
-	{
-		m_hButtonFont = pScheme->GetFont( ( m_szButtonFont[0] != '\0' ) ? m_szButtonFont : "GameUIButtons" );
-		m_hTextFont = pScheme->GetFont( ( m_szTextFont[0] != '\0' ) ? m_szTextFont : "X360_Title_1" );
-	}
+	m_hButtonFont = pScheme->GetFont( ( m_szButtonFont[0] != '\0' ) ? m_szButtonFont : "Default" );
+	m_hTextFont = pScheme->GetFont( ( m_szTextFont[0] != '\0' ) ? m_szTextFont : "Default" );
 
 	SetFgColor( pScheme->GetColor( m_szFGColor, Color( 255, 255, 255, 255 ) ) );
 	SetBgColor( pScheme->GetColor( m_szBGColor, Color( 0, 0, 0, 255 ) ) );
@@ -216,7 +201,7 @@ void CFooterPanel::ClearButtons( void )
 
 //-----------------------------------------------------------------------------
 // Purpose: Sets the pin right location with adjustments based on the current
-// screen width and height. The given pixel offset is assumed to be based on 
+// screen width and height. The given pixel offset is assumed to be based on
 // a 640x480 screen.
 //-----------------------------------------------------------------------------
 void CFooterPanel::SetButtonPinRightProportional( int nButtonPinRight )

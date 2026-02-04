@@ -467,9 +467,6 @@ EXPOSE_SINGLE_INTERFACE_GLOBALVAR(CStaticPropMgr, IStaticPropMgrServer, INTERFAC
 //-----------------------------------------------------------------------------
 CStaticProp::CStaticProp() : m_pModel(0), m_Alpha(255)
 {
-#ifdef _GAMECONSOLE
-	m_bIsStaticProp = true;
-#endif
 	m_ModelInstance = MODEL_INSTANCE_INVALID;
 	m_Partition = PARTITION_INVALID_HANDLE;
 	m_EntHandle = INVALID_EHANDLE;
@@ -1180,46 +1177,9 @@ int CStaticProp::DrawModel( int flags, const RenderableInstance_t &instance )
 	pRenderContext->PushMatrix();
 	pRenderContext->LoadIdentity();
 
-#ifdef _X360
-	ShaderStencilState_t stencilState;
-	bool bDeferredShadows = r_shadow_deferred.GetBool();
-	if ( bDeferredShadows )
-	{
-		// Deferred shadow rendering:
-		// clear stencil and hi-stencil because static props don't cast shadows
-		uint32 mask = 1 << 2;
-		uint32 nRef = 0;
-
-		stencilState.m_bEnable = true;
-		stencilState.m_nTestMask = 0xFFFFFFFF;
-		stencilState.m_nWriteMask = mask;
-		stencilState.m_nReferenceValue = nRef;
-		stencilState.m_CompareFunc = SHADER_STENCILFUNC_ALWAYS;
-		stencilState.m_PassOp = SHADER_STENCILOP_SET_TO_REFERENCE;
-		stencilState.m_FailOp = SHADER_STENCILOP_KEEP;
-		stencilState.m_ZFailOp = SHADER_STENCILOP_KEEP;
-
-		stencilState.m_bHiStencilEnable = false;
-		stencilState.m_bHiStencilWriteEnable = true;
-		stencilState.m_HiStencilCompareFunc = SHADER_HI_STENCILFUNC_NOTEQUAL;
-		stencilState.m_nHiStencilReferenceValue = 0;
-		pRenderContext->SetStencilState( stencilState );
-	}
-#endif
-
 	int drawn = modelrender->DrawModelExStaticProp( pRenderContext, sInfo );
 	pRenderContext->MatrixMode( MATERIAL_MODEL );
 	pRenderContext->PopMatrix();
-
-#ifdef _X360
-	if ( bDeferredShadows )
-	{
-		ShaderStencilState_t stencilState;
-		stencilState.m_bEnable = false;
-		stencilState.m_bHiStencilWriteEnable = false;
-		pRenderContext->SetStencilState( stencilState );
-	}
-#endif
 
 	return drawn;
 #else

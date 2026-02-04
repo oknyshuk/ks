@@ -151,10 +151,7 @@ public:
 	void						Think( void );
 	
 	//							called just before rendering, Players will be in the right
-	//							position, but scaleform update may not be called between LateThink()
-	//							and when the scaleform display is updated (this is probably not an issue
-	//							just a good-to-know
-	//							Also, late think is only called when in the game.
+	//							position. Also, late think is only called when in the game.
     void                        LateThink( void );
 
 	void						ProcessInput( bool bActive );

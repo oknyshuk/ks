@@ -6,9 +6,7 @@
 	
 #include "pch_materialsystem.h"
 
-#ifndef _PS3
 #define MATSYS_INTERNAL
-#endif
 
 #include "cmaterialsystem.h"
 
@@ -25,20 +23,9 @@
 #include "cmatnullrendercontext.h"
 #include "datacache/iresourceaccesscontrol.h"
 #include "filesystem/IQueuedLoader.h"
-#include "filesystem/IXboxInstaller.h"
 #include "cdll_int.h"
-#include "vjobs_interface.h"
-#include "ps3/ps3_sn.h"
 #include "shaderapidx9/imeshdx8.h"
 #include "tier0/perfstats.h"
-
-#if defined( _X360 )
-#include "xbox/xbox_console.h"
-#include "xbox/xbox_win32stubs.h"
-#elif defined(_PS3)
-#include "ps3/ps3_helpers.h"
-#include "ps3/ps3_console.h"
-#endif
 
 // NOTE: This must be the last file included!!!
 #include "tier0/memdbgon.h"
@@ -58,10 +45,8 @@ static ConVar mat_forcehardwaresync( "mat_forcehardwaresync", /* IsPC() ? "1" : 
 
 // Make sure this convar gets created before videocfg.lib is initialized, so it can be driven by dxsupport.cfg
 static ConVar mat_tonemapping_occlusion_use_stencil( "mat_tonemapping_occlusion_use_stencil", "0", FCVAR_DEVELOPMENTONLY );
-#if defined( DX_TO_GL_ABSTRACTION ) && !defined( _PS3 )
+#if defined( DX_TO_GL_ABSTRACTION )
     static ConVar mat_dxlevel( "mat_dxlevel", "100", FCVAR_DEVELOPMENTONLY, "", true, 90, true, 100, NULL );
-    //static ConVar mat_dxlevel( "mat_dxlevel", "95", FCVAR_DEVELOPMENTONLY, "", true, 95, true, 95, NULL );
-    //static ConVar mat_dxlevel( "mat_dxlevel", "92", FCVAR_DEVELOPMENTONLY, "", true, 92, true, 92, NULL );
 #else
 static ConVar mat_dxlevel( "mat_dxlevel", "0", FCVAR_DEVELOPMENTONLY );
 #endif
@@ -69,7 +54,7 @@ static ConVar mat_dxlevel( "mat_dxlevel", "0", FCVAR_DEVELOPMENTONLY );
 ConVar mat_queue_mode( "mat_queue_mode", "-1", FCVAR_RELEASE, "The queue/thread mode the material system should use: -1=default, 0=synchronous single thread, 1=queued single thread, 2=queued multithreaded" );
 
 ConVar mat_queue_report( "mat_queue_report", "0", FCVAR_ARCHIVE, "Report thread stalls.  Positive number will filter by stalls >= time in ms.  -1 reports all locks." );
-ConVar mat_queue_mode_force_allow( "mat_queue_mode_force_allow", IsPS3() ? "1" : "0", FCVAR_DEVELOPMENTONLY, "Whether QMS can be enabled on single threaded CPU" );
+ConVar mat_queue_mode_force_allow( "mat_queue_mode_force_allow", "0", FCVAR_DEVELOPMENTONLY, "Whether QMS can be enabled on single threaded CPU" );
 ConVar mat_queue_priority("mat_queue_priority", "1", FCVAR_RELEASE);
 
 // FIXME: Would like to remove these, but what the hey.
@@ -87,11 +72,7 @@ static ConVar mat_picmip( "mat_picmip", "0", FCVAR_NONE, "", true, -10, true, 4 
 ConVar csm_quality_level( "csm_quality_level", "0", FCVAR_ARCHIVE, "Cascaded shadow map quality level, [0,3], 0=VERY_LOW, 3=HIGHEST", true, 0, true, 3 );
 
 // Moving this here (instead of in viewpostprocess.cpp) so videocfg.cpp can modify its value early during init based off whatever setting is in video.txt
-#if defined( CSTRIKE15 )
 ConVar mat_software_aa_strength( "mat_software_aa_strength", "-1.0", 0, "Software AA - perform a software anti-aliasing post-process (an alternative/supplement to MSAA). This value sets the strength of the effect: (0.0 - off), (1.0 - full)" );
-#else
-ConVar mat_software_aa_strength( "mat_software_aa_strength", IsPS3()? "0" : "-1.0", 0, "Software AA - perform a software anti-aliasing post-process (an alternative/supplement to MSAA). This value sets the strength of the effect: (0.0 - off), (1.0 - full)" );
-#endif
 
 ConVar mat_async_tex_maxtime_ms( "mat_async_tex_maxtime_ms", "0.5", FCVAR_DEVELOPMENTONLY, "Cutoff time (in ms) spent in ServiceAsyncTextureLoads" );
 
@@ -104,19 +85,7 @@ IMaterialInternal *g_pErrorMaterial = NULL;
 
 CreateInterfaceFn g_fnMatSystemConnectCreateInterface = NULL;  
 
-#ifdef _PS3
-#define m_pRenderContext Ps3TlsMaterialSystemRenderContext
-#elif defined(_X360)
-IMatRenderContextInternal *CMaterialSystem::m_pRenderContexts[2];
-#define m_pRenderContext CMaterialSystem::m_pRenderContexts[(int)ThreadInMainThread()]
-#else
 CTHREADLOCALPTR(IMatRenderContextInternal) CMaterialSystem::m_pRenderContext;
-#endif
-
-#if defined( _X360 )
-static const unsigned int g_GamerpicSize = 64;
-static const ImageFormat g_GamerpicFormat = IMAGE_FORMAT_LINEAR_BGRA8888; // note that this format is intentionally BGRA instead of ARBB
-#endif // _X360
 
 //#define PERF_TESTING 1
 
@@ -152,13 +121,11 @@ CThreadFastMutex g_MatSysMutex;
 //-----------------------------------------------------------------------------
 // Purpose: additional materialsystem information, internal use only
 //-----------------------------------------------------------------------------
-#ifndef _GAMECONSOLE
 struct MaterialSystem_Config_Internal_t
 {
 	int gpu_level;
 };
 MaterialSystem_Config_Internal_t g_config_internal;
-#endif
 
 //-----------------------------------------------------------------------------
 // Necessary to allow the shader DLLs to get ahold of IMaterialSystemHardwareConfig
@@ -189,10 +156,7 @@ EXPOSE_INTERFACE_FN( GetICVar, ICVar, CVAR_INTERFACE_VERSION );
 // Accessor to get at the material system
 //-----------------------------------------------------------------------------
 IMaterialSystemInternal *g_pInternalMaterialSystem = &g_MaterialSystem;
-#ifndef _PS3
 IShaderUtil *g_pShaderUtil = &g_MaterialSystem;
-#endif
-IVJobs * g_pVJobs = NULL;
 
 #if defined( USE_SDL ) || defined( OSX )
 
@@ -216,14 +180,6 @@ void *ShaderFactory( const char *pName, int *pReturnCode )
 
 	if ( !Q_stricmp( pName, QUEUEDLOADER_INTERFACE_VERSION ))
 		return g_pQueuedLoader;
-
-	if ( !Q_stricmp( pName, VJOBS_INTERFACE_VERSION ) )
-		return g_pVJobs;
-
-#if defined( _X360 )
-	if ( !Q_stricmp( pName, XBOXINSTALLER_INTERFACE_VERSION ))
-		return g_pXboxInstaller;
-#endif
 
 	if ( !Q_stricmp( pName, SHADER_UTIL_INTERFACE_VERSION ))
 		return g_pShaderUtil;
@@ -379,12 +335,6 @@ class CResourcePreloadMaterial : public CResourcePreload
 		CompactMaterialVarHeap();
 	}
 
-#if defined( _PS3 )
-	virtual bool RequiresRendererLock()
-	{
-		return true;
-	}
-#endif // _PS3
 };
 
 static CResourcePreloadMaterial s_ResourcePreloadMaterial;
@@ -441,12 +391,6 @@ class CResourcePreloadCubemap : public CResourcePreload
 		}	
 	}
 
-#if defined( _PS3 )
-	virtual bool RequiresRendererLock()
-	{
-		return true;
-	}
-#endif // _PS3
 };
 static CResourcePreloadCubemap s_ResourcePreloadCubemap;
 
@@ -522,16 +466,6 @@ void CMaterialSystem::CreateDebugMaterials()
 		pVMTKeyValues->SetInt( "$vertexcolor", 1 );
 		m_pBufferClearObeyStencil[BUFFER_CLEAR_COLOR_AND_ALPHA_AND_DEPTH] = static_cast<IMaterialInternal*>(CreateMaterial( "___buffer_clear_obey_stencil7.vmt", pVMTKeyValues ))->GetRealTimeVersion();
 
-		if ( IsPS3() )
-		{
-			pVMTKeyValues = new KeyValues( "BufferClearObeyStencil" );
-			pVMTKeyValues->SetInt( "$nocull", 1 );
-			pVMTKeyValues->SetInt( "$cleardepth", 1 );
-			pVMTKeyValues->SetInt( "$vertexcolor", 1 );
-			pVMTKeyValues->SetInt( "$reloadzcull", 1 );
-			m_pReloadZcullMaterial = static_cast<IMaterialInternal*>(CreateMaterial( "__reload_zcull.vmt", pVMTKeyValues ))->GetRealTimeVersion();
-		}
-		
 		if ( IsX360() )
 		{
 			pVMTKeyValues = new KeyValues( "RenderTargetBlit_X360" );
@@ -578,13 +512,6 @@ void CMaterialSystem::CleanUpDebugMaterials()
 			m_pBufferClearObeyStencil[i]->DecrementReferenceCount();
 			RemoveMaterial( m_pBufferClearObeyStencil[i] );
 			m_pBufferClearObeyStencil[i] = NULL;
-		}
-
-		if ( IsPS3() )
-		{
-			m_pReloadZcullMaterial->DecrementReferenceCount();
-			RemoveMaterial( m_pReloadZcullMaterial );
-			m_pReloadZcullMaterial = NULL;
 		}
 
 		if ( IsX360() )
@@ -663,11 +590,7 @@ CMaterialSystem::CMaterialSystem()
 
 	m_pActiveAsyncTextureLoad = NULL;
 
-#ifndef _PS3
 	m_pActiveAsyncJob = NULL;
-#else
-	m_bQMSJobSubmitted = false;
-#endif
 	m_IdealThreadMode = m_ThreadMode = MATERIAL_SINGLE_THREADED;
 	m_nServiceThread = 0;
 
@@ -741,7 +664,7 @@ void CMaterialSystem::DestroyShaderAPI()
 //-----------------------------------------------------------------------------
 void CMaterialSystem::SetShaderAPI( char const *pShaderAPIDLL )
 {
-#if defined( _PS3 ) || defined( _OSX )
+#if defined( _OSX )
 	return;
 #endif
 
@@ -787,8 +710,6 @@ bool CMaterialSystem::Connect( CreateInterfaceFn factory )
 		return false;
 	}
 	
-	g_pVJobs = ( IVJobs* )factory( VJOBS_INTERFACE_VERSION, NULL );
-
 	// Get at the interfaces exported by the shader DLL
 
 #ifndef _OSX
@@ -811,8 +732,6 @@ bool CMaterialSystem::Connect( CreateInterfaceFn factory )
 	if ( !g_pLauncherMgr )
 		return false;
 
-#elif defined( _PS3 )
-	g_pHWConfig = g_pHardwareConfig;
 #elif defined( _OSX )
 	g_pHWConfig = g_pHardwareConfig;
 
@@ -868,7 +787,7 @@ void CMaterialSystem::Disconnect()
 		// Unload the DLL
 		DestroyShaderAPI();
 	}
-#if !defined( _PS3 ) && !defined( _OSX )
+#if !defined( _OSX )
 	g_pShaderAPI = NULL;
 	g_pHWConfig = NULL;
 	g_pShaderShadow = NULL;
@@ -945,11 +864,6 @@ void CMaterialSystem::InitColorCorrection( )
 	}
 }
 
-#ifndef _PS3 // make some empty stubs so we can use IsPS3() instead of ifdefs
-static inline void PS3InitFontLibrary( unsigned fontFileCacheSizeInBytes, unsigned maxNumFonts ) {};
-static inline void PS3DumpFontLibrary(){}
-#define kPS3_DEFAULT_MAX_USER_FONTS 0
-#endif
 
 //-----------------------------------------------------------------------------
 // Initialization + shutdown of the material system
@@ -1035,17 +949,6 @@ InitReturnVal_t CMaterialSystem::Init()
 	{
 		g_pQueuedLoader->InstallLoader( RESOURCEPRELOAD_MATERIAL, &s_ResourcePreloadMaterial );
 		g_pQueuedLoader->InstallLoader( RESOURCEPRELOAD_CUBEMAP, &s_ResourcePreloadCubemap );
-	}
-
-	if ( IsPS3() )
-	{
-		InitializePS3Fonts();
-		// load the font library and keep it resident forever.
-		// for an alternative means, where you just load and unload
-		// the library as needed, look at PS3FontLibraryRAII -- 
-		// that's disabled at the moment because we evidently render
-		// characters ad hoc each frame always.
-		PS3InitFontLibrary( 256 * 1024, kPS3_DEFAULT_MAX_USER_FONTS ); // try a 256kb file cache
 	}
 
 	// Set up a default material system config
@@ -1155,13 +1058,6 @@ void CMaterialSystem::Shutdown( )
 	{
 		g_pShaderDeviceMgr->Shutdown();
 	}
-#if defined( _PS3 )
-	// this would have been called in g_pShaderDeviceMgr->Shutdown(), but since g_pShaderDeviceMgr is sometimes NULL, we'll clean up mesh manager once more, just in case
-	MeshMgr()->Shutdown();
-#endif
-
-	if ( IsPS3() ) 
-		PS3DumpFontLibrary();
 
 	BaseClass::Shutdown();
 }
@@ -1377,92 +1273,16 @@ IClientMaterialSystem *CMaterialSystem::GetClientMaterialSystemInterface()
 
 void CMaterialSystem::RefreshFrontBufferNonInteractive()
 {
-
-#ifdef _PS3
-	extern bool IsItSafeToRefreshFrontBufferNonInteractivePs3();
-	if ( !IsItSafeToRefreshFrontBufferNonInteractivePs3() )
-#else
 	if ( !ThreadInMainThread() )
-#endif
 		return;
 
 	CMatRenderContextPtr pRenderContext( materials );
 	pRenderContext->RefreshFrontBufferNonInteractive();
 }
 
-#if GCM_ALLOW_TIMESTAMPS || X360_ALLOW_TIMESTAMPS
-static CThreadFastMutex s_mtFrameTimestamps;
-static double s_flMstThreadBeginTimestamp = 0.0f;
-static double s_flTotalFrameBeginTimestamp = 0.0f;
-static ApplicationPerformanceCountersInfo_t s_apci;
-
-void OnFrameTimestampAvailableMain( float ms )
-{
-	AUTO_LOCK( s_mtFrameTimestamps );
-	s_apci.msMain = ms;
-}
-void OnFrameTimestampAvailableMST( float ms )
-{
-	AUTO_LOCK( s_mtFrameTimestamps );
-	if ( !ms )
-	{
-		s_flMstThreadBeginTimestamp = Plat_FloatTime();
-	}
-	else
-	{
-		double flMstThreadFrameTimeSec = Plat_FloatTime() - s_flMstThreadBeginTimestamp;
-		s_apci.msMST = flMstThreadFrameTimeSec*1000.0f;
-	}
-}
-
-void OnFrameTimestampAvailableRsx( float ms )
-{
-	AUTO_LOCK( s_mtFrameTimestamps );
-	s_apci.msGPU = ms;
-}
-
-void OnFrameTimestampAvailableTotal( float ms )
-{
-	AUTO_LOCK( s_mtFrameTimestamps );
-	s_apci.msTotal = ms;
-}
-
-#ifdef _X360
-static LARGE_INTEGER s_gpuStartTime;
-static LARGE_INTEGER s_gpuTime;
-
-void OnGpuStartFrame(uint32 context)
-{
-	QueryPerformanceCounter( &s_gpuStartTime );
-}
-
-void OnGpuEndFrame(uint32 context)
-{
-	LARGE_INTEGER current_time;
-	QueryPerformanceCounter( &current_time );
-	s_gpuTime.QuadPart = current_time.QuadPart - s_gpuStartTime.QuadPart;
-}
-
-#endif
-
-#endif
-
 uint32 CMaterialSystem::GetFrameTimestamps( ApplicationPerformanceCountersInfo_t &apci, ApplicationInstantCountersInfo_t & aici )
 {
-#if defined (_X360) &&  X360_ALLOW_TIMESTAMPS
-	LARGE_INTEGER freq;
-	QueryPerformanceFrequency(&freq);
-	s_apci.msGPU = 1000.0f * ((double)s_gpuTime.QuadPart / (double)(freq.QuadPart));
-#endif
-
-
-#if GCM_ALLOW_TIMESTAMPS || X360_ALLOW_TIMESTAMPS
-	AUTO_LOCK( s_mtFrameTimestamps );
-	V_memcpy( &apci, &s_apci, sizeof( s_apci ) );
-	return 1000;
-#else
 	return 0;
-#endif
 }
 
 bool CMaterialSystem::CanDownloadTextures() const
@@ -1571,20 +1391,11 @@ void CMaterialSystem::ForceSingleThreaded()
 	}
 	if ( GetThreadMode() != MATERIAL_SINGLE_THREADED )
 	{
-#ifndef _PS3
-
 		if ( m_pActiveAsyncJob && !m_pActiveAsyncJob->IsFinished() )
 		{
 			m_pActiveAsyncJob->WaitForFinish();
 		}
-		SafeRelease( m_pActiveAsyncJob ); 
-#else
-		if (m_bQMSJobSubmitted)
-		{
-			g_pGcmSharedData->WaitForQMS();
-			m_bQMSJobSubmitted = 0;
-		}
-#endif
+		SafeRelease( m_pActiveAsyncJob );
 
 #ifdef MAT_QUEUED_OWN_THREADPOOL
 		ThreadRelease();
@@ -1655,7 +1466,7 @@ bool CMaterialSystem::SetMode( void* hwnd, const MaterialSystem_Config_t &config
 			}
 		}
 
-		if ( IsX360() || IsPS3() )
+		if ( IsX360() )
 		{
 			// shaderapi was not viable at init time, it is now
 			TextureManager()->ReloadTextures();
@@ -1862,7 +1673,7 @@ void CMaterialSystem::ReleaseShaderObjects( int nChangeFlags )
 
 void CMaterialSystem::RestoreShaderObjects( CreateInterfaceFn shaderFactory, int nChangeFlags )
 {
-#if !defined( _PS3 ) && !defined( _OSX )
+#if !defined( _OSX )
 	if ( shaderFactory )
 	{
 		g_pShaderAPI = (IShaderAPI*)shaderFactory( SHADERAPI_INTERFACE_VERSION, NULL );
@@ -2056,18 +1867,6 @@ void CMaterialSystem::GenerateConfigFromConfigKeyValues( MaterialSystem_Config_t
 		static ConVarRef mat_forceaniso( "mat_forceaniso" );
 		mat_forceaniso.SetValue( 8 );
 	}
-#elif defined( _PS3 )
-	// Shader API does the dirty work of querying cellVideo libraries for screen res, so just piggy back on it
-	ShaderDisplayMode_t info;
-	g_pShaderDeviceMgr->GetModeInfo( &info, 0, 0 );
-	pConfig->m_VideoMode.m_Width = info.m_nWidth;
-	pConfig->m_VideoMode.m_Height = info.m_nHeight;
-	// We can afford better aniso in standard def
-	if ( pConfig->m_VideoMode.m_Width == 640 )
-	{
-		static ConVarRef mat_forceaniso( "mat_forceaniso" );
-		mat_forceaniso.SetValue( 8 );
-	}
 #endif
 
 	// Destroy the keys.
@@ -2138,7 +1937,7 @@ static ConVar mat_normalmaps(		"mat_normalmaps", "0", FCVAR_CHEAT );
 static ConVar mat_measurefillrate(	"mat_measurefillrate", "0", FCVAR_CHEAT );
 static ConVar mat_fillrate(			"mat_fillrate", "0", FCVAR_CHEAT );
 static ConVar mat_reversedepth(		"mat_reversedepth", "0", FCVAR_CHEAT );
-#if defined( PLATFORM_POSIX ) && !defined( _PS3 )
+#if defined( PLATFORM_POSIX )
 static ConVar mat_bufferprimitives( "mat_bufferprimitives", "0" );	// I'm not seeing any benefit speed wise for buffered primitives on GLM/POSIX (checked via TF2 timedemo) - default to zero
 #else
 static ConVar mat_bufferprimitives( "mat_bufferprimitives", "1" );
@@ -2154,11 +1953,7 @@ static ConVar mat_drawgray(			"mat_drawgray","0", FCVAR_CHEAT );
 
 // These are not controlled by the material system, but are limited by settings in the material system
 static ConVar r_shadowrendertotexture(		"r_shadowrendertotexture", "0" );
-#if ( defined( CSTRIKE15 ) && defined( _PS3) )
 static ConVar r_flashlightdepthtexture(		"r_flashlightdepthtexture", "1" );
-#else
-static ConVar r_flashlightdepthtexture(		"r_flashlightdepthtexture", "1" );
-#endif
 // On non-gameconsoles mat_motion_blur_enabled now comes from video.txt/videodefaults.txt
 static ConVar mat_motion_blur_enabled( "mat_motion_blur_enabled", IsGameConsole() ? "1" : "0" );
 
@@ -2304,16 +2099,12 @@ bool CMaterialSystem::OverrideConfig( const MaterialSystem_Config_t &_config, bo
 	Assert( m_bGeneratedConfig );
 	// internal config settings
 
-#ifndef _GAMECONSOLE
 	MaterialSystem_Config_Internal_t config_internal;
 	config_internal.gpu_level = gpu_level.GetInt();
-#endif
 
-	if ( 
-		!memcmp( &_config, &g_config, sizeof(_config) ) 
-#ifndef _GAMECONSOLE
-		&& !memcmp( &config_internal, &g_config_internal, sizeof(config_internal) ) 
-#endif
+	if (
+		!memcmp( &_config, &g_config, sizeof(_config) )
+		&& !memcmp( &config_internal, &g_config_internal, sizeof(config_internal) )
 		)
 		return false;
 
@@ -2342,9 +2133,7 @@ bool CMaterialSystem::OverrideConfig( const MaterialSystem_Config_t &_config, bo
 	{
 		g_config = config;
 
-#ifndef _GAMECONSOLE
 		g_config_internal = config_internal;
-#endif
 
 		// Shouldn't call this more than once.
 		ColorSpace::SetGamma( 2.2f, 2.2f, OVERBRIGHT, g_config.bAllowCheats, false );
@@ -2532,7 +2321,6 @@ bool CMaterialSystem::OverrideConfig( const MaterialSystem_Config_t &_config, bo
 		bReloadMaterials = true;
 	}
 
-#ifndef _GAMECONSOLE
 	if ( config_internal.gpu_level != g_config_internal.gpu_level )
 	{
 		if ( mat_debugalttab.GetBool() )
@@ -2542,8 +2330,6 @@ bool CMaterialSystem::OverrideConfig( const MaterialSystem_Config_t &_config, bo
 		}
 		bReloadMaterials = true;
 	}
-
-#endif
 
 	// generic things that cause us to redownload lightmaps
 	if ( config.bAllowCheats != g_config.bAllowCheats )
@@ -2647,9 +2433,7 @@ bool CMaterialSystem::OverrideConfig( const MaterialSystem_Config_t &_config, bo
 
 
 	g_config = config;
-#ifndef _GAMECONSOLE
 	g_config_internal = config_internal;
-#endif
 
 	if ( bRedownloadTextures || bRedownloadLightmaps )
 	{
@@ -3335,11 +3119,7 @@ void CMaterialSystem::UncacheUnusedMaterials( bool bRecomputeStateSnapshots )
 //-----------------------------------------------------------------------------
 void CMaterialSystem::ResetTempHWMemory( bool bExitingLevel )
 {
-	if( !IsPS3() )
-	{
-		// Doing this on map transitions is not beneficial on PS3 (in fact it may fragment our RSX allocator)
-		g_pShaderAPI->DestroyVertexBuffers( bExitingLevel );
-	}
+	g_pShaderAPI->DestroyVertexBuffers( bExitingLevel );
 	TextureManager()->ReleaseTempRenderTargetBits();
 }
 
@@ -3677,7 +3457,7 @@ void CMaterialSystem::AllocateStandardTextures()
 	unsigned char outTexel[4];
 
 	int tcFlags = TEXTURE_CREATE_MANAGED;
-	int tcFlagsSRGB = TEXTURE_CREATE_MANAGED | (IsPS3()?0:TEXTURE_CREATE_SRGB);
+	int tcFlagsSRGB = TEXTURE_CREATE_MANAGED | TEXTURE_CREATE_SRGB;
 	if ( IsX360() )
 	{
 		// during init time, ok to allow any pixel conversion operations
@@ -3983,20 +3763,6 @@ bool CMaterialSystem::IsInFrame( ) const
 
 void CMaterialSystem::ThreadExecuteQueuedContext( CMatQueuedRenderContext *pContext )
 {
-	#ifdef _PS3
-		#if GCM_ALLOW_NULL_FLIPS
-		extern void Ps3NullFlipsStartSceneTime();
-		Ps3NullFlipsStartSceneTime();
-		#endif
-	// This function takes up a lot of global thread pool time in GPU-bound levels, and it's convenient
-	// to have it as a bar in snTuner profiler. Making it PS3-only to avoid polluting X360 bars
-	VPROF_BUDGET( "ThreadExecuteQueuedContext", "All Threaded Rendering" );
-	#endif
-
-	#if GCM_ALLOW_TIMESTAMPS || X360_ALLOW_TIMESTAMPS
-	OnFrameTimestampAvailableMST( 0.0f ); // signals frame start
-	#endif
-
 	m_nRenderThreadID = ThreadGetCurrentId(); 
 	IMatRenderContextInternal* pSavedRenderContext = m_pRenderContext;
 	m_pRenderContext =  &m_HardwareRenderContext;
@@ -4143,10 +3909,7 @@ void CMaterialSystem::EndFrame( void )
 		}
 #endif
 		ServiceEndFramePriorToNextContext();
-		g_pfnSwapBufferMarker();
 		break;
-
-#ifndef _PS3
 
 	case MATERIAL_QUEUED_THREADED:
 		{
@@ -4198,8 +3961,7 @@ void CMaterialSystem::EndFrame( void )
 			}
 #endif
 			ServiceEndFramePriorToNextContext();
-			g_pfnSwapBufferMarker();
-
+	
 			CMatQueuedRenderContext *pPrevContext = &m_QueuedRenderContexts[m_iCurQueuedContext];
 
 #ifdef MAT_QUEUED_OWN_THREADPOOL
@@ -4243,54 +4005,6 @@ void CMaterialSystem::EndFrame( void )
 			break;
 		}
 
-
-#else
-
-
-	case MATERIAL_QUEUED_THREADED:
-		{
-			// Wait for previous submitted QMS run
-			if (m_bQMSJobSubmitted)
-			{
-				g_pGcmSharedData->WaitForQMS();
-				m_bQMSJobSubmitted = 0;
-
-				if ( !IsPC() && mat_forcehardwaresync.GetBool() )
-				{
-					g_pShaderAPI->ForceHardwareSync();
-				}
-			}
-
-#if GCM_ALLOW_TIMESTAMPS || X360_ALLOW_TIMESTAMPS
-			{
-				double flCurrentTime = Plat_FloatTime();
-				OnFrameTimestampAvailableTotal( (flCurrentTime-s_flTotalFrameBeginTimestamp)*1000.0f );
-				s_flTotalFrameBeginTimestamp = flCurrentTime;
-			}
-#endif
-			ServiceEndFramePriorToNextContext();
-			g_pfnSwapBufferMarker();
-
-			// Switch Render Contexts
-
-			CMatQueuedRenderContext *pPrevContext = &m_QueuedRenderContexts[m_iCurQueuedContext];
-
-			m_QueuedRenderContexts[m_iCurQueuedContext].GetCallQueueInternal()->QueueCall( g_pShaderAPI, &IShaderAPI::ReleaseThreadOwnership );
-			m_iCurQueuedContext = ( ( m_iCurQueuedContext + 1 ) % ARRAYSIZE( m_QueuedRenderContexts) );
-			m_QueuedRenderContexts[m_iCurQueuedContext].BeginQueue( pPrevContext );
-			m_QueuedRenderContexts[m_iCurQueuedContext].GetCallQueueInternal()->QueueCall( g_pShaderAPI, &IShaderAPI::AcquireThreadOwnership );
-			m_pRenderContext =  &m_QueuedRenderContexts[m_iCurQueuedContext];
-		
-			// Run QMS on prevContext
-
-			g_pGcmSharedData->RunQMS(&RunQMS, (void*)this, (void*)pPrevContext);
-			m_bQMSJobSubmitted = 1;
-
-			break;
-		}
-
-#endif
-
 	case MATERIAL_QUEUED_SINGLE_THREADED:
 		{
 			VPROF_BUDGET( "Mat_ThreadedEndframe", "Mat_QueuedEndframe" );
@@ -4312,8 +4026,7 @@ void CMaterialSystem::EndFrame( void )
 			s_flTotalFrameBeginTimestamp = flCurrentTime;
 #endif
 			ServiceEndFramePriorToNextContext();
-			g_pfnSwapBufferMarker();
-			break;
+				break;
 		}
 	}
 
@@ -4355,19 +4068,11 @@ void CMaterialSystem::EndFrame( void )
 
 		case MATERIAL_QUEUED_THREADED:
 			{
-#ifndef _PS3
 				if ( m_pActiveAsyncJob )
 				{
 					m_pActiveAsyncJob->WaitForFinish();
 					SafeRelease( m_pActiveAsyncJob );
 				}
-#else
-				if (m_bQMSJobSubmitted)
-				{
-					g_pGcmSharedData->WaitForQMS();
-					m_bQMSJobSubmitted = 0;
-				}
-#endif
 				// We have a queued context set here, need hardware to flush the queue if the job isn't active
 				m_pRenderContext = &m_HardwareRenderContext;
 
@@ -4647,26 +4352,6 @@ void CMaterialSystem::DebugPrintUsedTextures( void )
 {
 	TextureManager()->DebugPrintUsedTextures();
 }
-
-#if defined( _X360 ) || defined( _PS3 )
-void CMaterialSystem::ListUsedMaterials( void )
-{	
-	int numMaterials = GetNumMaterials();
-	xMaterialList_t* pMaterialList = (xMaterialList_t *)stackalloc( numMaterials * sizeof( xMaterialList_t ) );
-
-	numMaterials = 0;
-	for ( MaterialHandle_t hMaterial = FirstMaterial(); hMaterial != InvalidMaterial(); hMaterial = NextMaterial( hMaterial ) )
-	{
-		IMaterialInternal *pMaterial = GetMaterialInternal( hMaterial );
-		pMaterialList[numMaterials].pName = pMaterial->GetName();
-		pMaterialList[numMaterials].pShaderName = pMaterial->GetShader() ? pMaterial->GetShader()->GetName() : "???";
-		pMaterialList[numMaterials].refCount = pMaterial->GetReferenceCount();
-		numMaterials++;
-	}
-
-	XBX_rMaterialList( numMaterials, pMaterialList );
-}
-#endif
 
 void CMaterialSystem::ToggleSuppressMaterial( char const* pMaterialName )
 {
@@ -5447,25 +5132,11 @@ MaterialLock_t CMaterialSystem::Lock()
 {
 	IMatRenderContextInternal *pCurContext = GetRenderContextInternal();
 
-#ifdef _X360
-	// use this to help catch synchronization blocks in PIX timing captures
-	PIXEVENT( pCurContext, "CMaterialSystem::Lock" );
-#endif
-
-#ifndef _PS3
-
 	if ( pCurContext != &m_HardwareRenderContext && m_pActiveAsyncJob )
 	{
 		m_pActiveAsyncJob->WaitForFinishAndRelease();
 		m_pActiveAsyncJob = NULL;
 	}
-#else
-	if ( pCurContext != &m_HardwareRenderContext && m_bQMSJobSubmitted )
-	{
-		g_pGcmSharedData->WaitForQMS();
-		m_bQMSJobSubmitted = 0;
-	}
-#endif
 
 	g_MatSysMutex.Lock();
 
@@ -5593,13 +5264,6 @@ void CMaterialSystem::DebugPrintUsedTextures( const CCommand &args )
 	DebugPrintUsedTextures();
 }
 
-#if defined( _X360 ) || defined( _PS3 )
-void CMaterialSystem::ListUsedMaterials( const CCommand &args )
-{
-	ListUsedMaterials();
-}
-#endif // !_X360
-
 void CMaterialSystem::ReloadAllMaterials( const CCommand &args )
 {
 	ReloadMaterials( NULL );
@@ -5620,35 +5284,6 @@ void CMaterialSystem::ReloadTextures( const CCommand &args )
 {
 	ReloadTextures();
 }
-
-#ifdef _PS3
-//void CMaterialSystem::GetVRAMScreenShotInfo( char **pointerToRawImageData, uint32 *uWidth, uint32 *uHeight, uint32 *uPitch, VRAMScreenShotInfoColor_t *colour )
-void CMaterialSystem::TransmitScreenshotToVX()
-{
-	extern char *GetScreenShotInfoForVX( IDirect3DDevice9 *pDevice, uint32 *uWidth, uint32 *uHeight, uint32 *uPitch, uint32 *colour );
-	
-	uint32 uWidth, uHeight, uPitch, uColor;
-	char *pFrameBuffer = GetScreenShotInfoForVX( Dx9Device(), &uWidth, &uHeight, &uPitch, &uColor );
-	if ( pFrameBuffer )
-	{
-		g_pValvePS3Console->TransmitScreenshot( pFrameBuffer, uWidth, uHeight, uPitch, uColor );
-	}
-	
-	//return GetVRAMScreenShotInfoGCM( pointerToRawImageData, Dx9Device(), uWidth, uHeight, uPitch, colour);
-}
-
-void CMaterialSystem::CompactRsxLocalMemory( char const *szReason )
-{
-	extern void Ps3gcmLocalMemoryAllocator_CompactWithReason( char const *szReason );
-	Ps3gcmLocalMemoryAllocator_CompactWithReason( szReason );
-}
-
-void CMaterialSystem::SetFlipPresentFrequency( int nNumVBlanks )
-{
-	extern void Ps3gcmFlip_SetFlipPresentFrequency( int nNumVBlanks );
-	// 7ltodo Ps3gcmFlip_SetFlipPresentFrequency( nNumVBlanks );
-}
-#endif
 
 
 void CMaterialSystem::SpinPresent( uint nFrames )
@@ -5675,7 +5310,3 @@ CON_COMMAND( mat_hdr_enabled, "Report if HDR is enabled for debugging" )
 		Log_Warning( LOG_MaterialSystemConsole, "HDR Disabled\n" );
 	}
 }
-
-#ifdef _PS3
-#include "shaderutil_ps3nonvirt.inl"
-#endif

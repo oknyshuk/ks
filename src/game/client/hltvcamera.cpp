@@ -5,6 +5,7 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "tier1/fmtstr.h"
 #include "hltvcamera.h"
 #include "cdll_client_int.h"
 #include "util_shared.h"
@@ -1835,19 +1836,8 @@ CON_COMMAND_F( list_active_casters, "List currently active casters.", FCVAR_CLIE
 		if ( CSGameRules()->m_arrTournamentActiveCasterAccounts[ i ] )
 		{
 			nActiveCasters++;
-
-			if ( steamapicontext->SteamUser() && steamapicontext->SteamFriends() )
-			{
-				CSteamID steamID( CSGameRules()->m_arrTournamentActiveCasterAccounts[ i ], steamapicontext->SteamUser()->GetSteamID().GetEUniverse(), k_EAccountTypeIndividual );
-				const char *pszName = steamapicontext->SteamFriends()->GetFriendPersonaName( steamID );
-				Msg( "%d, ID: %d Name: %s  %s\n", i, CSGameRules()->m_arrTournamentActiveCasterAccounts[ i ], pszName, 
-					 ( cameraManSteamID.GetAccountID() == CSGameRules()->m_arrTournamentActiveCasterAccounts[ i ] ) ? "*Camera Man*" : "" );
-			}
-			else
-			{
-				Msg( "%d, ID: %d  %s\n", i, CSGameRules()->m_arrTournamentActiveCasterAccounts[ i ], 
-					 ( cameraManSteamID.GetAccountID() == CSGameRules()->m_arrTournamentActiveCasterAccounts[ i ] ) ? "*Camera Man*" : "" );
-			}
+			Msg( "%d, ID: %d  %s\n", i, CSGameRules()->m_arrTournamentActiveCasterAccounts[ i ],
+				 ( cameraManSteamID.GetAccountID() == CSGameRules()->m_arrTournamentActiveCasterAccounts[ i ] ) ? "*Camera Man*" : "" );
 		}
 	}
 	if ( nActiveCasters == 0 )

@@ -51,16 +51,12 @@ typedef void *HDC;
 #include "gl_shader.h"
 #include "sys_dll.h"
 #include "materialsystem/imaterial.h"
-#include "IHammer.h"
 #include "avi/iavi.h"
 #include "tier2/tier2.h"
 #include "tier2/renderutils.h"
 #include "LoadScreenUpdate.h"
 #if defined( _X360 )
-#include "xbox/xbox_win32stubs.h"
-#include "xbox/xbox_launch.h"
 #else
-#include "xbox/xboxstubs.h"
 #endif
 #if !defined(NO_STEAM)
 #include "cl_steamauth.h"

@@ -1,4 +1,4 @@
-//===== Copyright © 1996-2005, Valve Corporation, All rights reserved. ======//
+//===== Copyright ï¿½ 1996-2005, Valve Corporation, All rights reserved. ======//
 //
 // Purpose: Defines the interface that the GameUI dll exports
 //
@@ -14,10 +14,6 @@
 
 #include "ienginevgui.h"
 #include "inputsystem/ButtonCode.h"
-
-#if !defined( _X360 )
-#include "xbox/xboxstubs.h"
-#endif
 
 //-----------------------------------------------------------------------------
 // Foward declarations

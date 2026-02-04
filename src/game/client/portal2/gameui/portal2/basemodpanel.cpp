@@ -13,7 +13,6 @@
 #include "engine/ienginesound.h"
 #include "EngineInterface.h"
 #include "tier0/dbg.h"
-#include "ixboxsystem.h"
 #include "GameUI_Interface.h"
 #include "cdll_client_int.h"
 #include "game/client/IGameClientExports.h"
@@ -23,7 +22,6 @@
 #include "filesystem/IXboxInstaller.h"
 
 #ifdef _X360
-	#include "xbox/xbox_launch.h"
 #elif defined(_PS3)
 #include "ps3/saverestore_ps3_api_ui.h"
 #endif
@@ -109,13 +107,10 @@
 #include "utlmap.h"
 
 #if defined( PORTAL2_PUZZLEMAKER )
-#include "gc_clientsystem.h"
-#include "econ_gcmessages.h"
 #include "vcommunitymapdialog.h"
 #include "vratemapdialog.h"
 #include "vplaytestdemosdialog.h"
 #include "vplaytestuploadwait.h"
-#include "../gcsdk/steamextra/rtime.h"
 #include "vpuzzlemakermenu.h"
 #include "vpuzzlemakermychambers.h"
 #include "vpuzzlemakerexitconfirmation.h"
@@ -1889,8 +1884,6 @@ CEG_NOINLINE void CBaseModPanel::OnLevelLoadingStarted( char const *levelName, b
 
 	if ( g_pGameSteamCloudSync )
 		g_pGameSteamCloudSync->AbortAll();
-
-	SpewInstallStatus();
 
 #if defined( _X360 )
 	// If the installer has finished while we are in the menus, then this is the ONLY place we

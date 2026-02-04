@@ -47,7 +47,6 @@
 #include "../utils/bzip2/bzlib.h"
 
 #if defined( _X360 )
-#include "xbox/xbox_win32stubs.h"
 #endif
 
 #if defined( _PS3 )

@@ -39,7 +39,6 @@
 #endif
 
 #if defined( _X360 )
-#include "xbox/xbox_win32stubs.h"
 #endif
 
 // set these before calling CheckParm

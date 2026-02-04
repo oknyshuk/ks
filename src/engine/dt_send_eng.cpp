@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
+//========= Copyright ï¿½ 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -1068,11 +1068,7 @@ static FORCEINLINE void AdvanceToNextChange( const uint32* RESTRICT pFrom, const
 	{
 		if( *pCurrFrom != *pCurrTo )
 		{
-#if defined(_PS3) || defined(_X360)
-			*pnDataDiff = DWordSwap((*pCurrFrom ^ *pCurrTo));
-#else
             *pnDataDiff = *pCurrFrom ^ *pCurrTo;
-#endif
 			break;
 		}
 	}

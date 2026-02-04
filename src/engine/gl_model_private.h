@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
+//========= Copyright ï¿½ 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -530,11 +530,7 @@ struct msurface2_t
 	// These are packed in to flags now
 	//unsigned char			vertCount;		// number of verts for this surface
 	//unsigned char			sortGroup;		// only uses 2 bits, subdivide?
-#ifdef _PS3
-	cplane_t				m_plane;			// pointer to shared plane
-#else
 	cplane_t*				plane;			// pointer to shared plane
-#endif
 	int						firstvertindex;	// look up in model->vertindices[] (only uses 17-18 bits?)
 	WorldDecalHandle_t		decals;         // unsigned short
 	ShadowDecalHandle_t		m_ShadowDecals; // unsigned short

@@ -27,7 +27,6 @@
 #include "matchmaking/iplayermanager.h"
 #include "matchmaking/iservermanager.h"
 
-#include "ixboxsystem.h"
 
 #include "uiavatarimage.h"
 #include "tokenset.h"

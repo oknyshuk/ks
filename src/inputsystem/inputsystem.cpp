@@ -13,10 +13,6 @@
 #include "filesystem.h"
 #include "platforminputdevice.h"
 
-#ifdef _PS3
-#include <vjobs_interface.h>
-#endif
-
 #ifdef PLATFORM_OSX
 #include <Carbon/Carbon.h>
 #include "materialsystem/imaterialsystem.h"
@@ -39,16 +35,10 @@ ConVar dev_force_selected_device( "dev_force_selected_device", "0", FCVAR_DEVELO
 // Singleton instance
 //-----------------------------------------------------------------------------
 static CInputSystem g_InputSystem;
-EXPOSE_SINGLE_INTERFACE_GLOBALVAR( CInputSystem, IInputSystem, 
+EXPOSE_SINGLE_INTERFACE_GLOBALVAR( CInputSystem, IInputSystem,
 						INPUTSYSTEM_INTERFACE_VERSION, g_InputSystem );
 
-#ifdef _PS3
-IVJobs * g_pVJobs = NULL;
-#endif
-
-
-
-#if defined( WIN32 ) && !defined( _X360 )
+#if defined( WIN32 )
 typedef BOOL (WINAPI *RegisterRawInputDevices_t)
 (
 	PCRAWINPUTDEVICE pRawInputDevices,
@@ -111,13 +101,6 @@ CInputSystem::CInputSystem()
 
 #if !defined( _CERT ) && !defined(LINUX)
 	V_memset( m_press_x360_buttons, 0, sizeof( m_press_x360_buttons ) );
-#endif
-
-#ifdef _PS3
-	m_pPS3CellNoPadDataHook = NULL;
-	m_pPS3CellPadDataHook = NULL;
-	m_PS3KeyboardConnected = false;
-	m_PS3MouseConnected = false;
 #endif
 
 	m_pXInputDLL = NULL;
@@ -190,7 +173,6 @@ InitReturnVal_t CInputSystem::Init()
 
 	joy_xcontroller_found.SetValue( 0 );
 
-#if !defined( _GAMECONSOLE )
 	if ( IsPC() )
 	{
 #if !defined( PLATFORM_POSIX )
@@ -212,17 +194,7 @@ InitReturnVal_t CInputSystem::Init()
 
 		if ( m_bXController )
 			joy_xcontroller_found.SetValue( 1 );
-
-
 	}
-#elif defined( _GAMECONSOLE )
-	if ( IsGameConsole() )
-	{
-		InitializeXDevices();
-		m_bXController = true;
-		joy_xcontroller_found.SetValue( 1 );
-	}
-#endif
 
 	InitCursors();
 
@@ -232,7 +204,7 @@ InitReturnVal_t CInputSystem::Init()
 
 	m_bRawInputSupported = true;
 	
-#elif defined( WIN32 ) && !defined( _X360 )
+#elif defined( WIN32 )
 	// Check if this version of windows supports raw mouse input (later than win2k)
 
 	CSysModule *m_pRawInputDLL = Sys_LoadModule( "USER32.dll" );
@@ -260,10 +232,6 @@ bool CInputSystem::Connect( CreateInterfaceFn factory )
 	if ( !BaseClass::Connect( factory ) )
 		return false;
 
-#ifdef _PS3
-	g_pVJobs = ( IVJobs* )factory( VJOBS_INTERFACE_VERSION, NULL );
-#endif
-
 #if defined( USE_SDL )
 	m_pLauncherMgr = (ILauncherMgr *)factory(  SDLMGR_INTERFACE_VERSION, NULL );
 #elif defined( OSX )
@@ -272,22 +240,6 @@ bool CInputSystem::Connect( CreateInterfaceFn factory )
 
 return true;
 }
-
-#ifdef _PS3
-extern void PS3_XInputShutdown();
-#endif
-
-#ifdef _PS3
-void CInputSystem::SetPS3CellPadDataHook( BCellPadDataHook_t hookFunc )
-{
-	m_pPS3CellPadDataHook = hookFunc;
-}
-void CInputSystem::SetPS3CellPadNoDataHook( BCellPadNoDataHook_t hookFunc )
-{
-	m_pPS3CellNoPadDataHook = hookFunc;
-}
-#endif
-
 
 
 //-----------------------------------------------------------------------------
@@ -306,10 +258,6 @@ void CInputSystem::Shutdown()
 	ShutdownCursors();
 
 	BaseClass::Shutdown();
-
-#ifdef _PS3
-	PS3_XInputShutdown();
-#endif
 }
 
 
@@ -327,10 +275,6 @@ void CInputSystem::SleepUntilInput( int nMaxSleepTimeMS )
 	}
 
 	MsgWaitForMultipleObjects( 1, &m_hEvent, FALSE, nMaxSleepTimeMS, QS_ALLEVENTS );
-#elif defined( _PS3 )
-	// no-op
-#else
-#warning "need a SleepUntilInput impl"
 #endif
 }
 
@@ -384,14 +328,9 @@ void CInputSystem::AttachToWindow( void* hWnd )
 #if defined ( USE_SDL )
 #elif defined( PLATFORM_OSX )
 #elif defined( PLATFORM_WINDOWS )
-#if defined( PLATFORM_X360 ) //GetWindowLongPtrW/SetWindowLongPtrW don't exist on the 360
-	m_ChainedWndProc = (WNDPROC)GetWindowLongPtr( (HWND)hWnd, GWLP_WNDPROC );
-	SetWindowLongPtr( (HWND)hWnd, GWLP_WNDPROC, (LONG_PTR)InputSystemWindowProc );
-#else
-
 	m_ChainedWndProc = (WNDPROC)GetWindowLongPtrW( (HWND)hWnd, GWLP_WNDPROC );
 	SetWindowLongPtrW( (HWND)hWnd, GWLP_WNDPROC, (LONG_PTR)InputSystemWindowProc );
-	
+
 	// register to read raw mouse input
 #if !defined(HID_USAGE_PAGE_GENERIC)
 #define HID_USAGE_PAGE_GENERIC         ((USHORT) 0x01)
@@ -401,40 +340,14 @@ void CInputSystem::AttachToWindow( void* hWnd )
 #endif
 
 	RAWINPUTDEVICE Rid[1];
-	Rid[0].usUsagePage = HID_USAGE_PAGE_GENERIC; 
-	Rid[0].usUsage = HID_USAGE_GENERIC_MOUSE; 
-	Rid[0].dwFlags = RIDEV_INPUTSINK;   
+	Rid[0].usUsagePage = HID_USAGE_PAGE_GENERIC;
+	Rid[0].usUsage = HID_USAGE_GENERIC_MOUSE;
+	Rid[0].dwFlags = RIDEV_INPUTSINK;
 	Rid[0].hwndTarget = (HWND)hWnd; // g_InputSystem.m_hAttachedHWnd; // GetHhWnd;
 	::RegisterRawInputDevices(Rid, ARRAYSIZE(Rid), sizeof(Rid[0]));
-	
-#endif
-#elif defined( _PS3 )
-#else
-#error
 #endif
 
 	m_hAttachedHWnd = (HWND)hWnd;
-
-#if defined( WIN32 ) && !defined( _X360 )
-	// register to read raw mouse input
-
-#if !defined(HID_USAGE_PAGE_GENERIC)
-#define HID_USAGE_PAGE_GENERIC         ((USHORT) 0x01)
-#endif
-#if !defined(HID_USAGE_GENERIC_MOUSE)
-#define HID_USAGE_GENERIC_MOUSE        ((USHORT) 0x02)
-#endif
-
-	if ( m_bRawInputSupported )
-	{
-		RAWINPUTDEVICE Rid[1];
-		Rid[0].usUsagePage = HID_USAGE_PAGE_GENERIC; 
-		Rid[0].usUsage = HID_USAGE_GENERIC_MOUSE; 
-		Rid[0].dwFlags = RIDEV_INPUTSINK;   
-		Rid[0].hwndTarget = g_InputSystem.m_hAttachedHWnd; // GetHhWnd;
-		pfnRegisterRawInputDevices(Rid, ARRAYSIZE(Rid), sizeof(Rid[0]));
-	}
-#endif
 
 	// New window, clear input state
 	ClearInputState( true );
@@ -1065,9 +978,6 @@ void CInputSystem::PollInputState( bool bIsInGame )
 	PollInputState_Linux();
 #elif defined( WIN32 )
 	PollInputState_Windows();
-#elif defined( _PS3 )
-#else
-#error
 #endif
 
 	// Leave the queued state up-to-date with the current
@@ -1116,12 +1026,11 @@ void CInputSystem::SampleDevices( void )
 	m_nLastSampleTick = ComputeSampleTick();
 
 	static ConVarRef joystick_force_disabled( "joystick_force_disabled" );
-#if !defined( PLATFORM_POSIX ) || defined( _GAMECONSOLE )
+#if !defined( PLATFORM_POSIX )
 	if ( joystick_force_disabled.IsValid() && joystick_force_disabled.GetBool() == false )
 	{
 		PollXDevices();
 	}
-	
 #endif
 	if ( m_bXController == false && joystick_force_disabled.IsValid() && joystick_force_disabled.GetBool() == false  )
 	{
@@ -1449,17 +1358,11 @@ void CInputSystem::SetCursorPosition( int x, int y )
 	m_pLauncherMgr->SetCursorPosition( x, y );
 #elif defined( OSX )
 	m_pLauncherMgr->SetCursorPosition( x, y );
-#elif defined( WIN32 ) 
+#elif defined( WIN32 )
 	POINT pt;
 	pt.x = x; pt.y = y;
 	ClientToScreen( (HWND)m_hAttachedHWnd, &pt );
 	SetCursorPos( pt.x, pt.y );
-#elif defined( PLATFORM_PS3 )
-	POINT pt;
-	pt.x = x; pt.y = y;
-	SetCursorPos( pt.x, pt.y );
-#else
-#error
 #endif
 
 	InputState_t &state = m_InputState[ m_bIsPolling ];
@@ -1846,7 +1749,7 @@ LRESULT CInputSystem::WindowProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lP
 		}
  		break;
 
-#if defined ( WIN32 ) && !defined ( _X360 )
+#if defined ( WIN32 )
 	case WM_INPUT:
 		{
 			if ( m_bRawInputSupported )
@@ -2113,12 +2016,8 @@ void CInputSystem::EnableMouseCapture( PlatWindow_t hWnd )
 	// We're using GetForegroundWindow here, but we really want to ask engine or game if they're the ActiveApp.
 	bool bActiveWindow = true;
 
-#if !defined( _GAMECONSOLE )
 	HWND hInputWnd = reinterpret_cast< HWND >( hWnd );
 	bActiveWindow = ( hInputWnd == ::GetForegroundWindow() );
-#else
-	HWND hInputWnd = reinterpret_cast< HWND >( m_hCurrentCaptureWnd );
-#endif
 
 	if ( m_hCurrentCaptureWnd != PLAT_WINDOW_INVALID || !bActiveWindow )
 	{
@@ -2181,10 +2080,6 @@ void  CInputSystem::InitPlatfromInputDeviceInfo( void )
 	m_currentlyConnectedInputDevices = INPUT_DEVICE_KEYBOARD_MOUSE;
 #elif defined( PLATFORM_LINUX )
 	m_currentlyConnectedInputDevices = INPUT_DEVICE_KEYBOARD_MOUSE;
-#elif defined( PLATFORM_X360 )
-	m_currentlyConnectedInputDevices = INPUT_DEVICE_GAMEPAD;
-#elif defined( PLATFORM_PS3 )
-	m_currentlyConnectedInputDevices = INPUT_DEVICE_NONE;
 #else
 	m_currentlyConnectedInputDevices = INPUT_DEVICE_NONE;
 #endif
@@ -2209,10 +2104,6 @@ void CInputSystem::ResetCurrentInputDevice( void )
 	m_currentInputDevice = INPUT_DEVICE_KEYBOARD_MOUSE;
 #elif defined( PLATFORM_LINUX )
 	m_currentInputDevice = INPUT_DEVICE_KEYBOARD_MOUSE;
-#elif defined( PLATFORM_X360 )
-	m_currentInputDevice = INPUT_DEVICE_GAMEPAD;
-#elif defined( PLATFORM_PS3 )
-	m_currentInputDevice = INPUT_DEVICE_NONE;
 #else
 	m_currentInputDevice = INPUT_DEVICE_NONE;
 #endif
@@ -2286,9 +2177,7 @@ InputDevice_t CInputSystem::IsOnlySingleDeviceConnected( void )
 
 bool CInputSystem::IsDeviceReadingInput( InputDevice_t device ) const
 {
-#ifndef _GAMECONSOLE
 	return true;
-#endif
 
 #if !defined( _CERT )
 	// [dkorus] test code for the device selection 
