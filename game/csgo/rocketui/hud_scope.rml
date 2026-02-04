@@ -1,0 +1,31 @@
+<rml>
+	<head>
+		<style>
+			body {
+				width: 100%;
+				height: 100%;
+				pointer-events: none;
+			}
+			/* Black fill areas */
+			.fill {
+				position: absolute;
+				background-color: #000;
+			}
+			/* Crosshair lines */
+			.line {
+				position: absolute;
+				background-color: #000;
+			}
+		</style>
+	</head>
+	<body>
+		<!-- Black fills around scope viewport -->
+		<div id="fill-top" class="fill"/>
+		<div id="fill-bottom" class="fill"/>
+		<div id="fill-left" class="fill"/>
+		<div id="fill-right" class="fill"/>
+		<!-- Crosshair lines -->
+		<div id="line-h" class="line"/>
+		<div id="line-v" class="line"/>
+	</body>
+</rml>

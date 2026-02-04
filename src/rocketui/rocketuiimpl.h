@@ -15,6 +15,7 @@
 #include "rocketrender.h"
 #include <RmlUi/Core/ElementDocument.h>
 #include <mutex>
+#include <unordered_set>
 
 class DeviceCallbacks;
 
@@ -46,7 +47,8 @@ protected:
   Rml::Context *m_ctxMenu;
   Rml::Context *m_ctxHud;
   Rml::Context *m_ctxCurrent; // Pointer to Hud or Menu (for rendering)
-  Rml::Context *m_ctxInput;   // Override for input routing (nullptr = use m_ctxCurrent)
+  Rml::Context
+      *m_ctxInput; // Override for input routing (nullptr = use m_ctxCurrent)
 
   // Mutexes to synchronize Update/Render - RmlUi is not thread-safe
   std::mutex m_mtxHud;
@@ -65,6 +67,11 @@ protected:
 
   // if > 0, we are stealing input from the game.
   int m_numInputConsumers;
+
+  // Key repeat state: tracks keys that just received IE_ButtonPressed.
+  // First IE_KeyCodeTyped after IE_ButtonPressed is a duplicate, not a repeat.
+  // We skip it, then process subsequent IE_KeyCodeTyped as actual repeats.
+  std::unordered_set<int> m_keysAwaitingFirstRepeat;
 
   // IAppSystem
 public:
@@ -99,13 +106,12 @@ public:
   virtual void RegisterPauseMenu(TogglePauseMenuFn showPauseMenuFunc) {
     m_togglePauseMenuFunc = showPauseMenuFunc;
   }
-  virtual void RegisterConsoleHandlers(ConsoleKeyInputFn keyHandler, ConsoleCharInputFn charHandler) {
+  virtual void RegisterConsoleHandlers(ConsoleKeyInputFn keyHandler,
+                                       ConsoleCharInputFn charHandler) {
     m_consoleKeyInputFunc = keyHandler;
     m_consoleCharInputFunc = charHandler;
   }
-  virtual void SetInputContext(Rml::Context* ctx) {
-    m_ctxInput = ctx;
-  }
+  virtual void SetInputContext(Rml::Context *ctx) { m_ctxInput = ctx; }
 
   void AddDeviceDependentObject(IShaderDeviceDependentObject *pObject);
   void RemoveDeviceDependentObject(IShaderDeviceDependentObject *pObject);

@@ -1,0 +1,41 @@
+<rml>
+	<head>
+		<style>
+			body {
+				width: 100%;
+				height: 100%;
+				pointer-events: none;
+			}
+			.line {
+				position: absolute;
+				background-color: rgba(50,250,50,200);
+			}
+			.outline {
+				position: absolute;
+				background-color: rgba(0,0,0,128);
+			}
+			#dot {
+				position: absolute;
+				display: none;
+			}
+			#ol-dot {
+				position: absolute;
+				display: none;
+			}
+		</style>
+	</head>
+	<body>
+		<!-- Outlines (rendered behind lines due to document order) -->
+		<div id="ol-top" class="outline"/>
+		<div id="ol-bottom" class="outline"/>
+		<div id="ol-left" class="outline"/>
+		<div id="ol-right" class="outline"/>
+		<div id="ol-dot" class="outline"/>
+		<!-- Crosshair lines -->
+		<div id="line-top" class="line"/>
+		<div id="line-bottom" class="line"/>
+		<div id="line-left" class="line"/>
+		<div id="line-right" class="line"/>
+		<div id="dot" class="line"/>
+	</body>
+</rml>

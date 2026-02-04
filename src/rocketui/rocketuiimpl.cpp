@@ -10,8 +10,8 @@
 #include <cstring>
 #include <fontconfig/fontconfig.h>
 
-#include "rocketkeys.h"
 #include "inputsystem/iinputsystem.h"
+#include "rocketkeys.h"
 
 // Helper to get current key modifier state for RmlUi
 static int GetRmlKeyModifierState() {
@@ -393,22 +393,49 @@ bool RocketUIImpl::HandleInputEvent(const InputEvent_t &event) {
   if (!rocket_enable.GetBool())
     return false;
 
-  // Use input context override if set, otherwise use current render context
   Rml::Context *inputCtx = m_ctxInput ? m_ctxInput : m_ctxCurrent;
+  int modifiers = GetRmlKeyModifierState();
+  ButtonCode_t key = (ButtonCode_t)event.m_nData;
+  bool isKeyboard = !IsMouseCode(key);
+
+  // Track key state to distinguish first press from repeat.
+  // Engine fires BOTH IE_ButtonPressed AND IE_KeyCodeTyped on first press,
+  // but only IE_KeyCodeTyped on repeat. We skip the first IE_KeyCodeTyped.
+  if (event.m_nType == IE_ButtonPressed && isKeyboard) {
+    m_keysAwaitingFirstRepeat.insert(key);
+  } else if (event.m_nType == IE_ButtonReleased && isKeyboard) {
+    m_keysAwaitingFirstRepeat.erase(key);
+  }
+
+  bool isFirstKeyCodeTyped = false;
+  if (event.m_nType == IE_KeyCodeTyped) {
+    if (m_keysAwaitingFirstRepeat.count(key)) {
+      m_keysAwaitingFirstRepeat.erase(key);
+      isFirstKeyCodeTyped =
+          true; // Skip this - it's duplicate of IE_ButtonPressed
+    }
+  }
 
   // Console input handling - highest priority
   if (m_consoleKeyInputFunc || m_consoleCharInputFunc) {
     switch (event.m_nType) {
     case IE_ButtonPressed:
     case IE_ButtonDoubleClicked:
-      if (m_consoleKeyInputFunc && !IsMouseCode((ButtonCode_t)event.m_nData)) {
-        if (m_consoleKeyInputFunc(event.m_nData, true))
+      if (m_consoleKeyInputFunc && isKeyboard) {
+        if (m_consoleKeyInputFunc(key, true))
           return true;
       }
       break;
     case IE_ButtonReleased:
-      if (m_consoleKeyInputFunc && !IsMouseCode((ButtonCode_t)event.m_nData)) {
-        if (m_consoleKeyInputFunc(event.m_nData, false))
+      if (m_consoleKeyInputFunc && isKeyboard) {
+        if (m_consoleKeyInputFunc(key, false))
+          return true;
+      }
+      break;
+    case IE_KeyCodeTyped:
+      // Key repeat - only process if it's an actual repeat, not first duplicate
+      if (!isFirstKeyCodeTyped && m_consoleKeyInputFunc && isKeyboard) {
+        if (m_consoleKeyInputFunc(key, true))
           return true;
       }
       break;
@@ -423,42 +450,31 @@ bool RocketUIImpl::HandleInputEvent(const InputEvent_t &event) {
     }
   }
 
-  // Get current modifier state for RmlUi
-  int modifiers = GetRmlKeyModifierState();
-
-  // Always get the mouse location
+  // Always track mouse location
   if (event.m_nType == IE_AnalogValueChanged && event.m_nData == MOUSE_XY) {
     inputCtx->ProcessMouseMove(event.m_nData2, event.m_nData3, modifiers);
   }
 
-  // Some edge cases
+  // Global hotkeys
   if (event.m_nType == IE_ButtonPressed) {
-    // Check for debugger. Toggle on F8.
-    if (event.m_nData == KEY_F8) {
+    if (key == KEY_F8) {
       ToggleDebugger();
       return true;
     }
-    // ESC key for the pause menu
-    if (event.m_nData == KEY_ESCAPE) {
-      if (m_togglePauseMenuFunc && m_pEngine->IsInGame()) {
-        m_togglePauseMenuFunc();
-      }
+    if (key == KEY_ESCAPE && m_togglePauseMenuFunc && m_pEngine->IsInGame()) {
+      m_togglePauseMenuFunc();
     }
   }
 
-  // Nothing wants input, skip.
-  if (!IsConsumingInput())
-    return false;
-
-  // The console is open, skip
-  if (m_pEngine->Con_IsVisible())
+  // Skip RmlUi processing if nothing wants input or VGUI console is open
+  if (!IsConsumingInput() || m_pEngine->Con_IsVisible())
     return false;
 
   switch (event.m_nType) {
   case IE_ButtonDoubleClicked:
   case IE_ButtonPressed:
-    if (IsMouseCode((ButtonCode_t)event.m_nData)) {
-      switch ((ButtonCode_t)event.m_nData) {
+    if (!isKeyboard) {
+      switch (key) {
       case MOUSE_LEFT:
         inputCtx->ProcessMouseButtonDown(0, modifiers);
         break;
@@ -484,14 +500,13 @@ bool RocketUIImpl::HandleInputEvent(const InputEvent_t &event) {
         break;
       }
     } else {
-      inputCtx->ProcessKeyDown(
-          ButtonToRocketKey((ButtonCode_t)event.m_nData), modifiers);
+      inputCtx->ProcessKeyDown(ButtonToRocketKey(key), modifiers);
     }
     break;
 
   case IE_ButtonReleased:
-    if (IsMouseCode((ButtonCode_t)event.m_nData)) {
-      switch ((ButtonCode_t)event.m_nData) {
+    if (!isKeyboard) {
+      switch (key) {
       case MOUSE_LEFT:
         inputCtx->ProcessMouseButtonUp(0, modifiers);
         break;
@@ -511,22 +526,24 @@ bool RocketUIImpl::HandleInputEvent(const InputEvent_t &event) {
         break;
       }
     } else {
-      inputCtx->ProcessKeyUp(ButtonToRocketKey((ButtonCode_t)event.m_nData),
-                             modifiers);
+      inputCtx->ProcessKeyUp(ButtonToRocketKey(key), modifiers);
     }
     break;
 
   case IE_KeyTyped: {
     char ascii = (char)((wchar_t)event.m_nData);
-    if (ascii != 8) // Rocketui doesn't like the backspace
-    {
+    if (ascii != 8) // RmlUi doesn't like backspace here
       inputCtx->ProcessTextInput(ascii);
-    }
     break;
   }
 
+  case IE_KeyCodeTyped:
+    // Key repeat - only process actual repeats, not the first duplicate
+    if (!isFirstKeyCodeTyped)
+      inputCtx->ProcessKeyDown(ButtonToRocketKey(key), modifiers);
+    break;
+
   case IE_AnalogValueChanged:
-    // Mouse/Joystick changes handled above
     break;
 
   default:
@@ -543,7 +560,8 @@ void RocketUIImpl::RenderHUDFrame() {
   // HUD context is the default for input handling during gameplay
   m_ctxCurrent = m_ctxHud;
 
-  // Lock mutex to synchronize with main thread Update - RmlUi is not thread-safe
+  // Lock mutex to synchronize with main thread Update - RmlUi is not
+  // thread-safe
   std::lock_guard<std::mutex> lock(m_mtxHud);
   RocketRenderDXVK::m_Instance.BeginFrame();
   m_ctxHud->Render();
@@ -562,7 +580,8 @@ void RocketUIImpl::RenderMenuFrame() {
     m_ctxCurrent = m_ctxMenu;
   }
 
-  // Lock mutex to synchronize with main thread Update - RmlUi is not thread-safe
+  // Lock mutex to synchronize with main thread Update - RmlUi is not
+  // thread-safe
   std::lock_guard<std::mutex> lock(m_mtxMenu);
   RocketRenderDXVK::m_Instance.BeginFrame();
   m_ctxMenu->Render();
@@ -629,8 +648,9 @@ void RocketUIImpl::SetRenderingDevice(IDirect3DDevice9 *pDevice,
     m_pDevice = pDevice;
     RocketRenderDXVK::m_Instance.Initialize(pDevice);
   } else {
-    // Device reset (map change) - release all RmlUi resources that use Vulkan handles
-    // Geometry handles and texture descriptor sets become invalid after reinit
+    // Device reset (map change) - release all RmlUi resources that use Vulkan
+    // handles Geometry handles and texture descriptor sets become invalid after
+    // reinit
     Rml::ReleaseCompiledGeometry(&RocketRenderDXVK::m_Instance);
     Rml::ReleaseTextures(&RocketRenderDXVK::m_Instance);
 
@@ -638,7 +658,7 @@ void RocketUIImpl::SetRenderingDevice(IDirect3DDevice9 *pDevice,
     // while the renderer is in a half-initialized state (m_initialized = false)
     m_pDevice = nullptr;
     RocketRenderDXVK::m_Instance.Reinitialize(pDevice);
-    m_pDevice = pDevice;  // Restore AFTER reinit completes
+    m_pDevice = pDevice; // Restore AFTER reinit completes
   }
 
   D3DVIEWPORT9 viewport;

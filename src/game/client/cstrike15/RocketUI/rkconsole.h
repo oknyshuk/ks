@@ -44,6 +44,9 @@ public:
     bool HandleKeyInput(int key, bool down);
     bool HandleCharInput(wchar_t ch);
 
+    // Event callback for input changes (auto-update completions)
+    void OnInputChange();
+
     // CGameEventListener
     virtual void FireGameEvent(IGameEvent *event);
 
@@ -54,6 +57,8 @@ private:
     // Input helpers (native input handles editing, we handle special keys)
     CUtlString GetInputValue() const;
     void SetInputValue(const char* text);
+    void SetInputValueAndMoveCursorToEnd(const char* text);
+    void MoveCursorToEnd();
     void Submit();
     bool IsInputFocused() const;
 

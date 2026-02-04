@@ -10,6 +10,18 @@
 #include <RmlUi/Core/Elements/ElementFormControlInput.h>
 #include <RmlUi/Core/Elements/ElementFormControlTextArea.h>
 
+// Event listener for console input changes
+class ConsoleInputListener : public Rml::EventListener {
+public:
+  void ProcessEvent(Rml::Event &event) override {
+    if (event.GetId() == Rml::EventId::Change) {
+      RkConsole().OnInputChange();
+    }
+  }
+};
+
+static ConsoleInputListener s_InputListener;
+
 static RocketConsole s_RocketConsole;
 
 RocketConsole &RocketConsole::Instance() { return s_RocketConsole; }
@@ -117,6 +129,10 @@ void RocketConsole::LoadDocument() {
   // Get the native input element
   if (Rml::Element *inputElem = m_pDocument->GetElementById("console_input")) {
     m_elemInput = rmlui_dynamic_cast<Rml::ElementFormControlInput *>(inputElem);
+    if (m_elemInput) {
+      // Listen for input changes to auto-update completions
+      m_elemInput->AddEventListener(Rml::EventId::Change, &s_InputListener);
+    }
   }
 
   // Replay buffered output to the textarea
@@ -154,6 +170,11 @@ void RocketConsole::UnloadDocument() {
     RocketUI()->DenyInputToGame(false, "RocketConsole");
     RocketUI()->SetInputContext(nullptr);
     m_bGrabbingInput = false;
+  }
+
+  // Remove event listener before closing
+  if (m_elemInput) {
+    m_elemInput->RemoveEventListener(Rml::EventId::Change, &s_InputListener);
   }
 
   m_pDocument->Close();
@@ -249,6 +270,19 @@ void RocketConsole::SetInputValue(const char *text) {
   }
 }
 
+void RocketConsole::MoveCursorToEnd() {
+  if (m_elemInput) {
+    Rml::String val = m_elemInput->GetValue();
+    int len = (int)val.size();
+    m_elemInput->SetSelectionRange(len, len);
+  }
+}
+
+void RocketConsole::SetInputValueAndMoveCursorToEnd(const char *text) {
+  SetInputValue(text);
+  MoveCursorToEnd();
+}
+
 // Check if input field has focus
 bool RocketConsole::IsInputFocused() const {
   if (m_elemInput && m_pDocument) {
@@ -263,11 +297,19 @@ bool RocketConsole::HandleKeyInput(int buttonCode, bool down) {
   if (!m_bVisible)
     return false;
 
-  if (!down)
-    return true; // Consume key-up when visible
-
   ButtonCode_t key = (ButtonCode_t)buttonCode;
+  bool inputFocused = IsInputFocused();
 
+  // Determine if this is a key we handle (need to consume both down and up)
+  bool isHandledKey = (key == KEY_ESCAPE || key == KEY_BACKQUOTE || key == KEY_TAB ||
+                       (inputFocused && (key == KEY_ENTER || key == KEY_PAD_ENTER ||
+                                         key == KEY_UP || key == KEY_DOWN)));
+
+  // Consume key-up for handled keys, let RmlUi see key-up for others (needed for key repeat)
+  if (!down)
+    return isHandledKey;
+
+  // Key-down processing
   switch (key) {
   case KEY_ESCAPE:
     if (m_bCompletionVisible)
@@ -282,22 +324,18 @@ bool RocketConsole::HandleKeyInput(int buttonCode, bool down) {
 
   case KEY_ENTER:
   case KEY_PAD_ENTER:
-    // Only submit if input field has focus
-    if (IsInputFocused()) {
-      if (m_bCompletionVisible && m_iCompletionIndex >= 0)
-        ApplyCompletion();
-      else
-        Submit();
-      HideCompletionList();
-      return true;
-    }
-    return false; // Let RmlUi handle enter in output (does nothing in readonly)
+    if (!inputFocused)
+      return false;
+    if (m_bCompletionVisible && m_iCompletionIndex >= 0)
+      ApplyCompletion();
+    else
+      Submit();
+    HideCompletionList();
+    return true;
 
   case KEY_TAB:
-    // Always focus input field on Tab
     if (m_elemInput) {
       m_elemInput->Focus();
-      // Then handle completion if input was already focused
       if (m_bCompletionVisible)
         NextCompletion();
       else {
@@ -311,8 +349,8 @@ bool RocketConsole::HandleKeyInput(int buttonCode, bool down) {
     return true;
 
   case KEY_UP:
-    if (!IsInputFocused())
-      return false; // Let RmlUi handle in output (scroll/selection)
+    if (!inputFocused)
+      return false;
     if (m_bCompletionVisible)
       PrevCompletion();
     else
@@ -320,8 +358,8 @@ bool RocketConsole::HandleKeyInput(int buttonCode, bool down) {
     return true;
 
   case KEY_DOWN:
-    if (!IsInputFocused())
-      return false; // Let RmlUi handle in output (scroll/selection)
+    if (!inputFocused)
+      return false;
     if (m_bCompletionVisible)
       NextCompletion();
     else
@@ -329,7 +367,6 @@ bool RocketConsole::HandleKeyInput(int buttonCode, bool down) {
     return true;
 
   default:
-    // Let RmlUi handle other keys (arrows, backspace, delete, ctrl+c/v/a, etc.)
     return false;
   }
 }
@@ -394,7 +431,7 @@ void RocketConsole::HistoryUp() {
     m_iHistoryPos--;
   }
 
-  SetInputValue(m_CommandHistory[m_iHistoryPos].Get());
+  SetInputValueAndMoveCursorToEnd(m_CommandHistory[m_iHistoryPos].Get());
 }
 
 void RocketConsole::HistoryDown() {
@@ -405,9 +442,9 @@ void RocketConsole::HistoryDown() {
 
   if (m_iHistoryPos >= m_CommandHistory.Count()) {
     m_iHistoryPos = -1;
-    SetInputValue(m_szSavedInput.Get());
+    SetInputValueAndMoveCursorToEnd(m_szSavedInput.Get());
   } else {
-    SetInputValue(m_CommandHistory[m_iHistoryPos].Get());
+    SetInputValueAndMoveCursorToEnd(m_CommandHistory[m_iHistoryPos].Get());
   }
 }
 
@@ -551,8 +588,22 @@ void RocketConsole::ApplyCompletion() {
   if (!m_CompletionList[m_iCompletionIndex].isCommand)
     newVal += " ";
 
-  SetInputValue(newVal.Get());
+  SetInputValueAndMoveCursorToEnd(newVal.Get());
   HideCompletionList();
+}
+
+void RocketConsole::OnInputChange() {
+  // Update completions only if already visible (user pressed Tab)
+  if (!m_bCompletionVisible)
+    return;
+
+  RebuildCompletionList();
+  if (m_CompletionList.Count() > 0) {
+    m_iCompletionIndex = 0;
+    ShowCompletionList();
+  } else {
+    HideCompletionList();
+  }
 }
 
 void RocketConsole::ColorPrint(const Color &clr, const char *pMessage) {
