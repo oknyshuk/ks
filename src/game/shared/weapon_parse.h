@@ -16,6 +16,7 @@
 #include "tier1/utlsortvector.h"
 #include "gamestringpool.h"
 #include "econ/econ_item_schema_minimal.h"
+#include "tier0/t0constants.h"
 
 #ifdef CLIENT_DLL
 #define CEconItemView C_EconItemView
@@ -26,9 +27,6 @@ class IFileSystem;
 //=============================================================================
 // Econ item system stubs (econ system removed)
 //=============================================================================
-
-// Size constants
-const int k_nKiloByte = 1024;
 
 // CEconPersonaDataPublic stub
 class CEconPersonaDataPublic

@@ -22,7 +22,7 @@ def build(bld):
         "responserules_runtime",
         "vgui_controls",
         "bonesetup",
-        "particels",
+        "particles",
         "mathlib_extended",
         "choreoobjects",
         "bitmap",
@@ -661,7 +661,8 @@ def build(bld):
     bld.shlib(
         source=source,
         target="server",
-        features="cxx",
+        features="pch cxx",
+        headers="cbase.h",
         includes=includes,
         use=libs,
         cxxflags=cxxflags,

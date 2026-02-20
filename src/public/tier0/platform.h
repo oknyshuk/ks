@@ -1267,7 +1267,7 @@ struct CPUInformation
 	CPUInformation(): m_Size(0){}
 };
 
-PLATFORM_INTERFACE const CPUInformation& GetCPUInformation();
+PLATFORM_OVERLOAD const CPUInformation& GetCPUInformation();
 
 PLATFORM_INTERFACE void GetCurrentDate( int *pDay, int *pMonth, int *pYear );
 PLATFORM_INTERFACE void GetCurrentDayOfTheWeek( int *pDay );  // 0 = Sunday

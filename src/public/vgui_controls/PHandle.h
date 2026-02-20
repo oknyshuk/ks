@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
+//========= Copyright ï¿½ 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -36,11 +36,12 @@ public:
 	Panel * operator = (Panel *pPanel)		{ return Set(pPanel); }
 
 	bool operator == (Panel *pPanel)		{ return (Get() == pPanel); }
-	operator bool ()						{ return Get() != 0; }
+	bool operator != (Panel *pPanel)		{ return (Get() != pPanel); }
+	explicit operator bool ()				{ return Get() != nullptr; }
 
 	friend inline bool operator == ( const PHandle &p1, const PHandle &p2 )
-	{ 
-		return p1.m_iPanelID == p2.m_iPanelID; 
+	{
+		return p1.m_iPanelID == p2.m_iPanelID;
 	}
 
 private:
@@ -62,7 +63,8 @@ public:
 	VPANEL operator = (VPANEL pPanel)		{ return Set(pPanel); }
 
 	bool operator == (VPANEL pPanel)		{ return (Get() == pPanel); }
-	operator bool ()						{ return Get() != 0; }
+	bool operator != (VPANEL pPanel)		{ return (Get() != pPanel); }
+	explicit operator bool ()				{ return Get() != 0; }
 
 private:
 	HPanel m_iPanelID;
@@ -83,7 +85,8 @@ public:
 	PanelType * operator ->()					{ return (PanelType *)PHandle::Get(); }
 	PanelType * operator = (PanelType *pPanel)	{ return (PanelType *)PHandle::Set(pPanel); }
 	bool operator == (Panel *pPanel)			{ return (PHandle::Get() == pPanel); }
-	operator bool ()							{ return PHandle::Get() != NULL; }
+	bool operator != (Panel *pPanel)			{ return (PHandle::Get() != pPanel); }
+	explicit operator bool ()					{ return PHandle::Get() != nullptr; }
 };
 
 };

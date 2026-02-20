@@ -1,10 +1,13 @@
-//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
+//========= Copyright ï¿½ 1996-2005, Valve Corporation, All rights reserved. ============//
 //
-// Purpose: 
+// Purpose:
 //
 // $NoKeywords: $
 //
 //=============================================================================//
+#ifndef COLLISION_SET_H
+#define COLLISION_SET_H
+#pragma once
 
 // A set of collision rules
 // NOTE: Defaults to all indices disabled
@@ -18,3 +21,5 @@ public:
 
 	virtual bool ShouldCollide( int index0, int index1 ) = 0;
 };
+
+#endif // COLLISION_SET_H

@@ -1,7 +1,13 @@
 #pragma once
 
 // Generated buildenv header stub for WAF builds
+#if defined(__clang__)
+#define BUILD_COMPILER "clang"
+#elif defined(__GNUC__)
 #define BUILD_COMPILER "gcc"
+#else
+#define BUILD_COMPILER "unknown"
+#endif
 #define BUILD_COMPILER_VERSION __VERSION__
 #define BUILD_TARGET "x86_64"
 

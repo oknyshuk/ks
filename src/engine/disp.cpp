@@ -161,11 +161,11 @@ void CDispInfo::UpdateNodeBoundingBoxes_R( CVertIndex const &nodeIndex, int iNod
 	{
 		int iIndexStart = nodeInfo.m_FirstTesselationIndex + i;
 
-		unsigned short tempIndices[3] = 
+		unsigned short tempIndices[3] =
 		{
-			m_MeshReader.Index( iIndexStart+0 ) - m_iVertOffset,
-			m_MeshReader.Index( iIndexStart+1 ) - m_iVertOffset,
-			m_MeshReader.Index( iIndexStart+2 ) - m_iVertOffset
+			(unsigned short)(m_MeshReader.Index( iIndexStart+0 ) - m_iVertOffset),
+			(unsigned short)(m_MeshReader.Index( iIndexStart+1 ) - m_iVertOffset),
+			(unsigned short)(m_MeshReader.Index( iIndexStart+2 ) - m_iVertOffset)
 		};
 
 		for ( int j = 0; j < 3; j++ )
@@ -202,13 +202,13 @@ void CDispInfo::TestAddDecalTri( int iIndexStart, unsigned short decalHandle, CD
 	decal_t *pDecal = pDispDecal->m_pDecal;
 
 	// If the decal is too far away from the plane of this triangle, reject it.
-	unsigned short tempIndices[3] = 
+	unsigned short tempIndices[3] =
 	{
-		m_MeshReader.Index( iIndexStart+0 ) - m_iVertOffset,
-		m_MeshReader.Index( iIndexStart+1 ) - m_iVertOffset,
-		m_MeshReader.Index( iIndexStart+2 ) - m_iVertOffset
+		(unsigned short)(m_MeshReader.Index( iIndexStart+0 ) - m_iVertOffset),
+		(unsigned short)(m_MeshReader.Index( iIndexStart+1 ) - m_iVertOffset),
+		(unsigned short)(m_MeshReader.Index( iIndexStart+2 ) - m_iVertOffset)
 	};
-	
+
 	const Vector &v0 = m_MeshReader.Position( tempIndices[0] );
 	const Vector &v1 = m_MeshReader.Position( tempIndices[1] );
 	const Vector &v2 = m_MeshReader.Position( tempIndices[2] );
@@ -296,11 +296,11 @@ void CDispInfo::TestAddDecalTri( int iIndexStart, unsigned short decalHandle, CD
 // ----------------------------------------------------------------------------- //
 void CDispInfo::TestAddDecalTri( int iIndexStart, unsigned short decalHandle, CDispShadowDecal *pDecal )
 {
-	unsigned short tempIndices[3] = 
+	unsigned short tempIndices[3] =
 	{
-		m_MeshReader.Index( iIndexStart+0 ) - m_iVertOffset,
-		m_MeshReader.Index( iIndexStart+1 ) - m_iVertOffset,
-		m_MeshReader.Index( iIndexStart+2 ) - m_iVertOffset
+		(unsigned short)(m_MeshReader.Index( iIndexStart+0 ) - m_iVertOffset),
+		(unsigned short)(m_MeshReader.Index( iIndexStart+1 ) - m_iVertOffset),
+		(unsigned short)(m_MeshReader.Index( iIndexStart+2 ) - m_iVertOffset)
 	};
 #ifndef DEDICATED
 	// Setup verts.

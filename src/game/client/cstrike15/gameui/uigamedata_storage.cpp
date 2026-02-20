@@ -648,11 +648,11 @@ bool CUIGameData::SelectStorageDevice( ISelectStorageDeviceClient *pSelectClient
 	if ( IsPS3() )
 	{
 		// PS3 will have only two storage partitions: primary and secondary
-		if ( iController == (int) XBX_GetPrimaryUserId() )
+		if ( iController == 0 )
 			XBX_SetStorageDeviceId( iController, 1 );
 		else
 			XBX_SetStorageDeviceId( iController, 2 );
-		
+
 		bForceDisplay = false; // PS3 doesn't display anything, so don't force it
 	}
 
@@ -836,7 +836,7 @@ void CUIGameData::GameStats_ReportAction( char const *szReportAction, char const
 	KeyValues *kv = new KeyValues( "gamestat_action" );
 	KeyValues::AutoDelete autodelete_kv( kv );
 	kv->SetInt( "version", 1 );
-	kv->SetUint64( "xuid", g_pMatchFramework->GetMatchSystem()->GetPlayerManager()->GetLocalPlayer( XBX_GetPrimaryUserId() )->GetXUID() );
+	kv->SetUint64( "xuid", g_pMatchFramework->GetMatchSystem()->GetPlayerManager()->GetLocalPlayer( 0 )->GetXUID() );
 	kv->SetUint64( "*mac", 0ull ); // this will be filled out with console MAC-address
 	kv->SetInt( "game_action", GameStats_GetActionIndex( szReportAction ) );
 	kv->SetInt( "game_mapid", GameStats_GetReportMapNameIndex( szMapName ) );

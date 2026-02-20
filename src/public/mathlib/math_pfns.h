@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
+//========= Copyright ï¿½ 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -7,6 +7,7 @@
 #ifndef _MATH_PFNS_H_
 #define _MATH_PFNS_H_
 
+#include "tier0/platform.h"
 #include <limits>
 
 // YUP_ACTIVE is from Source2. It's (obviously) not supported on this branch, just including it here to help merge camera.cpp/.h and the CSM shadow code.
@@ -108,7 +109,10 @@ FORCEINLINE float VECTORCALL FastRSqrt( float x )
 	return (0.5f * rroot) * (3.f - (x * rroot) * rroot);
 }
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdefaulted-function-deleted"
 #include "../../thirdparty/DirectXMath-dec2023/Inc/DirectXMath.h"
+#pragma GCC diagnostic pop
 
 FORCEINLINE void FastSinCos( float x, float* s, float* c ) { DirectX::XMScalarSinCosEst( s, c, x ); }
 FORCEINLINE float FastCos( float x ) { return DirectX::XMScalarCosEst( x ); }

@@ -1,17 +1,10 @@
 # Open CS:GO
 
-## Build:
-
 ```bash
-./waf configure [-h] [...]
-./waf install
-```
-
-## Files needed:
-
-```bash
-steam -console
-download_depot 730 731 7043469183016184477
+curl -fsSL https://install.determinate.systems/nix | sh -s -- install
+nix run .#setup                               # download depot to game/ (one-time, resumable)
+nix run                                       # build + install + launch
+nix develop; cd src; waf {configure,install}  # incremental dev build env
 ```
 
 ## Projects Used:

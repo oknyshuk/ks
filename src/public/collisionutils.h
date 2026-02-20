@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
+//========= Copyright ï¿½ 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: Common collision utility methods
 //
@@ -280,34 +280,19 @@ bool FASTCALL IsBoxIntersectingRay( const Vector& boxMin, const Vector& boxMax,
 									const Vector& invDelta, float flTolerance = 0.0f );
 
 
-// On the PC, we can't pass fltx4's in registers like this. On the x360, it is 
-// much better if we do.
-#if defined( _X360 ) || defined( _PS3 )
-bool FASTCALL IsBoxIntersectingRay( fltx4 boxMin, fltx4 boxMax, 
+bool FASTCALL IsBoxIntersectingRay( fltx4 boxMin, fltx4 boxMax,
 								   fltx4 origin, fltx4 delta, fltx4 invDelta, // ray parameters
 								   fltx4 vTolerance = LoadZeroSIMD() ///< eg from ReplicateX4(flTolerance)
 								   );
-#else
-bool FASTCALL IsBoxIntersectingRay( const fltx4 &boxMin, const fltx4 &boxMax, 
-								   const fltx4 & origin, const fltx4 & delta, const fltx4 & invDelta, // ray parameters
-								   const fltx4 & vTolerance = Four_Zeros ///< eg from ReplicateX4(flTolerance)
-								   );
-#endif
 
-bool inline FASTCALL IsBoxIntersectingRay( const fltx4& boxMin, const fltx4& boxMax, 
-								   const fltx4& origin, const fltx4& delta, float flTolerance = 0.0f )
+bool inline FASTCALL IsBoxIntersectingRay( fltx4 boxMin, fltx4 boxMax,
+								   fltx4 origin, fltx4 delta, float flTolerance = 0.0f )
 {
 	return IsBoxIntersectingRay( boxMin, boxMax, origin, delta, ReciprocalSIMD(delta), ReplicateX4(flTolerance) );
 }
 
-
-#if defined( _X360 ) || defined( _PS3 )
-bool FASTCALL IsBoxIntersectingRay( fltx4 boxMin, fltx4 boxMax, 
+bool FASTCALL IsBoxIntersectingRay( fltx4 boxMin, fltx4 boxMax,
 								   const Ray_t& ray, fltx4 fl4Tolerance = LoadZeroSIMD() );
-#else
-bool FASTCALL IsBoxIntersectingRay( const fltx4& boxMin, const fltx4& boxMax, 
-								   const Ray_t& ray, const fltx4 &fl4Tolerance = LoadZeroSIMD() );
-#endif
 
 FORCEINLINE bool IsBoxIntersectingRay( const Vector& boxMin, const Vector& boxMax, const Ray_t& ray )
 {

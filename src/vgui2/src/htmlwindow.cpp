@@ -1227,7 +1227,7 @@ void HtmlWindow::OnPaint(HDC hDC)
 				// (and win95 can have problems with RGB format...)
 				for( unsigned int i=0; i < lpbi->bmiHeader.biSizeImage; i+=4 )
 				{
-					register unsigned char tmp;
+					unsigned char tmp;
 					tmp=bmpBits[i];
 					bmpBits[i]=bmpBits[i+2];
 					bmpBits[i+2]=tmp;

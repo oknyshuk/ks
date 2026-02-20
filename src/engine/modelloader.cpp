@@ -3987,7 +3987,7 @@ model_t *CModelLoader::FindModel( const char *pName )
 			if ( s_BannedMDLs.m_map.Find( pModel->szPathName ).IsValid() )
 			{
 				COMPILE_TIME_ASSERT( MODELFLAG_RENDER_DISABLED == ENGINE_MODEL_CLIENT_MODELFLAG_RENDER_DISABLED );
-				COMPILE_TIME_ASSERT( offsetof( model_t, flags ) == ENGINE_MODEL_CLIENT_MODELT_OFFSET_FLAGS );
+				Assert( offsetof( model_t, flags ) == ENGINE_MODEL_CLIENT_MODELT_OFFSET_FLAGS );
 
 				pModel->flags |= MODELFLAG_RENDER_DISABLED;
 #ifdef _DEBUG

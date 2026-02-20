@@ -40,9 +40,6 @@ const char *COM_GetModDirectory();
 
 bool WriteBonusMapSavedData( KeyValues *data )
 {
-	if ( IsGameConsole() && ( XBX_GetStorageDeviceId(XBX_GetPrimaryUserId()) == XBX_INVALID_STORAGE_ID || XBX_GetStorageDeviceId(XBX_GetPrimaryUserId()) == XBX_STORAGE_DECLINED ) )
-		return false;
-
 	CUtlBuffer buf( 0, 0, CUtlBuffer::TEXT_BUFFER );
 
 	data->RecursiveSaveToFile( buf, 0 );

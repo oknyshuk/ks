@@ -7,6 +7,8 @@
 // $NoKeywords: $
 //===========================================================================//
 
+#pragma once
+
 #include "platform.h"
 
 #if defined( WIN32 )

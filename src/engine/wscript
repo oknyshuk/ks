@@ -35,7 +35,7 @@ def build(bld):
         "generated_proto",
         "quickhull",
         "protobuf",
-        "jpeg",
+        "JPEG",
         "bzip2",
         "mojoAL",
         "SDL2",
@@ -392,7 +392,8 @@ def build(bld):
     bld.shlib(
         source=source,
         target="engine",
-        features="cxx",
+        features="pch cxx",
+        headers="engine_pch.h",
         includes=includes,
         use=libs,
         install_path=bld.env.BINPATH,

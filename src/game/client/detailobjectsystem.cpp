@@ -2798,7 +2798,7 @@ void CDetailObjectSystem::RenderTranslucentDetailObjectsInLeaf( const DistanceFa
 
 	// FIXME: how to interleave around translucent props if we're not regenerating the cached sprite mesh? Could use a clipping plane?
 	{
-		LeafIndex_t oneLeaf[1] = { nLeaf };
+		LeafIndex_t oneLeaf[1] = { (LeafIndex_t)nLeaf };
 		RenderTranslucentDetailObjects( info, viewOrigin, viewForward, viewRight, viewUp, 1, oneLeaf );
 		return;
 	}

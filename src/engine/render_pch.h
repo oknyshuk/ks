@@ -8,6 +8,9 @@
 //=============================================================================//
 
 // main precompiled header for client rendering code
+
+#pragma once
+
 #include "const.h"
 #include "utlsymbol.h"
 #include "materialsystem/imesh.h"

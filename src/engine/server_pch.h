@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2007, Valve Corporation, All rights reserved. ============//
+//========= Copyright ï¿½ 1996-2007, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -8,6 +8,8 @@
 //=============================================================================//
 
 // main precompiled header for server files
+
+#pragma once
 
 #include "platform.h"
 #include "basetypes.h"

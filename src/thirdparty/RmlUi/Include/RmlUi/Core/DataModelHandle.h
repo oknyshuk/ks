@@ -73,7 +73,7 @@ public:
 
 	// Register a struct type.
 	// @note The type applies to every data model associated with the current Context.
-	// @return A handle which can be used to register struct members.
+	// @return A handle which can be used to struct members.
 	template <typename T>
 	StructHandle<T> RegisterStruct();
 

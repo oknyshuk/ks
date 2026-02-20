@@ -109,7 +109,7 @@ namespace   // unnamed namespaces are a convenient way to mark a whole bunch of 
 	{
 		DIR *d;
 		struct dirent *entry;
-		register int i=0;
+		int i=0;
 		size_t entrysize;
 
 		if ((d=opendir(dir)) == NULL)

@@ -76,7 +76,18 @@
 #include "vphysics/vehicles.h"
 #include "vphysics/virtualmesh.h"
 
-// Jolt
+// Jolt (undo strtools.h ctype poison macros before system headers)
+#undef isdigit
+#undef isalpha
+#undef isalnum
+#undef isprint
+#undef isxdigit
+#undef ispunct
+#undef isgraph
+#undef isupper
+#undef islower
+#undef iscntrl
+#undef isspace
 #include <Jolt/Jolt.h>
 #include <Jolt/RegisterTypes.h>
 

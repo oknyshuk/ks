@@ -48,7 +48,7 @@ public:
 			{
 				(fieldtype_t)FIELD_TYPE, 
 				"T", 
-				offsetof(typename UTLMAP::Node_t, elem),
+				(int)offsetof(typename UTLMAP::Node_t, elem),
 				1, 
 				FTYPEDESC_SAVE, 
 				NULL, 
@@ -113,7 +113,7 @@ public:
 			{
 				(fieldtype_t)FIELD_TYPE, 
 				"T", 
-				offsetof(typename UTLMAP::Node_t, elem),
+				(int)offsetof(typename UTLMAP::Node_t, elem),
 				1, 
 				FTYPEDESC_SAVE, 
 				NULL, 

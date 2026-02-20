@@ -2,3 +2,11 @@
 !/game/csgo/
 /game/csgo/*
 !/game/csgo/rocketui/
+
+.envrc
+/.direnv
+
+src/build/
+src/.lock-waf*
+src/.cache/
+src/ccache.conf

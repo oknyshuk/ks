@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
+//========= Copyright ï¿½ 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -112,9 +112,7 @@ inline CHandle<T>::CHandle( T *pObj )
 template<class T>
 inline CHandle<T> CHandle<T>::UnsafeFromBaseHandle( const CBaseHandle &handle )
 {
-	CHandle<T> ret;
-	ret.m_Index = handle.m_Index;
-	return ret;
+	return UnsafeFromIndex( handle.ToInt() );
 }
 
 template<class T>

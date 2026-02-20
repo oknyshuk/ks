@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2008, Valve Corporation, All rights reserved. ====
+//========= Copyright ï¿½ 1996-2008, Valve Corporation, All rights reserved. ====
 /*
 Entity Data Descriptions
 
@@ -491,7 +491,7 @@ void CBaseEntityOutput::DeleteAllElements( void )
 	m_ActionList = NULL;
 	while (pNext)
 	{
-		register CEventAction *strikeThis = pNext;
+		CEventAction *strikeThis = pNext;
 		pNext = pNext->m_pNext;
 		delete strikeThis;
 	}

@@ -283,16 +283,16 @@ inline bool RecvTable::IsInMainList() const
 	}
 
 
-#define RECVINFO(varName)						#varName, _offsetof(currentRecvDTClass, varName), sizeof(((currentRecvDTClass*)0)->varName)
-#define RECVINFO_NAME(varName, remoteVarName)	#remoteVarName, _offsetof(currentRecvDTClass, varName), sizeof(((currentRecvDTClass*)0)->varName)
-#define RECVINFO_STRING(varName)				#varName, _offsetof(currentRecvDTClass, varName), STRINGBUFSIZE(currentRecvDTClass, varName)
+#define RECVINFO(varName)						#varName, (int)_offsetof(currentRecvDTClass, varName), (int)sizeof(((currentRecvDTClass*)0)->varName)
+#define RECVINFO_NAME(varName, remoteVarName)	#remoteVarName, (int)_offsetof(currentRecvDTClass, varName), (int)sizeof(((currentRecvDTClass*)0)->varName)
+#define RECVINFO_STRING(varName)				#varName, (int)_offsetof(currentRecvDTClass, varName), (int)STRINGBUFSIZE(currentRecvDTClass, varName)
 #define RECVINFO_BASECLASS(tableName)			RecvPropDataTable("this", 0, 0, &REFERENCE_RECV_TABLE(tableName))
-#define RECVINFO_ARRAY(varName)					#varName, _offsetof(currentRecvDTClass, varName), sizeof(((currentRecvDTClass*)0)->varName[0]), sizeof(((currentRecvDTClass*)0)->varName)/sizeof(((currentRecvDTClass*)0)->varName[0])
+#define RECVINFO_ARRAY(varName)					#varName, (int)_offsetof(currentRecvDTClass, varName), (int)sizeof(((currentRecvDTClass*)0)->varName[0]), (int)(sizeof(((currentRecvDTClass*)0)->varName)/sizeof(((currentRecvDTClass*)0)->varName[0]))
 
 // Just specify the name and offset. Used for strings and data tables.
-#define RECVINFO_NOSIZE(varName)				#varName, _offsetof(currentRecvDTClass, varName)
+#define RECVINFO_NOSIZE(varName)				#varName, (int)_offsetof(currentRecvDTClass, varName)
 #define RECVINFO_DT(varName)					RECVINFO_NOSIZE(varName)
-#define RECVINFO_DTNAME(varName,remoteVarName)	#remoteVarName, _offsetof(currentRecvDTClass, varName)
+#define RECVINFO_DTNAME(varName,remoteVarName)	#remoteVarName, (int)_offsetof(currentRecvDTClass, varName)
 
 
 void RecvProxy_FloatToFloat  ( const CRecvProxyData *pData, void *pStruct, void *pOut );

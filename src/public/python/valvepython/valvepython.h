@@ -1,4 +1,4 @@
-//======= Copyright © 1996-2007, Valve Corporation, All rights reserved. ======
+//======= Copyright ï¿½ 1996-2007, Valve Corporation, All rights reserved. ======
 //
 // Purpose:
 //
@@ -207,8 +207,8 @@ typedef enum _pytypes
 	PY_FIELD_TYPECOUNT,			// MUST BE LAST
 } pytype_t;
 
-#define _PY_PARAMETER(var_name,type,parameter_name,help)		{ type, #var_name, offsetof(classNameTypedef, var_name), -1, parameter_name, help, NULL, sizeof( ((classNameTypedef *)0)->var_name ) }
-#define _PY_ARGUMENT(var_name,type,argument_index,help)			{ type, #var_name, offsetof(classNameTypedef, var_name), argument_index, "", help, NULL, sizeof( ((classNameTypedef *)0)->var_name ) }
+#define _PY_PARAMETER(var_name,type,parameter_name,help)		{ type, #var_name, (int)offsetof(classNameTypedef, var_name), -1, parameter_name, help, NULL, (int)sizeof( ((classNameTypedef *)0)->var_name ) }
+#define _PY_ARGUMENT(var_name,type,argument_index,help)			{ type, #var_name, (int)offsetof(classNameTypedef, var_name), argument_index, "", help, NULL, (int)sizeof( ((classNameTypedef *)0)->var_name ) }
 
 #define DEFINE_PY_PARAMETER(var_name,type,parameter_name,help)				_PY_PARAMETER(var_name, type, parameter_name, help )
 #define DEFINE_PY_ARGUMENT(var_name,type,argument_index,help)				_PY_ARGUMENT(var_name, type, argument_index, help )

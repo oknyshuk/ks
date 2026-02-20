@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
+//========= Copyright ï¿½ 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: Common collision utility methods
 //
@@ -927,29 +927,17 @@ bool FASTCALL IsBoxIntersectingRay( const Vector& vecBoxMin, const Vector& vecBo
 //-----------------------------------------------------------------------------
 
 
-#if defined( _X360 ) || defined( _PS3 )
-bool FASTCALL IsBoxIntersectingRay( fltx4 boxMin, fltx4 boxMax, 
+bool FASTCALL IsBoxIntersectingRay( fltx4 boxMin, fltx4 boxMax,
 								    fltx4 origin, fltx4 delta, fltx4 invDelta, // ray parameters
 									fltx4 vTolerance ///< eg from ReplicateX4(flTolerance)
 									)
-#else
-bool FASTCALL IsBoxIntersectingRay( const fltx4 &inBoxMin, const fltx4 & inBoxMax, 
-								   const fltx4 & origin, const fltx4 & delta, const fltx4 & invDelta, // ray parameters
-								   const fltx4 & vTolerance ///< eg from ReplicateX4(flTolerance)
-								   )
-#endif
 {
 	// Load the unaligned ray/box parameters into SIMD registers
 	// compute the mins/maxs of the box expanded by the ray extents
 	// relocate the problem so that the ray start is at the origin.
 
-#if defined( _X360 ) || defined( _PS3 )
 	boxMin = SubSIMD(boxMin, origin);
 	boxMax = SubSIMD(boxMax, origin);
-#else
-	fltx4 boxMin = SubSIMD(inBoxMin, origin);
-	fltx4 boxMax = SubSIMD(inBoxMax, origin);
-#endif
 
 	// Check to see if the origin (start point) and the end point (delta) are on the same side
 	// of any of the box sides - if so there can be no intersection
@@ -982,13 +970,8 @@ bool FASTCALL IsBoxIntersectingRay( const fltx4 &inBoxMin, const fltx4 & inBoxMa
 	return IsAllZeros(separation);
 }
 
-#if defined( _X360 ) || defined( _PS3 )
-bool FASTCALL IsBoxIntersectingRay( fltx4 boxMin, fltx4 boxMax, 
+bool FASTCALL IsBoxIntersectingRay( fltx4 boxMin, fltx4 boxMax,
 								   const Ray_t& ray, fltx4 fl4Tolerance )
-#else
-bool FASTCALL IsBoxIntersectingRay( const fltx4& boxMin, const fltx4& boxMax, 
-								   const Ray_t& ray, const fltx4 &fl4Tolerance )
-#endif
 {
 	fltx4 rayStart = LoadAlignedSIMD(ray.m_Start);
 	fltx4 rayExtents = LoadAlignedSIMD(ray.m_Extents);

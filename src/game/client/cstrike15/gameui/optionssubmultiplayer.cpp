@@ -55,10 +55,7 @@
 #include "materialsystem/imesh.h"
 #include "materialsystem/imaterialvar.h"
 
-// use the JPEGLIB_USE_STDIO define so that we can read in jpeg's from outside the game directory tree.  For Spray Import.
-#define JPEGLIB_USE_STDIO
-#include "jpeglib/jpeglib.h"
-#undef JPEGLIB_USE_STDIO
+#include <jpeglib.h>
 
 #include <setjmp.h>
 

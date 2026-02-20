@@ -40,7 +40,7 @@ typedef __vector4 FLTX4;
 #elif defined( _PS3 )
 typedef vec_float4 FLTX4;
 #else
-typedef const fltx4 & FLTX4;
+typedef fltx4 FLTX4;
 #endif
 
 // A 16-byte aligned int32 datastructure
