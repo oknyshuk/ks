@@ -117,15 +117,8 @@ void CMaterialReference::Shutdown( bool bDeleteIfUnreferenced /*=false*/ )
 		}
 		else
 		{
-			// materials is NULL - can't release ref properly
-			static int s_nLeakedRefs = 0;
-			s_nLeakedRefs++;
-			FILE *f = fopen("/tmp/material_leaks.txt", "a");
-			if (f)
-			{
-				fprintf(f, "Leaked ref #%d: %s\n", s_nLeakedRefs, m_pMaterial->GetName());
-				fclose(f);
-			}
+			// materials is NULL - material system already shut down,
+			// m_pMaterial is dangling. Just leak the ref silently.
 		}
 		m_pMaterial = NULL;
 	}

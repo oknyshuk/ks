@@ -332,7 +332,9 @@ void CShaderDeviceMgrDx8::InitAdapterInfo()
 //--------------------------------------------------------------------------------
 void CShaderDeviceMgrDx8::CheckBorderColorSupport( HardwareCaps_t *pCaps, int nAdapter )
 {
-#ifdef DX_TO_GL_ABSTRACTION
+#if defined( DX_TO_GL_ABSTRACTION )
+	if( true )
+#elif defined( DX_TO_VK_ABSTRACTION )
 	if( true )
 #else
 	if( IsX360() )
@@ -541,6 +543,12 @@ void CShaderDeviceMgrDx8::CheckVendorDependentAlphaToCoverage( HardwareCaps_t *p
 	pCaps->m_AlphaToCoverageDisableValue = FALSE;
 	pCaps->m_AlphaToCoverageState		 = D3DRS_ADAPTIVETESS_Y; // Just match the NVIDIA state hackery
 	return;
+#elif defined( DX_TO_VK_ABSTRACTION )
+	pCaps->m_bSupportsAlphaToCoverage	 = true;
+	pCaps->m_AlphaToCoverageEnableValue	 = TRUE;
+	pCaps->m_AlphaToCoverageDisableValue = FALSE;
+	pCaps->m_AlphaToCoverageState		 = D3DRS_ADAPTIVETESS_Y;
+	return;
 #endif
 
 #ifdef _X360
@@ -612,6 +620,10 @@ void CShaderDeviceMgrDx8::CheckVendorDependentDepthResolveSupport( HardwareCaps_
 #ifdef DX_TO_GL_ABSTRACTION
 	pCaps->m_bSupportsRESZ = false;
 	pCaps->m_bSupportsINTZ = false;
+#elif defined( DX_TO_VK_ABSTRACTION )
+	pCaps->m_bSupportsRESZ = false;
+	pCaps->m_bSupportsINTZ = false;
+	return;
 #endif
 
 	HRESULT hr;

@@ -216,7 +216,7 @@ void CHardwareConfig::SetupHardwareCaps( int nDXLevel, const HardwareCaps_t &act
 	memcpy( &m_UnOverriddenCaps, &actualCaps, sizeof(HardwareCaps_t) );
 
 	// Don't bother with fallbacks for DX10 or consoles
-#ifdef DX_TO_GL_ABSTRACTION
+#if defined( DX_TO_GL_ABSTRACTION ) || defined( DX_TO_VK_ABSTRACTION )
 	if ( nDXLevel >= 100 )
 #else
 	if ( !( IsPC() || IsPosix() ) || ( nDXLevel >= 100 ) )
@@ -987,6 +987,10 @@ bool CHardwareConfig::SupportsResolveDepth( void ) const
 			{
 				return false;
 			}
+		}
+#elif defined( DX_TO_VK_ABSTRACTION )
+		{
+			return true;
 		}
 #else
 		{

@@ -1558,6 +1558,11 @@ void CViewRender::DrawViewModels( const CViewSetup &view, bool drawViewmodel )
 	bool bUseDepthHack = !LocalPlayerIsCloseToPortal();
 	if( !bUseDepthHack )
 		pRenderContext->ClearBuffers( false, true, false );
+#elif defined( DX_TO_VK_ABSTRACTION )
+	// DXVK: Clear depth before viewmodel pass instead of relying on the depth
+	// range hack alone. Same approach as Portal's close-to-portal path.
+	const bool bUseDepthHack = false;
+	pRenderContext->ClearBuffers( false, true, false );
 #else
 	const bool bUseDepthHack = true;
 #endif
@@ -1673,6 +1678,10 @@ void CViewRender::DrawViewModels( const CViewSetup &view, bool drawViewmodel )
 	{
 		viewModelSetup.fov = view.fov;
 		render->Push3DView( pRenderContext, viewModelSetup, 0, NULL, GetFrustum() );
+
+#if defined( DX_TO_VK_ABSTRACTION )
+		pRenderContext->ClearBuffers( false, true, false );
+#endif
 
 		// HACK HACK:  Munge the depth range to prevent view model from poking into walls, etc.
 		// Force clipped down range

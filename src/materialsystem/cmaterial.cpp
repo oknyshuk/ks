@@ -581,7 +581,7 @@ CMaterial::~CMaterial()
 
 	if ( m_RefCount != 0 && !s_bTextMode )
 	{
-	    Warning( "Reference Count for Material %s (%d) != 0\n", GetName(), (int) m_RefCount );
+	    DevWarning( 1, "Reference Count for Material %s (%d) != 0\n", GetName(), (int) m_RefCount );
 	}
 
 	if ( m_pVMTKeyValues )

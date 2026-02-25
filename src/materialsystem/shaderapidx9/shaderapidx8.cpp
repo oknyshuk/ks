@@ -9387,9 +9387,11 @@ void CShaderAPIDx8::SetTextureState( Sampler_t sampler, TextureBindFlags_t nBind
 	SETSAMPLEADRESSSTATEANDMIRROR( sampler, samplerState, D3DSAMP_ADDRESSW, m_WTexWrap, tex.m_WTexWrap );
 	
 
+#ifdef DX_TO_GL_ABSTRACTION
 	const uint nNewShadowFilterState = ( nBindFlags & TEXTURE_BINDFLAGS_SHADOWDEPTH ) ? 1 : 0;
 	SETSAMPLESTATEANDMIRROR( sampler, samplerState, D3DSAMP_SHADOWFILTER, m_bShadowFilterEnable, nNewShadowFilterState );
-		
+#endif
+
 	D3DTEXTUREFILTERTYPE minFilter = D3DTEXTUREFILTERTYPE(tex.m_MinFilter);
 	SETSAMPLESTATEANDMIRROR( sampler, samplerState, D3DSAMP_MINFILTER, m_MinFilter, minFilter );
 
@@ -10132,10 +10134,10 @@ void CShaderAPIDx8::SetTextureState( Sampler_t sampler, TextureBindFlags_t nBind
 	bool noMipFilter = config.bMipMapTextures == 0;
 
 	// Set SHADOWFILTER or ATI Fetch4
-#if defined ( DX_TO_GL_ABSTRACTION ) && !defined( _PS3 )
+#if defined( DX_TO_GL_ABSTRACTION ) && !defined( _PS3 )
 	const uint nNewShadowFilterState = ( nBindFlags & TEXTURE_BINDFLAGS_SHADOWDEPTH ) ? 1 : 0;
 	SETSAMPLESTATEANDMIRROR( sampler, samplerState, D3DSAMP_SHADOWFILTER, m_bShadowFilterEnable, nNewShadowFilterState );
-#elif !defined( PLATFORM_X360 )
+#elif !defined( PLATFORM_X360 ) && !defined( DX_TO_VK_ABSTRACTION )
 	if ( g_pHardwareConfig->SupportsFetch4() )
 	{
 		const uint nNewFetch4State = ( nBindFlags & TEXTURE_BINDFLAGS_SHADOWDEPTH ) ? ATI_FETCH4_ENABLE : ATI_FETCH4_DISABLE;

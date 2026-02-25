@@ -200,7 +200,7 @@ void CShaderShadowDX8::Init( )
 	m_ShadowShaderState.m_VertexUsage = 0;
 
 	m_ShadowState.m_nFetch4Enable = 0;
-#if ( defined ( DX_TO_GL_ABSTRACTION ) )
+#if defined( DX_TO_GL_ABSTRACTION )
 	m_ShadowState.m_nShadowFilterEnable = 0;
 #endif
 

@@ -252,7 +252,11 @@ public:
 #endif
 
 	inline bool ShouldAlwaysUseShaderModel2bShaders() const { return IsOpenGL(); }
+#if defined( DX_TO_VK_ABSTRACTION )
+	inline bool PlatformRequiresNonNullPixelShaders() const { return true; }
+#else
 	inline bool PlatformRequiresNonNullPixelShaders() const { return IsOpenGL(); }
+#endif
 };
 
 #endif // IMATERIALSYSTEMHARDWARECONFIG_H
