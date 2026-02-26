@@ -1,37 +1,32 @@
 #! /usr/bin/env python
 
+
 def options(opt):
-	return
+    return
+
 
 def configure(conf):
-	return
+    return
+
 
 def build(bld):
-	libs = []
+    libs = []
 
-	includes = []
+    includes = []
 
-	source = [
-			'device_null.cpp',
-			'mix.cpp',
-			'simple_filter.cpp'
-	]
+    source = ["device_null.cpp", "mix.cpp", "simple_filter.cpp"]
 
-	if bld.env.DEST_OS == 'win32':
-		source += [
-			'windows_audio.cpp',
-			'device_dsound.cpp',
-			'device_xaudio2.cpp'
-		]
-	else:
-		source += ['device_sdl.cpp']
+    if bld.env.DEST_OS == "win32":
+        source += ["windows_audio.cpp", "device_dsound.cpp", "device_xaudio2.cpp"]
+    else:
+        source += ["device_sdl.cpp"]
 
-	bld.stlib(
-		source   = source,
-		target   = 'soundsystem_lowlevel',
-		features = 'cxx',
-		includes = includes,
-		use      = libs,
-		subsystem = bld.env.MSVC_SUBSYSTEM,
-		idx = bld.get_taskgen_count()
-	)
+    bld.stlib(
+        source=source,
+        target="soundsystem_lowlevel",
+        features="cxx",
+        includes=includes,
+        use=libs,
+        subsystem=bld.env.MSVC_SUBSYSTEM,
+        idx=bld.get_taskgen_count(),
+    )

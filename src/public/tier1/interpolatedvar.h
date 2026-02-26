@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
+//========= Copyright ï¿½ 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -286,7 +286,7 @@ struct CInterpolatedVarEntryBase<Type, false>
 	{
 		Assert(maxCount==1);
 		flChangeTime = time;
-		memcpy( &value, pValue, maxCount*sizeof(Type) );
+		memcpy( (void *)&value, pValue, maxCount*sizeof(Type) );
 		return &value;
 	}
 	void FastTransferFrom( CInterpolatedVarEntryBase &src )
@@ -618,7 +618,7 @@ inline int CInterpolatedVarArrayBase<Type, IS_ARRAY>::GetType() const
 template< typename Type, bool IS_ARRAY >
 void CInterpolatedVarArrayBase<Type, IS_ARRAY>::NoteLastNetworkedValue()
 {
-	memcpy( m_LastNetworkedValue, m_pValue, m_nMaxCount * sizeof( Type ) );
+	memcpy( (void *)m_LastNetworkedValue, m_pValue, m_nMaxCount * sizeof( Type ) );
 	m_LastNetworkedTime = g_flLastPacketTimestamp;
 }
 
@@ -676,7 +676,7 @@ template< typename Type, bool IS_ARRAY >
 inline void CInterpolatedVarArrayBase<Type, IS_ARRAY>::RestoreToLastNetworked()
 {
 	Assert( m_pValue );
-	memcpy( m_pValue, m_LastNetworkedValue, m_nMaxCount * sizeof( Type ) );
+	memcpy( (void *)m_pValue, m_LastNetworkedValue, m_nMaxCount * sizeof( Type ) );
 }
 
 template< typename Type, bool IS_ARRAY >
@@ -741,7 +741,7 @@ inline void CInterpolatedVarArrayBase<Type, IS_ARRAY>::Reset( float flCurrentTim
 		AddToHead( flCurrentTime, m_pValue, false );
 		AddToHead( flCurrentTime, m_pValue, false );
 
-		memcpy( m_LastNetworkedValue, m_pValue, m_nMaxCount * sizeof( Type ) );
+		memcpy( (void *)m_LastNetworkedValue, m_pValue, m_nMaxCount * sizeof( Type ) );
 	}
 }
 
@@ -1270,7 +1270,7 @@ inline void	CInterpolatedVarArrayBase<Type, IS_ARRAY>::SetMaxCount( float flCurr
 		m_bLooping = new byte[m_nMaxCount];
 		m_LastNetworkedValue = new Type[m_nMaxCount];
 		memset( m_bLooping, 0, sizeof(byte) * m_nMaxCount);
-		memset( m_LastNetworkedValue, 0, sizeof(Type) * m_nMaxCount);
+		memset( (void *)m_LastNetworkedValue, 0, sizeof(Type) * m_nMaxCount);
 
 		Reset( flCurrentTime );
 	}

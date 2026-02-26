@@ -1,30 +1,39 @@
 #! /usr/bin/env python
 
+
 def options(opt):
-	return
+    return
+
 
 def configure(conf):
-	return
+    return
+
 
 def build(bld):
-	libs = ['tier0', 'tier1', 'tier2', 'interfaces', 'vstdlib']
+    libs = [
+        "tier0",
+        "memoverride",
+        "public_common",
+        "tier1",
+        "tier2",
+        "interfaces",
+        "vstdlib",
+    ]
 
-	includes = []
+    includes = []
 
-	source = [
-		'localize.cpp',
-		'../public/registry.cpp',
-		'../public/UnicodeFileHelpers.cpp',
-		'../public/tier0/memoverride.cpp'
-	]
+    source = [
+        "localize.cpp",
+        "../public/UnicodeFileHelpers.cpp",
+    ]
 
-	bld.shlib(
-		source   = source,
-		target   = 'localize',
-		features = 'cxx',
-		includes = includes,
-		use      = libs,
-		install_path = bld.env.BINPATH,
-		subsystem = bld.env.MSVC_SUBSYSTEM,
-		idx = bld.get_taskgen_count()
-	)
+    bld.shlib(
+        source=source,
+        target="localize",
+        features="cxx",
+        includes=includes,
+        use=libs,
+        install_path=bld.env.BINPATH,
+        subsystem=bld.env.MSVC_SUBSYSTEM,
+        idx=bld.get_taskgen_count(),
+    )

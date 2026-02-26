@@ -1,4 +1,4 @@
-//========== Copyright © 2008, Valve Corporation, All rights reserved. ========
+//========== Copyright ï¿½ 2008, Valve Corporation, All rights reserved. ========
 //
 // Purpose:
 //
@@ -6,10 +6,7 @@
 
 #include "interface.h"
 #include "vscript/ivscript.h"
-#include "languages/gm/vgm/vgm.h"
 #include "languages/squirrel/vsquirrel/vsquirrel.h"
-#include "languages/lua/vlua/vlua.h" 
-#include "languages/python/vpython/vpython.h"
 #include "vstdlib/random.h"
 #include "tier1/tier1.h"
 

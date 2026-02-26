@@ -1,35 +1,38 @@
 #! /usr/bin/env python
 
+
 def options(opt):
-	return
+    return
+
 
 def configure(conf):
-	return
+    return
+
 
 def build(bld):
-	libs = []
+    libs = []
 
-	includes = []
+    includes = []
 
-	source = [
-		'builtin_constraints.cpp',
-		'builtin_initializers.cpp',
-		'builtin_particle_emitters.cpp',
-		'builtin_particle_forces.cpp',
-		'addbuiltin_ops.cpp',
-		'builtin_particle_ops.cpp',
-		'builtin_particle_render_ops.cpp',
-		'particle_snapshot.cpp',
-		'particle_sort.cpp',
-		'particles.cpp'
-	]
+    source = [
+        "builtin_constraints.cpp",
+        "builtin_initializers.cpp",
+        "builtin_particle_emitters.cpp",
+        "builtin_particle_forces.cpp",
+        "addbuiltin_ops.cpp",
+        "builtin_particle_ops.cpp",
+        "builtin_particle_render_ops.cpp",
+        "particle_snapshot.cpp",
+        "particle_sort.cpp",
+        "particles.cpp",
+    ]
 
-	bld.stlib(
-		source   = source,
-		target   = 'particles',
-		features = 'cxx',
-		includes = includes,
-		use      = libs,
-		subsystem = bld.env.MSVC_SUBSYSTEM,
-		idx = bld.get_taskgen_count()
-	)
+    bld.stlib(
+        source=source,
+        target="particles",
+        features="cxx",
+        includes=includes,
+        use=libs,
+        subsystem=bld.env.MSVC_SUBSYSTEM,
+        idx=bld.get_taskgen_count(),
+    )

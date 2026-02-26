@@ -1,31 +1,34 @@
 #! /usr/bin/env python
 
+
 def options(opt):
-	return
+    return
+
 
 def configure(conf):
-	return
+    return
+
 
 def build(bld):
-	libs = []
+    libs = []
 
-	includes = []
+    includes = []
 
-	source = [
-		'dmxattribute.cpp',
-		'dmxelement.cpp',
-		'dmxloader.cpp',
-		'dmxloadertext.cpp',
-		'dmxserializationdictionary.cpp',
-		'utlsoacontainer_serialization.cpp'
-	]
+    source = [
+        "dmxattribute.cpp",
+        "dmxelement.cpp",
+        "dmxloader.cpp",
+        "dmxloadertext.cpp",
+        "dmxserializationdictionary.cpp",
+        "utlsoacontainer_serialization.cpp",
+    ]
 
-	bld.stlib(
-		source   = source,
-		target   = 'dmxloader',
-		features = 'cxx',
-		includes = includes,
-		use      = libs,
-		subsystem = bld.env.MSVC_SUBSYSTEM,
-		idx = bld.get_taskgen_count()
-	)
+    bld.stlib(
+        source=source,
+        target="dmxloader",
+        features="cxx",
+        includes=includes,
+        use=libs,
+        subsystem=bld.env.MSVC_SUBSYSTEM,
+        idx=bld.get_taskgen_count(),
+    )

@@ -15,6 +15,8 @@ def configure(conf):
 def build(bld):
     libs = [
         "tier0",
+        "memoverride",
+        "public_common",
         "matchmaking_base",
         "tier1",
         "tier2",
@@ -39,8 +41,6 @@ def build(bld):
         "cstrike15/mm_title_richpresence.cpp",
         "cstrike15/mm_title_titledata.cpp",
         "../game/shared/cstrike15/gametypes.cpp",
-        "../common/platforminputdevice.cpp",
-        "../public/tier0/memoverride.cpp",
     ]
 
     source_matchmaking_base = [
@@ -72,8 +72,6 @@ def build(bld):
         "servermanager.cpp",
         "playerrankingdata.cpp",
         "extkeyvalues.cpp",
-        "../public/filesystem_helpers.cpp",
-        "../common/steamid.cpp",
         "main.cpp",
     ]
 

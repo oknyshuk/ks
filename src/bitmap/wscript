@@ -1,42 +1,45 @@
 #! /usr/bin/env python
 
+
 def options(opt):
-	return
+    return
+
 
 def configure(conf):
-	return
+    return
+
 
 def build(bld):
-	libs = []
+    libs = []
 
-	includes = []
+    includes = []
 
-	source = [
-		'bitmap.cpp',
-		'colorconversion.cpp',
-		'floatbitmap.cpp',
-		'floatbitmap2.cpp',
-		'floatbitmap3.cpp',
-		'floatbitmap_bilateralfilter.cpp',
-		'floatcubemap.cpp',
-		'imageformat.cpp',
-		'psd.cpp',
-		'psheet.cpp',
-		'resample.cpp',
-		'tgaloader.cpp',
-		'texturepacker.cpp',
-		'tgawriter.cpp'
-	]
+    source = [
+        "bitmap.cpp",
+        "colorconversion.cpp",
+        "floatbitmap.cpp",
+        "floatbitmap2.cpp",
+        "floatbitmap3.cpp",
+        "floatbitmap_bilateralfilter.cpp",
+        "floatcubemap.cpp",
+        "imageformat.cpp",
+        "psd.cpp",
+        "psheet.cpp",
+        "resample.cpp",
+        "tgaloader.cpp",
+        "texturepacker.cpp",
+        "tgawriter.cpp",
+    ]
 
-	if bld.env.DEST_OS == 'win32':
-		soruce += ['floatbitmap4.cpp']
+    if bld.env.DEST_OS == "win32":
+        soruce += ["floatbitmap4.cpp"]
 
-	bld.stlib(
-		source   = source,
-		target   = 'bitmap',
-		features = 'cxx',
-		includes = includes,
-		use      = libs,
-		subsystem = bld.env.MSVC_SUBSYSTEM,
-		idx = bld.get_taskgen_count()
-	)
+    bld.stlib(
+        source=source,
+        target="bitmap",
+        features="cxx",
+        includes=includes,
+        use=libs,
+        subsystem=bld.env.MSVC_SUBSYSTEM,
+        idx=bld.get_taskgen_count(),
+    )

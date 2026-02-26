@@ -15,6 +15,8 @@ def configure(conf):
 def build(bld):
     libs = [
         "tier0",
+        "memoverride",
+        "public_common",
         "vgui_controls",
         "vgui_surfacelib",
         "bitmap",
@@ -35,12 +37,9 @@ def build(bld):
     source = [
         "Clip2D.cpp",
         "Cursor.cpp",
-        "../public/filesystem_helpers.cpp",
         "Input.cpp",
         "MatSystemSurface.cpp",
         "../vgui2/src/vgui_key_translation.cpp",
-        "../public/vgui_controls/vgui_controls.cpp",
-        "../public/tier0/memoverride.cpp",
     ]
 
     if bld.env.DEST_OS == "win32":

@@ -1,28 +1,27 @@
 #! /usr/bin/env python
 
+
 def options(opt):
-	return
+    return
+
 
 def configure(conf):
-	conf.define('FAST_MATERIALVAR_ACCESS', True)
+    conf.define("FAST_MATERIALVAR_ACCESS", True)
+
 
 def build(bld):
-	libs = []
+    libs = []
 
-	includes = ['..']
+    includes = [".."]
 
-	source = [
-		'BaseShader.cpp',
-		'ShaderDLL.cpp',
-		'shaderlib_cvar.cpp'
-	]
+    source = ["BaseShader.cpp", "ShaderDLL.cpp", "shaderlib_cvar.cpp"]
 
-	bld.stlib(
-		source   = source,
-		target   = 'shaderlib',
-		features = 'cxx',
-		includes = includes,
-		use      = libs,
-		subsystem = bld.env.MSVC_SUBSYSTEM,
-		idx = bld.get_taskgen_count()
-	)
+    bld.stlib(
+        source=source,
+        target="shaderlib",
+        features="cxx",
+        includes=includes,
+        use=libs,
+        subsystem=bld.env.MSVC_SUBSYSTEM,
+        idx=bld.get_taskgen_count(),
+    )

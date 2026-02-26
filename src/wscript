@@ -313,6 +313,8 @@ def configure(conf):
     # Source Engine was written for MSVC which permits narrowing in brace init
     conf.env.append_unique("CFLAGS", ["-Wno-narrowing"])
     conf.env.append_unique("CXXFLAGS", ["-Wno-c++11-narrowing"])
+    # Source Engine predates C++11 override keyword
+    conf.env.append_unique("CXXFLAGS", ["-Wno-inconsistent-missing-override"])
 
     # --- Includes ---
     includes = [
@@ -398,6 +400,35 @@ def build(bld):
         os.environ["CCACHE_BASEDIR"] = base_dir
 
     root_env = bld.env
+
+    # --- Shared compilation units (compiled once, linked into many targets) ---
+    bld.objects(
+        source="public/tier0/memoverride.cpp",
+        target="memoverride",
+        features="cxx",
+        idx=bld.get_taskgen_count(),
+    )
+
+    bld.stlib(
+        source=[
+            "public/filesystem_helpers.cpp",
+            "public/vgui_controls/vgui_controls.cpp",
+            "public/collisionutils.cpp",
+            "public/networkvar.cpp",
+            "public/registry.cpp",
+            "public/scratchpad3d.cpp",
+            "public/dt_utlvector_common.cpp",
+            "public/XZip.cpp",
+            "public/XUnzip.cpp",
+            "common/steamid.cpp",
+            "common/platforminputdevice.cpp",
+            "common/randoverride.cpp",
+        ],
+        target="public_common",
+        features="cxx",
+        idx=bld.get_taskgen_count(),
+    )
+
     for prj in PROJECTS:
         bld.env = bld.all_envs[prj]
         bld.recurse(prj)
