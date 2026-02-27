@@ -3027,7 +3027,7 @@ void CMatSystemSurface::OnScreenSizeChanged( int nOldWidth, int nOldHeight )
 	int iNewWidth, iNewHeight;
 	GetScreenSize( iNewWidth, iNewHeight );
 
-	Msg( "Changing resolutions from (%d, %d) -> (%d, %d)\n", nOldWidth, nOldHeight, iNewWidth, iNewHeight );
+	// Msg( "Changing resolutions from (%d, %d) -> (%d, %d)\n", nOldWidth, nOldHeight, iNewWidth, iNewHeight );
 
 	// update the root panel size
 	ipanel()->SetSize(m_pEmbeddedPanel, iNewWidth, iNewHeight);
