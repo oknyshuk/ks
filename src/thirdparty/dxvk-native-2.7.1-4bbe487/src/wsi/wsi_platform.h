@@ -117,9 +117,6 @@ namespace dxvk::wsi {
 #if defined(DXVK_WSI_SDL3)
   extern WsiBootstrap Sdl3WSI;
 #endif
-#if defined(DXVK_WSI_SDL2)
-  extern WsiBootstrap Sdl2WSI;
-#endif
 #if defined(DXVK_WSI_GLFW)
   extern WsiBootstrap GlfwWSI;
 #endif

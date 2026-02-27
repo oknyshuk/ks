@@ -24,9 +24,6 @@ namespace dxvk::wsi {
       WsiMode fullscreenMode = { };
     } sdl3;
 #endif
-#if defined(DXVK_WSI_SDL2)
-    // Nothing to store
-#endif
 #if defined(DXVK_WSI_GLFW)
     // Nothing to store
 #endif

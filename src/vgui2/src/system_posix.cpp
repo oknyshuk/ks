@@ -37,9 +37,7 @@
 #endif
 
 #ifdef USE_SDL
-#include "SDL_stdinc.h"
-#include "SDL_clipboard.h"
-#include "SDL_error.h"
+#include <SDL3/SDL.h>
 #endif
 
 #define PROTECTED_THINGS_DISABLE

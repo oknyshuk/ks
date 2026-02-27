@@ -6,8 +6,7 @@
 
 #if defined( USE_SDL )
 #undef PROTECTED_THINGS_ENABLE
-#include "SDL.h"
-#include "SDL_syswm.h"
+#include <SDL3/SDL.h>
 #endif
 
 #if defined( _WIN32 ) && !defined( _X360 )
@@ -242,11 +241,12 @@ CVideoMode_Common::CVideoMode_Common( void )
 #if defined( USE_SDL )
     if ( SDL_WasInit( SDL_INIT_VIDEO ) )
     {
-        SDL_DisplayMode mode;
-        if ( SDL_GetDesktopDisplayMode( 0, &mode ) == 0 )
+        SDL_DisplayID primaryDisplay = SDL_GetPrimaryDisplay();
+        const SDL_DisplayMode *mode = SDL_GetDesktopDisplayMode( primaryDisplay );
+        if ( mode )
         {
-            desktopWidth = mode.w;
-            desktopHeight = mode.h;
+            desktopWidth = mode->w;
+            desktopHeight = mode->h;
         }
     }
 #endif
@@ -375,12 +375,16 @@ void CVideoMode_Common::OnWindowSizeChanged( int nNewWidth, int nNewHeight )
     if ( nNewWidth <= 0 || nNewHeight <= 0 )
         return;
 
-    // Skip if no actual change
+    // In fullscreen, the compositor controls the window size (it changes when
+    // moving between monitors). Don't override the user's chosen render
+    // resolution — all available resolutions from all monitors are in the
+    // settings list so the user can switch explicitly.
+    if ( !IsWindowedMode() )
+        return;
+
     if ( m_nModeWidth == nNewWidth && m_nModeHeight == nNewHeight )
         return;
 
-    // Trigger a full mode change to resize the backbuffer and update all systems.
-    // This will call AdjustForModeChange which handles VGUI notifications etc.
     SetMode( nNewWidth, nNewHeight, IsWindowedMode(), NoWindowBorder() );
 }
 
@@ -1052,9 +1056,8 @@ void CVideoMode_Common::InvalidateWindow()
 #if USE_SDL
         SDL_Event fake;
         memset(&fake, '\0', sizeof (SDL_Event));
-        fake.type = SDL_WINDOWEVENT;
+        fake.type = SDL_EVENT_WINDOW_EXPOSED;
         fake.window.windowID = SDL_GetWindowID((SDL_Window *) game->GetMainWindow());
-        fake.window.event = SDL_WINDOWEVENT_EXPOSED;
         SDL_PushEvent(&fake);
 #elif defined( WIN32 ) 
         InvalidateRect( (HWND)game->GetMainWindow(), NULL, FALSE );
@@ -1617,11 +1620,15 @@ void CVideoMode_Common::CenterEngineWindow( void *hWndCenter, int width, int hei
 	// Get the displayindex, and center our window on that display.
 	int displayindex = g_pLauncherMgr->GetActiveDisplayIndex();
 
-	SDL_DisplayMode mode;
-	SDL_GetCurrentDisplayMode( displayindex, &mode );
+	int dCount = 0;
+	SDL_DisplayID *dList = SDL_GetDisplays( &dCount );
+	SDL_DisplayID displayID = ( dList && displayindex < dCount ) ? dList[displayindex] : SDL_GetPrimaryDisplay();
+	SDL_free( dList );
 
-	const int wide = mode.w;
-	const int tall = mode.h;
+	const SDL_DisplayMode *mode = SDL_GetCurrentDisplayMode( displayID );
+
+	const int wide = mode->w;
+	const int tall = mode->h;
 	
 	CenterX = (wide - width) / 2;
 	CenterY = (tall - height) / 2;
@@ -1645,7 +1652,7 @@ void CVideoMode_Common::CenterEngineWindow( void *hWndCenter, int width, int hei
 	}
 	
 	SDL_Rect rect = { 0, 0, 0, 0 };
-	SDL_GetDisplayBounds( displayindex, &rect );
+	SDL_GetDisplayBounds( displayID, &rect );
 
 	CenterX += rect.x;
 	CenterY += rect.y;

@@ -7,7 +7,7 @@ def options(opt):
 
 def configure(conf):
     conf.define("DXVK_NATIVE", True)
-    conf.define("DXVK_WSI_SDL2", True)
+    conf.define("DXVK_WSI_SDL3", True)
     conf.define("DXVK_PLATFORM_LINUX", True)
 
 
@@ -27,9 +27,9 @@ def build(bld):
 
     source = [
         "wsi_platform.cpp",
-        "sdl2/wsi_monitor_sdl2.cpp",
-        "sdl2/wsi_platform_sdl2.cpp",
-        "sdl2/wsi_window_sdl2.cpp",
+        "sdl3/wsi_monitor_sdl3.cpp",
+        "sdl3/wsi_platform_sdl3.cpp",
+        "sdl3/wsi_window_sdl3.cpp",
     ]
 
     bld.stlib(

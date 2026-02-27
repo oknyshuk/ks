@@ -230,7 +230,7 @@ public:
 		OSXInputValue_t m_POV;
 		OSXInputValue_t m_Buttons[MAX_JOYSTICK_BUTTONS];
 #elif defined(LINUX)
-		void *m_pDevice;  // Really an SDL_GameController*, NULL if not present.
+		void *m_pDevice;  // Really an SDL_Gamepad*, NULL if not present.
 		void *m_pHaptic;  // Really an SDL_Haptic*
 		float m_fCurrentRumble;
 		bool m_bRumbleEnabled;

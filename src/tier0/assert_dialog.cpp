@@ -24,9 +24,9 @@ char *GetCommandLine();
 #if defined( LINUX ) || defined( USE_SDL )
 // We lazily load the SDL shared object, and only reference functions if it's
 // available, so this can be included on the dedicated server too.
-#include "SDL.h"
+#include <SDL3/SDL.h>
 
-typedef int ( SDLCALL FUNC_SDL_ShowMessageBox )( const SDL_MessageBoxData *messageboxdata, int *buttonid );
+typedef bool ( SDLCALL FUNC_SDL_ShowMessageBox )( const SDL_MessageBoxData *messageboxdata, int *buttonid );
 typedef SDL_Window* ( SDLCALL FUNC_SDL_GetKeyboardFocus )();
 #endif
 
@@ -601,16 +601,16 @@ else
 	if( getenv( "GAME_ASSERT_DIALOG" ) && !pfnSDLShowMessageBox )
 	{
 #if defined( WIN32 )
-        HMODULE ret = LoadLibrary( "SDL2.lib" );
+        HMODULE ret = LoadLibrary( "SDL3.lib" );
 
         pfnSDLShowMessageBox = ( FUNC_SDL_ShowMessageBox * )GetProcAddress( ret, "SDL_ShowMessageBox" );
         pfnSDLGetKeyboardFocus = ( FUNC_SDL_GetKeyboardFocus * )GetProcAddress( ret, "SDL_GetKeyboardFocus" );
 #else
 
 #if defined( OSX )
-        void *ret = dlopen( "libSDL2-2.0.0.dylib", RTLD_LAZY );
+        void *ret = dlopen( "libSDL3.0.dylib", RTLD_LAZY );
 #else
-        void *ret = dlopen( "libSDL2-2.0.so.0", RTLD_LAZY );
+        void *ret = dlopen( "libSDL3.so.0", RTLD_LAZY );
 #endif
 
         pfnSDLShowMessageBox = ( FUNC_SDL_ShowMessageBox * )dlsym( ret, "SDL_ShowMessageBox" );
@@ -642,8 +642,8 @@ else
 		messageboxdata.numbuttons = ARRAYSIZE( buttondata );
 		messageboxdata.buttons = buttondata;
 
-		int Ret = ( *pfnSDLShowMessageBox )( &messageboxdata, &buttonid );
-		if( Ret == -1 )
+		bool Ret = ( *pfnSDLShowMessageBox )( &messageboxdata, &buttonid );
+		if( !Ret )
 		{
 			buttonid = IDC_BREAK;
 		}

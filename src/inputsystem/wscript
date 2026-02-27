@@ -19,7 +19,7 @@ def build(bld):
         "interfaces",
         "vstdlib",
         "mathlib",
-        "SDL2",
+        "SDL3",
     ]
 
     includes = []

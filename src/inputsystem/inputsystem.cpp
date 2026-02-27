@@ -22,7 +22,7 @@
 #include "tier0/memdbgon.h"
 
 #if defined( USE_SDL )
-#include "SDL.h"
+#include <SDL3/SDL.h>
 static void initKeymap(void);
 #endif
 
@@ -619,7 +619,7 @@ void CInputSystem::PollInputState_Windows()
 #if defined(OSX) || defined( USE_SDL )
 
 #if defined( USE_SDL )
-static BYTE        scantokey[SDL_NUM_SCANCODES];
+static BYTE        scantokey[SDL_SCANCODE_COUNT];
 
 static void initKeymap(void)
 {

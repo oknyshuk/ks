@@ -79,47 +79,12 @@ namespace dxvk::wsi {
           HMONITOR         hMonitor,
           HWND             hWindow,
           DxvkWindowState* pState,
+          [[maybe_unused]]
           bool             ModeSwitch) {
-    SDL_DisplayID displayId = fromHmonitor(hMonitor);
-    SDL_Window* window = fromHwnd(hWindow);
-
-    if (!displayId)
-      return false;
-
-    SDL_Rect bounds = { };
-
-    if (!SDL_GetDisplayUsableBounds(displayId, &bounds)) {
-      Logger::err(str::format("SDL3 WSI: enterFullscreenMode: SDL_GetDisplayUsableBounds: ", SDL_GetError()));
-      return false;
-    }
-
-    if (!SDL_SetWindowPosition(window, bounds.x, bounds.y)) {
-      Logger::err(str::format("SDL3 WSI: enterFullscreenMode: SDL_SetWindowPosition: ", SDL_GetError()));
-      return false;
-    }
-
-    SDL_DisplayMode closestMode = { };
-
-    if (ModeSwitch) {
-      const auto& mode = pState->sdl3.fullscreenMode;
-
-      if (!SDL_GetClosestFullscreenDisplayMode(displayId, mode.width, mode.height,
-          float(mode.refreshRate.numerator) / float(mode.refreshRate.denominator), true, &closestMode)) {
-        Logger::err(str::format("SDL3 WSI: enterFullscreenMode: SDL_GetClosestFullscreenDisplayMode: ", SDL_GetError()));
-        return false;
-      }
-    }
-
-    if (!SDL_SetWindowFullscreenMode(window, ModeSwitch ? &closestMode : nullptr)) {
-      Logger::err(str::format("SDL3 WSI: enterFullscreenMode: SDL_SetWindowFullscreenMode: ", SDL_GetError()));
-      return false;
-    }
-
-    if (!SDL_SetWindowFullscreen(window, true)) {
-      Logger::err(str::format("SDL3 WSI: enterFullscreenMode: SDL_SetWindowFullscreen: ", SDL_GetError()));
-      return false;
-    }
-
+    // Fullscreen is managed by the game engine (sdlmgr) via SDL directly.
+    // Don't touch the fullscreen state here — re-requesting fullscreen
+    // causes Wayland compositors to re-evaluate the output, potentially
+    // moving the window to a different monitor.
     return true;
   }
 
@@ -127,13 +92,7 @@ namespace dxvk::wsi {
   bool Sdl3WsiDriver::leaveFullscreenMode(
           HWND             hWindow,
           DxvkWindowState* pState) {
-    SDL_Window* window = fromHwnd(hWindow);
-
-    if (!SDL_SetWindowFullscreen(window, false)) {
-      Logger::err(str::format("SDL3 WSI: leaveFullscreenMode: SDL_SetWindowFullscreen: ", SDL_GetError()));
-      return false;
-    }
-
+    // Fullscreen is managed by the game engine (sdlmgr) via SDL directly.
     return true;
   }
 

@@ -4,7 +4,7 @@
 
 #include "../wsi_platform.h"
 
-#include "../util/util_bit.h"
+#include "../../util/util_bit.h"
 
 namespace dxvk::wsi {
 

@@ -4,14 +4,14 @@
 #include <RmlUi/Core/SystemInterface.h>
 
 #ifdef USE_SDL
-#include <SDL_mouse.h>
+#include <SDL3/SDL.h>
 #endif
 
 class RocketSystem : public Rml::SystemInterface {
 public:
   static RocketSystem m_Instance;
 
-  SDL_Cursor *m_pCursors[SDL_NUM_SYSTEM_CURSORS];
+  SDL_Cursor *m_pCursors[SDL_SYSTEM_CURSOR_COUNT];
 
   // Get the number of seconds elapsed since the start of the application
   double GetElapsedTime() override;

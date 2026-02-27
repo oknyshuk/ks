@@ -7,7 +7,7 @@ def options(opt):
 
 def configure(conf):
     conf.define("DXVK_NATIVE", True)
-    conf.define("DXVK_WSI_SDL2", True)
+    conf.define("DXVK_WSI_SDL3", True)
     conf.define("DXVK_PLATFORM_LINUX", True)
 
 

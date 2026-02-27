@@ -15,7 +15,7 @@
 namespace dxvk::wsi {
 
   HMONITOR Sdl3WsiDriver::getDefaultMonitor() {
-    return enumMonitors(0);
+    return toHmonitor(SDL_GetPrimaryDisplay());
   }
 
 

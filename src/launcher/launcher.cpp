@@ -63,7 +63,7 @@
 #include "vstdlib/jobthread.h"
 #include "rocketui/rocketui.h"
 
-#include "SDL.h"
+#include <SDL3/SDL.h>
 
 #define MB_OK 			0x00000001
 #define MB_SYSTEMMODAL	0x00000002

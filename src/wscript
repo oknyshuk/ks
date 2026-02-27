@@ -352,8 +352,8 @@ def configure(conf):
         conf.define("DEDICATED", True)
 
     # --- Dependencies (pkg-config) ---
-    conf.check_cfg(package="sdl2", args="--cflags --libs", uselib_store="SDL2")
-    includes += conf.env.INCLUDES_SDL2
+    conf.check_cfg(package="sdl3", args="--cflags --libs", uselib_store="SDL3")
+    includes += conf.env.INCLUDES_SDL3
     conf.check_cfg(package="freetype2", args="--cflags --libs", uselib_store="FREETYPE")
     includes += conf.env.INCLUDES_FREETYPE
     conf.check_cfg(

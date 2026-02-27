@@ -379,7 +379,7 @@ void RocketUIImpl::EnableCursor(bool state) {
   // Use same approach as VGUI - set cursor and visibility
   if (state) {
     m_pLauncherMgr->SetMouseCursor(
-        RocketSystem::m_Instance.m_pCursors[SDL_SYSTEM_CURSOR_ARROW]);
+        RocketSystem::m_Instance.m_pCursors[SDL_SYSTEM_CURSOR_DEFAULT]);
   }
   m_pLauncherMgr->SetMouseVisible(state);
 

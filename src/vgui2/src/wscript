@@ -20,7 +20,7 @@ def build(bld):
         "tier3",
         "interfaces",
         "vstdlib",
-        "SDL2",
+        "SDL3",
     ]
 
     includes = []

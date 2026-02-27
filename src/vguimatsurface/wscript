@@ -29,7 +29,7 @@ def build(bld):
         "mathlib",
         "FREETYPE",
         "FONTCONFIG",
-        "SDL2",
+        "SDL3",
     ]
 
     includes = []

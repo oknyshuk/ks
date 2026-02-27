@@ -15,9 +15,6 @@ namespace dxvk::wsi {
 #if defined(DXVK_WSI_SDL3)
     &Sdl3WSI,
 #endif
-#if defined(DXVK_WSI_SDL2)
-    &Sdl2WSI,
-#endif
 #if defined(DXVK_WSI_GLFW)
     &GlfwWSI,
 #endif
@@ -33,8 +30,6 @@ namespace dxvk::wsi {
         // for other platforms however we _need_ to know which WSI to use!
 #if defined(DXVK_WSI_WIN32)
         hint = "Win32";
-#elif defined(DXVK_WSI_SDL2)
-        hint = "SDL2";
 #elif defined(DXVK_WSI_SDL3)
         hint = "SDL3";
 #elif defined(DXVK_WSI_GLFW)

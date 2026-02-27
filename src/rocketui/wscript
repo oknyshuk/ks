@@ -51,7 +51,7 @@ def build(bld):
         features="cxx",
         includes=includes,
         defines=defines,
-        use=libs + ["SDL2", "FREETYPE", "FONTCONFIG"],
+        use=libs + ["SDL3", "FREETYPE", "FONTCONFIG"],
         lib=["vulkan"],
         install_path=bld.env.BINPATH,
         subsystem=bld.env.MSVC_SUBSYSTEM,

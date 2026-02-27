@@ -20,7 +20,7 @@
           ];
 
           buildInputs = with pkgs; [
-            SDL2
+            sdl3
             freetype
             fontconfig
             libx11

@@ -18,7 +18,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 #if !defined(DEDICATED)
-#include "SDL.h"
+#include <SDL3/SDL.h>
 #endif
 #endif
 

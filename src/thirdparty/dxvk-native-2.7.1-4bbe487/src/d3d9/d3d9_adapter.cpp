@@ -982,44 +982,49 @@ namespace dxvk {
       }
     }
 
-    // Walk over all modes that the display supports and
-    // return those that match the requested format etc.
-    wsi::WsiMode devMode = { };
+    // Walk over all modes from all connected displays so the resolution
+    // list includes every available resolution across all monitors.
+    for (uint32_t monIdx = 0; ; monIdx++) {
+      HMONITOR hMon = wsi::enumMonitors(monIdx);
+      if (!hMon)
+        break;
 
-    uint32_t modeIndex = 0;
+      wsi::WsiMode devMode = { };
+      uint32_t modeIndex = 0;
 
-    while (wsi::getDisplayMode(wsi::getDefaultMonitor(), modeIndex++, &devMode)) {
-      // Skip interlaced modes altogether
-      if (devMode.interlaced)
-        continue;
+      while (wsi::getDisplayMode(hMon, modeIndex++, &devMode)) {
+        // Skip interlaced modes altogether
+        if (devMode.interlaced)
+          continue;
 
-      // Skip modes with incompatible formats
-      if (devMode.bitsPerPixel != GetMonitorFormatBpp(Format))
-        continue;
+        // Skip modes with incompatible formats
+        if (devMode.bitsPerPixel != GetMonitorFormatBpp(Format))
+          continue;
 
-      if (!forcedRatio.undefined() &&
-          ApplyOptionsFilters &&
-          Ratio<DWORD>(devMode.width, devMode.height) != forcedRatio)
-        continue;
+        if (!forcedRatio.undefined() &&
+            ApplyOptionsFilters &&
+            Ratio<DWORD>(devMode.width, devMode.height) != forcedRatio)
+          continue;
 
-      if (options.forceRefreshRate &&
-          ApplyOptionsFilters &&
-          devMode.refreshRate.numerator / devMode.refreshRate.denominator != options.forceRefreshRate)
-        continue;
+        if (options.forceRefreshRate &&
+            ApplyOptionsFilters &&
+            devMode.refreshRate.numerator / devMode.refreshRate.denominator != options.forceRefreshRate)
+          continue;
 
-      if (options.modeCountCompatibility &&
-          ApplyOptionsFilters &&
-          !IsEquivalentMode(devMode, currentMode) &&
-          (!currentCompatibleMode.width || !IsEquivalentMode(devMode, currentCompatibleMode)) &&
-          !IsCountCompatibleMode(devMode))
-        continue;
+        if (options.modeCountCompatibility &&
+            ApplyOptionsFilters &&
+            !IsEquivalentMode(devMode, currentMode) &&
+            (!currentCompatibleMode.width || !IsEquivalentMode(devMode, currentCompatibleMode)) &&
+            !IsCountCompatibleMode(devMode))
+          continue;
 
-      D3DDISPLAYMODEEX mode = ConvertDisplayMode(devMode);
-      // Fix up the D3DFORMAT to match what we are enumerating
-      mode.Format = static_cast<D3DFORMAT>(Format);
+        D3DDISPLAYMODEEX mode = ConvertDisplayMode(devMode);
+        // Fix up the D3DFORMAT to match what we are enumerating
+        mode.Format = static_cast<D3DFORMAT>(Format);
 
-      if (std::count(m_modes.begin(), m_modes.end(), mode) == 0)
-        m_modes.push_back(mode);
+        if (std::count(m_modes.begin(), m_modes.end(), mode) == 0)
+          m_modes.push_back(mode);
+      }
     }
   }
 

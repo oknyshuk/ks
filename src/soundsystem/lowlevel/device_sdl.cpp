@@ -1,7 +1,7 @@
 #include "basetypes.h"
 #include "commonmacros.h"
 
-#include "SDL.h"
+#include <SDL3/SDL.h>
 
 #include "mix.h"
 #include "soundsystem/lowlevel.h"
@@ -14,7 +14,7 @@ class CAudioSDL : public IAudioDevice2
 public:
 	CAudioSDL()
 	{
-		m_nDeviceID = 0;
+		m_pStream = nullptr;
 		m_nDeviceIndex = -1;
 		m_nBufferSizeBytes = 0;
 		m_nBufferCount = 0;
@@ -54,7 +54,7 @@ public:
 	// inline methods
 	inline int BytesPerSample() { return BitsPerSample()>>3; }
 
-	void FillAudioBuffer( Uint8 *buf, int len );
+	void FillAudioBuffer( SDL_AudioStream *stream, int additional_amount );
 
 
 private:
@@ -66,8 +66,7 @@ private:
 	int	SamplesPerBuffer() { return MIX_BUFFER_SIZE; }
 	int BytesPerBuffer() { return m_nBufferSizeBytes; }
 
-	SDL_AudioDeviceID m_nDeviceID;
-	SDL_AudioSpec m_deviceSpec;
+	SDL_AudioStream *m_pStream;
 
 	audio_device_init_params_t m_savedParams;
 
@@ -99,19 +98,23 @@ CAudioSDL::~CAudioSDL()
 	}
 }
 
-static void AudioCallback( void *userdata, Uint8 *stream, int len )
+static void SDLCALL AudioStreamCallback( void *userdata, SDL_AudioStream *stream, int additional_amount, int total_amount )
 {
 	CAudioSDL *dev = reinterpret_cast<CAudioSDL*>( userdata );
-	dev->FillAudioBuffer( stream, len );
+	dev->FillAudioBuffer( stream, additional_amount );
 }
 
 bool CAudioSDL::Init( const audio_device_init_params_t &params )
 {
 	m_savedParams = params;
 
-	int nDeviceCount = SDL_GetNumAudioDevices( 0 );
-	if ( !nDeviceCount )
+	int nDeviceCount = 0;
+	SDL_AudioDeviceID *pDevices = SDL_GetAudioPlaybackDevices( &nDeviceCount );
+	if ( !pDevices || !nDeviceCount )
+	{
+		SDL_free( pDevices );
 		return false;
+	}
 
 	m_nDeviceIndex = -1;
 	if ( params.m_bOverrideDevice )
@@ -124,7 +127,7 @@ bool CAudioSDL::Init( const audio_device_init_params_t &params )
         {
             for( int i = 0; i < nDeviceCount; ++i )
             {
-                const char *devName = SDL_GetAudioDeviceName( i, 0 );
+                const char *devName = SDL_GetAudioDeviceName( pDevices[i] );
                 if ( devName == NULL )
                 {
                     continue;
@@ -157,29 +160,32 @@ bool CAudioSDL::Init( const audio_device_init_params_t &params )
 	}
 #endif
 
-	SDL_AudioSpec desired;
-	desired.freq = int(MIX_DEFAULT_SAMPLING_RATE);
-	desired.format = AUDIO_S16SYS;
-	desired.channels = 2;
-	desired.samples = 1024;
-	desired.callback = AudioCallback;
-	desired.userdata = this;
+	SDL_AudioSpec spec;
+	spec.format = SDL_AUDIO_S16;
+	spec.channels = 2;
+	spec.freq = int(MIX_DEFAULT_SAMPLING_RATE);
 
-	m_nDeviceID = SDL_OpenAudioDevice( m_nDeviceIndex == -1 ? NULL : SDL_GetAudioDeviceName( m_nDeviceIndex, 0 ), 0, &desired, &m_deviceSpec, SDL_AUDIO_ALLOW_ANY_CHANGE );
+	m_pStream = SDL_OpenAudioDeviceStream( SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &spec, AudioStreamCallback, this );
 
-	const char *pDeviceNameUTF8 = m_nDeviceIndex == -1 ? DEFAULT_DEVICE_NAME : SDL_GetAudioDeviceName( m_nDeviceIndex, 0 );
+	const char *pDeviceNameUTF8 = m_nDeviceIndex == -1 ? DEFAULT_DEVICE_NAME : SDL_GetAudioDeviceName( pDevices[m_nDeviceIndex] );
 	Q_UTF8ToWString( pDeviceNameUTF8, m_deviceID, sizeof( m_deviceID ) );
 
-	// UNDONE: Have the device report MIX_DEFAULT_SAMPLING_RATE to the outside world
-	// and build an SDL_AudioCVT to convert from the engine's mix to the SDL device's audio output?
+	SDL_free( pDevices );
+
+	if ( !m_pStream )
+		return false;
+
+	// Query back the actual format from the stream
+	SDL_AudioSpec obtained;
+	SDL_GetAudioStreamFormat( m_pStream, &obtained, NULL );
 
 	// BUGBUG: Assert this for now
-	Assert( m_deviceSpec.channels == 2 );
-	Assert( m_deviceSpec.freq == int(MIX_DEFAULT_SAMPLING_RATE) );
+	Assert( obtained.channels == 2 );
+	Assert( obtained.freq == int(MIX_DEFAULT_SAMPLING_RATE) );
 
-	m_nChannels = m_deviceSpec.channels;
-	m_nSampleBits = SDL_AUDIO_BITSIZE( m_deviceSpec.format );
-	m_nSampleRate = m_deviceSpec.freq;
+	m_nChannels = obtained.channels;
+	m_nSampleBits = SDL_AUDIO_BITSIZE( obtained.format );
+	m_nSampleRate = obtained.freq;
 	m_bIsActive = true;
 	m_bIsHeadphone = false;
 	m_pName = "SDL Audio";
@@ -199,7 +205,7 @@ bool CAudioSDL::Init( const audio_device_init_params_t &params )
 	m_bAudioStarted = false;
 
 	// start audio playback
-	SDL_PauseAudioDevice( m_nDeviceID, 0 );
+	SDL_ResumeAudioStreamDevice( m_pStream );
 
 	return true;
 }
@@ -234,10 +240,10 @@ void CAudioSDL::OutputBuffer( int nChannels, CAudioMixBuffer *pChannelArray )
 
 void CAudioSDL::Shutdown()
 {
-	if ( m_nDeviceID > 0 )
+	if ( m_pStream != nullptr )
 	{
-		SDL_CloseAudioDevice( m_nDeviceID );
-		m_nDeviceID = 0;
+		SDL_DestroyAudioStream( m_pStream );
+		m_pStream = nullptr;
 	}
 }
 
@@ -294,8 +300,13 @@ void CAudioSDL::OutputDebugInfo() const
 	fprintf(stderr, "Rate:\t\t%d\n", SampleRate() );
 }
 
-void CAudioSDL::FillAudioBuffer( Uint8 *buf, int len )
+void CAudioSDL::FillAudioBuffer( SDL_AudioStream *stream, int additional_amount )
 {
+	int len = additional_amount;
+
+	// Temporary buffer to build audio data into before pushing to the stream
+	Uint8 tmpbuf[4096];
+
 	m_mutexBuffer.Lock();
 
 	bool bFailedToGetMore = false;
@@ -305,15 +316,6 @@ void CAudioSDL::FillAudioBuffer( Uint8 *buf, int len )
 		if ( m_nReadBuffer == m_nWriteBuffer )
 		{
 			m_mutexBuffer.Unlock();
-/*
-			if ( m_savedParams.m_pfnMixAudio != NULL )
-			{
-				//We are going to be starved, so ask the mixer to mix
-				//some more audio for us right now. We expect this
-				//call to fill our buffers up.
-				m_savedParams.m_pfnMixAudio( 0.01 );
-			}
-*/
 			m_mutexBuffer.Lock();
 
 			if ( m_nReadBuffer == m_nWriteBuffer )
@@ -329,14 +331,16 @@ void CAudioSDL::FillAudioBuffer( Uint8 *buf, int len )
 		{
 			int bufsize = m_nBufferSizeBytes - m_nPartialRead;
 			int nbytes = len < bufsize ? len : bufsize;
+			if ( nbytes > (int)sizeof( tmpbuf ) )
+				nbytes = (int)sizeof( tmpbuf );
 
 			if(m_bSilenced && m_fSilencedVol <= 0.0f)
 			{
-				memset( buf, 0, nbytes );
+				memset( tmpbuf, 0, nbytes );
 			}
 			else
 			{
-				memcpy( buf, ((unsigned char*)m_pBuffer[ m_nReadBuffer ]) + m_nPartialRead, nbytes );
+				memcpy( tmpbuf, ((unsigned char*)m_pBuffer[ m_nReadBuffer ]) + m_nPartialRead, nbytes );
 
 				// If we are silencing or unsilencing, make the volume fade rather than
 				// changing abruptly.
@@ -346,7 +350,7 @@ void CAudioSDL::FillAudioBuffer( Uint8 *buf, int len )
 
 				if ( m_bSilenced )
 				{
-					short* sbuf = reinterpret_cast<short*>(buf);
+					short* sbuf = reinterpret_cast<short*>(tmpbuf);
 					int i = 0;
 					while ( i < nbytes/2 )
 					{
@@ -364,7 +368,7 @@ void CAudioSDL::FillAudioBuffer( Uint8 *buf, int len )
 				}
 				else if ( m_fSilencedVol < 1.0f )
 				{
-					short* sbuf = reinterpret_cast<short*>(buf);
+					short* sbuf = reinterpret_cast<short*>(tmpbuf);
 					int i = 0;
 					while ( i < nbytes/2 && m_fSilencedVol < 1.0f )
 					{
@@ -378,7 +382,9 @@ void CAudioSDL::FillAudioBuffer( Uint8 *buf, int len )
 					}
 				}
 			}
-	
+
+			SDL_PutAudioStreamData( stream, tmpbuf, nbytes );
+
 			if ( nbytes == bufsize )
 			{
 				m_nReadBuffer = (m_nReadBuffer+1) % kNumBuffers;
@@ -389,7 +395,6 @@ void CAudioSDL::FillAudioBuffer( Uint8 *buf, int len )
 				m_nPartialRead += nbytes;
 			}
 
-			buf += nbytes;
 			len -= nbytes;
 		}
 	}
@@ -399,7 +404,14 @@ void CAudioSDL::FillAudioBuffer( Uint8 *buf, int len )
 	if ( len > 0 )
 	{
 		// We have been starved of data and have to fill with silence.
-		memset( buf, 0, len );
+		Uint8 silence[4096];
+		while ( len > 0 )
+		{
+			int chunk = len < (int)sizeof( silence ) ? len : (int)sizeof( silence );
+			memset( silence, 0, chunk );
+			SDL_PutAudioStreamData( stream, silence, chunk );
+			len -= chunk;
+		}
 	}
 }
 
@@ -408,8 +420,7 @@ static bool InitSDLAudio()
 {
 	if ( !g_bInitSDLAudio )
 	{
-		int nRet = SDL_InitSubSystem( SDL_INIT_AUDIO );
-		if ( nRet < 0 )
+		if ( !SDL_InitSubSystem( SDL_INIT_AUDIO ) )
 		{
 			return false;
 		}
@@ -437,12 +448,13 @@ int Audio_EnumerateSDLDevices( audio_device_description_t *pDeviceListOut, int n
 		description.m_nSubsystemId = AUDIO_SUBSYSTEM_SDL;
 	}
 
-	int nOutputDeviceCount = SDL_GetNumAudioDevices( 0 );
+	int nOutputDeviceCount = 0;
+	SDL_AudioDeviceID *pDevices = SDL_GetAudioPlaybackDevices( &nOutputDeviceCount );
 
 	int nIterateCount = MIN(nListCount-1, nOutputDeviceCount);
 	for ( int i = 0; i < nIterateCount; i++ )
 	{
-		const char *pNameUTF8 = SDL_GetAudioDeviceName( i, 0 );
+		const char *pNameUTF8 = SDL_GetAudioDeviceName( pDevices[i] );
 
 		audio_device_description_t& description = pDeviceListOut[i+1];
 
@@ -452,8 +464,10 @@ int Audio_EnumerateSDLDevices( audio_device_description_t *pDeviceListOut, int n
 		description.m_bIsDefault = false;
 		description.m_bIsAvailable = true;
 		description.m_nSubsystemId = AUDIO_SUBSYSTEM_SDL;
-	
+
 	}
+
+	SDL_free( pDevices );
 
 	return nIterateCount + 1;
 }

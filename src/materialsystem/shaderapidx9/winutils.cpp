@@ -9,7 +9,7 @@
 #ifndef _WIN32
 
 #ifdef USE_SDL
-#include "SDL.h"
+#include <SDL3/SDL.h>
 #endif
 
 void GlobalMemoryStatus( MEMORYSTATUS *pOut )

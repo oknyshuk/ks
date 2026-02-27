@@ -40,7 +40,7 @@ def build(bld):
         "JPEG",
         "bzip2",
         "mojoAL",
-        "SDL2",
+        "SDL3",
     ]
 
     includes = [

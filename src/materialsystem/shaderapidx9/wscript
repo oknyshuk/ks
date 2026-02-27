@@ -28,7 +28,7 @@ def build(bld):
         "vtf",
         "appframework",
         "bzip2",
-        "SDL2",
+        "SDL3",
     ]
 
     includes = [".."]

@@ -5,7 +5,7 @@
 //===========================================================================//
 #if defined( USE_SDL )
 #undef PROTECTED_THINGS_ENABLE
-#include "SDL.h"
+#include <SDL3/SDL.h>
 #endif
 
 #if defined( WIN32 ) && !defined( _X360 ) && !defined( DX_TO_GL_ABSTRACTION )
@@ -2078,8 +2078,8 @@ void CGame::PlayVideoListAndWait( const char *szVideoFileList, bool bNeedHealthW
 	}
 
 #if defined( USE_SDL )
-	int CursorStateBak = SDL_ShowCursor( -1 );
-	SDL_ShowCursor( 0 );
+	bool CursorStateBak = SDL_CursorVisible();
+	SDL_HideCursor();
 #elif defined( WIN32 )
 	// hide cursor while playing videos
 	::ShowCursor(FALSE);
@@ -2160,7 +2160,10 @@ void CGame::PlayVideoListAndWait( const char *szVideoFileList, bool bNeedHealthW
 #endif
 
 #if defined( USE_SDL )
-	SDL_ShowCursor( CursorStateBak );
+	if ( CursorStateBak )
+		SDL_ShowCursor();
+	else
+		SDL_HideCursor();
 #elif defined( WIN32 )
 	// show cursor again
 	::ShowCursor(TRUE);
@@ -2561,19 +2564,25 @@ void CGame::GetDesktopInfo( int &width, int &height, int &refreshrate )
 
 	// Go through all displays and return the size of the largest.
 	// Use SDL_GetDesktopDisplayMode for more reliable resolution info (especially on Wayland).
-	for( int i = 0; i < SDL_GetNumVideoDisplays(); i++ )
+	int numDisplays = 0;
+	SDL_DisplayID *displays = SDL_GetDisplays( &numDisplays );
+	if ( displays )
 	{
-		SDL_DisplayMode mode;
-
-		if ( SDL_GetDesktopDisplayMode( i, &mode ) == 0 )
+		for( int i = 0; i < numDisplays; i++ )
 		{
-			if ( ( mode.w > width ) || ( ( mode.w == width ) && ( mode.h > height ) ) )
+			const SDL_DisplayMode *mode = SDL_GetDesktopDisplayMode( displays[i] );
+
+			if ( mode )
 			{
-				width = mode.w;
-				height = mode.h;
-				refreshrate = mode.refresh_rate;
+				if ( ( mode->w > width ) || ( ( mode->w == width ) && ( mode->h > height ) ) )
+				{
+					width = mode->w;
+					height = mode->h;
+					refreshrate = (int)mode->refresh_rate;
+				}
 			}
 		}
+		SDL_free( displays );
 	}
 
 #elif defined( WIN32 )
@@ -2616,12 +2625,19 @@ void CGame::UpdateDesktopInformation( HWND hWnd )
 	static ConVarRef sdl_displayindex( "sdl_displayindex" );
 	int displayIndex = sdl_displayindex.IsValid() ? sdl_displayindex.GetInt() : 0;
 
-	SDL_DisplayMode mode;
-	SDL_GetDesktopDisplayMode( displayIndex, &mode );
+	int numDisplays = 0;
+	SDL_DisplayID *displays = SDL_GetDisplays( &numDisplays );
+	SDL_DisplayID displayID = ( displays && displayIndex < numDisplays ) ? displays[displayIndex] : SDL_GetPrimaryDisplay();
+	if ( displays )
+		SDL_free( displays );
 
-	m_iDesktopWidth = mode.w;
-	m_iDesktopHeight = mode.h;
-	m_iDesktopRefreshRate = mode.refresh_rate;
+	const SDL_DisplayMode *mode = SDL_GetDesktopDisplayMode( displayID );
+	if ( mode )
+	{
+		m_iDesktopWidth = mode->w;
+		m_iDesktopHeight = mode->h;
+		m_iDesktopRefreshRate = (int)mode->refresh_rate;
+	}
 #elif defined( WIN32 ) 
 	HDC dc = ::GetDC( hWnd );
 	m_iDesktopWidth = ::GetDeviceCaps(dc, HORZRES);
