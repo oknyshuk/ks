@@ -6,37 +6,51 @@
 				position: absolute;
 				left: 50%;
 				top: 50%;
-				width: 640dp;
-				height: 480dp;
-				margin-left: -320dp;
-				margin-top: -240dp;
+				width: 680dp;
+				height: 620dp;
+				margin-left: -340dp;
+				margin-top: -310dp;
 				background-color: rgba(15, 20, 25, 250);
 				border-width: 1dp;
 				border-color: rgba(255, 255, 255, 25);
 				border-radius: 4dp;
 				color: rgba(255, 255, 255, 229);
-			}
-			#header {
-				background-color: rgba(255, 255, 255, 13);
 				padding: 16dp 24dp;
+			}
+			#tab-bar {
+				display: flex;
+				flex-direction: row;
 				border-bottom-width: 1dp;
 				border-bottom-color: rgba(255, 255, 255, 25);
+				margin-bottom: 8dp;
 			}
-			#header-title {
-				font-size: 16dp;
-				font-weight: bold;
+			.tab {
+				padding: 8dp 20dp;
+				font-size: 12dp;
+				color: rgba(255, 255, 255, 140);
+				border-bottom-width: 2dp;
+				border-bottom-color: rgba(0, 0, 0, 0);
 			}
-			#content {
-				padding: 24dp;
-				max-height: 360dp;
-				overflow-y: auto;
+			.tab:hover {
+				color: rgba(255, 255, 255, 210);
+				background-color: rgba(255, 255, 255, 13);
+			}
+			.tab.active {
+				color: rgba(255, 200, 80, 229);
+				border-bottom-color: rgba(255, 200, 80, 229);
+			}
+			.page {
+				display: none;
+			}
+			.page.visible {
+				display: block;
 			}
 			.setting-row {
 				display: flex;
 				flex-direction: row;
 				align-items: center;
 				justify-content: space-between;
-				padding: 10dp 0;
+				padding: 7dp 0;
 				border-bottom-width: 1dp;
 				border-bottom-color: rgba(255, 255, 255, 13);
 			}
@@ -44,13 +58,9 @@
 				font-size: 13dp;
 				color: rgba(255, 255, 255, 204);
 			}
-			KisakConvarSettingEnum {
-				width: 180dp;
-			}
-			KisakConvarSettingSlider {
-				width: 180dp;
-			}
 			select {
+				width: 200dp;
+				height: 26dp;
 				background-color: rgba(40, 45, 50, 229);
 				border-width: 1dp;
 				border-color: rgba(255, 255, 255, 38);
@@ -59,8 +69,15 @@
 			}
 			selectvalue {
 				font-family: "Liberation Sans";
-				padding: 6dp 10dp;
+				width: auto;
+				margin-right: 16dp;
+				height: 12dp;
+				padding: 6dp 10dp 8dp 10dp;
 				font-size: 12dp;
+			}
+			selectarrow {
+				width: 16dp;
+				height: 26dp;
 			}
 			selectbox {
 				background-color: rgba(30, 35, 40, 250);
@@ -75,26 +92,57 @@
 			option:hover {
 				background-color: rgba(255, 200, 80, 76);
 			}
-			slidertrack {
-				height: 4dp;
-				background-color: rgba(255, 255, 255, 25);
-				border-radius: 2dp;
+			.slider-group {
+				display: flex;
+				flex-direction: row;
+				align-items: center;
 			}
-			sliderbar {
+			input.range {
+				width: 180dp;
+				height: 16dp;
+			}
+			input.range slidertrack {
+				height: 16dp;
+				background-color: rgba(255, 255, 255, 20);
+				border-radius: 8dp;
+			}
+			input.range sliderbar {
 				width: 16dp;
 				height: 16dp;
 				background-color: rgba(255, 200, 80, 229);
 				border-radius: 8dp;
 			}
-			sliderbar:hover {
+			input.range sliderbar:hover {
 				background-color: rgba(255, 220, 120, 255);
+			}
+			.range-value {
+				font-size: 11dp;
+				color: rgba(255, 255, 255, 160);
+				width: 40dp;
+				text-align: right;
+				margin-left: 8dp;
+			}
+			input.checkbox {
+				width: 18dp;
+				height: 18dp;
+				background-color: rgba(40, 45, 50, 229);
+				border-width: 1dp;
+				border-color: rgba(255, 255, 255, 38);
+				border-radius: 2dp;
+			}
+			input.checkbox:hover {
+				border-color: rgba(255, 255, 255, 76);
+			}
+			input.checkbox:checked {
+				background-color: rgba(255, 200, 80, 200);
+				border-color: rgba(255, 200, 80, 229);
 			}
 			#footer {
 				position: absolute;
 				bottom: 0;
 				left: 0;
 				right: 0;
-				padding: 16dp 24dp;
+				padding: 14dp 24dp;
 				border-top-width: 1dp;
 				border-top-color: rgba(255, 255, 255, 25);
 				display: flex;
@@ -131,117 +179,187 @@
 			#save:hover {
 				background-color: rgba(80, 140, 80, 204);
 			}
-			scrollbarvertical {
-				width: 6dp;
-				background-color: rgba(0, 0, 0, 76);
-			}
-			scrollbarvertical sliderbar {
-				width: 6dp;
-				height: auto;
-				background-color: rgba(255, 255, 255, 51);
-				border-radius: 3dp;
-			}
 		</style>
 	</head>
 	<body>
-		<div id="header">
-			<div id="header-title">VIDEO OPTIONS</div>
+		<div id="tab-bar">
+			<div class="tab active" id="tab-video">VIDEO</div>
+			<div class="tab" id="tab-audio">AUDIO</div>
+			<div class="tab" id="tab-mouse">MOUSE</div>
 		</div>
-		<div id="content">
+
+		<!-- VIDEO PAGE -->
+		<div id="page-video" class="page visible">
+			<div class="setting-row">
+				<span class="setting-label">Resolution</span>
+				<select id="resolution">
+					<!-- populated from C++ -->
+				</select>
+			</div>
+			<div class="setting-row">
+				<span class="setting-label">Display Mode</span>
+				<select id="display_mode">
+					<option value="0">Fullscreen</option>
+					<option value="1">Windowed</option>
+				</select>
+			</div>
 			<div class="setting-row">
 				<span class="setting-label">Shadow Quality</span>
-				<KisakConvarSettingEnum
-					convar="csm_quality_level"
-					enum-values-count="4"
-					enum-value-0="0" enum-name-0="Very Low"
-					enum-value-1="1" enum-name-1="Low"
-					enum-value-2="2" enum-name-2="Medium"
-					enum-value-3="3" enum-name-3="High"
-				/>
+				<select id="csm_quality_level" data-convar="csm_quality_level">
+					<option value="0">Very Low</option>
+					<option value="1">Low</option>
+					<option value="2">Medium</option>
+					<option value="3">High</option>
+				</select>
 			</div>
 			<div class="setting-row">
 				<span class="setting-label">GPU Memory</span>
-				<KisakConvarSettingEnum
-					convar="gpu_mem_level"
-					enum-values-count="3"
-					enum-value-0="0" enum-name-0="Low"
-					enum-value-1="1" enum-name-1="Medium"
-					enum-value-2="2" enum-name-2="High"
-				/>
+				<select id="gpu_mem_level" data-convar="gpu_mem_level">
+					<option value="0">Low</option>
+					<option value="1">Medium</option>
+					<option value="2">High</option>
+				</select>
 			</div>
 			<div class="setting-row">
 				<span class="setting-label">Effect Detail</span>
-				<KisakConvarSettingEnum
-					convar="cpu_level"
-					enum-values-count="3"
-					enum-value-0="0" enum-name-0="Low"
-					enum-value-1="1" enum-name-1="Medium"
-					enum-value-2="2" enum-name-2="High"
-				/>
+				<select id="cpu_level" data-convar="cpu_level">
+					<option value="0">Low</option>
+					<option value="1">Medium</option>
+					<option value="2">High</option>
+				</select>
 			</div>
 			<div class="setting-row">
 				<span class="setting-label">Shader Detail</span>
-				<KisakConvarSettingEnum
-					convar="gpu_level"
-					enum-values-count="4"
-					enum-value-0="0" enum-name-0="Low"
-					enum-value-1="1" enum-name-1="Medium"
-					enum-value-2="2" enum-name-2="High"
-					enum-value-3="3" enum-name-3="Very High"
-				/>
+				<select id="gpu_level" data-convar="gpu_level">
+					<option value="0">Low</option>
+					<option value="1">Medium</option>
+					<option value="2">High</option>
+					<option value="3">Very High</option>
+				</select>
 			</div>
 			<div class="setting-row">
 				<span class="setting-label">Multi-Core Rendering</span>
-				<KisakConvarSettingEnum
-					convar="mat_queue_mode"
-					enum-values-count="2"
-					enum-value-0="-1" enum-name-0="Enabled"
-					enum-value-1="0" enum-name-1="Disabled"
-				/>
+				<select id="mat_queue_mode" data-convar="mat_queue_mode">
+					<option value="-1">Enabled</option>
+					<option value="0">Disabled</option>
+				</select>
 			</div>
 			<div class="setting-row">
 				<span class="setting-label">Texture Quality</span>
-				<KisakConvarSettingEnum
-					convar="mat_picmip"
-					enum-values-count="5"
-					enum-value-0="0" enum-name-0="High"
-					enum-value-1="1" enum-name-1="Medium"
-					enum-value-2="2" enum-name-2="Low"
-					enum-value-3="3" enum-name-3="Very Low"
-					enum-value-4="4" enum-name-4="Lowest"
-				/>
+				<select id="mat_picmip" data-convar="mat_picmip">
+					<option value="0">High</option>
+					<option value="1">Medium</option>
+					<option value="2">Low</option>
+					<option value="3">Very Low</option>
+					<option value="4">Lowest</option>
+				</select>
 			</div>
 			<div class="setting-row">
 				<span class="setting-label">Texture Filtering</span>
-				<KisakConvarSettingEnum
-					convar="mat_forceaniso"
-					enum-values-count="6"
-					enum-value-0="0" enum-name-0="Bilinear"
-					enum-value-1="1" enum-name-1="Trilinear"
-					enum-value-2="2" enum-name-2="Aniso 2x"
-					enum-value-3="4" enum-name-3="Aniso 4x"
-					enum-value-4="8" enum-name-4="Aniso 8x"
-					enum-value-5="16" enum-name-5="Aniso 16x"
-				/>
+				<select id="mat_forceaniso" data-convar="mat_forceaniso">
+					<option value="0">Bilinear</option>
+					<option value="1">Trilinear</option>
+					<option value="2">Aniso 2x</option>
+					<option value="4">Aniso 4x</option>
+					<option value="8">Aniso 8x</option>
+					<option value="16">Aniso 16x</option>
+				</select>
 			</div>
 			<div class="setting-row">
 				<span class="setting-label">Anti-Aliasing</span>
-				<KisakConvarSettingEnum
-					convar="mat_antialias"
-					enum-values-count="3"
-					enum-value-0="0" enum-name-0="Disabled"
-					enum-value-1="4" enum-name-1="MSAA 4x"
-					enum-value-2="8" enum-name-2="MSAA 8x"
-				/>
+				<select id="mat_antialias" data-convar="mat_antialias">
+					<option value="0">Disabled</option>
+					<option value="4">MSAA 4x</option>
+					<option value="8">MSAA 8x</option>
+				</select>
+			</div>
+			<div class="setting-row">
+				<span class="setting-label">VSync</span>
+				<select id="mat_vsync" data-convar="mat_vsync">
+					<option value="0">Disabled</option>
+					<option value="1">Enabled</option>
+				</select>
 			</div>
 			<div class="setting-row">
 				<span class="setting-label">Brightness</span>
-				<KisakConvarSettingSlider
-					convar="mat_monitorgamma"
-					slider-min="1.6" slider-max="2.2" slider-step="0.05"
-				/>
+				<div class="slider-group">
+					<input type="range" id="mat_monitorgamma" data-convar="mat_monitorgamma" min="1.6" max="2.6" step="0.05" value="2.2" />
+					<span class="range-value" id="mat_monitorgamma_val"></span>
+				</div>
 			</div>
 		</div>
+
+		<!-- AUDIO PAGE -->
+		<div id="page-audio" class="page">
+			<div class="setting-row">
+				<span class="setting-label">Master Volume</span>
+				<div class="slider-group">
+					<input type="range" id="volume" data-convar="volume" min="0.0" max="1.0" step="0.05" value="1.0" />
+					<span class="range-value" id="volume_val"></span>
+				</div>
+			</div>
+			<div class="setting-row">
+				<span class="setting-label">Music Volume</span>
+				<div class="slider-group">
+					<input type="range" id="snd_musicvolume" data-convar="snd_musicvolume" min="0.0" max="1.0" step="0.05" value="0.5" />
+					<span class="range-value" id="snd_musicvolume_val"></span>
+				</div>
+			</div>
+			<div class="setting-row">
+				<span class="setting-label">Speaker Setup</span>
+				<select id="snd_surround_speakers" data-convar="snd_surround_speakers">
+					<option value="0">Headphones</option>
+					<option value="2">2 Speakers</option>
+					<option value="4">4 Speakers</option>
+					<option value="5">5.1 Surround</option>
+					<option value="7">7.1 Surround</option>
+				</select>
+			</div>
+			<div class="setting-row">
+				<span class="setting-label">Sound Quality</span>
+				<select id="snd_quality">
+					<option value="0">Low</option>
+					<option value="1">Medium</option>
+					<option value="2">High</option>
+				</select>
+			</div>
+			<div class="setting-row">
+				<span class="setting-label">Closed Captions</span>
+				<select id="closedcaptions">
+					<option value="0">Disabled</option>
+					<option value="1">Subtitles &amp; Sound Effects</option>
+					<option value="2">Subtitles Only</option>
+				</select>
+			</div>
+		</div>
+
+		<!-- MOUSE PAGE -->
+		<div id="page-mouse" class="page">
+			<div class="setting-row">
+				<span class="setting-label">Mouse Sensitivity</span>
+				<div class="slider-group">
+					<input type="range" id="sensitivity" data-convar="sensitivity" min="0.1" max="6.0" step="0.1" value="2.5" />
+					<span class="range-value" id="sensitivity_val"></span>
+				</div>
+			</div>
+			<div class="setting-row">
+				<span class="setting-label">Raw Input</span>
+				<input type="checkbox" id="m_rawinput" data-convar="m_rawinput" />
+			</div>
+			<div class="setting-row">
+				<span class="setting-label">Mouse Filter</span>
+				<input type="checkbox" id="m_filter" data-convar="m_filter" />
+			</div>
+			<div class="setting-row">
+				<span class="setting-label">Reverse Mouse</span>
+				<input type="checkbox" id="m_pitch" />
+			</div>
+			<div class="setting-row">
+				<span class="setting-label">Mouse Acceleration</span>
+				<input type="checkbox" id="m_customaccel" />
+			</div>
+		</div>
+
 		<div id="footer">
 			<span id="footer-hint">Changes apply immediately</span>
 			<div id="footer-buttons">

@@ -3233,16 +3233,7 @@ void CViewRender::RenderView( const CViewSetup &view, const CViewSetup &hudViewS
 			pRenderContext.SafeRelease();
 		}
 
-#ifdef IRONSIGHT
-		if ( r_drawothermodels.GetInt() == 1 && ApplyIronSightScopeEffect( view.x, view.y, view.width, view.height, &m_CurrentView, true ) )
-		{
-			//draw the viewmodel with a special flag that renders a special mask shape into the stencil buffer
-			DrawViewModels(view, whatToDraw & RENDERVIEW_DRAWVIEWMODEL, true);
-
-			//apply the finished blur effect over the screen, while masking out the scope lens
-			ApplyIronSightScopeEffect( view.x, view.y, view.width, view.height, &m_CurrentView, false );
-		}
-#endif
+		// CS2-style: ironsight weapons (AUG/SG553) just zoom FOV, no scope blur overlay.
 
 		bool bPerformedPostProcessing = false;
 		if ( !building_cubemaps.GetBool() && view.m_bDoBloomAndToneMapping )

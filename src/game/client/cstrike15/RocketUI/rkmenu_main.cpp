@@ -3,6 +3,7 @@
 #include <RmlUi/Core.h>
 
 #include "rkpanel_options.h"
+#include "rkpanel_play.h"
 
 Rml::ElementDocument *RocketMainMenuDocument::m_pInstance = nullptr;
 bool RocketMainMenuDocument::showing = false;
@@ -11,11 +12,24 @@ bool RocketMainMenuDocument::grabbingInput = false;
 class MainMenuEventListener : public Rml::EventListener
 {
 public:
-    void ProcessEvent(Rml::Event &keyevent) override
+    void ProcessEvent(Rml::Event &event) override
     {
-        // Click event on options menu button.
-        RocketOptionsDocument::ShowPanel( true );
-        keyevent.StopPropagation();
+        Rml::Element *current = event.GetCurrentElement();
+        if( !current )
+            return;
+
+        const Rml::String &id = current->GetId();
+
+        if( id == "options-menu-btn" )
+        {
+            RocketOptionsDocument::ShowPanel( true );
+        }
+        else if( id == "play-menu-btn" )
+        {
+            RocketPlayDocument::ShowPanel( true );
+        }
+
+        event.StopPropagation();
     }
 };
 static MainMenuEventListener mainMenuEventListener;
@@ -41,6 +55,7 @@ void RocketMainMenuDocument::LoadDialog()
             /* Exit */
         }
         m_pInstance->GetElementById("options-menu-btn")->AddEventListener(Rml::EventId::Click, &mainMenuEventListener);
+        m_pInstance->GetElementById("play-menu-btn")->AddEventListener(Rml::EventId::Click, &mainMenuEventListener);
     }
 }
 
@@ -49,6 +64,7 @@ void RocketMainMenuDocument::UnloadDialog()
     if( m_pInstance )
     {
         m_pInstance->GetElementById("options-menu-btn")->RemoveEventListener(Rml::EventId::Click, &mainMenuEventListener);
+        m_pInstance->GetElementById("play-menu-btn")->RemoveEventListener(Rml::EventId::Click, &mainMenuEventListener);
         m_pInstance->Close();
         m_pInstance = nullptr;
         if( grabbingInput )

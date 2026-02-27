@@ -18,7 +18,7 @@
 			#header {
 				display: flex;
 				flex-direction: row;
-				height: 48dp;
+				height: 34dp;
 			}
 			#ct-header {
 				flex: 1;
@@ -38,29 +38,15 @@
 				border-radius: 0 4dp 0 0;
 			}
 			.header-score {
-				font-size: 28dp;
+				font-size: 20dp;
 				font-weight: bold;
 			}
 			.header-label {
-				font-size: 12dp;
-				margin-left: 12dp;
-				margin-right: 12dp;
+				font-size: 11dp;
+				margin-left: 10dp;
+				margin-right: 10dp;
 				color: rgba(255, 255, 255, 178);
 			}
-			#legend {
-				display: flex;
-				flex-direction: row;
-				background-color: rgba(0, 0, 0, 102);
-				padding: 8dp 16dp;
-				font-size: 10dp;
-				color: rgba(255, 255, 255, 127);
-			}
-			.col-name { flex: 3; }
-			.col-cash { flex: 1; text-align: center; }
-			.col-k { width: 48dp; text-align: center; }
-			.col-d { width: 48dp; text-align: center; }
-			.col-a { width: 48dp; text-align: center; }
-			.col-ping { width: 56dp; text-align: center; }
 			#teams-container {
 				display: flex;
 				flex-direction: column;
@@ -80,25 +66,23 @@
 			.playerrow {
 				display: flex;
 				flex-direction: row;
-				padding: 6dp 16dp;
+				padding: 3dp 12dp;
 				align-items: center;
 				font-size: 13dp;
 			}
 			.ctplayer {
 				background-color: rgba(90, 140, 190, 38);
-				border-left-width: 3dp;
-				border-left-color: rgba(90, 140, 190, 153);
 			}
-			.ctplayer:hover {
-				background-color: rgba(90, 140, 190, 64);
+			.ctplayer.dead {
+				background-color: rgba(90, 140, 190, 12);
+				color: rgba(255, 255, 255, 100);
 			}
 			.tplayer {
 				background-color: rgba(180, 140, 60, 38);
-				border-left-width: 3dp;
-				border-left-color: rgba(180, 140, 60, 153);
 			}
-			.tplayer:hover {
-				background-color: rgba(180, 140, 60, 64);
+			.tplayer.dead {
+				background-color: rgba(180, 140, 60, 12);
+				color: rgba(255, 255, 255, 100);
 			}
 			.namecol {
 				flex: 3;
@@ -131,11 +115,10 @@
 			#footer {
 				display: flex;
 				flex-direction: row;
-				justify-content: space-between;
-				padding: 10dp 16dp;
+				padding: 5dp 12dp;
 				border-top-width: 1dp;
 				border-top-color: rgba(255, 255, 255, 25);
-				font-size: 11dp;
+				font-size: 10dp;
 				color: rgba(255, 255, 255, 127);
 			}
 		</style>
@@ -151,18 +134,10 @@
 				<span class="header-score">{{ t_score }}</span>
 			</div>
 		</div>
-		<div id="legend">
-			<div class="col-name">PLAYER</div>
-			<div class="col-cash">$</div>
-			<div class="col-k">K</div>
-			<div class="col-d">D</div>
-			<div class="col-a">A</div>
-			<div class="col-ping">PING</div>
-		</div>
 		<div id="teams-container">
 			<div id="ct">
 				<div data-for="goodplayer : ctplayers">
-					<div class="playerrow ctplayer">
+					<div class="playerrow ctplayer" data-class-dead="!goodplayer.alive">
 						<div class="namecol">{{ goodplayer.name }}</div>
 						<div class="cashcol">${{ goodplayer.cash }}</div>
 						<div class="killscol">{{ goodplayer.kills }}</div>
@@ -174,7 +149,7 @@
 			</div>
 			<div id="t">
 				<div data-for="badplayer : tplayers">
-					<div class="playerrow tplayer">
+					<div class="playerrow tplayer" data-class-dead="!badplayer.alive">
 						<div class="namecol">{{ badplayer.name }}</div>
 						<div class="cashcol">${{ badplayer.cash }}</div>
 						<div class="killscol">{{ badplayer.kills }}</div>
@@ -187,7 +162,6 @@
 		</div>
 		<div id="footer">
 			<span>Spectators: {{ num_specs }}</span>
-			<span>Press TAB to close</span>
 		</div>
 	</body>
 </rml>

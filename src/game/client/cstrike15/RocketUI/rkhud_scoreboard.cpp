@@ -25,6 +25,7 @@ struct PlayerEntry
     int deaths;
     int assists;
     int ping;
+    bool alive;
 };
 struct ScoreboardData
 {
@@ -98,6 +99,7 @@ static void LoadRkScoreboard()
         playerentry_handle.RegisterMember("deaths", &PlayerEntry::deaths);
         playerentry_handle.RegisterMember("assists", &PlayerEntry::assists);
         playerentry_handle.RegisterMember("ping", &PlayerEntry::ping);
+        playerentry_handle.RegisterMember("alive", &PlayerEntry::alive);
     }
 
     // Register Array-type of PlayerEntry
@@ -253,6 +255,7 @@ void RkHudScoreboard::Update()
             playerEntry->deaths = gr->GetDeaths( i );
             playerEntry->assists = g_PR->GetAssists( i );
             playerEntry->ping = gr->GetPing( i );
+            playerEntry->alive = player->IsAlive();
         }
         else
         {

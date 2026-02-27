@@ -3,8 +3,12 @@
 
 #include <rocketui/rocketui.h>
 
+class RkOptionsClickListener;
+
 class RocketOptionsDocument
 {
+    friend class RkOptionsClickListener;
+    friend class RkOptionsChangeListener;
 protected:
     static Rml::ElementDocument *m_pInstance;
 
@@ -19,8 +23,14 @@ public:
     static Rml::ElementDocument *GetInstance() { return m_pInstance; }
 
 private:
+    static void PopulateControls( void );
+    static void PopulateResolution( void );
+    static void PopulateDisplayMode( void );
+    static void SwitchTab( const char *tabId );
+
     static bool m_bVisible;
     static bool m_bGrabbingInput;
+    static bool m_bPopulating; // suppress Change events during PopulateControls
 };
 
 #endif //KISAKSTRIKE_RKPANEL_OPTIONS_H

@@ -1,0 +1,169 @@
+<rml>
+	<head>
+		<style>
+			body {
+				font-family: "Liberation Sans";
+				position: absolute;
+				left: 50%;
+				top: 50%;
+				width: 560dp;
+				height: 480dp;
+				margin-left: -280dp;
+				margin-top: -240dp;
+				background-color: rgba(15, 20, 25, 250);
+				border-width: 1dp;
+				border-color: rgba(255, 255, 255, 25);
+				border-radius: 4dp;
+				color: rgba(255, 255, 255, 229);
+				padding: 16dp 24dp;
+			}
+			#title {
+				font-size: 16dp;
+				font-weight: bold;
+				color: rgba(255, 200, 80, 229);
+				padding-bottom: 12dp;
+				border-bottom-width: 1dp;
+				border-bottom-color: rgba(255, 255, 255, 25);
+				margin-bottom: 8dp;
+			}
+			.setting-row {
+				display: flex;
+				flex-direction: row;
+				align-items: center;
+				justify-content: space-between;
+				padding: 7dp 0;
+				border-bottom-width: 1dp;
+				border-bottom-color: rgba(255, 255, 255, 13);
+			}
+			.setting-label {
+				font-size: 13dp;
+				color: rgba(255, 255, 255, 204);
+			}
+			select {
+				width: 260dp;
+				height: 26dp;
+				background-color: rgba(40, 45, 50, 229);
+				border-width: 1dp;
+				border-color: rgba(255, 255, 255, 38);
+				border-radius: 2dp;
+				color: rgba(255, 255, 255, 229);
+			}
+			selectvalue {
+				font-family: "Liberation Sans";
+				width: auto;
+				margin-right: 16dp;
+				height: 12dp;
+				padding: 6dp 10dp 8dp 10dp;
+				font-size: 12dp;
+			}
+			selectarrow {
+				width: 16dp;
+				height: 26dp;
+			}
+			selectbox {
+				background-color: rgba(30, 35, 40, 250);
+				border-width: 1dp;
+				border-color: rgba(255, 255, 255, 51);
+			}
+			option {
+				padding: 6dp 10dp;
+				font-size: 12dp;
+				background-color: rgba(30, 35, 40, 250);
+			}
+			option:hover {
+				background-color: rgba(255, 200, 80, 76);
+			}
+			input.text {
+				width: 260dp;
+				height: 26dp;
+				background-color: rgba(40, 45, 50, 229);
+				border-width: 1dp;
+				border-color: rgba(255, 255, 255, 38);
+				border-radius: 2dp;
+				color: rgba(255, 255, 255, 229);
+				padding: 4dp 10dp;
+				font-size: 12dp;
+				font-family: "Liberation Sans";
+			}
+			input.text:focus {
+				border-color: rgba(255, 200, 80, 153);
+			}
+			#footer {
+				position: absolute;
+				bottom: 0;
+				left: 0;
+				right: 0;
+				padding: 14dp 24dp;
+				border-top-width: 1dp;
+				border-top-color: rgba(255, 255, 255, 25);
+				display: flex;
+				flex-direction: row;
+				justify-content: flex-end;
+				align-items: center;
+			}
+			#footer-buttons {
+				display: flex;
+				flex-direction: row;
+			}
+			button {
+				padding: 10dp 24dp;
+				margin-left: 8dp;
+				background-color: rgba(50, 55, 60, 204);
+				border-width: 1dp;
+				border-color: rgba(255, 255, 255, 25);
+				border-radius: 3dp;
+				font-size: 12dp;
+				color: rgba(255, 255, 255, 217);
+			}
+			button:hover {
+				background-color: rgba(70, 80, 90, 229);
+				border-color: rgba(255, 255, 255, 51);
+			}
+			#start {
+				background-color: rgba(80, 120, 80, 153);
+				color: rgba(150, 255, 150, 242);
+			}
+			#start:hover {
+				background-color: rgba(80, 140, 80, 204);
+			}
+		</style>
+	</head>
+	<body>
+		<div id="title">CREATE SERVER</div>
+
+		<div class="setting-row">
+			<span class="setting-label">Map</span>
+			<select id="maplist">
+				<!-- populated from C++ -->
+			</select>
+		</div>
+		<div class="setting-row">
+			<span class="setting-label">Max Players</span>
+			<select id="maxplayers">
+				<option value="2">2</option>
+				<option value="4">4</option>
+				<option value="8">8</option>
+				<option value="10" selected>10</option>
+				<option value="16">16</option>
+				<option value="24">24</option>
+				<option value="32">32</option>
+				<option value="64">64</option>
+			</select>
+		</div>
+		<div class="setting-row">
+			<span class="setting-label">Server Name</span>
+			<input type="text" id="hostname" value="Counter-Strike: Global Offensive" />
+		</div>
+		<div class="setting-row">
+			<span class="setting-label">Password</span>
+			<input type="text" id="sv_password" value="" />
+		</div>
+
+		<div id="footer">
+			<div id="footer-buttons">
+				<button id="start">START</button>
+				<button id="close">BACK</button>
+			</div>
+		</div>
+	</body>
+</rml>

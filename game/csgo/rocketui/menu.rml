@@ -115,7 +115,7 @@
 					<span id="logo-subtitle">GLOBAL OFFENSIVE</span>
 				</div>
 				<div id="nav-tabs">
-					<span class="nav-tab nav-tab-active">PLAY</span>
+					<span class="nav-tab nav-tab-active" id="play-menu-btn">PLAY</span>
 					<span class="nav-tab" id="options-menu-btn">OPTIONS</span>
 				</div>
 			</div>
@@ -123,8 +123,6 @@
 				<div class="welcome-title">COUNTER-STRIKE</div>
 				<div class="welcome-subtitle">GLOBAL OFFENSIVE</div>
 				<div class="welcome-info">Open-source Linux port powered by RmlUi</div>
-				<div class="welcome-info">Use the console to start a game</div>
-				<div class="welcome-hint">Example: map de_dust2</div>
 			</div>
 			<div id="version-info">Open CS:GO - RocketUI v2.0</div>
 		</div>

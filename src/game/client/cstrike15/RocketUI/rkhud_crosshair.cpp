@@ -23,6 +23,11 @@ extern ConVar cl_crosshairdot;
 extern ConVar cl_crosshair_drawoutline;
 extern ConVar cl_crosshair_outlinethickness;
 
+// Recoil tracking (baseplayer_shared.cpp)
+extern ConVar view_recoil_tracking;
+
+ConVar cl_crosshair_recoil( "cl_crosshair_recoil", "1", FCVAR_ARCHIVE, "Crosshair follows recoil" );
+
 static void UnloadRkCrosshair()
 {
     RkHudCrosshair *pCrosshair = GET_HUDELEMENT( RkHudCrosshair );
@@ -131,6 +136,58 @@ void RkHudCrosshair::UpdateCrosshair()
     Rml::Vector2i dimensions = ctx->GetDimensions();
     int iCenterX = dimensions.x / 2;
     int iCenterY = dimensions.y / 2;
+
+    // Offset crosshair center so it points where bullets actually go.
+    //
+    // The camera view applies two offsets (CalcViewAngles):
+    //   eyeAngles += viewPunch                          (screen shake, cosmetic)
+    //   eyeAngles += aimPunch * view_recoil_tracking    (partial recoil, default 0.45)
+    //
+    // Bullets land at: baseAngles + aimPunch  (full aim punch, no view punch).
+    //
+    // Screen center = camera direction, so without correction the crosshair
+    // inherits both viewPunch and the partial aimPunch.  To make the crosshair
+    // show the true bullet destination we must offset by:
+    //   aimPunch * (1 - view_recoil_tracking) - viewPunch
+    //
+    // The viewPunch subtraction cancels the per-shot screen shake that rocks
+    // the camera but doesn't affect bullet trajectory, eliminating the
+    // visible jitter during spray.
+    if( cl_crosshair_recoil.GetBool() )
+    {
+        C_CSPlayer *pPlayer = C_CSPlayer::GetLocalCSPlayer();
+        if( pPlayer )
+        {
+            if( pPlayer->GetObserverMode() == OBS_MODE_IN_EYE )
+                pPlayer = ToCSPlayer( pPlayer->GetObserverTarget() );
+
+            if( pPlayer )
+            {
+                QAngle aimPunch  = pPlayer->GetAimPunchAngle();
+                QAngle viewPunch = pPlayer->GetViewPunchAngle();
+                float flUntracked = 1.0f - view_recoil_tracking.GetFloat();
+
+                // Net offset from screen center to bullet destination
+                float flOffsetPitch = aimPunch[PITCH] * flUntracked - viewPunch[PITCH];
+                float flOffsetYaw   = aimPunch[YAW]   * flUntracked - viewPunch[YAW];
+
+                // Project angle offset to screen pixels.
+                // GetFOV() is the base horizontal FOV for 4:3; the engine widens it
+                // for other aspects but vertical FOV stays constant, so we derive
+                // a single focal-length scale from screenHeight and the vertical FOV:
+                //   vfov = 2 * atan(tan(baseFov/2) * 3/4)
+                //   scale = screenHeight / (2 * tan(vfov/2))
+                //         = screenHeight / (1.5 * tan(baseFov/2))
+                float fov = pPlayer->GetFOV();
+                float flScale = (float)dimensions.y / ( 1.5f * tanf( DEG2RAD( fov ) * 0.5f ) );
+
+                // Pitch: negative = looking up → screen Y decreases
+                // Yaw:   positive = looking left → screen X decreases
+                iCenterX += (int)( -tanf( DEG2RAD( flOffsetYaw ) )   * flScale );
+                iCenterY += (int)(  tanf( DEG2RAD( flOffsetPitch ) ) * flScale );
+            }
+        }
+    }
 
     // Read convars
     float size = cl_crosshairsize.GetFloat();
@@ -334,12 +391,6 @@ bool RkHudCrosshair::ShouldDraw()
         // Sniper rifles never show the regular crosshair (they use the scope HUD when scoped)
         if( pWeapon->GetWeaponType() == WEAPONTYPE_SNIPER_RIFLE )
             return false;
-
-#ifdef IRONSIGHT
-        // AUG/SG553 hide crosshair when using ironsight
-        if( pWeapon->GetIronSightController() && pWeapon->GetIronSightController()->ShouldHideCrossHair() )
-            return false;
-#endif
     }
 
     return cl_drawhud.GetBool() && CHudElement::ShouldDraw();

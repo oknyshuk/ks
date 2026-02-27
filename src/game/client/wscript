@@ -689,6 +689,7 @@ def build(bld):
         "cstrike15/RocketUI/rkhud_teammenu.cpp",
         "cstrike15/RocketUI/rkmenu_main.cpp",
         "cstrike15/RocketUI/rkpanel_options.cpp",
+        "cstrike15/RocketUI/rkpanel_play.cpp",
         "cstrike15/RocketUI/rkpanel_popup.cpp",
     ]
 
