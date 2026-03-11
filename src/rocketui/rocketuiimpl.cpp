@@ -272,13 +272,13 @@ InitReturnVal_t RocketUIImpl::Init(void) {
   // Default width/height, these get updated in the DeviceCallbacks
   int width = 1920;
   int height = 1080;
-  RocketRenderDXVK::m_Instance.SetScreenSize(width, height);
+  RocketRenderD3D9::m_Instance.SetScreenSize(width, height);
 
   // Allocate and store system cursors so we can swap to them on the fly
   RocketSystem::m_Instance.InitCursors();
 
   Rml::SetFileInterface(&RocketFileSystem::m_Instance);
-  Rml::SetRenderInterface(&RocketRenderDXVK::m_Instance);
+  Rml::SetRenderInterface(&RocketRenderD3D9::m_Instance);
   Rml::SetSystemInterface(&RocketSystem::m_Instance);
 
   if (!Rml::Initialise()) {
@@ -316,7 +316,7 @@ void RocketUIImpl::Shutdown() {
   }
 
   RocketSystem::m_Instance.FreeCursors();
-  RocketRenderDXVK::m_Instance.Shutdown();
+  RocketRenderD3D9::m_Instance.Shutdown();
 
   if (m_pShaderDeviceMgr) {
     if (m_pDeviceCallbacks) {
@@ -563,9 +563,9 @@ void RocketUIImpl::RenderHUDFrame() {
   // Lock mutex to synchronize with main thread Update - RmlUi is not
   // thread-safe
   std::lock_guard<std::mutex> lock(m_mtxHud);
-  RocketRenderDXVK::m_Instance.BeginFrame();
+  RocketRenderD3D9::m_Instance.BeginFrame();
   m_ctxHud->Render();
-  RocketRenderDXVK::m_Instance.EndFrame();
+  RocketRenderD3D9::m_Instance.EndFrame();
 }
 
 void RocketUIImpl::RenderMenuFrame() {
@@ -583,9 +583,10 @@ void RocketUIImpl::RenderMenuFrame() {
   // Lock mutex to synchronize with main thread Update - RmlUi is not
   // thread-safe
   std::lock_guard<std::mutex> lock(m_mtxMenu);
-  RocketRenderDXVK::m_Instance.BeginFrame();
+  RocketRenderD3D9::m_Instance.BeginFrame();
   m_ctxMenu->Render();
-  RocketRenderDXVK::m_Instance.EndFrame();
+  RocketRenderD3D9::m_Instance.EndFrame();
+  m_pShaderAPI->ResetRenderState(false);
 }
 
 bool RocketUIImpl::ReloadDocuments() {
@@ -646,18 +647,18 @@ void RocketUIImpl::SetRenderingDevice(IDirect3DDevice9 *pDevice,
   if (m_pDevice == nullptr) {
     // First time initialization
     m_pDevice = pDevice;
-    RocketRenderDXVK::m_Instance.Initialize(pDevice);
+    RocketRenderD3D9::m_Instance.Initialize(pDevice);
   } else {
     // Device reset (map change) - release all RmlUi resources that use Vulkan
     // handles Geometry handles and texture descriptor sets become invalid after
     // reinit
-    Rml::ReleaseCompiledGeometry(&RocketRenderDXVK::m_Instance);
-    Rml::ReleaseTextures(&RocketRenderDXVK::m_Instance);
+    Rml::ReleaseCompiledGeometry(&RocketRenderD3D9::m_Instance);
+    Rml::ReleaseTextures(&RocketRenderD3D9::m_Instance);
 
     // Set m_pDevice to nullptr DURING reinit to prevent RunFrame from running
     // while the renderer is in a half-initialized state (m_initialized = false)
     m_pDevice = nullptr;
-    RocketRenderDXVK::m_Instance.Reinitialize(pDevice);
+    RocketRenderD3D9::m_Instance.Reinitialize(pDevice);
     m_pDevice = pDevice; // Restore AFTER reinit completes
   }
 
@@ -672,7 +673,7 @@ void RocketUIImpl::SetScreenSize(int width, int height) {
   m_ctxHud->SetDimensions(Rml::Vector2i(width, height));
   m_ctxMenu->SetDimensions(Rml::Vector2i(width, height));
 
-  RocketRenderDXVK::m_Instance.SetScreenSize(width, height);
+  RocketRenderD3D9::m_Instance.SetScreenSize(width, height);
 }
 
 void RocketUIImpl::ToggleDebugger() {

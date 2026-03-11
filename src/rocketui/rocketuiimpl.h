@@ -141,7 +141,7 @@ public:
 
   virtual void DeviceLost(void) {
     // Release back buffer resources to allow D3D9 device reset
-    RocketRenderDXVK::m_Instance.ReleaseBackBuffer();
+    RocketRenderD3D9::m_Instance.ReleaseBackBuffer();
   }
 
   virtual void DeviceReset(void *pDevice, void *pPresentParameters,

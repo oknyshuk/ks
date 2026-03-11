@@ -15,7 +15,7 @@ def build(bld):
         "rocketuiimpl.cpp",
         "rocketsystem.cpp",
         "rocketfilesystem.cpp",
-        "rocketrender_dxvk.cpp",
+        "rocketrender_d3d9.cpp",
     ]
 
     includes = [
@@ -26,7 +26,6 @@ def build(bld):
         "../thirdparty/dxvk-native-2.7.1-4bbe487/src/d3d9",
         "../thirdparty/dxvk-native-2.7.1-4bbe487/include/native/windows",
         "../thirdparty/dxvk-native-2.7.1-4bbe487/include/native/directx",
-        "../thirdparty/dxvk-native-2.7.1-4bbe487/include/vulkan/include",
     ]
 
     defines = [
@@ -52,7 +51,7 @@ def build(bld):
         includes=includes,
         defines=defines,
         use=libs + ["SDL3", "FREETYPE", "FONTCONFIG"],
-        lib=["vulkan"],
+        lib=[],
         install_path=bld.env.BINPATH,
         subsystem=bld.env.MSVC_SUBSYSTEM,
         idx=bld.get_taskgen_count(),
