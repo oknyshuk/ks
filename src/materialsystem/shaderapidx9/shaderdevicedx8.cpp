@@ -163,6 +163,9 @@ bool CShaderDeviceMgrDx8::Connect( CreateInterfaceFn factory )
 	gGL = ToGLConnectLibraries( factory );
 #endif
 
+	setenv("DXVK_WSI_DRIVER", "SDL3", 0);
+	setenv("DXVK_CONFIG", "dxvk.zeroMappedMemory=true", 0);
+
 #if defined( DO_DX9_HOOK )
 	m_pD3D = Direct3DCreate9Hook(D3D_SDK_VERSION);
 #else
@@ -1979,12 +1982,16 @@ void CShaderDeviceDx8::SetPresentParameters( void* hWnd, int nAdapter, const Sha
 	HRESULT hr;
 	ZeroMemory( &m_PresentParameters, sizeof( m_PresentParameters ) );
 
-	m_PresentParameters.Windowed = info.m_bWindowed;
 #if defined( DX_TO_VK_ABSTRACTION )
+	// Fullscreen is managed by SDL (sdlmgr) — always tell D3D9 we're windowed so
+	// DXVK's WSI layer doesn't call enterFullscreenMode, which double-triggers
+	// fullscreen and causes Wayland compositors to bounce the window between monitors.
+	m_PresentParameters.Windowed = TRUE;
 	// DXVK: Force COPY to preserve backbuffer content between frames.
 	// DISCARD with Vulkan swapchain rotation causes stale content (dirty rectangles bug).
 	m_PresentParameters.SwapEffect = D3DSWAPEFFECT_COPY;
 #else
+	m_PresentParameters.Windowed = info.m_bWindowed;
 	m_PresentParameters.SwapEffect = info.m_bUsingMultipleWindows ? D3DSWAPEFFECT_COPY : D3DSWAPEFFECT_DISCARD;
 #endif
 
@@ -2489,6 +2496,11 @@ IDirect3DDevice9* CShaderDeviceDx8::InvokeCreateDevice( void* hWnd, int nAdapter
 #ifdef _X360
 		pD3DDevice->SetHangCallback( GPUHangCallback );
 #endif
+#ifdef DX_TO_VK_ABSTRACTION
+		// DXVK: flush backbuffer init commands before heavy resource allocation begins.
+		// Without this sync point, vertex explosions occur during map loading.
+		pD3DDevice->Present( NULL, NULL, NULL, NULL );
+#endif
 	}
 	else
 	{
@@ -2867,6 +2879,10 @@ bool CShaderDeviceDx8::TryDeviceReset()
 	if ( bResetSuccess )
 	{
 		m_bResourcesReleased = false;
+#ifdef DX_TO_VK_ABSTRACTION
+		// DXVK: flush backbuffer init commands (see InvokeCreateDevice)
+		Dx9Device()->Present( NULL, NULL, NULL, NULL );
+#endif
 #if !defined( _GAMECONSOLE )
 		Dx9Device()->ReportDeviceReset();
 #endif

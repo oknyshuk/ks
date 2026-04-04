@@ -23,9 +23,9 @@ def build(bld):
         "../public",
         "../public/rocketui",
         "../thirdparty/RmlUi/Include",
-        "../thirdparty/dxvk-native-2.7.1-4bbe487/src/d3d9",
-        "../thirdparty/dxvk-native-2.7.1-4bbe487/include/native/windows",
-        "../thirdparty/dxvk-native-2.7.1-4bbe487/include/native/directx",
+        "../thirdparty/dxvk-2.7.1-1676dca/src/d3d9",
+        "../thirdparty/dxvk-2.7.1-1676dca/include/native/windows",
+        "../thirdparty/dxvk-2.7.1-1676dca/include/native/directx",
     ]
 
     defines = [

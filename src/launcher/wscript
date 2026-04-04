@@ -19,7 +19,6 @@ def build(bld):
         "tier3",
         "interfaces",
         "vstdlib",
-        "togl",
         "SDL3",
     ]
 

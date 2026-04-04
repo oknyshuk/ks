@@ -2406,54 +2406,110 @@ bool CVideoMode_MaterialSystem::Init( )
         bAllowSmallModes = true;
     }
 
-    int nAdapter = materials->GetCurrentAdapter();
-    int nModeCount = materials->GetModeCount( nAdapter );
-
     int nDesktopWidth, nDesktopHeight, nDesktopRefresh;
     game->GetDesktopInfo( nDesktopWidth, nDesktopHeight, nDesktopRefresh );
 
-    for ( int i = 0; i < nModeCount; i++ )
+#ifdef DX_TO_VK_ABSTRACTION
+    // Enumerate display modes directly via SDL3 across all monitors.
+    // DXVK's D3D9 adapter only queries the default monitor, which misses
+    // resolutions available on other displays in multi-monitor setups.
     {
-        MaterialVideoMode_t info;
-        materials->GetModeInfo( nAdapter, i, info );
+        int nDisplayCount = 0;
+        SDL_DisplayID *pDisplays = SDL_GetDisplays( &nDisplayCount );
 
-        if ( info.m_Width < 640 || info.m_Height < 480 )
+        for ( int d = 0; d < nDisplayCount && m_nNumModes < MAX_MODE_LIST; d++ )
         {
-            if ( !bAllowSmallModes )
-                continue;
-        }
+            int nSDLModeCount = 0;
+            SDL_DisplayMode **ppModes = SDL_GetFullscreenDisplayModes( pDisplays[d], &nSDLModeCount );
 
-        // make sure we don't already have this mode listed
-        bool bAlreadyInList = false;
-        for ( int j = 0; j < m_nNumModes; j++ )
-        {
-            if ( info.m_Width == m_rgModeList[ j ].width && info.m_Height == m_rgModeList[ j ].height )
+            for ( int i = 0; i < nSDLModeCount && m_nNumModes < MAX_MODE_LIST; i++ )
             {
-                // choose the highest refresh rate available for each mode up to the desktop rate
+                int w = ppModes[i]->w;
+                int h = ppModes[i]->h;
+                int refresh = (int)ppModes[i]->refresh_rate;
 
-                // if the new mode is valid and current is invalid or not as high, choose the new one
-                if ( info.m_RefreshRate <= nDesktopRefresh && (m_rgModeList[j].refreshRate > nDesktopRefresh || m_rgModeList[j].refreshRate < info.m_RefreshRate) )
+                if ( w < 640 || h < 480 )
                 {
-                    m_rgModeList[j].refreshRate = info.m_RefreshRate;
+                    if ( !bAllowSmallModes )
+                        continue;
                 }
-                bAlreadyInList = true;
-                break;
+
+                // Deduplicate: keep highest refresh rate up to desktop rate
+                bool bAlreadyInList = false;
+                for ( int j = 0; j < m_nNumModes; j++ )
+                {
+                    if ( w == m_rgModeList[j].width && h == m_rgModeList[j].height )
+                    {
+                        if ( refresh <= nDesktopRefresh &&
+                             ( m_rgModeList[j].refreshRate > nDesktopRefresh ||
+                               m_rgModeList[j].refreshRate < refresh ) )
+                        {
+                            m_rgModeList[j].refreshRate = refresh;
+                        }
+                        bAlreadyInList = true;
+                        break;
+                    }
+                }
+
+                if ( !bAlreadyInList )
+                {
+                    m_rgModeList[m_nNumModes].width = w;
+                    m_rgModeList[m_nNumModes].height = h;
+                    m_rgModeList[m_nNumModes].bpp = bitsperpixel;
+                    m_rgModeList[m_nNumModes].refreshRate = refresh;
+                    m_nNumModes++;
+                }
             }
+
+            SDL_free( (void *)ppModes );
         }
 
-        if ( bAlreadyInList )
-            continue;
-
-        m_rgModeList[ m_nNumModes ].width = info.m_Width;
-        m_rgModeList[ m_nNumModes ].height = info.m_Height;
-        m_rgModeList[ m_nNumModes ].bpp = bitsperpixel;
-        // NOTE: Don't clamp this to the desktop rate because we want to be sure we've only added
-        // modes that the adapter can do and maybe the desktop rate isn't available in this mode
-        m_rgModeList[ m_nNumModes ].refreshRate = info.m_RefreshRate;
-
-        if ( ++m_nNumModes >= MAX_MODE_LIST )
-            break;
+        SDL_free( pDisplays );
     }
+#else
+    {
+        int nAdapter = materials->GetCurrentAdapter();
+        int nModeCount = materials->GetModeCount( nAdapter );
+
+        for ( int i = 0; i < nModeCount; i++ )
+        {
+            MaterialVideoMode_t info;
+            materials->GetModeInfo( nAdapter, i, info );
+
+            if ( info.m_Width < 640 || info.m_Height < 480 )
+            {
+                if ( !bAllowSmallModes )
+                    continue;
+            }
+
+            // make sure we don't already have this mode listed
+            bool bAlreadyInList = false;
+            for ( int j = 0; j < m_nNumModes; j++ )
+            {
+                if ( info.m_Width == m_rgModeList[ j ].width && info.m_Height == m_rgModeList[ j ].height )
+                {
+                    if ( info.m_RefreshRate <= nDesktopRefresh && (m_rgModeList[j].refreshRate > nDesktopRefresh || m_rgModeList[j].refreshRate < info.m_RefreshRate) )
+                    {
+                        m_rgModeList[j].refreshRate = info.m_RefreshRate;
+                    }
+                    bAlreadyInList = true;
+                    break;
+                }
+            }
+
+            if ( bAlreadyInList )
+                continue;
+
+            m_rgModeList[ m_nNumModes ].width = info.m_Width;
+            m_rgModeList[ m_nNumModes ].height = info.m_Height;
+            m_rgModeList[ m_nNumModes ].bpp = bitsperpixel;
+            m_rgModeList[ m_nNumModes ].refreshRate = info.m_RefreshRate;
+
+            if ( ++m_nNumModes >= MAX_MODE_LIST )
+                break;
+        }
+    }
+#endif
 
     // Sort modes for easy searching later
     if ( m_nNumModes > 1 )
@@ -2665,8 +2721,10 @@ void CVideoMode_MaterialSystem::RestoreVideo( void )
     ShowWindow( (WindowRef)game->GetMainWindow() );
     CollapseWindow( (WindowRef)game->GetMainWindow(), false );
 #elif LINUX
-// 	XMapWindow( g_pLauncherMgr->GetDisplay(), (Window)game->GetMainWindow() );
-// !!! FIXME: Mapping isn't really what we want here.
+    // On Wayland the compositor owns window placement and fullscreen state.
+    // Re-applying AdjustWindow here (triggered on every focus gain) causes
+    // the window to bounce between monitors with different resolutions.
+    return;
 #elif _WIN32
 #else
 #error

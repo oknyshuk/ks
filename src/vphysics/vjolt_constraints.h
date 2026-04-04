@@ -39,6 +39,9 @@ public:
 	void AddConstraint( JoltPhysicsConstraint *pConstraint );
 	void RemoveConstraint( JoltPhysicsConstraint *pConstraint );
 
+	// [CS_PATCH]
+	void DetachAllConstraints();
+
 private:
 	std::vector< JoltPhysicsConstraint * >	m_pConstraints;
 	constraint_groupparams_t				m_ErrorParams = {};
@@ -83,6 +86,8 @@ public:
 	void SaveConstraintSettings( JPH::StateRecorder &recorder );
 
 private:
+
+	friend class JoltPhysicsConstraintGroup; // [CS_PATCH]
 
 	void SetGroup( IPhysicsConstraintGroup *pGroup );
 

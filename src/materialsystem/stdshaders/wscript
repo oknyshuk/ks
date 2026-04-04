@@ -22,7 +22,6 @@ def build(bld):
         "vstdlib",
         "videocfg",
         "mathlib",
-        "togl",
         "vtf",
         "bzip2",
     ]

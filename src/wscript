@@ -76,13 +76,13 @@ PROJECTS = [
     "soundsystem/lowlevel",
     "studiorender",
     "thirdparty/celt-v0.11.3",
-    "thirdparty/dxvk-native-2.7.1-4bbe487/src/d3d9",
-    "thirdparty/dxvk-native-2.7.1-4bbe487/src/dxso",
-    "thirdparty/dxvk-native-2.7.1-4bbe487/src/dxvk",
-    "thirdparty/dxvk-native-2.7.1-4bbe487/src/spirv",
-    "thirdparty/dxvk-native-2.7.1-4bbe487/src/util",
-    "thirdparty/dxvk-native-2.7.1-4bbe487/src/vulkan",
-    "thirdparty/dxvk-native-2.7.1-4bbe487/src/wsi",
+    "thirdparty/dxvk-2.7.1-1676dca/src/d3d9",
+    "thirdparty/dxvk-2.7.1-1676dca/src/dxso",
+    "thirdparty/dxvk-2.7.1-1676dca/src/dxvk",
+    "thirdparty/dxvk-2.7.1-1676dca/src/spirv",
+    "thirdparty/dxvk-2.7.1-1676dca/src/util",
+    "thirdparty/dxvk-2.7.1-1676dca/src/vulkan",
+    "thirdparty/dxvk-2.7.1-1676dca/src/wsi",
     "thirdparty/JoltPhysics-4.0.2/Jolt",
     "thirdparty/mojoAL",
     "thirdparty/protobuf-2.6.1/src",
@@ -365,8 +365,8 @@ def configure(conf):
     conf.check_cfg(package="libpng", args="--cflags --libs", uselib_store="PNG")
 
     includes += [
-        os.path.abspath("thirdparty/dxvk-native-2.7.1-4bbe487/include/native/windows"),
-        os.path.abspath("thirdparty/dxvk-native-2.7.1-4bbe487/include/native/directx"),
+        os.path.abspath("thirdparty/dxvk-2.7.1-1676dca/include/native/windows"),
+        os.path.abspath("thirdparty/dxvk-2.7.1-1676dca/include/native/directx"),
     ]
 
     conf.env.append_unique("INCLUDES", includes)

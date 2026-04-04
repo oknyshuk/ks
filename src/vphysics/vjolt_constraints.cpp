@@ -27,6 +27,18 @@ JoltPhysicsConstraintGroup::JoltPhysicsConstraintGroup()
 
 JoltPhysicsConstraintGroup::~JoltPhysicsConstraintGroup()
 {
+	// [CS_PATCH] Detach constraints so they don't dereference a freed group
+	// during destruction when entity deletion order is non-deterministic.
+	DetachAllConstraints();
+}
+
+// [CS_PATCH]
+void JoltPhysicsConstraintGroup::DetachAllConstraints()
+{
+	for ( JoltPhysicsConstraint *pConstraint : m_pConstraints )
+		pConstraint->m_pGroup = nullptr;
+
+	m_pConstraints.clear();
 }
 
 //-------------------------------------------------------------------------------------------------

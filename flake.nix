@@ -23,7 +23,6 @@
             sdl3
             freetype
             fontconfig
-            libx11
             vulkan-loader
             (zlib-ng.override { withZlibCompat = true; })
             libjpeg

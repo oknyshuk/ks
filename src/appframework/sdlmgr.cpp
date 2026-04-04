@@ -349,19 +349,7 @@ InitReturnVal_t CSDLMgr::Init()
 	m_bTextMode = false;
 #endif
 
-	// Default to using Xinerama and XRandR if available.
-
-	// If someone is running multimon, we want the individual
-	// screen sizes (not combined), so default to xinerama on.
-	SDL_SetHint( "SDL_VIDEO_X11_XINERAMA", "1" );
-	// We don't need xrandr since we're not changing the desktop resolution.
-	SDL_SetHint( "SDL_VIDEO_X11_XRANDR", "0" );
-	// Default to no XVidMode.
-	SDL_SetHint( "SDL_VIDEO_X11_XVIDMODE", "0" );
-
-	// Prefer Wayland over X11 - X11/XWayland has issues on modern Wayland desktops.
-	// This must be set before SDL_Init(). Falls back to X11 if Wayland unavailable.
-	SDL_SetHint( SDL_HINT_VIDEO_DRIVER, "wayland,x11" );
+	SDL_SetHint( SDL_HINT_VIDEO_DRIVER, "wayland" );
 	SDL_SetHint( SDL_HINT_VIDEO_ALLOW_SCREENSAVER, "1" );
 
 	if (!m_bTextMode && !SDL_WasInit(SDL_INIT_VIDEO))

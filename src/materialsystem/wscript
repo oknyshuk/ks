@@ -22,7 +22,6 @@ def build(bld):
         "interfaces",
         "vstdlib",
         "mathlib",
-        "togl",
         "shaderlib",
         "vtf",
         "videocfg",
