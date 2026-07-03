@@ -226,7 +226,6 @@ def build(bld):
         "audio/private/vox.cpp",
         "audio/private/snd_stubs.cpp",
         "serializedentity.cpp",
-        "bsplog.cpp",
     ]
 
     if bld.env.DEDICATED:

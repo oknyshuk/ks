@@ -32,7 +32,6 @@
 #include "keyvalues.h"
 #include "paint.h"
 #include "tier1/fmtstr.h"
-#include "bsplog.h"
 #include "edict.h"
 #include "debugoverlay.h"
 #include "engine/IEngineTrace.h"
@@ -1343,10 +1342,6 @@ bool CM_BrushOcclusionPass( COcclusionInfo &oi, const cbrush_t * RESTRICT brush 
 	if ( brush->IsBox() )
 	{
 		cboxbrush_t *pBox = &oi.m_pBSPData->map_boxbrushes[ brush->GetBox() ];
-		if ( oi.m_pDebugLog )
-		{
-			oi.m_pDebugLog->AddBox( CFmtStr( "hit%04d_box_brush%d", oi.m_pDebugLog->GetPrimCount(), brush->GetBox() ).Get(), "relevant", pBox->mins, pBox->maxs );
-		}
 
 /*
 		if ( !oi.m_pResults )
@@ -1425,10 +1420,6 @@ bool CM_BrushOcclusionPass( COcclusionInfo &oi, const cbrush_t * RESTRICT brush 
 	else// support for non-box brushes
 	{
 		cbrushside_t *  RESTRICT pSidesBegin = &oi.m_pBSPData->map_brushsides[ brush->firstbrushside ], *pSide = pSidesBegin;
-		if ( oi.m_pDebugLog )
-		{
-			oi.m_pDebugLog->AddBrush( CFmtStr( "hit%04d_brush%d_%dside", oi.m_pDebugLog->GetPrimCount(), brush->firstbrushside, brush->numsides ).Get(), "relevant", pSidesBegin, brush->numsides );
-		}
 
 		fltx4 f4EnterNum[ 2 ] = { Four_Zeros, Four_Zeros }, f4EnterDenum[ 2 ] = { Four_Ones, Four_Ones };
 		fltx4 f4LeaveNum[ 2 ] = { Four_NegOnes, Four_NegOnes }, f4LeaveDenum[ 2 ] = { Four_NegOnes, Four_NegOnes };
@@ -2814,40 +2805,6 @@ void CM_BoxTraceAgainstLeafList( const Ray_t &ray, const CTraceListData &traceDa
 	Assert( !ray.m_IsRay || trace.allsolid || ((trace.fraction + kBoxCheckFloatEpsilon) >= trace.fractionleftsolid) );
 }
 
-#ifdef _DEBUG
-CON_COMMAND( dump_occlusion_map, "Dump the data used for occlusion testing" )
-{
-	CBspDebugLog log("dump_occlusion_map.obj");
-	CCollisionBSPData *pBSPData = GetCollisionBSPData();
-	int nNotBoxes = 0;
-	int nRelevantBrushes = 0;
-	int traceContents = CONTENTS_SOLID | CONTENTS_MOVEABLE;
-	for ( int nBrush = 0; nBrush < pBSPData->numbrushes; ++nBrush )
-	{
-		const cbrush_t &brush = pBSPData->map_brushes[ nBrush ];
-		const int relevantContents = brush.contents & traceContents;
-		if ( !relevantContents )
-			continue;
-		if ( IsNoDrawBrush( pBSPData, relevantContents, traceContents, &brush ) )
-			continue;
-		++nRelevantBrushes;
-
-		if ( brush.IsBox() )
-		{
-			const cboxbrush_t &box = pBSPData->map_boxbrushes[ brush.GetBox() ];
-			log.AddBox( CFmtStr( "box%d", brush.GetBox() ).Get(), "relevant", box.mins, box.maxs );
-		}
-		else
-		{
-			cbrushside_t * RESTRICT pSidesBegin = &pBSPData->map_brushsides[ brush.firstbrushside ];
-			log.AddBrush( CFmtStr( "brush%d_%dside", brush.firstbrushside, brush.numsides ).Get(), "relevant_brush", pSidesBegin, brush.numsides );
-			++nNotBoxes;
-		}
-	}
-	Msg( "%d/%d relevant brushes, %d are not boxes\n", nRelevantBrushes, pBSPData->numbrushes, nNotBoxes );
-}
-#endif
-
 
 uint64 COcclusionInfo::s_nAssocArrayCollisions = 0;
 uint64 COcclusionInfo::s_nAssocArrayHits = 0;
@@ -3027,17 +2984,6 @@ bool CM_IsFullyOccluded( const VectorAligned &p0, const VectorAligned &vExtents0
 	oi.m_traceMaxs = VectorMax( p0, p1 );
 	oi.m_traceMaxs.z += vExtentsScaled.z;
 	oi.m_contents = CONTENTS_SOLID | CONTENTS_MOVEABLE; // can solid or moveable be semitransparent?
-	oi.m_pDebugLog = NULL;
-#ifdef _DEBUG
-	static bool s_bDumpOcclusionPass = false;
-	if ( s_bDumpOcclusionPass )
-	{
-		oi.m_pDebugLog = new CBspDebugLog( "bsp_debug_log.obj");
-		oi.m_pDebugLog->AddBox( "start", "start", p0 - vExtents0, p0 + vExtents0 );
-		oi.m_pDebugLog->AddBox( "end", "end", p1 - vExtents1, p1 + vExtents1 );
-		oi.m_pDebugLog->ResetPrimCount();
-	}
-#endif
 	return CM_RecursiveOcclusionPass( oi, 0, 0.0f, 1.0f, p0, p1 );
 
 }

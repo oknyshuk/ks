@@ -86,7 +86,6 @@ PROJECTS = [
     "thirdparty/JoltPhysics-4.0.2/Jolt",
     "thirdparty/mojoAL",
     "thirdparty/protobuf-2.6.1/src",
-    "thirdparty/quickhull",
     "thirdparty/RmlUi",
     "tier0",
     "tier1",

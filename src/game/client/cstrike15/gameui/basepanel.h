@@ -179,9 +179,7 @@ public:
 	void OnOpenNewGameDialog( const char *chapter = NULL );
 	void OnOpenBonusMapsDialog();
 	void OnOpenLoadGameDialog();
-	void OnOpenLoadGameDialog_Xbox();
 	void OnOpenSaveGameDialog();
-	void OnOpenSaveGameDialog_Xbox();
 	void OnCloseServerBrowser();
 	void OnOpenFriendsDialog();
 	void OnOpenDemoDialog();

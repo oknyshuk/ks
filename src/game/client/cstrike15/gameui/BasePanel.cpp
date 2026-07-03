@@ -2238,20 +2238,12 @@ void CBaseModPanel::RunMenuCommand(const char *command)
 		{
 			OnOpenLoadGameDialog();
 		}
-		else
-		{
-			OnOpenLoadGameDialog_Xbox();
-		}
 	}
 	else if ( !Q_stricmp( command, "OpenSaveGameDialog" ) )
 	{
 		if ( !GameUI().IsConsoleUI() )
 		{
 			OnOpenSaveGameDialog();
-		}
-		else
-		{
-			OnOpenSaveGameDialog_Xbox();
 		}
 	}
 	else if ( !Q_stricmp( command, "OpenBonusMapsDialog" ) )
@@ -3487,19 +3479,6 @@ void CBaseModPanel::OnOpenLoadGameDialog()
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CBaseModPanel::OnOpenLoadGameDialog_Xbox()
-{
-	if ( !m_hLoadGameDialog_Xbox.Get() )
-	{
-		m_hLoadGameDialog_Xbox = new CLoadGameDialogXbox(this);
-		PositionDialog( m_hLoadGameDialog_Xbox );
-	}
-	m_hLoadGameDialog_Xbox->Activate();
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: 
-//-----------------------------------------------------------------------------
 void CBaseModPanel::OnOpenSaveGameDialog()
 {
 	if ( !m_hSaveGameDialog.Get() )
@@ -3508,19 +3487,6 @@ void CBaseModPanel::OnOpenSaveGameDialog()
 		PositionDialog( m_hSaveGameDialog );
 	}
 	m_hSaveGameDialog->Activate();
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: 
-//-----------------------------------------------------------------------------
-void CBaseModPanel::OnOpenSaveGameDialog_Xbox()
-{
-	if ( !m_hSaveGameDialog_Xbox.Get() )
-	{
-		m_hSaveGameDialog_Xbox = new CSaveGameDialogXbox(this);
-		PositionDialog( m_hSaveGameDialog_Xbox );
-	}
-	m_hSaveGameDialog_Xbox->Activate();
 }
 
 //-----------------------------------------------------------------------------

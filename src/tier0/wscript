@@ -18,7 +18,6 @@ def build(bld):
     includes = []
 
     source = [
-        "../unitlib/unitlib.cpp",
         "assert_dialog.cpp",
         "commandline.cpp",
         "cpu.cpp",

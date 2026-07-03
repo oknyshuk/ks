@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
+//========= Copyright ï¿½ 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -83,8 +83,6 @@ struct TraceInfo_t
 };
 
 
-class CBspDebugLog;
-
 struct OcclusionTestResults_t;
 
 struct COcclusionInfo
@@ -147,7 +145,6 @@ struct COcclusionInfo
 	int m_contents;
 	// BSP Data
 	CCollisionBSPData *m_pBSPData;
-	CBspDebugLog *m_pDebugLog;
 	OcclusionTestResults_t *m_pResults;
 };
 
