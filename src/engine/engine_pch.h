@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 oknyshuk
+
 // Unified precompiled header for engine
 #pragma once
 

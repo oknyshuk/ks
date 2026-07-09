@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 oknyshuk
+
 #ifndef KISAKSTRIKE_RKCONSOLE_H
 #define KISAKSTRIKE_RKCONSOLE_H
 

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 oknyshuk
+
 #ifndef KISAKSTRIKE_RKHUD_CROSSHAIR_H
 #define KISAKSTRIKE_RKHUD_CROSSHAIR_H
 

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 oknyshuk
+
 #include "rkhud_crosshair.h"
 
 #include "cbase.h"

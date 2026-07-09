@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 oknyshuk
+
 // RocketUI D3D9 Renderer
 // Renders RmlUi through D3D9 calls that flow through DXVK's normal pipeline.
 // Replaces the standalone Vulkan renderer (rocketrender_dxvk.cpp) to eliminate

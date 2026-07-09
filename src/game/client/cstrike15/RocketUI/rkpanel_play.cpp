@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 oknyshuk
+
 #include "rkpanel_play.h"
 
 #include "cbase.h"
