@@ -49,7 +49,7 @@ CON_COMMAND_F(rocket_debug, "Open/Close the RocketUI Debugger", FCVAR_NONE) {
 }
 
 RocketUIImpl::RocketUIImpl()
-    : m_pDevice(nullptr), m_pDeviceCallbacks(nullptr)
+    : m_pDevice(nullptr), m_pDeviceCallbacks(nullptr), m_bDeviceActive(false)
 #ifdef USE_SDL
       ,
       m_pLauncherMgr(nullptr)
@@ -554,7 +554,7 @@ bool RocketUIImpl::HandleInputEvent(const InputEvent_t &event) {
 }
 
 void RocketUIImpl::RenderHUDFrame() {
-  if (!rocket_enable.GetBool())
+  if (!rocket_enable.GetBool() || !m_pDevice || !m_bDeviceActive)
     return;
 
   // HUD context is the default for input handling during gameplay
@@ -569,7 +569,7 @@ void RocketUIImpl::RenderHUDFrame() {
 }
 
 void RocketUIImpl::RenderMenuFrame() {
-  if (!rocket_enable.GetBool())
+  if (!rocket_enable.GetBool() || !m_pDevice || !m_bDeviceActive)
     return;
 
   // When called from main menu (V_RenderVGuiOnly), set menu as current context
@@ -649,14 +649,17 @@ void RocketUIImpl::SetRenderingDevice(IDirect3DDevice9 *pDevice,
     m_pDevice = pDevice;
     RocketRenderD3D9::m_Instance.Initialize(pDevice);
   } else {
-    // Device reset (map change) - release all RmlUi resources that use Vulkan
-    // handles Geometry handles and texture descriptor sets become invalid after
-    // reinit
-    Rml::ReleaseCompiledGeometry(&RocketRenderD3D9::m_Instance);
-    Rml::ReleaseTextures(&RocketRenderD3D9::m_Instance);
+    // Device reset. DXVK keeps the SAME device pointer and preserves
+    // D3DPOOL_MANAGED resources across Reset(), so RmlUi's compiled
+    // geometry/textures stay valid and need no re-upload. Only a genuine device
+    // re-creation (a different pointer) invalidates them and needs a rebuild.
+    if (pDevice != m_pDevice) {
+      Rml::ReleaseCompiledGeometry(&RocketRenderD3D9::m_Instance);
+      Rml::ReleaseTextures(&RocketRenderD3D9::m_Instance);
+    }
 
-    // Set m_pDevice to nullptr DURING reinit to prevent RunFrame from running
-    // while the renderer is in a half-initialized state (m_initialized = false)
+    // Null m_pDevice DURING reinit so RunFrame doesn't render a
+    // half-initialized renderer.
     m_pDevice = nullptr;
     RocketRenderD3D9::m_Instance.Reinitialize(pDevice);
     m_pDevice = pDevice; // Restore AFTER reinit completes
@@ -665,6 +668,8 @@ void RocketUIImpl::SetRenderingDevice(IDirect3DDevice9 *pDevice,
   D3DVIEWPORT9 viewport;
   pDevice->GetViewport(&viewport);
   SetScreenSize(viewport.Width, viewport.Height);
+
+  m_bDeviceActive = true;
 }
 
 void RocketUIImpl::SetScreenSize(int width, int height) {

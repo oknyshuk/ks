@@ -584,12 +584,9 @@ bool CreateDefaultVideoKeyValues( VidMatConfigData_t &configData )
 	if ( configData.pConfigKeys->GetInt( "setting.mat_antialias", 0 ) == 1 )
 		configData.pConfigKeys->SetInt( "setting.mat_antialias", 0 );
 
-	// Set the default resolution based on the aspect ratio mode 
-// 	int nWidth = configData.pConfigKeys->GetInt( "setting.defaultres" );
-// 	int nHeight = configData.pConfigKeys->GetInt( "setting.defaultresheight" );
-	// Ignore moddefaults configuration that might be outdated, just default to user's desktop resolution
-	int nWidth = configData.nPhysicalScreenWidth;
-	int nHeight = configData.nPhysicalScreenHeight;
+	// Set the default resolution based on the aspect ratio mode
+	int nWidth = configData.pConfigKeys->GetInt( "setting.defaultres" );
+	int nHeight = configData.pConfigKeys->GetInt( "setting.defaultresheight" );
 	if ( GetNearestFullscreenResolution( nWidth, nHeight, configData ) )
 	{
 		configData.pConfigKeys->SetInt( "setting.defaultres", nWidth );

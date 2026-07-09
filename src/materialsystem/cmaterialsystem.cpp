@@ -1839,26 +1839,7 @@ void CMaterialSystem::GenerateConfigFromConfigKeyValues( MaterialSystem_Config_t
 	ReadInt( pKeyValues, "setting.unsupported", 0, -1, &nUnsupported );
 	pConfig->SetFlag( MATSYS_VIDCFG_FLAGS_UNSUPPORTED, nUnsupported != 0 );
 
-#ifdef LINUX
-
-	// On Linux, ALWAYS use the native desktop resolution.
-	// Ignore moddefaults.txt which has outdated GPU-based resolution defaults.
-	uint width = 0;
-	uint height = 0;
-	uint refreshHz = 0;
-
-	if( g_pLauncherMgr )
-	{
-		g_pLauncherMgr->GetNativeDisplayInfo( -1, width, height, refreshHz );
-	}
-
-	if ( width > 0 && height > 0 )
-	{
-		pConfig->m_VideoMode.m_Width = width;
-		pConfig->m_VideoMode.m_Height = height;
-	}
-
-#elif defined( _X360 )
+#if defined( _X360 )
 	pConfig->m_VideoMode.m_Width = GetSystemMetrics( SM_CXSCREEN );
 	pConfig->m_VideoMode.m_Height = GetSystemMetrics( SM_CYSCREEN );
 	// We can afford better aniso in standard def

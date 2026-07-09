@@ -21,6 +21,7 @@ class DeviceCallbacks;
 
 class RocketUIImpl : public CTier3AppSystem<IRocketUI> {
   typedef CTier3AppSystem<IRocketUI> BaseClass;
+  friend class DeviceCallbacks;
 
 public:
   static RocketUIImpl m_Instance;
@@ -28,6 +29,9 @@ public:
 protected:
   IDirect3DDevice9 *m_pDevice;
   DeviceCallbacks *m_pDeviceCallbacks;
+  // False between a device-lost notification and the following device reset;
+  // UI rendering is skipped while lost (see RenderHUDFrame/RenderMenuFrame).
+  bool m_bDeviceActive;
 
   ILauncherMgr *m_pLauncherMgr;
   IShaderDeviceMgr *m_pShaderDeviceMgr;
@@ -140,8 +144,11 @@ public:
   DeviceCallbacks(void) : m_iRefCount(1), m_pRocketUI(nullptr) {}
 
   virtual void DeviceLost(void) {
-    // Release back buffer resources to allow D3D9 device reset
-    RocketRenderD3D9::m_Instance.ReleaseBackBuffer();
+    // Stop UI rendering until the device is reset. The renderer holds no
+    // D3DPOOL_DEFAULT resources so this isn't required for Reset() to succeed,
+    // but it cheaply enforces the "never touch a lost device" invariant.
+    if (m_pRocketUI)
+      m_pRocketUI->m_bDeviceActive = false;
   }
 
   virtual void DeviceReset(void *pDevice, void *pPresentParameters,

@@ -851,13 +851,109 @@ void CSDLMgr::SetWindowFullScreen( bool bFullScreen, int nWidth, int nHeight, bo
 
 	if ( m_bFullScreen != bFullScreen )
 	{
+		// Display we intend to steer the window onto (0 = leave it where it is).
+		// Declared out here so the post-fullscreen sanity check (D) can use it.
+		SDL_DisplayID targetDisplay = 0;
+
 		if ( bFullScreen )
 		{
+			// Steer FULLSCREEN_DESKTOP onto the intended monitor. We keep
+			// FULLSCREEN_DESKTOP (SDL owns real fullscreen); crispness comes from
+			// the backbuffer tracking the surface pixel size, so all we need is to
+			// get the window onto the right output before going fullscreen.
+			// Otherwise we fullscreen on whatever output the window currently sits
+			// on (e.g. a smaller internal panel), producing a scaled/blurry image.
+			int dCount = 0;
+			SDL_DisplayID *dList = SDL_GetDisplays( &dCount );
+
+			if ( dList && dCount > 0 )
+			{
+				// 1. Explicit user override wins. This is the only disambiguator
+				//    for two identical-resolution monitors. sdl_displayindex is an
+				//    index into SDL_GetDisplays(), not a raw SDL_DisplayID.
+				int idx = sdl_displayindex.GetInt();
+				if ( idx >= 0 && idx < dCount )
+				{
+					targetDisplay = dList[idx];
+				}
+
+				// 2. Exact desktop-mode match for the requested resolution. If
+				//    several displays match, prefer the one the window is already
+				//    on, else the primary, else the first match.
+				if ( !targetDisplay && nWidth > 0 && nHeight > 0 )
+				{
+					SDL_DisplayID curDisplay = SDL_GetDisplayForWindow( m_Window );
+					SDL_DisplayID primary = SDL_GetPrimaryDisplay();
+					SDL_DisplayID firstMatch = 0;
+					for ( int i = 0; i < dCount; i++ )
+					{
+						const SDL_DisplayMode *dm = SDL_GetDesktopDisplayMode( dList[i] );
+						if ( dm && dm->w == nWidth && dm->h == nHeight )
+						{
+							if ( dList[i] == curDisplay )
+							{
+								targetDisplay = dList[i];
+								break;
+							}
+							if ( !firstMatch )
+								firstMatch = dList[i];
+							if ( dList[i] == primary )
+								targetDisplay = dList[i];
+						}
+					}
+					if ( !targetDisplay )
+						targetDisplay = firstMatch;
+				}
+
+				// 3. Fall back to the largest display by area.
+				if ( !targetDisplay )
+				{
+					int bestArea = 0;
+					for ( int i = 0; i < dCount; i++ )
+					{
+						SDL_Rect rect = { 0, 0, 0, 0 };
+						SDL_GetDisplayBounds( dList[i], &rect );
+						int area = rect.w * rect.h;
+						if ( area > bestArea )
+						{
+							bestArea = area;
+							targetDisplay = dList[i];
+						}
+					}
+				}
+			}
+
+			// 4. If we picked a specific display, move the window there. Otherwise
+			//    fullscreen on the current output (no move).
+			if ( targetDisplay )
+			{
+				SDL_SetWindowPosition( m_Window,
+					SDL_WINDOWPOS_CENTERED_DISPLAY( targetDisplay ),
+					SDL_WINDOWPOS_CENTERED_DISPLAY( targetDisplay ) );
+				SDL_SyncWindow( m_Window );
+			}
+
+			if ( dList ) SDL_free( dList );
+
 			SDL_SetWindowFullscreenMode( m_Window, NULL );
 		}
 
 		SDL_SetWindowFullscreen( m_Window, bFullScreen );
 		SDL_SyncWindow( m_Window );
+
+		// D. Wayland positioning is a hint, not a guarantee. If we targeted a
+		//    specific display, verify the window actually landed there so a future
+		//    silent-blur regression is diagnosable. No retry / no exclusive fallback.
+		if ( bFullScreen && targetDisplay )
+		{
+			SDL_DisplayID actual = SDL_GetDisplayForWindow( m_Window );
+			if ( actual != targetDisplay )
+			{
+				Warning( "SetWindowFullScreen: requested display 0x%x but window landed on 0x%x\n",
+					(unsigned)targetDisplay, (unsigned)actual );
+			}
+		}
+
 		m_bFullScreen = bFullScreen;
 	}
 
@@ -1094,7 +1190,12 @@ void CSDLMgr::PumpWindowsMessageLoop()
 
 				CCocoaEvent theEvent;
 				theEvent.m_EventType = CocoaEvent_MouseMove;
-				// Scale mouse coords from window space to render resolution
+				// Scale mouse coords from window space to render resolution.
+				// SDL3 delivers mouse coords in LOGICAL window coordinates (points),
+				// while the backbuffer (bw/bh) is in PIXELS. m_WindowWidth/Height are
+				// kept in the same logical space as the event coords, so mx/m_WindowWidth
+				// is a normalized [0,1] fraction and multiplying by the pixel backbuffer
+				// yields the correct pixel coordinate. At 1.0x scale logical==pixel (no-op).
 				{
 					int mx = (int)event.motion.x;
 					int my = (int)event.motion.y;
@@ -1510,8 +1611,12 @@ void CSDLMgr::DisplayedSize( uint &width, uint &height )
 {
 	SDLAPP_FUNC;
 
-	int w, h;
-	SDL_GetWindowSize(m_Window, &w, &h);
+	// Report the PIXEL size of the drawable, not the logical (points) window
+	// size. This feeds SyncToActualWindowSize() -> the D3D9/DXVK backbuffer, and
+	// crispness requires backbuffer == surface pixel size. Under fractional
+	// display scaling logical != pixel; at 1.0x scale they are equal (no-op).
+	int w = 0, h = 0;
+	SDL_GetWindowSizeInPixels(m_Window, &w, &h);
 	width = (uint) w;
 	height = (uint) h;
 }

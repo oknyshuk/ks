@@ -127,7 +127,7 @@ static const DWORD kPSUntexturedBytecode[] = {
 
 RocketRenderD3D9::RocketRenderD3D9()
     : m_pDevice(nullptr), m_width(0), m_height(0), m_transformEnabled(false),
-      m_frameActive(false), m_stencilRef(0), m_d3dTransform(kIdentity) {}
+      m_hasStencil(false), m_stencilRef(0), m_d3dTransform(kIdentity) {}
 
 RocketRenderD3D9::~RocketRenderD3D9() { Shutdown(); }
 
@@ -141,60 +141,16 @@ void RocketRenderD3D9::Shutdown() {
   m_pDevice = nullptr;
 }
 
-void RocketRenderD3D9::ReleaseBackBuffer() { ReleaseResources(); }
-
 void RocketRenderD3D9::Reinitialize(IDirect3DDevice9 *pDevice) {
   ReleaseResources();
   m_pDevice = pDevice;
 }
 
+void RocketRenderD3D9::ReleaseResources() { ReleaseShaders(); }
+
 void RocketRenderD3D9::SetScreenSize(int width, int height) {
-  if (m_width != width || m_height != height)
-    ReleaseResources();
   m_width = width;
   m_height = height;
-}
-
-void RocketRenderD3D9::ReleaseResources() {
-  if (m_compositeQuad) {
-    ReleaseGeometry(m_compositeQuad);
-    m_compositeQuad = {};
-    m_compositeQuadW = m_compositeQuadH = 0;
-  }
-  if (m_uiDS) {
-    m_uiDS->Release();
-    m_uiDS = nullptr;
-  }
-  if (m_uiSurface) {
-    m_uiSurface->Release();
-    m_uiSurface = nullptr;
-  }
-  if (m_uiTexture) {
-    m_uiTexture->Release();
-    m_uiTexture = nullptr;
-  }
-  m_uiTargetW = m_uiTargetH = 0;
-  ReleaseShaders();
-}
-
-void RocketRenderD3D9::EnsureUITarget() {
-  if (m_uiTexture && m_uiTargetW == m_width && m_uiTargetH == m_height)
-    return;
-  if (m_uiSurface) {
-    m_uiSurface->Release();
-    m_uiSurface = nullptr;
-  }
-  if (m_uiTexture) {
-    m_uiTexture->Release();
-    m_uiTexture = nullptr;
-  }
-  if (FAILED(m_pDevice->CreateTexture(m_width, m_height, 1,
-                                      D3DUSAGE_RENDERTARGET, D3DFMT_A8R8G8B8,
-                                      D3DPOOL_DEFAULT, &m_uiTexture, nullptr)))
-    return;
-  m_uiTexture->GetSurfaceLevel(0, &m_uiSurface);
-  m_uiTargetW = m_width;
-  m_uiTargetH = m_height;
 }
 
 void RocketRenderD3D9::CreateShaders() {
@@ -283,8 +239,8 @@ void RocketRenderD3D9::SetupRenderState() {
   m_pDevice->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA);
   m_pDevice->SetRenderState(D3DRS_BLENDOP, D3DBLENDOP_ADD);
 
-  // Stencil: always pass initially
-  m_pDevice->SetRenderState(D3DRS_STENCILENABLE, TRUE);
+  // Stencil: always pass initially (only when a stencil buffer is present).
+  m_pDevice->SetRenderState(D3DRS_STENCILENABLE, m_hasStencil ? TRUE : FALSE);
   m_pDevice->SetRenderState(D3DRS_STENCILFUNC, D3DCMP_ALWAYS);
   m_pDevice->SetRenderState(D3DRS_STENCILREF, 1);
   m_pDevice->SetRenderState(D3DRS_STENCILMASK, 0xFFFFFFFF);
@@ -329,77 +285,52 @@ void RocketRenderD3D9::BeginFrame() {
   if (!m_pDevice)
     return;
 
-  // Save the real backbuffer surfaces (AddRef'd by Get*).
-  m_pDevice->GetRenderTarget(0, &m_realBackbufferRT);
-  m_pDevice->GetDepthStencilSurface(&m_realBackbufferDS);
-
-  // Ensure the non-MSAA UI render target exists.
-  EnsureUITarget();
-
-  // Non-MSAA depth-stencil for clip masks on the UI target.
-  if (!m_uiDS) {
-    m_pDevice->CreateDepthStencilSurface(m_width, m_height, D3DFMT_D24S8,
-                                         D3DMULTISAMPLE_NONE, 0, TRUE, &m_uiDS,
-                                         nullptr);
-  }
-
-  // Disable scissor — the game may have left it enabled,
-  // and D3D9's Clear only clears within the scissor rect when active.
+  // Render directly onto the currently bound (non-MSAA) backbuffer and its
+  // depth-stencil. Clear only stencil for clip masks — never color/depth, so
+  // the 3D scene underneath is preserved. Holding no offscreen D3DPOOL_DEFAULT
+  // target means device resets (e.g. resolution changes) never stall on alive
+  // losable resources.
   m_pDevice->SetRenderState(D3DRS_SCISSORTESTENABLE, FALSE);
 
-  if (m_uiSurface) {
-    m_pDevice->SetRenderTarget(0, m_uiSurface);
-    m_pDevice->SetDepthStencilSurface(m_uiDS);
-    m_pDevice->Clear(0, nullptr, D3DCLEAR_TARGET | D3DCLEAR_STENCIL,
-                     D3DCOLOR_ARGB(0, 0, 0, 0), 1.0f, 0);
-  } else {
-    m_pDevice->Clear(0, nullptr, D3DCLEAR_STENCIL, 0, 1.0f, 0);
+  // Clip masks need a stencil buffer. Detect whether the engine's bound DS has
+  // one: if not, skip the (otherwise-failing) stencil clear and fall back to
+  // scissor-only clipping. Also warn once if RT0 is MSAA — the swapchain is
+  // non-MSAA by construction, so this should never fire, but a stray log line
+  // beats silent corruption if that assumption ever breaks.
+  m_hasStencil = false;
+  IDirect3DSurface9 *ds = nullptr;
+  if (SUCCEEDED(m_pDevice->GetDepthStencilSurface(&ds)) && ds) {
+    D3DSURFACE_DESC d;
+    if (SUCCEEDED(ds->GetDesc(&d)))
+      m_hasStencil =
+          (d.Format == D3DFMT_D24S8 || d.Format == D3DFMT_D24FS8 ||
+           d.Format == D3DFMT_D24X4S4 || d.Format == D3DFMT_D15S1 ||
+           d.Format == D3DFMT_S8_LOCKABLE);
+    ds->Release();
   }
 
-  SetupRenderState();
-  m_frameActive = true;
-}
-
-void RocketRenderD3D9::EndFrame() {
-  if (!m_frameActive)
-    return;
-
-  // --- Composite the non-MSAA UI target onto the real backbuffer ----------
-  if (m_uiSurface && m_realBackbufferRT) {
-    m_pDevice->SetRenderTarget(0, m_realBackbufferRT);
-    if (m_realBackbufferDS)
-      m_pDevice->SetDepthStencilSurface(m_realBackbufferDS);
-
-    // Only scissor/stencil may have changed since BeginFrame's
-    // SetupRenderState.
-    m_pDevice->SetRenderState(D3DRS_STENCILENABLE, FALSE);
-    m_pDevice->SetRenderState(D3DRS_SCISSORTESTENABLE, FALSE);
-
-    EnsureCompositeQuad();
-    if (m_compositeQuad) {
-      m_pDevice->SetTexture(0, m_uiTexture);
-      m_pDevice->SetPixelShader(m_psTextured);
-      m_pDevice->SetVertexShaderConstantF(0, m_projT, 4);
-
-      GeometryData *geom = reinterpret_cast<GeometryData *>(m_compositeQuad);
-      m_pDevice->SetStreamSource(0, geom->vb, 0, sizeof(D3DVertex));
-      m_pDevice->SetIndices(geom->ib);
-      m_pDevice->DrawIndexedPrimitive(
-          D3DPT_TRIANGLELIST, 0, 0, geom->vertexCount, 0, geom->indexCount / 3);
+  static bool s_warnedMSAA = false;
+  if (!s_warnedMSAA) {
+    IDirect3DSurface9 *rt = nullptr;
+    if (SUCCEEDED(m_pDevice->GetRenderTarget(0, &rt)) && rt) {
+      D3DSURFACE_DESC d;
+      if (SUCCEEDED(rt->GetDesc(&d)) && d.MultiSampleType != D3DMULTISAMPLE_NONE) {
+        Rml::Log::Message(Rml::Log::LT_WARNING,
+                          "RocketUI: rendering onto an MSAA render target; "
+                          "UI/clip-mask results may be incorrect.");
+        s_warnedMSAA = true;
+      }
+      rt->Release();
     }
   }
 
-  // Release the real backbuffer references (AddRef'd by Get* in BeginFrame).
-  if (m_realBackbufferRT) {
-    m_realBackbufferRT->Release();
-    m_realBackbufferRT = nullptr;
-  }
-  if (m_realBackbufferDS) {
-    m_realBackbufferDS->Release();
-    m_realBackbufferDS = nullptr;
-  }
-  m_frameActive = false;
+  if (m_hasStencil)
+    m_pDevice->Clear(0, nullptr, D3DCLEAR_STENCIL, 0, 1.0f, 0);
+
+  SetupRenderState();
 }
+
+void RocketRenderD3D9::EndFrame() {}
 
 // --- Geometry ---
 
@@ -662,8 +593,8 @@ void RocketRenderD3D9::SetScissorRegion(Rml::Rectanglei region) {
 // --- Clip Masks (stencil) ---
 
 void RocketRenderD3D9::EnableClipMask(bool enable) {
-  if (!m_pDevice)
-    return;
+  if (!m_pDevice || !m_hasStencil)
+    return; // No stencil buffer: clip masks degrade to no clipping.
   if (enable) {
     m_pDevice->SetRenderState(D3DRS_STENCILENABLE, TRUE);
   } else {
@@ -674,8 +605,8 @@ void RocketRenderD3D9::EnableClipMask(bool enable) {
 void RocketRenderD3D9::RenderToClipMask(Rml::ClipMaskOperation operation,
                                         Rml::CompiledGeometryHandle geometry,
                                         Rml::Vector2f translation) {
-  if (!m_pDevice)
-    return;
+  if (!m_pDevice || !m_hasStencil)
+    return; // No stencil buffer: skip mask building, content renders unclipped.
 
   using Rml::ClipMaskOperation;
 
@@ -701,6 +632,8 @@ void RocketRenderD3D9::RenderToClipMask(Rml::ClipMaskOperation operation,
     m_stencilRef = 0;
     break;
   case ClipMaskOperation::Intersect:
+    // NOTE: saturating INCR on an 8-bit stencil; >255 nested clips would
+    // desync ref vs buffer. Not a concern for current UI depth.
     m_pDevice->SetRenderState(D3DRS_STENCILPASS, D3DSTENCILOP_INCR);
     m_stencilRef += 1;
     break;
@@ -726,31 +659,4 @@ void RocketRenderD3D9::SetTransform(const Rml::Matrix4f *transform) {
     m_d3dTransform = ToD3DMatrix(*transform);
   else
     m_d3dTransform = kIdentity;
-}
-
-void RocketRenderD3D9::EnsureCompositeQuad() {
-  if (m_compositeQuad && m_compositeQuadW == m_width &&
-      m_compositeQuadH == m_height)
-    return;
-  if (m_compositeQuad)
-    ReleaseGeometry(m_compositeQuad);
-
-  float w = (float)m_width, h = (float)m_height;
-  Rml::Vertex verts[4];
-  verts[0].position = {0, 0};
-  verts[0].colour = {255, 255, 255, 255};
-  verts[0].tex_coord = {0, 0};
-  verts[1].position = {w, 0};
-  verts[1].colour = {255, 255, 255, 255};
-  verts[1].tex_coord = {1, 0};
-  verts[2].position = {w, h};
-  verts[2].colour = {255, 255, 255, 255};
-  verts[2].tex_coord = {1, 1};
-  verts[3].position = {0, h};
-  verts[3].colour = {255, 255, 255, 255};
-  verts[3].tex_coord = {0, 1};
-  int indices[6] = {0, 1, 2, 0, 2, 3};
-  m_compositeQuad = CompileGeometry({verts, 4}, {indices, 6});
-  m_compositeQuadW = m_width;
-  m_compositeQuadH = m_height;
 }

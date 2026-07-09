@@ -40,6 +40,7 @@
 #include "tier0/icommandline.h"
 #include "ivideomode.h"
 #include "gl_matsysiface.h"
+#include "materialsystem/materialsystem_config.h"
 #include "cdll_engine_int.h"
 #include "vgui_baseui_interface.h"
 #include "iengine.h"
@@ -1278,7 +1279,21 @@ bool CGame::CreateGameWindow( void )
 	modinfo->deleteThis();
 	modinfo = NULL;
 
-	if ( !g_pLauncherMgr->CreateGameWindow( windowName, true, 0, 0, true ) )
+	// Create the window config-correct from the chosen material system mode so
+	// it lands at the right resolution / windowed state (matches Win32 structure)
+	// instead of an engine->launcher reach-around after creation. The launcher
+	// honors sdl_displayindex and FULLSCREEN_DESKTOP steering internally.
+	bool bWindowed = true;
+	int nWidth = 0;
+	int nHeight = 0;
+	if ( g_pMaterialSystemConfig )
+	{
+		bWindowed = g_pMaterialSystemConfig->Windowed();
+		nWidth = g_pMaterialSystemConfig->m_VideoMode.m_Width;
+		nHeight = g_pMaterialSystemConfig->m_VideoMode.m_Height;
+	}
+
+	if ( !g_pLauncherMgr->CreateGameWindow( windowName, bWindowed, nWidth, nHeight, true ) )
 	{
 		Error( "Fatal Error:  Unable to create game window!" );
 		return false;
