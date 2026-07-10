@@ -866,7 +866,8 @@ const char *CBaseCombatWeapon::GetWorldDroppedModel( void ) const
 		) );
 
 	// world dropped model path is optional, but always built. Make sure the model exists before returning it.
-	if ( szWorldDroppedModel )
+	// (defense-in-depth: also reject an empty string so a dropped weapon never ends up with model index 0 / invisible.)
+	if ( szWorldDroppedModel && szWorldDroppedModel[0] )
 	{
 		MDLHandle_t modelHandle = g_pMDLCache->FindMDL( szWorldDroppedModel );
 		if ( !g_pMDLCache->IsErrorModel( modelHandle ) )

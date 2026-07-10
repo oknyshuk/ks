@@ -60,7 +60,11 @@ public:
 	// Model accessors
 	const char *GetBasePlayerDisplayModel() const { return m_szModelPlayer; }
 	const char *GetWorldDisplayModel() const { return m_szModelWorld; }
-	const char *GetWorldDroppedModel() const { return m_szWorldDroppedModel; }
+	// Returns NULL (not "") when unset, matching the original econ schema contract:
+	// the NULL-check callers (FileWeaponInfo_t::GetWorldDroppedModel /
+	// CBaseCombatWeapon::GetWorldDroppedModel) depend on it so they can fall back to
+	// the world model instead of setting an empty (invisible) model on dropped weapons.
+	const char *GetWorldDroppedModel() const { return m_szWorldDroppedModel[0] ? m_szWorldDroppedModel : NULL; }
 
 	// Stub accessors for compatibility (return NULL/defaults)
 	const char *GetPrimaryAmmo() const { return NULL; }

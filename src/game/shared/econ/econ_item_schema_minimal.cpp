@@ -270,8 +270,19 @@ bool CEconItemDefinition::BInitFromKV( KeyValues *pKV, KeyValues *pPrefabs, CEco
 	const char *pszModelWorld = pKV->GetString( "model_world", "" );
 	V_strncpy( m_szModelWorld, pszModelWorld, sizeof( m_szModelWorld ) );
 
-	const char *pszWorldDroppedModel = pKV->GetString( "model_world_dropped", "" );
+	const char *pszWorldDroppedModel = pKV->GetString( "model_dropped", "" );
 	V_strncpy( m_szWorldDroppedModel, pszWorldDroppedModel, sizeof( m_szWorldDroppedModel ) );
+
+	// Match the original econ schema behavior (econ_item_schema.cpp): when a weapon
+	// has no explicit "model_dropped", derive the dropped world model from "model_world"
+	// by swapping the extension for "_dropped.mdl" (e.g. w_rif_ak47.mdl ->
+	// w_rif_ak47_dropped.mdl). These derived models ship in the game VPKs, and without
+	// this a dropped weapon ends up with an empty model and vanishes.
+	if ( !m_szWorldDroppedModel[0] && m_szModelWorld[0] )
+	{
+		V_StripExtension( m_szModelWorld, m_szWorldDroppedModel, sizeof( m_szWorldDroppedModel ) );
+		V_strcat_safe( m_szWorldDroppedModel, "_dropped.mdl" );
+	}
 
 	return true;
 }
