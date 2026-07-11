@@ -14,7 +14,7 @@
 
 #include "rocketrender.h"
 #include <RmlUi/Core/ElementDocument.h>
-#include <mutex>
+#include <atomic>
 #include <unordered_set>
 
 class DeviceCallbacks;
@@ -54,9 +54,18 @@ protected:
   Rml::Context
       *m_ctxInput; // Override for input routing (nullptr = use m_ctxCurrent)
 
-  // Mutexes to synchronize Update/Render - RmlUi is not thread-safe
-  std::mutex m_mtxHud;
-  std::mutex m_mtxMenu;
+  // RmlUi is single-threaded and runs entirely on the MAIN thread: Update,
+  // input, and Render-recording all happen here; only recorded command lists
+  // cross to the render thread (which never touches RmlUi state). So no lock is
+  // needed around RmlUi access.
+  //
+  // Device-lost/reset/screen-size callbacks fire on the render/async-D3D
+  // thread, so SetScreenSize can't mutate the contexts directly. It stages the
+  // new size here (lock-free) and RunFrame applies ctx->SetDimensions on the
+  // main thread.
+  std::atomic<bool> m_resizePending{false};
+  std::atomic<int> m_pendingW{0};
+  std::atomic<int> m_pendingH{0};
 
   bool m_isDebuggerOpen;
 
@@ -103,8 +112,10 @@ public:
   LoadDocumentFile(RocketDesinationContext_t ctx, const char *filepath,
                    LoadDocumentFn loadDocumentFunc = nullptr,
                    UnloadDocumentFn unloadDocumentFunc = nullptr);
-  virtual void RenderHUDFrame();
-  virtual void RenderMenuFrame();
+  virtual void *RecordHUD();
+  virtual void *RecordMenu();
+  virtual void RenderHUDFrame(void *cmdList);
+  virtual void RenderMenuFrame(void *cmdList);
   virtual Rml::Context *AccessHudContext();
   virtual Rml::Context *AccessMenuContext();
   virtual void RegisterPauseMenu(TogglePauseMenuFn showPauseMenuFunc) {
@@ -134,6 +145,9 @@ public:
 private:
   bool LoadFont(const char *filepath, const char *path);
   bool LoadFonts();
+  // Apply a pending resize (staged by SetScreenSize on the render thread) to
+  // the contexts, on the main thread. Called at the top of RunFrame.
+  void ApplyPendingResize();
 };
 
 class DeviceCallbacks : public IShaderDeviceDependentObject {

@@ -142,8 +142,8 @@ OPTFLAGS = {
         "clang": ["-O0"],
     },
     "sanitize": {
-        "gcc": ["-O0", "-fsanitize=address", "-pthread"],
-        "clang": ["-O0", "-fsanitize=address", "-pthread"],
+        "gcc": ["-O0", "-fno-omit-frame-pointer", "-fsanitize=address,undefined", "-pthread"],
+        "clang": ["-O0", "-fno-omit-frame-pointer", "-fsanitize=address,undefined", "-pthread"],
     },
 }
 
@@ -278,7 +278,7 @@ def configure(conf):
         cxxflags.append("-flto=thin")
         linkflags.append("-flto=thin")
     if build_type == "sanitize":
-        linkflags += ["-fsanitize=address", "-pthread"]
+        linkflags += ["-fsanitize=address,undefined", "-pthread"]
 
     conf.check_cc(
         cflags=cflags, linkflags=linkflags, msg="Checking for required C flags"

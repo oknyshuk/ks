@@ -2547,8 +2547,8 @@ public:
 #endif
 
 	// RocketUI stubs
-	virtual void				RenderRocketHUD() {}
-	virtual void				RenderRocketMenu() {}
+	virtual void				RenderRocketHUD(void *) {}
+	virtual void				RenderRocketMenu(void *) {}
 
 #if defined( _PS3 )
 	virtual void				FlushTextureCache() { }

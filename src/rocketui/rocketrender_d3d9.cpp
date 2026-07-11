@@ -5,6 +5,11 @@
 // Renders RmlUi through D3D9 calls that flow through DXVK's normal pipeline.
 // Replaces the standalone Vulkan renderer (rocketrender_dxvk.cpp) to eliminate
 // per-frame queue flushes and synchronization overhead.
+//
+// RmlUi runs single-threaded on the MAIN thread. The Rml::RenderInterface
+// overrides here only RECORD (allocate CPU-side handles / append POD commands /
+// stage releases); the actual D3D9 work happens on the RENDER thread in
+// Replay(), which owns the finished command list. See rocketrender.h.
 
 #ifdef Assert
 #undef Assert
@@ -15,6 +20,7 @@
 
 #include <d3d9.h>
 
+#include <stdio.h>
 #include <string.h>
 
 RocketRenderD3D9 RocketRenderD3D9::m_Instance;
@@ -125,6 +131,66 @@ static const DWORD kPSUntexturedBytecode[] = {
 };
 // clang-format on
 
+// ----- Handle + command types (implementation detail) -----
+
+struct D3DVertex {
+  float x, y, z;
+  DWORD color; // D3DCOLOR (BGRA)
+  float u, v;
+};
+
+// RmlUi geometry handle. CPU data is retained for the handle's lifetime so the
+// render thread can (re)create the VB/IB — lazily on first draw and again after
+// a genuine device re-creation (gen mismatch).
+struct RocketGeometry {
+  std::vector<D3DVertex> verts;
+  std::vector<int> indices;
+  IDirect3DVertexBuffer9 *vb = nullptr;
+  IDirect3DIndexBuffer9 *ib = nullptr;
+  uint32_t gen = 0; // device generation vb/ib belong to (0 = none yet)
+};
+
+// RmlUi texture handle. Pixels stored BGRA (A8R8G8B8), retained for lifetime.
+struct RocketTexture {
+  int w = 0, h = 0;
+  std::vector<unsigned char> pixels;
+  IDirect3DTexture9 *tex = nullptr;
+  uint32_t gen = 0;
+};
+
+enum class UICmdType : uint8_t {
+  Draw,
+  ScissorEnable,
+  ScissorRegion,
+  ClipEnable,
+  ClipRender,
+  Transform,
+};
+
+struct UICmd {
+  UICmdType type;
+  RocketGeometry *geom = nullptr;    // Draw, ClipRender
+  Rml::TextureHandle texture = 0;    // Draw (0 / -1 sentinel / RocketTexture*)
+  Rml::Vector2f translation;         // Draw, ClipRender
+  Rml::Rectanglei region;            // ScissorRegion
+  bool enable = false;               // ScissorEnable, ClipEnable
+  Rml::ClipMaskOperation op{};       // ClipRender
+  bool hasTransform = false;         // Transform
+  Rml::Matrix4f transform;           // Transform
+};
+
+// A frame's worth of recorded UI commands for one context. Built on the main
+// thread, ownership handed to the render thread, deleted after replay.
+// ponytail: flat UICmd (Matrix4f in every cmd) wastes a little memory; use a
+// side vector for transforms only if it ever shows in a profile.
+struct RocketCmdList {
+  uint32_t frame;
+  std::vector<UICmd> cmds;
+  explicit RocketCmdList(uint32_t f) : frame(f) {}
+};
+
+// ----- lifecycle -----
+
 RocketRenderD3D9::RocketRenderD3D9()
     : m_pDevice(nullptr), m_width(0), m_height(0), m_transformEnabled(false),
       m_hasStencil(false), m_stencilRef(0), m_d3dTransform(kIdentity) {}
@@ -138,6 +204,9 @@ bool RocketRenderD3D9::Initialize(IDirect3DDevice9 *pDevice) {
 
 void RocketRenderD3D9::Shutdown() {
   ReleaseResources();
+  // Free any handles still staged for release (nothing is in flight at
+  // shutdown). Live handles are released by Rml::Shutdown() before this.
+  DrainReleased(0xFFFFFFFFu);
   m_pDevice = nullptr;
 }
 
@@ -315,9 +384,11 @@ void RocketRenderD3D9::BeginFrame() {
     if (SUCCEEDED(m_pDevice->GetRenderTarget(0, &rt)) && rt) {
       D3DSURFACE_DESC d;
       if (SUCCEEDED(rt->GetDesc(&d)) && d.MultiSampleType != D3DMULTISAMPLE_NONE) {
-        Rml::Log::Message(Rml::Log::LT_WARNING,
-                          "RocketUI: rendering onto an MSAA render target; "
-                          "UI/clip-mask results may be incorrect.");
+        // Render thread: must NOT call into RmlUi (Rml::Log reads shared RmlUi
+        // state) — keep this diagnostic on a thread-safe channel so the
+        // "replay never touches RmlUi" invariant stays literally true.
+        fprintf(stderr, "RocketUI: rendering onto an MSAA render target; "
+                        "UI/clip-mask results may be incorrect.\n");
         s_warnedMSAA = true;
       }
       rt->Release();
@@ -332,121 +403,57 @@ void RocketRenderD3D9::BeginFrame() {
 
 void RocketRenderD3D9::EndFrame() {}
 
-// --- Geometry ---
+// ============================================================================
+// Recording (MAIN thread) — no device work here.
+// ============================================================================
+
+void *RocketRenderD3D9::BeginRecord() {
+  RocketCmdList *list = new RocketCmdList(m_frame);
+  m_target = list;
+  return list;
+}
 
 Rml::CompiledGeometryHandle
 RocketRenderD3D9::CompileGeometry(Rml::Span<const Rml::Vertex> vertices,
                                   Rml::Span<const int> indices) {
-  if (!m_pDevice)
-    return {};
-
-  const UINT vbSize = (UINT)vertices.size() * sizeof(D3DVertex);
-  const UINT ibSize = (UINT)indices.size() * sizeof(int);
-
-  IDirect3DVertexBuffer9 *vb = nullptr;
-  IDirect3DIndexBuffer9 *ib = nullptr;
-
-  if (FAILED(m_pDevice->CreateVertexBuffer(vbSize, D3DUSAGE_WRITEONLY, 0,
-                                           D3DPOOL_MANAGED, &vb, nullptr)))
-    return {};
-
-  if (FAILED(m_pDevice->CreateIndexBuffer(ibSize, D3DUSAGE_WRITEONLY,
-                                          D3DFMT_INDEX32, D3DPOOL_MANAGED, &ib,
-                                          nullptr))) {
-    vb->Release();
-    return {};
-  }
-
-  // Fill vertex buffer
-  void *vbData = nullptr;
-  if (FAILED(vb->Lock(0, vbSize, &vbData, 0))) {
-    vb->Release();
-    ib->Release();
-    return {};
-  }
-  D3DVertex *dst = (D3DVertex *)vbData;
+  RocketGeometry *g = new RocketGeometry;
+  g->verts.resize(vertices.size());
   for (size_t i = 0; i < vertices.size(); i++) {
     const Rml::Vertex &v = vertices[i];
-    dst[i].x = v.position.x;
-    dst[i].y = v.position.y;
-    dst[i].z = 0.0f;
+    D3DVertex &d = g->verts[i];
+    d.x = v.position.x;
+    d.y = v.position.y;
+    d.z = 0.0f;
     // RmlUi RGBA -> D3DCOLOR ARGB (BGRA in memory)
-    dst[i].color = ((DWORD)v.colour.alpha << 24) | ((DWORD)v.colour.red << 16) |
-                   ((DWORD)v.colour.green << 8) | ((DWORD)v.colour.blue);
-    dst[i].u = v.tex_coord.x;
-    dst[i].v = v.tex_coord.y;
+    d.color = ((DWORD)v.colour.alpha << 24) | ((DWORD)v.colour.red << 16) |
+              ((DWORD)v.colour.green << 8) | ((DWORD)v.colour.blue);
+    d.u = v.tex_coord.x;
+    d.v = v.tex_coord.y;
   }
-  vb->Unlock();
-
-  // Fill index buffer
-  void *ibData = nullptr;
-  if (FAILED(ib->Lock(0, ibSize, &ibData, 0))) {
-    vb->Release();
-    ib->Release();
-    return {};
-  }
-  memcpy(ibData, indices.data(), ibSize);
-  ib->Unlock();
-
-  GeometryData *data = new GeometryData;
-  data->vb = vb;
-  data->ib = ib;
-  data->vertexCount = (UINT)vertices.size();
-  data->indexCount = (UINT)indices.size();
-
-  return reinterpret_cast<Rml::CompiledGeometryHandle>(data);
+  g->indices.assign(indices.data(), indices.data() + indices.size());
+  return reinterpret_cast<Rml::CompiledGeometryHandle>(g);
 }
 
 void RocketRenderD3D9::RenderGeometry(Rml::CompiledGeometryHandle handle,
                                       Rml::Vector2f translation,
                                       Rml::TextureHandle texture) {
-  GeometryData *geom = reinterpret_cast<GeometryData *>(handle);
-  if (!geom || !m_pDevice)
+  if (!m_target)
     return;
-
-  if (m_transformEnabled) {
-    D3DMATRIX translate = {
-        1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, translation.x, translation.y, 0, 1};
-    UploadWVP(D3DMatMul(translate, m_d3dTransform));
-  } else {
-    // Fast path: transpose(translate * proj) only differs from projT in
-    // column 3 — avoids a full 4x4 multiply + transpose per draw.
-    float c[16];
-    memcpy(c, m_projT, sizeof(c));
-    float tx = translation.x, ty = translation.y;
-    for (int i = 0; i < 16; i += 4)
-      c[i + 3] += c[i] * tx + c[i + 1] * ty;
-    m_pDevice->SetVertexShaderConstantF(0, c, 4);
-  }
-
-  // Texture setup — switch pixel shader instead of texture stage ops.
-  if (!texture) {
-    m_pDevice->SetTexture(0, nullptr);
-    m_pDevice->SetPixelShader(m_psUntextured);
-  } else {
-    if (texture != TextureEnableWithoutBinding)
-      m_pDevice->SetTexture(0, (IDirect3DTexture9 *)texture);
-    m_pDevice->SetPixelShader(m_psTextured);
-  }
-
-  m_pDevice->SetStreamSource(0, geom->vb, 0, sizeof(D3DVertex));
-  m_pDevice->SetIndices(geom->ib);
-  m_pDevice->DrawIndexedPrimitive(D3DPT_TRIANGLELIST, 0, 0, geom->vertexCount,
-                                  0, geom->indexCount / 3);
+  UICmd c;
+  c.type = UICmdType::Draw;
+  c.geom = reinterpret_cast<RocketGeometry *>(handle);
+  c.texture = texture;
+  c.translation = translation;
+  m_target->cmds.push_back(c);
 }
 
 void RocketRenderD3D9::ReleaseGeometry(Rml::CompiledGeometryHandle geometry) {
-  GeometryData *data = reinterpret_cast<GeometryData *>(geometry);
-  if (data) {
-    if (data->vb)
-      data->vb->Release();
-    if (data->ib)
-      data->ib->Release();
-    delete data;
-  }
+  RocketGeometry *g = reinterpret_cast<RocketGeometry *>(geometry);
+  if (!g)
+    return;
+  std::lock_guard<std::mutex> lk(m_deadMutex);
+  m_deadGeom.emplace_back(g, m_frame);
 }
-
-// --- Textures ---
 
 #pragma pack(1)
 struct TGAHeader {
@@ -533,78 +540,226 @@ RocketRenderD3D9::LoadTexture(Rml::Vector2i &texture_dimensions,
 Rml::TextureHandle
 RocketRenderD3D9::GenerateTexture(Rml::Span<const Rml::byte> source_data,
                                   Rml::Vector2i dimensions) {
-  if (!m_pDevice)
-    return {};
-
-  IDirect3DTexture9 *texture = nullptr;
-  HRESULT hr = m_pDevice->CreateTexture(dimensions.x, dimensions.y, 1, 0,
-                                        D3DFMT_A8R8G8B8, D3DPOOL_MANAGED,
-                                        &texture, nullptr);
-  if (FAILED(hr))
-    return {};
-
-  D3DLOCKED_RECT locked;
-  hr = texture->LockRect(0, &locked, nullptr, 0);
-  if (FAILED(hr)) {
-    texture->Release();
-    return {};
-  }
-
+  RocketTexture *t = new RocketTexture;
+  t->w = dimensions.x;
+  t->h = dimensions.y;
+  const size_t n = (size_t)dimensions.x * (size_t)dimensions.y;
+  t->pixels.resize(n * 4);
   const Rml::byte *src = source_data.data();
-  for (int y = 0; y < dimensions.y; y++) {
-    unsigned char *dest = (unsigned char *)locked.pBits + y * locked.Pitch;
-    for (int x = 0; x < dimensions.x; x++) {
-      dest[0] = src[2]; // B
-      dest[1] = src[1]; // G
-      dest[2] = src[0]; // R
-      dest[3] = src[3]; // A
-      src += 4;
-      dest += 4;
-    }
+  unsigned char *dst = t->pixels.data();
+  // RmlUi RGBA -> D3D A8R8G8B8 (BGRA byte order). Done here on the main thread
+  // so the render thread's upload is a plain row memcpy.
+  for (size_t i = 0; i < n; i++) {
+    dst[0] = src[2]; // B
+    dst[1] = src[1]; // G
+    dst[2] = src[0]; // R
+    dst[3] = src[3]; // A
+    src += 4;
+    dst += 4;
   }
-
-  texture->UnlockRect(0);
-  return (Rml::TextureHandle)texture;
+  return reinterpret_cast<Rml::TextureHandle>(t);
 }
 
 void RocketRenderD3D9::ReleaseTexture(Rml::TextureHandle texture_handle) {
-  if (texture_handle)
-    ((IDirect3DTexture9 *)texture_handle)->Release();
+  if (!texture_handle || texture_handle == TextureEnableWithoutBinding)
+    return;
+  RocketTexture *t = reinterpret_cast<RocketTexture *>(texture_handle);
+  std::lock_guard<std::mutex> lk(m_deadMutex);
+  m_deadTex.emplace_back(t, m_frame);
 }
 
-// --- Scissor ---
-
 void RocketRenderD3D9::EnableScissorRegion(bool enable) {
-  if (m_pDevice)
-    m_pDevice->SetRenderState(D3DRS_SCISSORTESTENABLE, enable ? TRUE : FALSE);
+  if (!m_target)
+    return;
+  UICmd c;
+  c.type = UICmdType::ScissorEnable;
+  c.enable = enable;
+  m_target->cmds.push_back(c);
 }
 
 void RocketRenderD3D9::SetScissorRegion(Rml::Rectanglei region) {
-  if (!m_pDevice)
+  if (!m_target)
     return;
-  RECT rect;
-  rect.left = region.Left();
-  rect.top = region.Top();
-  rect.right = region.Right();
-  rect.bottom = region.Bottom();
-  m_pDevice->SetScissorRect(&rect);
+  UICmd c;
+  c.type = UICmdType::ScissorRegion;
+  c.region = region;
+  m_target->cmds.push_back(c);
 }
 
-// --- Clip Masks (stencil) ---
-
 void RocketRenderD3D9::EnableClipMask(bool enable) {
-  if (!m_pDevice || !m_hasStencil)
-    return; // No stencil buffer: clip masks degrade to no clipping.
-  if (enable) {
-    m_pDevice->SetRenderState(D3DRS_STENCILENABLE, TRUE);
-  } else {
-    m_pDevice->SetRenderState(D3DRS_STENCILENABLE, FALSE);
-  }
+  if (!m_target)
+    return;
+  UICmd c;
+  c.type = UICmdType::ClipEnable;
+  c.enable = enable;
+  m_target->cmds.push_back(c);
 }
 
 void RocketRenderD3D9::RenderToClipMask(Rml::ClipMaskOperation operation,
                                         Rml::CompiledGeometryHandle geometry,
                                         Rml::Vector2f translation) {
+  if (!m_target)
+    return;
+  UICmd c;
+  c.type = UICmdType::ClipRender;
+  c.op = operation;
+  c.geom = reinterpret_cast<RocketGeometry *>(geometry);
+  c.translation = translation;
+  m_target->cmds.push_back(c);
+}
+
+void RocketRenderD3D9::SetTransform(const Rml::Matrix4f *transform) {
+  if (!m_target)
+    return;
+  UICmd c;
+  c.type = UICmdType::Transform;
+  c.hasTransform = (transform != nullptr);
+  if (transform)
+    c.transform = *transform;
+  m_target->cmds.push_back(c);
+}
+
+// ============================================================================
+// Replay (RENDER thread) — the actual device work.
+// ============================================================================
+
+bool RocketRenderD3D9::EnsureGeometry(RocketGeometry *g) {
+  if (!g || !m_pDevice)
+    return false;
+  const uint32_t gen = m_deviceGen.load(std::memory_order_relaxed);
+  if (g->vb && g->ib && g->gen == gen)
+    return true; // already valid on this device
+
+  // Stale (device re-created) or not yet uploaded: (re)create from CPU data.
+  if (g->vb) {
+    g->vb->Release();
+    g->vb = nullptr;
+  }
+  if (g->ib) {
+    g->ib->Release();
+    g->ib = nullptr;
+  }
+  if (g->verts.empty() || g->indices.empty())
+    return false;
+
+  const UINT vbSize = (UINT)g->verts.size() * sizeof(D3DVertex);
+  const UINT ibSize = (UINT)g->indices.size() * sizeof(int);
+  IDirect3DVertexBuffer9 *vb = nullptr;
+  IDirect3DIndexBuffer9 *ib = nullptr;
+  if (FAILED(m_pDevice->CreateVertexBuffer(vbSize, D3DUSAGE_WRITEONLY, 0,
+                                           D3DPOOL_MANAGED, &vb, nullptr)))
+    return false;
+  if (FAILED(m_pDevice->CreateIndexBuffer(ibSize, D3DUSAGE_WRITEONLY,
+                                          D3DFMT_INDEX32, D3DPOOL_MANAGED, &ib,
+                                          nullptr))) {
+    vb->Release();
+    return false;
+  }
+  void *dst = nullptr;
+  if (FAILED(vb->Lock(0, vbSize, &dst, 0))) {
+    vb->Release();
+    ib->Release();
+    return false;
+  }
+  memcpy(dst, g->verts.data(), vbSize);
+  vb->Unlock();
+  if (FAILED(ib->Lock(0, ibSize, &dst, 0))) {
+    vb->Release();
+    ib->Release();
+    return false;
+  }
+  memcpy(dst, g->indices.data(), ibSize);
+  ib->Unlock();
+
+  g->vb = vb;
+  g->ib = ib;
+  g->gen = gen;
+  return true;
+}
+
+bool RocketRenderD3D9::EnsureTexture(RocketTexture *t) {
+  if (!t || !m_pDevice)
+    return false;
+  const uint32_t gen = m_deviceGen.load(std::memory_order_relaxed);
+  if (t->tex && t->gen == gen)
+    return true;
+
+  if (t->tex) {
+    t->tex->Release();
+    t->tex = nullptr;
+  }
+  if (t->pixels.empty() || t->w <= 0 || t->h <= 0)
+    return false;
+
+  IDirect3DTexture9 *tex = nullptr;
+  if (FAILED(m_pDevice->CreateTexture(t->w, t->h, 1, 0, D3DFMT_A8R8G8B8,
+                                      D3DPOOL_MANAGED, &tex, nullptr)))
+    return false;
+  D3DLOCKED_RECT lr;
+  if (FAILED(tex->LockRect(0, &lr, nullptr, 0))) {
+    tex->Release();
+    return false;
+  }
+  const unsigned char *src = t->pixels.data();
+  const size_t rowBytes = (size_t)t->w * 4;
+  for (int y = 0; y < t->h; y++)
+    memcpy((unsigned char *)lr.pBits + (size_t)y * lr.Pitch,
+           src + (size_t)y * rowBytes, rowBytes);
+  tex->UnlockRect(0);
+
+  t->tex = tex;
+  t->gen = gen;
+  return true;
+}
+
+void RocketRenderD3D9::DrawGeometryDev(RocketGeometry *g,
+                                       Rml::Vector2f translation,
+                                       Rml::TextureHandle texture) {
+  if (!g || !m_pDevice)
+    return;
+  if (!EnsureGeometry(g))
+    return;
+
+  if (m_transformEnabled) {
+    D3DMATRIX translate = {
+        1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, translation.x, translation.y, 0, 1};
+    UploadWVP(D3DMatMul(translate, m_d3dTransform));
+  } else {
+    // Fast path: transpose(translate * proj) only differs from projT in
+    // column 3 — avoids a full 4x4 multiply + transpose per draw.
+    float c[16];
+    memcpy(c, m_projT, sizeof(c));
+    float tx = translation.x, ty = translation.y;
+    for (int i = 0; i < 16; i += 4)
+      c[i + 3] += c[i] * tx + c[i + 1] * ty;
+    m_pDevice->SetVertexShaderConstantF(0, c, 4);
+  }
+
+  // Texture: 0 = none, -1 = enable textured shader without binding, else a
+  // RocketTexture*.
+  if (!texture) {
+    m_pDevice->SetTexture(0, nullptr);
+    m_pDevice->SetPixelShader(m_psUntextured);
+  } else {
+    if (texture != TextureEnableWithoutBinding) {
+      RocketTexture *t = reinterpret_cast<RocketTexture *>(texture);
+      if (!EnsureTexture(t))
+        return;
+      m_pDevice->SetTexture(0, t->tex);
+    }
+    m_pDevice->SetPixelShader(m_psTextured);
+  }
+
+  m_pDevice->SetStreamSource(0, g->vb, 0, sizeof(D3DVertex));
+  m_pDevice->SetIndices(g->ib);
+  m_pDevice->DrawIndexedPrimitive(D3DPT_TRIANGLELIST, 0, 0,
+                                  (UINT)g->verts.size(), 0,
+                                  (UINT)g->indices.size() / 3);
+}
+
+void RocketRenderD3D9::RenderToClipMaskDev(Rml::ClipMaskOperation operation,
+                                           RocketGeometry *g,
+                                           Rml::Vector2f translation) {
   if (!m_pDevice || !m_hasStencil)
     return; // No stencil buffer: skip mask building, content renders unclipped.
 
@@ -639,7 +794,7 @@ void RocketRenderD3D9::RenderToClipMask(Rml::ClipMaskOperation operation,
     break;
   }
 
-  RenderGeometry(geometry, translation, {});
+  DrawGeometryDev(g, translation, {});
 
   // Restore color writes and stencil test
   m_pDevice->SetRenderState(
@@ -651,12 +806,89 @@ void RocketRenderD3D9::RenderToClipMask(Rml::ClipMaskOperation operation,
   m_pDevice->SetRenderState(D3DRS_STENCILREF, m_stencilRef);
 }
 
-// --- Transform ---
+void RocketRenderD3D9::Replay(void *p) {
+  RocketCmdList *list = reinterpret_cast<RocketCmdList *>(p);
+  if (!list || !m_pDevice)
+    return;
 
-void RocketRenderD3D9::SetTransform(const Rml::Matrix4f *transform) {
-  m_transformEnabled = (transform != nullptr);
-  if (transform)
-    m_d3dTransform = ToD3DMatrix(*transform);
-  else
-    m_d3dTransform = kIdentity;
+  for (const UICmd &c : list->cmds) {
+    switch (c.type) {
+    case UICmdType::Draw:
+      DrawGeometryDev(c.geom, c.translation, c.texture);
+      break;
+    case UICmdType::ScissorEnable:
+      m_pDevice->SetRenderState(D3DRS_SCISSORTESTENABLE,
+                                c.enable ? TRUE : FALSE);
+      break;
+    case UICmdType::ScissorRegion: {
+      RECT rect = {c.region.Left(), c.region.Top(), c.region.Right(),
+                   c.region.Bottom()};
+      m_pDevice->SetScissorRect(&rect);
+      break;
+    }
+    case UICmdType::ClipEnable:
+      if (m_hasStencil)
+        m_pDevice->SetRenderState(D3DRS_STENCILENABLE,
+                                  c.enable ? TRUE : FALSE);
+      break;
+    case UICmdType::ClipRender:
+      RenderToClipMaskDev(c.op, c.geom, c.translation);
+      break;
+    case UICmdType::Transform:
+      m_transformEnabled = c.hasTransform;
+      m_d3dTransform = c.hasTransform ? ToD3DMatrix(c.transform) : kIdentity;
+      break;
+    }
+  }
+}
+
+void RocketRenderD3D9::DrainReleased(uint32_t listFrame) {
+  // A handle released in main-frame R had its last recorded draw in a list of
+  // frame <= R-1, which is fully replayed before any list of frame > R. So
+  // freeing entries with releaseFrame < listFrame can never hit a handle the
+  // current or a later in-flight list still references.
+  std::vector<RocketGeometry *> geom;
+  std::vector<RocketTexture *> tex;
+  {
+    std::lock_guard<std::mutex> lk(m_deadMutex);
+    for (size_t i = 0; i < m_deadGeom.size();) {
+      if (m_deadGeom[i].second < listFrame) {
+        geom.push_back(m_deadGeom[i].first);
+        m_deadGeom[i] = m_deadGeom.back();
+        m_deadGeom.pop_back();
+      } else {
+        ++i;
+      }
+    }
+    for (size_t i = 0; i < m_deadTex.size();) {
+      if (m_deadTex[i].second < listFrame) {
+        tex.push_back(m_deadTex[i].first);
+        m_deadTex[i] = m_deadTex.back();
+        m_deadTex.pop_back();
+      } else {
+        ++i;
+      }
+    }
+  }
+  // Release device resources + delete OUTSIDE the lock.
+  for (RocketGeometry *g : geom) {
+    if (g->vb)
+      g->vb->Release();
+    if (g->ib)
+      g->ib->Release();
+    delete g;
+  }
+  for (RocketTexture *t : tex) {
+    if (t->tex)
+      t->tex->Release();
+    delete t;
+  }
+}
+
+void RocketRenderD3D9::FreeList(void *p) {
+  RocketCmdList *list = reinterpret_cast<RocketCmdList *>(p);
+  if (!list)
+    return;
+  DrainReleased(list->frame);
+  delete list;
 }

@@ -714,8 +714,8 @@ public:
 	//--------------------------------------------------------
 	// RocketUI rendering
 	//--------------------------------------------------------
-	DEFINE_QUEUED_CALL_0(					RenderRocketHUD, IMatRenderContext, m_pHardwareContext );
-	DEFINE_QUEUED_CALL_0(					RenderRocketMenu, IMatRenderContext, m_pHardwareContext );
+	DEFINE_QUEUED_CALL_1(					RenderRocketHUD, void *, IMatRenderContext, m_pHardwareContext );
+	DEFINE_QUEUED_CALL_1(					RenderRocketMenu, void *, IMatRenderContext, m_pHardwareContext );
 
 	virtual ColorCorrectionHandle_t			FindLookup( const char *pName );
 

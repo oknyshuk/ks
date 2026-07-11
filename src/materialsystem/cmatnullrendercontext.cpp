@@ -951,8 +951,8 @@ public:
 	}
 
 	// RocketUI stubs - null context doesn't render
-	virtual void RenderRocketHUD() {}
-	virtual void RenderRocketMenu() {}
+	virtual void RenderRocketHUD(void *) {}
+	virtual void RenderRocketMenu(void *) {}
 
 	//--------------------------------------------------------
 	// debug logging - no-op in queued context

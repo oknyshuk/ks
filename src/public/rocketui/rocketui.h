@@ -60,9 +60,16 @@ public:
     virtual Rml::ElementDocument *LoadDocumentFile(RocketDesinationContext_t ctx, const char *filepath,
             LoadDocumentFn loadDocumentFunc = nullptr, UnloadDocumentFn unloadDocumentFunc = nullptr) = 0;
 
-    // The actual rendering
-    virtual void RenderHUDFrame() = 0;
-    virtual void RenderMenuFrame() = 0;
+    // Rendering is split so RmlUi stays single-threaded on the MAIN thread:
+    //  * RecordHUD/RecordMenu run Context::Render() on the main thread and
+    //    return an opaque command list (void*, actually a RocketCmdList*).
+    //  * RenderHUDFrame/RenderMenuFrame take that list, replay it on the
+    //    material-system render thread, and free it. Passing nullptr is a safe
+    //    no-op. Ownership of the list transfers to the callee.
+    virtual void *RecordHUD() = 0;
+    virtual void *RecordMenu() = 0;
+    virtual void RenderHUDFrame(void *cmdList) = 0;
+    virtual void RenderMenuFrame(void *cmdList) = 0;
 
     // Access to the actual contexts in case you need something specific like data-bindings.
     virtual Rml::Context* AccessHudContext() = 0;
@@ -79,6 +86,11 @@ public:
 
     virtual void AddDeviceDependentObject(IShaderDeviceDependentObject *pObject) = 0;
     virtual void RemoveDeviceDependentObject(IShaderDeviceDependentObject *pObject) = 0;
+
+    // NOTE: RmlUi is single-threaded and runs entirely on the MAIN thread here
+    // (Update + input + Render-recording). Only recorded command lists cross to
+    // the render thread, so NO external locking is needed to touch RmlUi
+    // elements from the main thread.
 };
 
 #endif // ROCKETUI_H

@@ -22,6 +22,7 @@
 #include "materialsystem/imaterial.h"
 #include "materialsystem/imaterialvar.h"
 #include "materialsystem/imaterialsystem.h"
+#include "rocketui/rocketui.h"
 #include "materialsystem/imaterialsystemhardwareconfig.h"
 #include "materialsystem/materialsystem_config.h"
 #include "detailobjectsystem.h"
@@ -3474,10 +3475,11 @@ void CViewRender::RenderView( const CViewSetup &view, const CViewSetup &hudViewS
 
 			GetClientMode()->PostRenderVGui();
 
-			// RocketUI HUD rendering
-			pRenderContext->RenderRocketHUD();
+			// RocketUI HUD rendering (record on the main thread; the render thread
+			// replays the returned command list)
+			pRenderContext->RenderRocketHUD(g_pRocketUI ? g_pRocketUI->RecordHUD() : nullptr);
 			// RocketUI Menu rendering (for console, pause menu, etc.)
-			pRenderContext->RenderRocketMenu();
+			pRenderContext->RenderRocketMenu(g_pRocketUI ? g_pRocketUI->RecordMenu() : nullptr);
 
 			pRenderContext->Flush();
 		}

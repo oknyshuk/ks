@@ -132,8 +132,9 @@ void V_RenderVGuiOnly_NoSwap()
 		   
 	pRenderContext->ClearBuffers( true, true );
 
-	// Render RocketUI menu before vgui
-	pRenderContext->RenderRocketMenu();
+	// Render RocketUI menu before vgui (record here on the main thread; the
+	// render thread replays the returned command list)
+	pRenderContext->RenderRocketMenu(g_pRocketUI ? g_pRocketUI->RecordMenu() : nullptr);
 
 	EngineVGui()->Paint( PAINT_UIPANELS );
 }

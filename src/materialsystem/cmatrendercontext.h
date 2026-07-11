@@ -664,8 +664,8 @@ public:
 	//---------------------------------------------------------
 	// RocketUI rendering
 	//--------------------------------------------------------
-	virtual void RenderRocketHUD() { if (g_pRocketUI) g_pRocketUI->RenderHUDFrame(); }
-	virtual void RenderRocketMenu() { if (g_pRocketUI) g_pRocketUI->RenderMenuFrame(); }
+	virtual void RenderRocketHUD(void *cmdList) { if (g_pRocketUI) g_pRocketUI->RenderHUDFrame(cmdList); }
+	virtual void RenderRocketMenu(void *cmdList) { if (g_pRocketUI) g_pRocketUI->RenderMenuFrame(cmdList); }
 
 	DELEGATE_TO_OBJECT_1( ColorCorrectionHandle_t, FindLookup, const char *, g_pColorCorrectionSystem );
 

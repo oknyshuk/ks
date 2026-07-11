@@ -1814,9 +1814,11 @@ public:
 	virtual void			Printf( char *fmt, ... ) = 0;
 	virtual float			Knob( char *knobname, float *setvalue = NULL ) = 0;
 
-	// RocketUI rendering
-	virtual void RenderRocketHUD() = 0;
-	virtual void RenderRocketMenu() = 0;
+	// RocketUI rendering. The argument is an opaque RmlUi command list produced
+	// on the main thread (RocketUI()->RecordHUD/RecordMenu); the callee replays
+	// and frees it. nullptr is a safe no-op.
+	virtual void RenderRocketHUD(void *cmdList) = 0;
+	virtual void RenderRocketMenu(void *cmdList) = 0;
 
 	virtual void SetRenderingPaint( bool bEnable ) = 0;
 

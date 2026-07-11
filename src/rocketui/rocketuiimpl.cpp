@@ -337,17 +337,20 @@ void RocketUIImpl::RunFrame(float time) {
 
   m_fTime = time;
 
+  // Start a new RmlUi frame: bump the counter that tags command lists and
+  // graveyard releases. All RmlUi work (Update, input, Render-recording) is on
+  // this main thread, so no lock is needed.
+  RocketRenderD3D9::m_Instance.NextFrame();
+
+  // Apply any resize staged by a device reset (render thread) before layout.
+  ApplyPendingResize();
+
   // Update both contexts - menu context needs updates even during gameplay
-  // (e.g., console is in menu context but rendered over HUD)
-  // Lock mutexes to synchronize with render thread - RmlUi is not thread-safe
-  if (m_ctxHud) {
-    std::lock_guard<std::mutex> lock(m_mtxHud);
+  // (e.g., console is in menu context but rendered over HUD).
+  if (m_ctxHud)
     m_ctxHud->Update();
-  }
-  if (m_ctxMenu) {
-    std::lock_guard<std::mutex> lock(m_mtxMenu);
+  if (m_ctxMenu)
     m_ctxMenu->Update();
-  }
 }
 
 void RocketUIImpl::DenyInputToGame(bool value, const char *why) {
@@ -553,46 +556,67 @@ bool RocketUIImpl::HandleInputEvent(const InputEvent_t &event) {
   return IsConsumingInput();
 }
 
-void RocketUIImpl::RenderHUDFrame() {
-  if (!rocket_enable.GetBool() || !m_pDevice || !m_bDeviceActive)
-    return;
+// Recording (MAIN thread): run Context::Render() into a command list which the
+// render thread later replays. Returns an opaque RocketCmdList* (or nullptr).
+void *RocketUIImpl::RecordHUD() {
+  if (!rocket_enable.GetBool() || !m_ctxHud)
+    return nullptr;
 
-  // HUD context is the default for input handling during gameplay
+  // HUD context is the default for input handling during gameplay.
   m_ctxCurrent = m_ctxHud;
 
-  // Lock mutex to synchronize with main thread Update - RmlUi is not
-  // thread-safe
-  std::lock_guard<std::mutex> lock(m_mtxHud);
-  RocketRenderD3D9::m_Instance.BeginFrame();
+  void *list = RocketRenderD3D9::m_Instance.BeginRecord();
   m_ctxHud->Render();
-  RocketRenderD3D9::m_Instance.EndFrame();
+  RocketRenderD3D9::m_Instance.EndRecord();
+  return list;
 }
 
-void RocketUIImpl::RenderMenuFrame() {
-  if (!rocket_enable.GetBool() || !m_pDevice || !m_bDeviceActive)
-    return;
+void *RocketUIImpl::RecordMenu() {
+  if (!rocket_enable.GetBool() || !m_ctxMenu)
+    return nullptr;
 
-  // When called from main menu (V_RenderVGuiOnly), set menu as current context
-  // When called during gameplay, don't change current context - just render
-  bool isInGame = m_ctxCurrent == m_ctxHud;
-
-  if (!isInGame) {
+  // Main menu (no HUD recorded this frame): make the menu the current context
+  // for input. During gameplay the HUD stays current (heuristic preserved).
+  if (m_ctxCurrent != m_ctxHud)
     m_ctxCurrent = m_ctxMenu;
-  }
 
-  // Lock mutex to synchronize with main thread Update - RmlUi is not
-  // thread-safe
-  std::lock_guard<std::mutex> lock(m_mtxMenu);
-  RocketRenderD3D9::m_Instance.BeginFrame();
+  void *list = RocketRenderD3D9::m_Instance.BeginRecord();
   m_ctxMenu->Render();
-  RocketRenderD3D9::m_Instance.EndFrame();
-  m_pShaderAPI->ResetRenderState(false);
+  RocketRenderD3D9::m_Instance.EndRecord();
+  return list;
+}
+
+// Replay (RENDER thread): execute a recorded list on the device, then free it.
+// FreeList also drains the release graveyard for finished frames. cmdList may
+// be nullptr (nothing recorded) -> just a no-op free.
+void RocketUIImpl::RenderHUDFrame(void *cmdList) {
+  RocketRenderD3D9 &r = RocketRenderD3D9::m_Instance;
+  if (cmdList && m_pDevice && m_bDeviceActive) {
+    r.BeginFrame();
+    r.Replay(cmdList);
+    r.EndFrame();
+  }
+  r.FreeList(cmdList);
+}
+
+void RocketUIImpl::RenderMenuFrame(void *cmdList) {
+  RocketRenderD3D9 &r = RocketRenderD3D9::m_Instance;
+  if (cmdList && m_pDevice && m_bDeviceActive) {
+    r.BeginFrame();
+    r.Replay(cmdList);
+    r.EndFrame();
+    m_pShaderAPI->ResetRenderState(false);
+  }
+  r.FreeList(cmdList);
 }
 
 bool RocketUIImpl::ReloadDocuments() {
   rocket_enable.SetValue(false);
   ThreadSleep(100);
 
+  // Reload runs on the main thread alongside recording; disabling rocket_enable
+  // stops new recording while documents are torn down/rebuilt, and released
+  // geometry is reclaimed safely via the frame-tagged graveyard.
   CUtlVector<CUtlPair<RocketDesinationContext_t,
                       CUtlPair<LoadDocumentFn, UnloadDocumentFn>>>
       copyOfPairs;
@@ -644,21 +668,24 @@ void RocketUIImpl::SetRenderingDevice(IDirect3DDevice9 *pDevice,
   if (!pDevice)
     return;
 
+  // Runs on the render/async-D3D thread (device callback). DEVICE work only;
+  // RmlUi context mutations (resize) are staged for the main thread via
+  // SetScreenSize -> ApplyPendingResize.
   if (m_pDevice == nullptr) {
     // First time initialization
     m_pDevice = pDevice;
     RocketRenderD3D9::m_Instance.Initialize(pDevice);
   } else {
-    // Device reset. DXVK keeps the SAME device pointer and preserves
-    // D3DPOOL_MANAGED resources across Reset(), so RmlUi's compiled
-    // geometry/textures stay valid and need no re-upload. Only a genuine device
-    // re-creation (a different pointer) invalidates them and needs a rebuild.
-    if (pDevice != m_pDevice) {
-      Rml::ReleaseCompiledGeometry(&RocketRenderD3D9::m_Instance);
-      Rml::ReleaseTextures(&RocketRenderD3D9::m_Instance);
-    }
+    // DXVK keeps the SAME device pointer and preserves D3DPOOL_MANAGED
+    // resources across Reset(), so RmlUi's cached geometry/textures stay valid.
+    // A genuine re-creation (different pointer) invalidates the underlying D3D9
+    // resources: bump the device generation so each live handle rebuilds its
+    // VB/IB/texture from retained CPU data on its next draw (render thread).
+    // The RmlUi-side handles stay valid, so there is nothing to release here.
+    if (pDevice != m_pDevice)
+      RocketRenderD3D9::m_Instance.BumpDeviceGen();
 
-    // Null m_pDevice DURING reinit so RunFrame doesn't render a
+    // Null m_pDevice DURING reinit so a replay doesn't touch a
     // half-initialized renderer.
     m_pDevice = nullptr;
     RocketRenderD3D9::m_Instance.Reinitialize(pDevice);
@@ -673,12 +700,26 @@ void RocketUIImpl::SetRenderingDevice(IDirect3DDevice9 *pDevice,
 }
 
 void RocketUIImpl::SetScreenSize(int width, int height) {
-  m_ctxCurrent = nullptr;
-
-  m_ctxHud->SetDimensions(Rml::Vector2i(width, height));
-  m_ctxMenu->SetDimensions(Rml::Vector2i(width, height));
-
+  // Called on the render/async-D3D thread (device callback). Set the executor's
+  // viewport now (render-thread state), but DEFER the RmlUi context resize to
+  // the main thread: SetDimensions mutates the element trees and must not race
+  // Update/Render on the main thread.
   RocketRenderD3D9::m_Instance.SetScreenSize(width, height);
+  m_pendingW.store(width, std::memory_order_relaxed);
+  m_pendingH.store(height, std::memory_order_relaxed);
+  m_resizePending.store(true, std::memory_order_release);
+}
+
+void RocketUIImpl::ApplyPendingResize() {
+  if (!m_resizePending.exchange(false, std::memory_order_acquire))
+    return;
+  const int w = m_pendingW.load(std::memory_order_relaxed);
+  const int h = m_pendingH.load(std::memory_order_relaxed);
+  m_ctxCurrent = nullptr;
+  if (m_ctxHud)
+    m_ctxHud->SetDimensions(Rml::Vector2i(w, h));
+  if (m_ctxMenu)
+    m_ctxMenu->SetDimensions(Rml::Vector2i(w, h));
 }
 
 void RocketUIImpl::ToggleDebugger() {
