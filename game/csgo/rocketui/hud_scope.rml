@@ -6,26 +6,69 @@
 				height: 100%;
 				pointer-events: none;
 			}
-			/* Black fill areas */
+			/* Black fill areas (letterbox around the scope square) */
 			.fill {
 				position: absolute;
 				background-color: #000;
 			}
-			/* Crosshair lines */
-			.line {
+			/* Reticle: a crisp solid core + soft gradient "wings" that grow from the
+			   core as the shot spreads. Axis-native — the vertical line's wings fade
+			   across width (horizontal-gradient), the horizontal line's across height
+			   (vertical-gradient). Both gradient stops are black so alpha fades clean. */
+			/* Reticle. Steady -> thin sharp solid lines (.core). Moving -> Valve's
+			   scope_line_blur sprite (.blur), tinted black; the horizontal line uses a
+			   transposed copy (.t.vtf) so the soft falloff runs across its thickness.
+			   C++ shows one pair and collapses the other to zero size (the original's
+			   sharp<->blur toggle). */
+			.core   { position: absolute; background-color: #000; }
+			.blur   { position: absolute; decorator: image(materials/sprites/scope_line_blur.vtf); image-color: #000; }
+			.blur-h { position: absolute; decorator: image(materials/sprites/scope_line_blur.t.vtf); image-color: #000; }
+			/* Scope square: C++ sizes/positions it to the viewport rect. Its four
+			   corners are masked into a circle by Valve's original scope_arc
+			   sprite (decoded straight from VTF). */
+			#scope { position: absolute; }
+			/* Lens dust + vignette overlay (Valve's original sprite), drawn under
+			   the mask/reticle. Fixed 78% opacity like the legacy scope. */
+			#lens {
 				position: absolute;
-				background-color: #000;
+				left: 0; top: 0;
+				width: 100%; height: 100%;
+				opacity: 0.78;
+				decorator: image( materials/overlays/scope_lens.vtf );
 			}
+			.arc {
+				position: absolute;
+				width: 50%;
+				height: 50%;
+				decorator: image( materials/sprites/scope_arc.vtf );
+			}
+			/* scope_arc's opaque corner is texture (1,1) = bottom-right, so the
+			   bottom-right quadrant needs no flip; the others mirror into place. */
+			#arc-tl { left: 0; top: 0; transform: scale(-1, -1); }
+			#arc-tr { right: 0; top: 0; transform: scaleY(-1); }
+			#arc-br { right: 0; bottom: 0; }
+			#arc-bl { left: 0; bottom: 0; transform: scaleX(-1); }
 		</style>
 	</head>
 	<body>
+		<!-- Lens dust overlay (under everything) -->
+		<div id="lens"/>
 		<!-- Black fills around scope viewport -->
 		<div id="fill-top" class="fill"/>
 		<div id="fill-bottom" class="fill"/>
 		<div id="fill-left" class="fill"/>
 		<div id="fill-right" class="fill"/>
-		<!-- Crosshair lines -->
-		<div id="line-h" class="line"/>
-		<div id="line-v" class="line"/>
+		<!-- Circular corner mask -->
+		<div id="scope">
+			<div id="arc-tl" class="arc"/>
+			<div id="arc-tr" class="arc"/>
+			<div id="arc-br" class="arc"/>
+			<div id="arc-bl" class="arc"/>
+		</div>
+		<!-- Crosshair reticle: sharp solid lines (steady) + soft sprite lines (moving) -->
+		<div id="v-blur" class="blur"/>
+		<div id="h-blur" class="blur-h"/>
+		<div id="v-core" class="core"/>
+		<div id="h-core" class="core"/>
 	</body>
 </rml>

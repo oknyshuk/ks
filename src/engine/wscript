@@ -38,6 +38,7 @@ def build(bld):
         "quickhull",
         "protobuf",
         "JPEG",
+        "ZLIB",
         "bzip2",
         "mojoAL",
         "SDL3",

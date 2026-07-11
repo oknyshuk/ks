@@ -16,6 +16,7 @@
 #endif
 
 #include "rocketrender.h"
+#include "rocketfilesystem.h"
 #include <RmlUi/Core.h>
 
 #include <d3d9.h>
@@ -475,6 +476,41 @@ struct TGAHeader {
 Rml::TextureHandle
 RocketRenderD3D9::LoadTexture(Rml::Vector2i &texture_dimensions,
                               const Rml::String &source) {
+  // Reuse original engine sprites directly: a ".vtf" source is decoded via the
+  // engine's VTF loader (which also reads from VPKs), so RmlUi documents can
+  // reference e.g. "materials/sprites/scope_arc.vtf".
+  if (source.size() >= 4 && source.compare(source.size() - 4, 4, ".vtf") == 0) {
+    // A ".t.vtf" suffix requests a transposed (90°-rotated) copy of the sprite,
+    // so a horizontal line can reuse a vertically-oriented sprite without
+    // rotating the element (the image decorator can't reorient texture UVs).
+    bool transpose = false;
+    Rml::String path = source;
+    const size_t tlen = 6; // ".t.vtf"
+    if (source.size() >= tlen &&
+        source.compare(source.size() - tlen, tlen, ".t.vtf") == 0) {
+      transpose = true;
+      path = source.substr(0, source.size() - tlen) + ".vtf";
+    }
+    std::vector<unsigned char> rgba;
+    int w = 0, h = 0;
+    if (!RocketLoadVTF_RGBA(path.c_str(), rgba, w, h))
+      return {};
+    if (transpose) {
+      std::vector<unsigned char> t((size_t)w * h * 4);
+      for (int y = 0; y < h; y++)
+        for (int x = 0; x < w; x++) {
+          const unsigned char *s = &rgba[((size_t)y * w + x) * 4];
+          unsigned char *d = &t[((size_t)x * h + y) * 4];
+          d[0] = s[0]; d[1] = s[1]; d[2] = s[2]; d[3] = s[3];
+        }
+      rgba.swap(t);
+      std::swap(w, h);
+    }
+    texture_dimensions.x = w;
+    texture_dimensions.y = h;
+    return GenerateTexture({rgba.data(), rgba.size()}, texture_dimensions);
+  }
+
   Rml::FileInterface *file_interface = Rml::GetFileInterface();
   Rml::FileHandle file_handle = file_interface->Open(source);
   if (!file_handle)

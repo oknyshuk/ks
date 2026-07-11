@@ -2,6 +2,14 @@
 #define ROCKETFILESYSTEM_H
 
 #include <RmlUi/Core/FileInterface.h>
+#include <vector>
+
+// Decode a Valve .vtf texture (from the game filesystem, incl. VPKs) to RGBA8888.
+// Lets RmlUi reuse the original engine sprites directly (see LoadTexture).
+// gamePath is relative to a GAME search path, e.g. "materials/sprites/scope_arc.vtf".
+// Returns false if the file is missing or not a valid VTF.
+bool RocketLoadVTF_RGBA(const char *gamePath, std::vector<unsigned char> &outRGBA,
+                        int &outWidth, int &outHeight);
 
 class RocketFileSystem : public Rml::FileInterface {
 public:

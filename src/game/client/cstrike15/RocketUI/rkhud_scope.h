@@ -29,9 +29,12 @@ public:
     Rml::Element *m_fillLeft;
     Rml::Element *m_fillRight;
 
-    // Crosshair lines
-    Rml::Element *m_lineH;
-    Rml::Element *m_lineV;
+    // Centered square whose corners scope_arc masks into a circle
+    Rml::Element *m_scope;
+
+    // Reticle elements: 0=v-core, 1=h-core (sharp, steady),
+    //                   2=v-blur, 3=h-blur (soft sprite, moving)
+    Rml::Element *m_reticle[4];
 
 private:
     void UpdateScope();

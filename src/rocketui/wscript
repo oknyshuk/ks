@@ -40,6 +40,9 @@ def build(bld):
         "tier3",
         "vstdlib",
         "interfaces",
+        "bitmap",
+        "vtf",
+        "mathlib",
         "RmlCore",
         "RmlDebugger",
     ]

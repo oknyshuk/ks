@@ -55,8 +55,11 @@ static void LoadRkScope()
     pScope->m_fillBottom = pScope->m_pDocument->GetElementById( "fill-bottom" );
     pScope->m_fillLeft = pScope->m_pDocument->GetElementById( "fill-left" );
     pScope->m_fillRight = pScope->m_pDocument->GetElementById( "fill-right" );
-    pScope->m_lineH = pScope->m_pDocument->GetElementById( "line-h" );
-    pScope->m_lineV = pScope->m_pDocument->GetElementById( "line-v" );
+    pScope->m_scope = pScope->m_pDocument->GetElementById( "scope" );
+
+    static const char *kReticleIds[4] = { "v-core", "h-core", "v-blur", "h-blur" };
+    for( int i = 0; i < 4; i++ )
+        pScope->m_reticle[i] = pScope->m_pDocument->GetElementById( kReticleIds[i] );
 
     pScope->ShowPanel( false, false );
 }
@@ -68,8 +71,8 @@ RkHudScope::RkHudScope( const char *pElementName ) : CHudElement( pElementName )
     m_fillBottom( nullptr ),
     m_fillLeft( nullptr ),
     m_fillRight( nullptr ),
-    m_lineH( nullptr ),
-    m_lineV( nullptr ),
+    m_scope( nullptr ),
+    m_reticle{},
     m_fAnimInset( 1.0f ),
     m_fLineSpreadDistance( 1.0f )
 {
@@ -90,6 +93,18 @@ void RkHudScope::LevelInit()
 void RkHudScope::LevelShutdown()
 {
     UnloadRkScope();
+}
+
+static void SetReticleRect( Rml::Element *e, int x, int y, int w, int h, const char *op )
+{
+    if( !e )
+        return;
+    char b[32];
+    V_snprintf( b, sizeof(b), "%dpx", x ); e->SetProperty( "left", b );
+    V_snprintf( b, sizeof(b), "%dpx", y ); e->SetProperty( "top", b );
+    V_snprintf( b, sizeof(b), "%dpx", w ); e->SetProperty( "width", b );
+    V_snprintf( b, sizeof(b), "%dpx", h ); e->SetProperty( "height", b );
+    e->SetProperty( "opacity", op );
 }
 
 void RkHudScope::UpdateScope()
@@ -179,6 +194,15 @@ void RkHudScope::UpdateScope()
 
     char buf[32];
 
+    // Size the circular corner-mask square to the scope viewport rect.
+    if( m_scope )
+    {
+        V_snprintf( buf, sizeof(buf), "%dpx", x1 );        m_scope->SetProperty( "left", buf );
+        V_snprintf( buf, sizeof(buf), "%dpx", y1 );        m_scope->SetProperty( "top", buf );
+        V_snprintf( buf, sizeof(buf), "%dpx", x2 - x1 );   m_scope->SetProperty( "width", buf );
+        V_snprintf( buf, sizeof(buf), "%dpx", y2 - y1 );   m_scope->SetProperty( "height", buf );
+    }
+
     // Position fill rectangles (black areas around scope viewport)
     // Top: full width, from 0 to y1
     if( m_fillTop )
@@ -228,33 +252,46 @@ void RkHudScope::UpdateScope()
         m_fillRight->SetProperty( "height", buf );
     }
 
-    // Line thickness from convar
-    int lineWidth = cl_crosshair_sniper_width.GetInt();
-    if( lineWidth < 1 )
-        lineWidth = 1;
+    // Reticle: a crisp solid core plus soft gradient wings that grow out of the
+    // core with movement/inaccuracy. Axis-native (no rotation); at rest the
+    // wings collapse to zero size, leaving only the crisp core. Spread magnitude
+    // mirrors the legacy CHudScope.
+    // Reticle: faithful port of the legacy CHudScope — a hard toggle between a
+    // thin sharp solid line (steady) and Valve's scope_line_blur sprite (moving),
+    // the sprite widening + fading with shot spread. The sprite's soft alpha
+    // profile (vs a solid bar) is what keeps the viewport from darkening.
+    int thickness = cl_crosshair_sniper_width.GetInt();
+    if( thickness < 1 )
+        thickness = 1;
 
-    // Horizontal line (full width, centered vertically)
-    if( m_lineH )
+    float fBlurWidth = powf( m_fLineSpreadDistance, 0.75f );
+    float fScreenBlurWidth = fBlurWidth * screenTall / 640.0f;
+    bool steady = ( fScreenBlurWidth <= thickness + 0.5f );
+
+    float a = steady ? ( ( fBlurWidth < 1.0f ) ? 1.0f : 1.0f / fBlurWidth )
+                     : ( ( fBlurWidth < 1.8f ) ? 1.0f : 1.8f / fBlurWidth );
+    a = clamp( sqrtf( a ), 140.0f / 255.0f, 1.0f );
+    char op[16];
+    V_snprintf( op, sizeof(op), "%.3f", a );
+
+    if( steady )
     {
-        m_lineH->SetProperty( "left", "0px" );
-        V_snprintf( buf, sizeof(buf), "%dpx", centerY - lineWidth / 2 );
-        m_lineH->SetProperty( "top", buf );
-        V_snprintf( buf, sizeof(buf), "%dpx", screenWide );
-        m_lineH->SetProperty( "width", buf );
-        V_snprintf( buf, sizeof(buf), "%dpx", lineWidth );
-        m_lineH->SetProperty( "height", buf );
+        // Sharp thin solid cross; collapse the blur sprites to zero size.
+        SetReticleRect( m_reticle[0], centerX - thickness / 2, 0, thickness, screenTall, op );
+        SetReticleRect( m_reticle[1], 0, centerY - thickness / 2, screenWide, thickness, op );
+        SetReticleRect( m_reticle[2], 0, 0, 0, 0, op );
+        SetReticleRect( m_reticle[3], 0, 0, 0, 0, op );
     }
-
-    // Vertical line (full height, centered horizontally)
-    if( m_lineV )
+    else
     {
-        V_snprintf( buf, sizeof(buf), "%dpx", centerX - lineWidth / 2 );
-        m_lineV->SetProperty( "left", buf );
-        m_lineV->SetProperty( "top", "0px" );
-        V_snprintf( buf, sizeof(buf), "%dpx", lineWidth );
-        m_lineV->SetProperty( "width", buf );
-        V_snprintf( buf, sizeof(buf), "%dpx", screenTall );
-        m_lineV->SetProperty( "height", buf );
+        // Soft blur sprite cross (widens + fades); collapse the sharp cross.
+        int bw = (int)( 2.0f * fScreenBlurWidth );
+        if( bw < 3 )
+            bw = 3; // keep the soft sprite from sampling to nothing near the toggle
+        SetReticleRect( m_reticle[2], centerX - bw / 2, 0, bw, screenTall, op );
+        SetReticleRect( m_reticle[3], 0, centerY - bw / 2, screenWide, bw, op );
+        SetReticleRect( m_reticle[0], 0, 0, 0, 0, op );
+        SetReticleRect( m_reticle[1], 0, 0, 0, 0, op );
     }
 }
 
