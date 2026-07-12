@@ -2934,7 +2934,7 @@ CON_COMMAND_F( save, "Saves current game.", FCVAR_DONTRECORD )
 		return;
 	}
 
-	if ( ( engineClient->IsInCommentaryMode() || ( scr_drawloading && EngineVGui()->IsGameUIVisible() ) ) && V_stristr( args[1], "quick" ) )
+	if ( ( ( scr_drawloading && EngineVGui()->IsGameUIVisible() ) ) && V_stristr( args[1], "quick" ) )
 	{
 		return;
 	}
@@ -3020,9 +3020,6 @@ CON_COMMAND_F( minisave, "Saves game (for current level only!)", FCVAR_DONTRECOR
 
 static void AutoSave_Silent( bool bDangerous )
 {
-	if ( g_bInCommentaryMode )
-		return;
-
 	// Can we save at this point?
 	if ( !saverestore->IsValidSave() )
 		return;
@@ -3079,9 +3076,6 @@ CON_COMMAND( autosave, "Autosave" )
 	if ( !serverGameDLL->SupportsSaveRestore() )
 		return;
 
-	if ( g_bInCommentaryMode )
-		return;
-
 	bool bConsole = IsGameConsole() || save_console.GetBool();
 	if ( bConsole )
 	{
@@ -3108,9 +3102,6 @@ CON_COMMAND( autosavedangerous, "AutoSaveDangerous" )
 		return;
 
 	if ( !serverGameDLL->SupportsSaveRestore() )
-		return;
-
-	if ( g_bInCommentaryMode )
 		return;
 
 	bool bConsole = IsGameConsole() || save_console.GetBool();
@@ -3212,7 +3203,7 @@ void Host_Loadgame_f( const CCommand &args )
 		return;
 	}
 
-	if ( ( engineClient->IsInCommentaryMode() || ( scr_drawloading && EngineVGui()->IsGameUIVisible() ) ) && V_stristr( args[1], "quick" ) )
+	if ( ( ( scr_drawloading && EngineVGui()->IsGameUIVisible() ) ) && V_stristr( args[1], "quick" ) )
 	{
 		return;
 	}

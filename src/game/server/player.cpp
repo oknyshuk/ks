@@ -128,9 +128,6 @@ static ConVar sv_maxusrcmdprocessticks( "sv_maxusrcmdprocessticks", "16", FCVAR_
 
 static ConVar old_armor( "player_old_armor", "0" );
 
-bool IsInCommentaryMode( void );
-bool IsListeningToCommentary( void );
-
 // This is declared in the engine, too
 ConVar	sv_noclipduringpause( "sv_noclipduringpause", "0", FCVAR_REPLICATED | FCVAR_CHEAT, "If cheats are enabled, then you can noclip with the game paused (for doing screenshots, etc.)." );
 
@@ -1160,35 +1157,6 @@ void CBasePlayer::DamageEffect(float flDamage, int fDamageType)
 #define ARMOR_RATIO	0.2
 #define ARMOR_BONUS	1.0
 
-//---------------------------------------------------------
-//---------------------------------------------------------
-bool CBasePlayer::ShouldTakeDamageInCommentaryMode( const CTakeDamageInfo &inputInfo )
-{
-	// Only ignore damage when we're listening to a commentary node
-	if ( !IsListeningToCommentary() )
-		return true;
-
-	// Allow SetHealth inputs to kill player.
-	if ( inputInfo.GetInflictor() == this && inputInfo.GetAttacker() == this )
-		return true;
-
-#ifdef PORTAL
-	if ( inputInfo.GetDamageType() & DMG_ACID )
-		return true;
-#endif
-
-	// In commentary, ignore all damage except for falling and leeches
-	if ( !(inputInfo.GetDamageType() & (DMG_BURN | DMG_PLASMA | DMG_FALL | DMG_CRUSH)) && inputInfo.GetDamageType() != DMG_GENERIC )
-		return false;
-
-	// We let DMG_CRUSH pass the check above so that we can check here for stress damage. Deny the CRUSH damage if there is no attacker,
-	// or if the attacker isn't a BSP model. Therefore, we're allowing any CRUSH damage done by a BSP model.
-	if ( (inputInfo.GetDamageType() & DMG_CRUSH) && ( inputInfo.GetAttacker() == NULL || !inputInfo.GetAttacker()->IsBSPModel() ) )
-		return false;
-
-	return true;
-}
-
 int CBasePlayer::OnTakeDamage( const CTakeDamageInfo &inputInfo )
 {
 	// have suit diagnose the problem - ie: report damage type
@@ -1209,12 +1177,6 @@ int CBasePlayer::OnTakeDamage( const CTakeDamageInfo &inputInfo )
 	{
 		// Let the vehicle decide if we should take this damage or not
 		if ( pVehicle->PassengerShouldReceiveDamage( info ) == false )
-			return 0;
-	}
-
- 	if ( IsInCommentaryMode() )
-	{
-		if( !ShouldTakeDamageInCommentaryMode( info ) )
 			return 0;
 	}
 

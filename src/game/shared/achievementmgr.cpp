@@ -990,8 +990,6 @@ void CAchievementMgr::PostRestoreSavedGame()
 	}
 }
 
-extern bool IsInCommentaryMode( void );
-
 ConVar	cc_achievement_disable("achievement_disable", "0", FCVAR_CHEAT | FCVAR_REPLICATED, "Turn off achievements." );
 
 //-----------------------------------------------------------------------------
@@ -1025,13 +1023,6 @@ bool CAchievementMgr::CheckAchievementsEnabled( )
 		}
 	}
 #endif
-
-	// can't be in commentary mode, user is invincible
-	if ( IsInCommentaryMode() )
-	{
-		Msg( "Achievements disabled: in commentary mode.\n" );
-		return false;
-	}
 
 #ifdef CLIENT_DLL
 	// achievements disabled if playing demo (Playback demo) or watching HLTV

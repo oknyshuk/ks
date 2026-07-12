@@ -21,7 +21,6 @@
 #include "ienginevgui.h"
 #include "c_playerresource.h"
 #include "cstrike15/c_cs_playerresource.h"
-#include "ihudlcd.h"
 #include "vgui/IInput.h"
 #include "vgui/ILocalize.h"
 #include "multiplay_gamerules.h"
@@ -77,21 +76,6 @@ static const char *gBugTokenTable[] = {
 	"feat", "feature",
 	NULL
 };
-
-
-// [jason] Forward Printf messages to the Scaleform voicestatus panel
-#if defined ( CSTRIKE15 )
-inline void CS15ForwardStatusMsg( const char* text, int clientid )
-{
-	/* Removed for partner depot */
-	ConMsg("[forwardstatusmsg]%s", text);
-}
-inline void CS15ForwardStatusMsg( const wchar_t* text, int clientid )
-{
-	/* Removed for partner depot */
-	ConMsg("[forwardstatusmsg]%ls", text);
-}
-#endif // CSTRIKE15
 
 
 // removes all color markup characters, so Msg can deal with the string properly
@@ -1843,21 +1827,9 @@ void	CBaseHudChat::ChatPrintfW( int iPlayerIndex, int iFilter, const wchar_t *ws
 			return; // cannot print potentially personal details
 	}
 
-	// Forward message to Scaleform for display
-#if defined( CSTRIKE15 ) 
-
-	if ( iFilter != CHAT_FILTER_NONE )
-	{
-		if ( !( iFilter & GetFilterFlags() ) )
-			return;
-	}
-
-	CS15ForwardStatusMsg( wszNotice, iPlayerIndex );	
-	return;
-
-#else
-	Assert( 0 );
-#endif // CSTRIKE15
+	char ansi[4096];
+	g_pVGuiLocalize->ConvertUnicodeToANSI( wszNotice, ansi, sizeof( ansi ) );
+	ChatPrintf( iPlayerIndex, iFilter, "%s", ansi );
 }
 
 //-----------------------------------------------------------------------------
@@ -1901,20 +1873,6 @@ void CBaseHudChat::ChatPrintf( int iPlayerIndex, int iFilter, const char *fmt, .
 	if ( !*pmsg )
 		return;
 
-	// [jason] Forward message to Scaleform for display
-#if defined( CSTRIKE15 ) 
-
-	if ( iFilter != CHAT_FILTER_NONE )
-	{
-		if ( !( iFilter & GetFilterFlags() ) )
-			return;
-	}
-
-	CS15ForwardStatusMsg( pmsg, iPlayerIndex );	
-	return;
-
-#endif // CSTRIKE15
-
 	// Now strip just newlines, since we want the color info for printing
 	pmsg = msg;
 	while ( *pmsg && ( *pmsg == '\n' ) )
@@ -1947,17 +1905,6 @@ void CBaseHudChat::ChatPrintf( int iPlayerIndex, int iFilter, const char *fmt, .
 			return;
 	}
 
-	if ( hudlcd )
-	{
-		if ( *pmsg < 32 )
-		{
-			hudlcd->AddChatLine( pmsg + 1 );
-		}
-		else
-		{
-			hudlcd->AddChatLine( pmsg );
-		}
-	}
 
 	line->SetText( "" );
 

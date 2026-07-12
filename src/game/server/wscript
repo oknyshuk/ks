@@ -161,7 +161,6 @@ def build(bld):
         "../shared/collisionproperty.cpp",
         "colorcorrection.cpp",
         "colorcorrectionvolume.cpp",
-        "CommentarySystem.cpp",
         "controlentities.cpp",
         "cplane.cpp",
         "CRagdollMagnet.cpp",

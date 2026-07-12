@@ -3010,7 +3010,6 @@ void CAI_BaseNPC::PostMovement()
 //-----------------------------------------------------------------------------
 
 float g_AINextDisabledMessageTime;
-extern bool IsInCommentaryMode( void );
 
 bool CAI_BaseNPC::PreThink( void )
 {
@@ -3023,7 +3022,7 @@ bool CAI_BaseNPC::PreThink( void )
 #ifndef PORTAL2
 	if ( (CAI_BaseNPC::m_nDebugBits & bits_debugDisableAI || !g_pAINetworkManager->NetworksLoaded()) )
 	{
-		if ( gpGlobals->curtime >= g_AINextDisabledMessageTime && !IsInCommentaryMode() )
+		if ( gpGlobals->curtime >= g_AINextDisabledMessageTime )
 		{
 			g_AINextDisabledMessageTime = gpGlobals->curtime + 0.5f;
 

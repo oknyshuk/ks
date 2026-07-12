@@ -35,8 +35,6 @@
 
 #ifndef CLIENT_DLL
 CUtlVector< CHandle<CTeamControlPointMaster> >		g_hControlPointMasters;
-
-extern bool IsInCommentaryMode( void );
 #endif
 
 extern ConVar spec_freeze_time;
@@ -223,7 +221,6 @@ static const char *s_PreserveEnts[] =
 	"info_node",
 	"info_target",
 	"info_node_hint",
-	"point_commentary_node",
 	"point_viewcontrol",
 	"func_precipitation",
 	"func_team_wall",
@@ -232,7 +229,6 @@ static const char *s_PreserveEnts[] =
 	"scene_manager",
 	"trigger_soundscape",
 	"commentary_auto",
-	"point_commentary_viewpoint",
 	"wearable_item",
 	"", // END Marker
 };
@@ -1185,10 +1181,6 @@ void CTeamplayRoundBasedRules::State_Think_PREGAME( void )
 	if ( IsLoadingBugBaitReport() || gpGlobals->eLoadType == MapLoad_Background )
 		return;
 
-	// Commentary stays in this mode too
-	if ( IsInCommentaryMode() )
-		return;
-	
 	if( CountActivePlayers() > 0 || (IsInArenaMode() == true && m_flWaitingForPlayersTimeEnds == 0.0f) )
 	{
 		State_Transition( GR_STATE_STARTGAME );			
@@ -1750,10 +1742,6 @@ void CTeamplayRoundBasedRules::State_Think_RESTART( void )
 //-----------------------------------------------------------------------------
 void CTeamplayRoundBasedRules::SetWinningTeam( int team, int iWinReason, bool bForceMapReset /* = true */, bool bSwitchTeams /* = false*/, bool bDontAddScore /* = false*/ )
 {
-	// Commentary doesn't let anyone win
-	if ( IsInCommentaryMode() )
-		return;
-
 	if ( ( team != TEAM_UNASSIGNED ) && ( team <= LAST_SHARED_TEAM || team >= GetNumberOfTeams() ) )
 	{
 		Assert( !"SetWinningTeam() called with invalid team." );
@@ -2829,11 +2817,6 @@ bool CTeamplayRoundBasedRules::AreTeamsUnbalanced( int &iHeaviestTeam, int &iLig
 			return false;
 		}
 	}
-
-#ifndef CLIENT_DLL
-	if ( IsInCommentaryMode() )
-		return false;
-#endif
 
 	int iMostPlayers = 0;
 	int iLeastPlayers = MAX_PLAYERS + 1;

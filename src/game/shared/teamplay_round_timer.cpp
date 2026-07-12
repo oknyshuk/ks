@@ -65,8 +65,6 @@ enum
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
-extern bool IsInCommentaryMode();
-
 #ifdef CLIENT_DLL
 
 // Use this proxy to flash the round timer whenever the timer is restarted
@@ -434,7 +432,7 @@ void CTeamRoundTimer::CalculateOutputMessages( void )
 //-----------------------------------------------------------------------------
 void CTeamRoundTimer::ClientThink()
 {
-	if ( IsDisabled() || m_bTimerPaused || IsInCommentaryMode() )
+	if ( IsDisabled() || m_bTimerPaused )
 		return;
 
 	if ( IsStopWatchTimer() == true && IsWatchingTimeStamps() == true )
@@ -836,7 +834,7 @@ void CTeamRoundTimer::RoundTimerThink( void )
 		InputDisable( data );
 	}
 
-	if ( IsDisabled() || m_bTimerPaused || IsInCommentaryMode() || gpGlobals->eLoadType == MapLoad_Background )
+	if ( IsDisabled() || m_bTimerPaused || gpGlobals->eLoadType == MapLoad_Background )
 	{
 		SetContextThink( &CTeamRoundTimer::RoundTimerThink, gpGlobals->curtime + 0.05, ROUND_TIMER_THINK );
 		return;

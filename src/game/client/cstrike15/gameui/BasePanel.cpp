@@ -48,24 +48,15 @@ using namespace vgui;
 #include "vgui_controls/ControllerMap.h"
 #include "tier0/icommandline.h"
 #include "tier1/convar.h"
-#include "newgamedialog.h"
-#include "bonusmapsdialog.h"
-#include "loadgamedialog.h"
-#include "savegamedialog.h"
-#include "optionsdialog.h"
 #include "createmultiplayergamedialog.h"
 
-#include "changegamedialog.h"
 #include "backgroundmenubutton.h"
 #include "playerlistdialog.h"
-#include "benchmarkdialog.h"
-#include "loadcommentarydialog.h"
 #include "bonusmapsdatabase.h"
 #include "engine/IEngineSound.h"
 #include "bitbuf.h"
 #include "tier1/fmtstr.h"
 #include "inputsystem/iinputsystem.h"
-#include "optionssubaudio.h"
 #if defined( _X360 )
 #include "../common/xlast_csgo/csgo.spa.h"
 #endif
@@ -660,8 +651,6 @@ CBaseModPanel::CBaseModPanel( const char *panelName ) : Panel(NULL, panelName )
 		// do any costly resource prefetching now....
 		// force the new dialog to get all of its chapter pics
 		g_bIsCreatingNewGameMenuForPreFetching = true;
-		m_hNewGameDialog = new CNewGameDialog( this, false );
-		m_hNewGameDialog->MarkForDeletion();
 		g_bIsCreatingNewGameMenuForPreFetching = false;
 
 #if 0
@@ -672,7 +661,7 @@ CBaseModPanel::CBaseModPanel( const char *panelName ) : Panel(NULL, panelName )
 		m_hControllerDialog->MarkForDeletion();
 #endif
 		
-        if ( !IsStartScreenEnabled() && !IsScaleformIntroMovieEnabled() && !m_bBypassStartScreen )
+        if ( !IsStartScreenEnabled() && !m_bBypassStartScreen )
 		{
 			ArmFirstMenuItem();
 			m_pConsoleAnimationController->StartAnimationSequence( "InitializeUILayout" );
@@ -1163,8 +1152,7 @@ void CBaseModPanel::OnLevelLoadingStarted( const char *levelName, bool bShowProg
 //-----------------------------------------------------------------------------
 void CBaseModPanel::OnLevelLoadingFinished()
 {
-	// [jason] $FIXME: Switch back to Scaleform, unless we are still using vgui for Pause Menu
-	if ( m_bScaleformPauseMenuEnabled || m_bRocketPauseMenuEnabled )
+	if ( m_bRocketPauseMenuEnabled )
 	{
 		ShowMainMenu( false );
 	}
@@ -1186,10 +1174,6 @@ void CBaseModPanel::OnLevelLoadingFinished()
 //-----------------------------------------------------------------------------
 void CBaseModPanel::DrawBackgroundImage()
 {
-	// [jason] Only render background if the Scaleform main menu is inactive
-	if ( IsScaleformMainMenuEnabled() && IsScaleformMainMenuActive() )
-		return;
-
 	// Skip background image when RocketUI is enabled (it draws its own background)
 	if ( IsRocketMainMenuEnabled() )
 		return;
@@ -1282,7 +1266,7 @@ void CBaseModPanel::DrawBackgroundImage()
 	}
 
 	// update the menu alpha
-    if ( !IsStartScreenEnabled() && !m_bBypassStartScreen && m_bFadingInMenus && !IsScaleformIntroMovieEnabled() )
+    if ( !IsStartScreenEnabled() && !m_bBypassStartScreen && m_bFadingInMenus )
 	{
 		if ( GameUI().IsConsoleUI() )
 		{
@@ -1578,27 +1562,7 @@ void CBaseModPanel::RunFrame()
 	UpdateLobbyBrowser();
 	UpdateMainMenuScreen();
 
-    if ( IsScaleformIntroMovieEnabled() )
-    {
-        if ( m_bIntroMovieWaitForButtonToClear )
-        {
-            if ( !g_pInputSystem->IsButtonDown( ( ButtonCode_t ) m_iIntroMovieButtonPressed ) )
-            {
-                m_bIntroMovieWaitForButtonToClear = false;
-                m_iIntroMovieButtonPressed = -1;
-            }
-        }
-        else if ( m_iIntroMovieButtonPressed == -1 )
-        {
-            m_iIntroMovieButtonPressed = CheckForAnyKeyPressed( !IsX360() );
-        }
-        else if ( !g_pInputSystem->IsButtonDown( ( ButtonCode_t ) m_iIntroMovieButtonPressed ) )
-        {
-            DismissScaleformIntroMovie();
-            m_iIntroMovieButtonPressed = -1;
-        }
-    }
-    else if ( IsStartScreenEnabled() )
+    if ( IsStartScreenEnabled() )
 	{
 		// If we're flagged to bypass the screen, just treat it as if sign-in naturally occurred
 		if ( m_bBypassStartScreen )
@@ -2102,14 +2066,7 @@ void CBaseModPanel::OnGameUIActivated()
 		}
 	}
 
-    if ( IsScaleformIntroMovieEnabled() )
-    {
-        CreateScaleformIntroMovie();
-    }
-    else
-    {
-        CreateStartScreenIfNeeded();
-    }
+    CreateStartScreenIfNeeded();
 
 	if ( GameUI().IsInLevel() )
 	{
@@ -2119,7 +2076,7 @@ void CBaseModPanel::OnGameUIActivated()
 			static ConVarRef cv_console_window_open( "console_window_open" );
 			if ( !IsPC() || !cv_console_window_open.GetBool() )
 			{
-				if (m_bScaleformPauseMenuEnabled || m_bRocketPauseMenuEnabled)
+				if (m_bRocketPauseMenuEnabled)
 				{
 					OnOpenPauseMenu();
 				}
@@ -2143,15 +2100,15 @@ void CBaseModPanel::OnGameUIActivated()
 	else // not the pause menu, update presence
 	{
 		// [jason] Safety check: If we're not in level, be sure that the pause menu is hidden
-		if ( IsScaleformPauseMenuActive() || IsRocketPauseMenuActive() )
+		if ( IsRocketPauseMenuActive() )
 		{
 			DismissPauseMenu();
 		}
 		
 		// [jason] If we are bringing the main menu UI up again (not start screen or loading) then ensure we have raised the main menu
-		if ( !m_bLevelLoading && !IsScaleformIntroMovieEnabled() &&
+		if ( !m_bLevelLoading &&
 			!IsStartScreenActive() && 
-			(IsScaleformMainMenuEnabled() && !IsScaleformMainMenuActive()) || (IsRocketMainMenuEnabled() && !IsRocketMainMenuActive()) )
+			IsScaleformMainMenuEnabled() || (IsRocketMainMenuEnabled() && !IsRocketMainMenuActive()) )
 		{
 			ShowMainMenu( false );
 			ShowScaleformMainMenu( true );
@@ -2173,10 +2130,7 @@ static bool IsVguiCommandOverScaleform(const char *command)
 	// If Scaleform isn't enabled and active for front-end/in-game, then this doesn't require any special handling
 	if ( GameUI().IsInLevel() )
 	{
-		if ( !BasePanel()->IsScaleformPauseMenuEnabled() )
-		{
-			return false;
-		}
+		return false;
 	}
 	else
 	{
@@ -2586,13 +2540,6 @@ void CBaseModPanel::RunMenuCommand(const char *command)
 	else if ( !Q_stricmp( command, "ReleaseModalWindow" ) )
 	{
 		vgui::surface()->RestrictPaintToSinglePanel(NULL);
-
-		// [jason] $FIXME: If we had a modal vgui dialog active over Scaleform, we need to restore Scaleform afterwards
-		if ( IsScaleformMainMenuActive() || IsScaleformPauseMenuActive() )
-		{
-			m_MessageDialogHandler.CloseAllMessageDialogs();
-			NotifyVguiDialogClosed();
-		}
 	}
 	else if ( Q_stristr( command, "engine " ) ) // $$$REI Arbitrary console command execution from UI
 	{
@@ -2678,7 +2625,7 @@ void CBaseModPanel::RunMenuCommand(const char *command)
 #endif
 			V_strcat( szSteamURL, szAppId, sizeof( szSteamURL ) );
 			V_strcat( szSteamURL, "/", sizeof( szSteamURL ) );
-			V_strcat( szSteamURL, COptionsSubAudio::GetUpdatedAudioLanguage(), sizeof( szSteamURL ) );
+			V_strcat( szSteamURL, "", sizeof( szSteamURL ) );
 
 			// Set Steam URL for re-launch in registry. Launcher will check this registry key and exec it in order to re-load the game in the proper language
 			// @wge HACK FIXME - Windows specific registry code.
@@ -3291,17 +3238,6 @@ public:
 		}
 		else if (!Q_stricmp(command, "SaveAndQuit"))
 		{
-			// find a new name to save
-			char saveName[128];
-			CSaveGameDialog::FindSaveSlot( saveName, sizeof(saveName) );
-			if ( saveName && saveName[ 0 ] )
-			{
-				// save the game
-				char sz[ 256 ];
-				Q_snprintf(sz, sizeof( sz ), "save %s\n", saveName );
-				engine->ClientCmd_Unrestricted( sz );
-			}
-
 			// quit
 			PostMessage(GetVParent(), new KeyValues("Command", "command", "QuitNoConfirm"));
 		}
@@ -3434,19 +3370,7 @@ void CBaseModPanel::OnOpenDisconnectConfirmationDialog()
 //-----------------------------------------------------------------------------
 void CBaseModPanel::OnOpenNewGameDialog(const char *chapter )
 {
-	if ( !m_hNewGameDialog.Get() )
-	{
-		m_hNewGameDialog = new CNewGameDialog(this, false);
-		PositionDialog( m_hNewGameDialog );
-	}
-
-	if ( chapter )
-	{
-		((CNewGameDialog *)m_hNewGameDialog.Get())->SetSelectedChapter(chapter);
-	}
-
-	((CNewGameDialog *)m_hNewGameDialog.Get())->SetCommentaryMode( false );
-	m_hNewGameDialog->Activate();
+	// Legacy single-player New Game dialog removed (RmlUi front-end).
 }
 
 //-----------------------------------------------------------------------------
@@ -3454,13 +3378,7 @@ void CBaseModPanel::OnOpenNewGameDialog(const char *chapter )
 //-----------------------------------------------------------------------------
 void CBaseModPanel::OnOpenBonusMapsDialog( void )
 {
-	if ( !m_hBonusMapsDialog.Get() )
-	{
-		m_hBonusMapsDialog = new CBonusMapsDialog(this);
-		PositionDialog( m_hBonusMapsDialog );
-	}
-
-	m_hBonusMapsDialog->Activate();
+	// Legacy bonus-maps dialog removed (RmlUi front-end).
 }
 
 //-----------------------------------------------------------------------------
@@ -3468,12 +3386,7 @@ void CBaseModPanel::OnOpenBonusMapsDialog( void )
 //-----------------------------------------------------------------------------
 void CBaseModPanel::OnOpenLoadGameDialog()
 {
-	if ( !m_hLoadGameDialog.Get() )
-	{
-		m_hLoadGameDialog = new CLoadGameDialog(this);
-		PositionDialog( m_hLoadGameDialog );
-	}
-	m_hLoadGameDialog->Activate();
+	// Legacy single-player Load Game dialog removed (RmlUi front-end).
 }
 
 //-----------------------------------------------------------------------------
@@ -3481,12 +3394,7 @@ void CBaseModPanel::OnOpenLoadGameDialog()
 //-----------------------------------------------------------------------------
 void CBaseModPanel::OnOpenSaveGameDialog()
 {
-	if ( !m_hSaveGameDialog.Get() )
-	{
-		m_hSaveGameDialog = new CSaveGameDialog(this);
-		PositionDialog( m_hSaveGameDialog );
-	}
-	m_hSaveGameDialog->Activate();
+	// Legacy single-player Save Game dialog removed (RmlUi front-end).
 }
 
 //-----------------------------------------------------------------------------
@@ -3494,13 +3402,7 @@ void CBaseModPanel::OnOpenSaveGameDialog()
 //-----------------------------------------------------------------------------
 void CBaseModPanel::OnOpenOptionsDialog()
 {
-	if ( !m_hOptionsDialog.Get() )
-	{
-		m_hOptionsDialog = new COptionsDialog(this);
-		PositionDialog( m_hOptionsDialog );
-	}
-
-	m_hOptionsDialog->Activate();
+	// Legacy vgui options dialog removed (RmlUi RocketOptionsDocument owns Options).
 }
 
 //-----------------------------------------------------------------------------
@@ -3615,12 +3517,7 @@ void CBaseModPanel::OnOpenAudioSettingsDialog()
 //-----------------------------------------------------------------------------
 void CBaseModPanel::OnOpenBenchmarkDialog()
 {
-	if (!m_hBenchmarkDialog.Get())
-	{
-		m_hBenchmarkDialog = new CBenchmarkDialog(this, "BenchmarkDialog");
-		PositionDialog( m_hBenchmarkDialog );
-	}
-	m_hBenchmarkDialog->Activate();
+	// Legacy benchmark dialog removed (RmlUi front-end).
 }
 
 //-----------------------------------------------------------------------------
@@ -3769,12 +3666,7 @@ void CBaseModPanel::CloseLeaderboardsDialog()
 //-----------------------------------------------------------------------------
 void CBaseModPanel::OnOpenChangeGameDialog()
 {
-	if (!m_hChangeGameDialog.Get())
-	{
-		m_hChangeGameDialog = new CChangeGameDialog(this);
-		PositionDialog(m_hChangeGameDialog);
-	}
-	m_hChangeGameDialog->Activate();
+	// Legacy change-game dialog removed (RmlUi front-end).
 }
 
 //-----------------------------------------------------------------------------
@@ -3898,21 +3790,7 @@ void CBaseModPanel::RestoreMainMenuScreen( void )
 //-----------------------------------------------------------------------------
 void CBaseModPanel::NotifyVguiDialogClosed( void )
 {
-	if ( GameUI().IsInLevel() )
-	{
-		if ( IsScaleformPauseMenuEnabled() && m_bMainMenuShown )
-		{
-			// Force the cursor to be under Scaleform control again
-			if ( IsPC() )
-			{
-				g_pMatSystemSurface->EnableWindowsMessages( false );
-			}
-
-			ShowMainMenu( false );
-			RestorePauseMenu();
-		}
-	}
-	else
+	if ( !GameUI().IsInLevel() )
 	{
 		if ( IsScaleformMainMenuEnabled() && m_bMainMenuShown )
 		{
@@ -3944,14 +3822,6 @@ void CBaseModPanel::OnPlayCreditsVideo()
 void CBaseModPanel::ShowScaleformMainMenu( bool bShow )
 {
 	/** Does nothing by default */
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: 
-//-----------------------------------------------------------------------------
-bool CBaseModPanel::IsScaleformMainMenuActive( void )
-{
-	return false;
 }
 
 //-----------------------------------------------------------------------------
@@ -3992,30 +3862,6 @@ void CBaseModPanel::DismissPauseMenu( void )
 void CBaseModPanel::RestorePauseMenu( void )
 {
 	ShowMainMenu( true );
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: To be overridden by Scaleform
-//-----------------------------------------------------------------------------
-void CBaseModPanel::ShowScaleformPauseMenu( bool bShow )
-{
-	/** Does nothing by default */
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: To be overridden by Scaleform
-//-----------------------------------------------------------------------------
-bool CBaseModPanel::IsScaleformPauseMenuActive( void )
-{
-	return false;
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: To be overridden by Scaleform
-//-----------------------------------------------------------------------------
-bool CBaseModPanel::IsScaleformPauseMenuVisible( void )
-{
-	return false;
 }
 
 //-----------------------------------------------------------------------------
@@ -4094,12 +3940,7 @@ void CBaseModPanel::OnOpenPlayerListDialog()
 //-----------------------------------------------------------------------------
 void CBaseModPanel::OnOpenLoadCommentaryDialog()
 {
-	if (!m_hPlayerListDialog.Get())
-	{
-		m_hLoadCommentaryDialog = new CLoadCommentaryDialog(this);
-		PositionDialog(m_hLoadCommentaryDialog);
-	}
-	m_hLoadCommentaryDialog->Activate();
+	// Legacy commentary dialog removed (RmlUi front-end).
 }
 
 //-----------------------------------------------------------------------------
@@ -4107,14 +3948,7 @@ void CBaseModPanel::OnOpenLoadCommentaryDialog()
 //-----------------------------------------------------------------------------
 void CBaseModPanel::OpenLoadSingleplayerCommentaryDialog()
 {
-	if ( !m_hNewGameDialog.Get() )
-	{
-		m_hNewGameDialog = new CNewGameDialog(this,true);
-		PositionDialog( m_hNewGameDialog );
-	}
-
-	((CNewGameDialog *)m_hNewGameDialog.Get())->SetCommentaryMode( true );
-	m_hNewGameDialog->Activate();
+	// Legacy single-player commentary dialog removed (RmlUi front-end).
 }
 
 void CBaseModPanel::OnOpenAchievementsDialog()
@@ -4444,8 +4278,7 @@ void CBaseModPanel::OnCreditsFinished( void )
 void CBaseModPanel::OnGameUIHidden()
 {
 	// [jason] Dismiss Pause menu if we close it via ESC key, etc
-	if ( (IsScaleformPauseMenuEnabled() && IsScaleformPauseMenuActive()) ||
-	     (IsRocketPauseMenuEnabled() && IsRocketPauseMenuActive()) )
+	if ( IsRocketPauseMenuEnabled() && IsRocketPauseMenuActive() )
 	{
 		DismissPauseMenu();
 	}

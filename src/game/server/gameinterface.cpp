@@ -143,7 +143,6 @@
 extern IToolFrameworkServer *g_pToolFrameworkServer;
 extern IParticleSystemQuery *g_pParticleSystemQuery;
 
-extern ConVar commentary;
 extern ConVar game_type;
 extern ConVar game_mode;
 ConVar occlusion_test_shadow_length( "occlusion_test_shadow_length", "144", FCVAR_RELEASE, "Max length of completely occluded shadow to consider a player for occlusion test. If shadow provably stops at this distance, the player may be considered for occlusion test. For longer shadows, we just don't do occlusion because we are not likely to find full occlusion when one of the boxes is expanded too much." );
@@ -181,7 +180,6 @@ DEFINE_LOGGING_CHANNEL_NO_TAGS( LOG_CONSOLE, "Console" );
 CTimedEventMgr g_NetworkPropertyEventMgr;
 
 ISaveRestoreBlockHandler *GetEventQueueSaveRestoreBlockHandler();
-ISaveRestoreBlockHandler *GetCommentarySaveRestoreBlockHandler();
 
 CUtlLinkedList<CMapEntityRef, unsigned short> g_MapEntityRefs;
 
@@ -254,7 +252,6 @@ ConVar sv_dc_friends_reqd(
 	"0", FCVAR_RELEASE,
 	"Set this to 0 to allow direct connects to a game in progress even if no presents are present" );
 
-static ConVar  *g_pcv_commentary = NULL;
 static ConVar *g_pcv_ThreadMode = NULL;
 
 #if !defined(NO_STEAM)
@@ -848,7 +845,6 @@ bool CServerGameDLL::DLLInit( CreateInterfaceFn appSystemFactory,
 	if ( !sv_cheats )
 		return false;
 
-	g_pcv_commentary = g_pCVar->FindVar( "commentary" );
 	g_pcv_ThreadMode = g_pCVar->FindVar( "host_thread_mode" );
 
 	sv_maxreplay = g_pCVar->FindVar( "sv_maxreplay" );
@@ -860,7 +856,6 @@ bool CServerGameDLL::DLLInit( CreateInterfaceFn appSystemFactory,
 	g_pGameSaveRestoreBlockSet->AddBlockHandler( GetAISaveRestoreBlockHandler() );
 	g_pGameSaveRestoreBlockSet->AddBlockHandler( GetTemplateSaveRestoreBlockHandler() );
 	g_pGameSaveRestoreBlockSet->AddBlockHandler( GetDefaultResponseSystemSaveRestoreBlockHandler() );
-	g_pGameSaveRestoreBlockSet->AddBlockHandler( GetCommentarySaveRestoreBlockHandler() );
 	g_pGameSaveRestoreBlockSet->AddBlockHandler( GetEventQueueSaveRestoreBlockHandler() );
 	g_pGameSaveRestoreBlockSet->AddBlockHandler( GetVScriptSaveRestoreBlockHandler() );
 
@@ -949,7 +944,6 @@ void CServerGameDLL::DLLShutdown( void )
 #endif
 
 	g_pGameSaveRestoreBlockSet->RemoveBlockHandler( GetVScriptSaveRestoreBlockHandler() );
-	g_pGameSaveRestoreBlockSet->RemoveBlockHandler( GetCommentarySaveRestoreBlockHandler() );
 	g_pGameSaveRestoreBlockSet->RemoveBlockHandler( GetEventQueueSaveRestoreBlockHandler() );
 	g_pGameSaveRestoreBlockSet->RemoveBlockHandler( GetDefaultResponseSystemSaveRestoreBlockHandler() );
 	g_pGameSaveRestoreBlockSet->RemoveBlockHandler( GetTemplateSaveRestoreBlockHandler() );
@@ -1963,13 +1957,9 @@ void CServerGameDLL::PreSaveGameLoaded( char const *pSaveName, bool bInGame )
 
 //-----------------------------------------------------------------------------
 // Purpose: Returns true if the game DLL wants the server not to be made public.
-//			Used by commentary system to hide multiplayer commentary servers from the master.
 //-----------------------------------------------------------------------------
 bool CServerGameDLL::ShouldHideServer( void )
 {
-	if ( g_pcv_commentary && g_pcv_commentary->GetBool() )
-		return true;
-
 	if ( gpGlobals->eLoadType == MapLoad_Background )
 		return true;
 

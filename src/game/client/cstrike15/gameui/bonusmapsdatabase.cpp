@@ -17,7 +17,6 @@
 #include "keyvalues.h"
 #include "basepanel.h"
 #include "gameui_interface.h"
-#include "bonusmapsdialog.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"

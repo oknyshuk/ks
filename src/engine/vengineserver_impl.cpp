@@ -373,15 +373,6 @@ public:
 #endif
 	}
 
-	virtual int IsInCommentaryMode( void )
-	{
-#ifdef DEDICATED
-		return false;
-#else
-		return g_bInCommentaryMode;
-#endif
-	}
-
 	virtual KeyValues* GetLaunchOptions( void )
 	{
 		return g_pLaunchOptions;

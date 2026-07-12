@@ -205,10 +205,6 @@ CON_COMMAND_F( togglescores, "Toggles score panel", FCVAR_CLIENTCMD_CAN_EXECUTE 
 	}
 	else
 	{
-		// Disallow bringing the Scoreboard up while we are paused
-		if ( BasePanel() && BasePanel()->IsScaleformPauseMenuActive() )
-			return;
-
 		GetViewPortInterface()->ShowPanel( scoreboard, true );
 	}
 }
@@ -315,8 +311,7 @@ void CounterStrikeViewport::UpdateAllPanels( void )
 	}
 
 	// see if we need to show a special ui instead of the hud
-	//	[jason] Do not rearrange viewport panels while the Pause menu is opened - it takes precedence over all viewports
-	if ( !bSomethingIsVisible && !BasePanel()->IsScaleformPauseMenuActive() )
+	if ( !bSomethingIsVisible )
 	{
 		C_CSPlayer *pCSPlayer = C_CSPlayer::GetLocalCSPlayer();
 

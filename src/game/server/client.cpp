@@ -48,8 +48,6 @@
 
 extern int giPrecacheGrunt;
 
-extern bool IsInCommentaryMode( void );
-
 ConVar  *sv_cheats = NULL;
 static ConVar tv_relaytextchat( "tv_relaytextchat", "1", FCVAR_RELEASE, "Relay text chat data: 0=off, 1=say, 2=say+say_team" );
 
@@ -627,12 +625,6 @@ void CPointClientCommand::InputCommand( inputdata_t& inputdata )
 		if ( player )
 		{
 			pClient = player->edict();
-		}
-
-		if ( IsInCommentaryMode() && !pClient )
-		{
-			// Commentary is stuffing a command in. We'll pretend it came from the first player.
-			pClient = INDEXENT( 1 );
 		}
 	}
 

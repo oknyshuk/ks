@@ -300,11 +300,6 @@ public:
 
 	void			OnMakeGamePublic( void );
 
-	virtual void	ShowScaleformPauseMenu( bool bShow );
-	virtual bool	IsScaleformPauseMenuActive( void );
-	virtual bool	IsScaleformPauseMenuVisible( void );
-	bool			IsScaleformPauseMenuEnabled( void ) { return m_bScaleformPauseMenuEnabled; }
-
     virtual void    ShowRocketPauseMenu( bool bShow );
     virtual bool    IsRocketPauseMenuActive( void );
     virtual bool    IsRocketPauseMenuVisible( void );
@@ -347,12 +342,10 @@ protected:
 
 	// [jason] Allow toggle of the new scaleform version of the main menu
 	virtual void	ShowScaleformMainMenu( bool bShow );
-	virtual bool	IsScaleformMainMenuActive( void );
 
 	virtual void ShowRocketMainMenu( bool bShow );
 	virtual bool IsRocketMainMenuActive( void );
 
-    virtual bool    IsScaleformIntroMovieEnabled( void ) { return false; }
     virtual void    CreateScaleformIntroMovie( void ) {}
     virtual void    DismissScaleformIntroMovie( void ) {}
 
@@ -538,7 +531,6 @@ private:
 
 	// [jason] Should we use the Scaleform main menu, or the old vgui one?
 	bool m_bScaleformMainMenuEnabled;
-	bool m_bScaleformPauseMenuEnabled;
     // lwss- like the above bools but for rocketui
 	bool m_bRocketMainMenuEnabled;
 	bool m_bRocketPauseMenuEnabled;

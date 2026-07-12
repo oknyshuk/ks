@@ -95,7 +95,6 @@ extern IVEngineClient *engineClient;
 
 #ifndef DEDICATED
 bool g_bInEditMode = false;
-bool g_bInCommentaryMode = false;
 #endif
 KeyValues *g_pLaunchOptions = NULL;
 
@@ -1204,7 +1203,6 @@ enum EMapFlags
 
 	EMAP_EDIT_MODE = (1<<0),
 	EMAP_BACKGROUND = (1<<1),
-	EMAP_COMMENTARY = (1<<2),
 	EMAP_SPLITSCREEN = (1<<3)
 
 };
@@ -1271,7 +1269,6 @@ void Host_Map_Helper( const CCommand &args, EMapFlags flags )
 	// If I was in edit mode reload config file
 	// to overwrite WC edit key bindings
 #if !defined(DEDICATED)
-	bool bCommentary = ( flags & EMAP_COMMENTARY ) != 0;
 	bool bEditmode = ( flags & EMAP_EDIT_MODE ) != 0;
 	if ( !bEditmode )
 	{
@@ -1287,7 +1284,6 @@ void Host_Map_Helper( const CCommand &args, EMapFlags flags )
 		g_bInEditMode = true;
 	}
 
-	g_bInCommentaryMode = bCommentary;
 #endif
 
 	SetLaunchOptions( args );
@@ -1387,13 +1383,6 @@ void Host_Map_Background_f( const CCommand &args )
 }
 
 
-//-----------------------------------------------------------------------------
-// Purpose: Runs a map in commentary mode
-//-----------------------------------------------------------------------------
-void Host_Map_Commentary_f( const CCommand &args )
-{
-	Host_Map_Helper( args, EMAP_COMMENTARY );
-}
 
 
 //-----------------------------------------------------------------------------
@@ -1660,14 +1649,6 @@ void Host_Disconnect( bool bShowMainMenu )
 
 	CDisconnectReentrancyCounter autoReentrancyCounter;
 	
-#if !defined( DEDICATED )
-	if ( bShowMainMenu )
-	{
-		// exiting game
-		// ensure commentary state gets cleared
-		g_bInCommentaryMode = false;
-	}
-#endif
 
 	if ( IsGameConsole() )
 	{

@@ -25,7 +25,6 @@ void Host_Map_f( const CCommand &args );
 void Host_MapGroup_f( const CCommand &args );
 void Host_SplitScreen_Map_f( const CCommand &args );
 void Host_Map_Background_f( const CCommand &args );
-void Host_Map_Commentary_f( const CCommand &args );
 void Host_Changelevel_f( const CCommand &args );
 void Host_Changelevel2_f( const CCommand &args );
 
@@ -732,12 +731,6 @@ static int Host_Background_f_CompletionFunc( char const *partial, char commands[
 //			**commands - 
 // Output : int
 //-----------------------------------------------------------------------------
-static int Host_Map_Commentary_f_CompletionFunc( char const *partial, char commands[ COMMAND_COMPLETION_MAXITEMS ][ COMMAND_COMPLETION_ITEM_LENGTH ] )
-{
-	char const *cmdname = "map_commentary ";
-	return _Host_Map_f_CompletionFunc( cmdname, partial, commands );
-}
-
 //-----------------------------------------------------------------------------
 // Purpose: 
 // Input  : *partial - 
@@ -806,7 +799,6 @@ static ConCommand map("map", Host_Map_f, "Start playing on specified map.", FCVA
 static ConCommand mapgroup( "mapgroup", Host_MapGroup_f, "Specify a map group", FCVAR_DONTRECORD );
 static ConCommand ss_map("ss_map", Host_SplitScreen_Map_f, "Start playing on specified map with max allowed splitscreen players.", FCVAR_DONTRECORD, Host_SSMap_f_CompletionFunc );
 static ConCommand map_background("map_background", Host_Map_Background_f, "Runs a map as the background to the main menu.", FCVAR_DONTRECORD, Host_Background_f_CompletionFunc );
-static ConCommand map_commentary("map_commentary", Host_Map_Commentary_f, "Start playing, with commentary, on a specified map.", FCVAR_DONTRECORD, Host_Map_Commentary_f_CompletionFunc );
 static ConCommand changelevel("changelevel", Host_Changelevel_f, "Change server to the specified map", FCVAR_DONTRECORD, Host_Changelevel_f_CompletionFunc );
 static ConCommand changelevel2("changelevel2", Host_Changelevel2_f, "Transition to the specified map in single player", FCVAR_DONTRECORD, Host_Changelevel2_f_CompletionFunc );
 #endif

@@ -1423,26 +1423,6 @@ bool SixenseInput::InMenuMode()
 	bool cstrike_panel_visible = false;
 
 #if defined( CSTRIKE15 ) // csgo
-	const int num_panels = 16;
-	char *panel_names[] = {
-		PANEL_OVERVIEW,		
-		PANEL_CLASS,		
-		PANEL_TEAM,			
-		PANEL_SPECMENU,		
-		PANEL_INFO,		
-		PANEL_BUY,			
-		PANEL_BUY_CT,		
-		PANEL_BUY_TER,		
-		PANEL_BUY_EQUIP_CT,	
-		PANEL_BUY_EQUIP_TER,	
-		PANEL_NAV_PROGRESS,
-		PANEL_BUYPRESET_MAIN,	
-		PANEL_BUYPRESET_EDIT,	
-		PANEL_INTRO,		
-		PANEL_COMMENTARY_MODELVIEWER,	
-		PANEL_SURVEY				
-	};
-#else // css
 	const int num_panels = 15;
 	char *panel_names[] = {
 		PANEL_OVERVIEW,		
@@ -1459,7 +1439,25 @@ bool SixenseInput::InMenuMode()
 		PANEL_BUYPRESET_MAIN,	
 		PANEL_BUYPRESET_EDIT,	
 		PANEL_INTRO,		
-		PANEL_COMMENTARY_MODELVIEWER
+		PANEL_SURVEY				
+	};
+#else // css
+	const int num_panels = 14;
+	char *panel_names[] = {
+		PANEL_OVERVIEW,		
+		PANEL_CLASS,		
+		PANEL_TEAM,			
+		PANEL_SPECMENU,		
+		PANEL_INFO,		
+		PANEL_BUY,			
+		PANEL_BUY_CT,		
+		PANEL_BUY_TER,		
+		PANEL_BUY_EQUIP_CT,	
+		PANEL_BUY_EQUIP_TER,	
+		PANEL_NAV_PROGRESS,
+		PANEL_BUYPRESET_MAIN,	
+		PANEL_BUYPRESET_EDIT,	
+		PANEL_INTRO,		
 	};
 #endif
 
@@ -1502,7 +1500,7 @@ bool SixenseInput::InMenuMode()
 
 #if defined( CSTRIKE_DLL ) && !defined( TERROR )
 #ifdef CSTRIKE15
-		BasePanel()->IsScaleformPauseMenuVisible() ||
+		BasePanel()->IsRocketPauseMenuVisible() ||
 #endif
 		cstrike_panel_visible ||
 #endif
@@ -2743,7 +2741,7 @@ void SixenseInput::SixenseUpdateKeys( float flFrametime, CUserCmd *pCmd )
 #ifdef CSTRIKE15
 	if ( m_pLeftButtonStates->buttonJustPressed( SIXENSE_BUTTON_START ) )
 	{
-		BasePanel()->ShowScaleformPauseMenu( true );
+		BasePanel()->ShowRocketPauseMenu( true );
 	}
 #else
 	if ( m_pLeftButtonStates->buttonJustPressed( SIXENSE_BUTTON_START ) )

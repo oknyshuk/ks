@@ -521,7 +521,6 @@ public:
 
 	virtual const char* GetMapEntitiesString();
 	virtual bool		IsInEditMode( void );
-	virtual bool		IsInCommentaryMode( void );
 	virtual float		GetScreenAspectRatio( int viewportWidth, int viewportHeight );
 
 	virtual unsigned int		GetEngineBuildNumber() { return GetHostVersion(); }
@@ -1771,11 +1770,6 @@ const char* CEngineClient::GetMapEntitiesString()
 bool CEngineClient::IsInEditMode( void )
 {
 	return g_bInEditMode;
-}
-
-bool CEngineClient::IsInCommentaryMode( void )
-{
-	return g_bInCommentaryMode;
 }
 
 float CEngineClient::GetScreenAspectRatio( int viewportWidth, int viewportHeight )

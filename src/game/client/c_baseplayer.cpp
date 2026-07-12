@@ -86,7 +86,6 @@ extern ConVar view_recoil_tracking;
 static Vector WALL_MIN(-WALL_OFFSET,-WALL_OFFSET,-WALL_OFFSET);
 static Vector WALL_MAX(WALL_OFFSET,WALL_OFFSET,WALL_OFFSET);
 
-bool CommentaryModeShouldSwallowInput( C_BasePlayer *pPlayer );
 
 extern ConVar default_fov;
 extern ConVar sensitivity;
@@ -2663,11 +2662,8 @@ void C_BasePlayer::PostThink( void )
 	{
 		UpdateCollisionBounds();
 
-		if ( !CommentaryModeShouldSwallowInput( this ) )
-		{
-			// do weapon stuff
-			ItemPostFrame();
-		}
+		// do weapon stuff
+		ItemPostFrame();
 
 		if ( GetFlags() & FL_ONGROUND )
 		{		

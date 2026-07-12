@@ -21,8 +21,6 @@
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
-// [hpe:jason]  Do not disable this element! It needs to be around to forward various HudChat messages to the new Scaleform UI
-//DECLARE_HUDELEMENT_FLAGS( CHudChat, HUDELEMENT_SS_FULLSCREEN_ONLY );
 DECLARE_HUDELEMENT(CHudChat);
 
 //=====================
@@ -122,14 +120,11 @@ void CHudChat::ChatPrintf(int iPlayerIndex, int iFilter, const char* fmt, ...)
 	if (!*pmsg)
 		return;
 
-	// [jason] Forward message to Scaleform for display
 	if (iFilter != CHAT_FILTER_NONE)
 	{
 		if (!(iFilter & GetFilterFlags()))
 			return;
 	}
-
-	//CS15ForwardStatusMsg(pmsg, iPlayerIndex);
 
 	// Now strip just newlines, since we want the color info for printing
 	pmsg = msg;

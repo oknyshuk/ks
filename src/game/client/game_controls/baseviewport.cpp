@@ -40,7 +40,6 @@
 #include "mapoverview.h"
 #include "hud.h"
 #include "NavProgress.h"
-#include "commentary_modelviewer.h"
 
 // our definition
 #include "baseviewport.h"
@@ -287,11 +286,6 @@ IViewPortPanel* CBaseViewport::CreatePanelByName(const char *szPanelName)
 		newpanel = new CRadialMenuPanel( this );
 	}
 #endif // PORTAL2
-
-	if ( Q_strcmp(PANEL_COMMENTARY_MODELVIEWER, szPanelName) == 0 )
-	{
-		newpanel = new CCommentaryModelViewer( this );
-	}
 
 	return newpanel;
 }

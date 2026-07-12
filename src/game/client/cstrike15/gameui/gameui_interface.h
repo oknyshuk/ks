@@ -15,8 +15,6 @@
 #include "vgui_controls/PHandle.h"
 #include "convar.h"
 
-#include "uicomponents/uicomponent_common.h"
-
 #if defined(_PS3)
 	#define BACKGROUND_MUSIC_FILENAME "gamestartup.ps3.wav"
 #else
@@ -134,10 +132,6 @@ public:
 	void RegisterGameUIStateListener(ICSGOGameUIStateListener *pListener);
 	void UnregisterGameUIStateListener(ICSGOGameUIStateListener *pListener);
 #endif // PANORAMA_ENABLE 
-	CUtlVector< IUiComponentGlobalInstanceBase * > & GetUiComponents()
-	{
-		return m_arrUiComponents;
-	}
 
 private:
 	void SendConnectedToGameMessage();
@@ -204,7 +198,6 @@ private:
 	bool m_bFirstActivationForSession = true;
 	bool m_bInLevelLoading = false;
 #endif
-	CUtlVector< IUiComponentGlobalInstanceBase * > m_arrUiComponents;
 
 };
 

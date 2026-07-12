@@ -316,14 +316,6 @@ void CGameUI::Initialize( CreateInterfaceFn factory )
 		ConnectPanoramaUIEngine( pPanoramaUIEngine );
 	}
 
-	if (!CommandLine()->CheckParm("-nopanorama"))
-	{
-		FOR_EACH_VEC(m_arrUiComponents, i)
-		{
-			m_arrUiComponents[i]->InstallPanoramaBindings();
-		}
-	}
-
 #endif
 	
 	if ( bFailed )
@@ -725,11 +717,6 @@ void CGameUI::RunFrame()
 	g_VModuleLoader.RunFrame();
 
 	GetUiBaseModPanelClass().RunFrame();
-
-	FOR_EACH_VEC( m_arrUiComponents, i )
-	{
-		m_arrUiComponents[ i ]->Tick();
-	}
 
 	// Play the start-up music the first time we run frame
 	if ( m_iPlayGameStartupSound > 0 )

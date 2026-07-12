@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
+//========= Copyright ï¿½ 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -33,8 +33,6 @@
 #define PANEL_BUYPRESET_EDIT	"buypreset_edit"
 #define PANEL_INTRO			"intro"
 
-
-#define PANEL_COMMENTARY_MODELVIEWER	"commentary_modelviewer"
 
 #define PANEL_SURVEY					"surveypanel"
 

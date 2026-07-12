@@ -373,9 +373,6 @@ public:
 	// contain $baseTexture and $bumpmap vars.
 	virtual void		ForceSimpleMaterial( const char *s ) = 0;
 
-	// Is the engine in Commentary mode?
-	virtual int			IsInCommentaryMode( void ) = 0;
-
 	// Is the engine running a background map?
 	virtual bool		IsLevelMainMenuBackground( void ) = 0;
 

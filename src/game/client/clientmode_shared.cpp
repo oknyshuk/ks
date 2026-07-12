@@ -76,8 +76,6 @@ extern ConVar v_viewmodel_fov;
 extern ConVar spec_show_xray;
 extern ConVar spec_hide_players;
 
-extern bool IsInCommentaryMode( void );
-
 CON_COMMAND( hud_reloadscheme, "Reloads hud layout and animation scripts." )
 {
 	g_pFullFileSystem->SyncDvdDevCache();
@@ -1059,7 +1057,6 @@ void ClientModeShared::FireGameEvent( IGameEvent *event )
 		if ( PlayerNameNotSetYet(event->GetString("name")) )
 			return;
 
-		if ( !IsInCommentaryMode() )
 		{
 			wchar_t wszLocalized[100];
 			wchar_t wszPlayerName[MAX_PLAYER_NAME_LENGTH];
@@ -1100,7 +1097,6 @@ void ClientModeShared::FireGameEvent( IGameEvent *event )
 		if ( PlayerNameNotSetYet(event->GetString("name")) )
 			return;
 
-		if ( !IsInCommentaryMode() )
 		{
 
 #ifdef CSTRIKE15
@@ -1200,7 +1196,6 @@ void ClientModeShared::FireGameEvent( IGameEvent *event )
 				Q_snwprintf ( wszTeam, sizeof( wszTeam ) / sizeof( wchar_t ), L"%d", team );
 			}
 
-			if ( !IsInCommentaryMode() )
 			{
 				wchar_t wszLocalized[100];
 				if ( bAutoTeamed )
@@ -1337,7 +1332,7 @@ void ClientModeShared::FireGameEvent( IGameEvent *event )
 			}
 		}
 
-		if ( !IsInCommentaryMode() && !bIgnoredCvar )
+		if ( !bIgnoredCvar )
 		{
 			wchar_t wszCvarName[64];
 			g_pVGuiLocalize->ConvertANSIToUnicode( event->GetString("cvarname"), wszCvarName, sizeof(wszCvarName) );
@@ -1366,7 +1361,6 @@ void ClientModeShared::FireGameEvent( IGameEvent *event )
 		if ( !hudChat || !pPlayer )
 			return;
 
-		if ( !IsInCommentaryMode() )
 		{
 			char const *szAchievementName = NULL; // should arrive as part of event instead of achievement ID
 			if ( szAchievementName )

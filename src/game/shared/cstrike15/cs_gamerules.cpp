@@ -102,7 +102,6 @@ static const float MAX_TIME_TO_WAIT_BEFORE_ENTERING = 5.0f;
 static const float AUTOBALANCE_TEXT_DELAY = 3.0f;
 
 extern IUploadGameStats *gamestatsuploader;
-extern bool Commentary_IsCommentaryEntity( CBaseEntity *pEntity );
 ConVar spec_replay_round_delay( "spec_replay_round_delay", "0", FCVAR_RELEASE, "Round can be delayed by this much due to someone watching a replay; must be at least 3-4 seconds, otherwise the last replay will always be interrupted by round start, assuming normal pause between round_end and round_start events (7 seconds) and freezecam delay (2 seconds) and 7.4 second full replay (5.4 second pre-death and ~2 seconds post-death) and replay in/out switching (up to a second)" );
 
 #endif // !CLIENT_DLL
@@ -14373,10 +14372,7 @@ void ServerThinkReplayUploader()
             // remove entities that has to be restored on roundrestart (breakables etc)
             else if ( !CS_FindInList( s_PreserveEnts, pCur->GetClassname() ) )
             {
-                if( !Commentary_IsCommentaryEntity( pCur ) ) //leave commentary alone
-                {
-                    UTIL_Remove( pCur );
-                }
+                UTIL_Remove( pCur );
             }
             
             pCur = gEntList.NextEnt( pCur );

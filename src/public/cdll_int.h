@@ -743,9 +743,6 @@ public:
 	// Using area bits, check whether the area of the specified point flows into the other areas
 	virtual void ComputeLeavesConnected( const Vector &vecOrigin, int nCount, const int *pLeafIndices, bool *pIsConnected ) = 0;
 
-	// Is the engine in Commentary mode?
-	virtual bool IsInCommentaryMode( void ) = 0;
-
 	virtual void SetBlurFade( float amount ) = 0; 
 	virtual bool IsTransitioningToLoad() = 0;
 
