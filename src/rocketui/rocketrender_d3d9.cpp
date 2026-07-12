@@ -3,8 +3,6 @@
 
 // RocketUI D3D9 Renderer
 // Renders RmlUi through D3D9 calls that flow through DXVK's normal pipeline.
-// Replaces the standalone Vulkan renderer (rocketrender_dxvk.cpp) to eliminate
-// per-frame queue flushes and synchronization overhead.
 //
 // RmlUi runs single-threaded on the MAIN thread. The Rml::RenderInterface
 // overrides here only RECORD (allocate CPU-side handles / append POD commands /
@@ -15,8 +13,8 @@
 #undef Assert
 #endif
 
-#include "rocketrender.h"
 #include "rocketfilesystem.h"
+#include "rocketrender.h"
 #include <RmlUi/Core.h>
 
 #include <d3d9.h>
@@ -74,64 +72,6 @@ static D3DMATRIX D3DMatMul(const D3DMATRIX &a, const D3DMATRIX &b) {
 static const D3DMATRIX kIdentity = {1, 0, 0, 0, 0, 1, 0, 0,
                                     0, 0, 1, 0, 0, 0, 0, 1};
 
-static D3DMATRIX D3DMatTranspose(const D3DMATRIX &m) {
-  D3DMATRIX t;
-  const float *M = &m._11;
-  float *T = &t._11;
-  for (int i = 0; i < 4; i++)
-    for (int j = 0; j < 4; j++)
-      T[i * 4 + j] = M[j * 4 + i];
-  return t;
-}
-
-// ----- SM 2.0 shader bytecodes (hand-assembled) -----
-// These bypass DXVK's fixed-function shader generation, which has known
-// issues producing wrong pixel values in some state combinations.
-//
-// DXVK register type encoding: 5-bit type split across token bits.
-//   high 3 bits = (type & 7)   → token bits [30:28]
-//   low  2 bits = (type >> 3)  → token bits [12:11]
-// Register types used:
-//   TEMP=0  INPUT=1  CONST=2  TEXTURE=3  RASTOUT=4
-//   ATTROUT=5  TEXCRDOUT=6  COLOROUT=8  SAMPLER=10
-//
-// VS: transform position by c0-c3 (WVP matrix), pass through color & texcoord.
-// PS textured:  output = tex2D(s0, t0) * v0
-// PS untextured: output = v0
-// clang-format off
-static const DWORD kVSBytecode[] = {
-  0xFFFE0200,                                       // vs_2_0
-  0x0200001F, 0x80000000, 0x100F0000,               // dcl_position v0
-  0x0200001F, 0x8000000A, 0x100F0001,               // dcl_color    v1
-  0x0200001F, 0x80000005, 0x100F0002,               // dcl_texcoord v2
-  0x03000009, 0x40010000, 0x90E40000, 0xA0E40000,   // dp4 oPos.x, v0, c0
-  0x03000009, 0x40020000, 0x90E40000, 0xA0E40001,   // dp4 oPos.y, v0, c1
-  0x03000009, 0x40040000, 0x90E40000, 0xA0E40002,   // dp4 oPos.z, v0, c2
-  0x03000009, 0x40080000, 0x90E40000, 0xA0E40003,   // dp4 oPos.w, v0, c3
-  0x02000001, 0x500F0000, 0x90E40001,               // mov oD0, v1
-  0x02000001, 0x600F0000, 0x90E40002,               // mov oT0, v2
-  0x0000FFFF                                         // end
-};
-
-static const DWORD kPSTexturedBytecode[] = {
-  0xFFFF0200,                                       // ps_2_0
-  0x0200001F, 0x90000000, 0x200F0800,               // dcl_2d s0
-  0x0200001F, 0x80000005, 0x300F0000,               // dcl    t0
-  0x0200001F, 0x8000000A, 0x100F0000,               // dcl    v0
-  0x03000042, 0x000F0000, 0xB0E40000, 0xA0E40800,   // texld  r0, t0, s0
-  0x03000005, 0x000F0000, 0x80E40000, 0x90E40000,   // mul    r0, r0, v0
-  0x02000001, 0x000F0800, 0x80E40000,               // mov    oC0, r0
-  0x0000FFFF                                         // end
-};
-
-static const DWORD kPSUntexturedBytecode[] = {
-  0xFFFF0200,                                       // ps_2_0
-  0x0200001F, 0x8000000A, 0x100F0000,               // dcl    v0
-  0x02000001, 0x000F0800, 0x90E40000,               // mov    oC0, v0
-  0x0000FFFF                                         // end
-};
-// clang-format on
-
 // ----- Handle + command types (implementation detail) -----
 
 struct D3DVertex {
@@ -170,14 +110,14 @@ enum class UICmdType : uint8_t {
 
 struct UICmd {
   UICmdType type;
-  RocketGeometry *geom = nullptr;    // Draw, ClipRender
-  Rml::TextureHandle texture = 0;    // Draw (0 / -1 sentinel / RocketTexture*)
-  Rml::Vector2f translation;         // Draw, ClipRender
-  Rml::Rectanglei region;            // ScissorRegion
-  bool enable = false;               // ScissorEnable, ClipEnable
-  Rml::ClipMaskOperation op{};       // ClipRender
-  bool hasTransform = false;         // Transform
-  Rml::Matrix4f transform;           // Transform
+  RocketGeometry *geom = nullptr; // Draw, ClipRender
+  Rml::TextureHandle texture = 0; // Draw (0 / -1 sentinel / RocketTexture*)
+  Rml::Vector2f translation;      // Draw, ClipRender
+  Rml::Rectanglei region;         // ScissorRegion
+  bool enable = false;            // ScissorEnable, ClipEnable
+  Rml::ClipMaskOperation op{};    // ClipRender
+  bool hasTransform = false;      // Transform
+  Rml::Matrix4f transform;        // Transform
 };
 
 // A frame's worth of recorded UI commands for one context. Built on the main
@@ -216,25 +156,16 @@ void RocketRenderD3D9::Reinitialize(IDirect3DDevice9 *pDevice) {
   m_pDevice = pDevice;
 }
 
-void RocketRenderD3D9::ReleaseResources() { ReleaseShaders(); }
+void RocketRenderD3D9::ReleaseResources() { ReleaseVertexDecl(); }
 
 void RocketRenderD3D9::SetScreenSize(int width, int height) {
   m_width = width;
   m_height = height;
 }
 
-void RocketRenderD3D9::CreateShaders() {
-  if (m_vs)
+void RocketRenderD3D9::CreateVertexDecl() {
+  if (m_vtxDecl)
     return;
-  if (FAILED(m_pDevice->CreateVertexShader(kVSBytecode, &m_vs)))
-    return;
-  if (FAILED(
-          m_pDevice->CreatePixelShader(kPSTexturedBytecode, &m_psTextured)) ||
-      FAILED(m_pDevice->CreatePixelShader(kPSUntexturedBytecode,
-                                          &m_psUntextured))) {
-    ReleaseShaders();
-    return;
-  }
 
   D3DVERTEXELEMENT9 elems[] = {{0, 0, D3DDECLTYPE_FLOAT3, D3DDECLMETHOD_DEFAULT,
                                 D3DDECLUSAGE_POSITION, 0},
@@ -244,38 +175,14 @@ void RocketRenderD3D9::CreateShaders() {
                                 D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_TEXCOORD,
                                 0},
                                D3DDECL_END()};
-  if (FAILED(m_pDevice->CreateVertexDeclaration(elems, &m_vtxDecl))) {
-    ReleaseShaders();
-    return;
-  }
+  m_pDevice->CreateVertexDeclaration(elems, &m_vtxDecl);
 }
 
-void RocketRenderD3D9::ReleaseShaders() {
+void RocketRenderD3D9::ReleaseVertexDecl() {
   if (m_vtxDecl) {
     m_vtxDecl->Release();
     m_vtxDecl = nullptr;
   }
-  if (m_psUntextured) {
-    m_psUntextured->Release();
-    m_psUntextured = nullptr;
-  }
-  if (m_psTextured) {
-    m_psTextured->Release();
-    m_psTextured = nullptr;
-  }
-  if (m_vs) {
-    m_vs->Release();
-    m_vs = nullptr;
-  }
-}
-
-void RocketRenderD3D9::UploadWVP(const D3DMATRIX &world) {
-  // D3D9 row-vector convention: v' = v * WVP.
-  // dp4(oPos.x, v, c0) = dot(v, c0), so c0 must be column 0 of WVP.
-  // Upload the transpose so each register holds one column.
-  D3DMATRIX wvp = D3DMatMul(world, m_d3dProjection);
-  D3DMATRIX wvpT = D3DMatTranspose(wvp);
-  m_pDevice->SetVertexShaderConstantF(0, &wvpT._11, 4);
 }
 
 void RocketRenderD3D9::SetupRenderState() {
@@ -287,12 +194,7 @@ void RocketRenderD3D9::SetupRenderState() {
       0.5f, (float)m_width + 0.5f, (float)m_height + 0.5f, 0.5f, -10000, 10000);
   m_d3dProjection = ToD3DMatrix(projection);
 
-  // Precompute transposed projection — used directly by the per-draw fast
-  // path and by composite blits (which use an identity world matrix).
-  D3DMATRIX pt = D3DMatTranspose(m_d3dProjection);
-  memcpy(m_projT, &pt._11, sizeof(m_projT));
-
-  CreateShaders();
+  CreateVertexDecl();
 
   // Rasterization
   m_pDevice->SetRenderState(D3DRS_CULLMODE, D3DCULL_NONE);
@@ -341,14 +243,38 @@ void RocketRenderD3D9::SetupRenderState() {
   m_pDevice->SetSamplerState(0, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP);
   m_pDevice->SetSamplerState(0, D3DSAMP_SRGBTEXTURE, FALSE);
 
-  // Bind shaders and vertex layout
-  m_pDevice->SetVertexShader(m_vs);
-  m_pDevice->SetPixelShader(m_psTextured);
+  // Fixed-function pipeline: bind no shaders and let DXVK generate the VS/PS
+  // from device state. FF reads far more implicit state than an explicit
+  // shader, and this renderer runs after the game's 3D pass, so pin every
+  // FF-relevant state explicitly to keep inherited state from leaking in.
+  m_pDevice->SetVertexShader(nullptr);
+  m_pDevice->SetPixelShader(nullptr);
   if (m_vtxDecl)
     m_pDevice->SetVertexDeclaration(m_vtxDecl);
 
+  m_pDevice->SetRenderState(D3DRS_LIGHTING, FALSE);
+  m_pDevice->SetRenderState(D3DRS_SPECULARENABLE, FALSE);
+  m_pDevice->SetRenderState(D3DRS_SHADEMODE, D3DSHADE_GOURAUD);
+  m_pDevice->SetRenderState(D3DRS_VERTEXBLEND, D3DVBF_DISABLE);
+  m_pDevice->SetRenderState(D3DRS_INDEXEDVERTEXBLENDENABLE, FALSE);
+
+  // Row-vector transforms (v * World * View * Proj), passed un-transposed.
+  // VIEW/PROJECTION are constant; WORLD is set per draw. The +0.5 half-pixel
+  // offset stays baked in the ortho matrix — DXVK applies its half-pixel
+  // correction at the viewport level, not per shader, so it is not doubled.
+  m_pDevice->SetTransform(D3DTS_VIEW, &kIdentity);
+  m_pDevice->SetTransform(D3DTS_PROJECTION, &m_d3dProjection);
+
+  // Texture stage 0 (color/alpha ops chosen per draw); terminate at stage 1.
+  m_pDevice->SetTextureStageState(0, D3DTSS_TEXCOORDINDEX, 0);
+  m_pDevice->SetTextureStageState(0, D3DTSS_TEXTURETRANSFORMFLAGS,
+                                  D3DTTFF_DISABLE);
+  m_pDevice->SetTextureStageState(1, D3DTSS_COLOROP, D3DTOP_DISABLE);
+  m_pDevice->SetTextureStageState(1, D3DTSS_ALPHAOP, D3DTOP_DISABLE);
+
   m_transformEnabled = false;
   m_stencilRef = 0;
+  m_ffTexMode = -1;
 }
 
 void RocketRenderD3D9::BeginFrame() {
@@ -372,10 +298,9 @@ void RocketRenderD3D9::BeginFrame() {
   if (SUCCEEDED(m_pDevice->GetDepthStencilSurface(&ds)) && ds) {
     D3DSURFACE_DESC d;
     if (SUCCEEDED(ds->GetDesc(&d)))
-      m_hasStencil =
-          (d.Format == D3DFMT_D24S8 || d.Format == D3DFMT_D24FS8 ||
-           d.Format == D3DFMT_D24X4S4 || d.Format == D3DFMT_D15S1 ||
-           d.Format == D3DFMT_S8_LOCKABLE);
+      m_hasStencil = (d.Format == D3DFMT_D24S8 || d.Format == D3DFMT_D24FS8 ||
+                      d.Format == D3DFMT_D24X4S4 || d.Format == D3DFMT_D15S1 ||
+                      d.Format == D3DFMT_S8_LOCKABLE);
     ds->Release();
   }
 
@@ -384,7 +309,8 @@ void RocketRenderD3D9::BeginFrame() {
     IDirect3DSurface9 *rt = nullptr;
     if (SUCCEEDED(m_pDevice->GetRenderTarget(0, &rt)) && rt) {
       D3DSURFACE_DESC d;
-      if (SUCCEEDED(rt->GetDesc(&d)) && d.MultiSampleType != D3DMULTISAMPLE_NONE) {
+      if (SUCCEEDED(rt->GetDesc(&d)) &&
+          d.MultiSampleType != D3DMULTISAMPLE_NONE) {
         // Render thread: must NOT call into RmlUi (Rml::Log reads shared RmlUi
         // state) — keep this diagnostic on a thread-safe channel so the
         // "replay never touches RmlUi" invariant stays literally true.
@@ -501,7 +427,10 @@ RocketRenderD3D9::LoadTexture(Rml::Vector2i &texture_dimensions,
         for (int x = 0; x < w; x++) {
           const unsigned char *s = &rgba[((size_t)y * w + x) * 4];
           unsigned char *d = &t[((size_t)x * h + y) * 4];
-          d[0] = s[0]; d[1] = s[1]; d[2] = s[2]; d[3] = s[3];
+          d[0] = s[0];
+          d[1] = s[1];
+          d[2] = s[2];
+          d[3] = s[3];
         }
       rgba.swap(t);
       std::swap(w, h);
@@ -756,26 +685,26 @@ void RocketRenderD3D9::DrawGeometryDev(RocketGeometry *g,
   if (!EnsureGeometry(g))
     return;
 
-  if (m_transformEnabled) {
-    D3DMATRIX translate = {
-        1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, translation.x, translation.y, 0, 1};
-    UploadWVP(D3DMatMul(translate, m_d3dTransform));
-  } else {
-    // Fast path: transpose(translate * proj) only differs from projT in
-    // column 3 — avoids a full 4x4 multiply + transpose per draw.
-    float c[16];
-    memcpy(c, m_projT, sizeof(c));
-    float tx = translation.x, ty = translation.y;
-    for (int i = 0; i < 16; i += 4)
-      c[i + 3] += c[i] * tx + c[i + 1] * ty;
-    m_pDevice->SetVertexShaderConstantF(0, c, 4);
-  }
+  // World transform (row-vector, non-transposed). VIEW/PROJECTION are set once
+  // in SetupRenderState; DXVK's fixed-function pipeline computes v*W*V*P.
+  D3DMATRIX translate = {
+      1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, translation.x, translation.y, 0, 1};
+  D3DMATRIX world =
+      m_transformEnabled ? D3DMatMul(translate, m_d3dTransform) : translate;
+  m_pDevice->SetTransform(D3DTS_WORLD, &world);
 
-  // Texture: 0 = none, -1 = enable textured shader without binding, else a
-  // RocketTexture*.
+  // Texture: 0 = none (out = diffuse), -1 = keep the bound texture
+  // (out = tex*diffuse), else a RocketTexture* to bind. Stage-0 ops are only
+  // re-issued when the textured/untextured mode actually changes.
   if (!texture) {
     m_pDevice->SetTexture(0, nullptr);
-    m_pDevice->SetPixelShader(m_psUntextured);
+    if (m_ffTexMode != 0) {
+      m_pDevice->SetTextureStageState(0, D3DTSS_COLOROP, D3DTOP_SELECTARG1);
+      m_pDevice->SetTextureStageState(0, D3DTSS_COLORARG1, D3DTA_DIFFUSE);
+      m_pDevice->SetTextureStageState(0, D3DTSS_ALPHAOP, D3DTOP_SELECTARG1);
+      m_pDevice->SetTextureStageState(0, D3DTSS_ALPHAARG1, D3DTA_DIFFUSE);
+      m_ffTexMode = 0;
+    }
   } else {
     if (texture != TextureEnableWithoutBinding) {
       RocketTexture *t = reinterpret_cast<RocketTexture *>(texture);
@@ -783,7 +712,15 @@ void RocketRenderD3D9::DrawGeometryDev(RocketGeometry *g,
         return;
       m_pDevice->SetTexture(0, t->tex);
     }
-    m_pDevice->SetPixelShader(m_psTextured);
+    if (m_ffTexMode != 1) {
+      m_pDevice->SetTextureStageState(0, D3DTSS_COLOROP, D3DTOP_MODULATE);
+      m_pDevice->SetTextureStageState(0, D3DTSS_COLORARG1, D3DTA_TEXTURE);
+      m_pDevice->SetTextureStageState(0, D3DTSS_COLORARG2, D3DTA_DIFFUSE);
+      m_pDevice->SetTextureStageState(0, D3DTSS_ALPHAOP, D3DTOP_MODULATE);
+      m_pDevice->SetTextureStageState(0, D3DTSS_ALPHAARG1, D3DTA_TEXTURE);
+      m_pDevice->SetTextureStageState(0, D3DTSS_ALPHAARG2, D3DTA_DIFFUSE);
+      m_ffTexMode = 1;
+    }
   }
 
   m_pDevice->SetStreamSource(0, g->vb, 0, sizeof(D3DVertex));
@@ -864,8 +801,7 @@ void RocketRenderD3D9::Replay(void *p) {
     }
     case UICmdType::ClipEnable:
       if (m_hasStencil)
-        m_pDevice->SetRenderState(D3DRS_STENCILENABLE,
-                                  c.enable ? TRUE : FALSE);
+        m_pDevice->SetRenderState(D3DRS_STENCILENABLE, c.enable ? TRUE : FALSE);
       break;
     case UICmdType::ClipRender:
       RenderToClipMaskDev(c.op, c.geom, c.translation);

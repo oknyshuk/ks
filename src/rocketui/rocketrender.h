@@ -36,7 +36,8 @@
 // only during replay on the one render thread.
 
 // Handles handed to RmlUi. Allocated on the main thread (CPU data only); their
-// D3D9 resources are created/destroyed on the render thread. Defined in the .cpp.
+// D3D9 resources are created/destroyed on the render thread. Defined in the
+// .cpp.
 struct RocketGeometry;
 struct RocketTexture;
 struct RocketCmdList;
@@ -59,13 +60,14 @@ public:
   void SetScreenSize(int width, int height);
 
   // --- Recording driver (MAIN thread) ---
-  void NextFrame() { ++m_frame; }  // one bump per RunFrame; tags lists/releases
-  void *BeginRecord();             // returns a fresh RocketCmdList* as void*
+  void NextFrame() { ++m_frame; } // one bump per RunFrame; tags lists/releases
+  void *BeginRecord();            // returns a fresh RocketCmdList* as void*
   void EndRecord() { m_target = nullptr; }
 
   // --- Replay driver (RENDER thread) ---
-  void Replay(void *list);  // execute recorded commands on the device
-  void FreeList(void *list); // drain graveyard for list->frame, then delete list
+  void Replay(void *list); // execute recorded commands on the device
+  void
+  FreeList(void *list); // drain graveyard for list->frame, then delete list
 
   // Bump on GENUINE device re-creation only (different device pointer). Live
   // handles then re-create their D3D9 resources from retained CPU data on their
@@ -103,9 +105,8 @@ public:
 private:
   void SetupRenderState();
   void ReleaseResources();
-  void CreateShaders();
-  void ReleaseShaders();
-  void UploadWVP(const D3DMATRIX &world);
+  void CreateVertexDecl();
+  void ReleaseVertexDecl();
 
   // Replay-side device ops (RENDER thread).
   bool EnsureGeometry(RocketGeometry *g);
@@ -114,7 +115,8 @@ private:
                        Rml::TextureHandle texture);
   void RenderToClipMaskDev(Rml::ClipMaskOperation operation, RocketGeometry *g,
                            Rml::Vector2f translation);
-  void DrainReleased(uint32_t listFrame); // free entries with releaseFrame < listFrame
+  void DrainReleased(
+      uint32_t listFrame); // free entries with releaseFrame < listFrame
 
   IDirect3DDevice9 *m_pDevice;
 
@@ -125,13 +127,13 @@ private:
 
   D3DMATRIX m_d3dTransform;
   D3DMATRIX m_d3dProjection;
-  float m_projT[16] = {}; // Transposed projection — cached for fast path
 
-  // Programmable shaders — bypass DXVK's FF shader generation.
-  IDirect3DVertexShader9 *m_vs = nullptr;
-  IDirect3DPixelShader9 *m_psTextured = nullptr;
-  IDirect3DPixelShader9 *m_psUntextured = nullptr;
+  // Fixed-function pipeline: DXVK generates the VS/PS from device state. The
+  // vertex layout stays an explicit declaration (POSITION/COLOR/TEXCOORD, all
+  // FF-transformable usages).
   IDirect3DVertexDeclaration9 *m_vtxDecl = nullptr;
+  int m_ffTexMode =
+      -1; // last texture-stage mode (-1 unset, 0 untextured, 1 textured)
 
   // Recording state (MAIN thread only).
   RocketCmdList *m_target = nullptr; // list currently being recorded into
@@ -146,7 +148,8 @@ private:
   // (see DrainReleased). Never freed on the main thread (would let the
   // allocator hand the address to a new handle while replay is still behind).
   // ponytail: one coarse mutex; uncontended (brief main-thread push vs
-  // once-per-list render-thread drain). Lock-free ring only if a profile says so.
+  // once-per-list render-thread drain). Lock-free ring only if a profile says
+  // so.
   std::mutex m_deadMutex;
   std::vector<std::pair<RocketGeometry *, uint32_t>> m_deadGeom;
   std::vector<std::pair<RocketTexture *, uint32_t>> m_deadTex;
