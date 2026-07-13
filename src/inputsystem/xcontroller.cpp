@@ -1,4 +1,4 @@
-//===== Copyright © 1996-2005, Valve Corporation, All rights reserved. ======//
+//===== Copyright ï¿½ 1996-2005, Valve Corporation, All rights reserved. ======//
 //
 // Purpose: Xbox controller implementation for inputsystem.dll
 //
@@ -18,8 +18,6 @@
 
 #include "vstdlib/IKeyValuesSystem.h"
 #include "materialsystem/imaterialsystem.h"
-#include "vgui/isurface.h"
-#include "vgui_controls/controls.h"
 
 
 // NOTE: This has to be the last file included!
@@ -370,10 +368,7 @@ bool CInputSystem::GetPS3CursorPos( int &x, int &y )
 		x = nScreenWidth * ( ( GetMotionControllerPosX() + 1.0f ) * 0.5f );
 		y = nScreenHeight * ( 1.0 - ( ( GetMotionControllerPosY() + 1.0f ) * 0.5f ) );
 
-		if ( vgui::surface()->IsCursorVisible() )
-		{
-			PostEvent( IE_AnalogValueChanged, m_nLastSampleTick, MOUSE_XY, x, y );
-		}
+		PostEvent( IE_AnalogValueChanged, m_nLastSampleTick, MOUSE_XY, x, y );
 
 		result = true;
 	}

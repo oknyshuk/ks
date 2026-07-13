@@ -21,12 +21,6 @@
 #endif
 
 #else
-#include "vguiscreen.h"
-#endif
-
-#if defined( CLIENT_DLL ) && defined( SIXENSE )
-#include "sixense/in_sixense.h"
-#include "sixense/sixense_convars_extern.h"
 #endif
 
 extern ConVar in_forceuser;
@@ -117,13 +111,7 @@ void CBaseViewModel::Spawn( void )
 }
 
 
-#if defined ( CSTRIKE_DLL ) && !defined ( CLIENT_DLL )
-#define VGUI_CONTROL_PANELS
-#endif
-
-#if defined ( TF_DLL )
-#define VGUI_CONTROL_PANELS
-#endif
+// VGUI in-world control panels removed (VGUI teardown); VGUI_CONTROL_PANELS intentionally left undefined.
 
 //-----------------------------------------------------------------------------
 // Purpose: 

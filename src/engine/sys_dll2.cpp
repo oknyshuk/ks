@@ -48,7 +48,7 @@
 #include "gl_shader.h"
 #include "l_studio.h"
 #ifdef _WIN32
-#include "vgui/ILocalize.h"
+#include "localize/ilocalize.h"
 #endif
 #include "sys_dll.h"
 #include "materialsystem/materialsystem_config.h"
@@ -75,8 +75,6 @@
 
 #ifndef DEDICATED
 #include "sys_mainwind.h"
-#include "vgui/ISystem.h"
-#include "vgui_controls/Controls.h"
 #include "IGameUIFuncs.h"
 #include "cl_steamauth.h"
 
@@ -553,7 +551,7 @@ bool CEngineAPI::Connect( CreateInterfaceFn factory )
 		return false;
 #endif
 
-	if ( !g_pStudioRender || !g_pDataCache || !g_pPhysics || !g_pMDLCache || !g_pMatSystemSurface || !g_pInputSystem || !g_pSoundEmitterSystem)
+	if ( !g_pStudioRender || !g_pDataCache || !g_pPhysics || !g_pMDLCache || !g_pInputSystem || !g_pSoundEmitterSystem)
 	{
 		Warning( "Engine wasn't able to acquire required interfaces!\n" );
 		return false;

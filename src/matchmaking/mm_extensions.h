@@ -12,7 +12,7 @@
 
 #include "UtlStringMap.h"
 
-#include "vgui/ILocalize.h"
+#include "localize/ilocalize.h"
 #include "engine/inetsupport.h"
 #include "cdll_int.h"
 #include "eiface.h"
@@ -57,7 +57,7 @@ protected:
 	void OnExtensionInterfaceUpdated( char const *szInterfaceString, void *pvInterface );
 
 public:
-	vgui::ILocalize * GetILocalize() { return m_exts.m_pILocalize; }
+	ILocalize * GetILocalize() { return m_exts.m_pILocalize; }
 	INetSupport * GetINetSupport() { return m_exts.m_pINetSupport; }
 	IEngineVoice * GetIEngineVoice() { return m_exts.m_pIEngineVoice; }
 	IVEngineClient * GetIVEngineClient() { return m_exts.m_pIVEngineClient; }
@@ -76,7 +76,7 @@ protected:
 	{
 		inline Exts_t() { memset( this, 0, sizeof( *this ) ); }
 
-		vgui::ILocalize *m_pILocalize;
+		ILocalize *m_pILocalize;
 		INetSupport *m_pINetSupport;
 		IEngineVoice *m_pIEngineVoice;
 		IVEngineClient *m_pIVEngineClient;

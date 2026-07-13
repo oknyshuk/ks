@@ -19,7 +19,7 @@ namespace Rml {
     class ElementFormControlTextArea;
 }
 
-class RocketConsole : public IConsoleDisplayFunc, public CGameEventListener
+class RocketConsole : public IConsoleDisplayFunc
 {
 public:
     static RocketConsole& Instance();
@@ -49,9 +49,6 @@ public:
 
     // Event callback for input changes (auto-update completions)
     void OnInputChange();
-
-    // CGameEventListener
-    virtual void FireGameEvent(IGameEvent *event);
 
 private:
     void LoadDocument();
@@ -118,8 +115,8 @@ private:
         Color color;
     };
     CUtlVector<OutputLine> m_OutputBuffer;
-    static const int MAX_OUTPUT_LINES = 200;
-    static const size_t MAX_OUTPUT_SIZE = 20 * 1024;  // ~20KB text limit (~2MB geometry)
+    static const int MAX_OUTPUT_LINES = 1000;
+    static const size_t MAX_OUTPUT_SIZE = 64 * 1024;  // ~64KB scrollback, FIFO-trimmed (bounded geometry when visible)
 
     Color m_PrintColor;
     Color m_DPrintColor;

@@ -36,34 +36,22 @@
 // interface to engine
 #include "engineinterface.h"
 
-#include "vguisystemmoduleloader.h"
+#include "uisystemmoduleloader.h"
 #include "bitmap/tgaloader.h"
 
-#include "gameconsole.h"
-#include "cdkeyentrydialog.h"
 #include "modinfo.h"
 #include "game/client/IGameClientExports.h"
 #include "materialsystem/imaterialsystem.h"
 #include "matchmaking/imatchframework.h"
 #include "iachievementmgr.h"
 #include "IGameUIFuncs.h"
-#include "ienginevgui.h"
-#include "gameconsole.h"
+#include "iengineui.h"
 
 // vgui2 interface
 // note that GameUI project uses ..\vgui2\include, not ..\utils\vgui\include
-#include "vgui/Cursor.h"
 #include "tier1/keyvalues.h"
-#include "vgui/ILocalize.h"
-#include "vgui/IPanel.h"
-#include "vgui/IScheme.h"
-#include "vgui/IVGui.h"
-#include "vgui/ISystem.h"
-#include "vgui/ISurface.h"
-#include "vgui_controls/Menu.h"
-#include "vgui_controls/PHandle.h"
+#include "localize/ilocalize.h"
 #include "tier3/tier3.h"
-#include "matsys_controls/matsyscontrols.h"
 #include "steam/steam_api.h"
 #include "protocol.h"
 #include "GameUI/IGameUI.h"
@@ -116,12 +104,11 @@ class IMatchExtPortal2 *g_pMatchExtPortal2 = &g_MatchExtPortal2;
 
 #elif defined( CSTRIKE15 )
 
-#include "basepanel.h"
-#include "../gameui/cstrike15/cstrike15basepanel.h"
-
-typedef CBaseModPanel UI_BASEMOD_PANEL_CLASS;
-inline UI_BASEMOD_PANEL_CLASS & GetUiBaseModPanelClass() { return *BasePanel(); }
-inline UI_BASEMOD_PANEL_CLASS & ConstructUiBaseModPanelClass() { return *BasePanelSingleton(); }
+// VGUI menu shell (CBaseModPanel/CCStrike15BasePanel) removed in VGUI teardown.
+// Menu open/close is routed directly to the RmlUi documents below.
+#include "../RocketUI/rkmenu_main.h"
+#include "../RocketUI/rkhud_pausemenu.h"
+#include "../RocketUI/rkhud_loadingscreen.h"
 
 #else
 
@@ -148,7 +135,7 @@ inline UI_BASEMOD_PANEL_CLASS & ConstructUiBaseModPanelClass() { return *BasePan
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
-IEngineVGui *enginevguifuncs = NULL;
+IEngineUI *engineuifuncs = NULL;
 // dgoodenough - xonline only exists on the 360.  All uses of xonline have had their
 // protection changed like this one
 // PS3_BUILDFIX
@@ -158,13 +145,10 @@ IXOnline  *xonline = NULL;			// 360 only
 #elif defined( _PS3 )
 IPS3SaveRestoreToUI *ps3saveuiapi = NULL;
 #endif
-vgui::ISurface *enginesurfacefuncs = NULL;
 IAchievementMgr *achievementmgr = NULL;
 
 class CGameUI;
 CGameUI *g_pGameUI = NULL;
-
-vgui::VPANEL g_hLoadingBackgroundDialog = NULL;
 
 static CGameUI g_GameUI;
 
@@ -186,15 +170,6 @@ IGameClientExports *GameClientExports()
 CGameUI &GameUI()
 {
 	return g_GameUI;
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: hack function to give the module loader access to the main panel handle
-//			only used in VguiSystemModuleLoader
-//-----------------------------------------------------------------------------
-vgui::VPANEL GetGameUIBasePanel()
-{
-	return GetUiBaseModPanelClass().GetVPanel();
 }
 
 EXPOSE_SINGLE_INTERFACE_GLOBALVAR(CGameUI, IGameUI, GAMEUI_INTERFACE_VERSION, g_GameUI);
@@ -269,21 +244,17 @@ void CGameUI::Initialize( CreateInterfaceFn factory )
 	CGameUIConVarRef var( "gameui_xbox" );
 	m_bIsConsoleUI = var.IsValid() && var.GetBool();
 
-	vgui::VGui_InitInterfacesList( "GameUI", &factory, 1 );
-	vgui::VGui_InitMatSysInterfacesList( "GameUI", &factory, 1 );
-
 	// load localization file
-	g_pVGuiLocalize->AddFile( "resource/gameui_%language%.txt", "GAME", true );
+	g_pLocalize->AddFile( "resource/gameui_%language%.txt", "GAME", true );
 
 	// load mod info
 	ModInfo().LoadCurrentGameInfo();
 
 	// load localization file for kb_act.lst
-	g_pVGuiLocalize->AddFile( "resource/valve_%language%.txt", "GAME", true );
+	g_pLocalize->AddFile( "resource/valve_%language%.txt", "GAME", true );
 
 	bool bFailed = false;
-	enginevguifuncs = (IEngineVGui *)factory( VENGINE_VGUI_VERSION, NULL );
-	enginesurfacefuncs = (vgui::ISurface *)factory(VGUI_SURFACE_INTERFACE_VERSION, NULL);
+	engineuifuncs = (IEngineUI *)factory( VENGINE_UI_VERSION, NULL );
 	gameuifuncs = (IGameUIFuncs *)factory( VENGINE_GAMEUIFUNCS_VERSION, NULL );
 // dgoodenough - xonline only exists on the 360.
 // PS3_BUILDFIX
@@ -293,7 +264,7 @@ void CGameUI::Initialize( CreateInterfaceFn factory )
 #ifdef SWARM_DLL
 	g_pMatchExtSwarm = ( IMatchExtSwarm * ) factory( IMATCHEXT_SWARM_INTERFACE, NULL );
 #endif
-	bFailed = !enginesurfacefuncs || !gameuifuncs || !enginevguifuncs ||
+	bFailed = !gameuifuncs || !engineuifuncs ||
 // dgoodenough - xonline only exists on the 360.
 // PS3_BUILDFIX
 #ifdef _X360
@@ -323,21 +294,7 @@ void CGameUI::Initialize( CreateInterfaceFn factory )
 		Error( "CGameUI::Initialize() failed to get necessary interfaces\n" );
 	}
 
-	// setup base panel
-	UI_BASEMOD_PANEL_CLASS& factoryBasePanel = ConstructUiBaseModPanelClass(); // explicit singleton instantiation
-
-	factoryBasePanel.SetBounds( 0, 0, 640, 480 );
-	factoryBasePanel.SetPaintBorderEnabled( false );
-	factoryBasePanel.SetPaintBackgroundEnabled( true );
-	factoryBasePanel.SetPaintEnabled( true );
-	factoryBasePanel.SetVisible( true );
-
-	factoryBasePanel.SetMouseInputEnabled( IsPC() );
-	// factoryBasePanel.SetKeyBoardInputEnabled( IsPC() );
-	factoryBasePanel.SetKeyBoardInputEnabled( true );
-
-	vgui::VPANEL rootpanel = enginevguifuncs->GetPanel( PANEL_GAMEUIDLL );
-	factoryBasePanel.SetParent( rootpanel );
+	// VGUI base panel removed; the RmlUi documents host the menu. Nothing to construct here.
 }
 
 void CGameUI::PostInit()
@@ -359,16 +316,6 @@ void CGameUI::PostInit()
 	// to know once client dlls have been loaded
 	BaseModUI::CUIGameData::Get()->OnGameUIPostInit();
 #endif
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: Sets the specified panel as the background panel for the loading
-//		dialog.  If NULL, default background is used.  If you set a panel,
-//		it should be full-screen with an opaque background, and must be a VGUI popup.
-//-----------------------------------------------------------------------------
-void CGameUI::SetLoadingBackgroundDialog( vgui::VPANEL panel )
-{
-	g_hLoadingBackgroundDialog = panel;
 }
 
 //-----------------------------------------------------------------------------
@@ -488,15 +435,13 @@ void CGameUI::Start()
 
 		g_pFullFileSystem->AddSearchPath(szConfigDir, "CONFIG");
 		g_pFullFileSystem->CreateDirHierarchy("", "CONFIG");
-		// user dialog configuration
-		vgui::system()->SetUserConfigFile("InGameDialogConfig.vdf", "CONFIG");
 
 		g_pFullFileSystem->AddSearchPath( "platform", "PLATFORM" );
 	}
 
 	// localization
-	g_pVGuiLocalize->AddFile( "resource/platform_%language%.txt");
-	g_pVGuiLocalize->AddFile( "resource/vgui_%language%.txt");
+	g_pLocalize->AddFile( "resource/platform_%language%.txt");
+	g_pLocalize->AddFile( "resource/vgui_%language%.txt");
 
 	// ********************************************************************
 	// The following is commented out to keep intro music from playing
@@ -615,7 +560,6 @@ void CGameUI::ActivateGameUI()
 void CGameUI::HideGameUI()
 {
 	engine->ExecuteClientCmd("gameui_hide");
-	GameConsole().HideImmediately();
 }
 
 //-----------------------------------------------------------------------------
@@ -653,17 +597,18 @@ void CGameUI::OnGameUIActivated()
 
 	SetSavedThisMenuSession( false );
 
-	UI_BASEMOD_PANEL_CLASS &ui = GetUiBaseModPanelClass();
-	bool bNeedActivation = true;
-	if ( ui.IsVisible() )
+	// Route menu activation directly to the RmlUi documents.
+	if ( IsInLevel() )
 	{
-		// Already visible, maybe don't need activation
-		if ( !IsInLevel() && IsInBackgroundLevel() )
-			bNeedActivation = false;
+		RocketPauseMenuDocument::ShowPanel( true, true );
 	}
-	if ( bNeedActivation )
+	else
 	{
-		GetUiBaseModPanelClass().OnGameUIActivated();
+		if ( RocketPauseMenuDocument::IsActive() )
+			RocketPauseMenuDocument::ShowPanel( false, true );
+		if ( !RocketMainMenuDocument::IsActive() )
+			RocketMainMenuDocument::LoadDialog();
+		RocketMainMenuDocument::ShowPanel( true );
 	}
 }
 
@@ -678,7 +623,13 @@ void CGameUI::OnGameUIHidden()
 	// unpause the game when leaving the UI
 	engine->ClientCmd_Unrestricted( "unpause nomsg" );
 
-	GetUiBaseModPanelClass().OnGameUIHidden();
+	if ( RocketPauseMenuDocument::IsActive() )
+		RocketPauseMenuDocument::ShowPanel( false, true );
+
+	// Hide the main menu too when the game UI is dismissed (e.g. after connecting
+	// to a server); otherwise it stays drawn over gameplay.
+	if ( RocketMainMenuDocument::IsActive() )
+		RocketMainMenuDocument::ShowPanel( false );
 
 	// Restore to default
 	if ( bWasActive )
@@ -698,25 +649,8 @@ void CGameUI::RunFrame()
 		m_bOpenProgressOnStart = false;
 	}
 
-	int wide, tall;
-#if defined( TOOLFRAMEWORK_VGUI_REFACTOR )
-	// resize the background panel to the screen size
-	vgui::VPANEL clientDllPanel = enginevguifuncs->GetPanel( PANEL_ROOT );
-
-	int x, y;
-	vgui::ipanel()->GetPos( clientDllPanel, x, y );
-	vgui::ipanel()->GetSize( clientDllPanel, wide, tall );
-	staticPanel->SetBounds( x, y, wide,tall );
-#else
-	vgui::surface()->GetScreenSize(wide, tall);
-
-	GetUiBaseModPanelClass().SetSize(wide, tall);
-#endif
-
 	// Run frames
 	g_VModuleLoader.RunFrame();
-
-	GetUiBaseModPanelClass().RunFrame();
 
 	// Play the start-up music the first time we run frame
 	if ( m_iPlayGameStartupSound > 0 )
@@ -810,11 +744,6 @@ void CGameUI::OnDisconnectFromServer( uint8 eSteamLoginFailure )
 	m_iGameConnectionPort = 0;
 	m_iGameQueryPort = 0;
 
-	if ( g_hLoadingBackgroundDialog )
-	{
-		vgui::ivgui()->PostMessage( g_hLoadingBackgroundDialog, new KeyValues("DisconnectedFromGame"), NULL );
-	}
-
 	IGameEvent *event = gameeventmanager->CreateEvent( "client_disconnect" );
 	if ( event )
 	{
@@ -847,12 +776,13 @@ void CGameUI::OnLevelLoadingStarted( const char *levelName, bool bShowProgressDi
 
 	g_VModuleLoader.PostMessageToAllModules( new KeyValues( "LoadingStarted" ) );
 
-	GetUiBaseModPanelClass().OnLevelLoadingStarted( mapName, bShowProgressDialog );
-
 	if ( bShowProgressDialog )
 	{
 		StartProgressBar();
 	}
+
+	if ( !RocketLoadingScreenDocument::IsVisible() )
+		RocketLoadingScreenDocument::ShowPanel( true );
 
 	// Don't play the start game sound if this happens before we get to the first frame
 	m_iPlayGameStartupSound = 0;
@@ -869,7 +799,6 @@ void CGameUI::OnLevelLoadingFinished(bool bError, const char *failureReason, con
 	// notify all the modules
 	g_VModuleLoader.PostMessageToAllModules( new KeyValues( "LoadingFinished" ) );
 
-	GetUiBaseModPanelClass().OnLevelLoadingFinished();
 	HideLoadingBackgroundDialog();
 
 #if defined( PORTAL )
@@ -929,12 +858,6 @@ bool CGameUI::UpdateSecondaryProgressBar(float progress, const wchar_t *desc )
 void CGameUI::SetProgressLevelName( const char *levelName )
 {
 	MEM_ALLOC_CREDIT();
-	if ( g_hLoadingBackgroundDialog )
-	{
-		KeyValues *pKV = new KeyValues( "ProgressLevelName" );
-		pKV->SetString( "levelName", levelName );
-		vgui::ivgui()->PostMessage( g_hLoadingBackgroundDialog, pKV, NULL );
-	}
 }
 
 
@@ -1069,13 +992,6 @@ void CGameUI::SetSavedThisMenuSession( bool bState )
 //-----------------------------------------------------------------------------
 void CGameUI::ShowLoadingBackgroundDialog()
 {
-	if ( g_hLoadingBackgroundDialog )
-	{
-		vgui::VPANEL panel = GetUiBaseModPanelClass().GetVPanel();
-
-		vgui::ipanel()->SetParent( g_hLoadingBackgroundDialog, panel );
-		vgui::ipanel()->MoveToFront( g_hLoadingBackgroundDialog );
-	}
 }
 
 
@@ -1084,20 +1000,6 @@ void CGameUI::ShowLoadingBackgroundDialog()
 //-----------------------------------------------------------------------------
 void CGameUI::HideLoadingBackgroundDialog()
 {
-	if ( g_hLoadingBackgroundDialog )
-	{
-		if ( engine->IsInGame() )
-		{
-			vgui::ivgui()->PostMessage( g_hLoadingBackgroundDialog, new KeyValues( "LoadedIntoGame" ), NULL );
-		}
-		else
-		{
-			vgui::ipanel()->SetVisible( g_hLoadingBackgroundDialog, false );
-			vgui::ipanel()->MoveToBack( g_hLoadingBackgroundDialog );
-		}
-
-		vgui::ivgui()->PostMessage( g_hLoadingBackgroundDialog, new KeyValues("HideAsLoadingPanel"), NULL );
-	}
 }
 
 //-----------------------------------------------------------------------------
@@ -1105,17 +1007,12 @@ void CGameUI::HideLoadingBackgroundDialog()
 //-----------------------------------------------------------------------------
 bool CGameUI::HasLoadingBackgroundDialog()
 {
-	return ( NULL != g_hLoadingBackgroundDialog );
+	return false;
 }
 
 //-----------------------------------------------------------------------------
 // Purpose: Xbox 360 calls from engine to GameUI 
 //-----------------------------------------------------------------------------
-void CGameUI::ShowMessageDialog( const uint nType, vgui::Panel *pOwner )
-{
-	BasePanel()->ShowMessageDialog( nType, pOwner );
-}
-
 void CGameUI::ShowMessageDialog( const char* messageID, const char* titleID )
 {
 }
@@ -1306,12 +1203,12 @@ void CGameUI::SetBackgroundMusicDesired( bool bPlayMusic )
 
 bool CGameUI::LoadingProgressWantsIsolatedRender( bool bContextValid )
 {
-	return GetUiBaseModPanelClass().LoadingProgressWantsIsolatedRender( bContextValid );
+	return false;
 }
 
 void CGameUI::RestoreTopLevelMenu()
 {
-	BasePanel()->PostMessage( BasePanel(), new KeyValues( "RunMenuCommand", "command", "RestoreTopLevelMenu" ) );
+	RocketMainMenuDocument::RestorePanel();
 }
 
 void CGameUI::SetPreviewBackgroundMusic( const char * pchPreviewMusicPrefix )

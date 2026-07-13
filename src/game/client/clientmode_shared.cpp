@@ -15,15 +15,10 @@
 #include "iviewrender.h"
 #include "hud_basechat.h"
 #include "weapon_selection.h"
-#include <vgui/IVGui.h>
-#include <vgui/Cursor.h>
-#include <vgui/IPanel.h>
-#include <vgui/IInput.h>
-#include <vgui/ILocalize.h>
+#include "localize/ilocalize.h"
 #include "engine/IEngineSound.h"
 #include <keyvalues.h>
-#include <vgui_controls/AnimationController.h>
-#include "vgui_int.h"
+#include "clientui.h"
 #include "hud_macros.h"
 #include "hltvcamera.h"
 #include "hud.h"
@@ -34,7 +29,6 @@
 #include "replaycamera.h"
 #endif
 #include "particlemgr.h"
-#include "c_vguiscreen.h"
 #include "c_team.h"
 #include "c_rumble.h"
 #include "fmtstr.h"
@@ -62,8 +56,6 @@
 class CHudWeaponSelection;
 class CHudChat;
 
-static vgui::HContext s_hVGuiContext = DEFAULT_VGUI_CONTEXT;
-
 ConVar cl_drawhud( "cl_drawhud", "1", FCVAR_CHEAT, "Enable the rendering of the hud" );
 ConVar hud_takesshots( "hud_takesshots", "0", FCVAR_CLIENTDLL | FCVAR_ARCHIVE, "Auto-save a scoreboard screenshot at the end of a map." );
 ConVar spec_usenumberkeys_nobinds( "spec_usenumberkeys_nobinds", "1", FCVAR_CLIENTDLL | FCVAR_ARCHIVE, "If set to 1, map voting and spectator view use the raw number keys instead of the weapon binds (slot1, slot2, etc)." );
@@ -75,26 +67,6 @@ ConVar spec_cameraman_disable_with_user_control( "spec_cameraman_disable_with_us
 extern ConVar v_viewmodel_fov;
 extern ConVar spec_show_xray;
 extern ConVar spec_hide_players;
-
-CON_COMMAND( hud_reloadscheme, "Reloads hud layout and animation scripts." )
-{
-	g_pFullFileSystem->SyncDvdDevCache();
-
-	for ( int hh = 0; hh < MAX_SPLITSCREEN_PLAYERS; ++hh )
-	{
-		ACTIVE_SPLITSCREEN_PLAYER_GUARD_VGUI( hh );
-		ClientModeShared *mode = ( ClientModeShared * )GetClientModeNormal();
-		if ( mode )
-		{
-			mode->ReloadScheme();
-		}
-	}
-	ClientModeShared *mode = ( ClientModeShared * )GetFullscreenClientMode();
-	if ( mode )
-	{
-		mode->ReloadSchemeWithRoot( VGui_GetFullscreenRootVPANEL() );
-	}
-}
 
 #if 0
 CON_COMMAND_F( crash, "Crash the client. Optional parameter -- type of crash:\n 0: read from NULL\n 1: write to NULL\n 2: DmCrashDump() (xbox360 only)", FCVAR_CHEAT )
@@ -199,31 +171,8 @@ ClientModeShared::ClientModeShared()
 //-----------------------------------------------------------------------------
 ClientModeShared::~ClientModeShared()
 {
-	// VGui_Shutdown() should have deleted/NULL'd
+	// UI_Shutdown() should have deleted/NULL'd
 	Assert( !m_pViewport );
-}
-
-void ClientModeShared::ReloadScheme( void )
-{
-	ReloadSchemeWithRoot( VGui_GetClientDLLRootPanel() );
-}
-
-void ClientModeShared::ReloadSchemeWithRoot( vgui::VPANEL pRoot )
-{
-	if ( pRoot )
-	{
-		int wide, tall;
-		vgui::ipanel()->GetSize(pRoot, wide, tall);
-		m_nRootSize[ 0 ] = wide;
-		m_nRootSize[ 1 ] = tall;
-	}
-
-	m_pViewport->ReloadScheme( "resource/ClientScheme.res" );
-	if ( GET_ACTIVE_SPLITSCREEN_SLOT() == 0 )
-	{
-		ClearKeyValuesCache();
-	}
-	// Msg( "Reload scheme [%d]\n", GET_ACTIVE_SPLITSCREEN_SLOT() );
 }
 
 //-----------------------------------------------------------------------------
@@ -265,8 +214,6 @@ void ClientModeShared::Init()
 	ReplayCamera()->Init();
 #endif
 
-	m_CursorNone = vgui::dc_none;
-
 	HOOK_MESSAGE( VGUIMenu );
 	HOOK_MESSAGE( Rumble );
 }
@@ -288,7 +235,7 @@ void ClientModeShared::InitViewport()
 }
 
 
-void ClientModeShared::VGui_Shutdown()
+void ClientModeShared::UI_Shutdown()
 {
 	delete m_pViewport;
 	m_pViewport = NULL;
@@ -489,11 +436,6 @@ void ClientModeShared::PostRenderVGui()
 //-----------------------------------------------------------------------------
 void ClientModeShared::Update()
 {
-	if ( m_pViewport->IsVisible() != cl_drawhud.GetBool() )
-	{
-		m_pViewport->SetVisible( cl_drawhud.GetBool() );
-	}
-
 	UpdateRumbleEffects( XBX_GetActiveUserId() );
 }
 
@@ -732,18 +674,6 @@ int ClientModeShared::HudElementKeyInput( int down, ButtonCode_t keynum, const c
 }
 
 //-----------------------------------------------------------------------------
-// Purpose: 
-// Output : vgui::Panel
-//-----------------------------------------------------------------------------
-vgui::Panel *ClientModeShared::GetMessagePanel()
-{
-	if ( m_pChatElement && m_pChatElement->GetInputPanel() && m_pChatElement->GetInputPanel()->IsVisible() )
-		return m_pChatElement->GetInputPanel();
-
-	return NULL;
-}
-
-//-----------------------------------------------------------------------------
 // Purpose: The player has started to type a message
 //-----------------------------------------------------------------------------
 void ClientModeShared::StartMessageMode( int iMessageModeType )
@@ -777,12 +707,6 @@ void ClientModeShared::LevelInit( const char *newmap )
 		gameeventmanager->FireEventClientSide( event );
 	}
 
-	// Create a vgui context for all of the in-game vgui panels...
-	if ( s_hVGuiContext == DEFAULT_VGUI_CONTEXT )
-	{
-		s_hVGuiContext = vgui::ivgui()->CreateContext();
-	}
-
 	// Reset any player explosion/shock effects
 	CLocalPlayerFilter filter;
 	enginesound->SetPlayerDSP( filter, 0, true );
@@ -797,11 +721,6 @@ void ClientModeShared::LevelShutdown( void )
 	{
 	m_pChatElement->LevelShutdown();
 	}
-	if ( s_hVGuiContext != DEFAULT_VGUI_CONTEXT )
-	{
-		vgui::ivgui()->DestroyContext( s_hVGuiContext );
-		s_hVGuiContext = DEFAULT_VGUI_CONTEXT;
-	}
 
 	// Reset any player explosion/shock effects
 	CLocalPlayerFilter filter;
@@ -810,65 +729,17 @@ void ClientModeShared::LevelShutdown( void )
 
 void ClientModeShared::Enable()
 {
-	vgui::VPANEL pRoot = VGui_GetClientDLLRootPanel();
-	EnableWithRootPanel( pRoot );
-}
-
-void ClientModeShared::EnableWithRootPanel( vgui::VPANEL pRoot )
-{
-	// Add our viewport to the root panel.
-	if( pRoot != NULL )
-	{
-		m_pViewport->SetParent( pRoot );
-	}
-
-	// All hud elements should be proportional
-	// This sets that flag on the viewport and all child panels
-	m_pViewport->SetProportional( true );
-
-	m_pViewport->SetCursor( m_CursorNone );
-	vgui::surface()->SetCursor( m_CursorNone );
-
-	m_pViewport->SetVisible( true );
-	if ( m_pViewport->IsKeyBoardInputEnabled() )
-	{
-		m_pViewport->RequestFocus();
-	}
-
 	Layout();
 }
 
 
 void ClientModeShared::Disable()
 {
-	vgui::VPANEL pRoot;
-
-	// Remove our viewport from the root panel.
-	if( ( pRoot = VGui_GetClientDLLRootPanel() ) != NULL )
-	{
-		m_pViewport->SetParent( (vgui::VPANEL)NULL );
-	}
-
-	m_pViewport->SetVisible( false );
 }
 
 
 void ClientModeShared::Layout( bool bForce /*= false*/)
 {
-	vgui::VPANEL pRoot;
-	int wide, tall;
-
-	// Make the viewport fill the root panel.
-	if( ( pRoot = m_pViewport->GetVParent() ) != NULL )
-	{
-		vgui::ipanel()->GetSize(pRoot, wide, tall);
-		bool changed = wide != m_nRootSize[ 0 ] || tall != m_nRootSize[ 1 ];
-		m_pViewport->SetBounds(0, 0, wide, tall);
-		if ( changed || bForce )
-		{
-			ReloadSchemeWithRoot( pRoot );
-		}
-	}
 }
 
 #ifdef IRONSIGHT
@@ -905,117 +776,6 @@ float ClientModeShared::GetViewModelFOV( void )
 #endif
 
 	return v_viewmodel_fov.GetFloat();
-}
-
-vgui::Panel *ClientModeShared::GetPanelFromViewport( const char *pchNamePath )
-{
-	char szTagetName[ 256 ];
-	Q_strncpy( szTagetName, pchNamePath, sizeof(szTagetName) );
-
-	char *pchName = szTagetName;
-
-	char *pchEndToken = strchr( pchName, ';' );
-	if ( pchEndToken )
-	{
-		*pchEndToken = '\0';
-	}
-
-	char *pchNextName = strchr( pchName, '/' );
-	if ( pchNextName )
-	{
-		*pchNextName = '\0';
-		pchNextName++;
-	}
-
-	// Comma means we want to count to a specific instance by name
-	int nInstance = 0;
-
-	char *pchInstancePos = strchr( pchName, ',' );
-	if ( pchInstancePos )
-	{
-		*pchInstancePos = '\0';
-		pchInstancePos++;
-
-		nInstance = atoi( pchInstancePos );
-	}
-
-	// Find the child
-	int nCurrentInstance = 0;
-	vgui::Panel *pPanel = NULL;
-
-	for ( int i = 0; i < GetViewport()->GetChildCount(); i++ )
-	{
-		Panel *pChild = GetViewport()->GetChild( i );
-		if ( !pChild )
-			continue;
-
-		if ( stricmp( pChild->GetName(), pchName ) == 0 )
-		{
-			nCurrentInstance++;
-
-			if ( nCurrentInstance > nInstance )
-			{
-				pPanel = pChild;
-				break;
-			}
-		}
-	}
-
-	pchName = pchNextName;
-
-	while ( pPanel )
-	{
-		if ( !pchName || pchName[ 0 ] == '\0' )
-		{
-			break;
-		}
-
-		pchNextName = strchr( pchName, '/' );
-		if ( pchNextName )
-		{
-			*pchNextName = '\0';
-			pchNextName++;
-		}
-
-		// Comma means we want to count to a specific instance by name
-		nInstance = 0;
-
-		pchInstancePos = strchr( pchName, ',' );
-		if ( pchInstancePos )
-		{
-			*pchInstancePos = '\0';
-			pchInstancePos++;
-
-			nInstance = atoi( pchInstancePos );
-		}
-
-		// Find the child
-		nCurrentInstance = 0;
-		vgui::Panel *pNextPanel = NULL;
-
-		for ( int i = 0; i < pPanel->GetChildCount(); i++ )
-		{
-			Panel *pChild = pPanel->GetChild( i );
-			if ( !pChild )
-				continue;
-
-			if ( stricmp( pChild->GetName(), pchName ) == 0 )
-			{
-				nCurrentInstance++;
-
-				if ( nCurrentInstance > nInstance )
-				{
-					pNextPanel = pChild;
-					break;
-				}
-			}
-		}
-
-		pPanel = pNextPanel;
-		pchName = pchNextName;
-	}
-
-	return pPanel;
 }
 
 class CHudChat;
@@ -1060,11 +820,11 @@ void ClientModeShared::FireGameEvent( IGameEvent *event )
 		{
 			wchar_t wszLocalized[100];
 			wchar_t wszPlayerName[MAX_PLAYER_NAME_LENGTH];
-			g_pVGuiLocalize->ConvertANSIToUnicode( event->GetString("name"), wszPlayerName, sizeof(wszPlayerName) );
-			g_pVGuiLocalize->ConstructString( wszLocalized, sizeof( wszLocalized ), g_pVGuiLocalize->Find( "#game_player_connecting" ), 1, wszPlayerName );
+			g_pLocalize->ConvertANSIToUnicode( event->GetString("name"), wszPlayerName, sizeof(wszPlayerName) );
+			g_pLocalize->ConstructString( wszLocalized, sizeof( wszLocalized ), g_pLocalize->Find( "#game_player_connecting" ), 1, wszPlayerName );
 
 			char szLocalized[100];
-			g_pVGuiLocalize->ConvertUnicodeToANSI( wszLocalized, szLocalized, sizeof(szLocalized) );
+			g_pLocalize->ConvertUnicodeToANSI( wszLocalized, szLocalized, sizeof(szLocalized) );
 
 			hudChat->Printf( CHAT_FILTER_JOINLEAVE, "%s", szLocalized );
 		}
@@ -1105,7 +865,7 @@ void ClientModeShared::FireGameEvent( IGameEvent *event )
 			pCSPR->GetDecoratedPlayerName( pPlayer->entindex(), wszPlayerName, sizeof( wszPlayerName ), ( EDecoratedPlayerNameFlag_t) ( k_EDecoratedPlayerNameFlag_DontUseNameOfControllingPlayer | k_EDecoratedPlayerNameFlag_DontUseAssassinationTargetName ) );
 #else
 			wchar_t wszPlayerName[MAX_PLAYER_NAME_LENGTH];
-			g_pVGuiLocalize->ConvertANSIToUnicode( pPlayer->GetPlayerName(), wszPlayerName, sizeof(wszPlayerName) );
+			g_pLocalize->ConvertANSIToUnicode( pPlayer->GetPlayerName(), wszPlayerName, sizeof(wszPlayerName) );
 #endif
 
 			wchar_t wszReasonBuf[64];
@@ -1114,22 +874,22 @@ void ClientModeShared::FireGameEvent( IGameEvent *event )
 
 			static bool s_bPerfectWorld = !!CommandLine()->FindParm( "-perfectworld" ); // we don't localize reasons in Perfect World because they are supplied by server
 			if ( s_bPerfectWorld && !( szReasonToken && szReasonToken[0] == '#' ) )
-				wszReason = g_pVGuiLocalize->Find( "#SFUI_Disconnect_Title" );
+				wszReason = g_pLocalize->Find( "#SFUI_Disconnect_Title" );
 			else
-				g_pVGuiLocalize->ConvertANSIToUnicode( event->GetString( "reason" ), wszReasonBuf, sizeof( wszReasonBuf ) );
+				g_pLocalize->ConvertANSIToUnicode( event->GetString( "reason" ), wszReasonBuf, sizeof( wszReasonBuf ) );
 
 			wchar_t wszLocalized[100];
 			if ( IsPC() )
 			{
-				g_pVGuiLocalize->ConstructString( wszLocalized, sizeof( wszLocalized ), g_pVGuiLocalize->Find( "#game_player_left_game" ), 2, wszPlayerName, wszReason );
+				g_pLocalize->ConstructString( wszLocalized, sizeof( wszLocalized ), g_pLocalize->Find( "#game_player_left_game" ), 2, wszPlayerName, wszReason );
 			}
 			else
 			{
-				g_pVGuiLocalize->ConstructString( wszLocalized, sizeof( wszLocalized ), g_pVGuiLocalize->Find( "#game_player_left_game" ), 1, wszPlayerName );
+				g_pLocalize->ConstructString( wszLocalized, sizeof( wszLocalized ), g_pLocalize->Find( "#game_player_left_game" ), 1, wszPlayerName );
 			}
 
 			char szLocalized[100];
-			g_pVGuiLocalize->ConvertUnicodeToANSI( wszLocalized, szLocalized, sizeof(szLocalized) );
+			g_pLocalize->ConvertUnicodeToANSI( wszLocalized, szLocalized, sizeof(szLocalized) );
 
 			hudChat->Printf( CHAT_FILTER_JOINLEAVE, "%s", szLocalized );
 		}
@@ -1148,11 +908,11 @@ void ClientModeShared::FireGameEvent( IGameEvent *event )
 
 		wchar_t wszLocalized[100];
 		wchar_t wszPlayerName[MAX_PLAYER_NAME_LENGTH];
-		g_pVGuiLocalize->ConvertANSIToUnicode( event->GetString("name"), wszPlayerName, sizeof(wszPlayerName) );
-		g_pVGuiLocalize->ConstructString( wszLocalized, sizeof( wszLocalized ), g_pVGuiLocalize->Find( "#game_player_joined_game" ), 1, wszPlayerName );
+		g_pLocalize->ConvertANSIToUnicode( event->GetString("name"), wszPlayerName, sizeof(wszPlayerName) );
+		g_pLocalize->ConstructString( wszLocalized, sizeof( wszLocalized ), g_pLocalize->Find( "#game_player_joined_game" ), 1, wszPlayerName );
 
 		char szLocalized[100];
-		g_pVGuiLocalize->ConvertUnicodeToANSI( wszLocalized, szLocalized, sizeof(szLocalized) );
+		g_pLocalize->ConvertUnicodeToANSI( wszLocalized, szLocalized, sizeof(szLocalized) );
 
 		hudChat->Printf( CHAT_FILTER_JOINLEAVE, "%s", szLocalized );
 	}
@@ -1183,13 +943,13 @@ void ClientModeShared::FireGameEvent( IGameEvent *event )
 		if ( !bSilent )
 		{
 			wchar_t wszPlayerName[MAX_PLAYER_NAME_LENGTH];
-			g_pVGuiLocalize->ConvertANSIToUnicode( pszName, wszPlayerName, sizeof(wszPlayerName) );
+			g_pLocalize->ConvertANSIToUnicode( pszName, wszPlayerName, sizeof(wszPlayerName) );
 
 			wchar_t wszTeam[64];
 			C_Team *pTeam = GetGlobalTeam( team );
 			if ( pTeam )
 			{
-				g_pVGuiLocalize->ConvertANSIToUnicode( pTeam->Get_Name(), wszTeam, sizeof(wszTeam) );
+				g_pLocalize->ConvertANSIToUnicode( pTeam->Get_Name(), wszTeam, sizeof(wszTeam) );
 			}
 			else
 			{
@@ -1200,15 +960,15 @@ void ClientModeShared::FireGameEvent( IGameEvent *event )
 				wchar_t wszLocalized[100];
 				if ( bAutoTeamed )
 				{
-					g_pVGuiLocalize->ConstructString( wszLocalized, sizeof( wszLocalized ), g_pVGuiLocalize->Find( "#game_player_joined_autoteam" ), 2, wszPlayerName, wszTeam );
+					g_pLocalize->ConstructString( wszLocalized, sizeof( wszLocalized ), g_pLocalize->Find( "#game_player_joined_autoteam" ), 2, wszPlayerName, wszTeam );
 				}
 				else
 				{
-					g_pVGuiLocalize->ConstructString( wszLocalized, sizeof( wszLocalized ), g_pVGuiLocalize->Find( "#game_player_joined_team" ), 2, wszPlayerName, wszTeam );
+					g_pLocalize->ConstructString( wszLocalized, sizeof( wszLocalized ), g_pLocalize->Find( "#game_player_joined_team" ), 2, wszPlayerName, wszTeam );
 				}
 
 				char szLocalized[100];
-				g_pVGuiLocalize->ConvertUnicodeToANSI( wszLocalized, szLocalized, sizeof(szLocalized) );
+				g_pLocalize->ConvertUnicodeToANSI( wszLocalized, szLocalized, sizeof(szLocalized) );
 
 				hudChat->Printf( CHAT_FILTER_TEAMCHANGE, "%s", szLocalized );
 			}
@@ -1235,16 +995,16 @@ void ClientModeShared::FireGameEvent( IGameEvent *event )
 			return;
 
 		wchar_t wszOldName[MAX_PLAYER_NAME_LENGTH];
-		g_pVGuiLocalize->ConvertANSIToUnicode( pszOldName, wszOldName, sizeof(wszOldName) );
+		g_pLocalize->ConvertANSIToUnicode( pszOldName, wszOldName, sizeof(wszOldName) );
 
 		wchar_t wszNewName[MAX_PLAYER_NAME_LENGTH];
-		g_pVGuiLocalize->ConvertANSIToUnicode( event->GetString( "newname" ), wszNewName, sizeof(wszNewName) );
+		g_pLocalize->ConvertANSIToUnicode( event->GetString( "newname" ), wszNewName, sizeof(wszNewName) );
 
 		wchar_t wszLocalized[100];
-		g_pVGuiLocalize->ConstructString( wszLocalized, sizeof( wszLocalized ), g_pVGuiLocalize->Find( "#game_player_changed_name" ), 2, wszOldName, wszNewName );
+		g_pLocalize->ConstructString( wszLocalized, sizeof( wszLocalized ), g_pLocalize->Find( "#game_player_changed_name" ), 2, wszOldName, wszNewName );
 
 		char szLocalized[100];
-		g_pVGuiLocalize->ConvertUnicodeToANSI( wszLocalized, szLocalized, sizeof(szLocalized) );
+		g_pLocalize->ConvertUnicodeToANSI( wszLocalized, szLocalized, sizeof(szLocalized) );
 
 		hudChat->Printf( CHAT_FILTER_NAMECHANGE, "%s", szLocalized );
 	}
@@ -1335,16 +1095,16 @@ void ClientModeShared::FireGameEvent( IGameEvent *event )
 		if ( !bIgnoredCvar )
 		{
 			wchar_t wszCvarName[64];
-			g_pVGuiLocalize->ConvertANSIToUnicode( event->GetString("cvarname"), wszCvarName, sizeof(wszCvarName) );
+			g_pLocalize->ConvertANSIToUnicode( event->GetString("cvarname"), wszCvarName, sizeof(wszCvarName) );
 
 			wchar_t wszCvarValue[16];
-			g_pVGuiLocalize->ConvertANSIToUnicode( event->GetString("cvarvalue"), wszCvarValue, sizeof(wszCvarValue) );
+			g_pLocalize->ConvertANSIToUnicode( event->GetString("cvarvalue"), wszCvarValue, sizeof(wszCvarValue) );
 
 			wchar_t wszLocalized[100];
-			g_pVGuiLocalize->ConstructString( wszLocalized, sizeof( wszLocalized ), g_pVGuiLocalize->Find( "#game_server_cvar_changed" ), 2, wszCvarName, wszCvarValue );
+			g_pLocalize->ConstructString( wszLocalized, sizeof( wszLocalized ), g_pLocalize->Find( "#game_server_cvar_changed" ), 2, wszCvarName, wszCvarValue );
 
 			char szLocalized[100];
-			g_pVGuiLocalize->ConvertUnicodeToANSI( wszLocalized, szLocalized, sizeof(szLocalized) );
+			g_pLocalize->ConvertUnicodeToANSI( wszLocalized, szLocalized, sizeof(szLocalized) );
 
 			hudChat->Printf( CHAT_FILTER_SERVERMSG, "%s", szLocalized );
 		}
@@ -1380,16 +1140,16 @@ void ClientModeShared::FireGameEvent( IGameEvent *event )
 				if ( g_PR )
 				{
 					wchar_t wszPlayerName[MAX_PLAYER_NAME_LENGTH];
-					g_pVGuiLocalize->ConvertANSIToUnicode( g_PR->GetPlayerName( iPlayerIndex ), wszPlayerName, sizeof( wszPlayerName ) );
+					g_pLocalize->ConvertANSIToUnicode( g_PR->GetPlayerName( iPlayerIndex ), wszPlayerName, sizeof( wszPlayerName ) );
 
-					const wchar_t *pchLocalizedAchievement = g_pVGuiLocalize->Find( CFmtStr( "#%s_T", szAchievementName ) );
+					const wchar_t *pchLocalizedAchievement = g_pLocalize->Find( CFmtStr( "#%s_T", szAchievementName ) );
 					if ( pchLocalizedAchievement )
 					{
 						wchar_t wszLocalizedString[128];
-						g_pVGuiLocalize->ConstructString( wszLocalizedString, sizeof( wszLocalizedString ), g_pVGuiLocalize->Find( "#Achievement_Earned" ), 2, wszPlayerName, pchLocalizedAchievement );
+						g_pLocalize->ConstructString( wszLocalizedString, sizeof( wszLocalizedString ), g_pLocalize->Find( "#Achievement_Earned" ), 2, wszPlayerName, pchLocalizedAchievement );
 
 						char szLocalized[128];
-						g_pVGuiLocalize->ConvertUnicodeToANSI( wszLocalizedString, szLocalized, sizeof( szLocalized ) );
+						g_pLocalize->ConvertUnicodeToANSI( wszLocalizedString, szLocalized, sizeof( szLocalized ) );
 
 						hudChat->ChatPrintf( iPlayerIndex, CHAT_FILTER_SERVERMSG, "%s", szLocalized );
 					}
@@ -1413,7 +1173,7 @@ void ClientModeShared::FireGameEvent( IGameEvent *event )
 		if ( g_PR )
 		{
 			wchar_t wszPlayerName[MAX_PLAYER_NAME_LENGTH];
-			g_pVGuiLocalize->ConvertANSIToUnicode( g_PR->GetPlayerName( iPlayerIndex ), wszPlayerName, sizeof( wszPlayerName ) );
+			g_pLocalize->ConvertANSIToUnicode( g_PR->GetPlayerName( iPlayerIndex ), wszPlayerName, sizeof( wszPlayerName ) );
 
 			if ( iMethod < 0 || iMethod >= ARRAYSIZE( g_pszItemFoundMethodStrings ) )
 			{
@@ -1424,7 +1184,7 @@ void ClientModeShared::FireGameEvent( IGameEvent *event )
 			if ( pszLocString )
 			{
 				wchar_t wszItemFound[256];
-				V_swprintf_safe( wszItemFound, L"%ls", g_pVGuiLocalize->Find( pszLocString ) );
+				V_swprintf_safe( wszItemFound, L"%ls", g_pLocalize->Find( pszLocString ) );
 
 				wchar_t *colorMarker = wcsstr( wszItemFound, L"::" );
 				if ( colorMarker )
@@ -1441,10 +1201,10 @@ void ClientModeShared::FireGameEvent( IGameEvent *event )
 
 				// TODO: Update the localization strings to only have two format parameters since that's all we need.
 				wchar_t wszLocalizedString[256];
-				g_pVGuiLocalize->ConstructString( wszLocalizedString, sizeof( wszLocalizedString ), wszItemFound, 3, wszPlayerName, g_pVGuiLocalize->Find( pItemDefinition->GetItemBaseName() ), L"" );
+				g_pLocalize->ConstructString( wszLocalizedString, sizeof( wszLocalizedString ), wszItemFound, 3, wszPlayerName, g_pLocalize->Find( pItemDefinition->GetItemBaseName() ), L"" );
 
 				char szLocalized[256];
-				g_pVGuiLocalize->ConvertUnicodeToANSI( wszLocalizedString, szLocalized, sizeof( szLocalized ) );
+				g_pLocalize->ConvertUnicodeToANSI( wszLocalizedString, szLocalized, sizeof( szLocalized ) );
 
 				hudChat->ChatPrintf( iPlayerIndex, CHAT_FILTER_SERVERMSG, "%s", szLocalized );
 			}
@@ -1461,23 +1221,7 @@ void ClientModeShared::FireGameEvent( IGameEvent *event )
 
 
 
-//-----------------------------------------------------------------------------
-// In-game VGUI context 
-//-----------------------------------------------------------------------------
-void ClientModeShared::ActivateInGameVGuiContext( vgui::Panel *pPanel )
-{
-	vgui::ivgui()->AssociatePanelWithContext( s_hVGuiContext, pPanel->GetVPanel() );
-	vgui::ivgui()->ActivateContext( s_hVGuiContext );
-}
-
-void ClientModeShared::DeactivateInGameVGuiContext()
-{
-	vgui::ivgui()->ActivateContext( DEFAULT_VGUI_CONTEXT );
-}
-
 int ClientModeShared::GetSplitScreenPlayerSlot() const
 {
-	int nSplitScreenUserSlot = vgui::ipanel()->GetMessageContextId( m_pViewport->GetVPanel() );
-	Assert( nSplitScreenUserSlot != -1 );
-	return nSplitScreenUserSlot;
+	return 0;
 }

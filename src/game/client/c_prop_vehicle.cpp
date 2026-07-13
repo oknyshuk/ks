@@ -9,7 +9,6 @@
 #include "cbase.h"
 #include "c_prop_vehicle.h"
 #include "hud.h"		
-#include <vgui_controls/Controls.h>
 #include <color.h>
 #include "view.h"
 #include "engine/ivdebugoverlay.h"

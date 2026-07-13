@@ -16,11 +16,8 @@
 #include "iclientmode.h"
 #include "weapon_selection.h"
 
-#include <vgui/vgui.h>
-#include <vgui/ISurface.h>
-#include <vgui/ILocalize.h>
+#include "localize/ilocalize.h"
 #include <keyvalues.h>
-#include <vgui_controls/AnimationController.h>
 
 #define MAX_MENU_STRING	512
 wchar_t g_szMenuString[MAX_MENU_STRING];
@@ -55,13 +52,11 @@ static char* ConvertCRtoNL( char *str )
 // Purpose: 
 //-----------------------------------------------------------------------------
 CHudMenu::CHudMenu( const char *pElementName ) :
-	CHudElement( pElementName ), BaseClass(NULL, "HudMenu")
+	CHudElement( pElementName )
 {
 	m_nSelectedItem = -1;
+	m_flOpenCloseTime = 1.0f;
 
-	vgui::Panel *pParent = GetClientMode()->GetViewport();
-	SetParent( pParent );
-	
 	SetHiddenBits( HIDEHUD_MISCSTATUS );
 }
 
@@ -137,108 +132,6 @@ bool CHudMenu::ShouldDraw( void )
 	}
 
 	return draw;
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: 
-// Input  : *text - 
-//			textlen - 
-//			font - 
-//			x - 
-//			y - 
-//-----------------------------------------------------------------------------
-void CHudMenu::PaintString( const wchar_t *text, int textlen, vgui::HFont& font, int x, int y )
-{
-	vgui::surface()->DrawSetTextFont( font );
-	vgui::surface()->DrawSetTextPos( x, y );
-
-	for ( int ch = 0; ch < textlen; ch++ )
-	{
-		vgui::surface()->DrawUnicodeChar( text[ch] );
-	}
-}
-
-
-//-----------------------------------------------------------------------------
-// Purpose: 
-//-----------------------------------------------------------------------------
-void CHudMenu::Paint()
-{
-	if ( !m_bMenuDisplayed )
-		return;
-
-	// center it
-	int x = 20;
-
-	Color	menuColor = m_MenuColor;
-	Color itemColor = m_ItemColor;
-
-	int c = m_Processed.Count();
-
-	int border = 20;
-
-	int wide = m_nMaxPixels + border;
-	int tall = m_nHeight + border;
-
-	int y = ( ScreenHeight() - tall ) * 0.5f;
-
-	DrawBox( x - border/2, y - border/2, wide, tall, m_BoxColor, m_flSelectionAlphaOverride / 255.0f );
-
-	//DrawTexturedBox( x - border/2, y - border/2, wide, tall, m_BoxColor, m_flSelectionAlphaOverride / 255.0f );
-
-	menuColor[3] = menuColor[3] * ( m_flSelectionAlphaOverride / 255.0f );
-	itemColor[3] = itemColor[3] * ( m_flSelectionAlphaOverride / 255.0f );
-
-	for ( int i = 0; i < c; i++ )
-	{
-		ProcessedLine *line = &m_Processed[ i ];
-		Assert( line );
-
-		Color clr = line->menuitem != 0 ? itemColor : menuColor;
-
-		bool canblur = false;
-		if ( line->menuitem != 0 &&
-			m_nSelectedItem >= 0 && 
-			( line->menuitem == m_nSelectedItem ) )
-		{
-			canblur = true;
-		}
-		
-		vgui::surface()->DrawSetTextColor( clr );
-
-		int drawLen = line->length;
-		if ( line->menuitem != 0 )
-		{
-			drawLen *= m_flTextScan;
-		}
-
-		vgui::surface()->DrawSetTextFont( line->menuitem != 0 ? m_hItemFont : m_hTextFont );
-
-		PaintString( &g_szMenuString[ line->startchar ], drawLen, 
-			line->menuitem != 0 ? m_hItemFont : m_hTextFont, x, y );
-
-		if ( canblur )
-		{
-			// draw the overbright blur
-			for (float fl = m_flBlur; fl > 0.0f; fl -= 1.0f)
-			{
-				if (fl >= 1.0f)
-				{
-					PaintString( &g_szMenuString[ line->startchar ], drawLen, m_hItemFontPulsing, x, y );
-				}
-				else
-				{
-					// draw a percentage of the last one
-					Color col = clr;
-					col[3] *= fl;
-					vgui::surface()->DrawSetTextColor(col);
-					PaintString( &g_szMenuString[ line->startchar ], drawLen, m_hItemFontPulsing, x, y );
-				}
-			}
-		}
-
-		y += line->height;
-	}
 }
 
 //-----------------------------------------------------------------------------
@@ -331,30 +224,6 @@ void CHudMenu::ProcessText( void )
 
 		m_Processed.AddToTail( line );
 	}
-
-	// Now compute pixels needed
-	int c = m_Processed.Count();
-	for ( i = 0; i < c; i++ )
-	{
-		ProcessedLine *l = &m_Processed[ i ];
-		Assert( l );
-
-		int pixels = 0;
-		vgui::HFont font = l->menuitem != 0 ? m_hItemFont : m_hTextFont;
-
-		for ( int ch = 0; ch < l->length; ch++ )
-		{
-			pixels += vgui::surface()->GetCharacterWidth( font, g_szMenuString[ ch + l->startchar ] );
-		}
-
-		l->pixels = pixels;
-		l->height = vgui::surface()->GetFontTall( font );
-		if ( pixels > m_nMaxPixels )
-		{
-			m_nMaxPixels = pixels;
-		}
-		m_nHeight += l->height;
-	}
 }
 //-----------------------------------------------------------------------------
 // Purpose: Local method to hide a menu, mirroring code found in
@@ -389,7 +258,7 @@ void CHudMenu::ShowMenu( const char * menuName, int validSlots )
 	char szMenuString[MAX_MENU_STRING];
     hudtextmessage->LocaliseTextString( g_szPrelocalisedMenuString, szMenuString, sizeof( szMenuString ) );
     ConvertCRtoNL( szMenuString );
-	g_pVGuiLocalize->ConvertANSIToUnicode( szMenuString, g_szMenuString, sizeof( g_szMenuString ) );
+	g_pLocalize->ConvertANSIToUnicode( szMenuString, g_szMenuString, sizeof( g_szMenuString ) );
 	
 	ProcessText();
 
@@ -421,7 +290,7 @@ void CHudMenu::ShowMenu_KeyValueItems( KeyValues *pKV )
 		m_bitsValidSlots |= (1<<i);
 
 		const char *pszItem = item->GetName();
-		const wchar_t *wLocalizedItem = g_pVGuiLocalize->Find( pszItem );
+		const wchar_t *wLocalizedItem = g_pLocalize->Find( pszItem );
 
 		Q_snwprintf( wItem, sizeof( wItem )/ sizeof( wchar_t ), L"%d. %ls\n", i+1, wLocalizedItem );
 
@@ -433,7 +302,7 @@ void CHudMenu::ShowMenu_KeyValueItems( KeyValues *pKV )
 	// put a cancel on the end
 	m_bitsValidSlots |= (1<<9);
 
-	Q_snwprintf( wItem, sizeof( wItem )/ sizeof( wchar_t ), L"0. %ls", g_pVGuiLocalize->Find( "#Cancel" ) );
+	Q_snwprintf( wItem, sizeof( wItem )/ sizeof( wchar_t ), L"0. %ls", g_pLocalize->Find( "#Cancel" ) );
 
 	Q_snwprintf( g_szMenuString, sizeof( g_szMenuString )/ sizeof( wchar_t ), L"%ls\n%ls", g_szMenuString, wItem );
 
@@ -480,7 +349,7 @@ bool CHudMenu::MsgFunc_ShowMenu( const CCSUsrMsg_ShowMenu &msg)
 		char szMenuString[MAX_MENU_STRING];
 		hudtextmessage->LocaliseTextString( g_szPrelocalisedMenuString, szMenuString, sizeof( szMenuString ) );
 		ConvertCRtoNL( szMenuString );
-		g_pVGuiLocalize->ConvertANSIToUnicode( szMenuString, g_szMenuString, sizeof( g_szMenuString ) );
+		g_pLocalize->ConvertANSIToUnicode( szMenuString, g_szMenuString, sizeof( g_szMenuString ) );
 			
 		ProcessText();
 
@@ -495,23 +364,4 @@ bool CHudMenu::MsgFunc_ShowMenu( const CCSUsrMsg_ShowMenu &msg)
 	}
 
 	return true;
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: hud scheme settings
-//-----------------------------------------------------------------------------
-void CHudMenu::ApplySchemeSettings(vgui::IScheme *pScheme)
-{
-	BaseClass::ApplySchemeSettings(pScheme);
-
-	SetPaintBackgroundEnabled( false );
-
-	// set our size
-	int screenWide, screenTall;
-	int x, y;
-	GetPos(x, y);
-	GetHudSize(screenWide, screenTall);
-	SetBounds(0, y, screenWide, screenTall - y);
-
-	ProcessText();
 }

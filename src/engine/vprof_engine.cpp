@@ -17,8 +17,7 @@
 #include "tier0/vprof.h"
 #include "materialsystem/imaterialsystem.h"
 #ifndef DEDICATED
-#include "vgui_baseui_interface.h"
-#include "vgui_vprofpanel.h"
+#include "engineui.h"
 #endif
 #include "utlvector.h"
 #include "sv_remoteaccess.h"
@@ -300,11 +299,6 @@ void PreUpdateProfile( float filteredtime )
 	VProfRecord_Snapshot();
 #endif
 
-#ifndef DEDICATED
-	// Update the vgui panel
-	if ( GetVProfPanel() )
-		GetVProfPanel()->UpdateProfile( filteredtime );
-#endif
 	g_bDumpCounters = false;
 }
 
@@ -481,13 +475,6 @@ DEFERRED_CON_COMMAND( vprof_reset, "Reset the stats in VProf profiler" )
 {
 	Msg("VProf reset.\n");
 	g_VProfCurrentProfile.Reset();
-
-#ifndef DEDICATED
-	if ( GetVProfPanel() )
-	{
-		GetVProfPanel()->Reset();
-	}
-#endif
 }
 
 DEFERRED_CON_COMMAND(vprof_reset_peaks, "Reset just the peak time in VProf profiler")

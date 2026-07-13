@@ -29,7 +29,7 @@
 #endif 
 
 #ifdef CLIENT_DLL
-#include "vgui_int.h"
+#include "clientui.h"
 #include "igameresources.h"
 #include "voice_status.h"
 extern const ConVar *sv_cheats;
@@ -1626,7 +1626,7 @@ void CBaseGameStats_Driver::ResetData()
 	pKV->SetInt( "DxLvl", g_pMaterialSystemHardwareConfig->GetDXSupportLevel() );
 	pKV->SetInt( "Width", dest_width );
 	pKV->SetInt( "Height", dest_height );
-	pKV->SetInt( "IsSplitScreen", VGui_IsSplitScreen() );
+	pKV->SetInt( "IsSplitScreen", UI_IsSplitScreen() );
 	
 	engine->SetGamestatsData( m_pGamestatsData );
 

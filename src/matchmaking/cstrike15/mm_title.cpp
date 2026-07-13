@@ -192,7 +192,7 @@ int CMatchTitle::GetTotalNumPlayersSupported()
 // Get a guest player name
 char const * CMatchTitle::GetGuestPlayerName( int iUserIndex )
 {
-	if ( vgui::ILocalize *pLocalize = g_pMatchExtensions->GetILocalize() )
+	if ( ILocalize *pLocalize = g_pMatchExtensions->GetILocalize() )
 	{
 		if ( wchar_t* wStringTableEntry = pLocalize->Find( "#SFUI_LocalPlayer" ) )
 		{

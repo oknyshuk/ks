@@ -30,7 +30,7 @@ public:
 	{
 		for ( int hh = 0; hh < MAX_SPLITSCREEN_PLAYERS; ++hh )
 		{
-			ACTIVE_SPLITSCREEN_PLAYER_GUARD_VGUI( hh );
+			ACTIVE_SPLITSCREEN_PLAYER_GUARD_UI( hh );
 			GetClientMode()->Layout();
 		}
 		return true;

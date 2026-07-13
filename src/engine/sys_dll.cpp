@@ -57,7 +57,7 @@
 #include "tier0/logging.h"
 #include "tier2/tier2_logging.h"
 
-#include "vgui_baseui_interface.h"
+#include "engineui.h"
 #include "tier0/systeminformation.h"
 #ifdef _WIN32
 #if !defined( _X360 )
@@ -1037,9 +1037,9 @@ void *GameFactory( const char *pName, int *pReturnCode )
 	}
 
 	// gameui.dll
-	if (EngineVGui()->GetGameUIFactory())
+	if (EngineUI()->GetGameUIFactory())
 	{
-		pRetVal = EngineVGui()->GetGameUIFactory()( pName, pReturnCode );
+		pRetVal = EngineUI()->GetGameUIFactory()( pName, pReturnCode );
 		if (pRetVal)
 			return pRetVal;
 	}

@@ -42,15 +42,13 @@
 #include "gl_matsysiface.h"
 #include "materialsystem/materialsystem_config.h"
 #include "cdll_engine_int.h"
-#include "vgui_baseui_interface.h"
+#include "engineui.h"
 #include "iengine.h"
 #include "avi/iavi.h"
 #include "keys.h"
 #include "VGuiMatSurface/IMatSystemSurface.h"
 #include "tier3/tier3.h"
 #include "sound.h"
-#include "vgui_controls/Controls.h"
-#include "vgui_controls/MessageDialog.h"
 #include "sys_dll.h"
 #include "inputsystem/iinputsystem.h"
 #include "inputsystem/ButtonCode.h"
@@ -59,7 +57,6 @@
 #if defined( BINK_VIDEO )
 #include "bink/bink.h"
 #endif
-#include "vgui/IVGui.h"
 #include "inputsystem/iinputstacksystem.h"
 #include "avi/ibik.h"
 #include "materialsystem/imaterial.h"
@@ -68,8 +65,7 @@
 
 #include "rocketui/rocketui.h"
 
-#include <vgui/ILocalize.h>
-#include <vgui/ISystem.h>
+#include "localize/ilocalize.h"
 
 #if defined( _X360 )
 #include "snd_dev_xaudio.h"
@@ -98,7 +94,7 @@ extern IVAudio * vaudio;
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
-extern ConVar cv_vguipanel_active;
+extern ConVar cv_uipanel_active;
 
 void S_BlockSound (void);
 void S_UnblockSound (void);
@@ -345,7 +341,7 @@ void CGame::AppActivate( bool fActive )
 		if ( fActive )
 		{
 			// Clear keyboard states (should be cleared already but...)
-			// VGui_ActivateMouse will reactivate the mouse soon.
+			// UI_ActivateMouse will reactivate the mouse soon.
 			ClearIOStates();
 			
 			UpdateMaterialSystemConfig();
@@ -420,27 +416,9 @@ void CGame::DispatchInputEvent( const InputEvent_t &event )
 	// Broadcast analog values both to VGui & to GameUI
 	case IE_AnalogValueChanged:
 		{
-			// mouse events should go to vgui first, but joystick events should go to scaleform first
+			if ( g_pRocketUI && g_pRocketUI->HandleInputEvent( event ) )
+				break;
 
-			if ( event.m_nData >= JOYSTICK_FIRST_AXIS )
-			{
-				if ( g_pMatSystemSurface && g_pMatSystemSurface->HandleInputEvent( event ) )
-					break;
-			}
-			else
-			{
-				if ( g_pMatSystemSurface && g_pMatSystemSurface->HandleInputEvent( event ) )
-					break;
-
-				bool vguiActive = IsPC() && cv_vguipanel_active.GetBool();
-
-				// we filter input while the console is visible, to prevent RocketUI from
-				//		handling anything underneath the console
-				if ( !vguiActive && g_pRocketUI && g_pRocketUI->HandleInputEvent( event ) )
-					break;
-			}
-
-			// Let GameUI have the next whack at events
 			if ( g_ClientDLL && g_ClientDLL->HandleGameUIEvent( event ) )
 				break;
 		}
@@ -450,7 +428,7 @@ void CGame::DispatchInputEvent( const InputEvent_t &event )
 		if ( event.m_nData == 1 )
 		{
 			// Overlay has activated
-			if ( !EngineVGui()->IsGameUIVisible() && sv.IsActive() && sv.IsSinglePlayerGame() )
+			if ( !EngineUI()->IsGameUIVisible() && sv.IsActive() && sv.IsSinglePlayerGame() )
 			{
 				Cbuf_AddText( Cbuf_GetCurrentPlayer(), "gameui_activate" );
 			}
@@ -469,19 +447,9 @@ void CGame::DispatchInputEvent( const InputEvent_t &event )
 		break;
 #endif
 	default:
-		
-		// Let vgui have the first whack at events
-		if ( g_pMatSystemSurface && g_pMatSystemSurface->HandleInputEvent( event ) )
+
+		if ( g_pRocketUI && g_pRocketUI->HandleInputEvent( event ) )
 			break;
-
-		{
-			bool vguiActive = IsPC() && cv_vguipanel_active.GetBool();
-
-			// we filter all input while the console is visible, to prevent RocketUI from
-			//		handling anything underneath the console
-			if ( !vguiActive && g_pRocketUI && g_pRocketUI->HandleInputEvent( event ) )
-				break;
-		}
 
 		for ( int i=0; i < ARRAYSIZE( g_GameMessageHandlers ); i++ )
 		{
@@ -1041,7 +1009,7 @@ int CGame::WindowProc( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 
 			// Don't activate it if it's already active (a sub window may be active)
 			// Multiplayer doesn't want the UI to appear, since it can't pause anyway
-			if ( !EngineVGui()->IsGameUIVisible() && sv.IsActive() && sv.IsSinglePlayerGame() )
+			if ( !EngineUI()->IsGameUIVisible() && sv.IsActive() && sv.IsSinglePlayerGame() )
 			{
 				Cbuf_AddText( Cbuf_GetCurrentPlayer(), "gameui_activate" );
 			}
@@ -1531,13 +1499,6 @@ void CGame::AttachToWindow()
 		g_pInputSystem->EnableInput( true );
 		g_pInputSystem->EnableMessagePump( false );
 	}
-
-	if ( g_pMatSystemSurface )
-	{
-		// Attach the vgui matsurface window proc
-        g_pMatSystemSurface->SetAppDrivesInput( true );
-        g_pMatSystemSurface->EnableWindowsMessages( true );
-	}
 }
 
 void CGame::DetachFromWindow()
@@ -1549,12 +1510,6 @@ void CGame::DetachFromWindow()
 		return;
 	}
 #endif
-
-	if ( g_pMatSystemSurface )
-	{
-		// Detach the vgui matsurface
-        g_pMatSystemSurface->EnableWindowsMessages( false );
-    }
 
 	if ( g_pInputSystem )
 	{
@@ -1581,10 +1536,6 @@ bool CGame::InputAttachToGameWindow()
 		return true;
 
 	AttachToWindow();
-
-#ifndef DEDICATED
-	vgui::surface()->OnScreenSizeChanged( videomode->GetModeWidth(), videomode->GetModeHeight() );
-#endif
 
 	// We don't get WM_ACTIVATEAPP messages in this case; simulate one.
 	AppActivate( true );
@@ -1716,294 +1667,6 @@ void CGame::PlayStartupVideos( void )
 #endif // DEDICATED
 }
 	
-#define MAX_CAPTION_LENGTH	256
-
-class CCaptionSequencer
-{
-public:
-	CCaptionSequencer( void ) : m_bCaptions( false )
-	{
-		Reset();
-	}
-
-	void Reset( void )
-	{
-		// captioning start when rendering stable, not simply at movie start
-		m_CaptionStartTime = 0;
-
-		// initial priming state to fetch a caption
-		m_bShowingCaption = false;
-		m_bCaptionStale = true;
-
-		m_CurCaptionString[0] = '\0';
-		m_CurCaptionStartTime = 0.0f;
-		m_CurCaptionEndTime = 0.0f;
-		m_CurCaptionColor = 0xFFFFFFFF;
-		if ( m_CaptionBuf.TellPut() )
-		{
-			// reset to start
-			m_CaptionBuf.SeekGet( CUtlBuffer::SEEK_HEAD, 0 );
-		}
-	}
-
-	void Init( const char *pFilename )
-	{
-		m_bCaptions = false;	
-
-		if ( g_pFullFileSystem->ReadFile( pFilename, "GAME", m_CaptionBuf ) )
-		{
-			// FIXME: This needs the MOD dir to construct the filename properly!
-			//		  See me when this is being merged into Main -- jweier
-			
-			g_pVGuiLocalize->AddFile( "resource/l4d360ui_%language%.txt", "GAME", true );
-			
-			m_bCaptions = true;	
-		}
-	}
-
-	void SetStartTime( float flStarTtime )
-	{
-		// Start our captions now
-		m_CaptionStartTime = Plat_FloatTime();
-	}
-
-	bool GetCaptionToken( char *token, int tokenLen )
-	{
-		if ( !token || !tokenLen )
-			return false;
-
-		if ( !m_CaptionBuf.IsValid() )
-		{
-			// end of data
-			return false;
-		}
-
-		m_CaptionBuf.GetLine( token, tokenLen );
-#ifdef _WIN32
-		char *pCRLF = V_stristr( token, "\r" );
-		if ( pCRLF )
-		{
-			*pCRLF = '\0';
-		}
-		m_CaptionBuf.SeekGet( CUtlBuffer::SEEK_CURRENT, 1 );
-#else
-		char *pCRLF = V_stristr( token, "\n" );
-		if ( pCRLF )
-		{
-			*pCRLF = '\0';
-		}
-#endif
-		return true;
-	}
-
-	bool GetNextCaption( void )
-	{
-		char buff[MAX_CAPTION_LENGTH];
-
-		if ( !GetCaptionToken( m_CurCaptionString, sizeof( m_CurCaptionString ) ) )
-		{
-			// end of captions
-			m_CurCaptionString[0] = '\0';
-			return false;
-		}
-
-		// hex color		
-		GetCaptionToken( buff, sizeof( buff ) );
-		sscanf( buff, "%x", &m_CurCaptionColor );
-
-		// float start time
-		GetCaptionToken( buff, sizeof( buff ) );
-		m_CurCaptionStartTime = atof( buff );
-
-		// float end time
-		GetCaptionToken( buff, sizeof( buff ) );
-		m_CurCaptionEndTime = atof( buff );
-
-		// have valid caption
-		m_bCaptionStale = false;
-		return true;
-	}
-
-	const char *GetCurrentCaption( int *pColorOut )
-	{
-		if ( m_bCaptions == false )
-			return NULL;
-
-		if ( m_CaptionStartTime )
-		{
-			// get a timeline
-			float elapsed = Plat_FloatTime() - m_CaptionStartTime;
-
-			// Get a new caption because we've just finished one
-			if ( !m_bShowingCaption && m_bCaptionStale )
-			{
-				GetNextCaption();
-			}
-
-			if ( m_bShowingCaption )
-			{
-				if ( elapsed > m_CurCaptionEndTime )	// Caption just turned off
-				{
-					m_bShowingCaption = false;			// Don't draw caption
-					m_bCaptionStale = true;				// Trigger getting a new one on the next frame
-				}
-			}
-			else
-			{
-				if ( elapsed > m_CurCaptionStartTime )	// Turn Caption on
-				{
-					m_bShowingCaption = true;
-				}
-			}
-
-			if ( m_bShowingCaption && m_CurCaptionString[0] )
-			{
-				if ( pColorOut )
-				{
-					*pColorOut = m_CurCaptionColor;
-				}
-				return m_CurCaptionString;
-			}
-		}
-
-		return NULL;
-	}
-
-private:
-	// Captions / Subtitles
-	bool				m_bCaptions;
-	bool				m_bShowingCaption;
-	bool				m_bCaptionStale;
-	vgui::HScheme		m_hCaptionFont;
-	float				m_CaptionStartTime;
-	CUtlBuffer			m_CaptionBuf;
-
-	char				m_CurCaptionString[MAX_CAPTION_LENGTH];
-	float				m_CurCaptionStartTime;
-	float				m_CurCaptionEndTime;
-	unsigned int		m_CurCaptionColor;
-};
-
-// Panel for drawing subtitles on a movie panel
-
-// Panel for drawing subtitles on a movie panel
-class CSubtitlePanel : public vgui::Panel
-{
-public:
-	CSubtitlePanel( vgui::Panel *parent, const char *pMovieName, int nPlaybackHeight ) : vgui::Panel( parent, "SubtitlePanel" ) 
-	{
-		// FIXME: Need a better method for this
-		vgui::HScheme hScheme = vgui::scheme()->LoadSchemeFromFile("Resource/SourceScheme.res", "Tracker" );
-		vgui::IScheme *pNewScheme = vgui::scheme()->GetIScheme( hScheme );
-		if ( pNewScheme )
-		{	
-			m_hFont = pNewScheme->GetFont( "CloseCaption_IntroMovie", true );
-		}
-
-		m_pSubtitleLabel = new vgui::Label( this, "SubtitleLabel", L"" );
-		m_pSubtitleLabel->SetFont( m_hFont );
-		int fontTall = vgui::surface()->GetFontTall( m_hFont );
-
-		int width, height;
-		vgui::surface()->GetScreenSize( width, height );
-
-		// clamp width to title safe area
-		int xPos = width * 0.05f;
-		width *= 0.9f;
-
-		// assume video is centered
-		// must be scaled according to playback height, due to letterboxing
-		// don't want to cut into or overlap border, need to be within video, and title safe
-		// so pushes up according to font height
-		int yOffset = ( nPlaybackHeight - height )/2;
-		int yPos = ( 0.85f * nPlaybackHeight - fontTall ) - yOffset;
-
-		// captions are anchored to a baseline and grow upward
-		// any resolution changes then are title safe
-		m_pSubtitleLabel->SetPos( xPos, yPos );
-		m_pSubtitleLabel->SetTall( fontTall*2 );
-		m_pSubtitleLabel->SetWide( width );
-		m_pSubtitleLabel->SetContentAlignment( vgui::Label::a_center );
-		m_pSubtitleLabel->SetCenterWrap( true );
-
-		// Strip our extension
-		char captionFilename[MAX_QPATH];
-		Q_StripExtension( pMovieName, captionFilename, MAX_QPATH );
-
-		// Now add on the '_captions.txt' ending
-		Q_strncat( captionFilename, "_captions.txt", MAX_QPATH );
-
-		// Setup our captions
-		m_Captions.Init( captionFilename );
-	}
-
-	void StartCaptions( void )
-	{
-		m_Captions.SetStartTime( Plat_FloatTime() );
-	}
-
-	virtual void Paint( void )
-	{
-		int nColor = 0xFFFFFFFF;
-		const char *pCaptionText = m_Captions.GetCurrentCaption( &nColor );
-
-		m_pSubtitleLabel->SetText( pCaptionText );
-
-		// Pull the color out of this hex value
-		int r = ( nColor >> 24 ) & 0xFF;
-		int g = ( nColor >> 16 ) & 0xFF;
-		int b = ( nColor >> 8 ) & 0xFF;
-		int a = ( nColor >> 0 ) & 0xFF;
-		m_pSubtitleLabel->SetFgColor( Color(r,g,b,a) );
-
-		vgui::Panel::Paint();
-	}
-
-private:
-	CCaptionSequencer	m_Captions;
-
-	vgui::HFont			m_hFont;
-	vgui::Label			*m_pSubtitleLabel;
-};
-
-
-const char *lpszDubbedLanguages[] =
-{ 
-	"english",
-	"french",
-	"german",
-	"spanish",
-	"russian"
-};
-
-//-----------------------------------------------------------------------------
-// Purpose: Determines if we should be playing with captions
-//-----------------------------------------------------------------------------
-inline bool ShouldUseCaptioning( void )
-{
-	char language[64];
-
-	// Fallback to English
-	V_strncpy( language, "english", sizeof( language ) );
-
-#if !defined( NO_STEAM ) && !defined( DEDICATED )
-	// When Steam isn't running we can't get the language info... 
-	if ( Steam3Client().SteamApps() )
-	{
-		V_strncpy( language, Steam3Client().SteamApps()->GetCurrentGameLanguage(), sizeof(language) );
-	}
-#endif
-
-	// Iterate through the language we have dubbed and don't subtitle in that case
-	for ( int i = 0; i < ARRAYSIZE( lpszDubbedLanguages ); i++ )
-	{
-		if ( Q_stricmp( language, lpszDubbedLanguages[i] ) == 0 )
-			return false;
-	}
-
-	return true;
-}
-
 
 //-----------------------------------------------------------------------------
 // Purpose: Tests for players attempting to skip a movie via keypress
@@ -2346,26 +2009,6 @@ void CGame::PlayVideoAndWait( const char *filename, bool bNeedHealthWarning )
 	// Enable the input system's message pump
 	g_pInputSystem->EnableMessagePump( true );
 
-	// Panel which allows for subtitling of startup movies
-	CSubtitlePanel *pSubtitlePanel = NULL;
-
-	bool bUseCaptioning = ShouldUseCaptioning();
-	if ( bUseCaptioning )
-	{
-		// Create a panel whose purpose is to 
-		pSubtitlePanel = new CSubtitlePanel( NULL, filename, nPlaybackHeight );
-		pSubtitlePanel->SetParent( g_pMatSystemSurface->GetEmbeddedPanel() );
-		pSubtitlePanel->SetPaintBackgroundEnabled( false );
-		pSubtitlePanel->SetPaintEnabled( true );
-		pSubtitlePanel->SetBounds( 0, 0, m_width, m_height );
-		
-		// VGUI needs a chance to move this panel into its global space
-		vgui::ivgui()->RunFrame();
-
-		// Start the caption sequence
-		pSubtitlePanel->StartCaptions();
-	}
-
 	// We need to make sure that these keys have been released since last pressed, otherwise you can skip
 	// movies inadvertently 
 	bool bKeyDebounced = ( UserRequestingMovieSkip() == false );
@@ -2412,12 +2055,6 @@ void CGame::PlayVideoAndWait( const char *filename, bool bNeedHealthWarning )
 		pRenderContext->ClearBuffers( true, true, true );
 		pRenderContext->DrawScreenSpaceRectangle( pMaterial, xpos, ypos, nPlaybackWidth, nPlaybackHeight, flU0*nTexWidth, flV0*nTexHeight, flU1*nTexWidth-1, flV1*nTexHeight-1, nTexWidth, nTexHeight );
 
-		// Draw our VGUI panel
-		if ( bUseCaptioning )
-		{
-			vgui::surface()->PaintTraverse( pSubtitlePanel->GetVPanel() );
-		}
-				
 		// Busy wait until we are ready to swap.
 #ifdef QUICKTIME_VIDEO
 		while ( !pVideoPlayer->ReadyForSwap( BIKHandle ) )
@@ -2453,8 +2090,6 @@ void CGame::PlayVideoAndWait( const char *filename, bool bNeedHealthWarning )
 		pVideoPlayer->DestroyMaterial( VideoHandle );
 	}
 
-	// Clean up VGUI work
-	delete pSubtitlePanel;
 #endif
 
 #endif // BINK_VIDEO

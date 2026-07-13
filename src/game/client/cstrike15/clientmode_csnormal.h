@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
+//========= Copyright ï¿½ 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -134,10 +134,6 @@ public:
 	void			SyncCurrentKeyBindingsToDeviceTitleData( int iController, int eDevice, const SyncKeyBindingValueDirection_t eOp );
 
 	void			CheckTitleDataStorageConnected( void );
-
-#if !defined(NO_STEAM) && !defined (_PS3)
-	STEAM_CALLBACK_MANUAL( ClientModeCSNormal, OnScreenshotRequested, ScreenshotRequested_t, m_CallbackScreenshotRequested );
-#endif
 
 	CUserMessageBinder m_UMCMsgKillCam;
 	CUserMessageBinder m_UMCMsgMatchEndConditions;

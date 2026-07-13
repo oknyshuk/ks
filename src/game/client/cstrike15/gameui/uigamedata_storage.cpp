@@ -6,7 +6,7 @@
 
 #include "uigamedata.h"
 #include "engineinterface.h"
-#include "vgui/ILocalize.h"
+#include "localize/ilocalize.h"
 #include "matchmaking/imatchframework.h"
 #include "filesystem.h"
 #include "fmtstr.h"
@@ -18,7 +18,6 @@
 
 
 using namespace BaseModUI;
-using namespace vgui;
 
 #ifndef ERROR_SUCCESS
 #define ERROR_SUCCESS 0
@@ -103,7 +102,7 @@ CON_COMMAND_F( ui_pump_dlc_mount_corrupt, "", FCVAR_DEVELOPMENTONLY )
 		}
 
 		// information text
-		if ( wchar_t *wszExplanation = g_pVGuiLocalize->Find( "#SFUI_MsgBx_DlcCorruptTxt" ) )
+		if ( wchar_t *wszExplanation = g_pLocalize->Find( "#SFUI_MsgBx_DlcCorruptTxt" ) )
 		{
 			int wlen = Q_wcslen( wszDlcInfo );
 			Q_wcsncpy( wszDlcInfo + wlen, wszExplanation, sizeof( wszDlcInfo ) - 2 * wlen );
@@ -143,7 +142,7 @@ CON_COMMAND_F( ui_pump_dlc_mount_content, "", FCVAR_DEVELOPMENTONLY )
 		}
 
 		// information text
-		if ( wchar_t *wszExplanation = g_pVGuiLocalize->Find( "#SFUI_MsgBx_DlcMountedTxt" ) )
+		if ( wchar_t *wszExplanation = g_pLocalize->Find( "#SFUI_MsgBx_DlcMountedTxt" ) )
 		{
 			int wlen = Q_wcslen( wszDlcInfo );
 			Q_wcsncpy( wszDlcInfo + wlen, wszExplanation, sizeof( wszDlcInfo ) - 2 * wlen );

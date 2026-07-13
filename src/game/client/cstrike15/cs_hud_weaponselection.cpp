@@ -13,12 +13,8 @@
 #include "c_cs_player.h"
 
 #include <keyvalues.h>
-#include <vgui/IScheme.h>
-#include <vgui/ISurface.h>
-#include <vgui/ISystem.h>
-#include <vgui_controls/AnimationController.h>
 
-#include "vgui/ILocalize.h"
+#include "localize/ilocalize.h"
 
 #include <string.h>
 
@@ -27,17 +23,19 @@
 
 DECLARE_HUDELEMENT( CHudWeaponSelection );
 
-using namespace vgui;
 
 //-----------------------------------------------------------------------------
 // Purpose: Constructor
 //-----------------------------------------------------------------------------
-CHudWeaponSelection::CHudWeaponSelection( const char *pElementName ) : CBaseHudWeaponSelection(pElementName), BaseClass(NULL, "HudWeaponSelection")
+CHudWeaponSelection::CHudWeaponSelection( const char *pElementName ) : CBaseHudWeaponSelection( pElementName )
 {
-	vgui::Panel *pParent = GetClientMode()->GetViewport();
-	SetParent( pParent );
-
 	SetHiddenBits( HIDEHUD_WEAPONSELECTION | HIDEHUD_PLAYERDEAD );
+
+	// Formerly CPanelAnimationVars; initialize to their old defaults now that this
+	// element is no longer a panel. (CHudElement::operator new zeroes members,
+	// so m_bPlaySelectionSounds MUST be set true here or weapon-switch sounds die.)
+	m_iMaxSlots = 6;
+	m_bPlaySelectionSounds = true;
 }
 
 //-----------------------------------------------------------------------------
@@ -87,13 +85,6 @@ void CHudWeaponSelection::OnWeaponSwitch( C_BaseCombatWeapon *pWeapon )
 		{
 		}
 	}
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: updates animation status
-//-----------------------------------------------------------------------------
-void CHudWeaponSelection::OnThink()
-{
 }
 
 //-----------------------------------------------------------------------------
@@ -153,222 +144,10 @@ void CHudWeaponSelection::LevelInit()
 	m_iMaxSlots = clamp( m_iMaxSlots, 0, MAX_WEAPON_SLOTS );
 }
 
-//-------------------------------------------------------------------------
-// Purpose: draws the selection area
-//-------------------------------------------------------------------------
-void CHudWeaponSelection::Paint()
-{
-#if !defined( CSTRIKE15 )
-	if (!ShouldDraw())
-		return;
-
-	C_BasePlayer *pPlayer = C_BasePlayer::GetLocalPlayer();
-	if ( !pPlayer )
-		return;
-
-	// find and display our current selection
-	C_BaseCombatWeapon *pSelectedWeapon = GetSelectedWeapon();
-	if ( !pSelectedWeapon )
-		return;
-
-	int iActiveSlot = (pSelectedWeapon ? pSelectedWeapon->GetSlot() : -1);
-
-	// interpolate the selected box size between the small box size and the large box size
-	// interpolation has been removed since there is no weapon pickup animation anymore, so it's all at the largest size
-	float percentageDone = 1.0f; //MIN(1.0f, (gpGlobals->curtime - m_flPickupStartTime) / m_flWeaponPickupGrowTime);
-	int largeBoxWide = m_flSmallBoxSize + ((m_flLargeBoxWide - m_flSmallBoxSize) * percentageDone);
-	int largeBoxTall = m_flSmallBoxSize + ((m_flLargeBoxTall - m_flSmallBoxSize) * percentageDone);
-	Color selectedColor;
-	{for (int i = 0; i < 4; i++)
-	{
-		selectedColor[i] = m_BoxColor[i] + ((m_SelectedBoxColor[i] - m_BoxColor[i]) * percentageDone);
-	}}
-
-	// calculate where to start drawing
-	int width = (m_iMaxSlots - 1) * (m_flSmallBoxSize + m_flBoxGap) + largeBoxWide;
-	int xpos = (GetWide() - width) / 2;
-	int ypos = 0;
-
-	// iterate over all the weapon slots
-	for ( int i = 0; i < m_iMaxSlots; i++ )
-	{
-		if ( i == iActiveSlot )
-		{
-			bool bFirstItem = true;
-			for (int slotpos = 0; slotpos < MAX_WEAPON_POSITIONS; slotpos++)
-			{
-				C_BaseCombatWeapon *pWeapon = GetWeaponInSlot(i, slotpos);
-				if ( !pWeapon )
-					continue;
-
-				// draw selected weapon
-				DrawBox(xpos, ypos, largeBoxWide, largeBoxTall, selectedColor, m_flSelectionAlphaOverride, bFirstItem ? i + 1 : -1);
-
-				// draw icon
-				Color col = GetFgColor();
-				// icons use old system, drawing in screen space
-				if ( pWeapon->GetSpriteActive() )
-				{
-					if (!pWeapon->CanBeSelected())
-					{
-						// unselectable weapon, display as such
-						col = Color(255, 0, 0, col[3]);
-					}
-					else if (pWeapon == pSelectedWeapon)
-					{
-						// currently selected weapon, display brighter
-						col[3] = m_flSelectionAlphaOverride;
-					}
-					pWeapon->GetSpriteActive()->DrawSelf( xpos + m_flIconXPos, ypos + m_flIconYPos, col );
-				}
-
-				// draw text
-				col = m_TextColor;
-				const FileWeaponInfo_t &weaponInfo = pWeapon->GetWpnData();
-
-				if (pWeapon == pSelectedWeapon)
-				{
-					wchar_t text[128];
-					wchar_t *tempString = g_pVGuiLocalize->Find(weaponInfo.szPrintName);
-
-					// setup our localized string
-					if ( tempString )
-					{
-#ifdef WIN32
-						_snwprintf(text, sizeof(text)/sizeof(wchar_t) - 1, L"%s", tempString);
-#else
-						_snwprintf(text, sizeof(text)/sizeof(wchar_t) - 1, L"%S", tempString);
-#endif
-						text[sizeof(text)/sizeof(wchar_t) - 1] = 0;
-					}
-					else
-					{
-						// string wasn't found by g_pVGuiLocalize->Find()
-						g_pVGuiLocalize->ConvertANSIToUnicode(weaponInfo.szPrintName, text, sizeof(text));
-					}
-					
-					surface()->DrawSetTextColor( col );
-					surface()->DrawSetTextFont( m_hTextFont );
-
-					// count the position
-					int slen = 0, charCount = 0, maxslen = 0;
-					{
-						for (wchar_t *pch = text; *pch != 0; pch++)
-						{
-							if (*pch == '\n') 
-							{
-								// newline character, drop to the next line
-								if (slen > maxslen)
-								{
-									maxslen = slen;
-								}
-								slen = 0;
-							}
-							else if (*pch == '\r')
-							{
-								// do nothing
-							}
-							else
-							{
-								slen += surface()->GetCharacterWidth( m_hTextFont, *pch );
-								charCount++;
-							}
-						}
-					}
-					if (slen > maxslen)
-					{
-						maxslen = slen;
-					}
-
-					int tx = xpos + ((largeBoxWide - maxslen) / 2);
-					int ty = ypos + (int)m_flTextYPos;
-					surface()->DrawSetTextPos( tx, ty );
-					// adjust the charCount by the scan amount
-					charCount *= m_flTextScan;
-					for (wchar_t *pch = text; charCount > 0; pch++)
-					{
-						if (*pch == '\n')
-						{
-							// newline character, move to the next line
-							surface()->DrawSetTextPos( xpos + ((largeBoxWide - slen) / 2), ty + (surface()->GetFontTall(m_hTextFont) * 1.1f));
-						}
-						else if (*pch == '\r')
-						{
-							// do nothing
-						}
-						else
-						{
-							surface()->DrawUnicodeChar(*pch);
-							charCount--;
-						}
-					}
-				}
-
-				ypos += (largeBoxTall + m_flBoxGap);
-				bFirstItem = false;
-			}
-
-			xpos += largeBoxWide;
-		}
-		else
-		{
-			// check to see if there is a weapons in this bucket
-			if ( GetFirstPos( i ) )
-			{
-				// draw has weapon in slot
-				DrawBox(xpos, ypos, m_flSmallBoxSize, m_flSmallBoxSize, m_BoxColor, m_flAlphaOverride, i + 1);
-			}
-			else
-			{
-				// draw empty slot
-				DrawBox(xpos, ypos, m_flSmallBoxSize, m_flSmallBoxSize, m_EmptyBoxColor, m_flAlphaOverride, -1);
-			}
-
-			xpos += m_flSmallBoxSize;
-		}
-
-		// reset position
-		ypos = 0;
-		xpos += m_flBoxGap;
-	}
-#endif // #if !defined( CSTRIKE15 )
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: draws a selection box
-//-----------------------------------------------------------------------------
-void CHudWeaponSelection::DrawBox(int x, int y, int wide, int tall, Color color, float normalizedAlpha, int number)
-{
-	BaseClass::DrawBox( x, y, wide, tall, color, normalizedAlpha / 255.0f );
-
-	// draw the number
-	if (number >= 0)
-	{
-		Color numberColor = m_NumberColor;
-		numberColor[3] *= normalizedAlpha / 255.0f;
-		surface()->DrawSetTextColor(numberColor);
-		surface()->DrawSetTextFont(m_hNumberFont);
-		wchar_t wch = '0' + number;
-		surface()->DrawSetTextPos(x + m_flSelectionNumberXPos, y + m_flSelectionNumberYPos);
-		surface()->DrawUnicodeChar(wch);
-	}
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: hud scheme settings
-//-----------------------------------------------------------------------------
-void CHudWeaponSelection::ApplySchemeSettings(vgui::IScheme *pScheme)
-{
-	BaseClass::ApplySchemeSettings(pScheme);
-	SetPaintBackgroundEnabled(false);
-
-	// set our size
-	int screenWide, screenTall;
-	int x, y;
-	GetPos(x, y);
-	GetHudSize(screenWide, screenTall);
-	SetBounds(0, y, screenWide, screenTall - y);
-}
+// NOTE: The render-only methods Paint(), DrawBox() and ApplySchemeSettings() were
+// removed here when CHudWeaponSelection stopped deriving from a panel. On
+// CSTRIKE15 the Paint() body was already compiled out (#if !defined( CSTRIKE15 )),
+// so no visible behavior changed; all weapon-switch logic lives in the methods below.
 
 //-----------------------------------------------------------------------------
 // Purpose: Opens weapon selection control

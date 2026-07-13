@@ -12,7 +12,6 @@
 #endif
 
 
-#include "vgui_controls/PHandle.h"
 #include "steam/isteamcontroller.h"
 
 #define MAX_LOCATOR_BINDINGS_SHOWN	8
@@ -113,6 +112,7 @@ public:
 	void AddIconEffects( int add )			{ m_iEffectsFlags |= add; }
 	void RemoveIconEffects( int remove )	{ m_iEffectsFlags &= ~remove; }
 	int GetIconEffectsFlags()				{ return m_iEffectsFlags; }
+	bool IsEffectActive( int f )			{ return ( m_iEffectsFlags & f ) != 0; }
 	void SetIconColor( Color color )		{ m_rgbaIconColor = color; }
 	Color GetIconColor( void ) const		{ return m_rgbaIconColor; }
 	void SetCaptionColor( Color col )		{ m_captionColor = col; }
@@ -124,13 +124,13 @@ public:
 	void EndPresent();
 
 	void UpdateVguiTarget( void );
-	vgui::Panel *GetVguiTarget( void );
-	void SetVguiTargetName( const char *pchVguiTargetName );
-	const char *GetVguiTargetName( void ) { return m_szVguiTargetName.String(); }
-	void SetVguiTargetLookup( const char *pchVguiTargetLookup );
-	const char *GetVguiTargetLookup( void ) { return m_szVguiTargetLookup.String(); }
+	void *GetVguiTarget( void );
+	void SetVguiTargetName( const char *pchUITargetName );
+	const char *GetVguiTargetName( void ) { return m_szUITargetName.String(); }
+	void SetVguiTargetLookup( const char *pchUITargetLookup );
+	const char *GetVguiTargetLookup( void ) { return m_szUITargetLookup.String(); }
 	void SetVguiTargetEdge( int nVguiEdge );
-	int GetVguiTargetEdge( void ) const { return m_nVguiTargetEdge; }
+	int GetVguiTargetEdge( void ) const { return m_nUITargetEdge; }
 
 	void SetOnscreenIconTextureName( const char *pszTexture );
 	void SetOffscreenIconTextureName( const char *pszTexture );
@@ -161,10 +161,9 @@ public:
 
 
 private:
-	CGameInstructorSymbol		m_szVguiTargetName;
-	CGameInstructorSymbol		m_szVguiTargetLookup;
-	vgui::DHANDLE<vgui::Panel>	m_hVguiTarget;
-	int							m_nVguiTargetEdge;
+	CGameInstructorSymbol		m_szUITargetName;
+	CGameInstructorSymbol		m_szUITargetLookup;
+	int							m_nUITargetEdge;
 
 	CGameInstructorSymbol	m_szOnscreenTexture;
 	CGameInstructorSymbol	m_szOffscreenTexture;

@@ -111,7 +111,7 @@
 #endif
 #include "sys_mainwind.h"
 #ifndef DEDICATED
-#include "vgui_baseui_interface.h"
+#include "engineui.h"
 #include "cl_steamauth.h"
 #endif
 #include "sv_remoteaccess.h" // NotifyDedicatedServerUI()
@@ -123,7 +123,6 @@
 #include "toolframework/itoolframework.h"
 #include "ienginetoolinternal.h"
 #include "inputsystem/iinputsystem.h"
-#include "vgui_askconnectpanel.h"
 #include "cvar.h"
 #include "saverestoretypes.h"
 #include "filesystem/IQueuedLoader.h"
@@ -1365,8 +1364,6 @@ void Host_ReadConfiguration( const int iController, const bool readDefault )
 		// If nothing is bound to it then bind it to '
 		Key_SetBinding( KEY_BACKQUOTE, "toggleconsole" );
 	}
-
-	SetupDefaultAskConnectAcceptKey();
 
 	Host_SetConfigCfgExecuted( iController );
 
@@ -4152,7 +4149,7 @@ void Host_PostInit()
 	if ( !sv.IsDedicated() )
 	{
 		// vgui needs other systems to finalize
-		EngineVGui()->PostInit();
+		EngineUI()->PostInit();
 	}
 
 	if ( serverGameDLL )
@@ -4588,7 +4585,7 @@ void Host_Init( bool bDedicated )
 		TRACEINIT( g_pMatchFramework->Init(), g_pMatchFramework->Shutdown() );
 
 		//startup vgui
-		TRACEINIT( EngineVGui()->Init(), EngineVGui()->Shutdown() );
+		TRACEINIT( EngineUI()->Init(), EngineUI()->Shutdown() );
 
 		TRACEINIT( TextMessageInit(), TextMessageShutdown() );
 
@@ -4601,7 +4598,7 @@ void Host_Init( bool bDedicated )
 		TRACEINIT( Decal_Init(), Decal_Shutdown() );
 
 		// hookup interfaces
-		EngineVGui()->Connect();
+		EngineUI()->Connect();
 	}
 	else
 #endif
@@ -4937,7 +4934,7 @@ void Host_Changelevel( bool loadfromsavedgame, const char *mapname, char *mapGro
 
 	if ( !sv.IsDedicated() )
 	{
-		EngineVGui()->SetProgressLevelName( mapname );
+		EngineUI()->SetProgressLevelName( mapname );
 	}
 	SCR_BeginLoadingPlaque( mapname );
 #endif
@@ -5123,7 +5120,7 @@ bool Host_NewGame( char *mapName, char *mapGroupName, bool loadGame, bool bBackg
 #ifndef DEDICATED
 	if ( !sv.IsDedicated() )
 	{
-		EngineVGui()->SetProgressLevelName( mapName );
+		EngineUI()->SetProgressLevelName( mapName );
 	}
 	SCR_BeginLoadingPlaque( mapName );
 #endif
@@ -5174,7 +5171,7 @@ bool Host_NewGame( char *mapName, char *mapGroupName, bool loadGame, bool bBackg
 	COM_TimestampedLog( "serverGameDLL->LevelInit" );
 
 #ifndef DEDICATED
-	EngineVGui()->UpdateProgressBar(PROGRESS_LEVELINIT);
+	EngineUI()->UpdateProgressBar(PROGRESS_LEVELINIT);
 
 	audiosourcecache->LevelInit( mapName );
 #endif
@@ -5387,7 +5384,7 @@ void Host_Shutdown(void)
 
 		TRACESHUTDOWN( TextMessageShutdown() );
 
-		TRACESHUTDOWN( EngineVGui()->Shutdown() );
+		TRACESHUTDOWN( EngineUI()->Shutdown() );
 
 		TRACESHUTDOWN( S_Shutdown() );
 

@@ -95,7 +95,7 @@ public:
 	// 'AppSystem lite' Connect function, to set up global interface pointers for the PuzzleMaker DLL:
 	virtual void Connect(	IFileSystem *_g_pFullFileSystem, IVEngineClient *_engine, IMaterialSystem *_materials, CGlobalVarsBase *_gpGlobals,
 							IMDLCache *_g_pMDLCache, IVModelInfoClient *_modelinfo, IVModelRender *_modelrender, IStudioRender *_g_pStudioRender,
-							vgui::ISurface *_g_pVGuiSurface, vgui::IInput *_g_pVGuiInput, vgui::IVGUILocalize *_g_pVGuiLocalize,
+							vgui::ISurface *_g_pVGuiSurface, vgui::IInput *_g_pVGuiInput, vgui::IVGUILocalize *_g_pLocalize,
 							IProcessUtils *_g_pProcessUtils, ICvar *_g_pCVar, IGameEventManager2 *_g_pGameEventManager ) = 0;
 
 	// Call this from the parent frame's 'ApplySchemeSettings' to set up the puzzlemaker's UI (fonts, etc)

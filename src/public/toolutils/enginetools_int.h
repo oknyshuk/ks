@@ -18,7 +18,7 @@
 // Forward declarations
 //-----------------------------------------------------------------------------
 class IEngineTool;
-class IEngineVGui;
+class IEngineUI;
 class IServerTools;
 class IClientTools;
 class IFileSystem;
@@ -32,7 +32,7 @@ class IVModelInfoClient;
 // Singleton interfaces
 //-----------------------------------------------------------------------------
 extern IEngineTool	*enginetools;
-extern IEngineVGui	*enginevgui;
+extern IEngineUI	*engineui;
 extern IServerTools	*servertools;
 extern IClientTools	*clienttools;
 extern IVModelInfoClient *modelinfoclient;

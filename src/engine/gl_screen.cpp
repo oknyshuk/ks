@@ -17,7 +17,7 @@
 #include "cdll_engine_int.h"
 #include "demo.h"
 #include "cl_main.h"
-#include "vgui_baseui_interface.h"
+#include "engineui.h"
 #include "con_nprint.h"
 #include "sys_mainwind.h"
 #include "ivideomode.h"
@@ -44,7 +44,7 @@ DLL_IMPORT void PublishAllMiniProfilers(int nHistoryMax);
 // In other C files.
 extern bool V_CheckGamma( void );
 extern void	V_RenderView( void );
-extern void V_RenderVGuiOnly( void );
+extern void V_RenderUIOnly( void );
 
 extern bool HostState_IsTransitioningToLoad();
 
@@ -89,7 +89,7 @@ void SCR_BeginLoadingPlaque( const char *levelName /*= NULL*/ )
 		scr_loadingStartTime = Plat_FloatTime();
 
 		// make sure game UI is allowed to show (gets disabled if chat window is up)
-		EngineVGui()->SetNotAllowedToShowGameUI( false );
+		EngineUI()->SetNotAllowedToShowGameUI( false );
 
 		// force QMS to serialize during loading
 		Host_AllowQueuedMaterialSystem( false );
@@ -114,7 +114,7 @@ void SCR_BeginLoadingPlaque( const char *levelName /*= NULL*/ )
 		}
 
 		// let everybody know we're starting loading
-		EngineVGui()->OnLevelLoadingStarted( levelName, HostState_IsTransitioningToLoad() );
+		EngineUI()->OnLevelLoadingStarted( levelName, HostState_IsTransitioningToLoad() );
 		scr_engineevent_loadingstarted = true;
 		g_pMatchFramework->GetEventsSubscription()->BroadcastEvent( new KeyValues(
 			"OnEngineLevelLoadingStarted", "name", levelName ) );
@@ -151,12 +151,12 @@ void SCR_EndLoadingPlaque( void )
 
 		scr_engineevent_loadingstarted = false;
 
-		EngineVGui()->HideLoadingPlaque();
+		EngineUI()->HideLoadingPlaque();
 
 		if ( g_pMatchFramework )
 		{
 			scr_engineevent_loadingstarted = false;
-			EngineVGui()->HideLoadingPlaque();
+			EngineUI()->HideLoadingPlaque();
 
 			KeyValues *kv = new KeyValues( "OnEngineLevelLoadingFinished" );
 			if ( gfExtendedError )
@@ -186,7 +186,7 @@ void SCR_EndLoadingPlaque( void )
 	{
 		if ( IsPC() )
 		{
-			EngineVGui()->ShowErrorMessage();
+			EngineUI()->ShowErrorMessage();
 		}
 	}
 
@@ -223,7 +223,7 @@ void SCR_UpdateScreen( void )
 	{
 		if ( !Host_IsSinglePlayerGame() )
 		{
-			V_RenderVGuiOnly();
+			V_RenderUIOnly();
 		}
 
 		// Put this here to avoid a crappy alt+tab situation:
@@ -260,7 +260,7 @@ void SCR_UpdateScreen( void )
 	CMatRenderContextPtr pRenderContext;
 	pRenderContext.GetFrom( materials );
 
-	if( EngineVGui()->IsGameUIVisible() || IsSteam3ClientGameOverlayActive() )
+	if( EngineUI()->IsGameUIVisible() || IsSteam3ClientGameOverlayActive() )
 	{
 		pRenderContext->AntiAliasingHint( AA_HINT_MENU );
 	}
@@ -271,7 +271,7 @@ void SCR_UpdateScreen( void )
 	}
 	pRenderContext.SafeRelease();
 
-	EngineVGui()->Simulate();
+	EngineUI()->Simulate();
 
 	{
 		CMatRenderContextPtr pRenderContext( materials );

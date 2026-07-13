@@ -1,4 +1,4 @@
-//===== Copyright © 1996-2005, Valve Corporation, All rights reserved. ======//
+//===== Copyright ï¿½ 1996-2005, Valve Corporation, All rights reserved. ======//
 //
 // Purpose: 
 //
@@ -315,7 +315,6 @@ public:
 	// Return true if any of these leaves are visible in the current PVS.
 	virtual bool			AreAnyLeavesVisible( int *leafList, int nLeaves ) = 0;
 
-	virtual	void			VguiPaint( void ) = 0;
 	// Sets up view fade parameters
 	virtual void			ViewDrawFade( byte *color, IMaterial *pMaterial, bool mapFullTextureToScreen = true ) = 0;
 	// Sets up the projection matrix for the specified field of view
@@ -347,9 +346,6 @@ public:
 	virtual void			SetAreaState( 
 			unsigned char chAreaBits[MAX_AREA_STATE_BYTES],
 			unsigned char chAreaPortalBits[MAX_AREA_PORTAL_STATE_BYTES] ) = 0;
-
-	// See i
-	virtual void			VGui_Paint( int mode ) = 0;
 
 	// Push, pop views (see PushViewFlags_t above for flags)
 	virtual void			Push3DView( IMatRenderContext *pRenderContext, const CViewSetup &view, int nFlags, ITexture* pRenderTarget, Frustum frustumPlanes ) = 0;

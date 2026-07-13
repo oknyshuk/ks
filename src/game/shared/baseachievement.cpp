@@ -9,15 +9,12 @@
 #include "icommandline.h"
 #ifdef CLIENT_DLL
 #include "tier3/tier3.h"
-#include "vgui/ILocalize.h"
-#include "achievement_notification_panel.h"
+#include "localize/ilocalize.h"
 #include "fmtstr.h"
 #include "cdll_client_int.h"
 #include "matchmaking/imatchframework.h"
 #endif // CLIENT_DLL
 
-#include <vgui/ISystem.h>
-#include <vgui_controls/Controls.h>
 
 // NOTE: This has to be the last file included!
 #include "tier0/memdbgon.h"

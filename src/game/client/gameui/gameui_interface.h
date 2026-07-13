@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
+//========= Copyright ï¿½ 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: Defines the interface that the GameUI dll exports
 //
@@ -11,8 +11,6 @@
 
 #include "GameUI/IGameUI.h"
 
-#include "vgui_controls/Panel.h"
-#include "vgui_controls/PHandle.h"
 #include "convar.h"
 
 #if defined ( CSTRIKE15 )
@@ -50,8 +48,6 @@ public:
 	// Toggle allowing the engine to hide the game UI with the escape key
 	void PreventEngineHideGameUI();
 	void AllowEngineHideGameUI();
-
-	virtual void SetLoadingBackgroundDialog( vgui::VPANEL panel );
 
 	// notifications
 	virtual void OnGameUIActivated();
@@ -124,8 +120,6 @@ private:
 
 	char m_szPreviousStatusText[128];
 	char m_szPlatformDir[MAX_PATH];
-
-	vgui::DHANDLE<class CCDKeyEntryDialog> m_hCDKeyEntryDialog;
 };
 
 // Purpose: singleton accessor

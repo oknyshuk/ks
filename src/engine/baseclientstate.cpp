@@ -15,7 +15,6 @@
 #include "cl_rcon.h"
 #ifndef DEDICATED
 #include "cl_pluginhelpers.h"
-#include "vgui_askconnectpanel.h"
 #include "cdll_engine_int.h"
 #endif
 #include "sv_steamauth.h"
@@ -35,7 +34,7 @@
 #include "hltvserver.h"
 #include "UtlStringMap.h"
 
-#include "vgui/ILocalize.h"
+#include "localize/ilocalize.h"
 #include "eiface.h"
 #include "cl_broadcast.h"
 
@@ -126,20 +125,7 @@ void CL_NameCvarChanged( IConVar *pConVar, const char *pOldString, float flOldVa
 
 
 
-#ifndef DEDICATED
-void askconnect_accept_f()
-{
-	char szHostName[256];
-	if ( IsAskConnectPanelActive( szHostName, sizeof( szHostName ) ) )
-	{
-		char szCommand[512];
-		V_snprintf( szCommand, sizeof( szCommand ), "connect %s", szHostName );
-		Cbuf_AddText( Cbuf_GetCurrentPlayer(), szCommand );
-		HideAskConnectPanel();
-	}
-}
-ConCommand askconnect_accept( "askconnect_accept", askconnect_accept_f, "Accept a redirect request by the server.", FCVAR_DONTRECORD );
-#endif
+
 
 #ifndef SWDS
 extern IVEngineClient *engineClient;
@@ -1787,7 +1773,7 @@ bool CBaseClientState::ProcessConnectionlessPacket( netpacket_t *packet )
 					// Show PW UI with current string
 #ifndef DEDICATED
 					SCR_EndLoadingPlaque();
-					EngineVGui()->ShowPasswordUI( password.GetString() );
+					EngineUI()->ShowPasswordUI( password.GetString() );
 #endif
 				}
 				else if ( dc.m_chLobbyType[0] && !sv.IsActive() && !dc.m_unLobbyID &&
@@ -2453,7 +2439,7 @@ bool CBaseClientState::SVCMsg_ServerInfo( const CSVCMsg_ServerInfo& msg )
 	VPROF( "SVCMsg_ServerInfo" );
 
 #ifndef DEDICATED
-	EngineVGui()->UpdateProgressBar(PROGRESS_PROCESSSERVERINFO);
+	EngineUI()->UpdateProgressBar(PROGRESS_PROCESSSERVERINFO);
 #endif
 
 	COM_TimestampedLog( " CBaseClient::SVCMsg_ServerInfo" );
@@ -2540,7 +2526,7 @@ bool CBaseClientState::SVCMsg_ServerInfo( const CSVCMsg_ServerInfo& msg )
 	m_unUGCMapFileID = msg.ugc_map_id();
 
 #if !defined(DEDICATED)
-	EngineVGui()->SetProgressLevelName( m_szLevelNameShort );
+	EngineUI()->SetProgressLevelName( m_szLevelNameShort );
 	audiosourcecache->LevelInit( m_szLevelNameShort );
 #endif
 
@@ -2834,7 +2820,7 @@ bool CBaseClientState::SVCMsg_CreateStringTable( const CSVCMsg_CreateStringTable
 	VPROF( "SVCMsg_CreateStringTable" );
 
 #ifndef DEDICATED
-	EngineVGui()->UpdateProgressBar(PROGRESS_PROCESSSTRINGTABLE);
+	EngineUI()->UpdateProgressBar(PROGRESS_PROCESSSTRINGTABLE);
 #endif
 
 	COM_TimestampedLog( " CBaseClient::ProcessCreateStringTable(%s)", msg.name().c_str() );

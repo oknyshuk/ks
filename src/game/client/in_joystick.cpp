@@ -12,6 +12,7 @@
 #include "cdll_client_int.h"
 #include "cdll_util.h"
 #include "kbutton.h"
+#include "rocketui/rocketui.h"
 #include "usercmd.h"
 #include "iclientvehicle.h"
 #include "input.h"
@@ -19,16 +20,13 @@
 #include "iclientmode.h"
 #include "convar.h"
 #include "hud.h"
-#include "vgui/ISurface.h"
-#include "vgui_controls/Controls.h"
-#include "vgui/Cursor.h"
 #include "tier0/icommandline.h"
 #include "inputsystem/iinputsystem.h"
 #include "inputsystem/ButtonCode.h"
 #include "math.h"
 #include "tier1/convar_serverbounded.h"
 #include "c_baseplayer.h"
-#include "ienginevgui.h"
+#include "iengineui.h"
 #include "inputsystem/iinputstacksystem.h"
 
 
@@ -1826,11 +1824,11 @@ void CInput::JoyStickMove( float frametime, CUserCmd *cmd )
 		return; 
 
 	// Skip out if vgui is active
-	if ( vgui::surface()->IsCursorVisible() )
+	if ( RocketUI()->IsConsumingInput() )
 		return;
 
 	// Don't move if GameUI is visible
-	if ( enginevgui->IsGameUIVisible() )
+	if ( engineui->IsGameUIVisible() )
 		return;
 
 #ifdef PORTAL2

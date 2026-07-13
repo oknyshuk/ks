@@ -14,11 +14,21 @@
 #endif
 
 ConVar weapon_accuracy_logging( "weapon_accuracy_logging", "0", FCVAR_REPLICATED | FCVAR_DEVELOPMENTONLY | FCVAR_ARCHIVE );
+#ifdef CLIENT_DLL
+// Client-only preference: haptics are a local input concern. Defining it in
+// shared code registers it in both client.dll and server.dll, which the cvar
+// system cannot link (not FCVAR_REPLICATED) -> "Parent cvar in client.dll not
+// allowed". Only the client reads it (see the CLIENT_DLL block below).
 ConVar steam_controller_haptics( "steam_controller_haptics", "1", FCVAR_RELEASE );
+#endif
 ConVar weapon_near_empty_sound( "weapon_near_empty_sound", "1", FCVAR_REPLICATED | FCVAR_CHEAT );
 ConVar weapon_debug_max_inaccuracy( "weapon_debug_max_inaccuracy", "0", FCVAR_REPLICATED | FCVAR_DEVELOPMENTONLY | FCVAR_CHEAT, "Force all shots to have maximum inaccuracy" );
 ConVar weapon_debug_inaccuracy_only_up( "weapon_debug_inaccuracy_only_up", "0", FCVAR_REPLICATED | FCVAR_DEVELOPMENTONLY | FCVAR_CHEAT, "Force weapon inaccuracy to be in exactly the up direction" );
+#ifdef CLIENT_DLL
+// Client-only sound tuning cvar; keep it out of server.dll to avoid an
+// unlinkable duplicate registration.
 ConVar snd_max_pitch_shift_inaccuracy("snd_max_pitch_shift_inaccuracy", "0.08", 0);
+#endif
 
 #ifdef CLIENT_DLL
 

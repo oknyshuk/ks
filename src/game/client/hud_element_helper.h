@@ -108,7 +108,7 @@ private:
 	((className*)GetHud( 0 ).FindElement( #className ))
 
 
-// Things that inherit from vgui::Panel, too, will have ambiguous new operators
+// Things that inherit from a panel, too, will have ambiguous new operators
 //  so this should disambiguate them
 #define DECLARE_MULTIPLY_INHERITED()							\
     void *operator new( size_t stAllocateBlock )				\

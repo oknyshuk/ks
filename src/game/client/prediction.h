@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
+//========= Copyright ï¿½ 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -19,7 +19,6 @@
 
 class CMoveData;
 class CUserCmd;
-class CPDumpPanel;
 //-----------------------------------------------------------------------------
 // Purpose: Implements prediction in the client .dll
 //-----------------------------------------------------------------------------
@@ -193,7 +192,6 @@ private:
 	bool			m_bPlayerOriginTypedescriptionSearched;
 	CUtlVector< const typedescription_t * >	m_PlayerOriginTypeDescription; // A vector in cases where the .x, .y, and .z are separately listed
 
-	CPDumpPanel		*m_pPDumpPanel;
 };
  
 extern CPrediction *prediction;

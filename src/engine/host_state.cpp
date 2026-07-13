@@ -27,7 +27,7 @@
 #include "snd_audio_source.h"
 #include "sv_steamauth.h"
 #ifndef DEDICATED
-#include "vgui_baseui_interface.h"
+#include "engineui.h"
 #endif
 #include "sv_plugin.h"
 #include "cl_main.h"
@@ -507,7 +507,7 @@ void CHostState::State_ChangeLevelMP()
 		{
 #ifndef DEDICATED
 			// start progress bar immediately for multiplayer level transitions
-			EngineVGui()->EnabledProgressBarForNextLoad();
+			EngineUI()->EnabledProgressBarForNextLoad();
 #endif
 			Host_Changelevel( false, m_levelName, m_mapGroupName, m_landmarkName );
 			SetState( HS_RUN, true );

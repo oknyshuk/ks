@@ -90,30 +90,16 @@ public:
 	virtual void SetProgressLevelName( const char *levelName ) = 0;
 	
 	// Xbox 360
-	virtual void ShowMessageDialog( const uint nType, vgui::Panel *pOwner ) = 0;
 	virtual void ShowMessageDialog( const char* messageID, const char* titleID ) = 0;
 
 	virtual void CreateCommandMsgBox( const char* pszTitle, const char* pszMessage, bool showOk = true, bool showCancel = false, const char* okCommand = NULL, const char* cancelCommand = NULL, const char* closedCommand = NULL, const char* pszLegend = NULL ) = 0;
 	virtual void CreateCommandMsgBoxInSlot( ECommandMsgBoxSlot slot, const char* pszTitle, const char* pszMessage, bool showOk = true, bool showCancel = false, const char* okCommand = NULL, const char* cancelCommand = NULL, const char* closedCommand = NULL, const char* pszLegend = NULL ) = 0;
 
-	// inserts specified panel as background for level load dialog
-	virtual void SetLoadingBackgroundDialog( vgui::VPANEL panel ) = 0;
-
 	virtual void OnConnectToServer2(const char *game, int IP, int connectionPort, int queryPort) = 0;
 
 	virtual void SetProgressOnStart() = 0;
 	virtual void OnDisconnectFromServer( uint8 eSteamLoginFailure ) = 0;
-/*
-	virtual void OnConfirmQuit( void ) = 0;
 
-	virtual bool IsMainMenuVisible( void ) = 0;
-
-	// Client DLL is providing us with a panel that it wants to replace the main menu with
-	virtual void SetMainMenuOverride( vgui::VPANEL panel ) = 0;
-	
-	// Client DLL is telling us that a main menu command was issued, probably from its custom main menu panel
-	virtual void SendMainMenuCommand( const char *pszCommand ) = 0;
-*/	
 	virtual void NeedConnectionProblemWaitScreen() = 0;
 	virtual void ShowPasswordUI( char const *pchCurrentPW ) = 0;
 

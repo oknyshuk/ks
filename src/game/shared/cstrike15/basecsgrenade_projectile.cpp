@@ -14,8 +14,6 @@ extern ConVar sv_gravity;
 	#include "c_cs_player.h"
 	#include "hltvcamera.h"
 	#include "in_buttons.h"
-	#include <vgui/IInput.h>
-	#include "vgui_controls/Controls.h"
 
 #else
 

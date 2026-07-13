@@ -38,7 +38,6 @@ IAchievementMgr * CAchievementMgr::GetInstanceInterface()
 #include "cs_client_gamestats.h"
 
 // [dwenger] Necessary for sorting achievements by award time
-#include <vgui/ISystem.h>
 #include "../../public/vgui_controls/Controls.h"
 
 #endif // CLIENT_DLL

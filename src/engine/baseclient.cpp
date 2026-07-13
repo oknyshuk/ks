@@ -13,7 +13,7 @@
 #include "GameEventManager.h"
 #include "LocalNetworkBackdoor.h"
 #ifndef DEDICATED
-#include "vgui_baseui_interface.h"
+#include "engineui.h"
 #endif
 #include "sv_remoteaccess.h" // NotifyDedicatedServerUI()
 #include "MapReslistGenerator.h"
@@ -629,7 +629,7 @@ bool CBaseClient::SendSignonData( void )
 {
 	COM_TimestampedLog( " CBaseClient::SendSignonData" );
 #ifndef DEDICATED
-	EngineVGui()->UpdateProgressBar(PROGRESS_SENDSIGNONDATA, false );
+	EngineUI()->UpdateProgressBar(PROGRESS_SENDSIGNONDATA, false );
 #endif
 
 	if ( m_Server->m_Signon.IsOverflowed() )
@@ -659,7 +659,7 @@ void CBaseClient::Connect( const char *szName, int nUserID, INetChannel *pNetCha
 #ifndef DEDICATED
 	if ( !bFakePlayer )
 	{
-		EngineVGui()->UpdateProgressBar(PROGRESS_SIGNONCONNECT, false);
+		EngineUI()->UpdateProgressBar(PROGRESS_SIGNONCONNECT, false);
 	}
 #endif
 	Clear();

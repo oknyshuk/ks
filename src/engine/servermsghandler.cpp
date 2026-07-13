@@ -26,7 +26,7 @@
 #include "r_efx.h"
 #include "r_local.h"
 #include "decal_private.h"
-#include "vgui_baseui_interface.h"
+#include "engineui.h"
 #include "host_state.h"
 #include "cl_ents_parse.h"
 #include "eiface.h"
@@ -225,10 +225,10 @@ void CClientState::Disconnect( bool bShowMainMenu )
 
 	if ( m_nMaxClients > 1 )
 	{
-		if ( EngineVGui()->IsConsoleVisible() == false )
+		if ( EngineUI()->IsConsoleVisible() == false )
 		{
 			// start progress bar immediately for multiplayer level transitions
-			EngineVGui()->EnabledProgressBarForNextLoad();
+			EngineUI()->EnabledProgressBarForNextLoad();
 		}
 	}
 
@@ -244,7 +244,7 @@ void CClientState::Disconnect( bool bShowMainMenu )
 	}
 
 	// notify game ui dll of out-of-in-game status
-	EngineVGui()->NotifyOfServerDisconnect();
+	EngineUI()->NotifyOfServerDisconnect();
 
 	HostState_OnClientDisconnected();
 

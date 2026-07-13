@@ -78,9 +78,6 @@ void RocketConsole::Initialize() {
   RocketUI()->RegisterConsoleHandlers(ConsoleKeyInputHandler,
                                       ConsoleCharInputHandler);
 
-  // Listen for map changes to clear console (reduces geometry buffer pressure)
-  ListenForGameEvent("game_newmap");
-
   m_bInitialized = true;
 }
 
@@ -92,9 +89,6 @@ void RocketConsole::Shutdown() {
 
   // Unregister input handlers
   RocketUI()->RegisterConsoleHandlers(nullptr, nullptr);
-
-  // Stop listening for game events
-  StopListeningForAllEvents();
 
   if (g_pCVar)
     g_pCVar->RemoveConsoleDisplayFunc(this);
@@ -248,14 +242,6 @@ void RocketConsole::Clear() {
 
   if (m_elemOutput) {
     m_elemOutput->SetValue("");
-  }
-}
-
-void RocketConsole::FireGameEvent(IGameEvent *event) {
-  const char *name = event->GetName();
-  if (V_strcmp(name, "game_newmap") == 0) {
-    // Clear console on map change to reduce geometry buffer pressure
-    Clear();
   }
 }
 

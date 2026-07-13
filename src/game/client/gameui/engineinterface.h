@@ -19,7 +19,7 @@
 #include "tier2/tier2.h"
 #include "matchmaking/imatchframework.h"
 
-extern class IEngineVGui *enginevguifuncs;
+extern class IEngineUI *engineuifuncs;
 #ifdef _GAMECONSOLE
 extern class IXOnline  *xonline;
 #endif

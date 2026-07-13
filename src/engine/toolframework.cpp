@@ -145,11 +145,11 @@ public:
 	virtual void	RenderFrameBegin();
 	virtual void	RenderFrameEnd();
 
-	virtual void	VGui_PreRenderAllTools( int paintMode );
-	virtual void	VGui_PostRenderAllTools( int paintMode );
+	virtual void	UI_PreRenderAllTools( int paintMode );
+	virtual void	UI_PostRenderAllTools( int paintMode );
 
-	virtual void	VGui_PreSimulateAllTools();
-	virtual void	VGui_PostSimulateAllTools();
+	virtual void	UI_PreSimulateAllTools();
+	virtual void	UI_PostSimulateAllTools();
 
 	// Are we using tools?
 	virtual bool	InToolMode();
@@ -1356,28 +1356,28 @@ bool CToolFrameworkInternal::SetupAudioState( AudioState_t &audioState )
 // Purpose: 
 // Input  :  - 
 //-----------------------------------------------------------------------------
-void CToolFrameworkInternal::VGui_PreRenderAllTools( int paintMode )
+void CToolFrameworkInternal::UI_PreRenderAllTools( int paintMode )
 {
-	InvokeMethodInt( &IToolSystem::VGui_PreRender, paintMode );
+	InvokeMethodInt( &IToolSystem::UI_PreRender, paintMode );
 }
 
 //-----------------------------------------------------------------------------
 // Purpose: 
 // Input  :  - 
 //-----------------------------------------------------------------------------
-void CToolFrameworkInternal::VGui_PostRenderAllTools( int paintMode )
+void CToolFrameworkInternal::UI_PostRenderAllTools( int paintMode )
 {
-	InvokeMethodInt( &IToolSystem::VGui_PostRender, paintMode );
+	InvokeMethodInt( &IToolSystem::UI_PostRender, paintMode );
 }
 
-void CToolFrameworkInternal::VGui_PreSimulateAllTools()
+void CToolFrameworkInternal::UI_PreSimulateAllTools()
 {
-	InvokeMethod( &IToolSystem::VGui_PreSimulate );
+	InvokeMethod( &IToolSystem::UI_PreSimulate );
 }
 
-void CToolFrameworkInternal::VGui_PostSimulateAllTools()
+void CToolFrameworkInternal::UI_PostSimulateAllTools()
 {
-	InvokeMethod( &IToolSystem::VGui_PostSimulate );
+	InvokeMethod( &IToolSystem::UI_PostSimulate );
 }
 
 //-----------------------------------------------------------------------------
@@ -1563,8 +1563,8 @@ public:
 	virtual void AdjustEngineViewport( int& x, int& y, int& width, int& height );
 	virtual bool SetupEngineView( Vector &origin, QAngle &angles, float &fov );
 	virtual bool SetupAudioState( AudioState_t &audioState );
-	virtual void VGui_PreRenderAllTools( int paintMode );
-	virtual void VGui_PostRenderAllTools( int paintMode );
+	virtual void UI_PreRenderAllTools( int paintMode );
+	virtual void UI_PostRenderAllTools( int paintMode );
 	virtual bool IsThirdPersonCamera( );
 	virtual bool InToolMode();
 };
@@ -1660,17 +1660,17 @@ bool CClientEngineTools::SetupAudioState( AudioState_t &audioState )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CClientEngineTools::VGui_PreRenderAllTools( int paintMode )
+void CClientEngineTools::UI_PreRenderAllTools( int paintMode )
 {
-	g_ToolFrameworkInternal.VGui_PreRenderAllTools( paintMode );
+	g_ToolFrameworkInternal.UI_PreRenderAllTools( paintMode );
 }
 
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CClientEngineTools::VGui_PostRenderAllTools( int paintMode )
+void CClientEngineTools::UI_PostRenderAllTools( int paintMode )
 {
-	g_ToolFrameworkInternal.VGui_PostRenderAllTools( paintMode );
+	g_ToolFrameworkInternal.UI_PostRenderAllTools( paintMode );
 }
 
 //-----------------------------------------------------------------------------

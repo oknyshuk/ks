@@ -29,8 +29,6 @@
 #include "materialsystem/imaterial.h"
 #include "toolframework/itoolframework.h"
 #include "toolframework/itoolsystem.h"
-#include "vgui/ISystem.h"
-#include <vgui_controls/Controls.h>
 #include "paint.h"
 
 

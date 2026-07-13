@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2008, Valve Corporation, All rights reserved. ============//
+//========= Copyright ï¿½ 1996-2008, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -9,9 +9,6 @@
 
 #undef XBX_GetPrimaryUserId
 
-#include "vgui_controls/Panel.h"
-#include "vgui_controls/Frame.h"
-#include "vgui_controls/Button.h"
 #include "tier1/utllinkedlist.h"
 #include "tier1/UtlMap.h"
 #include "tier1/keyvalues.h"
@@ -165,7 +162,6 @@ public:
 	void NeedConnectionProblemWaitScreen( void );
 	void ShowPasswordUI( char const *pchCurrentPW );
 
-	vgui::IImage * GetAvatarImage( XUID playerID );
 	char const * GetPlayerName( XUID playerID, char const *szPlayerNameSpeculative );
 
 #if !defined( _GAMECONSOLE ) && !defined( NO_STEAM )

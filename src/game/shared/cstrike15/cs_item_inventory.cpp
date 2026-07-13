@@ -6,7 +6,7 @@
 
 #include "cbase.h"
 #include "cs_item_inventory.h"
-#include "vgui/ILocalize.h"
+#include "localize/ilocalize.h"
 #include "tier3/tier3.h"
 
 // memdbgon must be the last include file in a .cpp file!!!

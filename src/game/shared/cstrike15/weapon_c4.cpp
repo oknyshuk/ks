@@ -24,7 +24,6 @@
 	#include "mapinfo.h"
 	#include "team.h"
 	#include "func_bomb_target.h"
-	#include "vguiscreen.h"
 	#include "bot.h"
 	#include "cs_player.h"
 
@@ -184,7 +183,6 @@ END_PREDICTION_DATA()
 		PrecacheModel( "models/props/de_overpass/balloon.mdl" );
 		PrecacheParticleSystem( "weapon_confetti_balloons" );
 		PrecacheModel( "models/weapons/w_eq_multimeter.mdl" );
-		PrecacheVGuiScreen( "c4_panel" );
 	}
 
 	void CPlantedC4::GetControlPanelInfo( int nPanelIndex, const char *&pPanelName )
@@ -202,90 +200,10 @@ END_PREDICTION_DATA()
 	//-----------------------------------------------------------------------------
 	void CPlantedC4::SpawnControlPanels()
 	{
-		char buf[64];
-
-		// FIXME: Deal with dynamically resizing control panels?
-
-		// If we're attached to an entity, spawn control panels on it instead of use
-		CBaseAnimating *pEntityToSpawnOn = this;
-		char *pOrgLL = "controlpanel%d_ll";
-		char *pOrgUR = "controlpanel%d_ur";
-		char *pAttachmentNameLL = pOrgLL;
-		char *pAttachmentNameUR = pOrgUR;
-
-		Assert( pEntityToSpawnOn );
-
-		// Lookup the attachment point...
-		int nPanel;
-		for ( nPanel = 0; true; ++nPanel )
-		{
-			Q_snprintf( buf, sizeof( buf ), pAttachmentNameLL, nPanel );
-			int nLLAttachmentIndex = pEntityToSpawnOn->LookupAttachment(buf);
-			if (nLLAttachmentIndex <= 0)
-			{
-				// Try and use my panels then
-				pEntityToSpawnOn = this;
-				Q_snprintf( buf, sizeof( buf ), pOrgLL, nPanel );
-				nLLAttachmentIndex = pEntityToSpawnOn->LookupAttachment(buf);
-				if (nLLAttachmentIndex <= 0)
-					return;
-			}
-
-			Q_snprintf( buf, sizeof( buf ), pAttachmentNameUR, nPanel );
-			int nURAttachmentIndex = pEntityToSpawnOn->LookupAttachment(buf);
-			if (nURAttachmentIndex <= 0)
-			{
-				// Try and use my panels then
-				Q_snprintf( buf, sizeof( buf ), pOrgUR, nPanel );
-				nURAttachmentIndex = pEntityToSpawnOn->LookupAttachment(buf);
-				if (nURAttachmentIndex <= 0)
-					return;
-			}
-
-			const char *pScreenName;
-			GetControlPanelInfo( nPanel, pScreenName );
-			if (!pScreenName)
-				continue;
-
-			const char *pScreenClassname;
-			GetControlPanelClassName( nPanel, pScreenClassname );
-			if ( !pScreenClassname )
-				continue;
-
-			// Compute the screen size from the attachment points...
-			matrix3x4_t	panelToWorld;
-			pEntityToSpawnOn->GetAttachment( nLLAttachmentIndex, panelToWorld );
-
-			matrix3x4_t	worldToPanel;
-			MatrixInvert( panelToWorld, worldToPanel );
-
-			// Now get the lower right position + transform into panel space
-			Vector lr, lrlocal;
-			pEntityToSpawnOn->GetAttachment( nURAttachmentIndex, panelToWorld );
-			MatrixGetColumn( panelToWorld, 3, lr );
-			VectorTransform( lr, worldToPanel, lrlocal );
-
-			float flWidth = fabs( lrlocal.x );
-			float flHeight = fabs( lrlocal.y );
-
-			CVGuiScreen *pScreen = CreateVGuiScreen( pScreenClassname, pScreenName, pEntityToSpawnOn, this, nLLAttachmentIndex );
-			pScreen->ChangeTeam( GetTeamNumber() );
-			pScreen->SetActualSize( flWidth, flHeight );
-			pScreen->SetActive( true );
-			pScreen->MakeVisibleOnlyToTeammates( false );
-			int nScreen = m_hScreens.AddToTail( );
-			m_hScreens[nScreen].Set( pScreen );			
-		}
 	}
 
 	void CPlantedC4::RemoveControlPanels()
 	{
-		// Clear off any screens that are still live.
-		for ( int ii = m_hScreens.Count(); --ii >= 0; )
-		{
-			DestroyVGuiScreen( m_hScreens[ii].Get() );
-		}
-		m_hScreens.RemoveAll();
 	}
 
 	void CPlantedC4::SetTransmit( CCheckTransmitInfo *pInfo, bool bAlways )
@@ -295,13 +213,6 @@ END_PREDICTION_DATA()
 			return;
 
 		BaseClass::SetTransmit( pInfo, bAlways );
-
-		// Force our screens to be sent too.
-		for ( int i=0; i < m_hScreens.Count(); i++ )
-		{
-			CVGuiScreen *pScreen = m_hScreens[i].Get();
-			pScreen->SetTransmit( pInfo, bAlways );
-		}
 	}
 
 	CPlantedC4* CPlantedC4::ShootSatchelCharge( CCSPlayer *pevOwner, Vector vecStart, QAngle vecAngles )
@@ -1432,8 +1343,6 @@ void CC4::PhysicsTouchTriggers(const Vector *pPrevAbsOrigin)
 
 	void CC4::Precache()
 	{
-		PrecacheVGuiScreen( "c4_view_panel" );
-
 		PrecacheScriptSound( "c4.disarmfinish" );
 		PrecacheScriptSound( "c4.explode" );
 		PrecacheScriptSound( "c4.disarmstart" );

@@ -45,15 +45,14 @@
 #include "c_effects.h"
 #include "smoke_fog_overlay.h"
 #include "materialsystem/imaterialsystemhardwareconfig.h"
-#include "vgui_int.h"
-#include "ienginevgui.h"
+#include "clientui.h"
+#include "iengineui.h"
 #include "ScreenSpaceEffects.h"
 #include "toolframework_client.h"
 #include "c_func_reflective_glass.h"
 #include "keyvalues.h"
 #include "renderparm.h"
 #include "modelrendersystem.h"
-#include "vgui/ISurface.h"
 #include "tier0/cache_hints.h"
 #include "c_env_cascade_light.h"
 
@@ -269,9 +268,9 @@ void GetSimpleWorldModelConfiguration( bool &bSimpleWorldModeWaterReflectionOut,
 	// we only load/use the world imposters for multiplayer maps.
 	if ( GameRules()->IsMultiplayer() || IsPC() )
 	{
-		if ( VGui_IsSplitScreen() )
+		if ( UI_IsSplitScreen() )
 		{
-			if ( VGui_IsSplitScreenPIP() )
+			if ( UI_IsSplitScreenPIP() )
 			{
 				if ( GET_ACTIVE_SPLITSCREEN_SLOT() == 0 )
 				{
@@ -2667,7 +2666,7 @@ void CViewRender::GetLetterBoxRectangles( int nSlot, const CViewSetup &view, CUt
 {
 	// This uses the full screen size, not the hud or 3d inset size
 	int x, y, w, h;
-	VGui_GetPanelBounds( nSlot, x, y, w, h );
+	UI_GetPanelBounds( nSlot, x, y, w, h );
 
 	int right = x + w;
 	int bottom = y + h;
@@ -2749,7 +2748,7 @@ void CViewRender::SetupMain3DView( int nSlot, const CViewSetup &view, const CVie
 		CViewSetup letterBoxViewSetup;
 		letterBoxViewSetup.x = 0;
 		letterBoxViewSetup.y = 0;
-		VGui_GetTrueScreenSize( letterBoxViewSetup.width, letterBoxViewSetup.height );
+		UI_GetTrueScreenSize( letterBoxViewSetup.width, letterBoxViewSetup.height );
 		render->Push2DView( pRenderContext, letterBoxViewSetup, 0, pRenderTarget, GetFrustum() );
 		
 		DrawLetterBoxRectangles( nSlot, letterbox );
@@ -2839,19 +2838,6 @@ void CViewRender::FreezeFrame( float flFreezeTime )
 		{
 			m_FreezeParams[ slot ].m_flFreezeFrameUntil = gpGlobals->curtime + flFreezeTime;
 			m_FreezeParams[ slot ].m_bTakeFreezeFrame = true;	
-		}
-	}
-}
-
-void PositionHudPanels( CUtlVector< vgui::VPANEL > &list, const CViewSetup &view )
-{
-	for ( int i = 0; i < list.Count(); ++i )
-	{
-		vgui::VPANEL root = list[ i ];
-		if ( root != 0 )
-		{
-			vgui::ipanel()->SetPos( root, view.x, view.y );
-			vgui::ipanel()->SetSize( root, view.width, view.height );
 		}
 	}
 }
@@ -3364,7 +3350,7 @@ void CViewRender::RenderView( const CViewSetup &view, const CViewSetup &hudViewS
 #endif
 
 	// Clear a row of pixels at the edge of the viewport if it isn't at the edge of the screen
-	if ( VGui_IsSplitScreen() )
+	if ( UI_IsSplitScreen() )
 	{
 		CMatRenderContextPtr pRenderContext( materials );
 		pRenderContext->PushRenderTargetAndViewport();
@@ -3436,33 +3422,9 @@ void CViewRender::RenderView( const CViewSetup &view, const CViewSetup &hudViewS
 
 		if ( whatToDraw & RENDERVIEW_DRAWHUD )
 		{
-			VPROF_BUDGET( "VGui_DrawHud", VPROF_BUDGETGROUP_OTHER_VGUI );
-			// paint the vgui screen
-			VGui_PreRender();
-
-			CUtlVector< vgui::VPANEL > vecHudPanels;
-
-			vecHudPanels.AddToTail( VGui_GetClientDLLRootPanel() );
-
-			// This block is suspect - why are we resizing fullscreen panels to be the size of the hudViewSetup
-			// which is potentially only half the screen
-			if ( GET_ACTIVE_SPLITSCREEN_SLOT() == 0 )
-			{
-				vecHudPanels.AddToTail( VGui_GetFullscreenRootVPANEL() );
-
-#if defined( TOOLFRAMEWORK_VGUI_REFACTOR )
-				vecHudPanels.AddToTail( enginevgui->GetPanel( PANEL_GAMEUIDLL ) );
-#endif
-				vecHudPanels.AddToTail( enginevgui->GetPanel( PANEL_CLIENTDLL_TOOLS ) );
-			}
-
-			PositionHudPanels( vecHudPanels, hudViewSetup );
-
+			VPROF_BUDGET( "UI_DrawHud", VPROF_BUDGETGROUP_OTHER_VGUI );
 			// The crosshair, etc. needs to get at the current setup stuff
 			AllowCurrentViewAccess( true );
-
-			// Draw the in-game stuff based on the actual viewport being used
-			render->VGui_Paint( PAINT_INGAMEPANELS );
 
 			// Some hud elements want to position themselves based on the on-screen position
 			// of simulated actors (players, physics objects, etc). LateThink() gives them
@@ -3470,8 +3432,6 @@ void CViewRender::RenderView( const CViewSetup &view, const CViewSetup &hudViewS
             GetHud().LateThink();
 
 			AllowCurrentViewAccess( false );
-
-			VGui_PostRender();
 
 			GetClientMode()->PostRenderVGui();
 
@@ -7409,8 +7369,8 @@ void CFreezeFrameView::Setup( const CViewSetup &shadowViewIn )
 {
 	BaseClass::Setup( shadowViewIn );
 
-	VGui_GetTrueScreenSize( m_nScreenSize[ 0 ], m_nScreenSize[ 1 ] );
-	VGui_GetPanelBounds( GET_ACTIVE_SPLITSCREEN_SLOT(), m_nSubRect[ 0 ], m_nSubRect[ 1 ], m_nSubRect[ 2 ], m_nSubRect[ 3 ] );
+	UI_GetTrueScreenSize( m_nScreenSize[ 0 ], m_nScreenSize[ 1 ] );
+	UI_GetPanelBounds( GET_ACTIVE_SPLITSCREEN_SLOT(), m_nSubRect[ 0 ], m_nSubRect[ 1 ], m_nSubRect[ 2 ], m_nSubRect[ 3 ] );
 
 	KeyValues *pVMTKeyValues = new KeyValues( "UnlitGeneric" );
 	pVMTKeyValues->SetString( "$basetexture", IsGameConsole() ? "_rt_FullFrameFB1" : "_rt_FullScreen" );

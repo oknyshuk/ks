@@ -20,7 +20,7 @@ def build(bld):
     ]
 
     if bld.env.DEST_OS == "win32":
-        source += ["VguiMatSysApp.cpp", "matsysapp.cpp", "WinApp.cpp"]
+        source += ["matsysapp.cpp", "WinApp.cpp"]
     else:
         source += ["posixapp.cpp", "sdlmgr.cpp"]
 

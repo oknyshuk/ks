@@ -45,13 +45,12 @@
 #include "enginetrace.h"
 #include "baseautocompletefilelist.h"
 #include "sound.h"
-#include "vgui_baseui_interface.h"
+#include "engineui.h"
 #include "gl_matsysiface.h"
 #include "cl_main.h"
 #include "pr_edict.h"
 #include "tier0/vprof.h"
-#include <vgui/ILocalize.h>
-#include "vgui_controls/Controls.h"
+#include "localize/ilocalize.h"
 #include "tier0/icommandline.h"
 #include "testscriptmgr.h"
 #include "vengineserver_impl.h"
@@ -2934,7 +2933,7 @@ CON_COMMAND_F( save, "Saves current game.", FCVAR_DONTRECORD )
 		return;
 	}
 
-	if ( ( ( scr_drawloading && EngineVGui()->IsGameUIVisible() ) ) && V_stristr( args[1], "quick" ) )
+	if ( ( ( scr_drawloading && EngineUI()->IsGameUIVisible() ) ) && V_stristr( args[1], "quick" ) )
 	{
 		return;
 	}
@@ -3141,7 +3140,7 @@ static void LoadSaveGame( const char *savename, bool bLetToolsOverrideLoadGameEn
 	// if we're not currently in a game, show progress
 	if ( !sv.IsActive() || sv.IsLevelMainMenuBackground() )
 	{
-		EngineVGui()->EnabledProgressBarForNextLoad();
+		EngineUI()->EnabledProgressBarForNextLoad();
 	}
 
 	// Put up loading plaque
@@ -3203,7 +3202,7 @@ void Host_Loadgame_f( const CCommand &args )
 		return;
 	}
 
-	if ( ( ( scr_drawloading && EngineVGui()->IsGameUIVisible() ) ) && V_stristr( args[1], "quick" ) )
+	if ( ( ( scr_drawloading && EngineUI()->IsGameUIVisible() ) ) && V_stristr( args[1], "quick" ) )
 	{
 		return;
 	}

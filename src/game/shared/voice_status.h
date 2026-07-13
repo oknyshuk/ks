@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
+//========= Copyright ï¿½ 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -10,10 +10,7 @@
 #pragma once
 
 
-#include <vgui_controls/Label.h>
 //#include "VGUI_Bitmap.h"
-#include <vgui_controls/Button.h>
-#include <vgui_controls/Image.h>
 #include "voice_common.h"
 #include "voice_banmgr.h"
 #include "hudelement.h"
@@ -21,30 +18,6 @@
 
 class CVoiceStatus;
 class IMaterial;
-class BitmapImage;
-
-// Voice Panel
-class CVoicePanel : public vgui::Panel
-{
-public:
-	CVoicePanel( );
-	~CVoicePanel();
-
-	virtual void Paint( void );
-	virtual void setImage( BitmapImage *pImage );
-
-private:
-	BitmapImage *m_pImage;
-};
-
-class CVoiceLabel
-{
-public:
-	vgui::Label			*m_pLabel;
-	vgui::Label			*m_pBackground;
-	CVoicePanel			*m_pIcon;		// Voice icon next to player name.
-	int					m_clientindex;	// Client index of the speaker. -1 if this label isn't being used.
-};
 
 // This is provided by each mod to access data that may not be the same across mods.
 abstract_class IVoiceStatusHelper
@@ -63,7 +36,7 @@ public:
 	virtual bool			CanShowSpeakerLabels() = 0;
 };
 
-class CVoiceStatus /*: public vgui::CDefaultInputSignal*/
+class CVoiceStatus
 {
 public:
 				CVoiceStatus();
@@ -75,7 +48,7 @@ public:
 	// Initialize the cl_dll's voice manager.
 	virtual int Init(
 		IVoiceStatusHelper *m_pHelper,
-		vgui::VPANEL pParentPanel);
+		uintp pParentPanel);
 	
 	// ackPosition is the bottom position of where CVoiceStatus will draw the voice acknowledgement labels.
 	virtual void VidInit();
@@ -159,7 +132,7 @@ private:
 	float			m_LastUpdateServerState;		// Last time we called this function.
 	int				m_bServerModEnable;				// What we've sent to the server about our "voice_modenable" cvar.
 
-	vgui::VPANEL	m_pParentPanel;
+	uintp			m_pParentPanel;
 	CPlayerBitVec	m_VoicePlayers;		// Who is currently talking. Indexed by client index.
 	
 	// This is the gamerules-defined list of players that you can hear. It is based on what teams people are on 

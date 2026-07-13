@@ -119,7 +119,7 @@ private:
 	};
 
 	char						m_szMessageText[ MAX_MESSAGE_TEXT ];
-	char						m_szVguiFont[ MAX_FONT_NAME ];
+	char						m_szUIFont[ MAX_FONT_NAME ];
 	client_textmessage_t		message;
 };
 

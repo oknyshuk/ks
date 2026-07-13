@@ -5,7 +5,7 @@
 #include "hud_macros.h"
 #include "text_message.h"
 #include "c_cs_playerresource.h"
-#include <vgui/ILocalize.h>
+#include "localize/ilocalize.h"
 
 // min/max conflict handled by RMLUI_USE_CUSTOM_ASSERT
 
@@ -144,7 +144,7 @@ static bool __MsgFunc_TextMsg( const CCSUsrMsg_TextMsg &msg )
             bool bTranslated = false;
             if( tmpStrBuf[0] == '#' ) // only translate parameters intended as localization tokens
             {
-                const wchar_t *pBuf = g_pVGuiLocalize->Find( tmpStrBuf );
+                const wchar_t *pBuf = g_pLocalize->Find( tmpStrBuf );
                 if( pBuf )
                 {
                     // copy pBuf into szBuf[i]
@@ -161,7 +161,7 @@ static bool __MsgFunc_TextMsg( const CCSUsrMsg_TextMsg &msg )
                 {
                     NullLastNewlineFromString( tmpStrBuf );  // these strings are meant for substitution into the main strings, so cull the automatic end newlines
                 }
-                g_pVGuiLocalize->ConvertANSIToUnicode( tmpStrBuf, szBuf[ i ], sizeof( szBuf[ i ] ) );
+                g_pLocalize->ConvertANSIToUnicode( tmpStrBuf, szBuf[ i ], sizeof( szBuf[ i ] ) );
             }
         }
     }
@@ -169,8 +169,8 @@ static bool __MsgFunc_TextMsg( const CCSUsrMsg_TextMsg &msg )
     //TODO: right now this is just ascii
     int len;
     RkHudChat* pChat;
-    g_pVGuiLocalize->ConstructString( outputBuf, sizeof( outputBuf), szBuf[0], 4, szBuf[1], szBuf[2], szBuf[3], szBuf[4] );
-    g_pVGuiLocalize->ConvertUnicodeToANSI( outputBuf, szString, sizeof( szString) );
+    g_pLocalize->ConstructString( outputBuf, sizeof( outputBuf), szBuf[0], 4, szBuf[1], szBuf[2], szBuf[3], szBuf[4] );
+    g_pLocalize->ConvertUnicodeToANSI( outputBuf, szString, sizeof( szString) );
     len = strlen( szString );
     if ( len && szString[len-1] != '\n' && szString[len-1] != '\r' )
     {

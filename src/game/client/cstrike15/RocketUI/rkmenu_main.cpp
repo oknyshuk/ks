@@ -82,6 +82,12 @@ void RocketMainMenuDocument::UpdateDialog()
     //    m_pInstance->UpdateDocument()
 }
 
+void RocketMainMenuDocument::RestorePanel()
+{
+    // Re-show the main menu (ShowPanel loads it first if it isn't up yet).
+    ShowPanel( true );
+}
+
 void RocketMainMenuDocument::ShowPanel(bool bShow, bool immediate)
 {
     // oh yeah buddy this'll get called before the loading sometimes

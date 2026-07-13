@@ -31,7 +31,7 @@ class IMaterialSystemStub;
 class IDataCache;
 class IMDLCache;
 class IVModelInfoClient;
-class IEngineVGui;
+class IEngineUI;
 class ISpatialPartition;
 class IBaseClientDLL;
 class ISpatialPartition;
@@ -72,7 +72,7 @@ extern IVRenderView *render;
 extern IVDebugOverlay *debugoverlay;
 extern IMaterialSystemStub *materials_stub;
 extern IVModelInfoClient *modelinfo;
-extern IEngineVGui *enginevgui;
+extern IEngineUI *engineui;
 extern ISpatialPartition* partition;
 extern IBaseClientDLL *clientdll;
 extern IFileSystem *filesystem;
@@ -172,12 +172,12 @@ void TrackBoneSetupEnt( C_BaseAnimating *pEnt );
 
 bool IsEngineThreaded();
 
-class CVGuiScreenSizeSplitScreenPlayerGuard
+class CUIScreenSizeSplitScreenPlayerGuard
 {
 public:
-	CVGuiScreenSizeSplitScreenPlayerGuard( bool bActive, int slot, int nOldSlot );
-	CVGuiScreenSizeSplitScreenPlayerGuard( bool bActive, C_BaseEntity *pEntity, int nOldSlot );
-	~CVGuiScreenSizeSplitScreenPlayerGuard();
+	CUIScreenSizeSplitScreenPlayerGuard( bool bActive, int slot, int nOldSlot );
+	CUIScreenSizeSplitScreenPlayerGuard( bool bActive, C_BaseEntity *pEntity, int nOldSlot );
+	~CUIScreenSizeSplitScreenPlayerGuard();
 private:
 
 	bool m_bNoRestore;
@@ -185,12 +185,12 @@ private:
 	int m_nOldSize[ 2 ];
 };
 
-class CSetActiveSplitScreenPlayerGuard : public CVGuiScreenSizeSplitScreenPlayerGuard
+class CSetActiveSplitScreenPlayerGuard : public CUIScreenSizeSplitScreenPlayerGuard
 {
 public:
 	CSetActiveSplitScreenPlayerGuard( char const *pchContext, int nLine );
-	CSetActiveSplitScreenPlayerGuard( char const *pchContext, int nLine, int slot, int nOldSlot, bool bSetVguiScreenSize );
-	CSetActiveSplitScreenPlayerGuard( char const *pchContext, int nLine, C_BaseEntity *pEntity, int nOldSlot, bool bSetVguiScreenSize );
+	CSetActiveSplitScreenPlayerGuard( char const *pchContext, int nLine, int slot, int nOldSlot, bool bSetUIScreenSize );
+	CSetActiveSplitScreenPlayerGuard( char const *pchContext, int nLine, C_BaseEntity *pEntity, int nOldSlot, bool bSetUIScreenSize );
 	~CSetActiveSplitScreenPlayerGuard();
 private:
 	bool	m_bChanged;
@@ -211,11 +211,11 @@ private:
 	bool m_bSaveGetLocalPlayerAllowed;
 };
 
-class CVGuiAbsPosSplitScreenPlayerGuard
+class CUIAbsPosSplitScreenPlayerGuard
 {
 public:
-	CVGuiAbsPosSplitScreenPlayerGuard( int slot, int nOldSlot, bool bInvert = false );
-	~CVGuiAbsPosSplitScreenPlayerGuard();
+	CUIAbsPosSplitScreenPlayerGuard( int slot, int nOldSlot, bool bInvert = false );
+	~CUIAbsPosSplitScreenPlayerGuard();
 private:
 	bool m_bNoRestore;
 };
@@ -235,16 +235,16 @@ bool BSerializeUserMessageToSVCMSG( CSVCMsg_UserMessage &svcmsg, int nType, cons
 
 #if defined( SPLIT_SCREEN_STUBS )
 
-#define VGUI_SCREENSIZE_SPLITSCREEN_GUARD( slot ) 
+#define UI_SCREENSIZE_SPLITSCREEN_GUARD( slot ) 
 #define ACTIVE_SPLITSCREEN_PLAYER_GUARD( slot )
 #define ACTIVE_SPLITSCREEN_PLAYER_GUARD_ENT( entity )
 
-#define ACTIVE_SPLITSCREEN_PLAYER_GUARD_VGUI( slot )
+#define ACTIVE_SPLITSCREEN_PLAYER_GUARD_UI( slot )
 #define ACTIVE_SPLITSCREEN_PLAYER_GUARD_ENT_VGUI( entity )
 
 #define HACK_GETLOCALPLAYER_GUARD( desc )
-#define VGUI_ABSPOS_SPLITSCREEN_GUARD( slot )
-#define VGUI_ABSPOS_SPLITSCREEN_GUARD_INVERT( slot )
+#define UI_ABSPOS_SPLITSCREEN_GUARD( slot )
+#define UI_ABSPOS_SPLITSCREEN_GUARD_INVERT( slot )
 
 #define FOR_EACH_VALID_SPLITSCREEN_PLAYER( iteratorName ) for ( int iteratorName = 0; iteratorName == 0; ++iteratorName )
 
@@ -259,17 +259,17 @@ FORCEINLINE uint32 ComputeSplitscreenRenderingFlags( IClientRenderable *pRendera
 
 #else
 
-#define VGUI_SCREENSIZE_SPLITSCREEN_GUARD( slot ) CVGuiScreenSizeSplitScreenPlayerGuard s_VGuiSSGuard( slot, engine->GetActiveSplitScreenPlayerSlot() );
+#define UI_SCREENSIZE_SPLITSCREEN_GUARD( slot ) CUIScreenSizeSplitScreenPlayerGuard s_VGuiSSGuard( slot, engine->GetActiveSplitScreenPlayerSlot() );
 #define ACTIVE_SPLITSCREEN_PLAYER_GUARD( slot )	CSetActiveSplitScreenPlayerGuard g_SSGuard( __FILE__, __LINE__, slot, engine->GetActiveSplitScreenPlayerSlot(), false );
 #define ACTIVE_SPLITSCREEN_PLAYER_GUARD_ENT( entity )	CSetActiveSplitScreenPlayerGuard g_SSEGuard( __FILE__, __LINE__, entity, engine->GetActiveSplitScreenPlayerSlot(), false );
 
-#define ACTIVE_SPLITSCREEN_PLAYER_GUARD_VGUI( slot )	CSetActiveSplitScreenPlayerGuard g_SSGuardNoVgui( __FILE__, __LINE__, slot, engine->GetActiveSplitScreenPlayerSlot(), true );
+#define ACTIVE_SPLITSCREEN_PLAYER_GUARD_UI( slot )	CSetActiveSplitScreenPlayerGuard g_SSGuardNoVgui( __FILE__, __LINE__, slot, engine->GetActiveSplitScreenPlayerSlot(), true );
 #define ACTIVE_SPLITSCREEN_PLAYER_GUARD_ENT_VGUI( entity )	CSetActiveSplitScreenPlayerGuard g_SSEGuardNoVgui( __FILE__, __LINE__, entity, engine->GetActiveSplitScreenPlayerSlot(), true );
 
 
 #define HACK_GETLOCALPLAYER_GUARD( desc )	CHackForGetLocalPlayerAccessAllowedGuard g_HackGLPGuard( desc, engine->IsLocalPlayerResolvable() );
-#define VGUI_ABSPOS_SPLITSCREEN_GUARD( slot ) CVGuiAbsPosSplitScreenPlayerGuard s_VGuiAbsPosGuard( slot, engine->GetActiveSplitScreenPlayerSlot() );
-#define VGUI_ABSPOS_SPLITSCREEN_GUARD_INVERT( slot ) CVGuiAbsPosSplitScreenPlayerGuard s_VGuiAbsPosGuard( slot, engine->GetActiveSplitScreenPlayerSlot(), true );
+#define UI_ABSPOS_SPLITSCREEN_GUARD( slot ) CUIAbsPosSplitScreenPlayerGuard s_VGuiAbsPosGuard( slot, engine->GetActiveSplitScreenPlayerSlot() );
+#define UI_ABSPOS_SPLITSCREEN_GUARD_INVERT( slot ) CUIAbsPosSplitScreenPlayerGuard s_VGuiAbsPosGuard( slot, engine->GetActiveSplitScreenPlayerSlot(), true );
 
 #define FOR_EACH_VALID_SPLITSCREEN_PLAYER( iteratorName )						\
 	for ( int iteratorName = FirstValidSplitScreenSlot();				\

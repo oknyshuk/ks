@@ -377,9 +377,9 @@ void CTextLesson::Stop( void )
 void CIconLesson::Init( void )
 {
 	m_hIconTarget = NULL;
-	m_szVguiTargetName = "";
-	m_szVguiTargetLookup = "";
-	m_nVguiTargetEdge = 0;
+	m_szUITargetName = "";
+	m_szUITargetLookup = "";
+	m_nUITargetEdge = 0;
 
 	m_hLocatorTarget = -1;
 	m_bFixedPosition = false;
@@ -814,9 +814,9 @@ void CIconLesson::UpdateLocatorTarget( CLocatorTarget *pLocatorTarget, C_BaseEnt
 		pLocatorTarget->m_bOriginInScreenspace = true;
 		pLocatorTarget->m_vecOrigin.x = m_fFixedPositionX;
 		pLocatorTarget->m_vecOrigin.y = m_fFixedPositionY;
-		pLocatorTarget->SetVguiTargetName( m_szVguiTargetName.String() );
-		pLocatorTarget->SetVguiTargetLookup( m_szVguiTargetLookup.String() );
-		pLocatorTarget->SetVguiTargetEdge( m_nVguiTargetEdge );
+		pLocatorTarget->SetVguiTargetName( m_szUITargetName.String() );
+		pLocatorTarget->SetVguiTargetLookup( m_szUITargetLookup.String() );
+		pLocatorTarget->SetVguiTargetEdge( m_nUITargetEdge );
 	}
 	else
 	{
@@ -940,9 +940,9 @@ void CIconLesson::UpdateLocatorTarget( CLocatorTarget *pLocatorTarget, C_BaseEnt
 	LESSON_VARIABLE_MACRO( FLOAT2, m_fFloat2, float )							\
 																				\
 	LESSON_VARIABLE_MACRO_EHANDLE( ICON_TARGET, m_hIconTarget, EHANDLE )							\
-	LESSON_VARIABLE_MACRO_STRING( VGUI_TARGET_NAME, m_szVguiTargetName, CGameInstructorSymbol )		\
-	LESSON_VARIABLE_MACRO_STRING( VGUI_TARGET_LOOKUP, m_szVguiTargetLookup, CGameInstructorSymbol )	\
-	LESSON_VARIABLE_MACRO( VGUI_TARGET_EDGE, m_nVguiTargetEdge, int )								\
+	LESSON_VARIABLE_MACRO_STRING( UI_TARGET_NAME, m_szUITargetName, CGameInstructorSymbol )		\
+	LESSON_VARIABLE_MACRO_STRING( UI_TARGET_LOOKUP, m_szUITargetLookup, CGameInstructorSymbol )	\
+	LESSON_VARIABLE_MACRO( UI_TARGET_EDGE, m_nUITargetEdge, int )								\
 	LESSON_VARIABLE_MACRO( FIXED_POSITION_X, m_fFixedPositionX, float )								\
 	LESSON_VARIABLE_MACRO( FIXED_POSITION_Y, m_fFixedPositionY, float )								\
 	LESSON_VARIABLE_MACRO_BOOL( FIXED_POSITION, m_bFixedPosition, bool )							\

@@ -108,9 +108,5 @@
         }
       );
     in
-    {
-      packages = lib.mapAttrs (_: v: v.packages) eachSystem;
-      devShells = lib.mapAttrs (_: v: v.devShells) eachSystem;
-      apps = lib.mapAttrs (_: v: v.apps) eachSystem;
-    };
+    lib.genAttrs [ "packages" "devShells" "apps" ] (out: lib.mapAttrs (_: v: v.${out}) eachSystem);
 }

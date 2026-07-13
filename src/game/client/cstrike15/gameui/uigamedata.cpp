@@ -6,16 +6,14 @@
 
 #include "cbase.h"
 
-#include "basepanel.h"
 #include "uigamedata.h"
 
 #include <ctype.h>
 
 
 #include "./GameUI/IGameUI.h"
-#include "ienginevgui.h"
+#include "iengineui.h"
 #include "icommandline.h"
-#include "vgui/ISurface.h"
 #include "engineinterface.h"
 #include "tier0/dbg.h"
 #include "gameui_interface.h"
@@ -41,7 +39,7 @@
 //#include "VAttractScreen.h"
 //#include "VPasswordEntry.h"
 // vgui controls
-#include "vgui/ILocalize.h"
+#include "localize/ilocalize.h"
 #include "netmessages.h"
 #include "steam/steam_api.h"
 #include "gameui_util.h"
@@ -56,7 +54,6 @@
 
 
 using namespace BaseModUI;
-using namespace vgui;
 
 //setup in GameUI_Interface.cpp
 // DWenger - Pulled out temporarily - extern const char *COM_GetModDirectory( void );
@@ -728,21 +725,6 @@ void CUIGameData::UpdateWaitPanel( const wchar_t * messageText, float minDisplay
 	// DWenger - Pulled out temporarily - }
 }
 
-void CUIGameData::CloseWaitScreen( vgui::Panel * callbackPanel, const char * message )
-{
-	// DWenger - Pulled out temporarily - if ( UI_IsDebug() )
-	// DWenger - Pulled out temporarily - {
-		// DWenger - Pulled out temporarily - Msg( "[GAMEUI] CloseWaitScreen( %s )\n", message );
-	// DWenger - Pulled out temporarily - }
-
-	// DWenger - Pulled out temporarily - GenericWaitScreen* waitScreen = static_cast<GenericWaitScreen*>( 
-		// DWenger - Pulled out temporarily - CBaseModPanel::GetSingleton().GetWindow( WT_GENERICWAITSCREEN ) );
-	// DWenger - Pulled out temporarily - if( waitScreen )
-	// DWenger - Pulled out temporarily - {
-		// DWenger - Pulled out temporarily - waitScreen->SetCloseCallback( callbackPanel, message );
-	// DWenger - Pulled out temporarily - }
-}
-
 void CUIGameData::NeedConnectionProblemWaitScreen ( void )
 {
 	m_flShowConnectionProblemTimer = 1.0f;
@@ -791,42 +773,6 @@ void CUIGameData::FinishPasswordUI( bool bOk )
 			// DWenger - Pulled out temporarily - engine->SetConnectionPassword( "" );
 		// DWenger - Pulled out temporarily - }
 	// DWenger - Pulled out temporarily - }
-}
-
-IImage *CUIGameData::GetAvatarImage( XUID playerID )
-{
-#ifdef _GAMECONSOLE
-	return NULL;
-#else
-	if ( !playerID )
-		return NULL;
-
-	// do we already have this image cached?
-	// DWenger - Pulled out temporarily - CAvatarImage *pImage = NULL;
-	int iIndex = m_mapUserXuidToAvatar.Find( playerID );
-	
-	if ( iIndex == m_mapUserXuidToAvatar.InvalidIndex() )
-	{
-		// cache a new image
-		// DWenger - Pulled out temporarily - pImage = new CAvatarImage();
-
-		// We may fail to set the steam ID - if the player is not our friend and we are not in a lobby or game, eg
-		// DWenger - Pulled out temporarily - if ( !pImage->SetAvatarSteamID( playerID ) )
-		// DWenger - Pulled out temporarily - {
-			// DWenger - Pulled out temporarily - delete pImage;
-			// DWenger - Pulled out temporarily - return NULL;
-		// DWenger - Pulled out temporarily - }
-
-		// DWenger - Pulled out temporarily - iIndex = m_mapUserXuidToAvatar.Insert( playerID, pImage );
-	}
-	// DWenger - Pulled out temporarily - else
-	// DWenger - Pulled out temporarily - {
-		// DWenger - Pulled out temporarily - pImage = m_mapUserXuidToAvatar.Element( iIndex );
-	// DWenger - Pulled out temporarily - }
-
-	// DWenger - Pulled out temporarily - return pImage;
-	return NULL; // DWenger - Added temporarily
-#endif // !_GAMECONSOLE
 }
 
 char const * CUIGameData::GetPlayerName( XUID playerID, char const *szPlayerNameSpeculative )
@@ -1349,7 +1295,7 @@ void CUIGameData::OnEvent( KeyValues *pEvent )
 				// is running and older version of the TU
 				char const *szTuRequiredCode = pEvent->GetString( "turequired" );
 				CFmtStr strLocKey( "#SessionError_TU_Required_%s", szTuRequiredCode );
-				if ( g_pVGuiLocalize->Find( strLocKey ) )
+				if ( g_pLocalize->Find( strLocKey ) )
 				{
 					Q_strncpy( chErrorMsgBuffer, strLocKey, sizeof( chErrorMsgBuffer ) );
 					szError = chErrorMsgBuffer;
@@ -1391,7 +1337,7 @@ void CUIGameData::OnEvent( KeyValues *pEvent )
 				}
 
 				CFmtStr strLocKey( "#SessionError_DLC_RequiredTitle_%d", iDlcRequired );
-				if ( !g_pVGuiLocalize->Find( strLocKey ) )
+				if ( !g_pLocalize->Find( strLocKey ) )
 					iDlcRequired = 0;
 
 				// Try to figure out if this DLC is paid/free/unknown
@@ -1407,8 +1353,8 @@ void CUIGameData::OnEvent( KeyValues *pEvent )
 				
 				// Format the strings
 				bool bKicked = !Q_stricmp( pEvent->GetString( "action" ), "kicked" );
-				wchar_t const *wszLine1 = g_pVGuiLocalize->Find( CFmtStr( "#SessionError_DLC_Required%s_%d", bKicked ? "Kicked" : "Join", iDlcRequired ) );
-				wchar_t const *wszLine2 = g_pVGuiLocalize->Find( CFmtStr( "#SessionError_DLC_Required%s_%d", uiDlcOfferID ? "Offer" : "Message", iDlcRequired ) );
+				wchar_t const *wszLine1 = g_pLocalize->Find( CFmtStr( "#SessionError_DLC_Required%s_%d", bKicked ? "Kicked" : "Join", iDlcRequired ) );
+				wchar_t const *wszLine2 = g_pLocalize->Find( CFmtStr( "#SessionError_DLC_Required%s_%d", uiDlcOfferID ? "Offer" : "Message", iDlcRequired ) );
 				
 				int numBytesTwoLines = ( Q_wcslen( wszLine1 ) + Q_wcslen( wszLine2 ) + 4 ) * sizeof( wchar_t );
 				wchar_t *pwszTwoLines = ( wchar_t * ) stackalloc( numBytesTwoLines );

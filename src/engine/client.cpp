@@ -16,7 +16,7 @@
 #include "host_state.h"
 #include "host.h"
 #include "gl_matsysiface.h"
-#include "vgui_baseui_interface.h"
+#include "engineui.h"
 #include "tier0/icommandline.h"
 #include <proto_oob.h>
 #include "checksum_engine.h"
@@ -32,11 +32,10 @@
 #include "MapReslistGenerator.h"
 #include "DownloadListGenerator.h"
 #include "GameEventManager.h"
-#include "vgui_baseui_interface.h"
+#include "engineui.h"
 #include "clockdriftmgr.h"
 #include "snd_audio_source.h"
-#include "vgui_controls/Controls.h"
-#include "vgui/ILocalize.h"
+#include "localize/ilocalize.h"
 #include "download.h"
 #include "checksum_engine.h"
 #include "ModelInfo.h"
@@ -300,15 +299,15 @@ bool CClientState::SetSignonState ( int state, int count, const CNETMsg_SignonSt
 		case SIGNONSTATE_CHALLENGE	:	
 			m_bMarkedCRCsUnverified = false;	// Remember that we just connected to a new server so it'll 
 												// reverify any necessary file CRCs on this server.
-			EngineVGui()->UpdateProgressBar(PROGRESS_SIGNONCHALLENGE);
+			EngineUI()->UpdateProgressBar(PROGRESS_SIGNONCHALLENGE);
 			break;
 
 		case SIGNONSTATE_CONNECTED :	
 			{
-				EngineVGui()->UpdateProgressBar(PROGRESS_SIGNONCONNECTED);
+				EngineUI()->UpdateProgressBar(PROGRESS_SIGNONCONNECTED);
 				
 				// make sure it's turned off when connecting
-				EngineVGui()->HideDebugSystem();
+				EngineUI()->HideDebugSystem();
 
 				SCR_BeginLoadingPlaque ();
 				// Clear channel and stuff
@@ -327,7 +326,7 @@ bool CClientState::SetSignonState ( int state, int count, const CNETMsg_SignonSt
 
 		case SIGNONSTATE_NEW :	
 			{
-				EngineVGui()->UpdateProgressBar(PROGRESS_SIGNONNEW);
+				EngineUI()->UpdateProgressBar(PROGRESS_SIGNONNEW);
 
 				if ( cl_download_demoplayer.GetBool() || !demoplayer->IsPlayingBack() )
 				{
@@ -353,7 +352,7 @@ bool CClientState::SetSignonState ( int state, int count, const CNETMsg_SignonSt
 			break;
 
 		case SIGNONSTATE_PRESPAWN	:
-			EngineVGui()->UpdateProgressBar(PROGRESS_SENDSIGNONDATA);
+			EngineUI()->UpdateProgressBar(PROGRESS_SENDSIGNONDATA);
 			m_nSoundSequence = 1;	// reset sound sequence number after receiving signon sounds
 			break;
 		
@@ -362,7 +361,7 @@ bool CClientState::SetSignonState ( int state, int count, const CNETMsg_SignonSt
 				extern float NET_GetFakeLag();
 				Assert( g_ClientDLL );
 
-				EngineVGui()->UpdateProgressBar(PROGRESS_SIGNONSPAWN);
+				EngineUI()->UpdateProgressBar(PROGRESS_SIGNONSPAWN);
 
 				// Tell client .dll about the transition
 				char mapname[256];
@@ -409,12 +408,12 @@ bool CClientState::SetSignonState ( int state, int count, const CNETMsg_SignonSt
 			if ( m_nMaxClients > 1 )
 			{
 				// start progress bar immediately for multiplayer level transitions
-				EngineVGui()->EnabledProgressBarForNextLoad();
+				EngineUI()->EnabledProgressBarForNextLoad();
 			}
 			SCR_BeginLoadingPlaque( msg->map_name().c_str() );
 			if ( m_nMaxClients > 1 )
 			{
-				EngineVGui()->UpdateProgressBar(PROGRESS_CHANGELEVEL);
+				EngineUI()->UpdateProgressBar(PROGRESS_CHANGELEVEL);
 			}
 			break;
 	}
@@ -616,7 +615,7 @@ bool CClientState::IsPaused() const
 	return m_bPaused || ( g_LostVideoMemory && Host_IsSinglePlayerGame() ) ||
 		!host_initialized || 
 		demoplayer->IsPlaybackPaused() ||
-		EngineVGui()->ShouldPause();
+		EngineUI()->ShouldPause();
 }
 
 float CClientState::GetTime() const
@@ -1693,7 +1692,7 @@ void CClientState::CheckUpdatingSteamResources()
 						char bufFileName[MAX_PATH];
 						V_FixupPathName( bufFileName, sizeof( bufFileName ), fname );
 
-						EngineVGui()->UpdateProgressBar(PROGRESS_PROCESSSERVERINFO);
+						EngineUI()->UpdateProgressBar(PROGRESS_PROCESSSERVERINFO);
 
 						if ( m_unUGCMapFileID != 0 )
 						{
@@ -1759,8 +1758,8 @@ void CClientState::CheckUpdatingSteamResources()
 				if ( CL_GetDownloadQueueSize() || g_bASW_Waiting_For_Map_Build || m_bDownloadingUGCMap )
 				{
 					// make sure the loading dialog is up
-					EngineVGui()->StartCustomProgress();
-					EngineVGui()->ActivateGameUI();
+					EngineUI()->StartCustomProgress();
+					EngineUI()->ActivateGameUI();
 					m_bDownloadResources = true;
 				}
 				else
@@ -1779,13 +1778,13 @@ void CClientState::CheckUpdatingSteamResources()
 			if (!m_bShownSteamResourceUpdateProgress)
 			{
 				// make sure the loading dialog is up
-				EngineVGui()->StartCustomProgress();
-				EngineVGui()->ActivateGameUI();
+				EngineUI()->StartCustomProgress();
+				EngineUI()->ActivateGameUI();
 				m_bShownSteamResourceUpdateProgress = true;
 			}
 
 			// change it to be updating steam resources
-			EngineVGui()->UpdateSecondaryProgressBar( flProgress, (flProgress < 1.0f) ? g_pVGuiLocalize->FindSafe("#Valve_UpdatingSteamResources") : L"" );
+			EngineUI()->UpdateSecondaryProgressBar( flProgress, (flProgress < 1.0f) ? g_pLocalize->FindSafe("#Valve_UpdatingSteamResources") : L"" );
 		}
 	}
 
@@ -1805,10 +1804,10 @@ void CClientState::CheckUpdatingSteamResources()
 			wchar_t wszPercent[ 10 ];
 			V_snwprintf( wszPercent, ARRAYSIZE( wszPercent ), L"%d%%",  (int)(100*progress) );
 			wchar_t wszWideBuff[ 128 ];
-			g_pVGuiLocalize->ConstructString( wszWideBuff, sizeof( wszWideBuff ), g_pVGuiLocalize->Find( "#SFUI_Loading_UGCMap_Progress" ), 1, wszPercent );
+			g_pLocalize->ConstructString( wszWideBuff, sizeof( wszWideBuff ), g_pLocalize->Find( "#SFUI_Loading_UGCMap_Progress" ), 1, wszPercent );
 
 			// change it to be updating steam resources
-			EngineVGui()->UpdateSecondaryProgressBar( progress, ( (progress > 0.0f) && (progress < 1.0f) ) ? wszWideBuff : L"" );
+			EngineUI()->UpdateSecondaryProgressBar( progress, ( (progress > 0.0f) && (progress < 1.0f) ) ? wszWideBuff : L"" );
 		}
 
 		if ( !stillDownloading && !g_bASW_Waiting_For_Map_Build && !m_bDownloadingUGCMap )
@@ -1817,7 +1816,7 @@ void CClientState::CheckUpdatingSteamResources()
 			FinishSignonState_New();
 
 			// Setting to blank will clear it
-			EngineVGui()->UpdateSecondaryProgressBar( 1, L"" );
+			EngineUI()->UpdateSecondaryProgressBar( 1, L"" );
 		}
 	}
 }
@@ -2087,7 +2086,7 @@ void CClientState::FinishSignonState_New()
 	// Tell rendering system we have a new set of models.
 	R_LevelInit();
 
-	EngineVGui()->UpdateProgressBar(PROGRESS_SENDCLIENTINFO);
+	EngineUI()->UpdateProgressBar(PROGRESS_SENDCLIENTINFO);
 	if ( !m_NetChannel )
 		return;
 	

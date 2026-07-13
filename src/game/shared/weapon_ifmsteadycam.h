@@ -1,4 +1,4 @@
-//===== Copyright © 1996-2005, Valve Corporation, All rights reserved. ======//
+//===== Copyright ï¿½ 1996-2005, Valve Corporation, All rights reserved. ======//
 //
 // Purpose: 
 //
@@ -85,7 +85,6 @@ private:
 	Vector m_vecViewOffset;
 	float m_flFOVOffsetY;
 
-	vgui::HFont	 m_hFont;
 	int m_nTextureId;
 #endif // CLIENT_DLL
 

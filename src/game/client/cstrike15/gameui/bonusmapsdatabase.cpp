@@ -15,7 +15,6 @@
 #include "modinfo.h"
 #include "engineinterface.h"
 #include "keyvalues.h"
-#include "basepanel.h"
 #include "gameui_interface.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
@@ -319,7 +318,8 @@ CBonusMapsDatabase::~CBonusMapsDatabase()
 	g_pBonusMapsDatabase = NULL;
 }
 
-extern bool g_bIsCreatingNewGameMenuForPreFetching;
+// Re-homed from deleted BasePanel.cpp (VGUI teardown).
+bool g_bIsCreatingNewGameMenuForPreFetching = false;
 
 bool CBonusMapsDatabase::ReadBonusMapSaveData( void )
 {

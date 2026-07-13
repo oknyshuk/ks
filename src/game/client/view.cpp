@@ -40,11 +40,9 @@
 #include "materialsystem/itexture.h"
 #include "toolframework_client.h"
 #include "tier0/icommandline.h"
-#include "ienginevgui.h"
-#include <vgui_controls/Controls.h>
-#include <vgui/ISurface.h>
+#include "iengineui.h"
 #include "ScreenSpaceEffects.h"
-#include "vgui_int.h"
+#include "clientui.h"
 #include "engine/SndInfo.h"
 #if defined( CSTRIKE15 )
 #include "c_cs_player.h"
@@ -54,11 +52,9 @@
 #endif
 #ifdef GAMEUI_EMBEDDED
 #if defined( PORTAL2 )
-#include "gameui/basemodpanel.h"
 #elif defined( SWARM_DLL )
 #include "swarm/gameui/swarm/basemodpanel.h"
 #elif defined( CSTRIKE15 )
-#include "gameui/basemodpanel.h"
 #else
 #error "GAMEUI_EMBEDDED"
 #endif
@@ -497,7 +493,7 @@ void CViewRender::OnRenderStart()
 	IterateRemoteSplitScreenViewSlots_Push( true );
 	FOR_EACH_VALID_SPLITSCREEN_PLAYER( hh )
 	{
-		ACTIVE_SPLITSCREEN_PLAYER_GUARD_VGUI( hh );
+		ACTIVE_SPLITSCREEN_PLAYER_GUARD_UI( hh );
 
 		// This will fill in one of the m_UserView[ hh ] slots
 		SetUpView();
@@ -1052,9 +1048,6 @@ void CViewRender::Render( vrect_t *rect )
 
 	m_bAllowViewAccess = true;
 
-	CUtlVector< vgui::Panel * > roots;
-	VGui_GetPanelList( roots );
-
 	// Stub out the material system if necessary.
 	CMatStubHandler matStub;
 	engine->EngineStats_BeginFrame();
@@ -1072,7 +1065,7 @@ void CViewRender::Render( vrect_t *rect )
 	IterateRemoteSplitScreenViewSlots_Push( true );
 	FOR_EACH_VALID_SPLITSCREEN_PLAYER( hh )
 	{
-		ACTIVE_SPLITSCREEN_PLAYER_GUARD_VGUI( hh );
+		ACTIVE_SPLITSCREEN_PLAYER_GUARD_UI( hh );
 
 		CViewSetup &view = GetView( hh );
 
@@ -1083,7 +1076,7 @@ void CViewRender::Render( vrect_t *rect )
 
 		// Using this API gives us a chance to "inset" the 3d views as needed for splitscreen
 		int insetX, insetY;
-		VGui_GetEngineRenderBounds( hh, view.x, view.y, view.width, view.height, insetX, insetY );
+		UI_GetEngineRenderBounds( hh, view.x, view.y, view.width, view.height, insetX, insetY );
 			
 		float aspectRatio = engineAspectRatio * 0.75f;	 // / (4/3)
 		view.fov = ScaleFOVByWidthRatio( view.fov,  aspectRatio );
@@ -1162,7 +1155,7 @@ void CViewRender::Render( vrect_t *rect )
 		if ( ( ss_debug_draw_player.GetInt() < 0 ) || ( hh == ss_debug_draw_player.GetInt() ) )
 		{
 			CViewSetup hudViewSetup;
-			VGui_GetHudBounds( hh, hudViewSetup.x, hudViewSetup.y, hudViewSetup.width, hudViewSetup.height );
+			UI_GetHudBounds( hh, hudViewSetup.x, hudViewSetup.y, hudViewSetup.width, hudViewSetup.height );
 			RenderView( view, hudViewSetup, nClearFlags, flags );
 		}
 
@@ -1213,7 +1206,6 @@ void CViewRender::Render( vrect_t *rect )
 			view2d.width			= rect->width;
 			view2d.height			= rect->height;
 			render->Push2DView( pRenderContext, view2d, 0, NULL, GetFrustum() );
-			render->VGui_Paint( PAINT_UIPANELS );
 			{
 				// The engine here is trying to access CurrentView() etc. which is bogus
 				ACTIVE_SPLITSCREEN_PLAYER_GUARD( 0 );

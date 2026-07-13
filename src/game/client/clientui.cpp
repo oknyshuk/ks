@@ -1,0 +1,762 @@
+//========= Copyright � 1996-2005, Valve Corporation, All rights reserved. ============//
+//
+// Purpose:
+//
+// $NoKeywords: $
+//=============================================================================//
+
+// Console GPU alignment stub (not used on PC)
+#ifndef GPU_RESOLVE_ALIGNMENT
+#define GPU_RESOLVE_ALIGNMENT 1
+#endif
+
+#include "cbase.h"
+#include "clientui.h"
+#include "iengineui.h"
+#include "uicenterprint.h"
+#include "tier0/vprof.h"
+#include "iclientmode.h"
+#include <keyvalues.h>
+#include "filesystem.h"
+
+
+#ifdef _PS3
+#include "ps3/ps3_core.h"
+#endif
+
+
+
+// memdbgon must be the last include file in a .cpp file!!!
+#include "tier0/memdbgon.h"
+
+
+bool IsWidescreen( void );
+
+
+void ss_pipsplit_changed( IConVar *pConVar, const char *pOldString, float flOldValue )
+{
+	UI_OnSplitScreenStateChanged();
+}
+static ConVar ss_pipsplit( "ss_pipsplit", "1", 0, "If enabled, use PIP instead of splitscreen. (Only works for 2 players)", ss_pipsplit_changed );
+static ConVar ss_pipscale( "ss_pipscale", "0.3f", 0, "Scale of the PIP aspect ratio to our resolution.", ss_pipsplit_changed );
+static ConVar ss_pip_right_offset( "ss_pip_right_offset", "25", 0, "PIP offset vector from the right of the screen", ss_pipsplit_changed );
+static ConVar ss_pip_bottom_offset( "ss_pip_bottom_offset", "25", 0, "PIP offset vector from the bottom of the screen", ss_pipsplit_changed );
+static ConVar ss_force_primary_fullscreen( "ss_force_primary_fullscreen", "0", 0, "If enabled, all splitscreen users will only see the first user's screen full screen", ss_pipsplit_changed );
+bool UI_UsePipSplit();
+
+
+void ss_verticalsplit_changed( IConVar *pConVar, const char *pOldString, float flOldValue )
+{
+	ConVarRef var( pConVar );
+	if ( var.GetBool() != !!(int)flOldValue )
+	{
+		UI_OnSplitScreenStateChanged();
+
+		if ( GetFullscreenClientMode() )
+		{
+			// we have to force re-layout, because the screen dimensions haven't changed,
+			// but our layout is going to be different.
+			GetFullscreenClientMode()->Layout( true );
+		}
+
+		FOR_EACH_VALID_SPLITSCREEN_PLAYER( i )
+		{
+			ACTIVE_SPLITSCREEN_PLAYER_GUARD_UI( i );
+			GetClientMode()->Layout();
+			GetHud().OnSplitScreenStateChanged();
+		}
+	}
+}
+static ConVar ss_verticalsplit( "ss_verticalsplit", "0", 0, "Two player split screen uses vertical split (do not set this directly, use ss_splitmode instead).", ss_verticalsplit_changed );
+
+void ss_splitmode_changed( IConVar *pConVar, const char *pOldString, float flOldValue )
+{
+	ConVarRef var( pConVar );
+
+	if ( !IsWidescreen() )
+	{
+		// Non-widescreen is alway horizontal
+		ss_verticalsplit.SetValue( 0 );
+	}
+	else
+	{
+		if ( var.GetInt() == 1 )
+		{
+			// Horizontal
+			ss_verticalsplit.SetValue( 0 );
+		}
+		else if ( var.GetInt() == 2 )
+		{
+			// Vertical
+			ss_verticalsplit.SetValue( 1 );
+		}
+		else
+		{
+			// Vertical is default for widescreen
+			ss_verticalsplit.SetValue( 1 );
+		}
+	}
+}
+static ConVar ss_splitmode( "ss_splitmode", "0", FCVAR_ARCHIVE | FCVAR_ARCHIVE_GAMECONSOLE, "Two player split screen mode (0 - recommended settings base on the width, 1 - horizontal, 2 - vertical (only allowed in widescreen)", ss_splitmode_changed );
+static ConVar ss_enable( "ss_enable", "0", FCVAR_RELEASE, "Enables Split Screen support. Play Single Player now launches into split screen mode. NO ONLINE SUPPORT" );
+
+
+class CSplitScreenLetterBox
+{
+public:
+
+	enum
+	{
+		SPLITSCREEN_NONWIDESCREEN_HORIZONTAL_SPLIT = 0,
+		SPLITSCREEN_WIDESCREEN_HORIZONTAL_SPLIT,
+		SPLITSCREEN_WIDESCREEN_VERTICAL_SPLIT,
+
+		NUM_SPLITSCREEN_TYPES,
+	};
+
+	void Init();
+
+	void SetNumSplitScreenPlayers( int nPlayers );
+
+	bool GetSettings( bool *pbInsetHud, float *pflAspect, float *pFOV, float *pViewmodelFOV );
+
+private:
+
+	struct LetterBox_t
+	{
+		LetterBox_t() : m_flAspectRatio( 4.0f / 3.0f ), m_bInsetHud( false ) {}
+		float	m_flAspectRatio;
+		bool	m_bInsetHud;
+		float	m_flFOV;
+		float 	m_flViewModelFOV;
+	};
+
+	bool		m_bValid;
+	LetterBox_t	m_Settings[ NUM_SPLITSCREEN_TYPES ];
+	int			m_nSplitScreenPlayers;
+};
+
+void CSplitScreenLetterBox::Init()
+{
+	m_nSplitScreenPlayers = 1;
+	char const *pchSlotNames[] = { "nonwidescreen", "widescreen_horizontal_split", "widescreen_vertical_split" };
+	char const *pchConfigFile = "splitscreen_config.txt";
+
+	m_bValid = true;
+	KeyValues *kv = new KeyValues( "splitscreen" );
+	if ( kv->LoadFromFile( g_pFullFileSystem, pchConfigFile, "MOD" ) )
+	{
+		for ( int i = 0; i < NUM_SPLITSCREEN_TYPES && m_bValid; ++i )
+		{
+			KeyValues *settings = kv->FindKey( pchSlotNames[ i ], false );
+			if ( settings )
+			{
+				// Get settings
+				char const *pchAspect = settings->GetString( "aspect", "4 by 3" );
+				if ( pchAspect )
+				{
+					// Allowable syntax is "16 by 9" or "16 x 9" or "1.77"
+					if ( Q_stristr( pchAspect, " by " ) )
+					{
+						float f1, f2;
+						if ( 2 == sscanf( pchAspect, "%f by %f", &f1, &f2 ) && f2 > 0.001f )
+						{
+							m_Settings[ i ].m_flAspectRatio = f1 / f2;
+						}
+						else
+						{
+							Error( "%s:  Invalid aspect ratio string '%s'\n", pchConfigFile, pchAspect );
+							m_bValid = false;
+						}
+					}
+					else if ( Q_stristr( pchAspect, " x " ) )
+					{
+						float f1, f2;
+						if ( 2 == sscanf( pchAspect, "%f x %f", &f1, &f2 ) && f2 > 0.001f )
+						{
+							m_Settings[ i ].m_flAspectRatio = f1 / f2;
+						}
+						else
+						{
+							Error( "%s:  Invalid aspect ratio string '%s'\n", pchConfigFile, pchAspect );
+							m_bValid = false;
+						}
+					}
+					else if ( Q_atof( pchAspect ) > 0.1f )
+					{
+						m_Settings[ i ].m_flAspectRatio = Q_atof( pchAspect );
+					}
+					else
+					{
+						Error( "%s:  Invalid aspect ratio string '%s'\n", pchConfigFile, pchAspect );
+						m_bValid = false;
+					}
+				}
+
+				// Get inset for hud
+				m_Settings[ i ].m_bInsetHud = settings->GetBool( "insethud", false );
+
+				// Get FOV
+				m_Settings[ i ].m_flFOV = settings->GetFloat( "fov", 90.0f );
+
+				// Get viewmodel FOVs
+				m_Settings[ i ].m_flViewModelFOV = settings->GetFloat( "viewmodelfov", 50.0f );
+			}
+			else
+			{
+				Error( "%s:  Missing settings block for split screen mode '%s'\n", pchConfigFile, pchSlotNames[ i ] );
+				m_bValid = false;
+				break;
+			}
+		}
+	}
+	else
+	{
+		Msg( "No split screen config file '%s', using defaults\n", pchConfigFile );
+		m_bValid = false;
+	}
+	kv->deleteThis();
+}
+
+void CSplitScreenLetterBox::SetNumSplitScreenPlayers( int nPlayers )
+{
+	m_nSplitScreenPlayers = nPlayers;
+}
+
+bool IsWidescreen( void )
+{
+	const AspectRatioInfo_t &aspectRatioInfo = materials->GetAspectRatioInfo();
+	return aspectRatioInfo.m_bIsWidescreen;
+}
+
+bool CSplitScreenLetterBox::GetSettings( bool *pbInsetHud, float *pflAspect, float *pFOV, float *pViewModelFOV )
+{
+	Assert( pbInsetHud );
+	Assert( pflAspect );
+	Assert( pFOV );
+	Assert( pViewModelFOV );
+	static bool bUsedDefaultsLastTime = false;
+	if ( !m_bValid || m_nSplitScreenPlayers == 1 || UI_UsePipSplit() || ss_force_primary_fullscreen.GetBool() )
+	{
+		if ( !bUsedDefaultsLastTime )
+		{
+			bUsedDefaultsLastTime = true;
+		}
+		*pbInsetHud = false;
+		*pflAspect = 4.0f / 3.0f;
+		// FIXME: These are the non-splitscreen defaults for L4D.  This code needs to be sanitized for other games.
+		*pFOV = 90.0f;
+		*pViewModelFOV = 50.0f;
+		return false;
+	}
+
+	// Figure out which splitscreen mode to use based on current configuration.
+	int slot;
+	if ( IsWidescreen() )
+	{
+		if ( ss_verticalsplit.GetBool() )
+		{
+			slot = SPLITSCREEN_WIDESCREEN_VERTICAL_SPLIT;
+		}
+		else
+		{
+			slot = SPLITSCREEN_WIDESCREEN_HORIZONTAL_SPLIT;
+		}
+	}
+	else
+	{
+		slot = SPLITSCREEN_NONWIDESCREEN_HORIZONTAL_SPLIT;
+	}
+
+	bUsedDefaultsLastTime = false;
+
+	const LetterBox_t &lb = m_Settings[ slot ];
+
+	*pbInsetHud = lb.m_bInsetHud;
+	*pflAspect = lb.m_flAspectRatio;
+	*pFOV = lb.m_flFOV;
+	*pViewModelFOV = lb.m_flViewModelFOV;
+	return true;
+}
+
+static CSplitScreenLetterBox g_LetterBox;
+
+CON_COMMAND( ss_reloadletterbox, "ss_reloadletterbox" )
+{
+	g_LetterBox.Init();
+	UI_OnSplitScreenStateChanged();
+
+	FOR_EACH_VALID_SPLITSCREEN_PLAYER( i )
+	{
+		ACTIVE_SPLITSCREEN_PLAYER_GUARD_UI( i );
+		GetClientMode()->Layout();
+		GetHud().OnSplitScreenStateChanged();
+	}
+}
+
+static void UI_OneTimeInit()
+{
+	static bool initialized = false;
+	if ( initialized )
+		return;
+	initialized = true;
+
+	g_LetterBox.Init();
+}
+
+bool UI_Startup( CreateInterfaceFn appSystemFactory )
+{
+	UI_OneTimeInit();
+	UI_OnSplitScreenStateChanged();
+	return true;
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void UI_CreateGlobalPanels( void )
+{
+}
+
+void UI_Shutdown()
+{
+	for ( int hh = 0; hh < MAX_SPLITSCREEN_PLAYERS; ++hh )
+	{
+		ACTIVE_SPLITSCREEN_PLAYER_GUARD_UI( hh );
+		if ( GetClientMode() )
+		{
+			GetClientMode()->UI_Shutdown();
+
+			if ( hh == 0 )
+			{
+				GetFullscreenClientMode()->UI_Shutdown();
+			}
+		}
+	}
+}
+
+static ConVar cl_showpausedimage( "cl_showpausedimage", "1", 0, "Show the 'Paused' image when game is paused." );
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+
+void GetHudSize( int& w, int &h )
+{
+	engine->GetScreenSize( w, h );
+}
+
+static vrect_t g_TrueScreenSize;
+static vrect_t g_ScreenSpaceBounds[ MAX_SPLITSCREEN_CLIENTS ];
+
+void UI_GetTrueScreenSize( int &w, int &h )
+{
+	w = g_TrueScreenSize.width;
+	h = g_TrueScreenSize.height;
+}
+
+void UI_SetScreenSpaceBounds( int slot, int x, int y, int w, int h )
+{
+	vrect_t &r = g_ScreenSpaceBounds[ slot ];
+	r.x = x;
+	r.y = y;
+	r.width = w;
+	r.height = h;
+}
+
+void UI_UpdateScreenSpaceBounds( int nNumSplits, int sx, int sy, int sw, int sh )
+{
+	g_TrueScreenSize.x = sx;
+	g_TrueScreenSize.y = sy;
+	g_TrueScreenSize.width = sw;
+	g_TrueScreenSize.height = sh;
+
+	CUtlVector< int > validSlots;
+	FOR_EACH_VALID_SPLITSCREEN_PLAYER( i )
+	{
+		validSlots.AddToTail( i );
+	}
+
+	Assert( validSlots.Count() == nNumSplits );
+
+	switch ( nNumSplits )
+	{
+	default:
+	case 1:
+		// Make it screen sized
+		{
+			UI_SetScreenSpaceBounds( validSlots[ 0 ], sx, sy, sw, sh );
+		}
+		break;
+	case 2:
+		{
+			if ( ss_force_primary_fullscreen.GetBool() )
+			{
+				// fullscreen
+				UI_SetScreenSpaceBounds( validSlots[ 0 ], 0, 0, sw, sh );
+				UI_SetScreenSpaceBounds( validSlots[ 1 ], sw, sh, 1, 1 );
+			}
+			else if ( UI_UsePipSplit() )
+			{
+				UI_SetScreenSpaceBounds( validSlots[ 0 ], sx, sy, sw, sh );
+				// scale with PIP resolution
+				float flPIPScale = ss_pipscale.GetFloat();
+				int pipWidth = sw * flPIPScale;
+				int pipHeight = sh * flPIPScale;
+				int x = sw - pipWidth - ss_pip_right_offset.GetInt();
+				int y = sh - pipHeight - ss_pip_bottom_offset.GetInt();
+				// round upper left corner down to the nearest multiple of 8 for X360 (resolve alignment requirements)
+				if ( IsX360() )
+				{
+					x &= (~7);
+					y &= (~7);
+				}
+				UI_SetScreenSpaceBounds( validSlots[ 1 ], x, y, pipWidth, pipHeight );
+			}
+			else if ( ss_verticalsplit.GetBool() )
+			{
+				sw /= 2;
+				// Stack two horiz, side by side
+				UI_SetScreenSpaceBounds( validSlots[ 0 ], sx, sy, sw, sh );
+				UI_SetScreenSpaceBounds( validSlots[ 1 ], sx + sw, sy, sw, sh );
+			}
+			else
+			{
+				sh /= 2;
+				// Stack two wide on top of one another
+				UI_SetScreenSpaceBounds( validSlots[ 0 ], sx, sy, sw, sh );
+				UI_SetScreenSpaceBounds( validSlots[ 1 ], sx, sy + sh, sw, sh );
+			}
+		}
+		break;
+	case 3:
+		{
+			int fullw = sw;
+
+			sw /= 2;
+			sh /= 2;
+
+			UI_SetScreenSpaceBounds( validSlots[ 0 ], sx + ( fullw - sw ) / 2, sy, sw, sh );
+			UI_SetScreenSpaceBounds( validSlots[ 1 ], sx, sy + sh, sw, sh );
+			UI_SetScreenSpaceBounds( validSlots[ 2 ], sx + sw, sy + sh, sw, sh );
+		}
+		break;
+	case 4:
+		{
+			sw /= 2;
+			sh /= 2;
+
+			// Stack two wide on top of one another
+			UI_SetScreenSpaceBounds( validSlots[ 0 ], sx, sy, sw, sh );
+			UI_SetScreenSpaceBounds( validSlots[ 1 ], sx + sw, sy, sw, sh );
+			UI_SetScreenSpaceBounds( validSlots[ 2 ], sx, sy + sh, sw, sh );
+			UI_SetScreenSpaceBounds( validSlots[ 3 ], sx + sw, sy + sh, sw, sh );
+		}
+		break;
+	}
+}
+
+CBitVec< MAX_SPLITSCREEN_PLAYERS > g_SplitScreenPlayers;
+
+bool g_bIterateRemoteSplitScreenPlayers = false;
+C_BasePlayer *g_RemoteSplitScreenPlayers[MAX_SPLITSCREEN_PLAYERS];
+
+void AddRemoteSplitScreenViewPlayer( C_BasePlayer *pPlayer )
+{
+	for( int i = 0; i != MAX_SPLITSCREEN_PLAYERS; ++i )
+	{
+		if( g_RemoteSplitScreenPlayers[i] == pPlayer )
+			return; //don't add it twice
+	}
+
+	for( int i = 0; i != MAX_SPLITSCREEN_PLAYERS; ++i )
+	{
+		if( !g_SplitScreenPlayers.IsBitSet( i ) && (g_RemoteSplitScreenPlayers[i] == NULL) )
+		{
+			g_RemoteSplitScreenPlayers[i] = pPlayer;
+			UI_OnSplitScreenStateChanged();
+			return;
+		}
+	}
+}
+
+void RemoveRemoteSplitScreenViewPlayer( C_BasePlayer *pPlayer )
+{
+	for( int i = 0; i != MAX_SPLITSCREEN_PLAYERS; ++i )
+	{
+		if( g_RemoteSplitScreenPlayers[i] == pPlayer )
+		{
+			g_RemoteSplitScreenPlayers[i] = NULL;
+			UI_OnSplitScreenStateChanged();
+			return;
+		}
+	}
+}
+
+C_BasePlayer *GetSplitScreenViewPlayer( int nSlot )
+{
+	return g_SplitScreenPlayers.IsBitSet( nSlot ) ? C_BasePlayer::GetLocalPlayer( nSlot ) : g_RemoteSplitScreenPlayers[nSlot];
+}
+
+void cl_enable_remote_splitscreen_callback_f( IConVar *var, const char *pOldValue, float flOldValue )
+{
+	UI_OnSplitScreenStateChanged();
+}
+
+ConVar cl_enable_remote_splitscreen( "cl_enable_remote_splitscreen", "0", 0, "Allows viewing of nonlocal players in a split screen fashion", cl_enable_remote_splitscreen_callback_f );
+static CUtlVector<bool> s_IterateNetworkedSplitScreenSlotsPushedValues;
+void IterateRemoteSplitScreenViewSlots_Push( bool bSet )
+{
+	if( !cl_enable_remote_splitscreen.GetBool() )
+	{
+		bSet = false;
+	}
+
+	s_IterateNetworkedSplitScreenSlotsPushedValues.AddToTail( g_bIterateRemoteSplitScreenPlayers );
+	g_bIterateRemoteSplitScreenPlayers = bSet;
+}
+
+void IterateRemoteSplitScreenViewSlots_Pop( void )
+{
+	Assert( s_IterateNetworkedSplitScreenSlotsPushedValues.Count() > 0 );
+	g_bIterateRemoteSplitScreenPlayers = s_IterateNetworkedSplitScreenSlotsPushedValues.Tail();
+	s_IterateNetworkedSplitScreenSlotsPushedValues.RemoveMultipleFromTail( 1 );
+}
+
+bool IsLocalSplitScreenPlayer( int nSlot )
+{
+	return g_SplitScreenPlayers.IsBitSet( nSlot );
+}
+
+int FirstValidSplitScreenSlot()
+{
+	return 0;
+}
+
+int NextValidSplitScreenSlot( int i )
+{
+	++i;
+	while ( i<  MAX_SPLITSCREEN_PLAYERS )
+	{
+		if ( g_SplitScreenPlayers.IsBitSet( i ) )
+			return i;
+
+		if( g_bIterateRemoteSplitScreenPlayers && cl_enable_remote_splitscreen.GetBool() && (g_RemoteSplitScreenPlayers[i] != NULL) )
+			return i;
+
+		++i;
+	}
+	return -1;
+}
+
+bool IsValidSplitScreenSlot( int i )
+{
+	return g_SplitScreenPlayers.IsBitSet( i ) || (g_bIterateRemoteSplitScreenPlayers && (g_RemoteSplitScreenPlayers[i] != NULL));
+}
+
+static int g_nCachedScreenSize[ 2 ] = { -1, -1 };
+
+void UI_OnScreenSizeChanged()
+{
+	engine->GetScreenSize( g_nCachedScreenSize[ 0 ], g_nCachedScreenSize[ 1 ] );
+
+	UI_OnSplitScreenStateChanged();
+}
+
+static int g_nNumSplits = 1; //number of logical splits (local players + remote splits)
+static int g_nNumLocalSplits = 1; //number of local players sitting at this computer
+
+
+bool UI_IsSplitScreen()
+{
+	return g_nNumSplits >= 2;
+}
+
+bool UI_IsSplitScreenPIP()
+{
+	return UI_IsSplitScreen() && g_nNumLocalSplits == ss_pipsplit.GetInt();
+}
+
+bool UI_UsePipSplit()
+{
+	return g_nNumLocalSplits <= ss_pipsplit.GetInt(); //ss_pipsplit 1 for remote splitscreen pip, ss_pipsplit 2 to use pip even with 2 local players
+}
+
+bool g_bSuppressConfigSystemLevelDueToPIPTransitions;
+void UI_OnSplitScreenStateChanged()
+{
+	g_SplitScreenPlayers.ClearAll();
+	g_nNumSplits = 0;
+	g_nNumLocalSplits = 0;
+	for ( int i = engine->FirstValidSplitScreenSlot();				
+		i != -1;												
+		i = engine->NextValidSplitScreenSlot( i ) )	
+	{
+		g_SplitScreenPlayers.Set( i );
+		g_RemoteSplitScreenPlayers[i] = NULL; //actual splitscreen players nuke networked splitscreen players
+		++g_nNumSplits;
+		++g_nNumLocalSplits;
+	}
+
+	if( cl_enable_remote_splitscreen.GetBool() )
+	{
+		for( int i = 0; i != MAX_SPLITSCREEN_PLAYERS; ++i )
+		{
+			if( g_RemoteSplitScreenPlayers[i] != NULL )
+			{
+				++g_nNumSplits;
+			}
+		}
+	}
+
+	IterateRemoteSplitScreenViewSlots_Push( true );
+	g_LetterBox.SetNumSplitScreenPlayers( g_nNumSplits );
+
+	// Now tile, etc. the rest of them
+	int sw, sh;
+	if ( g_nCachedScreenSize[ 0 ] == -1 )
+	{
+		engine->GetScreenSize( g_nCachedScreenSize[ 0 ], g_nCachedScreenSize[ 1 ] );
+	}
+
+	sw = g_nCachedScreenSize[ 0 ];
+	sh = g_nCachedScreenSize[ 1 ];
+
+	UI_UpdateScreenSpaceBounds( g_nNumSplits, 0, 0, sw, sh );
+
+	// get the current splitscreen/letterbox settings.  We only care about fov and viewmodelfov.
+	bool bDummy;
+	float flDummy, flFOV, flViewModelFOV;
+	g_LetterBox.GetSettings( &bDummy, &flDummy, &flFOV, &flViewModelFOV );
+
+	static SplitScreenConVarRef fov_desired( "fov_desired", true );
+
+	FOR_EACH_VALID_SPLITSCREEN_PLAYER( i )
+	{
+		if ( fov_desired.IsValid() )
+		{
+			fov_desired.SetValue( i, flFOV );
+		}
+	}
+
+	if ( !g_bSuppressConfigSystemLevelDueToPIPTransitions )
+	{
+		ConfigureCurrentSystemLevel( );
+	}
+
+	IterateRemoteSplitScreenViewSlots_Pop();
+	C_BaseEntity::UpdateVisibilityAllEntities();
+}
+
+void UI_GetPanelBounds( int slot, int &x, int &y, int &w, int &h )
+{
+	if ( !IsValidSplitScreenSlot( slot ) || g_nNumSplits == 1 )
+	{
+		x = y = 0;
+		engine->GetScreenSize( w, h );
+		return;
+	}
+
+	vrect_t &r = g_ScreenSpaceBounds[ slot ];
+	x = r.x;
+	y = r.y;
+	w = r.width;
+	h = r.height;
+}
+
+void UI_GetEngineRenderBounds( int slot, int &x, int &y, int &w, int &h, int &insetX, int &insetY )
+{
+	insetX = insetY = 0;
+
+	if ( !IsValidSplitScreenSlot( slot ) || g_nNumSplits == 1 )
+	{
+		x = y = 0;
+		engine->GetScreenSize( w, h );
+		return;
+	}
+
+	UI_GetPanelBounds( slot, x, y, w, h );
+
+	bool bDummy = false;
+	float flDummy = 0;
+	float flAspect = 1.0f;
+	if ( !g_LetterBox.GetSettings( &bDummy, &flAspect, &flDummy, &flDummy )  )
+	{
+		return;
+	}
+
+	// Need to convert from physical to pixel aspect ratio.  These aren't the same when using non-square pixels.
+	const AspectRatioInfo_t &aspectRatioInfo = materials->GetAspectRatioInfo();
+	flAspect *= aspectRatioInfo.m_flPhysicalToFrameBufferScalar;
+
+	// Figure out current aspect ratio
+	float flCurrentAspect = (float)w / (float)h;
+	float ratio = flAspect / flCurrentAspect;
+
+	if ( ratio > 1.0f )
+	{
+		// Screen is wider, need bars at top and bottom
+		int usetall = (float)w / flAspect;
+		if ( IsPC() )
+		{
+			insetY = ( h - usetall ) / 2;
+			y += insetY;
+			h = usetall;
+		}
+		else
+		{
+			// hopefully it centers, but it might not
+			usetall = AlignValue( usetall, 2 * GPU_RESOLVE_ALIGNMENT );
+			insetY = ( h - usetall ) / 2;
+			y += insetY;
+			y = AlignValue( y, GPU_RESOLVE_ALIGNMENT );
+			insetY = AlignValue( insetY, GPU_RESOLVE_ALIGNMENT );
+			h = usetall;
+		}
+	}
+	else
+	{
+		// Screen is narrower, need bars at left/right
+		int usewide = (float)h * flAspect;
+		if ( IsPC() )
+		{
+			insetX = ( w - usewide  ) / 2;
+			x += insetX;
+			w = usewide;
+		}
+		else
+		{
+			// hopefully it centers, but it might not
+			usewide = AlignValue( usewide, 2 * GPU_RESOLVE_ALIGNMENT );
+			insetX = ( w - usewide  ) / 2;
+			x += insetX;
+			x = AlignValue( x, GPU_RESOLVE_ALIGNMENT );
+			insetX = AlignValue( insetX, GPU_RESOLVE_ALIGNMENT );
+			w = usewide;
+		}
+	}
+}
+
+void UI_GetHudBounds( int slot, int &x, int &y, int &w, int &h )
+{
+	if ( !IsValidSplitScreenSlot( slot ) || g_nNumSplits == 1 )
+	{
+		x = y = 0;
+		engine->GetScreenSize( w, h );
+		return;
+	}
+
+	bool bInset = false;
+	float dummy = 1.0f;
+
+	if ( !g_LetterBox.GetSettings( &bInset, &dummy, &dummy, &dummy ) || 
+		 !bInset )
+	{
+		// Use entire bounds for HUD
+		UI_GetPanelBounds( slot, x, y, w, h );
+		return;
+	}
+
+	int insetX = 0, insetY = 0;
+	UI_GetEngineRenderBounds( slot, x, y, w, h, insetX, insetY );
+}

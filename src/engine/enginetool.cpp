@@ -35,7 +35,7 @@
 #include "gl_rmain.h"
 
 #ifndef DEDICATED
-#include "vgui_baseui_interface.h"
+#include "engineui.h"
 #endif
 
 // NOTE: This has to be the last file included!
@@ -59,7 +59,7 @@ extern ConVar host_framerate;
 void CL_StartMovie( const char *filename, int flags, int nWidth, int nHeight, float flFrameRate, int jpeg_quality );
 void CL_EndMovie();
 bool CL_IsRecordingMovie();
-void VGui_SetGameDLLPanelsVisible( bool show );
+void UI_SetGameDLLPanelsVisible( bool show );
 float AudioSource_GetSoundDuration( char const *pName );
 
 //-----------------------------------------------------------------------------
@@ -454,7 +454,7 @@ bool CEngineTool::IsConsoleVisible()
 #ifdef DEDICATED
 	return false;
 #else
-	return EngineVGui()->IsConsoleVisible();
+	return EngineUI()->IsConsoleVisible();
 #endif
 }
 
@@ -1105,7 +1105,7 @@ bool CEngineTool::IsVoiceRecording()
 
 void CEngineTool::OnModeChanged( bool bGameMode )
 {
-	EngineVGui()->OnToolModeChanged( bGameMode );
+	EngineUI()->OnToolModeChanged( bGameMode );
 }
 
 bool EngineTool_SuppressDeInit()

@@ -9,7 +9,7 @@
 #include <shareddefs.h>
 #include <cs_shareddefs.h>
 #include "hud.h"
-#include "vgui/ILocalize.h"
+#include "localize/ilocalize.h"
 #include "vstdlib/vstrtools.h"
 #include "cs_gamerules.h"
 #include "c_cs_player.h"
@@ -475,7 +475,7 @@ const char *C_CS_PlayerResource::GetPlayerName( int index )
 		const char* szLocToken = Helper_GetLocalPlayerAssassinationQuestLocToken( pQuestDef );
 		if ( szLocToken )
 		{
-			V_UnicodeToUTF8( g_pVGuiLocalize->Find( szLocToken ), szAssassinationTargetName, MAX_PLAYER_NAME_LENGTH );
+			V_UnicodeToUTF8( g_pLocalize->Find( szLocToken ), szAssassinationTargetName, MAX_PLAYER_NAME_LENGTH );
 			return szAssassinationTargetName;
 		}
 	}
@@ -617,7 +617,7 @@ const wchar_t* C_CS_PlayerResource::GetDecoratedPlayerName( int index, wchar_t* 
 
 			if ( szCoach )
 			{
-				V_strcpy_safe( nameBuf, g_pVGuiLocalize->FindAsUTF8( szCoach ) );
+				V_strcpy_safe( nameBuf, g_pLocalize->FindAsUTF8( szCoach ) );
 				V_strcat_safe( nameBuf, " " );
 			}
 			V_strcat_safe( nameBuf, GetPlayerName( nameIndex ) );
@@ -639,7 +639,7 @@ const wchar_t* C_CS_PlayerResource::GetDecoratedPlayerName( int index, wchar_t* 
 			{
 				szClan[0] = 0;
 			}
-			//g_pVGuiLocalize->ConvertANSIToUnicode( szClan, wszClanTag, sizeof( wszClanTag ) );
+			//g_pLocalize->ConvertANSIToUnicode( szClan, wszClanTag, sizeof( wszClanTag ) );
 
 			V_snprintf( nameBuf, ARRAYSIZE( nameBuf ) - 1, "%s%s", szClan, GetPlayerName( nameIndex ) );
 		}
@@ -662,7 +662,7 @@ const wchar_t* C_CS_PlayerResource::GetDecoratedPlayerName( int index, wchar_t* 
 		else
 		{
 			const char* translationID = ( nBotControlStringType == 1 ) ? "#SFUI_bot_controlled_by" : "#SFUI_bot_decorated_name";
-			g_pVGuiLocalize->ConstructString( buffer, buffsize, g_pVGuiLocalize->Find( translationID ), 1, pSafeWideName );
+			g_pLocalize->ConstructString( buffer, buffsize, g_pLocalize->Find( translationID ), 1, pSafeWideName );
 		}
 	}
 	else

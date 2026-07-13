@@ -16,7 +16,6 @@
 #include "usermessages.h"
 #include "fmtstr.h"
 #ifdef CLIENT_DLL
-#include "achievement_notification_panel.h"
 #include "c_playerresource.h"
 #include "c_cs_player.h"
 #ifdef TF_CLIENT_DLL
@@ -33,7 +32,7 @@
 #endif
 #include "cs_gamerules.h"
 #include "tier3/tier3.h"
-#include "vgui/ILocalize.h"
+#include "localize/ilocalize.h"
 
 #include "matchmaking/mm_helpers.h"
 

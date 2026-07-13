@@ -80,7 +80,7 @@
 #include "mapinfo.h"
 //#include "particle_parse.h"
 #include "../public/vstdlib/vstrtools.h"
-#include "../public/vgui/ILocalize.h"
+#include "localize/ilocalize.h"
 #include "../shared/cstrike15/flashbang_projectile.h"
 #include "usermessages.h"
 #include "teamplayroundbased_gamerules.h"

@@ -24,10 +24,9 @@
 #include "decal.h"
 #include "icliententitylist.h"
 #include "icliententity.h"
-#include "cl_demouipanel.h"
 #include "materialsystem/materialsystem_config.h"
 #include "tier2/tier2.h"
-#include "vgui_baseui_interface.h"
+#include "engineui.h"
 #include "con_nprint.h"
 #include "networkstringtableclient.h"
 #include "host_cmd.h"
@@ -4035,9 +4034,6 @@ CON_COMMAND( demo_listhighlights, "List all highlights data for the demo." )
 bool CDemoPlayer::OverrideView( democmdinfo_t& info )
 {
 #if !defined( LINUX )
-	if ( g_pDemoUI && g_pDemoUI->OverrideView( info, GetPlaybackTick() ) )
-		return true;
-
 	if ( demoaction && demoaction->OverrideView( info, GetPlaybackTick() ) )
 		return true;
 #endif

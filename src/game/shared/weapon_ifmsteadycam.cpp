@@ -12,11 +12,6 @@
 #include "dt_shared.h"
 
 #ifdef CLIENT_DLL
-#include "vgui_controls/controls.h"
-#include "vgui/isurface.h"
-#include "vgui/ischeme.h"
-#include "vgui/ilocalize.h"
-#include "vgui/vgui.h"
 #include "tier1/KeyValues.h"
 #include "toolframework/itoolframework.h"
 #endif
@@ -77,7 +72,6 @@ CWeaponIFMSteadyCam::CWeaponIFMSteadyCam()
 	m_vecViewOffset.Init();
 	m_flFOVOffsetY = 0.0f;
 	m_vecOffset.Init();
-	m_hFont = vgui::INVALID_FONT;
 	m_nTextureId = -1;
 #endif
 }
@@ -542,31 +536,6 @@ void CWeaponIFMSteadyCam::CreateMove( float flInputSampleTime, CUserCmd *pCmd, c
 //-----------------------------------------------------------------------------
 void CWeaponIFMSteadyCam::DrawArmLength( int x, int y, int w, int h, Color clr )
 {
-	// Draw a readout for the arm length
-	if ( m_hFont == vgui::INVALID_FONT )
-	{
-		vgui::HScheme hScheme = vgui::scheme()->GetScheme( "ClientScheme" );
-		vgui::IScheme *pScheme = vgui::scheme()->GetIScheme( hScheme );
-		m_hFont	= pScheme->GetFont("DefaultVerySmall", false );	
-		Assert( m_hFont != vgui::INVALID_FONT );
-	}
-	
-	// Create our string
-	char szString[256];
-	Q_snprintf( szString, sizeof(szString), "Arm Length: %.2f\n", m_flArmLength );
-
-	// Convert it to localize friendly unicode
-	wchar_t wcString[256];
-	g_pVGuiLocalize->ConvertANSIToUnicode( szString, wcString, sizeof(wcString) );
-
-	int tw, th;
-	vgui::surface()->GetTextSize( m_hFont, wcString, tw, th );
-
-	vgui::surface()->DrawSetTextFont( m_hFont ); // set the font	
-	vgui::surface()->DrawSetTextColor( clr ); // white
-	vgui::surface()->DrawSetTextPos( x + w - tw - 10, y + 10 ); // x,y position
-
-	vgui::surface()->DrawPrintText( wcString, wcslen(wcString) ); // print text
 }
 
 
@@ -575,34 +544,6 @@ void CWeaponIFMSteadyCam::DrawArmLength( int x, int y, int w, int h, Color clr )
 //-----------------------------------------------------------------------------
 void CWeaponIFMSteadyCam::DrawFOV( int x, int y, int w, int h, Color clrEdges, Color clrTriangle )
 {
-	if ( m_nTextureId < 0 )
-	{
-		m_nTextureId = vgui::surface()->CreateNewTextureID();
-		vgui::surface()->DrawSetTextureFile( m_nTextureId, "vgui/white", true, false );
-	}
-
-	// This is the fov
-	int nSize = 30;
-	int fx = x + w - 10 - nSize;
-	int fy = y + h - 10;
-	int fh = nSize * cos( M_PI * m_flFOV / 360.0f );
-	int fw = nSize * sin( M_PI * m_flFOV / 360.0f );
-		  
-	vgui::Vertex_t v[3];
-	v[0].m_Position.Init( fx, fy );
-	v[0].m_TexCoord.Init( 0.0f, 0.0f );
-	v[1].m_Position.Init( fx-fw, fy-fh );
-	v[1].m_TexCoord.Init( 0.0f, 0.0f );
-	v[2].m_Position.Init( fx+fw, fy-fh );
-	v[2].m_TexCoord.Init( 0.0f, 0.0f );
-
-	vgui::surface()->DrawSetTexture( m_nTextureId );
-	vgui::surface()->DrawSetColor( clrTriangle );
-	vgui::surface()->DrawTexturedPolygon( 3, v );
-
-	vgui::surface()->DrawSetColor( clrEdges );
-	vgui::surface()->DrawLine( fx, fy, fx - fw, fy - fh );
-	vgui::surface()->DrawLine( fx, fy, fx + fw, fy - fh );
 }
 
 
@@ -612,61 +553,6 @@ void CWeaponIFMSteadyCam::DrawFOV( int x, int y, int w, int h, Color clrEdges, C
 void CWeaponIFMSteadyCam::DrawCrosshair( void )
 {
 	BaseClass::DrawCrosshair();
-
-	int x, y, w, h;
-	GetOverlayBounds( x, y, w, h );
-
-	// Draw the targeting zone around the crosshair
-	int r, g, b, a;
-	GetHud().m_clrYellowish.GetColor( r, g, b, a );
-		 
-	Color gray( 255, 255, 255, 192 );
-	Color light( r, g, b, 255 );
-	Color dark( r, g, b, 128 );
-	Color red( 255, 0, 0, 128 );
-	
-	DrawArmLength( x, y, w, h, light );
-	DrawFOV( x, y, w, h, light, dark );
-
-	int cx, cy;
-	cx = x + ( w / 2 );
-	cy = y + ( h / 2 );
-
-	// This is the crosshair
-	vgui::surface()->DrawSetColor( gray );
-	vgui::surface()->DrawFilledRect( cx-10, cy-1, cx-3, cy+1 );
-	vgui::surface()->DrawFilledRect( cx+3, cy-1, cx+10, cy+1 );
-	vgui::surface()->DrawFilledRect( cx-1, cy-10, cx+1, cy-3 );
-	vgui::surface()->DrawFilledRect( cx-1, cy+3, cx+1, cy+10 );
-
-	// This is the yellow aiming dot
-	if ( ( m_vecViewOffset.x != 0.0f ) || ( m_vecViewOffset.y != 0.0f ) )
-	{
-		int ax, ay;
-		ax = cx + m_vecViewOffset.x;
-		ay = cy + m_vecViewOffset.y;
-		vgui::surface()->DrawSetColor( light );
-		vgui::surface()->DrawFilledRect( ax-2, ay-2, ax+2, ay+2 );
-	}
-
-	// This is the red actual dot
-	if ( ( m_vecActualViewOffset.x != 0.0f ) || ( m_vecActualViewOffset.y != 0.0f ) )
-	{
-		int ax, ay;
-		ax = cx + m_vecActualViewOffset.x;
-		ay = cy + m_vecActualViewOffset.y;
-		vgui::surface()->DrawSetColor( red );
-		vgui::surface()->DrawFilledRect( ax-2, ay-2, ax+2, ay+2 );
-	}
-
-	// This is the purple fov dot
-	if ( m_flFOVOffsetY != 0.0f )
-	{
-		Color purple( 255, 0, 255, 255 );
-		int vy = cy + m_flFOVOffsetY;
-		vgui::surface()->DrawSetColor( purple );
-		vgui::surface()->DrawFilledRect( cx-2, vy-2, cx+2, vy+2 );
-	}
 }
 
 #endif // CLIENT_DLL

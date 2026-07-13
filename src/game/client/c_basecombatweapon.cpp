@@ -5,11 +5,9 @@
 // $NoKeywords: $
 //=============================================================================//
 #include "cbase.h"
-#include "history_resource.h"
 #include "iclientmode.h"
 #include "iinput.h"
 #include "weapon_selection.h"
-#include "hud_crosshair.h"
 #include "engine/ivmodelinfo.h"
 #include "tier0/vprof.h"
 #include "hltvcamera.h"
@@ -212,79 +210,6 @@ void C_BaseCombatWeapon::Redraw()
 //-----------------------------------------------------------------------------
 void C_BaseCombatWeapon::DrawCrosshair()
 {
-#ifndef INFESTED_DLL
-	C_BasePlayer *player = C_BasePlayer::GetLocalPlayer();
-	if ( !player )
-		return;
-
-	Color clr = GetHud().m_clrNormal;
-/*
-
-	// TEST: if the thing under your crosshair is on a different team, light the crosshair with a different color.
-	Vector vShootPos, vShootAngles;
-	GetShootPosition( vShootPos, vShootAngles );
-
-	Vector vForward;
-	AngleVectors( vShootAngles, &vForward );
-	
-	
-	// Change the color depending on if we're looking at a friend or an enemy.
-	CPartitionFilterListMask filter( PARTITION_ALL_CLIENT_EDICTS );	
-	trace_t tr;
-	traceline->TraceLine( vShootPos, vShootPos + vForward * 10000, COLLISION_GROUP_NONE, MASK_SHOT, &tr, true, ~0, &filter );
-
-	if ( tr.index != 0 && tr.index != INVALID_CLIENTENTITY_HANDLE )
-	{
-		C_BaseEntity *pEnt = ClientEntityList().GetBaseEntityFromHandle( tr.index );
-		if ( pEnt )
-		{
-			if ( pEnt->GetTeamNumber() != player->GetTeamNumber() )
-			{
-				g = b = 0;
-			}
-		}
-	}		 
-*/
-
-	CHudCrosshair *crosshair = GET_HUDELEMENT( CHudCrosshair );
-	if ( !crosshair )
-		return;
-
-	// Find out if this weapon's auto-aimed onto a target
-	bool bOnTarget = ( m_iState == WEAPON_IS_ACTIVE ) && player->m_fOnTarget;
-	
-	if ( player->GetFOV() >= 90 )
-	{ 
-		// normal crosshairs
-		if ( bOnTarget && GetWpnData().iconAutoaim )
-		{
-			clr[3] = 255;
-
-			crosshair->SetCrosshair( GetWpnData().iconAutoaim, clr );
-		}
-		else if ( GetWpnData().iconCrosshair )
-		{
-			clr[3] = 255;
-			crosshair->SetCrosshair( GetWpnData().iconCrosshair, clr );
-		}
-		else
-		{
-			crosshair->ResetCrosshair();
-		}
-	}
-	else
-	{ 
-		Color white( 255, 255, 255, 255 );
-
-		// zoomed crosshairs
-		if (bOnTarget && GetWpnData().iconZoomedAutoaim)
-			crosshair->SetCrosshair(GetWpnData().iconZoomedAutoaim, white);
-		else if ( GetWpnData().iconZoomedCrosshair )
-			crosshair->SetCrosshair( GetWpnData().iconZoomedCrosshair, white );
-		else
-			crosshair->ResetCrosshair();
-	}
-	#endif
 }
 //-----------------------------------------------------------------------------
 // Purpose: This weapon is the active weapon, and the viewmodel for it was just drawn.

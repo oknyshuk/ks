@@ -14,14 +14,8 @@
 #include "cbase.h"
 
 // vgui panel includes
-#include <vgui_controls/Panel.h>
-#include <vgui/ISurface.h>
 #include <keyvalues.h>
-#include <vgui/Cursor.h>
-#include <vgui/IScheme.h>
-#include <vgui/IVGui.h>
-#include <vgui/ILocalize.h>
-#include <vgui/vgui.h>
+#include "localize/ilocalize.h"
 
 // client dll/engine defines
 #include "hud.h"
@@ -36,12 +30,9 @@
 #include "counterstrikeviewport.h"
 #include "cs_gamerules.h"
 // #include "c_user_message_register.h"
-#include "vguicenterprint.h"
+#include "uicenterprint.h"
 #include "text_message.h"
-
-#if defined( CSTRIKE15 )
-#include "basepanel.h"
-#endif
+#include "../RocketUI/rkhud_teammenu.h"
 
 ConVar crosshair( "crosshair", "1", FCVAR_ARCHIVE  | FCVAR_SS );
 ConVar cl_disablefreezecam(
@@ -71,7 +62,8 @@ CON_COMMAND_F( teammenu, "Show team selection window", FCVAR_SERVER_CAN_EXECUTE 
 	if( pPlayer && pPlayer->CanShowTeamMenu() )
 	{
 		( ( CounterStrikeViewport * )GetViewPortInterface() )->SetChoseTeamAndClass( true );
-		GetViewPortInterface()->ShowPanel( PANEL_TEAM, true );
+		// RmlUi team-select (VGUI teardown): the vgui PANEL_TEAM panel no longer exists.
+		RocketTeamMenuDocument::ShowPanel( true );
 	}
 
 }
@@ -236,17 +228,6 @@ void CounterStrikeViewport::Start( IGameUIFuncs *pGameUIFuncs, IGameEventManager
 	SetChoseTeamAndClass( false );
 }
 
-void CounterStrikeViewport::ApplySchemeSettings( vgui::IScheme *pScheme )
-{
-	BaseClass::ApplySchemeSettings( pScheme );
-
-	ListenForGameEvent( "cs_win_panel_match" );
-
-	GetHud().InitColors( pScheme );
-
-	SetPaintBackgroundEnabled( false );
-}
-
 
 IViewPortPanel* CounterStrikeViewport::CreatePanelByName( const char *szPanelName )
 {
@@ -292,7 +273,7 @@ void CounterStrikeViewport::UpdateAllPanels( void )
 {
 	bool bSomethingIsVisible = false;
 
-	ACTIVE_SPLITSCREEN_PLAYER_GUARD_VGUI( vgui::ipanel()->GetMessageContextId( GetVPanel() ) );
+	ACTIVE_SPLITSCREEN_PLAYER_GUARD( 0 );
 
 	for ( int i = 0; i < m_UnorderedPanels.Count(); ++i )
 	{

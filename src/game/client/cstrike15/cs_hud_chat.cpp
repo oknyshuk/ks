@@ -10,48 +10,17 @@
 #include "c_cs_playerresource.h"
 #include "hud_macros.h"
 #include "text_message.h"
-#include "vguicenterprint.h"
-#include "vgui/ILocalize.h"
+#include "uicenterprint.h"
+#include "localize/ilocalize.h"
 #include "engine/IEngineSound.h"
 #include "radio_status.h"
 #include "bot/shared_util.h"
 #include "voice_status.h"
-#include <vgui/IScheme.h>
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
 DECLARE_HUDELEMENT(CHudChat);
-
-//=====================
-//CHudChatLine
-//=====================
-
-CHudChatLine::CHudChatLine( vgui::Panel *parent, const char *panelName ) : CBaseHudChatLine( parent, panelName )
-{
-	m_text = NULL;
-}
-
-void CHudChatLine::ApplySchemeSettings(vgui::IScheme *pScheme)
-{
-	BaseClass::ApplySchemeSettings( pScheme );
-}
-
-//=====================
-//CHudChatInputLine
-//=====================
-
-void CHudChatInputLine::ApplySchemeSettings(vgui::IScheme *pScheme)
-{
-	BaseClass::ApplySchemeSettings(pScheme);
-
-	vgui::HFont hFont = pScheme->GetFont( "ChatFont" );
-
-	m_pPrompt->SetFont( hFont );
-	m_pInput->SetFont( hFont );
-
-	m_pInput->SetFgColor( pScheme->GetColor( "Chat.TypingText", pScheme->GetColor( "Panel.FgColor", Color( 255, 255, 255, 255 ) ) ) );
-}
 
 //=====================
 //CHudChat
@@ -64,14 +33,10 @@ CHudChat::CHudChat( const char *pElementName ) : BaseClass( pElementName )
 
 void CHudChat::CreateChatInputLine( void )
 {
-	m_pChatInput = new CHudChatInputLine( this, "ChatInputLine" );
-	m_pChatInput->SetVisible( false );
 }
 
 void CHudChat::CreateChatLines( void )
 {
-	m_ChatLine = new CHudChatLine( this, "ChatLine1" );
-	m_ChatLine->SetVisible( false );		
 }
 
 void CHudChat::Init( void )
@@ -135,79 +100,6 @@ void CHudChat::ChatPrintf(int iPlayerIndex, int iFilter, const char* fmt, ...)
 
 	if (!*pmsg)
 		return;
-
-	CBaseHudChatLine* line = (CBaseHudChatLine*)FindUnusedChatLine();
-	if (!line)
-	{
-		line = (CBaseHudChatLine*)FindUnusedChatLine();
-	}
-
-	if (!line)
-	{
-		return;
-	}
-
-	if (iFilter != CHAT_FILTER_NONE)
-	{
-#ifdef PORTAL2
-		if (iFilter & (CHAT_FILTER_JOINLEAVE | CHAT_FILTER_TEAMCHANGE))
-			// In Portal 2 we don't want to show join/leave or teamchange messages
-			return;
-#endif
-		if (!(iFilter & GetFilterFlags()))
-			return;
-	}
-
-	line->SetText("");
-
-	int iNameStart = 0;
-	int iNameLength = 0;
-
-	player_info_t sPlayerInfo;
-	if (iPlayerIndex == 0)
-	{
-		Q_memset(&sPlayerInfo, 0, sizeof(player_info_t));
-		Q_strncpy(sPlayerInfo.name, "Console", sizeof(sPlayerInfo.name));
-	}
-	else
-	{
-		engine->GetPlayerInfo(iPlayerIndex, &sPlayerInfo);
-	}
-
-	int bufSize = (strlen(pmsg) + 1) * sizeof(wchar_t);
-	wchar_t* wbuf = static_cast<wchar_t*>(stackalloc(bufSize));
-	if (wbuf)
-	{
-		Color clrNameColor = GetClientColor(iPlayerIndex);
-
-		line->SetExpireTime();
-
-		g_pVGuiLocalize->ConvertANSIToUnicode(pmsg, wbuf, bufSize);
-
-		// find the player's name in the unicode string, in case there is no color markup
-		const char* pName = sPlayerInfo.name;
-
-		if (pName)
-		{
-			wchar_t wideName[MAX_PLAYER_NAME_LENGTH];
-			g_pVGuiLocalize->ConvertANSIToUnicode(pName, wideName, sizeof(wideName));
-
-			const wchar_t* nameInString = wcsstr(wbuf, wideName);
-
-			if (nameInString)
-			{
-				iNameStart = (nameInString - wbuf);
-				iNameLength = wcslen(wideName);
-			}
-		}
-
-		line->SetVisible(false);
-		line->SetNameStart(iNameStart);
-		line->SetNameLength(iNameLength);
-		line->SetNameColor(clrNameColor);
-
-		line->InsertAndColorizeText(wbuf, iPlayerIndex);
-	}
 }
 
 
@@ -237,10 +129,10 @@ bool CHudChat::MsgFunc_RadioText( const CCSUsrMsg_RadioText &msg )
 	if ( V_strcmp( msg.params( 3 ).c_str(), "auto" ) != 0 && ( GetClientVoiceMgr()->IsPlayerBlocked( client ) || GetClientVoiceMgr()->ShouldHideCommunicationFromPlayer( client ) ) )
 		return false;
 
-	g_pVGuiLocalize->ConstructString( szBuf[5], sizeof( szBuf[5] ), msg_text, 4, szBuf[1], szBuf[2], szBuf[3], szBuf[4] );
+	g_pLocalize->ConstructString( szBuf[5], sizeof( szBuf[5] ), msg_text, 4, szBuf[1], szBuf[2], szBuf[3], szBuf[4] );
 
 	char ansiString[512];
-	g_pVGuiLocalize->ConvertUnicodeToANSI( ConvertCRtoNL( szBuf[5] ), ansiString, sizeof( ansiString ) );
+	g_pLocalize->ConvertUnicodeToANSI( ConvertCRtoNL( szBuf[5] ), ansiString, sizeof( ansiString ) );
 	ChatPrintf( client, CHAT_FILTER_TEAMCHANGE, "%c%s", COLOR_USEOLDCOLORS, ansiString );
 
 	CLocalPlayerFilter filter;
@@ -285,13 +177,13 @@ bool CHudChat::MsgFunc_SayText2( const CCSUsrMsg_SayText2 &msg )
 	{
 		extern const char* Helper_GetLocalPlayerAssassinationQuestLocToken( const CEconQuestDefinition *pQuest );
 		if ( const char* szToken = Helper_GetLocalPlayerAssassinationQuestLocToken( pQuestDef ) )
-			V_wcscpy_safe( szBuf[ 1 ], g_pVGuiLocalize->Find( szToken ) );
+			V_wcscpy_safe( szBuf[ 1 ], g_pLocalize->Find( szToken ) );
 	}
 
-	g_pVGuiLocalize->ConstructString( szBuf[5], sizeof( szBuf[5] ), msg_text, 4, szBuf[1], szBuf[2], szBuf[3], szBuf[4] );
+	g_pLocalize->ConstructString( szBuf[5], sizeof( szBuf[5] ), msg_text, 4, szBuf[1], szBuf[2], szBuf[3], szBuf[4] );
 
 	char ansiString[512];
-	g_pVGuiLocalize->ConvertUnicodeToANSI( ConvertCRtoNL( szBuf[5] ), ansiString, sizeof( ansiString ) );
+	g_pLocalize->ConvertUnicodeToANSI( ConvertCRtoNL( szBuf[5] ), ansiString, sizeof( ansiString ) );
 
 	if ( bWantsToChat )
 	{
@@ -309,8 +201,6 @@ bool CHudChat::MsgFunc_SayText2( const CCSUsrMsg_SayText2 &msg )
 
 		// print raw chat text
 		ChatPrintf( client, iFilter, "%c%s", COLOR_USEOLDCOLORS, ansiString );
-
-		//Msg( "%s\n", RemoveColorMarkup(ansiString) );
 
 		if ( playChatSound )
 		{
@@ -334,14 +224,7 @@ bool CHudChat::MsgFunc_SayText2( const CCSUsrMsg_SayText2 &msg )
 //-----------------------------------------------------------------------------
 int CHudChat::GetChatInputOffset( void )
 {
-	if ( m_pChatInput->IsVisible() )
-	{
-		return m_iFontHeight;
-	}
-	else
-	{
-		return 0;
-	}
+	return m_iFontHeight;
 }
 
 //-----------------------------------------------------------------------------
@@ -417,17 +300,7 @@ Color CHudChat::GetTextColorForClient( TextColor colorNum, int clientIndex )
 		break;
 
 	case COLOR_ACHIEVEMENT:
-		{
-			vgui::IScheme *pSourceScheme = vgui::scheme()->GetIScheme( vgui::scheme()->GetScheme( "SourceScheme" ) ); 
-			if ( pSourceScheme )
-			{
-				c = pSourceScheme->GetColor( "SteamLightGreen", GetBgColor() );
-			}
-			else
-			{
-				c = g_ColorGrey;
-			}
-		}
+		c = g_ColorGrey;
 		break;
 
 	default:

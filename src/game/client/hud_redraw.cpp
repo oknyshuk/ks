@@ -11,15 +11,10 @@
 #include "cbase.h"
 #include "hudelement.h"
 #include "iclientmode.h"
-#include "itextmessage.h"
-#include "vgui_basepanel.h"
-#include "hud_crosshair.h"
-#include <vgui/ISurface.h>
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
-using namespace vgui;
 
 //For progress bar orientations
 const int CHud::HUDPB_HORIZONTAL = 0;
@@ -38,7 +33,7 @@ static void FovChanged_Callback( IConVar *pConVar, const char *pOldString, float
 
 static ConVar fov_watcher( "_fov", "0", 0, "Automates fov command to server.", FovChanged_Callback );
 
-void CHud::DoElementThink( CHudElement* pElement, vgui::Panel* pPanel )
+void CHud::DoElementThink( CHudElement* pElement )
 {
     bool visible = true;
 
@@ -54,12 +49,7 @@ void CHud::DoElementThink( CHudElement* pElement, vgui::Panel* pPanel )
 
     pElement->SetActive( visible );
     pElement->Think();
-         
-    if ( pPanel && pPanel->IsVisible() != visible )
-    {
-	    pPanel->SetVisible( visible );
-    }
-	
+
 	bool bProcessInput = visible;
     if ( bProcessInput )
     {
@@ -74,10 +64,8 @@ void CHud::Think( void )
 {
 	// Determine the visibility of all hud elements
 	CUtlVector< CHudElement * > & list = GetHudList();
-	CUtlVector< vgui::Panel * > & hudPanelList = GetHudPanelList();
 
 	int c = list.Count();
-	Assert( c == hudPanelList.Count() );
 
 	m_bEngineIsInGame = engine->IsInGame() && ( engine->IsLevelMainMenuBackground() == false );
 
@@ -86,7 +74,7 @@ void CHud::Think( void )
 		CHudElement* pElement = list[i];
         if ( !pElement->m_bWantLateUpdate )
         {
-            DoElementThink( pElement, hudPanelList[ i ] );
+            DoElementThink( pElement );
         }
 	}
 
@@ -131,10 +119,8 @@ void CHud::LateThink( void )
 	SNPROF("LateThink");
 
 	CUtlVector< CHudElement * > & list = GetHudList();
-	CUtlVector< vgui::Panel * > & hudPanelList = GetHudPanelList();
 
 	int c = list.Count();
-	Assert( c == hudPanelList.Count() );
 
 	m_bEngineIsInGame = engine->IsInGame() && ( engine->IsLevelMainMenuBackground() == false );
 
@@ -143,7 +129,7 @@ void CHud::LateThink( void )
 		CHudElement* pElement = list[i];
         if ( pElement->m_bWantLateUpdate )
         {
-            DoElementThink( pElement, hudPanelList[ i ] );
+            DoElementThink( pElement );
         }
 	}
 }
@@ -161,46 +147,6 @@ void CHud::LateThink( void )
 //-----------------------------------------------------------------------------
 void CHud::DrawProgressBar( int x, int y, int width, int height, float percentage, Color& clr, unsigned char type )
 {
-	//Clamp our percentage
-	percentage = MIN( 1.0f, percentage );
-	percentage = MAX( 0.0f, percentage );
-
-	Color lowColor = clr;
-	lowColor[ 0 ] /= 2;
-	lowColor[ 1 ] /= 2;
-	lowColor[ 2 ] /= 2;
-
-	//Draw a vertical progress bar
-	if ( type == HUDPB_VERTICAL )
-	{
-		int	barOfs = height * percentage;
-
-		surface()->DrawSetColor( lowColor );
-		surface()->DrawFilledRect( x, y, x + width, y + barOfs );
-
-		surface()->DrawSetColor( clr );
-		surface()->DrawFilledRect( x, y + barOfs, x + width, y + height );
-	}
-	else if ( type == HUDPB_HORIZONTAL )
-	{
-		int	barOfs = width * percentage;
-
-		surface()->DrawSetColor( lowColor );
-		surface()->DrawFilledRect( x, y, x + barOfs, y +  height );
-
-		surface()->DrawSetColor( clr );
-		surface()->DrawFilledRect( x + barOfs, y, x + width, y + height );
-	}
-	else if ( type == HUDPB_HORIZONTAL_INV )
-	{
-		int	barOfs = width * percentage;
-
-		surface()->DrawSetColor( clr );
-		surface()->DrawFilledRect( x, y, x + barOfs, y + height );
-
-		surface()->DrawSetColor( lowColor );
-		surface()->DrawFilledRect( x + barOfs, y, x + width, y +  height );
-	}
 }
 
 //-----------------------------------------------------------------------------

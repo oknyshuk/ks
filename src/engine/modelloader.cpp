@@ -33,7 +33,7 @@
 #include "tier0/icommandline.h"
 #include "MapReslistGenerator.h"
 #ifndef DEDICATED
-#include "vgui_baseui_interface.h"
+#include "engineui.h"
 #endif
 #include "engine/ivmodelrender.h"
 #include "host.h"
@@ -5046,7 +5046,7 @@ void CModelLoader::Map_LoadModel( model_t *mod )
 #endif
 
 #ifndef DEDICATED
-	EngineVGui()->UpdateProgressBar(PROGRESS_LOADWORLDMODEL);
+	EngineUI()->UpdateProgressBar(PROGRESS_LOADWORLDMODEL);
 #endif
 
 	Assert( !( mod->nLoadFlags & FMODELLOADER_LOADED ) );
@@ -5152,7 +5152,7 @@ void CModelLoader::Map_LoadModelGuts( model_t *mod )
 	}
 
 #ifndef DEDICATED
-	EngineVGui()->UpdateProgressBar(PROGRESS_LOADWORLDMODEL);
+	EngineUI()->UpdateProgressBar(PROGRESS_LOADWORLDMODEL);
 #endif
 
 	// Until BSP version 19, this must occur after loading texinfo
@@ -5183,7 +5183,7 @@ void CModelLoader::Map_LoadModelGuts( model_t *mod )
 	}
 
 #ifndef DEDICATED
-	EngineVGui()->UpdateProgressBar(PROGRESS_LOADWORLDMODEL);
+	EngineUI()->UpdateProgressBar(PROGRESS_LOADWORLDMODEL);
 #endif
 
 	{
@@ -5207,7 +5207,7 @@ void CModelLoader::Map_LoadModelGuts( model_t *mod )
 	}
 
 #ifndef DEDICATED
-	EngineVGui()->UpdateProgressBar(PROGRESS_LOADWORLDMODEL);
+	EngineUI()->UpdateProgressBar(PROGRESS_LOADWORLDMODEL);
 #endif
 
 	{
@@ -5251,7 +5251,7 @@ void CModelLoader::Map_LoadModelGuts( model_t *mod )
 	}
 
 #ifndef DEDICATED
-	EngineVGui()->UpdateProgressBar(PROGRESS_LOADWORLDMODEL);
+	EngineUI()->UpdateProgressBar(PROGRESS_LOADWORLDMODEL);
 #endif
 
 	{
@@ -5323,7 +5323,7 @@ void CModelLoader::Map_LoadModelGuts( model_t *mod )
 	}
 
 #ifndef DEDICATED
-	EngineVGui()->UpdateProgressBar(PROGRESS_LOADWORLDMODEL);
+	EngineUI()->UpdateProgressBar(PROGRESS_LOADWORLDMODEL);
 #endif
 
 	{
@@ -5333,7 +5333,7 @@ void CModelLoader::Map_LoadModelGuts( model_t *mod )
 		Mod_LoadSubmodels( submodelList );
 
 #ifndef DEDICATED
-		EngineVGui()->UpdateProgressBar(PROGRESS_LOADWORLDMODEL);
+		EngineUI()->UpdateProgressBar(PROGRESS_LOADWORLDMODEL);
 #endif
 
 		COM_TimestampedLog( "  SetupSubModels" );
@@ -5347,7 +5347,7 @@ void CModelLoader::Map_LoadModelGuts( model_t *mod )
 	}
 
 #ifndef DEDICATED
-	EngineVGui()->UpdateProgressBar(PROGRESS_LOADWORLDMODEL);
+	EngineUI()->UpdateProgressBar(PROGRESS_LOADWORLDMODEL);
 #endif
 	{
 		MEM_ALLOC_CREDIT_("Map_VisClear");

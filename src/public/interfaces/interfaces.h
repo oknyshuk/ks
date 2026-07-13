@@ -129,7 +129,6 @@ DECLARE_TIER1_INTERFACE( IEventSystem, g_pEventSystem );
 
 #define LOCALIZE_INTERFACE_VERSION 			"Localize_001"
 DECLARE_TIER2_INTERFACE( ILocalize, g_pLocalize );
-DECLARE_TIER3_INTERFACE( vgui::ILocalize, g_pVGuiLocalize );
 
 #define RENDER_DEVICE_MGR_INTERFACE_VERSION		"RenderDeviceMgr001"
 DECLARE_TIER2_INTERFACE( IRenderDeviceMgr, g_pRenderDeviceMgr );

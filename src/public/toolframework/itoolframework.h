@@ -284,12 +284,12 @@ public:  // Other Hooks
 	virtual void	RenderFrameBegin() = 0;
 	virtual void	RenderFrameEnd() = 0;
 
-	// Paintmode is an enum declared in enginevgui.h
-	virtual void	VGui_PreRenderAllTools( int paintMode ) = 0;
-	virtual void	VGui_PostRenderAllTools( int paintMode ) = 0;
+	// Paintmode is an enum declared in engineui.h
+	virtual void	UI_PreRenderAllTools( int paintMode ) = 0;
+	virtual void	UI_PostRenderAllTools( int paintMode ) = 0;
 
-	virtual void	VGui_PreSimulateAllTools() = 0;
-	virtual void	VGui_PostSimulateAllTools() = 0;
+	virtual void	UI_PreSimulateAllTools() = 0;
+	virtual void	UI_PostSimulateAllTools() = 0;
 
 	// Are we using tools?
 	virtual bool	InToolMode() = 0;

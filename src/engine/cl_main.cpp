@@ -23,7 +23,7 @@
 #include "filesystem_engine.h"
 #include "icliententity.h"
 #include "dt_recv_eng.h"
-#include "vgui_baseui_interface.h"
+#include "engineui.h"
 #include "testscriptmgr.h"
 #include <tier0/vprof.h>
 #include <proto_oob.h>
@@ -41,7 +41,7 @@
 #include "decal.h"
 #include "sv_rcon.h"
 #include "cl_rcon.h"
-#include "vgui_baseui_interface.h"
+#include "engineui.h"
 #include "snd_audio_source.h"
 #include "iregistry.h"
 #include "sys.h"
@@ -56,14 +56,12 @@
 #include "tier2/tier2.h"
 #include "host_state.h"
 #include "enginethreads.h"
-#include "vgui/ISystem.h"
 #include "pure_server.h"
 #include "SoundEmitterSystem/isoundemittersystembase.h"
 #include "LoadScreenUpdate.h"
 #include "tier0/systeminformation.h"
 #include "steam/steam_api.h"
 #include "SourceAppInfo.h"
-#include "cl_texturelistpanel.h"
 #include "enginethreads.h"
 #include "tier1/characterset.h"
 #include "const.h"
@@ -477,7 +475,7 @@ void CL_ReadPackets ( bool bFinalTick )
 	// If we're fully connected, but still showing loading plaque, tick it once per frame
 	if ( cl.IsActive() && scr_drawloading )
 	{
-		EngineVGui()->UpdateProgressBar( PROGRESS_DEFAULT );
+		EngineUI()->UpdateProgressBar( PROGRESS_DEFAULT );
 	}
 
 	// update client times/tick
@@ -556,7 +554,7 @@ void CL_ReadPackets ( bool bFinalTick )
 		{
 			if ( IsPC() )
 			{
-				EngineVGui()->ShowErrorMessage();
+				EngineUI()->ShowErrorMessage();
 			}
 	
 			Host_Disconnect (true);
@@ -574,8 +572,6 @@ void CL_ClearState ( void )
 {
 	// clear out the current whitelist
 	CL_HandlePureServerWhitelist( NULL );
-
-	CL_TextureListPanel_ClearState();
 
 	CL_ResetEntityBits();
 
@@ -927,11 +923,11 @@ CON_COMMAND_F( connect, "Connect to specified server.", FCVAR_DONTRECORD )
 		NET_SetMultiplayer( true );		
 
 		// start progress bar immediately for remote connection
-		EngineVGui()->EnabledProgressBarForNextLoad();
+		EngineUI()->EnabledProgressBarForNextLoad();
 
 		SCR_BeginLoadingPlaque();
 
-		EngineVGui()->UpdateProgressBar(PROGRESS_BEGINCONNECT);
+		EngineUI()->UpdateProgressBar(PROGRESS_BEGINCONNECT);
 	}
 	else
 	{
@@ -1037,11 +1033,11 @@ CON_COMMAND_F( connect_splitscreen, "Connect to specified server. With multiple 
 		NET_SetMultiplayer( true );		
 
 		// start progress bar immediately for remote connection
-		EngineVGui()->EnabledProgressBarForNextLoad();
+		EngineUI()->EnabledProgressBarForNextLoad();
 
 		SCR_BeginLoadingPlaque();
 
-		EngineVGui()->UpdateProgressBar(PROGRESS_BEGINCONNECT);
+		EngineUI()->UpdateProgressBar(PROGRESS_BEGINCONNECT);
 	}
 	else
 	{
@@ -1628,7 +1624,7 @@ void CL_FullyConnected( void )
 {
 	CETWScope timer( "CL_FullyConnected" );
 
-	EngineVGui()->UpdateProgressBar( PROGRESS_FULLYCONNECTED );
+	EngineUI()->UpdateProgressBar( PROGRESS_FULLYCONNECTED );
 
 	// This has to happen HERE. ***** PRIOR TO g_pQueuedLoader->EndMapLoading() *****
 	// in phase 3, because it is in this phase
@@ -1708,11 +1704,11 @@ void CL_FullyConnected( void )
 	}
 
 	int iQueryPort = CL_GetServerQueryPort();
-	EngineVGui()->NotifyOfServerConnect(com_gamedir, ip, port, iQueryPort);
+	EngineUI()->NotifyOfServerConnect(com_gamedir, ip, port, iQueryPort);
 
 	GetTestScriptMgr()->CheckPoint( "FinishedMapLoad" );
 
-	EngineVGui()->UpdateProgressBar( PROGRESS_READYTOPLAY );
+	EngineUI()->UpdateProgressBar( PROGRESS_READYTOPLAY );
 
 	if ( ( !IsX360() && !IsPS3() ) || GetBaseLocalClient().m_nMaxClients == 1 )
 	{
@@ -1786,7 +1782,7 @@ void CL_FullyConnected( void )
 			XINPUT_CAPABILITIES caps;
 			if ( XInputGetCapabilities( iController, XINPUT_FLAG_GAMEPAD, &caps ) == ERROR_DEVICE_NOT_CONNECTED )
 			{
-				EngineVGui()->ActivateGameUI();
+				EngineUI()->ActivateGameUI();
 				break;
 			}
 		}
@@ -2856,7 +2852,7 @@ void CL_Move(float accumulated_extra_samples, bool bFinalTick )
 			np.index = 3;
 			Con_NXPrintf( &np, "Auto-disconnect in %.1f seconds", flRemainingTime );
 
-			EngineVGui()->NeedConnectionProblemWaitScreen();
+			EngineUI()->NeedConnectionProblemWaitScreen();
 		}
 
 		// sets m_nDeltaTick to -1
@@ -3231,7 +3227,7 @@ void CL_DemoTransitionFromTestChmb()
 //-----------------------------------------------------------------------------
 // Purpose: make the gameui appear after a certain interval
 //----------------------------------------------------------------------------
-void V_RenderVGuiOnly();
+void V_RenderUIOnly();
 bool V_CheckGamma();
 void CL_DemoCheckGameUIRevealTime( ) 
 {
@@ -3254,11 +3250,11 @@ void CL_DemoCheckGameUIRevealTime( )
 	if ( s_fDemoPlayMusicTime > 0 )
 	{
 		V_CheckGamma();
-		V_RenderVGuiOnly();
+		V_RenderUIOnly();
 		if ( s_fDemoPlayMusicTime < Sys_FloatTime() )
 		{
 			s_fDemoPlayMusicTime = -1;
-			EngineVGui()->ActivateGameUI();
+			EngineUI()->ActivateGameUI();
 
 			if ( CL_IsHL2Demo() )
 			{
@@ -3268,7 +3264,7 @@ void CL_DemoCheckGameUIRevealTime( )
 				}
 // 				else
 // 				{
-// 					EngineVGui()->ShowNewGameDialog(6);// bring up the new game dialog in game UI
+// 					EngineUI()->ShowNewGameDialog(6);// bring up the new game dialog in game UI
 // 				}
 			}
 		}
@@ -3464,13 +3460,7 @@ void CL_InitLanguageCvar()
 		{
 			// Use steam client language
 			memset( language, 0, sizeof( language ) );
-#ifdef PLATFORM_WINDOWS
-			vgui::system()->GetRegistryString( "HKEY_CURRENT_USER\\Software\\Valve\\Steam\\Language", language, sizeof( language ) - 1 );
-			if ( Q_strlen( language ) == 0 || Q_stricmp( language, "unknown" ) == 0 )
-			{
-				Q_strncpy( language, "english", sizeof( language ) );
-			}
-#elif defined(OSX)
+#if defined(OSX)
 			if ( Steam3Client().SteamApps() )
 			{
 				// just follow the language steam wants you to be
@@ -3504,13 +3494,6 @@ void CL_ChangeCloudSettingsCvar( IConVar *var, const char *pOldValue, float flOl
 	// !! bug do i need to do something linux-wise here.
 	if ( IsPC() && Steam3Client().SteamUtils() )
 	{
-#ifdef PLATFORM_WINDOWS
-		char szRegistryKeyLocation[ 256 ];
-		Q_snprintf( szRegistryKeyLocation, sizeof( szRegistryKeyLocation ), "HKEY_CURRENT_USER\\Software\\Valve\\Steam\\Apps\\%d\\Cloud", Steam3Client().SteamUtils()->GetAppID() );
-
-		ConVarRef ref( var->GetName() );
-		vgui::system()->SetRegistryInteger( szRegistryKeyLocation, ref.GetInt() );
-#endif
 	}
 }
 
@@ -3520,32 +3503,7 @@ void CL_InitCloudSettingsCvar()
 	if ( IsPC()	&& Steam3Client().SteamUtils() )
 	{
 		int iCloudSettings = -1;
-#ifdef PLATFORM_WINDOWS
-		char szRegistryKeyLocation[ 256 ];
-		Q_snprintf( szRegistryKeyLocation, sizeof( szRegistryKeyLocation ), "HKEY_CURRENT_USER\\Software\\Valve\\Steam\\Apps\\%d\\Cloud", Steam3Client().SteamUtils()->GetAppID() );
-
-		bool bFound = vgui::system()->GetRegistryInteger( szRegistryKeyLocation, iCloudSettings );
-
-		if ( !bFound )
-		{
-			#ifndef PORTAL2
-			// No key yet, use the uninitialized value
-			iCloudSettings = -1;
-			#else
-			// Portal 2 will cloud everything by default if no registry key
-			iCloudSettings = STEAMREMOTESTORAGE_CLOUD_ALL;
-			#endif
-		}
-
-		#if defined( CSTRIKE15 )
-		// Cloud isn't used in CS:GO for now
-		// This may eventually become optional, but we need to wipe out people's settings
-		// So that it's opt-in for existing players in the future
-		iCloudSettings = 0;
-		#endif
-#else
 		iCloudSettings = STEAMREMOTESTORAGE_CLOUD_ALL;
-#endif
 		
 		cl_cloud_settings.SetValue( iCloudSettings );
 	}
@@ -3910,7 +3868,7 @@ void CL_InstallAndInvokeClientStringTableCallbacks()
 		{
 			if ( !( j % 25 ) )
 			{
-				EngineVGui()->UpdateProgressBar(PROGRESS_DEFAULT);
+				EngineUI()->UpdateProgressBar(PROGRESS_DEFAULT);
 			}
 
 			int userDataSize;

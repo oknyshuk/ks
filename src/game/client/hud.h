@@ -13,7 +13,6 @@
 #include "utlvector.h"
 #include "utldict.h"
 #include "convar.h"
-#include <vgui/vgui.h>
 #include <color.h>
 #include <bitbuf.h>
 #include "usermessages.h"
@@ -49,7 +48,6 @@ public:
 		bRenderUsingFont = false;
 		bPrecached = false;
 		cCharacterInFont = 0;
-		hFont = NULL;
 	}
 
 	CHudTexture& operator =( const CHudTexture& src )
@@ -64,7 +62,6 @@ public:
 		rc = src.rc;
 		bRenderUsingFont = src.bRenderUsingFont;
 		cCharacterInFont = src.cCharacterInFont;
-		hFont = src.hFont;
 
 		return *this;
 	}
@@ -86,12 +83,12 @@ public:
 	int EffectiveWidth( float flScale ) const;
 	int EffectiveHeight( float flScale ) const;
 
-	void DrawSelf( int x, int y, const Color& clr, float flApparentZ = vgui::STEREO_NOOP ) const;
-	void DrawSelf( int x, int y, int w, int h, const Color& clr, float flApparentZ = vgui::STEREO_NOOP ) const;
-	void DrawSelfCropped( int x, int y, int cropx, int cropy, int cropw, int croph, Color clr, float flApparentZ = vgui::STEREO_NOOP ) const;
+	void DrawSelf( int x, int y, const Color& clr, float flApparentZ = 1.0f ) const;
+	void DrawSelf( int x, int y, int w, int h, const Color& clr, float flApparentZ = 1.0f ) const;
+	void DrawSelfCropped( int x, int y, int cropx, int cropy, int cropw, int croph, Color clr, float flApparentZ = 1.0f ) const;
 	// new version to scale the texture over a finalWidth and finalHeight passed in
-	void DrawSelfCropped( int x, int y, int cropx, int cropy, int cropw, int croph, int finalWidth, int finalHeight, Color clr, float flApparentZ = vgui::STEREO_NOOP ) const;
-	void DrawSelfScalableCorners( int x, int y, int w, int h, int iSrcCornerW, int iSrcCornerH, int iDrawCornerW, int iDrawCornerH, Color clr, float flApparentZ = vgui::STEREO_NOOP ) const;
+	void DrawSelfCropped( int x, int y, int cropx, int cropy, int cropw, int croph, int finalWidth, int finalHeight, Color clr, float flApparentZ = 1.0f ) const;
+	void DrawSelfScalableCorners( int x, int y, int w, int h, int iSrcCornerW, int iSrcCornerH, int iDrawCornerW, int iDrawCornerH, Color clr, float flApparentZ = 1.0f ) const;
 
 	char		szShortName[ 64 ];
 	char		szTextureFile[ 64 ];
@@ -99,7 +96,6 @@ public:
 	bool		bRenderUsingFont;
 	bool		bPrecached;
 	char		cCharacterInFont;
-	vgui::HFont hFont;
 
 	// vgui texture Id assigned to this item
 	int			textureId;
@@ -158,8 +154,6 @@ public:
 	void						OnTimeJump();
 	void						UpdateHud( bool bActive );
 
-	void						InitColors( vgui::IScheme *pScheme );
-
 	// Hud element registration
 	void						AddHudElement( CHudElement *pHudElement );
 	void						RemoveHudElement( CHudElement *pHudElement );
@@ -191,8 +185,6 @@ public:
 
 	CUtlVector< CHudElement * > &GetHudList();
 	const CUtlVector< CHudElement * > &GetHudList() const;
-	CUtlVector< vgui::Panel * > &GetHudPanelList();
-	const CUtlVector< vgui::Panel * > &GetHudPanelList() const;
 	void						OnSplitScreenStateChanged();
 
 	void						DisableHud( void );
@@ -213,12 +205,9 @@ public:
 	Color						m_clrYellowish;
 
 	CUtlVector< CHudElement * >	m_HudList;
-	// Same list as above, but with vgui::Panel dynamic_cast precomputed.  These should all be non-NULL!!!
-	CUtlVector< vgui::Panel * >	m_HudPanelList; 
 
 private:
-	void						InitFonts();
-    void                        DoElementThink( CHudElement* pElement, vgui::Panel* pPanel );
+	void						DoElementThink( CHudElement* pElement );
 
 
 
@@ -260,11 +249,6 @@ private:
 };
 
 CHudIcons &HudIcons();
-
-//-----------------------------------------------------------------------------
-// Global fonts used in the client DLL
-//-----------------------------------------------------------------------------
-extern vgui::HFont g_hFontTrebuchet24;
 
 void LoadHudTextures( CUtlDict< CHudTexture *, int >& list, const char *szFilenameWithoutExtension, const unsigned char *pICEKey );
 

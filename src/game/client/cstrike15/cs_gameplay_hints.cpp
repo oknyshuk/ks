@@ -8,7 +8,7 @@
 #include "keyvalues.h"
 #include "fmtstr.h"
 #include "filesystem.h"
-#include "vgui/ILocalize.h"
+#include "localize/ilocalize.h"
 #include "gametypes/igametypes.h"
 #include "cs_gamerules.h"
 
@@ -101,7 +101,7 @@ void CCSGameplayHints::PostInit()
 				const char* szLocToken = entry->GetString( "locToken", NULL );
 				if ( szLocToken )
 				{
-					const wchar_t *wszText = g_pVGuiLocalize->Find( szLocToken );
+					const wchar_t *wszText = g_pLocalize->Find( szLocToken );
 					Assert( wszText );
 					// Sanity check length here
 					if ( wszText )

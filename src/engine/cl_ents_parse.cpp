@@ -159,7 +159,7 @@ IClientNetworkable* CL_CreateDLLEntity( int iEnt, int iClass, int iSerialNum )
 		if ( !GetBaseLocalClient().IsActive() )
 		{
 			COM_TimestampedLog( "cl:  create '%s'", pClientClass->m_pNetworkName );
-			EngineVGui()->UpdateProgressBar( PROGRESS_CREATEENTITIES ); 				
+			EngineUI()->UpdateProgressBar( PROGRESS_CREATEENTITIES ); 				
 		}
 
 		// Create the entity.

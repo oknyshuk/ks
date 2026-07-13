@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
+//========= Copyright ï¿½ 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -549,6 +549,16 @@ bool CKeyValuesSystem::GetKeyValuesExpressionSymbol( const char *name )
 	//
 	// Fallback conditionals
 	//
+
+	if ( !V_stricmp( name, "INPUTSWAPAB" ) )
+	{
+		// Registered dynamically by the input system in InitializeXDevices() once
+		// controllers are enumerated (true only for Japanese PS3 button layout).
+		// KV files can be parsed before input init, so provide a false default
+		// here to avoid a bogus "Unknown symbol" warning. If the input system has
+		// already registered a value, the symbol-table lookup above wins.
+		return false;
+	}
 
 	if ( !V_stricmp( name, "GAMECONSOLESPLITSCREEN" ) )
 	{

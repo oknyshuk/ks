@@ -28,7 +28,7 @@
 // vgui includes
 #include "vgui/IBorder.h"
 #include "vgui/IInput.h"
-#include "vgui/ILocalize.h"
+#include "localize/ilocalize.h"
 #include "vgui/IPanel.h"
 #include "vgui/IScheme.h"
 #include "vgui/ISurface.h"

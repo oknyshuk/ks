@@ -11,15 +11,9 @@
 #include "clientmode_csnormal.h"
 #include "cdll_client_int.h"
 #include "iinput.h"
-#include "vgui/ISystem.h"
-#include "vgui/ISurface.h"
-#include "vgui/IPanel.h"
-#include <vgui_controls/AnimationController.h>
 #include "ivmodemanager.h"
-#include "buymenu.h"
 #include "cliententitylist.h"
 #include "filesystem.h"
-#include "vgui/IVGui.h"
 #include "hud_basechat.h"
 #include "view_shared.h"
 #include "view.h"
@@ -28,7 +22,6 @@
 #include "cstrikeclassmenu.h"
 #else
 #include "cs_gamerules.h"
-#include "classmenu.h"
 #include "gameui/gameui_interface.h"
 #include "c_cs_playerresource.h"
 #include "smokegrenade_projectile.h"
@@ -44,8 +37,7 @@
 #include "c_soundscape.h"
 #include <keyvalues.h>
 #include "text_message.h"
-#include "panelmetaclassmgr.h"
-#include "vguicenterprint.h"
+#include "uicenterprint.h"
 #include "physpropclientside.h"
 #include "c_weapon__stubs.h"
 #include <engine/IEngineSound.h>
@@ -62,13 +54,12 @@
 #include "hud_macros.h"
 #include "c_plantedc4.h"
 #include "tier1/fmtstr.h"
-#include "history_resource.h"
 #include "cs_client_gamestats.h"
 #include "viewpostprocess.h"
 #include "../../engine/keys.h"
 #include "inputsystem/iinputsystem.h"
 #include "matchmaking/mm_helpers.h"
-#include "gameui/basepanel.h"
+#include "RocketUI/rkmenu_main.h"
 #include "gameui/uigamedata.h"
 #include "GameStats.h"
 #if defined ( _GAMECONSOLE )
@@ -80,6 +71,7 @@
 #include "hltvcamera.h"
 #include "basecsgrenade_projectile.h"
 #include "hud_chat.h"
+#include "localize/ilocalize.h"
 #include "hltvreplaysystem.h"
 #include "netmessages.h"
 #include "playerdecals_signature.h"
@@ -115,7 +107,6 @@ bool __MsgFunc_PlayerDecalDigitalSignature( const CCSUsrMsg_PlayerDecalDigitalSi
 // WARNING!! WARNING!! WARNING!! WARNING!! WARNING!! WARNING!! WARNING!! WARNING!!
 //
 
-class CHudHintDisplay;
 class CHudChat;
 
 //-----------------------------------------------------------------------------
@@ -491,8 +482,6 @@ IVModeManager *modemanager = ( IVModeManager * )&g_ModeManager;
 // CCSModeManager implementation.
 // --------------------------------------------------------------------------------- //
 
-#define SCREEN_FILE		"scripts/vgui_screens.txt"
-
 void CCSModeManager::Init()
 {
 	for( int i = 0; i < MAX_SPLITSCREEN_PLAYERS; ++i )
@@ -500,8 +489,6 @@ void CCSModeManager::Init()
 		ACTIVE_SPLITSCREEN_PLAYER_GUARD( i );
 		g_pClientMode[ i ] = GetClientModeNormal();
 	}
-
-	PanelMetaClassMgr()->LoadMetaClassDefinitionFile( SCREEN_FILE );
 }
 
 void CCSModeManager::LevelInit( const char *newmap )
@@ -675,19 +662,6 @@ void ClientModeCSNormal::Init()
 		m_UMCMsgDisplayInventory.Bind< CS_UM_DisplayInventory, CCSUsrMsg_DisplayInventory>( UtlMakeDelegate(MsgFunc_DisplayInventory) );
 	}
 
-	CHudElement* hintBox = (CHudElement*)GET_HUDELEMENT( CHudHintDisplay );
-	if (hintBox)
-	{
-		hintBox->RegisterForRenderGroup("hide_for_scoreboard");
-		hintBox->RegisterForRenderGroup("hide_for_round_panel");
-	}
-
-	CHudElement* historyResource = (CHudElement*)GET_HUDELEMENT( CHudHistoryResource );
-	if (historyResource)
-	{
-		historyResource->RegisterForRenderGroup("hide_for_scoreboard");
-	}
-
 	char szName[ MAX_PATH ] = "";
 
 	if ( m_CCKillCamReplay == INVALID_CLIENT_CCHANDLE )
@@ -765,22 +739,8 @@ void ClientModeCSNormal::Init()
 
 	m_hCurrentColorCorrection = NULL;
 
-#if !defined(NO_STEAM) && !defined (_PS3)
-	m_CallbackScreenshotRequested.Register( this, &ClientModeCSNormal::OnScreenshotRequested );
-#endif
-
 	EnableSteamScreenshots( true );
 }
-
-#if !defined(NO_STEAM) && !defined (_PS3)
-void ClientModeCSNormal::OnScreenshotRequested( ScreenshotRequested_t *pParam )
-{
-	// Steam has requested a screenshot, act as if the key currently bound to screenshots
-	// has been pressed (we want tagging and the killcam screenshot behavior if applicable)
-	KeyInput( 0, BUTTON_CODE_INVALID, "screenshot" );
-	engine->ClientCmd( "screenshot" );
-}
-#endif
 
 
 void ClientModeCSNormal::InitViewport()
@@ -1059,10 +1019,6 @@ void ClientModeCSNormal::Update()
 	extern void OnPlayerDecalsUpdate();
 	OnPlayerDecalsUpdate();
 
-	// Override the hud's visibility if this is a logo (like E3 demo) map.
-	if ( CSGameRules() && CSGameRules()->IsLogoMap() )
-		m_pViewport->SetVisible( false );
-
 	if ( ( m_fDelayedCTWinTime > 0.0f ) && ( gpGlobals->curtime >= m_fDelayedCTWinTime  ) )
 	{
 		CLocalPlayerFilter filter;
@@ -1158,7 +1114,7 @@ void ClientModeCSNormal::Update()
 				KeyValues::AutoDelete autodelete( pKVLocalizedQuestStrings );
 				FOR_EACH_SUBKEY( pQuestDef->GetStringTokens(), keyvalue )
 				{
-					pKVLocalizedQuestStrings->SetWString( keyvalue->GetName(), g_pVGuiLocalize->Find( keyvalue->GetString() ) );
+					pKVLocalizedQuestStrings->SetWString( keyvalue->GetName(), g_pLocalize->Find( keyvalue->GetString() ) );
 				}
 				
 				// Points earned
@@ -1174,14 +1130,14 @@ void ClientModeCSNormal::Update()
 
 					const locchar_t * locShortName = L"";
 
-					locShortName = g_pVGuiLocalize->Find( pQuestDef->GetShortNameLocToken( ) );
+					locShortName = g_pLocalize->Find( pQuestDef->GetShortNameLocToken( ) );
 
 					if ( !locShortName )
 					{
 						locShortName = L"QUEST MISSING SHORT NAME";
 					}
 
-					g_pVGuiLocalize->ConstructString( wchQuestName, sizeof( wchQuestName ), locShortName, pKVLocalizedQuestStrings );
+					g_pLocalize->ConstructString( wchQuestName, sizeof( wchQuestName ), locShortName, pKVLocalizedQuestStrings );
 					pKVLocalizedQuestStrings->SetWString( "quest_short_name", wchQuestName );
 					
 				}
@@ -1195,7 +1151,7 @@ void ClientModeCSNormal::Update()
 
 				// Make the message
 				wchar_t wchHudMessage[256] = {};
-				g_pVGuiLocalize->ConstructString( wchHudMessage, sizeof( wchHudMessage ), fmtToken, pKVLocalizedQuestStrings );
+				g_pLocalize->ConstructString( wchHudMessage, sizeof( wchHudMessage ), fmtToken, pKVLocalizedQuestStrings );
 				if ( wchHudMessage[0] )
 				{
 					if ( CHudChat* pChat = ( CHudChat* )( GetHud( 0 ).FindElement( "CHudChat" ) ) )
@@ -1222,11 +1178,11 @@ void ClientModeCSNormal::Update()
 			{
 				s_nLastTimePlayedConsecutivelyPrinted = nTimePlayedConsecutively;
 
-				static wchar_t const * const kwszHour = g_pVGuiLocalize->Find( "#SFUI_Warning_AntiAddiction_Time_Hour" );
-				static wchar_t const * const kwszHours = g_pVGuiLocalize->Find( "#SFUI_Warning_AntiAddiction_Time_Hours" );
-				static wchar_t const * const kwszMinutes = g_pVGuiLocalize->Find( "#SFUI_Warning_AntiAddiction_Time_Minutes" );
-				static wchar_t const * const kwszFmtH = g_pVGuiLocalize->Find( "#SFUI_Warning_AntiAddiction_Time_Format_H" );
-				static wchar_t const * const kwszFmtHM = g_pVGuiLocalize->Find( "#SFUI_Warning_AntiAddiction_Time_Format_HM" );
+				static wchar_t const * const kwszHour = g_pLocalize->Find( "#SFUI_Warning_AntiAddiction_Time_Hour" );
+				static wchar_t const * const kwszHours = g_pLocalize->Find( "#SFUI_Warning_AntiAddiction_Time_Hours" );
+				static wchar_t const * const kwszMinutes = g_pLocalize->Find( "#SFUI_Warning_AntiAddiction_Time_Minutes" );
+				static wchar_t const * const kwszFmtH = g_pLocalize->Find( "#SFUI_Warning_AntiAddiction_Time_Format_H" );
+				static wchar_t const * const kwszFmtHM = g_pLocalize->Find( "#SFUI_Warning_AntiAddiction_Time_Format_HM" );
 
 				wchar_t wszHours[64] = {}, wszMinutes[64] = {};
 				V_swprintf_safe( wszHours, L"%d", nTimePlayedConsecutively/3600 );
@@ -1234,7 +1190,7 @@ void ClientModeCSNormal::Update()
 				wchar_t const *wszFmtTime = ( ( nTimePlayedConsecutively%3600 ) / 60 >= 5 ) ? kwszFmtHM : kwszFmtH;
 				
 				wchar_t wszTimeString[256] = {};
-				g_pVGuiLocalize->ConstructString( wszTimeString, sizeof( wszTimeString ), wszFmtTime, 4,
+				g_pLocalize->ConstructString( wszTimeString, sizeof( wszTimeString ), wszFmtTime, 4,
 					wszHours, ( nTimePlayedConsecutively/3600 > 1 ) ? kwszHours : kwszHour, wszMinutes, kwszMinutes );
 
 				char const *szColor = "Green";
@@ -1244,7 +1200,7 @@ void ClientModeCSNormal::Update()
 					szColor = "Yellow";
 				
 				wchar_t wszLocalizedAntiAddiction[1024] = {};
-				g_pVGuiLocalize->ConstructString( wszLocalizedAntiAddiction, sizeof( wszLocalizedAntiAddiction ), g_pVGuiLocalize->Find( CFmtStr( "#SFUI_Warning_AntiAddiction_%s", szColor ) ), 1, wszTimeString );
+				g_pLocalize->ConstructString( wszLocalizedAntiAddiction, sizeof( wszLocalizedAntiAddiction ), g_pLocalize->Find( CFmtStr( "#SFUI_Warning_AntiAddiction_%s", szColor ) ), 1, wszTimeString );
 				pChat->ChatPrintfW( 0, CHAT_FILTER_NONE, wszLocalizedAntiAddiction );
 			}
 		}
@@ -1859,18 +1815,10 @@ int	ClientModeCSNormal::KeyInput( int down, ButtonCode_t keynum, const char *psz
 class CHudViewport : public CBaseViewport
 {
 private:
-	DECLARE_CLASS_SIMPLE( CHudViewport, CBaseViewport );
+	typedef CBaseViewport BaseClass;
+	typedef CHudViewport ThisClass;
 
 protected:
-	virtual void ApplySchemeSettings( vgui::IScheme *pScheme )
-	{
-		BaseClass::ApplySchemeSettings( pScheme );
-
-		GetHud().InitColors( pScheme );
-
-		SetPaintBackgroundEnabled( false );
-	}
-
 	virtual void CreateDefaultPanels( void ) { /* don't create any panels yet*/ };
 };
 
@@ -1879,7 +1827,8 @@ protected:
 class FullscreenCSViewport : public CHudViewport
 {
 private:
-	DECLARE_CLASS_SIMPLE( FullscreenCSViewport, CHudViewport );
+	typedef CHudViewport BaseClass;
+	typedef FullscreenCSViewport ThisClass;
 
 private:
 	virtual void InitViewportSingletons( void )
@@ -1890,21 +1839,14 @@ private:
 	virtual void SetUpPopup( void )
 	{
 	}
-
-	virtual void ApplySchemeSettings( vgui::IScheme *pScheme )
-	{
-		BaseClass::ApplySchemeSettings( pScheme );
-
-		SetMouseInputEnabled( false );
-		SetKeyBoardInputEnabled( false );
-	}
 };
 
 
 
 class ClientModeCSFullscreen : public ClientModeCSNormal
 {
-	DECLARE_CLASS_SIMPLE( ClientModeCSFullscreen, ClientModeCSNormal );
+	typedef ClientModeCSNormal BaseClass;
+	typedef ClientModeCSFullscreen ThisClass;
 
 public:
 	virtual void InitViewport()
@@ -2538,26 +2480,26 @@ void ClientModeCSNormal::FireGameEvent( IGameEvent *event )
 
 			if ( iTeam == TEAM_SPECTATOR && !bIsBot )
 			{
-				g_pVGuiLocalize->ConvertANSIToUnicode( pPlayer->GetPlayerName(), wszPlayerName, sizeof(wszPlayerName) );
-				g_pVGuiLocalize->ConstructString( wszLocalized, sizeof( wszLocalized ), g_pVGuiLocalize->Find( "#Cstrike_game_join_spectators" ), 1, wszPlayerName );
+				g_pLocalize->ConvertANSIToUnicode( pPlayer->GetPlayerName(), wszPlayerName, sizeof(wszPlayerName) );
+				g_pLocalize->ConstructString( wszLocalized, sizeof( wszLocalized ), g_pLocalize->Find( "#Cstrike_game_join_spectators" ), 1, wszPlayerName );
 
-				g_pVGuiLocalize->ConvertUnicodeToANSI( wszLocalized, szLocalized, sizeof(szLocalized) );
+				g_pLocalize->ConvertUnicodeToANSI( wszLocalized, szLocalized, sizeof(szLocalized) );
 				pHudChat->Printf( CHAT_FILTER_NONE, "%s", szLocalized );
 			}
 			else if ( iTeam == TEAM_TERRORIST && !bIsBot )
 			{
-				g_pVGuiLocalize->ConvertANSIToUnicode( pPlayer->GetPlayerName(), wszPlayerName, sizeof(wszPlayerName) );
-				g_pVGuiLocalize->ConstructString( wszLocalized, sizeof( wszLocalized ), g_pVGuiLocalize->Find( "#Cstrike_game_join_terrorist" ), 1, wszPlayerName );
+				g_pLocalize->ConvertANSIToUnicode( pPlayer->GetPlayerName(), wszPlayerName, sizeof(wszPlayerName) );
+				g_pLocalize->ConstructString( wszLocalized, sizeof( wszLocalized ), g_pLocalize->Find( "#Cstrike_game_join_terrorist" ), 1, wszPlayerName );
 
-				g_pVGuiLocalize->ConvertUnicodeToANSI( wszLocalized, szLocalized, sizeof(szLocalized) );
+				g_pLocalize->ConvertUnicodeToANSI( wszLocalized, szLocalized, sizeof(szLocalized) );
 				pHudChat->Printf( CHAT_FILTER_NONE, "%s", szLocalized );
 			}
 			else if ( iTeam == TEAM_CT && !bIsBot )
 			{
-				g_pVGuiLocalize->ConvertANSIToUnicode( pPlayer->GetPlayerName(), wszPlayerName, sizeof(wszPlayerName) );
-				g_pVGuiLocalize->ConstructString( wszLocalized, sizeof( wszLocalized ), g_pVGuiLocalize->Find( "#Cstrike_game_join_ct" ), 1, wszPlayerName );
+				g_pLocalize->ConvertANSIToUnicode( pPlayer->GetPlayerName(), wszPlayerName, sizeof(wszPlayerName) );
+				g_pLocalize->ConstructString( wszLocalized, sizeof( wszLocalized ), g_pLocalize->Find( "#Cstrike_game_join_ct" ), 1, wszPlayerName );
 
-				g_pVGuiLocalize->ConvertUnicodeToANSI( wszLocalized, szLocalized, sizeof(szLocalized) );
+				g_pLocalize->ConvertUnicodeToANSI( wszLocalized, szLocalized, sizeof(szLocalized) );
 				pHudChat->Printf( CHAT_FILTER_NONE, "%s", szLocalized );
 			}
 		}
@@ -2577,7 +2519,7 @@ void ClientModeCSNormal::FireGameEvent( IGameEvent *event )
 
 			V_swprintf_safe( seconds, L"%d", mp_c4timer.GetInt() );
 
-			g_pVGuiLocalize->ConstructString( wszLocalized, sizeof( wszLocalized ), g_pVGuiLocalize->Find( "#Cstrike_TitlesTXT_Bomb_Planted" ), 1, seconds );
+			g_pLocalize->ConstructString( wszLocalized, sizeof( wszLocalized ), g_pLocalize->Find( "#Cstrike_TitlesTXT_Bomb_Planted" ), 1, seconds );
 
 			GetCenterPrint()->Print( wszLocalized );
 
@@ -2723,9 +2665,9 @@ void ClientModeCSNormal::FireGameEvent( IGameEvent *event )
 
 				wchar_t wszLocalizedString[MAX_DECORATED_PLAYER_NAME_LENGTH] = {};
 				if ( iRank == MEDAL_RANK_SILVER )
-					g_pVGuiLocalize->ConstructString( wszLocalizedString, sizeof( wszLocalizedString ), g_pVGuiLocalize->Find( "#SEASONX_Coin_LevelUp_Silver" ), 1, wszPlayerName );
+					g_pLocalize->ConstructString( wszLocalizedString, sizeof( wszLocalizedString ), g_pLocalize->Find( "#SEASONX_Coin_LevelUp_Silver" ), 1, wszPlayerName );
 				else if ( iRank == MEDAL_RANK_GOLD )
-					g_pVGuiLocalize->ConstructString( wszLocalizedString, sizeof( wszLocalizedString ), g_pVGuiLocalize->Find( "#SEASONX_Coin_LevelUp_Gold" ), 1, wszPlayerName );
+					g_pLocalize->ConstructString( wszLocalizedString, sizeof( wszLocalizedString ), g_pLocalize->Find( "#SEASONX_Coin_LevelUp_Gold" ), 1, wszPlayerName );
 
 				if ( wszLocalizedString[0] )
 				{
@@ -2780,7 +2722,7 @@ void ClientModeCSNormal::FireGameEvent( IGameEvent *event )
 						if (constAchievementName)
 						{
 							wchar_t wszLocalizedString[2 * MAX_DECORATED_PLAYER_NAME_LENGTH];
-							g_pVGuiLocalize->ConstructString( wszLocalizedString, sizeof( wszLocalizedString ), g_pVGuiLocalize->Find( "#Achievement_Earned" ), 2, wszPlayerName, constAchievementName/*wszAchievementString*/ );
+							g_pLocalize->ConstructString( wszLocalizedString, sizeof( wszLocalizedString ), g_pLocalize->Find( "#Achievement_Earned" ), 2, wszPlayerName, constAchievementName/*wszAchievementString*/ );
 
 							hudChat->ChatPrintfW( iPlayerIndex, CHAT_FILTER_ACHIEVEMENT, wszLocalizedString );
 						}
@@ -2828,7 +2770,7 @@ void ClientModeCSNormal::FireGameEvent( IGameEvent *event )
 				}
 
 				const char *pszLocString = g_pszItemFoundMethodStrings[iMethod];
-				wchar_t const *wszItemFound = pszLocString ? g_pVGuiLocalize->Find( pszLocString ) : NULL;
+				wchar_t const *wszItemFound = pszLocString ? g_pLocalize->Find( pszLocString ) : NULL;
 				if ( wszItemFound )
 				{
 					// TODO: Update the localization strings to only have two format parameters since that's all we need.
@@ -2849,14 +2791,14 @@ void ClientModeCSNormal::FireGameEvent( IGameEvent *event )
 								wchar_t wszItemName[256];
 								_snwprintf( wszItemName, ARRAYSIZE( wszItemName ), L"%c" PRI_WS_FOR_WS L"\01", nRarity + COLOR_RARITY_FIRST, pEconItem->GetItemName() );
 
-								g_pVGuiLocalize->ConstructString( wszLocalizedString, sizeof( wszLocalizedString ), wszItemFound, 3, wszPlayerName, wszItemName, L"" );
+								g_pLocalize->ConstructString( wszLocalizedString, sizeof( wszLocalizedString ), wszItemFound, 3, wszPlayerName, wszItemName, L"" );
 								bUsingFullName = true;
 							}
 						}
 					}
 					
 					if ( !bUsingFullName )
-						g_pVGuiLocalize->ConstructString( wszLocalizedString, sizeof( wszLocalizedString ), wszItemFound, 3, wszPlayerName, g_pVGuiLocalize->Find( pItemDefinition->GetItemBaseName() ), L"" );
+						g_pLocalize->ConstructString( wszLocalizedString, sizeof( wszLocalizedString ), wszItemFound, 3, wszPlayerName, g_pLocalize->Find( pItemDefinition->GetItemBaseName() ), L"" );
 
 					if ( wszLocalizedString[0] )
 					{
@@ -2889,10 +2831,10 @@ void ClientModeCSNormal::FireGameEvent( IGameEvent *event )
 				wchar_t wszPlayerName[MAX_DECORATED_PLAYER_NAME_LENGTH] = {};
 				cs_PR->GetDecoratedPlayerName( iPlayerIndex, wszPlayerName, sizeof( wszPlayerName ), k_EDecoratedPlayerNameFlag_DontMakeStringSafe );
 
-				if ( wchar_t const *wszLocToken = g_pVGuiLocalize->Find( fmtMessageLoc ) )
+				if ( wchar_t const *wszLocToken = g_pLocalize->Find( fmtMessageLoc ) )
 				{
 					wchar_t wszLocalizedString[2 * MAX_DECORATED_PLAYER_NAME_LENGTH];
-					g_pVGuiLocalize->ConstructString( wszLocalizedString, sizeof( wszLocalizedString ), wszLocToken, 2, wszPlayerName, wszArg2 );
+					g_pLocalize->ConstructString( wszLocalizedString, sizeof( wszLocalizedString ), wszLocToken, 2, wszPlayerName, wszArg2 );
 
 					hudChat->ChatPrintfW( iPlayerIndex, CHAT_FILTER_ACHIEVEMENT, wszLocalizedString );
 				}
@@ -2940,10 +2882,10 @@ void ClientModeCSNormal::FireGameEvent( IGameEvent *event )
 					cs_PR->GetDecoratedPlayerName( pFoundRecipient->entindex(), wszArg2, sizeof( wszArg2 ), k_EDecoratedPlayerNameFlag_DontMakeStringSafe );
 					
 					char const *fmtMessageLoc = "#Item_GiftsYouSentGift";
-					if ( wchar_t const *wszLocToken = g_pVGuiLocalize->Find( fmtMessageLoc ) )
+					if ( wchar_t const *wszLocToken = g_pLocalize->Find( fmtMessageLoc ) )
 					{
 						wchar_t wszLocalizedString[2 * MAX_DECORATED_PLAYER_NAME_LENGTH];
-						g_pVGuiLocalize->ConstructString( wszLocalizedString, sizeof( wszLocalizedString ), wszLocToken, 1, wszArg2 );
+						g_pLocalize->ConstructString( wszLocalizedString, sizeof( wszLocalizedString ), wszLocToken, 1, wszArg2 );
 
 						hudChat->ChatPrintfW( iPlayerIndex, CHAT_FILTER_ACHIEVEMENT, wszLocalizedString );
 					}
@@ -2956,10 +2898,10 @@ void ClientModeCSNormal::FireGameEvent( IGameEvent *event )
 				cs_PR->GetDecoratedPlayerName( iPlayerIndex, wszPlayerName, sizeof( wszPlayerName ), k_EDecoratedPlayerNameFlag_DontMakeStringSafe );
 
 				char const *fmtMessageLoc = "#Item_GiftsYouGotGift";
-				if ( wchar_t const *wszLocToken = g_pVGuiLocalize->Find( fmtMessageLoc ) )
+				if ( wchar_t const *wszLocToken = g_pLocalize->Find( fmtMessageLoc ) )
 				{
 					wchar_t wszLocalizedString[2 * MAX_DECORATED_PLAYER_NAME_LENGTH];
-					g_pVGuiLocalize->ConstructString( wszLocalizedString, sizeof( wszLocalizedString ), wszLocToken, 1, wszPlayerName );
+					g_pLocalize->ConstructString( wszLocalizedString, sizeof( wszLocalizedString ), wszLocToken, 1, wszPlayerName );
 
 					hudChat->ChatPrintfW( iPlayerIndex, CHAT_FILTER_ACHIEVEMENT, wszLocalizedString );
 
@@ -3046,7 +2988,7 @@ bool __MsgFunc_SendPlayerItemFound( const CCSUsrMsg_SendPlayerItemFound &msg )
 		}
 
 		const char *pszLocString = g_pszItemFoundMethodStrings[ iMethod ];
-		wchar_t *wszItemFound = pszLocString ? g_pVGuiLocalize->Find( pszLocString ) : NULL;
+		wchar_t *wszItemFound = pszLocString ? g_pLocalize->Find( pszLocString ) : NULL;
 		if ( wszItemFound )
 		{
 			wchar_t wszLocalizedString[ 2 * MAX_DECORATED_PLAYER_NAME_LENGTH ] = {};
@@ -3405,18 +3347,6 @@ static void UpdateClassImageEntity(
 
 #endif // CSTRIKE15
 
-bool WillPanelBeVisible( vgui::VPANEL hPanel )
-{
-	while ( hPanel )
-	{
-		if ( !vgui::ipanel()->IsVisible( hPanel ) )
-			return false;
-
-		hPanel = vgui::ipanel()->GetParent( hPanel );
-	}
-	return true;
-}
-
 void ClientModeCSNormal::PreRender(CViewSetup *pSetup)
 {
 	ClientModeShared::PreRender( pSetup );
@@ -3428,29 +3358,6 @@ void ClientModeCSNormal::PreRender(CViewSetup *pSetup)
 
 void ClientModeCSNormal::PostRenderVGui()
 {
-#if !defined( CSTRIKE15 )
-	// If the team menu is up, then we will render the model of the character that is currently selected.
-	for ( int i=0; i < g_ClassImagePanels.Count(); i++ )
-	{
-		CCSClassImagePanel *pPanel = g_ClassImagePanels[i];
-		if ( WillPanelBeVisible( pPanel->GetVPanel() ) )
-		{
-			// Ok, we have a visible class image panel.
-			int x, y, w, h;
-			pPanel->GetBounds( x, y, w, h );
-			pPanel->LocalToScreen( x, y );
-
-			// Allow for the border.
-			x += 3;
-			y += 5;
-			w -= 2;
-			h -= 10;
-
-			UpdateClassImageEntity( g_ClassImagePanels[i]->m_ModelName, x, y, w, h );
-			return;
-		}
-	}
-#endif // !CSTRIKE15
 }
 
 bool ClientModeCSNormal::ShouldDrawViewModel( void )
@@ -3577,15 +3484,6 @@ bool __MsgFunc_DisconnectToLobby( const CCSUsrMsg_DisconnectToLobby &msg )
 
 bool __MsgFunc_WarmupHasEnded( const CCSUsrMsg_WarmupHasEnded &msg )
 {
-	if ( CSGameRules() && CSGameRules()->IsQueuedMatchmaking() )
-	{
-		IViewPortPanel *pTextWindow = GetViewPortInterface()->FindPanelByName( PANEL_INFO );
-		if ( pTextWindow && pTextWindow->IsVisible() )
-		{
-			( static_cast< vgui::Frame * >( ( CTextWindow * )pTextWindow ) )->OnCommand( "okay" );
-		}
-	}
-
 	return true;
 }
 
@@ -3833,18 +3731,16 @@ void ClientModeCSFullscreen::OnEvent( KeyValues *pEvent )
 	else if ( !Q_stricmp( pEventName, "OnClientInsecureBlocked" ) )
 	{
 		g_bClientIsAllowedToPlayOnSecureServers = false;
-		BasePanel()->RestoreMainMenuScreen();
+		RocketMainMenuDocument::RestorePanel();
 	}
 }
 
 CON_COMMAND_F( error_message_explain_vac, "Take user to Steam support article", FCVAR_CLIENTCMD_CAN_EXECUTE | FCVAR_HIDDEN )
 {
-	vgui::system()->OpenURL("https://support.steampowered.com/kb_article.php?ref=2117-ILZV-2837" );
 }
 
 CON_COMMAND_F( error_message_explain_pure, "Take user to Steam support article", FCVAR_CLIENTCMD_CAN_EXECUTE | FCVAR_HIDDEN )
 {
-	vgui::system()->OpenURL("https://support.steampowered.com/kb_article.php?ref=8285-YOAZ-6049" );
 }
 
 void ClientModeCSFullscreen::FireGameEvent( IGameEvent *event )

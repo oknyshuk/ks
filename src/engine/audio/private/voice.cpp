@@ -21,7 +21,7 @@
 #include "../../filesystem_engine.h"
 #include "tier1/utlbuffer.h"
 #include "../../cl_splitscreen.h"
-#include "vgui_baseui_interface.h"
+#include "engineui.h"
 #include "demo.h"
 
 extern IVEngineClient *engineClient;
@@ -778,7 +778,7 @@ bool Voice_Init(const char *pCodecName, int iVersion )
 //	if ( V_strncmp( g_pszCurrentVoiceCodec, pCodecName, sizeof( g_pszCurrentVoiceCodec ) ) == 0 && g_iCurrentVoiceVersion == iVersion )
 //		return true;
 
-	EngineVGui()->UpdateProgressBar( PROGRESS_DEFAULT );
+	EngineUI()->UpdateProgressBar( PROGRESS_DEFAULT );
 
 	Voice_Deinit();
 
@@ -800,7 +800,7 @@ bool Voice_Init(const char *pCodecName, int iVersion )
 		g_VoiceSampleFormat.nAvgBytesPerSec = VOICE_OUTPUT_SAMPLE_RATE * 2;
 	}
 
-	EngineVGui()->UpdateProgressBar( PROGRESS_DEFAULT );
+	EngineUI()->UpdateProgressBar( PROGRESS_DEFAULT );
 
 #ifdef OSX
 	IVoiceRecord* CreateVoiceRecord_AudioQueue(int sampleRate);
@@ -821,7 +821,7 @@ bool Voice_Init(const char *pCodecName, int iVersion )
 		steamapicontext->Init();
 	}
 	
-	EngineVGui()->UpdateProgressBar( PROGRESS_DEFAULT );
+	EngineUI()->UpdateProgressBar( PROGRESS_DEFAULT );
 
 	// Get the codec.
 	CreateInterfaceFn createCodecFn;
@@ -841,7 +841,7 @@ bool Voice_Init(const char *pCodecName, int iVersion )
 		g_hVoiceCodecDLL = NULL;
 	}
 
-	EngineVGui()->UpdateProgressBar( PROGRESS_DEFAULT );
+	EngineUI()->UpdateProgressBar( PROGRESS_DEFAULT );
 
 	if ( !g_hVoiceCodecDLL || (createCodecFn = Sys_GetFactory(g_hVoiceCodecDLL)) == NULL ||
 		 (g_pEncodeCodec = (IVoiceCodec*)createCodecFn(pCodecName, NULL)) == NULL || !g_pEncodeCodec->Init( iVersion ) )
@@ -855,7 +855,7 @@ bool Voice_Init(const char *pCodecName, int iVersion )
 	{
 		CVoiceChannel *pChannel = &g_VoiceChannels[i];
 
-		EngineVGui()->UpdateProgressBar( PROGRESS_DEFAULT );
+		EngineUI()->UpdateProgressBar( PROGRESS_DEFAULT );
 
 		if((pChannel->m_pVoiceCodec = (IVoiceCodec*)createCodecFn(pCodecName, NULL)) == NULL || !pChannel->m_pVoiceCodec->Init( iVersion ))
 		{
@@ -864,7 +864,7 @@ bool Voice_Init(const char *pCodecName, int iVersion )
 		}
 	}
 
-	EngineVGui()->UpdateProgressBar( PROGRESS_DEFAULT );
+	EngineUI()->UpdateProgressBar( PROGRESS_DEFAULT );
 
 	InitMixerControls();
 

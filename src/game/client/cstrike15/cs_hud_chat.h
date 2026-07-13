@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
+//========= Copyright ï¿½ 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose:
 //
@@ -16,16 +16,6 @@
 //--------------------------------------------------------------------------------------------------------------
 class CHudChatLine : public CBaseHudChatLine
 {
-	DECLARE_CLASS_SIMPLE( CHudChatLine, CBaseHudChatLine );
-
-public:
-	CHudChatLine( vgui::Panel *parent, const char *panelName );
-
-	virtual void	ApplySchemeSettings(vgui::IScheme *pScheme);
-
-private:
-	CHudChatLine( const CHudChatLine & ); // = delete; // not defined, not accessible
-
 };
 
 //-----------------------------------------------------------------------------
@@ -33,17 +23,11 @@ private:
 //-----------------------------------------------------------------------------
 class CHudChatInputLine : public CBaseHudChatInputLine
 {
-	DECLARE_CLASS_SIMPLE( CHudChatInputLine, CBaseHudChatInputLine );
-
-public:
-	CHudChatInputLine( CBaseHudChat *parent, char const *panelName ) : CBaseHudChatInputLine( parent, panelName ) {}
-
-	virtual void	ApplySchemeSettings(vgui::IScheme *pScheme);
 };
 
 class CHudChat : public CBaseHudChat
 {
-	DECLARE_CLASS_SIMPLE( CHudChat, CBaseHudChat );
+	typedef CBaseHudChat BaseClass;
 
 public:
 	explicit CHudChat( const char *pElementName );

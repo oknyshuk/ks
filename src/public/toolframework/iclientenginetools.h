@@ -45,9 +45,9 @@ public:
 	virtual bool SetupEngineView( Vector &origin, QAngle &angles, float &fov ) = 0;
 	virtual bool SetupAudioState( AudioState_t &audioState ) = 0;
 
-	// Paintmode is an enum declared in ienginevgui.h
-	virtual void VGui_PreRenderAllTools( int paintMode ) = 0;
-	virtual void VGui_PostRenderAllTools( int paintMode ) = 0;
+	// Paintmode is an enum declared in iengineui.h
+	virtual void UI_PreRenderAllTools( int paintMode ) = 0;
+	virtual void UI_PostRenderAllTools( int paintMode ) = 0;
 
 	virtual bool IsThirdPersonCamera( ) = 0;
 

@@ -11,7 +11,7 @@
 
 #include "host.h"
 #include "tier3/tier3.h"
-#include "vgui/ILocalize.h"
+#include "localize/ilocalize.h"
 
 #ifdef IS_WINDOWS_PC
 #include "winerror.h"
@@ -543,7 +543,7 @@ uint CXboxSystem::CreateUserSettingsContainer( int iController, uint nCreationFl
 	#if XBX_USER_SETTINGS_CONTAINER_ENABLED
 	XCONTENT_DATA contentData;
 	memset( &contentData, 0, sizeof( contentData ) );
-	Q_wcsncpy( contentData.szDisplayName, g_pVGuiLocalize->FindSafe( "#GameUI_Console_UserSettings" ), sizeof( contentData.szDisplayName ) );
+	Q_wcsncpy( contentData.szDisplayName, g_pLocalize->FindSafe( "#GameUI_Console_UserSettings" ), sizeof( contentData.szDisplayName ) );
 	Q_snprintf( contentData.szFileName, sizeof( contentData.szFileName ), "UserSettings" );
 
 	return XHelper_CreateContainer( iController, nCreationFlags, contentData, XBX_USER_SETTINGS_BYTES, XBX_USER_SETTINGS_CONTAINER_DRIVE );
@@ -635,9 +635,9 @@ void CXboxSystem::GetModSaveContainerNames( const char *pchModName, const wchar_
 	{
 		char chFmtString[256] = {0};
 		Q_snprintf( chFmtString, sizeof( chFmtString ), "#GameUI_Console_%s_Saves", pchModName );
-		wchar_t const *wszLocStr = g_pVGuiLocalize->Find( chFmtString );
+		wchar_t const *wszLocStr = g_pLocalize->Find( chFmtString );
 		if ( !wszLocStr || !*wszLocStr )
-			wszLocStr = g_pVGuiLocalize->Find( "#GameUI_Console_SaveGames" );
+			wszLocStr = g_pLocalize->Find( "#GameUI_Console_SaveGames" );
 		if ( !wszLocStr || !*wszLocStr )
 			wszLocStr = L"SAVES";
 

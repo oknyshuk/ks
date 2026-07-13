@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2009, Valve Corporation, All rights reserved. ============//
+//========= Copyright ï¿½ 1996-2009, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: Allows movies to be played as a VGUI screen in the world
 //
@@ -7,7 +7,6 @@
 #include "cbase.h"
 #include "EnvMessage.h"
 #include "fmtstr.h"
-#include "vguiscreen.h"
 #include "filesystem.h"
 
 // NOTE: This has to be the last file included!
@@ -92,8 +91,6 @@ private:
 	int			m_iScreenHeight;
 
 	bool		m_bDoFullTransmit;
-
-	CHandle<CVGuiScreen>	m_hScreen;
 };
 
 LINK_ENTITY_TO_CLASS( vgui_movie_display, CMovieDisplay );
@@ -128,8 +125,6 @@ BEGIN_DATADESC( CMovieDisplay )
 
 	DEFINE_FIELD( m_bDoFullTransmit, FIELD_BOOLEAN ),
 
-	DEFINE_FIELD( m_hScreen, FIELD_EHANDLE ),
-
 	DEFINE_INPUTFUNC( FIELD_VOID, "Disable", InputDisable ),
 	DEFINE_INPUTFUNC( FIELD_VOID, "Enable", InputEnable ),
 
@@ -162,7 +157,6 @@ END_SEND_TABLE()
 
 CMovieDisplay::~CMovieDisplay()
 {
-	DestroyVGuiScreen( m_hScreen.Get() );
 }
 
 //-----------------------------------------------------------------------------
@@ -218,9 +212,6 @@ void CMovieDisplay::SetTransmit( CCheckTransmitInfo *pInfo, bool bAlways )
 		return;
 
 	BaseClass::SetTransmit( pInfo, bAlways );
-
-	// Force our screen to be sent too.
-	m_hScreen->SetTransmit( pInfo, bAlways );
 }
 
 //-----------------------------------------------------------------------------
@@ -258,7 +249,6 @@ void CMovieDisplay::Precache( void )
 {
 	BaseClass::Precache();
 
-	PrecacheVGuiScreen( "movie_display_screen" );
 	if ( m_bForcePrecache )
 	{
 		DevMsg( "Precaching vgui_movie_display %s with movie %s\n", m_iName->ToCStr(), m_szMovieFilename.Get() );
@@ -285,17 +275,6 @@ void CMovieDisplay::OnRestore( void )
 //-----------------------------------------------------------------------------
 void CMovieDisplay::ScreenVisible( bool bVisible )
 {
-	// Set its active state
-	m_hScreen->SetActive( bVisible );
-
-	if ( bVisible )
-	{
-		m_hScreen->RemoveEffects( EF_NODRAW );
-	}
-	else
-	{
-		m_hScreen->AddEffects( EF_NODRAW );
-	}
 }
 
 //-----------------------------------------------------------------------------
@@ -430,32 +409,6 @@ void CMovieDisplay::GetControlPanelClassName( int nPanelIndex, const char *&pPan
 //-----------------------------------------------------------------------------
 void CMovieDisplay::SpawnControlPanels()
 {
-	int nPanel;
-	for ( nPanel = 0; true; ++nPanel )
-	{
-		const char *pScreenName;
-		GetControlPanelInfo( nPanel, pScreenName );
-		if (!pScreenName)
-			continue;
-
-		const char *pScreenClassname;
-		GetControlPanelClassName( nPanel, pScreenClassname );
-		if ( !pScreenClassname )
-			continue;
-
-		float flWidth = m_iScreenWidth;
-		float flHeight = m_iScreenHeight;
-
-		CVGuiScreen *pScreen = CreateVGuiScreen( pScreenClassname, pScreenName, this, this, 0 );
-		pScreen->ChangeTeam( GetTeamNumber() );
-		pScreen->SetActualSize( flWidth, flHeight );
-		pScreen->SetActive( true );
-		pScreen->MakeVisibleOnlyToTeammates( false );
-		pScreen->SetTransparency( true );
-		m_hScreen = pScreen;
-
-		return;
-	}
 }
 
 //-----------------------------------------------------------------------------
@@ -463,32 +416,4 @@ void CMovieDisplay::SpawnControlPanels()
 //-----------------------------------------------------------------------------
 void CMovieDisplay::RestoreControlPanels( void )
 {
-	int nPanel;
-	for ( nPanel = 0; true; ++nPanel )
-	{
-		const char *pScreenName;
-		GetControlPanelInfo( nPanel, pScreenName );
-		if (!pScreenName)
-			continue;
-
-		const char *pScreenClassname;
-		GetControlPanelClassName( nPanel, pScreenClassname );
-		if ( !pScreenClassname )
-			continue;
-
-		CVGuiScreen *pScreen = (CVGuiScreen *)gEntList.FindEntityByClassname( NULL, pScreenClassname );
-
-		while ( ( pScreen && pScreen->GetOwnerEntity() != this ) || Q_strcmp( pScreen->GetPanelName(), pScreenName ) != 0 )
-		{
-			pScreen = (CVGuiScreen *)gEntList.FindEntityByClassname( pScreen, pScreenClassname );
-		}
-
-		if ( pScreen )
-		{
-			m_hScreen = pScreen;
-			m_hScreen->SetActive( true );
-		}
-
-		return;
-	}
 }

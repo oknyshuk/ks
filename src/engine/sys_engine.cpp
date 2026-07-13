@@ -32,7 +32,7 @@
 #include "filesystem_engine.h"
 #include "tier0/cpumonitoring.h"
 #ifndef DEDICATED
-#include "vgui_baseui_interface.h"
+#include "engineui.h"
 #endif
 #ifdef _PS3
 #include <sysutil/sysutil_sysparam.h>

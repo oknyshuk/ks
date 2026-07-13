@@ -37,12 +37,12 @@
 #include "filesystem.h"
 #include "filesystem_engine.h"
 #include "server.h"
-#include "vgui_baseui_interface.h"
+#include "engineui.h"
 #include "vprof.h"
 #include "net_chan.h"
 #include "tier1/interface.h"
 #include "interfaces/interfaces.h"
-#include "vgui/ILocalize.h"
+#include "localize/ilocalize.h"
 
 #include "../utils/bzip2/bzlib.h"
 
@@ -760,7 +760,7 @@ void DownloadManager::CheckActiveDownload()
 		{
 // 			// change it to be updating steam resources
 #ifndef DEDICATED
- 			EngineVGui()->UpdateSecondaryProgressBarWithFile( 1, m_activeRequest->gamePath, m_activeRequest->nBytesTotal );
+ 			EngineUI()->UpdateSecondaryProgressBarWithFile( 1, m_activeRequest->gamePath, m_activeRequest->nBytesTotal );
 #endif
 
 			// Persist complete data to disk, and remove cache entry
@@ -799,7 +799,7 @@ void DownloadManager::CheckActiveDownload()
 			{
 				m_lastPercent = percent;
 #ifndef DEDICATED
-				EngineVGui()->UpdateSecondaryProgressBarWithFile( m_lastPercent * 0.01f, m_activeRequest->gamePath, m_activeRequest->nBytesTotal );
+				EngineUI()->UpdateSecondaryProgressBarWithFile( m_lastPercent * 0.01f, m_activeRequest->gamePath, m_activeRequest->nBytesTotal );
 #endif
 			}
 		}
@@ -850,7 +850,7 @@ void DownloadManager::StartNewDownload()
 		//TODO: ContinueLoadingProgressBar( "Http", m_totalRequests - m_queuedRequests.Count(), 0.0f );
 		//TODO: SetLoadingProgressBarStatusText( "#GameUI_VerifyingAndDownloading" );
 #ifndef DEDICATED
- 		EngineVGui()->UpdateSecondaryProgressBarWithFile( 0, m_activeRequest->gamePath, m_activeRequest->nBytesTotal );
+ 		EngineUI()->UpdateSecondaryProgressBarWithFile( 0, m_activeRequest->gamePath, m_activeRequest->nBytesTotal );
 #endif
 		UpdateProgressBar();
 
@@ -907,7 +907,7 @@ void DownloadManager::UpdateProgressBar()
 	}
 
 #ifndef DEDICATED
-	EngineVGui()->UpdateSecondaryProgressBarWithFile( progress, m_activeRequest->gamePath, total );
+	EngineUI()->UpdateSecondaryProgressBarWithFile( progress, m_activeRequest->gamePath, total );
 #endif
 }
 

@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
+//========= Copyright ï¿½ 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -11,7 +11,6 @@
 #endif
 
 #include "weapon_selection.h"
-#include <vgui_controls/Panel.h>
 #include "cs_weapon_parse.h"
 
 enum
@@ -24,9 +23,9 @@ enum
 //-----------------------------------------------------------------------------
 // Purpose: cstrike weapon selection hud element
 //-----------------------------------------------------------------------------
-class CHudWeaponSelection : public CBaseHudWeaponSelection, public vgui::Panel
+class CHudWeaponSelection : public CBaseHudWeaponSelection
 {
-	DECLARE_CLASS_SIMPLE( CHudWeaponSelection, vgui::Panel );
+	DECLARE_CLASS( CHudWeaponSelection, CBaseHudWeaponSelection );
 
 public:
 	explicit CHudWeaponSelection(const char *pElementName );
@@ -93,10 +92,6 @@ public:
 	C_BaseCombatWeapon *FindPrevWeaponInWeaponSelection(int iCurrentSlot, int iCurrentPosition);
 
 protected:
-	virtual void OnThink();
-	virtual void Paint();
-	virtual void ApplySchemeSettings(vgui::IScheme *pScheme);
-
 	virtual bool IsWeaponSelectable()
 	{ 
 		if (IsInSelectionMode())
@@ -113,41 +108,10 @@ private:
 
 	virtual	void SetSelectedWeapon( C_BaseCombatWeapon *pWeapon );
 
-	void DrawBox(int x, int y, int wide, int tall, Color color, float normalizedAlpha, int number);
-
-	CPanelAnimationVar( vgui::HFont, m_hNumberFont, "NumberFont", "HudSelectionNumbers" );
-	CPanelAnimationVar( vgui::HFont, m_hTextFont, "TextFont", "HudSelectionText" );
-
-	CPanelAnimationVarAliasType( float, m_flSmallBoxSize, "SmallBoxSize", "32", "proportional_float" );
-	CPanelAnimationVarAliasType( float, m_flLargeBoxWide, "LargeBoxWide", "108", "proportional_float" );
-	CPanelAnimationVarAliasType( float, m_flLargeBoxTall, "LargeBoxTall", "72", "proportional_float" );
-
-	CPanelAnimationVarAliasType( float, m_flBoxGap, "BoxGap", "12", "proportional_float" );
-
-	CPanelAnimationVarAliasType( float, m_flSelectionNumberXPos, "SelectionNumberXPos", "4", "proportional_float" );
-	CPanelAnimationVarAliasType( float, m_flSelectionNumberYPos, "SelectionNumberYPos", "4", "proportional_float" );
-
-	CPanelAnimationVarAliasType( float, m_flIconXPos, "IconXPos", "16", "proportional_float" );
-	CPanelAnimationVarAliasType( float, m_flIconYPos, "IconYPos", "8", "proportional_float" );
-
-	CPanelAnimationVarAliasType( float, m_flTextYPos, "TextYPos", "54", "proportional_float" );
-
-	CPanelAnimationVar( float, m_flAlphaOverride, "Alpha", "255" );
-	CPanelAnimationVar( float, m_flSelectionAlphaOverride, "SelectionAlpha", "255" );
-
-
-	CPanelAnimationVar( Color, m_TextColor, "TextColor", "SelectionTextFg" );
-	CPanelAnimationVar( Color, m_NumberColor, "NumberColor", "SelectionNumberFg" );
-	CPanelAnimationVar( Color, m_EmptyBoxColor, "EmptyBoxColor", "SelectionEmptyBoxBg" );
-	CPanelAnimationVar( Color, m_BoxColor, "BoxColor", "SelectionBoxBg" );
-	CPanelAnimationVar( Color, m_SelectedBoxColor, "SelectedBoxClor", "SelectionSelectedBoxBg" );
-
-	CPanelAnimationVar( float, m_flWeaponPickupGrowTime, "SelectionGrowTime", "0.1" );
-
-	CPanelAnimationVar( float, m_flTextScan, "TextScan", "1.0" );
-
-	CPanelAnimationVar( int, m_iMaxSlots, "MaxSlots", "6" );
-	CPanelAnimationVar( bool, m_bPlaySelectionSounds, "PlaySelectSounds", "1" );
+	// Weapon-switch behavior settings. Defaults match the former panel-animation
+	// defaults ("6" / "1").
+	int  m_iMaxSlots;
+	bool m_bPlaySelectionSounds;
 };
 
 #endif	//CS_HUD_CHAT_H

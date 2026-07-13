@@ -23,15 +23,12 @@
 #include "iviewrender.h"
 #include "iclientmode.h"
 #include "tier0/icommandline.h"
-#include "vgui/ISurface.h"
-#include "vgui_controls/Controls.h"
-#include "vgui/Cursor.h"
 #include "cdll_client_int.h"
 #include "cdll_util.h"
 #include "tier1/convar_serverbounded.h"
 #include "inputsystem/iinputsystem.h"
 #include "inputsystem/iinputstacksystem.h"
-#include "ienginevgui.h"
+#include "iengineui.h"
 
 //Debugging for SteamController
 #include "engine/ivdebugoverlay.h"
@@ -163,7 +160,7 @@ static bool InitControllerTables()
 //-----------------------------------------------------------------------------
 void CInput::SteamControllerMove( float flFrametime, CUserCmd *cmd )
 {
-	g_pInputSystem->SetSteamControllerMode( enginevgui->IsGameUIVisible() ? "MenuControls" : "GameControls" );
+	g_pInputSystem->SetSteamControllerMode( engineui->IsGameUIVisible() ? "MenuControls" : "GameControls" );
 	
 	if ( !steamapicontext || !steamapicontext->SteamController() )
 	{
@@ -230,7 +227,7 @@ void CInput::SteamControllerMove( float flFrametime, CUserCmd *cmd )
 		state.bActive = bActive && ( state.bActive || !state.bState );
 	}
 
-	if ( enginevgui->IsGameUIVisible() )
+	if ( engineui->IsGameUIVisible() )
 		return;
 
 	//Handle movement based on controller data.

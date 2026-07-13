@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
+//========= Copyright ï¿½ 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -1103,14 +1103,6 @@ void CCSBot::DebugDisplay( void ) const
 		Vector aimTarget = EyePositionConst() +  aimVector * fDistance;
 
 		NDebugOverlay::Cross3D( aimTarget, 8.0f, 255, 255, 0, true, duration );
-
-/*
-		vgui::surface()->DrawSetColor( r, g, b, alpha );
-		float fHalfFov = DEG2RAD( pPlayer->GetFOV() ) * 0.5f;
-		float fSpreadDistance = ( GetInaccuracy() + GetSpread() ) * 320.0f / tanf( fHalfFov );
-		int iSpreadDistance = RoundFloatToInt( YRES( fSpreadDistance ));
-		vgui::surface()->DrawFilledRect( x0, y0, x1, y1 );
-*/
 
 	}
 

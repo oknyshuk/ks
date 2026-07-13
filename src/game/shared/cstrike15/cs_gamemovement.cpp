@@ -15,7 +15,7 @@
 
 #ifdef CLIENT_DLL
 	#include "c_cs_player.h"
-	#include "vguicenterprint.h"
+	#include "uicenterprint.h"
 #else
 	#include "cs_player.h"
 	#include "keyvalues.h"

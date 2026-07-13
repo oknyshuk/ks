@@ -81,7 +81,7 @@ public:
 		
 		// Get name string
 		char const *szName = steamapicontext->SteamFriends()->GetFriendPersonaName( xuid );
-		g_pVGuiLocalize->ConvertANSIToUnicode( szName, m_wszNameBuf, sizeof( m_wszNameBuf ) );
+		g_pLocalize->ConvertANSIToUnicode( szName, m_wszNameBuf, sizeof( m_wszNameBuf ) );
 
 		// Get image
 		if ( !m_iTextureHandle || !g_pISteamOverlayRenderHost->TextureIsValid( m_iTextureHandle ) )

@@ -28,8 +28,7 @@
 #endif
 
 #ifndef DEDICATED
-#include <vgui_controls/Controls.h>
-#include <vgui/ILocalize.h>
+#include "localize/ilocalize.h"
 #endif
 
 // memdbgon must be the last include file in a .cpp file!!!
@@ -286,12 +285,12 @@ void CCvarUtilities::SetDirect( ConVar *var, const char *value )
 #ifndef DEDICATED
 		if ( sv.IsDedicated() )
 		{
-			// Dedicated servers don't have g_pVGuiLocalize, so fall back
+			// Dedicated servers don't have g_pLocalize, so fall back
 			V_UTF8ToUnicode( pszValue, unicode, sizeof( unicode ) );
 		}
 		else
 		{
-			g_pVGuiLocalize->ConvertANSIToUnicode( pszValue, unicode, sizeof( unicode ) );
+			g_pLocalize->ConvertANSIToUnicode( pszValue, unicode, sizeof( unicode ) );
 		}
 #else
 		V_UTF8ToUnicode( pszValue, unicode, sizeof( unicode ) );
@@ -336,7 +335,7 @@ void CCvarUtilities::SetDirect( ConVar *var, const char *value )
 		}
 		else
 		{
-			g_pVGuiLocalize->ConvertUnicodeToANSI( newUnicode, szNew, sizeof( szNew ) );
+			g_pLocalize->ConvertUnicodeToANSI( newUnicode, szNew, sizeof( szNew ) );
 		}
 #else
 		V_UnicodeToUTF8( newUnicode, szNew, sizeof( szNew ) );
@@ -647,6 +646,15 @@ void CCvarUtilities::WriteVariables( CUtlBuffer *buff, const int iSplitscreenSlo
 			continue;
 
 		ConVar *cv = (ConVar *)var;
+
+		// Never persist cvars that cannot be read back in. FCVAR_DEVELOPMENTONLY
+		// (and FCVAR_HIDDEN) cvars are rejected by the command executor as
+		// "Unknown command" (see Cmd_ExecuteCommand), so writing them to
+		// config.cfg only produces console spam on the next load. This also
+		// prevents dev-only archived cvars (e.g. cl_thirdperson,
+		// weapon_accuracy_logging, tr_*) from lingering in the user config.
+		if ( cv->IsFlagSet( FCVAR_DEVELOPMENTONLY ) || cv->IsFlagSet( FCVAR_HIDDEN ) )
+			continue;
 
 		bool archive = cv->IsFlagSet( IsGameConsole() ? FCVAR_ARCHIVE_GAMECONSOLE : FCVAR_ARCHIVE );
 		if ( archive )

@@ -23,9 +23,8 @@
 #include "filesystem.h"
 #include "filesystem_engine.h"
 #include "sound.h"
-#include "vgui_controls/Controls.h"
-#include "vgui/ILocalize.h"
-#include "vgui_baseui_interface.h"
+#include "localize/ilocalize.h"
+#include "engineui.h"
 #include "datacache/idatacache.h"
 #include "sys_dll.h"
 #include "toolframework/itoolframework.h"
@@ -349,12 +348,12 @@ public:
 			return;
 		}
 
-		EngineVGui()->ActivateGameUI();
-		EngineVGui()->StartCustomProgress();
-		const wchar_t *str = g_pVGuiLocalize->Find( "#Valve_CreatingCache" );
+		EngineUI()->ActivateGameUI();
+		EngineUI()->StartCustomProgress();
+		const wchar_t *str = g_pLocalize->Find( "#Valve_CreatingCache" );
 		if ( str )
 		{
-			EngineVGui()->UpdateCustomProgressBar( 0.0f, str );
+			EngineUI()->UpdateCustomProgressBar( 0.0f, str );
 		}
 	}
 
@@ -365,21 +364,21 @@ public:
 			return;
 		}
 
-		const wchar_t *format = g_pVGuiLocalize->Find( "Valve_CreatingSpecificSoundCache" );
+		const wchar_t *format = g_pLocalize->Find( "Valve_CreatingSpecificSoundCache" );
 		if ( format )
 		{
 			wchar_t constructed[ 1024 ];
 			wchar_t file[ 256 ];
-			g_pVGuiLocalize->ConvertANSIToUnicode( cachefile, file, sizeof( file ) );
+			g_pLocalize->ConvertANSIToUnicode( cachefile, file, sizeof( file ) );
 
-			g_pVGuiLocalize->ConstructString( 
+			g_pLocalize->ConstructString( 
 				constructed, 
 				sizeof( constructed ),
 				( wchar_t * )format,
 				1,
 				file );
 
-			EngineVGui()->UpdateCustomProgressBar( percent, constructed );
+			EngineUI()->UpdateCustomProgressBar( percent, constructed );
 		}
 	}
 
@@ -390,8 +389,8 @@ public:
 			return;
 		}
 
-		EngineVGui()->FinishCustomProgress();
-		EngineVGui()->HideGameUI();
+		EngineUI()->FinishCustomProgress();
+		EngineUI()->HideGameUI();
 	}
 
 	virtual int GetPrecachedSoundCount()
@@ -419,7 +418,7 @@ public:
 
 	virtual bool ShouldSuppressNonUISounds()
 	{
-		return EngineVGui()->IsGameUIVisible() || IsGamePaused();
+		return EngineUI()->IsGameUIVisible() || IsGamePaused();
 	}
 
 	virtual char const *GetUILanguage()

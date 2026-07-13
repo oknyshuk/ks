@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2008, Valve Corporation, All rights reserved. ============//
+//========= Copyright ï¿½ 1996-2008, Valve Corporation, All rights reserved. ============//
 //
 // Purpose:		Stub for custom mod lesson actions. 
 //				This is so that mods can do actions 
@@ -10,8 +10,7 @@
 
 #include "c_gameinstructor.h"
 #include "c_baselesson.h"
-#include "ienginevgui.h"
-#include "message.h"
+#include "iengineui.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -73,13 +72,7 @@ bool CScriptedIconLesson::Mod_ProcessElementAction( int iAction, bool bNot, cons
 
 bool C_GameInstructor::Mod_HiddenByOtherElements( void )
 {
-	if ( engine->IsPaused() || enginevgui->IsGameUIVisible() )
-	{
-		return true;
-	}
-
-	CHudMessage *pHudMessage = GET_HUDELEMENT( CHudMessage );
-	if ( pHudMessage && pHudMessage->ShouldDraw() )
+	if ( engine->IsPaused() || engineui->IsGameUIVisible() )
 	{
 		return true;
 	}

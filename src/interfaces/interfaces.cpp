@@ -83,7 +83,6 @@ vgui::IInput *g_pVGuiInput = 0;
 vgui::ISurface *g_pVGuiSurface = 0;
 vgui::IPanel *g_pVGuiPanel = 0;
 vgui::IVGui	*g_pVGui = 0;
-vgui::ILocalize *g_pVGuiLocalize = 0;
 vgui::ISchemeManager *g_pVGuiSchemeManager = 0;
 vgui::ISystem *g_pVGuiSystem = 0;
 IDataCache *g_pDataCache = 0;
@@ -145,7 +144,6 @@ static InterfaceGlobals_t g_pInterfaceGlobals[] =
 	{ VGUI_SCHEME_INTERFACE_VERSION, &g_pVGuiSchemeManager },
 	{ VGUI_SYSTEM_INTERFACE_VERSION, &g_pVGuiSystem },
 	{ LOCALIZE_INTERFACE_VERSION, &g_pLocalize },
-	{ LOCALIZE_INTERFACE_VERSION, &g_pVGuiLocalize },
 	{ MAT_SYSTEM_SURFACE_INTERFACE_VERSION, &g_pMatSystemSurface },
 	{ DATACACHE_INTERFACE_VERSION, &g_pDataCache },
 	{ MDLCACHE_INTERFACE_VERSION, &g_pMDLCache },

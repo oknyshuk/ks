@@ -8,7 +8,6 @@
 #include "cbase.h"
 #include <stdarg.h>
 #include "hud.h"
-#include "itextmessage.h"
 #include "materialsystem/imaterial.h"
 #include "materialsystem/itexture.h"
 #include "materialsystem/imaterialsystem.h"
@@ -22,13 +21,10 @@
 #include "engine/IEngineTrace.h"
 #include "engine/ivmodelinfo.h"
 #include "c_te_effect_dispatch.h"
-#include <vgui_controls/Controls.h>
-#include <vgui/ISurface.h>
-#include <vgui/ILocalize.h>
+#include "localize/ilocalize.h"
 #include "view.h"
 #include <ctype.h>
-#include <vgui_controls/EditablePanel.h>
-#include "vgui_int.h"
+#include "clientui.h"
 #include "cdll_client_int.h"
 #include "c_cs_playerresource.h"
 #include "c_cs_player.h"
@@ -565,7 +561,7 @@ bool GetVectorInScreenSpace( Vector pos, int& iX, int& iY, Vector *vecOffset )
 	// Transform to screen space
 	int x, y, screenWidth, screenHeight;
 	int insetX, insetY;
-	VGui_GetEngineRenderBounds( GET_ACTIVE_SPLITSCREEN_SLOT(), x, y, screenWidth, screenHeight, insetX, insetY );
+	UI_GetEngineRenderBounds( GET_ACTIVE_SPLITSCREEN_SLOT(), x, y, screenWidth, screenHeight, insetX, insetY );
 
 	// Transform to screen space
 	int iFacing = ScreenTransform( pos, screen );
@@ -673,69 +669,6 @@ CBaseEntity *CEntitySphereQuery::GetCurrentEntity()
 }
 
 //-----------------------------------------------------------------------------
-// Purpose: 
-// Input  : font - 
-//			*str - 
-// Output : int
-//-----------------------------------------------------------------------------
-int UTIL_ComputeStringWidth( vgui::HFont& font, const char *str )
-{
-	float pixels = 0;
-	const char *p = (char *)str;
-	const char *pAfter = p + 1;
-	const char *pBefore = "\0";
-	while ( *p )
-	{
-#ifdef OSX
-		float wide, abcA, abcC;
-		vgui::surface()->GetKernedCharWidth( font, *p, *pBefore, *pAfter, wide, abcA, abcC );
-		pixels += wide;
-#else
-		pixels += vgui::surface()->GetCharacterWidth( font, *p );
-#endif
-		pBefore = p;
-		p++;
-		if ( *p )
-			pAfter = p + 1; 
-		else
-			pAfter = "\0";
-	}
-	return (int)ceil(pixels);
-}
-
-
-//-----------------------------------------------------------------------------
-// Purpose: 
-// Input  : font - 
-//			*str - 
-// Output : int
-//-----------------------------------------------------------------------------
-int UTIL_ComputeStringWidth( vgui::HFont& font, const wchar_t *str )
-{
-	float pixels = 0;
-	const wchar_t *p = (wchar_t *)str;
-	const wchar_t *pAfter = p + 1;
-	const wchar_t *pBefore = L"\0";
-	while ( *p )
-	{
-#ifdef OSX
-		float wide, abcA, abcC;
-		vgui::surface()->GetKernedCharWidth( font, *p, *pBefore, *pAfter, wide, abcA, abcC );
-		pixels += wide;
-#else
-		pixels += vgui::surface()->GetCharacterWidth( font, *p );
-#endif
-		pBefore = p;
-		p++;
-		if ( *p )
-			pAfter = p + 1; 
-		else
-			pAfter = L"\0";
-	}
-	return (int)ceil(pixels);
-}
-
-//-----------------------------------------------------------------------------
 // Purpose: Scans player names
 //Passes the player name to be checked in a KeyValues pointer
 //with the keyname "name"
@@ -839,7 +772,7 @@ void UTIL_ReplaceKeyBindings( const wchar_t *inbuf, int inbufsizebytes, wchar_t 
 
 				// lookup key names
 				char binding[64];
-				g_pVGuiLocalize->ConvertUnicodeToANSI( token, binding, sizeof(binding) );
+				g_pLocalize->ConvertUnicodeToANSI( token, binding, sizeof(binding) );
 
 				const char *key = engine->Key_LookupBindingEx( *binding == '+' ? binding + 1 : binding, nSlot );
 
@@ -873,10 +806,10 @@ void UTIL_ReplaceKeyBindings( const wchar_t *inbuf, int inbufsizebytes, wchar_t 
 				}
 				
 
-				wchar_t *locName = g_pVGuiLocalize->Find( friendlyName );
+				wchar_t *locName = g_pLocalize->Find( friendlyName );
 				if ( !locName || wcslen(locName) <= 0)
 				{
-					g_pVGuiLocalize->ConvertANSIToUnicode( friendlyName, token, sizeof(token) );
+					g_pLocalize->ConvertANSIToUnicode( friendlyName, token, sizeof(token) );
 
 					outbuf[pos] = '\0';
 					wcscat( outbuf, token );
@@ -915,27 +848,6 @@ void UTIL_ReplaceKeyBindings( const wchar_t *inbuf, int inbufsizebytes, wchar_t 
 	}
 
 	outbuf[pos] = '\0';
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: 
-//-----------------------------------------------------------------------------
-void UTIL_SetControlStringWithKeybindings( vgui::EditablePanel *panel, const char *controlName, const char *str )
-{
-	if ( !panel || !controlName || !str )
-		return;
-
-	const wchar_t *unicodeStr = g_pVGuiLocalize->Find( str );
-	if ( unicodeStr )
-	{
-		wchar_t buf[512];
-		UTIL_ReplaceKeyBindings( unicodeStr, 0, buf, sizeof( buf ) );
-		panel->SetControlString( controlName, buf );
-	}
-	else
-	{
-		panel->SetControlString( controlName, str );
-	}
 }
 
 //-----------------------------------------------------------------------------
@@ -1381,7 +1293,7 @@ wchar_t *UTIL_GetLocalizedKeyString( const char *command, const char *fmt, const
 	}
 
 	wchar_t wszKey[64];
-	g_pVGuiLocalize->ConvertANSIToUnicode( szKey,  wszKey, sizeof(wszKey) );
+	g_pLocalize->ConvertANSIToUnicode( szKey,  wszKey, sizeof(wszKey) );
 
 	int argCount = 1;
 	if ( arg1 )
@@ -1397,7 +1309,7 @@ wchar_t *UTIL_GetLocalizedKeyString( const char *command, const char *fmt, const
 		}
 	}
 
-	g_pVGuiLocalize->ConstructString( useString[index], sizeof( useString[index] ), g_pVGuiLocalize->Find( fmt ), argCount, wszKey, arg1, arg2, arg3 );
+	g_pLocalize->ConstructString( useString[index], sizeof( useString[index] ), g_pLocalize->Find( fmt ), argCount, wszKey, arg1, arg2, arg3 );
 	return useString[index];
 }
 
@@ -1407,7 +1319,7 @@ void UTIL_GetClientStatusText( char *buffer, int nSize )
 	buffer[0] = 0;
 
 #if defined ( CSTRIKE15 )
-	extern float g_flReadyToCheckForPCBootInvite;
+	float g_flReadyToCheckForPCBootInvite = 0.0f;
 	bool bStartupFinished = g_flReadyToCheckForPCBootInvite && ( ( Plat_FloatTime() - g_flReadyToCheckForPCBootInvite ) > 1.5f );
 	if ( bStartupFinished )
 		Q_snprintf( buffer, nSize, "+" );

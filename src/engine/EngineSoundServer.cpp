@@ -20,7 +20,7 @@
 #include "soundchars.h"
 #include "tier0/vprof.h"
 #ifndef DEDICATED
-#include "vgui_baseui_interface.h"
+#include "engineui.h"
 #endif
 #include "SoundEmitterSystem/isoundemittersystembase.h"
 
@@ -197,7 +197,7 @@ CEngineSoundServer::~CEngineSoundServer()
 bool CEngineSoundServer::PrecacheSound( const char *pSample, bool bPreload, bool bIsUISound )
 {
 #ifndef DEDICATED
-	EngineVGui()->UpdateProgressBar( PROGRESS_DEFAULT ); 
+	EngineUI()->UpdateProgressBar( PROGRESS_DEFAULT ); 
 #endif
 	int		i;
 

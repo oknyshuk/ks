@@ -1177,7 +1177,6 @@ namespace vgui
 {
 	class IImage;
 }
-vgui::IImage* GetDefaultAvatarImage( C_BasePlayer *pPlayer );
 
 
 void AddSmokeGrenade( Vector location, int iEntityId );

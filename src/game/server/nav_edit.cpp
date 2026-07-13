@@ -207,9 +207,6 @@ void CNavMesh::GetEditVectors( Vector *pos, Vector *forward )
 
 	*pos = player->EyePosition();
 
-#ifdef SERVER_USES_VGUI
-//	GetNavUIEditVectors( pos, forward );
-#endif // SERVER_USES_VGUI
 }
 
 

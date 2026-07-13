@@ -30,8 +30,6 @@
 #include "iregistry.h"
 #include "appframework/iappsystem.h"
 #include "appframework/AppFramework.h"
-#include <vgui/vgui.h>
-#include <vgui/ISurface.h>
 #include "tier0/platform.h"
 #include "tier0/memalloc.h"
 #include "datacache/iresourceaccesscontrol.h"
@@ -39,7 +37,6 @@
 #include "tier1/utlrbtree.h"
 #include "materialsystem/imaterialsystem.h"
 #include "istudiorender.h"
-#include "vgui/IVGui.h"
 #include "datacache/idatacache.h"
 #include "datacache/imdlcache.h"
 #include "vphysics_interface.h"
@@ -52,6 +49,7 @@
 #include "tier2/tier2.h"
 #include "tier3/tier3.h"
 #include "inputsystem/iinputsystem.h"
+#include "inputsystem/iinputstacksystem.h"
 #include "filesystem/IQueuedLoader.h"
 #include "reslistgenerator.h"
 #include "tier1/fmtstr.h"
@@ -703,6 +701,8 @@ bool CSourceAppSystemGroup::Create()
 		{ LAUNCHER_APPSYSTEM( "filesystem_stdio" ),		XBOXINSTALLER_INTERFACE_VERSION },
 #endif
 		{ LAUNCHER_APPSYSTEM( "inputsystem" ),			INPUTSYSTEM_INTERFACE_VERSION },
+		{ LAUNCHER_APPSYSTEM( "inputsystem" ),			INPUTSTACKSYSTEM_INTERFACE_VERSION },
+		{ LAUNCHER_APPSYSTEM( "localize" ),				LOCALIZE_INTERFACE_VERSION },
 		{ LAUNCHER_APPSYSTEM( "vphysics" ),				VPHYSICS_INTERFACE_VERSION },
 		{ LAUNCHER_APPSYSTEM( "materialsystem" ),		MATERIAL_SYSTEM_INTERFACE_VERSION },
 		{ LAUNCHER_APPSYSTEM( "datacache" ),			DATACACHE_INTERFACE_VERSION },
@@ -728,9 +728,6 @@ bool CSourceAppSystemGroup::Create()
 #elif defined( BINK_ENABLED_FOR_CONSOLE )
 		{ LAUNCHER_APPSYSTEM( "engine" ),				BIK_INTERFACE_VERSION },
 #endif
-		// NOTE: This has to occur before vgui2.dll so it replaces vgui2's surface implementation
-		{ LAUNCHER_APPSYSTEM( "vguimatsurface" ),		VGUI_SURFACE_INTERFACE_VERSION },
-		{ LAUNCHER_APPSYSTEM( "vgui2" ),				VGUI_IVGUI_INTERFACE_VERSION },
 		{ LAUNCHER_APPSYSTEM( "engine" ),				VENGINE_LAUNCHER_API_VERSION },
 
 		{ "", "" }					// Required to terminate the list

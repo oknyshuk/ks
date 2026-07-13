@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
+//========= Copyright ï¿½ 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -11,8 +11,6 @@
 #include <stdio.h>
 #include "voice_status.h"
 #include "r_efx.h"
-#include <vgui_controls/TextImage.h>
-#include <vgui/MouseCode.h>
 #include "cdll_client_int.h"
 #include "hud_macros.h"
 #include "c_playerresource.h"
@@ -21,14 +19,9 @@
 #include "materialsystem/imesh.h"
 #include "view.h"
 #include "convar.h"
-#include <vgui_controls/Controls.h>
-#include <vgui/IScheme.h>
-#include <vgui/ISurface.h>
-#include "vgui_bitmapimage.h"
 #include "materialsystem/imaterial.h"
 #include "tier0/dbg.h"
 #include "cdll_int.h"
-#include <vgui/IPanel.h>
 #include "con_nprint.h"
 
 #if defined(PORTAL2)
@@ -46,7 +39,6 @@
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
-using namespace vgui;
 
 
 extern int cam_thirdperson;
@@ -184,7 +176,7 @@ CVoiceStatus::~CVoiceStatus()
 
 int CVoiceStatus::Init(
 	IVoiceStatusHelper *pHelper,
-	VPANEL pParentPanel)
+	uintp pParentPanel)
 {
 	const char *pGameDir = engine->GetGameDirectory();
 	if( pGameDir )
@@ -213,12 +205,6 @@ int CVoiceStatus::Init(
 	}
 
 	return 1;
-}
-
-
-BitmapImage* vgui_LoadMaterial( vgui::VPANEL pParent, const char *pFilename )
-{
-	return new BitmapImage( pParent, pFilename );
 }
 
 
@@ -682,25 +668,6 @@ void CVoiceStatus::StopSquelchMode()
 bool CVoiceStatus::IsInSquelchMode()
 {
 	return m_bInSquelchMode;
-}
-
-void SetOrUpdateBounds( 
-	vgui::Panel *pPanel, 
-	int left, int top, int wide, int tall, 
-	bool bOnlyUpdateBounds, int &topCoord, int &bottomCoord )
-{
-	if ( bOnlyUpdateBounds )
-	{
-		if ( top < topCoord )
-			topCoord = top;
-
-		if ( (top+tall) >= bottomCoord )
-			bottomCoord = top+tall;
-	}
-	else
-	{
-		pPanel->SetBounds( left, top, wide, tall );
-	}
 }
 
 //-----------------------------------------------------------------------------

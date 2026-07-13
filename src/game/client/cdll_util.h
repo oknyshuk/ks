@@ -62,8 +62,6 @@ inline void ConvertNormalizedScreenSpaceToPixelScreenSpace( Vector &in )
 #define XRES(x)	( x  * ( ( float )ScreenWidth() / 640.0 ) )
 #define YRES(y)	( y  * ( ( float )ScreenHeight() / 480.0 ) )
 
-int		UTIL_ComputeStringWidth( vgui::HFont& font, const char *str );
-int		UTIL_ComputeStringWidth( vgui::HFont& font, const wchar_t *str );
 float	UTIL_AngleDiff( float destAngle, float srcAngle );
 void	UTIL_Bubbles( const Vector& mins, const Vector& maxs, int count );
 void	UTIL_Smoke( const Vector &origin, const float scale, const float framerate );
@@ -77,7 +75,6 @@ void	UTIL_FreeFile( byte *buffer );
 void	UTIL_MakeSafeName( const char *oldName, char *newName, int newNameBufSize );	///< Cleans up player names for putting in vgui controls (cleaned names can be up to original*2+1 in length)
 const char *UTIL_SafeName( const char *oldName );	///< Wraps UTIL_MakeSafeName, and returns a static buffer
 void	UTIL_ReplaceKeyBindings( const wchar_t *inbuf, int inbufsizebytes, OUT_Z_BYTECAP(outbufsizebytes) wchar_t *outbuf, int outbufsizebytes );
-void	UTIL_SetControlStringWithKeybindings( vgui::EditablePanel *panel, const char *controlName, const char *str );
 
 void	UTIL_MessageText( C_BasePlayer *player, const char *text, Color color = Color( 0, 0, 0, 0 ) );
 

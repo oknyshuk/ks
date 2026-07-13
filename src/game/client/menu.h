@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
+//========= Copyright ï¿½ 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -13,16 +13,14 @@
 
 #include "utlvector.h"
 #include "hudelement.h"
-#include <vgui_controls/Panel.h>
 
 #define MENU_SELECTION_TIMEOUT	5.0f
 
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-class CHudMenu : public CHudElement, public vgui::Panel
+class CHudMenu : public CHudElement
 {
-	DECLARE_CLASS_SIMPLE( CHudMenu, vgui::Panel );
 public:
 	explicit CHudMenu( const char *pElementName );
 	void Init( void );
@@ -40,13 +38,8 @@ public:
 	CUserMessageBinder m_UMCMsgShowMenu;
 
 private:
-	virtual void OnThink();
-	virtual void Paint();
-	virtual void ApplySchemeSettings(vgui::IScheme *pScheme);
-private:
+	void OnThink();
 	void		ProcessText( void );
-
-	void PaintString( const wchar_t *text, int textlen, vgui::HFont& font, int x, int y );
 
 	struct ProcessedLine
 	{
@@ -70,21 +63,7 @@ private:
 
 	float			m_flSelectionTime;
 
-	CPanelAnimationVar( float, m_flOpenCloseTime, "OpenCloseTime", "1" );
-
-	CPanelAnimationVar( float, m_flBlur, "Blur", "0" );
-	CPanelAnimationVar( float, m_flTextScan, "TextScane", "1" );
-
-	CPanelAnimationVar( float, m_flAlphaOverride, "Alpha", "255.0" );
-	CPanelAnimationVar( float, m_flSelectionAlphaOverride, "SelectionAlpha", "255.0" );
-
-	CPanelAnimationVar( vgui::HFont, m_hTextFont, "TextFont", "MenuTextFont" );
-	CPanelAnimationVar( vgui::HFont, m_hItemFont, "ItemFont", "MenuItemFont" );
-	CPanelAnimationVar( vgui::HFont, m_hItemFontPulsing, "ItemFontPulsing", "MenuItemFontPulsing" );
-
-	CPanelAnimationVar( Color, m_MenuColor, "MenuColor", "MenuColor" );
-	CPanelAnimationVar( Color, m_ItemColor, "MenuItemColor", "ItemColor" );
-	CPanelAnimationVar( Color, m_BoxColor, "MenuBoxColor", "MenuBoxBg" );
+	float			m_flOpenCloseTime;
 };
 
 #endif // HUD_MENU_H

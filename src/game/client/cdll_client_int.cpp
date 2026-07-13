@@ -7,7 +7,7 @@
 #include "cdll_int.h"
 #include "tier1/fmtstr.h"
 #include <crtmemdebug.h>
-#include "vgui_int.h"
+#include "clientui.h"
 #include "clientmode.h"
 #include "iinput.h"
 #include "iviewrender.h"
@@ -19,7 +19,7 @@
 #include "steam/steam_api.h"
 #include "smoke_fog_overlay.h"
 #include "view.h"
-#include "ienginevgui.h"
+#include "iengineui.h"
 #include "iefx.h"
 #include "enginesprite.h"
 #include "networkstringtable_clientdll.h"
@@ -30,7 +30,6 @@
 #include "engine/ishadowmgr.h"
 #include "engine/IStaticPropMgr.h"
 #include "hud_basechat.h"
-#include "hud_crosshair.h"
 #include "view_shared.h"
 #include "env_wind_shared.h"
 #include "detailobjectsystem.h"
@@ -41,7 +40,7 @@
 #include "materialsystem/imaterialsystemhardwareconfig.h"
 #include "c_soundscape.h"
 #include "engine/ivdebugoverlay.h"
-#include "vguicenterprint.h"
+#include "uicenterprint.h"
 #include "iviewrender_beams.h"
 #include "tier0/vprof.h"
 #include "engine/IEngineTrace.h"
@@ -62,17 +61,12 @@
 #include "vstdlib/jobthread.h"
 #include "gamerules_register.h"
 #include "game/client/iviewport.h"
-#include "vgui_controls/AnimationController.h"
 #include "bitmap/tgawriter.h"
 #include "c_world.h"
 #include "perfvisualbenchmark.h"	
 #include "SoundEmitterSystem/isoundemittersystembase.h"
-#include "hud_closecaption.h"
 #include "colorcorrectionmgr.h"
 #include "physpropclientside.h"
-#include "panelmetaclassmgr.h"
-#include "c_vguiscreen.h"
-#include "imessagechars.h"
 #include "game/client/IGameClientExports.h"
 #include "client_factorylist.h"
 #include "ragdoll_shared.h"
@@ -98,13 +92,10 @@
 #endif
 #include "matchmaking/imatchframework.h"
 #include "cdll_bounded_cvars.h"
-#include "matsys_controls/matsyscontrols.h"
 #include "GameStats.h"
 #include "videocfg/videocfg.h"
 #include "tier2/tier2_logging.h"
 #include "Sprite.h"
-#include "hud_savestatus.h"
-#include "vgui_video.h"
 #include "gametypes/igametypes.h"
 #include "c_keyvalue_saver.h"
 #include "c_team.h"
@@ -125,14 +116,12 @@
 #ifdef GAMEUI_EMBEDDED
 #if defined( PORTAL2 )
 #ifdef GAMEUI_UISYSTEM2_ENABLED
-#include "gameui/basemodpanel.h"
 #else
 #include "portal2/gameui/portal2/basemodpanel.h"
 #endif
 #elif defined( SWARM_DLL )
 #include "swarm/gameui/swarm/basemodpanel.h"
 #elif defined( CSTRIKE15 )
-#include "cstrike15/gameui/basepanel.h"
 #else
 #error "GAMEUI_EMBEDDED"
 #endif
@@ -166,14 +155,10 @@
 #include "tier1/utldict.h"
 #include "keybindinglistener.h"
 
-#ifdef SIXENSE
-#include "sixense/in_sixense.h"
-#endif
 
 #include "viewrender.h"
 
 #include "irendertorthelperobject.h"
-#include "iloadingdisc.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -191,7 +176,7 @@ IVDebugOverlay *debugoverlay = NULL;
 IMaterialSystemStub *materials_stub = NULL;
 IDataCache *datacache = NULL;
 IVModelInfoClient *modelinfo = NULL;
-IEngineVGui *enginevgui = NULL;
+IEngineUI *engineui = NULL;
 INetworkStringTableContainer *networkstringtable = NULL;
 ISpatialPartition* partition = NULL;
 IFileSystem *filesystem = NULL;
@@ -262,13 +247,10 @@ bool IsHeadTrackingEnabled()
 #endif
 }
 
-void VGui_ClearVideoPanels();
-
 // String tables
 INetworkStringTable *g_pStringTableParticleEffectNames = NULL;
 INetworkStringTable *g_pStringTableExtraParticleFiles = NULL;
 INetworkStringTable *g_StringTableEffectDispatch = NULL;
-INetworkStringTable *g_StringTableVguiScreen = NULL;
 INetworkStringTable *g_pStringTableMaterials = NULL;
 INetworkStringTable *g_pStringTableInfoPanel = NULL;
 INetworkStringTable *g_pStringTableClientSideChoreoScenes = NULL;
@@ -335,8 +317,6 @@ bool g_bDataChangedPostEventsAllowed = false;
 
 class IMoveHelper;
 
-void DispatchHudText( const char *pszName );
-
 static ConVar s_CV_ShowParticleCounts("showparticlecounts", "0", 0, "Display number of particles drawn per frame");
 // static ConVar s_cl_team("cl_team", "default", FCVAR_ARCHIVE, "Default team when joining a game");
 // static ConVar s_cl_class("cl_class", "default", FCVAR_ARCHIVE, "Default class when joining a game");
@@ -351,7 +331,7 @@ static ConVar *g_pcv_ThreadMode = NULL;
 
 // implements ACTIVE_SPLITSCREEN_PLAYER_GUARD (cdll_client_int.h)
 CSetActiveSplitScreenPlayerGuard::CSetActiveSplitScreenPlayerGuard( char const *pchContext, int nLine ) :
-	CVGuiScreenSizeSplitScreenPlayerGuard( false, engine->GetActiveSplitScreenPlayerSlot(), engine->GetActiveSplitScreenPlayerSlot() )
+	CUIScreenSizeSplitScreenPlayerGuard( false, engine->GetActiveSplitScreenPlayerSlot(), engine->GetActiveSplitScreenPlayerSlot() )
 {
 	m_bChanged = true;
 	m_pchContext = pchContext;
@@ -360,8 +340,8 @@ CSetActiveSplitScreenPlayerGuard::CSetActiveSplitScreenPlayerGuard( char const *
 	m_bSaveGetLocalPlayerAllowed = engine->SetLocalPlayerIsResolvable( pchContext, nLine, false );
 }
 
-CSetActiveSplitScreenPlayerGuard::CSetActiveSplitScreenPlayerGuard( char const *pchContext, int nLine, int slot, int nOldSlot, bool bSetVguiScreenSize ) :
-	CVGuiScreenSizeSplitScreenPlayerGuard( bSetVguiScreenSize, slot, nOldSlot )
+CSetActiveSplitScreenPlayerGuard::CSetActiveSplitScreenPlayerGuard( char const *pchContext, int nLine, int slot, int nOldSlot, bool bSetUIScreenSize ) :
+	CUIScreenSizeSplitScreenPlayerGuard( bSetUIScreenSize, slot, nOldSlot )
 {
 	if ( nOldSlot == slot && engine->IsLocalPlayerResolvable() )
 	{
@@ -376,8 +356,8 @@ CSetActiveSplitScreenPlayerGuard::CSetActiveSplitScreenPlayerGuard( char const *
 	m_bSaveGetLocalPlayerAllowed = engine->SetLocalPlayerIsResolvable( pchContext, nLine, slot >= 0 );
 }
 
-CSetActiveSplitScreenPlayerGuard::CSetActiveSplitScreenPlayerGuard( char const *pchContext, int nLine, C_BaseEntity *pEntity, int nOldSlot, bool bSetVguiScreenSize ) :
-	CVGuiScreenSizeSplitScreenPlayerGuard( bSetVguiScreenSize, pEntity, nOldSlot )
+CSetActiveSplitScreenPlayerGuard::CSetActiveSplitScreenPlayerGuard( char const *pchContext, int nLine, C_BaseEntity *pEntity, int nOldSlot, bool bSetUIScreenSize ) :
+	CUIScreenSizeSplitScreenPlayerGuard( bSetUIScreenSize, pEntity, nOldSlot )
 {
 	int slot = C_BasePlayer::GetSplitScreenSlotForPlayer( pEntity );
 	if ( slot == -1 )
@@ -443,84 +423,27 @@ CHackForGetLocalPlayerAccessAllowedGuard::~CHackForGetLocalPlayerAccessAllowedGu
 	engine->SetLocalPlayerIsResolvable( m_pszContext, 0, m_bSaveGetLocalPlayerAllowed );
 }
 
-CVGuiScreenSizeSplitScreenPlayerGuard::CVGuiScreenSizeSplitScreenPlayerGuard( bool bActive, int slot, int nOldSlot )
+CUIScreenSizeSplitScreenPlayerGuard::CUIScreenSizeSplitScreenPlayerGuard( bool bActive, int slot, int nOldSlot )
 {
-	if ( !bActive )
-	{
-		m_bNoRestore = true;
-		return;
-	}
-
-	if ( vgui::surface()->IsScreenSizeOverrideActive() && nOldSlot == slot && engine->IsLocalPlayerResolvable() )
-	{
-		m_bNoRestore = true;
-		return;
-	}
-
-	m_bNoRestore = false;
-	vgui::surface()->GetScreenSize( m_nOldSize[ 0 ], m_nOldSize[ 1 ] );
-	int x, y, w, h;
-	VGui_GetHudBounds( slot >= 0 ? slot : 0, x, y, w, h );
-	m_bOldSetting = vgui::surface()->ForceScreenSizeOverride( true, w, h );
+	m_bNoRestore = true;
 }
 
-CVGuiScreenSizeSplitScreenPlayerGuard::CVGuiScreenSizeSplitScreenPlayerGuard( bool bActive, C_BaseEntity *pEntity, int nOldSlot )
+CUIScreenSizeSplitScreenPlayerGuard::CUIScreenSizeSplitScreenPlayerGuard( bool bActive, C_BaseEntity *pEntity, int nOldSlot )
 {
-	if ( !bActive )
-	{
-		m_bNoRestore = true;
-		return;
-	}
-
-	int slot = C_BasePlayer::GetSplitScreenSlotForPlayer( pEntity );
-	if ( vgui::surface()->IsScreenSizeOverrideActive() && nOldSlot == slot && engine->IsLocalPlayerResolvable() )
-	{
-		m_bNoRestore = true;
-		return;
-	}
-
-	m_bNoRestore = false;
-	vgui::surface()->GetScreenSize( m_nOldSize[ 0 ], m_nOldSize[ 1 ] );
-	// Get size for this user
-	int x, y, w, h;
-	VGui_GetHudBounds( slot >= 0 ? slot : 0, x, y, w, h );
-	m_bOldSetting = vgui::surface()->ForceScreenSizeOverride( true, w, h );
+	m_bNoRestore = true;
 }
 
-CVGuiScreenSizeSplitScreenPlayerGuard::~CVGuiScreenSizeSplitScreenPlayerGuard()
+CUIScreenSizeSplitScreenPlayerGuard::~CUIScreenSizeSplitScreenPlayerGuard()
 {
-	if ( m_bNoRestore )
-		return;
-	vgui::surface()->ForceScreenSizeOverride( m_bOldSetting, m_nOldSize[ 0 ], m_nOldSize[ 1 ] );
 }
 
-CVGuiAbsPosSplitScreenPlayerGuard::CVGuiAbsPosSplitScreenPlayerGuard( int slot, int nOldSlot, bool bInvert /*=false*/ )
+CUIAbsPosSplitScreenPlayerGuard::CUIAbsPosSplitScreenPlayerGuard( int slot, int nOldSlot, bool bInvert /*=false*/ )
 {
-	if ( nOldSlot == slot && engine->IsLocalPlayerResolvable() && vgui::surface()->IsScreenPosOverrideActive() )
-	{
-		m_bNoRestore = true;
-		return;
-	}
-
-	m_bNoRestore = false;
-
-	// Get size for this user
-	int x, y, w, h;
-	VGui_GetHudBounds( slot, x, y, w, h );
-	if ( bInvert )
-	{
-		x = -x;
-		y = -y;
-	}
-
-	vgui::surface()->ForceScreenPosOffset( true, x, y );
+	m_bNoRestore = true;
 }
 
-CVGuiAbsPosSplitScreenPlayerGuard::~CVGuiAbsPosSplitScreenPlayerGuard()
+CUIAbsPosSplitScreenPlayerGuard::~CUIAbsPosSplitScreenPlayerGuard()
 {
-	if ( m_bNoRestore )
-		return;
-	vgui::surface()->ForceScreenPosOffset( false, 0, 0 );
 }
 
 //-----------------------------------------------------------------------------
@@ -580,14 +503,6 @@ public:
 		return false;
 	}
 	
-    void CreateAchievementsPanel( vgui::Panel* pParent )
-    {
-        if (g_pAchievementsAndStatsInterface)
-        {
-            g_pAchievementsAndStatsInterface->CreatePanel( pParent );
-        }
-    }
-
     void DisplayAchievementPanel()
     {
         if (g_pAchievementsAndStatsInterface)
@@ -913,7 +828,6 @@ public:
 	virtual void			OnScreenSizeChanged( int nOldWidth, int nOldHeight );
 	virtual IMaterialProxy *InstantiateMaterialProxy( const char *proxyName );
 
-	virtual vgui::VPANEL	GetFullscreenClientDLLVPanel( void );
 	virtual void			MarkEntitiesAsTouching( IClientEntity *e1, IClientEntity *e2 );
 	virtual void			OnKeyBindingChanged( ButtonCode_t buttonCode, char const *pchKeyName, char const *pchNewBinding );
 	virtual bool			HandleGameUIEvent( const InputEvent_t &event );
@@ -989,8 +903,6 @@ private:
 
 	CUtlRBTree< IMaterial * >	m_CachedMaterials;
 	CUtlSymbolTable				m_CachedMovies;
-
-	CHudCloseCaption		*m_pHudCloseCaption;
 };
 
 
@@ -1151,7 +1063,6 @@ CHLClient::CHLClient()
 {
 	// Kinda bogus, but the logic in the engine is too convoluted to put it there
 	g_bLevelInitialized = false;
-	m_pHudCloseCaption = NULL;
 
 	SetDefLessFunc( m_CachedMaterials );
 }
@@ -1172,13 +1083,11 @@ bool InitParticleManager()
 
 bool InitGameSystems( CreateInterfaceFn appSystemFactory )
 {
-	if (!VGui_Startup( appSystemFactory ))
+	if (!UI_Startup( appSystemFactory ))
 		return false;
 
 	// Keep the spinner going.
 	materials->RefreshFrontBufferNonInteractive();
-
-	vgui::VGui_InitMatSysInterfacesList( "ClientDLL", &appSystemFactory, 1 );
 
 	// Keep the spinner going.
 	materials->RefreshFrontBufferNonInteractive();
@@ -1214,12 +1123,9 @@ bool InitGameSystems( CreateInterfaceFn appSystemFactory )
 
 	modemanager->Init( );
 
-	// Load the ClientScheme just once
-	vgui::scheme()->LoadSchemeFromFileEx( VGui_GetFullscreenRootVPANEL(), "resource/ClientScheme.res", "ClientScheme");
-
 	for ( int hh = 0; hh < MAX_SPLITSCREEN_PLAYERS; ++hh )
 	{
-		ACTIVE_SPLITSCREEN_PLAYER_GUARD_VGUI( hh );
+		ACTIVE_SPLITSCREEN_PLAYER_GUARD_UI( hh );
 		GetClientMode()->InitViewport();
 
 		if ( hh == 0 )
@@ -1230,13 +1136,13 @@ bool InitGameSystems( CreateInterfaceFn appSystemFactory )
 
 	for ( int hh = 0; hh < MAX_SPLITSCREEN_PLAYERS; ++hh )
 	{
-		ACTIVE_SPLITSCREEN_PLAYER_GUARD_VGUI( hh );
+		ACTIVE_SPLITSCREEN_PLAYER_GUARD_UI( hh );
 		GetHud().Init();
 	}
 
 	for ( int hh = 0; hh < MAX_SPLITSCREEN_PLAYERS; ++hh )
 	{
-		ACTIVE_SPLITSCREEN_PLAYER_GUARD_VGUI( hh );
+		ACTIVE_SPLITSCREEN_PLAYER_GUARD_UI( hh );
 		GetClientMode()->Init();
 
 		if ( hh == 0 )
@@ -1250,12 +1156,12 @@ bool InitGameSystems( CreateInterfaceFn appSystemFactory )
 
 	for ( int hh = 0; hh < MAX_SPLITSCREEN_PLAYERS; ++hh )
 	{
-		ACTIVE_SPLITSCREEN_PLAYER_GUARD_VGUI( hh );
+		ACTIVE_SPLITSCREEN_PLAYER_GUARD_UI( hh );
 		GetClientMode()->Enable();
 
 		if ( hh == 0 )
 		{
-			GetFullscreenClientMode()->EnableWithRootPanel( VGui_GetFullscreenRootVPANEL() );
+			GetFullscreenClientMode()->Enable();
 		}
 	}	
 
@@ -1269,7 +1175,7 @@ bool InitGameSystems( CreateInterfaceFn appSystemFactory )
 	view->Init();
 	for ( int hh = 0; hh < MAX_SPLITSCREEN_PLAYERS; ++hh )
 	{
-		ACTIVE_SPLITSCREEN_PLAYER_GUARD_VGUI( hh );
+		ACTIVE_SPLITSCREEN_PLAYER_GUARD_UI( hh );
 		GetViewEffects()->Init();
 	}
 
@@ -1277,7 +1183,7 @@ bool InitGameSystems( CreateInterfaceFn appSystemFactory )
 
 	input->Init_All();
 
-	VGui_CreateGlobalPanels();
+	UI_CreateGlobalPanels();
 
 	InitSmokeFogOverlay();
 
@@ -1292,8 +1198,7 @@ bool InitGameSystems( CreateInterfaceFn appSystemFactory )
 
 	// Embed voice status icons inside chat element
 	{
-		vgui::VPANEL parent = enginevgui->GetPanel( PANEL_CLIENTDLL );
-		GetClientVoiceMgr()->Init( &g_VoiceStatusHelper, parent );
+		GetClientVoiceMgr()->Init( &g_VoiceStatusHelper, 0 );
 	}
 
 	if ( !PhysicsDLLInit( appSystemFactory ) )
@@ -1328,10 +1233,6 @@ int CHLClient::Connect( CreateInterfaceFn appSystemFactory, CGlobalVarsBase *pGl
 {
 	InitCRTMemDebug();
 	MathLib_Init( 2.2f, 2.2f, 0.0f, 2.0f );
-
-#ifdef SIXENSE
-	g_pSixenseInput = new SixenseInput;
-#endif
 
 	// Hook up global variables
 	gpGlobals = pGlobals;
@@ -1378,7 +1279,7 @@ int CHLClient::Init( CreateInterfaceFn appSystemFactory, CGlobalVarsBase *pGloba
 		return false;
 	if ( (modelinfo = (IVModelInfoClient *)appSystemFactory(VMODELINFO_CLIENT_INTERFACE_VERSION, NULL )) == NULL )
 		return false;
-	if ( (enginevgui = (IEngineVGui *)appSystemFactory(VENGINE_VGUI_VERSION, NULL )) == NULL )
+	if ( (engineui = (IEngineUI *)appSystemFactory(VENGINE_UI_VERSION, NULL )) == NULL )
 		return false;
 	if ( (networkstringtable = (INetworkStringTableContainer *)appSystemFactory(INTERFACENAME_NETWORKSTRINGTABLECLIENT,NULL)) == NULL )
 		return false;
@@ -1437,8 +1338,6 @@ int CHLClient::Init( CreateInterfaceFn appSystemFactory, CGlobalVarsBase *pGloba
 	if ( ( gamestatsuploader = (IUploadGameStats *)appSystemFactory( INTERFACEVERSION_UPLOADGAMESTATS, NULL )) == NULL )
 		return false;
 #endif
-	if (!g_pMatSystemSurface)
-		return false;
 
 #ifdef INFESTED_DLL
 	if ( (missionchooser = (IASW_Mission_Chooser *)appSystemFactory(ASW_MISSION_CHOOSER_VERSION, NULL)) == NULL )
@@ -1559,9 +1458,6 @@ int CHLClient::Init( CreateInterfaceFn appSystemFactory, CGlobalVarsBase *pGloba
 
 	C_BaseAnimating::InitBoneSetupThreadPool();
 
-	// This is a fullscreen element, so only lives on slot 0!!!
-	m_pHudCloseCaption = GET_FULLSCREEN_HUDELEMENT( CHudCloseCaption );
-
 #if defined( PORTAL2_PUZZLEMAKER )
 	// This must be called after all other VGui initialization (i.e after InitGameSystems)
 	g_PuzzleMaker.Init();
@@ -1590,11 +1486,6 @@ void CHLClient::PostInit()
 	{
 		engine->ExecuteClientCmd( "toggleRdrOpt" );
 	}
-
-#ifdef SIXENSE
-	// allow sixnese input to perform post-init operations
-		g_pSixenseInput->PostInit();
-#endif
 
 #if defined( CSTRIKE15 )
 	// Initialize RocketUI console to capture console output
@@ -1629,14 +1520,6 @@ void CHLClient::Shutdown( void )
 	ActivityList_Free();
 	EventList_Free();
 
-	VGui_ClearVideoPanels();
-
-#ifdef SIXENSE
-		g_pSixenseInput->Shutdown();
-		delete g_pSixenseInput;
-		g_pSixenseInput = NULL;
-#endif
-
 	C_BaseAnimating::ShutdownBoneSetupThreadPool();
 	ClientWorldFactoryShutdown();
 
@@ -1650,7 +1533,7 @@ void CHLClient::Shutdown( void )
 
 	for ( int hh = 0; hh < MAX_SPLITSCREEN_PLAYERS; ++hh )
 	{
-		ACTIVE_SPLITSCREEN_PLAYER_GUARD_VGUI( hh );
+		ACTIVE_SPLITSCREEN_PLAYER_GUARD_UI( hh );
 		GetClientMode()->Disable();
 
 		if ( hh == 0 )
@@ -1661,7 +1544,7 @@ void CHLClient::Shutdown( void )
 
 	for ( int hh = 0; hh < MAX_SPLITSCREEN_PLAYERS; ++hh )
 	{
-		ACTIVE_SPLITSCREEN_PLAYER_GUARD_VGUI( hh );
+		ACTIVE_SPLITSCREEN_PLAYER_GUARD_UI( hh );
 		GetClientMode()->Shutdown();
 
 		if ( hh == 0 )
@@ -1687,17 +1570,15 @@ void CHLClient::Shutdown( void )
 
 	for ( int hh = 0; hh < MAX_SPLITSCREEN_PLAYERS; ++hh )
 	{
-		ACTIVE_SPLITSCREEN_PLAYER_GUARD_VGUI( hh );
+		ACTIVE_SPLITSCREEN_PLAYER_GUARD_UI( hh );
 		GetHud().Shutdown();
 	}
 
-	VGui_Shutdown();
+	UI_Shutdown();
 
 #ifdef USE_BLOBULATOR
 	Blobulator::ShutdownBlob();
 #endif // USE_BLOBULATOR
-	
-	ClearKeyValuesCache();
 
 #ifndef NO_STEAM
 	ClientSteamContext().Shutdown();
@@ -1768,19 +1649,10 @@ void CHLClient::HudUpdate( bool bActive )
 	}
 
 	// run vgui animations
-	vgui::GetAnimationController()->UpdateAnimations( Plat_FloatTime() );
 
 	// I don't think this is necessary any longer, but I will leave it until
 	// I can check into this further.
 	C_BaseTempEntity::CheckDynamicTempEnts();
-
-#ifdef SIXENSE
-	// If we're not connected, update sixense so we can move the mouse cursor when in the menus
-	if( !engine->IsConnected() || engine->IsPaused() )
-	{
-		g_pSixenseInput->SixenseFrame( 0, NULL ); 
-	}
-#endif
 }
 
 //-----------------------------------------------------------------------------
@@ -1802,11 +1674,6 @@ void CHLClient::HudReset( void )
 //-----------------------------------------------------------------------------
 void CHLClient::HudText( const char * message )
 {
-	for ( int hh = 0; hh < MAX_SPLITSCREEN_PLAYERS; ++hh )
-	{
-		ACTIVE_SPLITSCREEN_PLAYER_GUARD( hh );
-		DispatchHudText( message );
-	}
 }
 
 
@@ -2016,10 +1883,6 @@ void CHLClient::IN_SetSampleTime( float frametime )
 {
 	input->Joystick_SetSampleTime( frametime );
 	input->IN_SetSampleTime( frametime );
-
-#ifdef SIXENSE
-		g_pSixenseInput->ResetFrameTime( frametime );
-#endif
 }
 //-----------------------------------------------------------------------------
 // Purpose: Fills in usercmd_s structure based on current view angles and key/controller inputs
@@ -2318,13 +2181,13 @@ void ConfigureCurrentSystemLevel()
 	char szModName[32] = "csgo";
 #endif
 
-	bool bVGUIIsSplitscreen = VGui_IsSplitScreen();
-	if ( cl_disable_splitscreen_cpu_level_cfgs_in_pip.GetBool() && bVGUIIsSplitscreen && VGui_IsSplitScreenPIP() )
+	bool bUIIsSplitscreen = UI_IsSplitScreen();
+	if ( cl_disable_splitscreen_cpu_level_cfgs_in_pip.GetBool() && bUIIsSplitscreen && UI_IsSplitScreenPIP() )
 	{
-		bVGUIIsSplitscreen = false;
+		bUIIsSplitscreen = false;
 	}
 	
-	UpdateSystemLevel( nCPULevel, nGPULevel, nMemLevel, nGPUMemLevel, bVGUIIsSplitscreen, szModName );
+	UpdateSystemLevel( nCPULevel, nGPULevel, nMemLevel, nGPUMemLevel, bUIIsSplitscreen, szModName );
 
 	if ( engine )
 	{
@@ -2471,7 +2334,6 @@ void CHLClient::ResetStringTablePointers()
 {
 	g_pStringTableParticleEffectNames = NULL;
 	g_StringTableEffectDispatch = NULL;
-	g_StringTableVguiScreen = NULL;
 	g_pStringTableMaterials = NULL;
 	g_pStringTableInfoPanel = NULL;
 	g_pStringTableClientSideChoreoScenes = NULL;
@@ -2549,8 +2411,6 @@ void CHLClient::LevelShutdown( void )
 
 	ClientVoiceMgr_LevelShutdown();
 
-	messagechars->Clear();
-
 	g_pParticleSystemMgr->LevelShutdown();
 	g_pParticleSystemMgr->UncacheAllParticleSystems();
 
@@ -2576,13 +2436,6 @@ void CHLClient::LevelShutdown( void )
 //-----------------------------------------------------------------------------
 void CHLClient::SetCrosshairAngle( const QAngle& angle )
 {
-#ifndef INFESTED_DLL
-	CHudCrosshair *crosshair = GET_HUDELEMENT( CHudCrosshair );
-	if ( crosshair )
-	{
-		crosshair->SetCrosshairAngle( angle );
-	}
-#endif
 }
 
 //-----------------------------------------------------------------------------
@@ -2691,17 +2544,6 @@ void OnPrecacheParticleFile( void *object, INetworkStringTable *stringTable, int
 }
 
 //-----------------------------------------------------------------------------
-// Called when the string table for VGUI changes
-//-----------------------------------------------------------------------------
-void OnVguiScreenTableChanged( void *object, INetworkStringTable *stringTable, int stringNumber, const char *newString, void const *newData )
-{
-	// Make sure this puppy is precached
-	vgui::Panel *pPanel = PanelMetaClassMgr()->CreatePanelMetaClass( newString, 100, NULL, NULL );
-	if ( pPanel )
-		PanelMetaClassMgr()->DestroyPanelMetaClass( pPanel );
-}
-
-//-----------------------------------------------------------------------------
 // Purpose: Preload the string on the client (if single player it should already be in the cache from the server!!!)
 // Input  : *object - 
 //			*stringTable - 
@@ -2720,15 +2562,7 @@ void OnSceneStringTableChanged( void *object, INetworkStringTable *stringTable, 
 void CHLClient::InstallStringTableCallback( const char *tableName )
 {
 	// Here, cache off string table IDs
-	if (!Q_strcasecmp(tableName, "VguiScreen"))
-	{
-		// Look up the id 
-		g_StringTableVguiScreen = networkstringtable->FindTable( tableName );
-
-		// When the material list changes, we need to know immediately
-		g_StringTableVguiScreen->SetStringChangedCallback( NULL, OnVguiScreenTableChanged );
-	}
-	else if (!Q_strcasecmp(tableName, "Materials"))
+	if (!Q_strcasecmp(tableName, "Materials"))
 	{
 		// Look up the id 
 		g_pStringTableMaterials = networkstringtable->FindTable( tableName );
@@ -3455,29 +3289,11 @@ void CHLClient::WriteSaveGameScreenshot( const char *pFilename )
 //  the appropriate close caption if running with closecaption = 1
 void CHLClient::EmitSentenceCloseCaption( char const *tokenstream )
 {
-	extern ConVar closecaption;
-	
-	if ( !closecaption.GetBool() )
-		return;
-
-	if ( m_pHudCloseCaption )
-	{
-		m_pHudCloseCaption->ProcessSentenceCaptionStream( tokenstream );
-	}
 }
 
 
 void CHLClient::EmitCloseCaption( char const *captionname, float duration )
 {
-	extern ConVar closecaption;
-
-	if ( !closecaption.GetBool() )
-		return;
-
-	if ( m_pHudCloseCaption )
-	{
-		m_pHudCloseCaption->ProcessCaption( captionname, duration );
-	}
 }
 
 CStandardRecvProxies* CHLClient::GetStandardRecvProxies()
@@ -3610,7 +3426,6 @@ void CHLClient::SetDemoPlaybackHighlightXuid( uint64 xuid, bool bLowlights )
 
 void CHLClient::ShowHighlightSkippingMessage( bool bState, int nCurrentTick, int nTickStart, int nTickStop )
 {
-	loadingdisc->SetFastForwardVisible( bState, true );
 	g_HltvReplaySystem.SetDemoPlaybackFadeBrackets( nCurrentTick, nTickStart, nTickStop );
 }
 
@@ -3690,7 +3505,7 @@ void CHLClient::ReplayUI_SendMessage( KeyValues *pMsg )
 		if ( pLocalizeStr && pLocalizeStr[0] )
 		{
 			char szLocalized[256];
-			g_pVGuiLocalize->ConvertUnicodeToANSI( g_pVGuiLocalize->Find( pLocalizeStr ), szLocalized, sizeof(szLocalized) );
+			g_pLocalize->ConvertUnicodeToANSI( g_pLocalize->Find( pLocalizeStr ), szLocalized, sizeof(szLocalized) );
 			g_pClientMode->DisplayReplayMessage( szLocalized, -1.0f, NULL, pMsg->GetString( "sound", NULL ), false );
 		}
 	}
@@ -3788,11 +3603,11 @@ void CHLClient::OnActiveSplitscreenPlayerChanged( int nNewSlot )
 
 void CHLClient::OnSplitScreenStateChanged()
 {
-	VGui_OnSplitScreenStateChanged();
+	UI_OnSplitScreenStateChanged();
 	IterateRemoteSplitScreenViewSlots_Push( true );
 	FOR_EACH_VALID_SPLITSCREEN_PLAYER( i )
 	{
-		ACTIVE_SPLITSCREEN_PLAYER_GUARD_VGUI( i );
+		ACTIVE_SPLITSCREEN_PLAYER_GUARD_UI( i );
 		GetClientMode()->Layout();
 		GetHud().OnSplitScreenStateChanged();
 	}
@@ -3809,7 +3624,6 @@ void CHLClient::OnSplitScreenStateChanged()
 	// which results in a broken font state.
 	// Instead, we are doing the same thing the consoles do (which cannot change video sizes) which is to NOT ditch the glyphs
 	// when changing split screen state. When SS for PC gets turned into a primary concept this can be revisited.
-	vgui::surface()->ResetFontCaches();
 #endif
 
 	// Update visibility for all ents so that the second viewport for the split player guy looks right, etc.
@@ -3851,7 +3665,7 @@ void CHLClient::CenterStringOff()
 void CHLClient::OnScreenSizeChanged( int nOldWidth, int nOldHeight )
 {
 	// Tell split screen system
-	VGui_OnScreenSizeChanged();
+	UI_OnScreenSizeChanged();
 }
 
 IMaterialProxy *CHLClient::InstantiateMaterialProxy( const char *proxyName )
@@ -3862,11 +3676,6 @@ IMaterialProxy *CHLClient::InstantiateMaterialProxy( const char *proxyName )
 		return pProxy;
 #endif
 	return GetMaterialProxyDict().CreateProxy( proxyName );
-}
-
-vgui::VPANEL CHLClient::GetFullscreenClientDLLVPanel( void )
-{
-	return VGui_GetFullscreenRootVPANEL();
 }
 
 // XBX_GetActiveUserId defined in platform.h
@@ -3990,31 +3799,15 @@ void CHLClient::SetBlurFade( float scale )
 
 void CHLClient::ResetHudCloseCaption()
 {
-	if ( !IsGameConsole() )
-	{
-		// only xbox needs to force the close caption system to remount
-		return;
-	}
-
-	if ( m_pHudCloseCaption )
-	{
-		// force the caption dictionary to remount
-		m_pHudCloseCaption->InitCaptionDictionary( NULL, true );
-	}
 }
 
 void CHLClient::Hud_SaveStarted()
 {
-	CHudSaveStatus *pSaveStatus = GET_FULLSCREEN_HUDELEMENT( CHudSaveStatus );
-	if ( pSaveStatus )
-	{
-		pSaveStatus->SaveStarted();
-	}
 }
 
 void CHLClient::ShutdownMovies()
 {
-	//VGui_StopAllVideoPanels();
+	//UI_StopAllVideoPanels();
 }
 
 void CHLClient::GetStatus( char *buffer, int bufsize )

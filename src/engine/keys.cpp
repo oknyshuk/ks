@@ -12,7 +12,7 @@
 #include "toolframework/itoolframework.h"
 #include "toolframework/itoolsystem.h"
 #include "tier1/utlbuffer.h"
-#include "vgui_baseui_interface.h"
+#include "engineui.h"
 #include "tier2/tier2.h"
 #include "inputsystem/iinputsystem.h"
 #include "keyvalues.h"
@@ -38,7 +38,7 @@ enum KeyUpTarget_t
 {
 	KEY_UP_ANYTARGET = 0,
 	KEY_UP_ENGINE,
-	KEY_UP_VGUI,
+	KEY_UP_UI,
 	KEY_UP_TOOLS,
 	KEY_UP_CLIENT,
 	KEY_UP_GAMEUI,
@@ -247,7 +247,7 @@ CON_COMMAND( unbindallmousekeyboard, "Unbind all mouse / keyboard keys." )
 #ifndef DEDICATED
 CON_COMMAND_F( escape, "Escape key pressed.", FCVAR_CLIENTCMD_CAN_EXECUTE )
 {
-	EngineVGui()->HideGameUI();
+	EngineUI()->HideGameUI();
 }
 #endif
 
@@ -966,7 +966,7 @@ static bool HandleToolKey( const InputEvent_t &event )
 //-----------------------------------------------------------------------------
 // Lets vgui have a whack at key events
 //-----------------------------------------------------------------------------
-static bool HandleVGuiKey( const InputEvent_t &event )
+static bool HandleUIKey( const InputEvent_t &event )
 {
 	bool bDown = ( event.m_nType == IE_ButtonPressed ) || ( event.m_nType == IE_ButtonDoubleClicked );
 	if ( bDown && IsGameConsole() )
@@ -976,7 +976,7 @@ static bool HandleVGuiKey( const InputEvent_t &event )
 		CheckCheatCodes();
 	}
 
-	return EngineVGui()->Key_Event( event );
+	return EngineUI()->Key_Event( event );
 }
 
 
@@ -1210,16 +1210,16 @@ void Key_Event( const InputEvent_t &event )
 	}
 
 	// Make sure vgui is initialzied
-	if ( !EngineVGui()->IsInitialized() )
+	if ( !EngineUI()->IsInitialized() )
 		return;
 
 	// Keep vgui's notion of which keys are down up-to-date regardless of filtering
 	// Necessary because vgui has multiple input contexts, so vgui can't directly
 	// ask the input system for this information.
 	// QUESTION: Should GameUI do the same thing?
-	EngineVGui()->UpdateButtonState( event );
+	EngineUI()->UpdateButtonState( event );
 
-	if ( IsPC() && EngineVGui()->IsGameUIVisible() && scr_drawloading && IsESC( event ) )
+	if ( IsPC() && EngineUI()->IsGameUIVisible() && scr_drawloading && IsESC( event ) )
 	{
 		// prevent ESC key during loading
 		return;
@@ -1236,7 +1236,7 @@ void Key_Event( const InputEvent_t &event )
 	if ( !IsESC( event ) && !(event.m_nType == IE_ButtonPressed && code == KEY_BACKQUOTE) )
 	{
 		// Let vgui have a whack at keys
-		if ( FilterKey( event, KEY_UP_VGUI, HandleVGuiKey ) )
+		if ( FilterKey( event, KEY_UP_UI, HandleUIKey ) )
 			return;
 
 		// RocketUI goes first
@@ -1267,7 +1267,7 @@ void Key_Event( const InputEvent_t &event )
 			return;
 
 		// Let vgui have a whack at keys
-		if ( FilterKey( event, KEY_UP_VGUI, HandleVGuiKey ) )
+		if ( FilterKey( event, KEY_UP_UI, HandleUIKey ) )
 			return;
 	}
 

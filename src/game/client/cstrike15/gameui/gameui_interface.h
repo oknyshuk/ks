@@ -11,8 +11,6 @@
 
 #include "GameUI/IGameUI.h"
 
-#include "vgui_controls/Panel.h"
-#include "vgui_controls/PHandle.h"
 #include "convar.h"
 
 #if defined(_PS3)
@@ -53,8 +51,6 @@ public:
 	void PreventEngineHideGameUI();
 	void AllowEngineHideGameUI();
 
-	virtual void SetLoadingBackgroundDialog( vgui::VPANEL panel );
-
 	// notifications
 	virtual void OnGameUIActivated();
 	virtual void OnGameUIHidden();
@@ -74,7 +70,6 @@ public:
 	virtual bool UpdateSecondaryProgressBar(float progress, const wchar_t *desc );
 
 	// Xbox 360
-	virtual void ShowMessageDialog( const uint nType, vgui::Panel *pOwner = NULL );
 	virtual void ShowMessageDialog( const char* messageID, const char* titleID );
 
 	virtual void CreateCommandMsgBox( const char* pszTitle, const char* pszMessage, bool showOk = true, bool showCancel = false, const char* okCommand = NULL, const char* cancelCommand = NULL, const char* closedCommand = NULL, const char* pszLegend = NULL );
@@ -170,8 +165,6 @@ private:
 
 	char m_szPreviousStatusText[128];
 	char m_szPlatformDir[MAX_PATH];
-
-	vgui::DHANDLE<class CCDKeyEntryDialog> m_hCDKeyEntryDialog;
 
 	int m_nBackgroundMusicGUID;
 	bool m_bBackgroundMusicDesired;

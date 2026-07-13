@@ -282,9 +282,6 @@ private:
 		
 #endif
 
-	// Control panel
-	typedef CHandle<CVGuiScreen>	ScreenHandle_t;
-	CUtlVector<ScreenHandle_t>	m_hScreens;
 };
 
 inline CBaseViewModel *ToBaseViewModel( CBaseAnimating *pAnim )

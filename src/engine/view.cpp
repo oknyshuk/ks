@@ -15,7 +15,7 @@
 #include "gl_rsurf.h"
 #include "r_local.h"
 #include "debugoverlay.h"
-#include "vgui_baseui_interface.h"
+#include "engineui.h"
 #include "materialsystem/imaterialsystemhardwareconfig.h"
 #include "demo.h"
 #include "istudiorender.h"
@@ -28,7 +28,6 @@
 #include "cl_main.h"
 #include "l_studio.h"
 #include "IOcclusionSystem.h"
-#include "cl_demouipanel.h"
 #include "mod_vis.h"
 #include "ivideomode.h"
 #include "gl_shader.h"
@@ -120,7 +119,7 @@ void V_Shutdown( void )
 // Purpose: 
 // Input  :  - 
 //-----------------------------------------------------------------------------
-void V_RenderVGuiOnly_NoSwap()
+void V_RenderUIOnly_NoSwap()
 {
 	// Need to clear the screen in this case, cause we're not drawing
 	// the loading screen.
@@ -135,8 +134,6 @@ void V_RenderVGuiOnly_NoSwap()
 	// Render RocketUI menu before vgui (record here on the main thread; the
 	// render thread replays the returned command list)
 	pRenderContext->RenderRocketMenu(g_pRocketUI ? g_pRocketUI->RecordMenu() : nullptr);
-
-	EngineVGui()->Paint( PAINT_UIPANELS );
 }
 
 //-----------------------------------------------------------------------------
@@ -145,17 +142,17 @@ void V_RenderVGuiOnly_NoSwap()
 
 bool s_bTriggeredHostError = false;
 
-void V_RenderVGuiOnly( void )
+void V_RenderUIOnly( void )
 {
 	materials->BeginFrame( host_frametime );
 
-	EngineVGui()->Simulate();
+	EngineUI()->Simulate();
 
 	g_EngineRenderer->FrameBegin();
 
 	toolframework->RenderFrameBegin();
 
-	V_RenderVGuiOnly_NoSwap();
+	V_RenderUIOnly_NoSwap();
 
 	toolframework->RenderFrameEnd();
 
@@ -198,7 +195,7 @@ void V_RenderView( void )
 
 	bool bCanRenderWorld = ( host_state.worldmodel != NULL ) && GetBaseLocalClient().IsActive();
 
-	bCanRenderWorld = bCanRenderWorld && !EngineVGui()->IsPlayingFullScreenVideo();
+	bCanRenderWorld = bCanRenderWorld && !EngineUI()->IsPlayingFullScreenVideo();
 
 	bCanRenderWorld = bCanRenderWorld && toolframework->ShouldGameRenderView();
 
@@ -222,7 +219,7 @@ void V_RenderView( void )
 	{
 		// Because we now do a lot of downloading before spawning map, don't render anything world related 
 		// until we are an active client.
-		V_RenderVGuiOnly_NoSwap();
+		V_RenderUIOnly_NoSwap();
 	}
 	else if ( !g_LostVideoMemory )
 	{
@@ -326,15 +323,6 @@ public:
 	{
 		DrawSavedModelDebugOverlays();
 
-		if ( g_pDemoUI )
-		{
-			g_pDemoUI->DrawDebuggingInfo();
-		}
-
-		//if ( g_pDemoUI2 )
-		//{
-		//	g_pDemoUI2->DrawDebuggingInfo();
-		//}
 
 		SpatialPartition()->DrawDebugOverlays();
 
@@ -498,17 +486,6 @@ public:
 	bool AreAnyLeavesVisible( int *leafList, int nLeaves )
 	{
 		return Map_AreAnyLeavesVisible( *host_state.worldbrush, leafList, nLeaves );
-	}
-
-	// For backward compatibility only!!!
-	void VguiPaint( void )
-	{
-		EngineVGui()->BackwardCompatibility_Paint();
-	}
-
-	void VGui_Paint( int mode )
-	{
-		EngineVGui()->Paint( (PaintMode_t)mode );
 	}
 
 	void ViewDrawFade( byte *color, IMaterial* pFadeMaterial, bool mapFullTextureToScreen )

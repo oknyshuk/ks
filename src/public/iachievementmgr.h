@@ -112,13 +112,13 @@ public:
 #define ACHIEVEMENTMGR_INTERFACE_VERSION "ACHIEVEMENTMGR_INTERFACE_VERSION001"
 
 #define ACHIEVEMENT_LOCALIZED_NAME_FROM_STR( name ) \
-	( g_pVGuiLocalize->FindSafe( CFmtStr( "#%s_NAME", name ) ) )
+	( g_pLocalize->FindSafe( CFmtStr( "#%s_NAME", name ) ) )
 
 #define ACHIEVEMENT_LOCALIZED_NAME( pAchievement ) \
 	( ACHIEVEMENT_LOCALIZED_NAME_FROM_STR( pAchievement->GetName() ) )
 
 #define ACHIEVEMENT_LOCALIZED_DESC_FROM_STR( name ) \
-	( g_pVGuiLocalize->FindSafe( CFmtStr( "#%s_DESC", name ) ) )
+	( g_pLocalize->FindSafe( CFmtStr( "#%s_DESC", name ) ) )
 
 #define ACHIEVEMENT_LOCALIZED_DESC( pAchievement ) \
 	( ACHIEVEMENT_LOCALIZED_DESC_FROM_STR( pAchievement->GetName() ) )

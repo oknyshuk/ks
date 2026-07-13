@@ -13,13 +13,11 @@
 #include "movevars_shared.h"
 #include "in_buttons.h"
 #include "text_message.h"
-#include "vgui_controls/Controls.h"
-#include "vgui/ILocalize.h"
-#include "vguicenterprint.h"
+#include "localize/ilocalize.h"
+#include "uicenterprint.h"
 #include "game/client/iviewport.h"
 #include <keyvalues.h>
 #include "matchmaking/imatchframework.h"
-#include "iloadingdisc.h"
 #include "view_shared.h"
 #include "view.h"
 #include "ivrenderview.h"
@@ -28,8 +26,6 @@
 #include "ivieweffects.h"
 #include "cs_hud_chat.h"
 #include "in_buttons.h"
-#include <vgui/IInput.h>
-#include "vgui_controls/Controls.h"
 #include "hltvreplaysystem.h"
 
 #ifdef CSTRIKE_DLL
@@ -1395,8 +1391,6 @@ void C_HLTVCamera::Update()
 			m_flAutodirectorPausedTime = -1.0f;
 		}
 	}
-
-	loadingdisc->SetFastForwardVisible( bFastForwardNotification );
 }
 
 void C_HLTVCamera::SpecCameraGotoPos( Vector vecPos, QAngle angAngle, int nPlayerIndex )
@@ -1503,7 +1497,7 @@ void C_HLTVCamera::FireGameEvent( IGameEvent * event)
 		const char *pszText = event->GetString( "text", "" );
 		
 		const char *tmpStr = hudtextmessage->LookupString( pszText );
-		const wchar_t *pBuf = g_pVGuiLocalize->Find( tmpStr );
+		const wchar_t *pBuf = g_pLocalize->Find( tmpStr );
 		if ( pBuf )
 		{
 			// Copy pBuf into szBuf[i].
@@ -1513,7 +1507,7 @@ void C_HLTVCamera::FireGameEvent( IGameEvent * event)
 		}
 		else
 		{
-			g_pVGuiLocalize->ConvertANSIToUnicode( tmpStr, outputBuf, sizeof(outputBuf) );
+			g_pLocalize->ConvertANSIToUnicode( tmpStr, outputBuf, sizeof(outputBuf) );
 		}
 
 		GetCenterPrint()->Print( ConvertCRtoNL( outputBuf ) );
@@ -1743,7 +1737,7 @@ void C_HLTVCamera::SetAutoDirector( AutodirectorState_t eState )
 								CBaseHudChat *hudChat = ( CBaseHudChat * )GET_HUDELEMENT( CHudChat );
 								if ( hudChat && pLocalPlayer && !IsAutoDirectorOn() )
 								{
-									hudChat->ChatPrintfW( pLocalPlayer->entindex(), CHAT_FILTER_SERVERMSG, g_pVGuiLocalize->Find( "#CSGO_Scoreboard_CasterControl_Camera_On" ) );
+									hudChat->ChatPrintfW( pLocalPlayer->entindex(), CHAT_FILTER_SERVERMSG, g_pLocalize->Find( "#CSGO_Scoreboard_CasterControl_Camera_On" ) );
 								
 									pLocalPlayer->EmitSound("Vote.Passed");		
 								}
@@ -1777,7 +1771,7 @@ void C_HLTVCamera::SetAutoDirector( AutodirectorState_t eState )
 		CBaseHudChat *hudChat = ( CBaseHudChat * )GET_HUDELEMENT( CHudChat );
 		if ( hudChat && pLocalPlayer && m_iCameraMan != 0 && IsAutoDirectorOn() )
 		{
-			hudChat->ChatPrintfW( pLocalPlayer->entindex(), CHAT_FILTER_SERVERMSG, g_pVGuiLocalize->Find( "#CSGO_Scoreboard_CasterControl_Camera_Off" ) );
+			hudChat->ChatPrintfW( pLocalPlayer->entindex(), CHAT_FILTER_SERVERMSG, g_pLocalize->Find( "#CSGO_Scoreboard_CasterControl_Camera_Off" ) );
 			
 			pLocalPlayer->EmitSound("UI.ButtonRolloverLarge");		
 		}

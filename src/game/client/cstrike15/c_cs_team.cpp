@@ -9,7 +9,7 @@
 #include "hud.h"
 #include "recvproxy.h"
 #include "c_cs_team.h"
-#include "vgui/ILocalize.h"
+#include "localize/ilocalize.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -44,7 +44,7 @@ const char* Helper_GetLocalPlayerAssassinationQuestLocToken( const CEconQuestDef
 bool Helper_GetDecoratedAssassinationTargetName( const CEconQuestDefinition *pQuest, wchar_t* pszBuffer, size_t nBuffSizeInCharacters )
 {
 	const char* szToken = Helper_GetLocalPlayerAssassinationQuestLocToken( pQuest );
-	if ( wchar_t *wszUndecoratedName = g_pVGuiLocalize->Find( szToken ) )
+	if ( wchar_t *wszUndecoratedName = g_pLocalize->Find( szToken ) )
 	{
 		V_snwprintf( pszBuffer, nBuffSizeInCharacters, L"<font color = '#FF0000'><i>" PRI_WS_FOR_WS L"</i></font>", wszUndecoratedName );
 		return true;

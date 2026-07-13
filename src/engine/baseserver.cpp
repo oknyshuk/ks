@@ -2969,7 +2969,11 @@ void CBaseServer::Init( bool bIsDedicated )
 	if ( !g_pKVrulesConvars )
 	{
 		g_pKVrulesConvars = new KeyValues( "NotifyRulesCvars" );
-		if ( !g_pKVrulesConvars->LoadFromFile( g_pFullFileSystem, "gamerulescvars.txt", "MOD" ) )
+		// gamerulescvars.txt is optional (only a .example ships by default); it just
+		// selects which cvars are reported to management tools. Only warn if the
+		// file actually exists but fails to parse, otherwise stay quiet.
+		if ( g_pFullFileSystem->FileExists( "gamerulescvars.txt", "MOD" ) &&
+		     !g_pKVrulesConvars->LoadFromFile( g_pFullFileSystem, "gamerulescvars.txt", "MOD" ) )
 		{
 			Warning( "Failed to load gamerulescvars.txt, game rules cvars might not be reported to management tools.\n" );
 		}

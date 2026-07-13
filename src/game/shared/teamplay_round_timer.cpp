@@ -11,7 +11,6 @@
 
 #ifdef CLIENT_DLL
 #include "IClientMode.h"
-#include "vgui_controls/AnimationController.h"
 #include "c_playerresource.h"
 #include "c_team_objectiveresource.h"
 #else

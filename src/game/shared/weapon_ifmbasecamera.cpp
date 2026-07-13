@@ -1,4 +1,4 @@
-//===== Copyright © 1996-2005, Valve Corporation, All rights reserved. ======//
+//===== Copyright ï¿½ 1996-2005, Valve Corporation, All rights reserved. ======//
 //
 // Purpose: 
 //
@@ -11,8 +11,6 @@
 #ifdef CLIENT_DLL
 #include "view_shared.h"
 #include "iviewrender.h"
-#include "vgui_controls/controls.h"
-#include "vgui/isurface.h"
 
 // NOTE: This has to be the last file included!
 #include "tier0/memdbgon.h"
@@ -385,22 +383,6 @@ void CWeaponIFMBaseCamera::ViewModelDrawn( int nFlags, CBaseViewModel *pBaseView
 void CWeaponIFMBaseCamera::DrawCrosshair( void )
 {
 	BaseClass::DrawCrosshair();
-
-	int x, y, w, h;
-	GetOverlayBounds( x, y, w, h );
-
-	// Draw the targeting zone around the crosshair
-	int r, g, b, a;
-	GetHud().m_clrYellowish.GetColor( r, g, b, a );
-
-	Color light( r, g, b, 160 );
-
-	int nBorderSize = 4;
-	vgui::surface()->DrawSetColor( light );
-	vgui::surface()->DrawFilledRect( x-nBorderSize, y-nBorderSize, x+w+nBorderSize, y );
-	vgui::surface()->DrawFilledRect( x-nBorderSize, y+h, x+w+nBorderSize, y+h+nBorderSize );
-	vgui::surface()->DrawFilledRect( x-nBorderSize, y, x, y+h );
-	vgui::surface()->DrawFilledRect( x+w, y, x+w+nBorderSize, y+h );
 }
 
 #endif // CLIENT_DLL

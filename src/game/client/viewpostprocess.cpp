@@ -1625,7 +1625,7 @@ static ConVar mat_software_aa_edge_threshold( "mat_software_aa_edge_threshold", 
 static ConVar mat_software_aa_blur_one_pixel_lines( "mat_software_aa_blur_one_pixel_lines", "0.5", 0, "How much software AA should blur one-pixel thick lines: (0.0 - none), (1.0 - lots)" );
 static ConVar mat_software_aa_tap_offset( "mat_software_aa_tap_offset", "1.0", 0, "Software AA - adjusts the displacement of the taps used by the software AA shader (default 1.0 - a lower value will make the image sharper, higher will make it blurrier)" );
 static ConVar mat_software_aa_debug( "mat_software_aa_debug", "0", 0, "Software AA debug mode: (0 - off), (1 - show number of 'unlike' samples: 0->black, 1->red, 2->green, 3->blue), (2 - show anti-alias blend strength), (3 - show averaged 'unlike' colour)" );
-static ConVar mat_software_aa_strength_vgui( "mat_software_aa_strength_vgui", "-1.0", 0, "Same as mat_software_aa_strength, but forced to this value when called by the post vgui AA pass." );
+static ConVar mat_software_aa_strength_ui( "mat_software_aa_strength_ui", "-1.0", 0, "Same as mat_software_aa_strength, but forced to this value when called by the post vgui AA pass." );
 
 // FXAA convars - defaults taken from 3.11 implementation
 static ConVar mat_fxaa_subpixel_C( "mat_fxaa_subpixel_C", "0.5", 0, "Effects sub-pixel AA quality and inversely sharpness (only used on FXAA Console): (0.33 - sharper), (0.5 - default)" );
@@ -2482,7 +2482,7 @@ static ConVar mat_postprocess_x( "mat_postprocess_x", "4" );
 static ConVar mat_postprocess_y( "mat_postprocess_y", "1" );
 static ConVar mat_postprocess_enable( "mat_postprocess_enable", "0" );
 
-bool DoEnginePostProcessing( int x, int y, int w, int h, bool bFlashlightIsOn, bool bPostVGui )
+bool DoEnginePostProcessing( int x, int y, int w, int h, bool bFlashlightIsOn, bool bPostUI )
 {
 	// don't do this if disabled or in alt-tab
 	if ( s_bOverridePostProcessingDisable || w <=0 || h <= 0 )
@@ -2510,7 +2510,7 @@ bool DoEnginePostProcessing( int x, int y, int w, int h, bool bFlashlightIsOn, b
 		ICallQueue *pCallQueue = pRenderContext->GetCallQueue();
 		if ( pCallQueue )
 		{
-			pCallQueue->QueueCall( DoEnginePostProcessing, x, y, w, h, bFlashlightIsOn, bPostVGui );
+			pCallQueue->QueueCall( DoEnginePostProcessing, x, y, w, h, bFlashlightIsOn, bPostUI );
 			return false;
 		}
 	}
@@ -2576,24 +2576,24 @@ bool DoEnginePostProcessing( int x, int y, int w, int h, bool bFlashlightIsOn, b
 	}
 
 	// Same trick for setting up the vgui aa strength
-	if ( mat_software_aa_strength_vgui.GetFloat() == -1.0f )
+	if ( mat_software_aa_strength_ui.GetFloat() == -1.0f )
 	{
 		if ( IsGameConsole() && (g_pMaterialSystem->GetCurrentConfigForVideoCard().m_VideoMode.m_Height == 720) )
 		{
-			mat_software_aa_strength_vgui.SetValue( 2.0f );
+			mat_software_aa_strength_ui.SetValue( 2.0f );
 		}
 		else
 		{
-			mat_software_aa_strength_vgui.SetValue( 1.0f );
+			mat_software_aa_strength_ui.SetValue( 1.0f );
 		}
 	}
 
 	float flAAStrength;
 
-	// We do a second AA blur pass over the TF intro menus. use mat_software_aa_strength_vgui there instead
-	if ( IsGameConsole() && bPostVGui )
+	// We do a second AA blur pass over the TF intro menus. use mat_software_aa_strength_ui there instead
+	if ( IsGameConsole() && bPostUI )
 	{
-		flAAStrength = mat_software_aa_strength_vgui.GetFloat();
+		flAAStrength = mat_software_aa_strength_ui.GetFloat();
 	}
 	else
 	{
@@ -2603,8 +2603,8 @@ bool DoEnginePostProcessing( int x, int y, int w, int h, bool bFlashlightIsOn, b
 	// Bloom, software-AA and color-correction (applied in 1 pass, after generation of the bloom texture)
 	float flBloomScale = GetBloomAmount();
 	bool  bPerformSoftwareAA	= ( flAAStrength != 0.0f );
-	bool  bPerformBloom			= !bPostVGui && ( flBloomScale > 0.0f );
-	bool  bPerformColCorrect	= !bPostVGui && 
+	bool  bPerformBloom			= !bPostUI && ( flBloomScale > 0.0f );
+	bool  bPerformColCorrect	= !bPostUI && 
 								  g_pColorCorrectionMgr->HasNonZeroColorCorrectionWeights() &&
 								  mat_colorcorrection.GetInt();
 

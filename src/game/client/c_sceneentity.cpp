@@ -16,7 +16,6 @@
 #include "scenefilecache/ISceneFileCache.h"
 #include "materialsystem/imaterialsystemhardwareconfig.h"
 #include "tier2/tier2.h"
-#include "hud_closecaption.h"
 #include "tier1/fmtstr.h"
 #include "../../common/blackbox_helper.h"
 
@@ -626,36 +625,7 @@ void C_SceneEntity::DispatchStartSpeak( CChoreoScene *scene, C_BaseFlex *actor, 
 		EmitSound( filter, actor->entindex(), es );
 		actor->AddSceneEvent( scene, event, NULL, IsClientOnly(), this );
 
-		// Close captioning only on master token no matter what...
-		if ( event->GetCloseCaptionType() == CChoreoEvent::CC_MASTER )
-		{
-			char tok[ CChoreoEvent::MAX_CCTOKEN_STRING ];
-			bool validtoken = event->GetPlaybackCloseCaptionToken( tok, sizeof( tok ) );
-			if ( validtoken )
-			{
-				CRC32_t tokenCRC;
-				CRC32_Init( &tokenCRC );
-
-				char lowercase[ 256 ];
-				Q_strncpy( lowercase, tok, sizeof( lowercase ) );
-				Q_strlower( lowercase );
-
-				CRC32_ProcessBuffer( &tokenCRC, lowercase, Q_strlen( lowercase ) );
-				CRC32_Final( &tokenCRC );
-
-				float endtime = event->GetLastSlaveEndTime();
-				float durationShort = event->GetDuration();
-				float durationLong = endtime - event->GetStartTime();
-				float duration = MAX( durationShort, durationLong );
-
-				CHudCloseCaption *hudCloseCaption = GET_FULLSCREEN_HUDELEMENT( CHudCloseCaption );
-				if ( hudCloseCaption )
-				{
-					hudCloseCaption->ProcessCaption( lowercase, duration );
-				}
-			}
-
-		}
+		// Close captioning removed (VGUI teardown)
 	}
 }
 

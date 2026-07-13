@@ -541,7 +541,7 @@ bool CLocalize::AddFile( const char *szFileName, const char *pPathID, bool bIncl
 			}
 			else
 			{
-				bValid = vgui::system()->GetRegistryString( "HKEY_CURRENT_USER\\Software\\Valve\\Steam\\Language", language, sizeof(language)-1 );
+				bValid = false;
 			}
 			if ( bValid && !Q_stricmp( language, "unknown" ) )
 			{

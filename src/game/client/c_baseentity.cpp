@@ -6685,9 +6685,10 @@ C_AI_BaseNPC *C_BaseEntity::MyNPCPointer( void )
 //  the recipient list.
 // Input  : filter - 
 //-----------------------------------------------------------------------------
+ConVar closecaption( "closecaption", "0", FCVAR_ARCHIVE | FCVAR_ARCHIVE_GAMECONSOLE, "Enable close captioning." );
+
 void C_BaseEntity::RemoveRecipientsIfNotCloseCaptioning( C_RecipientFilter& filter )
 {
-	extern ConVar closecaption;
 	if ( !closecaption.GetBool() )
 	{
 		filter.Reset();

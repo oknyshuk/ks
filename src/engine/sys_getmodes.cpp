@@ -44,9 +44,6 @@ typedef void *HDC;
 #include "materialsystem/itexture.h"
 #include "materialsystem/imaterialsystemhardwareconfig.h"
 #include <jpeglib.h>
-#include "vgui/ISurface.h"
-#include "vgui/IScheme.h"
-#include "vgui_controls/Controls.h"
 #include "gl_shader.h"
 #include "sys_dll.h"
 #include "materialsystem/imaterial.h"
@@ -979,17 +976,6 @@ void CVideoMode_Common::DrawStartupGraphic()
 		DrawScreenSpaceRectangle( pMaterial, 0, 0, w, h, 0, 0, tw-1, th-1, tw, th, NULL,1,1,depth );
 //		DrawScreenSpaceRectangle( pLoadingMaterial, w-lw, h-lh, lw, lh, 0, 0, lw-1, lh-1, lw, lh, NULL,1,1,depth );
 
-#endif // CSTRIKE15
-
-// Don't draw the title text for CSS15
-#if !defined( CSTRIKE15 )
-		// center align at bottom
-		int title_y = vgui::scheme()->GetProportionalScaledValue( 390 );
-		int title_w = vgui::scheme()->GetProportionalScaledValue( 240 );
-		int title_h = vgui::scheme()->GetProportionalScaledValue( 60 );
-		int title_x = (w/2 - title_w/2);
-
-		DrawScreenSpaceRectangle( pTitleMaterial, title_x, title_y, title_w, title_h, 0, 0, title_w-1, title_h-1, title_w, title_h, NULL,1,1,depth );
 #endif // CSTRIKE15
 
 		g_pMaterialSystem->SwapBuffers();
@@ -2652,9 +2638,6 @@ void CVideoMode_MaterialSystem::AdjustForModeChange( void )
     MarkClientViewRectDirty();
     pRenderContext->Viewport( 0, 0, GetModeWidth(), GetModeHeight() );
 
-    // fixup vgui - pass old values so panels that match old size will resize
-    vgui::surface()->OnScreenSizeChanged( nOldWidth, nOldHeight );
-	
 	game->OnScreenSizeChanged( nOldWidth, nOldHeight );
 }
 

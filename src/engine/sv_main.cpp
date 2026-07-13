@@ -51,7 +51,7 @@
 #include "voice.h"
 
 #ifndef DEDICATED
-#include "vgui_baseui_interface.h"
+#include "engineui.h"
 #endif
 #include "cbenchmark.h"
 #include "client.h"
@@ -105,7 +105,7 @@ extern ConVar sv_sendtables;
 ConVar sv_hibernate_when_empty( "sv_hibernate_when_empty", "1", FCVAR_RELEASE, "Puts the server into extremely low CPU usage mode when no clients connected", OnHibernateWhenEmptyChanged );
 ConVar sv_hibernate_punt_tv_clients( "sv_hibernate_punt_tv_clients", "0", FCVAR_RELEASE, "When enabled will punt all GOTV clients during hibernation" );
 ConVar sv_hibernate_ms( "sv_hibernate_ms", "20", FCVAR_RELEASE, "# of milliseconds to sleep per frame while hibernating" );
-ConVar sv_hibernate_ms_vgui( "sv_hibernate_ms_vgui", "20", FCVAR_RELEASE, "# of milliseconds to sleep per frame while hibernating but running the vgui dedicated server frontend" );
+ConVar sv_hibernate_ms_ui( "sv_hibernate_ms_ui", "20", FCVAR_RELEASE, "# of milliseconds to sleep per frame while hibernating but running the vgui dedicated server frontend" );
 static ConVar sv_hibernate_postgame_delay( "sv_hibernate_postgame_delay", "5", FCVAR_RELEASE, "# of seconds to wait after final client leaves before hibernating.");
 
 ConVar	host_flush_threshold( "host_flush_threshold", "12", FCVAR_RELEASE, "Memory threshold below which the host should flush caches between server instances" );
@@ -2569,7 +2569,7 @@ bool SV_ActivateServer()
 {
     COM_TimestampedLog( "SV_ActivateServer" );
 #ifndef DEDICATED
-    EngineVGui()->UpdateProgressBar(PROGRESS_ACTIVATESERVER);
+    EngineUI()->UpdateProgressBar(PROGRESS_ACTIVATESERVER);
 #endif
 
     COM_TimestampedLog( "serverGameDLL->ServerActivate" );
@@ -2931,7 +2931,7 @@ bool CGameServer::SpawnServer( char *mapname, char * mapGroupName, char *startsp
 
     COM_TimestampedLog( "SV_SpawnServer(%s)", mapname );
 #ifndef DEDICATED
-    EngineVGui()->UpdateProgressBar(PROGRESS_SPAWNSERVER);
+    EngineUI()->UpdateProgressBar(PROGRESS_SPAWNSERVER);
 #endif
     COM_SetupLogDir( mapname );
 
@@ -3132,7 +3132,7 @@ bool CGameServer::SpawnServer( char *mapname, char * mapGroupName, char *startsp
     if ( IsMultiplayer() && !IsGameConsole() )
     {
 #ifndef DEDICATED
-        EngineVGui()->UpdateProgressBar(PROGRESS_CRCMAP);
+        EngineUI()->UpdateProgressBar(PROGRESS_CRCMAP);
 #endif
         // Server map CRC check.
         CRC32_Init(&worldmapCRC);
@@ -3145,7 +3145,7 @@ bool CGameServer::SpawnServer( char *mapname, char * mapGroupName, char *startsp
         }
 
 #ifndef DEDICATED
-        EngineVGui()->UpdateProgressBar(PROGRESS_CRCCLIENTDLL);
+        EngineUI()->UpdateProgressBar(PROGRESS_CRCCLIENTDLL);
 #endif
 
         // DLL CRC check.
@@ -3167,7 +3167,7 @@ bool CGameServer::SpawnServer( char *mapname, char * mapGroupName, char *startsp
     COM_TimestampedLog( "SV_CreateNetworkStringTables" );
 
 #ifndef DEDICATED
-    EngineVGui()->UpdateProgressBar(PROGRESS_CREATENETWORKSTRINGTABLES);
+    EngineUI()->UpdateProgressBar(PROGRESS_CREATENETWORKSTRINGTABLES);
 #endif
 
     // Create network string tables ( including precache tables )
@@ -3182,7 +3182,7 @@ bool CGameServer::SpawnServer( char *mapname, char * mapGroupName, char *startsp
     COM_TimestampedLog( "Precache world model (%s)", szModelName );
 
 #ifndef DEDICATED
-    EngineVGui()->UpdateProgressBar(PROGRESS_PRECACHEWORLD);
+    EngineUI()->UpdateProgressBar(PROGRESS_PRECACHEWORLD);
 #endif
     // Add in world
     PrecacheModel( szModelName, RES_FATALIFMISSING | RES_PRELOAD, host_state.worldmodel );
@@ -3200,7 +3200,7 @@ bool CGameServer::SpawnServer( char *mapname, char * mapGroupName, char *startsp
     }
 
 #ifndef DEDICATED
-    EngineVGui()->UpdateProgressBar(PROGRESS_CLEARWORLD);
+    EngineUI()->UpdateProgressBar(PROGRESS_CLEARWORLD);
 #endif
     COM_TimestampedLog( "SV_ClearWorld" );
 
@@ -3305,7 +3305,7 @@ bool SV_IsSimulating( void )
             return false;
 
         // Don't simulate in single player if console is down or the bug UI is active and we're in a game 
-        if ( GetBaseLocalClient().IsActive() && ( Con_IsVisible() || EngineVGui()->ShouldPause() ) )
+        if ( GetBaseLocalClient().IsActive() && ( Con_IsVisible() || EngineUI()->ShouldPause() ) )
             return false;
     }
 #endif //DEDICATED
@@ -3339,7 +3339,7 @@ void SV_Think( bool bIsSimulating )
             if ( g_bIsVGuiBasedDedicatedServer )
             {
                 // Keep VGUi happy
-                nMilliseconds = sv_hibernate_ms_vgui.GetInt();
+                nMilliseconds = sv_hibernate_ms_ui.GetInt();
             }
 #endif
             NET_SleepUntilMessages( nMilliseconds );

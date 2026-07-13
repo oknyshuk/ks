@@ -41,8 +41,6 @@
 #include "videocfg/videocfg.h"
 #include "LoadScreenUpdate.h"
 #include "cl_main.h"
-#include <vgui/IScheme.h>
-#include <vgui_controls/Controls.h>
 #include "GameEventManager.h"
 #if defined( _X360 )
 #endif
@@ -1239,7 +1237,6 @@ void InitStartupScreen()
 	CMatRenderContextPtr pRenderContext( g_pMaterialSystem );
 	pRenderContext->SetNonInteractiveTempFullscreenBuffer( pTexture, MATERIAL_NON_INTERACTIVE_MODE_STARTUP );
 
-#if defined( CSTRIKE15 )
 	pTexture = materials->FindTexture( "console/spinner", TEXTURE_GROUP_OTHER );
 	pRenderContext->SetNonInteractivePacifierTexture( pTexture, 0.5f, 0.5f, 0.2f );
 
@@ -1247,8 +1244,8 @@ void InitStartupScreen()
 	const int logoHeight = 64;
 
 	float x, y, w, h;
-	w = vgui::scheme()->GetProportionalScaledValue( logoWidth ) / 2;
-	h = vgui::scheme()->GetProportionalScaledValue( logoHeight ) / 2;
+	w = ( logoWidth * screenHeight / 1080 ) / 2;
+	h = ( logoHeight * screenHeight / 1080 ) / 2;
 
 	x = (screenWidth / 2 - w / 2 ) / (float)screenWidth;
 	y = (screenHeight / 2 - h / 2) / (float)screenHeight;
@@ -1257,34 +1254,6 @@ void InitStartupScreen()
 
 	pTexture = materials->FindTexture( "console/logo", TEXTURE_GROUP_OTHER );
 	pRenderContext->SetNonInteractiveLogoTexture( pTexture, x, y, w, h );
-#else
-	// this is what the loading progress calcs
-	float x, y, w, h, size;
-	size = vgui::scheme()->GetProportionalScaledValue( 85 );
-	x = screenWidth - vgui::scheme()->GetProportionalScaledValue( 85 );
-	y = vgui::scheme()->GetProportionalScaledValue( 70 );
-
-	// back solve to send in to achieve the above placement
-	x = x /(float)screenWidth;
-	y = y /(float)screenHeight;
-	size = size/(float)screenHeight;
-
-	pTexture = materials->FindTexture( "vgui/spinner", TEXTURE_GROUP_OTHER );
-	pRenderContext->SetNonInteractivePacifierTexture( pTexture, x, y, size );
-
-	y = vgui::scheme()->GetProportionalScaledValue( 390 );
-	w = vgui::scheme()->GetProportionalScaledValue( 240 );
-	h = vgui::scheme()->GetProportionalScaledValue( 60 );
-
-	// center align at bottom
-	x = (screenWidth/2 - w/2)/(float)screenWidth;
-	y = y/(float)screenHeight;
-	w = w/(float)screenWidth;
-	h = h/(float)screenHeight;
-
-	pTexture = materials->FindTexture( "vgui/portal2logo", TEXTURE_GROUP_OTHER );
-	pRenderContext->SetNonInteractiveLogoTexture( pTexture, x, y, w, h );
-#endif // CSTRIKE15
 }
 
 //-----------------------------------------------------------------------------

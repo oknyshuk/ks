@@ -26,18 +26,10 @@
 #define SILENCER_VISIBLE 0
 #define SILENCER_HIDDEN 1
 
-#ifdef SIXENSE
-#include "sixense\in_sixense.h"
-#include "view.h"
-#endif
-
 #if defined( CLIENT_DLL )
 
-	#include "vgui/ISurface.h"
-	#include "vgui_controls/Controls.h"
 	#include "c_cs_player.h"
 	#include "predicted_viewmodel.h"
-	#include "hud_crosshair.h"
 	#include "c_te_effect_dispatch.h"
 	#include "c_te_legacytempents.h"
 	#include "cs_hud_weaponselection.h"
@@ -98,8 +90,8 @@ ConVar weapon_air_spread_scale( "weapon_air_spread_scale", "1.0", FCVAR_RELEASE 
 ConVar weapon_legacy_recoiltable( "weapon_legacy_recoiltable", "0", FCVAR_REPLICATED | FCVAR_DEVELOPMENTONLY );
 ConVar weapon_reticle_knife_show( "weapon_reticle_knife_show", "0", FCVAR_RELEASE | FCVAR_REPLICATED, "When enabled will show knife reticle on clients. Used for game modes requiring target id display when holding a knife." );
 
-ConVar weapon_auto_cleanup_time( "weapon_auto_cleanup_time", "0", FCVAR_RELEASE, "If set to non-zero, weapons will delete themselves after the specified time (in seconds) if no players are near." );
-ConVar weapon_max_before_cleanup( "weapon_max_before_cleanup", "0", FCVAR_RELEASE, "If set to non-zero, will remove the oldest dropped weapon to maintain the specified number of dropped weapons in the world." );
+ConVar weapon_auto_cleanup_time( "weapon_auto_cleanup_time", "0", FCVAR_RELEASE | FCVAR_REPLICATED, "If set to non-zero, weapons will delete themselves after the specified time (in seconds) if no players are near." );
+ConVar weapon_max_before_cleanup( "weapon_max_before_cleanup", "0", FCVAR_RELEASE | FCVAR_REPLICATED, "If set to non-zero, will remove the oldest dropped weapon to maintain the specified number of dropped weapons in the world." );
 
 
 #if defined( CLIENT_DLL )
@@ -420,24 +412,6 @@ LINK_ENTITY_TO_CLASS_ALIASED( weapon_cs_base, WeaponCSBase );
 
 void DrawCrosshairRect( int r, int g, int b, int a, int x0, int y0, int x1, int y1, bool bAdditive )
 {
-	if ( cl_crosshair_drawoutline.GetBool() )
-	{
-		float flThick = cl_crosshair_outlinethickness.GetFloat();
-		vgui::surface()->DrawSetColor( 0, 0, 0, a );
-		vgui::surface()->DrawFilledRect( x0-flThick, y0-flThick, x1+flThick, y1+flThick );
-	}
-
-	vgui::surface()->DrawSetColor( r, g, b, a );
-
-	if ( bAdditive )
-	{
-		vgui::surface()->DrawTexturedRect( x0, y0, x1, y1 );
-	}
-	else
-	{
-		// Alpha-blended crosshair
-		vgui::surface()->DrawFilledRect( x0, y0, x1, y1 );
-	}
 }
 
 #endif
@@ -1864,12 +1838,6 @@ void CWeaponCSBase::DrawCrosshair()
 {
 	if ( !crosshair.GetInt() )
 		return;
-	CHudCrosshair *pCrosshair = GET_HUDELEMENT( CHudCrosshair );
-
-	// clear old hud crosshair
-	if ( !pCrosshair )
-		return;
-		pCrosshair->SetCrosshair( 0, Color( 255, 255, 255, 255 ) );
 
 	CCSPlayer* pPlayer = ( CCSPlayer* )C_BasePlayer::GetLocalPlayer();
 
@@ -1927,7 +1895,6 @@ void CWeaponCSBase::DrawCrosshair()
 	bool bAdditive = !cl_crosshairusealpha.GetBool() && !pPlayer->m_bNightVisionOn;
 	if ( bAdditive )
 	{
-		vgui::surface()->DrawSetTexture( m_iCrosshairTextureID );
 		alpha = 200;
 	}
 
@@ -2047,46 +2014,8 @@ void CWeaponCSBase::DrawCrosshair()
 		iCappedCrosshairDistance = 4 + cl_crosshairgap.GetFloat();
 	}
 
-#ifdef SIXENSE
-	int iCenterX;
-	int iCenterY;
-
-	if( g_pSixenseInput->IsEnabled() )
-	{
-		// Never autoaim a predicted weapon (for now)
-		Vector	aimVector;
-		AngleVectors( CurrentViewAngles() - g_pSixenseInput->GetViewAngleOffset(), &aimVector );
-
-		// calculate where the bullet would go so we can draw the cross appropriately
-		Vector vecStart = pPlayer->Weapon_ShootPosition();
-		Vector vecEnd = pPlayer->Weapon_ShootPosition() + aimVector * MAX_TRACE_LENGTH;
-
-
-		trace_t tr;
-		UTIL_TraceLine( vecStart, vecEnd, MASK_SHOT, pPlayer, COLLISION_GROUP_NONE, &tr );
-
-		Vector screen;
-		screen.Init();
-		ScreenTransform(tr.endpos, screen);
-
-		iCenterX = ScreenWidth() / 2;
-		iCenterY = ScreenHeight() / 2;
-
-		iCenterX += 0.5 * screen[0] * ScreenWidth() + 0.5;
-		iCenterY += 0.5 * screen[1] * ScreenHeight() + 0.5;
-		iCenterY = ScreenHeight() - iCenterY;
-
-	}
-	else
-	{
-		iCenterX = ScreenWidth() / 2;
-		iCenterY = ScreenHeight() / 2;
-	}
-
-#else
 	int iCenterX = ScreenWidth() / 2;
 	int iCenterY = ScreenHeight() / 2;
-#endif
 
 	float flAngleToScreenPixel = 0;
 
@@ -2218,7 +2147,6 @@ void CWeaponCSBase::DrawCrosshair()
 		r = 250;
 		g = 250;
 		b = 50;
-		//vgui::surface()->DrawSetColor( r, g, b, alpha );
 
 		int iBarThickness = MAX( 1, RoundFloatToInt( YRES( cl_crosshairthickness.GetFloat() )) );
 

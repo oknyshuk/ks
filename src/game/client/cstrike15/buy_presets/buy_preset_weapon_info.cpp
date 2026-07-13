@@ -12,8 +12,7 @@
 #include "cs_ammodef.h"
 #include "cs_gamerules.h"
 #include "bot/shared_util.h"
-#include <vgui/ILocalize.h>
-#include <vgui_controls/Controls.h>
+#include "localize/ilocalize.h"
 #include "c_cs_player.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
@@ -87,7 +86,7 @@ const wchar_t* WeaponIDToDisplayName( CSWeaponID weaponID )
 {
 	for( int i=0; weaponDisplayNameInfo[i].displayName; ++i )
 		if ( weaponDisplayNameInfo[i].id == weaponID )
-			return g_pVGuiLocalize->Find( weaponDisplayNameInfo[i].displayName );
+			return g_pLocalize->Find( weaponDisplayNameInfo[i].displayName );
 
 	return NULL;
 }

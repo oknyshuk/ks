@@ -348,7 +348,7 @@ char const *CDemoActionTextMessageStart::GetMessageText( void ) const
 //-----------------------------------------------------------------------------
 void CDemoActionTextMessageStart::SetFontName( char const *font )
 {
-	Q_strncpy( m_szVguiFont, font, sizeof( m_szVguiFont ) );
+	Q_strncpy( m_szUIFont, font, sizeof( m_szUIFont ) );
 }
 
 //-----------------------------------------------------------------------------
@@ -357,11 +357,11 @@ void CDemoActionTextMessageStart::SetFontName( char const *font )
 //-----------------------------------------------------------------------------
 char const *CDemoActionTextMessageStart::GetFontName( void ) const
 {
-	if ( !Q_strcasecmp( "TextMessageDefault", m_szVguiFont ) )
+	if ( !Q_strcasecmp( "TextMessageDefault", m_szUIFont ) )
 	{
 		return "";
 	}
-	return m_szVguiFont;
+	return m_szUIFont;
 }
 
 //-----------------------------------------------------------------------------

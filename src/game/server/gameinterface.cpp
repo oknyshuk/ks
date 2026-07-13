@@ -74,9 +74,7 @@
 #include "player_voice_listener.h"
 
 #ifdef _WIN32
-#include "ienginevgui.h"
-#include "vgui_gamedll_int.h"
-#include "vgui_controls/AnimationController.h"
+#include "iengineui.h"
 #endif
 
 #include "ragdoll_shared.h"
@@ -204,15 +202,9 @@ IDataCache *datacache = NULL;
 IVDebugOverlay * debugoverlay = NULL;
 ISoundEmitterSystemBase *soundemitterbase = NULL;
 IServerPluginHelpers *serverpluginhelpers = NULL;
-#ifdef SERVER_USES_VGUI
-IEngineVGui *enginevgui = NULL;
-#endif // SERVER_USES_VGUI
 IServerEngineTools *serverenginetools = NULL;
 IServerFoundry *serverfoundry = NULL;
 ISceneFileCache *scenefilecache = NULL;
-#ifdef SERVER_USES_VGUI
-IGameUIFuncs *gameuifuncs = NULL;
-#endif // SERVER_USES_VGUI
 IScriptManager *scriptmanager = NULL;
 IBlackBox *blackboxrecorder = NULL;
 
@@ -638,14 +630,6 @@ static bool InitGameSystems( CreateInterfaceFn appSystemFactory )
 	// Add sound emitter
 	IGameSystem::Add( SoundEmitterSystem() );
 
-#ifdef SERVER_USES_VGUI
-	// Startup vgui
-	if ( enginevgui )
-	{
-		if(!VGui_Startup( appSystemFactory ))
-			return false;
-	}
-#endif // SERVER_USES_VGUI
 
 	// load Mod specific game events ( MUST be before InitAllSystems() so it can pickup the mod specific events)
 	gameeventmanager->LoadEventsFromFile("resource/ModEvents.res");
@@ -769,21 +753,6 @@ bool CServerGameDLL::DLLInit( CreateInterfaceFn appSystemFactory,
 		return false;
 #endif
 
-#ifdef SERVER_USES_VGUI
-	// If not running dedicated, grab the engine vgui interface
-	if ( !engine->IsDedicatedServer() )
-	{
-#ifdef _WIN32
-		if ( ( enginevgui = ( IEngineVGui * )appSystemFactory(VENGINE_VGUI_VERSION, NULL)) == NULL )
-			return false;
-		
-		// This interface is optional, and is only valid when running with -tools
-		serverenginetools = ( IServerEngineTools * )appSystemFactory( VSERVERENGINETOOLS_INTERFACE_VERSION, NULL );
-		
-		gameuifuncs = (IGameUIFuncs * )appSystemFactory( VENGINE_GAMEUIFUNCS_VERSION, NULL );
-#endif
-	}
-#endif // SERVER_USES_VGUI
 
 #ifdef INFESTED_DLL
 	if ( (missionchooser = (IASW_Mission_Chooser *)appSystemFactory(ASW_MISSION_CHOOSER_VERSION, NULL)) == NULL )
@@ -914,15 +883,6 @@ void CServerGameDLL::PostInit()
 {
 	IGameSystem::PostInitAllSystems();
 
-#ifdef SERVER_USES_VGUI
-	if ( !engine->IsDedicatedServer() && enginevgui )
-	{
-		if ( VGui_PostInit() )
-		{
-			// all good
-		}
-	}
-#endif // SERVER_USES_VGUI
 }
 
 void CServerGameDLL::PostToolsInit()
@@ -962,12 +922,6 @@ void CServerGameDLL::DLLShutdown( void )
 
 	IGameSystem::ShutdownAllSystems();
 
-#ifdef SERVER_USES_VGUI
-	if ( enginevgui )
-	{
-		VGui_Shutdown();
-	}
-#endif // SERVER_USES_VGUI
 
 #ifdef CSTRIKE_DLL // BOTPORT: TODO: move these ifdefs out
 	RemoveBotControl();

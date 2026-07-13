@@ -116,10 +116,10 @@ public:
 	virtual void	HostRunFrameEnd();
 	virtual void	RenderFrameBegin();
 	virtual void	RenderFrameEnd();
-	virtual void	VGui_PreRender( int paintMode );
-	virtual void	VGui_PostRender( int paintMode );
-	virtual void	VGui_PreSimulate();
-	virtual void	VGui_PostSimulate();
+	virtual void	UI_PreRender( int paintMode );
+	virtual void	UI_PostRender( int paintMode );
+	virtual void	UI_PreSimulate();
+	virtual void	UI_PostSimulate();
 	virtual vgui::VPANEL GetClientWorkspaceArea();
 	// Inherited from vgui::Panel
 	virtual void	OnMousePressed( vgui::MouseCode code );

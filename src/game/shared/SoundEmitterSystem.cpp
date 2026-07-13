@@ -21,9 +21,6 @@
 #include "closedcaptions.h"
 #include "usermessages.h"
 #else
-#include <vgui_controls/Controls.h>
-#include <vgui/IVGui.h>
-#include "hud_closecaption.h"
 #ifdef GAMEUI_UISYSTEM2_ENABLED
 #include "gameui.h"
 #endif
@@ -1138,12 +1135,7 @@ public:
 				}
 			}
 #else
-			// Direct dispatch
-			CHudCloseCaption *cchud = GET_FULLSCREEN_HUDELEMENT( CHudCloseCaption );
-			if ( cchud )
-			{
-				cchud->ProcessCaption( lowercase, duration, fromplayer );
-			}
+			// Close caption HUD removed (VGUI teardown)
 #endif
 		}
 	}

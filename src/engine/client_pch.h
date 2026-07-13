@@ -53,21 +53,6 @@
 #include "sys.h"
 
 #ifndef DEDICATED
-#include "vgui_basepanel.h"
-#include "vgui_baseui_interface.h"
-#include "vgui/IVGui.h"
-#include <vgui/IInput.h>
-#include <vgui/ILocalize.h>
-#include <vgui/IPanel.h>
-#include "vgui/IScheme.h"
-#include "vgui/ISurface.h"
-#include "vgui_controls/Controls.h"
-#include "vgui_controls/Label.h"
-#include "vgui_controls/TextEntry.h"
-#include "vgui_controls/Button.h"
-#include "vgui_controls/ComboBox.h"
-#include "vgui_controls/CheckButton.h"
-#include "vgui_controls/FileOpenDialog.h"
-#include "vgui_controls/ScrollBar.h"
-#include "vgui_controls/TreeView.h"
+#include "engineui.h"
+#include "localize/ilocalize.h"
 #endif

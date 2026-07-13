@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2008, Valve Corporation, All rights reserved. ============//
+//========= Copyright ï¿½ 1996-2008, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -7,9 +7,6 @@
 #ifndef __UIGAMEDATA_H__
 #define __UIGAMEDATA_H__
 
-#include "vgui_controls/Panel.h"
-#include "vgui_controls/Frame.h"
-#include "vgui_controls/Button.h"
 #include "tier1/utllinkedlist.h"
 #include "tier1/utlmap.h"
 #include "tier1/keyvalues.h"
@@ -28,7 +25,6 @@
 #include "matchmaking/iservermanager.h"
 
 
-#include "uiavatarimage.h"
 #include "tokenset.h"
 
 #include "engineinterface.h"
@@ -175,13 +171,11 @@ namespace BaseModUI {
 		void OpenWaitScreen( const char * messageText, float minDisplayTime = 3.0f, KeyValues *pSettings = NULL );
 		void UpdateWaitPanel( const char * messageText, float minDisplayTime = 3.0f );
 		void UpdateWaitPanel( const wchar_t * messageText, float minDisplayTime = 3.0f );
-		void CloseWaitScreen( vgui::Panel * callbackPanel, const char * messageName );
 
 		void NeedConnectionProblemWaitScreen( void );
 		void ShowPasswordUI( char const *pchCurrentPW );
 		void FinishPasswordUI( bool bOk );
 
-		vgui::IImage * GetAvatarImage( XUID playerID );
 		char const * GetPlayerName( XUID playerID, char const *szPlayerNameSpeculative );
 
 	#if !defined( NO_STEAM )

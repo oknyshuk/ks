@@ -14,9 +14,8 @@
 #include "movevars_shared.h"
 #include "in_buttons.h"
 #include "text_message.h"
-#include "vgui_controls/Controls.h"
-#include "vgui/ILocalize.h"
-#include "vguicenterprint.h"
+#include "localize/ilocalize.h"
+#include "uicenterprint.h"
 #include "game/client/iviewport.h"
 #include <keyvalues.h>
 
@@ -682,7 +681,7 @@ void C_ReplayCamera::FireGameEvent( IGameEvent * event)
 		const char *pszText = event->GetString( "text", "" );
 		
 		char *tmpStr = hudtextmessage->LookupString( pszText );
-		const wchar_t *pBuf = g_pVGuiLocalize->Find( tmpStr );
+		const wchar_t *pBuf = g_pLocalize->Find( tmpStr );
 		if ( pBuf )
 		{
 			// Copy pBuf into szBuf[i].
@@ -692,7 +691,7 @@ void C_ReplayCamera::FireGameEvent( IGameEvent * event)
 		}
 		else
 		{
-			g_pVGuiLocalize->ConvertANSIToUnicode( tmpStr, outputBuf, sizeof(outputBuf) );
+			g_pLocalize->ConvertANSIToUnicode( tmpStr, outputBuf, sizeof(outputBuf) );
 		}
 
 		GetCenterPrint()->Print( ConvertCRtoNL( outputBuf ) );

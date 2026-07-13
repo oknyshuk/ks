@@ -57,7 +57,7 @@
 #include "cl_steamauth.h"
 #include "cl_splitscreen.h"
 #ifndef DEDICATED
-#include "vgui_baseui_interface.h"
+#include "engineui.h"
 #endif
 #include "sound.h"
 #include "voice.h"
@@ -1701,7 +1701,7 @@ void Host_Disconnect( bool bShowMainMenu )
 			}
 #endif
 
-			EngineVGui()->ActivateGameUI();
+			EngineUI()->ActivateGameUI();
 		}
 	}
 #endif

@@ -9,8 +9,8 @@
 #ifndef ICLIENTMODE_H
 #define ICLIENTMODE_H
 
-#include <vgui/vgui.h>
 #include <inputsystem/ButtonCode.h>
+#include "noopanimcontroller.h"
 
 class CViewSetup;
 class C_BaseEntity;
@@ -21,7 +21,6 @@ class AudioState_t;
 namespace vgui
 {
 	class Panel;
-	class AnimationController;
 }
 
 // Message mode types
@@ -46,7 +45,7 @@ public:
 	virtual void	Init()=0;
 
 	// Called when vgui is shutting down.
-	virtual void	VGui_Shutdown() = 0;
+	virtual void	UI_Shutdown() = 0;
 
 	// One time call when dll is shutting down
 	virtual void	Shutdown()=0;
@@ -55,7 +54,6 @@ public:
 	// This can re-layout the view and such.
 	// Note that Enable and Disable are called when the DLL initializes and shuts down.
 	virtual void	Enable()=0;
-	virtual void	EnableWithRootPanel( vgui::VPANEL pRoot )=0;
 
 	// Called when it's about to go into another client mode.
 	virtual void	Disable()=0;
@@ -64,14 +62,8 @@ public:
 	// This should move the viewport into the correct position.
 	virtual void	Layout( bool bForce = false )=0;
 
-	// Gets at the viewport, if there is one...
-	virtual vgui::Panel *GetViewport() = 0;
-
-	// Gets a panel hierarchically below the viewport by name like so "ASWHudInventoryMode/SuitAbilityPanel/ItemPanel1"...
-	virtual vgui::Panel *GetPanelFromViewport( const char *pchNamePath ) = 0;
-
 	// Gets at the viewports vgui panel animation controller, if there is one...
-	virtual vgui::AnimationController *GetViewportAnimationController() = 0;
+	virtual CNoopAnimController *GetViewportAnimationController() = 0;
 
 	// called every time shared client dll/engine data gets changed,
 	// and gives the cdll a chance to modify the data.
@@ -90,7 +82,6 @@ public:
 	virtual void	OverrideAudioState( AudioState_t *pAudioState ) = 0;
 	virtual int		KeyInput( int down, ButtonCode_t keynum, const char *pszCurrentBinding ) = 0;
 	virtual void	StartMessageMode( int iMessageModeType ) = 0;
-	virtual vgui::Panel *GetMessagePanel() = 0;
 	virtual void	OverrideMouseInput( float *x, float *y ) = 0;
 	virtual bool	CreateMove( float flInputSampleTime, CUserCmd *cmd ) = 0;
 
@@ -112,8 +103,6 @@ public:
 
 	virtual void	PostRenderVGui() = 0;
 
-	virtual void	ActivateInGameVGuiContext( vgui::Panel *pPanel ) = 0;
-	virtual void	DeactivateInGameVGuiContext() = 0;
 	virtual float	GetViewModelFOV( void ) = 0;
 
 	virtual bool	CanRecordDemo( char *errorMsg, int length ) const = 0;

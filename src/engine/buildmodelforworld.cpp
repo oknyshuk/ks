@@ -982,7 +982,7 @@ ConVar r_buildingmapforworld( "r_buildingmapforworld", "0" );
 CON_COMMAND( buildmodelforworld, "buildmodelforworld" )
 {
 	r_buildingmapforworld.SetValue( 1 );
-	extern void V_RenderVGuiOnly();
+	extern void V_RenderUIOnly();
 
 	if ( g_LostVideoMemory )
 	{
@@ -1026,7 +1026,7 @@ CON_COMMAND( buildmodelforworld, "buildmodelforworld" )
 	bool bAllow = Host_AllowQueuedMaterialSystem( false );
 
 	// do this to force a frame to render so the material system syncs up to single thread mode
-	V_RenderVGuiOnly();
+	V_RenderUIOnly();
 
 	// we need to load some data from disk again to make displacement alpha work
 	CMapLoadHelper::Init( host_state.worldmodel, host_state.worldmodel->szPathName );

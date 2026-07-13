@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
+//========= Copyright ï¿½ 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -16,8 +16,7 @@
 	#include "portal_shareddefs.h"
 #endif
 
-#include <vgui/IInput.h>
-#include "vgui_controls/Controls.h"
+#include "inputsystem/iinputsystem.h"
 #include "tier0/vprof.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
@@ -347,7 +346,7 @@ void CInput::CAM_Think( void )
 	{
 		// Unless explicitly moving the camera, don't move it
 		user.m_fCameraInterceptingMouse = user.m_fCameraMovingWithMouse =
-			vgui::input()->IsKeyDown( KEY_LALT ) || vgui::input()->IsKeyDown( KEY_RALT );
+			g_pInputSystem->IsButtonDown( KEY_LALT ) || g_pInputSystem->IsButtonDown( KEY_RALT );
 		//if ( !user.m_fCameraMovingWithMouse )
 		//	return;
 
@@ -360,17 +359,17 @@ void CInput::CAM_Think( void )
 		memset( &cam_out, 0, sizeof( cam_out ) );
 
 		// Unless left or right mouse button is down, don't do anything
-		if ( /* Left+Middle Button Down */ vgui::input()->IsMouseDown( MOUSE_LEFT ) && vgui::input()->IsMouseDown( MOUSE_MIDDLE ) )
+		if ( /* Left+Middle Button Down */ g_pInputSystem->IsButtonDown( MOUSE_LEFT ) && g_pInputSystem->IsButtonDown( MOUSE_MIDDLE ) )
 		{
 			// Do only zoom in/out camera adjustment
 			user.m_fCameraDistanceMove = true;
 		}
-		else if ( /* Left Button Down */ vgui::input()->IsMouseDown( MOUSE_LEFT ) )
+		else if ( /* Left Button Down */ g_pInputSystem->IsButtonDown( MOUSE_LEFT ) )
 		{
 			// Do only rotational camera movement
 			user.m_fCameraDistanceMove = false;
 		}
-		else if ( /* Right Button Down */ vgui::input()->IsMouseDown( MOUSE_RIGHT ) )
+		else if ( /* Right Button Down */ g_pInputSystem->IsButtonDown( MOUSE_RIGHT ) )
 		{
 			// Do only zoom in/out camera adjustment
 			user.m_fCameraDistanceMove = true;

@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
+//========= Copyright ï¿½ 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: Weapons Resource implementation
 //
@@ -7,9 +7,6 @@
 // $NoKeywords: $
 //=============================================================================//
 #include "cbase.h"
-#include "history_resource.h"
-#include <vgui_controls/Controls.h>
-#include <vgui/ISurface.h>
 #include "c_baseplayer.h"
 #include "hud.h"
 
@@ -201,34 +198,6 @@ void WeaponsResource::LoadWeaponSprites( WEAPON_FILE_INFO_HANDLE hWeaponFileInfo
 			pWeaponInfo->iconAmmo2->Precache();
 		}
 	}
-
-#if !defined( CSTRIKE15 )
-	// Blast data into all of the Huds
-	for ( int hh = 0; hh < MAX_SPLITSCREEN_PLAYERS; ++hh )
-	{
-		ACTIVE_SPLITSCREEN_PLAYER_GUARD( hh );
-		CHudHistoryResource *pHudHR = GET_HUDELEMENT( CHudHistoryResource );	
-		if( !pHudHR )
-			continue;
-
-		if ( pWeaponInfo->iconInactive )
-		{
-			pHudHR->SetHistoryGap( pWeaponInfo->iconInactive->Height() );
-		}
-		if ( pWeaponInfo->iconActive )
-		{
-			pHudHR->SetHistoryGap( pWeaponInfo->iconActive->Height() );
-		}
-		if ( pWeaponInfo->iconAmmo )
-		{
-			pHudHR->SetHistoryGap( pWeaponInfo->iconAmmo->Height() );
-		}
-		if ( pWeaponInfo->iconAmmo2 )
-		{
-			pHudHR->SetHistoryGap( pWeaponInfo->iconAmmo2->Height() );
-		}
-	}
-#endif // !CSTRIKE15
 
 	FreeHudTextureList( tempList );
 }

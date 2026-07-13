@@ -28,7 +28,6 @@ public:
 	virtual void OnGameUIActivated() = 0;
 	virtual void OnGameUIHidden() = 0;
 
-	virtual void CreateAchievementsPanel( vgui::Panel* pParent ) = 0;
 	virtual void DisplayAchievementPanel( ) = 0;
 	virtual void ShutdownAchievementPanel( ) = 0;
 	virtual int GetAchievementsPanelMinWidth( void ) const = 0;

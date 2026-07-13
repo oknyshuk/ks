@@ -11,7 +11,6 @@
 #include "c_user_message_register.h"
 #include "flashlighteffect.h"
 #include "weapon_selection.h"
-#include "history_resource.h"
 #include "iinput.h"
 #include "input.h"
 #include "ammodef.h"
@@ -42,9 +41,7 @@
 #include "toolframework/itoolframework.h"
 #include "toolframework_client.h"
 #include "view_scene.h"
-#include "c_vguiscreen.h"
 #include "datacache/imdlcache.h"
-#include "vgui/ISurface.h"
 #include "voice_status.h"
 #include "fx.h"
 #include "cellcoord.h"
@@ -574,7 +571,7 @@ C_BasePlayer::~C_BasePlayer()
 		UntouchAllTriggerSoundOperator( this );
 	}
 
-	DeactivateVguiScreen( m_pCurrentVguiScreen.Get() );
+	// DeactivateVguiScreen removed (VGUI teardown)
 	for ( int i = 0; i < MAX_SPLITSCREEN_PLAYERS; ++i )
 	{
 		if ( this == s_pLocalPlayer[ i ] )
@@ -1391,12 +1388,7 @@ void C_BasePlayer::OnDataChanged( DataUpdateType_t updateType )
 
 				if ( !pWeaponData || !( pWeaponData->iFlags & ITEM_FLAG_NOAMMOPICKUPS ) )
 				{
-					// We got more ammo for this ammo index. Add it to the ammo history
-					CHudHistoryResource *pHudHR = GET_HUDELEMENT( CHudHistoryResource );
-					if( pHudHR )
-					{
-						pHudHR->AddToHistory( HISTSLOT_AMMO, i, abs(GetAmmoCount(i) - m_iOldAmmo[i]) );
-					}
+					// Ammo pickup history removed (VGUI teardown)
 				}
 			}
 		}
@@ -1514,15 +1506,7 @@ bool C_BasePlayer::IsInVGuiInputMode() const
 //-----------------------------------------------------------------------------
 bool C_BasePlayer::IsInViewModelVGuiInputMode() const
 {
-	C_BaseEntity *pScreenEnt = m_pCurrentVguiScreen.Get();
-
-	if ( !pScreenEnt )
-		return false;
-
-	Assert( dynamic_cast<C_VGuiScreen*>(pScreenEnt) );
-	C_VGuiScreen *pVguiScreen = static_cast<C_VGuiScreen*>(pScreenEnt);
-
-	return ( pVguiScreen->IsAttachedToViewModel() && pVguiScreen->AcceptsInput() );
+	return false;
 }
 
 //-----------------------------------------------------------------------------
@@ -1530,86 +1514,7 @@ bool C_BasePlayer::IsInViewModelVGuiInputMode() const
 //-----------------------------------------------------------------------------
 void C_BasePlayer::DetermineVguiInputMode( CUserCmd *pCmd )
 {
-	// If we're dead, close down and abort!
-	if ( !IsAlive() )
-	{
-		DeactivateVguiScreen( m_pCurrentVguiScreen.Get() );
-		m_pCurrentVguiScreen.Set( NULL );
-		return;
-	}
-
-	// If we're in vgui mode *and* we're holding down mouse buttons,
-	// stay in vgui mode even if we're outside the screen bounds
-	if ( m_pCurrentVguiScreen.Get() && ( pCmd->buttons & ( IN_ATTACK | IN_ATTACK2 | IN_ZOOM ) ) )
-	{
-		SetVGuiScreenButtonState( m_pCurrentVguiScreen.Get(), pCmd->buttons );
-
-		// Kill all attack inputs if we're in vgui screen mode
-		pCmd->buttons &= ~( IN_ATTACK | IN_ATTACK2 | IN_ZOOM );
-		return;
-	}
-
-	// We're not in vgui input mode if we're moving, or have hit a key
-	// that will make us move...
-
-	// Not in vgui mode if we're moving too quickly
-	// ROBIN: Disabled movement preventing VGUI screen usage
-	//if (GetVelocity().LengthSqr() > MAX_VGUI_INPUT_MODE_SPEED_SQ)
-	if ( 0 )
-	{
-		DeactivateVguiScreen( m_pCurrentVguiScreen.Get() );
-		m_pCurrentVguiScreen.Set( NULL );
-		return;
-	}
-
-	// Don't enter vgui mode if we've got combat buttons held down
-	bool bAttacking = false;
-	if ( (( pCmd->buttons & IN_ATTACK ) || ( pCmd->buttons & IN_ATTACK2 ) || ( pCmd->buttons & IN_ZOOM ) ) && !m_pCurrentVguiScreen.Get() )
-	{
-		bAttacking = true;
-	}
-
-	// Not in vgui mode if we're pushing any movement key at all
-	// Not in vgui mode if we're in a vehicle...
-	// ROBIN: Disabled movement preventing VGUI screen usage
-	//if ((pCmd->forwardmove > MAX_VGUI_INPUT_MODE_SPEED) ||
-	//	(pCmd->sidemove > MAX_VGUI_INPUT_MODE_SPEED) ||
-	//	(pCmd->upmove > MAX_VGUI_INPUT_MODE_SPEED) ||
-	//	(pCmd->buttons & IN_JUMP) ||
-	//	(bAttacking) )
-	if ( bAttacking || IsInAVehicle() )
-	{ 
-		DeactivateVguiScreen( m_pCurrentVguiScreen.Get() );
-		m_pCurrentVguiScreen.Set( NULL );
-		return;
-	}
-
-	// Don't interact with world screens when we're in a menu
-	if ( vgui::surface()->IsCursorVisible() )
-	{
-		DeactivateVguiScreen( m_pCurrentVguiScreen.Get() );
-		m_pCurrentVguiScreen.Set( NULL );
-		return;
-	}
-
-	// Not in vgui mode if there are no nearby screens
-	C_BaseEntity *pOldScreen = m_pCurrentVguiScreen.Get();
-
-	m_pCurrentVguiScreen = FindNearbyVguiScreen( EyePosition(), pCmd->viewangles, GetTeamNumber() );
-
-	if (pOldScreen != m_pCurrentVguiScreen)
-	{
-		DeactivateVguiScreen( pOldScreen );
-		ActivateVguiScreen( m_pCurrentVguiScreen.Get() );
-	}
-
-	if (m_pCurrentVguiScreen.Get())
-	{
-		SetVGuiScreenButtonState( m_pCurrentVguiScreen.Get(), pCmd->buttons );
-
-		// Kill all attack inputs if we're in vgui screen mode
-		pCmd->buttons &= ~(IN_ATTACK | IN_ATTACK2 | IN_ZOOM);
-	}
+	// In-world VGUI screens removed (VGUI teardown)
 }
 
 //-----------------------------------------------------------------------------

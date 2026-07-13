@@ -17,13 +17,13 @@
 // Every tool must expose this back to us
 extern char const *GetVGuiControlsModuleName();
 
-bool VGui_Startup( CreateInterfaceFn appSystemFactory );
-bool VGui_PostInit();
-void VGui_Shutdown( void );
+bool UI_Startup( CreateInterfaceFn appSystemFactory );
+bool UI_PostInit();
+void UI_Shutdown( void );
 
 // Must be implemented by .dll
 void VGUI_CreateToolRootPanel( void );
 void VGUI_DestroyToolRootPanel( void );
-vgui::VPANEL VGui_GetToolRootPanel( void );
+vgui::VPANEL UI_GetToolRootPanel( void );
 
 #endif // VGUI_TOOLS_H

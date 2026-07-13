@@ -11,8 +11,6 @@
 #endif
 #include <stdio.h>
 #include "UtlBuffer.h"
-#include <vgui/VGUI.h>
-#include <vgui_controls/Controls.h>
 #include "FileSystem.h"
 
 // dgoodenough - select the correct stubs header based on current console
@@ -26,7 +24,6 @@
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
-using namespace vgui;
 
 #define	TYP_LUMPY		64				// 64 + grab command number
 

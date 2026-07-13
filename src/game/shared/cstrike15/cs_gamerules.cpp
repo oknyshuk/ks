@@ -38,7 +38,7 @@
     #include "networkstringtable_clientdll.h"
     #include "c_cs_player.h"
     #include "fmtstr.h"
-    #include "vgui/ILocalize.h"		// temp - needed for GetFriendlyMapName()
+    #include "localize/ilocalize.h"		// temp - needed for GetFriendlyMapName()
 	#include "c_team.h"
 	#include "weapon_selection.h"
 	#include "hud_macros.h"
@@ -148,6 +148,12 @@ ConVar mp_team_timeout_max( "mp_team_timeout_max", "1", FCVAR_RELEASE | FCVAR_GA
 
 void MaxAllowedNetGraphCallback( IConVar *var, const char *pOldValue, float flOldValue );
 ConVar sv_max_allowed_net_graph( "sv_max_allowed_net_graph", "1", FCVAR_NOTIFY | FCVAR_RELEASE | FCVAR_REPLICATED, "Determines max allowed net_graph value for clients.", MaxAllowedNetGraphCallback );
+
+#ifdef CLIENT_DLL
+// The legacy VGUI net_graph renderer was removed; the cvar is retained here (its only
+// remaining consumer is the clamp below) so a future RmlUi rewrite can read it.
+ConVar net_graph( "net_graph", "0", FCVAR_ARCHIVE, "Draw the network usage data (renderer pending rewrite)." );
+#endif
 
 void MaxAllowedNetGraphCallback( IConVar *var, const char *pOldValue, float flOldValue )
 {
@@ -1893,7 +1899,7 @@ static void mpwarmuptime_f( IConVar *pConVar, const char *pOldString, float flOl
 }
 
 
-ConVar mp_verbose_changelevel_spew( "mp_verbose_changelevel_spew", "1", FCVAR_RELEASE );
+ConVar mp_verbose_changelevel_spew( "mp_verbose_changelevel_spew", "1", FCVAR_RELEASE | FCVAR_REPLICATED );
 
 ConVar mp_warmuptime( 
     "mp_warmuptime", 
@@ -2435,7 +2441,7 @@ ConVar mp_endmatch_votenextmap_keepcurrent(
 ConVar mp_endmatch_votenextleveltime(
 	"mp_endmatch_votenextleveltime",
 	"20",
-	FCVAR_RELEASE,
+	FCVAR_RELEASE | FCVAR_REPLICATED,
 	"If mp_endmatch_votenextmap is set, players have this much time to vote on the next map at match end." );
 	
 // music controls
@@ -17283,12 +17289,12 @@ const wchar_t* CCSGameRules::GetFriendlyMapName( const char* szShortName )
     char szToken[MAX_MAP_NAME+10+1]; // includes prefix size
     szToken[0] = '\0';
     V_snprintf( szToken, ARRAYSIZE( szToken ), "#SFUI_Map_%s", szShortName );
-    wchar_t* szTranslated = g_pVGuiLocalize->Find( szToken );
+    wchar_t* szTranslated = g_pLocalize->Find( szToken );
     if ( szTranslated )
         return szTranslated;
 
     static wchar_t wszMapName[128];
-    g_pVGuiLocalize->ConvertANSIToUnicode(szShortName, wszMapName, sizeof(wszMapName));
+    g_pLocalize->ConvertANSIToUnicode(szShortName, wszMapName, sizeof(wszMapName));
     return wszMapName;
 }
 
@@ -17297,7 +17303,7 @@ bool CCSGameRules::GetFriendlyMapNameToken( const char* szShortName, char* szOut
     // Create the nice version of the name.
     CreateFriendlyMapNameToken( szShortName, szOutBuffer, nBuffSize );
 
-    if ( g_pVGuiLocalize->Find( szOutBuffer ) )
+    if ( g_pLocalize->Find( szOutBuffer ) )
         return true;
 
     return false;

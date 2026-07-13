@@ -19,8 +19,6 @@
 #include "tmessage.h"
 #include "console.h"
 #include "snd_audio_source.h"
-#include <vgui_controls/Controls.h>
-#include <vgui/IInput.h>
 #include "iengine.h"
 #include "keys.h"
 #include "con_nprint.h"
@@ -52,7 +50,6 @@
 #include "eiface.h"
 #include "engine/IClientLeafSystem.h"
 #include "dt_recv_eng.h"
-#include <vgui/IVGui.h>
 #include "sys_dll.h"
 #include "vphysics_interface.h"
 #include "materialsystem/imesh.h"
@@ -63,10 +60,9 @@
 #include "host_saverestore.h"
 #include "cl_main.h"
 #include "demo.h"
-#include "vgui_baseui_interface.h"
+#include "engineui.h"
 #include "LocalNetworkBackdoor.h"
 #include "lightcache.h"
-#include "vgui/ISystem.h"
 #include "Steam.h"
 #include "ivideomode.h"
 #include "icolorcorrectiontools.h"
@@ -2399,7 +2395,7 @@ bool CEngineClient::IsActiveApp( void )
 // Callback for LevelInit to tick the progress bar during time consuming operations
 void CEngineClient::TickProgressBar()
 {
-	EngineVGui()->UpdateProgressBar( PROGRESS_DEFAULT );
+	EngineUI()->UpdateProgressBar( PROGRESS_DEFAULT );
 }
 
 // Returns the requested input context
@@ -2411,7 +2407,7 @@ InputContextHandle_t CEngineClient::GetInputContext( EngineInputContextId_t id )
 		return GetGameInputContext();
 
 	case ENGINE_INPUT_CONTEXT_GAMEUI:
-		return EngineVGui()->GetGameUIInputContext();
+		return EngineUI()->GetGameUIInputContext();
 	}
 
 	return INPUT_CONTEXT_HANDLE_INVALID;
@@ -2459,12 +2455,12 @@ void CEngineClient::AudioLanguageChanged()
 
 void CEngineClient::StartLoadingScreenForCommand( const char* command )
 {
-	EngineVGui()->StartLoadingScreenForCommand( command );
+	EngineUI()->StartLoadingScreenForCommand( command );
 }
 
 void CEngineClient::StartLoadingScreenForKeyValues( KeyValues* keyValues )
 {
-	EngineVGui()->StartLoadingScreenForKeyValues( keyValues );
+	EngineUI()->StartLoadingScreenForKeyValues( keyValues );
 }
 
 #if defined(_PS3)
@@ -2751,9 +2747,9 @@ void ClientDLL_Init( void )
 			if ( ( g_pMaterialSystemHardwareConfig->GetDXSupportLevel() < 95 ) && IsPC() && !IsOSX() && !IsOpenGL() ) // TODO: Need to remove the IsPC() before shipping once the Mac work is complete (mac is 92 right now)
 			{
 				wchar_t wcMessage[512];
-				g_pVGuiLocalize->ConstructString( wcMessage, sizeof( wcMessage ), g_pVGuiLocalize->Find( "#Valve_MinShaderModel3" ), 0 );
+				g_pLocalize->ConstructString( wcMessage, sizeof( wcMessage ), g_pLocalize->Find( "#Valve_MinShaderModel3" ), 0 );
 
-				g_pVGuiLocalize->ConvertUnicodeToANSI( wcMessage, pMessage, sizeof( pMessage ) );
+				g_pLocalize->ConvertUnicodeToANSI( wcMessage, pMessage, sizeof( pMessage ) );
 				
 				bFailed = true;
 			}
@@ -2817,9 +2813,9 @@ void ClientDLL_Init( void )
 				if ( ( g_pMaterialSystemConfig && g_pMaterialSystemConfig->IsUnsupported() ) || ( g_pMaterialSystemHardwareConfig && g_pMaterialSystemHardwareConfig->IsUnsupported() ) )
 				{
 					wchar_t wcMessage[512];
-					g_pVGuiLocalize->ConstructString( wcMessage, sizeof( wcMessage ), g_pVGuiLocalize->Find( "#Valve_UnsupportedCard" ), 0 );
+					g_pLocalize->ConstructString( wcMessage, sizeof( wcMessage ), g_pLocalize->Find( "#Valve_UnsupportedCard" ), 0 );
 
-					g_pVGuiLocalize->ConvertUnicodeToANSI( wcMessage, pMessage, sizeof( pMessage ) );
+					g_pLocalize->ConvertUnicodeToANSI( wcMessage, pMessage, sizeof( pMessage ) );
 
 					// Make sure the warning message is visible in full-screen mode (otherwise the game appears like it's locked up).
 					const bool bIsFullScreen = (videomode && !videomode->IsWindowedMode());
@@ -2851,9 +2847,7 @@ void ClientDLL_Shutdown( void )
 
 	{
 		FORCE_DEFAULT_SPLITSCREEN_PLAYER_GUARD;
-		vgui::ivgui()->RunFrame();
 		materials->UncacheAllMaterials();
-		vgui::ivgui()->RunFrame();
 	}
 
 	if( g_pClientSidePrediction )
@@ -2994,15 +2988,6 @@ int  ClientDLL_GetSpectatorTarget( ClientDLLObserverMode_t *pObserverMode )
 		*pObserverMode = CLIENT_DLL_OBSERVER_NONE;
 	}
 	return -1;
-}
-
-vgui::VPANEL ClientDLL_GetFullscreenClientDLLVPanel( void )
-{
-	if ( g_ClientDLL )
-	{
-		return g_ClientDLL->GetFullscreenClientDLLVPanel();
-	}
-	return false;
 }
 
 #if defined ( _PS3 )

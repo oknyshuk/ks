@@ -8,9 +8,9 @@
 #include "hud_chat.h"
 #include "hud_macros.h"
 #include "text_message.h"
-#include "vguicenterprint.h"
+#include "uicenterprint.h"
 #include "hud_basechat.h"
-#include <vgui/ILocalize.h>
+#include "localize/ilocalize.h"
 
 // NOTE: This has to be the last file included!
 #include "tier0/memdbgon.h"
@@ -58,10 +58,10 @@ void CHudChat::MsgFunc_SayText2( bf_read &msg )
 	ReadLocalizedString( msg, szBuf[3], sizeof( szBuf[3] ), true );
 	ReadLocalizedString( msg, szBuf[4], sizeof( szBuf[4] ), true );
 
-	g_pVGuiLocalize->ConstructString( szBuf[5], sizeof( szBuf[5] ), msg_text, 4, szBuf[1], szBuf[2], szBuf[3], szBuf[4] );
+	g_pLocalize->ConstructString( szBuf[5], sizeof( szBuf[5] ), msg_text, 4, szBuf[1], szBuf[2], szBuf[3], szBuf[4] );
 
 	char ansiString[512];
-	g_pVGuiLocalize->ConvertUnicodeToANSI( ConvertCRtoNL( szBuf[5] ), ansiString, sizeof( ansiString ) );
+	g_pLocalize->ConvertUnicodeToANSI( ConvertCRtoNL( szBuf[5] ), ansiString, sizeof( ansiString ) );
 
 	if ( bWantsToChat )
 	{

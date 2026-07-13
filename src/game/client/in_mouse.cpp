@@ -14,6 +14,7 @@
 #include <Carbon/Carbon.h>
 #endif
 #include "hud.h"
+#include "rocketui/rocketui.h"
 #include "cdll_int.h"
 #include "kbutton.h"
 #include "basehandle.h"
@@ -22,9 +23,6 @@
 #include "iviewrender.h"
 #include "iclientmode.h"
 #include "tier0/icommandline.h"
-#include "vgui/ISurface.h"
-#include "vgui_controls/Controls.h"
-#include "vgui/Cursor.h"
 #include "cdll_client_int.h"
 #include "cdll_util.h"
 #include "tier1/convar_serverbounded.h"
@@ -637,9 +635,8 @@ void CInput::AccumulateMouse( int nSlot )
 	//only accumulate mouse if we are not moving the camera with the mouse
 	PerUserInput_t &user = GetPerUser( nSlot );
 
-	if ( !user.m_fCameraInterceptingMouse && vgui::surface()->IsCursorLocked() )
+	if ( !user.m_fCameraInterceptingMouse && !RocketUI()->IsConsumingInput() )
 	{
-		//Assert( !vgui::surface()->IsCursorVisible() );
 #if defined( USE_SDL ) || defined( OSX )
 		int dx, dy;
 		engine->GetMouseDelta( dx, dy );
@@ -786,7 +783,7 @@ void CInput::GetFullscreenMousePos( int *mx, int *my, int *unclampedx /*=NULL*/,
 	//
 
 	int w, h;
-	vgui::surface()->GetScreenSize( w, h );
+	engine->GetScreenSize( w, h );
 	current_posx += w  / 2;
 	current_posy += h / 2;
 

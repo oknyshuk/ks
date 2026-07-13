@@ -29,9 +29,7 @@
 #include "datacache/idatacache.h"
 #include "tier1/keyvalues.h"
 #ifndef DEDICATED
-#include "vgui_baseui_interface.h"
-#include "vgui/ISystem.h"
-#include "vgui_controls/Controls.h"
+#include "engineui.h"
 #endif
 #include "matchmaking/imatchframework.h"
 #include "tier2/tier2.h"
@@ -961,7 +959,7 @@ void COM_InitFilesystem( const char *pFullModPath )
 	Q_FixSlashes( com_basedir );
 	
 #ifndef DEDICATED
-	EngineVGui()->SetVGUIDirectories();
+	EngineUI()->SetVGUIDirectories();
 #endif
 
 	// Set LOGDIR to be something reasonable

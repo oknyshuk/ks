@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
+//========= Copyright ï¿½ 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: Implements the big scary boom-boom machine Antlions fear.
 //
@@ -7,7 +7,6 @@
 #include "cbase.h"
 #include "EnvMessage.h"
 #include "fmtstr.h"
-#include "vguiscreen.h"
 #include "filesystem.h"
 
 // NOTE: This has to be the last file included!
@@ -91,9 +90,6 @@ private:
 	int		m_iScreenHeight;
 
 	bool	m_bDoFullTransmit;
-
-	typedef CHandle<CVGuiScreen>	ScreenHandle_t;
-	CUtlVector<ScreenHandle_t>	m_hScreens;
 };
 
 
@@ -156,13 +152,6 @@ END_SEND_TABLE()
 
 CSlideshowDisplay::~CSlideshowDisplay()
 {
-	int i;
-	// Kill the control panels
-	for ( i = m_hScreens.Count(); --i >= 0; )
-	{
-		DestroyVGuiScreen( m_hScreens[i].Get() );
-	}
-	m_hScreens.RemoveAll();
 }
 
 //-----------------------------------------------------------------------------
@@ -220,13 +209,6 @@ void CSlideshowDisplay::SetTransmit( CCheckTransmitInfo *pInfo, bool bAlways )
 		return;
 
 	BaseClass::SetTransmit( pInfo, bAlways );
-
-	// Force our screens to be sent too.
-	for ( int i=0; i < m_hScreens.Count(); i++ )
-	{
-		CVGuiScreen *pScreen = m_hScreens[i].Get();
-		pScreen->SetTransmit( pInfo, bAlways );
-	}
 }
 
 void CSlideshowDisplay::Spawn( void )
@@ -255,8 +237,6 @@ void CSlideshowDisplay::Precache( void )
 	BaseClass::Precache();
 
 	BuildSlideShowImagesList();
-
-	PrecacheVGuiScreen( "slideshow_display_screen" );
 }
 
 void CSlideshowDisplay::OnRestore( void )
@@ -272,14 +252,6 @@ void CSlideshowDisplay::OnRestore( void )
 
 void CSlideshowDisplay::ScreenVisible( bool bVisible )
 {
-	for ( int iScreen = 0; iScreen < m_hScreens.Count(); ++iScreen )
-	{
-		CVGuiScreen *pScreen = m_hScreens[ iScreen ].Get();
-		if ( bVisible )
-			pScreen->RemoveEffects( EF_NODRAW );
-		else
-			pScreen->AddEffects( EF_NODRAW );
-	}
 }
 
 void CSlideshowDisplay::Disable( void )
@@ -391,66 +363,10 @@ void CSlideshowDisplay::GetControlPanelClassName( int nPanelIndex, const char *&
 //-----------------------------------------------------------------------------
 void CSlideshowDisplay::SpawnControlPanels()
 {
-	int nPanel;
-	for ( nPanel = 0; true; ++nPanel )
-	{
-		const char *pScreenName;
-		GetControlPanelInfo( nPanel, pScreenName );
-		if (!pScreenName)
-			continue;
-
-		const char *pScreenClassname;
-		GetControlPanelClassName( nPanel, pScreenClassname );
-		if ( !pScreenClassname )
-			continue;
-
-		float flWidth = m_iScreenWidth;
-		float flHeight = m_iScreenHeight;
-
-		CVGuiScreen *pScreen = CreateVGuiScreen( pScreenClassname, pScreenName, this, this, 0 );
-		pScreen->ChangeTeam( GetTeamNumber() );
-		pScreen->SetActualSize( flWidth, flHeight );
-		pScreen->SetActive( true );
-		pScreen->MakeVisibleOnlyToTeammates( false );
-		pScreen->SetTransparency( true );
-		int nScreen = m_hScreens.AddToTail( );
-		m_hScreens[nScreen].Set( pScreen );
-
-		return;
-	}
 }
 
 void CSlideshowDisplay::RestoreControlPanels( void )
 {
-	int nPanel;
-	for ( nPanel = 0; true; ++nPanel )
-	{
-		const char *pScreenName;
-		GetControlPanelInfo( nPanel, pScreenName );
-		if (!pScreenName)
-			continue;
-
-		const char *pScreenClassname;
-		GetControlPanelClassName( nPanel, pScreenClassname );
-		if ( !pScreenClassname )
-			continue;
-
-		CVGuiScreen *pScreen = (CVGuiScreen *)gEntList.FindEntityByClassname( NULL, pScreenClassname );
-
-		while ( ( pScreen && pScreen->GetOwnerEntity() != this ) || Q_strcmp( pScreen->GetPanelName(), pScreenName ) != 0 )
-		{
-			pScreen = (CVGuiScreen *)gEntList.FindEntityByClassname( pScreen, pScreenClassname );
-		}
-
-		if ( pScreen )
-		{
-			int nScreen = m_hScreens.AddToTail( );
-			m_hScreens[nScreen].Set( pScreen );	
-			pScreen->SetActive( true );
-		}
-
-		return;
-	}
 }
 
 void CSlideshowDisplay::BuildSlideShowImagesList( void )

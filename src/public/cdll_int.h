@@ -1051,8 +1051,6 @@ public:
 
 	virtual IMaterialProxy *InstantiateMaterialProxy( const char *proxyName ) = 0;
 
-	virtual vgui::VPANEL	GetFullscreenClientDLLVPanel( void ) = 0;
-
 	// The engine wants to mark two entities as touching
 	virtual void			MarkEntitiesAsTouching( IClientEntity *e1, IClientEntity *e2 ) = 0;
 

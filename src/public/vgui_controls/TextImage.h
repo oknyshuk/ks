@@ -13,7 +13,7 @@
 #endif
 
 #include <vgui/vgui.h>
-#include <vgui/ILocalize.h>
+#include "localize/ilocalize.h"
 #include <vgui_controls/Image.h>
 
 #include <utlvector.h>

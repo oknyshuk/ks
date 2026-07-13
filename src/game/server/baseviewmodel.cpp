@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
+//========= Copyright ï¿½ 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -12,7 +12,6 @@
 #include "player.h"
 #include <keyvalues.h>
 #include "studio.h"
-#include "vguiscreen.h"
 #include "saverestore_utlvector.h"
 #include "hltvdirector.h"
 #include "replaydirector.h"
@@ -43,7 +42,6 @@ BEGIN_DATADESC( CBaseViewModel )
 
 	DEFINE_FIELD( m_vecLastFacing, FIELD_VECTOR ),
 	DEFINE_FIELD( m_hWeapon, FIELD_EHANDLE ),
-	DEFINE_UTLVECTOR( m_hScreens, FIELD_EHANDLE ),
 
 // Read from weapons file
 //	DEFINE_FIELD( m_sVMName, FIELD_STRING ),
@@ -128,12 +126,4 @@ void CBaseViewModel::SetTransmit( CCheckTransmitInfo *pInfo, bool bAlways )
 		return;
 
 	BaseClass::SetTransmit( pInfo, bAlways );
-	
-	// Force our screens to be sent too.
-	for ( int i=0; i < m_hScreens.Count(); i++ )
-	{
-		CVGuiScreen *pScreen = m_hScreens[i].Get();
-		if ( pScreen )
-			pScreen->SetTransmit( pInfo, bAlways );
-	}
 }

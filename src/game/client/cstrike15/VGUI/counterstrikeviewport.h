@@ -12,7 +12,6 @@
 #include "baseviewport.h"
 
 
-using namespace vgui;
 
 namespace vgui 
 {
@@ -35,22 +34,17 @@ class CounterStrikeViewport : public CBaseViewport
 {
 
 private:
-	DECLARE_CLASS_SIMPLE( CounterStrikeViewport, CBaseViewport );
+	typedef CBaseViewport BaseClass;
 
 public:
 
 	IViewPortPanel* CreatePanelByName( const char *szPanelName );
 	void CreateDefaultPanels( void );
 
-	virtual void ApplySchemeSettings( vgui::IScheme *pScheme );
 	virtual void Start( IGameUIFuncs *pGameUIFuncs, IGameEventManager2 * pGameEventManager );
 		
 	int GetDeathMessageStartHeight( void );
 
-	virtual void ShowBackGround( bool bShow )
-	{
-		m_pBackGround->SetVisible( false );	// CS:S menus paint their own backgrounds...
-	}
 	//=============================================================================
 	// HPE_BEGIN:
 	// [mhansen] We want to let the team screen know if this is the first time
@@ -69,8 +63,6 @@ public:
 
 
 private:
-	void CenterWindow( vgui::Frame *win );
-
 	//=============================================================================
 	// HPE_BEGIN:
 	// [mhansen] We want to let the team screen know if this is the first time

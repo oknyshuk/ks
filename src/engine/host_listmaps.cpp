@@ -14,7 +14,7 @@
 #include "demo.h"
 #include "tier2/fileutils.h"
 #ifndef DEDICATED
-#include "vgui_baseui_interface.h"
+#include "engineui.h"
 #endif
 
 // memdbgon must be the last include file in a .cpp file!!!
@@ -223,7 +223,7 @@ void CMapListManager::Think( void )
 
 #ifndef DEDICATED
 	// Only update pending files if console is visible to avoid slamming FS while in a map
-	if ( !EngineVGui()->IsConsoleVisible() )
+	if ( !EngineUI()->IsConsoleVisible() )
 		return;
 #endif
 

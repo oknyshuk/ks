@@ -11,7 +11,6 @@
 #pragma once
 #endif
 
-#include <vgui/vgui.h>
 
 class KeyValues;
 

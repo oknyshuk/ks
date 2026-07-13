@@ -11,14 +11,10 @@
 #include "ivrenderview.h"
 #include "iinput.h"
 #include "usercmd.h"
-#include <vgui_controls/Controls.h>
-#include <vgui/ISurface.h>
-#include <vgui/IScheme.h>
 #include "hud.h"
 #include "iclientvehicle.h"
 #include "in_buttons.h"
 #include "con_nprint.h"
-#include "hud_pdump.h"
 #include "datacache/imdlcache.h"
 
 #ifdef HL2_CLIENT_DLL
@@ -92,7 +88,6 @@ CPrediction::CPrediction( void ) : m_SavedVars( true )
 
 	m_bPlayerOriginTypedescriptionSearched = false;
 	m_bEnginePaused = false;
-	m_pPDumpPanel = NULL;
 
 	m_flLastServerWorldTimeStamp = -1.0f;
 #endif
@@ -106,7 +101,6 @@ void CPrediction::Init( void )
 {
 #if !defined( NO_ENTITY_PREDICTION )
 	m_bOldCLPredictValue = cl_predict->GetBool();
-	m_pPDumpPanel = GetPDumpPanel();
 #endif
 }
 
@@ -657,14 +651,6 @@ void CPrediction::PostNetworkDataReceived( int commands_acknowledged )
 
 				if ( !showlist )
 				{
-					if ( error_check && 
-						!entityDumped &&
-						m_pPDumpPanel &&
-						ShouldDumpEntity( ent ) )
-					{
-						entityDumped = true;
-						m_pPDumpPanel->DumpEntity( ent, split.m_nServerCommandsAcknowledged );
-					}
 					continue;
 				}
 
@@ -728,19 +714,6 @@ void CPrediction::PostNetworkDataReceived( int commands_acknowledged )
 
 		// Can also look at regular entities
 		int dumpentindex = cl_predictionentitydump.GetInt();
-		if ( m_pPDumpPanel && error_check && !entityDumped && dumpentindex != -1 )
-		{
-			int last_entity = ClientEntityList().GetHighestEntityIndex();
-			if ( dumpentindex >= 0 && dumpentindex <= last_entity )
-			{
-				C_BaseEntity *ent = ClientEntityList().GetBaseEntity( dumpentindex );
-				if ( ent )
-				{
-					m_pPDumpPanel->DumpEntity( ent, split.m_nServerCommandsAcknowledged );
-					entityDumped = true;
-				}
-			}
-		}
 
 		if( split.m_bPreviousAckHadErrors && cl_prediction_error_timestamps.GetBool() )
 		{
@@ -749,11 +722,6 @@ void CPrediction::PostNetworkDataReceived( int commands_acknowledged )
 	}
 
 	CheckPredictConvar();
-
-	if ( m_pPDumpPanel && error_check && !entityDumped )
-	{
-		m_pPDumpPanel->Clear();
-	}
 #endif
 
 }

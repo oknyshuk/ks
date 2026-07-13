@@ -15,8 +15,7 @@
 #include "cbase.h"
 #include "text_message.h"
 #include "client_textmessage.h"
-#include "vgui_controls/Controls.h"
-#include "vgui/ILocalize.h"
+#include "localize/ilocalize.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -83,9 +82,9 @@ char *CHudTextMessage::LocaliseTextString( const char *msg, char *dst_buffer, in
 
 			// Does titles.txt want to lookup into cstrike_<language>.txt?
 			wchar_t *pLocalizedStr;
-			if ( clmsg->pMessage[0] == '#' && ((pLocalizedStr = g_pVGuiLocalize->Find( clmsg->pMessage )) != NULL ) )
+			if ( clmsg->pMessage[0] == '#' && ((pLocalizedStr = g_pLocalize->Find( clmsg->pMessage )) != NULL ) )
 			{
-				g_pVGuiLocalize->ConvertUnicodeToANSI( pLocalizedStr, dst, buffer_size );
+				g_pLocalize->ConvertUnicodeToANSI( pLocalizedStr, dst, buffer_size );
 			}
 			else
 			{

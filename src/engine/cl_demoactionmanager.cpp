@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
+//========= Copyright ï¿½ 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -6,16 +6,12 @@
 //=============================================================================//
 
 #include "client_pch.h"
-#include <vgui/vgui.h>
-#include <vgui_controls/Controls.h>
 #include "cl_demoaction.h"
 #include "cl_demoactionmanager.h"
-#include "cl_demouipanel.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
-using namespace vgui;
 
 //-----------------------------------------------------------------------------
 // Purpose: 

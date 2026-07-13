@@ -14,7 +14,7 @@
 #include "usermessages.h"
 #include "c_cs_player.h"
 #include "achievements_cs.h"
-#include "vgui/ILocalize.h"
+#include "localize/ilocalize.h"
 #include "c_team.h"
 #include "engineinterface.h"
 #include "matchmaking/mm_helpers.h"
@@ -398,7 +398,7 @@ PlayerStatData_t CCSClientGameStats::GetStatById( int id, int nUserSlot )
 		statData.iStatValue = m_lifetimeStats[nUserSlot][statData.iStatId];
 
 		// we can make this more efficient by caching the localized names
-		statData.pStatDisplayName = g_pVGuiLocalize->Find( CSStatProperty_Table[id].szLocalizationToken );
+		statData.pStatDisplayName = g_pLocalize->Find( CSStatProperty_Table[id].szLocalizationToken );
 
 		return statData;
 	}

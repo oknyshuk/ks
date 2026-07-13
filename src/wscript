@@ -71,7 +71,6 @@ PROJECTS = [
     "rocketui",
     "responserules/runtime",
     "scenefilecache",
-    "serverbrowser",
     "soundemittersystem",
     "soundsystem/lowlevel",
     "studiorender",
@@ -93,11 +92,6 @@ PROJECTS = [
     "tier2",
     "tier3",
     "utils/bzip2",
-    "vgui2/matsys_controls",
-    "vgui2/src",
-    "vgui2/vgui_controls",
-    "vgui2/vgui_surfacelib",
-    "vguimatsurface",
     "videocfg",
     "vphysics",
     "vpklib",
@@ -143,8 +137,18 @@ OPTFLAGS = {
         "clang": ["-O0"],
     },
     "sanitize": {
-        "gcc": ["-O0", "-fno-omit-frame-pointer", "-fsanitize=address,undefined", "-pthread"],
-        "clang": ["-O0", "-fno-omit-frame-pointer", "-fsanitize=address,undefined", "-pthread"],
+        "gcc": [
+            "-O0",
+            "-fno-omit-frame-pointer",
+            "-fsanitize=address,undefined",
+            "-pthread",
+        ],
+        "clang": [
+            "-O0",
+            "-fno-omit-frame-pointer",
+            "-fsanitize=address,undefined",
+            "-pthread",
+        ],
     },
 }
 
@@ -230,7 +234,6 @@ def configure(conf):
                 "base_dir": base_dir,
                 "sloppiness": "include_file_mtime,include_file_ctime,time_macros,pch_defines,file_stat_matches,clang_index_store,locale,random_seed",
                 "hash_dir": "false",
-                "max_size": "30G",
                 "hard_link": "true",
                 "compression_level": "1",
                 "depend_mode": "true",

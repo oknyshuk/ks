@@ -1213,12 +1213,12 @@ void R_BuildCubemapSamples( int numIterations )
 #if !defined( DEDICATED ) && !defined( _GAMECONSOLE )
 CON_COMMAND( buildcubemaps, "Rebuild cubemaps." )
 {
-	extern void V_RenderVGuiOnly();
+	extern void V_RenderUIOnly();
 
 	bool bAllow = Host_AllowQueuedMaterialSystem(false);
 
 	// do this to force a frame to render so the material system syncs up to single thread mode
-	V_RenderVGuiOnly();
+	V_RenderUIOnly();
 	if ( args.ArgC() == 1 )
 	{
 		R_BuildCubemapSamples( 1 );

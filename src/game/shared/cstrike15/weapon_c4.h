@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
+//========= Copyright ï¿½ 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -107,9 +107,6 @@
 		void GetControlPanelClassName( int nPanelIndex, const char *&pPanelName );
 		void SpawnControlPanels( void );
 		void RemoveControlPanels( void );
-
-		typedef CHandle<CVGuiScreen>	ScreenHandle_t;
-		CUtlVector<ScreenHandle_t>	m_hScreens;
 
 		int m_iProgressBarTime;
 		bool m_bVoiceAlertFired;

@@ -2978,7 +2978,14 @@ bool C_BaseAnimating::ShouldSkipAnimationFrame( float currentTime )
 	return false;
 }
 
-extern ConVar cl_countbones;
+ConVar cl_countbones( "cl_countbones", "0", FCVAR_CHEAT, "" );
+
+// Client-side debug-line helper (declared in util_shared.h; the server twin lives
+// in game/server/ndebugoverlay.cpp). Relocated here from the removed vgui_debugoverlaypanel.cpp.
+void DebugDrawLine( const Vector& vecAbsStart, const Vector& vecAbsEnd, int r, int g, int b, bool test, float duration )
+{
+	debugoverlay->AddLineOverlay( vecAbsStart + Vector( 0,0,0.1), vecAbsEnd + Vector( 0,0,0.1), r,g,b, test, duration );
+}
 
 bool C_BaseAnimating::SetupBones( matrix3x4a_t *pBoneToWorldOut, int nMaxBones, int boneMask, float currentTime )
 {

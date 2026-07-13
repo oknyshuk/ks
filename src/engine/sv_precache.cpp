@@ -14,7 +14,7 @@
 #include "DownloadListGenerator.h"
 #include "soundchars.h"
 #ifndef DEDICATED
-#include "vgui_baseui_interface.h"
+#include "engineui.h"
 #endif
 
 // memdbgon must be the last include file in a .cpp file!!!
@@ -241,7 +241,7 @@ int CGameServer::PrecacheModel( char const *name, int flags, model_t *model /*=N
 		{
 			slot->SetModel( modelloader->GetModelForName( name, IModelLoader::FMODELLOADER_SERVER ) );
 #ifndef DEDICATED
-			EngineVGui()->UpdateProgressBar(PROGRESS_DEFAULT); 
+			EngineUI()->UpdateProgressBar(PROGRESS_DEFAULT); 
 #endif
 			MapReslistGenerator().OnModelPrecached(name);
 		}

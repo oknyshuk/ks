@@ -11,7 +11,7 @@
 #include "hltvreplaysystem.h"
 #include "rocketui/rocketui.h"
 #include "tier1/fmtstr.h"
-#include "vgui/ILocalize.h"
+#include "localize/ilocalize.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -168,7 +168,7 @@ void C_PlayerResource::UpdateAsLocalizedFakePlayerName( int slot, char const *pc
 		{
 			if ( i ) strComposite.Append( " " );
 
-			if ( wchar_t const * const kwszLocalizedToken = g_pVGuiLocalize->Find( CFmtStr( "#CSGO_FakePlayer_%s", arrLocTokens[ i ] ) ) )
+			if ( wchar_t const * const kwszLocalizedToken = g_pLocalize->Find( CFmtStr( "#CSGO_FakePlayer_%s", arrLocTokens[ i ] ) ) )
 			{
 				char chUtf8token[ MAX_PLAYER_NAME_LENGTH ] = {};
 				V_UnicodeToUTF8( kwszLocalizedToken, chUtf8token, sizeof( chUtf8token ) );
@@ -232,7 +232,7 @@ void C_PlayerResource::ClientThink()
 	static char s_chStaticArrayVarName[MAX_PLAYER_NAME_LENGTH] = {}; \
 	if ( !s_chStaticArrayVarName[ 0 ] ) \
 	{ \
-		wchar_t const * const kwszTheSuspect = g_pVGuiLocalize->Find( szLocToken ); \
+		wchar_t const * const kwszTheSuspect = g_pLocalize->Find( szLocToken ); \
 		Assert( kwszTheSuspect ); \
 		V_UnicodeToUTF8( kwszTheSuspect, s_chStaticArrayVarName, sizeof( s_chStaticArrayVarName ) ); \
 		Assert( s_chStaticArrayVarName[ 0 ] ); \

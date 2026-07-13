@@ -44,7 +44,7 @@ extern class IMatchExtPortal2 *g_pMatchExtPortal2;
 // engine interface singleton accessors
 extern IVEngineClient *engine;
 extern class IBik *bik;
-extern class IEngineVGui *enginevguifuncs;
+extern class IEngineUI *engineuifuncs;
 extern class IGameUIFuncs *gameuifuncs;
 extern class IEngineSound *enginesound;
 #ifdef _GAMECONSOLE

@@ -15,7 +15,7 @@
 
 struct RenderableInstance_t;
 
-bool DoEnginePostProcessing( int x, int y, int w, int h, bool bFlashlightIsOn, bool bPostVGui = false );
+bool DoEnginePostProcessing( int x, int y, int w, int h, bool bFlashlightIsOn, bool bPostUI = false );
 bool DoImageSpaceMotionBlur( const CViewSetup &view );
 bool IsDepthOfFieldEnabled();
 void DoDepthOfField( const CViewSetup &view );

@@ -11,8 +11,7 @@
 #include "weapon_csbase.h"
 #include "game/client/iviewport.h"
 #include "filesystem.h"
-#include <vgui/ILocalize.h>
-#include <vgui_controls/Controls.h>
+#include "localize/ilocalize.h"
 #include "c_cs_player.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
@@ -37,7 +36,7 @@ static void PrintBuyPresetUsage( void )
 			if ( preset && preset->GetName() && preset->GetName()[0] )
 			{
 				char buffer[64];
-				g_pVGuiLocalize->ConvertUnicodeToANSI( preset->GetName(), buffer, sizeof( buffer ) );
+				g_pLocalize->ConvertUnicodeToANSI( preset->GetName(), buffer, sizeof( buffer ) );
 				Msg( " %d. %s\n", i+1, buffer );
 			}
 		}

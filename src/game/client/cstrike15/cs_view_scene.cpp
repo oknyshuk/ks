@@ -38,7 +38,6 @@
 #include "shake.h"
 #include "precache_register.h"
 #include "engine/IEngineSound.h"
-#include <vgui/ISurface.h>
 #include "hltvreplaysystem.h"
 
 // NOTE: This has to be the last file included!

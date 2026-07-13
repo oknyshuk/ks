@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
+//========= Copyright ï¿½ 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -12,7 +12,6 @@
 #include "clientmode.h"
 #include "hudelement.h"
 #include "keyvalues.h"
-#include "vgui_controls/AnimationController.h"
 #include "engine/IEngineSound.h"
 #include <bitbuf.h>
 

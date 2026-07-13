@@ -26,7 +26,7 @@
 #include "inputsystem/iinputsystem.h"
 #include "materialsystem/imaterialsystem.h"
 #ifndef DEDICATED
-#include "vgui_baseui_interface.h"
+#include "engineui.h"
 #include "server.h"
 #include "matchmaking/imatchframework.h"
 #endif
@@ -276,7 +276,7 @@ void CSteam3Client::OnGameOverlayActivated( GameOverlayActivated_t *pGameOverlay
 #ifndef DEDICATED
 		// Don't activate it if it's already active (a sub window may be active)
 		// Multiplayer doesn't want the UI to appear, since it can't pause anyway
-		if ( !EngineVGui()->IsGameUIVisible() && sv.IsActive() && sv.IsSinglePlayerGame() )
+		if ( !EngineUI()->IsGameUIVisible() && sv.IsActive() && sv.IsSinglePlayerGame() )
 		{
 			Cbuf_AddText( Cbuf_GetCurrentPlayer(), "gameui_activate" );
 		}

@@ -7,7 +7,7 @@
 #include "cbase.h"
 #include "c_cs_player.h"
 #include "c_user_message_register.h"
-#include "vgui/ILocalize.h"
+#include "localize/ilocalize.h"
 #include "view.h"
 #include "iclientvehicle.h"
 #include "ivieweffects.h"
@@ -50,13 +50,11 @@
 
 #include "steam/steam_api.h"
 
-#include "vguicenterprint.h"
+#include "uicenterprint.h"
 #include "xlast_csgo/csgo.spa.h"
 
 #include "weapon_basecsgrenade.h"
 
-#include <vgui/IInput.h>
-#include "vgui_controls/Controls.h"
 
 #include "cs_player_rank_mgr.h"
 #include "cs_item_inventory.h"
@@ -177,9 +175,9 @@ ConVar cl_freeze_cam_penetration_tolerance( "cl_freeze_cam_penetration_tolerance
 
 ConVar cl_ragdoll_crumple( "cl_ragdoll_crumple", "1" );
 
-ConVar cl_teamid_overhead( "cl_teamid_overhead", "1", FCVAR_CHEAT | FCVAR_SS, "Shows teamID over player's heads.  0 = off, 1 = on" );
-ConVar cl_teamid_overhead_maxdist( "cl_teamid_overhead_maxdist", "3000", FCVAR_CHEAT | FCVAR_SS, "max distance at which the overhead team id icons will show" );
-ConVar cl_teamid_overhead_maxdist_spec( "cl_teamid_overhead_maxdist_spec", "2000", FCVAR_CHEAT | FCVAR_SS, "max distance at which the overhead team id icons will show when a spectator" );
+ConVar cl_teamid_overhead( "cl_teamid_overhead", "1", FCVAR_ARCHIVE | FCVAR_SS, "Shows teamID over player's heads.  0 = off, 1 = on" );
+ConVar cl_teamid_overhead_maxdist( "cl_teamid_overhead_maxdist", "3000", FCVAR_ARCHIVE | FCVAR_SS, "max distance at which the overhead team id icons will show" );
+ConVar cl_teamid_overhead_maxdist_spec( "cl_teamid_overhead_maxdist_spec", "2000", FCVAR_ARCHIVE | FCVAR_SS, "max distance at which the overhead team id icons will show when a spectator" );
 ConVar cl_show_equipment_value( "cl_show_equipment_value", "0" );
 
 ConVar cl_show_clan_in_death_notice("cl_show_clan_in_death_notice", "1", FCVAR_CLIENTDLL | FCVAR_RELEASE | FCVAR_ARCHIVE, "Is set, the clan name will show next to player names in the death notices.");
@@ -526,28 +524,6 @@ BEGIN_PREDICTION_DATA( C_CSPlayer )
 	DEFINE_PRED_FIELD( m_bDuckOverride, FIELD_BOOLEAN, FTYPEDESC_INSENDTABLE ),   
 
 END_PREDICTION_DATA()
-
-vgui::IImage* GetDefaultAvatarImage( C_BasePlayer *pPlayer )
-{
-	vgui::IImage* result = NULL;
-
-	switch ( pPlayer ? pPlayer->GetTeamNumber() : TEAM_MAXCOUNT )
-	{
-		case TEAM_TERRORIST: 
-			result = vgui::scheme()->GetImage( CSTRIKE_DEFAULT_T_AVATAR, true );
-			break;
-
-		case TEAM_CT:		 
-			result = vgui::scheme()->GetImage( CSTRIKE_DEFAULT_CT_AVATAR, true );
-			break;
-
-		default:
-			result = vgui::scheme()->GetImage( CSTRIKE_DEFAULT_AVATAR, true );
-			break;
-	}
-
-	return result;
-}
 
 // ----------------------------------------------------------------------------- //
 // Client ragdoll entity.
@@ -2603,8 +2579,8 @@ void C_CSPlayer::FireGameEvent( IGameEvent *event )
 			{
 				wchar_t wszLocalized[100];
 				wchar_t wszPlayerName[MAX_PLAYER_NAME_LENGTH];
-				g_pVGuiLocalize->ConvertANSIToUnicode( pGoldKnifeUser->GetPlayerName(), wszPlayerName, sizeof(wszPlayerName) );
-				g_pVGuiLocalize->ConstructString( wszLocalized, sizeof( wszLocalized ), g_pVGuiLocalize->Find( "#SFUI_Notice_Knife_Level" ), 1, wszPlayerName );
+				g_pLocalize->ConvertANSIToUnicode( pGoldKnifeUser->GetPlayerName(), wszPlayerName, sizeof(wszPlayerName) );
+				g_pLocalize->ConstructString( wszLocalized, sizeof( wszLocalized ), g_pLocalize->Find( "#SFUI_Notice_Knife_Level" ), 1, wszPlayerName );
 
 				GetCenterPrint()->Print( wszLocalized );
 				EmitSound("GunGame.PlayerReachedKnife");
@@ -5076,9 +5052,9 @@ bool C_CSPlayer::IsHoldingSpecGrenadeKey( void )
 	bool bHoldingGrenadeKey = false;
 	int nGrenadeKey = cl_spec_follow_grenade_key.GetInt();
 	if ( nGrenadeKey == 0 )
-		bHoldingGrenadeKey = vgui::input()->IsKeyDown( KEY_LALT );
+		bHoldingGrenadeKey = g_pInputSystem->IsButtonDown( KEY_LALT );
 	else if ( nGrenadeKey == 1 )
-		bHoldingGrenadeKey = vgui::input()->IsKeyDown( KEY_LSHIFT );
+		bHoldingGrenadeKey = g_pInputSystem->IsButtonDown( KEY_LSHIFT );
 	else if ( nGrenadeKey == 2 )
 		clientdll->IN_IsKeyDown( "in_reload", bHoldingGrenadeKey );
 

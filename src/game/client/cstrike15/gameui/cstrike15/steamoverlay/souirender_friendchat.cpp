@@ -12,7 +12,7 @@ public:
 		m_uiLatestLobbyInvite( 0 )
 	{
 		char const *szName = steamapicontext->SteamFriends()->GetFriendPersonaName( xuid );
-		g_pVGuiLocalize->ConvertANSIToUnicode( szName, m_wszNameBuf, sizeof( m_wszNameBuf ) );
+		g_pLocalize->ConvertANSIToUnicode( szName, m_wszNameBuf, sizeof( m_wszNameBuf ) );
 	}
 
 	void OnInviteReceived( uint64 uiLobbyId )

@@ -1,4 +1,4 @@
-//===== Copyright © 1996-2005, Valve Corporation, All rights reserved. ======//
+//===== Copyright ï¿½ 1996-2005, Valve Corporation, All rights reserved. ======//
 //
 // Purpose: 
 //
@@ -11,13 +11,6 @@
 #ifdef _WIN32
 #pragma once
 #endif
-
-#include <vgui/vgui.h>
-
-namespace vgui
-{
-	class Panel;
-}
 
 typedef unsigned char byte;
 
@@ -39,8 +32,6 @@ Returns true if the log file is successfully read.
 */
 class CUtlBuffer;
 bool GetConsoleLogFileData( CUtlBuffer& buf );
-
-vgui::Panel* Con_GetConsolePanel();
 
 
 #endif			// CONSOLE_H

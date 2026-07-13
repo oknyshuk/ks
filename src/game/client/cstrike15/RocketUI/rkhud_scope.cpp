@@ -14,7 +14,7 @@
 DECLARE_HUDELEMENT_DEPTH( RkHudScope, 70 );
 
 extern ConVar cl_crosshair_sniper_width;
-extern ConVar cl_crosshair_sniper_show_normal_inaccuracy;
+ConVar cl_crosshair_sniper_show_normal_inaccuracy( "cl_crosshair_sniper_show_normal_inaccuracy", "0", FCVAR_CLIENTDLL | FCVAR_ARCHIVE | FCVAR_SS, "Include standing inaccuracy when determining sniper crosshair blur" );
 
 static void UnloadRkScope()
 {

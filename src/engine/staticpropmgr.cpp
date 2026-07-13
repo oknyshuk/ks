@@ -50,7 +50,7 @@
 #include "gl_cvars.h"
 #include "shaderapi/ishaderapi.h"
 #include "iclientalphaproperty.h"
-#include "vgui_baseui_interface.h"
+#include "engineui.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -1470,7 +1470,7 @@ void CStaticPropMgr::UnserializeModelDict( CUtlBuffer& buf )
 #ifndef DEDICATED
 		if ( !(i % 10 ) )
 		{
-			EngineVGui()->UpdateProgressBar(PROGRESS_DEFAULT);
+			EngineUI()->UpdateProgressBar(PROGRESS_DEFAULT);
 		}
 #endif
 
@@ -1574,7 +1574,7 @@ void CStaticPropMgr::UnserializeModels( CUtlBuffer& buf )
 #ifndef DEDICATED
 		if ( !(i % 10 ) )
 		{
-			EngineVGui()->UpdateProgressBar(PROGRESS_DEFAULT);
+			EngineUI()->UpdateProgressBar(PROGRESS_DEFAULT);
 		}
 #endif
 	}
@@ -2040,7 +2040,7 @@ void CStaticPropMgr::PrecacheLighting()
 		MDLCACHE_CRITICAL_SECTION_( g_pMDLCache );
 		m_StaticProps[i].PrecacheLighting();
 #ifndef DEDICATED
-		EngineVGui()->UpdateProgressBar( PROGRESS_PRECACHELIGHTING );
+		EngineUI()->UpdateProgressBar( PROGRESS_PRECACHELIGHTING );
 #endif
 	}
 

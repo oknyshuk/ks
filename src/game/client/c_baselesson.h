@@ -250,9 +250,9 @@ private:
 
 protected:
 	CHandle<C_BaseEntity>		m_hIconTarget;
-	CGameInstructorSymbol		m_szVguiTargetName;
-	CGameInstructorSymbol		m_szVguiTargetLookup;
-	int		m_nVguiTargetEdge;
+	CGameInstructorSymbol		m_szUITargetName;
+	CGameInstructorSymbol		m_szUITargetLookup;
+	int		m_nUITargetEdge;
 	float	m_flUpOffset;
 	float	m_flRelativeUpOffset;
 	float	m_fFixedPositionX;

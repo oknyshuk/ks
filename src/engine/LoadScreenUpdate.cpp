@@ -177,8 +177,8 @@ void CLoaderMemAlloc::Start( MaterialNonInteractiveMode_t mode )
 	// since Present is what copies the back buffer into the temp buffer
 	if ( mode == MATERIAL_NON_INTERACTIVE_MODE_LEVEL_LOAD )
 	{
-		extern void V_RenderVGuiOnly( void );
-		V_RenderVGuiOnly();
+		extern void V_RenderUIOnly( void );
+		V_RenderUIOnly();
 	}
 
 	m_pMemAlloc = g_pMemAlloc;
