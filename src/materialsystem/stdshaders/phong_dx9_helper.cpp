@@ -28,8 +28,6 @@ static ConVar mat_displacementmap( "mat_displacementmap", "1", FCVAR_CHEAT );
 static ConVar r_lightwarpidentity( "r_lightwarpidentity", "0", FCVAR_CHEAT );
 static ConVar r_rimlight( "r_rimlight", "1", FCVAR_CHEAT );
 
-// FCVAR_RELEASE so they survive CULL_ALL_CVARS_NOT_FCVAR_RELEASE (tier1/convar.cpp)
-// and can be set from default.cfg without spewing "Unknown command".
 static ConVar cl_teamid_min( "cl_teamid_min", "200", FCVAR_RELEASE );
 static ConVar cl_teamid_max( "cl_teamid_max", "1000", FCVAR_RELEASE );
 

@@ -15,9 +15,9 @@
 
 DECLARE_HUDELEMENT( RkHudChat );
 
-ConVar rocket_hud_chat_idle_opacity( "rocket_hud_chat_idle_opacity", "0.2", 0, "The Opacity of the Chat while it is not active" );
-ConVar rocket_hud_chat_active_opacity( "rocket_hud_chat_active_opacity", "0.7", 0, "The Opacity of the Chat while typing/new message" );
-ConVar rocket_hud_chat_max_entries( "rocket_hud_chat_max_entries", "1000", 0, "Chat History Length" );
+ConVar rocket_hud_chat_idle_opacity( "rocket_hud_chat_idle_opacity", "0.2", FCVAR_ARCHIVE, "The Opacity of the Chat while it is not active" );
+ConVar rocket_hud_chat_active_opacity( "rocket_hud_chat_active_opacity", "0.7", FCVAR_ARCHIVE, "The Opacity of the Chat while typing/new message" );
+ConVar rocket_hud_chat_max_entries( "rocket_hud_chat_max_entries", "1000", FCVAR_ARCHIVE, "Chat History Length" );
 
 CON_COMMAND_F( rocket_hud_chat_clear, "Clears the Chat History", FCVAR_NONE )
 {

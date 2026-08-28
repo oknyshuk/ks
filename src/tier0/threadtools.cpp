@@ -569,15 +569,62 @@ void ThreadSetAffinity( ThreadHandle_t hThread, int nAffinityMask )
 
 #ifdef _WIN32
 	SetThreadAffinityMask( hThread, nAffinityMask );
-#elif defined(POSIX)
-// 	cpu_set_t cpuSet;
-// 	CPU_ZERO( cpuSet );
-// 	for( int i = 0 ; i < 32; i++ )
-// 	  if ( nAffinityMask & ( 1 << i ) )
-// 	    CPU_SET( cpuSet, i );
-// 	sched_setaffinity( hThread, sizeof( cpuSet ), &cpuSet );
+#elif defined(LINUX)
+	cpu_set_t cpuSet;
+	CPU_ZERO( &cpuSet );
+	for ( int i = 0; i < 32; i++ )
+	{
+		if ( nAffinityMask & ( 1 << i ) )
+			CPU_SET( i, &cpuSet );
+	}
+	pthread_setaffinity_np( (pthread_t)hThread, sizeof( cpuSet ), &cpuSet );
 #endif
 
+}
+
+//-----------------------------------------------------------------------------
+
+int ThreadPinToFastestCores()
+{
+#if defined(LINUX)
+	constexpr int kMaxCPUs = 256;
+	const int nCPUs = sysconf( _SC_NPROCESSORS_CONF );
+	if ( nCPUs <= 0 || nCPUs > kMaxCPUs )
+		return 0;
+
+	long freq[ kMaxCPUs ] = {};
+	long nTopFreq = 0;
+	for ( int i = 0; i < nCPUs; i++ )
+	{
+		char szPath[ 96 ];
+		snprintf( szPath, sizeof( szPath ), "/sys/devices/system/cpu/cpu%d/cpufreq/cpuinfo_max_freq", i );
+		if ( FILE *pFile = fopen( szPath, "r" ) )
+		{
+			if ( fscanf( pFile, "%ld", &freq[ i ] ) != 1 )
+				freq[ i ] = 0;
+			fclose( pFile );
+			if ( freq[ i ] > nTopFreq )
+				nTopFreq = freq[ i ];
+		}
+	}
+
+	cpu_set_t cpuSet;
+	CPU_ZERO( &cpuSet );
+	for ( int i = 0; i < nCPUs; i++ )
+	{
+		if ( freq[ i ] * 20 >= nTopFreq * 19 )	// within 5% of the top clock == same frequency tier
+			CPU_SET( i, &cpuSet );
+	}
+
+	// no cpufreq or a uniform CPU sets every bit, and pinning below 4 cores trades stutter for starvation
+	const int nFast = CPU_COUNT( &cpuSet );
+	if ( nFast == nCPUs || nFast < 4 )
+		return 0;
+
+	return sched_setaffinity( 0, sizeof( cpuSet ), &cpuSet ) == 0 ? nFast : 0;
+#else
+	return 0;
+#endif
 }
 
 //-----------------------------------------------------------------------------

@@ -725,6 +725,7 @@ ConVar	host_timescale( "host_timescale","1.0", FCVAR_REPLICATED | FCVAR_CHEAT, "
 ConVar	host_limitlocal( "host_limitlocal", "0", 0, "Apply cl_cmdrate and cl_updaterate to loopback connection" );
 ConVar	host_framerate( "host_framerate","0", FCVAR_REPLICATED | FCVAR_CHEAT, "Set to lock per-frame time elapse." );
 ConVar	host_speeds( "host_speeds","0", 0, "Show general system running times." );		// set for running times
+ConVar	host_frametrace( "host_frametrace", "0", 0, "Log per-frame timings to frametrace.csv." );
 
 ConVar  developer( "developer", "0", FCVAR_RELEASE, "Set developer message level");
 
@@ -2130,8 +2131,6 @@ void CFrameTimer::MarkFrame()
 	double frameTime;
 	double fps;
 
-	// ConDMsg("%f %f %f\n", time1, time2, time3 );
-
 	float fs_input = (deltas[FRAME_SEGMENT_INPUT])*1000.0;
 	float fs_client = (deltas[FRAME_SEGMENT_CLIENT])*1000.0;
 	float fs_server = (deltas[FRAME_SEGMENT_SERVER])*1000.0;
@@ -2145,7 +2144,6 @@ void CFrameTimer::MarkFrame()
 	ResetDeltas();
 
 	frameTime = host_frametime;
-	//frameTime /= 1000.0;
 	if ( frameTime < 0.0001 )
 	{
 		fps = 999.0;
@@ -2153,6 +2151,28 @@ void CFrameTimer::MarkFrame()
 	else
 	{
 		fps = 1.0 / frameTime;
+	}
+
+	if ( host_frametrace.GetBool() )
+	{
+		static FILE *pTrace = []() {
+			FILE *pFile = fopen( "frametrace.csv", "w" );
+			if ( pFile )
+			{
+				setvbuf( pFile, NULL, _IOLBF, 0 );
+				fputs( "t,wall_ms,frametime_ms,inp,sv,cl,render,snd,cl_dll,exec\n", pFile );
+			}
+			return pFile;
+		}();
+		static double flPrev = Plat_FloatTime();
+		const double flNow = Plat_FloatTime();
+		if ( pTrace )
+		{
+			fprintf( pTrace, "%.6f,%.3f,%.3f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f\n", flNow,
+				( flNow - flPrev ) * 1000.0, frameTime * 1000.0,
+				fs_input, fs_server, fs_client, fs_render, fs_sound, fs_cldll, fs_exec );
+		}
+		flPrev = flNow;
 	}
 
 	if (host_speeds.GetInt())

@@ -1555,22 +1555,11 @@ void RunThreadPoolTests()
 		Msg( "ThreadPoolTest:     Distribute\n" );
 		ThreadPoolTest::Test( true, true, bToCompletion  );
 
-// 		Msg( "ThreadPoolTest:     One core\n" );
-// 		ThreadSetAffinity( 0, 1 );
-// 		ThreadPoolTest::Test( false, true, bToCompletion  );
-// 		ThreadSetAffinity( 0, mask1 );
-
 		Msg( "ThreadPoolTest:     NO Sleep\n" );
 		ThreadPoolTest::Test( false, false, bToCompletion  );
 
 		Msg( "ThreadPoolTest:     Distribute NO Sleep\n" );
 		ThreadPoolTest::Test( true, false, bToCompletion  );
-
-//		Not plumbed correctly
-// 		Msg( "ThreadPoolTest:     One core\n" );
-// 		ThreadSetAffinity( 0, 1 );
-// 		ThreadPoolTest::Test( false, false, bToCompletion  );
-// 		ThreadSetAffinity( 0, mask1 );
 	}
 
 	for ( int bMain = 0; bMain < 2; bMain++ )
@@ -1588,21 +1577,11 @@ void RunThreadPoolTests()
 			Msg( "ThreadPoolTest:     Distribute\n" );
 			ThreadPoolTest::Test( true, true, bToCompletion, true, !!bMain );
 
-// 			Msg( "ThreadPoolTest:     One core\n" );
-// 			ThreadSetAffinity( 0, 1 );
-// 			ThreadPoolTest::Test( false, true, bToCompletion, true, !!bMain );
-// 			ThreadSetAffinity( 0, mask1 );
-
 			Msg( "ThreadPoolTest:     NO Sleep\n" );
 			ThreadPoolTest::Test( false, false, bToCompletion, true, !!bMain );
 
 			Msg( "ThreadPoolTest:     Distribute NO Sleep\n" );
 			ThreadPoolTest::Test( true, false, bToCompletion, true, !!bMain );
-
-// 			Msg( "ThreadPoolTest:     One core\n" );
-// 			ThreadSetAffinity( 0, 1 );
-// 			ThreadPoolTest::Test( false, false, bToCompletion, true, !!bMain );
-// 			ThreadSetAffinity( 0, mask1 );
 		}
 	}
 #ifdef _WIN32

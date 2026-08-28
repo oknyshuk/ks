@@ -1396,6 +1396,10 @@ extern "C" DLL_EXPORT int LauncherMain( int argc, char **argv )
 #endif
 
 #ifdef LINUX
+	// must precede any thread creation: children inherit the affinity mask
+	if ( !CommandLine()->FindParm( "-noaffinity" ) )
+		ThreadPinToFastestCores();
+
 	//  fix to stop us from crashing in printf/sscanf functions that don't expect
 	//  localization to mess with your "." and "," float seperators. Mac OSX also sets LANG
 	//  to en_US.UTF-8 before starting up (in info.plist I believe).

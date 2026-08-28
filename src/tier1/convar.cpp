@@ -22,10 +22,6 @@
 #endif
 #include "tier0/memdbgon.h"
 
-
-// This enables the l4d style of culling all cvars that are not marked FCVAR_RELEASE :
-#define CULL_ALL_CVARS_NOT_FCVAR_RELEASE
-
 //-----------------------------------------------------------------------------
 // Statically constructed list of ConCommandBases, 
 // used for registering them with the ICVar interface
@@ -1115,15 +1111,6 @@ void ConVar::Create( const char *pName, const char *pDefaultValue, int flags /*=
 		m_Value.m_fValue = ObscureConvarValue( fValue, ( intp ) this );
 		m_Value.m_nValue = ObscureConvarValue( ( int ) dblValue, ( intp) this );
 	}
-
-	//If we're not tagged as cheat, archive or release then hide us.
-#if defined( CULL_ALL_CVARS_NOT_FCVAR_RELEASE )
-// FIXMEL4DTOMAINMERGE: will need to assess if this hides too many convars for TF and other projects in main
-	if ( !( flags & ( FCVAR_CHEAT | FCVAR_ARCHIVE | FCVAR_RELEASE | FCVAR_USERINFO ) ) )
-	{
-		flags |= FCVAR_DEVELOPMENTONLY;
-	}
-#endif
 
 	BaseClass::Create( pName, pHelpString, flags );
 }

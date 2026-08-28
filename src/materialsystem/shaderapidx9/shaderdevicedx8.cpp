@@ -164,6 +164,7 @@ bool CShaderDeviceMgrDx8::Connect( CreateInterfaceFn factory )
 #endif
 
 	setenv("DXVK_WSI_DRIVER", "SDL3", 0);
+	setenv("DXVK_CONFIG", "d3d9.hideIntelGpu = False", 0);
 
 #if defined( DO_DX9_HOOK )
 	m_pD3D = Direct3DCreate9Hook(D3D_SDK_VERSION);

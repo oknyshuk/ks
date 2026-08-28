@@ -42,11 +42,8 @@
             pname = "ks";
             version = "0.1.0";
             src = ./src;
-
             nativeBuildInputs = nativeBuildInputs ++ [ pkgs.wafHook ];
             inherit buildInputs;
-
-            env.MARCH = "x86-64-v3";
           };
         in
         {
@@ -92,14 +89,12 @@
           devShells.default = llvm.stdenv.mkDerivation {
             name = "ks-dev";
             NIX_ENFORCE_NO_NATIVE = false;
-            NIX_HARDENING_DISABLE = true;
             nativeBuildInputs = nativeBuildInputs ++ [
               pkgs.waf
               pkgs.ccache
               llvm.clang-tools
             ];
             inherit buildInputs;
-
             shellHook = ''
               export LD_LIBRARY_PATH="${runtimePath}''${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
               export XDG_DATA_DIRS="${pkgs.mesa}/share''${XDG_DATA_DIRS:+:$XDG_DATA_DIRS}"

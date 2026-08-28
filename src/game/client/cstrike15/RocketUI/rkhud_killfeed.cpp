@@ -11,7 +11,7 @@
 
 DECLARE_HUDELEMENT( RkHudKillfeed );
 
-ConVar rocket_hud_killfeed_linger_time( "rocket_hud_killfeed_linger_time", "5", 0, "How long in seconds to keep each killfeed entry on screen." );
+ConVar rocket_hud_killfeed_linger_time( "rocket_hud_killfeed_linger_time", "5", FCVAR_ARCHIVE, "How long in seconds to keep each killfeed entry on screen." );
 
 struct KillfeedEntry
 {

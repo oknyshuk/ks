@@ -10,8 +10,8 @@
 DECLARE_HUDELEMENT( RkHudRadar );
 DECLARE_HUD_MESSAGE( RkHudRadar, ProcessSpottedEntityUpdate );
 
-ConVar rocket_hud_radar_info_linger_time( "rocket_hud_radar_info_linger_time", "3", 0, "How long in seconds does the data stay visible after an update" );
-ConVar rocket_hud_radar_scale( "rocket_hud_radar_scale", "0.15", 0, "scale for radar" );
+ConVar rocket_hud_radar_info_linger_time( "rocket_hud_radar_info_linger_time", "3", FCVAR_ARCHIVE, "How long in seconds does the data stay visible after an update" );
+ConVar rocket_hud_radar_scale( "rocket_hud_radar_scale", "0.15", FCVAR_ARCHIVE, "scale for radar" );
 
 static void RadarSizeChanged( IConVar *pConvar, const char *szOldValue, float fOldValue )
 {
@@ -23,8 +23,8 @@ static void RadarSizeChanged( IConVar *pConvar, const char *szOldValue, float fO
     }
     pRadar->UpdateRadarSize();
 }
-ConVar rocket_hud_radar_height( "rocket_hud_radar_height", "400", 0, "height in pixels for the radar", RadarSizeChanged );
-ConVar rocket_hud_radar_width( "rocket_hud_radar_width", "400", 0, "width in pixels for the radar", RadarSizeChanged );
+ConVar rocket_hud_radar_height( "rocket_hud_radar_height", "400", FCVAR_ARCHIVE, "height in pixels for the radar", RadarSizeChanged );
+ConVar rocket_hud_radar_width( "rocket_hud_radar_width", "400", FCVAR_ARCHIVE, "width in pixels for the radar", RadarSizeChanged );
 
 
 bool RkHudRadar::MsgFunc_ProcessSpottedEntityUpdate(const CCSUsrMsg_ProcessSpottedEntityUpdate &msg)

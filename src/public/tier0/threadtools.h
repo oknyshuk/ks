@@ -189,6 +189,7 @@ PLATFORM_INTERFACE void ThreadSetDebugName( ThreadHandle_t hThread, const char *
 inline		 void ThreadSetDebugName( const char *pszName ) { ThreadSetDebugName( NULL, pszName ); }
 
 PLATFORM_INTERFACE void ThreadSetAffinity( ThreadHandle_t hThread, int nAffinityMask );
+PLATFORM_INTERFACE int ThreadPinToFastestCores();	// returns the number of CPUs pinned to, 0 if it did nothing
 
 
 //-----------------------------------------------------------------------------
