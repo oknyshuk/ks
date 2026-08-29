@@ -2252,10 +2252,6 @@ void CModAppSystemGroup::PostShutdown()
 
 void CModAppSystemGroup::Destroy()
 {
-	// Note: g_pMatchFramework->Shutdown() TRACESHUTDOWN is handled in Host_Shutdown()
-	// to match the TRACEINIT in Host_Init(). Just clear the pointer here.
-	g_pMatchFramework = NULL;
-
 	// unload game and client .dlls
 	ServerDLL_Unload();
 #ifndef DEDICATED
@@ -2269,12 +2265,18 @@ void CModAppSystemGroup::Destroy()
 
 	Host_SubscribeForProfileEvents( false );
 
+	// Host_Shutdown() runs after Destroy() on a dedicated server
+	if ( g_pMatchFramework )
+	{
+		g_pMatchFramework->Shutdown();
+		g_pMatchFramework = NULL;
+	}
+
 	FileSystem_UnloadModule( g_pMatchmakingDllModule );
 
 	g_pIfaceMatchFramework = NULL;
 	g_pMatchmakingDllModule = NULL;
 	g_pfnMatchmakingFactory = NULL;
-	g_pMatchFramework = NULL;
 
 	/// vjobs
 

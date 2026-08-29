@@ -1155,13 +1155,16 @@ void Host_WriteConfiguration( const int iController, const char *filename )
 {
 	// Set the joystick being force disabled just as we write the config
 	// This allows us to chose this option in the menu with a controller without accidentally disabling our only mode of input
-	static ConVarRef joystick_force_disabled( "joystick_force_disabled" );
-	static ConVarRef joystick_force_disabled_set_from_options( "joystick_force_disabled_set_from_options" );
-	if ( joystick_force_disabled.IsValid() && joystick_force_disabled_set_from_options.IsValid() )
+	if ( !sv.IsDedicated() )
 	{
-		if ( joystick_force_disabled.GetBool() != joystick_force_disabled_set_from_options.GetBool() )
+		static ConVarRef joystick_force_disabled( "joystick_force_disabled" );
+		static ConVarRef joystick_force_disabled_set_from_options( "joystick_force_disabled_set_from_options" );
+		if ( joystick_force_disabled.IsValid() && joystick_force_disabled_set_from_options.IsValid() )
 		{
-			joystick_force_disabled.SetValue( joystick_force_disabled_set_from_options.GetBool() );
+			if ( joystick_force_disabled.GetBool() != joystick_force_disabled_set_from_options.GetBool() )
+			{
+				joystick_force_disabled.SetValue( joystick_force_disabled_set_from_options.GetBool() );
+			}
 		}
 	}
 
@@ -3343,7 +3346,7 @@ void _Host_RunFrame (float time)
 		else
 		{
 			// initialize networking after commandline & autoexec.cfg have been parsed
-			NET_Init( NET_IsDedicated() );
+			NET_Init( sv.IsDedicated() );
 		}
 
 		g_HostTimes.EndFrameSegment( FRAME_SEGMENT_CMD_EXECUTE );
@@ -4564,7 +4567,7 @@ void Host_Init( bool bDedicated )
 
 	if ( CommandLine()->FindParm( "-xlsp" ) != 0 )
 	{
-		TRACEINIT( NET_Init( bDedicated ), NET_Shutdown() );
+		NET_Init( bDedicated );
 	}
 
 	TRACEINIT( g_GameEventManager.Init(), g_GameEventManager.Shutdown() );
@@ -4602,7 +4605,7 @@ void Host_Init( bool bDedicated )
 
 		TRACEINIT( InitStudioRender(), ShutdownStudioRender() );
 
-		TRACEINIT( g_pMatchFramework->Init(), g_pMatchFramework->Shutdown() );
+		g_pMatchFramework->Init();
 
 		//startup vgui
 		TRACEINIT( EngineUI()->Init(), EngineUI()->Shutdown() );
@@ -4631,7 +4634,7 @@ void Host_Init( bool bDedicated )
 
 		TRACEINIT( InitStudioRender(), ShutdownStudioRender() );
 
-		TRACEINIT( g_pMatchFramework->Init(), g_pMatchFramework->Shutdown() );
+		g_pMatchFramework->Init();
 
 		TRACEINIT( Decal_Init(), Decal_Shutdown() );
 
@@ -5397,7 +5400,8 @@ void Host_Shutdown(void)
 
 		if ( g_pMatchFramework )
 		{
-			TRACESHUTDOWN( g_pMatchFramework->Shutdown() );
+			g_pMatchFramework->Shutdown();
+			g_pMatchFramework = NULL;
 		}
 
 		TRACESHUTDOWN( ClientDLL_Shutdown() );
@@ -5425,7 +5429,8 @@ void Host_Shutdown(void)
 	{
 		if ( g_pMatchFramework )
 		{
-			TRACESHUTDOWN( g_pMatchFramework->Shutdown() );
+			g_pMatchFramework->Shutdown();
+			g_pMatchFramework = NULL;
 		}
 
 #ifndef DEDICATED
@@ -5461,13 +5466,12 @@ void Host_Shutdown(void)
 
 	TRACESHUTDOWN( sv.Shutdown() );
 
-	TRACESHUTDOWN( NET_Shutdown() );
+	NET_Shutdown();
 
 	TRACESHUTDOWN( g_pSteamSocketMgr->Shutdown() );
 
 #ifndef DEDICATED
 	TRACESHUTDOWN( Key_Shutdown() );
-	TRACESHUTDOWN( ShutdownMixerControls() );
 #endif
 
 	TRACESHUTDOWN( Filter_Shutdown() );

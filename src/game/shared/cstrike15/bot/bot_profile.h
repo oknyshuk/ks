@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
+//========= Copyright ï¿½ 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -47,6 +47,7 @@ public:
 
 		m_cost = 0;
 		m_skin = 0;	
+		m_rank = 0;
 		m_difficultyFlags = 0;
 		m_voicePitch = 100;
 		m_reactionTime = 0.3f;
@@ -88,6 +89,7 @@ public:
 
 	int GetCost() const;
 	int GetSkin() const;
+	int GetRank() const;
 	int GetMaxDifficulty() const;					///< return maximum difficulty flag value
 	bool IsDifficulty( BotDifficultyType diff ) const;	///< return true if this profile can be used for the given difficulty level
 	bool IsMaxDifficulty( BotDifficultyType diff ) const;	///< return true if this profile's highest difficulty matches the incoming difficulty level
@@ -138,6 +140,7 @@ private:
 
 	int m_cost;								///< reputation point cost for career mode
 	int m_skin;								///< "skin" index
+	int m_rank;								///< skill rank, as an elo-like rating
 	unsigned char m_difficultyFlags;		///< bits set correspond to difficulty levels this is valid for
 	int m_voicePitch;						///< the pitch shift for bot chatter (100 = normal)
 	float m_reactionTime;					///< our reaction time in seconds
@@ -217,6 +220,11 @@ inline int BotProfile::GetCost() const
 inline int BotProfile::GetSkin() const
 {
 	return m_skin;
+}
+
+inline int BotProfile::GetRank() const
+{
+	return m_rank;
 }
 
 inline int BotProfile::GetVoicePitch() const
@@ -312,6 +320,9 @@ inline void BotProfile::Inherit( const BotProfile *parent, const BotProfile *bas
 
 	if (parent->m_skin != baseline->m_skin)
 		m_skin = parent->m_skin;
+
+	if (parent->m_rank != baseline->m_rank)
+		m_rank = parent->m_rank;
 
 	if (parent->m_difficultyFlags != baseline->m_difficultyFlags)
 		m_difficultyFlags = parent->m_difficultyFlags;

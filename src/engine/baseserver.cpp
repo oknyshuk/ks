@@ -933,7 +933,7 @@ bool CBaseServer::ProcessConnectionlessPacket(netpacket_t * packet)
 #if !defined(NO_STEAM)
 			// Drop packet if we don't yet have our Steam ID
 			// because we're still logging on
-			if ( !Steam3Server().BHasLogonResult() )
+			if ( !Steam3Server().BHasLogonResult() && !sv_lan.GetBool() )
 				break;
 #endif
 			ReplyChallenge( packet->from, msg );

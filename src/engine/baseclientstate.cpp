@@ -1,4 +1,4 @@
-﻿//===== Copyright � 1996-2005, Valve Corporation, All rights reserved. ======//
+//===== Copyright � 1996-2005, Valve Corporation, All rights reserved. ======//
 //
 // Purpose:  baseclientstate.cpp: implementation of the CBaseClientState class.
 // 
@@ -942,6 +942,17 @@ bool CBaseClientState::PrepareSteamConnectResponse( uint64 unGSSteamID, bool bGS
 
 bool Remote_t::Resolve()
 {
+	// The engine treats a literal "localhost" as the in-process local game (see
+	// CL_Connect) while a numeric 127.0.0.1 is a separate process such as srcds.
+	// SetFromString() rewrites "localhost" to 127.0.0.1 and loses that
+	// distinction, so resolve it to NA_LOOPBACK here instead.
+	if ( StringHasPrefixCaseSensitive( m_szRetryAddress.String(), "localhost" ) )
+	{
+		m_adrRemote.SetAddrType( NSAT_NETADR );
+		m_adrRemote.m_adr.SetType( NA_LOOPBACK );
+		return true;
+	}
+
 	if ( !m_adrRemote.SetFromString( m_szRetryAddress ) )
 	{
 		return false;

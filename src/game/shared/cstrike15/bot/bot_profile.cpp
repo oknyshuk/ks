@@ -520,6 +520,10 @@ void BotProfileManager::Init( const char *filename, unsigned int *checksum )
 			{
 				profile->m_cost = atoi( token );
 			}
+			else if ( !stricmp( "Rank", attributeName ) )
+			{
+				profile->m_rank = atoi( token );
+			}
 			else if ( !stricmp( "VoicePitch", attributeName ) )
 			{
 				profile->m_voicePitch = atoi( token );

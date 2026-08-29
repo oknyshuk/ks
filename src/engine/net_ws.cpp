@@ -2476,7 +2476,9 @@ int NET_SendPacket ( INetChannel *chan, int sock,  const ns_address &to, const u
 		}
 	}
 
-	if ( !NET_IsMultiplayer() || to.IsLoopback() || ( to.IsLocalhost() && !net_usesocketsforloopback.GetBool() ) )
+	// Only NA_LOOPBACK means the peer lives in this process. A numeric 127.0.0.1
+	// peer is a separate process on this machine and must go over real sockets.
+	if ( !NET_IsMultiplayer() || to.IsLoopback() )
 	{
 		Assert( !pVoicePayload );
 
@@ -2929,7 +2931,8 @@ void NET_OpenSockets (void)
 	const int nProtocol = IsX360() ? IPPROTO_VDP : IPPROTO_UDP;
 
 	OpenSocketInternal( NS_SERVER, hostport.GetInt(), PORT_SERVER, "server", nProtocol, false );
-	OpenSocketInternal( NS_CLIENT, clientport.GetInt(), PORT_SERVER, "client", nProtocol, true );
+	if ( !net_dedicated )
+		OpenSocketInternal( NS_CLIENT, clientport.GetInt(), PORT_SERVER, "client", nProtocol, true );
 
 #ifdef _X360
 	int nX360Port = PORT_X360_RESERVED_FIRST;

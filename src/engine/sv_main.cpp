@@ -250,7 +250,7 @@ ConVar	sv_pure_consensus( "sv_pure_consensus", "99999999", FCVAR_RELEASE, "Minim
 ConVar	sv_pure_retiretime( "sv_pure_retiretime", "900", FCVAR_RELEASE, "Seconds of server idle time to flush the sv_pure file hash cache." );
 
 ConVar  sv_cheats( "sv_cheats", "0", FCVAR_NOTIFY|FCVAR_REPLICATED | FCVAR_RELEASE, "Allow cheats on server", SV_CheatsChanged_f );
-ConVar  sv_lan( "sv_lan", "0", FCVAR_RELEASE, "Server is a lan server ( no heartbeat, no authentication, no non-class C addresses )" );
+ConVar  sv_lan( "sv_lan", "1", FCVAR_RELEASE, "Server is a lan server ( no heartbeat, no authentication, no non-class C addresses )" );
 
 
 static	ConVar	sv_pausable( "sv_pausable","0", FCVAR_RELEASE, "Is the server pausable." );
@@ -1246,6 +1246,13 @@ void CGameServer::Init (bool isDedicated)
 
     if ( isDedicated )
     {
+        // srcds shares the non-DEDICATED engine binary, so it picks up the listen
+        // server defaults for these. Valve's DEDICATED build ships this off.
+        ConVarRef parallel_sendsnapshot( "sv_parallel_sendsnapshot" );
+        parallel_sendsnapshot.SetValue( 0 );
+        ConVarRef parallel_packentities( "sv_parallel_packentities" );
+        parallel_packentities.SetValue( 0 );
+
         // if dedicated server, hibernate until first client connects
         UpdateHibernationState( );
     }

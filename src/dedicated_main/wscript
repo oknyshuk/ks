@@ -1,0 +1,28 @@
+#! /usr/bin/env python
+
+
+def options(opt):
+    return
+
+
+def configure(conf):
+    return
+
+
+def build(bld):
+    libs = []
+
+    includes = []
+
+    source = ["main.cpp"]
+
+    bld(
+        source=source,
+        target="srcds",
+        features="cxx cxxprogram",
+        includes=includes,
+        use=libs,
+        install_path=bld.env.PREFIX,
+        subsystem=bld.env.MSVC_SUBSYSTEM,
+        idx=bld.get_taskgen_count(),
+    )

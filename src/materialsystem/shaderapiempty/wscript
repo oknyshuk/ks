@@ -1,0 +1,37 @@
+#! /usr/bin/env python
+
+
+def options(opt):
+    return
+
+
+def configure(conf):
+    return
+
+
+def build(bld):
+    libs = [
+        "tier0",
+        "memoverride",
+        "tier1",
+        "tier2",
+        "interfaces",
+        "vstdlib",
+        "mathlib",
+        "shaderlib",
+    ]
+
+    includes = [".."]
+
+    source = ["shaderapiempty.cpp"]
+
+    bld.shlib(
+        source=source,
+        target="shaderapiempty",
+        features="cxx",
+        includes=includes,
+        use=libs,
+        install_path=bld.env.BINPATH,
+        subsystem=bld.env.MSVC_SUBSYSTEM,
+        idx=bld.get_taskgen_count(),
+    )

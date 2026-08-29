@@ -729,8 +729,6 @@ bool CMaterialSystem::Connect( CreateInterfaceFn factory )
 #endif
 
 	g_pLauncherMgr = (ILauncherMgr *)factory( "SDLMgrInterface001", NULL );
-	if ( !g_pLauncherMgr )
-		return false;
 
 #elif defined( _OSX )
 	g_pHWConfig = g_pHardwareConfig;

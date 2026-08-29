@@ -2150,10 +2150,13 @@ bool CGame::Init( void *pvInstance )
 	m_hInstance = (HINSTANCE)pvInstance;
 #endif
 
-	m_hInputContext = g_pInputStackSystem->PushInputContext();
+	if ( g_pInputStackSystem )
+	{
+		m_hInputContext = g_pInputStackSystem->PushInputContext();
 
-	// Capture + hide the mouse
-	g_pInputStackSystem->SetMouseCapture( m_hInputContext, true );
+		// Capture + hide the mouse
+		g_pInputStackSystem->SetMouseCapture( m_hInputContext, true );
+	}
 
 	return true;
 }
@@ -2186,7 +2189,8 @@ void *CGame::GetMainWindow( void )
 #if defined(USE_SDL)
 void** CGame::GetMainWindowAddress( void )
 {
-	m_hWindow = (SDL_Window *)g_pLauncherMgr->GetWindowRef();
+	if ( g_pLauncherMgr )
+		m_hWindow = (SDL_Window *)g_pLauncherMgr->GetWindowRef();
 	return (void**)&m_hWindow;
 }
 #elif defined( WIN32 ) 
