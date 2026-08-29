@@ -12,9 +12,7 @@
 
 
 #ifdef _WIN32
-#if !defined( _X360 )
 #include "winlite.h"
-#endif
 #endif
 
 #include "vstdlib/random.h"
@@ -33,16 +31,12 @@
 
 #if defined(_WIN32)
 
-#if !defined( _X360 )
 #include <winsock2.h>
-#else
-#include "winsockx.h"
-#endif
 
 // #include <process.h>
 typedef int socklen_t;
 
-#elif defined POSIX
+#else
 
 #include <unistd.h>
 #include <sys/socket.h>

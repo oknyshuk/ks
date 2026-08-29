@@ -37,11 +37,6 @@ struct Ray_t;
 struct client_textmessage_t;
 typedef CGameTrace trace_t;
 
-namespace vgui
-{
-	typedef unsigned long HFont;
-	class EditablePanel;
-};
 
 
 

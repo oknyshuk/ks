@@ -21,9 +21,6 @@
 #include "checksum_crc.h"
 #include "tier1/generichash.h"
 
-#if IsPlatformX360()
-#include "filesystem/IXboxInstaller.h"
-#endif
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -163,12 +160,6 @@ void *CSoundEmitterSystemBase::QueryInterface( const char *pInterfaceName )
 //-----------------------------------------------------------------------------
 static void AccumulateFileNameAndTimestampIntoChecksum( CRC32_t *crc, char const *filename )
 {
-	if ( IsX360() )
-	{
-		// this is an expensive i/o operation due to search path fall through
-		// 360 doesn't need or use the checksums
-		return;
-	}
 
 	long ft = g_pFullFileSystem->GetFileTime( filename, "GAME" );
 	CRC32_ProcessBuffer( crc, &ft, sizeof( ft ) );
@@ -224,10 +215,6 @@ bool CSoundEmitterSystemBase::LoadGameSoundManifest()
 	CRC32_t crc;
 	CRC32_Init( &crc );
 
-#if 0
-	AccumulateFileNameAndTimestampIntoChecksum( &crc, "scripts/game_sounds_music/game_sounds_music_deathcams.txt" );
-	AddSoundsFromFile( "scripts/game_sounds_music/game_sounds_music_deathcams.txt", true, true );
-#endif
 
 
 	KeyValues *manifest = new KeyValues( MANIFEST_FILE );
@@ -268,11 +255,6 @@ bool CSoundEmitterSystemBase::LoadGameSoundManifest()
 	}
 	else
 	{
-		if( IsPS3() )
-		{
-			return false;
-		}
-		else
 		{
 			Error( "Unable to load manifest file '%s'\n", MANIFEST_FILE );
 		}		
@@ -425,9 +407,6 @@ int	CSoundEmitterSystemBase::FindBestSoundForGender( SoundFile *pSoundnames, int
 {
 	// Check for recycling of random sounds...
 	EnsureAvailableSlotsForGender( pSoundnames, c, gender );
-#if 0
-	Msg( "nRandomSeed(1) %i : ", nRandomSeed );
-#endif
 
 	// because this random int / index came across the network as a 6 bit uint
 	// we utilize the 0 slot as "undefined", however 0 is a valid index
@@ -481,9 +460,6 @@ int	CSoundEmitterSystemBase::FindBestSoundForGender( SoundFile *pSoundnames, int
 				nRandomSum -= c;
 			}
 			nRandomSeed = nRandomSum;
-#if 0
-			Msg( "nRandomIndex %i : nRandomMSB %i : nRandomSum %i : ", nRandomIndex, nRandomMSB, nRandomSum );
-#endif
 		}
 		else
 		{
@@ -492,9 +468,6 @@ int	CSoundEmitterSystemBase::FindBestSoundForGender( SoundFile *pSoundnames, int
 		}
 	}
 
-#if 0
-		Msg( "nRandomSeed %i : nAdjRandomSeed %i : nRandomLSB %i : idx %i : %i\n", nRandomSeed, nAdjRandomSeed, nRandomLSB, idx );
-#endif
 	return idx;
 
 
@@ -1680,17 +1653,6 @@ bool CSoundEmitterSystemBase::GetParametersForSoundEx( const char *soundname, HS
 	}
 
 	int nNumberOfSoundNames = internal->NumSoundNames();
-#if IsPlatformPS3()
-	if ( g_pFullFileSystem->IsPrefetchingDone() == false )
-	{
-		nNumberOfSoundNames = imin( nNumberOfSoundNames, 5 );			// The HDD is not filled yet, we are going to play up to 5 variations max
-	}
-#elif IsPlatformX360()
-	if ( g_pXboxInstaller->IsFullyInstalled() == false )
-	{
-		nNumberOfSoundNames = imin( nNumberOfSoundNames, 5 );			// Either there is no HDD, or it has not been fully installed
-	}
-#endif
 
 	params.channel = internal->GetChannel();
 	params.volume = internal->GetVolume().Random();

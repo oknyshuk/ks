@@ -1,4 +1,4 @@
-//===== Copyright © 1996-2009, Valve Corporation, All rights reserved. ======//
+//===== Copyright ï¿½ 1996-2009, Valve Corporation, All rights reserved. ======//
 //
 // Purpose:
 //
@@ -29,24 +29,21 @@ public:
 
 #include "protocol.h"
 
-#ifndef SWDS
 
 #include "sys_session.h"
-#include "ds_searcher.h"
-#include "match_searcher.h"
 
 #include "mm_session_offline_custom.h"
-#include "mm_session_online_host.h"
-#include "mm_session_online_client.h"
-#include "mm_session_online_search.h"
-#include "mm_session_online_teamsearch.h"
 
 void MatchSession_BroadcastSessionSettingsUpdate( KeyValues *pUpdateDeletePackage );
 void MatchSession_PrepareClientForConnect( KeyValues *pSettings, uint64 uiReservationCookieOverride = 0ull );
 
 struct MatchSessionServerInfo_t
 {
-	CDsSearcher::DsResult_t m_dsResult;
+	struct
+	{
+		char m_szPublicConnectionString[256];
+		char m_szPrivateConnectionString[256];
+	} m_dsResult;
 
 	char m_szConnectCmd[256];
 
@@ -83,13 +80,6 @@ enum MatchSessionMachineFlags_t
 char const * MatchSession_EncryptAddressString( char const *szAddress, uint64 ullCrypt );
 char const * MatchSession_DecryptAddressString( char const *szAddress, uint64 ullCrypt );
 
-#endif // SWDS
 
-#ifdef _X360
-
-// Keeps adjusting client side rate setting based on QOS with server
-void MatchSession_RateAdjustmentUpdate();
-
-#endif
 
 #endif // MM_SESSION_H

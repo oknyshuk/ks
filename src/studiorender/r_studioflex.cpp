@@ -68,11 +68,6 @@ void CStudioRender::R_StudioEyeballPosition( const mstudioeyeball_t *peyeball, e
 
 	VectorMA( pstate->forward, peyeball->zoffset + dz, pstate->right, pstate->forward );
 
-#if 0
-	// add random jitter
-	VectorMA( forward, RandomFloat( -0.02, 0.02 ), right, forward );
-	VectorMA( forward, RandomFloat( -0.02, 0.02 ), up, forward );
-#endif
 
 	VectorNormalize( pstate->forward );
 	// re-aim eyes 
@@ -430,23 +425,6 @@ void CStudioRender::AddGlint( CPixelWriter &pixelWriter, float x, float y, const
 //-----------------------------------------------------------------------------
 
 // test/stub code
-#if 0
-class CEmptyTextureRegen : public ITextureRegenerator
-{
-public:
-	virtual void RegenerateTextureBits( ITexture *pTexture, IVTFTexture *pVTFTexture, Rect_t *pRect )
-	{
-		// get the texture
-		unsigned char *pTextureData = pVTFTexture->ImageData( 0, 0, 0 );
-		int nImageSize = pVTFTexture->ComputeMipSize( 0 );
-		memset( pTextureData, 0, nImageSize );
-	}
-
-	// We've got a global instance, no need to delete it
-	virtual void Release() {}
-};
-static CEmptyTextureRegen s_GlintTextureRegen;
-#endif
 
 class CGlintTextureRegenerator : public ITextureRegenerator
 {
@@ -515,13 +493,10 @@ void CStudioRender::PrecacheGlint()
 		}
 		m_pGlintTexture->IncrementReferenceCount();
 		
-		if ( !IsX360() )
-		{
-			// Get the texture that we are going to be updating procedurally.
-			s_pProcGlint = g_pMaterialSystem->CreateProceduralTexture( 
-				"proc_eyeglint", TEXTURE_GROUP_MODEL, 32, 32, IMAGE_FORMAT_BGRA8888, TEXTUREFLAGS_NOMIP|TEXTUREFLAGS_NOLOD );
-			s_pProcGlint->SetTextureRegenerator( &s_GlintTextureRegen );
-		}
+		// Get the texture that we are going to be updating procedurally.
+		s_pProcGlint = g_pMaterialSystem->CreateProceduralTexture( 
+			"proc_eyeglint", TEXTURE_GROUP_MODEL, 32, 32, IMAGE_FORMAT_BGRA8888, TEXTUREFLAGS_NOMIP|TEXTUREFLAGS_NOLOD );
+		s_pProcGlint->SetTextureRegenerator( &s_GlintTextureRegen );
 
 		// JAY: I don't see this pattern in the code often.  It looks like the material system
 		// would rather than I deal exclusively with IMaterials instead.
@@ -529,7 +504,7 @@ void CStudioRender::PrecacheGlint()
 		// For now, just hardcode one
 		// UNDONE: Add a $lodtexture to the eyes shader.  Maybe add a $lodsize too.
 		// UNDONE: Make eyes texture load $lodtexture and switch to that here instead of black
-		m_pGlintLODTexture = g_pMaterialSystem->FindTexture( IsX360() ? "black" : "vgui/black", NULL, false );
+		m_pGlintLODTexture = g_pMaterialSystem->FindTexture( false ? "black" : "vgui/black", NULL, false );
 		m_pGlintLODTexture->IncrementReferenceCount();
 	}
 }
@@ -748,10 +723,6 @@ ITexture* CStudioRender::RenderGlintTexture( const eyeballstate_t *pState,
 	pRenderContext->MatrixMode( MATERIAL_PROJECTION );
 	pRenderContext->PopMatrix();
 
-	if ( IsX360() )
-	{
-		pRenderContext->CopyRenderTargetToTextureEx( m_pGlintTexture, 0, NULL, NULL );
-	}
 
 	pRenderContext->PopRenderTargetAndViewport( );
 
@@ -797,7 +768,7 @@ void CStudioRender::R_StudioEyeballGlint( const eyeballstate_t *pstate, IMateria
 	}
 
 	// Legacy method for DX8
-	if ( !IsX360() && r_glint_procedural.GetInt() )
+	if ( r_glint_procedural.GetInt() )
 	{
 		// Set up the texture regenerator
 		s_GlintTextureRegen.m_pVRight = &vright;

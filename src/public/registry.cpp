@@ -5,7 +5,7 @@
 // $NoKeywords: $
 //===========================================================================//
 
-#if defined( WIN32 ) && !defined( _X360 )
+#if defined( WIN32 )
 #include <windows.h>
 #endif
 #include "tier0/platform.h"
@@ -13,8 +13,6 @@
 #include "tier0/dbg.h"
 #include "tier1/strtools.h"
 #include <stdio.h>
-#if defined( _X360 )
-#endif
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -115,215 +113,6 @@ void CRegistry::WriteString( const char *pKeyBase, const char *pKey, const char 
 	WriteString( pFullKey, value );
 }
 
-#ifndef POSIX
-
-//-----------------------------------------------------------------------------
-// Purpose: 
-//-----------------------------------------------------------------------------
-CRegistry::CRegistry( void )
-{
-	// Assume failure
-	m_bValid	= false;
-	m_hKey		= 0;
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: 
-//-----------------------------------------------------------------------------
-CRegistry::~CRegistry( void )
-{
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: Read integer from registry
-// Input  : *key - 
-//			defaultValue - 
-// Output : int
-//-----------------------------------------------------------------------------
-int CRegistry::ReadInt( const char *key, int defaultValue /*= 0*/ )
-{
-	LONG lResult;           // Registry function result code
-	DWORD dwType;           // Type of key
-	DWORD dwSize;           // Size of element data
-
-	int value;
-
-	if ( !m_bValid )
-	{
-		return defaultValue;
-	}
-
-	dwSize = sizeof( DWORD );
-
-	lResult = RegQueryValueEx(
-		m_hKey,		// handle to key
-		key,	// value name
-		0,			// reserved
-		&dwType,    // type buffer
-		(LPBYTE)&value,    // data buffer
-		&dwSize );  // size of data buffer
-
-	if (lResult != ERROR_SUCCESS)  // Failure
-		return defaultValue;
-
-	if (dwType != REG_DWORD)
-		return defaultValue;
-
-	return value;
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: Save integer to registry
-// Input  : *key - 
-//			value - 
-//-----------------------------------------------------------------------------
-void CRegistry::WriteInt( const char *key, int value )
-{
-	// Size of element data
-	DWORD dwSize;           
-
-	if ( !m_bValid )
-	{
-		return;
-	}
-
-	dwSize = sizeof( DWORD );
-
-	RegSetValueEx(
-		m_hKey,		// handle to key
-		key,	// value name
-		0,			// reserved
-		REG_DWORD,		// type buffer
-		(LPBYTE)&value,    // data buffer
-		dwSize );  // size of data buffer
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: Read string value from registry
-// Input  : *key - 
-//			*defaultValue - 
-// Output : const char
-//-----------------------------------------------------------------------------
-const char *CRegistry::ReadString( const char *key, const char *defaultValue /* = NULL */ )
-{
-	LONG lResult;        
-	// Type of key
-	DWORD dwType;        
-	// Size of element data
-	DWORD dwSize = 512;           
-
-	static char value[ 512 ];
-
-	value[0] = 0;
-
-	if ( !m_bValid )
-	{
-		return defaultValue;
-	}
-
-	lResult = RegQueryValueEx(
-		m_hKey,		// handle to key
-		key,	// value name
-		0,			// reserved
-		&dwType,    // type buffer
-		(unsigned char *)value,    // data buffer
-		&dwSize );  // size of data buffer
-
-	if ( lResult != ERROR_SUCCESS ) 
-	{
-		return defaultValue;
-	}
-
-	if ( dwType != REG_SZ )
-	{
-		return defaultValue;
-	}
-
-	return value;
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: Save string to registry
-// Input  : *key - 
-//			*value - 
-//-----------------------------------------------------------------------------
-void CRegistry::WriteString( const char *key, const char *value )
-{
-	DWORD dwSize;           // Size of element data
-
-	if ( !m_bValid )
-	{
-		return;
-	}
-
-	dwSize = (DWORD)( strlen( value ) + 1 );
-
-	RegSetValueEx(
-		m_hKey,		// handle to key
-		key,	// value name
-		0,			// reserved
-		REG_SZ,		// type buffer
-		(LPBYTE)value,    // data buffer
-		dwSize );  // size of data buffer
-}
-
-
-
-
-bool CRegistry::DirectInit( const char *subDirectoryUnderValve )
-{
-	LONG lResult;           // Registry function result code
-	ULONG dwDisposition;    // Type of key opening event
-
-	char szModelKey[ 1024 ];
-	wsprintf( szModelKey, "Software\\Valve\\%s", subDirectoryUnderValve );
-
-	lResult = RegCreateKeyEx(
-		HKEY_CURRENT_USER,	// handle of open key 
-		szModelKey,			// address of name of subkey to open 
-		0ul,					// DWORD ulOptions,	  // reserved 
-		NULL,			// Type of value
-		REG_OPTION_NON_VOLATILE, // Store permanently in reg.
-		KEY_ALL_ACCESS,		// REGSAM samDesired, // security access mask 
-		NULL,
-		&m_hKey,				// Key we are creating
-		&dwDisposition );    // Type of creation
-
-	if ( lResult != ERROR_SUCCESS )
-	{
-		m_bValid = false;
-		return false;
-	}
-	
-	// Success
-	m_bValid = true;
-	return true;
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: Open default launcher key based on game directory
-//-----------------------------------------------------------------------------
-bool CRegistry::Init( const char *platformName )
-{
-	char subDir[ 512 ];
-	wsprintf( subDir, "%s\\Settings", platformName );
-	return DirectInit( subDir );
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: 
-//-----------------------------------------------------------------------------
-void CRegistry::Shutdown( void )
-{
-	if ( !m_bValid )
-		return;
-
-	// Make invalid
-	m_bValid = false;
-	RegCloseKey( m_hKey );
-}
-
-#else
 
 
 
@@ -415,5 +204,4 @@ void CRegistry::Shutdown( void )
 	// Make invalid
 	m_bValid = false;
 }
-#endif // POSIX
 

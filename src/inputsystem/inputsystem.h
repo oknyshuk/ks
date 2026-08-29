@@ -29,23 +29,7 @@
 #endif
 
 #if defined(PLATFORM_POSIX)
-#ifdef PLATFORM_OSX
-#define DWORD DWORD
-#define CARBON_WORKAROUND
-
-#include <CoreFoundation/CoreFoundation.h>
-#include <Carbon/Carbon.h>    
-#include <IOKit/IOKitLib.h>
-#include <IOKit/IOCFPlugIn.h>
-#include <Kernel/IOKit/hidsystem/IOHIDUsageTables.h>
-#include <IOKit/hid/IOHIDLib.h>
-#include <IOKit/hid/IOHIDKeys.h>
-#include <ForceFeedback/ForceFeedback.h>
-#include <ForceFeedback/ForceFeedbackConstants.h>
-#undef DWORD
-#else
 typedef char xKey_t;
-#endif // OSX
 #include "posix_stubs.h"
 #endif // POSIX
 #include "appframework/ilaunchermgr.h"
@@ -144,10 +128,6 @@ public:
 
 #ifdef PLATFORM_WINDOWS
 	LRESULT WindowProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam );
-#elif defined(PLATFORM_OSX)
-	// helper function for callbacks
-	struct JoystickInfo_t;
-	void HIDAddElement(CFTypeRef refElement, JoystickInfo_t &info );
 #endif
 
 #if defined( USE_SDL )
@@ -194,49 +174,17 @@ private:
 	};
 
 public:
-#if defined(PLATFORM_OSX)
-	struct OSXInputValue_t
-	{
-		bool m_bSet;
-		int m_MinVal;
-		int m_MaxVal;
-		int m_MinReport;
-		int m_MaxReport;
-		int m_Cookie;
-		uint32 m_Usage;
-		CFTypeRef m_RefElement;
-	};
-#define MAX_JOYSTICK_BUTTONS 32
-#endif
 	
 	struct JoystickInfo_t
 	{
 #if defined(PLATFORM_WINDOWS)
 		JOYINFOEX m_JoyInfoEx;
-#elif defined(PLATFORM_OSX)
-		FFDeviceObjectReference m_FFInterface;
-		IOHIDDeviceInterface **m_Interface;
-		long usage;  // from IOUSBHID Parser.h
-		long usagePage;  // from IOUSBHID Parser.h
-		CInputSystem *m_pParent;
-		bool m_bRemoved;
-		bool m_bXBoxRumbleEnabled;
-		OSXInputValue_t m_xaxis;
-		OSXInputValue_t m_yaxis;
-		OSXInputValue_t m_zaxis;
-		OSXInputValue_t m_raxis;
-		OSXInputValue_t m_uaxis;
-		OSXInputValue_t m_vaxis;
-		OSXInputValue_t m_POV;
-		OSXInputValue_t m_Buttons[MAX_JOYSTICK_BUTTONS];
-#elif defined(LINUX)
+#else
 		void *m_pDevice;  // Really an SDL_Gamepad*, NULL if not present.
 		void *m_pHaptic;  // Really an SDL_Haptic*
 		float m_fCurrentRumble;
 		bool m_bRumbleEnabled;
 
-#else
-#error
 #endif
 		int m_nButtonCount;
 		int m_nAxisFlags;
@@ -354,11 +302,6 @@ public:
 	// Sets rumble values for an Xbox controller
 	void SetXDeviceRumble( float fLeftMotor, float fRightMotor, int userId );
 
-#if !defined( _CERT ) && !defined(LINUX)
-	CON_COMMAND_MEMBER_F( CInputSystem, "press_x360_button", PressX360Button, "Press the specified Xbox 360 controller button (lt, rt, st[art], ba[ck], lb, rb, a, b, x, y, l[eft], r[right], u[p], d[own])", 0 );
-	void PollPressX360Button( void );
-	uint32 m_press_x360_buttons[ 2 ];
-#endif
 
 	void QueueMoveControllerRumble( float fRightMotor );
 
@@ -395,13 +338,7 @@ public:
 private:
 
 	// Purpose: Get raw joystick sample along axis
-#if defined(LINUX)
 	void AxisAnalogButtonEvent( ButtonCode_t buttonCode, bool state, int nLastSampleTick );
-#elif defined(OSX)
-	unsigned int AxisValue( JoystickAxis_t axis, JoystickInfo_t &info );
-#else
-	unsigned int AxisValue( JoystickAxis_t axis, JOYINFOEX& ji );
-#endif
 
 	// Chains the window message to the previous wndproc
 	LRESULT ChainWindowMessage( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam );
@@ -461,20 +398,6 @@ private:
 	void PollInputState_Windows();
 #endif
 	// Poll input state for different OSes.
-#if defined( PLATFORM_OSX )
-	void PollInputState_OSX();
-	void HIDGetElementInfo( CFTypeRef refElement, OSXInputValue_t &input );
-	bool HIDBuildDevice( io_object_t ioHIDDeviceObject, JoystickInfo_t &info );
-	bool HIDCreateOpenDeviceInterface( io_object_t hidDevice, JoystickInfo_t &info );
-	void HIDGetDeviceInfo( io_object_t hidDevice, CFMutableDictionaryRef hidProperties, JoystickInfo_t &info );
-	void HIDGetElements( CFTypeRef refElementCurrent, JoystickInfo_t &info );
-	void HIDGetCollectionElements( CFMutableDictionaryRef deviceProperties, JoystickInfo_t &info );
-	void HIDDisposeDevice( JoystickInfo_t &info );
-	int	HIDGetElementValue( JoystickInfo_t &info, OSXInputValue_t &value );
-	int HIDScaledCalibratedValue( JoystickInfo_t &info, OSXInputValue_t &value );
-	void HIDSortJoystickButtons( JoystickInfo_t &info );
-
-#elif defined(LINUX)
 public:
 	void PollInputState_Linux();
 	void JoystickHotplugAdded( int joystickIndex );
@@ -483,7 +406,6 @@ public:
 	void JoystickButtonRelease( int joystickId, int button ); // same as above.
 	void JoystickAxisMotion( int joystickId, int axis, int value );
 
-#endif
 
 private:
 

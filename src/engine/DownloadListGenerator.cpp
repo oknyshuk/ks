@@ -47,11 +47,6 @@ CDownloadListGenerator::CDownloadListGenerator()
 //-----------------------------------------------------------------------------
 void CDownloadListGenerator::SetStringTable( INetworkStringTable *pStringTable )
 {
-	if ( IsX360() )
-	{
-		// not supporting
-		return;
-	}
 
 	m_pStringTable = pStringTable;
 
@@ -98,11 +93,6 @@ void CDownloadListGenerator::SetStringTable( INetworkStringTable *pStringTable )
 //-----------------------------------------------------------------------------
 void CDownloadListGenerator::OnLevelLoadStart(const char *levelName)
 {
-	if ( IsX360() )
-	{
-		// not supporting
-		return;
-	}
 
 	// close the previous level reslist, if any
 	if (m_hReslistFile != FILESYSTEM_INVALID_HANDLE)
@@ -136,11 +126,6 @@ void CDownloadListGenerator::OnLevelLoadStart(const char *levelName)
 //-----------------------------------------------------------------------------
 void CDownloadListGenerator::OnLevelLoadEnd()
 {
-	if ( IsX360() )
-	{
-		// not supporting
-		return;
-	}
 
 	if ( m_hReslistFile != FILESYSTEM_INVALID_HANDLE )
 	{
@@ -155,11 +140,6 @@ void CDownloadListGenerator::OnLevelLoadEnd()
 //-----------------------------------------------------------------------------
 void CDownloadListGenerator::OnModelPrecached(const char *relativePathFileName)
 {
-	if ( IsX360() )
-	{
-		// not supporting
-		return;
-	}
 
 	if (Q_strstr(relativePathFileName, ".vmt"))
 	{
@@ -197,11 +177,6 @@ void CDownloadListGenerator::OnModelPrecached(const char *relativePathFileName)
 //-----------------------------------------------------------------------------
 void CDownloadListGenerator::OnSoundPrecached(const char *relativePathFileName)
 {
-	if ( IsX360() )
-	{
-		// not supporting
-		return;
-	}
 
 	// skip any special characters
 	if (!V_isalnum(relativePathFileName[0]))
@@ -230,8 +205,6 @@ void CDownloadListGenerator::OnSoundPrecached(const char *relativePathFileName)
 void CDownloadListGenerator::OnResourcePrecached( const char *pRelativePathFileName )
 {
 	// not supporting
-	if ( IsX360() )
-		return;
 
 	// ignore empty string
 	if ( pRelativePathFileName[0] == 0 )
@@ -302,11 +275,6 @@ void CDownloadListGenerator::OnResourcePrecached( const char *pRelativePathFileN
 //-----------------------------------------------------------------------------
 void CDownloadListGenerator::ForceExactFile( const char *relativePathFileName, ConsistencyType consistency )
 {
-	if ( IsX360() )
-	{
-		// not supporting
-		return;
-	}
 
 	if ( !m_pStringTable )
 		return;
@@ -372,11 +340,6 @@ void CDownloadListGenerator::ForceExactFile( const char *relativePathFileName, C
 //-----------------------------------------------------------------------------
 void CDownloadListGenerator::ForceModelBounds( const char *relativePathFileName, const Vector &mins, const Vector &maxs )
 {
-	if ( IsX360() )
-	{
-		// not supporting
-		return;
-	}
 
 	if ( !m_pStringTable )
 		return;

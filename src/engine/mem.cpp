@@ -7,9 +7,7 @@
 //=============================================================================//
 // mem.c
 #include <stdlib.h>
-#ifndef _PS3
 #include <memory.h>
-#endif
 #include <string.h>
 #include "mem.h"
 

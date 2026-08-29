@@ -122,10 +122,6 @@ void R_Init (void)
 
 	UpdateMaterialSystemConfig();
 
-#if defined( _PS3 )
-	g_pBuildIndicesJob->Init();
-	g_pBuildWorldListsJob->Init();
-#endif
 }
 
 //-----------------------------------------------------------------------------
@@ -293,7 +289,7 @@ void R_LevelInit( void )
 	UpdateMaterialSystemConfig();
 	
 	// FIXME: E3 2003 HACK
-	if ( IsPC() && mat_levelflush.GetBool() )
+	if ( mat_levelflush.GetBool() )
 	{
 		bool bOnLevelShutdown = false;
 		materials->ResetTempHWMemory( bOnLevelShutdown );

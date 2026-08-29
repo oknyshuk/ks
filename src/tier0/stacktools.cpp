@@ -19,11 +19,6 @@
 #include <dbghelp.h>
 #endif
 
-#if defined( PLATFORM_X360 )
-#include <xbdm.h>
-#include <map>
-#include <set>
-#endif
 
 #include "tier0/valve_on.h"
 
@@ -140,7 +135,7 @@ inline bool ValidStackAddress( void *pAddress, const void *pNoLessThan, const vo
 	if( pAddress > pNoGreaterThan ) //never traverse outside the stack (Oh 0xCCCCCCCC, how I hate you)
 		return false;
 
-#if defined( WIN32 ) && !defined( _X360 ) && 1
+#if defined( WIN32 ) && 1
 	if( IsBadReadPtr( pAddress, (sizeof( void * ) * 2) ) ) //safety net, but also throws an exception (handled internally) to stop bad access
 		return false;
 #endif
@@ -237,7 +232,7 @@ int GetCallStack_Fast( void **pReturnAddressesOut, int iArrayCount, int iSkipCou
 
 
 
-#if defined( WIN32 ) && !defined( _X360 )
+#if defined( WIN32 )
 //===============================================================================================================
 // Windows version of the toolset
 //===============================================================================================================

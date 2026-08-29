@@ -50,7 +50,7 @@
 #define MEM_SBH_ENABLED 1
 #endif
 
-#if !defined(_CERT) && ( defined( PLATFORM_WINDOWS_PC64 ) || DEVELOPMENT_ONLY )
+#if ( defined( PLATFORM_WINDOWS_PC64 ) || DEVELOPMENT_ONLY )
 #define TRACK_SBH_COUNTS
 #endif
 

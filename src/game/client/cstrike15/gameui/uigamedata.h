@@ -12,11 +12,9 @@
 #include "tier1/keyvalues.h"
 #include "tier1/fmtstr.h"
 
-#if !defined( NO_STEAM )
 
 #include "steam/steam_api.h"
 
-#endif // !defined( NO_STEAM )
 
 #include "matchmaking/imatchframework.h"
 #include "matchmaking/imatchsystem.h"
@@ -178,18 +176,14 @@ namespace BaseModUI {
 
 		char const * GetPlayerName( XUID playerID, char const *szPlayerNameSpeculative );
 
-	#if !defined( NO_STEAM )
 
 		STEAM_CALLBACK( CUIGameData, Steam_OnUserStatsReceived, UserStatsReceived_t, m_CallbackUserStatsReceived );
 		STEAM_CALLBACK( CUIGameData, Steam_OnUserStatsStored, UserStatsStored_t, m_CallbackUserStatsStored );
 
-	#endif
 
-	#if !defined( _GAMECONSOLE ) && !defined( NO_STEAM )
 
 		STEAM_CALLBACK( CUIGameData, Steam_OnPersonaStateChanged, PersonaStateChange_t, m_CallbackPersonaStateChanged );
 
-	#endif
 
 		void ReloadScheme();
 
@@ -284,17 +278,6 @@ const char *GameModeLocKeyFromInt( int iMode );
 int GameModeIntFromString( const char *szString );
 
 
-#if defined( _PS3 )
-
-class IPS3SaveSteamInfoProviderUiGameData : public IPS3SaveSteamInfoProvider
-{
-public:
-	virtual void RunFrame() = 0;
-	virtual void WriteSteamStats() = 0;
-};
-IPS3SaveSteamInfoProviderUiGameData * GetPs3SaveSteamInfoProvider();
-
-#endif
 
 
 

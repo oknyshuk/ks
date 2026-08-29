@@ -165,20 +165,17 @@ extern ConVar r_flashlightenableculling;
 
 bool C_EnvProjectedTexture::ShouldUpdate( void )
 {
-	if ( !IsGameConsole() )
-	{
-		CPULevel_t nCPULevel = GetCPULevel();
-		bool bNoDraw = ( GetMinCPULevel() && GetMinCPULevel()-1 > nCPULevel );
-		bNoDraw = bNoDraw || ( GetMaxCPULevel() && GetMaxCPULevel()-1 < nCPULevel );
-		if ( bNoDraw )
-			return false;
+	CPULevel_t nCPULevel = GetCPULevel();
+	bool bNoDraw = ( GetMinCPULevel() && GetMinCPULevel()-1 > nCPULevel );
+	bNoDraw = bNoDraw || ( GetMaxCPULevel() && GetMaxCPULevel()-1 < nCPULevel );
+	if ( bNoDraw )
+		return false;
 
-		GPULevel_t nGPULevel = GetGPULevel();
-		bNoDraw = ( GetMinGPULevel() && GetMinGPULevel()-1 > nGPULevel );
-		bNoDraw = bNoDraw || ( GetMaxGPULevel() && GetMaxGPULevel()-1 < nGPULevel );
-		if ( bNoDraw )
-			return false;
-	}
+	GPULevel_t nGPULevel = GetGPULevel();
+	bNoDraw = ( GetMinGPULevel() && GetMinGPULevel()-1 > nGPULevel );
+	bNoDraw = bNoDraw || ( GetMaxGPULevel() && GetMaxGPULevel()-1 < nGPULevel );
+	if ( bNoDraw )
+		return false;
 
 	return true;
 }
@@ -301,9 +298,6 @@ void C_EnvProjectedTexture::UpdateLight( void )
 			// quickly check the proposed light's bbox against the view frustum to determine whether we
 			// should bother to create it, if it doesn't exist, or cull it, if it does.
 
-#ifndef LINUX
-#pragma message("OPTIMIZATION: this should be made SIMD")
-#endif
 			// get the half-widths of the near and far planes, 
 			// based on the FOV which is in degrees. Remember that
 			// on planet Valve, x is forward, y left, and z up. 
@@ -351,19 +345,6 @@ void C_EnvProjectedTexture::UpdateLight( void )
 				VectorMax( maxs, *(*vOutRects+i), maxs );
 			}
 
-#if 0 //for debugging the visibility frustum we just calculated
-			NDebugOverlay::Triangle( vOutRects[0][0], vOutRects[0][1], vOutRects[0][2], 255, 0, 0, 100, true, 0.0f ); //first tri
-			NDebugOverlay::Triangle( vOutRects[0][2], vOutRects[0][1], vOutRects[0][0], 255, 0, 0, 100, true, 0.0f ); //make it double sided
-			NDebugOverlay::Triangle( vOutRects[0][2], vOutRects[0][3], vOutRects[0][0], 255, 0, 0, 100, true, 0.0f ); //second tri
-			NDebugOverlay::Triangle( vOutRects[0][0], vOutRects[0][3], vOutRects[0][2], 255, 0, 0, 100, true, 0.0f ); //make it double sided
-
-			NDebugOverlay::Triangle( vOutRects[1][0], vOutRects[1][1], vOutRects[1][2], 0, 0, 255, 100, true, 0.0f ); //first tri
-			NDebugOverlay::Triangle( vOutRects[1][2], vOutRects[1][1], vOutRects[1][0], 0, 0, 255, 100, true, 0.0f ); //make it double sided
-			NDebugOverlay::Triangle( vOutRects[1][2], vOutRects[1][3], vOutRects[1][0], 0, 0, 255, 100, true, 0.0f ); //second tri
-			NDebugOverlay::Triangle( vOutRects[1][0], vOutRects[1][3], vOutRects[1][2], 0, 0, 255, 100, true, 0.0f ); //make it double sided
-
-			NDebugOverlay::Box( vec3_origin, mins, maxs, 0, 255, 0, 100, 0.0f );
-#endif
 			
 			bool bVisible = IsBBoxVisible( mins, maxs );
 

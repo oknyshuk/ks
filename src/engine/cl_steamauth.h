@@ -28,14 +28,6 @@ public:
 	bool BGSSecure() { return m_bGSSecure; }
 	void RunFrame();
 	bool IsGameOverlayActive()const { return m_bGameOverlayActive; }
-#if !defined(NO_STEAM)
-	STEAM_CALLBACK( CSteam3Client, OnClientGameServerDeny, ClientGameServerDeny_t, m_CallbackClientGameServerDeny );
-	STEAM_CALLBACK( CSteam3Client, OnGameServerChangeRequested, GameServerChangeRequested_t, m_CallbackGameServerChangeRequested );
-	STEAM_CALLBACK( CSteam3Client, OnGameOverlayActivated, GameOverlayActivated_t, m_CallbackGameOverlayActivated );
-	STEAM_CALLBACK( CSteam3Client, OnPersonaUpdated, PersonaStateChange_t, m_CallbackPersonaStateChanged );
-	STEAM_CALLBACK( CSteam3Client, OnLowBattery, LowBatteryPower_t, m_CallbackLowBattery );
-	STEAM_CALLBACK( CSteam3Client, OnSteamSocketStatus, SocketStatusCallback_t, m_CallbackSteamSocketStatus );
-#endif
 
 private:
 	HAuthTicket m_hAuthTicket;

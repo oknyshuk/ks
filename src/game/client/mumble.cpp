@@ -4,10 +4,10 @@
 //
 //===========================================================================//
 
-#if defined( WIN32 ) && !defined( _X360 )
+#if defined( WIN32 )
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
-#elif defined( POSIX )
+#else
 #include <sys/mman.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -19,10 +19,8 @@
 #include "view.h"
 #include "mumble.h"
 
-#if !defined( _X360 ) && !defined( NO_STEAM )
 #include "steam/isteamuser.h"
 #include "steam/steam_api.h"
-#endif
 
 const char *COM_GetModDirectory(); // return the mod dir (rather than the complete -game param, which can be a path)
 
@@ -86,7 +84,7 @@ void CMumbleSystem::LevelInitPostEntity()
 	if ( g_pMumbleMemory )
 		return;
 
-#if defined( WIN32 ) && !defined( _X360 )
+#if defined( WIN32 )
 	g_hMapObject = OpenFileMappingW( FILE_MAP_ALL_ACCESS, FALSE, L"MumbleLink" );
 	if ( g_hMapObject == NULL )
 		return;
@@ -98,7 +96,7 @@ void CMumbleSystem::LevelInitPostEntity()
 		g_hMapObject = NULL;
 		return;
 	}
-#elif defined( POSIX )
+#else
 	char memname[256];
 	V_sprintf_safe( memname, "/MumbleLink.%d", getuid() );
 
@@ -121,14 +119,14 @@ void CMumbleSystem::LevelInitPostEntity()
 
 void CMumbleSystem::LevelShutdownPreEntity()
 {
-#if defined( WIN32 ) && !defined( _X360 )
+#if defined( WIN32 )
 	if ( g_hMapObject )
 	{
 		CloseHandle( g_hMapObject );
 		g_pMumbleMemory = NULL;
 		g_hMapObject = NULL;
 	}
-#elif defined( POSIX )
+#else
 	if ( g_pMumbleMemory )
 	{
 		munmap( g_pMumbleMemory, sizeof(struct MumbleSharedMemory_t) );
@@ -147,7 +145,6 @@ void VectorToMumbleFloatArray( const Vector &vec, float *rgfl )
 
 void CMumbleSystem::PostRender()
 {
-#ifndef NO_STEAM
 	if ( !g_pMumbleMemory || !sv_mumble_positionalaudio.GetBool() )
 		return;
 
@@ -237,12 +234,10 @@ void CMumbleSystem::PostRender()
 	// differ for those who shouldn't (e.g. it could contain the server+port and team)
 	memcpy( g_pMumbleMemory->context, &m_szSteamIDCurrentServer, m_cubSteamIDCurrentServer );
 	g_pMumbleMemory->context_len = m_cubSteamIDCurrentServer;
-#endif // NO_STEAM
 }
 
 void CMumbleSystem::FireGameEvent( IGameEvent *event )
 {
-#ifndef NO_STEAM
 	const char *eventname = event->GetName();
 
 	if ( !eventname || !eventname[0] )
@@ -253,5 +248,4 @@ void CMumbleSystem::FireGameEvent( IGameEvent *event )
 		V_strcpy_safe( m_szSteamIDCurrentServer, event->GetString( "steamid", "" ) );
 		m_cubSteamIDCurrentServer = strlen( m_szSteamIDCurrentServer ) + 1;
 	}
-#endif // NO_STEAM
 }

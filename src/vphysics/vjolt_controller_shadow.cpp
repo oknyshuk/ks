@@ -104,12 +104,6 @@ void JoltPhysicsShadowController::UseShadowMaterial( bool bUseShadowMaterial )
 	if ( !m_pObject )
 		return;
 
-#if 0
-	int current = m_pObject->GetMaterialIndex();
-	int target = bUseShadowMaterial ? ShadowMaterialIndex : m_savedMaterialIndex;
-	if ( target != current )
-		m_pObject->SetMaterialIndex( target );
-#endif
 }
 
 void JoltPhysicsShadowController::ObjectMaterialChanged( int materialIndex )

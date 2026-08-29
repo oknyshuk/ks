@@ -1561,11 +1561,7 @@ bool CEngineTrace::ClipTraceToTrace( trace_t &clipTrace, trace_t *pFinalTrace )
 
 inline bool ShouldTestStaticProp( IHandleEntity *pHandleEntity )
 {
-#if defined( _GAMECONSOLE )
-	return pHandleEntity->m_bIsStaticProp;
-#else
 	return true;
-#endif
 }
 
 //-----------------------------------------------------------------------------
@@ -2901,7 +2897,7 @@ void CEngineTrace::TraceRay( const Ray_t &ray, unsigned int fMask, ITraceFilter 
 		pCollideable = HandleEntityToCollideable( pHandleEntity );
 
 		// Check for error condition
-		if ( IsPC() && IsDebug() && !IsSolid( pCollideable->GetSolid(), pCollideable->GetSolidFlags() ) )
+		if ( IsDebug() && !IsSolid( pCollideable->GetSolid(), pCollideable->GetSolidFlags() ) )
 		{
 			Assert( 0 );
 			Msg( "%s in solid list (not solid)\n", GetDebugName(pHandleEntity) );
@@ -3078,9 +3074,7 @@ public:
 
 
 // create a macro that is true if we are allowed to debug traces during thinks, and compiles out to nothing otherwise.
-#ifndef _PS3
 #include "engine/thinktracecounter.h"
-#endif
 
 /// Used only in debugging: get/set/clear/increment the trace debug counter. See comment below for details.
 int CEngineTrace::GetSetDebugTraceCounter( int value, DebugTraceCounterBehavior_t behavior )

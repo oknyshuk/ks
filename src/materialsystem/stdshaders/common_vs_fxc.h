@@ -20,11 +20,6 @@
 //	SKIP: defined $LIGHTING_PREVIEW && defined $FASTPATH && $LIGHTING_PREVIEW && $FASTPATH
 // --------------------------------------------------------------------------------
 
-#ifdef _PS3
-// Remap semantics for PS3 Cg
-#define POSITION1 TEXCOORD4
-#define NORMAL1 TEXCOORD5
-#endif // _PS3
 
 #ifndef COMPRESSED_VERTS
 // Default to no vertex compression
@@ -71,10 +66,8 @@ const float4 cConstants1				: register(c1);
 const bool g_bLightEnabled[4]			: register(b0);
 										// through b3
 
-#ifndef _PS3
 const int g_nLightCountRegister			: register(i0);
 #define g_nLightCount					g_nLightCountRegister.x
-#endif // !_PS3
 
 
 
@@ -285,10 +278,6 @@ void DecompressVertex_Normal( float4 inputNormal, out float3 outputNormal )
 {
 	if ( COMPRESSED_VERTS == 1 )
 	{
-#ifdef _PS3
-		// ps3 byte order is swapped
-		inputNormal = inputNormal.wzyx;
-#endif // _PS3
 		if ( COMPRESSED_NORMALS_TYPE == COMPRESSED_NORMALS_SEPARATETANGENTS_SHORT2 )
 		{
 			_DecompressShort2Normal( inputNormal.xy, outputNormal );
@@ -308,10 +297,6 @@ void DecompressVertex_NormalTangent( float4 inputNormal,  float4 inputTangent, o
 {
 	if ( COMPRESSED_VERTS == 1 )
 	{
-#ifdef _PS3
-		// ps3 byte order is swapped
-		inputNormal = inputNormal.wzyx;
-#endif // _PS3
 		if ( COMPRESSED_NORMALS_TYPE == COMPRESSED_NORMALS_SEPARATETANGENTS_SHORT2 )
 		{
 			_DecompressShort2NormalTangent( inputNormal.xy, inputTangent.xy, outputNormal, outputTangent );
@@ -580,11 +565,6 @@ float4 DecompressBoneWeights( const float4 weights )
 		result += 1;
 		result /= 32768;
 
-#ifdef _PS3
-		// @todo [kutta] - figure out why the values are swapped
-		// Only the first 2 values are even used, and their position seems to be swapped on PS3, so swap X & Y and who cares about z / w anyways
-		return result.yxzw;
-#endif // _PS3
 	}
 
 	return result;
@@ -594,18 +574,9 @@ void SkinPosition( bool bSkinning, const float4 modelPos,
                    const float4 boneWeights, float4 fBoneIndices,
 				   out float3 worldPos )
 {
-#if defined( _PS3 )
-	int3 boneIndices = D3DCOLORtoUBYTE4( fBoneIndices ).zyx;
-#elif !defined( _X360 )
 	int3 boneIndices = D3DCOLORtoUBYTE4( fBoneIndices ).xyz;
-#else
-	int3 boneIndices = fBoneIndices.xyz;
-#endif
 
 	// Needed for invariance issues caused by multipass rendering
-#if defined( _X360 )
-	[isolate] 
-#endif
 	{ 
 		if ( !bSkinning )
 		{
@@ -631,17 +602,8 @@ void SkinPositionAndNormal( bool bSkinning, const float4 modelPos, const float3 
 						    out float3 worldPos, out float3 worldNormal )
 {
 	// Needed for invariance issues caused by multipass rendering
-#if defined( _X360 )
-	[isolate] 
-#endif
 	{ 
-#if defined( _PS3 )
-		int3 boneIndices = D3DCOLORtoUBYTE4( fBoneIndices ).zyx;
-#elif !defined( _X360 )
 		int3 boneIndices = D3DCOLORtoUBYTE4( fBoneIndices ).xyz;
-#else
-		int3 boneIndices = fBoneIndices;
-#endif
 
 		if ( !bSkinning )
 		{
@@ -675,18 +637,9 @@ void SkinPositionNormalAndTangentSpace(
 						    out float3 worldPos, out float3 worldNormal, 
 							out float3 worldTangentS, out float3 worldTangentT )
 {
-#if defined( _PS3 )
-	int3 boneIndices = D3DCOLORtoUBYTE4( fBoneIndices ).zyx;
-#elif !defined( _X360 )
 	int3 boneIndices = D3DCOLORtoUBYTE4( fBoneIndices ).xyz;
-#else
-	int3 boneIndices = fBoneIndices.xyz;
-#endif
 
 	// Needed for invariance issues caused by multipass rendering
-#if defined( _X360 )
-	[isolate] 
-#endif
 	{ 
 		if ( !bSkinning )
 		{
@@ -747,19 +700,7 @@ float VertexAttenInternal( const float3 worldPos, int lightNum )
 	lightDir *= ooLightDist;
 
 	float3 vDist;
-	#if ( defined( _X360 ) || defined( _PS3 ) )
-	{
-		//X360 dynamic compile hits an internal compiler error using dst(), this is the breakdown of how dst() works from the 360 docs.
-		vDist.x = 1;
-		vDist.y = lightDistSquared * ooLightDist;
-		vDist.z = lightDistSquared;
-		//flDist.w = ooLightDist;
-	}
-	#else
-	{
-		vDist = dst( lightDistSquared, ooLightDist ).xyz;
-	}
-	#endif
+	vDist = dst( lightDistSquared, ooLightDist ).xyz;
 
 	float flDistanceAtten = 1.0f / dot( cLightInfo[lightNum].atten.xyz, vDist );
 
@@ -856,23 +797,10 @@ float3 DoLighting( const float3 worldPos, const float3 worldNormal,
 
 	if( bDynamicLight )			// Dynamic light
 	{
-#ifdef _PS3
-		// no integer constant support :(
-		if ( g_bLightEnabled[0] )
-		{
-			linearColor += DoLightInternal( worldPos, worldNormal, 0, bHalfLambert );
-
-			if ( g_bLightEnabled[1] )
-			{
-				linearColor += DoLightInternal( worldPos, worldNormal, 1, bHalfLambert );
-			}
-		}
-#else // _PS3
 		for (int i = 0; i < g_nLightCount; i++)
 		{
 			linearColor += DoLightInternal( worldPos, worldNormal, i, bHalfLambert );
 		}	
-#endif // !_PS3
 	}
 
 	if( bDynamicLight )
@@ -900,18 +828,6 @@ float3 DoLightingSeparateDirectional( const float3 worldPos, const float3 worldN
 
 	if( bDynamicLight )			// Dynamic light
 	{
-#if defined(_PS3)
-		// no integer constant support :(
-		if ( g_bLightEnabled[0] )
-		{
-			directionalLightColor += DoLightInternal( worldPos, worldNormal, 0, bHalfLambert );
-
-			if ( g_bLightEnabled[1] )
-			{
-				linearColor += DoLightInternal( worldPos, worldNormal, 1, bHalfLambert );
-			}
-		}
-#else
 		for (int i = 0; i < g_nLightCount; i++)
 		{
 			float3 contribColor = DoLightInternal( worldPos, worldNormal, i, bHalfLambert );
@@ -924,7 +840,6 @@ float3 DoLightingSeparateDirectional( const float3 worldPos, const float3 worldN
 				linearColor += contribColor;
 			}
 		}	
-#endif
 	}
 
 	if( bDynamicLight )

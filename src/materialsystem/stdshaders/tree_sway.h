@@ -22,11 +22,7 @@
 		float3 vModelRoot = float3( hlsl_float4x3_element( cModel[0],3,0 ), hlsl_float4x3_element( cModel[0],3,1 ), hlsl_float4x3_element( cModel[0],3,2 ) );
 
 		// Transform the wind direction into model space
-#ifdef _PS3
-		float3 vWindDirAndIntensityOS = mul( float3( g_vWindDir, 0 ), ( float3x3 )cModel[0] );
-#else
 		float3 vWindDirAndIntensityOS = mul( ( float3x3 )cModel[0], float3( g_vWindDir, 0 ) );
-#endif // !_PS3
 
 		float flSwayScaleHeight = saturate( ( vPositionOS.z - g_flHeight * g_flStartHeight ) /
 											( ( 1.0 - g_flStartHeight ) * g_flHeight ) );
@@ -44,10 +40,6 @@
 		}
 		#endif
 
-		#ifdef _X360
-			// Scale branch motion based on how orthogonal they are
-			float flOrthoBranchScale = 1.0 - abs( dot( normalize( vWindDirAndIntensityOS.xyz ), float3( normalize( vPositionOS.xy ), 0 ) ) );
-		#else
 			// Scale branch motion based on how orthogonal they are
 			// This is what I want to compute:
 			// float flOrthoBranchScale = 1.0 - abs( dot( normalize( vWindDirAndIntensityOS.xyz ), float3( normalize( vPositionOS.xy ), 0 ) ) );
@@ -55,7 +47,6 @@
 			// and divide by the length of the vectors, making sure to avoid divide by 0.
 			float flOrthoBranchScale = abs( dot( vWindDirAndIntensityOS.xyz, float3( vPositionOS.xy, 0 ) ) );
 			flOrthoBranchScale = 1.0 - saturate( flOrthoBranchScale / ( max( length( vWindDirAndIntensityOS.xyz ), 0.0001 ) * max( length( vPositionOS.xy ), 0.0001 ) ) );
-		#endif
 
 		float flSwayScaleTrunk = g_flSwayIntensity * pow( flSwayScaleHeight, g_flSwayFalloffCurve );
 		float flSwayScaleBranches = g_flSwayIntensity * flOrthoBranchScale * flSwayScaleRadius * flHeightThreshold;

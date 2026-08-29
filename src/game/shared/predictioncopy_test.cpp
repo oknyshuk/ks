@@ -10,14 +10,10 @@
 #if !defined( NO_ENTITY_PREDICTION )
 
 #include "igamesystem.h"
-#ifndef _PS3
 #include <typeinfo>
-#endif
 #include "cdll_int.h"
 #endif
-#ifndef _PS3
 #include <memory.h>
-#endif
 #include <stdarg.h>
 #include "tier0/dbg.h"
 #include "tier1/strtools.h"

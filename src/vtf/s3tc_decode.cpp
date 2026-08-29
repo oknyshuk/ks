@@ -228,59 +228,6 @@ void GenerateRepresentativePalette(
 	)
 {
 	Error( "GenerateRepresentativePalette: not implemented" );	
-#if 0														// this code was ifdefed out. no idea under what circumstances it was meant to be called.
-
-	Assert( nBlocks == 2 || nBlocks == 3 );
-
-	S3RGBA values[12*4];
-	memset( values, 0xFF, sizeof( values ) );
-	int width = nBlocks * 4;
-	for ( int i=0; i < nBlocks; i++ )
-	{
-		for ( int y=0; y < 4; y++ )
-		{
-			for ( int x=0; x < 4; x++ )
-			{
-				int outIndex = y*width+(i*4+x);
-				values[outIndex] = pOriginals[i][y * (lPitch/4) + x];
-			}
-		}			
-	}
-	
-	DDSURFACEDESC descIn;
-	DDSURFACEDESC descOut;
-	memset( &descIn, 0, sizeof(descIn) );
-	memset( &descOut, 0, sizeof(descOut) );
-
-	descIn.dwSize = sizeof(descIn);
-	descIn.dwFlags = DDSD_WIDTH | DDSD_HEIGHT | DDSD_LPSURFACE | DDSD_PIXELFORMAT;
-	descIn.dwWidth = width;
-	descIn.dwHeight = 4;
-	descIn.lPitch = width * 4;
-	descIn.lpSurface = values;
-	descIn.ddpfPixelFormat.dwSize = sizeof( DDPIXELFORMAT );
-
-	descIn.ddpfPixelFormat.dwFlags = DDPF_RGB | DDPF_ALPHAPIXELS;
-	descIn.ddpfPixelFormat.dwRGBBitCount = 32;
-	descIn.ddpfPixelFormat.dwRBitMask = 0xff0000;
-	descIn.ddpfPixelFormat.dwGBitMask = 0x00ff00;
-	descIn.ddpfPixelFormat.dwBBitMask = 0x0000ff;
-	descIn.ddpfPixelFormat.dwRGBAlphaBitMask = 0xff000000;
-
-	descOut.dwSize = sizeof( descOut );
-	
-	float weight[3] = {0.3086f, 0.6094f, 0.0820f};
-	
-	S3TC_BLOCK_WIDTH = nBlocks * 4;
-	
-	DWORD encodeFlags = S3TC_ENCODE_RGB_FULL;
-	if ( format == IMAGE_FORMAT_DXT5 )
-		encodeFlags |= S3TC_ENCODE_ALPHA_INTERPOLATED;
-
-	S3TCencode( &descIn, NULL, &descOut, mergedBlocks, encodeFlags, weight );
-
-	S3TC_BLOCK_WIDTH = 4;
-#endif
 }
 
 void S3TC_MergeBlocks( 

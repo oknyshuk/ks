@@ -64,15 +64,9 @@ Studio models are position independent, so the cache manager can move them.
 
 struct studiohdr_t;
 
-#ifdef _GAMECONSOLE
-#define MAXSTUDIOTRIANGLES	65536	// 
-#define MAXSTUDIOVERTS		32768	// These numbers save memory in CCachedRenderData, but restrict usable model sizes on 360
-#define	MAXSTUDIOFLEXVERTS	4096	// 
-#else
 #define MAXSTUDIOTRIANGLES	65536	// TODO: tune this
 #define MAXSTUDIOVERTS		65536	// TODO: tune this
 #define	MAXSTUDIOFLEXVERTS	10000	// max number of verts that can be flexed per mesh.  TODO: tune this
-#endif
 #define MAXSTUDIOSKINS		32		// total textures
 #define MAXSTUDIOBONES		256		// total bones actually used
 #define MAXSTUDIOFLEXDESC	1024	// maximum number of low level flexes (actual morph targets)
@@ -1900,9 +1894,7 @@ struct studioloddata_t
 	IMaterial			**ppMaterials; /* will have studiohdr_t.numtextures elements allocated */
 	// hack - this needs to go away.
 	int					*pMaterialFlags; /* will have studiohdr_t.numtextures elements allocated */
-#ifndef _CERT
 	int					m_NumFaces;	/* Total face count for this LOD */
-#endif // !_CERT
 
 	// For decals on hardware morphing, we must actually do hardware skinning
 	// For this to work, we have to hope that the total # of bones used by
@@ -1947,7 +1939,6 @@ struct studiohwdata_t
 		return numLODs-1;
 	}
 
-#ifndef _CERT
 	// Each model counts how many rendered faces it accounts for each frame:
 	inline void UpdateFacesRenderedCount( studiohdr_t *pStudioHdr, CUtlHash< studiohwdata_t * > &hwDataHash, int nLOD, int nInstances, int nFacesOverride = -1 )
 	{
@@ -1969,7 +1960,6 @@ struct studiohwdata_t
 	int m_NumFacesRenderedThisFrame;
 	int m_NumTimesRenderedThisFrame;
 	studiohdr_t *m_pStudioHdr; // There is no way to map between these inside CStudioRender, so we have to store it.
-#endif // !_CERT
 };
 
 // ----------------------------------------------------------
@@ -2309,17 +2299,7 @@ struct vertexFileHeader_t
 	int		numLODs;						// num of valid lods
 	int		numLODVertexes[MAX_NUM_LODS];	// num verts for desired root lod
 	int		numFixups;						// num of vertexFileFixup_t
-#ifdef _PS3
-	union
-	{
-		int fixupTableStart;
-		uint32 ps3edgeDmaInputDesc;			// [PS3: offset of the EDGE DMA INPUT stream]
-	};
-	uint32 inline GetPs3EdgeDmaInputStart() const { return ( ps3edgeDmaInputDesc & 0xFFFF ) << 8; }
-	uint32 inline GetPs3EdgeDmaInputLength() const { return ( ( ps3edgeDmaInputDesc >> 16 ) & 0x7FFF ) << 8; }
-#else
 	int		fixupTableStart;				// offset from base to fixup table
-#endif
 	int		vertexDataStart;				// offset from base to vertex block
 	int		tangentDataStart;				// offset from base to tangent block
 
@@ -2358,16 +2338,6 @@ public:
 			return NULL;
 	}
 
-#ifdef _PS3
-	// Accessor to EDGE DMA INPUT format
-	const byte *GetPs3EdgeDmaInput() const
-	{
-		if ( ( id == MODEL_VERTEX_FILE_ID ) && ( ps3edgeDmaInputDesc & 0x80000000 ) )
-			return ( byte * ) ( GetPs3EdgeDmaInputStart() + (byte *)this );
-		else
-			return NULL;
-	}
-#endif
 };
 
 // apply sequentially to lod sorted vertex and tangent pools to re-establish mesh order
@@ -3747,13 +3717,6 @@ inline int Studio_VertexDataSize( const vertexFileHeader_t *pVvdHdr, int rootLOD
 	if (bNeedsTangentS)
 	{
 		dataLength += numVertexes*sizeof(Vector4D);
-#ifdef _PS3
-		if ( !pVvdHdr->numFixups && ( pVvdHdr->ps3edgeDmaInputDesc & 0x80000000 ) )
-		{
-			// PS3 does not support root lod, so all vertexes will be used
-			dataLength = pVvdHdr->GetPs3EdgeDmaInputStart() + pVvdHdr->GetPs3EdgeDmaInputLength();
-		}
-#endif
 	}
 
 	if (bHasExtraData)
@@ -3794,26 +3757,12 @@ inline int Studio_LoadVertexes( const vertexFileHeader_t *pTempVvdHdr, vertexFil
 		// tangent data follows possibly reduced vertex data
 		pNewVvdHdr->tangentDataStart = pNewVvdHdr->vertexDataStart + numVertexes*sizeof(mstudiovertex_t);
 
-#ifdef _PS3
-		// PS3 does not support root LOD, so all vertices will be available
-		if ( !pTempVvdHdr->numFixups && ( pTempVvdHdr->ps3edgeDmaInputDesc & 0x80000000 ) )
-		{
-			pNewVvdHdr->ps3edgeDmaInputDesc = pTempVvdHdr->ps3edgeDmaInputDesc;
-		}
-		else
-		{
-			pNewVvdHdr->ps3edgeDmaInputDesc = 0;
-		}
-#endif
 	}
 	else
 	{
 		// no tangent data will be available, mark for identification
 		pNewVvdHdr->tangentDataStart = 0;
 
-#ifdef _PS3
-		pNewVvdHdr->ps3edgeDmaInputDesc = 0;
-#endif
 	}
 
 	if (bHasExtraData)
@@ -3842,17 +3791,6 @@ inline int Studio_LoadVertexes( const vertexFileHeader_t *pTempVvdHdr, vertexFil
 				(byte *)pTempVvdHdr+pTempVvdHdr->tangentDataStart,
 				numVertexes*sizeof(Vector4D) );
 
-#ifdef _PS3
-			if ( pNewVvdHdr->ps3edgeDmaInputDesc )
-			{
-				// transfer EDGE DMA INPUT to cache memory
-				memcpy(
-					const_cast< byte* >( pNewVvdHdr->GetPs3EdgeDmaInput() ),
-					pTempVvdHdr->GetPs3EdgeDmaInput(),
-					pTempVvdHdr->GetPs3EdgeDmaInputLength()
-					);
-			}
-#endif
 		}
 
 		if (bHasExtraData)

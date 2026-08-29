@@ -10,10 +10,6 @@
 #include "snd_dev_sdl.h"
 #endif
 
-#if defined(OSX)
-#include "snd_dev_openal.h"
-#include "snd_dev_mac_audioqueue.h"
-#endif
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -79,68 +75,43 @@ IAudioDevice *IAudioDevice::AutoDetectInit()
 {
 	IAudioDevice *pDevice = NULL;
 
-	if ( IsPC() )
-	{
 #if defined( WIN32 ) && !defined( USE_SDL )
 
-		if ( !pDevice )
+	if ( !pDevice )
+	{
+		if ( snd_firsttime )
 		{
-			if ( snd_firsttime )
-			{
-				pDevice = Audio_CreateDirectSoundDevice();
-			}
+			pDevice = Audio_CreateDirectSoundDevice();
 		}
+	}
 
-#elif defined(OSX)
-		if ( !CommandLine()->CheckParm( "-snd_openal" ) )
-		{
-			DevMsg( "Using AudioQueue Interface\n" );
-			pDevice = Audio_CreateMacAudioQueueDevice();
-		}
-		if ( !pDevice )
-		{
-			DevMsg( "Using OpenAL Interface\n" );
-			pDevice = Audio_CreateOpenALDevice(); // fall back to openAL if the audio queue fails
-		}
 #elif defined( USE_SDL )
-		DevMsg( "Trying SDL Audio Interface\n" );
-		pDevice = Audio_CreateSDLAudioDevice();
+	DevMsg( "Trying SDL Audio Interface\n" );
+	pDevice = Audio_CreateSDLAudioDevice();
 
 #ifdef NEVER
-		// Jul 2012. mikesart. E-mail exchange with Ryan Gordon after figuring out that
-		// Audio_CreatePulseAudioDevice() wasn't working on Ubuntu 12.04 (lots of stuttering).
-		//
-		// > I installed libpulse-dev, rebuilt SDL, and now SDL is using pulse
-		// > audio and everything is working great. However I'm wondering if we
-		// > need to fall back to PulseAudio in our codebase if SDL is doing that
-		// > for us. I mean, is it worth me going through and debugging our Pulse
-		// > Audio path or should I just remove it?
-		// 
-		// Remove it...it never worked well, and only remained in case there were
-		// concerns about relying on SDL. The SDL codepath is way easier to read,
-		// simpler to maintain, and handles all sorts of strange audio backends,
-		// including Pulse.
-		if ( !pDevice )
-		{
-			DevMsg( "Trying PulseAudio Interface\n" );
-			pDevice = Audio_CreatePulseAudioDevice(); // fall back to PulseAudio if SDL fails
-		}
+	// Jul 2012. mikesart. E-mail exchange with Ryan Gordon after figuring out that
+	// Audio_CreatePulseAudioDevice() wasn't working on Ubuntu 12.04 (lots of stuttering).
+	//
+	// > I installed libpulse-dev, rebuilt SDL, and now SDL is using pulse
+	// > audio and everything is working great. However I'm wondering if we
+	// > need to fall back to PulseAudio in our codebase if SDL is doing that
+	// > for us. I mean, is it worth me going through and debugging our Pulse
+	// > Audio path or should I just remove it?
+	// 
+	// Remove it...it never worked well, and only remained in case there were
+	// concerns about relying on SDL. The SDL codepath is way easier to read,
+	// simpler to maintain, and handles all sorts of strange audio backends,
+	// including Pulse.
+	if ( !pDevice )
+	{
+		DevMsg( "Trying PulseAudio Interface\n" );
+		pDevice = Audio_CreatePulseAudioDevice(); // fall back to PulseAudio if SDL fails
+	}
 #endif // NEVER
 
 #else
 #error
-#endif
-	}
-#if defined( _X360 )
-	else
-	{
-		pDevice = Audio_CreateXAudioDevice( true );
-		if ( pDevice )
-		{
-			// xaudio requires threaded mixing
-			S_EnableThreadedMixing( true );
-		}
-	}
 #endif
 
 	snd_firsttime = false;

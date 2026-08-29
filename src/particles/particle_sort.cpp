@@ -190,14 +190,12 @@ int CParticleCollection::GenerateCulledSortedIndexList(
 	else
 		s_GenerateData<SORT_KEY_NONE, true>( pOut, vecCamera, &vecFwd, pVisibilityData, this );
 
-#ifndef SWDS
 	if ( bSorted )
 	{
 		// sort the output in place
 		std::make_heap( pOut, pOut + nParticles, SortLessFunc );
 		std::sort_heap( pOut, pOut + nParticles, SortLessFunc );
 	}
-#endif
 	return nParticles;
 }
 

@@ -747,7 +747,7 @@ void CIconLesson::TakePlaceOf( CBaseLesson *pLesson )
 
 void CIconLesson::SetLocatorBinding( CLocatorTarget * pLocatorTarget )
 {
-	if ( IsGameConsole() || input->ControllerModeActive() )
+	if ( input->ControllerModeActive() )
 	{
 		// Try to use gamepad bindings first
 		if ( m_szGamepadBinding.String()[ 0 ] != '\0' )

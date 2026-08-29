@@ -588,13 +588,6 @@ BEGIN_VS_SHADER( CustomClothing, "Help for CustomClothing" )
 		*dynVSIdx = _vshIndex.GetIndex();
 
 		// No pixel shader on Direct3D, doubles fill rate
-		if ( IsOSXOpenGL() )
-		{
-			DECLARE_DYNAMIC_PIXEL_SHADER( white_ps20 );
-			SET_DYNAMIC_PIXEL_SHADER( white_ps20 );
-			*dynPSIdx = _pshIndex.GetIndex();
-		}
-		else
 		{
 			*dynPSIdx = 0;
 		}

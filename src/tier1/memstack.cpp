@@ -265,7 +265,6 @@ void CMemoryStack::RegisterAllocation()
 	m_bRegisteredAllocation = true;
 
 	// Temp memorystack spew: very useful when we crash out of memory
-	if ( IsGameConsole() && bSpewAllocations ) Msg( "CMemoryStack: %4.1fMB (%s)\n", GetSize()/(float)(1024*1024), m_pszAllocOwner );
 }
 
 void CMemoryStack::RegisterDeallocation( bool bShouldSpewSize )
@@ -279,7 +278,6 @@ void CMemoryStack::RegisterDeallocation( bool bShouldSpewSize )
 	m_bRegisteredAllocation = false;
 
 	// Temp memorystack spew: very useful when we crash out of memory
-	if ( bShouldSpewSize && IsGameConsole() && bSpewAllocations ) Msg( "CMemoryStack: %4.1fMB (%s)\n", GetSize()/(float)(1024*1024), m_pszAllocOwner );
 }
 
 //-------------------------------------

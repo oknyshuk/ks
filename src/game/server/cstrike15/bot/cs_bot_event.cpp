@@ -337,22 +337,12 @@ void CCSBot::OnHostageFollows( IGameEvent *event )
 			if (GetTask() != CCSBot::GUARD_HOSTAGE_RESCUE_ZONE)
 			{
 				//const float headOffChance = 33.3f;
-				if (true) // || RandomFloat( 0, 100 ) < headOffChance)
+				// head them off at a rescue zone
+				if (GuardRandomZone())
 				{
-					// head them off at a rescue zone
-					if (GuardRandomZone())
-					{
-						SetTask( CCSBot::GUARD_HOSTAGE_RESCUE_ZONE );
-						SetDisposition( CCSBot::OPPORTUNITY_FIRE );
-						PrintIfWatched( "Trying to beat them to an escape zone!\n" );
-					}
-				}
-				else
-				{
-					SetTask( SEEK_AND_DESTROY );
-					StandUp();
-					Run();
-					MoveTo( playerOrigin, FASTEST_ROUTE );
+					SetTask( CCSBot::GUARD_HOSTAGE_RESCUE_ZONE );
+					SetDisposition( CCSBot::OPPORTUNITY_FIRE );
+					PrintIfWatched( "Trying to beat them to an escape zone!\n" );
 				}
 			}
 		}

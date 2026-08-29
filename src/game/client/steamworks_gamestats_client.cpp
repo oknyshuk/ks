@@ -407,7 +407,6 @@ int CSteamWorksGameStatsClient::GetFriendCountInGame()
 	// Get the number of steam friends in game
 	int friendsInOurGame = 0;
 
-#if !defined( NO_STEAM )
 
 	// Do we have access to the steam API?
 	if ( AccessToSteamAPI() )
@@ -445,7 +444,6 @@ int CSteamWorksGameStatsClient::GetFriendCountInGame()
 		}
 	}
 
-#endif // !NO_STEAM
 
 	return friendsInOurGame;
 }

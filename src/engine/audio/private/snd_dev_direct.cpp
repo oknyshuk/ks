@@ -65,11 +65,7 @@ static GUID IID_IDirectSound3DBufferDef = {0x279AFA86, 0x4981, 0x11CE, {0xA5, 0x
 static ConVar windows_speaker_config("windows_speaker_config", "-1", FCVAR_RELEASE|FCVAR_ARCHIVE);
 static DWORD g_ForcedSpeakerConfig = 0;
 
-#if !defined( DX_TO_GL_ABSTRACTION )
 ConVar snd_mute_losefocus( "snd_mute_losefocus", "1", FCVAR_ARCHIVE );
-#else
-extern ConVar snd_mute_losefocus;
-#endif
 
 //-----------------------------------------------------------------------------
 // Purpose: Implementation of direct sound
@@ -1907,13 +1903,6 @@ static void TransferSamplesToSurroundBuffer( int outputCount, surround_transfer_
 			transfer.pOutput[4]  = (transfer.snd_rp[j]*volumeFactor)>>8;		// RL
 			transfer.pOutput[5] = (transfer.snd_rp[j + 1]*volumeFactor)>>8;	// RR
 			
-#if 0
-			// average channels into the subwoofer, let the sub filter the output
-			// NOTE: avg l/r rear to do 2 shifts instead of divide by 5
-			int sumFront = (int)transfer.pOutput[0] + (int)transfer.pOutput[1] + (int)transfer.pOutput[2];
-			int sumRear = (int)transfer.pOutput[4] + (int)transfer.pOutput[5];
-			transfer.pOutput[3]  = (sumFront + (sumRear>>1)) >> 2;
-#endif
 
 			transfer.pOutput += 6;
 			//Assert( baseOffset <= (DeviceSampleCount()) );

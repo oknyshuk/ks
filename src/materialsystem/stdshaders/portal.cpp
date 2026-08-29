@@ -52,16 +52,6 @@ BEGIN_VS_SHADER( Portal_DX90,
 	{
 		if ( params[BASETEXTURE]->IsDefined() )
 		{
-			if ( IsGameConsole() )
-			{
-				// prevent unused rt access
-				IMaterialVar* pNameVar = params[BASETEXTURE];
-				const char *pStringValue = pNameVar->GetStringValue();
-				if ( !V_stricmp( pStringValue, "_rt_portal1" ) || !V_stricmp( pStringValue, "_rt_portal2" ) )
-				{
-					pNameVar->SetStringValue( "white" );
-				}
-			}
 			LoadTexture( BASETEXTURE, TEXTUREFLAGS_SRGB );
 		}
 
@@ -232,10 +222,6 @@ BEGIN_VS_SHADER( Portal_DX90,
 
 				VMatrix matFinal;
 				MatrixMultiply( matProj, matCustomView, matFinal );
-#ifdef _PS3
-				// PS3's Cg likes things in row-major rather than column-major
-				MatrixTranspose( matFinal, matFinal );
-#endif // _PS3
 				pShaderAPI->SetVertexShaderConstant( VERTEX_SHADER_SHADER_SPECIFIC_CONST_0, matFinal.Base(), 4 );
 			}
 

@@ -104,47 +104,27 @@
 #define STRICT
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
-#elif !defined(_X360)
+#else
 #define far
 #define near
 #define INVALID_HANDLE_VALUE (void*)-1
 #define _tzset tzset
 #endif
 
-#if defined( _X360 )
-#endif
 
-#if defined( _PS3 )
-#include "basetypes.h"
-#include "ps3/ps3_core.h"
-#include "ps3/ps3_win32stubs.h"
-#include "tls_ps3.h"
-#endif
 
 #include <time.h>
 #include "zip/XZip.h"
 #include <stdarg.h>
 
-#ifdef POSIX
-#ifndef _PS3
 #include <sys/mman.h>
-#endif
 #define _stricmp strcasecmp
-#endif
 
-#ifdef OSX
-#define MAP_ANONYMOUS MAP_ANON
-#endif
 
 #ifdef XZIP_NOT_THREAD_SAFE
 static ZRESULT lasterrorZ=ZR_OK;
-#elif defined( _PS3 )
-#define lasterrorZ GetTLSGlobals()->uiEngineZipLastErrorZ
-#elif defined( LINUX )
-static ZRESULT lasterrorZ=ZR_OK;
 #else
-#include "tier0/threadtools.h"
-static GenericThreadLocals::CThreadLocalInt<ZRESULT> lasterrorZ;
+static ZRESULT lasterrorZ=ZR_OK;
 #endif
 
 #include "tier1/strtools.h"
@@ -692,13 +672,11 @@ void AssertXZip(TState &state,bool cond, const char *msg)
 	state.err=msg;
 }
 
-#if defined( LINUX )
 // __cdecl appears to be undefined under linux.  Define it for the following functions to compile
 #if defined( __cdecl )
   #undef __cdecl
 #endif
 #define __cdecl 
-#endif
 
 void __cdecl Trace(const char *x, ...) {va_list paramList; va_start(paramList, x); paramList; va_end(paramList);}
 void __cdecl Tracec(bool ,const char *x, ...) {va_list paramList; va_start(paramList, x); paramList; va_end(paramList);}
@@ -2419,16 +2397,10 @@ ZRESULT TZip::Create(void *z,unsigned int len,DWORD flags)
 				return ZR_NOALLOC;
 			}
 #endif
-#ifdef _PS3
-			obuf = (char*) malloc( len );
-			if (obuf==NULL)
-				return ZR_NOALLOC;
-#elif defined( POSIX )
 			obuf = (char*) calloc( len, 1 );
 			hmapout = (void*)-1; // sentinel to let close know it's a file in posix.
 			if ( !obuf )
 				return ZR_NOALLOC;
-#endif
 		}
 		ocanseek=true;
 		opos=0; 
@@ -2540,11 +2512,7 @@ ZRESULT TZip::Close()
 #ifdef _WIN32
     UnmapViewOfFile(obuf); 
 #endif
-#ifdef _PS3
-  free( obuf );
-#elif defined( POSIX )
 	free(obuf);
-#endif
   obuf=0;
 #ifdef _WIN32
   if (hmapout!=0) CloseHandle(hmapout); hmapout=0;
@@ -2985,9 +2953,7 @@ typedef struct
 
 HZIP CreateZipZ(void *z,unsigned int len,DWORD flags)
 { 
-#ifndef _PS3
 	_tzset();
-#endif
 	TZip *zip = new TZip();
 	lasterrorZ = zip->Create(z,len,flags);
 	if (lasterrorZ != ZR_OK) 

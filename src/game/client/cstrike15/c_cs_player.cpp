@@ -3137,15 +3137,6 @@ static bool GlowEffectGunGameLeader( C_CSPlayer* thisPlayer, C_CSPlayer* pLocalP
 	if ( team->GetGGLeader( nTeam ) != thisPlayer->entindex() )
 		return false;
 
-#if 0
-	// if this player hasn't fired for a while, they don't glow
-	// (REMOVED)
-	if ( thisPlayer->m_flLastFiredWeaponTime > 0 )
-	{
-		if ( gpGlobals->curTime > ( thisPlayer->m_flLastFiredWeaponTime + 4.0f ) )
-			return false;
-	}
-#endif
 
 	// if the player is at gold knife level, they don't glow
 	int nMaxIndex = CSGameRules()->GetNumProgressiveGunGameWeapons( nTeam ) - 1;
@@ -3798,19 +3789,6 @@ void C_CSPlayer::AddDecal( const Vector& rayStart, const Vector& rayEnd, const V
 float g_flFattenAmt = 4;
 void C_CSPlayer::GetShadowRenderBounds( Vector &mins, Vector &maxs, ShadowType_t shadowType )
 {
-#if defined( _PS3 ) && defined( CSTRIKE15 )
-
-	// eurogamer PS3 temp fix - prevents the shadow resolution yo-yo (due to render bound changes - comments below) and frees some perf up
-
-	mins = CollisionProp()->OBBMins();
-	maxs = CollisionProp()->OBBMaxs();
-	// Thus, we give it some padding here.
-	mins -= Vector( g_flFattenAmt, g_flFattenAmt, 0 );
-	maxs += Vector( g_flFattenAmt, g_flFattenAmt, 0 );
-
-	return;
-
-#else
 
 
 
@@ -3834,7 +3812,6 @@ void C_CSPlayer::GetShadowRenderBounds( Vector &mins, Vector &maxs, ShadowType_t
 		maxs += Vector( g_flFattenAmt, g_flFattenAmt, 0 );
 	}
 
-#endif
 
 }
 
@@ -6544,22 +6521,6 @@ void C_CSPlayer::TeamChange( int iNewTeam )
 			m_bShouldAutobuyDMWeapons = true;
 	}
 
-#if defined( _X360 )
-	if ( C_BasePlayer::IsLocalPlayer( this ) )
-	{
-		DWORD dwValue = CONTEXT_CSS_TEAM_SPECTATOR;
-		if ( iNewTeam == TEAM_TERRORIST ) 
-			dwValue = CONTEXT_CSS_TEAM_T;
-		else if ( iNewTeam == TEAM_CT ) 
-			dwValue = CONTEXT_CSS_TEAM_CT;
-
-		DevMsg( "Setting rich presence for team to %d\n", dwValue );
-		
-		XUSER_CONTEXT xUserContext = { CONTEXT_CSS_TEAM, dwValue };
-		ACTIVE_SPLITSCREEN_PLAYER_GUARD( GET_ACTIVE_SPLITSCREEN_SLOT() );
-		xboxsystem->UserSetContext( XBX_GetActiveUserId(), xUserContext, true );
-	}
-#endif 
 
 	SplitScreenConVarRef varOption( "cl_clanid" );
 	const char *pClanID = varOption.GetString( 0 );
@@ -7974,7 +7935,6 @@ void C_CSPlayer::CalcDeathCamView( Vector& eyeOrigin, QAngle& eyeAngles, float& 
 bool C_CSPlayer::IsCursorOnAutoAimTarget()
 {
 	// don't allow autoaiming on PC at all
-	if ( IsPC() )
 		return false;
 
 // disabled 6/29/15 -mtw

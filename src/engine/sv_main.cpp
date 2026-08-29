@@ -75,7 +75,6 @@
 #include "vstdlib/jobthread.h"
 #include "pure_server.h"
 #include "datacache/idatacache.h"
-#include "filesystem/IQueuedLoader.h"
 #include "vstdlib/jobthread.h"
 #include "SourceAppInfo.h"
 #include "cl_rcon.h"
@@ -88,13 +87,8 @@
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
-#ifdef _LINUX
 #include <syscall.h>
-#endif
 
-#ifdef _PS3
-#include <sys/memory.h>
-#endif
 
 extern CNetworkStringTableContainer *networkStringTableContainerServer;
 extern CNetworkStringTableContainer *networkStringTableContainerClient;
@@ -111,7 +105,7 @@ static ConVar sv_hibernate_postgame_delay( "sv_hibernate_postgame_delay", "5", F
 ConVar	host_flush_threshold( "host_flush_threshold", "12", FCVAR_RELEASE, "Memory threshold below which the host should flush caches between server instances" );
 extern ConVar fps_max;
 
-static ConVar sv_pausable_dev( "sv_pausable_dev", IsGameConsole() ? "0" : "1", FCVAR_DEVELOPMENTONLY, "Whether listen server is pausable when running -dev and playing solo against bots" );
+static ConVar sv_pausable_dev( "sv_pausable_dev", "1", FCVAR_DEVELOPMENTONLY, "Whether listen server is pausable when running -dev and playing solo against bots" );
 static ConVar sv_pausable_dev_ds( "sv_pausable_dev_ds", "0", FCVAR_DEVELOPMENTONLY, "Whether dedicated server is pausable when running -dev and playing solo against bots" );
 
 // Server default maxplayers value
@@ -154,8 +148,6 @@ void RevertAllModifiedLocalState()
 
 static void SV_CheatsChanged_f( IConVar *pConVar, const char *pOldString, float flOldValue )
 {
-    if ( IsGameConsole() )		// Cheats are always on for console, don't care reverting convars
-        return;
 
     ConVarRef var( pConVar );
     if ( var.GetInt() == 0 )
@@ -327,93 +319,6 @@ void SV_FlushMemoryOnNextServer()
 //-----------------------------------------------------------------------------
 void SV_CheckForFlushMemory( const char *pCurrentMapName, const char *pDestMapName )
 {
-#ifdef _GAMECONSOLE
-    if ( host_flush_threshold.GetInt() == 0 )
-        return;
-
-    // There are three cases in which we flush memory
-    //   Case 1: changing from one map to another
-    //          -> flush temp data caches
-    //   Case 2: loading any map (inc. A to A) and free memory is below host_flush_threshold MB
-    //          -> flush everything
-    //   Case 3: loading a 'blacklisted' map (the known biggest memory users, or where texture sets change)
-    //          -> flush everything
-    static const char *mapBlackList[] = 
-    {
-        ""
-    };
-
-    char szCurrentMapName[MAX_PATH];
-    char szDestMapName[MAX_PATH];
-    if ( pCurrentMapName )
-    {
-        V_FileBase( pCurrentMapName, szCurrentMapName, sizeof( szCurrentMapName ) );
-    }
-    else
-    {
-        szCurrentMapName[0] = '\0';
-    }
-    pCurrentMapName = szCurrentMapName;
-
-    if ( pDestMapName )
-    {
-        V_FileBase( pDestMapName, szDestMapName, sizeof( szDestMapName ) );
-    }
-    else
-    {
-        szDestMapName[0] = '\0';
-    }
-    pDestMapName = szDestMapName;
-
-    bool bIsMapChanging = pCurrentMapName[0] && V_stricmp( pCurrentMapName, pDestMapName );
-
-    bool bIsDestMapBlacklisted = false;
-    for ( int i = 0; i < ARRAYSIZE( mapBlackList ); i++ )
-    {
-        if ( pDestMapName && !V_stricmp( pDestMapName, mapBlackList[i] ) )
-        {
-            bIsDestMapBlacklisted = true;
-        }
-    }
-    
-    size_t dwSizePhysical = 0xffffffff;
-#ifdef _WIN32
-    {
-        MEMORYSTATUS stat;
-        GlobalMemoryStatus( &stat );
-        dwSizePhysical = stat.dwAvailPhys;
-    }
-#elif defined( _PS3 )
-    {
-        sys_memory_info_t smi = {0,0};
-        sys_memory_get_user_memory_size( &smi );
-        dwSizePhysical = smi.available_user_memory;
-    }
-#endif
-
-    // console csgo wants a full flush always for fragmentation concerns
-    bool bFullFlush = ( ( dwSizePhysical < host_flush_threshold.GetInt() * 1024 * 1024 ) || ( bIsDestMapBlacklisted && bIsMapChanging ) ) || ( IsGameConsole() && !V_stricmp( COM_GetModDirectory(), "csgo" ) );
-    bool bPartialFlush = !bFullFlush && bIsMapChanging;
-
-    const char *pReason = "No Flush";
-    if ( bFullFlush )
-    {
-        // Flush everything; all map data should get reloaded
-        SV_FlushMemoryOnNextServer();
-        g_pDataCache->Flush();
-        wavedatacache->Flush();
-        pReason = "Full Flush";
-    }
-    else if ( bPartialFlush )
-    {
-        // Flush temporary data (async anim, non-locked async audio)
-        g_pMDLCache->Flush( MDLCACHE_FLUSH_ANIMBLOCK );
-        wavedatacache->Flush();
-        pReason = "Partial Flush";
-    }
-
-    Msg( "Current Map: (%s), Next Map: (%s), %s\n", (pCurrentMapName[0] ? pCurrentMapName : ""), (pDestMapName[0] ? pDestMapName : ""), pReason );
-#endif	// console
 }
 
 //-----------------------------------------------------------------------------
@@ -424,10 +329,6 @@ bool SV_FlushMemoryIfMarked()
     if ( g_bFlushMemoryOnNextServer )
     {
         g_bFlushMemoryOnNextServer = false;
-        if ( IsGameConsole() )
-        {
-            g_pQueuedLoader->PurgeAll();
-        }
         g_pDataCache->Flush();
         g_pMaterialSystem->CompactMemory();
         g_pFileSystem->AsyncFinishAll();
@@ -1028,7 +929,7 @@ void SV_InitGameDLL( void )
         return;
     }
 
-#if !defined(DEDICATED) && !defined( _GAMECONSOLE )
+#if !defined(DEDICATED)
     bool CL_IsHL2Demo();
     if ( CL_IsHL2Demo() && !sv.IsDedicated() && Q_stricmp( COM_GetModDirectory(), "hl2" ) )
     {
@@ -1258,7 +1159,6 @@ void CGameServer::Init (bool isDedicated)
     }
 
 	// Install signal handlers for the dedicated server
-	#ifdef POSIX
 		if ( isDedicated )
 		{
 			signal( SIGINT,
@@ -1285,7 +1185,6 @@ void CGameServer::Init (bool isDedicated)
 				}
 			);
 		}
-	#endif
 }
 
 bool CGameServer::IsPausable( void ) const
@@ -1405,11 +1304,6 @@ void SV_StartSound ( IRecipientFilter& filter, edict_t *pSoundEmittingEntity, in
         sound.fTickTime = sv.GetFinalTickTime();
         sound.fDelay = soundtime - sv.GetFinalTickTime();
         sound.nFlags |= SND_DELAY;
-#if 0
-        static float lastSoundTime = 0;
-        Msg("SV: [%.3f] Play %s at %.3f\n", soundtime - lastSoundTime, pSample, soundtime );
-        lastSoundTime = soundtime;
-#endif
     }
     
     // find precache number for sound
@@ -1823,16 +1717,6 @@ static ConVar sv_maxuptimelimit(  "sv_maxuptimelimit", "0", FCVAR_RELEASE,
 	"this number of hours, the server will exit."	);
 
 
-#if 0
-static void sv_WasteMemory( void )
-{
-    uint8 *pWastedRam = new uint8[ 100 * 1024 * 1024 ];
-    memset( pWastedRam, 0xff, 100 * 1024 * 1024 );			// make sure it gets committed
-    Msg( "waste 100mb. using %dMB with an sv_memory_limit of %dMB\n", ApproximateProcessMemoryUsage() / ( 1024 * 1024 ), sv_memlimit.GetInt() );
-}
-
-static ConCommand sv_wastememory( "sv_wastememory", sv_WasteMemory, "Causes the server to allocate 100MB of ram and never free it", FCVAR_CHEAT );
-#endif
 
 
 
@@ -1917,13 +1801,11 @@ void CGameServer::SetHibernating( bool bHibernating )
 				}
             }
             
-#ifdef _LINUX
             // if we are a child process running forked, we want to exit now. We want to "really" exit. no destructors, no nothing
             if ( IsChildProcess() )							// are we a subprocess?
             {
                 syscall( SYS_exit, 0 );	// we are not going to perform a normal c++ exit. We _dont_ want to run destructors, etc.
             }
-#endif
             if ( bExit )
             {
                 HostState_Shutdown();
@@ -1997,7 +1879,7 @@ void CGameServer::UpdateHibernationState()
 		}
 		else
 		{
-			if ( ( hltv->m_nGlobalClients > 0 ) || hltv->m_Broadcast.IsRecording() )
+			if ( hltv->m_nGlobalClients > 0 )
 			{
 				flMaxDirectorDelay = Max( flMaxDirectorDelay, hltv->GetDirector()->GetDelay() );
 			}
@@ -2107,7 +1989,7 @@ void CGameServer::FinishRestore()
 
     // Reset
     m_bLoadgame = false;
-    saverestore->SetIsXSave( IsX360() );
+    saverestore->SetIsXSave( false );
 #endif
 }
 
@@ -2410,18 +2292,6 @@ void SV_BroadcastVoiceData(IClient * cl, const CCLCMsg_VoiceData& msg )
 			}
 		}
 
-        if ( IsGameConsole() && bSelf == true )	
-        {
-            if ( voice_verbose.GetBool() )
-            {
-                Msg( "* SV_BroadcastVoiceData:  Self.  Dropping %d bytes from %s (%s) to %s (%s)\n", 
-					voiceData.voice_data().size(), cl->GetClientName(), 
-					cl->GetNetChannel() ? cl->GetNetChannel()->GetAddress() : "null", 
-					pDestClient->GetClientName(), pDestClient->GetNetChannel() ? pDestClient->GetNetChannel()->GetAddress() : "null" );
-            }
-            continue;
-        }
-            
         if ( !bHearsPlayer && !bSelf )
         {
             if ( voice_verbose.GetBool() )
@@ -2645,9 +2515,6 @@ bool SV_ActivateServer()
                 replay->Init( NET_IsDedicated() );
             }
 
-#if !defined( NO_STEAM )
-            Steam3Server().UpdateSpectatorPort( NET_GetUDPPort( NS_REPLAY ) );
-#endif
 
             if ( replay->IsActive() )
             {
@@ -2746,12 +2613,6 @@ bool SV_ActivateServer()
 
     // Heartbeat the master server in case we turned SrcTV on or off.
     Steam3Server().SendUpdatedServerDetails();
-	#if !defined( NO_STEAM )
-	{
-        if ( Steam3Server().SteamGameServer() )
-            Steam3Server().SteamGameServer()->ForceHeartbeat();
-	}
-	#endif
 
 	if ( serverGameDLL && Steam3Server().GetGSSteamID().IsValid() )
 		serverGameDLL->UpdateGCInformation();
@@ -2864,15 +2725,6 @@ void CGameServer::ExecGameTypeCfg( const char *mapname )
 
     int numSlots = pGameSettings->GetInt( "members/numSlots", -1 );
 
-#if defined (_GAMECONSOLE) && defined ( CSTRIKE15 )
-    // FIXME(hpe) sb: temp: quick hack for splitscreen; NOTE: SetMaxClients required since integration (taken from PORTAL2 below)
-    ConVarRef ss_enable( "ss_enable" );
-    if ( ss_enable.GetInt() > 0 )
-    {
-        numSlots = 9;
-        SetMaxClients( numSlots );
-    }
-#endif
 
     if ( numSlots >= 0 )
     {
@@ -2918,12 +2770,6 @@ bool CGameServer::SpawnServer( char *mapname, char * mapGroupName, char *startsp
             m_bLoadedPlugins = true;
             g_pServerPluginHandler->LoadPlugins(); // load 3rd party plugins
         }
-    }
-
-    if ( IsGameConsole() && g_pQueuedLoader->IsMapLoading() )
-    {
-        Msg( "Spawning a new server - loading map %s. Forcing current map load to end.\n", mapname );
-        g_pQueuedLoader->EndMapLoading( true );
     }
 
 //	NOTE[pmf]: Removed this. We don't want to limit the server fps below what our desired tick rate is; apparently 
@@ -3136,7 +2982,7 @@ bool CGameServer::SpawnServer( char *mapname, char * mapGroupName, char *startsp
 
     COM_TimestampedLog( "modelloader->GetModelForName(%s) -- Finished", szModelName );
 
-    if ( IsMultiplayer() && !IsGameConsole() )
+    if ( IsMultiplayer() )
     {
 #ifndef DEDICATED
         EngineUI()->UpdateProgressBar(PROGRESS_CRCMAP);
@@ -3246,14 +3092,8 @@ bool CGameServer::SpawnServer( char *mapname, char * mapGroupName, char *startsp
         event->SetInt(	  "password", 0 );				// TODO
 #if defined( _WIN32 )
         event->SetString( "os", "WIN32" );
-#elif defined ( LINUX )
-        event->SetString( "os", "LINUX" );
-#elif defined ( OSX )
-        event->SetString( "os", "OSX" );
-#elif defined ( _PS3 )
-        event->SetString( "os", "PS3" );
 #else
-#error
+        event->SetString( "os", "LINUX" );
 #endif
         event->SetInt( "dedicated", IsDedicated() ? 1 : 0 );
 
@@ -3492,13 +3332,6 @@ void SV_Frame( bool finalTick )
     // lock string tables
     networkStringTableContainerServer->Lock( true );
 
-#if !defined(NO_STEAM)
-    // let the steam auth server process new connections
-    if ( sv.IsMultiplayer() || serverGameDLL->ShouldPreferSteamAuth() )
-    {
-        Steam3Server().RunFrame();
-    }
-#endif
 }
 
 void SV_SetSteamCrashComment( void )
@@ -3540,9 +3373,6 @@ void SV_SetSteamCrashComment( void )
 			com_gamedir, build_number(), osversion, tString, CommandLine()->GetCmdLine(),
 			g_ServerGlobalVariables.network_protocol );
 
-#ifndef NO_STEAM
-		SteamAPI_SetMiniDumpComment( g_minidumpinfo );
-#endif
 	}
 }
 

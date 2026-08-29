@@ -390,43 +390,32 @@ void ClientPrecache( void )
 {
 	ClientGamePrecache();
 
-	if ( !IsGameConsole() && !engine->IsDedicatedServerForXbox() )
+	// Force levels
+	char pBuf[MAX_PATH];
+	for ( int i = 0; i < CPU_LEVEL_PC_COUNT; ++i )
 	{
-		// Force levels
-		char pBuf[MAX_PATH];
-		for ( int i = 0; i < CPU_LEVEL_PC_COUNT; ++i )
-		{
-			Q_snprintf( pBuf, sizeof(pBuf), "cfg/cpu_level_%d_pc.ekv", i );
-			engine->ForceExactFile( pBuf );
-			Q_snprintf( pBuf, sizeof(pBuf), "cfg/cpu_level_%d_pc_ss.ekv", i );
-			engine->ForceExactFile( pBuf );
-		}
-
-		for ( int i = 0; i < GPU_LEVEL_PC_COUNT; ++i )
-		{
-			Q_snprintf( pBuf, sizeof(pBuf), "cfg/gpu_level_%d_pc.ekv", i );
-			engine->ForceExactFile( pBuf );
-		}
-
-		for ( int i = 0; i < MEM_LEVEL_PC_COUNT; ++i )
-		{
-			Q_snprintf( pBuf, sizeof(pBuf), "cfg/mem_level_%d_pc.ekv", i );
-			engine->ForceExactFile( pBuf );
-		}
-
-		for ( int i = 0; i < GPU_MEM_LEVEL_PC_COUNT; ++i )
-		{
-			Q_snprintf( pBuf, sizeof(pBuf), "cfg/gpu_mem_level_%d_pc.ekv", i );
-			engine->ForceExactFile( pBuf );
-		}
+		Q_snprintf( pBuf, sizeof(pBuf), "cfg/cpu_level_%d_pc.ekv", i );
+		engine->ForceExactFile( pBuf );
+		Q_snprintf( pBuf, sizeof(pBuf), "cfg/cpu_level_%d_pc_ss.ekv", i );
+		engine->ForceExactFile( pBuf );
 	}
-	else
+
+	for ( int i = 0; i < GPU_LEVEL_PC_COUNT; ++i )
 	{
-		engine->ForceExactFile( "cfg/mem_level_360.ekv" );
-		engine->ForceExactFile( "cfg/gpu_mem_level_360.ekv" );
-		engine->ForceExactFile( "cfg/gpu_level_360.ekv" );
-		engine->ForceExactFile( "cfg/cpu_level_360.ekv" );
-		engine->ForceExactFile( "cfg/cpu_level_360_ss.ekv" );
+		Q_snprintf( pBuf, sizeof(pBuf), "cfg/gpu_level_%d_pc.ekv", i );
+		engine->ForceExactFile( pBuf );
+	}
+
+	for ( int i = 0; i < MEM_LEVEL_PC_COUNT; ++i )
+	{
+		Q_snprintf( pBuf, sizeof(pBuf), "cfg/mem_level_%d_pc.ekv", i );
+		engine->ForceExactFile( pBuf );
+	}
+
+	for ( int i = 0; i < GPU_MEM_LEVEL_PC_COUNT; ++i )
+	{
+		Q_snprintf( pBuf, sizeof(pBuf), "cfg/gpu_mem_level_%d_pc.ekv", i );
+		engine->ForceExactFile( pBuf );
 	}
 
 	// Game Instructor lessons - don't want people making simple scripted wall hacks

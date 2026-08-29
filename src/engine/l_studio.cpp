@@ -38,13 +38,12 @@
 #include "vstdlib/random.h"
 #include "datacache/idatacache.h"
 #include "materialsystem/materialsystem_config.h"
-#if defined( _WIN32 ) && !defined( _X360 )
+#if defined( _WIN32 )
 #include <xmmintrin.h>
 #endif
 #include "staticpropmgr.h"
 #include "materialsystem/hardwareverts.h"
 #include "tier1/callqueue.h"
-#include "filesystem/IQueuedLoader.h"
 #include "tier2/tier2.h"
 #include "tier1/utlsortvector.h"
 #include "tier1/lzmaDecoder.h"
@@ -80,11 +79,7 @@ static ConVar r_lightaverage( "r_lightaverage", "1", 0, "Activates/deactivate li
 static ConVar r_lightinterp( "r_lightinterp", "5", FCVAR_CHEAT, "Controls the speed of light interpolation, 0 turns off interpolation" );
 static ConVar r_eyeglintlodpixels( "r_eyeglintlodpixels", "20.0", 0, "The number of pixels wide an eyeball has to be before rendering an eyeglint.  Is a floating point value." );
 ConVar r_rootlod( "r_rootlod", "0", FCVAR_MATERIAL_SYSTEM_THREAD, "Root LOD", true, 0, true, MAX_NUM_LODS-1, SetRootLOD_f );
-#ifndef _PS3
 static ConVar r_decalstaticprops( "r_decalstaticprops", "1", 0, "Decal static props test" );
-#else
-static ConVar r_decalstaticprops( "r_decalstaticprops", "0", 0, "Decal static props test" );
-#endif
 static ConCommand r_flushlod( "r_flushlod", FlushLOD_f, "Flush and reload LODs." );
 ConVar r_debugrandomstaticlighting( "r_debugrandomstaticlighting", "0", FCVAR_CHEAT, "Set to 1 to randomize static lighting for debugging.  Must restart for change to take affect." );
 ConVar r_proplightingfromdisk( "r_proplightingfromdisk", "1", 0, "0=Off, 1=On, 2=Show Errors" );
@@ -135,7 +130,7 @@ void UpdateStudioRenderConfig( void )
 	s_StudioRenderConfig.fEyeShiftY = r_eyeshift_y.GetFloat();
 	s_StudioRenderConfig.fEyeShiftZ = r_eyeshift_z.GetFloat();
 	s_StudioRenderConfig.fEyeSize = r_eyesize.GetFloat();	
-	if ( IsPC() && ( mat_softwareskin.GetInt() || ShouldDrawInWireFrameMode() || r_slowpathwireframe.GetInt() ) )
+	if ( ( mat_softwareskin.GetInt() || ShouldDrawInWireFrameMode() || r_slowpathwireframe.GetInt() ) )
 	{
 		s_StudioRenderConfig.bSoftwareSkin = true;
 	}
@@ -368,7 +363,6 @@ float Engine_WorldLightDistanceFalloff( const dworldlight_t *wl, const Vector& d
 	switch (wl->type)
 	{
 		case emit_surface:
-#if 1
 			// Cull out stuff that's too far
 			if (wl->radius != 0)
 			{
@@ -377,14 +371,6 @@ float Engine_WorldLightDistanceFalloff( const dworldlight_t *wl, const Vector& d
 			}
 
 			return InvRSquared(delta);
-#else
-			// 1/r*r
-			falloff = DotProduct( delta, delta );
-			if (falloff < 1)
-				return 1.f;
-			else
-				return 1.f / falloff;
-#endif
 
 			break;
 
@@ -621,10 +607,8 @@ public:
 		Q_memset( data->m_pMeshInfos, 0, params.m_nMeshes*sizeof( ColorMeshInfo_t ) );
 		data->m_ppTargets = new unsigned char *[params.m_nMeshes];
 
-#if !defined( DX_TO_GL_ABSTRACTION )
 		CMeshBuilder meshBuilder;
 		MaterialLock_t hLock = materials->Lock();
-#endif
 		CMatRenderContextPtr pRenderContext( materials );
 	
 		for ( int i=0; i<params.m_nMeshes; i++ )
@@ -668,12 +652,11 @@ public:
 				// Allocate a standalone VB per color mesh
 				data->m_pMeshInfos[i].m_pMesh = pRenderContext->CreateStaticMesh( vertexFormat, TEXTURE_GROUP_STATIC_VERTEX_BUFFER_COLOR );
 
-#if !defined( DX_TO_GL_ABSTRACTION )
 				// build out the underlying vertex buffer
 				// lock now in same thread as draw, otherwise d3drip
 				meshBuilder.Begin( data->m_pMeshInfos[i].m_pMesh, MATERIAL_HETEROGENOUS,
 					params.m_nVertexes[i], 0 );
-				if ( IsPC() && meshBuilder.VertexSize() == 0 )	 // HACK: mesh creation can return null vertex buffer if alt-tabbed away
+				if ( meshBuilder.VertexSize() == 0 )	 // HACK: mesh creation can return null vertex buffer if alt-tabbed away
 				{
 					data->m_ppTargets[i] = NULL;
 					data->m_bHasInvalidVB = true;
@@ -687,7 +670,6 @@ public:
 					data->m_ppTargets[i] = ( meshBuilder.Specular() );
 				}
 				meshBuilder.End();
-#endif
 
 				if ( g_VBAllocTracker )
 					g_VBAllocTracker->TrackMeshAllocations( NULL );
@@ -697,15 +679,11 @@ public:
 			if ( !data->m_pMeshInfos[i].m_pMesh )
 			{
 				data->DestroyResource();
-#if !defined( DX_TO_GL_ABSTRACTION )
 				materials->Unlock( hLock );
-#endif
 				return NULL;
 			}
 		}
-#if !defined( DX_TO_GL_ABSTRACTION )
 		materials->Unlock( hLock );
-#endif
 		return data;
 	}
 
@@ -974,71 +952,6 @@ DEFINE_FIXEDSIZE_ALLOCATOR( CModelRender::ModelInstanceLightingState_t, 100, CUt
 
 #include "tier0/memdbgon.h"
 
-//-----------------------------------------------------------------------------
-// Resource loading for static prop lighting
-//-----------------------------------------------------------------------------
-class CResourcePreloadPropLighting : public CResourcePreload
-{
-	virtual bool CreateResource( const char *pName )
-	{
-		if ( !r_proplightingfromdisk.GetBool() )
-		{
-			// do nothing, not an error
-			return true;
-		}
-
-		char szBasename[MAX_PATH];
-		char szFilename[MAX_PATH];
-		V_FileBase( pName, szBasename, sizeof( szBasename ) );
-		V_snprintf( szFilename, sizeof( szFilename ), "%s%s.vhv", szBasename, GetPlatformExt() );
-
-		// static props have the same name across maps
-		// can check if loading the same map and early out if data present
-		if ( g_pQueuedLoader->IsSameMapLoading() && s_ModelRender.IsStaticPropColorDataCached( szFilename ) )
-		{
-			// same map is loading, all disk prop lighting was left in the cache
-			// otherwise the pre-purge operation below will do the cleanup
-			return true;
-		}
-
-		// create an anonymous job to get the lighting data in memory, claim during static prop instancing
-		LoaderJob_t loaderJob;
-		loaderJob.m_pFilename = szFilename;
-		loaderJob.m_pPathID = "GAME";
-		loaderJob.m_Priority = LOADERPRIORITY_DURINGPRELOAD;
-		g_pQueuedLoader->AddJob( &loaderJob );
-		return true;
-	}
-
-	//-----------------------------------------------------------------------------
-	// Pre purge operation before i/o commences
-	//-----------------------------------------------------------------------------
-	virtual void PurgeUnreferencedResources()
-	{
-		if ( g_pQueuedLoader->IsSameMapLoading() )
-		{
-			// do nothing, same map is loading, correct disk prop lighting will still be in data cache
-			return;
-		}
-
-		// Map is different, need to purge any existing disk prop lighting
-		// before anonymous i/o commences, otherwise 2x memory usage
-		s_ModelRender.PurgeCachedStaticPropColorData();
-	}
-
-	virtual void PurgeAll()
-	{
-		s_ModelRender.PurgeCachedStaticPropColorData();
-	}
-
-#if defined( _PS3 )
-	virtual bool RequiresRendererLock()
-	{
-		return true;
-	}
-#endif // _PS3
-};
-static CResourcePreloadPropLighting s_ResourcePreloadPropLighting;
 
 //-----------------------------------------------------------------------------
 // Init, shutdown studiorender
@@ -1079,14 +992,6 @@ bool CModelRender::Init()
 	DataCacheLimits_t limits( (unsigned)-1, (unsigned)-1, 0, 0 );
 	CCacheClientBaseClass::Init( g_pDataCache, "ColorMesh", limits );
 
-	if ( IsGameConsole() )
-	{
-		// due to static prop light pooling and expecting to NEVER LRU purge due to -1 max bytes limit
-		// not allowing console mem_force_flush to unexpectedly flush, which would otherwise destabilizes color meshes
-		GetCacheSection()->SetOptions( GetCacheSection()->GetOptions() | DC_NO_USER_FORCE_FLUSH );
-
-		g_pQueuedLoader->InstallLoader( RESOURCEPRELOAD_STATICPROPLIGHTING, &s_ResourcePreloadPropLighting );
-	}
 	return true;
 }
 
@@ -1745,12 +1650,6 @@ int CModelRender::GetLightingConditions( const Vector &vecLightingOrigin, Vector
 	{
 		pRenderable = m_ModelInstances[ handle ].m_pRenderable;
 
-		if ( IsX360() || IsPS3() )
-		{
-			COMPILE_TIME_ASSERT( ALIGN_VALUE( sizeof( ModelInstanceLightingState_t ), 128 ) == 256 || !( IsX360() || IsPS3() ) );
-			PREFETCH360( m_ModelInstances[handle].m_pLightingState, 0 );
-			PREFETCH360( m_ModelInstances[handle].m_pLightingState, 128 );
-		}
 	}
 
 	int nFlags = LIGHTCACHEFLAGS_STATIC | LIGHTCACHEFLAGS_DYNAMIC | LIGHTCACHEFLAGS_LIGHTSTYLE; 
@@ -2834,12 +2733,6 @@ bool CModelRender::DrawModelSetup( IMatRenderContext *pRenderContext, ModelRende
 
 	Assert ( pInfo.pRenderable );
 
-	if ( IsGameConsole() && ( pInfo.pModel->flags & MODELFLAG_VIEW_WEAPON_MODEL ) && !modelloader->IsViewWeaponModelResident( pInfo.pModel ) )
-	{
-		state.m_pStudioHWData = NULL;
-		return false;
-	}
-
 	state.m_pStudioHWData = g_pMDLCache->GetHardwareData( pInfo.pModel->studio );
 	if ( !state.m_pStudioHWData )
 		return false;
@@ -2919,12 +2812,6 @@ bool CModelRender::DrawModelSetup( IMatRenderContext *pRenderContext, ModelRende
 		state.m_drawFlags |= STUDIORENDER_SSAODEPTHTEXTURE;
 	}
 
-
-	if ( IsGameConsole() && ( pInfo.pModel->flags & MODELFLAG_VIEW_WEAPON_MODEL ) && modelloader->IsModelInWeaponCache( pInfo.pModel ) )
-	{
-		// queued rendering needs to know about these because their data can be evicted while they are queued
-		state.m_drawFlags |= STUDIORENDER_MODEL_IS_CACHEABLE;
-	}
 
 	return true;
 #endif
@@ -3958,18 +3845,6 @@ void CModelRender::ComputeModelVertexLightingOld( mstudiomodel_t *pModel,
 	// build the lighting descriptors
 	R_SetNonAmbientLightingState( pLightingState->numlights, pLightingState->locallight, &nNumLightDesc, lightDesc, false );
 
-	if ( IsGameConsole() )
-	{
-		// On console, we depend on VRAD to compute ALL prop lighting, so this model must have been
-		// changed since the BSP was last rebuilt - flag it visually by setting it to fullbright.
-		for ( int i = 0; i < pModel->numvertices; ++i )
-		{
-			pLighting[i].r = 255;
-			pLighting[i].g = 255;
-			pLighting[i].b = 255;
-		}
-		return;
-	}
 
 	const thinModelVertices_t		*thinVertData	= NULL;
 	const mstudio_modelvertexdata_t	*vertData		= pModel->GetVertexData();
@@ -3998,9 +3873,7 @@ void CModelRender::ComputeModelVertexLightingOld( mstudiomodel_t *pModel,
 			{
 				// hint the next vertex
 				// data is loaded with one extra vertex for read past
-#if !defined( _X360 ) // X360TBD
 				_mm_prefetch( (char*)&pFatVerts[i+1], _MM_HINT_T0 );
-#endif
 			}
 #endif
 
@@ -4052,8 +3925,6 @@ void CModelRender::ComputeModelVertexLighting( IHandleEntity *pProp,
 	matrix3x4_t& matrix, Vector4D *pTempMem, color24 *pLighting )
 {
 #ifndef DEDICATED
-	if ( IsGameConsole() )
-		return;
 
 	int i;
 	unsigned char *pInSolid = (unsigned char*)stackalloc( ((pModel->numvertices + 7) >> 3) * sizeof(unsigned char) );
@@ -4210,18 +4081,6 @@ void CModelRender::ValidateStaticPropColorData( ModelInstanceHandle_t handle )
 		Q_snprintf( fileName, sizeof( fileName ), "sp_hdr_%d%s.vhv", StaticPropMgr()->GetStaticPropIndex( pProp ), GetPlatformExt() );
 	}
 
-	if ( IsGameConsole()  )
-	{
-		DataCacheHandle_t hColorMesh = GetCachedStaticPropColorData( fileName );
-		if ( hColorMesh != DC_INVALID_HANDLE )
-		{
-			// already have it
-			pInstance->m_ColorMeshHandle = hColorMesh;
-			pInstance->m_nFlags &= ~MODEL_INSTANCE_DISKCOMPILED_COLOR_BAD;
-			pInstance->m_nFlags |= MODEL_INSTANCE_HAS_DISKCOMPILED_COLOR;
-			return;
-		}
-	}
 
 	if ( !g_pFileSystem->ReadFile( fileName, "GAME", utlBuf, sizeof( HardwareVerts::FileHeader_t ), 0 ) )
 	{
@@ -4300,29 +4159,6 @@ void CModelRender::StaticPropColorMeshCallback( void *pContext, const void *pDat
 		goto cleanUp;
 	}
 
-	if ( IsGameConsole() )
-	{
-		// only the 360 has compressed VHV data
-		CLZMA lzma;
-
-		// the compressed data is after the header
-		byte *pCompressedData = (byte *)pData + sizeof( HardwareVerts::FileHeader_t );
-		if ( lzma.IsCompressed( pCompressedData ) )
-		{
-			// create a buffer that matches the original
-			int actualSize = lzma.GetActualSize( pCompressedData );
-			pOriginalData = (byte *)malloc( sizeof( HardwareVerts::FileHeader_t ) + actualSize );
-
-			// place the header, then uncompress directly after it
-			V_memcpy( pOriginalData, pData, sizeof( HardwareVerts::FileHeader_t ) );
-			int outputLength = lzma.Uncompress( pCompressedData, pOriginalData + sizeof( HardwareVerts::FileHeader_t ) );
-			if ( outputLength != actualSize )
-			{
-				goto cleanUp;
-			}
-			pData = pOriginalData;
-		}
-	}
 
 	pVhvHdr = (HardwareVerts::FileHeader_t *)pData;
 
@@ -4349,82 +4185,6 @@ void CModelRender::StaticPropColorMeshCallback( void *pContext, const void *pDat
 			// meshes are out of sync, discard data
 			break;
 		}
-#if defined( DX_TO_GL_ABSTRACTION )
-		int nID = meshID-startMesh;
-
-		unsigned char *pIn = (unsigned char *) pVhvHdr->pVertexBase( meshID );
-		//			unsigned char *pOut = pStaticPropContext->m_pColorMeshData->m_ppTargets[ nID ];
-		unsigned char *pOut = NULL;
-
-		CMeshBuilder meshBuilder;
-		meshBuilder.Begin( pStaticPropContext->m_pColorMeshData->m_pMeshInfos[ nID ].m_pMesh, MATERIAL_HETEROGENOUS, numVertexes, 0 );
-		if ( numLightingComponents > 1 )
-		{
-			pOut = reinterpret_cast< unsigned char * >( const_cast< float * >( meshBuilder.Normal() ) );
-		}
-		else
-		{
-			pOut = meshBuilder.Specular();
-		}
-
-		// OPENGL_SWAP_COLORS
-		// If we are in text mode, we don't actually have backing for this memory so we can't write to it.
-		if ( !s_bTextMode )
-		{
-			for ( int i=0; i < (numVertexes * numLightingComponents ); i++ )
-			{
-				unsigned char red = *pIn++;
-				unsigned char green = *pIn++;
-				unsigned char blue = *pIn++;
-	
-				*pOut++ = blue;
-				*pOut++ = green;
-				*pOut++ = red;
-				*pOut++ = *pIn++; // Alpha goes straight across
-			}
-		}
-
-		pIn = (unsigned char *)pVhvHdr->pVertexBase( meshID );
-		if ( g_pMaterialSystemHardwareConfig->GetCSMAccurateBlending() )
-		{
-			for ( int i = 0; i < numVertexes; i++ )
-			{
-				int vertexSunAmount = 0;
-				for ( int j = 0; j < numLightingComponents; j++ )
-				{
-					vertexSunAmount += (unsigned int)(pIn[3]);
-					pIn += 4;
-				}
-				accSunAmount += vertexSunAmount / numLightingComponents;
-			}
-		}
-		else
-		{
-			for ( int i = 0; i < (numVertexes * numLightingComponents); i++ )
-			{
-				accSunAmount += 255 - (unsigned int)(pIn[3]);
-				pIn += 4;
-			}
-		}
-
-		meshBuilder.End();
-#elif defined( _PS3 )
-		// CELL_GCM_SWAP_COLORS
-		unsigned char *pIn = (unsigned char *) pVhvHdr->pVertexBase( meshID );
-		unsigned char *pOut = pStaticPropContext->m_pColorMeshData->m_ppTargets[meshID-startMesh];
-
-		for ( int i=0; i < (numVertexes * numLightingComponents ); i++ )
-		{
-			unsigned char red = *pIn++;
-			unsigned char green = *pIn++;
-			unsigned char blue = *pIn++;
-			unsigned char alpha = *pIn++;
-			*pOut++ = alpha;
-			*pOut++ = blue;
-			*pOut++ = green;
-			*pOut++ = red;
-		}
-#else
 		V_memcpy( (void*)pStaticPropContext->m_pColorMeshData->m_ppTargets[meshID-startMesh], pVhvHdr->pVertexBase( meshID ), numVertexes*4*numLightingComponents );
 	
 		unsigned char *pIn = (unsigned char *)pVhvHdr->pVertexBase( meshID );
@@ -4449,7 +4209,6 @@ void CModelRender::StaticPropColorMeshCallback( void *pContext, const void *pDat
 				pIn += 4;
 			}
 		}
-#endif
 	}
 	
 	// crude way to determine whether static prop makes any visual contribution to csm's
@@ -4463,13 +4222,6 @@ void CModelRender::StaticPropColorMeshCallback( void *pContext, const void *pDat
 	}
 
 cleanUp:
-	if ( IsGameConsole() )
-	{
-		AUTO_LOCK_FM( m_CachedStaticPropMutex );
-		// track the color mesh's datacache handle so that we can find it long after the model instance's are gone
-		// the static prop filenames are guaranteed uniquely decorated
-		m_CachedStaticPropColorData.Insert( pStaticPropContext->m_szFilename, pStaticPropContext->m_ColorMeshHandle );
-	}
 
 	// mark as completed in single atomic operation
 	pStaticPropContext->m_pColorMeshData->m_bColorMeshValid = true;
@@ -4494,18 +4246,6 @@ static void StaticPropColorMeshCallback( const FileAsyncRequest_t &request, int 
 	s_ModelRender.StaticPropColorMeshCallback( request.pContext, request.pData, numReadBytes, asyncStatus );
 }
 
-//-----------------------------------------------------------------------------
-// Queued loader callback
-// Called from async i/o thread - must spend minimal cycles in this context
-//-----------------------------------------------------------------------------
-static void QueuedLoaderCallback_PropLighting( void *pContext, void *pContext2, const void *pData, int nSize, LoaderError_t loaderError )
-{
-	// translate error
-	FSAsyncStatus_t asyncStatus = ( loaderError == LOADERERROR_NONE ? FSASYNC_OK : FSASYNC_ERR_READING );
-
-	// mimic async i/o completion
-	s_ModelRender.StaticPropColorMeshCallback( pContext, pData, nSize, asyncStatus );
-}
 
 //-----------------------------------------------------------------------------
 // Loads the serialized static prop color data.
@@ -4524,17 +4264,6 @@ bool CModelRender::LoadStaticPropColorData( IHandleEntity *pProp, DataCacheHandl
 	if ( !pColorMeshData )
 	{
 		return false;
-	}
-
-	if ( IsGameConsole() && pColorMeshData->m_bColorMeshValid )
-	{
-		// This prevents excessive pointless i/o of the same data.
-		// For the 360, the disk bits are invariant (HDR only), no reason to reload.
-		// The loading pattern causes these to hit multiple times, the first time is correct (color meshes are invalid)
-		// due to LevelInitClient(). The additional calls are due to RecomputeStaticLighting() due to lighting config
-		// chage/dirty that is tripped at conclusion of load. 
-		CacheUnlock( colorMeshHandle );
-		return true;
 	}
 
 	if ( pColorMeshData->m_hAsyncControl )
@@ -4571,23 +4300,6 @@ bool CModelRender::LoadStaticPropColorData( IHandleEntity *pProp, DataCacheHandl
 	pContext->m_StaticPropIndex = StaticPropMgr()->GetStaticPropIndex( pProp );
 	V_strncpy( pContext->m_szFilename, fileName, sizeof( pContext->m_szFilename ) );
 
-	if ( IsGameConsole() && g_pQueuedLoader->IsMapLoading() )
-	{
-		if ( !g_pQueuedLoader->ClaimAnonymousJob( fileName, QueuedLoaderCallback_PropLighting, (void *)pContext ) )
-		{
-			// not there as expected
-			// as a less optimal fallback during loading, issue as a standard queued loader job
-			LoaderJob_t loaderJob;
-			loaderJob.m_pFilename = fileName;
-			loaderJob.m_pPathID = "GAME";
-			loaderJob.m_pCallback = QueuedLoaderCallback_PropLighting;
-			loaderJob.m_pContext = (void *)pContext;
-			loaderJob.m_Priority = LOADERPRIORITY_BEFOREPLAY;
-			g_pQueuedLoader->AddJob( &loaderJob );
-		}
-		return true;
-	}
-
 	// Check if the device was created with the D3DCREATE_MULTITHREADED flags in which case
 	// the d3d device is thread safe. (cf CShaderDeviceDx8::InvokeCreateDevice() in shaderdevicedx8.cpp)
 	// The StaticPropColorMeshCallback() callback will create, lock/unlock vertex and index buffers and
@@ -4622,7 +4334,7 @@ bool CModelRender::LoadStaticPropColorData( IHandleEntity *pProp, DataCacheHandl
 	// Host_AllowQueuedMaterialSystem
 	// see: CL_FullyConnected g_pFullFileSystem->AsyncFinishAll
 	// AsyncFinishAll will not finish jobs with priority <0
-	fileRequest.priority = IsPS3() ? 0 : -1;
+	fileRequest.priority = -1;
 
 	fileRequest.pszPathID = "GAME";
 	
@@ -4652,7 +4364,7 @@ bool CModelRender::UpdateStaticPropColorData( IHandleEntity *pProp, ModelInstanc
 	}
 
 	// HACK: on PC, VB creation can fail due to device loss
-	if ( IsPC() && pColorMeshData->m_bHasInvalidVB )
+	if ( pColorMeshData->m_bHasInvalidVB )
 	{
 		// Don't retry until color data is flushed by device restore
 		pColorMeshData->m_bColorMeshValid = false;
@@ -4894,10 +4606,6 @@ void CModelRender::ReleaseAllStaticPropColorData( void )
 	{
 		DestroyStaticPropColorData( i );
 	}
-	if ( IsGameConsole() )
-	{
-		PurgeCachedStaticPropColorData();
-	}
 }
 
 
@@ -4966,19 +4674,8 @@ ModelInstanceHandle_t CModelRender::CreateInstance( IClientRenderable *pRenderab
 		// validate static color meshes once, now at load/create time
 		ValidateStaticPropColorData( handle );
 	
-		// 360 persists the color meshes across same map loads
-		if ( !IsGameConsole() || instance.m_ColorMeshHandle == DC_INVALID_HANDLE )
-		{
-			// builds out color meshes or loads disk colors, now at load/create time
-			RecomputeStaticLighting( handle );
-		}
-		else
-			if ( r_decalstaticprops.GetBool() && instance.m_LightCacheHandle )
-			{
-#ifndef DEDICATED
-				instance.m_pLightingState->m_AmbientLightingState = *(LightcacheGetStatic( *pCache, NULL, LIGHTCACHEFLAGS_STATIC ));
-#endif
-			}
+		// builds out color meshes or loads disk colors, now at load/create time
+		RecomputeStaticLighting( handle );
 	}
 	
 	return handle;
@@ -5075,8 +4772,7 @@ bool CModelRender::RecomputeStaticLighting( ModelInstanceHandle_t handle )
 void CModelRender::PurgeCachedStaticPropColorData( void )
 {
 	// valid for console only
-	Assert( IsGameConsole() );
-	if ( IsPC() )
+	Assert( false );
 	{
 		return;
 	}
@@ -5097,69 +4793,28 @@ void CModelRender::PurgeCachedStaticPropColorData( void )
 bool CModelRender::IsStaticPropColorDataCached( const char *pName )
 {
 	// valid for console only
-	Assert( IsGameConsole() );
-	if ( IsPC() )
-	{
-		return false;
-	}
-
-	DataCacheHandle_t hColorMesh = DC_INVALID_HANDLE;
-	{
-		AUTO_LOCK_FM( m_CachedStaticPropMutex );
-		int iIndex = m_CachedStaticPropColorData.Find( pName );
-		if ( m_CachedStaticPropColorData.IsValidIndex( iIndex ) )
-		{
-			hColorMesh = m_CachedStaticPropColorData[iIndex];
-		}
-	}
-
-	CColorMeshData *pColorMeshData = CacheGetNoTouch( hColorMesh );
-	if ( pColorMeshData )
-	{
-		// color mesh data is in cache
-		return true;
-	}
-
+	Assert( false );
 	return false;
 }
 
 DataCacheHandle_t CModelRender::GetCachedStaticPropColorData( const char *pName )
 {
 	// valid for console only
-	Assert( IsGameConsole() );
-	if ( IsPC() )
-	{
-		return DC_INVALID_HANDLE;
-	}
-
-	DataCacheHandle_t hColorMesh = DC_INVALID_HANDLE;
-	{
-		AUTO_LOCK_FM( m_CachedStaticPropMutex );
-		int iIndex = m_CachedStaticPropColorData.Find( pName );
-		if ( m_CachedStaticPropColorData.IsValidIndex( iIndex ) )
-		{
-			hColorMesh = m_CachedStaticPropColorData[iIndex];
-		}
-	}
-
-	return hColorMesh;
+	Assert( false );
+	return DC_INVALID_HANDLE;
 }
 
 void CModelRender::SetupColorMeshes( int nTotalVerts )
 {
 	// valid for console only
-	Assert( IsGameConsole() );
-	if ( IsPC() )
+	Assert( false );
 	{
 		return;
 	}
 
-	if ( !g_pQueuedLoader->IsMapLoading() )
-	{
-		// oops, the queued loader didn't run which does the pre-purge cleanup
-		// do the cleanup now
-		PurgeCachedStaticPropColorData();
-	}
+	// oops, the queued loader didn't run which does the pre-purge cleanup
+	// do the cleanup now
+	PurgeCachedStaticPropColorData();
 
 	// Set up the appropriate default value for color mesh pooling
 	if ( r_proplightingpooling.GetInt() == -1 )
@@ -5203,9 +4858,7 @@ void CModelRender::DestroyInstance( ModelInstanceHandle_t handle )
 	// can only persist props with disk based lighting
 	// check for dvd mode as a reasonable assurance that the queued loader will be responsible for a possible purge
 	// if the queued loader doesn't run, the purge will get caught later than intended
-	bool bPersistLighting = IsGameConsole() && 
-		( m_ModelInstances[handle].m_nFlags & MODEL_INSTANCE_HAS_DISKCOMPILED_COLOR ) && 
-		( g_pFullFileSystem->GetDVDMode() != DVDMODE_OFF );
+	bool bPersistLighting = false;
 	if ( !bPersistLighting )
 	{
 		DestroyStaticPropColorData( handle );

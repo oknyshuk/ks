@@ -15,7 +15,7 @@
 //=============================================================================
 
 #include <limits.h>
-#if defined( _WIN32 ) && !defined( _X360 )
+#if defined( _WIN32 )
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #endif
@@ -26,7 +26,6 @@
 #include "tier0/icommandline.h"
 #include "vstdlib/random.h"
 #include "basefilesystem.h"
-#include "filesystem/IQueuedLoader.h"
 
 // VCR mode for now is handled by not running async.  This is primarily for
 // performance reasons. VCR mode would preclude the use of a lock-free job
@@ -98,7 +97,7 @@ static bool AsyncAllowHeldFiles( void )
 FORCEINLINE static void SimulateDelay( void )
 {
 #ifndef DISABLE_ASYNC
-	if ( async_simulate_delay.GetInt() == 0 || ThreadInMainThread() || g_pQueuedLoader->IsMapLoading() )
+	if ( async_simulate_delay.GetInt() == 0 || ThreadInMainThread() )
 	{
 	}
 	else 
@@ -670,35 +669,6 @@ void CBaseFileSystem::InitAsync()
 	Assert( !m_pThreadPool );
 	if ( m_pThreadPool )
 		return;
-#ifndef OSX
-	if ( IsX360() && Plat_IsInDebugSession() )
-	{
-		class CBreakThread : public CThread
-		{
-			virtual int Run()
-			{
-				for (;;)
-				{
-					Sleep(1000);
-					static int wakeCount;
-					wakeCount++;
-					volatile static int bForceResume = false;
-					if ( bForceResume )
-					{
-						bForceResume = false;
-						BaseFileSystem()->AsyncResume();
-					}
-				}
-
-				return 0;
-			}
-		};
-
-		static CBreakThread breakThread;
-		breakThread.SetName( "DebugBreakThread" );
-		breakThread.Start( 1024 );
-	}
-#endif
 
 	if ( CommandLine()->FindParm( "-noasync" ) )
 	{
@@ -706,7 +676,7 @@ void CBaseFileSystem::InitAsync()
 		return;
 	}
 
-	bool b360EmulatePS3 = ( IsX360() && CommandLine()->FindParm( "-ps3" ) );
+	bool b360EmulatePS3 = false;
 
 	// create the i/o thread pool
 	m_pThreadPool = CreateNewThreadPool();
@@ -715,22 +685,10 @@ void CBaseFileSystem::InitAsync()
 	params.iThreadPriority = 0;
 	params.bIOThreads = true;
 
-	if ( !IsX360() && !IsPS3() )
-	{
-		params.nThreads = MIN( GetCPUInformation().m_nLogicalProcessors, 3 ); // > 3 threads doing IO on one drive, are you crazy?
-		params.nStackSize = 256 * 1024;
-	}
+	params.nThreads = MIN( GetCPUInformation().m_nLogicalProcessors, 3 ); // > 3 threads doing IO on one drive, are you crazy?
+	params.nStackSize = 256 * 1024;
 
-	if ( IsX360() && !b360EmulatePS3 )
-	{
-		// override defaults
-		// 360 has a single i/o thread on the farthest proc
-		params.nThreads = 1;
-		params.fDistribute = TRS_TRUE;
-		params.bUseAffinityTable = true;
-		params.iAffinityTable[0] = XBOX_PROCESSOR_3;
-	}
-	if ( IsPS3() || b360EmulatePS3 )
+	if ( b360EmulatePS3 )
 	{
 		// override defaults
 		// PS3 has a single i/o thread
@@ -994,7 +952,7 @@ bool CBaseFileSystem::AsyncResume()
 //-----------------------------------------------------------------------------
 FSAsyncStatus_t CBaseFileSystem::AsyncBeginRead( const char *pszFile, FSAsyncFile_t *phFile )
 {
-#if !defined( _PS3) && !defined(FILESYSTEM_STEAM) && !defined(DEDICATED)
+#if !defined(FILESYSTEM_STEAM) && !defined(DEDICATED)
 	if ( AsyncAllowHeldFiles() )
 	{
 		*phFile = g_AsyncOpenedFiles.FindOrAdd( pszFile );
@@ -1011,7 +969,7 @@ FSAsyncStatus_t CBaseFileSystem::AsyncBeginRead( const char *pszFile, FSAsyncFil
 //-----------------------------------------------------------------------------
 FSAsyncStatus_t CBaseFileSystem::AsyncEndRead( FSAsyncFile_t hFile )
 {
-#if !defined( _PS3) && !defined(FILESYSTEM_STEAM) && !defined(DEDICATED)
+#if !defined(FILESYSTEM_STEAM) && !defined(DEDICATED)
 	if ( hFile != FS_INVALID_ASYNC_FILE )
 		g_AsyncOpenedFiles.Release( hFile );
 #endif
@@ -1361,7 +1319,7 @@ FSAsyncStatus_t CBaseFileSystem::SyncGetFileSize( const FileAsyncRequest_t &requ
 //-----------------------------------------------------------------------------
 FSAsyncStatus_t CBaseFileSystem::SyncWrite(const char *pszFilename, const void *pSrc, int nSrcBytes, bool bFreeMemory, bool bAppend )
 {
-	FileHandle_t hFile = OpenEx( pszFilename, ( bAppend ) ? "ab+" : "wb", IsX360() ? FSOPEN_NEVERINPACK : 0, NULL );
+	FileHandle_t hFile = OpenEx( pszFilename, ( bAppend ) ? "ab+" : "wb", 0, NULL );
 	if ( hFile )
 	{
 		SetBufferSize( hFile, 0 );
@@ -1389,12 +1347,12 @@ FSAsyncStatus_t CBaseFileSystem::SyncWrite(const char *pszFilename, const void *
 //-----------------------------------------------------------------------------
 FSAsyncStatus_t CBaseFileSystem::SyncAppendFile(const char *pAppendToFileName, const char *pAppendFromFileName )
 {
-	FileHandle_t hDestFile = OpenEx( pAppendToFileName, "ab+", IsX360() ? FSOPEN_NEVERINPACK : 0, NULL );
+	FileHandle_t hDestFile = OpenEx( pAppendToFileName, "ab+", 0, NULL );
 	FSAsyncStatus_t result = FSASYNC_ERR_FAILURE;
 	if ( hDestFile )
 	{
 		SetBufferSize( hDestFile, 0 );
-		FileHandle_t hSourceFile = OpenEx( pAppendFromFileName, "rb", IsX360() ? FSOPEN_NEVERINPACK : 0, NULL );
+		FileHandle_t hSourceFile = OpenEx( pAppendFromFileName, "rb", 0, NULL );
 		if ( hSourceFile )
 		{
 			SetBufferSize( hSourceFile, 0 );
@@ -1469,12 +1427,8 @@ void CBaseFileSystem::DoAsyncCallback( const FileAsyncRequest_t &request, void *
 	if ( pDataToFree  )
 	{
 		Assert( !request.pfnAlloc );
-#if defined( OSX ) || defined( _PS3 ) || defined( LINUX )
 		// The ugly delete[] (void*) method generates a compile warning on osx, as it should.
 		free( pDataToFree );
-#else
-		delete [] pDataToFree;
-#endif
 	}
 }
 

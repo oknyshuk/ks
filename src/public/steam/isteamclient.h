@@ -73,9 +73,7 @@ typedef int32 HSteamPipe;
 // handle to single instance of a steam user
 typedef int32 HSteamUser;
 // function prototype
-#if defined( POSIX )
 #define __cdecl
-#endif
 extern "C" typedef void (__cdecl *SteamAPIWarningMessageHook_t)(int, const char *);
 extern "C" typedef uint32 ( *SteamAPI_CheckCallbackRegistered_t )( int iCallbackNum );
 #if defined( __SNC__ )

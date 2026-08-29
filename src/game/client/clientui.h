@@ -13,10 +13,6 @@
 #include "interface.h"
 
 
-namespace vgui
-{
-	class Panel;
-}
 
 struct vrect_t;
 

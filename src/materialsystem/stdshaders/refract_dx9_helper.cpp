@@ -132,7 +132,7 @@ void DrawRefract_DX9( CBaseVSShader *pShader, IMaterialVar** params, IShaderDyna
 	bool bSecondaryNormal = ( ( info.m_nNormalMap2 != -1 ) && ( params[info.m_nNormalMap2]->IsTexture() ) );
 	bool bColorModulate = ( ( info.m_nVertexColorModulate != -1 ) && ( params[info.m_nVertexColorModulate]->GetIntValue() ) );
 	bool bWriteZ = params[info.m_nNoWriteZ]->GetIntValue() == 0;
-	bool bMirrorAboutViewportEdges = IsX360() && ( info.m_nMirrorAboutViewportEdges != -1 ) && ( params[info.m_nMirrorAboutViewportEdges]->GetIntValue() != 0 );
+	bool bMirrorAboutViewportEdges = false && ( info.m_nMirrorAboutViewportEdges != -1 ) && ( params[info.m_nMirrorAboutViewportEdges]->GetIntValue() != 0 );
 	bool bUseMagnification = params[info.m_nMagnifyEnable]->GetIntValue() != 0;
 	
 	if( blurAmount < 0 )
@@ -169,7 +169,7 @@ void DrawRefract_DX9( CBaseVSShader *pShader, IMaterialVar** params, IShaderDyna
 
 		// source render target that contains the image that we are warping.
 		pShaderShadow->EnableTexture( SHADER_SAMPLER2, true );
-		pShaderShadow->EnableSRGBRead( SHADER_SAMPLER2, !IsX360() );
+		pShaderShadow->EnableSRGBRead( SHADER_SAMPLER2, !false );
 
 		// normal map
 		pShaderShadow->EnableTexture( SHADER_SAMPLER3, true );
@@ -226,7 +226,7 @@ void DrawRefract_DX9( CBaseVSShader *pShader, IMaterialVar** params, IShaderDyna
 		SET_STATIC_VERTEX_SHADER( refract_vs20 );
 
 		// We have to do this in the shader on R500 or Leopard
-		bool bShaderSRGBConvert = IsOSX() && ( g_pHardwareConfig->FakeSRGBWrite() || !g_pHardwareConfig->CanDoSRGBReadFromRTs() );
+		bool bShaderSRGBConvert = false && ( g_pHardwareConfig->FakeSRGBWrite() || !g_pHardwareConfig->CanDoSRGBReadFromRTs() );
 
 		if ( g_pHardwareConfig->SupportsPixelShaders_2_b() || g_pHardwareConfig->ShouldAlwaysUseShaderModel2bShaders() ) // always send OpenGL down the ps2b path
 		{
@@ -273,7 +273,7 @@ void DrawRefract_DX9( CBaseVSShader *pShader, IMaterialVar** params, IShaderDyna
 
 		if ( params[info.m_nBaseTexture]->IsTexture() )
 		{
-			pShader->BindTexture( SHADER_SAMPLER2, IsX360() ? TEXTURE_BINDFLAGS_NONE : TEXTURE_BINDFLAGS_SRGBREAD, info.m_nBaseTexture, info.m_nFrame );
+			pShader->BindTexture( SHADER_SAMPLER2, false ? TEXTURE_BINDFLAGS_NONE : TEXTURE_BINDFLAGS_SRGBREAD, info.m_nBaseTexture, info.m_nFrame );
 
 			// Set refract texture dimensions
 			ITexture *pTarget = params[info.m_nBaseTexture]->GetTextureValue();
@@ -284,7 +284,7 @@ void DrawRefract_DX9( CBaseVSShader *pShader, IMaterialVar** params, IShaderDyna
 		}
 		else
 		{
-			pShaderAPI->BindStandardTexture( SHADER_SAMPLER2, IsX360() ? TEXTURE_BINDFLAGS_NONE : TEXTURE_BINDFLAGS_SRGBREAD, TEXTURE_FRAME_BUFFER_FULL_TEXTURE_0 );
+			pShaderAPI->BindStandardTexture( SHADER_SAMPLER2, false ? TEXTURE_BINDFLAGS_NONE : TEXTURE_BINDFLAGS_SRGBREAD, TEXTURE_FRAME_BUFFER_FULL_TEXTURE_0 );
 
 			// Set refract texture dimensions
 			int nWidth = 0;

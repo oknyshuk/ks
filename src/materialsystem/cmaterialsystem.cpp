@@ -22,7 +22,6 @@
 #include "vstdlib/jobthread.h"
 #include "cmatnullrendercontext.h"
 #include "datacache/iresourceaccesscontrol.h"
-#include "filesystem/IQueuedLoader.h"
 #include "cdll_int.h"
 #include "shaderapidx9/imeshdx8.h"
 #include "tier0/perfstats.h"
@@ -41,15 +40,11 @@ ConVar mat_force_vertexfog( "mat_force_vertexfog", "0", FCVAR_DEVELOPMENTONLY );
 static ConVar mat_forcemanagedtextureintohardware( "mat_forcemanagedtextureintohardware", "1", FCVAR_CHEAT | FCVAR_DEVELOPMENTONLY );
 ConVar mat_supportflashlight( "mat_supportflashlight", "-1", FCVAR_CHEAT | FCVAR_DEVELOPMENTONLY, "0 - do not support flashlight (don't load flashlight shader combos), 1 - flashlight is supported" );
 // Default this to zero for the press playtest!
-static ConVar mat_forcehardwaresync( "mat_forcehardwaresync", /* IsPC() ? "1" : */ "0" );
+static ConVar mat_forcehardwaresync( "mat_forcehardwaresync", /* true ? "1" : */ "0" );
 
 // Make sure this convar gets created before videocfg.lib is initialized, so it can be driven by dxsupport.cfg
 static ConVar mat_tonemapping_occlusion_use_stencil( "mat_tonemapping_occlusion_use_stencil", "0", FCVAR_DEVELOPMENTONLY );
-#if defined( DX_TO_GL_ABSTRACTION )
-    static ConVar mat_dxlevel( "mat_dxlevel", "100", FCVAR_DEVELOPMENTONLY, "", true, 90, true, 100, NULL );
-#else
 static ConVar mat_dxlevel( "mat_dxlevel", "0", FCVAR_DEVELOPMENTONLY );
-#endif
 
 ConVar mat_queue_mode( "mat_queue_mode", "-1", FCVAR_RELEASE, "The queue/thread mode the material system should use: -1=default, 0=synchronous single thread, 1=queued single thread, 2=queued multithreaded" );
 
@@ -58,14 +53,9 @@ ConVar mat_queue_mode_force_allow( "mat_queue_mode_force_allow", "0", FCVAR_DEVE
 ConVar mat_queue_priority("mat_queue_priority", "1", FCVAR_RELEASE);
 
 // FIXME: Would like to remove these, but what the hey.
-#if defined( DX_TO_GL_ABSTRACTION )
-static ConVar cpu_level( "cpu_level", "3", 0, "CPU Level - Default: High" );
-static ConVar gpu_mem_level( "gpu_mem_level", "3", 0, "Memory Level - Default: High" );
-#else
 static ConVar cpu_level( "cpu_level", "2", 0, "CPU Level - Default: High" );
 static ConVar mem_level( "mem_level", "2", 0, "Memory Level - Default: High" );
 static ConVar gpu_mem_level( "gpu_mem_level", "2", 0, "Memory Level - Default: High" );
-#endif
 
 static ConVar mat_picmip( "mat_picmip", "0", FCVAR_NONE, "", true, -10, true, 4 );
 
@@ -89,11 +79,6 @@ CTHREADLOCALPTR(IMatRenderContextInternal) CMaterialSystem::m_pRenderContext;
 
 //#define PERF_TESTING 1
 
-#ifdef DX_TO_GL_ABSTRACTION
-// Uncomment if you want the material queued system to run on its own thread pool
-// Otherwise it will use the global thread pool
-#define MAT_QUEUED_OWN_THREADPOOL
-#endif
 
 //-----------------------------------------------------------------------------
 // Implementational structures
@@ -178,9 +163,6 @@ void *ShaderFactory( const char *pName, int *pReturnCode )
 	if ( !Q_stricmp( pName, FILESYSTEM_INTERFACE_VERSION ))
 		return g_pFullFileSystem;
 
-	if ( !Q_stricmp( pName, QUEUEDLOADER_INTERFACE_VERSION ))
-		return g_pQueuedLoader;
-
 	if ( !Q_stricmp( pName, SHADER_UTIL_INTERFACE_VERSION ))
 		return g_pShaderUtil;
 
@@ -189,10 +171,6 @@ void *ShaderFactory( const char *pName, int *pReturnCode )
 		return g_pLauncherMgr;
 #endif
 
-#if PLATFORM_OSX
-	if ( !Q_stricmp( pName, "CocoaMgrInterface006" /*COCOAMGR_INTERFACE_VERSION*/ ))
-		return g_pLauncherMgr;
-#endif
 
 	void * pInterface = g_MaterialSystem.QueryInterface( pName );
 	if ( pInterface )
@@ -205,194 +183,7 @@ void *ShaderFactory( const char *pName, int *pReturnCode )
 	return NULL;	
 }
 
-//-----------------------------------------------------------------------------
-// Resource preloading for materials.
-//-----------------------------------------------------------------------------
-class CResourcePreloadMaterial : public CResourcePreload
-{
-	virtual bool CreateResource( const char *pName )
-	{
-		IMaterial *pMaterial = g_MaterialSystem.FindMaterial( pName, TEXTURE_GROUP_WORLD, false );
-		IMaterialInternal *pMatInternal = static_cast< IMaterialInternal * >( pMaterial );
-		if ( pMatInternal )
-		{
-			// always work with the realtime material internally
-			pMatInternal = pMatInternal->GetRealTimeVersion();
 
-			// tag these for later identification (prevents an unwanted purge)
-			pMatInternal->MarkAsPreloaded( true );
-			if ( !pMatInternal->IsErrorMaterial() )
-			{
-				// force material's textures to create now
-				pMatInternal->Precache();
-				return true;
-			}
-			else
-			{
-				if ( IsPosix() )
-				{
-					printf("\n ##### CResourcePreloadMaterial::CreateResource can't find material %s\n", pName);
-				}
-			}
-		}
-
-		return false;
-	}
-
-	//-----------------------------------------------------------------------------
-	// Called before queued loader i/o jobs are actually performed. Must free up memory
-	// to ensure i/o requests have enough memory to succeed.  The materials that were
-	// touched by the CreateResource() are inhibited from purging (as is their textures,
-	// by virtue of ref counts), all others are candidates.  The preloaded materials
-	// are by definition zero ref'd until owned by the normal loading process. Any material
-	// that stays zero ref'd is a candidate for the post load purge.
-	//-----------------------------------------------------------------------------
-	virtual void PurgeUnreferencedResources()
-	{
-		bool bSpew = ( g_pQueuedLoader->GetSpewDetail() & LOADER_DETAIL_PURGES ) != 0;
-
-		bool bDidUncacheMaterial = false;
-		MaterialHandle_t hNext;
-		for ( MaterialHandle_t hMaterial = g_MaterialSystem.FirstMaterial(); hMaterial != g_MaterialSystem.InvalidMaterial(); hMaterial = hNext )
-		{
-			hNext = g_MaterialSystem.NextMaterial( hMaterial );
-
-			IMaterialInternal *pMatInternal = g_MaterialSystem.GetMaterialInternal( hMaterial );
-			Assert( pMatInternal->GetReferenceCount() >= 0 );
-
-			// preloaded materials are safe from this pre-purge
-			if ( !pMatInternal->IsPreloaded() )
-			{
-				// undo any possible artifical ref count
-				pMatInternal->ArtificialRelease();
-				if ( pMatInternal->GetReferenceCount() <= 0 )
-				{
-					if ( bSpew )
-					{
-						Msg( "CResourcePreloadMaterial: Purging: %s (%d)\n", pMatInternal->GetName(), pMatInternal->GetReferenceCount() );
-					}
-					bDidUncacheMaterial = true;
-					pMatInternal->Uncache();
-					pMatInternal->DeleteIfUnreferenced();
-				}
-			}
-			else
-			{
-				// clear the bit
-				pMatInternal->MarkAsPreloaded( false );
-			}
-		}
-
-		// purged materials unreference their textures
-		// purge any zero ref'd textures
-		TextureManager()->RemoveUnusedTextures();
-
-		// fixup any excluded textures, may cause some new batch requests
-		MaterialSystem()->UpdateExcludedTextures();
-	}
-
-	virtual void PurgeAll()
-	{
-		bool bSpew = ( g_pQueuedLoader->GetSpewDetail() & LOADER_DETAIL_PURGES ) != 0;
-
-		bool bDidUncacheMaterial = false;
-		MaterialHandle_t hNext;
-		for ( MaterialHandle_t hMaterial = g_MaterialSystem.FirstMaterial(); hMaterial != g_MaterialSystem.InvalidMaterial(); hMaterial = hNext )
-		{
-			hNext = g_MaterialSystem.NextMaterial( hMaterial );
-
-			IMaterialInternal *pMatInternal = g_MaterialSystem.GetMaterialInternal( hMaterial );
-			Assert( pMatInternal->GetReferenceCount() >= 0 );
-
-			pMatInternal->MarkAsPreloaded( false );
-			// undo any possible artifical ref count
-			pMatInternal->ArtificialRelease();
-			if ( pMatInternal->GetReferenceCount() <= 0 )
-			{
-				if ( bSpew )
-				{
-					Msg( "CResourcePreloadMaterial: Purging: %s (%d)\n", pMatInternal->GetName(), pMatInternal->GetReferenceCount() );
-				}
-				bDidUncacheMaterial = true;
-				pMatInternal->Uncache();
-				pMatInternal->DeleteIfUnreferenced();
-			}
-		}
-
-		// purged materials unreference their textures
-		// purge any zero ref'd textures
-		TextureManager()->RemoveUnusedTextures();
-	}
-
-	void OnEndMapLoading( bool bAbort )
-	{
-		CMaterialDict *pDict = g_MaterialSystem.GetMaterialDict();
-		for (MaterialHandle_t i = pDict->FirstMaterial(); i != pDict->InvalidMaterial(); i = pDict->NextMaterial(i) )
-		{
-			pDict->GetMaterialInternal(i)->CompactMaterialVars();
-		}
-
-		CompactMaterialVarHeap();
-	}
-
-};
-
-static CResourcePreloadMaterial s_ResourcePreloadMaterial;
-
-//-----------------------------------------------------------------------------
-// Resource preloading for cubemaps.
-//-----------------------------------------------------------------------------
-class CResourcePreloadCubemap : public CResourcePreload
-{
-	virtual bool CreateResource( const char *pName )
-	{
-		ITexture *pTexture = g_MaterialSystem.FindTexture( pName, TEXTURE_GROUP_CUBE_MAP, true );
-		ITextureInternal *pTexInternal = static_cast< ITextureInternal * >( pTexture );
-		if ( pTexInternal )
-		{
-			// There can be cubemaps that are unbound by materials. To prevent an unwanted purge,
-			// mark and increase the ref count. Otherwise the pre-purge discards these zero
-			// ref'd textures, and then the normal loading process hitches on the miss.
-			// The zombie cubemaps DO get discarded after the normal loading process completes
-			// if no material references them.
-			pTexInternal->MarkAsPreloaded( true );
-			pTexInternal->IncrementReferenceCount();
-			if ( !IsErrorTexture( pTexInternal ) )
-			{
-				return true;
-			}
-		}
-		return false;
-	}
-
-	//-----------------------------------------------------------------------------
-	// All valid cubemaps should have been owned by their materials.  Undo the preloaded
-	// cubemap locks. Any zero ref'd cubemaps will be purged by the normal loading path conclusion.
-	//-----------------------------------------------------------------------------
-	virtual void OnEndMapLoading( bool bAbort )
-	{
-		int iIndex = -1;
-		for ( ;; )
-		{
-			ITextureInternal *pTexInternal;
-			iIndex = TextureManager()->FindNext( iIndex, &pTexInternal );
-			if ( iIndex == -1 || !pTexInternal )
-			{
-				// end of list
-				break;
-			}
-
-			if ( pTexInternal->IsPreloaded() )
-			{
-				// undo the artificial increase
-				pTexInternal->MarkAsPreloaded( false );
-				pTexInternal->DecrementReferenceCount();
-			}
-		}	
-	}
-
-};
-static CResourcePreloadCubemap s_ResourcePreloadCubemap;
 
 //-----------------------------------------------------------------------------
 // Creates the debugging materials
@@ -466,28 +257,8 @@ void CMaterialSystem::CreateDebugMaterials()
 		pVMTKeyValues->SetInt( "$vertexcolor", 1 );
 		m_pBufferClearObeyStencil[BUFFER_CLEAR_COLOR_AND_ALPHA_AND_DEPTH] = static_cast<IMaterialInternal*>(CreateMaterial( "___buffer_clear_obey_stencil7.vmt", pVMTKeyValues ))->GetRealTimeVersion();
 
-		if ( IsX360() )
-		{
-			pVMTKeyValues = new KeyValues( "RenderTargetBlit_X360" );
-			m_pRenderTargetBlitMaterial = static_cast<IMaterialInternal*>(CreateMaterial( "___renderTargetBlit.vmt", pVMTKeyValues ))->GetRealTimeVersion();
-		}
 
 		// PORTAL2 - hack to make sure BINK shaders are always precached to avoid hitches at runtime
-		if ( IsGameConsole() )
-		{
-			pVMTKeyValues = new KeyValues( "Bik" );
-
-			pVMTKeyValues->SetInt( "$nofog", 1 );
-			pVMTKeyValues->SetInt( "$spriteorientation", 3 );
-			pVMTKeyValues->SetInt( "$translucent", 1 );
-			pVMTKeyValues->SetInt( "$vertexcolor", 1 );
-			pVMTKeyValues->SetInt( "$vertexalpha", 1 );
-			pVMTKeyValues->SetInt( "$nolod", 1 );
-			pVMTKeyValues->SetInt( "$nomip", 1 );
-			pVMTKeyValues->SetInt( "$nobasetexture", 1 );
-
-			m_pBIKPreloadMaterial = static_cast<IMaterialInternal*>(CreateMaterial( "___binkprecache.vmt", pVMTKeyValues ))->GetRealTimeVersion();
-		}
 
 		ShaderSystem()->CreateDebugMaterials();
 	}
@@ -514,20 +285,8 @@ void CMaterialSystem::CleanUpDebugMaterials()
 			m_pBufferClearObeyStencil[i] = NULL;
 		}
 
-		if ( IsX360() )
-		{
-			m_pRenderTargetBlitMaterial->DecrementReferenceCount();
-			RemoveMaterial( m_pRenderTargetBlitMaterial );
-			m_pRenderTargetBlitMaterial = NULL;
-		}
 
 		// PORTAL2 - clean up preloaded bink shader
-		if ( IsGameConsole() )
-		{
-			m_pBIKPreloadMaterial->DecrementReferenceCount();
-			RemoveMaterial( m_pBIKPreloadMaterial );
-			m_pBIKPreloadMaterial = NULL;
-		}
 
 		ShaderSystem()->CleanUpDebugMaterials();
 	}
@@ -561,9 +320,6 @@ CMaterialSystem::CMaterialSystem()
 	m_bInFrame = false;
 	m_bThreadHasOwnership = false;
 
-#ifdef DX_TO_GL_ABSTRACTION
-	m_ThreadOwnershipID = 0;
-#endif
 
 	m_pShaderDLL = NULL;
 	m_FullbrightLightmapTextureHandle = INVALID_SHADERAPI_TEXTURE_HANDLE;
@@ -664,9 +420,6 @@ void CMaterialSystem::DestroyShaderAPI()
 //-----------------------------------------------------------------------------
 void CMaterialSystem::SetShaderAPI( char const *pShaderAPIDLL )
 {
-#if defined( _OSX )
-	return;
-#endif
 
 	if ( m_ShaderAPIFactory )
 	{
@@ -712,36 +465,18 @@ bool CMaterialSystem::Connect( CreateInterfaceFn factory )
 	
 	// Get at the interfaces exported by the shader DLL
 
-#ifndef _OSX
 	g_pShaderDeviceMgr = (IShaderDeviceMgr*)m_ShaderAPIFactory( SHADER_DEVICE_MGR_INTERFACE_VERSION, 0 );
 	if ( !g_pShaderDeviceMgr )
 		return false;
 	g_pHWConfig = (IHardwareConfigInternal*)m_ShaderAPIFactory( MATERIALSYSTEM_HARDWARECONFIG_INTERFACE_VERSION, 0 );
 	if ( !g_pHWConfig )
 		return false;
-#endif
 
 #ifndef DEDICATED
 
 #if defined( USE_SDL )
-#if !defined( LINUX )
-	g_pHWConfig = g_pHardwareConfig;
-#endif
 
 	g_pLauncherMgr = (ILauncherMgr *)factory( "SDLMgrInterface001", NULL );
-
-#elif defined( _OSX )
-	g_pHWConfig = g_pHardwareConfig;
-
-	// write a link to the Cocoa manager into the config record so the shader subsystem can get to it.
-	// alas we can't include icocoamgr.h due to a header conflict in the SDK, so the interface name here is hardwired for now
-	// /System/Library/Frameworks/CoreServices.framework/Frameworks/CarbonCore.framework/Headers/Threads.h:520:
-	// error: declaration of C function ‘OSErr CreateThreadPool(ThreadStyle, SInt16, Size)’
-#define  COCOAMGR_INTERFACE_VERSION "CocoaMgrInterface006"
-
-	g_pLauncherMgr = (ILauncherMgr *)factory( COCOAMGR_INTERFACE_VERSION, NULL );		
-	if ( !g_pLauncherMgr )
-		return false;
 
 #elif defined(_WIN32)
 
@@ -753,7 +488,6 @@ bool CMaterialSystem::Connect( CreateInterfaceFn factory )
 
 #endif // !DEDICATED
 
-#ifndef _OSX
 	// FIXME: ShaderAPI, ShaderDevice, and ShaderShadow should only come in after setting mode
 	g_pShaderAPI = (IShaderAPI*)m_ShaderAPIFactory( SHADERAPI_INTERFACE_VERSION, 0 );
 	if ( !g_pShaderAPI )
@@ -764,7 +498,6 @@ bool CMaterialSystem::Connect( CreateInterfaceFn factory )
 	g_pShaderShadow = (IShaderShadow*)m_ShaderAPIFactory( SHADERSHADOW_INTERFACE_VERSION, 0 );
 	if ( !g_pShaderShadow )
 		return false;
-#endif
 
 	// Remember the factory for connect
 	g_fnMatSystemConnectCreateInterface = factory;
@@ -785,12 +518,10 @@ void CMaterialSystem::Disconnect()
 		// Unload the DLL
 		DestroyShaderAPI();
 	}
-#if !defined( _OSX )
 	g_pShaderAPI = NULL;
 	g_pHWConfig = NULL;
 	g_pShaderShadow = NULL;
 	g_pShaderDevice = NULL;
-#endif
 
 	BaseClass::Disconnect();
 }
@@ -894,7 +625,7 @@ InitReturnVal_t CMaterialSystem::Init()
 	// Shader system!
 	ShaderSystem()->Init();
 
-#if defined( WIN32 ) && !defined( _X360 )
+#if defined( WIN32 )
 	// HACKHACK: <sigh> This horrible hack is possibly the only way to reliably detect an old
 	// version of hammer initializing the material system. We need to know this so that we set
 	// up the editor materials properly. If we don't do this, we never allocate the white lightmap,
@@ -943,11 +674,6 @@ InitReturnVal_t CMaterialSystem::Init()
 	// Set up debug materials...
 	CreateDebugMaterials();	
 
-	if ( IsGameConsole() )
-	{
-		g_pQueuedLoader->InstallLoader( RESOURCEPRELOAD_MATERIAL, &s_ResourcePreloadMaterial );
-		g_pQueuedLoader->InstallLoader( RESOURCEPRELOAD_CUBEMAP, &s_ResourcePreloadCubemap );
-	}
 
 	// Set up a default material system config
 //	GenerateConfigFromConfigKeyValues( &g_config, false );
@@ -1449,27 +1175,18 @@ bool CMaterialSystem::SetMode( void* hwnd, const MaterialSystem_Config_t &config
 	// will be reloaded via the reaquireresources call. Same goes for procedural materials
 	if ( !bPreviouslyUsingGraphics )
 	{
-		if ( IsPC() )
+		TextureManager()->RestoreRenderTargets();
+		TextureManager()->RestoreNonRenderTargetTextures();
+		if ( MaterialSystem()->CanUseEditorMaterials() )
 		{
-			TextureManager()->RestoreRenderTargets();
-			TextureManager()->RestoreNonRenderTargetTextures();
-			if ( MaterialSystem()->CanUseEditorMaterials() )
-			{
-				// We are in Hammer.  Allocate these here since we aren't going to allocate
-				// lightmaps.
-				// HACK!
-				// NOTE! : Overbright is 1.0 so that Hammer will work properly with the white bumped and unbumped lightmaps.
-				MathLib_Init( 2.2f, 2.2f, 0.0f, OVERBRIGHT );
-				AllocateStandardTextures();
-			}
-		}
-
-		if ( IsX360() )
-		{
-			// shaderapi was not viable at init time, it is now
-			TextureManager()->ReloadTextures();
+			// We are in Hammer.  Allocate these here since we aren't going to allocate
+			// lightmaps.
+			// HACK!
+			// NOTE! : Overbright is 1.0 so that Hammer will work properly with the white bumped and unbumped lightmaps.
+			MathLib_Init( 2.2f, 2.2f, 0.0f, OVERBRIGHT );
 			AllocateStandardTextures();
 		}
+
 	}
 
 	g_pShaderDevice->SetHardwareGammaRamp( config.m_fMonitorGamma, config.m_fGammaTVRangeMin, config.m_fGammaTVRangeMax, 
@@ -1671,14 +1388,12 @@ void CMaterialSystem::ReleaseShaderObjects( int nChangeFlags )
 
 void CMaterialSystem::RestoreShaderObjects( CreateInterfaceFn shaderFactory, int nChangeFlags )
 {
-#if !defined( _OSX )
 	if ( shaderFactory )
 	{
 		g_pShaderAPI = (IShaderAPI*)shaderFactory( SHADERAPI_INTERFACE_VERSION, NULL );
 		g_pShaderDevice = (IShaderDevice*)shaderFactory( SHADER_DEVICE_INTERFACE_VERSION, NULL );
 		g_pShaderShadow = (IShaderShadow*)shaderFactory( SHADERSHADOW_INTERFACE_VERSION, NULL );
 	}
-#endif
 
 	for( MaterialHandle_t i = m_MaterialDict.FirstMaterial(); i != m_MaterialDict.InvalidMaterial(); i = m_MaterialDict.NextMaterial( i ) )
 	{
@@ -1821,7 +1536,7 @@ void CMaterialSystem::GenerateConfigFromConfigKeyValues( MaterialSystem_Config_t
 	if ( !pKeyValues )
 		return;
 
-	if ( IsPC() && !GetRecommendedVideoConfig( pKeyValues ) ) 
+	if ( !GetRecommendedVideoConfig( pKeyValues ) ) 
 	{
 		pKeyValues->deleteThis();
 		return;
@@ -1837,16 +1552,6 @@ void CMaterialSystem::GenerateConfigFromConfigKeyValues( MaterialSystem_Config_t
 	ReadInt( pKeyValues, "setting.unsupported", 0, -1, &nUnsupported );
 	pConfig->SetFlag( MATSYS_VIDCFG_FLAGS_UNSUPPORTED, nUnsupported != 0 );
 
-#if defined( _X360 )
-	pConfig->m_VideoMode.m_Width = GetSystemMetrics( SM_CXSCREEN );
-	pConfig->m_VideoMode.m_Height = GetSystemMetrics( SM_CYSCREEN );
-	// We can afford better aniso in standard def
-	if ( pConfig->m_VideoMode.m_Width == 640 )
-	{
-		static ConVarRef mat_forceaniso( "mat_forceaniso" );
-		mat_forceaniso.SetValue( 8 );
-	}
-#endif
 
 	// Destroy the keys.
 	pKeyValues->deleteThis();
@@ -1873,7 +1578,7 @@ static void MatProxyCallback( IConVar *pConVar, const char *old, float flOldValu
 //-----------------------------------------------------------------------------
 // Convars that control the config record
 //-----------------------------------------------------------------------------
-ConVar mat_vsync( "mat_vsync", IsGameConsole() ? "1" : "0", FCVAR_NONE, "Force sync to vertical retrace", true, 0.0, true, 1.0 );
+ConVar mat_vsync( "mat_vsync", false ? "1" : "0", FCVAR_NONE, "Force sync to vertical retrace", true, 0.0, true, 1.0 );
 
 // Texture-related
 static ConVar mat_forceaniso( "mat_forceaniso", "1" ); // 0 = Bilinear, 1 = Trilinear, 2+ = Aniso
@@ -1904,7 +1609,7 @@ static ConVar mat_monitorgamma_tv_range_max( "mat_monitorgamma_tv_range_max", "2
 // TV's generally have a 2.5 gamma, so we need to convert our 2.2 frame buffer into a 2.5 frame buffer for display on a TV
 static ConVar mat_monitorgamma_tv_exp( "mat_monitorgamma_tv_exp", "2.5", 0, "", true, 1.0f, true, 4.0f );
 
-static ConVar mat_monitorgamma_tv_enabled( "mat_monitorgamma_tv_enabled", IsGameConsole() ? "1" : "0", FCVAR_ARCHIVE | FCVAR_ARCHIVE_GAMECONSOLE, "" );
+static ConVar mat_monitorgamma_tv_enabled( "mat_monitorgamma_tv_enabled", false ? "1" : "0", FCVAR_ARCHIVE | FCVAR_ARCHIVE_GAMECONSOLE, "" );
 
 static ConVar mat_triplebuffered(   "mat_triplebuffered", "0", 0, "This means we want triple buffering if we are fullscreen and vsync'd" );
 static ConVar mat_antialias(		"mat_antialias", "0" );
@@ -1934,7 +1639,7 @@ static ConVar mat_drawgray(			"mat_drawgray","0", FCVAR_CHEAT );
 static ConVar r_shadowrendertotexture(		"r_shadowrendertotexture", "0" );
 static ConVar r_flashlightdepthtexture(		"r_flashlightdepthtexture", "1" );
 // On non-gameconsoles mat_motion_blur_enabled now comes from video.txt/videodefaults.txt
-static ConVar mat_motion_blur_enabled( "mat_motion_blur_enabled", IsGameConsole() ? "1" : "0" );
+static ConVar mat_motion_blur_enabled( "mat_motion_blur_enabled", false ? "1" : "0" );
 
 static ConVar mat_paint_enabled( "mat_paint_enabled", "0" );
 
@@ -2171,14 +1876,11 @@ bool CMaterialSystem::OverrideConfig( const MaterialSystem_Config_t &_config, bo
 				g_config.ShadowDepthTexture() ? 1 : 0, config.ShadowDepthTexture() ? 1 : 0 );
 		}
 
-		if ( !IsGameConsole() )
-		{
-			// On the 360, we don't actually destroy or recreate any render targets when r_shadowdepthtexture changes,
-			// so we don't have to do any of this stuff
-			forceUpdate = true;
-			bReloadMaterials = true;
-			recomputeSnapshots = true;
-		}
+		// On the 360, we don't actually destroy or recreate any render targets when r_shadowdepthtexture changes,
+		// so we don't have to do any of this stuff
+		forceUpdate = true;
+		bReloadMaterials = true;
+		recomputeSnapshots = true;
 	}
 
 	if ( forceUpdate )
@@ -2382,7 +2084,7 @@ bool CMaterialSystem::OverrideConfig( const MaterialSystem_Config_t &_config, bo
 	if ( config.m_bWantTripleBuffered != g_config.m_bWantTripleBuffered )
 	{
 		// Only force a video mode change if we are fullscreen and vsync'd
-		if ( ( IsGameConsole() || !config.Windowed() ) && ( config.WaitForVSync() ) )
+		if ( ( !config.Windowed() ) && ( config.WaitForVSync() ) )
 		{
 			if ( mat_debugalttab.GetBool() )
 			{
@@ -2393,21 +2095,13 @@ bool CMaterialSystem::OverrideConfig( const MaterialSystem_Config_t &_config, bo
 	}
 
 	// toggle wait for vsync
-	if ( (IsGameConsole() || !config.Windowed()) && (config.WaitForVSync() != g_config.WaitForVSync()) )
+	if ( ( !config.Windowed() ) && (config.WaitForVSync() != g_config.WaitForVSync()) )
 	{
-#		if ( !defined( _X360 ) )
+		if ( mat_debugalttab.GetBool() )
 		{
-			if ( mat_debugalttab.GetBool() )
-			{
-				Warning( "mat_debugalttab: video mode changed due to toggle of wait for vsync\n" );
-			}
-			bVideoModeChange = true;
+			Warning( "mat_debugalttab: video mode changed due to toggle of wait for vsync\n" );
 		}
-#		else
-		{
-			g_pShaderAPI->EnableVSync_360( config.WaitForVSync() );
-		}
-#		endif
+		bVideoModeChange = true;
 	}
 
 
@@ -2421,18 +2115,15 @@ bool CMaterialSystem::OverrideConfig( const MaterialSystem_Config_t &_config, bo
 	}
 
 	// 360 does not support various configuration changes and cannot reload materials
-	if ( !IsGameConsole() )
+	if ( bResetAnisotropy || recomputeSnapshots || bRedownloadLightmaps ||
+		bRedownloadTextures || bResetAnisotropy || bVideoModeChange ||
+		bSetStandardVertexShaderConstants || bResetTextureFilter )
 	{
-		if ( bResetAnisotropy || recomputeSnapshots || bRedownloadLightmaps ||
-			bRedownloadTextures || bResetAnisotropy || bVideoModeChange ||
-			bSetStandardVertexShaderConstants || bResetTextureFilter )
-		{
-			Unlock( hLock );
-			ForceSingleThreaded();
-			hLock = Lock();
-		}
+		Unlock( hLock );
+		ForceSingleThreaded();
+		hLock = Lock();
 	}
-	if ( bReloadMaterials && !IsGameConsole() )
+	if ( bReloadMaterials )
 	{
 		if ( mat_debugalttab.GetBool() )
 		{
@@ -2444,7 +2135,7 @@ bool CMaterialSystem::OverrideConfig( const MaterialSystem_Config_t &_config, bo
 	// 360 does not support various configuration changes and cannot reload textures
 	// 360 has no reason to reload textures, it's unnecessary and massively expensive
 	// 360 does not use this path as an init affect to get its textures into memory
-	if ( bRedownloadTextures && !IsGameConsole() )
+	if ( bRedownloadTextures )
 	{
 		if ( mat_debugalttab.GetBool() )
 		{
@@ -2626,107 +2317,6 @@ ITexture *CMaterialSystem::CreateProceduralTexture(
 	ITextureInternal* pTex = TextureManager()->CreateProceduralTexture( pTextureName, pTextureGroupName, w, h, 1, fmt, nFlags );
 	return pTex;
 }
-#if defined( _X360 )
-
-//-----------------------------------------------------------------------------
-// Create a texture for displaying gamerpics.
-// This function allocates the texture in the correct gamerpic format, but it does not fill in the gamerpic data.
-//-----------------------------------------------------------------------------
-ITexture *CMaterialSystem::CreateGamerpicTexture(
-	const char			*pTextureName,
-	const char			*pTextureGroupName,
-	int					nFlags )
-{
-	return CreateProceduralTexture( pTextureName, pTextureGroupName, g_GamerpicSize, g_GamerpicSize, g_GamerpicFormat, nFlags );
-}
-
-//-----------------------------------------------------------------------------
-// Update the given texture with the player gamerpic for the local player at the given index.
-// Note: this texture must be the correct size and format. Use CreateGamerpicTexture.
-//-----------------------------------------------------------------------------
-bool CMaterialSystem::UpdateLocalGamerpicTexture(
-	ITexture			*pTexture, 
-	DWORD				userIndex )
-{
-	Assert( pTexture != NULL );
-	Assert( pTexture->GetActualWidth() == g_GamerpicSize && pTexture->GetActualHeight() == g_GamerpicSize );
-	Assert( pTexture->GetImageFormat() == g_GamerpicFormat );
-	Assert( userIndex >= 0 && userIndex < 4 );
-
-	// lock
-	CPixelWriter writer;
-	g_pShaderAPI->ModifyTexture( ((ITextureInternal*)pTexture)->GetTextureHandle( 0 ) );
-	g_pShaderAPI->TexLock( 0, 0, 0, 0, g_GamerpicSize, g_GamerpicSize, writer );
-
-	// Write the gamerpic to the texture.
-	BYTE *pBuf = (BYTE*)writer.GetPixelMemory();
-	DWORD retVal = XUserReadGamerPicture( userIndex, FALSE, pBuf, g_GamerpicSize * writer.GetPixelSize(), g_GamerpicSize * writer.GetPixelSize(), NULL );
-
-	// unlock
-	g_pShaderAPI->TexUnlock();
-
-	return (retVal == ERROR_SUCCESS);
-}
-
-//-----------------------------------------------------------------------------
-// Update the given texture with a remote player's gamerpic.
-// Note: this texture must be the correct size and format. Use CreateGamerpicTexture.
-//-----------------------------------------------------------------------------
-bool CMaterialSystem::UpdateRemoteGamerpicTexture(
-	ITexture			*pTexture,
-	XUID				xuid )
-{
-	Assert( pTexture != NULL );
-	Assert( pTexture->GetActualWidth() == g_GamerpicSize && pTexture->GetActualHeight() == g_GamerpicSize );
-	Assert( pTexture->GetImageFormat() == g_GamerpicFormat );
-
-	//
-	// Read the remote player's profile.
-	//
-
-	const DWORD xuidCount = 1;
-	XUID xuids[xuidCount];
-	xuids[0] = xuid;
-
-	const DWORD settingIdCount = 1;
-	DWORD settingIds[settingIdCount];
-	settingIds[0] = XPROFILE_GAMERCARD_PICTURE_KEY;
-
-	// Get the size of the results.
-	DWORD resultsSize = 0;
-	DWORD retVal = XUserReadProfileSettingsByXuid( 0, XBX_GetPrimaryUserId(), xuidCount, xuids, settingIdCount, settingIds, &resultsSize, 0, 0 );
-	if ( retVal != ERROR_INSUFFICIENT_BUFFER )
-	{
-		return false;
-	}
-
-	Assert( resultsSize > 0 );
-
-	// Get the profile with the correct results size.
-	CArrayAutoPtr<unsigned char> spResultsBuffer( new unsigned char[resultsSize] );
-	XUSER_READ_PROFILE_SETTING_RESULT *pResults = (XUSER_READ_PROFILE_SETTING_RESULT*)spResultsBuffer.Get();
-	retVal = XUserReadProfileSettingsByXuid( 0, 0, xuidCount, xuids, settingIdCount, settingIds, &resultsSize, pResults, 0 );
-	if ( retVal != ERROR_SUCCESS || pResults->dwSettingsLen == 0 )
-	{
-		return false;
-	}
-
-	// lock
-	CPixelWriter writer;
-	g_pShaderAPI->ModifyTexture( ((ITextureInternal*)pTexture)->GetTextureHandle( 0 ) );
-	g_pShaderAPI->TexLock( 0, 0, 0, 0, g_GamerpicSize, g_GamerpicSize, writer );
-
-	// Write the gamerpic to the texture.
-	BYTE *pBuf = (BYTE*)writer.GetPixelMemory();
-	retVal = XUserReadGamerPictureByKey( &(pResults->pSettings[0].data), FALSE, pBuf, g_GamerpicSize * writer.GetPixelSize(), g_GamerpicSize * writer.GetPixelSize(), NULL );
-
-	// unlock
-	g_pShaderAPI->TexUnlock();
-
-	return (retVal == ERROR_SUCCESS);
-}
-
-#endif // _X360
 
 	
 //-----------------------------------------------------------------------------
@@ -2938,14 +2528,11 @@ ITexture *CMaterialSystem::FindTexture( char const *pTextureName, const char *pT
 	Assert( pTexture );
 	if ( pTexture->IsError() && !CommandLine()->HasParm( "-textmode" ) )
 	{
-		if ( IsPC() )
+		for ( int i=0; i<NELEMS( TextureAliases ); i+=2 )
 		{
-			for ( int i=0; i<NELEMS( TextureAliases ); i+=2 )
+			if ( !Q_stricmp( pTextureName, TextureAliases[i] ) )
 			{
-				if ( !Q_stricmp( pTextureName, TextureAliases[i] ) )
-				{
-					return FindTexture( TextureAliases[i+1], pTextureGroupName, bComplain, nAdditionalCreationFlags );
-				}
+				return FindTexture( TextureAliases[i+1], pTextureGroupName, bComplain, nAdditionalCreationFlags );
 			}
 		}
 		if ( bComplain )
@@ -3053,12 +2640,6 @@ void CMaterialSystem::UncacheUnusedMaterials( bool bRecomputeStateSnapshots )
 		}
 	}
 
-	if ( IsX360() && bRecomputeStateSnapshots )
-	{
-		// Always recompute snapshots because the queued loading process skips it during pre-purge,
-		// allowing it to happen just once, here.
-		bDidUncacheMaterial = true;
-	}
 
 	if ( bDidUncacheMaterial && bRecomputeStateSnapshots )
 	{
@@ -3200,7 +2781,7 @@ void CMaterialSystem::ServiceAsyncTextureLoads()
 //#define SPEW_SERVICE_END_FRAME_TIME
 void CMaterialSystem::ServiceEndFramePriorToNextContext()
 {
-#if !defined( _CERT ) && defined( SPEW_SERVICE_END_FRAME_TIME )
+#if defined( SPEW_SERVICE_END_FRAME_TIME )
 	double flStartTime = Plat_FloatTime();
 #endif
 
@@ -3230,7 +2811,7 @@ void CMaterialSystem::ServiceEndFramePriorToNextContext()
 		ServiceAsyncTextureLoads();
 	}
 
-#if !defined( _CERT ) && defined( SPEW_SERVICE_END_FRAME_TIME )
+#if defined( SPEW_SERVICE_END_FRAME_TIME )
 	float flElapsed = ( Plat_FloatTime() - flStartTime ) * 1000.0f;
 	if ( flElapsed > 1.0f )
 	{
@@ -3287,7 +2868,6 @@ void CMaterialSystem::ReloadTextures( void )
 {
 	ForceSingleThreaded();
 	// 360 should not have gotten here
-	Assert( !IsX360() );
 
 	TextureManager()->RestoreRenderTargets();
 	TextureManager()->RestoreNonRenderTargetTextures();
@@ -3437,12 +3017,6 @@ void CMaterialSystem::AllocateStandardTextures()
 
 	int tcFlags = TEXTURE_CREATE_MANAGED;
 	int tcFlagsSRGB = TEXTURE_CREATE_MANAGED | TEXTURE_CREATE_SRGB;
-	if ( IsX360() )
-	{
-		// during init time, ok to allow any pixel conversion operations
-		tcFlags |= TEXTURE_CREATE_CANCONVERTFORMAT;
-		tcFlagsSRGB |= TEXTURE_CREATE_CANCONVERTFORMAT;
-	}
 
 	// allocate a black single texel texture
 	m_BlackTextureHandle = g_pShaderAPI->CreateTexture( 1, 1, 1, IMAGE_FORMAT_BGRX8888, 1, 1, tcFlags, "[BLACK_TEXID]", TEXTURE_GROUP_OTHER );
@@ -3507,7 +3081,7 @@ void CMaterialSystem::AllocateStandardTextures()
 	// note: make sure and redo this when changing gamma, etc.
 	// don't mipmap lightmaps
 	// 360 expects RGBE encoded lightmaps, PC does not
-	ImageFormat targetFormat  = IsX360() ? IMAGE_FORMAT_BGRA8888 : IMAGE_FORMAT_BGRX8888;
+	ImageFormat targetFormat  = false ? IMAGE_FORMAT_BGRA8888 : IMAGE_FORMAT_BGRX8888;
 	m_FullbrightLightmapTextureHandle = g_pShaderAPI->CreateTexture( 1, 1, 1, targetFormat, 1, 1, tcFlagsSRGB, "[FULLBRIGHT_LIGHTMAP_TEXID]", TEXTURE_GROUP_LIGHTMAP );
 	g_pShaderAPI->ModifyTexture( m_FullbrightLightmapTextureHandle );
 	g_pShaderAPI->TexMinFilter( SHADER_TEXFILTERMODE_LINEAR );
@@ -3557,7 +3131,7 @@ void CMaterialSystem::AllocateStandardTextures()
 	g_pShaderAPI->SetStandardTextureHandle( TEXTURE_SSBUMP_FLAT, m_FlatSSBumpTextureHandle );
 
 	// allocate a single texel fullbright 1 lightmap for use with bump textures
-	targetFormat = IsX360() ? IMAGE_FORMAT_BGRA8888 : IMAGE_FORMAT_BGRX8888;
+	targetFormat = false ? IMAGE_FORMAT_BGRA8888 : IMAGE_FORMAT_BGRX8888;
 	m_FullbrightBumpedLightmapTextureHandle = g_pShaderAPI->CreateTexture( 1, 1, 1, targetFormat, 1, 1, tcFlags, "[FULLBRIGHT_BUMPED_LIGHTMAP_TEXID]", TEXTURE_GROUP_LIGHTMAP );
 	g_pShaderAPI->ModifyTexture( m_FullbrightBumpedLightmapTextureHandle );
 	g_pShaderAPI->TexMinFilter( SHADER_TEXFILTERMODE_LINEAR );
@@ -3718,7 +3292,7 @@ void CMaterialSystem::BeginFrame( float frameTime )
 	VPROF_BUDGET( "CMaterialSystem::BeginFrame", VPROF_BUDGETGROUP_SWAP_BUFFERS );
 
 	IMatRenderContextInternal *pRenderContext = GetRenderContextInternal();
-	if ( mat_forcehardwaresync.GetBool() && (IsPC() || m_ThreadMode != MATERIAL_QUEUED_THREADED) )
+	if ( mat_forcehardwaresync.GetBool() )
 	{
 		pRenderContext->ForceHardwareSync();
 	}
@@ -3758,11 +3332,7 @@ void CMaterialSystem::ThreadExecuteQueuedContext( CMatQueuedRenderContext *pCont
 
 IThreadPool *CMaterialSystem::CreateMatQueueThreadPool()
 {
-	if( IsX360() )
-	{
-		return g_pThreadPool;
-	}
-	else if( !m_pMatQueueThreadPool )
+	if( !m_pMatQueueThreadPool )
 	{
 		ThreadPoolStartParams_t startParams;
 
@@ -3801,33 +3371,6 @@ static double s_flMainThreadBeginTimestampSec = 0.0f;
 // and from fullscreen don't force GL calls at the same time as the render thread.
 //
 
-#if defined ( OSX )
-
-static void CheckOsxForcedNextThreadMode( MaterialThreadMode_t* pNextThreadMode, bool* pbForcedSingleThreaded )
-{
-	const int nOsxFramesAtSingleThreaded = 2;
-	static int nOsxFrames = nOsxFramesAtSingleThreaded;
-	if ( *pbForcedSingleThreaded )
-	{
-		*pNextThreadMode = MATERIAL_SINGLE_THREADED;
-
-		if ( nOsxFrames == 0 )
-		{
-			*pbForcedSingleThreaded = false;
-			nOsxFrames = nOsxFramesAtSingleThreaded;
-		}
-		else
-		{
-			nOsxFrames--;
-		}
-	}
-	else
-	{
-		nOsxFrames = nOsxFramesAtSingleThreaded;
-	}
-}
-
-#endif 
 
 void CMaterialSystem::EndFrame( void )
 {
@@ -3857,15 +3400,11 @@ void CMaterialSystem::EndFrame( void )
 		nextThreadMode = MATERIAL_SINGLE_THREADED;
 	}
 
-#if !defined ( OSX )
 	if ( m_bForcedSingleThreaded )
 	{
 		nextThreadMode = MATERIAL_SINGLE_THREADED;
 		m_bForcedSingleThreaded = false;
 	}
-#else
-	CheckOsxForcedNextThreadMode(&nextThreadMode, &m_bForcedSingleThreaded );
-#endif
 
 #if GCM_ALLOW_TIMESTAMPS || X360_ALLOW_TIMESTAMPS
 	{
@@ -3919,13 +3458,6 @@ void CMaterialSystem::EndFrame( void )
 					if ( !m_pActiveAsyncJob->IsFinished() )
 						DevMsg( "CMaterialSystem::EndFrame - waiting on additional threaded work for MatQueuedThreaded.\n" );
 //lwss: ifdef out this console check
-#if !IsPC()
-					//if ( !IsPC() && mat_forcehardwaresync.GetBool() )
-					if ( mat_forcehardwaresync.GetBool() )
-					{
-						g_pShaderAPI->ForceHardwareSync();
-					}
-#endif
 //lwss end
 				}
 			}
@@ -3964,13 +3496,6 @@ void CMaterialSystem::EndFrame( void )
 			m_pRenderContext =  &m_QueuedRenderContexts[m_iCurQueuedContext];
 
 			m_pActiveAsyncJob = new CFunctorJob( CreateFunctor( this, &CMaterialSystem::ThreadExecuteQueuedContext, pPrevContext ) );
-			if ( !IsPC() )
-			{
-				if ( m_nServiceThread >= 0 )
-				{
-					m_pActiveAsyncJob->SetServiceThread( m_nServiceThread );
-				}
-			}
 			if ( mat_queue_priority.GetBool() )
 			{
 				m_pActiveAsyncJob->SetFlags( m_pActiveAsyncJob->GetFlags() | JF_QUEUE );
@@ -4075,9 +3600,7 @@ void CMaterialSystem::EndFrame( void )
 		}
 
 		m_ThreadMode = nextThreadMode;
-#ifndef DX_TO_GL_ABSTRACTION
 		Assert( g_MatSysMutex.GetOwnerId() == 0 );
-#endif
 
 		g_pShaderAPI->EnableShaderShaderMutex( m_ThreadMode != MATERIAL_SINGLE_THREADED ); // use mutex even for queued to allow "disalow access" to function properly
 		g_pShaderAPI->EnableBuffer2FramesAhead( true );
@@ -4456,12 +3979,6 @@ void CMaterialSystem::GetShaderFallback( const char *pShaderName, char *pFallbac
 //-----------------------------------------------------------------------------
 // Triggers OpenGL shader preloading at game startup
 //-----------------------------------------------------------------------------
-#if defined( DX_TO_GL_ABSTRACTION ) && !defined( _GAMECONSOLE )
-void	CMaterialSystem::DoStartupShaderPreloading( void )
-{
-	GetRenderContextInternal()->DoStartupShaderPreloading();
-}
-#endif
 
 	
 void CMaterialSystem::SwapBuffers( void )
@@ -4498,34 +4015,31 @@ bool CMaterialSystem::SupportsMSAAMode( int nNumSamples )
 
 void CMaterialSystem::ReloadFilesInList( IFileList *pFilesToReload )
 {
-	if ( IsPC() )
+	// We have to flush the materials in 2 steps because they have recursive dependencies. The problem case
+	// is if you have two materials, A and B, that depend on C. You tell A to reload and it also reloads C. Then
+	// the filesystem thinks C doesn't need to be reloaded anymore. So when you get to B, it decides not to reload 
+	// either since C doesn't need to be reloaded. To fix this, we ask all materials if they want to reload in
+	// one stage, then in the next stage we actually reload the appropriate ones.
+	MaterialHandle_t hNext;
+	for ( MaterialHandle_t h=m_MaterialDict.FirstMaterial(); h != m_MaterialDict.InvalidMaterial(); h=hNext )
 	{
-		// We have to flush the materials in 2 steps because they have recursive dependencies. The problem case
-		// is if you have two materials, A and B, that depend on C. You tell A to reload and it also reloads C. Then
-		// the filesystem thinks C doesn't need to be reloaded anymore. So when you get to B, it decides not to reload 
-		// either since C doesn't need to be reloaded. To fix this, we ask all materials if they want to reload in
-		// one stage, then in the next stage we actually reload the appropriate ones.
-		MaterialHandle_t hNext;
-		for ( MaterialHandle_t h=m_MaterialDict.FirstMaterial(); h != m_MaterialDict.InvalidMaterial(); h=hNext )
-		{
-			hNext = m_MaterialDict.NextMaterial( h );
-			IMaterialInternal *pMat = m_MaterialDict.GetMaterialInternal( h );
+		hNext = m_MaterialDict.NextMaterial( h );
+		IMaterialInternal *pMat = m_MaterialDict.GetMaterialInternal( h );
 
-			pMat->DecideShouldReloadFromWhitelist( pFilesToReload );
-		}
-
-		// Now reload the materials that wanted to be reloaded.
-		for ( MaterialHandle_t h=m_MaterialDict.FirstMaterial(); h != m_MaterialDict.InvalidMaterial(); h=hNext )
-		{
-			hNext = m_MaterialDict.NextMaterial( h );
-			IMaterialInternal *pMat = m_MaterialDict.GetMaterialInternal( h );
-
-			pMat->ReloadFromWhitelistIfMarked();
-		}
-
-		// Flush out necessary textures.
-		TextureManager()->ReloadFilesInList( pFilesToReload );
+		pMat->DecideShouldReloadFromWhitelist( pFilesToReload );
 	}
+
+	// Now reload the materials that wanted to be reloaded.
+	for ( MaterialHandle_t h=m_MaterialDict.FirstMaterial(); h != m_MaterialDict.InvalidMaterial(); h=hNext )
+	{
+		hNext = m_MaterialDict.NextMaterial( h );
+		IMaterialInternal *pMat = m_MaterialDict.GetMaterialInternal( h );
+
+		pMat->ReloadFromWhitelistIfMarked();
+	}
+
+	// Flush out necessary textures.
+	TextureManager()->ReloadFilesInList( pFilesToReload );
 }
 
 // Does the device support the given CSAA level?
@@ -4601,8 +4115,6 @@ bool CMaterialSystem::GetRecommendedConfigurationInfo( int nDXLevel, KeyValues *
 //-----------------------------------------------------------------------------
 void CMaterialSystem::HandleDeviceLost()
 {
-	if ( IsGameConsole() )
-		return;
 
 	g_pShaderAPI->HandleDeviceLost();
 }
@@ -4698,13 +4210,6 @@ ITexture* CMaterialSystem::CreateNamedRenderTargetTextureEx(
 	ITextureInternal* pTex = TextureManager()->CreateRenderTargetTexture( pRTName, w, h, sizeMode, format, rtType, textureFlags, renderTargetFlags, false );
 	pTex->IncrementReferenceCount();
 
-#if defined( _X360 )
-	if ( !( renderTargetFlags & CREATERENDERTARGETFLAGS_NOEDRAM ) )
-	{
-		// create the EDRAM surface that is bound to the RT Texture
-		pTex->CreateRenderTargetSurface( 0, 0, IMAGE_FORMAT_UNKNOWN, true );
-	}
-#endif
 
 	return pTex;
 }
@@ -4758,13 +4263,6 @@ ITexture *CMaterialSystem::CreateNamedMultiRenderTargetTexture(
 
 	ITextureInternal* pTex =TextureManager()->CreateRenderTargetTexture( pRTName, w, h, sizeMode, format, rtType, textureFlags, renderTargetFlags, true );	
 
-#if defined( _X360 )
-	if ( !( renderTargetFlags & CREATERENDERTARGETFLAGS_NOEDRAM ) )
-	{
-		// create the EDRAM surface that is bound to the RT Texture
-		pTex->CreateRenderTargetSurface( 0, 0, IMAGE_FORMAT_UNKNOWN, true );
-	}
-#endif
 
 
 	return pTex; //ref count is 0
@@ -4790,7 +4288,7 @@ void CMaterialSystem::EndRenderTargetAllocation( void )
 
 	if ( ! m_nAllocatingRenderTargets )
 	{
-		if ( IsPC() && CanDownloadTextures() )
+		if ( CanDownloadTextures() )
 		{
 			// Simulate an Alt-Tab...will cause RTs to be allocated first
 			g_pShaderDevice->ReleaseResources();
@@ -4880,130 +4378,14 @@ bool CMaterialSystem::IsStereoActiveThisFrame() const
 //-----------------------------------------------------------------------------------------------------
 // 360 TTF Font Support
 //-----------------------------------------------------------------------------------------------------
-#if defined( _X360 )
-HXUIFONT CMaterialSystem::OpenTrueTypeFont( const char *pFontname, int tall, int style )
-{
-	MaterialLock_t hLock = Lock();
-	HXUIFONT result = g_pShaderAPI->OpenTrueTypeFont( pFontname, tall, style );
-	Unlock( hLock );
-	return result;
-}
-void CMaterialSystem::CloseTrueTypeFont( HXUIFONT hFont )
-{
-	MaterialLock_t hLock = Lock();
-	g_pShaderAPI->CloseTrueTypeFont( hFont );
-	Unlock( hLock );
-}
-bool CMaterialSystem::GetTrueTypeFontMetrics( HXUIFONT hFont, wchar_t wchFirst, wchar_t wchLast, XUIFontMetrics *pFontMetrics, XUICharMetrics *pCharMetrics )
-{
-	MaterialLock_t hLock = Lock();
-	bool result = g_pShaderAPI->GetTrueTypeFontMetrics( hFont, wchFirst, wchLast, pFontMetrics, pCharMetrics );
-	Unlock( hLock );
-	return result;
-}
-bool CMaterialSystem::GetTrueTypeGlyphs( HXUIFONT hFont, int numChars, wchar_t *pWch, int *pOffsetX, int *pOffsetY, int *pWidth, int *pHeight, unsigned char *pRGBA, int *pRGBAOffset )
-{
-	MaterialLock_t hLock = Lock();
-	bool result = g_pShaderAPI->GetTrueTypeGlyphs( hFont, numChars, pWch, pOffsetX, pOffsetY, pWidth, pHeight, pRGBA, pRGBAOffset );
-	Unlock( hLock );
-	return result;
-}
-#endif
 
 //-----------------------------------------------------------------------------------------------------
 // 360 Back Buffer access. Due to hardware, RT data must be blitted from EDRAM
 // and converted.
 //-----------------------------------------------------------------------------------------------------
-#if defined( _X360 )
-void CMaterialSystem::ReadBackBuffer( Rect_t *pSrcRect, Rect_t *pDstRect, unsigned char *pDstData, ImageFormat dstFormat, int dstStride ) 
-{
-	Assert( pSrcRect && pDstRect && pDstData );
 
-	int fbWidth, fbHeight;
-	g_pShaderAPI->GetBackBufferDimensions( fbWidth, fbHeight ); 
 
-	if ( pDstRect->width > fbWidth || pDstRect->height > fbHeight )
-	{
-		Assert( 0 );
-		return;
-	}
 
-	// intermediate results will be placed at (0,0)
-	Rect_t	rect;
-	rect.x = 0;
-	rect.y = 0;
-	rect.width = pDstRect->width;
-	rect.height = pDstRect->height;
-
-	ITexture *pTempRT;
-	bool bStretch = ( pSrcRect->width != pDstRect->width || pSrcRect->height != pDstRect->height );
-	if ( !bStretch )
-	{
-		// hijack an unused RT (no surface required) for 1:1 resolve work, fastest path
-		pTempRT = FindTexture( "_rt_FullFrameFB", TEXTURE_GROUP_RENDER_TARGET );
-	}
-	else
-	{
-		// hijack an unused RT (with surface abilities) for stretch work, slower path
-		pTempRT = FindTexture( "_rt_WaterReflection", TEXTURE_GROUP_RENDER_TARGET );
-	}
-
-	Assert( !pTempRT->IsError() && pDstRect->width <= pTempRT->GetActualWidth() && pDstRect->height <= pTempRT->GetActualHeight() );
-	GetRenderContextInternal()->CopyRenderTargetToTextureEx( pTempRT, 0, pSrcRect, &rect );
-
-	// access the RT bits
-	CPixelWriter writer;
-	g_pShaderAPI->ModifyTexture( ((ITextureInternal*)pTempRT)->GetTextureHandle( 0 ) );
-	if ( !g_pShaderAPI->TexLock( 0, 0, 0, 0, pTempRT->GetActualWidth(), pTempRT->GetActualHeight(), writer ) )
-		return;
-
-	// this will be adequate for non-block formats
-	int srcStride = pTempRT->GetActualWidth() * ImageLoader::SizeInBytes( pTempRT->GetImageFormat() );
-
-	// untile intermediate RT in place to achieve linear access
-	XGUntileTextureLevel(
-		pTempRT->GetActualWidth(),
-		pTempRT->GetActualHeight(),
-		0,
-		XGGetGpuFormat( ImageLoader::ImageFormatToD3DFormat( pTempRT->GetImageFormat() ) ),
-		0,
-		(char*)writer.GetPixelMemory(),
-		srcStride,
-		NULL,
-		writer.GetPixelMemory(),
-		NULL );
-
-	// swap back to x86 order as expected by image conversion
-	ImageLoader::ByteSwapImageData( (unsigned char*)writer.GetPixelMemory(), srcStride*pTempRT->GetActualHeight(), pTempRT->GetImageFormat() );
-
-	// convert to callers format
-	Assert( dstFormat == IMAGE_FORMAT_RGB888 );
-	ImageLoader::ConvertImageFormat( (unsigned char*)writer.GetPixelMemory(), pTempRT->GetImageFormat(), pDstData, dstFormat, pDstRect->width, pDstRect->height, srcStride, dstStride );
-
-	g_pShaderAPI->TexUnlock();
-}
-#endif
-
-#if defined( _X360 )
-void CMaterialSystem::PersistDisplay() 
-{
-	g_pShaderAPI->PersistDisplay();
-}
-#endif
-
-#if defined( _X360 )
-void *CMaterialSystem::GetD3DDevice() 
-{
-	return g_pShaderAPI->GetD3DDevice();
-}
-#endif
-
-#if defined( _X360 )
-bool CMaterialSystem::OwnGPUResources( bool bEnable ) 
-{
-	return g_pShaderAPI->OwnGPUResources( bEnable );
-}
-#endif
 
 //-----------------------------------------------------------------------------------------------------
 //

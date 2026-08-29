@@ -480,22 +480,7 @@ void CTeamplayRoundBasedRules::Think( void )
 		// check to see if we should change levels now
 		if ( m_flIntermissionStartTime && ( m_flIntermissionStartTime + GetIntermissionDuration() < gpGlobals->curtime ) )
 		{
-			if ( !IsGameConsole() )
-			{
-				ChangeLevel(); // intermission is over
-			}
-			else
-			{
-				IGameEvent * event = gameeventmanager->CreateEvent( "player_stats_updated" );
-				if ( event )
-				{
-					event->SetBool( "forceupload", true );
-					gameeventmanager->FireEvent( event );
-				}
-				
-				g_pMatchFramework->GetEventsSubscription()->BroadcastEvent( new KeyValues(
-					"OnEngineEndGame", "reason", "gameover" ) );
-			}
+			ChangeLevel(); // intermission is over
 
 			// Don't run this code again
 			m_flIntermissionStartTime = 0.f;

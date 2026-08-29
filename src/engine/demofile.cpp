@@ -579,7 +579,7 @@ bool CDemoFile::Open( const char *name, bool bReadOnly, bool bMemoryBuffer )
 	}
 	else
 	{
-		StreamDemoBufferInitParams_t params( name, NULL, bReadOnly ? CUtlBuffer::READ_ONLY : 0, IsX360() ? FSOPEN_NEVERINPACK : 0 );
+		StreamDemoBufferInitParams_t params( name, NULL, bReadOnly ? CUtlBuffer::READ_ONLY : 0, 0 );
 		m_pBuffer = CreateDemoBuffer( false, params );
 	}
 

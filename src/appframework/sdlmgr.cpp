@@ -164,9 +164,6 @@ public:
 private:
 	void handleKeyInput( const SDL_Event &event );
 
-#if defined( OSX )
-	bool					m_force_vsync;				// true if 10.6.4 + bad NV driver
-#endif
 
 	SDL_Window *m_Window;
 
@@ -600,9 +597,7 @@ bool CSDLMgr::CreateHiddenGameWindow( const char *pTitle, bool bWindowed, int wi
 	if (m_Window == NULL)
 		Error( "Failed to create SDL window: %s", SDL_GetError() );
 
-#if defined( LINUX )
 	SetAssertDialogParent( m_Window );
-#endif
 
 	m_WindowWidth = width;
 	m_WindowHeight = height;
@@ -1037,15 +1032,6 @@ void CSDLMgr::handleKeyInput( const SDL_Event &event )
 
 	Assert( ( event.type == SDL_EVENT_KEY_DOWN ) || ( event.type == SDL_EVENT_KEY_UP ) );
 
-#ifdef OSX
-	if ( event.type == SDL_EVENT_KEY_DOWN && event.key.key == SDLK_TAB &&
-	     SDL_GetModState()&KMOD_GUI && !CommandLine()->FindParm( "-noexclusivefs" ) )
-	{
-		// If we're in exclusive fullscreen mode, and they command-tab, handle
-		// that by forcing minimization of the window.
-		SDL_MinimizeWindow( m_Window );
-	}
-#endif
 
 	const bool bPressed = ( event.type == SDL_EVENT_KEY_DOWN );
 
@@ -1318,12 +1304,6 @@ void CSDLMgr::PumpWindowsMessageLoop()
 			{
 				int scroll = event.wheel.y;
 
-#ifdef OSX
-				if ( scroll == 0 && ( SDL_GetModState()&KMOD_SHIFT ) )
-				{
-					scroll = -event.wheel.x;
-				}
-#endif
 
 				if ( scroll )
 				{
@@ -1382,7 +1362,6 @@ void CSDLMgr::PumpWindowsMessageLoop()
 				SDL_SetModState( SDL_KMOD_NONE );
 				break;
 			}
-#ifdef LINUX
 			case SDL_EVENT_WINDOW_RESIZED:
 			{
 				int newWidth = event.window.data1;
@@ -1409,7 +1388,6 @@ void CSDLMgr::PumpWindowsMessageLoop()
 				}
 				break;
 			}
-#endif
 
 			case SDL_EVENT_KEY_UP:
 			case SDL_EVENT_KEY_DOWN:

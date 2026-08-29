@@ -68,13 +68,11 @@ IMPLEMENT_CLIENTCLASS_DT_NOBASE( C_RopeKeyframe, DT_RopeKeyframe, CRopeKeyframe 
 	RecvPropInt( RECVINFO( m_iParentAttachment ) ),
 	RecvPropInt( RECVINFO( m_iDefaultRopeMaterialModelIndex ) ),	
 	
-#if 1
 // #ifndef _GAMECONSOLE -- X360 client and Win32 XLSP dedicated server need equivalent SendTables
 	RecvPropInt( RECVINFO( m_nMinCPULevel ) ), 
 	RecvPropInt( RECVINFO( m_nMaxCPULevel ) ), 
 	RecvPropInt( RECVINFO( m_nMinGPULevel ) ), 
 	RecvPropInt( RECVINFO( m_nMaxGPULevel ) ), 
-#endif
 
 END_RECV_TABLE()
 
@@ -1390,20 +1388,17 @@ bool C_RopeKeyframe::ShouldDraw()
 	if( !(m_RopeFlags & ROPE_SIMULATE) )
 		return false;
 
-	if ( !IsGameConsole() )
-	{
-		CPULevel_t nCPULevel = GetCPULevel();
-		bool bNoDraw = ( GetMinCPULevel() && GetMinCPULevel()-1 > nCPULevel );
-		bNoDraw = bNoDraw || ( GetMaxCPULevel() && GetMaxCPULevel()-1 < nCPULevel );
-		if ( bNoDraw )
-			return false;
+	CPULevel_t nCPULevel = GetCPULevel();
+	bool bNoDraw = ( GetMinCPULevel() && GetMinCPULevel()-1 > nCPULevel );
+	bNoDraw = bNoDraw || ( GetMaxCPULevel() && GetMaxCPULevel()-1 < nCPULevel );
+	if ( bNoDraw )
+		return false;
 
-		GPULevel_t nGPULevel = GetGPULevel();
-		bNoDraw = ( GetMinGPULevel() && GetMinGPULevel()-1 > nGPULevel );
-		bNoDraw = bNoDraw || ( GetMaxGPULevel() && GetMaxGPULevel()-1 < nGPULevel );
-		if ( bNoDraw )
-			return false;
-	}
+	GPULevel_t nGPULevel = GetGPULevel();
+	bNoDraw = ( GetMinGPULevel() && GetMinGPULevel()-1 > nGPULevel );
+	bNoDraw = bNoDraw || ( GetMaxGPULevel() && GetMaxGPULevel()-1 < nGPULevel );
+	if ( bNoDraw )
+		return false;
 
 	return true;
 }

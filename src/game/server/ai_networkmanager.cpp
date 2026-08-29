@@ -8,7 +8,6 @@
 #include "cbase.h"
 #include "fmtstr.h"
 #include "filesystem.h"
-#include "filesystem/IQueuedLoader.h"
 #include "utlbuffer.h"
 #include "utlrbtree.h"
 #include "editor_sendcommand.h"
@@ -280,10 +279,6 @@ void CAI_NetworkManager::SaveNetworkGraph( void )
 		buf.PutFloat( pNode->GetYaw() );
 		buf.Put( pNode->m_flVOffset, sizeof( pNode->m_flVOffset ) );
 		buf.PutChar( pNode->GetType() );
-		if ( IsGameConsole() )
-		{
-			buf.SeekPut( CUtlBuffer::SEEK_CURRENT, 3 );
-		}
 		buf.PutInt( ( pNode->m_eNodeInfo & bits_NODE_SAVE_MASK ) );
 		buf.PutShort( pNode->GetZone() );
 
@@ -510,21 +505,6 @@ void CAI_NetworkManager::LoadNetworkGraph( void )
 	// Read the file in one gulp
 	CUtlBuffer buf;
 	bool bHaveAIN = false;
-	if ( IsGameConsole() && g_pQueuedLoader->IsMapLoading() )
-	{
-		// .ain was loaded anonymously by bsp, should be ready
-		void *pData;
-		int nDataSize;
-		if ( g_pQueuedLoader->ClaimAnonymousJob( szNrpFilename, &pData, &nDataSize ) )
-		{
-			if ( nDataSize != 0 )
-			{
-				buf.Put( pData, nDataSize );
-				bHaveAIN = true;
-			}
-			filesystem->FreeOptimalReadBuffer( pData );
-		}
-	}
 	
 	if ( !bHaveAIN && !filesystem->ReadFile( szNrpFilename, "game", buf ) )
 	{
@@ -599,10 +579,6 @@ void CAI_NetworkManager::LoadNetworkGraph( void )
 
 		buf.Get( new_node->m_flVOffset, sizeof(new_node->m_flVOffset) );
 		new_node->m_eNodeType = (NodeType_e)buf.GetChar();
-		if ( IsGameConsole() )
-		{
-			buf.SeekGet( CUtlBuffer::SEEK_CURRENT, 3 );
-		}
 
 		new_node->m_eNodeInfo = buf.GetInt();
 		new_node->m_zone = buf.GetShort();
@@ -640,7 +616,6 @@ void CAI_NetworkManager::LoadNetworkGraph( void )
 	}
 
 	
-#if 1
 	CUtlRBTree<int> usedIds;
 	CUtlRBTree<int> reportedIds;
 	SetDefLessFunc( usedIds );
@@ -674,7 +649,6 @@ void CAI_NetworkManager::LoadNetworkGraph( void )
 
 	if ( printedHeader )
 		DevMsg( "\n** Should run \"Check For Problems\" on the VMF then verify dynamic links\n" );
-#endif
 
 	gm_fNetworksLoaded = true;
 	CAI_DynamicLink::gm_bInitialized = false;
@@ -942,12 +916,6 @@ bool CAI_NetworkManager::IsAIFileCurrent ( const char *szMapName )
 	if ( !g_pGameRules->FAllowNPCs() )
 	{
 		return false;
-	}
-
-	if ( IsGameConsole() && ( filesystem->GetDVDMode() == DVDMODE_STRICT ) )
-	{
-		// dvd build process validates and guarantees correctness, timestamps are allowed to be wrong
-		return true;
 	}
 
 	Q_snprintf( szBspFilename, sizeof( szBspFilename ), "maps/%s%s.bsp" ,szMapName, GetPlatformExt() );

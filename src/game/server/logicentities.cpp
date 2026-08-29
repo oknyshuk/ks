@@ -381,7 +381,7 @@ void CLogicCoopManager::CompareValues( void )
 		else if ( m_bPlayerStateA != m_bPlayerStateB )
 		{
 			// only fire the output if they become dissimilar for the first time 
-			if ( ( m_bPlayerStateA == true  && m_bPrevPlayerStateA != true ) || m_bPlayerStateB == true  && m_bPrevPlayerStateB != true )
+			if ( ( m_bPlayerStateA == true && m_bPrevPlayerStateA != true ) || m_bPlayerStateB == true && m_bPrevPlayerStateB != true )
 				m_OnChangeToAnyTrue.FireOutput( this, this );
 			else if ( ( m_bPlayerStateA == false && m_bPrevPlayerStateA != false ) || ( m_bPlayerStateB == false && m_bPrevPlayerStateB != false ) )
 				m_OnChangeToAnyFalse.FireOutput( this, this );

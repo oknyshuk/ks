@@ -10,14 +10,11 @@
 #undef fopen
 #endif
 
-#if defined( WIN32 ) && !defined( _X360 )
+#if defined( WIN32 )
 #include <windows.h> // SRC only!!
-#elif defined( POSIX )
+#else
 #include <stdio.h>
 #include <sys/stat.h>
-#ifdef OSX
-#include <copyfile.h>
-#endif
 #endif
 
 #include "imageutils.h"
@@ -72,18 +69,13 @@ extern void longjmp( jmp_buf, int ) __attribute__((noreturn));
 #ifdef WIN32
 #include <io.h>
 #endif
-#ifdef OSX
-#include <copyfile.h>
-#endif
 
 #ifndef WIN32
 #define DeleteFile(s)	remove(s)
 #endif
 
-#if defined( _X360 )
-#endif
 
-#if !defined( _GAMECONSOLE ) && ( defined(GAME_DLL) || defined(CLIENT_DLL) )
+#if ( defined(GAME_DLL) || defined(CLIENT_DLL) )
 	#include "base_gcmessages.pb.h"
 #endif //!defined( _GAMECONSOLE )
 
@@ -189,7 +181,6 @@ public:
 // convert the JPEG file given to a TGA file at the given output path.
 ConversionErrorType ImgUtl_ConvertJPEGToTGA( const char *jpegpath, const char *tgaPath, bool bRequirePowerOfTwo )
 {
-#if !defined( _X360 )
 
 	//
 	// !FIXME! This really probably should use ImgUtl_ReadJPEGAsRGBA, to avoid duplicated code.
@@ -310,16 +301,11 @@ ConversionErrorType ImgUtl_ConvertJPEGToTGA( const char *jpegpath, const char *t
 	free(buf);
 	return bRetVal ? CE_SUCCESS : CE_ERROR_WRITING_OUTPUT_FILE;
 
-#else
-	return CE_SOURCE_FILE_FORMAT_NOT_SUPPORTED;
-#endif
 }
 
 // convert the bmp file given to a TGA file at the given destination path.
 ConversionErrorType ImgUtl_ConvertBMPToTGA(const char *bmpPath, const char *tgaPath)
 {
-	if ( !IsPC() )
-		return CE_SOURCE_FILE_FORMAT_NOT_SUPPORTED;
 
 #ifdef WIN32
 
@@ -540,7 +526,6 @@ unsigned char * ImgUtl_ReadTGAAsRGBA(const char *tgaPath, int &width, int &heigh
 
 unsigned char *ImgUtl_ReadJPEGAsRGBA( const char *jpegPath, int &width, int &height, ConversionErrorType &errcode )
 {
-#if !defined( _X360 )
 	struct jpeg_decompress_struct jpegInfo;
 	struct ValveJpegErrorHandler_t jerr;
 	JSAMPROW row_pointer[1];
@@ -685,15 +670,10 @@ unsigned char *ImgUtl_ReadJPEGAsRGBA( const char *jpegPath, int &width, int &hei
 	errcode = CE_SUCCESS;
 	return buf;
 
-#else
-	errcode = CE_SOURCE_FILE_FORMAT_NOT_SUPPORTED;
-	return NULL;
-#endif
 }
 
 ConversionErrorType ImgUtl_ReadJPEGAsRGBA( CUtlBuffer &srcBuf, CUtlBuffer &dstBuf, int &width, int &height )
 {
-#if !defined( _X360 )
 	// Point directly to our CUtlBuffer data
 	CJpegSourceMgr jpgMgr;
 	jpgMgr.bytes_in_buffer = srcBuf.Size();
@@ -804,10 +784,6 @@ ConversionErrorType ImgUtl_ReadJPEGAsRGBA( CUtlBuffer &srcBuf, CUtlBuffer &dstBu
 	height = image_height;
 	return CE_SUCCESS;
 
-#else
-	errcode = CE_SOURCE_FILE_FORMAT_NOT_SUPPORTED;
-	return NULL;
-#endif
 }
 
 static void ReadPNGData( png_structp png_ptr, png_bytep outBytes, png_size_t byteCountToRead )
@@ -832,7 +808,6 @@ static void ReadPNGData( png_structp png_ptr, png_bytep outBytes, png_size_t byt
 
 unsigned char *ImgUtl_ReadPNGAsRGBA( const char *pngPath, int &width, int &height, ConversionErrorType &errcode )
 {
-#if !defined( _X360 )
 
 	// Just load the whole file into a memory buffer
 	CUtlBuffer bufFileContents;
@@ -845,15 +820,11 @@ unsigned char *ImgUtl_ReadPNGAsRGBA( const char *pngPath, int &width, int &heigh
 	// Load it
 	return ImgUtl_ReadPNGAsRGBAFromBuffer( bufFileContents, width, height, errcode );
 
-#else
-	errcode = CE_SOURCE_FILE_FORMAT_NOT_SUPPORTED;
-	return NULL;
-#endif
 }
 
 unsigned char		*ImgUtl_ReadPNGAsRGBAFromBuffer( CUtlBuffer &buffer, int &width, int &height, ConversionErrorType &errcode )
 {
-#if !defined( _X360 ) && defined( WIN32 )
+#if defined( WIN32 )
 
 	png_const_bytep pngData = (png_const_bytep)buffer.Base();
 	if (png_sig_cmp( pngData, 0, 8))
@@ -1681,8 +1652,6 @@ static void DoCopyFile( const char *source, const char *destination )
 {
 #if defined( WIN32 )
 	CopyFile( source, destination, true );
-#elif defined( OSX )
-	copyfile( source, destination, NULL, COPYFILE_ALL );
 #elif defined( ENGINE_DLL )
 	::COM_CopyFile( source, destination );
 #elif REPLAY_DLL
@@ -1703,7 +1672,6 @@ static void DoDeleteFile( const char *filename )
 
 ConversionErrorType	ImgUtl_ConvertToVTFAndDumpVMT( const char *pInPath, const char *pMaterialsSubDir, int nMaxWidth/*=-1*/, int nMaxHeight/*=-1*/ )
 {
-#ifndef _XBOX
 	if ((pInPath == NULL) || (pInPath[0] == 0))
 	{
 		return CE_ERROR_PARSING_SOURCE;
@@ -1835,7 +1803,7 @@ ConversionErrorType	ImgUtl_ConvertToVTFAndDumpVMT( const char *pInPath, const ch
 
 		// Create a safe version of pOutDir with corrected slashes
 		char szOutDir[MAX_PATH*2];
-		V_strcpy_safe( szOutDir, IsPosix() ? "/materials/" : "\\materials\\" );
+		V_strcpy_safe( szOutDir, "/materials/" );
 		if ( pMaterialsSubDir[0] == '\\' || pMaterialsSubDir[0] == '/' )
 			pMaterialsSubDir = pMaterialsSubDir + 1;
 		Q_strcat(szOutDir, pMaterialsSubDir, sizeof(szOutDir) );
@@ -1903,7 +1871,6 @@ ConversionErrorType	ImgUtl_ConvertToVTFAndDumpVMT( const char *pInPath, const ch
 	}
 
 	return nErrorCode;
-#endif
 }
 
 ConversionErrorType ImgUtl_WriteGenericVMT( const char *vtfPath, const char *pMaterialsSubDir )
@@ -1980,7 +1947,7 @@ static void FlushPNGData( png_structp png_ptr )
 
 ConversionErrorType ImgUtl_WriteRGBAAsPNGToBuffer( const unsigned char *pRGBAData, int nWidth, int nHeight, CUtlBuffer &bufOutData, int nStride )
 {
-#if !defined( _X360 ) && defined( WIN32 )
+#if defined( WIN32 )
 	// Auto detect image stride
 	if ( nStride <= 0 )
 	{
@@ -2207,7 +2174,6 @@ bool ImgUtl_WriteRGBToJPEG( unsigned char *pSrcBuf, unsigned int nSrcWidth, unsi
 
 ConversionErrorType ImgUtl_WriteRGBAAsJPEGToBuffer( const unsigned char *pRGBAData, int nWidth, int nHeight, CUtlBuffer &bufOutData, int nStride )
 {
-#if !defined( _X360 )
 
 	JSAMPROW row_pointer[1];     // pointer to JSAMPLE row[s]
 	int row_stride;              // physical row width in image buffer
@@ -2269,9 +2235,6 @@ ConversionErrorType ImgUtl_WriteRGBAAsJPEGToBuffer( const unsigned char *pRGBADa
 	free( pDstRow );
 
 	return CE_SUCCESS;
-#else
-	return CE_SOURCE_FILE_FORMAT_NOT_SUPPORTED;
-#endif
 }
 
 ConversionErrorType ImgUtl_LoadBitmap( const char *pszFilename, Bitmap_t &bitmap )

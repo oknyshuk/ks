@@ -986,16 +986,7 @@ int CBasePlayer::TakeHealth( float flHealth, int bitsDamageType )
 
 	// I disabled reporting history into the dbghist because it was super spammy.
 	// But, if you need to reenable it, the code is below in the "else" clause.
-#if 1 // #ifdef DISABLE_DEBUG_HISTORY
 	return BaseClass::TakeHealth (flHealth, bitsDamageType);
-#else
-	const int healingTaken = BaseClass::TakeHealth(flHealth,bitsDamageType);
-	char buf[256];
-	Q_snprintf(buf, 256, "[%f] Player %s healed for %d with damagetype %X\n", gpGlobals->curtime, GetDebugName(), healingTaken, bitsDamageType);
-	ADD_DEBUG_HISTORY( HISTORY_PLAYER_DAMAGE, buf );
-
-	return healingTaken;
-#endif
 }
 
 //-----------------------------------------------------------------------------
@@ -1756,9 +1747,7 @@ void CBasePlayer::Event_Killed( const CTakeDamageInfo &info )
 
 	g_pGameRules->PlayerKilled( this, info );
 
-	#if !defined( _GAMECONSOLE ) || defined ( CSTRIKE15 )
 	gamestats->Event_PlayerKilled( this, info );
-	#endif
 
 	RumbleEffect( RUMBLE_STOP_ALL, 0, RUMBLE_FLAGS_NONE );
 
@@ -5040,9 +5029,7 @@ void CBasePlayer::InitialSpawn( void )
 {
 	m_iConnected = PlayerConnected;
 	m_flInitialSpawnTime = gpGlobals->curtime;
-	#if !defined( _GAMECONSOLE ) || defined ( CSTRIKE15 )
 	gamestats->Event_PlayerConnected( this );
-	#endif
 }
 
 //-----------------------------------------------------------------------------
@@ -5326,14 +5313,6 @@ void CBasePlayer::Precache( void )
 	m_flgeigerRange = 1000;
 	m_igeigerRangePrev = 1000;
 
-#if 0
-	// @Note (toml 04-19-04): These are saved, used to be slammed here
-	m_bitsDamageType = 0;
-	m_bitsHUDDamage = -1;
-	SetPlayerUnderwter( false );
-
-	m_iTrain = TRAIN_NEW;
-#endif
 
 	m_iClientBattery = -1;
 
@@ -5685,9 +5664,7 @@ bool CBasePlayer::GetInVehicle( IServerVehicle *pVehicle, int nRole )
 	SetMoveType( MOVETYPE_NOCLIP );
 
 	// This is a hack to fixup the player's stats since they really didn't "cheat" and enter noclip from the console
-	#if !defined( _GAMECONSOLE ) || defined ( CSTRIKE15 )
 	gamestats->Event_DecrementPlayerEnteredNoClip( this );
-	#endif
 
 	// Get the seat position we'll be at in this vehicle
 	Vector vSeatOrigin;
@@ -6973,12 +6950,6 @@ bool CBasePlayer::BumpWeapon( CBaseCombatWeapon *pWeapon )
 		{
 #ifdef HL2_DLL
 
-			if ( IsGameConsole() )
-			{
-				CFmtStr hint;
-				hint.sprintf( "#valve_hint_select_%s", pWeapon->GetClassname() );
-				UTIL_HudHintText( this, hint.Access() );
-			}
 
 			// Always switch to a newly-picked up weapon
 			if ( !PlayerHasMegaPhysCannon() )
@@ -7138,33 +7109,6 @@ void CBasePlayer::UpdateClientData( void )
 
 	UpdateBattery();
 
-#if 0 // BYE BYE!!
-	// Update Flashlight
-	if ((m_flFlashLightTime) && (m_flFlashLightTime <= gpGlobals->curtime))
-	{
-		if (FlashlightIsOn())
-		{
-			if (m_iFlashBattery)
-			{
-				m_flFlashLightTime = FLASH_DRAIN_TIME + gpGlobals->curtime;
-				m_iFlashBattery--;
-				
-				if (!m_iFlashBattery)
-					FlashlightTurnOff();
-			}
-		}
-		else
-		{
-			if (m_iFlashBattery < 100)
-			{
-				m_flFlashLightTime = FLASH_CHARGE_TIME + gpGlobals->curtime;
-				m_iFlashBattery++;
-			}
-			else
-				m_flFlashLightTime = 0;
-		}
-	}
-#endif 
 
 	CheckTrainUpdate();
 
@@ -7263,7 +7207,7 @@ bool CBasePlayer::ShouldAutoaim( void )
 		return false;
 
 	// autoaiming is only for easy and medium skill
-	return ( IsGameConsole() || !g_pGameRules->IsSkillLevel(SKILL_HARD) );
+	return ( !g_pGameRules->IsSkillLevel(SKILL_HARD) );
 }
 
 //-----------------------------------------------------------------------------
@@ -9459,9 +9403,7 @@ void CBasePlayer::Event_KilledOther( CBaseEntity *pVictim, const CTakeDamageInfo
 	BaseClass::Event_KilledOther( pVictim, info );
 	if ( pVictim != this )
 	{
-		#if !defined( _GAMECONSOLE ) || defined ( CSTRIKE15 )
 		gamestats->Event_PlayerKilledOther( this, pVictim, info );
-		#endif
 	}
 }
 
@@ -9869,7 +9811,6 @@ bool CBasePlayer::HandleVoteCommands( const CCommand &args )
 }
 
 
-#if !defined(NO_STEAM)
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
@@ -9895,7 +9836,6 @@ uint64 CBasePlayer::GetSteamIDAsUInt64( void )
 		return steamIDForPlayer.ConvertToUint64();
 	return 0;
 }
-#endif // NO_STEAM
 
 
 

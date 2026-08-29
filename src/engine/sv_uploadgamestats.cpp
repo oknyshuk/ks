@@ -8,28 +8,16 @@
 
 #ifdef _WIN32
 
-#if !defined( _X360 )
 #include <winsock.h>
-#else
-#include "winsockx.h"
-#endif
 
-#elif POSIX
+#else
 #define INVALID_SOCKET -1
 #define SOCKET_ERROR -1
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
-#ifdef OSX
-#include <uuid/uuid.h>
-#endif
-#ifdef _PS3
-#include "basetypes.h"
-#include "ps3/ps3_core.h"
-#else
 #include <pwd.h>
 #define closesocket close
-#endif
 #include "quakedef.h" // build_number()
 #endif
 
@@ -56,13 +44,7 @@
 #include "sv_steamauth.h"
 #include "threadtools.h"
 
-#if defined( _X360 )
-#endif
 
-#if defined( _PS3 )
-#include "ps3/ps3_win32stubs.h"
-#define closesocket socketclose
-#endif
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -414,8 +396,6 @@ public:
 			{
 				bOk = false;
 			}
-#elif defined( _GAMECONSOLE )
-			Q_strncpy( username, "console", sizeof( username ) );
 #else
 			struct passwd *pass = getpwuid( getuid() );
 			if ( pass )
@@ -458,9 +438,6 @@ public:
 #ifdef WIN32
 				UUID newId;
 				UuidCreate( &newId );
-#elif defined(OSX)
-				uuid_t newId;
-				uuid_generate( newId );
 #else
 				char newId[32] = {0};	// TODO: add platform-specific UUID generation
 #endif
@@ -509,7 +486,7 @@ public:
 	// Only works in single player
 	virtual bool IsHDREnabled( void )
 	{
-#if defined( DEDICATED ) || defined( _X360 )
+#if defined( DEDICATED )
 		return false;
 #else
 		return g_pMaterialSystemHardwareConfig->GetHDREnabled();
@@ -951,9 +928,6 @@ EGameStatsUploadStatus Win32UploadGameStatsBlocking
 	const TGameStatsParameters & rGameStatsParameters
 )
 {
-#ifdef _PS3
-	return eGameStatsUploadFailed;
-#else
 	EGameStatsUploadStatus status = eGameStatsUploadSucceeded;
 
 	CUtlBuffer buf( rGameStatsParameters.m_uStatsBlobSize + 4096 );
@@ -1048,7 +1022,7 @@ EGameStatsUploadStatus Win32UploadGameStatsBlocking
 			adr.sin_port = htons( harvester_port );
 #ifdef _WIN32
 			adr.sin_addr.S_un.S_addr = harvester_ip;
-#elif POSIX
+#else
 			adr.sin_addr.s_addr = harvester_ip;
 #endif
 
@@ -1068,7 +1042,6 @@ EGameStatsUploadStatus Win32UploadGameStatsBlocking
 	}
 
 	return status;
-#endif
 }
 
 
@@ -1165,10 +1138,6 @@ void CAsyncUploaderThread::QueueData( char const *szMapName, uint uiBlobVersion,
 
 void CAsyncUploaderThread::ThreadProc()
 {
-#ifdef _GAMECONSOLE
-	Assert( !"This is illegal on console" );
-	DebuggerBreak();
-#endif
 	for ( ; ; )
 	{
 		// Fetch an item from queue

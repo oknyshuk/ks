@@ -317,7 +317,6 @@ void CBaseMultiplayerPlayer::StopScoringEscortPoints( void )
 	SetContextThink( NULL, 0, ESCORT_SCORE_CONTEXT );
 }
 
-#if !defined(NO_STEAM)
 //-----------------------------------------------------------------------------
 // Purpose:
 //-----------------------------------------------------------------------------
@@ -343,4 +342,3 @@ uint64 CBaseMultiplayerPlayer::GetSteamIDAsUInt64( void ) const
 		return steamIDForPlayer.ConvertToUint64();
 	return 0;
 }
-#endif // NO_STEAM

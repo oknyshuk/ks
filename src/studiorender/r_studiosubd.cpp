@@ -55,7 +55,7 @@ static matrix3x4_t *ComputeSkinMatrixSSE( mstudioboneweight_t &boneweights, matr
 	VPROF_BUDGET( "ComputeSkinMatrixSSE", _T("SubD Rendering") );
 
 	// NOTE: pPoseToWorld, being cache aligned, doesn't need explicit initialization
-#if defined( _WIN32 ) && !defined( WIN64 ) && !defined( _X360 ) 
+#if defined( _WIN32 ) && !defined( WIN64 ) 
 	switch( boneweights.numbones )
 	{
 	default:
@@ -261,9 +261,6 @@ static matrix3x4_t *ComputeSkinMatrixSSE( mstudioboneweight_t &boneweights, matr
 		return &scratchMatrix;
 	}
 #else
-#ifndef LINUX
-	#pragma message( "ComputeSkinMatrixSSE C implementation only" )
-#endif
 	extern matrix3x4_t *ComputeSkinMatrix( mstudioboneweight_t &boneweights, matrix3x4_t *pPoseToWorld, matrix3x4_t &scratchMatrix );
 	return ComputeSkinMatrix( boneweights, pPoseToWorld, scratchMatrix );
 #endif
@@ -485,59 +482,7 @@ void GenerateWorldSpacePatches( float *pSubDBuff, int nNumPatches, unsigned shor
 //-----------------------------------------------------------------------------------
 void CStudioRender::GenerateBicubicPatches( mstudiomesh_t* pmesh, studiomeshgroup_t* pGroup, bool bDoFlex )
 {
-#if defined( LINUX )
   	Assert(0);
-#else
-	VPROF_BUDGET( "CStudioRender::GenerateBicubicPatches", _T("SubD Rendering") );
-
-	FillTables(); // This only does work the first time through
-
-	Assert( pmesh );
-	Assert( pGroup );
-
-	const mstudio_meshvertexdata_t *vertData = pmesh->GetVertexData( m_pStudioHdr );
-	Assert( vertData );
-
-	mstudiovertex_t *pVertices = vertData->Vertex( 0 );
-
-	m_vSkinnedSubDVertices.SetCount( pGroup->m_NumVertices );
-
-	// First, apply software flexing and skinning to the vertices
-	SkinSubDCage( pVertices, pGroup->m_NumVertices, m_PoseToWorld,
-				  m_VertexCache, pGroup->m_pGroupIndexToMeshIndex, m_vSkinnedSubDVertices.Base(), bDoFlex );
-
-	// Early out
-	if ( mat_tessellation_update_buffers.GetBool() == false )
-		return;
-
-	// Lock the subd buffers
-	int nNumPatches = 0;
-	for ( int s=0; s<pGroup->m_NumStrips; ++s )
-	{
-		nNumPatches += pGroup->m_pUniqueFaces[s];
-	}
-
-	CMatRenderContextPtr pRenderContext( g_pMaterialSystem );
-	float *pSubDBuff = pRenderContext->LockSubDBuffer( nNumPatches );
-
-	// Now we are in world space, we can map to array of Bicubic patches
-	int totalIndices = 0;
-	float *pCurrentPtr = pSubDBuff;
-	for ( int s=0; s<pGroup->m_NumStrips; ++s )
-	{
-		OptimizedModel::StripHeader_t *pStrip = &pGroup->m_pStripData[s];
-		int StripFaces = pGroup->m_pUniqueFaces[s];
-
-		GenerateWorldSpacePatches( pCurrentPtr, StripFaces, &pGroup->m_pTopologyIndices[totalIndices], m_vSkinnedSubDVertices.Base(), ( pStrip->flags & OptimizedModel::STRIP_IS_QUADLIST_REG ) != 0 );
-
-		totalIndices += pStrip->numTopologyIndices;
-		pCurrentPtr += StripFaces * 120;
-	}
-
-	// Unlock subd buffers
-	pRenderContext->UnlockSubDBuffer( );
-
-#endif // !LINUX
 }
 
 
@@ -598,23 +543,6 @@ void CStudioRender::SoftwareProcessQuadMesh( mstudiomesh_t* pmesh, CMeshBuilder&
 	{
 		int patchCorner = 0;
 
-#if 0
-		Vector4D debugTangent[4];
-		for ( int j=0; j < 4; ++j )
-		{
-			int idx = quad.oneRing[patchCorner];
-			memcpy( &debugTangent[j], &pStudioTangentS[idx], sizeof( Vector4D ) );
-			patchCorner += quad.vtx1RingSize[j];
-		}
-
-		// These should be the same sign for a given patch.
-		// If they're not, that's bad
-		Assert( ( debugTangent[0].w == debugTangent[1].w ) &&
-				( debugTangent[1].w == debugTangent[2].w ) &&
-				( debugTangent[2].w == debugTangent[3].w ) );
-
-		patchCorner = 0;
-#endif
 
 		for ( int j=0; j < 4; ++j )							// Four verts per face
 		{

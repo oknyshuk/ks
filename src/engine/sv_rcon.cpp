@@ -9,7 +9,7 @@
 #include <winsock.h>
 #undef SetPort // winsock screws with the SetPort string... *sigh*
 #define MSG_NOSIGNAL 0
-#elif POSIX
+#else
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -19,9 +19,6 @@
 #define closesocket close
 #define WSAGetLastError() errno
 #define ioctlsocket ioctl
-#ifdef OSX
-#define MSG_NOSIGNAL 0
-#endif
 #endif
 #include <tier0/dbg.h>
 #include "utlbuffer.h"
@@ -31,8 +28,6 @@
 #include "sv_remoteaccess.h"
 #include "cl_rcon.h"
 
-#if defined( _X360 )
-#endif
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -443,17 +438,9 @@ bool CRConServer::SendRCONResponse( int nIndex, const void *data, int len, bool 
 	Assert( !( fromQueue && data != (pSocketData->m_OutstandingSends[pSocketData->m_OutstandingSends.Head()].Base())));
 
 	int sendLen = 0;
-#if defined(OSX)
-	int true_val = 1;
-	setsockopt( hSocket, SOL_SOCKET, SO_NOSIGPIPE, &true_val, sizeof(true_val));
-#endif
 	while ( sendLen < len )
 	{
-#if defined(OSX)
-		int ret = send( hSocket, (const char *)data + sendLen, len - sendLen, 0 );
-#else
 		int ret = send( hSocket, (const char *)data + sendLen, len - sendLen, MSG_NOSIGNAL );
-#endif
 		if ( ret == -1 )
 		{
 			// can't finish sending this right now, push it back

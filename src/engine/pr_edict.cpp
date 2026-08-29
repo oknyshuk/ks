@@ -201,10 +201,7 @@ void ED_Free (edict_t *ed)
 		// We don't know what was causing the entity to persist after sv.edicts was shut down, so hopefully this guard will let
 		// us catch it in the debugger if we ever see it again.
 		Warning( "ED_Free(0x%p) called after sv.edicts == NULL\n", ed );
-		if ( !IsX360() )
-		{
-			DebuggerBreak();
-		}
+		DebuggerBreak();
 		return;
 	}
 

@@ -36,7 +36,6 @@
 #include "soundenvelope.h"
 #include "c_basetempentity.h"
 #include "materialsystem/imaterialsystemstub.h"
-#include "VGuiMatSurface/IMatSystemSurface.h"
 #include "materialsystem/imaterialsystemhardwareconfig.h"
 #include "c_soundscape.h"
 #include "engine/ivdebugoverlay.h"
@@ -1071,7 +1070,7 @@ CHLClient::CHLClient()
 extern IGameSystem *ViewportClientSystem();
 
 // enable threaded init functions on x360
-static ConVar cl_threaded_init("cl_threaded_init", IsGameConsole() ? "1" : "0");
+static ConVar cl_threaded_init("cl_threaded_init", "0");
 
 bool InitParticleManager()
 {
@@ -1304,10 +1303,8 @@ int CHLClient::Init( CreateInterfaceFn appSystemFactory, CGlobalVarsBase *pGloba
 	if ( (inputsystem = (IInputSystem *)appSystemFactory(INPUTSYSTEM_INTERFACE_VERSION, NULL)) == NULL )
 		return false;
 #if defined ( AVI_VIDEO )		
-	if ( IsPC() && !IsPosix() && (avi = (IAvi *)appSystemFactory(AVI_INTERFACE_VERSION, NULL)) == NULL )
-		return false;
 #endif
-#if ( !defined( _GAMECONSOLE ) || defined( BINK_ENABLED_FOR_CONSOLE ) ) && defined( BINK_VIDEO )
+#if ( !defined( BINK_ENABLED_FOR_CONSOLE ) ) && defined( BINK_VIDEO )
 	if ( (bik = (IBik *)appSystemFactory(BIK_INTERFACE_VERSION, NULL)) == NULL )
 		return false;
 #endif
@@ -1331,13 +1328,11 @@ int CHLClient::Init( CreateInterfaceFn appSystemFactory, CGlobalVarsBase *pGloba
 #endif
 
 #if defined( REPLAY_ENABLED )
-	if ( IsPC() && (g_pReplayHistoryManager = (IReplayHistoryManager *)appSystemFactory( REPLAYHISTORYMANAGER_INTERFACE_VERSION, NULL )) == NULL )
+	if ( (g_pReplayHistoryManager = (IReplayHistoryManager *)appSystemFactory( REPLAYHISTORYMANAGER_INTERFACE_VERSION, NULL )) == NULL )
 		return false;
 #endif
-#ifndef _GAMECONSOLE
 	if ( ( gamestatsuploader = (IUploadGameStats *)appSystemFactory( INTERFACEVERSION_UPLOADGAMESTATS, NULL )) == NULL )
 		return false;
-#endif
 
 #ifdef INFESTED_DLL
 	if ( (missionchooser = (IASW_Mission_Chooser *)appSystemFactory(ASW_MISSION_CHOOSER_VERSION, NULL)) == NULL )
@@ -1580,10 +1575,8 @@ void CHLClient::Shutdown( void )
 	Blobulator::ShutdownBlob();
 #endif // USE_BLOBULATOR
 
-#ifndef NO_STEAM
 	ClientSteamContext().Shutdown();
 	// SteamAPI_Shutdown(); << Steam shutdown is controlled by engine
-#endif
 	
 	DisconnectTier3Libraries( );
 	DisconnectTier2Libraries( );
@@ -1953,9 +1946,7 @@ void CHLClient::View_Render( vrect_t *rect )
 
 	view->Render( rect );
 
-#if !defined( _GAMECONSOLE ) && !defined( NO_STEAM )
 	UpdatePerfStats();
-#endif
 }
 
 
@@ -2010,18 +2001,10 @@ void OnCPULevelChanged( IConVar *var, const char *pOldValue, float flOldValue )
 }
 
 
-#if defined( DX_TO_GL_ABSTRACTION )
-static ConVar cpu_level( "cpu_level", "3", 0, "CPU Level - Default: High", OnCPULevelChanged );
-#else
 static ConVar cpu_level( "cpu_level", "2", 0, "CPU Level - Default: High", OnCPULevelChanged );
-#endif
 
 CPULevel_t GetCPULevel()
 {
-	if ( IsX360() )
-		return CPU_LEVEL_360;
-	if ( IsPS3() )
-		return CPU_LEVEL_PS3;
 
 	return GetActualCPULevel();
 }
@@ -2046,10 +2029,6 @@ void OnGPULevelChanged( IConVar *var, const char *pOldValue, float flOldValue )
 static ConVar gpu_level( "gpu_level", "3", 0, "GPU Level - Default: High", OnGPULevelChanged );
 GPULevel_t GetGPULevel()
 {
-	if ( IsX360() )
-		return GPU_LEVEL_360;
-	if ( IsPS3() )
-		return GPU_LEVEL_PS3;
 
 	// Should we cache system_level off during level init?
 	GPULevel_t nSystemLevel = (GPULevel_t)clamp( gpu_level.GetInt(), 0, GPU_LEVEL_PC_COUNT-1 );
@@ -2065,24 +2044,12 @@ void OnMemLevelChanged( IConVar *var, const char *pOldValue, float flOldValue )
 	ConfigureCurrentSystemLevel();
 }
 
-#if defined( DX_TO_GL_ABSTRACTION )
-static ConVar mem_level( "mem_level", "3", 0, "Memory Level - Default: High", OnMemLevelChanged );
-#else
 static ConVar mem_level( "mem_level", "2", 0, "Memory Level - Default: High", OnMemLevelChanged );
-#endif
 
 MemLevel_t GetMemLevel()
 {
-	if ( IsX360() )
-		return MEM_LEVEL_360;
-	if ( IsPS3() )
-		return MEM_LEVEL_PS3;
 	
-#ifdef POSIX
 	const int nMinMemLevel = 2;
-#else
-	const int nMinMemLevel = 0;
-#endif
 
 	// Should we cache system_level off during level init?
 	MemLevel_t nSystemLevel = (MemLevel_t)clamp( mem_level.GetInt(), nMinMemLevel, MEM_LEVEL_PC_COUNT-1 );
@@ -2097,18 +2064,10 @@ void OnGPUMemLevelChanged( IConVar *var, const char *pOldValue, float flOldValue
 	ConfigureCurrentSystemLevel();
 }
 
-#if defined( DX_TO_GL_ABSTRACTION )
-static ConVar gpu_mem_level( "gpu_mem_level", "3", 0, "Memory Level - Default: High", OnGPUMemLevelChanged );
-#else
 static ConVar gpu_mem_level( "gpu_mem_level", "2", 0, "Memory Level - Default: High", OnGPUMemLevelChanged );
-#endif
 
 GPUMemLevel_t GetGPUMemLevel()
 {
-	if ( IsX360() )
-		return GPU_MEM_LEVEL_360;
-	if ( IsPS3() )
-		return GPU_MEM_LEVEL_PS3;
 
 	// Should we cache system_level off during level init?
 	GPUMemLevel_t nSystemLevel = (GPUMemLevel_t)clamp( gpu_mem_level.GetInt(), 0, GPU_MEM_LEVEL_PC_COUNT-1 );
@@ -2645,10 +2604,6 @@ void CHLClient::PrecacheMaterial( const char *pMaterialName )
 	}
 	else
 	{
-		if (IsOSX())
-		{
-			printf("\n ##### CHLClient::PrecacheMaterial could not find material %s (%s)", pMaterialName, pTempBuf );
-		}
 	}
 }
 
@@ -3615,16 +3570,6 @@ void CHLClient::OnSplitScreenStateChanged()
 
 	GetFullscreenClientMode()->Layout( true );
 
-#if 0
-	// APS: This cannot be done in this way, the schemes also need to be reloaded as they hook the fonts and
-	// various font metrics for custom drawing/sizing etc.
-	// See CMatSystemSurface::OnScreenSizeChanged() which is doing the better thing.
-	// However, that is still not good enough due to questionable code in CScheme::ReloadFontGlyphs() which
-	// prevents the reload due to it's cached concept of the screensize not changing, except the purge is already partialy done,
-	// which results in a broken font state.
-	// Instead, we are doing the same thing the consoles do (which cannot change video sizes) which is to NOT ditch the glyphs
-	// when changing split screen state. When SS for PC gets turned into a primary concept this can be revisited.
-#endif
 
 	// Update visibility for all ents so that the second viewport for the split player guy looks right, etc.
 	C_BaseEntityIterator iterator;

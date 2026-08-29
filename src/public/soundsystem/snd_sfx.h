@@ -37,7 +37,6 @@ public:
 	bool				m_bIsLateLoad : 1;
 	bool				m_bMixGroupsCached : 1;
 	bool				m_bIsMusic : 1;
-	bool				m_bIsCreatedByQueuedLoader : 1;
 
 	byte				m_mixGroupCount;
 	// UNDONE: Use a fixed bit vec here?

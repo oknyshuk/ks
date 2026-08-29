@@ -82,28 +82,14 @@ CPlugin::~CPlugin()
 //---------------------------------------------------------------------------------
 bool CPlugin::Load( const char *fileName )
 {
-	if ( IsX360() )
-	{
-		return false;
-	}
 
 	char fixedFileName[ MAX_PATH ];
 	Q_strncpy( fixedFileName, fileName, sizeof(fixedFileName) );
 	Q_FixSlashes( fixedFileName );
 
-#if defined ( OSX ) || defined( LINUX )
 	// Linux doesn't check signatures, so in that case disable plugins on the client completely unless -insecure is specified
 	if ( !sv.IsDedicated() && Host_IsSecureServerAllowed() )
 		return false;
-#else
-	if ( !sv.IsDedicated() && Host_IsSecureServerAllowed() )
-	{
-		if ( CommandLine()->FindParm( "-LoadPluginsForClient" ) )
-			Host_DisallowSecureServers();
-		else
-			return false;
-	}
-#endif
 
 	// Only allow unsigned plugins in -insecure mode
 	if ( !Host_AllowLoadModule( fixedFileName, "GAME", false ) )
@@ -240,10 +226,6 @@ CServerPlugin::~CServerPlugin()
 //---------------------------------------------------------------------------------
 void CServerPlugin::LoadPlugins()
 {
-	if ( IsX360() )
-	{
-		return;
-	}
 
 	m_Plugins.PurgeAndDeleteElements();
 
@@ -541,7 +523,7 @@ bool CServerPlugin::ClientConnect( edict_t *pEntity, const char *pszName, const 
 				Assert( bAllowConnect == false );
 				return bAllowConnect;
 			}
-			else if ( result == PLUGIN_OVERRIDE  && bRetValOverridden == false ) // only the first PLUGIN_OVERRIDE return set the retval
+			else if ( result == PLUGIN_OVERRIDE && bRetValOverridden == false ) // only the first PLUGIN_OVERRIDE return set the retval
 			{
 				bSavedRetVal = bAllowConnect;
 				bRetValOverridden = true;

@@ -10,7 +10,6 @@
 #include "tier0/memdbgon.h"
 
 
-#if !defined( _CERT )
 
 // Memory log auto game system instantiation
 CMemoryLog g_MemoryLog;
@@ -48,4 +47,3 @@ void CMemoryLog::LevelInitPostEntity( void )
 #endif
 }
 
-#endif // !defined( _CERT )

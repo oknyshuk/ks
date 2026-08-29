@@ -216,10 +216,7 @@ void BotProfileManager::Init( const char *filename, unsigned int *checksum )
 
 	if (!file)
 	{
-		if ( true ) // UTIL_IsGame( "czero" ) )
-		{
-            Msg( "WARNING: Cannot access bot profile database '%s'\n", filename );
-		}
+        Msg( "WARNING: Cannot access bot profile database '%s'\n", filename );
 		return;
 	}
 

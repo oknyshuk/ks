@@ -155,10 +155,6 @@ void ClearModelSoundsCache();
 
 void WaveTrace( char const *wavname, char const *funcname )
 {
-	if ( IsGameConsole() && !IsDebug() )
-	{
-		return;
-	}
 
 	static CUtlSymbolTable s_WaveTrace;
 
@@ -355,23 +351,12 @@ public:
 
 		for ( char *path = strtok( searchPaths, ";" ); path; path = strtok( NULL, ";" ) )
 		{
-			if ( IsGameConsole() && ( filesystem->GetDVDMode() == DVDMODE_STRICT ) && !V_stristr( path, ".zip" ) )
-			{
-				// only want zip paths
-				continue;
-			} 
 
 			char fullpath[MAX_PATH];
 			Q_snprintf( fullpath, sizeof( fullpath ), "%s%s", path, filename );
 			Q_FixSlashes( fullpath );
 			Q_strlower( fullpath );
 
-			if ( IsGameConsole() )
-			{
-				char fullpath360[MAX_PATH];
-				UpdateOrCreateCaptionFile( fullpath, fullpath360, sizeof( fullpath360 ) );
-				Q_strncpy( fullpath, fullpath360, sizeof( fullpath ) );
-			}
 
 			int idx = m_ServerCaptions.AddToTail();
 			AsyncCaption_t& entry = m_ServerCaptions[ idx  ];
@@ -2229,7 +2214,7 @@ void CBaseEntity::EmitCloseCaption( IRecipientFilter& filter, int entindex, char
 //-----------------------------------------------------------------------------
 bool CBaseEntity::PrecacheSound( const char *name )
 {
-	if ( IsPC() && !g_bPermitDirectSoundPrecache )
+	if ( !g_bPermitDirectSoundPrecache )
 	{
 		Warning( "Direct precache of %s\n", name );
 	}

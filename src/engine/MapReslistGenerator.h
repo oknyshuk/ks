@@ -60,7 +60,6 @@ public:
 	// returns true if reslist generation is enabled
 	bool		IsEnabled()			{ return m_bLoggingEnabled; }
 	bool		IsLoggingToMap()	{ return m_bLoggingEnabled && !m_bLogToEngineList; }
-	bool		IsCreatingForXbox();
 
 	// call to mark level load/end
 	void		OnLevelLoadStart(const char *levelName);
@@ -99,7 +98,6 @@ private:
 	bool		m_bLoggingEnabled;
 	bool		m_bUsingMapList;
 	bool		m_bRestartOnTransition;
-	bool		m_bCreatingForXbox;
 	// true for engine, false for map
 	bool		m_bLogToEngineList;
 	bool		m_bAutoQuit;

@@ -7,10 +7,8 @@
 
 #include "BaseVSShader.h"
 
-#if !defined( _GAMECONSOLE )
 #include "engine_post_vs30.inc"
 #include "engine_post_ps30.inc"
-#endif
 
 #include "engine_post_vs20.inc"
 #include "engine_post_ps20.inc"
@@ -296,7 +294,7 @@ BEGIN_VS_SHADER_FLAGS( Engine_Post_dx9, "Engine post-processing effects (softwar
 
 	SHADER_DRAW
 	{
-		bool bSFM = ( ToolsEnabled() && IsPlatformWindowsPC() && g_pHardwareConfig->SupportsPixelShaders_3_0() ) ? true : false;
+		bool bSFM = ( ToolsEnabled() && false && g_pHardwareConfig->SupportsPixelShaders_3_0() ) ? true : false;
 		bSFM;
 		bool bToolMode = params[TOOLMODE]->GetIntValue() != 0;
 		bool bDepthBlurEnable = params[ DEPTHBLURENABLE ]->GetIntValue() != 0;
@@ -360,20 +358,17 @@ BEGIN_VS_SHADER_FLAGS( Engine_Post_dx9, "Engine post-processing effects (softwar
 			int		userDataSize		= 0;
 			pShaderShadow->VertexShaderVertexFormat( format, numTexCoords, pTexCoordDimensions, userDataSize );
 
-#if !defined( _GAMECONSOLE )
 			if( g_pHardwareConfig->SupportsPixelShaders_3_0() )
 			{
 				DECLARE_STATIC_VERTEX_SHADER( engine_post_vs30 );
 				SET_STATIC_VERTEX_SHADER( engine_post_vs30 );
 			}
 			else
-#endif
 			{
 				DECLARE_STATIC_VERTEX_SHADER( engine_post_vs20 );
 				SET_STATIC_VERTEX_SHADER( engine_post_vs20 );
 			}
 
-#if !defined( _GAMECONSOLE )
 			if( g_pHardwareConfig->SupportsPixelShaders_3_0() )
 			{
 				DECLARE_STATIC_PIXEL_SHADER( engine_post_ps30 );
@@ -384,7 +379,6 @@ BEGIN_VS_SHADER_FLAGS( Engine_Post_dx9, "Engine post-processing effects (softwar
 				SET_STATIC_PIXEL_SHADER( engine_post_ps30 );
 			}
 			else 
-#endif
 			if( g_pHardwareConfig->SupportsPixelShaders_2_b() )
 			{
 				DECLARE_STATIC_PIXEL_SHADER( engine_post_ps20b );
@@ -423,7 +417,7 @@ BEGIN_VS_SHADER_FLAGS( Engine_Post_dx9, "Engine post-processing effects (softwar
 			}
 
 			// ps20b has a desaturation control that overrides color correction, only used by the SFM (tools mode on Windows)
-			bool bDesaturateEnable = bToolMode && ( params[DESATURATEENABLE]->GetIntValue() != 0 ) && g_pHardwareConfig->SupportsPixelShaders_2_b() && IsPlatformWindows();
+			bool bDesaturateEnable = bToolMode && ( params[DESATURATEENABLE]->GetIntValue() != 0 ) && g_pHardwareConfig->SupportsPixelShaders_2_b() && false;
 			
 			if ( params[FADE]->GetIntValue() == 0 )
 			{
@@ -561,7 +555,7 @@ BEGIN_VS_SHADER_FLAGS( Engine_Post_dx9, "Engine post-processing effects (softwar
 			pShaderAPI->SetPixelShaderConstant( 4, ccInfo.m_pLookupWeights );
 
 			int aaEnabled = false;
-			if ( IsGameConsole() || ( g_pHardwareConfig->SupportsPixelShaders_3_0() && !bSFM ) )
+			if ( ( g_pHardwareConfig->SupportsPixelShaders_3_0() && !bSFM ) )
 			{
 				aaEnabled = ( params[ AAINTERNAL1 ]->GetVecValue()[0] != 0.0f ) ? 1 : 0;
 			}
@@ -587,14 +581,10 @@ BEGIN_VS_SHADER_FLAGS( Engine_Post_dx9, "Engine post-processing effects (softwar
 			{
 				bloomConstant[2] = mat_depth_blur_focal_distance_override.GetFloat();
 			}
-#ifdef _X360
-			bloomConstant[3] = 0.0f; // Depth blur is currently broken on X360 because we're not writing out the depth scale properly
-#else // !_X360
 			if ( mat_depth_blur_strength_override.GetFloat() >= 0.0f )
 			{
 				bloomConstant[3] = mat_depth_blur_strength_override.GetFloat();
 			}
-#endif // _X360
 			
 			pShaderAPI->SetPixelShaderConstant( 5, bloomConstant );
 
@@ -641,10 +631,6 @@ BEGIN_VS_SHADER_FLAGS( Engine_Post_dx9, "Engine post-processing effects (softwar
 					vPsConst6[0] = mat_grain_scale_override.GetFloat();
 				}
 
-				if ( IsX360() )
-				{
-					vPsConst6[0] *= 0.15f;
-				}
 
 				if ( vPsConst6[0] <= 0.0f )
 				{
@@ -755,7 +741,6 @@ BEGIN_VS_SHADER_FLAGS( Engine_Post_dx9, "Engine post-processing effects (softwar
 			
 			int nFadeType = clamp( params[FADE]->GetIntValue(), 0, 2 ); 
 
-#if !defined( _GAMECONSOLE )
 			if ( g_pHardwareConfig->SupportsPixelShaders_3_0() )
 			{
 				DECLARE_DYNAMIC_PIXEL_SHADER( engine_post_ps30 );
@@ -775,7 +760,6 @@ BEGIN_VS_SHADER_FLAGS( Engine_Post_dx9, "Engine post-processing effects (softwar
 				SET_DYNAMIC_PIXEL_SHADER( engine_post_ps30 );
 			}
 			else 
-#endif
 			if ( g_pHardwareConfig->SupportsPixelShaders_2_b() )
 			{
 				DECLARE_DYNAMIC_PIXEL_SHADER( engine_post_ps20b );
@@ -790,10 +774,8 @@ BEGIN_VS_SHADER_FLAGS( Engine_Post_dx9, "Engine post-processing effects (softwar
 				SET_DYNAMIC_PIXEL_SHADER_COMBO( VOMIT_ENABLE,					bVomitEnable );
 				SET_DYNAMIC_PIXEL_SHADER_COMBO( FADE_TO_BLACK,					bFadeToBlackEnable );
 				SET_DYNAMIC_PIXEL_SHADER_COMBO( FADE_TYPE,						nFadeType );
-#if !defined( _X360 ) && !defined( _PS3 )
 				SET_DYNAMIC_PIXEL_SHADER_COMBO( TV_GAMMA,						params[TV_GAMMA]->GetIntValue() && bToolMode ? 1 : 0 );
 				SET_DYNAMIC_PIXEL_SHADER_COMBO( DESATURATEENABLE,				bDesaturateEnable );
-#endif
 				SET_DYNAMIC_PIXEL_SHADER( engine_post_ps20b );
 			}
 			else
@@ -807,14 +789,12 @@ BEGIN_VS_SHADER_FLAGS( Engine_Post_dx9, "Engine post-processing effects (softwar
 				SET_DYNAMIC_PIXEL_SHADER( engine_post_ps20 );
 			}
 
-#if !defined( _GAMECONSOLE )
 			if ( g_pHardwareConfig->SupportsPixelShaders_3_0() )
 			{
 				DECLARE_DYNAMIC_VERTEX_SHADER( engine_post_vs30 );
 				SET_DYNAMIC_VERTEX_SHADER( engine_post_vs30 );
 			}
 			else
-#endif
 			{
 				DECLARE_DYNAMIC_VERTEX_SHADER( engine_post_vs20 );
 				SET_DYNAMIC_VERTEX_SHADER( engine_post_vs20 );

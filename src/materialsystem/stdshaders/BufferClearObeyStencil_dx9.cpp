@@ -48,7 +48,7 @@ BEGIN_VS_SHADER_FLAGS( BufferClearObeyStencil_DX9, "", SHADER_NOT_EDITABLE )
 		bool bEnableAlphaWrites = (params[CLEARALPHA]->GetIntValue() >= 0) ? (params[CLEARALPHA]->GetIntValue() != 0) : bEnableColorWrites;
 
 		bool bUsesColor = bEnableColorWrites || bEnableAlphaWrites;
-		bool bReloadZcull = ( IsPS3() && params[RELOADZCULL]->GetIntValue() != 0 ) ? true : false;
+		bool bReloadZcull = ( false && params[RELOADZCULL]->GetIntValue() != 0 ) ? true : false;
 
 		SHADOW_STATE
 		{

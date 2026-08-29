@@ -340,19 +340,6 @@ struct worldbrushdata_t
 
 	int              m_nBSPFileSize;
 
-#if 0
-	int			numportals;
-	mportal_t	*portals;
-
-	int			numclusters;
-	mcluster_t	*clusters;
-
-	int			numportalverts;
-	unsigned short *portalverts;
-
-	int			numclusterportals;
-	unsigned short *clusterportals;
-#endif
 };
 
 // only models with type "mod_brush" have this data
@@ -622,11 +609,7 @@ inline int& MSurf_DLightBits( SurfaceHandle_t surfID, worldbrushdata_t *pData = 
 
 inline cplane_t& MSurf_Plane( SurfaceHandle_t surfID )
 {
-#ifndef _PS3
 	return *surfID->plane;
-#else
-	return surfID->m_plane;
-#endif
 }
 
 inline int& MSurf_FirstVertIndex( SurfaceHandle_t surfID )

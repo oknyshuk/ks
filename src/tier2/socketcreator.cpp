@@ -7,9 +7,7 @@
 #include "tier0/platform.h"
 
 #if defined(_WIN32)
-#if !defined(_X360)
 #include <winsock.h>
-#endif
 #undef SetPort // winsock screws with the SetPort string... *sigh*
 #define socklen_t int
 #define MSG_NOSIGNAL 0
@@ -19,16 +17,7 @@
 #include <netinet/in.h>
 #include <netinet/tcp.h>
 #include <errno.h>
-#ifdef OSX
-#define MSG_NOSIGNAL 0
-#endif
-#ifdef _PS3
-// NOTE: this socket creator doesn't work on PS3
-// here's a compile-hack:
-#define EWOULDBLOCK EAGAIN
-#else
 #include <sys/ioctl.h>
-#endif
 #define closesocket close
 #define WSAGetLastError() errno
 #define ioctlsocket ioctl
@@ -37,8 +26,6 @@
 #include "socketcreator.h"
 //#include "server.h"
 
-#if defined( _X360 )
-#endif
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -108,11 +95,8 @@ bool SocketWouldBlock()
 {
 #ifdef _WIN32
 	return (WSAGetLastError() == WSAEWOULDBLOCK);
-#elif defined(POSIX)
-	return (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINPROGRESS);
 #else
-	Assert( false ); // Not implemented for this platform
-	return false;
+	return (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINPROGRESS);
 #endif
 }
 
@@ -149,10 +133,6 @@ bool CSocketCreator::CreateListenSocket( const netadr_t &netAdr, bool bListenOnA
 {
 	CloseListenSocket();
 
-#if PLATFORM_PS3
-	Assert( 0 );
-	return false;
-#else
 	m_ListenAddress = netAdr;
 	m_hListenSocket = socket (PF_INET, SOCK_STREAM, IPPROTO_TCP);
 	if ( m_hListenSocket == -1 )
@@ -188,7 +168,6 @@ bool CSocketCreator::CreateListenSocket( const netadr_t &netAdr, bool bListenOnA
 	}
 
 	return true;
-#endif
 }
 
 
@@ -197,10 +176,6 @@ bool CSocketCreator::CreateListenSocket( const netadr_t &netAdr, bool bListenOnA
 //-----------------------------------------------------------------------------
 bool CSocketCreator::ConfigureSocket( int sock )
 {
-#if PLATFORM_PS3
-	Assert( 0 );
-	return false;
-#else
 	// disable NAGLE (rcon cmds are small in size)
 	int nodelay = 1;
 	setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, (char*)&nodelay, sizeof(nodelay)); 
@@ -216,7 +191,6 @@ bool CSocketCreator::ConfigureSocket( int sock )
 		return false;
 	}
 	return true;
-#endif
 }
 
 
@@ -225,10 +199,6 @@ bool CSocketCreator::ConfigureSocket( int sock )
 //-----------------------------------------------------------------------------
 void CSocketCreator::ProcessAccept()
 {
-#if PLATFORM_PS3
-	Assert( 0 );
-	return;
-#else
 	int newSocket;
 	sockaddr sa;
 	int nLengthAddr = sizeof(sa);
@@ -237,9 +207,7 @@ void CSocketCreator::ProcessAccept()
 	if ( newSocket == -1 )
 	{
 		if ( !SocketWouldBlock()
-#ifdef POSIX
 			&& errno != EINTR 
-#endif
 		 )
 		{
 			Warning ("Socket ProcessAccept Error: %s\n", NET_ErrorString( WSAGetLastError() ) );
@@ -274,7 +242,6 @@ void CSocketCreator::ProcessAccept()
 		m_pListener->OnSocketAccepted( newSocket, adr, &pData );
 	}
 	pNewEntry->m_pData = pData;
-#endif
 }
 
 
@@ -283,10 +250,6 @@ void CSocketCreator::ProcessAccept()
 //-----------------------------------------------------------------------------
 int CSocketCreator::ConnectSocket( const netadr_t &netAdr, bool bSingleSocket )
 {
-#if PLATFORM_PS3
-	Assert( 0 );
-	return -1;
-#else
 	if ( bSingleSocket )
 	{
 		CloseAllAcceptedSockets();
@@ -359,7 +322,6 @@ int CSocketCreator::ConnectSocket( const netadr_t &netAdr, bool bSingleSocket )
 
 	pNewEntry->m_pData = pData;
 	return nIndex;
-#endif
 }
 
 
@@ -368,24 +330,15 @@ int CSocketCreator::ConnectSocket( const netadr_t &netAdr, bool bSingleSocket )
 //-----------------------------------------------------------------------------
 void CSocketCreator::CloseListenSocket()
 {
-#if PLATFORM_PS3
-	Assert( 0 );
-	return;
-#else
 	if ( m_hListenSocket != -1 )
 	{
 		closesocket( m_hListenSocket );
 		m_hListenSocket = -1;
 	}
-#endif
 }
 
 void CSocketCreator::CloseAcceptedSocket( int nIndex )
 {
-#if PLATFORM_PS3
-	Assert( 0 );
-	return;
-#else
 	if ( nIndex >= m_hAcceptedSockets.Count() )
 		return;
 
@@ -396,15 +349,10 @@ void CSocketCreator::CloseAcceptedSocket( int nIndex )
 	}
 	closesocket( connected.m_hSocket );
 	m_hAcceptedSockets.Remove( nIndex );
-#endif
 }
 
 void CSocketCreator::CloseAllAcceptedSockets()
 {
-#if PLATFORM_PS3
-	Warning( "CSocketCreator::CloseAllAcceptedSockets is UNIMPLEMENTED.\n" );
-	return;
-#else
 	int nCount = m_hAcceptedSockets.Count();
 	for ( int i = 0; i < nCount; ++i )
 	{
@@ -416,7 +364,6 @@ void CSocketCreator::CloseAllAcceptedSockets()
 		closesocket( connected.m_hSocket );
 	}
 	m_hAcceptedSockets.RemoveAll();
-#endif
 }
 
 

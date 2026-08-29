@@ -34,7 +34,7 @@ static const uint32 _sincos_inv_masks[] = { (uint32)~0x0, (uint32)0x0 };
 
 	#define _PS_CONST(Name, Val) \
 		static const __declspec(align(16)) float _ps_##Name[4] = { Val, Val, Val, Val }
-#elif POSIX
+#else
 	#define _PS_EXTERN_CONST(Name, Val) \
 		const float _ps_##Name[4] __attribute__((aligned(16))) = { Val, Val, Val, Val }
 
@@ -81,7 +81,6 @@ void  __cdecl _SSE_VectorMA( const float *start, float scale, const float *direc
 //-----------------------------------------------------------------------------
 
 
-#ifdef POSIX
 //#define _PS_CONST(Name, Val) static const ALIGN16 float _ps_##Name[4] ALIGN16_POST = { Val, Val, Val, Val }
 #define _PS_CONST_TYPE(Name, Type, Val) static const ALIGN16 Type _ps_##Name[4] ALIGN16_POST = { Val, Val, Val, Val }
 
@@ -120,7 +119,6 @@ typedef union xmm_mm_union {
 typedef __m128 v4sf;  // vector of 4 float (sse1)
 typedef __m64 v2si;   // vector of 2 int (mmx)
 
-#endif
 
 
 // SSE Version of VectorTransform

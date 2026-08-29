@@ -273,17 +273,9 @@ inline char const *GetStringTableDictionaryFileName( bool bIsFallback )
 {
 	if ( bIsFallback )
 	{
-		if ( IsGameConsole() || NET_IsDedicatedForXbox() )
-		{
-			return BSPPACK_STRINGTABLE_DICTIONARY_GAMECONSOLE_FALLBACK;
-		}
 		return BSPPACK_STRINGTABLE_DICTIONARY_FALLBACK;
 	}
 
-	if ( IsGameConsole() || NET_IsDedicatedForXbox() )
-	{
-		return BSPPACK_STRINGTABLE_DICTIONARY_GAMECONSOLE;
-	}
 	return BSPPACK_STRINGTABLE_DICTIONARY;
 }
 
@@ -965,7 +957,7 @@ int CNetworkStringTable::WriteUpdate( CBaseClient *client, bf_write &buf, int ti
 	// keep it enabled on Valve official servers since clients always have all maps or on listen servers
 	if ( bEncodeUsingDictionaries && !Q_stricmp( gamedir, "csgo" ) )
 	{
-		bEncodeUsingDictionaries = IsGameConsole();
+		bEncodeUsingDictionaries = false;
 	}
 
 	int count = m_pItems->Count();
@@ -1101,10 +1093,6 @@ int CNetworkStringTable::WriteUpdate( CBaseClient *client, bf_write &buf, int ti
 		bEncodeUsingDictionaries && 
 		nDictionaryCount < 0.9f * count )
 	{
-		if ( IsGameConsole() )
-		{
-			Warning( "String Table dictionary for %s should be rebuilt, only found %d of %d strings in dictionary\n", GetTableName(), nDictionaryCount, count );
-		}
 	}
 
 	return entriesUpdated;
@@ -2196,11 +2184,6 @@ void CNetworkStringTableContainer::Dump( void )
 void CNetworkStringTableContainer::CreateDictionary( char const *pchMapName )
 {
 	// Don't do this on Game Consoles!!!
-	if ( IsGameConsole() )
-	{
-		Warning( "Map %s missing GameConsole stringtable dictionary!!!\n", pchMapName );
-		return;
-	}
 
 	char mapPath[ MAX_PATH ];
 	Q_snprintf( mapPath, sizeof( mapPath ), "maps/%s.bsp", pchMapName );
@@ -2237,7 +2220,7 @@ void CNetworkStringTableContainer::CreateDictionary( char const *pchMapName )
 		}
 	}
 
-	g_StringTableDictionary.CacheNewStringTableForWriteToBSPOnLevelShutdown( pchMapName, buf, MapReslistGenerator().IsCreatingForXbox() ); 
+	g_StringTableDictionary.CacheNewStringTableForWriteToBSPOnLevelShutdown( pchMapName, buf, false ); 
 }
 
 void CNetworkStringTableContainer::UpdateDictionaryStrings()

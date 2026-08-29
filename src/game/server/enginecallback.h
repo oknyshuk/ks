@@ -12,9 +12,7 @@
 #include "eiface.h"
 #endif
 
-#ifdef POSIX
 #define random random_valve // stdlib.h defined random()..., and so does vstdlib/random.h
-#endif
 
 #include "tier3/tier3.h"
 #include "tier2/tier2_logging.h"
@@ -54,10 +52,8 @@ extern IServerEngineTools		*serverenginetools;
 extern IServerFoundry			*serverfoundry;
 extern IScriptManager			*scriptmanager;
 
-#if !defined( NO_STEAM )
 extern CSteamAPIContext			*steamapicontext; // available on game clients
 extern CSteamGameServerAPIContext *steamgameserverapicontext; //available on game servers
-#endif
 
 #ifdef INFESTED_DLL
 class IASW_Mission_Chooser;

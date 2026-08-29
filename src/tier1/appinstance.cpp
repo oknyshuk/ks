@@ -41,12 +41,6 @@
 #ifdef PLATFORM_WINDOWS_PC 
 #include <windows.h>
 #endif
-#ifdef PLATFORM_OSX
-#include <fcntl.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include "tier1/checksum_crc.h"
-#endif
 
 
 
@@ -66,115 +60,23 @@ CSingleAppInstance::CSingleAppInstance( tchar* InstanceName, bool exitOnNotUniqu
 		return;
 	}
 
-#ifndef _PS3
 #ifdef WIN32
-	if ( IsPlatformWindows() )
-	{
-		// don't allow more than one instance to run
-		m_hMutex = ::CreateMutex( NULL, FALSE, InstanceName );
-
-		unsigned int waitResult = ::WaitForSingleObject( m_hMutex, 0 );
-
-		// Here, we have the mutex
-		if ( waitResult == WAIT_OBJECT_0 || waitResult == WAIT_ABANDONED )
-		{
-			m_isUniqueInstance = true;		
-			return;
-		}
-
-		// couldn't get the mutex, we must be running another instance
-		::CloseHandle( m_hMutex );
-		m_hMutex = NULL;
-		
-
-		// note that we are not unique, i.e. another instance of this app (or one using the same instance name) is running
-		m_isUniqueInstance = false;
-		
-		CheckForOtherRunningInstances( exitOnNotUnique, displayMsgIfNotUnique );
-	}
-#elif defined(OSX)
-	
-	m_hMutex = -1; // 0 in theory is a valid fd, so set the sentinal to -1 for checking in the destructor
-	
-	// Under OSX use flock in /tmp/source_engine_<game>.lock, create the file if it doesn't exist
-	CRC32_t gameCRC;
-	CRC32_Init(&gameCRC);
-	CRC32_ProcessBuffer( &gameCRC, (void *)InstanceName, Q_strlen( InstanceName ) );
-	CRC32_Final( &gameCRC );
-	
-	V_snprintf( m_szLockPath, sizeof(m_szLockPath), "/tmp/source_engine_%lu.lock", gameCRC );
-	m_hMutex = open( m_szLockPath, O_CREAT | O_WRONLY | O_EXLOCK | O_NONBLOCK | O_TRUNC, 0777 );
-	if( m_hMutex >= 0 )
-	{
-		// make sure we give full perms to the file, we only one instance per machine
-		fchmod( m_hMutex, 0777 );
-		
-		m_isUniqueInstance = true;		
-		// we leave the file open, under unix rules when we die we'll automatically close and remove the locks
-		return;
-	}   		 
-	
-	// We were unable to open the file, it should be because we are unable to retain a lock
-	if ( errno != EWOULDBLOCK)
-	{
-		fprintf( stderr, "unexpected error %d trying to exclusively lock %s\n", errno, m_szLockPath );
-	}
-	
-	m_isUniqueInstance = false;		
 #endif
 
-#endif // _PS3
 }
 
 
 
 CSingleAppInstance::~CSingleAppInstance()
 {
-#ifndef _PS3
 #ifdef WIN32
-	if ( IsPlatformWindows() && m_hMutex )
-	{
-		::ReleaseMutex( m_hMutex );
-		::CloseHandle( m_hMutex );
-		m_hMutex = NULL;
-	}
-#elif defined(OSX)
-	if ( m_hMutex != -1 )
-	{
-		close( m_hMutex );
-		m_hMutex = -1;
-		unlink( m_szLockPath ); 
-	}
 #endif
-#endif // _PS3
 }
 
 
 bool CSingleAppInstance::CheckForOtherRunningInstances( bool exitOnNotUnique, bool displayMsgIfNotUnique )
 {
 
-	if ( IsPlatformWindows() || IsOSX() )
-	{
-		// are we the only running instance of this app?  Then we are Unique (aren't we SPECIAL?)
-		if ( m_isUniqueInstance )
-		{
-			return false;
-		}
-	
-		// should we display a message to the user?	
-		if ( displayMsgIfNotUnique )
-		{
-			Plat_MessageBox( "Alert", "Another copy of this program is already running on this machine.  Only one instance at a time is allowed" );
-		}
-		
-		// should we attempt normal program termination?
-		if ( exitOnNotUnique )
-		{
-			exit( 0 );
-		}
-		
-		return true;
-	}
 
 	// We fell through, so act like there are no other instances
 	return false;
@@ -191,58 +93,12 @@ bool CSingleAppInstance::CheckForOtherRunningInstances( bool exitOnNotUnique, bo
 // ===========================================================================
 bool CSingleAppInstance::CheckForRunningInstance( tchar* InstanceName )
 {
-#ifndef _PS3
 	// validate input		
 	Assert( InstanceName != NULL && V_strlen( InstanceName ) > 0 && V_strlen( InstanceName ) < MAX_PATH );
 
 #ifdef WIN32
-	if ( IsPlatformWindows() )
-	{
-		// don't allow more than one instance to run
-		HANDLE hMutex = ::CreateMutex( NULL, FALSE, InstanceName );
-
-		unsigned int waitResult = ::WaitForSingleObject( hMutex, 0 );
-
-		::CloseHandle( hMutex );
-
-		// Did we grab the mutex successfully?  nope...
-		if ( waitResult == WAIT_OBJECT_0 || waitResult == WAIT_ABANDONED )
-		{
-			return false;
-		}
-
-		// couldn't get the mutex, must be another instance running somewhere that has it
-		return true;
-		
-	}
-#elif defined(OSX)
-	// Under OSX use flock in /tmp/source_engine_<game>.lock, create the file if it doesn't exist
-	CRC32_t gameCRC;
-	CRC32_Init(&gameCRC);
-	CRC32_ProcessBuffer( &gameCRC, (void *)InstanceName, Q_strlen( InstanceName ) );
-	CRC32_Final( &gameCRC );
-	
-	char szLockPath[ MAX_PATH ];
-	V_snprintf( szLockPath, sizeof(szLockPath), "/tmp/source_engine_%lu.lock", gameCRC );
-	int lockFD = open( szLockPath, O_CREAT | O_WRONLY | O_EXLOCK | O_NONBLOCK | O_TRUNC, 0777 );
-	if( lockFD >= 0 )
-	{
-		close( lockFD );
-		unlink( szLockPath ); 
-		return false;
-	}   		 
-	
-	// We were unable to open the file, it should be because we are unable to retain a lock
-	if ( errno != EWOULDBLOCK)
-	{
-		fprintf( stderr, "unexpected error %d trying to exclusively lock %s\n", errno, szLockPath );
-	}
-	
-	// couldn't get the mutex, must be another instance running somewhere that has it
-	return true;
 #endif
 	
-#endif // _PS3
 
 	return false;
 }

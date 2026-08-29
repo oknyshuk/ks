@@ -34,9 +34,7 @@ to the following restrictions:
 #ifdef __cplusplus
 extern "C" {
 #endif
-#ifndef _GAMECONSOLE
 #pragma comment(lib, "WSOCK32.LIB")
-#endif
 struct SQDbgServer;
 typedef SQDbgServer* HSQREMOTEDBG;
 

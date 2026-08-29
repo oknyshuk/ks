@@ -84,7 +84,6 @@ BEGIN_BYTESWAP_DATADESC_( VTFFileHeaderPS3_t, VTFFileBaseHeader_t )
 	DEFINE_FIELD( compressedSize, FIELD_INTEGER ),
 END_DATADESC()
 
-#if defined( POSIX )
 // stub functions
 const char* S3TC_GetBlock(
         const void *pCompressed,
@@ -139,7 +138,6 @@ void S3TC_SetPaletteIndex(
         S3PaletteIndex paletteIndex )
 {
 }
-#endif
 
 // This gives a vertex number to each of the 4 verts on each face.
 // We use this to match the verts and determine which edges need to be blended together.
@@ -320,17 +318,7 @@ bool CVTFTexture::IsPreTiled() const
 //-----------------------------------------------------------------------------
 int CVTFTexture::ComputeMipCount() const
 {
-	if ( IsX360() && ( m_nVersion[0] == VTF_X360_MAJOR_VERSION ) && ( m_nFlags & TEXTUREFLAGS_NOMIP ) )
-	{
-		// 360 vtf format culled unused mips at conversion time
-		return 1;
-	}
 
-	if ( IsPS3() && ( m_nVersion[0] == VTF_PS3_MAJOR_VERSION ) && ( m_nFlags & TEXTUREFLAGS_NOMIP ) )
-	{
-		// PS3 vtf format culled unused mips at conversion time
-		return 1;
-	}
 
 	// NOTE: No matter what, all mip levels should be created because
 	// we have to worry about various fallbacks
@@ -918,22 +906,18 @@ static bool ReadHeaderFromBufferPastBaseHeader( CUtlBuffer &buf, VTFFileHeader_t
 	{
 		buf.Get( pBuf, sizeof(VTFFileHeaderV7_2_t) - sizeof(VTFFileBaseHeader_t) );
 
-		#if defined (POSIX)
 			// read 15 dummy bytes to be properly positioned with 7.2 PC data
 			byte dummy[15];
 			buf.Get( dummy, 15 );
-		#endif
 	}
 	else if ( header.version[1] == 1 || header.version[1] == 0 )
 	{
 		// previous version 7.0 or 7.1
 		buf.Get( pBuf, sizeof(VTFFileHeaderV7_1_t) - sizeof(VTFFileBaseHeader_t) );
 
-		#if defined (POSIX)
 			// read a dummy byte to be properly positioned with 7.0/1 PC data
 			byte dummy;
 			buf.Get( &dummy, 1 );
-		#endif
 	}
 	else
 	{
@@ -946,34 +930,6 @@ static bool ReadHeaderFromBufferPastBaseHeader( CUtlBuffer &buf, VTFFileHeader_t
 
 bool CVTFTexture::ReadHeader( CUtlBuffer &buf, VTFFileHeader_t &header )
 {
-	if ( (IsX360() || IsPS3()) && SetupByteSwap( buf ) )
-	{
-		VTFFileBaseHeader_t baseHeader;
-		m_Swap.SwapFieldsToTargetEndian( &baseHeader, (VTFFileBaseHeader_t*)buf.PeekGet() );
-
-		// Swap the header inside the UtlBuffer
-		if ( baseHeader.version[0] == VTF_MAJOR_VERSION )
-		{
-			if ( baseHeader.version[1] == 0 || baseHeader.version[1] == 1 )
-			{
-				// version 7.0 or 7.1
-				m_Swap.SwapFieldsToTargetEndian( (VTFFileHeaderV7_1_t*)buf.PeekGet() );
-			}
-			else if ( baseHeader.version[1] == 2 )
-			{
-				// version 7.2
-				m_Swap.SwapFieldsToTargetEndian( (VTFFileHeaderV7_2_t*)buf.PeekGet() );
-			}
-			else if ( baseHeader.version[1] == 3 )
-			{
-				m_Swap.SwapFieldsToTargetEndian( (VTFFileHeaderV7_3_t*)buf.PeekGet() );
-			}
-			else if ( baseHeader.version[1] >= 4 && baseHeader.version[1] <= VTF_MINOR_VERSION )
-			{
-				m_Swap.SwapFieldsToTargetEndian( (VTFFileHeader_t*)buf.PeekGet() );
-			}
-		}
-	}
 
 	memset( &header, 0, sizeof(VTFFileHeader_t) );
 	buf.Get( &header, sizeof(VTFFileBaseHeader_t) );
@@ -1113,18 +1069,6 @@ bool CVTFTexture::Unserialize( CUtlBuffer &buf, bool bHeaderOnly, int nSkipMipLe
 		if ( !buf.IsValid() )
 			return false;
 
-		if ( IsX360() || IsPS3() )
-		{
-			// Byte-swap the dictionary data offsets
-			for ( int k = 0; k < m_arrResourcesInfo.Count(); ++ k )
-			{
-				ResourceEntryInfo &rei = m_arrResourcesInfo[k];
-				if ( ( rei.eType & RSRCF_HAS_NO_DATA_CHUNK ) == 0 )
-				{
-					m_Swap.SwapBufferToTargetEndian( &rei.resData );
-				}
-			}
-		}
 	}
 	else
 	{
@@ -1217,36 +1161,23 @@ ResourceEntryInfo const *CVTFTexture::FindResourceEntryInfo( uint32 eType ) cons
 	pRange[0] = m_arrResourcesInfo.Base();
 	pRange[1] = pRange[0] + m_arrResourcesInfo.Count();
 
-	if ( IsPC() )
-	{
-		// Quick-search in a sorted array
-		ResourceEntryInfo const *pMid;
+	// Quick-search in a sorted array
+	ResourceEntryInfo const *pMid;
 find_routine:
-		if ( pRange[0] != pRange[1] )
+	if ( pRange[0] != pRange[1] )
+	{
+		pMid = pRange[0] + ( pRange[1] - pRange[0] ) / 2;
+		if ( int diff = int( pMid->eType & ~RSRCF_MASK ) - int( eType ) )
 		{
-			pMid = pRange[0] + ( pRange[1] - pRange[0] ) / 2;
-			if ( int diff = int( pMid->eType & ~RSRCF_MASK ) - int( eType ) )
-			{
-				int off = !( diff > 0 );
-				pRange[ !off ] = pMid + off;
-				goto find_routine;
-			}
-			else
-				return pMid;
+			int off = !( diff > 0 );
+			pRange[ !off ] = pMid + off;
+			goto find_routine;
 		}
 		else
-			return NULL;
+			return pMid;
 	}
 	else
-	{
-		// 360 eschews a sorted format due to endian issues
-		// use a linear search for compatibility with reading pc formats
-		for ( ; pRange[0] < pRange[1]; ++pRange[0] )
-		{
-			if ( ( pRange[0]->eType & ~RSRCF_MASK ) == eType )
-				return pRange[0];
-		}
-	}
+		return NULL;
 
 	return NULL;
 }
@@ -1272,11 +1203,8 @@ ResourceEntryInfo * CVTFTexture::FindOrCreateResourceEntryInfo( uint32 eType )
 		}
 
 		// sort for PC only, 360 uses linear sort for compatibility with PC endian
-		if ( IsPC() )
-		{
-			if ( rsrcType > eType )
-				break;
-		}
+		if ( rsrcType > eType )
+			break;
 	}
 
 	ResourceEntryInfo rei;
@@ -1373,12 +1301,6 @@ static int PadBuffer( CUtlBuffer &buf, int iAlignment )
 //-----------------------------------------------------------------------------
 bool CVTFTexture::Serialize( CUtlBuffer &buf )
 {
-	if ( IsGameConsole() )
-	{
-		// Unsupported path, console has no reason and cannot serialize
-		Assert( 0 );
-		return false;
-	}
 
 	if ( !m_pImageData )
 	{
@@ -1734,28 +1656,6 @@ int CVTFTexture::GetImageOffset( int iFrame, int iFace, int iMipLevel, ImageForm
 	int i;
 	int iOffset = 0;
 
-	if ( ( IsX360() && ( m_nVersion[0] == VTF_X360_MAJOR_VERSION ) ) || ( IsPS3() && ( m_nVersion[0] == VTF_PS3_MAJOR_VERSION ) ) )
-	{
-		// 360 data is stored same as disk, 1x1 up to NxN
-		// get to the right miplevel
-		int iMipWidth, iMipHeight, iMipDepth;
-		for ( i = m_nMipCount - 1; i > iMipLevel; --i )
-		{
-			ComputeMipLevelDimensions( i, &iMipWidth, &iMipHeight, &iMipDepth );
-			int iMipLevelSize = ImageLoader::GetMemRequired( iMipWidth, iMipHeight, iMipDepth, fmt, false );
-			iOffset += m_nFrameCount * m_nFaceCount * iMipLevelSize;
-		}
-
-		// get to the right frame
-		ComputeMipLevelDimensions( iMipLevel, &iMipWidth, &iMipHeight, &iMipDepth );
-		int nFaceSize = ImageLoader::GetMemRequired( iMipWidth, iMipHeight, iMipDepth, fmt, false );
-		iOffset += iFrame * m_nFaceCount * nFaceSize;
-		
-		// get to the right face
-		iOffset += iFace * nFaceSize;
-
-		return iOffset;
-	}
 
 	// get to the right frame
 	int iFaceSize = ComputeFaceSize( 0, fmt );
@@ -1849,12 +1749,6 @@ void CVTFTexture::ConvertImageFormat( ImageFormat fmt, bool bNormalToDUDV, bool 
 		return;
 	}
 
-	if ( ( IsX360() && ( m_nVersion[0] == VTF_X360_MAJOR_VERSION ) ) || ( IsPS3() && ( m_nVersion[0] == VTF_PS3_MAJOR_VERSION ) ) )
-	{
-		// 360 textures should be baked in final format
-		Assert( 0 );
-		return;
-	}
 
 	// FIXME: Should this be re-written to not do an allocation?
 	int iConvertedSize = ComputeTotalSize( fmt );
@@ -2221,11 +2115,6 @@ static void CalcHemisphereColor( SphereCalc_t *pCalc, float x, float y )
 
 	int iFace = CalcFaceIndex( normal );
 	CalcColor( pCalc, iFace, normal, pCalc->m_pColor );
-#if 0
-	pCalc->m_pColor[0] = normal[0] * 127 + 127;
-	pCalc->m_pColor[1] = normal[1] * 127 + 127;
-	pCalc->m_pColor[2] = normal[2] * 127 + 127;
-#endif
 }
 
 //-----------------------------------------------------------------------------

@@ -125,7 +125,6 @@
 #include "inputsystem/iinputsystem.h"
 #include "cvar.h"
 #include "saverestoretypes.h"
-#include "filesystem/IQueuedLoader.h"
 #include "soundservice.h"
 #include "steam/isteamremotestorage.h"
 #include "ConfigManager.h"
@@ -563,9 +562,9 @@ enum HostThreadMode
 };
 
 // On the PS3, we want host_thead_mode and threaded_sound off.
-ConVar host_thread_mode( "host_thread_mode", ( IsPlatformX360() || IsPlatformPS3() ) ? "1" : "0", FCVAR_DEVELOPMENTONLY, "Run the host in threaded mode, (0 == off, 1 == if multicore, 2 == force)" );
-ConVar host_threaded_sound( "host_threaded_sound", ( IsPlatformX360() || IsPlatformPS3()) ? "1" : "0", 0, "Run the sound on a thread (independent of mix)" );
-ConVar host_threaded_sound_simplethread( "host_threaded_sound_simplethread", ( IsPlatformPS3()) ? "1" : "0", 0, "Run the sound on a simple thread not a jobthread" );
+ConVar host_thread_mode( "host_thread_mode", "0", FCVAR_DEVELOPMENTONLY, "Run the host in threaded mode, (0 == off, 1 == if multicore, 2 == force)" );
+ConVar host_threaded_sound( "host_threaded_sound", "0", 0, "Run the sound on a thread (independent of mix)" );
+ConVar host_threaded_sound_simplethread( "host_threaded_sound_simplethread", "0", 0, "Run the sound on a simple thread not a jobthread" );
 
 extern ConVar threadpool_reserve;
 CThreadEvent g_ReleaseThreadReservation( true );
@@ -1111,24 +1110,10 @@ void Host_SetConfigCfgExecuted( const int iController, bool bExecuted = true )
 
 void Host_ResetGlobalConfiguration()
 {
-#ifdef _GAMECONSOLE
-	ACTIVE_SPLITSCREEN_PLAYER_GUARD( 0 );
-#endif
 
-#ifndef _GAMECONSOLE
 	// We exec our global default configuration for non-consoles
 	Cbuf_AddText( Cbuf_GetCurrentPlayer(), "exec config.global" PLATFORM_EXT ".cfg game\n" );
 	Cbuf_Execute();
-#else
-	CUtlVector< ConVar * > arrCVars;
-	cv->WriteVariables( NULL, 0, false, &arrCVars );
-	for ( int k = 0; k < arrCVars.Count(); ++ k )
-	{
-		ConVar *cvSave = arrCVars[k];
-		cvSave->Revert();
-		DevMsg( "Console reset global configuration: %s = \"%s\"\n", cvSave->GetName(), cvSave->GetString() );
-	}
-#endif
 }
 
 /*
@@ -1192,7 +1177,7 @@ void Host_WriteConfiguration( const int iController, const char *filename )
 	// config.cfg cvars
 	if ( !sv.IsDedicated() )
 	{
-		if ( IsPC() && Key_CountBindings() <= 1 )
+		if ( Key_CountBindings() <= 1 )
 		{
 			ConMsg( "skipping %s output, no keys bound\n", filename );
 			return;
@@ -1237,44 +1222,7 @@ void Host_WriteConfiguration( const int iController, const char *filename )
 			return;
 		}
 
-#if defined(NO_STEAM)
 		AssertMsg( false, "SteamCloud not available on Xbox 360. Badger Martin to fix this." );
-#else
-		ISteamRemoteStorage *pRemoteStorage =
-			Steam3Client().SteamClient() ? (ISteamRemoteStorage *) Steam3Client().SteamClient()->GetISteamGenericInterface(
-			SteamAPI_GetHSteamUser(), SteamAPI_GetHSteamPipe(), STEAMREMOTESTORAGE_INTERFACE_VERSION ):NULL;
-
-		if ( pRemoteStorage )
-		{
-			int32 availableBytes, totalBytes = 0;
-			if ( pRemoteStorage->GetQuota( &totalBytes, &availableBytes ) )
-			{
-				if ( totalBytes > 0 )
-				{
-
-					if ( cl_cloud_settings.GetInt() != -1 && ( cl_cloud_settings.GetInt() & STEAMREMOTESTORAGE_CLOUD_CONFIG ) )
-					{
-						// TODO put MOD dir in pathname
-						if ( pRemoteStorage->FileWrite( szFileName, configBuff.Base(), configBuff.TellMaxPut() ) )
-						{
-							// Refresh local copy so that on next game boot Host_ReadPreStartupConfiguration() will avoid loading the stale config.cfg
-							// which will only get downloaded & refreshed later during Host_ReadConfiguration()
-							GetFileFromRemoteStorage( pRemoteStorage, "cfg/config.cfg", "cfg/config.cfg", GetConfigPathID() );
-
-							DevMsg( "[Cloud]: SUCCEESS saving %s in remote storage\n", szFileName );
-						}
-						else
-						{
-							// probably a quota issue. TODO what to do ?
-							DevMsg( "[Cloud]: FAILED saving %s in remote storage\n", szFileName );
-						}
-					}
-				}
-			}
-
-			// even if SteamCloud worked we still safe the same file locally
-		}
-#endif
 
 
 		// make a persistent copy that async will use and free
@@ -1307,12 +1255,6 @@ void Host_ReadConfiguration( const int iController, const bool readDefault )
 	}
 
 	// Handle the console case
-#ifdef _GAMECONSOLE
-	{
-		Host_ReadConfiguration_Console( iController );
-		return;
-	}
-#else
 	bool saveconfig = false;
 
 	ISteamRemoteStorage *pRemoteStorage = Steam3Client().SteamClient() ? (ISteamRemoteStorage *)Steam3Client().SteamClient()->GetISteamGenericInterface(
@@ -1379,7 +1321,6 @@ void Host_ReadConfiguration( const int iController, const bool readDefault )
 		Host_WriteConfiguration( iController, "config.cfg" );
 		host_initialized = saveinit;
 	}
-#endif
 }
 
 CON_COMMAND( host_writeconfig, "Store current settings to config.cfg (or specified .cfg file)." )
@@ -1460,19 +1401,6 @@ CON_COMMAND( host_reset_config, "reset config (for testing) with param as splits
 
 }
 
-#ifdef _GAMECONSOLE
-CON_COMMAND( host_writeconfig_video_ss, "Store current video settings to config.cfg (or specified .cfg file) with first param as controller index." )
-{
-	if ( args.ArgC() != 2 )
-	{
-		ConMsg( "Usage:  writeconfig <controller index>\n" );
-		return;
-	}
-
-	int controller = atoi( args[1] );
-	Host_WriteConfiguration_Console( controller, true );
-}
-#endif
 
 #endif
 
@@ -1484,12 +1412,6 @@ CON_COMMAND( host_writeconfig_video_ss, "Store current video settings to config.
 void Host_ReadPreStartupConfiguration()
 {
 	FileHandle_t f = NULL;
-	if ( IsGameConsole() )
-	{
-		// 360 config is less restrictive and can be anywhere in the game path
-		f = g_pFileSystem->Open( "//game/cfg/config" PLATFORM_EXT ".cfg", "rt" );
-	}
-	else
 	{
 		f = g_pFileSystem->Open( "//usrlocal/cfg/config.cfg", "rt" );
 		if ( !f )
@@ -1664,7 +1586,6 @@ void Host_AccumulateTime( float dt )
 	}
 #endif
 
-#if 1
 	if ( host_framerate.GetFloat() != 0
 #if !defined(DEDICATED)
 		&& ( CanCheat() || demoplayer->IsPlayingBack() )
@@ -1729,7 +1650,6 @@ void Host_AccumulateTime( float dt )
 		host_frametime = MAX( host_frametime, MIN_FRAMETIME );
 		host_frametime_unscaled = host_frametime;
 	}
-#endif // 1
 
 	// Adjust the client clock very slightly to keep it in line with the server clock.
 #ifndef DEDICATED
@@ -1923,7 +1843,7 @@ void Host_BuildUserInfoUpdateMessage( int nSplitScreenSlot, CMsg_CVars *rCvarLis
 	if ( count <= 0 )
 		return;
 
-#if !defined( _GAMECONSOLE ) && !defined( DEDICATED )
+#if !defined( DEDICATED )
 	// Add local user SteamID
 	if ( Steam3Client().SteamUser() && Steam3Client().SteamUser()->GetSteamID().GetAccountID() )
 	{
@@ -2063,9 +1983,6 @@ void CL_ProcessVoiceData()
 	}
 #endif
 
-#if defined ( _GAMECONSOLE )
-	CL_ProcessGameConsoleVoiceData();
-#endif
 }
 #endif
 
@@ -2943,11 +2860,7 @@ CON_COMMAND( host_runofftime, "Run off some time without rendering/updating soun
 	SCR_UpdateScreen ();
 }
 
-#if !defined( _GAMECONSOLE )
 S_API int SteamGameServer_GetIPCCallCount();
-#else
-S_API int SteamGameServer_GetIPCCallCount() { return 0; }
-#endif
 void Host_ShowIPCCallCount()
 {
 	// If set to 0 then get out.
@@ -2970,24 +2883,6 @@ void Host_ShowIPCCallCount()
 	if ( flCurTime - s_flLastTime >= flInterval )
 	{
 		uint32 callCount = 0;
-#ifndef NO_STEAM
-		ISteamClient *pSteamClient =
-#ifdef DEDICATED
-			Steam3Server().SteamClient()
-#else
-			Steam3Client().SteamClient()
-#endif
-			;
-		if ( pSteamClient )
-		{
-			callCount = pSteamClient->GetIPCCallCount();
-		}
-		else
-		{
-			// Ok, we're a dedicated server and we need to use this to get it.
-			callCount = (uint32)SteamGameServer_GetIPCCallCount();
-		}
-#endif
 
 		// Avoid a divide by zero.
 		int frameCount = host_framecount - s_nLastFrame;
@@ -3052,7 +2947,7 @@ static void PrintHostFrameTimes( int nNumTicks, float flHostRemainder, float flM
 }
 #endif // DEDICATED
 
-#if !( defined( _CERT ) || defined( DEDICATED ) )
+#if !( defined( DEDICATED ) )
 ConVar fs_enable_stats( "fs_enable_stats", "0" );
 static void PrintFsStats()
 {
@@ -3275,11 +3170,7 @@ void _Host_RunFrame (float time)
 		numticks = 0;	// how many ticks we will simulate this frame
 
 		// If we're using sv_alternateticks, make sure there are at least 2 ticks worth of host_remainder time to consume
-#if defined( LINUX )
 		bool bAlternateTicks = false;
-#else
-		bool bAlternateTicks = sv_alternateticks.GetBool() && ( GetBaseLocalClient().m_nMaxClients == 1 );
-#endif
 
 		float flMinimumTickInterval = bAlternateTicks ? host_state.interval_per_tick * 2.0f : host_state.interval_per_tick;
 		if ( host_remainder >= flMinimumTickInterval )
@@ -3303,7 +3194,7 @@ void _Host_RunFrame (float time)
 
 		g_pMDLCache->MarkFrame();
 
-#if !( defined( _CERT ) || defined( DEDICATED ) )
+#if !( defined( DEDICATED ) )
 		if ( host_print_frame_times.GetBool() )
 		{
 			PrintHostFrameTimes( numticks, host_remainder, flMinimumTickInterval );
@@ -3322,32 +3213,10 @@ void _Host_RunFrame (float time)
 		g_HostTimes.StartFrameSegment( FRAME_SEGMENT_CMD_EXECUTE );
 
 		// process console commands
-#if defined( _GAMECONSOLE ) && !defined( _CERT )
-		static volatile bool s_bMemDebug = !!CommandLine()->FindParm( "-mem_dump_frames" );
-		if ( s_bMemDebug )
-			Cbuf_AddText( CBUF_FIRST_PLAYER, "mem_dump;\n" );
-
-		static char s_chBufferConCommandHack[256] = {0};
-		if ( s_chBufferConCommandHack[0] )
-		{
-			Cbuf_AddText( CBUF_FIRST_PLAYER, s_chBufferConCommandHack );
-			s_chBufferConCommandHack[0] = 0;
-		}
-#endif
 		Cbuf_Execute ();
 
-		if ( NET_IsDedicatedForXbox() )
-		{
-			if ( NET_IsDedicated() && !NET_IsMultiplayer() )
-			{
-				NET_SetMultiplayer( true );
-			}
-		}
-		else
-		{
-			// initialize networking after commandline & autoexec.cfg have been parsed
-			NET_Init( sv.IsDedicated() );
-		}
+		// initialize networking after commandline & autoexec.cfg have been parsed
+		NET_Init( sv.IsDedicated() );
 
 		g_HostTimes.EndFrameSegment( FRAME_SEGMENT_CMD_EXECUTE );
 
@@ -3416,18 +3285,8 @@ void _Host_RunFrame (float time)
 				// Only send updates on final tick so we don't re-encode network data multiple times per frame unnecessarily
 				bool bFinalTick = ( tick == (numticks - 1) );
 
-				if ( NET_IsDedicatedForXbox() )
-				{
-					if ( NET_IsDedicated() && !NET_IsMultiplayer() )
-					{
-						NET_SetMultiplayer( true );
-					}
-				}
-				else
-				{
-					// initialize networking after commandline & autoexec.cfg have been parsed
-					NET_Init( NET_IsDedicated() );
-				}
+				// initialize networking after commandline & autoexec.cfg have been parsed
+				NET_Init( NET_IsDedicated() );
 
 				g_ServerGlobalVariables.tickcount = sv.m_nTickCount;
 				// NOTE:  Do we want do this at start or end of this loop?
@@ -3590,18 +3449,8 @@ void _Host_RunFrame (float time)
 				// Only send updates on final tick so we don't re-encode network data multiple times per frame unnecessarily
 				bool bFinalTick = ( tick == (clientticks - 1) );
 
-				if ( NET_IsDedicatedForXbox() )
-				{
-					if ( NET_IsDedicated() && !NET_IsMultiplayer() )
-					{
-						NET_SetMultiplayer( true );
-					}
-				}
-				else
-				{
-					// initialize networking after commandline & autoexec.cfg have been parsed
-					NET_Init( NET_IsDedicated() );
-				}
+				// initialize networking after commandline & autoexec.cfg have been parsed
+				NET_Init( NET_IsDedicated() );
 
 				g_ClientGlobalVariables.tickcount = cl.GetClientTickCount();
 
@@ -3899,26 +3748,12 @@ bool IsLowViolence_Secure()
 	return false;
 #endif
 
-#ifndef _GAMECONSOLE
-	if ( IsPC() && Steam3Client().SteamApps() )
+	if ( Steam3Client().SteamApps() )
 	{
 		// let Steam determine current violence settings
 		return Steam3Client().SteamApps()->BIsLowViolence();
 	}
-#endif
 
-	if ( IsGameConsole() )
-	{
-#if defined( _LOWVIOLENCE )
-		// a low violence build can not be-undone
-		return true;
-#endif
-		// Users can opt into low violence mode on the command-line.
-		if ( IsLowViolence_CommandLine() )
-		{
-			return true;
-		}
-	}
 
 	return false;
 }
@@ -3930,18 +3765,6 @@ bool IsLowViolence_Secure()
 //-----------------------------------------------------------------------------
 bool IsLowViolence_Registry()
 {
-	if ( IsGameConsole() )
-	{
-#if defined( _LOWVIOLENCE )
-		// a low violence build can not be-undone
-		return true;
-#endif
-		// Users can opt into low violence mode on the command-line.
-		if ( IsLowViolence_CommandLine() )
-		{
-			return true;
-		}
-	}
 
 // CS:GO does not have any low violence regions. Ignore the registry settings.
 #if defined( CSTRIKE15 )
@@ -4230,7 +4053,6 @@ void InstallConVarHook( void );
 int g_nForkID = 0;
 int g_nSocketToParentProcess = -1;
 
-#ifdef _LINUX
 #include <sys/socket.h>
 #include <sys/types.h>
 void SendStringToParentProcess( char const *pMsg )
@@ -4239,7 +4061,6 @@ void SendStringToParentProcess( char const *pMsg )
 	Assert( g_nSocketToParentProcess != -1 );
 	send( g_nSocketToParentProcess, pMsg, 1 + strlen( pMsg ), MSG_DONTWAIT );
 }
-#endif
 
 
 CDebugInputThread * g_pDebugInputThread;
@@ -4249,7 +4070,7 @@ CDebugInputThread * g_pDebugInputThread;
 #define SignatureWarning( ... ) ((void)(0))
 static bool Host_IsValidSignature( const char *pFilename, bool bAllowUnknown )
 {
-#if defined( DEDICATED ) || defined( _GAMECONSOLE )
+#if defined( DEDICATED )
 	return true;
 #else
 	if ( Steam3Client().SteamUtils() )
@@ -4292,86 +4113,11 @@ static bool Host_IsValidSignature( const char *pFilename, bool bAllowUnknown )
 // Ask steam if it is ok to load this DLL.  Unsigned DLLs should not be loaded unless
 // the client is running -insecure (testing a plugin for example)
 // This keeps legitimate users with modified binaries from getting VAC banned because of them
-#if defined( DEDICATED ) || defined( OSX ) || defined( LINUX )
-#else
-static CUtlVector< CUtlString * > g_PendingSignatureChecks;
-static CUtlVector< CUtlString * > g_FailedSignatureChecks;
-#endif
 bool Host_AllowLoadModule( const char *pFilename, const char *pPathID, bool bAllowUnknown )
 {
-#if defined( DEDICATED ) || defined( OSX ) || defined( LINUX )
 	// dedicated servers don't check signatures
 	// OSX and Linux have no ability to check signatures
 	return true;
-#else
-	// Allow loading plugins
-	if ( sv.IsDedicated() )
-		return true;
-
-	// check signature
-	bool bSignatureIsValid = false;
-
-	if ( g_bAllowSecureServers && Steam3Client().SteamUtils() )
-	{
-		char szDllname[512];
-
-		V_strncpy( szDllname, pFilename, sizeof(szDllname) );
-		V_SetExtension( szDllname, DLL_EXT_STRING, sizeof(szDllname) );
-		if ( pPathID )
-		{
-
-			char szFullPath[ 512 ];
-			const char *pFullPath = g_pFileSystem->RelativePathToFullPath( szDllname, pPathID, szFullPath, sizeof(szFullPath) );
-			if ( !pFullPath )
-			{
-				SignatureWarning("Can't find %s on disk\n", szDllname );
-				bSignatureIsValid = false;
-			}
-			else
-			{
-				if ( CommandLine()->FindParm( "-immediatesignaturechecks" ) )
-				{
-					bSignatureIsValid = Host_IsValidSignature( pFullPath, bAllowUnknown );
-				}
-				else
-				{
-					g_PendingSignatureChecks.AddToTail( new CUtlString( pFullPath ) );
-					bSignatureIsValid = true;
-				}
-			}
-		}
-		else
-		{
-			if ( CommandLine()->FindParm( "-immediatesignaturechecks" ) )
-			{
-				bSignatureIsValid = Host_IsValidSignature( szDllname, bAllowUnknown );
-			}
-			else
-			{
-				g_PendingSignatureChecks.AddToTail( new CUtlString( szDllname ) );
-				bSignatureIsValid = true;
-			}
-		}
-	}
-	else
-	{
-		if ( g_bAllowSecureServers )
-		{
-			SignatureWarning("Steam is not active, running in -insecure mode.\n");
-		}
-		g_bAllowSecureServers = false;
-	}
-
-	if ( bSignatureIsValid )
-		return true;
-
-	if ( !g_bAllowSecureServers )
-	{
-		SignatureWarning("Loading unsigned module %s\nAccess to secure servers is disabled.\n", pFilename );
-		return true;
-	}
-	return false;
-#endif
 }
 
 bool Host_IsSecureServerAllowed()
@@ -4396,47 +4142,6 @@ void Host_DisallowSecureServers()
 
 void Host_FinishSecureSignatureChecks()
 {
-#if defined( DEDICATED ) || defined( OSX ) || defined( LINUX )
-#else
-	while ( g_PendingSignatureChecks.Count() )
-	{
-		// CSGO May 2017 checking via library loader hook
-		// bool bSignatureIsValid = Host_IsValidSignature( g_PendingSignatureChecks.Head()->Get(), false );
-		bool bSignatureIsValid = true;
-		if ( !bSignatureIsValid )
-		{
-			SignatureWarning( "Loaded unsigned module %s\nAccess to secure servers is disabled.\n", g_PendingSignatureChecks.Head()->Get() );
-			g_bAllowSecureServers = false;
-			g_FailedSignatureChecks.AddToTail( new CUtlString( g_PendingSignatureChecks.Head()->Get() ) );
-		}
-		delete g_PendingSignatureChecks.Head();
-		g_PendingSignatureChecks.FastRemove( 0 );
-	}
-	g_PendingSignatureChecks.PurgeAndDeleteElements();
-
-	// Also check the main .exe that is running us
-	TCHAR tchBufExe[ MAX_PATH ] = {};
-	DWORD dwResult = GetModuleFileName( NULL, tchBufExe, MAX_PATH );
-	if ( dwResult > 0 && dwResult < MAX_PATH-1 )
-	{
-		bool bSignatureIsValid = Host_IsValidSignature( tchBufExe, false );
-		if ( !bSignatureIsValid )
-		{
-			SignatureWarning( "Loaded unsigned module %s\nAccess to secure servers is disabled.\n", tchBufExe );
-			g_bAllowSecureServers = false;
-			g_FailedSignatureChecks.AddToTail( new CUtlString( tchBufExe ) );
-		}
-	}
-	else
-	{
-		SignatureWarning( "Failed to determine exe module filename.\nAccess to secure servers is disabled.\n" );
-		g_bAllowSecureServers = false;
-		g_FailedSignatureChecks.AddToTail( new CUtlString( "" ) );
-	}
-
-//	if ( IScaleformSlotInitController *pCtrlr = g_ClientDLL->GetScaleformSlotInitController() )
-//		pCtrlr->PassSignaturesArray( &g_FailedSignatureChecks );
-#endif
 }
 
 static bool s_bDedicatedForPurposesOfThreadPool = false;
@@ -4446,7 +4151,7 @@ void GetThreadPoolStartParams( ThreadPoolStartParams_t &startParams )
 	// Dedicated servers should not explicitly set the main thread's affinity so that machines running multiple
 	// copies of the dedicated server can load-balance properly.
 	// For now on the PC we use SetThreadIdealProcessor instead of explicity affinity
-	if ( !s_bDedicatedForPurposesOfThreadPool && IsPC() )
+	if ( !s_bDedicatedForPurposesOfThreadPool )
 	{
 		// this will set ideal processor on each thread
 		startParams.fDistribute = TRS_TRUE;
@@ -4462,12 +4167,10 @@ void Host_Init( bool bDedicated )
 	host_idealtime = 0;
 
 	// this code is called prefork. If we are going to fork, we want to delay some stuff, because we might not even be acting as a "real" server.
-#ifdef _LINUX
 	if ( CommandLine()->FindParm( "-fork" ) )
 	{
 		g_nForkID = FORK_ID_PARENT_PROCESS;
 	}
-#endif
 
 #if defined(_WIN32)
 	if ( CommandLine()->FindParm( "-pme" ) )
@@ -4489,7 +4192,6 @@ void Host_Init( bool bDedicated )
 	s_bDedicatedForPurposesOfThreadPool = bDedicated;
 	GetThreadPoolStartParams( startParams );
 
-#ifndef _CERT
 	if ( CommandLine()->FindParm( "-tslist" ) )
 	{
 		int nTests = 10000;
@@ -4500,7 +4202,6 @@ void Host_Init( bool bDedicated )
 		Msg( "Running Thread Pool tests\n" );
 		RunThreadPoolTests();
 	}
-#endif
 	if ( g_pThreadPool )
 	{
 		g_pThreadPool->Start( startParams );
@@ -4564,11 +4265,6 @@ void Host_Init( bool bDedicated )
 	DevMsg( "Seeded random number generator @ %d ( %.3f )\n", ( reinterpret_cast< int & >( flTimeToSeed ) ) & 0x7FFFFFFF, flTimeToSeed );
 
 	TRACEINIT( g_pSteamSocketMgr->Init(), g_pSteamSocketMgr->Shutdown() );
-
-	if ( CommandLine()->FindParm( "-xlsp" ) != 0 )
-	{
-		NET_Init( bDedicated );
-	}
 
 	TRACEINIT( g_GameEventManager.Init(), g_GameEventManager.Shutdown() );
 
@@ -4643,17 +4339,6 @@ void Host_Init( bool bDedicated )
 #endif
 	}
 
-	if ( IsPC() )
-	{
-#if !defined(NO_STEAM)
-		// on PC, enable FCVAR_DEVELOPMENTONLY cvars if we're logged into beta or dev universes.  They remain hidden & disabled otherwise.
-		EUniverse eUniverse = GetSteamUniverse();
-		if ( ( eUniverse == k_EUniverseBeta ) || ( eUniverse == k_EUniverseDev ) )
-		{
-			ConVarUtilities->EnableDevCvars();
-		}
-#endif
-	}
 
 #ifndef DEDICATED
 	memset( g_bConfigCfgExecuted, 0, sizeof(g_bConfigCfgExecuted) );
@@ -4664,13 +4349,7 @@ void Host_Init( bool bDedicated )
 	// Audio system initializes after matchmaking, so need to explicitly
 	// set the voice interface extension
 	IEngineVoice *pIEngineVoice = NULL;
-#ifdef _GAMECONSOLE
-	pIEngineVoice = Audio_GetXVoice();
-#elif ( defined( _WIN32 ) || defined( OSX ) || defined( LINUX ) ) && !defined( NO_STEAM )
-	pIEngineVoice = Audio_GetEngineVoiceSteam();
-#else
 	pIEngineVoice = Audio_GetEngineVoiceStub();
-#endif
 
 	if ( !pIEngineVoice )
 	{
@@ -4689,12 +4368,7 @@ void Host_Init( bool bDedicated )
 #endif
 
 	// Execute valve.rc
-#ifdef _GAMECONSOLE
-	// the 360 version loads a 3d background
 	Cbuf_AddText( Cbuf_GetCurrentPlayer(), "exec valve.rc\n" );
-#else
-	Cbuf_AddText( Cbuf_GetCurrentPlayer(), "exec valve.rc\n" );
-#endif
 
 	// Execute mod-specfic settings, without falling back based on search path.
 	// This lets us set overrides for games while letting mods of those games
@@ -4704,10 +4378,6 @@ void Host_Init( bool bDedicated )
 		Cbuf_AddText( Cbuf_GetCurrentPlayer(), "exec modsettings.cfg mod\n" );
 	}
 
-#ifdef _GAMECONSOLE
-	Cbuf_AddText( Cbuf_GetCurrentPlayer(), "cmd2 exec config" PLATFORM_EXT ".cfg\n" );
-	Cbuf_AddText( Cbuf_GetCurrentPlayer(), "cmd1 exec config" PLATFORM_EXT ".cfg\n" );
-#endif
 
 	// Mark DLL as active
 	//	eng->SetNextState( InEditMode() ? IEngine::DLL_PAUSED : IEngine::DLL_ACTIVE );
@@ -4724,7 +4394,7 @@ void Host_Init( bool bDedicated )
 	host_hunklevel = Hunk_LowMark();
 
 #ifdef SOURCE_MT
-	if ( CommandLine()->FindParm( "-swapcores" ) && !IsPS3() )
+	if ( CommandLine()->FindParm( "-swapcores" ) )
 	{
 		g_nMaterialSystemThread = 1;
 		g_nServerThread = 0;
@@ -4809,78 +4479,6 @@ void Host_Init( bool bDedicated )
 	}
 }
 
-class CAddTransitionResourcesCB : public ISaveRestoreDataCallback
-{
-public:
-	CAddTransitionResourcesCB( const char *pLevelName, const char *pLandmarkName )
-	 : m_pLevelName( pLevelName ), m_pLandMarkName( pLandmarkName ) {}
-
-	//-----------------------------------------------------------------------------
-	// Adds hints to the loader to keep resources that are in the transition volume,
-	// as they may not be part of the next map's reslist.
-	//-----------------------------------------------------------------------------
-	virtual void Execute( CSaveRestoreData *pSaveData )
-	{
-		if ( !pSaveData || IsPC() || ( g_pFileSystem->GetDVDMode() == DVDMODE_OFF ) )
-		{
-			return;
-		}
-
-		// get the bit marked for the next level
-		int transitionMask = 0;
-		for ( int i = 0; i < pSaveData->levelInfo.connectionCount; i++ )
-		{
-			if ( !Q_stricmp( m_pLevelName, pSaveData->levelInfo.levelList[i].mapName ) && !Q_stricmp( m_pLandMarkName, pSaveData->levelInfo.levelList[i].landmarkName ) )
-			{
-				transitionMask = 1<<i;
-				break;
-			}
-		}
-
-		if ( !transitionMask )
-		{
-			// nothing to do
-			return;
-		}
-
-		const char *pModelName;
-		bool bHasHumans = false;
-		for ( int i = 0; i < pSaveData->NumEntities(); i++ )
-		{
-			if ( pSaveData->GetEntityInfo(i)->flags & transitionMask )
-			{
-				// this entity will cross the transition and needs to be preserved
-				// add to the next map's resource list which effectively keeps it from being purged
-				// only care about the actual mdl and not any of its dependants
-				pModelName = pSaveData->GetEntityInfo(i)->modelname.ToCStr();
-				g_pQueuedLoader->AddMapResource( pModelName );
-
-				// humans require a post pass
-				if ( !bHasHumans && V_stristr( pModelName, "models/humans" ) )
-				{
-					bHasHumans = true;
-				}
-			}
-		}
-
-		if ( bHasHumans )
-		{
-			// the presence of any human entity in the transition needs to ensure all the human mdls stay
-			int count = modelloader->GetCount();
-			for ( int i = 0; i < count; i++ )
-			{
-				pModelName = modelloader->GetName( modelloader->GetModelForIndex( i ) );
-				if ( V_stristr( pModelName, "models/humans" ) )
-				{
-					g_pQueuedLoader->AddMapResource( pModelName );
-				}
-			}
-		}
-	}
-
-	const char *m_pLevelName;
-	const char *m_pLandMarkName;
-};
 
 // There's a version of this in bsplib.cpp!!!  Make sure that they match.
 void GetPlatformMapPath( const char *pMapPath, char *pPlatformMapPath, int maxLength )
@@ -4898,7 +4496,7 @@ void GetPlatformMapPath( const char *pMapPath, char *pPlatformMapPath, int maxLe
 
 void AdjustThreadPoolThreadCount()
 {
-#if defined( DEDICATED ) && IsPlatformLinux()
+#if defined( DEDICATED ) && 1
 	extern ConVar occlusion_test_async;
 	int nTargetThreads = occlusion_test_async.GetInt();
 	if ( nTargetThreads != g_pThreadPool->NumThreads() )
@@ -5032,11 +4630,8 @@ void Host_Changelevel( bool loadfromsavedgame, const char *mapname, char *mapGro
 	{
 		if ( !bTransitionBySave )
 		{
-			// This callback ensures resources in the transition volume stay
-			CAddTransitionResourcesCB addTransitionResources( level, startspot );
-
 			// save the current level's state
-			if ( !saverestore->SaveGameState( true, &addTransitionResources ) )
+			if ( !saverestore->SaveGameState( true, NULL ) )
 			{
 				Warning( "Failed to save data for transition\n" );
 				SCR_EndLoadingPlaque();
@@ -5219,14 +4814,6 @@ bool Host_NewGame( char *mapName, char *mapGroupName, bool loadGame, bool bBackg
 		COM_TimestampedLog( "Stuff 'connect localhost' to console" );
 
 		int nNumPlayers = 1;
-
-		if( IsGameConsole() && !bBackgroundLevel )
-		{
-#ifdef _GAMECONSOLE
-			// on the 360 we need to ask matchmaking how many players to connect.
-			nNumPlayers = XBX_GetNumGameUsers();
-#endif
-		}
 
 		if ( bSplitScreenConnect )
 		{
@@ -5543,7 +5130,7 @@ void Host_EnsureHostNameSet()
 		const char *szHostName = "";
 #ifndef DEDICATED
 		// if this is a PC listen server and there is a logged-on Steam user, use the user's Steam name as the host name
-		if ( IsPC() && !sv.IsDedicated() && Steam3Client().SteamUser() )
+		if ( !sv.IsDedicated() && Steam3Client().SteamUser() )
 		{
 			if ( Steam3Client().SteamUser()->BLoggedOn() )
 			{

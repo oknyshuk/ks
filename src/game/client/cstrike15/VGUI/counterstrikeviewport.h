@@ -13,12 +13,6 @@
 
 
 
-namespace vgui 
-{
-	class Panel;
-	class Label;
-	class CBitmapImagePanel;
-}
 
 class CCSTeamMenu;
 class CCSClassMenu;

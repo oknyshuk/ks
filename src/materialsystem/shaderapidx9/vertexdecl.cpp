@@ -164,13 +164,7 @@ static D3DDECLTYPE VertexElementToDeclType( VertexElement_t element, VertexCompr
 			// Wrinkle is packed into Position.W, it is not specified as a separate vertex element
 			Assert( 0 );
 			return D3DDECLTYPE_UNUSED;
-#if !defined( _X360 )
 		case VERTEX_ELEMENT_BONEINDEX:		return D3DDECLTYPE_D3DCOLOR;
-#else
-		// UBYTE4 comes in as [0,255] in the shader, which is ideal for bone indices
-		// (unfortunately, UBYTE4 is not universally supported on PC DX8 GPUs)
-		case VERTEX_ELEMENT_BONEINDEX:		return D3DDECLTYPE_UBYTE4;
-#endif
 		case VERTEX_ELEMENT_BONEWEIGHTS1:	return D3DDECLTYPE_FLOAT1;
 		case VERTEX_ELEMENT_BONEWEIGHTS2:	return D3DDECLTYPE_FLOAT2;
 		case VERTEX_ELEMENT_BONEWEIGHTS3:	return D3DDECLTYPE_FLOAT3;
@@ -250,21 +244,6 @@ void ComputeVertexSpec( VertexFormat_t fmt, D3DVERTEXELEMENT9 *pDecl,
 
 	VertexCompressionType_t compressionType = CompressionType( fmt );
 
-	if ( IsX360() )
-	{
-		// On 360, there's a performance penalty for reading more than 2 streams in the vertex shader
-		// (we don't do this yet, but we should be aware if we start doing it)
-
-		// As an extra clarification - perf difference is only observed in bandwidth-bound cases,
-		// so it is safe to use extra streams as long as we aren't bandwidth-bound,
-		// the assertion is safe to be removed.
-
-#ifdef _DEBUG
-		int numStreams = 1 + ( bStaticLit ? 1 : 0 ) + ( bUsingFlex ? 1 : 0 ) + ( bUsingMorph ? 1 : 0 );
-		numStreams;
-		// Assert( numStreams <= 2 );
-#endif
-	}
 
 	if( bUsingPreTessPatch )
 	{

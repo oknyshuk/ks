@@ -121,12 +121,10 @@ SQDbgServer::~SQDbgServer()
 	sq_pushnull(_v);
 	sq_seterrorhandler(_v);
 	sq_release(_v,&_debugroot);
-#ifndef _X360
 	if(_accept != INVALID_SOCKET)
 		sqdbg_closesocket(_accept);
 	if(_endpoint != INVALID_SOCKET)
 		sqdbg_closesocket(_endpoint);
-#endif
 }
 
 bool SQDbgServer::Init()
@@ -185,11 +183,10 @@ bool SQDbgServer::Init()
 
 bool SQDbgServer::IsConnected()
 {
-#ifndef _GAMECONSOLE
 	if ( _endpoint != INVALID_SOCKET )
 	{
 		fd_set set;
-#if defined(_WIN32) || defined(_PS3)
+#if defined(_WIN32)
 		set.fd_count = 1;
 		set.fd_array[0] = _endpoint;
 #else
@@ -202,7 +199,6 @@ bool SQDbgServer::IsConnected()
 		}
 		DevMsg( "Script debugger disconnected\n" );
 	}
-#endif
 	return false;
 }
 
@@ -220,7 +216,6 @@ void SQDbgServer::BusyWait()
 
 void SQDbgServer::SendChunk(const SQChar *chunk)
 {
-#ifndef _GAMECONSOLE
 	char *buf=NULL;
 	int buf_len=0;
 #ifdef _UNICODE
@@ -232,7 +227,6 @@ void SQDbgServer::SendChunk(const SQChar *chunk)
 	buf=(char *)chunk;
 #endif
 	send(_endpoint,(const char*)buf,(int)strlen((const char *)buf),0);
-#endif
 }
 
 
@@ -404,9 +398,7 @@ void SQDbgServer::ParseMsg(const char *msg)
 		case MSG_ID('t','r'):
 			{
 				scprintf(_SC("terminate from user\n"));
-#ifndef _X360
 				sqdbg_closesocket(_endpoint);
-#endif
 				_endpoint = INVALID_SOCKET;
 			}
 			break;

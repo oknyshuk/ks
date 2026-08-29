@@ -91,9 +91,7 @@ FORCEINLINE bool IsChildProcess( void )
 {
 	return g_nForkID > 0;
 }
-#ifdef _LINUX
 void SendStringToParentProcess( char const *pMsg );
-#endif
 
 
 

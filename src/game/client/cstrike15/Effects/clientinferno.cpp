@@ -92,11 +92,8 @@ void C_Inferno::ClientThink()
 
 	bool bIsAttachedToMovingObject = (GetMoveParent() != NULL) ? true : false;
 
-	if (true || m_lastFireCount != m_fireCount || bIsAttachedToMovingObject )
-	{
-		SynchronizeDrawables();
-		m_lastFireCount = m_fireCount;
-	}
+	SynchronizeDrawables();
+	m_lastFireCount = m_fireCount;
 	
 	bool bDidRecomputeBounds = false;
 

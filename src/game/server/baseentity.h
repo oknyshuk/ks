@@ -1093,7 +1093,7 @@ public:
 #elif defined( GNUC ) || defined( PLATFORM_WINDOWS_PC64 )
         //lwss update: newer compilers will make class member pointers 2x the size of a pointer
 	    COMPILE_TIME_ASSERT( sizeof(func) == 8 || sizeof(func) == 16 );
-#elif !defined( _PS3 )
+#else
 		COMPILE_TIME_ASSERT( sizeof(func) == 4 || sizeof(func) == 8 );
 #endif
 		m_pfnTouch = func; 
@@ -1107,7 +1107,7 @@ public:
 #elif defined( GNUC ) || defined( PLATFORM_WINDOWS_PC64 )
         //lwss update: newer compilers will make class member pointers 2x the size of a pointer
 	    COMPILE_TIME_ASSERT( sizeof(func) == 8 || sizeof(func) == 16 );
-#elif !defined( _PS3 )
+#else
 		COMPILE_TIME_ASSERT( sizeof(func) == 4 || sizeof(func) == 8 );
 #endif
 		m_pfnUse = func; 
@@ -1121,7 +1121,7 @@ public:
 #elif defined( GNUC ) || defined( PLATFORM_WINDOWS_PC64 )
         //lwss update: newer compilers will make class member pointers 2x the size of a pointer
 	    COMPILE_TIME_ASSERT( sizeof(func) == 8 || sizeof(func) == 16 );
-#elif !defined( _PS3 )
+#else
 		COMPILE_TIME_ASSERT( sizeof(func) == 4 || sizeof(func) == 8 );
 #endif
 		m_pfnBlocked = func; 

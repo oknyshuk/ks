@@ -8,9 +8,7 @@
 #ifndef SHAREDINTERFACE_H
 #define SHAREDINTERFACE_H
 
-#ifdef POSIX
 #define random random_valve// stdlib.h defined random() and our class defn conflicts so under POSIX rename it using the preprocessor
-#endif
 
 class IFileSystem;
 class IUniformRandomStream;

@@ -1038,15 +1038,7 @@ void CStudioRender::RetireDecalAtAddress( DecalModelList_t &list, DecalLRUListIn
 				pMaterial->m_Decals.Remove( pDecalHistory->m_Decal );
 				if ( pMaterial->m_Decals.Count() == 0)
 				{
-#if 1
 					pMaterial->m_Decals.Purge();
-#else
-					if ( list.m_pLod[iLOD].m_FirstMaterial == pDecalHistory->m_Material )
-					{
-						list.m_pLod[iLOD].m_FirstMaterial = m_DecalMaterial.Next( pDecalHistory->m_Material );
-					}
-					m_DecalMaterial.Free( pDecalHistory->m_Material );
-#endif
 				}
 			}
 
@@ -1225,8 +1217,6 @@ void CStudioRender::AddDecal( StudioDecalHandle_t hDecal, const StudioRenderCont
 {
 	VPROF( "CStudioRender::AddDecal" );
 
-	if ( IsPS3() ) // FIXME: <vitaliy> disabling decals on models since on PS3 vertex data is packed for EDGE!
-		return;
 
 	if ( hDecal == STUDIORENDER_DECAL_INVALID )
 		return;
@@ -1330,33 +1320,13 @@ void CStudioRender::AddDecal( StudioDecalHandle_t hDecal, const StudioRenderCont
 		return;
 	}
 
-	if ( !IsGameConsole() )
-	{
-		buildInfo.m_pMeshVertices = (MeshVertexInfo_t*)stackalloc( nMeshCount * sizeof(MeshVertexInfo_t) );	
-		int nVertexCount = ComputeVertexAllocation( iMaxLOD, body, list.m_pHardwareData, buildInfo.m_pMeshVertices );
-		buildInfo.m_pVertexBuffer = (DecalBuildVertexInfo_t*)stackalloc( nVertexCount * sizeof(DecalBuildVertexInfo_t) );
-	}
-	else
-	{
-		// Don't allocate on the stack
-		buildInfo.m_pMeshVertices = (MeshVertexInfo_t*)malloc( nMeshCount * sizeof(MeshVertexInfo_t) );	
-		int nVertexCount = ComputeVertexAllocation( iMaxLOD, body, list.m_pHardwareData, buildInfo.m_pMeshVertices );
-		buildInfo.m_pVertexBuffer = (DecalBuildVertexInfo_t*)malloc( nVertexCount * sizeof(DecalBuildVertexInfo_t) );
-	}
+	buildInfo.m_pMeshVertices = (MeshVertexInfo_t*)stackalloc( nMeshCount * sizeof(MeshVertexInfo_t) );	
+	int nVertexCount = ComputeVertexAllocation( iMaxLOD, body, list.m_pHardwareData, buildInfo.m_pMeshVertices );
+	buildInfo.m_pVertexBuffer = (DecalBuildVertexInfo_t*)stackalloc( nVertexCount * sizeof(DecalBuildVertexInfo_t) );
 
 	// Project all mesh vertices
 	ProjectDecalsOntoMeshes( buildInfo, nMeshCount );
 
-	if ( IsGameConsole() )
-	{
-		while ( g_nTotalDecalVerts * sizeof(DecalVertex_t) > 256*1024 && m_DecalLRU.Head() != m_DecalLRU.InvalidIndex() )
-		{
-			DecalId_t nRetireID = m_DecalLRU[ m_DecalLRU.Head() ].m_nDecalId;
-			StudioDecalHandle_t hRetire = m_DecalLRU[ m_DecalLRU.Head() ].m_hDecalHandle;
-			DecalModelList_t &modelList = m_DecalList[(intp)hRetire];
-			RetireDecal( modelList, nRetireID, modelList.m_pHardwareData->m_RootLOD, modelList.m_pHardwareData->m_NumLODs );
-		}
-	}
 
 	// Global list of decals trimming
 	if ( m_DecalLRU.Count() >= MAX( m_pRC->m_Config.maxDecalsPerModel * 10, 150 ) )
@@ -1514,11 +1484,6 @@ void CStudioRender::AddDecal( StudioDecalHandle_t hDecal, const StudioRenderCont
 		++m_nDecalId;
 	}
 
-	if ( IsGameConsole() )
-	{
-		free( buildInfo.m_pMeshVertices );
-		free( buildInfo.m_pVertexBuffer );
-	}
 
 	m_pStudioHdr = NULL;
 	m_pRC = NULL;
@@ -1548,22 +1513,6 @@ void CStudioRender::DrawSingleBoneDecals( CMeshBuilder& meshBuilder, const Decal
 		
 		meshBuilder.Position3fv( vertex.m_Position.Base() );
 		meshBuilder.Normal3fv( GetVecNormal( vertex.m_Normal ).Base() );
-#if 0
-		if ( decalMaterial.m_pMaterial->InMaterialPage() )
-		{
-			float offset[2], scale[2];
-			decalMaterial.m_pMaterial->GetMaterialOffset( offset );
-			decalMaterial.m_pMaterial->GetMaterialScale( scale );
-
-			Vector2D vecTexCoord( vertex.m_TexCoord.x, vertex.m_TexCoord.y );
-			vecTexCoord.x = clamp( vecTexCoord.x, 0.0f, 1.0f );
-			vecTexCoord.y = clamp( vecTexCoord.y, 0.0f, 1.0f );
-			meshBuilder.TexCoordSubRect2f( 0, vecTexCoord.x, vecTexCoord.y, offset[0], offset[1], scale[0], scale[1] );
-
-//			meshBuilder.TexCoordSubRect2f( 0, vertex.m_TexCoord.x, vertex.m_TexCoord.y, offset[0], offset[1], scale[0], scale[1] );
-		}
-		else
-#endif
 		{
 			meshBuilder.TexCoord2fv( 0, GetVecTexCoord(vertex.m_TexCoord).Base() );
 		}
@@ -1608,22 +1557,6 @@ void CStudioRender::DrawSingleBoneFlexedDecals( IMatRenderContext *pRenderContex
 			meshBuilder.Normal3fv( GetVecNormal( vertex.m_Normal ).Base() );
 		}
 
-#if 0
-		if ( decalMaterial.m_pMaterial->InMaterialPage() )
-		{
-			float offset[2], scale[2];
-			decalMaterial.m_pMaterial->GetMaterialOffset( offset );
-			decalMaterial.m_pMaterial->GetMaterialScale( scale );
-
-			Vector2D vecTexCoord( vertex.m_TexCoord.x, vertex.m_TexCoord.y );
-			vecTexCoord.x = clamp( vecTexCoord.x, 0.0f, 1.0f );
-			vecTexCoord.y = clamp( vecTexCoord.y, 0.0f, 1.0f );
-			meshBuilder.TexCoordSubRect2f( 0, vecTexCoord.x, vecTexCoord.y, offset[0], offset[1], scale[0], scale[1] );
-
-//			meshBuilder.TexCoordSubRect2f( 0, vertex.m_TexCoord.x, vertex.m_TexCoord.y, offset[0], offset[1], scale[0], scale[1] );
-		}
-		else
-#endif
 		{
 			meshBuilder.TexCoord2fv( 0, GetVecTexCoord(vertex.m_TexCoord).Base() );
 		}
@@ -1715,22 +1648,6 @@ bool CStudioRender::DrawMultiBoneDecals( CMeshBuilder& meshBuilder, DecalMateria
 			meshBuilder.Normal3fv( pCachedVert->m_Normal.Base() );
 		}
 
-#if 0
-		if ( decalMaterial.m_pMaterial->InMaterialPage() )
-		{
-			float offset[2], scale[2];
-			decalMaterial.m_pMaterial->GetMaterialOffset( offset );
-			decalMaterial.m_pMaterial->GetMaterialScale( scale );
-
-			Vector2D vecTexCoord( vertex.m_TexCoord.x, vertex.m_TexCoord.y );
-			vecTexCoord.x = clamp( vecTexCoord.x, 0.0f, 1.0f );
-			vecTexCoord.y = clamp( vecTexCoord.y, 0.0f, 1.0f );
-			meshBuilder.TexCoordSubRect2f( 0, vecTexCoord.x, vecTexCoord.y, offset[0], offset[1], scale[0], scale[1] );
-
-//			meshBuilder.TexCoordSubRect2f( 0, vertex.m_TexCoord.x, vertex.m_TexCoord.y, offset[0], offset[1], scale[0], scale[1] );
-		}
-		else
-#endif
 		{
 			meshBuilder.TexCoord2fv( 0, GetVecTexCoord(vertex.m_TexCoord).Base() );
 		}
@@ -1976,9 +1893,7 @@ void CStudioRender::DrawInstancedMultiBoneDecals( CMeshBuilder& meshBuilder, con
 				if ( j != verts.InvalidIndex() )
 				{
 					const DecalVertex_t& nextVertex = verts[j];
-#ifdef _X360
-					PREFETCH360( &nextVertex, 0 );
-#elif _SSE1
+#if   _SSE1
 					_mm_prefetch( reinterpret_cast<const char *>(&nextVertex) , _MM_HINT_T0 );
 #endif
 				}

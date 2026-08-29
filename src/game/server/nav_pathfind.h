@@ -245,10 +245,6 @@ bool NavAreaBuildPath( CNavArea *startArea, CNavArea *goalArea, const Vector *go
 				how = (NavTraverseType)dir;
 				++searchIndex;
 
-				if ( IsGameConsole() && searchIndex < floorList->Count() )
-				{
-					PREFETCH360( floorList->Element( searchIndex ).area, 0  );
-				}
 			}
 			else if ( searchWhere == SEARCH_LADDERS )
 			{

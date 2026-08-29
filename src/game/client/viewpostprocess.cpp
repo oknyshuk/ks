@@ -55,16 +55,7 @@ float g_flTonemapPercentBrightPixels = 2.0f;
 float g_flTonemapMinAvgLum = 3.0f;
 float g_flTonemapRate = 1.0f;
 
-#if defined( _X360 )
-#if defined( CSTRIKE15 )
 float g_flTonemapPercentTarget = 60.0f;
-#else
-// Move "up" the percent target to make X360 a bit brighter than it's been to compensate for our bad 8-bit histogram utilization and to also compensate for the non-PWL texture change.
-float g_flTonemapPercentTarget = 80.0f
-#endif
-#else
-float g_flTonemapPercentTarget = 60.0f;
-#endif
 
 extern void GetTonemapSettingsFromEnvTonemapController( void );
 
@@ -89,18 +80,7 @@ static ConVar mat_dynamic_tonemapping( "mat_dynamic_tonemapping", "1", FCVAR_CHE
 static ConVar mat_tonemapping_occlusion_use_stencil( "mat_tonemapping_occlusion_use_stencil", "0", FCVAR_DEVELOPMENTONLY  );
 
 static ConVar mat_autoexposure_max( "mat_autoexposure_max", "2", FCVAR_CHEAT );
-#if defined( _X360 )
-
-#if defined( CSTRIKE15 )
-static ConVar mat_autoexposure_max_multiplier("mat_autoexposure_max_multiplier","1.0", FCVAR_CHEAT);
-#else
-// Allow the max. pixel shader multiplier to be 50% higher to better utilize the available 8-bit output range, and to help compensate for the gamma ramp adjustments we've made. (At some point we should also adjust the PS3.)
-static ConVar mat_autoexposure_max_multiplier("mat_autoexposure_max_multiplier","1.5", FCVAR_CHEAT );
-#endif
-
-#else
 static ConVar mat_autoexposure_max_multiplier("mat_autoexposure_max_multiplier","1.0", FCVAR_CHEAT );
-#endif
 static ConVar mat_autoexposure_min( "mat_autoexposure_min", "0.5", FCVAR_CHEAT );
 static ConVar mat_show_histogram( "mat_show_histogram", "0", FCVAR_CHEAT );
 ConVar mat_hdr_uncapexposure( "mat_hdr_uncapexposure", "0", FCVAR_CHEAT );
@@ -141,9 +121,6 @@ ConVar mat_blur_r( "mat_blur_r", "0.7" );
 ConVar mat_blur_g( "mat_blur_g", "0.7" );
 ConVar mat_blur_b( "mat_blur_b", "0.7" );
 
-#if defined(_PS3)
-ConVar mat_PS3_findpostvarsfast( "mat_PS3_findpostvarsfast", "1" );
-#endif
 
 
 
@@ -583,14 +560,6 @@ void CHistogramBucket::IssueQuery( int nFrameNum )
 	// Set stencil bits where the colors match
 	IMaterial *pLumCompareMaterial;
 
-#if defined(_PS3)
-	if( mat_PS3_findpostvarsfast.GetInt() )
-	{
-		pLumCompareMaterial = CLumCompareMaterialProxy::GetLumCompareMaterial( materials );
-		CLumCompareMaterialProxy::SetupLumCompareMaterial( flTestRangeMin, flTestRangeMax );
-	}
-	else
-#endif
 	{
 		pLumCompareMaterial = materials->FindMaterial( "dev/lumcompare", TEXTURE_GROUP_OTHER, true );
 
@@ -669,11 +638,6 @@ void CHistogramBucket::IssueQuery( int nFrameNum )
 		pRenderContext->SetStencilState( state );
 
 		IMaterial *pLumCompareStencilMaterial;
-#if defined(_PS3)
-		if( mat_PS3_findpostvarsfast.GetInt() )
-			pLumCompareStencilMaterial = CLumCompareStencilMaterialProxy::GetLumCompareStencilMaterial( materials );
-		else
-#endif
 		pLumCompareStencilMaterial = materials->FindMaterial( "dev/no_pixel_write", TEXTURE_GROUP_OTHER, true);
 
 		pRenderContext->DrawScreenSpaceRectangle( pLumCompareStencilMaterial,
@@ -1157,7 +1121,7 @@ void CTonemapSystem::DisplayHistogram()
 	//pRenderContext->ClearBuffers( true, true );
 
 	// Output some text data
-	if ( !IsGameConsole() && ( mat_show_histogram.GetInt() == 1 ) )
+	if ( ( mat_show_histogram.GetInt() == 1 ) )
 	{
 		float flTonemapMinAvgLum = mat_force_tonemap_min_avglum.GetFloat() >= 0.0f ? mat_force_tonemap_min_avglum.GetFloat() : g_flTonemapMinAvgLum;
 		engine->Con_NPrintf( 23 + ( nViewportY / 10 ), "(Histogram luminance is in linear space)" );
@@ -1169,10 +1133,6 @@ void CTonemapSystem::DisplayHistogram()
 	}
 
 	int xpStart = nViewportX + nViewportWidth - nTotalGraphPixelsWide - 10;
-	if ( IsGameConsole() )
-	{
-		xpStart -= 50;
-	}
 
 	int yOffset = 4 + nViewportY;
 
@@ -1285,17 +1245,14 @@ void CTonemapSystem::DisplayHistogram()
 		pRenderContext->ClearColor3ub( 255, 255, 0 );
 		pRenderContext->ClearBuffers( true, true );
 
-		if ( !IsGameConsole() )
+		int nHeight = 21;
+		if ( mat_show_histogram.GetInt() == 2 ) // No histogram
 		{
-			int nHeight = 21;
-			if ( mat_show_histogram.GetInt() == 2 ) // No histogram
-			{
-				nHeight = 1;
-			}
-
-			engine->Con_NPrintf( nHeight + ( nViewportY / 10 ), "%.2f                                                                             %.2f                                                                           %.2f",
-								 flAutoExposureMin, ( flAutoExposureMax + flAutoExposureMin ) / 2.0f, flAutoExposureMax );
+			nHeight = 1;
 		}
+
+		engine->Con_NPrintf( nHeight + ( nViewportY / 10 ), "%.2f                                                                             %.2f                                                                           %.2f",
+							 flAutoExposureMin, ( flAutoExposureMax + flAutoExposureMin ) / 2.0f, flAutoExposureMax );
 	}
 
 	// Last bar doesn't clear properly so draw an extra pixel
@@ -1633,7 +1590,7 @@ static ConVar mat_fxaa_edge_sharpness_C( "mat_fxaa_edge_sharpness_C", "8.0", 0, 
 static ConVar mat_fxaa_edge_threshold_C( "mat_fxaa_edge_threshold_C", "0.125", 0, "Does not affect PS3 which uses FXAA_CONSOLE_PS3_EDGE_THRESHOLD define due to being ALU bound (and only safe values are 1/4, 1/8). On X360, (0.125 - default, leaves less aliasing, but is softer, 0.25 - leaves more aliasing and is sharper)" );
 static ConVar mat_fxaa_edge_threshold_min_C( "mat_fxaa_edge_threshold_min_C", "0.0", 0, "Trims the algorithm from processing darks. Does not affect PS3 due to being ALU bound. (0.04 - slower and less aliasing in darks, 0.05 - default, 0.06 - faster but more aliasing in darks). Special note: when using FXAA_GREEN_AS_LUMA likely want to set this to zero" );
 static ConVar mat_fxaa_subpixel_Q( "mat_fxaa_subpixel_Q", "0.75", 0, "Effects sub-pixel AA quality and inversely sharpness (only used on FXAA Quality): (0.0 - off), (1.0 - upper limit, softer), default = 0.75" );
-static ConVar mat_fxaa_edge_threshold_Q( "mat_fxaa_edge_threshold_Q", IsGameConsole() ? "0.166" : ".35", 0, "The minimum amount of local contrast required to apply algorithm: (0.063 - overkill, slower), (0.125 - high quality), (0.166 - default), (0.250 - low quality), (0.333 - too little, faster)" );
+static ConVar mat_fxaa_edge_threshold_Q( "mat_fxaa_edge_threshold_Q", ".35", 0, "The minimum amount of local contrast required to apply algorithm: (0.063 - overkill, slower), (0.125 - high quality), (0.166 - default), (0.250 - low quality), (0.333 - too little, faster)" );
 static ConVar mat_fxaa_edge_threshold_min_Q( "mat_fxaa_edge_threshold_min_Q", "0.0", 0, "Trims the algorithm from processing darks: (0.0312 - visible limit, slower), (0.0625 - high quality, faster), (0.0833 - upper limit, the start of fisible unfiltered edges). Special note: when using FXAA_GREEN_AS_LUMA, likely want to set this to zero" );
 
 
@@ -1681,14 +1638,6 @@ public:
 	static void SetupEnginePostMaterialAA( bool bPerformSoftwareAA, float flAAStrength );
 	static void SetupEnginePostMaterialTextureTransform( const Vector4D & fullViewportBloomUVs, const Vector4D & fullViewportFBUVs, Vector2D destTexSize );
 
-#if defined(_PS3)
-	static IMaterial *GetEnginePostMaterial( IMaterialSystem * materials );
-	static int		 GetLocalContrastEnable( IMaterialSystem * materials );
-	static ITexture  *GetSrcTexture( IMaterialSystem * materials );
-	static ITexture  *GetSrcPS3Texture( IMaterialSystem * materials );
-	static ITexture  *GetDstRT0Texture( IMaterialSystem * materials );
-	static ITexture  *GetDstRT1Texture( IMaterialSystem * materials );
-#endif
 
 private:
 	static float s_vBloomAAValues[4];
@@ -1699,14 +1648,6 @@ private:
 	static int   s_PostBloomEnable;
 	static float s_PostBloomAmount;
 
-#if defined(_PS3)
-	static IMaterial	*s_pEnginePostMaterial;
-	static ITexture		*s_pSrcTexture;
-	static ITexture		*s_pSrcPS3Texture;
-	static ITexture		*s_pDstRT0Texture;
-	static ITexture		*s_pDstRT1Texture;
-	static IMaterialVar	*s_pMaterialParam_LocalContrastEnable;
-#endif
 };
 
 float CEnginePostMaterialProxy::s_vBloomAAValues[4]					= { 0.0f, 0.0f, 0.0f, 0.0f };
@@ -1716,14 +1657,6 @@ float CEnginePostMaterialProxy::s_vFXAAValuesQ[4]					= { 0.0f, 0.0f, 0.0f, 0.0f
 float CEnginePostMaterialProxy::s_vBloomUVTransform[4]				= { 0.0f, 0.0f, 0.0f, 0.0f };
 int   CEnginePostMaterialProxy::s_PostBloomEnable					= 1;
 float CEnginePostMaterialProxy::s_PostBloomAmount					= 1.0f;
-#if defined(_PS3)
-IMaterial *CEnginePostMaterialProxy::s_pEnginePostMaterial			= NULL;
-ITexture *CEnginePostMaterialProxy::s_pSrcTexture					= NULL;
-ITexture *CEnginePostMaterialProxy::s_pSrcPS3Texture				= NULL;
-ITexture *CEnginePostMaterialProxy::s_pDstRT0Texture				= NULL;
-ITexture *CEnginePostMaterialProxy::s_pDstRT1Texture				= NULL;
-IMaterialVar *CEnginePostMaterialProxy::s_pMaterialParam_LocalContrastEnable = NULL;
-#endif
 
 CEnginePostMaterialProxy::CEnginePostMaterialProxy()
 {
@@ -1750,14 +1683,6 @@ CEnginePostMaterialProxy::CEnginePostMaterialProxy()
 	m_pMaterialParam_ScreenBlurStrength			= NULL;
 	m_pMaterialParam_FilmGrainStrength			= NULL;
 
-#if defined(_PS3)
-	s_pMaterialParam_LocalContrastEnable		= NULL;
-	s_pEnginePostMaterial						= NULL;
-	s_pSrcTexture								= NULL;
-	s_pSrcPS3Texture							= NULL;
-	s_pDstRT0Texture							= NULL;
-	s_pDstRT1Texture							= NULL;
-#endif
 }
 
 CEnginePostMaterialProxy::~CEnginePostMaterialProxy()
@@ -1797,14 +1722,6 @@ bool CEnginePostMaterialProxy::Init( IMaterial *pMaterial, KeyValues *pKeyValues
 	m_pMaterialParam_FadeColor = pMaterial->FindVar( "$fadeColor", &bFoundVar, false );
 	m_pMaterialParam_FadeType = pMaterial->FindVar( "$fade", &bFoundVar, false );
 
-#if defined(_PS3)
-	s_pEnginePostMaterial				 = NULL;
-	s_pSrcTexture						 = NULL;
-	s_pSrcPS3Texture					 = NULL;
-	s_pDstRT0Texture					 = NULL;
-	s_pDstRT1Texture					 = NULL;
-	s_pMaterialParam_LocalContrastEnable = NULL;
-#endif
 
 	return true;
 }
@@ -1902,70 +1819,6 @@ IMaterial *CEnginePostMaterialProxy::GetMaterial()
 	return m_pMaterialParam_AAValues->GetOwningMaterial();
 }
 
-#if defined(_PS3 )
-
-IMaterial *CEnginePostMaterialProxy::GetEnginePostMaterial( IMaterialSystem * materials )
-{
-	if( s_pEnginePostMaterial == NULL)
-	{
-		s_pEnginePostMaterial = materials->FindMaterial( "dev/engine_post", TEXTURE_GROUP_OTHER, true );
-	}
-
-	return s_pEnginePostMaterial;
-}
-
-int CEnginePostMaterialProxy::GetLocalContrastEnable( IMaterialSystem * materials )
-{
-	if( s_pMaterialParam_LocalContrastEnable == NULL )
-	{
-		s_pMaterialParam_LocalContrastEnable = GetEnginePostMaterial( materials )->FindVar( "$localcontrastenable", NULL, false );
-	}
-
-	return s_pMaterialParam_LocalContrastEnable->GetIntValueFast();
-}
-
-ITexture *CEnginePostMaterialProxy::GetSrcTexture( IMaterialSystem * materials )
-{
-	if( s_pSrcTexture == NULL )
-	{	
-		s_pSrcTexture = materials->FindTexture( "_rt_FullFrameFB", TEXTURE_GROUP_RENDER_TARGET );
-	}
-
-	return s_pSrcTexture;
-}
-
-ITexture *CEnginePostMaterialProxy::GetSrcPS3Texture( IMaterialSystem * materials )
-{
-	if( s_pSrcPS3Texture == NULL )
-	{	
-		s_pSrcPS3Texture = materials->FindTexture( "^PS3^BACKBUFFER", TEXTURE_GROUP_RENDER_TARGET );
-	}
-
-	return s_pSrcPS3Texture;
-}
-
-ITexture *CEnginePostMaterialProxy::GetDstRT0Texture( IMaterialSystem * materials )
-{
-	if( s_pDstRT0Texture == NULL )
-	{	
-		s_pDstRT0Texture = materials->FindTexture( "_rt_SmallFB0", TEXTURE_GROUP_RENDER_TARGET );
-	}
-
-	return s_pDstRT0Texture;
-}
-
-ITexture *CEnginePostMaterialProxy::GetDstRT1Texture( IMaterialSystem * materials )
-{
-	if( s_pDstRT1Texture == NULL )
-	{	
-		s_pDstRT1Texture = materials->FindTexture( "_rt_SmallFB1", TEXTURE_GROUP_RENDER_TARGET );
-	}
-
-	return s_pDstRT1Texture;
-}
-
-
-#endif
 
 
 
@@ -2066,7 +1919,7 @@ static void DrawBloomDebugBoxes( IMatRenderContext *pRenderContext, int nX, int 
 {
 	// draw inset rects which should have a centered bloom 
 	pRenderContext->PushRenderTargetAndViewport();
-	pRenderContext->SetRenderTarget( IsPS3() ? materials->FindTexture( "_rt_FullFrameFB", TEXTURE_GROUP_RENDER_TARGET ) : NULL );
+	pRenderContext->SetRenderTarget( NULL );
 
 	// full screen clear
 	pRenderContext->Viewport( nX, nY, nWidth, nHeight );
@@ -2135,19 +1988,6 @@ static float GetBloomAmount( void )
 		currentBloomAmount = GetCurrentBloomScale() * rate + ( 1.0f - rate ) * currentBloomAmount;
 		flBloomAmount = currentBloomAmount;
 
-		if (IsGameConsole())
-		{
-			//we want to scale the bloom effect down because the effect textures are lower reolution on the 360.
-			//target match 1280x1024
-			if ( (g_pMaterialSystem->GetCurrentConfigForVideoCard().m_VideoMode.m_Height == 720) )
-			{
-				flBloomAmount *= (720.0f/1024.0f);
-			}
-			else //640x480
-			{
-				flBloomAmount *= (480.0f/1024.0f);
-			}
-		}
 	}
 
 	if ( hdrType == HDR_TYPE_NONE )
@@ -2199,7 +2039,7 @@ static void DumpTGAofRenderTarget( const int width, const int height, const char
 
 	// async write to disk (this will take ownership of the memory)
 	char szPathedFileName[_MAX_PATH];
-	Q_snprintf( szPathedFileName, sizeof(szPathedFileName), "//MOD/%d_%s_%s.tga", s_nRTIndex++, pFilename, IsOSX() ? "OSX" : "PC" );
+	Q_snprintf( szPathedFileName, sizeof(szPathedFileName), "//MOD/%d_%s_%s.tga", s_nRTIndex++, pFilename, "PC" );
 
 	FileHandle_t fileTGA = filesystem->Open( szPathedFileName, "wb" );
 	filesystem->Write( buffer.Base(), buffer.TellPut(), fileTGA );
@@ -2222,14 +2062,6 @@ static void DownsampleFBQuarterSize( IMatRenderContext *pRenderContext, int nSrc
 	Assert( pDest->GetActualHeight() == nSrcHeight / 4 );
 
 	IMaterial *downsample_mat;
-#if defined(_PS3)
-	if( mat_PS3_findpostvarsfast.GetInt() )
-	{
-		downsample_mat = CDownsampleMaterialProxy::GetDownsampleMaterial( materials );
-		CDownsampleMaterialProxy::SetupDownsampleMaterial( g_flBloomExponent, g_flBloomSaturation );
-	}
-	else
-#endif
 	{
 		downsample_mat = materials->FindMaterial( bFloatHDR ? "dev/downsample" : "dev/downsample_non_hdr", TEXTURE_GROUP_OTHER, true );
 
@@ -2256,11 +2088,7 @@ static void DownsampleFBQuarterSize( IMatRenderContext *pRenderContext, int nSrc
 												0, 0, nSrcWidth-2, nSrcHeight-2,
 												nSrcWidth, nSrcHeight );
 
-	if ( IsX360() )
-	{
-		pRenderContext->CopyRenderTargetToTextureEx( pDest, 0, NULL, NULL );
-	}
-	else if ( s_bDumpRenderTargets )
+	if ( s_bDumpRenderTargets )
 	{
 		DumpTGAofRenderTarget( nSrcWidth/4, nSrcHeight/4, "QuarterSizeFB" );
 	}
@@ -2279,21 +2107,6 @@ static void Generate8BitBloomTexture( IMatRenderContext *pRenderContext,
 	ITexture *dest_rt0;
 	ITexture *dest_rt1;
 
-#if defined(_PS3)
-	if( mat_PS3_findpostvarsfast.GetInt() )
-	{
-		pSrc = CEnginePostMaterialProxy::GetSrcTexture( materials );
-
-		// FIXME: assumes bClearRGB = false here
-
-		xblur_mat = CXBlurMaterialProxy::GetXBlurMaterial( materials );
-		yblur_mat = CYBlurMaterialProxy::GetYBlurMaterial( materials );
-
-		dest_rt0 = CEnginePostMaterialProxy::GetDstRT0Texture( materials );
-		dest_rt1 = CEnginePostMaterialProxy::GetDstRT1Texture( materials );
-	}
-	else
-#endif
 	{
 		pSrc = materials->FindTexture( "_rt_FullFrameFB", TEXTURE_GROUP_RENDER_TARGET );
 
@@ -2339,11 +2152,7 @@ static void Generate8BitBloomTexture( IMatRenderContext *pRenderContext,
 	pRenderContext->DrawScreenSpaceRectangle(	xblur_mat, 0, 0, nSrcWidth/4, nSrcHeight/4,
 												0, 0, nSrcWidth/4-1, nSrcHeight/4-1,
 												nSrcWidth/4, nSrcHeight/4 );
-	if ( IsX360() )
-	{
-		pRenderContext->CopyRenderTargetToTextureEx( dest_rt1, 0, NULL, NULL );
-	}
-	else if ( s_bDumpRenderTargets )
+	if ( s_bDumpRenderTargets )
 	{
 		DumpTGAofRenderTarget( nSrcWidth/4, nSrcHeight/4, "BlurX" );
 	}
@@ -2356,11 +2165,7 @@ static void Generate8BitBloomTexture( IMatRenderContext *pRenderContext,
 												0, 0, nSrcWidth / 4 - 1, nSrcHeight / 4 - 1,
 												nSrcWidth / 4, nSrcHeight / 4 );
 
-	if ( IsX360() )
-	{
-		pRenderContext->CopyRenderTargetToTextureEx( dest_rt0, 0, NULL, NULL );
-	}
-	else if ( s_bDumpRenderTargets )
+	if ( s_bDumpRenderTargets )
 	{
 		DumpTGAofRenderTarget( nSrcWidth/4, nSrcHeight/4, "BlurYAndBloom" );
 	}
@@ -2377,7 +2182,7 @@ static void DoTonemapping( IMatRenderContext *pRenderContext, int nX, int nY, in
 	// Update HDR histogram
 	if ( mat_dynamic_tonemapping.GetInt() )
 	{
-		if ( s_bScreenEffectTextureIsUpdated == false && !IsPS3() )
+		if ( s_bScreenEffectTextureIsUpdated == false )
 		{
 			// FIXME: nX/nY/nWidth/nHeight are used here, but the equivalent parameters are ignored in Generate8BitBloomTexture
 			UpdateScreenEffectTexture( 0, nX, nY, nWidth, nHeight, false );
@@ -2396,19 +2201,6 @@ static void DoTonemapping( IMatRenderContext *pRenderContext, int nX, int nY, in
 			float flTonemapPercentTarget = mat_force_tonemap_percent_target.GetFloat() >= 0.0f ? mat_force_tonemap_percent_target.GetFloat() : g_flTonemapPercentTarget;
 			float flTonemapPercentBrightPixels = mat_force_tonemap_percent_bright_pixels.GetFloat() >= 0.0f ? mat_force_tonemap_percent_bright_pixels.GetFloat() : g_flTonemapPercentBrightPixels;
 			bool bDrawTextThisFrame = ( mat_show_histogram.GetInt() == 1 );
-			if ( IsGameConsole() )
-			{
-				static float s_flLastTimeUpdate = 0.0f;
-				if ( int( gpGlobals->curtime ) - int( s_flLastTimeUpdate ) >= 2 )
-				{
-					s_flLastTimeUpdate = gpGlobals->curtime;
-					bDrawTextThisFrame = true;
-				}
-				else
-				{
-					bDrawTextThisFrame = false;
-				}
-			}
 
 			if ( bDrawTextThisFrame == true )
 			{
@@ -2419,12 +2211,6 @@ static void DoTonemapping( IMatRenderContext *pRenderContext, int nX, int nY, in
 				}
 				else
 				{
-					if ( IsGameConsole() )
-					{
-						engine->Con_NPrintf( 25 + ( nY / 10 ), "[mat_show_histogram]  Target Scalar = %4.2f  Min/Max( %4.2f, %4.2f )  Final Scalar: %4.2f\n",
-							GetCurrentTonemappingSystem()->ComputeTargetTonemapScalar( true ), flAutoExposureMin, flAutoExposureMax, GetCurrentTonemappingSystem()->GetCurrentTonemappingScale() );
-					}
-					else
 					{
 						engine->Con_NPrintf( 25 + ( nY / 10 ), "%.2f%% of pixels above %d%% target @ %4.2f%%  Target Scalar = %4.2f  Min/Max( %4.2f, %4.2f )  Final Scalar: %4.2f",
 											 flTonemapPercentBrightPixels, (int)flTonemapPercentTarget,
@@ -2515,9 +2301,6 @@ bool DoEnginePostProcessing( int x, int y, int w, int h, bool bFlashlightIsOn, b
 		}
 	}
 
-	#if defined( _X360 )
-		pRenderContext->PushVertexShaderGPRAllocation( 16 ); //max out pixel shader threads
-	#endif
 
 	GetTonemapSettingsFromEnvTonemapController();
 
@@ -2541,9 +2324,6 @@ bool DoEnginePostProcessing( int x, int y, int w, int h, bool bFlashlightIsOn, b
 	{
 		GetCurrentTonemappingSystem()->DisplayHistogram();
 
-		#if defined( _X360 )
-			pRenderContext->PopVertexShaderGPRAllocation();
-		#endif
 
 		return false;
 	}
@@ -2553,23 +2333,6 @@ bool DoEnginePostProcessing( int x, int y, int w, int h, bool bFlashlightIsOn, b
 	// Set software-AA on by default for 360
 	if ( mat_software_aa_strength.GetFloat() == -1.0f )
 	{
-		if ( IsGameConsole() )
-		{
-			mat_software_aa_strength.SetValue( 1.0f );
-			if ( g_pMaterialSystem->GetCurrentConfigForVideoCard().m_VideoMode.m_Height > 480 )
-			{
-				mat_software_aa_quality.SetValue( 0 );
-			}
-			else
-			{
-				// For standard-def, we have fewer pixels so we can afford 'high quality' mode (5->9 taps/pixel)
-				mat_software_aa_quality.SetValue( 1 );
-
-				// Disable in 480p for now
-				mat_software_aa_strength.SetValue( 0.0f );
-			}
-		}
-		else
 		{
 			mat_software_aa_strength.SetValue( 0.0f );
 		}
@@ -2578,27 +2341,13 @@ bool DoEnginePostProcessing( int x, int y, int w, int h, bool bFlashlightIsOn, b
 	// Same trick for setting up the vgui aa strength
 	if ( mat_software_aa_strength_ui.GetFloat() == -1.0f )
 	{
-		if ( IsGameConsole() && (g_pMaterialSystem->GetCurrentConfigForVideoCard().m_VideoMode.m_Height == 720) )
-		{
-			mat_software_aa_strength_ui.SetValue( 2.0f );
-		}
-		else
-		{
-			mat_software_aa_strength_ui.SetValue( 1.0f );
-		}
+		mat_software_aa_strength_ui.SetValue( 1.0f );
 	}
 
 	float flAAStrength;
 
 	// We do a second AA blur pass over the TF intro menus. use mat_software_aa_strength_ui there instead
-	if ( IsGameConsole() && bPostUI )
-	{
-		flAAStrength = mat_software_aa_strength_ui.GetFloat();
-	}
-	else
-	{
-		flAAStrength = mat_software_aa_strength.GetFloat();
-	}
+	flAAStrength = mat_software_aa_strength.GetFloat();
 
 	// Bloom, software-AA and color-correction (applied in 1 pass, after generation of the bloom texture)
 	float flBloomScale = GetBloomAmount();
@@ -2616,70 +2365,33 @@ bool DoEnginePostProcessing( int x, int y, int w, int h, bool bFlashlightIsOn, b
 		pPostMat = materials->FindMaterial( "dev/engine_post_splitscreen", TEXTURE_GROUP_OTHER, true );
 	else
 	{
-#if defined(_PS3)
-
-		if( mat_PS3_findpostvarsfast.GetInt() )
-			pPostMat = CEnginePostMaterialProxy::GetEnginePostMaterial( materials );
-		else
-			pPostMat = materials->FindMaterial( "dev/engine_post", TEXTURE_GROUP_OTHER, true );
-
-#else
 		pPostMat = materials->FindMaterial( "dev/engine_post", TEXTURE_GROUP_OTHER, true );
-#endif
 	}
 
 	if ( pPostMat )
 	{
 
-#if defined(_PS3)
-
-		if( mat_PS3_findpostvarsfast.GetInt() )
-		{
-			bPerformLocalContrastEnhancement = CEnginePostMaterialProxy::GetLocalContrastEnable( materials ) && mat_local_contrast_enable.GetBool();
-		}
-		else
-		{
-			IMaterialVar* pMatVar = pPostMat->FindVar( "$localcontrastenable", NULL, false );
-
-			if ( pMatVar )
-			{
-				bPerformLocalContrastEnhancement = pMatVar->GetIntValue() && mat_local_contrast_enable.GetBool();
-			}
-		}
-#else
 		IMaterialVar* pMatVar = pPostMat->FindVar( "$localcontrastenable", NULL, false );
 
 		if ( pMatVar )
 		{
 			bPerformLocalContrastEnhancement = pMatVar->GetIntValue() && mat_local_contrast_enable.GetBool();
 		}
-#endif
 	}
 
 	bool bPerformedPostProcessPass = false;
 
-	if ( true )
 	{
 		ITexture *pSrc;
-#if defined(_PS3)
-		if( mat_PS3_findpostvarsfast.GetInt() )
-			pSrc = CEnginePostMaterialProxy::GetSrcTexture( materials );
-		else
-#endif
 		pSrc = materials->FindTexture( "_rt_FullFrameFB", TEXTURE_GROUP_RENDER_TARGET );
 
 		int nSrcWidth = pSrc->GetActualWidth();
 		int nSrcHeight = pSrc->GetActualHeight();
 
 		ITexture *dest_rt1;
-#if defined(_PS3)
-		if( mat_PS3_findpostvarsfast.GetInt() )
-			dest_rt1 = CEnginePostMaterialProxy::GetDstRT1Texture( materials );
-		else
-#endif
 		dest_rt1 = materials->FindTexture( "_rt_SmallFB1", TEXTURE_GROUP_RENDER_TARGET );
 
-		if ( !s_bScreenEffectTextureIsUpdated && !IsPS3() )
+		if ( !s_bScreenEffectTextureIsUpdated )
 		{
 			UpdateScreenEffectTexture( 0, x, y, w, h, false );
 			s_bScreenEffectTextureIsUpdated = true;
@@ -2751,7 +2463,7 @@ bool DoEnginePostProcessing( int x, int y, int w, int h, bool bFlashlightIsOn, b
 		// when run outside the debugger for some mods (DoD). This forces it to skip
 		// a frame, ensuring we don't get the weird texture crash we otherwise would.
 		// FIXME: This will be removed when the true cause is found [added: Main CL 144694]
-		static bool bFirstFrame = !IsGameConsole();
+		static bool bFirstFrame = true;
 		if ( !bFirstFrame || !bPerformColCorrect )
 		{
 			HDRType_t hdrType = g_pMaterialSystemHardwareConfig->GetHDRType();
@@ -2790,9 +2502,6 @@ bool DoEnginePostProcessing( int x, int y, int w, int h, bool bFlashlightIsOn, b
 
 	GetCurrentTonemappingSystem()->DisplayHistogram();
 
-	#if defined( _X360 )
-		pRenderContext->PopVertexShaderGPRAllocation();
-	#endif
 
 	return bPerformedPostProcessPass;
 }
@@ -2872,31 +2581,19 @@ public:
 	virtual void OnBind( C_BaseEntity *pEntity );
 	virtual IMaterial *GetMaterial();
 
-#if defined(_PS3)
-	static IMaterial *GetMotionBlurMaterial( IMaterialSystem * materials );
-#endif
 
 private:
 	IMaterialVar *m_pMaterialParam;
 	IMaterialVar *m_pMaterialParamViewport;
 
-#if defined(_PS3)
-	static IMaterial	*s_pMotionBlurMaterial;
-#endif
 };
 
 
-#if defined(_PS3)
-IMaterial *CMotionBlurMaterialProxy::s_pMotionBlurMaterial = NULL;
-#endif
 
 CMotionBlurMaterialProxy::CMotionBlurMaterialProxy()
 {
 	m_pMaterialParam		= NULL;
 
-#if defined(_PS3)
-	s_pMotionBlurMaterial	= NULL;
-#endif
 }
 
 CMotionBlurMaterialProxy::~CMotionBlurMaterialProxy()
@@ -2940,19 +2637,6 @@ IMaterial *CMotionBlurMaterialProxy::GetMaterial()
 	return m_pMaterialParam->GetOwningMaterial();
 }
 
-#if defined(_PS3)
-
-IMaterial *CMotionBlurMaterialProxy::GetMotionBlurMaterial( IMaterialSystem * materials )
-{
-	if( s_pMotionBlurMaterial == NULL)
-	{
-		s_pMotionBlurMaterial = materials->FindMaterial( "dev/motion_blur", TEXTURE_GROUP_OTHER, true );
-	}
-
-	return s_pMotionBlurMaterial;
-}
-
-#endif
 
 EXPOSE_MATERIAL_PROXY( CMotionBlurMaterialProxy, MotionBlur );
 
@@ -3027,7 +2711,6 @@ bool DoImageSpaceMotionBlur( const CViewSetup &view )
 	//===============================================================================//
 	// Set global g_vMotionBlurValues[4] values so material proxy can get the values //
 	//===============================================================================//
-	if ( true )
 	{
 		//=====================//
 		// Previous frame data //
@@ -3307,7 +2990,7 @@ bool DoImageSpaceMotionBlur( const CViewSetup &view )
 			//===============================================================//
 			// Dampen motion blur from 100%-0% as fps drops from 50fps-30fps //
 			//===============================================================//
-			if ( !IsGameConsole() && !bSFMBlur ) // I'm not doing this on the 360 yet since I can't test it.  SFM doesn't need it either
+			if ( !bSFMBlur ) // I'm not doing this on the 360 yet since I can't test it.  SFM doesn't need it either
 			{
 				float flSlowFps = 30.0f;
 				float flFastFps = 50.0f;
@@ -3380,14 +3063,8 @@ bool DoImageSpaceMotionBlur( const CViewSetup &view )
 	//==========================================//
 	// Set global g_vMotionBlurViewportValues[] //
 	//==========================================//
-	if ( true )
 	{
 		ITexture *pSrc;
-#if defined(_PS3)
-		if( mat_PS3_findpostvarsfast.GetInt() )
-			pSrc = CEnginePostMaterialProxy::GetSrcTexture( materials );
-		else
-#endif
 		pSrc = materials->FindTexture( "_rt_FullFrameFB", TEXTURE_GROUP_RENDER_TARGET );
 
 		float flSrcWidth = ( float )pSrc->GetActualWidth();
@@ -3429,35 +3106,21 @@ bool DoImageSpaceMotionBlur( const CViewSetup &view )
 	// Render quad and let material proxy pick up the g_vMotionBlurValues[4] values just set above //
 	//=============================================================================================//
 	bool bPerformedMotionBlur = false;
-	if ( true )
 	{
 		CMatRenderContextPtr pRenderContext( materials );
 					
 		ITexture *pSrc;
-#if defined(_PS3)
-		if( mat_PS3_findpostvarsfast.GetInt() )
-			pSrc = CEnginePostMaterialProxy::GetSrcPS3Texture( materials );
-		else
-#endif
-		pSrc = materials->FindTexture( IsPS3() ? "^PS3^BACKBUFFER" : "_rt_FullFrameFB", TEXTURE_GROUP_RENDER_TARGET );
+		pSrc = materials->FindTexture( "_rt_FullFrameFB", TEXTURE_GROUP_RENDER_TARGET );
 
 		int nSrcWidth = pSrc->GetActualWidth();
 		int nSrcHeight = pSrc->GetActualHeight();
 		int nViewportWidth, nViewportHeight, nDummy;
 		pRenderContext->GetViewport( nDummy, nDummy, nViewportWidth, nViewportHeight );
 
-		if ( !IsPS3() )
-		{
-			UpdateScreenEffectTexture( 0, x, y, w, h, false );
-		}
+		UpdateScreenEffectTexture( 0, x, y, w, h, false );
 		
 		// Get material pointer
 		IMaterial *pMatMotionBlur;
-#if defined(_PS3)
-		if( mat_PS3_findpostvarsfast.GetInt() )
-			pMatMotionBlur = CMotionBlurMaterialProxy::GetMotionBlurMaterial( materials );
-		else
-#endif
 		pMatMotionBlur = materials->FindMaterial( "dev/motion_blur", TEXTURE_GROUP_OTHER, true );
 
 		//SetRenderTargetAndViewPort( dest_rt0 );
@@ -3649,10 +3312,6 @@ void DoDepthOfField( const CViewSetup &view )
 			0, 0, dest_rt0->GetActualWidth()-1, dest_rt0->GetActualHeight()-1,
 			dest_rt0->GetActualWidth(), dest_rt0->GetActualHeight() );
 
-		if ( IsGameConsole() )
-		{
-			pRenderContext->CopyRenderTargetToTextureEx( dest_rt1, 0, NULL, NULL );
-		}
 
 		pRenderContext->PopRenderTargetAndViewport();
 	}
@@ -3891,10 +3550,6 @@ void BlurEntity( IClientRenderable *pRenderable, bool bPreDraw, int drawFlags, c
 				0, 0, dest_rt[iSrc]->GetActualWidth()-1, dest_rt[iSrc]->GetActualHeight()-1,
 				dest_rt[iSrc]->GetActualWidth(), dest_rt[iSrc]->GetActualHeight() );
 
-			if ( IsGameConsole() )
-			{
-				pRenderContext->CopyRenderTargetToTextureEx( dest_rt[iDest], 0, NULL, NULL );
-			}
 		}
 		pEntBlurCopyBackFinal = pEntBlurCopyBack[iBlurPasses & 1];
 	}

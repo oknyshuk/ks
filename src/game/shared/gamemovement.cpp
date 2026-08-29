@@ -715,17 +715,6 @@ void DrawDispCollPlane( CBaseTrace *pTrace )
 	vecPlanePoints[2] = vecImpactPoint + ( vecBasisU * flLength ) + ( vecBasisV * flLength );
 	vecPlanePoints[3] = vecImpactPoint + ( vecBasisU * flLength ) + ( vecBasisV * -flLength );
 
-#if 0
-	// Test facing.
-	Vector vecEdges[2];
-	vecEdges[0] = vecPlanePoints[1] - vecPlanePoints[0];
-	vecEdges[1] = vecPlanePoints[2] - vecPlanePoints[0];
-	Vector vecCross = vecEdges[0].Cross( vecEdges[1] );
-	if ( vecCross.Dot( vecNormal ) < 0.0f )
-	{
-		// Reverse winding.
-	}
-#endif
 
 	// Draw the plane.
 	NDebugOverlay::Triangle( vecPlanePoints[0], vecPlanePoints[1], vecPlanePoints[2], 125, 125, 125, 125, false, 5.0f );
@@ -1891,22 +1880,6 @@ void CGameMovement::Friction( void )
 		// Bleed off some speed, but if we have less than the bleed
 		//  threshold, bleed the threshold amount.
 
-		if ( IsGameConsole() )
-		{
-			if( player->m_Local.m_bDucked )
-			{
-				control = (speed < sv_stopspeed.GetFloat()) ? sv_stopspeed.GetFloat() : speed;
-			}
-			else
-			{
-#if defined ( TF_DLL ) || defined ( TF_CLIENT_DLL )
-				control = (speed < sv_stopspeed.GetFloat()) ? sv_stopspeed.GetFloat() : speed;
-#else
-				control = (speed < sv_stopspeed.GetFloat()) ? (sv_stopspeed.GetFloat() * 2.0f) : speed;
-#endif
-			}
-		}
-		else
 		{
 			control = (speed < sv_stopspeed.GetFloat()) ? sv_stopspeed.GetFloat() : speed;
 		}
@@ -4806,15 +4779,6 @@ void CGameMovement::Duck( void )
 		{
 // XBOX SERVER ONLY
 #if !defined(CLIENT_DLL)
-			if ( IsGameConsole() && buttonsPressed & IN_DUCK )
-			{
-				// Hinting logic
-				if ( player->GetToggledDuckState() && player->m_nNumCrouches < NUM_CROUCH_HINTS )
-				{
-					UTIL_HudHintText( player, "#Valve_Hint_Crouch" );
-					player->m_nNumCrouches++;
-				}
-			}
 #endif
 			// Have the duck button pressed, but the player currently isn't in the duck position.
 			if ( ( buttonsPressed & IN_DUCK ) && !bInDuck && !bDuckJump && !bDuckJumpTime )

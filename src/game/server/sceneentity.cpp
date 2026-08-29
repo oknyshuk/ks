@@ -5106,10 +5106,6 @@ void PrecacheInstancedScene( char const *pszScene )
 	{
 		// Scenes are sloppy and don't always exist.
 		// A scene that is not in the pre-built cache image, but on disk, is a true error.
-		if ( IsGameConsole() && ( g_pFullFileSystem->GetDVDMode() != DVDMODE_STRICT ) && g_pFullFileSystem->FileExists( pszScene, "GAME" ) )
-		{
-			Warning( "PrecacheInstancedScene: Missing scene '%s' from scene image cache.\nRebuild scene image cache!\n", pszScene );
-		}
 	}
 	else
 	{
@@ -5361,13 +5357,6 @@ void CSceneManager::Think()
 			continue;
 		}
 
-		if ( IsX360() || IsPS3() )
-		{
-			if ( i+1 < c )
-			{
-				PREFETCH360( &scene->m_pScene, 0 );
-			}
-		}
 		scene->DoThink( frameTime );
 
 		if ( m_ActiveScenes.Count() < c )

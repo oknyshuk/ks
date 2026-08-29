@@ -541,23 +541,6 @@ void D3DDeviceWrapper::ExecutePushBuffer( PushBuffer const* pb)
 				break;
 			}
 
-#ifdef DX_TO_GL_ABSTRACTION
-			case PBCMD_SET_RENDERSTATEINLINE:
-			{
-				VPROF_BUFFER_PLAYBACK( "SET_RENDERSTATEINLINE" );
-				Dx9Device()->SetRenderStateInline( (D3DRENDERSTATETYPE)dptr[1], dptr[2] );
-				dptr += 3;
-				break;
-			}
-
-			case PBCMD_SET_SAMPLER_STATES:
-			{
-				VPROF_BUFFER_PLAYBACK( "SET_SAMPLER_STATES" );
-				Dx9Device()->SetSamplerStates( dptr[1], dptr[2], dptr[3], dptr[4], dptr[5], dptr[6], dptr[7] );
-				dptr += 8;
-				break;
-			}
-#endif
 
 			case PBCMD_DRAWPRIM:
 			{
@@ -567,7 +550,6 @@ void D3DDeviceWrapper::ExecutePushBuffer( PushBuffer const* pb)
 				break;
 			}
 
-#ifndef DX_TO_GL_ABSTRACTION
 			case PBCMD_DRAWPRIMUP_RESZ:
 			{
 				VPROF_BUFFER_PLAYBACK( "DRAWPRIMUP_RESZ" );
@@ -586,7 +568,6 @@ void D3DDeviceWrapper::ExecutePushBuffer( PushBuffer const* pb)
 				dptr++;
 				break;
 			}
-#endif
 
 			case PBCMD_DRAWINDEXEDPRIM:
 			{
@@ -711,33 +692,6 @@ void D3DDeviceWrapper::ExecutePushBuffer( PushBuffer const* pb)
 				break;
 			}
 
-#ifdef DX_TO_GL_ABSTRACTION
-			case PBCMD_UNLOCK_ACTAULSIZE_VB:
-			{
-				VPROF_BUFFER_PLAYBACK( "UNLOCK_ACTUALSIZE_VB" );
-				IDirect3DVertexBuffer9 *p = (IDirect3DVertexBuffer9 *)FetchPtr( dptr + 1 );
-				p->UnlockActualSize( dptr[2] );
-				dptr += 1 + N_DWORDS_IN_PTR + 1;
-				break;
-			}
-
-			case PBCMD_UNLOCK_ACTAULSIZE_IB:
-			{
-				VPROF_BUFFER_PLAYBACK( "UNLOCK_ACTUALSIZE_IB" );
-				IDirect3DIndexBuffer9 *p = (IDirect3DIndexBuffer9 *)FetchPtr( dptr + 1 );
-				p->UnlockActualSize( dptr[2] );
-				dptr += 1 + N_DWORDS_IN_PTR + 1;
-				break;
-			}
-
-			case PBCMD_SET_MAX_USED_VERTEX_SHADER_CONSTANTS_HINT:
-			{
-				VPROF_BUFFER_PLAYBACK( "SET_MAX_USED_VERTEX_SHADER_CONSTANTS_HINT" );
-				Dx9Device()->SetMaxUsedVertexShaderConstantsHint( dptr[1] );
-				dptr += 2;
-				break;
-			}
-#endif
 
 			case PBCMD_SET_VERTEX_SHADER_CONSTANT:
 			{
@@ -919,23 +873,6 @@ void D3DDeviceWrapper::ExecutePushBuffer( PushBuffer const* pb)
 				Dx9Device()->SetScissorRect( pRect );
 			}
 
-#ifdef DX_TO_GL_ABSTRACTION
-			case PBCMD_ACQUIRE_THREAD_OWNERSHIP:
-			{
-				VPROF_BUFFER_PLAYBACK( "ACQUIRE_THREAD_OWNERSHIP" );
-				Dx9Device()->AcquireThreadOwnership();
-				dptr++;
-				break;
-			}
-
-			case PBCMD_RELEASE_THREAD_OWNERSHIP:
-			{
-				VPROF_BUFFER_PLAYBACK( "PBCMD_RELEASE_THREAD_OWNERSHIP" );
-				Dx9Device()->ReleaseThreadOwnership();
-				dptr++;
-				break;
-			}
-#endif
 		}
 	}
 }

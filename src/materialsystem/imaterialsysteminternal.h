@@ -38,7 +38,7 @@ public:
 #ifdef DEDICATED
 		m_Allocator.Init( (const char *)stackName, 2*1024, 0, 0, 4 );
 #else
-		m_Allocator.Init( (const char *)stackName, ( IsGameConsole() || IsPlatformPosix() ) ? 2*1024*1024 : 8*1024*1024, 64*1024, 256*1024, 4 );
+		m_Allocator.Init( (const char *)stackName, 2*1024*1024, 64*1024, 256*1024, 4 );
 #endif
 		m_FunctorFactory.SetAllocator( &m_Allocator );
 		m_pHead = m_pTail = NULL;

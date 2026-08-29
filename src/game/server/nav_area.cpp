@@ -2103,21 +2103,8 @@ bool CNavArea::IsCoplanar( const CNavArea *area ) const
 float CNavArea::GetZ( float x, float y ) const RESTRICT
 {
 	// guard against division by zero due to degenerate areas
-#ifdef _GAMECONSOLE 
-	// do the compare-against-zero on the integer unit to avoid a fcmp
-	// IEEE754 float positive zero is simply 0x00. There is also a 
-	// floating-point negative zero (-0.0f == 0x80000000), but given 
-	// how m_inv is computed earlier, that's not a possible value for
-	// it here, so we don't have to check for that.
-	//
-	// oddly, the compiler isn't smart enough to do this on its own
-	if ( *reinterpret_cast<const unsigned *>(&m_invDxCorners) == 0 ||
-		 *reinterpret_cast<const unsigned *>(&m_invDyCorners) == 0 )
-		return m_neZ;
-#else
 	if (m_invDxCorners == 0.0f || m_invDyCorners == 0.0f)
 		return m_neZ;
-#endif
 
 	float u = (x - m_nwCorner.x) * m_invDxCorners;
 	float v = (y - m_nwCorner.y) * m_invDyCorners;
@@ -4893,17 +4880,6 @@ void CNavArea::UpdateBlocked( bool force, int teamID )
 	else if ( !tr.startsolid )
 	{
 		// unblock ourself
-#ifdef TERROR
-		extern ConVar DebugZombieBreakables;
-		if ( DebugZombieBreakables.GetBool() )
-#else
-		if ( false )
-#endif
-
-		{
-			NDebugOverlay::Box( origin, bounds.lo, bounds.hi, 0, 255, 0, 10, 5.0f );
-		}
-		else
 		{
 			for ( int i = 0; i < MAX_NAV_TEAMS; ++i )
 			{
@@ -4916,17 +4892,6 @@ void CNavArea::UpdateBlocked( bool force, int teamID )
 	if ( !tr.startsolid )
 	{
 		// unblock ourself
-#ifdef TERROR
-		extern ConVar DebugZombieBreakables;
-		if ( DebugZombieBreakables.GetBool() )
-#else
-		if ( false )
-#endif
-
-		{
-			NDebugOverlay::Box( origin, bounds.lo, bounds.hi, 0, 255, 0, 10, 5.0f );
-		}
-		else
 		{
 			for ( int i = 0; i < MAX_NAV_TEAMS; ++i )
 			{

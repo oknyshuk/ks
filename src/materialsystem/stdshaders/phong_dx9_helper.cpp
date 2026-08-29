@@ -14,10 +14,8 @@
 #include "shaderlib/commandbuilder.h"
 #include "tier0/vprof.h"
 
-#if !defined( _X360 ) && !defined( _PS3 )
 #include "phong_vs30.inc"
 #include "phong_ps30.inc"
-#endif
 
 #include "shaderapifast.h"
 
@@ -31,11 +29,7 @@ static ConVar r_rimlight( "r_rimlight", "1", FCVAR_CHEAT );
 static ConVar cl_teamid_min( "cl_teamid_min", "200", FCVAR_RELEASE );
 static ConVar cl_teamid_max( "cl_teamid_max", "1000", FCVAR_RELEASE );
 
-#if defined( CSTRIKE15 ) && defined( _X360 )
-static ConVar r_shader_srgbread( "r_shader_srgbread", "1", 0, "1 = use shader srgb texture reads, 0 = use HW" );
-#else
 static ConVar r_shader_srgbread( "r_shader_srgbread", "0", 0, "1 = use shader srgb texture reads, 0 = use HW" );
-#endif
 
 static ConVar r_csm_viewmodelquality( "r_csm_viewmodelquality", "1" );
 
@@ -245,9 +239,6 @@ class CPhong_DX9_Context : public CBasePerMaterialContextData
 {
 public:
 	CCommandBufferBuilder< CFixedCommandStorageBuffer< 800 > > m_SemiStaticCmdsOut;
-#ifdef _PS3
-	CCommandBufferBuilder< CFixedCommandStorageBuffer< 256 > > m_flashlightECB;
-#endif
 };
 
 struct PhongShaderInfo_t
@@ -305,32 +296,26 @@ void DrawPhong_DX9( CBaseVSShader *pShader, IMaterialVar** params, IShaderDynami
 	bool bSupportsSM3 = g_pHardwareConfig->SupportsPixelShaders_3_0() && ( !bAvgStaticLightStreams );
 	bool bUseStaticControlFlow = g_pHardwareConfig->SupportsStaticControlFlow() && ( !bAvgStaticLightStreams );
 
-	bool bSFM = ( ToolsEnabled() && IsPlatformWindowsPC() && bSupportsSM3 ) ? true : false;
+	bool bSFM = ( ToolsEnabled() && false && bSupportsSM3 ) ? true : false;
 
 	bool bHasFlashlight = pShader->UsingFlashlight( params );
-	bool bHasFlashlightOnly = bHasFlashlight && !IsGameConsole();
-#if !defined( _X360 ) && !defined( _PS3 )
+	bool bHasFlashlightOnly = bHasFlashlight && !false;
 	bool bIsDecal = IS_FLAG_SET( MATERIAL_VAR_DECAL );
-#endif
 	bool bIsAlphaTested = IS_FLAG_SET( MATERIAL_VAR_ALPHATEST ) != 0;
 	BlendType_t nBlendType = pShader->EvaluateBlendRequirements( info.m_nBaseTexture, true );
 	bool bFullyOpaque = (nBlendType != BT_BLENDADD) && (nBlendType != BT_BLEND) && !bIsAlphaTested && !bHasFlashlightOnly; //dest alpha is free for special use
 	bool bHasDisplacement = (info.m_nDisplacementMap != -1) && params[info.m_nDisplacementMap]->IsTexture() && bSFM;
-#if !defined( _X360 ) && !defined( _PS3 )
 	bool bHasDisplacementWrinkles = (info.m_nDisplacementWrinkleMap != -1) && params[info.m_nDisplacementWrinkleMap]->GetIntValue() && bSFM;
-#endif
 
 	bool bHDR = g_pHardwareConfig->GetHDRType() != HDR_TYPE_NONE;
 
 #if defined( CSTRIKE15 )
-	bool bShaderSrgbRead = ( IsX360() && r_shader_srgbread.GetBool() );
+	bool bShaderSrgbRead = ( false && r_shader_srgbread.GetBool() );
 #else
-	bool bShaderSrgbRead =( IsX360() && IS_PARAM_DEFINED( info.m_nShaderSrgbRead360 ) && ( params[info.m_nShaderSrgbRead360]->GetIntValue() ) );
+	bool bShaderSrgbRead =( false && IS_PARAM_DEFINED( info.m_nShaderSrgbRead360 ) && ( params[info.m_nShaderSrgbRead360]->GetIntValue() ) );
 #endif
 
-#if !defined( _X360 ) && !defined( _PS3 )
 	bool bMorphing = ( !pShaderAPI || pShaderAPI->IsHWMorphingEnabled() ) && bSFM && g_pHardwareConfig->HasFastVertexTextures();
-#endif
 
 	if( pShader->IsSnapshotting() )
 	{
@@ -355,7 +340,7 @@ void DrawPhong_DX9( CBaseVSShader *pShader, IMaterialVar** params, IShaderDynami
 		}
 
 		// Based upon vendor and device dependent formats
-		ShadowFilterMode_t nShadowFilterMode = bHasFlashlight ? g_pHardwareConfig->GetShadowFilterMode( false /* bForceLowQuality */, bSupportsSM3 && !IsPlatformPS3() && !IsPlatformX360() /* bPS30 */ ) : SHADOWFILTERMODE_DEFAULT;
+		ShadowFilterMode_t nShadowFilterMode = bHasFlashlight ? g_pHardwareConfig->GetShadowFilterMode( false /* bForceLowQuality */, bSupportsSM3 && !false && !false /* bPS30 */ ) : SHADOWFILTERMODE_DEFAULT;
 		if( bHasFlashlightOnly )
 		{
 			if (params[info.m_nBaseTexture]->IsTexture())
@@ -421,12 +406,12 @@ void DrawPhong_DX9( CBaseVSShader *pShader, IMaterialVar** params, IShaderDynami
 		}
 
 		// Always enable ambient occlusion sampler on PC on DX10 parts
-		if ( IsPC() && bSupportsSM3 && bSFM )
+		if ( bSupportsSM3 && bSFM )
 		{
 			pShaderShadow->EnableTexture( SHADER_SAMPLER15, true );
 		}
 
-		if ( bHasDisplacement && IsPC() && g_pHardwareConfig->HasFastVertexTextures() )
+		if ( bHasDisplacement && g_pHardwareConfig->HasFastVertexTextures() )
 		{
 			pShaderShadow->EnableVertexTexture( SHADER_VERTEXTEXTURE_SAMPLER2, true );
 		}
@@ -450,13 +435,11 @@ void DrawPhong_DX9( CBaseVSShader *pShader, IMaterialVar** params, IShaderDynami
 		int pTexCoordDim[3] = { 2, 0, 3 };
 		int nTexCoordCount = 1;
 
-#if !defined( _X360 ) && !defined( _PS3 )
 		// Special morphed decal information 
 		if ( bIsDecal && bMorphing )
 		{
 			nTexCoordCount = 3;
 		}
-#endif
 
 		// This shader supports compressed vertices, so OR in that flag:
 		flags |= VERTEX_FORMAT_COMPRESSED;
@@ -466,9 +449,7 @@ void DrawPhong_DX9( CBaseVSShader *pShader, IMaterialVar** params, IShaderDynami
 
 		pShaderShadow->VertexShaderVertexFormat( flags, nTexCoordCount, pTexCoordDim, userDataSize );
 
-#if !defined( _X360 ) && !defined( _PS3 )
 		bool bWorldNormal = ( ENABLE_FIXED_LIGHTING_OUTPUTNORMAL_AND_DEPTH == ( IS_FLAG2_SET( MATERIAL_VAR2_USE_GBUFFER0 ) + 2 * IS_FLAG2_SET( MATERIAL_VAR2_USE_GBUFFER1 )));
-#endif
 
 		// This is to allow phong materials to disable half lambert. Half lambert has always been forced on in phong,
 		// so the only safe way to allow artists to disable half lambert is to create this param that disables the
@@ -478,9 +459,7 @@ void DrawPhong_DX9( CBaseVSShader *pShader, IMaterialVar** params, IShaderDynami
 		// Disabling half-lambert for CSGO (not 'compatible' with CSM's - fixes bad shadow aliasing on viewmodels in particular).
 		bool bPhongHalfLambert = false;
 
-		#if !defined( _X360 ) && !defined( _PS3 )
 		if ( !bSupportsSM3 )
-		#endif
 		{
 			DECLARE_STATIC_VERTEX_SHADER( phong_vs20 );
 			SET_STATIC_VERTEX_SHADER_COMBO( SFM, bSFM );
@@ -515,7 +494,6 @@ void DrawPhong_DX9( CBaseVSShader *pShader, IMaterialVar** params, IShaderDynami
 			SET_STATIC_PIXEL_SHADER_COMBO( CSM_MODE, 0 );
 			SET_STATIC_PIXEL_SHADER( phong_ps20b );
 		}
-		#if !defined( _X360 ) && !defined( _PS3 )
 		else
 		{
 			// The vertex shader uses the vertex id stream
@@ -558,7 +536,6 @@ void DrawPhong_DX9( CBaseVSShader *pShader, IMaterialVar** params, IShaderDynami
 			SET_STATIC_PIXEL_SHADER_COMBO( CSM_MODE, ( g_pHardwareConfig->SupportsCascadedShadowMapping() && !bSFM && !bHasFlashlight && g_pConfig->nFullbright != 1 ) ? nCSMQualityComboValue : 0 );
 			SET_STATIC_PIXEL_SHADER( phong_ps30 );
 		}
-		#endif
 
 		if( bHasFlashlightOnly )
 		{
@@ -600,9 +577,6 @@ void DrawPhong_DX9( CBaseVSShader *pShader, IMaterialVar** params, IShaderDynami
 			}
 
 			pContextData->m_SemiStaticCmdsOut.Reset();
-#ifdef _PS3
-			pContextData->m_flashlightECB.Reset();
-#endif
 			pContextData->m_bMaterialVarsChanged = false;
 
 			PhongShaderInfo_t phongInfo;
@@ -626,7 +600,7 @@ void DrawPhong_DX9( CBaseVSShader *pShader, IMaterialVar** params, IShaderDynami
 			bool bHasPhongTintMap = bHasSpecularExponentTexture && (info.m_nPhongAlbedoTint != -1) && ( params[info.m_nPhongAlbedoTint]->GetIntValue() != 0 );
 			bool bHasNormalMapAlphaEnvmapMask = IS_FLAG_SET( MATERIAL_VAR_NORMALMAPALPHAENVMAPMASK );
 			bool bHasRimMaskMap = bHasSpecularExponentTexture && phongInfo.m_bHasRimLight && (info.m_nRimMask != -1) && ( params[info.m_nRimMask]->GetIntValue() != 0 );
-			bool bHasSinglePassFlashlight = IsX360() || IsPS3(); // NOTE: If you change this, fix state.m_nDepthTweakConstant below! And, deal with SINGLE_PASS_FLASHLIGHT in phong_ps20b.fxc
+			bool bHasSinglePassFlashlight = false || false; // NOTE: If you change this, fix state.m_nDepthTweakConstant below! And, deal with SINGLE_PASS_FLASHLIGHT in phong_ps20b.fxc
 
 			if( phongInfo.m_bHasBaseTexture )
 			{
@@ -959,9 +933,7 @@ void DrawPhong_DX9( CBaseVSShader *pShader, IMaterialVar** params, IShaderDynami
 			pContextData->m_SemiStaticCmdsOut.SetPixelShaderConstant( PSREG_SPEC_RIM_PARAMS, vSpecularTint, 1 );
 			pContextData->m_SemiStaticCmdsOut.SetPixelShaderConstant( PSREG_SHADER_CONTROLS_2, vShaderControls2, 1 );
 
-#ifndef _PS3
 			pContextData->m_SemiStaticCmdsOut.SetPixelShaderFogParams( PSREG_FOG_PARAMS );
-#endif
 
 			if ( bHasFlashlight )
 			{
@@ -977,13 +949,8 @@ void DrawPhong_DX9( CBaseVSShader *pShader, IMaterialVar** params, IShaderDynami
 				state.m_nWorldToTextureConstant = PSREG_FLASHLIGHT_TO_WORLD_TEXTURE;
 				state.m_bFlashlightNoLambert = false;
 				state.m_bSinglePassFlashlight = bHasSinglePassFlashlight;
-#ifdef _PS3
-				pContextData->m_flashlightECB.SetPixelShaderFlashlightState( state );
-				pContextData->m_flashlightECB.End();
-#else
 				pContextData->m_SemiStaticCmdsOut.SetPixelShaderFlashlightState( state );
-#endif
-				if ( !( IsX360() || IsPS3() ) && ( g_pHardwareConfig->GetDXSupportLevel() > 92 ) )
+				if ( ( g_pHardwareConfig->GetDXSupportLevel() > 92 ) )
 				{
 					pContextData->m_SemiStaticCmdsOut.SetPixelShaderUberLightState( 
 						PSREG_UBERLIGHT_SMOOTH_EDGE_0,		PSREG_UBERLIGHT_SMOOTH_EDGE_1,
@@ -994,17 +961,11 @@ void DrawPhong_DX9( CBaseVSShader *pShader, IMaterialVar** params, IShaderDynami
 			pContextData->m_SemiStaticCmdsOut.End();
 		}
 
-#ifdef _PS3
-		CCommandBufferBuilder< CDynamicCommandStorageBuffer > DynamicCmdsOut;
-		ShaderApiFast( pShaderAPI )->ExecuteCommandBuffer( pContextData->m_SemiStaticCmdsOut.Base() );
-		if (bHasFlashlight) ShaderApiFast( pShaderAPI )->ExecuteCommandBuffer( pContextData->m_flashlightECB.Base() );
-#else
 		CCommandBufferBuilder< CFixedCommandStorageBuffer< 1000 > > DynamicCmdsOut;
 		DynamicCmdsOut.Call( pContextData->m_SemiStaticCmdsOut.Base() );
-#endif
 
 		// On PC, we sample from ambient occlusion texture
-		if ( IsPC() && bSupportsSM3 && bSFM )
+		if ( bSupportsSM3 && bSFM )
 		{
 			ITexture *pAOTexture = ShaderApiFast( pShaderAPI )->GetTextureRenderingParameter( TEXTURE_RENDERPARM_AMBIENT_OCCLUSION );
 
@@ -1062,7 +1023,7 @@ void DrawPhong_DX9( CBaseVSShader *pShader, IMaterialVar** params, IShaderDynami
 		ShaderApiFast( pShaderAPI )->SetVertexShaderConstant( VERTEX_SHADER_SHADER_SPECIFIC_CONST_10, vTeamIdMinMax );
 
 		bool bCSMEnabled = pShaderAPI->IsCascadedShadowMapping() && !bHasFlashlight && !bSFM && g_pConfig->nFullbright != 1;
-		if ( ( !( IsGameConsole() ) ) &&
+		if ( ( !( false ) ) &&
 			 ( !bSupportsSM3 || ToolsEnabled() ) )
 		{
 			bCSMEnabled = false;
@@ -1073,9 +1034,7 @@ void DrawPhong_DX9( CBaseVSShader *pShader, IMaterialVar** params, IShaderDynami
 		static ConVarRef r_staticlight_streams( "r_staticlight_streams", true );
 		bool bStaticLight3Streams = (r_staticlight_streams.GetInt() == 3);
 
-		#if !defined( _X360 ) && !defined( _PS3 )
 		if ( !bSupportsSM3 )
-		#endif
 		{
 			bool bIsRenderingViewModels = false;
 
@@ -1083,23 +1042,22 @@ void DrawPhong_DX9( CBaseVSShader *pShader, IMaterialVar** params, IShaderDynami
 			SET_DYNAMIC_VERTEX_SHADER_COMBO( SKINNING, numBones > 0 );
 			SET_DYNAMIC_VERTEX_SHADER_COMBO( COMPRESSED_VERTS, (int)vertexCompression );
 			SET_DYNAMIC_VERTEX_SHADER_COMBO( TESSELLATION, 0 );
-			SET_DYNAMIC_VERTEX_SHADER_COMBO( NUM_LIGHTS, bUseStaticControlFlow ? 0 : ( IsPS3() ) ? MIN(2, lightState.m_nNumLights) : lightState.m_nNumLights );
+			SET_DYNAMIC_VERTEX_SHADER_COMBO( NUM_LIGHTS, bUseStaticControlFlow ? 0 : ( false ) ? MIN(2, lightState.m_nNumLights) : lightState.m_nNumLights );
 			SET_DYNAMIC_VERTEX_SHADER_COMBO( CSM_VIEWMODELQUALITY, bIsRenderingViewModels ? 1 : 0 );
 			SET_DYNAMIC_VERTEX_SHADER_COMBO( STATICLIGHT3, lightState.m_bStaticLight && bStaticLight3Streams );
 			SET_DYNAMIC_VERTEX_SHADER( phong_vs20 );
 
 			DECLARE_DYNAMIC_PIXEL_SHADER( phong_ps20b );
-			SET_DYNAMIC_PIXEL_SHADER_COMBO( NUM_LIGHTS, ( IsPS3() ) ? MIN(2, lightState.m_nNumLights) : lightState.m_nNumLights );
+			SET_DYNAMIC_PIXEL_SHADER_COMBO( NUM_LIGHTS, ( false ) ? MIN(2, lightState.m_nNumLights) : lightState.m_nNumLights );
 			SET_DYNAMIC_PIXEL_SHADER_COMBO( WRITEWATERFOGTODESTALPHA, bWriteWaterFogToAlpha );
 			SET_DYNAMIC_PIXEL_SHADER_COMBO( WRITE_DEPTH_TO_DESTALPHA, bWriteDepthToAlpha );
 			SET_DYNAMIC_PIXEL_SHADER_COMBO( FLASHLIGHTSHADOWS, bFlashlightShadows );
-			SET_DYNAMIC_PIXEL_SHADER_COMBO( CASCADE_SIZE, ( IsGameConsole() ) ? ( bCSMEnabled ? 1 : 0 ) : 0 );
+			SET_DYNAMIC_PIXEL_SHADER_COMBO( CASCADE_SIZE, ( false ) ? ( bCSMEnabled ? 1 : 0 ) : 0 );
 			SET_DYNAMIC_PIXEL_SHADER_COMBO( CSM_VIEWMODELQUALITY, bIsRenderingViewModels ? 1 : 0 );
 			SET_DYNAMIC_PIXEL_SHADER_COMBO( STATICLIGHT3, lightState.m_bStaticLight && bStaticLight3Streams );
 
 			SET_DYNAMIC_PIXEL_SHADER( phong_ps20b );
 		}
-		#if !defined( _X360 ) && !defined( _PS3 )
 		else
 		{
 			if ( bMorphing )
@@ -1108,11 +1066,7 @@ void DrawPhong_DX9( CBaseVSShader *pShader, IMaterialVar** params, IShaderDynami
 			}
 
 			int nLightingPreviewMode = 0;
-#if 0
-			// Unused. Disabled for CS:GO -- Thorsten
-			nLightingPreviewMode = ShaderApiFast( pShaderAPI )->GetIntRenderingParameter( INT_RENDERPARM_ENABLE_FIXED_LIGHTING );
-#endif
-			if ( ( nLightingPreviewMode == ENABLE_FIXED_LIGHTING_OUTPUTNORMAL_AND_DEPTH ) && IsPC() )
+			if ( ( nLightingPreviewMode == ENABLE_FIXED_LIGHTING_OUTPUTNORMAL_AND_DEPTH ) )
 			{
 				float vEyeDir[4];
 				ShaderApiFast( pShaderAPI )->GetWorldSpaceCameraDirection( vEyeDir );
@@ -1188,12 +1142,8 @@ void DrawPhong_DX9( CBaseVSShader *pShader, IMaterialVar** params, IShaderDynami
 			// Set constant to enable translation of VPOS to render target coordinates in ps_3_0
 			ShaderApiFast( pShaderAPI )->SetScreenSizeForVPOS();
 		}
-		#endif
 
 		DynamicCmdsOut.End();
-#ifdef _PS3
-		ShaderApiFast( pShaderAPI )->SetPixelShaderFogParams( PSREG_FOG_PARAMS );
-#endif
 		ShaderApiFast( pShaderAPI )->ExecuteCommandBuffer( DynamicCmdsOut.Base() );
 	}
 	pShader->Draw();
@@ -1248,16 +1198,6 @@ void DrawPhong_DX9_ExecuteFastPath( int *vsDynIndex, int *psDynIndex,
 	
 	bool bIsRenderingViewModels = false;
 
-	if( IsGameConsole() )
-	{
-		ITexture *pDepthTextureAtlas = NULL;
-		const CascadedShadowMappingState_t &cascadeState = pShaderAPI->GetCascadedShadowMappingState( &pDepthTextureAtlas );
-
-		if ( pDepthTextureAtlas )
-		{
-			bIsRenderingViewModels = cascadeState.m_bIsRenderingViewModels && r_csm_viewmodelquality.GetBool();
-		}
-	}
 
 	static ConVarRef r_staticlight_streams( "r_staticlight_streams", true );
 	bool bStaticLight3Streams = (r_staticlight_streams.GetInt() == 3);

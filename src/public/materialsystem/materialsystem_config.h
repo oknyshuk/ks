@@ -11,9 +11,6 @@
 #pragma once
 #endif
 
-#if (!defined(_CERT)) && defined (_X360)
-#define X360_ALLOW_TIMESTAMPS 1				// Comment in to enable showfps 12 etc...
-#endif
 
 #include "materialsystem/imaterialsystem.h"
 
@@ -171,7 +168,7 @@ struct MaterialSystem_Config_t
 		m_fGammaTVRangeMin = 16.0f;
 		m_fGammaTVRangeMax = 255.0f;
 		m_fGammaTVExponent = 2.5;
-		m_bGammaTVEnabled = IsGameConsole();
+		m_bGammaTVEnabled = false;
 
 		m_bWantTripleBuffered = false;
 		m_nAASamples = 1;

@@ -20,17 +20,11 @@
 #include "mathlib/IceKey.H"
 #include "engine/inetsupport.h"
 
-#if !defined( _X360 ) && !defined( NO_STEAM )
-#include "sv_steamauth.h"
-#endif
 
 #ifndef DEDICATED
 #include "cl_steamauth.h"
 #endif
 
-#ifdef _PS3
-#include <cell/sysmodule.h>
-#endif
 
 
 // memdbgon must be the last include file in a .cpp file!!!
@@ -83,30 +77,12 @@ static ConVar recvpackets	( "net_recvpackets", "-1", FCVAR_CHEAT, "Receive exact
 static ConVar	net_savelargesplits( "net_savelargesplits", "-1", 0, "If not -1, then if a split has this many or more split parts, save the entire packet to disc for analysis." );
 #endif
 
-#ifdef _X360
-static void NET_LogServerCallback( IConVar *var, const char *pOldString, float flOldValue );
-static ConVar net_logserver( "net_logserver", "0", 0,  "Dump server stats to a file", NET_LogServerCallback );
-static ConVar net_loginterval( "net_loginterval", "1", 0, "Time in seconds between server logs" );
-#endif
 
 //-----------------------------------------------------------------------------
 // Toggle Xbox 360 network security to allow cross-platform testing
 //-----------------------------------------------------------------------------
-#if !defined( _X360 )
 #define X360SecureNetwork() false
 #define IPPROTO_VDP	IPPROTO_UDP
-#elif defined( _CERT )
-#define X360SecureNetwork() true
-#else
-bool X360SecureNetwork( void )
-{
-	if ( CommandLine()->FindParm( "-xnet_bypass_security" ) )
-	{
-		return false;
-	}
-	return true;
-}
-#endif
 
 extern ConVar net_showudp;
 extern ConVar net_showudp_oob;
@@ -218,8 +194,6 @@ static	bool net_addhltv1 = false; // by default, HLTV1 (sup)port is disabled. Mu
 static	bool net_noreplay = false;	// disable Replay support
 #endif
 static	bool net_dedicated = false;	// true is dedicated system
-static	bool net_dedicatedForXbox = false; // true is dedicated system serving xbox
-static	bool net_dedicatedForXboxInsecure = false; // true if dedicated system serving insecure xbox
 static	int  net_error = 0;			// global error code updated with NET_GetLastError()
 
 static int g_nFakeSocketHandle = 0;	// for when we are only using Steam. Need a fake socket handle.
@@ -472,16 +446,13 @@ int NET_OpenSocket ( const char *net_interface, int& port, int protocol )
 	
 	if ( protocol == IPPROTO_TCP )
 	{
-		if ( !IsX360() ) // SO_KEEPALIVE unsupported on the 360
+		opt = 1; // set TCP options: keep TCP connection alive
+		ret = setsockopt( newsocket, SOL_SOCKET, SO_KEEPALIVE, (char *)&opt, sizeof(opt) );
+		if (ret == -1)
 		{
-			opt = 1; // set TCP options: keep TCP connection alive
-			ret = setsockopt( newsocket, SOL_SOCKET, SO_KEEPALIVE, (char *)&opt, sizeof(opt) );
-			if (ret == -1)
-			{
-				NET_GetLastError();		
-				Msg ("WARNING: NET_OpenSocket: setsockopt SO_KEEPALIVE: %s\n", NET_ErrorString(net_error));
-				return 0;
-			}
+			NET_GetLastError();		
+			Msg ("WARNING: NET_OpenSocket: setsockopt SO_KEEPALIVE: %s\n", NET_ErrorString(net_error));
+			return 0;
 		}
 
 		linger optlinger;	// set TCP options: Does not block close waiting for unsent data to be sent
@@ -509,7 +480,7 @@ int NET_OpenSocket ( const char *net_interface, int& port, int protocol )
 	// sockets default to 8 KB buffers which makes dataloss very common. Linux (Ubuntu 12.04 anyway)
 	// UDP sockets default to 208 KB so there is no need to change the setting.
 	// Use net_usesocketsforloopback 1 to use sockets for listen servers for testing.
-	if ( protocol == IPPROTO_TCP || IsPlatformWindowsPC() )
+	if ( protocol == IPPROTO_TCP )
 	{
 		const int UDP_BUFFER_SIZE = 128 * 1024; // Better than 8 KB.
 		const int bufferSize = ( protocol == IPPROTO_TCP ) ? NET_MAX_MESSAGE : UDP_BUFFER_SIZE;
@@ -540,16 +511,13 @@ int NET_OpenSocket ( const char *net_interface, int& port, int protocol )
 	// rest is UDP only
 	
 	// VDP protocol (Xbox 360 secure network) doesn't support SO_BROADCAST
-	if ( !IsX360() || protocol != IPPROTO_VDP )
- 	{
-		opt = 1; // set UDP options: make it broadcast capable
-		ret = setsockopt( newsocket, SOL_SOCKET, SO_BROADCAST, (char *)&opt, sizeof(opt) );
-		if (ret == -1)
-		{
-			NET_GetLastError();		
-			Msg ("WARNING: NET_OpenSocket: setsockopt SO_BROADCAST: %s\n", NET_ErrorString(net_error));
-			return 0;
-		}
+	opt = 1; // set UDP options: make it broadcast capable
+	ret = setsockopt( newsocket, SOL_SOCKET, SO_BROADCAST, (char *)&opt, sizeof(opt) );
+	if (ret == -1)
+	{
+		NET_GetLastError();		
+		Msg ("WARNING: NET_OpenSocket: setsockopt SO_BROADCAST: %s\n", NET_ErrorString(net_error));
+		return 0;
 	}
 	
 	if ( CommandLine()->FindParm( "-reuse" ) )
@@ -1152,11 +1120,6 @@ static const tokenset_t< ESocketIndex_t > s_SocketDescMap[] =
 {						 
 	{ "cl",		NS_CLIENT		},                          
 	{ "sv",		NS_SERVER		},                          
-#ifdef _X360
-	{ "Xsl",	NS_X360_SYSTEMLINK	},
-	{ "Xlb",	NS_X360_LOBBY		},
-	{ "Xtl",	NS_X360_TEAMLINK	},
-#endif
 	{ "htv",	NS_HLTV			},
 	{ "htv1",	NS_HLTV1			},
 #if defined( REPLAY_ENABLED )
@@ -1366,7 +1329,7 @@ static bool NET_ReceiveDatagram_Helper( const int sock, netpacket_t * packet, bo
 	Assert ( packet );
 	Assert ( net_multiplayer );
 
-#if defined( _DEBUG ) && !defined( _PS3 )
+#if defined( _DEBUG )
 	if ( recvpackets.GetInt() >= 0 )
 	{
 		unsigned long bytes;
@@ -1401,64 +1364,6 @@ static bool NET_ReceiveDatagram_Helper( const int sock, netpacket_t * packet, bo
 
 		unsigned int nVoiceBits = 0u;
 
-		if ( IsX360() || net_dedicatedForXbox )
-		{
-			// X360TBD: Check for voice data and forward it to XAudio
-			// For now, just pull off the 2-byte VDP header and shift the data
-			unsigned short nDataBytes = ( *( unsigned short * )packet->data );
-
-			// 0xFFFF check is necessary because our LAN is broadcasting Source Engine Query requests
-			// which uses the out of band header, 0xFFFFFFFF, so it's not an XBox VDP packet.
-			if ( nDataBytes != 0xFFFF )
-			{
-				Assert( nDataBytes > 0 && nDataBytes <= ret );
-
-				int nVoiceBytes = ret - nDataBytes - 2;
-				if ( nVoiceBytes > 0 )
-				{
-					if ( voice_verbose.GetBool() )
-					{
-						Msg( "* NET_ReceiveDatagram: receiving voice from %s (%d bytes)\n", ns_address_render( packet->from ).String(), nVoiceBytes );
-					}
-
-					byte *pVoice = (byte *)packet->data + 2 + nDataBytes;
-
-					nVoiceBits = (unsigned int)LittleShort( *( unsigned short *)pVoice );
-					unsigned int nExpectedVoiceBytes = Bits2Bytes( nVoiceBits );
-					pVoice += sizeof( unsigned short );
-					
-					CLZSS lzss;
-					if ( lzss.IsCompressed( pVoice ) )
-					{
-						unsigned int unDecompressedVoice = lzss.GetActualSize( pVoice );
-						if ( unDecompressedVoice != nExpectedVoiceBytes )
-						{
-							return false;
-						}
-
-						bufVoice.EnsureCapacity( unDecompressedVoice );
-
-						// Decompress it
-						unsigned int unCheck = lzss.SafeUncompress( pVoice, bufVoice.Base(), unDecompressedVoice );
-						if ( unCheck != unDecompressedVoice )
-						{
-							return false;
-						}
-
-						nVoiceBytes = unDecompressedVoice;
-					}
-					else
-					{
-						bufVoice.EnsureCapacity( nVoiceBytes );
-						Q_memcpy( bufVoice.Base(), pVoice, nVoiceBytes );
-					}
-				}
-
-				Q_memmove( packet->data, &packet->data[2], nDataBytes );
-
-				ret = nDataBytes;
-			}
-		}
 
 		packet->size = ret;
 		
@@ -1711,7 +1616,7 @@ netpacket_t *NET_GetPacket (int sock, byte *scratch )
 		extern IVEngineClient *engineClient;
 		// PORTAL2-specific hack for console perf - don't waste time reading from the actual socket (expensive Steam code)
 		if ( !NET_IsMultiplayer() || engineClient->IsSplitScreenActive() 
-			|| ( !IsGameConsole() && sv.IsActive() && !sv. IsMultiplayer() ) )
+			|| ( sv.IsActive() && !sv.IsMultiplayer() ) )
 #else // PORTAL2
 		if ( !NET_IsMultiplayer() )
 #endif // !PORTAL2
@@ -2039,59 +1944,7 @@ static int NET_SendRawPacket( SOCKET s, const void *buf, int len, const ns_addre
 
 int NET_SendToImpl( SOCKET s, const char * buf, int len, const ns_address &to, int iGameDataLength )
 {
-	int nSend = 0;
-	if ( IsX360() || net_dedicatedForXbox )
-	{
-		// 360 uses VDP protocol to piggyback voice data across the network.
-		// [cbGameData][GameData][VoiceData] 
-		// cbGameData is a two-byte prefix that contains the number of game data bytes in native order.
-		// XLSP servers (the only cross-platform communication possible with a secure network)
-		// swaps the header at the SG, decrypts the GameData and then forwards the packet to the title server.
-		Assert( len < (unsigned short)-1 );
-		const unsigned short nDataBytes = iGameDataLength == -1 ? len : iGameDataLength;
-
-		if ( voice_xsend_debug.GetBool() && iGameDataLength >= 0 && iGameDataLength != len )
-		{
-			DevMsg( "XVoice: VDP packet to %d with unencrypted %d bytes out of %d bytes\n", s, len - iGameDataLength, len );
-		}
-		
-		const int nVDPHeaderBytes = 2;
-
-		if ( !to.IsType<netadr_t>() )
-		{
-			Warning( "NET_SendToImpl - cannot send to non-IP address %s\n", ns_address_render( to ).String() );
-			return -1;
-		}
-
-#if defined( _WIN32 )
-
-		sockaddr sadrto;
-		to.AsType<netadr_t>().ToSockadr( &sadrto );
-
- 		WSABUF buffers[2];
-		buffers[0].len = nVDPHeaderBytes;
-		buffers[0].buf = (char*)&nDataBytes;
-		buffers[1].len = len;
-		buffers[1].buf = const_cast<char*>( buf );
-
-		if ( nDataBytes < len && voice_verbose.GetBool() )
-		{
-			Msg( "* NET_SendToImpl: sending voice to %s (%d bytes)\n", ns_address_render( to ).String(), len - nDataBytes );
-		}
-
-		WSASendTo( s, buffers, 2, (DWORD*)&nSend, 0, &sadrto, sizeof(sadrto), NULL, NULL );
-#else
-		//!!perf!! use linux sendmsg for gather similar to WSASendTo http://linux.die.net/man/3/sendmsg
-		uint8 *pData = ( uint8 * ) stackalloc( nVDPHeaderBytes + len );
-		memcpy( pData, &nDataBytes, nVDPHeaderBytes );
-		memcpy( pData + nVDPHeaderBytes, buf, len );
-		nSend = NET_SendRawPacket( s, ( const char * ) pData, nVDPHeaderBytes + len, to );
-#endif
-	}
-	else
-	{
-		nSend = NET_SendRawPacket( s, buf, len, to );
-	}
+	int nSend = NET_SendRawPacket( s, buf, len, to );
 
 	return nSend;
 }
@@ -2928,19 +2781,12 @@ NET_OpenSockets
 void NET_OpenSockets (void)
 {	
 	// Xbox 360 uses VDP protocol to combine encrypted game data with clear voice data
-	const int nProtocol = IsX360() ? IPPROTO_VDP : IPPROTO_UDP;
+	const int nProtocol = IPPROTO_UDP;
 
 	OpenSocketInternal( NS_SERVER, hostport.GetInt(), PORT_SERVER, "server", nProtocol, false );
 	if ( !net_dedicated )
 		OpenSocketInternal( NS_CLIENT, clientport.GetInt(), PORT_SERVER, "client", nProtocol, true );
 
-#ifdef _X360
-	int nX360Port = PORT_X360_RESERVED_FIRST;
-	OpenSocketInternal( NS_X360_SYSTEMLINK,	0, nX360Port ++,	"x360systemlink",	IPPROTO_UDP,	false );
-	OpenSocketInternal( NS_X360_LOBBY,		0, nX360Port ++,	"x360lobby",		nProtocol,		false );
-	OpenSocketInternal( NS_X360_TEAMLINK,	0, nX360Port ++,	"x360teamlink",		nProtocol,		false );
-	Assert( nX360Port <= PORT_X360_RESERVED_LAST );
-#endif
 
 	if ( !net_nohltv )
 	{
@@ -3027,157 +2873,6 @@ void NET_GetLocalAddress (void)
 	}
 	else
 	{
-#ifdef _X360
-		int err = 0;
-		XNADDR xnaddrLocal;
-		ZeroMemory( &xnaddrLocal, sizeof( xnaddrLocal ) );
-		while( XNET_GET_XNADDR_PENDING == ( err = XNetGetTitleXnAddr( &xnaddrLocal ) ) )
-			continue;
-
-		static struct XnAddrType_t
-		{
-			int m_code;
-			char const *m_szValue;
-		}
-		arrXnAddrTypes[] = {
-			{ XNET_GET_XNADDR_NONE,				"NONE" },
-			{ XNET_GET_XNADDR_ETHERNET,         "ETHERNET" },
-			{ XNET_GET_XNADDR_STATIC,           "STATIC" },
-			{ XNET_GET_XNADDR_DHCP,             "DHCP" },
-			{ XNET_GET_XNADDR_PPPOE,            "PPPoE" },
-			{ XNET_GET_XNADDR_GATEWAY,          "GATEWAY" },
-			{ XNET_GET_XNADDR_DNS,              "DNS" },
-			{ XNET_GET_XNADDR_ONLINE,			"ONLINE" },
-			{ XNET_GET_XNADDR_TROUBLESHOOT,		"TROUBLESHOOT" },
-			{ 0, NULL }
-		};
-
-		Msg( "Local XNetwork address type 0x%08X", err );
-		for ( XnAddrType_t const *pxat = arrXnAddrTypes; pxat->m_code; ++ pxat )
-		{
-			if ( ( err & pxat->m_code ) == pxat->m_code )
-				Msg( " %s", pxat->m_szValue );
-		}
-		Msg( "\n" );
-
-		net_local_adr.SetFromString( "127.0.0.1" );
-		Msg( "Local IP address: %d.%d.%d.%d\n",
-			xnaddrLocal.ina.S_un.S_un_b.s_b1,
-			xnaddrLocal.ina.S_un.S_un_b.s_b2,
-			xnaddrLocal.ina.S_un.S_un_b.s_b3,
-			xnaddrLocal.ina.S_un.S_un_b.s_b4 );
-
-#elif defined( _PS3 )
-		CellNetCtlInfo cnci;
-		memset( &cnci, 0, sizeof( cnci ) );
-
-		// Print CELL network information for debug output
-		Msg( "=========== CELL network information ===========\n" );
-		for ( int iCellInfo = CELL_NET_CTL_INFO_DEVICE; iCellInfo <= CELL_NET_CTL_INFO_UPNP_CONFIG; ++ iCellInfo )
-		{
-			int ret = cellNetCtlGetInfo( iCellInfo, &cnci );
-			if ( CELL_OK != ret )
-			{
-				Warning( "NET: failed to obtain CELL NET INFO #%d, error code %d.\n", iCellInfo, ret );
-			}
-			else switch ( iCellInfo )
-			{
-				case CELL_NET_CTL_INFO_DEVICE:
-					Msg( " Device:            %u\n", cnci.device );
-					break;
-				case CELL_NET_CTL_INFO_ETHER_ADDR:
-					Msg( " Ethernet Address:  [" );
-						NET_ConPrintByteStream( cnci.ether_addr.data, sizeof( cnci.ether_addr.data ) );
-						NET_ConPrintByteStream( cnci.ether_addr.padding, sizeof( cnci.ether_addr.padding ) );
-						Msg( " ]\n" );
-						break;
-				case CELL_NET_CTL_INFO_MTU:
-					Msg( " MTU:               %u\n", cnci.mtu );
-					break;
-				case CELL_NET_CTL_INFO_LINK:
-					Msg( " Link:              %u\n", cnci.link );
-					break;
-				case CELL_NET_CTL_INFO_LINK_TYPE:
-					Msg( " Link type:         %u\n", cnci.link_type );
-					break;
-				case CELL_NET_CTL_INFO_BSSID:
-					Msg( " BSSID Address:     [" );
-						NET_ConPrintByteStream( cnci.bssid.data, sizeof( cnci.bssid.data ) );
-						NET_ConPrintByteStream( cnci.bssid.padding, sizeof( cnci.bssid.padding ) );
-						Msg( " ]\n" );
-						break;
-				case CELL_NET_CTL_INFO_SSID:
-					Msg( " SSID Address:      [" );
-						NET_ConPrintByteStream( cnci.ssid.data, sizeof( cnci.ssid.data ) );
-						NET_ConPrintByteStream( &cnci.ssid.term, sizeof( cnci.ssid.term ) );
-						NET_ConPrintByteStream( cnci.ssid.padding, sizeof( cnci.ssid.padding ) );
-						Msg( " ]\n" );
-						break;
-				case CELL_NET_CTL_INFO_WLAN_SECURITY:
-					Msg( " WLAN security:     %u\n", cnci.wlan_security );
-					break;
-				case CELL_NET_CTL_INFO_8021X_TYPE:
-					Msg( " WAuth 8021x type:  %u\n", cnci.auth_8021x_type );
-					break;
-				case CELL_NET_CTL_INFO_8021X_AUTH_NAME:
-					Msg( " WAuth 8021x name:  %s\n", cnci.auth_8021x_auth_name );
-					break;
-				case CELL_NET_CTL_INFO_RSSI:
-					Msg( " WRSSI:             %u\n", cnci.rssi );
-					break;
-				case CELL_NET_CTL_INFO_CHANNEL:
-					Msg( " WChannel:          %u\n", cnci.channel );
-					break;
-				case CELL_NET_CTL_INFO_IP_CONFIG:
-					Msg( " Ipconfig:          %u\n", cnci.ip_config );
-					break;
-				case CELL_NET_CTL_INFO_DHCP_HOSTNAME:
-					Msg( " DHCP hostname:     %s\n", cnci.dhcp_hostname );
-					break;
-				case CELL_NET_CTL_INFO_PPPOE_AUTH_NAME:
-					Msg( " PPPOE auth name:   %s\n", cnci.pppoe_auth_name );
-					break;
-				case CELL_NET_CTL_INFO_IP_ADDRESS:
-					Msg( " IP address:        %s\n", cnci.ip_address );
-					break;
-				case CELL_NET_CTL_INFO_NETMASK:
-					Msg( " Net mask:          %s\n", cnci.netmask );
-					break;
-				case CELL_NET_CTL_INFO_DEFAULT_ROUTE:
-					Msg( " Default route:     %s\n", cnci.default_route );
-					break;
-				case CELL_NET_CTL_INFO_PRIMARY_DNS:
-					Msg( " Primary DNS:       %s\n", cnci.primary_dns );
-					break;
-				case CELL_NET_CTL_INFO_SECONDARY_DNS:
-					Msg( " Secondary DNS:     %s\n", cnci.secondary_dns );
-					break;
-				case CELL_NET_CTL_INFO_HTTP_PROXY_CONFIG:
-					Msg( " HTTP proxy config: %u\n", cnci.http_proxy_config );
-					break;
-				case CELL_NET_CTL_INFO_HTTP_PROXY_SERVER:
-					Msg( " HTTP proxy server: %s\n", cnci.http_proxy_server );
-					break;
-				case CELL_NET_CTL_INFO_HTTP_PROXY_PORT:
-					Msg( " HTTP proxy port: %d\n", cnci.http_proxy_port );
-					break;
-				case CELL_NET_CTL_INFO_UPNP_CONFIG:
-					Msg( " UPNP config:       %u\n", cnci.upnp_config );
-					break;
-				default:
-					Msg( " UNKNOWNNETDATA[%d]:     [", iCellInfo );
-						NET_ConPrintByteStream( reinterpret_cast< const uint8* >( &cnci ), sizeof( cnci ) );
-						Msg( " ]\n" );
-					break;
-			}
-		}
-		Msg( "================================================\n" );
-		// -- end CELL network debug information
-
-		net_local_adr.SetFromString( "127.0.0.1" );
-		if ( CELL_OK == cellNetCtlGetInfo( CELL_NET_CTL_INFO_IP_ADDRESS, &cnci ) )
-			net_local_adr.SetFromString( cnci.ip_address );
-#else
 		char	buff[512];
 
 		// If we have changed the ip var from the command line, use that instead.
@@ -3187,7 +2882,6 @@ void NET_GetLocalAddress (void)
 		}
 		else
 		{
-#if defined( LINUX )
 		//        Run the systems ifconfig call to scan for an eth0 address so we don't show only the machine's loopback address
 		//
 		// note:  This block simply grabs and prints out the IP address to the TTY stream
@@ -3227,14 +2921,12 @@ void NET_GetLocalAddress (void)
 		{
 			Msg( "Network: <failed to find IP> " );
 		}
-#endif // LINUX
 
 			gethostname( buff, sizeof(buff) );	// get own IP address
 			buff[sizeof(buff)-1] = 0;			// Ensure that it doesn't overrun the buffer
 		}
 
 		NET_StringToAdr (buff, &net_local_adr);
-#endif
 
 		int ipaddr = ( net_local_adr.ip[0] << 24 ) + 
 			( net_local_adr.ip[1] << 16 ) + 
@@ -3263,130 +2955,7 @@ bool NET_IsDedicated( void )
 	return net_dedicated;
 }
 
-#ifdef SERVER_XLSP
-bool NET_IsDedicatedForXbox( void )
-{
-	return net_dedicated && net_dedicatedForXbox;
-}
-#endif
 
-#ifdef _X360
-#include "iengine.h"
-static FileHandle_t g_fh;
-void NET_LogServerStatus( void )
-{
-	if ( !g_fh )
-		return;
-
-	static float fNextTime = 0.f;
-	float fCurrentTime = eng->GetCurTime();
-
-	if ( fCurrentTime >= fNextTime )
-	{
-		fNextTime = fCurrentTime + net_loginterval.GetFloat();
-	}
-	else
-	{
-		return;
-	}
-
-	AUTO_LOCK_FM( s_NetChannels );
-	int numChannels = s_NetChannels.Count();
-
-	if ( numChannels == 0 )
-	{
-		ConMsg( "No active net channels.\n" );
-		return;
-	}
-
-	enum
-	{
-		NET_LATENCY,
-		NET_LOSS,
-		NET_PACKETS_IN,
-		NET_PACKETS_OUT,
-		NET_CHOKE_IN,
-		NET_CHOKE_OUT,
-		NET_FLOW_IN,
-		NET_FLOW_OUT,
-		NET_TOTAL_IN,
-		NET_TOTAL_OUT,
-		NET_LAST,
-	};
-	float fStats[NET_LAST] = {0.f};
-
-	for ( int i = 0; i < numChannels; ++i )
-	{
-		INetChannel *chan = s_NetChannels[i];
-		fStats[NET_LATENCY] += chan->GetAvgLatency(FLOW_OUTGOING);
-		fStats[NET_LOSS] += chan->GetAvgLoss(FLOW_INCOMING);
-		fStats[NET_PACKETS_IN] += chan->GetAvgPackets(FLOW_INCOMING);
-		fStats[NET_PACKETS_OUT] += chan->GetAvgPackets(FLOW_OUTGOING);
-		fStats[NET_CHOKE_IN] += chan->GetAvgChoke(FLOW_INCOMING);
-		fStats[NET_CHOKE_OUT] += chan->GetAvgChoke(FLOW_OUTGOING);
-		fStats[NET_FLOW_IN] += chan->GetAvgData(FLOW_INCOMING);
-		fStats[NET_FLOW_OUT] += chan->GetAvgData(FLOW_OUTGOING);
-		fStats[NET_TOTAL_IN] += chan->GetTotalData(FLOW_INCOMING);
-		fStats[NET_TOTAL_OUT] += chan->GetTotalData(FLOW_OUTGOING);
-	}
-
-	for ( int i = 0; i < NET_LAST; ++i )
-	{
-		fStats[i] /= numChannels;
-	}
-
-	const unsigned int size = 128;
-	char msg[size];
-	Q_snprintf( msg, size, "%.0f,%d,%.0f,%.0f,%.0f,%.1f,%.1f,%.1f,%.1f,%.1f\n", 
-				fCurrentTime,
-				numChannels,
-				fStats[NET_LATENCY],
-				fStats[NET_LOSS],
-				fStats[NET_PACKETS_IN], 
-				fStats[NET_PACKETS_OUT],
-				fStats[NET_FLOW_IN]/1024.0f, 
-				fStats[NET_FLOW_OUT]/1024.0f,
-				fStats[NET_CHOKE_IN],
-				fStats[NET_CHOKE_OUT]
-			 );
-
-	g_pFileSystem->Write( msg, Q_strlen( msg ), g_fh );
-}
-
-void NET_LogServerCallback( IConVar *pConVar, const char *pOldString, float flOldValue )
-{
-	ConVarRef var( pConVar );
-
-	if ( var.GetBool() )
-	{
-		if ( g_fh )
-		{
-			g_pFileSystem->Close( g_fh );
-			g_fh = 0;
-		}
-
-		g_fh = g_pFileSystem->Open( "dump.csv", "wt" );
-		if ( !g_fh )
-		{
-			Msg( "Failed to open log file\n" );
-			pConVar->SetValue( 0 );
-			return;
-		}
-
-		char msg[128];
-		Q_snprintf( msg, 128, "Time,Channels,Latency,Loss,Packets In,Packets Out,Flow In(kB/s),Flow Out(kB/s),Choke In,Choke Out\n" );
-		g_pFileSystem->Write( msg, Q_strlen( msg ), g_fh );
-	}
-	else
-	{
-		if ( g_fh )
-		{
-			g_pFileSystem->Close( g_fh );
-			g_fh = 0;
-		}
-	}
-}
-#endif
 
 /*
 ====================
@@ -3444,12 +3013,6 @@ void NET_RunFrame( double realtime )
 	#ifdef ENABLE_RPT
 	RPTClient().RunFrame();
 	#endif
-#endif
-#ifdef _X360
-	if ( net_logserver.GetInt() )
-	{
-		NET_LogServerStatus();
-	}
 #endif
 
 	if ( g_pMatchFramework )
@@ -3538,10 +3101,6 @@ void NET_Config ( void )
 	}
 	
 
-#if !defined( LINUX )
-  	// note:  linux prints out the network IP before calling this function
-	DevMsg( "Network: IP %s ", net_local_adr.ToString(true));
-#endif
 	DevMsg( "mode %s, dedicated %s, ports %i SV / %i CL\n", 
 		net_multiplayer?"MP":"SP", net_dedicated?"Yes":"No", 
 		net_sockets[NS_SERVER].nPort, net_sockets[NS_CLIENT].nPort );
@@ -3564,8 +3123,6 @@ void NET_SetDedicated ()
 	}
 
 	net_dedicated = true;
-	net_dedicatedForXbox = ( CommandLine()->FindParm( "-xlsp" ) != 0 );
-	net_dedicatedForXboxInsecure = ( CommandLine()->FindParm( "-xlsp_insecure" ) != 0 );
 }
 
 void NET_ListenSocket( int sock, bool bListen )
@@ -3695,7 +3252,7 @@ void NET_Init( bool bIsDedicated )
 		net_notcp = false;
 	}
 
-	if ( IsGameConsole() || CommandLine()->FindParm( "-nohltv" ) )
+	if ( CommandLine()->FindParm( "-nohltv" ) )
 	{
 		net_nohltv = true;
 	}
@@ -3718,96 +3275,7 @@ void NET_Init( bool bIsDedicated )
 	}
 	else
 	{
-#if defined( _X360 )
-		XOnlineCleanup();
-
-		XNetStartupParams xnsp;
-		memset( &xnsp, 0, sizeof( xnsp ) );
-		xnsp.cfgSizeOfStruct = sizeof( XNetStartupParams );
-		if ( X360SecureNetwork() )
-		{
-			Msg( "Xbox 360 Network: Secure.\n" );
-		}
-		else
-		{
-			// Allow cross-platform communication
-			xnsp.cfgFlags = XNET_STARTUP_BYPASS_SECURITY;
-			Warning( "Xbox 360 Network: Security Bypassed.\n" );
-		}
-
-		// Prepare for the number of connections required by the title
-		g_pMatchFramework->GetMatchTitle()->PrepareNetStartupParams( &xnsp );
-
-		INT err = XNetStartup( &xnsp );
-		if ( err )
-		{
-			Warning( "Error! XNetStartup() failed, error %d.\n", err);
-		}
-		else
-		{
-			Msg( "\n"
-				 "Xbox 360 secure network initialized:\n"
-				 "     flags:            0x%08X\n"
-				 "     reg XNKID/XNKEY:  %d\n"
-				 "     reg XNADDR/XNKID: %d\n"
-				 "     max UDP sockets:  %d\n"
-				 "     max TCP sockets:  %d\n"
-				 "     buffer size recv: %d K\n"
-				 "     buffer size send: %d K\n"
-				 "     QOS reply size:   %d b\n"
-				 "     QOS timeout:      %d sec\n"
-				 "     QOS retries:      %d\n"
-				 "     QOS responses:    %d\n"
-				 "     QOS pair wait:    %d sec\n"
-				 "\n",
-				 xnsp.cfgFlags,
-				 xnsp.cfgSockMaxDgramSockets,
-				 xnsp.cfgSockMaxStreamSockets,
-				 xnsp.cfgSockDefaultRecvBufsizeInK,
-				 xnsp.cfgSockDefaultSendBufsizeInK,
-				 xnsp.cfgKeyRegMax,
-				 xnsp.cfgSecRegMax,
-				 xnsp.cfgQosDataLimitDiv4 * 4,
-				 xnsp.cfgQosProbeTimeoutInSeconds,
-				 xnsp.cfgQosProbeRetries,
-				 xnsp.cfgQosSrvMaxSimultaneousResponses,
-				 xnsp.cfgQosPairWaitTimeInSeconds
-				);
-
-			// initialize winsock 2.2
-			WSAData wsaData = {0};
-			err = WSAStartup( MAKEWORD(2,2), &wsaData );
-			if ( err != 0 )
-			{
-				Warning( "Error! Failed to WSAStartup! err = %d.\n", err );
-				net_noip = true;
-			}
-			else
-			{
-				Msg( "Socket layer initialized:\n"
-					 "       wsa ver used: %d.%d\n"
-					 "       wsa ver max:  %d.%d\n"
-					 "       description:  %s\n"
-					 "       sys status:   %s\n"
-					 "\n",
-					 LOBYTE( wsaData.wVersion ), HIBYTE( wsaData.wVersion ),
-					 LOBYTE( wsaData.wHighVersion ), HIBYTE( wsaData.wHighVersion ),
-					 wsaData.szDescription,
-					 wsaData.szSystemStatus
-					);
-
-				err = XOnlineStartup();
-				if ( err != ERROR_SUCCESS )
-				{
-					Warning( "Error! XOnlineStartup() failed, error %d.\n", err );
-				}
-				else
-				{
-					Msg( "XOnline services started.\n\n" );
-				}
-			}
-		}
-#elif defined( _WIN32 )
+#if   defined( _WIN32 )
 		// initialize winsock 2.0
 		WSAData wsaData;
 		if ( WSAStartup( MAKEWORD(2,0), &wsaData ) != 0 )
@@ -3815,58 +3283,6 @@ void NET_Init( bool bIsDedicated )
 			ConMsg( "Error! Failed to load network socket library.\n");
 			net_noip = true;
 		}
-#elif defined( _PS3 )
-		#if !defined( NO_STEAM )
-		// Steam initializes networking
-		if ( cellSysmoduleIsLoaded( CELL_SYSMODULE_NET ) != CELL_SYSMODULE_LOADED )
-			net_noip = true;
-		#else
-		int err = cellSysmoduleLoadModule( CELL_SYSMODULE_NET );
-		if ( err < 0 )
-		{
-			ConMsg( "Error! cellSysmoduleLoadModule error %d loading NET!\n", err );
-			net_noip = true;
-		}
-		else
-		{
-			Msg( "cellSysmoduleLoadModule loaded NET.\n" );
-
-			sys_net_initialize_parameter_t netParams;
-			memset( &netParams, 0, sizeof( netParams ) );
-
-			// Prepare for the number of connections required by the title
-			g_pMatchFramework->GetMatchTitle()->PrepareNetStartupParams( &netParams );
-
-			err = sys_net_initialize_network_ex( &netParams );
-			if ( err < 0 )
-			{
-				ConMsg( "Error! sys_net_initialize_network_ex error %d ( %d kBytes of memory allocated )!\n", err, netParams.memory_size / 1024 );
-				net_noip = true;
-
-				cellSysmoduleUnloadModule( CELL_SYSMODULE_NET );
-			}
-			else
-			{
-				Msg( "sys_net_initialize_network_ex succeeded ( %d kBytes of memory allocated )!\n", netParams.memory_size / 1024 );
-
-				int err = cellNetCtlInit();
-				
-				// GSidhu - in case of NO_STEAM we try and init this lib twice
-				if ( (err < 0) && (err != CELL_NET_CTL_ERROR_NOT_TERMINATED) )
-				{
-					ConMsg( "Error! cellNetCtlInit error %d!\n", err );
-					net_noip = true;
-
-//					sys_net_finalize_network();
-//					cellSysmoduleUnloadModule( CELL_SYSMODULE_NET );
-				}
-				else
-				{
-					Msg( "cellNetCtlInit succeeded.\n\n" );
-				}
-			}
-		}
-		#endif // NO_STEAM
 #endif
 	}
 
@@ -3979,13 +3395,6 @@ void NET_Shutdown (void)
 #if defined(_WIN32)
 	if ( !net_noip )
 	{
-#if defined(_X360)
-		nError = XOnlineCleanup();
-		if ( nError != ERROR_SUCCESS )
-		{
-			Msg( "Warning! Failed to complete XOnlineCleanup = 0x%x.\n", nError );
-		}
-#endif	// _X360
 
 		nError = WSACleanup();
 		if ( nError )
@@ -3993,17 +3402,6 @@ void NET_Shutdown (void)
 			Msg("Failed to complete WSACleanup = 0x%x.\n", nError );
 		}
 	}
-#elif defined( _PS3 )
-	#if !defined( NO_STEAM )
-	// Steam manages networking
-	#else
-	if ( !net_noip )
-	{
-		cellNetCtlTerm();
-		sys_net_finalize_network();
-		cellSysmoduleUnloadModule( CELL_SYSMODULE_NET );
-	}
-	#endif
 #endif	// _WIN32
 
 	Assert( s_NetChannels.Count() == 0 );
@@ -4214,15 +3612,6 @@ bool NET_GetPublicAdr( netadr_t &adr )
 		if ( adr.GetPort() == 0 )
 			adr.SetPort( port );
 	}
-#if !defined( _X360 ) && !defined( NO_STEAM )
-	else if ( NET_IsDedicated() &&
-		Steam3Server().SteamGameServer()->GetPublicIP() != 0u )
-	{
-		bRet = true;
-		adr.SetType( NA_IP );
-		adr.SetIPAndPort( Steam3Server().SteamGameServer()->GetPublicIP(), port );
-	}
-#endif
 	return bRet;
 }
 

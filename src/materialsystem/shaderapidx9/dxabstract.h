@@ -4,13 +4,6 @@
 //
 //==================================================================================================
 
-#ifdef _PS3
-// Delegate to the correct dxabstract,
-// code in other files seem to include dxabstract
-// in a lot of places without platform specialization
-#include "../ps3gcm/dxabstract.h"
-#include "ps3/dxabstract_gcm_shared.h"
-#else
 
 
 #ifndef DXABSTRACT_H
@@ -29,14 +22,9 @@
 #ifndef WIN32
 #error sorry man
 #endif
-#ifdef _X360
-#include "d3d9.h"
-#include "d3dx9.h"
-#else
 #include <windows.h>
 #include "../../dx9sdk/include/d3d9.h"
 #include "../../dx9sdk/include/d3dx9.h"
-#endif
 typedef HWND VD3DHWND;
 
 #else
@@ -1398,12 +1386,6 @@ typedef struct _D3DCAPS9
     DWORD   MaxPixelShader30InstructionSlots;
 	
 	// only on Mac Posix/GL
-	#if ( defined ( PLATFORM_OSX ) )
-		DWORD	FakeSRGBWrite;				// 1 for parts which can't support SRGB writes due to driver issues - 0 for others
-		DWORD	MixedSizeTargets;			// 1 for parts which can mix attachment sizes (RT's color vs depth)
-		DWORD	CanDoSRGBReadFromRTs;		// 0 when we're on Leopard, 1 when on Snow Leopard
-		DWORD	SRGBDecode;
-	#endif
 } D3DCAPS9;
 
 typedef struct _D3DDISPLAYMODE
@@ -2373,5 +2355,4 @@ HRESULT D3DXCompileShader(
 
 
 
-#endif // PS3
 

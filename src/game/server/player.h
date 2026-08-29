@@ -368,21 +368,7 @@ public:
 	int						GetClientIndex()	{ return ENTINDEX( edict() ) - 1; }
 
 	// returns the player name
-#ifdef _PS3
-	const char *			GetPlayerName() const 
-							{ 
-								if (!strcmp(m_szNetname, ""))
-								{
-									return "empty";
-								}
-								else
-								{
-									return m_szNetname; 
-								}
-							}
-#else
 	const char *			GetPlayerName() const { return m_szNetname; }
-#endif
 		
 	void					SetPlayerName( const char *name );
 
@@ -891,12 +877,10 @@ public:
 	// Here so that derived classes can use the expresser
 	virtual CAI_Expresser *GetExpresser() { return NULL; };
 
-#if !defined(NO_STEAM)
 	//----------------------------
 	// Steam handling
 	bool		GetSteamID( CSteamID *pID, bool bRequireFullyAuthenticated = false );
 	uint64		GetSteamIDAsUInt64( void );
-#endif
 
 	void				IncrementEFNoInterpParity();
 	int					GetEFNoInterpParity() const;

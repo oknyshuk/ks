@@ -70,10 +70,6 @@ void SquirrelVM::Shutdown()
 {
   if (_VM) {
     Cleanup();
-#if 0
-    sq_release(_VM,&_root->_o);
-    sq_resetobject(&_root->_o);
-#endif
     delete _root;
     _root = NULL;
     HSQUIRRELVM v = _VM;
@@ -314,13 +310,9 @@ SquirrelObject SquirrelVM::CreateFunction(SQFUNCTION func,const SQChar * scriptF
 //    tm[0] = 't';
 //    tm[1] = 0;
   } // if
-#if 0
-  sq_setparamscheck(_VM,numParams+1,ptm); // Parameters are table+args (thus, the +1).
-#else
   if (ptm) {
     sq_setparamscheck(_VM,numParams,ptm); // Determine arg count from type string.
   } // if
-#endif
 #ifdef _DEBUG
   sq_setnativeclosurename(_VM,-1,scriptFuncName); // For debugging only.
 #endif

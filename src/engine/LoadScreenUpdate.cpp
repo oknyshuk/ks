@@ -104,43 +104,23 @@ static CLoaderMemAlloc s_LoaderMemAlloc;
 
 void AbortLoadingUpdatesDueToShutdown()
 {
-	if ( IsGameConsole() && s_bLoadingUpdatesEnabled )
-	{
-		s_LoaderMemAlloc.AbortDueToShutdown();
-	}
 	s_bLoadingUpdatesEnabled = false;
 }
 
 void BeginLoadingUpdates( MaterialNonInteractiveMode_t mode )
 {
-	if ( IsGameConsole() && s_bLoadingUpdatesEnabled )
-	{
-		s_LoaderMemAlloc.Start( mode );
-	}
 }
 
 void RefreshScreenIfNecessary()
 {
-	if ( IsGameConsole() && s_bLoadingUpdatesEnabled )
-	{
-		s_LoaderMemAlloc.CheckSwap();
-	}
 }
 
 void PauseLoadingUpdates( bool bPause )
 {
-	if ( IsGameConsole() && s_bLoadingUpdatesEnabled )
-	{
-		s_LoaderMemAlloc.Pause( bPause );
-	}
 }
 
 void EndLoadingUpdates()
 {
-	if ( IsGameConsole() && s_bLoadingUpdatesEnabled )
-	{
-		s_LoaderMemAlloc.Stop();
-	}
 }
 
 static int LoadLibraryThreadFunc()

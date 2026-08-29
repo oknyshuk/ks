@@ -127,10 +127,6 @@ BEGIN_VS_SHADER( Water_DX90,
 			params[WATERBLENDFACTOR]->SetFloatValue( 1.0f );
 		}
 
-		if ( IsPS3() && !params[SCENEDEPTH]->IsDefined() )
-		{
-			params[SCENEDEPTH]->SetStringValue( "^PS3^DEPTHBUFFER" );
-		}
 
 		// If there's no envmap or reflection texture, make sure to set the reflection tint to 0 so we don't reflect garbage
 		// (The better change would be to add static combos to support no environment map but this is a lower impact change at this point)
@@ -274,14 +270,14 @@ BEGIN_VS_SHADER( Water_DX90,
 			{
 				// refract sampler
 				pShaderShadow->EnableTexture( SHADER_SAMPLER0, true );
-				pShaderShadow->EnableSRGBRead( SHADER_SAMPLER0, !IsX360() );
+				pShaderShadow->EnableSRGBRead( SHADER_SAMPLER0, !false );
 			}
 
 			if ( bReflection )
 			{
 				// reflect sampler
 				pShaderShadow->EnableTexture( SHADER_SAMPLER1, true );
-				pShaderShadow->EnableSRGBRead( SHADER_SAMPLER1, !IsX360() );
+				pShaderShadow->EnableSRGBRead( SHADER_SAMPLER1, !false );
 			}  
 			else
 			{
@@ -326,10 +322,6 @@ BEGIN_VS_SHADER( Water_DX90,
 				pShaderShadow->EnableTexture( SHADER_SAMPLER8, true );
 			}
 			
-			if ( IsGameConsole() )
-			{
-				pShaderShadow->EnableTexture( SHADER_SAMPLER9, true );
-			}
 
 			if ( bHasSimpleOverlay )
 			{
@@ -414,12 +406,12 @@ BEGIN_VS_SHADER( Water_DX90,
 			if ( bRefraction )
 			{
 				// HDRFIXME: add comment about binding.. Specify the number of MRTs in the enable
-				BindTexture( SHADER_SAMPLER0, SRGBReadMask( !IsX360() ), REFRACTTEXTURE, -1 );
+				BindTexture( SHADER_SAMPLER0, SRGBReadMask( !false ), REFRACTTEXTURE, -1 );
 			}
 
 			if ( bReflection )
 			{
-				BindTexture( SHADER_SAMPLER1, SRGBReadMask( !IsX360() ), REFLECTTEXTURE, -1 );
+				BindTexture( SHADER_SAMPLER1, SRGBReadMask( !false ), REFLECTTEXTURE, -1 );
 			}
 			else if ( params[ ENVMAP ]->IsDefined() )
 			{
@@ -435,7 +427,7 @@ BEGIN_VS_SHADER( Water_DX90,
 
 			if( bHasBaseTexture )
 			{
-				BindTexture( SHADER_SAMPLER10, IsX360() ? TEXTURE_BINDFLAGS_NONE : TEXTURE_BINDFLAGS_SRGBREAD, BASETEXTURE, FRAME );
+				BindTexture( SHADER_SAMPLER10, false ? TEXTURE_BINDFLAGS_NONE : TEXTURE_BINDFLAGS_SRGBREAD, BASETEXTURE, FRAME );
 			}
 
 			if ( bHasFlowmap )
@@ -469,45 +461,6 @@ BEGIN_VS_SHADER( Water_DX90,
 				BindTexture( SHADER_SAMPLER11, TEXTURE_BINDFLAGS_SRGBREAD, SIMPLEOVERLAY );
 			}
 
-			if ( IsGameConsole() )
-			{
-				if ( IsPS3() )
-				{
-					BindTexture( SHADER_SAMPLER9, TEXTURE_BINDFLAGS_NONE, SCENEDEPTH, -1 );
-				}
-				else if ( IsX360() )
-				{
-					pShaderAPI->BindStandardTexture( SHADER_SAMPLER9, TEXTURE_BINDFLAGS_NONE, TEXTURE_FRAME_BUFFER_FULL_DEPTH );
-				}
-				else
-				{
-					Error( "water.cpp: Unsupported console platform.\n" );
-				}
-				
-				VMatrix viewMatrix, projMatrix, worldToProjMatrix, projToWorldMatrix;
-				pShaderAPI->GetMatrix( MATERIAL_VIEW, viewMatrix.m[0] );
-				pShaderAPI->GetActualProjectionMatrix( projMatrix.m[0] );
-								
-				// The view and proj matrices are transposed vs. what you would normally expect, argh.
-				//viewMatrix = viewMatrix.Transpose();
-				//projMatrix = projMatrix.Transpose();
-				//MatrixMultiply( projMatrix, viewMatrix, worldToProjMatrix );
-				//MatrixInverseGeneral( worldToProjMatrix, projToWorldMatrix );
-
-				// One less transpose.
-				MatrixMultiply( viewMatrix, projMatrix, worldToProjMatrix );
-				MatrixInverseGeneral( worldToProjMatrix, projToWorldMatrix );
-				projToWorldMatrix = projToWorldMatrix.Transpose();
-								
-				// Send down rows 2 (Z) and 3 (W), because that's all the water shader needs to recover worldspace Z.
-				pShaderAPI->SetPixelShaderConstant( 33, &projToWorldMatrix.m[2][0], 1 );
-				pShaderAPI->SetPixelShaderConstant( 34, &projToWorldMatrix.m[3][0], 1 );
-				
-				int nDepthFeather = params[DEPTH_FEATHER]->GetIntValue();
-				const float flDepthFeatherDistanceFactor = .16f;
-				Vector4D vEdgeFeatheringParams( flDepthFeatherDistanceFactor, nDepthFeather ? 0.0f : 1.0f, 0.0f, 0.0f );
-				pShaderAPI->SetPixelShaderConstant( 35, vEdgeFeatheringParams.Base(), 1 );
-			}
 			
 			// Time
 			float vTimeConst[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
@@ -586,9 +539,6 @@ BEGIN_VS_SHADER( Water_DX90,
 				params[REFRACTAMOUNT]->GetFloatValue(), params[REFRACTAMOUNT]->GetFloatValue() };
 			pShaderAPI->SetPixelShaderConstant( 5, c5, 1 );
 
-#if 0
-			SetPixelShaderConstantGammaToLinear( 6, FOGCOLOR );
-#else
 			// Need to use the srgb curve since that we do in UpdatePixelFogColorConstant so that we match the older version of water where we render to an offscreen buffer and fog on the way in.
 			float fogColorConstant[4];
 
@@ -599,7 +549,6 @@ BEGIN_VS_SHADER( Water_DX90,
 			fogColorConstant[1] = SrgbGammaToLinear( fogColorConstant[1] );
 			fogColorConstant[2] = SrgbGammaToLinear( fogColorConstant[2] );
 			pShaderAPI->SetPixelShaderConstant( 6, fogColorConstant, 1 );
-#endif
 
 			float c7[4] = 
 			{ 
@@ -630,30 +579,14 @@ BEGIN_VS_SHADER( Water_DX90,
 			DECLARE_DYNAMIC_VERTEX_SHADER( water_vs20 );
 			SET_DYNAMIC_VERTEX_SHADER( water_vs20 );
 
-#ifdef _PS3
-			CCommandBufferBuilder< CDynamicCommandStorageBuffer > DynamicCmdsOut;
-#else
 			CCommandBufferBuilder< CFixedCommandStorageBuffer< 1000 > > DynamicCmdsOut;
-#endif
 
 			bool bFlashlightShadows = false;
 			bool bUberlight = false;
 			if( hasFlashlight )
 			{
-#ifdef _PS3
-				CCommandBufferBuilder< CFixedCommandStorageBuffer< 256 > > flashlightECB;
-#endif
 
 				pShaderAPI->GetFlashlightShaderInfo( &bFlashlightShadows, &bUberlight );
-#ifdef _PS3
-				{
-					flashlightECB.SetVertexShaderFlashlightState( VERTEX_SHADER_SHADER_SPECIFIC_CONST_4 );
-				}
-#endif
-				if( IsX360())
-				{
-					DynamicCmdsOut.SetVertexShaderFlashlightState( VERTEX_SHADER_SHADER_SPECIFIC_CONST_4 );
-				}
 
 				CBCmdSetPixelShaderFlashlightState_t state;
 				state.m_LightSampler = SHADER_SAMPLER6; // FIXME . . don't want this here.
@@ -668,18 +601,7 @@ BEGIN_VS_SHADER( Water_DX90,
 				state.m_bFlashlightNoLambert = false;
 				state.m_bSinglePassFlashlight = true;
 
-#ifdef _PS3
-				{
-					flashlightECB.SetPixelShaderFlashlightState( state );
-					flashlightECB.End();
-
-					ShaderApiFast( pShaderAPI )->ExecuteCommandBufferPPU( flashlightECB.Base() );
-				}
-#else
-				{
-					DynamicCmdsOut.SetPixelShaderFlashlightState( state );
-				}
-#endif
+				DynamicCmdsOut.SetPixelShaderFlashlightState( state );
 				DynamicCmdsOut.SetPixelShaderConstant( 10, FLASHLIGHTTINT );
 			}
 
@@ -909,32 +831,9 @@ BEGIN_VS_SHADER( Water_DX90,
 
 		if ( ( bReflection || bRefraction || bEnvMap ) && !UsingEditor( params ) && !bForceCheap )
 		{
-			#ifdef _GAMECONSOLE 
-			{
-				if ( IS_FLAG_SET( MATERIAL_VAR_PSEUDO_TRANSLUCENT ) )
-				{
-					// Do not render pseudo translucent water during the auto Z pass on Xbox 360
-					if ( pShaderAPI )
-					{
-						pShaderAPI->EnablePredication( false, true );
-					}
-				}
-			}
-			#endif // _GAMECONSOLE 
 
 			DrawReflectionRefraction( params, pShaderShadow, pShaderAPI, bReflection, bRefraction );
 
-			#ifdef _GAMECONSOLE 
-			{
-				if ( IS_FLAG_SET( MATERIAL_VAR_PSEUDO_TRANSLUCENT ) )
-				{
-					if ( pShaderAPI )
-					{
-						pShaderAPI->DisablePredication();
-					}
-				}
-			}
-			#endif // _GAMECONSOLE 
 		}
 		else
 		{

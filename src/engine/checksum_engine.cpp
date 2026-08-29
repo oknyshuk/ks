@@ -182,13 +182,6 @@ bool CRC_MapFile(CRC32_t *crcvalue, const char *pszFileName)
 		return false;
 	}
 
-	if ( IsX360() )
-	{
-		// 360 bsp's store the pc checksum in the flags lump header
-		g_pFileSystem->Close(fp);
-		*crcvalue = header.lumps[LUMP_MAP_FLAGS].version;
-		return true;
-	}
 
 	static char gamedir[MAX_OSPATH];
 	Q_FileBase( com_gamedir, gamedir, sizeof( gamedir ) );

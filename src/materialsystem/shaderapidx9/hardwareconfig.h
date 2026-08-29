@@ -38,25 +38,11 @@ struct ShaderDeviceInfo_t;
 
 enum
 {
-#if defined( DX_TO_GL_ABSTRACTION )
-	MAXUSERCLIPPLANES = 2,
-    
-#if defined( OSX )
-    MAX_NUM_LIGHTS = 2,
-#else
-    MAX_NUM_LIGHTS = 4,
-#endif
-
-#else
 	MAXUSERCLIPPLANES = 6,
 	MAX_NUM_LIGHTS = 4,
-#endif	
 
 	MAX_OUTPUTS = 3,
 
-#if defined( _PS3 )
-	MAX_FRAGMENT_PROGRAM_CONSTS = 96,
-#endif
 };
 
 //-----------------------------------------------------------------------------

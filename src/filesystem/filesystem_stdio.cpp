@@ -14,9 +14,7 @@
 
 #include "basefilesystem.h"
 
-#ifndef _PS3
 #include "filesystemasync.h"
-#endif
 
 #include "tier0/dbg.h"
 #include "tier0/threadtools.h"
@@ -24,11 +22,9 @@
 
 #ifdef _WIN32
 #include "tier0/tslist.h"
-#elif defined(POSIX)
+#else
 #include <fcntl.h>
-#ifdef LINUX
 #include <sys/file.h>
-#endif
 #endif
 #include "tier1/convar.h"
 #include "tier0/vprof.h"
@@ -40,54 +36,12 @@
 
 bool ShouldFailIo()
 {
-#if defined( _CERT ) || !defined( _PS3 )
 	return false;
-#else
-	static float s_flFailIoAfter = CommandLine()->ParmValue( "-failioafter", 0.0f );
-	return ( s_flFailIoAfter > 0 && Plat_FloatTime() > s_flFailIoAfter );
-#endif
 }
 
 
-#if defined( _PS3 )
-#include <cell/cell_fs.h>
-#include <cell/sysmodule.h>
-#include <tier0/memalloc.h>
-#include <sys/process.h>
-#include <sys/memory.h>
-#include <sys/timer.h>
-#include <sysutil/sysutil_gamecontent.h>
-#include "ps3/ps3_console.h"
-// #include "ps3/ps3_gamedata.h"
-#include "tls_ps3.h"
-#include "ps3_pathinfo.h"
-#include <dirent.h>
-#include <cell/fios.h>
-
-#if 0 // defined( _PS3 )
-
-#include "MemMgr/inc/MemMgr.h"
-#include "FileGroup.h"
-#include "const.h"
-#include <sys/sys_time.h>
-#include "memmgr\inc\PS3VirtualAlloc.h"
-
-char gSrcGameDataPath[MAX_PATH];
-bool g_bUseBdvdGameData = false;
-
-extern uint g_ioThreadId;
-
-CFileGroupSystem g_fileGroupSystem;
-int g_levelLoadGroup = -1;
-
-#endif //_PS3
-
-#endif 
 
 
-#ifdef _X360
-#undef WaitForSingleObject
-#endif
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -96,272 +50,7 @@ ASSERT_INVARIANT( SEEK_CUR == FILESYSTEM_SEEK_CURRENT );
 ASSERT_INVARIANT( SEEK_SET == FILESYSTEM_SEEK_HEAD );
 ASSERT_INVARIANT( SEEK_END == FILESYSTEM_SEEK_TAIL );
 
-#ifdef _PS3
 
-/// A bunch of little subroutines to handle all the ickyness necessary
-/// in emulating the FindFirstFile() function (use of which is a WTF
-/// in itself). 
-namespace   // unnamed namespaces are a convenient way to mark a whole bunch of stuff as "static" ie internal linkage
-{
-	int scandir(const char *dir, struct dirent ***namelist,
-		int (*select)(const struct dirent *),
-		int (*compar)(const struct dirent **, const struct dirent **))
-	{
-		DIR *d;
-		struct dirent *entry;
-		int i=0;
-		size_t entrysize;
-
-		if ((d=opendir(dir)) == NULL)
-			return(-1);
-
-		*namelist=NULL;
-		while ((entry=readdir(d)) != NULL)
-		{
-			if (select == NULL || (select != NULL && (*select)(entry)))
-			{
-				*namelist=(struct dirent **)realloc((void *)(*namelist),
-					(size_t)((i+1)*sizeof(struct dirent *)));
-				if (*namelist == NULL) return(-1);
-				entrysize=sizeof(struct dirent)-sizeof(entry->d_name)+strlen(entry->d_name)+1;
-				(*namelist)[i]=(struct dirent *)malloc(entrysize);
-				if ((*namelist)[i] == NULL) return(-1);
-				memcpy((*namelist)[i], entry, entrysize);
-				i++;
-			}
-		}
-		if (closedir(d)) return(-1);
-		if (i == 0) return(-1);
-		//	if (compar != NULL)
-		//		qsort((void *)(*namelist), (size_t)i, sizeof(struct dirent *), compar);
-
-		return(i);
-	}
-
-	int alphasort(const struct dirent **a, const struct dirent **b)
-	{
-		return(strcmp((*a)->d_name, (*b)->d_name));
-	}
-
-
-
-	char selectBuf[PATH_MAX];
-
-	int FileSelect(const struct dirent *ent)
-	{
-		const char *mask=selectBuf;
-		const char *name=ent->d_name;
-
-		//DEBUG_PRINTF("Test:%s %s\n",mask,name);
-
-		if(!strcmp(name,".") || !strcmp(name,"..") ) return 0;
-
-		if(!strcmp(selectBuf,"*.*")) return 1;
-
-		while( *mask && *name )
-		{
-			if(*mask=='*')
-			{
-				mask++; // move to the next char in the mask
-				if(!*mask) // if this is the end of the mask its a match 
-				{
-					return 1;
-				}
-				while(*name && toupper(*name)!=toupper(*mask)) 
-				{ // while the two don't meet up again
-					name++;
-				}
-				if(!*name) 
-				{ // end of the name
-					break; 
-				}
-			}
-			else if (*mask!='?')
-			{
-				if( toupper(*mask) != toupper(*name) )
-				{	// mismatched!
-					return 0;
-				}
-				else
-				{	
-					mask++;
-					name++;
-					if( !*mask && !*name) 
-					{ // if its at the end of the buffer
-						return 1;
-					}
-
-				}
-
-			}
-			else /* mask is "?", we don't care*/
-			{
-				mask++;
-				name++;
-			}
-		}	
-
-		return( !*mask && !*name ); // both of the strings are at the end
-	}
-
-	int FillDataStruct(FIND_DATA *dat)
-	{
-		struct stat fileStat;
-
-		if(dat->numMatches<0)
-			return -1;
-
-		Q_strncpy(dat->cFileName,dat->namelist[dat->numMatches]->d_name, sizeof( dat->cFileName ) );
-
-		if(!stat(dat->cFileName,&fileStat))
-		{
-			dat->dwFileAttributes=fileStat.st_mode;           
-		}
-		else
-		{
-			dat->dwFileAttributes=0;
-		}	
-		//DEBUG_PRINTF("%s\n", dat->namelist[dat->numMatches]->d_name);
-		free(dat->namelist[dat->numMatches]);
-
-		dat->numMatches--;
-		return 1;
-	}
-
-
-	const char *GetSonyFSErrorString( int errorcode )
-	{
-		switch( errorcode )
-		{
-		case CELL_FS_SUCCEEDED:
-				return "Normal termination"; 
-
-		case 	CELL_FS_ENOTMOUNTED:
-				return "File system corresponding to pathis not mounted";
-
-		case CELL_FS_ENOENT:
-				return "File specified by path does not exist";
-
-		case CELL_FS_EIO:
-				return "I/O error has occurred";
-
-		case CELL_FS_ENOMEM:
-				return "Memory is insufficient ";
-
-		case CELL_FS_ENOTDIR:
-				return "Components in path contain something other than a directory";
-
-		case CELL_FS_ENAMETOOLONG:
-				return "path or components in the path exceed the maximum length ";
-
-		case CELL_FS_EFSSPECIFIC:
-				return "File system specific internal error has occurred";
-
-		case CELL_FS_EFAULT:
-				return "pathor sb is NULL";
-
-		case CELL_FS_EACCES:
-				return "Search permission is denied for a component of path. ";
-
-		default:
-			return "Unknown error code";
-		}
-	}
-
-}
-
-HANDLE FindFirstFile(char *fileName, FIND_DATA *dat)
-{
-	char nameStore[PATH_MAX];
-	char *dir=NULL;
-	int n,iret=-1;
-
-	Q_strncpy(nameStore,fileName, sizeof( nameStore ) );
-	FixUpPathCaseForPS3(nameStore);
-
-	if(strrchr(nameStore,'/') )
-	{
-		dir=nameStore;
-		while(strrchr(dir,'/') )
-		{
-			struct stat dirChk;
-
-			// zero this with the dir name
-			dir=strrchr(nameStore,'/');
-			*dir='\0';
-
-			dir=nameStore;
-			stat(dir,&dirChk);
-
-			if( dirChk.st_mode & _S_IFDIR )
-			{
-				break;	
-			}
-		}
-	}
-	else
-	{
-		// couldn't find a dir seperator...
-		return ( void * ) INVALID_HANDLE_VALUE;
-	}
-
-	if( strlen(dir)>0 )
-	{
-		Q_strncpy(selectBuf,fileName+strlen(dir)+1, sizeof( selectBuf ) );
-
-		n = scandir(dir, &dat->namelist, FileSelect, alphasort);
-		if (n < 0)
-		{
-			// silently return, nothing interesting
-		}
-		else 
-		{
-			dat->numMatches=n-1; // n is the number of matches
-			iret=FillDataStruct(dat);
-			if(iret<0)
-			{
-				free(dat->namelist);
-			}
-
-		}
-	}
-
-	return reinterpret_cast<void*>(iret);
-}
-
-bool FindNextFile(HANDLE handle, FIND_DATA *dat)
-{
-	AssertMsg( false, "WARNING: untested\n" );
-	if(dat->numMatches<0)
-	{	
-		free(dat->namelist);
-		return false; // no matches left
-	}	
-
-	FillDataStruct(dat);
-	return true;
-}
-
-bool FindClose(HANDLE handle)
-{
-	AssertMsg( false, "WARNING: untested\n" );
-	return true;
-}
-
-#endif
-
-#if 0 // defined(_PS3)
-
-#define DebugPrint(fmt, ...)	Msg( fmt, ## __VA_ARGS__ )
-
-static bool ThreadInIoThread()
-{
-    return( ThreadGetCurrentId() == g_ioThreadId );
-}
-
-
-
-#endif //_PS3
 
 #if __DARWIN_64_BIT_INO_T
 #error badness
@@ -470,9 +159,7 @@ public:
 	virtual int FS_fflush();
 	virtual char *FS_fgets( char *dest, int destSize );
 
-#if defined( POSIX ) && !defined( _PS3 )
 	static CUtlMap< int, CInterlockedInt > m_LockedFDMap;
-#endif
 private:
 	CStdioFile( FILE *pFile, bool bWriteable )
 		: m_pFile( pFile ), m_bWriteable( bWriteable )
@@ -483,9 +170,7 @@ private:
 	bool m_bWriteable;
 };
 
-#if defined( POSIX ) && !defined( _PS3 )
 CUtlMap< int, CInterlockedInt > CStdioFile::m_LockedFDMap;
-#endif
 
 //-----------------------------------------------------------------------------
 
@@ -532,43 +217,6 @@ private:
 
 #endif
 
-#if IsPlatformPS3()
-class CFiosReadOnlyFile : public CStdFilesystemFile
-{
-public:
-	static bool CanOpen( const char *filename, const char *options );
-	static CFiosReadOnlyFile *FS_fopen( const char *filename, const char *options, int64 *size );
-
-	virtual void FS_setbufsize( unsigned nBytes ) {}
-	virtual void FS_fclose();
-	virtual void FS_fseek( int64 pos, int seekType );
-	virtual long FS_ftell();
-	virtual int FS_feof();
-	virtual size_t FS_fread( void *dest, size_t destSize, size_t size);
-	virtual size_t FS_fwrite( const void *src, size_t size ) { return 0; }
-	virtual bool FS_setmode( FileMode_t mode ) { Error( "Can't set mode, open a second file in right mode\n" ); return false; }
-	virtual size_t FS_vfprintf( const char *fmt, va_list list ) { return 0; }
-	virtual int FS_ferror() { return 0;	}
-	virtual int FS_fflush() { return 0; }
-	virtual char *FS_fgets( char *dest, int destSize );
-	virtual int FS_GetSectorSize() { return 2048; }
-
-private:
-	CFiosReadOnlyFile( cell::fios::filehandle * pFileHandle, int64 nFileSize )
-		:
-		m_pHandle( pFileHandle ),
-		m_nSize( nFileSize ),
-		m_nReadPos( 0 )
-	{
-		// Do nothing...
-	}
-
-	cell::fios::filehandle * m_pHandle;
-	int64					 m_nSize;
-	int64					 m_nReadPos;
-};
-
-#endif
 
 
 //-----------------------------------------------------------------------------
@@ -576,9 +224,7 @@ private:
 //-----------------------------------------------------------------------------
 CFileSystem_Stdio g_FileSystem_Stdio;
 
-#ifndef _PS3
 CAsyncFileSystem g_FileSystem_Async;
-#endif
 
 #if defined(_WIN32) && defined(DEDICATED)
 CBaseFileSystem *BaseFileSystem_Stdio( void )
@@ -600,29 +246,23 @@ EXPOSE_SINGLE_INTERFACE_GLOBALVAR( CFileSystem_Stdio, IBaseFileSystem, BASEFILES
 
 #endif
 
-#ifndef _PS3
 EXPOSE_SINGLE_INTERFACE_GLOBALVAR( CAsyncFileSystem, IAsyncFileSystem, ASYNCFILESYSTEM_INTERFACE_VERSION, g_FileSystem_Async );
-#endif // _PS3
 
 
 //-----------------------------------------------------------------------------
 
 bool UseOptimalBufferAllocation()
 {
-	static bool bUseOptimalBufferAllocation = ( IsX360() || ( !IsPosix() && Q_stristr( Plat_GetCommandLine(), "-unbuffered_io" ) != NULL ) );
+	static bool bUseOptimalBufferAllocation = false;
 	return bUseOptimalBufferAllocation;
 }
 ConVar filesystem_unbuffered_io( "filesystem_unbuffered_io", "1", 0, "" );
 #define UseUnbufferedIO() ( UseOptimalBufferAllocation() && filesystem_unbuffered_io.GetBool() )
 
 ConVar filesystem_native( "filesystem_native", "1", 0, "Use native FS or STDIO" );
-ConVar filesystem_max_stdio_read( "filesystem_max_stdio_read", IsX360() ? "64" : "16", 0, "" );
+ConVar filesystem_max_stdio_read( "filesystem_max_stdio_read", "16", 0, "" );
 ConVar filesystem_report_buffered_io( "filesystem_report_buffered_io", "0" );
 
-#if IsPlatformPS3()
-extern bool g_bUseFiosHddCache;
-ConVar fs_fios_enable_hdd_cache( "fs_fios_enable_hdd_cache", "0", 0, "Use fios HDD cache, disable this to have normal BluRay speed. 1 to enable it, 0 to disable it." );
-#endif
 
 //-----------------------------------------------------------------------------
 // constructor
@@ -631,9 +271,7 @@ CFileSystem_Stdio::CFileSystem_Stdio()
 {
 	m_bMounted = false;
 	m_bCanAsync = true;
-#if defined( POSIX ) && !defined( _PS3 )
 	SetDefLessFunc( CStdioFile::m_LockedFDMap );
-#endif
 }
 
 
@@ -698,11 +336,6 @@ bool CFileSystem_Stdio::GetOptimalIOConstraints( FileHandle_t hFile, unsigned *p
 
 	if ( pBufferAlign )
 	{
-		if ( IsX360() )
-		{
-			*pBufferAlign = 4;
-		}
-		else
 		{
 			*pBufferAlign = sectorSize;
 		}
@@ -753,11 +386,6 @@ void *CFileSystem_Stdio::AllocOptimalReadBuffer( FileHandle_t hFile, unsigned nS
 	bool bOffsetIsAligned = ( nOffset % sectorSize == 0 );
 	unsigned nAllocSize = ( bOffsetIsAligned ) ? AlignValue( nSize, sectorSize ) : nSize;
 
-	if ( IsX360() )
-	{
-		return malloc( nAllocSize );
-	}
-	else
 	{
 		unsigned nAllocAlignment = ( bOffsetIsAligned ) ? sectorSize : 4;
 		return _aligned_malloc( nAllocSize, nAllocAlignment );
@@ -777,11 +405,6 @@ void CFileSystem_Stdio::FreeOptimalReadBuffer( void *p )
 
 	if ( p )
 	{
-		if ( IsX360() )
-		{
-			free( p );
-		}
-		else
 		{
 			 _aligned_free( p );
 		}
@@ -810,13 +433,6 @@ FILE *CFileSystem_Stdio::FS_fopen( const char *filename, const char *options, un
 	}
 #endif
 
-#if IsPlatformPS3()
-	if ( CFiosReadOnlyFile::CanOpen( filename, options ) )
-	{
-		pFile = CFiosReadOnlyFile::FS_fopen( filename, options, size );
-		return (FILE *)pFile;
-	}
-#endif
 
 	pFile = CStdioFile::FS_fopen( filename, options, size );
 
@@ -970,7 +586,6 @@ int CFileSystem_Stdio::FS_chmod( const char *path, int pmode )
 		return -1;
 
 	int rt = _chmod( path, pmode );
-#if defined( LINUX )
 	if (rt==-1)
 	{
 		char file[MAX_PATH];
@@ -979,7 +594,6 @@ int CFileSystem_Stdio::FS_chmod( const char *path, int pmode )
 			rt=_chmod(file,pmode);
 		}
 	}	
-#endif
 	return rt;
 }
 
@@ -994,35 +608,7 @@ int CFileSystem_Stdio::FS_stat( const char *path, struct _stat *buf )
 	}
 
 	int rt;
-#ifdef _PS3
-    CellFsStat cellBuf;
-    CellFsErrno retFs = cellFsStat(path, &cellBuf);
-    if(retFs == CELL_FS_SUCCEEDED)
-    {
-        buf->st_atime = cellBuf.st_atime;
-        buf->st_blksize = cellBuf.st_blksize;
-        buf->st_ctime = cellBuf.st_ctime;
-        buf->st_gid = cellBuf.st_gid;
-        buf->st_mode = cellBuf.st_mode;
-        buf->st_mtime = cellBuf.st_mtime;
-        buf->st_size = cellBuf.st_size;
-        buf->st_uid = cellBuf.st_uid;
-        buf->st_dev = 0;
-        buf->st_ino = 0;
-        buf->st_nlink = 0;
-        buf->st_rdev = 0;
-        buf->st_blocks = 0;
-        rt = 0;
-    }
-    else
-    {
-        rt = -1;
-        //TBD: SET ERRNO
-    }
-#else
     rt = _stat( path, buf );
-#endif
-#if defined(LINUX)
 	if ( rt == -1 )
 	{
 		char file[MAX_PATH];
@@ -1031,7 +617,6 @@ int CFileSystem_Stdio::FS_stat( const char *path, struct _stat *buf )
 			rt = _stat( file, buf );
 		}
 	}	
-#endif
 	return rt;
 }
 
@@ -1166,7 +751,6 @@ CStdioFile *CStdioFile::FS_fopen( const char *filename, const char *options, int
 		}
 	}
 
-#if defined( LINUX )
 	if(!pFile && !strchr(options,'w') && !strchr(options,'+') ) // try opening the lower cased version
 	{
 		char file[MAX_PATH];
@@ -1186,7 +770,6 @@ CStdioFile *CStdioFile::FS_fopen( const char *filename, const char *options, int
 			}
 		}
 	}
-#endif
 
 	if ( pFile )
 	{
@@ -1194,7 +777,6 @@ CStdioFile *CStdioFile::FS_fopen( const char *filename, const char *options, int
 		if ( strchr(options,'w') || strchr(options,'a') )
 			bWriteable = true;
 		
-#if defined( POSIX ) && !defined( _PS3 )
 		if ( bWriteable )
 		{
 			// Win32 has an undocumented feature that is serialized ALL writes to a file across threads (i.e only 1 thread can open a file at a time)
@@ -1235,7 +817,6 @@ CStdioFile *CStdioFile::FS_fopen( const char *filename, const char *options, int
 			
 			rewind( pFile );
 		}
-#endif
 		return new CStdioFile( pFile, bWriteable );
 	}
 
@@ -1247,12 +828,7 @@ CStdioFile *CStdioFile::FS_fopen( const char *filename, const char *options, int
 //-----------------------------------------------------------------------------
 void CStdioFile::FS_setbufsize( unsigned nBytes )
 {
-#ifdef _PS3
-	if ( nBytes )
-	{
-		setvbuf( m_pFile, NULL, _IOFBF,  nBytes );
-	}
-#elif defined _WIN32
+#if   defined _WIN32
 	if ( nBytes )
 	{
 		setvbuf( m_pFile, NULL, _IOFBF,  32768 );
@@ -1274,7 +850,6 @@ void CStdioFile::FS_setbufsize( unsigned nBytes )
 //-----------------------------------------------------------------------------
 void CStdioFile::FS_fclose()
 {
-#if defined( POSIX ) && !defined( _PS3 )
 	if ( m_bWriteable )
 	{
 		fflush( m_pFile );
@@ -1284,7 +859,6 @@ void CStdioFile::FS_fclose()
 		if ( iLockID != m_LockedFDMap.InvalidIndex() )
 			m_LockedFDMap[ iLockID ] = -1;
 	}
-#endif
 	fclose(m_pFile);
 }
 
@@ -1441,13 +1015,8 @@ int GetSectorSize( const char *pszFilename )
 		return 0;
 	}
 
-	if ( IsX360() )
-	{
-		// purposely dvd centric, which is also the worst case
-		return XBOX_DVD_SECTORSIZE;
-	}
 
-#if defined( _WIN32 ) && !defined( FILESYSTEM_STEAM ) && !defined( _X360 )
+#if defined( _WIN32 ) && !defined( FILESYSTEM_STEAM )
 	char szAbsoluteFilename[MAX_FILEPATH];
 	if ( pszFilename[1] != ':' )
 	{
@@ -1666,11 +1235,7 @@ int CWin32ReadOnlyFile::FS_feof()
 
 // ends up on a thread's stack, don't blindly increase without awareness of that implication
 // 360 threads have small stacks, using small buffer of the worst case quantum sector size
-#if !defined( _X360 )
 #define READ_TEMP_BUFFER	( 32*1024 )
-#else
-#define READ_TEMP_BUFFER	( 2*XBOX_DVD_SECTORSIZE )
-#endif
 
 //-----------------------------------------------------------------------------
 // Purpose: low-level filesystem wrapper
@@ -1699,7 +1264,7 @@ size_t CWin32ReadOnlyFile::FS_fread( void *dest, size_t destSize, size_t size )
 
 	if ( m_hFileUnbuffered != INVALID_HANDLE_VALUE )
 	{
-		const int destBaseAlign = ( IsX360() ) ? 4 : m_SectorSize;
+		const int destBaseAlign = ( false ) ? 4 : m_SectorSize;
 		bool bDestBaseIsAligned = ( (DWORD)dest % destBaseAlign == 0 );
 		bool bCanReadUnbufferedDirect = ( bDestBaseIsAligned && ( destSize % m_SectorSize == 0 ) && ( m_ReadPos % m_SectorSize == 0 ) );
 
@@ -1781,18 +1346,6 @@ size_t CWin32ReadOnlyFile::FS_fread( void *dest, size_t destSize, size_t size )
 		{
 			DWORD dwError = GetLastError();
 
-			if ( IsX360() )
-			{
-				if ( dwError == ERROR_DISK_CORRUPT || dwError == ERROR_FILE_CORRUPT )
-				{
-					FSDirtyDiskReportFunc_t func = g_FileSystem_Stdio.GetDirtyDiskReportFunc();
-					if ( func )
-					{
-						func();
-						result = 0;
-					}
-				}
-			}
 
 			if ( dwError == ERROR_NO_SYSTEM_RESOURCES && MAX_READ > MIN_READ )
 			{
@@ -1869,257 +1422,4 @@ char *CWin32ReadOnlyFile::FS_fgets( char *dest, int destSize )
 
 #endif
 
-#if IsPlatformPS3()
-
-const char * GetSupportedPrefix()
-{
-	return g_pPS3PathInfo->GameImagePath();
-}
-
-int GetSupportedPrefixLength()
-{
-	return strlen( GetSupportedPrefix() );
-}
-
-
-bool CFiosReadOnlyFile::CanOpen( const char *filename, const char *options )
-{
-	if( ShouldFailIo() )
-		return false;
-
-	extern ConVar fs_fios_enabled;
-	if ( fs_fios_enabled.GetBool() )
-	{
-		bool bSupported = ( options[0] == 'r' && options[1] == 'b' && options[2] == 0 && filesystem_native.GetBool() );
-		bSupported &= ( memcmp( filename, GetSupportedPrefix(), GetSupportedPrefixLength() ) == 0 );
-		return bSupported;
-	}
-	else
-	{
-		return false;
-	}
-}
-
-//-----------------------------------------------------------------------------
-// 
-//-----------------------------------------------------------------------------
-
-static cell::fios::filehandle * OpenFiosFile( const char *filename, int64 *pFileSize )
-{
-	if( ShouldFailIo() )
-		return NULL;
-
-	cell::fios::scheduler * pScheduler = cell::fios::scheduler::getDefaultScheduler();
-
-	cell::fios::filehandle * pFileHandle;
-	cell::fios::err_t err;
-
-	Assert( memcmp( filename, GetSupportedPrefix(), GetSupportedPrefixLength() ) == 0);
-	filename += GetSupportedPrefixLength();		// Skip the prefix, FIOS already takes it in account
-
-	err = pScheduler->getFileSizeSync( NULL, filename, pFileSize );
-	if ( err != cell::fios::CELL_FIOS_NOERROR )
-	{
-		Warning( "[FIOS] Failed to get size of file '%s'.\n", filename );
-		return NULL;
-	}
-
-	err = pScheduler->openFileSync( NULL, filename, cell::fios::kO_RDONLY, &pFileHandle );
-	if ( err != cell::fios::CELL_FIOS_NOERROR )
-	{
-		Warning( "[FIOS] Failed to open file '%s'.\n", filename );
-		return NULL;
-	}
-
-	return pFileHandle;
-}
-
-CFiosReadOnlyFile * CFiosReadOnlyFile::FS_fopen( const char *filename, const char *options, int64 *size )
-{
-	if( ShouldFailIo() )
-		return NULL;
-
-	Assert( CanOpen( filename, options ) );
-
-	int64 nFileSize;
-	cell::fios::filehandle * pFileHandle = OpenFiosFile( filename, &nFileSize );
-	if ( pFileHandle == NULL )
-	{
-		return NULL;
-	}
-
-	if ( size )
-	{
-		*size = nFileSize;
-	}
-
-	return new CFiosReadOnlyFile( pFileHandle, nFileSize );
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: low-level filesystem wrapper
-//-----------------------------------------------------------------------------
-void CFiosReadOnlyFile::FS_fclose()
-{
-	if ( m_pHandle != NULL )
-	{
-		cell::fios::err_t err = cell::fios::scheduler::getDefaultScheduler()->closeFileSync( NULL, m_pHandle );
-		if ( err != cell::fios::CELL_FIOS_NOERROR )
-		{
-			Warning( "[FIOS] Failed to close file.\n" );
-		}
-	}
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: low-level filesystem wrapper
-//-----------------------------------------------------------------------------
-void CFiosReadOnlyFile::FS_fseek( int64 pos, int seekType )
-{
-	switch ( seekType )
-	{
-	case SEEK_SET:
-		m_nReadPos = pos;
-		break;
-
-	case SEEK_CUR:
-		m_nReadPos += pos;
-		break;
-
-	case SEEK_END:
-		m_nReadPos = m_nSize - pos;
-		break;
-	}
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: low-level filesystem wrapper
-//-----------------------------------------------------------------------------
-long CFiosReadOnlyFile::FS_ftell()
-{
-	return m_nReadPos;	
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: low-level filesystem wrapper
-//-----------------------------------------------------------------------------
-int CFiosReadOnlyFile::FS_feof()
-{
-	return ( m_nReadPos >= m_nSize );	
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: low-level filesystem wrapper
-//-----------------------------------------------------------------------------
-
-// Set the flag to true if any of the op is processing.
-void IsAnyOpProcessing( void *pContext, cell::fios::op *pOp )
-{
-	bool * pBool = ( bool * )pContext;
-	bool bFinished = pOp->isDone() || pOp->isCancelled();
-	*pBool |= ( bFinished == false );		// Mark the ops that are still working
-}
-
-size_t CFiosReadOnlyFile::FS_fread( void *dest, size_t destSize, size_t size )
-{
-	VPROF_BUDGET( "CFiosReadOnlyFile::FS_fread", VPROF_BUDGETGROUP_OTHER_FILESYSTEM );
-
-	if( ShouldFailIo() )
-		return 0;
-
-	if ( size == 0 )
-	{
-		return 0;
-	}
-
-	cell::fios::opattr_t opattr = FIOS_OPATTR_INITIALIZER;
-	// The user can disable usage of HDD cache with the ConVar fs_fios_enable_hdd_cache.
-	// However in some case, the game will disable its usage temporarily too (with g_bUseFiosHddCache).
-	// This can happen if the game is saving. We want to avoid the save system and FIOS to compete for the HDD usage.
-	// In that case, IO accesses will be done on the BluRay. It is only temporary (few seconds), and most data should be in memory anyway.
-	// We just want to avoid cases where a single data takes several seconds to load.
-	if ( fs_fios_enable_hdd_cache.GetBool() && ( g_bUseFiosHddCache == false ) )
-	{
-		// Display a message so we can detect prolonged incorrect state.
-		static uint32 nLastSpew = 0;
-		const int SPEW_EVERY_N_MILLISECONDS = 5 * 1000;		// Don't need to spew too much. Every 5 seconds is enough for us to detect potential issue.
-
-		uint32 nCurrentTime = Plat_MSTime();
-		if ( nCurrentTime > nLastSpew + SPEW_EVERY_N_MILLISECONDS )
-		{
-			Msg( "Fios HDD accesses disabled as a save is occurring.\n" );
-			nLastSpew = nCurrentTime;
-		}
-	}
-
-	cell::fios::scheduler *pScheduler = cell::fios::scheduler::getDefaultScheduler();
-	uint32_t opFlags = cell::fios::kOPF_DONTFILLDISKCACHE;			// By default, full cache usage
-
-	// Again another FIOS function "pScheduler->isIdle()" does not work as expected. Implement another work around.
-	bool bWorkingOps = false;
-	pScheduler->iterateOps( &IsAnyOpProcessing, &bWorkingOps );
-	if ( bWorkingOps )
-	{
-		// It is not idle, it is probably prefetching or doing something else. Let's reduce the HDD usage (read but don't write).
-		// If the data is really important, it will be cached later when the scheduler is idle.
-		opFlags = cell::fios::kOPF_DONTFILLCACHE;
-	}
-	opattr.opflags = ( fs_fios_enable_hdd_cache.GetBool() && g_bUseFiosHddCache ) ? opFlags : cell::fios::kOPF_NOCACHE;
-	opattr.deadline = kDEADLINE_NOW;					// Consider using kDEADLINE_ASAP
-														// By using ASAP, the hope is that FIOS will schedule the read in the best manner to reduce seeks
-														// NOW could help serve this read better but could reduce overall performance.
-														// We use NOW, as the non-persistent prefetches are ASAP
-														// And persistent prefetches are LATER (the priority doesn't really apply between prefetches otherwise).
-	opattr.priority = cell::fios::kPRIO_DEFAULT;
-	opattr.pCallback = 0;
-	opattr.opflags = 0;
-	opattr.pLicense = 0;
-
-	cell::fios::err_t err = pScheduler->readFileSync( &opattr, m_pHandle, dest, size, m_nReadPos );
-	if ( err != cell::fios::CELL_FIOS_NOERROR )
-	{
-		return 0;
-	}
-	m_nReadPos += size;
-	return size;
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: low-level filesystem wrapper
-//-----------------------------------------------------------------------------
-char *CFiosReadOnlyFile::FS_fgets( char *dest, int destSize ) 
-{  
-	if( ShouldFailIo() )
-		return NULL;
-
-	if ( FS_feof() )
-	{
-		return NULL;
-	}
-	int nStartPos = m_nReadPos;
-	int nBytesRead = FS_fread( dest, destSize, destSize );
-	if ( !nBytesRead )
-	{
-		return NULL;
-	}
-
-	dest[imin( nBytesRead, destSize - 1)] = 0;
-	char *pNewline = strchr( dest, '\n' );
-	if ( pNewline )
-	{
-		// advance past, leave \n
-		pNewline++;
-		*pNewline = 0;
-	}
-	else
-	{
-		pNewline = &dest[imin( nBytesRead, destSize - 1)];
-	}
-	m_nReadPos = nStartPos + ( pNewline - dest ) + 1;
-
-	return dest; 
-}
-
-
-#endif
 

@@ -585,7 +585,7 @@ CShadowMgr::CShadowMgr()
 	m_pSurfaceBounds = NULL;
 	m_bInitialized = false;
 	m_hSinglePassFlashlightState = SHADOW_HANDLE_INVALID;
-	m_bSinglePassFlashlightStateEnabled = IsGameConsole();
+	m_bSinglePassFlashlightStateEnabled = false;
 	
 	m_nSkipShadowForEntIndex = INT_MIN;
 
@@ -1245,15 +1245,6 @@ void CShadowMgr::AddSurfaceToShadow( ShadowHandle_t handle, SurfaceHandle_t surf
 	if ( !bIsFlashlight && MSurf_Flags(surfID) & (SURFDRAW_TRANS | SURFDRAW_ALPHATEST | SURFDRAW_NOSHADOWS) )
 		return;
 
-#if 0
-	// Make sure the surface has the shadow on it exactly once...
-	ShadowDecalHandle_t	dh = MSurf_ShadowDecals( surfID );
-	while (dh != m_ShadowDecals.InvalidIndex() )
-	{
-		Assert ( m_ShadowDecals[dh].m_Shadow != handle );
-		dh = m_ShadowDecals.Next(dh);
-	}
-#endif
 
 	// Create a shadow decal for this surface and add it to the surface
 	AddShadowDecalToSurface( surfID, handle );
@@ -4488,7 +4479,7 @@ void CShadowMgr::PushSinglePassFlashlightStateEnabled( bool bEnable )
 void CShadowMgr::PopSinglePassFlashlightStateEnabled( void )
 {
 	m_bStack_SinglePassFlashlightStateEnabled.Pop();
-	bool bEnable = IsGameConsole();
+	bool bEnable = false;
 	if( m_bStack_SinglePassFlashlightStateEnabled.Count() != 0 )
 	{
 		bEnable = m_bStack_SinglePassFlashlightStateEnabled.Top();
@@ -4692,35 +4683,19 @@ void CShadowMgr::DrawFlashlightDepthTexture( )
 			meshBuilder.Begin( pMesh, MATERIAL_QUADS, 1 );
 
 			meshBuilder.Position3f( wOffset, hOffset, 0.0f );
-#ifdef DX_TO_GL_ABSTRACTION
-			meshBuilder.TexCoord2f( 0, 0.0f, 1.0f );					// Posix is rotated due to render target origin differences
-#else
 			meshBuilder.TexCoord2f( 0, 0.0f, 0.0f );
-#endif
 			meshBuilder.AdvanceVertexF<VTX_HAVEPOS, 1>();
 
 			meshBuilder.Position3f( wOffset + w, hOffset, 0.0f );
-#ifdef DX_TO_GL_ABSTRACTION
-			meshBuilder.TexCoord2f( 0, 0.0f, 0.0f );
-#else
 			meshBuilder.TexCoord2f( 0, 1.0f, 0.0f );
-#endif
 			meshBuilder.AdvanceVertexF<VTX_HAVEPOS, 1>();
 
 			meshBuilder.Position3f( wOffset + w, hOffset + h, 0.0f );
-#ifdef DX_TO_GL_ABSTRACTION
-			meshBuilder.TexCoord2f( 0, 1.0f, 0.0f );
-#else
 			meshBuilder.TexCoord2f( 0, 1.0f, 1.0f );
-#endif
 			meshBuilder.AdvanceVertexF<VTX_HAVEPOS, 1>();
 
 			meshBuilder.Position3f( wOffset, hOffset + h, 0.0f );
-#ifdef DX_TO_GL_ABSTRACTION
-			meshBuilder.TexCoord2f( 0, 1.0f, 1.0f );
-#else
 			meshBuilder.TexCoord2f( 0, 0.0f, 1.0f );
-#endif			
 			meshBuilder.AdvanceVertexF<VTX_HAVEPOS, 1>();
 
 			meshBuilder.End();

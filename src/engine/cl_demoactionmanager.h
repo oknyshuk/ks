@@ -13,10 +13,6 @@
 
 class CUtlBuffer;
 
-namespace vgui
-{
-	class Panel;
-};
 
 class CBaseDemoAction;
 struct democmdinfo_t;

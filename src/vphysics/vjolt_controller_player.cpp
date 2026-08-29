@@ -186,41 +186,6 @@ static void CheckCollision( JoltPhysicsObject *pObject, JPH::CollideShapeCollect
 }
 
 // Slart: This is a version of CheckCollision that projects the player by their velocity, to attempt to push objects that we'll walk into soon
-#if 0
-static void CheckCollision2( JoltPhysicsObject *pObject, JPH::CollideShapeCollector &ioCollector, const JPH::Vec3Arg targetVelocity, float flDeltaTime )
-{
-	JPH::PhysicsSystem *pSystem = pObject->GetEnvironment()->GetPhysicsSystem();
-
-	// TODO(Josh): Make a PLAYER ONLY layer that will only collide with MOVING ONLY annd
-	// NOTHING ELSE tomorrow.
-
-	// Create query broadphase layer filter
-	JPH::DefaultBroadPhaseLayerFilter broadphase_layer_filter = pSystem->GetDefaultBroadPhaseLayerFilter( Layers::MOVING );
-
-	// Create query object layer filter
-	JPH::DefaultObjectLayerFilter object_layer_filter = pSystem->GetDefaultLayerFilter( Layers::MOVING );
-
-	// Ignore my own body
-	JPH::IgnoreSingleBodyFilter body_filter( pObject->GetBodyID() );
-
-	// Determine position to test
-	JPH::Vec3 position;
-	JPH::Quat rotation;
-	JPH::BodyInterface &bi = pSystem->GetBodyInterfaceNoLock();
-	bi.GetPositionAndRotation( pObject->GetBodyID(), position, rotation );
-	position += targetVelocity * ( flDeltaTime * 2.0f );
-	JPH::Mat44 query_transform = JPH::Mat44::sRotationTranslation( rotation, position + rotation * pObject->GetBody()->GetShape()->GetCenterOfMass() );
-
-	// Settings for collide shape
-	JPH::CollideShapeSettings settings;
-	settings.mActiveEdgeMode = JPH::EActiveEdgeMode::CollideOnlyWithActive;
-	settings.mActiveEdgeMovementDirection = bi.GetLinearVelocity( pObject->GetBodyID() );
-	settings.mBackFaceMode = JPH::EBackFaceMode::IgnoreBackFaces;
-	settings.mMaxSeparationDistance = vjolt_player_collision_tolerance.GetFloat();
-
-	pSystem->GetNarrowPhaseQueryNoLock().CollideShape( pObject->GetBody()->GetShape(), JPH::Vec3::sReplicate( 1.0f ), query_transform, settings, ioCollector, broadphase_layer_filter, object_layer_filter, body_filter );
-}
-#endif
 
 template <bool MoveablesOnly>
 class SourceHitFilter : public JPH::BodyFilter
@@ -363,20 +328,6 @@ void JoltPhysicsPlayerController::OnPreSimulate( float flDeltaTime )
 {
 	VJoltAssertMsg( m_pObject->GetBody()->GetMotionType() == JPH::EMotionType::Kinematic, "Shadow controllers must be kinematic!" );
 
-#if 0
-	if ( m_pGround )
-	{
-		JPH::Mat44 matrix = JPH::Mat44::sRotationTranslation( m_pObject->GetBody()->GetRotation(), m_pObject->GetBody()->GetPosition() ).Transposed3x3();
-		m_groundPos = -matrix.Multiply3x3( m_targetPosition );
-
-		matrix3x4_t mat;
-		m_pGround->GetPositionMatrix( &mat );
-		m_targetPosition = mat.TransformVector( m_GroundPos );
-
-		m_pGround->GetVelocityAtPoint( m_GroundPos, &groundVelocity );
-		m_pObject->AddVelocity( -groundVelocity );
-	}
-#else
 	/*if ( m_pGround )
 	{
 		JPH::Mat44 matrix = JPH::Mat44::sRotationTranslation( m_pObject->GetBody()->GetRotation(), m_pObject->GetBody()->GetPosition() ).Transposed3x3();
@@ -384,7 +335,6 @@ void JoltPhysicsPlayerController::OnPreSimulate( float flDeltaTime )
 		int g = 5;
 		m_targetPosition = matrix * groundPos;
 	}*/
-#endif
 
 	// Apply downwards force to the ground
 	// This code mimics JoltObject::ApplyForceOffset but without Source > Jolt conversions

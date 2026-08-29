@@ -17,21 +17,12 @@
 typedef unsigned char uint8;
 #endif
 
-#if defined( __GNUC__ ) && !defined(POSIX)
-	#if __GNUC__ < 4
-		#error "Steamworks requires GCC 4.X (4.2 or 4.4 have been tested)"
-	#endif
-	#define POSIX 1
-#endif
 
 #if defined(__x86_64__) || defined(_WIN64)
 #define X64BITS
 #endif
 
 // Make sure VALVE_BIG_ENDIAN gets set on PS3, may already be set previously in Valve internal code.
-#if !defined(VALVE_BIG_ENDIAN) && defined(_PS3)
-#define VALVE_BIG_ENDIAN
-#endif
 
 typedef unsigned char uint8;
 typedef signed char int8;

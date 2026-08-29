@@ -14,10 +14,8 @@
 #include "lightmappedgeneric_vs20.inc"
 #include "lightmappedgeneric_ps20b.inc"
 
-#if !defined( _X360 ) && !defined( _PS3 )
 	#include "lightmappedgeneric_vs30.inc"
 	#include "lightmappedgeneric_ps30.inc"
-#endif
 
 #include "shaderapifast.h"
 #include "tier0/vprof.h"
@@ -36,11 +34,7 @@ static void mat_phong_lightmappedgeneric_changed( IConVar *var, const char *pOld
 }
 ConVar mat_phong_lightmappedgeneric( "mat_phong_lightmappedgeneric", "1", FCVAR_DEVELOPMENTONLY, "0 = disable, 1 = default, 2 = visualize phong component only (no diffuse)", mat_phong_lightmappedgeneric_changed );
 
-#if defined( CSTRIKE15 ) && defined( _X360 )
-static ConVar r_shader_srgbread( "r_shader_srgbread", "1", 0, "1 = use shader srgb texture reads, 0 = use HW" );
-#else
 static ConVar r_shader_srgbread( "r_shader_srgbread", "0", 0, "1 = use shader srgb texture reads, 0 = use HW" );
-#endif
 
 static ConVar mat_force_vertexfog( "mat_force_vertexfog", "0", FCVAR_DEVELOPMENTONLY );
 
@@ -414,19 +408,19 @@ void DrawLightmappedGeneric_DX9( CBaseVSShader *pShader, IMaterialVar** params, 
 	bool hasFlashlight = pShader->UsingFlashlight( params );
 	CLightmappedGeneric_DX9_Context *pContextData = reinterpret_cast< CLightmappedGeneric_DX9_Context *> ( *pContextDataPtr );
 #if defined( CSTRIKE15 )
-	bool bShaderSrgbRead = IsX360() && r_shader_srgbread.GetBool();
+	bool bShaderSrgbRead = false && r_shader_srgbread.GetBool();
 #else
-	bool bShaderSrgbRead = ( IsX360() && IS_PARAM_DEFINED( info.m_nShaderSrgbRead360 ) && params[info.m_nShaderSrgbRead360]->GetIntValue() );
+	bool bShaderSrgbRead = ( false && IS_PARAM_DEFINED( info.m_nShaderSrgbRead360 ) && params[info.m_nShaderSrgbRead360]->GetIntValue() );
 #endif
 	bool bHDR = g_pHardwareConfig->GetHDRType() != HDR_TYPE_NONE;
 
-	if ( pShaderShadow || ( ! pContextData ) || pContextData->m_bMaterialVarsChanged || ( hasFlashlight && !( IsX360() || IsPS3() ) ) )
+	if ( pShaderShadow || ( ! pContextData ) || pContextData->m_bMaterialVarsChanged || ( hasFlashlight ) )
 	{
 		bool hasBaseTexture = params[info.m_nBaseTexture]->IsTexture();
 		int nAlphaChannelTextureVar = hasBaseTexture ? (int)info.m_nBaseTexture : (int)info.m_nEnvmapMask;
 		BlendType_t nBlendType = pShader->EvaluateBlendRequirements( nAlphaChannelTextureVar, hasBaseTexture );
 		bool bIsAlphaTested = IS_FLAG_SET( MATERIAL_VAR_ALPHATEST ) != 0;
-		bool bFullyOpaqueWithoutAlphaTest = (nBlendType != BT_BLENDADD) && (nBlendType != BT_BLEND) && (!hasFlashlight || IsX360() || IsPS3()); //dest alpha is free for special use
+		bool bFullyOpaqueWithoutAlphaTest = (nBlendType != BT_BLENDADD) && (nBlendType != BT_BLEND) && (!hasFlashlight || false || false); //dest alpha is free for special use
 		bool bFullyOpaque = bFullyOpaqueWithoutAlphaTest && !bIsAlphaTested;
 		bool bNeedRegenStaticCmds = (! pContextData ) || pShaderShadow;
 
@@ -463,7 +457,7 @@ void DrawLightmappedGeneric_DX9( CBaseVSShader *pShader, IMaterialVar** params, 
 		bool hasNormalMapAlphaEnvmapMask = g_pConfig->UseSpecular() && IS_FLAG_SET( MATERIAL_VAR_NORMALMAPALPHAENVMAPMASK );
 		bool hasPhong = g_pConfig->UseSpecular() && ( (info.m_nPhong != -1) && params[info.m_nPhong]->GetIntValue() );
 
-		if ( hasFlashlight && !( IsX360() || IsPS3() ) )				
+		if ( hasFlashlight )				
 		{
 			// !!speed!! do this in the caller so we don't build struct every time
 			CBaseVSShader::DrawFlashlight_dx90_Vars_t vars;
@@ -590,9 +584,7 @@ void DrawLightmappedGeneric_DX9( CBaseVSShader *pShader, IMaterialVar** params, 
 						params[info.m_nSeamlessMappingScale]->GetFloatValue(),0,0,0 );
 				}
 				staticCmdsBuf.StoreEyePosInPixelShaderConstant( 10 );
-#ifndef _PS3
 				staticCmdsBuf.SetPixelShaderFogParams( 11 );
-#endif
 				staticCmdsBuf.End();
 				// now, copy buf
 				pContextData->m_pStaticCmds = new uint8[staticCmdsBuf.Size()];
@@ -612,7 +604,7 @@ void DrawLightmappedGeneric_DX9( CBaseVSShader *pShader, IMaterialVar** params, 
 
 				unsigned int flags = VERTEX_POSITION;
 
-				if( hasEnvmap || ( ( IsX360() || IsPS3() ) && hasFlashlight ) )
+				if( hasEnvmap )
 				{
 					flags |= VERTEX_TANGENT_S | VERTEX_TANGENT_T | VERTEX_NORMAL;
 				}
@@ -639,15 +631,7 @@ void DrawLightmappedGeneric_DX9( CBaseVSShader *pShader, IMaterialVar** params, 
 
 				// PORTAL2 HACK for single pass paint (currently disabled)
 				// Hijack detail blend mode 9 for paint (this blend mode was previously skipped/unused in lightmappedgeneric)
-				if ( g_pConfig->m_bPaintInGame && false )
-				{
-					nDetailBlendMode = DETAIL_BLEND_MODE_MASK_BASE_BY_DETAIL_ALPHA;
-				}
 				
-				if( hasFlashlight && ( IsX360() || IsPS3() ) )
-				{
-					//pShaderShadow->SetShadowDepthFiltering( SHADER_SAMPLER14 );
-				}
 
 				if( hasVertexColor || hasBaseTexture2 || hasBump2 )
 				{
@@ -674,9 +658,6 @@ void DrawLightmappedGeneric_DX9( CBaseVSShader *pShader, IMaterialVar** params, 
 				}
 		
 				int nLightingPreviewMode = IS_FLAG2_SET( MATERIAL_VAR2_USE_GBUFFER0 );
-#if 0
-				int nLightingPreviewMode = IS_FLAG2_SET( MATERIAL_VAR2_USE_GBUFFER0 ) + 2 * IS_FLAG2_SET( MATERIAL_VAR2_USE_GBUFFER1 );
-#endif
 
 				pShaderShadow->VertexShaderVertexFormat( flags, numTexCoords, 0, 0 );
 
@@ -687,9 +668,7 @@ void DrawLightmappedGeneric_DX9( CBaseVSShader *pShader, IMaterialVar** params, 
 
 				bool bCSMBlending = g_pHardwareConfig->GetCSMAccurateBlending();
 
-				#if !defined( _X360 ) && !defined( _PS3 )
 				if ( !g_pHardwareConfig->SupportsPixelShaders_3_0() )
-				#endif
 				{
 					DECLARE_STATIC_VERTEX_SHADER( lightmappedgeneric_vs20 );
 					SET_STATIC_VERTEX_SHADER_COMBO( ENVMAP_MASK,  hasEnvmapMask );
@@ -705,9 +684,6 @@ void DrawLightmappedGeneric_DX9( CBaseVSShader *pShader, IMaterialVar** params, 
 					SET_STATIC_VERTEX_SHADER_COMBO( SELFILLUM,  hasSelfIllum );
 					SET_STATIC_VERTEX_SHADER_COMBO( PAINT, 0 );
 					SET_STATIC_VERTEX_SHADER_COMBO( ADDBUMPMAPS, bAddBumpMaps );
-					#if defined( _X360 ) || defined( _PS3 )
-						SET_STATIC_VERTEX_SHADER_COMBO( FLASHLIGHT, hasFlashlight);
-					#endif
 					SET_STATIC_VERTEX_SHADER( lightmappedgeneric_vs20 );
 
 					if ( g_pHardwareConfig->SupportsPixelShaders_2_b() )
@@ -729,9 +705,6 @@ void DrawLightmappedGeneric_DX9( CBaseVSShader *pShader, IMaterialVar** params, 
 						SET_STATIC_PIXEL_SHADER_COMBO( ENVMAPANISOTROPY, bEnvmapAnisotropy );
 						SET_STATIC_PIXEL_SHADER_COMBO( ADDBUMPMAPS, bAddBumpMaps );
 
-						#if defined( _X360 ) || defined( _PS3 )
-							SET_STATIC_PIXEL_SHADER_COMBO( FLASHLIGHT, hasFlashlight);
-						#endif
 						SET_STATIC_PIXEL_SHADER_COMBO( SHADER_SRGB_READ, bShaderSrgbRead );
 						SET_STATIC_PIXEL_SHADER_COMBO( LIGHTING_PREVIEW, nLightingPreviewMode );
 						SET_STATIC_PIXEL_SHADER_COMBO( CSM_BLENDING, bCSMBlending );
@@ -763,7 +736,6 @@ void DrawLightmappedGeneric_DX9( CBaseVSShader *pShader, IMaterialVar** params, 
 						SET_STATIC_PIXEL_SHADER( lightmappedgeneric_ps20 );
 					}
 				}
-				#if !defined( _X360 ) && !defined( _PS3 )
 				else // Shader model 3.0, PC only
 				{
 					int nCSMQualityComboValue = g_pHardwareConfig->GetCSMShaderMode( materials->GetCurrentConfigForVideoCard().GetCSMQualityMode() );
@@ -807,7 +779,6 @@ void DrawLightmappedGeneric_DX9( CBaseVSShader *pShader, IMaterialVar** params, 
 					SET_STATIC_PIXEL_SHADER_COMBO( PHONG, hasPhong );
 					SET_STATIC_PIXEL_SHADER( lightmappedgeneric_ps30 );
 				}
-				#endif
 
 				// HACK HACK HACK - enable alpha writes all the time so that we have them for
 				// underwater stuff and writing depth to dest alpha
@@ -849,9 +820,6 @@ void DrawLightmappedGeneric_DX9( CBaseVSShader *pShader, IMaterialVar** params, 
 		{
 			// need to regenerate the semistatic cmds
 			pContextData->m_SemiStaticCmdsOut.Reset();
-#ifdef _PS3
-			pContextData->m_flashlightECB.Reset();
-#endif
 			pContextData->m_bMaterialVarsChanged = false;
 			
 			// If we don't have a texture transform, we don't have
@@ -1177,43 +1145,6 @@ void DrawLightmappedGeneric_DX9( CBaseVSShader *pShader, IMaterialVar** params, 
 				envmapTintVal[2] = 0.0f;
 			}
 
-			if ( hasFlashlight && ( IsX360() || IsPS3() ) )
-			{
-#ifdef _PS3
-				{
-					pContextData->m_flashlightECB.SetVertexShaderFlashlightState( VERTEX_SHADER_SHADER_SPECIFIC_CONST_6 );
-				}
-#endif
-				if( IsX360())
-				{
-					pContextData->m_SemiStaticCmdsOut.SetVertexShaderFlashlightState( VERTEX_SHADER_SHADER_SPECIFIC_CONST_6 );
-				}
-
-				CBCmdSetPixelShaderFlashlightState_t state;
-				state.m_LightSampler = SHADER_SAMPLER13;
-				state.m_DepthSampler = SHADER_SAMPLER14;
-				state.m_ShadowNoiseSampler = SHADER_SAMPLER15;
-				state.m_nColorConstant = 28;
-				state.m_nAttenConstant = 13;
-				state.m_nOriginConstant = 14;
-				state.m_nDepthTweakConstant = 19;
-				state.m_nScreenScaleConstant = 31;
-				state.m_nWorldToTextureConstant = -1;
-				state.m_bFlashlightNoLambert = false;
-				state.m_bSinglePassFlashlight = bSinglePassFlashlight;
-
-#ifdef _PS3
-				{
-					pContextData->m_flashlightECB.SetPixelShaderFlashlightState( state );
-					pContextData->m_flashlightECB.End();
-				}
-#else
-
-				{
-					pContextData->m_SemiStaticCmdsOut.SetPixelShaderFlashlightState( state );
-				}
-#endif
-			}
 
 			// phong
 			if ( hasPhong )
@@ -1272,16 +1203,9 @@ void DrawLightmappedGeneric_DX9( CBaseVSShader *pShader, IMaterialVar** params, 
 	DYNAMIC_STATE
 	{
 
-#ifdef _PS3
-		CCommandBufferBuilder< CDynamicCommandStorageBuffer > DynamicCmdsOut;
-		ShaderApiFast( pShaderAPI )->ExecuteCommandBuffer( pContextData->m_pStaticCmds );
-		ShaderApiFast( pShaderAPI )->ExecuteCommandBuffer( pContextData->m_SemiStaticCmdsOut.Base() );
-		if (hasFlashlight) ShaderApiFast( pShaderAPI )->ExecuteCommandBufferPPU( pContextData->m_flashlightECB.Base() );
-#else
 		CCommandBufferBuilder< CFixedCommandStorageBuffer< 1000 > > DynamicCmdsOut;
 		DynamicCmdsOut.Call( pContextData->m_pStaticCmds );
 		DynamicCmdsOut.Call( pContextData->m_SemiStaticCmdsOut.Base() );
-#endif
 
 		bool hasEnvmap = params[info.m_nEnvmap]->IsTexture();
 
@@ -1302,7 +1226,7 @@ void DrawLightmappedGeneric_DX9( CBaseVSShader *pShader, IMaterialVar** params, 
 		}
 
 		bool bWorldNormal = ( nFixedLightingMode == ENABLE_FIXED_LIGHTING_OUTPUTNORMAL_AND_DEPTH );
-		if ( bWorldNormal && IsPC() )
+		if ( bWorldNormal )
 		{
 			float vEyeDir[4];
 			ShaderApiFast( pShaderAPI )->GetWorldSpaceCameraDirection( vEyeDir );
@@ -1316,7 +1240,6 @@ void DrawLightmappedGeneric_DX9( CBaseVSShader *pShader, IMaterialVar** params, 
 
 		MaterialFogMode_t fogType = ShaderApiFast( pShaderAPI )->GetSceneFogMode();
 
-#if !defined( _X360 ) && !defined( _PS3 )
 		if ( g_pHardwareConfig->SupportsPixelShaders_3_0() )
 		{
 			DECLARE_DYNAMIC_VERTEX_SHADER( lightmappedgeneric_vs30 );
@@ -1324,7 +1247,6 @@ void DrawLightmappedGeneric_DX9( CBaseVSShader *pShader, IMaterialVar** params, 
 			SET_DYNAMIC_VERTEX_SHADER_CMD( DynamicCmdsOut, lightmappedgeneric_vs30 );
 		}
 		else
-#endif
 		{
 			DECLARE_DYNAMIC_VERTEX_SHADER( lightmappedgeneric_vs20 );
 			SET_DYNAMIC_VERTEX_SHADER_COMBO( FASTPATH,  bVertexShaderFastPath );
@@ -1373,20 +1295,13 @@ void DrawLightmappedGeneric_DX9( CBaseVSShader *pShader, IMaterialVar** params, 
 
 		bool bFlashlightShadows = false;
 		bool bUberlight = false;
-		if( hasFlashlight && ( IsX360() || IsPS3() ) )
+		// only do ambient light when not using flashlight
+		float vAmbientColor[4] = { mat_ambient_light_r.GetFloat(), mat_ambient_light_g.GetFloat(), mat_ambient_light_b.GetFloat(), 0.0f };
+		if ( g_pConfig->nFullbright == 1 )
 		{
-			ShaderApiFast( pShaderAPI )->GetFlashlightShaderInfo( &bFlashlightShadows, &bUberlight );
+			vAmbientColor[0] = vAmbientColor[1] = vAmbientColor[2] = 0.0f;
 		}
-		else
-		{
-			// only do ambient light when not using flashlight
-			float vAmbientColor[4] = { mat_ambient_light_r.GetFloat(), mat_ambient_light_g.GetFloat(), mat_ambient_light_b.GetFloat(), 0.0f };
-			if ( g_pConfig->nFullbright == 1 )
-			{
-				vAmbientColor[0] = vAmbientColor[1] = vAmbientColor[2] = 0.0f;
-			}
-			DynamicCmdsOut.SetPixelShaderConstant( 31, vAmbientColor, 1 );
-		}
+		DynamicCmdsOut.SetPixelShaderConstant( 31, vAmbientColor, 1 );
 
 		/* Time - used for debugging
 		float vTimeConst[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
@@ -1397,7 +1312,6 @@ void DrawLightmappedGeneric_DX9( CBaseVSShader *pShader, IMaterialVar** params, 
 
 		float envmapContrast = params[info.m_nEnvmapContrast]->GetFloatValue();
 		
-#if !defined( _X360 ) && !defined( _PS3 )
 		if ( g_pHardwareConfig->SupportsPixelShaders_3_0() )
 		{
 			BOOL bCSMEnabled = pShaderAPI->IsCascadedShadowMapping() && !ToolsEnabled() && !(g_pConfig->nFullbright == 1);
@@ -1424,20 +1338,8 @@ void DrawLightmappedGeneric_DX9( CBaseVSShader *pShader, IMaterialVar** params, 
 			SET_DYNAMIC_PIXEL_SHADER_CMD( DynamicCmdsOut, lightmappedgeneric_ps30 );
 		}
 		else
-#endif
 		if ( g_pHardwareConfig->SupportsPixelShaders_2_b() )
 		{
-			if ( IsGameConsole() && pShaderAPI->IsCascadedShadowMapping() )
-			{
-				ITexture *pDepthTextureAtlas = NULL;
-				const CascadedShadowMappingState_t &cascadeState = pShaderAPI->GetCascadedShadowMappingState( &pDepthTextureAtlas, true );
-
-				if (pDepthTextureAtlas)
-				{
-					DynamicCmdsOut.BindTexture( pShader, SHADER_SAMPLER15, TEXTURE_BINDFLAGS_SHADOWDEPTH, pDepthTextureAtlas, 0 );
-                    DynamicCmdsOut.SetPixelShaderConstant( 64, &cascadeState.m_vLightColor.x, CASCADED_SHADOW_MAPPING_CONSTANT_BUFFER_SIZE );
-				}
-           }
 
 			DECLARE_DYNAMIC_PIXEL_SHADER( lightmappedgeneric_ps20b );
 			SET_DYNAMIC_PIXEL_SHADER_COMBO( FASTPATH, bFastPath );
@@ -1463,14 +1365,11 @@ void DrawLightmappedGeneric_DX9( CBaseVSShader *pShader, IMaterialVar** params, 
 		}
 
 		DynamicCmdsOut.End();
-#ifdef _PS3
-		ShaderApiFast( pShaderAPI )->SetPixelShaderFogParams( 11 );
-#endif 
 		ShaderApiFast( pShaderAPI )->ExecuteCommandBuffer( DynamicCmdsOut.Base() );
 	}
 	pShader->Draw();
 
-	if( IsPC() && (IS_FLAG_SET( MATERIAL_VAR_ALPHATEST ) != 0) && pContextData->m_bFullyOpaqueWithoutAlphaTest )
+	if( (IS_FLAG_SET( MATERIAL_VAR_ALPHATEST ) != 0) && pContextData->m_bFullyOpaqueWithoutAlphaTest )
 	{
 		//Alpha testing makes it so we can't write to dest alpha
 		//Writing to depth makes it so later polygons can't write to dest alpha either

@@ -72,29 +72,6 @@ float GetAlpha( BYTE byte )
 }
 
 
-#if !defined( LINUX )
-// draw a surface in random color
-void DebugDrawSurface( SurfaceHandle_t surfID )
-{
-	Color surfColor = Color( RandomInt(0, 255), RandomInt(0, 255), RandomInt(0, 255), 128 );
-
-	// check if the sphere actually intersecting with the surface using barycentric test
-	int nFirstVertex = MSurf_FirstVertIndex( surfID );
-	int numVert = MSurf_VertCount( surfID );
-
-	int vertIndex = host_state.worldbrush->vertindices[nFirstVertex];
-	Vector vOrigin = host_state.worldbrush->vertexes[vertIndex].position;
-	for (int v = 1; v < numVert - 1; ++v )
-	{
-		vertIndex = host_state.worldbrush->vertindices[nFirstVertex+v];
-		Vector v1 = host_state.worldbrush->vertexes[vertIndex].position;
-		vertIndex = host_state.worldbrush->vertindices[nFirstVertex+v+1];
-		Vector v2 = host_state.worldbrush->vertexes[vertIndex].position;
-	
-		CDebugOverlay::AddTriangleOverlay( vOrigin, v1, v2, surfColor.r(), surfColor.g(), surfColor.b(), 128, false, 0.1f );
-	}
-}
-#endif
 
 extern MaterialSystem_SortInfo_t *materialSortInfoArray;
 
@@ -1137,62 +1114,6 @@ void ProjectPointOntoSurfaceTexture( const SurfaceCtx_t& ctx, SurfaceHandle_t su
 
 bool ComputePaintRect( SurfaceHandle_t surfID, const Vector &vPosition, float flSphereRadius, PaintRect_t& paintRect )
 {
-#if !defined( LINUX )
-	// find dist from plane
-	VPlane forwardFacingPlane = MSurf_GetForwardFacingPlane( surfID );
-	float distFromPlane = forwardFacingPlane.DistTo( vPosition );
-	AssertMsg( distFromPlane < flSphereRadius, "How did this surface intersect with the query sphere?" );
-
-	float circleRadius = FastSqrt( flSphereRadius * flSphereRadius - distFromPlane * distFromPlane );
-
-	SurfaceCtx_t ctx;
-	SurfSetupSurfaceContext( ctx, surfID );
-	Vector2D uvCenter, uvExtents;
-	{
-		ProjectPointOntoSurfaceTexture( ctx, surfID, vPosition, uvCenter );
-		mtexinfo_t *pTexInfo = MSurf_TexInfo( surfID );
-		uvExtents.x = circleRadius * pTexInfo->lightmapVecsLuxelsPerWorldUnits[0].AsVector3D().Length();
-		uvExtents.y = circleRadius * pTexInfo->lightmapVecsLuxelsPerWorldUnits[1].AsVector3D().Length();
-	}
-
-	Assert( uvExtents.x > 0 && uvExtents.y > 0 );
-
-	Vector2D uvMins, uvMaxs;
-	uvMins = uvCenter - uvExtents;
-	uvMaxs = uvCenter + uvExtents;
-
-	int sOffset = MSurf_OffsetIntoLightmapPage( surfID )[0];
-	int tOffset = MSurf_OffsetIntoLightmapPage( surfID )[1];
-	int sMax = ( MSurf_LightmapExtents( surfID )[0] );
-	int tMax = ( MSurf_LightmapExtents( surfID )[1] );
-
-	if ( ( sOffset <= uvMaxs.x && uvMins.x <= sOffset + sMax ) && ( tOffset <= uvMaxs.y && uvMins.y <= tOffset + tMax ) )
-	{
-		// init paintRect
-		float flRoundedCircleRadius = floor( fpmax( uvExtents.x, uvExtents.y ) + 0.5f );
-		int surfWidth = sMax + 1;
-		int surfHeight = tMax + 1;
-
-		paintRect.flCenterAlpha = distFromPlane / flSphereRadius;
-		paintRect.flCircleRadius = flRoundedCircleRadius;
-		paintRect.uvCenter = uvCenter;
-		paintRect.surfID = surfID;
-
-		int startX = MAX( ( int )( uvCenter.x - flRoundedCircleRadius - 0.5f ), sOffset );
-		int startY = MAX( ( int )( uvCenter.y - flRoundedCircleRadius - 0.5f ), tOffset );
-		int endX = MIN( ( int )( uvCenter.x + flRoundedCircleRadius + 0.5f ), sOffset + surfWidth );
-		int endY = MIN( ( int )( uvCenter.y + flRoundedCircleRadius + 0.5f ), tOffset + surfHeight );
-		Rect_t rect;
-		rect.x = startX;
-		rect.y = startY;
-		rect.width = endX - startX;
-		rect.height = endY - startY;
-
-		paintRect.rect = rect;
-
-		return ( rect.width > 0 && rect.height > 0 );
-	}
-#endif
 
 	return false;
 }
@@ -1602,27 +1523,3 @@ void R_RedownloadAllPaintmaps()
 }
 
 
-#if 0
-CON_COMMAND_F( dump_paintmaps, "dump paintmap data to \"paintmap_#.txt\"", FCVAR_CHEAT )
-{
-	for ( int i=0; i<g_PaintManager.m_iPaintmaps; ++i )
-	{
-		char filename[64];
-		V_snprintf( filename, sizeof(filename), "paintmap_%i.txt", i );
-
-		CUtlBuffer buf;
-		const BYTE *pData = g_PaintManager.GetPaintmapData(i);
-		int w,h;
-		g_PaintManager.GetPaintmapSize( i, w, h );
-		int size = w*h;
-		for ( int b=0; b<size; ++b)
-		{
-			buf.PutChar( pData[b] );
-		}
-
-		g_pFullFileSystem->WriteFile( filename, NULL, buf );
-
-		buf.Purge();
-	}
-}
-#endif

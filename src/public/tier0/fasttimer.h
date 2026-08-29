@@ -13,15 +13,11 @@
 
 #include <assert.h>
 #include "tier0/platform.h"
-#ifdef _PS3
-#include "sys/sys_time.h"
-#else
 inline uint64 sys_time_get_timebase_frequency()
 {
 	DebuggerBreak(); // Error("sys_time_get_timebase_frequency called on non-PS3 platform.");
 	return 1; // this function should never ever be called.
 }
-#endif
 
 PLATFORM_INTERFACE uint64 g_ClockSpeed;
 PLATFORM_INTERFACE unsigned long g_dwClockSpeed;
@@ -86,16 +82,6 @@ public:
 	{
 		const CPUInformation& pi = GetCPUInformation();
 
-		if ( IsX360() )
-		{
-			// cycle counter runs as doc'd at 1/64 Xbox 3.2GHz clock speed, thus 50 Mhz
-			g_ClockSpeed = pi.m_Speed / 64L;
-		}
-		else if ( IsPS3() )
-		{
-			g_ClockSpeed = sys_time_get_timebase_frequency(); // CPU clock rate is totally unrelated to time base register frequency on PS3
-		}
-		else
 		{
 			g_ClockSpeed = pi.m_Speed;
 		}
@@ -399,16 +385,6 @@ inline void CFastTimer::End()
 {
 	CCycleCount cnt;
 	cnt.Sample();
-	if ( IsX360() )
-	{
-		// have to handle rollover, hires timer is only accurate to 32 bits
-		// more than one overflow should not have occurred, otherwise caller should use a slower timer
-		if ( (uint64)cnt.m_Int64 <= (uint64)m_Duration.m_Int64 )
-		{
-			// rollover occurred	
-			cnt.m_Int64 += 0x100000000LL;	
-		}
-	}
 
 	m_Duration.m_Int64 = cnt.m_Int64 - m_Duration.m_Int64;
 
@@ -421,16 +397,6 @@ inline CCycleCount CFastTimer::GetDurationInProgress() const
 {
 	CCycleCount cnt;
 	cnt.Sample();
-	if ( IsX360() )
-	{
-		// have to handle rollover, hires timer is only accurate to 32 bits
-		// more than one overflow should not have occurred, otherwise caller should use a slower timer
-		if ( (uint64)cnt.m_Int64 <= (uint64)m_Duration.m_Int64 )
-		{
-			// rollover occurred	
-			cnt.m_Int64 += 0x100000000LL;	
-		}
-	}
 
 	CCycleCount result;
 	result.m_Int64 = cnt.m_Int64 - m_Duration.m_Int64;

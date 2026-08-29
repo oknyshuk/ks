@@ -51,14 +51,10 @@ IVBAllocTracker *g_VBAllocTracker = 0;
 IColorCorrectionSystem *colorcorrection = 0;
 IP4 *p4 = 0;
 IMdlLib *mdllib = 0;
-IQueuedLoader *g_pQueuedLoader = 0;
 IResourceAccessControl *g_pResourceAccessControl = 0;
 IPrecacheSystem *g_pPrecacheSystem = 0;
 ISceneSystem *g_pSceneSystem = 0;
 
-#if defined( PLATFORM_X360 )
-IXboxInstaller *g_pXboxInstaller = 0;
-#endif
 
 IMatchFramework *g_pMatchFramework = 0;
 IGameUISystemMgr *g_pGameUISystemMgr = 0;
@@ -79,12 +75,6 @@ IMeshSystem *g_pMeshSystem = 0;
 IStudioRender *g_pStudioRender = 0;
 IStudioRender *studiorender = 0;
 IMatSystemSurface *g_pMatSystemSurface = 0;
-vgui::IInput *g_pVGuiInput = 0;
-vgui::ISurface *g_pVGuiSurface = 0;
-vgui::IPanel *g_pVGuiPanel = 0;
-vgui::IVGui	*g_pVGui = 0;
-vgui::ISchemeManager *g_pVGuiSchemeManager = 0;
-vgui::ISystem *g_pVGuiSystem = 0;
 IDataCache *g_pDataCache = 0;
 IMDLCache *g_pMDLCache = 0;
 IMDLCache *mdlcache = 0;
@@ -132,17 +122,10 @@ static InterfaceGlobals_t g_pInterfaceGlobals[] =
 	{ COLORCORRECTION_INTERFACE_VERSION, &colorcorrection },
 	{ P4_INTERFACE_VERSION, &p4 },
 	{ MDLLIB_INTERFACE_VERSION, &mdllib },
-	{ QUEUEDLOADER_INTERFACE_VERSION, &g_pQueuedLoader },
 	{ RESOURCE_ACCESS_CONTROL_INTERFACE_VERSION, &g_pResourceAccessControl },
 	{ PRECACHE_SYSTEM_INTERFACE_VERSION, &g_pPrecacheSystem },
 	{ STUDIO_RENDER_INTERFACE_VERSION, &g_pStudioRender },
 	{ STUDIO_RENDER_INTERFACE_VERSION, &studiorender },
-	{ VGUI_IVGUI_INTERFACE_VERSION, &g_pVGui },
-	{ VGUI_INPUT_INTERFACE_VERSION, &g_pVGuiInput },
-	{ VGUI_PANEL_INTERFACE_VERSION, &g_pVGuiPanel },
-	{ VGUI_SURFACE_INTERFACE_VERSION, &g_pVGuiSurface },
-	{ VGUI_SCHEME_INTERFACE_VERSION, &g_pVGuiSchemeManager },
-	{ VGUI_SYSTEM_INTERFACE_VERSION, &g_pVGuiSystem },
 	{ LOCALIZE_INTERFACE_VERSION, &g_pLocalize },
 	{ MAT_SYSTEM_SURFACE_INTERFACE_VERSION, &g_pMatSystemSurface },
 	{ DATACACHE_INTERFACE_VERSION, &g_pDataCache },
@@ -160,9 +143,6 @@ static InterfaceGlobals_t g_pInterfaceGlobals[] =
 	{ WORLD_RENDERER_MGR_INTERFACE_VERSION, &g_pWorldRendererMgr },
 	{ RENDER_SYSTEM_SURFACE_INTERFACE_VERSION, &g_pVGuiRenderSurface },
 
-#if defined( _X360 )
-	{ XBOXINSTALLER_INTERFACE_VERSION, &g_pXboxInstaller },
-#endif
 
 	{ MATCHFRAMEWORK_INTERFACE_VERSION, &g_pMatchFramework },
 	{ GAMEUISYSTEMMGR_INTERFACE_VERSION, &g_pGameUISystemMgr },

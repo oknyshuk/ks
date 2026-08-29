@@ -17,11 +17,6 @@
 #include <bitbuf.h>
 #include "usermessages.h"
 
-namespace vgui
-{
-	class IScheme;
-	class Panel;
-}
 
 // basic rectangle struct used for drawing
 typedef struct wrect_s

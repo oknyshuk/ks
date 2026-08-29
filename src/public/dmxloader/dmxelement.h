@@ -106,9 +106,6 @@ struct DmxElementUnpackStructure_t
 #define DMXELEMENT_UNPACK_BASECLASS_NAMESPACE( _namespace, _structName, _baseClass ) \
 	{ "Baseclass unpack", "", AT_TYPE_COUNT, size_cast< int >((intp) static_cast< _baseClass * >( (_structName*)0)), 0, NO_BIT_OFFSET, NOT_A_BITFIELD, NO_USER_DATA, #_baseClass, DmxElementUnpackInit##_namespace<_baseClass>( (_baseClass *)0 ), NOT_AN_ARRAY },
 
-#define VGUI_UNPACK_BASEPANEL() \
-	DMXELEMENT_UNPACK_BASECLASS_NAMESPACE( vgui, DestStructType_t, DestStructType_t::BaseClass ) \
-
 #define DMXELEMENT_UNPACK_FIELD( _attributeName, _defaultString, _type, _varName )	\
 	{ _attributeName, _defaultString, CDmAttributeInfo<_type>::AttributeType(), offsetof( DestStructType_t, _varName ), sizeof( ((DestStructType_t *)0)->_varName), NO_BIT_OFFSET, NOT_A_BITFIELD, NO_USER_DATA, NO_EMBEDDED_TYPENAME, NO_EMBEDDED_STRUCT_PTR, NOT_AN_ARRAY },
 // Use for preallocated char array
@@ -169,26 +166,12 @@ struct DmxElementUnpackStructure_t
 //	template <typename T> friend DmxElementUnpackStructure_t *DmxElementUnpackInit##_namespace(T *);
 
 // Adds serialization unpack structure and unpack func to your class.
-#if defined( _PS3 ) && defined( __GCC__ )
-#define DECLARE_DMXELEMENT_UNPACK_NAMESPACE( _namespace ) \
-	template <typename T> friend DmxElementUnpackStructure_t *_namespace::DmxElementUnpackInit##_namespace(T *); \
-	private: \
-		static DmxElementUnpackStructure_t *s_pUnpackParams; \
-	public:	 \
-		virtual const DmxElementUnpackStructure_t* GetUnpackStructure() const { return s_pUnpackParams; }
-#else
 #define DECLARE_DMXELEMENT_UNPACK_NAMESPACE( _namespace ) \
 	template <typename T> friend DmxElementUnpackStructure_t *DmxElementUnpackInit##_namespace(T *); \
 	private: \
 		static DmxElementUnpackStructure_t *s_pUnpackParams; \
 	public:	 \
 		virtual const DmxElementUnpackStructure_t* GetUnpackStructure() const { return s_pUnpackParams; }
-#endif
-
-// Use when your panel class is derived from another baseclass
-#define BEGIN_DMXELEMENT_UNPACK_NAMESPACE_SIMPLE( _namespace, _structName ) \
-	BEGIN_DMXELEMENT_UNPACK_NAMESPACE( _namespace, _structName )  \
-	VGUI_UNPACK_BASEPANEL() \
 
 // Use when  your panel class has no base class
 #define BEGIN_DMXELEMENT_UNPACK_NAMESPACE_SIMPLE_NO_BASE( _namespace, _structName ) \

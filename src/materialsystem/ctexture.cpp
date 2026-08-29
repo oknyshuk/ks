@@ -46,7 +46,6 @@
 #include "pixelwriter.h"
 #include "tier1/callqueue.h"
 #include "tier1/UtlStringMap.h"
-#include "filesystem/IQueuedLoader.h"
 #include "tier2/fileutils.h"
 #include "filesystem.h"
 #include "tier2/tier2.h"
@@ -520,7 +519,6 @@ public:
 	
 	virtual void DeleteIfUnreferenced();
 
-	void FixupTexture( const void *pData, int nSize, LoaderError_t loaderError );
 
 	void SwapContents( ITexture *pOther );
 
@@ -626,43 +624,6 @@ public:
 		temp.depthHandle = INVALID_SHADERAPI_TEXTURE_HANDLE;
 		temp.bHasSeparateDepth = (depth == MATERIAL_RT_DEPTH_SEPARATE) || (depth == MATERIAL_RT_DEPTH_ONLY);
 
-		if( IsX360() )
-		{
-			if( HasBeenAllocated() )
-			{
-				//need to initialize these handles now
-				extern int GetCreationFlags( int iTextureFlags, int iInternalTextureFlags, ImageFormat fmt ); //defined about 1000 lines down where it makes more logical sense to be
-				int nCreateFlags = GetCreationFlags( m_nFlags, m_nInternalFlags, m_ImageFormat );
-
-				// For depth only render target: adjust texture width/height
-				// Currently we just leave it the same size, will update with further testing
-				int nShaderApiCreateTextureDepth = ( ( m_nFlags & TEXTUREFLAGS_DEPTHRENDERTARGET ) && ( m_nOriginalRenderTargetType == RENDER_TARGET_ONLY_DEPTH ) ) ? 1 : m_nActualDepth;
-
-				
-				// Create all animated texture frames in a single call
-				g_pShaderAPI->CreateTextures(
-					&temp.handle, 1,
-					m_nActualWidth / iDownsizePow2, m_nActualHeight / iDownsizePow2, nShaderApiCreateTextureDepth, m_ImageFormat, m_nActualMipCount,
-					1, nCreateFlags, GetName(), GetTextureGroupName() );
-
-				// Create the depth render target buffer
-				if ( temp.bHasSeparateDepth )
-				{
-					MEM_ALLOC_CREDIT();
-
-					char debugName[128];
-					sprintf( debugName, "%s_ZBuffer", GetName() );
-
-					temp.depthHandle = g_pShaderAPI->CreateDepthTexture( 
-						m_ImageFormat, 
-						m_nActualWidth / iDownsizePow2, 
-						m_nActualHeight / iDownsizePow2,
-						debugName,
-						( m_nOriginalRenderTargetType == RENDER_TARGET_ONLY_DEPTH ) );
-				}
-			}
-		}
-		else
 		{
 			Assert( HasBeenAllocated() );
 		}
@@ -895,16 +856,6 @@ public:
 
 		Assert( m_pTextureHandles && m_nFrameCount >= 1 );
 
-		if ( IsX360() &&
-			( m_nInternalFlags & TEXTUREFLAGSINTERNAL_TEMPRENDERTARGET ) &&
-			!HasBeenAllocated() )
-		{
-			//need to create the texture bits now
-			//to avoid creating the texture bits previously, we simply skipped this step
-			if ( !AllocateShaderAPITextures() )
-				return;
-		}
-
 		if ( m_pTextureHandles && m_nFrameCount >= 1 )
 		{
 			g_pShaderAPI->CopyRenderTargetToTextureEx( m_Targets[m_nActiveTarget].handle, nRenderTargetID, pSrcRect, pDstRect );
@@ -1077,7 +1028,6 @@ protected:
 public:
 	virtual void DeleteIfUnreferenced();
 
-	void FixupTexture( const void *pData, int nSize, LoaderError_t loaderError ) { NULL; }
 
 	void SwapContents( ITexture *pOther ) { NULL; }
 
@@ -1412,7 +1362,7 @@ IVTFTexture *CTexture::GetScratchVTFAsyncTexture()
 int CTexture::GetOptimalReadBuffer( FileHandle_t hFile, int nSize, CUtlBuffer &optimalBuffer )
 {
 	// get an optimal read buffer, only resize if necessary
-	int minSize = IsGameConsole() ? 0 : 2 * 1024 * 1024;	// 360 has no min, PC uses 2MB min to avoid fragmentation
+	int minSize = false ? 0 : 2 * 1024 * 1024;	// 360 has no min, PC uses 2MB min to avoid fragmentation
 	nSize = MAX(nSize, minSize);
 	int nBytesOptimalRead = g_pFullFileSystem->GetOptimalReadSize( hFile, nSize );
 	if ( nBytesOptimalRead > s_nOptimalReadBufferSize )
@@ -1603,11 +1553,6 @@ void CTexture::InitRenderTarget(
 		++nFrameCount;
 	}
 
-	if ( IsX360() )
-	{
-		// 360 RT needs its coupled surface, expected at [nFrameCount-1]
-		++nFrameCount;
-	}
 
 	if ( renderTargetFlags & CREATERENDERTARGETFLAGS_TEMP )
 	{
@@ -1639,7 +1584,7 @@ void CTexture::OnRestore()
 { 
 	// May have to change whether or not we have a depth buffer.
 	// Are we a render target?
-	if ( IsPC() && ( m_nFlags & TEXTUREFLAGS_RENDERTARGET ) )
+	if ( ( m_nFlags & TEXTUREFLAGS_RENDERTARGET ) )
 	{
 		// Did they not ask for a depth buffer?
 		if ( m_nOriginalRenderTargetType == RENDER_TARGET )
@@ -1824,53 +1769,6 @@ int GetCreationFlags( int iTextureFlags, int iInternalTextureFlags, ImageFormat 
 		nCreateFlags |= TEXTURE_CREATE_VERTEXTEXTURE;
 	}
 
-	if ( IsGameConsole() )
-	{
-		if ( iInternalTextureFlags & TEXTUREFLAGSINTERNAL_QUEUEDLOAD )
-		{
-			// queued load, no d3d bits until data arrival
-			nCreateFlags |= TEXTURE_CREATE_NOD3DMEMORY;
-		}
-		if ( iInternalTextureFlags & TEXTUREFLAGSINTERNAL_REDUCED )
-		{
-			// propagate this information
-			nCreateFlags |= TEXTURE_CREATE_REDUCED;
-		}
-		if ( iInternalTextureFlags & TEXTUREFLAGSINTERNAL_ERROR )
-		{
-			// propagate this information
-			nCreateFlags |= TEXTURE_CREATE_ERROR;
-		}
-		if ( iInternalTextureFlags & ( TEXTUREFLAGSINTERNAL_SHOULDEXCLUDE | TEXTUREFLAGSINTERNAL_SHOULDTEMPEXCLUDE ) )
-		{
-			// propagate this information
-			nCreateFlags |= TEXTURE_CREATE_EXCLUDED;
-		}
-
-		if ( IsPS3() )
-		{
-			if ( iTextureFlags & TEXTUREFLAGS_PROCEDURAL )
-			{
-				nCreateFlags |= TEXTURE_CREATE_DYNAMIC;
-			}
-		}
-
-		if ( IsX360() )
-		{
-			if ( iTextureFlags & TEXTUREFLAGS_PROCEDURAL )
-			{
-				nCreateFlags |= TEXTURE_CREATE_CANCONVERTFORMAT;
-			}
-			if ( iTextureFlags & TEXTUREFLAGS_PWL_CORRECTED )
-			{
-				nCreateFlags |= TEXTURE_CREATE_PWLCORRECTED;
-			}
-			if ( iInternalTextureFlags & TEXTUREFLAGSINTERNAL_CACHEABLE )
-			{
-				nCreateFlags |= TEXTURE_CREATE_CACHEABLE;
-			}
-		}
-	}
 
 	return nCreateFlags;
 }
@@ -1895,7 +1793,7 @@ bool CTexture::AllocateShaderAPITextures()
 		// create the depth texture below	
 		// nCount must be 2 on pc/ps3, must be 3 on 360
 		if ( ( m_nFlags & TEXTUREFLAGS_DEPTHRENDERTARGET ) &&
-			 ( ( ( IsPC() || IsPS3() ) && (nCount == 2)) || (IsX360() && (nCount == 3)) ) )
+			 ( nCount == 2 ) )
 		{
 			--nCount;
 		}
@@ -1915,22 +1813,6 @@ bool CTexture::AllocateShaderAPITextures()
 		}
 	}
 
-	if ( IsGameConsole() )
-	{
-		if ( IsX360() && ( m_nFlags & TEXTUREFLAGS_RENDERTARGET ) )
-		{
-			// 360 render targets allocates one additional handle for optional EDRAM surface
-			--nCount;
-			m_pTextureHandles[m_nFrameCount - 1] = INVALID_SHADERAPI_TEXTURE_HANDLE; 
-		}
-
-		if ( m_nInternalFlags & TEXTUREFLAGSINTERNAL_QUEUEDLOAD )
-		{
-			// Artificially increment reference count (per frame) to ensure
-			// a queued texture stays resident until it's wholly finalized.
-			m_nRefCount += nCount;
-		}
-	}	
 								   
 	// For depth only render target: adjust texture width/height
 	// Currently we just leave it the same size, will update with further testing
@@ -2020,23 +1902,10 @@ ImageFormat CTexture::ComputeActualFormat( ImageFormat srcFormat )
 		return dstFormat;
 	}
 
-	if ( IsGameConsole() && ( srcFormat == IMAGE_FORMAT_A8 ) )
-	{
-		// these are the right alpha formats for xbox
-		return IMAGE_FORMAT_A8;
-	}
 
 	// NOTE: Below this piece of code is only called when compressed textures are
 	// turned off, or if the source texture is not compressed.
 
-#ifdef DX_TO_GL_ABSTRACTION
-	if ( ( srcFormat == IMAGE_FORMAT_UVWQ8888 ) || ( srcFormat == IMAGE_FORMAT_UV88 ) || ( srcFormat == IMAGE_FORMAT_UVLX8888 )  )
-	{
-		// Danger, this is going to blow up on the Mac.  You better know what you're
-		// doing with these exotic formats...which were introduced in 1999
-		Assert( 0 );
-	}
-#endif
 
 	// We use the TEXTUREFLAGS_EIGHTBITALPHA and TEXTUREFLAGS_ONEBITALPHA flags
 	// to decide how many bits of alpha we need; vtex checks the alpha channel
@@ -2046,11 +1915,7 @@ ImageFormat CTexture::ComputeActualFormat( ImageFormat srcFormat )
 		( srcFormat == IMAGE_FORMAT_RGBA16161616F ) || ( srcFormat == IMAGE_FORMAT_RGBA32323232F ) ||
 		( srcFormat == IMAGE_FORMAT_R32F ) )
 	{
-#ifdef DX_TO_GL_ABSTRACTION		
-		dstFormat = g_pShaderAPI->GetNearestSupportedFormat( srcFormat, false );  // Stupid HACK!
-#else
 		dstFormat = g_pShaderAPI->GetNearestSupportedFormat( srcFormat, true );  // Stupid HACK!
-#endif
 	} 
 	else if ( m_nFlags & ( TEXTUREFLAGS_EIGHTBITALPHA | TEXTUREFLAGS_ONEBITALPHA ) )
 	{
@@ -2108,7 +1973,7 @@ int CTexture::ComputeActualMipCount() const
 
 	// If on the PC and running a newer OS than WinXP, then don't drop mips.
 	// XP can crash if we run out of paged pool memory since each mip consumes ~1kb of paged pool memory.
-	#if defined( WIN32 ) && !defined( _GAMECONSOLE )
+	#if defined( WIN32 )
 	{
 		OSVERSIONINFOEX osvi;
 		ZeroMemory( &osvi, sizeof( OSVERSIONINFOEX ) );
@@ -2124,27 +1989,14 @@ int CTexture::ComputeActualMipCount() const
 	}
 	#endif
 
-	if ( IsX360() )
-	{
-		bForceTextureAllMips  = true;
-	}
 
 	bool bIsFlashlightTextureOnGL = false;
-#ifdef DX_TO_GL_ABSTRACTION
-	 // Hack to only recognize the border bit (for the purposes of truncating the mip chain) on "flashlight" textures on Mac
-	const char *pTexName = m_Name.String();
-	bIsFlashlightTextureOnGL =  ( m_nFlags & TEXTUREFLAGS_BORDER ) && V_stristr( pTexName, "flashlight" );
-#endif
 	
 	// If we are not loading all mips, then count the number of mips we want to load
 	if ( ( !IsOpenGL() && !bForceTextureAllMips ) || bMostMips || bIsFlashlightTextureOnGL )
 	{
 		// Stop loading mips when width or height is < 32
 		int nMaxMipSize = 32; // Default for windows XP
-		if ( IsPS3() )
-		{
-			nMaxMipSize = 4;
-		}
 
 		if ( bMostMips )
 		{
@@ -2190,78 +2042,75 @@ int CTexture::ComputeActualSize( bool bIgnorePicmip, IVTFTexture *pVTFTexture )
 	// Fetch clamping dimensions from special LOD control settings block
 	// or runtime texture lod override.
 	//
-	if ( IsPC() )
+	// Fetch LOD settings from the VTF if available
+	TextureLODControlSettings_t lcs;
+	memset( &lcs, 0, sizeof( lcs ) );
+	TextureLODControlSettings_t const *pLODInfo = NULL;
+	if ( pVTFTexture )
 	{
-		// Fetch LOD settings from the VTF if available
-		TextureLODControlSettings_t lcs;
-		memset( &lcs, 0, sizeof( lcs ) );
-		TextureLODControlSettings_t const *pLODInfo = NULL;
-		if ( pVTFTexture )
-		{
-			pLODInfo = reinterpret_cast<TextureLODControlSettings_t const *> (
-					pVTFTexture->GetResourceData( VTF_RSRC_TEXTURE_LOD_SETTINGS, NULL ) );
-			if ( pLODInfo )
-				lcs = *pLODInfo;
-		}
-
-		// Prepare the default LOD settings (that essentially result in no clamping)
-		TextureLODControlSettings_t default_lod_settings;
-		memset( &default_lod_settings, 0, sizeof( default_lod_settings ) );
-		{
-			for ( int w = m_nActualWidth; w > 1; w >>= 1 )
-				  ++ default_lod_settings.m_ResolutionClampX;
-			for ( int h = m_nActualHeight; h > 1; h >>= 1 )
-				  ++ default_lod_settings.m_ResolutionClampY;
-		}
-
-		// Check for LOD control override
-		{
-			TextureLodOverride::OverrideInfo oi = TextureLodOverride::Get( GetName() );
-			
-			if ( oi.x && oi.y && !pLODInfo )	// If overriding texture that doesn't have lod info yet, then use default
-				lcs = default_lod_settings;
-
-			lcs.m_ResolutionClampX += oi.x;
-			lcs.m_ResolutionClampY += oi.y;
-			if ( int8( lcs.m_ResolutionClampX ) < 0 )
-				lcs.m_ResolutionClampX = 0;
-			if ( int8( lcs.m_ResolutionClampY ) < 0 )
-				lcs.m_ResolutionClampY = 0;
-		}
-
-		// Compute the requested mip0 dimensions
-		if ( lcs.m_ResolutionClampX && lcs.m_ResolutionClampY )
-		{
-			nClampX = (1 << lcs.m_ResolutionClampX );
-			nClampY = (1 << lcs.m_ResolutionClampY );
-		}
-
-		// Check for exclude settings
-		{
-			int iExclude = TextureLodExclude::Get( GetName() );
-			if ( iExclude > 0 )
-			{
-				// Mip request by exclude rules
-				nClampX = MIN( iExclude, nClampX );
-				nClampY = MIN( iExclude, nClampY );
-			}
-			else if ( iExclude == 0 )
-			{
-				// Texture should be excluded completely
-				// we cannot actually exclude it, we need
-				// to clamp it down to 4x4 for dxt to work.
-				// The texture will never be loaded when honoring
-				// the real exclude list rules.
-				nClampX = MIN( 4, nClampX );
-				nClampY = MIN( 4, nClampY );
-			}
-		}
-
-		// In case clamp values exceed texture dimensions, then fix up
-		// the clamping values
-		nClampX = MIN( nClampX, m_nActualWidth );
-		nClampY = MIN( nClampY, m_nActualHeight );
+		pLODInfo = reinterpret_cast<TextureLODControlSettings_t const *> (
+				pVTFTexture->GetResourceData( VTF_RSRC_TEXTURE_LOD_SETTINGS, NULL ) );
+		if ( pLODInfo )
+			lcs = *pLODInfo;
 	}
+
+	// Prepare the default LOD settings (that essentially result in no clamping)
+	TextureLODControlSettings_t default_lod_settings;
+	memset( &default_lod_settings, 0, sizeof( default_lod_settings ) );
+	{
+		for ( int w = m_nActualWidth; w > 1; w >>= 1 )
+			  ++ default_lod_settings.m_ResolutionClampX;
+		for ( int h = m_nActualHeight; h > 1; h >>= 1 )
+			  ++ default_lod_settings.m_ResolutionClampY;
+	}
+
+	// Check for LOD control override
+	{
+		TextureLodOverride::OverrideInfo oi = TextureLodOverride::Get( GetName() );
+		
+		if ( oi.x && oi.y && !pLODInfo )	// If overriding texture that doesn't have lod info yet, then use default
+			lcs = default_lod_settings;
+
+		lcs.m_ResolutionClampX += oi.x;
+		lcs.m_ResolutionClampY += oi.y;
+		if ( int8( lcs.m_ResolutionClampX ) < 0 )
+			lcs.m_ResolutionClampX = 0;
+		if ( int8( lcs.m_ResolutionClampY ) < 0 )
+			lcs.m_ResolutionClampY = 0;
+	}
+
+	// Compute the requested mip0 dimensions
+	if ( lcs.m_ResolutionClampX && lcs.m_ResolutionClampY )
+	{
+		nClampX = (1 << lcs.m_ResolutionClampX );
+		nClampY = (1 << lcs.m_ResolutionClampY );
+	}
+
+	// Check for exclude settings
+	{
+		int iExclude = TextureLodExclude::Get( GetName() );
+		if ( iExclude > 0 )
+		{
+			// Mip request by exclude rules
+			nClampX = MIN( iExclude, nClampX );
+			nClampY = MIN( iExclude, nClampY );
+		}
+		else if ( iExclude == 0 )
+		{
+			// Texture should be excluded completely
+			// we cannot actually exclude it, we need
+			// to clamp it down to 4x4 for dxt to work.
+			// The texture will never be loaded when honoring
+			// the real exclude list rules.
+			nClampX = MIN( 4, nClampX );
+			nClampY = MIN( 4, nClampY );
+		}
+	}
+
+	// In case clamp values exceed texture dimensions, then fix up
+	// the clamping values
+	nClampX = MIN( nClampX, m_nActualWidth );
+	nClampY = MIN( nClampY, m_nActualHeight );
 
 	//
 	// Honor dimension limit restrictions
@@ -2280,61 +2129,6 @@ int CTexture::ComputeActualSize( bool bIgnorePicmip, IVTFTexture *pVTFTexture )
 		nDimensionLimit = 0;
 	}
 
-	if ( IsGameConsole() )
-	{
-		// limiting large textures 
-		static int s_nMaxDimensionLimit = 0;
-		if ( !s_nMaxDimensionLimit )
-		{
-			bool bNo256 = ( CommandLine()->FindParm( "-no256" ) != 0 );
-			bool bNo512 = ( CommandLine()->FindParm( "-no512" ) != 0 );
-			bool bNo1024 = CommandLine()->FindParm( "-no1024" ) && !CommandLine()->FindParm( "-allow1024" );
-			if ( bNo256 )
-			{
-				s_nMaxDimensionLimit = 128;
-			}
-			else if ( bNo512 )
-			{
-				s_nMaxDimensionLimit = 256;
-			}
-			else if ( g_pFullFileSystem->IsDVDHosted() || bNo1024 )
-			{
-				s_nMaxDimensionLimit = 512;
-			}
-			else
-			{
-				s_nMaxDimensionLimit = 1024;
-			}
-		}
-		if ( nDimensionLimit > 0 )
-		{
-			nDimensionLimit = MIN( nDimensionLimit, s_nMaxDimensionLimit );
-		}
-		else if ( !( m_nFlags & (TEXTUREFLAGS_NOLOD|TEXTUREFLAGS_NOMIP|TEXTUREFLAGS_PROCEDURAL|TEXTUREFLAGS_RENDERTARGET|TEXTUREFLAGS_DEPTHRENDERTARGET) ) )
-		{
-			nDimensionLimit = s_nMaxDimensionLimit;
-		}
-	}
-	else if ( IsPlatformOSX() )
-	{
-		// limiting large textures on OSX to 1024, override with -allow2048 on cl
-		static int s_nMaxDimensionLimit = 0;
-
-		if (!s_nMaxDimensionLimit)
-		{
-			bool bAllow2048 = !!CommandLine()->FindParm( "-allow2048" );
-
-			if ( !bAllow2048 && !( m_nFlags & (TEXTUREFLAGS_NOLOD | TEXTUREFLAGS_NOMIP | TEXTUREFLAGS_PROCEDURAL | TEXTUREFLAGS_RENDERTARGET | TEXTUREFLAGS_DEPTHRENDERTARGET) ) )
-			{
-				s_nMaxDimensionLimit = 1024;
-			}
-		}
-
-		if ( !( m_nFlags & (TEXTUREFLAGS_NOLOD | TEXTUREFLAGS_NOMIP | TEXTUREFLAGS_PROCEDURAL | TEXTUREFLAGS_RENDERTARGET | TEXTUREFLAGS_DEPTHRENDERTARGET) ) )
-		{
-			nDimensionLimit = s_nMaxDimensionLimit;
-		}
-	}
 
 	// Special case: If the top mipmap level is <= 128KB, and the width is really wide (2048), and its height is <= 64, and we know it's mipmapped, then allow one axis to be > 1024, otherwise just restrict to 1024.
 	// This purposely convoluted logic is useful on things like the confetti particle effect's texture (used in sp_a2_column_blocker), which is 2048x64, and is very noticeable when it's cut down to 1024x32.
@@ -2676,7 +2470,6 @@ bool CTexture::DownloadAsyncTexture( AsyncTextureContext_t *pContext, void *pSou
 		return true;
 	
 	Assert( m_nFlags & TEXTUREFLAGS_ASYNC_DOWNLOAD );
-	Assert( !IsGameConsole() );
 	Assert( !IsRenderTarget() );
 	Assert( !IsTempRenderTarget() );
 	Assert( !IsProcedural() );
@@ -2837,15 +2630,7 @@ bool CTexture::SetRenderTarget( int nRenderTargetID, ITexture *pDepthTexture )
 	Assert( HasBeenAllocated() );
 
 	ShaderAPITextureHandle_t textureHandle;
-	if ( !IsX360() )
-	{
-		textureHandle = m_pTextureHandles[0];
-	}
-	else
-	{
-		Assert( m_nFrameCount > 1 );
-		textureHandle = m_pTextureHandles[m_nFrameCount-1];
-	}
+	textureHandle = m_pTextureHandles[0];
 
 	ShaderAPITextureHandle_t depthTextureHandle = (ShaderAPITextureHandle_t)SHADER_RENDERTARGET_DEPTHBUFFER;
 
@@ -3015,12 +2800,6 @@ unsigned int CTexture::GetFlags() const
 
 void CTexture::ForceLODOverride( int iNumLodsOverrideUpOrDown )
 {
-	if ( IsGameConsole() )
-	{
-		// not supporting
-		Assert( 0 );
-		return;
-	}
 
 	TextureLodOverride::OverrideInfo oi( iNumLodsOverrideUpOrDown, iNumLodsOverrideUpOrDown );
 	TextureLodOverride::Add( GetName(), oi );
@@ -3029,11 +2808,6 @@ void CTexture::ForceLODOverride( int iNumLodsOverrideUpOrDown )
 
 void CTexture::ForceExcludeOverride( int iExcludeOverride )
 {
-	if ( IsGameConsole() )
-	{
-		Assert( 0 );
-		return;
-	}
 
 	TextureLodExclude::Add( GetName(), iExcludeOverride );
 	Download( NULL );
@@ -3069,11 +2843,6 @@ void CTexture::SetFilteringAndClampingMode()
 		return;
 
 	int nCount = m_nFrameCount;
-	if ( IsX360() && IsRenderTarget() )
-	{
-		// 360 render targets have a reserved surface
-		nCount--;
-	}
 
 	for ( int iFrame = 0; iFrame < nCount; ++iFrame )
 	{
@@ -3102,11 +2871,6 @@ void CTexture::Precache()
 	if ( !Q_strnicmp( m_Name.String(), "env_cubemap", 12 ))
 		return;
 	
-	if ( IsGameConsole() && m_nFlags )
-	{
-		// 360 can be assured that precaching has already been done
-		return;
-	}
 
 	IVTFTexture *pVTFTexture = GetScratchVTFTexture();
 
@@ -3535,11 +3299,6 @@ void CTexture::CopyLowResImageToTexture( IVTFTexture *pTexture )
 //-----------------------------------------------------------------------------
 bool CTexture::SetupDebuggingTextures( IVTFTexture *pVTFTexture )
 {
-	if ( IsGameConsole() )
-	{
-		// not supporting
-		return false;
-	}
 
 	if ( pVTFTexture->Flags() & TEXTUREFLAGS_NODEBUGOVERRIDE )
 		return false;
@@ -3589,21 +3348,12 @@ bool CTexture::ConvertToActualFormat( IVTFTexture *pVTFTexture )
 
 	ImageFormat fmt = m_ImageFormat;
 	ImageFormat dstFormat = ComputeActualFormat( pVTFTexture->Format() );
-#ifdef PLATFORM_OSX
-	if ( IsVolumeTexture() && ImageLoader::IsCompressed( dstFormat ) )
-	{
-		// OSX does not support compressed 3d textures
-		dstFormat = IMAGE_FORMAT_RGBA8888;
-	}
-#endif
 	if ( fmt != dstFormat )
 	{
-		Assert( !IsGameConsole() );
 		pVTFTexture->ConvertImageFormat( dstFormat, false );
 		m_ImageFormat = dstFormat;
 		bConverted = true;
 	}
-#ifndef _PS3
 	// No reason to do this conversion on PS3
 	else if ( HardwareConfig()->GetHDRType() == HDR_TYPE_INTEGER &&
 		     fmt == dstFormat && dstFormat == IMAGE_FORMAT_RGBA16161616F )
@@ -3613,7 +3363,6 @@ bool CTexture::ConvertToActualFormat( IVTFTexture *pVTFTexture )
 		pVTFTexture->ConvertImageFormat( IMAGE_FORMAT_RGBA16161616F, false );
 		bConverted = true;
 	}
-#endif // !_PS3
 
 	return bConverted;
 }
@@ -3658,14 +3407,9 @@ IVTFTexture *CTexture::LoadTexttureBitsFromFileOrData( void *pSourceData, int nS
 	const char *pName;
 	if (m_nInternalFlags & TEXTUREFLAGSINTERNAL_SHOULDEXCLUDE)
 	{
-#if !defined( _CERT )
 		// excluded texture should not be visible, want these to be found during testing
 		// use the green checkerboard
 		pName = "dev/dev_exclude_error";
-#else
-		// for shipping (in case it happens) better to use the version meant for momentary rendering
-		pName = "dev/dev_temp_exclude";
-#endif
 	}
 	else if ((m_nInternalFlags & TEXTUREFLAGSINTERNAL_SHOULDTEMPEXCLUDE) && m_nDesiredTempDimensionLimit <= 0)
 	{
@@ -3751,10 +3495,6 @@ IVTFTexture *CTexture::LoadTextureBitsFromFile( char *pCacheFileName, char **ppR
 		{
 			if ( !StringHasPrefix( m_Name.String(), "env_cubemap" ) )
 			{
-				if ( IsOSX() )
-				{
-					printf("\n ##### CTexture::LoadTextureBitsFromFile couldn't find %s",pCacheFileName );
-				}
 				DevWarning( "\"%s\": can't be found on disk\n", pCacheFileName );
 			}
 			return HandleFileLoadFailedTexture( pVTFTexture );
@@ -4005,26 +3745,6 @@ void CTexture::GetDownloadFaceCount( int &nFirstFace, int &nFaceCount )
 	}
 }
 
-//-----------------------------------------------------------------------------
-// Fixup a queue loaded texture with the delayed hi-res data
-//-----------------------------------------------------------------------------
-void CTexture::FixupTexture( const void *pData, int nSize, LoaderError_t loaderError )
-{
-	if ( loaderError != LOADERERROR_NONE )
-	{
-		// mark as invalid
-		nSize = 0;
-	}
-
-	m_nInternalFlags &= ~TEXTUREFLAGSINTERNAL_QUEUEDLOAD;
-
-	// Make sure we've actually allocated the texture handles
-	Assert( HasBeenAllocated() );
-}
-static void QueuedLoaderCallback( void *pContext, void *pContext2, const void *pData, int nSize, LoaderError_t loaderError )
-{
-	reinterpret_cast< CTexture * >( pContext )->FixupTexture( pData, nSize, loaderError );
-}
 
 //-----------------------------------------------------------------------------
 // Generates the procedural bits
@@ -4052,11 +3772,6 @@ IVTFTexture *CTexture::ReconstructPartialProceduralBits( const Rect_t *pRect, Re
 	// It must bound all partially-covered pixels..
 	ComputeMipLevelSubRect( pRect, nMipSkipCount, pActualRect );
 
-	if ( IsGameConsole() && !IsDebug() && !m_pTextureRegenerator )
-	{
-		// no checkerboards in 360 release
-		return NULL;
-	}
 
 	bool bUsePreallocatedScratchTexture = m_pTextureRegenerator && m_pTextureRegenerator->HasPreallocatedScratchTexture();
 	
@@ -4107,11 +3822,6 @@ void CTexture::ReconstructPartialTexture( const Rect_t *pRect )
 			return;
 	}
 
-	if ( IsGameConsole() && !pVTFTexture )
-	{
-		// 360 inhibited procedural generation
-		return;
-	}
 
 	int nFaceCount, nFirstFace;
 	GetDownloadFaceCount( nFirstFace, nFaceCount );
@@ -4261,11 +3971,8 @@ void CTexture::ReconstructTexture( void *pSourceData, int nSourceDataSize )
 		}
 
 		// Create the shader api textures, except temp render targets on 360.
-		if ( !( IsX360() && IsTempRenderTarget() ) )
-		{
-			if ( !AllocateShaderAPITextures() )
-				return;
-		}
+		if ( !AllocateShaderAPITextures() )
+			return;
 	}
 
 	// Render Targets just need to be cleared, they have no upload
@@ -4299,7 +4006,7 @@ void CTexture::ReconstructTexture( void *pSourceData, int nSourceDataSize )
 
 	// the 360 does not persist a large buffer
 	// the pc can afford to persist a large buffer
-	FreeOptimalReadBuffer( IsGameConsole() ? 32*1024 : 6*1024*1024 );
+	FreeOptimalReadBuffer( false ? 32*1024 : 6*1024*1024 );
 }
 
 // Get the shaderapi texture handle associated w/ a particular frame
@@ -4397,16 +4104,6 @@ void CTexture::CopyFrameBufferToMe( int nRenderTargetID, Rect_t *pSrcRect, Rect_
 {
 	Assert( m_pTextureHandles && m_nFrameCount >= 1 );
 
-	if ( IsX360() &&
-		( m_nInternalFlags & TEXTUREFLAGSINTERNAL_TEMPRENDERTARGET ) &&
-		!HasBeenAllocated() )
-	{
-		//need to create the texture bits now
-		//to avoid creating the texture bits previously, we simply skipped this step
-		if ( !AllocateShaderAPITextures() )
-			return;
-	}
-
 	if ( m_pTextureHandles && m_nFrameCount >= 1 )
 	{
 		g_pShaderAPI->CopyRenderTargetToTextureEx( m_pTextureHandles[0], nRenderTargetID, pSrcRect, pDstRect );
@@ -4416,16 +4113,6 @@ void CTexture::CopyFrameBufferToMe( int nRenderTargetID, Rect_t *pSrcRect, Rect_
 void CTexture::CopyMeToFrameBuffer( int nRenderTargetID, Rect_t *pSrcRect, Rect_t *pDstRect )
 {
 	Assert( m_pTextureHandles && m_nFrameCount >= 1 );
-
-	if ( IsX360() &&
-		( m_nInternalFlags & TEXTUREFLAGSINTERNAL_TEMPRENDERTARGET ) &&
-		!HasBeenAllocated() )
-	{
-		//need to create the texture bits now
-		//to avoid creating the texture bits previously, we simply skipped this step
-		if ( !AllocateShaderAPITextures() )
-			return;
-	}
 
 	if ( m_pTextureHandles && m_nFrameCount >= 1 )
 	{
@@ -4792,7 +4479,7 @@ bool CTexture::ScheduleExcludeAsyncDownload()
 		}
 
 		// all 360 files are expected to be in zip, no need to search outside of zip
-		g_pFullFileSystem->RelativePathToFullPath( cacheFileName, MaterialSystem()->GetForcedTextureLoadPathID(), fullPath, sizeof( fullPath ), ( IsX360() ? FILTER_CULLNONPACK : FILTER_NONE ) );
+		g_pFullFileSystem->RelativePathToFullPath( cacheFileName, MaterialSystem()->GetForcedTextureLoadPathID(), fullPath, sizeof( fullPath ), ( false ? FILTER_CULLNONPACK : FILTER_NONE ) );
 		bool bExists = V_IsAbsolutePath( fullPath );
 		if ( !bExists )
 		{

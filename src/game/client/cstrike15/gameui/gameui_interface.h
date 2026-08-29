@@ -13,11 +13,7 @@
 
 #include "convar.h"
 
-#if defined(_PS3)
-	#define BACKGROUND_MUSIC_FILENAME "gamestartup.ps3.wav"
-#else
 	#define BACKGROUND_MUSIC_FILENAME "mainmenu.mp3"
-#endif
 
 #define MAX_BACKGROUND_MUSIC 3
 
@@ -89,9 +85,6 @@ public:
 
  	virtual void SetProgressOnStart();
  
-#if defined( _GAMECONSOLE ) && defined( _DEMO )
-	virtual void OnDemoTimeout();
-#endif
 
  	// state
  	bool IsInLevel();
@@ -129,7 +122,6 @@ public:
 #endif // PANORAMA_ENABLE 
 
 private:
-	void SendConnectedToGameMessage();
 
 	virtual void StartProgressBar();
 	virtual bool ContinueProgressBar(float progressFraction, bool showDialog = true );

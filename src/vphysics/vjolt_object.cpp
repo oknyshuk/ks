@@ -699,9 +699,7 @@ void JoltPhysicsObject::SetShadow( float maxSpeed, float maxAngularSpeed, bool a
 	}
 	else
 	{
-#if 1
 		m_bShadowTemporarilyDisableGravity = false;
-#endif
 
 		m_pShadowController = static_cast<JoltPhysicsShadowController *>( m_pEnvironment->CreateShadowController( this, allowPhysicsMovement, allowPhysicsRotation ) );
 		m_pShadowController->MaxSpeed( maxSpeed, maxAngularSpeed );
@@ -712,14 +710,12 @@ void JoltPhysicsObject::UpdateShadow( const Vector &targetPosition, const QAngle
 {
 	if ( m_pShadowController )
 	{
-#if 1
 		if ( tempDisableGravity != m_bShadowTemporarilyDisableGravity )
 		{
 			m_bShadowTemporarilyDisableGravity = tempDisableGravity;
 			if ( !m_pShadowController || m_pShadowController->AllowsTranslation() )
 				EnableGravity( !m_bShadowTemporarilyDisableGravity );
 		}
-#endif
 		m_pShadowController->Update( targetPosition, targetAngles, timeOffset );
 	}
 }

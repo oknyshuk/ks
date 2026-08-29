@@ -261,9 +261,7 @@ void CCommandLine::CreateCmdLine( const char *commandline )
 	m_pszCmdLine = new char[len];
 	memcpy( m_pszCmdLine, szFull, len );
 
-#if defined( POSIX )
 	Plat_SetCommandLine( m_pszCmdLine );
-#endif
 
 	ParseCommandLine();
 }

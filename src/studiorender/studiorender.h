@@ -22,7 +22,7 @@
 #include "flexrenderdata.h"
 #include "mathlib/compressed_vector.h"
 #include "r_studiolight.h"
-#if defined( _WIN32 ) && !defined( _X360 )
+#if defined( _WIN32 )
 #include <xmmintrin.h>
 #endif
 #include "tier0/dbg.h"
@@ -265,18 +265,16 @@ public:
 	// Performs the lighting computation
 	inline void R_ComputeLightAtPoint3( const Vector &pos, const Vector &norm, Vector &color );
 
-#if defined( _WIN32 ) && !defined( _X360 )
+#if defined( _WIN32 )
 	// sse-ized lighting pipeline. lights 4 vertices at once
 	inline void R_ComputeLightAtPoints3( const FourVectors &pos, const FourVectors &norm, FourVectors &color );
 	void R_MouthLighting( __m128 fIllum, const FourVectors& normal, const FourVectors& forward, FourVectors& light );
 #endif
 
-#ifndef _CERT
 	void GatherRenderedFaceInfo( IStudioRender::FaceInfoCallbackFunc_t pFunc );
 	
 	// Spew per-model-per-frame 'faces rendered' counters:
 	void UpdateModelFaceCounts( int nNumToSpew = 0, bool bClearHistory = 0 );
-#endif // _CERT
 
 	int GetForcedMaterialOverrideIndex( int nMaterialIndex );
 
@@ -732,15 +730,9 @@ private:
 	CUtlFixedLinkedList< DecalLRU_t > m_DecalLRU;
 
 	FlashlightState_t *m_pCurrentFlashlight;
-#if !defined( LINUX )
-	// Vectors of Vector4D's for CPU-side subdivision surface processing
-	CUtlVector< fltx4, CUtlMemoryAligned<fltx4, 16> > m_vSkinnedSubDVertices;
-#endif
 
-#ifndef _CERT
 	// Each model counts how many rendered faces it accounts for each frame:
 	CUtlHash< studiohwdata_t * > m_ModelFaceCountHash;
-#endif // !_CERT
 
 	friend class CGlintTextureRegenerator;
 	friend struct mstudiomodel_t;
@@ -872,27 +864,17 @@ public:
 		switch (nLightType)	
 		{
 			case MATERIAL_LIGHT_POINT:
-#if 1
 				// half-lambert
 				dot = DotProduct( snormal, delta );
 				if (dot < 0.f)
 					return 0.f;
-#else
-				dot = DotProduct( snormal, delta ) * 0.5 + 0.5;
-				dot = dot * dot;
-#endif
 				return dot;
 
 			case MATERIAL_LIGHT_SPOT:
-#if 1
 				// half-lambert
 				dot = DotProduct( snormal, delta );
 				if (dot < 0.)
 					return 0.f;
-#else
-				dot = DotProduct( snormal, delta ) * 0.5 + 0.5;
-				dot = dot * dot;
-#endif
 
  				dot2 = -DotProduct (delta, lnormal);
 				if (dot2 <= wl->m_PhiDot)
@@ -913,15 +895,10 @@ public:
 				return ratio;
 
 			case MATERIAL_LIGHT_DIRECTIONAL:
-#if 1
 				// half-lambert
 				dot2 = -DotProduct( snormal, lnormal );
 				if (dot2 < 0.f)
 					return 0.f;
-#else
-				dot2 = -DotProduct( snormal, lnormal ) * 0.5 + 0.5;
-				dot2 = dot2 * dot2;
-#endif
 				return dot2;
 
 			case MATERIAL_LIGHT_DISABLE:
@@ -929,10 +906,6 @@ public:
 
 			NO_DEFAULT;
 		} 
-#ifdef _PS3
-		Assert( false ); // PS3 doesn't have true __assume (used in NO_DEFAULT), so a return value is expected
-		return 0.0f;
-#endif
 	}
 };
 
@@ -979,10 +952,6 @@ public:
 
 			NO_DEFAULT;
 		} 
-#ifdef _PS3
-		Assert( false ); // PS3 doesn't have true __assume (used in NO_DEFAULT), so a return value is expected
-		return 0.0f;
-#endif
 	}
 };
 
@@ -996,10 +965,6 @@ inline float CStudioRender::R_WorldLightAngle( const LightDesc_t *wl, const Vect
 		case MATERIAL_LIGHT_SPOT:			return CWorldLightAngleWrapper<MATERIAL_LIGHT_SPOT>::WorldLightAngle( wl, lnormal, snormal, delta );
 		NO_DEFAULT;
 	}
-#ifdef _PS3
-	Assert( false ); // PS3 doesn't have true __assume (used in NO_DEFAULT), so a return value is expected
-	return 0.0f;
-#endif
 }
 
 

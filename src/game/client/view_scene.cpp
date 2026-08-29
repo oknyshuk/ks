@@ -33,19 +33,6 @@ int g_nRefractUpdatePortalRender = 0;
 
 bool g_bAllowMultipleRefractUpdatesPerScenePerFrame = false;
 
-#if defined( _GAMECONSOLE )
-class CAllowMultipleRefractsLogic : public CAutoGameSystem
-{
-public:
-	void LevelInitPreEntity()
-	{
-		// EP1 core room needs many refract updates per frame to avoid looking broken (ep1_citadel_03)
-		// Same with Kleiner's lab (d1_trainstation_05)
-		g_bAllowMultipleRefractUpdatesPerScenePerFrame = FStrEq( MapName(), "ep1_citadel_03" ) || FStrEq( MapName(), "d1_trainstation_05" );
-	}
-};
-static CAllowMultipleRefractsLogic s_AllowMultipleRefractsLogic;
-#endif
 
 void ViewTransform( const Vector &worldSpace, Vector &viewSpace )
 {
@@ -104,11 +91,6 @@ void UpdateFullScreenDepthTexture( void )
 	Rect_t viewportRect;
 	pRenderContext->GetViewport( viewportRect.x, viewportRect.y, viewportRect.width, viewportRect.height );
 
-	if ( IsGameConsole() )
-	{	
-		pRenderContext->CopyRenderTargetToTextureEx( pDepthTex, -1, &viewportRect, &viewportRect );
-	}
-	else
 	{
 		pRenderContext->CopyRenderTargetToTextureEx( pDepthTex, -1, NULL, NULL );
 	}
@@ -120,11 +102,8 @@ void UpdateFullScreenDepthTexture( void )
 		IMaterial *pMaterial = materials->FindMaterial( "debug/showz", TEXTURE_GROUP_OTHER, true );
 		IMaterialVar *BaseTextureVar = pMaterial->FindVar( "$basetexture", NULL, false );
 		IMaterialVar *pDepthInAlpha = NULL;
-		if( IsPC() )
-		{
-			pDepthInAlpha = pMaterial->FindVar( "$ALPHADEPTH", NULL, false );
-			pDepthInAlpha->SetIntValue( 1 );
-		}
+		pDepthInAlpha = pMaterial->FindVar( "$ALPHADEPTH", NULL, false );
+		pDepthInAlpha->SetIntValue( 1 );
 		
 		BaseTextureVar->SetTextureValue( pDepthTex );
 

@@ -1534,9 +1534,7 @@ bool C_BasePlayer::CreateMove( float flInputSampleTime, CUserCmd *pCmd )
 	}
 	else 
 	{
-#ifndef _GAMECONSOLE
 		if ( joy_autosprint.GetBool() )
-#endif
 		{
 			if ( input->KeyState( &in_joyspeed ) != 0.0f )
 			{
@@ -1802,14 +1800,6 @@ bool C_BasePlayer::ShouldInterpolate()
 bool C_BasePlayer::ShouldDraw()
 {
 	// $FIXME(hpe) this was returning false in splitscreen mode making 2nd player invisible
-#if defined (_GAMECONSOLE) && defined ( CSTRIKE15 )
-	ConVarRef ss_enable( "ss_enable" );
-	if ( ss_enable.GetInt() > 0 )
-	{
-		return ( IsLocalSplitScreenPlayer() || this != GetSplitScreenViewPlayer() || C_BasePlayer::ShouldDrawLocalPlayer() || (GetObserverMode() == OBS_MODE_DEATHCAM ) ) &&
-			   BaseClass::ShouldDraw();
-	}
-#endif
 	return ( this != GetSplitScreenViewPlayer() || C_BasePlayer::ShouldDrawLocalPlayer() || (GetObserverMode() == OBS_MODE_DEATHCAM ) ) &&
 		   BaseClass::ShouldDraw();
 }
@@ -2740,13 +2730,6 @@ void C_BasePlayer::SetSuitUpdate(const char *name, int fgroup, int iNoRepeat)
 //-----------------------------------------------------------------------------
 void C_BasePlayer::ResetAutoaim( void )
 {
-#if 0
-	if (m_vecAutoAim.x != 0 || m_vecAutoAim.y != 0)
-	{
-		m_vecAutoAim = QAngle( 0, 0, 0 );
-		engine->CrosshairAngle( edict(), 0, 0 );
-	}
-#endif
 	m_fOnTarget = false;
 }
 
@@ -2939,7 +2922,7 @@ float C_BasePlayer::GetFOV( void ) const
 	IClientVehicle *pVehicle = const_cast< C_BasePlayer * >(this)->GetVehicle();
 	if ( pVehicle )
 	{
-		if ( IsX360() == false )
+		if ( false == false )
 			const_cast< C_BasePlayer * >(this)->CacheVehicleView();
 
 		flDefaultFOV = ( m_flVehicleViewFOV == 0 ) ? GetDefaultFOV() : m_flVehicleViewFOV;
@@ -3143,37 +3126,6 @@ void C_BasePlayer::LeaveVehicle( void )
 		return;
 
 // Let server do this for now
-#if 0
-	IClientVehicle *pVehicle = GetVehicle();
-	Assert( pVehicle );
-
-	int nRole = pVehicle->GetPassengerRole( this );
-	Assert( nRole != VEHICLE_ROLE_NONE );
-
-	SetParent( NULL );
-
-	// Find the first non-blocked exit point:
-	Vector vNewPos = GetAbsOrigin();
-	QAngle qAngles = GetAbsAngles();
-	pVehicle->GetPassengerExitPoint( nRole, &vNewPos, &qAngles );
-	OnVehicleEnd( vNewPos );
-	SetAbsOrigin( vNewPos );
-	SetAbsAngles( qAngles );
-
-	m_Local.m_iHideHUD &= ~HIDEHUD_WEAPONSELECTION;
-	RemoveEffects( EF_NODRAW );
-
-	SetMoveType( MOVETYPE_WALK );
-	SetCollisionGroup( COLLISION_GROUP_PLAYER );
-
-	qAngles[ROLL] = 0;
-	SnapEyeAngles( qAngles );
-
-	m_hVehicle = NULL;
-	pVehicle->SetPassenger(nRole, NULL);
-
-	Weapon_Switch( m_hLastWeapon );
-#endif
 }
 
 
@@ -3633,16 +3585,12 @@ bool C_BasePlayer::GetSteamID( CSteamID *pID )
 
 		if ( pi.friendsID && steamapicontext && steamapicontext->SteamUtils() )
 		{
-#if 1	// new
 			static EUniverse universe = k_EUniverseInvalid;
 
 			if ( universe == k_EUniverseInvalid )
 				universe = steamapicontext->SteamUtils()->GetConnectedUniverse();
 
 			pID->InstancedSet( pi.friendsID, 1, universe, k_EAccountTypeIndividual );
-#else	// old
-			pID->InstancedSet( pi.friendsID, 1, steamapicontext->SteamUtils()->GetConnectedUniverse(), k_EAccountTypeIndividual );
-#endif
 
 			return true;
 		}

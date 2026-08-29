@@ -761,10 +761,8 @@ bool BotPhraseManager::Initialize( const char *filename, int bankIndex )
 				}
 				speak->m_place = placeCriteria;
 				speak->m_count = countCriteria;
-#ifdef POSIX
 				Q_FixSlashes( speak->m_phrase );
 				Q_strlower( speak->m_phrase );
-#endif
 
 #if defined( CSTRIKE15 )
 				// cstrike15 doesn't use bot chatter this way, the system redirects to RR, so no need to do anything other than slam this

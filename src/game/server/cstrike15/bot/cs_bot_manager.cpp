@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
+//========= Copyright ï¿½ 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -44,7 +44,7 @@ int UTIL_CSSBotsInGame( void );
 ConVar bot_join_delay( "bot_join_delay", "0", FCVAR_GAMEDLL, "Prevents bots from joining the server for this many seconds after a map change." );
 ConVar bot_join_in_warmup( "bot_join_in_warmup", "1", FCVAR_GAMEDLL, "Prevents bots from joining the server while warmup phase is active." );
 
-ConVar throttle_expensive_ai( "throttle_expensive_ai", IsGameConsole() ? "1" : "0" );
+ConVar throttle_expensive_ai( "throttle_expensive_ai", "0" );
 
 extern ConVar mp_guardian_target_site;
 /**
@@ -437,15 +437,7 @@ void CCSBotManager::ServerActivate( void )
 
 	TheBotProfiles->Reset();
 	TheBotProfiles->FindVoiceBankIndex( "BotChatter.db" ); // make sure default voice bank is first
-	const char *filename;
-	if ( false ) // g_engfuncs.pfnIsCareerMatch() )
-	{
-		filename = "MissionPacks/BotPackList.db";
-	}
-	else
-	{
-		filename = "BotPackList.db";
-	}
+	const char *filename = "BotPackList.db";
 
 	// read in the list of bot profile DBs
 	FileHandle_t file = filesystem->Open( filename, "r" );
@@ -976,45 +968,6 @@ CON_COMMAND_F( bot_goto_selected, "Sends a bot to the selected nav area (useful 
 }
 
 //--------------------------------------------------------------------------------------------------------------
-#if 0
-CON_COMMAND_F( bot_memory_usage, "Reports on the bots' memory usage", FCVAR_GAMEDLL )
-{
-	if ( !UTIL_IsCommandIssuedByServerAdmin() )
-		return;
-
-	Msg( "Memory usage:\n" );
-
-	Msg( "  %d bytes per bot\n", sizeof(CCSBot) );
-
-	Msg( "  %d Navigation Areas @ %d bytes each = %d bytes\n", 
-					TheNavMesh->GetNavAreaCount(),
-					sizeof( CNavArea ),
-					TheNavMesh->GetNavAreaCount() * sizeof( CNavArea ) );
-
-	Msg( "  %d Hiding Spots @ %d bytes each = %d bytes\n", 
-					TheHidingSpotList.Count(),
-					sizeof( HidingSpot ),
-					TheHidingSpotList.Count() * sizeof( HidingSpot ) );
-
-/*
-	unsigned int encounterMem = 0;
-	FOR_EACH_LL( TheNavAreaList, it )
-	{
-		CNavArea *area = TheNavAreaList[ it ];
-
-		FOR_EACH_LL( area->m_spotEncounterList, it )
-		{
-			SpotEncounter *se = area->m_spotEncounterList[ it ];
-
-			encounterMem += sizeof( SpotEncounter );
-			encounterMem += se->spotList.Count() * sizeof( SpotOrder );
-		}
-	}
-
-	Msg( "  Encounter Spot data = %d bytes\n", encounterMem );
-*/
-}
-#endif
 
 
 bool CCSBotManager::ServerCommand( const char *cmd )
@@ -1037,11 +990,6 @@ bool CCSBotManager::BotAddCommand( int team, bool isFromConsole, const char *pro
 	if ( !TheNavMesh->IsLoaded() )
 	{
 		// [msmith] We don't want to run nav mesh generation if we're on a console.
-		if ( IsGameConsole() )
-		{
-			DevWarning("Cannot add bot!  No nav mesh found for this map!");
-			return false;
-		}
 
 		// If there isn't a Navigation Mesh in memory, create one
 		if ( !TheNavMesh->IsGenerating() )

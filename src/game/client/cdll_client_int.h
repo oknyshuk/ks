@@ -91,9 +91,7 @@ extern ISceneFileCache *scenefilecache;
 extern IAvi *avi;
 extern IBik *bik;
 extern IUploadGameStats *gamestatsuploader;
-#ifndef NO_STEAM
 extern CSteamAPIContext *steamapicontext;
-#endif
 extern ISoundEmitterSystemBase *soundemitterbase;
 
 #if defined( CSTRIKE15 )
@@ -322,8 +320,6 @@ inline bool IsLocalSplitScreenPlayer( void ) { return IsLocalSplitScreenPlayer( 
 // Returns XBX_GetUserId( GET_ACTIVE_SPLITSCREEN_SLOT() )
 int XBX_GetActiveUserId();
 
-#ifndef _PS3
 #define XBX_GetPrimaryUserId() _Use_XBX_GetActiveUserId_Instead
-#endif
 
 #endif // CDLL_CLIENT_INT_H

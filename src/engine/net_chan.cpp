@@ -18,11 +18,7 @@
 #include "replay.h"
 #include "datacache/imdlcache.h"
 #include "tier0/vprof.h"
-#if defined( _X360 )
-#endif
-#ifdef POSIX
 #include "net_ws_headers.h"									// need SOCKET
-#endif
 #include "net_ws_queued_packet_sender.h"
 #include "download.h"
 #include "filesystem_init.h"
@@ -95,9 +91,7 @@ void LogMultiline(bool input, char const *label, const char * data, size_t len) 
 }
 
 // Want this on PC and non-cert builds
-#if !defined( _GAMECONSOLE ) || !defined( _CERT )
 #define NET_PARANOID_DUMPS
-#endif
 
 #if defined( NET_PARANOID_DUMPS )
 class CNetchanParanoidMode
@@ -1906,7 +1900,6 @@ void CNetChan::UpdateSubChannels()
 	}
 }
 
-#if 1
 
 unsigned short BufferToShortChecksum( const void *pvData, size_t nLength )
 {
@@ -1918,37 +1911,6 @@ unsigned short BufferToShortChecksum( const void *pvData, size_t nLength )
 	return (unsigned short)( lowpart ^ highpart );
 }
 
-#else
-
-// If the CRC version ever is deemed to expensive, here's a quick xor version.
-//  It's probably not super robust.
-inline unsigned short BufferToShortChecksum( const void *pvData, size_t nSize )
-{
-	const uint32 *pData = (const uint32 *)pvData;
-
-	unsigned short us = 0;
-	while ( nSize >= sizeof( uint32 ) )
-	{
-		us ^= ( *pData & 0xffff );
-		us ^= ( ( *pData >> 16 ) & 0xffff );
-
-		nSize -= sizeof( uint32 );
-		pData += sizeof( uint32 );
-	}
-
-	const byte *pbData = (const byte *)pData;
-
-	while ( nSize > 0 )
-	{
-		us ^= *pbData;
-		++pbData;
-		--nSize;
-	}
-
-	return us;
-}
-
-#endif
 
 #define MIN_ROUTABLE_TESTING
 
@@ -1959,10 +1921,6 @@ static ConVar net_minroutable( "net_minroutable", "16", FCVAR_DEVELOPMENTONLY, "
 // XBox live requires appending voice data in the clear after game payload
 static bool ShouldSendVoiceInTheClear()
 {
-	if ( IsX360() )
-		return true;
-	if ( NET_IsDedicatedForXbox() )
-		return true;
 	return false;
 }
 
@@ -2465,12 +2423,8 @@ bool CNetChan::_ProcessMessages( bf_read &buf, bool wasReliable  )
 		if (level == 2 )
 		{
 			// Crash
-#if defined( _X360 )
-			XBX_CrashDump( false );
-#else
 			byte *p = 0;
 			*p = 0x1;
-#endif
 		}
 		else
 		{

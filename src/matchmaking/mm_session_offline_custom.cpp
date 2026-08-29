@@ -1,4 +1,4 @@
-//===== Copyright © 1996-2009, Valve Corporation, All rights reserved. ======//
+//===== Copyright ï¿½ 1996-2009, Valve Corporation, All rights reserved. ======//
 //
 // Purpose: 
 //
@@ -263,9 +263,6 @@ void CMatchSessionOfflineCustom::InitializeGameSettings()
 		pMembers->SetInt( "numMachines", 1 );
 
 		int numPlayers = 1;
-#ifdef _GAMECONSOLE
-		numPlayers = XBX_GetNumGameUsers();
-#endif
 		pMembers->SetInt( "numPlayers", numPlayers );
 		pMembers->SetInt( "numSlots", numPlayers );
 
@@ -276,7 +273,8 @@ void CMatchSessionOfflineCustom::InitializeGameSettings()
 			pMachine->SetUint64( "id", ( pPriPlayer ? pPriPlayer->GetXUID() : INVALID_XUID ) );
 			pMachine->SetUint64( "flags", MatchSession_GetMachineFlags() );
 			pMachine->SetInt( "numPlayers", numPlayers );
-			pMachine->SetUint64( "dlcmask", g_pMatchFramework->GetMatchSystem()->GetDlcManager()->GetDataInfo()->GetUint64( "@info/installed" ) );
+			if ( IDlcManager *pDlcManager = g_pMatchFramework->GetMatchSystem()->GetDlcManager() )
+				pMachine->SetUint64( "dlcmask", pDlcManager->GetDataInfo()->GetUint64( "@info/installed" ) );
 			pMachine->SetString( "tuver", MatchSession_GetTuInstalledString() );
 			pMachine->SetInt( "ping", 0 );
 
@@ -285,9 +283,6 @@ void CMatchSessionOfflineCustom::InitializeGameSettings()
 				if ( KeyValues *pPlayer = pMachine->FindKey( CFmtStr( "player%d", k ), true ) )
 				{
 					int iController = 0;
-#ifdef _GAMECONSOLE
-					iController = XBX_GetUserId( k );
-#endif
 					IPlayerLocal *player = g_pPlayerManager->GetLocalPlayer( iController );
 					if ( player )
 					{

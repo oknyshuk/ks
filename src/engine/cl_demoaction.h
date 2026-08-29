@@ -19,10 +19,6 @@ class CBaseDemoAction;
 class CBaseActionEditDialog;
 class CDemoEditorPanel;
 /*
-namespace vgui
-{
-	class Panel;
-}
 */
 
 //-----------------------------------------------------------------------------

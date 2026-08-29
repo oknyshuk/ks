@@ -35,10 +35,6 @@
 #include "tier0/memdbgon.h"
 
 ConVar g_cv_miniprofiler_dump( "miniprofiler_dump", "0" );
-#if defined( _X360 )
-ConVar g_cv_frame_pcm( "frame_pcm", "0" );
-bool g_started_frame_pcm = false;
-#endif
 DLL_IMPORT void PublishAllMiniProfilers(int nHistoryMax);
 
 // In other C files.
@@ -81,10 +77,6 @@ void SCR_BeginLoadingPlaque( const char *levelName /*= NULL*/ )
 	{
 		MEM_ALLOC_CREDIT();
 
-#if defined( _DEMO ) && defined( _X360 )
-		// disable demo timeouts during loading
-		Host_EnableDemoTimeout( false );
-#endif
 
 		scr_loadingStartTime = Plat_FloatTime();
 
@@ -144,10 +136,6 @@ void SCR_EndLoadingPlaque( void )
 	// MATCHMAKING:UNDONE: This pattern came over from l4d but needed to change since the new clients don't have the same mission/game structure
 	if ( scr_drawloading )
 	{
-#if defined( _DEMO ) && defined( _X360 )
-		// allow demo timeouts
-		Host_EnableDemoTimeout( true );
-#endif
 
 		scr_engineevent_loadingstarted = false;
 
@@ -184,10 +172,7 @@ void SCR_EndLoadingPlaque( void )
 	}
 	else if ( gfExtendedError )
 	{
-		if ( IsPC() )
-		{
-			EngineUI()->ShowErrorMessage();
-		}
+		EngineUI()->ShowErrorMessage();
 	}
 
 	if ( scr_engineevent_loadingstarted )
@@ -235,7 +220,7 @@ void SCR_UpdateScreen( void )
 		// 6.  CL_FullyConnected only gets called if we get a snapshot from the server
 		// 7.  In single player we only send snapshots if g_LostVideoMemory is cleared
 		// 8.  goto step 1
-		if ( !IsGameConsole() && g_LostVideoMemory )
+		if ( g_LostVideoMemory )
 		{
 			Shader_SwapBuffers();
 		}
@@ -310,28 +295,12 @@ void SCR_UpdateScreen( void )
 
 	materials->EndFrame();
 
-#if !defined( _CERT )
 	PublishAllMiniProfilers( g_cv_miniprofiler_dump.GetInt() );
-#if defined( _X360 )
-	if ( g_started_frame_pcm )
-	{
-		g_started_frame_pcm = false;
-		PMCStopAndReport();
-	}
-	if ( g_cv_frame_pcm.GetInt() )
-	{
-		g_cv_frame_pcm.SetValue("0");
-		g_started_frame_pcm = true;
-		PMCInstallAndStart(ePMCSetup(PMC_SETUP_OVERVIEW_PB0T0 + GetCurrentProcessorNumber()));
-	}
-#endif
-#endif
 
 	// NOTE: It isn't super awesome to do this here, but it has to occur after
 	// the client DLL where it knows its read in all entities, which happens in
 	// ClientDLL_FrameStageNotify( FRAME_RENDER_START )
 #ifndef DEDICATED
-	if ( IsPC() )
 	{
 		static bool s_bTestedBuildCubemaps = false;
 		CClientState &cl = GetBaseLocalClient();

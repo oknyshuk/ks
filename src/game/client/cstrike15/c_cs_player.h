@@ -1173,10 +1173,6 @@ inline C_CSPlayer *ToCSPlayer( CBaseEntity *pEntity )
 	return assert_cast<C_CSPlayer*>( pEntity );
 }
 
-namespace vgui
-{
-	class IImage;
-}
 
 
 void AddSmokeGrenade( Vector location, int iEntityId );

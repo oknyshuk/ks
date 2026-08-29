@@ -1,7 +1,4 @@
 #include "sqplus.h"
-#ifdef _PS3
-#undef _STD_USING
-#endif
 #include <stdio.h>
 #if defined(VSCRIPT_DLL_EXPORT) || defined(VSQUIRREL_TEST)
 #include "memdbgon.h"
@@ -105,16 +102,7 @@ static int setVar(StackHandler & sa,VarRef * vr,void * data) {
     SQUserPointer src = sa.GetInstanceUp(3,(SQUserPointer)vr->copyFunc); // Effectively performs: ClassType<>::type() == ClassType<>getCopyFunc().
     if (!src) throw SquirrelError(_T("INSTANCE type assignment mismatch"));
     vr->copyFunc(data,src);
-#if 0 // Return an instance on the stack (allocates memory)
-    if (!CreateNativeClassInstance(sa.GetVMPtr(),vr->typeName,data,0)) { // data = address
-      ScriptStringVar256 msg;
-      SCSNPRINTF(msg.s,sizeof(msg),_T("getVar(): Could not create instance: %s"),vr->typeName);
-      throw SquirrelError(msg.s);
-    } // if
-    return 1;
-#else // Don't return on stack.
     return 0;
-#endif
   }
   case TypeInfo<SQUserPointer>::TypeID: {
     ScriptStringVar256 msg;

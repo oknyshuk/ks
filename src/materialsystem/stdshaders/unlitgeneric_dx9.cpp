@@ -201,7 +201,7 @@ BEGIN_VS_SHADER( UnlitGeneric, "Help for UnlitGeneric" )
 		VertexLitGeneric_DX9_Vars_t vars;
 		SetupVars( vars );
 
-		if ( ( pShaderShadow == NULL ) && ( pShaderAPI != NULL ) && (params[RECEIVEFLASHLIGHT]->GetIntValue() == 0) && ShaderApiFast( pShaderAPI )->InFlashlightMode() && !( IsX360() || IsPS3() ) ) // Not snapshotting && flashlight pass
+		if ( ( pShaderShadow == NULL ) && ( pShaderAPI != NULL ) && (params[RECEIVEFLASHLIGHT]->GetIntValue() == 0) && ShaderApiFast( pShaderAPI )->InFlashlightMode() ) // Not snapshotting && flashlight pass
 		{
 			// Don't go in here on the 360/PS3 with single-pass flashlight, because there is no 2nd draw call for this material.
 			// FIXME: Is the !IsX360/PS3() test too broad?

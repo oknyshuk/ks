@@ -534,7 +534,7 @@ void CBaseClient::SetName(const char * name)
 	// We also don't care for tournaments to use (1) in names since names are baked into the GC schema
 	// also don't care in coop because bots can have the same names
 	static char const * s_pchTournamentServer = CommandLine()->ParmValue( "-tournament", ( char const * ) NULL );
-	if ( !s_pchTournamentServer && !IsX360() && !NET_IsDedicatedForXbox() && !sv_duplicate_playernames_ok.GetBool() )
+	if ( !s_pchTournamentServer && !sv_duplicate_playernames_ok.GetBool() )
 	{
 		// Check to see if another user by the same name exists
 		while ( true )
@@ -1871,13 +1871,7 @@ const char *CBaseClient::GetNetworkIDString() const
 		return "BOT";
 	}
 
-#if defined( _X360 )
-	if ( m_ConVars )
-#elif defined( SERVER_XLSP )
-	if ( NET_IsDedicatedForXbox() && m_ConVars )
-#else
 	if ( 0 )
-#endif
 	{
 		const char * value = m_ConVars->GetString( "networkid_force", "" );
 		if ( value && *value )
@@ -1892,13 +1886,7 @@ uint64 CBaseClient::GetClientXuid() const
 	// For 2nd SS player IsFakeClient() == true, so need to short-circuit it straight into forced network_id -- Vitaliy
 	const char * value = NULL;
 
-#if defined( _X360 )
-	if ( m_ConVars )
-#elif defined( SERVER_XLSP )
-	if ( NET_IsDedicatedForXbox() && m_ConVars )
-#else
 	if ( 0 )
-#endif
 	{
 		value = m_ConVars->GetString( "networkid_force", NULL );
 	}
@@ -1989,21 +1977,6 @@ void CBaseClient::FillSignOnFullServerInfo( CNETMsg_SignonState_t &state )
 	//		server clients connected to it at the moment
 	//
 
-	if ( IsX360() || sv.IsDedicatedForXbox() )
-	{
-		//
-		//	We only do this on X360 listen server and X360-dedicated server
-		//
-		state.set_num_server_players (sv.GetClientCount());
-		for ( int j = 0 ; j < sv.GetClientCount() ; j++ )
-		{
-			IClient *client = sv.GetClient( j );
-	
-			char const *szNetworkId = client->GetNetworkIDString();
-			
-			state.add_players_networkids( szNetworkId );
-		}		
-	}
 
 	const char *pMapname = HostState_GetNewLevel();
 	state.set_map_name( pMapname ? pMapname : "" );
@@ -2057,7 +2030,6 @@ struct SessionClient_t
 
 void HostValidateSessionImpl()
 {
-	if ( !sv.IsDedicatedForXbox() )
 		return;
 
 	Msg( "[SESSION] Validating Session Information...\n" );

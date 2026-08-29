@@ -155,7 +155,6 @@ bool ShouldHideAllPlayers() { return false; }
 
 // this context is not available on dedicated servers
 // WARNING! always check if interfaces are available before using
-#if !defined(NO_STEAM)
 static CSteamAPIContext s_SteamAPIContext;	
 CSteamAPIContext *steamapicontext = &s_SteamAPIContext;
 
@@ -163,7 +162,6 @@ CSteamAPIContext *steamapicontext = &s_SteamAPIContext;
 // WARNING! always check if interfaces are available before using
 static CSteamGameServerAPIContext s_SteamGameServerAPIContext;
 CSteamGameServerAPIContext *steamgameserverapicontext = &s_SteamGameServerAPIContext;
-#endif
 
 
 IUploadGameStats *gamestatsuploader = NULL;
@@ -246,7 +244,6 @@ ConVar sv_dc_friends_reqd(
 
 static ConVar *g_pcv_ThreadMode = NULL;
 
-#if !defined(NO_STEAM)
 //-----------------------------------------------------------------------------
 // Purpose: singleton accessor
 //-----------------------------------------------------------------------------
@@ -263,7 +260,6 @@ CSteam3Server::CSteam3Server()
 {
 	m_bInitialized = false;
 }
-#endif
 
 // String tables
 INetworkStringTable *g_pStringTableParticleEffectNames = NULL;
@@ -374,70 +370,6 @@ void			DrawMessageEntities();
 extern ConVar think_limit;
 
 
-#if 0
-//-----------------------------------------------------------------------------
-// Purpose: Draw output overlays for any measure sections
-// Input  : 
-//-----------------------------------------------------------------------------
-void DrawMeasuredSections(void)
-{
-	int		row = 1;
-	float	rowheight = 0.025;
-
-	CMeasureSection *p = CMeasureSection::GetList();
-	while ( p )
-	{
-		char str[256];
-		Q_snprintf(str,sizeof(str),"%s",p->GetName());
-		NDebugOverlay::ScreenText( 0.01,0.51+(row*rowheight),str, 255,255,255,255, 0.0 );
-		
-		Q_snprintf(str,sizeof(str),"%5.2f\n",p->GetTime().GetMillisecondsF());
-		//Q_snprintf(str,sizeof(str),"%3.3f\n",p->GetTime().GetSeconds() * 100.0 / Plat_FloatTime());
-		NDebugOverlay::ScreenText( 0.28,0.51+(row*rowheight),str, 255,255,255,255, 0.0 );
-
-		Q_snprintf(str,sizeof(str),"%5.2f\n",p->GetMaxTime().GetMillisecondsF());
-		//Q_snprintf(str,sizeof(str),"%3.3f\n",p->GetTime().GetSeconds() * 100.0 / Plat_FloatTime());
-		NDebugOverlay::ScreenText( 0.34,0.51+(row*rowheight),str, 255,255,255,255, 0.0 );
-
-
-		row++;
-
-		p = p->GetNext();
-	}
-
-	bool sort_reset = false;
-
-	// Time to redo sort?
-	if ( measure_resort.GetFloat() > 0.0 &&
-		Plat_FloatTime() >= CMeasureSection::m_dNextResort )
-	{
-		// Redo it
-		CMeasureSection::SortSections();
-		// Set next time
-		CMeasureSection::m_dNextResort = Plat_FloatTime() + measure_resort.GetFloat();
-		// Flag to reset sort accumulator, too
-		sort_reset = true;
-	}
-
-	// Iterate through the sections now
-	p = CMeasureSection::GetList();
-	while ( p )
-	{
-		// Update max 
-		p->UpdateMax();
-
-		// Reset regular accum.
-		p->Reset();
-		// Reset sort accum less often
-		if ( sort_reset )
-		{
-			p->SortReset();
-		}
-		p = p->GetNext();
-	}
-
-}
-#endif
 
 //-----------------------------------------------------------------------------
 // Purpose:
@@ -596,7 +528,7 @@ void DrawAllDebugOverlays( void )
 }
 
 // enable threading of init functions on x360
-static ConVar sv_threaded_init("sv_threaded_init", IsGameConsole() ? "1" : "0");
+static ConVar sv_threaded_init("sv_threaded_init", "0");
 
 static bool InitGameSystems( CreateInterfaceFn appSystemFactory )
 {
@@ -680,15 +612,9 @@ bool CServerGameDLL::DLLInit( CreateInterfaceFn appSystemFactory,
 	if ( cvar == NULL )
 		return false;
 
-#if !defined( SWDS ) && !defined(NO_STEAM)
-	#ifndef _PS3
 	SteamAPI_InitSafe();
-	#endif
 	s_SteamAPIContext.Init();
-#endif
-#if !defined(NO_STEAM)
 	s_SteamGameServerAPIContext.Init();
-#endif
 
 	COM_TimestampedLog( "Factories - Start" );
 
@@ -696,14 +622,10 @@ bool CServerGameDLL::DLLInit( CreateInterfaceFn appSystemFactory,
 	if ( (engine = (IVEngineServer*)appSystemFactory(INTERFACEVERSION_VENGINESERVER, NULL)) == NULL )
 		return false;
 
-#if !defined(NO_STEAM)
-	#ifndef _PS3
 	if( SteamAPI_RestartAppIfNecessary( engine->GetAppID() ) )
 	{
 		return false;
 	}
-	#endif
-#endif
 
 	if ( (g_pVoiceServer = (IVoiceServer*)appSystemFactory(INTERFACEVERSION_VOICESERVER, NULL)) == NULL )
 		return false;
@@ -804,7 +726,7 @@ bool CServerGameDLL::DLLInit( CreateInterfaceFn appSystemFactory,
 	
 	COM_TimestampedLog( "g_pParticleSystemMgr->Init" );
 	// Initialize the particle system
-	bool bPrecacheParticles = IsPC() && !engine->IsCreatingXboxReslist();
+	bool bPrecacheParticles = true;
 	if ( !g_pParticleSystemMgr->Init( g_pParticleSystemQuery, bPrecacheParticles ) )
 	{
 		return false;
@@ -935,11 +857,9 @@ void CServerGameDLL::DLLShutdown( void )
 		TheNavMesh = NULL;
 	}
 
-#if !defined(NO_STEAM)
 	s_SteamAPIContext.Clear(); // Steam API context shutdown
 	s_SteamGameServerAPIContext.Clear();	
 	// SteamAPI_Shutdown(); << Steam shutdown is controlled by engine
-#endif
 	
 	DisconnectTier3Libraries();
 	DisconnectTier2Libraries();
@@ -956,10 +876,6 @@ float CServerGameDLL::GetTickInterval( void ) const
 {
 	float tickinterval = DEFAULT_TICK_INTERVAL;
 
-	if ( engine->IsDedicatedServerForXbox() )
-		tickinterval = DEFAULT_TICK_INTERVAL_X360;
-	else if ( engine->IsDedicatedServerForPS3() )
-		tickinterval = DEFAULT_TICK_INTERVAL_PS3;
 
 // Ignoring this for now, server ops are abusing it
 #if !defined( TF_DLL )
@@ -990,10 +906,6 @@ bool CServerGameDLL::GameInit( void )
 	ResetGlobalState();
 
 	const char* szConfigName = "game.cfg";
-	if ( engine->IsDedicatedServerForXbox() || IsX360() )
-		szConfigName = "game360.cfg";
-	else if ( engine->IsDedicatedServerForPS3() || IsPS3() )
-		szConfigName = "gamePS3.cfg";
 
 	char szCommand[64];
 	V_snprintf(szCommand, sizeof(szCommand), "exec %s\n", szConfigName);
@@ -1277,11 +1189,9 @@ void CServerGameDLL::ServerActivate( edict_t *pEdictList, int edictCount, int cl
 		think_limit.SetValue( 0 );
 	}
 
-#ifndef _XBOX
 	// load the Navigation Mesh for this map
 	TheNavMesh->Load();
 	TheNavMesh->OnServerActivate();
-#endif
 
 #if defined( CSTRIKE_DLL ) // BOTPORT: TODO: move these ifdefs out
 	TheBots->ServerActivate();
@@ -1295,15 +1205,11 @@ void CServerGameDLL::GameServerSteamAPIActivated( bool bActive )
 {
 	if ( bActive )
 	{
-#if !defined( NO_STEAM )
 		steamgameserverapicontext->Init();
-#endif
 	}
 	else
 	{
-#if !defined( NO_STEAM )
 		steamgameserverapicontext->Clear();
-#endif
 	}
 }
 
@@ -1321,14 +1227,12 @@ void CServerGameDLL::GameFrame( bool simulating )
 	if ( g_InRestore )
 		return;
 
-#ifndef NO_STEAM
 	// All the calls to us from the engine prior to gameframe (like LevelInit & ServerActivate)
 	// are done before the engine has got the Steam API connected, so we have to wait until now to connect ourselves.
 	if ( Steam3Server().CheckInitialized() )
 	{
 		GameRules()->UpdateGameplayStatsFromSteam();
 	}
-#endif
 
 	g_bIsLogging = engine->IsLogEnabled();
 	if ( CBaseEntity::IsSimulatingOnAlternateTicks() )
@@ -1904,9 +1808,7 @@ void CServerGameDLL::ReadRestoreHeaders( CSaveRestoreData *s )
 
 void CServerGameDLL::PreSaveGameLoaded( char const *pSaveName, bool bInGame )
 {
-	#ifndef _GAMECONSOLE
 	gamestats->Event_PreSaveGameLoaded( pSaveName, bInGame );
-	#endif
 }
 
 //-----------------------------------------------------------------------------
@@ -2298,10 +2200,6 @@ void UpdateChapterRestrictions( const char *mapname )
 			sv_unlockedchapters.SetValue( nNewChapter );
 
 			// HACK: Call up through a better function than this? 7/23/07 - jdw
-			if ( IsGameConsole() )
-			{
-				engine->ServerCommand( "host_writeconfig\n" );
-			}
 		}
 
 		g_nCurrentChapterIndex = nNewChapter;
@@ -2677,7 +2575,6 @@ void CServerGameEnts::CheckTransmit( CCheckTransmitInfo *pInfo, const unsigned s
 	// which it sees all entities so that it gets their basic information.
 	const bool bIsFreshlySpawned = pRecipientPlayer->GetInitialSpawnTime()+3.0f > gpGlobals->curtime;
 	const int skyBoxArea = pRecipientPlayer->m_Local.m_skybox3d.area;
-#ifndef _GAMECONSOLE
 	const bool bIsHLTV = pRecipientPlayer->IsHLTV();
 #if defined( REPLAY_ENABLED )
 	const bool bIsReplay = pRecipientPlayer->IsReplay();
@@ -2688,7 +2585,6 @@ void CServerGameEnts::CheckTransmit( CCheckTransmitInfo *pInfo, const unsigned s
 	// m_pTransmitAlways must be set if HLTV client
 	Assert( bIsHLTV == ( pInfo->m_pTransmitAlways != NULL) ||
 		    bIsReplay == ( pInfo->m_pTransmitAlways != NULL) );
-#endif
 	IEngineTrace::CAutoSuspendOcclusionTests autoSuspender( enginetrace ); // suspend the async engine traces for the time being
 	for ( int i=0; i < nEdicts; i++ )
 	{
@@ -2715,12 +2611,10 @@ void CServerGameEnts::CheckTransmit( CCheckTransmitInfo *pInfo, const unsigned s
 				// mark entity for sending
 				pInfo->m_pTransmitEdict->Set( iEdict );
 	
-#ifndef _GAMECONSOLE
 				if ( bIsHLTV || bIsReplay )
 				{
 					pInfo->m_pTransmitAlways->Set( iEdict );
 				}
-#endif	
 				CServerNetworkProperty *pEnt = static_cast<CServerNetworkProperty*>( pEdict->GetNetworkable() );
 				if ( !pEnt )
 					break;
@@ -2764,7 +2658,6 @@ void CServerGameEnts::CheckTransmit( CCheckTransmitInfo *pInfo, const unsigned s
 
 		CServerNetworkProperty *netProp = static_cast<CServerNetworkProperty*>( pEdict->GetNetworkable() );
 
-#ifndef _GAMECONSOLE
 		if ( bIsHLTV || bIsReplay )
 		{
 			// for the HLTV/Replay we don't cull against PVS
@@ -2778,7 +2671,6 @@ void CServerGameEnts::CheckTransmit( CCheckTransmitInfo *pInfo, const unsigned s
 			}
 			continue;
 		}
-#endif
 
 		// Always send entities in the player's 3d skybox.
 		// Sidenote: call of AreaNum() ensures that PVS data is up to date for this entity
@@ -3058,9 +2950,7 @@ void CServerGameClients::ClientDisconnect( edict_t *pEdict )
 			if ( g_pGameRules )
 			{
 				g_pGameRules->ClientDisconnected( pEdict );
-				#ifndef _GAMECONSOLE
 				gamestats->Event_PlayerDisconnected( player );
-				#endif
 			}
 		}
 

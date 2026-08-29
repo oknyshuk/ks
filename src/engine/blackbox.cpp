@@ -16,7 +16,7 @@
 #include "tier0/memdbgon.h"
 
 // development only, off by default for 360
-ConVar blackbox( "blackbox", IsX360() ? "0" : "1" );
+ConVar blackbox( "blackbox", "1" );
 
 #define MAX_MESSAGE_SIZE 1024
 #define DEFAULT_RECORD_LIMIT 16
@@ -109,7 +109,7 @@ CBlackBox::~CBlackBox()
 
 void CBlackBox::Record( int type, const char *msg )
 {
-	if ( IsX360() || !blackbox.GetBool() )
+	if ( !blackbox.GetBool() )
 		return;
 
 	if ( !ValidType(type) )	
@@ -173,7 +173,7 @@ void CBlackBox::Flush( int type )
 
 CON_COMMAND_F( blackbox_record, "Record an entry into the blackbox", FCVAR_DONTRECORD )
 {
-	if ( IsX360() || !blackbox.GetBool() )
+	if ( !blackbox.GetBool() )
 		return;
 
 	if ( args.ArgC() < 2 )
@@ -187,8 +187,6 @@ CON_COMMAND_F( blackbox_record, "Record an entry into the blackbox", FCVAR_DONTR
 
 CON_COMMAND_F( blackbox_dump, "Dump the contents of the blackbox", FCVAR_DONTRECORD )
 {
-	if ( IsX360() )
-		return;
 
 	for ( int type = 0; type < gBlackBox->GetTypeCount(); type++ )
 	{
@@ -201,7 +199,7 @@ CON_COMMAND_F( blackbox_dump, "Dump the contents of the blackbox", FCVAR_DONTREC
 
 void BlackBox_Record( const char *type, const char *pFormat, ... )
 {
-	if ( IsGameConsole() || !blackbox.GetBool() )
+	if ( !blackbox.GetBool() )
 		return;
 
 	int type_num;

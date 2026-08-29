@@ -156,11 +156,6 @@ void CDynamicLight::InputToggle( inputdata_t &inputdata )
 //------------------------------------------------------------------------------
 void CDynamicLight::Spawn( void )
 {
-	if ( IsGameConsole() )
-	{
-		UTIL_Remove(this);
-		return;
-	}
 	Precache();
 	SetSolid( SOLID_NONE );
 	m_On = true;

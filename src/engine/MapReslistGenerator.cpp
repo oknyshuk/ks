@@ -118,7 +118,6 @@ CMapReslistGenerator::CMapReslistGenerator() :
 	m_bUsingMapList = false;
 	m_bTrackingDeletions = false;
 	m_bLoggingEnabled = false;
-	m_bCreatingForXbox = false;
 	m_iCurrentMap = 0;
 	m_flNextMapRunTime = 0.0f;
 	m_szPrefix[0] = '\0';
@@ -422,7 +421,6 @@ void CMapReslistGenerator::EnableReslistGeneration( bool usemaplistfile )
 		}
 	}
 
-	m_bCreatingForXbox = CommandLine()->FindParm( "-xboxreslist" ) != 0;
 
 	// create file to dump out to
 	g_pFileSystem->CreateDirHierarchy( m_sResListDir.String() , "DEFAULT_WRITE_PATH" );
@@ -1030,7 +1028,3 @@ void CMapReslistGenerator::SpewTrackedDeletionsLog()
 	g_pFileSystem->Close( hUndeleteFile );
 }
 
-bool CMapReslistGenerator::IsCreatingForXbox()
-{
-	return IsEnabled() && m_bCreatingForXbox;
-}	

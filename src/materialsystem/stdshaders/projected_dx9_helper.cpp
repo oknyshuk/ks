@@ -52,9 +52,7 @@ void DrawProjected_DX9( CBaseVSShader *pShader, IMaterialVar** params, IShaderDy
 
 		pShaderShadow->VertexShaderVertexFormat( flags, nTexCoordCount, NULL, 0 );
 
-#ifndef _X360
 		if ( !g_pHardwareConfig->HasFastVertexTextures() )
-#endif
 		{
 			DECLARE_STATIC_VERTEX_SHADER( projected_vs20 );
 			SET_STATIC_VERTEX_SHADER_COMBO( MODEL,  bIsModel );
@@ -72,7 +70,6 @@ void DrawProjected_DX9( CBaseVSShader *pShader, IMaterialVar** params, IShaderDy
 				SET_STATIC_PIXEL_SHADER( projected_ps20 );
 			}
 		}
-#ifndef _X360
 		else
 		{
 			// The vertex shader uses the vertex id stream
@@ -86,7 +83,6 @@ void DrawProjected_DX9( CBaseVSShader *pShader, IMaterialVar** params, IShaderDy
 			DECLARE_STATIC_PIXEL_SHADER( projected_ps30 );
 			SET_STATIC_PIXEL_SHADER( projected_ps30 );
 		}
-#endif
 
 		pShader->DefaultFog();
 
@@ -109,9 +105,7 @@ void DrawProjected_DX9( CBaseVSShader *pShader, IMaterialVar** params, IShaderDy
 		LightState_t lightState = {0, false, false};
 		pShaderAPI->GetDX9LightState( &lightState );
 
-#ifndef _X360
 		if ( !g_pHardwareConfig->HasFastVertexTextures() )
-#endif
 		{
 			DECLARE_DYNAMIC_VERTEX_SHADER( projected_vs20 );
 			SET_DYNAMIC_VERTEX_SHADER( projected_vs20 );
@@ -128,7 +122,6 @@ void DrawProjected_DX9( CBaseVSShader *pShader, IMaterialVar** params, IShaderDy
 				SET_DYNAMIC_PIXEL_SHADER( projected_ps20 );
 			}
 		}
-#ifndef _X360
 		else
 		{
 			DECLARE_DYNAMIC_VERTEX_SHADER( projected_vs30 );
@@ -137,7 +130,6 @@ void DrawProjected_DX9( CBaseVSShader *pShader, IMaterialVar** params, IShaderDy
 			DECLARE_DYNAMIC_PIXEL_SHADER( projected_ps30 );
 			SET_DYNAMIC_PIXEL_SHADER( projected_ps30 );
 		}
-#endif
 
 		pShader->SetVertexShaderTextureTransform( VERTEX_SHADER_SHADER_SPECIFIC_CONST_6, info.m_nBaseTextureTransform );
 

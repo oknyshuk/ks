@@ -36,12 +36,8 @@
 #include "ispatialpartitioninternal.h"
 #include "toolframework/itoolframework.h"
 #include "tier1/callqueue.h"
-#include "filesystem/IQueuedLoader.h"
 #include "r_decal.h"
 
-#ifdef _PS3
-#include "tls_ps3.h"
-#endif
 
 #include "rocketui/rocketui.h"
 
@@ -82,8 +78,6 @@ FIXME:  Define this as a change function to the ConVar's below rather than polli
 */
 bool V_CheckGamma( void )
 {
-	if ( IsX360() )
-		return false;
 
 	static int lastLightmap = -1;
 	extern void GL_RebuildLightmaps( void );
@@ -162,25 +156,6 @@ void V_RenderUIOnly( void )
 
 	Shader_SwapBuffers();
 
-#ifdef _PS3
-	if ( GetTLSGlobals()->bNormalQuitRequested )
-	{
-		// hack to prevent PS/3 deadlock on queued loader render mutex when quitting during loading a map
-		uint nUnlockedQueuedRenderer = g_pQueuedLoader ? g_pQueuedLoader->UnlockProgressBarMutex() : 0;
-		
-		if ( !s_bTriggeredHostError )
-		{
-			Assert( ThreadInMainThread() );
-			s_bTriggeredHostError = true;
-			Host_Error( "SystemQuitRequest" );
-		}
-		// hack to prevent PS/3 deadlock on queued loader render mutex when quitting during loading a map
-		if( g_pQueuedLoader )
-		{
-			g_pQueuedLoader->LockProgressBarMutex( nUnlockedQueuedRenderer );
-		}
-	}
-#endif
 }
 
 
@@ -199,7 +174,7 @@ void V_RenderView( void )
 
 	bCanRenderWorld = bCanRenderWorld && toolframework->ShouldGameRenderView();
 
-	if ( IsPC() && bCanRenderWorld && g_bTextMode )
+	if ( bCanRenderWorld && g_bTextMode )
 	{	
 		// Sleep to let the other textmode clients get some cycles.
 		Sys_Sleep( 15 );
@@ -380,22 +355,10 @@ public:
 		return g_EngineRenderer->CreateWorldList();
 	}
 
-#if defined(_PS3)
-	IWorldRenderList * CreateWorldList_PS3( int viewID )
-	{
-		return g_EngineRenderer->CreateWorldList_PS3( viewID );
-	}
-
-	void BuildWorldLists_PS3_Epilogue( IWorldRenderList *pList, WorldListInfo_t* pInfo, bool bShadowDepth )
-	{
-		g_EngineRenderer->BuildWorldLists_PS3_Epilogue( pList, pInfo, bShadowDepth );
-	}
-#else
 	void BuildWorldLists_Epilogue( IWorldRenderList *pList, WorldListInfo_t* pInfo, bool bShadowDepth )
 	{
 		g_EngineRenderer->BuildWorldLists_Epilogue( pList, pInfo, bShadowDepth );
 	}
-#endif
 
 	void BuildWorldLists( IWorldRenderList *pList, WorldListInfo_t* pInfo, int iForceFViewLeaf, const VisOverrideData_t* pVisData, bool bShadowDepth, float *pReflectionWaterHeight )
 	{

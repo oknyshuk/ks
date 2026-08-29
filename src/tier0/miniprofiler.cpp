@@ -41,23 +41,14 @@ public:
 };
 CRootMiniProfiler g_rootMiniProfiler;
 
-#if defined( STATIC_LINK ) || defined( _LINUX )
 // in static link scenario, we don't need any extra linkage specified where we define our variables
 #undef MINIPROFILER_DLL_LINKAGE
 #define MINIPROFILER_DLL_LINKAGE
-#else
-extern "C"
-{
-#endif
 	MINIPROFILER_DLL_LINKAGE CMiniProfiler *g_pRootMiniProfiler = &g_rootMiniProfiler;
 	MINIPROFILER_DLL_LINKAGE CLinkedMiniProfiler *g_pGlobalMiniProfilers = NULL;
 	MINIPROFILER_DLL_LINKAGE CLinkedMiniProfiler *g_pAssertMiniProfilers = NULL;
 	MINIPROFILER_DLL_LINKAGE CMiniProfiler *g_pLastMiniProfiler = &g_rootMiniProfiler;
 	MINIPROFILER_DLL_LINKAGE uint32 g_nMiniProfilerFrame = 0;
-#if defined( STATIC_LINK ) || defined( _LINUX )
-#else
-}
-#endif
 
 int64 GetHardwareClockReliably()
 {

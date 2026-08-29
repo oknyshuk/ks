@@ -10,9 +10,6 @@
 #ifndef COMMON_FXC_H_
 #define COMMON_FXC_H_
 
-#if defined( _PS3 ) || defined( _X360 )
-#	define _GAMECONSOLE 1
-#endif
 
 #include "common_pragmas.h"
 #include "common_hlsl_cpp_consts.h"
@@ -41,16 +38,6 @@
 #   define h4texCUBE texCUBE
 #endif
 
-#ifdef _PS3
-	#define TEXCOORD0_centroid TEXCOORD0
-	#define TEXCOORD1_centroid TEXCOORD1
-	#define TEXCOORD2_centroid TEXCOORD2
-	#define TEXCOORD3_centroid TEXCOORD3
-	#define TEXCOORD4_centroid TEXCOORD4
-	#define TEXCOORD5_centroid TEXCOORD5
-	#define TEXCOORD6_centroid TEXCOORD6
-	#define TEXCOORD7_centroid TEXCOORD7
-#endif
 
 #define FP16_MAX	65504.0f
 
@@ -67,45 +54,24 @@ static const HALF3 bumpBasisTranspose[3] = {
 	HALF3(  OO_SQRT_3, OO_SQRT_3, OO_SQRT_3 )
 };
 
-#if defined( _X360 )
-#define REVERSE_DEPTH_ON_X360 //uncomment to use D3DFMT_D24FS8 with an inverted depth viewport for better performance. Keep this in sync with the same named #define in public/shaderapi/shareddefs.h
-//Note that the reversal happens in the viewport. So ONLY reading back from a depth texture should be affected. Projected math is unaffected.
-#endif
 
 bool IsX360( void )
 {
-	#if defined( _X360 )
-		return true;
-	#else
 		return false;
-	#endif
 }
 
 bool IsSonyPS3( void )
 {
-#if defined( _PS3 )
-	return true;
-#else
 	return false;
-#endif
 }
 
 bool IsGameConsole( void )
 {
-#if defined( _GAMECONSOLE )
-	return true;
-#else
 	return false;
-#endif
 }
 
-#if defined( _PS3 )
-#define hlsl_float4x3_element( MATRIX,ROW4,COL3 ) ((MATRIX)[COL3][ROW4])
-#define hlsl_float4x3 float3x4
-#else
 #define hlsl_float4x3_element( MATRIX,ROW4,COL3 ) ((MATRIX)[ROW4][COL3])
 #define hlsl_float4x3 float4x3
-#endif
 
 // For CS:GO
 //#define SOFTEN_COSINE_EXP 1.5
@@ -194,26 +160,12 @@ void ComputeBumpedLightmapCoordinates( float4 Lightmap1and2Coord, float2 Lightma
 
 float3 mul3x3(float3 v, float3x3 m)
 {
-#if defined( _PS3 )
-	return mul( m, v );
-#elif !defined( _X360 )
     return float3(dot(v, transpose(m)[0]), dot(v, transpose(m)[1]), dot(v, transpose(m)[2]));
-#else
-	// xbox360 fxc.exe (new back end) borks with transposes, generates bad code
-	return mul( v, m );
-#endif
 }
 
 float3 mul4x3(float4 v, hlsl_float4x3 m)
 {
-#if defined( _PS3 )
-	return mul( m, v );
-#elif !defined( _X360 )
 	return float3(dot(v, transpose(m)[0]), dot(v, transpose(m)[1]), dot(v, transpose(m)[2]));
-#else
-	// xbox360 fxc.exe (new back end) borks with transposes, generates bad code
-	return mul( v, m );
-#endif
 }
 
 float3 DecompressHDR( float4 input )
@@ -332,7 +284,6 @@ float3 X360GammaToLinear( float3 v360GammaColor )
 	return vLinearColor.rgb;
 }
 
-#ifndef _PS3
 
 float X360LinearToGamma( float flLinearValue )
 {
@@ -379,7 +330,6 @@ float3 SrgbGammaTo360Gamma( float3 vSrgbGammaColor )
 	return X360LinearToGamma( vColor );
 }
 
-#endif
 
 // Function to do srgb read in shader code
 #ifndef SHADER_SRGB_READ
@@ -402,28 +352,9 @@ float4 tex2Dsrgb( sampler iSampler, float2 iUv )
 	}
 	#else
 	{
-		if ( IsX360() )
-		{
-			float4 vTextureValue = tex2D( iSampler, iUv.xy );
-
-			#if defined( CSTRIKE15 )
-				// [mariod] - shader gamma read
-			    // assume we don't have a mix of pwl and srgb textures (all source is srgb for CS:GO, and all RT's are already in gamma space and not read through this path)
-				// GammaToLinear much faster than SrgbGammaToLinear, what is the real quality trade-off?
-				vTextureValue.rgb = GammaToLinear( vTextureValue.rgb );
-				//vTextureValue.rgb = SrgbGammaToLinear( vTextureValue.rgb );
-			#else
-				vTextureValue.rgb = X360GammaToLinear( vTextureValue.rgb );
-			#endif
-
-			return vTextureValue.rgba;
-		}
-		else
-		{
-			float4 vTextureValue = tex2D( iSampler, iUv.xy );
-			vTextureValue.rgb = SrgbGammaToLinear( vTextureValue.rgb );
-			return vTextureValue.rgba;
-		}
+		float4 vTextureValue = tex2D( iSampler, iUv.xy );
+		vTextureValue.rgb = SrgbGammaToLinear( vTextureValue.rgb );
+		return vTextureValue.rgba;
 	}
 	#endif
 }
@@ -439,23 +370,6 @@ HALF3 h3tex2Dsrgb( sampler iSampler, float2 iUv )
 	}
 	#else
 	{
-		if ( IsX360() )
-		{
-			HALF3 vTextureValue = tex2D( iSampler, iUv.xy );
-
-			#if defined( CSTRIKE15 )
-				// [mariod] - shader gamma read
-				// assume we don't have a mix of pwl and srgb textures (all source is srgb for CS:GO, and all RT's are already in gamma space and not read through this path)
-				// GammaToLinear much faster than SrgbGammaToLinear, what is the real quality trade-off?
-				vTextureValue.rgb = GammaToLinear( vTextureValue.rgb );
-				//vTextureValue.rgb = SrgbGammaToLinear( vTextureValue.rgb );
-			#else
-				vTextureValue.rgb = X360GammaToLinear( vTextureValue.rgb );
-			#endif
-
-			return vTextureValue.rgb;
-		}
-		else
 		{
 			HALF3 vTextureValue = h3tex2D( iSampler, iUv.xy );
 			vTextureValue.rgb = h3SrgbGammaToLinear( vTextureValue.rgb );
@@ -476,23 +390,6 @@ HALF4 h4tex2Dsrgb( sampler iSampler, float2 iUv )
 	}
 	#else
 	{
-		if ( IsX360() )
-		{
-			HALF4 vTextureValue = tex2D( iSampler, iUv.xy );
-
-			#if defined( CSTRIKE15 )
-				// [mariod] - shader gamma read
-				// assume we don't have a mix of pwl and srgb textures (all source is srgb for CS:GO, and all RT's are already in gamma space and not read through this path)
-				// GammaToLinear much faster than SrgbGammaToLinear, what is the real quality trade-off?
-				vTextureValue.rgb = GammaToLinear( vTextureValue.rgb );
-				//vTextureValue.rgb = SrgbGammaToLinear( vTextureValue.rgb );
-			#else
-				vTextureValue.rgb = X360GammaToLinear( vTextureValue.rgb );
-			#endif
-
-			return vTextureValue.rgba;
-		}
-		else
 		{
 			HALF4 vTextureValue = h4tex2D( iSampler, iUv.xy );
 			vTextureValue.rgb = h3SrgbGammaToLinear( vTextureValue.rgb );
@@ -547,11 +444,7 @@ float CalcRangeFogFactorNonFixedFunction( float3 worldPos, float3 eyePos, float 
 
 float4 TransformFlashlightWorldToTexture( float3 vWorldPos, float4x4 vFlashlightWorldToTexture )
 {
-#ifdef _PS3
-	float4 vSpotTexCoord = mul( vFlashlightWorldToTexture, float4( vWorldPos, 1.0f ) );
-#else // _PS3
 	float4 vSpotTexCoord = mul( float4( vWorldPos, 1.0f ), vFlashlightWorldToTexture );
-#endif // !_PS3
 
 	return vSpotTexCoord;
 }

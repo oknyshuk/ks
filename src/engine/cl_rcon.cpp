@@ -5,16 +5,7 @@
 //===========================================================================//
 
 #include "tier0/platform.h"
-#ifdef POSIX
 #include "net_ws_headers.h"
-#else
-#if !defined( _X360 )
-#include <winsock.h>
-#else
-#include "winsockx.h"
-#endif
-#undef SetPort // winsock screws with the SetPort string... *sigh*8
-#endif
 
 #include <tier0/dbg.h>
 #include "utlbuffer.h"
@@ -26,8 +17,6 @@
 #include "zip/XUnzip.h"
 
 
-#if defined( _X360 )
-#endif
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -801,12 +790,6 @@ void CRConClient::SendBugRequest()
 	SendResponse( response );
 }
 
-#if 0
-CON_COMMAND( remote_bug, "Starts a bug report with data from the currently connected rcon machine" )
-{ 
-	RCONClient().SendBugRequest();
-}
-#endif
 
 //-----------------------------------------------------------------------------
 // We've got data from the server, save it

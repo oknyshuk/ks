@@ -225,7 +225,7 @@ bool CClockDriftMgr::IsClockCorrectionEnabled()
 #ifdef DEDICATED
 	return false;
 #else
-	if ( sv.IsActive() && ( IsGameConsole() || NET_GetFakeLag() <= 0.0f ) )
+	if ( sv.IsActive() && ( NET_GetFakeLag() <= 0.0f ) )
 	{
 		// Never want this in listen server. Has the result of slamming the server time
 		// as well in host.cpp, thus can never recover. Yields the server simulation running

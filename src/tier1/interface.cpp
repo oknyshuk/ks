@@ -29,9 +29,7 @@
 #ifdef _WIN32
 #include <direct.h> // getcwd
 #endif
-#if defined(POSIX)
 #include "tier0/platform.h"
-#endif
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -39,9 +37,7 @@
 // ------------------------------------------------------------------------------------ //
 // InterfaceReg.
 // ------------------------------------------------------------------------------------ //
-#ifdef POSIX
 DLL_GLOBAL_EXPORT
-#endif
 InterfaceReg *s_pInterfaceRegs;
 
 InterfaceReg::InterfaceReg( InstantiateInterfaceFn fn, const char *pName ) :
@@ -94,7 +90,6 @@ void* CreateInterface( const char *pName, int *pReturnCode )
 
 
 
-#if defined( POSIX )
 // Linux doesn't have this function so this emulates its functionality
 void *GetModuleHandle(const char *name)
 {
@@ -120,7 +115,6 @@ void *GetModuleHandle(const char *name)
 	dlclose(handle);
 	return handle;
 }
-#endif
 
 #if defined( _WIN32 )
 #define WIN32_LEAN_AND_MEAN
@@ -193,10 +187,6 @@ static HMODULE Sys_LoadLibraryGuts( const char *pLibraryName )
 	Q_strncpy( str, pLibraryName, sizeof(str) );
 	if ( !Q_stristr( str, pModuleExtension ) )
 	{
-		if ( IsX360() )
-		{
-			Q_StripExtension( str, str, sizeof(str) );
-		}
 		Q_strncat( str, pModuleAddition, sizeof(str) );
 	}
 	Q_FixSlashes( str );
@@ -210,25 +200,6 @@ static HMODULE Sys_LoadLibraryGuts( const char *pLibraryName )
 		{
 			StackToolsNotify_LoadedLibrary( str );
 		}
-#if 0	// you can enable this block to help track down why a module isn't loading:
-		else
-		{
-#ifdef  _WINDOWS
-			char buf[1024];
-			FormatMessage( 
-				FORMAT_MESSAGE_FROM_SYSTEM | 
-				FORMAT_MESSAGE_IGNORE_INSERTS,
-				NULL,
-				GetLastError(),
-				0, // Default language
-				(LPTSTR) buf,
-				1023,
-				NULL  // no insert arguments
-				);
-			Warning( "Could not load %s: %s\n", str, buf );
-#endif
-		}
-#endif
 
 		return retVal;
 	}
@@ -259,7 +230,7 @@ static HMODULE Sys_LoadLibraryGuts( const char *pLibraryName )
 
 	return context.m_hLibrary;
 
-#elif defined( POSIX )
+#else
 	HMODULE ret = (HMODULE)dlopen( str, RTLD_NOW );
 	if ( ! ret )
 	{
@@ -283,16 +254,10 @@ static HMODULE Sys_LoadLibrary( const char *pLibraryName )
 	// load a library. If a library suffix is set, look for the library first with that name
 	const char *pSuffix = NULL;
 	
-	if ( CommandLine()->FindParm( "-xlsp" ) )
-	{
-		pSuffix = "_xlsp";
-	}
-#ifdef POSIX
-	else if ( CommandLine()->FindParm( "-valveinternal" ) )
+if ( CommandLine()->FindParm( "-valveinternal" ) )
 	{
 		pSuffix = "_valveinternal";
 	}
-#endif
 #ifdef IS_WINDOWS_PC
 	else if ( CommandLine()->FindParm( "-ds" ) )			// windows DS bins
 	{
@@ -358,11 +323,7 @@ CSysModule *Sys_LoadModule( const char *pModuleName )
 		}
 
 		size_t cCwd = strlen( szCwd );
-#ifdef POSIX
 		Q_snprintf( szAbsoluteModuleName, sizeof(szAbsoluteModuleName), "%s/bin/lib%s", szCwd, pModuleName );
-#else
-		Q_snprintf( szAbsoluteModuleName, sizeof(szAbsoluteModuleName), "%s/bin/%s", szCwd, pModuleName );
-#endif
 		hDLL = Sys_LoadLibrary( szAbsoluteModuleName );
 	}
 
@@ -398,33 +359,6 @@ CSysModule *Sys_LoadModule( const char *pModuleName )
 	}
 
 //lwss - Was having issues with the "BuiltDebug" symbol here. Looked at source-sdk-2013 and they just ifdef it out
-#if !defined(LINUX)
-    // If running in the debugger, assume debug binaries are okay, otherwise they must run with -allowdebug
-	if ( !IsGameConsole() && Sys_GetProcAddress( hDLL, "BuiltDebug" ) )
-	{
-		if ( hDLL && !CommandLine()->FindParm( "-allowdebug" ) && 
-			 !Sys_IsDebuggerPresent() )
-		{
-			Error( "Module %s is a debug build\n", pModuleName );
-		}
-
-		DevWarning( "Module %s is a debug build\n", pModuleName );
-
-		if ( !s_bRunningWithDebugModules )
-		{
-			s_bRunningWithDebugModules = true;
-			
-#ifdef IS_WINDOWS_PC
-			char chMemoryName[ MAX_PATH ];
-			DebugKernelMemoryObjectName( chMemoryName );
-			
-			(void) CreateFileMapping( INVALID_HANDLE_VALUE, NULL, PAGE_READWRITE, 0, 1024, chMemoryName );
-			// Created a shared memory kernel object specific to process id
-			// Existence of this object indicates that we have debug modules loaded
-#endif
-		}
-	}
-#endif
 //lwss end
 
 //lwss - add dlopen error checking here.
@@ -474,7 +408,7 @@ void Sys_UnloadModule( CSysModule *pModule )
 
 #ifdef _WIN32
 	FreeLibrary( hDLL );
-#elif defined( POSIX )
+#else
 //$$$$$$ mikesart: for testing with valgrind don't unload so...	dlclose((void *)hDLL);
 #endif
 }
@@ -493,7 +427,7 @@ CreateInterfaceFn Sys_GetFactory( CSysModule *pModule )
 	HMODULE	hDLL = reinterpret_cast<HMODULE>(pModule);
 #ifdef _WIN32
 	return reinterpret_cast<CreateInterfaceFn>(GetProcAddress( hDLL, CREATEINTERFACE_PROCNAME ));
-#elif defined( POSIX )
+#else
 	// Linux gives this error:
 	//../public/interface.cpp: In function `IBaseInterface *(*Sys_GetFactory
 	//(CSysModule *)) (const char *, int *)':
@@ -523,7 +457,7 @@ CreateInterfaceFn Sys_GetFactory( const char *pModuleName )
 {
 #ifdef _WIN32
 	return static_cast<CreateInterfaceFn>( Sys_GetProcAddress( pModuleName, CREATEINTERFACE_PROCNAME ) );
-#elif defined(POSIX)
+#else
 	// see Sys_GetFactory( CSysModule *pModule ) for an explanation
 	return (CreateInterfaceFn)( Sys_GetProcAddress( pModuleName, CREATEINTERFACE_PROCNAME ) );
 #endif

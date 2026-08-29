@@ -367,7 +367,7 @@ inline int ComputeVertexDesc( unsigned char * pBuffer, VertexFormat_t vertexForm
 	// We always use vertex sizes which are half-cache aligned (16 bytes)
 	// x360 compressed vertexes are not compatible with forced alignments
 	bool bCacheAlign = ( vertexFormat & VERTEX_FORMAT_USE_EXACT_FORMAT ) == 0;
-	if ( bCacheAlign && ( offset > 16 ) && IsPC() )
+	if ( bCacheAlign && ( offset > 16 ) )
 	{
 		offset = (offset + 0xF) & (~0xF);
 	}

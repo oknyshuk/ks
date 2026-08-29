@@ -106,12 +106,6 @@ struct DemoImportantTick_t
 	KeyValues *pKeys;
 };
 
-namespace vgui
-{
-	// handle to an internal vgui panel
-	// this is the only handle to a panel that is valid across dll boundaries
-	typedef uintp VPANEL;
-}
 
 //-----------------------------------------------------------------------------
 // Purpose: This data structure is filled in by the engine when the client .dll requests information about
@@ -701,7 +695,6 @@ public:
 	virtual void SetMixLayerTriggerFactor( const char *pMixLayerIndex, const char *pMixGroupIndex, float flFactor ) = 0;
 
 	virtual bool IsCreatingReslist() = 0;
-	virtual bool IsCreatingXboxReslist() = 0;
 
 	virtual void SetTimescale( float flTimescale ) = 0;
 

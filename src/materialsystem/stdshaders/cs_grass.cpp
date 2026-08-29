@@ -55,7 +55,7 @@ BEGIN_VS_SHADER( Grass, "Help for Grass" )
 
 		bool bCSMEnabled;
 		int	nCSMQualityComboValue = 0;
-		bool bSFM = ( ToolsEnabled() && IsPlatformWindowsPC() && g_pHardwareConfig->SupportsPixelShaders_3_0() ) ? true : false;
+		bool bSFM = ( ToolsEnabled() && false && g_pHardwareConfig->SupportsPixelShaders_3_0() ) ? true : false;
 
         bCSMEnabled = g_pHardwareConfig->SupportsCascadedShadowMapping() && !bSFM;
         if ( bCSMEnabled )
@@ -145,7 +145,7 @@ BEGIN_VS_SHADER( Grass, "Help for Grass" )
 
 
 		bool bCSMEnabled;
-		bool bSFM = ( ToolsEnabled() && IsPlatformWindowsPC() && g_pHardwareConfig->SupportsPixelShaders_3_0() ) ? true : false;
+		bool bSFM = ( ToolsEnabled() && false && g_pHardwareConfig->SupportsPixelShaders_3_0() ) ? true : false;
 
         bCSMEnabled = g_pHardwareConfig->SupportsCascadedShadowMapping() && pShaderAPI->IsCascadedShadowMapping() && !bSFM;
 

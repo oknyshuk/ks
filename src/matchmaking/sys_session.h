@@ -1,4 +1,4 @@
-//===== Copyright © 1996-2009, Valve Corporation, All rights reserved. ======//
+//===== Copyright ï¿½ 1996-2009, Valve Corporation, All rights reserved. ======//
 //
 // Purpose: 
 //
@@ -13,6 +13,23 @@
 class CSysSessionBase;
 class CSysSessionHost;
 class CSysSessionClient;
+
+struct CSteamLobbyObject
+{
+	enum LobbyState_t
+	{
+		STATE_DEFAULT = 0,
+		STATE_ACTIVE_GAME,
+		STATE_DISCONNECTED_FROM_STEAM
+	};
+
+	uint64 m_uiLobbyID;
+	LobbyState_t m_eLobbyState;
+
+	CSteamLobbyObject() : m_uiLobbyID( 0 ), m_eLobbyState( STATE_DEFAULT ) {}
+
+	uint64 GetSessionId() const { return m_uiLobbyID; }
+};
 
 class CSysSessionBase
 {
@@ -58,9 +75,6 @@ protected:
 
 	void PrintValue( KeyValues *val, char *chBuffer, int numBytesBuffer );
 
-#ifdef _X360
-
-#elif !defined( NO_STEAM )
 public:
 	STEAM_CALLBACK_MANUAL( CSysSessionBase, Steam_OnLobbyChatMsg, LobbyChatMsg_t, m_CallbackOnLobbyChatMsg );
 	STEAM_CALLBACK_MANUAL( CSysSessionBase, Steam_OnLobbyChatUpdate, LobbyChatUpdate_t, m_CallbackOnLobbyChatUpdate );
@@ -80,9 +94,6 @@ protected:
 	char const * LobbyEnterErrorAsString( LobbyEnter_t *pLobbyEnter );
 	void LobbySetDataFromKeyValues( char const *szPath, KeyValues *key, bool bRecurse = true );
 
-#else
-	uint64 m_lobby;
-#endif
 
 protected:
 	// Voice engine
@@ -127,10 +138,6 @@ public:
 
 	void KickPlayer( KeyValues *pCommand );
 
-#ifdef _X360
-	void GetHostSessionInfo( char chBuffer[ XSESSION_INFO_STRING_LENGTH ] );
-	uint64 GetHostSessionId();
-#endif
 
 	void UpdateMembersInfo();
 	void OnUpdateSessionSettings( KeyValues *kv );
@@ -169,17 +176,6 @@ protected:
 	int  m_numRemainingTeamPlayers;
 	float m_flTeamResStartTime;
 
-#ifdef _X360
-
-	virtual void OnAsyncOperationFinished();
-
-	// IX360NetworkEvents
-	virtual void OnX360NetDisconnected( XUID xuidRemote );
-	virtual bool OnX360NetConnectionlessPacket( netpacket_t *pkt, KeyValues *msg );
-
-	void DestroyAfterMigrationFinished();
-
-#elif !defined( NO_STEAM )
 
 	CCallResult< CSysSessionHost, LobbyCreated_t > m_CallbackOnLobbyCreated;
 	void Steam_OnLobbyCreated( LobbyCreated_t *p, bool bError );
@@ -190,7 +186,6 @@ protected:
 	double m_dblDormantMembersCheckTime;
 	int m_numDormantMembersDetected;
 
-#endif
 
 	enum State_t
 	{
@@ -199,10 +194,6 @@ protected:
 		STATE_IDLE,
 		STATE_FAIL,
 		STATE_MIGRATE,
-#ifdef _X360
-		STATE_ALLOWING_MIGRATE,
-		STATE_DELETE,
-#endif
 		STATE_UNDEFINED
 	};
 
@@ -226,9 +217,6 @@ public:
 
 	virtual XUID GetHostXuid( XUID xuidValidResult = 0ull );
 
-#ifdef _X360
-	char const * GetHostNetworkAddress( XSESSION_INFO &xsi );
-#endif
 
 	void Migrate( KeyValues *pCommand );
 
@@ -254,22 +242,9 @@ protected:
 	void InitSessionProperties( KeyValues *pSettings );
 	void UpdateSessionProperties( KeyValues *kv );
 
-#ifdef _X360
-
-	virtual void OnAsyncOperationFinished();
-	virtual void XP2P_Interconnect();
-
-	// IX360NetworkEvents
-	virtual void OnX360NetDisconnected( XUID xuidRemote );
-	virtual bool OnX360NetConnectionlessPacket( netpacket_t *pkt, KeyValues *msg );
-
-	XNADDR m_xnaddrLocal;
-
-#elif !defined( NO_STEAM )
 
 	STEAM_CALLBACK_MANUAL( CSysSessionClient, Steam_OnLobbyEntered, LobbyEnter_t, m_CallbackOnLobbyEntered );
 
-#endif
 
 	struct RequestJoinDataInfo_t
 	{
@@ -280,17 +255,12 @@ protected:
 	enum State_t
 	{
 		STATE_INIT,
-#if !defined ( NO_STEAM )
         STATE_JOIN_LOBBY,
-#endif
 		STATE_CREATING,
 		STATE_REQUESTING_JOIN_DATA,
 		STATE_IDLE,
 		STATE_FAIL,
 		STATE_MIGRATE,
-#ifdef _X360
-		STATE_DELETE,
-#endif
 		STATE_UNDEFINED
 	};
 
@@ -336,24 +306,11 @@ protected:
 	
 public:
 
-#ifdef _X360
-
-	XSESSION_INFO m_sessionInfo;
-
-	virtual bool OnX360NetConnectionlessPacket( netpacket_t *pkt, KeyValues *msg );
-	virtual void OnAsyncOperationFinished();
-	IN_ADDR m_inaddr;
-
-#elif !defined( NO_STEAM )
 
 	STEAM_CALLBACK_MANUAL( CSysSessionConTeamHost, Steam_OnLobbyEntered, LobbyEnter_t, m_CallbackOnLobbyEntered );
 
-#endif
 };
 
 
-#ifdef _X360
-void SysSession360_UpdatePending();
-#endif
 
 #endif

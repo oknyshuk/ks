@@ -23,9 +23,6 @@ inline CLockedResource< T > CloneArrayWithMarkers( CResourceStream *pStream, con
 	return result;
 }
 
-#if 0//def _DEBUG
-#define CloneArray( STREAM, ARRAY, COUNT ) CloneArrayWithMarkers( (STREAM), (ARRAY), (COUNT), #ARRAY ); 
-#endif
 
 
 

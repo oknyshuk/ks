@@ -83,10 +83,6 @@ typedef struct
 class CHudTexture;
 class Color;
 
-namespace vgui2
-{
-	typedef unsigned long HFont;
-}
 
 #define MWHEEL_UP		 1
 #define MWHEEL_DOWN		-1

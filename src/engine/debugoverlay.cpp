@@ -369,9 +369,6 @@ void AddEntityTextOverlay(int ent_index, int line_offset, float duration, int r,
 	if ( GetBaseLocalClient().IsPaused() )
 		return;
 
-#if defined( _X360 ) && defined( _CERT )
-	return;
-#endif
 
 	AUTO_LOCK( s_OverlayMutex );
 	OverlayText_t *new_overlay = new OverlayText_t;
@@ -453,9 +450,6 @@ void AddTextOverlay(const Vector& textPos, float duration, const char *text)
 	if ( GetBaseLocalClient().IsPaused() )
 		return;
 
-#if defined( _X360 ) && defined( _CERT )
-	return;
-#endif
 
 	AUTO_LOCK( s_OverlayMutex );
 	OverlayText_t *new_overlay = new OverlayText_t;
@@ -484,9 +478,6 @@ void AddTextOverlay(const Vector& textPos, float duration, float alpha, const ch
 	if ( GetBaseLocalClient().IsPaused() )
 		return;
 
-#if defined( _X360 ) && defined( _CERT )
-	return;
-#endif
 
 	AUTO_LOCK( s_OverlayMutex );
 	OverlayText_t *new_overlay = new OverlayText_t;
@@ -515,9 +506,6 @@ void AddScreenTextOverlay(float flXPos, float flYPos, int line_offset, float dur
 	if ( GetBaseLocalClient().IsPaused() )
 		return;
 
-#if defined( _X360 ) && defined( _CERT )
-	return;
-#endif
 
 	AUTO_LOCK( s_OverlayMutex );
 	OverlayText_t *new_overlay = new OverlayText_t;
@@ -554,9 +542,6 @@ void AddTextOverlay(const Vector& textPos, int line_offset, float duration, cons
 	if ( GetBaseLocalClient().IsPaused() )
 		return;
 
-#if defined( _X360 ) && defined( _CERT )
-	return;
-#endif
 
 	AUTO_LOCK( s_OverlayMutex );
 	OverlayText_t *new_overlay = new OverlayText_t;
@@ -581,9 +566,6 @@ void AddTextOverlay(const Vector& textPos, int line_offset, float duration, floa
 	if ( GetBaseLocalClient().IsPaused() )
 		return;
 
-#if defined( _X360 ) && defined( _CERT )
-	return;
-#endif
 
 	AUTO_LOCK( s_OverlayMutex );
 	OverlayText_t *new_overlay = new OverlayText_t;
@@ -608,9 +590,6 @@ void AddTextOverlay(const Vector& textPos, int line_offset, float duration, floa
 	if ( GetBaseLocalClient().IsPaused() )
 		return;
 
-#if defined( _X360 ) && defined( _CERT )
-	return;
-#endif
 
 	AUTO_LOCK( s_OverlayMutex );
 	OverlayText_t *new_overlay = new OverlayText_t;

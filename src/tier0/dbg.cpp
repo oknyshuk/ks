@@ -30,8 +30,6 @@
 #include "tier0/vprof.h"
 #include <math.h>
 
-#if defined( _X360 )
-#endif
 
 #ifndef STEAM
 #define PvRealloc realloc
@@ -136,7 +134,7 @@ void _ExitOnFatalAssert( const tchar* pFile, int line )
 //-----------------------------------------------------------------------------
 PLATFORM_INTERFACE void _AssertValidReadPtr( void* ptr, int count/* = 1*/ )
 {
-#if defined( _WIN32 ) && !defined( _X360 )
+#if defined( _WIN32 )
 	Assert( !IsBadReadPtr( ptr, count ) );
 #else
 	Assert( !count || ptr );
@@ -145,7 +143,7 @@ PLATFORM_INTERFACE void _AssertValidReadPtr( void* ptr, int count/* = 1*/ )
 
 PLATFORM_INTERFACE void _AssertValidWritePtr( void* ptr, int count/* = 1*/ )
 {
-#if defined( _WIN32 ) && !defined( _X360 )
+#if defined( _WIN32 )
 	Assert( !IsBadWritePtr( ptr, count ) );
 #else
 	Assert( !count || ptr );
@@ -154,7 +152,7 @@ PLATFORM_INTERFACE void _AssertValidWritePtr( void* ptr, int count/* = 1*/ )
 
 PLATFORM_INTERFACE void _AssertValidReadWritePtr( void* ptr, int count/* = 1*/ )
 {
-#if defined( _WIN32 ) && !defined( _X360 )
+#if defined( _WIN32 )
 	Assert(!( IsBadWritePtr(ptr, count) || IsBadReadPtr(ptr,count)));
 #else
 	Assert( !count || ptr );
@@ -163,7 +161,7 @@ PLATFORM_INTERFACE void _AssertValidReadWritePtr( void* ptr, int count/* = 1*/ )
 
 PLATFORM_INTERFACE void _AssertValidStringPtr( const tchar* ptr, int maxchar/* = 0xFFFFFF */ )
 {
-#if defined( _WIN32 ) && !defined( _X360 )
+#if defined( _WIN32 )
 	#ifdef TCHAR_IS_CHAR
 		Assert( !IsBadStringPtr( ptr, maxchar ) );
 	#else
@@ -176,7 +174,7 @@ PLATFORM_INTERFACE void _AssertValidStringPtr( const tchar* ptr, int maxchar/* =
 
 PLATFORM_INTERFACE void AssertValidWStringPtr( const wchar_t* ptr, int maxchar/* = 0xFFFFFF */ )
 {
-#if defined( _WIN32 ) && !defined( _X360 )
+#if defined( _WIN32 )
 	Assert( !IsBadStringPtrW( ptr, maxchar ) );
 #else
 	Assert( ptr );
@@ -397,33 +395,25 @@ void COM_TimestampedLog( char const *fmt, ... )
 
 	float curStamp = Plat_FloatTime();
 
-#if defined( _X360 )
-	XBX_rTimeStampLog( curStamp, string );
-#elif defined( _PS3 )
-	Log_Warning( LOG_LOADING, "%8.4f / %8.4f:  %s\n", curStamp, curStamp - s_LastStamp, string );
-#endif
 
-	if ( IsPC() )
+	// If ETW profiling is enabled then do it only.
+	/*if (s_bShouldLogToETW)
 	{
-		// If ETW profiling is enabled then do it only.
-		/*if (s_bShouldLogToETW)
-		{
-			ETWMark( string );
-		}*/
-		if ( !s_bFirstWrite )
-		{
-			unlink( "timestamped.log" );
-			s_bFirstWrite = true;
-		}
+		ETWMark( string );
+	}*/
+	if ( !s_bFirstWrite )
+	{
+		unlink( "timestamped.log" );
+		s_bFirstWrite = true;
+	}
 
-		FILE* fp = fopen( "timestamped.log", "at+" );
-		fprintf( fp, "%8.4f / %8.4f:  %s\n", curStamp, curStamp - s_LastStamp, string );
-		fclose( fp );
+	FILE* fp = fopen( "timestamped.log", "at+" );
+	fprintf( fp, "%8.4f / %8.4f:  %s\n", curStamp, curStamp - s_LastStamp, string );
+	fclose( fp );
 
-		if ( s_bShouldLogToConsole )
-		{
-			Msg( "%8.4f / %8.4f:  %s\n", curStamp, curStamp - s_LastStamp, string );
-		}
+	if ( s_bShouldLogToConsole )
+	{
+		Msg( "%8.4f / %8.4f:  %s\n", curStamp, curStamp - s_LastStamp, string );
 	}
 
 	s_LastStamp = curStamp;

@@ -1114,77 +1114,9 @@ void CCSBot::DebugDisplay( void ) const
 	else
 	{
 		// show encounter spot data
-		if (false && m_spotEncounter)
-		{
-			NDebugOverlay::Line( m_spotEncounter->path.from, m_spotEncounter->path.to, 0, 150, 150, true, 0.1f );
-
-			Vector dir = m_spotEncounter->path.to - m_spotEncounter->path.from;
-			float length = dir.NormalizeInPlace();
-
-			const SpotOrder *order;
-			Vector along;
-
-			FOR_EACH_VEC( m_spotEncounter->spots, it )
-			{
-				order = &m_spotEncounter->spots[ it ];
-
-				// ignore spots the enemy could not have possibly reached yet
-				if (order->spot->GetArea())
-				{
-					if (TheCSBots()->GetElapsedRoundTime() < order->spot->GetArea()->GetEarliestOccupyTime( OtherTeam( GetTeamNumber() ) ))
-					{
-						continue;
-					}
-				}
-
-				along = m_spotEncounter->path.from + order->t * length * dir;
-
-				NDebugOverlay::Line( along, order->spot->GetPosition(), 0, 255, 255, true, 0.1f );
-			}
-		}
 	}
 
 	// show aim targets
-	if (false)
-	{
-		CStudioHdr *pStudioHdr = const_cast< CCSBot *>( this )->GetModelPtr();
-		if ( !pStudioHdr )
-			return;
-
-		mstudiohitboxset_t *set = pStudioHdr->pHitboxSet( const_cast< CCSBot *>( this )->GetHitboxSet() );
-		if ( !set )
-			return;
-
-		Vector position, forward, right, up;
-		QAngle angles;
-		char buffer[16];
-
-		for ( int i = 0; i < set->numhitboxes; i++ )
-		{
-			mstudiobbox_t *pbox = set->pHitbox( i );
-
-			const_cast< CCSBot *>( this )->GetBonePosition( pbox->bone, position, angles );
-		
-			AngleVectors( angles, &forward, &right, &up );
-
-			NDebugOverlay::BoxAngles( position, pbox->bbmin, pbox->bbmax, angles, 255, 0, 0, 0, 0.1f );
-
-			const float size = 5.0f;
-			NDebugOverlay::Line( position, position + size * forward, 255, 255, 0, true, 0.1f );
-			NDebugOverlay::Line( position, position + size * right, 255, 0, 0, true, 0.1f );
-			NDebugOverlay::Line( position, position + size * up, 0, 255, 0, true, 0.1f );
-
-			Q_snprintf( buffer, 16, "%d", i );
-			if (i == 12)
-			{
-				// in local bone space
-				const float headForwardOffset = 4.0f;
-				const float headRightOffset = 2.0f;
-				position += headForwardOffset * forward + headRightOffset * right;
-			}
-			NDebugOverlay::Text( position, buffer, true, 0.1f );
-		}
-	}
 
 
 	/*

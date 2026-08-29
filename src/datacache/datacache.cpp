@@ -6,9 +6,7 @@
 
 #include "datacache/idatacache.h"
 
-#if defined( POSIX ) && !defined( _PS3 )
 #include <malloc.h>
-#endif
 
 #include "tier0/vprof.h"
 #include "basetypes.h"
@@ -23,15 +21,9 @@
 #include "datacache.h"
 #include "utlvector.h"
 #include "fmtstr.h"
-#if defined( _X360 )
-#endif
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
-#ifdef _PS3
-#include "tls_ps3.h"
-extern uint32 gMinAllocSize;
-#endif //_PS3
 
 //-----------------------------------------------------------------------------
 // Singleton
@@ -194,9 +186,7 @@ bool CDataCacheSection::AddEx( DataCacheClientID_t clientId, const void *pItemDa
 {
 	VPROF( "CDataCacheSection::Add" );
 
-#if !defined( _CERT )
 	ForceFlushDebug( true );
-#endif
 
 	if ( ( m_options & DC_VALIDATE ) && Find( clientId ) )
 	{
@@ -215,12 +205,6 @@ bool CDataCacheSection::AddEx( DataCacheClientID_t clientId, const void *pItemDa
 	};
 
 	memhandle_t hMem = m_LRU.CreateResource( itemData, true );
-#ifdef _PS3
-	if ( m_LRU.LockCount( hMem ) == 1 )
-	{
-		NoteLock( size );
-	}
-#endif
 
 	Assert( hMem != (memhandle_t)0 && hMem != (memhandle_t)DC_INVALID_HANDLE );
 
@@ -361,9 +345,7 @@ void CDataCacheSection::GetAndLockMultiple( void **ppData, int nCount, DataCache
 {
 	VPROF( "CDataCacheSection::GetAndLockMultiple" );
 
-#if !defined( _CERT )
 	ForceFlushDebug( !g_iDontForceFlush );
-#endif
 
 	AUTO_LOCK( m_mutex );
 	for ( int i = 0; i < nCount; ++i )
@@ -398,9 +380,7 @@ void *CDataCacheSection::Lock( DataCacheHandle_t handle )
 {
 	VPROF( "CDataCacheSection::Lock" );
 
-#if !defined( _CERT )
 	ForceFlushDebug( !g_iDontForceFlush );
-#endif
 
 	if ( handle != DC_INVALID_HANDLE )
 	{
@@ -475,9 +455,7 @@ void *CDataCacheSection::Get( DataCacheHandle_t handle, bool bFrameLock )
 {
 	VPROF( "CDataCacheSection::Get" );
 
-#if !defined( _CERT )
 	ForceFlushDebug( !g_iDontForceFlush );
-#endif
 
 	if ( handle != DC_INVALID_HANDLE )
 	{
@@ -565,9 +543,7 @@ void *CDataCacheSection::FrameLock( DataCacheHandle_t handle )
 {
 	VPROF( "CDataCacheSection::FrameLock" );
 
-#if !defined( _CERT )
 	ForceFlushDebug( !g_iDontForceFlush );
-#endif
 
 	void *pResult = NULL;
 	FrameLock_t *pFrameLock = m_FrameLocks[g_nThreadID];
@@ -999,21 +975,6 @@ void CDataCacheSection::ForceFlushDebug( bool bFlush )
 	{
 		if ( !*mem_force_flush_section.GetString() )
 		{
-			if ( IsGameConsole() )
-			{
-				// The 360 does not use LRU purge behavior on some sections (section limits are -1) and thus cannot handle arbitrary purges.
-				// Instead the 360 marks those sections, and then must iterate/skip here
-				int count = m_pSharedCache->GetSectionCount();
-				for ( int i = 0; i < count; i++ )
-				{
-					IDataCacheSection *pCacheSection = m_pSharedCache->FindSection( m_pSharedCache->GetSectionName( i ) );
-					if ( pCacheSection && !( pCacheSection->GetOptions() & DC_NO_USER_FORCE_FLUSH ) )
-					{
-						pCacheSection->Flush();
-					}
-				}
-			}
-			else
 			{
 				m_pSharedCache->Flush();
 			}
@@ -1222,9 +1183,6 @@ IDataCacheSection *CDataCache::AddSection( IDataCacheClient *pClient, const char
 //-----------------------------------------------------------------------------
 void CDataCache::RemoveSection( const char *pszClientName, bool bCallFlush )
 {
-#ifdef _PS3
-    // TODO: if (!g_bDoingExitSequence)
-#endif
     {
 		int iSection = FindSectionIndex( pszClientName );
 
@@ -1374,26 +1332,6 @@ void CDataCache::OutputReport( DataCacheReportType_t reportType, const char *psz
 		}
 		OutputReport( DC_SUMMARY_REPORT, pszSection );
 	}
-#if defined( _X360 )
-	else if ( reportType == DC_DETAIL_REPORT_VXCONSOLE )
-	{
-		int numLockedItems = lockedlist.Count();
-		int numLruItems = lruList.Count();
-		CUtlVector< xDataCacheItem_t > vxconsoleItems;
-		vxconsoleItems.SetCount( numLockedItems + numLruItems );
-
-		for ( i = 0; i < numLockedItems; ++i )
-		{
-			OutputItemReport( lockedlist[i], &vxconsoleItems[i] );
-		}
-		for ( i = 0; i < numLruItems; ++i )
-		{
-			OutputItemReport( lruList[i], &vxconsoleItems[numLockedItems + i] );
-		}
-
-		XBX_rDataCacheList( vxconsoleItems.Count(), vxconsoleItems.Base() );
-	}
-#endif
 	else if ( reportType == DC_SUMMARY_REPORT )
 	{
 		if ( !pszSection )
@@ -1465,21 +1403,6 @@ void CDataCache::OutputItemReport( memhandle_t hItem, void *pXboxData )
 	name[0] = 0;
 	pSection->GetClient()->GetItemName( pItem->clientId, pItem->pItemData, name, DC_MAX_ITEM_NAME );
 
-#if defined( _X360 )
-	if ( pXboxData )
-	{
-		// spew into vxconsole friendly structure
-		xDataCacheItem_t *pXboxItem = (xDataCacheItem_t *)pXboxData;
-		V_strncpy( pXboxItem->name, name, sizeof( pXboxItem->section ) );
-		V_strncpy( pXboxItem->section, pItem->pSection->GetName(), sizeof( pXboxItem->section ) );
-		pXboxItem->size = pItem->size;
-		pXboxItem->lockCount = m_LRU.LockCount( hItem );
-		pXboxItem->clientId = pItem->clientId;
-		pXboxItem->itemData = (unsigned int)pItem->pItemData;
-		pXboxItem->handle = (unsigned int)hItem;
-		return;
-	}
-#endif
 
 	Msg( "\t%16.16s : %12s : 0x%08x, %p, 0x%p : %s : %s\n", 
 		Q_pretifymem( pItem->size, 2, true ), 

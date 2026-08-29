@@ -9,12 +9,9 @@
 #include "tier0/vprof.h"
 #include "sv_ipratelimit.h"
 
-#if IsPlatformWindows()
-#else
 #include <poll.h>
-#endif
 
-#if !defined(_X360) && !defined(NO_STEAM) && !defined(DEDICATED)
+#if !defined(NO_STEAM) && !defined(DEDICATED)
 #define USE_STEAM_SOCKETS
 #endif
 
@@ -95,22 +92,10 @@ private:
 	public:
 		explicit CSocketThread( int s, int nsSock ) : m_s( s ), m_nsSock( nsSock ), m_hThread( NULL ), m_pDataQueueBufferCollect( NULL )
 		{
-#if IsPlatformWindows()
-			m_wsaEvents[0] = ::WSACreateEvent();
-			if ( !m_wsaEvents[0] )
-				Error( "WSACreateEvent failed\n" );
-			m_wsaEvents[1] = ::WSACreateEvent();
-			if ( !m_wsaEvents[1] )
-				Error( "WSACreateEvent failed\n" );
-			int ret = ::WSAEventSelect( m_s, m_wsaEvents[ 1 ], FD_READ );
-			if ( ret )
-				Error( "WSAEventSelect failed\n" );
-#else
 			Q_memset( m_sockSignalPipe, -1, sizeof( m_sockSignalPipe ) );
 			int ret = socketpair( PF_LOCAL, SOCK_STREAM, 0, m_sockSignalPipe ); // 0=main; 1=pump
 			if ( ret )
 				Error( "socketpair failed!\n" );
-#endif
 
 			// Create the thread and start socket processing
 			m_hThread = CreateSimpleThread( CallbackThreadProc, this );
@@ -120,24 +105,15 @@ private:
 		~CSocketThread()
 		{
 			// Kill the thread!
-#if IsPlatformWindows()
-			::WSASetEvent( m_wsaEvents[0] );
-#else
 			write( m_sockSignalPipe[0], "", 1 ); // write one zero byte to wake the thread
-#endif
 			// wait for it to die
 			ThreadJoin( m_hThread );
 			ReleaseThreadHandle( m_hThread );
 			m_hThread = NULL;
 
 			// Shutdown resources
-#if IsPlatformWindows()
-			::WSACloseEvent( m_wsaEvents[0] );
-			::WSACloseEvent( m_wsaEvents[1] );
-#else
 			close( m_sockSignalPipe[0] );
 			close( m_sockSignalPipe[1] );
-#endif
 			
 			// Purge all packet data blocks
 			m_tslstDataQueue.Purge();
@@ -210,9 +186,6 @@ private:
 			typedef CUtlMap< uint64, CPerNetChanRatelimit_t, int, CDefLess< uint64 > > MapPerClientRatelimit_t;
 			MapPerClientRatelimit_t mapPerClientRatelimit;
 
-#if IsPlatformWindows()
-			const DWORD cWsaEvents = Q_ARRAYSIZE( m_wsaEvents );
-#else
 			const int numSyscallPollFDs = 2;
 			struct pollfd syscallPollFDs[ numSyscallPollFDs ];
 			Q_memset( syscallPollFDs, 0, sizeof( syscallPollFDs ) );
@@ -220,7 +193,6 @@ private:
 			syscallPollFDs[ 0 ].events = POLLIN;
 			syscallPollFDs[ 1 ].fd = m_sockSignalPipe[1];
 			syscallPollFDs[ 1 ].events = POLLIN;
-#endif
 
 			volatile double &vdblNetTimeForThread = net_time;
 			for ( ;; )
@@ -239,17 +211,9 @@ private:
 				if ( ret <= 0 )
 				{
 					// Efficiently sleep while we wait for next packet
-#if IsPlatformWindows()
-					DWORD dwWsaWaitResult = ::WSAWaitForMultipleEvents( cWsaEvents, m_wsaEvents, FALSE, WSA_INFINITE, FALSE );
-					if ( dwWsaWaitResult == WSA_WAIT_EVENT_0 )
-						return; // Finish the socket pump thread due to event signal from destructor
-					WSANETWORKEVENTS wsaNetworkEvents;
-					::WSAEnumNetworkEvents( m_s, m_wsaEvents[1], &wsaNetworkEvents ); // Reset socket read event
-#else
 					ret = ::poll( syscallPollFDs, numSyscallPollFDs, -1 ); // Sleep indefinitely until data available
 					if ( syscallPollFDs[ 1 ].revents )
 						return;	// Finish the socket reading thread if socketpair pump end of the pipe has incoming signal
-#endif
 					continue;
 				}
 				if ( ret > 0 )
@@ -390,11 +354,7 @@ private:
 		CTSQueue< ReceivedData_t > m_tslstDataQueue;	// FIFO - actual data packets pumped from socket, thread-safe access on both threads
 		CTSQueue< net_threaded_buffer_t * > m_tslstBuffers;	// FIFO - buffers storing data pumped from socket, multiple packets can be stored in one memory chunk, thread-safe access on both threads
 		net_threaded_buffer_t *m_pDataQueueBufferCollect; // Main thread tracking when collect buffer can be returned to global pool
-#if IsPlatformWindows()
-		WSAEVENT m_wsaEvents[2];
-#else
 		int m_sockSignalPipe[2];
-#endif
 	};
 	CSocketThread * GetSocketThread( int s, int nsSock = -1, bool bRequired = false )
 	{
@@ -459,11 +419,6 @@ static const tokenset_t< ESocketIndex_t > s_SocketIndexMap[] =
 {						 
 	{ "NS_CLIENT",		NS_CLIENT		},                          
 	{ "NS_SERVER",		NS_SERVER		},                          
-#ifdef _X360
-	{ "NS_X360_SYSTEMLINK",	NS_X360_SYSTEMLINK	},
-	{ "NS_X360_LOBBY",		NS_X360_LOBBY		},
-	{ "NS_X360_TEAMLINK",	NS_X360_TEAMLINK	},
-#endif
 	{ "NS_HLTV",		NS_HLTV			},
 	{ "NS_HLTV1",		NS_HLTV1		},
 	{ NULL, ( ESocketIndex_t )-1 }
@@ -1055,9 +1010,6 @@ void CSteamSocketMgr::PrintStatus()
 #else
 
 // For LINUX it's basically all stubbed
-#ifdef _PS3
-ASSERT_INVARIANT( sizeof( int ) == sizeof( socklen_t ) );
-#endif
 
 class CSteamSocketMgr : public ISteamSocketMgr
 {

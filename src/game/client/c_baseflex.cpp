@@ -383,10 +383,6 @@ public:
 			pFolder = "expressions";
 
 #if defined( PORTAL2 )
-			if ( IsGameConsole() )
-			{
-				return false;
-			}
 #endif
 		}
 
@@ -469,23 +465,17 @@ public:
 			Q_snprintf( fn, sizeof( fn ), "player/%s/phonemes/phonemes_strong", pTFClasses[i] );
 			FindSceneFile( NULL, fn, true );
 
-			if ( !IsGameConsole() )
-			{
-				Q_snprintf( fn, sizeof( fn ), "player/hwm/%s/phonemes/phonemes", pTFClasses[i] );
-				FindSceneFile( NULL, fn, true );
-				Q_snprintf( fn, sizeof( fn ), "player/hwm/%s/phonemes/phonemes_weak", pTFClasses[i] );
-				FindSceneFile( NULL, fn, true );
-				Q_snprintf( fn, sizeof( fn ), "player/hwm/%s/phonemes/phonemes_strong", pTFClasses[i] );
-				FindSceneFile( NULL, fn, true );
-			}
+			Q_snprintf( fn, sizeof( fn ), "player/hwm/%s/phonemes/phonemes", pTFClasses[i] );
+			FindSceneFile( NULL, fn, true );
+			Q_snprintf( fn, sizeof( fn ), "player/hwm/%s/phonemes/phonemes_weak", pTFClasses[i] );
+			FindSceneFile( NULL, fn, true );
+			Q_snprintf( fn, sizeof( fn ), "player/hwm/%s/phonemes/phonemes_strong", pTFClasses[i] );
+			FindSceneFile( NULL, fn, true );
 
 			Q_snprintf( fn, sizeof( fn ), "player/%s/emotion/emotion", pTFClasses[i] );
 			FindSceneFile( NULL, fn, true );
-			if ( !IsGameConsole() )
-			{
-				Q_snprintf( fn, sizeof( fn ), "player/hwm/%s/emotion/emotion", pTFClasses[i] );
-				FindSceneFile( NULL, fn, true );
-			}
+			Q_snprintf( fn, sizeof( fn ), "player/hwm/%s/emotion/emotion", pTFClasses[i] );
+			FindSceneFile( NULL, fn, true );
 		}
 #endif
 
@@ -567,39 +557,6 @@ public:
 		m_FileList.AddToTail( pfile );
 
 		// Swap the entire file
-		if ( IsGameConsole() )
-		{
-			CByteswap swap;
-			swap.ActivateByteSwapping( true );
-			byte *pData = (byte*)buffer;
-			flexsettinghdr_t *pHdr = (flexsettinghdr_t*)pData;
-			swap.SwapFieldsToTargetEndian( pHdr );
-
-			// Flex Settings
-			flexsetting_t *pFlexSetting = (flexsetting_t*)((byte*)pHdr + pHdr->flexsettingindex);
-			for ( int i = 0; i < pHdr->numflexsettings; ++i, ++pFlexSetting )
-			{
-				swap.SwapFieldsToTargetEndian( pFlexSetting );
-				
-				flexweight_t *pWeight = (flexweight_t*)(((byte*)pFlexSetting) + pFlexSetting->settingindex );
-				for ( int j = 0; j < pFlexSetting->numsettings; ++j, ++pWeight )
-				{
-					swap.SwapFieldsToTargetEndian( pWeight );
-				}
-			}
-
-			// indexes
-			pData = (byte*)pHdr + pHdr->indexindex;
-			swap.SwapBufferToTargetEndian( (int*)pData, (int*)pData, pHdr->numindexes );
-
-			// keymappings
-			pData  = (byte*)pHdr + pHdr->keymappingindex;
-			swap.SwapBufferToTargetEndian( (int*)pData, (int*)pData, pHdr->numkeys );
-
-			// keyname indices
-			pData = (byte*)pHdr + pHdr->keynameindex;
-			swap.SwapBufferToTargetEndian( (int*)pData, (int*)pData, pHdr->numkeys );
-		}
 
 		// Fill in translation table
 		EnsureTranslations( instance, ( const flexsettinghdr_t * )pfile->buffer );

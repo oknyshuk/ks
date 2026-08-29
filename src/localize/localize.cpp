@@ -7,13 +7,10 @@
 
 
 #pragma warning( disable: 4018 ) // '==' : signed/unsigned mismatch in rbtree
-#if defined( WIN32 ) && !defined( _X360 )
+#if defined( WIN32 )
 #include <windows.h>
 #include <vadefs.h>
-#elif defined( _PS3 )
-
-
-#elif defined( POSIX )
+#else
 #include <iconv.h>
 #endif
 
@@ -32,11 +29,7 @@
 #include "exprevaluator.h"
 #include "iregistry.h"
 #include <vstdlib/vstrtools.h>
-#include "vgui/ISystem.h"
-#include "vgui_controls/Controls.h"
 
-#if defined( _X360 )
-#endif
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -153,9 +146,7 @@ private:
 	void InvokeChangeCallbacks( );
 	virtual int ConvertANSIToUCS2(const char *ansi, OUT_Z_BYTECAP(unicodeBufferSizeInBytes) ucs2 *unicode, int unicodeBufferSizeInBytes);
 	virtual int ConvertUCS2ToANSI(const ucs2 *unicode, OUT_Z_BYTECAP(ansiBufferSize) char *ansi, int ansiBufferSize);
-#if defined ( POSIX ) && !defined( _PS3 )
 	virtual void AddString(const char *tokenName, ucs2 *unicodeString, const char *fileName);
-#endif
 	char m_szLanguage[64];
 	bool m_bUseOnlyLongestLanguageString;
 	bool m_bSuppressChangeCallbacks;
@@ -532,28 +523,19 @@ bool CLocalize::AddFile( const char *szFileName, const char *pPathID, bool bIncl
 		success = AddFile( fileName, pPathID, bIncludeFallbackSearchPaths );
 
 		bool bValid = true;
-		if ( IsPC() )
+		if ( CommandLine()->CheckParm( "-language" ) )
 		{
-			if ( CommandLine()->CheckParm( "-language" ) )
-			{
-				Q_strncpy( language, CommandLine()->ParmValue( "-language", "english" ), sizeof( language ) );
-				bValid = true;
-			}
-			else
-			{
-				bValid = false;
-			}
-			if ( bValid && !Q_stricmp( language, "unknown" ) )
-			{
-				// Fall back to english
-				bValid = false;
-			}
+			Q_strncpy( language, CommandLine()->ParmValue( "-language", "english" ), sizeof( language ) );
+			bValid = true;
 		}
 		else
 		{
-#ifdef _GAMECONSOLE
-			Q_strncpy( language, XBX_GetLanguageString(), sizeof( language ) );
-#endif
+			bValid = false;
+		}
+		if ( bValid && !Q_stricmp( language, "unknown" ) )
+		{
+			// Fall back to english
+			bValid = false;
 		}
 
 		// LOAD THE LOCALIZED FILE IF IT'S NOT ENGLISH
@@ -618,30 +600,6 @@ bool CLocalize::AddAllLanguageFiles( const char *baseFileName )
 	// This will suppress callbacks until we're done.
 	m_bSuppressChangeCallbacks = true;
 
-	if ( IsX360() )
-	{
-#ifdef _X360
-		// xbox cannot support FindFirst/FindNext due to zips
-		const char *pLanguageString = NULL;
-		while ( 1 )
-		{
-			pLanguageString = XBX_GetNextSupportedLanguage( pLanguageString, NULL );
-			if ( !pLanguageString )
-			{
-				// end of list
-				break;
-			}
-
-			// re-add in the search path
-			char szFile[MAX_PATH];
-			V_snprintf( szFile, sizeof( szFile ), "%s%s.txt", baseFileName, pLanguageString );
-
-			// add the file
-			bSuccess &= AddFile( szFile, NULL, true );
-		}
-#endif
-	}
-	else
 	{
 		// work out the path the files are in
 		char szFilePath[MAX_PATH];
@@ -752,13 +710,9 @@ bool CLocalize::SaveToFile( const char *szFileName )
 		g_pFullFileSystem->Write(&unicodeTab, sizeof(ucs2), file);
 
 		g_pFullFileSystem->Write(&unicodeQuote, sizeof(ucs2), file);
-#ifdef POSIX
 		ucs2 ucs2Value[MAX_LOCALIZED_CHARS];
 		V_UnicodeToUCS2( value, wcslen(value)*sizeof(wchar_t), (char *)ucs2Value, sizeof(ucs2Value) );
 		g_pFullFileSystem->Write(ucs2Value, wcslen(value) * sizeof(ucs2), file);
-#else
-		g_pFullFileSystem->Write(value, wcslen(value) * sizeof(ucs2), file);
-#endif
 		g_pFullFileSystem->Write(&unicodeQuote, sizeof(ucs2), file);
 
 		g_pFullFileSystem->Write(&unicodeCR, sizeof(ucs2), file);
@@ -821,11 +775,7 @@ wchar_t *CLocalize::Find(const char *pName)
 // Like Find(), but as a failsafe, returns an error message instead of NULL if the string isn't found.  
 const wchar_t *CLocalize::FindSafe(const char *pName)
 {
-#ifdef _CERT
-	const wchar_t *failsafe = L"";
-#else
 	const wchar_t *failsafe = L"#FIXME_LOCALIZATION_FAIL_MISSING_STRING";
-#endif
 
 	const wchar_t *locstr = Find( pName );
 
@@ -862,7 +812,6 @@ LocalizeStringIndex_t CLocalize::FindIndex(const char *pName)
 	return m_Lookup.Find( invalidItem );
 }
 
-#if defined( POSIX ) && !defined( _PS3 )
 void CLocalize::AddString(const char *pString, ucs2 *pUCS2Value, const char *fileName)
 {
 	if (!pString || !pUCS2Value ) 
@@ -872,7 +821,6 @@ void CLocalize::AddString(const char *pString, ucs2 *pUCS2Value, const char *fil
 
 	AddString( pString, pValue, fileName );
 }
-#endif
 
 //-----------------------------------------------------------------------------
 // Finds and/or creates a symbol based on the string
@@ -1122,13 +1070,7 @@ bool CLocalize::LocalizationFileIsLoaded(const char *name)
 //-----------------------------------------------------------------------------
 int CLocalize::ConvertANSIToUnicode(const char *ansi, wchar_t *unicode, int unicodeBufferSizeInBytes)
 {
-#ifdef POSIX
 	return V_UTF8ToUnicode(ansi, unicode, unicodeBufferSizeInBytes);
-#else
-	int chars = ::MultiByteToWideChar(CP_UTF8, 0, ansi, -1, unicode, unicodeBufferSizeInBytes / sizeof(wchar_t));
-	unicode[(unicodeBufferSizeInBytes / sizeof(wchar_t)) - 1] = 0;
-	return chars;
-#endif
 }
 
 //-----------------------------------------------------------------------------
@@ -1136,13 +1078,7 @@ int CLocalize::ConvertANSIToUnicode(const char *ansi, wchar_t *unicode, int unic
 //-----------------------------------------------------------------------------
 int CLocalize::ConvertUnicodeToANSI(const wchar_t *unicode, char *ansi, int ansiBufferSize)
 {
-#ifdef POSIX
 	return V_UnicodeToUTF8(unicode, ansi, ansiBufferSize);
-#else
-	int result = ::WideCharToMultiByte(CP_UTF8, 0, unicode, -1, ansi, ansiBufferSize, NULL, NULL);
-	ansi[ansiBufferSize - 1] = 0;
-	return result;
-#endif
 }
 
 //-----------------------------------------------------------------------------
@@ -1150,13 +1086,7 @@ int CLocalize::ConvertUnicodeToANSI(const wchar_t *unicode, char *ansi, int ansi
 //-----------------------------------------------------------------------------
 int CLocalize::ConvertANSIToUCS2(const char *ansi, OUT_Z_BYTECAP(unicodeBufferSizeInBytes) ucs2 *unicode, int unicodeBufferSizeInBytes)
 {
-#ifdef POSIX
 	return V_UTF8ToUCS2(ansi, strlen(ansi)*sizeof(char), unicode, unicodeBufferSizeInBytes);
-#else
-	int chars = ::MultiByteToWideChar(CP_UTF8, 0, ansi, -1, unicode, unicodeBufferSizeInBytes / sizeof(wchar_t));
-	unicode[(unicodeBufferSizeInBytes / sizeof(wchar_t)) - 1] = 0;
-	return chars;
-#endif
 }
 
 //-----------------------------------------------------------------------------
@@ -1164,13 +1094,7 @@ int CLocalize::ConvertANSIToUCS2(const char *ansi, OUT_Z_BYTECAP(unicodeBufferSi
 //-----------------------------------------------------------------------------
 int CLocalize::ConvertUCS2ToANSI(const ucs2 *unicode, OUT_Z_BYTECAP(ansiBufferSize) char *ansi, int ansiBufferSize)
 {
-#ifdef POSIX
 	return V_UCS2ToUTF8(unicode, ansi, ansiBufferSize);
-#else
-	int result = ::WideCharToMultiByte(CP_UTF8, 0, unicode, -1, ansi, ansiBufferSize, NULL, NULL);
-	ansi[ansiBufferSize - 1] = 0;
-	return result;
-#endif
 }
 
 
@@ -1383,12 +1307,9 @@ void ConstructStringVArgsInternal_Impl(T *unicodeOutput, int unicodeBufferSizeIn
 	// On 64 bits, va_list does not just point to a contiguous blob of parameters
 	// so extract into an array here.
 	T** arguments = (T**)stackalloc( sizeof(T*)*numFormatParameters );
-	if ( IsPC() )
+	for ( int i = 0; i < numFormatParameters; ++i )
 	{
-		for ( int i = 0; i < numFormatParameters; ++i )
-		{
-			arguments[i] = va_arg( argList, T* );
-		}
+		arguments[i] = va_arg( argList, T* );
 	}
 
 #ifdef _DEBUG
@@ -1413,18 +1334,7 @@ void ConstructStringVArgsInternal_Impl(T *unicodeOutput, int unicodeBufferSizeIn
 			if ( argindex < numFormatParameters )
 			{
 				T *param = NULL;
-				if ( IsPC() )
-				{
-#if !defined( _PS3 )
-					param = arguments[ argindex ];
-#endif // !_PS3
-				}
-				else
-				{
-					// X360TBD: convert string to new %var% format if this assert hits
-					Assert( argindex == curArgIdx++ );
-					param = va_arg( argList, T* );
-				}
+				param = arguments[ argindex ];
 
 				if (!param)
 				{

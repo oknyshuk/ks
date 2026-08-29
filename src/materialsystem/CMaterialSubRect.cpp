@@ -17,9 +17,7 @@
 #include "materialsystem/imaterialproxyfactory.h"
 #include "IHardwareConfigInternal.h"
 #include "utlsymbol.h"
-#ifndef _PS3
 #include <malloc.h>
-#endif
 #include "filesystem.h"
 #include <keyvalues.h>
 #include "mempool.h"
@@ -661,7 +659,7 @@ void CMaterialSubRect::ParseMaterialVars( KeyValues &keyValues )
 	{
 		DevWarning( 1, "CMaterialSubRect::InitializeShader: Shader not specified in material %s.\n", GetName() );
 		Assert( 0 );
-		pShaderName = IsPC() ? "Wireframe_DX6" : "Wireframe_DX9";
+		pShaderName = true ? "Wireframe_DX6" : "Wireframe_DX9";
 	}
 
 	// Verify we have the correct "shader."  There is only one type.

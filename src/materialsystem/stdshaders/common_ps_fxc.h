@@ -28,17 +28,10 @@
 // --------------------------------------------------------------------------------
 
 // PS3 sRGB writes require a half4 return value
-#if defined( _PS3 )
-#define float4_color_return_type half4
-#else // _PS3
 #define float4_color_return_type float4
-#endif // !_PS3
 
 // System defined pixel shader constants
 
-#if defined( _X360 )
-const bool g_bHighQualityShadows : register( b0 );
-#endif
 
 // NOTE: w == 1.0f / (Dest alpha compressed depth range).
 const float4 g_LinearFogColor : register( c29 );
@@ -244,30 +237,11 @@ float3 smoothstep3( float3 edge0, float3 edge1, float3 OneOverWidth, float3 x )
 
 float CalcWaterFogAlpha( const float flWaterZ, const float flEyePosZ, const float flWorldPosZ, const float flProjPosZ, const float flFogOORange )
 {
-#if 0
-	// This version is what you use if you want a line-integral throught he water for water fog.
-//	float flDepthFromWater = flWaterZ - flWorldPosZ + 2.0f; // hackity hack . .this is for the DF_FUDGE_UP in view_scene.cpp
-	float flDepthFromWater = flWaterZ - flWorldPosZ;
-
-	// if flDepthFromWater < 0, then set it to 0
-	// This is the equivalent of moving the vert to the water surface if it's above the water surface
-	// We'll do this with the saturate at the end instead.
-//	flDepthFromWater = max( 0.0f, flDepthFromWater );
-
-	// Calculate the ratio of water fog to regular fog (ie. how much of the distance from the viewer
-	// to the vert is actually underwater.
-	float flDepthFromEye = flEyePosZ - flWorldPosZ;
-	float f = (flDepthFromWater / flDepthFromEye) * flProjPosZ;
-
-	// $tmp.w is now the distance that we see through water.
-	return saturate( f * flFogOORange );
-#else
 	// This version is simply using the depth of the water to determine fog factor,
 	// which is cheaper than doing the line integral and also fixes some problems with having 
 	// a hard line on the shore when the water surface is viewed tangentially.
 	// hackity hack . .the 2.0 is for the DF_FUDGE_UP in view_scene.cpp
 	return saturate( ( flWaterZ - flWorldPosZ - 2.0f ) * flFogOORange );
-#endif
 }
 
 HALF CalcPixelFogFactor( int iPIXELFOGTYPE, const float4 fogParams, const float3 vEyePos, const float3 vWorldPos, const float flProjPosZ )
@@ -393,14 +367,6 @@ float4_color_return_type FinalOutput( const float4 vShaderColor, float pixelFogF
 		result.rgb = BlendPixelFog( result.rgb, pixelFogFactor, g_LinearFogColor.rgb, iPIXELFOGTYPE );
 	}
 
-#if defined(_X360) && defined( CSTRIKE15 )
-	// [mariod] - is this the only path? (defintely not TONEMAP_SCALE_GAMMA)...ensure aligned with what the shaders are doing, add combo (mimic srgb write render state) if necessary and mem exists...
-	if( iTONEMAP_SCALE_TYPE == TONEMAP_SCALE_LINEAR )
-	{
-		result.rgb = LinearToGamma( result.rgb );
-		//result.rgb = SrgbLinearToGamma( result.rgb );
-	}
-#endif
 
 
 	return ( float4_color_return_type )result;
@@ -433,14 +399,6 @@ float4_color_return_type FinalOutputHalf( const HALF4 vShaderColor, float pixelF
 		result.rgb = BlendPixelFogHalf( result.rgb, pixelFogFactor, g_LinearFogColor.rgb, iPIXELFOGTYPE );
 	}
 
-#if defined(_X360) && defined( CSTRIKE15 )
-	// [mariod] - should we send TONEMAP_SCALE_NONE down this path too?
-	if( iTONEMAP_SCALE_TYPE == TONEMAP_SCALE_LINEAR )
-	{
-		result.rgb = LinearToGamma( result.rgb );
-		//result.rgb = SrgbLinearToGamma( result.rgb );
-	}
-#endif
 
 	return ( float4_color_return_type )result;
 }
@@ -590,49 +548,6 @@ float2 CalcParallaxedTexCoord( float2 inTexCoord, float2 vParallax, float3 vNorm
 
    return texSampleBase;
 
-#if 0
-   cResultColor.rgb = ComputeDiffuseColor( texSampleBase, vLight );
-        
-   float fBound = 1.0 - fStepSize * nStepIndex;
-   if ( fNextHeight < fCurrentBound )
-//    if( 0 )
-   {
-      //void DoIteration( in float2 vParallaxJittered, in float3 vLight, inout float4 cResultColor )
-      //cResultColor.rgb = float3(1,0,0);
-      DoIteration( vParallax + vPixelSize, vLight, fStepSize, inTexCoord, nStepIndex, dx, dy, fBound, cResultColor );
-      DoIteration( vParallax - vPixelSize, vLight, fStepSize, inTexCoord, nStepIndex, dx, dy, fBound, cResultColor );
-      DoIteration( vParallax + float2( -vPixelSize.x, vPixelSize.y ), vLight, fStepSize, inTexCoord, nStepIndex, dx, dy, fBound, cResultColor );
-      DoIteration( vParallax + float2( vPixelSize.x, -vPixelSize.y ), vLight, fStepSize, inTexCoord, nStepIndex, dx, dy, fBound, cResultColor );
-
-      cResultColor.rgb /= 5;
-//      cResultColor.rgb = float3( 1.0f, 0.0f, 0.0f );
-   }   // End of if ( fNextHeight < fCurrentBound )
-  
-#if DOSHADOWS
-   {
-      //============================================//
-      // Soft shadow and self-occlusion computation //
-      //============================================//
-      // Compute the blurry shadows (note that this computation takes into 
-      // account self-occlusion for shadow computation):
-      float sh0 =  tex2D( sNormalMap, texSampleBase).w;
-      float shA = (tex2D( sNormalMap, texSampleBase + inXY * 0.88 ).w - sh0 - 0.88 ) *  1 * fShadowSoftening;
-      float sh9 = (tex2D( sNormalMap, texSampleBase + inXY * 0.77 ).w - sh0 - 0.77 ) *  2 * fShadowSoftening;
-      float sh8 = (tex2D( sNormalMap, texSampleBase + inXY * 0.66 ).w - sh0 - 0.66 ) *  4 * fShadowSoftening;
-      float sh7 = (tex2D( sNormalMap, texSampleBase + inXY * 0.55 ).w - sh0 - 0.55 ) *  6 * fShadowSoftening;
-      float sh6 = (tex2D( sNormalMap, texSampleBase + inXY * 0.44 ).w - sh0 - 0.44 ) *  8 * fShadowSoftening;
-      float sh5 = (tex2D( sNormalMap, texSampleBase + inXY * 0.33 ).w - sh0 - 0.33 ) * 10 * fShadowSoftening;
-      float sh4 = (tex2D( sNormalMap, texSampleBase + inXY * 0.22 ).w - sh0 - 0.22 ) * 12 * fShadowSoftening;
-      
-      // Compute the actual shadow strength:
-      float fShadow = 1 - max( max( max( max( max( max( shA, sh9 ), sh8 ), sh7 ), sh6 ), sh5 ), sh4 );
-
-      cResultColor.rgb *= fShadow * 0.6 + 0.4;
-   }
-#endif
-   
-   return cResultColor;
-#endif
 }
 
 
@@ -832,38 +747,6 @@ HALF3 TextureCombinePostLighting( HALF3 lit_baseColor, HALF4 detailColor, int co
 	return lit_baseColor;
 }
 
-#if ( defined( _X360 ) || defined ( _PS3 ) )		
-float SampleHardwareDepth( sampler DepthSampler, float2 vDepthSampleCoords )
-{
-	float flSceneProjZ = 0.0f;
-	
-	#if ( defined( _PS3 ) )
-	{
-		float3 vSceneDepth = tex2D( DepthSampler, vDepthSampleCoords ).xyz;
-		// There's a slightly faster, but less precise way to recover Z here if we need it - see the Cgc docs.
-		vSceneDepth = round( vSceneDepth.xyz * 255.0f );
-		float3 vDepthFactorPrecise = float3( 65536.0/16777215.0, 256.0/16777215.0, 1.0/16777215.0 );
-		flSceneProjZ = dot( vSceneDepth.xyz, vDepthFactorPrecise );
-	}
-	#elif ( defined( _X360 ) )
-	{
-		float4 vSampledDepths;
-		asm 
-		{
-			tfetch2D vSampledDepths.x___, vDepthSampleCoords, DepthSampler, OffsetX=0.5, OffsetY=0.5, MinFilter=point, MagFilter=point, MipFilter=point
-		};
-		flSceneProjZ = vSampledDepths.x;
-		#if ( defined( REVERSE_DEPTH_ON_X360 ) )
-		{
-			flSceneProjZ = 1.0f - flSceneProjZ;
-		}
-		#endif
-    }
-	#endif
-	
-	return flSceneProjZ;
-}
-#endif
 
 HALF DepthFeathering( sampler DepthSampler, const float4 vProjPos, float4 vDepthBlendConstants )
 {
@@ -874,30 +757,6 @@ HALF DepthFeathering( sampler DepthSampler, const float4 vProjPos, float4 vDepth
 		
 		float flFeatheredAlpha;
 		
-#		if ( defined( _X360 ) || defined ( _PS3 ) )		
-		{
-			// This code can handle oblique projection matrices used on the PS3. The depth feathering factor is a function computed in viewspace Z.
-			// Sample the scene's depth at the current fragment.
-			float flSceneProjZ = SampleHardwareDepth( DepthSampler, vScreenPos );
-			
-			float4 vSceneProjPos = float4( vProjPosDivW.x, vProjPosDivW.y, flSceneProjZ, 1.0f );
-			
-			float flSceneViewZ = dot( vSceneProjPos, g_vDepthFeatherProjToViewZW[0] );
-			float flSceneViewW = dot( vSceneProjPos, g_vDepthFeatherProjToViewZW[1] );
-			flSceneViewZ /= flSceneViewW;
-			
-			// Computes the fragment's viewspace Z from its projection space coord.
-			// We could iterate the fragment's viewspace Z to save these 2 dots and a rcp, but this would require an extra iterator
-			// and modifications to all the vertex shaders to compute viewspace coords (which was tricky enough that this approach seems
-			// like the best compromise of devtime+testing vs. perf).
-			float flSurfViewZ = dot( vProjPos, g_vDepthFeatherProjToViewZW[0] );
-			float flSurfViewW = dot( vProjPos, g_vDepthFeatherProjToViewZW[1] );
-			flSurfViewZ /= flSurfViewW;
-		
-			flFeatheredAlpha = flSurfViewZ - flSceneViewZ;
-			flFeatheredAlpha = saturate( saturate( vDepthBlendConstants.z * flFeatheredAlpha ) + vDepthBlendConstants.w );
-		}
-#		else
 		{
 			float flSceneDepth = tex2D( DepthSampler, vScreenPos ).a;	// PC uses dest alpha of the frame buffer
 			float flSpriteDepth = SoftParticleDepth( vProjPos.z );
@@ -906,7 +765,6 @@ HALF DepthFeathering( sampler DepthSampler, const float4 vProjPos, float4 vDepth
 			flFeatheredAlpha = max( smoothstep( 0.75f, 1.0f, flSceneDepth ), flFeatheredAlpha ); //as the sprite approaches the edge of our compressed depth space, the math stops working. So as the sprite approaches the far depth, smoothly remove feathering.
 			flFeatheredAlpha = saturate( flFeatheredAlpha );
 		}
-#		endif
 
 		return flFeatheredAlpha;
 	}
@@ -919,20 +777,7 @@ HALF DepthFeathering( sampler DepthSampler, const float4 vProjPos, float4 vDepth
 
 HALF ComputeCameraFade( float4 vProjPos, float flNearPlane = 7.0f )
 {
-#if ( defined( _X360 ) || defined ( _PS3 ) )		
-	// Compute viewspace Z and W, just like depth feathering (which is currently only supported on the consoles, 
-	// which is why I'm only computing the factor in viewspace on the consoles as well).
-	float flSurfViewZ = dot( vProjPos, g_vDepthFeatherProjToViewZW[0] );
-	float flSurfViewW = dot( vProjPos, g_vDepthFeatherProjToViewZW[1] );
-	// Project to W=1.
-	flSurfViewZ /= flSurfViewW;
-	// Compute fade factor from viewspace Z.
-	float flFadeFactorScale = .06f;
-	flSurfViewZ = saturate( ( -flSurfViewZ - flNearPlane  ) * flFadeFactorScale );
-	return flSurfViewZ * flSurfViewZ;
-#else
 	return smoothstep( 0.0f, 1.0f, saturate( vProjPos.z * 0.025f ) );
-#endif	
 }
 
 #define ORDERED_DITHER_MAGNITUDE .008f

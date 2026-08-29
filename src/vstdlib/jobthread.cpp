@@ -4,7 +4,7 @@
 //
 //=============================================================================
 
-#if defined( _WIN32 ) && !defined( _X360 )
+#if defined( _WIN32 )
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #endif
@@ -21,13 +21,7 @@
 #include "tier1/generichash.h"
 #include "tier0/fasttimer.h"
 
-#if defined( _X360 )
-#endif
 
-#ifdef _PS3
-#include "tls_ps3.h"
-#include "ps3/ps3_win32stubs.h"
-#endif
 
 #include "tier0/memdbgon.h"
 
@@ -780,15 +774,6 @@ void CThreadPool::InsertJobInQueue( CJob *pJob )
 	}
 
 
-#ifdef SN_TARGET_PS3
-	// GSidhu
-	// Make sure render job goes on shared q rather than direct q.
-	// Direct q jobs get picked up only after jobs appear on shared q or
-	// wait times out on shared q.
-	// This is a fix for Eurogamer, look at this in more detail later
-
-	pQueue = &m_SharedQueue;
-#endif 
 
 	m_nJobs -= pQueue->Push( pJob );
 }
@@ -988,7 +973,7 @@ int CThreadPool::AbortAll()
 
 bool CThreadPool::Start( const ThreadPoolStartParams_t &startParams, const char *pszName )
 {
-#if defined( DEDICATED ) && IsPlatformLinux()
+#if defined( DEDICATED ) && 1
 	if ( !startParams.bEnableOnLinuxDedicatedServer )
 		return false;
 #endif
@@ -1009,13 +994,10 @@ bool CThreadPool::Start( const ThreadPoolStartParams_t &startParams, const char 
 		{
 			// One worker thread per logical processor minus main thread and graphic driver
 			nThreads = ci.m_nLogicalProcessors  - 2;
-			if ( IsPC() )
+			if ( nThreads > 3 )
 			{
-				if ( nThreads > 3 )
-				{
-					DevMsg( "Defaulting to limit of 3 worker threads, use -threads on command line if want more\n" ); // Current >4 processor configs don't really work so well, probably due to cache issues? (toml 7/12/2007)
-					nThreads = 3;
-				}
+				DevMsg( "Defaulting to limit of 3 worker threads, use -threads on command line if want more\n" ); // Current >4 processor configs don't really work so well, probably due to cache issues? (toml 7/12/2007)
+				nThreads = 3;
 			}
 		}
 
@@ -1060,11 +1042,6 @@ bool CThreadPool::Start( const ThreadPoolStartParams_t &startParams, const char 
 		}
 	}
 
-	if ( IsPS3() && priority < ThreadGetPriority() )
-	{
-		// On PS3 all thread pools should be the same priority as creator or less demanding
-		priority = ThreadGetPriority();
-	}
 
 	bool bDistribute;
 	if ( startParams.fDistribute != TRS_NONE )
@@ -1188,21 +1165,6 @@ void CThreadPool::Distribute( bool bDistribute, int *pAffinityTable )
 
 bool CThreadPool::Stop( int timeout )
 {
-#ifdef _PS3
-	if ( GetTLSGlobals()->bNormalQuitRequested )
-	{
-		// When PS3 system requests a quit we
-		// might leave some of our threads suspended
-		// we need to resume them so that they could
-		// receive TPM_EXIT command
-		AUTO_LOCK( m_SuspendMutex );
-		if ( m_nSuspend >= 1 )
-		{
-			m_nSuspend = 1;
-			ResumeExecution();
-		}
-	}
-#endif
 
 	CUtlVector< ThreadHandle_t > arrHandles;
 	arrHandles.SetCount( m_Threads.Count() );
@@ -1339,8 +1301,8 @@ void Test( bool bDistribute, bool bSleep = true, bool bFinishExecute = false, bo
 		for ( g_iSleep = -10; g_iSleep <= 10; g_iSleep += 10 )
 		{
 			Msg( "ThreadPoolTest:         Testing! Sleep %d, interleave %d, prioritized %d \n", g_iSleep, bInterleavePushPop, bPrioritized );
-			int nMaxThreads = ( IsX360() ) ? 6 : 8;
-			int nIncrement = ( IsX360() ) ? 1 : 2;
+			int nMaxThreads = ( false ) ? 6 : 8;
+			int nIncrement = ( false ) ? 1 : 2;
 			for ( int i = 1; i <= nMaxThreads; i += nIncrement )
 			{
 				CCountJob::m_nCount = 0;
@@ -1546,11 +1508,8 @@ void RunThreadPoolTests()
 	{
 		bool bToCompletion = ( i % 2 != 0 );
 		Msg( bToCompletion ? "ThreadPoolTest:   To completion\n" : "ThreadPoolTest:   NOT to completion\n" );
-		if ( !IsX360() )
-		{
-			Msg( "ThreadPoolTest:     Non-distribute\n" );
-			ThreadPoolTest::Test( false, true, bToCompletion );
-		}
+		Msg( "ThreadPoolTest:     Non-distribute\n" );
+		ThreadPoolTest::Test( false, true, bToCompletion );
 
 		Msg( "ThreadPoolTest:     Distribute\n" );
 		ThreadPoolTest::Test( true, true, bToCompletion  );
@@ -1568,11 +1527,8 @@ void RunThreadPoolTests()
 		for ( int i = 0; i < 2; i++ )
 		{
 			bool bToCompletion = true;// = ( i % 2 != 0 );
-			if ( !IsX360() )
-			{
-				Msg( "ThreadPoolTest:     Non-distribute\n" );
-				ThreadPoolTest::Test( false, true, bToCompletion, true, !!bMain );
-			}
+			Msg( "ThreadPoolTest:     Non-distribute\n" );
+			ThreadPoolTest::Test( false, true, bToCompletion, true, !!bMain );
 
 			Msg( "ThreadPoolTest:     Distribute\n" );
 			ThreadPoolTest::Test( true, true, bToCompletion, true, !!bMain );

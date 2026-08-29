@@ -5,11 +5,9 @@
 //===========================================================================//
 
 #ifdef _WIN32
-#if !defined( _X360 )
 #include "winlite.h"
 #include <winsock2.h> // INADDR_ANY defn
-#endif
-#elif POSIX
+#else
 #include <netinet/in.h>
 #endif
 
@@ -47,12 +45,7 @@ extern ConVar sv_lan;
 extern ConVar sv_region;
 extern ConVar cl_hideserverip;
 
-#if defined( _X360 )
-#endif
 
-#if defined( _PS3 )
-#include "ps3/ps3_win32stubs.h"
-#endif
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -83,14 +76,6 @@ CSteam3Server  &Steam3Server()
 // Purpose: Constructor
 //-----------------------------------------------------------------------------
 CSteam3Server::CSteam3Server() 
-#if !defined(NO_STEAM)
-:
-	m_CallbackLogonSuccess( this, &CSteam3Server::OnLogonSuccess ),
-	m_CallbackLogonFailure( this, &CSteam3Server::OnLogonFailure ),
-	m_CallbackLoggedOff( this, &CSteam3Server::OnLoggedOff ),
-	m_CallbackValidateAuthTicketResponse( this, &CSteam3Server::OnValidateAuthTicketResponse ),
-	m_CallbackGSPolicyResponse( this, &CSteam3Server::OnGSPolicyResponse )
-#endif
 {
 	m_bHasActivePlayers = false;
 	m_bLogOnResult = false;
@@ -114,12 +99,6 @@ EServerMode CSteam3Server::GetCurrentServerMode()
 	{
 		return eServerModeNoAuthentication;
 	}
-#ifdef _PS3
-	else if ( MAX( XBX_GetNumGameUsers(), 1 ) >= sv.GetMaxClients() ) // PS3 local game
-	{
-		return eServerModeNoAuthentication;
-	}
-#endif
 	else if ( !Host_IsSecureServerAllowed() || CommandLine()->FindParm( "-insecure" ) )
 	{
 		return eServerModeAuthentication;
@@ -224,128 +203,10 @@ void CSteam3Server::Activate()
 		m_QueryPort = m_usPort;
 	}
 	
-	if ( NET_IsDedicatedForXbox() )
-	{
-		Warning( "************************************************\n" );
-		Warning( "*  Dedicated Server for Xbox. Not using STEAM. *\n" );
-		Warning( "*  This server will operate in LAN mode only.  *\n" );
-		Warning( "************************************************\n" );
-		m_eServerMode = eServerModeNoAuthentication;
-		sv_lan.SetValue( true );
-		return;
-	}
 	
-#ifndef _X360
-	#if defined( NO_STEAM )
 	m_eServerMode = eServerModeNoAuthentication;
 	sv_lan.SetValue( true );
 	return;
-	#else
-
-	switch ( m_eServerMode )
-	{
-		case eServerModeNoAuthentication:
-			Msg( "Initializing Steam libraries for LAN server\n" );
-			break;
-		case eServerModeAuthentication:
-			Msg( "Initializing Steam libraries for INSECURE Internet server.  Authentication and VAC not requested.\n" );
-			break;
-		case eServerModeAuthenticationAndSecure:
-			Msg( "Initializing Steam libraries for secure Internet server\n" );
-			break;
-		default:
-			Warning( "Bogus eServermode %d!\n", m_eServerMode );
-			Assert( !"Bogus server mode?!" );
-			break;
-	}
-
-	#ifdef _PS3
-	extern SteamPS3Params_t g_EngineSteamPS3Params;
-	if ( !SteamGameServer_Init( &g_EngineSteamPS3Params,
-	#else
-	SteamAPI_SetTryCatchCallbacks( false ); // We don't use exceptions, so tell steam not to use try/catch in callback handlers
-	if ( !SteamGameServer_InitSafe( 
-	#endif
-				m_unIP, 
-				m_usPort+1,	// Steam lives on -steamport + 1, master server updater lives on -steamport.
-				usGamePort, 
-				usMasterServerUpdaterPort,
-				m_eServerMode, 
-				GetHostVersionString() ) )
-	{
-steam_no_good:
-#if !defined( NO_STEAM )
-		Warning( "************************************************\n" );
-		Warning( "*  Unable to load Steam support library.       *\n" );
-		Warning( "*  This server will operate in LAN mode only.  *\n" );
-		Warning( "************************************************\n" );
-#endif
-		m_eServerMode = eServerModeNoAuthentication;
-		if ( !IsPS3() )
-			sv_lan.SetValue( true );
-		return;
-	}
-
-	// note that SteamGameServer_InitSafe() calls SteamAPI_SetBreakpadAppID() for you, which is what we don't want if we wish
-	// to report crashes under a different AppId.  Reset it back to our crashing one now.
-	extern AppId_t g_nDedicatedServerAppIdBreakpad;
-	if ( g_nDedicatedServerAppIdBreakpad )	// Actually force breakpad interfaces to use an override AppID
-		SteamAPI_SetBreakpadAppID( g_nDedicatedServerAppIdBreakpad );
-
-	// Steam API context init
-	Init();
-	if ( SteamGameServer() == NULL )
-	{
-		Assert( false );
-		goto steam_no_good;
-	}
-	#endif // NO_STEAM
-	
-	// Set some stuff that should NOT change while the server is
-	// running
-	SteamGameServer()->SetProduct( GetHostProductString() );
-	SteamGameServer()->SetGameDescription( serverGameDLL->GetGameDescription() );
-	SteamGameServer()->SetDedicatedServer( sv.IsDedicated() );
-	SteamGameServer()->SetModDir( gamedir );
-
-	// Use anonymous logon, or persistent?
-	if ( m_sAccountToken.IsEmpty() )
-	{
-		if ( serverGameDLL && serverGameDLL->IsValveDS() )
-		{
-			Msg( "Logging in as official server anonymously.\n" );
-		}
-		else if ( NET_IsDedicated() || sv.IsDedicated() )
-		{
-			Warning( "****************************************************\n" );
-			Warning( "*                                                  *\n" );
-			Warning( "*  No Steam account token was specified.           *\n" );
-			Warning( "*  Logging into anonymous game server account.     *\n" );
-			Warning( "*  Connections will be restricted to LAN only.     *\n" );
-			Warning( "*                                                  *\n" );
-			Warning( "*  To create a game server account go to           *\n" );
-			Warning( "*  http://steamcommunity.com/dev/managegameservers *\n" );
-			Warning( "*                                                  *\n" );
-			Warning( "****************************************************\n" );
-		}
-		else
-		{
-			Msg( "Logging into anonymous listen server account.\n" );
-		}
-
-		SteamGameServer()->LogOnAnonymous();
-	}
-	else
-	{
-		Msg( "Logging into Steam gameserver account with logon token '%.8sxxxxxxxxxxxxxxxxxxxxxxxx'\n", m_sAccountToken.String() );
-
-		// TODO: Change this to use just the token when the SDK is updated
-		SteamGameServer()->LogOn( m_sAccountToken );
-	}
-
-#endif
-
-	SendUpdatedServerDetails();
 }
 
 
@@ -356,17 +217,11 @@ void CSteam3Server::Shutdown()
 {
 	if ( !BIsActive() )
 		return;
-#if !defined( NO_STEAM )
-	SteamGameServer_Shutdown();
-#endif
 	m_bHasActivePlayers = false;
 	m_bLogOnResult = false;
 	m_SteamIDGS = k_steamIDNotInitYetGS;
 	m_eServerMode = eServerModeInvalid;
 
-#if !defined( NO_STEAM )
-	Clear(); // Steam API context shutdown
-#endif
 }
 
 
@@ -448,388 +303,6 @@ const CSteamID &CSteam3Server::GetGSSteamID() const
 }
 
 
-#if !defined(NO_STEAM)
-//-----------------------------------------------------------------------------
-// Purpose: Called when secure policy is set
-//-----------------------------------------------------------------------------
-void CSteam3Server::OnGSPolicyResponse( GSPolicyResponse_t *pPolicyResponse )
-{
-	if ( !BIsActive() )
-		return;
-
-	// We need to make sure we include our "secure" tag in the server data
-	sv.UpdateGameType();
-
-	if ( SteamGameServer() && SteamGameServer()->BSecure() )
-	{
-		Msg( "VAC secure mode is activated.\n" );
-	}
-	else
-	{
-		Msg( "VAC secure mode disabled.\n" );
-	}
-}
-
-
-//-----------------------------------------------------------------------------
-// Purpose: 
-//-----------------------------------------------------------------------------
-void CSteam3Server::OnLogonSuccess( SteamServersConnected_t *pLogonSuccess )
-{
-	if ( !BIsActive() )
-		return;
-
-	if ( !m_bLogOnResult )
-	{
-		m_bLogOnResult = true;
-	}
-
-#ifndef DEDICATED
-	// Notify the client that they should retry their connection. This avoids a ~six second timeout
-	// when connecting to a local server.
-	GetBaseLocalClient().ResetConnectionRetries();
-#endif
-	if ( !BLanOnly() )
-	{
-		Msg( "Connection to Steam servers successful.\n" );
-		if ( SteamGameServer() && ( cl_hideserverip.GetInt()<=0 ) )
-		{			
-			uint32 ip = SteamGameServer()->GetPublicIP();
-			Msg( "   Public IP is %d.%d.%d.%d.\n", (ip >> 24) & 255, (ip >> 16) & 255, (ip >> 8) & 255, ip & 255 );
-
-			static bool s_bAddressCertificateVerified = !!CommandLine()->FindParm( "-ignore_certificate_address" );
-			if ( !s_bAddressCertificateVerified )
-			{
-				s_bAddressCertificateVerified = true;
-
-				const byte *pbNetEncryptPublic = NULL;
-				int cbNetEncryptPublic = 0;
-				const byte *pbNetEncryptSignature = NULL;
-				int cbNetEncryptSignature = 0;
-				bool bServerRequiresEncryptedChannels =
-					NET_CryptGetNetworkCertificate( k_ENetworkCertificate_PublicKey, &pbNetEncryptPublic, &cbNetEncryptPublic ) &&
-					NET_CryptGetNetworkCertificate( k_ENetworkCertificate_Signature, &pbNetEncryptSignature, &cbNetEncryptSignature );
-
-				byte *pbAllocatedSampleKey = NULL;
-				int cbAllocatedSampleKeyCryptoBlock = 0;
-				if ( bServerRequiresEncryptedChannels &&
-					!NET_CryptVerifyServerCertificateAndAllocateSessionKey( true, ns_address( netadr_t( ip, 0 ) ),
-						pbNetEncryptPublic, cbNetEncryptPublic,
-						pbNetEncryptSignature, cbNetEncryptSignature,
-						&pbAllocatedSampleKey, &cbAllocatedSampleKeyCryptoBlock ) )
-				{
-					Warning( "NET_CryptVerifyServerCertificateAndAllocateSessionKey failed to validate gameserver certificate using server public address %s!\n", netadr_t( ip, 0 ).ToString( true ) );
-					Plat_ExitProcess( 0 );
-				}
-				delete pbAllocatedSampleKey;
-			}
-		}
-	}
-
-	if ( SteamGameServer() )
-	{
-		m_SteamIDGS = SteamGameServer()->GetSteamID();
-		if ( m_SteamIDGS.BAnonGameServerAccount() )
-		{
-			Msg( "Assigned anonymous gameserver Steam ID %s.\n", m_SteamIDGS.Render() );
-		}
-		else if ( m_SteamIDGS.BPersistentGameServerAccount() )
-		{
-			Msg( "Assigned persistent gameserver Steam ID %s.\n", m_SteamIDGS.Render() );
-		}
-		else
-		{
-			Warning( "Assigned Steam ID %s, which is of an unexpected type!\n", m_SteamIDGS.Render() );
-			Assert( !"Unexpected steam ID type!" );
-		}
-		switch ( m_SteamIDGS.GetEUniverse() )
-		{
-			case k_EUniversePublic:
-				break;
-			case k_EUniverseBeta:
-				Msg( "Connected to Steam BETA universe.\n" );
-				break;
-			case k_EUniverseDev:
-				Msg( "Connected to Steam DEV universe.\n" );
-				break;
-			default:
-				Msg( "Connected to Steam universe %d\n", m_SteamIDGS.GetEUniverse() );
-				break;
-		}
-	}
-	else
-	{
-		m_SteamIDGS = k_steamIDNotInitYetGS;
-	}
-
-	// send updated server details
-	// OnLogonSuccess() gets called each time we logon, so if we get dropped this gets called
-	// again and we get need to retell the AM our details
-	SendUpdatedServerDetails();
-
-	if ( SteamGameServer() )
-	{
-		uint32 ip = SteamGameServer()->GetPublicIP();
-		sv.OnSteamServerLogonSuccess( ip );
-	}
-}
-
-
-//-----------------------------------------------------------------------------
-// Purpose: callback on unable to connect to the steam3 backend
-// Input  : eResult - 
-//-----------------------------------------------------------------------------
-void CSteam3Server::OnLogonFailure( SteamServerConnectFailure_t *pLogonFailure )
-{
-	if ( !BIsActive() )
-		return;
-
-	if ( !m_bLogOnResult )
-	{
-		char const *szFatalError = NULL;
-		switch ( pLogonFailure->m_eResult )
-		{
-		case k_EResultAccountNotFound:	// account not found
-			szFatalError = "*  Invalid Steam account token was specified.      *\n";
-			break;
-		case k_EResultGSLTDenied:		// a game server login token owned by this token's owner has been banned
-			szFatalError = "*  Steam account token specified was revoked.      *\n";
-			break;
-		case k_EResultGSOwnerDenied:	// game server owner is denied for other reason (account lock, community ban, vac ban, missing phone)
-			szFatalError = "*  Steam account token owner no longer eligible.   *\n";
-			break;
-		case k_EResultGSLTExpired:		// this game server login token was disused for a long time and was marked expired
-			szFatalError = "*  Steam account token has expired from inactivity.*\n";
-			break;
-		case k_EResultServiceUnavailable:
-			if ( !BLanOnly() )
-			{
-				Msg( "Connection to Steam servers successful (SU).\n" );
-			}
-			break;
-		default:
-			if ( !BLanOnly() )
-			{
-				Warning( "Could not establish connection to Steam servers.\n" );
-			}
-			break;
-		}
-
-		if ( szFatalError )
-		{
-			if ( NET_IsDedicated() || sv.IsDedicated() )
-			{
-				Warning( "****************************************************\n" );
-				Warning( "*                FATAL ERROR                       *\n" );
-				Warning( "%s", szFatalError );
-				Warning( "*  Double-check your sv_setsteamaccount setting.   *\n" );
-				Warning( "*                                                  *\n" );
-				Warning( "*  To create a game server account go to           *\n" );
-				Warning( "*  http://steamcommunity.com/dev/managegameservers *\n" );
-				Warning( "*                                                  *\n" );
-				Warning( "****************************************************\n" );
-				Plat_ExitProcess( 0 );
-				return;
-			}
-			if ( !BLanOnly() )
-			{
-				Msg( "Connection to Steam servers successful (%d).\n", pLogonFailure->m_eResult );
-			}
-		}
-	}
-
-	m_bLogOnResult = true;
-}
-
-
-//-----------------------------------------------------------------------------
-// Purpose: 
-// Input  : eResult - 
-//-----------------------------------------------------------------------------
-void CSteam3Server::OnLoggedOff( SteamServersDisconnected_t *pLoggedOff )
-{
-	if ( !BLanOnly() )
-	{
-		Warning( "Connection to Steam servers lost.  (Result = %d)\n", pLoggedOff->m_eResult );
-	}
-
-	if ( GetGSSteamID().BPersistentGameServerAccount() )
-	{
-		switch ( pLoggedOff->m_eResult )
-		{
-		case k_EResultLoggedInElsewhere:
-		case k_EResultLogonSessionReplaced:
-			Warning( "****************************************************\n" );
-			Warning( "*                                                  *\n" );
-			Warning( "*  Steam account token was reused elsewhere.       *\n" );
-			Warning( "*  Make sure you are using a separate account      *\n" );
-			Warning( "*  token for each game server that you operate.    *\n" );
-			Warning( "*                                                  *\n" );
-			Warning( "*  To create additional game server accounts go to *\n" );
-			Warning( "*  http://steamcommunity.com/dev/managegameservers *\n" );
-			Warning( "*                                                  *\n" );
-			Warning( "*  This game server instance will now shut down!   *\n" );
-			Warning( "*                                                  *\n" );
-			Warning( "****************************************************\n" );
-			Cbuf_AddText( CBUF_SERVER, "quit;\n" );
-			return;
-		}
-	}
-}
-
-
-//-----------------------------------------------------------------------------
-// Purpose: 
-//-----------------------------------------------------------------------------
-void CSteam3Server::OnValidateAuthTicketResponse( ValidateAuthTicketResponse_t *pValidateAuthTicketResponse )
-{
-	//Msg("Steam backend:Got approval for %x\n", pGSClientApprove->m_SteamID.ConvertToUint64() );
-	// We got the approval message from the back end.
-	// Note that if we dont get it, we default to approved anyway
-	// dont need to send anything back
-
-	if ( !BIsActive() )
-		return;
-
-	CBaseClient *client = ClientFindFromSteamID( pValidateAuthTicketResponse->m_SteamID );
-	if ( !client )
-		return;
-
-	if ( pValidateAuthTicketResponse->m_eAuthSessionResponse != k_EAuthSessionResponseOK )
-	{
-		OnValidateAuthTicketResponseHelper( client, pValidateAuthTicketResponse->m_eAuthSessionResponse );
-		return;
-	}
-
-	if ( Filter_IsUserBanned( client->GetNetworkID() ) )
-	{
-		sv.RejectConnection( client->GetNetChannel()->GetRemoteAddress(), "#Valve_Reject_Banned_From_Server" );
-		client->Disconnect( va( "STEAM UserID %s is not allowed to join this server", client->GetNetworkIDString() ) );
-	}
-	else if ( CheckForDuplicateSteamID( client ) )
-	{
-		client->Disconnect( CFmtStr( "STEAM UserID %s is already in use on this server", client->GetNetworkIDString() ) );
-	}
-	else
-	{
-		char msg[ 512 ];
-		sprintf( msg, "\"%s<%i><%s><>\" STEAM USERID validated\n", client->GetClientName(), client->GetUserID(), client->GetNetworkIDString() );
-
-		DevMsg( "%s", msg );
-		g_Log.Printf( "%s", msg );
-
-		g_pServerPluginHandler->NetworkIDValidated( client->GetClientName(), client->GetNetworkIDString() );
-
-		// Tell IServerGameClients if its version is high enough.
-		if ( g_iServerGameClientsVersion >= 4 )
-		{
-			serverGameClients->NetworkIDValidated( client->GetClientName(), client->GetNetworkIDString(), pValidateAuthTicketResponse->m_SteamID );
-		}
-	}
-
-
-	client->SetFullyAuthenticated();
-
-}
-
-
-//-----------------------------------------------------------------------------
-// Purpose: invalid steam logon errors can be enforced differently, this function takes care of all the rules
-//-----------------------------------------------------------------------------
-void CSteam3Server::OnInvalidSteamLogonErrorForClient( CBaseClient *cl )
-{
-	if ( BLanOnly() )
-		return;
-
-	bool bDisconnectRightNow = true;
-	if ( cl->IsFullyAuthenticated() )
-	{
-		if ( sv_steamauth_enforce.GetInt() == 0 )
-		{
-			bDisconnectRightNow = false;
-		}
-		else if ( sv_steamauth_enforce.GetInt() == 1 )
-		{
-			KeyValues *kvCommand = new KeyValues( "InvalidSteamLogon" );
-			KeyValues::AutoDeleteInline autodelete( kvCommand );
-			serverGameClients->ClientCommandKeyValues( EDICT_NUM( cl->m_nEntityIndex ), kvCommand );
-			if ( !kvCommand->GetBool( "disconnect" ) )
-				bDisconnectRightNow = false;
-		}
-	}
-
-	if ( bDisconnectRightNow )
-	{
-		cl->Disconnect( INVALID_STEAM_LOGON );
-	}
-	else
-	{
-		Warning( "STEAMAUTH: Client %s not immediately kicked because sv_steamauth_enforce=%d\n", cl->GetClientName(), sv_steamauth_enforce.GetInt() );
-		g_Log.Printf( "STEAMAUTH: Client %s not immediately kicked because sv_steamauth_enforce=%d\n", cl->GetClientName(), sv_steamauth_enforce.GetInt() );
-	}
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: helper for receiving a response to authenticating a user
-// Input  : steamID
-//			eAuthSessionResponse - reason
-//-----------------------------------------------------------------------------
-void CSteam3Server::OnValidateAuthTicketResponseHelper( CBaseClient *cl, EAuthSessionResponse eAuthSessionResponse )
-{
-	INetChannel *netchan = cl->GetNetChannel();
-
-	// If the client is timing out, the Steam failure is probably related (e.g. game crashed). Let's just print that the client timed out.
-	if ( netchan && netchan->IsTimingOut() )
-	{
-		cl->Disconnect( CFmtStr( "%s timed out", cl->GetClientName() ) );
-		return;
-	}
-
-	// Emit a more detailed diagnostic.
-	Warning( "STEAMAUTH: Client %s received failure code %d\n", cl->GetClientName(), (int)eAuthSessionResponse );
-	g_Log.Printf( "STEAMAUTH: Client %s received failure code %d\n", cl->GetClientName(), (int)eAuthSessionResponse );
-
-	switch ( eAuthSessionResponse )
-	{
-	case k_EAuthSessionResponseUserNotConnectedToSteam:
-		OnInvalidSteamLogonErrorForClient( cl );
-		break;
-	case k_EAuthSessionResponseLoggedInElseWhere:
-		if ( !BLanOnly() ) 
-			cl->Disconnect( INVALID_STEAM_LOGGED_IN_ELSEWHERE );
-		break;
-	case k_EAuthSessionResponseNoLicenseOrExpired:
-		cl->Disconnect( "This Steam account does not own this game. \nPlease login to the correct Steam account" );
-		break;
-	case k_EAuthSessionResponseVACBanned:
-		if ( !BLanOnly() ) 
-			cl->Disconnect( INVALID_STEAM_VACBANSTATE );
-		break;
-	case k_EAuthSessionResponseAuthTicketCanceled:
-		OnInvalidSteamLogonErrorForClient( cl );
-		break;
-	case k_EAuthSessionResponseAuthTicketInvalidAlreadyUsed:
-	case k_EAuthSessionResponseAuthTicketInvalid:
-		OnInvalidSteamLogonErrorForClient( cl );
-		break;
-	case k_EAuthSessionResponseVACCheckTimedOut:
-		switch ( sv_steamauth_enforce.GetInt() )
-		{
-		case 0:
-		case 1:	// we may need to defer the kick till a bit later
-			OnInvalidSteamLogonErrorForClient( cl );
-			break;
-		default:
-			cl->Disconnect( "VAC authentication error" );
-			break;
-		}
-		break;
-	default:
-		cl->Disconnect( "Client dropped by server" );
-		break;
-	}
-}
-#endif
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -1046,9 +519,6 @@ void CSteam3Server::RunFrame()
 	if ( fCurtime - s_fLastRunCallback > 0.1f )
 	{
 		s_fLastRunCallback = fCurtime;
-#ifndef NO_STEAM
-		SteamGameServer_RunCallbacks();
-#endif
 	}
 }
 

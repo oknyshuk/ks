@@ -34,7 +34,7 @@
 #include "tier0/memdbgon.h"
 
 // Vertex instancing (1 vert submitted per particle, duplicated to 4 (a quad) on the GPU) is supported only on 360
-const bool bUseInstancing = IsX360();
+const bool bUseInstancing = false;
 
 //-----------------------------------------------------------------------------
 // Utility method to compute the max # of particles per batch
@@ -2567,7 +2567,7 @@ struct FastRopeVertexNormalCacheAligned_t : public FastRopeVertexNormal_t
 	int m_nPadding[ 2 ];
 	
 	// On the PC, vertex structures need to be sized in multiples of 16 bytes
-	FORCEINLINE void Check() { COMPILE_TIME_ASSERT( !IsPC() || ( sizeof( *this ) % 16 ) == 0 ); }
+	FORCEINLINE void Check() { COMPILE_TIME_ASSERT( ( sizeof( *this ) % 16 ) == 0 ); }
 };
 
 template < class T >
@@ -3165,16 +3165,6 @@ void C_OP_RenderBlobs::Render( IMatRenderContext *pRenderContext, CParticleColle
 
 
 
-	#if 0
-		// Note: it is not good to have these static variables here.
-		static RENDERER_CLASS* sweepRenderer = NULL;
-		static ImpTiler* tiler = NULL;
-		if(!sweepRenderer)
-		{
-		sweepRenderer = new RENDERER_CLASS();
-		tiler = new ImpTiler(sweepRenderer);
-		}
-	#endif
 
 	IMaterial *pMaterial = pParticles->m_pDef->GetMaterial();
 

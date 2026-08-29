@@ -378,11 +378,7 @@ public:
 	virtual LightCacheHandle_t GetLightCacheHandleForStaticProp( IHandleEntity *pHandleEntity );
 	inline bool IsStaticProp_Inline( IHandleEntity *pHandleEntity ) const
 	{
-#if defined( _GAMECONSOLE )
-		return (!pHandleEntity) || pHandleEntity->m_bIsStaticProp;
-#else
 		return (!pHandleEntity) || ( (pHandleEntity->GetRefEHandle().GetSerialNumber() == (STATICPROP_EHANDLE_MASK >> NUM_SERIAL_NUM_SHIFT_BITS) ) != 0 );
-#endif
 	}
 	virtual bool IsStaticProp( IHandleEntity *pHandleEntity ) const;
 	virtual bool IsStaticProp( CBaseHandle handle ) const;
@@ -759,37 +755,6 @@ bool CStaticProp::GetRenderData( void *pData, ModelDataCategory_t nCategory )
 		*(RenderableLightingModel_t*)pData = LIGHTING_MODEL_STATIC_PROP;
 		return true;
 
-#if defined( _X360 )
-	// Deferred shadow rendering:
-	case MODEL_DATA_STENCIL:
-		{
-			if ( r_shadow_deferred.GetBool() )
-			{
-				// clear stencil and hi-stencil because static props don't cast shadows
-				ShaderStencilState_t* pStencilState = reinterpret_cast<ShaderStencilState_t*>( pData );
-
-				uint32 mask = 1 << 2;
-				uint32 nRef = 0;
-
-				pStencilState->m_bEnable = true;
-				pStencilState->m_nTestMask = 0xFFFFFFFF;
-				pStencilState->m_nWriteMask = mask;
-				pStencilState->m_nReferenceValue = nRef;
-				pStencilState->m_CompareFunc = SHADER_STENCILFUNC_ALWAYS;
-				pStencilState->m_PassOp = SHADER_STENCILOP_SET_TO_REFERENCE;
-				pStencilState->m_FailOp = SHADER_STENCILOP_KEEP;
-				pStencilState->m_ZFailOp = SHADER_STENCILOP_KEEP;//SHADER_STENCILOP_SET_TO_REFERENCE;
-
-
-				pStencilState->m_bHiStencilEnable = false;
-				pStencilState->m_bHiStencilWriteEnable = true;
-				pStencilState->m_HiStencilCompareFunc = SHADER_HI_STENCILFUNC_NOTEQUAL;
-				pStencilState->m_nHiStencilReferenceValue = 0;
-				return true;
-			}
-		}
-		return false;
-#endif
 
 	default:
 		return false;
@@ -1415,18 +1380,15 @@ void CStaticPropMgr::UpdatePropVisibility( int nCPULevel, int nGPULevel )
 		CStaticProp &prop = m_StaticProps[i];
 
 		bool bNoDraw = false;
-		if ( !IsGameConsole() )
+		if ( nCPULevel >= 0 )
 		{
-			if ( nCPULevel >= 0 )
-			{
-				bNoDraw =            ( prop.m_nMinCPULevel && prop.m_nMinCPULevel-1 > nCPULevel );
-				bNoDraw = bNoDraw || ( prop.m_nMaxCPULevel && prop.m_nMaxCPULevel-1 < nCPULevel );
-			}
-			if ( nGPULevel >= 0 )
-			{
-				bNoDraw = bNoDraw || ( prop.m_nMinGPULevel && prop.m_nMinGPULevel-1 > nGPULevel );
-				bNoDraw = bNoDraw || ( prop.m_nMaxGPULevel && prop.m_nMaxGPULevel-1 < nGPULevel );
-			}
+			bNoDraw =            ( prop.m_nMinCPULevel && prop.m_nMinCPULevel-1 > nCPULevel );
+			bNoDraw = bNoDraw || ( prop.m_nMaxCPULevel && prop.m_nMaxCPULevel-1 < nCPULevel );
+		}
+		if ( nGPULevel >= 0 )
+		{
+			bNoDraw = bNoDraw || ( prop.m_nMinGPULevel && prop.m_nMinGPULevel-1 > nGPULevel );
+			bNoDraw = bNoDraw || ( prop.m_nMaxGPULevel && prop.m_nMaxGPULevel-1 < nGPULevel );
 		}
 
 		// Add the prop to all the leaves it lies in
@@ -2008,31 +1970,6 @@ void CStaticPropMgr::PrecacheLighting()
 	COM_TimestampedLog( "CStaticPropMgr::PrecacheLighting - start");
 
 	int numVerts = 0;
-	if ( IsGameConsole() )
-	{
-		if ( g_bLoadedMapHasBakedPropLighting && g_pMaterialSystemHardwareConfig->SupportsStreamOffset() )
-		{
-			// total the static prop verts
-			int i = m_StaticProps.Count();
-			while ( --i >= 0 )
-			{
-				studiohwdata_t *pStudioHWData = g_pMDLCache->GetHardwareData( ( (model_t*)m_StaticProps[i].GetModel() )->studio );
-				for ( int lodID = pStudioHWData->m_RootLOD; lodID < pStudioHWData->m_NumLODs; lodID++ )
-				{
-					studioloddata_t *pLOD = &pStudioHWData->m_pLODs[lodID];
-					for ( int meshID = 0; meshID < pStudioHWData->m_NumStudioMeshes; meshID++ )
-					{
-						studiomeshdata_t *pMesh = &pLOD->m_pMeshData[meshID];
-						for ( int groupID = 0; groupID < pMesh->m_NumGroup; groupID++ )
-						{
-							numVerts += pMesh->m_pMeshGroup[groupID].m_NumVertices;
-						}
-					}
-				}
-			}
-		}
-		modelrender->SetupColorMeshes( numVerts );
-	}
 
 	int total = m_StaticProps.Count();
 	for ( int i = 0; i < total; i++ )

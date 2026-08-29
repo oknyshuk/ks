@@ -406,16 +406,7 @@ BEGIN_VS_SHADER( VertexLitGeneric, "Help for VertexLitGeneric" )
 		bool bDisableTreeSway = false; 
 		
 		// Disable tree swaying on consoles, or on "cheap" shadow filter modes (which are too pixelated).
-		if ( IsGameConsole() || IsPlatformOSX() )
-#if defined( CSTRIKE15 ) 
-			if( IsPlatformOSX() || IsPS3() )
-			{
-				bDisableTreeSway = true;
-			}
-#else
-			bDisableTreeSway = true;
-#endif
-		else if ( g_pHardwareConfig->GetShadowFilterMode( false /* bForceLowQuality */, g_pHardwareConfig->SupportsPixelShaders_3_0() /* bPS30 */ ) >= SHADOWFILTERMODE_FIRST_CHEAP_MODE )
+		if ( g_pHardwareConfig->GetShadowFilterMode( false /* bForceLowQuality */, g_pHardwareConfig->SupportsPixelShaders_3_0() /* bPS30 */ ) >= SHADOWFILTERMODE_FIRST_CHEAP_MODE )
 		{
 			bDisableTreeSway = true;
 		}
@@ -590,17 +581,9 @@ BEGIN_VS_SHADER( VertexLitGeneric, "Help for VertexLitGeneric" )
 		if ( params[FLESHINTERIORENABLED]->GetIntValue() )
 		{
 			// If ( snapshotting ) or ( we need to draw this frame )
-			if ( ( pShaderShadow != NULL ) || ( true ) )
-			{
-				FleshInteriorBlendedPassVars_t info;
-				SetupVarsFleshInteriorBlendedPass( info );
-				DrawFleshInteriorBlendedPass( this, params, pShaderAPI, pShaderShadow, info, vertexCompression );
-			}
-			else // We're not snapshotting and we don't need to draw this frame
-			{
-				// Skip this pass!
-				Draw( false );
-			}
+			FleshInteriorBlendedPassVars_t info;
+			SetupVarsFleshInteriorBlendedPass( info );
+			DrawFleshInteriorBlendedPass( this, params, pShaderAPI, pShaderShadow, info, vertexCompression );
 		}
 	}
 

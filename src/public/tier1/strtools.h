@@ -18,11 +18,9 @@
 #include "color.h"
 
 #include <ctype.h>
-#if POSIX
 #include <wchar.h>
 #include <math.h>
 #include <wctype.h>
-#endif
 
 #include <string.h>
 #include <stdlib.h>
@@ -67,9 +65,6 @@ template< class T, class A > class CUtlVector;
 
 extern const char *nexttoken(char *token, const char *str, char sep);
 
-#ifdef OSX
-size_t strnlen( const char *s, size_t n );
-#endif
 
 //-----------------------------------------------------------------------------
 // Portable versions of standard string functions
@@ -95,7 +90,6 @@ wchar_t*	_V_wcsupr ( wchar_t *start);
 // Compatibility with Source2
 #define V_strlower_fast _V_strlower
 
-#ifdef POSIX
 inline char *strupr( char *start )
 {
       char *str = start;
@@ -140,36 +134,10 @@ inline wchar_t *_wcsupr( wchar_t *start )
 	return start;
 };
 
-#endif // POSIX
 
 // there are some users of these via tier1 templates in used in tier0. but tier0 can't depend on vstdlib which means in tier0 we always need the inlined ones
 #if ( !defined( TIER0_DLL_EXPORT ) )
 
-#if !defined( _DEBUG ) && defined( _PS3 )
-
-#include "tier1/strtools_inlines.h"
-
-// To avoid cross-prx calls, making the V_* fucntions that don't do anything but debug checks and call through to the non V_* function
-// go ahead and call the non-V_* functions directly.
-#define V_memset(dest, fill, count)		memset   ((dest), (fill), (count))	
-#define V_memcpy(dest, src, count)		memcpy	((dest), (src), (count))	
-#define V_memmove(dest, src, count)		memmove	((dest), (src), (count))	
-#define V_memcmp(m1, m2, count)			memcmp	((m1), (m2), (count))		
-#define V_strcpy(dest, src)				strcpy	((dest), (src))			
-#define V_strcmp(s1, s2)				strcmp	((s1), (s2))			
-#define V_strupr(start)					strupr	((start))				
-#define V_strlower(start)				strlwr ((start))		
-#define V_wcslen(pwch)					wcslen	((pwch))
-#define V_wcsupr(start)					_wcsupr ((start))
-#define V_wcslower(start)				_wcslwr ((start))
-// To avoid cross-prx calls, using inline versions of these custom functions:
-#define V_strlen(str)					_V_strlen_inline	((str))				
-#define V_strrchr(s, c)					_V_strrchr_inline	((s), (c))				
-#define V_wcscmp(s1, s2)				_V_wcscmp_inline	((s1), (s2))			
-#define V_stricmp(s1, s2 )				_V_stricmp_inline	((s1), (s2) )			
-#define V_strstr(s1, search )			_V_strstr_inline	((s1), (search) )		
-
-#else
 
 #define V_memset(dest, fill, count)		_V_memset	((dest), (fill), static_cast<int>(count))	
 #define V_memcpy(dest, src, count)		_V_memcpy	((dest), (src), static_cast<int>(count))	
@@ -191,7 +159,6 @@ inline wchar_t *_wcsupr( wchar_t *start )
 #define V_wcsupr(start)					_V_wcsupr	((start))
 #define V_wcslower(start)				_V_wcslower ((start))				
 
-#endif
 
 #else
 
@@ -339,9 +306,6 @@ inline bool V_isspace(int c)
 	// return ((1 << (c-1)) & 0x80001F00) != 0 && ((c-1)&0xE0) == 0;
 	
 	// 5% faster on Core i7, 35% faster on Xbox360, no branches, validated:
-	#ifdef _X360
-	return ((1 << (c-1)) & 0x80001F00 & ~(-int((c-1)&0xE0))) != 0;
-	#else
 	// this is 11% faster on Core i7 than the previous, VC2005 compiler generates a seemingly unbalanced search tree that's faster
 	switch(c)
 	{
@@ -355,7 +319,6 @@ inline bool V_isspace(int c)
 	default:
 		return false;
 	}
-	#endif
 }
 #undef isspace
 #define isspace use_V_isspace_instead_of_isspace
@@ -634,7 +597,7 @@ typedef char *  va_list;
 
 #endif   // _VA_LIST_DEFINED
 
-#elif POSIX
+#else
 #include <stdarg.h>
 #endif
 
@@ -645,7 +608,7 @@ typedef char *  va_list;
 #define INCORRECT_PATH_SEPARATOR_S "/"
 #define CHARACTERS_WHICH_SEPARATE_DIRECTORY_COMPONENTS_IN_PATHNAMES ":/\\"
 #define PATHSEPARATOR(c) ((c) == '\\' || (c) == '/')
-#elif POSIX || defined( _PS3 )
+#else
 #define CORRECT_PATH_SEPARATOR '/'
 #define CORRECT_PATH_SEPARATOR_S "/"
 #define INCORRECT_PATH_SEPARATOR '\\'
@@ -1444,17 +1407,10 @@ inline int	V_strcspn( const char *s1, const char *search )		{ return (int)( strc
 #endif // !defined( VSTDLIB_DLL_EXPORT )
 
 
-#if defined(_PS3) || defined(POSIX)
 #define PRI_WS_FOR_WS L"%ls"
 #define PRI_WS_FOR_S "%ls"
 #define PRI_S_FOR_WS L"%s"
 #define PRI_S_FOR_S "%s"
-#else
-#define PRI_WS_FOR_WS L"%s"
-#define PRI_WS_FOR_S "%S"
-#define PRI_S_FOR_WS L"%S"
-#define PRI_S_FOR_S "%s"
-#endif
 
 namespace AsianWordWrap
 {

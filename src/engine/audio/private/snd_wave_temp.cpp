@@ -70,19 +70,7 @@ void WaveAppendTmpFile( const char *filename, void *pBuffer, int sampleBits, int
 
 	g_pFileSystem->Seek( file, 0, FILESYSTEM_SEEK_TAIL );
 
-	if ( IsGameConsole() && sampleBits == 16 )
-	{
-		short *pSwapped = (short * )stackalloc( numSamples * sampleBits/8 );
-		for ( int i=0; i<numSamples; i++ )
-		{
-			pSwapped[i] = LittleShort( ((short*)pBuffer)[i] );
-		}
-		g_pFileSystem->Write( pSwapped, numSamples * sizeof( short ), file );
-	}
-	else
-	{
-		g_pFileSystem->Write( pBuffer, numSamples * sampleBits/8, file );
-	}
+	g_pFileSystem->Write( pBuffer, numSamples * sampleBits/8, file );
 
 	g_pFileSystem->Close( file );
 }

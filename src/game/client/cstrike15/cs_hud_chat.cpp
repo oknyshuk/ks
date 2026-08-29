@@ -51,10 +51,6 @@ void CHudChat::Init( void )
 //-----------------------------------------------------------------------------
 void CHudChat::ChatPrintf(int iPlayerIndex, int iFilter, const char* fmt, ...)
 {
-#if defined( _PS3 ) && !defined( NO_STEAM )
-	if (!steamapicontext->SteamFriends() || steamapicontext->SteamFriends()->GetUserRestrictions())
-		return; // user not eligible to chat
-#endif
 
 	if (CDemoPlaybackParameters_t const* pParameters = engine->GetDemoPlaybackParameters())
 	{

@@ -451,10 +451,8 @@ int CValidateAlloc::heapchk()
 
 #ifdef _WIN32
 	return bOk ? _HEAPOK : 0;
-#elif POSIX
-	return bOk;
 #else
-#error
+	return bOk;
 #endif
 }
 

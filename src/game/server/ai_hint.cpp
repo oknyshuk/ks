@@ -1062,9 +1062,6 @@ bool CAI_Hint::IsInNodeFOV( CBaseEntity *pOther )
 		return true;
 	}
 
-#if 0 
-	NDebugOverlay::Line( GetAbsOrigin(), GetAbsOrigin() + m_vecForward * 16, 255, 255, 0, false, 1 );
-#endif
 
 	Vector vecToNPC = pOther->GetAbsOrigin() - GetAbsOrigin();
 	VectorNormalize( vecToNPC );
@@ -1072,15 +1069,9 @@ bool CAI_Hint::IsInNodeFOV( CBaseEntity *pOther )
 
 	if( flDot > m_nodeFOV )
 	{
-#if 0 
-		NDebugOverlay::Line( GetAbsOrigin(), pOther->GetAbsOrigin(), 0, 255, 0, false, 1 );
-#endif
 		return true;
 	}
 
-#if 0 
-	NDebugOverlay::Line( GetAbsOrigin(), pOther->GetAbsOrigin(), 255, 0, 0, false, 1 );
-#endif
 
 	return false;
 }

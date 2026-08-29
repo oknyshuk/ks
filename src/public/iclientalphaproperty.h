@@ -81,9 +81,7 @@ public:
 	virtual void DestroyClientAlphaProperty( IClientAlphaProperty *pAlphaProperty ) = 0;
 };
 
-#ifndef SWDS
 extern IClientAlphaPropertyMgr *g_pClientAlphaPropertyMgr;
-#endif
 
 
 #endif // ICLIENTALPHAPROPERTY_H

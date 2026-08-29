@@ -147,7 +147,6 @@ private:
 
 	bool		m_bInitialized;
 	bool		m_bActive;
-	bool		m_bCreatingForXbox;
 
 	CUtlString	m_sBaseDir;
 	CUtlString  m_sGameDir;
@@ -172,7 +171,6 @@ IResListGenerator *reslistgenerator = &g_ResListGenerator;
 CResListGenerator::CResListGenerator() :
 	m_bInitialized( false ),
 	m_bActive( false ),
-	m_bCreatingForXbox( false ),
 	m_nCurrentWorkItem( 0 ),
 	m_nCurrentState( STATE_SETUP )
 {
@@ -198,11 +196,6 @@ void CResListGenerator::CollateFiles( char const *pchResListFilename )
 
 void CResListGenerator::Init( char const *pchBaseDir, char const *pchGameDir )
 {
-	if ( IsX360() )
-	{
-		// not used or supported, PC builds them for Xbox
-		return;
-	}
 
 	// Because we have to call this inside the first Apps "PreInit", we need only Init on the very first call
 	if ( m_bInitialized )
@@ -344,24 +337,12 @@ bool CResListGenerator::TickAndFixupCommandLine()
 				CommandLine()->AppendParm( "-startmap", szMap );
 			}
 
-			if ( m_bCreatingForXbox )
-			{
-				CommandLine()->AppendParm( "-xboxreslist", NULL );
-			}
-
 			Warning( "Generating Reslists: Setting command line:\n'%s'\n", CommandLine()->GetCmdLine() );
 		}
 		break;
 
 	case STATE_GENERATINGCACHES:
 		{
-			if ( m_bCreatingForXbox )
-			{
-				// Xbox has no caches, process finished
-				m_bActive = false;
-				break;
-			}
-
 			// Prepare stuff
 			// Reset command line based on current state
 			char szCmd[ 512 ];
@@ -507,7 +488,6 @@ bool CResListGenerator::InitCommandFile( char const *pchGameDir, char const *pch
 	m_sBaseCommandLine = kv->GetString( "basecommandline", "" );
 	m_sFinalDir = kv->GetString( "finaldir", m_sFinalDir.String() );
 	m_sWorkingDir = kv->GetString( "workdir", m_sWorkingDir.String() );
-	m_bCreatingForXbox = kv->GetInt( "xbox", 0 ) != 0;
 
 	int i = 0;
 	do

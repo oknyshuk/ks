@@ -87,13 +87,6 @@ BEGIN_VS_SHADER_FLAGS( WriteZ_DX9, "Help for WriteZ", SHADER_NOT_EDITABLE )
 		*dynVSIdx = _vshIndex.GetIndex();
 
 		// No pixel shader on Direct3D, doubles fill rate
-		if ( IsOSXOpenGL() )
-		{
-			DECLARE_DYNAMIC_PIXEL_SHADER( white_ps20 );
-			SET_DYNAMIC_PIXEL_SHADER( white_ps20 );
-			*dynPSIdx = _pshIndex.GetIndex();
-		}
-		else
 		{
 			*dynPSIdx = 0;
 		}

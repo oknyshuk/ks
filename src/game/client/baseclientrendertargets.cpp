@@ -64,7 +64,7 @@ ITexture* CBaseClientRenderTargets::CreateWaterRefractionTexture( IMaterialSyste
 		//
 		// EDIT: on consoles it doesn't matter for Portal 2 because we never use refraction anyways...we always opt for cheaper translucent water.  Save memory instead.
 		// @TODO: get rid of this buffer entirely on consoles
-		IsGameConsole() ? MATERIAL_RT_DEPTH_SHARED : MATERIAL_RT_DEPTH_SEPARATE,
+		false ? MATERIAL_RT_DEPTH_SHARED : MATERIAL_RT_DEPTH_SEPARATE,
 
 		TEXTUREFLAGS_CLAMPS | TEXTUREFLAGS_CLAMPT,
 		CREATERENDERTARGETFLAGS_HDR );
@@ -120,11 +120,9 @@ void CBaseClientRenderTargets::SetupClientRenderTargets( IMaterialSystem* pMater
 	// mdonofrio - Don't need monitors or flashlight shadows for CS15. 
 	// Still need to initrendertargets for shadowmgr (blob/rtt shadows) - it will skip depth textures if convars set appropriately??
 
-#if !( defined( CSTRIKE15 ) && defined( _PS3 ) ) 
 	// Monitors
 	if ( iCameraTextureSize )
 		m_CameraTexture.Init( CreateCameraTexture( pMaterialSystem, iCameraTextureSize ) );
-#endif
 
 	ITexture *pGlintTexture = pMaterialSystem->CreateNamedRenderTargetTextureEx2( 
 		"_rt_eyeglint", 32, 32, RT_SIZE_NO_CHANGE, IMAGE_FORMAT_BGRA8888, MATERIAL_RT_DEPTH_NONE );

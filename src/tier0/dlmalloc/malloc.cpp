@@ -500,15 +500,8 @@ MAX_RELEASE_CHECK_RATE   default: 255 unless not HAVE_MMAP
 #endif  /* _WIN32 */
 #endif  /* WIN32 */
 #ifdef WIN32
-#if !defined( _X360 )
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
-#else
-#undef Verify
-#define _XBOX
-#include <xtl.h>
-#undef _XBOX
-#endif
 #define HAVE_MMAP 1
 #define HAVE_MORECORE 0
 #define LACKS_UNISTD_H
@@ -525,12 +518,6 @@ MAX_RELEASE_CHECK_RATE   default: 255 unless not HAVE_MMAP
 #define MMAP_CLEARS 1
 #endif /* _WIN32_WCE */
 #endif  /* WIN32 */
-#ifdef _PS3
-#include "tier0/memvirt.h"
-#define LACKS_SYS_MMAN_H
-#define LACKS_SYS_PARAM_H
-#define HAVE_MORECORE 0
-#endif
 
 #if defined(DARWIN) || defined(_DARWIN)
 /* Mac OSX docs advise not to use sbrk; it seems better to use mmap */
@@ -1321,19 +1308,6 @@ extern void*     sbrk(ptrdiff_t);
 #include <thread.h>
 #endif /* solaris */
 #else
-#if 0
-#ifndef _M_AMD64
-/* These are already defined on AMD64 builds */
-#ifdef __cplusplus
-extern "C" {
-#endif /* __cplusplus */
-LONG __cdecl _InterlockedCompareExchange(LPLONG volatile Dest, LONG Exchange, LONG Comp);
-LONG __cdecl _InterlockedExchange(LPLONG volatile Target, LONG Value);
-#ifdef __cplusplus
-}
-#endif /* __cplusplus */
-#endif /* _M_AMD64 */
-#endif
 #pragma intrinsic (_InterlockedCompareExchange)
 #pragma intrinsic (_InterlockedExchange)
 #define interlockedcompareexchange _InterlockedCompareExchange
@@ -1342,7 +1316,7 @@ LONG __cdecl _InterlockedExchange(LPLONG volatile Target, LONG Value);
 #endif /* USE_LOCKS */
 
 /* Declarations for bit scanning on win32 */
-#if defined(_MSC_VER) && _MSC_VER>=1300 && !defined(_X360)
+#if defined(_MSC_VER) && _MSC_VER>=1300
 #ifndef BitScanForward	/* Try to avoid pulling in WinNT.h */
 #ifdef __cplusplus
 extern "C" {
@@ -1461,48 +1435,7 @@ unsigned char _BitScanReverse(unsigned long *index, unsigned long mask);
 #define IS_MMAPPED_BIT       (SIZE_T_ONE)
 #define USE_MMAP_BIT         (SIZE_T_ONE)
 
-#ifdef _PS3
-
-/* PS3 MMAP via CVirtualMemoryManager */
-extern IVirtualMemorySection * VirtualMemoryManager_AllocateVirtualMemorySection( size_t numMaxBytes );
-static FORCEINLINE void* ps3mmap(size_t size) {
-  IVirtualMemorySection *pVirtualSection = VirtualMemoryManager_AllocateVirtualMemorySection(size);
-  if (!pVirtualSection)
-    return MFAIL;
-  if ((pVirtualSection->GetTotalSize()!=size) || !pVirtualSection->CommitPages(pVirtualSection->GetBaseAddress(),size)) {
-    pVirtualSection->Release();
-    return MFAIL;
-  }
-  return pVirtualSection->GetBaseAddress();
-}
-static FORCEINLINE int ps3munmap(void *addr, size_t size)
-{
-  // Check that the given address range exactly corresponds to a set of virtual memory sections:
-  // NOTE: This deliberately fails when called from sys_trim (which tries to shrink mapped regions in-place)
-  byte *cursor = reinterpret_cast<byte *>(addr), *end = cursor + size;
-  while(cursor<end) {
-    IVirtualMemorySection *pVirtualSection = GetMemorySectionForAddress(cursor);
-    if (!pVirtualSection||(pVirtualSection->GetBaseAddress()!=cursor))
-      return -1;
-    cursor += pVirtualSection->GetTotalSize();
-  }
-  if (cursor!=end)
-    return -1;
-  // Things look good, so release those sections!
-  cursor = reinterpret_cast<byte *>(addr);
-  while(cursor<end) {
-    IVirtualMemorySection *pVirtualSection = GetMemorySectionForAddress(cursor);
-    cursor += pVirtualSection->GetTotalSize();
-    pVirtualSection->Release();
-  }
-  return 0;
-}
-
-#define CALL_MMAP(s)         ps3mmap(s)
-#define CALL_MUNMAP(a, s)    ps3munmap((a), (s))
-#define DIRECT_MMAP(s)       ps3mmap(s)
-
-#elif !defined(WIN32)
+#if   !defined(WIN32)
 #define CALL_MUNMAP(a, s)    munmap((a), (s))
 #define MMAP_PROT            (PROT_READ|PROT_WRITE)
 #if !defined(MAP_ANONYMOUS) && defined(MAP_ANON)
@@ -1527,7 +1460,6 @@ static int dev_zero_fd = -1; /* Cached file descriptor for /dev/zero. */
 #define DIRECT_MMAP(s)       CALL_MMAP(s)
 #else /* WIN32 */
 
-#ifndef _X360
 /* Win32 MMAP via VirtualAlloc */
 static /*FORCEINLINE*/ void* win32mmap(size_t size) {
   void* ptr = VirtualAlloc(0, size, MEM_RESERVE|MEM_COMMIT, PAGE_READWRITE);
@@ -1540,20 +1472,6 @@ static /*FORCEINLINE*/ void* win32direct_mmap(size_t size) {
                            PAGE_READWRITE);
   return (ptr != 0)? ptr: MFAIL;
 }
-#else /* _X360 */
-/* Win32 MMAP via VirtualAlloc */
-static FORCEINLINE void* win32mmap(size_t size) {
-  void* ptr = VirtualAlloc(0, size, MEM_RESERVE|MEM_COMMIT|MEM_NOZERO|MEM_LARGE_PAGES, PAGE_READWRITE);
-  return (ptr != 0)? ptr: MFAIL;
-}
-
-/* For direct MMAP, use MEM_TOP_DOWN to minimize interference */
-static FORCEINLINE void* win32direct_mmap(size_t size) {
-  void* ptr = VirtualAlloc(0, size, MEM_RESERVE|MEM_COMMIT|MEM_TOP_DOWN|MEM_NOZERO|MEM_LARGE_PAGES,
-                           PAGE_READWRITE);
-  return (ptr != 0)? ptr: MFAIL;
-}
-#endif /* _X360 */
 
 /* This function supports releasing coalesed segments */
 static /*FORCEINLINE*/ int win32munmap(void* ptr, size_t size) {
@@ -2695,7 +2613,7 @@ static size_t traverse_and_check(mstate m);
   }\
 }
 
-#elif defined(_MSC_VER) && _MSC_VER>=1300 && !defined(_X360)
+#elif defined(_MSC_VER) && _MSC_VER>=1300
 #define compute_tree_index(S, I)\
 {\
   size_t X = S >> TREEBIN_SHIFT;\
@@ -2767,7 +2685,7 @@ static size_t traverse_and_check(mstate m);
   __asm__("bsfl\t%1, %0\n\t" : "=r" (J) : "g" (X));\
   I = (bindex_t)J;\
 }
-#elif defined(_MSC_VER) && _MSC_VER>=1300 && !defined(_X360)
+#elif defined(_MSC_VER) && _MSC_VER>=1300
 #define compute_bit2idx(X, I)\
 {\
   unsigned int J;\
@@ -2962,12 +2880,7 @@ static int init_mparams(void) {
     }
     RELEASE_MAGIC_INIT_LOCK();
 
-#ifdef _PS3
-	// Match Valve's PS3 page size policy (see tier0/memvirt.cpp)
-    mparams.page_size = VMM_PAGE_SIZE;
-    mparams.granularity = VMM_PAGE_SIZE;
-
-#elif !defined( WIN32 )
+#if   !defined( WIN32 )
     mparams.page_size = malloc_getpagesize;
     mparams.granularity = ((DEFAULT_GRANULARITY != 0)?
                            DEFAULT_GRANULARITY : mparams.page_size);

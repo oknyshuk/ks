@@ -95,11 +95,8 @@ void COM_ExplainDisconnection( bool bPrint, const char *fmt, ... )
 	Q_vsnprintf( szString, sizeof( szString ), fmt,argptr );
 	va_end ( argptr );
 
-	if ( !IsX360() )
-	{
-		Q_strncpy( gszDisconnectReason, szString, 256 );
-		gfExtendedError = true;
-	}
+	Q_strncpy( gszDisconnectReason, szString, 256 );
+	gfExtendedError = true;
 
 	if ( bPrint )
 	{
@@ -122,17 +119,14 @@ COM_ExtendedExplainDisconnection
 */
 void COM_ExtendedExplainDisconnection( bool bPrint, const char *fmt, ... )
 {
-	if ( !IsX360() )
-	{
-		va_list		argptr;
-		char		string[1024];
-		
-		va_start (argptr, fmt);
-		Q_vsnprintf(string, sizeof( string ), fmt,argptr);
-		va_end (argptr);
+	va_list		argptr;
+	char		string[1024];
+	
+	va_start (argptr, fmt);
+	Q_vsnprintf(string, sizeof( string ), fmt,argptr);
+	va_end (argptr);
 
-		Q_strncpy( gszExtendedDisconnectReason, string, 256 );
-	}
+	Q_strncpy( gszExtendedDisconnectReason, string, 256 );
 
 	if ( bPrint )
 	{
@@ -536,8 +530,6 @@ needed.  This is for the convenience of developers using ISDN from home.
 */
 bool COM_CopyFile ( const char *netpath, const char *cachepath)
 {
-	if ( IsX360() )
-		return false;
 
 	int             remaining, count;
 	char			buf[4096];
@@ -668,10 +660,6 @@ byte *COM_LoadFile (const char *path, int usehunk, int *pLength)
 	Q_FileBase( path, base, sizeof( base ) );
 
 	unsigned bufSize = len + 1;
-	if ( IsX360() )
-	{
-		bufSize = g_pFileSystem->GetOptimalReadSize( hFile, bufSize ); // align to sector
-	}
 
 	switch ( usehunk )
 	{
@@ -789,9 +777,6 @@ void COM_StringFree(const char *in)
 
 void COM_SetupLogDir( const char *mapname )
 {
-#if defined( _CERT )
-	return;
-#endif
 
 	char gameDir[MAX_OSPATH];
 	COM_GetGameDir( gameDir, sizeof( gameDir ) );
@@ -884,43 +869,7 @@ void COM_InitFilesystem( const char *pFullModPath )
 	// Fallback to English
 	V_strncpy( language, "english", sizeof( language ) );
 
-	if ( IsPC() )
-	{
-#if !defined( NO_STEAM )
-		if ( CommandLine()->CheckParm( "-language" ) )
-		{
-			Q_strncpy( language, CommandLine()->ParmValue( "-language", "english"), sizeof( language ) );
-		}
-		else
-		{
-			// get Steam client language
-			memset( language, 0, sizeof( language ) );
-			if ( Steam3Client().SteamApps() )
-			{
-				// just follow the language steam wants you to be
-				const char *lang = Steam3Client().SteamApps()->GetCurrentGameLanguage();
-				if ( lang && Q_strlen(lang) )
-				{
-					Q_strncpy( language, lang, sizeof(language) );
-				}
-				else 
-					Q_strncpy( language, "english", sizeof(language) );
-			}
-			else 
-			{
-				Q_strncpy( language, "english", sizeof(language) );
-			}
-		}
-#endif // NO_STEAM
-	}
 
-#if defined( _GAMECONSOLE )
-	if ( XBX_IsAudioLocalized() )
-	{
-		// allow non-english audio localization for gameconsole configured language
-		V_strncpy( language, XBX_GetLanguageString(), sizeof( language ) );
-	}
-#endif
 
 	if ( ( Q_strlen( language ) > 0 ) && ( Q_stricmp( language, "english" ) != 0 ) )
 	{
@@ -929,19 +878,7 @@ void COM_InitFilesystem( const char *pFullModPath )
 #endif
 	
 	initInfo.m_pFileSystem = g_pFileSystem;
-#if !defined(_PS3)
 	initInfo.m_pDirectoryName = pFullModPath;
-#else
-	char ps3NeedsAbsoluteModPath[256];
-
-#ifdef HDD_BOOT
-	snprintf( ps3NeedsAbsoluteModPath, 256, "%s", pFullModPath );
-#else
-	snprintf( ps3NeedsAbsoluteModPath, 256, "%s/%s", g_pPS3PathInfo->GameImagePath(), pFullModPath );
-#endif    
-
-	initInfo.m_pDirectoryName = ps3NeedsAbsoluteModPath;
-#endif
 	if ( !initInfo.m_pDirectoryName )
 	{
 		initInfo.m_pDirectoryName = GetCurrentGame();

@@ -13,8 +13,6 @@
 #include "server.h"
 #include "MapReslistGenerator.h"
 #include "tier2/socketcreator.h"
-#if defined( _X360 )
-#endif
 #include "toolframework/itoolframework.h"
 #include "netconsole.h"
 #include "host_cmd.h"
@@ -24,11 +22,7 @@
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
-#if !defined( _X360 )
 #define	MAXPRINTMSG	4096
-#else
-#define	MAXPRINTMSG	1024
-#endif
 
 DEFINE_LOGGING_CHANNEL_NO_TAGS( LOG_CONSOLE, "Console" );
 
@@ -107,7 +101,7 @@ static const char *GetTimestampString( void )
 static ConVar con_trace( "con_trace", "0", FCVAR_MATERIAL_SYSTEM_THREAD, "Print console text to low level printout." );
 static ConVar con_notifytime( "con_notifytime","8", FCVAR_MATERIAL_SYSTEM_THREAD, "How long to display recent console text to the upper part of the game window" );
 static ConVar con_times("contimes", "8", FCVAR_MATERIAL_SYSTEM_THREAD, "Number of console lines to overlay for debugging." );
-static ConVar con_drawnotify( "con_drawnotify", IsGameConsole() ? "0" : "1", 0, "Disables drawing of notification area (for taking screenshots)." );
+static ConVar con_drawnotify( "con_drawnotify", "1", 0, "Disables drawing of notification area (for taking screenshots)." );
 static ConVar con_enable("con_enable", "0", FCVAR_ARCHIVE, "Allows the console to be activated.");
 static ConVar con_filter_enable ( "con_filter_enable","0", FCVAR_MATERIAL_SYSTEM_THREAD | FCVAR_RELEASE, "Filters console output based on the setting of con_filter_text. 1 filters completely, 2 displays filtered text brighter than other text." );
 static ConVar con_filter_text ( "con_filter_text","", FCVAR_MATERIAL_SYSTEM_THREAD | FCVAR_RELEASE, "Text with which to filter console spew. Set con_filter_enable 1 or 2 to activate." );
@@ -123,8 +117,6 @@ Con_HideConsole_f
 */
 void Con_HideConsole_f( void )
 {
-	if ( IsX360() )
-		return;
 
 	Cbuf_AddText( Cbuf_GetCurrentPlayer(), "rocket_console_hide\n", kCommandSrcCode );
 }
@@ -142,8 +134,6 @@ Con_ShowConsole_f
 */
 void Con_ShowConsole_f( void )
 {
-	if ( IsX360() )
-		return;
 
 	// Allow the app to disable the console from the command-line, for demos.
 	if ( !Con_ConsoleAllowed() )
@@ -162,8 +152,6 @@ void Con_ShowConsole_f( void )
 //-----------------------------------------------------------------------------
 void Con_ToggleConsole_f( void )
 {
-	if ( IsX360() )
-		return;
 
 	Cbuf_AddText( Cbuf_GetCurrentPlayer(), "rocket_console_toggle\n", kCommandSrcCode );
 }
@@ -173,8 +161,6 @@ void Con_ToggleConsole_f( void )
 //-----------------------------------------------------------------------------
 void Con_Clear_f( void )
 {	
-	if ( IsX360() )
-		return;
 
 	EngineUI()->ClearConsole();
 	Con_ClearNotify();
@@ -661,114 +647,87 @@ void Con_ColorPrint( const Color& clr, char const *msg )
 	bool debugprint = g_fIsDebugPrint;
 
 	SendStringToNetConsoles( msg );
-	if ( IsPC() )
+	if ( g_bInColorPrint )
+		return;
+
+	int nCon_Filter_Enable = con_filter_enable.GetInt();
+	if ( nCon_Filter_Enable > 0 )
 	{
-		if ( g_bInColorPrint )
-			return;
+		const char *pszText = con_filter_text.GetString();
+		const char *pszIgnoreText = con_filter_text_out.GetString();
 
-		int nCon_Filter_Enable = con_filter_enable.GetInt();
-		if ( nCon_Filter_Enable > 0 )
+		switch( nCon_Filter_Enable )
 		{
-			const char *pszText = con_filter_text.GetString();
-			const char *pszIgnoreText = con_filter_text_out.GetString();
+		case 1:
+			// if line does not contain keyword do not print the line
+			if ( pszText && ( *pszText != '\0' ) && ( Q_stristr( msg, pszText ) == NULL ))
+				return;
+			if ( pszIgnoreText && *pszIgnoreText && ( Q_stristr( msg, pszIgnoreText ) != NULL ) )
+				return;
+			break;
 
-			switch( nCon_Filter_Enable )
+		case 2:
+			if ( pszIgnoreText && *pszIgnoreText && ( Q_stristr( msg, pszIgnoreText ) != NULL ) )
+				return;
+			// if line does not contain keyword print it in a darker color
+			if ( pszText && ( *pszText != '\0' ) && ( Q_stristr( msg, pszText ) == NULL ))
 			{
-			case 1:
-				// if line does not contain keyword do not print the line
-				if ( pszText && ( *pszText != '\0' ) && ( Q_stristr( msg, pszText ) == NULL ))
-					return;
-				if ( pszIgnoreText && *pszIgnoreText && ( Q_stristr( msg, pszIgnoreText ) != NULL ) )
-					return;
-				break;
-
-			case 2:
-				if ( pszIgnoreText && *pszIgnoreText && ( Q_stristr( msg, pszIgnoreText ) != NULL ) )
-					return;
-				// if line does not contain keyword print it in a darker color
-				if ( pszText && ( *pszText != '\0' ) && ( Q_stristr( msg, pszText ) == NULL ))
-				{
-					Color mycolor(200, 200, 200, 150 );
-					g_pCVar->ConsoleColorPrintf( mycolor, "%s", msg );
-					return;
-				}
-				break;
-
-			default:
-				// by default do no filtering
-				break;
+				Color mycolor(200, 200, 200, 150 );
+				g_pCVar->ConsoleColorPrintf( mycolor, "%s", msg );
+				return;
 			}
-		}
+			break;
 
-		g_bInColorPrint = true;
-
-		// also echo to debugging console
-		if ( Plat_IsInDebugSession() && !con_trace.GetInt() )
-		{
-			Sys_OutputDebugString(msg);
+		default:
+			// by default do no filtering
+			break;
 		}
-			
-		if ( sv.IsDedicated() )
-		{
-			g_bInColorPrint = false;
-			return;		// no graphics mode
-		}
+	}
 
-		if ( g_fColorPrintf )
+	g_bInColorPrint = true;
+
+	// also echo to debugging console
+	if ( Plat_IsInDebugSession() && !con_trace.GetInt() )
+	{
+		Sys_OutputDebugString(msg);
+	}
+		
+	if ( sv.IsDedicated() )
+	{
+		g_bInColorPrint = false;
+		return;		// no graphics mode
+	}
+
+	if ( g_fColorPrintf )
+	{
+		g_pCVar->ConsoleColorPrintf( clr, "%s", msg );
+	}
+	else
+	{
+		// write it out to the vgui console no matter what
+		if ( g_fIsDebugPrint )
 		{
-			g_pCVar->ConsoleColorPrintf( clr, "%s", msg );
+			// Don't spew debug stuff to actual console once in game, unless console isn't up
+			if ( !GetBaseLocalClient().IsActive() || !convisible )
+			{
+				g_pCVar->ConsoleDPrintf( "%s", msg );
+			}
 		}
 		else
 		{
-			// write it out to the vgui console no matter what
-			if ( g_fIsDebugPrint )
-			{
-				// Don't spew debug stuff to actual console once in game, unless console isn't up
-				if ( !GetBaseLocalClient().IsActive() || !convisible )
-				{
-					g_pCVar->ConsoleDPrintf( "%s", msg );
-				}
-			}
-			else
-			{
-				g_pCVar->ConsolePrintf( "%s", msg );
-			}
+			g_pCVar->ConsolePrintf( "%s", msg );
 		}
-
-		// Make sure we "spew" if this wan't generated from the spew system
-		if ( !g_bInSpew )
-		{
-			Msg( "%s", msg );
-		}
-
-		g_bInColorPrint = false;
 	}
-	
-#if defined( _X360 )
-	int			r,g,b,a;
-	char		buffer[MAXPRINTMSG];
-	const char	*pFrom;
-	char		*pTo;
 
-	clr.GetColor(r, g, b, a);
-
-	// fixup percent printers
-	pFrom = msg;
-	pTo   = buffer;
-	while ( *pFrom && pTo < buffer+sizeof(buffer)-1 )
+	// Make sure we "spew" if this wan't generated from the spew system
+	if ( !g_bInSpew )
 	{
-		*pTo = *pFrom++;
-		if ( *pTo++ == '%' )
-			*pTo++ = '%';
+		Msg( "%s", msg );
 	}
-	*pTo = '\0';
 
-	XBX_DebugString( XMAKECOLOR(r,g,b), buffer );
-#endif
+	g_bInColorPrint = false;
+	
 
-#if defined( _PS3 )
-	Sys_OutputDebugString( msg );
-#endif
 }
 #endif
 
@@ -812,11 +771,7 @@ void Con_Print( const char *msg )
 	}
 	else
 	{
-#if !defined( _X360 )
 		Color clr( 255, 255, 255, 255 );
-#else
-		Color clr( 0, 0, 0, 255 );
-#endif
 		Con_ColorPrint( clr, msg );
 	}
 #endif
@@ -846,11 +801,7 @@ void Con_Printf( const char *fmt, ... )
 	}
 	else
 	{
-#if !defined( _X360 )
 		Color clr( 255, 255, 255, 255 );
-#else
-		Color clr( 0, 0, 0, 255 );
-#endif
 		Con_ColorPrint( clr, msg );
 	}
 #endif
@@ -964,18 +915,6 @@ void Con_NPrintf( int idx, const char *fmt, ... )
 	va_start(argptr, fmt);
     Q_vsnprintf( outtext, sizeof( outtext ), fmt, argptr);
     va_end(argptr);
-
-	if ( IsPC() 
-#ifndef _CERT
-		|| IsGameConsole()
-#endif // !_CERT
-		)
-	{
-	}
-	else
-	{
-		Con_Printf( outtext );
-	}
 }
 
 void Con_NXPrintf( const struct con_nprint_s *info, const char *fmt, ... )
@@ -986,22 +925,6 @@ void Con_NXPrintf( const struct con_nprint_s *info, const char *fmt, ... )
 	va_start(argptr, fmt);
     Q_vsnprintf( outtext, sizeof( outtext ), fmt, argptr);
     va_end(argptr);
-
-	if ( IsPC() 
-#ifndef _CERT
-		|| IsGameConsole()
-#endif // !_CERT
-		)
-	{
-	}
-	else
-	{
-		// xbox doesn't use notify printing
-		Con_Printf( outtext );
-		// enforce a terminal CR, which PC callers don't specify
-		// ensure vxconsole ouptut is formatted as expected (more often than not)
-		Con_Printf( "\n" );
-	}
 }
 
 

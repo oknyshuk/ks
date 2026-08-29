@@ -432,7 +432,6 @@ public:
 	virtual void DrawModelArray( const StudioModelArrayInfo2_t &info, int nCount, StudioArrayData_t *pArrayData, 
 		int nInstanceStride, int flags = STUDIORENDER_DRAW_ENTIRE_MODEL ) = 0;
 
-#ifndef _CERT
 	struct FacesRenderedInfo_t
 	{
 		studiohdr_t *pStudioHdr;
@@ -442,7 +441,6 @@ public:
 
 	typedef void ( * FaceInfoCallbackFunc_t )( int nTopN, FacesRenderedInfo_t *pRenderedFaceInfo, int nTotalFaces );
 	virtual void GatherRenderedFaceInfo( FaceInfoCallbackFunc_t pFunc ) = 0;
-#endif // !_CERT
 };
 
 DECLARE_TIER3_INTERFACE( IStudioRender, g_pStudioRender );

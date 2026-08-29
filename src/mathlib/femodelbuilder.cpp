@@ -3127,27 +3127,6 @@ bool CFeModelBuilder::Finish( bool bTriangulate, float flAddCurvature, float flS
 		}
 	}
 
-	if ( false ) // sorting is not strictly necessary and it obscures debugging
-	{
-		HeapSort( m_TaperedCapsuleStretches, []( const FeTaperedCapsuleStretch_t &left, const FeTaperedCapsuleStretch_t &right ) {
-			if ( left.nNode[ 1 ] != right.nNode[ 1 ] )
-				return left.nNode[ 1 ] < right.nNode[ 1 ];
-			if ( left.nNode[ 0 ] != right.nNode[ 0 ] )
-				return left.nNode[ 0 ] < right.nNode[ 0 ];
-			if ( left.flRadius[ 1 ] != right.flRadius[ 1 ] )
-				return left.flRadius[ 1 ] > right.flRadius[ 1 ];
-			if ( left.flRadius[ 0 ] != right.flRadius[ 0 ] )
-				return left.flRadius[ 0 ] > right.flRadius[ 0 ];
-			return false;
-		} );
-		RemoveDuplicates( m_TaperedCapsuleStretches );
-		HeapSort( m_TaperedCapsuleRigids, []( const FeTaperedCapsuleRigid_t &left, const FeTaperedCapsuleRigid_t &right ) {
-			return left.nNode < right.nNode;
-		} );
-		HeapSort( m_SphereRigids, []( const FeSphereRigid_t & left, const FeSphereRigid_t &right ) {
-			return left.nNode < right.nNode;
-		} );
-	}
 	ReallocateMultiBuffer( context );
 
 	if ( !m_bUnitlessDamping )

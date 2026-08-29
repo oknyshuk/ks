@@ -54,12 +54,10 @@ static bool SysSession_AllowCreate()
 
 
 CSysSessionBase::CSysSessionBase( KeyValues *pSettings ) :
-#if !defined( NO_STEAM )
 	m_CallbackOnServersConnected( this, &CSysSessionBase::Steam_OnServersConnected ),
 	m_CallbackOnServersDisconnected( this, &CSysSessionBase::Steam_OnServersDisconnected ),
 	m_CallbackOnP2PSessionRequest( this, &CSysSessionBase::Steam_OnP2PSessionRequest ),
 	m_bVoiceUsingSessionP2P( false ),
-#endif
 	m_Voice_flLastHeadsetStatusCheck( -1.0f ),
 	m_pSettings( pSettings ),
 	m_xuidMachineId( g_pPlayerManager->GetLocalPlayer( XBX_GetPrimaryUserId() )->GetXUID() ),
@@ -75,7 +73,6 @@ CSysSessionBase::~CSysSessionBase()
 
 bool CSysSessionBase::Update()
 {
-#if !defined( NO_STEAM )
 	if ( !IsServiceSession() )
 	{
 		// Process P2P network
@@ -89,7 +86,6 @@ bool CSysSessionBase::Update()
 				UnpackAndReceiveMessage( utlMemory.Base(), uiSteamMsgSize, true, idRemote.ConvertToUint64() );
 		}
 	}
-#endif
 
 	Voice_UpdateLocalHeadsetsStatus();
 	Voice_CaptureAndTransmitLocalVoiceData();
@@ -123,7 +119,6 @@ void CSysSessionBase::SendEventsNotification( KeyValues *notify )
 
 void CSysSessionBase::Destroy()
 {
-#if !defined( NO_STEAM )
 	Voice_ProcessTalkers( NULL, false );
 
 	if ( m_lobby.m_uiLobbyID )
@@ -140,7 +135,6 @@ void CSysSessionBase::Destroy()
 		steamapicontext->SteamMatchmaking()->LeaveLobby( m_lobby.m_uiLobbyID );
 	}
 	m_lobby = CSteamLobbyObject();
-#endif
 
 	delete this;
 }
@@ -149,7 +143,6 @@ void CSysSessionBase::DebugPrint()
 {
 	DevMsg( "CSysSessionBase\n" );
 	DevMsg( "    machineid: %llx\n", m_xuidMachineId );
-#if !defined( NO_STEAM )
 	DevMsg( "    lobby id:  %llx\n", m_lobby.m_uiLobbyID );
 	DevMsg( "    lbystate:  %d\n", m_lobby.m_eLobbyState );
 
@@ -175,7 +168,6 @@ void CSysSessionBase::DebugPrint()
 		}
 		DevMsg( "    ldata:net: %s\n", steamapicontext->SteamMatchmaking()->GetLobbyData( m_lobby.m_uiLobbyID, "system:network" ) );
 	}
-#endif
 }
 
 void CSysSessionBase::Command( KeyValues *pCommand )
@@ -198,12 +190,7 @@ uint64 CSysSessionBase::GetReservationCookie()
 
 uint64 CSysSessionBase::GetNonceCookie()
 {
-#if !defined( NO_STEAM )
 	return m_lobby.GetSessionId();
-#else
-	Assert( false ); // Not implemented for this platform
-	return 0;
-#endif
 }
 
 uint64 CSysSessionBase::GetSessionID()
@@ -218,9 +205,7 @@ void CSysSessionBase::ReplyLanSearch( KeyValues *msg )
 	KeyValues::AutoDelete autodelete( reply );
 
 	// Put information about our session
-#if !defined( NO_STEAM )
 	reply->SetUint64( "options/sessionid", m_lobby.m_uiLobbyID );
-#endif
 
 	// Information about primary player
 	if ( IPlayerLocal *pPlayer = g_pPlayerManager->GetLocalPlayer( XBX_GetPrimaryUserId() ) )
@@ -244,7 +229,6 @@ void CSysSessionBase::ReplyLanSearch( KeyValues *msg )
 
 void CSysSessionBase::SendMessage( KeyValues *msg )
 {
-#if !defined( NO_STEAM )
 
 	CUtlBuffer buf;
 	buf.ActivateByteSwapping( !CByteswap::IsMachineBigEndian() );
@@ -304,7 +288,6 @@ void CSysSessionBase::SendMessage( KeyValues *msg )
 	{
 		ReceiveMessage( msg, true, m_xuidMachineId );
 	}
-#endif
 }
 
 void CSysSessionBase::ReceiveMessage( KeyValues *msg, bool bValidatedLobbyMember, XUID xuidSrc )
@@ -361,7 +344,6 @@ void CSysSessionBase::ReceiveMessage( KeyValues *msg, bool bValidatedLobbyMember
 	}
 }
 
-#if !defined( NO_STEAM )
 
 void CSysSessionBase::UnpackAndReceiveMessage( const void *pvBuffer, int numBytes, bool bValidatedLobbyMember, XUID xuidSrc )
 {
@@ -473,8 +455,7 @@ void CSysSessionBase::Steam_OnP2PSessionRequest( P2PSessionRequest_t *pParam )
 	uint64 idRemote = pParam->m_steamIDRemote.ConvertToUint64();
 	if ( m_lobby.m_uiLobbyID && g_pMatchExtensions->GetIVEngineClient() &&
 		( !g_pMatchExtensions->GetIVEngineClient()->IsConnected() || g_pMatchExtensions->GetIVEngineClient()->IsClientLocalToActiveServer() ) &&
-		 SessionMembersFindPlayer( m_pSettings, idRemote ) &&
-		 ( !IsPS3() || ( m_lobby.m_eLobbyState == CSteamLobbyObject::STATE_DEFAULT ) ) )
+		 SessionMembersFindPlayer( m_pSettings, idRemote ) )
 	{
 		// We are in the lobby together, accept P2P session request
 		steamapicontext->SteamNetworking()->AcceptP2PSessionWithUser( idRemote );
@@ -650,7 +631,6 @@ void CSysSessionBase::LobbySetDataFromKeyValues( char const *szPath, KeyValues *
 	}
 }
 
-#endif
 
 void CSysSessionBase::Voice_ProcessTalkers( KeyValues *pMachine, bool bAdd )
 {
@@ -699,10 +679,8 @@ void CSysSessionBase::Voice_ProcessTalkers( KeyValues *pMachine, bool bAdd )
 			else
 			{
 				pIEngineVoice->RemovePlayerFromVoiceList( xuid, iCtrlr );
-#if !defined( NO_STEAM )
 				// When removing from voice list tear down P2P session
 				steamapicontext->SteamNetworking()->CloseP2PSessionWithUser( xuid );
-#endif
 			}
 		}
 	}
@@ -719,12 +697,10 @@ void CSysSessionBase::Voice_CaptureAndTransmitLocalVoiceData()
 
 	if ( g_pMatchFramework->GetMatchTitle()->GetTitleSettingsFlags() & MATCHTITLE_VOICE_INGAME )
 	{
-#if !defined( NO_STEAM )
 		if ( m_lobby.m_eLobbyState != m_lobby.STATE_DEFAULT )
 		{
 			return;
 		}
-#endif
 	}
 
 	for ( DWORD k = 0; k < XBX_GetNumGameUsers(); ++ k )
@@ -826,9 +802,7 @@ void CSysSessionBase::Voice_UpdateLocalHeadsetsStatus()
 	{
 		bool bHeadset = false;
 
-#if !defined( NO_STEAM )
 		bHeadset = g_pMatchExtensions->GetIEngineVoice()->IsHeadsetPresent( XBX_GetPrimaryUserId() );
-#endif
 
 		char const *szCurValue = pMachine->GetString( CFmtStr( "player%d/voice", k ), "" );
 		char const *szHeadsetValue = bHeadset ? "headset" : "";
@@ -970,13 +944,11 @@ bool CSysSessionBase::FindAndRemovePlayerFromMembers( XUID xuid )
 					OnSessionEvent( kv );
 				}
 
-#if !defined( NO_STEAM )
 				if ( dynamic_cast< CSysSessionHost * >( this ) )
 				{
 					// Update members information
 					LobbySetDataFromKeyValues( "members", m_pSettings->FindKey( "Members" ), false );
 				}
-#endif
 
 				return true;
 			}
@@ -988,15 +960,12 @@ bool CSysSessionBase::FindAndRemovePlayerFromMembers( XUID xuid )
 
 void CSysSessionBase::UpdateSessionProperties( KeyValues *kv, bool bHost )
 {
-#if !defined( NO_STEAM )
 	SetupSteamRankingConfiguration();
-#endif
 
 	if ( !bHost )
 		// On PC it's all Steam-server-side and only host sets the metadata
 		return;
 
-#if !defined( NO_STEAM )
 	if ( !m_lobby.m_uiLobbyID )
 		return;
 
@@ -1006,12 +975,10 @@ void CSysSessionBase::UpdateSessionProperties( KeyValues *kv, bool bHost )
 		LobbySetDataFromKeyValues( "game", kv->FindKey( "game" ) );
 		LobbySetDataFromKeyValues( "options", kv->FindKey( "options" ) );
 	}
-#endif
 }
 
 void CSysSessionBase::SetSessionActiveGameplayState( bool bActive, char const *szSecureServerAddress )
 {
-#if !defined( NO_STEAM )
 	switch ( m_lobby.m_eLobbyState )
 	{
 	case CSteamLobbyObject::STATE_DEFAULT:
@@ -1038,25 +1005,20 @@ void CSysSessionBase::SetSessionActiveGameplayState( bool bActive, char const *s
 		}
 		break;
 	}
-#endif
 }
 
 
 void CSysSessionBase::UpdateTeamProperties( KeyValues *pTeamProperties )
 {
-#if !defined(NO_STEAM)
 	if ( !m_lobby.m_uiLobbyID )
 		return;
 
 	LobbySetDataFromKeyValues( "members", pTeamProperties->FindKey( "members" ) );
-#endif
 }
 
 void CSysSessionBase::UpdateServerInfo( KeyValues *pServerKey )
 {
-#if !defined(NO_STEAM)
 	LobbySetDataFromKeyValues( "server", pServerKey->FindKey( "server" ) );
-#endif
 }
 
 void CSysSessionBase::PrintValue( KeyValues *val, char *chBuffer, int numBytesBuffer )
@@ -1089,10 +1051,8 @@ void CSysSessionBase::PrintValue( KeyValues *val, char *chBuffer, int numBytesBu
 
 CSysSessionHost::CSysSessionHost( KeyValues *pSettings ) :
 	CSysSessionBase( pSettings ),
-#if !defined( NO_STEAM )
 	m_dblDormantMembersCheckTime( Plat_FloatTime() ),
 	m_numDormantMembersDetected( 0 ),
-#endif
 	m_eState( STATE_INIT ),
 	m_flTimeOperationStarted( 0.0f ),
 	m_flInitializeTimestamp( 0.0f ),
@@ -1105,10 +1065,8 @@ CSysSessionHost::CSysSessionHost( KeyValues *pSettings ) :
 
 CSysSessionHost::CSysSessionHost( CSysSessionClient *pClient, KeyValues *pSettings ) :
 	CSysSessionBase( pSettings ),
-#if !defined( NO_STEAM )
 	m_dblDormantMembersCheckTime( Plat_FloatTime() ),
 	m_numDormantMembersDetected( 0 ),
-#endif
 	m_eState( STATE_IDLE ),
 	m_flTimeOperationStarted( 0.0f ),
 	m_flInitializeTimestamp( 0.0f ),
@@ -1121,14 +1079,12 @@ CSysSessionHost::CSysSessionHost( CSysSessionClient *pClient, KeyValues *pSettin
 
 	m_Voice_flLastHeadsetStatusCheck = pClient->m_Voice_flLastHeadsetStatusCheck;
 
-#if !defined( NO_STEAM )
 	// Install callback for messages
 	m_CallbackOnLobbyChatMsg.Register( this, &CSysSessionBase::Steam_OnLobbyChatMsg );
 	m_CallbackOnLobbyChatUpdate.Register( this, &CSysSessionBase::Steam_OnLobbyChatUpdate );
 
 	// Set the migrated members information
 	LobbySetDataFromKeyValues( "members", m_pSettings->FindKey( "members" ), false );
-#endif
 
 	// Send a notification
 	KeyValues *kvEvent = new KeyValues( "OnPlayerLeaderChanged" );
@@ -1154,14 +1110,10 @@ bool CSysSessionHost::Update()
 		if ( !m_flInitializeTimestamp )
 		{
 			m_flInitializeTimestamp = Plat_FloatTime();
-#if !defined( NO_STEAM )
 			SetupSteamRankingConfiguration();
-#endif
 		}
 		if (
-#if !defined( NO_STEAM )
 			( IsSteamRankingConfigured() || ( Plat_FloatTime() >= m_flInitializeTimestamp + mm_session_sys_ranking_timeout.GetFloat() ) ) &&
-#endif
 			( Plat_FloatTime() >= m_flInitializeTimestamp + mm_session_sys_delay_create_host.GetFloat() ) &&
 			SysSession_AllowCreate()
 			)
@@ -1170,7 +1122,6 @@ bool CSysSessionHost::Update()
 		}
 		break;
 
-#if !defined( NO_STEAM )
 	case STATE_IDLE:
 		// Track players who are in the MMS session object, but haven't made KV request to join or failed KV request and didn't drop
 		if ( m_lobby.m_uiLobbyID )
@@ -1204,7 +1155,6 @@ bool CSysSessionHost::Update()
 			}
 		}
 		break;
-#endif
 	}
 
 	// Update reservation status
@@ -1243,10 +1193,8 @@ void CSysSessionHost::DebugPrint()
 
 XUID CSysSessionHost::GetHostXuid( XUID xuidValidResult )
 {
-#if !defined( NO_STEAM )
 	return m_lobby.m_uiLobbyID ? steamapicontext->SteamMatchmaking()
 		->GetLobbyOwner( m_lobby.m_uiLobbyID ).ConvertToUint64() : m_xuidMachineId;
-#endif
 	return 0ull;
 }
 
@@ -1330,13 +1278,11 @@ void CSysSessionHost::OnMachineUpdated( KeyValues *pMachine )
 
 void CSysSessionHost::UpdateStateInit()
 {
-#if !defined( NO_STEAM )
 	ELobbyType eType = k_ELobbyTypeFriendsOnly;
 	int numSlots = m_pSettings->GetInt( "members/numSlots", 1 );
 
 	SteamAPICall_t hCall = steamapicontext->SteamMatchmaking()->CreateLobby( eType, numSlots );
 	m_CallbackOnLobbyCreated.Set( hCall, this, &CSysSessionHost::Steam_OnLobbyCreated );
-#endif
 
 	m_eState = STATE_CREATING;
 }
@@ -1383,7 +1329,6 @@ void CSysSessionHost::Migrate( KeyValues *pCommand )
 		return;
 	}
 
-#ifndef NO_STEAM
 	Verify( steamapicontext->SteamMatchmaking()->SetLobbyOwner( m_lobby.m_uiLobbyID, pCommand->GetUint64( "xuid" ) ) );
 	
 	// Prepare the update notification
@@ -1393,7 +1338,6 @@ void CSysSessionHost::Migrate( KeyValues *pCommand )
 	kv->SetString( "action", "client" );
 	// Inside this event broadcast our session will be deleted
 	SendEventsNotification( kv );
-#endif
 }
 
 void CSysSessionHost::OnPlayerLeave( XUID xuid )
@@ -1401,13 +1345,11 @@ void CSysSessionHost::OnPlayerLeave( XUID xuid )
 	// We detected that the player dropped out of the lobby,
 	// disconnect the player from the session
 
-#if !defined( NO_STEAM )
 	if ( !V_stricmp( m_pSettings->GetString( "system/netflag" ), "noleave" ) )
 	{
 		DevMsg( "CSysSessionHost::OnPlayerLeave(%llx) ignored in noleave mode.\n", xuid );
 		return;
 	}
-#endif
 
 	if ( FindAndRemovePlayerFromMembers( xuid ) )
 	{
@@ -1429,7 +1371,6 @@ void CSysSessionHost::OnPlayerLeave( XUID xuid )
 
 
 
-#if !defined( NO_STEAM )
 
 void CSysSessionHost::Steam_OnLobbyCreated( LobbyCreated_t *pLobbyCreate, bool bError )
 {
@@ -1524,11 +1465,9 @@ bool CSysSessionHost::GetLobbyType( KeyValues *kv, ELobbyType *peType, bool *pbJ
 		return false;
 }
 
-#endif
 
 void CSysSessionHost::UpdateMembersInfo()
 {
-#if !defined( NO_STEAM )
 	if ( m_lobby.m_uiLobbyID )
 	{
 		steamapicontext->SteamMatchmaking()->SetLobbyMemberLimit( m_lobby.m_uiLobbyID,
@@ -1537,7 +1476,6 @@ void CSysSessionHost::UpdateMembersInfo()
 
 	// Set the initial members information
 	LobbySetDataFromKeyValues( "members", m_pSettings->FindKey( "members" ), false );
-#endif
 }
 
 void CSysSessionHost::InitSessionProperties()
@@ -1557,7 +1495,6 @@ void CSysSessionHost::UpdateSessionProperties( KeyValues *kv )
 	// Set joinability and public/private slots distribution
 	//
 
-#if !defined( NO_STEAM )
 	ELobbyType eType = k_ELobbyTypePublic;
 	bool bJoinable = true;
 	if ( GetLobbyType( kv, &eType, &bJoinable ) && m_lobby.m_uiLobbyID )
@@ -1565,7 +1502,6 @@ void CSysSessionHost::UpdateSessionProperties( KeyValues *kv )
 		steamapicontext->SteamMatchmaking()->SetLobbyType( m_lobby.m_uiLobbyID, eType );
 		steamapicontext->SteamMatchmaking()->SetLobbyJoinable( m_lobby.m_uiLobbyID, bJoinable );
 	}
-#endif
 }
 
 bool CSysSessionHost::Process_RequestJoinData( XUID xuidClient, KeyValues *pSettings )
@@ -1822,10 +1758,8 @@ bool CSysSessionHost::Process_RequestJoinData( XUID xuidClient, KeyValues *pSett
 
 	Voice_UpdateMutelist();
 
-#if !defined( NO_STEAM )
 	// Update members information
 	LobbySetDataFromKeyValues( "members", m_pSettings->FindKey( "members" ), false );
-#endif
 
 	return true;
 }
@@ -1866,7 +1800,6 @@ xit:
 
 void CSysSessionHost::ReserveTeamSession( XUID key, int numPlayers )
 {
-#if !defined (NO_STEAM)
 	DevMsg( "CSysSessionHost::ReserveTeamSession\n");
 	m_teamResKey = key;
 	m_numRemainingTeamPlayers = numPlayers;
@@ -1877,12 +1810,10 @@ void CSysSessionHost::ReserveTeamSession( XUID key, int numPlayers )
 	KeyValues::AutoDelete autodelete( settings );
 	settings->SetInt( "TeamRes", 1 );
 	LobbySetDataFromKeyValues( "TeamReservation", settings );
-#endif
 }
 
 void CSysSessionHost::UnreserveTeamSession()
 {
-#if !defined (NO_STEAM)
 	DevMsg( "CSysSessionHost::UnreserveTeamSession\n");
 	m_teamResKey = 0;
 	m_numRemainingTeamPlayers = 0;
@@ -1892,7 +1823,6 @@ void CSysSessionHost::UnreserveTeamSession()
 	KeyValues::AutoDelete autodelete( settings );
 	settings->SetInt( "TeamRes", 0 );
 	LobbySetDataFromKeyValues( "TeamReservation", settings );
-#endif
 }
 
 void CSysSessionHost::Process_VoiceStatus( KeyValues *msg, XUID xuidSrc )
@@ -1965,11 +1895,9 @@ CSysSessionClient::CSysSessionClient( CSysSessionHost *pHost, KeyValues *pSettin
 
 	m_Voice_flLastHeadsetStatusCheck = pHost->m_Voice_flLastHeadsetStatusCheck;
 
-#if !defined( NO_STEAM )
 	// Install callback for messages
 	m_CallbackOnLobbyChatMsg.Register( this, &CSysSessionBase::Steam_OnLobbyChatMsg );
 	m_CallbackOnLobbyChatUpdate.Register( this, &CSysSessionBase::Steam_OnLobbyChatUpdate );
-#endif
 }
 
 
@@ -1990,14 +1918,10 @@ bool CSysSessionClient::Update()
 		if ( !m_flInitializeTimestamp )
 		{
 			m_flInitializeTimestamp = Plat_FloatTime();
-#if !defined( NO_STEAM )
 			SetupSteamRankingConfiguration();
-#endif
 		}
 		if (
-#if !defined( NO_STEAM )
 			( IsSteamRankingConfigured() || ( Plat_FloatTime() >= m_flInitializeTimestamp + mm_session_sys_ranking_timeout.GetFloat() ) ) &&
-#endif
 			SysSession_AllowCreate()
 			)
 			UpdateStateInit();
@@ -2020,13 +1944,11 @@ bool CSysSessionClient::Update()
 			}
 		break;
 
-#if !defined( NO_STEAM )
 	case STATE_JOIN_LOBBY:
 		m_CallbackOnLobbyEntered.Register( this, &CSysSessionClient::Steam_OnLobbyEntered );
 		steamapicontext->SteamMatchmaking()->JoinLobby( m_lobby.m_uiLobbyID );
 		m_eState = STATE_CREATING;
 		break;
-#endif
 
 	case STATE_IDLE:
 		break;
@@ -2065,19 +1987,15 @@ void CSysSessionClient::DebugPrint()
 
 XUID CSysSessionClient::GetHostXuid( XUID xuidValidResult )
 {
-#if !defined( NO_STEAM )
 	return m_lobby.m_uiLobbyID ? steamapicontext->SteamMatchmaking()
 		->GetLobbyOwner( m_lobby.m_uiLobbyID ).ConvertToUint64() : m_xuidMachineId;
-#endif
 	return 0ull;
 }
 
 void CSysSessionClient::UpdateStateInit()
 {
-#if !defined( NO_STEAM )
 	m_lobby.m_uiLobbyID = m_pSettings->GetUint64( "options/sessionid", 0ull );
 	m_eState = STATE_JOIN_LOBBY;
-#endif
 }
 
 void CSysSessionClient::InitSessionProperties( KeyValues *pSettings )
@@ -2171,7 +2089,6 @@ void CSysSessionClient::ReceiveMessage( KeyValues *msg, bool bValidatedLobbyMemb
 
 
 
-#if !defined( NO_STEAM )
 void CSysSessionClient::Steam_OnLobbyEntered( LobbyEnter_t *pLobbyEnter )
 {
 	// Filter out notifications not from our lobby
@@ -2290,7 +2207,6 @@ void CSysSessionClient::Steam_OnLobbyEntered( LobbyEnter_t *pLobbyEnter )
 		return;
 	}
 }
-#endif
 
 void CSysSessionClient::Process_ReplyJoinData_Our( KeyValues *msg )
 {
@@ -2476,12 +2392,10 @@ void CSysSessionClient::Send_RequestJoinData()
 	DevMsg( "Sending join session request...\n" );
 	KeyValuesDumpAsDevMsg( msg, 1 );
 
-#if !defined( NO_STEAM )
 	// Install callback for messages
 	m_CallbackOnLobbyChatMsg.Register( this, &CSysSessionBase::Steam_OnLobbyChatMsg );
 	m_CallbackOnLobbyChatUpdate.Register( this, &CSysSessionBase::Steam_OnLobbyChatUpdate );
 	SendMessage( msg );
-#endif
 }
 
 void CSysSessionClient::Migrate( KeyValues *pCommand )
@@ -2492,7 +2406,6 @@ void CSysSessionClient::Migrate( KeyValues *pCommand )
 		return;
 	}
 
-#ifndef NO_STEAM
 	uint64 uiNewLobbyOwner = steamapicontext->SteamMatchmaking()->GetLobbyOwner( m_lobby.m_uiLobbyID ).ConvertToUint64();
 	Assert( uiNewLobbyOwner == m_xuidMachineId );
 	uiNewLobbyOwner;
@@ -2504,18 +2417,15 @@ void CSysSessionClient::Migrate( KeyValues *pCommand )
 	kv->SetString( "action", "host" );
 	// Inside this event broadcast our session will be deleted
 	SendEventsNotification( kv );
-#endif
 }
 
 void CSysSessionClient::OnPlayerLeave( XUID xuid )
 {
-#if !defined( NO_STEAM )
 	if ( !V_stricmp( m_pSettings->GetString( "system/netflag" ), "noleave" ) )
 	{
 		DevMsg( "CSysSessionClient::OnPlayerLeave(%llx) ignored in noleave mode.\n", xuid );
 		return;
 	}
-#endif
 
 	XUID xuidCurrentHost = GetHostXuid( xuid );	// Indicate the the leaving XUID could have been the host
 
@@ -2527,7 +2437,6 @@ void CSysSessionClient::OnPlayerLeave( XUID xuid )
 	// We only care to handle this event further if we are becoming the new host
 	char const *szForcedError = NULL;
 
-#if !defined( NO_STEAM )
 	XUID xuidNewHost = steamapicontext->SteamMatchmaking()->GetLobbyOwner( m_lobby.m_uiLobbyID ).ConvertToUint64();
 	if ( xuidNewHost != m_xuidMachineId )
 	{
@@ -2554,7 +2463,6 @@ void CSysSessionClient::OnPlayerLeave( XUID xuid )
 
 	if ( m_eState != STATE_IDLE )
 		szForcedError = "n/a";
-#endif
 
 	// Prepare the update notification
 	KeyValues *kv = new KeyValues( "mmF->SysSessionUpdate" );
@@ -2612,16 +2520,12 @@ CSysSessionConTeamHost::CSysSessionConTeamHost( KeyValues *pSettings ) :
 	m_eState( STATE_INIT ),
 	m_lastRequestSendTime( 0.0f )
 {
-#if !defined (NO_STEAM)
 	m_CallbackOnLobbyChatMsg.Register( this, &CSysSessionBase::Steam_OnLobbyChatMsg );
-#endif
 }
 
 CSysSessionConTeamHost::~CSysSessionConTeamHost()
 {
-#if !defined (NO_STEAM)
 	m_CallbackOnLobbyChatMsg.Unregister();
-#endif
 }
 
 bool CSysSessionConTeamHost::Update()
@@ -2633,12 +2537,10 @@ bool CSysSessionConTeamHost::Update()
 	{
 	case STATE_INIT:
 
-#if !defined (NO_STEAM)
 		// Join lobby
 		m_lobby.m_uiLobbyID = m_pSettings->GetUint64( "options/sessionid", 0ull );
 		m_CallbackOnLobbyEntered.Register( this, &CSysSessionConTeamHost::Steam_OnLobbyEntered );
 		steamapicontext->SteamMatchmaking()->JoinLobby( m_lobby.m_uiLobbyID );
-#endif
 
 		m_eState = STATE_WAITING_LOBBY_JOIN;
 		break;
@@ -2669,7 +2571,6 @@ void CSysSessionConTeamHost::Destroy()
 
 bool CSysSessionConTeamHost::GetPlayerSidesAssignment( int *numPlayers, uint64 playerIDs[10], int side[10] )
 {
-#if !defined (NO_STEAM)
 	if ( GetResult() != RESULT_SUCCESS )
 	{
 		return false;
@@ -2727,14 +2628,12 @@ bool CSysSessionConTeamHost::GetPlayerSidesAssignment( int *numPlayers, uint64 p
 		
 	*numPlayers = numTeamPlayers;
 
-#endif
 
 	return true;
 }
 
 void CSysSessionConTeamHost::ReceiveMessage( KeyValues *msg, bool bValidatedLobbyMember, XUID xuidSrc )
 {
-#if !defined (NO_STEAM)
 
 	char const *szMsg = msg->GetName();
 	bool bProcessed = false;
@@ -2768,7 +2667,6 @@ void CSysSessionConTeamHost::ReceiveMessage( KeyValues *msg, bool bValidatedLobb
 		CSysSessionBase::ReceiveMessage( msg, bValidatedLobbyMember, xuidSrc );
 	}
 
-#endif
 
 }
 
@@ -2786,14 +2684,12 @@ void CSysSessionConTeamHost::SendReservationRequest()
 
 	DevMsg( "Sending res request with teamResKey == %llx\n ", teamResKey );
 
-#if !defined (NO_STEAM)
 	CUtlBuffer buf;
 	buf.ActivateByteSwapping( !CByteswap::IsMachineBigEndian() );
 	buf.PutInt( g_pMatchExtensions->GetINetSupport()->GetEngineBuildNumber() );
 	reservation->WriteAsBinary( buf );
 
 	steamapicontext->SteamMatchmaking()->SendLobbyChatMsg( m_lobby.m_uiLobbyID, buf.Base(), buf.TellMaxPut() );
-#endif
 
 	m_lastRequestSendTime = Plat_FloatTime();
 }
@@ -2811,7 +2707,6 @@ void CSysSessionConTeamHost::Failed()
 	m_result = RESULT_FAIL;
 }
 
-#if !defined( NO_STEAM )
 
 void CSysSessionConTeamHost::Steam_OnLobbyEntered( LobbyEnter_t *pLobbyEnter )
 {
@@ -2831,7 +2726,6 @@ void CSysSessionConTeamHost::Steam_OnLobbyEntered( LobbyEnter_t *pLobbyEnter )
 		m_eState = STATE_SEND_RESERVATION_REQUEST;
 	}
 }
-#endif
 
 XUID CSysSessionConTeamHost::GetHostXuid( XUID xuidValidResult )
 {

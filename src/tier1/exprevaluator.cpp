@@ -30,42 +30,42 @@ bool DefaultConditionalSymbolProc( const char *pKey )
 
 	if ( !V_stricmp( pKey, "WIN32" ) )
 	{
-		return IsPC();
+		return true;
 	}
 
 	if ( !V_stricmp( pKey, "WINDOWS" ) )
 	{
-		return IsPlatformWindowsPC();
+		return false;
 	}
 	
 	if ( !V_stricmp( pKey, "X360" ) )
 	{
-		return IsX360();
+		return false;
 	}
 
 	if ( !V_stricmp( pKey, "PS3" ) )
 	{
-		return IsPS3();
+		return false;
 	}
 
 	if ( !V_stricmp( pKey, "OSX" ) )
 	{
-		return IsPlatformOSX();
+		return false;
 	}
 
 	if ( !V_stricmp( pKey, "LINUX" ) )
 	{
-		return IsPlatformLinux();
+		return true;
 	}
 
 	if ( !V_stricmp( pKey, "POSIX" ) )
 	{
-		return IsPlatformPosix();
+		return true;
 	}	
 	
 	if ( !V_stricmp( pKey, "GAMECONSOLE" ) )
 	{
-		return IsGameConsole();
+		return false;
 	}
 
 	if ( !V_stricmp( pKey, "DEMO" ) )

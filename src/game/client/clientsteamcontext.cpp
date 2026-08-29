@@ -14,12 +14,10 @@ CSteamAPIContext *steamapicontext = &g_ClientSteamContext;
 
 //-----------------------------------------------------------------------------
 CClientSteamContext::CClientSteamContext() 
-#if !defined(NO_STEAM)
 :
 	m_CallbackSteamServersDisconnected( this, &CClientSteamContext::OnSteamServersDisconnected ),
 	m_CallbackSteamServerConnectFailure( this, &CClientSteamContext::OnSteamServerConnectFailure ),
 	m_CallbackSteamServersConnected( this, &CClientSteamContext::OnSteamServersConnected )
-#endif
 {
 	m_bActive = false;
 	m_bLoggedOn = false;
@@ -43,9 +41,7 @@ void CClientSteamContext::Shutdown()
 
 	m_bActive = false;
 	m_bLoggedOn = false;
-#if !defined( NO_STEAM )
 	Clear(); // Steam API context shutdown
-#endif
 }
 
 //-----------------------------------------------------------------------------
@@ -58,17 +54,13 @@ void CClientSteamContext::Activate()
 
 	m_bActive = true;
 
-#if !defined( NO_STEAM )
-	#ifndef _PS3
 	SteamAPI_InitSafe(); // ignore failure, that will fall out later when they don't get a valid logon cookie
 	SteamAPI_SetTryCatchCallbacks( false ); // We don't use exceptions, so tell steam not to use try/catch in callback handlers
-	#endif
 
 	Init(); // Steam API context init
 	
 	UpdateLoggedOnState();
 	Msg( "CClientSteamContext logged on = %d\n", m_bLoggedOn );
-#endif
 }
 
 void CClientSteamContext::UpdateLoggedOnState()
@@ -94,7 +86,6 @@ void CClientSteamContext::UpdateLoggedOnState()
 	}
 }
 
-#if !defined(NO_STEAM)
 void CClientSteamContext::OnSteamServersDisconnected( SteamServersDisconnected_t *pDisconnected )
 {
 	UpdateLoggedOnState();
@@ -112,7 +103,6 @@ void CClientSteamContext::OnSteamServersConnected( SteamServersConnected_t *pCon
 	UpdateLoggedOnState();
 	Msg( "CClientSteamContext OnSteamServersConnected logged on = %d\n", m_bLoggedOn );
 }
-#endif // !defined(NO_STEAM)
 
 void CClientSteamContext::InstallCallback( CUtlDelegate< void ( const SteamLoggedOnChange_t & ) > delegate )
 {

@@ -377,7 +377,7 @@ int CVBAllocTracker::ComputeVertexSize( VertexElementMap_t map, VertexFormat_t f
 	// On PC (see CVertexBufferBase::ComputeVertexDescription() in meshbase.cpp)
 	// vertex strides are aligned to 16 bytes:
 	bool bCacheAlign = ( fmt & VERTEX_FORMAT_USE_EXACT_FORMAT ) == 0;
-	if ( bCacheAlign && ( vertexSize > 16 ) && IsPC() )
+	if ( bCacheAlign && ( vertexSize > 16 ) )
 	{
 		vertexSize = (vertexSize + 0xF) & (~0xF);
 	}
@@ -466,7 +466,6 @@ void CVBAllocTracker::UpdateElements( CounterData & data, VertexFormat_t fmt, in
 
 int CVBAllocTracker::ComputeAlignmentWastage( int bufferSize )
 {
-	if ( !IsX360() )
 		return 0;
 
 	// VBs are 4KB-aligned on 360, so we waste thiiiiiis much:
@@ -536,12 +535,6 @@ void CVBAllocTracker::SpewExpectedSavings( void )
 	// UNDONE: disable tangents for non-bumped models			(issue: forcedmaterialoverride support... don't think that needs tangents, though
 	//                                                                  however, if we use UBYTE4 normal+tangent encoding, removing tangents saves nothing)
 
-	if ( IsX360() )
-	{
-		// We expect to avoid 4-KB-alignment wastage for color meshes, by allocating them
-		// out of a single, shared VB and adding per-mesh offsets in vertex shaders
-		AddSaving( alreadySaved, yetToSave, "CColorMeshData::CreateResource",			VERTEX_ELEMENT_USERDATA4,		SAVING_ALIGNMENT );
-	}
 
 	Msg("[VBMEM]\n");
 	Msg("[VBMEM] Total expected memory saving by disabling/compressing vertex elements: %6.2f MB\n", yetToSave / ( 1024.0f*1024.0f ) );

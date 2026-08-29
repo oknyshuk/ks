@@ -12,11 +12,7 @@
 
 static ConVar rope_min_pixel_diameter( "rope_min_pixel_diameter", "2.0", FCVAR_CHEAT );
 
-#if defined( CSTRIKE15 ) && defined( _X360 )
-static ConVar r_shader_srgbread( "r_shader_srgbread", "1", 0, "1 = use shader srgb texture reads, 0 = use HW" );
-#else
 static ConVar r_shader_srgbread( "r_shader_srgbread", "0", 0, "1 = use shader srgb texture reads, 0 = use HW" );
-#endif
 
 BEGIN_VS_SHADER( SplineRope, "Help for SplineRope" )
 	BEGIN_SHADER_PARAMS
@@ -65,9 +61,9 @@ BEGIN_VS_SHADER( SplineRope, "Help for SplineRope" )
 	SHADER_DRAW
 	{
 #if defined( CSTRIKE15 )
-		bool bShaderSrgbRead = IsX360() && r_shader_srgbread.GetBool();
+		bool bShaderSrgbRead = false && r_shader_srgbread.GetBool();
 #else
-		bool bShaderSrgbRead = ( IsX360() && params[SHADERSRGBREAD360]->GetIntValue() );
+		bool bShaderSrgbRead = ( false && params[SHADERSRGBREAD360]->GetIntValue() );
 #endif
 		bool bShadowDepth = ( params[SHADOWDEPTH]->GetIntValue() != 0 );
 

@@ -4195,44 +4195,36 @@ bool CParticleSystemMgr::ReadParticleConfigFile( const char *pFileName, bool bPr
 	}
 
 //	char pFallbackBuf[MAX_PATH];
-	if ( IsPC() )
+	// Look for fallback particle systems
+	char pTemp[MAX_PATH];
+	Q_StripExtension( pFileName, pTemp, sizeof(pTemp) );
+	const char *pExt = Q_GetFileExtension( pFileName );
+	if ( !pExt )
 	{
-		// Look for fallback particle systems
-		char pTemp[MAX_PATH];
-		Q_StripExtension( pFileName, pTemp, sizeof(pTemp) );
-		const char *pExt = Q_GetFileExtension( pFileName );
-		if ( !pExt )
-		{
-			pExt = "pcf";
-		}
-		
-		/*
-		// FIXME: Hook GPU level and/or CPU level into fallbacks instead of dxsupport level
-		if ( g_pMaterialSystemHardwareConfig->GetDXSupportLevel() < 90 )
-		{
-			Q_snprintf( pFallbackBuf, sizeof(pFallbackBuf), "%s_dx80.%s", pTemp, pExt );
-			if ( g_pFullFileSystem->FileExists( pFallbackBuf ) )
-			{
-				pFileName = pFallbackBuf;
-			}
-		}
-		else if ( g_pMaterialSystemHardwareConfig->GetDXSupportLevel() == 90 &&  g_pMaterialSystemHardwareConfig->PreferReducedFillrate() )
-		{
-			Q_snprintf( pFallbackBuf, sizeof(pFallbackBuf), "%s_dx90_slow.%s", pTemp, pExt );
-			if ( g_pFullFileSystem->FileExists( pFallbackBuf ) )
-			{
-				pFileName = pFallbackBuf;
-			}
-		}
-		*/
+		pExt = "pcf";
 	}
+	
+	/*
+	// FIXME: Hook GPU level and/or CPU level into fallbacks instead of dxsupport level
+	if ( g_pMaterialSystemHardwareConfig->GetDXSupportLevel() < 90 )
+	{
+		Q_snprintf( pFallbackBuf, sizeof(pFallbackBuf), "%s_dx80.%s", pTemp, pExt );
+		if ( g_pFullFileSystem->FileExists( pFallbackBuf ) )
+		{
+			pFileName = pFallbackBuf;
+		}
+	}
+	else if ( g_pMaterialSystemHardwareConfig->GetDXSupportLevel() == 90 &&  g_pMaterialSystemHardwareConfig->PreferReducedFillrate() )
+	{
+		Q_snprintf( pFallbackBuf, sizeof(pFallbackBuf), "%s_dx90_slow.%s", pTemp, pExt );
+		if ( g_pFullFileSystem->FileExists( pFallbackBuf ) )
+		{
+			pFileName = pFallbackBuf;
+		}
+	}
+	*/
 
 	CUtlBuffer buf( 0, 0, 0 );
-	if ( IsX360() || IsPS3() )
-	{
-		// fell through, load as pc particle resource file
-		buf.ActivateByteSwapping( true );
-	}
 
 	if ( g_pFullFileSystem->ReadFile( pFileName, "GAME", buf ) )
 	{

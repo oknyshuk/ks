@@ -42,8 +42,6 @@
 #include "LoadScreenUpdate.h"
 #include "cl_main.h"
 #include "GameEventManager.h"
-#if defined( _X360 )
-#endif
 
 extern IFileSystem *g_pFileSystem;
 #ifndef DEDICATED
@@ -89,18 +87,11 @@ static CTextureReference g_QuarterSizedFBTexture3;
 static CTextureReference g_TeenyFBTexture0;
 static CTextureReference g_TeenyFBTexture1;
 static CTextureReference g_TeenyFBTexture2;
-#ifdef _PS3
-static CTextureReference g_FullFrameRawBufferAliasPS3_BackBuffer;
-static CTextureReference g_FullFrameRawBufferAliasPS3_DepthBuffer;
-#endif
 static CTextureReference g_FullFrameFBTexture0;
 static CTextureReference g_FullFrameFBTexture1;
 static CTextureReference g_FullFrameFBTexture2;
 static CTextureReference g_FullFrameDepth;
 
-#if defined( _X360 )
-	static CTextureReference g_RtGlowTexture360;
-#endif
 
 // each sort ID's mesh for the depth fill render
 CUtlVector<IMesh *> g_DepthMeshForSortID;
@@ -134,20 +125,16 @@ static ConVar mat_monitorgamma_tv_range_max( "mat_monitorgamma_tv_range_max", "2
 // TV's generally have a 2.5 gamma, so we need to convert our 2.2 frame buffer into a 2.5 frame buffer for display on a TV
 static ConVar mat_monitorgamma_tv_exp( "mat_monitorgamma_tv_exp", "2.5", 0, "", true, 1.0f, true, 4.0f );
 
-static ConVar mat_monitorgamma_tv_enabled( "mat_monitorgamma_tv_enabled", IsGameConsole() ? "1" : "0", FCVAR_ARCHIVE | FCVAR_ARCHIVE_GAMECONSOLE, "" );
+static ConVar mat_monitorgamma_tv_enabled( "mat_monitorgamma_tv_enabled", "0", FCVAR_ARCHIVE | FCVAR_ARCHIVE_GAMECONSOLE, "" );
 				  
 ConVar r_drawbrushmodels( "r_drawbrushmodels", "1", FCVAR_CHEAT, "Render brush models. 0=Off, 1=Normal, 2=Wireframe" );
 
 ConVar r_shadowrendertotexture( "r_shadowrendertotexture", "0" );
 
-#if ( defined( CSTRIKE15 ) && defined( _PS3 ) )
 ConVar r_flashlightdepthtexture( "r_flashlightdepthtexture", "1" );
-#else
-ConVar r_flashlightdepthtexture( "r_flashlightdepthtexture", "1" );
-#endif
 
 // On non-gameconsoles mat_motion_blur_enabled now comes from video.txt/videodefaults.txt
-ConVar mat_motion_blur_enabled( "mat_motion_blur_enabled", IsGameConsole() ? "1" : "0" );
+ConVar mat_motion_blur_enabled( "mat_motion_blur_enabled", "0" );
 
 // Note: this is only here so we can ship an update without changing materialsystem.dll.
 // Once we ship materialsystem.dll again, we can get rid of this and make the only one exist in materialsystem.dll.
@@ -186,11 +173,6 @@ static void NukeModeSwitchSaveGames( void )
 
 void mat_hdr_level_Callback( IConVar *var, const char *pOldString, float flOldValue )
 {
-	if ( IsX360() )
-	{
-		// can't support, expected to be static
-		return;
-	}
 
 	// CSGO doesn't support any values other than 2.
 	mat_hdr_level.SetValue( clamp( mat_hdr_level.GetInt(), 2, 2 ) );
@@ -241,7 +223,7 @@ void ClearMaterialConfigLightingChanged()
 //-----------------------------------------------------------------------------
 static void ReadMaterialSystemConfigFromRegistry( MaterialSystem_Config_t &config )
 {
-#if defined(DEDICATED) || defined(_GAMECONSOLE)
+#if defined(DEDICATED)
 	return;
 #else
 	// Create and Init the video config block.
@@ -334,7 +316,7 @@ int GetScreenAspectMode( int width, int height )
 //-----------------------------------------------------------------------------
 static void WriteMaterialSystemConfigToRegistry( const MaterialSystem_Config_t &config )
 {
-#if defined(DEDICATED) || defined(_GAMECONSOLE)
+#if defined(DEDICATED)
 	return;
 #else
 	ConVarRef defaultres_restart( "defaultres_restart" );
@@ -353,12 +335,6 @@ static void WriteMaterialSystemConfigToRegistry( const MaterialSystem_Config_t &
 //-----------------------------------------------------------------------------
 static void OverrideMaterialSystemConfigFromCommandLine( MaterialSystem_Config_t &config )
 {
-	if ( IsX360() )
-	{
-		// these overrides cannot be supported
-		// the console configuration is explicit
-		return;
-	}
 
 	// Check for windowed mode command line override
 	if ( CommandLine()->FindParm( "-sw" ) || 
@@ -506,11 +482,7 @@ void InitMaterialSystemConfig( bool bInEditMode )
 	// Capture autoconfig.
 	if ( CommandLine()->FindParm( "-autoconfig" ) )
 	{
-#ifdef _GAMECONSOLE
-		AssertMsg( false, "VideoCFG not supported on Xbox 360." );
-#else
 		ResetVideoConfigToDefaults();
-#endif
 	}
 
 	ReadMaterialSystemConfigFromRegistry( config );
@@ -624,7 +596,7 @@ CON_COMMAND( mat_configcurrent, "show the current video control panel config for
 	PrintMaterialSystemConfig( config );
 }
 
-#if !defined(DEDICATED) && !defined( _X360 )
+#if !defined(DEDICATED)
 CON_COMMAND( mat_setvideomode, "sets the width, height, windowed state of the material system" )
 {
 	if ( args.ArgC() < 4 )
@@ -654,7 +626,7 @@ CON_COMMAND( mat_savechanges, "saves current video configuration to the registry
 	WriteMaterialSystemConfigToRegistry( *g_pMaterialSystemConfig );
 }
 
-#if !defined( _GAMECONSOLE ) && !defined( DEDICATED )
+#if !defined( DEDICATED )
 CON_COMMAND( mat_updateconvars, "updates the video config convars" )
 {
 	UpdateVideoConfigConVars();
@@ -699,8 +671,6 @@ CON_COMMAND_F( mat_suppress, "Suppress a material from drawing", FCVAR_CHEAT | F
 
 static ITexture *CreatePowerOfTwoFBTexture( void )
 {
-	if ( IsX360() )
-		return NULL;
 
 	return materials->CreateNamedRenderTargetTextureEx2( 
 		"_rt_PowerOfTwoFB",
@@ -803,11 +773,6 @@ static ITexture *CreateFullFrameFBTexture( int textureIndex, int iExtraFlags = 0
 	}
 
 	int rtFlags = iExtraFlags | CREATERENDERTARGETFLAGS_HDR;
-	if ( IsX360() )
-	{
-		// just make the system memory texture only
-		rtFlags |= CREATERENDERTARGETFLAGS_NOEDRAM;
-	}
 	return materials->CreateNamedRenderTargetTextureEx2(
 		textureName,
 		1, 1, RT_SIZE_FULL_FRAME_BUFFER, materials->GetBackBufferFormat(), 
@@ -818,15 +783,6 @@ static ITexture *CreateFullFrameFBTexture( int textureIndex, int iExtraFlags = 0
 
 static ITexture *CreateFullFrameDepthTexture( void )
 {
-	if ( IsGameConsole() )
-	{
-		return materials->CreateNamedRenderTargetTextureEx2( "_rt_FullFrameDepth", 1, 1, 
-			RT_SIZE_FULL_FRAME_BUFFER, g_pMaterialSystemHardwareConfig->GetShadowDepthTextureFormat(), MATERIAL_RT_DEPTH_NONE,
-			TEXTUREFLAGS_CLAMPS | TEXTUREFLAGS_CLAMPT | TEXTUREFLAGS_POINTSAMPLE,
-			CREATERENDERTARGETFLAGS_NOEDRAM );
-
-	}
-	else
 	{
 		if ( g_pMaterialSystemHardwareConfig->SupportsResolveDepth() )
 		{
@@ -874,14 +830,11 @@ void InitWellKnownRenderTargets( void )
 
 	// Create the render targets upon which mods may rely
 
-	if ( IsPC() )
-	{
-		// Create for all mods as vgui2 uses it for 3D painting
-		g_PowerOfTwoFBTexture.Init( CreatePowerOfTwoFBTexture() );
-	}
+	// Create for all mods as vgui2 uses it for 3D painting
+	g_PowerOfTwoFBTexture.Init( CreatePowerOfTwoFBTexture() );
 
 	// Create these for all mods because the engine references them
-	if ( IsPC() && g_pMaterialSystemHardwareConfig->GetHDRType() == HDR_TYPE_FLOAT )
+	if ( g_pMaterialSystemHardwareConfig->GetHDRType() == HDR_TYPE_FLOAT )
 	{
 		// Used for building HDR Cubemaps
 		g_BuildCubemaps16BitTexture.Init( CreateBuildCubemaps16BitTexture() );
@@ -892,7 +845,7 @@ void InitWellKnownRenderTargets( void )
 
 	/*
 	// Commenting out this texture aliasing because it breaks the paint screenspace effect in Portal 2.
-	if( IsX360() )
+	if( false )
 	materials->AddTextureAlias( "_rt_SmallFB1", "_rt_SmallFB0" ); //an alias is good enough on the 360 since we don't have a texture lock problem during post processing
 	else
 	g_QuarterSizedFBTexture1.Init( CreateQuarterSizedFBTexture( 1, 0 ) );			
@@ -904,39 +857,13 @@ void InitWellKnownRenderTargets( void )
 #endif
 
 
-#if defined( _X360 )
-	g_RtGlowTexture360.InitRenderTargetTexture( 8, 8, RT_SIZE_NO_CHANGE, IMAGE_FORMAT_ARGB8888, MATERIAL_RT_DEPTH_NONE, false, "_rt_Glows360" );
 
-	// NOTE: The 360 requires render targets generated with 1xMSAA to be 80x16 aligned in EDRAM
-	//       Using 1120x624 since this seems to be the largest surface we can fit in EDRAM next to the back buffer
-	g_RtGlowTexture360.InitRenderTargetSurface( 1120, 624, IMAGE_FORMAT_ARGB8888, false );
-#endif
-
-	if ( IsPC() )
 	{
 		g_TeenyFBTexture0.Init( CreateTeenyFBTexture( 0 ) );
 		g_TeenyFBTexture1.Init( CreateTeenyFBTexture( 1 ) );
 		g_TeenyFBTexture2.Init( CreateTeenyFBTexture( 2 ) );
 	}
 
-#ifdef _PS3
-	g_FullFrameRawBufferAliasPS3_BackBuffer.Init(
-		materials->CreateNamedRenderTargetTextureEx2(
-		"^PS3^BACKBUFFER",
-		1, 1, RT_SIZE_FULL_FRAME_BUFFER,
-		materials->GetBackBufferFormat(), 
-		MATERIAL_RT_DEPTH_SHARED,
-		TEXTUREFLAGS_CLAMPS | TEXTUREFLAGS_CLAMPT,
-		CREATERENDERTARGETFLAGS_HDR ) );
-	g_FullFrameRawBufferAliasPS3_DepthBuffer.Init(
-		materials->CreateNamedRenderTargetTextureEx2(
-		"^PS3^DEPTHBUFFER",
-		1, 1, RT_SIZE_FULL_FRAME_BUFFER,
-		g_pMaterialSystemHardwareConfig->GetShadowDepthTextureFormat(),
-		MATERIAL_RT_DEPTH_NONE,
-		TEXTUREFLAGS_CLAMPS | TEXTUREFLAGS_CLAMPT | TEXTUREFLAGS_POINTSAMPLE,
-		CREATERENDERTARGETFLAGS_NOEDRAM ) );
-#endif
 
 	g_FullFrameFBTexture0.Init( CreateFullFrameFBTexture( 0 ) );
 
@@ -947,7 +874,6 @@ void InitWellKnownRenderTargets( void )
 	}
 
 #if defined( LEFT4DEAD )
-	if ( IsPC() )	
 	{
 		g_FullFrameFBTexture1.Init( CreateFullFrameFBTexture( 1 ) );	// save some memory on the 360
 	}
@@ -957,9 +883,7 @@ void InitWellKnownRenderTargets( void )
 
 #endif
 
-#ifndef _PS3
 	g_FullFrameDepth.Init( CreateFullFrameDepthTexture() );
-#endif
 
 	// Allow the client to init their own mod-specific render targets
 	if ( g_pClientRenderTargets )
@@ -990,15 +914,8 @@ void InitWellKnownRenderTargets( void )
 void ShutdownWellKnownRenderTargets( void )
 {
 #if !defined( DEDICATED )
-	if ( IsX360() )
-	{
-		// cannot allowing RT's to reconstruct, causes other fatal problems
-		// many other 360 systems have been coded with this expected constraint
-		Assert( 0 );
-		return;
-	}
 
-	if ( IsPC() && mat_debugalttab.GetBool() )
+	if ( mat_debugalttab.GetBool() )
 	{
 		Warning( "mat_debugalttab: ShutdownWellKnownRenderTargets\n" );
 	}
@@ -1008,27 +925,17 @@ void ShutdownWellKnownRenderTargets( void )
 		
 	g_QuarterSizedFBTexture0.Shutdown();
 	
-	if( IsX360() )
-		materials->RemoveTextureAlias( "_rt_SmallFB1" );
-	else
-		g_QuarterSizedFBTexture1.Shutdown();
+g_QuarterSizedFBTexture1.Shutdown();
 
 	g_QuarterSizedFBTexture2.Shutdown();
 	g_QuarterSizedFBTexture3.Shutdown();
 
-	#if defined( _X360 )
-		g_RtGlowTexture360.Shutdown();
-	#endif
 
 	g_TeenyFBTexture0.Shutdown();
 	g_TeenyFBTexture1.Shutdown();
 	g_TeenyFBTexture2.Shutdown();
 	g_FullFrameFBTexture0.Shutdown();
 	g_FullFrameFBTexture1.Shutdown();
-	if ( IsX360() )
-	{
-		g_FullFrameFBTexture2.Shutdown();
-	}
 	CMatRenderContextPtr pRenderContext( g_pMaterialSystem );
 	pRenderContext->SetNonInteractiveTempFullscreenBuffer( NULL, MATERIAL_NON_INTERACTIVE_MODE_LEVEL_LOAD );
 
@@ -1054,7 +961,7 @@ void ShutdownWellKnownRenderTargets( void )
 //-----------------------------------------------------------------------------
 static void InitDebugMaterials( void )
 {
-	if ( IsPC() && mat_debugalttab.GetBool() )
+	if ( mat_debugalttab.GetBool() )
 	{
 		Warning( "mat_debugalttab: InitDebugMaterials\n" );
 	}
@@ -1162,7 +1069,7 @@ static void InitDebugMaterials( void )
 //-----------------------------------------------------------------------------
 static void ShutdownDebugMaterials( void )
 {
-	if ( IsPC() && mat_debugalttab.GetBool() )
+	if ( mat_debugalttab.GetBool() )
 	{
 		Warning( "mat_debugalttab: ShutdownDebugMaterials\n" );
 	}
@@ -1222,7 +1129,6 @@ static void ShutdownDebugMaterials( void )
 //-----------------------------------------------------------------------------
 void InitStartupScreen()
 {
-	if ( !IsGameConsole() )
 		return;
 
 	int screenWidth, screenHeight;
@@ -1292,13 +1198,6 @@ void ShutdownMaterialSystem( void )
 //-----------------------------------------------------------------------------
 void ReleaseMaterialSystemObjects( int nChangeFlags )
 {
-	if ( IsGameConsole() )
-	{
-		// 360 has not implemented release/restore
-		Warning( "ReleaseMaterialSystemObjects(): not implemented for 360\n" );
-		Assert( 0 );
-		return;
-	}
 
 #ifndef DEDICATED
 	DispInfo_ReleaseMaterialSystemObjects( host_state.worldmodel );
@@ -1314,13 +1213,6 @@ void ReleaseMaterialSystemObjects( int nChangeFlags )
 
 void RestoreMaterialSystemObjects( int nChangeFlags )
 {
-	if ( IsGameConsole() )
-	{
-		// 360 has not implemented release/restore
-		Warning( "RestoreMaterialSystemObjects(): not implemented for 360\n" );
-		Assert( 0 );
-		return;
-	}
 
 	bool bThreadingAllowed = Host_AllowQueuedMaterialSystem( false );
 	g_LostVideoMemory = false;

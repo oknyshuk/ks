@@ -36,8 +36,6 @@
 #include <localize/ilocalize.h>
 #include "gameui_interface.h"
 #include "menu.h" // CHudMenu
-#if defined( _X360 )
-#endif
 #include "matchmaking/imatchframework.h"
 #include "clientmode_csnormal.h"
 
@@ -68,38 +66,6 @@ extern ConVar v_viewmodel_fov;
 extern ConVar spec_show_xray;
 extern ConVar spec_hide_players;
 
-#if 0
-CON_COMMAND_F( crash, "Crash the client. Optional parameter -- type of crash:\n 0: read from NULL\n 1: write to NULL\n 2: DmCrashDump() (xbox360 only)", FCVAR_CHEAT )
-{
-	int crashtype = 0;
-	int dummy;
-	if ( args.ArgC() > 1 )
-	{
-		crashtype = Q_atoi( args[1] );
-	}
-	switch (crashtype)
-	{
-	case 0:
-		dummy = *((int *) NULL);
-		Msg("Crashed! %d\n", dummy); // keeps dummy from optimizing out
-		break;
-	case 1:
-		*((int *)NULL) = 42;
-		break;
-#if defined( _GAMECONSOLE )
-	case 2:
-		XBX_CrashDump( false );
-		break;
-	case 3:
-		XBX_CrashDumpFullHeap( true );
-		break;
-#endif
-	default:
-		Msg("Unknown variety of crash. You have now failed to crash. I hope you're happy.\n");
-		break;
-	}
-}
-#endif // _DEBUG
 
 static bool __MsgFunc_Rumble( const CCSUsrMsg_Rumble &msg )
 {
@@ -806,8 +772,6 @@ void ClientModeShared::FireGameEvent( IGameEvent *event )
 	{
 #ifdef PORTAL2
 		// dont show these message on the console at all
-		if ( IsGameConsole() )
-			return;
 #endif
 
 		if ( this == GetFullscreenClientMode() )
@@ -839,8 +803,6 @@ void ClientModeShared::FireGameEvent( IGameEvent *event )
 	{
 #ifdef PORTAL2
 		// dont show these message on the console at all
-		if ( IsGameConsole() )
-			return;
 #endif
 
 		if ( this == GetFullscreenClientMode() )
@@ -879,14 +841,7 @@ void ClientModeShared::FireGameEvent( IGameEvent *event )
 				g_pLocalize->ConvertANSIToUnicode( event->GetString( "reason" ), wszReasonBuf, sizeof( wszReasonBuf ) );
 
 			wchar_t wszLocalized[100];
-			if ( IsPC() )
-			{
-				g_pLocalize->ConstructString( wszLocalized, sizeof( wszLocalized ), g_pLocalize->Find( "#game_player_left_game" ), 2, wszPlayerName, wszReason );
-			}
-			else
-			{
-				g_pLocalize->ConstructString( wszLocalized, sizeof( wszLocalized ), g_pLocalize->Find( "#game_player_left_game" ), 1, wszPlayerName );
-			}
+			g_pLocalize->ConstructString( wszLocalized, sizeof( wszLocalized ), g_pLocalize->Find( "#game_player_left_game" ), 2, wszPlayerName, wszReason );
 
 			char szLocalized[100];
 			g_pLocalize->ConvertUnicodeToANSI( wszLocalized, szLocalized, sizeof(szLocalized) );
@@ -898,8 +853,6 @@ void ClientModeShared::FireGameEvent( IGameEvent *event )
 	{
 #ifdef PORTAL2
 		// dont show these message on the console at all
-		if ( IsGameConsole() )
-			return;
 #endif
 		if ( !hudChat )
 			return;
@@ -1070,8 +1023,6 @@ void ClientModeShared::FireGameEvent( IGameEvent *event )
 	}
 	else if ( Q_strcmp( "server_cvar", eventname ) == 0 )
 	{
-		if ( (IsGameConsole() && IsCert()) || (IsGameConsole() && developer.GetInt() < 2) )
-			return;
 
 		if ( this == GetFullscreenClientMode() )
 			return;

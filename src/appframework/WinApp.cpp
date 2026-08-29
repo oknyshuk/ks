@@ -14,8 +14,6 @@
 #include "vstdlib/cvar.h"
 #include "tier2/tier2.h"
 
-#ifdef _X360
-#endif
 
 // NOTE: This has to be the last file included!
 #include "tier0/memdbgon.h"
@@ -160,7 +158,6 @@ bool CSteamApplication::Create()
 	m_pFileSystem = (IFileSystem*)AddSystem( fileSystemModule, FILESYSTEM_INTERFACE_VERSION );
 	if ( !m_pFileSystem )
 	{
-		if( !IsPS3() )
 			Error( "Unable to load %s", pFileSystemDLL );
 		return false;
 	}

@@ -26,13 +26,6 @@
 #include "tier1/utlqueue.h"
 #include "appframework/iappsystem.h"
 #include "tier2/tier2.h"
-#ifdef _PS3
-#include <sysutil/sysutil_syscache.h>
-#include <sysutil/sysutil_gamecontent.h>
-struct HddCacheFileStatus;
-extern char gSrcGameDataPath[];
-class CFileGroupSystem;
-#endif
 
 //-----------------------------------------------------------------------------
 // Forward declarations
@@ -47,9 +40,6 @@ typedef int FileFindHandle_t;
 typedef void (*FileSystemLoggingFunc_t)( const char *fileName, const char *accessType );
 typedef int WaitForResourcesHandle_t;
 
-#ifdef _X360
-typedef void* HANDLE;
-#endif
 
 //-----------------------------------------------------------------------------
 // Enums used by the interface
@@ -120,40 +110,6 @@ typedef uint32 PathTypeQuery_t;
 #define IS_PACKFILE( n ) ( n & ( PATH_IS_PACKFILE | PATH_IS_MAPPACKFILE ) )
 #define IS_DVDDEV( n )   ( n & PATH_IS_DVDDEV )
 
-enum DVDMode_t
-{
-	DVDMODE_OFF    = 0, // not using dvd
-	DVDMODE_STRICT = 1, // dvd device only
-	DVDMODE_DEV    = 2, // dev mode, mutiple devices ok
-	DVDMODE_DEV_VISTA = 3, // dev mode from a vista host, mutiple devices ok
-};
-
-#ifdef _PS3
-
-enum FsState_t
-{
-    FS_STATE_INIT = 0,
-    FS_STATE_LEVEL_LOAD = 1,
-    FS_STATE_LEVEL_RUN = 2,
-    FS_STATE_LEVEL_RESTORE = 3,
-    FS_STATE_LEVEL_LOAD_END = 4,
-    FS_STATE_EXITING = 5
-};
-
-enum Ps3FileType_t
-{
-    PS3_FILETYPE_WAV,
-    PS3_FILETYPE_ANI,
-    PS3_FILETYPE_BSP,
-    PS3_FILETYPE_VMT,
-    PS3_FILETYPE_QPRE,
-    PS3_FILETYPE_OTHER,
-    PS3_FILETYPE_DIR,
-    PS3_FILETYPE_UNKNOWN
-};
-
-
-#endif
 
 // In non-retail builds, enable the file blocking access tracking stuff...
 #if defined( TRACK_BLOCKING_IO )
@@ -593,10 +549,6 @@ public:
 
 	// converts a partial path into a full path
 	virtual const char		*RelativePathToFullPath( const char *pFileName, const char *pPathID, char *pLocalPath, int localPathBufferSize, PathTypeFilter_t pathFilter = FILTER_NONE, PathTypeQuery_t *pPathType = NULL ) = 0;
-#if IsGameConsole()
-	// Given a relative path, gets the PACK file that contained this file and its offset and size. Can be used to prefetch a file to a HDD for caching reason.
-	virtual bool            GetPackFileInfoFromRelativePath( const char *pFileName, const char *pPathID, char *pPackPath, int nPackPathBufferSize, int64 &nPosition, int64 &nLength ) = 0;
-#endif
 	// Returns the search path, each path is separated by ;s. Returns the length of the string returned
 	virtual int				GetSearchPath( const char *pathID, bool bGetPackFiles, char *pPath, int nMaxLen ) = 0;
 
@@ -766,28 +718,6 @@ public:
 	// Returns the file system statistics retreived by the implementation.  Returns NULL if not supported.
 	virtual const FileSystemStatistics *GetFilesystemStatistics() = 0;
 
-#if defined( _PS3 )
-	// EA cruft not used:   virtual Ps3FileType_t GetPs3FileType(const char* path) = 0;
-	virtual void LogFileAccess( const char *pFullFileName ) = 0;
-
-	// Prefetches a full file in the HDD cache.
-	virtual bool PrefetchFile( const char *pFileName, int nPriority, bool bPersist ) = 0;
-	// Prefetches a file portion in the HDD cache.
-	virtual bool PrefetchFile( const char *pFileName, int nPriority, bool bPersist, int64 nOffset, int64 nSize ) = 0;
-	// Flushes the HDD cache.
-	virtual void FlushCache() = 0;
-	// Suspends all prefetches (like when the game is doing a file intensive operation not controlled by the HDD cache, like Bink movies).
-	virtual void SuspendPrefetches( const char *pWhy ) = 0;
-	// Resumes prefetches. This function has to to be called as many time as SuspendPrefetches() to effectively resumes prefetches.
-	virtual void ResumePrefetches( const char * pWhy ) = 0;
-
-	// Gets called when we are starting / ending a save (it allows the file system to reduce its HDD usage and use BluRay instead).
-	virtual void OnSaveStateChanged( bool bSaving ) = 0;
-
-	// Returns the prefetching state. If true, everything has been prefetched on the HDD.
-	virtual bool IsPrefetchingDone() = 0;
-
-#endif //_PS3
 	//--------------------------------------------------------
 	// Start of new functions after Lost Coast release (7/05)
 	//--------------------------------------------------------
@@ -859,7 +789,6 @@ public:
 	virtual int			GetPathIndex( const FileNameHandle_t &handle ) = 0;
 	virtual long		GetPathTime( const char *pPath, const char *pPathID ) = 0;
 
-	virtual DVDMode_t	GetDVDMode() = 0;
 
 	//--------------------------------------------------------
 	// Whitelisting for pure servers.
@@ -960,36 +889,10 @@ public:
 
 //-----------------------------------------------------------------------------
 
-#if defined( _X360 ) && !defined( _CERT )
-extern char g_szXboxProfileLastFileOpened[MAX_PATH];
-#define SetLastProfileFileRead( s ) Q_strncpy( g_szXboxProfileLastFileOpened, sizeof( g_szXboxProfileLastFileOpened), pFileName )
-#define GetLastProfileFileRead() (&g_szXboxProfileLastFileOpened[0])
-#else
 #define SetLastProfileFileRead( s ) ((void)0)
 #define GetLastProfileFileRead() NULL
-#endif
 
-#if defined( _X360 ) && defined( _BASETSD_H_ )
-class CXboxDiskCacheSetter
-{
-public:
-	CXboxDiskCacheSetter( SIZE_T newSize )
-	{
-		m_oldSize = XGetFileCacheSize();
-		XSetFileCacheSize( newSize );
-	}
-
-	~CXboxDiskCacheSetter()
-	{
-		XSetFileCacheSize( m_oldSize );
-	}
-private:
-	SIZE_T m_oldSize;
-};
-#define DISK_INTENSIVE() CXboxDiskCacheSetter cacheSetter( 1024*1024 )
-#else
 #define DISK_INTENSIVE() ((void)0)
-#endif
 
 //-----------------------------------------------------------------------------
 

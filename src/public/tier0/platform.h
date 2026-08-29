@@ -25,10 +25,8 @@
 #define GCC_DIAG_POP()
 #endif
 
-#ifdef LINUX
 #pragma GCC diagnostic ignored "-Wconversion-null"	// passing NULL to non-pointer argument 1
 #pragma GCC diagnostic ignored "-Wpointer-arith"	// NULL used in arithmetic. Ie, vpanel == NULL where VPANEL is uint.
-#endif
 
 #ifdef _DEBUG
 #if !defined( PLAT_COMPILE_TIME_ASSERT )
@@ -58,10 +56,8 @@
 	#include <float.h>
 	#include <stdlib.h>
 	#include <string.h>
-#if defined( OSX ) || defined ( _LINUX )
 	#include <signal.h>
 	#include <stdarg.h>
-#endif
 
 // SN compiler optimization macros (no longer needed, kept as no-ops)
 #define SN_OPT_DISABLE
@@ -128,10 +124,6 @@
 	#define IsPlatformPosix()	0
 	#define IsPlatformOSX()		0
 	#define IsOSXOpenGL()		0
-	#define IsPlatformPS3()		0
-	#define IsPlatformPS3_PPU()	0
-	#define IsPlatformPS3_SPU()	0
-	#define IsPlatformX360()	0
 	#define PLATFORM_WINDOWS	1
 	#define PLATFORM_OPENGL 0
 	#define IsPlatformWindowsPC() 1
@@ -147,38 +139,19 @@
 		#define PLATFORM_WINDOWS_PC32 1
 	#endif
 
-#elif defined(POSIX)
-	#define IsPlatformX360()		0
-	#define IsPlatformPS3()			0
-	#define IsPlatformPS3_PPU()		0
-	#define IsPlatformPS3_SPU()		0
+#else
 	#define IsPlatformWindowsPC()	0
 	#define IsPlatformWindowsPC64()	0
 	#define IsPlatformWindowsPC32()	0
 	#define IsPlatformPosix()		1
 	#define PLATFORM_POSIX 1
 
-	#if defined( LINUX ) && !defined( OSX ) // for havok we define both symbols, so don't let the osx build wander down here
 		#define IsPlatformLinux() 1
 		#define IsPlatformOSX() 0
 		#define IsOSXOpenGL() 0
 		#define PLATFORM_OPENGL 0
 		#define PLATFORM_LINUX 1
-	#elif defined ( OSX )
-		#define IsPlatformLinux() 0
-		#define IsPlatformOSX() 1
-		#define IsOSXOpenGL() 1
-		#define PLATFORM_OSX 1
-		#define PLATFORM_OPENGL 1
-	#else
-		#define IsPlatformLinux() 0
-		#define IsPlatformOSX() 0
-		#define IsOSXOpenGL() 0
-		#define PLATFORM_OPENGL 0
-	#endif
 
-#else
-	#error
 #endif
 
 // IsXXXX platform pseudo-functions
@@ -198,8 +171,6 @@
 #define IsLinux()	IsPlatformLinux() 
 #define IsOSX()		IsPlatformOSX()
 #define IsPosix()	IsPlatformPosix()
-#define IsX360()	IsPlatformX360()
-#define IsPS3()		IsPlatformPS3()
 
 // Setup platform defines.
 #ifdef COMPILER_MSVC
@@ -219,26 +190,6 @@
 #endif
 
 #endif // CROSS_PLATFORM_VERSION < 2
-
-// VXConsole is no longer available
-#define HasVxConsole() 0
-
-//-----------------------------------------------------------------------------
-// Set up platform type defines.
-//-----------------------------------------------------------------------------
-#define IsPC()		1
-#define IsGameConsole() 0
-
-
-
-//-----------------------------------------------------------------------------
-// Set up build configuration defines.
-//-----------------------------------------------------------------------------
-#ifdef _CERT
-#define IsCert() 1
-#else
-#define IsCert() 0
-#endif
 
 #ifdef _DEBUG
 #define IsRelease() 0
@@ -652,23 +603,9 @@ typedef void * HINSTANCE;
 // Pull in the /analyze code annotations.
 #include "annotations.h"
 
-#ifdef POSIX
 #pragma GCC diagnostic ignored "-Wswitch-enum"				// enumeration values not handled in switch
 #pragma GCC diagnostic ignored "-Wparentheses"				// using the result of an assignment as a condition without parentheses
-#endif
 
-#ifdef OSX
-#pragma GCC diagnostic ignored "-Wconversion-null"			// passing NULL to non-pointer argument 1
-#pragma GCC diagnostic ignored "-Wnull-arithmetic"			// NULL used in arithmetic. Ie, vpanel == NULL where VPANEL is uint.
-#pragma GCC diagnostic ignored "-Wlogical-op-parentheses"	// '&&' within '||' (wants parenthesis)
-#pragma GCC diagnostic ignored "-Wconstant-conversion"		// implicit truncation from x to y (where y is smaller size than x) changes value
-#pragma GCC diagnostic ignored "-Wformat-security"			// format string is not a string literal (potentially insecure)
-#pragma GCC diagnostic ignored "-Wreturn-type-c-linkage"	// C-linkage specified, but returns user-defined type
-#pragma GCC diagnostic ignored "-Wswitch"					// enumeration values not handled in switch
-#pragma GCC diagnostic ignored "-Wdelete-non-virtual-dtor"	// virtual functions but non-virtual destructor
-#pragma GCC diagnostic ignored "-Wformat"					// type conversion, format/argument conflict
-#pragma GCC diagnostic ignored "-Wbool-conversions"			// type conversion
-#endif
 
 //-----------------------------------------------------------------------------
 // Convert int<-->pointer, avoiding 32/64-bit compiler warnings:
@@ -684,11 +621,7 @@ typedef void * HINSTANCE;
 
 	#define stackalloc( _size )		alloca( ALIGN_VALUE( _size, 16 ) )
 
-	#ifdef PLATFORM_OSX
-		#define mallocsize( _p )	( malloc_size( _p ) )
-	#else
 		#define mallocsize( _p )	( malloc_usable_size( _p ) )
-	#endif
 
 #elif defined ( COMPILER_MSVC )
 
@@ -712,15 +645,9 @@ typedef void * HINSTANCE;
 #ifdef COMPILER_MSVC64
 	#define DebuggerBreak()		__debugbreak()
 #elif COMPILER_GCC
-	#if !defined( __aarch64__ )
-		#if defined( OSX )
-			#define DebuggerBreak()  if ( Plat_IsInDebugSession() ) asm( "int3" ); else { raise(SIGTRAP); }
-		#elif defined( PLATFORM_CYGWIN ) || defined( PLATFORM_POSIX )
+		#if   defined( PLATFORM_CYGWIN ) || defined( PLATFORM_POSIX )
 			#define DebuggerBreak()		__asm__( "int $0x3;")
 		#endif
-	#else
-		#define DebuggerBreak()	raise(SIGTRAP)
-	#endif
 #else
 #error DebuggerBreak() is not defined for this platform!
 #endif
@@ -831,11 +758,9 @@ typedef void *HANDLE;
 #define _snprintf snprintf
 #endif
 
-#if !defined( __SPU__ )
 #include <alloca.h>
 #include <unistd.h>											// get unlink
 #include <errno.h>
-#endif
 
 
 #endif // PLATFORM_POSIX
@@ -1161,12 +1086,7 @@ typedef bool (*ExitProcessWithErrorCBFn)( int nCode );
 PLATFORM_INTERFACE void				Plat_SetExitProcessWithErrorCB( ExitProcessWithErrorCBFn pfnCB );
 
 // If OSX or Linux have 2GB of address space for 32-bit apps, then return true here when that case is detected
-#if defined( OSX )
-// make memory tradeoffs for low-fragmentation (compact memory, use different patterns, etc)
-inline bool			Plat_NeedsLowFragmentation() { return true; }
-#else
 inline bool			Plat_NeedsLowFragmentation() { return false; }
-#endif
 
 PLATFORM_INTERFACE int Plat_chmod(const char *filename, int pmode);
 PLATFORM_INTERFACE bool Plat_FileExists(const char *pFileName);
@@ -1174,18 +1094,14 @@ PLATFORM_INTERFACE size_t Plat_FileSize(const char *pFileName);
 PLATFORM_INTERFACE bool Plat_IsDirectory(const char *pFilepath);
 PLATFORM_INTERFACE bool Plat_FileIsReadOnly(const char *pFileName);
 
-#if defined( __aarch64__ )
-#include <sse2neon.h>
-#elif defined( _WIN32 ) && defined( _MSC_VER ) && ( _MSC_VER >= 1400 )
+#if   defined( _WIN32 ) && defined( _MSC_VER ) && ( _MSC_VER >= 1400 )
 extern "C" unsigned __int64 __rdtsc();
 #pragma intrinsic(__rdtsc)
 #endif
 
 inline uint64 Plat_Rdtsc()
 {
-#if defined( __aarch64__ )
-	return ( uint64 )_rdtsc();
-#elif defined( _WIN64 )
+#if   defined( _WIN64 )
 	return ( uint64 )__rdtsc();
 #elif defined( _WIN32 )
 #if defined( _MSC_VER ) && ( _MSC_VER >= 1400 )
@@ -1367,17 +1283,11 @@ class CReuseVaList
 public:
 	CReuseVaList( va_list List )
 	{
-#if defined(LINUX) || defined(OSX)
 		va_copy( m_ReuseList, List );
-#else
-		m_ReuseList = List;
-#endif
 	}
 	~CReuseVaList()
 	{
-#if defined(LINUX) || defined(OSX)
 		va_end( m_ReuseList );
-#endif
 	}
 
 	va_list m_ReuseList;
@@ -1466,7 +1376,6 @@ inline T* MoveConstruct( T* pMemory, T&& src )
 
 // [will] - Fixing a clang compile: unable to create a pseudo-destructor (aka a destructor that does nothing) for float __attribute__((__vector_size__(16)))
 // Fixed by specializing the Destroy function to not call destructor for that type.
-#if defined( __clang__ ) || defined (LINUX)
 
 template <class T>
 inline void Destruct( T* pMemory );
@@ -1474,7 +1383,6 @@ inline void Destruct( T* pMemory );
 template <>
 inline void Destruct( float __attribute__((__vector_size__(16)))* pMemory );
 
-#endif // __clang__
 
 template <class T>
 inline void Destruct( T* pMemory )
@@ -1488,7 +1396,6 @@ inline void Destruct( T* pMemory )
 
 // [will] - Fixing a clang compile: unable to create a pseudo-destructor (aka a destructor that does nothing) for float __attribute__((__vector_size__(16)))
 // Fixed by specializing the Destroy function to not call destructor for that type.
-#if defined( __clang__ ) || defined (LINUX)
 
 template <>
 inline void Destruct( float __attribute__((__vector_size__(16)))* pMemory )
@@ -1498,7 +1405,6 @@ inline void Destruct( float __attribute__((__vector_size__(16)))* pMemory )
 #endif
 }
 
-#endif // __clang__
 
 //
 // GET_OUTER()
@@ -1665,24 +1571,10 @@ PLATFORM_INTERFACE PlatOSVersion_t Plat_GetOSVersion();
 // under linux right now. It should be possible to implement this functionality in windows via a
 // thread, if desired.
 
-#if defined( POSIX )
 
 PLATFORM_INTERFACE void BeginWatchdogTimer( int nSecs );
 PLATFORM_INTERFACE void EndWatchdogTimer( void );
 PLATFORM_INTERFACE void ResetBaseTime( void );							  // reset plat_floattime to 0 for a subprocess
-#else
-FORCEINLINE void BeginWatchdogTimer( int nSecs )
-{
-}
-
-FORCEINLINE void EndWatchdogTimer( void )
-{
-}
-FORCEINLINE void ResetBaseTime( void )						  // reset plat_floattime to 0 for a subprocess
-{
-}
-
-#endif
 
 
 #ifdef _rotl64

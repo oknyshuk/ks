@@ -410,7 +410,7 @@ void GameTypes::InitMapSidecars( KeyValues* pKV )
 	KeyValues *pKVMaps = pKV->FindKey( "maps" );
 
 	char mapwild[MAX_PATH];
-	Q_snprintf( mapwild, sizeof( mapwild ), "*.%sbsp", IsX360() ? "360." : "" );
+	Q_snprintf( mapwild, sizeof( mapwild ), "*.%sbsp", false ? "360." : "" );
 	CUtlVector<CUtlString> outList;
 	// BEGIN Search the maps dir for .kv files that correspond to bsps.
 	RecursiveFindFilesMatchingName( &outList, "maps", mapwild, "GAME" );

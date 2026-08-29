@@ -85,7 +85,7 @@ public:
 		SetMostRecentElapsedSeconds( 0 );
 		m_szMostRecentSaveLoadGame[0] = 0;
 		m_szSaveGameName[ 0 ] = 0;
-		m_bIsXSave = IsX360();
+		m_bIsXSave = false;
 		m_bOverrideLoadGameEntsOn = false;
 	}
 

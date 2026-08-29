@@ -678,10 +678,6 @@ void CBaseCombatWeapon::Spawn( void )
 		SetAIAddOn( AllocPooledString( GetWpnData().szAIAddOn ) );
 	}
 
-	if( IsGameConsole() )
-	{
-		AddEffects( EF_ITEM_BLINK );
-	}
 
 	FallInit();
 	SetCollisionGroup( COLLISION_GROUP_WEAPON );
@@ -2137,42 +2133,7 @@ void CBaseCombatWeapon::HideThink( void )
 //-----------------------------------------------------------------------------
 void CBaseCombatWeapon::ItemPreFrame( void )
 {
-
 	MaintainIdealActivity();
-
-#ifndef CLIENT_DLL
-#ifndef HL2_EPISODIC
-	if ( IsGameConsole() )
-#endif
-	{
-		// If we haven't displayed the hint enough times yet, it's time to try to 
-		// display the hint, and the player is not standing still, try to show a hud hint.
-		// If the player IS standing still, assume they could change away from this weapon at
-		// any second.
-		if( (!m_bAltFireHudHintDisplayed || !m_bReloadHudHintDisplayed) && gpGlobals->curtime > m_flHudHintMinDisplayTime && gpGlobals->curtime > m_flHudHintPollTime && GetOwner() && GetOwner()->IsPlayer() )
-		{
-			CBasePlayer *pPlayer = (CBasePlayer*)(GetOwner());
-
-			if( pPlayer && pPlayer->GetStickDist() > 0.0f )
-			{
-				// If the player is moving, they're unlikely to switch away from the current weapon
-				// the moment this weapon displays its HUD hint.
-				if( ShouldDisplayReloadHUDHint() )
-				{
-					DisplayReloadHudHint();
-				}
-				else if( ShouldDisplayAltFireHUDHint() )
-				{
-					DisplayAltFireHudHint();
-				}
-			}
-			else
-			{
-				m_flHudHintPollTime = gpGlobals->curtime + 2.0f;
-			}
-		}
-	}
-#endif
 }
 
 //====================================================================================
@@ -2220,12 +2181,7 @@ void CBaseCombatWeapon::ItemPostFrame( void )
 			// For instance, the crossbow doesn't have a 'real' secondary fire, but it still 
 			// stops the crossbow from firing on the 360 if the player chooses to hold down their
 			// zoom button. (sjb) Orange Box 7/25/2007
-#if !defined(CLIENT_DLL)
-			if( !IsGameConsole() || !ClassMatches("weapon_crossbow") )
-#endif
-			{
-				bFired = ShouldBlockPrimaryFire();
-			}
+			bFired = ShouldBlockPrimaryFire();
 
 			SecondaryAttack();
 

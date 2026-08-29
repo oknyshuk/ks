@@ -93,8 +93,6 @@ public: // IServer implementation
 	virtual bool	IsActive( void ) const { return m_State >= ss_active; }	
 	virtual bool	IsLoading( void ) const { return m_State == ss_loading; }
 	virtual bool	IsDedicated( void ) const { return m_bIsDedicated; }
-	FORCEINLINE bool IsDedicatedForXbox( void ) const { return m_bIsDedicatedForXbox; }
-	FORCEINLINE bool IsDedicatedForPS3( void ) const { return m_bIsDedicatedForPS3; }
 	virtual bool	IsPaused( void ) const { return m_State == ss_paused; }
 	virtual bool	IsMultiplayer( void ) const { return m_nMaxclients > 1; }
 	virtual bool	IsPausable( void ) const { return false; }
@@ -309,8 +307,6 @@ protected:
 	CUtlVector<CBaseClient*>	m_Clients;		// array of up to [maxclients] client slots.
 	
 	bool		m_bIsDedicated;
-	bool		m_bIsDedicatedForXbox;
-	bool		m_bIsDedicatedForPS3;
 
 	CUtlVector<challenge_t> m_ServerQueryChallenges; // prevent spoofed IP's from server queries/connecting
 

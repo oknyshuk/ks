@@ -238,7 +238,7 @@ REGISTER_SEND_PROXY_NON_MODIFIED_POINTER( SendProxy_SendPredictableId );
 //--------------------------------------------------------------------------------------------------------
 // Origin debugging
 //--------------------------------------------------------------------------------------------------------
-#if (defined(_WIN32) && (!defined(_GAMECONSOLE) ) )
+#if defined(_WIN32)
 #include "filesystem.h"
 
 struct SOriginDebugFP
@@ -625,13 +625,11 @@ IMPLEMENT_SERVERCLASS_ST_NOBASE( CBaseEntity, DT_BaseEntity )
 	SendPropFloat( SENDINFO( m_fadeMaxDist ),			0, SPROP_NOSCALE ),
 	SendPropFloat( SENDINFO( m_flFadeScale ),			0, SPROP_NOSCALE ),
 
-#if 1
 // #ifndef _GAMECONSOLE -- X360 client and Win32 XLSP dedicated server need equivalent SendTables
 	SendPropInt( SENDINFO(m_nMinCPULevel),				CPU_LEVEL_BIT_COUNT, SPROP_UNSIGNED ),
 	SendPropInt( SENDINFO(m_nMaxCPULevel),				CPU_LEVEL_BIT_COUNT, SPROP_UNSIGNED ),
 	SendPropInt( SENDINFO(m_nMinGPULevel),				GPU_LEVEL_BIT_COUNT, SPROP_UNSIGNED ),
 	SendPropInt( SENDINFO(m_nMaxGPULevel),				GPU_LEVEL_BIT_COUNT, SPROP_UNSIGNED ),
-#endif
 
 	SendPropFloat(SENDINFO( m_flUseLookAtAngle ) ),
 
@@ -2654,7 +2652,6 @@ void CBaseEntity::UpdateOnRemove( void )
 //-----------------------------------------------------------------------------
 int CBaseEntity::ObjectCaps( void ) 
 {
-#if 1
 	model_t *pModel = GetModel();
 	bool bIsBrush = ( pModel && modelinfo->GetModelType( pModel ) == mod_brush );
 
@@ -2681,22 +2678,6 @@ int CBaseEntity::ObjectCaps( void )
 	}
 
 	return 0;
-#else
-	// We inherit our parent's use capabilities so that we can forward use commands
-	// to our parent.
-	int parentCaps = 0;
-	if (GetParent())
-	{
-		parentCaps = GetParent()->ObjectCaps();
-		parentCaps &= ( FCAP_IMPULSE_USE | FCAP_CONTINUOUS_USE | FCAP_ONOFF_USE | FCAP_DIRECTIONAL_USE );
-	}	
-
-	model_t *pModel = GetModel();
-	if ( pModel && modelinfo->GetModelType( pModel ) == mod_brush )
-		return parentCaps;
-
-	return FCAP_ACROSS_TRANSITION | parentCaps;
-#endif
 }
 
 #if defined ( PORTAL2 )
@@ -5255,10 +5236,6 @@ static CUtlCachedFileData< CModelSoundsCache > g_ModelSoundsCache( "modelsounds.
 
 void ClearModelSoundsCache()
 {
-	if ( IsGameConsole() || engine->IsCreatingXboxReslist() )
-	{
-		return;
-	}
 
 	g_ModelSoundsCache.Reload();
 }
@@ -5269,10 +5246,6 @@ void ClearModelSoundsCache()
 //-----------------------------------------------------------------------------
 bool ModelSoundsCacheInit()
 {
-	if ( IsGameConsole() || engine->IsCreatingXboxReslist() )
-	{
-		return true;
-	}
 
 	return g_ModelSoundsCache.Init();
 }
@@ -5282,10 +5255,6 @@ bool ModelSoundsCacheInit()
 //-----------------------------------------------------------------------------
 void ModelSoundsCacheShutdown()
 {
-	if ( IsGameConsole() || engine->IsCreatingXboxReslist() )
-	{
-		return;
-	}
 
 	g_ModelSoundsCache.Shutdown();
 }
@@ -5299,10 +5268,6 @@ public:
 	}
 	virtual void LevelInitPostEntity()
 	{
-		if ( IsGameConsole() )
-		{
-			return;
-		}
 
 		if ( g_ModelSoundsCache.IsDirty() )
 		{
@@ -5311,14 +5276,6 @@ public:
 	}
 	virtual void LevelShutdownPostEntity()
 	{
-		if ( IsGameConsole() )
-		{
-			// Unforunate that this table must persist through duration of level.
-			// It is the common case that PrecacheModel() still gets called (and needs this table),
-			// after LevelInitPostEntity, as PrecacheModel() redundantly precaches.
-			g_ModelSoundsSymbolHelper.RemoveAll();
-			return;
-		}
 
 		if ( g_ModelSoundsCache.IsDirty() )
 		{
@@ -5378,25 +5335,9 @@ static CWatchForModelAccess g_WatchForModels;
 //-----------------------------------------------------------------------------
 void CBaseEntity::PrecacheSoundHelper( const char *pName )
 {
-	if ( !IsGameConsole() )
-	{
-		// 360 only
-		Assert( 0 );
-		return;
-	}
-
-	if ( !pName || !pName[0] )
-	{
-		return;
-	}
-
-	if ( UTL_INVAL_SYMBOL == g_ModelSoundsSymbolHelper.Find( pName ) )
-	{
-		g_ModelSoundsSymbolHelper.AddString( pName );
-
-		// very expensive, only call when required
-		PrecacheScriptSound( pName );
-	}
+	// 360 only
+	Assert( 0 );
+	return;
 }
 
 class CModelPrecacheSystem : public CAutoGameSystem
@@ -5447,38 +5388,35 @@ void CBaseEntity::PrecacheModelComponents( int nModelIndex )
 	}
 
 	// sounds
-	if ( IsPC() )
+	const char *name = modelinfo->GetModelName( pModel );
+	if ( !g_ModelSoundsCache.EntryExists( name ) )
 	{
-		const char *name = modelinfo->GetModelName( pModel );
-		if ( !g_ModelSoundsCache.EntryExists( name ) )
-		{
-			char extension[ 8 ];
-			Q_ExtractFileExtension( name, extension, sizeof( extension ) );
+		char extension[ 8 ];
+		Q_ExtractFileExtension( name, extension, sizeof( extension ) );
 
-			if ( Q_stristr( extension, "mdl" ) )
+		if ( Q_stristr( extension, "mdl" ) )
+		{
+			DevMsg( 2, "Late precache of %s, need to rebuild modelsounds.cache\n", name );
+		}
+		else
+		{
+			if ( !extension[ 0 ] )
 			{
-				DevMsg( 2, "Late precache of %s, need to rebuild modelsounds.cache\n", name );
+				Warning( "Precache of %s ambigious (no extension specified)\n", name );
 			}
 			else
 			{
-				if ( !extension[ 0 ] )
-				{
-					Warning( "Precache of %s ambigious (no extension specified)\n", name );
-				}
-				else
-				{
-					Warning( "Late precache of %s (file missing?)\n", name );
-				}
-				return;
+				Warning( "Late precache of %s (file missing?)\n", name );
 			}
+			return;
 		}
+	}
 
-		CModelSoundsCache *entry = g_ModelSoundsCache.Get( name );
-		Assert( entry );
-		if ( entry )
-		{
-			entry->PrecacheSoundList();
-		}
+	CModelSoundsCache *entry = g_ModelSoundsCache.Get( name );
+	Assert( entry );
+	if ( entry )
+	{
+		entry->PrecacheSoundList();
 	}
 
 	// particles
@@ -5543,63 +5481,6 @@ void CBaseEntity::PrecacheModelComponents( int nModelIndex )
 					// The disk based solution was not needed. Now at runtime partly due to already crawling the sequences
 					// for the particles and the expensive part was redundant PrecacheScriptSound(), which is now prevented
 					// by a local symbol table.
-					if ( IsGameConsole() )
-					{
-						switch ( nEvent )
-						{
-						default:
-							{
-								if ( ( pEvent->type & AE_TYPE_NEWEVENTSYSTEM ) && ( nEvent == AE_SV_PLAYSOUND ) )
-								{
-									PrecacheSoundHelper( pEvent->pszOptions() );
-								}
-							}
-							break;
-						case CL_EVENT_FOOTSTEP_LEFT:
-						case CL_EVENT_FOOTSTEP_RIGHT:
-							{
-								char soundname[256];
-								char const *options = pEvent->pszOptions();
-								if ( !options || !options[0] )
-								{
-									options = "NPC_CombineS";
-								}
-
-								Q_snprintf( soundname, sizeof( soundname ), "%s.RunFootstepLeft", options );
-								PrecacheSoundHelper( soundname );
-								Q_snprintf( soundname, sizeof( soundname ), "%s.RunFootstepRight", options );
-								PrecacheSoundHelper( soundname );
-								Q_snprintf( soundname, sizeof( soundname ), "%s.FootstepLeft", options );
-								PrecacheSoundHelper( soundname );
-								Q_snprintf( soundname, sizeof( soundname ), "%s.FootstepRight", options );
-								PrecacheSoundHelper( soundname );
-							}
-							break;
-						case AE_CL_PLAYSOUND:
-							{
-								if ( !( pEvent->type & AE_TYPE_CLIENT ) )
-									break;
-
-								if ( pEvent->pszOptions()[0] )
-								{
-									PrecacheSoundHelper( pEvent->pszOptions() );
-								}
-								else
-								{
-									Warning( "-- Error --:  empty soundname, .qc error on AE_CL_PLAYSOUND in model %s, sequence %s, animevent # %i\n", 
-										studioHdr.GetRenderHdr()->pszName(), seq.pszLabel(), j+1 );
-								}
-							}
-							break;
-						case CL_EVENT_SOUND:
-						case SCRIPT_EVENT_SOUND:
-						case SCRIPT_EVENT_SOUND_VOICE:
-							{
-								PrecacheSoundHelper( pEvent->pszOptions() );
-							}
-							break;
-						}
-					}
 				}
 			}
 		}
@@ -8448,7 +8329,6 @@ bool CBaseEntity::SUB_AllowedToFade( void )
 
 	// only keep fading things active on the high end
 #if !defined( PORTAL2 )
-	if ( !IsGameConsole() )
 	{
 		CBasePlayer *pPlayer = ( AI_IsSinglePlayer() ) ? UTIL_GetLocalPlayer() : NULL;
 

@@ -9,7 +9,6 @@
 #include "audio_pch.h"
 #include "utllinkedlist.h"
 #include "utldict.h"
-#include "filesystem/IQueuedLoader.h"
 #include "cdll_int.h"
 #include "mempool.h"
 #include "memstack.h"
@@ -34,34 +33,10 @@ extern double realtime;
 // For non-looped sounds, only 2 buffers are needed for streaming.
 // For looped sounds, we may need up to 4 buffers. (assuming that the last sound frame is at the beginning of the buffer, and the first loop sound frame is at the end of a buffer).
 
-#if IsX360()
-# define STREAM_BUFFER_COUNT				2
-#if !defined( CSTRIKE15 )
-# define STREAM_BUFFER_DATASIZE				( 2 * XBOX_DVD_ECC_SIZE )		// On X360 DVD, to reduce the number of seeks we actually read 64 Kb at a time instead of 32 Kb
-																			// This increases the memory in term of temp buffer, it reduces the number of different sounds stored in the cache
-#else
-# define STREAM_BUFFER_DATASIZE				( 1 * XBOX_DVD_ECC_SIZE )		// CSTRIKE15 is not shipping on a DVD
-#endif
-
-// XBox has enough memory, and needs to lighten the i/o for the DVD (not using the HDD on this product)
-// NOTE: in the case of asian languages, we need to spend an extra 7MB loading a large font file - this is taken from the audio cache.
-# define CONSOLE_STREAMING_AUDIO_PORTAL2	( 20 * 1024 * 1024 )
-# define ASIAN_FONT_MEMORY_USAGE			(  7 * 1024 * 1024 )
-#elif IsPS3()
-# define STREAM_BUFFER_COUNT				4				// Don't use memory for 4 buffers but 3, as in most case it is enough. In rare cases, we may have a latency issue.
-															// However due to the latency introduced by the saving mechanism (also using the HHD), let's use a bit more for looped sounds.
-															// Note that looped sounds on PS3 are not MP3 encoded but WAV encoded, so they are much bigger, we'll use 4 instead of 3 due to the save latency.
-# define STREAM_BUFFER_DATASIZE				( 32 * 1024 )	// Blu-Ray has a block size of 64 Kb. We could reduce this to 32 Kb to allow more different sounds, but this would make the loading less optimal.
-															// We actually reduced it to 32 Kb (like for X360) as we are now using FIOS for caching on the HDD. 32 Kb is a good size for the HDD.
-// We should be good in term of memory on PS3 now.
-# define CONSOLE_STREAMING_AUDIO_PORTAL2	( 4 * 1024 * 1024 )
-# define ASIAN_FONT_MEMORY_USAGE			( 0 )
-#else
 # define STREAM_BUFFER_COUNT				4
 # define STREAM_BUFFER_DATASIZE				( 64 * 1024 )
 # define CONSOLE_STREAMING_AUDIO_PORTAL2	( 4 * 1024 * 1024 )
 # define ASIAN_FONT_MEMORY_USAGE			( 0 )
-#endif
 
 // PC single buffering implementation
 // UNDONE: Allocate this in cache instead?
@@ -88,7 +63,7 @@ ConVar snd_async_stream_fail( "snd_async_stream_fail", "0", 0, "Spew stream pool
 ConVar snd_async_stream_purges( "snd_async_stream_purges", "0", 0, "Spew stream pool purges." );
 ConVar snd_async_stream_static_alloc( "snd_async_stream_static_alloc", "0", 0, "If 1, spews allocations on the static alloc pool. Set to 0 for no spew." );
 ConVar snd_async_stream_recover_from_exhausted_stream( "snd_async_stream_recover_from_exhausted_stream", "1", 0, "If 1, recovers when the stream is exhausted when playing PCM sounds (prevents music or ambiance sounds to stop if too many sounds are played). Set to 0, to stop the sound otherwise." );
-ConVar snd_async_stream_spew_exhausted_buffer( "snd_async_stream_spew_exhausted_buffer", IsCert() ? "0" : "1", 0, "If 1, spews warnings when the buffer is exhausted (recommended). Set to 0 for no spew (for debugging purpose only)." );
+ConVar snd_async_stream_spew_exhausted_buffer( "snd_async_stream_spew_exhausted_buffer", "1", 0, "If 1, spews warnings when the buffer is exhausted (recommended). Set to 0 for no spew (for debugging purpose only)." );
 ConVar snd_async_stream_spew_exhausted_buffer_time( "snd_async_stream_spew_exhausted_buffer_time", "1000", 0, "Number of milliseconds between each exhausted buffer spew." );
 ConVar snd_async_stream_spew_delayed_start_time( "snd_async_stream_spew_delayed_start_time", "500", 0, "Spew any asynchronous sound that starts with more than N milliseconds delay. By default spew when there is more than 500 ms delay." );
 ConVar snd_async_stream_spew_delayed_start_filter( "snd_async_stream_spew_delayed_start_filter", "vo", 0, "Filter used to spew sounds that starts late. Use an empty string \"\" to display all sounds. By default only the VO are displayed.");
@@ -139,7 +114,6 @@ public:
 	unsigned int Size();
 
 	static void AsyncCallback( const FileAsyncRequest_t &asyncRequest, int numReadBytes, FSAsyncStatus_t err );
-	static void QueuedLoaderCallback( void *pContext, void *pContext2, const void *pData, int nSize, LoaderError_t loaderError );
 	static CAsyncWaveData *CreateResource( const asyncwaveparams_t &params );
 	static unsigned int EstimatedSize( const asyncwaveparams_t &params );
 
@@ -598,69 +572,25 @@ CAsyncWaveData::CAsyncWaveData() :
 //-----------------------------------------------------------------------------
 void CAsyncWaveData::DestroyResource()
 {
-	if ( IsPC() )
+	if ( m_hAsyncControl )
 	{
-		if ( m_hAsyncControl )
+		if ( !m_bLoaded && !m_bMissing )
 		{
-			if ( !m_bLoaded && !m_bMissing )
-			{
-				// NOTE:  We CANNOT call AsyncAbort since if the file is actually being read we'll end 
-				//  up still getting a callback, but our this ptr (deleted below) will be feeefeee and we'll trash the heap 
-				//  pretty bad.  So we call AsyncFinish, which will do a blocking read and will definitely succeed	
-				// Block until we are finished
-				g_pFileSystem->AsyncFinish( m_hAsyncControl, true );
-			}
-			
-			g_pFileSystem->AsyncRelease( m_hAsyncControl );
-			m_hAsyncControl = NULL;
+			// NOTE:  We CANNOT call AsyncAbort since if the file is actually being read we'll end 
+			//  up still getting a callback, but our this ptr (deleted below) will be feeefeee and we'll trash the heap 
+			//  pretty bad.  So we call AsyncFinish, which will do a blocking read and will definitely succeed	
+			// Block until we are finished
+			g_pFileSystem->AsyncFinish( m_hAsyncControl, true );
 		}
+		
+		g_pFileSystem->AsyncRelease( m_hAsyncControl );
+		m_hAsyncControl = NULL;
 	}
 
-	if ( IsGameConsole() )
-	{
-		if ( m_hAsyncControl )
-		{
-			if ( !m_bLoaded && !m_bMissing )
-			{
-				// force an abort
-				int errStatus = g_pFileSystem->AsyncAbort( m_hAsyncControl );
-				if ( errStatus != FSASYNC_ERR_UNKNOWNID )
-				{
-					// must wait for abort to finish before deallocating data
-					g_pFileSystem->AsyncFinish( m_hAsyncControl, true );
-				}
-			}
-			g_pFileSystem->AsyncRelease( m_hAsyncControl );
-			m_hAsyncControl = NULL;
-		}
-		if ( m_hBuffer != INVALID_BUFFER_HANDLE )
-		{
-			// hint the manager that this tracked buffer is invalid
-			wavedatacache->MarkBufferDiscarded( m_hBuffer );
-		}
-	}
 
 	// delete buffers
-	if ( IsPC() )
-	{
-		g_pFileSystem->FreeOptimalReadBuffer( m_pAlloc );
-	}
+	g_pFileSystem->FreeOptimalReadBuffer( m_pAlloc );
 
-	if ( IsGameConsole() )
-	{
-		if ( m_bIsTransient )
-		{
-			g_pAudioStreamPool->Free( m_pAlloc );
-		}
-		else if ( m_bIsStaticPooled )
-		{
-			// freed as part of pool purge
-		}
-		else
-		{
-			free( m_pAlloc );
-		}
-	}
 
 	delete this;
 }
@@ -702,17 +632,8 @@ unsigned int CAsyncWaveData::Size()
 { 
 	int size;
 
-	if ( IsPC() )
-	{
-		size = sizeof( *this ) + m_nDataSize;
-	}
+	size = sizeof( *this ) + m_nDataSize;
 
-	if ( IsGameConsole() )
-	{
-		// the data size is volatile and shrinks during streaming near end of file
-		// report the real constant size of this object's allocation
-		size = m_nBufferBytes;
-	}
 
 	return size;
 }
@@ -728,58 +649,6 @@ CAsyncWaveData *CAsyncWaveData::CreateResource( const asyncwaveparams_t &params 
 
 	CAsyncWaveData *pData = NULL;
 
-	if ( IsGameConsole() )
-	{
-		// create buffers now for re-use during streaming process
-		void *pBuffer = NULL;
-		int bufferSize;
-		bool bIsStaticPooled = params.bIsStaticPooled;
-		if ( params.bIsTransient )
-		{
-			// streaming transient sounds pool their fixed size dynamic buffers to lighten fragmentation
-			bufferSize = STREAM_BUFFER_DATASIZE;
-			pBuffer = g_pAudioStreamPool->Alloc();
-			if ( !pBuffer )
-			{
-				// pool is empty, purge required
-				// failure case detected by create logic, will drive purge and retry
-				return NULL;
-			}
-		}
-		else
-		{
-			// non-streaming sounds have buffers that are only transient during map transitions
-			bufferSize = AlignValue( params.datasize, params.alignment );
-			if ( bIsStaticPooled )
-			{
-				// pool these sounds
-				pBuffer = g_pAudioStaticPool->Alloc( bufferSize );
-				if ( snd_async_stream_static_alloc.GetBool() )
-				{
-					Msg( "CAsyncWavDataCache: Static Pool: %.2f MB used of %.2f MB\n", g_pAudioStaticPool->GetUsed() / ( 1024.0f * 1024.0f ), g_pAudioStaticPool->GetSize() / ( 1024.0f * 1024.0f ) );
-				}
-				if ( !pBuffer )
-				{
-					Warning( "CAsyncWaveData:: Static Pool OVERFLOW, failing to standard heap!\n" );
-					// flip and fail to other heap
-					bIsStaticPooled = false;
-				}
-			}
-
-			if ( !bIsStaticPooled )
-			{
-				// use the standard heap for non-streaming non-pooled buffers
-				pBuffer = new byte[bufferSize];
-			}
-		}
-
-		pData = new CAsyncWaveData;
-		pData->m_nBufferBytes = bufferSize;
-		pData->m_pAlloc = pData->m_pvData = pBuffer;
-		pData->m_bIsTransient = params.bIsTransient;
-		pData->m_bIsStaticPooled = bIsStaticPooled;
-	}
-	else
 	{
 		pData = new CAsyncWaveData;
 		Assert( pData );
@@ -802,23 +671,8 @@ unsigned int CAsyncWaveData::EstimatedSize( const asyncwaveparams_t &params )
 {
 	int size;
 
-	if ( IsPC() )
-	{
-		size = 	sizeof( CAsyncWaveData ) + params.datasize;
-	}
+	size = 	sizeof( CAsyncWaveData ) + params.datasize;
 
-	if ( IsGameConsole() )
-	{
-		// the expected size of this object's allocations
-		if ( params.bIsTransient )
-		{
-			size = STREAM_BUFFER_DATASIZE;
-		}
-		else
-		{
-			size = AlignValue( params.datasize, params.alignment );
-		}
-	}
 
 	return size;
 }
@@ -839,16 +693,6 @@ void CAsyncWaveData::AsyncCallback(const FileAsyncRequest_t &asyncRequest, int n
 	}
 }
 
-//-----------------------------------------------------------------------------
-// Purpose: Static method, called by thread, don't call anything non-threadsafe from handler!!!
-//-----------------------------------------------------------------------------
-void CAsyncWaveData::QueuedLoaderCallback( void *pContext, void *pContext2, const void *pData, int nSize, LoaderError_t loaderError )
-{
-	CAsyncWaveData *pObject = reinterpret_cast< CAsyncWaveData * >( pContext );
-	Assert( pObject );
-
-	pObject->OnAsyncCompleted( NULL, nSize, loaderError == LOADERERROR_NONE ? FSASYNC_OK : FSASYNC_ERR_FILEOPEN );
-}
 
 //-----------------------------------------------------------------------------
 // Purpose: NOTE: THIS IS CALLED FROM A THREAD SO YOU CAN'T CALL INTO ANYTHING NON-THREADSAFE
@@ -859,68 +703,41 @@ void CAsyncWaveData::QueuedLoaderCallback( void *pContext, void *pContext2, cons
 //-----------------------------------------------------------------------------
 void CAsyncWaveData::OnAsyncCompleted( const FileAsyncRequest_t *asyncFilePtr, int numReadBytes, FSAsyncStatus_t err )
 {
-	if ( IsPC() )
+	// Take hold of pointer (we can just use delete[] across .dlls because we are using a shared memory allocator...)
+	if ( err == FSASYNC_OK || err == FSASYNC_ERR_READING )
 	{
-		// Take hold of pointer (we can just use delete[] across .dlls because we are using a shared memory allocator...)
-		if ( err == FSASYNC_OK || err == FSASYNC_ERR_READING )
+		m_arrival = ( float )Plat_FloatTime();
+
+		// Take over ptr
+		m_pAlloc = asyncFilePtr->pData;
+		if ( SndAlignReads() )
 		{
-			m_arrival = ( float )Plat_FloatTime();
-
-			// Take over ptr
-			m_pAlloc = asyncFilePtr->pData;
-			if ( SndAlignReads() )
-			{
-				m_async.nOffset = ( m_async.nBytes - m_nDataSize );
-				m_async.nBytes -= m_async.nOffset;
-				m_pvData = ((byte *)m_pAlloc) + m_async.nOffset;
-				m_nReadSize	= numReadBytes - m_async.nOffset;
-			}
-			else
-			{
-				m_pvData = m_pAlloc;
-				m_nReadSize = numReadBytes;
-			}
-
-			// Needs to be post-processed
-			m_bPostProcessed = false;
-
-			// Finished loading
-			m_bLoaded = true;
+			m_async.nOffset = ( m_async.nBytes - m_nDataSize );
+			m_async.nBytes -= m_async.nOffset;
+			m_pvData = ((byte *)m_pAlloc) + m_async.nOffset;
+			m_nReadSize	= numReadBytes - m_async.nOffset;
 		}
-		else if ( err == FSASYNC_ERR_FILEOPEN )
+		else
 		{
-			// SEE NOTE IN FUNCTION COMMENT ABOVE!!!
-			// Tracker 22905, et al.
-			// Because this api gets called from the other thread, don't spew warning here as it can
-			//  cause a crash in searching CUtlSymbolTables since they use a global var for a LessFunc context!!!
-			m_bMissing = true;
+			m_pvData = m_pAlloc;
+			m_nReadSize = numReadBytes;
 		}
+
+		// Needs to be post-processed
+		m_bPostProcessed = false;
+
+		// Finished loading
+		m_bLoaded = true;
+	}
+	else if ( err == FSASYNC_ERR_FILEOPEN )
+	{
+		// SEE NOTE IN FUNCTION COMMENT ABOVE!!!
+		// Tracker 22905, et al.
+		// Because this api gets called from the other thread, don't spew warning here as it can
+		//  cause a crash in searching CUtlSymbolTables since they use a global var for a LessFunc context!!!
+		m_bMissing = true;
 	}
 
-	if ( IsGameConsole() )
-	{
-		m_arrival = (float)Plat_FloatTime();
-
-		// possibly reading more than intended due to alignment restriction
-		m_nReadSize = numReadBytes;
-		if ( m_nReadSize > m_nDataSize )
-		{
-			// clamp to expected, extra data is unreliable
-			m_nReadSize = m_nDataSize;
-		}
-
-		if ( err != FSASYNC_OK )
-		{
-			// track as any error
-			m_bMissing = true;
-		}
-
-		if ( err != FSASYNC_ERR_FILEOPEN )
-		{
-			// some data got loaded
-			m_bLoaded = true;
-		}
-	}
 }
 
 //-----------------------------------------------------------------------------
@@ -1082,7 +899,7 @@ void CAsyncWaveData::SetAsyncPriority( int priority )
 //-----------------------------------------------------------------------------
 void CAsyncWaveData::StartAsyncLoading( const asyncwaveparams_t& params )
 {
-	Assert( IsGameConsole() || ( IsPC() && !m_bLoaded ) );
+	Assert( !m_bLoaded );
 
 	// expected to be relative to the sound\ dir
 	m_hFileNameHandle = params.hFilename;
@@ -1098,34 +915,21 @@ void CAsyncWaveData::StartAsyncLoading( const asyncwaveparams_t& params )
 		nPriority = 0;
 	}
 
-	if ( !IsGameConsole() )
+	m_async.pData = NULL;
+	if ( SndAlignReads() )
 	{
-		m_async.pData = NULL;
-		if ( SndAlignReads() )
-		{
-			m_async.nOffset = 0;
-			m_async.nBytes = params.seekpos + params.datasize;
-		}
-		else
-		{
-			m_async.nOffset = params.seekpos;
-			m_async.nBytes = params.datasize;
-		}
+		m_async.nOffset = 0;
+		m_async.nBytes = params.seekpos + params.datasize;
 	}
 	else
 	{
-		Assert( params.datasize > 0 );
-
-		// using explicit allocated buffer on xbox
-		m_async.pData = m_pvData;
 		m_async.nOffset = params.seekpos;
-		m_async.nBytes = AlignValue( params.datasize, params.alignment ); 
+		m_async.nBytes = params.datasize;
 	}
-
 	m_async.pfnCallback	= AsyncCallback;	// optional completion callback
 	m_async.pContext = (void *)this;		// caller's unique context
 	m_async.priority = nPriority;			// inter list priority, 0=lowest
-	m_async.flags = IsGameConsole() ? 0 : FSASYNC_FLAGS_ALLOCNOFREE;
+	m_async.flags = FSASYNC_FLAGS_ALLOCNOFREE;
 	m_async.pszPathID = "GAME";
 
 	m_bLoaded = false;
@@ -1140,36 +944,6 @@ void CAsyncWaveData::StartAsyncLoading( const asyncwaveparams_t& params )
 	m_async.pszFilename	= szFilename;
 
 	char szFullName[MAX_PATH];
-	if ( IsGameConsole() )
-	{
-		// all audio is expected be in zips
-		// resolve to absolute name now, where path can be filtered to just the zips (fast find, no real i/o)
-		// otherwise the dvd will do a costly seek for each zip miss due to search path fall through
-		PathTypeQuery_t pathType;
-		if ( !g_pFileSystem->RelativePathToFullPath( m_async.pszFilename, m_async.pszPathID, szFullName, sizeof( szFullName ), GetAudioPathFilter(), &pathType ) )
-		{
-			// not found, do callback now to handle error
-			m_async.pfnCallback( m_async, 0, FSASYNC_ERR_FILEOPEN );
-			return;
-		}
-		m_async.pszFilename	= szFullName;
-	}
-
-	if ( IsGameConsole() && params.bCanBeQueued )
-	{
-		// queued loader takes over
-		LoaderJob_t loaderJob;
-		loaderJob.m_pFilename = m_async.pszFilename;
-		loaderJob.m_pPathID = m_async.pszPathID;
-		loaderJob.m_pCallback = QueuedLoaderCallback;
-		loaderJob.m_pContext = (void *)this;
-		loaderJob.m_Priority = LOADERPRIORITY_DURINGPRELOAD;
-		loaderJob.m_pTargetData = m_async.pData;
-		loaderJob.m_nBytesToRead = m_async.nBytes;
-		loaderJob.m_nStartOffset = m_async.nOffset;
-		g_pQueuedLoader->AddJob( &loaderJob );
-		return;
-	}
 
 	MEM_ALLOC_CREDIT();
 	
@@ -1361,64 +1135,6 @@ bool CAsyncWavDataCache::Init( unsigned int memSize )
 	if ( m_bInitialized )
 		return true;
 	
-	if ( IsGameConsole() )
-	{	
-		// xbox non-streaming audio is uncapped, all these sounds allocate as required
-		// streaming audio is constrained, explicitly managed, and pooled
-		unsigned int nStaticPoolSize = CONSOLE_STATIC_AUDIO_DEFAULT;
-
-		const char *pGame = engineClient->GetGameDirectory();
-		if ( !Q_stricmp( Q_UnqualifiedFileName( pGame ), "tf" ) )
-		{
-			memSize = CONSOLE_STREAMING_AUDIO_TF;
-		}
-		else if ( StringHasPrefix( Q_UnqualifiedFileName( pGame ), "left4dead2") )
-		{
-			if ( g_pFullFileSystem->IsDVDHosted() )
-			{
-				memSize = CONSOLE_STREAMING_AUDIO_LEFT4DEAD_DVD;
-			}
-			else
-			{
-				memSize = CONSOLE_STREAMING_AUDIO_LEFT4DEAD;
-			}
-		}
-		else if ( StringHasPrefix( Q_UnqualifiedFileName( pGame ), "portal2") )
-		{
-			nStaticPoolSize = CONSOLE_STATIC_AUDIO_PORTAL2;
-			memSize = CONSOLE_STREAMING_AUDIO_PORTAL2;
-			if ( IsX360() && XBX_IsRestrictiveLanguage() )
-			{
-				COMPILE_TIME_ASSERT( !IsX360() || ( CONSOLE_STREAMING_AUDIO_PORTAL2 == 20*1024*1024 ) ); // Might want to revisit this tradeoff if this changes
-				memSize -= ASIAN_FONT_MEMORY_USAGE;
-			}
-		}
-		else if ( StringHasPrefix( Q_UnqualifiedFileName( pGame ), "csgo" ) )
-		{
-			nStaticPoolSize = CONSOLE_STATIC_AUDIO_CSTRIKE15;
-			memSize = CONSOLE_STREAMING_AUDIO_CSTRIKE15;
-		}	
-		else
-		{
-			memSize = CONSOLE_STREAMING_AUDIO_DEFAULT;
-		}
-		
-		// needs to be integral
-		Assert( memSize % STREAM_BUFFER_DATASIZE == 0 );
-		g_pAudioStreamPool = new CUtlMemoryPool( STREAM_BUFFER_DATASIZE, memSize/STREAM_BUFFER_DATASIZE, CUtlMemoryPool::GROW_NONE, "CAsyncWavDataCache::AudioStreamPool" );
-		// force the actual pool allocation to occur on first alloc
-		g_pAudioStreamPool->Clear();
-	
-		// create a pool to hold the non-streaming static data
-		g_pAudioStaticPool = new CMemoryStack;
-		g_pAudioStaticPool->Init( "g_pAudioStaticPool", nStaticPoolSize, 0, nStaticPoolSize );
-
-		// NOTE!!!!
-		// console audio section is unlimited, purges are *explicitly* invoked via FindOrCreateBuffer()
-		// the create will cause the resource to be created which checks the pools, fails, and then the explicit purge occurs
-		memSize = (unsigned int)-1;
-	}
-	else
 	{
 		if ( memSize < DEFAULT_WAV_MEMORY_CACHE )
 		{
@@ -1651,8 +1367,8 @@ StreamHandle_t CAsyncWavDataCache::OpenStreamedLoad( char const *pFileName, int 
 	streamedEntry.m_BufferSize = bufferSize;
 	streamedEntry.m_numBuffers = numBuffers;
 	streamedEntry.m_bSinglePlay = ( flags & STREAMED_SINGLEPLAY ) != 0;
-	streamedEntry.m_SectorSize = ( IsGameConsole() && ( flags & STREAMED_FROMDVD ) ) ? XBOX_DVD_SECTORSIZE : 1;
-	streamedEntry.m_bIsTransient = IsGameConsole() && ( flags & STREAMED_TRANSIENT ) != 0;
+	streamedEntry.m_SectorSize = 1;
+	streamedEntry.m_bIsTransient = false;
 
 	bool bFindBuffer;
 	if ( !( flags & STREAMED_TRANSIENT ) && !( flags & STREAMED_QUEUEDLOAD ) )
@@ -1790,68 +1506,7 @@ void CAsyncWavDataCache::CloseStreamedLoad( StreamHandle_t hStream )
 //-----------------------------------------------------------------------------
 void CAsyncWavDataCache::CleanupDeadBuffers( bool bSync )
 {
-	if ( !IsGameConsole() )
-	{
-		return;
-	}
-
-	for ( int iEntryIndex = 0; iEntryIndex < m_DeadBuffers.Count(); )
-	{
-		WaveCacheHandle_t hWaveData = m_DeadBuffers[iEntryIndex].hWaveData;
-		bool bSinglePlay = m_DeadBuffers[iEntryIndex].bSinglePlay;
-
-		int lockCount = s_WaveCache.GetLockCount( hWaveData );
-		Assert( lockCount >= 1 );
-		if ( lockCount > 1 )
-		{
-			// this buffer got re-claimed by some stream
-			// just remove the oustanding lock that should have occurred during the initial close but was prevented
-			// this buffer will eventually free when the last consumer releases
-			s_WaveCache.CacheUnlock( hWaveData );
-
-			// no longer tracking
-			m_DeadBuffers.Remove( iEntryIndex );
-			continue;
-		}
-
-		// going to a zero lock count with an async operation in flight would cause memory corruption	
-		// check the buffer to ensure it has completed
-		CAsyncWaveData *pBuffer = s_WaveCache.CacheGetNoTouch( hWaveData );
-		if ( pBuffer )
-		{
-			if ( !pBuffer->m_bMissing && !pBuffer->m_bLoaded )
-			{
-				if ( !bSync )
-				{
-					// still in flight, it will eventually finish 
-					// keep tracking
-					iEntryIndex++;
-					continue;
-				}
-				else
-				{
-					// cause a sync operation to force the async operation to finish 
-					void *pData = NULL;
-					pBuffer->BlockingGetDataPointer( &pData );
-				}
-			}
-		}
-
-		// remove the outstanding lock
-		lockCount = s_WaveCache.CacheUnlock( hWaveData );
-
-		if ( bSinglePlay )
-		{
-			// a buffering single play stream has no reason to reuse its own buffers and destroys them
-			// these buffers are uniquely owned, so the lock count can/should only be 0 at this point
-			// if !=0 the remove will respect the lock and do nothing and the buffer becomes a zombie
-			Assert( lockCount == 0 );
-			s_WaveCache.CacheRemove( hWaveData );
-		}
-
-		//  no longer tracking
-		m_DeadBuffers.Remove( iEntryIndex );
-	}
+	return;
 }
 
 //-----------------------------------------------------------------------------
@@ -2483,49 +2138,12 @@ void CAsyncWavDataCache::Flush( bool bTearDownStaticPool )
 		return;
 	}
 
-	if ( IsGameConsole() )
-	{
-		// this will sync stop (and unlock) any buffers that could not be unlocked at stream closure
-		CleanupDeadBuffers( true );
-	}
 
 	// purge all unlocked resources
 	s_WaveCache.Flush();
 
 	MemoryUsageType spewType = SPEW_BASIC;
  
-	if ( IsGameConsole() )
-	{
-		if ( bTearDownStaticPool )
-		{
-			// The caller has unlocked all static resources that should have been in this pool
-			// and flush should have released them.
-			// This is VERY scary, with this technique there is no way to ensure all resources from this pool
-			// are really unlocked unless we scan the cache section annd make queries. And if they aren't,
-			// nothing can be done because this is a stack, so either way it's just fatal.
-			// Tear the pool down.
-			g_pAudioStaticPool->FreeAll( false );
-		}
-
-		// a flush nominally occurs during level transitions to free up memory
-		// the underlying pool's blob needs to get freed to use for level transition work
-		// the next first allocation will re-establish the blob
-		if ( !g_pAudioStreamPool->Count() )
-		{
-			g_pAudioStreamPool->Clear();
-		}
-		else
-		{
-			// this is used between levels, no sounds should be occuring, lock counts *should* be 0
-			// the flush should have caused the stream buffers to destroy and thus the pool to be emptied
-			// if sounds are not playing, buffers that are remaining are locked and would be zombied
-			// zombied buffers would just accumulate until the stream pool couldn't play any more sounds
-			// spewing more details into the log to scan after playtests to track (if any) down
-			Warning( "CAsyncWavDataCache: Failed to clear stream pool during flush\n" );
-			// need more detailed breakdown
-			spewType = SPEW_ALL;
-		}
-	}
 
 	SpewMemoryUsage( spewType );
 }
@@ -2562,128 +2180,46 @@ void CAsyncWavDataCache::SpewMemoryUsage( MemoryUsageType level )
 	int bytesUsed = status.nBytes;
 	int bytesTotal = limits.nMaxBytes;
 
-	if ( IsPC() )
+	if ( level != SPEW_BASIC )
 	{
-		if ( level != SPEW_BASIC )
+		for ( int i = m_CacheHandles.FirstInorder(); m_CacheHandles.IsValidIndex(i); i = m_CacheHandles.NextInorder(i) )
 		{
-			for ( int i = m_CacheHandles.FirstInorder(); m_CacheHandles.IsValidIndex(i); i = m_CacheHandles.NextInorder(i) )
+			char name[MAX_PATH];
+			if ( !g_pFileSystem->String( m_CacheHandles[ i ].name, name, sizeof( name ) ) )
 			{
-				char name[MAX_PATH];
-				if ( !g_pFileSystem->String( m_CacheHandles[ i ].name, name, sizeof( name ) ) )
-				{
-					Assert( 0 );
-					continue;
-				}
+				Assert( 0 );
+				continue;
+			}
 
-				if ( level == SPEW_MUSIC_NONSTREAMING && V_stristr( name, "music" ) == NULL )
-					continue;
+			if ( level == SPEW_MUSIC_NONSTREAMING && V_stristr( name, "music" ) == NULL )
+				continue;
 
-				WaveCacheHandle_t &handle = m_CacheHandles[ i ].handle;
-				CAsyncWaveData *data = s_WaveCache.CacheGetNoTouch( handle );
-				if ( data )
-				{
-					Msg( "\t%16.16s : %s\n", Q_pretifymem(data->Size()),name);
-				}
-				else
-				{
-					Msg( "\t%16.16s : %s\n", "not resident",name);
-				}
+			WaveCacheHandle_t &handle = m_CacheHandles[ i ].handle;
+			CAsyncWaveData *data = s_WaveCache.CacheGetNoTouch( handle );
+			if ( data )
+			{
+				Msg( "\t%16.16s : %s\n", Q_pretifymem(data->Size()),name);
+			}
+			else
+			{
+				Msg( "\t%16.16s : %s\n", "not resident",name);
 			}
 		}
-
-		float percent;
-		if ( bytesTotal <= 0 )
-		{
-			// unbounded, indeterminate
-			percent = 0;
-			bytesTotal = 0;
-		}
-		else
-		{
-			percent = 100.0f * (float)bytesUsed / (float)bytesTotal;
-		}
-		Msg( "CAsyncWavDataCache:  %i .wavs total %s, %.2f %% of capacity\n", m_CacheHandles.Count(), Q_pretifymem( bytesUsed, 2 ), percent );
 	}
+
+	float percent;
+	if ( bytesTotal <= 0 )
+	{
+		// unbounded, indeterminate
+		percent = 0;
+		bytesTotal = 0;
+	}
+	else
+	{
+		percent = 100.0f * (float)bytesUsed / (float)bytesTotal;
+	}
+	Msg( "CAsyncWavDataCache:  %i .wavs total %s, %.2f %% of capacity\n", m_CacheHandles.Count(), Q_pretifymem( bytesUsed, 2 ), percent );
 	
-	if ( IsGameConsole() )
-	{
-		if ( level == SPEW_BASIC )
-		{
-			// basic spew memory usage is the total of all the outstanding buffers
-			// this isn't intended as an entirely accurate memory usage report
-			Msg( "CAsyncWavDataCache: %.2f MB used\n", bytesUsed / ( 1024.0f * 1024.0f ) );
-			Msg( "CAsyncWavDataCache: Static Pool: %.2f MB used of %.2f MB\n", g_pAudioStaticPool->GetUsed() / ( 1024.0f * 1024.0f ), g_pAudioStaticPool->GetSize() / ( 1024.0f * 1024.0f ) );
-			Msg( "CAsyncWavDataCache: Stream Pool: %.2f MB used of %.2f MB\n", ( g_pAudioStreamPool->Count() * g_pAudioStreamPool->BlockSize() ) / ( 1024.0f * 1024.0f ), g_pAudioStreamPool->Size() / ( 1024.0f * 1024.0f ) );
-			Msg( "CAsyncWavDataCache: Dead Buffers: %d\n", m_DeadBuffers.Count() );
-		}
-		else
-		{
-			// detailed spew breaks the stream buffers into resident (pooled or standard) or streaming types
-			// iterate non-stream buffers
-			int nonStreamBytesUsedPooled = 0;
-			Msg( "\nCAsyncWavDataCache: Non-Stream Buffer List (Pooled Heap):\n" );
-			for ( BufferHandle_t h = m_BufferList.FirstInorder(); h != m_BufferList.InvalidIndex(); h = m_BufferList.NextInorder( h ) )
-			{
-				BufferEntry_t *pBuffer = &m_BufferList[h];
-				CAsyncWaveData *pData = s_WaveCache.CacheGetNoTouch( pBuffer->m_hWaveData );
-				s_WaveCache.CacheLockMutex();
-				if ( pData && !pData->m_bIsTransient && pData->m_bIsStaticPooled )
-				{
-					int lockCount = s_WaveCache.GetLockCount( pBuffer->m_hWaveData );
-					unsigned int ageStamp = s_WaveCache.GetAgeStamp( pBuffer->m_hWaveData );
-					Msg( "Start:%7d Size:%7d Lock:%3d Age:%4d %s\n", pBuffer->m_StartPos, pData->m_nBufferBytes, lockCount, ageStamp, pData->GetFileName() );
-					nonStreamBytesUsedPooled += pData->m_nBufferBytes;
-				}
-				s_WaveCache.CacheUnlockMutex();
-			}
-			Msg( "CAsyncWavDataCache: Non-Stream Buffers (Pooled): %.2f MB used\n", (float)nonStreamBytesUsedPooled / ( 1024.0f * 1024.0f ) );
-
-			int nonStreamBytesUsedStandard = 0;
-			Msg( "\nCAsyncWavDataCache: Non-Stream Buffer List (Standard Heap):\n" );
-			for ( BufferHandle_t h = m_BufferList.FirstInorder(); h != m_BufferList.InvalidIndex(); h = m_BufferList.NextInorder( h ) )
-			{
-				BufferEntry_t *pBuffer = &m_BufferList[h];
-				CAsyncWaveData *pData = s_WaveCache.CacheGetNoTouch( pBuffer->m_hWaveData );
-				s_WaveCache.CacheLockMutex();
-				if ( pData && !pData->m_bIsTransient && !pData->m_bIsStaticPooled )
-				{
-					int lockCount = s_WaveCache.GetLockCount( pBuffer->m_hWaveData );
-					unsigned int ageStamp = s_WaveCache.GetAgeStamp( pBuffer->m_hWaveData );
-					Msg( "Start:%7d Size:%7d Lock:%3d Age:%4d %s\n", pBuffer->m_StartPos, pData->m_nBufferBytes, lockCount, ageStamp, pData->GetFileName() );
-					nonStreamBytesUsedStandard += pData->m_nBufferBytes;
-				}
-				s_WaveCache.CacheUnlockMutex();
-			}
-			Msg( "CAsyncWavDataCache: Non-Stream Buffers (Standard): %.2f MB used\n", (float)nonStreamBytesUsedStandard / ( 1024.0f * 1024.0f ) );
-
-			// iterate stream buffers
-			int streamBytesUsed = 0;
-			Msg( "\nCAsyncWavDataCache: Stream Buffer List:\n" );
-			for ( BufferHandle_t h = m_BufferList.FirstInorder(); h != m_BufferList.InvalidIndex(); h = m_BufferList.NextInorder( h ) )
-			{
-				BufferEntry_t *pBuffer = &m_BufferList[h];
-				CAsyncWaveData *pData = s_WaveCache.CacheGetNoTouch( pBuffer->m_hWaveData );
-				s_WaveCache.CacheLockMutex();
-				if ( pData && pData->m_bIsTransient )
-				{
-					int lockCount = s_WaveCache.GetLockCount( pBuffer->m_hWaveData );
-					unsigned int ageStamp = s_WaveCache.GetAgeStamp( pBuffer->m_hWaveData );
-					Msg( "Start:%7d Size:%7d Lock:%3d Age:%4d %s\n", pBuffer->m_StartPos, pData->m_nBufferBytes, lockCount, ageStamp, pData->GetFileName() );
-					streamBytesUsed += pData->m_nBufferBytes;
-				}
-				s_WaveCache.CacheUnlockMutex();
-			}
-			Msg( "CAsyncWavDataCache: Stream Buffers: %.2f MB used\n", (float)streamBytesUsed / ( 1024.0f * 1024.0f ) );
-
-			// the stream pool usage should match exactly with the streaming buffer iteration results
-			Msg( "\nCAsyncWavDataCache: Stream Pool\n" );
-			Msg( "  Block Size: %d bytes\n", g_pAudioStreamPool->BlockSize() );
-			Msg( "  Blocks:     %d\n", g_pAudioStreamPool->Count() );
-			Msg( "  Allocated:  %.2f MB \n", ( g_pAudioStreamPool->Count() * g_pAudioStreamPool->BlockSize() ) / ( 1024.0f * 1024.0f ) );
-			Msg( "  Pool:       %.2f MB \n", g_pAudioStreamPool->Size() / ( 1024.0f * 1024.0f ) );
-			Msg( "  Dead:       %d\n", m_DeadBuffers.Count() );
-		}
-	}
 }
 
 //-----------------------------------------------------------------------------
@@ -2754,11 +2290,6 @@ CON_COMMAND( snd_async_showmem_music, "Show async memory stats for just non-stre
 //-----------------------------------------------------------------------------
 void PrefetchDataStream( const char *pFileName, int dataOffset, int dataSize )
 {
-	if ( IsGameConsole() )
-	{
-		// Xbox streaming buffer implementation does not support this "hinting"
-		return;
-	}
 
 	wavedatacache->PrefetchCache( pFileName, dataSize, dataOffset );
 }
@@ -2872,166 +2403,20 @@ CWaveDataStreamAsync::CWaveDataStreamAsync
 		return;
 	}
 
-	if ( IsPC() )
-	{
-		m_hCache = wavedatacache->AsyncLoadCache( GetFileName(), m_dataSize, m_dataStart );
+	m_hCache = wavedatacache->AsyncLoadCache( GetFileName(), m_dataSize, m_dataStart );
 
-		m_pBuffer = new char[SINGLE_BUFFER_SIZE];
-		Q_memset( m_pBuffer, 0, SINGLE_BUFFER_SIZE );
+	m_pBuffer = new char[SINGLE_BUFFER_SIZE];
+	Q_memset( m_pBuffer, 0, SINGLE_BUFFER_SIZE );
 
-		// size of a sample
-		m_sampleSize = source.SampleSize();
-		// size in samples of the buffer
-		m_bufferSize = SINGLE_BUFFER_SIZE / m_sampleSize;
-		// size in samples (not bytes) of the wave itself
-		m_waveSize = fileSize / m_sampleSize;
+	// size of a sample
+	m_sampleSize = source.SampleSize();
+	// size in samples of the buffer
+	m_bufferSize = SINGLE_BUFFER_SIZE / m_sampleSize;
+	// size in samples (not bytes) of the wave itself
+	m_waveSize = fileSize / m_sampleSize;
 
-		m_AudioCacheHandle.Get( CAudioSource::AUDIO_SOURCE_WAV, m_pSfx->IsPrecachedSound(), m_pSfx, &m_nCachedDataSize );
-	}
+	m_AudioCacheHandle.Get( CAudioSource::AUDIO_SOURCE_WAV, m_pSfx->IsPrecachedSound(), m_pSfx, &m_nCachedDataSize );
 	
-	if ( IsGameConsole() )
-	{
-		// size of a sample
-		m_sampleSize = source.SampleSize();
-		// size in samples (not bytes) of the wave itself
-		m_waveSize = fileSize / m_sampleSize;
-
-		// mark as transient to let streamer better configure the buffers for a streaming wave	
-		// absence of transient indicates a memory resident wave
-		streamFlags_t flags = STREAMED_FROMDVD | STREAMED_TRANSIENT;
-		if ( IsGameConsole() )
-		{
-			char cleanName[MAX_PATH];
-			V_strncpy( cleanName, pFileName, sizeof( cleanName ) );
-			V_FixSlashes( cleanName, '/' );
-
-			bool bForceToSinglePlay = false;
-
-			if ( bForceToSinglePlay || 
-				V_stristr( cleanName, "music/" ) || 
-				V_stristr( cleanName, "commentary/" ) ||
-				V_stristr( cleanName, "playonce/" ))
-			{
-				// music discards and cycles its buffers
-				flags |= STREAMED_SINGLEPLAY;
-			}
-			else if ( !source.IsSentenceWord() && V_stristr( cleanName, "vo/" ) )
-			{
-				// vo discards and cycles its buffers, except for sentence sources which recur
-				flags |= STREAMED_SINGLEPLAY;
-			}
-	}
-
-#if IsX360()
-		// the xma mixer expects quantum xma blocks
-		COMPILE_TIME_ASSERT( ( STREAM_BUFFER_DATASIZE % XMA_BLOCK_SIZE ) == 0 );
-		// streaming buffers must be sector compliant
-		COMPILE_TIME_ASSERT( ( STREAM_BUFFER_DATASIZE % XBOX_DVD_SECTORSIZE ) == 0 );
-#endif
-
-		int transferSize = STREAM_BUFFER_DATASIZE;
-		int nAlignedDataSize = AlignValue( m_dataSize, transferSize );
-		int numBuffers = nAlignedDataSize / transferSize;					// Number of buffers that we would need at max
-
-		int nNecessaryBuffers = source.IsLooped() ? 4 : 2;					// By default we need 2 buffers, but when looping the safe number is 4
-		nNecessaryBuffers = MIN( nNecessaryBuffers, STREAM_BUFFER_COUNT );	// Max numbers of buffers allowed on that platform
-		numBuffers = MIN( numBuffers, nNecessaryBuffers );					// Don't allocate more buffers than necessary to load completely the sound
-
-		if ( numBuffers == 1 )
-		{
-			// the transfer buffer can be exact sized
-			// [oliviern] I kept the old behavior but it seems to me that this would fragment the memory (and would not help in worst case anyway)
-			transferSize = m_dataSize;
-		}
-
-		// allocate a transfer buffer
-		// when multiple buffering, exactly matches the size of the streaming buffer
-		// ensures that a streaming buffer can be entirely consumed and requeued during the transfer
-		m_pBuffer = new char[transferSize];
-		// size in samples of the transfer buffer
-		m_bufferSize = transferSize / m_sampleSize;
-
-		int loopStart;
-		if ( source.IsLooped() )
-		{
-			int loopBlock;
-			loopStart = m_pStreamSource->GetLoopingInfo( &loopBlock, NULL, NULL ) * m_sampleSize;
-
-			// Note that the loop start is inaccurate for some format (like WAVE_FORMAT_MP3).
-			// It is a bytes position in uncompressed samples, but this is not valid for MP3.
-			// We actually update the loopStart when we parse the sound (while playing it) and we find the MP3 frame that contains the loop position.
-			// We then call UpdateLoopPosition() with the corresponding MP3 frame.
-			// In most cases, the full MP3 sound is going to fit in the streaming buffers. For long sounds when the looping points is far (like at the beginning),
-			// loopStart is going to be updated before it is actually used.
-			// There is a potential for rare cases where we will start streaming with an incorrect loop position, then update the loop point at a later time.
-			// In this case, we may stream some memory for nothing or in some extreme cases, have the streamed buffers not ready in time.
-			// This would happen only for the first loop.
-			// The XMA format fixes that by approximating loopStart with loopBlock (because compressed samples are fortunately aligned on 2048 bytes).
-#if defined( _GAMECONSOLE )
-			switch ( source.Format() )
-			{
-#if IsX360()
-			case WAVE_FORMAT_XMA:
-				// xma works in blocks, mixer handles inter-block accurate loop positioning
-				// block streaming will cycle from the block where the loop occurs
-				loopStart = loopBlock * XMA_BLOCK_SIZE;
-				break;
-#endif
-#if IsPS3()
-			case WAVE_FORMAT_MP3:
-				loopStart /= 10;		// We assume that we have a compression factor of 10.
-										// With the streamed buffer, it is better to start before than after (as the current impl. reads several buffers forward).
-				if ( loopStart > fileSize )
-				{
-					// Make sure we are in a reasonable range
-					loopStart = fileSize - transferSize;
-					if ( loopStart < 0 )
-					{
-						loopStart = 0;
-					}
-				}
-				break;
-
-			case WAVE_FORMAT_TEMP:
-				// Uncompressed, so keep it roughly the same
-				break;
-#endif
-			default:
-				// Nothing to fix up
-				break;
-			}
-#endif
-
-		}
-		else
-		{
-			// sample not looped
-			loopStart = -1;
-		}
-
-		// load the file piecewise through a buffering implementation
-		m_hStream = wavedatacache->OpenStreamedLoad( pFileName, m_dataSize, m_dataStart, startOffset, loopStart, STREAM_BUFFER_DATASIZE, numBuffers, flags, soundError );
-		if ( m_hStream == INVALID_STREAM_HANDLE )
-		{
-			if ( soundError == SE_NO_STREAM_BUFFER )
-			{
-				DevWarning( "[Sound] Not enough stream buffer available to setup wav file: '\\%s'\n", GetFileName() );
-			}
-			else
-			{
-				DevWarning( "[Sound] Failed to setup streaming wav file: sound\\%s\n", GetFileName() );
-			}
-			m_bValid = false;
-			return;
-		}
-		else
-		{
-			m_sampleIndex = startOffset;		// Do not forget to initialize the sample index at the correct position
-												// otherwise this is going to put the whole streaming algorithm off.
-												// The whole streaming layer in this file should be re-written by the way as it is needlessly complicated
-												// and only works in very specific conditions.
-		}
-	}
 
 	V_memset( m_LastSample, 0, sizeof( m_LastSample ) );
 
@@ -3043,16 +2428,12 @@ CWaveDataStreamAsync::CWaveDataStreamAsync
 //-----------------------------------------------------------------------------
 CWaveDataStreamAsync::~CWaveDataStreamAsync( void ) 
 {
-	if ( IsPC() && m_source.IsPlayOnce() && m_source.CanDelete() )
+	if ( m_source.IsPlayOnce() && m_source.CanDelete() )
 	{
 		m_source.SetPlayOnce( false ); // in case it gets used again
 		wavedatacache->Unload( m_hCache );
 	}
 
-	if ( IsGameConsole() )
-	{
-		wavedatacache->CloseStreamedLoad( m_hStream ); 
-	}
 
 	delete [] m_pBuffer;
 }
@@ -3083,35 +2464,28 @@ char const *CWaveDataStreamAsync::GetFileName()
 //-----------------------------------------------------------------------------
 bool CWaveDataStreamAsync::IsReadyToMix()
 {
-	if ( IsPC() )
+	// If not async loaded, start mixing right away
+	if ( !m_source.IsAsyncLoad() && !snd_async_fullyasync.GetBool() )
 	{
-		// If not async loaded, start mixing right away
-		if ( !m_source.IsAsyncLoad() && !snd_async_fullyasync.GetBool() )
-		{
-			return true;
-		}
-
-		bool bCacheValid;
-		bool bLoaded = wavedatacache->IsDataLoadCompleted( m_hCache, &bCacheValid );
-		if ( !bCacheValid )
-		{
-			wavedatacache->RestartDataLoad( &m_hCache, GetFileName(), m_dataSize, m_dataStart );
-		}
-
-		// When laying off a movie, all sound access is forced to be synchronous to get better 
-		//  synchronization (avoids async loading random delay)
-		if ( g_pEngineToolInternal->IsRecordingMovie() )
-		{
-			return true;
-		}
-
-		return bLoaded;
+		return true;
 	}
 
-	if ( IsGameConsole() )
+	bool bCacheValid;
+	bool bLoaded = wavedatacache->IsDataLoadCompleted( m_hCache, &bCacheValid );
+	if ( !bCacheValid )
 	{
-		return wavedatacache->IsStreamedDataReady( m_hStream );
+		wavedatacache->RestartDataLoad( &m_hCache, GetFileName(), m_dataSize, m_dataStart );
 	}
+
+	// When laying off a movie, all sound access is forced to be synchronous to get better 
+	//  synchronization (avoids async loading random delay)
+	if ( g_pEngineToolInternal->IsRecordingMovie() )
+	{
+		return true;
+	}
+
+	return bLoaded;
+
 
 	return false;
 }
@@ -3211,147 +2585,74 @@ int CWaveDataStreamAsync::ReadSourceData( void **pData, int64 sampleIndex, int s
 		if ( m_bufferCount > m_bufferSize )
 			m_bufferCount = m_bufferSize;
 
-		if ( IsPC() )
+		// See if we can load in the initial data right out of the cached data lump instead.
+		int cacheddatastartpos = ( seekpos - m_dataStart );
+
+		// FastGet doesn't call into IsPrecachedSound if the handle appears valid...
+		CAudioSourceCachedInfo *info = m_AudioCacheHandle.FastGet();
+		if ( !info )
 		{
-			// See if we can load in the initial data right out of the cached data lump instead.
-			int cacheddatastartpos = ( seekpos - m_dataStart );
+			// Full recache
+			info = m_AudioCacheHandle.Get( CAudioSource::AUDIO_SOURCE_WAV, m_pSfx->IsPrecachedSound(), m_pSfx, &m_nCachedDataSize );
+		}
 
-			// FastGet doesn't call into IsPrecachedSound if the handle appears valid...
-			CAudioSourceCachedInfo *info = m_AudioCacheHandle.FastGet();
-			if ( !info )
+		bool startupCacheUsed = false;
+
+		if  ( info && 
+			( m_nCachedDataSize > 0 ) && 
+			( cacheddatastartpos < m_nCachedDataSize ) )
+		{
+			// Get a ptr to the cached data
+			const byte *cacheddata = info->CachedData();
+			if ( cacheddata )
 			{
-				// Full recache
-				info = m_AudioCacheHandle.Get( CAudioSource::AUDIO_SOURCE_WAV, m_pSfx->IsPrecachedSound(), m_pSfx, &m_nCachedDataSize );
-			}
+				// See how many samples of cached data are available (cacheddatastartpos is zero on the first read)
+				int availSamples = ( m_nCachedDataSize - cacheddatastartpos ) / m_sampleSize;
 
-			bool startupCacheUsed = false;
-
-			if  ( info && 
-				( m_nCachedDataSize > 0 ) && 
-				( cacheddatastartpos < m_nCachedDataSize ) )
-			{
-				// Get a ptr to the cached data
-				const byte *cacheddata = info->CachedData();
-				if ( cacheddata )
+				// Clamp to size of our internal buffer
+				if ( availSamples > m_bufferSize )
 				{
-					// See how many samples of cached data are available (cacheddatastartpos is zero on the first read)
-					int availSamples = ( m_nCachedDataSize - cacheddatastartpos ) / m_sampleSize;
-
-					// Clamp to size of our internal buffer
-					if ( availSamples > m_bufferSize )
-					{
-						availSamples = m_bufferSize;
-					}
-
-					// Mark how many we are returning
-					m_bufferCount = availSamples;
-					// Copy raw sample data directly out of cache
-					Q_memcpy( m_pBuffer, ( char * )cacheddata + cacheddatastartpos, availSamples * m_sampleSize );
-
-					startupCacheUsed = true;
-				}
-			}
-
-			// Not in startup cache, grab data from async cache loader (will block if data hasn't arrived yet)
-			if ( !startupCacheUsed )
-			{
-				bool postprocessed = false;
-				
-				// read in the max bufferable, available samples
-				if ( !wavedatacache->CopyDataIntoMemory( 
-					m_hCache, 
-					GetFileName(), 
-					m_dataSize, 
-					m_dataStart,
-					m_pBuffer, 
-					m_bufferSize * m_sampleSize,
-					seekpos, 
-					m_bufferCount * m_sampleSize,
-					&postprocessed ) )
-				{
-					return 0;
+					availSamples = m_bufferSize;
 				}
 
-				// do any conversion the source needs (mixer will decode/decompress)
-				if ( !postprocessed )
-				{
-					// Note that we don't set the postprocessed flag on the underlying data, since for streaming we're copying the
-					//  original data into this buffer instead.
-					m_pStreamSource->UpdateSamples( m_pBuffer, m_bufferCount );
-				}
+				// Mark how many we are returning
+				m_bufferCount = availSamples;
+				// Copy raw sample data directly out of cache
+				Q_memcpy( m_pBuffer, ( char * )cacheddata + cacheddatastartpos, availSamples * m_sampleSize );
+
+				startupCacheUsed = true;
 			}
 		}
 
-		if ( IsGameConsole() )
+		// Not in startup cache, grab data from async cache loader (will block if data hasn't arrived yet)
+		if ( !startupCacheUsed )
 		{
-			if ( m_hStream != INVALID_STREAM_HANDLE )
-			{
-				// request available data, may get less
-				// drives the buffering
-				int nBytesFilled = wavedatacache->CopyStreamedDataIntoMemory( 
-									m_hStream, 
-									m_pBuffer, 
-									m_bufferSize * m_sampleSize,
-									seekpos, 
-									m_bufferCount * m_sampleSize );
-
-				if ( nBytesFilled == 0 )
-				{
-					// If we reach here, it means the streamer is behind
-					// Let's try to recover so the sound does not stop abruptly. It only works for PCM sounds though,
-					// for XMA and MP3 sounds, we have to do this at their own level (as we can't send simulated data for them).
-					if ( snd_async_stream_recover_from_exhausted_stream.GetBool() && ( m_source.Format() == WAVE_FORMAT_PCM ) )
-					{
-						if ( m_sampleSize <= SIZE_LAST_SAMPLE )
-						{
-							if ( snd_async_stream_spew_exhausted_buffer.GetBool() && ( g_pQueuedLoader->IsMapLoading() == false ) )
-							{
-								static uint sOldTime = 0;
-								uint nCurrentTime = Plat_MSTime();
-								if ( nCurrentTime >= sOldTime + snd_async_stream_spew_exhausted_buffer_time.GetInt() )
-								{
-									Warning( "[Sound] The stream buffer is exhausted for sound '%s'. Except after loading, fill a bug to have the number of sounds played reduced.\n", GetFileName() );
-									sOldTime = nCurrentTime;
-								}
-							}
-							// This code is not optimized, but hopefully never executed.
-							int nSamplesToFill = imin( m_bufferCount, AUDIOSOURCE_COPYBUF_SIZE  / m_sampleSize );
-							nSamplesToFill = imin( nSamplesToFill, sampleCount );
-							if ( copyBuf != NULL )
-							{
-								for ( int i = 0 ; i < nSamplesToFill ; ++i )
-								{
-									V_memcpy( &copyBuf[ i * m_sampleSize ], &m_LastSample, m_sampleSize );
-								}
-							}
-							*pData = copyBuf;
-
-							m_bufferCount = nOldBufferCount;		// Put back the values to the state before any change were applied.
-							m_sampleIndex = nOldSampleIndex;		// In some cases, we could actually have a buffer filled with static if the sound was smaller than one buffer long.
-							return nSamplesToFill;
-						}
-					}
-				}
-				else
-				{
-					if ( m_sampleSize <= SIZE_LAST_SAMPLE )
-					{
-						// Let's copy the last sample, in case next time the streamer is too late. We fill with the last sample instead of zero to reduce potential pops.
-						V_memcpy( &m_LastSample, &m_pBuffer[ nBytesFilled - m_sampleSize ], m_sampleSize );
-					}
-				}
-
-				// convert to number of samples in the buffer
-				m_bufferCount = nBytesFilled / m_sampleSize;
-			}
-			else
+			bool postprocessed = false;
+			
+			// read in the max bufferable, available samples
+			if ( !wavedatacache->CopyDataIntoMemory( 
+				m_hCache, 
+				GetFileName(), 
+				m_dataSize, 
+				m_dataStart,
+				m_pBuffer, 
+				m_bufferSize * m_sampleSize,
+				seekpos, 
+				m_bufferCount * m_sampleSize,
+				&postprocessed ) )
 			{
 				return 0;
 			}
 
-			// do any conversion now the source needs (mixer will decode/decompress) on this buffer
-			m_pStreamSource->UpdateSamples( m_pBuffer, m_bufferCount );
+			// do any conversion the source needs (mixer will decode/decompress)
+			if ( !postprocessed )
+			{
+				// Note that we don't set the postprocessed flag on the underlying data, since for streaming we're copying the
+				//  original data into this buffer instead.
+				m_pStreamSource->UpdateSamples( m_pBuffer, m_bufferCount );
+			}
 		}
+
 	}
 
 	// If we have some samples in the buffer that are within range of the request
@@ -3440,17 +2741,9 @@ bool CWaveDataMemoryAsync::IsReadyToMix()
 		return true;
 	}
 
-	if ( IsPC() )
-	{
-		// Msg( "Waiting for data '%s'\n", m_source.GetFileName() );
-		m_source.CacheLoad();
-	}
+	// Msg( "Waiting for data '%s'\n", m_source.GetFileName() );
+	m_source.CacheLoad();
 
-	if ( IsGameConsole() )
-	{
-		// expected to be resident and valid, otherwise being called prior to load
-		Assert( 0 );
-	}
 
 	return false;
 }

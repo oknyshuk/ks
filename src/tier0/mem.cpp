@@ -72,12 +72,10 @@ void MemFreeScratch()
 	--s_nBufDepth;
 }
 
-#ifdef POSIX
 void ZeroMemory( void *mem, size_t length )
 {
 	memset( mem, 0x0, length );
 }
-#endif
 
 void MemOutOfMemory( size_t nBytesAttempted )
 {

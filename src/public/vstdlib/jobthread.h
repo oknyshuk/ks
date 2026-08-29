@@ -108,7 +108,7 @@ struct ThreadPoolStartParams_t
 		: bIOThreads( bIOThreads ), nThreads( nThreads ), nThreadsMax( -1 ), fDistribute( fDistribute ), nStackSize( nStackSize ), iThreadPriority( iThreadPriority )
 	{
 		bExecOnThreadPoolThreadsOnly = false;
-#if defined( DEDICATED ) && IsPlatformLinux()
+#if defined( DEDICATED ) && 1
 		bEnableOnLinuxDedicatedServer = false; // by default, thread pools don't start up on Linux DS
 #endif
 
@@ -134,7 +134,7 @@ struct ThreadPoolStartParams_t
 	bool			bIOThreads : 1;
 	bool			bUseAffinityTable : 1;
 	bool			bExecOnThreadPoolThreadsOnly : 1;
-#if defined( DEDICATED ) && IsPlatformLinux()
+#if defined( DEDICATED ) && 1
 	bool			bEnableOnLinuxDedicatedServer : 1;
 #endif
 };
@@ -444,9 +444,6 @@ JOB_INTERFACE void RunThreadPoolTests();
 //-----------------------------------------------------------------------------
 
 JOB_INTERFACE IThreadPool *g_pThreadPool;
-#ifdef _X360
-JOB_INTERFACE IThreadPool *g_pAlternateThreadPool;
-#endif
 
 //-----------------------------------------------------------------------------
 // Class to combine the metadata for an operation and the ability to perform
@@ -913,9 +910,6 @@ public:
 		if ( nItems == 0 )
 			return;
 
-#if defined(_X360)
-		volatile int ignored = ID_TO_PREVENT_COMDATS_IN_PROFILES;
-#endif
 
 		m_nChunkSize = nChunkSize;
 		if ( !pThreadPool )
@@ -976,9 +970,6 @@ private:
 	{
 		if ( m_pItems < m_pLimit )
 		{
-#if defined(_X360)
-			volatile int ignored = ID_TO_PREVENT_COMDATS_IN_PROFILES;
-#endif
 			m_ItemProcessor.Begin();
 
 			ITEM_TYPE *pLimit = m_pLimit;

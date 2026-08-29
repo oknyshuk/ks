@@ -34,12 +34,6 @@
 #include "c_cs_player.h"
 #endif
 
-#if defined( _X360 )
-#elif defined( _PS3 )
-#include "ps3/ps3_core.h"
-#include "ps3/ps3_win32stubs.h"
-#else
-#endif
 
 #ifdef PORTAL2
 #include "radialmenu.h"
@@ -71,7 +65,7 @@ void JoystickForceDisabled_ChangeCallback( IConVar *pConVar, char const *pOldStr
 	}
 }
 
-static ConVar joy_variable_frametime( "joy_variable_frametime", IsGameConsole() ? "0" : "1", 0 );
+static ConVar joy_variable_frametime( "joy_variable_frametime", "1", 0 );
 
 // Axis mapping
 static ConVar joy_name( "joy_name", "joystick", FCVAR_ARCHIVE );
@@ -443,32 +437,16 @@ envelope_t	controlEnvelope[ MAX_SPLITSCREEN_PLAYERS ];
 static bool IsJoystickPegged( float input, float otherAxis )
 {
 
-#if defined( _X360 )
-	static float fPower = 1.25f;
-#elif defined( _PS3 )
-	static float fPower = 0.9f;
-#else
 	static float fPower = 0.9f; // pc
-#endif
 
 
 	float fMinimumVal = 0.01f; // accomodate dead zone
 	float algorythmX = abs(input); 
 	float algorythmY = MAX( abs(otherAxis),fMinimumVal ); 
 
-#if defined( _PS3 )
-	float fltempAlgorythmSample = MAX( algorythmX, algorythmY );
-#else
 	float fltempAlgorythmSample = pow(  pow(algorythmX,fPower)+pow(algorythmY,fPower),fPower); 
-#endif
 
-#if defined( _X360 )
-	float flJoyAddititiveDistComparison = 0.98f;
-#elif defined( _PS3 )
-	float flJoyAddititiveDistComparison = 0.91f;
-#else
 	float flJoyAddititiveDistComparison = 0.94f;
-#endif
 	bool result = fltempAlgorythmSample >= flJoyAddititiveDistComparison;
 
 	return result;
@@ -908,11 +886,6 @@ void CInput::Joystick_Advanced( bool bSilent )
 	int	i;
 	DWORD dwTemp;
 
-	if ( IsGameConsole() )
-	{
-		// Xbox always uses a joystick
-		in_joystick.SetValue( 1 );
-	}
 
 	for ( int hh = 0; hh < MAX_SPLITSCREEN_PLAYERS; ++hh )
 	{
@@ -1003,7 +976,6 @@ void CInput::Joystick_Advanced( bool bSilent )
 	}
 #else // !SWARM_DLL && !PORTAL
 
-#if !defined( _PS3 )
 
 	// [Forrest] For CStrike 1.5 we want to load 360controller.cfg on Xbox as well as PC.
 	// If we have an xcontroller on the PC, load the cfg file if it hasn't been loaded.
@@ -1030,7 +1002,6 @@ void CInput::Joystick_Advanced( bool bSilent )
 		joy_xcontroller_cfg_loaded.SetValue( 0 );
 	}
 
-#endif
 
 #endif // SWARM_DLL
 }
@@ -1103,20 +1074,13 @@ float CInput::ScaleAxisValue( const float axisValue, const float axisThreshold )
 	// has a (potentially) unique threshold value.  If all axes were restricted to a single threshold
 	// as they are on the Xbox, this function could move to inputsystem and be slightly more optimal.
 	float result = 0.f;
-	if ( IsPC() )
+	if ( axisValue < -axisThreshold )
 	{
-		if ( axisValue < -axisThreshold )
-		{
-			result = ( axisValue + axisThreshold ) / ( MAX_BUTTONSAMPLE - axisThreshold );
-		}
-		else if ( axisValue > axisThreshold )
-		{
-			result = ( axisValue - axisThreshold ) / ( MAX_BUTTONSAMPLE - axisThreshold );
-		}
+		result = ( axisValue + axisThreshold ) / ( MAX_BUTTONSAMPLE - axisThreshold );
 	}
-	else
+	else if ( axisValue > axisThreshold )
 	{
-		result =  axisValue * ( 1.f / MAX_BUTTONSAMPLE );
+		result = ( axisValue - axisThreshold ) / ( MAX_BUTTONSAMPLE - axisThreshold );
 	}
 
 	return result;
@@ -1926,17 +1890,14 @@ void CInput::JoyStickApplyMovement( CUserCmd *cmd, float joyForwardMove, float j
 		cmd->sidemove += joySideMove;
 	}
 
-	if ( IsPC() )
+	CCommand tmp;
+	if ( FloatMakePositive(joyForwardMove) >= joy_autosprint.GetFloat() || FloatMakePositive(joySideMove) >= joy_autosprint.GetFloat() )
 	{
-		CCommand tmp;
-		if ( FloatMakePositive(joyForwardMove) >= joy_autosprint.GetFloat() || FloatMakePositive(joySideMove) >= joy_autosprint.GetFloat() )
-		{
-			KeyDown( &in_joyspeed, NULL );
-		}
-		else
-		{
-			KeyUp( &in_joyspeed, NULL );
-		}
+		KeyDown( &in_joyspeed, NULL );
+	}
+	else
+	{
+		KeyUp( &in_joyspeed, NULL );
 	}
 }
 

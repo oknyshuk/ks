@@ -6,7 +6,6 @@
 
 #include "cbase.h"
 
-#if !defined( _GAMECONSOLE )
 
 #include "cdll_int.h"
 #include "tier2/tier2.h"
@@ -45,11 +44,9 @@ ConVar	steamworks_sessionid_server( "steamworks_sessionid_server", "0", FCVAR_RE
 //-----------------------------------------------------------------------------
 time_t CSteamWorksGameStatsUploader::GetTimeSinceEpoch( void )
 {
-#if !defined( NO_STEAM )
 	if ( steamapicontext && steamapicontext->SteamUtils() )
 		return steamapicontext->SteamUtils()->GetServerRealTime();
 	else
-#endif
 	{
 		// Default to system time.
 		time_t aclock;
@@ -280,7 +277,6 @@ void CSteamWorksGameStatsUploader::ClearSessionID()
 		m_pSessionConVar->SetValue( 0 );
 	}
 }
-#ifndef	NO_STEAM
 
 //-----------------------------------------------------------------------------
 // Purpose: The steam callback used to get our session IDs.
@@ -379,7 +375,6 @@ void CSteamWorksGameStatsUploader::FrameUpdatePostEntityThink()
 }
 #endif // GAME_DLL
 
-#endif // !NO_STEAM
 
 //-----------------------------------------------------------------------------
 // Purpose: Opens a session: requests the session id, etc.
@@ -525,12 +520,10 @@ EResult CSteamWorksGameStatsUploader::WriteStringToTable( const char *value, uin
 //-----------------------------------------------------------------------------
 bool CSteamWorksGameStatsUploader::AccessToSteamAPI( void )
 {
-#if !defined( NO_STEAM )
 #ifdef	GAME_DLL
 	return ( steamgameserverapicontext && steamgameserverapicontext->SteamGameServer() && steamgameserverapicontext->SteamClient() && steamgameserverapicontext->SteamGameServerUtils() );
 #elif	CLIENT_DLL
 	return ( steamapicontext && steamapicontext->SteamUser() && steamapicontext->SteamUser()->BLoggedOn() && steamapicontext->SteamFriends() && steamapicontext->SteamMatchmaking() );
-#endif
 #endif
 	return false;
 }
@@ -541,7 +534,6 @@ bool CSteamWorksGameStatsUploader::AccessToSteamAPI( void )
 //-----------------------------------------------------------------------------
 ISteamGameStats* CSteamWorksGameStatsUploader::GetInterface( void )
 {
-#if !defined( NO_STEAM )
 
 	HSteamUser hSteamUser = 0;
 	HSteamPipe hSteamPipe = 0;
@@ -577,7 +569,6 @@ ISteamGameStats* CSteamWorksGameStatsUploader::GetInterface( void )
 		return (ISteamGameStats*)steamapicontext->SteamClient()->GetISteamGenericInterface( hSteamUser, hSteamPipe, STEAMGAMESTATS_INTERFACE_VERSION );
 	}
 
-#endif // !NO_STEAM
 
 	// If we haven't returned already, then we can't get access to the interface
 	return NULL;
@@ -817,4 +808,3 @@ void IGameStatTracker::PrintGamestatMemoryUsage( void )
 	}
 }
 
-#endif

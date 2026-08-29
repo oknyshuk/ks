@@ -280,32 +280,24 @@ void CCSBot::UpdateLookAngles( void )
 
 	angleDiff = AngleNormalize( angleDiff );
 
-	if ( false && fabsf(angleDiff) < onTargetTolerance )
+	// simple angular spring/damper
+	// double the stiffness since pitch is only +/- 90 and yaw is +/- 180
+	float accel = 2.0f * stiffness * angleDiff - damping * m_lookPitchVel;
+
+	// limit rate
+	if (accel > maxAccel)
+		accel = maxAccel;
+	else if (accel < -maxAccel)
+		accel = -maxAccel;
+
+	m_lookPitchVel += deltaT * accel;
+	viewAngles.x += deltaT * m_lookPitchVel;
+
+	// keep track of how long our view remains steady
+	const float steadyPitch = 1000.0f;
+	if (fabs( accel ) > steadyPitch)
 	{
-		m_lookPitchVel = 0.0f;
-		viewAngles.x = usePitch;
-	}
-	else
-	{
-		// simple angular spring/damper
-		// double the stiffness since pitch is only +/- 90 and yaw is +/- 180
-		float accel = 2.0f * stiffness * angleDiff - damping * m_lookPitchVel;
-
-		// limit rate
-		if (accel > maxAccel)
-			accel = maxAccel;
-		else if (accel < -maxAccel)
-			accel = -maxAccel;
-
-		m_lookPitchVel += deltaT * accel;
-		viewAngles.x += deltaT * m_lookPitchVel;
-
-		// keep track of how long our view remains steady
-		const float steadyPitch = 1000.0f;
-		if (fabs( accel ) > steadyPitch)
-		{
-			m_viewSteadyTimer.Start();
-		}
+		m_viewSteadyTimer.Start();
 	}
 
 	//PrintIfWatched( "yawVel = %g, pitchVel = %g\n", m_lookYawVel, m_lookPitchVel );

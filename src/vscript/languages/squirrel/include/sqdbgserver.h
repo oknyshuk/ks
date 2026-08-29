@@ -4,7 +4,6 @@
 #define MAX_BP_PATH 512
 #define MAX_MSG_LEN 2049
 
-#if defined( _PS3 ) || defined( POSIX )
 #include <ctype.h>
 #include <unistd.h>
 #include <sys/socket.h>
@@ -14,7 +13,6 @@
 typedef int SOCKET;
 #define INVALID_SOCKET -1
 #define SOCKET_ERROR   -1
-#endif
 
 // Parts of squirrel do a #define of type, which leads to compile warnings/errors when STL files are included.
 // -- at least in VS 2013. Luckily we can temporarily #undef it and avoid the problem.
@@ -29,9 +27,6 @@ typedef int SOCKET;
 /*
 	see copyright notice in sqrdbg.h
 */
-#if !defined( _X360 ) && !defined( _PS3 ) && !defined( POSIX )
-#include <winsock.h>
-#endif
 
 typedef std::basic_string<SQChar> SQDBGString;
 

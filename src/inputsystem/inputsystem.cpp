@@ -13,10 +13,6 @@
 #include "filesystem.h"
 #include "platforminputdevice.h"
 
-#ifdef PLATFORM_OSX
-#include <Carbon/Carbon.h>
-#include "materialsystem/imaterialsystem.h"
-#endif
 
 // NOTE: This has to be the last file included!
 #include "tier0/memdbgon.h"
@@ -99,9 +95,6 @@ CInputSystem::CInputSystem()
 	// This is B.S., must be a compile-time assert with valid expression:
 	// Assert( (MAX_JOYSTICKS + 7) >> 3 << sizeof(unsigned short) ); 
 
-#if !defined( _CERT ) && !defined(LINUX)
-	V_memset( m_press_x360_buttons, 0, sizeof( m_press_x360_buttons ) );
-#endif
 
 	m_pXInputDLL = NULL;
 	m_pRawInputDLL = NULL;
@@ -157,7 +150,6 @@ InitReturnVal_t CInputSystem::Init()
 	m_StartupTimeTick = Plat_MSTime();
 
 #if !defined( PLATFORM_POSIX )
-	if ( IsPC() )
 	{
 		m_uiMouseWheel = RegisterWindowMessage( "MSWHEEL_ROLLMSG" );
 	}
@@ -173,49 +165,33 @@ InitReturnVal_t CInputSystem::Init()
 
 	joy_xcontroller_found.SetValue( 0 );
 
-	if ( IsPC() )
-	{
 #if !defined( PLATFORM_POSIX )
-		m_pXInputDLL = Sys_LoadModule( "XInput1_3.dll" );
-		if ( m_pXInputDLL )
-		{
-			InitializeXDevices();
-		}
-#endif
-		if ( !m_nJoystickCount )
-		{
-			// Didn't find any XControllers. See if we can find other joysticks.
-			InitializeJoysticks();
-		}
-		else
-		{
-			m_bXController = true;
-		}
-
-		if ( m_bXController )
-			joy_xcontroller_found.SetValue( 1 );
+	m_pXInputDLL = Sys_LoadModule( "XInput1_3.dll" );
+	if ( m_pXInputDLL )
+	{
+		InitializeXDevices();
 	}
+#endif
+	if ( !m_nJoystickCount )
+	{
+		// Didn't find any XControllers. See if we can find other joysticks.
+		InitializeJoysticks();
+	}
+	else
+	{
+		m_bXController = true;
+	}
+
+	if ( m_bXController )
+		joy_xcontroller_found.SetValue( 1 );
 
 	InitCursors();
 
 	m_bRawInputSupported = false;
 
-#if defined( LINUX )
 
 	m_bRawInputSupported = true;
 	
-#elif defined( WIN32 )
-	// Check if this version of windows supports raw mouse input (later than win2k)
-
-	CSysModule *m_pRawInputDLL = Sys_LoadModule( "USER32.dll" );
-	if ( m_pRawInputDLL )
-	{
-		pfnRegisterRawInputDevices = (RegisterRawInputDevices_t)GetProcAddress( (HMODULE)m_pRawInputDLL, "RegisterRawInputDevices" );
-		pfnGetRawInputData = (GetRawInputData_t)GetProcAddress( (HMODULE)m_pRawInputDLL, "GetRawInputData" );
-		if ( pfnRegisterRawInputDevices && pfnGetRawInputData )
-			m_bRawInputSupported = true;
-	}
-#endif
 
 #if defined( USE_SDL )
 	initKeymap();
@@ -234,8 +210,6 @@ bool CInputSystem::Connect( CreateInterfaceFn factory )
 
 #if defined( USE_SDL )
 	m_pLauncherMgr = (ILauncherMgr *)factory(  SDLMGR_INTERFACE_VERSION, NULL );
-#elif defined( OSX )
-	m_pLauncherMgr = (ILauncherMgr *)factory(  COCOAMGR_INTERFACE_VERSION, NULL );
 #endif
 
 return true;
@@ -326,7 +300,6 @@ void CInputSystem::AttachToWindow( void* hWnd )
 	}
 
 #if defined ( USE_SDL )
-#elif defined( PLATFORM_OSX )
 #elif defined( PLATFORM_WINDOWS )
 	m_ChainedWndProc = (WNDPROC)GetWindowLongPtrW( (HWND)hWnd, GWLP_WNDPROC );
 	SetWindowLongPtrW( (HWND)hWnd, GWLP_WNDPROC, (LONG_PTR)InputSystemWindowProc );
@@ -516,12 +489,6 @@ void CInputSystem::PostButtonPressedEvent( InputEventType_t nType, int nTick, Bu
 		// Add this event to the app-visible event queue
 		PostEvent( nType, nTick, scanCode, virtualCode );
 
-		if ( IsGameConsole() && ShouldGenerateUIEvents() && IsJoystickCode( scanCode ) )
-		{
-			// xboxissue - as yet input hasn't been made aware of analog inputs or ports
-			// so just digital produce a key typed message
-			PostEvent( IE_KeyCodeTyped, nTick, scanCode );
-		}
 	}
 }
 
@@ -591,7 +558,7 @@ void CInputSystem::CopyInputState( InputState_t *pDest, const InputState_t &src,
 #if defined( WIN32 ) && !defined( USE_SDL )
 void CInputSystem::PollInputState_Windows()
 {
-	if ( IsPC() && m_bPumpEnabled )
+	if ( m_bPumpEnabled )
 	{
 		// Poll mouse + keyboard
 		MSG msg;
@@ -683,26 +650,6 @@ static void initKeymap(void)
     scantokey[SDL_SCANCODE_RGUI] = KEY_RWIN;
 }
 
-#elif defined(OSX)
-static BYTE        scantokey[128] = 
-{ 
-	KEY_A, KEY_S, KEY_D, KEY_F, KEY_H, KEY_G, KEY_Z, KEY_X,
-	KEY_C, KEY_V,  KEY_BACKQUOTE /*german backquote char*/ , KEY_B, KEY_Q, KEY_W, KEY_E, KEY_R,  //15
-	KEY_Y, KEY_T, KEY_1, KEY_2, KEY_3, KEY_4, KEY_6, KEY_5, // 23
-	KEY_EQUAL, KEY_9, KEY_7, KEY_MINUS, KEY_8, KEY_0, KEY_RBRACKET, KEY_O, //31
-	KEY_U, KEY_LBRACKET, KEY_I, KEY_P, KEY_ENTER , KEY_L, KEY_J, KEY_APOSTROPHE, //39
-	KEY_K, KEY_SEMICOLON, KEY_BACKSLASH, KEY_COMMA,KEY_SLASH, KEY_N, KEY_M, KEY_PERIOD, // 47
-	KEY_TAB, KEY_SPACE, KEY_BACKQUOTE, KEY_BACKSPACE, 0, KEY_ESCAPE, KEY_RWIN, KEY_LWIN, //55
-	KEY_LSHIFT, KEY_CAPSLOCK, KEY_LALT, KEY_LCONTROL, KEY_LSHIFT, 0, KEY_RCONTROL, 0, //63
-	0, KEY_PAD_DECIMAL,    0  ,    KEY_PAD_MULTIPLY,    0  ,  KEY_PAD_PLUS,    0  , KEY_NUMLOCK , // 71
-	0, 0  ,    0  , KEY_PAD_DIVIDE, KEY_PAD_ENTER,    0  ,    KEY_PAD_MINUS,    0  ,  // 79
-	0, KEY_PAD_DIVIDE, KEY_PAD_0, KEY_PAD_1, KEY_PAD_2, KEY_PAD_3, KEY_PAD_4, KEY_PAD_5,  // 87
-	KEY_PAD_6, KEY_PAD_7, 0, KEY_PAD_8, KEY_PAD_9,  0,    0  ,    0  , // 95
-	KEY_F5, KEY_F6, KEY_F7, KEY_F3, KEY_F8, KEY_F9, 0, KEY_F11, // 103
-	0, 0  ,    0  ,    0  , 0, KEY_F10,    KEY_APP  , KEY_F12, // 111
-	0  ,    0, KEY_INSERT, KEY_HOME, KEY_PAGEUP, KEY_DELETE, KEY_F4, KEY_END,  // 119
-	KEY_F2, KEY_PAGEDOWN, KEY_F1, KEY_LEFT, KEY_RIGHT, KEY_DOWN, KEY_UP,  0,  // 127
-}; 
 #else 
 #error
 #endif
@@ -714,16 +661,7 @@ bool MapCocoaVirtualKeyToButtonCode( int nCocoaVirtualKeyCode, ButtonCode_t *pOu
 		*pOut = (ButtonCode_t)(-1 * nCocoaVirtualKeyCode);
 	else 
 	{
-#ifdef OSX
-		int modified = nCocoaVirtualKeyCode & 255;
-	
-		if ( modified > 127)
-		{
-			return false;
-		}
-#else
 		nCocoaVirtualKeyCode &= 0x000000ff;
-#endif
 	
 		*pOut = (ButtonCode_t)scantokey[nCocoaVirtualKeyCode];
 	}
@@ -733,13 +671,7 @@ bool MapCocoaVirtualKeyToButtonCode( int nCocoaVirtualKeyCode, ButtonCode_t *pOu
 
 
 
-#ifdef LINUX
 void CInputSystem::PollInputState_Linux()
-#elif defined( OSX )
-void CInputSystem::PollInputState_OSX()
-#elif defined( _WIN32 )
-void CInputSystem::PollInputState_Windows()
-#endif
 {
 	InputState_t &state = m_InputState[ m_bIsPolling ];
 
@@ -770,9 +702,7 @@ void CInputSystem::PollInputState_Windows()
 					{
 						ButtonCode_t scanCode = virtualCode;
 
-#ifdef LINUX
 						if( scanCode != BUTTON_CODE_NONE )
-#endif
 						{
 							// For SDL, hitting spacebar causes a SDL_KEYDOWN event, then SDL_TEXTINPUT with
 							//	event.text.text[0] = ' ', and then we get here and wind up sending two events
@@ -789,13 +719,11 @@ void CInputSystem::PollInputState_Windows()
 						event.m_nData = scanCode;
 						g_pInputSystem->PostUserEvent( event );
 						
-#if defined( LINUX ) || (defined( OSX ) && defined( USE_SDL ) )
 						if ( scanCode == KEY_BACKSPACE )
 						{
 							// On Linux (and OS X, when using SDL), we need to fire this event to have backspace keypresses picked up by scaleform.
 							PostEvent( IE_KeyTyped, GetPollTick(), (wchar_t)8 );
 						}
-#endif
 					}
 
 					if ( !(pEvent->m_ModifierKeyMask & (1<<eCommandKey) ) && pEvent->m_VirtualKeyCode >= 0 && pEvent->m_UnicodeKey > 0 )
@@ -898,11 +826,7 @@ void CInputSystem::PollInputState_Windows()
 					PostEvent( IE_ButtonPressed, m_nLastSampleTick, code, code );
 					PostEvent( IE_ButtonReleased, m_nLastSampleTick, code, code );
 					
-#ifdef LINUX
 					state.m_pAnalogDelta[ MOUSE_WHEEL ] = pEvent->m_MousePos[1];
-#else
-					state.m_pAnalogDelta[ MOUSE_WHEEL ] = ( (short)pEvent->m_MousePos[1] ) / 10;
-#endif
 					state.m_pAnalogValue[ MOUSE_WHEEL ] += state.m_pAnalogDelta[ MOUSE_WHEEL ];
 					PostEvent( IE_AnalogValueChanged, m_nLastSampleTick, MOUSE_WHEEL, state.m_pAnalogValue[ MOUSE_WHEEL ], state.m_pAnalogDelta[ MOUSE_WHEEL ] );
 				}
@@ -950,9 +874,6 @@ void CInputSystem::PollInputState_Windows()
 //-----------------------------------------------------------------------------
 void CInputSystem::PollInputState( bool bIsInGame )
 {
-#if !defined( _CERT ) && !defined(LINUX)
-	PollPressX360Button();
-#endif
 
 	m_bIsPolling = true;
 	++m_nPollCount;
@@ -972,13 +893,7 @@ void CInputSystem::PollInputState( bool bIsInGame )
 	// the LastPollTick not updated (not 100% sure though)
 	m_nLastPollTick = m_nLastSampleTick;
 
-#if defined( PLATFORM_OSX )
-	PollInputState_OSX();
-#elif defined( LINUX )
 	PollInputState_Linux();
-#elif defined( WIN32 )
-	PollInputState_Windows();
-#endif
 
 	// Leave the queued state up-to-date with the current
 	CopyInputState( &queuedState, m_InputState[ INPUT_STATE_CURRENT ], false );
@@ -1046,10 +961,6 @@ void CInputSystem::SampleDevices( void )
 //-----------------------------------------------------------------------------
 void CInputSystem::SetRumble( float fLeftMotor, float fRightMotor, int userId )
 {
-#ifndef LINUX
-	// TODO: send force feedback to rumble-enabled joysticks
-	SetXDeviceRumble( fLeftMotor, fRightMotor, userId );
-#endif
 }
 
 
@@ -1058,41 +969,7 @@ void CInputSystem::SetRumble( float fLeftMotor, float fRightMotor, int userId )
 //-----------------------------------------------------------------------------
 void CInputSystem::StopRumble( int userId )
 {
-	if ( IsPlatformWindowsPC() )
 	{
-		if ( userId == INVALID_USER_ID )
-		{
-			xdevice_t* pXDevice = &m_XDevices[0];
-
-			for ( int i = 0; i < XUSER_MAX_COUNT; ++i, ++pXDevice )
-			{
-				if ( pXDevice->active )
-				{
-					pXDevice->vibration.wLeftMotorSpeed = 0;
-					pXDevice->vibration.wRightMotorSpeed = 0;
-					pXDevice->pendingRumbleUpdate = true;
-					WriteToXDevice( pXDevice );
-				}
-			}
-		}
-		else
-		{
-			xdevice_t* pXDevice = &m_XDevices[userId];
-
-			if ( pXDevice->active )
-			{
-				pXDevice->vibration.wLeftMotorSpeed = 0;
-				pXDevice->vibration.wRightMotorSpeed = 0;
-				pXDevice->pendingRumbleUpdate = true;
-				WriteToXDevice( pXDevice );
-			}
-		}
-	}
-	else
-	{
-#ifndef LINUX
-		SetXDeviceRumble( 0, 0, userId );
-#endif
 	}
 }
 
@@ -1189,7 +1066,6 @@ uint64 CInputSystem::GetMotionControllerDeviceStatusFlags( ) const
 	return m_nMotionControllerStatusFlags;
 }
 
-#if defined( _OSX ) || defined (LINUX)
 // this is defined in xcontroller.cpp, but that file isn't included
 // in posix builds
 void CInputSystem::SetMotionControllerCalibrationInvalid( void )
@@ -1206,7 +1082,6 @@ void CInputSystem::ResetMotionControllerScreenCalibration( void )
 
 }
 
-#endif // _OSX
 
 //-----------------------------------------------------------------------------
 // Returns the input events since the last poll
@@ -1284,32 +1159,6 @@ int CInputSystem::ButtonMaskFromMouseWParam( WPARAM wParam, ButtonCode_t code, b
 {
 	int nButtonMask = 0;
 
-#if !defined( POSIX ) && !defined( USE_SDL)
-	if ( wParam & MK_LBUTTON )
-	{
-		nButtonMask |= 1;
-	}
-
-	if ( wParam & MK_RBUTTON )
-	{
-		nButtonMask |= 2;
-	}
-
-	if ( wParam & MK_MBUTTON )
-	{
-		nButtonMask |= 4;
-	}
-
-	if ( wParam & MS_MK_BUTTON4 )
-	{
-		nButtonMask |= 8;
-	}
-
-	if ( wParam & MS_MK_BUTTON5 )
-	{
-		nButtonMask |= 16;
-	}
-#endif
 
 #ifdef _DEBUG
 	if ( code != BUTTON_CODE_INVALID )
@@ -1356,8 +1205,6 @@ void CInputSystem::SetCursorPosition( int x, int y )
 
 #if defined( USE_SDL )
 	m_pLauncherMgr->SetCursorPosition( x, y );
-#elif defined( OSX )
-	m_pLauncherMgr->SetCursorPosition( x, y );
 #elif defined( WIN32 )
 	POINT pt;
 	pt.x = x; pt.y = y;
@@ -1399,43 +1246,6 @@ void CInputSystem::GetCursorPosition( int *pX, int *pY )
 #if defined( USE_SDL )
 	*pX = m_InputState[INPUT_STATE_CURRENT].m_pAnalogValue[MOUSE_X];
 	*pY = m_InputState[INPUT_STATE_CURRENT].m_pAnalogValue[MOUSE_Y];
-#elif defined( PLATFORM_OSX )
-	if ( m_bCursorVisible )
-	{
-		CGEventRef event = CGEventCreate( NULL );
-		CGPoint pnt = CGEventGetLocation( event );
-
-		// [will] - QuickDraw functions removed in 10.7, so using using CocoaMgr for window info instead.
-		unsigned int displayWidth, displayHeight;
-		m_pLauncherMgr->DisplayedSize( displayWidth, displayHeight );
-
-		*pX = pnt.x;
-		*pY = pnt.y;
-		CMatRenderContextPtr pRenderContext( g_pMaterialSystem );
-		int rx, ry, width, height;
-		pRenderContext->GetViewport( rx, ry, width, height );
-		
-		int windowHeight = (int)displayWidth;
-		int windowWidth = (int)displayHeight;
-		if ( width != windowWidth || abs( height - windowHeight ) > 22 )
-		{
-			// scale the x/y back into the co-ords of the back buffer, not the scaled up window 
-			//DevMsg( "Mouse x:%d y:%d %d %d %d %d\n", x, y, width, windowWidth, height, abs( height - windowHeight ) );
-			*pX = *pX * (float)width/windowWidth;
-			*pY = *pY * (float)height/windowHeight;
-		}
-
-		CFRelease( event );
-	}
-	else
-	{
-		// cursor is invisible, just say the center of the screen
-		CMatRenderContextPtr pRenderContext( g_pMaterialSystem );
-		int rx, ry, width, height;
-		pRenderContext->GetViewport( rx, ry, width, height );
-		*pX = width/2;
-		*pY = height/2;
-	}
 #elif !defined( PLATFORM_POSIX )
 	POINT pt;
 	::GetCursorPos( &pt );
@@ -1493,415 +1303,9 @@ void CInputSystem::LocateMouseClick( LPARAM lParam )
 //-----------------------------------------------------------------------------
 LRESULT CInputSystem::WindowProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam )
 {
-#if !defined( POSIX ) && !defined( USE_SDL )
-
-	if ( !m_bEnabled )
-		return ChainWindowMessage( hwnd, uMsg, wParam, lParam );
-
-	if ( ShouldGenerateUIEvents() && ( hwnd != m_hLastIMEHWnd ) )
-	{
-		m_hLastIMEHWnd = hwnd;
-		PostEvent( IE_IMESetWindow, m_nLastSampleTick, (intp)hwnd );
-	}
-
-	// Allow ActivateApp messages to get through so we know when to reset input state
-	if ( ( hwnd != m_hAttachedHWnd ) && ( uMsg != WM_ACTIVATEAPP ) )
-		return ChainWindowMessage( hwnd, uMsg, wParam, lParam );
-
-	InputState_t &state = m_InputState[ m_bIsPolling ];
-	switch( uMsg )
-	{
-	case WM_ACTIVATEAPP:
-		if ( hwnd == m_hAttachedHWnd )
-		{
-			bool bActivated = ( wParam == 1 );
-			if ( !bActivated )
-			{
-				ResetInputState();
-			}
-		}
-		break;
-
-	case WM_CLOSE:
-		// Handle close messages
-		PostEvent( IE_Close, m_nLastSampleTick );
-
-		// don't Run default message pump, as that destroys the window
-		return 0;
-
-	case WM_SETCURSOR:
-		if ( ShouldGenerateUIEvents() )
-		{
-			PostEvent( IE_SetCursor, m_nLastSampleTick );
-		}
-		break;
-
-	case WM_SIZE:
-		{
-			int nWidth = LOWORD( lParam );
-			int nHeight = HIWORD( lParam );
-			bool bMinimized = ( wParam == SIZE_MINIMIZED ) || IsIconic( hwnd );
-			if ( bMinimized )
-			{
-				nWidth = nHeight = 0;
-			}
-			PostEvent( IE_WindowSizeChanged, m_nLastSampleTick, nWidth, nHeight, bMinimized );
-		}
-		break;
-
-	case WM_LBUTTONDOWN:
-		{
-			LocateMouseClick( lParam );
-			int nButtonMask = ButtonMaskFromMouseWParam( wParam, MOUSE_LEFT, true );
-			ETWMouseDown( 0, (short)LOWORD(lParam), (short)HIWORD(lParam) );
-			UpdateMouseButtonState( nButtonMask );
-		}
-		break;
-
-	case WM_LBUTTONUP:
-		{
-			LocateMouseClick( lParam );
-			int nButtonMask = ButtonMaskFromMouseWParam( wParam, MOUSE_LEFT, false );
-			ETWMouseUp( 0, (short)LOWORD(lParam), (short)HIWORD(lParam) );
-			UpdateMouseButtonState( nButtonMask );
-		}
-		break;
-
-	case WM_RBUTTONDOWN:
-		{
-			LocateMouseClick( lParam );
-			int nButtonMask = ButtonMaskFromMouseWParam( wParam, MOUSE_RIGHT, true );
-			ETWMouseDown( 2, (short)LOWORD(lParam), (short)HIWORD(lParam) );
-			UpdateMouseButtonState( nButtonMask );
-		}
-		break;
-
-	case WM_RBUTTONUP:
-		{
-			LocateMouseClick( lParam );
-			int nButtonMask = ButtonMaskFromMouseWParam( wParam, MOUSE_RIGHT, false );
-			ETWMouseUp( 2, (short)LOWORD(lParam), (short)HIWORD(lParam) );
-			UpdateMouseButtonState( nButtonMask );
-		}
-		break;
-
-	case WM_MBUTTONDOWN:
-		{
-			LocateMouseClick( lParam );
-			int nButtonMask = ButtonMaskFromMouseWParam( wParam, MOUSE_MIDDLE, true );
-			ETWMouseDown( 1, (short)LOWORD(lParam), (short)HIWORD(lParam) );
-			UpdateMouseButtonState( nButtonMask );
-		}
-		break;
-
-	case WM_MBUTTONUP:
-		{
-			LocateMouseClick( lParam );
-			int nButtonMask = ButtonMaskFromMouseWParam( wParam, MOUSE_MIDDLE, false );
-			ETWMouseUp( 1, (short)LOWORD(lParam), (short)HIWORD(lParam) );
-			UpdateMouseButtonState( nButtonMask );
-		}
-		break;
-
-	case MS_WM_XBUTTONDOWN:
-		{
-			LocateMouseClick( lParam );
-
-			ButtonCode_t code = ( HIWORD( wParam ) == 1 ) ? MOUSE_4 : MOUSE_5;
-			int nButtonMask = ButtonMaskFromMouseWParam( wParam, code, true );
-			UpdateMouseButtonState( nButtonMask );
-
-			// Windows docs say the XBUTTON messages we should return true from
-			return TRUE;
-		}
-		break;
-
-	case MS_WM_XBUTTONUP:
-		{
-			LocateMouseClick( lParam );
-
-			ButtonCode_t code = ( HIWORD( wParam ) == 1 ) ? MOUSE_4 : MOUSE_5;
-			int nButtonMask = ButtonMaskFromMouseWParam( wParam, code, false );
-			UpdateMouseButtonState( nButtonMask );
-
-			// Windows docs say the XBUTTON messages we should return true from
-			return TRUE;
-		}
-		break;
-
-	case WM_LBUTTONDBLCLK:
-		{
-			LocateMouseClick( lParam );
-			int nButtonMask = ButtonMaskFromMouseWParam( wParam, MOUSE_LEFT, true );
-			ETWMouseDown( 0, (short)LOWORD(lParam), (short)HIWORD(lParam) );
-			UpdateMouseButtonState( nButtonMask, MOUSE_LEFT );
-		}
-		break;
-
-	case WM_RBUTTONDBLCLK:
-		{
-			LocateMouseClick( lParam );
-			int nButtonMask = ButtonMaskFromMouseWParam( wParam, MOUSE_RIGHT, true );
-			ETWMouseDown( 2, (short)LOWORD(lParam), (short)HIWORD(lParam) );
-			UpdateMouseButtonState( nButtonMask, MOUSE_RIGHT );
-		}
-		break;
-
-	case WM_MBUTTONDBLCLK:
-		{
-			LocateMouseClick( lParam );
-			int nButtonMask = ButtonMaskFromMouseWParam( wParam, MOUSE_MIDDLE, true );
-			ETWMouseDown( 1, (short)LOWORD(lParam), (short)HIWORD(lParam) );
-			UpdateMouseButtonState( nButtonMask, MOUSE_MIDDLE );
-		}
-		break;
-
-	case MS_WM_XBUTTONDBLCLK:
-		{
-			LocateMouseClick( lParam );
-
-			ButtonCode_t code = ( HIWORD( wParam ) == 1 ) ? MOUSE_4 : MOUSE_5;
-			int nButtonMask = ButtonMaskFromMouseWParam( wParam, code, true );
-			UpdateMouseButtonState( nButtonMask, code );
-
-			// Windows docs say the XBUTTON messages we should return true from
-			return TRUE;
-		}
-		break;
-
-	case WM_KEYDOWN:
-	case WM_SYSKEYDOWN:
-		{
-			// Suppress key repeats
-			if ( !( lParam & ( 1<<30 ) ) )
-			{
-				// NOTE: These two can be unequal! For example, keypad enter
-				// which returns KEY_ENTER from virtual keys, and KEY_PAD_ENTER from scan codes
-				// Since things like vgui care about virtual keys; we're going to
-				// put both scan codes in the input message
-				ButtonCode_t virtualCode = ButtonCode_VirtualKeyToButtonCode( wParam );
-				ButtonCode_t scanCode = ButtonCode_ScanCodeToButtonCode( lParam );
-				PostButtonPressedEvent( IE_ButtonPressed, m_nLastSampleTick, scanCode, virtualCode );
-
-				// Post ETW events describing key presses to help correlate input events to performance
-				// problems in the game.
-				ETWKeyDown( scanCode, virtualCode, ButtonCodeToString( virtualCode ) );
-
-				// Deal with toggles
-				if ( scanCode == KEY_CAPSLOCK || scanCode == KEY_SCROLLLOCK || scanCode == KEY_NUMLOCK )
-				{
-					int nVirtualKey;
-					ButtonCode_t toggleCode;
-					switch( scanCode )
-					{
-					default: case KEY_CAPSLOCK: nVirtualKey = VK_CAPITAL; toggleCode = KEY_CAPSLOCKTOGGLE; break;
-					case KEY_SCROLLLOCK: nVirtualKey = VK_SCROLL; toggleCode = KEY_SCROLLLOCKTOGGLE; break;
-					case KEY_NUMLOCK: nVirtualKey = VK_NUMLOCK; toggleCode = KEY_NUMLOCKTOGGLE; break;
-					};
-
-					SHORT wState = GetKeyState( nVirtualKey );
-					bool bToggleState = ( wState & 0x1 ) != 0;
-					PostButtonPressedEvent( bToggleState ? IE_ButtonPressed : IE_ButtonReleased, m_nLastSampleTick, toggleCode, toggleCode );
-				}
-			}
-
-			if ( ShouldGenerateUIEvents() )
-			{
-				ButtonCode_t virtualCode = ButtonCode_VirtualKeyToButtonCode( wParam );
-				int nKeyRepeat = LOWORD( lParam );
-				for ( int i = 0; i < nKeyRepeat; ++i )
-				{
-					PostEvent( IE_KeyCodeTyped, m_nLastSampleTick, virtualCode );
-				}
-			}
-		}
-		break;
-
-	case WM_KEYUP:
-	case WM_SYSKEYUP:
-		{
-			// Don't handle key ups if the key's already up. This can happen when we alt-tab back to the engine.
-			ButtonCode_t virtualCode = ButtonCode_VirtualKeyToButtonCode( wParam );
-			ButtonCode_t scanCode = ButtonCode_ScanCodeToButtonCode( lParam );
-			PostButtonReleasedEvent( IE_ButtonReleased, m_nLastSampleTick, scanCode, virtualCode );
-		}
-		break;
-
-	case WM_MOUSEWHEEL:
-		{
-			ButtonCode_t code = (short)HIWORD( wParam ) > 0 ? MOUSE_WHEEL_UP : MOUSE_WHEEL_DOWN;
-			state.m_ButtonPressedTick[ code ] = state.m_ButtonReleasedTick[ code ] = m_nLastSampleTick;
-			PostEvent( IE_ButtonPressed, m_nLastSampleTick, code, code );
-			PostEvent( IE_ButtonReleased, m_nLastSampleTick, code, code );
-
-			state.m_pAnalogDelta[ MOUSE_WHEEL ] = ( (short)HIWORD(wParam) ) / WHEEL_DELTA;
-			state.m_pAnalogValue[ MOUSE_WHEEL ] += state.m_pAnalogDelta[ MOUSE_WHEEL ];
-			PostEvent( IE_AnalogValueChanged, m_nLastSampleTick, MOUSE_WHEEL, state.m_pAnalogValue[ MOUSE_WHEEL ], state.m_pAnalogDelta[ MOUSE_WHEEL ] );
-		}
-		break;
-
-	case WM_MOUSEMOVE:
-		{
-			UpdateMousePositionState( state, (short)LOWORD(lParam), (short)HIWORD(lParam) );
-
-			int nButtonMask = ButtonMaskFromMouseWParam( wParam );
-			UpdateMouseButtonState( nButtonMask );
-		}
- 		break;
-
-#if defined ( WIN32 )
-	case WM_INPUT:
-		{
-			if ( m_bRawInputSupported )
-			{
-				UINT dwSize = sizeof( RAWINPUT );
-				static BYTE lpb[ sizeof( RAWINPUT ) ];
-
-				pfnGetRawInputData((HRAWINPUT)lParam, RID_INPUT, lpb, &dwSize, sizeof(RAWINPUTHEADER));
-
-				RAWINPUT* raw = (RAWINPUT*)lpb;
-				if (raw->header.dwType == RIM_TYPEMOUSE) 
-				{
-					m_mouseRawAccumX += raw->data.mouse.lLastX;
-					m_mouseRawAccumY += raw->data.mouse.lLastY;
-				} 
-			}
-		}
-		break;
-#endif
-
-	case WM_SYSCHAR:
-	case WM_CHAR:
-		if ( ShouldGenerateUIEvents() && !m_bIMEComposing )
-		{
-			PostEvent( IE_KeyTyped, m_nLastSampleTick, (wchar_t)wParam );
-		}
-		break;
-
-	case WM_INPUTLANGCHANGE:
-		// Note that this is passed to IME managers even if the IME is currently
-		// disallowed so that IMEs are still aware of the current language
-		// in case they are allowed in the future.
-		if ( ShouldGenerateUIEvents() )
-		{
-			PostEvent( IE_InputLanguageChanged, m_nLastSampleTick );
-		}
-		break;
-
-	case WM_IME_KEYDOWN:
-		break;
-
-	case WM_IME_STARTCOMPOSITION:
-		if ( ShouldGenerateUIEvents() )
-		{
-			m_bIMEComposing = true;
-			PostEvent( IE_IMEStartComposition, m_nLastSampleTick );
-			return TRUE;
-		}
-		break;
-
-	case WM_IME_COMPOSITION:
-		if ( ShouldGenerateUIEvents() )
-		{
-			PostEvent( IE_IMEComposition, m_nLastSampleTick, (int)lParam );
-			return TRUE;
-		}
-		break;
-
-	case WM_IME_ENDCOMPOSITION:
-		if ( ShouldGenerateUIEvents() )
-		{
-			m_bIMEComposing = false;
-			PostEvent( IE_IMEEndComposition, m_nLastSampleTick );
-			return TRUE;
-		}
-		break;
-
-	case WM_IME_NOTIFY:
-		if ( ShouldGenerateUIEvents() )
-		{
-			switch (wParam)
-			{
-			default:
-				break;
-
-			case 14:  // Chinese Traditional IMN_PRIVATE...
-				break; 
-
-			case IMN_OPENCANDIDATE:
-				PostEvent( IE_IMEShowCandidates, m_nLastSampleTick );
-				return 1;
-
-			case IMN_CHANGECANDIDATE:
-				PostEvent( IE_IMEChangeCandidates, m_nLastSampleTick );
-				return 0;
-
-			case IMN_CLOSECANDIDATE:
-				PostEvent( IE_IMECloseCandidates, m_nLastSampleTick );
-				break;
-
-				// To detect the change of IME mode, or the toggling of Japanese IME 
-			case IMN_SETCONVERSIONMODE:
-			case IMN_SETSENTENCEMODE:
-			case IMN_SETOPENSTATUS:   
-				PostEvent( IE_IMERecomputeModes, m_nLastSampleTick );
-				if ( wParam == IMN_SETOPENSTATUS )
-					return 0;
-				break;
-
-			case IMN_CLOSESTATUSWINDOW:   
-			case IMN_GUIDELINE:   
-			case IMN_OPENSTATUSWINDOW:   
-			case IMN_SETCANDIDATEPOS:   
-			case IMN_SETCOMPOSITIONFONT:   
-			case IMN_SETCOMPOSITIONWINDOW:   
-			case IMN_SETSTATUSWINDOWPOS:   
-				break;
-			}
-		}
-		break;
-
-	case WM_IME_CHAR:
-		if ( ShouldGenerateUIEvents() )
-		{
-			// We need to process this message so that the IME doesn't double 
-			// convert the unicode IME characters into garbage characters and post
-			// them to our window... (get ? marks after text entry ).
-			return 0;
-		}
-		break;
-
-	case WM_IME_SETCONTEXT:
-		if ( ShouldGenerateUIEvents() )
-		{
-			// We draw all IME windows ourselves
-			lParam &= ~ISC_SHOWUICOMPOSITIONWINDOW;
-			lParam &= ~ISC_SHOWUIGUIDELINE;
-			lParam &= ~ISC_SHOWUIALLCANDIDATEWINDOW;
-		}
-
-		break;
-
-	}
-
-	// Can't put this in the case statement, it's not constant
-	if ( IsPC() && ( uMsg == m_uiMouseWheel ) )
-	{
-		ButtonCode_t code = ( ( int )wParam ) > 0 ? MOUSE_WHEEL_UP : MOUSE_WHEEL_DOWN;
-		state.m_ButtonPressedTick[ code ] = state.m_ButtonReleasedTick[ code ] = m_nLastSampleTick;
-		PostEvent( IE_ButtonPressed, m_nLastSampleTick, code, code );
-		PostEvent( IE_ButtonReleased, m_nLastSampleTick, code, code );
-
-		state.m_pAnalogDelta[ MOUSE_WHEEL ] = ( ( int )wParam ) / WHEEL_DELTA;
-		state.m_pAnalogValue[ MOUSE_WHEEL ] += state.m_pAnalogDelta[ MOUSE_WHEEL ];
-		PostEvent( IE_AnalogValueChanged, m_nLastSampleTick, MOUSE_WHEEL, state.m_pAnalogValue[ MOUSE_WHEEL ], state.m_pAnalogDelta[ MOUSE_WHEEL ] );
-	}
-	return ChainWindowMessage( hwnd, uMsg, wParam, lParam );
-#else
 
 	return 0;
 
-#endif
 }
 #endif
 
@@ -2076,8 +1480,6 @@ void  CInputSystem::InitPlatfromInputDeviceInfo( void )
 
 #if defined( PLATFORM_WINDOWS_PC )
 	m_currentlyConnectedInputDevices = INPUT_DEVICE_KEYBOARD_MOUSE;
-#elif defined( PLATFORM_OSX )
-	m_currentlyConnectedInputDevices = INPUT_DEVICE_KEYBOARD_MOUSE;
 #elif defined( PLATFORM_LINUX )
 	m_currentlyConnectedInputDevices = INPUT_DEVICE_KEYBOARD_MOUSE;
 #else
@@ -2099,8 +1501,6 @@ void CInputSystem::ResetCurrentInputDevice( void )
 	}
 
 #if defined( PLATFORM_WINDOWS_PC )
-	m_currentInputDevice = INPUT_DEVICE_KEYBOARD_MOUSE;
-#elif defined( PLATFORM_OSX )
 	m_currentInputDevice = INPUT_DEVICE_KEYBOARD_MOUSE;
 #elif defined( PLATFORM_LINUX )
 	m_currentInputDevice = INPUT_DEVICE_KEYBOARD_MOUSE;
@@ -2178,30 +1578,6 @@ InputDevice_t CInputSystem::IsOnlySingleDeviceConnected( void )
 bool CInputSystem::IsDeviceReadingInput( InputDevice_t device ) const
 {
 	return true;
-
-#if !defined( _CERT )
-	// [dkorus] test code for the device selection 
-	int forceSelected = dev_force_selected_device.GetInt(); 
-	if ( forceSelected != 0)
-	{
-		if ( device == forceSelected )
-		{
-			return true;
-		}
-		else 
-		{
-			return false;
-		}
-	}
-#endif
-
-	if ( device == m_currentInputDevice ||
-		 m_currentInputDevice == INPUT_DEVICE_NONE )
-		{
-			return true;
-		}
-
-	return false;
 }
 
 
@@ -2234,98 +1610,3 @@ bool CInputSystem::IsSamplingForCurrentDevice( void )
 }
 
 
-#ifndef LINUX
-
-#if !defined( _CERT )
-// [mhansen] Add support for pressing Xbox 360 controller buttons (should work on PS3 too)
-struct C_press_x360_button_code
-{
-	char c1;
-	char c2;
-	xKey_t key;
-};
-
-static const C_press_x360_button_code press_x360_button_codes[] =
-{ 
-	{ 'l', 't', XK_BUTTON_LTRIGGER },
-	{ 'r', 't', XK_BUTTON_RTRIGGER },
-	{ 's', 't', XK_BUTTON_START },
-	{ 'b', 'a', XK_BUTTON_BACK },
-	{ 'l', 'b', XK_BUTTON_LEFT_SHOULDER },
-	{ 'r', 'b', XK_BUTTON_RIGHT_SHOULDER },
-	{ 'l', 's', XK_BUTTON_LEFT_SHOULDER },
-	{ 'r', 's', XK_BUTTON_RIGHT_SHOULDER },
-	{ 'a', 0, XK_BUTTON_A },
-	{ 'b', 0, XK_BUTTON_B },
-	{ 'x', 0, XK_BUTTON_X },
-	{ 'y', 0, XK_BUTTON_Y },
-	{ 'l', 0, XK_BUTTON_LEFT },
-	{ 'r', 0, XK_BUTTON_RIGHT },
-	{ 'u', 0, XK_BUTTON_UP },
-	{ 'd', 0, XK_BUTTON_DOWN },
-};
-static const int cNum_press_x360_button_codes = ARRAYSIZE( press_x360_button_codes );
-
-void CInputSystem::PressX360Button( const CCommand &args )
-{
-	if ( pc_fake_controller.GetBool( ) && !m_bXController )
-	{
-		// [dkorus] we're simulating fake controller input and we don't have a controller enabled.  Fake a controller so we can accept controller presses.
-		//			this fixes the PC so it can use the same scripting engine as the other setups
-		//			NOTE:  This is wrapped in a !_CERT block.  This shouldn't end up in the shipped game.
-		m_bXController = true;
-	}
-
-	if ( args.ArgC() < 2 )
-	{
-		Warning( "press_x360_button: requires a key to send (lt, rt, st[art], ba[ck], lb, rb, a, b, x, y, l[eft], r[right], u[p], d[own])" );
-		return;
-	}
-	
-	const char* pKey = args[1];
-
-	// We're stashing this in a bitmask so make sure we don't overflow it
-	//COMPILE_TIME_ASSERT( cNum_press_x360_button_codes < sizeof( m_press_x360_buttons[ 0 ] ) );
-
-	xKey_t key = XK_BUTTON_A;
-	for ( uint32 i = 0; i < cNum_press_x360_button_codes; i++ )
-	{
-		if ( pKey[0] == press_x360_button_codes[i].c1 && ( pKey[1] == press_x360_button_codes[i].c2 || press_x360_button_codes[i].c2 == 0 ) )
-		{
-			key = press_x360_button_codes[i].key;
-			m_press_x360_buttons[ 0 ] = m_press_x360_buttons[ 0 ] | (1 << i );
-			break;
-		}
-	}
-}
-
-void CInputSystem::PollPressX360Button( void )
-{
-	uint32 pressedButtons = m_press_x360_buttons[ 0 ];
-	uint32 releasedButtons = m_press_x360_buttons[ 1 ];
-
-	// Reset the buttons we pressed this frame
-	m_press_x360_buttons[ 0 ] = 0;
-
-	// Store the buttons we pressed this frame so we can clear them next frame
-	m_press_x360_buttons[ 1 ] = pressedButtons;
-
-	// Clear any old button presses and press any new ones
-	for ( uint32 i = 0; i < cNum_press_x360_button_codes; i++ )
-	{
-		uint32 mask = 1 << i;
-		if ( releasedButtons & mask )
-		{
-			PostXKeyEvent( 0, press_x360_button_codes[i].key, 0 );
-		}
-
-		if ( pressedButtons & mask )
-		{
-			PostXKeyEvent( 0, press_x360_button_codes[i].key, 32768/*XBX_MAX_BUTTONSAMPLE*/ );
-		}
-	}
-}
-
-#endif // !_CERT
-
-#endif

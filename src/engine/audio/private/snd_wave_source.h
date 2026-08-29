@@ -75,8 +75,8 @@ public:
 	virtual char const		*GetFileName( char *pOutBuffer, size_t bufLen );
 
 	// 360 uses alternate play once semantics
-	virtual void			SetPlayOnce( bool bIsPlayOnce ) { m_bIsPlayOnce = IsPC() ? bIsPlayOnce : false; }
-	virtual bool			IsPlayOnce() { return IsPC() ? m_bIsPlayOnce : false; }
+	virtual void			SetPlayOnce( bool bIsPlayOnce ) { m_bIsPlayOnce = true ? bIsPlayOnce : false; }
+	virtual bool			IsPlayOnce() { return true ? m_bIsPlayOnce : false; }
 
 	virtual void			SetSentenceWord( bool bIsWord ) { m_bIsSentenceWord = bIsWord; }
 	virtual bool			IsSentenceWord() { return m_bIsSentenceWord; }

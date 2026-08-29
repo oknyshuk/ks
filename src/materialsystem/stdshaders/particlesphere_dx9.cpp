@@ -51,10 +51,6 @@ BEGIN_VS_SHADER_FLAGS( ParticleSphere_DX9, "Help for BumpmappedEnvMap", SHADER_N
 		{
 			params[ DEPTHBLENDSCALE ]->SetFloatValue( 50.0f );
 		}
-		if ( IsPS3() && !params[SCENEDEPTH]->IsDefined() )
-		{
-			params[SCENEDEPTH]->SetStringValue( "^PS3^DEPTHBUFFER" );
-		}
 	}
 
 	SHADER_INIT
@@ -78,10 +74,6 @@ BEGIN_VS_SHADER_FLAGS( ParticleSphere_DX9, "Help for BumpmappedEnvMap", SHADER_N
 	{
 		// This matches the logic in spritecard.cpp closer
 		bool bDepthBlend = false;
-		if ( IsX360() || IsPS3() )
-		{
-			bDepthBlend = ( params[DEPTHBLEND]->GetIntValue() != 0 ) && mat_depthfeather_enable.GetBool();
-		}
 
 		SHADOW_STATE
 		{
@@ -123,11 +115,6 @@ BEGIN_VS_SHADER_FLAGS( ParticleSphere_DX9, "Help for BumpmappedEnvMap", SHADER_N
 
 			if ( bDepthBlend )
 			{
-				if ( IsPS3() )
-				{
-					BindTexture( SHADER_SAMPLER1, TEXTURE_BINDFLAGS_NONE, SCENEDEPTH, -1 );
-				}
-				else
 				{
 					pShaderAPI->BindStandardTexture( SHADER_SAMPLER1, TEXTURE_BINDFLAGS_NONE, TEXTURE_FRAME_BUFFER_FULL_DEPTH );
 				}

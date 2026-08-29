@@ -55,7 +55,7 @@ void DrawLightShafts( CBaseVSShader *pShader, IMaterialVar** params, IShaderDyna
 	
 		DECLARE_STATIC_PIXEL_SHADER( lightshafts_ps30 );
 		
-		SET_STATIC_PIXEL_SHADER_COMBO( FLASHLIGHTDEPTHFILTERMODE, IsPC() ? g_pHardwareConfig->GetShadowFilterMode( false /* bForceLowQuality */, true /* bPS30 */ ) : SHADOWFILTERMODE_DEFAULT );
+		SET_STATIC_PIXEL_SHADER_COMBO( FLASHLIGHTDEPTHFILTERMODE, true ? g_pHardwareConfig->GetShadowFilterMode( false /* bForceLowQuality */, true /* bPS30 */ ) : SHADOWFILTERMODE_DEFAULT );
 		SET_STATIC_PIXEL_SHADER( lightshafts_ps30 );
 
 		pShaderShadow->EnableTexture( SHADER_SAMPLER0, true );					// Cookie texture

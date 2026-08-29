@@ -51,32 +51,16 @@ def build(bld):
         "mm_netmsgcontroller.cpp",
         "mm_session.cpp",
         "mm_voice.cpp",
-        "ds_searcher.cpp",
-        "match_searcher.cpp",
         "mm_netmgr.cpp",
         "mm_session_offline_custom.cpp",
-        "mm_session_online_client.cpp",
-        "mm_session_online_host.cpp",
-        "mm_session_online_search.cpp",
-        "mm_session_online_teamsearch.cpp",
         "sys_session.cpp",
         "steam_apihook.cpp",
-        "steam_datacenterjobs.cpp",
-        "datacenter.cpp",
-        "mm_dlc.cpp",
-        "leaderboards.cpp",
         "matchsystem.cpp",
         "player.cpp",
         "playermanager.cpp",
-        "searchmanager.cpp",
-        "servermanager.cpp",
-        "playerrankingdata.cpp",
         "extkeyvalues.cpp",
         "main.cpp",
     ]
-
-    if not bld.env.DEDICATED:
-        source_matchmaking_base += ["steam_lobbyapi.cpp"]
 
     for target in ("matchmaking", "matchmaking_ds"):
         bld.shlib(

@@ -897,7 +897,6 @@ void TrackedFile_t::ProcessFileRead( void *dest, size_t nBytesRead )
 #ifdef SUPPORT_VPK
 void CFileTracker2::NotePackFileAccess( const char *pFilename, const char *pPathID, CPackedStoreFileHandle &VPKHandle )
 {
-#if !defined( _GAMECONSOLE )
 	AUTO_LOCK( m_Mutex );
 	int idxFileVPK = VPKHandle.m_pOwner->m_PackFileID - 1;
 
@@ -947,7 +946,6 @@ void CFileTracker2::NotePackFileAccess( const char *pFilename, const char *pPath
 		}
 		trackedVPKFileFind.m_nFileFraction += k_nFileFractionSize;
 	}
-#endif
 }
 #endif
 
@@ -956,70 +954,6 @@ void CFileTracker2::NotePackFileAccess( const char *pFilename, const char *pPath
 void CFileTracker2::NotePackFileRead( CPackedStoreFileHandle &VPKHandle, void *pBuffer, int nReadLength )
 {
 	// This is all a no-op because we are using the VPK SubmitThreadedMD5Request API
-#if 0
-	AUTO_LOCK( m_Mutex );
-	TrackedVPKFile_t trackedVPKFileFind;
-	trackedVPKFileFind.m_nPackFileNumber = VPKHandle.m_nFileNumber;
-	trackedVPKFileFind.m_PackFileID = VPKHandle.m_pOwner->m_PackFileID;
-
-
-	// what should we do about a file that straddles the 1MB boundary?
-	trackedVPKFileFind.m_nFileFraction = VPKHandle.m_nFileOffset & k_nFileFractionMask;
-
-	int idxAllFiles = m_treeAllOpenedFiles.InvalidIndex();
-	int idxTrackedVPKFile = m_treeTrackedVPKFiles.Find( trackedVPKFileFind );
-	if ( idxTrackedVPKFile != m_treeTrackedVPKFiles.InvalidIndex() )
-	{
-		TrackedVPKFile_t &trackedVPKFile = m_treeTrackedVPKFiles[idxTrackedVPKFile];
-
-		idxAllFiles = trackedVPKFile.m_idxAllOpenedFiles;
-	}
-	else
-	{
-		char szDataFileName[MAX_PATH];
-		VPKHandle.GetPackFileName( szDataFileName, sizeof(szDataFileName) );
-		const char *pszFileName = V_GetFileName( szDataFileName );
-		idxAllFiles = trackedVPKFileFind.m_idxAllOpenedFiles = IdxFileFromName( pszFileName, "GAME", trackedVPKFileFind.m_nFileFraction, 0, true, true );
-		idxTrackedVPKFile = m_treeTrackedVPKFiles.Insert( trackedVPKFileFind );
-	}
-
-	if ( idxAllFiles != m_treeAllOpenedFiles.InvalidIndex() )
-	{
-		TrackedFile_t &trackedfile = m_treeAllOpenedFiles[idxAllFiles];
-		// if we have never hashed this before - do it now
-		if ( trackedfile.m_filehashFinal.m_eFileHashType != FileHash_t::k_EFileHashTypeEntireFile )
-		{
-			int64 fileSize;
-			VPKHandle.HashEntirePackFile( fileSize, trackedVPKFileFind.m_nFileFraction, k_nFileFractionSize, trackedfile.m_filehashFinal );
-			trackedfile.m_nLength = fileSize;
-		}
-		trackedfile.m_cubTotalRead += nReadLength;
-	}
-#endif
-#if 0
-	// we could verify the CRC from the VPK here.
-	// we would need to compute a CRC - not an MD5
-	FileInVPK_t fiv;
-	fiv.m_PackFileID = VPKHandle.m_pOwner->m_PackFileID;
-	fiv.m_nPackFileNumber = VPKHandle.m_nFileNumber;
-	fiv.m_nFileOffset = VPKHandle.m_nFileOffset;
-	int idxFileInVPK = m_treeFileInVPK.Find( fiv );
-	if ( idxFileInVPK != m_treeFileInVPK.InvalidIndex() )
-	{
-		TrackedFile_t &trackedfile = m_treeAllOpenedFiles[m_treeFileInVPK[idxFileInVPK].m_idxAllOpenedFiles];
-		// back into the current file position
-		trackedfile.m_nFilePos = VPKHandle.m_nCurrentFileOffset - nReadLength;
-		
-		trackedfile.ProcessFileRead( pBuffer, nReadLength );
-		if ( VPKHandle.m_nMetaDataSize == 0 && 
-			trackedfile.m_eFileHashType == FileHash_t::k_EFileHashTypeEntireFile &&
-			trackedfile.m_crcFinal != VPKHandle.GetFileCRCFromHeaderData() )
-		{
-			// this should match? why doesn't it match
-		}
-
-	}
-#endif
 }
 #endif
 
@@ -1091,7 +1025,6 @@ int CFileTracker2::IdxFileFromName( const char *pFilename, const char *pPathID, 
 #ifdef SUPPORT_VPK
 int CFileTracker2::NotePackFileOpened( const char *pRawFileName, const char *pFilename, const char *pPathID, int64 nLength )
 {
-#if !defined( _GAMECONSOLE )
 	AUTO_LOCK( m_Mutex );
 	TrackedFile_t trackedfileToFind;
 	trackedfileToFind.RebuildFileName( pRawFileName, NULL );
@@ -1110,25 +1043,19 @@ int CFileTracker2::NotePackFileOpened( const char *pRawFileName, const char *pFi
 		m_treeAllOpenedFiles.Reinsert( idxFile );
 	}
 	return idxFile + 1;
-#else
-	return 0;
-#endif
 }
 #endif
 
 void CFileTracker2::NoteFileLoadedFromDisk( const char *pFilename, const char *pPathID, FILE *fp, int64 nLength )
 {
-#if !defined( _GAMECONSOLE )
 	AUTO_LOCK( m_Mutex );
 
 	int idxFile = IdxFileFromName( pFilename, pPathID, 0, nLength, false, true );
 	m_mapAllOpenFiles.Insert( fp, idxFile );
-#endif
 }
 
 void CFileTracker2::RecordFileClose( FILE *fp )
 {
-#if !defined( _GAMECONSOLE )
 	//VPROF_BUDGET("CFileTracker2::RecordFileClose", "PureFileTracker2");
 	AUTO_LOCK( m_Mutex );
 
@@ -1145,12 +1072,10 @@ void CFileTracker2::RecordFileClose( FILE *fp )
 
 		m_mapAllOpenFiles.RemoveAt( idx );
 	}
-#endif
 }
 
 void CFileTracker2::RecordFileSeek( FILE *fp, int64 pos, int seekType )
 {
-#if !defined( _GAMECONSOLE )
 	AUTO_LOCK( m_Mutex );
 	int idx = m_mapAllOpenFiles.Find( fp );
 	if ( idx != m_mapAllOpenFiles.InvalidIndex() )
@@ -1174,13 +1099,11 @@ void CFileTracker2::RecordFileSeek( FILE *fp, int64 pos, int seekType )
 			}
 		}
 	}
-#endif
 }
 
 
 void CFileTracker2::RecordFileRead( void *dest, size_t nBytesRead, size_t nBytesRequested, FILE *fp )
 {
-#if !defined( _GAMECONSOLE )
 
 	//VPROF_BUDGET("CFileTracker2::RecordFileRead", "PureFileTracker2");
 	AUTO_LOCK( m_Mutex );
@@ -1199,7 +1122,6 @@ void CFileTracker2::RecordFileRead( void *dest, size_t nBytesRead, size_t nBytes
 	{
 		m_cMissedReads++;
 	}
-#endif
 }
 
 int CFileTracker2::ListOpenedFiles( bool bListAll, const char *pchFilenameFind, bool bRecentFileList )

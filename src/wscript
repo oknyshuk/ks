@@ -1,9 +1,12 @@
 #! /usr/bin/env python
 
+import json
 import os
 import shutil
+import subprocess
+from concurrent.futures import ThreadPoolExecutor
 
-from waflib import Build, Configure, Context, TaskGen
+from waflib import Build, Configure, Context, Logs, TaskGen
 
 # --- Auto-RPATH based on install location ---
 
@@ -122,60 +125,16 @@ Build.BuildContext.get_taskgen_count = _get_taskgen_count
 # --- Optimization flag tables ---
 
 OPTFLAGS = {
-    "fast": {
-        "gcc": [
-            "-Ofast",
-            "-funsafe-math-optimizations",
-            "-fomit-frame-pointer",
-            "-fno-semantic-interposition",
-        ],
-        "clang": ["-O3", "-ffast-math"],
-    },
-    "release": {
-        "gcc": ["-O3", "-fno-semantic-interposition"],
-        "clang": ["-O3"],
-    },
-    "debug": {
-        "gcc": ["-O0"],
-        "clang": ["-O0"],
-    },
-    "sanitize": {
-        "gcc": [
-            "-O0",
-            "-fno-omit-frame-pointer",
-            "-fsanitize=address,undefined",
-            "-pthread",
-        ],
-        "clang": [
-            "-O0",
-            "-fno-omit-frame-pointer",
-            "-fsanitize=address,undefined",
-            "-pthread",
-        ],
-    },
+    "fast": ["-O3", "-ffast-math"],
+    "release": ["-O3"],
+    "debug": ["-O0"],
+    "sanitize": [
+        "-O0",
+        "-fno-omit-frame-pointer",
+        "-fsanitize=address,undefined",
+        "-pthread",
+    ],
 }
-
-
-def _filter_cflags(conf, flags, existing=[]):
-    supported = []
-    for f in flags:
-        try:
-            conf.check_cc(cflags=["-Werror", f] + existing, mandatory=True)
-            supported.append(f)
-        except Exception:
-            pass
-    return supported
-
-
-def _filter_cxxflags(conf, flags, existing=[]):
-    supported = []
-    for f in flags:
-        try:
-            conf.check_cxx(cxxflags=["-Werror", f] + existing, mandatory=True)
-            supported.append(f)
-        except Exception:
-            pass
-    return supported
 
 
 # --- WAF entry points ---
@@ -202,13 +161,6 @@ def options(opt):
         default=False,
         help="disable warnings",
     )
-    grp.add_option(
-        "--dedicated",
-        action="store_true",
-        dest="DEDICATED",
-        default=False,
-        help="build dedicated server",
-    )
 
     opt.recurse(PROJECTS)
 
@@ -219,9 +171,6 @@ def configure(conf):
 
     # --- Compiler detection ---
     conf.load("compiler_c compiler_cxx")
-
-    if conf.env.DEST_CPU == "amd64":
-        conf.env.DEST_CPU = "x86_64"
 
     # --- CCache (auto-enable if on PATH) ---
     ccache_path = shutil.which("ccache")
@@ -237,7 +186,6 @@ def configure(conf):
                 "base_dir": base_dir,
                 "sloppiness": "include_file_mtime,include_file_ctime,time_macros,pch_defines,file_stat_matches,clang_index_store,locale,random_seed",
                 "hash_dir": "false",
-                "hard_link": "true",
                 "compression_level": "1",
                 "depend_mode": "true",
                 "inode_cache": "true",
@@ -267,20 +215,20 @@ def configure(conf):
         conf.fatal(f"Invalid build type '{build_type}'. Valid: {', '.join(OPTFLAGS)}")
     conf.msg("Build type", build_type)
 
-    compiler = conf.env.COMPILER_CC
-
-    cflags = ["-g", "-fvisibility=hidden"]
-    if compiler == "clang":
-        cflags += ["-gsplit-dwarf", "-fno-standalone-debug", "-fno-threadsafe-statics"]
-    cflags += OPTFLAGS[build_type].get(compiler, OPTFLAGS[build_type].get("gcc", []))
+    cflags = [
+        "-g",
+        "-fvisibility=hidden",
+        "-gsplit-dwarf",
+        "-fno-standalone-debug",
+        "-fno-threadsafe-statics",
+    ]
+    cflags += OPTFLAGS[build_type]
     cxxflags = list(cflags)
 
-    linkflags = []
+    linkflags = ["-gsplit-dwarf"]
     if shutil.which("mold"):
         linkflags.append("-fuse-ld=mold")
-    if compiler == "clang":
-        linkflags.append("-gsplit-dwarf")
-    if build_type == "fast" and compiler == "clang":
+    if build_type == "fast":
         cflags.append("-flto=thin")
         cxxflags.append("-flto=thin")
         linkflags.append("-flto=thin")
@@ -298,21 +246,14 @@ def configure(conf):
     conf.env.append_unique("CXXFLAGS", cxxflags)
     conf.env.append_unique("LINKFLAGS", linkflags)
 
-    # --- Optional flags (filtered for compiler support) ---
-    opt_flags = []
+    # --- Optional flags ---
     if conf.options.NO_WARNINGS:
-        opt_flags.append("-w")
-    if compiler == "clang":
-        opt_flags.append("-fcolor-diagnostics")
-    elif compiler == "gcc":
-        opt_flags.append("-fdiagnostics-color=always")
+        conf.env.append_unique("CFLAGS", ["-w"])
+        conf.env.append_unique("CXXFLAGS", ["-w"])
 
-    conf.env.append_unique("CFLAGS", _filter_cflags(conf, opt_flags, cflags))
-    conf.env.append_unique(
-        "CXXFLAGS", _filter_cxxflags(conf, opt_flags + ["-std=c++20"], cxxflags)
-    )
+    conf.env.append_unique("CFLAGS", ["-fcolor-diagnostics"])
+    conf.env.append_unique("CXXFLAGS", ["-fcolor-diagnostics", "-std=c++20"])
 
-    # Flags that shouldn't go through filter (which uses -Werror)
     conf.env.append_unique(
         "CXXFLAGS", ["-Wno-invalid-offsetof", "-Wno-free-nonheap-object"]
     )
@@ -331,9 +272,8 @@ def configure(conf):
     ]
 
     # --- Defines ---
-    if compiler == "clang":
-        conf.define("COMPILER_CLANG", True)
-    conf.define("COMPILER_GCC", True)  # GCC-compatible (both gcc and clang)
+    conf.define("COMPILER_CLANG", True)
+    conf.define("COMPILER_GCC", True)  # GCC-compatible
     conf.define("_POSIX", True)
     conf.define("POSIX", True)
     conf.define("USE_SDL", True)
@@ -353,9 +293,6 @@ def configure(conf):
         conf.define("_DEBUG", 1)
     else:
         conf.define("NDEBUG", 1)
-
-    if conf.options.DEDICATED:
-        conf.define("DEDICATED", True)
 
     # --- Dependencies (pkg-config) ---
     conf.check_cfg(package="sdl3", args="--cflags --libs", uselib_store="SDL3")
@@ -418,7 +355,6 @@ def build(bld):
     bld.stlib(
         source=[
             "public/filesystem_helpers.cpp",
-            "public/vgui_controls/vgui_controls.cpp",
             "public/collisionutils.cpp",
             "public/networkvar.cpp",
             "public/registry.cpp",
@@ -439,3 +375,161 @@ def build(bld):
         bld.env = bld.all_envs[prj]
         bld.recurse(prj)
     bld.env = root_env
+
+
+# --- `waf check`: syntax-only check of locally modified sources -------------
+# Far cheaper than a full build, and catches what mechanical source edits break.
+
+
+class CheckContext(Build.BuildContext):
+    """syntax-check sources modified since HEAD (no codegen, no link)"""
+
+    cmd = "check"
+    fun = "check"
+
+
+def check(bld):
+    cdb = bld.path.get_bld().find_node("compile_commands.json")
+    if not cdb:
+        bld.fatal("no compile_commands.json; run `waf build` once first")
+
+    db = {}
+    for e in json.loads(cdb.read()):
+        cmd = e.get("command") or " ".join(e.get("arguments", []))
+        db[os.path.realpath(os.path.join(e.get("directory", "."), e["file"]))] = (
+            e.get("directory", "."),
+            cmd,
+        )
+
+    top = bld.srcnode.parent.abspath()
+    changed = subprocess.run(
+        ["git", "diff", "--name-only", "HEAD"],
+        cwd=top,
+        capture_output=True,
+        text=True,
+    ).stdout.split()
+
+    targets = []
+    for f in changed:
+        if not f.endswith((".cpp", ".c")):
+            continue
+        p = os.path.realpath(os.path.join(top, f))
+        if os.path.isfile(p) and p in db:
+            targets.append(p)
+
+    if not targets:
+        Logs.info("check: no modified compilable sources")
+        return
+
+    def one(p):
+        cwd, cmd = db[p]
+        toks = cmd.split()
+        argv, skip = [], False
+        for t in toks:
+            if skip:
+                skip = False
+                continue
+            # a stale PCH is irrelevant to a syntax check, and blocks it
+            if t == "-include":
+                skip = True
+                continue
+            if t in ("-c", "-o") or t.endswith((".o", ".pch")):
+                continue
+            argv.append(t)
+        argv.append("-fsyntax-only")
+        r = subprocess.run(argv, cwd=cwd, capture_output=True, text=True)
+        return p, r.returncode, r.stderr
+
+    bad = 0
+    with ThreadPoolExecutor(max_workers=os.cpu_count()) as ex:
+        for p, rc, err in ex.map(one, targets):
+            if rc:
+                bad += 1
+                Logs.error("FAIL %s" % os.path.relpath(p, top))
+                for line in [x for x in err.splitlines() if " error: " in x][:4]:
+                    Logs.error("    " + line.strip())
+
+    Logs.info("check: %d/%d ok" % (len(targets) - bad, len(targets)))
+    if bad:
+        bld.fatal("%d file(s) failed" % bad)
+
+
+# --- `waf smoke`: headless regression smoke (symbols + a few seconds of srcds) --
+# Every shipped .so is checked for unresolved symbols, then srcds loads a map
+# and runs for a few seconds. Catches the "compiles fine, dies on startup" class.
+#
+#   waf smoke                            de_dust2, 12s
+#   SECS=30 MAPS="de_nuke cs_office" waf smoke
+
+
+class SmokeContext(Build.BuildContext):
+    """run every shipped .so through ldd -r, then srcds through a few maps"""
+
+    cmd = "smoke"
+    fun = "smoke"
+
+
+def smoke(bld):
+    prefix = bld.env.PREFIX
+    srcds = os.path.join(prefix, "srcds")
+    if not os.path.isfile(srcds):
+        bld.fatal("no srcds at %s; run `waf install` first" % srcds)
+
+    secs = int(os.environ.get("SECS", "12"))
+    maps = os.environ.get("MAPS", "de_dust2").split()
+
+    libdirs = [os.path.join(prefix, "bin"), os.path.join(prefix, "csgo", "bin")]
+    sos = sorted(
+        os.path.join(d, f) for d in libdirs for f in os.listdir(d) if f.endswith(".so")
+    )
+    env = dict(os.environ, LD_LIBRARY_PATH=os.pathsep.join(libdirs))
+
+    bad = 0
+    for so in sos:
+        out = subprocess.run(["ldd", "-r", so], capture_output=True, text=True, env=env).stdout
+        hits = [l for l in out.splitlines() if "undefined symbol" in l or "not found" in l]
+        if hits:
+            bad += 1
+            Logs.error("FAIL %s" % so)
+            for l in hits[:5]:
+                Logs.error("       " + l.strip())
+    if not bad:
+        Logs.info("ok   %d libraries" % len(sos))
+
+    # servercfgfile is exec'd at level init, after the gamemode cfgs, so it is
+    # the only place these stick.
+    cfg = os.path.join(prefix, "csgo", "cfg", "ks_smoke.cfg")
+    with open(cfg, "w") as f:
+        f.write("sv_hibernate_when_empty 0\nbot_join_after_player 0\nbot_quota 10\n")
+
+    try:
+        for m in maps:
+            argv = [
+                srcds, "-game", "csgo", "-console", "-insecure",
+                "+sv_lan", "1", "+servercfgfile", "ks_smoke.cfg", "+map", m,
+            ]
+            try:
+                r = subprocess.run(argv, cwd=prefix, capture_output=True, text=True, timeout=secs)
+                rc, log = r.returncode, r.stdout
+            except subprocess.TimeoutExpired as e:
+                # timed out means srcds was still alive after `secs`: a pass.
+                # (on POSIX, TimeoutExpired carries raw bytes even with text=True)
+                out = e.stdout or b""
+                rc, log = 124, out.decode("utf-8", "replace") if isinstance(out, bytes) else out
+
+            if rc != 124:
+                bad += 1
+                Logs.error("FAIL %s (exit %s)" % (m, rc))
+                for line in log.splitlines()[-3:]:
+                    Logs.error("       | " + line)
+            elif ("Host_NewGame on map %s" % m) not in log:
+                bad += 1
+                Logs.error("FAIL %s (never loaded)" % m)
+            else:
+                Logs.info("ok   %-16s %5d lines" % (m, log.count("\n")))
+    finally:
+        os.remove(cfg)
+
+    if bad:
+        bld.fatal("smoke: %d check(s) failed" % bad)
+    Logs.info("smoke: PASS")

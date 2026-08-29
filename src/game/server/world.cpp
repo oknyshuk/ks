@@ -544,13 +544,8 @@ BEGIN_DATADESC( CWorld )
 
 	// DEFINE_FIELD( m_flMaxOccludeeArea,	FIELD_CLASSCHECK_IGNORE ) // do this or else we get a warning about multiply-defined fields	
 	// DEFINE_FIELD( m_flMinOccluderArea,	FIELD_CLASSCHECK_IGNORE ) // do this or else we get a warning about multiply-defined fields	
-#ifdef _GAMECONSOLE
-	DEFINE_KEYFIELD( m_flMaxOccludeeArea, FIELD_FLOAT, "maxoccludeearea_x360" ),
-	DEFINE_KEYFIELD( m_flMinOccluderArea, FIELD_FLOAT, "minoccluderarea_x360" ),
-#else
 	DEFINE_KEYFIELD( m_flMaxOccludeeArea, FIELD_FLOAT, "maxoccludeearea" ),
 	DEFINE_KEYFIELD( m_flMinOccluderArea, FIELD_FLOAT, "minoccluderarea" ),
-#endif
 	DEFINE_KEYFIELD( m_flMaxPropScreenSpaceWidth, FIELD_FLOAT, "maxpropscreenwidth" ),
 	DEFINE_KEYFIELD( m_flMinPropScreenSpaceWidth, FIELD_FLOAT, "minpropscreenwidth" ),
 	DEFINE_KEYFIELD( m_iszDetailSpriteMaterial, FIELD_STRING, "detailmaterial" ),
@@ -738,8 +733,8 @@ void CWorld::Spawn( void )
 
 	g_EventQueue.Init();
 	Precache( );
-	GlobalEntity_Add( "is_console", STRING(gpGlobals->mapname), ( IsGameConsole() ) ? GLOBAL_ON : GLOBAL_OFF );
-	GlobalEntity_Add( "is_pc", STRING(gpGlobals->mapname), ( !IsGameConsole() ) ? GLOBAL_ON : GLOBAL_OFF );
+	GlobalEntity_Add( "is_console", STRING(gpGlobals->mapname), GLOBAL_OFF );
+	GlobalEntity_Add( "is_pc", STRING(gpGlobals->mapname), GLOBAL_ON );
 }
 
 static const char *g_DefaultLightstyles[] =

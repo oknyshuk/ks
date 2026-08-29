@@ -32,13 +32,7 @@ static void SvSearchKeyChangeCallback( IConVar *pConVar, const char *pOldValue, 
 }
 
 ConVar sv_search_key( "sv_search_key",
-#if defined( _PS3 )
-						"csgo-ps3-rc0",
-#elif defined( SERVER_XLSP ) || defined( _X360 )
-						"csgo-x360-rc1",
-#else
 						"",
-#endif
 						  FCVAR_RELEASE, "When searching for a dedicated server from lobby, restrict search to only dedicated servers having the same sv_search_key.", SvSearchKeyChangeCallback );
 
 

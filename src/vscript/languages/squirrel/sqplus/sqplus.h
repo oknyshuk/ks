@@ -19,12 +19,10 @@
 
 #ifdef __APPLE__
   #include <malloc/malloc.h>
-#elif !defined(_PS3)
+#else
   #include <malloc.h>
 #endif
-#if !defined(_PS3)
 #include <memory.h>
-#endif
 #if defined(_MSC_VER) || defined(__BORLANDC__) 
   #include <tchar.h>
   #ifndef UNICODE
@@ -54,11 +52,7 @@
   #define FALSE 0
 #endif
 
-#if 1
 #define SQ_CALL_RAISE_ERROR SQTrue
-#else
-#define SQ_CALL_RAISE_ERROR SQFalse
-#endif
 
 #include "squirrel.h"
 
@@ -323,7 +317,6 @@ typedef VarRef * VarRefPtr;
 // Internal use only.
 inline void getVarNameTag(SQChar * buff,INT maxSize,const SQChar * scriptName) {
 //  Assert(maxSize > 3);
-#if 1
   SQChar * d = buff;
   d[0] = '_';
   d[1] = 'v';
@@ -335,9 +328,6 @@ inline void getVarNameTag(SQChar * buff,INT maxSize,const SQChar * scriptName) {
     pos++;
   } // while
   d[pos] = 0; // null terminate.
-#else
-  SCSNPRINTF(buff,maxSize,_T("_v%s"),scriptName);
-#endif
 } // getVarNameTag
 
 // Internal use only.
@@ -475,13 +465,8 @@ inline BOOL CreateConstructNativeClassInstance(HSQUIRRELVM v,const SQChar * clas
     sq_settop(v,oldtop);
     return FALSE;
   } // if
-#if 0
-  sq_remove(v,-3); // Remove the root table.
-  sq_push(v,1);    // Push the 'this'.
-#else // Kamaitati's change. 5/28/06 jcs.
   sq_remove(v,-2); // Remove the root table. 
   sq_pushroottable(v); // Push the 'this'.
-#endif
   if (SQ_FAILED(sq_call(v,1,SQTrue,SQ_CALL_RAISE_ERROR))) { // Call ClassName(): creates new instance and calls constructor (instead of sq_createinstance() where constructor is not called).
     sq_settop(v,oldtop);
     return FALSE;
@@ -1269,11 +1254,6 @@ public:
 };
 
 // Code fragment useful for debugging new implementations.
-#if 0
-HSQOBJECT ho = sa.GetObjectHandle(paramCount);
-SquirrelObject so(ho);
-SQObjectType sot = so.GetType();
-#endif
 
 // === Standard function call ===
 
@@ -1965,23 +1945,6 @@ inline void GetRet(TypeWrapper<void>,HSQUIRRELVM v,int idx) { sq_pop(v,2); }
 
 // === Example SQClassDef usage (see testSqPlus2.cpp): ===
 
-#if 0
-  SQClassDef<NewTestObj> sqClass(_T("NewTestObj");
-  sqClass.func(NewTestObj::newtestR1,_T("newtestR1"));
-  sqClass.var(&NewTestObj::val,_T("val"));
-  sqClass.var(&NewTestObj::s1,_T("s1"));
-  sqClass.var(&NewTestObj::s2,_T("s2"));
-  sqClass.funcVarArgs(&NewTestObj::multiArgs,_T("multiArgs"));
-
-// Shorthand form:
-
-  SQClassDef<NewTestObj>(_T("NewTestObj").
-    func(NewTestObj::newtestR1,_T("newtestR1")).
-    var(&NewTestObj::val,_T("val")).
-    var(&NewTestObj::s1,_T("s1")).
-    var(&NewTestObj::s2,_T("s2")).
-    funcVarArgs(NewTestObj::multiArgs,_T("multiArgs"));
-#endif
 
 // === Macros for old style registration. SQClassDef registration is now easier to use (SQ_DECLARE_CLASS() is not needed) ===
 

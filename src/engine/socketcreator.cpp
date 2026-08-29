@@ -10,7 +10,7 @@
 #undef SetPort // winsock screws with the SetPort string... *sigh*
 #define socklen_t int
 #define MSG_NOSIGNAL 0
-#elif POSIX
+#else
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -20,16 +20,11 @@
 #define closesocket close
 #define WSAGetLastError() errno
 #define ioctlsocket ioctl
-#ifdef OSX
-#define MSG_NOSIGNAL 0
-#endif
 #endif
 #include <tier0/dbg.h>
 #include "socketcreator.h"
 #include "server.h"
 
-#if defined( _X360 )
-#endif
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -38,7 +33,7 @@ bool SocketWouldBlock()
 {
 #ifdef _WIN32
 	return (WSAGetLastError() == WSAEWOULDBLOCK);
-#elif POSIX
+#else
 	return (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINPROGRESS);
 #endif
 }
@@ -148,9 +143,7 @@ void CSocketCreator::ProcessAccept()
 	if ( newSocket == -1 )
 	{
 		if ( !SocketWouldBlock()
-#ifdef POSIX
 			&& errno != EINTR 
-#endif
 		 )
 		{
 			Warning ("Socket ProcessAccept Error: %s\n", NET_ErrorString( WSAGetLastError() ) );

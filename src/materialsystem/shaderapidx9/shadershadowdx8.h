@@ -38,9 +38,7 @@ struct SamplerShadowState_t
 	bool	m_TextureEnable : 1;
 	bool	m_SRGBReadEnable : 1;
 	bool	m_Fetch4Enable : 1;
-#if ( defined ( POSIX ) )
 	bool	m_ShadowFilterEnable : 1;
-#endif
 };
 
 struct DepthTestState_t

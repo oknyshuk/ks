@@ -1195,8 +1195,7 @@ void CInput::ControllerMove( int nSlot, float frametime, CUserCmd *cmd )
 {
 	ConVarRef cl_mouseenable( "cl_mouseenable" );
 
-	if ( (IsPC() || IsPlatformPS3()) && 
-		 cl_mouseenable.GetBool() && 
+	if ( 		 cl_mouseenable.GetBool() && 
 		 nSlot == in_forceuser.GetInt() && 
 		 g_pInputSystem->IsDeviceReadingInput( INPUT_DEVICE_KEYBOARD_MOUSE ) )
 	{
@@ -1990,16 +1989,13 @@ void CInput::Init_All (void)
 
 	m_fMouseParmsValid	= false;
 	m_fJoystickAdvancedInit = false;
-	m_bControllerMode = !IsPC();
+	m_bControllerMode = false;
 	m_fAccumulatedMouseMove = 0.0f;
 	m_lastAutoAimValue = 1.0f;
 
 	// Initialize inputs
-	if ( IsPC() || IsPlatformPS3() )
-	{
-		Init_Mouse ();
-		Init_Keyboard();
-	}
+	Init_Mouse ();
+	Init_Keyboard();
 		
 	// Initialize third person camera controls.
 	Init_Camera();

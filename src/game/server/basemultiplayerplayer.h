@@ -97,12 +97,10 @@ public:
 
 	float GetConnectionTime( void ) { return m_flConnectionTime; }
 
-#if !defined(NO_STEAM)
 	//----------------------------
 	// Steam handling
 	bool		GetSteamID( CSteamID *pID ) const;
 	uint64		GetSteamIDAsUInt64( void ) const;
-#endif
 
 protected:
 	virtual CAI_Expresser *CreateExpresser( void );

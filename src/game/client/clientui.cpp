@@ -20,9 +20,6 @@
 #include "filesystem.h"
 
 
-#ifdef _PS3
-#include "ps3/ps3_core.h"
-#endif
 
 
 
@@ -406,11 +403,6 @@ void UI_UpdateScreenSpaceBounds( int nNumSplits, int sx, int sy, int sw, int sh 
 				int x = sw - pipWidth - ss_pip_right_offset.GetInt();
 				int y = sh - pipHeight - ss_pip_bottom_offset.GetInt();
 				// round upper left corner down to the nearest multiple of 8 for X360 (resolve alignment requirements)
-				if ( IsX360() )
-				{
-					x &= (~7);
-					y &= (~7);
-				}
 				UI_SetScreenSpaceBounds( validSlots[ 1 ], x, y, pipWidth, pipHeight );
 			}
 			else if ( ss_verticalsplit.GetBool() )
@@ -697,43 +689,17 @@ void UI_GetEngineRenderBounds( int slot, int &x, int &y, int &w, int &h, int &in
 	{
 		// Screen is wider, need bars at top and bottom
 		int usetall = (float)w / flAspect;
-		if ( IsPC() )
-		{
-			insetY = ( h - usetall ) / 2;
-			y += insetY;
-			h = usetall;
-		}
-		else
-		{
-			// hopefully it centers, but it might not
-			usetall = AlignValue( usetall, 2 * GPU_RESOLVE_ALIGNMENT );
-			insetY = ( h - usetall ) / 2;
-			y += insetY;
-			y = AlignValue( y, GPU_RESOLVE_ALIGNMENT );
-			insetY = AlignValue( insetY, GPU_RESOLVE_ALIGNMENT );
-			h = usetall;
-		}
+		insetY = ( h - usetall ) / 2;
+		y += insetY;
+		h = usetall;
 	}
 	else
 	{
 		// Screen is narrower, need bars at left/right
 		int usewide = (float)h * flAspect;
-		if ( IsPC() )
-		{
-			insetX = ( w - usewide  ) / 2;
-			x += insetX;
-			w = usewide;
-		}
-		else
-		{
-			// hopefully it centers, but it might not
-			usewide = AlignValue( usewide, 2 * GPU_RESOLVE_ALIGNMENT );
-			insetX = ( w - usewide  ) / 2;
-			x += insetX;
-			x = AlignValue( x, GPU_RESOLVE_ALIGNMENT );
-			insetX = AlignValue( insetX, GPU_RESOLVE_ALIGNMENT );
-			w = usewide;
-		}
+		insetX = ( w - usewide  ) / 2;
+		x += insetX;
+		w = usewide;
 	}
 }
 

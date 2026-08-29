@@ -1550,9 +1550,6 @@ CON_COMMAND( replay_status, "Show Replay server status." )
 
 CON_COMMAND( replay_record, "Starts Replay demo recording." )
 {
-#if 0
-	AssertMsg( 0, "Use replay_autorecord 1!" );
-#else
 	if ( !replay || !replay->IsActive() )
 	{
 		ConMsg("Replay not active.\n" );
@@ -1566,7 +1563,6 @@ CON_COMMAND( replay_record, "Starts Replay demo recording." )
 	}
 
 	replay->m_DemoRecorder.StartAutoRecording();
-#endif
 }
 
 CON_COMMAND( replay_stoprecord, "Stops Replay demo recording." )

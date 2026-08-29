@@ -4,11 +4,11 @@
 //
 //===========================================================================//
 
-#if defined( _WIN32 ) && !defined( _X360 )
+#if defined( _WIN32 )
 #include <windows.h>
 #include <direct.h>
 #include <io.h> // _chmod
-#elif POSIX
+#else
 #include <unistd.h>
 #endif
 

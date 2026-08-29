@@ -196,7 +196,7 @@ static void SortSpawnListByHierarchy( int nEntities, HierarchicalSpawn_t *pSpawn
 	// it can properly set up anything that relies on hierarchy.
 #ifdef _WIN32
 	qsort(&pSpawnList[0], nEntities, sizeof(pSpawnList[0]), (int (__cdecl *)(const void *, const void *))CompareSpawnOrder);
-#elif POSIX
+#else
 	qsort(&pSpawnList[0], nEntities, sizeof(pSpawnList[0]), (int (*)(const void *, const void *))CompareSpawnOrder);
 #endif
 	delete g_pClassnameSpawnPriority;

@@ -11,9 +11,6 @@
 #include <winuser.h>
 #endif // WIN32
 
-#if defined( _OSX )
-#include "posix_stubs.h"
-#endif
 
 #include "key_translation.h"
 #include "tier1/convar.h"
@@ -224,13 +221,8 @@ static const char *s_pButtonCodeName[ ] =
 	"RALT",			// KEY_RALT,
 	"CTRL",			// KEY_LCONTROL,
 	"RCTRL",		// KEY_RCONTROL,
-#if defined(OSX)
-    "COMMAND",      // KEY_LWIN
-    "COMMAND",      // KEY_RWIN
-#else
 	"LWIN",			// KEY_LWIN,
 	"RWIN",			// KEY_RWIN,
-#endif
 	"APP",			// KEY_APP,
 	"UPARROW",		// KEY_UP,
 	"LEFTARROW",	// KEY_LEFT,
@@ -473,12 +465,6 @@ void ButtonCode_InitKeyTranslationTable()
 	COMPILE_TIME_ASSERT( sizeof(s_pAnalogCodeName) / sizeof( const char * ) == ANALOG_CODE_LAST );
 
 // For debugging, spews entire mapping
-#if 0
-	for ( int i = 0; i < BUTTON_CODE_LAST; ++i )
-	{
-		Msg( "code %d == %s\n", i, s_pButtonCodeName[ i ] );
-	}
-#endif
 
 	// set virtual key translation table
 	memset( s_pVirtualKeyToButtonCode, KEY_NONE, sizeof(s_pVirtualKeyToButtonCode) );
@@ -794,13 +780,8 @@ ButtonCode_t ButtonCode_StringToButtonCode( const char *pString, bool bXControll
 		return BUTTON_CODE_INVALID;
 	}
 
-#if defined(OSX)
-  // map "l_win" to the LWIN key on OSX (it appears in the table as "command" )
-  if ( !Q_stricmp( pString, "lwin" ) )
-#else
   // map "COMMAND" to the LWIN key on non-OSX
   if ( !Q_stricmp( pString, "command" ) )
-#endif
   {
     return KEY_LWIN;
   }

@@ -23,7 +23,7 @@
 #include "tier0/memdbgon.h"
 
 // preload up to 1 second worth of blocks ahead.
-ConVar mod_load_preload( "mod_load_preload", IsGameConsole() ? "1.0" : "1.0", 0, "Indicates how far ahead in seconds to preload animations." );
+ConVar mod_load_preload( "mod_load_preload", false ? "1.0" : "1.0", 0, "Indicates how far ahead in seconds to preload animations." );
 #ifdef _DEBUG
 ConVar softbody_debug( "softbody_debug", "0", FCVAR_CHEAT );
 ConVar softbody_debug_substr( "softbody_debug_substr", "", FCVAR_CHEAT );
@@ -817,9 +817,6 @@ const virtualmodel_t * CStudioHdr::ResetVModel( const virtualmodel_t *pVModel ) 
 	if (pVModel != NULL)
 	{
 		m_pVModel = (virtualmodel_t *)pVModel;
-#if !defined( POSIX )
-		Assert( !pVModel->m_Lock.GetOwnerId() );
-#endif
 		m_pStudioHdrCache.SetCount( m_pVModel->m_group.Count() );
 
 		int i;
@@ -868,9 +865,6 @@ const studiohdr_t *CStudioHdr::GroupStudioHdr( int i )
 
 	if (pStudioHdr == NULL)
 	{
-#if !defined( POSIX )
-		Assert( !m_pVModel->m_Lock.GetOwnerId() );
-#endif
 		virtualgroup_t *pGroup = &m_pVModel->m_group[ i ];
 		pStudioHdr = pGroup->GetStudioHdr();
 		m_pStudioHdrCache[ i ] = pStudioHdr;
@@ -1304,37 +1298,6 @@ const mstudioiklock_t &CStudioHdr::pIKAutoplayLock( int i )
 	return *pStudioHdr->pLocalIKAutoplayLock( m_pVModel->m_iklock[i].index );
 }
 
-#if 0
-int	CStudioHdr::CountAutoplaySequences() const
-{
-	int count = 0;
-	for (int i = 0; i < GetNumSeq(); i++)
-	{
-		mstudioseqdesc_t &seqdesc = pSeqdesc( i );
-		if (seqdesc.flags & STUDIO_AUTOPLAY)
-		{
-			count++;
-		}
-	}
-	return count;
-}
-
-int	CStudioHdr::CopyAutoplaySequences( unsigned short *pOut, int outCount ) const
-{
-	int outIndex = 0;
-	for (int i = 0; i < GetNumSeq() && outIndex < outCount; i++)
-	{
-		mstudioseqdesc_t &seqdesc = pSeqdesc( i );
-		if (seqdesc.flags & STUDIO_AUTOPLAY)
-		{
-			pOut[outIndex] = i;
-			outIndex++;
-		}
-	}
-	return outIndex;
-}
-
-#endif
 
 //-----------------------------------------------------------------------------
 // Purpose:	maps local sequence bone to global bone
@@ -2127,7 +2090,7 @@ CStudioHdr::CActivityToSequenceMapping *CStudioHdr::CActivityToSequenceMapping::
 	int i = g_StudioHdrToActivityMaps.Find( pRealHdr );
 	if ( i != g_StudioHdrToActivityMaps.InvalidIndex() )
 	{
-		if ( !IsX360() && ( g_StudioHdrToActivityMaps[i].checksum != pRealHdr->checksum || Q_strcmp( g_StudioHdrToActivityMaps[i].name, pRealHdr->name ) != 0 ) )
+		if ( ( g_StudioHdrToActivityMaps[i].checksum != pRealHdr->checksum || Q_strcmp( g_StudioHdrToActivityMaps[i].name, pRealHdr->name ) != 0 ) )
 		{
 			AssertFatal( g_StudioHdrToActivityMaps[i].nRefs == 0 );
 			delete g_StudioHdrToActivityMaps[i].pMap;

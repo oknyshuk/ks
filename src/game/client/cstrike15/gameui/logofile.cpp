@@ -6,20 +6,13 @@
 //
 //=============================================================================//
 
-#if !defined( _GAMECONSOLE )
 #include <windows.h>
-#endif
 #include <stdio.h>
 #include "UtlBuffer.h"
 #include "FileSystem.h"
 
 // dgoodenough - select the correct stubs header based on current console
 // PS3_BUILDFIX
-#if defined( _PS3 )
-#include "ps3/ps3_win32stubs.h"
-#endif
-#if defined( _X360 )
-#endif
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -95,11 +88,7 @@ int GrabMip ( HANDLE hdib, unsigned char *lump_p, char *lumpname, COLORREF crf, 
 	// dgoodenough - GlobalLock is win32 specific, skip using it for now, we'll fix this up later
 	// PS3_BUILDFIX
 	// FIXME FIXME FIXME - This will need help.
-#if defined( _PS3 )
-	lpbmi = NULL;
-#else
 	lpbmi = (LPBITMAPINFO)::GlobalLock((HGLOBAL)hdib);
-#endif
 	unsigned char *lump_start = lump_p;
 	
 	xl = yl = 0;
@@ -187,9 +176,7 @@ int GrabMip ( HANDLE hdib, unsigned char *lump_p, char *lumpname, COLORREF crf, 
 	// dgoodenough - GlobalUnlock is win32 specific, skip using it for now, we'll fix this up later
 	// PS3_BUILDFIX
 	// FIXME FIXME FIXME - This will need help.
-#if !defined( _PS3 )
 	::GlobalUnlock(lpbmi);
-#endif
 
 	// Write out palette in 16bit mode
 	*(unsigned short *) lump_p = 256;	// palette size

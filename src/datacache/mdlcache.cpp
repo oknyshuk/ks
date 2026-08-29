@@ -9,9 +9,7 @@
 //
 //===========================================================================//
 
-#ifndef _PS3
 #include <memory.h>
-#endif
 
 #include "tier0/vprof.h"
 #include "tier0/icommandline.h"
@@ -34,7 +32,6 @@
 #include "phyfile.h"
 #include "studiobyteswap.h"
 #include "tier2/fileutils.h"
-#include "filesystem/IQueuedLoader.h"
 #include "tier1/lzmaDecoder.h"
 #include "datacache/iresourceaccesscontrol.h"
 #include "tier0/miniprofiler.h"
@@ -43,9 +40,6 @@
 #include "vtfcombine.h"
 #include "keyvalues.h"
 
-#ifdef _CERT
-#define NO_LOG_MDLCACHE 1
-#endif
 
 //#define DEBUG_ANIM_STALLS
 
@@ -58,11 +52,7 @@
 #define MdlCacheMsg		if ( !LogMdlCache() ) ; else Msg
 #define MdlCacheWarning if ( !LogMdlCache() ) ; else Warning
 
-#if defined( _X360 )
-#define AsyncMdlCache() 0	// Explicitly !!!OFF!!! for 360 (incompatible), specific compatible resources opt in individually.
-#else
 #define AsyncMdlCache() 0
-#endif
 
 #define ERROR_MODEL		"models/error.mdl"
 #define IDSTUDIOHEADER	(('T'<<24)+('S'<<16)+('D'<<8)+'I')
@@ -377,7 +367,7 @@ static ConVar mod_test_not_available( "mod_test_not_available", "0" );
 static ConVar mod_test_mesh_not_available( "mod_test_mesh_not_available", "0" );
 static ConVar mod_test_verts_not_available( "mod_test_verts_not_available", "0" );
 static ConVar mod_load_mesh_async( "mod_load_mesh_async", ( AsyncMdlCache() ) ? "1" : "0" );
-static ConVar mod_load_anims_async( "mod_load_anims_async", ( IsGameConsole() || AsyncMdlCache() ) ? "1" : "0" );
+static ConVar mod_load_anims_async( "mod_load_anims_async", ( AsyncMdlCache() ) ? "1" : "0" );
 static ConVar mod_load_vcollide_async( "mod_load_vcollide_async",  ( AsyncMdlCache() ) ? "1" : "0" );
 static ConVar mod_trace_load( "mod_trace_load", "0" );
 static ConVar mod_lock_mdls_on_load( "mod_lock_mdls_on_load", "1" );
@@ -405,9 +395,7 @@ static void MakeFilename( char szFileName[MAX_PATH], studiohdr_t *pStudioHdr, co
 	Q_StripExtension( pStudioHdr->pszName(), szBaseModelName, MAX_PATH );
 	Q_snprintf( szFileName, MAX_PATH, "models/%s%s", szBaseModelName, pszExtension );
 	Q_FixSlashes( szFileName );
-#ifdef POSIX
 	Q_strlower( szFileName );
-#endif
 }
 
 // cache off the surface prop indices for each bone or model prop
@@ -654,7 +642,6 @@ public:
 
 	// Queued loading
 	void ProcessQueuedData( ModelParts_t *pModelParts );
-	static void	QueuedLoaderCallback_MDL( void *pContext, void  *pContext2, const void *pData, int nSize, LoaderError_t loaderError );
 
 	// combined models
 	virtual MDLHandle_t	CreateCombinedModel( const char *pszModelName );
@@ -1029,7 +1016,6 @@ private:
 		CLZMA lzma;
 
 		// Trivial early-outs - make sure we have valid data, and are on a game console (no LZMA on PC):
-		if ( !IsGameConsole() || !m_pData )
 			return true;
 
 		// Some asset types have an uncompressed header before the compressed data starts:
@@ -1220,22 +1206,10 @@ InitReturnVal_t CMDLCache::Init()
 	if ( !m_pAnimBlocksCacheSection )
 	{
 		unsigned int animBlockLimit = (unsigned)-1;
-		if ( IsGameConsole() )
-		{
-			// consoles limit the anim cache, tuned to worst case
-			// Use the amount of memory allocated by g_AnimBlockAllocator
-			animBlockLimit = ANIMBLOCK_SIZE*MAX_ANIMBLOCKS;
-		}
 		DataCacheLimits_t limits( animBlockLimit, (unsigned)-1, 0, 0 );
 		m_pAnimBlocksCacheSection = g_pDataCache->AddSection( this, MODEL_CACHE_ANIMBLOCK_SECTION_NAME, limits );
 	}
 
-	if ( IsGameConsole() )
-	{
-		// By default, source data is assumed to be non-native to the 360.
-		StudioByteSwap::ActivateByteSwapping( true );
-		StudioByteSwap::SetCollisionInterface( g_pPhysicsCollision );
-	}
 	m_bLostVideoMemory = false;
 	m_bInitialized = true;
 
@@ -1243,11 +1217,8 @@ InitReturnVal_t CMDLCache::Init()
 	g_pFullFileSystem->AddLoggingFunc( &CacheLog );
 #endif
 
-	if ( IsPC() )
-	{
-		//UNDONE: This opens up a whole fun realm of cheating for multiplayer games!
-		//m_ModelSwapper.LoadSubstitutionFile( MODEL_SUBSTITUTION_FILENAME );
-	}
+	//UNDONE: This opens up a whole fun realm of cheating for multiplayer games!
+	//m_ModelSwapper.LoadSubstitutionFile( MODEL_SUBSTITUTION_FILENAME );
 
 	return INIT_OK;
 }
@@ -1371,13 +1342,6 @@ void CMDLCache::Flush( studiodata_t *pStudioData, MDLCacheFlush_t nFlushFlags )
 
 			if ( pStudioData->m_pCombinedStudioData->m_nReferenceFlags == 0 )
 			{
-#if 0
-				if ( pStudioData->m_pCombinedStudioData->m_pCombineData != NULL )
-				{
-					//				Assert( 0 ); // is this currently in flight in the combiner thread?
-					delete pStudioData->m_pCombinedStudioData->m_pCombineData;
-				}
-#endif
 #ifdef DEBUG_COMBINER
 				Msg( "%p Free: pStudioData=%p\n", pStudioData->m_pCombinedStudioData, pStudioData );
 #endif
@@ -1632,13 +1596,6 @@ void CMDLCache::UnserializeVCollide( MDLHandle_t handle, bool bUseAsync, bool sy
 		Assert( pStudioData->m_pVCollide == NULL);
 		pStudioData->m_pVCollide = NULL;
 
-#if 0
-		// FIXME:  ywb
-		// If we don't ask for the virtual model to load, then we can get a hitch later on after startup
-		// Should we async load the sub .mdls during startup assuming they'll all be resident by the time the level can actually
-		//  start drawing?
-		if ( pStudioData->m_pVirtualModel || synchronousLoad )
-#endif
 		{
 			pStudioData->m_nFlags |= STUDIODATA_FLAGS_VCOLLISION_SCANNED;
 			virtualmodel_t *pVirtualModel = GetVirtualModel( handle );
@@ -1667,15 +1624,7 @@ void CMDLCache::UnserializeVCollide( MDLHandle_t handle, bool bUseAsync, bool sy
 		Q_strncpy( pFileName, GetActualModelName( handle ), MAX_PATH );
 		Q_SetExtension( pFileName, ".phy", sizeof( pFileName ) );
 		Q_FixSlashes( pFileName );
-#ifdef POSIX
 		Q_strlower( pFileName );
-#endif
-		if ( IsGameConsole() )
-		{
-			char pX360Filename[MAX_PATH];
-			UpdateOrCreate( NULL, pFileName, pX360Filename, sizeof( pX360Filename ), "GAME" );
-			Q_strncpy( pFileName, pX360Filename, sizeof(pX360Filename) );
-		}
 
 		bool bAsyncLoad = bUseAsync && !synchronousLoad;
 
@@ -1878,12 +1827,6 @@ unsigned char *CMDLCache::UnserializeAnimBlock( MDLHandle_t handle, bool bUseAsy
 {
 	VPROF( "CMDLCache::UnserializeAnimBlock" );
 
-	if ( IsGameConsole() && g_pQueuedLoader->IsMapLoading() )
-	{
-		// anim block i/o is not allowed at this stage
-		return NULL;
-	}
-
 	// Block 0 is never used!!!
 	Assert( nBlock > 0 );
 
@@ -1908,15 +1851,7 @@ unsigned char *CMDLCache::UnserializeAnimBlock( MDLHandle_t handle, bool bUseAsy
 		char pFileName[MAX_PATH];
 		Q_strncpy( pFileName, pModelName, sizeof(pFileName) );
 		Q_FixSlashes( pFileName );
-#ifdef POSIX
 		Q_strlower( pFileName );
-#endif
-		if ( IsGameConsole() )
-		{
-			char pX360Filename[MAX_PATH];
-			UpdateOrCreate( pStudioHdr, pFileName, pX360Filename, sizeof( pX360Filename ), "GAME" );
-			Q_strncpy( pFileName, pX360Filename, sizeof(pX360Filename) );
-		}
 
 		MdlCacheMsg( "MDLCache: Begin load Anim Block %s (block %i, bytes %d)\n", GetModelName( handle ), nBlock, nSize );
 
@@ -2223,12 +2158,6 @@ void CMDLCache::UnserializeAllVirtualModelsAndAnimBlocks( MDLHandle_t handle )
 	// unfortunately, the virtualmodel does build data into the cacheable studiohdr
 	FreeVirtualModel( m_MDLDict[handle] );
 
-	if ( IsGameConsole() && g_pQueuedLoader->IsMapLoading() )
-	{
-		// queued loading has to do it
-		return;
-	}
-
 	// don't load the submodel data
 	if ( !mod_forcedata.GetBool() )
 		return;
@@ -2236,11 +2165,6 @@ void CMDLCache::UnserializeAllVirtualModelsAndAnimBlocks( MDLHandle_t handle )
 	// if not present, will instance and load the submodels
 	GetVirtualModel( handle );
 
-	if ( IsGameConsole() )
-	{
-		// 360 does not drive the anims into its small cache section
-		return;
-	}
 
 	// Note that the animblocks start at 1!!!
 	studiohdr_t *pStudioHdr = GetStudioHdr( handle );
@@ -2313,12 +2237,6 @@ bool CMDLCache::UnserializeHardwareData( MDLHandle_t handle, bool bUseAsync )
 		// use model name for correct path
 		char pFileName[MAX_PATH];
 		MakeFilename( pFileName, pStudioHdr, GetVTXExtension() );
-		if ( IsGameConsole() )
-		{
-			char pX360Filename[MAX_PATH];
-			UpdateOrCreate( pStudioHdr, pFileName, pX360Filename, sizeof( pX360Filename ), "GAME" );
-			Q_strncpy( pFileName, pX360Filename, sizeof(pX360Filename) );
-		}
 
 		MdlCacheMsg( "MDLCache: Begin load VTX %s\n", GetModelName( handle ) );
 
@@ -2705,20 +2623,9 @@ bool CMDLCache::ReadFileNative( char *pFileName, const char *pPath, CUtlBuffer &
 {
 	bool bOk = false;
 
-	if ( IsGameConsole() )
-	{
-		// Read the 360 version
-		char pX360Filename[ MAX_PATH ];
-		UpdateOrCreate( NULL, pFileName, pX360Filename, sizeof( pX360Filename ), pPath );
-		bOk = g_pFullFileSystem->ReadFile( pX360Filename, pPath, buf, nMaxBytes );
-	}
-	else
 	{
 		const char *pActualFilename = pFileName;
-		if ( IsPC() )
-		{
-			pActualFilename = m_ModelSwapper.TranslateModelName( pFileName );
-		}
+		pActualFilename = m_ModelSwapper.TranslateModelName( pFileName );
 
 		// Read the PC version
 		bOk = g_pFullFileSystem->ReadFile( pActualFilename, pPath, buf, nMaxBytes );
@@ -2816,9 +2723,7 @@ bool CMDLCache::ReadMDLFile( MDLHandle_t handle, const char *pMDLFileName, CMDLC
 	char pFileName[ MAX_PATH ];
 	Q_strncpy( pFileName, pMDLFileName, sizeof( pFileName ) );
 	Q_FixSlashes( pFileName );
-#ifdef POSIX
 	Q_strlower( pFileName );
-#endif
 
 	MdlCacheMsg( "MDLCache: Load studiohdr %s\n", pFileName );
 
@@ -3004,12 +2909,6 @@ studiohdr_t *CMDLCache::GetStudioHdr( MDLHandle_t handle )
 
 			if ( !bOk )
 			{
-				if (IsOSX())
-				{
-					// rbarris wants this to go somewhere like the console.log prior to crashing, which is what the Error call will do next
-					printf("\n ##### Model %s not found and %s couldn't be loaded", pModelName, ERROR_MODEL );
-					fflush( stdout );
-				}
 				
 				Error( "Model %s not found and %s couldn't be loaded", pModelName, ERROR_MODEL );
 				if ( mod_lock_mdls_on_load.GetBool() )
@@ -3111,14 +3010,11 @@ void CMDLCache::TouchAllData( MDLHandle_t handle )
 		}
 	}
 
-	if ( !IsGameConsole() )
+	// cache the anims
+	// Note that the animblocks start at 1!!!
+	for ( int i=1; i< (int)pStudioHdr->numanimblocks; ++i )
 	{
-		// cache the anims
-		// Note that the animblocks start at 1!!!
-		for ( int i=1; i< (int)pStudioHdr->numanimblocks; ++i )
-		{
-			pStudioHdr->GetAnimBlock( i );
-		}
+		pStudioHdr->GetAnimBlock( i );
 	}
 
 	// cache the vertexes
@@ -3211,11 +3107,6 @@ bool CMDLCache::GetItemName( DataCacheClientID_t clientId, const void *pItem, ch
 //-----------------------------------------------------------------------------
 void CMDLCache::BeginCoarseLock()
 {
-	if ( IsGameConsole() )
-	{
-		m_pModelCacheSection->BeginFrameLocking();
-		m_pMeshCacheSection->BeginFrameLocking();
-	}
 }
 
 //-----------------------------------------------------------------------------
@@ -3223,11 +3114,6 @@ void CMDLCache::BeginCoarseLock()
 //-----------------------------------------------------------------------------
 void CMDLCache::EndCoarseLock()
 {
-	if ( IsGameConsole() )
-	{
-		m_pModelCacheSection->EndFrameLocking();
-		m_pMeshCacheSection->EndFrameLocking();
-	}
 }
 
 
@@ -3236,11 +3122,8 @@ void CMDLCache::EndCoarseLock()
 //-----------------------------------------------------------------------------
 void CMDLCache::BeginLock()
 {
-	if ( !IsGameConsole() )
-	{
-		m_pModelCacheSection->BeginFrameLocking();
-		m_pMeshCacheSection->BeginFrameLocking();
-	}
+	m_pModelCacheSection->BeginFrameLocking();
+	m_pMeshCacheSection->BeginFrameLocking();
 	m_pAnimBlocksCacheSection->BeginFrameLocking();
 }
 
@@ -3249,11 +3132,8 @@ void CMDLCache::BeginLock()
 //-----------------------------------------------------------------------------
 void CMDLCache::EndLock()
 {
-	if ( !IsGameConsole() )
-	{
-		m_pModelCacheSection->EndFrameLocking();
-		m_pMeshCacheSection->EndFrameLocking();
-	}
+	m_pModelCacheSection->EndFrameLocking();
+	m_pMeshCacheSection->EndFrameLocking();
 	m_pAnimBlocksCacheSection->EndFrameLocking();
 }
 
@@ -3596,21 +3476,9 @@ FSAsyncStatus_t CMDLCache::LoadData( const char *pszFilename, const char *pszPat
 {
 	if ( !*pControl )
 	{
-		if ( IsGameConsole() && g_pQueuedLoader->IsMapLoading() )
-		{
-			// the weapon model cache explicitly bypasses the QL causing beingin warnings
-			// per request, these need to get suppressed from the log which is causing undesired noise
-			if ( !m_pCacheNotify || !m_pCacheNotify->ShouldSupressLoadWarning( hModel ) )
-			{
-				DevWarning( "CMDLCache: Non-Optimal loading path for %s\n", pszFilename );
-			}
-		}
 
 		const char *pActualFilename = pszFilename;
-		if ( IsPC() )
-		{
-			pActualFilename = m_ModelSwapper.TranslateModelName( pszFilename );
-		}
+		pActualFilename = m_ModelSwapper.TranslateModelName( pszFilename );
 		
 		FileAsyncRequest_t asyncRequest;
 		asyncRequest.pszFilename = pActualFilename;
@@ -3865,21 +3733,6 @@ bool CMDLCache::ProcessDataIntoCache( MDLHandle_t handle, CMDLCacheData &cacheDa
 			{
 				vertexFileHeader_t *originalVertexData = GetVertexData( handle );
 				Assert( originalVertexData );
-				if ( originalVertexData && IsGameConsole() )
-				{
-					// PORTAL2 CONSOLE: Vertex/Index data will never be read again (no model decals or load-time lighting), so discard the VVD data and create a new header
-					int nullVertexDataSize = 0;
-					vertexFileHeader_t *nullVertexData = CreateNullVertexes( originalVertexData, pStudioHdrCurrent, &nullVertexDataSize );
-					Assert( nullVertexData && ( nullVertexDataSize > 0 ) );
-					if ( nullVertexData && ( nullVertexDataSize > 0 ) )
-					{
-						// Remove and free the original cache entry, and add the new one
-						// This causes the aliased "forced" locked vertex pointer to be nulled
-						// which trips MarkAsLoaded() to re-establish it during CL_FullyConnected(), thus the alias is maintained.
-						Flush( handle, MDLCACHE_FLUSH_VERTEXES | MDLCACHE_FLUSH_IGNORELOCK );
-						CacheData( &pStudioDataCurrent->m_VertexCache, nullVertexData, nullVertexDataSize, pStudioHdrCurrent->pszName(), MDLCACHE_VERTEXES, MakeCacheID( handle, MDLCACHE_VERTEXES) );
-					}
-				}
 			}
 
 			break;
@@ -4295,12 +4148,6 @@ vertexFileHeader_t *CMDLCache::LoadVertexData( studiohdr_t *pStudioHdr )
 		// load the VVD file
 		// use model name for correct path
 		MakeFilename( pFileName, pStudioHdr, ".vvd" );
-		if ( IsGameConsole() )
-		{
-			char pX360Filename[MAX_PATH];
-			UpdateOrCreate( pStudioHdr, pFileName, pX360Filename, sizeof( pX360Filename ), "GAME" );
-			Q_strncpy( pFileName, pX360Filename, sizeof(pX360Filename) );
-		}
 
 		MdlCacheMsg( "MDLCache: Begin load VVD %s\n", pFileName );
 
@@ -4519,136 +4366,14 @@ void CMDLCache::ProcessQueuedData( ModelParts_t *pModelParts )
 	delete pModelParts;
 }
 
-//-----------------------------------------------------------------------------
-// Journals each of the incoming MDL components until all arrive (or error).
-// Not all components exist, but that information is not known at job submission.
-//-----------------------------------------------------------------------------
-void CMDLCache::QueuedLoaderCallback_MDL( void *pContext, void *pContext2, const void *pData, int nSize, LoaderError_t loaderError )
-{
-	// validity is denoted by a nonzero buffer
-	nSize = ( loaderError == LOADERERROR_NONE ) ? nSize : 0;
-
-	// journal each incoming buffer
-	ModelParts_t *pModelParts = (ModelParts_t *)pContext;
-	ModelParts_t::BufferType_t bufferType = static_cast< ModelParts_t::BufferType_t >(size_cast<int>( (intp) pContext2 ) );
-	pModelParts->Buffers[bufferType].SetExternalBuffer( (void *)pData, nSize, nSize, CUtlBuffer::READ_ONLY );
-	pModelParts->nLoadedParts += (1 << bufferType);
-
-	// wait for all components
-	if ( pModelParts->DoFinalProcessing() )
-	{
-		// now have all components, process the raw data into the cache
-		g_MDLCache.ProcessQueuedData( pModelParts );
-	}
-}
 
 //-----------------------------------------------------------------------------
 // Build a queued loader job to get the MDL ant all of its components into the cache.
 //-----------------------------------------------------------------------------
 bool CMDLCache::PreloadModel( MDLHandle_t handle )
 {
-	if ( !IsGameConsole() )
-	{
-		return false;
-	}
-
-	if ( !g_pQueuedLoader->IsMapLoading() || handle == MDLHANDLE_INVALID )
-	{
-		return false;
-	}
-
-	if ( !g_pQueuedLoader->IsBatching() )
-	{
-		// batching must be active, following code depends on its behavior
-		DevWarning( "CMDLCache:: Late preload of model '%s'\n", GetModelName( handle ) );
-		return false;
-	}
-
-	// determine existing presence
-	// actual necessity is not established here, allowable absent files need their i/o error to occur
-	// queued loader has additional info and may inhibit some specific model's types
-	bool bNeedsMDL = !IsDataLoaded( handle, MDLCACHE_STUDIOHDR );
-	bool bNeedsVTX = !IsDataLoaded( handle, MDLCACHE_STUDIOHWDATA );
-	bool bNeedsVVD = !IsDataLoaded( handle, MDLCACHE_VERTEXES );
-	bool bNeedsPHY = !IsDataLoaded( handle, MDLCACHE_VCOLLIDE );
-	if ( !bNeedsMDL && !bNeedsVTX && !bNeedsVVD && !bNeedsPHY )
-	{
-		// already in cache, nothing to do
-		return true;
-	}
-
-	char szFilename[MAX_PATH];
-	char szNameOnDisk[MAX_PATH];
-	V_strncpy( szFilename, GetActualModelName( handle ), sizeof( szFilename ) );
-	V_StripExtension( szFilename, szFilename, sizeof( szFilename ) );
-
-	// need to gather all model parts (mdl, vtx, vvd, phy, ani)
-	ModelParts_t *pModelParts = new ModelParts_t;
-	pModelParts->hMDL = handle;
-
-	// create multiple loader jobs to perform gathering i/o operations
-	LoaderJob_t loaderJob;
-	loaderJob.m_pPathID = "GAME";
-	loaderJob.m_pCallback = QueuedLoaderCallback_MDL;
-	loaderJob.m_pContext = (void *)pModelParts;
-	loaderJob.m_Priority = LOADERPRIORITY_DURINGPRELOAD;
-	loaderJob.m_bPersistTargetData = true;
-
-	if ( bNeedsMDL )
-	{
-		V_snprintf( szNameOnDisk, sizeof( szNameOnDisk ), "%s%s.mdl", szFilename, GetPlatformExt() );
-		loaderJob.m_pFilename = szNameOnDisk;
-		loaderJob.m_pContext2 = (void *)ModelParts_t::BUFFER_MDL;
-		if ( g_pQueuedLoader->AddJob( &loaderJob ) )
-		{
-			pModelParts->nExpectedParts |= 1 << ModelParts_t::BUFFER_MDL;
-		}
-	}
-
-	if ( bNeedsVTX )
-	{
-		// vtx extensions are .xxx.vtx, need to re-form as, ???.xxx.yyy.vtx
-		char szTempName[MAX_PATH];
-		V_snprintf( szNameOnDisk, sizeof( szNameOnDisk ), "%s%s", szFilename, GetVTXExtension() );
-		V_StripExtension( szNameOnDisk, szTempName, sizeof( szTempName ) );
-		V_snprintf( szNameOnDisk, sizeof( szNameOnDisk ), "%s%s.vtx", szTempName, GetPlatformExt() );
-		loaderJob.m_pFilename = szNameOnDisk;
-		loaderJob.m_pContext2 = (void *)ModelParts_t::BUFFER_VTX;
-		if ( g_pQueuedLoader->AddJob( &loaderJob ) )
-		{
-			pModelParts->nExpectedParts |= 1 << ModelParts_t::BUFFER_VTX;
-		}
-	}
-
-	if ( bNeedsVVD )
-	{
-		V_snprintf( szNameOnDisk, sizeof( szNameOnDisk ), "%s%s.vvd", szFilename, GetPlatformExt() );
-		loaderJob.m_pFilename = szNameOnDisk;
-		loaderJob.m_pContext2 = (void *)ModelParts_t::BUFFER_VVD;
-		if ( g_pQueuedLoader->AddJob( &loaderJob ) )
-		{
-			pModelParts->nExpectedParts |= 1 << ModelParts_t::BUFFER_VVD;
-		}
-	}
-
-	if ( bNeedsPHY )
-	{
-		V_snprintf( szNameOnDisk, sizeof( szNameOnDisk ), "%s%s.phy", szFilename, GetPlatformExt() );
-		loaderJob.m_pFilename = szNameOnDisk;
-		loaderJob.m_pContext2 = (void *)ModelParts_t::BUFFER_PHY;
-		if ( g_pQueuedLoader->AddJob( &loaderJob ) )
-		{
-			pModelParts->nExpectedParts |= 1 << ModelParts_t::BUFFER_PHY;
-		}
-	}
-
-	if ( !pModelParts->nExpectedParts )
-	{
-		// further logic showed that no components are actually needed
-		delete pModelParts;
-	}
-
-	return true;
+	// the console queued loader is gone; nothing to preload
+	return false;
 }
 
 bool CMDLCache::ProcessPendingHardwareRestore()
@@ -4745,81 +4470,8 @@ static void IOAsyncVVDCallback( const FileAsyncRequest_t &asyncRequest, int numR
 //-----------------------------------------------------------------------------
 bool CMDLCache::RestoreHardwareData( MDLHandle_t handle, FSAsyncControl_t *pAsyncVTXControl, FSAsyncControl_t *pAsyncVVDControl )
 {
-	if ( !IsGameConsole() )
-	{
-		return false;
-	}
-
-	if ( *pAsyncVTXControl || *pAsyncVVDControl )
-	{
-		// already scheduled
-		return false;
-	}
-
-	bool bNeedsVTX = !IsDataLoaded( handle, MDLCACHE_STUDIOHWDATA );
-	if ( !bNeedsVTX )
-	{
-		// already in cache, nothing to do
-		return false;
-	}
-
-	bool bNeedsVVD = !IsDataLoaded( handle, MDLCACHE_VERTEXES );
-
-	char szFilename[MAX_PATH];
-	char szNameOnDisk[MAX_PATH];
-	V_strncpy( szFilename, GetActualModelName( handle ), sizeof( szFilename ) );
-	V_StripExtension( szFilename, szFilename, sizeof( szFilename ) );
-
-	// need to gather all model parts (vtx, vvd)
-	ModelParts_t *pModelParts = new ModelParts_t;
-	pModelParts->hMDL = handle;
-
-	if ( bNeedsVTX )
-	{
-		// vtx extensions are .xxx.vtx, need to re-form as, ???.xxx.yyy.vtx
-		char szTempName[MAX_PATH];
-		V_snprintf( szNameOnDisk, sizeof( szNameOnDisk ), "%s%s", szFilename, GetVTXExtension() );
-		V_StripExtension( szNameOnDisk, szTempName, sizeof( szTempName ) );
-		V_snprintf( szNameOnDisk, sizeof( szNameOnDisk ), "%s%s.vtx", szTempName, GetPlatformExt() );
-	
-		// schedule the async
-		FileAsyncRequest_t asyncRequest;
-		asyncRequest.pszFilename = szNameOnDisk;
-		asyncRequest.pszPathID = "GAME";
-		asyncRequest.priority = -1;
-		asyncRequest.flags = FSASYNC_FLAGS_ALLOCNOFREE;
-		asyncRequest.pContext = (void *)pModelParts;
-		asyncRequest.pfnCallback = IOAsyncVTXCallback;
-		g_pFullFileSystem->AsyncRead( asyncRequest, pAsyncVTXControl );
-
-		pModelParts->nExpectedParts |= 1 << ModelParts_t::BUFFER_VTX;
-	}
-
-	if ( bNeedsVVD )
-	{
-		V_snprintf( szNameOnDisk, sizeof( szNameOnDisk ), "%s%s.vvd", szFilename, GetPlatformExt() );
-
-		// schedule the async
-		FileAsyncRequest_t asyncRequest;
-		asyncRequest.pszFilename = szNameOnDisk;
-		asyncRequest.pszPathID = "GAME";
-		asyncRequest.priority = -1;
-		asyncRequest.flags = FSASYNC_FLAGS_ALLOCNOFREE;
-		asyncRequest.pContext = (void *)pModelParts;
-		asyncRequest.pfnCallback = IOAsyncVVDCallback;
-		g_pFullFileSystem->AsyncRead( asyncRequest, pAsyncVVDControl );
-
-		pModelParts->nExpectedParts |= 1 << ModelParts_t::BUFFER_VVD;
-	}
-
-	if ( !pModelParts->nExpectedParts )
-	{
-		// further logic showed that no components are actually needed
-		delete pModelParts;
-		return false;
-	}
-
-	return true;
+	// the console queued loader is gone; nothing to preload
+	return false;
 }
 
 //-----------------------------------------------------------------------------
@@ -5561,10 +5213,6 @@ void CMDLCache::ShutdownCombiner( )
 		m_bCombinerShutdown = true;
 		m_CombinerEvent.Set();
 		m_CombinerShutdownEvent.Wait();
-#if 0
-		// how to kill this guy off?
-		ReleaseThreadHandle( m_hCombinerThread );
-#endif
 		m_hCombinerThread = NULL;
 	}
 

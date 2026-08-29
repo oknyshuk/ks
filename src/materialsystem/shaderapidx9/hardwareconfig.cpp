@@ -69,7 +69,7 @@ void CHardwareConfig::SetHDREnabled( bool bEnable )
 //-----------------------------------------------------------------------------
 void CHardwareConfig::ForceCapsToDXLevel( HardwareCaps_t *pCaps, int nDxLevel, const HardwareCaps_t &actualCaps )
 {
-	if ( !IsPC() || nDxLevel > 100 )
+	if ( nDxLevel > 100 )
 		return;
 
 	pCaps->m_nDXSupportLevel = nDxLevel;
@@ -106,11 +106,6 @@ void CHardwareConfig::ForceCapsToDXLevel( HardwareCaps_t *pCaps, int nDxLevel, c
 		pCaps->m_SupportsShaderModel_3_0 = false;
 		if ( IsOpenGL() )
 		{
-            if ( IsOSX() )
-            {
-                pCaps->m_bSupportsStaticControlFlow = CommandLine()->CheckParm( "-glslcontrolflow" ) != NULL;
-            }
-            else
             {
                 pCaps->m_bSupportsStaticControlFlow = !CommandLine()->CheckParm( "-noglslcontrolflow" );
             }
@@ -143,11 +138,6 @@ void CHardwareConfig::ForceCapsToDXLevel( HardwareCaps_t *pCaps, int nDxLevel, c
             
         if ( IsOpenGL() )
         {
-            if ( IsOSX() )
-            {
-                pCaps->m_bSupportsStaticControlFlow = CommandLine()->CheckParm( "-glslcontrolflow" ) != NULL;
-            }
-            else
             {
                 pCaps->m_bSupportsStaticControlFlow = !CommandLine()->CheckParm( "-noglslcontrolflow" );
             }
@@ -166,11 +156,6 @@ void CHardwareConfig::ForceCapsToDXLevel( HardwareCaps_t *pCaps, int nDxLevel, c
 	case 100:
         if ( IsOpenGL() )
         {
-            if ( IsOSX() )
-            {
-                pCaps->m_bSupportsStaticControlFlow = CommandLine()->CheckParm( "-glslcontrolflow" ) != NULL;
-            }
-            else
             {
                 pCaps->m_bSupportsStaticControlFlow = !CommandLine()->CheckParm( "-noglslcontrolflow" );
             }
@@ -190,9 +175,6 @@ void CHardwareConfig::ForceCapsToDXLevel( HardwareCaps_t *pCaps, int nDxLevel, c
 		break;
 	}
 
-#ifdef _PS3
-	pCaps->m_NumPixelShaderConstants = MAX_FRAGMENT_PROGRAM_CONSTS; // this is somewhat of a lie... fragment shader constants are special on PS3 and we actually have a larger number of these
-#endif
 }
 
 
@@ -219,13 +201,11 @@ void CHardwareConfig::SetupHardwareCaps( int nDXLevel, const HardwareCaps_t &act
 #if defined( DX_TO_GL_ABSTRACTION ) || defined( DX_TO_VK_ABSTRACTION )
 	if ( nDXLevel >= 100 )
 #else
-	if ( !( IsPC() || IsPosix() ) || ( nDXLevel >= 100 ) )
+	if ( ( nDXLevel >= 100 ) )
 #endif
 		return;
 
 	// Don't bother with fallbacks for consoles.
-	if ( IsGameConsole() )
-		return;
 
 	int nForceDXLevel = CommandLine()->ParmValue( "-maxdxlevel", 0 );
 	if ( nForceDXLevel >= 90 )
@@ -235,7 +215,7 @@ void CHardwareConfig::SetupHardwareCaps( int nDXLevel, const HardwareCaps_t &act
 	else 
 	{
 		// Don't bother with fallbacks for DX10 or consoles
-		if ( !IsPC() || !IsPosix() || ( nDXLevel >= 100 ) )
+		if ( ( nDXLevel >= 100 ) )
 			return;
 	}
 	
@@ -404,32 +384,16 @@ bool CHardwareConfig::IsUnsupported() const
 
 ShadowFilterMode_t CHardwareConfig::GetShadowFilterMode( bool bForceLowQualityShadows, bool bPS30 ) const
 {
-#if PLATFORM_POSIX || !defined( PLATFORM_X360 )
 	static ConVarRef gpu_level( "gpu_level" );
 	int nGPULevel = gpu_level.GetInt();
 	
     const bool bUseLowQualityShadows = ( nGPULevel < 2 ) || ( bForceLowQualityShadows );
-#endif
 	
 #if PLATFORM_POSIX
 	// Currently Mac or PS3
 	if ( !m_Caps.m_bSupportsShadowDepthTextures )
 		return SHADOWFILTERMODE_DEFAULT;
 
-    if ( IsOSXOpenGL() &&
-         ( bUseLowQualityShadows || ( m_Caps.m_VendorID == VENDORID_INTEL ) ) )
-    {
-        return NVIDIA_PCF_CHEAP;
-    }
-
-	if( IsPS3() )
-	{
-		// PS3 shaders doesn't use the regular PC/POSIX values. It supports either 9 (the default) or 1 tap (fast) filtering.
-		return bForceLowQualityShadows ? GAMECONSOLE_SINGLE_TAP_PCF : GAMECONSOLE_NINE_TAP_PCF;
-	}
-#elif defined( PLATFORM_X360 )
-	// X360
-	return bForceLowQualityShadows ? GAMECONSOLE_SINGLE_TAP_PCF : GAMECONSOLE_NINE_TAP_PCF;
 #else
 	// PC
 	if ( !m_Caps.m_bSupportsShadowDepthTextures || !ShaderUtil()->GetConfig().ShadowDepthTexture() )
@@ -484,35 +448,12 @@ ShadowFilterMode_t CHardwareConfig::GetShadowFilterMode( bool bForceLowQualitySh
 	return SHADOWFILTERMODE_DEFAULT;
 }
 
-#if defined( CSTRIKE15 ) && defined( _X360 )
-static ConVar r_shader_srgb( "r_shader_srgb", "0", 0, "-1 = use hardware caps. 0 = use hardware srgb. 1 = use shader srgb(software lookup)" );		// -1=use caps 0=off 1=on
-static ConVar r_shader_srgbread( "r_shader_srgbread", "1", 0, "1 = use shader srgb texture reads, 0 = use HW" );
-#else
 static ConVar r_shader_srgb( "r_shader_srgb", "0", 0, "-1 = use hardware caps. 0 = use hardware srgb. 1 = use shader srgb(software lookup)" );		// -1=use caps 0=off 1=on
 static ConVar r_shader_srgbread( "r_shader_srgbread", "0", 0, "1 = use shader srgb texture reads, 0 = use HW" );
-#endif
 
 int CHardwareConfig::NeedsShaderSRGBConversion() const
 {
-	if ( IsX360() )
-	{
-#if defined( CSTRIKE15 )
-		// [mariod] TODO - tidy up the use of this (now mostly obsolete) convar after PAX
-		if( r_shader_srgbread.GetBool() )
-		{
-			return false;
-		}
-#else
-		// 360 always now uses a permanent hw solution
-		return false;
-#endif
-	}
 
-	if ( IsPS3() )
-	{
-		// PS3 natively supports srgb in hardware
-		return false;
-	}
 
 	int cValue = r_shader_srgb.GetInt();
 	switch( cValue )
@@ -531,7 +472,7 @@ int CHardwareConfig::NeedsShaderSRGBConversion() const
 bool CHardwareConfig::UsesSRGBCorrectBlending() const
 {
 	int cValue = r_shader_srgb.GetInt();
-	return ( cValue == 0 ) && ( ( m_ActualCaps.m_bDX10Blending ) || IsX360() );
+	return ( cValue == 0 ) && ( m_ActualCaps.m_bDX10Blending );
 }
 
 static ConVar mat_disablehwmorph( "mat_disablehwmorph", "0", FCVAR_DEVELOPMENTONLY, "Disables HW morphing for particular mods" );
@@ -682,11 +623,6 @@ const char *CHardwareConfig::GetShaderDLLName() const
 
 bool CHardwareConfig::ReadPixelsFromFrontBuffer() const
 {
-	if ( IsX360() )
-	{
-		// future proof safety, not allowing the front read path
-		return false;
-	}
 
 	// GR - in DX 9.0a can blit from MSAA back buffer
 	return false;
@@ -694,11 +630,6 @@ bool CHardwareConfig::ReadPixelsFromFrontBuffer() const
 
 bool CHardwareConfig::PreferDynamicTextures() const
 {
-	if ( IsX360() )
-	{
-		// future proof safety, not allowing these
-		return false;
-	}
 
 	return m_Caps.m_PreferDynamicTextures;
 }
@@ -822,10 +753,6 @@ HDRType_t CHardwareConfig::GetHDRType() const
 
 float CHardwareConfig::GetLightMapScaleFactor( void ) const
 {
-#ifdef _PS3
-	// PS3 uses floating point lightmaps but not the full HDR_TYPE_FLOAT codepath
-	return 1.0f;
-#else // _PS3
 	switch( GetHDRType() )
 	{
 	case HDR_TYPE_FLOAT:
@@ -839,7 +766,6 @@ float CHardwareConfig::GetLightMapScaleFactor( void ) const
 	default:
 		return GammaToLinearFullRange( 2.0 );	// light map scale
 	}
-#endif // !_PS3
 }
 
 HDRType_t CHardwareConfig::GetHardwareHDRType() const
@@ -899,22 +825,12 @@ ImageFormat CHardwareConfig::GetNullTextureFormat( void ) const
 
 bool CHardwareConfig::SupportsCascadedShadowMapping( void ) const
 {
-#if defined(_PS3) 
-	return m_Caps.m_bSupportsCascadedShadowMapping;
-#elif defined(_X360)
-	return m_Caps.m_bSupportsCascadedShadowMapping;
-#else
     return m_Caps.m_bSupportsCascadedShadowMapping && ( GetDXSupportLevel() >= 95 );
-#endif
 }
 
 CSMQualityMode_t CHardwareConfig::GetCSMQuality( void ) const
 {
-#if defined( _X360 ) || defined( _PS3 )
-	return CSMQUALITY_VERY_LOW;
-#else
 	return (CSMQualityMode_t)m_Caps.m_nCSMQuality;
-#endif
 }
 
 bool CHardwareConfig::SupportsBilinearPCFSampling() const
@@ -922,7 +838,7 @@ bool CHardwareConfig::SupportsBilinearPCFSampling() const
 #if defined( DX_TO_VK_ABSTRACTION )
 	return true;
 #endif
-	if( IsOpenGL() || IsPS3() || IsX360() )
+	if( IsOpenGL() )
 		return true;
 
 	if ( ( m_Caps.m_VendorID == VENDORID_NVIDIA ) || ( m_Caps.m_VendorID == VENDORID_INTEL ) )
@@ -942,9 +858,6 @@ bool CHardwareConfig::SupportsBilinearPCFSampling() const
 // Returns the CSM static combo to select given the current card's capablities and the configured CSM quality level.
 CSMShaderMode_t CHardwareConfig::GetCSMShaderMode( CSMQualityMode_t nQualityLevel ) const
 {
-#if defined( _X360 ) || defined( _PS3 )
-	return CSMSHADERMODE_LOW_OR_VERY_LOW;
-#endif
 
 	// Special case for ATI DX9-class (pre ATI HD 2xxx) cards that don't support NVidia-style PCF filtering - always set to CSMSHADERMODE_ATIFETCH4.
 	if ( !SupportsBilinearPCFSampling() )
@@ -977,18 +890,7 @@ bool CHardwareConfig::SupportsResolveDepth( void ) const
 	if ( ( gpu_level.GetInt() >= 2 ) &&
 		 ( mat_resolveFullFrameDepth.GetInt() == 1 ) )
 	{
-#if defined(DX_TO_GL_ABSTRACTION)
-		{
-			if ( gGL->m_bHave_GL_EXT_framebuffer_blit )
-			{
-				return true;
-			}
-			else
-			{
-				return false;
-			}
-		}
-#elif defined( DX_TO_VK_ABSTRACTION )
+#if   defined( DX_TO_VK_ABSTRACTION )
 		{
 			return true;
 		}
@@ -1026,7 +928,3 @@ bool CHardwareConfig::HasFullResolutionDepthTexture(void) const
 	}
 }
 
-#ifdef _PS3
-#include "hardwareconfig_ps3nonvirt.h"
-#include "hardwareconfig_ps3nonvirt.inl"
-#endif

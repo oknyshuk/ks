@@ -69,31 +69,16 @@ void CSosOperatorPlatform::ParseKV( CSosOperatorStack *pStack, void *pVoidMem, K
 				}
 				else if ( !V_strcasecmp( pParamString, "pc" ) )
 				{
-					if( IsPC( ) )
-					{
-						pStructMem->m_flOutput[0] = 1.0;
-					}
+					pStructMem->m_flOutput[0] = 1.0;
 				}
 				else if ( !V_strcasecmp( pParamString, "x360" ) )
 				{
-					if( IsX360( ) )
-					{
-						pStructMem->m_flOutput[0] = 1.0;
-					}
 				}
 				else if ( !V_strcasecmp( pParamString, "ps3" ) )
 				{
-					if( IsPS3( ) )
-					{
-						pStructMem->m_flOutput[0] = 1.0;
-					}
 				}
 				else if ( !V_strcasecmp( pParamString, "osx" ) )
 				{
-					if( IsOSX( ) )
-					{
-						pStructMem->m_flOutput[0] = 1.0;
-					}
 				}
 				else
 				{

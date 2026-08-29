@@ -127,16 +127,6 @@ HRESULT SetupWindowsMixerPreferences( bool bDuckingOptOut = true )
 		hr = pSessionManager2->GetAudioSessionControl(NULL, 0, &pSessionControl);
 		// enable this code to force some default master volume for this game.  
 		// NOTE: This will have the side effect of not remembering any setting the user made in the wiundows mixer
-#if 0
-		ISimpleAudioVolume *pSimpleVolume = NULL;
-		hr = pSessionManager2->GetSimpleAudioVolume( NULL, FALSE, &pSimpleVolume );
-		if ( SUCCEEDED(hr) )
-		{
-			pSimpleVolume->SetMasterVolume( flMasterVolume, NULL );
-			pSimpleVolume->Release();
-		}
-
-#endif
 		pSessionManager2->Release();
 		pSessionManager2 = NULL;
 	}

@@ -999,7 +999,7 @@ enum
 bool IsHeadTrackingEnabled();
 
 // If this is defined, all of the scopeguard objects are NULL'd out to reduce overhead
-#if defined( CSTRIKE15 ) //&& !defined( _GAMECONSOLE )  // Split screen removed from console.
+#if defined( CSTRIKE15 ) // // Split screen removed from console.
 #define SPLIT_SCREEN_STUBS
 #endif
 
@@ -1012,11 +1012,7 @@ bool IsHeadTrackingEnabled();
 #elif defined( PORTAL2 )
 	#define MAX_SPLITSCREEN_PLAYERS 2
 #elif defined ( CSTRIKE15 )
-#if defined( _GAMECONSOLE )
-	#define MAX_SPLITSCREEN_PLAYERS 1 // Split screen removed from console.
-#else
 	#define MAX_SPLITSCREEN_PLAYERS 1
-#endif
 #else
 	#define MAX_SPLITSCREEN_PLAYERS 1
 #endif

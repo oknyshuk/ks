@@ -33,9 +33,7 @@ CShaderDeviceBase *g_pShaderDevice;
 CShaderAPIBase *g_pShaderAPI;
 CShaderDeviceMgrBase *g_pShaderDeviceMgr;
 IShaderShadow *g_pShaderShadow;
-#if !defined( _OSX )
 IShaderUtil* g_pShaderUtil;		// The main shader utility interface
-#endif
 
 bool g_bUseShaderMutex = false;	// Shader mutex globals
 bool g_bShaderAccessDisallowed;
@@ -90,9 +88,6 @@ static void InitShaderAPICVars( )
 CShaderDeviceMgrBase::CShaderDeviceMgrBase()
 {
 	m_pDXSupport = NULL;
-#if defined( _OSX )
-	g_pShaderDeviceMgr = this;
-#endif
 }
 
 CShaderDeviceMgrBase::~CShaderDeviceMgrBase()
@@ -133,7 +128,7 @@ bool CShaderDeviceMgrBase::Connect( CreateInterfaceFn factory )
 {
 	LOCK_SHADERAPI();
 
-	Assert( IsOSX() || !g_pShaderDeviceMgr );
+	Assert( !g_pShaderDeviceMgr );
 
 	s_TempFactory = factory;
 
@@ -142,10 +137,8 @@ bool CShaderDeviceMgrBase::Connect( CreateInterfaceFn factory )
 	ConnectTier1Libraries( &actualFactory, 1 );
 	InitShaderAPICVars();
 	ConnectTier2Libraries( &actualFactory, 1 );
-#if !defined( _OSX )
 	if ( !g_pShaderUtil )
 		g_pShaderUtil = (IShaderUtil*)ShaderDeviceFactory( SHADER_UTIL_INTERFACE_VERSION, NULL );
-#endif
 
 	g_pShaderDeviceMgr = this;
 
@@ -166,10 +159,8 @@ void CShaderDeviceMgrBase::Disconnect()
 {
 	LOCK_SHADERAPI();
 
-#if !defined( _OSX )
 	g_pShaderDeviceMgr = NULL;
 	g_pShaderUtil = NULL;
-#endif
 	DisconnectTier2Libraries();
 	ConVar_Unregister();
 	DisconnectTier1Libraries();
@@ -471,9 +462,6 @@ void CShaderDeviceMgrBase::ReadDXSupportLevels( HardwareCaps_t &caps )
 // Loads the hardware caps, for cases in which the D3D caps lie or where we need to augment the caps
 //-----------------------------------------------------------------------------
 
-#ifdef OSX
-ConVar mat_osx_csm_enabled( "mat_osx_csm_enabled", "1", FCVAR_DEVELOPMENTONLY, "" );
-#endif
 
 void CShaderDeviceMgrBase::LoadHardwareCaps( KeyValues *pGroup, HardwareCaps_t &caps )
 {
@@ -502,13 +490,7 @@ void CShaderDeviceMgrBase::LoadHardwareCaps( KeyValues *pGroup, HardwareCaps_t &
 	// dxsupport can only kill CSM support, not forcefully enable it.
 	if ( !ReadBool( pGroup, "setting.SupportsCascadedShadowMapping", true ) )
 	{
-#ifdef OSX
-		// Set convar mat_osx_csm_enabled to 0 and do not touch caps.m_bSupportsCascadedShadowMapping (as CS:GO always had
-		// the caps set to true, therefore code path where the caps is false haven't been tested and might not be safe)
-		mat_osx_csm_enabled.SetValue( 0 );
-#else
 		caps.m_bSupportsCascadedShadowMapping = false;
-#endif
 	}
 	
 	int nCSMQuality = CSMQUALITY_VERY_LOW;
@@ -603,20 +585,11 @@ static unsigned long GetRam()
 //-----------------------------------------------------------------------------
 bool CShaderDeviceMgrBase::GetRecommendedVideoConfig( int nAdapter, int nVendorID, int nDeviceID, KeyValues *pConfiguration ) 
 {
-	if ( IsX360() )
-	{
-		// this is not compatible with xbox
-		return false;
-	}
 
 	LOCK_SHADERAPI();
 
 	VidMatConfigData_t configData;
-#ifdef POSIX
 	V_strcpy_safe( configData.szFileName, "cfg/moddefaults_mac.txt" );
-#else
-	V_strcpy_safe( configData.szFileName, "cfg\\moddefaults.txt" );
-#endif
 	V_strcpy_safe( configData.szPathID, "MOD" );
 	configData.pConfigKeys = pConfiguration;
 	configData.nVendorID = nVendorID;
@@ -656,13 +629,7 @@ bool CShaderDeviceMgrBase::GetRecommendedConfigurationInfo( int nAdapter, int nD
 	LOCK_SHADERAPI();
 
 	VidMatConfigData_t configData;
-#ifdef OSX
-	V_strcpy_safe( configData.szFileName, "../bin/dxsupport_mac.cfg" );
-#elif LINUX
 	V_strcpy_safe( configData.szFileName, "../bin/dxsupport.cfg" );
-#else
-	V_strcpy_safe( configData.szFileName, "..\\bin\\dxsupport.cfg" );
-#endif
 	V_strcpy_safe( configData.szPathID, "GAME" );
 	configData.pConfigKeys = pConfiguration;
 	configData.nVendorID = nVendorID;
@@ -938,7 +905,6 @@ static BOOL CALLBACK EnumWindowsProcNotThis( VD3DHWND hWnd, LPARAM lParam )
 #ifdef USE_ACTUAL_DX
 static LRESULT CALLBACK ShaderDX8WndProc(VD3DHWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam )
 {
-#if !defined( _X360 )
 	// FIXME: Should these IPC messages tell when an app has focus or not?
 	// If so, we'd want to totally disable the shader api layer when an app
 	// doesn't have focus.
@@ -972,7 +938,6 @@ static LRESULT CALLBACK ShaderDX8WndProc(VD3DHWND hWnd, UINT msg, WPARAM wParam,
 	}
 
 	return DefWindowProc( hWnd, msg, wParam, lParam );
-#endif
 }
 #endif
 
@@ -984,7 +949,6 @@ void CShaderDeviceBase::InstallWindowHook( void* hWnd )
 {
 	Assert( m_hWndCookie == NULL );
 #ifdef USE_ACTUAL_DX
-#if !defined( _X360 )
 	VD3DHWND hParent = GetTopmostParentWindow( (VD3DHWND)hWnd );
 
 	// Attach a child window to the parent; we're gonna store special info there
@@ -1009,13 +973,11 @@ void CShaderDeviceBase::InstallWindowHook( void* hWnd )
 	// Marks it as a material system window
 	SetWindowLongPtr( (VD3DHWND)m_hWndCookie, GWLP_USERDATA, MATERIAL_SYSTEM_WINDOW_ID );
 #endif
-#endif
 }
 
 void CShaderDeviceBase::RemoveWindowHook( void* hWnd )
 {
 #ifdef USE_ACTUAL_DX
-#if !defined( _X360 )
 	if ( m_hWndCookie )
 	{
 		DestroyWindow( (VD3DHWND)m_hWndCookie ); 
@@ -1026,7 +988,6 @@ void CShaderDeviceBase::RemoveWindowHook( void* hWnd )
 	HINSTANCE hInst = (HINSTANCE)GetWindowLongPtr( hParent, GWLP_HINSTANCE );
 	UnregisterClass( "shaderdx8", hInst );
 #endif
-#endif
 }
 
 
@@ -1036,7 +997,6 @@ void CShaderDeviceBase::RemoveWindowHook( void* hWnd )
 void CShaderDeviceBase::SendIPCMessage( IPCMessage_t msg )
 {
 #ifdef USE_ACTUAL_DX
-#if !defined( _X360 )
 	// Gotta send this to all windows, since we don't know which ones
 	// are material system apps...
 	if ( msg != EVICT_MESSAGE )
@@ -1047,7 +1007,6 @@ void CShaderDeviceBase::SendIPCMessage( IPCMessage_t msg )
 	{
 		EnumWindows( EnumWindowsProcNotThis, (DWORD)msg );
 	}
-#endif
 #endif
 }
 

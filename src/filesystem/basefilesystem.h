@@ -24,7 +24,7 @@
 #undef GetJob
 #undef AddJob
 
-#elif defined( POSIX )
+#else
 	#include <unistd.h> // unlink
 	#include "linux_support.h"
 	#define INVALID_HANDLE_VALUE (void *)-1
@@ -74,14 +74,14 @@
 #ifdef _WIN32
 #define CORRECT_PATH_SEPARATOR '\\'
 #define INCORRECT_PATH_SEPARATOR '/'
-#elif defined(POSIX)
+#else
 #define CORRECT_PATH_SEPARATOR '/'
 #define INCORRECT_PATH_SEPARATOR '\\'
 #endif
 
 #ifdef	_WIN32
 #define PATHSEPARATOR(c) ((c) == '\\' || (c) == '/')
-#elif defined(POSIX)
+#else
 #define PATHSEPARATOR(c) ((c) == '/')
 #endif	//_WIN32
 
@@ -590,9 +590,6 @@ public:
 	// converts a partial path into a full path
 	// can be filtered to restrict path types and can provide info about resolved path
 	virtual const char			*RelativePathToFullPath( const char *pFileName, const char *pPathID, char *pFullPath, int fullPathBufferSize, PathTypeFilter_t pathFilter = FILTER_NONE, PathTypeQuery_t *pPathType = NULL );
-#if IsGameConsole()
-	virtual bool				GetPackFileInfoFromRelativePath( const char *pFileName, const char *pPathID, char *pPackPath, int nPackPathBufferSize, int64 &nPosition, int64 &nLength );
-#endif
 	// Returns the search path, each path is separated by ;s. Returns the length of the string returned
 	virtual int					GetSearchPath( const char *pathID, bool bGetPackFiles, char *pPath, int nMaxLen );
 	virtual int					GetSearchPathID( char *pPath, int nMaxLen );
@@ -627,7 +624,6 @@ public:
 	virtual KeyValues			*LoadKeyValues( KeyValuesPreloadType_t type, char const *filename, char const *pPathID = 0 );
 	virtual bool				LoadKeyValues( KeyValues& head, KeyValuesPreloadType_t type, char const *filename, char const *pPathID = 0 );
 
-	virtual DVDMode_t			GetDVDMode() { return m_DVDMode; }
 	virtual bool				IsLaunchedFromXboxHDD() { return m_bLaunchedFromXboxHDD; }
 	virtual bool				IsInstalledToXboxHDDCache() { return m_bFoundXboxImageInCache; }
 	virtual bool				IsDVDHosted() { return m_bDVDHosted; }
@@ -1057,7 +1053,6 @@ protected:
 	static CUtlSymbol			m_GamePathID;
 	static CUtlSymbol			m_BSPPathID;
 
-	static DVDMode_t			m_DVDMode;
 	static bool					m_bFoundXboxImageInCache;
 	static bool					m_bLaunchedFromXboxHDD;
 	static bool					m_bDVDHosted;

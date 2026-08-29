@@ -224,16 +224,6 @@ void SharedVehicleViewSmoothing(CBasePlayer *pPlayer,
 	// Forcing it to recalculate on 360 (the only platform the bug shows) for this entity and
 	// it's hierarchy.
 #if defined ( CLIENT_DLL )
-	if ( IsX360() )
-	{
-		C_BaseAnimating* pParent = (C_BaseAnimating*)pData->pVehicle->GetMoveParent();
-		while ( pParent )
-		{
-			pParent->InvalidateBoneCache();
-			pParent = (C_BaseAnimating*)pParent->GetMoveParent();
-		}
-		pData->pVehicle->InvalidateBoneCache();
-	}
 #endif
 
 	pData->pVehicle->GetAttachment( eyeAttachmentIndex, vehicleEyeOrigin, vehicleEyeAngles );

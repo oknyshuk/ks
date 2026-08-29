@@ -1259,7 +1259,7 @@ void CCSPlayer::InitialSpawn( void )
 		}
 	}
 
-	if ( !engine->IsDedicatedServer() && TheNavMesh->IsOutOfDate() && this == UTIL_GetListenServerHost() && !IsGameConsole() )
+	if ( !engine->IsDedicatedServer() && TheNavMesh->IsOutOfDate() && this == UTIL_GetListenServerHost() )
 	{
 		ClientPrint( this, HUD_PRINTCENTER, "The Navigation Mesh was built using a different version of this map." );
 	}
@@ -1535,7 +1535,7 @@ void CCSPlayer::Spawn()
 
 	m_iNumSpawns++;
 
-	if ( !engine->IsDedicatedServer() && CSGameRules()->m_iTotalRoundsPlayed < 2 && TheNavMesh->IsOutOfDate() && this == UTIL_GetListenServerHost() && !IsGameConsole() )
+	if ( !engine->IsDedicatedServer() && CSGameRules()->m_iTotalRoundsPlayed < 2 && TheNavMesh->IsOutOfDate() && this == UTIL_GetListenServerHost() )
 	{
 		ClientPrint( this, HUD_PRINTCENTER, "The Navigation Mesh was built using a different version of this map." );
 	}
@@ -1788,7 +1788,7 @@ void CCSPlayer::Spawn()
 	{
 		m_bInvalidSteamLogonDelayed = false;
 		Warning( "Invalid Steam Logon Delayed: Kicking client [U:1:%d] %s\n", GetHumanPlayerAccountID(), GetPlayerName() );
-		engine->ServerCommand( UTIL_VarArgs( "kickid_ex %d %d No Steam logon\n", this->GetUserID(), /*bIsPlayingOffline*/ false ? 0 : 1 ) );
+		engine->ServerCommand( UTIL_VarArgs( "kickid_ex %d %d No Steam logon\n", this->GetUserID(), /*bIsPlayingOffline*/ 1 ) );
 	}
 }
 
@@ -4169,22 +4169,6 @@ void CCSPlayer::PostThink()
 
 
 
-#if 0
-	if ( m_iNumFollowers > 0 && IsAlive() )
-	{
-		ShortestPathCost cost = ShortestPathCost();
-		float dist = NavAreaTravelDistance( this->GetLastKnownArea(),
-						TheNavMesh->GetNearestNavArea( TheCSBots()->GetZone(0)->m_center ),
-						cost );
-
-		if( dist < cs_hostage_near_rescue_music_distance.GetFloat() )
-		{
-			CBroadcastRecipientFilter filter;
-			PlayMusicSelection( filter, "Music.HostageNearRescue" );
-			//DevMsg("***DISTANCE TO RESCUE: %f: FOLLOWERS: %i\n", dist, m_iNumFollowers );
-		}
-	}
-#endif
 
 	// Store the eye angles pitch so the client can compute its animation state correctly.
 	QAngle eyeAngles = EyeAngles();
@@ -6786,7 +6770,6 @@ void CCSPlayer::PreThink()
 		m_hDominateEffectPlayer = NULL;
 	}
 
-#ifndef _XBOX
 	++ m_nTicksSinceLastPlaceUpdate;
 	// No reason to update this every tick! Once per second is good enough
 	if ( m_nTicksSinceLastPlaceUpdate > 30 )
@@ -6811,7 +6794,6 @@ void CCSPlayer::PreThink()
 			}
 		}
 	}
-#endif
 }
 
 void CCSPlayer::MoveToNextIntroCamera()
@@ -12651,7 +12633,6 @@ void CCSPlayer::ReportCustomClothingModels( void )
 
 	for ( int nSlot = LOADOUT_POSITION_FIRST_COSMETIC; nSlot <= LOADOUT_POSITION_LAST_COSMETIC; ++nSlot )
 	{
-#if !defined(NO_STEAM)
 		if ( steamgameserverapicontext->SteamGameServer() )
 		{
 			CSteamID steamIDForPlayer;
@@ -12665,7 +12646,6 @@ void CCSPlayer::ReportCustomClothingModels( void )
 			}
 		}
 	}
-#endif
 }
 
 bool CCSPlayer::HandleDropWeapon( CBaseCombatWeapon *pWeapon, bool bSwapping )
@@ -14788,13 +14768,6 @@ void CCSPlayer::SendGunGameWeaponUpgradeAlert( void )
 
 void CCSPlayer::OnPreResetRound()
 {
-#if 0 // removed this achievement
-	//Check headshot survival achievement
-	if (IsAlive() && m_bSurvivedHeadshotDueToHelmet && CSGameRules()->IsPlayingAnyCompetitiveStrictRuleset() )
-	{
-		AwardAchievement(CSSurvivedHeadshotDueToHelmet );
-	}
-#endif
 
 	if (IsAlive() && m_grenadeDamageTakenThisRound > AchievementConsts::SurviveGrenade_MinDamage )
 	{

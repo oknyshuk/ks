@@ -1138,8 +1138,6 @@ void CPrediction::SetIdealPitch ( int nSlot, C_BasePlayer *player, const Vector&
 		return;
 	
 	// Don't do this on the 360..
-	if ( IsGameConsole() )
-		return;
 
 	AngleVectors( angles, &forward );
 	forward[2] = 0;

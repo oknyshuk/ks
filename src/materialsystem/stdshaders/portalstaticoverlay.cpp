@@ -115,7 +115,7 @@ SHADER_DRAW
 		if( bStaticBlendTexture || bAlphaMaskTexture )
 		{
 			pShaderShadow->EnableTexture( SHADER_SAMPLER0, true );
-			pShaderShadow->EnableSRGBRead( SHADER_SAMPLER0, bStaticBlendTexture && !IsX360() );
+			pShaderShadow->EnableSRGBRead( SHADER_SAMPLER0, bStaticBlendTexture && !false );
 		}
 
 		if( bStaticBlendTexture && bAlphaMaskTexture )
@@ -182,7 +182,7 @@ SHADER_DRAW
 
 		if ( bStaticBlendTexture )
 		{
-			BindTexture( SHADER_SAMPLER0, !IsX360() ? TEXTURE_BINDFLAGS_SRGBREAD : TEXTURE_BINDFLAGS_NONE, STATICBLENDTEXTURE, STATICBLENDTEXTUREFRAME );
+			BindTexture( SHADER_SAMPLER0, !false ? TEXTURE_BINDFLAGS_SRGBREAD : TEXTURE_BINDFLAGS_NONE, STATICBLENDTEXTURE, STATICBLENDTEXTUREFRAME );
 			if( bAlphaMaskTexture )
 				BindTexture( SHADER_SAMPLER1, TEXTURE_BINDFLAGS_NONE, ALPHAMASKTEXTURE, ALPHAMASKTEXTUREFRAME );
 		}

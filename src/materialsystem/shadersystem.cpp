@@ -29,12 +29,7 @@
 // NOTE: This must be the last file included!
 #include "tier0/memdbgon.h"
 
-#if defined( _PS3 ) || defined( _OSX )
-#define g_pShaderAPI ShaderAPI()
-#define ShaderApiParam( x ) g_pShaderAPIDX8
-#else
 #define ShaderApiParam( x ) x
-#endif
 
 
 //#define DEBUG_DEPTH 1
@@ -312,16 +307,10 @@ void CShaderSystem::LoadAllShaderDLLs( )
 	// Add the shaders to the dictionary of shaders...
 	SetupShaderDictionary( i );
 
-#if defined( _PS3 ) || defined( _OSX )
-	LoadShaderDLL( "stdshader_dx9" DLL_EXT_STRING );
-#else // _PS3 || _OSX
 
 	// 360 has the the debug shaders in its dx9 dll
-	if ( IsPC() || !IsX360() )
-	{
-		// Always need the debug shaders
-		LoadShaderDLL( "stdshader_dbg" );
-	}
+	// Always need the debug shaders
+	LoadShaderDLL( "stdshader_dbg" );
 
 	// Load up standard shader DLLs...
 	int dxSupportLevel = HardwareConfig()->GetMaxDXSupportLevel();
@@ -357,36 +346,12 @@ void CShaderSystem::LoadAllShaderDLLs( )
 		LoadShaderDLL( "shader_test" );
 	}
 #endif
-#endif // !_PS3
 }
 
 void CShaderSystem::LoadModShaderDLLs( int dxSupportLevel )
 {
 	// @wge: Not so sure about this OSX addition, may break modding support!
 	return;	// no more support for custom game shaders to control which DLLs we allow loading
-
-	const char *pModShaderPathID = "GAMEBIN";
-
-	// First load the ones with dx_ prefix.
-	char buf[256];
-
-	int dxStart = 6;
-	for ( int i = dxStart; i <= dxSupportLevel; ++i )
-	{
-		Q_snprintf( buf, sizeof( buf ), "game_shader_dx%d", i );
-		LoadShaderDLL( buf, pModShaderPathID, true );
-	}
-
-	// Now load the ones with any dx_ prefix.
-	FileFindHandle_t findHandle;
-	const char *pFilename = g_pFullFileSystem->FindFirstEx( "game_shader_generic*", pModShaderPathID, &findHandle );
-	while ( pFilename )
-	{
-		Q_snprintf( buf, sizeof( buf ), "%s", pFilename );
-		LoadShaderDLL( buf, pModShaderPathID, true );
-
-		pFilename = g_pFullFileSystem->FindNext( findHandle );
-	}
 }
 
 
@@ -417,7 +382,6 @@ bool CShaderSystem::LoadShaderDLL( const char *pFullPath )
 //-----------------------------------------------------------------------------
 bool CShaderSystem::LoadShaderDLL( const char *pFullPath, const char *pPathID, bool bModShaderDLL )
 {
-#if !defined( _PS3 ) && !defined( _OSX )
 	if ( !pFullPath && !pFullPath[0] )
 		return true;
 
@@ -452,13 +416,6 @@ bool CShaderSystem::LoadShaderDLL( const char *pFullPath, const char *pPathID, b
 		return false;
 	}
 
-#else
-
-	CSysModule *hInstance = NULL;
-	IShaderDLLInternal *pShaderDLL = GetShaderDLLInternal();
-	pShaderDLL->Connect( Sys_GetFactoryThis(), false );
-
-#endif // !_PS3 && !_OSX
 
 	// FIXME: We need to do some sort of shader validation here for anticheat.
 
@@ -623,10 +580,8 @@ void CShaderSystem::SetupShaderDictionary( int nShaderDLLIndex )
 		IShader *pShader = info.m_pShaderDLL->GetShader( i );
 		const char *pShaderName = pShader->GetName();
 
-#ifdef POSIX
 		//if (CommandLine()->FindParm("-glmspew"))
 		//	printf("CShaderSystem::SetupShaderDictionary: %s", pShaderName );
-#endif
 		
 		// Make sure it doesn't try to override another shader DLL's names.
 		if ( info.m_bModShaderDLL )
@@ -804,12 +759,9 @@ void CShaderSystem::PrepForShaderDraw( IShader *pShader,
 
 	// 360 runs the console remotely, spew cannot cause the matsys to be reentrant
 	// 360 sidesteps the other negative affect that *all* buffered spew redirects as warning text
-	if ( IsPC() || ( !IsX360() && !IsPS3() ) )
-	{
-		LoggingSystem_PushLoggingState( true );
-		LoggingSystem_RegisterLoggingListener( &m_BufferedLoggingListener );
-		LoggingSystem_SetLoggingResponsePolicy( &m_NonFatalLoggingResponsePolicy );
-	}
+	LoggingSystem_PushLoggingState( true );
+	LoggingSystem_RegisterLoggingListener( &m_BufferedLoggingListener );
+	LoggingSystem_SetLoggingResponsePolicy( &m_NonFatalLoggingResponsePolicy );
 
 	m_pRenderState = pRenderState;
 	m_nModulation = nModulation;
@@ -818,11 +770,8 @@ void CShaderSystem::PrepForShaderDraw( IShader *pShader,
 
 void CShaderSystem::DoneWithShaderDraw()
 {
-	if ( IsPC() || ( !IsX360() && !IsPS3() ) )
-	{
-		LoggingSystem_PopLoggingState( true );
-		m_BufferedLoggingListener.EmitBufferedSpew();
-	}
+	LoggingSystem_PopLoggingState( true );
+	m_BufferedLoggingListener.EmitBufferedSpew();
 
 	m_pRenderState = NULL;
 }
@@ -1294,14 +1243,7 @@ bool CShaderSystem::ComputeVertexFormatFromSnapshot( IMaterialVar **params, Shad
 	}
 #endif
 
-	if ( IsPC() )
-	{
-		pRenderState->m_VertexFormat = g_pShaderAPI->ComputeVertexFormat( numSnapshots, pSnapshots );
-	}
-	else
-	{
-		pRenderState->m_VertexFormat = pRenderState->m_VertexUsage;
-	}
+	pRenderState->m_VertexFormat = g_pShaderAPI->ComputeVertexFormat( numSnapshots, pSnapshots );
 
 	return true;
 }
@@ -1397,8 +1339,7 @@ void CShaderSystem::DrawElements( IShader *pShader, IMaterialVar **params,
 	int materialVarFlags = params[FLAGS]->GetIntValue();
 
 	// FIXME: need one conditional that we calculate once a frame for debug or not with everything debug under that.
-	if ( !IsOSXOpenGL() &&
-		 ( ( g_config.bMeasureFillRate || g_config.bVisualizeFillRate ) &&
+	if ( ( ( g_config.bMeasureFillRate || g_config.bVisualizeFillRate ) &&
 		 ( ( materialVarFlags & MATERIAL_VAR_USE_IN_FILLRATE_MODE ) == 0 ) ) )
 	{
 		DrawMeasureFillRate( pRenderState, mod, vertexCompression );
@@ -1873,7 +1814,4 @@ void CShaderSystem::AddShaderComboInformation( const ShaderComboSemantics_t *pSe
 	g_pShaderAPI->AddShaderComboInformation( pSemantics );
 }
 
-#ifdef _PS3
-#include "shadersystem_ps3nonvirt.inl"
-#endif
 

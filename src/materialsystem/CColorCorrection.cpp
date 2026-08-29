@@ -4,9 +4,9 @@
 //
 //==============================================================================
 
-#if defined (WIN32) && !defined( _X360 )
+#if defined (WIN32)
 #include <windows.h>
-#elif defined( POSIX )
+#else
 #define _cdecl
 #endif
 #include "materialsystem/IColorCorrection.h"
@@ -16,7 +16,6 @@
 #include "utlvector.h"
 #include "generichash.h"
 #include "filesystem.h"
-#include "filesystem/IQueuedLoader.h"
 #include "tier2/fileutils.h"
 #include "pixelwriter.h"
 
@@ -64,10 +63,6 @@ public:
 			}
 		}
 
-		if ( IsX360() )
-		{
-			g_pColorCorrectionSystem->OnProceduralRegenComplete( m_ColorCorrectionHandle );
-		}
 	}
 
 	virtual void Release() 
@@ -155,32 +150,17 @@ void ColorCorrectionLookup_t::AllocTexture()
 	m_pColorCorrectionTexture->SetTextureRegenerator( pRegen );
 
 	// xbox needs to defer the real download (only once) to when the volume data is pushed in
-	if ( !IsX360() )
-	{
-		m_pColorCorrectionTexture->Download();
-	}
+	m_pColorCorrectionTexture->Download();
 }
 
 void ColorCorrectionLookup_t::ReleaseTexture()
 {
-	if ( IsX360() )
-	{
-		// there is no release/restore ability on the xbox
-		Assert( 0 );
-		return;
-	}
 
 	m_pColorCorrectionTexture->Release();
 }
 
 void ColorCorrectionLookup_t::RestoreTexture()
 {
-	if ( IsX360() )
-	{
-		// there is no release/restore ability on the xbox
-		Assert( 0 );
-		return;
-	}
 
 	// Put the texture back onto the board
 	m_pColorCorrectionTexture->OnRestore();	// Give render targets a chance to reinitialize themselves if necessary (due to AA changes).
@@ -257,10 +237,8 @@ protected:
 CColorCorrectionSystem g_ColorCorrectionSystem;
 IColorCorrectionSystem *g_pColorCorrectionSystem = &g_ColorCorrectionSystem;
 
-#ifndef _X360
 // Don't allow this on the 360.. it doesn't work in mat_queued_mode
 EXPOSE_SINGLE_INTERFACE_GLOBALVAR( CColorCorrectionSystem, IColorCorrectionSystem, COLORCORRECTION_INTERFACE_VERSION, g_ColorCorrectionSystem );
-#endif
 
 
 //-----------------------------------------------------------------------------
@@ -268,12 +246,6 @@ EXPOSE_SINGLE_INTERFACE_GLOBALVAR( CColorCorrectionSystem, IColorCorrectionSyste
 //-----------------------------------------------------------------------------
 void ReleaseColorCorrection( int nChangeFlags )
 {
-	if ( IsX360() )
-	{
-		// there is no release/restore ability on the xbox
-		Assert( 0 );
-		return;
-	}
 
 	if ( nChangeFlags & MATERIAL_RESTORE_VERTEX_FORMAT_CHANGED )
 		return;
@@ -283,12 +255,6 @@ void ReleaseColorCorrection( int nChangeFlags )
 
 void RestoreColorCorrection( int nChangeFlags )
 {
-	if ( IsX360() )
-	{
-		// there is no release/restore ability on the xbox
-		Assert( 0 );
-		return;
-	}
 
 	if ( nChangeFlags & MATERIAL_RESTORE_VERTEX_FORMAT_CHANGED )
 		return;
@@ -500,7 +466,7 @@ ColorCorrectionHandle_t CColorCorrectionSystem::AddLookup( const char *pName )
 
 	// xbox needs to defer the real download (only once) to when the volume data is pushed in
 	// the PC downloads becuase that was the legacy behavior (silly to me)
-	bool bDownload = !IsX360();
+	bool bDownload = true;
 	
 	LockLookup( handle );
 	ResetLookup( handle );
@@ -724,10 +690,6 @@ void CColorCorrectionSystem::LoadLookup( ColorCorrectionHandle_t handle, const c
 	Assert( pLookupName );
 
 	char szXboxName[MAX_PATH];
-	if ( IsX360() || IsPS3() )
-	{
-		pLookupName = CreatePlatformFilename( pLookupName, szXboxName, sizeof( szXboxName ) );
-	}
 
 	CUtlBuffer colorBuff;
 	if ( !g_pFullFileSystem->ReadFile( pLookupName, "GAME", colorBuff ) )
@@ -863,12 +825,6 @@ color24 CColorCorrectionSystem::ConvertToColor24( RGBX5551_t inColor )
 //-----------------------------------------------------------------------------
 void CColorCorrectionSystem::ReleaseTextures()
 {
-	if ( IsX360() )
-	{
-		// there is no release/restore ability on the xbox
-		Assert( 0 );
-		return;
-	}
 
 	for ( int i=0;i<m_ColorCorrectionList.Count();i++ )
 	{
@@ -881,12 +837,6 @@ void CColorCorrectionSystem::ReleaseTextures()
 //-----------------------------------------------------------------------------
 void CColorCorrectionSystem::RestoreTextures()
 {
-	if ( IsX360() )
-	{
-		// there is no release/restore ability on the xbox
-		Assert( 0 );
-		return;
-	}
 
 	for ( int i=0;i<m_ColorCorrectionList.Count();i++ )
 	{
@@ -968,25 +918,6 @@ void CColorCorrectionSystem::GetCurrentColorCorrection( ShaderColorCorrectionInf
 
 void CColorCorrectionSystem::OnProceduralRegenComplete( ColorCorrectionHandle_t handle )
 {
-	if ( !IsX360() )
-	{
-		// xbox only
-		return;
-	}
-
-	ColorCorrectionLookup_t *pLookup = FindLookup( handle );
-	if ( !pLookup )
-	{
-		// huh? should have been there
-		Assert( 0 );
-		return;
-	}
-
-	// Based on nefarious knowledge, the backing volume can be ditched on the xbox.
-	// The xbox only uses file based color correction, and does not support release/restore.
-	// For memory savings on L4D, at 98k per instance, l42_hospita01_aparments with ~20
-	// correction volumes, saves 2MB. The inept design enforces a unique instance per weight/entity.
-	delete [] pLookup->m_pColorCorrection;
-	// mark as free, used to check validity of this hack
-	pLookup->m_pColorCorrection = NULL;
+	// xbox only
+	return;
 }

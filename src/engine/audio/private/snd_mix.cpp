@@ -312,12 +312,6 @@ void S_TransferStereo16( void *pOutput, const portable_samplepair_t *pfront, int
 {
 	int		lpos;
 	
-	if ( IsX360() )
-	{
-		// not the right path for 360
-		Assert( 0 );
-		return;
-	}
 
 	Assert( pOutput );
 
@@ -412,11 +406,8 @@ void S_FreeChannel(channel_t *ch)
 
 	SND_CloseMouth(ch);
 
-	if ( !IsGameConsole() )
-	{
-		char nameBuf[MAX_PATH];
-		g_pSoundServices->OnSoundStopped( ch->guid, ch->soundsource, ch->entchannel, ch->sfx->getname(nameBuf, sizeof(nameBuf)) );
-	}
+	char nameBuf[MAX_PATH];
+	g_pSoundServices->OnSoundStopped( ch->guid, ch->soundsource, ch->entchannel, ch->sfx->getname(nameBuf, sizeof(nameBuf)) );
 
 	ch->flags.isSentence = false;
 //	Msg("End sound %s\n", ch->sfx->getname() );
@@ -523,7 +514,7 @@ void MIX_MixChannelsToPaintbuffer( CChannelList &list, int64 endtime, int flags,
 		//  for the "soundsource" but we still need the lipsync to pause if the game is paused.  Therefore
 		//  I changed SND_IsMouth to look for any .wav on any channels which has sentence data
 		bool bIsMouth = ch->flags.m_bHasMouth;
-		bool bShouldPause = IsGameConsole() ? !ch->sfx->m_bIsUISound : bIsMouth; 
+		bool bShouldPause = bIsMouth; 
 
 		if( snd_pause_all.GetInt() )
 		{
@@ -1174,7 +1165,7 @@ inline void MIX_SetPaintbufferFlags(int ipaintbuffer, int flags)
 
 void ZeroBuffer( void * pBuffer, int nSize )
 {
-#if IsGameConsole() || IsDebug()
+#if 0 || IsDebug()
 	// On console we are going to use prefetch and pre-zero as much as we can...
 	// We do it on PC debug as well, for debugging purpose.
 	if ( nSize < 2 * CACHE_LINE_SIZE )
@@ -1291,15 +1282,8 @@ inline int MIX_CenterFromLeftRight( int l, int r )
 inline int MIX_CenterFromLeftRightRounded( int l, int r )
 {
 	int sum = l + r;
-#if IsGameConsole()
-	// To match VMX operation (and avoid asserts due to minor differences), we do the rounding.
-	// If sum is positive, we add 1. Not for negative sum though. (the X360 documentation only states +1 in all cases but that's incorrect).
-	int nSign = sum >> 31;			// 0 if sum was positive, 0xffffffff if negative
-	sum += nSign + 1;
-#else
 	int nSign = sum >> 31;			// 0 if sum was positive, 0xffffffff if negative
 	sum += nSign;
-#endif
 	return sum / 2;
 }
 
@@ -1343,56 +1327,31 @@ public:
 // Move these intrinsics to ssemath.h (once they are in a better shape).
 // Have some trouble with intx4, define own type and will handle this better at a later point during the refactoring of ssemath.
 
-#if IsPlatformX360()
-typedef __vector4 samplex4;
-#elif IsPlatformPS3_PPU()
-typedef vector signed int samplex4;
-#else
 // Assume that's intel / SSE
 typedef __m128i samplex4;
-#endif
 
 FORCEINLINE
 samplex4 AddSignedSIMD( const samplex4 & first, const samplex4 & second )
 {
-#if IsPlatformX360()
-	return __vaddsws( first, second );
-#elif IsPlatformPS3_PPU()
-	return vec_vaddsws( first, second );
-#else
 	// Assume that's intel / SSE
 	return _mm_add_epi32( first, second );
-#endif
 }
 
 FORCEINLINE
 samplex4 AverageSIMD( const samplex4 & first, const samplex4 & second )
 {
-#if IsPlatformX360()
-	return __vavgsw( first, second );
-#elif IsPlatformPS3_PPU()
-	return vec_vavgsw( first, second );
-#else
 	// There is no SSE2 average for 32 bits, do it with 2 operations (the code was not rounding).
 	samplex4 sum = _mm_add_epi32( first, second );
 	return _mm_srai_epi32( sum, 1 );
-#endif
 }
 
 FORCEINLINE
 samplex4 AverageLeftAndRightSIMD( const samplex4 & first )
 {
-#if IsPlatformX360()
-	// Swap left and right of each sample pair
-	samplex4 second = __vpermwi( first, (1 << 6) | (0 << 4) | (3 << 2) | (2 << 0) );
-#elif IsPlatformPS3_PPU()
-	samplex4 second = vec_perm( first, first, _VEC_SWIZZLE_YXWZ );
-#else
 	// SSE is not as good as VMX in term of converting similar types to one another
 	const __m128 & first128 = (const __m128 &)first;
 	__m128 result = _mm_shuffle_ps( first128, first128, MM_SHUFFLE_REV( 1, 0, 3, 2 ) );
 	samplex4 second = (samplex4&)result;
-#endif
 	// Then average them (both pairs should be the same).
 	return AverageSIMD( first, second );
 }
@@ -3259,7 +3218,6 @@ void SND_InitScaletable (void)
 
 void SND_PaintChannelFrom8(portable_samplepair_t *pOutput, float *volume, byte *pData8, int count)
 {
-#if	1
 	int 	data;
 	int		*lscale, *rscale;
 	int		i;
@@ -3274,98 +3232,6 @@ void SND_PaintChannelFrom8(portable_samplepair_t *pOutput, float *volume, byte *
 		pOutput[i].left += lscale[data];
 		pOutput[i].right += rscale[data];
 	}
-#else
-	// portable_samplepair_t structure
-#define psp_left		0
-#define psp_right		4
-#define psp_size		8
-	static int			tempStore;
-	
-	__asm
-	{
-		// prologue
-		push	ebp
-
-		// esp = pOutput
-		mov		eax, pOutput
-		mov		tempStore, eax
-		xchg	esp,tempStore
-		// ebx = volume
-		mov		ebx,volume
-		// esi = pData8
-		mov		esi,pData8
-		// ecx = count
-		mov		ecx,count
-
-		// These values depend on the setting of SND_SCALE_BITS
-		// The mask must mask off all the lower bits you aren't using in the multiply
-		// so for 7 bits, the mask is 0xFE, 6 bits 0xFC, etc.
-		// The shift must multiply by the table size.  There are 256 4-byte values in the table at each level.
-		// So each index must be shifted left by 10, but since the bits we use are in the MSB rather than LSB
-		// they must be shifted right by 8 - SND_SCALE_BITS.  e.g., for a 7 bit number the left shift is:
-		// 10 - (8-7) = 9.  For a 5 bit number it's 10 - (8-5) = 7.
-		mov		eax,[ebx]
-		mov		edx,[ebx + 4]
-		and		eax,0xFE
-		and		edx,0xFE
-
-		// shift up by 10 to index table, down by 1 to make the 7 MSB of the bytes an index
-		// eax = lscale
-		// edx = rscale
-		shl		eax,0x09
-		shl		edx,0x09
-		add		eax,OFFSET snd_scaletable
-		add		edx,OFFSET snd_scaletable
-
-		// ebx = data byte
-		sub		ebx,ebx
-		mov		bl,[esi+ecx-1]
-
-		// odd or even number of L/R samples
-		test	ecx,0x01
-		jz		PCF8_Loop
-
-		// process odd L/R sample
-		mov		edi,[eax+ebx*4]
-		mov		ebp,[edx+ebx*4]
-		add		edi,[esp+ecx*psp_size-psp_size+psp_left]
-		add		ebp,[esp+ecx*psp_size-psp_size+psp_right]
-		mov		[esp+ecx*psp_size-psp_size+psp_left],edi
-		mov		[esp+ecx*psp_size-psp_size+psp_right],ebp
-		mov		bl,[esi+ecx-1-1]
-
-		dec		ecx
-		jz		PCF8_Done
-
-PCF8_Loop:
-		// process L/R sample N
-		mov		edi,[eax+ebx*4]
-		mov		ebp,[edx+ebx*4]
-		add		edi,[esp+ecx*psp_size-psp_size+psp_left]
-		add		ebp,[esp+ecx*psp_size-psp_size+psp_right]
-		mov		[esp+ecx*psp_size-psp_size+psp_left],edi
-		mov		[esp+ecx*psp_size-psp_size+psp_right],ebp
-		mov		bl,[esi+ecx-1-1]
-
-		// process L/R sample N-1
-		mov		edi,[eax+ebx*4]
-		mov		ebp,[edx+ebx*4]
-		add		edi,[esp+ecx*psp_size-psp_size*2+psp_left]
-		add		ebp,[esp+ecx*psp_size-psp_size*2+psp_right]
-		mov		[esp+ecx*psp_size-psp_size*2+psp_left],edi
-		mov		[esp+ecx*psp_size-psp_size*2+psp_right],ebp
-		mov		bl,[esi+ecx-1-2]
-
-		// two L/R samples per iteration
-		sub		ecx,0x02
-		jnz		PCF8_Loop
-
-PCF8_Done:
-		// epilogue
-		xchg	esp,tempStore
-		pop		ebp
-	}
-#endif
 }
 
 //===============================================================================
@@ -4105,7 +3971,6 @@ void SW_Mix16Mono_Shift( portable_samplepair_t *pOutput, float *volume, short *p
 	float vol0 = volume[0];
 	float vol1 = volume[1];
 
-#if 1
 	int sampleIndex = 0;
 	fixedint sampleFrac = inputOffset;
 
@@ -4117,149 +3982,18 @@ void SW_Mix16Mono_Shift( portable_samplepair_t *pOutput, float *volume, short *p
 		sampleIndex += FIX_INTPART(sampleFrac);
 		sampleFrac = FIX_FRACPART(sampleFrac);
 	}
-#else
-	// in assembly, you can make this 32.32 instead of 4.28 and use the carry flag instead of masking
-	int rateScaleInt = FIX_INTPART(rateScaleFix);
-	unsigned int rateScaleFrac = FIX_FRACPART(rateScaleFix) << (32-FIX_BITS);
-
-	__asm
-	{
-		mov eax, volume					;
-		movq mm0, DWORD PTR [eax]		; vol1, vol0 (32-bits each)
-		packssdw mm0, mm0				; pack and replicate... vol1, vol0, vol1, vol0 (16-bits each)
-		//pxor mm7, mm7					; mm7 is my zero register...
-
-		xor esi, esi
-		mov	eax, DWORD PTR [pOutput]	; store initial output ptr
-		mov edx, DWORD PTR [pData]		; store initial input ptr
-		mov ebx, inputOffset;
-		mov ecx, outCount;
-		
-BEGINLOAD:
-		movd mm2, WORD PTR [edx+2*esi]	; load first piece of data from pData
-		punpcklwd mm2, mm2				; 0, 0, pData_1st, pData_1st
-
-		add ebx, rateScaleFrac			; do the crazy fixed integer math
-		adc esi, rateScaleInt
-
-		movd mm3, WORD PTR [edx+2*esi]	; load second piece of data from pData
-		punpcklwd mm3, mm3				; 0, 0, pData_2nd, pData_2nd
-		punpckldq mm2, mm3				; pData_2nd, pData_2nd, pData_2nd, pData_2nd
-
-		add ebx, rateScaleFrac			; do the crazy fixed integer math
-		adc esi, rateScaleInt
-	
-        movq mm3, mm2					; copy the goods
-		pmullw mm2, mm0					; pData_2nd*vol1, pData_2nd*vol0, pData_1st*vol1, pData_1st*vol0 (bits 0-15)
-		pmulhw mm3, mm0					; pData_2nd*vol1, pData_2nd*vol0, pData_1st*vol1, pData_1st*vol0 (bits 16-31)
-
-		movq mm4, mm2					; copy
-		movq mm5, mm3					; copy
-
-		punpcklwd mm2, mm3				; pData_1st*vol1, pData_1st*vol0 (bits 0-31)
-		punpckhwd mm4, mm5				; pData_2nd*vol1, pData_2nd*vol0 (bits 0-31)
-		psrad mm2, 8					; shift right by 8
-		psrad mm4, 8					; shift right by 8
-
-		add ecx, -2                     ; decrement i-value
-		paddd mm2, QWORD PTR [eax]		; add to existing vals
-		paddd mm4, QWORD PTR [eax+8]	;
-
-		movq QWORD PTR [eax], mm2		; store back
-		movq QWORD PTR [eax+8], mm4		;
-
-		add eax, 10h					;
-		cmp ecx, 01h                    ; see if we can quit
-		jg BEGINLOAD                    ; Kipp Owens is a doof...
-		jl END							; Nick Shaffner is killing me...
-
-		movsx edi, WORD PTR [edx+2*esi] ; load first 16 bit val and zero-extend
-		imul  edi, vol0					; multiply pData[sampleIndex] by volume[0]
-		sar   edi, 08h                  ; divide by 256
-		add DWORD PTR [eax], edi        ; add to pOutput[i].left
-		
-		movsx edi, WORD PTR [edx+2*esi] ; load same 16 bit val and zero-extend (cuz I thrashed the reg)
-		imul  edi, vol1					; multiply pData[sampleIndex] by volume[1]
-		sar   edi, 08h                  ; divide by 256
-		add DWORD PTR [eax+04h], edi    ; add to pOutput[i].right
-END:
-		emms;
-	}
-#endif
 }
 
 void SW_Mix16Mono_NoShift( portable_samplepair_t *pOutput, float *volume, short *pData, int outCount )
 {
 	float vol0 = volume[0];
 	float vol1 = volume[1];
-#if 1
 	for ( int i = 0; i < outCount; i++ )
 	{
 		int x = *pData++;
 		pOutput[i].left += int((x * vol0) / 256.0f);
 		pOutput[i].right += int((x * vol1) / 256.0f);
 	}
-#else
-	__asm
-	{
-		mov eax, volume					;
-		movq mm0, DWORD PTR [eax]		; vol1, vol0 (32-bits each)
-		packssdw mm0, mm0				; pack and replicate... vol1, vol0, vol1, vol0 (16-bits each)
-		//pxor mm7, mm7					; mm7 is my zero register...
-
-		mov	eax, DWORD PTR [pOutput]	; store initial output ptr
-		mov edx, DWORD PTR [pData]		; store initial input ptr
-		mov ecx, outCount;
-		
-BEGINLOAD:
-		movd mm2, WORD PTR [edx]	; load first piece o data from pData
-		punpcklwd mm2, mm2				; 0, 0, pData_1st, pData_1st
-		add edx,2						; move to the next sample
-
-		movd mm3, WORD PTR [edx]	; load second piece o data from pData
-		punpcklwd mm3, mm3				; 0, 0, pData_2nd, pData_2nd
-		punpckldq mm2, mm3				; pData_2nd, pData_2nd, pData_2nd, pData_2nd
-
-		add edx,2						; move to the next sample
-	
-        movq mm3, mm2					; copy the goods
-		pmullw mm2, mm0					; pData_2nd*vol1, pData_2nd*vol0, pData_1st*vol1, pData_1st*vol0 (bits 0-15)
-		pmulhw mm3, mm0					; pData_2nd*vol1, pData_2nd*vol0, pData_1st*vol1, pData_1st*vol0 (bits 16-31)
-
-		movq mm4, mm2					; copy
-		movq mm5, mm3					; copy
-
-		punpcklwd mm2, mm3				; pData_1st*vol1, pData_1st*vol0 (bits 0-31)
-		punpckhwd mm4, mm5				; pData_2nd*vol1, pData_2nd*vol0 (bits 0-31)
-		psrad mm2, 8					; shift right by 8
-		psrad mm4, 8					; shift right by 8
-
-		add ecx, -2                     ; decrement i-value
-		paddd mm2, QWORD PTR [eax]		; add to existing vals
-		paddd mm4, QWORD PTR [eax+8]	;
-
-		movq QWORD PTR [eax], mm2		; store back
-		movq QWORD PTR [eax+8], mm4		;
-
-		add eax, 10h					;
-		cmp ecx, 01h                    ; see if we can quit
-		jg BEGINLOAD                    ; I can cut and paste code!
-		jl END							; 
-
-		movsx edi, WORD PTR [edx]		; load first 16 bit val and zero-extend
-		mov esi,edi						; save a copy for the other channel
-		imul  edi, vol0					; multiply pData[sampleIndex] by volume[0]
-		sar   edi, 08h                  ; divide by 256
-		add DWORD PTR [eax], edi        ; add to pOutput[i].left
-		
-										; esi has a copy, use it now
-		imul  esi, vol1					; multiply pData[sampleIndex] by volume[1]
-		sar   esi, 08h                  ; divide by 256
-		add DWORD PTR [eax+04h], esi    ; add to pOutput[i].right
-END:
-		emms;
-	}
-#endif
 }
 
 
@@ -4865,11 +4599,7 @@ void Mix16MonoWavtype( channel_t *pChannel, portable_samplepair_t *pOutput, floa
 #endif
 
 // The optimized path has not been ported to PC, run the normal mode, except in debug to test the optimization process.
-#if ( !IsPlatformWindowsPC() || defined(_DEBUG) )
 	if ( snd_mix_optimization.GetBool() )
-#else
-	if ( false )
-#endif
 	{
 	if ( FUseHighQualityPitch( pChannel ) )
 		SW_Mix16Mono_Interp_Opt( pOutput, volume, pData, inputOffset, rateScaleFix, outCount );
@@ -5159,17 +4889,6 @@ void SND_MouthUpdateAll()
 
 				char nameBuf[MAX_PATH];
 				DevMsg( 2, "out of voice sources, won't lipsync %s\n", rec.pSource->GetFileName(nameBuf, sizeof(nameBuf)) );
-#if 0
-				for ( int i = 0; i < pMouth->GetNumVoiceSources(); i++ )
-				{
-					CVoiceData *pVoice  = pMouth->GetVoiceSource(i);
-					CAudioSourceWave *pWave = dynamic_cast<CAudioSourceWave *>(pVoice->GetSource());
-					const char *pName = "unknown";
-					if ( pWave && pWave->GetName() )
-						pName = pWave->GetName();
-					Msg("Playing %s...\n", pName );
-				}
-#endif
 				// try again to add after clearing
 				vd = pMouth->AddSource( rec.pSource, false );
 			}
@@ -5331,8 +5050,6 @@ float g_moviestart;
 
 void SND_MovieStart( void )
 {
-	if ( IsGameConsole() )
-		return;
 
 	if ( !cl_movieinfo.IsRecording() )
 		return;
@@ -5360,8 +5077,6 @@ void SND_MovieStart( void )
 
 void SND_MovieEnd( void )
 {
-	if ( IsGameConsole() )
-		return;
 
 	if ( !cl_movieinfo.IsRecording() )
 	{
@@ -5391,8 +5106,6 @@ bool SND_IsRecording()
 
 void SND_RecordBuffer( void )
 {
-	if ( IsGameConsole() )
-		return;
 
 	if ( !SND_IsRecording() )
 		return;

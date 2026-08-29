@@ -44,9 +44,6 @@ void DrawLightmappedPaint_DX9( CBaseVSShader *pShader, IMaterialVar** params, IS
 		bool bFullyOpaque = false;
 		bool bNeedRegenStaticCmds = (! pContextData ) || pShaderShadow;
 		bool bThickPaint = ( nGPULevel > 1 );
-		#ifdef _GAMECONSOLE
-			bThickPaint = TRUE;
-		#endif
 
 		if ( ! pContextData )								// make sure allocated
 		{
@@ -92,13 +89,6 @@ void DrawLightmappedPaint_DX9( CBaseVSShader *pShader, IMaterialVar** params, IS
 				pContextData->ResetStaticCmds();
 				CCommandBufferBuilder< CFixedCommandStorageBuffer< 5000 > > staticCmdsBuf;
 
-#if 0
-				int nLightingPreviewMode = IS_FLAG2_SET( MATERIAL_VAR2_USE_GBUFFER0 ) + 2 * IS_FLAG2_SET( MATERIAL_VAR2_USE_GBUFFER1 );
-				if ( ( nLightingPreviewMode == ENABLE_FIXED_LIGHTING_OUTPUTNORMAL_AND_DEPTH ) && IsPC() )
-				{
-					staticCmdsBuf.SetVertexShaderNearAndFarZ( VERTEX_SHADER_SHADER_SPECIFIC_CONST_6 );	// Needed for SSAO
-				}
-#endif
 
 				staticCmdsBuf.BindStandardTexture( SHADER_SAMPLER1, bHDR ? TEXTURE_BINDFLAGS_NONE : TEXTURE_BINDFLAGS_SRGBREAD, TEXTURE_LIGHTMAP );
 
@@ -115,9 +105,7 @@ void DrawLightmappedPaint_DX9( CBaseVSShader *pShader, IMaterialVar** params, IS
 						params[info.m_nSeamlessMappingScale]->GetFloatValue(),0,0,0 );
 				}
 				staticCmdsBuf.StoreEyePosInPixelShaderConstant( 10 );
-#ifndef _PS3
 				staticCmdsBuf.SetPixelShaderFogParams( 11 );
-#endif
 				staticCmdsBuf.End();
 				// now, copy buf
 				pContextData->m_pStaticCmds = new uint8[staticCmdsBuf.Size()];
@@ -166,9 +154,6 @@ void DrawLightmappedPaint_DX9( CBaseVSShader *pShader, IMaterialVar** params, IS
 				}
 		
 				int nLightingPreviewMode = 0;
-#if 0
-				int nLightingPreviewMode = IS_FLAG2_SET( MATERIAL_VAR2_USE_GBUFFER0 ) + 2 * IS_FLAG2_SET( MATERIAL_VAR2_USE_GBUFFER1 );
-#endif
 				pShaderShadow->VertexShaderVertexFormat( flags, numTexCoords, 0, 0 );
 
 				// Pre-cache pixel shaders
@@ -189,9 +174,6 @@ void DrawLightmappedPaint_DX9( CBaseVSShader *pShader, IMaterialVar** params, IS
 				SET_STATIC_VERTEX_SHADER_COMBO( SELFILLUM,  hasSelfIllum );
 				SET_STATIC_VERTEX_SHADER_COMBO( PAINT, 1 );
 				SET_STATIC_VERTEX_SHADER_COMBO( ADDBUMPMAPS, 0 );
-#if defined( _X360 ) || defined( _PS3 )
-				SET_STATIC_VERTEX_SHADER_COMBO( FLASHLIGHT, 0);
-#endif
 				SET_STATIC_VERTEX_SHADER( lightmappedgeneric_vs20 );
 
 #define TCOMBINE_NONE 12									// there is no detail texture
@@ -381,15 +363,9 @@ void DrawLightmappedPaint_DX9( CBaseVSShader *pShader, IMaterialVar** params, IS
 	DYNAMIC_STATE
 	{
 		ShaderApiFast( pShaderAPI )->SetDefaultState();
-#ifdef _PS3
-		CCommandBufferBuilder< CDynamicCommandStorageBuffer > DynamicCmdsOut;
-		ShaderApiFast( pShaderAPI )->ExecuteCommandBuffer( pContextData->m_pStaticCmds );
-		ShaderApiFast( pShaderAPI )->ExecuteCommandBuffer( pContextData->m_SemiStaticCmdsOut.Base() );
-#else
 		CCommandBufferBuilder< CFixedCommandStorageBuffer< 1000 > > DynamicCmdsOut;
 		DynamicCmdsOut.Call( pContextData->m_pStaticCmds );
 		DynamicCmdsOut.Call( pContextData->m_SemiStaticCmdsOut.Base() );
-#endif
 
 		bool hasEnvmap = params[info.m_nPaintEnvmap]->IsTexture();
 
@@ -492,9 +468,6 @@ void DrawLightmappedPaint_DX9( CBaseVSShader *pShader, IMaterialVar** params, IS
 		}
 
 		DynamicCmdsOut.End();
-#ifdef _PS3
-		ShaderApiFast( pShaderAPI )->SetPixelShaderFogParams( 11 );
-#endif
 		ShaderApiFast( pShaderAPI )->ExecuteCommandBuffer( DynamicCmdsOut.Base() );
 	}
 	pShader->Draw();

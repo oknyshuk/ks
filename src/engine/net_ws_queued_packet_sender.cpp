@@ -93,7 +93,7 @@ bool CQueuedPacketSender::Start( unsigned nBytesStack )
 #ifdef IS_WINDOWS_PC
 		SetPriority( THREAD_PRIORITY_HIGHEST );
 		ThreadSetDebugName( GetThreadHandle(), "CQueuedPacketSender" );
-#elif POSIX
+#else
 		//SetPriority( PRIORITY_MAX );
 #endif
 

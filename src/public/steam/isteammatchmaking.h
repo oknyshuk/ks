@@ -250,12 +250,6 @@ public:
 	// you must be the lobby owner of both lobbies
 	virtual bool SetLinkedLobby( CSteamID steamIDLobby, CSteamID steamIDLobbyDependent ) = 0;
 
-#ifdef _PS3
-	// changes who the lobby owner is
-	// you must be the lobby owner for this to succeed, and steamIDNewOwner must be in the lobby
-	// after completion, the local user will no longer be the owner
-	virtual void CheckForPSNGameBootInvite( unsigned int iGameBootAttributes  ) = 0;
-#endif
 	CALL_BACK( LobbyChatUpdate_t );
 };
 #define STEAMMATCHMAKING_INTERFACE_VERSION "SteamMatchMaking009"

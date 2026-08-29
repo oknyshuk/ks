@@ -23,16 +23,12 @@ ConVar mm_events_listeners_validation( "mm_events_listeners_validation", "0", FC
 // Implementation of Steam invite listener
 //
 uint64 g_uiLastInviteFlags = 0ull;
-#if !defined( _X360 ) && !defined( NO_STEAM ) && !defined( SWDS )
 class CMatchSteamInviteListener
 {
 public:
 	void RunFrame();
 	void Register();
 	STEAM_CALLBACK_MANUAL( CMatchSteamInviteListener, Steam_OnGameLobbyJoinRequested, GameLobbyJoinRequested_t, m_CallbackOnGameLobbyJoinRequested );
-#ifdef _PS3
-	STEAM_CALLBACK_MANUAL( CMatchSteamInviteListener, Steam_OnPSNGameBootInviteResult, PSNGameBootInviteResult_t, m_CallbackOnPSNGameBootInviteResult );
-#endif
 
 protected:
 	GameLobbyJoinRequested_t m_msgPending;
@@ -42,19 +38,7 @@ g_MatchSteamInviteListener;
 void CMatchSteamInviteListener::Register()
 {
 	m_CallbackOnGameLobbyJoinRequested.Register( this, &CMatchSteamInviteListener::Steam_OnGameLobbyJoinRequested );
-#ifdef _PS3
-	m_CallbackOnPSNGameBootInviteResult.Register( this, &CMatchSteamInviteListener::Steam_OnPSNGameBootInviteResult );
-#endif
 }
-#else
-class CMatchSteamInviteListener
-{
-public:
-	void RunFrame() {}
-	void Register() {}
-}
-g_MatchSteamInviteListener;
-#endif
 
 
 
@@ -94,12 +78,6 @@ void CMatchFramework::Shutdown()
 
 	// Shutdown the title
 	MM_Title_Shutdown();
-
-	// Cancel any pending server updates before shutdown
-	g_pServerManager->EnableServersUpdate( false );
-
-	// Cancel any pending datacenter queries
-	g_pDatacenter->EnableUpdate( false );
 }
 
 void CMatchFramework::RunFrame()
@@ -110,22 +88,10 @@ void CMatchFramework::RunFrame()
 		g_pMatchEventsSubscription->BroadcastEvent( new KeyValues( "mm_events_listeners_validation" ) );
 	}
 
-#ifdef _X360
-	if ( IXOnline *pIXOnline = g_pMatchExtensions->GetIXOnline() )
-		pIXOnline->RunFrame();
-
-	MMX360_UpdateDormantOperations();
-
-	SysSession360_UpdatePending();
-#endif
 
 	RunFrame_Invite();
 	g_MatchSteamInviteListener.RunFrame();
 
-#ifdef _X360
-	// Pump rate adjustments
-	MatchSession_RateAdjustmentUpdate();
-#endif
 
 	// Let the network mgr run
 	g_pConnectionlessLanMgr->Update();
@@ -185,11 +151,7 @@ void CMatchFramework::ApplySettings( KeyValues* keyValues )
 }
 
 
-#ifdef _X360
-static XINVITE_INFO s_InviteInfo;
-#else
 static uint64 s_InviteInfo;
-#endif
 static bool s_bInviteSessionDelayedJoin;
 static int s_nInviteConfirmed;
 
@@ -202,43 +164,6 @@ static bool IsZeroData( void const *pvData )
 
 static bool ValidateInviteController( int iController )
 {
-#ifdef _X360
-	XUSER_SIGNIN_STATE eSignInState = XUserGetSigninState( iController );
-	XUSER_SIGNIN_INFO xsi = {0};
-	if ( ( eSignInState != eXUserSigninState_SignedInToLive ) ||
-		( ERROR_SUCCESS != XUserGetSigninInfo( iController, XUSER_GET_SIGNIN_INFO_ONLINE_XUID_ONLY, &xsi ) ) ||
-		! ( xsi.dwInfoFlags & XUSER_INFO_FLAG_LIVE_ENABLED ) )
-	{
-		DevWarning( "ValidateInviteController: ctrl%d check1 failed (state=%d, flags=0x%X, xuid=%llx)!\n",
-			eSignInState, xsi.dwInfoFlags, xsi.xuid );
-		
-		if ( KeyValues *notify = new KeyValues(
-			"OnInvite", "action", "error", "error", "NotOnline" ) )
-		{
-			notify->SetInt( "user", iController );
-			g_pMatchEventsSubscription->BroadcastEvent( notify );
-		}
-		
-		return false;
-	}
-
-	BOOL bMultiplayer = FALSE;
-	if ( ( ERROR_SUCCESS != XUserCheckPrivilege( iController, XPRIVILEGE_MULTIPLAYER_SESSIONS, &bMultiplayer ) ) ||
-		( !bMultiplayer ) )
-	{
-		DevWarning( "ValidateInviteController: ctrl%d check2 failed (state=%d, flags=0x%X, xuid=%llx) - on multiplayer priv!\n",
-			eSignInState, xsi.dwInfoFlags, xsi.xuid );
-
-		if ( KeyValues *notify = new KeyValues(
-			"OnInvite", "action", "error", "error", "NoMultiplayer" ) )
-		{
-			notify->SetInt( "user", iController );
-			g_pMatchEventsSubscription->BroadcastEvent( notify );
-		}
-
-		return false;
-	}
-#endif
 
 	return true;
 }
@@ -255,57 +180,6 @@ static bool ValidateInviteControllers()
 
 static bool VerifyInviteEligibility()
 {
-#ifdef _X360
-	// Make sure that the inviter is not signed in
-	for ( int k = 0; k < XUSER_MAX_COUNT; ++ k )
-	{
-		XUID xuid;
-		if ( ERROR_SUCCESS == XUserGetXUID( k, &xuid ) &&
-			xuid == s_InviteInfo.xuidInviter )
-		{
-			g_pMatchEventsSubscription->BroadcastEvent( new KeyValues(
-				"OnInvite", "action", "error", "error", "SameConsole" ) );
-			return false;
-		}
-	}
-
-	// Check if the user is currently inactive
-	bool bExistingUser = false;
-	for ( DWORD k = 0; k < XBX_GetNumGameUsers(); ++ k )
-	{
-		if ( XBX_GetInvitedUserId() == (DWORD) XBX_GetUserId( k ) &&
-			!XBX_GetUserIsGuest( k ) )
-		{
-			bExistingUser = true;
-			break;
-		}
-	}
-
-	// Check if this is the existing user that the invite is for a different session
-	// than the session they are currently in (e.g. they are in a lobby and do
-	// "Join Party and Game" with another user who is in the same lobby)
-	char chInviteSessionInfo[ XSESSION_INFO_STRING_LENGTH ] = {0};
-	MMX360_SessionInfoToString( s_InviteInfo.hostInfo, chInviteSessionInfo );
-	if ( IMatchSession *pIMatchSession = g_pMatchFramework->GetMatchSession() )
-	{
-		bool bJoinable = ( ( IMatchSessionInternal * ) pIMatchSession )->IsAnotherSessionJoinable( chInviteSessionInfo );
-		if ( !bJoinable && bExistingUser )
-		{
-			Warning( "VerifyInviteEligibility: declined invite due to local session!\n" );
-			return false;
-		}
-	}
-
-	// New user is eligible since otherwise he shouldn't be able to accept an invite
-	if ( !bExistingUser || ( XBX_GetNumGameUsers() < 2 ) ||
-		( g_pMMF->GetMatchTitle()->GetTitleSettingsFlags() & MATCHTITLE_INVITE_ONLY_SINGLE_USER ) )
-	{
-		if ( !ValidateInviteController( XBX_GetInvitedUserId() ) )
-			return false;
-		else
-			return true;
-	}
-#endif
 
 	// Check that every user is valid
 	return ValidateInviteControllers();
@@ -315,11 +189,7 @@ static void JoinInviteSession()
 {
 	s_bInviteSessionDelayedJoin = false;
 
-#ifdef _X360
-	if ( 0ull == ( uint64 const & ) s_InviteInfo.hostInfo.sessionID )
-#else
 	if ( !s_InviteInfo )
-#endif
 		return;
 	
 	if ( g_pMatchExtensions->GetIVEngineClient()->IsDrawingLoadingImage() )
@@ -339,116 +209,28 @@ static void JoinInviteSession()
 		return;
 	}
 
-#if !defined( NO_STEAM ) && !defined( _GAMECONSOLE ) && !defined( SWDS )
 	extern bool g_bSteamStatsReceived;
 	if ( !g_bSteamStatsReceived && ( g_uiLastInviteFlags & MM_INVITE_FLAG_PCBOOT ) )
 	{
 		s_bInviteSessionDelayedJoin = true;
 		return;
 	}
-#endif
 
-#ifdef _X360
-	DevMsg( "JoinInviteSession: sessionid = %llx, xuid = %llx\n", ( uint64 const & ) s_InviteInfo.hostInfo.sessionID, s_InviteInfo.xuidInvitee );
-#else
 	DevMsg( "JoinInviteSession: sessionid = %llx\n", s_InviteInfo );
-#endif
 
 	//
 	// Validate the user accepting the invite
 	//
-#ifdef _GAMECONSOLE
-	if ( XBX_GetInvitedUserId() == INVALID_USER_ID )
-	{
-		DevWarning( "JoinInviteSession: no invited user!\n" );
-		return;
-	}
-#endif
-#ifdef _X360
-	XUSER_SIGNIN_STATE eSignInState = XUserGetSigninState( XBX_GetInvitedUserId() );
-	XUSER_SIGNIN_INFO xsi = {0};
-	if ( ( eSignInState != eXUserSigninState_SignedInToLive ) ||
-		( ERROR_SUCCESS != XUserGetSigninInfo( XBX_GetInvitedUserId(), XUSER_GET_SIGNIN_INFO_ONLINE_XUID_ONLY, &xsi ) ) ||
-		! ( xsi.dwInfoFlags & XUSER_INFO_FLAG_LIVE_ENABLED ) ||
-		( xsi.dwInfoFlags & XUSER_INFO_FLAG_GUEST ) ||
-		!IsEqualXUID( xsi.xuid, s_InviteInfo.xuidInvitee ) )
-	{
-		DevWarning( "JoinInviteSession: invited user signin information validation failed (state=%d, flags=0x%X, xuid=%llx)!\n",
-			eSignInState, xsi.dwInfoFlags, xsi.xuid );
-		return;
-	}
-	BOOL bMultiplayer = FALSE;
-	if ( ( ERROR_SUCCESS != XUserCheckPrivilege( XBX_GetInvitedUserId(), XPRIVILEGE_MULTIPLAYER_SESSIONS, &bMultiplayer ) ) ||
-		( !bMultiplayer ) )
-	{
-		DevWarning( "JoinInviteSession: no multiplayer priv!\n" );
-		return;
-	}
-#endif
 
 	//
 	// Check if the currently-involved user is accepting the invite
 	//
-#ifdef _GAMECONSOLE
-	bool bExistingUser = false;
-	for ( DWORD k = 0; k < XBX_GetNumGameUsers(); ++ k )
-	{
-		if ( XBX_GetInvitedUserId() == (DWORD) XBX_GetUserId( k ) &&
-			!XBX_GetUserIsGuest( k ) )
-		{
-			bExistingUser = true;
-			break;
-		}
-	}
-	if ( !bExistingUser ||
-		( ( XBX_GetNumGameUsers() > 1 ) && ( g_pMMF->GetMatchTitle()->GetTitleSettingsFlags() & MATCHTITLE_INVITE_ONLY_SINGLE_USER ) ) )
-	{
-		// Another controller is accepting the invite or guest status
-		// has changed.
-		// then we need to reset all our XBX core state:
-
-		DevMsg( "JoinInviteSession: activating inactive controller%d\n", XBX_GetInvitedUserId() );
-
-		g_pMatchEventsSubscription->BroadcastEvent( new KeyValues( "OnProfilesWriteOpportunity", "reason", "deactivation" ) );
-
-		XBX_ClearUserIdSlots();
-
-		XBX_SetPrimaryUserId( XBX_GetInvitedUserId() );
-		XBX_SetPrimaryUserIsGuest( 0 );
-
-		XBX_SetUserId( 0, XBX_GetInvitedUserId() );
-		XBX_SetUserIsGuest( 0, 0 );
-
-		XBX_SetNumGameUsers( 1 );
-		g_pMatchEventsSubscription->BroadcastEvent( new KeyValues( "OnProfilesChanged", "numProfiles", int(1) ) );
-
-		IPlayerLocal *pPlayer = g_pPlayerManager->GetLocalPlayer( XBX_GetPrimaryUserId() );
-		if ( !pPlayer )
-		{
-			g_pMatchEventsSubscription->BroadcastEvent( new KeyValues(
-				"OnInvite", "action", "error", "error", "" ) );
-			return;
-		}
-		( ( PlayerLocal * ) pPlayer )->SetFlag_AwaitingTitleData();
-
-		// Since we have activated a new profile, we need to wait until title data gets loaded
-		DevMsg( "JoinInviteSession: activated inactive controller%d, waiting for title data...\n", XBX_GetInvitedUserId() );
-		return;
-	}
-#endif
 
 	// Validate storage device
 	s_nInviteConfirmed = -1;
 	if ( KeyValues *notify = new KeyValues( "OnInvite" ) )
 	{
-#ifdef _X360
-		char chSessionInfo[ XSESSION_INFO_STRING_LENGTH ] = {0};
-		MMX360_SessionInfoToString( s_InviteInfo.hostInfo, chSessionInfo );
-		notify->SetInt( "user", XBX_GetInvitedUserId() );
-		notify->SetString( "sessioninfo", chSessionInfo );
-#else
 		notify->SetUint64( "sessionid", s_InviteInfo );
-#endif
 		notify->SetString( "action", "storage" );
 		notify->SetPtr( "confirmed", &s_nInviteConfirmed );
 
@@ -471,12 +253,6 @@ static void JoinInviteSession()
 	//
 	// Argument validation
 	//
-#ifdef _GAMECONSOLE
-	Assert( XBX_GetInvitedUserId() >= 0 );
-	Assert( XBX_GetInvitedUserId() < XUSER_MAX_COUNT );
-	Assert( XBX_GetSlotByUserId( XBX_GetInvitedUserId() ) < ( int ) XBX_GetNumGameUsers() );
-	Assert( XBX_GetNumGameUsers() < MAX_SPLITSCREEN_CLIENTS );
-#endif
 
 	// Requesting to join the stored off session
 	KeyValues *pSettings = KeyValues::FromString(
@@ -489,20 +265,7 @@ static void JoinInviteSession()
 		" } "
 		);
 	
-#ifdef _X360
-	pSettings->SetUint64( "options/sessionid", ( const uint64 & ) s_InviteInfo.hostInfo.sessionID );
-
-	if ( !IsZeroData< sizeof( s_InviteInfo.hostInfo.keyExchangeKey ) >( &s_InviteInfo.hostInfo.keyExchangeKey ) )
-	{
-		// Missing sessioninfo will cause the session info to be discovered during session
-		// creation time
-		char chSessionInfoBuffer[ XSESSION_INFO_STRING_LENGTH ] = {0};
-		MMX360_SessionInfoToString( s_InviteInfo.hostInfo, chSessionInfoBuffer );
-		pSettings->SetString( "options/sessioninfo", chSessionInfoBuffer );
-	}
-#else
 	pSettings->SetUint64( "options/sessionid", s_InviteInfo );
-#endif
 	
 	KeyValues::AutoDelete autodelete( pSettings );
 	Q_memset( &s_InviteInfo, 0, sizeof( s_InviteInfo ) );
@@ -522,14 +285,7 @@ static void OnInviteAccepted()
 	s_nInviteConfirmed = -1;
 	if ( KeyValues *notify = new KeyValues( "OnInvite" ) )
 	{
-#ifdef _X360
-		char chSessionInfo[ XSESSION_INFO_STRING_LENGTH ] = {0};
-		MMX360_SessionInfoToString( s_InviteInfo.hostInfo, chSessionInfo );
-		notify->SetInt( "user", XBX_GetInvitedUserId() );
-		notify->SetString( "sessioninfo", chSessionInfo );
-#else
 		notify->SetUint64( "sessionid", s_InviteInfo );
-#endif
 		notify->SetString( "action", "accepted" );
 		notify->SetPtr( "confirmed", &s_nInviteConfirmed );
 
@@ -572,45 +328,12 @@ void CMatchFramework::RunFrame_Invite()
 
 void CMatchFramework::AcceptInvite( int iController )
 {
-#ifdef _X360
-	s_bInviteSessionDelayedJoin = false;
-
-	// Grab our invite info
-	DWORD dwError = g_pMatchExtensions->GetIXOnline()->XInviteGetAcceptedInfo( iController, &s_InviteInfo );
-	if ( dwError != ERROR_SUCCESS )
-	{
-		ZeroMemory( &s_InviteInfo, sizeof( s_InviteInfo ) );
-		return;
-	}
-
-	// We only care if we're asked to join this title's session
-	if ( s_InviteInfo.dwTitleID != GetMatchTitle()->GetTitleID() )
-	{
-		ZeroMemory( &s_InviteInfo, sizeof( s_InviteInfo ) );
-		return;
-	}
-
-	// We just mark the invited user and let the matchmaking handle profile changes
-	XBX_SetInvitedUserId( iController );
-
-	// Invite accepted logic after globals have been setup
-	OnInviteAccepted();
-#endif
 }
 
-#if !defined( _X360 ) && !defined( NO_STEAM ) && !defined( SWDS )
 void CMatchSteamInviteListener::Steam_OnGameLobbyJoinRequested( GameLobbyJoinRequested_t *pJoinInvite )
 {
-#ifdef _PS3
-	if ( pJoinInvite->m_steamIDFriend.ConvertToUint64() != ~0ull )
-	{
-		g_uiLastInviteFlags = ( pJoinInvite->m_steamIDFriend.BConsoleUserAccount() ? MM_INVITE_FLAG_CONSOLE : 0 );
-	}
-#endif
 
-#if !defined( _GAMECONSOLE )
 	g_uiLastInviteFlags = ( pJoinInvite->m_steamIDFriend.ConvertToUint64() == ~0ull ) ? MM_INVITE_FLAG_PCBOOT : 0;
-#endif
 
 	m_msgPending = GameLobbyJoinRequested_t();
 	s_bInviteSessionDelayedJoin = false;
@@ -618,10 +341,6 @@ void CMatchSteamInviteListener::Steam_OnGameLobbyJoinRequested( GameLobbyJoinReq
 	if ( !s_InviteInfo )
 		return;
 	
-	#ifdef _GAMECONSOLE
-	// We just mark the invited user and let the matchmaking handle profile changes
-	XBX_SetInvitedUserId( XBX_GetPrimaryUserId() );
-	#endif
 
 	// Whether we have to make invite go pending
 	char chBuffer[2] = {};
@@ -637,15 +356,6 @@ void CMatchSteamInviteListener::Steam_OnGameLobbyJoinRequested( GameLobbyJoinReq
 	OnInviteAccepted();
 }
 
-#ifdef _PS3
-void CMatchSteamInviteListener::Steam_OnPSNGameBootInviteResult( PSNGameBootInviteResult_t *pParam )
-{
-	if ( pParam->m_bGameBootInviteExists && pParam->m_steamIDLobby.IsValid() )
-	{
-		g_uiLastInviteFlags = MM_INVITE_FLAG_CONSOLE;
-	}
-}
-#endif
 
 void CMatchSteamInviteListener::RunFrame()
 {
@@ -655,7 +365,6 @@ void CMatchSteamInviteListener::RunFrame()
 		Steam_OnGameLobbyJoinRequested( &msgRequest );
 	}
 }
-#endif
 
 
 IMatchSession *CMatchFramework::GetMatchSession()
@@ -668,7 +377,6 @@ void CMatchFramework::CreateSession( KeyValues *pSettings )
 	DevMsg( "CreateSession: \n");
 	KeyValuesDumpAsDevMsg( pSettings );
 
-#ifndef SWDS
 	if ( !pSettings )
 		return;
 
@@ -680,10 +388,6 @@ void CMatchFramework::CreateSession( KeyValues *pSettings )
 
 	char const *szNetwork = pSettings->GetString( "system/network", "offline" );
 
-#ifdef _X360
-	if ( !Q_stricmp( "LIVE", szNetwork ) && !ValidateInviteControllers() )
-		return;
-#endif
 
 	// Recompute XUIDs for the session type that we are creating
 	g_pPlayerManager->RecomputePlayerXUIDs( szNetwork );
@@ -698,8 +402,7 @@ void CMatchFramework::CreateSession( KeyValues *pSettings )
 	}
 	else
 	{
-		CMatchSessionOnlineHost *pSession = new CMatchSessionOnlineHost( pSettings );
-		pMatchSessionNew = pSession;
+		Warning( "CreateSession: online sessions are not supported, use direct connect or LAN\n" );
 	}
 
 	if ( pMatchSessionNew )
@@ -707,12 +410,10 @@ void CMatchFramework::CreateSession( KeyValues *pSettings )
 		CloseSession();
 		m_pMatchSession = pMatchSessionNew;
 	}
-#endif
 }
 
 void CMatchFramework::MatchSession( KeyValues *pSettings )
 {
-#ifndef SWDS
 	if ( !pSettings )
 		return;
 
@@ -737,40 +438,14 @@ void CMatchFramework::MatchSession( KeyValues *pSettings )
 	//
 	if ( !Q_stricmp( "joinsession", szAction ) )
 	{
-#ifdef _X360
-		// For LIVE sessions we need to be eligible
-		if ( !Q_stricmp( "LIVE", szNetwork ) && !ValidateInviteControllers() )
-			return;
-#endif
-
-		// We have an explicit session to join
-		CMatchSessionOnlineClient *pSession = new CMatchSessionOnlineClient( pSettings );
-		pMatchSessionNew = pSession;
+		Warning( "MatchSession: online sessions are not supported, use direct connect or LAN\n" );
 	}
 	else if ( !Q_stricmp( "joininvitesession", szAction ) )
 	{
-#ifdef _X360
-		ZeroMemory( &s_InviteInfo, sizeof( s_InviteInfo ) );
-		XUSER_SIGNIN_INFO xsi;
-		if ( ERROR_SUCCESS == XUserGetSigninInfo( XBX_GetInvitedUserId(), XUSER_GET_SIGNIN_INFO_ONLINE_XUID_ONLY, &xsi ) )
-			s_InviteInfo.xuidInvitee = xsi.xuid;
-
-		uint64 uiSessionID = pSettings->GetUint64( "options/sessionid", 0ull );
-		s_InviteInfo.hostInfo.sessionID = ( XNKID & ) uiSessionID;
-
-		OnInviteAccepted();
-#endif
 	}
 	else // "quickmatch" or "custommatch"
 	{
-#ifdef _X360
-		// For LIVE sessions we need to be eligible
-		if ( !Q_stricmp( "LIVE", szNetwork ) && !ValidateInviteControllers() )
-			return;
-#endif
-
-		CMatchSessionOnlineSearch *pSession = new CMatchSessionOnlineSearch( pSettings );
-		pMatchSessionNew = pSession;
+		Warning( "MatchSession: online sessions are not supported, use direct connect or LAN\n" );
 	}
 
 	if ( pMatchSessionNew )
@@ -778,7 +453,6 @@ void CMatchFramework::MatchSession( KeyValues *pSettings )
 		CloseSession();
 		m_pMatchSession = pMatchSessionNew;
 	}
-#endif
 }
 
 
@@ -851,12 +525,10 @@ void CMatchFramework::OnEvent( KeyValues *pEvent )
 	}
 	else if ( !Q_stricmp( "OnSteamOverlayCall::LobbyJoin", szEvent ) )
 	{
-#if !defined( _X360 ) && !defined( NO_STEAM ) && !defined( SWDS )
 		GameLobbyJoinRequested_t msg;
 		msg.m_steamIDLobby.SetFromUint64( pEvent->GetUint64( "sessionid" ) );
 		msg.m_steamIDFriend.SetFromUint64( ~0ull );
 		g_MatchSteamInviteListener.Steam_OnGameLobbyJoinRequested( &msg );
-#endif
 		return;
 	}
 	else if ( !Q_stricmp( "OnMatchSessionUpdate", szEvent ) )
@@ -926,12 +598,6 @@ void CMatchFramework::OnEvent( KeyValues *pEvent )
 	//
 	if ( g_pPlayerManager )
 		g_pPlayerManager->OnEvent( pEvent );
-	if ( g_pServerManager )
-		g_pServerManager->OnEvent( pEvent );
-	if ( g_pDatacenter )
-		g_pDatacenter->OnEvent( pEvent );
-	if ( g_pDlcManager )
-		g_pDlcManager->OnEvent( pEvent );
 
 	//
 	// Delegate to the title

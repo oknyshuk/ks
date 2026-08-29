@@ -481,7 +481,7 @@ void C_SceneEntity::StartEvent( float currenttime, CChoreoScene *scene, CChoreoE
 	}
 
 	Scene_Printf( "%s : %8.2f:  start %s\n", GetSceneFileName(), currenttime, event->GetDescription() );
-	if ( IsPC() && event )
+	if ( event )
 	{
 		BlackBox_Record( "vcd", "%s : %8.2f:  start %s", GetSceneFileName(), currenttime, event->GetDescription() );
 	}

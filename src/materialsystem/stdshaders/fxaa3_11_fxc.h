@@ -1,19 +1,11 @@
 //========== Copyright (c) Valve Corporation, All rights reserved. ==========//
 
 
-#if defined( _PS3 )
-#define FXAA_PS3 1
-#else 
-#if defined( _X360 )
-#define FXAA_360 1
-#else
 // TODO: PC #defines here
 #define FXAA_PC 1
 #define FXAA_HLSL_3 1
 #define FXAA_QUALITY__PRESET 12
 #define FXAA_DISCARD 0
-#endif
-#endif
 
 // alpha may contain depth for dof, so use green as Luma for now
 #define FXAA_GREEN_AS_LUMA 1
@@ -357,15 +349,7 @@ A. Or use FXAA_GREEN_AS_LUMA.
     // 4.0 is softer
     // 2.0 is really soft (good for vector graphics inputs)
     //
-    #if 1
         #define FXAA_CONSOLE__PS3_EDGE_SHARPNESS 8.0
-    #endif
-    #if 0
-        #define FXAA_CONSOLE__PS3_EDGE_SHARPNESS 4.0
-    #endif
-    #if 0
-        #define FXAA_CONSOLE__PS3_EDGE_SHARPNESS 2.0
-    #endif
 #endif
 /*--------------------------------------------------------------------------*/
 #ifndef FXAA_CONSOLE__PS3_EDGE_THRESHOLD
@@ -385,11 +369,7 @@ A. Or use FXAA_GREEN_AS_LUMA.
     // 0.125 leaves less aliasing, but is softer
     // 0.25 leaves more aliasing, and is sharper
     //
-    #if 1
         #define FXAA_CONSOLE__PS3_EDGE_THRESHOLD 0.125
-    #else
-        #define FXAA_CONSOLE__PS3_EDGE_THRESHOLD 0.25
-    #endif
 #endif
 
 /*============================================================================
@@ -1369,90 +1349,6 @@ however I fixed a bug which was in both FXAA 3.9 and FXAA 3.10.
 And note this is replacing the old unoptimized version.
 If it does not work, please let me know so I can fix it.
 ============================================================================*/
-#if 0// use PS3 path for 360 until fixed this version (FXAA_360 == 1)
-/*--------------------------------------------------------------------------*/
-[reduceTempRegUsage(4)]
-float4 FxaaPixelShader(
-    // See FXAA Quality FxaaPixelShader() source for docs on Inputs!
-    FxaaFloat2 pos,
-    FxaaFloat4 fxaaConsolePosPos,
-    FxaaTex tex,
-    FxaaTex fxaaConsole360TexExpBiasNegOne,
-    FxaaTex fxaaConsole360TexExpBiasNegTwo,
-    FxaaFloat2 fxaaQualityRcpFrame,
-    FxaaFloat4 fxaaConsoleRcpFrameOpt,
-    FxaaFloat4 fxaaConsoleRcpFrameOpt2,
-    FxaaFloat4 fxaaConsole360RcpFrameOpt2,
-    FxaaFloat fxaaQualitySubpix,
-    FxaaFloat fxaaQualityEdgeThreshold,
-    FxaaFloat fxaaQualityEdgeThresholdMin,
-    FxaaFloat fxaaConsoleEdgeSharpness,
-    FxaaFloat fxaaConsoleEdgeThreshold,
-    FxaaFloat fxaaConsoleEdgeThresholdMin,
-    FxaaFloat4 fxaaConsole360ConstDir
-) {
-/*--------------------------------------------------------------------------*/
-    float4 lumaNwNeSwSe;
-    #if (FXAA_GREEN_AS_LUMA == 0)
-        asm { 
-            tfetch2D lumaNwNeSwSe.w___, tex, pos.xy, OffsetX = -0.5, OffsetY = -0.5, UseComputedLOD=false
-            tfetch2D lumaNwNeSwSe._w__, tex, pos.xy, OffsetX =  0.5, OffsetY = -0.5, UseComputedLOD=false
-            tfetch2D lumaNwNeSwSe.__w_, tex, pos.xy, OffsetX = -0.5, OffsetY =  0.5, UseComputedLOD=false
-            tfetch2D lumaNwNeSwSe.___w, tex, pos.xy, OffsetX =  0.5, OffsetY =  0.5, UseComputedLOD=false
-        };
-    #else
-        asm { 
-            tfetch2D lumaNwNeSwSe.y___, tex, pos.xy, OffsetX = -0.5, OffsetY = -0.5, UseComputedLOD=false
-            tfetch2D lumaNwNeSwSe._y__, tex, pos.xy, OffsetX =  0.5, OffsetY = -0.5, UseComputedLOD=false
-            tfetch2D lumaNwNeSwSe.__y_, tex, pos.xy, OffsetX = -0.5, OffsetY =  0.5, UseComputedLOD=false
-            tfetch2D lumaNwNeSwSe.___y, tex, pos.xy, OffsetX =  0.5, OffsetY =  0.5, UseComputedLOD=false
-        };
-    #endif
-/*--------------------------------------------------------------------------*/
-    lumaNwNeSwSe.y += 1.0/384.0;
-    float2 lumaMinTemp = min(lumaNwNeSwSe.xy, lumaNwNeSwSe.zw);
-    float2 lumaMaxTemp = max(lumaNwNeSwSe.xy, lumaNwNeSwSe.zw);
-    float lumaMin = min(lumaMinTemp.x, lumaMinTemp.y);
-    float lumaMax = max(lumaMaxTemp.x, lumaMaxTemp.y);
-/*--------------------------------------------------------------------------*/
-    float4 rgbyM = tex2Dlod(tex, float4(pos.xy, 0.0, 0.0));
-    #if (FXAA_GREEN_AS_LUMA == 0)
-        float lumaMinM = min(lumaMin, rgbyM.w);
-        float lumaMaxM = max(lumaMax, rgbyM.w);
-    #else
-        float lumaMinM = min(lumaMin, rgbyM.y);
-        float lumaMaxM = max(lumaMax, rgbyM.y);
-    #endif        
-    if((lumaMaxM - lumaMinM) < max(fxaaConsoleEdgeThresholdMin, lumaMax * fxaaConsoleEdgeThreshold)) return rgbyM;
-/*--------------------------------------------------------------------------*/
-    float2 dir;
-    dir.x = dot(lumaNwNeSwSe, fxaaConsole360ConstDir.yyxx);
-    dir.y = dot(lumaNwNeSwSe, fxaaConsole360ConstDir.xyxy);
-    dir = normalize(dir);
-/*--------------------------------------------------------------------------*/
-    float4 dir1 = dir.xyxy * fxaaConsoleRcpFrameOpt.xyzw;
-/*--------------------------------------------------------------------------*/
-    float4 dir2;
-    float dirAbsMinTimesC = min(abs(dir.x), abs(dir.y)) * fxaaConsoleEdgeSharpness;
-    dir2 = saturate(fxaaConsole360ConstDir.zzww * dir.xyxy / dirAbsMinTimesC + 0.5);
-    dir2 = dir2 * fxaaConsole360RcpFrameOpt2.xyxy + fxaaConsole360RcpFrameOpt2.zwzw;
-/*--------------------------------------------------------------------------*/
-
-	// [mariod] - these samplers not set up yet so read as if reading tex sampler (do exponent bias manually) 
-    float4 rgbyN1 = 0.5 * tex2Dlod(fxaaConsole360TexExpBiasNegOne, float4(pos.xy + dir1.xy, 0.0, 0.0));
-    float4 rgbyP1 = 0.5 * tex2Dlod(fxaaConsole360TexExpBiasNegOne, float4(pos.xy + dir1.zw, 0.0, 0.0));
-    float4 rgbyN2 = 0.25 * tex2Dlod(fxaaConsole360TexExpBiasNegTwo, float4(pos.xy + dir2.xy, 0.0, 0.0));
-    float4 rgbyP2 = 0.25 * tex2Dlod(fxaaConsole360TexExpBiasNegTwo, float4(pos.xy + dir2.zw, 0.0, 0.0));
-
-/*--------------------------------------------------------------------------*/
-    float4 rgbyA = rgbyN1 + rgbyP1;
-    float4 rgbyB = rgbyN2 + rgbyP2 + rgbyA * 0.5;
-/*--------------------------------------------------------------------------*/
-    float4 rgbyR = ((FxaaLuma(rgbyB) - lumaMax) > 0.0) ? rgbyA : rgbyB; 
-    rgbyR = ((FxaaLuma(rgbyB) - lumaMin) > 0.0) ? rgbyR : rgbyA; 
-    return rgbyR; }
-/*==========================================================================*/
-#endif
 
 
 

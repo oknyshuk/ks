@@ -94,8 +94,6 @@ static void VTex_Unload( CSysModule *pModule )
 static void TakeCubemapSnapshot( const Vector &origin, const char *pFileNameBase, int screenBufSize,
 						 int tgaSize, bool bPFM )
 {
-	if ( IsGameConsole() )
-		return;
 
 	if ( g_LostVideoMemory )
 		return;
@@ -291,8 +289,6 @@ static void TakeCubemapSnapshot( const Vector &origin, const char *pFileNameBase
 //-----------------------------------------------------------------------------
 void* CubemapsFSFactory( const char *pName, int *pReturnCode )
 {
-	if ( IsGameConsole() )
-		return NULL;
 
 	if ( Q_stricmp( pName, FILESYSTEM_INTERFACE_VERSION ) == 0 )
 		return g_pFileSystem;
@@ -336,8 +332,6 @@ bool CCubemapCollection::Add( char const *szCubemapFile )
 static void BuildSingleCubemap( const char *pVTFName, const Vector &vecOrigin,
 	int nSize, bool bHDR, const char *pGameDir, IVTex *ivt, CCubemapCollection *pCC )
 {
-	if ( IsGameConsole() )
-		return;
 
 	if ( pCC && !pCC->Add( pVTFName ) )
 		return; // Already compiled
@@ -393,8 +387,6 @@ static void BuildSingleCubemap( const char *pVTFName, const Vector &vecOrigin,
 //-----------------------------------------------------------------------------
 CON_COMMAND( envmap, "" )
 {
-	if ( IsGameConsole() )
-		return;
 
 	char	base[ 256 ];
 	IClientEntity *world = entitylist->GetClientEntity( 0 );
@@ -520,8 +512,6 @@ CON_COMMAND( lightprobe,
 	"Creates a cubemap and a file indicating the local lighting in a subdirectory called 'materials/lightprobes'\n."
 	"The lightprobe command requires you specify a base file name.\n" )
 {
-	if ( IsGameConsole() )
-		return;
 
 	if ( args.ArgC() < 2 ) 
 	{
@@ -582,11 +572,6 @@ CON_COMMAND( lightprobe,
 
 static bool LoadSrcVTFFiles( IVTFTexture *pSrcVTFTextures[6], const char *pSkyboxBaseName )
 {
-	if ( IsGameConsole() )
-	{
-		return false;
-	}
-	else
 	{
 		int i;
 		for( i = 0; i < 6; i++ )
@@ -624,8 +609,6 @@ static bool LoadSrcVTFFiles( IVTFTexture *pSrcVTFTextures[6], const char *pSkybo
 
 void Cubemap_CreateDefaultCubemap( const char *pMapName, IBSPPack *iBSPPack )
 {
-	if ( IsGameConsole() )
-		return;
 	// NOTE: This implementation depends on the fact that all VTF files contain
 	// all mipmap levels
 	ConVarRef skyboxBaseNameConVar( "sv_skyname" );
@@ -806,8 +789,6 @@ void Cubemap_CreateDefaultCubemap( const char *pMapName, IBSPPack *iBSPPack )
 
 static void AddSampleToBSPFile( bool bHDR, mcubemapsample_t *pSample, const char *matDir, IBSPPack *iBSPPack, CCubemapCollection *pCC )
 {
-	if ( IsGameConsole() )
-		return;
 
 	char inputTextureName[512] = {};
 	const char *pHDRSuffix = bHDR ? "_hdr" : "";
@@ -856,8 +837,6 @@ static int nOldBloomDisable = 0;
 static int originaldrawMRMModelsVal = 1; 
 void R_BuildCubemapSamples_PreBuild()
 {
-	if ( IsGameConsole() )
-		return;
 
 	FORCE_DEFAULT_SPLITSCREEN_PLAYER_GUARD;
 
@@ -1023,8 +1002,6 @@ void R_BuildCubemapSamples_PostBuild()
 }
 void R_BuildCubemapSamples( int numIterations )
 {
-	if ( IsGameConsole() )
-		return;
 
 	// Make sure that the file is writable before building cubemaps.
 	Assert( g_pFileSystem->FileExists( GetBaseLocalClient().m_szLevelName, "GAME" ) );
@@ -1210,7 +1187,7 @@ void R_BuildCubemapSamples( int numIterations )
 	reload_materials.SetValue( 1 );
 }
 
-#if !defined( DEDICATED ) && !defined( _GAMECONSOLE )
+#if !defined( DEDICATED )
 CON_COMMAND( buildcubemaps, "Rebuild cubemaps." )
 {
 	extern void V_RenderUIOnly();

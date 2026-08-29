@@ -162,11 +162,6 @@ CFrameSnapshot* CFrameSnapshotManager::TakeTickSnapshot(
 		edict++;
 		entry++;
 
-		if ( IsGameConsole() && edict->GetNetworkable() )
-		{
-			PREFETCH360( edict->GetNetworkable(), 0 );
-		}
-
 		IServerUnknown *pUnk = edict->GetUnknown();
 
 		if ( !pUnk )

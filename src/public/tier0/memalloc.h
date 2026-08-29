@@ -17,30 +17,14 @@
 // These memory debugging switches aren't relevant under Linux builds since memoverride.cpp
 // isn't built into Linux projects
 // [will] - Temporarily disabling for OSX until I can fix memory issues.
-#if !defined( LINUX ) && !defined( _OSX )
-// Define this in release to get memory tracking even in release builds
-//#define USE_MEM_DEBUG 1
-
-// Define this in release to get light memory debugging
-//#define USE_LIGHT_MEM_DEBUG
-
-// Define this to require -uselmd to turn light memory debugging on
-#define LIGHT_MEM_DEBUG_REQUIRES_CMD_LINE_SWITCH
-#endif
 
 #if defined( _MEMTEST )
-#if defined( _WIN32 ) || defined( _PS3 )
+#if defined( _WIN32 )
 #define USE_MEM_DEBUG 1
 #endif
 #endif
 
 
-#if defined( _PS3 )
-// Define STEAM_SHARES_GAME_ALLOCATOR to make Steam use the game's tier0 memory allocator.
-// This adds some memory to the game's Small Block Heap and Medium Block Heap, to compensate.
-// This configuration was disabled for Portal 2, as we could not sufficiently test it before ship.
-//#define STEAM_SHARES_GAME_ALLOCATOR
-#endif
 
 #if defined( STEAM_SHARES_GAME_ALLOCATOR )
 #define MBYTES_STEAM_SBH_USAGE 2
@@ -217,20 +201,9 @@ public:
 //-----------------------------------------------------------------------------
 // Singleton interface
 //-----------------------------------------------------------------------------
-#ifdef _PS3
-
-PLATFORM_INTERFACE IMemAlloc * g_pMemAllocInternalPS3;
-#ifndef PLATFORM_INTERFACE_MEM_ALLOC_INTERNAL_PS3_OVERRIDE
-#define g_pMemAlloc g_pMemAllocInternalPS3
-#else
-#define g_pMemAlloc PLATFORM_INTERFACE_MEM_ALLOC_INTERNAL_PS3_OVERRIDE
-#endif
-
-#else // !_PS3
 
 MEM_INTERFACE IMemAlloc *g_pMemAlloc;
 
-#endif
 
 //-----------------------------------------------------------------------------
 
@@ -641,11 +614,8 @@ struct MemAllocFileLine_t
 //-----------------------------------------------------------------------------
 
 
-#elif defined( POSIX )
+#else
 
-#if defined( OSX )
-inline void *memalign(size_t alignment, size_t size) {void *pTmp=NULL; posix_memalign(&pTmp, alignment, size); return pTmp;}
-#endif
 
 inline void *_aligned_malloc( size_t nSize, size_t align )															{ return memalign( align, nSize ); }
 inline void _aligned_free( void *ptr )																				{ free( ptr ); }
@@ -657,11 +627,7 @@ inline void *MemAlloc_AllocAligned( size_t size, size_t align )														{ r
 inline void *MemAlloc_AllocAlignedFileLine( size_t size, size_t align, const char *pszFile = NULL, int nLine = 0 )	{ return memalign( align, size ); }
 inline void MemAlloc_FreeAligned( void *pMemBlock, const char *pszFile = NULL, int nLine = 0 ) 						{ free( pMemBlock ); }
 
-#if defined( OSX )
-inline size_t _msize( void *ptr )																					{ return malloc_size( ptr ); }
-#else
 inline size_t _msize( void *ptr )																					{ return malloc_usable_size( ptr ); }
-#endif
 
 inline void *MemAlloc_ReallocAligned( void *ptr, size_t size, size_t align )
 {
@@ -720,7 +686,6 @@ inline void MemAlloc_GlobalMemoryStatus( size_t *pusedMemory, size_t *pfreeMemor
 
 
 // linux memory tracking via hooks.
-#if defined( POSIX ) && !defined( _PS3 )
 PLATFORM_INTERFACE void MemoryLogMessage( char const *s );						// throw a message into the memory log
 PLATFORM_INTERFACE void EnableMemoryLogging( bool bOnOff );
 PLATFORM_INTERFACE void DumpMemoryLog( int nThresh );
@@ -730,30 +695,6 @@ PLATFORM_INTERFACE void DumpChangedMemory( int nThresh );
 
 // ApproximateProcessMemoryUsage returns the approximate memory footprint of this process.
 PLATFORM_INTERFACE size_t ApproximateProcessMemoryUsage( void );
-#else
-inline void MemoryLogMessage( char const * )
-{
-}
-inline void EnableMemoryLogging( bool )
-{
-}
-inline void DumpMemoryLog( int )
-{
-}
-inline void DumpMemorySummary( void )
-{
-}
-inline void SetMemoryMark( void )
-{
-}
-inline void DumpChangedMemory( int )
-{
-}
-inline size_t ApproximateProcessMemoryUsage( void )
-{
-	return 0;
-}
-#endif
 
 
 #endif /* TIER0_MEMALLOC_H */

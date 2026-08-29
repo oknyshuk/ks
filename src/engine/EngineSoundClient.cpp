@@ -89,9 +89,6 @@ public:
 
 	virtual void SetReplaySoundFade( float flReplayVolume ) { g_flReplaySoundFade = flReplayVolume; }
 	virtual float GetReplaySoundFade()const { return g_flReplaySoundFade; }
-#if defined( _GAMECONSOLE )
-	virtual void	UnloadSound( const char *pSample );
-#endif
 
 private:
 	int EmitSoundInternal( IRecipientFilter& filter, int iEntIndex, int iChannel, const char *pSoundEntry, HSOUNDSCRIPTHASH nSoundEntryHash, const char *pSample, 
@@ -418,15 +415,6 @@ void CEngineSoundClient::StopSound( int iEntIndex, int iChannel, const char *pSa
 
 void CEngineSoundClient::SetRoomType( IRecipientFilter& filter, int roomType )
 {
-#ifndef LINUX
-	extern ConVar snd_dsp_spew_changes;
-	extern ConVar dsp_room;
-	if ( snd_dsp_spew_changes.GetBool() )
-	{
-		DevMsg( "Changing to room type %d.\n", roomType );
-	}
-	dsp_room.SetValue( roomType );
-#endif
 }
 
 void CEngineSoundClient::SetPlayerDSP( IRecipientFilter& filter, int dspType, bool fastReset )
@@ -561,18 +549,12 @@ void CEngineSoundClient::PrecacheSentenceGroup( const char *pGroupName )
 void CEngineSoundClient::NotifyBeginMoviePlayback()
 {
 	StopAllSounds(true);
-#if defined( _X360 )
-	XMPOverrideBackgroundMusic();
-#endif
 
 	m_bMoviePlaying = true;
 }
 
 void CEngineSoundClient::NotifyEndMoviePlayback()
 {
-#if defined( _X360 )
-	XMPRestoreBackgroundMusic();
-#endif
 
 	m_bMoviePlaying = false;
 }
@@ -587,12 +569,3 @@ bool CEngineSoundClient::GetSoundChannelVolume( const char* sound, float &flVolu
 	return S_GetSoundChannelVolume( sound, flVolumeLeft, flVolumeRight );
 }
 
-#if defined( _GAMECONSOLE )
-void CEngineSoundClient::UnloadSound( const char *pSample )
-{
-	S_UnloadSound( pSample );
-}
-
-
-
-#endif

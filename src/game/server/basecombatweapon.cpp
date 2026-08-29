@@ -116,14 +116,6 @@ void CBaseCombatWeapon::Operator_FrameUpdate( CBaseCombatCharacter *pOperator )
 				ResetSequence( iSequence );	// Set to new anim (if it's there)
 			}
 		}
-#if 0
-		else
-		{
-			// animation that just ended doesn't loop! That means we just finished a fidget
-			// and should return to our heaviest weighted idle (the subtle one)
-			SelectHeaviestSequence( GetActivity() );
-		}
-#endif
 	}
 
 	CBasePlayer *pOwner = ToBasePlayer( GetOwner() );
@@ -396,29 +388,6 @@ int CBaseCombatWeapon::WeaponRangeAttack1Condition( float flDot, float flDist )
 int CBaseCombatWeapon::WeaponRangeAttack2Condition( float flDot, float flDist )
 {
 	// currently disabled
-	return COND_NONE;
-
-	if ( m_bReloadsSingly )
-	{
-		if (m_iClip2 <=0)
-		{
-			return COND_NO_SECONDARY_AMMO;
-		}
-		else if ( flDist < m_fMinRange2) 
-		{
-			return COND_TOO_CLOSE_TO_ATTACK;
-		}
-		else if (flDist > m_fMaxRange2) 
-		{
-			return COND_TOO_FAR_TO_ATTACK;
-		}
-		else if (flDot < 0.5) 
-		{
-			return COND_NOT_FACING_ATTACK;
-		}
-		return COND_CAN_RANGE_ATTACK2;
-	}
-
 	return COND_NONE;
 }
 

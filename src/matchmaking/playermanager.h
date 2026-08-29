@@ -15,7 +15,6 @@ class PlayerManager;
 #include "utlvector.h"
 #include "utlmap.h"
 
-#ifndef SWDS
 
 #include "player.h"
 
@@ -78,9 +77,6 @@ protected:
 	void RemoveOldFriends();
 	void OnSigninChange( KeyValues *pEvent );
 	void OnLostConnectionToConsoleNetwork();
-#if defined( _PS3 ) && !defined( NO_STEAM )
-	STEAM_CALLBACK( PlayerManager, Steam_OnPS3PSNStatusChange, PS3PSNStatusChange_t, m_CallbackOnPS3PSNStatusChange );
-#endif
 
 private:
 	void CreateFriendEnumeration( int iCtrlr );
@@ -103,10 +99,6 @@ private:
 		void * mFriendBuffer;
 		int mFriendBufferSize;
 		int mFriendsStartIndex;
-#ifdef _X360
-		HANDLE mFriendEnumHandle;
-		XOVERLAPPED mFriendsOverlapped;
-#endif
 		XUID mXuid;
 	};
 	SFriendSearchData m_searchData[ XUSER_MAX_COUNT ];
@@ -125,16 +117,6 @@ private:
 	bool m_bRequestStoreStats;
 };
 
-#else // SWDS
-
-class PlayerManager: public IPlayerManager, public IMatchEventsSink
-{
-public:
-	// SWDS declaration is intentionally left stripped
-	virtual void Update() = 0;
-};
-
-#endif
 
 extern class PlayerManager *g_pPlayerManager;
 

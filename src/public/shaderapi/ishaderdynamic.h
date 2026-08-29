@@ -299,13 +299,6 @@ public:
 
 	virtual float GetSubDHeight() = 0;
 
-#if defined( _GAMECONSOLE )
-	// Enables console-specific command predication.
-	// Set values to 'true' if batches should be rendered in the z-pass and/or the render pass.
-	// Disabling predication returns to default values, which allows D3D to control predication
-	virtual void EnablePredication( bool bZPass, bool bRenderPass ) = 0;
-	virtual void DisablePredication() = 0;
-#endif // _GAMECONSOLE
 
 	virtual bool IsRenderingPaint() const = 0;
 

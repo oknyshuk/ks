@@ -243,12 +243,6 @@ bool IsBoxIntersectingBoxExtents( const Vector& boxCenter1, const Vector& boxHal
 						   const Vector& boxCenter2, const Vector& boxHalfDiagonal2 );
 
 
-#ifdef _X360
-// inline version:
-#include "mathlib/ssemath.h"
-inline bool IsBoxIntersectingBoxExtents( const fltx4 boxCenter1, const fltx4 boxHalfDiagonal1, 
-								 const fltx4 boxCenter2, const fltx4 boxHalfDiagonal2 );
-#endif
 
 //-----------------------------------------------------------------------------
 // 
@@ -463,23 +457,6 @@ bool IntersectRayWithAACylinder( const Ray_t &ray,
 //-----------------------------------------------------------------------------
 
 
-#ifdef _X360
-inline bool IsBoxIntersectingBoxExtents( const fltx4 boxCenter1, const fltx4 boxHalfDiagonal1, 
-								 const fltx4 boxCenter2, const fltx4 boxHalfDiagonal2 )
-{
-	fltx4 vecDelta, vecSize;
-
-	vecDelta = SubSIMD(boxCenter1, boxCenter2);
-	vecSize = AddSIMD(boxHalfDiagonal1, boxHalfDiagonal2);
-
-	uint condition;
-	XMVectorInBoundsR(&condition, vecDelta, vecSize);
-	// we want the top three words to be all 1's ; that means in bounds
-
-
-	return XMComparisonAllInBounds( condition );
-}
-#endif
 
 
 #endif // COLLISIONUTILS_H

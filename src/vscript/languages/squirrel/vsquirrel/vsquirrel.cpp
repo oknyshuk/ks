@@ -11,15 +11,9 @@
 //-------------------------------------
 
 #include <stdio.h>
-#if defined( _PS3 ) || defined( POSIX )
 #include <ctype.h>
 #include <wctype.h>
 #undef _STD_USING
-#elif defined( _WIN32 )
-#include <io.h>
-#include <conio.h>
-#include <direct.h>
-#endif // _PS3
 
 #ifdef _HAS_EXCEPTIONS
 #undef _HAS_EXCEPTIONS
@@ -72,13 +66,11 @@
 static SQObjectType lastType;
 #endif
 
-#if defined( _PS3 ) || defined( POSIX )
 inline int64 max( int64 a, int64 b)
 {
 	return a > b ? a : b;
 }
 
-#endif
 //-----------------------------------------------------------------------------
 // Stub out unwanted features
 //-----------------------------------------------------------------------------

@@ -10,10 +10,8 @@
 #include "bitmap/imageformat.h"
 #include "basetypes.h"
 #include "tier0/dbg.h"
-#ifndef _PS3
 #include <malloc.h>
 #include <memory.h>
-#endif
 #include "mathlib/mathlib.h"
 #include "mathlib/vector.h"
 #include "tier1/utlmemory.h"
@@ -21,9 +19,7 @@
 #include "mathlib/compressed_vector.h"
 #include "nvtc.h"
 
-#if defined( POSIX ) && !defined( _PS3 )
 typedef int32 *DWORD_PTR;
-#endif
 
 #include "bitmap/floatbitmap.h"
 
@@ -151,30 +147,6 @@ static UserFormatToRGBA8888Func_t GetUserFormatToRGBA8888Func_t( ImageFormat src
 	case IMAGE_FORMAT_R16F:
 		return NULL;
 
-#if defined( _X360 )
-	case IMAGE_FORMAT_LINEAR_RGBA8888:
-		return RGBA8888ToRGBA8888;
-	case IMAGE_FORMAT_LINEAR_ABGR8888:
-		return ABGR8888ToRGBA8888;
-	case IMAGE_FORMAT_LINEAR_RGB888:
-		return RGB888ToRGBA8888;
-	case IMAGE_FORMAT_LINEAR_BGR888:
-		return BGR888ToRGBA8888;
-	case IMAGE_FORMAT_LINEAR_I8:
-		return I8ToRGBA8888;
-	case IMAGE_FORMAT_LINEAR_ARGB8888:
-		return ARGB8888ToRGBA8888;
-	case IMAGE_FORMAT_LINEAR_BGRA8888:
-		return BGRA8888ToRGBA8888;
-	case IMAGE_FORMAT_LINEAR_BGRX8888:
-		return BGRX8888ToRGBA8888;
-	case IMAGE_FORMAT_LINEAR_BGRX5551:
-		return BGRX5551ToRGBA8888;
-	case IMAGE_FORMAT_LINEAR_RGBA16161616:
-		return RGBA16161616ToRGBA8888;
-	case IMAGE_FORMAT_LINEAR_A8:
-		return A8ToRGBA8888;
-#endif
 
 	default:
 		return NULL;
@@ -236,28 +208,6 @@ static RGBA8888ToUserFormatFunc_t GetRGBA8888ToUserFormatFunc_t( ImageFormat dst
 	case IMAGE_FORMAT_RGBA16161616F:
 		return RGBA8888ToRGBA16161616F;
 
-#if defined( _X360 )
-	case IMAGE_FORMAT_LINEAR_RGBA8888:
-		return RGBA8888ToRGBA8888;
-	case IMAGE_FORMAT_LINEAR_ABGR8888:
-		return RGBA8888ToABGR8888;
-	case IMAGE_FORMAT_LINEAR_RGB888:
-		return RGBA8888ToRGB888;
-	case IMAGE_FORMAT_LINEAR_BGR888:
-		return RGBA8888ToBGR888;
-	case IMAGE_FORMAT_LINEAR_I8:
-		return RGBA8888ToI8;
-	case IMAGE_FORMAT_LINEAR_ARGB8888:
-		return RGBA8888ToARGB8888;
-	case IMAGE_FORMAT_LINEAR_BGRA8888:
-		return RGBA8888ToBGRA8888;
-	case IMAGE_FORMAT_LINEAR_BGRX8888:
-		return RGBA8888ToBGRX8888;
-	case IMAGE_FORMAT_LINEAR_BGRX5551:
-		return RGBA8888ToBGRX5551;
-	case IMAGE_FORMAT_LINEAR_A8:
-		return RGBA8888ToA8;
-#endif
 
 	default:
 		return NULL;
@@ -889,78 +839,8 @@ bool ConvertToDXT(  const uint8 *src, ImageFormat srcImageFormat,
  					uint8 *dst, ImageFormat dstImageFormat, 
 					int width, int height, int srcStride, int dstStride )
 {
-#if !defined( _X360 ) && !defined( POSIX )
-	// from rgb(a) to dxtN
-	if( srcStride != 0 || dstStride != 0 )
-		return false;
-
-	DDSURFACEDESC descIn;
-	DDSURFACEDESC descOut;
-	memset( &descIn, 0, sizeof(descIn) );
-	memset( &descOut, 0, sizeof(descOut) );
-	float weight[3] = {0.3086f, 0.6094f, 0.0820f};
-	uint32 dwEncodeType = GetDXTCEncodeType( dstImageFormat );
-	
-	// Setup descIn
-	descIn.dwSize = sizeof(descIn);
-	descIn.dwFlags = DDSD_WIDTH | DDSD_HEIGHT | DDSD_LPSURFACE | 
-		/*DDSD_PITCH | */ DDSD_PIXELFORMAT;
-	descIn.dwWidth = width;
-	descIn.dwHeight = height;
-	descIn.lPitch = width * ImageLoader::SizeInBytes( srcImageFormat );
-	descIn.lpSurface = ( LPVOID *) src;
-	descIn.ddpfPixelFormat.dwSize = sizeof( DDPIXELFORMAT );
-	switch ( srcImageFormat )
-	{
-	case IMAGE_FORMAT_RGBA8888:
-		descIn.ddpfPixelFormat.dwFlags = DDPF_RGB | DDPF_ALPHAPIXELS;
-		descIn.ddpfPixelFormat.dwRGBBitCount = 32;
-		descIn.ddpfPixelFormat.dwRBitMask = 0x0000ff;
-		descIn.ddpfPixelFormat.dwGBitMask = 0x00ff00;
-		descIn.ddpfPixelFormat.dwBBitMask = 0xff0000;
-		// must set this anyway or S3TC will lock up!!!
-		descIn.ddpfPixelFormat.dwRGBAlphaBitMask = 0xff000000;
-		break;
-	case IMAGE_FORMAT_BGRA8888:
-		descIn.ddpfPixelFormat.dwFlags = DDPF_RGB | DDPF_ALPHAPIXELS;
-		descIn.ddpfPixelFormat.dwRGBBitCount = 32;
-		descIn.ddpfPixelFormat.dwRBitMask = 0xFF0000;
-		descIn.ddpfPixelFormat.dwGBitMask = 0x00ff00;
-		descIn.ddpfPixelFormat.dwBBitMask = 0x0000FF;
-		// must set this anyway or S3TC will lock up!!!
-		descIn.ddpfPixelFormat.dwRGBAlphaBitMask = 0xff000000;
-		break;
-	case IMAGE_FORMAT_BGRX8888:
-		descIn.ddpfPixelFormat.dwFlags = DDPF_RGB;
-		descIn.ddpfPixelFormat.dwRGBBitCount = 32;
-		descIn.ddpfPixelFormat.dwRBitMask = 0xFF0000;
-		descIn.ddpfPixelFormat.dwGBitMask = 0x00ff00;
-		descIn.ddpfPixelFormat.dwBBitMask = 0x0000FF;
-		// must set this anyway or S3TC will lock up!!!
-		descIn.ddpfPixelFormat.dwRGBAlphaBitMask = 0xff000000;
-		break;
-	case IMAGE_FORMAT_RGB888:
-		descIn.ddpfPixelFormat.dwFlags = DDPF_RGB;
-		descIn.ddpfPixelFormat.dwRGBBitCount = 24;
-		descIn.ddpfPixelFormat.dwRBitMask = 0x0000ff;
-		descIn.ddpfPixelFormat.dwGBitMask = 0x00ff00;
-		descIn.ddpfPixelFormat.dwBBitMask = 0xff0000;
-		descIn.ddpfPixelFormat.dwRGBAlphaBitMask = 0xff000000;
-		break;
-	default:
-		return false;
-	}
-	
-	// Setup descOut
-	descOut.dwSize = sizeof( descOut );
-	
-	// Encode the texture
-	S3TCencode( &descIn, NULL, &descOut, dst, dwEncodeType, weight );
-	return true;
-#else
 	Assert( 0 );
 	return false;
-#endif
 }
 
 bool ConvertToDXTRuntime(	const uint8 *src, ImageFormat srcImageFormat,
@@ -1531,7 +1411,7 @@ bool ConvertImageFormat( const uint8 *src, ImageFormat srcImageFormat,
 			  srcImageFormat == IMAGE_FORMAT_ATI2N )
 	{
 		// DxtN to DxtN
-		Assert( IsPC() );
+		Assert( true );
 		return false;
 	}
 	else
@@ -1555,7 +1435,7 @@ bool ConvertImageFormat( const uint8 *src, ImageFormat srcImageFormat,
 			((srcImageFormat == IMAGE_FORMAT_BGRA8888) && (dstImageFormat == IMAGE_FORMAT_BGRX8888)) )
 		{
 			// I have no idea why this isn't true on all platforms but I didn't want to mess with stuff
-			if ( ( IsGameConsole() || (srcImageFormat == IMAGE_FORMAT_RGBA32323232F ) || ( srcImageFormat == IMAGE_FORMAT_RGBA8888 ) || ( srcImageFormat == IMAGE_FORMAT_BGRA8888 ) ) && 
+			if ( ( (srcImageFormat == IMAGE_FORMAT_RGBA32323232F ) || ( srcImageFormat == IMAGE_FORMAT_RGBA8888 ) || ( srcImageFormat == IMAGE_FORMAT_BGRA8888 ) ) && 
 				 ( srcStride == dstStride ) && ( width*srcPixelSize == srcStride ) )
 			{
 				// fastest path

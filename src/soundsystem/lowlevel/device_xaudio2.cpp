@@ -450,13 +450,7 @@ int CAudioXAudio2::QueuedBufferCount()
 	// NOTE: If callbacks work on all clients then we do not need to do the potentially expensive GetState() call
 	// we already know if buffers are retired
 	// UNDONE: If this is causing problems, just change to #if 0 - the other code in this changelist will not interact with anything
-#if 1
 	return m_nActiveBuffers;
-#else
-	XAUDIO2_VOICE_STATE state;
-	m_pSourceVoice->GetState( &state );
-	return state.BuffersQueued;
-#endif
 }
 
 int	CAudioXAudio2::EmptyBufferCount()

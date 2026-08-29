@@ -135,7 +135,7 @@ ConVar r_flashlightenableculling( "r_flashlightenableculling", "1", 0, "Enable f
 #endif
 
 static void HalfUpdateRateCallback( IConVar *var, const char *pOldValue, float flOldValue );
-static ConVar r_shadow_half_update_rate( "r_shadow_half_update_rate", IsGameConsole() ? "1" : "0", 0, "Updates shadows at half the framerate", HalfUpdateRateCallback );
+static ConVar r_shadow_half_update_rate( "r_shadow_half_update_rate", "0", 0, "Updates shadows at half the framerate", HalfUpdateRateCallback );
 
 static void DeferredShadowToggleCallback( IConVar *var, const char *pOldValue, float flOldValue );
 static void DeferredShadowDownsampleToggleCallback( IConVar *var, const char *pOldValue, float flOldValue );
@@ -147,23 +147,10 @@ static ConVar r_shadow_debug_spew( "r_shadow_debug_spew", "0", FCVAR_CHEAT );
 
 static ConVar r_flashlight_info( "r_flashlight_info", "0", 0, "Information about currently enabled flashlights" );
 
-#if defined( _PS3 )
-ConVar r_flashlightdepthtexture( "r_flashlightdepthtexture", "1" );
-ConVar r_flashlightdepthreshigh( "r_flashlightdepthreshigh", "640" );
-ConVar r_flashlightdepthres( "r_flashlightdepthres", "640" );
-#elif defined( _X360 )
-ConVar r_flashlightdepthtexture( "r_flashlightdepthtexture", "1" );
-ConVar r_flashlightdepthreshigh( "r_flashlightdepthreshigh", "720" );
-ConVar r_flashlightdepthres( "r_flashlightdepthres", "720" );
-#else
 ConVar r_flashlightdepthtexture( "r_flashlightdepthtexture", "1" );
 ConVar r_flashlightdepthreshigh( "r_flashlightdepthreshigh", "2048" );
 ConVar r_flashlightdepthres( "r_flashlightdepthres", "1024" );
-#endif
 
-#if defined( _GAMECONSOLE )
-#define RTT_TEXTURE_SIZE_640
-#endif
 
 #ifdef _WIN32
 #pragma warning( disable: 4701 )
@@ -231,11 +218,7 @@ private:
 		TEXTURE_PAGE_SIZE	    = 1024,
 		MAX_TEXTURE_POWER    	= 8,
 #endif
-#if !defined( _GAMECONSOLE )
 		MIN_TEXTURE_POWER	    = 4,
-#else
-		MIN_TEXTURE_POWER	    = 5,	// per resolve requirements to ensure 32x32 aligned offsets
-#endif
 		MAX_TEXTURE_SIZE	    = (1 << MAX_TEXTURE_POWER),
 		MIN_TEXTURE_SIZE	    = (1 << MIN_TEXTURE_POWER),
 		BLOCK_SIZE			    = MAX_TEXTURE_SIZE,
@@ -314,29 +297,8 @@ void CTextureAllocator::Init()
 
 void CTextureAllocator::InitRenderTargets( void )
 {
-#if !defined( _X360 )
 	// don't need depth buffer for shadows
 	m_TexturePage.InitRenderTarget( TEXTURE_PAGE_SIZE, TEXTURE_PAGE_SIZE, RT_SIZE_NO_CHANGE, IMAGE_FORMAT_ARGB8888, MATERIAL_RT_DEPTH_NONE, false, "_rt_Shadows" );
-#else
-	// unfortunate explicit management required for this render target
-	// 32bpp edram is only largest shadow fragment, but resolved to actual shadow atlas
-	// because full-res 1024x1024 shadow buffer is too large for EDRAM
-	m_TexturePage.InitRenderTargetTexture( TEXTURE_PAGE_SIZE, TEXTURE_PAGE_SIZE, RT_SIZE_NO_CHANGE, IMAGE_FORMAT_ARGB8888, MATERIAL_RT_DEPTH_NONE, false, "_rt_Shadows" );
-
-#ifdef RTT_TEXTURE_SIZE_640
-	// use 4x multisampling for smoother shadows
-	m_TexturePage.InitRenderTargetSurface( MAX_TEXTURE_SIZE, MAX_TEXTURE_SIZE, IMAGE_FORMAT_ARGB8888, false, RT_MULTISAMPLE_4_SAMPLES );
-#else
-	// edram footprint is only 256x256x4 = 256K
-	m_TexturePage.InitRenderTargetSurface( MAX_TEXTURE_SIZE, MAX_TEXTURE_SIZE, IMAGE_FORMAT_ARGB8888, false );
-#endif
-
-	// due to texture/surface size mismatch, ensure texture page is entirely cleared translucent
-	// otherwise border artifacts at edge of shadows due to pixel shader averaging of unwanted bits
-	// should also set m_bRenderTargetNeedsClear
-	m_TexturePage->ClearTexture( 0, 0, 0, 0 );
-
-#endif
 
 }
 
@@ -388,11 +350,7 @@ void CTextureAllocator::Reset()
 	m_Blocks[24].m_FragmentPower = MAX_TEXTURE_POWER;	// 199 slots total
 #else
 	// FIXME: Improve heuristic?!?
-#if !defined( _GAMECONSOLE )
 	m_Blocks[0].m_FragmentPower  = MAX_TEXTURE_POWER-4;	// 128 cells at ExE resolution
-#else
-	m_Blocks[0].m_FragmentPower  = MAX_TEXTURE_POWER-3;	// 64 cells at DxD resolution
-#endif
 	m_Blocks[1].m_FragmentPower  = MAX_TEXTURE_POWER-3;	// 64 cells at DxD resolution
 	m_Blocks[2].m_FragmentPower  = MAX_TEXTURE_POWER-2;	// 32 cells at CxC resolution
 	m_Blocks[3].m_FragmentPower  = MAX_TEXTURE_POWER-2;		 
@@ -798,9 +756,6 @@ static ConVar r_shadows( "r_shadows", "1" ); // hook into engine's cvars..
 static ConVar r_shadowmaxrendered("r_shadowmaxrendered", "32");
 static ConVar r_shadows_gamecontrol( "r_shadows_gamecontrol", "-1", FCVAR_CHEAT );	 // hook into engine's cvars..
 
-#ifdef _PS3
-uint32 g_ps3_ShadowDepth_TextureCache;
-#endif
 
 //-----------------------------------------------------------------------------
 // The class responsible for dealing with shadows on the client side
@@ -1664,29 +1619,15 @@ void CClientShadowMgr::InitDepthTextureShadows()
 		m_bDepthTexturesAllocated = true;
 
 		ImageFormat dstFormat  = g_pMaterialSystemHardwareConfig->GetShadowDepthTextureFormat();	// Vendor-dependent depth texture format
-#if !defined( _X360 )
 		ImageFormat nullFormat = g_pMaterialSystemHardwareConfig->GetNullTextureFormat();			// Vendor-dependent null texture format (takes as little memory as possible)
-#endif
 		materials->BeginRenderTargetAllocation();
 		
 		RenderTargetSizeMode_t sizeMode = RT_SIZE_OFFSCREEN;
-		if ( IsPS3() || IsPC() )
-		{
-			// Don't allow the shadow buffer render target's to get resized to always be <= the size of the backbuffer on the PC.
-			// This allows us to use 1024x1024 or larger shadow depth buffers when 1024x768 backbuffers, for example.
-			sizeMode = RT_SIZE_NO_CHANGE;
-		}
+		// Don't allow the shadow buffer render target's to get resized to always be <= the size of the backbuffer on the PC.
+		// This allows us to use 1024x1024 or larger shadow depth buffers when 1024x768 backbuffers, for example.
+		sizeMode = RT_SIZE_NO_CHANGE;
 		
-#if defined( _X360 )
-		// For the 360, we'll be rendering depth directly into the dummy depth and Resolve()ing to the depth texture.
-		// only need the dummy surface, don't care about color results
-		m_DummyColorTexture.InitRenderTargetTexture( m_nDepthTextureResolution, m_nDepthTextureResolution, RT_SIZE_OFFSCREEN, IMAGE_FORMAT_BGR565, MATERIAL_RT_DEPTH_SHARED, false, "_rt_ShadowDummy", CREATERENDERTARGETFLAGS_ALIASCOLORANDDEPTHSURFACES );
-		m_DummyColorTexture.InitRenderTargetSurface( m_nDepthTextureResolution, m_nDepthTextureResolution, IMAGE_FORMAT_BGR565, false );
-#elif defined (_PS3)
-		m_DummyColorTexture.InitRenderTarget( 8, 8, sizeMode, nullFormat, MATERIAL_RT_DEPTH_NONE, false, "_rt_ShadowDummy" );
-#else
 		m_DummyColorTexture.InitRenderTarget( m_nDepthTextureResolution, m_nDepthTextureResolution, sizeMode, nullFormat, MATERIAL_RT_DEPTH_NONE, false, "_rt_ShadowDummy" );
-#endif
 
 		// Create some number of depth-stencil textures
 		m_DepthTextureCache.Purge();
@@ -1701,39 +1642,12 @@ void CClientShadowMgr::InitDepthTextureShadows()
 
 			int nTextureResolution = ( i < MAX_DEPTH_TEXTURE_HIGHRES_SHADOWS ? m_nDepthTextureResolutionHigh : m_nDepthTextureResolution );
 
-#if defined( _X360 )
-			// create a render target to use as a resolve target to get the shared depth buffer
-			// surface is effectively never used
-			depthTex.InitRenderTargetTexture( nTextureResolution, nTextureResolution, RT_SIZE_OFFSCREEN, dstFormat, MATERIAL_RT_DEPTH_NONE, false, strRTName );
-			depthTex.InitRenderTargetSurface( 1, 1, dstFormat, false );
-#else
 			depthTex.InitRenderTarget( nTextureResolution, nTextureResolution, sizeMode, dstFormat, MATERIAL_RT_DEPTH_NONE, false, strRTName );
-#endif
 
 			m_DepthTextureCache.AddToTail( depthTex );
 			m_DepthTextureCacheLocks.AddToTail( bFalse );
 		}
 
-#if 0 // 7LTODO #ifdef _PS3
-		AssertFatalEquals( m_nMaxDepthTextureShadows, 1 );
-		for( int i=0; i < m_nMaxDepthTextureShadows; i++ )
-		{
-			CTextureReference depthTex;	// Depth-stencil surface
-			bool bFalse = false;
-
-			char strRTName[64];
-			Q_snprintf( strRTName, ARRAYSIZE( strRTName ), "_rt_ShadowDepthTexture_Cache%d", i );
-
-			int nTextureResolution = ( i < MAX_DEPTH_TEXTURE_HIGHRES_SHADOWS ? m_nDepthTextureResolutionHigh : m_nDepthTextureResolution );
-
-			depthTex.InitRenderTarget( nTextureResolution, nTextureResolution, sizeMode, dstFormat, MATERIAL_RT_DEPTH_NONE, false, strRTName );
-
-			m_DepthTextureCache.AddToTail( depthTex );
-			m_DepthTextureCacheLocks.AddToTail( bFalse );
-
-			g_ps3_ShadowDepth_TextureCache = m_uiDepthTextureCache = materials->EstablishGpuDataTransferCache( PS3GPU_DATA_TRANSFER_CREATECACHELINK, m_DepthTextureCache[0], depthTex );
-		}
-#endif
 
 		materials->EndRenderTargetAllocation();
 	}
@@ -1835,19 +1749,9 @@ void CClientShadowMgr::ShutdownRenderToTextureShadows()
 
 void CClientShadowMgr::InitDeferredShadows()
 {
-	if ( IsGameConsole() )
-	{
-		m_RenderDeferredShadowMat.Init( "engine/renderdeferredshadow", TEXTURE_GROUP_OTHER );
-		m_RenderDeferredSimpleShadowMat.Init( "engine/renderdeferredsimpleshadow", TEXTURE_GROUP_OTHER );
-	}
 
 	if ( r_shadow_deferred_downsample.GetBool() )
 	{
-#if defined( _X360 )
-		m_downSampledNormals.InitRenderTargetTexture( DEFERRED_SHADOW_BUFFER_WIDTH, DEFERRED_SHADOW_BUFFER_HEIGHT, RT_SIZE_OFFSCREEN, IMAGE_FORMAT_ARGB8888, MATERIAL_RT_DEPTH_SEPARATE, false, "_rt_DownsampledNormals" );
-		m_downSampledNormals.InitRenderTargetSurface( DEFERRED_SHADOW_BUFFER_WIDTH, DEFERRED_SHADOW_BUFFER_HEIGHT, IMAGE_FORMAT_ARGB8888, true );
-		m_downSampledDepth.InitRenderTargetTexture( DEFERRED_SHADOW_BUFFER_WIDTH, DEFERRED_SHADOW_BUFFER_HEIGHT, RT_SIZE_OFFSCREEN, IMAGE_FORMAT_D24FS8, MATERIAL_RT_DEPTH_NONE, false, "_rt_DownsampledDepth" );
-#endif
 	}
 }
 
@@ -1883,11 +1787,6 @@ void CClientShadowMgr::SetShadowColor( unsigned char r, unsigned char g, unsigne
 			m_RenderModelShadow->ColorModulate( fr, fg, fb );
 		}
 
-		if ( IsGameConsole() )
-		{
-			m_RenderDeferredShadowMat->ColorModulate( fr, fg, fb );
-			m_RenderDeferredSimpleShadowMat->ColorModulate( fr, fg, fb );
-		}
 	}
 
 	m_AmbientLightColor.r = r;
@@ -4149,17 +4048,14 @@ void CClientShadowMgr::ComputeHierarchicalBounds( IClientRenderable *pRenderable
 
 	// We could use a good solution for this in the regular PC build, since
 	// it causes lots of extra bone setups for entities you can't see.
-	if ( IsPC() )
-	{
-		IClientRenderable *pChild = pRenderable->FirstShadowChild();
+	IClientRenderable *pChild = pRenderable->FirstShadowChild();
 
-		// Don't recurse down the tree when we hit a blobby shadow
-		if ( pChild && shadowType != SHADOWS_SIMPLE )
-		{
-			matrix3x4_t matWorldToBBox;
-			MatrixInvert( pRenderable->RenderableToWorldTransform(), matWorldToBBox );
-			AddChildBounds( matWorldToBBox, pRenderable, vecMins, vecMaxs );
-		}
+	// Don't recurse down the tree when we hit a blobby shadow
+	if ( pChild && shadowType != SHADOWS_SIMPLE )
+	{
+		matrix3x4_t matWorldToBBox;
+		MatrixInvert( pRenderable->RenderableToWorldTransform(), matWorldToBBox );
+		AddChildBounds( matWorldToBBox, pRenderable, vecMins, vecMaxs );
 	}
 }
 
@@ -5385,7 +5281,7 @@ bool CClientShadowMgr::DrawRenderToTextureShadow( int nSlot, unsigned short clie
 		// Sets the viewport state
 		int x, y, w, h;
 		m_ShadowAllocator.GetTextureRect( shadow.m_ShadowTexture, x, y, w, h );
-		pRenderContext->Viewport( IsGameConsole() ? 0 : x, IsGameConsole() ? 0 : y, w, h ); 
+		pRenderContext->Viewport( x, y, w, h ); 
 
 		// Clear the selected viewport only (don't need to clear depth)
 		pRenderContext->ClearBuffers( true, false );
@@ -5396,13 +5292,6 @@ bool CClientShadowMgr::DrawRenderToTextureShadow( int nSlot, unsigned short clie
 		if ( DrawShadowHierarchy( pRenderable, shadow ) )
 		{
 			bDrewTexture = true;
-			if ( IsGameConsole() )
-			{
-				// resolve render target to system memory texture
-				Rect_t srcRect = { 0, 0, w, h };
-				Rect_t dstRect = { x, y, w, h };
-				pRenderContext->CopyRenderTargetToTextureEx( m_ShadowAllocator.GetTexture(), 0, &srcRect, &dstRect );
-			}
 		}
 		else
 		{
@@ -5653,7 +5542,7 @@ void CClientShadowMgr::SetViewFlashlightState( int nActiveFlashlightCount, Clien
 	// set and don't render flashlights additively in the shadow mgr at a far later time
 	// because the CPU costs are prohibitive
 
-	shadowmgr->PushSinglePassFlashlightStateEnabled( IsGameConsole() );
+	shadowmgr->PushSinglePassFlashlightStateEnabled( false );
 
 	AssertOnce( nActiveFlashlightCount <= m_nMaxDepthTextureShadows ); 
 	if ( nActiveFlashlightCount > 0 )
@@ -6389,11 +6278,6 @@ void CClientShadowMgr::DownsampleDepthBuffer( IMatRenderContext* pRenderContext,
 		0, 0, 2*nWidth-2, 2*nHeight-2,
 		2*nWidth, 2*nHeight );
 
-	if ( IsGameConsole() )
-	{
-		pRenderContext->CopyRenderTargetToTextureEx( m_downSampledNormals, 0, NULL, NULL );
-		pRenderContext->CopyRenderTargetToTextureEx( m_downSampledDepth, -1, NULL, NULL );
-	}
 
 	pRenderContext->PopRenderTargetAndViewport();
 }
@@ -6435,287 +6319,13 @@ void CClientShadowMgr::DrawDeferredShadows( const CViewSetup &view, int leafCoun
 {
 	VPROF_BUDGET( __FUNCTION__, VPROF_BUDGETGROUP_SHADOW_RENDERING );
 
-	if ( !IsGameConsole() )
-	{
-		return;
-	}
-
-	// We assume the visible shadow list was updated in ComputeShadowTextures. This is only correct if we're not rendering from multiple view points.
-
-	int nNumShadows = s_VisibleShadowList.GetVisibleShadowCount();
-	if ( nNumShadows == 0 )
-	{
-		return;
-	}
-
-	IntersectingShadowInfo_t* pInsideVolume = (IntersectingShadowInfo_t*)stackalloc( nNumShadows * sizeof(IntersectingShadowInfo_t) );
-	int nNumInsideVolumes = 0;
-
-	CMatRenderContextPtr pRenderContext( materials );
-
-	PIXEVENT( pRenderContext, "DEFERRED_SHADOWS" );
-
-	matrix3x4_t viewMatrix;
-	pRenderContext->GetMatrix( MATERIAL_VIEW, &viewMatrix );
-
-	VMatrix projMatrix;
-	pRenderContext->GetMatrix( MATERIAL_PROJECTION, &projMatrix );
-
-	VMatrix viewProjMatrix;
-	VMatrix invViewProjMatrix;
-	MatrixMultiply( projMatrix, VMatrix(viewMatrix), viewProjMatrix );
-	MatrixInverseGeneral( viewProjMatrix, invViewProjMatrix );
-
-	ShaderStencilState_t state;
-	state.m_bEnable = true;
-	state.m_nWriteMask = 0xFF;
-	state.m_nTestMask = 0x1 << 2;
-	state.m_nReferenceValue = 0x0;
-	state.m_CompareFunc = SHADER_STENCILFUNC_EQUAL;
-	state.m_PassOp = SHADER_STENCILOP_KEEP;
-	state.m_FailOp = SHADER_STENCILOP_KEEP;
-	state.m_ZFailOp = SHADER_STENCILOP_KEEP;
-#if defined( _X360 )
-	state.m_bHiStencilEnable = true;
-	state.m_bHiStencilWriteEnable = false;
-	state.m_HiStencilCompareFunc = SHADER_HI_STENCILFUNC_EQUAL;
-	state.m_nHiStencilReferenceValue = 0;
-#endif
-
-#ifdef _X360
-	pRenderContext->PushVertexShaderGPRAllocation( 16 );
-#endif
-
-	if ( r_shadow_deferred_downsample.GetBool() )
-	{
-		DownsampleDepthBuffer( pRenderContext, invViewProjMatrix );
-
-		int nWidth = m_downSampledNormals->GetActualWidth();
-		int nHeight = m_downSampledNormals->GetActualHeight();
-		pRenderContext->PushRenderTargetAndViewport( m_downSampledNormals, 0, 0, nWidth, nHeight );
-	}
-	else
-	{
-		pRenderContext->SetStencilState( state );
-#if defined( _X360 )
-		pRenderContext->FlushHiStencil();
-#endif
-	}
-
-	pRenderContext->MatrixMode( MATERIAL_MODEL );
-	pRenderContext->PushMatrix();
-	pRenderContext->LoadIdentity();
-	
-	IMaterialVar* pTextureVar = m_RenderDeferredShadowMat->FindVar( "$basetexture", NULL, false );
-	if( pTextureVar )
-	{
-		pTextureVar->SetTextureValue( s_ClientShadowMgr.GetShadowTexture( CLIENTSHADOW_INVALID_HANDLE ) );
-	}
-	pTextureVar = m_RenderDeferredShadowMat->FindVar( "$depthtexture", NULL, false );
-	if( pTextureVar )
-	{
-		//pTextureVar->SetTextureValue( s_ClientShadowMgr.GetShadowTexture( CLIENTSHADOW_INVALID_HANDLE ) );
-		pTextureVar->SetTextureValue( GetFullFrameDepthTexture() );
-	}
-
-	IMaterialVar* pZFailVar = m_RenderDeferredShadowMat->FindVar( "$zfailenable", NULL, false );
-
-	if( pZFailVar )
-	{
-		pZFailVar->SetIntValue( 0 );
-	}
-	pRenderContext->Bind( m_RenderDeferredShadowMat );
-
-	Vector camPos;
-	pRenderContext->GetWorldSpaceCameraPosition( &camPos );
-
-	IMesh* pMesh = pRenderContext->GetDynamicMesh();
-	CMeshBuilder meshBuilder;
-
-	int nMaxVerts, nMaxIndices;
-	pRenderContext->GetMaxToRender( pMesh, false, &nMaxVerts, &nMaxIndices );
-	int nMaxShadowsPerBatch = MIN( nMaxVerts / ( ARRAYSIZE( pShadowBoundVerts ) / 4 ), nMaxIndices / ARRAYSIZE( pShadowBoundIndices ) );
-
-	meshBuilder.Begin( pMesh, MATERIAL_TRIANGLES, nMaxShadowsPerBatch * ARRAYSIZE( pShadowBoundVerts ) / 4, nMaxShadowsPerBatch * ARRAYSIZE( pShadowBoundIndices ) );
-	int nNumShadowsBatched = 0;
-	
-	// Z-Pass shadow volumes
-	for ( int i = 0; i < nNumShadows; ++i )
-	{
-		const VisibleShadowInfo_t& vsi = s_VisibleShadowList.GetVisibleShadow( i );
-		ClientShadow_t& shadow = m_Shadows[vsi.m_hShadow];
-
-		matrix3x4_t objToWorld;
-		if ( SetupDeferredShadow( shadow, camPos, &objToWorld ) )
-		{
-			pInsideVolume[nNumInsideVolumes].h = vsi.m_hShadow;
-			MatrixCopy( objToWorld, pInsideVolume[nNumInsideVolumes].objToWorld );
-			nNumInsideVolumes++;
-			continue;
-		}
-
-		VMatrix projToTextureMatrix;
-		MatrixMultiply( shadow.m_WorldToTexture, invViewProjMatrix, projToTextureMatrix );
-
-		// create extruded bounding geometry
-		BuildCubeWithDegenerateEdgeQuads( meshBuilder, objToWorld, projToTextureMatrix, shadow );
-		nNumShadowsBatched++;
-		if ( nNumShadowsBatched == nMaxShadowsPerBatch )
-		{
-			// flush
-			meshBuilder.End();
-			pMesh->Draw();
-			meshBuilder.Begin( pMesh, MATERIAL_TRIANGLES, nMaxShadowsPerBatch * ARRAYSIZE( pShadowBoundVerts ) / 4, nMaxShadowsPerBatch * ARRAYSIZE( pShadowBoundIndices ) );
-			nNumShadowsBatched = 0;
-		}
-	}
-
-	// render
-	meshBuilder.End();
-	if ( nNumShadowsBatched > 0 )
-	{
-		pMesh->Draw();
-		nNumShadowsBatched = 0;
-	}
-	else
-	{
-		pMesh->MarkAsDrawn();
-	}
-
-	// draw deferred blobby shadow volumes
-	if ( s_VisibleShadowList.GetVisibleBlobbyShadowCount() > 0 )
-	{
-		pRenderContext->Bind( m_RenderDeferredSimpleShadowMat );
-		pTextureVar = m_RenderDeferredSimpleShadowMat->FindVar( "$depthtexture", NULL, false );
-		if( pTextureVar )
-		{
-			pTextureVar->SetTextureValue( GetFullFrameDepthTexture() );
-		}
-
-		int nNumShadows = s_VisibleShadowList.GetVisibleBlobbyShadowCount();
-		meshBuilder.Begin( pMesh, MATERIAL_TRIANGLES, nMaxShadowsPerBatch * ARRAYSIZE( pShadowBoundVerts ) / 4, nMaxShadowsPerBatch * ARRAYSIZE( pShadowBoundIndices ) );
-
-		for ( int i = 0; i < nNumShadows; ++i )
-		{
-			const VisibleShadowInfo_t& vsi = s_VisibleShadowList.GetVisibleBlobbyShadow( i );
-			ClientShadow_t& shadow = m_Shadows[vsi.m_hShadow];
-
-			matrix3x4_t objToWorld;
-			if ( SetupDeferredShadow( shadow, camPos, &objToWorld ) )
-			{
-				//DevWarning( "Blobby shadow needs z-fail rendering. Skipped.\n" );
-				continue;
-			}
-
-			VMatrix projToTextureMatrix;
-			MatrixMultiply( shadow.m_WorldToTexture, invViewProjMatrix, projToTextureMatrix );
-
-			// create extruded bounding geometry
-			BuildCubeWithDegenerateEdgeQuads( meshBuilder, objToWorld, projToTextureMatrix, shadow );
-			nNumShadowsBatched++;
-			if ( nNumShadowsBatched == nMaxShadowsPerBatch )
-			{
-				// flush
-				meshBuilder.End();
-				pMesh->Draw();
-				meshBuilder.Begin( pMesh, MATERIAL_TRIANGLES, nMaxShadowsPerBatch * ARRAYSIZE( pShadowBoundVerts ) / 4, nMaxShadowsPerBatch * ARRAYSIZE( pShadowBoundIndices ) );
-				nNumShadowsBatched = 0;
-			}
-		}
-
-		// render
-		meshBuilder.End();
-		if ( nNumShadowsBatched > 0 )
-		{
-			pMesh->Draw();
-			nNumShadowsBatched = 0;
-		}
-		else
-		{
-			pMesh->MarkAsDrawn();
-		}
-	}
-
-	// draw zfail volumes
-	if ( nNumInsideVolumes > 0 )
-	{
-		pRenderContext->CullMode( MATERIAL_CULLMODE_CW );
-		if( pZFailVar )
-		{
-			pZFailVar->SetIntValue( 1 );
-		}
-		pRenderContext->Bind( m_RenderDeferredShadowMat );
-
-		//IMesh* pMesh = pRenderContext->GetDynamicMesh();
-		meshBuilder.Begin( pMesh, MATERIAL_TRIANGLES, nMaxShadowsPerBatch * ARRAYSIZE( pShadowBoundVerts ) / 4, nMaxShadowsPerBatch * ARRAYSIZE( pShadowBoundIndices ) );
-		for ( int i = 0; i < nNumInsideVolumes; ++i )
-		{
-			ClientShadow_t& shadow = m_Shadows[pInsideVolume[i].h];
-
-			VMatrix projToTextureMatrix;
-			MatrixMultiply( shadow.m_WorldToTexture, invViewProjMatrix, projToTextureMatrix );
-
-			// create extruded bounding geometry
-			BuildCubeWithDegenerateEdgeQuads( meshBuilder, pInsideVolume[i].objToWorld, projToTextureMatrix, shadow );
-			nNumShadowsBatched++;
-			if ( nNumShadowsBatched == nMaxShadowsPerBatch )
-			{
-				// flush
-				meshBuilder.End();
-				pMesh->Draw();
-				//pMesh = pRenderContext->GetDynamicMesh();
-				meshBuilder.Begin( pMesh, MATERIAL_TRIANGLES, nMaxShadowsPerBatch * ARRAYSIZE( pShadowBoundVerts ) / 4, nMaxShadowsPerBatch * ARRAYSIZE( pShadowBoundIndices ) );
-				nNumShadowsBatched = 0;
-			}
-		}
-		meshBuilder.End();
-		if ( nNumShadowsBatched > 0 )
-		{
-			pMesh->Draw();
-			nNumShadowsBatched = 0;
-		}
-		else
-		{
-			pMesh->MarkAsDrawn();
-		}
-	}
-
-	pRenderContext->PopMatrix();
-	// reset culling
-	pRenderContext->CullMode( MATERIAL_CULLMODE_CCW );
-
-	if ( r_shadow_deferred_downsample.GetBool() )
-	{
-		pRenderContext->CopyRenderTargetToTextureEx( m_downSampledNormals, 0, NULL, NULL );
-		pRenderContext->PopRenderTargetAndViewport();
-
-		pRenderContext->SetStencilState( state );
-
-		CompositeDeferredShadows( pRenderContext );
-	}
-
-	ShaderStencilState_t stateDisable;
-	stateDisable.m_bEnable = false;
-#if defined( _X360 )
-	stateDisable.m_bHiStencilEnable = false;
-	stateDisable.m_bHiStencilWriteEnable = false;
-#endif
-	pRenderContext->SetStencilState( stateDisable );
-
-#ifdef _X360
-	pRenderContext->PopVertexShaderGPRAllocation();
-#endif
-
-	// NOTE: We could use geometry instancing for drawing the extruded bounding boxes
+	return;
 }
 
 void DeferredShadowToggleCallback( IConVar*, const char *, float )
 {
-	if ( !IsGameConsole() )
-	{
-		DevMsg( "Deferred shadow rendering only supported on the 360.\n" );
-		return;
-	}
+	DevMsg( "Deferred shadow rendering only supported on the 360.\n" );
+	return;
 
 	s_ClientShadowMgr.UpdateAllShadows();
 	s_ClientShadowMgr.RemoveAllShadowDecals();

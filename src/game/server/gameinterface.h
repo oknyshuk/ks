@@ -15,9 +15,7 @@
 
 #include "mapentities.h"
 
-#ifndef NO_STEAM
 #include "steam/steam_gameserver.h"
-#endif
 
 class CEngineGotvSyncPacket;
 
@@ -315,7 +313,6 @@ public:
 EXPOSE_SINGLE_INTERFACE(CServerGameTags, IServerGameTags,
                         INTERFACEVERSION_SERVERGAMETAGS);
 
-#ifndef NO_STEAM
 //-----------------------------------------------------------------------------
 // Purpose:
 //-----------------------------------------------------------------------------
@@ -342,6 +339,5 @@ private:
   bool m_bInitialized;
 };
 CSteam3Server &Steam3Server();
-#endif
 
 #endif // GAMEINTERFACE_H

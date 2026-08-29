@@ -343,10 +343,6 @@ void DrawPaintBlob(  CBaseVSShader *pShader, IMaterialVar** params, IShaderDynam
 
 			pShaderAPI->SetPixelShaderConstant( PSREG_FLASHLIGHT_SCREEN_SCALE, vScreenScale, 1 );
 
-			if ( IsX360() )
-			{
-				pShaderAPI->SetBooleanPixelShaderConstant( 0, &state.m_nShadowQuality, 1 );
-			}
 		}
 
 		flConsts[0] = IS_PARAM_DEFINED( info.m_nBumpStrength ) ? params[info.m_nBumpStrength]->GetFloatValue() : kDefaultBumpStrength;

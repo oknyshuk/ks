@@ -868,9 +868,6 @@ inline float anglemod(float a)
 //// CLAMP
 #if defined(__cplusplus) && defined(PLATFORM_PPC)
 
-#ifdef _X360
-#define __fsels __fsel
-#endif
 
 template< >
 inline double clamp( double const &val, double const &minVal, double const &maxVal )
@@ -1565,26 +1562,6 @@ inline float SimpleSplineRemapValClamped( float val, float A, float B, float C, 
 
 FORCEINLINE int RoundFloatToInt(float f)
 {
-#if defined( _X360 )
-#ifdef Assert
-	Assert( IsFPUControlWordSet() );
-#endif
-	union
-	{
-		double flResult;
-		int pResult[2];
-	};
-	flResult = __fctiw( f );
-	return pResult[1];
-#elif defined ( _PS3 )
-#if defined(__SPU__)
-	int nResult;
-	nResult = static_cast<int>(f);
-	return nResult;
-#else
-	return  __fctiw( f );
-#endif
-#else // !X360
 	int nResult;
 #if GNUC && !defined( __aarch64__ )
 	__asm __volatile__ (
@@ -1594,36 +1571,10 @@ FORCEINLINE int RoundFloatToInt(float f)
 	nResult = static_cast<int>(f);
 #endif
 	return nResult;
-#endif
 }
 
 FORCEINLINE unsigned char RoundFloatToByte(float f)
 {
-#if defined( _X360 )
-#ifdef Assert
-	Assert( IsFPUControlWordSet() );
-#endif
-	union
-	{
-		double flResult;
-		int pIntResult[2];
-		unsigned char pResult[8];
-	};
-	flResult = __fctiw( f );
-#ifdef Assert
-	Assert( pIntResult[1] >= 0 && pIntResult[1] <= 255 );
-#endif
-	return pResult[7];
-
-#elif defined ( _PS3 )
-#if defined(__SPU__)
-	int nResult;
-	nResult = static_cast<unsigned int> (f) & 0xff;
-	return nResult;
-#else
-	return __fctiw( f );
-#endif
-#else // !X360
 	int nResult;
 
 #if GNUC && !defined( __aarch64__ )
@@ -1639,31 +1590,10 @@ FORCEINLINE unsigned char RoundFloatToByte(float f)
 #endif
 	return nResult;
 
-#endif
 }
 
 FORCEINLINE unsigned long RoundFloatToUnsignedLong(float f)
 {
-#if defined( _X360 )
-#ifdef Assert
-	Assert( IsFPUControlWordSet() );
-#endif
-	union
-	{
-		double flResult;
-		int pIntResult[2];
-		unsigned long pResult[2];
-	};
-	flResult = __fctiw( f );
-	Assert( pIntResult[1] >= 0 );
-	return pResult[1];
-#elif defined ( _PS3 )
-#if defined(__SPU__)
-	return static_cast<unsigned long>(f);
-#else
-	return __fctiw( f );
-#endif
-#else  // !X360
 #if defined( COMPILER_GCC ) && !defined( __aarch64__ )
 	unsigned char nResult[8];
 	__asm __volatile__ (
@@ -1672,7 +1602,6 @@ FORCEINLINE unsigned long RoundFloatToUnsignedLong(float f)
 	return *((unsigned long*)nResult);
 #else
 	return static_cast<unsigned long>(f);
-#endif
 #endif
 }
 
@@ -1684,25 +1613,7 @@ FORCEINLINE bool IsIntegralValue( float flValue, float flTolerance = 0.001f )
 // Fast, accurate ftol:
 FORCEINLINE int Float2Int( float a )
 {
-#if defined( _X360 )
-	union
-	{
-		double flResult;
-		int pResult[2];
-	};
-	flResult = __fctiwz( a );
-	return pResult[1];
-#elif defined ( _PS3 )
-#if defined(__SPU__)
-	int RetVal;
-	RetVal = static_cast<int>( a );
-	return RetVal;
-#else
-	return __fctiwz( a );
-#endif
-#else  // !X360
 	return static_cast<int>( a );
-#endif
 }
 
 
@@ -1727,11 +1638,7 @@ FORCEINLINE unsigned char FastFToC( float c )
 	dc = c * 255.0f + (float)(1 << 23);
 	
 	// return the lsb
-#if defined( _X360 ) || defined( _PS3 )
-	return ((unsigned char*)&dc)[3];
-#else
 	return *(unsigned char*)&dc;
-#endif
 }
 
 //-----------------------------------------------------------------------------
@@ -2568,24 +2475,6 @@ FORCEINLINE void RGB2YUV( int &nR, int &nG, int &nB, float &fY, float &fU, float
 	}
 }
 
-#ifdef _X360
-// Used for direct CPU access to VB data on 360 (used by shaderapi, studiorender and engine)
-struct VBCPU_AccessInfo_t
-{
-	// Points to the GPU data pointer in the CVertexBuffer struct (VB data can be relocated during level transitions)
-	const byte **ppBaseAddress;
-	// pBaseAddress should be computed from ppBaseAddress immediately before use
-	const byte  *pBaseAddress;
-	int          nStride;
-	int          nPositionOffset;
-	int          nTexCoord0_Offset;
-	int          nNormalOffset;
-	int          nBoneIndexOffset;
-	int          nBoneWeightOffset;
-	int          nCompressionType;
-	// TODO: if needed, add colour and tangents
-};
-#endif
 
 //-----------------------------------------------------------------------------
 // Convert RGB to HSV
@@ -2602,18 +2491,10 @@ void HSVtoRGB( const Vector &hsv, Vector &rgb );
 //-----------------------------------------------------------------------------
 // Fast version of pow and log
 //-----------------------------------------------------------------------------
-#ifndef _PS3 // these actually aren't fast (or correct) on the PS3
 float FastLog2(float i);			// log2( i )
 float FastPow2(float i);			// 2^i
 float FastPow(float a, float b);	// a^b
 float FastPow10( float i );			// 10^i
-#else
-inline float FastLog2(float i) {return logbf(i);}			// log2( i )
-inline float FastPow2(float i) {return exp2f(i);}			// 2^i
-inline float FastPow(float a, float b) {return powf(a,b);}	// a^b
-#define LOGBASE2OF10 3.3219280948873623478703194294893901758648313930
-inline float FastPow10( float i ) { return exp2f( i * LOGBASE2OF10 ); }			// 10^i, transform to base two, so log2(10^y) = y log2(10) . log2(10) = 3.3219280948873623478703194294893901758648313930
-#endif
 
 //-----------------------------------------------------------------------------
 // For testing float equality
@@ -2666,16 +2547,6 @@ inline float Approach( float target, float value, float speed )
 {
 	float delta = target - value;
 
-#if defined(_X360) || defined( _PS3 ) // use conditional move for speed on 360
-
-	return fsel( delta-speed,	// delta >= speed ?
-				 value + speed,	// if delta == speed, then value + speed == value + delta == target  
-				 fsel( (-speed) - delta, // delta <= -speed
-						value - speed,
-						target )
-				);  // delta < speed && delta > -speed
-
-#else
 
 	if ( delta > speed )
 		value += speed;
@@ -2686,7 +2557,6 @@ inline float Approach( float target, float value, float speed )
 		
 	return value;
 
-#endif
 }
 
 
@@ -2704,31 +2574,10 @@ inline float interpstep(float edge0, float edge1, float x)
 }
 
 // on PPC we can do this truncate without converting to int
-#if defined(_X360) || defined(_PS3)
-inline double TruncateFloatToIntAsFloat( double flVal )
-{
-#if defined(_X360)
-	double flIntFormat = __fctiwz( flVal );
-	return __fcfid( flIntFormat );
-#elif defined(_PS3)
-#if defined(__SPU__)
-	int iVal = int(flVal);
-	return static_cast<double>(iVal);
-#else
-	double flIntFormat = __builtin_fctiwz( flVal );
-	return __builtin_fcfid( flIntFormat );
-#endif
-#endif
-}
-#endif
 
 inline double SubtractIntegerPart( double flVal )
 {
-#if defined(_X360) || defined(_PS3)
-	return flVal - TruncateFloatToIntAsFloat(flVal);
-#else
 	return flVal - int(flVal);
-#endif
 }
 
 

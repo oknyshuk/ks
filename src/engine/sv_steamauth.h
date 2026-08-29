@@ -22,14 +22,6 @@ class CSteam3Server : public CSteamGameServerAPIContext
 public:
 	CSteam3Server();
 	~CSteam3Server();
-#if !defined(NO_STEAM)
-	STEAM_GAMESERVER_CALLBACK( CSteam3Server, OnLogonSuccess, SteamServersConnected_t, m_CallbackLogonSuccess );
-	STEAM_GAMESERVER_CALLBACK( CSteam3Server, OnLogonFailure, SteamServerConnectFailure_t, m_CallbackLogonFailure );
-	STEAM_GAMESERVER_CALLBACK( CSteam3Server, OnLoggedOff, SteamServersDisconnected_t, m_CallbackLoggedOff );
-	// game server callbacks
-	STEAM_GAMESERVER_CALLBACK( CSteam3Server, OnGSPolicyResponse, GSPolicyResponse_t, m_CallbackGSPolicyResponse );
-	STEAM_GAMESERVER_CALLBACK( CSteam3Server, OnValidateAuthTicketResponse, ValidateAuthTicketResponse_t, m_CallbackValidateAuthTicketResponse );
-#endif
 
 	// CSteam3 stuff
   	void Activate();

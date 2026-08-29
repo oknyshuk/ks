@@ -9,7 +9,6 @@
 // 1 means it's possible and resulted from being a debug build
 // 2 means it's possible and resulted from being manually forced on for a release build
 
-#if defined( POSIX ) && !defined( _PS3 ) 
 	#ifndef GLMDEBUG
 		#ifdef DEBUG
 			#define GLMDEBUG 1	// normally 1 here, testing
@@ -21,11 +20,6 @@
 			#define GLMDEBUG 0
 		#endif
 	#endif
-#else
-	#ifndef GLMDEBUG
-		#define GLMDEBUG 0
-	#endif
-#endif
 
 // helpful macro if you are in a position to call GLM functions directly (i.e. you live in materialsystem / shaderapidx9)
 #if GLMDEBUG

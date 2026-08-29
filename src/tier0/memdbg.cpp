@@ -24,38 +24,23 @@
 #include <errno.h>
 #include <io.h>
 #endif
-#ifdef OSX
-#include <malloc/malloc.h>
-#include <stdlib.h>
-#endif
 
 #include <map>
 #include <set>
 #include <limits.h>
 #include "tier0/threadtools.h"
-#ifdef _X360
-#endif
 
-#ifdef _PS3
-#include "sys/memory.h"
-#include "tls_ps3.h"
-#include "ps3/ps3_helpers.h"
-#include "memoverride_ps3.h"
-#endif
 
 #ifdef USE_LIGHT_MEM_DEBUG
 #undef USE_MEM_DEBUG
 #endif
 
-#if (!defined( POSIX ) && (defined(_DEBUG) || defined(USE_MEM_DEBUG)))
-#pragma message ("USE_MEM_DEBUG is enabled in a release build. Don't check this in!")
-#endif
 
 #include "mem_impl_type.h"
 
 #if MEM_IMPL_TYPE_DBG
 
-#if defined(_WIN32) && ( !defined(_X360) && !defined(_WIN64) )
+#if defined(_WIN32) && ( !defined(_WIN64) )
 //be sure to disable frame pointer omission for all projects. "vpc /nofpo" when using stack traces
 //#define USE_STACK_TRACES 
 // or:
@@ -78,17 +63,8 @@ const size_t STACK_TRACE_LENGTH = 32;
 
 //-----------------------------------------------------------------------------
 
-#ifdef _PS3
-MemOverrideRawCrtFunctions_t *g_pMemOverrideRawCrtFns;
-#define DebugAlloc	(g_pMemOverrideRawCrtFns->pfn_malloc)
-#define DebugFree	(g_pMemOverrideRawCrtFns->pfn_free)
-#elif defined( _X360 )
-#define DebugAlloc	DmAllocatePool
-#define DebugFree	DmFreePool
-#else
 #define DebugAlloc	malloc
 #define DebugFree	free
-#endif
 
 #ifdef _WIN32
 int g_DefaultHeapFlags = _CrtSetDbgFlag( _CrtSetDbgFlag(_CRTDBG_REPORT_FLAG) | _CRTDBG_ALLOC_MEM_DF );
@@ -288,7 +264,7 @@ enum DbgMemHeaderBlockType_t
 };
 
 struct DbgMemHeader_t
-#if !defined( _DEBUG ) || defined( _PS3 )
+#if !defined( _DEBUG )
 	: CrtDbgMemHeader_t
 #endif
 {
@@ -302,13 +278,9 @@ struct DbgMemHeader_t
 	Sentinal_t sentinal;
 };
 
-const int g_nRecentFrees = ( IsPC() ) ? 8192 : 512;
+const int g_nRecentFrees = ( true ) ? 8192 : 512;
 DbgMemHeader_t ** GetRecentFrees() { static DbgMemHeader_t **g_pRecentFrees = (DbgMemHeader_t**)
-#ifdef _PS3
-g_pMemOverrideRawCrtFns->pfn_calloc
-#else
 calloc
-#endif
 ( g_nRecentFrees, sizeof(DbgMemHeader_t *) );
 return g_pRecentFrees; }
 uint32 volatile g_iNextFreeSlot;
@@ -357,42 +329,19 @@ void LMDValidateBlock( DbgMemHeader_t *pHeader, bool bFreeList )
 
 //-----------------------------------------------------------------------------
 
-#if defined( _DEBUG ) && !defined( POSIX )
-#define GetCrtDbgMemHeader( pMem ) ((CrtDbgMemHeader_t*)((DbgMemHeader_t*)pMem - 1) - 1)
-#elif defined( OSX )
-DbgMemHeader_t *GetCrtDbgMemHeader( void *pMem );
-#else
 #define GetCrtDbgMemHeader( pMem ) ((DbgMemHeader_t*)(pMem) - 1)
-#endif
 
 #if defined( USE_STACK_TRACES )
 #define GetAllocationStatIndex_Internal( pMem ) ( ((DbgMemHeader_t*)pMem - 1)->nStatIndex )
 #endif
 
-#ifdef OSX
-DbgMemHeader_t *GetCrtDbgMemHeader( void *pMem )
-{
-	size_t msize = malloc_size( pMem );
-	return (DbgMemHeader_t *)( (char *)pMem + msize - sizeof(DbgMemHeader_t) );
-}
-#endif
 
 
 inline void *InternalMalloc( size_t nSize, const char *pFileName, int nLine )
 {
-#if defined( POSIX ) || defined( _PS3 )
 	void *pAllocedMem = NULL;
-#ifdef OSX
-	pAllocedMem = malloc_zone_malloc( malloc_default_zone(), nSize + sizeof(DbgMemHeader_t) + sizeof( Sentinal_t ) );	
-	DbgMemHeader_t *pInternalMem = GetCrtDbgMemHeader( pAllocedMem );
-#elif defined( _PS3 )
-	pAllocedMem = (g_pMemOverrideRawCrtFns->pfn_malloc)( nSize + sizeof(DbgMemHeader_t) + sizeof( Sentinal_t ) );
-	DbgMemHeader_t *pInternalMem = (DbgMemHeader_t *)pAllocedMem;
-	*((void**)pInternalMem->m_Reserved2) = pAllocedMem;
-#else
 	pAllocedMem = malloc( nSize + sizeof(DbgMemHeader_t) + sizeof( Sentinal_t ) );
 	DbgMemHeader_t *pInternalMem = (DbgMemHeader_t *)pAllocedMem;
-#endif
 	
 	pInternalMem->m_pFileName = pFileName;
 	pInternalMem->m_nLineNumber = nLine;
@@ -403,47 +352,16 @@ inline void *InternalMalloc( size_t nSize, const char *pFileName, int nLine )
 	*( (Sentinal_t *)( ((byte*)pInternalMem) + sizeof( DbgMemHeader_t ) + nSize ) ) = g_TailSentinel;
 	LMDValidateBlock( pInternalMem, false );
 
-#ifdef OSX
-	return pAllocedMem;
-#else
 	return pInternalMem + 1;	
-#endif
 	
-#else // WIN32
-	DbgMemHeader_t *pInternalMem;
-#if !defined( _DEBUG ) 
-	pInternalMem = (DbgMemHeader_t *)malloc( nSize + sizeof(DbgMemHeader_t) );
-	pInternalMem->m_pFileName = pFileName;
-	pInternalMem->m_nLineNumber = nLine;
-#else
-	pInternalMem = (DbgMemHeader_t *)_malloc_dbg( nSize + sizeof(DbgMemHeader_t), _NORMAL_BLOCK, pFileName, nLine );
-#endif
-
-	pInternalMem->nLogicalSize = nSize;
-	return pInternalMem + 1;
-#endif // WIN32
 }
 
 #ifdef MEMALLOC_SUPPORTS_ALIGNED_ALLOCATIONS
 inline void *InternalMallocAligned( size_t nSize, size_t align, const char *pFileName, int nLine )
 {
-#if defined( POSIX ) || defined( _PS3 )
 	void *pAllocedMem = NULL;
-#ifdef OSX
-	pAllocedMem = malloc_zone_malloc( malloc_default_zone(), nSize + sizeof(DbgMemHeader_t) + sizeof( Sentinal_t ) );	
-	DbgMemHeader_t *pInternalMem = GetCrtDbgMemHeader( pAllocedMem );
-#elif defined( _PS3 )
-	size_t numWastedAlignPages = ( sizeof( DbgMemHeader_t ) / align );
-	if ( align * numWastedAlignPages < sizeof( DbgMemHeader_t ) )
-		++ numWastedAlignPages;
-	size_t nSizeRequired = nSize + numWastedAlignPages*align + sizeof( Sentinal_t );
-	pAllocedMem = (g_pMemOverrideRawCrtFns->pfn_memalign)( align, nSizeRequired );
-	DbgMemHeader_t *pInternalMem = GetCrtDbgMemHeader( ((char*)pAllocedMem) + numWastedAlignPages*align );
-	*((void**)pInternalMem->m_Reserved2) = pAllocedMem;
-#else
 	pAllocedMem = malloc( nSize + sizeof(DbgMemHeader_t) + sizeof( Sentinal_t ) );
 	DbgMemHeader_t *pInternalMem = (DbgMemHeader_t *)pAllocedMem;
-#endif
 	
 	pInternalMem->m_pFileName = pFileName;
 	pInternalMem->m_nLineNumber = nLine;
@@ -454,25 +372,8 @@ inline void *InternalMallocAligned( size_t nSize, size_t align, const char *pFil
 	*( (Sentinal_t *)( ((byte*)pInternalMem) + sizeof( DbgMemHeader_t ) + nSize ) ) = g_TailSentinel;
 	LMDValidateBlock( pInternalMem, false );
 
-#ifdef OSX
-	return pAllocedMem;
-#else
 	return pInternalMem + 1;	
-#endif
 	
-#else // WIN32
-	DbgMemHeader_t *pInternalMem;
-#if !defined( _DEBUG ) 
-	pInternalMem = (DbgMemHeader_t *)malloc( nSize + sizeof(DbgMemHeader_t) );
-	pInternalMem->m_pFileName = pFileName;
-	pInternalMem->m_nLineNumber = nLine;
-#else
-	pInternalMem = (DbgMemHeader_t *)_malloc_dbg( nSize + sizeof(DbgMemHeader_t), _NORMAL_BLOCK, pFileName, nLine );
-#endif
-
-	pInternalMem->nLogicalSize = nSize;
-	return pInternalMem + 1;
-#endif // WIN32
 }
 #endif
 
@@ -481,21 +382,10 @@ inline void *InternalRealloc( void *pMem, size_t nNewSize, const char *pFileName
 	if ( !pMem )
 		return InternalMalloc( nNewSize, pFileName, nLine );
 
-#ifdef POSIX
 	void *pNewAllocedMem = NULL;
-#ifdef OSX
-	pNewAllocedMem = (DbgMemHeader_t *)malloc_zone_realloc( malloc_default_zone(), pMem, nNewSize + sizeof(DbgMemHeader_t) + sizeof( Sentinal_t ) );
-	DbgMemHeader_t *pInternalMem = GetCrtDbgMemHeader( pNewAllocedMem );
-#elif defined( _PS3 )
-	DbgMemHeader_t *pInternalMem = GetCrtDbgMemHeader( pMem );
-	pNewAllocedMem = (DbgMemHeader_t *)(g_pMemOverrideRawCrtFns->pfn_realloc)( *((void**)pInternalMem->m_Reserved2), nNewSize + sizeof(DbgMemHeader_t) + sizeof( Sentinal_t ) );
-	pInternalMem = (DbgMemHeader_t *)pNewAllocedMem;
-	*((void**)pInternalMem->m_Reserved2) = pNewAllocedMem;
-#else
 	DbgMemHeader_t *pInternalMem = GetCrtDbgMemHeader( pMem );
 	pNewAllocedMem = (DbgMemHeader_t *)realloc( pInternalMem, nNewSize + sizeof(DbgMemHeader_t) + sizeof( Sentinal_t ) );
 	pInternalMem = (DbgMemHeader_t *)pNewAllocedMem;
-#endif
 	
 	pInternalMem->m_pFileName = pFileName;
 	pInternalMem->m_nLineNumber = nLine;
@@ -506,25 +396,8 @@ inline void *InternalRealloc( void *pMem, size_t nNewSize, const char *pFileName
 	*( (Sentinal_t *)( ((byte*)pInternalMem) + sizeof( DbgMemHeader_t ) + nNewSize ) ) = g_TailSentinel;
 	LMDValidateBlock( pInternalMem, false );
 	
-#ifdef OSX
-	return pNewAllocedMem;
-#else
 	return pInternalMem + 1;
-#endif
 	
-#else // WIN32
-	DbgMemHeader_t *pInternalMem = (DbgMemHeader_t *)pMem - 1;
-#if !defined( _DEBUG )
-	pInternalMem = (DbgMemHeader_t *)realloc( pInternalMem, nNewSize + sizeof(DbgMemHeader_t) );
-	pInternalMem->m_pFileName = pFileName;
-	pInternalMem->m_nLineNumber = nLine;
-#else
-	pInternalMem = (DbgMemHeader_t *)_realloc_dbg( pInternalMem, nNewSize + sizeof(DbgMemHeader_t), _NORMAL_BLOCK, pFileName, nLine );
-#endif
-
-	pInternalMem->nLogicalSize = nNewSize;
-	return pInternalMem + 1;
-#endif // WIN32
 }
 
 #ifdef MEMALLOC_SUPPORTS_ALIGNED_ALLOCATIONS
@@ -533,26 +406,10 @@ inline void *InternalReallocAligned( void *pMem, size_t nNewSize, size_t align, 
 	if ( !pMem )
 		return InternalMallocAligned( nNewSize, align, pFileName, nLine );
 
-#ifdef POSIX
 	void *pNewAllocedMem = NULL;
-#ifdef OSX
-	pNewAllocedMem = (DbgMemHeader_t *)malloc_zone_realloc( malloc_default_zone(), pMem, nNewSize + sizeof(DbgMemHeader_t) + sizeof( Sentinal_t ) );
-	DbgMemHeader_t *pInternalMem = GetCrtDbgMemHeader( pNewAllocedMem );
-#elif defined( _PS3 )
-	size_t numWastedAlignPages = ( sizeof( DbgMemHeader_t ) / align );
-	if ( align * numWastedAlignPages < sizeof( DbgMemHeader_t ) )
-		++ numWastedAlignPages;
-	size_t nSizeRequired = nNewSize + numWastedAlignPages*align + sizeof( Sentinal_t );
-	
-	DbgMemHeader_t *pInternalMem = GetCrtDbgMemHeader( pMem );
-	pNewAllocedMem = (DbgMemHeader_t *)(g_pMemOverrideRawCrtFns->pfn_reallocalign)( *((void**)pInternalMem->m_Reserved2), nSizeRequired, align );
-	pInternalMem = GetCrtDbgMemHeader( ((char*)pNewAllocedMem) + numWastedAlignPages*align );
-	*((void**)pInternalMem->m_Reserved2) = pNewAllocedMem;
-#else
 	DbgMemHeader_t *pInternalMem = GetCrtDbgMemHeader( pMem );
 	pNewAllocedMem = (DbgMemHeader_t *)realloc( pInternalMem, nNewSize + sizeof(DbgMemHeader_t) + sizeof( Sentinal_t ) );
 	pInternalMem = (DbgMemHeader_t *)pNewAllocedMem;
-#endif
 	
 	pInternalMem->m_pFileName = pFileName;
 	pInternalMem->m_nLineNumber = nLine;
@@ -563,25 +420,8 @@ inline void *InternalReallocAligned( void *pMem, size_t nNewSize, size_t align, 
 	*( (Sentinal_t *)( ((byte*)pInternalMem) + sizeof( DbgMemHeader_t ) + nNewSize ) ) = g_TailSentinel;
 	LMDValidateBlock( pInternalMem, false );
 	
-#ifdef OSX
-	return pNewAllocedMem;
-#else
 	return pInternalMem + 1;
-#endif
 	
-#else // WIN32
-	DbgMemHeader_t *pInternalMem = (DbgMemHeader_t *)pMem - 1;
-#if !defined( _DEBUG )
-	pInternalMem = (DbgMemHeader_t *)realloc( pInternalMem, nNewSize + sizeof(DbgMemHeader_t) );
-	pInternalMem->m_pFileName = pFileName;
-	pInternalMem->m_nLineNumber = nLine;
-#else
-	pInternalMem = (DbgMemHeader_t *)_realloc_dbg( pInternalMem, nNewSize + sizeof(DbgMemHeader_t), _NORMAL_BLOCK, pFileName, nLine );
-#endif
-
-	pInternalMem->nLogicalSize = nNewSize;
-	return pInternalMem + 1;
-#endif // WIN32
 }
 #endif
 
@@ -592,7 +432,6 @@ inline void InternalFree( void *pMem )
 
 	DbgMemHeader_t *pInternalMem = (DbgMemHeader_t *)pMem - 1;
 
-#if defined( POSIX )
 	// Record it in recent free blocks list
 	DbgMemHeader_t **pRecentFrees = GetRecentFrees();
 	uint32 iNextSlot = ThreadInterlockedIncrement( &g_iNextFreeSlot );
@@ -635,48 +474,18 @@ inline void InternalFree( void *pMem )
 	if ( !pToFree )
 		return;
 
-#ifdef OSX
-	malloc_zone_free( malloc_default_zone(), pToFree );
-#elif defined( _PS3 )
-	(g_pMemOverrideRawCrtFns->pfn_free)( *((void**)pToFree->m_Reserved2) );
-#elif LINUX
 	free( pToFree );
-#else
-	free( pToFree );	
-#endif
-#elif defined( _DEBUG )
-	_free_dbg( pInternalMem, _NORMAL_BLOCK );
-#else
-	free( pInternalMem );
-#endif
 }
 
 inline size_t InternalMSize( void *pMem )
 {
-#if defined( _PS3 )
 	DbgMemHeader_t *pInternalMem = GetCrtDbgMemHeader( pMem );
 	return pInternalMem->nLogicalSize;
-#elif defined(POSIX)
-	DbgMemHeader_t *pInternalMem = GetCrtDbgMemHeader( pMem );
-	return pInternalMem->nLogicalSize;
-#elif !defined(_DEBUG)
-	DbgMemHeader_t *pInternalMem = GetCrtDbgMemHeader( pMem );
-	return _msize( pInternalMem ) - sizeof(DbgMemHeader_t);
-#else
-	DbgMemHeader_t *pInternalMem = (DbgMemHeader_t *)pMem - 1;
-	return _msize_dbg( pInternalMem, _NORMAL_BLOCK ) - sizeof(DbgMemHeader_t);
-#endif	
 }
 
 inline size_t InternalLogicalSize( void *pMem )
 {
-#if defined(POSIX)
 	DbgMemHeader_t *pInternalMem = GetCrtDbgMemHeader( pMem );
-#elif !defined(_DEBUG)
-	DbgMemHeader_t *pInternalMem = (DbgMemHeader_t *)pMem - 1;
-#else
-	DbgMemHeader_t *pInternalMem = (DbgMemHeader_t *)pMem - 1;
-#endif
 	return pInternalMem->nLogicalSize;
 }
 
@@ -814,9 +623,6 @@ public:
 
 	virtual void CompactHeap() 
 	{
-#if defined( _X360 ) && defined( _DEBUG )
-		HeapCompact( GetProcessHeap(), 0 );
-#endif
 	}
 
 	virtual void CompactIncremental() {}
@@ -961,7 +767,7 @@ private:
 
 	virtual IVirtualMemorySection * AllocateVirtualMemorySection( size_t numMaxBytes )
 	{
-#if defined( _GAMECONSOLE ) || defined( _WIN32 )
+#if defined( _WIN32 )
 		extern IVirtualMemorySection * VirtualMemoryManager_AllocateVirtualMemorySection( size_t numMaxBytes );
 		return VirtualMemoryManager_AllocateVirtualMemorySection( numMaxBytes );
 #else
@@ -1035,48 +841,16 @@ struct DbgInfoStack_t
 	int m_nLine;
 };
 
-#ifdef _PS3
-#ifndef _CERT
-extern TLSGlobals * ( *g_pfnElfGetTlsGlobals )();
-#define IfDbgInfoIsReady() if ( TLSGlobals *IfDbgInfoIsReady_pTlsGlobals = g_pfnElfGetTlsGlobals ? g_pfnElfGetTlsGlobals() : NULL )
-#else
-#define IfDbgInfoIsReady() if ( TLSGlobals *IfDbgInfoIsReady_pTlsGlobals = GetTLSGlobals() )
-#endif
-#define g_DbgInfoStack ( ( DbgInfoStack_t *& ) IfDbgInfoIsReady_pTlsGlobals->pMallocDbgInfoStack )
-#define g_nDbgInfoStackDepth ( IfDbgInfoIsReady_pTlsGlobals->nMallocDbgInfoStackDepth )
-#else
 CTHREADLOCALPTR( DbgInfoStack_t)	g_DbgInfoStack CONSTRUCT_EARLY;
 CTHREADLOCALINT						g_nDbgInfoStackDepth CONSTRUCT_EARLY;
 #define IfDbgInfoIsReady() if (true)
-#endif
 
-#ifdef _PS3
-struct CDbgMemAlloc_GetRawCrtMemOverrideFuncs_Early
-{
-	CDbgMemAlloc_GetRawCrtMemOverrideFuncs_Early()
-	{
-		malloc_managed_size mms;
-		mms.current_inuse_size = 0x12345678;
-		mms.current_system_size = 0x09ABCDEF;
-		mms.max_system_size = 0;
-		int iResult = malloc_stats( &mms );
-		g_pMemOverrideRawCrtFns = reinterpret_cast< MemOverrideRawCrtFunctions_t * >( iResult );
-	}
-}
-g_CDbgMemAlloc_GetRawCrtMemOverrideFuncs_Early CONSTRUCT_EARLY;
-#endif
 
 //-----------------------------------------------------------------------------
 // Singleton...
 //-----------------------------------------------------------------------------
 static CDbgMemAlloc s_DbgMemAlloc CONSTRUCT_EARLY;
 
-#ifdef _PS3
-
-IMemAlloc *g_pMemAllocInternalPS3 = &s_DbgMemAlloc;
-PLATFORM_OVERRIDE_MEM_ALLOC_INTERNAL_PS3_IMPL
-
-#else // !_PS3
 
 #ifndef TIER0_VALIDATE_HEAP
 IMemAlloc *g_pMemAlloc CONSTRUCT_EARLY = &s_DbgMemAlloc;
@@ -1092,7 +866,6 @@ void SetAllocatorObject( IMemAlloc* pAllocator )
 }
 #endif
 
-#endif // _PS3
 
 
 //-----------------------------------------------------------------------------
@@ -1145,31 +918,11 @@ CDbgMemAlloc::CDbgMemAlloc() : m_sMemoryAllocFailed( (size_t)0 )
 	m_OutputFunc = DefaultHeapReportFunc;
 	m_bInitialized = true;
 
-	if ( !IsDebug() && !IsX360() )
+	if ( !IsDebug() )
 	{
 		Plat_DebugString( "USE_MEM_DEBUG is enabled in a release build. Don't check this in!\n" );
 	}
 
-#ifdef _PS3
-	g_pMemAllocInternalPS3 = &s_DbgMemAlloc;
-	PLATFORM_OVERRIDE_MEM_ALLOC_INTERNAL_PS3.m_pMemAllocCached = &s_DbgMemAlloc;
-	malloc_managed_size mms;
-	mms.current_inuse_size = 0x12345678;
-	mms.current_system_size = 0x09ABCDEF;
-	mms.max_system_size = reinterpret_cast< size_t >( this );
-	int iResult = malloc_stats( &mms );
-	g_pMemOverrideRawCrtFns = reinterpret_cast< MemOverrideRawCrtFunctions_t * >( iResult );
-#elif IsPlatformWindowsPC()
-	char *pStr = (char*)Plat_GetCommandLineA();
-	if ( pStr )
-	{
-		char tempStr[512];
-		strncpy( tempStr, pStr, sizeof( tempStr ) - 1 );
-		tempStr[ sizeof( tempStr ) - 1 ] = 0;
-		_strupr( tempStr );
-		CheckWindowsAllocSettings( tempStr );
-	}
-#endif
 }
 
 CDbgMemAlloc::~CDbgMemAlloc()
@@ -1953,113 +1706,60 @@ size_t CDbgMemAlloc::GetSize( void *pMem )
 //-----------------------------------------------------------------------------
 int32 CDbgMemAlloc::CrtSetBreakAlloc( int32 lNewBreakAlloc )
 {
-#ifdef POSIX
 	return 0;
-#else
-	return _CrtSetBreakAlloc( lNewBreakAlloc );
-#endif
 }
 
 int CDbgMemAlloc::CrtSetReportMode( int nReportType, int nReportMode )
 {
-#ifdef POSIX
 	return 0;
-#else
-	return _CrtSetReportMode( nReportType, nReportMode );
-#endif
 }
 
 int CDbgMemAlloc::CrtIsValidHeapPointer( const void *pMem )
 {
-#ifdef POSIX
 	return 0;
-#else
-	return _CrtIsValidHeapPointer( pMem );
-#endif
 }
 
 int CDbgMemAlloc::CrtIsValidPointer( const void *pMem, unsigned int size, int access )
 {
-#ifdef POSIX
 	return 0;
-#else
-	return _CrtIsValidPointer( pMem, size, access );
-#endif
 }
 
 #define DBGMEM_CHECKMEMORY 1
 
 int CDbgMemAlloc::CrtCheckMemory( void )
 {
-#if !defined( DBGMEM_CHECKMEMORY ) || defined( POSIX )
 	return 1;
-#elif defined( _WIN32 )
-	if ( !_CrtCheckMemory())
-	{
-		Msg( "Memory check failed!\n" );
-		return 0;
-	}
-	return 1;
-#else
-	return 1;
-#endif
 }
 
 int CDbgMemAlloc::CrtSetDbgFlag( int nNewFlag )
 {
-#ifdef POSIX
 	return 0;
-#else
-	return _CrtSetDbgFlag( nNewFlag );
-#endif
 }
 
 void CDbgMemAlloc::CrtMemCheckpoint( _CrtMemState *pState )
 {
-#ifndef POSIX
-	_CrtMemCheckpoint( pState );
-#endif
 }
 
 // FIXME: Remove when we have our own allocator
 void* CDbgMemAlloc::CrtSetReportFile( int nRptType, void* hFile )
 {
-#ifdef POSIX
 	return 0;
-#else
-	return (void*)_CrtSetReportFile( nRptType, (_HFILE)hFile );
-#endif
 }
 
 void* CDbgMemAlloc::CrtSetReportHook( void* pfnNewHook )
 {
-#ifdef POSIX
 	return 0;
-#else
-	return (void*)_CrtSetReportHook( (_CRT_REPORT_HOOK)pfnNewHook );
-#endif
 }
 
 int CDbgMemAlloc::CrtDbgReport( int nRptType, const char * szFile,
 		int nLine, const char * szModule, const char * pMsg )
 {
-#ifdef POSIX
 	return 0;
-#else
-	return _CrtDbgReport( nRptType, szFile, nLine, szModule, pMsg );
-#endif
 }
 
 int CDbgMemAlloc::heapchk()
 {
-#ifdef POSIX
 	return 0;
-#else
-	if ( CrtCheckMemory() )
-		return _HEAPOK;
-	else
-		return _HEAPBADPTR;
-#endif
 }
 
 void CDbgMemAlloc::DumpBlockStats( void *p )
@@ -2143,11 +1843,6 @@ void CDbgMemAlloc::DumpStatsFileBase( char const *pchFileBase, DumpStatsFormat_t
 	if (m_OutputFunc == DefaultHeapReportFunc)
 	{
 		char *pPath = "";
-#ifdef _X360
-		pPath = "D:\\";
-#elif defined( _PS3 )
-		pPath = "/app_home/";
-#endif
 		
 
 
@@ -2156,9 +1851,6 @@ void CDbgMemAlloc::DumpStatsFileBase( char const *pchFileBase, DumpStatsFormat_t
 		char szXboxName[32];
 		strcpy( szXboxName, "memdump" );
 
-#if defined( _PS3 )
-		_snprintf( szFileName, sizeof( szFileName ), "%s%s_%d.txt", pPath, s_szStatsMapName, s_FileCount );
-#else
 		DWORD numChars = sizeof( szXboxName );
 		DmGetXboxName( szXboxName, &numChars ); 
 		char *pXboxName = strstr( szXboxName, "_360" );
@@ -2170,11 +1862,10 @@ void CDbgMemAlloc::DumpStatsFileBase( char const *pchFileBase, DumpStatsFormat_t
 		SYSTEMTIME systemTime;
 		GetLocalTime( &systemTime );
 		_snprintf( szFileName, sizeof( szFileName ), "%s%s_%2.2d%2.2d_%2.2d%2.2d%2.2d_%d.txt", pPath, s_szStatsMapName, systemTime.wMonth, systemTime.wDay, systemTime.wHour, systemTime.wMinute, systemTime.wSecond, s_FileCount );
-#endif
 
 #else // _MEMTEST
 
-#if defined( _WIN32 ) && !defined( _X360 )
+#if defined( _WIN32 )
 		bool fileExists = true;
 		while (fileExists)
 		{
@@ -2219,61 +1910,10 @@ void CDbgMemAlloc::DumpStatsFileBase( char const *pchFileBase, DumpStatsFormat_t
 		m_OutputFunc("\n");
 
 		MemInfo_t totals = m_GlobalInfo;
-#ifdef _PS3
-		{
-			// Add a line for system heap stats
-			static malloc_managed_size mms;
-			(g_pMemOverrideRawCrtFns->pfn_malloc_stats)( &mms );
-
-			MemInfo_t info;
-			info.m_nCurrentSize		= mms.current_inuse_size;
-			info.m_nPeakSize		= mms.max_system_size;
-			info.m_nOverheadSize	= mms.current_system_size - mms.current_inuse_size;
-			DumpMemInfo( "||PS3 malloc_stats||", 0, info );
-
-			// Add a line for PRXs
-			char prxFilename[256];
-			sys_prx_id_t prxIDs[256];
-			sys_prx_segment_info_t prxSegments[32];
-			sys_prx_get_module_list_t prxList = { sizeof( sys_prx_get_module_list_t ), ARRAYSIZE( prxIDs ), 0, prxIDs, NULL };
-			sys_prx_get_module_list( 0, &prxList );
-			Assert( prxList.count < ARRAYSIZE( prxIDs ) );
-			memset( &info, 0, sizeof( info ) );
-			for ( int i = 0; i < prxList.count; i++ )
-			{
-				sys_prx_module_info_t prxInfo;
-				prxInfo.size          = sizeof( sys_prx_module_info_t );
-				prxInfo.filename      = prxFilename;
-				prxInfo.filename_size = sizeof( prxFilename );
-				prxInfo.segments      = prxSegments;
-				prxInfo.segments_num  = ARRAYSIZE( prxSegments );
-				sys_prx_get_module_info( prxList.idlist[i], 0, &prxInfo );
-				Assert( prxInfo.segments_num < ARRAYSIZE( prxSegments ) );
-				for ( int j = 0; j < prxInfo.segments_num; j++ )
-				{
-					info.m_nCurrentSize += prxInfo.segments[j].memsz;
-				}
-			}
-			DumpMemInfo( "PS3 PRXs", 0, info );
-
-			// Add PRX sizes to our global tracked total:
-			totals.m_nCurrentSize += info.m_nCurrentSize;
-		}
-#endif // _PS3
 
 		// The total of all memory usage we know about:
 		DumpMemInfo( "||Totals||", 0, totals );
 
-		if ( IsGameConsole() )
-		{
-			// Add a line showing total system memory usage from the OS (if this is more than
-			// "||Totals||", then there is unknown memory usage that we need to track down):
-			size_t usedMemory, freeMemory;
-			GlobalMemoryStatus( &usedMemory, &freeMemory );
-			MemInfo_t info;
-			info.m_nCurrentSize = usedMemory;
-			DumpMemInfo( "||Used Memory||", 0, info );
-		}
 
 #ifdef _MEMTEST
 		{
@@ -2302,9 +1942,6 @@ void CDbgMemAlloc::DumpStatsFileBase( char const *pchFileBase, DumpStatsFormat_t
 	{
 		fclose(s_DbgFile);
 
-#if defined( _X360 )
-		XBX_rMemDump( szFileName );
-#endif
 	}
 }
 
@@ -2313,43 +1950,11 @@ void CDbgMemAlloc::GlobalMemoryStatus( size_t *pUsedMemory, size_t *pFreeMemory 
 	if ( !pUsedMemory || !pFreeMemory )
 		return;
 
-#if defined ( _X360 )
-
-	// GlobalMemoryStatus tells us how much physical memory is free
-	MEMORYSTATUS stat;
-	::GlobalMemoryStatus( &stat );
-	*pFreeMemory = stat.dwAvailPhys;
-
-	// Used is total minus free (discount the 32MB system reservation)
-	*pUsedMemory = ( stat.dwTotalPhys - 32*1024*1024 ) - *pFreeMemory;
-
-#elif defined( _PS3 )
-
-	// need to factor in how much empty space there is in the heap
-	// (since it NEVER returns pages back to the OS after hitting a high-watermark)
-	static malloc_managed_size mms;
-	(g_pMemOverrideRawCrtFns->pfn_malloc_stats)( &mms );
-	int heapFree = mms.current_system_size - mms.current_inuse_size;
-	Assert( heapFree >= 0 );
-
-	// sys_memory_get_user_memory_size tells us how much PPU memory is used/free
-	static sys_memory_info stat;
-	sys_memory_get_user_memory_size( &stat );
-	*pFreeMemory  = stat.available_user_memory;
-	*pFreeMemory += heapFree;
-	*pUsedMemory  = stat.total_user_memory - *pFreeMemory;
-	// 213MB are available in retail mode, so adjust free mem to reflect that even if we're in devkit mode
-	const size_t RETAIL_SIZE = 213*1024*1024;
-	if ( stat.total_user_memory > RETAIL_SIZE )
-		*pFreeMemory -= stat.total_user_memory - RETAIL_SIZE;
-
-#else
 
 	// no data
 	*pFreeMemory = 0;
 	*pUsedMemory = 0;
 
-#endif
 }
 
 #ifdef USE_STACK_TRACES
@@ -2361,10 +1966,6 @@ void CDbgMemAlloc::DumpCallStackFlow( char const *pchFileBase )
 	static int s_FileCount = 0;
 	
 	char *pPath = "";
-	if ( IsX360() )
-	{
-		pPath = "D:\\";
-	}
 
 #if defined( _MEMTEST ) && defined( _WIN32 )
 	char szXboxName[32];
@@ -2407,22 +2008,8 @@ void CDbgMemAlloc::SetCRTAllocFailed( size_t nSize )
 	char buffer[256];
 	_snprintf( buffer, sizeof( buffer ), "***** OUT OF MEMORY! attempted allocation size: %u ****\n", nSize );
 	buffer[ ARRAYSIZE(buffer) - 1] = 0;
-#if defined( _PS3 ) && defined( _DEBUG )
-	DebuggerBreak();
-#endif // _PS3
 
-#ifdef _X360 
-	XBX_OutputDebugString( buffer );
-	if ( !Plat_IsInDebugSession() )
-	{
-		XBX_CrashDump( true );
-#if defined( _DEMO )
-		XLaunchNewImage( XLAUNCH_KEYWORD_DEFAULT_APP, 0 );
-#else
-		XLaunchNewImage( "default.xex", 0 );
-#endif
-	}
-#elif defined(_WIN32 )
+#if   defined(_WIN32 )
 	OutputDebugString( buffer );
 	if ( !Plat_IsInDebugSession() )
 	{
@@ -2446,7 +2033,6 @@ size_t CDbgMemAlloc::MemoryAllocFailed()
 
 
 
-#ifdef LINUX
 //
 // Under linux we can ask GLIBC to override malloc for us
 //   Base on code from Ryan, http://hg.icculus.org/icculus/mallocmonitor/file/29c4b0d049f7/monitor_client/malloc_hook_glibc.c
@@ -2601,200 +2187,6 @@ static void override_init_hook(void)
  */
 void (*__malloc_initialize_hook)(void) __attribute__((visibility("default")))= override_init_hook;
 
-#elif defined( OSX )
-//
-// pointers to the osx versions of these functions
-static void *osx_malloc_hook = NULL;
-static void *osx_realloc_hook = NULL;
-static void *osx_free_hook = NULL;
-
-// convenience functions for setting the hooks... 
-static inline void save_osx_hooks(void);
-static inline void set_osx_hooks(void);
-static inline void set_override_hooks(void);
-
-CThreadMutex g_HookMutex;
-//
-// Our overriding hooks...they call through to the original C runtime
-//  implementations and report to the monitoring daemon.
-//
-
-static void *override_malloc_hook(struct _malloc_zone_t *zone, size_t s)
-{
-    void *retval;
-    set_osx_hooks(); 
-    retval = InternalMalloc( s, NULL, 0 );
-    set_override_hooks(); 
-	
-    return(retval);
-} 
-
-
-static void *override_realloc_hook(struct _malloc_zone_t *zone, void *ptr, size_t s)
-{
-    void *retval;
-	
-    set_osx_hooks();  
-    retval = InternalRealloc(ptr, s, NULL, 0);	
-    set_override_hooks(); 
-	
-    return(retval);
-} 
-
-
-static void override_free_hook(struct _malloc_zone_t *zone, void *ptr)
-{
-	// sometime they pass in a null pointer from higher level calls, just ignore it
-	if ( !ptr )
-		return;
-	
-    set_osx_hooks(); 
-	
-	DbgMemHeader_t *pInternalMem = GetCrtDbgMemHeader( ptr );
-	if ( *((int*)pInternalMem->m_Reserved) == 0xf00df00d )
-	{
-		InternalFree( ptr );
-	}
-    
-    set_override_hooks(); 
-} 
-
-
-/*
- 
- These are func's we could optionally override right now on OSX but don't need to
- 
- static size_t override_size_hook(struct _malloc_zone_t *zone, const void *ptr)
- {
- set_osx_hooks();  
- DbgMemHeader_t *pInternalMem = GetCrtDbgMemHeader( (void *)ptr );
- set_override_hooks(); 
- if ( *((int*)pInternalMem->m_Reserved) == 0xf00df00d )
- {
- return pInternalMem->nLogicalSize;
- }
- return 0;
- } 
- 
- 
- static void *override_calloc_hook(struct _malloc_zone_t *zone, size_t num_items, size_t size )
- {
- void *ans = override_malloc_hook( zone, num_items*size );
- if ( !ans )
- return 0;
- memset( ans, 0x0, num_items*size );
- return ans;
- }
- 
- static void *override_valloc_hook(struct _malloc_zone_t *zone, size_t size )
- {
- return override_calloc_hook( zone, 1, size );
- }
- 
- static void override_destroy_hook(struct _malloc_zone_t *zone)
- {
- }
- */
-
-
-
-//
-//  Save a copy of the original allocation hooks, so we can call into them
-//   from our overriding functions. It's possible that osx might change
-//   these hooks under various conditions (so the manual's examples seem
-//   to suggest), so we update them whenever we finish calling into the
-//   the originals.
-//
-static inline void save_osx_hooks(void)
-{ 
-	malloc_zone_t *malloc_zone = malloc_default_zone();
-	
-    osx_malloc_hook = (void *)malloc_zone->malloc;
-    osx_realloc_hook = (void *)malloc_zone->realloc;
-    osx_free_hook = (void *)malloc_zone->free;
-	
-	// These are func's we could optionally override right now on OSX but don't need to
-	// osx_size_hook = (void *)malloc_zone->size;
-	// osx_calloc_hook = (void *)malloc_zone->calloc;
-	// osx_valloc_hook = (void *)malloc_zone->valloc;
-	// osx_destroy_hook = (void *)malloc_zone->destroy;
-} 
-
-//
-//  Restore the hooks to the osx versions. This is needed since, say,
-//   their realloc() might call malloc() or free() under the hood, etc, so
-//   it's safer to let them have complete control over the subsystem, which
-//   also makes our logging saner, too.
-// 
-static inline void set_osx_hooks(void)
-{
-	malloc_zone_t *malloc_zone = malloc_default_zone();
-	malloc_zone->malloc = (void* (*)(_malloc_zone_t*, size_t))osx_malloc_hook;
-    malloc_zone->realloc = (void* (*)(_malloc_zone_t*, void*, size_t))osx_realloc_hook;
-    malloc_zone->free = (void (*)(_malloc_zone_t*, void*))osx_free_hook;
-	
-	// These are func's we could optionally override right now on OSX but don't need to
-	
-	//malloc_zone->size = (size_t (*)(_malloc_zone_t*, const void *))osx_size_hook;
-    //malloc_zone->calloc = (void* (*)(_malloc_zone_t*, size_t, size_t))osx_calloc_hook;
-    //malloc_zone->valloc = (void* (*)(_malloc_zone_t*, size_t))osx_valloc_hook;
-    //malloc_zone->destroy = (void (*)(_malloc_zone_t*))osx_destroy_hook;
-} 
-
-
-/*
- * Put our hooks back in place. This should be done after the original
- *  osx version has been called and we've finished any logging (which
- *  may call osx functions, too). This sets us up for the next calls from
- *  the application.
- */
-static inline void set_override_hooks(void)
-{
-	malloc_zone_t *malloc_zone = malloc_default_zone();
-	
-	malloc_zone->malloc = override_malloc_hook;
-    malloc_zone->realloc = override_realloc_hook;
-    malloc_zone->free = override_free_hook;
-	
-	// These are func's we could optionally override right now on OSX but don't need to
-	//malloc_zone->size = override_size_hook;
-    //malloc_zone->calloc = override_calloc_hook;
-	// malloc_zone->valloc = override_valloc_hook;
-    //malloc_zone->destroy = override_destroy_hook;
-} 
-
-
-//
-// The Hook Of All Hooks...how we get in there in the first place.
-//
-// osx will call this when the malloc subsystem is initializing, giving
-// us a chance to install hooks that override the functions.
-//
-
-void __attribute__ ((constructor)) mem_init(void)
-{
-    AUTO_LOCK( g_HookMutex );
-	save_osx_hooks();
-    set_override_hooks();
-}
-
-void *operator new( size_t nSize, int nBlockUse, const char *pFileName, int nLine )
-{
-	set_osx_hooks(); 
-	void *pMem = g_pMemAlloc->Alloc(nSize, pFileName, nLine);
-	set_override_hooks(); 
-	return pMem;
-}
-
-void *operator new[] ( size_t nSize, int nBlockUse, const char *pFileName, int nLine )
-{
-	set_osx_hooks(); 
-	void *pMem = g_pMemAlloc->Alloc(nSize, pFileName, nLine);
-	set_override_hooks(); 
-	return pMem;
-}
-
-#endif // OSX
 
 int GetAllocationCallStack( void *mem, void **pCallStackOut, int iMaxEntriesOut )
 {

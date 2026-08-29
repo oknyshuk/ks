@@ -16,7 +16,6 @@
 #pragma once
 #endif
 
-#include <vgui/vgui.h>
 
 #include "viewport_panel_names.h"
 
@@ -41,9 +40,7 @@ public:
 	virtual void ShowPanel( bool state ) = 0; // activate VGUI Frame
 		
 	// VGUI functions:
-	virtual vgui::VPANEL GetVPanel( void ) = 0; // returns VGUI panel handle
 	virtual bool IsVisible() = 0;  // true if panel is visible
-	virtual void SetParent( vgui::VPANEL parent ) = 0;
 
 	virtual bool WantsBackgroundBlurred( void ) = 0;
 

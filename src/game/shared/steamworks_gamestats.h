@@ -4,7 +4,7 @@
 //
 //=============================================================================//
 
-#if !defined( STEAMWORKS_GAMESTATS_H ) && !defined( _GAMECONSOLE )
+#if !defined( STEAMWORKS_GAMESTATS_H )
 #define STEAMWORKS_GAMESTATS_H
 #ifdef _WIN32
 #pragma once
@@ -18,9 +18,7 @@
 #include "tier1/utlstring.h"
 #include "networkvar.h"
 
-#ifndef	 _GAMECONSOLE
 #include "steam/isteamgamestats.h"
-#endif
 
 // Container to hold all the KeyValue stats to send only if the convar "steamworks_immediate_upload" is set to 0.
 // Otherwise, the stats are uploaded as they are received.
@@ -47,7 +45,6 @@ class CSteamWorksGameStatsUploader : public CAutoGameSystemPerFrame, public CGam
 	DECLARE_CLASS_NOBASE( CSteamWorksGameStatsUploader )
 public:
 
-#ifndef	NO_STEAM	
 	CCallResult<CSteamWorksGameStatsUploader, GameStatsSessionIssued_t> m_CallbackSteamSessionInfoIssued;
 	void Steam_OnSteamSessionInfoIssued( GameStatsSessionIssued_t *pResult, bool bError );
 	virtual void OnSteamSessionIssued( GameStatsSessionIssued_t *pResult, bool bError ); // virtual for child classes to be notified
@@ -55,7 +52,6 @@ public:
 	CCallResult<CSteamWorksGameStatsUploader, GameStatsSessionClosed_t> m_CallbackSteamSessionInfoClosed;
 	void Steam_OnSteamSessionInfoClosed( GameStatsSessionClosed_t *pResult, bool bError );
 	virtual void OnSteamSessionClosed( GameStatsSessionClosed_t *pResult, bool bError ); // virtual for child classes to be notified
-#endif
 
 
 	// called after entities think

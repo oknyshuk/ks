@@ -11,22 +11,18 @@
 
 
 
-#if defined(_WIN32) && !defined(_X360)
+#if defined(_WIN32)
 #include "winlite.h"		// FILETIME
 #elif defined(OSX) || defined(CYGWIN)
 #include <time.h>                  
 #include <sys/time.h>                  
 #include <sys/resource.h>                  
 #include <netinet/in.h>
-#elif defined(LINUX)
+#else
 #include <time.h>                  
 #include <sys/sysinfo.h>          
 #include <asm/param.h> // for HZ
 #include <netinet/in.h>
-#elif defined(_X360)
-#elif defined(_PS3)
-#else
-#error "Includes for CPU usage calcs here"
 #endif
 
 #include "filesystem_engine.h"
@@ -61,8 +57,6 @@
 #include "sv_ipratelimit.h"
 #include "cl_steamauth.h"
 #include "fmtstr.h"
-#if defined( _X360 )
-#endif
 #include "mathlib/IceKey.H"
 #include "matchmaking/imatchframework.h"
 #include "tier2/tier2.h"
@@ -217,7 +211,7 @@ static void SvPasswordChangeCallback( IConVar *pConVar, const char *pOldValue, f
 static ConVar	sv_password( "sv_password", "", FCVAR_NOTIFY | FCVAR_PROTECTED | FCVAR_DONTRECORD | FCVAR_RELEASE, "Server password for entry into multiplayer games", SvPasswordChangeCallback );
 ConVar			sv_tags( "sv_tags", "", FCVAR_NOTIFY | FCVAR_RELEASE, "Server tags. Used to provide extra information to clients when they're browsing for servers. Separate tags with a comma.", SvTagsChangeCallback );
 ConVar			sv_visiblemaxplayers( "sv_visiblemaxplayers", "-1",  FCVAR_RELEASE, "Overrides the max players reported to prospective clients" );
-ConVar			sv_alternateticks( "sv_alternateticks", ( IsX360() ) ? "1" : "0", FCVAR_RELEASE, "If set, server only simulates entities on even numbered ticks.\n" );
+ConVar			sv_alternateticks( "sv_alternateticks", "0", FCVAR_RELEASE, "If set, server only simulates entities on even numbered ticks.\n" );
 ConVar			sv_allow_wait_command( "sv_allow_wait_command", "1", FCVAR_REPLICATED | FCVAR_RELEASE, "Allow or disallow the wait command on clients connected to this server." );
 ConVar			sv_allow_lobby_connect_only( "sv_allow_lobby_connect_only", "0",  FCVAR_RELEASE, "If set, players may only join this server from matchmaking lobby, may not connect directly." );
 static ConVar   sv_reservation_timeout( "sv_reservation_timeout", "45", FCVAR_RELEASE, "Time in seconds before lobby reservation expires.", true, 5.0f, true, 180.0f );
@@ -331,8 +325,6 @@ CBaseServer::CBaseServer() :
 	m_flTimescale = 1.0f;
 	m_nUserid = 0;
 	m_bIsDedicated = false;
-	m_bIsDedicatedForXbox = false;
-	m_bIsDedicatedForPS3 = false;
 	m_fCPUPercent = 0;
 	m_fLastCPUCheckTime = 0;
 	
@@ -371,8 +363,6 @@ bool CBaseServer::CheckChallengeNr( const ns_address &adr, int nChallengeValue )
 		return true;
 
 	// X360TBD: network
-	if ( IsX360() || IsDedicatedForXbox() )
-		return true;
 
 	for (int i=0 ; i<m_ServerQueryChallenges.Count() ; i++)
 	{
@@ -562,13 +552,6 @@ IClient *CBaseServer::ConnectClient ( const ns_address &adr, int protocol, int c
 
 	bool bIsLocalConnection = adr.IsLocalhost() || adr.IsLoopback();
 
-#ifndef NO_STEAM
-	if ( IsExclusiveToLobbyConnections() && !IsReserved() && !bIsLocalConnection )
-	{
-		RejectConnection( adr, "Server only accepting connections from game lobby %s %d.\n", sAdr.String(), challenge );
-		return NULL;
-	}
-#endif
 
 	// Listen server level background map is always a single 
 	//  player map, don't allow shenanigans or mayhem.
@@ -598,14 +581,6 @@ IClient *CBaseServer::ConnectClient ( const ns_address &adr, int protocol, int c
 	// if its a normal spectator client or a relay proxy
 	if ( !IsHLTV() && !IsReplay() )
 	{
-#ifndef NO_STEAM
-		// LAN servers restrict to class b IP addresses
-		if ( !CheckIPRestrictions( adr, authProtocol ) )
-		{
-			RejectConnection( adr, "#Valve_Reject_LAN_Game");
-			return NULL;
-		}
-#endif
 									    
 		if ( !CheckPassword( adr, password, name ) )
 		{
@@ -930,12 +905,6 @@ bool CBaseServer::ProcessConnectionlessPacket(netpacket_t * packet)
 
 
 		case A2S_GETCHALLENGE :  
-#if !defined(NO_STEAM)
-			// Drop packet if we don't yet have our Steam ID
-			// because we're still logging on
-			if ( !Steam3Server().BHasLogonResult() && !sv_lan.GetBool() )
-				break;
-#endif
 			ReplyChallenge( packet->from, msg );
 			break;
 		
@@ -1267,8 +1236,6 @@ bool CBaseServer::ProcessConnectionlessPacket(netpacket_t * packet)
 
 #if defined(_WIN32)
 						  buf.PutUnsignedChar( 'w' );
-#elif defined(OSX)
-						  buf.PutUnsignedChar( 'm' );
 #else // LINUX?
 						  buf.PutUnsignedChar( 'l' );
 #endif
@@ -1656,16 +1623,6 @@ void CBaseServer::ReplyChallenge( const ns_address &adr, bf_read &inmsg )
 	bool bWroteInfo = false;
 	uint64 ullSteamIDGS = 0ull;
 
-#if !defined( NO_STEAM )
-	ullSteamIDGS = Steam3Server().GetGSSteamID().ConvertToUint64();
-	if ( authprotocol == PROTOCOL_STEAM )
-	{
-		msg.WriteShort( 0 ); //  steam2 encryption key not there anymore
-		msg.WriteLongLong( ullSteamIDGS );
-		msg.WriteByte( Steam3Server().BSecure() );
-		bWroteInfo = true;
-	}
-#endif
 
 	if ( !bWroteInfo )
 	{
@@ -1961,53 +1918,50 @@ void CBaseServer::ReplyReservationRequest( const ns_address &adr, bf_read &msgIn
 	else
 	{
 		bool bOkay = true;
-		if ( !IsX360() && !IsDedicatedForXbox() )
+		int nChallengeNr = GetChallengeNr( adr );
+		if ( !CanAcceptChallengesFrom( adr ) )
 		{
-			int nChallengeNr = GetChallengeNr( adr );
-			if ( !CanAcceptChallengesFrom( adr ) )
+			DevMsg( "Reservation request from address %s, but challenges exclusive for %s\n",
+				ns_address_render( adr ).String(), m_adrReservationGraceStarted.ToString() );
+			bOkay = false;
+		}
+		else if ( !nChallengeNr )
+		{
+			DevMsg( "Reservation request from unknown address %s\n", ns_address_render( adr ).String() );
+			bOkay = false;
+		}
+		else
+		{
+			int payloadSize = msgIn.ReadLong();
+			if ( payloadSize <= 0 || payloadSize > sizeof( decrypted ) || ( payloadSize % 8 ) )
 			{
-				DevMsg( "Reservation request from address %s, but challenges exclusive for %s\n",
-					ns_address_render( adr ).String(), m_adrReservationGraceStarted.ToString() );
-				bOkay = false;
-			}
-			else if ( !nChallengeNr )
-			{
-				DevMsg( "Reservation request from unknown address %s\n", ns_address_render( adr ).String() );
+				DevMsg( "ReplyReservationRequest:  Reservation request with bogus payload size from %s [%d bytes]\n", ns_address_render( adr ).String(), payloadSize );
 				bOkay = false;
 			}
 			else
 			{
-				int payloadSize = msgIn.ReadLong();
-				if ( payloadSize <= 0 || payloadSize > sizeof( decrypted ) || ( payloadSize % 8 ) )
+				IceKey cipher(1); /* medium encryption level */
+				unsigned char ucEncryptionKey[8] = { 0 };
+				*( int * )&ucEncryptionKey[ 0 ] = LittleDWord( nChallengeNr ^ 0x5ef8ce12 );
+				*( int * )&ucEncryptionKey[ 4 ] = LittleDWord( nChallengeNr ^ 0xaa98e42c );
+
+				cipher.set( ucEncryptionKey );
+
+				msgIn.ReadBytes( decrypted, payloadSize );
+				// Try and decrypt it
+				DecryptBuffer( cipher, decrypted, payloadSize );
+
+				// Rewind and use decrypted payload
+				msgIn.StartReading( decrypted, payloadSize );
+
+				unsigned int nMagic = msgIn.ReadLong();
+				if ( nMagic == 0xfeedbeef )
 				{
-					DevMsg( "ReplyReservationRequest:  Reservation request with bogus payload size from %s [%d bytes]\n", ns_address_render( adr ).String(), payloadSize );
-					bOkay = false;
+					bOkay = true;
 				}
 				else
 				{
-					IceKey cipher(1); /* medium encryption level */
-					unsigned char ucEncryptionKey[8] = { 0 };
-					*( int * )&ucEncryptionKey[ 0 ] = LittleDWord( nChallengeNr ^ 0x5ef8ce12 );
-					*( int * )&ucEncryptionKey[ 4 ] = LittleDWord( nChallengeNr ^ 0xaa98e42c );
-
-					cipher.set( ucEncryptionKey );
-
-					msgIn.ReadBytes( decrypted, payloadSize );
-					// Try and decrypt it
-					DecryptBuffer( cipher, decrypted, payloadSize );
-
-					// Rewind and use decrypted payload
-					msgIn.StartReading( decrypted, payloadSize );
-
-					unsigned int nMagic = msgIn.ReadLong();
-					if ( nMagic == 0xfeedbeef )
-					{
-						bOkay = true;
-					}
-					else
-					{
-						Msg( "ReplyReservationRequest:  Reservation request with bogus payload data from %s [%d bytes]\n", ns_address_render( adr ).String(), payloadSize );
-					}
+					Msg( "ReplyReservationRequest:  Reservation request with bogus payload data from %s [%d bytes]\n", ns_address_render( adr ).String(), payloadSize );
 				}
 			}
 		}
@@ -2265,13 +2219,9 @@ const char *CBaseServer::GetName( void ) const
 
 bool UseCDKeyAuth()
 {
-#ifdef NO_STEAM
 	return true;
-#endif
 
 	// if we are physically on a 360 (360 listen server) or we are on a PC dedicated server for 360 clients, don't require Steam auth
-	if ( IsX360() || NET_IsDedicatedForXbox() )
-		return true;
 
 	// for single player games that don't use Steam features, don't require Steam auth
 	if ( !serverGameDLL->ShouldPreferSteamAuth() && Host_IsSinglePlayerGame() )
@@ -2411,100 +2361,9 @@ void CBaseServer::CalculateCPUUsage( void )
 			memcpy(&lastTotalTime,&totalTime,sizeof(__int64));
 			lastAvg=m_fLastCPUCheckTime;
 		}
-#elif defined ( _PS3 )
-		// FAKE
-		m_fCPUPercent = 0.1;
-#elif defined ( LINUX )
-		// FAKE
-		m_fCPUPercent = 0.1;
-#elif defined ( POSIX )
-	/*
-		// linux CPU % code here :)
-		static int32 lastrunticks,lastcputicks;
-		static float lastAvg=0;
-
-		struct sysinfo infos; 
-		int32 dummy;
-		int length;
-		char statFile[PATH_MAX];
-		int32 now = time(NULL);
-		int32 ctime,stime,start_time;
-		FILE *pFile;
-		int32 runticks,cputicks;
-
-		snprintf(statFile,PATH_MAX,"/proc/%i/stat",getpid());
-		
-		// we can't use FS_Open() cause its outside our dir
-		pFile = fopen(statFile, "r");
-		if ( pFile == NULL )
-        	{
-			goto end;
-        	}
-	        sysinfo(&infos);
-
-		fscanf(pFile,
-			"%d %s %c %d %d %d %d %d %lu %lu \
-			%lu %lu %lu %ld %ld %ld %ld %ld %ld %lu \
-			%lu %ld %lu %lu %lu %lu %lu %lu %lu %lu \
-			%lu %lu %lu %lu %lu %lu",
-			&dummy,statFile,&dummy,&dummy,&dummy,&dummy,
-			&dummy,&dummy,&dummy,&dummy, // end of first line
-			&dummy,&dummy,&dummy,&ctime,&stime,
-			&dummy,&dummy,&dummy,&dummy,&dummy, // end of second
-			&start_time,&dummy,&dummy,&dummy,&dummy,
-			&dummy,&dummy,&dummy,&dummy,&dummy, // end of third
-			&dummy,&dummy,&dummy,&dummy,&dummy,&dummy);
-		fclose(pFile);					
-
-		runticks = infos.uptime*HZ -start_time; // time the process has been running
-		cputicks = stime+ctime;
-			
-		if(lastcputicks==0)
-		{
-			lastcputicks=cputicks;
-		}
-
-		if(lastrunticks==0)
-		{
-			lastrunticks=runticks;
-		}
-		else
-		{
-			m_fCPUPercent = (float)(cputicks-lastcputicks)/(float)(runticks-lastrunticks);
-		}	
-
-		*/
-		//ConMsg("%f %li %li %li %li\n",cpuPercent,
-		//	cputicks,(cputicks-lastcputicks),
-		//	(runticks-lastrunticks),runticks);
-
-		static struct rusage s_lastUsage;
-		static float lastAvg = 0;
-		struct rusage currentUsage;
-
-		if ( getrusage( RUSAGE_SELF, &currentUsage ) == 0 )
-		{
-			double flTimeDiff = (double)( currentUsage.ru_utime.tv_sec - s_lastUsage.ru_utime.tv_sec ) + (double)(( currentUsage.ru_utime.tv_usec - s_lastUsage.ru_utime.tv_usec )/1000000); 
-			m_fCPUPercent = flTimeDiff/(m_fLastCPUCheckTime - lastAvg);
-
-			// now save this away for next time
-			if( m_fLastCPUCheckTime > lastAvg+5) 
-			{
-				s_lastUsage = currentUsage;
-				lastAvg = m_fLastCPUCheckTime;
-			}
-		}
-		
-		// limit checking :)
-		if( m_fCPUPercent > 0.999 )
-			m_fCPUPercent = 0.999;
-		if( m_fCPUPercent < 0 )
-			m_fCPUPercent = 0;
-		
-end:
-
 #else
-#error
+		// FAKE
+		m_fCPUPercent = 0.1;
 #endif
 		m_fLastCPUCheckTime=Sys_FloatTime(); 
 	}
@@ -2704,10 +2563,6 @@ bool CBaseServer::CheckChallengeType( CBaseClient * client, int nNewUserID, cons
 		return false;
 	}
 
-	if ( IsDedicatedForXbox() )
-	{
-		return true;
-	}
 
 	if ( nAuthProtocol == PROTOCOL_STEAM )
 	{
@@ -2767,8 +2622,6 @@ bool CBaseServer::CheckIPRestrictions( const ns_address &adr, int nAuthProtocol 
 		return true;
 
 	// X360TBD: network
-	if ( IsX360() )
-		return true;
 
 	// allow other users if they're on the same ip range
 	if ( Steam3Server().BLanOnly() )
@@ -2959,8 +2812,6 @@ void CBaseServer::Init( bool bIsDedicated )
 	m_nSpawnCount = 0;
 	m_nUserid = 1;
 	m_bIsDedicated = bIsDedicated;
-	m_bIsDedicatedForXbox = bIsDedicated && ( CommandLine()->FindParm( "-xlsp" ) != 0 );
-	m_bIsDedicatedForPS3 = bIsDedicated && ( CommandLine()->FindParm( "-ps3ds" ) != 0 );
 
 	m_Socket = NS_SERVER;	
 	
@@ -3226,7 +3077,6 @@ Read's packets from clients and executes messages as appropriate.
 
 void UpdateParentProcess( void )
 {
-#ifdef _LINUX
 	static double s_flNextParentProcessUpdate = -1;
 	float flNow = Sys_FloatTime();
 	if ( flNow >= s_flNextParentProcessUpdate )
@@ -3236,7 +3086,6 @@ void UpdateParentProcess( void )
 		sprintf( sbuf, "status map=%s;players=%d", sv.GetMapName(), sv.GetNumClients() );
 		SendStringToParentProcess( sbuf );
 	}
-#endif
 
 }
 
@@ -3502,18 +3351,6 @@ void CBaseServer::Shutdown( void )
 	// Let drop messages go out
 	Sys_Sleep( 100 );
 
-#if !defined( _X360 ) && !defined( NO_STEAM )
-	if ( !IsHLTV() )
-	{
-		if ( m_flFlagForSteamIDReuseAfterShutdownTime && ( Plat_FloatTime() - m_flFlagForSteamIDReuseAfterShutdownTime < 1.0 ) )
-			;// Server was flagged for shutdown and SteamID reuse, don't LogOff
-		else
-			Steam3Server().DeactivateAndLogoff();
-
-		// Reset the shutdown flag
-		m_flFlagForSteamIDReuseAfterShutdownTime = 0;
-	}
-#endif
 
 	// Let drop messages go out
 	Sys_Sleep( 100 );
@@ -4293,13 +4130,8 @@ void CBaseServer::UpdateGameType()
 	}
 
 	// Is this server "secure"?
-#if !defined( NO_STEAM ) && !defined( _GAMECONSOLE )
-	{
-		AddTagString( m_GameType, Steam3Server().BSecure() ? "secure" : "insecure" );
-	}
-#endif
 
-// 	if ( IsDedicated() &&  serverGameDLL->IsValveDS() && !IsX360() && !IsDedicatedForXbox() &&
+// 	if ( IsDedicated() &&  serverGameDLL->IsValveDS() && !IsX360() && !false &&
 // 		 !bHaveAnyClients &&
 // 		 !IsReserved() && !( GetNumClients() - GetNumFakeClients() ) &&
 // 		 !sv_steamgroup_exclusive.GetBool() )
@@ -4333,7 +4165,7 @@ void CBaseServer::UpdateGameData()
 
 	// Add search key
 	CUtlString utlKey;
-	if ( serverGameDLL && IsDedicated() && !IsX360() && !IsDedicatedForXbox() &&
+	if ( serverGameDLL && IsDedicated() &&
 	 		( GetNumHumanPlayers() <= 0 ) &&
 	 		!IsReserved() && !( GetNumClients() - GetNumFakeClients() ) &&
 	 		!sv_steamgroup_exclusive.GetBool() && !GetPassword() )
@@ -4412,20 +4244,7 @@ bool CBaseServer::IsPlayingSoloAgainstBots() const
 
 bool CBaseServer::IsExclusiveToLobbyConnections() const
 {
-#ifndef NO_STEAM
-	if ( !IsDedicated() )
-		return false;
-
-	// We are switching CStrike to always have lobbies associated with servers for community matchmaking
-	if ( !sv_allow_lobby_connect_only.GetBool() )
-		return false;
-
-	if ( sv_lan.GetBool() )
-		return false;
-	return true;
-#else
 	return false;
-#endif
 }
 
 // CON_COMMAND( sv_unreserve, "Clears any lobby reservation for this server\n" )

@@ -1,4 +1,4 @@
-//===== Copyright © 1996-2009, Valve Corporation, All rights reserved. ======//
+//===== Copyright ï¿½ 1996-2009, Valve Corporation, All rights reserved. ======//
 //
 // Purpose: 
 //
@@ -47,10 +47,6 @@ class CMatchFramework;
 
 #include "matchsystem.h"
 #include "playermanager.h"
-#include "servermanager.h"
-#include "searchmanager.h"
-#include "datacenter.h"
-#include "mm_dlc.h"
 
 enum MatchFrameworkInviteFlags_t
 {

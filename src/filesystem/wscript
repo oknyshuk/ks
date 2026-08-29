@@ -22,7 +22,6 @@ def build(bld):
         "filesystem_stdio.cpp",
         "../public/kevvaluescompiler.cpp",
         "../public/zip_utils.cpp",
-        "QueuedLoader.cpp",
     ]
 
     if bld.env.DEST_OS != "win32":

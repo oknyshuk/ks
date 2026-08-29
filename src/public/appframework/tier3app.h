@@ -21,7 +21,6 @@
 
 #include "appframework/tier2app.h"
 #include "tier3/tier3.h"
-#include "vgui_controls/Controls.h"
 
 
 //-----------------------------------------------------------------------------
@@ -74,46 +73,6 @@ public:
 	{
 		DisconnectTier3Libraries();
 		BaseClass::PostShutdown();
-	}
-};
-
-
-//-----------------------------------------------------------------------------
-// The application object for apps that use vgui
-//-----------------------------------------------------------------------------
-class CVguiSteamApp : public CTier3SteamApp
-{
-	typedef CTier3SteamApp BaseClass;
-
-public:
-	// Methods of IApplication
-	virtual bool PreInit()
-	{
-		if ( !BaseClass::PreInit() )
-			return false;
-
-		CreateInterfaceFn factory = GetFactory();
-		return vgui::VGui_InitInterfacesList( "CVguiSteamApp", &factory, 1 );
-	}
-};
-
-
-//-----------------------------------------------------------------------------
-// The application object for apps that use vgui
-//-----------------------------------------------------------------------------
-class CVguiDmSteamApp : public CTier3DmSteamApp
-{
-	typedef CTier3DmSteamApp BaseClass;
-
-public:
-	// Methods of IApplication
-	virtual bool PreInit()
-	{
-		if ( !BaseClass::PreInit() )
-			return false;
-
-		CreateInterfaceFn factory = GetFactory();
-		return vgui::VGui_InitInterfacesList( "CVguiSteamApp", &factory, 1 );
 	}
 };
 

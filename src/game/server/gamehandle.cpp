@@ -8,7 +8,7 @@
 #if defined(_WIN32)
 #include "winlite.h"
 extern HMODULE win32DLLHandle;
-#elif defined(POSIX)
+#else
 #include <stdio.h>
 #include "tier0/dbg.h"
 #endif
@@ -20,11 +20,9 @@ void *GetGameModuleHandle()
 {
 #if defined(_WIN32)
 	return (void *)win32DLLHandle;
-#elif defined(POSIX)
+#else
 	Assert(0);
 	return NULL; // NOT implemented
-#else
-#error "GetGameModuleHandle() needs to be implemented"
 #endif
 }
 

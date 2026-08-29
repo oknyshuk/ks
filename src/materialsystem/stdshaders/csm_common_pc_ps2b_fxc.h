@@ -72,11 +72,7 @@ int CSMRangeTestNonExpanded( float2 vCoords )
 
 float4 CSMTransformLightToTexture( float4 pos, float4x4 mat )
 {
-#if defined(_PS3)
-	return mul( mat, pos );
-#else
 	return mul( pos, mat );
-#endif
 }
 
 float CSMTransformLightToTexture_Element( float4 pos, float4 matRow )

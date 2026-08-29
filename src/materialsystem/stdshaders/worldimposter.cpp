@@ -29,7 +29,7 @@ BEGIN_VS_SHADER( worldimposter, "Help for worldimposter" )
 
 	SHADER_INIT
 	{
-		LoadTexture( BASETEXTURE, IsX360() ? 0 : TEXTUREFLAGS_SRGB );
+		LoadTexture( BASETEXTURE, false ? 0 : TEXTUREFLAGS_SRGB );
 		LoadTexture( ALBEDO, TEXTUREFLAGS_SRGB );
 	}
 
@@ -135,10 +135,6 @@ BEGIN_VS_SHADER( worldimposter, "Help for worldimposter" )
 
 //				pShaderAPI->SetPixelShaderConstant( PSREG_FLASHLIGHT_SCREEN_SCALE, vScreenScale, 1 );
 
-				if ( IsX360() )
-				{
-					pShaderAPI->SetBooleanPixelShaderConstant( 0, &flashlightState.m_nShadowQuality, 1 );
-				}
 			}
 
 			DECLARE_DYNAMIC_VERTEX_SHADER( worldimposter_vs20 );
@@ -161,7 +157,7 @@ BEGIN_VS_SHADER( worldimposter, "Help for worldimposter" )
 				SET_DYNAMIC_PIXEL_SHADER_COMBO( FLASHLIGHTSHADOWS, bFlashlightShadows );
 				SET_DYNAMIC_PIXEL_SHADER( worldimposter_ps20 );
 			}
-			BindTexture( SHADER_SAMPLER0, IsX360() ? TEXTURE_BINDFLAGS_NONE : TEXTURE_BINDFLAGS_SRGBREAD, BASETEXTURE, -1 );
+			BindTexture( SHADER_SAMPLER0, false ? TEXTURE_BINDFLAGS_NONE : TEXTURE_BINDFLAGS_SRGBREAD, BASETEXTURE, -1 );
 			BindTexture( SHADER_SAMPLER1, TEXTURE_BINDFLAGS_SRGBREAD, ALBEDO, -1 );
 		}
 		Draw();

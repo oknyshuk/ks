@@ -141,7 +141,7 @@ BEGIN_VS_SHADER( UnlitTwoTexture_DX9, "Help for UnlitTwoTexture_DX9" )
 		}
 
 		// Skip flashlight pass for unlit stuff
-		bool bNewFlashlightPath = IsX360() || IsPS3();
+		bool bNewFlashlightPath = false || false;
 		if ( bDrawStandardPass && ( pShaderShadow == NULL ) && ( pShaderAPI != NULL ) &&
 			!bNewFlashlightPath && ( pShaderAPI->InFlashlightMode() ) ) // not snapshotting && flashlight pass)
 		{
@@ -259,7 +259,7 @@ BEGIN_VS_SHADER( UnlitTwoTexture_DX9, "Help for UnlitTwoTexture_DX9" )
 				int numBones = pShaderAPI->GetCurrentNumBones();
 
 				bool bWorldNormal = pShaderAPI->GetIntRenderingParameter( INT_RENDERPARM_ENABLE_FIXED_LIGHTING ) == ENABLE_FIXED_LIGHTING_OUTPUTNORMAL_AND_DEPTH;
-				if ( IsPC() && bWorldNormal )
+				if ( bWorldNormal )
 				{
 					float vEyeDir[4];
 					pShaderAPI->GetWorldSpaceCameraDirection( vEyeDir );

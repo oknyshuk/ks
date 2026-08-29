@@ -72,12 +72,7 @@ public:
     HRESULT __stdcall GetDevice( IDirect3DDevice8** ppDevice )
 	{
 		FPRINTF( s_FileHandle, "IDirect3DTexture8::GetDevice\n" );
-#if 0
-		*ppDevice = m_pDevice;
-		return D3D_OK;		
-#else
 		return m_pTexture->GetDevice( ppDevice );
-#endif
 	}
 
     HRESULT __stdcall SetPrivateData( REFGUID refguid,CONST void* pData,DWORD SizeOfData,DWORD Flags)
@@ -326,20 +321,7 @@ public:
     HRESULT __stdcall CreateTexture(UINT Width,UINT Height,UINT Levels,DWORD Usage,D3DFORMAT Format,D3DPOOL Pool,IDirect3DTexture8** ppTexture)
 	{
 		FPRINTF( s_FileHandle, "CreateTexture\n" );
-#if 0
-		HRESULT ret = m_pD3DDevice->CreateTexture( Width, Height, Levels, Usage, Format, Pool, ppTexture );
-		if( ret == D3D_OK )
-		{
-			*ppTexture = new CStubD3DTexture( *ppTexture, this );
-			return ret;
-		}
-		else
-		{
-			return ret;
-		}
-#else
 		return m_pD3DDevice->CreateTexture( Width, Height, Levels, Usage, Format, Pool, ppTexture );
-#endif
 	}
 
     HRESULT __stdcall CreateVolumeTexture(UINT Width,UINT Height,UINT Depth,UINT Levels,DWORD Usage,D3DFORMAT Format,D3DPOOL Pool,IDirect3DVolumeTexture8** ppVolumeTexture)
@@ -603,11 +585,7 @@ public:
     HRESULT __stdcall ValidateDevice(DWORD* pNumPasses)
 	{
 		FPRINTF( s_FileHandle, "ValidateDevice\n" );
-#if 0
-		return m_pD3DDevice->ValidateDevice( pNumPasses );
-#else
 		return D3D_OK;
-#endif
 	}
 
     HRESULT __stdcall GetInfo(DWORD DevInfoID,void* pDevInfoStruct,DWORD DevInfoStructSize)

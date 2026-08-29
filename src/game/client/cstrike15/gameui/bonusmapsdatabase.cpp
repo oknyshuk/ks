@@ -44,16 +44,10 @@ bool WriteBonusMapSavedData( KeyValues *data )
 
 	char	szFilename[_MAX_PATH];
 
-	if ( IsGameConsole() )
-		Q_snprintf( szFilename, sizeof( szFilename ), "cfg:/bonus_maps_data.bmd" );
-	else
-		Q_snprintf( szFilename, sizeof( szFilename ), "save/bonus_maps_data.bmd" );
+Q_snprintf( szFilename, sizeof( szFilename ), "save/bonus_maps_data.bmd" );
 
 	bool bWriteSuccess = g_pFullFileSystem->WriteFile( szFilename, MOD_DIR, buf );
 
-#ifdef _X360
-	xboxsystem->FinishContainerWrites(XBX_GetPrimaryUserId());
-#endif
 
 	return bWriteSuccess;
 }
@@ -89,7 +83,7 @@ void GetBooleanStatus( KeyValues *pBonusFilesKey, BonusMapDescription_t &map )
 bool SetBooleanStatus( KeyValues *pBonusFilesKey, const char *pchName, const char *pchFileName, const char *pchMapName, bool bValue )
 {
 	// Don't create entries for files that don't exist
-	if ( !IsGameConsole() && !g_pFullFileSystem->FileExists( pchFileName, "MOD" ) )
+	if ( !g_pFullFileSystem->FileExists( pchFileName, "MOD" ) )
 	{
 		DevMsg( "Failed to set boolean status for file %s.", pchFileName );
 		return false;
@@ -188,7 +182,7 @@ float GetChallengeBests( KeyValues *pBonusFilesKey, BonusMapDescription_t &chall
 bool UpdateChallengeBest( KeyValues *pBonusFilesKey, const BonusMapChallenge_t &challenge )
 {
 	// Don't create entries for files that don't exist
-	if ( !IsGameConsole() && !g_pFullFileSystem->FileExists( challenge.szFileName, "MOD" ) )
+	if ( !g_pFullFileSystem->FileExists( challenge.szFileName, "MOD" ) )
 	{
 		DevMsg( "Failed to set challenge best for file %s.", challenge.szFileName );
 		return false;
@@ -332,19 +326,10 @@ bool CBonusMapsDatabase::ReadBonusMapSaveData( void )
 		return false;
 	}
 
-#ifdef _GAMECONSOLE
-#pragma message( __FILE__ "(" __LINE__AS_STRING ") : warning custom: Slamming controller for xbox storage id to 0" )
-	// Nothing to read
-	if ( XBX_GetStorageDeviceId( 0 ) == XBX_INVALID_STORAGE_ID || XBX_GetStorageDeviceId( 0 ) == XBX_STORAGE_DECLINED )
-		return false;
-#endif
 
 	char	szFilename[_MAX_PATH];
 
-	if ( IsGameConsole() )
-		Q_snprintf( szFilename, sizeof( szFilename ), "cfg:/bonus_maps_data.bmd" );
-	else
-		Q_snprintf( szFilename, sizeof( szFilename ), "save/bonus_maps_data.bmd" );
+Q_snprintf( szFilename, sizeof( szFilename ), "save/bonus_maps_data.bmd" );
 
 	m_pBonusMapSavedData->LoadFromFile( g_pFullFileSystem, szFilename, NULL );
 
@@ -709,7 +694,7 @@ void CBonusMapsDatabase::AddBonus( const char *pCurrentPath, const char *pDirFil
 	Q_snprintf( szFileName, sizeof( szFileName ), "%s%s", pCurrentPath, pDirFileName );
 
 	// Only load bonus maps from the current mod's maps dir
-	if( !IsGameConsole() && !g_pFullFileSystem->FileExists( szFileName, "MOD" ) )
+	if( !g_pFullFileSystem->FileExists( szFileName, "MOD" ) )
 		return;
 
 	ParseBonusMapData( szFileName, pDirFileName, bIsFolder );

@@ -36,19 +36,19 @@ BEGIN_VS_SHADER_FLAGS( MotionBlur_dx9, "Motion Blur", SHADER_NOT_EDITABLE )
 	{
 		if ( params[BASETEXTURE]->IsDefined() )
 		{
-			LoadTexture( BASETEXTURE, IsOSX() && g_pHardwareConfig->CanDoSRGBReadFromRTs() ? TEXTUREFLAGS_SRGB : 0 );
+			LoadTexture( BASETEXTURE, false && g_pHardwareConfig->CanDoSRGBReadFromRTs() ? TEXTUREFLAGS_SRGB : 0 );
 		}
 	}
 
 	SHADER_DRAW
 	{
-		bool bForceSRGBReadsAndWrites = IsOSXOpenGL() && g_pHardwareConfig->CanDoSRGBReadFromRTs();
+		bool bForceSRGBReadsAndWrites = false && g_pHardwareConfig->CanDoSRGBReadFromRTs();
 		SHADOW_STATE
 		{
 			pShaderShadow->VertexShaderVertexFormat( VERTEX_POSITION, 1, 0, 0 );
 
 			// On OSX OpenGL, we must do sRGB reads and writes since these render targets are tagged as such
-			bool bForceSRGBReadsAndWrites = IsOSX() && g_pHardwareConfig->CanDoSRGBReadFromRTs();
+			bool bForceSRGBReadsAndWrites = false && g_pHardwareConfig->CanDoSRGBReadFromRTs();
 			
 			// NOTE: sRGB is disabled because of the NV8800 brokenness
 			pShaderShadow->EnableTexture( SHADER_SAMPLER0, true );

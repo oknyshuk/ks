@@ -225,7 +225,7 @@ int CGameServer::PrecacheModel( char const *name, int flags, model_t *model /*=N
 	}
 
 	bool bLoadNow;
-	bLoadNow = ( !slot->GetModel() && ( ( flags & RES_PRELOAD ) || IsGameConsole() ) );
+	bLoadNow = ( !slot->GetModel() && ( ( flags & RES_PRELOAD ) ) );
 	if ( CommandLine()->FindParm( "-nopreload" ) ||	CommandLine()->FindParm( "-nopreloadmodels" ))
 	{
 		bLoadNow = false;

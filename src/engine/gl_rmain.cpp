@@ -39,9 +39,7 @@
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
-#ifndef _X360
 extern ConVar r_waterforceexpensive;
-#endif
 
 ConVar r_aspectratio( "r_aspectratio", "0" );
 ConVar r_dynamiclighting( "r_dynamiclighting", "1", FCVAR_CHEAT );
@@ -251,16 +249,7 @@ public:
 	void ViewDrawFade( byte *color, IMaterial* pMaterial, bool mapFullTextureToScreen = true );
 
 	IWorldRenderList * CreateWorldList();
-#if defined(_PS3)
-	IWorldRenderList * CreateWorldList_PS3( int viewID );
-	void BuildWorldLists_PS3_Epilogue( IWorldRenderList *pList, WorldListInfo_t* pInfo, bool bShadowDepth );
-	int GetDrawFlags( void );
-	int GetBuildViewID( void );
-	bool IsSPUBuildWRJobsOn( void );
-	void CacheFrustumData( Frustum_t *pFrustum, Frustum_t *pAreaFrustum, void *pRenderAreaBits, int numArea, bool bViewerInSolidSpace );
-#else
 	void BuildWorldLists_Epilogue( IWorldRenderList *pList, WorldListInfo_t* pInfo, bool bShadowDepth );
-#endif
 
 	void BuildWorldLists( IWorldRenderList *pList, WorldListInfo_t* pInfo, int iForceViewLeaf, const VisOverrideData_t* pVisData, bool bShadowDepth, float *pWaterReflectionHeight );
 	void DrawWorldLists( IMatRenderContext *pRenderContext, IWorldRenderList *pList, unsigned long flags, float waterZAdjust );
@@ -399,7 +388,6 @@ void CRender::FrameBegin( void )
 	g_pStudioRender->BeginFrame();
 }
 
-#ifndef _CERT
 
 static void PrintRenderedFaceInfoCallback( int nTopN, IStudioRender::FacesRenderedInfo_t *pFaces, int nTotalFaces )
 {
@@ -424,7 +412,6 @@ static void PrintRenderedFaceInfoCallback( int nTopN, IStudioRender::FacesRender
 	}
 }
 
-#endif // !_CERT
 
 //-----------------------------------------------------------------------------
 // Called when the engine has finished rendering
@@ -444,9 +431,7 @@ void CRender::FrameEnd( void )
 
 	g_pStudioRender->EndFrame();
 
-#ifndef _CERT
 	g_pStudioRender->GatherRenderedFaceInfo( PrintRenderedFaceInfoCallback );
-#endif // !_CERT
 
 	g_LightmapTransformList.RemoveAll();
 }
@@ -618,7 +603,6 @@ void ComputeWorldToScreenMatrix( VMatrix *pWorldToScreen, const VMatrix &worldTo
 //-----------------------------------------------------------------------------
 void CRender::Push3DView( IMatRenderContext *pRenderContext, const CViewSetup &view, int nFlags, ITexture* pRenderTarget, Frustum frustumPlanes, ITexture* pDepthTexture )
 {
-	Assert( !IsX360() || (pDepthTexture == NULL) ); //Don't render to a depth texture on the 360. Instead, render using a normal depth buffer and use IDirect3DDevice9::Resolve()
 
 	int i = m_ViewStack.Push( );
 	m_ViewStack[i].m_View = view;
@@ -1187,12 +1171,6 @@ IWorldRenderList * CRender::CreateWorldList()
 	return AllocWorldRenderList();
 }
 
-#if defined(_PS3)
-IWorldRenderList * CRender::CreateWorldList_PS3( int viewID )
-{
-	return AllocWorldRenderList_PS3( viewID );
-}
-#endif
 
 
 // JasonM TODO: optimize in the case of shadow depth mapping (i.e. don't update lightmaps)
@@ -1218,14 +1196,6 @@ void CRender::BuildWorldLists( IWorldRenderList *pList, WorldListInfo_t* pInfo, 
 	Assert( m_iLightmapUpdateDepth > 0 || g_LightmapUpdateList.Count() == 0 );
 }
 
-#if defined(_PS3)
-void CRender::BuildWorldLists_PS3_Epilogue( IWorldRenderList *pList, WorldListInfo_t* pInfo, bool bShadowDepth )
-{	
-	Assert( pList );
-
-	R_BuildWorldLists_PS3_Epilogue( pList, pInfo, bShadowDepth );
-}
-#else
 void CRender::BuildWorldLists_Epilogue( IWorldRenderList *pList, WorldListInfo_t* pInfo, bool bShadowDepth )
 {	
 	Assert( pList );
@@ -1245,7 +1215,6 @@ void CRender::BuildWorldLists_Epilogue( IWorldRenderList *pList, WorldListInfo_t
 
 	Assert( m_iLightmapUpdateDepth > 0 || g_LightmapUpdateList.Count() == 0 );
 }
-#endif
 
 void CRender::DrawWorldLists( IMatRenderContext *pRenderContext, IWorldRenderList *pList, unsigned long flags, float flWaterZAdjust )
 {

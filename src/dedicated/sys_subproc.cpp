@@ -6,7 +6,6 @@
 //===========================================================================//
 
 
-#ifdef _LINUX
 
 // linux has a multi-processing forked server mode.
 #include <stdio.h>
@@ -842,4 +841,3 @@ void CServerInstance::HandleSocketInput( void )
 
 
 
-#endif //linux

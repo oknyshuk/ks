@@ -5,9 +5,6 @@
 // $NoKeywords: $
 //===========================================================================//
 
-#if !defined( _GAMECONSOLE ) && !defined( _OSX ) & !defined (LINUX)
-#include <windows.h>
-#endif
 #include "cbase.h"
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -15,14 +12,8 @@
 // dgoodenough - io.h and direct.h don't exist on PS3
 // PS3_BUILDFIX
 // @wge Fix for OSX too.
-#if !defined( _PS3 ) && !defined( _OSX ) && !defined (LINUX)
-#include <io.h>
-#endif
 #include <tier0/dbg.h>
 // @wge Fix for OSX too.
-#if !defined( _PS3 ) && !defined( _OSX ) && !defined (LINUX)
-#include <direct.h>
-#endif
 
 #ifdef SendMessage
 #undef SendMessage
@@ -36,7 +27,6 @@
 // interface to engine
 #include "engineinterface.h"
 
-#include "uisystemmoduleloader.h"
 #include "bitmap/tgaloader.h"
 
 #include "modinfo.h"
@@ -121,12 +111,6 @@ inline UI_BASEMOD_PANEL_CLASS & ConstructUiBaseModPanelClass() { return *BasePan
 
 // dgoodenough - select correct stub header based on current console
 // PS3_BUILDFIX
-#if defined( _PS3 )
-#include "ps3/ps3_win32stubs.h"
-#include <cell/sysmodule.h>
-#endif
-#if defined( _X360 )
-#endif
 
 #include "tier0/dbg.h"
 #include "engine/IEngineSound.h"
@@ -140,11 +124,6 @@ IEngineUI *engineuifuncs = NULL;
 // protection changed like this one
 // PS3_BUILDFIX
 // FIXME we will have to put in something for Playstation Home.
-#if defined( _X360 )
-IXOnline  *xonline = NULL;			// 360 only
-#elif defined( _PS3 )
-IPS3SaveRestoreToUI *ps3saveuiapi = NULL;
-#endif
 IAchievementMgr *achievementmgr = NULL;
 
 class CGameUI;
@@ -231,15 +210,9 @@ void CGameUI::Initialize( CreateInterfaceFn factory )
 #if defined( BINK_VIDEO )
 	bik = (IBik*)factory( BIK_INTERFACE_VERSION, NULL );
 #endif
-#ifdef _PS3
-	ps3saveuiapi = (IPS3SaveRestoreToUI*)factory( IPS3SAVEUIAPI_VERSION_STRING, NULL );
-	cellSysmoduleLoadModule( CELL_SYSMODULE_SYSUTIL_USERINFO );
-#endif
 
-#ifndef _GAMECONSOLE
 	SteamAPI_InitSafe();
 	steamapicontext->Init();
-#endif
 
 	CGameUIConVarRef var( "gameui_xbox" );
 	m_bIsConsoleUI = var.IsValid() && var.GetBool();
@@ -258,18 +231,12 @@ void CGameUI::Initialize( CreateInterfaceFn factory )
 	gameuifuncs = (IGameUIFuncs *)factory( VENGINE_GAMEUIFUNCS_VERSION, NULL );
 // dgoodenough - xonline only exists on the 360.
 // PS3_BUILDFIX
-#ifdef _X360
-	xonline = (IXOnline *)factory( XONLINE_INTERFACE_VERSION, NULL );
-#endif
 #ifdef SWARM_DLL
 	g_pMatchExtSwarm = ( IMatchExtSwarm * ) factory( IMATCHEXT_SWARM_INTERFACE, NULL );
 #endif
 	bFailed = !gameuifuncs || !engineuifuncs ||
 // dgoodenough - xonline only exists on the 360.
 // PS3_BUILDFIX
-#ifdef _X360
-		!xonline ||
-#endif
 #ifdef SWARM_DLL
 		!g_pMatchExtSwarm ||
 #endif
@@ -299,18 +266,6 @@ void CGameUI::Initialize( CreateInterfaceFn factory )
 
 void CGameUI::PostInit()
 {
-	if ( IsGameConsole() )
-	{
-		enginesound->PrecacheSound( "UI/buttonrollover.wav", true, true );
-		enginesound->PrecacheSound( "UI/buttonclick.wav", true, true );
-		enginesound->PrecacheSound( "UI/buttonclickrelease.wav", true, true );
-		enginesound->PrecacheSound( "player/suit_denydevice.wav", true, true );
-
-		enginesound->PrecacheSound( "UI/menu_accept.wav", true, true );
-		enginesound->PrecacheSound( "UI/menu_focus.wav", true, true );
-		enginesound->PrecacheSound( "UI/menu_invalid.wav", true, true );
-		enginesound->PrecacheSound( "UI/menu_back.wav", true, true );
-	}
 
 #ifdef SWARM_DLL
 	// to know once client dlls have been loaded
@@ -345,9 +300,6 @@ void CGameUI::PlayGameStartupSound()
 	// L4D not using this path, L4D UI now handling with background menu movies   	
 	return;
 #endif
-
-	if ( IsGameConsole() )
-		return;
 
 	if ( CommandLine()->FindParm( "-nostartupsound" ) )
 		return;
@@ -394,13 +346,7 @@ void CGameUI::PlayGameStartupSound()
 // PS3_BUILDFIX
 // FIXME - we need to find some sort of entropy here and select based on that.
 // @wge Fix for OSX too.
-#if defined( _PS3 ) || defined( _OSX ) || defined (LINUX)
 		int index = 0;
-#else
-		SYSTEMTIME SystemTime;
-		GetSystemTime( &SystemTime );
-		int index = SystemTime.wMilliseconds % fileNames.Count();
-#endif
 		if ( fileNames.IsValidIndex( index ) && fileNames[index] )
 		{
 			char found[ 512 ];
@@ -424,20 +370,17 @@ void CGameUI::Start()
 	if ( !FindPlatformDirectory( m_szPlatformDir, sizeof( m_szPlatformDir ) ) )
 		return;
 
-	if ( IsPC() )
-	{
-		// setup config file directory
-		char szConfigDir[512];
-		Q_strncpy( szConfigDir, m_szPlatformDir, sizeof( szConfigDir ) );
-		Q_strncat( szConfigDir, "config", sizeof( szConfigDir ), COPY_ALL_CHARACTERS );
+	// setup config file directory
+	char szConfigDir[512];
+	Q_strncpy( szConfigDir, m_szPlatformDir, sizeof( szConfigDir ) );
+	Q_strncat( szConfigDir, "config", sizeof( szConfigDir ), COPY_ALL_CHARACTERS );
 
-		Msg( "Steam config directory: %s\n", szConfigDir );
+	Msg( "Steam config directory: %s\n", szConfigDir );
 
-		g_pFullFileSystem->AddSearchPath(szConfigDir, "CONFIG");
-		g_pFullFileSystem->CreateDirHierarchy("", "CONFIG");
+	g_pFullFileSystem->AddSearchPath(szConfigDir, "CONFIG");
+	g_pFullFileSystem->CreateDirHierarchy("", "CONFIG");
 
-		g_pFullFileSystem->AddSearchPath( "platform", "PLATFORM" );
-	}
+	g_pFullFileSystem->AddSearchPath( "platform", "PLATFORM" );
 
 	// localization
 	g_pLocalize->AddFile( "resource/platform_%language%.txt");
@@ -453,12 +396,9 @@ void CGameUI::Start()
 	//SetBackgroundMusicDesired( true );
 	// ********************************************************************
 
-	if ( IsPC() )
-	{
-		// now we are set up to check every frame to see if we can friends/server browser
-		m_bTryingToLoadFriends = true;
-		m_iFriendsLoadPauseFrames = 1;
-	}
+	// now we are set up to check every frame to see if we can friends/server browser
+	m_bTryingToLoadFriends = true;
+	m_iFriendsLoadPauseFrames = 1;
 }
 
 //-----------------------------------------------------------------------------
@@ -479,34 +419,19 @@ bool CGameUI::FindPlatformDirectory(char *platformDir, int bufferSize)
 	if ( platformDir[0] == '\0' )
 	{
 		// we're not under steam, so setup using path relative to game
-		if ( IsPC() )
-		{
 #ifdef WIN32
-			if ( ::GetModuleFileName( ( HINSTANCE )GetModuleHandle( NULL ), platformDir, bufferSize ) )
+		if ( ::GetModuleFileName( ( HINSTANCE )GetModuleHandle( NULL ), platformDir, bufferSize ) )
 #else
-			if ( getcwd( platformDir, bufferSize ) )
+		if ( getcwd( platformDir, bufferSize ) )
 #endif
-			{
-#ifdef WIN32
-				V_StripFilename( platformDir ); // GetModuleFileName returns the exe as well as path
-#endif
-				V_AppendSlash( platformDir, bufferSize );
-				Q_strncat(platformDir, "platform", bufferSize, COPY_ALL_CHARACTERS );
-				V_AppendSlash( platformDir, bufferSize );
-				return true;
-			}
-		}
-		else
 		{
-			// xbox fetches the platform path from exisiting platform search path
-			// path to executeable is not correct for xbox remote configuration
-			if ( g_pFullFileSystem->GetSearchPath( "PLATFORM", false, platformDir, bufferSize ) )
-			{
-				char *pSeperator = strchr( platformDir, ';' );
-				if ( pSeperator )
-					*pSeperator = '\0';
-				return true;
-			}
+#ifdef WIN32
+			V_StripFilename( platformDir ); // GetModuleFileName returns the exe as well as path
+#endif
+			V_AppendSlash( platformDir, bufferSize );
+			Q_strncat(platformDir, "platform", bufferSize, COPY_ALL_CHARACTERS );
+			V_AppendSlash( platformDir, bufferSize );
+			return true;
 		}
 
 		Error( "Unable to determine platform directory\n" );
@@ -521,22 +446,13 @@ bool CGameUI::FindPlatformDirectory(char *platformDir, int bufferSize)
 //-----------------------------------------------------------------------------
 void CGameUI::Shutdown()
 {
-#ifdef _PS3
-	cellSysmoduleUnloadModule( CELL_SYSMODULE_SYSUTIL_USERINFO );
-#endif
 
 	// notify all the modules of Shutdown
-	g_VModuleLoader.ShutdownPlatformModules();
-
-	// unload the modules them from memory
-	g_VModuleLoader.UnloadPlatformModules();
 
 	ModInfo().FreeModInfo();
 	
 	steamapicontext->Clear();
-#ifndef _GAMECONSOLE
 	// SteamAPI_Shutdown(); << Steam shutdown is controlled by engine
-#endif
 	
 	ConVar_Unregister();
 	DisconnectTier3Libraries();
@@ -643,14 +559,6 @@ void CGameUI::OnGameUIHidden()
 //-----------------------------------------------------------------------------
 void CGameUI::RunFrame()
 {
-	if ( IsGameConsole() && m_bOpenProgressOnStart )
-	{
-		StartProgressBar();
-		m_bOpenProgressOnStart = false;
-	}
-
-	// Run frames
-	g_VModuleLoader.RunFrame();
 
 	// Play the start-up music the first time we run frame
 	if ( m_iPlayGameStartupSound > 0 )
@@ -662,39 +570,10 @@ void CGameUI::RunFrame()
 		UpdateBackgroundMusic();
 	}
 
-	if ( IsPC() && m_bTryingToLoadFriends && m_iFriendsLoadPauseFrames-- < 1  )
+	if ( m_bTryingToLoadFriends && m_iFriendsLoadPauseFrames-- < 1  )
 	{
 		// clear the loading flag
 		m_bTryingToLoadFriends = false;
-		g_VModuleLoader.LoadPlatformModules(&m_GameFactory, 1, false);
-
-		// notify the game of our game name
-		const char *fullGamePath = engine->GetGameDirectory();
-		const char *pathSep = strrchr( fullGamePath, '/' );
-		if ( !pathSep )
-		{
-			pathSep = strrchr( fullGamePath, '\\' );
-		}
-		if ( pathSep )
-		{
-			KeyValues *pKV = new KeyValues("ActiveGameName" );
-			pKV->SetString( "name", pathSep + 1 );
-			pKV->SetInt( "appid", engine->GetAppID() );
-			KeyValues *modinfo = new KeyValues("ModInfo");
-			if ( modinfo->LoadFromFile( g_pFullFileSystem, "gameinfo.txt" ) )
-			{
-				pKV->SetString( "game", modinfo->GetString( "game", "" ) );
-			}
-			modinfo->deleteThis();
-
-			g_VModuleLoader.PostMessageToAllModules( pKV );
-		}
-
-		// notify the ui of a game connect if we're already in a game
-		if (m_iGameIP)
-		{
-			SendConnectedToGameMessage();
-		}
 	}
 }
 
@@ -717,20 +596,6 @@ void CGameUI::OnConnectToServer2(const char *game, int IP, int connectionPort, i
 	m_iGameIP = IP;
 	m_iGameConnectionPort = connectionPort;
 	m_iGameQueryPort = queryPort;
-
-	SendConnectedToGameMessage();
-}
-
-
-void CGameUI::SendConnectedToGameMessage()
-{
-	MEM_ALLOC_CREDIT();
-	KeyValues *kv = new KeyValues( "ConnectedToGame" );
-	kv->SetInt( "ip", m_iGameIP );
-	kv->SetInt( "connectionport", m_iGameConnectionPort );
-	kv->SetInt( "queryport", m_iGameQueryPort );
-
-	g_VModuleLoader.PostMessageToAllModules( kv );
 }
 
 
@@ -750,7 +615,6 @@ void CGameUI::OnDisconnectFromServer( uint8 eSteamLoginFailure )
 		gameeventmanager->FireEventClientSide( event );
 	}
 
-	g_VModuleLoader.PostMessageToAllModules(new KeyValues("DisconnectedFromGame"));
 
 	if ( eSteamLoginFailure == STEAMLOGINFAILURE_NOSTEAMLOGIN )
 	{
@@ -774,7 +638,6 @@ void CGameUI::OnLevelLoadingStarted( const char *levelName, bool bShowProgressDi
 	V_strcpy_safe( mapName, levelName ? levelName : "" );
 	V_FixSlashes( mapName, '/' );
 
-	g_VModuleLoader.PostMessageToAllModules( new KeyValues( "LoadingStarted" ) );
 
 	if ( bShowProgressDialog )
 	{
@@ -797,7 +660,6 @@ void CGameUI::OnLevelLoadingFinished(bool bError, const char *failureReason, con
 	StopProgressBar( bError, failureReason, extendedReason );
 
 	// notify all the modules
-	g_VModuleLoader.PostMessageToAllModules( new KeyValues( "LoadingFinished" ) );
 
 	HideLoadingBackgroundDialog();
 
@@ -885,7 +747,7 @@ void CGameUI::StopProgressBar(bool bError, const char *failureReason, const char
 {
 // CStrike15 handles error messages elsewhere. (ClientModeCSFullscreen::OnEvent)
 #if !defined( CSTRIKE15 )
-	if ( !IsGameConsole() && bError )
+	if ( bError )
 	{
 		ShowMessageDialog( extendedReason, failureReason );
 	}	
@@ -1048,12 +910,6 @@ void CGameUI::SetProgressOnStart()
 	m_bOpenProgressOnStart = true;
 }
 
-#if defined( _GAMECONSOLE ) && defined( _DEMO )
-void CGameUI::OnDemoTimeout()
-{
-	GetUiBaseModPanelClass().OnDemoTimeout();
-}
-#endif
 
 bool CGameUI::IsPlayingFullScreenVideo()
 {
@@ -1091,14 +947,6 @@ void CGameUI::ReleaseBackgroundMusic( void )
 	
 	enginesound->StopSoundByGuid( m_nBackgroundMusicGUID, true );
 
- #if defined( _GAMECONSOLE )
-
-	char nMusicKit[128];
-	V_snprintf( nMusicKit, 128, "music/%03i/%s", m_nBackgroundMusicVersion, BACKGROUND_MUSIC_FILENAME );
-
-	//release this to save on memory
- 	enginesound->UnloadSound( nMusicKit );
- #endif
 
 	m_nBackgroundMusicGUID = 0;
 }

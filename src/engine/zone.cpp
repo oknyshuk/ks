@@ -43,16 +43,12 @@ static bool g_bWarnedOverflow;
 #define SIZE_PHYSICAL_HUNK (16*MB)
 #endif
 
-const int HUNK_COMMIT_FLOOR = ( IsGameConsole() ? 4/*18*/ : 40 )*MB;
+const int HUNK_COMMIT_FLOOR = ( 40 )*MB;
 
 const char *CHunkAllocCredit::s_DbgInfoStack[ DBG_INFO_STACK_DEPTH ];
 int			CHunkAllocCredit::s_DbgInfoStackDepth = -1;
 
-#if !defined( _CERT )
 ConVar hunk_track_allocation_types( "hunk_track_allocation_types", "1", FCVAR_CHEAT );
-#else
-ConVar hunk_track_allocation_types( "hunk_track_allocation_types", "0", FCVAR_CHEAT );
-#endif
 CUtlDict<int, int> g_HunkAllocationsByName;
 struct hunkalloc_t { int index, size; };
 int HunkAllocSortFunc( const void *a, const void *b )
@@ -81,12 +77,6 @@ CON_COMMAND_F( hunk_print_allocations, "", FCVAR_CLIENTCMD_CAN_EXECUTE )
 	}
 	delete [] items;
 	
-#if defined( _X360 )
-	xBudgetInfo_t budgetInfo;
-
-	budgetInfo.BSPSize = total;
-	XBX_rBudgetInfo( &budgetInfo );
-#endif
 
 }
 

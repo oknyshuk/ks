@@ -8,10 +8,7 @@
 #include "tier0/platwindow.h"
 
 #if defined( PLATFORM_WINDOWS )
-#if !defined( PLATFORM_X360 )
 #include <windows.h>
-#else
-#endif
 #endif
 
 

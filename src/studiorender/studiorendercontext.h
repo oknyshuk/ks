@@ -159,11 +159,9 @@ public:
 	virtual int GetMaterialList( studiohdr_t *pStudioHdr, int count, IMaterial** ppMaterials );
 	virtual int GetMaterialListFromBodyAndSkin( MDLHandle_t studio, int nSkin, int nBody, int nCountOutputMaterials, IMaterial** ppOutputMaterials );
 
-#ifndef _CERT
 	// Gathers information about faces rendered this past frame and feeds them into the given callback function (presuambly to spew)
 	// Callback may be invoked on mat queue thread!
 	virtual void GatherRenderedFaceInfo( IStudioRender::FaceInfoCallbackFunc_t pFunc );
-#endif // _CERT
 
 	// Other public methods
 public:

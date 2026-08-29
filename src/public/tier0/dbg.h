@@ -8,7 +8,6 @@
 #ifndef DBG_H
 #define DBG_H
 
-#if !defined(__SPU__)
 
 
 #ifdef _WIN32
@@ -124,10 +123,8 @@ typedef void (*AssertFailedNotifyFunc_t)( const char *pchFile, int nLine, const 
 PLATFORM_INTERFACE void SetAssertFailedNotifyFunc( AssertFailedNotifyFunc_t func );
 PLATFORM_INTERFACE void CallAssertFailedNotifyFunc( const char *pchFile, int nLine, const char *pchMessage );
 
-#if defined( LINUX )
 PLATFORM_INTERFACE void SetAssertDialogParent( struct SDL_Window *window );
 PLATFORM_INTERFACE struct SDL_Window * GetAssertDialogParent();
-#endif
 
 /* Used to define macros, never use these directly. */
 
@@ -237,7 +234,7 @@ PLATFORM_INTERFACE struct SDL_Window * GetAssertDialogParent();
 #endif // DBGFLAG_ASSERTFATAL
 
 // lightweight assert macros: in theory, can be run in release without slowing it down
-#if defined(_CERT) || defined(_RETAIL)
+#if defined(_RETAIL)
 #define AssertAligned(PTR)
 #define AssertAlignedWidth(PTR, width)
 #define AssertAlignedConsole(PTR)
@@ -528,15 +525,9 @@ private:
 #endif
 
 // Tier0 uses these for string functions since this abstraction is normally done in tier1.
-#ifdef POSIX
 	#define Tier0Internal_sntprintf  snprintf
 	#define Tier0Internal_vsntprintf vsnprintf
 	#define Tier0Internal_vsnprintf  vsnprintf
-#else
-	#define Tier0Internal_sntprintf  _sntprintf
-	#define Tier0Internal_vsntprintf _vsntprintf
-	#define Tier0Internal_vsnprintf  _vsnprintf
-#endif
 
 //-----------------------------------------------------------------------------
 //
@@ -779,58 +770,6 @@ private:
 //-----------------------------------------------------------------------------
 
 
-#else //#if !defined(__SPU__)
-
-// void these for now
-
-#define  Assert( _exp )										((void)0)
-#define  AssertOnce( _exp )									((void)0)
-#define  AssertMsg( _exp, _msg )							((void)0)
-#define  AssertMsgOnce( _exp, _msg )						((void)0)
-#define  AssertFunc( _exp, _f )								((void)0)
-#define  AssertEquals( _exp, _expectedValue )				((void)0)
-#define  AssertFloatEquals( _exp, _expectedValue, _tol )	((void)0)
-#define  Verify( _exp )										(_exp)
-#define  VerifyEquals( _exp, _expectedValue )           	(_exp)
-
-#define  AssertMsg1( _exp, _msg, a1 )									((void)0)
-#define  AssertMsg2( _exp, _msg, a1, a2 )								((void)0)
-#define  AssertMsg3( _exp, _msg, a1, a2, a3 )							((void)0)
-#define  AssertMsg4( _exp, _msg, a1, a2, a3, a4 )						((void)0)
-#define  AssertMsg5( _exp, _msg, a1, a2, a3, a4, a5 )					((void)0)
-#define  AssertMsg6( _exp, _msg, a1, a2, a3, a4, a5, a6 )				((void)0)
-#define  AssertMsg6( _exp, _msg, a1, a2, a3, a4, a5, a6 )				((void)0)
-#define  AssertMsg7( _exp, _msg, a1, a2, a3, a4, a5, a6, a7 )			((void)0)
-#define  AssertMsg8( _exp, _msg, a1, a2, a3, a4, a5, a6, a7, a8 )		((void)0)
-#define  AssertMsg9( _exp, _msg, a1, a2, a3, a4, a5, a6, a7, a8, a9 )	((void)0)
-
-#define COMPILE_TIME_ASSERT( pred )
-#define ASSERT_INVARIANT( pred )
-
-#define  AssertFatal( _exp )									((void)0)
-#define  AssertFatalOnce( _exp )								((void)0)
-#define  AssertFatalMsg( _exp, _msg )							((void)0)
-#define  AssertFatalMsgOnce( _exp, _msg )						((void)0)
-#define  AssertFatalFunc( _exp, _f )							((void)0)
-#define  AssertFatalEquals( _exp, _expectedValue )				((void)0)
-#define  AssertFatalFloatEquals( _exp, _expectedValue, _tol )	((void)0)
-#define  VerifyFatal( _exp )									(_exp)
-#define  VerifyEqualsFatal( _exp, _expectedValue )				(_exp)
-
-#define  AssertFatalMsg1( _exp, _msg, a1 )									((void)0)
-#define  AssertFatalMsg2( _exp, _msg, a1, a2 )								((void)0)
-#define  AssertFatalMsg3( _exp, _msg, a1, a2, a3 )							((void)0)
-#define  AssertFatalMsg4( _exp, _msg, a1, a2, a3, a4 )						((void)0)
-#define  AssertFatalMsg5( _exp, _msg, a1, a2, a3, a4, a5 )					((void)0)
-#define  AssertFatalMsg6( _exp, _msg, a1, a2, a3, a4, a5, a6 )				((void)0)
-#define  AssertFatalMsg6( _exp, _msg, a1, a2, a3, a4, a5, a6 )				((void)0)
-#define  AssertFatalMsg7( _exp, _msg, a1, a2, a3, a4, a5, a6, a7 )			((void)0)
-#define  AssertFatalMsg8( _exp, _msg, a1, a2, a3, a4, a5, a6, a7, a8 )		((void)0)
-#define  AssertFatalMsg9( _exp, _msg, a1, a2, a3, a4, a5, a6, a7, a8, a9 )	((void)0)
-
-#define AssertAligned(PTR)
-
-#endif
 
 
 #endif /* DBG_H */

@@ -12,7 +12,6 @@
 
 #include "utlmap.h"
 #ifndef DEDICATED
-#include "vgui_controls/Panel.h"
 #endif
 
 class CBaseAchievement;

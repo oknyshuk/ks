@@ -12,7 +12,6 @@
 #endif
 
 #include "interface.h"
-#include "vgui/IPanel.h"
 
 class CCommand;
 
@@ -103,9 +102,6 @@ public:
 	virtual void NeedConnectionProblemWaitScreen() = 0;
 	virtual void ShowPasswordUI( char const *pchCurrentPW ) = 0;
 
-#if defined( _X360 ) && defined( _DEMO )
-	virtual void OnDemoTimeout( void ) = 0;
-#endif
 
 	virtual bool LoadingProgressWantsIsolatedRender( bool bContextValid ) = 0;
 

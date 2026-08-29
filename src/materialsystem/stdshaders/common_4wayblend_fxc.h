@@ -61,49 +61,10 @@ void GetBaseTextureAndNormal( sampler base, sampler base2, sampler base3, sample
 
 HALF4 LightMapSample( sampler LightmapSampler, float2 vTexCoord )
 {
-	#if ( !defined( _X360 ) || !defined( USE_32BIT_LIGHTMAPS_ON_360 ) )
 	{
 		HALF4 sample = h4tex2D( LightmapSampler, vTexCoord );
 		return sample;
 	}
-	#else
-	{
-		#if 0 //1 for cheap sampling, 0 for accurate scaling from the individual samples
-		{
-			float4 sample = tex2D( LightmapSampler, vTexCoord );
-
-			return HALF4( sample.rgb * sample.a, 1.0 );
-		}
-		#else
-		{
-			float4 Weights;
-			float4 samples_0; //no arrays allowed in inline assembly
-			float4 samples_1;
-			float4 samples_2;
-			float4 samples_3;
-			
-			asm {
-				tfetch2D samples_0, vTexCoord.xy, LightmapSampler, OffsetX = -0.5, OffsetY = -0.5, MinFilter=point, MagFilter=point, MipFilter=keep, UseComputedLOD=false
-				tfetch2D samples_1, vTexCoord.xy, LightmapSampler, OffsetX =  0.5, OffsetY = -0.5, MinFilter=point, MagFilter=point, MipFilter=keep, UseComputedLOD=false
-				tfetch2D samples_2, vTexCoord.xy, LightmapSampler, OffsetX = -0.5, OffsetY =  0.5, MinFilter=point, MagFilter=point, MipFilter=keep, UseComputedLOD=false
-				tfetch2D samples_3, vTexCoord.xy, LightmapSampler, OffsetX =  0.5, OffsetY =  0.5, MinFilter=point, MagFilter=point, MipFilter=keep, UseComputedLOD=false
-
-				getWeights2D Weights, vTexCoord.xy, LightmapSampler
-			};
-
-			Weights = float4( (1-Weights.x)*(1-Weights.y), Weights.x*(1-Weights.y), (1-Weights.x)*Weights.y, Weights.x*Weights.y );
-
-			float3 result;
-			result.rgb  = samples_0.rgb * (samples_0.a * Weights.x);
-			result.rgb += samples_1.rgb * (samples_1.a * Weights.y);
-			result.rgb += samples_2.rgb * (samples_2.a * Weights.z);
-			result.rgb += samples_3.rgb * (samples_3.a * Weights.w);
-		
-			return float4( result, 1.0 );
-		}
-		#endif
-	}
-	#endif
 }
 
 #ifdef PIXELSHADER
@@ -145,14 +106,7 @@ struct VS_OUTPUT
 	float4 vertexBlend				: COLOR1;
 
 	// Extra iterators on 360, used in flashlight combo
-	#if ( defined( _X360 ) || defined( _PS3 ) ) && FLASHLIGHT
-		float4 flashlightSpacePos		: TEXCOORD8;
-		float4 vProjPos					: TEXCOORD9;
-	#endif
 	
-	#if defined( PIXELSHADER ) && defined( _X360 )
-		 float2 vScreenPos : VPOS;
-	#endif
 };
 
 #define DETAILCOORDS detailOrBumpAndEnvmapMaskTexCoord.xy

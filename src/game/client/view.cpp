@@ -868,7 +868,7 @@ void CViewRender::WriteSaveGameScreenshotOfSize( const char *pFilename, int widt
 	// The API requires us to know the nMaterialSystemThread index, which is only available in engine, and I don't 
 	// want to modify IMaterialSystem just to get savegame screenshots to work. Find another way.
 	int nMaterialSystemThread = 0;
-	if ( CommandLine()->FindParm( "-swapcores" ) && !IsPS3() )
+	if ( CommandLine()->FindParm( "-swapcores" ) )
 	{
 		nMaterialSystemThread = 1;
 	}
@@ -901,12 +901,9 @@ void CViewRender::WriteSaveGameScreenshotOfSize( const char *pFilename, int widt
 
 	// async write to disk (this will take ownership of the memory)
 	char szPathedFileName[_MAX_PATH];
-	if ( !IsGameConsole() )
-	{
-		Q_snprintf( szPathedFileName, sizeof(szPathedFileName), "//MOD/%s", pFilename );
-	}
+	Q_snprintf( szPathedFileName, sizeof(szPathedFileName), "//MOD/%s", pFilename );
 
-	filesystem->AsyncWrite( !IsGameConsole() ? szPathedFileName : pFilename, buffer.Base(), buffer.TellPut(), true );
+	filesystem->AsyncWrite( szPathedFileName, buffer.Base(), buffer.TellPut(), true );
 
 	g_bRenderingScreenshot = false;
 	m_bAllowViewAccess = false;
@@ -1094,12 +1091,6 @@ void CViewRender::Render( vrect_t *rect )
 
 		view.width *= flViewportScale;
 		view.height *= flViewportScale;
-		if ( IsGameConsole() )
-		{
-			// view must be compliant to resolve restrictions
-			view.width = AlignValue( view.width, GPU_RESOLVE_ALIGNMENT );
-			view.height = AlignValue( view.height, GPU_RESOLVE_ALIGNMENT );
-		}
 
 		view.m_flAspectRatio = ( engineAspectRatio > 0.0f ) ? engineAspectRatio : ( (float)view.width / (float)view.height );
 
@@ -1165,32 +1156,15 @@ void CViewRender::Render( vrect_t *rect )
 
 	engine->EngineStats_EndFrame();
 
-#if !defined( _GAMECONSOLE )
 	// Stop stubbing the material system so we can see the budget panel
 	matStub.End();
-#endif
 
 	// Render the new-style embedded UI
 	// TODO: when embedded UI will be used for HUD, we will need it to maintain
 	// a separate screen for HUD and a separate screen stack for pause menu & main menu.
 	// for now only render embedded UI in pause menu & main menu
-#if defined( GAMEUI_UISYSTEM2_ENABLED ) && 0
-	BaseModUI::CBaseModPanel *pBaseModPanel = BaseModUI::CBaseModPanel::GetSingletonPtr();
-	// render the new-style embedded UI only if base mod panel is not visible (game-hud)
-	// otherwise base mod panel will render the embedded UI on top of video/productscreen
-	if ( !pBaseModPanel || !pBaseModPanel->IsVisible() )
-	{
-		Rect_t uiViewport;
-		uiViewport.x		= rect->x;
-		uiViewport.y		= rect->y;
-		uiViewport.width	= rect->width;
-		uiViewport.height	= rect->height;
-		g_pGameUIGameSystem->Render( uiViewport, gpGlobals->curtime );
-	}
-#endif
 
 	// Draw all of the UI stuff "fullscreen"
-	if ( true ) // For PIXEVENT
 	{
 		{
 			CMatRenderContextPtr pRenderContext( materials );
@@ -1313,7 +1287,7 @@ static void PlayDistance_Callback( IConVar *pConVar, const char *pOldString, flo
 */
 }
 
-static ConVar play_distance( "play_distance", IsGameConsole() ? "2" : "1", FCVAR_ARCHIVE | FCVAR_ARCHIVE_GAMECONSOLE, "Set to 1:\"2 foot\" or 2:\"10 foot\" presets.", PlayDistance_Callback );
+static ConVar play_distance( "play_distance", "1", FCVAR_ARCHIVE | FCVAR_ARCHIVE_GAMECONSOLE, "Set to 1:\"2 foot\" or 2:\"10 foot\" presets.", PlayDistance_Callback );
 
 /*
 static void HudPresetSize_Callback( IConVar *pConVar, const char *pOldString, float flOldValue )

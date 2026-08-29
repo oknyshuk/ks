@@ -8,7 +8,6 @@
 #define CSM_DEPTH_TEXTURE_RESOLUTION_MEDIUM_OR_HIGH ( 1024*2 )
 
 // Bilinear Percentage Closer Filtering with ATI Fetch4
-#if 1
 // This works on real ATI X1000-series hardware that uses a DX9-style FETCH4 swizzle.
 float CSMSampleShadowBuffer1TapATIBilinear( float2 vPositionLs, float flComparisonDepth )
 {
@@ -31,29 +30,6 @@ float CSMSampleShadowBuffer1TapATIBilinear( float2 vPositionLs, float flComparis
 		 		
 	return dot( vCmpSamples, vFactors );
 }
-#else
-// This works properly on recent ATI hardware that uses DX 10.1+ style GATHER4 swizzles. Argh.
-float CSMSampleShadowBuffer1TapATIBilinear( float2 vPositionLs, float flComparisonDepth )
-{
-	float flSunShadowingShadowTextureWidth = CSM_DEPTH_TEXTURE_RESOLUTION_VERY_LOW;
-	float flSunShadowingShadowTextureHeight = CSM_DEPTH_TEXTURE_RESOLUTION_VERY_LOW;
-	float flSunShadowingInvShadowTextureWidth = 1.0f / CSM_DEPTH_TEXTURE_RESOLUTION_VERY_LOW;
-	float flSunShadowingInvShadowTextureHeight = 1.0f / CSM_DEPTH_TEXTURE_RESOLUTION_VERY_LOW;
-	
-	float2 vFracPositionLs = frac( vPositionLs * float2( flSunShadowingShadowTextureWidth, flSunShadowingShadowTextureHeight ) );
-	float2 vSamplePositionLs = vPositionLs - vFracPositionLs * float2( flSunShadowingInvShadowTextureWidth, flSunShadowingInvShadowTextureHeight );
-	vSamplePositionLs += .00125f/CSM_DEPTH_TEXTURE_RESOLUTION_VERY_LOW;
-		
-	float4 vCmpSamples = tex2D( CSMDepthAtlasSampler, vSamplePositionLs.xy ).abrg;
-		
-	vCmpSamples = vCmpSamples > flComparisonDepth;
-	
-	float4 vFactors = float4( ( 1.0f - vFracPositionLs.x ) * ( 1.0f - vFracPositionLs.y ), vFracPositionLs.x   * ( 1.0f - vFracPositionLs.y ),
-							  ( 1.0f - vFracPositionLs.x ) *          vFracPositionLs.y,   vFracPositionLs.x   *          vFracPositionLs.y );
-		 		
-	return dot( vCmpSamples, vFactors );
-}
-#endif
 
 float CSMSampleShadowBuffer1Tap( float2 vPositionLs, float flComparisonDepth )
 {

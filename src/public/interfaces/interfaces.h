@@ -22,23 +22,11 @@ typedef void* (*CreateInterfaceFn)(const char *pName, int *pReturnCode);
 //-----------------------------------------------------------------------------
 // Macros to declare interfaces appropriate for various tiers
 //-----------------------------------------------------------------------------
-#if 1 || defined( TIER1_LIBRARY ) || defined( TIER2_LIBRARY ) || defined( TIER3_LIBRARY ) || defined( TIER4_LIBRARY ) || defined( APPLICATION )
 #define DECLARE_TIER1_INTERFACE( _Interface, _Global )	extern _Interface * _Global;
-#else
-#define DECLARE_TIER1_INTERFACE( _Interface, _Global )
-#endif
 
-#if 1 || defined( TIER2_LIBRARY ) || defined( TIER3_LIBRARY ) || defined( TIER4_LIBRARY ) || defined( APPLICATION )
 #define DECLARE_TIER2_INTERFACE( _Interface, _Global )	extern _Interface * _Global;
-#else
-#define DECLARE_TIER2_INTERFACE( _Interface, _Global )
-#endif
 
-#if 1 || defined( TIER3_LIBRARY ) || defined( TIER4_LIBRARY ) || defined( APPLICATION )
 #define DECLARE_TIER3_INTERFACE( _Interface, _Global )	extern _Interface * _Global;
-#else
-#define DECLARE_TIER3_INTERFACE( _Interface, _Global )
-#endif
 
 
 //-----------------------------------------------------------------------------
@@ -65,7 +53,6 @@ class IMaterialSystemHardwareConfig;
 class IMdlLib;
 class INetworkSystem;
 class IP4;
-class IQueuedLoader;
 class IResourceAccessControl;
 class IPrecacheSystem;
 class IRenderDevice;
@@ -92,16 +79,6 @@ class IVGuiRenderSurface;
 
 class IRocketUI;
 
-namespace vgui
-{
-	class ISurface;
-	class IVGui;
-	class IInput;
-	class IPanel;
-	class ILocalize;
-	class ISchemeManager;
-	class ISystem;
-}
 
 
 
@@ -173,8 +150,6 @@ DECLARE_TIER2_INTERFACE( IP4, p4 );
 #define MDLLIB_INTERFACE_VERSION				"VMDLLIB001"
 DECLARE_TIER2_INTERFACE( IMdlLib, mdllib );
 
-#define QUEUEDLOADER_INTERFACE_VERSION			"QueuedLoaderVersion001"
-DECLARE_TIER2_INTERFACE( IQueuedLoader, g_pQueuedLoader );
 
 #define RESOURCE_ACCESS_CONTROL_INTERFACE_VERSION	"VResourceAccessControl001"
 DECLARE_TIER2_INTERFACE( IResourceAccessControl, g_pResourceAccessControl );
@@ -182,10 +157,6 @@ DECLARE_TIER2_INTERFACE( IResourceAccessControl, g_pResourceAccessControl );
 #define PRECACHE_SYSTEM_INTERFACE_VERSION		"VPrecacheSystem001"
 DECLARE_TIER2_INTERFACE( IPrecacheSystem, g_pPrecacheSystem );
 
-#if defined( _X360 )
-#define XBOXINSTALLER_INTERFACE_VERSION			"XboxInstallerVersion001"
-DECLARE_TIER2_INTERFACE( IXboxInstaller, g_pXboxInstaller );
-#endif
 
 #define MATCHFRAMEWORK_INTERFACE_VERSION		"MATCHFRAMEWORK_001"
 DECLARE_TIER2_INTERFACE( IMatchFramework, g_pMatchFramework );
@@ -226,26 +197,6 @@ DECLARE_TIER3_INTERFACE( IVGuiRenderSurface, g_pVGuiRenderSurface );
 
 #define SCENESYSTEM_INTERFACE_VERSION			"SceneSystem_001"
 DECLARE_TIER3_INTERFACE( ISceneSystem, g_pSceneSystem );
-
-#define VGUI_SURFACE_INTERFACE_VERSION			"VGUI_Surface031"
-DECLARE_TIER3_INTERFACE( vgui::ISurface, g_pVGuiSurface );
-
-#define SCHEME_SURFACE_INTERFACE_VERSION		"SchemeSurface001"
-
-#define VGUI_INPUT_INTERFACE_VERSION			"VGUI_Input005"
-DECLARE_TIER3_INTERFACE( vgui::IInput, g_pVGuiInput );
-
-#define VGUI_IVGUI_INTERFACE_VERSION			"VGUI_ivgui008"
-DECLARE_TIER3_INTERFACE( vgui::IVGui, g_pVGui );
-
-#define VGUI_PANEL_INTERFACE_VERSION			"VGUI_Panel009"
-DECLARE_TIER3_INTERFACE( vgui::IPanel, g_pVGuiPanel );
-
-#define VGUI_SCHEME_INTERFACE_VERSION			"VGUI_Scheme010"
-DECLARE_TIER3_INTERFACE( vgui::ISchemeManager, g_pVGuiSchemeManager );
-
-#define VGUI_SYSTEM_INTERFACE_VERSION			"VGUI_System010"
-DECLARE_TIER3_INTERFACE( vgui::ISystem, g_pVGuiSystem );
 
 #define DATACACHE_INTERFACE_VERSION				"VDataCache003"
 DECLARE_TIER3_INTERFACE( IDataCache, g_pDataCache );	// FIXME: Should IDataCache be in tier2?

@@ -79,7 +79,7 @@ int g_interactionHitByPlayerThrownPhysObj = 0;
 int	g_interactionPlayerPuntedHeavyObject = 0;
 
 int g_ActiveGibCount = 0;
-ConVar prop_active_gib_limit( "prop_active_gib_limit", IsGameConsole() ? "32" : "64" );
+ConVar prop_active_gib_limit( "prop_active_gib_limit", "64" );
 ConVar prop_active_gib_max_fade_time( "prop_active_gib_max_fade_time", "12" );
 #define ACTIVE_GIB_LIMIT prop_active_gib_limit.GetInt()
 #define ACTIVE_GIB_FADE prop_active_gib_max_fade_time.GetInt()
@@ -1105,15 +1105,6 @@ int CBreakableProp::OnTakeDamage( const CTakeDamageInfo &inputInfo )
 		return 0;
 
 	// UNDONE: Do this?
-#if 0
-	// Make a shard noise each time func breakable is hit.
-	// Don't play shard noise if being burned.
-	// Don't play shard noise if cbreakable actually died.
-	if ( ( bitsDamageType & DMG_BURN ) == false )
-	{
-		DamageSound();
-	}
-#endif
 
 	// don't take damage on the same frame you were created 
 	// (avoids a set of explosions progressively vaporizing a compound breakable)
@@ -1524,17 +1515,6 @@ void CBreakableProp::OnPhysGunPickup( CBasePlayer *pPhysGunUser, PhysGunPickup_t
 		PlayPuntSound(); 
 	}
 
-	if ( IsGameConsole() )
-	{
-		if( reason != PUNTED_BY_CANNON && (pPhysGunUser->m_nNumCrateHudHints < NUM_SUPPLY_CRATE_HUD_HINTS) )
-		{
-			if( FClassnameIs( this, "item_item_crate") )
-			{
-				pPhysGunUser->m_nNumCrateHudHints++;
-				UTIL_HudHintText( pPhysGunUser, "#Valve_Hint_Hold_ItemCrate" );
-			}
-		}
-	}
 
 	SetPhysicsAttacker( pPhysGunUser, gpGlobals->curtime );
 
@@ -1702,9 +1682,7 @@ void CBreakableProp::Break( CBaseEntity *pBreaker, const CTakeDamageInfo &info )
 		}
 		if ( bSmashed )
 		{
-			#ifndef _GAMECONSOLE
 			gamestats->Event_CrateSmashed();
-			#endif
 		}
 	}
 
@@ -2994,13 +2972,6 @@ bool CPhysicsProp::CreateVPhysics()
 		{
 			PhysSetGameFlags( pPhysicsObject, FVPHYSICS_DMG_SLICE );
 
-#if 0
-			if( g_pDeveloper->GetInt() )
-			{
-				// Highlight them in developer mode.
-				m_debugOverlays |= (OVERLAY_TEXT_BIT|OVERLAY_BBOX_BIT);
-			}
-#endif
 		}
 	}
 

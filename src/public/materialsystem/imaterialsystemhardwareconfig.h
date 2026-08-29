@@ -13,11 +13,7 @@
 #pragma once
 #endif
 
-#if defined( DX_TO_GL_ABSTRACTION )
-#define IsPlatformOpenGL() true
-#else
 #define IsPlatformOpenGL() false
-#endif
 
 #include "tier1/interface.h"
 //#include "tier2/tier2.h"
@@ -61,18 +57,8 @@ enum VertexCompressionType_t
 // use DEFCONFIGMETHOD to define time-critical methods that we want to make just return constants
 // on the 360, so that the checks will happen at compile time. Not all methods are defined this way
 // - just the ones that I perceive as being called often in the frame interval.
-#ifdef _GAMECONSOLE
-#define DEFCONFIGMETHOD( ret_type, method, xbox_return_value )		\
-FORCEINLINE ret_type method const 									\
-{																	\
-	return xbox_return_value;										\
-}
-
-
-#else
 #define DEFCONFIGMETHOD( ret_type, method, xbox_return_value )	\
 virtual ret_type method const = 0;
-#endif
 
 //-----------------------------------------------------------------------------
 // Shadow filter types
@@ -96,11 +82,7 @@ enum ShadowFilterMode_t
 
 	// All modes >= SHADOWFILTERMODE_FIRST_CHEAP_MODE are considered the "cheap" modes.
 
-#if defined( _GAMECONSOLE )
-	SHADOWFILTERMODE_FIRST_CHEAP_MODE = GAMECONSOLE_SINGLE_TAP_PCF,
-#else
 	SHADOWFILTERMODE_FIRST_CHEAP_MODE = NVIDIA_PCF_CHEAP,
-#endif
 };
 
 //-----------------------------------------------------------------------------
@@ -203,7 +185,7 @@ public:
 
 	virtual int NeedsShaderSRGBConversion() const = 0;
 
-	DEFCONFIGMETHOD( bool, UsesSRGBCorrectBlending(), IsX360() );
+	DEFCONFIGMETHOD( bool, UsesSRGBCorrectBlending(), false );
 
 	virtual bool HasFastVertexTextures() const = 0;
 	virtual int MaxHWMorphBatchCount() const = 0;

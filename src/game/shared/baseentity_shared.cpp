@@ -2241,11 +2241,9 @@ void CBaseEntity::FireBullets( const FireBulletsInfo_t &info )
 
 	if ( IsPlayer() && flCumulativeDamage > 0.0f )
 	{
-		#ifndef _GAMECONSOLE
 		CTakeDamageInfo dmgInfo( this, pAttacker, flCumulativeDamage, nDamageType );
 		CBasePlayer *pPlayer = static_cast< CBasePlayer * >( this );
 		gamestats->Event_WeaponHit( pPlayer, info.m_bPrimaryAttack, pPlayer->GetActiveWeapon()->GetClassname(), dmgInfo );
-		#endif
 	}
 #endif
 }
@@ -2770,7 +2768,7 @@ bool CBaseEntity::IsSimulatingOnAlternateTicks()
 	}
 	else
 	{
-		return IsX360();
+		return false;
 	}
 }
 

@@ -47,14 +47,7 @@ extern class IBik *bik;
 extern class IEngineUI *engineuifuncs;
 extern class IGameUIFuncs *gameuifuncs;
 extern class IEngineSound *enginesound;
-#ifdef _GAMECONSOLE
-extern class IXOnline  *xonline;
-#endif
 extern class IAchievementMgr *achievementmgr; 
 extern class CSteamAPIContext *steamapicontext;
-#ifdef _PS3
-#include "ps3/saverestore_ps3_api_ui.h"
-extern class IPS3SaveRestoreToUI *ps3saveuiapi;
-#endif
 
 #endif // ENGINEINTERFACE_H

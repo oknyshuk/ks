@@ -19,18 +19,12 @@
 #include "tier1/utlmap.h"
 #include "tier1/fmtstr.h"
 
-#ifdef _X360
-#elif defined( _PS3 )
-#include "ps3/ps3_console.h"
-#endif
 
-#ifdef POSIX
 #include <wctype.h>
 #include <wchar.h>
 
 #define VPROJ_INCREMENT_COUNTER(a, b) /* */
 #define VPROJ(a) /* */
-#endif
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -980,33 +974,7 @@ void CCvar::ConsoleDPrintf( const char *pFormat, ... ) const
 // Purpose: 
 //-----------------------------------------------------------------------------
 #if defined( USE_VXCONSOLE )
-#ifdef _PS3 
-/*
-Here's a terrible hack.
-In porting the part of the game that speaks to VXConsole, EA chose to
-write it as a cluster of global functions, instead of a class interface like
-Aaron did with IXboxConsole. Some of these globals need access to symbols 
-inside the engine, so they are defined there. However, CCvar is inside vstdlib.
-In the EA build this didn't make a difference because everything was a huge
-monolithic executable, and you could just access any symbol from anywhere.
-In our build, with its PRXes, that doesn't fly.
-So, the proper solution to this problem is to wrap all of the PS3 vxconsole
-stuff in an interface, put it inside vstlib, create the dcim connection there,
-and then export the interface pointer. The engine meanwhile would export the 
-symbols the vxlib needs, and then we give that interface class inside
-vstlib a pointer to the engine once the engine is available. 
-Right now however I just want to get the thing working with as little modification
-as possible so I can fix the vxconsole windows app itself and hopefully get 
-bidirectional TTY to our game. So, instead of the proper solution,
-I'm just duct-taping everything together by simply passing a pointer to the engine
-symbol this function needs whenever I call it. 
-Blech. I'll fix it later. 
--egr 4/29/10. (is it later than September 2010? go call egr and make fun of him.)
-*/
 void CCvar::PublishToVXConsole()
-#else
-void CCvar::PublishToVXConsole()
-#endif
 {
 	const char *commands[6*1024];
 	const char *helptext[6*1024];
@@ -1029,11 +997,7 @@ void CCvar::PublishToVXConsole()
 
 	if ( numCommands )
 	{
-#ifdef _PS3
-		g_pValvePS3Console->AddCommands( numCommands, commands, helptext );
-#else
 		XBX_rAddCommands( numCommands, commands, helptext );
-#endif
 	}
 }
 
@@ -1256,9 +1220,6 @@ CConCommandHash::CCommandHashHandle_t CConCommandHash::Find( const ConCommandBas
 	// or something similarly nonfatally bad. With this #if 1, we'll search
 	// by name instead of by pointer, which is more robust in the face
 	// of double registered commands, but obviously slower.
-#if 0 
-	return Find(cmd->GetName());
-#else
 	HashKey_t hashkey = Hash(cmd);
 	int iBucket = hashkey & kBUCKETMASK;
 
@@ -1287,7 +1248,6 @@ CConCommandHash::CCommandHashHandle_t CConCommandHash::Find( const ConCommandBas
 		"ConCommand %s couldn't be found by pointer, but was found by name!", cmd->GetName() );
 #endif
 	return InvalidHandle();
-#endif
 }
 
 

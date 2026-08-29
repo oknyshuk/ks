@@ -31,9 +31,6 @@
 
 #if ( IS_WINDOWS_PC )
 	#define NO_STEREO_D3D10 1
-#ifdef DX_TO_GL_ABSTRACTION
-	#define NO_STEREO_D3D9 1
-#endif
 	#include "hl2stereo.h"
 #endif
 
@@ -744,19 +741,6 @@ public:
 			DO_D3D( SetRenderState( state, val ) );
 	}
 
-#ifdef DX_TO_GL_ABSTRACTION
-	FORCEINLINE void SetRenderStateInline( D3DRENDERSTATETYPE state, DWORD val )
-	{
-		//		Assert( state >= 0 && state < MAX_NUM_RENDERSTATES );
-		RECORD_RENDER_STATE( state, val );
-		if (ASyncMode())
-		{
-			Push( PBCMD_SET_RENDERSTATEINLINE, state, val );
-		}
-		else
-			DO_D3D( SetRenderStateInline( state, val ) );
-	}
-#endif
 
 	FORCEINLINE void SetScissorRect( const RECT *pScissorRect )
 	{
@@ -772,15 +756,6 @@ public:
 			DO_D3D( SetScissorRect( pScissorRect ) );
 	}
 
-#ifdef DX_TO_GL_ABSTRACTION
-	FORCEINLINE void SetMaxUsedVertexShaderConstantsHint( uint nMaxReg )
-	{
-		if (ASyncMode())
-			Push( PBCMD_SET_MAX_USED_VERTEX_SHADER_CONSTANTS_HINT, nMaxReg );
-		else
-			DO_D3D( SetMaxUsedVertexShaderConstantsHint( nMaxReg ) );
-	}
-#endif
 
 	FORCEINLINE void SetVertexShaderConstantF( UINT StartRegister, CONST float * pConstantData,
 								   UINT Vector4fCount)
@@ -1096,12 +1071,10 @@ public:
 		return hr;
 	}
 
-#ifndef DX_TO_GL_ABSTRACTION
 	FORCEINLINE HRESULT  UpdateSurface(	IDirect3DSurface9* pSourceSurface, CONST RECT* pSourceRect, IDirect3DSurface9* pDestSurface, CONST POINT* pDestPoint )
 	{
 		return m_pD3DDevice->UpdateSurface( pSourceSurface, pSourceRect, pDestSurface, pDestPoint );
 	}
-#endif
 
 	void Release( IDirect3DIndexBuffer9* ib )
 	{
@@ -1155,18 +1128,6 @@ public:
 		}
 	}
 
-#ifdef DX_TO_GL_ABSTRACTION
-	FORCEINLINE void UnlockActualSize( IDirect3DVertexBuffer9* vb, uint nActualSize )
-	{
-		// needed for d3d on pc only
-		if (ASyncMode())
-			Push( PBCMD_UNLOCK_ACTAULSIZE_VB, vb, nActualSize );
-		else
-		{
-			vb->UnlockActualSize(nActualSize);
-		}
-	}
-#endif
 
 	FORCEINLINE void Unlock( IDirect3DIndexBuffer9* ib )
 	{
@@ -1208,18 +1169,6 @@ public:
 		}
 	}
 
-#ifdef DX_TO_GL_ABSTRACTION
-	FORCEINLINE void UnlockActualSize( IDirect3DIndexBuffer9* ib, uint nActualSize )
-	{
-		// needed for d3d on pc only
-		if (ASyncMode())
-			Push( PBCMD_UNLOCK_ACTAULSIZE_IB, ib, nActualSize );
-		else
-		{
-			ib->UnlockActualSize( nActualSize );
-		}
-	}
-#endif
 
 	void ShowCursor( bool onoff)
 	{
@@ -1296,16 +1245,6 @@ public:
 			DO_D3D( SetSamplerState( stage, state, val) );
 	}
 
-#ifdef DX_TO_GL_ABSTRACTION
-	FORCEINLINE void SetSamplerStates( DWORD Sampler, DWORD AddressU, DWORD AddressV, DWORD AddressW, DWORD MinFilter, DWORD MagFilter, DWORD MipFilter )
-	{
-		RECORD_SAMPLER_STATES( Sampler, AddressU, AddressV, AddressW, MinFilter, MagFilter, MipFilter );
-		if (ASyncMode())
-			Push( PBCMD_SET_SAMPLER_STATES, Sampler, AddressU, AddressV, AddressW, MinFilter, MagFilter, MipFilter );
-		else
-			DO_D3D( SetSamplerStates( Sampler, AddressU, AddressV, AddressW, MinFilter, MagFilter, MipFilter ) );
-	}
-#endif
 	
 	void SetFVF( int fvf)
 	{
@@ -1366,11 +1305,7 @@ public:
 		)
 	{
 		Synchronize();
-		#ifdef DX_TO_GL_ABSTRACTION
-			return m_pD3DDevice->CreateVertexShader( pFunction, ppShader, pShaderName, debugLabel );
-		#else
 			return m_pD3DDevice->CreateVertexShader( pFunction, ppShader );
-		#endif
 	}
 
 	HRESULT CreatePixelShader(
@@ -1382,11 +1317,7 @@ public:
 		)
 	{
 		Synchronize();
-		#ifdef DX_TO_GL_ABSTRACTION
-			return m_pD3DDevice->CreatePixelShader( pFunction, ppShader, pShaderName, debugLabel, pCentroidMask );
-		#else
 			return m_pD3DDevice->CreatePixelShader( pFunction, ppShader );
-		#endif
 	}
 
 
@@ -1470,7 +1401,6 @@ public:
 		}
 	}
 
-#ifndef DX_TO_GL_ABSTRACTION
 	FORCEINLINE void DrawPrimitiveUP_RESZ( const void *pVertexStream )
 	{
 		if ( ASyncMode() )
@@ -1530,7 +1460,6 @@ public:
 		// Track our current tessellation level
 		m_nCurrentTessLevel = (int)ceil( level );
 	}
-#endif
 	
 	void SetMaterial( D3DMATERIAL9 const *mat)
 	{
@@ -1558,25 +1487,6 @@ public:
 			DO_D3D( SetVertexShader( pShader ) );
 	}
 
-#ifdef DX_TO_GL_ABSTRACTION
-	FORCEINLINE HRESULT LinkShaderPair( IDirect3DVertexShader9* vs, IDirect3DPixelShader9* ps )
-	{
-		Assert ( !ASyncMode() );
-		return DO_D3D( LinkShaderPair( vs, ps ) );
-	}
-
-	FORCEINLINE HRESULT ValidateShaderPair( IDirect3DVertexShader9* vs, IDirect3DPixelShader9* ps )
-	{
-		Assert( !ASyncMode() );
-		return DO_D3D( ValidateShaderPair( vs, ps ) );
-	}
-
-	HRESULT QueryShaderPair( int index, GLMShaderPairInfo *infoOut )
-	{
-		Assert ( !ASyncMode() );
-		return DO_D3D( QueryShaderPair( index, infoOut ) );
-	}
-#endif
 
 	void EvictManagedResources( void )
 	{
@@ -1645,43 +1555,7 @@ public:
 									  hDestWindowOverride, pDirtyRegion );
 	}
 
-#ifdef _PS3
-	void GetGPUMemoryStats( GPUMemoryStats &stats )
-	{
-		m_pD3DDevice->GetGPUMemoryStats( stats );
-	}
-	
-	void BeginZPass( DWORD Flags )
-	{
-		m_pD3DDevice->BeginZPass();
-	}
-	void SetPredication( DWORD PredicationMask )
-	{
-		m_pD3DDevice->SetPredication( PredicationMask );
-	}
-	HRESULT EndZPass()
-	{
-		return m_pD3DDevice->EndZPass();
-	}
-#endif // _PS3
 
-#ifdef DX_TO_GL_ABSTRACTION
-	FORCEINLINE void AcquireThreadOwnership( void )
-	{
-		if (ASyncMode())
-			Push( PBCMD_ACQUIRE_THREAD_OWNERSHIP );
-		else
-			DO_D3D( AcquireThreadOwnership() );
-	}
-
-	FORCEINLINE void ReleaseThreadOwnership( void )
-	{
-		if (ASyncMode())
-			Push( PBCMD_RELEASE_THREAD_OWNERSHIP );
-		else
-			DO_D3D( ReleaseThreadOwnership() );
-	}
-#endif
 
 };
 

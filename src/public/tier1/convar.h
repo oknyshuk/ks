@@ -32,12 +32,8 @@
 
 #ifdef _WIN32
 #define FORCEINLINE_CVAR FORCEINLINE
-#elif POSIX
-#define FORCEINLINE_CVAR inline
-#elif defined(_PS3)
-#define FORCEINLINE_CVAR __attribute__((always_inline)) FORCEINLINE 
 #else
-#error "implement me"
+#define FORCEINLINE_CVAR inline
 #endif
 
 

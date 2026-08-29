@@ -39,7 +39,6 @@
 #include "../../server.h"
 #include "edict.h"
 #include "../../pure_server.h"
-#include "filesystem/IQueuedLoader.h"
 #include "voice.h"
 #include "snd_dma.h"
 #include "snd_mixgroups.h"
@@ -64,7 +63,7 @@
 
 
 ConVar snd_sos_show_client_rcv("snd_sos_show_client_rcv", "0", FCVAR_CHEAT);
-ConVar snd_sos_allow_dynamic_chantype( "snd_sos_allow_dynamic_chantype", IsPlatformX360() ? "1" : "1" );
+ConVar snd_sos_allow_dynamic_chantype( "snd_sos_allow_dynamic_chantype", "1" );
 
 BEGIN_DEFINE_LOGGING_CHANNEL( LOG_SOUND_OPERATOR_SYSTEM, "SoundOperatorSystem", LCF_CONSOLE_ONLY, LS_MESSAGE );
 ADD_LOGGING_CHANNEL_TAG( "SoundOperatorSystem" );
@@ -406,7 +405,6 @@ CSfxTable::CSfxTable()
 	m_bIsMusic = false;
 	m_bIsLateLoad = false;
 	m_bMixGroupsCached = false;
-	m_bIsCreatedByQueuedLoader = false;
 	m_pDebugName = NULL;
 }
 
@@ -483,12 +481,6 @@ FileNameHandle_t CSfxTable::GetFileNameHandle()
 //-----------------------------------------------------------------------------
 const char *CSfxTable::GetFileName( char *pOutBuf, size_t bufLen )
 {
-	if ( IsGameConsole() && m_bUseErrorFilename )
-	{
-		// Redirecting error sounds to a valid empty wave, prevents a bad loading retry pattern during gameplay
-		// which may event sounds skipped by preload, because they don't exist.
-		return "common/null.wav";
-	}
 
 	const char *pName = getname(pOutBuf, bufLen);
 	return pName ? PSkipSoundChars( pName ) : NULL;	
@@ -558,10 +550,10 @@ static ConVar volume( "volume", "1.0", FCVAR_ARCHIVE | FCVAR_ARCHIVE_GAMECONSOLE
 // since the volume convar is manipulated by the UI it needs to be 0-1, this is a lower level control to limit that to a smaller
 // range if necessary. On X360, we need to set this value to 0.5 to get similar level as the other X360 games.
 // On PS3 and PC however, a value of 1.0 matches the other games. This is mostly for the game engine as it is not used by the movie.
-static ConVar ui_volume_scale( "ui_volume_scale", IsPlatformX360() ? "0.5" : "1.0" );
+static ConVar ui_volume_scale( "ui_volume_scale", "1.0" );
 // Similar knob for the movies.
 // These values were given by Mike Morasky after various testing. 
-ConVar movie_volume_scale( "movie_volume_scale", IsPlatformPS3() ? "0.9" : "1.0" );
+ConVar movie_volume_scale( "movie_volume_scale", "1.0" );
 
 // user configurable music volume - NOTE there is no music submix so this is pre-multiplied into each channel
 ConVar snd_musicvolume_multiplier_inoverlay( "snd_musicvolume_multiplier_inoverlay", "0.1", FCVAR_ARCHIVE | FCVAR_ARCHIVE_GAMECONSOLE, "Music volume multiplier when Steam Overlay is active", true, 0.0f, true, 1.0f );
@@ -593,73 +585,6 @@ extern ConVar host_threaded_sound;
 IVAudio *vaudio = NULL;
 CSysModule *g_pVAudioModule = NULL;
 
-//-----------------------------------------------------------------------------
-// Resource loading for sound
-//-----------------------------------------------------------------------------
-class CResourcePreloadSound : public CResourcePreload
-{
-public:
-	CResourcePreloadSound()
-	{
-	}
-
-	virtual void PrepareForCreate( bool bSameMap )
-	{
-		if ( !bSameMap )
-		{
-			// cannot support dynamic nature of sounds changing across maps due to deep fragmentation
-			// always purge, tear all the sounds away, and put them back
-			PurgeAllSounds();
-		}
-	}
-
-	virtual bool CreateResource( const char *pName )
-	{
-		CSfxTable *pSfx = S_PrecacheSound( pName );
-		if ( !pSfx )
-		{
-			return false;
-		}
-		return true;
-	}
-
-private:
-	void PurgeAllSounds()
-	{
-		bool bSpew = ( g_pQueuedLoader->GetSpewDetail() & LOADER_DETAIL_PURGES ) != 0;
-		char nameBuf[MAX_PATH];
-
-		for ( int i = s_Sounds.FirstInorder(); i != s_Sounds.InvalidIndex(); i = s_Sounds.NextInorder( i ) )
-		{
-			CSfxTable *pSfx = s_Sounds[i].pSfx;
-			if ( pSfx && pSfx->pSource )
-			{
-				if ( !pSfx->m_bIsCreatedByQueuedLoader )
-				{
-					// never purge sounds we do not own
-					if ( bSpew )
-					{
-						Msg( "CResourcePreloadSound: Skipping: %s\n", pSfx->GetFileName(nameBuf, sizeof(nameBuf)) );
-					}
-					continue;
-				}
-
-				// sound was not part of preload, purge it
-				if ( bSpew )
-				{
-					Msg( "CResourcePreloadSound: Purging: %s\n", pSfx->GetFileName(nameBuf, sizeof(nameBuf)) );
-				}
-
-				pSfx->pSource->CacheUnload();
-				delete pSfx->pSource;
-				pSfx->pSource = NULL;
-			}
-		}
-
-		wavedatacache->Flush( true );
-	}
-};
-static CResourcePreloadSound s_ResourcePreloadSound;
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -691,20 +616,6 @@ void S_SoundInfo_f(void)
 	Msg( "total_channels: %d\n", total_channels);
 	char nameBuf[MAX_PATH];
 
-	if ( IsGameConsole() )
-	{
-		// dump a glimpse of the mixing state
-		CChannelList list;
-		g_ActiveChannels.GetActiveChannels( list );
-
-		Msg( "\nActive Channels: %d\n", list.Count() );
-		for ( int i = 0; i < list.Count(); i++ )
-		{
-			channel_t *pChannel = list.GetChannel( i );
-			Msg( "Channel:%2d Mixer:%p %s\n", list.GetChannelIndex( i ), pChannel->pMixer, pChannel->sfx->GetFileName( nameBuf, sizeof( nameBuf ) ) );
-		}
-	}
-	else
 	{
 		for (int i = MAX_DYNAMIC_CHANNELS; i<total_channels; i++)
 		{
@@ -915,12 +826,8 @@ bool IsValidSampleRate( int rate )
 
 void VAudioInit()
 {
-	if ( IsPC() && !g_pVAudioModule )
+	if ( !g_pVAudioModule )
 	{
-		if ( !IsPosix() )
-		{
-			g_pFileSystem->GetLocalCopy( "mss32.dll" ); // vaudio_miles.dll will load this...
-		}
 		
 		g_pVAudioModule = FileSystem_LoadModule( "vaudio_miles" );
 		if ( g_pVAudioModule )
@@ -935,33 +842,9 @@ void VAudioInit()
 S_Init
 ================
 */
-#ifdef _PS3
-// On PS3 sound can only initialize once
-enum Ps3SoundState_t
-{
-	PS3_SOUND_NOT_INITIALIZED,
-	PS3_SOUND_INITIALIZED,
-	PS3_SOUND_SHUTDOWN
-};
-static Ps3SoundState_t s_ePs3SoundState = PS3_SOUND_NOT_INITIALIZED;
-#endif
 
 void S_Init( void )
 {
-#ifdef _PS3
-	if ( s_ePs3SoundState == PS3_SOUND_NOT_INITIALIZED )
-	{
-		s_ePs3SoundState = PS3_SOUND_INITIALIZED;
-	}
-	else
-	{
-		if ( s_ePs3SoundState != PS3_SOUND_INITIALIZED )
-		{
-			Warning( "ERROR: PS3 sound system cannot be initialized again (state %d)!\n", s_ePs3SoundState );
-		}
-		return;
-	}
-#endif
 
 	if ( sv.IsDedicated() )
 	{
@@ -974,18 +857,8 @@ void S_Init( void )
 	// KDB: init sentence array
 	TRACEINIT( VOX_Init(), VOX_Shutdown() );	
 
-	if ( IsPC() )
-	{
-		VAudioInit();
-	}
+	VAudioInit();
 
-#ifdef _PS3
-	// even if we do have sound, do we still have to Init mp3dec ? E.g. because it's logically a decoder, not a sound service. It's not clear.
-	for ( int i = 0 ; i < NUMBER_OF_MP3_DECODER_SLOTS ; ++i )
-	{
-		g_mp3dec[i].Init();
-	}
-#endif
 
 	if ( CommandLine()->CheckParm( "-nosound" ) )
 	{
@@ -1012,28 +885,10 @@ void S_Init( void )
 
 	AllocDsps( true );
 
-	if ( IsGameConsole() )
-	{
-		g_pQueuedLoader->InstallLoader( RESOURCEPRELOAD_SOUND, &s_ResourcePreloadSound );
-	}
 
 	DevMsg( "Sound Initialization: Finish, Sampling Rate: %i\n", g_AudioDevice->SampleRate() );
 
-#ifdef _X360
-	BOOL bPlaybackControl;
-	// get initial state of the x360 media player
-	if ( XMPTitleHasPlaybackControl( &bPlaybackControl ) == ERROR_SUCCESS )
-	{
-		S_EnableMusic(bPlaybackControl!=0);
-	}
-#if defined( BINK_ENABLED_FOR_CONSOLE ) && defined(BINK_VIDEO)
-	bik->HookXAudio();
-#endif
-#endif
 
-#if defined( _PS3 ) && defined( BINK_ENABLED_FOR_CONSOLE )
-	bik->SetPS3SoundDevice( g_AudioDevice->DeviceChannels() );
-#endif  // _PS3 && BINK_ENABLED_FOR_CONSOLE
 
 }
 
@@ -1044,32 +899,17 @@ void DumpFilePaths(const char *filename);
 // =======================================================================
 void S_Shutdown(void)
 {
-#ifdef _PS3
-	if ( s_ePs3SoundState == PS3_SOUND_INITIALIZED )
-	{
-		s_ePs3SoundState = PS3_SOUND_SHUTDOWN;
-		Msg( "PS3 sound system is shutting down...\n" );
-	}
-	else
-	{
-		Warning( "ERROR: PS3 sound system cannot shutdown again (state %d)!\n", s_ePs3SoundState );
-		return;
-	}
-#endif
 
 	if ( !sv.IsDedicated() )
 	{
 
-#if !defined( _X360 )
 		if ( VoiceTweak_IsStillTweaking() )
 		{
 			VoiceTweak_EndVoiceTweakMode();
 		}
-#endif
 
 		// dump a complete list of audio files played during this game
-#ifndef _PS3
-		if ( IsPC() && snd_store_filepaths.GetString()[ 0 ])
+		if ( snd_store_filepaths.GetString()[ 0 ])
 		{
 			/*time_t ltime;
 			time(&ltime);
@@ -1090,7 +930,6 @@ void S_Shutdown(void)
 #endif
 			DumpFilePaths(filename);
 		}
-#endif
 
 		S_StopAllSounds( true );
 		S_ShutdownMixThread();
@@ -1119,16 +958,13 @@ void S_Shutdown(void)
 		// release sentences resources
 		TRACESHUTDOWN( VOX_Shutdown() );
 		
-		if ( IsPC() )
-		{
-			// shutdown vaudio
-			if ( vaudio )
-				delete vaudio;
+		// shutdown vaudio
+		if ( vaudio )
+			delete vaudio;
 
-			FileSystem_UnloadModule( g_pVAudioModule );
-			g_pVAudioModule = NULL;
-			vaudio = NULL;
-		}
+		FileSystem_UnloadModule( g_pVAudioModule );
+		g_pVAudioModule = NULL;
+		vaudio = NULL;
 
 		MIX_FreeAllPaintbuffers();
 		snd_initialized = false;
@@ -1140,19 +976,10 @@ void S_Shutdown(void)
 		s_buffers = 0;
 		s_oldsampleOutCount = 0;
 		s_lastsoundtime = 0.0f;
-#if !defined( _X360 )
 		Voice_Deinit();
-#endif
 	}
 
 	TRACESHUTDOWN( audiosourcecache->Shutdown() );
-#ifdef _PS3
-	for ( int i = 0 ; i < NUMBER_OF_MP3_DECODER_SLOTS ; ++i )
-	{
-		HandleRemainingFrameInfos( i, true );
-		g_mp3dec[i].Shutdown();
-	}
-#endif
 }
 
 bool S_IsInitted()
@@ -1182,24 +1009,6 @@ CSfxTable *S_FindName( const char *szName, int *pInCache )
 	}
 
 	pName = szName;
-	if ( IsGameConsole() )
-	{
-		Q_strncpy( szBuff, pName, sizeof( szBuff ) );
-		int len = Q_strlen( szBuff )-4;
-		if ( len > 0 && !Q_strnicmp( szBuff+len, ".mp3", 4 ) )
-		{
-			// convert unsupported .mp3 to .wav
-			Q_strcpy( szBuff+len, ".wav" );
-		}
-		pName = szBuff;
-
-		if ( pName[0] == CHAR_STREAM )
-		{
-			// streaming (or not) is hardcoded to alternate criteria
-			// prevent the same sound from creating disparate instances
-			pName++;
-		}
-	}
 
 	AUTO_LOCK( g_SoundMapMutex );
 
@@ -1263,56 +1072,6 @@ CAudioSource *S_LoadSound( CSfxTable *pSfx, channel_t *ch, SoundError &soundErro
 
 	if ( !pSfx->pSource )
 	{
-		if ( IsGameConsole() )
-		{
-			if ( SND_IsInGame() && !g_pQueuedLoader->IsMapLoading() )
-			{
-				// sound should be present (due to reslists), but NOT allowing a load hitch during gameplay 
-				// loading a sound during gameplay is a bad experience, causes a very expensive sync i/o to fetch the header
-				// and in the case of a memory wave, the actual audio data
-				bool bFound = false;
-				if ( !pSfx->m_bIsLateLoad )
-				{
-					if ( pSndName != pSndFilename )
-					{
-						// the sound might already exist as an undecorated audio source
-						FileNameHandle_t fnHandle = g_pFileSystem->FindOrAddFileName( pSndFilename );
-						int i = s_Sounds.Find( fnHandle );
-						if ( i != s_Sounds.InvalidIndex() )
-						{
-							CSfxTable *pOtherSfx = s_Sounds[i].pSfx;
-							Assert( pOtherSfx );
-							CAudioSource *pOtherSource = pOtherSfx->pSource;
-							if ( pOtherSource && pOtherSource->IsCached() )
-							{
-								// Can safely let the "load" continue because the headers are expected to be in the preload
-								// that are now persisted and the wave data cache will find an existing audio buffer match,
-								// so no sync i/o should occur from either.
-								bFound = true;
-							}
-						}
-					}
-
-					if ( !bFound )
-					{
-						// warn once
-						DevWarning( "[Sound] S_LoadSound: Late load '%s', skipping.\n", pSndName ); 
-						pSfx->m_bIsLateLoad = true;
-					}
-				}
-
-				if ( !bFound )
-				{
-					soundError = SE_SKIPPED;
-					return NULL;
-				}
-			}
-			else if ( pSfx->m_bIsLateLoad )
-			{
-				// outside of gameplay, let the load happen
-				pSfx->m_bIsLateLoad = false;
-			}
-		}
 
 		double st = Plat_FloatTime();
 
@@ -1333,67 +1092,6 @@ CAudioSource *S_LoadSound( CSfxTable *pSfx, channel_t *ch, SoundError &soundErro
 		}
 
 		// override streaming
-		if ( IsGameConsole() )
-		{
-			// these are the ONLY non-streaming static sounds
-			const char *s_CriticalSounds[] = 
-			{
-				"common/",
-				"items/",
-				"ui/",
-				"weapons/",
-				"vfx/fizzler_lp_01",
-				"player/player_fall_whoosh_lp_01",
-				"ambient/machines/portalgun_rotate_loop1"
-			};
-
-			// can further refine critical sounds and ensure these stream
-			const char *s_NonCriticalSounds[] = 
-			{
-				// forcing the streamer to do more work all these static sounds now stream
-				// freed memory devoted to more textures
-				"player/footsteps",
-#if defined( CSTRIKE15 )
-				"weapons/",
-#endif
-				"gamestartup",
-			};
-
-			// stream everything but critical sounds
-			bStream = true;
-			char cleanName[MAX_PATH];
-			V_strncpy( cleanName, pSndFilename, sizeof( cleanName ) );
-			V_FixSlashes( cleanName, '/' );
-			for ( int i = 0; bStream && i < ARRAYSIZE( s_CriticalSounds ); i++ )
-			{
-				if ( StringHasPrefix( cleanName, s_CriticalSounds[i] ) )
-				{
-					// never stream these, regardless of sound chars
-					bStream = false;
-				}
-			}
-
-			// some broad classified critical sounds can actually stream
-			for ( int i = 0; !bStream && i < ARRAYSIZE( s_NonCriticalSounds ); i++ )
-			{
-				if ( V_stristr( cleanName, s_NonCriticalSounds[i] ) )
-				{
-					bStream = true;
-				}
-			}
-
-#if defined( _X360 )
-			// shutdown streaming sounds ONLY during the main menu while the installer might go active or is active
-			if ( bStream && V_stristr( cleanName, "music/mainmenu" ) &&
-				g_pXboxInstaller->IsInstallEnabled() && !g_pXboxInstaller->IsFullyInstalled() )
-			{
-				// installer only runs during main menu UI
-				// cannot stream at all during installer
-				// force this background ui music to not stream
-				bStream = false;
-			}
-#endif
-		}
 
 		if ( bStream )
 		{
@@ -1404,15 +1102,7 @@ CAudioSource *S_LoadSound( CSfxTable *pSfx, channel_t *ch, SoundError &soundErro
 		{
 			if ( bUserVox )
 			{
-				if ( !IsGameConsole() )
-				{
-					pSfx->pSource = Voice_SetupAudioSource( ch->soundsource, ch->entchannel );
-				}
-				else
-				{
-					// not supporting
-					Assert( 0 );
-				}
+				pSfx->pSource = Voice_SetupAudioSource( ch->soundsource, ch->entchannel );
 			}
 			else
 			{
@@ -1421,11 +1111,6 @@ CAudioSource *S_LoadSound( CSfxTable *pSfx, channel_t *ch, SoundError &soundErro
 			}
 		}
 		
-		if ( IsGameConsole() )
-		{
-			// need to track these
-			pSfx->m_bIsCreatedByQueuedLoader = g_pQueuedLoader->IsMapLoading();
-		}
 
 		double ed = Plat_FloatTime();
 		g_flAccumulatedSoundLoadTime += ( ed - st );
@@ -1509,12 +1194,6 @@ void S_InternalReloadSound( CSfxTable *sfx )
 //-----------------------------------------------------------------------------
 void S_ReloadSound( const char *name )
 {
-	if ( IsGameConsole() )
-	{
-		// not supporting
-		Assert( 0 );
-		return;
-	}
 
 	if ( !g_AudioDevice )
 		return;
@@ -1538,8 +1217,6 @@ void S_ReloadSound( const char *name )
 // See comments on CL_HandlePureServerWhitelist for details of what we're doing here.
 void S_ReloadFilesInList( IFileList *pFilesToReload )
 {
-	if ( !IsPC() )
-		return;
 
 	S_StopAllSounds( true );
 	wavedatacache->Flush();
@@ -2106,27 +1783,24 @@ void S_RestartSong( const musicsave_t *song )
 
 		S_StartSound( params );
 
-		if ( IsPC() )
+		// Now find the channel this went on and skip ahead in the mixer
+		for (int i = 0; i < total_channels; i++)
 		{
-			// Now find the channel this went on and skip ahead in the mixer
-			for (int i = 0; i < total_channels; i++)
+			channel_t *ch = &channels[i]; 
+
+			if ( !ch->pMixer ||
+				 !ch->pMixer->GetSource() )
 			{
-				channel_t *ch = &channels[i]; 
-
-				if ( !ch->pMixer ||
-					 !ch->pMixer->GetSource() )
-				{
-					continue;
-				}
-
-				if ( ch->pMixer->GetSource() != pSound->pSource )
-				{
-					continue;
-				}
-
-				ch->pMixer->SetPositionFromSaved( song->sampleposition );
-				break;
+				continue;
 			}
+
+			if ( ch->pMixer->GetSource() != pSound->pSource )
+			{
+				continue;
+			}
+
+			ch->pMixer->SetPositionFromSaved( song->sampleposition );
+			break;
 		}
 	}
 }
@@ -2838,11 +2512,6 @@ bool SND_IsLongWave( const channel_t *pChannel )
 			return true;
 
 	// UNDONE: Do this on long wave files too?
-#if 0
-		float length = (float)pSource->SampleCount() / (float)pSource->SampleRate();
-		if ( length > 0.75f )
-			return true;
-#endif
 	}
 
 	return false;
@@ -5229,7 +4898,6 @@ void SND_ExecuteUpdateOperators( channel_t *ch )
 	// setup scratchpad
 	g_scratchpad.SetPerExecution( ch, NULL );
 
-#if !defined( _X360 )
 	// Currently we don't process voice channels via operators
 	if ( ch->sfx && 
 	ch->sfx->pSource && 
@@ -5238,7 +4906,6 @@ void SND_ExecuteUpdateOperators( channel_t *ch )
 		Log_Warning( LOG_SOUND_OPERATOR_SYSTEM, "Voice channel attempting to be processed by operators" );
 		// Voice_Spatialize( ch );
 	}
-#endif
 
 
 	//////////////////////////////////////////////////////////////////////////
@@ -5299,14 +4966,12 @@ void SND_Spatialize(channel_t *ch)
 	ch->dspmix = 0;					// default mix 0% dsp_room fx
 	ch->distmix = 0;				// default 100% left (near) wav
 
-#if !defined( _X360 )
 	if ( ch->sfx && 
 		ch->sfx->pSource && 
 		ch->sfx->pSource->GetType() == CAudioSource::AUDIO_SOURCE_VOICE )
 	{
 		Voice_Spatialize( ch );
 	}
-#endif
 
 	// For Splitscreen this is the average position, a total hack!!!
 	Vector blended_listener_origin( 0, 0, 0 );
@@ -5415,7 +5080,7 @@ void SND_Spatialize(channel_t *ch)
 		VectorAngles( ch->direction, source_angles );
 	}
 
-	if ( IsPC() && ch->userdata != 0 )
+	if ( ch->userdata != 0 )
 	{
 		g_pSoundServices->GetToolSpatialization( ch->userdata, ch->guid, si );
 		if ( ch->flags.bUpdatePositions )
@@ -5571,14 +5236,12 @@ void SND_Spatialize(channel_t *ch)
 		gain = gain * snd_menumusic_volume.GetFloat();
 
 
-#if !defined( _X360 )
 	if ( ch->sfx && 
 		ch->sfx->pSource && 
 		ch->sfx->pSource->GetType() == CAudioSource::AUDIO_SOURCE_VOICE )
 	{
 		gain = MAX(gain, voice_minimum_gain.GetFloat());
 	}
-#endif
 
 	// map gain through global mixer by soundtype
 //	int last_mixgroupid;
@@ -6256,11 +5919,6 @@ inline void ChannelStopVolXfade( channel_t *pch, int ivol )
 }
 
 // Once the correct parameters are determined, we can bake them in if we want (and if there is a noticeable performance overhead)
-#if 0
-#define	VOL_XFADE_TIME	0.070	
-#define VOL_INCR_MAX	20.0
-#define VOL_NO_XFADE	5.0
-#else
 ConVar snd_vol_xfade_time( "snd_vol_xfade_time", "0.070", 0, "Channel volume cross-fade time in seconds." );
 ConVar snd_vol_xfade_incr_max( "snd_vol_xfade_incr_max", "20.0", 0, "Never change volume by more than +/-N units per frame during cross-fade." );
 ConVar snd_vol_no_xfade( "snd_vol_no_xfade", "5.0", 0, "If current and target volumes are close, don't cross-fade." );
@@ -6269,7 +5927,6 @@ ConVar snd_vol_xfade_speed_multiplier_for_doppler( "snd_vol_xfade_speed_multipli
 #define	VOL_XFADE_TIME	snd_vol_xfade_time.GetFloat()
 #define VOL_INCR_MAX	snd_vol_xfade_incr_max.GetFloat()
 #define VOL_NO_XFADE	snd_vol_no_xfade.GetFloat()
-#endif
 
 // set volume target and volume increment (for crossfade) for channel & speaker
 void ChannelSetVolTarget( channel_t *pch, int ivol, float volume_target )
@@ -6377,8 +6034,6 @@ void ChannelUpdateVolXfade( channel_t *pch )
 void DumpFilePaths(const char *filename)
 {
 	// Don't Write to internal storage on the 360
-	if ( IsGameConsole() )
-		return;
 
 	// Generate a new .cfg file.
 	char		szFileName[MAX_PATH];
@@ -6392,8 +6047,6 @@ void DumpFilePaths(const char *filename)
 	{
 		Q_strncpy( computername, "???", sizeof( computername )  );
 	}
-#elif defined( _PS3 )
-	Q_strncpy( computername, "PS3", sizeof( computername ) );
 #else
 	if ( gethostname( computername, sizeof(computername) ) == -1 )
 	{
@@ -6501,7 +6154,7 @@ static int S_StartSound_Immediate( StartSoundParams_t& params )
 	}
 
 	// storing file paths for complete list of sounds used in game
-	if ( IsPC() && snd_store_filepaths.GetString()[ 0 ] )
+	if ( snd_store_filepaths.GetString()[ 0 ] )
 	{
 		if( CommandLine()->FindParm("-playtest") != 0 &&
 			!( params.flags & ( SND_STOP | SND_CHANGE_VOL | SND_CHANGE_PITCH ) ) )
@@ -6518,18 +6171,6 @@ static int S_StartSound_Immediate( StartSoundParams_t& params )
 		}
 	}
 
-#if defined( _X360 )
-	if ( !engineClient->IsConnected() && g_pXboxInstaller->IsInstallEnabled() && !g_pXboxInstaller->IsFullyInstalled() )
-	{
-		// prevent ANY audio streaming during main menu while the install might go active or is occurring
-		// static memory sounds are fine
-		if ( params.pSfx->pSource && params.pSfx->pSource->IsStreaming() )
-		{
-			DevWarning( "Ignoring streaming sound '%s' while installer may become active.\n", sndname );
-			return 0;
-		}
-	}
-#endif
 
 	// Override the entchannel to CHAN_STREAM if this is a non-voice stream sound.
 	if ( !params.staticsound &&
@@ -6672,7 +6313,7 @@ static int S_StartSound_Immediate( StartSoundParams_t& params )
 	ch->initialStreamPosition = params.initialStreamPosition;
 	ch->skipInitialSamples = params.skipInitialSamples;
 
-	if ( IsPC() && ch->userdata != 0 )
+	if ( ch->userdata != 0 )
 	{
 		g_pSoundServices->GetToolSpatialization( ch->userdata, ch->guid, si );
 	}
@@ -7064,137 +6705,56 @@ int S_StartSound( StartSoundParams_t& params )
 	}
 
 	bool bReport = snd_report_start_sound.GetBool();
-	if ( bReport || IsPC() )
+	if ( bReport )
 	{
-		if ( bReport )
+		const char * pLooping = "";
+		if ( snd_report_loop_sound.GetBool() )
 		{
-			const char * pLooping = "";
-			if ( snd_report_loop_sound.GetBool() )
+			if ( params.pSfx->pSource != NULL )
 			{
-				if ( params.pSfx->pSource != NULL )
+				bool bIsLooped = params.pSfx->pSource->IsLooped();
+				pLooping = bIsLooped ? "Looping." : "Not looping.";
+			}
+			else
+			{
+				pLooping = "CAudioSource is NULL.";
+			}
+		}
+
+		const char * pFormat = "";
+		if ( snd_report_format_sound.GetBool() )
+		{
+			if ( params.pSfx->pSource != NULL )
+			{
+				switch ( params.pSfx->pSource->Format() )
 				{
-					bool bIsLooped = params.pSfx->pSource->IsLooped();
-					pLooping = bIsLooped ? "Looping." : "Not looping.";
-				}
-				else
-				{
-					pLooping = "CAudioSource is NULL.";
+				case WAVE_FORMAT_ADPCM:	pFormat = "ADPCM."; break;
+				case WAVE_FORMAT_PCM:	pFormat = "PCM."; break;
+				case WAVE_FORMAT_XMA:	pFormat = "XMA."; break;
+				case WAVE_FORMAT_TEMP:	pFormat = "Fake-MP3."; break;
+				case WAVE_FORMAT_MP3:	pFormat = "MP3."; break;
+				default: pFormat = "Unknown format."; break;
 				}
 			}
-
-			const char * pFormat = "";
-			if ( snd_report_format_sound.GetBool() )
+			else
 			{
-				if ( params.pSfx->pSource != NULL )
+				if ( pLooping[0] == '\0' )
 				{
-					switch ( params.pSfx->pSource->Format() )
-					{
-					case WAVE_FORMAT_ADPCM:	pFormat = "ADPCM."; break;
-					case WAVE_FORMAT_PCM:	pFormat = "PCM."; break;
-					case WAVE_FORMAT_XMA:	pFormat = "XMA."; break;
-					case WAVE_FORMAT_TEMP:	pFormat = "Fake-MP3."; break;
-					case WAVE_FORMAT_MP3:	pFormat = "MP3."; break;
-					default: pFormat = "Unknown format."; break;
-					}
+					// Don't want to write the same text twice.
+					pFormat = "CAudioSource is NULL.";
 				}
-				else
-				{
-					if ( pLooping[0] == '\0' )
-					{
-						// Don't want to write the same text twice.
-						pFormat = "CAudioSource is NULL.";
-					}
-				}
-			}			
+			}
+		}			
 
-			Warning( "[Sound] S_StartSound(\"%s\") called. Flags: %d. %s%s\n", pfn, params.flags, pLooping, pFormat );
-		}
-		if ( IsPC() )
-		{
-			BlackBox_Record( "wav", "%s", pfn );
-		}
+		Warning( "[Sound] S_StartSound(\"%s\") called. Flags: %d. %s%s\n", pfn, params.flags, pLooping, pFormat );
 	}
+	BlackBox_Record( "wav", "%s", pfn );
 
 	if ( params.flags & SND_UPDATE_DELAY_FOR_CHOREO )
 	{
 		params.delay = 0;		// If we update for choreo, there is no real need to have a delay (usually few ms before or after).
 								// We try to synchronize each sentence after the other and in some cases where the IO latency is a bit high,
 								// the accumulated error may actually make very small sounds disappear or sound bad.
-	}
-
-	if ( IsGameConsole() && params.delay < 0 && !params.initialStreamPosition && params.pSfx && params.pSfx->pSource )
-	{
-		// calculate an initial stream position from the expected sample position
-		float rate = params.pSfx->pSource->SampleRate();
-		int nSamplePosition = (int)( -params.delay * rate * params.pitch * 0.01f );
-
-#ifdef PORTAL2
-		// We only use this for Portal 2, as we may want to keep the other behavior when there are machine guns involved.
-		const int DONT_SKIP_N_SAMPLES = (int)( rate / 20.0f );		// Let's not skip if less than 1/20th of a second
-		if ( nSamplePosition <= DONT_SKIP_N_SAMPLES)
-		{
-			// Nothing to skip
-			params.delay = 0;
-		}
-		else
-#endif
-		{
-			int nResult = params.pSfx->pSource->SampleToStreamPosition( nSamplePosition );
-
-			// Here are the various possibilities for consoles:
-			//	nResult < 0
-			//	- For XMA or MP3 with no seek-table, we don't get an initial stream position but we will use the delay to skip the samples.
-			//	nResult >= 0
-			//	- For XMA with seek-table, we need initial stream position and no delay.
-			//  - For WAV file,  we need the initial stream position and a delay (but it will not skip the samples and use SetStartSample() instead).
-
-			if ( nResult >= 0 )
-			{
-				params.initialStreamPosition = nResult;
-				if ( params.pSfx->pSource->Format() == WAVE_FORMAT_XMA )
-				{
-					// As stated above, if we are in XMA and we got a stream position we need to remove the delay
-					params.delay = 0;
-					params.m_bDelayedStart = true;
-				}
-			}
-			else
-			{
-				// If the feature is not supported, we are going to use the other model (skipping the first samples).
-
-				// To avoid the higher I/O requirement (see comment below), we are going to skip samples when we play the sound (instead of ahead of time).
-				// In many cases, the delay is actually rather small, so we can actually hide it as part of the normal process.
-				// It happens because a lot of sounds are played with a delay to fix timing differences between server and client (think machine gun).
-				// However it is applied on many sounds (like VO) where it does not make much sense.
-
-				// For a 32 Kb block, compressed with MP3 (or XMA without seek-table), the compression ratio is around 8x,
-				// so a normal block read will contain around 130K mono samples, 65K stereo samples.
-				//
-				// Thus we can safely skip the first 32K stereo samples as part of the normal process without incurring more I/O pressure.
-				// The call to SkipSamples() below is much heavier.
-
-				// MP3 has actually better facility than XMA. It knows the number of samples per frame, and thus can avoid the SPU decoding on PS3. 
-				// With XMA, each 2048 bytes block have N samples, so we need to decode one at a time.
-				// However if we push too many samples to skip to later (when we play the sound), we could end up  with the sound being delayed with video
-				// say after a save in the Portal 2 container ride. So it is better in this case to forcibly skip the samples when we play the sound.
-
-				const int SAFE_NUMBER_OF_SAMPLES_TO_SKIP = params.pSfx->pSource->IsStereoWav() ? 16000 : 32000;
-				if ( nSamplePosition < SAFE_NUMBER_OF_SAMPLES_TO_SKIP )
-				{
-					params.delay = 0;
-					params.skipInitialSamples = nSamplePosition;
-					params.m_bDelayedStart = true;
-				}
-
-				// Although it works on PS3 and X360, the downside is that it has a higher I/O requirement at the beginning of the sound
-				// and a much bigger requirement if we have a lot to skip (it is as if we are playing the sound very quickly).
-				// On PS3 MP3, it is acceptable, especially as we are using the HDD to store sounds.
-				// On X360, it sounds bad the first second, however most VO sound will have seek table, so will support the feature above.
-				// As of today, PS3 MP3 does not support seek table.
-
-				// Keep the delay here, it will be used later.
-			}
-		}
 	}
 
 	// It mixes once with volumes for all split players consolidated into a single set of speaker volumes
@@ -7252,22 +6812,6 @@ int S_StartSoundEntry( StartSoundParams_t &pStartParams, int nSeed, bool bFromPr
 
 	// Try to deduce the actor's gender
 	gender_t gender = GENDER_NONE;
-#if 0
-// 
-// 	IClientEntity *pClientEntity = NULL;
-// 	if ( entitylist )
-// 	{
-// 		pClientEntity = entitylist->GetClientEntity( pStartParams.soundsource );
-// 		if ( pClientEntity )
-// 		{
-// 			char const *actorModel = STRING( pClientEntity->GetModelName() );
-// 			if( actorModel )
-// 			{
-// 				gender = g_pSoundEmitterSystem->GetActorGender( actorModel );
-// 			}
-// 		}
-// 	}
-#endif
 
 	pStartParams.m_pSoundEntryName = g_pSoundEmitterSystem->GetSoundNameForHash( pStartParams.m_nSoundScriptHash );
 
@@ -7318,9 +6862,6 @@ int S_StartSoundEntry( StartSoundParams_t &pStartParams, int nSeed, bool bFromPr
 	}
 
 
-#if 0
-	S_CompareSoundParams( pStartParams , pScriptParams );
-#endif
 
 	// only block and execute start stack if an actual "start" message
 	if ( !( pStartParams.flags & SND_STOP || 
@@ -8710,8 +8251,6 @@ void GetSoundTime(void)
 
 void S_ExtraUpdate( void )
 {
-	if ( IsGameConsole() )
-		return;
 
 	if ( !g_AudioDevice || !g_pSoundServices )
 		return;
@@ -8846,11 +8385,7 @@ void S_Update_Guts( float mixAheadTime )
 
 }
 
-#if !defined( _X360 )
 #define THREADED_MIX_TIME 33
-#else
-#define THREADED_MIX_TIME XMA_POLL_RATE
-#endif
 
 ConVar snd_ShowThreadFrameTime( "snd_ShowThreadFrameTime", "0" );
 
@@ -8915,10 +8450,6 @@ void S_Update_( float mixAheadTime )
 		{
 			g_bMixThreadExit = false;
 			g_hMixThread = ThreadExecuteSolo( "SndMix", S_Update_Thread );
-			if ( IsX360() )
-			{
-				ThreadSetAffinity( g_hMixThread, XBOX_PROCESSOR_5 );
-			}
 		}
 	}
 }
@@ -9106,18 +8637,6 @@ static void S_PlayDelay( const CCommand &args )
 static ConCommand sndplaydelay( "sndplaydelay", S_PlayDelay );
 
 
-#if defined( _GAMECONSOLE )
-void S_UnloadSound( const char *pName )
-{
-	CSfxTable *pSfx = S_FindName( pName, NULL );
-	if ( pSfx && pSfx->pSource )
-	{
-		pSfx->pSource->CacheUnload();
-		delete pSfx->pSource;
-		pSfx->pSource = NULL;
-	}
-}
-#endif
 
 void S_PurgeSoundsDueToLanguageChange()
 {
@@ -9193,93 +8712,6 @@ void S_SoundList(void)
 	Msg( "Total: %.2f MB\n", (float)total/(1024.0f * 1024.0f) );
 }
 
-#if defined( _X360 ) || defined( _PS3 )
-CON_COMMAND( vx_soundlist, "Dump sounds to VXConsole" )
-{
-	CSfxTable		*sfx;
-	CAudioSource	*pSource;
-	int				dataSize;
-	char			*pFormatStr;
-	int				sampleRate;
-	int				sampleBits;
-	int				streamed;
-	int				looped;
-	int				channels;
-	int				numSamples;
-	int				quality;
-
-	int numSounds = s_Sounds.Count();
-	xSoundList_t* pSoundList = new xSoundList_t[numSounds];
-
-	int i = 0;
-	char nameBuf[MAX_PATH];
-	for ( int iSrcSound=s_Sounds.FirstInorder(); iSrcSound != s_Sounds.InvalidIndex(); iSrcSound = s_Sounds.NextInorder( iSrcSound ) )
-	{
-		dataSize = -1;
-		sampleRate = -1;
-		sampleBits = -1;
-		pFormatStr = "???";
-		streamed = -1;
-		looped = -1;
-		channels = -1;
-		numSamples = -1;
-		quality = -1;
-
-		sfx = s_Sounds[iSrcSound].pSfx;
-		pSource = sfx->pSource;
-		if ( pSource && pSource->IsCached() )
-		{
-			numSamples = pSource->SampleCount();
-			dataSize = pSource->DataSize();
-			sampleRate = pSource->SampleRate();
-			streamed = pSource->IsStreaming();
-			looped = pSource->IsLooped();
-			channels = pSource->IsStereoWav() ? 2 : 1;
-			quality = pSource->GetQuality();
-
-			switch ( pSource->Format() )
-			{
-			case WAVE_FORMAT_ADPCM:
-				pFormatStr = "ADPCM";
-				sampleBits = 16;
-				break;
-			case WAVE_FORMAT_PCM:
-				pFormatStr = "PCM";
-				sampleBits = (pSource->SampleSize() * 8)/channels;
-				break;
-			case WAVE_FORMAT_XMA:
-				pFormatStr = "XMA";
-				sampleBits = 16;
-				break;
-			case WAVE_FORMAT_MP3:
-			case WAVE_FORMAT_TEMP:
-				pFormatStr = "MP3";
-				sampleBits = 16;
-				break;
-			default:
-				pFormatStr = "Unknown";
-				sampleBits = 16;
-				break;
-			}
-		}
-
-		V_strncpy( pSoundList[i].name, sfx->getname(nameBuf, sizeof(nameBuf)), sizeof( pSoundList[i].name ) );
-		V_strncpy( pSoundList[i].formatName, pFormatStr, sizeof( pSoundList[i].formatName ) );
-		pSoundList[i].rate = sampleRate;
-		pSoundList[i].bits = sampleBits;
-		pSoundList[i].channels = channels;
-		pSoundList[i].looped = looped;
-		pSoundList[i].dataSize = dataSize;
-		pSoundList[i].numSamples = numSamples;
-		pSoundList[i].streamed = streamed;
-		pSoundList[i].quality = quality;
-		++i;
-	}
-
-	XBX_rSoundList( numSounds, pSoundList );
-	delete [] pSoundList;
-}
-#endif
 
 extern unsigned g_snd_time_debug;
 extern unsigned g_snd_call_time_debug;
@@ -9359,161 +8791,12 @@ void DEBUG_StopSoundMeasure(int type, int samplecount )
 	g_snd_frametime = Plat_MSTime();
 }
 
-#ifndef LINUX
-extern ConVar dsp_room;
-#endif
 
 
 // speak a sentence from console; works by passing in "!sentencename"
 // or "sentence"
 static void S_Say( const CCommand &args )
 {
-#ifndef LINUX
-
-	CSfxTable *pSfx;
-
-	if ( !g_AudioDevice->IsActive() )
-		return;
-
-	char sound[256];
-	Q_strncpy( sound, args[1], sizeof( sound ) );		
-	
-	// DEBUG - test performance of dsp code
-	if ( !Q_stricmp( sound, "dsp" ) )
-	{
-		unsigned time;
-		int i;
-		int count = 10000;
-		int idsp; 
-
-		for (i = 0; i < PAINTBUFFER_SIZE; i++)
-		{
-			g_paintbuffer[i].left = RandomInt(0,2999);
-			g_paintbuffer[i].right = RandomInt(0,2999);
-		}
-
-		Msg ("Start profiling 10,000 calls to DSP\n");
-		
-		idsp = dsp_room.GetInt();
-		
-		// get system time
-
-		time = Plat_MSTime();
-		
-		for (i = 0; i < count; i++)
-		{
-			// SX_RoomFX(PAINTBUFFER_SIZE, TRUE, TRUE);
-
-			DSP_Process(idsp, g_paintbuffer, NULL, NULL, PAINTBUFFER_SIZE);
-
-		}
-		// display system time delta 
-		Msg("%d milliseconds \n", Plat_MSTime() - time);
-		return;
-	} 
-	
-	if ( !Q_stricmp(sound, "paint") )
-	{
-		unsigned time;
-		int count = 10000;
-		static int hash=543;
-		int64 psav = g_paintedtime;
-
-		Msg ("Start profiling MIX_PaintChannels\n");
-		
-		pSfx = S_PrecacheSound("ambience/labdrone1.wav");
-
-		int nSlot = GET_ACTIVE_SPLITSCREEN_SLOT();
-		StartSoundParams_t params;
-		params.staticsound = false;
-		params.soundsource = hash++;
-		params.entchannel = CHAN_AUTO;
-		params.pSfx = pSfx;
-		params.origin = listener_origin[ nSlot ];
-		params.fvol = 1.0f;
-		params.soundlevel = SNDLVL_NONE;
-		params.flags = 0;
-		params.pitch = PITCH_NORM;
-
-		S_StartSound( params );
-
-		// get system time
-		time = Plat_MSTime();
-
-		// paint a boatload of sound
-
-		MIX_PaintChannels( g_paintedtime + 512*count, s_bIsListenerUnderwater );		
-
-		// display system time delta 
-		Msg("%d milliseconds \n", Plat_MSTime() - time);
-		g_paintedtime = psav;
-		return;
-	}
-
-	// DEBUG
-	if ( !TestSoundChar( sound, CHAR_SENTENCE ) )
-	{
-		// build a fake sentence name, then play the sentence text
-
-		Q_strncpy(sound, "xxtestxx ", sizeof( sound ) );
-		Q_strncat(sound, args[1], sizeof( sound ), COPY_ALL_CHARACTERS );
-
-		int addIndex = g_Sentences.AddToTail();
-		sentence_t *pSentence = &g_Sentences[addIndex];
-		pSentence->pName = sound;
-		pSentence->length = 0;
-
-		// insert null terminator after sentence name
-		sound[8] = 0;
-
-		pSfx = S_PrecacheSound ("!xxtestxx");
-		if (!pSfx)
-		{
-			Msg ("S_Say: can't cache %s\n", sound);
-			return;
-		}
-
-		int nSlot = GET_ACTIVE_SPLITSCREEN_SLOT();
-		StartSoundParams_t params;
-		params.staticsound = false;
-		params.soundsource = g_pSoundServices->GetViewEntity( nSlot );
-		params.entchannel = CHAN_REPLACE;
-		params.pSfx = pSfx;
-		params.origin = vec3_origin;
-		params.fvol = 1.0f;
-		params.soundlevel = SNDLVL_NONE;
-		params.flags = 0;
-		params.pitch = PITCH_NORM;
-
-		S_StartSound ( params );
-		
-		// remove last
-		g_Sentences.Remove( g_Sentences.Count() - 1 );
-	}
-	else
-	{
-		pSfx = S_FindName(sound, NULL);
-		if (!pSfx)
-		{
-			Msg ("S_Say: can't find sentence name %s\n", sound);
-			return;
-		}
-
-		int nSlot = GET_ACTIVE_SPLITSCREEN_SLOT();
-		StartSoundParams_t params;
-		params.staticsound = false;
-		params.soundsource = g_pSoundServices->GetViewEntity( nSlot );
-		params.entchannel = CHAN_REPLACE;
-		params.pSfx = pSfx;
-		params.origin = vec3_origin;
-		params.fvol = 1.0f;
-		params.soundlevel = SNDLVL_NONE;
-		params.flags = 0;
-		params.pitch = PITCH_NORM;
-
-		S_StartSound( params );
-	}
-#endif // LINUX
 }
 
 

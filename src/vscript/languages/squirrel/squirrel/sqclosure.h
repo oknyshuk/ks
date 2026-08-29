@@ -6,11 +6,6 @@
 #undef new // allow placement new
 #endif
 
-#ifdef _X360
-#if defined Yield
-#undef Yield
-#endif
-#endif
 
 struct SQFunctionProto;
 

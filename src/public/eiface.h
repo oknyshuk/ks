@@ -457,9 +457,6 @@ public:
 	virtual int GetAllClusterBounds( bbox_t *pBBoxList, int maxBBox ) = 0;
 
 	virtual bool IsCreatingReslist() = 0;
-	virtual bool IsCreatingXboxReslist() = 0;
-	virtual bool IsDedicatedServerForXbox() = 0;
-	virtual bool IsDedicatedServerForPS3( void ) = 0;
 
 	virtual void Pause( bool bPause, bool bForce = false ) = 0;
 

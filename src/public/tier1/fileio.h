@@ -15,9 +15,7 @@ typedef __time64_t time64_t;
 #include <sys/types.h>
 #include <sys/stat.h>
 typedef int64_t time64_t;
-#if !defined( _PS3 )
 #include <signal.h>
-#endif // _PS3
 #endif
 
 #include "tier0/platform.h"
@@ -56,9 +54,7 @@ class CDirIterator
 {
 public:
 
-#if !defined( _PS3 )
 	CDirIterator( const char *pchSearchPath );
-#endif
 
 	CDirIterator( const char *pchPath, const char *pchPattern );
 	~CDirIterator();
@@ -100,11 +96,7 @@ public:
 #ifdef DBGFLAG_VALIDATE
 	void Validate( CValidator &validator, const char *pchName )
 	{
-#if defined( _PS3 )
-		ValidateObj( m_strPattern );
-#else
 		validator.ClaimMemory( m_pFindData );
-#endif
 	}
 #endif
 
@@ -113,13 +105,7 @@ private:
 	bool BValidFilename();
 	bool m_bNoFiles, m_bUsedFirstFile;
 
-#if defined(_PS3)
-	bool BFindNextPS3();
-	bool m_bOpenHandle;		// don't see an invalid value for the FD returned from OpenDir
-	int m_hFind;
-	CellFsDirectoryEntry *m_pDirEntry;
-	CUtlString m_strPattern;
-#elif defined(_WIN32)
+#if   defined(_WIN32)
 	HANDLE m_hFind;
 	struct _WIN32_FIND_DATAW *m_pFindData;
 	char m_rgchFileName[MAX_PATH * 4];
@@ -159,12 +145,8 @@ public:
 
 #ifdef _WIN32
 	static void __stdcall ThreadedWriteFileCompletionFunc( unsigned long dwErrorCode, unsigned long dwBytesTransfered, struct _OVERLAPPED *pOverlapped );
-#elif defined( _PS3 )
-	// not implemented on PS3
-#elif defined(POSIX)
-	static void __stdcall ThreadedWriteFileCompletionFunc( sigval sigval );
 #else
-#error
+	static void __stdcall ThreadedWriteFileCompletionFunc( sigval sigval );
 #endif
 
 	void Sleep( uint nMSec ); // system specific sleep call
@@ -189,7 +171,6 @@ inline uint64 CFileWriter::GetBytesWritten()
 	return m_cubWritten; 
 }
 
-#if !defined(_PS3)
 //-----------------------------------------------------------------------------
 // Purpose: Encapsulates watching a directory for file changes
 //-----------------------------------------------------------------------------
@@ -214,26 +195,15 @@ private:
 	void *m_hFile;
 	void *m_pOverlapped;
 	void *m_pFileInfo;
-#ifdef OSX
-public:
-	struct timespec m_modTime;
-	void AddFileToChangeList( const char *pchFile );
-	CUtlString m_BaseDir;
-private:
-	void *m_WatcherStream;
-#endif
 	friend class CDirWatcherFriend;
 
-#ifdef LINUX
 	void AddFileToChangeList( const char *pchFile );
-#endif
 #ifdef WIN32
 	// used by callback functions to push a file onto the list
 	void AddFileToChangeList( const char *pchFile );
 	void PostDirWatch();
 #endif
 };
-#endif // _PS3
 
 bool CreateDirRecursive( const char *pchPathIn );
 bool BFileExists( const char *pchFileNameIn );

@@ -16,14 +16,12 @@ typedef HMODULE LibraryHandle;
 #define LoadLibraryHandle(libname) LoadLibrary(libname)
 #define CloseLibraryHandle(handle) FreeLibrary(handle)
 #define LookupInLibraryHandle(handle, fn) GetProcAddress(handle, fn)
-#elif defined(POSIX)
+#else
 #include <dlfcn.h>
 typedef void *LibraryHandle;
 #define LoadLibraryHandle(libname) dlopen(libname, RTLD_NOW)
 #define CloseLibraryHandle(handle) dlclose(handle)
 #define LookupInLibraryHandle(handle, fn) dlsym(handle, fn)
-#else
-#error Please define your platform.
 #endif
 
 #ifndef DEBUG

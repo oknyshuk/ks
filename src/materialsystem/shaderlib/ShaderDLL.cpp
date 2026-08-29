@@ -52,21 +52,14 @@ private:
 //-----------------------------------------------------------------------------
 // Global interfaces/structures
 //-----------------------------------------------------------------------------
-#if !defined( _PS3 ) && !defined( _OSX )
 IMaterialSystemHardwareConfig* g_pHardwareConfig;
 const MaterialSystem_Config_t *g_pConfig;
-#else
-extern MaterialSystem_Config_t g_config;
-const MaterialSystem_Config_t *g_pConfig = &g_config;
-#endif
 
 
 //-----------------------------------------------------------------------------
 // Interfaces/structures local to shaderlib
 //-----------------------------------------------------------------------------
-#ifndef _PS3
 IShaderSystem* g_pSLShaderSystem;
-#endif
 
 
 // Pattern necessary because shaders register themselves in global constructors
@@ -117,12 +110,6 @@ CShaderDLL::CShaderDLL()
 //-----------------------------------------------------------------------------
 bool CShaderDLL::Connect( CreateInterfaceFn factory, bool bIsMaterialSystem )
 {
-#if defined( _PS3 )
-	return true;
-#elif defined( OSX )
-	g_pSLShaderSystem =  (IShaderSystem*)factory( SHADERSYSTEM_INTERFACE_VERSION, NULL );
-	return ( g_pSLShaderSystem != NULL );
-#else
 	g_pHardwareConfig =  (IMaterialSystemHardwareConfig*)factory( MATERIALSYSTEM_HARDWARECONFIG_INTERFACE_VERSION, NULL );
 	g_pConfig = (const MaterialSystem_Config_t*)factory( MATERIALSYSTEM_CONFIG_VERSION, NULL );
 	g_pSLShaderSystem =  (IShaderSystem*)factory( SHADERSYSTEM_INTERFACE_VERSION, NULL );
@@ -134,14 +121,10 @@ bool CShaderDLL::Connect( CreateInterfaceFn factory, bool bIsMaterialSystem )
 	}
 
 	return ( g_pConfig != NULL ) && (g_pHardwareConfig != NULL) && ( g_pSLShaderSystem != NULL );
-#endif
 }
 
 void CShaderDLL::Disconnect( bool bIsMaterialSystem )
 {
-#if defined( OSX )
-	g_pSLShaderSystem = NULL;
-#elif !defined( _PS3 )
 	if ( !bIsMaterialSystem )
 	{
 		ConVar_Unregister();
@@ -151,7 +134,6 @@ void CShaderDLL::Disconnect( bool bIsMaterialSystem )
 	g_pHardwareConfig = NULL;
 	g_pConfig = NULL;
 	g_pSLShaderSystem = NULL;
-#endif
 }
 
 bool CShaderDLL::Connect( CreateInterfaceFn factory )

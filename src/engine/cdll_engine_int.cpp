@@ -90,11 +90,7 @@
 #include "igame.h"
 #include "sys_mainwind.h"
 #include "dbginput.h"
-#include "cl_broadcast.h"
 
-#if defined( _PS3 )
-#include "engine_helper_ps3.h"
-#endif
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -393,9 +389,6 @@ public:
 	int		IsBoxInViewCluster( const Vector& mins, const Vector& maxs );
 
 	void Sound_ExtraUpdate( void );
-#if defined(_PS3)
-	void Sound_ServerUpdateSoundsPS3( void );
-#endif
 
 	bool CullBox ( const Vector& mins, const Vector& maxs );
 	const char *GetGameDirectory( void );
@@ -604,7 +597,6 @@ public:
 
 
 	virtual bool IsCreatingReslist();
-	virtual bool IsCreatingXboxReslist();
 
 	virtual void SetTimescale( float flTimescale );
 
@@ -696,18 +688,6 @@ public:
 	virtual bool SOSSetOpvarFloat( const char *pOpVarName, float flValue );
 	virtual bool SOSGetOpvarFloat( const char *pOpVarName, float &flValue );
 
-#if defined(_PS3)
-	virtual void* GetHostStateWorldBrush( void );
-	virtual bool PS3_IsUserRestrictedFromChat( void );
-	virtual bool PS3_IsUserRestrictedFromOnline( void );
-	virtual bool PS3_PendingInvitesFound( void );
-	virtual void PS3_ShowInviteOverlay( void );
-
-	virtual bool  bOverrideCSMConvars( void ); 
-	virtual bool  bDrawWorldIntoCSM( void );
-	virtual bool  bDrawStaticPropsIntoCSM( void ); 
-	virtual float GetCSMMaxDist( void );
-#endif
 
 	virtual bool IsSubscribedMap( const char *pchMapName, bool bOnlyOnDisk );
 	virtual bool IsFeaturedMap( const char *pchMapName, bool bOnlyOnDisk );
@@ -1190,23 +1170,10 @@ int	CEngineClient::IsBoxInViewCluster( const Vector& mins, const Vector& maxs )
 void CEngineClient::Sound_ExtraUpdate( void )
 {
 	// On xbox, sound is mixed on another thread, this is not necessary ever
-	if ( IsGameConsole() )
-		return;
 
 	S_ExtraUpdate();
 }
 
-#if defined(_PS3)
-extern void Host_UpdateSounds( void );
-
-void CEngineClient::Sound_ServerUpdateSoundsPS3( void )
-{
-	if (sv.IsActive())
-	{
-		Host_UpdateSounds();
-	}
-}
-#endif
 
 bool CEngineClient::CullBox ( const Vector& mins, const Vector& maxs )
 {
@@ -1655,7 +1622,7 @@ int CEngineClient::GetConnectionDataProtocol() const
 
 bool CEngineClient::EngineGotvSyncPacket( const CEngineGotvSyncPacket *pPkt )
 {
-	return s_ClientBroadcastPlayer.OnEngineGotvSyncPacket( pPkt );
+	return false;
 }
 
 
@@ -1788,48 +1755,9 @@ void CEngineClient::SetOverlayBindProxy( int iOverlayID, void *pBindProxy )
 //-----------------------------------------------------------------------------
 bool CEngineClient::CopyFrameBufferToMaterial( const char *pMaterialName )
 {
-	if ( !IsX360() )
-	{
-		// not for PC
-		Assert( 0 );
-		return false;
-	}
-
-	IMaterial *pMaterial = materials->FindMaterial( pMaterialName, TEXTURE_GROUP_OTHER );
-	if ( pMaterial->IsErrorMaterial() )
-	{
-		// unknown material
-		return false;
-	}
-
-	bool bFound;
-	IMaterialVar *pMaterialVar = pMaterial->FindVar( "$baseTexture", &bFound, false );
-	if ( !bFound || pMaterialVar->GetType() != MATERIAL_VAR_TYPE_TEXTURE )
-	{
-		// lack of expected $basetexture
-		return false;
-	}
-
-	ITexture *pTexture = pMaterialVar->GetTextureValue();
-	if ( !pTexture || !pTexture->IsRenderTarget() )
-	{
-		// base texture is not a render target
-		return false;
-	}
-
-	CMatRenderContextPtr pRenderContext( materials );
-
-	int width, height;
-	pRenderContext->GetRenderTargetDimensions( width, height );
-	if ( width != pTexture->GetActualWidth() || height != pTexture->GetActualHeight() )
-	{
-		// better be matched, not supporting a disparate blit in this context
-		// disparate blit may very well use same RT we are trying to copy into
-		return false;
-	}
-
-	pRenderContext->CopyRenderTargetToTexture( pTexture );
-	return true;
+	// not for PC
+	Assert( 0 );
+	return false;
 }
 
 
@@ -1846,7 +1774,7 @@ void CEngineClient::GrabPreColorCorrectedFrame( int x, int y, int width, int hei
 //-----------------------------------------------------------------------------
 bool CEngineClient::IsHammerRunning( ) const
 {
-	return IsPC() ? InEditMode() : false;
+	return InEditMode();
 }
 
 extern IAchievementMgr *g_pAchievementMgr;
@@ -1899,27 +1827,8 @@ void CEngineClient::SetMostRecentSaveGame( const char *lpszFilename )
 //-----------------------------------------------------------------------------
 void CEngineClient::StartXboxExitingProcess()
 {
-	if ( IsPC() )
-	{
-		// not for PC
-		return;
-	}
-
-	g_pInputSystem->StopRumble();
-
-	// save out the achievements
-	g_pAchievementMgr->SaveGlobalStateIfDirty();
-
-	// save out profile data
-	if ( g_pMatchFramework )
-	{
-		g_pMatchFramework->GetEventsSubscription()->BroadcastEvent( new KeyValues( "OnProfilesWriteOpportunity", "reason", "deactivation" ) );
-	}
-
-	S_StopAllSounds( true );
-
-	// Shutdown QMS, need to go back to single threaded
-	Host_AllowQueuedMaterialSystem( false );
+	// not for PC
+	return;
 }
 
 bool CEngineClient::IsSaveInProgress()
@@ -2212,10 +2121,6 @@ bool CEngineClient::IsCreatingReslist()
 {
 	return MapReslistGenerator().IsEnabled();
 }
-bool CEngineClient::IsCreatingXboxReslist()
-{
-	return MapReslistGenerator().IsCreatingForXbox();
-}
 
 void CEngineClient::UpdateDAndELights( void )
 {
@@ -2436,13 +2341,6 @@ int CEngineClient::GetGenericMemoryStats( GenericMemoryStat_t **ppMemoryStats )
 
 	AddGenericMemoryStat( "Hunk", Hunk_Size() );
 
-#ifdef _GAMECONSOLE
-	if ( host_state.worldbrush )
-	{
-		AddGenericMemoryStat( "BSP",     host_state.worldbrush->m_nBSPFileSize );
-		AddGenericMemoryStat( "LM_lump", host_state.worldbrush->m_nLightingDataSize );
-	}
-#endif // _GAMECONSOLE
 
 	*ppMemoryStats = &g_EngineMemStats[0];
 	return g_nEngineMemStats;
@@ -2463,12 +2361,6 @@ void CEngineClient::StartLoadingScreenForKeyValues( KeyValues* keyValues )
 	EngineUI()->StartLoadingScreenForKeyValues( keyValues );
 }
 
-#if defined(_PS3)
-void* CEngineClient::GetHostStateWorldBrush( void )
-{
-	return host_state.worldbrush;
-}
-#endif
 
 int	CEngineClient::GetClientVersion() const
 {
@@ -2584,13 +2476,11 @@ bool ClientDLL_Load()
 	// Check the signature on the client dll.  If this fails we load it anyway but put this client
 	// into insecure mode so it won't connect to secure servers and get VAC banned
 	// #if 0 the following block and rebuild engine.dll if you want to build your own noCEG client.dll and run on Steam Public in secure mode!
-#if 1
 	if ( !Host_AllowLoadModule( "client" DLL_EXT_STRING, "GAMEBIN", false ) )
 	{
 		// not supposed to load this but we will anyway
 		Host_DisallowSecureServers();
 	}
-#endif
 
 	// loads the client.dll, but ensures that the client dll is running under Steam
 	// this will have to be undone when we want mods to be able to run
@@ -2607,11 +2497,6 @@ bool ClientDLL_Load()
 			g_bClientGameDLLGreaterThanV13 = true;
 			if ( !g_ClientDLL )
 			{
-				if( IsPS3() )
-				{
-					return false;
-				}
-				else
 				{
 					Sys_Error( "Could not get client.dll interface from library client" );
 				}
@@ -2619,11 +2504,6 @@ bool ClientDLL_Load()
 		}
 		else
 		{
-			if( IsPS3() )
-			{
-				return false;
-			}
-			else
 			{
 				Sys_Error( "Could not find factory interface in library client" );
 			}
@@ -2632,11 +2512,6 @@ bool ClientDLL_Load()
 	else
 	{	
 		// library failed to load
-		if( IsPS3() )
-		{
-			return false;
-		}
-		else
 		{
 			Sys_Error( "Could not load library client" );
 		}
@@ -2736,7 +2611,7 @@ void ClientDLL_Init( void )
 			toolframework->ClientInit( g_ClientFactory );
 		}
 		 		
-		if ( g_pMaterialSystemHardwareConfig && !IsGameConsole( ) )
+		if ( g_pMaterialSystemHardwareConfig )
 		{
 			char pMessage[1024];
 			pMessage[0] = '\0';
@@ -2744,7 +2619,7 @@ void ClientDLL_Init( void )
 		
 			// We only run on hardware that supports shader model 3.0 (dxlevel 95) or later
 			// @wge: HACK FIXME - Not doing this on MacOSX for now...
-			if ( ( g_pMaterialSystemHardwareConfig->GetDXSupportLevel() < 95 ) && IsPC() && !IsOSX() && !IsOpenGL() ) // TODO: Need to remove the IsPC() before shipping once the Mac work is complete (mac is 92 right now)
+			if ( ( g_pMaterialSystemHardwareConfig->GetDXSupportLevel() < 95 ) && !IsOpenGL() ) // TODO: Need to remove the true before shipping once the Mac work is complete (mac is 92 right now)
 			{
 				wchar_t wcMessage[512];
 				g_pLocalize->ConstructString( wcMessage, sizeof( wcMessage ), g_pLocalize->Find( "#Valve_MinShaderModel3" ), 0 );
@@ -2910,14 +2785,6 @@ void ClientDLL_ProcessInput( void )
 		g_ClientDLL->HudProcessInput( GetLocalClient().IsConnected() );
 	}
 	
-#ifdef _PS3
-	if( g_pDebugInputThread && !g_pDebugInputThread->m_inputString.IsEmpty() )
-	{
-		AUTO_LOCK( g_pDebugInputThread->m_mx );
-		Cbuf_AddText( Cbuf_GetCurrentPlayer(), g_pDebugInputThread->m_inputString.Get(), kCommandSrcConsoleBuffer );
-		g_pDebugInputThread->m_inputString.Purge();
-	}
-#endif
 }
 
 
@@ -2990,29 +2857,4 @@ int  ClientDLL_GetSpectatorTarget( ClientDLLObserverMode_t *pObserverMode )
 	return -1;
 }
 
-#if defined ( _PS3 )
-
-// note:  We assume if we aren't connected or initialized, that the chat is NOT restricted
-bool CEngineClient::PS3_IsUserRestrictedFromChat( void )
-{
-	return EngineHelperPS3::PS3_IsUserRestrictedFromChat();
-}
-
-// NOTE:  If we're not signed in yet, or not initialized, we consider this as not restricted from online
-bool CEngineClient::PS3_IsUserRestrictedFromOnline( void )
-{
-	return EngineHelperPS3::PS3_IsUserRestrictedFromOnline();
-}
-
-bool CEngineClient::PS3_PendingInvitesFound( void )
-{
-	return EngineHelperPS3::PS3_PendingInvitesFound();
-}
-
-void CEngineClient::PS3_ShowInviteOverlay( void )
-{
-	EngineHelperPS3::PS3_ShowInviteOverlay();
-}
-
-#endif // _PS3
 

@@ -36,9 +36,7 @@ struct SCompositeTextureRTData_t
 // this should match the s_compositeTextureRTData array in composite_texture.cpp
 enum CompositeTextureRTSizes_t
 {
-#if !defined( PLATFORM_OSX )
 	COMPOSITE_TEXTURE_RT_2048,
-#endif
 	COMPOSITE_TEXTURE_RT_1024,
 	COMPOSITE_TEXTURE_RT_512,
 	COMPOSITE_TEXTURE_RT_256,

@@ -9,12 +9,9 @@
 #include <SDL3/SDL.h>
 #endif
 
-#if defined( _WIN32 ) && !defined( _X360 )
+#if defined( _WIN32 )
 #include "winlite.h"
-#elif defined(POSIX)
-	#ifdef OSX
-		#include <Carbon/Carbon.h>
-	#endif
+#else
 typedef void *HDC;
 #endif
 
@@ -51,12 +48,6 @@ typedef void *HDC;
 #include "tier2/tier2.h"
 #include "tier2/renderutils.h"
 #include "LoadScreenUpdate.h"
-#if defined( _X360 )
-#else
-#endif
-#if !defined(NO_STEAM)
-#include "cl_steamauth.h"
-#endif
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -127,9 +118,6 @@ protected:
 	void				ComputeStartupGraphicName( char *pBuf, int nBufLen );
 	void				WriteScreenshotToSteam( uint8 *pImage, int cubImage, int width, int height );
 	void				AddScreenshotToSteam( const char *pchFilenameJpeg, int width, int height );
-#if !defined(NO_STEAM)
-	void				ApplySteamScreenshotTags( ScreenshotHandle hScreenshot );
-#endif
 
 	// Finds the video mode in the list of video modes 
 	int					FindVideoMode( int nDesiredWidth, int nDesiredHeight, bool bWindowed );
@@ -166,11 +154,7 @@ private:
 protected:
 	enum
 	{
-#if !defined( _X360 )
 		MAX_MODE_LIST =	512
-#else
-		MAX_MODE_LIST =	2
-#endif
 	};
 
 	enum
@@ -466,46 +450,6 @@ int CVideoMode_Common::FindVideoMode( int nDesiredWidth, int nDesiredHeight, boo
 	// If we want to scale the 3D portion of the game and leave the UI at the same res, then
 	//	re-enable this code. Not that on retina displays the UI will be super small and that
 	//	should probably be fixed.
-#if 0
-	static ConVarRef mat_viewportscale( "mat_viewportscale" );
-
-	if ( !bWindowed )
-	{
-		m_nRenderWidth = nDesiredWidth;
-		m_nRenderHeight = nDesiredHeight;
-
-		uint nWidth, nHeight, nRefreshHz;
-
-		g_pLauncherMgr->GetNativeDisplayInfo( -1, nWidth, nHeight, nRefreshHz );
-
-		for ( int i = 0; i < m_nNumModes; i++)
-		{
-			if ( m_rgModeList[i].width != ( int )nWidth )
-			{
-				continue;
-			}
-
-			if ( m_rgModeList[i].height != ( int )nHeight )
-			{
-				continue;
-			}
-
-			if ( m_rgModeList[i].refreshRate != ( int )nRefreshHz )
-			{
-				continue;
-			}
-
-			mat_viewportscale.SetValue( ( float )nDesiredWidth / ( float )nWidth );
-			return i;
-		}
-
-		Assert( 0 );	// we should have found our native resolution, why not???
-	}
-	else
-	{
-		mat_viewportscale.SetValue( 1.0f );
-	}
-#endif // 0
 
 #endif // USE_SDL
 
@@ -628,17 +572,6 @@ bool CVideoMode_Common::CreateGameWindow( int nWidth, int nHeight, bool bWindowe
 		if ( !SetMode( GetModeWidth(), GetModeHeight(), IsWindowedMode(), NoWindowBorder() ) )
             return false;
 
-#if defined( USE_SDL ) && 0
-		static ConVarRef mat_viewportscale( "mat_viewportscale" );
-
-		if ( !bWindowed )
-		{
-			m_nRenderWidth = nWidth;
-			m_nRenderHeight = nHeight;
-
-			mat_viewportscale.SetValue(  ( float )nWidth / ( float )GetModeWidth() );
-		}
-#endif
 
 		if( IsPS3QuitRequested() )
 			return false;
@@ -737,18 +670,6 @@ bool CVideoMode_Common::SetupStartupGraphic()
 //-----------------------------------------------------------------------------
 void CVideoMode_Common::WriteScreenshotToSteam( uint8 *pImage, int cubImage, int width, int height )
 {
-#if !defined(NO_STEAM)
-	if ( cl_savescreenshotstosteam.GetBool() )
-	{
-		if ( Steam3Client().SteamScreenshots() )
-		{
-			ScreenshotHandle hScreenshot = Steam3Client().SteamScreenshots()->WriteScreenshot( pImage, cubImage, width, height );
-			ApplySteamScreenshotTags( hScreenshot );
-		}
-	}
-	cl_screenshotusertag.SetValue(0);
-	cl_screenshotlocation.SetValue("");
-#endif
 }
 
 
@@ -758,18 +679,6 @@ void CVideoMode_Common::WriteScreenshotToSteam( uint8 *pImage, int cubImage, int
 //-----------------------------------------------------------------------------
 void CVideoMode_Common::AddScreenshotToSteam( const char *pchFilename, int width, int height )
 {
-#if !defined(NO_STEAM)
-	if ( cl_savescreenshotstosteam.GetBool() )
-	{
-		if ( Steam3Client().SteamScreenshots() )
-		{
-			ScreenshotHandle hScreenshot = Steam3Client().SteamScreenshots()->AddScreenshotToLibrary( pchFilename, NULL, width, height );
-			ApplySteamScreenshotTags( hScreenshot );
-		}
-	}
-	cl_screenshotusertag.SetValue(0);
-	cl_screenshotlocation.SetValue("");
-#endif
 }
 
 
@@ -777,27 +686,6 @@ void CVideoMode_Common::AddScreenshotToSteam( const char *pchFilename, int width
 // Applies tags to a screenshot for the Steam screenshot library, which are
 // passed in through convars
 //-----------------------------------------------------------------------------
-#if !defined(NO_STEAM)
-void CVideoMode_Common::ApplySteamScreenshotTags( ScreenshotHandle hScreenshot )
-{
-	if ( hScreenshot != INVALID_SCREENSHOT_HANDLE )
-	{
-		if ( cl_screenshotusertag.GetBool() )
-		{
-			if ( Steam3Client().SteamUtils() )
-			{
-				CSteamID steamID( cl_screenshotusertag.GetInt(), Steam3Client().SteamUtils()->GetConnectedUniverse(), k_EAccountTypeIndividual );
-				Steam3Client().SteamScreenshots()->TagUser( hScreenshot, steamID );
-			}
-		}
-		const char *pchLocation = cl_screenshotlocation.GetString();
-		if ( pchLocation && pchLocation[0] )
-		{
-			Steam3Client().SteamScreenshots()->SetLocation( hScreenshot, pchLocation );
-		}
-	}	
-}
-#endif
 
 
 
@@ -806,13 +694,6 @@ void CVideoMode_Common::ApplySteamScreenshotTags( ScreenshotHandle hScreenshot )
 //-----------------------------------------------------------------------------
 void CVideoMode_Common::DrawStartupVideo()
 {
-#if defined( _X360 )
-	if ( ( XboxLaunch()->GetLaunchFlags() & LF_WARMRESTART ) )
-	{
-		// xbox does not play intro startup videos if it restarted itself
-		return;
-	}
-#endif
 
     // render an avi, if we have one
     if ( !m_bPlayedStartupVideo && !InEditMode() )
@@ -828,14 +709,6 @@ void CVideoMode_Common::DrawStartupVideo()
 //-----------------------------------------------------------------------------
 void CVideoMode_Common::DrawStartupGraphic()
 {
-    if ( IsGameConsole() )
-	{
-		// For TCRs the game consoles must maintain a steady refresh with the startup background.
-		// This system already has already been supplied the components. This just starts it.
-		BeginLoadingUpdates( MATERIAL_NON_INTERACTIVE_MODE_STARTUP );
-		g_pMaterialSystem->RefreshFrontBufferNonInteractive();
-        return;
-	}
 
 	if ( !SetupStartupGraphic() )
         return;
@@ -981,9 +854,6 @@ void CVideoMode_Common::DrawStartupGraphic()
 		g_pMaterialSystem->SwapBuffers();
 	}
 
-#if defined( DX_TO_GL_ABSTRACTION ) && !defined( _GAMECONSOLE )
-	g_pMaterialSystem->DoStartupShaderPreloading();
-#endif
 
     pMaterial->Release();
     pLoadingMaterial->Release();
@@ -1003,8 +873,6 @@ void CVideoMode_Common::DrawStartupGraphic()
 void CVideoMode_Common::BlitGraphicToHDCWithAlpha(HDC hdc, byte *rgba, int imageWidth, int imageHeight, int x0, int y0, int x1, int y1)
 {
 #ifdef WIN32
-    if ( IsX360() )
-        return;
 
     int x = x0;
     int y = y0;
@@ -1047,15 +915,6 @@ void CVideoMode_Common::InvalidateWindow()
         SDL_PushEvent(&fake);
 #elif defined( WIN32 ) 
         InvalidateRect( (HWND)game->GetMainWindow(), NULL, FALSE );
-#elif defined( OSX ) && defined( PLATFORM_64BITS )
-	// Do nothing, we'll move to SDL or we'll port the below.
-	Assert( !"OSX-64 unimpl" );
-#elif OSX
-        int x,y,w,t;
-        game->GetWindowRect( &x,&y,&w,&t);
-        Rect bounds = { 0,0,w,t}; // inval is in local co-ords
-        InvalWindowRect( (WindowRef)game->GetMainWindow(), &bounds );
-#elif defined( _PS3 )
 #else
 #error
 #endif
@@ -1064,8 +923,6 @@ void CVideoMode_Common::InvalidateWindow()
 
 void CVideoMode_Common::DrawNullBackground( void *hHDC, int w, int h )
 {
-	if ( IsX360() )
-		return;
 
 	HDC hdc = (HDC)hHDC;
 
@@ -1126,17 +983,12 @@ void CVideoMode_Common::DrawNullBackground( void *hHDC, int w, int h )
 	}
 }
 
-#if !defined( _WIN32 ) && !defined( _PS3 )
+#if !defined( _WIN32 )
 
 typedef unsigned char BYTE;
 
-#if !defined( OSX ) || defined( PLATFORM_64BITS )
         typedef unsigned int ULONG;
         typedef int LONG;
-#else
-        typedef unsigned long ULONG;
-        typedef long LONG;
-#endif
 
 typedef char * LPSTR;
 
@@ -1183,8 +1035,6 @@ typedef GUID UUID;
 //-----------------------------------------------------------------------------
 void CVideoMode_Common::BlitGraphicToHDC(HDC hdc, byte *rgba, int imageWidth, int imageHeight, int x0, int y0, int x1, int y1)
 {
-    if ( IsX360() )
-        return;
 
 #ifdef WIN32
     int x = x0;
@@ -1368,12 +1218,6 @@ int CVideoMode_Common::GetRefreshRateForMode( const vmode_t *pMode )
 //-----------------------------------------------------------------------------
 void CVideoMode_Common::AdjustWindow( int nWidth, int nHeight, int nBPP, bool bWindowed, bool bNoWindowBorder )
 {
-	if ( IsPS3() )
-	{
-		if ( game )
-			game->SetWindowSize( nWidth, nHeight );
-		return;
-	}
 
     if ( g_bTextMode )
         return;
@@ -1388,7 +1232,6 @@ void CVideoMode_Common::AdjustWindow( int nWidth, int nHeight, int nBPP, bool bW
     WindowRect.bottom   = nHeight;
 
 #if defined( WIN32 ) && !defined( USE_SDL )
-#ifndef _X360
 	// Get window style
     DWORD style = GetWindowLong( (HWND)game->GetMainWindow(), GWL_STYLE );
     DWORD exStyle = GetWindowLong( (HWND)game->GetMainWindow(), GWL_EXSTYLE );
@@ -1420,28 +1263,19 @@ void CVideoMode_Common::AdjustWindow( int nWidth, int nHeight, int nBPP, bool bW
 
     // Compute rect needed for that size client area based on window style
     AdjustWindowRectEx( &WindowRect, style, FALSE, exStyle );
-#endif
 
     // Prepare to set window pos, which is required when toggling between topmost and not window flags
     HWND hWndAfter = NULL;
     DWORD dwSwpFlags = 0;
-#ifndef _X360
+    if ( bWindowed )
     {
-        if ( bWindowed )
-        {
-            hWndAfter = HWND_NOTOPMOST;
-        }
-        else
-        {
-            hWndAfter = HWND_TOPMOST;
-        }
-        dwSwpFlags = SWP_FRAMECHANGED;
+        hWndAfter = HWND_NOTOPMOST;
     }
-#else
+    else
     {
-        dwSwpFlags = SWP_NOZORDER;
+        hWndAfter = HWND_TOPMOST;
     }
-#endif
+    dwSwpFlags = SWP_FRAMECHANGED;
 
     // Move the window to 0, 0 and the new true size
     SetWindowPos( (HWND)game->GetMainWindow(),
@@ -1471,28 +1305,6 @@ void CVideoMode_Common::AdjustWindow( int nWidth, int nHeight, int nBPP, bool bW
 	// information, and so it thinks everything worked great. We need to get the resolution of the desktop
 	// back from the firehose, and calling into the material system from sdlmgr would insert a dependency
 	// on materialsystem into every dll we build (since sdlmgr lives in appframework).
-	if ( IsOSX() && !bWindowed && !bNoWindowBorder )
-	{
-		// Did we set the size correctly?
-		materials->GetDisplayMode( vidMode );
-		if ( vidMode.m_Width != nWidth || vidMode.m_Height != nHeight )
-		{
-			Msg( "Requested full screen window of %dx%d, but got %dx%d. Trying again.\n", nWidth, nHeight, vidMode.m_Width, vidMode.m_Height );
-			g_pLauncherMgr->SetWindowFullScreen( false, nWidth, nHeight, bNoWindowBorder );
-			g_pLauncherMgr->SetWindowFullScreen( true, nWidth, nHeight, bNoWindowBorder );
-		}
-
-		// If still not, then force non-exclusive mode. 
-		materials->GetDisplayMode( vidMode );
-		if ( vidMode.m_Width != nWidth || vidMode.m_Height != nHeight )
-		{
-			Msg( "Requested full screen window of %dx%d, but got %dx%d. Disabling exclusive mode and trying again.\n", nWidth, nHeight, vidMode.m_Width, vidMode.m_Height );
-			CommandLine()->RemoveParm( "-exclusivefs" );
-			CommandLine()->AppendParm( "-noexclusivefs", nullptr );
-			g_pLauncherMgr->SetWindowFullScreen( false, nWidth, nHeight, bNoWindowBorder );
-			g_pLauncherMgr->SetWindowFullScreen( true, nWidth, nHeight, bNoWindowBorder );
-		}
-	}
 
 	CenterEngineWindow( game->GetMainWindow(),
 		WindowRect.right - WindowRect.left,
@@ -1501,18 +1313,6 @@ void CVideoMode_Common::AdjustWindow( int nWidth, int nHeight, int nBPP, bool bW
 	g_pLauncherMgr->SizeWindow( WindowRect.right - WindowRect.left, WindowRect.bottom - WindowRect.top );
 
 #elif defined( WIN32 )
-#elif defined(OSX)
-
-	g_pLauncherMgr->SizeWindow( WindowRect.right - WindowRect.left, WindowRect.bottom - WindowRect.top );
-
-#ifdef LINUX
-	if( bWindowed )
-	{
-		SDL_Window* win = (SDL_Window*)g_pLauncherMgr->GetWindowRef();
-		SDL_SetWindowBordered( win, ( CommandLine()->FindParm( "-noborder" ) ) ? SDL_FALSE : SDL_TRUE );
-	}
-#endif
-
 #else
     Assert( !"Impl me" );
 #endif
@@ -1646,7 +1446,6 @@ void CVideoMode_Common::CenterEngineWindow( void *hWndCenter, int width, int hei
 	game->SetWindowXY( CenterX, CenterY );
 	g_pLauncherMgr->MoveWindow( CenterX, CenterY );
 #elif defined( WIN32 ) 
-   if ( IsPC() )
     {
         // In windowed mode go through game->GetDesktopInfo because system metrics change
         // when going fullscreen vs windowed.
@@ -1671,11 +1470,6 @@ void CVideoMode_Common::CenterEngineWindow( void *hWndCenter, int width, int hei
         CenterX = (CenterX < 0) ? 0: CenterX;
         CenterY = (CenterY < 0) ? 0: CenterY;
     }
-    else
-    {
-        CenterX = 0;
-        CenterY = 0;
-    }
 
     // tweak the x and w positions if the user species them on the command-line
     CenterX = CommandLine()->ParmValue( "-x", CenterX );
@@ -1685,44 +1479,6 @@ void CVideoMode_Common::CenterEngineWindow( void *hWndCenter, int width, int hei
 
     SetWindowPos ( (HWND)hWndCenter, NULL, CenterX, CenterY, 0, 0,
                   SWP_NOSIZE | SWP_NOZORDER | SWP_SHOWWINDOW | SWP_DRAWFRAME);
-#elif defined(OSX)
-	CGDisplayCount maxDisplays = 1;
-	CGDirectDisplayID activeDspys[1];
-	CGDisplayErr error;
-	short i;
-	CGDisplayCount newDspyCnt = 0;
-	
-	error = CGGetActiveDisplayList(maxDisplays, activeDspys, &newDspyCnt);
-	if (error || newDspyCnt < 1) 
-		return;
-	
-	CGRect displayRect = CGDisplayBounds (activeDspys[0]);
-	int wide = displayRect.size.width;
-	int tall = displayRect.size.height;
-	
-	CenterX = (wide - width) / 2;
-	CenterY = (tall - height) / 2;
-	CenterX = (CenterX < 0) ? 0: CenterX;
-	CenterY = (CenterY < 0) ? 0: CenterY;
-
-	// tweak the x and w positions if the user species them on the command-line
-    CenterX = CommandLine()->ParmValue( "-x", CenterX );
-    CenterY = CommandLine()->ParmValue( "-y", CenterY );
-	
-	// also check for the negated form (since it is hard to say "-x -1000")
-	int negx = CommandLine()->ParmValue( "-negx", 0 ); 
-	if (negx > 0)
-	{
-		CenterX = -negx;
-	}
-	int negy = CommandLine()->ParmValue( "-negy", 0 ); 
-	if (negy > 0)
-	{
-		CenterY = -negy;
-	}
-	
-	game->SetWindowXY( CenterX, CenterY );
-	g_pLauncherMgr->MoveWindow( CenterX, CenterY );
 #else
 	Assert( !"Impl me" );
 #endif
@@ -1764,14 +1520,6 @@ void CVideoMode_Common::TakeSnapshotTGA( const char *pFilename )
 
 	// this xbox screenshot path is not meant as an exact framebuffer image
 	// need to correct for srgb disparity for proper comparison with PC screenshots
-	if ( IsX360() )
-	{
-		// process as 3 byte tuples
-		for ( int i = 0; i < GetModeWidth() * GetModeHeight() * 3; i++ )
-		{
-			pImage[i] = ( unsigned char )( SrgbLinearToGamma( X360GammaToLinear( (float)pImage[i] / 255.0f ) ) * 255.0f );
-		}
-	}
 
     CUtlBuffer outBuf;
     if ( TGAWriter::WriteToBuffer( pImage, outBuf, GetModeWidth(), GetModeHeight(), IMAGE_FORMAT_RGB888,
@@ -1811,12 +1559,6 @@ ITexture *CVideoMode_Common::GetFullFrameFB0( void )
 
 void CVideoMode_Common::BlitHiLoScreenBuffersTo16Bit( void )
 {
-    if ( IsX360() )
-    {
-        // FIXME: this breaks in 480p due to (at least) the multisampled depth buffer (need to cache, clear and restore the depth target)
-        Assert( 0 );
-        return;
-    }
     
     IMaterial *pHDRCombineMaterial = materials->FindMaterial( "dev/hdrcombineto16bit", TEXTURE_GROUP_OTHER, true );
 //  if( IsErrorMaterial( pHDRCombineMaterial ) )
@@ -1893,12 +1635,6 @@ void GetCubemapOffset( CubeMapFaceIndex_t faceIndex, int &x, int &y, int &faceDi
 //-----------------------------------------------------------------------------
 void CVideoMode_Common::TakeSnapshotPFMRect( const char *pFilename, int x, int y, int w, int h, int resampleWidth, int resampleHeight, CubeMapFaceIndex_t faceIndex )
 {
-    if ( IsX360() )
-    {
-        // FIXME: this breaks in 480p due to (at least) the multisampled depth buffer (need to cache, clear and restore the depth target)
-        Assert( 0 );
-        return;
-    }
 
     if ( g_pMaterialSystemHardwareConfig->GetHDRType() == HDR_TYPE_NONE )
     {
@@ -1976,11 +1712,6 @@ void CVideoMode_Common::TakeSnapshotPFMRect( const char *pFilename, int x, int y
 //-----------------------------------------------------------------------------
 void CVideoMode_Common::TakeSnapshotTGARect( const char *pFilename, int x, int y, int w, int h, int resampleWidth, int resampleHeight, bool bPFM, CubeMapFaceIndex_t faceIndex )
 {
-    if ( IsX360() )
-    {
-        Assert( 0 );
-        return;
-    }
 
     if ( bPFM )
     {
@@ -2069,8 +1800,6 @@ static void VID_ProcessMovieFrame( const MovieInfo_t& info, bool jpeg, const cha
 //-----------------------------------------------------------------------------
 void CVideoMode_Common::WriteMovieFrame( const MovieInfo_t& info )
 {
-	if ( IsX360() )
-		return;
     char const *pMovieName = info.moviename;
     int nMovieFrame = info.movieframe;
 
@@ -2216,7 +1945,6 @@ GLOBAL(void) jpeg_UtlBuffer_dest (j_compress_ptr cinfo, CUtlBuffer *pBuffer )
 
 bool CVideoMode_Common::TakeSnapshotJPEGToBuffer( CUtlBuffer& buf, int quality )
 {
-#if !defined( _GAMECONSOLE )
     if ( g_LostVideoMemory )
         return false;
 
@@ -2284,10 +2012,6 @@ bool CVideoMode_Common::TakeSnapshotJPEGToBuffer( CUtlBuffer& buf, int quality )
     
     delete[] pImage;
 
-#else
-    // not supporting
-    Assert( 0 );
-#endif
     return true;
 }
 
@@ -2297,7 +2021,6 @@ bool CVideoMode_Common::TakeSnapshotJPEGToBuffer( CUtlBuffer& buf, int quality )
 //-----------------------------------------------------------------------------
 void CVideoMode_Common::TakeSnapshotJPEG( const char *pFilename, int quality )
 {
-#if !defined( _X360 )
     Assert( pFilename );
 
     // Output buffer
@@ -2332,9 +2055,6 @@ void CVideoMode_Common::TakeSnapshotJPEG( const char *pFilename, int quality )
 		}
 	}
 
-#else
-    Assert( 0 );
-#endif
 }
 
 //-----------------------------------------------------------------------------
@@ -2536,7 +2256,6 @@ bool CVideoMode_MaterialSystem::SetMode( int nWidth, int nHeight, bool bWindowed
 		videoMode.width = nWidth;
 		videoMode.height = nHeight;
 	}
-#if defined( LINUX )
 	// On Linux with FULLSCREEN_DESKTOP, the compositor controls the resolution.
 	// Always use the exact requested size to match the actual window dimensions.
 	else if ( !bWindowed && ( videoMode.width != nWidth || videoMode.height != nHeight ) )
@@ -2544,7 +2263,6 @@ bool CVideoMode_MaterialSystem::SetMode( int nWidth, int nHeight, bool bWindowed
 		videoMode.width = nWidth;
 		videoMode.height = nHeight;
 	}
-#endif
 
     // update current video state
     MaterialSystem_Config_t config = *g_pMaterialSystemConfig;
@@ -2560,19 +2278,6 @@ bool CVideoMode_MaterialSystem::SetMode( int nWidth, int nHeight, bool bWindowed
     config.SetFlag( MATSYS_VIDCFG_FLAGS_WINDOWED, bWindowed );
 	config.SetFlag( MATSYS_VIDCFG_FLAGS_NO_WINDOW_BORDER, bNoWindowBorder );
 
-#if defined( _X360 )
-	XVIDEO_MODE xvideoMode;
-	XGetVideoMode( &xvideoMode );
-	config.SetFlag( MATSYS_VIDCFG_FLAGS_SCALE_TO_OUTPUT_RESOLUTION, (DWORD)nWidth != xvideoMode.dwDisplayWidth || (DWORD)nHeight != xvideoMode.dwDisplayHeight );
-    if ( nHeight == 480 || nWidth == 576 )
-    {
-        // Use 2xMSAA for standard def (see mat_software_aa_strength for fake hi-def aa)
-        // FIXME: shuffle the EDRAM surfaces to allow 4xMSAA for standard def
-        //        (they would overlap & trash each other with the current arrangement)
-        // NOTE: This should affect 640x480 and 848x480 (which is also used for 640x480 widescreen), and PAL 640x576
-        config.m_nAASamples = 2;
-    }
-#endif
 
     // FIXME: This is trash. We have to do *different* things depending on how we're setting the mode!
     if ( !m_bSetModeOnce )
@@ -2615,8 +2320,8 @@ void CVideoMode_MaterialSystem::AdjustForModeChange( void )
     // reset the window size
     CMatRenderContextPtr pRenderContext( materials );
 
-#if ( !defined( _GAMECONSOLE ) && defined ( WIN32 ) )
-	if ( !IsGameConsole() && !IsWindowedMode() && bWindowed )
+#if ( defined ( WIN32 ) )
+	if ( !IsWindowedMode() && bWindowed )
 	{
 		// Release fullscreen before going from windowed to fullscreen to avoid the case on Vista where we go from 
 		// fullscreen 640x480 to a higher reswindowed, but the rendertarget stays at 640x480 and the window is sized arbitrarily.
@@ -2675,8 +2380,6 @@ void CVideoMode_MaterialSystem::SetGameWindow( void *hWnd )
 //-----------------------------------------------------------------------------
 void CVideoMode_MaterialSystem::ReleaseVideo( void )
 {
-    if ( IsX360() )
-        return;
 
     if ( IsWindowedMode() )
         return;
@@ -2690,27 +2393,17 @@ void CVideoMode_MaterialSystem::ReleaseVideo( void )
 //-----------------------------------------------------------------------------
 void CVideoMode_MaterialSystem::RestoreVideo( void )
 {
-    if ( IsX360() )
-        return;
 
     if ( IsWindowedMode() )
         return;
 
 #if defined( WIN32 ) && !defined( USE_SDL )
     ShowWindow( (HWND)game->GetMainWindow(), SW_SHOWNORMAL );
-#elif defined( OSX ) && defined( PLATFORM_64BITS )
-    Assert( !"OSX-64 unimpl" );
-#elif OSX
-    ShowWindow( (WindowRef)game->GetMainWindow() );
-    CollapseWindow( (WindowRef)game->GetMainWindow(), false );
-#elif LINUX
+#else
     // On Wayland the compositor owns window placement and fullscreen state.
     // Re-applying AdjustWindow here (triggered on every focus gain) causes
     // the window to bounce between monitors with different resolutions.
     return;
-#elif _WIN32
-#else
-#error
 #endif
 	AdjustWindow( GetModeWidth(), GetModeHeight(), GetModeBPP(), IsWindowedMode(), NoWindowBorder() );
 }
@@ -2721,8 +2414,6 @@ void CVideoMode_MaterialSystem::RestoreVideo( void )
 //-----------------------------------------------------------------------------
 void CVideoMode_MaterialSystem::ReleaseFullScreen( void )
 {
-    if ( IsGameConsole() )
-        return;
 
     if ( IsWindowedMode() )
         return;
@@ -2731,22 +2422,9 @@ void CVideoMode_MaterialSystem::ReleaseFullScreen( void )
     // Hide the main window
     ChangeDisplaySettings( NULL, 0 );
     ShowWindow( (HWND)game->GetMainWindow(), SW_MINIMIZE );
-#elif defined( OSX ) && defined( PLATFORM_64BITS )
-    Assert( !"OSX-64 unimpl" );
-#elif OSX
-    CollapseWindow( (WindowRef)game->GetMainWindow(), true );
-
-	if (!CommandLine()->FindParm("-keepmousehooked"))
-	{
-		 //CGAssociateMouseAndMouseCursorPosition (TRUE);
-	}
-	CGDisplayShowCursor (kCGDirectMainDisplay);
-#elif LINUX
+#else
 //	XUnmapWindow( g_pLauncherMgr->GetDisplay(), (Window)game->GetMainWindow() );
 // !!! FIXME: Unmapping isn't really what we want here.
-#elif _WIN32
-#else
-#error
 #endif
 }
 
@@ -2756,8 +2434,6 @@ void CVideoMode_MaterialSystem::ReleaseFullScreen( void )
 //-----------------------------------------------------------------------------
 void CVideoMode_MaterialSystem::ChangeDisplaySettingsToFullscreen( int nWidth, int nHeight, int nBPP, bool bDesktopFriendlyFullscreen )
 {
-	if ( IsGameConsole() )
-        return;
 
     if ( IsWindowedMode() )
         return;
@@ -2796,7 +2472,7 @@ void CVideoMode_MaterialSystem::ReadScreenPixels( int x, int y, int w, int h, vo
     if ( !g_LostVideoMemory )
     {
         bool bReadPixelsFromFrontBuffer = g_pMaterialSystemHardwareConfig->ReadPixelsFromFrontBuffer();
-        if( IsPS3() || bReadPixelsFromFrontBuffer )
+        if( bReadPixelsFromFrontBuffer )
         {
             Shader_SwapBuffers();
         }
@@ -2811,7 +2487,7 @@ void CVideoMode_MaterialSystem::ReadScreenPixels( int x, int y, int w, int h, vo
 
         pRenderContext->ReadPixelsAndStretch( &rect, &rect, (unsigned char*)pBuffer, format, w * ImageLoader::SizeInBytes( format ) );
 
-		if( IsPS3() || bReadPixelsFromFrontBuffer )
+		if( bReadPixelsFromFrontBuffer )
         {
             Shader_SwapBuffers();
         }

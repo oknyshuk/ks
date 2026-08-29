@@ -224,9 +224,6 @@ void C_SunlightShadowControl::ClientThink()
 		{
 			g_pClientShadowMgr->UpdateFlashlightState( m_LocalFlashlightHandle, state );
 #ifndef INFESTED_DLL
-#ifndef LINUX
-#pragma message("TODO: rebuild sunlight projected texture after sunlight control changes.")
-#endif
 			g_pClientShadowMgr->UpdateProjectedTexture( m_LocalFlashlightHandle, true );
 #endif
 		}

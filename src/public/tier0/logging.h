@@ -10,7 +10,6 @@
 #ifndef LOGGING_H
 #define LOGGING_H
 
-#if !defined(__SPU__)
 
 #if defined( COMPILER_MSVC )
 #pragma once
@@ -21,13 +20,9 @@
 #include <stdio.h>
 
 // For XBX_** functions
-#if defined( _X360 )
-#endif
 
 // Used by CColorizedLoggingListener
-#if defined( _WIN32 ) || (defined(POSIX) && !defined(_GAMECONSOLE))
 #include "tier0/win32consoleio.h"
-#endif
 
 /*
 	---- Logging System ----
@@ -276,16 +271,8 @@ public:
 
 	  virtual void Log( const LoggingContext_t *pContext, const tchar *pMessage )
 	  {
-#ifdef _X360
-		  if ( !m_bQuietDebugger && XBX_IsConsoleConnected() )
 		  {
-			  // send to console
-			  XBX_DebugString( XMAKECOLOR( 0,0,0 ), pMessage );
-		  }
-		  else
-#endif
-		  {
-#if !defined( _CERT ) && !defined( DBGFLAG_STRINGS_STRIP )
+#if !defined( DBGFLAG_STRINGS_STRIP )
 			  if ( !m_bQuietPrintf )
 			  {
 				  _tprintf( _T("%s"), pMessage );
@@ -338,7 +325,6 @@ public:
 // A logging listener with Win32 console API color support which which prints 
 // to stdout and the debug channel.
 //-----------------------------------------------------------------------------
-#if !defined(_GAMECONSOLE)
 class CColorizedLoggingListener : public CSimpleLoggingListener
 {
 public:
@@ -378,7 +364,6 @@ public:
 
 	Win32ConsoleColorContext_t m_ColorContext;
 };
-#endif // !_GAMECONSOLE
 
 
 //-----------------------------------------------------------------------------
@@ -762,6 +747,5 @@ PLATFORM_OVERLOAD LoggingResponse_t LoggingSystem_Log( LoggingChannelID_t channe
 PLATFORM_INTERFACE LoggingResponse_t LoggingSystem_LogDirect( LoggingChannelID_t channelID, LoggingSeverity_t severity, Color spewColor, const char *pMessage );
 PLATFORM_INTERFACE LoggingResponse_t LoggingSystem_LogAssert( PRINTF_FORMAT_STRING const char *pMessageFormat, ... ) FMTFUNCTION( 1, 2 );
 
-#endif //#if !defined(__SPU__)
 
 #endif // LOGGING_H

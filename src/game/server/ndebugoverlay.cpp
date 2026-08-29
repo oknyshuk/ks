@@ -13,11 +13,9 @@
 #include "ndebugoverlay.h"
 #include "wcedit.h"
 
-#if defined( DEDICATED ) || defined( _PS3 ) || defined( POSIX )
 #include "ai_basenpc.h"
 #include "ai_network.h"
 #include "ai_networkmanager.h"
-#endif
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -143,7 +141,6 @@ float GetLongFloorZ(const Vector &origin)
 //------------------------------------------------------------------------------
 void UTIL_DrawPositioningOverlay( float flCrossDistance )
 {
-#ifndef SWDS
 	CBasePlayer* pPlayer = UTIL_PlayerByIndex(CBaseEntity::m_nDebugPlayer);
 
 	if (!pPlayer) 
@@ -212,7 +209,6 @@ void UTIL_DrawPositioningOverlay( float flCrossDistance )
 	Vector textPos = topPos - pRight*16 + Vector(0,0,10);
 	NDebugOverlay::Text( textPos, text, true, 0 );
 	*/
-#endif
 }
 
 //------------------------------------------------------------------------------

@@ -118,11 +118,9 @@ DECLARE_FIELD_SIZE( FIELD_SOUNDNAME,	sizeof(int))
 DECLARE_FIELD_SIZE( FIELD_INPUT,		sizeof(int))
 #if defined(_WIN32)
 DECLARE_FIELD_SIZE( FIELD_FUNCTION,		sizeof(void *))
-#elif defined(POSIX)
+#else
 // pointer to members under gnuc are 8bytes if you have a virtual func
 DECLARE_FIELD_SIZE( FIELD_FUNCTION,		2 * sizeof(void *))
-#else
-#error
 #endif
 DECLARE_FIELD_SIZE( FIELD_VMATRIX,		16 * sizeof(float))
 DECLARE_FIELD_SIZE( FIELD_VMATRIX_WORLDSPACE,	16 * sizeof(float))
@@ -342,21 +340,12 @@ struct datamap_t
 	template <typename T> friend void DataMapAccess(T *, datamap_t **p); \
 	template <typename T> friend datamap_t *DataMapInit(T *);
 
-#if defined(POSIX) && !defined(_PS3)
 
 #define DECLARE_SIMPLE_DATADESC_INSIDE_NAMESPACE() \
 	static datamap_t m_DataMap; \
 	static datamap_t *GetBaseMap(); \
 	template <typename T> friend void ::DataMapAccess(T *, datamap_t **p); 
 
-#else
-#define DECLARE_SIMPLE_DATADESC_INSIDE_NAMESPACE() \
-	static datamap_t m_DataMap; \
-	static datamap_t *GetBaseMap(); \
-	template <typename T> friend void ::DataMapAccess(T *, datamap_t **p); \
-	template <typename T> friend datamap_t *::DataMapInit(T *);
-
-#endif
 
 #define	DECLARE_DATADESC() \
 	DECLARE_SIMPLE_DATADESC() \

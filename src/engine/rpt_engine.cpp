@@ -211,12 +211,10 @@ CON_COMMAND_F( rpt_start, "", FCVAR_DONTRECORD | FCVAR_HIDDEN )
 	int nDay, nMonth, nYear;
 	GetCurrentDate( &nDay, &nMonth, &nYear );
 	Q_snprintf( pDir, sizeof(pDir), "rpt/%d_%d_%d", nMonth, nDay, nYear );
-#elif POSIX
+#else
 	time_t now = time(NULL);
 	struct tm *tm = localtime( &now );
 	Q_snprintf( pDir, sizeof(pDir), "rpt/%d_%d_%d", tm->tm_mon, tm->tm_wday, tm->tm_year + 1900 );
-#else
-#error
 #endif
 	RPTClient().SetRemoteFileDirectory( pDir );
 

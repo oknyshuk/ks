@@ -7,19 +7,13 @@
 //=============================================================================//
 
 
-#if defined(_WIN32) && !defined(_X360)
+#if defined(_WIN32)
 #include "winlite.h"
 #endif
-#ifdef OSX
-#include <Carbon/Carbon.h>
-#include <sys/sysctl.h>
-#endif
-#if defined(LINUX)
 #include <unistd.h>
 #include <fcntl.h>
 #if !defined(DEDICATED)
 #include <SDL3/SDL.h>
-#endif
 #endif
 
 #include "quakedef.h"
@@ -60,16 +54,9 @@
 #include "engineui.h"
 #include "tier0/systeminformation.h"
 #ifdef _WIN32
-#if !defined( _X360 )
 #include <io.h>
 #endif
-#endif
 #include "toolframework/itoolframework.h"
-#if defined( _X360 )
-#elif defined( _PS3 )
-#include "ps3/ps3_console.h"
-#include "sys/tty.h"
-#endif
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -367,21 +354,16 @@ bool Sys_MessageBox(const char *title, const char *info, bool bShowOkAndCancel)
 	SDL_ShowMessageBox( &messageboxdata, &buttonid );
 	return ( buttonid == 1 );
 
-#elif defined ( POSIX )
+#else
 
 	Warning( "%s\n", info );
 	return true;
 
-#else
-#error "implement me"
 #endif
 }
 
 bool g_bUpdateMinidumpComment = true;
 
-#if !defined(NO_STEAM) && !defined(DEDICATED) && !defined(LINUX)
-void BuildMinidumpComment( char const *pchSysErrorText );
-#endif
 
 //-----------------------------------------------------------------------------
 // Purpose: Exit engine with error
@@ -416,37 +398,23 @@ void Sys_Error_Internal( bool bMinidump, const char *error, va_list argsList )
 	g_bInErrorExit = true;
 	
 #if !defined( DEDICATED )
-	if ( IsPC() && videomode )
+	if ( videomode )
 		videomode->Shutdown();
 #endif
 
-	if ( IsPC() &&
-		 !CommandLine()->FindParm( "-makereslists" ) &&
+	if ( 		 !CommandLine()->FindParm( "-makereslists" ) &&
 		 !CommandLine()->FindParm( "-nomessagebox" ) )
 	{
 #ifdef _WIN32
 		::MessageBox( NULL, text, "Engine Error", MB_OK | MB_TOPMOST );
-#elif defined ( LINUX )
+#else
 		Sys_MessageBox( "Engine Error", text, false );
 #endif
 	}
 
-	if ( IsPC() )
-	{
-		DebuggerBreakIfDebugging();
-	}
-	else
-	{
-		DebuggerBreak(); 
-	}
+	DebuggerBreakIfDebugging();
 
-#if !defined( _X360 )
 
-#if !defined(NO_STEAM) && !defined(DEDICATED) && !defined(LINUX)
-	Status_Update();
-	BuildMinidumpComment( text );
-	g_bUpdateMinidumpComment = false;
-#endif
 
 	if ( bMinidump && !Plat_IsInDebugSession() && !CommandLine()->FindParm( "-nominidumps") )
 	{
@@ -472,26 +440,14 @@ void Sys_Error_Internal( bool bMinidump, const char *error, va_list argsList )
 			
 			// We always get here because the above filter evaluates to EXCEPTION_EXECUTE_HANDLER
 		}
-#elif defined( OSX )
-	// Doing this doesn't quite work the way we want because there is no "crashing" thread
-	// and we see "No thread was identified as the cause of the crash; No signature could be created because we do not know which thread crashed" on the back end
-	//SteamAPI_WriteMiniDump( 0, NULL, build_number() );
-	printf("\n ##### Sys_Error: %s", text );
-	fflush(stdout );
-	
-	int *p = 0;
-	*p = 0xdeadbeef;
-#elif defined( LINUX )
-	// Doing this doesn't quite work the way we want because there is no "crashing" thread
-	// and we see "No thread was identified as the cause of the crash; No signature could be created because we do not know which thread crashed" on the back end
-	//SteamAPI_WriteMiniDump( 0, NULL, build_number() );
-	int *p = 0;
-	*p = 0xdeadbeef;
 #else
-//!!BUG!! "need minidump impl on sys_error"
+	// Doing this doesn't quite work the way we want because there is no "crashing" thread
+	// and we see "No thread was identified as the cause of the crash; No signature could be created because we do not know which thread crashed" on the back end
+	//SteamAPI_WriteMiniDump( 0, NULL, build_number() );
+	int *p = 0;
+	*p = 0xdeadbeef;
 #endif
 	}
-#endif // _X360
 
 	host_initialized = false;
 	Plat_ExitProcess( 100 );
@@ -554,7 +510,7 @@ void Sys_Sleep( int msec )
 //			lpReserved - 
 // Output : BOOL WINAPI   DllMain
 //-----------------------------------------------------------------------------
-#if defined(_WIN32) && !defined( _X360 )
+#if defined(_WIN32)
 BOOL WINAPI DllMain(HANDLE hInst, ULONG ulInit, LPVOID lpReserved)
 {
 	InitCRTMemDebug();
@@ -588,109 +544,89 @@ void Sys_InitMemory( void )
 #ifdef _WIN32
 #if (_MSC_VER > 1200)
 	// MSVC 6.0 doesn't support GlobalMemoryStatusEx()
-	if ( IsPC() )
-	{
-		OSVERSIONINFOEX osvi;
-		ZeroMemory(&osvi, sizeof(OSVERSIONINFOEX));
-		osvi.dwOSVersionInfoSize = sizeof(OSVERSIONINFOEX);
+	OSVERSIONINFOEX osvi;
+	ZeroMemory(&osvi, sizeof(OSVERSIONINFOEX));
+	osvi.dwOSVersionInfoSize = sizeof(OSVERSIONINFOEX);
 
-		if ( GetVersionEx ((OSVERSIONINFO *)&osvi) )
+	if ( GetVersionEx ((OSVERSIONINFO *)&osvi) )
+	{
+		if ( osvi.dwPlatformId >= VER_PLATFORM_WIN32_NT && osvi.dwMajorVersion >= 5 )
 		{
-			if ( osvi.dwPlatformId >= VER_PLATFORM_WIN32_NT && osvi.dwMajorVersion >= 5 )
+			MEMORYSTATUSEX	memStat;
+			ZeroMemory(&memStat, sizeof(MEMORYSTATUSEX));
+			memStat.dwLength = sizeof(MEMORYSTATUSEX);
+			if ( GlobalMemoryStatusEx( &memStat ) )
 			{
-				MEMORYSTATUSEX	memStat;
-				ZeroMemory(&memStat, sizeof(MEMORYSTATUSEX));
-				memStat.dwLength = sizeof(MEMORYSTATUSEX);
-				if ( GlobalMemoryStatusEx( &memStat ) )
+				if ( memStat.ullTotalPhys > 0xFFFFFFFFUL )
 				{
-					if ( memStat.ullTotalPhys > 0xFFFFFFFFUL )
-					{
-						host_parms.memsize = 0xFFFFFFFFUL;
-					}
-					else
-					{
-						host_parms.memsize = memStat.ullTotalPhys;
-					}
+					host_parms.memsize = 0xFFFFFFFFUL;
+				}
+				else
+				{
+					host_parms.memsize = memStat.ullTotalPhys;
 				}
 			}
 		}
 	}
 #endif // (_MSC_VER > 1200)
 
-	if ( !IsGameConsole() )
+	if ( host_parms.memsize == 0 )
 	{
-		if ( host_parms.memsize == 0 )
-		{
-			MEMORYSTATUS lpBuffer;
-			// Get OS Memory status
-			lpBuffer.dwLength = sizeof(MEMORYSTATUS);
-			GlobalMemoryStatus( &lpBuffer );
+		MEMORYSTATUS lpBuffer;
+		// Get OS Memory status
+		lpBuffer.dwLength = sizeof(MEMORYSTATUS);
+		GlobalMemoryStatus( &lpBuffer );
 
-			if ( lpBuffer.dwTotalPhys <= 0 )
-			{
-				host_parms.memsize = MAXIMUM_WIN_MEMORY;
-			}
-			else
-			{
-				host_parms.memsize = lpBuffer.dwTotalPhys;
-			}	
-		}
-		if ( host_parms.memsize < ONE_HUNDRED_TWENTY_EIGHT_MB )
+		if ( lpBuffer.dwTotalPhys <= 0 )
 		{
-			Sys_Error( "Available memory less than 128MB!!! %i\n", host_parms.memsize );
-		}
-
-		// take one quarter the physical memory
-		if ( host_parms.memsize <= 512*1024*1024)
-		{
-			host_parms.memsize >>= 2;
-			// Apply cap of 64MB for 512MB systems
-			// this keeps the code the same as HL2 gold
-			// but allows us to use more memory on 1GB+ systems
-			if (host_parms.memsize > MAXIMUM_DEDICATED_MEMORY)
-			{
-				host_parms.memsize = MAXIMUM_DEDICATED_MEMORY;
-			}
+			host_parms.memsize = MAXIMUM_WIN_MEMORY;
 		}
 		else
 		{
-			// just take one quarter, no cap
-			host_parms.memsize >>= 2;
-		}
+			host_parms.memsize = lpBuffer.dwTotalPhys;
+		}	
+	}
+	if ( host_parms.memsize < ONE_HUNDRED_TWENTY_EIGHT_MB )
+	{
+		Sys_Error( "Available memory less than 128MB!!! %i\n", host_parms.memsize );
+	}
 
-		// At least MINIMUM_WIN_MEMORY mb, even if we have to swap a lot.
-		if (host_parms.memsize < MINIMUM_WIN_MEMORY)
+	// take one quarter the physical memory
+	if ( host_parms.memsize <= 512*1024*1024)
+	{
+		host_parms.memsize >>= 2;
+		// Apply cap of 64MB for 512MB systems
+		// this keeps the code the same as HL2 gold
+		// but allows us to use more memory on 1GB+ systems
+		if (host_parms.memsize > MAXIMUM_DEDICATED_MEMORY)
 		{
-			host_parms.memsize = MINIMUM_WIN_MEMORY;
-		}
-
-		// Apply cap
-		if (host_parms.memsize > MAXIMUM_WIN_MEMORY)
-		{
-			host_parms.memsize = MAXIMUM_WIN_MEMORY;
+			host_parms.memsize = MAXIMUM_DEDICATED_MEMORY;
 		}
 	}
 	else
 	{
-		host_parms.memsize = 128*1024*1024;
+		// just take one quarter, no cap
+		host_parms.memsize >>= 2;
+	}
+
+	// At least MINIMUM_WIN_MEMORY mb, even if we have to swap a lot.
+	if (host_parms.memsize < MINIMUM_WIN_MEMORY)
+	{
+		host_parms.memsize = MINIMUM_WIN_MEMORY;
+	}
+
+	// Apply cap
+	if (host_parms.memsize > MAXIMUM_WIN_MEMORY)
+	{
+		host_parms.memsize = MAXIMUM_WIN_MEMORY;
 	}
 #elif defined ( DEDICATED )
 	// hard code 32 mb for dedicated servers
 	host_parms.memsize = MAXIMUM_DEDICATED_MEMORY;
 
-#elif defined(POSIX)
+#else
 	uint64_t memsize = ONE_HUNDRED_TWENTY_EIGHT_MB;
 
-#if defined(OSX)
-	int mib[2] = { CTL_HW, HW_MEMSIZE };
-	u_int namelen = sizeof(mib) / sizeof(mib[0]);
-	size_t len = sizeof(memsize);
-
-	if (sysctl(mib, namelen, &memsize, &len, NULL, 0) < 0) 
-	{
-		memsize = ONE_HUNDRED_TWENTY_EIGHT_MB;
-	}
-#elif defined(LINUX)
 	const int fd = open("/proc/meminfo", O_RDONLY);
 	if (fd < 0)
 	{
@@ -725,9 +661,6 @@ void Sys_InitMemory( void )
 		}
 	}
 
-#else
-#error Write me.
-#endif
 
 	if ( memsize > 0xFFFFFFFFUL )
 	{
@@ -773,10 +706,6 @@ void Sys_InitMemory( void )
 		host_parms.memsize = MAXIMUM_WIN_MEMORY;
 	}
 	
-#elif defined( _PS3 )
-	host_parms.memsize = 128*1024*1024;
-#else
-	#error Write me.
 #endif
 }
 
@@ -808,12 +737,7 @@ void Sys_ShutdownAuthentication( void )
 //-----------------------------------------------------------------------------
 // Debug library spew output
 //-----------------------------------------------------------------------------
-#ifdef _PS3
-#include "tls_ps3.h"
-#define g_bInSpew GetTLSGlobals()->bEngineConsoleIsInSpew
-#else
 CTHREADLOCALINT g_bInSpew;
-#endif
 
 #include "tier1/fmtstr.h"
 
@@ -825,7 +749,7 @@ static CThreadFastMutex g_SpewMutex;
 
 static void AddSpewRecord( char const *pMsg )
 {
-#if !defined( DEDICATED ) && !defined( _GAMECONSOLE )
+#if !defined( DEDICATED )
 	CUtlString str;
 	str.Format( "%d(%f):  %s", g_nSpewLines, Plat_FloatTime(), pMsg );
 
@@ -871,12 +795,6 @@ void GetSpew( char *buf, size_t buflen )
 
 
 
-#ifdef _PS3
-DEFINE_LOGGING_CHANNEL_NO_TAGS( LOG_PSGL, "PSGL" );
-DEFINE_LOGGING_CHANNEL_NO_TAGS( LOG_VJOBS, "VJOBS" );
-DEFINE_LOGGING_CHANNEL_NO_TAGS( LOG_PHYSICS, "PHYSICS" );
-DEFINE_LOGGING_CHANNEL_NO_TAGS( LOG_LOADING, "LOADING" );
-#endif
 
 class CEngineConsoleLoggingListener : public ILoggingListener
 {
@@ -891,38 +809,6 @@ public:
 			}
 			return;
 		}
-#if defined( _PS3 ) && !defined( _CERT )
-		if( pContext->m_ChannelID == LOG_PSGL )
-		{
-			uint wrote;
-			// write to TTY USR1
-			sys_tty_write( SYS_TTYP3, pMessage, V_strlen(pMessage), &wrote );
-			return;
-		}
-		else if( pContext->m_ChannelID == LOG_VJOBS )
-		{
-			uint wrote;
-			// write to TTY USR2
-			sys_tty_write( SYS_TTYP4, pMessage, V_strlen(pMessage), &wrote );
-			return;
-		}
-		else if( pContext->m_ChannelID == LOG_PHYSICS )
-		{
-			uint wrote;
-			// write to TTY USR3
-			sys_tty_write( SYS_TTYP5, pMessage, V_strlen(pMessage), &wrote );
-			return;
-		}
-		else if( pContext->m_ChannelID == LOG_LOADING )
-		{
-			uint wrote;
-			// write to TTY USR4
-			sys_tty_write( SYS_TTYP6, pMessage, V_strlen(pMessage), &wrote );
-			return;
-		}
-		// NOTE: SYS_TTYP13 is taken by vxconsole
-		COMPILE_TIME_ASSERT( SYS_TTYP13 == 13 );
-#endif
 		
 
 		bool suppress = g_bInSpew ? true : false;
@@ -944,19 +830,15 @@ public:
 				}
 				else
 				{
-#ifdef _LINUX
 					SendStringToParentProcess( va( "#%02d:%s", g_nForkID, pMessage ) );
-#endif
 				}
 
 			}
 
-#ifndef _CERT
 			if ( g_bTextMode )
 			{
 				printf( "%s", pMessage );
 			}
-#endif
 			Color spewColor = pContext->m_Color;
 			switch ( pContext->m_Severity )
 			{
@@ -964,11 +846,7 @@ public:
 			case LS_MESSAGE:
 				if ( pContext->m_Color == UNSPECIFIED_LOGGING_COLOR )
 				{
-#if !defined( _X360 )
 					spewColor.SetColor( 255, 255, 255, 255 );
-#else
-					spewColor.SetColor( 0, 0, 0, 255 );
-#endif
 				}
 				break;
 			case LS_WARNING:
@@ -1111,7 +989,6 @@ int Sys_InitGame( CreateInterfaceFn appSystemFactory, const char* pBaseDir, void
 	Q_FixSlashes( s_pBaseDir );
 	host_parms.basedir = s_pBaseDir;
 
-#ifdef LINUX
 	if ( CommandLine()->FindParm ( "-pidfile" ) )
 	{	
 		FileHandle_t pidFile = g_pFileSystem->Open( CommandLine()->ParmValue ( "-pidfile", "srcds.pid" ), "w+" );
@@ -1127,14 +1004,12 @@ int Sys_InitGame( CreateInterfaceFn appSystemFactory, const char* pBaseDir, void
 			Warning("Unable to open pidfile (%s)\n", CommandLine()->CheckParm ( "-pidfile" ));
 		}
 	}
-#endif
 
 
 	// Initialize clock
 	TRACEINIT( Sys_Init(), Sys_Shutdown() );
 
 #if defined(_DEBUG)
-	if ( IsPC() )
 	{
 		if( !CommandLine()->FindParm( "-nodttest" ) && !CommandLine()->FindParm( "-dti" ) )
 		{
@@ -1159,10 +1034,6 @@ int Sys_InitGame( CreateInterfaceFn appSystemFactory, const char* pBaseDir, void
 
 	MapReslistGenerator_BuildMapList();
 
-#if !defined(NO_STEAM) && !defined(DEDICATED) && !defined(LINUX)
-	Status_Update();
-	BuildMinidumpComment( NULL );
-#endif
 
 
 	return 1;
@@ -1348,10 +1219,7 @@ void LoadEntityDLLs( const char *szBaseDir, bool bServerOnly )
 		LoadThisDll( szDllFilename, bServerOnly );
 	}
 
-#elif defined( _PS3 )
-	Q_snprintf( szDllFilename, sizeof( szDllFilename ), "server" DLL_EXT_STRING );
-	LoadThisDll( szDllFilename, bServerOnly );
-#elif defined( LINUX )
+#else
 	if ( s_bIsDedicatedServer && !CommandLine()->FindParm( "-novalveds" ) )
 	{
 		Q_snprintf( szDllFilename, sizeof( szDllFilename ), "server_valve" );
@@ -1362,11 +1230,6 @@ void LoadEntityDLLs( const char *szBaseDir, bool bServerOnly )
 		Q_snprintf( szDllFilename, sizeof( szDllFilename ), "server"  );
 		LoadThisDll( szDllFilename, bServerOnly );
 	}
-#elif defined( POSIX )
-	Q_snprintf( szDllFilename, sizeof( szDllFilename ), "server" );
-	LoadThisDll( szDllFilename, bServerOnly );
-#else
-	#error "define server.dll type"
 #endif
 
 
@@ -1596,8 +1459,6 @@ void Sys_SetRegKeyValue( const char *pszSubKey, const char *pszElement,	const ch
 void Sys_CreateFileAssociations( int count, FileAssociationInfo *list )
 {
 #if defined(_WIN32)
-	if ( IsX360() )
-		return;
 
 	char appname[ 512 ];
 
@@ -1685,25 +1546,9 @@ CON_COMMAND( star_memory, "Dump memory stats" )
 {
 	// get a current stat of available memory
 	// 32 MB is reserved and fixed by OS, so not reporting to allow memory loggers sync
-#ifdef LINUX
 	struct mallinfo memstats = mallinfo( );
 	Msg( "sbrk size: %.2f MB, Used: %.2f MB, #mallocs = %d\n",
 		 memstats.arena / ( 1024.0 * 1024.0), memstats.uordblks / ( 1024.0 * 1024.0 ), memstats.hblks );
-#elif OSX
-	struct mstats memstats = mstats( );
-	Msg( "Available %.2f MB, Used: %.2f MB, #mallocs = %d\n",
-		 memstats.bytes_free / ( 1024.0 * 1024.0), memstats.bytes_used / ( 1024.0 * 1024.0 ), memstats.chunks_used );
-#elif defined( _PS3 )
-	Msg( "Memory info on PS3: not implemented.\n" );
-#else
-	MEMORYSTATUSEX statex;
-	statex.dwLength = sizeof( MEMORYSTATUSEX );
-	GlobalMemoryStatusEx( &statex );
-	Msg( "Available: %.2f MB, Used: %.2f MB, Free: %.2f MB\n", 
-		statex.ullTotalPhys/( 1024.0f*1024.0f ) - 32.0f,
-		( statex.ullTotalPhys - statex.ullAvailPhys )/( 1024.0f*1024.0f ) - 32.0f, 
-		statex.ullAvailPhys/( 1024.0f*1024.0f ) );
-#endif
 }
 
 #if defined( ENABLE_RUNTIME_STACK_TRANSLATION )

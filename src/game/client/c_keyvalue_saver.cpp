@@ -41,12 +41,9 @@ bool C_KeyValueSaver::Init( void )
 
 	ACTIVE_SPLITSCREEN_PLAYER_GUARD( m_nSplitScreenSlot );
 
-	if ( !IsGameConsole() )
-	{
-		ListenForGameEvent( "round_end" );
-		ListenForGameEvent( "map_transition" );
-		ListenForGameEvent( "game_newmap" );
-	}
+	ListenForGameEvent( "round_end" );
+	ListenForGameEvent( "map_transition" );
+	ListenForGameEvent( "game_newmap" );
 
 	return true;
 }
@@ -76,24 +73,6 @@ void C_KeyValueSaver::Update( float frametime )
 {
 	ACTIVE_SPLITSCREEN_PLAYER_GUARD( m_nSplitScreenSlot );
 
-	if ( IsGameConsole() )
-	{
-		// On X360 we want to save when they're not connected
-		if ( !engine->IsInGame() )
-		{
-			// They aren't in game
-			WriteAllDirtyKeyValues();
-		}
-		else
-		{
-			const char *levelName = engine->GetLevelName();
-			if ( levelName && levelName[0] && engine->IsLevelMainMenuBackground() )
-			{
-				// The are in game, but it's a background map
-				WriteAllDirtyKeyValues();
-			}
-		}
-	}
 }
 
 void C_KeyValueSaver::FireGameEvent( IGameEvent *event )
@@ -102,15 +81,12 @@ void C_KeyValueSaver::FireGameEvent( IGameEvent *event )
 
 	const char *name = event->GetName();
 
-	if ( !IsGameConsole() )
+	if ( Q_strcmp( name, "round_end" ) == 0 || 
+		 Q_strcmp( name, "map_transition" ) == 0 || 
+		 Q_strcmp( name, "game_newmap" ) == 0 )
 	{
-		if ( Q_strcmp( name, "round_end" ) == 0 || 
-			 Q_strcmp( name, "map_transition" ) == 0 || 
-			 Q_strcmp( name, "game_newmap" ) == 0 )
-		{
-			// Good place to save
-			WriteAllDirtyKeyValues();
-		}
+		// Good place to save
+		WriteAllDirtyKeyValues();
 	}
 }
 
@@ -175,15 +151,6 @@ void C_KeyValueSaver::MarkKeyValuesDirty( const char *pchFileName )
 bool C_KeyValueSaver::ReadKeyValues( KeyValueSaverData *pKeyValueData )
 {
 #if !defined( CSTRIKE15 )
-#ifdef _GAMECONSOLE
-	DevMsg( "Read Game Instructor for splitscreen slot %d\n", m_nSplitScreenSlot );
-
-	if ( m_nSplitScreenSlot < 0 )
-		return false;
-
-	if ( m_nSplitScreenSlot >= (int) XBX_GetNumGameUsers() )
-		return false;
-#endif
 
 	char szFilename[_MAX_PATH];
 	Q_snprintf( szFilename, sizeof( szFilename ), VarArgs( "save/%s", pKeyValueData->szFileName ) );
@@ -221,15 +188,6 @@ bool C_KeyValueSaver::WriteDirtyKeyValues( KeyValueSaverData *pKeyValueData, boo
 	// in a yet-unmounted state.
 	pKeyValueData->bDirtySaveData = false;
 
-#ifdef _GAMECONSOLE
-	DevMsg( "Write KeyValueSaver for splitscreen slot %d at time: %.1f\n", m_nSplitScreenSlot, Plat_FloatTime() );
-
-	if ( m_nSplitScreenSlot < 0 )
-		return false;
-
-	if ( m_nSplitScreenSlot >= (int) XBX_GetNumGameUsers() )
-		return false;
-#endif
 
 	// Build key value data to save
 	if ( pKeyValueData->pKeyValues )

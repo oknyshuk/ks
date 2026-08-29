@@ -49,9 +49,7 @@ int GetMatPicMip()
 static SCompositeTextureRTData_t s_compositeTextureRTData[COMPOSITE_TEXTURE_RT_COUNT] =
 {
 	// these should be sorted in descending size order
-#if !defined( PLATFORM_OSX )
 	{ "_rt_CustomMaterial2048", 2048, true,  false, NULL },
-#endif
 	{ "_rt_CustomMaterial1024", 1024, true,  false, NULL },
 	{ "_rt_CustomMaterial512",   512, true,  false, NULL },
 	{ "_rt_CustomMaterial256",   256, false, false, NULL },
@@ -592,15 +590,6 @@ void CCompositeTexture::Finalize()
 	m_ResultTexture.m_pTexture->Download();
 	m_bNeedsFinalize = false;
 
-#if defined( DX_TO_GL_ABSTRACTION )
-	// Free VTF, significant mem saving - after Downloand not used for anything other than CWeaponCSBase::SaveCustomMaterialsTextures()
-	// forceregenerate ensures this is safe on loss of focus - see CCompositeTextureResult::RegenerateTextureBits()
-	if ( m_pResultVTF != NULL )
-	{
-		DestroyVTFTexture( m_pResultVTF );
-		m_pResultVTF = NULL;
-	}
-#endif
 }
 
 bool CCompositeTexture::Compare( const SCompositeTextureInfo &textureInfo )

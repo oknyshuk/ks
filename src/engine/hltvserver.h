@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
+//========= Copyright ï¿½ 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -13,7 +13,6 @@
 #include "baseserver.h"
 #include "hltvclient.h"
 #include "hltvdemo.h"
-#include "hltvbroadcast.h"
 #include "hltvclientstate.h"
 #include "clientframe.h"
 #include "networkstringtable.h"
@@ -200,7 +199,6 @@ public:
 	void	StartMaster(CGameClient *client); // start HLTV server as master proxy
 	void	ConnectRelay(const char *address); // connect to other HLTV proxy
 	void	StartDemo(const char *filename); // starts playing back a demo file
-	void	StartBroadcast();
 	void    StartRelay( void ); // start HLTV server as relay proxy
 	bool	SendNetMsg( INetMessage &msg, bool bForceReliable = false, bool bVoice = false );
 	bool	NETMsg_PlayerAvatarData( const CNETMsg_PlayerAvatarData& msg );
@@ -340,7 +338,6 @@ public:
 	CGameClient		*m_MasterClient;		// if != NULL, this is the master HLTV 
 	CHLTVClientState m_ClientState;
 	CHLTVDemoRecorder m_DemoRecorder;			// HLTV demo object for recording and playback
-	CHLTVBroadcast	m_Broadcast;
 	CGameServer		*m_Server;		// pointer to source server (sv.)
 	IHLTVDirector	*m_Director;	// HTLV director exported by game.dll	
 	int				m_nFirstTick;	// first known server tick;

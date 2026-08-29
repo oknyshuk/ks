@@ -14,7 +14,6 @@
 #include "tier0/platform.h"
 #include "tier0/dbg.h"
 
-#if defined( POSIX )
 #include <pthread.h>
 #include <errno.h>
 #ifndef WAIT_OBJECT_0
@@ -29,20 +28,12 @@
 #ifndef THREAD_PRIORITY_HIGHEST
 #define THREAD_PRIORITY_HIGHEST 2
 #endif
-#endif
 
 #if defined(COMPILER_MSVC)
 // For _ReadWriteBarrier()
 #include <intrin.h>
 #endif
 
-#ifdef OSX
-// Add some missing defines
-#define PTHREAD_MUTEX_TIMED_NP         PTHREAD_MUTEX_NORMAL
-#define PTHREAD_MUTEX_RECURSIVE_NP     PTHREAD_MUTEX_RECURSIVE
-#define PTHREAD_MUTEX_ERRORCHECK_NP    PTHREAD_MUTEX_ERRORCHECK
-#define PTHREAD_MUTEX_ADAPTIVE_NP      3
-#endif
 
 #if defined( _WIN32 )
 #pragma once
@@ -99,7 +90,7 @@ enum ThreadPriorityEnum_t
 #define TP_IS_PRIORITY_HIGHER( a, b ) ( ( a ) > ( b ) )
 #endif
 
-#if defined( PLATFORM_WINDOWS_PC ) && !defined( STEAM ) && !defined( _CERT )
+#if defined( PLATFORM_WINDOWS_PC ) && !defined( STEAM )
 //Thread parent stack trace linkage requires ALL executing binaries to disable frame pointer omission to operate speedily/successfully. (/Oy-)  "vpc /nofpo"
 #define THREAD_PARENT_STACK_TRACE_SUPPORTED 1 //uncomment to support joining the root of a thread's stack trace to its parent's at time of invocation. Must also set ENABLE_THREAD_PARENT_STACK_TRACING in stacktools.h
 #endif
@@ -167,8 +158,6 @@ inline void ThreadPause()
 {
 #if defined( COMPILER_PS3 )
 	__db16cyc();
-#elif defined( __aarch64__ )
-	sched_yield();
 #elif defined( COMPILER_GCC )
 	__asm __volatile( "pause" );
 #elif defined ( COMPILER_MSVC64 )
@@ -201,7 +190,7 @@ PLATFORM_INTERFACE int ThreadPinToFastestCores();	// returns the number of CPUs 
 
 #ifdef _WIN32
 #define NOINLINE
-#elif defined(POSIX)
+#else
 #define NOINLINE __attribute__ ((noinline))
 #endif
 
@@ -218,7 +207,6 @@ PLATFORM_INTERFACE int ThreadPinToFastestCores();	// returns the number of CPUs 
 #error Every platform needs to define ThreadMemoryBarrier to at least prevent compiler reordering
 #endif
 
-#if defined( _LINUX ) || defined( _OSX )
 #define USE_INTRINSIC_INTERLOCKED
 // linux implementation
 inline int32 ThreadInterlockedIncrement( int32 volatile *p )
@@ -262,15 +250,6 @@ inline bool ThreadInterlockedAssignIf( int32 volatile *p, int32 value, int32 com
 	return __sync_bool_compare_and_swap( p, comperand, value );
 }
 
-#else
-// non 32-bit windows and 360 implementation
-PLATFORM_INTERFACE int32 ThreadInterlockedIncrement( int32 volatile * ) NOINLINE;
-PLATFORM_INTERFACE int32 ThreadInterlockedDecrement( int32 volatile * ) NOINLINE;
-PLATFORM_INTERFACE int32 ThreadInterlockedExchange( int32 volatile *, int32 value ) NOINLINE;
-PLATFORM_INTERFACE int32 ThreadInterlockedExchangeAdd( int32 volatile *, int32 value ) NOINLINE;
-PLATFORM_INTERFACE int32 ThreadInterlockedCompareExchange( int32 volatile *, int32 value, int32 comperand ) NOINLINE;
-PLATFORM_INTERFACE bool ThreadInterlockedAssignIf( int32 volatile *, int32 value, int32 comperand ) NOINLINE;
-#endif
 
 
 PLATFORM_INTERFACE void *ThreadInterlockedExchangePointer( void * volatile *, void *value ) NOINLINE;
@@ -290,7 +269,6 @@ PLATFORM_INTERFACE bool ThreadInterlockedAssignIf64( volatile int64 *pDest, int6
 
 PLATFORM_INTERFACE int64 ThreadInterlockedExchange64( int64 volatile *, int64 value ) NOINLINE;
 
-#if defined(POSIX)
 
 inline int64 ThreadInterlockedIncrement64( int64 volatile *p )
 {
@@ -304,7 +282,6 @@ inline int64 ThreadInterlockedDecrement64( int64 volatile *p )
 	return __sync_fetch_and_add( p, -1 ) - 1;
 }
 
-#endif
 
 #ifdef COMPILER_MSVC64
 // 64 bit windows can use intrinsics for these, 32-bit can't
@@ -400,11 +377,7 @@ public:
 		void   Set(void *);
 
 private:
-#if defined(POSIX)
 		pthread_key_t m_index;
-#else
-		uint32 m_index;
-#endif
 	};
 
 	//---------------------------------------------------------
@@ -504,13 +477,9 @@ private:
 	};
 }
 
-#ifdef _OSX
-PLATFORM_INTERFACE GenericThreadLocals::CThreadLocalInt<int> g_nThreadID;
-#else // _OSX
 #ifndef TIER0_DLL_EXPORT
 DLL_GLOBAL_IMPORT CTHREADLOCALINT g_nThreadID;
 #endif // TIER0_DLL_EXPORT
-#endif // _OSX
 
 #endif /// afx32
 #endif //__win32
@@ -782,11 +751,9 @@ private:
 	#define TT_SIZEOF_CRITICALSECTION 24
 #endif // _WIN64
 	byte m_CriticalSection[TT_SIZEOF_CRITICALSECTION];
-#elif defined(POSIX)
+#else
 	pthread_mutex_t m_Mutex;
 	pthread_mutexattr_t m_Attr;
-#else
-#error
 #endif
 
 #ifdef THREAD_MUTEX_TRACING_SUPPORTED
@@ -1134,15 +1101,13 @@ protected:
 #ifdef _WIN32
 	HANDLE m_hSyncObject;
 	bool m_bCreatedHandle;
-#elif defined(POSIX)
+#else
 	pthread_mutex_t	m_Mutex;
 	pthread_cond_t	m_Condition;
 	bool m_bInitalized;
 	int m_cSet;
 	bool m_bManualReset;
 	bool m_bWakeForEvent;
-#else
-#error "Implement me"
 #endif
 
 private:
@@ -1574,7 +1539,7 @@ private:
 #ifdef _WIN32
 	HANDLE 	m_hThread;
 	ThreadId_t m_threadId;
-#elif defined(POSIX)
+#else
 	pthread_t m_threadId;
 	volatile pthread_t	m_threadZombieId;
 	//lwss add - Thread params. These were previously allocated on the heap and leaked.
@@ -1783,108 +1748,6 @@ extern "C"
 #endif
 
 //---------------------------------------------------------
-#if !defined(POSIX)
-
-inline void CThreadMutex::Lock()
-{
-	#if defined( THREAD_MUTEX_TRACING_ENABLED )
-		uint thisThreadID = ThreadGetCurrentId();
-		if ( m_bTrace && m_currentOwnerID && ( m_currentOwnerID != thisThreadID ) )
-			Msg( _T( "Thread %u about to wait for lock %p owned by %u\n" ), ThreadGetCurrentId(), (CRITICAL_SECTION *)&m_CriticalSection, m_currentOwnerID );
-	#endif
-
-		LockSilent();
-
-	#ifdef THREAD_MUTEX_TRACING_ENABLED
-		if (m_lockCount == 0)
-		{
-			// we now own it for the first time.  Set owner information
-			m_currentOwnerID = thisThreadID;
-			if ( m_bTrace )
-				Msg( _T( "Thread %u now owns lock 0x%p\n" ), m_currentOwnerID, (CRITICAL_SECTION *)&m_CriticalSection );
-		}
-		m_lockCount++;
-	#endif
-}
-
-//---------------------------------------------------------
-
-inline void CThreadMutex::Unlock()
-{
-	#ifdef THREAD_MUTEX_TRACING_ENABLED
-		AssertMsg( m_lockCount >= 1, "Invalid unlock of thread lock" );
-		m_lockCount--;
-		if (m_lockCount == 0)
-		{
-			if ( m_bTrace )
-				Msg( _T( "Thread %u releasing lock 0x%p\n" ), m_currentOwnerID, (CRITICAL_SECTION *)&m_CriticalSection );
-			m_currentOwnerID = 0;
-		}
-	#endif
-	UnlockSilent();
-}
-
-//---------------------------------------------------------
-
-inline void CThreadMutex::LockSilent()
-{
-	#ifdef MSVC
-	EnterCriticalSection((CRITICAL_SECTION *)&m_CriticalSection);
-	#else
-	DebuggerBreak();	// should not be called - not defined for this platform/compiler!!!
-	#endif
-}
-
-//---------------------------------------------------------
-
-inline void CThreadMutex::UnlockSilent()
-{
-	#ifdef MSVC
-	LeaveCriticalSection((CRITICAL_SECTION *)&m_CriticalSection);
-	#else
-	DebuggerBreak();	// should not be called - not defined for this platform/compiler!!!
-	#endif
-}
-
-//---------------------------------------------------------
-
-inline bool CThreadMutex::AssertOwnedByCurrentThread()
-{
-#ifdef THREAD_MUTEX_TRACING_ENABLED
-#ifdef _WIN32
-	if (ThreadGetCurrentId() == m_currentOwnerID)
-		return true;
-	AssertMsg3( 0, "Expected thread %u as owner of lock 0x%p, but %u owns", ThreadGetCurrentId(), (CRITICAL_SECTION *)&m_CriticalSection, m_currentOwnerID );
-	return false;
-#endif
-#else
-	return true;
-#endif
-}
-
-inline bool CThreadMutex::IsOwnedByCurrentThread_DebugOnly()
-{
-#if defined ( THREAD_MUTEX_TRACING_ENABLED ) && defined ( _WIN32 )
-	return ThreadGetCurrentId() == m_currentOwnerID;
-#else
-	return true;
-#endif
-}
-
-//---------------------------------------------------------
-
-inline void CThreadMutex::SetTrace( bool bTrace )
-{
-#ifdef _WIN32
-#ifdef THREAD_MUTEX_TRACING_ENABLED
-	m_bTrace = bTrace;
-#endif
-#endif
-}
-
-//---------------------------------------------------------
-
-#elif defined(POSIX)
 
 inline CThreadMutex::CThreadMutex()
 {
@@ -1942,9 +1805,6 @@ inline void CThreadMutex::SetTrace(bool fTrace)
 {
 }
 
-#else 
-#error
-#endif // POSIX
 
 //-----------------------------------------------------------------------------
 //
@@ -2186,21 +2046,11 @@ FORCEINLINE bool CThreadSpinRWLock::TryLockForRead()
 	LockInfo_t oldValue;
 	LockInfo_t newValue;
 
-	if( IsX360() || IsPS3() )
-	{
-		// this is the code equivalent to original code (see below) that doesn't cause LHS on Xbox360
-		// WARNING: This code assumes BIG Endian CPU
-		oldValue.m_i64 = uint32( m_lockInfo.m_nReaders );
-		newValue.m_i64 = oldValue.m_i64 + 1; // NOTE: when we have -1 (or 0xFFFFFFFF) readers, this will result in non-equivalent code
-	}
-	else
-	{
-		// this is the original code that worked here for a while
-		oldValue.m_nReaders = m_lockInfo.m_nReaders;
-		oldValue.m_writerId = 0;
-		newValue.m_nReaders = oldValue.m_nReaders + 1;
-		newValue.m_writerId = 0;
-	}
+	// this is the original code that worked here for a while
+	oldValue.m_nReaders = m_lockInfo.m_nReaders;
+	oldValue.m_writerId = 0;
+	newValue.m_nReaders = oldValue.m_nReaders + 1;
+	newValue.m_writerId = 0;
 
 	if ( AssignIf( newValue, oldValue ) )
 	{

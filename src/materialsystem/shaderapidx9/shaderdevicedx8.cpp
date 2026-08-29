@@ -29,17 +29,10 @@
 #include "tier0/vprof_telemetry.h"
 #include "tier0/miniprofiler.h"
 
-#if defined ( DX_TO_GL_ABSTRACTION )
-// Placed here so inlines placed in dxabstract.h can access gGL
-COpenGLEntryPoints *gGL = NULL;
-#endif
 
 #define D3D_BATCH_PERF_ANALYSIS 0
 
 #if D3D_BATCH_PERF_ANALYSIS
-	#if defined( DX_TO_GL_ABSTRACTION )
-		#error Cannot enable D3D_BATCH_PERF_ANALYSIS when using DX_TO_GL_ABSTRACTION, use GL_BATCH_PERF_ANALYSIS instead.
-	#endif
 	// Define this if you want all d3d9 interfaces hooked and run through the dx9hook.h shim interfaces. For profiling, etc.
 	#define DO_DX9_HOOK
 #endif
@@ -58,22 +51,11 @@ static double s_rdtsc_to_ms;
 #include "dx9hook.h"
 #endif
 
-#ifndef _X360
 #include "wmi.h"
-#endif
 
-#if defined( _X360 )
-#endif
 
-#ifdef _PS3
-#include <sys/tty.h>
-#include <sysutil/sysutil_sysparam.h>
-#include <ps3gcm/gcmstate.h>
-#endif
 
-#if defined( LINUX )
 #include "appframework/ilaunchermgr.h"
-#endif
 
 // NOTE: This has to be the last file included!
 #include "tier0/memdbgon.h"
@@ -81,9 +63,6 @@ static double s_rdtsc_to_ms;
 // A logging channel used during engine initialization
 DEFINE_LOGGING_CHANNEL_NO_TAGS( LOG_EngineInitialization, "EngineInitialization" );
 
-#if defined( _X360 )
-#define JUNE_2009_XDK_ISSUES
-#endif
 
 //-----------------------------------------------------------------------------
 // Globals
@@ -99,9 +78,6 @@ EXPOSE_SINGLE_INTERFACE_GLOBALVAR( CShaderDeviceMgrDx8, IShaderDeviceMgr,
 
 #endif
 
-#if defined( _X360 )
-IDirect3D9 *m_pD3D;
-#endif
 
 
 // hook into mat_forcedynamic from the engine.
@@ -110,12 +86,8 @@ static ConVar mat_forcedynamic( "mat_forcedynamic", "0", FCVAR_CHEAT );
 // Turn this on to record frames that are longer than what CERT requires on the 360.
 ConVar mat_spew_long_frames( "mat_spew_long_frames", "0", 0, "warn about frames that go over 66ms for CERT purposes." );
 
-#if defined( _PS3 ) || defined( _OSX )
-extern ConVar mat_debugalttab;
-#else
 // this is hooked into the engines convar
 ConVar mat_debugalttab( "mat_debugalttab", "0", FCVAR_CHEAT );
-#endif
 
 //-----------------------------------------------------------------------------
 //
@@ -132,22 +104,12 @@ CShaderDeviceMgrDx8::CShaderDeviceMgrDx8()
 	m_pD3D = NULL;
 	m_bAdapterInfoIntialized = false;
 
-#if defined( PIX_INSTRUMENTATION ) && defined ( DX_TO_GL_ABSTRACTION ) && defined( _WIN32 )
-	m_hD3D9 = NULL;
-	m_pBeginEvent = NULL;
-	m_pEndEvent = NULL;
-	m_pSetMarker = NULL;
-	m_pSetOptions = NULL;
-#endif	
 }
 
 CShaderDeviceMgrDx8::~CShaderDeviceMgrDx8()
 {
 }
 
-#ifdef OSX
-#include <Carbon/Carbon.h>
-#endif
 
 //-----------------------------------------------------------------------------
 // Connect, disconnect
@@ -159,9 +121,6 @@ bool CShaderDeviceMgrDx8::Connect( CreateInterfaceFn factory )
 	if ( !BaseClass::Connect( factory ) )
 		return false;
 
-#if defined ( DX_TO_GL_ABSTRACTION )
-	gGL = ToGLConnectLibraries( factory );
-#endif
 
 	setenv("DXVK_WSI_DRIVER", "SDL3", 0);
 	setenv("DXVK_CONFIG", "d3d9.hideIntelGpu = False", 0);
@@ -178,24 +137,6 @@ bool CShaderDeviceMgrDx8::Connect( CreateInterfaceFn factory )
 		return false;
 	}
 
-#if defined( PIX_INSTRUMENTATION ) && defined ( DX_TO_GL_ABSTRACTION ) && defined( _WIN32 )
-	// This is a little odd, but AMD PerfStudio hooks D3D9.DLL and intercepts all of the D3DPERF API's (even for OpenGL apps).
-	// So dynamically load d3d9.dll and get the address of these exported functions.
-	if ( !m_hD3D9 )
-	{
-		m_hD3D9 = LoadLibraryA("d3d9.dll");
-	}
-	if ( m_hD3D9 )
-	{
-		Plat_DebugString( "PIX_INSTRUMENTATION: Loaded d3d9.dll\n" );
-		printf( "PIX_INSTRUMENTATION: Loaded d3d9.dll\n" );
-
-		m_pBeginEvent = (D3DPERF_BeginEvent_FuncPtr)GetProcAddress( m_hD3D9, "D3DPERF_BeginEvent" );
-		m_pEndEvent = (D3DPERF_EndEvent_FuncPtr)GetProcAddress( m_hD3D9, "D3DPERF_EndEvent" );
-		m_pSetMarker = (D3DPERF_SetMarker_FuncPtr)GetProcAddress( m_hD3D9, "D3DPERF_SetOptions" );
-		m_pSetOptions = (D3DPERF_SetOptions_FuncPtr)GetProcAddress( m_hD3D9, "D3DPERF_SetMarker" );
-	}
-#endif
 
 	// FIXME: Want this to be here, but we can't because Steam
 	// hasn't had it's application ID set up yet.
@@ -208,18 +149,6 @@ void CShaderDeviceMgrDx8::Disconnect()
 {
 	LOCK_SHADERAPI();
 
-#if defined( PIX_INSTRUMENTATION ) && defined ( DX_TO_GL_ABSTRACTION ) && defined( _WIN32 )
-	if ( m_hD3D9 )
-	{
-		m_pBeginEvent = NULL;
-		m_pEndEvent = NULL;
-		m_pSetMarker = NULL;
-		m_pSetOptions = NULL;
-
-		FreeLibrary( m_hD3D9 );
-		m_hD3D9 = NULL;
-	}
-#endif
 
 	if ( m_pD3D )
 	{
@@ -227,9 +156,6 @@ void CShaderDeviceMgrDx8::Disconnect()
 		m_pD3D = 0;
 	}
 
-#if defined ( DX_TO_GL_ABSTRACTION )
-	ToGLDisconnectLibraries();
-#endif
 
 	BaseClass::Disconnect();
 }
@@ -281,12 +207,10 @@ void CShaderDeviceMgrDx8::Shutdown( )
 //-----------------------------------------------------------------------------
 // Inline methods
 //-----------------------------------------------------------------------------
-#if !defined( _GAMECONSOLE )
 bool CShaderDeviceDx8::IsActive() const
 {
 	return Dx9Device()->IsActive();
 }
-#endif
 
 
 //-----------------------------------------------------------------------------
@@ -335,20 +259,7 @@ void CShaderDeviceMgrDx8::InitAdapterInfo()
 //--------------------------------------------------------------------------------
 void CShaderDeviceMgrDx8::CheckBorderColorSupport( HardwareCaps_t *pCaps, int nAdapter )
 {
-#if defined( DX_TO_GL_ABSTRACTION )
-	if( true )
-#elif defined( DX_TO_VK_ABSTRACTION )
-	if( true )
-#else
-	if( IsX360() )
-#endif
-	{
-		pCaps->m_bSupportsBorderColor = true;
-	}
-	else // Most PC parts do this, but let's not deal with that yet (JasonM)
-	{
-		pCaps->m_bSupportsBorderColor = false;
-	}
+	pCaps->m_bSupportsBorderColor = true;
 }
 
 //--------------------------------------------------------------------------------
@@ -363,35 +274,7 @@ void CShaderDeviceMgrDx8::CheckVendorDependentShadowMappingSupport( HardwareCaps
 		pCaps->m_NullTextureFormat = IMAGE_FORMAT_RGB565;
 	}
 
-#if defined( _X360 )
-	//pCaps->m_ShadowDepthTextureFormat = ReverseDepthOnX360() ? IMAGE_FORMAT_X360_DST24F : IMAGE_FORMAT_X360_DST24;
-	pCaps->m_ShadowDepthTextureFormat = ReverseDepthOnX360() ? IMAGE_FORMAT_D24FS8 : IMAGE_FORMAT_D24S8;
-	pCaps->m_bSupportsShadowDepthTextures = true;
-	pCaps->m_bSupportsFetch4 = false;
-	pCaps->m_HighPrecisionShadowDepthTextureFormat = pCaps->m_ShadowDepthTextureFormat;
-	return;
-#elif defined ( _PS3 )
-	pCaps->m_NullTextureFormat = IMAGE_FORMAT_ARGB8888; 
-	if ( CommandLine()->CheckParm( "-d24shadowbuffer" ) )
-	{
-		pCaps->m_ShadowDepthTextureFormat = IMAGE_FORMAT_D24S8;
-	}
-	else
-	{
-		pCaps->m_ShadowDepthTextureFormat = IMAGE_FORMAT_D16;
-	}
-	pCaps->m_bSupportsShadowDepthTextures = true;
-	pCaps->m_bSupportsFetch4 = false;
-	pCaps->m_HighPrecisionShadowDepthTextureFormat = pCaps->m_ShadowDepthTextureFormat;
-	return;
-#elif defined ( DX_TO_GL_ABSTRACTION )
-	// We may want to only do this on the higher-end Mac SKUs, since it's not free...
-	pCaps->m_ShadowDepthTextureFormat = IMAGE_FORMAT_D16_SHADOW; // This format shunts us down the right shader combo path
-	pCaps->m_bSupportsShadowDepthTextures = true;
-	pCaps->m_bSupportsFetch4 = false;
-	pCaps->m_HighPrecisionShadowDepthTextureFormat = pCaps->m_ShadowDepthTextureFormat;
-	return;
-#elif defined ( DX_TO_VK_ABSTRACTION )
+#if   defined ( DX_TO_VK_ABSTRACTION )
 	pCaps->m_ShadowDepthTextureFormat = IMAGE_FORMAT_D16_SHADOW;
 	pCaps->m_bSupportsShadowDepthTextures = true;
 	pCaps->m_bSupportsFetch4 = false;
@@ -404,9 +287,8 @@ void CShaderDeviceMgrDx8::CheckVendorDependentShadowMappingSupport( HardwareCaps
 	return;
 #endif
 
-	if ( IsPC() )
 	{
-		bool bToolsMode = IsPlatformWindows() && ( CommandLine()->CheckParm( "-tools" ) != NULL );
+		bool bToolsMode = false;
 
 		if ( ( pCaps->m_VendorID == VENDORID_NVIDIA ) && ( pCaps->m_SupportsShaderModel_3_0  ) )	// ps_3_0 parts from nVidia
 		{
@@ -540,13 +422,7 @@ void CShaderDeviceMgrDx8::CheckVendorDependentAlphaToCoverage( HardwareCaps_t *p
 	pCaps->m_bSupportsAlphaToCoverage = false;
 
 	// Bail out on OpenGL
-#ifdef DX_TO_GL_ABSTRACTION
-	pCaps->m_bSupportsAlphaToCoverage	 = true;
-	pCaps->m_AlphaToCoverageEnableValue	 = TRUE;
-	pCaps->m_AlphaToCoverageDisableValue = FALSE;
-	pCaps->m_AlphaToCoverageState		 = D3DRS_ADAPTIVETESS_Y; // Just match the NVIDIA state hackery
-	return;
-#elif defined( DX_TO_VK_ABSTRACTION )
+#if   defined( DX_TO_VK_ABSTRACTION )
 	pCaps->m_bSupportsAlphaToCoverage	 = true;
 	pCaps->m_AlphaToCoverageEnableValue	 = TRUE;
 	pCaps->m_AlphaToCoverageDisableValue = FALSE;
@@ -554,15 +430,6 @@ void CShaderDeviceMgrDx8::CheckVendorDependentAlphaToCoverage( HardwareCaps_t *p
 	return;
 #endif
 
-#ifdef _X360
-	{
-		pCaps->m_bSupportsAlphaToCoverage	 = true;
-		pCaps->m_AlphaToCoverageEnableValue	 = TRUE;
-		pCaps->m_AlphaToCoverageDisableValue = FALSE;
-		pCaps->m_AlphaToCoverageState		 = D3DRS_ALPHATOMASKENABLE;
-		return;
-	}
-#endif // _X360
 
 	if ( pCaps->m_VendorID == VENDORID_NVIDIA )
 	{
@@ -620,10 +487,7 @@ void CShaderDeviceMgrDx8::CheckVendorDependentAlphaToCoverage( HardwareCaps_t *p
 void CShaderDeviceMgrDx8::CheckVendorDependentDepthResolveSupport( HardwareCaps_t *pCaps, int nAdapter )
 {
 	// Bail out on OpenGL
-#ifdef DX_TO_GL_ABSTRACTION
-	pCaps->m_bSupportsRESZ = false;
-	pCaps->m_bSupportsINTZ = false;
-#elif defined( DX_TO_VK_ABSTRACTION )
+#if   defined( DX_TO_VK_ABSTRACTION )
 	pCaps->m_bSupportsRESZ = false;
 	pCaps->m_bSupportsINTZ = false;
 	return;
@@ -645,17 +509,9 @@ void CShaderDeviceMgrDx8::CheckVendorDependentDepthResolveSupport( HardwareCaps_
 
 ConVar mat_hdr_level( "mat_hdr_level", "2" );
 
-#if defined( _PS3 )
-#define SHADOWMAP_SLOPESCALEDEPTHBIAS_D24	"5"
-#define SHADOWMAP_DEPTHBIAS_D24				"2500"
-#define SHADOWMAP_SLOPESCALEDEPTHBIAS	"2"
-#define SHADOWMAP_DEPTHBIAS				".25"
-#elif defined( DX_TO_GL_ABSTRACTION ) || defined( DX_TO_VK_ABSTRACTION )
+#if   defined( DX_TO_GL_ABSTRACTION ) || defined( DX_TO_VK_ABSTRACTION )
 #define SHADOWMAP_SLOPESCALEDEPTHBIAS	"8"
 #define SHADOWMAP_DEPTHBIAS				"20"
-#elif defined ( _X360 )
-#define SHADOWMAP_SLOPESCALEDEPTHBIAS	"2.15"
-#define SHADOWMAP_DEPTHBIAS				".000032"
 #else
 #define SHADOWMAP_SLOPESCALEDEPTHBIAS	"3"
 #define SHADOWMAP_DEPTHBIAS				".000025"
@@ -697,7 +553,6 @@ bool CShaderDeviceMgrDx8::ComputeCapsFromD3D( HardwareCaps_t *pCaps, int nAdapte
 
 	// Make sure mac users do not fake their graphic cards and bypass the mandatory
 	// CSMs for high end GPUs
-#ifndef OSX
 	// Intended for debugging only
 	if ( CommandLine()->CheckParm( "-force_device_id" ) )
 	{
@@ -725,7 +580,6 @@ bool CShaderDeviceMgrDx8::ComputeCapsFromD3D( HardwareCaps_t *pCaps, int nAdapte
 			}
 		}
 	}
-#endif
 
 	Q_strncpy( pCaps->m_pDriverName, ident.Description, MATERIAL_ADAPTER_NAME_LENGTH );
 	pCaps->m_VendorID = ident.VendorId;
@@ -764,14 +618,6 @@ bool CShaderDeviceMgrDx8::ComputeCapsFromD3D( HardwareCaps_t *pCaps, int nAdapte
         pCaps->m_SupportsShaderModel_3_0 = true;
 	}
 
-#if 0
-	// Slam 3.0 shaders off for Intel
-	// Don't do this anymore on CS:GO because we require shader model 3.0, and there are Intel chipsets with decent SM3 support now.
-	if ( pCaps->m_VendorID == VENDORID_INTEL )
-	{
-		pCaps->m_SupportsShaderModel_3_0 = false;
-	}
-#endif
 
 	pCaps->m_MaxVertexShader30InstructionSlots = 0;
 	pCaps->m_MaxPixelShader30InstructionSlots  = 0;
@@ -783,16 +629,7 @@ bool CShaderDeviceMgrDx8::ComputeCapsFromD3D( HardwareCaps_t *pCaps, int nAdapte
 	}
 
 	pCaps->m_bSoftwareVertexProcessing = false;
-	if ( IsPlatformWindows() && CommandLine()->CheckParm( "-mat_softwaretl" ) )
-	{
-		pCaps->m_bSoftwareVertexProcessing = true;
-	}
 
-	if ( IsPlatformWindows() && !( caps.DevCaps & D3DDEVCAPS_HWTRANSFORMANDLIGHT ) )
-	{
-		// no hardware t&l. . use software
-		pCaps->m_bSoftwareVertexProcessing = true;
-	}
 
 	// Set mat_forcedynamic if software vertex processing since the software vp pipe has 
 	// problems with sparse vertex buffers (it transforms the whole thing.)
@@ -802,21 +639,7 @@ bool CShaderDeviceMgrDx8::ComputeCapsFromD3D( HardwareCaps_t *pCaps, int nAdapte
 	}
 
 
-#ifdef _PS3
 	pCaps->m_bSupportsStaticControlFlow = true;
-#elif defined DX_TO_GL_ABSTRACTION
-    // On OSX, we can force ourselves down a static control flow path, but this only works with GLSL
-    if ( IsOSX() )
-    {
-        pCaps->m_bSupportsStaticControlFlow = CommandLine()->CheckParm("-glslcontrolflow") != NULL;
-    }
-    else
-    {
-        pCaps->m_bSupportsStaticControlFlow = !CommandLine()->CheckParm("-noglslcontrolflow");
-    }
-#else
-	pCaps->m_bSupportsStaticControlFlow = true;
-#endif
 
 	// NOTE: Texture stages is a fixed-function concept
 	// NOTE: Normally, the number of texture units == the number of texture
@@ -864,31 +687,6 @@ bool CShaderDeviceMgrDx8::ComputeCapsFromD3D( HardwareCaps_t *pCaps, int nAdapte
 		pCaps->m_NumIntegerPixelShaderConstants = 16;	// 2.0 parts have 16 bool ps registers
 	}
 
-	if ( IsX360() )
-	{
-		// NOTE!  This is really 224, but we do an optimization that only blasts the first 32 always.
-		if ( IsGPUOwnSupported() )
-		{
-			pCaps->m_NumPixelShaderConstants = 32;
-		}
-		else
-		{
-			pCaps->m_NumPixelShaderConstants = 224;
-		}
-	}
-	else if ( IsPS3() )
-	{
-		pCaps->m_NumVertexShaderConstants = 256;
-		#if defined( _PS3 )
-		pCaps->m_NumPixelShaderConstants = MAX_FRAGMENT_PROGRAM_CONSTS; // this is somewhat of a lie... fragment shader constants are special on PS3 and we actually have a larger number of these
-		#endif
-
-		pCaps->m_NumIntegerVertexShaderConstants = pCaps->m_NumIntegerPixelShaderConstants = 0;
-
-		pCaps->m_NumBooleanVertexShaderConstants = 32;
-		pCaps->m_NumBooleanPixelShaderConstants = 0;		
-	}
-	else
 	{
 		if ( pCaps->m_SupportsShaderModel_3_0 )
 		{
@@ -928,25 +726,20 @@ bool CShaderDeviceMgrDx8::ComputeCapsFromD3D( HardwareCaps_t *pCaps, int nAdapte
 
 	pCaps->m_bNeedsATICentroidHack = false;
 	pCaps->m_bDisableShaderOptimizations = false;
-	pCaps->m_bPreferZPrepass = IsPS3(); // turn on ZPass on PS/3 by default
+	pCaps->m_bPreferZPrepass = false; // turn on ZPass on PS/3 by default
 	pCaps->m_bSuppressPixelShaderCentroidHackFixup = false;
 	pCaps->m_bPreferTexturesInHWMemory = true;
-	pCaps->m_bPreferHardwareSync = IsPC();
+	pCaps->m_bPreferHardwareSync = true;
 	pCaps->m_bUnsupported = false;
 	// Check if ZBias and SlopeScaleDepthBias are supported. .if not, tweak the projection matrix instead
 	// for polyoffset.
 	pCaps->m_ZBiasAndSlopeScaledDepthBiasSupported =
 		( ( caps.RasterCaps & D3DPRASTERCAPS_DEPTHBIAS) != 0 ) &&
 		( ( caps.RasterCaps & D3DPRASTERCAPS_SLOPESCALEDEPTHBIAS ) != 0 );
-	if ( IsX360() )
-	{
-		// driver lies, force it
-		pCaps->m_ZBiasAndSlopeScaledDepthBiasSupported = true;
-	}
 
 	// How many user clip planes?
 	pCaps->m_MaxUserClipPlanes = caps.MaxUserClipPlanes;
-	if ( CommandLine()->CheckParm( "-nouserclip" ) /* || (IsOSXOpenGL() && (!CommandLine()->FindParm("-glslmode"))) || r_emulategl.GetBool() */ )
+	if ( CommandLine()->CheckParm( "-nouserclip" ) /* || (false && (!CommandLine()->FindParm("-glslmode"))) || r_emulategl.GetBool() */ )
 	{
 		// rbarris 03Feb10: this now ignores POSIX / -glslmode / r_emulategl because we're defaulting GLSL mode "on".
 		// so this will mean that the engine will always ask for user clip planes.
@@ -964,27 +757,13 @@ bool CShaderDeviceMgrDx8::ComputeCapsFromD3D( HardwareCaps_t *pCaps, int nAdapte
 	pCaps->m_FakeSRGBWrite = false;
 	pCaps->m_CanDoSRGBReadFromRTs = true;
 	pCaps->m_bSupportsGLMixedSizeTargets = false;
-#ifdef DX_TO_GL_ABSTRACTION
-	// using #if because we're referencing fields in the RHS which don't exist in Windows headers for the caps9 struct
-	pCaps->m_FakeSRGBWrite = caps.FakeSRGBWrite != 0;
-	pCaps->m_CanDoSRGBReadFromRTs = caps.CanDoSRGBReadFromRTs != 0;
-	pCaps->m_bSupportsGLMixedSizeTargets = caps.MixedSizeTargets != 0; 	
-#endif
 	
 	// Query for SRGB support as needed for our DX 9 stuff
-	if ( IsPC() || !IsX360() )
-	{
-		pCaps->m_SupportsSRGB = ( D3D()->CheckDeviceFormat( nAdapter, DX8_DEVTYPE, D3DFMT_X8R8G8B8, D3DUSAGE_QUERY_SRGBREAD, D3DRTYPE_TEXTURE, D3DFMT_DXT1 ) == S_OK);
+	pCaps->m_SupportsSRGB = ( D3D()->CheckDeviceFormat( nAdapter, DX8_DEVTYPE, D3DFMT_X8R8G8B8, D3DUSAGE_QUERY_SRGBREAD, D3DRTYPE_TEXTURE, D3DFMT_DXT1 ) == S_OK);
 
-		if ( pCaps->m_SupportsSRGB )
-		{
-			pCaps->m_SupportsSRGB = ( D3D()->CheckDeviceFormat( nAdapter, DX8_DEVTYPE, D3DFMT_X8R8G8B8, D3DUSAGE_QUERY_SRGBREAD | D3DUSAGE_QUERY_SRGBWRITE, D3DRTYPE_TEXTURE, D3DFMT_A8R8G8B8 ) == S_OK);
-		}
-	}
-	else
+	if ( pCaps->m_SupportsSRGB )
 	{
-		// 360 does support it, but is queried in the wrong manner, so force it
-		pCaps->m_SupportsSRGB = true;
+		pCaps->m_SupportsSRGB = ( D3D()->CheckDeviceFormat( nAdapter, DX8_DEVTYPE, D3DFMT_X8R8G8B8, D3DUSAGE_QUERY_SRGBREAD | D3DUSAGE_QUERY_SRGBWRITE, D3DRTYPE_TEXTURE, D3DFMT_A8R8G8B8 ) == S_OK);
 	}
 
 	if ( CommandLine()->CheckParm( "-nosrgb" ) )
@@ -1052,7 +831,7 @@ bool CShaderDeviceMgrDx8::ComputeCapsFromD3D( HardwareCaps_t *pCaps, int nAdapte
 		}
 	}
 
-	if ( IsPC() && pCaps->m_SupportsSRGB )
+	if ( pCaps->m_SupportsSRGB )
 	{
 		if ( pCaps->m_VendorID == VENDORID_NVIDIA )
 		{
@@ -1167,8 +946,7 @@ bool CShaderDeviceMgrDx8::ComputeCapsFromD3D( HardwareCaps_t *pCaps, int nAdapte
 		//		(caps.PrimitiveMiscCaps & D3DPMISCCAPS_SEPARATEALPHABLEND) &&
 		bSupportsFloat16Textures &&
 		bSupportsFloat16RenderTargets &&
-		pCaps->m_SupportsSRGB && 
-		!IsX360();
+		pCaps->m_SupportsSRGB;
 
 	pCaps->m_MaxHDRType = HDR_TYPE_NONE;
 	if ( bSupportsFloatHDR )
@@ -1213,9 +991,7 @@ bool CShaderDeviceMgrDx8::ComputeCapsFromD3D( HardwareCaps_t *pCaps, int nAdapte
 
 	// This may get more complex if we start using multiple flavors of compressed vertex - for now it's "on or off"
 	pCaps->m_SupportsCompressedVertices = VERTEX_COMPRESSION_ON;
-#if !defined( _GAMECONSOLE ) // Disabling vertex compression for Portal 2 to help PS3 perf
 	if ( CommandLine()->CheckParm( "-no_compressed_verts" ) )
-#endif
 	{
 		pCaps->m_SupportsCompressedVertices = VERTEX_COMPRESSION_NONE;
 	}
@@ -1241,14 +1017,6 @@ bool CShaderDeviceMgrDx8::ComputeCapsFromD3D( HardwareCaps_t *pCaps, int nAdapte
 		}
 	}
 
-#if defined( _PS3 )
-	if ( CommandLine()->CheckParm( "-d24shadowbuffer" ) )
-	{
-		// Slam in larger depth bias settings if we're using D24 shadow buffering (only used for comparison/profiling purposes).
-		mat_slopescaledepthbias_shadowmap.SetValue( SHADOWMAP_SLOPESCALEDEPTHBIAS_D24 );
-		mat_depthbias_shadowmap.SetValue( SHADOWMAP_DEPTHBIAS_D24 );
-	}
-#endif
 
 	if( pCaps->m_MaxUserClipPlanes == 0 )
 	{
@@ -1277,12 +1045,6 @@ void CShaderDeviceMgrDx8::ComputeDXSupportLevel( HardwareCaps_t &caps )
 	// FIXME: Improve this!! There should be a whole list of features
 	// we require in order to be considered a DX7 board, DX8 board, etc.
 
-	if ( IsX360() )
-	{
-		caps.m_nMinDXSupportLevel = 98;
-		caps.m_nMaxDXSupportLevel = 98;
-		return;
-	}
 		
 #if !defined( CSTRIKE15 )
 	if ( caps.m_bDX10Card ) // Note that we don't tie vertex textures to 30 shaders anymore
@@ -1397,26 +1159,7 @@ bool CShaderDeviceMgrDx8::SetAdapter( int nAdapter, int nAdapterFlags )
 //-----------------------------------------------------------------------------
 void CShaderDeviceMgrDx8::GetDesktopResolution( int *pWidth, int *pHeight, int nAdapter ) const
 {
-#if defined ( _X360 )
-#elif defined ( DX_TO_GL_ABSTRACTION )
-	D3DDISPLAYMODE d3dDisplayMode;
-	m_pD3D->GetAdapterDisplayMode( nAdapter, &d3dDisplayMode );
-	*pWidth = d3dDisplayMode.Width;
-	*pHeight = d3dDisplayMode.Height;
-#elif defined( _X360 ) || defined( _PS3 ) || defined( POSIX )
 // Empty
-#else
-	HMONITOR hMonitor = m_pD3D->GetAdapterMonitor( nAdapter );
-//	*pWidth = ::GetDeviceCaps( hMonitor, HORZSIZE );
-//	*pHeight = ::GetDeviceCaps( hMonitor, VERTSIZE );
-
-	MONITORINFO monitorInfo;
-	memset( &monitorInfo, 0, sizeof(monitorInfo) );
-	monitorInfo.cbSize = sizeof(monitorInfo); 
-	GetMonitorInfo( hMonitor, &monitorInfo );
-	*pWidth = monitorInfo.rcMonitor.right - monitorInfo.rcMonitor.left;
-	*pHeight = monitorInfo.rcMonitor.bottom - monitorInfo.rcMonitor.top;
-#endif
 }
 
 
@@ -1428,89 +1171,10 @@ int CShaderDeviceMgrDx8::GetModeCount( int nAdapter ) const
 	LOCK_SHADERAPI();
 	Assert( m_pD3D && (nAdapter < GetAdapterCount() ) );
 
-#if !defined( _X360 )
 	// fixme - what format should I use here?
 	return m_pD3D->GetAdapterModeCount( nAdapter, D3DFMT_X8R8G8B8 );
-#else
-	return 1; // Only one mode, which is the current mode set in the 360 dashboard.  Going to fill it in with exactly what the 360 is set to.
-#endif
 }
 
-#ifdef _PS3
-static void PS3_GetVideoOutResolution( int *pWidth, int *pHeight, float *pAspectRatio )
-{
-	*pWidth = 640;
-	*pHeight = 480;
-
-	CellVideoOutState videoOutState;
-	int ret = cellVideoOutGetState( CELL_VIDEO_OUT_PRIMARY, 0, &videoOutState);
-	if ( ret < CELL_OK )
-		return;
-
-	CellVideoOutResolution resolution;
-	ret = cellVideoOutGetResolution( videoOutState.displayMode.resolutionId, &resolution );
-	if ( ret < CELL_OK )
-		return;
-
-	*pWidth = resolution.width;
-	*pHeight = resolution.height;
-
-#ifndef _CERT
-	static bool s_bPrintOnce = false;
-	if ( !s_bPrintOnce )
-	{
-		s_bPrintOnce = true;
-		char chDbg[512];
-		Q_snprintf( chDbg, sizeof( chDbg ),
-			"----- VIDEO MODE -----\n"
-			"STATE:  %s\n"
-			"COLOR:  %s\n"
-			"RES:    %u x %u  [#%d]\n"
-			"ASPECT: %s\n"
-			"RRATE: %s%s%s%s\n"
-			"SCAN:   %s\n"
-			"----------------------\n",
-			(videoOutState.state == CELL_VIDEO_OUT_OUTPUT_STATE_ENABLED) ? "ENABLED" : "NOT READY",
-			(videoOutState.colorSpace == CELL_VIDEO_OUT_COLOR_SPACE_RGB) ? "RGB" : ( (videoOutState.colorSpace == CELL_VIDEO_OUT_COLOR_SPACE_YUV) ? "YUV" : "UNDEFINED" ),
-			resolution.width, resolution.height, videoOutState.displayMode.resolutionId,
-			(videoOutState.displayMode.aspect == CELL_VIDEO_OUT_ASPECT_4_3) ? "4x3" : ( (videoOutState.displayMode.aspect == CELL_VIDEO_OUT_ASPECT_16_9) ? "16x9" : "AUTO" ),
-			(videoOutState.displayMode.refreshRates & CELL_VIDEO_OUT_REFRESH_RATE_30HZ) ? " 30Hz" : "",
-			(videoOutState.displayMode.refreshRates & CELL_VIDEO_OUT_REFRESH_RATE_50HZ) ? " 50Hz" : "",
-			(videoOutState.displayMode.refreshRates & CELL_VIDEO_OUT_REFRESH_RATE_60HZ) ? " 60Hz" : "",
-			(videoOutState.displayMode.refreshRates & CELL_VIDEO_OUT_REFRESH_RATE_59_94HZ) ? " 59.94Hz" : "",
-			videoOutState.displayMode.scanMode ? "PROGRESSIVE" : "INTERLACED"
-			);
-		unsigned int dummy;
-		sys_tty_write( SYS_TTYP15, chDbg, Q_strlen( chDbg ), &dummy );
-	}
-#endif
-
-	// Clamp 1080p resolution down to 720p
-	if ( resolution.height >= 720 && CommandLine()->FindParm( "-480p" ) )
-	{
-		*pWidth = 640;
-		*pHeight = 480;
-	}
-	else if ( resolution.height >= 1080 && !CommandLine()->FindParm( "-1080p" ) )
-	{
-		*pWidth = 1280;
-		*pHeight = 720;
-	}
-
-	switch ( videoOutState.displayMode.aspect )
-	{
-	case CELL_VIDEO_OUT_ASPECT_4_3:
-		*pAspectRatio = 4.0f/3.0f;
-		break;
-	case CELL_VIDEO_OUT_ASPECT_16_9:
-		*pAspectRatio = 16.0f/9.0f;
-		break;
-	default:
-		*pAspectRatio = float( *pWidth ) / float( *pHeight );
-		break;
-	}
-}
-#endif // _PS3
 
 //-----------------------------------------------------------------------------
 // Returns mode information..
@@ -1523,19 +1187,6 @@ void CShaderDeviceMgrDx8::GetModeInfo( ShaderDisplayMode_t* pInfo, int nAdapter,
 	Assert( m_pD3D && (nAdapter < GetAdapterCount() ) );
 	Assert( nMode < GetModeCount( nAdapter ) );
 
-#if defined( _PS3 )
-	PS3_GetVideoOutResolution( &pInfo->m_nWidth, &pInfo->m_nHeight, &pInfo->m_flAspectRatio );
-	pInfo->m_Format = ImageLoader::D3DFormatToImageFormat( D3DFMT_X8R8G8B8 );
-	pInfo->m_nRefreshRateNumerator = 60;
-	pInfo->m_nRefreshRateDenominator = 1;
-#elif defined( _X360 )
-	pInfo->m_Format = ImageLoader::D3DFormatToImageFormat( D3DFMT_X8R8G8B8 );
-	pInfo->m_nRefreshRateNumerator = 60;
-	pInfo->m_nRefreshRateDenominator = 1;
-
-	pInfo->m_nWidth = GetSystemMetrics( SM_CXSCREEN );
-	pInfo->m_nHeight = GetSystemMetrics( SM_CYSCREEN );
-#else
 	HRESULT hr;
 	D3DDISPLAYMODE d3dInfo;
 
@@ -1549,7 +1200,6 @@ void CShaderDeviceMgrDx8::GetModeInfo( ShaderDisplayMode_t* pInfo, int nAdapter,
 	pInfo->m_nRefreshRateNumerator = d3dInfo.RefreshRate;
 	pInfo->m_nRefreshRateDenominator = 1;
 
-#endif
 }
 
 
@@ -1565,25 +1215,7 @@ void CShaderDeviceMgrDx8::GetCurrentModeInfo( ShaderDisplayMode_t* pInfo, int nA
 
 	HRESULT hr;
 	D3DDISPLAYMODE mode;
-#if defined( _PS3 )
-	PS3_GetVideoOutResolution( ( int *)&mode.Width, ( int *)&mode.Height, &pInfo->m_flAspectRatio );
- 	mode.Format = D3DFMT_X8R8G8B8;
- 	mode.RefreshRate = 60;	
-#elif defined( _X360 )
-	if ( !m_pD3DDevice )
-	{
-		// the console has no prior display or mode until its created
-		mode.Width  = GetSystemMetrics( SM_CXSCREEN );
-		mode.Height = GetSystemMetrics( SM_CYSCREEN );
-		mode.RefreshRate = 60;
-		mode.Format = D3DFMT_X8R8G8B8;
-	}
-	else
-	{
-		hr = m_pD3DDevice->GetDisplayMode( 0, &mode );
-		Assert( !FAILED(hr) );
-	}
-#elif defined( LINUX ) && defined( USE_SDL )
+#if   defined( LINUX ) && defined( USE_SDL )
 	// On Linux, query SDL for actual window size rather than relying on D3D adapter.
 	// With DXVK and Wayland's FULLSCREEN_DESKTOP, the D3D adapter mode may not match
 	// the actual window/display resolution.
@@ -1644,7 +1276,7 @@ CreateInterfaceFn CShaderDeviceMgrDx8::SetMode( void *hWnd, int nAdapter, const 
 	bool bReacquireResourcesNeeded = false;
 	if ( g_pShaderDevice )
 	{
-		bReacquireResourcesNeeded = IsPC();
+		bReacquireResourcesNeeded = true;
 		g_pShaderDevice->ReleaseResources();
 	}
 
@@ -1714,9 +1346,7 @@ bool CShaderDeviceMgrDx8::ValidateMode( int nAdapter, const ShaderDeviceInfo_t &
 //-----------------------------------------------------------------------------
 int CShaderDeviceMgrDx8::GetVidMemBytes( int nAdapter ) const
 {
-#if defined( _X360 )
-	return 256*1024*1024;
-#elif defined (DX_TO_VK_ABSTRACTION)
+#if   defined (DX_TO_VK_ABSTRACTION)
 	return 1024*1024*1024;
 #else
 	// FIXME: This currently ignores the adapter
@@ -1732,15 +1362,7 @@ int CShaderDeviceMgrDx8::GetVidMemBytes( int nAdapter ) const
 //
 //-----------------------------------------------------------------------------
 
-#if 0
-// FIXME: Enable after I've separated it out from shaderapidx8 a little better
-static CShaderDeviceDx8 s_ShaderDeviceDX8;
-CShaderDeviceDx8* g_pShaderDeviceDx8 = &s_ShaderDeviceDX8;
-#endif
 
-#if defined( _GAMECONSOLE )
-IDirect3DDevice *m_pD3DDevice;
-#endif
 
 
 //-----------------------------------------------------------------------------
@@ -1802,9 +1424,6 @@ static DWORD ComputeDeviceCreationFlags( D3DCAPS& caps, bool bSoftwareVertexProc
 	}
 	nDeviceCreationFlags |= D3DCREATE_FPU_PRESERVE;
 
-#ifdef _X360
-	nDeviceCreationFlags |= D3DCREATE_BUFFER_2_FRAMES;
-#endif
 
 	return nDeviceCreationFlags;
 }
@@ -1817,7 +1436,6 @@ D3DMULTISAMPLE_TYPE CShaderDeviceDx8::ComputeMultisampleType( int nSampleCount )
 {
 	switch (nSampleCount)
 	{
-#if !defined( _X360 )
 	case 2: return D3DMULTISAMPLE_2_SAMPLES;
 	case 3: return D3DMULTISAMPLE_3_SAMPLES;
 	case 4: return D3DMULTISAMPLE_4_SAMPLES;
@@ -1833,10 +1451,6 @@ D3DMULTISAMPLE_TYPE CShaderDeviceDx8::ComputeMultisampleType( int nSampleCount )
 	case 14: return D3DMULTISAMPLE_14_SAMPLES;
 	case 15: return D3DMULTISAMPLE_15_SAMPLES;
 	case 16: return D3DMULTISAMPLE_16_SAMPLES;
-#else
-	case 2: return D3DMULTISAMPLE_2_SAMPLES;
-	case 4: return D3DMULTISAMPLE_4_SAMPLES;
-#endif
 	default:
 	case 0:
 	case 1:
@@ -1847,7 +1461,7 @@ D3DMULTISAMPLE_TYPE CShaderDeviceDx8::ComputeMultisampleType( int nSampleCount )
 
 void CShaderDeviceDx8::CalcBackBufferDimensions( const ShaderDisplayMode_t &mode, const ShaderDeviceInfo_t &info, int *pBackBufferWidth, int *pBackBufferHeight )
 {
-	if ( IsX360() || !info.m_bWindowed )
+	if ( !info.m_bWindowed )
 	{
 		// fullscreen
 		bool useDefault = ( info.m_DisplayMode.m_nWidth == 0 ) || ( info.m_DisplayMode.m_nHeight == 0 );
@@ -1899,79 +1513,34 @@ void CShaderDeviceDx8::SetPresentParameters( void* hWnd, int nAdapter, const Sha
 	m_AspectRatioInfo.m_flFrameBufferAspectRatio = ( float )backBufferWidth / ( float )backBufferHeight;
 	m_AspectRatioInfo.m_flPhysicalAspectRatio = m_AspectRatioInfo.m_flFrameBufferAspectRatio;
 	m_AspectRatioInfo.m_flFrameBuffertoPhysicalScalar = 1.0f;
-#ifdef _PS3
-	// Device physical aspect ratio / framebuffer pixel aspect ratio.
-	m_AspectRatioInfo.m_flPhysicalAspectRatio = mode.m_flAspectRatio;
-	m_AspectRatioInfo.m_flFrameBuffertoPhysicalScalar = m_AspectRatioInfo.m_flPhysicalAspectRatio / m_AspectRatioInfo.m_flFrameBufferAspectRatio;
-#endif
 
 	m_AspectRatioInfo.m_flPhysicalToFrameBufferScalar = 1.0f / m_AspectRatioInfo.m_flFrameBuffertoPhysicalScalar;
 
 	m_AspectRatioInfo.m_bIsWidescreen = ( m_AspectRatioInfo.m_flPhysicalAspectRatio >= 1.5999f );
-	if ( IsGameConsole () )
-	{
-		m_AspectRatioInfo.m_bIsHidef = backBufferHeight > 480;
-	}
-	else
 	{
 		m_AspectRatioInfo.m_bIsHidef = backBufferHeight >= 720;
 	}
-#ifdef DX_TO_GL_ABSTRACTION
-	{
-		m_AspectRatioInfo.m_bIsHidef = backBufferHeight  >= 640;
-	}
-#endif
 	m_AspectRatioInfo.m_bInitialized = true;
 
 
 	// Set kv conditional
-	KeyValuesSystem()->SetKeyValuesExpressionSymbol( "WIN32WIDE", IsGameConsole() ? false : m_AspectRatioInfo.m_bIsWidescreen );
-	KeyValuesSystem()->SetKeyValuesExpressionSymbol( "WIN32HIDEF", IsGameConsole() ? false : m_AspectRatioInfo.m_bIsHidef );
-	KeyValuesSystem()->SetKeyValuesExpressionSymbol( "WIN32LODEF", IsGameConsole() ? false : !m_AspectRatioInfo.m_bIsHidef );
+	KeyValuesSystem()->SetKeyValuesExpressionSymbol( "WIN32WIDE", false ? false : m_AspectRatioInfo.m_bIsWidescreen );
+	KeyValuesSystem()->SetKeyValuesExpressionSymbol( "WIN32HIDEF", false ? false : m_AspectRatioInfo.m_bIsHidef );
+	KeyValuesSystem()->SetKeyValuesExpressionSymbol( "WIN32LODEF", false ? false : !m_AspectRatioInfo.m_bIsHidef );
 
-#if defined( _X360 )
-	XVIDEO_MODE videoMode;
-	XGetVideoMode( &videoMode );
-	m_AspectRatioInfo.m_bIsWidescreen = videoMode.fIsWideScreen != 0;
-#endif
 
 	// Set kv conditional
-	KeyValuesSystem()->SetKeyValuesExpressionSymbol( "GAMECONSOLEWIDE", IsGameConsole() ? m_AspectRatioInfo.m_bIsWidescreen : false );
-	KeyValuesSystem()->SetKeyValuesExpressionSymbol( "GAMECONSOLEHIDEF", IsGameConsole() ? m_AspectRatioInfo.m_bIsHidef : false );
-	KeyValuesSystem()->SetKeyValuesExpressionSymbol( "GAMECONSOLELODEF", IsGameConsole() ? !m_AspectRatioInfo.m_bIsHidef : false );
+	KeyValuesSystem()->SetKeyValuesExpressionSymbol( "GAMECONSOLEWIDE", false ? m_AspectRatioInfo.m_bIsWidescreen : false );
+	KeyValuesSystem()->SetKeyValuesExpressionSymbol( "GAMECONSOLEHIDEF", false ? m_AspectRatioInfo.m_bIsHidef : false );
+	KeyValuesSystem()->SetKeyValuesExpressionSymbol( "GAMECONSOLELODEF", false ? !m_AspectRatioInfo.m_bIsHidef : false );
 
 	// UI needs to layout differently for lowdef anamorphic widescreen on PS3 since we don't have square pixels there, ie:
 	// 720x480 widescreen
 	// 720x576 widescreen
-	KeyValuesSystem()->SetKeyValuesExpressionSymbol( "ANAMORPHIC", IsPlatformPS3() && m_AspectRatioInfo.m_bIsWidescreen && ( backBufferWidth == 720 ) );
+	KeyValuesSystem()->SetKeyValuesExpressionSymbol( "ANAMORPHIC", false );
 
 
-#if defined( _X360 )
 
-// Commented out and using presentation interval to clamp to 30fps
-//
-// 	// want 30 for 60Hz, and 25 for 50Hz (PAL)
-// 	int nNewFpsMax = ( ( int )( videoMode.RefreshRate + 0.5f ) ) >> 1;
-// 	// slam to either 30 or 25 so that we don't end up with any other cases.
-// 	if( nNewFpsMax < 26 )
-// 	{
-// 		nNewFpsMax = 25;
-// 	}
-// 	else
-// 	{
-// 		nNewFpsMax = 30;
-// 	}
-// 	DevMsg( "*******Monitor refresh is %f, setting fps_max to %d*********\n", videoMode.RefreshRate, nNewFpsMax );
-// 	ConVarRef fps_max( "fps_max" );
-// 	fps_max.SetValue( nNewFpsMax );
-
-#endif
-
-#ifdef _GAMECONSOLE
-	// This could probably be removed, but since we are changing fps_max above, I don't want to change the behavior.
-	// force these to resolve now, other systems at startup will peek at them
-	g_pCVar->ProcessQueuedMaterialThreadConVarSets();
-#endif
 
 	if ( bSetSymbolsOnly )
 	{
@@ -1996,7 +1565,7 @@ void CShaderDeviceDx8::SetPresentParameters( void* hWnd, int nAdapter, const Sha
 #endif
 
 	// for 360, we want to create it ourselves for hierarchical z support
-	m_PresentParameters.EnableAutoDepthStencil = IsX360() ? FALSE : TRUE; 
+	m_PresentParameters.EnableAutoDepthStencil = false ? FALSE : TRUE; 
 
 	// What back-buffer format should we use?
 	ImageFormat backBufferFormat = FindNearestSupportedBackBufferFormat( nAdapter,
@@ -2009,11 +1578,7 @@ void CShaderDeviceDx8::SetPresentParameters( void* hWnd, int nAdapter, const Sha
 		// always stencil for dx9/hdr
 		m_bUsingStencil = true;
 	}
-#if defined( _X360 )
-	D3DFORMAT nDepthFormat = ReverseDepthOnX360() ? D3DFMT_D24FS8 : D3DFMT_D24S8;
-#else
 	D3DFORMAT nDepthFormat = m_bUsingStencil ? D3DFMT_D24S8 : D3DFMT_D24X8;
-#endif
 	m_PresentParameters.AutoDepthStencilFormat = FindNearestSupportedDepthFormat( 
 		nAdapter, m_AdapterFormat, backBufferFormat, nDepthFormat );
 	m_PresentParameters.hDeviceWindow = (VD3DHWND)hWnd;
@@ -2024,24 +1589,18 @@ void CShaderDeviceDx8::SetPresentParameters( void* hWnd, int nAdapter, const Sha
 	case D3DFMT_D24S8:
 		m_iStencilBufferBits = 8;
 		break;
-#if defined( _X360 )
-	case D3DFMT_D24FS8:
-		m_iStencilBufferBits = 8;
-		break;
-#else
 	case D3DFMT_D24X4S4:
 		m_iStencilBufferBits = 4;
 		break;
 	case D3DFMT_D15S1:
 		m_iStencilBufferBits = 1;
 		break;
-#endif
 	default:
 		m_iStencilBufferBits = 0;
 		m_bUsingStencil = false; //couldn't acquire a stencil buffer
 	};
 
-	if ( IsX360() || !info.m_bWindowed ) // if fullscreen
+	if ( !info.m_bWindowed ) // if fullscreen
 	{
 		// Use requested resolution if valid, otherwise fall back to native display mode.
 		// On Linux/Wayland, runtime mode changes (from display switching) need to use
@@ -2050,9 +1609,6 @@ void CShaderDeviceDx8::SetPresentParameters( void* hWnd, int nAdapter, const Sha
 		m_PresentParameters.BackBufferWidth = useDefault ? mode.m_nWidth : info.m_DisplayMode.m_nWidth;
 		m_PresentParameters.BackBufferHeight = useDefault ? mode.m_nHeight : info.m_DisplayMode.m_nHeight;
 		m_PresentParameters.BackBufferFormat = ImageLoader::ImageFormatToD3DFormat( backBufferFormat );
-#if defined( _X360 )
-		m_PresentParameters.FrontBufferFormat = D3DFMT_LE_X8R8G8B8;
-#endif
 		if ( !info.m_bWaitForVSync || CommandLine()->FindParm( "-forcenovsync" ) )
 		{
 			// Not vsync'd so only double buffer
@@ -2064,32 +1620,12 @@ void CShaderDeviceDx8::SetPresentParameters( void* hWnd, int nAdapter, const Sha
 			// We are vsync'd and fullscreen, so allow triple buffering
 			static ConVarRef mat_triplebuffered( "mat_triplebuffered" );
 			m_PresentParameters.BackBufferCount = mat_triplebuffered.GetInt() ? 2 : 1;
-#if defined( _X360 )
-			m_PresentParameters.PresentationInterval = D3DPRESENT_INTERVAL_TWO;
-#else
 			m_PresentParameters.PresentationInterval = D3DPRESENT_INTERVAL_ONE; // this is temporary until it's correctly defined on the PS3
-#endif
 		}
 
 		m_PresentParameters.FullScreen_RefreshRateInHz = info.m_DisplayMode.m_nRefreshRateDenominator ? 
 			info.m_DisplayMode.m_nRefreshRateNumerator / info.m_DisplayMode.m_nRefreshRateDenominator : D3DPRESENT_RATE_DEFAULT;
 
-#if defined( _X360 )
-		// setup hardware scaling - should be native 720p upsampling to 1080i
-		if ( info.m_bScaleToOutputResolution )
-		{
-			m_PresentParameters.VideoScalerParameters.ScalerSourceRect.x2 = m_PresentParameters.BackBufferWidth;
-			m_PresentParameters.VideoScalerParameters.ScalerSourceRect.y2 = m_PresentParameters.BackBufferHeight;
-			m_PresentParameters.VideoScalerParameters.ScaledOutputWidth = videoMode.dwDisplayWidth;
-			m_PresentParameters.VideoScalerParameters.ScaledOutputHeight = videoMode.dwDisplayHeight;
-			DevMsg( "VIDEO SCALING: scaling from %dx%d to %dx%d\n", ( int )m_PresentParameters.BackBufferWidth, ( int )m_PresentParameters.BackBufferHeight,
-				( int )videoMode.dwDisplayWidth, ( int )videoMode.dwDisplayHeight );
-		}
-		else
-		{
-			DevMsg( "VIDEO SCALING: No scaling: %dx%d\n", ( int )m_PresentParameters.BackBufferWidth, ( int )m_PresentParameters.BackBufferHeight );
-		}
-#endif
 	}
 	else // if windowed
 	{
@@ -2197,7 +1733,7 @@ bool CShaderDeviceDx8::InitDevice( void* hwnd, int nAdapter, const ShaderDeviceI
 
 void CShaderDeviceDx8::ShutdownDevice()
 {
-	if ( ( IsPC() || IsPS3() ) && IsActive() )
+	if ( IsActive() )
 	{
 		Dx9Device()->Release();
 
@@ -2205,9 +1741,7 @@ void CShaderDeviceDx8::ShutdownDevice()
 		delete ( CStubD3DDevice * )Dx9Device();
 #endif
 
-#if !defined( _X360 ) && !defined( _PS3 )
 		Dx9Device()->ShutDownDevice();
-#endif
 
 		RemoveWindowHook( (VD3DHWND)m_hWnd );
 		m_hWnd = 0;
@@ -2430,22 +1964,6 @@ void CShaderDeviceDx8::DetectQuerySupport( IDirect3DDevice9 *pD3DDevice )
 }
 
 
-#ifdef _X360
-void GPUHangCallback( const char *pDescription )
-{
-	if ( !pDescription )
-	{
-#ifdef _CERT
-		XboxLaunch()->Launch();
-#endif
-		return;
-	}
-
-#ifndef _CERT
-	Warning( pDescription );
-#endif
-}
-#endif
 
 #if(DIRECT3D_VERSION < 0x0900)
 #define D3DDEVTYPE_NULLREF 	( D3DDEVTYPE )4
@@ -2465,27 +1983,21 @@ IDirect3DDevice9* CShaderDeviceDx8::InvokeCreateDevice( void* hWnd, int nAdapter
 	deviceCreationFlags = D3DCREATE_FPU_PRESERVE | D3DCREATE_HARDWARE_VERTEXPROCESSING;
 #endif
 
-	if ( !IsX360() )
+	// Create the device with multi-threaded safeguards if we're using mat_queue_mode 2.
+	// The logic to enable multithreaded rendering happens well after the device has been created, 
+	// so we replicate some of that logic here.
+	ConVarRef mat_queue_mode( "mat_queue_mode" );
+	if ( mat_queue_mode.GetInt() == 2 ||
+	 ( mat_queue_mode.GetInt() == -2 && GetCPUInformation().m_nPhysicalProcessors >= 2 ) ||
+		 ( mat_queue_mode.GetInt() == -1 && GetCPUInformation().m_nPhysicalProcessors >= 2 ) )
 	{
-		// Create the device with multi-threaded safeguards if we're using mat_queue_mode 2.
-		// The logic to enable multithreaded rendering happens well after the device has been created, 
-		// so we replicate some of that logic here.
-		ConVarRef mat_queue_mode( "mat_queue_mode" );
-		if ( mat_queue_mode.GetInt() == 2 ||
-		 ( mat_queue_mode.GetInt() == -2 && GetCPUInformation().m_nPhysicalProcessors >= 2 ) ||
-			 ( mat_queue_mode.GetInt() == -1 && GetCPUInformation().m_nPhysicalProcessors >= 2 ) )
-		{
-			deviceCreationFlags |= D3DCREATE_MULTITHREADED;
-		}
+		deviceCreationFlags |= D3DCREATE_MULTITHREADED;
 	}
 
 #ifdef ENABLE_NULLREF_DEVICE_SUPPORT
 	devType =  CommandLine()->FindParm( "-nulldevice" ) ? D3DDEVTYPE_NULLREF: devType;
 #endif
 
-#if defined ( DX_TO_GL_ABSTRACTION )
-	gGL = GetOpenGLEntryPoints(0);
-#endif
 
 	HRESULT hr = D3D()->CreateDevice( nAdapter, devType,
 		(VD3DHWND)hWnd, deviceCreationFlags, &m_PresentParameters, &pD3DDevice );
@@ -2493,9 +2005,6 @@ IDirect3DDevice9* CShaderDeviceDx8::InvokeCreateDevice( void* hWnd, int nAdapter
 	if ( !FAILED( hr ) && pD3DDevice )
 	{
 		g_pShaderDeviceMgr->InvokeDeviceResetNotifications( pD3DDevice, &m_PresentParameters, hWnd );
-#ifdef _X360
-		pD3DDevice->SetHangCallback( GPUHangCallback );
-#endif
 #ifdef DX_TO_VK_ABSTRACTION
 		// DXVK: flush backbuffer init commands before heavy resource allocation begins.
 		// Without this sync point, vertex explosions occur during map loading.
@@ -2525,7 +2034,7 @@ bool CShaderDeviceDx8::CreateD3DDevice( void* pHWnd, int nAdapter, const ShaderD
 
 	VD3DHWND hWnd = (VD3DHWND)pHWnd;
 
-#if ( !defined( PIX_INSTRUMENTATION ) && !defined( _X360 ) && !defined( NVPERFHUD ) )
+#if ( !defined( PIX_INSTRUMENTATION ) && !defined( NVPERFHUD ) )
 	D3DPERF_SetOptions(1);	// Explicitly disallow PIX instrumented profiling in external builds
 #endif
 
@@ -2554,7 +2063,7 @@ bool CShaderDeviceDx8::CreateD3DDevice( void* pHWnd, int nAdapter, const ShaderD
 	SendIPCMessage( RELEASE_MESSAGE );
 
 	// Create a stereo texture updater so the nvidia dll's can init. Must be BEFORE device creation!
-	#if !defined( _GAMECONSOLE ) && !defined(DX_TO_GL_ABSTRACTION) && ( IS_WINDOWS_PC )
+	#if !defined(DX_TO_GL_ABSTRACTION) && ( IS_WINDOWS_PC )
 	nv::stereo::HL2StereoD3D9 *pStereoD3D9 = new nv::stereo::HL2StereoD3D9;
 	#endif
 
@@ -2562,7 +2071,7 @@ bool CShaderDeviceDx8::CreateD3DDevice( void* pHWnd, int nAdapter, const ShaderD
 	IDirect3DDevice9 *pD3DDevice = InvokeCreateDevice( pHWnd, nAdapter, deviceCreationFlags );
 	if ( !pD3DDevice )
 	{
-		#if !defined( _GAMECONSOLE ) && !defined(DX_TO_GL_ABSTRACTION) && ( IS_WINDOWS_PC )
+ #if !defined(DX_TO_GL_ABSTRACTION) && ( IS_WINDOWS_PC )
 		delete pStereoD3D9;
 		#endif
 		return false;
@@ -2571,80 +2080,21 @@ bool CShaderDeviceDx8::CreateD3DDevice( void* pHWnd, int nAdapter, const ShaderD
 	DetectQuerySupport( pD3DDevice );			// Check to see if query is supported
 
 	// This must happen AFTER device creation
-	#if !defined( _GAMECONSOLE ) && !defined(DX_TO_GL_ABSTRACTION) && ( IS_WINDOWS_PC )
+	#if !defined(DX_TO_GL_ABSTRACTION) && ( IS_WINDOWS_PC )
 	pStereoD3D9->Init( pD3DDevice );
 	#endif
 
 #ifdef STUBD3D
 	Dx9Device() = new CStubD3DDevice( pD3DDevice, g_pFullFileSystem );
-#elif !defined( _GAMECONSOLE )
+#else
 	Dx9Device()->SetDevicePtr( pD3DDevice, &m_PresentParameters, pHWnd );
 
-	#if !defined( _GAMECONSOLE ) && !defined(DX_TO_GL_ABSTRACTION) && ( IS_WINDOWS_PC )
+	#if !defined(DX_TO_GL_ABSTRACTION) && ( IS_WINDOWS_PC )
 		// Give pointer to d3d_async layer (it will free the memory later)
 		Dx9Device()->SetStereoTextureUpdater( pStereoD3D9 );
 	#endif
-#else
-	m_pD3DDevice = pD3DDevice;
 #endif
 
-#if defined( _X360 )
-	// Create the depth buffer, created manually to enable hierarchical z
-	{
-		D3DSURFACE_PARAMETERS DepthStencilParams;
-		V_memset( &DepthStencilParams, 0, sizeof( DepthStencilParams ) );
-
-		// Depth is immediately after the back buffer in EDRAM
-		// allocate the hierarchical z tiles at the end of the area so all other allocations can trivially allocate at 0
-		DepthStencilParams.Base = XGSurfaceSize( 
-			m_PresentParameters.BackBufferWidth,
-			m_PresentParameters.BackBufferHeight, 
-			m_PresentParameters.BackBufferFormat, 
-			m_PresentParameters.MultiSampleType );
-		DepthStencilParams.ColorExpBias = 0;
-		DepthStencilParams.HierarchicalZBase = GPU_HIERARCHICAL_Z_TILES - XGHierarchicalZSize( m_PresentParameters.BackBufferWidth, m_PresentParameters.BackBufferHeight, m_PresentParameters.MultiSampleType );
-		DepthStencilParams.HiZFunc = D3DHIZFUNC_DEFAULT;
-
-		IDirect3DSurface *pDepthStencilSurface = NULL;
-		hr = Dx9Device()->CreateDepthStencilSurface( 
-			m_PresentParameters.BackBufferWidth, 
-			m_PresentParameters.BackBufferHeight, 
-			m_PresentParameters.AutoDepthStencilFormat,
-			m_PresentParameters.MultiSampleType, 
-			m_PresentParameters.MultiSampleQuality,
-			TRUE,
-			&pDepthStencilSurface,
-			&DepthStencilParams );
-		Assert( SUCCEEDED( hr ) );
-		if ( FAILED( hr ) )
-			return false;
-
-		hr = Dx9Device()->SetDepthStencilSurface( pDepthStencilSurface );
-		Assert( SUCCEEDED( hr ) );
-		if ( FAILED( hr ) )
-			return false;
-	}
-
-	// Initialize XUI, needed for TTF font rasterization
-	// xui requires and shares our d3d device
-	{
-		hr = XuiRenderInitShared( pD3DDevice, &m_PresentParameters, XuiD3DXTextureLoader );
-		if ( FAILED( hr ) )
-			return false;
-
-		XUIInitParams xuiInit;
-		XUI_INIT_PARAMS( xuiInit );
-		xuiInit.dwFlags = XUI_INIT_PARAMS_FLAGS_NONE;
-		xuiInit.pHooks = NULL;
-		hr = XuiInit( &xuiInit );
-		if ( FAILED( hr ) )
-			return false;
-
-		hr = XuiRenderCreateDC( &m_hDC );
-		if ( FAILED( hr ) )
-			return false;
-	}
-#endif
 
 	// CheckDeviceLost();
 
@@ -2676,8 +2126,6 @@ bool CShaderDeviceDx8::CreateD3DDevice( void* pHWnd, int nAdapter, const ShaderD
 //-----------------------------------------------------------------------------
 void CShaderDeviceDx8::AllocFrameSyncTextureObject()
 {
-	if ( IsGameConsole() || IsOSX() )
-		return;
 
 	FreeFrameSyncTextureObject();
 
@@ -2698,8 +2146,6 @@ void CShaderDeviceDx8::AllocFrameSyncTextureObject()
 
 void CShaderDeviceDx8::FreeFrameSyncTextureObject()
 {
-	if ( IsGameConsole() || IsOSX() )
-		return;
 
 	if ( m_pFrameSyncTexture )
 	{
@@ -2709,8 +2155,6 @@ void CShaderDeviceDx8::FreeFrameSyncTextureObject()
 }
 void CShaderDeviceDx8::AllocFrameSyncObjects( void )
 {
-	if ( IsGameConsole() || IsOSX() )
-		return;
 
 	if ( mat_debugalttab.GetBool() )
 	{
@@ -2751,8 +2195,6 @@ void CShaderDeviceDx8::AllocFrameSyncObjects( void )
 
 void CShaderDeviceDx8::FreeFrameSyncObjects( void )
 {
-	if ( IsX360() || IsOSX() )
-		return;
 
 	if ( mat_debugalttab.GetBool() )
 	{
@@ -2863,8 +2305,6 @@ void CShaderDeviceDx8::HandleThreadEvent( uint32 threadEvent )
 //-----------------------------------------------------------------------------
 bool CShaderDeviceDx8::TryDeviceReset()
 {
-	if ( IsX360() )
-		return true;
 
 	// Don't try to reset the device until we're sure our resources have been released
 	if ( !m_bResourcesReleased )
@@ -2883,9 +2323,7 @@ bool CShaderDeviceDx8::TryDeviceReset()
 		// DXVK: flush backbuffer init commands (see InvokeCreateDevice)
 		Dx9Device()->Present( NULL, NULL, NULL, NULL );
 #endif
-#if !defined( _GAMECONSOLE )
 		Dx9Device()->ReportDeviceReset();
-#endif
 	}
 
 	return bResetSuccess;
@@ -3015,8 +2453,6 @@ void CShaderDeviceDx8::ReacquireResourcesInternal( bool bResetState, bool bForce
 //-----------------------------------------------------------------------------
 bool CShaderDeviceDx8::ResizeWindow( const ShaderDeviceInfo_t &info ) 
 {
-	if ( IsGameConsole() )
-		return false;
 
 	m_bPendingVideoModeChange = false;
 
@@ -3050,8 +2486,6 @@ bool CShaderDeviceDx8::ResizeWindow( const ShaderDeviceInfo_t &info )
 //-----------------------------------------------------------------------------
 void CShaderDeviceDx8::MarkDeviceLost( )
 {
-	if ( IsX360() )
-		return;
 
 	m_bQueuedDeviceLost = true;
 }
@@ -3060,13 +2494,12 @@ void CShaderDeviceDx8::MarkDeviceLost( )
 //-----------------------------------------------------------------------------
 // Checks if the device was lost
 //-----------------------------------------------------------------------------
-#if defined( _DEBUG ) && !defined( _X360 )
+#if defined( _DEBUG )
 ConVar mat_forcelostdevice( "mat_forcelostdevice", "0" );
 #endif
 
 void CShaderDeviceDx8::CheckDeviceLost( bool bOtherAppInitializing )
 {
-#if !defined( _X360 )
 	// FIXME: We could also queue up if WM_SIZE changes and look at that
 	// but that seems to only make sense if we have resizable windows where 
 	// we do *not* allocate buffers as large as the entire current video mode
@@ -3184,11 +2617,7 @@ void CShaderDeviceDx8::CheckDeviceLost( bool bOtherAppInitializing )
 			// purge unreferenced materials
 			g_pShaderUtil->UncacheUnusedMaterials( true );
 
-#if !defined( _GAMECONSOLE )
 			Dx9Device()->ReportDeviceReset();
-#else
-			g_pShaderDeviceMgr->InvokeDeviceResetNotifications( m_pD3DDevice, &m_PresentParameters, m_hWnd );
-#endif
 
 			// We were bad, now we're ok. Restore resources and reset render state.
 			ReacquireResourcesInternal( true, true, "OtherAppInit" );
@@ -3196,95 +2625,30 @@ void CShaderDeviceDx8::CheckDeviceLost( bool bOtherAppInitializing )
 	}
 
 	// Do mode change if we have a video mode change.
-#ifdef LINUX
 	// On Linux, always allow mode change regardless of deactivation state.
 	// IsDeactivated() can return incorrect values on Wayland when moving between displays.
 	if ( m_bPendingVideoModeChange )
-#else
-	if ( m_bPendingVideoModeChange && !IsDeactivated() )
-#endif
 	{
 #ifdef _DEBUG
 		Warning( "mode change!\n" );
 #endif
 		ResizeWindow( m_PendingVideoModeChangeConfig );
 	}
-#endif
 }
 
 bool CShaderDeviceDx8::BuildStaticShader(	bool bVertexShader, void **ppShader, const char *pShaderName,
 											const char *strShaderProgram, const DWORD *shaderData, unsigned int shaderSize )
 {
-#if defined( X360_LINK_WITH_SHADER_COMPILE )
-	// Compile our shader from HLSL-in-a-string
-	ID3DXBuffer *pErrorMsg = NULL;
-	ID3DXBuffer *pShaderCode = NULL;
-
-	const char *shaderModel = bVertexShader ? "vs_2_0" : "ps_2_0";
-	HRESULT hr = D3DXCompileShader( strShaderProgram, (UINT)strlen( strShaderProgram ), NULL, NULL, "main", shaderModel, 0, &pShaderCode, &pErrorMsg, NULL );
-	if ( FAILED( hr ) )
-		return false;
-
-	// Check that our static shader data is valid
-	if ( ( shaderSize != pShaderCode->GetBufferSize() ) || memcmp( shaderData, pShaderCode->GetBufferPointer(), shaderSize ) )
-	{
-		// Use the fallback compiled-from-string data
-		shaderData = (DWORD*)pShaderCode->GetBufferPointer();
-		shaderSize = pShaderCode->GetBufferSize();
-
-#if defined( _CERT )
-#error "X360_LINK_WITH_SHADER_COMPILE should not be defined when _CERT is defined!! Only use it when revving XDK."
-#endif
-		// Force a crash, so the user will attach a debugger and thus see the below spew
-		char *p = 0;
-		*p = 0;
-
-		// Shader data needs updating - allow me to spew it out for your cut'n'paste convenience
-		Plat_DebugString( "\n\nERROR: static shader data in RestorePersistedDisplay needs updating for new XDK/compiler version! (" );
-		Plat_DebugString( pShaderName );
-		Plat_DebugString( ")\nconst DWORD shaderData[] = {\n    " );
-		int numLines = ( shaderSize + 31 ) / 32;
-		for ( int i = 0; i < numLines; i++ )
-		{
-			int numWords = MIN( 8, ( ( shaderSize / 4 ) - i*8 ) );
-			for ( int j = 0; j < numWords; j++ )
-			{
-				char wordBuffer[ 32 ];
-				V_snprintf( wordBuffer, sizeof( wordBuffer ), "0x%08x, ", shaderData[ i*8 + j ] );
-				Plat_DebugString( wordBuffer );
-			}
-			Plat_DebugString( "\n    " );
-		}
-		Plat_DebugString( "};\n\n" );
-	}
-#endif // defined( X360_LINK_WITH_SHADER_COMPILE )
 
 	if ( bVertexShader )
 	{
-#ifdef _GAMECONSOLE
-		Dx9Device()->CreateVertexShader( shaderData, (IDirect3DVertexShader9 **)ppShader );
-#else
 		Dx9Device()->CreateVertexShader( shaderData, (IDirect3DVertexShader9 **)ppShader, pShaderName );
-#endif
 	}
 	else
 	{
-#ifdef _GAMECONSOLE
-		Dx9Device()->CreatePixelShader( shaderData, (IDirect3DPixelShader9 **)ppShader );
-#else	
 		Dx9Device()->CreatePixelShader( shaderData, (IDirect3DPixelShader9 **)ppShader, pShaderName );
-#endif
 	}
 
-#if defined( X360_LINK_WITH_SHADER_COMPILE )
-	pShaderCode->Release();
-	pShaderCode = NULL;
-	if ( pErrorMsg )
-	{
-		pErrorMsg->Release();
-		pErrorMsg = NULL;
-	}
-#endif // defined( X360_LINK_WITH_SHADER_COMPILE )
 
 	return true;
 }
@@ -3294,210 +2658,6 @@ bool CShaderDeviceDx8::BuildStaticShader(	bool bVertexShader, void **ppShader, c
 //-----------------------------------------------------------------------------
 bool CShaderDeviceDx8::AllocNonInteractiveRefreshObjects()
 {
-#if defined( _GAMECONSOLE )
-
-#if defined( _X360 )
-
-	// HLSL source for the refresh shaders:
-	const char *strVertexShaderProgram = 
-		" float4x4 matWVP : register(c0);"  
-		" struct VS_IN"  
-		" {" 
-		" float4 ObjPos : POSITION;"
-		" float2 TexCoord : TEXCOORD;"
-		" };" 
-		" struct VS_OUT" 
-		" {" 
-		" float4 ProjPos : POSITION;" 
-		" float2 TexCoord : TEXCOORD;"
-		" };"  
-		" VS_OUT main( VS_IN In )"  
-		" {"  
-		" VS_OUT Out; "  
-		" Out.ProjPos = mul( matWVP, In.ObjPos );"
-		" Out.TexCoord = In.TexCoord;"
-		" return Out;"  
-		" }";
-
-	const char *strPixelShaderProgram = 
-		" struct PS_IN"
-		" {"
-		" float2 TexCoord : TEXCOORD;"
-		" };"
-		" sampler detail : register( s0 );"
-		" float4 main( PS_IN In ) : COLOR"  
-		" {"  
-		" return tex2D( detail, In.TexCoord );"
-		" }"; 
-
-	const char *strPixelShaderProgram2 = 
-		" struct PS_IN"
-		" {"
-		" float2 TexCoord : TEXCOORD;"
-		" };"
-		" sampler detail : register( s0 );"
-		" float4 main( PS_IN In ) : COLOR"  
-		" {"  
-		" return tex2D( detail, In.TexCoord );"
-		" }"; 
-
-	const char *strPixelShaderProgram3 = 
-		" struct PS_IN"
-		" {"
-		" float2 TexCoord : TEXCOORD;"
-		" };"
-		" float SrgbGammaToLinear( float flSrgbGammaValue )"
-		" {"
-		" float x = saturate( flSrgbGammaValue );"
-		" return ( x <= 0.04045f ) ? ( x / 12.92f ) : ( pow( ( x + 0.055f ) / 1.055f, 2.4f ) );"
-		" }"
-		" float X360LinearToGamma( float flLinearValue )"
-		" {"
-		" float fl360GammaValue;"
-		" flLinearValue = saturate( flLinearValue );"
-		" if ( flLinearValue < ( 128.0f / 1023.0f ) )"
-		" {"
-		" if ( flLinearValue < ( 64.0f / 1023.0f ) )"
-		" {"
-		" fl360GammaValue = flLinearValue * ( 1023.0f * ( 1.0f / 255.0f ) );"
-		" }"
-		" else"
-		" {"
-		" fl360GammaValue = flLinearValue * ( ( 1023.0f / 2.0f ) * ( 1.0f / 255.0f ) ) + ( 32.0f / 255.0f );"
-		" }"
-		" }"
-		" else"
-		" {"
-		" if ( flLinearValue < ( 512.0f / 1023.0f ) )"
-		" {"
-		" fl360GammaValue = flLinearValue * ( ( 1023.0f / 4.0f ) * ( 1.0f / 255.0f ) ) + ( 64.0f / 255.0f );"
-		" }"
-		" else"
-		" {"
-		" fl360GammaValue = flLinearValue * ( ( 1023.0f /8.0f ) * ( 1.0f / 255.0f ) ) + ( 128.0f /255.0f );"
-		" if ( fl360GammaValue > 1.0f )"
-		" {"
-		" fl360GammaValue = 1.0f;"
-		" }"
-		" }"
-		" }"
-		" fl360GammaValue = saturate( fl360GammaValue );"
-		" return fl360GammaValue;"
-		" }"
-		" sampler detail : register( s0 );"
-		" float4 main( PS_IN In ) : COLOR"  
-		" {"  
-		" float4 vTextureColor = tex2D( detail, In.TexCoord );"
-//		Only needed in TOB, not needed for L4D which had a corrected offline PWL processing
-//		" vTextureColor.r = X360LinearToGamma( SrgbGammaToLinear( vTextureColor.r ) );" 
-//		" vTextureColor.g = X360LinearToGamma( SrgbGammaToLinear( vTextureColor.g ) );"
-//		" vTextureColor.b = X360LinearToGamma( SrgbGammaToLinear( vTextureColor.b ) );"
-		" return vTextureColor;"
-		" }"; 
-
-
-	// Hard-coded compiled shader data, so we don't have to bloat our DLLs
-	// with all the shader compilation stuff from the D3D libs (over 2 MB!)
-#if defined( _X360 ) && ( _XDK_VER != 20764 )
-	// Make sure this hard-coded shader data gets updated with each XDK rev
-#if !defined( JUNE_2009_XDK_ISSUES )
-#error "Define X360_LINK_WITH_SHADER_COMPILE temporarily (to verify compiled static shader data, and spew out new data if necessary)"
-#endif
-#endif
-	
-	DWORD vertexShaderData[] = {
-		0x102a1101, 0x000000bc, 0x00000084, 0x00000000, 0x00000024, 0x00000000, 0x00000084, 0x00000000, 
-		0x00000000, 0x0000005c, 0x0000001c, 0x0000004f, 0xfffe0300, 0x00000001, 0x0000001c, 0x00000000, 
-		0x00000048, 0x00000030, 0x00020000, 0x00040000, 0x00000038, 0x00000000, 0x6d617457, 0x565000ab, 
-		0x00030003, 0x00040004, 0x00010000, 0x00000000, 0x76735f33, 0x5f300032, 0x2e302e32, 0x30373634, 
-		0x2e3000ab, 0x00000000, 0x00000084, 0x00010002, 0x00000000, 0x00000000, 0x00000821, 0x00000001, 
-		0x00000002, 0x00000001, 0x00000290, 0x00100003, 0x00305004, 0x00003050, 0x00001009, 0x30052003, 
-		0x00001200, 0xc2000000, 0x00004005, 0x00001200, 0xc4000000, 0x00001009, 0x00002200, 0x00000000, 
-		0x05f82000, 0x00000688, 0x00000000, 0x05f80000, 0x00000fc8, 0x00000000, 0xc80f0001, 0x001b8800, 
-		0xa1020300, 0xc80f0001, 0x00c68800, 0xab020201, 0xc80f0001, 0x00b13494, 0xab020101, 0xc80f803e, 
-		0x006c0034, 0xab020001, 0xc8038000, 0x00b0b000, 0xe2000000, 0x00000000, 0x00000000, 0x00000000, 
-	};
-	
-
-	DWORD pixelShaderData1[] = {
-		0x102a1100, 0x000000a8, 0x0000003c, 0x00000000, 0x00000024, 0x00000000, 0x00000084, 0x00000000, 
-		0x00000000, 0x0000005c, 0x0000001c, 0x0000004f, 0xffff0300, 0x00000001, 0x0000001c, 0x00000000, 
-		0x00000048, 0x00000030, 0x00030000, 0x00010000, 0x00000038, 0x00000000, 0x64657461, 0x696c00ab, 
-		0x0004000c, 0x00010001, 0x00010000, 0x00000000, 0x70735f33, 0x5f300032, 0x2e302e32, 0x30373634, 
-		0x2e3000ab, 0x00000000, 0x0000003c, 0x10000000, 0x00000004, 0x00000000, 0x00000821, 0x00010001, 
-		0x00000001, 0x00003050, 0x00011002, 0x00001200, 0xc4000000, 0x00001003, 0x00002200, 0x00000000, 
-		0x10080001, 0x1f1ff688, 0x00004000, 0xc80f8000, 0x00000000, 0xe2000000, 0x00000000, 0x00000000, 
-		0x00000000, 
-	};
-
-		
-	DWORD pixelShaderData2[] = {
-		0x102a1100, 0x000000a8, 0x0000003c, 0x00000000, 0x00000024, 0x00000000, 0x00000084, 0x00000000, 
-		0x00000000, 0x0000005c, 0x0000001c, 0x0000004f, 0xffff0300, 0x00000001, 0x0000001c, 0x00000000, 
-		0x00000048, 0x00000030, 0x00030000, 0x00010000, 0x00000038, 0x00000000, 0x64657461, 0x696c00ab, 
-		0x0004000c, 0x00010001, 0x00010000, 0x00000000, 0x70735f33, 0x5f300032, 0x2e302e32, 0x30373634, 
-		0x2e3000ab, 0x00000000, 0x0000003c, 0x10000000, 0x00000004, 0x00000000, 0x00000821, 0x00010001, 
-		0x00000001, 0x00003050, 0x00011002, 0x00001200, 0xc4000000, 0x00001003, 0x00002200, 0x00000000, 
-		0x10080001, 0x1f1ff688, 0x00004000, 0xc80f8000, 0x00000000, 0xe2000000, 0x00000000, 0x00000000, 
-		0x00000000, 
-	};
-
-
-	DWORD pixelShaderData3[] = {
-		0x102a1100, 0x000000a8, 0x0000003c, 0x00000000, 0x00000024, 0x00000000, 0x00000084, 0x00000000, 
-		0x00000000, 0x0000005c, 0x0000001c, 0x0000004f, 0xffff0300, 0x00000001, 0x0000001c, 0x00000000, 
-		0x00000048, 0x00000030, 0x00030000, 0x00010000, 0x00000038, 0x00000000, 0x64657461, 0x696c00ab, 
-		0x0004000c, 0x00010001, 0x00010000, 0x00000000, 0x70735f33, 0x5f300032, 0x2e302e32, 0x30373634, 
-		0x2e3000ab, 0x00000000, 0x0000003c, 0x10000000, 0x00000004, 0x00000000, 0x00000821, 0x00010001, 
-		0x00000001, 0x00003050, 0x00011002, 0x00001200, 0xc4000000, 0x00001003, 0x00002200, 0x00000000, 
-		0x10080001, 0x1f1ff688, 0x00004000, 0xc80f8000, 0x00000000, 0xe2000000, 0x00000000, 0x00000000, 
-		0x00000000, 
-	};
-
-	// Build the requisite shaders:
-	if ( !BuildStaticShader( true, (void **)&m_NonInteractiveRefresh.m_pVertexShader, "m_pVertexShader",
-							 strVertexShaderProgram, vertexShaderData, sizeof( vertexShaderData ) ) )
-		return false;
-
-	if ( !BuildStaticShader( false, (void **)&m_NonInteractiveRefresh.m_pPixelShader, "m_pPixelShader",
-							 strPixelShaderProgram, pixelShaderData1, sizeof( pixelShaderData1 ) ) )
-		return false;
-
-	if ( !BuildStaticShader( false, (void **)&m_NonInteractiveRefresh.m_pPixelShaderStartup, "m_pPixelShaderStartup",
-							 strPixelShaderProgram2, pixelShaderData2, sizeof( pixelShaderData2 ) ) )
-		return false;
-
-	if ( !BuildStaticShader( false, (void **)&m_NonInteractiveRefresh.m_pPixelShaderStartupPass2, "m_pPixelShaderStartupPass2",
-							 strPixelShaderProgram3, pixelShaderData3, sizeof( pixelShaderData3 ) ) )
-		return false;
-
-#elif defined( _PS3 )
-		
-	extern uint32_t _binary_noninteractiveshader_vpo_start;
-	extern uint32_t _binary_noninteractiveshader_vpo_end;
-	extern uint32_t _binary_noninteractiveshader_fpo_start;
-	extern uint32_t _binary_noninteractiveshader_fpo_end;
-	extern uint32_t _binary_noninteractiveshaderstartup_fpo_start;
-	extern uint32_t _binary_noninteractiveshaderstartup_fpo_end;
-	extern uint32_t _binary_noninteractiveshaderstartuppass2_fpo_start;
-	extern uint32_t _binary_noninteractiveshaderstartuppass2_fpo_end;
-
-	Dx9Device()->CreateVertexShader( ( const DWORD* )&_binary_noninteractiveshader_vpo_start, &m_NonInteractiveRefresh.m_pVertexShader, "m_pVertexShader" );
-	Dx9Device()->CreatePixelShader( ( const DWORD* )&_binary_noninteractiveshader_fpo_start, &m_NonInteractiveRefresh.m_pPixelShader, "m_pPixelShader" );
-	Dx9Device()->CreatePixelShader( ( const DWORD* )&_binary_noninteractiveshaderstartup_fpo_start, &m_NonInteractiveRefresh.m_pPixelShaderStartup, "m_pPixelShaderStartup" );
-	Dx9Device()->CreatePixelShader( ( const DWORD* )&_binary_noninteractiveshaderstartuppass2_fpo_start, &m_NonInteractiveRefresh.m_pPixelShaderStartupPass2, "m_pPixelShaderStartupPass2" );
-#endif		
-
-	D3DVERTEXELEMENT9 VertexElements[4] =
-	{
-		{ 0,  0, D3DDECLTYPE_FLOAT3, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_POSITION, 0 },
-		{ 0, 12, D3DDECLTYPE_FLOAT2, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_TEXCOORD, 0 },
-		D3DDECL_END()
-	};
-	// Create a vertex declaration from the element descriptions.
-	Dx9Device()->CreateVertexDeclaration( VertexElements, &m_NonInteractiveRefresh.m_pVertexDecl );
-
-#endif
 	return true;
 }
 
@@ -3541,7 +2701,6 @@ bool CShaderDeviceDx8::InNonInteractiveMode() const
 
 void CShaderDeviceDx8::EnableNonInteractiveMode( MaterialNonInteractiveMode_t mode, ShaderNonInteractiveInfo_t *pInfo )
 {
-	if ( !IsGameConsole() )
 		return;
 	if ( pInfo && ( pInfo->m_hTempFullscreenTexture == INVALID_SHADERAPI_TEXTURE_HANDLE ) )
 	{
@@ -3571,30 +2730,6 @@ void CShaderDeviceDx8::EnableNonInteractiveMode( MaterialNonInteractiveMode_t mo
 			mat_monitorgamma_tv_exp.GetFloat(), mat_monitorgamma_tv_enabled.GetBool() );
 	}
 
-#ifdef _X360
-	if ( mode != MATERIAL_NON_INTERACTIVE_MODE_NONE )
-	{
-		// HACK: VSync off (prevents us wasting time blocking on VSync due to our irregular present intervals)
-		Dx9Device()->SetRenderState( D3DRS_PRESENTINTERVAL, D3DPRESENT_INTERVAL_IMMEDIATE );
-	}
-	else
-	{
-		// HACK: VSync on if we want it.
-		Dx9Device()->SetRenderState( D3DRS_PRESENTINTERVAL, m_PresentParameters.PresentationInterval );
-	}
-#elif defined (_PS3)
-	if ( mode != MATERIAL_NON_INTERACTIVE_MODE_NONE )
-	{
-		// HACK: VSync off (prevents us wasting time blocking on VSync due to our irregular present intervals)
-		g_ps3gcmGlobalState.SetFastFlip(1);
-	}
-	else
-	{
-		// HACK: VSync on if we want it.
-
-		g_ps3gcmGlobalState.SetFastFlip(0);
-	}
-#endif
 
 //	Msg( "Time elapsed: %.3f Peak %.3f Ave %.5f Count %d Count Above %d\n", Plat_FloatTime() - m_NonInteractiveRefresh.m_flStartTime,
 //		m_NonInteractiveRefresh.m_flPeakDt, m_NonInteractiveRefresh.m_flTotalDt / m_NonInteractiveRefresh.m_nSamples, m_NonInteractiveRefresh.m_nSamples, m_NonInteractiveRefresh.m_nCountAbove66 );
@@ -3637,41 +2772,6 @@ void CShaderDeviceDx8::UpdatePresentStats()
 float g_flLastUpdateTime = 0.0f;
 bool g_bInSwap = false;
 
-#ifdef _PS3
-
-struct Vector4
-{
-	Vector4(){}
-	Vector4( float fx, float fy, float fz, float fw) { x=fx;y=fy;z=fz;w=fw; }
-	float x,y,z,w;
-};
-
-struct Matrix4x4
-{
-	Vector4 r[4];
-};
-
-Matrix4x4 Matrix4x4OrthographicOffCenterLH( float ViewLeft, float ViewRight, float ViewBottom, float ViewTop, float NearZ, float FarZ )
-{
-	Matrix4x4 M;
-
-	float ReciprocalWidth = 1.0f / (ViewRight - ViewLeft);
-	float ReciprocalHeight = 1.0f / (ViewTop - ViewBottom);
-
-	M.r[0] = Vector4(2 * ReciprocalWidth, 0.0f, 0.0f, 0.0f);
-	M.r[1] = Vector4(0.0f, -2 * ReciprocalHeight, 0.0f, 0.0f);
-	M.r[2] = Vector4(0.0f, 0.0f, 1.0f / (FarZ - NearZ), 0.0f);
-	M.r[3] = Vector4(-(ViewLeft + ViewRight) * ReciprocalWidth, 
-		(ViewTop + ViewBottom) * ReciprocalHeight,
-		-M.r[2].z * NearZ,
-		1.0f);
-
-	return M;
-}
-#elif defined( _X360 )
-#define Matrix4x4OrthographicOffCenterLH XMMatrixOrthographicOffCenterLH
-#define Matrix4x4 XMMATRIX
-#endif
 
 #if ENABLE_MICRO_PROFILER
 double g_time_PresentProfilerReset = 0;
@@ -3681,21 +2781,18 @@ CMicroProfiler g_mp_Present;
 void CShaderDeviceDx8::OnDebugEvent( const char * pEvent )
 {
 #if ENABLE_MICRO_PROFILER
-	if( !IsCert() )
+	double timeNow = Plat_FloatTime(), timeDelta = timeNow - g_time_PresentProfilerReset;
+	double flSleepMilliseconds = g_mp_Present.GetTotalMilliseconds();
+	if( g_mp_Present.m_numCalls )
 	{
-		double timeNow = Plat_FloatTime(), timeDelta = timeNow - g_time_PresentProfilerReset;
-		double flSleepMilliseconds = g_mp_Present.GetTotalMilliseconds();
-		if( g_mp_Present.m_numCalls )
-		{
-			COM_TimestampedLog( "Present() Stats: %d flips / %.1f sec = ave %.1f fps. Sleep %.2f seconds = %.3fms/flip. %s\n", g_mp_Present.m_numCalls, timeDelta, timeDelta > 0.001 ? float( g_mp_Present.m_numCalls ) / timeDelta : 0.0f, flSleepMilliseconds * 1e-3f, g_mp_Present.m_numCalls ? flSleepMilliseconds / double( g_mp_Present.m_numCalls ) : 0.0f, pEvent );
-		}
-		else
-		{
-			COM_TimestampedLog( "Present() Stats: no flips / %.1f sec. %s\n", timeDelta, pEvent );
-		}
-		g_mp_Present.Reset();
-		g_time_PresentProfilerReset = timeNow;
+		COM_TimestampedLog( "Present() Stats: %d flips / %.1f sec = ave %.1f fps. Sleep %.2f seconds = %.3fms/flip. %s\n", g_mp_Present.m_numCalls, timeDelta, timeDelta > 0.001 ? float( g_mp_Present.m_numCalls ) / timeDelta : 0.0f, flSleepMilliseconds * 1e-3f, g_mp_Present.m_numCalls ? flSleepMilliseconds / double( g_mp_Present.m_numCalls ) : 0.0f, pEvent );
 	}
+	else
+	{
+		COM_TimestampedLog( "Present() Stats: no flips / %.1f sec. %s\n", timeDelta, pEvent );
+	}
+	g_mp_Present.Reset();
+	g_time_PresentProfilerReset = timeNow;
 #endif
 }
 
@@ -3704,22 +2801,11 @@ void CShaderDeviceDx8::OnDebugEvent( const char * pEvent )
 void CShaderDeviceDx8::RefreshFrontBufferNonInteractive()
 {
 
-	if ( !IsGameConsole() || !InNonInteractiveMode() )
 		return;
 		
 	float flTimeBegin = Plat_FloatTime();
 	float dt = flTimeBegin - g_flLastUpdateTime;
 		
-	#ifdef _PS3
-// 	7ltodo extern bool IsRsxReadyForNoninteractiveRefresh( );
-// 	if( !IsRsxReadyForNoninteractiveRefresh( ) )
-// 	{
-// 		// why bother rendering anything if there are front buffers in the queue for flipping, or something was flipped 1 or less vblanks ago?
-// 		// if we do bother to render in this case, we may enter a self-perpetuating bad state where we fill up the queue of front buffers to flip
-// 		// and have to wait for up to 33 ms in every Present, effectively making this function stall for 33 ms for no good reason.
-// 		return;
-// 	}
-	#endif
     if( dt < LOADING_PRESENT_UPDATE_INTERVAL || g_bInSwap || g_pMaterialSystem->IsInFrame() )
 		return;
 
@@ -3728,214 +2814,6 @@ void CShaderDeviceDx8::RefreshFrontBufferNonInteractive()
 	// Other code should not be talking to D3D at the same time as this
 	AUTO_LOCK_FM( m_nonInteractiveModeMutex );
 
-#ifdef _GAMECONSOLE
-	g_pShaderAPI->OwnGPUResources( false );
-	IDirect3DBaseTexture *pTexture = g_pShaderAPI->GetD3DTexture( m_NonInteractiveRefresh.m_Info.m_hTempFullscreenTexture );
-
-	int w, h;
-	g_pShaderAPI->GetBackBufferDimensions( w, h );
-	Matrix4x4 matWVP = Matrix4x4OrthographicOffCenterLH( 0, (float)w, (float)h, 0, 0, 1 );
-
-	// Structure to hold vertex data.
-	struct TEXVERTEX
-	{
-		FLOAT       Position[3];
-		FLOAT       TexCoord[2];
-	};
-	TEXVERTEX Vertices[4];
-
-	float flPixelCenter = IsPS3() ? 0 : 0.5f;
-
-	bool bInStartupMode = ( m_NonInteractiveRefresh.m_Mode == MATERIAL_NON_INTERACTIVE_MODE_STARTUP );
-	
-#if defined( CSTRIKE15 )
-	if ( bInStartupMode )
-	{
-		// Render the initial vtf loading screen to match how we render our Scaleform backgrounds,
-		//	so the transition between loading and Scaleform is seamless:
-
-		// HACK: These are the dimensions of the src background vtf
-		const float th = 1024.f;
-		const float tw = 1024.f;
-
-		// VTFs are forced to be square, even if the source texture is non 1:1.  Rescale the
-		//		texture to assume its actually in 16:9, as it was authored
-		float convertTH = th * 720.0f / 1280.0f;
-
-		// Now, determine the scale between the texture and the viewport in height
-		float heightScale = (float)h / convertTH;
-
-		int scaledTH = (int)( heightScale * (float) convertTH );
-		int scaledTW = (int)( heightScale * (float) tw );
-
-		float bgTop		= (h / 2) - (scaledTH / 2) - flPixelCenter;
-		float bgLeft	= (w / 2) - (scaledTW / 2) - flPixelCenter;
-		float bgBottom	= (h / 2) + (scaledTH / 2) - flPixelCenter;
-		float bgRight	= (w / 2) + (scaledTW / 2) - flPixelCenter;
-
-		Vertices[0].Position[0] = bgLeft;
-		Vertices[0].Position[1] = bgTop;
-		Vertices[0].Position[2] = 0;
-		Vertices[0].TexCoord[0] = 0;
-		Vertices[0].TexCoord[1] = 0;
-
-		Vertices[1].Position[0] = bgRight;
-		Vertices[1].Position[1] = bgTop;
-		Vertices[1].Position[2] = 0;
-		Vertices[1].TexCoord[0] = 1;
-		Vertices[1].TexCoord[1] = 0;
-
-		Vertices[2].Position[0] = bgRight;
-		Vertices[2].Position[1] = bgBottom;
-		Vertices[2].Position[2] = 0;
-		Vertices[2].TexCoord[0] = 1;
-		Vertices[2].TexCoord[1] = 1;
-
-		Vertices[3].Position[0] = bgLeft;
-		Vertices[3].Position[1] = bgBottom;
-		Vertices[3].Position[2] = 0;
-		Vertices[3].TexCoord[0] = 0;
-		Vertices[3].TexCoord[1] = 1;
-	}
-	else
-#endif // !CSTRIKE15
-	{
-		Vertices[0].Position[0] = -flPixelCenter;
-		Vertices[0].Position[1] = -flPixelCenter;
-		Vertices[0].Position[2] = 0;
-		Vertices[0].TexCoord[0] = 0;
-		Vertices[0].TexCoord[1] = 0;
-
-		Vertices[1].Position[0] = w - flPixelCenter;
-		Vertices[1].Position[1] = -flPixelCenter;
-		Vertices[1].Position[2] = 0;
-		Vertices[1].TexCoord[0] = 1;
-		Vertices[1].TexCoord[1] = 0;
-
-		Vertices[2].Position[0] = w - flPixelCenter;
-		Vertices[2].Position[1] = h - flPixelCenter;
-		Vertices[2].Position[2] = 0;
-		Vertices[2].TexCoord[0] = 1;
-		Vertices[2].TexCoord[1] = 1;
-
-		Vertices[3].Position[0] = -flPixelCenter;
-		Vertices[3].Position[1] = h - flPixelCenter;
-		Vertices[3].Position[2] = 0;
-		Vertices[3].TexCoord[0] = 0;
-		Vertices[3].TexCoord[1] = 1;
-	}
-
-	D3DVIEWPORT9 viewport;
-	viewport.X = viewport.Y = 0;
-	viewport.Width = w; viewport.Height = h;
-	viewport.MinZ = ReverseDepthOnX360() ? 1.0f : 0.0f;
-	viewport.MaxZ = 1.0f - viewport.MinZ;
-
-
-	
-
-	float flDepth = (ShaderUtil()->GetConfig().bReverseDepth ^ ReverseDepthOnX360()) ? 0.0f : 1.0f;
-	#ifdef _PS3
-	Dx9Device()->AntiAliasingHint( AA_HINT_MENU );
-	#endif
-	Dx9Device()->Clear( 0, NULL, D3DCLEAR_ZBUFFER | D3DCLEAR_STENCIL | D3DCLEAR_TARGET0, 0, flDepth, 0L );
-
-	Dx9Device()->SetViewport( &viewport );
-	Dx9Device()->SetTexture( 0, pTexture );
-	Dx9Device()->SetVertexShader( m_NonInteractiveRefresh.m_pVertexShader );
-	Dx9Device()->SetPixelShader( bInStartupMode ? m_NonInteractiveRefresh.m_pPixelShaderStartup : m_NonInteractiveRefresh.m_pPixelShader );
-	Dx9Device()->SetVertexShaderConstantF( 0, (FLOAT*)&matWVP, 4 );
-	Dx9Device()->SetVertexDeclaration( m_NonInteractiveRefresh.m_pVertexDecl );
-	Dx9Device()->SetSamplerState( 0, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP );
-	Dx9Device()->SetSamplerState( 0, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP );
-	Dx9Device()->SetSamplerState( 0, D3DSAMP_MINFILTER, D3DTEXF_LINEAR );
-	Dx9Device()->SetSamplerState( 0, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR );
-	Dx9Device()->SetRenderState( D3DRS_ZENABLE, FALSE );
-	Dx9Device()->DrawPrimitiveUP( D3DPT_QUADLIST, 1, Vertices, sizeof( TEXVERTEX ) );
-
-	if ( bInStartupMode && m_NonInteractiveRefresh.m_Info.m_flLogoNormalizedW && m_NonInteractiveRefresh.m_Info.m_flLogoNormalizedH )
-	{
-		float flXPos = m_NonInteractiveRefresh.m_Info.m_flLogoNormalizedX;
-		float flYPos = m_NonInteractiveRefresh.m_Info.m_flLogoNormalizedY;
-		float flWidth = m_NonInteractiveRefresh.m_Info.m_flLogoNormalizedW;
-		float flHeight = m_NonInteractiveRefresh.m_Info.m_flLogoNormalizedH;
-
-		int x = w * flXPos;
-		int y = h * flYPos;
-		int logoW = w * flWidth;
-		int logoH = h * flHeight;
-
-		Vertices[0].Position[0] = x - flPixelCenter;
-		Vertices[0].Position[1] = y - flPixelCenter;
-		Vertices[1].Position[0] = x + logoW - flPixelCenter;
-		Vertices[1].Position[1] = y - flPixelCenter;
-		Vertices[2].Position[0] = x + logoW - flPixelCenter;
-		Vertices[2].Position[1] = y + logoH - flPixelCenter;
-		Vertices[3].Position[0] = x - flPixelCenter;
-		Vertices[3].Position[1] = y + logoH - flPixelCenter;
-
-		pTexture = g_pShaderAPI->GetD3DTexture( m_NonInteractiveRefresh.m_Info.m_hLogoTexture );
-		Dx9Device()->SetRenderState( D3DRS_ALPHABLENDENABLE, 1 );
-		Dx9Device()->SetRenderState( D3DRS_SRCBLEND, D3DBLEND_SRCALPHA );
-		Dx9Device()->SetRenderState( D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA );
-		Dx9Device()->SetTexture( 0, pTexture );
-		Dx9Device()->SetPixelShader( m_NonInteractiveRefresh.m_pPixelShaderStartupPass2 );
-		//Dx9Device()->SetVertexShaderConstantF( 0, (FLOAT*)&matWVP, 4 );
-		Dx9Device()->DrawPrimitiveUP( D3DPT_QUADLIST, 1, Vertices, sizeof( TEXVERTEX ) );
-	}
-
-	if ( bInStartupMode && ( m_NonInteractiveRefresh.m_Info.m_nPacifierCount > 0 ) )
-	{
-		float flXPos = m_NonInteractiveRefresh.m_Info.m_flNormalizedX;
-		float flYPos = m_NonInteractiveRefresh.m_Info.m_flNormalizedY;
-		float flHeight = m_NonInteractiveRefresh.m_Info.m_flNormalizedSize;
-
-		int nSize = h * flHeight;
-		int x = w * flXPos - nSize * 0.5f;
-		int y = h * flYPos - nSize * 0.5f;
-
-		Vertices[0].Position[0] = x - flPixelCenter;
-		Vertices[0].Position[1] = y - flPixelCenter;
-		Vertices[1].Position[0] = x + nSize - flPixelCenter;
-		Vertices[1].Position[1] = y - flPixelCenter;
-		Vertices[2].Position[0] = x + nSize - flPixelCenter;
-		Vertices[2].Position[1] = y + nSize - flPixelCenter;
-		Vertices[3].Position[0] = x - flPixelCenter;
-		Vertices[3].Position[1] = y + nSize - flPixelCenter;
-
-		float flDt = flTimeBegin - m_NonInteractiveRefresh.m_flLastPacifierTime;
-		// Even if we are drawing faster than 10 hertz (goal is 60 for this path), only animate the spinner at 10 hertz.
-		if ( flDt > 0.10f )
-		{
-			if ( ++m_NonInteractiveRefresh.m_nPacifierFrame >= m_NonInteractiveRefresh.m_Info.m_nPacifierCount )
-			{
-				m_NonInteractiveRefresh.m_nPacifierFrame = 0;
-			}
-			m_NonInteractiveRefresh.m_flLastPacifierTime = flTimeBegin;
-		}
-
-		pTexture = g_pShaderAPI->GetD3DTexture( m_NonInteractiveRefresh.m_Info.m_pPacifierTextures[ m_NonInteractiveRefresh.m_nPacifierFrame ] );
-		Dx9Device()->SetRenderState( D3DRS_ALPHABLENDENABLE, 1 );
-		Dx9Device()->SetRenderState( D3DRS_SRCBLEND, D3DBLEND_SRCALPHA );
-		Dx9Device()->SetRenderState( D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA );
-		Dx9Device()->SetTexture( 0, pTexture );
-		Dx9Device()->SetPixelShader( m_NonInteractiveRefresh.m_pPixelShaderStartupPass2 );
-		Dx9Device()->DrawPrimitiveUP( D3DPT_QUADLIST, 1, Vertices, sizeof( TEXVERTEX ) );
-	}
-
-	Dx9Device()->SetVertexShader( NULL );
-	Dx9Device()->SetPixelShader( NULL );
-	Dx9Device()->SetTexture( 0, NULL );
-	Dx9Device()->SetVertexDeclaration( NULL );
-	Dx9Device()->SetRenderState( D3DRS_ZENABLE, TRUE );
-
-	Dx9Device()->Present( 0, 0, 0, 0 );
-
-	g_pShaderAPI->QueueResetRenderState();
-	g_pShaderAPI->OwnGPUResources( true );
-
-	UpdatePresentStats();
-#endif
 
 	g_bInSwap = false;
 
@@ -3944,20 +2822,12 @@ void CShaderDeviceDx8::RefreshFrontBufferNonInteractive()
     // if we don't resample time after the block
     g_flLastUpdateTime = Plat_FloatTime();
     
-    #if !defined( _CERT )
     float flPresentCost = g_flLastUpdateTime - flTimeBegin;
     if( flPresentCost > ( IsDebug() ? 1e-3f : 5e-3f ) )
     {
 		COM_TimestampedLog( "RefreshFrontBufferNonInteractive %.3f ms", flPresentCost * 1000 );
     }
-    #endif
 
-	if ( IsPS3() )
-	{
-		// We can't trust device state after a swap/present operation.
-		// Reset all render state after the underlying PS3 device wrapper has reset its own state.	
-		g_pShaderAPI->ResetRenderState( 1 );
-	}
 
 }
 
@@ -4004,12 +2874,12 @@ void CShaderDeviceDx8::Present()
 
 	// If we're not iconified, try to present (without this check, we can flicker when Alt-Tabbed away)
 #ifdef _WIN32
-	if ( IsX360() || (IsIconic( ( HWND )m_hWnd ) == 0 && bValidPresent) )
+	if ( ( IsIconic( ( HWND )m_hWnd ) == 0 && bValidPresent ) )
 #else
-	if ( IsX360() || (IsIconic( (VD3DHWND)m_hWnd ) == 0 && bValidPresent) )
+	if ( ( IsIconic( (VD3DHWND)m_hWnd ) == 0 && bValidPresent ) )
 #endif
 	{
-		if ( IsPC() && ( m_IsResizing || ( m_ViewHWnd != (VD3DHWND)m_hWnd ) ) )
+		if ( ( m_IsResizing || ( m_ViewHWnd != (VD3DHWND)m_hWnd ) ) )
 		{
 			RECT destRect;
 			GetClientRect( ( HWND )m_ViewHWnd, &destRect );
@@ -4036,30 +2906,6 @@ void CShaderDeviceDx8::Present()
 
 	UpdatePresentStats();
 
-	if ( IsPlatformWindows() )
-	{
-		if ( hr == D3DERR_DRIVERINTERNALERROR )
-		{
-			/*	Usually this bug means that the driver has run out of internal video
-				memory, due to leaking it slowly over several application restarts. 
-				As of summer 2007, IE in particular seemed to leak a lot of driver 
-				memory for every image context it created in the browser window. A
-				reboot clears out the leaked memory and will generally allow the game
-				to be run again; occasionally (but not frequently) it's necessary to 
-				reduce video settings in the game as well to run. But, this is too 
-				fine a distinction to explain in a dialog, so place the guilt on the 
-				user and ask them to reduce video settings regardless.
-			*/
-
-			Error( "Internal driver error at Present.\n"
-				   "You're likely out of OS Paged Pool Memory! For more info, see\n"
-				   "http://support.steampowered.com\n" );
-		}
-		if ( hr == D3DERR_DEVICELOST )
-		{
-			MarkDeviceLost();
-		}
-	}
 
 	MeshMgr()->DiscardVertexBuffers();
 
@@ -4068,12 +2914,6 @@ void CShaderDeviceDx8::Present()
 		CheckDeviceLost( m_bOtherAppInitializing );
 	}
 
-	if ( IsX360() )
-	{
-		// according to docs  - "Mandatory Reset of GPU Registers"
-		// 360 must force the cached state to be dirty after any present()
-		g_pShaderAPI->ResetRenderState( false );
-	}
 
 #ifdef RECORD_KEYFRAMES
 	static int frame = 0;
@@ -4106,7 +2946,7 @@ void CShaderDeviceDx8::Present()
 		// may see minor impact. D3DSWAPEFFECT_COPY alone doesn't suffice because DXVK's
 		// Vulkan swapchain still rotates images underneath.
 		g_pShaderAPI->ClearBuffers( true, true, true, -1, -1 );
-#elif !defined( DX_TO_GL_ABSTRACTION )
+#else
 		if ( ( ShaderUtil()->GetConfig().bMeasureFillRate || ShaderUtil()->GetConfig().bVisualizeFillRate ) )
 		{
 			g_pShaderAPI->ClearBuffers( true, true, true, -1, -1 );
@@ -4116,12 +2956,6 @@ void CShaderDeviceDx8::Present()
 		Dx9Device()->BeginScene();
 	}
 
-	if ( IsPS3() )
-	{
-		// We can't trust device state after a swap/present operation.
-		// Reset all render state after the underlying PS3 device wrapper has reset its own state.		
-		g_pShaderAPI->ResetRenderState( false );
-	}
 }
 
 
@@ -4153,42 +2987,7 @@ void CShaderDeviceDx8::SetHardwareGammaRamp( float fGamma, float fGammaTVRangeMi
 	DevMsg( 2, "**** Gamma Ramp: fGamma: %f fGammaTVRangeMin: %f fGammaTVRangeMax: %f fGammaTVExponent: %f bTVEnabled: %u\n",
 		fGamma, fGammaTVRangeMin, fGammaTVRangeMax, fGammaTVExponent, bTVEnabled );
 					
-#ifdef _PS3
-	// input gamma driven by UI: 1.8 - 2.6
-	// On PS3 we assume that TV mode is defaulting UI 2.2 value to 2.2/2.5 HW value
-	float flHwGamma = 2.2f / 2.5f;
-	if ( fGamma < 2.2 )
-	{
-		// we remap the range [1.8-2.2] into [0.8-2.2/2.5]
-		flHwGamma = 0.8 + ( fGamma - 1.8 ) / ( 2.2 - 1.8 ) * ( 2.2/2.5 - 0.8 );
-	}
-	else
-	{
-		// we remap the range [2.2-2.6] into [2.2/2.5 - 1.2]
-		flHwGamma = 2.2/2.5 + ( fGamma - 2.2 ) / ( 2.6 - 2.2 ) * ( 1.2 - 2.2/2.5 );
-	}
-	// ps3 hardware gamma range allowed by specifications: 0.8 - 1.2
-	flHwGamma = clamp( flHwGamma, 0.8f, 1.2f );
-	cellVideoOutSetGamma( CELL_VIDEO_OUT_PRIMARY, flHwGamma );
-#else
 
-#ifdef PLATFORM_X360
-	// On X360, if we're in TV mode, and not high def and at 480P/I or less, then we disable our [16,235] (or equivalent) conversion because the X360's 
-	// system software already applies this adjustment (as far as we can determine) in the "Standard" Black level mode in the X360 dashboard.
-	// See: System Settings->Console Settings->Display->Black Level
-	if ( ( bTVEnabled ) && ( mat_monitorgamma_force_480_full_tv_range.GetBool() ) )
-	{
-		XVIDEO_MODE xvideoMode;
-		XGetVideoMode( &xvideoMode );
-		if ( ( !xvideoMode.fIsHiDef ) && ( xvideoMode.dwDisplayHeight <= 480 ) )
-		{
-			fGammaTVRangeMin = 0;
-			fGammaTVRangeMax = 255;
-
-			//Warning( "CShaderDeviceDx8::SetHardwareGammaRamp: Forcing TV range min/max in 480I/P mode to [0,255]\n" );
-		}
-	}
-#endif
 
 	D3DGAMMARAMP gammaRamp;
 	for ( int i = 0; i < 256; i++ )
@@ -4199,20 +2998,7 @@ void CShaderDeviceDx8::SetHardwareGammaRamp( float fGamma, float fGammaTVRangeMi
 		// We're purposely want PWL adjustment *enabled* here, even though we're no longer using PWL adjusted textures. This adjusts for the distortion introduced
 		// into our overall signal transfer function at low linear light scales.
 		float flSrgbGammaValue;
-		if ( IsX360() && mat_monitorgamma_pwl2srgb.GetInt() )
-		{
-			// First undo the 360 broken sRGB curve by bringing the value back into linear space
-			float flLinearValue = X360GammaToLinear( flInputValue );
-			flLinearValue = clamp( flLinearValue, 0.0f, 1.0f );
-
-			// Now apply a true sRGB curve to mimic PC hardware
-			flSrgbGammaValue = SrgbLinearToGamma( flLinearValue ); // ( flLinearValue <= 0.0031308f ) ? ( flLinearValue * 12.92f ) : ( 1.055f * powf( flLinearValue, ( 1.0f / 2.4f ) ) ) - 0.055f;
-			flSrgbGammaValue = clamp( flSrgbGammaValue, 0.0f, 1.0f );
-		}
-		else
-		{
-			flSrgbGammaValue = flInputValue;
-		}
+		flSrgbGammaValue = flInputValue;
 
 		// Apply the user controlled exponent curve
 		float flCorrection = pow( flSrgbGammaValue, ( fGamma / 2.2f ) );
@@ -4230,14 +3016,6 @@ void CShaderDeviceDx8::SetHardwareGammaRamp( float fGamma, float fGammaTVRangeMi
 			flCorrection = clamp( flCorrection, 0.0f, 1.0f );
 		}
 #if !defined( CSTRIKE15 )
- 		else if ( IsX360() )
- 		{
- 			// Approximate compensation for not using PWL textures on 360 in "monitor" (VGA) mode. Without this the low-end of the ramp will appear too bright at high linear light scales.
- 			float flVGANonPWLAdjustmentGamma = mat_monitorgamma_vganonpwlgamma.GetFloat();
- 
- 			flCorrection = pow( flCorrection, 2.2f / flVGANonPWLAdjustmentGamma );
- 			flCorrection = clamp( flCorrection, 0.0f, 1.0f );
- 		}
 #endif
 
 		// Generate final int value
@@ -4251,7 +3029,6 @@ void CShaderDeviceDx8::SetHardwareGammaRamp( float fGamma, float fGammaTVRangeMi
 	{
 		Dx9Device()->SetGammaRamp( 0, D3DSGR_NO_CALIBRATION, &gammaRamp );
 	}
-#endif
 }
 
 
@@ -4294,12 +3071,6 @@ void CShaderDeviceDx8::DestroyPixelShader( PixelShaderHandle_t hShader )
 	ShaderManager()->DestroyPixelShader( hShader );
 }
 
-#ifdef DX_TO_GL_ABSTRACTION
-void CShaderDeviceDx8::DoStartupShaderPreloading( void )
-{
-	ShaderManager()->DoStartupShaderPreloading();
-}
-#endif
 
 
 //-----------------------------------------------------------------------------
@@ -4358,46 +3129,3 @@ IIndexBuffer *CShaderDeviceDx8::GetDynamicIndexBuffer( )
 	return MeshMgr()->GetDynamicIndexBuffer( );
 }
 
-#ifdef _X360
-void CShaderDeviceDx8::SpewVideoInfo360( const CCommand &args )
-{
-	XVIDEO_MODE videoMode;
-	XGetVideoMode( &videoMode );
-
-	Warning( "back buffer size: %dx%d\n", m_PresentParameters.BackBufferWidth, m_PresentParameters.BackBufferHeight );
-	Warning( "display resolution: %dx%d %s\n", videoMode.dwDisplayWidth, videoMode.dwDisplayHeight, videoMode.fIsInterlaced ? "interlaced" : "progressive" );
-	Warning( "refresh rate: %f\n", videoMode.RefreshRate );
-	Warning( "aspect: %s\n", videoMode.fIsWideScreen ? "16x9 (widescreen)" : "4x3 (normal)" );
-	Warning( "%s\n", videoMode.fIsHiDef ? "hidef" : "lodef" );
-	switch( videoMode.VideoStandard )
-	{
-	case XC_VIDEO_STANDARD_NTSC_M:
-		Warning( "video standard: NTSC_M\n" );
-		break;
-	case XC_VIDEO_STANDARD_NTSC_J:
-		Warning( "video standard: NTSC_J\n" );
-		break;
-	case XC_VIDEO_STANDARD_PAL_I:
-		Warning( "video standard: PAL_I\n" );
-		break;
-	default:
-		Warning( "error: UNKNOWN VIDEO STANDARD!\n" );
-		Assert( 0 );
-		break;
-	}
-	ConVarRef fps_max( "fps_max" );
-	Warning( "fps_max: %f\n", fps_max.GetFloat() );
-	switch( m_PresentParameters.MultiSampleType )
-	{
-	case D3DMULTISAMPLE_NONE:
-		Warning( "multisample type: D3DMULTISAMPLE_NONE\n" );
-		break;
-	case D3DMULTISAMPLE_2_SAMPLES:
-		Warning( "multisample type: D3DMULTISAMPLE_2_SAMPLES\n" );
-		break;
-	case D3DMULTISAMPLE_4_SAMPLES:
-		Warning( "multisample type: D3DMULTISAMPLE_4_SAMPLES\n" );
-		break;
-	}
-}
-#endif

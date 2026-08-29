@@ -8,7 +8,6 @@
 #ifndef VPROF_H
 #define VPROF_H
 
-#if !defined(__SPU__)
 
 #include "tier0/dbg.h"
 #include "tier0/fasttimer.h"
@@ -1162,7 +1161,6 @@ private:
 #pragma warning(pop)
 #endif
 
-#endif // #if !defined(__SPU__)
 
 #endif
 

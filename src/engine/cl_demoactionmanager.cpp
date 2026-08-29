@@ -353,17 +353,6 @@ void CDemoActionManager::SaveToFile( void )
 void CDemoActionManager::OnVDMLoaded( char const *demfilename )
 {
 	// Notify UI?
-#if !defined (LINUX)
-	if ( g_pDemoUI )
-	{
-		g_pDemoUI->OnVDMChanged();
-	}
-
-	//if ( g_pDemoUI2 )
-	//{
-	//	g_pDemoUI2->OnVDMChanged();
-	//}
-#endif
 }
 
 

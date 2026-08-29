@@ -114,16 +114,7 @@ CAudioMixer *CreateWaveMixer( IWaveData *data, int format, int channels, int bit
 	case WAVE_FORMAT_ADPCM:
 		return CreateADPCMMixer( data );
 
-#if IsX360()
-	case WAVE_FORMAT_XMA:
-		return CreateXMAMixer( data, initialStreamPosition, skipInitialSamples, bUpdateDelayForChoreo );
-#endif
 
-#if IsPS3()
-	case WAVE_FORMAT_TEMP:
-	case WAVE_FORMAT_MP3:
-		return CreatePs3Mp3Mixer( data, initialStreamPosition, skipInitialSamples, bUpdateDelayForChoreo );
-#endif
 
 	default:
 		// unsupported format or wav file missing!!!
@@ -323,7 +314,7 @@ char *CAudioMixerWave::LoadMixBuffer( channel_t *pChannel, int sample_load_reque
 		// none available, bail out
 		// 360 might not be able to get samples due to latency of loop seek
 		// could also be the valid EOF for non-loops (caller keeps polling for data, until no more)
-		AssertOnce( IsGameConsole() || !m_pData->Source().IsLooped() );
+		AssertOnce( !m_pData->Source().IsLooped() );
 		*pSamplesLoaded = 0;
 
 		if ( (*snd_find_channel.GetString()) != '\0' )
@@ -490,7 +481,7 @@ char *CAudioMixerWave::LoadMixBuffer( channel_t *pChannel, int sample_load_reque
 	if ( samples_loaded < sample_load_request )
 	{
 		// should always be able to get as many samples as we request from looping sound sources
-		AssertOnce ( IsGameConsole() || !m_pData->Source().IsLooped() );
+		AssertOnce( !m_pData->Source().IsLooped() );
 
 		// these samples are filled with 0, not loaded.
 		// non-looping source hit end of data, fill rest of g_temppaintbuffer with 0

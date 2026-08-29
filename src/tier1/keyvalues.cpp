@@ -6,9 +6,9 @@
 //
 //=============================================================================//
 
-#if defined( _WIN32 ) && !defined( _X360 )
+#if defined( _WIN32 )
 #include <windows.h>		// for widechartomultibyte and multibytetowidechar
-#elif defined(POSIX)
+#else
 #include <wchar.h> // wcslen()
 #define _alloca alloca
 #define _wtoi(arg) wcstol(arg, NULL, 10)
@@ -1953,25 +1953,6 @@ void KeyValues::RecursiveCopyKeyValues( KeyValues& src )
 		}
 
 	}
-#if 0
-	KeyValues *pDst = this;
-	for ( KeyValues *pSrc = src.m_pSub; pSrc; pSrc = pSrc->m_pPeer )
-	{
-		if ( pSrc->m_pSub )
-		{
-			pDst->m_pSub = new KeyValues( pSrc->m_pSub->getName() );
-			pDst->m_pSub->RecursiveCopyKeyValues( *pSrc->m_pSub );
-		}
-		else
-		{
-			// copy non-empty keys
-			if ( pSrc->m_sValue && *(pSrc->m_sValue) )
-			{
-				pDst->m_pPeer = new KeyValues( 
-			}
-		}
-	}
-#endif
 
 	// Handle the immediate child
 	if( src.m_pSub )
@@ -2295,23 +2276,6 @@ bool KeyValues::LoadFromBuffer( char const *resourceName, CUtlBuffer &buf, IBase
 {
 	AUTO_LOCK_FM( g_KVMutex );
 
-	if ( IsGameConsole() )
-	{
-		// Let's not crash if the buffer is empty
-		unsigned char *pData = buf.Size() > 0 ? (unsigned char *)buf.PeekGet() : NULL;
-		if ( pData && (unsigned int)pData[0] == KV_BINARY_POOLED_FORMAT )
-		{
-			// skip past binary marker
-			buf.GetUnsignedChar();
-			// get the pool identifier, allows the fs to bind the expected string pool
-			unsigned int poolKey = buf.GetUnsignedInt();
-
-			RemoveEverything();
-			Init();
-
-			return ReadAsBinaryPooledFormat( buf, pFileSystem, poolKey, pfnEvaluateSymbolProc );
-		}
-	}
 
 	KeyValues *pPreviousKey = NULL;
 	KeyValues *pCurrentKey = this;
@@ -2461,15 +2425,6 @@ bool KeyValues::LoadFromBuffer( char const *resourceName, const char *pBuffer, I
 	if ( !pBuffer )
 		return true;
 
-	if ( IsGameConsole() && (unsigned int)((unsigned char *)pBuffer)[0] == KV_BINARY_POOLED_FORMAT )
-	{
-		// bad, got a binary compiled KV file through an unexpected text path
-		// not all paths support binary compiled kv, needs to get fixed
-		// need to have caller supply buffer length (strlen not valid), this interface change was never plumbed
-		Warning( "ERROR! Binary compiled KV '%s' in an unexpected handler\n", resourceName );
-		Assert( 0 );
-		return false;
-	}
 
 	int nLen = V_strlen( pBuffer );
 	CUtlBuffer buf( pBuffer, nLen, CUtlBuffer::READ_ONLY | CUtlBuffer::TEXT_BUFFER );
@@ -2622,7 +2577,6 @@ void KeyValues::RecursiveLoadFromBuffer( char const *resourceName, CKeyValuesTok
 			long lval = strtol( value, &pIEnd, 10 );
 			float fval = (float)strtod( value, &pFEnd );
 			bool bOverflow = ( lval == LONG_MAX || lval == LONG_MIN ) && errno == ERANGE;
-#ifdef POSIX
 			// strtod supports hex representation in strings under posix but we DON'T
 			// want that support in keyvalues, so undo it here if needed
 			if ( len > 1 &&  tolower(value[1]) == 'x' )
@@ -2630,7 +2584,6 @@ void KeyValues::RecursiveLoadFromBuffer( char const *resourceName, CKeyValuesTok
 				fval = 0.0f;
 				pFEnd = (char *)value;
 			}
-#endif
 
 			if ( *value == 0 )
 			{
@@ -3187,11 +3140,8 @@ bool KeyValues::ReadAsBinaryFiltered( CUtlBuffer &buffer, int nStackDepth )
 bool KeyValues::ReadAsBinaryPooledFormat( CUtlBuffer &buffer, IBaseFileSystem *pFileSystem, unsigned int poolKey, GetSymbolProc_t pfnEvaluateSymbolProc )
 {
 	// xbox only support
-	if ( !IsGameConsole() )
-	{
-		Assert( 0 );
-		return false;
-	}
+	Assert( 0 );
+	return false;
 
 	if ( buffer.IsText() ) // must be a binary buffer
 		return false;
@@ -3922,16 +3872,6 @@ bool IKeyValuesDumpContextAsText::KvWriteValue( KeyValues *val, int nIndentLevel
 
 	default:
 		break;
-#if 0	// this code was accidentally stubbed out by a mis-integration in CL722860; it hasn't been tested
-		{
-			int n = val->GetDataType();
-			char *chBuffer = ( char * ) stackalloc( 128 );
-			V_snprintf( chBuffer, 128, "??kvtype[%d]", n );
-			if ( !KvWriteText( chBuffer ) )
-				return false;
-		}
-		break;
-#endif
 	}
 
 	return KvWriteText( "\n" );

@@ -15,9 +15,7 @@
 
 #include "utlvector.h"
 
-#ifdef POSIX
 #include "qsort_s.h"
-#endif
 
 
 //-----------------------------------------------------------------------------

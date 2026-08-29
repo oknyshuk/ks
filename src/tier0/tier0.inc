@@ -134,7 +134,6 @@ $Project
 		$File	"$SRCDIR\public\tier0\vprof_telemetry.h"
 		$File	"$SRCDIR\public\tier0\wchartypes.h"
 		$File	"$SRCDIR\public\tier0\win32consoleio.h"
-		$File	"$SRCDIR\public\tier0\xbox_codeline_defines.h"
 		$File	"$SRCDIR\public\tier0\dynfunction.h"
 	}
 

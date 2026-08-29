@@ -13,8 +13,6 @@
 #ifdef IS_WINDOWS_PC
 #include "winlite.h"
 
-#elif OSX
-	#include <Carbon/Carbon.h>
 #endif
 #include "appframework/ilaunchermgr.h"
 #include "keys.h"
@@ -54,12 +52,9 @@
 
 #include "engineui.h"
 #include "toolframework/itoolframework.h"
-#include "filesystem/IQueuedLoader.h"
 #include "LoadScreenUpdate.h"
 #include "tier0/etwprof.h"
 
-#if defined( _X360 )
-#endif
 
 #include "tier1/tokenset.h"
 
@@ -363,65 +358,6 @@ IEngineUIInternal *EngineUI()
 // reserved portion of the bar.
 //-----------------------------------------------------------------------------
 #define PROGRESS_RESERVE 0.50f
-class CLoaderProgress : public ILoaderProgress
-{
-public:
-	CLoaderProgress()
-	{ 
-		// initialize to disabled state
-		m_SnappedProgress = -1;
-		m_flLastProgress = 0.0f;
-	}
-
-	void BeginProgress()
-	{
-		g_EngineUIImp.SetProgressBias( 0 );
-		m_SnappedProgress = 0;
-	}
-
-	void UpdateProgress( float progress, bool bForce )
-	{
-		if ( !bForce )
-		{
-			m_flLastProgress = progress;
-		}
-		if ( m_SnappedProgress == - 1 && !bForce )
-		{
-			// not enabled
-			return;
-		}	
-
-		int snappedProgress = progress * 15;
-
-		// Need excessive updates on the console to keep the XBox slider inny bar/XMB active
-		if ( !IsGameConsole() && ( snappedProgress <= m_SnappedProgress ) )
-		{
-			// prevent excessive updates
-			return;
-		}
-		m_SnappedProgress = snappedProgress;
-
-		// up to reserved
-		g_EngineUIImp.UpdateProgressBar( bForce ? 1.0f : ( PROGRESS_RESERVE * progress ) );
-	}
-
-	void EndProgress()
-	{
-		// the normal legacy bar now picks up after reserved region
-		g_EngineUIImp.SetProgressBias( PROGRESS_RESERVE );
-		m_SnappedProgress = -1;
-	}
-
-	void PauseNonInteractiveProgress( bool bPause )
-	{
-		PauseLoadingUpdates( bPause );
-	}
-
-private:
-	int m_SnappedProgress;
-	float m_flLastProgress;
-};
-static CLoaderProgress s_LoaderProgress;
 
 	
 //-----------------------------------------------------------------------------
@@ -460,7 +396,6 @@ bool CEngineUI::SetVGUIDirectories()
 {
 	// add vgui skins directory last
 #if defined(_WIN32)
-	if ( IsPC() )
 	{
 		char temp[ 512 ];
 		char skin[128];
@@ -518,19 +453,8 @@ void CEngineUI::Init()
 	m_hGameUIInputContext = g_pInputStackSystem->PushInputContext();
 	g_pInputStackSystem->EnableInputContext( m_hGameUIInputContext, false );
 
-	if ( IsGameConsole() )
-	{
-		CCommand ccommand;
-		if ( CL_ShouldLoadBackgroundLevel( ccommand ) )
-		{
-			staticGameUIFuncs->SetProgressOnStart();
-		}
-	}
 
-	if ( IsPC() )
-	{
-		colorcorrectiontools->Init();
-	}
+	colorcorrectiontools->Init();
 
 	COM_TimestampedLog( "materials->CacheUsedMaterials()" );
 
@@ -581,11 +505,6 @@ void CEngineUI::Init()
 	COM_TimestampedLog( "staticGameUIFuncs->Start" );
 	staticGameUIFuncs->Start();
 
-	if ( IsGameConsole() )
-	{
-		// provide an interface for loader to send progress notifications
-		g_pQueuedLoader->InstallProgress( &s_LoaderProgress ); 
-	}
 
 	// show the game UI
 	COM_TimestampedLog( "ActivateGameUI()" );
@@ -604,9 +523,6 @@ void CEngineUI::Init()
 void CEngineUI::PostInit()
 {
 	staticGameUIFuncs->PostInit();
-#if defined( _GAMECONSOLE )
-	g_pMatSystemSurface->ClearTemporaryFontCache();
-#endif
 }
 
 //-----------------------------------------------------------------------------
@@ -616,15 +532,7 @@ void CEngineUI::Connect()
 {
 	staticGameUIFuncs->Connect( g_GameSystemFactory );
 
-	#if OSX
-//		g_pLauncherMgr = (ILauncherMgr *)g_GameSystemFactory(  COCOAMGR_INTERFACE_VERSION, NULL );	
-	#endif
-	#if LINUX
 //		g_pLauncherMgr = (ILauncherMgr *)g_GameSystemFactory(  LINUXMGR_INTERFACE_VERSION, NULL );	
-	#endif
-	#if defined( _WIN32 ) && defined( DX_TO_GL_ABSTRACTION )
-//		g_pLauncherMgr = (ILauncherMgr *)g_GameSystemFactory(  WINMGR_INTERFACE_VERSION, NULL );	
-	#endif
 }
 
 //-----------------------------------------------------------------------------
@@ -692,10 +600,7 @@ void CEngineUI::SetEngineVisible( bool state )
 //-----------------------------------------------------------------------------
 bool CEngineUI::ShouldPause()
 {
-	if ( IsPC() )
-	{
-		return bugreporter->ShouldPause();
-	}
+	return bugreporter->ShouldPause();
 	return false;
 }
 
@@ -905,11 +810,8 @@ void CEngineUI::OnLevelLoadingStarted( char const *levelName, bool bLocalServer 
 		}
 	}
 	
-	if ( IsGameConsole() || IsPC() )
-	{
-		// TCR requirement, always!!!
-		m_bShowProgressDialog = true;
-	}
+	// TCR requirement, always!!!
+	m_bShowProgressDialog = true;
 
 	// we've starting loading a level/connecting to a server
 	staticGameUIFuncs->OnLevelLoadingStarted( levelName, m_bShowProgressDialog );
@@ -1291,7 +1193,7 @@ bool CEngineUI::Key_Event( const InputEvent_t &event )
 	bool bDown = ( event.m_nType == IE_ButtonPressed ) || ( event.m_nType == IE_ButtonDoubleClicked );
 	ButtonCode_t code = (ButtonCode_t)event.m_nData;
 
-	if ( IsPC() && IsShiftKeyDown() )
+	if ( IsShiftKeyDown() )
 	{
 		switch( code )
 		{
@@ -1313,49 +1215,39 @@ bool CEngineUI::Key_Event( const InputEvent_t &event )
 
 #if defined( _WIN32 )
 	// Ignore alt tilde, since the Japanese IME uses this to toggle itself on/off
-	if ( IsPC() && code == KEY_BACKQUOTE && ( IsAltKeyDown() || IsCtrlKeyDown() ) )
+	if ( code == KEY_BACKQUOTE && ( IsAltKeyDown() || IsCtrlKeyDown() ) )
 		return event.m_nType != IE_ButtonReleased;
 #endif
 			   
 	// ESCAPE toggles game ui
-	bool isConsole = IsX360() || IsPS3();
+	bool isConsole = false;
 	ButtonCode_t uiToggleKey = isConsole ? KEY_XBUTTON_START : KEY_ESCAPE;
 	ButtonCode_t baseButtonCode = GetBaseButtonCode( code );
 
 	// make sure PS3 supports the console default press (START) or ESCAPE
-	bool isUIToggleKey = ( baseButtonCode == uiToggleKey ) || 
-						 ( IsPS3() && baseButtonCode == KEY_ESCAPE ) ;
+	bool isUIToggleKey = ( baseButtonCode == uiToggleKey ) ;
 
 	// Hitting the Start button on any xbox controller brings up the game ui, so translate to base code space
 	if ( bDown && isUIToggleKey )
 	{
-		if ( IsPC() )
+		if ( cv_console_window_open.GetBool() )
 		{
-			if ( cv_console_window_open.GetBool() )
-			{
-				HideConsole();
-			}
-			else if ( IsGameUIVisible()  )
-			{
-				// Don't allow hiding of the game ui if there's no level
-				const char *pLevelName = engineClient->GetLevelName();
-				if ( pLevelName && pLevelName[0] )
-				{
-					Cbuf_AddText( Cbuf_GetCurrentPlayer(), "gameui_hide" );
-				}
-			}
-			else if ( !cv_ignore_ui_activate_key.GetBool() )
-			{
-				Cbuf_AddText( Cbuf_GetCurrentPlayer(), "gameui_activate" );
-			}
-			return true;
+			HideConsole();
 		}
-		if ( IsGameConsole() && !IsGameUIVisible() )
+		else if ( IsGameUIVisible()  )
 		{
-			// console UI does not toggle, engine does "show", but UI needs to handle "hide"
+			// Don't allow hiding of the game ui if there's no level
+			const char *pLevelName = engineClient->GetLevelName();
+			if ( pLevelName && pLevelName[0] )
+			{
+				Cbuf_AddText( Cbuf_GetCurrentPlayer(), "gameui_hide" );
+			}
+		}
+		else if ( !cv_ignore_ui_activate_key.GetBool() )
+		{
 			Cbuf_AddText( Cbuf_GetCurrentPlayer(), "gameui_activate" );
-			return true;
 		}
+		return true;
 	}
 
 	return false;
@@ -1363,10 +1255,6 @@ bool CEngineUI::Key_Event( const InputEvent_t &event )
 
 void CEngineUI::Simulate()
 {
-	if ( IsGameConsole() && r_drawui.GetInt() == 0 )
-	{
-		return;
-	}
 
 	toolframework->UI_PreSimulateAllTools();
 
@@ -1394,8 +1282,6 @@ void CEngineUI::Simulate()
 			w = rect.right;
 			h = rect.bottom;
 		}
-#elif defined( _PS3 )
-		g_pMaterialSystem->GetBackBufferDimensions( w, h );
 #else
 #error
 #endif
@@ -1477,7 +1363,7 @@ void UI_PlaySound( const char *pFileName )
 		ACTIVE_SPLITSCREEN_PLAYER_GUARD( 0 );
 
 		StartSoundParams_t params;
-		params.staticsound = IsGameConsole() ? true : false;
+		params.staticsound = false;
 		params.soundsource = GetLocalClient().GetViewEntity();
 		params.entchannel = CHAN_AUTO;
 		params.pSfx = pSound;

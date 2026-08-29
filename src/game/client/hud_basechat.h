@@ -14,10 +14,6 @@
 #include "hudelement.h"
 #include <color.h>
 
-namespace vgui
-{
-	class Panel;
-};
 
 #define CHATLINE_NUM_FLASHES 8.0f
 #define CHATLINE_FLASH_TIME 5.0f

@@ -577,7 +577,6 @@ BOOL SquirrelObject::GetTypeTag(SQUserPointer * typeTag) {
 } // SquirrelObject::GetTypeTag
 
 const SQChar * SquirrelObject::GetTypeName(const SQChar * key) {
-#if 1
   // This version will work even if SQ_SUPPORT_INSTANCE_TYPE_INFO is not enabled.
   SqPlus::ScriptStringVar256 varNameTag;
   SqPlus::getVarNameTag(varNameTag,sizeof(varNameTag),key);
@@ -587,11 +586,6 @@ const SQChar * SquirrelObject::GetTypeName(const SQChar * key) {
   } // if
   SqPlus::VarRefPtr vr = (SqPlus::VarRefPtr)data;
   return vr->typeName;
-#else // This version will only work if SQ_SUPPORT_INSTANCE_TYPE_INFO is enabled.
-  SquirrelObject so = GetValue(key);
-  if (so.IsNull()) return NULL;
-  return so.GetTypeName();
-#endif
 } // SquirrelObject::GetTypeName
 
 const SQChar * SquirrelObject::GetTypeName(INT key) {

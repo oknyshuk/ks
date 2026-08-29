@@ -321,8 +321,6 @@ CON_COMMAND( bind, "Bind a key." )
 
 CON_COMMAND( bind_osx, "Bind a key for OSX only." )
 {
-	if ( IsOSX() )
-		BindHelper( args );
 }
 
 
@@ -669,120 +667,26 @@ int Key_CodeForBinding( const char *pBinding, int userId, int iStartCount, Bindi
 
 		int iCount = 0;
 
-		if ( IsPC() || userId < 0 || nFlags == BINDINGLOOKUP_ALL )
+		for( int i=0 ; i < BUTTON_CODE_LAST ; i++ )
 		{
-			for( int i=0 ; i < BUTTON_CODE_LAST ; i++ )
+			if( IsKeyBoundedToBinding( i, pBind ) )
 			{
-				if( IsKeyBoundedToBinding( i, pBind ) )
+				if ( nFlags == BINDINGLOOKUP_ALL ||
+					( nFlags == BINDINGLOOKUP_STEAMCONTROLLER_ONLY && ( i >= STEAMCONTROLLER_FIRST && i <= STEAMCONTROLLER_LAST ) ) ||
+					 ( nFlags == BINDINGLOOKUP_KEYBOARD_ONLY && ( i < JOYSTICK_FIRST || i > JOYSTICK_LAST ) && ( i < STEAMCONTROLLER_FIRST || i > STEAMCONTROLLER_LAST ) ) || 
+					 ( nFlags == BINDINGLOOKUP_JOYSTICK_ONLY && ( i >= JOYSTICK_FIRST && i <= JOYSTICK_LAST ) ) )
 				{
-					if ( nFlags == BINDINGLOOKUP_ALL ||
-						( nFlags == BINDINGLOOKUP_STEAMCONTROLLER_ONLY && ( i >= STEAMCONTROLLER_FIRST && i <= STEAMCONTROLLER_LAST ) ) ||
-						 ( nFlags == BINDINGLOOKUP_KEYBOARD_ONLY && ( i < JOYSTICK_FIRST || i > JOYSTICK_LAST ) && ( i < STEAMCONTROLLER_FIRST || i > STEAMCONTROLLER_LAST ) ) || 
-						 ( nFlags == BINDINGLOOKUP_JOYSTICK_ONLY && ( i >= JOYSTICK_FIRST && i <= JOYSTICK_LAST ) ) )
+					if ( iCount == iStartCount )
 					{
-						if ( iCount == iStartCount )
-						{
-							return i;
-						}
-						else
-						{
-							++iCount;
-						}
+						return i;
+					}
+					else
+					{
+						++iCount;
 					}
 				}
 			}
 		}
-		else
-		{
-			int first = userId * JOYSTICK_MAX_BUTTON_COUNT + JOYSTICK_FIRST_BUTTON;
-			int last = first + JOYSTICK_MAX_BUTTON_COUNT;
-
-			for( int i = first; i < last; ++i )
-			{
-				if( IsKeyBoundedToBinding( i, pBind ) )
-				{
-					if ( iCount == iStartCount )
-					{
-						return i;
-					}
-					else
-					{
-						++iCount;
-					}
-				}
-			}
-
-			first = userId * JOYSTICK_POV_BUTTON_COUNT + JOYSTICK_FIRST_POV_BUTTON;
-			last  = first + JOYSTICK_POV_BUTTON_COUNT;
-			for( int i = first; i < last; ++i )
-			{
-				if( IsKeyBoundedToBinding( i, pBind ) )
-				{
-					if ( iCount == iStartCount )
-					{
-						return i;
-					}
-					else
-					{
-						++iCount;
-					}
-				}
-			}
-		
-			first = userId * JOYSTICK_AXIS_BUTTON_COUNT + JOYSTICK_FIRST_AXIS_BUTTON;
-			last  = first + JOYSTICK_AXIS_BUTTON_COUNT;
-			for( int i = first; i < last; ++i )
-			{
-				if( IsKeyBoundedToBinding( i, pBind ) )
-				{
-					if ( iCount == iStartCount )
-					{
-						return i;
-					}
-					else
-					{
-						++iCount;
-					}
-				}
-			}
-			
-			first = userId * STEAMCONTROLLER_MAX_BUTTON_COUNT + STEAMCONTROLLER_FIRST_BUTTON;
-			last = first + STEAMCONTROLLER_MAX_BUTTON_COUNT;
-
-			for( int i = first; i < last; ++i )
-			{
-				if( IsKeyBoundedToBinding( i, pBind ) )
-				{
-					if ( iCount == iStartCount )
-					{
-						return i;
-					}
-					else
-					{
-						++iCount;
-					}
-				}
-			}
-
-			first = userId * STEAMCONTROLLER_AXIS_BUTTON_COUNT + STEAMCONTROLLER_FIRST_AXIS_BUTTON;
-			last  = first + STEAMCONTROLLER_AXIS_BUTTON_COUNT;
-			for( int i = first; i < last; ++i )
-			{
-				if( IsKeyBoundedToBinding( i, pBind ) )
-				{
-					if ( iCount == iStartCount )
-					{
-						return i;
-					}
-					else
-					{
-						++iCount;
-					}
-				}
-			}
-			
-		}
-
 		// Xbox 360 controller: Handle the dual bindings for duck and zoom
 		if ( !Q_stricmp( "duck", pBind ) )
 			return Key_CodeForBinding( "toggle_duck", userId, iCount );
@@ -969,12 +873,6 @@ static bool HandleToolKey( const InputEvent_t &event )
 static bool HandleUIKey( const InputEvent_t &event )
 {
 	bool bDown = ( event.m_nType == IE_ButtonPressed ) || ( event.m_nType == IE_ButtonDoubleClicked );
-	if ( bDown && IsGameConsole() )
-	{
-		ButtonCode_t code = (ButtonCode_t)event.m_nData;
-		LogKeyPress( code );
-		CheckCheatCodes();
-	}
 
 	return EngineUI()->Key_Event( event );
 }
@@ -1033,7 +931,7 @@ static bool HandleEngineKey( const InputEvent_t &event )
 	ButtonCode_t code = (ButtonCode_t)event.m_nData;
 
 	// Warn about unbound keys 
-	if ( IsPC() && bDown )
+	if ( bDown )
 	{
 		if ( IsJoystickCode( code ) &&
 			!IsJoystickAxisCode( code ) && 
@@ -1219,7 +1117,7 @@ void Key_Event( const InputEvent_t &event )
 	// QUESTION: Should GameUI do the same thing?
 	EngineUI()->UpdateButtonState( event );
 
-	if ( IsPC() && EngineUI()->IsGameUIVisible() && scr_drawloading && IsESC( event ) )
+	if ( EngineUI()->IsGameUIVisible() && scr_drawloading && IsESC( event ) )
 	{
 		// prevent ESC key during loading
 		return;

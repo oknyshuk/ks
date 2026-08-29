@@ -3,9 +3,6 @@
 */
 #include "tier0/basetypes.h"
 #include <squirrel.h>
-#if !defined( _X360 ) && !defined( _PS3 ) && !defined( POSIX )
-#include <winsock.h>
-#endif
 #include "sqrdbg.h"
 #include "sqdbgserver.h"
 SQInteger debug_hook(HSQUIRRELVM v);
@@ -18,7 +15,6 @@ SQInteger error_handler(HSQUIRRELVM v);
 
 HSQREMOTEDBG sq_rdbg_init(HSQUIRRELVM v,unsigned short port,SQBool autoupdate)
 {
-#ifndef _GAMECONSOLE
 	sockaddr_in bindaddr;
 #ifdef _WIN32
 	WSADATA wsadata;
@@ -44,14 +40,10 @@ HSQREMOTEDBG sq_rdbg_init(HSQUIRRELVM v,unsigned short port,SQBool autoupdate)
 	}
 	
     return rdbg;
-#else
-	return NULL;
-#endif
 }
 
 SQRESULT sq_rdbg_waitforconnections(HSQREMOTEDBG rdbg)
 {
-#ifndef _GAMECONSOLE
 	if(SQ_FAILED(sq_compilebuffer(rdbg->_v,serialize_state_nut,(SQInteger)scstrlen(serialize_state_nut),_SC("SERIALIZE_STATE"),SQFalse))) {
 		sq_throwerror(rdbg->_v,_SC("error compiling the serialization function"));
 	}
@@ -73,13 +65,11 @@ SQRESULT sq_rdbg_waitforconnections(HSQREMOTEDBG rdbg)
 	while(!rdbg->_ready){
 		sq_rdbg_update(rdbg);
 	}
-#endif
 	return SQ_OK;
 }
 
 SQRESULT sq_rdbg_update(HSQREMOTEDBG rdbg)
 {
-#ifndef _GAMECONSOLE
 #ifdef _WIN32
 	TIMEVAL time;
 #else
@@ -119,7 +109,6 @@ SQRESULT sq_rdbg_update(HSQREMOTEDBG rdbg)
 		temp[size+1]=NULL;
 		rdbg->ParseMsg(temp);
 	}
-#endif
 	return SQ_OK;
 }
 
@@ -176,11 +165,9 @@ SQInteger error_handler(HSQUIRRELVM v)
 
 SQRESULT sq_rdbg_shutdown(HSQREMOTEDBG rdbg)
 {
-#ifndef _GAMECONSOLE
 	delete rdbg;
 #ifdef _WIN32
 	WSACleanup();
-#endif
 #endif
 	return SQ_OK;
 }

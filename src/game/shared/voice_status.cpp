@@ -511,7 +511,7 @@ void CVoiceStatus::UpdateSpeakerStatus(int entindex, int iSsSlot, bool bTalking)
 		}
 		else 
 		{
-#if defined( PORTAL2 ) && !defined( _GAMECONSOLE )
+#if defined( PORTAL2 )
 			if ( m_flTalkTime[ iClient ] > 0.0f )
 			{
 				g_PortalGameStats.Event_MicUsage( entindex, m_flTalkTime[ iClient ], gpGlobals->curtime - m_flTalkTime[ iClient ] );

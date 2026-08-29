@@ -14,7 +14,7 @@
 #include <windows.h>
 #include <assert.h>
 #include <direct.h>
-#elif POSIX
+#else
 #include <stdlib.h>
 #include <dlfcn.h>
 #include <string.h>
@@ -29,7 +29,7 @@
 #ifdef _WIN32
 typedef int (*DedicatedMain_t)( HINSTANCE hInstance, HINSTANCE hPrevInstance, 
 							  LPSTR lpCmdLine, int nCmdShow );
-#elif POSIX
+#else
 typedef int (*DedicatedMain_t)( int argc, char *argv[] );
 
 #endif
@@ -114,7 +114,7 @@ int APIENTRY WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdL
 	return main( hInstance, hPrevInstance, lpCmdLine, nCmdShow );
 }
 
-#elif defined(POSIX)
+#else
 #define stringize(a) #a
 #define dedicated_binary(a,b,c) a stringize(b) c 
 

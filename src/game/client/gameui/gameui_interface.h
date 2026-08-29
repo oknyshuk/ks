@@ -73,9 +73,6 @@ public:
 
  	virtual void SetProgressOnStart();
  
-#if defined( _GAMECONSOLE ) && defined( _DEMO )
-	virtual void OnDemoTimeout();
-#endif
 
  	// state
  	bool IsInLevel();
@@ -89,7 +86,6 @@ public:
 	bool HasLoadingBackgroundDialog();
 
 private:
-	void SendConnectedToGameMessage();
 
 	virtual void StartProgressBar();
 	virtual bool ContinueProgressBar(float progressFraction);

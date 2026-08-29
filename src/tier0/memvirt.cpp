@@ -23,10 +23,6 @@
 #include <windows.h>
 #include <crtdbg.h>
 #endif
-#ifdef OSX
-#include <malloc/malloc.h>
-#include <stdlib.h>
-#endif
 
 #include <map>
 #include <set>

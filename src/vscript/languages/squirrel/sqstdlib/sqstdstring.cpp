@@ -1,9 +1,4 @@
 /* see copyright notice in squirrel.h */
-#ifdef _PS3
-#include <ctype.h>
-#include <stdio.h>
-#undef _STD_USING
-#endif
 
 #include <squirrel.h>
 #include <sqstdstring.h>

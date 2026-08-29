@@ -154,52 +154,49 @@ A LAN server will know not to allows more then xxx users with the same CD Key
 */
 const char *CClientState::GetCDKeyHash( void )
 {
-	if ( IsPC() )
+	char szKeyBuffer[256]; // Keys are about 13 chars long.	
+	static char szHashedKeyBuffer[64];
+	int nKeyLength;
+	bool bDedicated = false;
+
+	MD5Context_t ctx;
+	unsigned char digest[16]; // The MD5 Hash
+
+	nKeyLength = Q_snprintf( szKeyBuffer, sizeof( szKeyBuffer ), "%s", registry->ReadString( "key", "" ) );
+
+	if (bDedicated)
 	{
-		char szKeyBuffer[256]; // Keys are about 13 chars long.	
-		static char szHashedKeyBuffer[64];
-		int nKeyLength;
-		bool bDedicated = false;
-
-		MD5Context_t ctx;
-		unsigned char digest[16]; // The MD5 Hash
-
-		nKeyLength = Q_snprintf( szKeyBuffer, sizeof( szKeyBuffer ), "%s", registry->ReadString( "key", "" ) );
-
-		if (bDedicated)
-		{
-			ConMsg("Key has no meaning on dedicated server...\n");
-			return "";
-		}
-
-		if ( nKeyLength == 0 )
-		{
-			nKeyLength = 13;
-			Q_strncpy( szKeyBuffer, "1234567890123", sizeof( szKeyBuffer ) );
-			Assert( Q_strlen( szKeyBuffer ) == nKeyLength );
-
-			DevMsg( "Missing CD Key from registry, inserting blank key\n" );
-
-			registry->WriteString( "key", szKeyBuffer );
-		}
-
-		if (nKeyLength <= 0 ||
-			nKeyLength >= 256 )
-		{
-			ConMsg("Bogus key length on CD Key...\n");
-			return "";
-		}
-
-		// Now get the md5 hash of the key
-		memset( &ctx, 0, sizeof( ctx ) );
-		memset( digest, 0, sizeof( digest ) );
-		
-		MD5Init(&ctx);
-		MD5Update(&ctx, (unsigned char*)szKeyBuffer, nKeyLength);
-		MD5Final(digest, &ctx);
-		Q_strncpy ( szHashedKeyBuffer, MD5_Print ( digest, sizeof( digest ) ), sizeof( szHashedKeyBuffer ) );
-		return szHashedKeyBuffer;
+		ConMsg("Key has no meaning on dedicated server...\n");
+		return "";
 	}
+
+	if ( nKeyLength == 0 )
+	{
+		nKeyLength = 13;
+		Q_strncpy( szKeyBuffer, "1234567890123", sizeof( szKeyBuffer ) );
+		Assert( Q_strlen( szKeyBuffer ) == nKeyLength );
+
+		DevMsg( "Missing CD Key from registry, inserting blank key\n" );
+
+		registry->WriteString( "key", szKeyBuffer );
+	}
+
+	if (nKeyLength <= 0 ||
+		nKeyLength >= 256 )
+	{
+		ConMsg("Bogus key length on CD Key...\n");
+		return "";
+	}
+
+	// Now get the md5 hash of the key
+	memset( &ctx, 0, sizeof( ctx ) );
+	memset( digest, 0, sizeof( digest ) );
+	
+	MD5Init(&ctx);
+	MD5Update(&ctx, (unsigned char*)szKeyBuffer, nKeyLength);
+	MD5Final(digest, &ctx);
+	Q_strncpy ( szHashedKeyBuffer, MD5_Print ( digest, sizeof( digest ) ), sizeof( szHashedKeyBuffer ) );
+	return szHashedKeyBuffer;
 
 	return "12345678901234567890123456789012";
 }
@@ -215,11 +212,7 @@ void CClientState::SendClientInfo( void )
 	info.set_is_replay( false );
 #endif
 
-#if !defined( NO_STEAM )
-	info.set_friends_id( Steam3Client().SteamUser() ? Steam3Client().SteamUser()->GetSteamID().GetAccountID() : 0 );
-#else
 	info.set_friends_id( 0 );
-#endif
 	info.set_friends_name( m_FriendsName );
 
 	CheckOwnCustomFiles(); // load & verfiy custom player files
@@ -933,7 +926,7 @@ void CClientState::SetModel( int tableIndex )
 	CPrecacheItem *p = &model_precache[ tableIndex ];
 	const CPrecacheUserData *data = CL_GetPrecacheUserData( m_pModelPrecacheTable, tableIndex );
 
-	bool bLoadNow = ( data && ( data->flags & RES_PRELOAD ) ) || IsGameConsole();
+	bool bLoadNow = ( data && ( data->flags & RES_PRELOAD ) );
 	if ( CommandLine()->FindParm( "-nopreload" ) ||	CommandLine()->FindParm( "-nopreloadmodels" ))
 	{
 		bLoadNow = false;
@@ -1120,7 +1113,7 @@ void CClientState::SetSound( int tableIndex )
 	CPrecacheItem *p = &sound_precache[ tableIndex ];
 	const CPrecacheUserData *data = CL_GetPrecacheUserData( m_pSoundPrecacheTable, tableIndex );
 
-	bool bLoadNow = ( data && ( data->flags & RES_PRELOAD ) ) || IsGameConsole();
+	bool bLoadNow = ( data && ( data->flags & RES_PRELOAD ) );
 	if ( CommandLine()->FindParm( "-nopreload" ) ||	CommandLine()->FindParm( "-nopreloadsounds" ))
 	{
 		bLoadNow = false;
@@ -1608,10 +1601,6 @@ void CClientState::ReadPacketEntities( CEntityReadInfo &u )
 //-----------------------------------------------------------------------------
 void CClientState::StartUpdatingSteamResources()
 {
-	if ( IsX360() )
-	{
-		return;
-	}
 
 	// we can only do this when in SIGNONSTATE_NEW, 
 	// since the completion of this triggers the continuation of SIGNONSTATE_NEW
@@ -1638,10 +1627,6 @@ CON_COMMAND( asw_engine_finished_building_map, "Notify engine that we've finishe
 //-----------------------------------------------------------------------------
 void CClientState::CheckUpdatingSteamResources()
 {
-	if ( IsX360() )
-	{
-		return;
-	}
 
 	VPROF_BUDGET( "CheckUpdatingSteamResources", VPROF_BUDGETGROUP_STEAM );
 
@@ -2038,36 +2023,6 @@ void CClientState::FinishSignonState_New()
 	COM_TimestampedLog( "CL_InstallAndInvokeClientStringTableCallbacks" );
 	CL_InstallAndInvokeClientStringTableCallbacks();
 	
-#if 0
-
-	// HACK!!!!  For use only on PC not yet using a whitelist!
-	// install hooks
-	if ( IsPC() && 	( m_nMaxClients > 1 ) )
-	{
-		m_pModelPrecacheTable->SetStringChangedCallback( NULL, Callback_ModelChanged );
-
-		int nTableCount = m_StringTableContainer->GetNumTables();
-		for ( int iTable =0; iTable < nTableCount; ++iTable )
-		{
-			// iterate through server tables
-			CNetworkStringTable *pTable = (CNetworkStringTable*)m_StringTableContainer->GetTable( iTable );
-			if ( !pTable )
-				continue;
-
-			pfnStringChanged pCallbackFunction = pTable->GetCallback();
-			if ( pCallbackFunction )
-				for ( int iString = 0; iString < pTable->GetNumStrings(); ++iString )
-				{
-					int userDataSize;
-					const void *pUserData = pTable->GetStringUserData( iString, &userDataSize );
-					(*pCallbackFunction)( NULL, pTable, iString, pTable->GetString( iString ), pUserData );
-				}
-		}
-
-		materials->CacheUsedMaterials();
-	}
-
-#endif
 
 	COM_TimestampedLog( "materials->CacheUsedMaterials" );
 
@@ -2188,29 +2143,6 @@ void CClientState::ConsistencyCheck(bool bChanged )
 			else
 			{
 				// [FTrepte] It seems that the boundsData is endian-swapped when connecting to the PC server in CClientState::ConsistencyCheck.
-				if (IsX360())
-				{
-					CByteswap swap;
-					swap.ActivateByteSwapping( true );
-
-					float minx = boundsData->mins.x;
-					swap.SwapBufferToTargetEndian<float>(&boundsData->mins.x, &minx, 1);
-
-					float miny = boundsData->mins.y;
-					swap.SwapBufferToTargetEndian<float>(&boundsData->mins.y, &miny, 1);
-
-					float minz = boundsData->mins.z;
-					swap.SwapBufferToTargetEndian<float>(&boundsData->mins.z, &minz, 1);
-
-					float maxx = boundsData->maxs.x;
-					swap.SwapBufferToTargetEndian<float>(&boundsData->maxs.x, &maxx, 1);
-
-					float maxy = boundsData->maxs.y;
-					swap.SwapBufferToTargetEndian<float>(&boundsData->maxs.y, &maxy, 1);
-
-					float maxz = boundsData->maxs.z;
-					swap.SwapBufferToTargetEndian<float>(&boundsData->maxs.z, &maxz, 1);
-				}					
 
 				if ( pModel->mins.x < boundsData->mins.x ||
 					pModel->mins.y < boundsData->mins.y ||

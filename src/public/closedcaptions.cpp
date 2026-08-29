@@ -25,23 +25,14 @@ bool AsyncCaption_t::LoadFromFile( char const *pchFullPath )
 	g_pFullFileSystem->Read( &m_Header, sizeof( m_Header ), fh );
 	if ( m_Header.magic != COMPILED_CAPTION_FILEID )
 	{
-		if( IsPS3() )
-			return false;
-		else
 			Error( "Invalid file id for %s\n", pchFullPath );
 	}
 	if ( m_Header.version != COMPILED_CAPTION_VERSION )
 	{
-		if( IsPS3() )
-			return false;
-		else
 			Error( "Invalid file version for %s\n", pchFullPath );
 	}
 	if ( m_Header.directorysize < 0 || m_Header.directorysize > 64 * 1024 )
 	{
-		if( IsPS3() )
-			return false;
-		else
 			Error( "Invalid directory size %d for %s\n", m_Header.directorysize, pchFullPath );
 	}
 	//if ( m_Header.blocksize != MAX_BLOCK_SIZE )

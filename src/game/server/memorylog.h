@@ -7,7 +7,6 @@
 #ifndef MEMORYLOG_H
 #define MEMORYLOG_H
 
-#if !defined( _CERT )
 
 #include "igamesystem.h"
 
@@ -20,6 +19,5 @@ public:
 private:
 };
 
-#endif // !defined( _CERT )
 
 #endif // MEMORYLOG_H

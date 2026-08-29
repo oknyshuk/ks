@@ -46,10 +46,7 @@ BEGIN_VS_SHADER_FLAGS( floattoscreen, "Help for floattoscreen", SHADER_NOT_EDITA
 			pShaderShadow->VertexShaderVertexFormat( fmt, 1, 0, 0 );
 
 			// convert from linear to gamma on write.
-			if ( !IsX360() ) // The 360 is using this shader when it shouldn't...this is just a quick hack to keep things looking right on the 360
-			{
-				pShaderShadow->EnableSRGBWrite( true );
-			}
+			pShaderShadow->EnableSRGBWrite( true );
 
 			// Pre-cache shaders
 			DECLARE_STATIC_VERTEX_SHADER( screenspaceeffect_vs20 );

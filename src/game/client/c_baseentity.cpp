@@ -624,13 +624,11 @@ BEGIN_RECV_TABLE_NOBASE(C_BaseEntity, DT_BaseEntity)
 	RecvPropFloat( RECVINFO( m_fadeMaxDist ) ), 
 	RecvPropFloat( RECVINFO( m_flFadeScale ) ), 
 
-#if 1
 // #ifndef _GAMECONSOLE -- X360 client and Win32 XLSP dedicated server need equivalent SendTables
 	RecvPropInt( RECVINFO( m_nMinCPULevel ) ), 
 	RecvPropInt( RECVINFO( m_nMaxCPULevel ) ), 
 	RecvPropInt( RECVINFO( m_nMinGPULevel ) ), 
 	RecvPropInt( RECVINFO( m_nMaxGPULevel ) ), 
-#endif
 
 	RecvPropFloat( RECVINFO( m_flUseLookAtAngle ) ),
 
@@ -1607,19 +1605,6 @@ void C_BaseEntity::VPhysicsCompensateForPredictionErrors( const byte *predicted_
 	const byte *networked_state_data = (const byte *)GetOriginalNetworkDataObject();
 #endif
 
-#if 0
-	{
-		int iSavedCommand;
-		int iNetworkedCommand;
-		{
-			const typedescription_t *tdSavedCommand = CPredictionCopy::FindFlatFieldByName( "m_SavedCommandNum", GetPredDescMap() );
-			Assert( tdSavedCommand );
-			Q_memcpy( &iSavedCommand, predicted_state_data + tdSavedCommand->flatOffset[ TD_OFFSET_PACKED ], sizeof( int ) );
-			Q_memcpy( &iNetworkedCommand, networked_state_data + tdSavedCommand->flatOffset[ TD_OFFSET_PACKED ], sizeof( int ) );
-		}
-		Assert( iNetworkedCommand == iSavedCommand );
-	}
-#endif
 
 	IPhysicsObject *pPhysicsObject = VPhysicsGetObject();
 	IPredictedPhysicsObject *pPredictedObject = pPhysicsObject ? pPhysicsObject->GetPredictedInterface() : NULL;
@@ -1662,14 +1647,6 @@ void C_BaseEntity::VPhysicsCompensateForPredictionErrors( const byte *predicted_
 		}
 #endif
 
-#if 0
-		const float kMaxVelocityDelta = 50.0f;
-		float fVelocityLengthSqr = vVelocityDelta.LengthSqr();
-		if( vVelocityDelta.LengthSqr() > (kMaxVelocityDelta * kMaxVelocityDelta) )
-		{
-			vVelocityDelta *= (kMaxVelocityDelta / sqrtf(fVelocityLengthSqr));
-		}
-#endif
 		
 		pPredictedObject->SetErrorDelta_Position( vOriginDelta );
 		pPredictedObject->SetErrorDelta_Velocity( vVelocityDelta );
@@ -1884,20 +1861,17 @@ bool C_BaseEntity::ShouldDraw()
 	if ( m_nRenderMode == kRenderNone )
 		return false;
 
-	if ( !IsGameConsole() )
-	{
-		CPULevel_t nCPULevel = GetCPULevel();
-		bool bNoDraw = ( m_nMinCPULevel && m_nMinCPULevel-1 > nCPULevel );
-		bNoDraw = bNoDraw || ( m_nMaxCPULevel && m_nMaxCPULevel-1 < nCPULevel );
-		if ( bNoDraw )
-			return false;
+	CPULevel_t nCPULevel = GetCPULevel();
+	bool bNoDraw = ( m_nMinCPULevel && m_nMinCPULevel-1 > nCPULevel );
+	bNoDraw = bNoDraw || ( m_nMaxCPULevel && m_nMaxCPULevel-1 < nCPULevel );
+	if ( bNoDraw )
+		return false;
 
-		GPULevel_t nGPULevel = GetGPULevel();
-		bNoDraw = ( m_nMinGPULevel && m_nMinGPULevel-1 > nGPULevel );
-		bNoDraw = bNoDraw || ( m_nMaxGPULevel && m_nMaxGPULevel-1 < nGPULevel );
-		if ( bNoDraw )
-			return false;
-	}
+	GPULevel_t nGPULevel = GetGPULevel();
+	bNoDraw = ( m_nMinGPULevel && m_nMinGPULevel-1 > nGPULevel );
+	bNoDraw = bNoDraw || ( m_nMaxGPULevel && m_nMaxGPULevel-1 < nGPULevel );
+	if ( bNoDraw )
+		return false;
 
 	return (model != 0) && !IsEffectActive(EF_NODRAW) && (index != 0);
 }
@@ -2771,14 +2745,6 @@ void C_BaseEntity::PreDataUpdate( DataUpdateType_t updateType )
 		Spawn();
 	}
 
-#if 0 // Yahn suggesting commenting this out as a fix to demo recording not working
-	// If the entity moves itself every FRAME on the server but doesn't update animtime,
-	// then use the current server time as the time for interpolation.
-	if ( IsSelfAnimating() )
-	{
-		m_flAnimTime = engine->GetLastTimeStamp();
-	}
-#endif
 
 	m_vecOldOrigin = GetNetworkOrigin();
 	m_vecOldAngRotation = GetNetworkAngles();
@@ -5692,15 +5658,6 @@ float C_BaseEntity::GetAttackDamageScale( void )
 {
 	float flScale = 1;
 // Not hooked up to prediction yet
-#if 0
-	FOR_EACH_LL( m_DamageModifiers, i )
-	{
-		if ( !m_DamageModifiers[i]->IsDamageDoneToMe() )
-		{
-			flScale *= m_DamageModifiers[i]->GetModifier();
-		}
-	}
-#endif
 	return flScale;
 }
 
@@ -5727,12 +5684,6 @@ void C_BaseEntity::SetDormantPredictable( bool dormant )
 	m_nIncomingPacketEntityBecameDormant = prediction->GetIncomingPacketNumber();
 
 // Do we need to do the following kinds of things?
-#if 0
-	// Remove from collisions
-	SetSolid( SOLID_NOT );
-	// Don't render
-	AddEffects( EF_NODRAW );
-#endif
 #endif
 }
 

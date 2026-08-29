@@ -7,8 +7,6 @@
 #include <tier0/platform.h>
 #ifdef IS_WINDOWS_PC
 #include <windows.h>
-#elif defined( _X360 )
-// already defined nothing
 #else
 #define INVALID_HANDLE_VALUE (void *)0
 #define FILE_BEGIN SEEK_SET
@@ -1141,11 +1139,7 @@ bool CZipFile::FileExistsInZip( const char *pRelativeName )
 void CZipFile::AddFileToZip( const char *relativename, const char *fullpath )
 {
 	FILE *temp;
-#if defined( POSIX )
 	temp = fopen( fullpath, "rb" );
-#else
-	fopen_s( &temp, fullpath, "rb" );
-#endif
 	if ( !temp )
 		return;
 

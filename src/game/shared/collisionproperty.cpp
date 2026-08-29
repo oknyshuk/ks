@@ -30,9 +30,6 @@
 
 #include "predictable_entity.h"
 
-#ifdef _PS3
-#include "tls_ps3.h"
-#endif
 
 
 // memdbgon must be the last include file in a .cpp file!!!
@@ -41,10 +38,6 @@
 //#define DEBUG_SNC_TYPE_PUN_BUG
 
 
-#if defined( _PS3 ) && defined( DEBUG_SNC_TYPE_PUN_BUG )
-#undef ASSERT_COORD
-#define ASSERT_COORD( V ) do{ if( !TEST_COORD( V ) ) __builtin_snpause(); } while(0)
-#endif
 
 
 //-----------------------------------------------------------------------------

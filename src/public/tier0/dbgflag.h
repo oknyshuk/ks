@@ -61,8 +61,5 @@
 
 #endif // _DEBUG
 
-#if defined( _CERT )
-#define DBGFLAG_STRINGS_STRIP
-#endif
 
 #endif // DBGFLAG_H

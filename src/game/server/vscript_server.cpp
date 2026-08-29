@@ -16,7 +16,6 @@
 #include "isaverestore.h"
 #include "gamerules.h"
 #include "particle_parse.h"
-#if defined( _WIN32 ) || defined( POSIX )
 //lwss - hardcode nut file here instead of regenerating it each time. I don't think it will change for now.
 //#include "vscript_server_nut.h"
 //Generated with: `perl texttoarray.pl ../../game/server/vscript_server.nut g_Script_vscript_server > /tmp/file.h`
@@ -309,7 +308,6 @@ function __DumpScope( depth, table )
 	}
 }*/
 //lwss end
-#endif
 
 #ifdef DOTA_DLL
 #include "dota_animation.h"

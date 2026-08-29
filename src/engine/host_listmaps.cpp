@@ -268,7 +268,7 @@ void CMapListManager::RefreshList( void )
 	if ( host_maplist_recurse_subdirs.GetBool() )
 	{		
 		char mapwild[MAX_QPATH];
-		Q_snprintf( mapwild, sizeof( mapwild ), "*.%sbsp", IsX360() ? "360." : "" );
+		Q_snprintf( mapwild, sizeof( mapwild ), "*.%sbsp", "" );
 
 		CUtlVector<CUtlString> outList;
 		RecursiveFindFilesMatchingName( &outList, "maps", mapwild, "GAME" );
@@ -312,15 +312,9 @@ void CMapListManager::RefreshList( void )
 		char const *findfn = Sys_FindFirst( mapwild, NULL, 0 );
 		while ( findfn )
 		{
-			if ( IsPC() && V_stristr( findfn, ".360.bsp" ) )
+			if ( V_stristr( findfn, ".360.bsp" ) )
 			{
 				// ignore 360 bsp
-				findfn = Sys_FindNext( NULL, 0 );
-				continue;
-			}
-			else if ( IsX360() && !V_stristr( findfn, ".360.bsp" ) )
-			{
-				// ignore pc bsp
 				findfn = Sys_FindNext( NULL, 0 );
 				continue;
 			}
@@ -422,7 +416,7 @@ void CMapListManager::BuildList( void )
 	{
 
 		char mapwild[MAX_QPATH];
-		Q_snprintf( mapwild, sizeof( mapwild ), "*.%sbsp", IsX360() ? "360." : "" );
+		Q_snprintf( mapwild, sizeof( mapwild ), "*.%sbsp", "" );
 
 		CUtlVector<CUtlString> outList;
 		RecursiveFindFilesMatchingName( &outList, "maps", mapwild, "GAME" );
@@ -430,14 +424,9 @@ void CMapListManager::BuildList( void )
 		FOR_EACH_VEC( outList, i )
 		{
 			const char* curMap = outList[i].Access();
-			if ( IsPC() && V_stristr( curMap, ".360.bsp" ) )
+			if ( V_stristr( curMap, ".360.bsp" ) )
 			{
 				// ignore 360 bsp
-				continue;
-			}
-			else if ( IsX360() && !V_stristr( curMap, ".360.bsp" ) )
-			{
-				// ignore pc bsp
 				continue;
 			}
 
@@ -457,19 +446,13 @@ void CMapListManager::BuildList( void )
 	{
 		// Search the directory structure.
 		char mapwild[MAX_QPATH];
-		Q_snprintf( mapwild, sizeof( mapwild ), "maps/*.%sbsp", IsX360() ? "360." : "" );
+		Q_snprintf( mapwild, sizeof( mapwild ), "maps/*.%sbsp", "" );
 		char const *findfn = Sys_FindFirst( mapwild, NULL, 0 );
 		while ( findfn )
 		{
-			if ( IsPC() && V_stristr( findfn, ".360.bsp" ) )
+			if ( V_stristr( findfn, ".360.bsp" ) )
 			{
 				// ignore 360 bsp
-				findfn = Sys_FindNext( NULL, 0 );
-				continue;
-			}
-			else if ( IsX360() && !V_stristr( findfn, ".360.bsp" ) )
-			{
-				// ignore pc bsp
 				findfn = Sys_FindNext( NULL, 0 );
 				continue;
 			}

@@ -53,7 +53,7 @@ public:
 
 	virtual void OnExtraUpdate()
 	{
-		if ( IsPC() && g_ClientDLL && game && game->IsActiveApp() )
+		if ( g_ClientDLL && game && game->IsActiveApp() )
 		{
 			g_ClientDLL->IN_Accumulate();
 		}
@@ -82,10 +82,6 @@ public:
 
 	virtual bool GetToolSpatialization( int iUserData, int guid, SpatializationInfo_t& info )
 	{
-		if ( IsX360() )
-		{
-			return false;
-		}
 
 		return toolframework->GetSoundSpatialization( iUserData, guid, info );
 	}
@@ -343,10 +339,6 @@ public:
 
 	virtual void CacheBuildingStart()
 	{
-		if ( IsX360() )
-		{
-			return;
-		}
 
 		EngineUI()->ActivateGameUI();
 		EngineUI()->StartCustomProgress();
@@ -359,10 +351,6 @@ public:
 
 	virtual void CacheBuildingUpdateProgress( float percent, char const *cachefile )
 	{
-		if ( IsX360() )
-		{
-			return;
-		}
 
 		const wchar_t *format = g_pLocalize->Find( "Valve_CreatingSpecificSoundCache" );
 		if ( format )
@@ -384,10 +372,6 @@ public:
 
 	virtual void CacheBuildingFinish()
 	{
-		if ( IsX360() )
-		{
-			return;
-		}
 
 		EngineUI()->FinishCustomProgress();
 		EngineUI()->HideGameUI();
@@ -510,7 +494,7 @@ private:
 
 		// Don't send the sound message to the tool framework if active tool 
 		// is not recording or the sound originated from the tool.
-		if ( IsX360() || !toolframework->IsToolRecording() || params.bToolSound )
+		if ( !toolframework->IsToolRecording() || params.bToolSound )
 			return;
 
 		KeyValues *msg = new KeyValues( "StartSound" );
@@ -550,7 +534,7 @@ private:
 
 		VPROF("OnSoundStopped");
 
-		if ( IsX360() || !toolframework->IsToolRecording() )
+		if ( !toolframework->IsToolRecording() )
 			return;
 
 		KeyValues *msg = new KeyValues( "StopSound" );

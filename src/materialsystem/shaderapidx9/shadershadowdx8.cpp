@@ -200,9 +200,6 @@ void CShaderShadowDX8::Init( )
 	m_ShadowShaderState.m_VertexUsage = 0;
 
 	m_ShadowState.m_nFetch4Enable = 0;
-#if defined( DX_TO_GL_ABSTRACTION )
-	m_ShadowState.m_nShadowFilterEnable = 0;
-#endif
 
 	for (int i = 0; i < MAX_SAMPLERS; ++i)
 	{
@@ -603,31 +600,6 @@ void CShaderShadowDX8::EnableSRGBRead( Sampler_t sampler, bool bEnable )
 {
 }
 
-#if 0
-void CShaderShadowDX8::SetShadowDepthFiltering( Sampler_t stage )
-{
-	int nMask = ( 1 << stage );
-	if ( stage < m_pHardwareConfig->GetSamplerCount() )
-	{
-#if ( defined ( POSIX ) )
-//		m_ShadowState.m_ShadowFilterEnable |= nMask;
-#else
-		if ( !m_pHardwareConfig->SupportsFetch4() )
-		{
-			m_ShadowState.m_nFetch4Enable &= ~nMask;
-		}
-		else
-		{
-			m_ShadowState.m_nFetch4Enable |= nMask;
-		}
-#endif
-	}
-	else
-	{
-		Warning( "Attempting set shadow filtering state on an invalid sampler (%d)!\n", stage );
-	}
-}
-#endif
 
 //-----------------------------------------------------------------------------
 // Compute the vertex format from vertex descriptor flags
@@ -674,9 +646,6 @@ void CShaderShadowDX8::VertexShaderVertexFormat( unsigned int nFlags,
 void CShaderShadowDX8::SetVertexShader( const char* pFileName, int nStaticVshIndex )
 {
 	char	debugLabel[500] = "";
-#ifdef DX_TO_GL_ABSTRACTION
-	Q_snprintf( debugLabel, sizeof(debugLabel), "vs-file %s vs-index %d", pFileName, nStaticVshIndex ); 
-#endif
 
 	m_ShadowShaderState.m_VertexShader = ShaderManager()->CreateVertexShader( pFileName, nStaticVshIndex, debugLabel );
 	m_ShadowShaderState.m_nStaticVshIndex = nStaticVshIndex;
@@ -685,9 +654,6 @@ void CShaderShadowDX8::SetVertexShader( const char* pFileName, int nStaticVshInd
 void CShaderShadowDX8::SetPixelShader( const char* pFileName, int nStaticPshIndex )
 {
 	char	debugLabel[500] = "";
-#ifdef DX_TO_GL_ABSTRACTION
-	Q_snprintf( debugLabel, sizeof(debugLabel), "ps-file %s ps-index %d", pFileName, nStaticPshIndex ); 
-#endif
 
 	m_ShadowShaderState.m_PixelShader = ShaderManager()->CreatePixelShader( pFileName, nStaticPshIndex, debugLabel );
 	m_ShadowShaderState.m_nStaticPshIndex = nStaticPshIndex;

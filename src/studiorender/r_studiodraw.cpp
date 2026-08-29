@@ -127,11 +127,6 @@ void CStudioRender::R_StudioDrawHulls( int hitboxset, bool translucent )
 		}
 		for (j = 0; j < 6; j++)
 		{
-#if 0
-			tmp[0] = tmp[1] = tmp[2] = 0;
-			tmp[j % 3] = (j < 3) ? 1.0 : -1.0;
-			// R_StudioLighting( &lv, pbbox[i].bone, 0, tmp ); // BUG: not updated
-#endif
 
 			IMesh* pMesh = pRenderContext->GetDynamicMesh();
 			CMeshBuilder meshBuilder;
@@ -323,7 +318,6 @@ int CStudioRender::R_StudioRenderModel( IMatRenderContext *pRenderContext, int s
 		numPasses++;
 	}
 
-#ifndef _CERT
 	static ConVarRef mat_rendered_faces_count( "mat_rendered_faces_count" );
 	static ConVarRef mat_print_top_model_vert_counts( "mat_print_top_model_vert_counts" );
 	if ( numPasses && ( mat_rendered_faces_count.GetBool() || mat_print_top_model_vert_counts.GetBool() ) )
@@ -331,7 +325,6 @@ int CStudioRender::R_StudioRenderModel( IMatRenderContext *pRenderContext, int s
 		// Each model counts how many rendered faces it accounts for each frame:
 		m_pStudioHWData->UpdateFacesRenderedCount( m_pStudioHdr, m_ModelFaceCountHash, lod, 1, numFacesRendered );
 	}
-#endif // !_CERT
 
 	return numFacesRendered;
 }
@@ -497,7 +490,7 @@ void CStudioRender::DrawShadows( const DrawModelInfo_t& info, int flags, int bon
 	CMatRenderContextPtr pRenderContext( g_pMaterialSystem );
 
 	// Bail if we're using single-pass flashlight
-	if ( IsGameConsole() || pRenderContext->SinglePassFlashlightModeEnabled() )
+	if ( pRenderContext->SinglePassFlashlightModeEnabled() )
 		return;
 
 	pRenderContext->SetFlashlightMode( true );
@@ -565,7 +558,7 @@ void CStudioRender::DrawStaticPropShadows( const DrawModelInfo_t &info, const St
 // Draw flashlight lighting on decals.
 void CStudioRender::DrawFlashlightDecals( const DrawModelInfo_t& info, int lod )
 {
-	if ( !m_ShadowState.Count() || IsGameConsole() ) // game console implies single pass flashlight
+	if ( !m_ShadowState.Count() ) // game console implies single pass flashlight
 		return;
 
 	CMatRenderContextPtr pRenderContext( g_pMaterialSystem );
@@ -732,7 +725,7 @@ static void ComputeSkinMatrixToMemory( mstudioboneweight_t &boneweights, matrix3
 void ComputeSkinMatrixToMemorySSE( mstudioboneweight_t &boneweights, matrix3x4_t *pPoseToWorld, matrix3x4_t &result )
 {
 	// NOTE: pPoseToWorld, being cache aligned, doesn't need explicit initialization
-#if defined( _WIN32 ) && !defined( _WIN64 ) && !defined( _X360 )
+#if defined( _WIN32 ) && !defined( _WIN64 )
 	switch( boneweights.numbones )
 	{
 	default:
@@ -935,9 +928,7 @@ void ComputeSkinMatrixToMemorySSE( mstudioboneweight_t &boneweights, matrix3x4_t
 			}
 		}
 	}
-#elif POSIX || _WIN64
-	ComputeSkinMatrixToMemory( boneweights, pPoseToWorld, result );
-#elif defined( _X360 )
+#else
 	ComputeSkinMatrixToMemory( boneweights, pPoseToWorld, result );
 #endif
 }
@@ -945,7 +936,7 @@ void ComputeSkinMatrixToMemorySSE( mstudioboneweight_t &boneweights, matrix3x4_t
 matrix3x4_t *ComputeSkinMatrixSSE( mstudioboneweight_t &boneweights, matrix3x4_t *pPoseToWorld, matrix3x4_t &scratchMatrix )
 {
 	// NOTE: pPoseToWorld, being cache aligned, doesn't need explicit initialization
-#if defined( _WIN32 ) && !defined( _WIN64 ) && !defined( _X360 )
+#if defined( _WIN32 ) && !defined( _WIN64 )
 	switch( boneweights.numbones )
 	{
 	default:
@@ -1151,9 +1142,6 @@ matrix3x4_t *ComputeSkinMatrixSSE( mstudioboneweight_t &boneweights, matrix3x4_t
 		return &scratchMatrix;
 	}
 #else
-#ifndef LINUX
-#pragma message("ComputeSkinMatrixSSE C implementation only")
-#endif
 
 return ComputeSkinMatrix( boneweights, pPoseToWorld, scratchMatrix );
 #endif
@@ -1192,7 +1180,7 @@ inline void CStudioRender::R_ComputeLightAtPoint3( const Vector &pos, const Vect
 
 // define SPECIAL_SSE_MESH_PROCESSOR to enable code which contains a special optimized SSE lighting loop, significantly
 // improving software vertex processing performace.
-#if defined( _WIN32 ) && !defined( _X360 )
+#if defined( _WIN32 )
 #define SPECIAL_SSE_MESH_PROCESSOR
 #endif
 
@@ -1379,14 +1367,14 @@ public:
 		}
 #endif
 
-#if defined( _WIN32 ) && !defined( _X360 )
+#if defined( _WIN32 )
 		// Precaches the data
 		_mm_prefetch( (char*)((int)pGroupToMesh & (~0x1F)), _MM_HINT_NTA );
 #endif
 		for ( int i = 0; i < PREFETCH_VERT_COUNT; ++i )
 		{
 			ntemp[i] = pGroupToMesh[i];
-#if defined( _WIN32 ) && !defined( _X360 )
+#if defined( _WIN32 )
 			char *pMem = (char*)&pVertices[ntemp[i]];
 			_mm_prefetch( pMem, _MM_HINT_NTA );
 			_mm_prefetch( pMem + 32, _MM_HINT_NTA );
@@ -1400,7 +1388,7 @@ public:
 		int n, idx;
 		for ( int j=0; j < numVertices; ++j )
 		{
-#if defined( _WIN32 ) && !defined( _X360 )
+#if defined( _WIN32 )
 			char *pMem = (char*)&pGroupToMesh[j + PREFETCH_VERT_COUNT + 1];
 			_mm_prefetch( (char*)((int)pMem & (~0x1F)), _MM_HINT_NTA );
 #endif
@@ -1443,7 +1431,7 @@ public:
 			R_TransformVert( pSrcPos, pSrcNorm, pSrcTangentS, pSkinMat, 
 				*(VectorAligned*)&dstVertex.m_vecPosition, dstVertex.m_vecNormal, *(Vector4DAligned*)&dstVertex.m_vecUserData );
 
-#if defined( _WIN32 ) && !defined( _X360 )
+#if defined( _WIN32 )
 			_mm_prefetch( (char*)&pVertices[ntemp[idx]], _MM_HINT_NTA);
 			_mm_prefetch( (char*)&pVertices[ntemp[idx]] + 32, _MM_HINT_NTA );
 			if ( nHasTangentSpace )
@@ -1454,12 +1442,8 @@ public:
 
 			dstVertex.m_vecTexCoord = vert.m_vecTexCoord; 
 
-#if !defined( _X360 )
 			Assert( dstVertex.m_vecUserData.w == -1.0f || dstVertex.m_vecUserData.w == 1.0f );
 			meshBuilder.FastVertexSSE( dstVertex );
-#else
-			meshBuilder.VertexDX8ToX360( dstVertex );
-#endif
 		}
 		meshBuilder.FastAdvanceNVertices( numVertices );
 	}
@@ -2281,7 +2265,7 @@ int CStudioRender::R_StudioDrawStaticMesh( IMatRenderContext *pRenderContext, ms
 
 	// Needed when we switch back and forth between hardware + software lighting
 #ifdef IS_WINDOWS_PC
-	if ( IsPC() && pGroup->m_MeshNeedsRestore )
+	if ( pGroup->m_MeshNeedsRestore )
 	{
 		VertexCompressionType_t compressionType = CompressionType( pGroup->m_pMesh->GetVertexFormat() );
 		switch ( compressionType )
@@ -2560,11 +2544,6 @@ int CStudioRender::R_StudioDrawEyeball( IMatRenderContext *pRenderContext, mstud
 	// EXPLICITLY DISABLING NEED FOR CPU SIDE VERTS ON CONSOLES!!!!
 	// PORTAL2 CONSOLE: Vertex/Index data will never be read again (no model decals or load-time lighting), so discard the VVD data and create a new header
 	// If we ever have a flexed eye vert on a model on the console, badness will ensue (ie. won't flex).
-	if ( IsGameConsole() )
-	{
-		bShouldHardwareSkin = true;
-		bFlexStatic = false;
-	}
 
 	pRenderContext->MatrixMode( MATERIAL_MODEL );
 	pRenderContext->LoadIdentity();
@@ -2884,10 +2863,6 @@ int CStudioRender::R_StudioDrawPoints( IMatRenderContext *pRenderContext, int sk
 	int			i;
 	int numFacesRendered = 0;
 
-#if 0 // garymcthack
-	if ( m_pSubModel->numfaces == 0 )
-		return 0;
-#endif
 
 	// happens when there's a model load failure
 	if ( m_pStudioMeshes == 0 )

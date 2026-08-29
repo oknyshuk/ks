@@ -34,9 +34,6 @@
 #ifndef DEDICATED
 #include "engineui.h"
 #endif
-#ifdef _PS3
-#include <sysutil/sysutil_sysparam.h>
-#endif
 #include "tier0/etwprof.h"
 
 #include "steam/steam_api.h"
@@ -96,7 +93,7 @@ static void mat_powersavingsmode_callback( IConVar *var, const char *pOldValue, 
 }
 static ConVar mat_powersavingsmode( "mat_powersavingsmode", "0", FCVAR_ARCHIVE, "Power Savings Mode", mat_powersavingsmode_callback );
 
-ConVar sleep_when_meeting_framerate( "sleep_when_meeting_framerate", IsGameConsole() ? "0" : "1", FCVAR_NONE, "Sleep instead of spinning if we're meeting the desired framerate." );
+ConVar sleep_when_meeting_framerate( "sleep_when_meeting_framerate", "1", FCVAR_NONE, "Sleep instead of spinning if we're meeting the desired framerate." );
 
 static ConVar fps_max_splitscreen( "fps_max_splitscreen", STRINGIFY( DEFAULT_FPS_MAX ), 0, "Frame rate limiter, splitscreen" );
 #if !defined( DEDICATED )
@@ -173,9 +170,6 @@ private:
 	double			m_flPreviousTime;
 	float			m_flFilteredTime;
 	float			m_flMinFrameTime; // Expected duration of a frame, or zero if it is unlimited.
-#ifdef _GAMECONSOLE
-	float           m_flTimeSinceLastXBXProcessEventsCall;
-#endif
 
 #if WITH_OVERLAY_CURSOR_VISIBILITY_WORKAROUND
 	STEAM_CALLBACK( CEngine, OnGameOverlayActivated, GameOverlayActivated_t, m_CallbackGameOverlayActivated );
@@ -205,9 +199,6 @@ CEngine::CEngine( void )
 	m_flPreviousTime	= 0.0;
 	m_flFilteredTime	= 0.0f;
 	m_flMinFrameTime	= 0.0f;
-#ifdef _GAMECONSOLE
-	m_flTimeSinceLastXBXProcessEventsCall = 1.0e19;			// make ti call on first frame
-#endif
 
 	m_nQuitting			= QUIT_NOTQUITTING;
 }
@@ -275,7 +266,7 @@ bool CEngine::FilterTime( float dt )
 	// Dedicated's tic_rate regulates server frame rate.  Don't apply fps filter here.
 	// Only do this restriction on the client. Prevents clients from accomplishing certain
 	// hacks by pausing their client for a period of time.
-	if ( IsPC() && !sv.IsDedicated() && !CanCheat() && ( fps_max.GetFloat() < 30 ) && !Host_IsSinglePlayerGame() )
+	if ( !sv.IsDedicated() && !CanCheat() && ( fps_max.GetFloat() < 30 ) && !Host_IsSinglePlayerGame() )
 	{
 		// Don't do anything if fps_max=0 (which means it's unlimited).
 		if ( fps_max.GetFloat() != 0.0f )
@@ -286,85 +277,6 @@ bool CEngine::FilterTime( float dt )
 	}
 
 	float fps = fps_max.GetFloat();
-#ifdef _GAMECONSOLE
-	static bool bInitializedFpsMax;
-	static float flRefreshRate = 0;
-	if ( !bInitializedFpsMax )
-	{
-		bInitializedFpsMax = true;
-		{
-		#ifdef _X360
-			XVIDEO_MODE videoMode;
-			XGetVideoMode( &videoMode );
-			flRefreshRate = videoMode.RefreshRate;
-		#elif defined( _PS3 )
-			CellVideoOutState videoOutState;
-			if ( cellVideoOutGetState( CELL_VIDEO_OUT_PRIMARY, 0, &videoOutState) >= CELL_OK )
-			{
-				struct { int rrFlag; float flRate; }
-				arrRefreshRates[] = {
-					{ CELL_VIDEO_OUT_REFRESH_RATE_59_94HZ, 59.94f },
-					{ CELL_VIDEO_OUT_REFRESH_RATE_60HZ, 60.00f },
-					{ CELL_VIDEO_OUT_REFRESH_RATE_50HZ, 50.00f },
-					{ CELL_VIDEO_OUT_REFRESH_RATE_30HZ, 30.00f },
-				};
-				for ( int jj = 0; jj < ARRAYSIZE( arrRefreshRates ); ++ jj )
-				{
-					if ( arrRefreshRates[jj].rrFlag & videoOutState.displayMode.refreshRates )
-					{
-						flRefreshRate = arrRefreshRates[jj].flRate;
-						break;
-					}
-				}
-				if ( !flRefreshRate )
-				{
-					Warning( "Failed to determine PS3 video out refresh rate, assuming 59.94 Hz\n" );
-					flRefreshRate = 59.94f;
-				}
-			}
-			else
-			{
-				bInitializedFpsMax = false;
-			}
-		#else
-			#error
-		#endif
-		}
-
-// Taken fps_max out since we'll use the presentation interval to force max 30fps
-// This gives us a much smoother frametime and ensure we don't drop a frame
-// due to the inaccuracy of fps_max
-//
-//		if ( flRefreshRate > 49 )
-//		{
-//			float fpsMax = flRefreshRate / 2.0f, fpsSplitscreenMax = flRefreshRate / 2.0f;
-//			DevMsg( "Setting fps_max to %f and fps_splitscreen_max to %f (from defaults of %f/%f ) to match refresh rate of %f\n", fpsMax, fpsSplitscreenMax, fps_max.GetFloat(), fps_max_splitscreen.GetFloat(), flRefreshRate );
-//			fps_max.SetValue( fpsMax );
-//			fps_max_splitscreen.SetValue( fpsSplitscreenMax );
-//		}
-
-	}
-
-	bool bSplitscreen = false;
-	// Need a smarter way of doing this
-	for ( int i = 1; i < splitscreen->GetNumSplitScreenPlayers(); i++ )
-	{
-		if ( splitscreen->IsValidSplitScreenSlot( i ) )
-		{
-			bSplitscreen = true;
-			break;
-		}
-	}
-
-	if ( !bSplitscreen )
-	{
-		fps = fps_max.GetFloat();
-	}
-	else
-	{
-		fps = fps_max_splitscreen.GetFloat();
-	}
-#endif
 
 #if !defined( DEDICATED )
 	extern IVEngineClient *engineClient;
@@ -374,17 +286,6 @@ bool CEngine::FilterTime( float dt )
 	}
 #endif
 
-#ifdef _PS3
-	{
-		int nPresentFrequency = 1;
-		if ( fps > 1.0f )
-		{
-			nPresentFrequency = int( (flRefreshRate + 1.0) / fps );
-			nPresentFrequency = MAX( 1, nPresentFrequency );
-		}
-		g_pMaterialSystem->SetFlipPresentFrequency( nPresentFrequency );
-	}
-#endif
 	if ( fps > 0.0f )
 	{
 		// Limit fps to withing tolerable range
@@ -452,18 +353,6 @@ void CEngine::Frame( void )
 		dt = host_nexttick;
 	}
 
-#ifdef _GAMECONSOLE
-#define XBOX_PROCESS_EVENTS_MAXINTERVAL  0.2 				// 1/5 sec
-		// handle Xbox system messages process xbox events occasionally. every frame is too often -
-		// makes this code add up to something
-		m_flTimeSinceLastXBXProcessEventsCall += MAX( 0, dt );
-		if ( m_flTimeSinceLastXBXProcessEventsCall > XBOX_PROCESS_EVENTS_MAXINTERVAL || vx_do_not_throttle_events.GetBool() )
-		{
-			XBX_ProcessEvents();
-			XBX_DispatchEventsQueue();
-			m_flTimeSinceLastXBXProcessEventsCall = 0.;
-		}
-#endif
 
 	// Remember old time
 	m_flPreviousTime = m_flCurrentTime;
@@ -479,7 +368,6 @@ void CEngine::Frame( void )
 	// If the frametime is still too short, don't pass through
 	if ( !FilterTime( m_flFrameTime ) )
 	{
-#ifdef POSIX
 		double fSleepNS = ( m_flMinFrameTime - m_flFrameTime ) * 1000000000.0;
 		unsigned nSleepNS = (unsigned)floor( fSleepNS );
 		if ( nSleepNS && sleep_when_meeting_framerate.GetInt() )
@@ -487,15 +375,6 @@ void CEngine::Frame( void )
 			TM_ZONE( TELEMETRY_LEVEL0, TMZF_NONE, "Engine Nano Sleep" );
 			ThreadNanoSleep( nSleepNS );
 		}
-#else //POSIX
-		float fSleepMS = ( m_flMinFrameTime - m_flFrameTime ) * 1000;
-		unsigned nSleepMS = (unsigned)floor( fSleepMS );
-		if ( nSleepMS && sleep_when_meeting_framerate.GetInt() )
-		{
-			TM_ZONE( TELEMETRY_LEVEL0, TMZF_NONE, "Engine Sleep" );
-			ThreadSleep( nSleepMS );
-		}
-#endif //POSIX
 		m_flFilteredTime += dt;
 		return;
 	}

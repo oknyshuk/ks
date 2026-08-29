@@ -27,15 +27,6 @@ HMODULE win32DLLHandle;
 // Required DLL entry point
 BOOL WINAPI DllMain( HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved )
 {
-	// ensure data sizes are stable
-	if ( IsPlatformWindowsPC32() && sizeof( inputfunc_t ) != sizeof( int ) ||
-		 IsPlatformWindowsPC64() && sizeof( inputfunc_t ) != sizeof( void* ) )
-	{
-		Assert( !IsPlatformWindowsPC32() || sizeof( inputfunc_t ) == sizeof( int ) );
-		Assert( !IsPlatformWindowsPC64() || sizeof( inputfunc_t ) == sizeof( void* ) );
-		return FALSE;
-	}
-
 	if ( fdwReason == DLL_PROCESS_ATTACH )
     {
 		win32DLLHandle = hinstDLL;

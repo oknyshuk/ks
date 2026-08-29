@@ -121,7 +121,7 @@ void DrawPortalRefract( CBaseVSShader *pShader, IMaterialVar** params,
 
 		// Textures
 		pShaderShadow->EnableTexture( SHADER_SAMPLER0, true ); // Refraction texture
-		pShaderShadow->EnableSRGBRead( SHADER_SAMPLER0, !bShaderSRGBRead && !IsX360() );
+		pShaderShadow->EnableSRGBRead( SHADER_SAMPLER0, !bShaderSRGBRead && !false );
 		pShaderShadow->EnableTexture( SHADER_SAMPLER1, true ); // Noise
 		pShaderShadow->EnableSRGBRead( SHADER_SAMPLER1, false ); // Not sRGB
 		pShaderShadow->EnableTexture( SHADER_SAMPLER2, true ); // Color
@@ -205,7 +205,7 @@ void DrawPortalRefract( CBaseVSShader *pShader, IMaterialVar** params,
 		// Bind textures
 		if ( nStage == 0 ) // Only bind frame buffer texture for first stage
 		{
-			ShaderApiFast( pShaderAPI )->BindStandardTexture( SHADER_SAMPLER0, ( !bShaderSRGBRead && !IsX360() ) ? TEXTURE_BINDFLAGS_SRGBREAD : TEXTURE_BINDFLAGS_NONE, TEXTURE_FRAME_BUFFER_FULL_TEXTURE_0 ); // Refraction Map
+			ShaderApiFast( pShaderAPI )->BindStandardTexture( SHADER_SAMPLER0, ( !bShaderSRGBRead && !false ) ? TEXTURE_BINDFLAGS_SRGBREAD : TEXTURE_BINDFLAGS_NONE, TEXTURE_FRAME_BUFFER_FULL_TEXTURE_0 ); // Refraction Map
 		}
 		else if ( nStage == 2 ) // Only load textures for third stage
 		{

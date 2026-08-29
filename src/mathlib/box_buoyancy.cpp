@@ -7,98 +7,6 @@ inline const Vector ToVector( const fltx4 & f4 )
 	return Vector( SubFloat( f4, 0 ), SubFloat( f4, 1 ), SubFloat( f4, 2 ) );
 }
 
-#ifdef _X360
-FORCEINLINE fltx4 PermYXZW( const fltx4 & a )
-{
-	return __vpermwi( a,  0x4B ); // 01001011b
-}
-FORCEINLINE fltx4 PermXZYW( const fltx4 & a )
-{
-	return __vpermwi( a,  0x27 ); // 00100111b
-}
-FORCEINLINE fltx4 PermZYXW( const fltx4 & a )
-{
-	return __vpermwi( a,  0x93 ); // 10010011b
-}
-FORCEINLINE fltx4 PermXXYW( const fltx4 & a )
-{
-	return __vpermwi( a,  0x07 ); // 00000111b
-}
-FORCEINLINE fltx4 PermYZZW( const fltx4 & a )
-{
-	return __vpermwi( a,  0x6B ); // 01101011b
-}
-FORCEINLINE fltx4 Sum3SIMD( const fltx4 &a )
-{
-	return __vmsum3fp( a, Four_Ones );
-}
-FORCEINLINE fltx4 CombineSIMD( const fltx4 & x, const fltx4 & y, const fltx4 & z, const fltx4 & w )
-{
-	fltx4 r0 = __vmrghw(x, z);
-	fltx4 r1 = __vmrghw(y, w);
-
-	return __vmrghw(r0, r1);
-}
-
-// Assumes Y(xbox),Z(PC) are splatted
-FORCEINLINE fltx4 CombineXYZ_Special( const fltx4 & x, const fltx4 & y, const fltx4 & z )
-{
-	fltx4 r0 = __vmrghw(x, z);
-	return __vmrghw(r0, y);
-}
-
-#elif defined( _PS3 )
-
-const int32 ALIGN16 g_SIMD_YXZW[4] ALIGN16_POST = { 0x04050607, 0x00010203, 0x08090A0B, 0x0C0D0E0F };
-const int32 ALIGN16 g_SIMD_XZYW[4] ALIGN16_POST = { 0x00010203, 0x08090A0B, 0x04050607, 0x0C0D0E0F };
-const int32 ALIGN16 g_SIMD_ZYXW[4] ALIGN16_POST = { 0x08090A0B, 0x04050607, 0x00010203, 0x0C0D0E0F };
-const int32 ALIGN16 g_SIMD_XXYW[4] ALIGN16_POST = { 0x00010203, 0x00010203, 0x04050607, 0x0C0D0E0F };
-const int32 ALIGN16 g_SIMD_YZZW[4] ALIGN16_POST = { 0x04050607, 0x08090A0B, 0x08090A0B, 0x0C0D0E0F };
-
-FORCEINLINE fltx4 PermYXZW( const fltx4 & a )
-{
-	return vec_perm( a, a, (vec_uchar16)LoadAlignedIntSIMD( g_SIMD_YXZW ) );
-}
-FORCEINLINE fltx4 PermXZYW( const fltx4 & a )
-{
-	return vec_perm( a, a, (vec_uchar16)LoadAlignedIntSIMD( g_SIMD_XZYW ) );
-}
-FORCEINLINE fltx4 PermZYXW( const fltx4 & a )
-{
-	return vec_perm( a, a, (vec_uchar16)LoadAlignedIntSIMD( g_SIMD_ZYXW ) );
-}
-FORCEINLINE fltx4 PermXXYW( const fltx4 & a )
-{
-	return vec_perm( a, a, (vec_uchar16)LoadAlignedIntSIMD( g_SIMD_XXYW ) );
-}
-FORCEINLINE fltx4 PermYZZW( const fltx4 & a )
-{
-	return vec_perm( a, a, (vec_uchar16)LoadAlignedIntSIMD( g_SIMD_YZZW ) );
-}
-FORCEINLINE fltx4 Sum3SIMD( const fltx4 &a )
-{
-	return SplatXSIMD( a ) + SplatYSIMD( a ) + SplatZSIMD( a );
-}
-
-const int32 ALIGN16 g_SIMD_XAXA[4] ALIGN16_POST = { 0x00010203, 0x10111213, 0x00010203, 0x10111213 };
-const int32 ALIGN16 g_SIMD_XYAB[4] ALIGN16_POST = { 0x00010203, 0x10111213, 0x00010203, 0x10111213 };
-FORCEINLINE fltx4 CombineSIMD( const fltx4 & x, const fltx4 & y, const fltx4 & z, const fltx4 & w )
-{
-	//fltx4 xy = vec_perm(x, y, LoadAlignedIntSIMD( g_SIMD_XAXA ) );
-	//fltx4 zw = vec_perm(z, w, LoadAlignedIntSIMD( g_SIMD_XAXA ) );
-	fltx4 xzxz = vec_mergeh(x, z);
-	fltx4 ywyw = vec_mergeh(y, w);
-
-	return vec_mergeh(xzxz, ywyw);
-}
-
-// Assumes Y(xbox),Z(PC) are splatted
-FORCEINLINE fltx4 CombineXYZ_Special( const fltx4 & x, const fltx4 & y, const fltx4 & z )
-{
-	fltx4 r0 = vec_mergeh(x, z);
-	return vec_mergeh(r0, y);
-}
-#else
 FORCEINLINE fltx4 PermYXZW( const fltx4 & a )
 {
 	return _mm_shuffle_ps( a, a, _MM_SHUFFLE( 3, 2, 0, 1 ) );
@@ -139,7 +47,6 @@ FORCEINLINE fltx4 CombineXYZ_Special( const fltx4 & x, const fltx4 & y, const fl
 }
 
 
-#endif
 
 
 
@@ -702,18 +609,12 @@ fltx4 GetBoxBuoyancy3x4( const FourVectors &box_in )
 	fltx4 f4All_Z = Four_Zeros;//Sum3SIMD( f4All_Z_Cpos - f4All_Z_Cneg );
 
 	fltx4 f4All_W = Sum3SIMD( f4All_W_Cpos - f4All_W_Cneg );
-#if 1
 	// <Sergiy> again, to be brutally honest, I don't care about the actual lever of archimedes force.
 	// I can just as well use lever * displaced_volume to compute the torque, and it'll actually be more precise, although less understandable.
 	//
 
 	// this variant returns XYZ of the center of mass of displaced fluid multiplied by W, and W = volume of displaced fluid
 	fltx4 f4All = CombineSIMD( f4All_X, f4All_Y, f4All_Z, f4All_W ) + f4All_W * boxCenterXY;
-#else
-	// this variant returns XYZ of the center of mass of displaced fluid, and W = volume of displaced fluid
-	fltx4 rcpAllW = ReciprocalSIMD( f4All_W );
-	fltx4 f4All = SetWSIMD( CombineXYZ_Special( f4All_X, f4All_Y, f4All_Z ) * rcpAllW + boxCenterXY, f4All_W );
-#endif
 	return f4All;
 }
 
@@ -793,11 +694,7 @@ Vector4D GetPyramidBuoyancy( const Vector &pos, const Vector &a, const Vector &b
 	}
 
 	Vector4D result;
-#if 1
 	result.Init( vecCenter * flSign, flSum * flSign );
-#else
-	result.Init( flSum > 1e-8f ? vecCenter / flSum : Vector( 0, 0, 0 ), flSum * flSign );
-#endif
 	return result;
 }
 

@@ -45,9 +45,6 @@ void ClearCheatCommands( void )
 
 void ReadCheatCommandsFromFile( const char *pchFileName )
 {
-#if defined( _CERT )
-	return;
-#endif
 	KeyValues *pCheatCodeKeys = new KeyValues( "cheat_codes" );
 	if ( pCheatCodeKeys->LoadFromFile( g_pFullFileSystem, pchFileName, NULL ) )
 	{
@@ -97,9 +94,6 @@ void ResetKeyLogging()
 //---------------------------------------------------------
 void LogKeyPress( ButtonCode_t code )
 {
-#if defined( _CERT )
-	return;
-#endif
 	if ( s_nKeyLogIndex < CHEAT_CODE_MAX_LEN )
 	{
 		// Log isn't full, so add it in the next spot
@@ -123,9 +117,6 @@ void LogKeyPress( ButtonCode_t code )
 //---------------------------------------------------------
 void CheckCheatCodes()
 {
-#if defined( _CERT )
-	return;
-#endif
 	// Loop through all cheat codes
 	int iNumCheatCodes = s_CheatCodeCommands.Count();
 	for ( int iCheatCode = 0; iCheatCode < iNumCheatCodes; ++iCheatCode )

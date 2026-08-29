@@ -42,13 +42,7 @@
 #include "sound.h"
 #endif
 
-#if IsPlatformWindowsPC()
-#define WIN32_LEAN_AND_MEAN
-#undef INVALID_HANDLE_VALUE
-#include <winsock2.h> // gethostname
-#elif !IsGameConsole()
 #include <sys/unistd.h> // gethostname
-#endif
 
 #ifdef DEDICATED
 #include "server.h"
@@ -68,7 +62,7 @@ static ConVar demo_quitafterplayback( "demo_quitafterplayback", "0",
 #endif
 	"Quits game after demo playback." 
 );
-extern ConVar demo_debug;
+ConVar demo_debug( "demo_debug", "0", 0, "Demo debug info." );
 static ConVar demo_interpolateview( "demo_interpolateview", "1", 0, "Do view interpolation during dem playback." );
 static ConVar demo_pauseatservertick( "demo_pauseatservertick", "0", 0, "Pauses demo playback at server tick" );
 static ConVar demo_enabledemos( "demo_enabledemos", ENABLE_DEMOS_BY_DEFAULT ? "1" : "0", 0, "Enable recording demos (must be set true before loading a map)" );
@@ -644,7 +638,7 @@ void CDemoRecorder::StartupDemoFile( void )
 		return;
 
 	// open demo header file containing sigondata
-	FileHandle_t hDemoHeader = g_pFileSystem->OpenEx( DEMO_HEADER_FILE, "rb", IsGameConsole() ? FSOPEN_NEVERINPACK : 0 );
+	FileHandle_t hDemoHeader = g_pFileSystem->OpenEx( DEMO_HEADER_FILE, "rb", 0 );
 	if ( hDemoHeader == FILESYSTEM_INVALID_HANDLE )
 	{
 		ConMsg ("StartupDemoFile: couldn't open demo file header.\n");
@@ -1250,24 +1244,6 @@ void CDemoPlayer::SkipToTick( int tick, bool bRelative, bool bPause )
 		}
 		RestartPlayback();
 
-#if 0 // old way
-		// we have to reload the whole demo file
-		// we need to create a temp copy of the filename
-		char fileName[MAX_OSPATH];
-		V_strcpy_safe( fileName, m_DemoFile.m_szFileName );
-
-		StopPlayback();
-
-		// disconnect before reloading demo, to avoid sometimes loading into game instead of demo
-		GetBaseLocalClient().Disconnect(false);
-
-		// reload current demo file
-		StartPlayback( fileName, m_bTimeDemo, NULL );
-
-		// Make sure the proper skipping occurs after reload
-		if ( tick > 0 )
-			tick |= SKIP_TO_TICK_FLAG;
-#endif
 	}
 
 	if ( tick != GetPlaybackTick() )
@@ -2340,9 +2316,7 @@ void ComputeTimedemoResultsFilename( CFmtStr &fileName, CFmtStr &dateString )
 	// Compute the local computer's name
 	char host[256] = "";
 	DWORD length = sizeof( host ) - 1;
-#if !IsGameConsole()
 	if ( gethostname( host, length ) < 0 )
-#endif
 	{
 		// Use dateString as a fallback, if we can't get the host name
 		V_strncpy( host, dateString.Access(), length );
@@ -2351,7 +2325,7 @@ void ComputeTimedemoResultsFilename( CFmtStr &fileName, CFmtStr &dateString )
 
 	// Get the destination path (default to the gamedir)
 	CUtlString benchmarkPath = CommandLine()->ParmValue( "-benchmark_path" );
-	if ( benchmarkPath.Length() && !IsOSX() )  // Don't bother on Mac, we can't write to an smb share trivially
+	if ( benchmarkPath.Length() )  // Don't bother on Mac, we can't write to an smb share trivially
 	{
 		benchmarkPath.StripTrailingSlash();
 		V_FixSlashes( benchmarkPath.Get() );
@@ -4033,10 +4007,6 @@ CON_COMMAND( demo_listhighlights, "List all highlights data for the demo." )
 
 bool CDemoPlayer::OverrideView( democmdinfo_t& info )
 {
-#if !defined( LINUX )
-	if ( demoaction && demoaction->OverrideView( info, GetPlaybackTick() ) )
-		return true;
-#endif
 	return false;
 }
 

@@ -45,9 +45,7 @@ CSBombEventName BombEventNameFromString( const char* pEventName );
 
 int GetCSLevelIndex( const char *pLevelName );
 
-#if !defined( NO_STEAM )
 uint32 GetPlayerID( CCSPlayer *pPlayer );
-#endif
 
 typedef struct
 {
@@ -151,7 +149,6 @@ static uint32 PackAimAngleStat( CCSPlayer *pPlayer )
 //
 // OGS Gamestats
 //
-#if !defined( _GAMECONSOLE ) && !defined( NO_STEAM )
 struct SWeaponShotData : public BaseStatData 
 {
 	SWeaponShotData( CCSPlayer *pPlayer, CWeaponCSBase* pWeapon, uint8 subBullet, uint8 round, uint8 iRecoilIndex )
@@ -386,16 +383,13 @@ typedef CUtlVector< SWeaponMissData* > CSGOWeaponMissData;
 typedef CUtlVector< SWeaponShotData* > CSGOWeaponShotsData;
 typedef CUtlVector< SMarketPurchases* > CSGOMarketPurchaseData;
 
-#endif // OGS Data
 
 //=============================================================================
 //
 // CS Game Stats Class
 //
 class CCSGameStats : public CBaseGameStats, public CGameEventListener, public CAutoGameSystemPerFrame
-#if !defined( _GAMECONSOLE )
 , public IGameStatTracker
-#endif
 {
 public:
 
@@ -440,12 +434,10 @@ public:
 	void RecordWeaponHit( SWeaponHitData* pHitData );
 	
 	// Steamworks Gamestats
-#if !defined( _GAMECONSOLE )
 	void UploadRoundStats( void );
 	virtual void SubmitGameStats( KeyValues *pKV );
 	virtual StatContainerList_t* GetStatContainerList( void );
 	bool AnyOGSDataToSubmit( void );
-#endif
 
 	virtual void FireGameEvent( IGameEvent *event );
 
@@ -493,7 +485,6 @@ private:
 	WeaponStats					m_weaponStats[WEAPON_MAX][WeaponMode_MAX];
 
 	// Steamworks Gamestats
-#if !defined( _GAMECONSOLE ) && !defined( NO_STEAM )
 	CSGOWeaponHitData			m_WeaponHitData;
 	CSGOWeaponMissData			m_WeaponMissData;
 	CSGOWeaponShotsData			m_WeaponShotData;
@@ -501,7 +492,6 @@ private:
 
 	// A static list of all the stat containers, one for each data structure being tracked
 	static StatContainerList_t * s_StatLists;
-#endif	
 };
 
 extern CCSGameStats CCS_GameStats;

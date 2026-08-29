@@ -156,7 +156,6 @@ static inline CChangeFrameList * GetMergedChangeFrameList( PackedEntity* pPrevFr
 	{
 		CActiveHltvServerIterator hltv;
 
-#ifndef _XBOX	
 #if defined( REPLAY_ENABLED )
 		if ( hltv || (replay && replay->IsActive()) )
 #else
@@ -168,7 +167,6 @@ static inline CChangeFrameList * GetMergedChangeFrameList( PackedEntity* pPrevFr
 			pChangeFrame = pPrevFrame->GetChangeFrameList()->Copy();
 		}
 		else
-#endif
 		{
 			// Ok, now snag the changeframe from the previous frame and update the 'last frame changed'
 			// for the properties in the delta.

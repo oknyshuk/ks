@@ -12,12 +12,8 @@
 #include "tier2/tier2.h"
 #include "cmdlib.h"
 #include "scriplib.h"
-#if defined( _X360 )
-#endif
-#if defined(POSIX)
 #include "../../filesystem/linux_support.h"
 #include <sys/stat.h>
-#endif
 /*
 =============================================================================
 
@@ -1147,7 +1143,6 @@ char *CScriptLib::MakeTemporaryFilename( char const *pchModPath, char *pPath, in
 //-----------------------------------------------------------------------------
 void CScriptLib::DeleteTemporaryFiles( const char *pFileMask )
 {
-#if !defined( _X360 )
 	const char *pEnv = getenv( "temp" );
 	if ( !pEnv )
 	{
@@ -1168,9 +1163,6 @@ void CScriptLib::DeleteTemporaryFiles( const char *pFileMask )
 			_unlink( fileList[i].fileName.String() );
 		}
 	}
-#else
-	AssertOnce( !"CScriptLib::DeleteTemporaryFiles:  Not avail on 360\n" );
-#endif
 }
 
 //-----------------------------------------------------------------------------
@@ -1251,7 +1243,7 @@ int CScriptLib::GetFileList( const char* pDirPath, const char* pPattern, CUtlVec
 	while ( !_findnext( h, &findData ) );
 
 	_findclose( h );
-#elif defined(POSIX)
+#else
 	FIND_DATA findData;
 	Q_FixSlashes( fullPath );
 	void *h = FindFirstFile( fullPath, &findData );
@@ -1290,11 +1282,7 @@ int CScriptLib::GetFileList( const char* pDirPath, const char* pPattern, CUtlVec
 		fileList[j].fileName.Set( fileName );
 		struct stat statbuf;
 		if ( stat( fileName, &statbuf ) )
-#ifdef LINUX
 			fileList[j].timeWrite = statbuf.st_mtime;
-#else
-			fileList[j].timeWrite = statbuf.st_mtimespec.tv_sec;
-#endif
 		else
 			fileList[j].timeWrite = 0;
 	}
@@ -1302,8 +1290,6 @@ int CScriptLib::GetFileList( const char* pDirPath, const char* pPattern, CUtlVec
 
 	FindClose( h );
 
-#else
-#error
 #endif
 	
 

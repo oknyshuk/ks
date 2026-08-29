@@ -65,11 +65,9 @@ int Audio_EnumerateDevices( eSubSystems_t nSubsystem, audio_device_description_t
 		nDeviceCount = Audio_EnumerateDSoundDevices( pDeviceListOut, nListCount );
 		break;
 #endif
-#ifdef POSIX
 	case AUDIO_SUBSYSTEM_SDL:
 		nDeviceCount = Audio_EnumerateSDLDevices( pDeviceListOut, nListCount );
 		break;
-#endif
 	case AUDIO_SUBSYSTEM_NULL:
 		nDeviceCount = 1;
 		if ( nListCount > 0 )
@@ -234,7 +232,6 @@ IAudioDevice2 *CAudioDeviceList::CreateDevice( audio_device_init_params_t &param
 	}
 #endif
 
-#ifdef POSIX
 	nSubsystem = AUDIO_SUBSYSTEM_SDL;
 
 	if ( nSubsystem == AUDIO_SUBSYSTEM_SDL )
@@ -246,7 +243,6 @@ IAudioDevice2 *CAudioDeviceList::CreateDevice( audio_device_init_params_t &param
 		Warning("Failed to initialize SDL device!\n");
 		nSubsystem = AUDIO_SUBSYSTEM_NULL;
 	}
-#endif
 
 	// failed
 	return Audio_CreateNullDevice();

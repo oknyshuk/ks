@@ -524,7 +524,6 @@ def build(bld):
         "cstrike15/gameui/rungameengine.cpp",
         "cstrike15/gameui/uigamedata.cpp",
         "cstrike15/gameui/uigamedata_storage.cpp",
-        "cstrike15/gameui/uisystemmoduleloader.cpp",
         "../../common/language.cpp",
         "../../common/GameUI/ObjectList.cpp",
         "cstrike15/gameui/bonusmapsdatabase.cpp",

@@ -691,7 +691,6 @@ void AttackState::OnUpdate( CCSBot *me )
 		return;
 	}
 
-	if (true || gpGlobals->curtime > m_reacquireTimestamp)
 		me->FireWeaponAtEnemy();
 
 

@@ -15,9 +15,6 @@
 #include "c_world.h"
 #include "materialsystem/materialsystem_config.h"
 
-#if defined (_PS3 )
-#include <algorithm>
-#endif
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -33,7 +30,7 @@
 // apply the level setting and spews a warning. FCVAR_RELEASE keeps it visible
 // and settable from the console without persisting a stale archived value.
 ConVar cl_csm_enabled( "cl_csm_enabled", "1", FCVAR_RELEASE, "" );
-ConVar cl_csm_max_shadow_dist("cl_csm_max_shadow_dist", ( IsX360() ) ? "350" : IsPS3() ? "250" : "-1", FCVAR_DEVELOPMENTONLY, "" );
+ConVar cl_csm_max_shadow_dist("cl_csm_max_shadow_dist", "-1", FCVAR_DEVELOPMENTONLY, "" );
 
 ConVar cl_csm_capture_state( "cl_csm_capture_state", "0", FCVAR_DEVELOPMENTONLY, "" );
 ConVar cl_csm_clear_captured_state( "cl_csm_clear_captured_state", "0", FCVAR_DEVELOPMENTONLY, "" );
@@ -64,31 +61,31 @@ ConVar cl_csm_shadows( "cl_csm_shadows", "1", FCVAR_DEVELOPMENTONLY );
 ConVar cl_csm_entity_shadows( "cl_csm_entity_shadows", "1", FCVAR_DEVELOPMENTONLY );
 ConVar cl_csm_static_prop_shadows( "cl_csm_static_prop_shadows", "1", FCVAR_DEVELOPMENTONLY );
 ConVar cl_csm_world_shadows( "cl_csm_world_shadows", "1", FCVAR_DEVELOPMENTONLY );
-ConVar cl_csm_world_shadows_in_viewmodelcascade( "cl_csm_world_shadows_in_viewmodelcascade", ( IsGameConsole() || IsPlatformOSX() ) ? "0" : "1", FCVAR_DEVELOPMENTONLY );
+ConVar cl_csm_world_shadows_in_viewmodelcascade( "cl_csm_world_shadows_in_viewmodelcascade", "1", FCVAR_DEVELOPMENTONLY );
 ConVar cl_csm_sprite_shadows( "cl_csm_sprite_shadows", "1", FCVAR_DEVELOPMENTONLY );
 ConVar cl_csm_rope_shadows( "cl_csm_rope_shadows", "1", FCVAR_DEVELOPMENTONLY );
-ConVar cl_csm_translucent_shadows( "cl_csm_translucent_shadows", ( IsGameConsole() || IsPlatformOSX()  )? "0" : "1", FCVAR_DEVELOPMENTONLY );
+ConVar cl_csm_translucent_shadows( "cl_csm_translucent_shadows", "1", FCVAR_DEVELOPMENTONLY );
 ConVar cl_csm_translucent_shadows_using_opaque_path( "cl_csm_translucent_shadows_using_opaque_path", "1", FCVAR_DEVELOPMENTONLY );
 ConVar cl_csm_ignore_disable_shadow_depth_rendering( "cl_csm_ignore_disable_shadow_depth_rendering", "0", FCVAR_DEVELOPMENTONLY );
 ConVar cl_csm_optimize_static_props( "cl_csm_optimize_static_props", "1", FCVAR_DEVELOPMENTONLY, "Enable/Disable optimal static prop rendering into CSM's (cull static props that make no visual contribution to shadows)" );
 
 ConVar cl_csm_viewmodel_shadows( "cl_csm_viewmodel_shadows", "1", FCVAR_DEVELOPMENTONLY );
 ConVar cl_csm_viewmodel_max_shadow_dist( "cl_csm_viewmodel_max_shadow_dist", "21", FCVAR_DEVELOPMENTONLY );
-ConVar cl_csm_viewmodel_farz( "cl_csm_viewmodel_farz", ( IsGameConsole() || IsPlatformOSX() ) ? "15" : "30", FCVAR_DEVELOPMENTONLY );
+ConVar cl_csm_viewmodel_farz( "cl_csm_viewmodel_farz", "30", FCVAR_DEVELOPMENTONLY );
 ConVar cl_csm_viewmodel_max_visible_dist( "cl_csm_viewmodel_max_visible_dist", "1000", FCVAR_DEVELOPMENTONLY );
 
-ConVar cl_csm_slopescaledepthbias_c0( "cl_csm_slopescaledepthbias_c0", ( IsGameConsole() || IsPlatformOSX() ) ? "2" : "1.3", FCVAR_DEVELOPMENTONLY );
-ConVar cl_csm_slopescaledepthbias_c1( "cl_csm_slopescaledepthbias_c1", IsPlatformOSX() ? "4" : "2", FCVAR_DEVELOPMENTONLY );
-ConVar cl_csm_slopescaledepthbias_c2( "cl_csm_slopescaledepthbias_c2", IsPlatformOSX() ? "4" : "2", FCVAR_DEVELOPMENTONLY );
+ConVar cl_csm_slopescaledepthbias_c0( "cl_csm_slopescaledepthbias_c0", "1.3", FCVAR_DEVELOPMENTONLY );
+ConVar cl_csm_slopescaledepthbias_c1( "cl_csm_slopescaledepthbias_c1", "2", FCVAR_DEVELOPMENTONLY );
+ConVar cl_csm_slopescaledepthbias_c2( "cl_csm_slopescaledepthbias_c2", "2", FCVAR_DEVELOPMENTONLY );
 ConVar cl_csm_slopescaledepthbias_c3( "cl_csm_slopescaledepthbias_c3", "2", FCVAR_DEVELOPMENTONLY );
 
-ConVar cl_csm_depthbias_c0(	"cl_csm_depthbias_c0", ( IsGameConsole() || IsPlatformOSX() ) ? ".000005" : ".000025", FCVAR_DEVELOPMENTONLY );
-ConVar cl_csm_depthbias_c1(	"cl_csm_depthbias_c1", IsPlatformOSX() ? "2" : ".000025", FCVAR_DEVELOPMENTONLY );
-ConVar cl_csm_depthbias_c2(	"cl_csm_depthbias_c2", IsPlatformOSX() ? "2" : ".000025", FCVAR_DEVELOPMENTONLY );
+ConVar cl_csm_depthbias_c0(	"cl_csm_depthbias_c0", ".000025", FCVAR_DEVELOPMENTONLY );
+ConVar cl_csm_depthbias_c1(	"cl_csm_depthbias_c1", ".000025", FCVAR_DEVELOPMENTONLY );
+ConVar cl_csm_depthbias_c2(	"cl_csm_depthbias_c2", ".000025", FCVAR_DEVELOPMENTONLY );
 ConVar cl_csm_depthbias_c3(	"cl_csm_depthbias_c3", ".000025", FCVAR_DEVELOPMENTONLY );
 
-ConVar cl_csm_viewmodel_slopescaledepthbias( "cl_csm_viewmodel_slopescaledepthbias", ( IsGameConsole() || IsPlatformOSX() ) ? "2" : "1.5", FCVAR_DEVELOPMENTONLY );
-ConVar cl_csm_viewmodel_depthbias( "cl_csm_viewmodel_depthbias", ( IsGameConsole() || IsPlatformOSX() ) ? ".000005" : ".00005", FCVAR_DEVELOPMENTONLY );
+ConVar cl_csm_viewmodel_slopescaledepthbias( "cl_csm_viewmodel_slopescaledepthbias", "1.5", FCVAR_DEVELOPMENTONLY );
+ConVar cl_csm_viewmodel_depthbias( "cl_csm_viewmodel_depthbias", ".00005", FCVAR_DEVELOPMENTONLY );
 
 ConVar cl_csm_hack_proj_matrices_for_cull_debugging( "cl_csm_hack_proj_matrices_for_cull_debugging", "0", FCVAR_DEVELOPMENTONLY );
 
@@ -220,12 +217,6 @@ static void Add3DLineOverlay( const Vector &s, const Vector &e, const Vector &co
 	NDebugOverlay::Line( s, e, (int)(color.x * 255.0f), (int)(color.y * 255.0f), (int)(color.z * 255.0f), !bDepthTest, NDEBUG_PERSIST_TILL_NEXT_SERVER );
 }
 
-#if defined(_X360)
-template <class T> void _swap ( T& a, T& b )
-{
-	T c(a); a=b; b=c;
-}
-#endif
 
 static void DebugRenderConvexPolyhedron( const Vector4D *pPlanes, uint nNumPlanes, const Vector &color, bool zTest )
 {
@@ -305,11 +296,7 @@ static void DebugRenderConvexPolyhedron( const Vector4D *pPlanes, uint nNumPlane
 			int nClipped = ClipPolyToPlane_Precise( pSrcVerts, nVerts, pDstVerts, vClipNormal, flClipDist, .000000125f );
 			
 			nVerts = nClipped;
-#if defined(_X360)
-			_swap( pSrcVerts, pDstVerts );
-#else
 			std::swap( pSrcVerts, pDstVerts );
-#endif
 			if ( nVerts < 3 )
 				break;
 		}
@@ -633,16 +620,10 @@ void CDebugPrimRenderer2D::AddScreenspaceWireframeFrustum2D( const VMatrix &xfor
 
 // TODO: Break CCascadeLightManager out to a separate file?
 
-#if defined( _X360 )
-	#define CSM_DEFAULT_DEPTH_TEXTURE_RESOLUTION 704*2
-#elif defined( _PS3 )
-	#define CSM_DEFAULT_DEPTH_TEXTURE_RESOLUTION 640*2
-#else
 	// Important note: On PC, this depth texture resolution (or the inverse of it) is effectively hardcoded into the filter kernels sample offsets. Don't change it unless you fix this dependency.
 	#define CSM_DEFAULT_DEPTH_TEXTURE_RESOLUTION 1024*2
 	#define CSM_FALLBACK_DEPTH_TEXTURE_RESOLUTION 768*2
 	#define CSM_FALLBACK2_DEPTH_TEXTURE_RESOLUTION 640*2
-#endif
 
 CCascadeLightManager::CCascadeLightManager() :
 	m_bRenderTargetsAllocated( false ),
@@ -662,65 +643,6 @@ CCascadeLightManager::~CCascadeLightManager()
 {
 }
 
-#ifdef OSX
-
-static ConVar mat_osx_force_csm_enabled( "mat_osx_force_csm_enabled", "0", FCVAR_RELEASE );
-
-static bool OSX_HardwareGoodEnoughForCSMs()
-{
-	if ( IsPlatformOSX() )
-	{
-		// Historically, CS:GO did not have CSMs or multicore rendering on Mac. Both features are
-		// available on Mac post the Sep 2014 Linux port integration, but multicore is not enough
-		// to absorb the perf hit of CSMs on low end Macs. This function identifies the Macs on
-		// which we do not want to enable CSMs, those that satisfy the following properties:
-		// 1. lowend GPU identified in CShaderDeviceMgrBase::ReadHardwareCaps by setting 
-		//    the convar mat_osx_csm_enabled to false;
-		// 2. CPU has four or less logical processors (and less than 2.6GHz recorded clock speed)
-
-		if ( mat_osx_force_csm_enabled.GetBool() )
-		{
-			return true;
-		}
-
-		bool bGoodEnough = true;
-
-		// Check GPU
-		static ConVarRef mat_osx_csm_enabled( "mat_osx_csm_enabled" );
-		if ( !mat_osx_csm_enabled.GetBool() )
-		{
-			// GPU not good enough
-			//printf("CSM: GPU matched string \"%s\", not good enough\n");
-			bGoodEnough = false;
-		}
-
-		// Check CPU
-		CPUInformation const& cpuInfo = GetCPUInformation();
-
-		//printf( "CSM: CPU has %d logical processors\n", cpuInfo.m_nLogicalProcessors );
-
-		if ( cpuInfo.m_nLogicalProcessors <= 4 )
-		{
-			// allow if clock speed is >= 2.6GHz, observing the list of Mac CPU's since Jan '08, this will now enable CSM's
-			// on most Mac Pro's and iMacs (those that have the ability for GPU's to pass the test above, but would have been excluded due to logical processor count).
-			if ( ( (double)cpuInfo.m_Speed / 1000000000.0 ) < 2.6 )
-			{
-				//printf("CSM: CPU cores not enough\n");
-				bGoodEnough = false;
-			}
-		}
-
-		return bGoodEnough;
-	}
-	else
-	{
-		// Platform other than OSX
-		Assert( 0 );
-		return true;
-	}
-}
-
-#endif
 
 bool CCascadeLightManager::InitRenderTargets()
 {
@@ -729,9 +651,6 @@ bool CCascadeLightManager::InitRenderTargets()
 	CsmDbgMsg( "C_CascadeLight::InitRenderTargets\n" );
 
 	if (
-#ifdef OSX
-		!OSX_HardwareGoodEnoughForCSMs() ||
-#endif
 		!cl_csm_enabled.GetBool() ||
 		!g_pMaterialSystemHardwareConfig->SupportsCascadedShadowMapping() ||
 		!g_pMaterialSystemHardwareConfig->SupportsShadowDepthTextures()
@@ -749,9 +668,7 @@ bool CCascadeLightManager::InitRenderTargets()
 	m_bRenderTargetsAllocated = true;
 			
 	ImageFormat dstFormat  = g_pMaterialSystemHardwareConfig->GetShadowDepthTextureFormat();	// Vendor-dependent depth texture format
-#ifndef _X360
 	ImageFormat nullFormat = g_pMaterialSystemHardwareConfig->GetNullTextureFormat();			// Vendor-dependent null texture format (takes as little memory as possible)
-#endif
 		
 	RenderTargetSizeMode_t sizeMode = RT_SIZE_OFFSCREEN;
 	
@@ -761,17 +678,14 @@ bool CCascadeLightManager::InitRenderTargets()
 
 	m_nCurRenderTargetQualityMode = GetCSMQualityMode();
 
-	if( !( IsGameConsole() ) )
+	m_nDepthTextureResolution = CSM_DEFAULT_DEPTH_TEXTURE_RESOLUTION;
+	if ( GetCSMQualityMode() == CSMQUALITY_VERY_LOW )
 	{
-		m_nDepthTextureResolution = CSM_DEFAULT_DEPTH_TEXTURE_RESOLUTION;
-		if ( GetCSMQualityMode() == CSMQUALITY_VERY_LOW )
-		{
-			m_nDepthTextureResolution = CSM_FALLBACK2_DEPTH_TEXTURE_RESOLUTION;
-		}
-		else if ( GetCSMQualityMode() == CSMQUALITY_LOW )
-		{
-			m_nDepthTextureResolution = CSM_FALLBACK_DEPTH_TEXTURE_RESOLUTION;
-		}
+		m_nDepthTextureResolution = CSM_FALLBACK2_DEPTH_TEXTURE_RESOLUTION;
+	}
+	else if ( GetCSMQualityMode() == CSMQUALITY_LOW )
+	{
+		m_nDepthTextureResolution = CSM_FALLBACK_DEPTH_TEXTURE_RESOLUTION;
 	}
 	
 	m_curState.m_CSMParallelSplit.Init( m_nDepthTextureResolution / 2, MAX_SUN_LIGHT_SHADOW_CASCADE_SIZE );
@@ -779,33 +693,12 @@ bool CCascadeLightManager::InitRenderTargets()
 
 	materials->BeginRenderTargetAllocation();
 	
-#if defined(_PS3)
-	
-	m_DummyColorTexture.InitRenderTarget( 8, 8, sizeMode, nullFormat, 
- 										  MATERIAL_RT_DEPTH_NONE, false, "_rt_CSMDummy" );
-	m_ShadowDepthTexture.InitRenderTarget( m_nDepthTextureResolution, m_nDepthTextureResolution, sizeMode, dstFormat, 
-											MATERIAL_RT_DEPTH_NONE, false, "_rt_CSMShadowDepth" );
-
-#elif defined(_X360)
-
-	// For the 360, we'll be rendering depth directly into the dummy depth and Resolve()ing to the depth texture.
-	// only need the dummy surface, don't care about color results
-	m_DummyColorTexture.InitRenderTargetTexture( m_nDepthTextureResolution/2, m_nDepthTextureResolution/2, RT_SIZE_OFFSCREEN, IMAGE_FORMAT_BGR565, //IMAGE_FORMAT_BGRA8888, 
-												 MATERIAL_RT_DEPTH_SHARED, false, "_rt_CSMShadowDummy", CREATERENDERTARGETFLAGS_ALIASCOLORANDDEPTHSURFACES );
-	m_DummyColorTexture.InitRenderTargetSurface( m_nDepthTextureResolution/2, m_nDepthTextureResolution/2, IMAGE_FORMAT_BGR565, false );
-
-	m_ShadowDepthTexture.InitRenderTargetTexture( m_nDepthTextureResolution, m_nDepthTextureResolution, RT_SIZE_OFFSCREEN, 
-												  dstFormat, MATERIAL_RT_DEPTH_NONE, false, "_rt_CSMShadowDepth" );
-	m_ShadowDepthTexture.InitRenderTargetSurface( 1, 1, dstFormat, false );
-
-#else
 
 	m_DummyColorTexture.InitRenderTarget( m_nDepthTextureResolution, m_nDepthTextureResolution, sizeMode, nullFormat, 
 		MATERIAL_RT_DEPTH_NONE, false, "_rt_CSMShadowDummy" );
 	m_ShadowDepthTexture.InitRenderTarget( m_nDepthTextureResolution, m_nDepthTextureResolution, sizeMode, dstFormat, 
 		MATERIAL_RT_DEPTH_NONE, false, "_rt_CSMShadowDepth" );
 
-#endif
 
 	materials->EndRenderTargetAllocation();
 
@@ -1095,13 +988,8 @@ void CCascadeLightManager::Draw2DDebugInfo()
 	int nFirstCascadeIndex = 0;
 	int nLastCascadeIndex = (int)lightState.m_nShadowCascadeSize - 1;
 	
-#if defined( _GAMECONSOLE )	
-	const int nShadowBufferDebugVisWidth  = 256;
-	const int nShadowBufferDebugVisHeight = 256;
-#else
 	const int nShadowBufferDebugVisWidth  = 512;
 	const int nShadowBufferDebugVisHeight = 512;
-#endif
 
 	for ( int nCascadeIndex = nFirstCascadeIndex; nCascadeIndex <= nLastCascadeIndex; ++nCascadeIndex )
 	{
@@ -1112,13 +1000,8 @@ void CCascadeLightManager::Draw2DDebugInfo()
 		
 		Rect_t destRect;
 
-#if defined( _GAMECONSOLE )		
-		destRect.x = 64 + ( nShadowBufferDebugVisWidth + 75 ) * nPlacementX;
-		destRect.y = 64 + ( nShadowBufferDebugVisHeight + 75 ) * nPlacementY;
-#else
 		destRect.x = 16 + ( nShadowBufferDebugVisWidth + 75 ) * nPlacementX;
 		destRect.y = 16 + ( nShadowBufferDebugVisHeight + 75 ) * nPlacementY;
-#endif		
 		destRect.width = nShadowBufferDebugVisWidth;
 		destRect.height = nShadowBufferDebugVisHeight;
 
@@ -1303,19 +1186,8 @@ void CCascadeLightManager::RenderViews( CCascadeLightManager::CFullCSMState &sta
 {
 	SunLightState_t &lightState = state.m_CSMParallelSplit.GetLightState();
 	
-#if 0
-	VMatrix computedWorldToView;
-	VMatrix computedViewToProj;
-	VMatrix computedWorldToProj;
-#endif
 
 	uint nCascadeIndex = 0;
-    if( IsGameConsole() )
-	{
-		// don't use cascade 0 for console. TODO - at some point we should make better use of texture space, right now we waste 25%
-		nCascadeIndex = bIncludeViewModels ? 0 : 1;
-	}
-	else
 	{
 		if ( ( !bIncludeViewModels ) && ( GetCSMQualityMode() <= CSMQUALITY_LOW ) )
 			nCascadeIndex = 1;
@@ -1333,14 +1205,6 @@ void CCascadeLightManager::RenderViews( CCascadeLightManager::CFullCSMState &sta
 		shadowView.height = lightState.m_CascadeViewports[nCascadeIndex].height;
 		shadowView.m_bRenderToSubrectOfLargerScreen = true;
 
-#if defined(_X360)
-		// render into top left viewport
-		// resolve to appropriate quadrant of final texture
-		shadowView.xCsmDstOffset = shadowView.x;
-		shadowView.yCsmDstOffset = shadowView.y;
-		shadowView.x = 0;
-		shadowView.y = 0;
-#endif
 
 		const CFrustum &cascadeFrustum = lightState.m_CascadeFrustums[nCascadeIndex];
 
@@ -1379,10 +1243,6 @@ void CCascadeLightManager::RenderViews( CCascadeLightManager::CFullCSMState &sta
 
 		// Set depth bias factors specific to this cascade
 		
-#if 0		
-		float flShadowSlopeScaleDepthBias = g_pMaterialSystemHardwareConfig->GetShadowSlopeScaleDepthBias();
-		float flShadowDepthBias = g_pMaterialSystemHardwareConfig->GetShadowDepthBias();
-#else
 		static ConVar *s_csm_slopescales[4] = { &cl_csm_slopescaledepthbias_c0, &cl_csm_slopescaledepthbias_c1, &cl_csm_slopescaledepthbias_c2, &cl_csm_slopescaledepthbias_c3 };
 		static ConVar *s_csm_depthbias[4] = { &cl_csm_depthbias_c0, &cl_csm_depthbias_c1, &cl_csm_depthbias_c2, &cl_csm_depthbias_c3 };
 				
@@ -1394,7 +1254,6 @@ void CCascadeLightManager::RenderViews( CCascadeLightManager::CFullCSMState &sta
 			flShadowSlopeScaleDepthBias = cl_csm_viewmodel_slopescaledepthbias.GetFloat();
 			flShadowDepthBias = cl_csm_viewmodel_depthbias.GetFloat();
 		}
-#endif
 
 		pRenderContext->PerpareForCascadeDraw( nCascadeIndex, flShadowSlopeScaleDepthBias, flShadowDepthBias );
 		pRenderContext->SetShadowDepthBiasFactors( flShadowSlopeScaleDepthBias, flShadowDepthBias );
@@ -1415,47 +1274,6 @@ void CCascadeLightManager::RenderViews( CCascadeLightManager::CFullCSMState &sta
 
 		shadowView.m_pCSMVolumeCuller = &volumeCuller;
 
-#if 0
-		// Purely for debugging.
-		shadowView.m_bCustomViewMatrix = false;
-		shadowView.m_bCustomProjMatrix = false;
-
-		shadowView.ComputeViewMatrices( &computedWorldToView, &computedViewToProj, &computedWorldToProj );
-
-		if ( cl_csm_use_forced_view_matrices.GetBool() )
-		{
-			shadowView.m_bCustomViewMatrix = true;
-			shadowView.m_bCustomProjMatrix = true;
-		}
-
-		Vector currentViewForward, currentViewRight, currentViewUp;
-		AngleVectors( shadowView.angles, &currentViewForward, &currentViewRight, &currentViewUp );
-
-		// Now compute the culling planes the same way as CRender::OrthoExtractFrustumPlanes() does, so they can be manually 
-		// compared against the planes the CSM manager computed. The game makes several assumptions about view and ortho projection space.
-		VPlane frustumPlanes[6];
-
-		float orgOffset = DotProduct(shadowView.origin, currentViewForward);
-		frustumPlanes[FRUSTUM_FARZ].m_Normal = -currentViewForward;
-		frustumPlanes[FRUSTUM_FARZ].m_Dist = -shadowView.zFar - orgOffset;
-
-		frustumPlanes[FRUSTUM_NEARZ].m_Normal = currentViewForward;
-		frustumPlanes[FRUSTUM_NEARZ].m_Dist = shadowView.zNear + orgOffset;
-
-		orgOffset = DotProduct(shadowView.origin, currentViewRight);
-		frustumPlanes[FRUSTUM_LEFT].m_Normal = currentViewRight;
-		frustumPlanes[FRUSTUM_LEFT].m_Dist = shadowView.m_OrthoLeft + orgOffset;
-
-		frustumPlanes[FRUSTUM_RIGHT].m_Normal = -currentViewRight;
-		frustumPlanes[FRUSTUM_RIGHT].m_Dist = -shadowView.m_OrthoRight - orgOffset;
-
-		orgOffset = DotProduct(shadowView.origin, currentViewUp);
-		frustumPlanes[FRUSTUM_TOP].m_Normal = currentViewUp;
-		frustumPlanes[FRUSTUM_TOP].m_Dist = shadowView.m_OrthoTop + orgOffset;
-
-		frustumPlanes[FRUSTUM_BOTTOM].m_Normal = -currentViewUp;
-		frustumPlanes[FRUSTUM_BOTTOM].m_Dist = -shadowView.m_OrthoBottom - orgOffset;
-#endif
 		
 		// Render to the shadow depth texture with appropriate view
 		
@@ -1522,9 +1340,6 @@ void CCascadeLightManager::ComputeShadowDepthTextures( const CViewSetup &viewSet
 	m_bCSMIsActive = false;
 	
 	if (
-#ifdef OSX
-		!OSX_HardwareGoodEnoughForCSMs() ||
-#endif
 		!cl_csm_enabled.GetBool() ||
 		!g_pMaterialSystemHardwareConfig->SupportsCascadedShadowMapping() ||
 		!g_pMaterialSystemHardwareConfig->SupportsShadowDepthTextures()
@@ -1579,32 +1394,12 @@ void CCascadeLightManager::ComputeShadowDepthTextures( const CViewSetup &viewSet
 		if ( flMaxShadowDist <= 0.0f )
 		{
 			flMaxShadowDist = C_CascadeLight::Get()->GetMaxShadowDist();
-#ifdef OSX
-			if ( GetCSMQualityMode() == CSMQUALITY_HIGH )
-			{
-				// At the highest CSM quality level boost the max shadow distance (match Windows on high end Macs)
-				// This seems OK from a CS fairness perspective (it can be argued either way whether this gives a player an advantage, or disadvantage).
-				flMaxShadowDist *= 1.4f;
-			}
-            else if ( GetCSMQualityMode() == CSMQUALITY_LOW )
-            {
-                // match PS3 distance for lowest performing Macs
-				flMaxShadowDist *= 0.8f;
-            }
-            else if ( GetCSMQualityMode() == CSMQUALITY_VERY_LOW )
-            {
-                // match PS3 distance for lowest performing Macs
-				flMaxShadowDist *= 0.6f;
-            }
-#else
-			if ( ( !IsGameConsole() ) &&
-                 ( GetCSMQualityMode() == CSMQUALITY_HIGH ) )
+			if (                  ( GetCSMQualityMode() == CSMQUALITY_HIGH ) )
 			{
 				// At the highest CSM quality level boost the max shadow distance.
 				// This seems OK from a CS fairness perspective (it can be argued either way whether this gives a player an advantage, or disadvantage).
 				flMaxShadowDist *= 1.4f;
 			}
-#endif
 		}
 		if ( flMaxShadowDist <= 0.0f )
 			flMaxShadowDist = 400.0f;
@@ -1637,8 +1432,7 @@ void CCascadeLightManager::ComputeShadowDepthTextures( const CViewSetup &viewSet
 			RenderViews( GetActiveState(), false );
 			
 			bool bRenderViewModelCascade = cl_csm_viewmodel_shadows.GetBool();
-			if ( ( !IsGameConsole() ) &&
-				 ( GetCSMQualityMode() == CSMQUALITY_VERY_LOW ) )
+			if ( 				 ( GetCSMQualityMode() == CSMQUALITY_VERY_LOW ) )
 			{
 				bRenderViewModelCascade = false;
 			}
@@ -1684,8 +1478,7 @@ void CCascadeLightManager::BeginViewModelRendering()
 	if ( !IsEnabledAndActive() || !m_bStateIsValid || !cl_csm_viewmodel_shadows.GetBool() )
 		return;
 
-	if ( ( !IsGameConsole() ) &&
-		 ( GetCSMQualityMode() == CSMQUALITY_VERY_LOW ) )
+	if ( 		 ( GetCSMQualityMode() == CSMQUALITY_VERY_LOW ) )
 		return;
 			
 	m_bCSMIsActive = true;
@@ -1704,8 +1497,7 @@ void CCascadeLightManager::EndViewModelRendering()
 	if ( !IsEnabledAndActive() || !m_bStateIsValid || !cl_csm_viewmodel_shadows.GetBool() )
 		return;
 
-	if ( ( !IsGameConsole() ) &&
-		 ( GetCSMQualityMode() == CSMQUALITY_VERY_LOW ) )
+	if ( 		 ( GetCSMQualityMode() == CSMQUALITY_VERY_LOW ) )
 		return;
 
 	if ( m_bCSMIsActive )
@@ -1769,8 +1561,6 @@ void CC_CSM_Status( const CCommand& args )
 
 CSMQualityMode_t CCascadeLightManager::GetCSMQualityMode()
 {
-	if ( IsGameConsole() )
-		return CSMQUALITY_VERY_LOW;
 
 	if ( !g_pMaterialSystemHardwareConfig->SupportsBilinearPCFSampling() )
 	{

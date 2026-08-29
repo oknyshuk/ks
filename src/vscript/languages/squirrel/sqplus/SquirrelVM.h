@@ -45,11 +45,6 @@ public:
 	static const SquirrelObject &GetRootTable();
 	static HSQUIRRELVM GetVMPtr() { return _VM; }
 
-#if 0
-  static void SetVMPtr(HSQUIRRELVM v) {
-    _VM = v;
-  } // setVMPtr
-#endif
 
   static void GetVMSys(SquirrelVMSys & vmSys) {
     vmSys._VM   = _VM;

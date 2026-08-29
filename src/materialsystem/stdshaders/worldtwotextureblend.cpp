@@ -10,10 +10,8 @@
 
 #include "convar.h"
 
-#if !defined( _X360 ) && !defined( _PS3 )
 #include "lightmappedgeneric_vs30.inc"
 #include "worldtwotextureblend_ps30.inc"
-#endif
 
 #include "lightmappedgeneric_vs20.inc"
 #include "worldtwotextureblend_ps20.inc"
@@ -26,11 +24,7 @@
 
 
 
-#if defined( CSTRIKE15 ) && defined( _X360 )
-static ConVar r_shader_srgbread( "r_shader_srgbread", "1", 0, "1 = use shader srgb texture reads, 0 = use HW" );
-#else
 static ConVar r_shader_srgbread( "r_shader_srgbread", "0", 0, "1 = use shader srgb texture reads, 0 = use HW" );
-#endif
 
 
 // FIXME: Need to make a dx9 version so that "CENTROID" works.
@@ -179,9 +173,9 @@ END_SHADER_PARAMS
 		bool bSeamlessMapping = params[SEAMLESS_SCALE]->GetFloatValue() != 0.0;
 
 #if defined( CSTRIKE15 )
-		bool bShaderSrgbRead = ( IsX360() && r_shader_srgbread.GetBool() );
+		bool bShaderSrgbRead = ( false && r_shader_srgbread.GetBool() );
 #else
-		bool bShaderSrgbRead = ( IsX360() && IS_PARAM_DEFINED( SHADERSRGBREAD360 ) && params[SHADERSRGBREAD360]->GetIntValue() );
+		bool bShaderSrgbRead = ( false && IS_PARAM_DEFINED( SHADERSRGBREAD360 ) && params[SHADERSRGBREAD360]->GetIntValue() );
 #endif
 
 		SHADOW_STATE
@@ -194,7 +188,7 @@ END_SHADER_PARAMS
 			{
 				if ( g_pHardwareConfig->SupportsPixelShaders_2_b() )
 				{
-					nShadowFilterMode = g_pHardwareConfig->GetShadowFilterMode( false /* bForceLowQuality */, g_pHardwareConfig->HasFastVertexTextures() && !IsPlatformX360() && !IsPlatformPS3() /* bPS30 */ );	// Based upon vendor and device dependent formats
+					nShadowFilterMode = g_pHardwareConfig->GetShadowFilterMode( false /* bForceLowQuality */, g_pHardwareConfig->HasFastVertexTextures() && !false && !false /* bPS30 */ );	// Based upon vendor and device dependent formats
 				}
 
 				SetAdditiveBlendingShadowState( BASETEXTURE, true );
@@ -259,11 +253,7 @@ END_SHADER_PARAMS
 			pShaderShadow->EnableSRGBWrite( true );
 
 			int nLightingPreviewMode = 0;
-#if 0
-			int nLightingPreviewMode = IS_FLAG2_SET( MATERIAL_VAR2_USE_GBUFFER0 ) + 2 * IS_FLAG2_SET( MATERIAL_VAR2_USE_GBUFFER1 );
-#endif
 
-#if !defined( _X360 ) && !defined( _PS3 )
 			if ( g_pHardwareConfig->HasFastVertexTextures() )
 			{
 				DECLARE_STATIC_VERTEX_SHADER( lightmappedgeneric_vs30 );
@@ -283,7 +273,6 @@ END_SHADER_PARAMS
 				SET_STATIC_VERTEX_SHADER( lightmappedgeneric_vs30 );
 			}
 			else
-#endif
 			{
 				DECLARE_STATIC_VERTEX_SHADER( lightmappedgeneric_vs20 );
 				SET_STATIC_VERTEX_SHADER_COMBO( ENVMAP_MASK,  false );
@@ -299,13 +288,9 @@ END_SHADER_PARAMS
 				SET_STATIC_VERTEX_SHADER_COMBO( LIGHTING_PREVIEW, nLightingPreviewMode != 0 );
 				SET_STATIC_VERTEX_SHADER_COMBO( PAINT, 0 );
 				SET_STATIC_VERTEX_SHADER_COMBO( ADDBUMPMAPS, 0 );
-	#if defined( _X360 ) || defined( _PS3 )
-				SET_STATIC_VERTEX_SHADER_COMBO( FLASHLIGHT, hasFlashlight );
-	#endif
 				SET_STATIC_VERTEX_SHADER( lightmappedgeneric_vs20 );
 			}
 
-#if !defined( _X360 ) && !defined( _PS3 )
 			if ( g_pHardwareConfig->HasFastVertexTextures() )
 			{
 				DECLARE_STATIC_PIXEL_SHADER( worldtwotextureblend_ps30 );
@@ -321,7 +306,6 @@ END_SHADER_PARAMS
 				SET_STATIC_PIXEL_SHADER( worldtwotextureblend_ps30 );
 			}
 			else
-#endif
 			if ( g_pHardwareConfig->SupportsPixelShaders_2_b() )
 			{
 				DECLARE_STATIC_PIXEL_SHADER( worldtwotextureblend_ps20b );
@@ -452,23 +436,19 @@ END_SHADER_PARAMS
 
 			MaterialFogMode_t fogType = ShaderApiFast( pShaderAPI )->GetSceneFogMode();
 
-			if ( IsPC() )
+			bool bWorldNormal = ShaderApiFast( pShaderAPI )->GetIntRenderingParameter( INT_RENDERPARM_ENABLE_FIXED_LIGHTING ) == ENABLE_FIXED_LIGHTING_OUTPUTNORMAL_AND_DEPTH;
+			if ( bWorldNormal )
 			{
-				bool bWorldNormal = ShaderApiFast( pShaderAPI )->GetIntRenderingParameter( INT_RENDERPARM_ENABLE_FIXED_LIGHTING ) == ENABLE_FIXED_LIGHTING_OUTPUTNORMAL_AND_DEPTH;
-				if ( bWorldNormal )
-				{
-					float vEyeDir[4];
-					ShaderApiFast( pShaderAPI )->GetWorldSpaceCameraDirection( vEyeDir );
+				float vEyeDir[4];
+				ShaderApiFast( pShaderAPI )->GetWorldSpaceCameraDirection( vEyeDir );
 
-					float flFarZ = ShaderApiFast( pShaderAPI )->GetFarZ();
-					vEyeDir[0] /= flFarZ;	// Divide by farZ for SSAO algorithm
-					vEyeDir[1] /= flFarZ;
-					vEyeDir[2] /= flFarZ;
-					ShaderApiFast( pShaderAPI )->SetVertexShaderConstant( VERTEX_SHADER_SHADER_SPECIFIC_CONST_12, vEyeDir );
-				}
+				float flFarZ = ShaderApiFast( pShaderAPI )->GetFarZ();
+				vEyeDir[0] /= flFarZ;	// Divide by farZ for SSAO algorithm
+				vEyeDir[1] /= flFarZ;
+				vEyeDir[2] /= flFarZ;
+				ShaderApiFast( pShaderAPI )->SetVertexShaderConstant( VERTEX_SHADER_SHADER_SPECIFIC_CONST_12, vEyeDir );
 			}
 
-#if !defined( _X360 ) && !defined( _PS3 )
 			if (g_pHardwareConfig->HasFastVertexTextures() )
 			{
 				DECLARE_DYNAMIC_VERTEX_SHADER( lightmappedgeneric_vs30 );
@@ -476,7 +456,6 @@ END_SHADER_PARAMS
 				SET_DYNAMIC_VERTEX_SHADER( lightmappedgeneric_vs30 );
 			}
 			else
-#endif
 			{
 				DECLARE_DYNAMIC_VERTEX_SHADER( lightmappedgeneric_vs20 );
 				SET_DYNAMIC_VERTEX_SHADER_COMBO( FASTPATH,  bVertexShaderFastPath );
@@ -498,7 +477,6 @@ END_SHADER_PARAMS
 				bWriteWaterFogToAlpha = false;
 			}
 
-#if !defined( _X360 ) && !defined( _PS3 )
 			if ( g_pHardwareConfig->HasFastVertexTextures() )
 			{
 				DECLARE_DYNAMIC_PIXEL_SHADER( worldtwotextureblend_ps30 );
@@ -511,7 +489,6 @@ END_SHADER_PARAMS
 				SET_DYNAMIC_PIXEL_SHADER( worldtwotextureblend_ps30 );
 			}
 			else
-#endif
 			if ( g_pHardwareConfig->SupportsPixelShaders_2_b() )
 			{
 				DECLARE_DYNAMIC_PIXEL_SHADER( worldtwotextureblend_ps20b );
@@ -578,7 +555,7 @@ END_SHADER_PARAMS
 
 				ShaderApiFast( pShaderAPI )->SetPixelShaderConstant( 16, worldToTexture.Base(), 4 );
 
-				if ( IsPC() && g_pHardwareConfig->HasFastVertexTextures() )
+				if ( g_pHardwareConfig->HasFastVertexTextures() )
 				{
 					SetupUberlightFromState( pShaderAPI, flashlightState );
 				}
@@ -590,14 +567,6 @@ END_SHADER_PARAMS
 	SHADER_DRAW
 	{
 		bool bHasFlashlight = UsingFlashlight( params );
-		if ( bHasFlashlight && ( IsX360() || IsPS3() ) )
-		{
-			DrawPass( params, pShaderAPI, pShaderShadow, false, vertexCompression );
-			SHADOW_STATE
-			{
-				SetInitialShadowState( );
-			}
-		}
 		DrawPass( params, pShaderAPI, pShaderShadow, bHasFlashlight, vertexCompression );
 	}
 

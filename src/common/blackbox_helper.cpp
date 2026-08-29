@@ -16,9 +16,6 @@ void BlackBox_Record( const char *type, PRINTF_FORMAT_STRING const char *pFormat
 {
 	static ConVarRef blackbox( "blackbox" );
 
-	if ( IsX360() )
-		return;
-
 	if ( !blackbox.IsValid() || !blackbox.GetBool() )
 		 return;
 

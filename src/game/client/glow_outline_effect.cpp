@@ -119,13 +119,6 @@ void CGlowObjectManager::RenderGlowModels( const CViewSetup *pSetup, int nSplitS
 
 	ITexture *pRtFullFrame = materials->FindTexture( FULL_FRAME_TEXTURE, TEXTURE_GROUP_RENDER_TARGET );
 
-	if ( IsX360() )
-	{
-		ITexture *pRtGlowTexture360 = materials->FindTexture( "_rt_Glows360", TEXTURE_GROUP_RENDER_TARGET );
-
-		SetRenderTargetAndViewPort( pRtGlowTexture360, GLOW_360_RT_WIDTH, GLOW_360_RT_HEIGHT );
-	}
-	else
 	{
 		SetRenderTargetAndViewPort( pRtFullFrame, pSetup->width, pSetup->height );
 	}
@@ -270,15 +263,6 @@ void CGlowObjectManager::RenderGlowModels( const CViewSetup *pSetup, int nSplitS
 	stencilStateDisable.m_bEnable = false;
 	pRenderContext->SetStencilState( stencilStateDisable );
 
-	if ( IsX360() )
-	{
-		Rect_t rect;
-		rect.x = rect.y = 0;
-		rect.width = GLOW_360_RT_WIDTH;
-		rect.height = GLOW_360_RT_HEIGHT;
-
-		pRenderContext->CopyRenderTargetToTextureEx( pRtFullFrame, 0, &rect, &rect );
-	}
 
 	pRenderContext->PopRenderTargetAndViewport();
 }
@@ -291,9 +275,6 @@ void CGlowObjectManager::DownSampleAndBlurRT( const CViewSetup *pSetup, CMatRend
 	// Setup state for downsample/bloom
 	//===================================
 
-#if defined( _X360 )
-	pRenderContext->PushVertexShaderGPRAllocation( 16 ); // Max out pixel shader threads
-#endif
 
 	pRenderContext->PushRenderTargetAndViewport();
 
@@ -341,21 +322,10 @@ void CGlowObjectManager::DownSampleAndBlurRT( const CViewSetup *pSetup, CMatRend
 	// accesses pixels on both sides of the source coord
 	int nFullFbWidth = nSrcWidth;
 	int nFullFbHeight = nSrcHeight;
-	if ( IsX360() )
-	{
-		nFullFbWidth = GLOW_360_RT_WIDTH;
-		nFullFbHeight = GLOW_360_RT_HEIGHT;
-	}
 	pRenderContext->DrawScreenSpaceRectangle( pMatDownsample, 0, 0, nSrcWidth/4, nSrcHeight/4,
 		0, 0, nFullFbWidth - 4, nFullFbHeight - 4,
 		pRtFullFrame->GetActualWidth(), pRtFullFrame->GetActualHeight() );
 
-	if ( IsX360() )
-	{
-		// Need to reset viewport to full size so we can also copy the cleared black pixels around the border
-		SetRenderTargetAndViewPort( pRtQuarterSize0, pRtQuarterSize0->GetActualWidth(), pRtQuarterSize0->GetActualHeight() );
-		pRenderContext->CopyRenderTargetToTextureEx( pRtQuarterSize0, 0, NULL, NULL );
-	}
 
 	//============================//
 	// Guassian blur x rt0 to rt1 //
@@ -378,10 +348,6 @@ void CGlowObjectManager::DownSampleAndBlurRT( const CViewSetup *pSetup, CMatRend
 		0, 0, nSrcWidth/4-1, nSrcHeight/4-1,
 		pRtQuarterSize0->GetActualWidth(), pRtQuarterSize0->GetActualHeight() );
 
-	if ( IsX360() )
-	{
-		pRenderContext->CopyRenderTargetToTextureEx( pRtQuarterSize1, 0, NULL, NULL );
-	}
 
 	//============================//
 	// Gaussian blur y rt1 to rt0 //
@@ -393,10 +359,6 @@ void CGlowObjectManager::DownSampleAndBlurRT( const CViewSetup *pSetup, CMatRend
 		0, 0, nSrcWidth / 4 - 1, nSrcHeight / 4 - 1,
 		pRtQuarterSize1->GetActualWidth(), pRtQuarterSize1->GetActualHeight() );
 
-	if ( IsX360() )
-	{
-		pRenderContext->CopyRenderTargetToTextureEx( pRtQuarterSize1, 0, NULL, NULL ); // copy to rt1 instead of rt0 because rt1 has linear reads enabled and works more easily with screenspace_general to fix 360 bloom issues
-	}
 
 	// Pop RT
 	pRenderContext->PopRenderTargetAndViewport();
@@ -821,9 +783,6 @@ void CGlowObjectManager::ApplyEntityGlowEffects( const CViewSetup *pSetup, int n
 		pRenderContext->SetStencilState( stencilStateDisable );
 	}
 
-#if defined( _X360 )
-	pRenderContext->PopVertexShaderGPRAllocation();
-#endif
 }
 
 void CGlowObjectManager::GlowObjectDefinition_t::DrawModel()

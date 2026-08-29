@@ -48,21 +48,17 @@ static ConVar r_flexstats( "r_flexstats", "0", FCVAR_CHEAT );
 // Multiplicative factor on LOD switch points. See GetLODForMetric() in studio.h
 static ConVar r_lod_switch_scale( "r_lod_switch_scale", "1", FCVAR_HIDDEN );
 
-#ifndef _CERT
 static ConVar mat_rendered_faces_count( "mat_rendered_faces_count", "0", FCVAR_CHEAT, "Set to N to count how many faces each model draws each frame and spew the top N offenders from the last 150 frames (use 'mat_rendered_faces_spew' to spew all models rendered in the current frame)" );
 static ConVar mat_print_top_model_vert_counts( "mat_print_top_model_vert_counts", "0", 0, "Constantly print to screen the top N models as measured by total faces rendered this frame");
 
 bool ModelFaceCountHashCompareFunc( studiohwdata_t *const &a, studiohwdata_t *const &b ) { return a == b; }
 uint32 ModelFaceCountHashKeyFunc( studiohwdata_t *const &a ) { return HashIntConventional( (int32)(intp)a ); }
-#endif // !_CERT
 
 //-----------------------------------------------------------------------------
 // Constructor
 //-----------------------------------------------------------------------------
 CStudioRender::CStudioRender()
-#ifndef _CERT
  :	m_ModelFaceCountHash( 1024, 0, 0, ModelFaceCountHashCompareFunc, ModelFaceCountHashKeyFunc )
-#endif
 {
 	m_pRC = NULL;
 	m_pBoneToWorld = NULL;
@@ -429,20 +425,16 @@ void CStudioRender::Shutdown( void )
 //-----------------------------------------------------------------------------
 void CStudioRender::BeginFrame( void )
 {
-#ifndef _CERT
 	// Clear the model face count hash table for the coming frame
 	if ( mat_rendered_faces_count.GetBool() || mat_print_top_model_vert_counts.GetBool() )
 		m_ModelFaceCountHash.RemoveAll();
-#endif // !_CERT
 
 	PrecacheGlint();
 }
 
 void CStudioRender::EndFrame( void )
 {
-#ifndef _CERT
 	UpdateModelFaceCounts();
-#endif // !_CERT
 
 	CleanupDecals();
 }
@@ -600,11 +592,6 @@ void CStudioRender::DrawModel( const DrawModelInfo_t& info, const StudioRenderCo
 	ComputePoseToWorld( m_PoseToWorld, m_pStudioHdr, boneMask, m_pRC->m_ViewOrigin, pBoneToWorld );
 
 	bool bOldFlashlightState = false;
-	if ( pRenderContext->IsCullingEnabledForSinglePassFlashlight() && IsGameConsole() )
-	{
-		bOldFlashlightState = pRenderContext->GetFlashlightMode();
-		pRenderContext->SetFlashlightMode( m_ShadowState.Count() > 0 );
-	}
 
 	if ( ( flags & STUDIORENDER_NO_PRIMARY_DRAW ) == 0 )	// if this flag is set, then we are drawing multiple shadows in separate calls ( probably for capture )
 	{	
@@ -613,10 +600,6 @@ void CStudioRender::DrawModel( const DrawModelInfo_t& info, const StudioRenderCo
 			info.m_pHardwareData->m_pLODs[info.m_Lod].pMaterialFlags, flags, boneMask, info.m_Lod, info.m_pColorMeshes);
 	}
 
-	if ( pRenderContext->IsCullingEnabledForSinglePassFlashlight() && IsGameConsole() )
-	{
-		pRenderContext->SetFlashlightMode( bOldFlashlightState );
-	}
 
 	// Draw all the decals on this model
 	// If the model is not in memory, this code may not function correctly
@@ -774,9 +757,7 @@ int CStudioRender::CountMeshesToDraw( const StudioModelArrayInfo_t &drawInfo, in
 {
 	VPROF( "CStudioRender::CountMeshesToDraw" );
 
-#ifndef _CERT
 	bool bCountRenderedFaces = mat_rendered_faces_count.GetBool() || mat_print_top_model_vert_counts.GetBool();
-#endif // !_CERT
 
 	StudioArrayInstanceData_t *pCurInstance = pInstanceData;
 	int nTotalMeshCount = 0;
@@ -788,11 +769,9 @@ int CStudioRender::CountMeshesToDraw( const StudioModelArrayInfo_t &drawInfo, in
 		// get the studio mesh data for this lod
 		studiomeshdata_t *pMeshDataBase = drawInfo.m_pHardwareData->m_pLODs[nLod].m_pMeshData;
 
-#ifndef _CERT
 		// Each model counts how many rendered faces it accounts for each frame:
 		if ( bCountRenderedFaces )
 			drawInfo.m_pHardwareData->UpdateFacesRenderedCount( drawInfo.m_pStudioHdr, m_ModelFaceCountHash, nLod, nTimesRendered );
-#endif // !_CERT
 
 
 		int nBody = pCurInstance->m_nBody;
@@ -823,9 +802,7 @@ int CStudioRender::CountMeshesToDraw( const StudioModelArrayInfo2_t &drawInfo, i
 {
 	VPROF( "CStudioRender::CountMeshesToDraw" );
 
-#ifndef _CERT
 	bool bCountRenderedFaces = mat_rendered_faces_count.GetBool() || mat_print_top_model_vert_counts.GetBool();
-#endif // !_CERT
 
 	int nTotalMeshCount = 0;
 	for ( int i = 0; i < nCount; ++i )
@@ -840,11 +817,9 @@ int CStudioRender::CountMeshesToDraw( const StudioModelArrayInfo2_t &drawInfo, i
 			// get the studio mesh data for this lod
 			studiomeshdata_t *pMeshDataBase = arrayData.m_pHardwareData->m_pLODs[nLod].m_pMeshData;
 
-#ifndef _CERT
 			// Each model counts how many rendered faces it accounts for each frame:
 			if ( bCountRenderedFaces )
 				arrayData.m_pHardwareData->UpdateFacesRenderedCount( arrayData.m_pStudioHdr, m_ModelFaceCountHash, nLod, nTimesRendered );
-#endif // !_CERT
 
 			int nBody = pCurInstance->m_nBody;
 			for ( int body = 0; body < arrayData.m_pStudioHdr->numbodyparts; ++body ) 
@@ -1260,7 +1235,7 @@ void CStudioRender::RestoreMeshes( int nCount, BaseMeshRenderData_t *pRenderData
 // Allocate temporary arrays either on the stack, or from the heap. 
 // Prevents using all the stack when *lots* of objects are rendered to CSM's.
 //-----------------------------------------------------------------------------
-#if defined( CSTRIKE15 ) // 7ls && !defined( _GAMECONSOLE )
+#if defined( CSTRIKE15 ) // 7ls
 	#define STUDIORENDER_TEMP_DATA_MALLOC( typeName, p, n ) const int nTempDataSize##p = (n); void *pvFree##p = NULL; typeName *p = (typeName *) ( ( nTempDataSize##p < 64*1024 ) ? stackalloc( nTempDataSize##p ) : ( pvFree##p = malloc( nTempDataSize##p ) ) );
 	#define STUDIORENDER_TEMP_DATA_FREE( p ) free( pvFree##p )
 #else
@@ -1280,10 +1255,6 @@ void CStudioRender::DrawMeshRenderData( IMatRenderContext *pRenderContext,
 	STUDIORENDER_TEMP_DATA_MALLOC( MeshInstanceData_t, pInstance, nTotalStripCount * sizeof(MeshInstanceData_t) );
 	IMaterial *pLastMaterial = NULL;
 	IMesh *pLastMesh = NULL;
-#ifdef _GAMECONSOLE
-	bool bLastUsingFlashlight = false;
-	bool bSavedFlashlightEnable = pRenderContext->GetFlashlightMode();
-#endif // _GAMECONSOLE
 	int nMaxBoneCount = 0;
 	int nMaxLightCount = 0;
 	bool bIsSkinned = drawInfo.m_pStudioHdr->numbones > 1;
@@ -1303,19 +1274,10 @@ void CStudioRender::DrawMeshRenderData( IMatRenderContext *pRenderContext,
 			continue;
 
 		if ( ( pLastMaterial != data.m_pMaterial ) || ( pLastMesh != data.m_pGroup->m_pMesh ) 
-#ifdef _GAMECONSOLE
-			|| ( bLastUsingFlashlight != ( pCurrInstance->m_nFlashlightUsage != 0 ) ) 
-#endif // _GAMECONSOLE
 			)
 		{
 			if ( nInstanceCount > 0 )
 			{
-#ifdef _GAMECONSOLE
-				if ( pRenderContext->IsCullingEnabledForSinglePassFlashlight() )
-				{
-					pRenderContext->SetFlashlightMode( bLastUsingFlashlight );
-				}				
-#endif // _GAMECONSOLE
 				pRenderContext->SetNumBoneWeights( bIsSkinned ? nMaxBoneCount : 0 );
 				pRenderContext->Bind( pLastMaterial, NULL );
 				pRenderContext->DrawInstances( nInstanceCount, pInstance );
@@ -1325,9 +1287,6 @@ void CStudioRender::DrawMeshRenderData( IMatRenderContext *pRenderContext,
 			nMaxLightCount = 0;
 			pLastMesh = data.m_pGroup->m_pMesh;
 			pLastMaterial = data.m_pMaterial;
-#ifdef _GAMECONSOLE
-			bLastUsingFlashlight = pCurrInstance->m_nFlashlightUsage != 0;
-#endif // _GAMECONSOLE
 		}
 
 		studiomeshgroup_t* pGroup = data.m_pGroup;
@@ -1372,20 +1331,11 @@ void CStudioRender::DrawMeshRenderData( IMatRenderContext *pRenderContext,
 
 	if ( nInstanceCount > 0 )
 	{
-#ifdef _GAMECONSOLE
-		if ( pRenderContext->IsCullingEnabledForSinglePassFlashlight() )
-		{
-			pRenderContext->SetFlashlightMode( bLastUsingFlashlight );
-		}
-#endif // _GAMECONSOLE
 		pRenderContext->SetNumBoneWeights( bIsSkinned ? nMaxBoneCount : 0 );
 		pRenderContext->Bind( pLastMaterial, NULL );
 		pRenderContext->DrawInstances( nInstanceCount, pInstance );
 	}
 
-#ifdef _GAMECONSOLE
-	pRenderContext->SetFlashlightMode( bSavedFlashlightEnable );
-#endif // _GAMECONSOLE
 	pRenderContext->SetNumBoneWeights( 0 );
 
 	STUDIORENDER_TEMP_DATA_FREE( pInstance );
@@ -1401,7 +1351,7 @@ void CStudioRender::DrawMeshRenderData( IMatRenderContext *pRenderContext,
 	SNPROF( "CStudioRender::DrawMeshRenderData" );
 
 	int nInstanceCount = 0;
-	int nMaxBatchSize = IsGameConsole() ? CONSOLE_MAX_MODEL_FAST_PATH_BATCH_SIZE : nTotalStripCount;
+	int nMaxBatchSize = false ? CONSOLE_MAX_MODEL_FAST_PATH_BATCH_SIZE : nTotalStripCount;
 	STUDIORENDER_TEMP_DATA_MALLOC( MeshInstanceData_t, pInstance, nMaxBatchSize * sizeof(MeshInstanceData_t) );
 	IMaterial *pLastMaterial = NULL;
 	int nMaxBoneCount = 0;
@@ -1409,10 +1359,6 @@ void CStudioRender::DrawMeshRenderData( IMatRenderContext *pRenderContext,
 	int nLastMeshBoneCount = 0;
 	VertexCompressionType_t nLastCompressionType = VERTEX_COMPRESSION_INVALID;
 	bool bLastMeshUsedColorMesh = false;
-#ifdef _GAMECONSOLE
-	bool bLastUsingFlashlight = false;
-	bool bSavedFlashlightEnable = pRenderContext->GetFlashlightMode();
-#endif // _GAMECONSOLE
 	int nStartingStripIndex = 0; // used to interrupt batching within a group if the number of strips exceeds the max batch size
 	
 	for ( int i = 0; i < nCount; ++i )
@@ -1428,21 +1374,11 @@ void CStudioRender::DrawMeshRenderData( IMatRenderContext *pRenderContext,
 		if ( ( pLastMaterial != data.m_pMaterial ) ||					// shadow material is different
 			( nLastCompressionType != ( int )data.m_nCompressionType ) ||		// compression type is different
 			( nLastMeshBoneCount != data.m_nMeshBoneCount ) ||			// # of bones in the mesh data is different
-			( bLastMeshUsedColorMesh != bUsingColorMesh ) || 			// Lighting type is different
-			( IsGameConsole() && ( nInstanceCount >= nMaxBatchSize ) )	// max # of batches to render at once due to stack limitations on console
-#ifdef _GAMECONSOLE
-			|| ( bLastUsingFlashlight != ( pCurrInstance->m_nFlashlightUsage != 0 ) )
-#endif // _GAMECONSOLE
+			( bLastMeshUsedColorMesh != bUsingColorMesh )			// Lighting type is different
 			)
 		{
 			if ( nInstanceCount > 0 )
 			{
-#ifdef _GAMECONSOLE
-				if ( pRenderContext->IsCullingEnabledForSinglePassFlashlight() )
-				{
-					pRenderContext->SetFlashlightMode( bLastUsingFlashlight );
-				}
-#endif // _GAMECONSOLE
 				pRenderContext->SetNumBoneWeights( nLastMeshBoneCount > 0 ? nMaxBoneCount : 0 );
 				pRenderContext->Bind( pLastMaterial, NULL );
 				pRenderContext->DrawInstances( nInstanceCount, pInstance );
@@ -1454,9 +1390,6 @@ void CStudioRender::DrawMeshRenderData( IMatRenderContext *pRenderContext,
 			pLastMaterial = data.m_pMaterial;
 			nLastMeshBoneCount = data.m_nMeshBoneCount;
 			bLastMeshUsedColorMesh = bUsingColorMesh;
-#ifdef _GAMECONSOLE
-			bLastUsingFlashlight = pCurrInstance->m_nFlashlightUsage != 0;
-#endif // _GAMECONSOLE
 		}
 
 		studiomeshgroup_t* pGroup = data.m_pGroup;
@@ -1496,41 +1429,18 @@ void CStudioRender::DrawMeshRenderData( IMatRenderContext *pRenderContext,
 
 			nMaxBoneCount = MAX( nMaxBoneCount, pStrip->numBones );
 
-			if ( IsGameConsole() && nInstanceCount >= nMaxBatchSize )
-			{
-				break;
-			}
 		}
 
-		if ( IsGameConsole() && j < pGroup->m_NumStrips )
-		{
-			// We're going to have to process this pRenderData[] entry again,
-			// but start iterating from a higher strip index next time.
-			nStartingStripIndex = j + 1;
-			-- i;
-		}
-		else
-		{
-			nStartingStripIndex = 0;
-		}
+		nStartingStripIndex = 0;
 	}
 
 	if ( nInstanceCount > 0 )
 	{
-#ifdef _GAMECONSOLE
-		if ( pRenderContext->IsCullingEnabledForSinglePassFlashlight() )
-		{
-			pRenderContext->SetFlashlightMode( bLastUsingFlashlight );
-		}
-#endif // _GAMECONSOLE
 		pRenderContext->SetNumBoneWeights( nLastMeshBoneCount > 0 ? nMaxBoneCount : 0 );
 		pRenderContext->Bind( pLastMaterial, NULL );
 		pRenderContext->DrawInstances( nInstanceCount, pInstance );
 	}
 
-#ifdef _GAMECONSOLE
-	pRenderContext->SetFlashlightMode( bSavedFlashlightEnable );
-#endif // _GAMECONSOLE
 	pRenderContext->SetNumBoneWeights( 0 );
 
 	STUDIORENDER_TEMP_DATA_FREE( pInstance );
@@ -1830,7 +1740,7 @@ void CStudioRender::DrawModelArray( const StudioModelArrayInfo_t &drawInfo, cons
 
 	// Count number of meshes per instance
 	bool bDoShadows = ( ( nFlags & STUDIORENDER_DRAW_NO_SHADOWS ) == 0 );
-	bool bSinglePassFlashlight = IsGameConsole();
+	bool bSinglePassFlashlight = false;
 	int nTimesRendered  = 1 + ( bSinglePassFlashlight ? 0 : ( bDoShadows ? drawInfo.m_nFlashlightCount : 1 ) );
 	int nTotalMeshCount = CountMeshesToDraw( drawInfo, nCount, pInstanceData, nInstanceStride, nTimesRendered );
 
@@ -1899,7 +1809,7 @@ void CStudioRender::DrawModelArray2( const StudioModelArrayInfo2_t &drawInfo, co
 
 	// Count number of meshes per instance
 	bool bDoShadows = ( ( nFlags & STUDIORENDER_DRAW_NO_SHADOWS ) == 0 );
-	bool bSinglePassFlashlight = IsGameConsole();
+	bool bSinglePassFlashlight = false;
 	int nTimesRendered  = 1 + ( bSinglePassFlashlight ? 0 : ( bDoShadows ? drawInfo.m_nFlashlightCount : 1 ) );
 	int nTotalMeshCount = CountMeshesToDraw( drawInfo, nCount, pArrayData, nInstanceStride, nTimesRendered );
 
@@ -1965,9 +1875,7 @@ int CStudioRender::CountMeshesToDraw( int nCount, StudioArrayData_t *pShadowData
 {
 	VPROF( "CStudioRender::CountMeshesToDraw (shadow)" );
 
-#ifndef _CERT
 	bool bCountRenderedFaces = mat_rendered_faces_count.GetBool() || mat_print_top_model_vert_counts.GetBool();
-#endif // !_CERT
 
 	int nTotalMeshCount = 0;
 	for ( int i = 0; i < nCount; ++i )
@@ -1982,11 +1890,9 @@ int CStudioRender::CountMeshesToDraw( int nCount, StudioArrayData_t *pShadowData
 			// get the studio mesh data for this lod
 			studiomeshdata_t *pMeshDataBase = shadow.m_pHardwareData->m_pLODs[nLod].m_pMeshData;
 
-#ifndef _CERT
 			// Each model counts how many rendered faces it accounts for each frame:
 			if ( bCountRenderedFaces )
 				shadow.m_pHardwareData->UpdateFacesRenderedCount( shadow.m_pStudioHdr, m_ModelFaceCountHash, nLod, 1 );
-#endif // !_CERT
 
 			int nBody = pCurInstance->m_nBody;
 			for ( int body = 0; body < shadow.m_pStudioHdr->numbodyparts; ++body ) 
@@ -2435,9 +2341,7 @@ void CStudioRender::DrawModelArrayStaticProp( const DrawModelInfo_t& info,
 		pskinref += ( skin * m_pStudioHdr->numskinref );
 	}
 
-#ifndef _CERT
 	int nFacesPerModel = 0;
-#endif // !_CERT
 
 	// draw each mesh
 	for ( int i = 0; i < m_pSubModel->nummeshes; ++i)
@@ -2465,7 +2369,7 @@ void CStudioRender::DrawModelArrayStaticProp( const DrawModelInfo_t& info,
 			studiomeshgroup_t* pGroup = &pMeshData->m_pMeshGroup[j];
 			// Needed when we switch back and forth between hardware + software lighting
 #ifdef IS_WINDOWS_PC
-			if ( IsPC() && pGroup->m_MeshNeedsRestore )
+			if ( pGroup->m_MeshNeedsRestore )
 			{
 				VertexCompressionType_t compressionType = CompressionType( pGroup->m_pMesh->GetVertexFormat() );
 				switch ( compressionType )
@@ -2504,7 +2408,6 @@ void CStudioRender::DrawModelArrayStaticProp( const DrawModelInfo_t& info,
 					pMesh->SetPrimitiveType( GetPrimitiveTypeForStripHeaderFlags( pStrip->flags ) );
 					pMesh->DrawModulated( instance.m_DiffuseModulation, pStrip->indexOffset, pStrip->numIndices );
 
-#ifndef _CERT
 					// Count # faces per instance for the first instance only
 					if ( k == 0 )
 					{
@@ -2512,20 +2415,17 @@ void CStudioRender::DrawModelArrayStaticProp( const DrawModelInfo_t& info,
 						Assert( GetPrimitiveTypeForStripHeaderFlags( pStrip->flags ) == MATERIAL_TRIANGLES );
 						nFacesPerModel += pStrip->numIndices / 3;
 					}
-#endif // !_CERT
 				}
 			}
 			pMesh->SetColorMesh( NULL, 0 );
 		}
 	}
 
-#ifndef _CERT
 	if ( mat_rendered_faces_count.GetBool() || mat_print_top_model_vert_counts.GetBool() )
 	{
 		// Each model counts how many rendered faces it accounts for each frame:
 		m_pStudioHWData->UpdateFacesRenderedCount( m_pStudioHdr, m_ModelFaceCountHash, lod, nInstanceCount, nFacesPerModel );
 	}
-#endif // !_CERT
 
 
 	// Restore the configs
@@ -2538,7 +2438,6 @@ void CStudioRender::DrawModelArrayStaticProp( const DrawModelInfo_t& info,
 	m_pStudioHWData = NULL;
 }
 
-#ifndef _CERT
 
 
 bool FacesRenderedInfoCompareFunc( IStudioRender::FacesRenderedInfo_t const &a, IStudioRender::FacesRenderedInfo_t const &b ) { return a.pStudioHdr == b.pStudioHdr; }
@@ -2707,4 +2606,3 @@ CON_COMMAND( mat_rendered_faces_spew, "'mat_rendered_faces_spew <n>' Spew the nu
 	g_StudioRender.UpdateModelFaceCounts( nNumToSpew );
 }
 
-#endif // !_CERT

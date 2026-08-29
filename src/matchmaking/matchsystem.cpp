@@ -8,13 +8,6 @@
 
 #include "matchsystem.h"
 #include "playermanager.h"
-#include "servermanager.h"
-#include "datacenter.h"
-
-#ifndef SWDS
-#include "searchmanager.h"
-#include "leaderboards.h"
-#endif
 
 // NOTE: This has to be the last file included!
 #include "tier0/memdbgon.h"
@@ -54,47 +47,27 @@ IMatchVoice * CMatchSystem::GetMatchVoice()
 
 IServerManager * CMatchSystem::GetUserGroupsServerManager()
 {
-	return g_pServerManager;
+	return NULL;
 }
 
 ISearchManager * CMatchSystem::CreateGameSearchManager( KeyValues *pParams )
 {
-#ifndef SWDS
-	return new CSearchManager( pParams );
-#else
 	return NULL;
-#endif
 }
 
 IDatacenter * CMatchSystem::GetDatacenter()
 {
-	return g_pDatacenter;
+	return NULL;
 }
 
 IDlcManager * CMatchSystem::GetDlcManager()
 {
-	return g_pDlcManager;
+	return NULL;
 }
 
 void CMatchSystem::Update()
 {
 	if ( g_pPlayerManager )
 		g_pPlayerManager->Update();
-
-	if ( g_pServerManager )
-		g_pServerManager->Update();
-
-#ifndef SWDS
-	CSearchManager::UpdateAll();
-
-	if ( g_pLeaderboardRequestQueue )
-		g_pLeaderboardRequestQueue->Update();
-#endif
-
-	if ( g_pDatacenter )
-		g_pDatacenter->Update();
-
-	if ( g_pDlcManager )
-		g_pDlcManager->Update();
 }
 

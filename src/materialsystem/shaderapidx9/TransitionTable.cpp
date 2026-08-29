@@ -296,10 +296,8 @@ void CTransitionTable::Reset()
 
 static inline void SetTextureStageState( int stage, D3DTEXTURESTAGESTATETYPE state, DWORD val )
 {
-#if !defined( _X360 )
 	Assert( !g_pShaderDeviceDx8->IsDeactivated() );
 	Dx9Device()->SetTextureStageState( stage, state, val );
-#endif
 }
 
 //Moved to a #define so every instance of this skips unsupported render states at compile time
@@ -322,11 +320,7 @@ static inline void SetTextureStageState( int stage, D3DTEXTURESTAGESTATETYPE sta
 		}													\
 	}
 
-#ifdef DX_TO_GL_ABSTRACTION
-#define SetRenderStateConstMacro( state, val ) { if ( state != D3DRS_NOTSUPPORTED ) Dx9Device()->SetRenderStateConstInline( state, val ); }
-#else
 #define SetRenderStateConstMacro( state, val ) SetRenderState( state, val )
-#endif
 
 #ifdef _WIN32
 #pragma warning( default : 4189 )
@@ -432,14 +426,6 @@ void ApplyFetch4Enable( const ShadowState_t& shaderState, int stage )
 	UPDATE_BOARD_SAMPLER_STATE( ATISAMP_FETCH4, Fetch4Enable, stage );
 }	
 
-#ifdef DX_TO_GL_ABSTRACTION
-void ApplyShadowFilterEnable( const ShadowState_t& shaderState, int stage )
-{
-	SetSamplerState( stage, D3DSAMP_SHADOWFILTER, shaderState.m_nShadowFilterEnable & ( 1 << stage ) );
-	
-	UPDATE_BOARD_SAMPLER_STATE( D3DSAMP_SHADOWFILTER, ShadowFilterEnable, stage );
-}																	
-#endif
 
 
 //APPLY_RENDER_STATE_FUNC( D3DRS_ZWRITEENABLE,			ZWriteEnable )
@@ -450,9 +436,6 @@ APPLY_RENDER_STATE_FUNC_ALPHATEST_AND_MISC( D3DRS_FILLMODE,				FillMode )
 void ApplyZWriteEnable( const ShadowState_t& shaderState, int arg )
 {
 	SetRenderState( D3DRS_ZWRITEENABLE, shaderState.m_DepthTestState.m_ZWriteEnable );
-#if defined( _X360 )
-	//SetRenderState( D3DRS_HIZWRITEENABLE, shaderState.m_ZWriteEnable ? D3DHIZ_AUTOMATIC : D3DHIZ_DISABLE );
-#endif
 #ifdef DEBUG_BOARD_STATE
 	BoardState().m_DepthTestState.m_ZWriteEnable = shaderState.m_DepthTestState.m_ZWriteEnable;
 #endif
@@ -551,9 +534,6 @@ void ApplyDepthTest( const ShadowState_t& state, int stage )
 void CTransitionTable::SetZEnable( D3DZBUFFERTYPE nEnable )
 {
 	SetRenderState( D3DRS_ZENABLE, nEnable );
-#if defined( _X360 )
-		//SetRenderState( D3DRS_HIZENABLE, nEnable ? D3DHIZ_AUTOMATIC : D3DHIZ_DISABLE );
-#endif
 }
 
 void CTransitionTable::SetZFunc( D3DCMPFUNC nCmpFunc )
@@ -1097,17 +1077,7 @@ void CTransitionTable::UseDefaultState( )
 	{
 		SetSamplerState( i, D3DSAMP_SRGBTEXTURE, SamplerState(i).m_SRGBReadEnable );
 
-#if 0
-		// Set default Fetch4 state on parts which support it
-		if ( HardwareConfig()->SupportsFetch4() )
-		{
-			SetSamplerState( i, ATISAMP_FETCH4, SamplerState(i).m_Fetch4Enable ? ATI_FETCH4_ENABLE : ATI_FETCH4_DISABLE );
-		}
-#endif
 		
-#ifdef DX_TO_GL_ABSTRACTION
-		SetSamplerState( i, D3DSAMP_SHADOWFILTER, SamplerState(i).m_ShadowFilterEnable );
-#endif
 	}
 
 	// Disable z overrides...
@@ -1165,9 +1135,6 @@ void CTransitionTable::OverrideDepthEnable( bool bEnable, bool bDepthWriteEnable
 			{
 				SetRenderState( D3DRS_ZFUNC, D3DCMP_ALWAYS );
 			}
-#if defined( _X360 )
-			//SetRenderState( D3DRS_HIZWRITEENABLE, m_CurrentState.m_OverrideZWriteEnable ? D3DHIZ_AUTOMATIC : D3DHIZ_DISABLE );
-#endif
 		}
 		else
 		{
@@ -1176,9 +1143,6 @@ void CTransitionTable::OverrideDepthEnable( bool bEnable, bool bDepthWriteEnable
 				SetZEnable( (D3DZBUFFERTYPE ) CurrentShadowState()->m_DepthTestState.m_ZEnable );
 				SetRenderState( D3DRS_ZWRITEENABLE, CurrentShadowState()->m_DepthTestState.m_ZWriteEnable );
 				SetRenderState( D3DRS_ZFUNC, CurrentShadowState()->m_DepthTestState.m_ZFunc );
-#if defined( _X360 )
-				//SetRenderState( D3DRS_HIZWRITEENABLE, CurrentShadowState()->m_ZWriteEnable ? D3DHIZ_AUTOMATIC : D3DHIZ_DISABLE );
-#endif
 			}
 		}
 	}
@@ -1288,9 +1252,6 @@ void CTransitionTable::PerformShadowStateOverrides( )
 		{
 			SetRenderState( D3DRS_ZFUNC, D3DCMP_ALWAYS );
 		}
-#if defined( _X360 )
-		//SetRenderState( D3DRS_HIZWRITEENABLE, m_CurrentState.m_OverrideZWriteEnable ? D3DHIZ_AUTOMATIC : D3DHIZ_DISABLE );
-#endif
 	}
 
 	if ( m_CurrentState.m_bOverrideAlphaWriteEnable )

@@ -5,9 +5,7 @@
 //===========================================================================//
 
 #include <stdlib.h>
-#ifndef _PS3
 #include <malloc.h>
-#endif
 #include "materialsystem_global.h"
 #include "string.h"
 #include "shaderapi/ishaderapi.h"
@@ -33,17 +31,12 @@
 #include "tier1/utlrbtree.h"
 #include "ctype.h"
 #include "tier0/icommandline.h"
-#include "filesystem/IQueuedLoader.h"
 
 // Need lightmaps access here
-#ifndef _PS3
 #define MATSYS_INTERNAL
-#endif
 #include "cmatlightmaps.h"
 #include "cmaterialsystem.h"
-#ifndef _PS3
 #undef MATSYS_INTERNAL
-#endif
 
 #include "tier0/memdbgon.h"
 
@@ -290,71 +283,6 @@ public:
 					float u = x * flInvWidth - 1.0f;
 					float oow = 1.0f / sqrt( 1.0f + u*u + v*v );
 
-#if defined( DX_TO_GL_ABSTRACTION ) && !defined( _PS3 )
-					float flX = (255.0f * 0.5 * (u*oow + 1.0f) + 0.5f);
-					float flY = (255.0f * 0.5 * (v*oow + 1.0f) + 0.5f);
-					float flZ = (255.0f * 0.5 * (oow + 1.0f) + 0.5f);
-
-					switch (iFace)
-					{
-						case CUBEMAP_FACE_RIGHT:
-							flX = 255.0f - flX;
-							flY = 255.0f - flY;
-							break;
-						case CUBEMAP_FACE_LEFT:
-							flY = 255.0f - flY;
-							flZ = 255.0f - flZ;
-							break;
-						case CUBEMAP_FACE_BACK:	
-							break;
-						case CUBEMAP_FACE_FRONT:
-							flY = 255.0f - flY;
-							flZ = 255.0f - flZ;
-							break;
-						case CUBEMAP_FACE_UP:
-							flY = 255.0f - flY;
-							break;
-						case CUBEMAP_FACE_DOWN:
-							flX = 255.0f - flX;
-							flY = 255.0f - flY;
-							flZ = 255.0f - flZ;
-							break;
-						default:
-							break;
-					}
-
-					flX -= 128.0f;
-					flY -= 128.0f;
-					flZ -= 128.0f;
-
-					flX /= 128.0f;
-					flY /= 128.0f;
-					flZ /= 128.0f;
-
-					switch ( iFace )
-					{
-						case CUBEMAP_FACE_RIGHT:
-							pixelWriter.WritePixelF( flZ, flY, flX, 0.0f );
-							break;
-						case CUBEMAP_FACE_LEFT:
-							pixelWriter.WritePixelF( flZ, flY, flX, 0.0f );
-							break;
-						case CUBEMAP_FACE_BACK:	
-							pixelWriter.WritePixelF( flX,  flZ,  flY, 0.0f );
-							break;
-						case CUBEMAP_FACE_FRONT:
-							pixelWriter.WritePixelF( flX,  flZ,  flY, 0.0f );
-							break;
-						case CUBEMAP_FACE_UP:
-							pixelWriter.WritePixelF( flX, flY,  flZ, 0.0f );
-							break;
-						case CUBEMAP_FACE_DOWN:
-							pixelWriter.WritePixelF( flX, flY, flZ, 0.0f );
-							break;
-						default:
-							break;
-					}
-#else
 					int ix = (int)(255 * 0.5 * (u*oow + 1.0f) + 0.5f);
 					ix = clamp( ix, 0, 255 );
 					int iy = (int)(255 * 0.5 * (v*oow + 1.0f) + 0.5f);
@@ -434,7 +362,6 @@ public:
 					default:
 						break;
 					}
-#endif
 				} // x
 			} // y
 		} // iFace
@@ -708,7 +635,7 @@ void CTextureManager::Init( int nFlags )
 		ImageFormat fmt = IsOpenGL() ? IMAGE_FORMAT_RGBA16161616F : IMAGE_FORMAT_UVWQ8888;
 		
 		int nFlags = TEXTUREFLAGS_ENVMAP | TEXTUREFLAGS_NOMIP | TEXTUREFLAGS_NOLOD | TEXTUREFLAGS_SINGLECOPY | TEXTUREFLAGS_CLAMPS | TEXTUREFLAGS_CLAMPT | TEXTUREFLAGS_CLAMPU;
-		nFlags |= IsOSXOpenGL() ? TEXTUREFLAGS_POINTSAMPLE : 0; // JasonM - ridiculous hack around R500 lameness...we never use this texture on MacOS anyways (right?)
+		nFlags |= false ? TEXTUREFLAGS_POINTSAMPLE : 0; // JasonM - ridiculous hack around R500 lameness...we never use this texture on MacOS anyways (right?)
 		
 		// Create a normalization cubemap
 		m_pSignedNormalizationCubemap = CreateProceduralTexture( "normalizesigned", TEXTURE_GROUP_CUBE_MAP,
@@ -835,7 +762,7 @@ void CTextureManager::AllocateStandardRenderTargets( )
 	bool bAllocateFullscreenTexture = ( m_nFlags & MATERIAL_INIT_ALLOCATE_FULLSCREEN_TEXTURE ) != 0;
 	bool bAllocateMorphAccumTexture = g_pMorphMgr->ShouldAllocateScratchTextures();
 
-	if ( IsPC() && ( bAllocateFullscreenTexture || bAllocateMorphAccumTexture ) )
+	if ( ( bAllocateFullscreenTexture || bAllocateMorphAccumTexture ) )
 	{
 		MaterialSystem()->BeginRenderTargetAllocation();
 
@@ -966,7 +893,6 @@ void CTextureManager::RestoreTexture( ITextureInternal* pTexture )
 void CTextureManager::RestoreNonRenderTargetTextures()
 {
 	// 360 should not have gotten here
-	Assert( !IsX360() );
 
 	for ( int i = m_TextureList.First(); i != m_TextureList.InvalidIndex(); i = m_TextureList.Next( i ) )
 	{
@@ -983,7 +909,6 @@ void CTextureManager::RestoreNonRenderTargetTextures()
 void CTextureManager::RestoreRenderTargets()
 {
 	// 360 should not have gotten here
-	Assert( !IsX360() );
 
 	for ( int i = m_TextureList.First(); i != m_TextureList.InvalidIndex(); i = m_TextureList.Next( i ) )
 	{
@@ -1016,8 +941,6 @@ void CTextureManager::ReloadTextures()
 
 static void ForceTextureIntoHardware( ITexture *pTexture, IMaterial *pMaterial, IMaterialVar *pBaseTextureVar )
 {
-	if ( IsGameConsole() )
-		return;
 
 	pBaseTextureVar->SetTextureValue( pTexture );
 
@@ -1058,8 +981,6 @@ static void ForceTextureIntoHardware( ITexture *pTexture, IMaterial *pMaterial, 
 //-----------------------------------------------------------------------------
 void CTextureManager::ForceAllTexturesIntoHardware( void )
 {
-	if ( IsGameConsole() )
-		return;
 
 	IMaterial *pMaterial = MaterialSystem()->FindMaterial( "engine/preloadtexture", "texture preload" );
 	pMaterial = ((IMaterialInternal *)pMaterial)->GetRealTimeVersion(); //always work with the realtime material internally
@@ -1164,31 +1085,6 @@ ITextureInternal *CTextureManager::LoadTexture( const char *pTextureName, const 
 			// mark the new texture as excluded
 			int nDimensionsLimit = m_TextureExcludes[iIndex];
 			pNewTexture->MarkAsExcluded( ( nDimensionsLimit == 0 ), nDimensionsLimit );
-		}
-		else if ( m_bUsingWeaponModelCache && g_pQueuedLoader->IsMapLoading() )
-		{
-			// Unfortunate, but the weapon textures get automatically subverted
-			// to avoid ensuring that scripts do not need to be maintained as new weapons occur.
-			// When a weapon texture in not explicitly excluded (which trumps), ensure the exclusion.
-			if ( V_stristr( pNewTexture->GetName(), "weapons/v_models" ) || 
-				V_stristr( pNewTexture->GetName(), "weapons/w_models" ) || 
-				V_stristr( pNewTexture->GetName(), "weapons/shared" ) )
-			{
-				// ALL weapon textures (subject to temp exclusion) are getting pre-excluded down to 16, which matches the weapon model cache
-				// exclusion expectation during loading.
-				//
-				// This is necessary to avoid a horrible memory load pattern where the QL would otherwise load the texture at full-res and then
-				// the weapon model cache would then evict causing a reload as it evicts down to 16.
-				//
-				// This hack is because the QL is blasting these in BEFORE the weapon model cache has any chance to know what are the actual dependent
-				// weapon materials that are subject to initial eviction.
-				//
-				// Instead this gets in front of the QL which will bring in ALL weapon based textures in at the desired reduced state with a single load/free.
-				// Then, there is a fixup by weapon model cache that has then discovered which texture are the REAL dependents and restores the ones
-				// that got broadly classified here (i.e. shared textures that can't be subject to temp evictions). Temp Exclusion abilities cannot
-				// be determined this early, thus the broad classification, and the unfortunate minor fixup
-				pNewTexture->MarkAsExcluded( false, 16, true );
-			}
 		}
 
 		// Stick the texture onto the board
@@ -1362,7 +1258,7 @@ void CTextureManager::SetExcludedTextures( const char *pScriptName, bool bUsingW
 {
 	MEM_ALLOC_CREDIT();
 
-	m_bUsingWeaponModelCache = IsGameConsole() && bUsingWeaponModelCache;
+	m_bUsingWeaponModelCache = false;
 
 	// clear all existing texture's exclusion
 	for ( int i = m_TextureExcludes.First(); i != m_TextureExcludes.InvalidIndex(); i = m_TextureExcludes.Next( i ) )
@@ -1488,14 +1384,6 @@ ITextureInternal *CTextureManager::CreateRenderTargetTexture(
 			ITextureInternal::ChangeRenderTarget( pTexture, w, h, sizeMode, fmt, type, 
 					textureFlags, renderTargetFlags );
 
-#ifdef _PS3
-			if ( pRTName[0] == '^' )
-			{
-				// Alias raw buffer
-				pTexture->Ps3gcmRawBufferAlias( pRTName );
-				return pTexture;
-			}
-#endif
 
 
 			// download if ready
@@ -1514,14 +1402,6 @@ ITextureInternal *CTextureManager::CreateRenderTargetTexture(
 	m_TextureList.Insert( pTexture->GetName(), pTexture );
 
 	// NOTE: This will download the texture only if the shader api is ready
-#ifdef _PS3
-	if ( pRTName && pRTName[0] == '^' )
-	{
-		// Alias raw buffer
-		pTexture->Ps3gcmRawBufferAlias( pRTName );
-	}
-	else
-#endif
 	{
 		pTexture->Download();
 	}
@@ -1577,32 +1457,16 @@ void CTextureManager::RemoveTexture( ITextureInternal *pTexture )
 
 void CTextureManager::ReloadFilesInList( IFileList *pFilesToReload )
 {
-	if ( IsPC() )
+	for ( int i=m_TextureList.First(); i != m_TextureList.InvalidIndex(); i=m_TextureList.Next( i ) )
 	{
-		for ( int i=m_TextureList.First(); i != m_TextureList.InvalidIndex(); i=m_TextureList.Next( i ) )
-		{
-			ITextureInternal *pTex = m_TextureList[i];
+		ITextureInternal *pTex = m_TextureList[i];
 
-			pTex->ReloadFilesInList( pFilesToReload );
-		}
+		pTex->ReloadFilesInList( pFilesToReload );
 	}
 }
 
 void CTextureManager::ReleaseTempRenderTargetBits( void )
 {
-	if( IsX360() ) //only sane on 360
-	{
-		int iNext;
-		for ( int i = m_TextureList.First(); i != m_TextureList.InvalidIndex(); i = iNext )
-		{
-			iNext = m_TextureList.Next( i );
-
-			if ( m_TextureList[i]->IsTempRenderTarget() )
-			{
-				m_TextureList[i]->Release();
-			}
-		}
-	}
 }
 
 void CTextureManager::DebugPrintUsedTextures( void )

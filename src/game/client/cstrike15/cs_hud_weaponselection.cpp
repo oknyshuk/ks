@@ -109,14 +109,6 @@ bool CHudWeaponSelection::IsHudMenuPreventingWeaponSelection()
 //-----------------------------------------------------------------------------
 bool CHudWeaponSelection::ShouldDraw()
 {
-	// [jason] Moving into Scaleform: sfhudhealthammopanel
-#if defined( CSTRIKE15 )
-	if ( !IsPC() )
-	{
-		return false;
-	}
-#endif
-
 	C_BasePlayer *pPlayer = C_BasePlayer::GetLocalPlayer();
 	if ( !pPlayer )
 	{

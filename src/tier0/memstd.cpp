@@ -138,11 +138,7 @@ void DumpMemoryInfoStats()
 #define realloc_internal realloc
 #define realloc_aligned_internal realloc
 #define free_internal free
-#ifdef POSIX
 #define msize_internal malloc_usable_size
-#else  // POSIX
-#define msize_internal _msize
-#endif // POSIX
 #define compact_internal() (0)
 #define heapstats_internal(p) (void)(0)
 #else // USE_DLMALLOC
@@ -369,27 +365,6 @@ CStdMemAlloc::CStdMemAlloc()
 	m_sMemoryAllocFailed( (size_t)0 ),
 	m_bInCompact( false )
 {
-#if IsPlatformWindowsPC()
-	char *pStr = (char*)Plat_GetCommandLineA();
-	if ( pStr )
-	{
-		char tempStr[512];
-		strncpy( tempStr, pStr, sizeof( tempStr ) - 1 );
-		tempStr[ sizeof( tempStr ) - 1 ] = 0;
-		_strupr( tempStr );
-		s_bUsingProcessHeap = CheckWindowsAllocSettings( tempStr );
-
-#ifdef MEMALLOC_REGIONS
-		const char *pMemSpaceParam = "-memspacemb ";
-		if ( const char *pMemSpace = strstr( pStr, pMemSpaceParam ) )
-		{
-			const char *pMemSpaceMb = pMemSpace + strlen( pMemSpaceParam );
-			int nMb = atoi( pMemSpaceMb );
-			s_nMemSpaceSize = size_t( nMb ) * ( 1024 * 1024ull );
-		}
-#endif
-	}
-#endif
 }
 
 #if MEM_SBH_ENABLED
@@ -1614,9 +1589,6 @@ bool CSmallBlockHeap<CAllocator>::Validate()
 #else // LIGHT_MEM_DEBUG_REQUIRES_CMD_LINE_SWITCH
 bool g_bUsingLMD = ( Plat_GetCommandLineA() ) ? ( strstr( Plat_GetCommandLineA(), "-uselmd" ) != NULL ) : false;
 #define UsingLMD() g_bUsingLMD
-#if defined( _PS3 )
-#error "Plat_GetCommandLineA() not implemented on PS3"
-#endif
 #endif // LIGHT_MEM_DEBUG_REQUIRES_CMD_LINE_SWITCH
 
 const char *g_pszUnknown = "unknown";
@@ -1661,7 +1633,7 @@ struct AllocHeader_t
 	Sentinal_t sentinal;
 };
 
-const int g_nRecentFrees = ( IsPC() ) ? 8192 : 512;
+const int g_nRecentFrees = ( true ) ? 8192 : 512;
 AllocHeader_t **g_pRecentFrees = (AllocHeader_t **)calloc( g_nRecentFrees, sizeof(AllocHeader_t *) );
 int g_iNextFreeSlot;
 
@@ -2294,14 +2266,7 @@ void *CStdMemAlloc::RegionAlloc( int region, size_t nSize, const char *pFileName
 	return LMDNoteAlloc( CStdMemAlloc::InternalAlloc( region, nAdjustedSize ), nSize, 0, pFileName, nLine );
 }
 
-#if defined (LINUX)
 #include <malloc.h>
-#elif defined (OSX)
-#define malloc_usable_size( ptr ) malloc_size( ptr )
-extern "C" {
-	extern size_t malloc_size( const void *ptr );
-}
-#endif // LINUX/OSX
 
 //-----------------------------------------------------------------------------
 // Returns the size of a particular allocation (NOTE: may be larger than the size requested!)
@@ -2380,7 +2345,6 @@ int CStdMemAlloc::CrtIsValidPointer( const void *pMem, unsigned int size, int ac
 
 int CStdMemAlloc::CrtCheckMemory( void )
 {
-#ifndef _CERT
 	LMDValidateHeap();
 #if MEM_SBH_ENABLED
 	if ( !m_PrimarySBH.Validate() )
@@ -2400,7 +2364,6 @@ int CStdMemAlloc::CrtCheckMemory( void )
 	}
 #endif // MEMALLOC_NO_FALLBACK
 #endif // MEM_SBH_ENABLED
-#endif // _CERT
 	return 1;
 }
 
@@ -2617,10 +2580,6 @@ size_t CStdMemAlloc::InternalCompact( bool bSmallBlockOnly )
 #ifndef MEMALLOC_NO_FALLBACK
 	nBytesRecovered = m_FallbackSBH.Compact( false );
 	nTotalBytesRecovered += nBytesRecovered;
-	if ( nBytesRecovered && IsGameConsole() )
-	{
-		Msg( "Compact freed %d bytes from virtual heap (up to 256k still committed)\n", nBytesRecovered );
-	}
 #endif // MEMALLOC_NO_FALLBACK
 	nBytesRecovered = m_PrimarySBH.Compact( false );
 	nTotalBytesRecovered += nBytesRecovered;
@@ -2634,17 +2593,9 @@ size_t CStdMemAlloc::InternalCompact( bool bSmallBlockOnly )
 	{
 		nBytesRecovered = compact_internal();
 		nTotalBytesRecovered += nBytesRecovered;
-		if ( nBytesRecovered && IsGameConsole() )
-		{
-			Msg( "Compact released %d bytes from the mixed block heap\n", nBytesRecovered );
-		}
 	}
 
 	nBytesRecovered = compact_internal();
-	if ( nBytesRecovered && IsGameConsole() )
-	{
-		Msg( "Compact released %d bytes from the mixed block heap\n", nBytesRecovered );
-	}
 
 	m_bInCompact = false;
 	m_CompactMutex.Unlock();

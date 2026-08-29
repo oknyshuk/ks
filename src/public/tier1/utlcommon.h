@@ -172,7 +172,7 @@ template <> struct DefaultHashFunctor<unsigned int> : Mix32HashFunctor { };
 #if defined(_WIN32)
 template <> struct DefaultHashFunctor<signed long> : Mix32HashFunctor { };
 template <> struct DefaultHashFunctor<unsigned long> : Mix32HashFunctor { };
-#elif defined(POSIX)
+#else
 template <> struct DefaultHashFunctor<signed long> : Mix64HashFunctor { };
 template <> struct DefaultHashFunctor<unsigned long> : Mix64HashFunctor { };
 #endif

@@ -30,9 +30,7 @@
 #include "hegrenade_projectile.h"
 #include "Effects/inferno.h"
 
-#if !defined( _GAMECONSOLE )
 #include "cdll_int.h"
-#endif
 
 // NOTE: This has to be the last file included!
 #include "tier0/memdbgon.h"
@@ -129,7 +127,6 @@ CSBombEventName BombEventNameFromString( const char* pEventName )
 }
 
 
-#if !defined( NO_STEAM )
 uint32 GetPlayerID( CCSPlayer *pPlayer )
 {
 	// Steam account id's for bots based on difficulty
@@ -173,7 +170,6 @@ uint32 GetPlayerID( CCSPlayer *pPlayer )
 
 	return pPlayer->GetSteamIDAsUInt64();
 }
-#endif // !NO_STEAM
 
 // [Forrest] Allow nemesis/revenge to be turned off for a server
 static void SvNoNemesisChangeCallback( IConVar *pConVar, const char *pOldValue, float flOldValue )
@@ -210,9 +206,7 @@ int GetCSLevelIndex( const char *pLevelName )
 
 
 CCSGameStats CCS_GameStats;
-#if !defined( _GAMECONSOLE ) && !defined( NO_STEAM )
 CCSGameStats::StatContainerList_t* CCSGameStats::s_StatLists = new CCSGameStats::StatContainerList_t();
-#endif
 
 //-----------------------------------------------------------------------------
 // Purpose: Constructor
@@ -301,7 +295,6 @@ void CCSGameStats::Event_ShotFired( CBasePlayer *pPlayer, CBaseCombatWeapon* pWe
 
 			// OGS tracking
 			// Check to see if this bullet is from a weapon that fires multiple bullets with a single shot.
-#if !defined( _GAMECONSOLE ) && !defined( NO_STEAM )			
 			uint8 iSubBullet = 0;			
 			SWeaponShotData *lastShotData = m_WeaponShotData.Count() ? m_WeaponShotData.Tail() : NULL;
 
@@ -312,7 +305,6 @@ void CCSGameStats::Event_ShotFired( CBasePlayer *pPlayer, CBaseCombatWeapon* pWe
 			}
 
 			m_WeaponShotData.AddToTail( new SWeaponShotData( pCSPlayer, pCSWeapon, iSubBullet, CSGameRules()->m_iTotalRoundsPlayed, (int)pCSWeapon->m_flRecoilIndex ) );
-#endif
 			for (int i = 0; WeaponName_StatId_Table[i].weaponId != WEAPON_NONE; ++i)
 			{
 			    if ( WeaponName_StatId_Table[i].weaponId == weaponId && WeaponName_StatId_Table[i].shotStatId != CSSTAT_UNDEFINED )
@@ -895,7 +887,6 @@ void CCSGameStats::Event_PlayerDamage( CBasePlayer *pBasePlayer, const CTakeDama
 	// OGS stats
 
 	// See if this is a bullet from a weapon that fires multiple (shotgun)
-#if !defined( _GAMECONSOLE ) && !defined( NO_STEAM )
 
 	if ( info.GetBulletID() != 0 )
 	{
@@ -910,7 +901,6 @@ void CCSGameStats::Event_PlayerDamage( CBasePlayer *pBasePlayer, const CTakeDama
 
 		m_WeaponHitData.AddToTail( new SWeaponHitData( ToCSPlayer( pBasePlayer ), info, iSubBullet, CSGameRules()->m_iTotalRoundsPlayed, info.GetRecoilIndex() ) );
 	}
-#endif	
 }
 
 //-----------------------------------------------------------------------------
@@ -929,14 +919,12 @@ void CCSGameStats::Event_MoneySpent( CCSPlayer* pPlayer, int moneySpent, const c
 	if ( pPlayer && moneySpent > 0)
 	{
 		IncrementStat(pPlayer, CSSTAT_MONEY_SPENT, moneySpent);
-#if !defined( _GAMECONSOLE ) && !defined( NO_STEAM )
 		if ( pItemName && !pPlayer->IsBot() )
 		{
 			CSteamID steamIDForBuyer;
 			pPlayer->GetSteamID( &steamIDForBuyer );
 			m_MarketPurchases.AddToTail( new SMarketPurchases( steamIDForBuyer.ConvertToUint64(), moneySpent, pItemName, CSGameRules()->m_iTotalRoundsPlayed ) );
 		}
-#endif
 	}
 }
 
@@ -978,10 +966,8 @@ void CCSGameStats::FireGameEvent( IGameEvent *event )
 	}
 	else if ( V_strcmp( pEventName, "round_officially_ended" ) == 0 )
 	{
-#if !defined( _GAMECONSOLE )
 		// Upload round stats here to avoid end-of-round visual hitch
 		UploadRoundStats();
-#endif
 	}
 	else if ( V_strcmp(pEventName, "break_prop") == 0 )
 	{
@@ -1148,12 +1134,10 @@ void CCSGameStats::ResetRoundStats()
 //-----------------------------------------------------------------------------
 void CCSGameStats::ClearOGSRoundStats()
 {
-#if !defined( _GAMECONSOLE ) && !defined( NO_STEAM )
 	m_WeaponHitData.PurgeAndDeleteElements();
 	m_WeaponMissData.PurgeAndDeleteElements();
 	m_WeaponShotData.PurgeAndDeleteElements();
 	m_MarketPurchases.PurgeAndDeleteElements();
-#endif
 }
 
 //-----------------------------------------------------------------------------
@@ -1531,9 +1515,7 @@ void CCSGameStats::Event_LevelShutdown( float fElapsed )
 	}
 	CBaseGameStats::Event_LevelShutdown(fElapsed);
 
-#if !defined( _GAMECONSOLE )
 	GetSteamWorksGameStatsServer().EndSession();
-#endif
 }
 
 // Reset any per match info that resides in the player class
@@ -1550,7 +1532,6 @@ void CCSGameStats::ResetPlayerClassMatchStats()
 	}
 }
 
-#if !defined( _GAMECONSOLE )
 
 
 extern double g_rowCommitTime;
@@ -1560,7 +1541,6 @@ extern double g_rowWriteTime;
 //-----------------------------------------------------------------------------
 void CCSGameStats::UploadRoundStats( void )
 {
-#if !defined( NO_STEAM )
 	// If we don't have any data to send, we can early out now;
 
 	// Purpose: Linux servers hang if they submit too many bullets at once and they restart. That's bad!
@@ -1669,47 +1649,14 @@ void CCSGameStats::UploadRoundStats( void )
 
 	// Reset the bullet ID.
 	CCSPlayer::ResetBulletGroup();
-#endif // !NO_STEAM
 }
 
-#if 0 
-CON_COMMAND ( teststats, "Test command" )
-{
-	CFastTimer totalTimer;
-	double uploadTime = 0.0f;
-	g_rowCommitTime = 0.0f;
-	g_rowWriteTime = 0.0f;
-
-	for( int i = 0; i < 1000; i++ )
-	{
-		KeyValues *pKV = new KeyValues( "basedata" );
-		if ( !pKV )
-			return;
-
-		pKV->SetName( "foobartest" );
-		pKV->SetUint64( "test1", 1234 );
-		pKV->SetUint64( "test2", 1234 );
-		pKV->SetUint64( "test3", 1234 );
-		pKV->SetUint64( "test4", 1234 );
-		pKV->SetString( "test5", "TEST1234567890TEST1234567890TEST!");
-
-		totalTimer.Start();
-		GetSteamWorksGameStatsServer().AddStatsForUpload( pKV, args.ArgC() == 1 );
-		totalTimer.End();
-
-		uploadTime += totalTimer.GetDuration().GetMillisecondsF();
-	}
-
-	Msg( "teststats took %.3f msec   commit: %.3fms   write: %.3fms.\n", uploadTime, g_rowCommitTime, g_rowWriteTime );
-}
-#endif
 
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
 void CCSGameStats::SubmitGameStats( KeyValues *pKV )
 {
-#if !defined( NO_STEAM )
 	int listCount = s_StatLists->Count();
 	for( int i=0; i < listCount; ++i )
 	{
@@ -1717,7 +1664,6 @@ void CCSGameStats::SubmitGameStats( KeyValues *pKV )
 		(*s_StatLists)[i]->SendData(pKV);
 		(*s_StatLists)[i]->Clear();
 	}
-#endif // !NO_STEAM
 }
 
 //-----------------------------------------------------------------------------
@@ -1725,11 +1671,7 @@ void CCSGameStats::SubmitGameStats( KeyValues *pKV )
 //-----------------------------------------------------------------------------
 CCSGameStats::StatContainerList_t* CCSGameStats::GetStatContainerList( void )
 {
-#if !defined( NO_STEAM )
 	return s_StatLists;
-#else
-	return NULL;
-#endif
 }
 
 //-----------------------------------------------------------------------------
@@ -1737,11 +1679,7 @@ CCSGameStats::StatContainerList_t* CCSGameStats::GetStatContainerList( void )
 //-----------------------------------------------------------------------------
 bool CCSGameStats::AnyOGSDataToSubmit( void )
 {
-#if !defined( NO_STEAM )
 	return m_WeaponShotData.Count() > 0 || m_MarketPurchases.Count() > 0;
-#else
-	return false;
-#endif
 }
 
 void CCSGameStats::CreateNewGameStatsSession( void )
@@ -2011,4 +1949,3 @@ bool SWeaponHitData::InitAsBombEvent( CCSPlayer *pCSPlayer, CPlantedC4 *pPlanted
 
 
 
-#endif // !_GAMECONSOLE

@@ -190,11 +190,6 @@ samplerCUBE EnvmapSampler			: register( s2 );
 
 sampler BumpmapSampler				: register( s4 );
 
-#if (BUMPMAP == 1) && defined( _PS3 )
-// Causes the Cg compiler to automatically produce _bx2 modifier on the texture load instead of producing a MAD to range expand the vector, saving one instruction.
-#pragma texsign BumpmapSampler
-#pragma texformat BumpmapSampler RGBA8
-#endif
 
 #if BUMPMAP2 == 1
 	sampler BumpmapSampler2			: register( s5 );
@@ -218,17 +213,6 @@ sampler BaseTextureSampler2			: register( s7 );
 	#endif
 #endif
 
-#if ( defined( _X360 ) || defined( _PS3 ) ) && FLASHLIGHT
-	sampler FlashlightSampler		: register( s13 );
-	sampler ShadowDepthSampler		: register( s14 );
-	sampler RandRotSampler			: register( s15 );
-
-#if defined(_PS3)
-// Needed for optimal shadow filter code generation on PS3.
-#pragma texformat ShadowDepthSampler DEPTH_COMPONENT24
-#endif
-
-#endif
 
 #ifdef PHONG_DEBUG
 #undef PHONG_DEBUG
@@ -246,7 +230,7 @@ float Luminance( float3 cColor )
 
 //-----------------------------------------------------------------------------------------------------------------------------
 
-#if ( CASCADED_SHADOW_MAPPING ) && !defined( _X360 ) && !defined( _PS3 ) && !defined( SHADER_MODEL_PS_2_B )
+#if ( CASCADED_SHADOW_MAPPING ) && !defined( SHADER_MODEL_PS_2_B )
 const bool g_bCSMEnabled : register(b0);
 #undef CASCADE_SIZE
 #define CASCADE_SIZE 1
@@ -260,10 +244,6 @@ const bool g_bCSMEnabled : register(b0);
 #if ( ( CASCADED_SHADOW_MAPPING ) && ( CASCADE_SIZE > 0 ) )
 	sampler CSMDepthAtlasSampler : register( s15 );
 	
-	#if defined(_PS3)
-		// Needed for optimal shadow filter code generation on PS3.
-		#pragma texformat CSMDepthAtlasSampler DEPTH_COMPONENT24
-	#endif
 
 	#if defined( SHADER_MODEL_PS_2_B )
 		#define CSM_LIGHTMAPPEDGENERIC
@@ -275,16 +255,6 @@ const bool g_bCSMEnabled : register(b0);
 
 //-----------------------------------------------------------------------------------------------------------------------------
 
-#if defined( _X360 )
-	// The compiler runs out of temp registers in certain combos, increase the maximum for now
-	#if ( BASETEXTURE2 && (BUMPMAP == 2) && CUBEMAP && NORMALMAPALPHAENVMAPMASK && DIFFUSEBUMPMAP && FLASHLIGHT && SHADER_SRGB_READ )
-		[maxtempreg(44)]
-	#elif ( SHADER_SRGB_READ == 1 )
-		[maxtempreg(41)]
-	#else
-		[maxtempreg(36)]
-	#endif
-#endif
 
 #if LIGHTING_PREVIEW == 2
 LPREVIEW_PS_OUT main( PS_INPUT i )
@@ -699,7 +669,7 @@ float4_color_return_type main( PS_INPUT i ) : COLOR
 	// also a catch path for ssbump
 	#if ( ( ( CSM_BLENDING == 0 ) ) && ( CASCADED_SHADOW_MAPPING ) && ( CASCADE_SIZE > 0 ) )
 	{
-#if !defined( _X360 ) && !defined( _PS3 ) && !defined( SHADER_MODEL_PS_2_B )
+#if !defined( SHADER_MODEL_PS_2_B )
 		if ( g_bCSMEnabled )
 		{
 #endif						
@@ -740,7 +710,7 @@ float4_color_return_type main( PS_INPUT i ) : COLOR
 	//			diffuseLighting.rgb = lerp( float3(1.0f-flShadowScalar,1.0f-flShadowScalar,1.0f-flShadowScalar), CSMVisualizeSplit( worldPos ), .3f );
 	//			return float4(diffuseLighting.rgb, 1.0f);
 			}			
-#if !defined( _X360 ) && !defined( _PS3 ) && !defined( SHADER_MODEL_PS_2_B )
+#if !defined( SHADER_MODEL_PS_2_B )
 		}
 #endif
 
@@ -754,36 +724,6 @@ float4_color_return_type main( PS_INPUT i ) : COLOR
 
 	HALF3 diffuseComponent = albedo.rgb * diffuseLighting;
 
-	#if ( defined( _X360 ) || defined( _PS3 ) ) && FLASHLIGHT
-		// ssbump doesn't pass a normal to the flashlight...it computes shadowing a different way
-		#if ( BUMPMAP == 2 )
-			bool bHasNormal = false;
-
-			float3 worldPosToLightVector = g_FlashlightPos - worldPos;
-
-			HALF3 tangentPosToLightVector;
-			tangentPosToLightVector.x = dot( worldPosToLightVector, tangenttranspose[0] );
-			tangentPosToLightVector.y = dot( worldPosToLightVector, tangenttranspose[1] );
-			tangentPosToLightVector.z = dot( worldPosToLightVector, tangenttranspose[2] );
-
-			tangentPosToLightVector = normalize( tangentPosToLightVector );
-			HALF nDotL = saturate( vSSBumpVector.x*dot( tangentPosToLightVector, bumpBasis[0]) +
-									vSSBumpVector.y*dot( tangentPosToLightVector, bumpBasis[1]) +
-									vSSBumpVector.z*dot( tangentPosToLightVector, bumpBasis[2]) );
-		#else
-			bool bHasNormal = true;
-			HALF nDotL = 1.0h;
-		#endif
-
-		bool bShadows = FLASHLIGHTSHADOWS ? true : false;
-	
-		HALF3 flashlightColor = DoFlashlight( g_FlashlightPos, worldPos, i.flashlightSpacePos,
-			worldSpaceNormal, g_FlashlightAttenuationFactors.xyz, 
-			g_FlashlightAttenuationFactors.w, FlashlightSampler, ShadowDepthSampler,
-			RandRotSampler, 0, bShadows, i.vProjPos.xy / i.vProjPos.w, false, g_ShadowTweaks, bHasNormal );
-
-		diffuseComponent = albedo.xyz * ( diffuseLighting + ( flashlightColor * nDotL * (HALF3)g_TintValuesWithoutLightmapScale.rgb ) );
-	#endif
 
 	if ( bSelfIllum )
 	{
@@ -981,11 +921,6 @@ float4_color_return_type main( PS_INPUT i ) : COLOR
 
 		float4_color_return_type vOutput = FinalOutputHalf( HALF4( result.rgb, alpha ), fogFactor, PIXELFOGTYPE, TONEMAP_SCALE_LINEAR, bWriteDepthToAlpha, i.worldPos_projPosZ.w );
 
-		#if ( defined( _X360 ) )
-		{
-			vOutput.xyz += ScreenSpaceOrderedDither( i.vScreenPos );
-		}
-		#endif
 
 		return vOutput;
 	}

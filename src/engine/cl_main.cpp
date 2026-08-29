@@ -51,7 +51,6 @@
 #include "sys_dll.h"
 #include "avi/iavi.h"
 #include "cl_steamauth.h"
-#include "filesystem/IQueuedLoader.h"
 #include "matchmaking/imatchframework.h"
 #include "tier2/tier2.h"
 #include "host_state.h"
@@ -68,8 +67,6 @@
 #include "audio/private/snd_sfx.h"
 #include "MapReslistGenerator.h"
 
-#ifdef _X360
-#endif
 #if defined( REPLAY_ENABLED )
 #include "replayhistorymanager.h"
 #endif
@@ -175,17 +172,6 @@ void CL_HandlePureServerWhitelist( CPureServerWhitelist *pWhitelist )
 		pAllowFromDiskList = pWhitelist->GetAllowFromDiskList();
 	}
 	
-	if ( !IsPC() )
-	{
-		if ( pForceMatchList )
-			pForceMatchList->Release();
-		
-		if ( pAllowFromDiskList )
-			pAllowFromDiskList->Release();
-		
-		return;
-	}
-
 	// we wont reload any files.
 	IFileList *pFilesToReload;
 	g_pFileSystem->RegisterFileWhitelist( pForceMatchList, pAllowFromDiskList, &pFilesToReload );
@@ -284,28 +270,15 @@ const CPrecacheUserData* CL_GetPrecacheUserData( INetworkStringTable *table, int
 static bool s_bIsHL2Demo = false;
 void CL_InitHL2DemoFlag()
 {
-#if defined(_GAMECONSOLE)
-	s_bIsHL2Demo = false;
-#else
 	static bool initialized = false;
 	if ( !initialized )
 	{
-#ifndef NO_STEAM
-		if ( Steam3Client().SteamApps() && !Q_stricmp( COM_GetModDirectory(), "hl2" ) && g_pFileSystem->IsSteam() )
-		{
-			initialized = true;
-
-			// if user didn't buy HL2 yet, this must be the free demo
-			s_bIsHL2Demo = !Steam3Client().SteamApps()->BIsSubscribedApp( GetAppSteamAppId( k_App_HL2 ) );
-		}
-#endif
 
 		if ( !Q_stricmp( COM_GetModDirectory(), "hl2" ) && CommandLine()->CheckParm( "-demo" ) ) 
 		{
 			s_bIsHL2Demo = true;
 		}
 	}
-#endif
 }
 
 //-----------------------------------------------------------------------------
@@ -320,26 +293,7 @@ bool CL_IsHL2Demo()
 static bool s_bIsPortalDemo = false;
 void CL_InitPortalDemoFlag()
 {
-#if defined(_GAMECONSOLE) || defined( NO_STEAM )
 	s_bIsPortalDemo = false;
-#else
-	static bool initialized = false;
-	if ( !initialized )
-	{
-		if ( Steam3Client().SteamApps() && !Q_stricmp( COM_GetModDirectory(), "portal" ) && g_pFileSystem->IsSteam() )
-		{
-			initialized = true;
-		
-			// if user didn't buy Portal yet, this must be the free demo
-			s_bIsPortalDemo = !Steam3Client().SteamApps()->BIsSubscribedApp( GetAppSteamAppId( k_App_PORTAL ) );
-		}
-		
-		if ( !Q_stricmp( COM_GetModDirectory(), "portal" ) && CommandLine()->CheckParm( "-demo" ) ) 
-		{
-			s_bIsPortalDemo = true;
-		}
-	}
-#endif
 }
 
 //-----------------------------------------------------------------------------
@@ -376,11 +330,6 @@ void CL_CheckClientState( void )
 //-----------------------------------------------------------------------------
 bool CL_CheckCRCs( const char *pszMap )
 {
-	if ( IsGameConsole() )
-	{
-		// Console does not need to CRC map/dlls (slows loading), closed data system
-		return true;
-	}
 
 	// If we are on PC cross-playing with a console, then don't perform CRC check
 	if ( !GetBaseLocalClient().serverCRC && !GetBaseLocalClient().serverClientSideDllCRC )
@@ -552,10 +501,7 @@ void CL_ReadPackets ( bool bFinalTick )
 
 		if ( bDisconnected )
 		{
-			if ( IsPC() )
-			{
-				EngineUI()->ShowErrorMessage();
-			}
+			EngineUI()->ShowErrorMessage();
 	
 			Host_Disconnect (true);
 			return;
@@ -652,9 +598,6 @@ static bool CL_SoundMessageLessFunc( SoundInfo_t const &sound1, SoundInfo_t cons
 }
 
 static CUtlRBTree< SoundInfo_t, int > g_SoundMessages( 0, 0, CL_SoundMessageLessFunc );
-#ifndef LINUX
-extern ConVar snd_show;
-#endif
 
 //-----------------------------------------------------------------------------
 // Purpose: Add sound to queue
@@ -668,24 +611,6 @@ void CL_AddSound( const SoundInfo_t &sound )
 void CL_SndShow( const char *pName, const SoundInfo_t &pSound )
 {
 
-#ifndef LINUX
-	if ( snd_show.GetInt() >= 2 )
-	{
-		DevMsg( "%i (seq %i) %s : src %d : ch %d : %d dB : vol %.2f : time %.3f (%.4f delay) @%.1f %.1f %.1f\n", 
-			host_framecount,
-			pSound.nSequenceNumber,
-			pName,
-			pSound.nEntityIndex, 
-			pSound.nChannel, 
-			pSound.Soundlevel, 
-			pSound.fVolume, 
-			GetBaseLocalClient().GetTime(),
-			pSound.fDelay,
-			pSound.vOrigin.x,
-			pSound.vOrigin.y,
-			pSound.vOrigin.z );
-	}
-#endif
 }
 
 //-----------------------------------------------------------------------------
@@ -708,11 +633,6 @@ void CL_DispatchSound( const SoundInfo_t &sound )
 			// this adjusts for host_thread_mode or any other cases where we're running more than one
 			// tick at a time, but we get network updates on the first tick
 			soundtime -= ((g_ClientGlobalVariables.simTicksThisFrame-1) * host_state.interval_per_tick);
-#if 0
-			static float lastSoundTime = 0;
-			Msg("[%.3f] Play %s at %.3f\n", soundtime - lastSoundTime, name, soundtime );
-			lastSoundTime = soundtime;
-#endif
 			// this sound was networked over from the server, use server clock
 			params.delay = S_ComputeDelayForSoundtime( soundtime, CLOCK_SYNC_SERVER );
 			if ( params.delay < 0 )
@@ -1024,7 +944,6 @@ CON_COMMAND_F( connect_splitscreen, "Connect to specified server. With multiple 
 	// If it's not a single player connection to "localhost", initialize networking & stop listenserver
 	if ( !StringHasPrefixCaseSensitive( argValues[ 0 ].String(), "localhost" ) )
 	{
-		if ( !IsGameConsole() )
 			return;
 
 		Host_Disconnect(false);	
@@ -1066,394 +985,9 @@ CON_COMMAND_F( connect_splitscreen, "Connect to specified server. With multiple 
 	gfExtendedError = false;
 }
 
-#if defined( _X360 ) && !defined( _CERT )
-//-----------------------------------------------------------------------------
-// Caller must provide secure address string.  Establishes connection.
-// Returns TRUE if successful. Non-shipping development helper only.
-//-----------------------------------------------------------------------------
-static bool XLSP_StartConnection( const char *pXLSPAddress, char *pOutAddress, int outAddressSize, unsigned int timeout = 10 * 1000 )
-{
-	// remove the possible port
-	int nPort = -1;
-	char cleanAddress[128];
-	V_strncpy( cleanAddress, pXLSPAddress, sizeof( cleanAddress ) );
-	char *pPort = strchr( cleanAddress, ':' );
-	if ( pPort )
-	{
-		*pPort++ = '\0';
-		if ( pPort[0] )
-		{
-			nPort = atoi( pPort );
-		}
-	}
 
-	IN_ADDR xlspAddress;
-	int ip4[4];
-	sscanf( cleanAddress, "%d.%d.%d.%d", &ip4[0], &ip4[1], &ip4[2], &ip4[3] );
-	xlspAddress.S_un.S_un_b.s_b1 = ip4[0];
-	xlspAddress.S_un.S_un_b.s_b2 = ip4[1];
-	xlspAddress.S_un.S_un_b.s_b3 = ip4[2];
-	xlspAddress.S_un.S_un_b.s_b4 = ip4[3];
 
-	// track and free last known secure address
-	static IN_ADDR s_lastSecureAddress;
-	if ( s_lastSecureAddress.S_un.S_addr != 0x0 )
-	{
-		XNetUnregisterInAddr( s_lastSecureAddress );
-		s_lastSecureAddress.S_un.S_addr = 0x0;
-	}
 
-	IN_ADDR secureAddress;
-	DWORD dwResult = XNetServerToInAddr( xlspAddress, g_pMatchFramework->GetMatchTitle()->GetTitleServiceID(), &secureAddress );
-	if ( dwResult != ERROR_SUCCESS )
-	{
-		Warning( "Failed to resolve XLSP secure address for %d.%d.%d.%d\n", 
-			xlspAddress.S_un.S_un_b.s_b1,
-			xlspAddress.S_un.S_un_b.s_b2,
-			xlspAddress.S_un.S_un_b.s_b3,
-			xlspAddress.S_un.S_un_b.s_b4 );
-		return false;
-	}
-
-	s_lastSecureAddress = secureAddress;
-
-	Msg( "Attempting connection to XLSP title server using, XLSP:%d.%d.%d.%d -> Secure:%d.%d.%d.%d\n", 
-		xlspAddress.S_un.S_un_b.s_b1,
-		xlspAddress.S_un.S_un_b.s_b2,
-		xlspAddress.S_un.S_un_b.s_b3,
-		xlspAddress.S_un.S_un_b.s_b4,
-		secureAddress.S_un.S_un_b.s_b1,
-		secureAddress.S_un.S_un_b.s_b2,
-		secureAddress.S_un.S_un_b.s_b3,
-		secureAddress.S_un.S_un_b.s_b4 );
-
-	// Connect to server
-	int iResult;
-	if ( ( iResult = XNetConnect( secureAddress ) ) != 0 )
-	{
-		Warning( "XNetConnect: failed with %d.\n", iResult );
-		return false;
-	}
-
-	// Wait for the SG connection to complete
-	unsigned long startTime = Plat_MSTime();
-	while ( ( dwResult = XNetGetConnectStatus( secureAddress ) ) == XNET_CONNECT_STATUS_PENDING )
-	{
-		if ( ( Plat_MSTime() - startTime ) > timeout )
-		{
-			Warning( "XNetConnect: Timeout, took longer than %ums to complete.\n", timeout );
-			return false;
-		}
-		Sleep( 100 );
-	}
-
-	if ( dwResult != XNET_CONNECT_STATUS_CONNECTED )
-	{
-		Warning( "XNetGetConnectStatus: connection failed with %d.\n", dwResult );
-		return false;
-	}
-
-	if ( nPort != -1 )
-	{
-		V_snprintf( 
-			pOutAddress, 
-			outAddressSize, 
-			"%d.%d.%d.%d:%d",
-			secureAddress.S_un.S_un_b.s_b1,
-			secureAddress.S_un.S_un_b.s_b2,
-			secureAddress.S_un.S_un_b.s_b3,
-			secureAddress.S_un.S_un_b.s_b4,
-			nPort );
-	} 
-	else
-	{
-		V_snprintf( 
-			pOutAddress,
-			outAddressSize,
-			"%d.%d.%d.%d",
-			secureAddress.S_un.S_un_b.s_b1,
-			secureAddress.S_un.S_un_b.s_b2,
-			secureAddress.S_un.S_un_b.s_b3,
-			secureAddress.S_un.S_un_b.s_b4 );
-	}
-
-	Msg( "Connected to XLSP title server.\n" );
-	return true;
-}
-#endif
-
-#if defined( _X360 ) && !defined( _CERT )
-//-----------------------------------------------------------------------------
-// Assume non-numeric name string address represents XLSP because system link
-// can only be IP4. Resolve name to secure IP4.
-// Returns -1 if error, Returns 0 if not XLSP, Returns 1 if valid.
-// Non-shipping development helper only.
-//-----------------------------------------------------------------------------
-static int XLSP_NameToAddress( const char *pAddress, char *pOutAddress, int outAddressSize )
-{
-	// want string names, but not this one
-	if ( StringHasPrefixCaseSensitive( pAddress, "localhost" ) )
-	{
-		return 0;
-	}
-
-	// do not use DNS, not trying to resolve the name
-	netadr_t netadr;
-	netadr.SetFromString( pAddress, false );
-	if ( netadr.IsBaseAdrValid() )
-	{
-		// not a string name, ignore
-		return 0;
-	}
-
-	// remove the possible port
-	int nPort = -1;
-	char cleanAddress[128];
-	V_strncpy( cleanAddress, pAddress, sizeof( cleanAddress ) );
-	char *pPort = strchr( cleanAddress, ':' );
-	if ( pPort )
-	{
-		*pPort++ = '\0';
-		if ( pPort[0] )
-		{
-			nPort = atoi( pPort );
-		}
-	}
-
-	XTITLE_SERVER_INFO serverInfos[XTITLE_SERVER_MAX_LSP_INFO];
-	V_memset( serverInfos, 0, sizeof( serverInfos ) );
-
-	// get a title server enumerator
-	IN_ADDR serverAddr = { 0 };
-	bool bFound = false;
-	DWORD dwBufferSize = 0;
-	HANDLE hServerEnum = INVALID_HANDLE_VALUE;
-	DWORD dwServerCount = 0;
-	DWORD dwResult = XTitleServerCreateEnumerator( NULL, XTITLE_SERVER_MAX_LSP_INFO, &dwBufferSize, &hServerEnum );
-	if ( dwResult == ERROR_SUCCESS )
-	{
-		// synchronous population
-		dwResult = XEnumerate( hServerEnum, serverInfos, sizeof( serverInfos ), &dwServerCount, NULL );
-		CloseHandle( hServerEnum );
-		if ( dwResult == ERROR_SUCCESS )
-		{
-			// iterate all known servers, try and find match
-			for ( unsigned int i = 0; i < dwServerCount; i++ )
-			{
-				// get the clean name
-				char cleanName[XTITLE_SERVER_MAX_SERVER_INFO_LEN];
-				V_strncpy( cleanName, serverInfos[i].szServerInfo, sizeof( cleanName ) );
-				char *pArgs = V_stristr( cleanName, "**" );
-				if ( pArgs )
-				{
-					*pArgs = '\0';
-				}
-				if ( !V_stricmp( cleanAddress, cleanName ) )
-				{
-					serverAddr = serverInfos[i].inaServer;
-					bFound = true;
-					break;
-				}
-			}
-		}
-	}
-	if ( !bFound )
-	{
-		return -1;
-	}
-
-	if ( nPort != -1 )
-	{
-		V_snprintf( 
-			pOutAddress, 
-			outAddressSize, 
-			"%d.%d.%d.%d:%d",
-			serverAddr.S_un.S_un_b.s_b1,
-			serverAddr.S_un.S_un_b.s_b2,
-			serverAddr.S_un.S_un_b.s_b3,
-			serverAddr.S_un.S_un_b.s_b4,
-			nPort );
-	} 
-	else
-	{
-		V_snprintf( 
-			pOutAddress,
-			outAddressSize,
-			"%d.%d.%d.%d",
-			serverAddr.S_un.S_un_b.s_b1,
-			serverAddr.S_un.S_un_b.s_b2,
-			serverAddr.S_un.S_un_b.s_b3,
-			serverAddr.S_un.S_un_b.s_b4 );
-	}
-
-	// success
-	return 1;
-}
-#endif
-
-#if defined( _X360 ) && !defined( _CERT )
-//  Non-shipping development helper only.
-CON_COMMAND( xlsp_list_servers, "Spew XLSP title servers" )
-{
-	XTITLE_SERVER_INFO serverInfos[XTITLE_SERVER_MAX_LSP_INFO];
-	V_memset( serverInfos, 0, sizeof( serverInfos ) );
-
-	// get a title server enumerator
-	DWORD dwBufferSize = 0;
-	HANDLE hServerEnum = INVALID_HANDLE_VALUE;
-	DWORD dwResult = XTitleServerCreateEnumerator( NULL, XTITLE_SERVER_MAX_LSP_INFO, &dwBufferSize, &hServerEnum );
-	if ( dwResult != ERROR_SUCCESS )
-	{
-		Warning( "XTitleServerCreateEnumerator: failed with 0x%0x.\n", dwResult );
-		return;
-	}
-
-	// synchronous population
-	DWORD dwServerCount = 0;
-	dwResult = XEnumerate( hServerEnum, serverInfos, sizeof( serverInfos ), &dwServerCount, NULL );
-	CloseHandle( hServerEnum );
-	if ( dwResult != ERROR_SUCCESS || !dwServerCount )
-	{
-		Msg( "No XLSP servers found.\n" );
-		return;
-	}
-
-	// iterate and spew
-	Msg( "\nXLSP Title Servers:\n" );
-	for ( DWORD i = 0; i < dwServerCount; ++i )
-	{
-		// decode private additional args
-		char *pToken = V_stristr( serverInfos[i].szServerInfo, "**" );
-		if ( !pToken )
-		{
-			// bad non-conformant syntax, unknown
-			continue;
-		}
-		*pToken = '\0';
-		pToken += 2;
-
-		// change to whitespace for easy tokenization
-		char argString[XTITLE_SERVER_MAX_SERVER_INFO_LEN];
-		V_strncpy( argString, pToken, sizeof( argString ) );
-		pToken = argString;
-		while ( 1 )
-		{
-			pToken = strchr( pToken, '_' );
-			if ( !pToken )
-			{
-				break;
-			}
-			*pToken++ = ' ';
-		}
-
-		// get the port and range
-		int nPort = 0;
-		int nNumPorts = 0;
-		int nMasterPort = 0;
-		int nNumMasterPorts = 0;
-		sscanf( argString, "%d %d %d %d", &nMasterPort, &nNumMasterPorts, &nPort, &nNumPorts );
-
-		// send an async QOS probe to XLSP SG and wait
-		DWORD serviceID = g_pMatchFramework->GetMatchTitle()->GetTitleServiceID();
-		XNQOS *pXNQOS = NULL;
-		DWORD wRttMinInMsecs = 0;
-		DWORD wRttMedInMsecs = 0;
-		DWORD dwUpBitsPerSec = 0;
-		DWORD dwDnBitsPerSec = 0;
-		dwResult = XNetQosLookup( 0, NULL, NULL, NULL, 1, &serverInfos[i].inaServer, &serviceID, 8, 0, 0, NULL, &pXNQOS );
-		if ( dwResult == ERROR_SUCCESS )
-		{
-			while ( pXNQOS->cxnqosPending != 0 )
-			{
-				Sleep( 100 );
-			}
-			if ( pXNQOS->axnqosinfo[0].bFlags & XNET_XNQOSINFO_COMPLETE )
-			{
-				// meaningful results
-				wRttMinInMsecs = pXNQOS->axnqosinfo[0].wRttMinInMsecs;
-				wRttMedInMsecs = pXNQOS->axnqosinfo[0].wRttMedInMsecs;
-				dwUpBitsPerSec = pXNQOS->axnqosinfo[0].dwUpBitsPerSec;
-				dwDnBitsPerSec = pXNQOS->axnqosinfo[0].dwDnBitsPerSec;
-			}
-			
-			XNetQosRelease( pXNQOS );
-			pXNQOS = NULL;
-		}
-
-		// spew
-		Msg( "Virtual IP4        RTT AvgRTT Upstream Dnstream\n" );
-		Msg( "--------------- ------ ------ -------- --------\n" );
-		Msg( "%3d.%3d.%3d.%3d %4dms %4dms %4dkbps %4dkbps \"%s\"\n", 
-			serverInfos[i].inaServer.S_un.S_un_b.s_b1,
-			serverInfos[i].inaServer.S_un.S_un_b.s_b2, 
-			serverInfos[i].inaServer.S_un.S_un_b.s_b3,
-			serverInfos[i].inaServer.S_un.S_un_b.s_b4,
-			wRttMinInMsecs,
-			wRttMedInMsecs,
-			dwUpBitsPerSec/1024,
-			dwDnBitsPerSec/1024,
-			serverInfos[i].szServerInfo );
-		Msg( "   Title Server Ports:  [%d..%d]\n",  nPort, nPort + nNumPorts - 1 );
-		Msg( "   Master Server Ports: [%d..%d]\n",  nMasterPort, nMasterPort + nNumMasterPorts - 1 );
-	}
-}
-#endif
-
-#if defined( _X360 ) && !defined( _CERT )
-//  Non-shipping development helper only.
-CON_COMMAND_F( connect_xlsp, "Direct connection to specified xlsp server.", FCVAR_DONTRECORD )
-{
-	// must have xlsp port specifier
-	if ( args.ArgC() < 4 || args.Arg( 2 )[0] != ':' )
-	{
-		ConMsg( "Usage: connect_xlsp <xlsp_server:port> [# of players]\n" );
-		return;
-	}
-
-	// the tokenizer breaks the address up if a port is provided, we need to reassemble.
-	char address[128];
-	V_strcpy_safe( address, args.Arg( 1 ) );
-	Q_strcat( address, args.Arg( 2 ), sizeof( address ) );
-	Q_strcat( address, args.Arg( 3 ), sizeof( address ) );
-
-	int numPlayers = 1;
-	if ( args.ArgC() >= 5 )
-	{
-		numPlayers = atoi( args.Arg( 4 ) );
-	}
-
-	// due to dev purposes, do xlsp resolve synchronously
-	char xlspAddress[128];
-	char secureAddress[128];
-	int result = XLSP_NameToAddress( address, xlspAddress, sizeof( xlspAddress ) );
-	if ( result > 0 )
-	{
-		// have valid xlsp, establish connection
-		if ( !XLSP_StartConnection( xlspAddress, secureAddress, sizeof( secureAddress ) ) )
-		{
-			// failed
-			Warning( "Could not connect to XLSP server %s.\n", address );
-			return;
-		}
-		// address has been convoluted to the XLSP secure private address
-		V_strncpy( address, secureAddress, sizeof( address ) );
-	}
-	else if ( result == 0 )
-	{
-		Warning( "Not an XLSP server address %s.\n", address );
-		return; 
-	}
-	else
-	{
-		Warning( "No XLSP server found matching %s.\n", address );
-		return;
-	}
-
-	CCommand newArgs;
-	newArgs.Tokenize( CFmtStr( "connect_splitscreen %s %d", secureAddress, numPlayers ) );
-	connect_splitscreen( newArgs );
-}
-#endif
 
 //-----------------------------------------------------------------------------
 // Takes the map name, strips path and extension
@@ -1632,23 +1166,6 @@ void CL_FullyConnected( void )
 	// that the world entity has been created by this point)
 	StaticPropMgr()->LevelInitClient();
 	
-	if ( IsGameConsole() )
-	{
-		// Notify the loader the end of the loading context, preloads are about to be purged
-		g_pQueuedLoader->EndMapLoading( false );
-
-		if ( IsPS3() )
-		{
-			// PS3 static prop lighting (legacy async IO still in flight catching
-			// non reslist-lighting buffers) is writing data into raw pointers
-			// to RSX memory which have been acquired before material system
-			// switches to multithreaded mode. During switch to multithreaded
-			// mode RSX moves its memory so pointers become invalid and thus
-			// all IO must be finished and callbacks fired before
-			// Host_AllowQueuedMaterialSystem
-			g_pFullFileSystem->AsyncFinishAll();
-		}
-	}
 		
 	// loading completed
 
@@ -1658,9 +1175,6 @@ void CL_FullyConnected( void )
 	// can NOW safely purge unused models and their data hierarchy (materials, shaders, etc)
 	modelloader->PurgeUnusedModels();
 
-#ifdef _PS3
-	g_pMaterialSystem->CompactRsxLocalMemory( "FULLY CONNECTED0" );
-#endif
 
 	// loading is complete, hint the view model cache to its initial state and evict everybody
 	// this is a safety catch for any view models that leaked in, the eviction should be a near no-op
@@ -1710,13 +1224,10 @@ void CL_FullyConnected( void )
 
 	EngineUI()->UpdateProgressBar( PROGRESS_READYTOPLAY );
 
-	if ( ( !IsX360() && !IsPS3() ) || GetBaseLocalClient().m_nMaxClients == 1 )
-	{
-		// Need this to persist for multiplayer respawns, 360 can't reload
-		// [mhansen] PS3 is failing to reload also. We should probably figure out why that is
-		// but keeping it around should fix it for now.
-		CM_DiscardEntityString();
-	}
+	// Need this to persist for multiplayer respawns, 360 can't reload
+	// [mhansen] PS3 is failing to reload also. We should probably figure out why that is
+	// but keeping it around should fix it for now.
+	CM_DiscardEntityString();
 
 	g_pMDLCache->EndMapLoad();
 
@@ -1736,12 +1247,6 @@ void CL_FullyConnected( void )
 			cl.m_NetChannel->GetTotalPackets( FLOW_OUTGOING ) );
 	}
 
-	if ( IsX360() )
-	{
-		// Reset material system temporary memory (once loading is complete), ready for in-map use
-		bool bOnLevelShutdown = false;
-		materials->ResetTempHWMemory( bOnLevelShutdown );
-	}
 
 	// matsys gets a hint that loading operations have ceased and gameplay is about to start
 	g_pMaterialSystem->OnLevelLoadingComplete();
@@ -1750,9 +1255,6 @@ void CL_FullyConnected( void )
 	SCR_EndLoadingPlaque();
 	EndLoadingUpdates();
 
-#ifdef _PS3
-	g_pMaterialSystem->CompactRsxLocalMemory( "FULLY CONNECTED" );
-#endif
 
 	// background maps are for main menu UI, QMS not needed or used, easier context
 	if ( !engineClient->IsLevelMainMenuBackground() )
@@ -1771,23 +1273,6 @@ void CL_FullyConnected( void )
 		scr_nextdrawtick = host_tickcount + TIME_TO_TICKS( 0.25f );
 	}
 
-#ifdef _X360
-	// At the conclusion of loading with a valid user check for a valid controller connection.
-	// If it's been lost, then we need to pop our game UI up
-	for ( DWORD k = 0; k < XBX_GetNumGameUsers(); ++ k )
-	{
-		int iController = XBX_GetUserId( k );
-		if ( iController != XBX_INVALID_USER_ID )
-		{
-			XINPUT_CAPABILITIES caps;
-			if ( XInputGetCapabilities( iController, XINPUT_FLAG_GAMEPAD, &caps ) == ERROR_DEVICE_NOT_CONNECTED )
-			{
-				EngineUI()->ActivateGameUI();
-				break;
-			}
-		}
-	}
-#endif
 
 	// Now that we're connected, toggle the clan tag so it gets sent to the server
 	//ConVarRef cl_clanid( "cl_clanid" );
@@ -2064,15 +1549,6 @@ void CL_TakeSnapshotAndSwap()
 
 		if ( cl_snapshotname[0] )
 		{
-#if defined( PLATFORM_X360 )
-			if ( ( tolower( cl_snapshotname[0] ) == 'd' ) && ( cl_snapshotname[1] == ':' ) && ( cl_snapshotname[2] == '\\' ) )
-			{
-				// Filename begins with "d:\" on X360, so assume the user knows what they're doing and has specified the full absolute filename.
-				V_strcpy( filename, cl_snapshotname );
-				remove( filename );
-			}
-			else
-#endif
 			{
 				Q_strncpy( base, cl_snapshotname, sizeof( base ) );
 				Q_snprintf( filename, sizeof( filename ), "screenshots/%s%s", base, extension );
@@ -2997,12 +2473,6 @@ bool CL_ShouldLoadBackgroundLevel( const CCommand &args )
 	if ( args.ArgC() == 2 )
 	{
 		// presence of args identifies an end-of-game situation
-		if ( IsGameConsole() )
-		{
-			// Console needs to get UI in the correct state to transition to the Background level
-			// from the credits.
-			return true;
-		}
 
 		if ( !Q_stricmp( args[1], "force" ) )
 		{
@@ -3278,24 +2748,14 @@ void CL_DemoCheckGameUIRevealTime( )
 
 char g_minidumpinfo[ 4094 ] = {0};
 PAGED_POOL_INFO_t g_pagedpoolinfo = { 0 };
-#if !defined( NO_STEAM )
-extern bool g_bV3SteamInterface;
-#endif
 void DisplaySystemVersion( char *osversion, int maxlen );
 
 void CL_SetPagedPoolInfo()
 {
-	if ( IsGameConsole() )
-		return;
-#if !defined( _GAMECONSOLE ) && !defined(NO_STEAM) && !defined(DEDICATED)
-	Plat_GetPagedPoolInfo( &g_pagedpoolinfo );
-#endif
 }
 
 void CL_SetSteamCrashComment()
 {
-	if ( IsGameConsole() )
-		return;
 
 	char map[ 80 ];
 	char videoinfo[ 2048 ];
@@ -3349,10 +2809,8 @@ void CL_SetSteamCrashComment()
 	ConVarRef mat_aaquality( "mat_aaquality" );
 	ConVarRef r_shadowrendertotexture( "r_shadowrendertotexture" );
 	ConVarRef r_flashlightdepthtexture( "r_flashlightdepthtexture" );
-#ifndef _X360
 	ConVarRef csm_quality_level( "csm_quality_level" );
 	ConVarRef r_waterforceexpensive( "r_waterforceexpensive" );
-#endif
 	ConVarRef r_waterforcereflectentities( "r_waterforcereflectentities" );
 	ConVarRef mat_vsync( "mat_vsync" );
 	ConVarRef r_rootlod( "r_rootlod" );
@@ -3360,18 +2818,11 @@ void CL_SetSteamCrashComment()
 	ConVarRef mat_queue_mode( "mat_queue_mode" );
 	ConVarRef mat_triplebuffered( "mat_triplebuffered" );
 
-#ifdef _X360
-	Q_snprintf( videoinfo, sizeof(videoinfo), "picmip: %i forceaniso: %i antialias: %i (%i) vsync: %i rootlod: %i\nshadowrendertotexture: %i r_flashlightdepthtexture %i"\
-				"waterforcereflectentities: %i mat_motion_blur_enabled: %i mat_triplebuffered: %i",
-				mat_picmip.GetInt(), mat_forceaniso.GetInt(), mat_antialias.GetInt(), mat_aaquality.GetInt(), mat_vsync.GetInt(), r_rootlod.GetInt(), r_shadowrendertotexture.GetInt(),
-				r_flashlightdepthtexture.GetInt(), r_waterforcereflectentities.GetInt(), mat_motion_blur_enabled.GetInt(), mat_triplebuffered.GetInt() );
-#else
 	Q_snprintf( videoinfo, sizeof(videoinfo), "picmip: %i\nforceaniso: %i\nantialias: %i (%i)\nvsync: %i\nrootlod: %i\nshadowrendertotexture: %i\nr_flashlightdepthtexture %i\n"\
 				"waterforceexpensive: %i\nwaterforcereflectentities: %i\nmat_motion_blur_enabled: %i\nmat_queue_mode %i\nmat_triplebuffered: %i\ncsm_quality_level: %i",
 				mat_picmip.GetInt(), mat_forceaniso.GetInt(), mat_antialias.GetInt(), mat_aaquality.GetInt(), mat_vsync.GetInt(), r_rootlod.GetInt(), r_shadowrendertotexture.GetInt(),
 				r_flashlightdepthtexture.GetInt(), r_waterforceexpensive.GetInt(), r_waterforcereflectentities.GetInt(), mat_motion_blur_enabled.GetInt(), mat_queue_mode.GetInt(), 
 				mat_triplebuffered.GetInt(), csm_quality_level.GetInt() );
-#endif
 	int latency = 0;
 	if ( GetBaseLocalClient().m_NetChannel )
 	{
@@ -3429,9 +2880,6 @@ void CL_SetSteamCrashComment()
 			map, com_gamedir, build_number(), osversion, misc, pNetChannel, tString, CommandLine()->GetCmdLine(), Sys_GetVersionString(), 
 			driverinfo, videoinfo, g_pagedpoolinfo.numPagesUsed, (int)g_pagedpoolinfo.numPagesFree );
 
-#ifndef NO_STEAM
-	SteamAPI_SetMiniDumpComment( g_minidumpinfo );
-#endif
 }
 
 
@@ -3449,50 +2897,15 @@ void CL_InitLanguageCvar()
 	// Fallback to English
 	V_strncpy( language, "english", sizeof( language ) );
 	
-	if ( IsPC() )
 	{
-#if !defined( NO_STEAM )
-		if ( CommandLine()->CheckParm( "-language" ) )
-		{
-			Q_strncpy( language, CommandLine()->ParmValue( "-language", "english"), sizeof( language ) );
-		}
-		else
-		{
-			// Use steam client language
-			memset( language, 0, sizeof( language ) );
-#if defined(OSX)
-			if ( Steam3Client().SteamApps() )
-			{
-				// just follow the language steam wants you to be
-				const char *lang = Steam3Client().SteamApps()->GetCurrentGameLanguage();
-				if ( lang && Q_strlen(lang) )
-				{
-					Q_strncpy( language, lang, sizeof( language ) );
-				}
-				else 
-					Q_strncpy( language, "english", sizeof( language ) );
-			}
-			else 
-			{
-				Q_strncpy( language, "english", sizeof( language ) );
-			}
-#endif			
-		}
-#endif
 	}
-#if defined( _X360 ) || defined( _PS3 )
-	else
-	{
-		Q_strncpy( language, XBX_GetLanguageString(), sizeof( language ) );
-	}
-#endif
 	cl_language.SetValue( language );
 }
 
 void CL_ChangeCloudSettingsCvar( IConVar *var, const char *pOldValue, float flOldValue )
 {
 	// !! bug do i need to do something linux-wise here.
-	if ( IsPC() && Steam3Client().SteamUtils() )
+	if ( Steam3Client().SteamUtils() )
 	{
 	}
 }
@@ -3500,7 +2913,7 @@ void CL_ChangeCloudSettingsCvar( IConVar *var, const char *pOldValue, float flOl
 ConVar cl_cloud_settings( "cl_cloud_settings", "-1", FCVAR_HIDDEN, "Cloud enabled from (from HKCU\\Software\\Valve\\Steam\\Apps\\appid\\Cloud)", CL_ChangeCloudSettingsCvar );
 void CL_InitCloudSettingsCvar()
 {
-	if ( IsPC()	&& Steam3Client().SteamUtils() )
+	if ( Steam3Client().SteamUtils() )
 	{
 		int iCloudSettings = -1;
 		iCloudSettings = STEAMREMOTESTORAGE_CLOUD_ALL;
@@ -3618,14 +3031,6 @@ CON_COMMAND_F( setinfo, "Adds a new user info value", FCVAR_CLIENTCMD_CAN_EXECUT
 #endif
 		}
 
-		if ( IsPC() )
-		{
-#if !defined(NO_STEAM)
-			EUniverse eUniverse = GetSteamUniverse();
-			if ( (( eUniverse != k_EUniverseBeta ) && ( eUniverse != k_EUniverseDev )) && pCommand->IsFlagSet( FCVAR_DEVELOPMENTONLY ) )
-				return;
-#endif 
-		}
 
 		if ( pCommand->IsFlagSet( FCVAR_CHEAT ) && sv_cheats.GetBool() == 0  )
 		{

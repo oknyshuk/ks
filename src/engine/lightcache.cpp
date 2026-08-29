@@ -252,12 +252,8 @@ public:
 
 
 // NOTE!  Changed from 4 to 3 for L4D!  May or may not want to merge this to main.
-#ifdef POSIX
 ConVar r_worldlights	("r_worldlights", "2", 0, "number of world lights to use per vertex" );
 // JasonM GL - capping at 2 world lights at the moment
-#else
-ConVar r_worldlights	("r_worldlights", "3", 0, "number of world lights to use per vertex" );
-#endif
 ConVar r_radiosity		("r_radiosity", "4", FCVAR_CHEAT, "0: no radiosity\n1: radiosity with ambient cube (6 samples)\n2: radiosity with 162 samples\n3: 162 samples for static props, 6 samples for everything else" );
 ConVar r_worldlightmin	("r_worldlightmin", "0.0002" );
 ConVar r_avglight		("r_avglight", "1", FCVAR_CHEAT);
@@ -530,18 +526,6 @@ static lightcache_t* NewLightcacheEntry( int bucket )
 //-----------------------------------------------------------------------------
 // Compute the lightcache origin
 //-----------------------------------------------------------------------------
-#if 0
-static inline void ComputeLightcacheOrigin( int x, int y, int z, Vector& org )
-{
-	// this is suspicious and *maybe* wrong
-	// the bucket origin can't re-establish the correct negative numbers
-	// because of the non-arithmetic shift down?
-	int ix = x << HASH_GRID_SIZEX;
-	int iy = y << HASH_GRID_SIZEY;
-	int iz = z << HASH_GRID_SIZEZ;
-	org.Init( ix, iy, iz );
-}
-#endif
 
 //-----------------------------------------------------------------------------
 // Compute the lightcache bounds given a point
@@ -1062,21 +1046,10 @@ static float LightIntensityAndDirectionAtPointNew( dworldlight_t* pLight, lightz
 static float LightIntensityAndDirectionAtPoint( dworldlight_t* pLight, lightzbuffer_t *pZBuf,
 	const Vector& mid, int fFlags, IHandleEntity *pIgnoreEnt, Vector *pDirection ) 
 {
-#if 1
 	if ( pZBuf )
 		return LightIntensityAndDirectionAtPointNew( pLight, pZBuf, mid, fFlags, pIgnoreEnt, pDirection );
 	else
 		return LightIntensityAndDirectionAtPointOld( pLight,  mid, fFlags, pIgnoreEnt, pDirection );
-#else
-	float old = LightIntensityAndDirectionAtPointOld( pLight,  mid, fFlags, pIgnoreEnt, pDirection );
-	float newf = LightIntensityAndDirectionAtPointNew( pLight, pZBuf, mid, fFlags, pIgnoreEnt, pDirection );
-	if ( old != newf )
-	{
-		float old2 = LightIntensityAndDirectionAtPointOld( pLight,  mid, fFlags, pIgnoreEnt, pDirection );
-		float newf2 = LightIntensityAndDirectionAtPointNew( pLight, pZBuf, mid, fFlags, pIgnoreEnt, pDirection );
-	}
-	return newf;
-#endif
 }
 
 //-----------------------------------------------------------------------------
@@ -1196,8 +1169,6 @@ static float LightIntensityAndDirectionInBox( dworldlight_t* pLight,
 bool ComputeVertexLightingFromSphericalSamples( const Vector& vecVertex, 
 	const Vector &vecNormal, IHandleEntity *pIgnoreEnt, Vector *pLinearColor )
 {
-	if ( IsX360() )
-		return false;
 
 	// Check to see if this vertex is in solid
 	trace_t tr;
@@ -1983,29 +1954,6 @@ static bool IsCachedLightStylesValid( CBaseLightCache* pCache )
 //-----------------------------------------------------------------------------
 // Find a lightcache entry within the requested radius from a point
 //-----------------------------------------------------------------------------
-#if 0
-static int FindRecentCacheEntryWithinRadius( int count, CacheInfo_t* pCache, const Vector& origin, float radius )
-{
-	radius *= radius;
-
-	// Try to find something within the radius of an existing new sample
-	int minIndex = -1;
-	for (int i = 0; i < count; ++i)
-	{
-		Vector delta;
-		ComputeLightcacheOrigin( pCache[i].x, pCache[i].y, pCache[i].z, delta );
-		delta -= origin;
-		float distSq = delta.LengthSqr();
-		if (distSq < radius )
-		{
-			minIndex = i;
-			radius = distSq;
-		}
-	}
-
-	return minIndex;
-}
-#endif
 
 
 //-----------------------------------------------------------------------------
@@ -3001,18 +2949,9 @@ void ComputeLighting( const Vector& pt, const Vector* pNormal, bool bClamp, bool
 
 	if (bClamp)
 	{
-#if 1
 		color.x = fpmin( color.x, 1.0f ); // if (color.x > 1.0f)	color.x = 1.0f;
 		color.y = fpmin( color.y, 1.0f ); // if (color.y > 1.0f)	color.y = 1.0f;
 		color.z = fpmin( color.z, 1.0f ); // if (color.z > 1.0f)	color.z = 1.0f;
-#else
-		if (color.x > 1.0f)
-			color.x = 1.0f;
-		if (color.y > 1.0f)
-			color.y = 1.0f;
-		if (color.z > 1.0f)
-			color.z = 1.0f;
-#endif
 	}
 }
 

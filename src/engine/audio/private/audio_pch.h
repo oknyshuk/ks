@@ -60,13 +60,4 @@
 #include "snd_io.h"
 #include "voice_mixer_controls.h"
 
-#if IsX360()
-# include "snd_wave_mixer_xma.h"
-# include "xbox/xbox_win32stubs.h"
-# include <xhv2.h>
-#elif IsPS3()
-# include "snd_wave_mixer_ps3_mp3.h"
-# include "ps3/ps3_win32stubs.h"
-#elif defined(POSIX)
-# include "audio/private/posix_stubs.h"
-#endif
+#include "audio/private/posix_stubs.h"

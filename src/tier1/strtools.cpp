@@ -53,7 +53,6 @@
 #undef stricmp
 #endif
 
-#ifdef POSIX
 
 #include <iconv.h>
 
@@ -63,11 +62,6 @@
 #define stricmp strcasecmp
 #define _strtoi64 strtoll
 #define _strtoui64 strtoull
-#elif _WIN32
-#include <direct.h>
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
-#endif
 
 #ifdef _WIN32
 #ifndef CP_UTF8
@@ -83,9 +77,7 @@
 #include "tier1/utlstring.h"
 #include "tier1/fmtstr.h"
 
-#ifdef POSIX
 #include "tier1/qsort_s.h"
-#endif
 
 
 #include "tier0/vprof.h"
@@ -130,27 +122,16 @@ int _V_memcmp (const void *m1, const void *m2, int count)
 
 int	_V_strlen(const char *str)
 {
-#ifdef POSIX
 	if ( !str )
 		return 0;
-#endif
 	return ( int )strlen( str );
 }
 
-#ifdef OSX
-size_t strnlen( const char *s, size_t n )
-{
-	const char *p = (const char *)memchr( s, 0, n );
-	return (p ? p - s : n);
-}
-#endif
 
 int	_V_strnlen(const char *str, int count )
 {
-#ifdef POSIX
 	if ( !str )
 		return 0;
-#endif
 	return ( int )strnlen( str, count );
 }
 
@@ -211,58 +192,12 @@ int	_V_stricmp( const char *s1, const char *s2 )
 	if ( s1 == s2 )
 		return 0;
 
-#ifdef POSIX
 	if ( s1 == NULL )
 		return -1;
 	if ( s2 == NULL )
 		return 1;
 	
 	return stricmp( s1, s2 );
-#else	
-	uint8 const *pS1 = ( uint8 const * ) s1;
-	uint8 const *pS2 = ( uint8 const * ) s2;
-	for(;;)
-	{
-		int c1 = *( pS1++ );
-		int c2 = *( pS2++ );
-		if ( c1 == c2 )
-		{
-			if ( !c1 ) return 0;
-		}
-		else
-		{
-			if ( ! c2 )
-			{
-				return c1 - c2;
-			}
-			c1 = FastASCIIToLower( c1 );
-			c2 = FastASCIIToLower( c2 );
-			if ( c1 != c2 )
-			{
-				return c1 - c2;
-			}
-		}
-		c1 = *( pS1++ );
-		c2 = *( pS2++ );
-		if ( c1 == c2 )
-		{
-			if ( !c1 ) return 0;
-		}
-		else
-		{
-			if ( ! c2 )
-			{
-				return c1 - c2;
-			}
-			c1 = FastASCIIToLower( c1 );
-			c2 = FastASCIIToLower( c2 );
-			if ( c1 != c2 )
-			{
-				return c1 - c2;
-			}
-		}
-	}
-#endif
 }
 
 // A special high-performance case-insensitive compare function
@@ -954,10 +889,8 @@ int V_snwprintf( OUT_Z_CAP(maxLenInNumWideCharacters) wchar_t *pDest, int maxLen
 	va_start( marker, pFormat );
 #ifdef _WIN32
 	int len = _vsnwprintf( pDest, maxLenInNumWideCharacters, pFormat, marker );
-#elif POSIX
-	int len = vswprintf( pDest, maxLenInNumWideCharacters, pFormat, marker );
 #else
-#error "define vsnwprintf type."
+	int len = vswprintf( pDest, maxLenInNumWideCharacters, pFormat, marker );
 #endif
 	va_end( marker );
 
@@ -983,10 +916,8 @@ int V_vsnwprintf( OUT_Z_CAP(maxLenInChars) wchar_t *pDest, int maxLenInChars, PR
 
 #ifdef _WIN32
 	int len = _vsnwprintf( pDest, maxLenInChars, pFormat, params );
-#elif POSIX
-	int len = vswprintf( pDest, maxLenInChars, pFormat, params );
 #else
-#error "define vsnwprintf type."
+	int len = vswprintf( pDest, maxLenInChars, pFormat, params );
 #endif
 
 	// Len < 0 represents an overflow
@@ -1010,10 +941,8 @@ int V_snprintf( char *pDest, int maxLen, char const *pFormat, ... )
 	va_start( marker, pFormat );
 #ifdef _WIN32
 	int len = _vsnprintf( pDest, maxLen, pFormat, marker );
-#elif POSIX
-	int len = vsnprintf( pDest, maxLen, pFormat, marker );
 #else
-	#error "define vsnprintf type."
+	int len = vsnprintf( pDest, maxLen, pFormat, marker );
 #endif
 	va_end( marker );
 
@@ -1350,7 +1279,7 @@ int _V_UTF8ToUnicode( const char *pUTF8, wchar_t *pwchDest, int cubDestSizeInByt
 		return 0;
 #ifdef _WIN32
 	int cchResult = MultiByteToWideChar( CP_UTF8, 0, pUTF8, -1, pwchDest, cubDestSizeInBytes / sizeof(wchar_t) );
-#elif POSIX
+#else
 	int cchResult = mbstowcs( pwchDest, pUTF8, cubDestSizeInBytes / sizeof(wchar_t) );
 #endif
 	pwchDest[(cubDestSizeInBytes / sizeof(wchar_t)) - 1] = 0;
@@ -1369,7 +1298,7 @@ int _V_UnicodeToUTF8( const wchar_t *pUnicode, char *pUTF8, int cubDestSizeInByt
 
 #ifdef _WIN32
 	int cchResult = WideCharToMultiByte( CP_UTF8, 0, pUnicode, -1, pUTF8, cubDestSizeInBytes, NULL, NULL );
-#elif POSIX
+#else
 	int cchResult = 0;
 	if ( pUnicode && pUTF8 )
 		cchResult = wcstombs( pUTF8, pUnicode, cubDestSizeInBytes );
@@ -1438,7 +1367,7 @@ int _V_UnicodeToUCS2( const wchar_t *pUnicode, int cubSrcInBytes, char *pUCS2, i
 	// Make sure we NULL-terminate.
 	pDest[ cchResult - 1 ] = 0;
 
-#elif defined (POSIX)
+#else
 	iconv_t conv_t = iconv_open( "UCS-2LE", "UTF-32LE" );
 	size_t cchResult = -1;
 	size_t nLenUnicde = cubSrcInBytes;
@@ -1455,8 +1384,6 @@ int _V_UnicodeToUCS2( const wchar_t *pUnicode, int cubSrcInBytes, char *pUCS2, i
 		else
 			cchResult = cubSrcInBytes / sizeof( wchar_t );
 	}
-#else
-	#error Must be implemented for this platform
 #endif
 	return cchResult;	
 }
@@ -1471,7 +1398,7 @@ int _V_UCS2ToUTF8( const ucs2 *pUCS2, char *pUTF8, int cubDestSizeInBytes )
 #ifdef _WIN32
 	// under win32 wchar_t == ucs2, sigh
 	int cchResult = WideCharToMultiByte( CP_UTF8, 0, pUCS2, -1, pUTF8, cubDestSizeInBytes, NULL, NULL );
-#elif defined(POSIX)
+#else
 	iconv_t conv_t = iconv_open( "UTF-8", "UCS-2LE" );
 	size_t cchResult = -1;
 	size_t nLenUnicde = cubDestSizeInBytes;
@@ -1504,7 +1431,7 @@ int _V_UTF8ToUCS2( const char *pUTF8, int cubSrcInBytes, ucs2 *pUCS2, int cubDes
 #ifdef _WIN32
 	// under win32 wchar_t == ucs2, sigh
 	int cchResult = MultiByteToWideChar( CP_UTF8, 0, pUTF8, -1, pUCS2, cubDestSizeInBytes / sizeof(wchar_t) );
-#elif defined(POSIX)
+#else
 	iconv_t conv_t = iconv_open( "UCS-2LE", "UTF-8" );
 	size_t cchResult = -1;
 	size_t nLenUnicde = cubSrcInBytes;
@@ -1875,7 +1802,7 @@ void  V_StripFilename (char *path)
 #ifdef _WIN32
 #define CORRECT_PATH_SEPARATOR '\\'
 #define INCORRECT_PATH_SEPARATOR '/'
-#elif POSIX
+#else
 #define CORRECT_PATH_SEPARATOR '/'
 #define INCORRECT_PATH_SEPARATOR '\\'
 #endif
@@ -2419,10 +2346,6 @@ bool V_IsAbsolutePath( const char *pStr )
 	bool bIsAbsolute = ( pStr[0] && pStr[1] == ':' ) || pStr[0] == '/' || pStr[0] == '\\';
 #endif
 
-	if ( IsX360() && !bIsAbsolute )
-	{
-		bIsAbsolute = ( V_stristr( pStr, ":" ) != NULL );
-	}
 	
 	return bIsAbsolute;
 }
@@ -2836,7 +2759,7 @@ void V_strtowcs( const char *pString, int nInSize, wchar_t *pWString, int nOutSi
 		// MultiByteToWideChar will only do that if nInSize includes the source null-terminator!
 		pWString[ result ] = 0;
 	}
-#elif POSIX
+#else
 	if ( mbstowcs( pWString, pString, nOutSizeInBytes / sizeof(pWString[0]) ) <= 0 )
 	{
 		*pWString = 0;
@@ -2873,7 +2796,7 @@ void V_wcstostr( const wchar_t *pWString, int nInSize, char *pString, int nOutSi
 		// MultiByteToWideChar will only do that if nInSize includes the source null-terminator!
 		pString[ result ] = '\0';
 	}
-#elif POSIX
+#else
 	if ( wcstombs( pString, pWString, nOutSizeInChars ) <= 0 )
 	{
 		*pString = '\0';
@@ -3384,9 +3307,7 @@ bool AsianWordWrap::CanBreakRepeated( wchar_t wcCandidate )
 	return true;
 }
 
-#if defined( LINUX )
 inline int __cdecl iswascii(wchar_t c) { return ((unsigned)(c) < 0x80); } // not defined in wctype.h on Linux
-#endif
 
 // Used to determine if we can break a line between the first two characters passed
 bool AsianWordWrap::CanBreakAfter( const wchar_t* wsz )

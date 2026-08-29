@@ -14,9 +14,7 @@
 #include "tier1/keyvalues.h"
 #include "tier1/fmtstr.h"
 
-#ifndef _GAMECONSOLE
 #include "steam/steam_api.h"
-#endif // _GAMECONSOLE
 
 #include "matchmaking/imatchframework.h"
 #include "matchmaking/imatchsystem.h"
@@ -164,9 +162,7 @@ public:
 
 	char const * GetPlayerName( XUID playerID, char const *szPlayerNameSpeculative );
 
-#if !defined( _GAMECONSOLE ) && !defined( NO_STEAM )
 	STEAM_CALLBACK( CUIGameData, Steam_OnPersonaStateChanged, PersonaStateChange_t, m_CallbackPersonaStateChanged );
-#endif
 
 	void ReloadScheme();
 

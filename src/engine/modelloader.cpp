@@ -42,7 +42,6 @@
 #include "datacache/imdlcache.h"
 #include "gl_cvars.h"
 #include "vphysics_interface.h"
-#include "filesystem/IQueuedLoader.h"
 #include "tier2/tier2.h"
 #include "lightcache.h"
 #include "lumpfiles.h"
@@ -59,10 +58,6 @@
 #include "server.h"
 #include "ifilelist.h"
 #include "LoadScreenUpdate.h"
-#if defined( _X360 )
-#elif defined( _PS3 )
-#include "ps3/ps3_console.h"
-#endif
 #include "materialsystem/imesh.h"
 #include "networkstringtable.h"
 #include "fmtstr.h"
@@ -86,7 +81,7 @@ ConVar r_hunkalloclightmaps( "r_hunkalloclightmaps", "1" );
 // Not compatible for PC (due to ALT+TAB req's), mutually exclusive and similar to "unloadlightmaps", but keeps only
 // the styled lightmaps for animated light updates and discards the static portion of the lightmaps
 // (after lightmap page setup), so dlight support is severed when this is enabled.
-ConVar r_keepstyledlightmapsonly( "r_keepstyledlightmapsonly", IsGameConsole() ? "1" : "0" ); 
+ConVar r_keepstyledlightmapsonly( "r_keepstyledlightmapsonly", "0" ); 
 
 // keep this many weapon view models resident, LRU purge others
 // clamped to minimum player inventory to prevent LRU and needing to 
@@ -536,20 +531,12 @@ CON_COMMAND( mod_DumpWeaponWorldModelCache, "Dumps the weapon world model cache 
 //-----------------------------------------------------------------------------
 char *GetMapPathNameOnDisk( char *pDiskName, const char *pFullMapName, unsigned int nDiskNameSize )
 {
-	if ( !IsGameConsole() )
+	// pc names are as is
+	if ( pFullMapName != pDiskName )
 	{
-		// pc names are as is
-		if ( pFullMapName != pDiskName )
-		{
-			V_strncpy( pDiskName, pFullMapName, nDiskNameSize );
-		}
+		V_strncpy( pDiskName, pFullMapName, nDiskNameSize );
 	}
-	else
-	{
-		// expecting the input name to be maps/foo.bsp
-		V_StripExtension( pFullMapName, pDiskName, nDiskNameSize );
-		V_strncat( pDiskName, PLATFORM_EXT ".bsp", nDiskNameSize );
-	}
+
 	return pDiskName;
 }
 
@@ -587,7 +574,7 @@ void CMapLoadHelper::Init( model_t *pMapModel, const char *pPathName )
 
 	char szNameOnDisk[MAX_PATH];
 	GetMapPathNameOnDisk( szNameOnDisk, s_szMapPathName, sizeof( szNameOnDisk ) );
-	s_MapFileHandle = g_pFileSystem->OpenEx( szNameOnDisk, "rb", IsGameConsole() ? FSOPEN_NEVERINPACK : 0, IsGameConsole() ? "GAME" : NULL );
+	s_MapFileHandle = g_pFileSystem->OpenEx( szNameOnDisk, "rb", 0, NULL );
 	if ( s_MapFileHandle == FILESYSTEM_INVALID_HANDLE )
 	{
 		if ( !g_bClearingClientState )
@@ -628,47 +615,44 @@ void CMapLoadHelper::Init( model_t *pMapModel, const char *pPathName )
 
 	s_pMap = &g_ModelLoader.m_worldBrushData;
 
-	if ( IsPC() )
+	// Now find and open our lump files, and create the master list of them.
+	for ( int iIndex = 0; iIndex < MAX_LUMPFILES; iIndex++ )
 	{
-		// Now find and open our lump files, and create the master list of them.
-		for ( int iIndex = 0; iIndex < MAX_LUMPFILES; iIndex++ )
+		lumpfileheader_t lumpHeader;
+		char lumpfilename[MAX_PATH];
+
+		GenerateLumpFileName( s_szMapPathName, lumpfilename, MAX_PATH, iIndex );
+		if ( !g_pFileSystem->FileExists( lumpfilename ) )
+			break;
+
+		// Open the lump file
+		FileHandle_t lumpFile = g_pFileSystem->Open( lumpfilename, "rb" );
+		if ( lumpFile == FILESYSTEM_INVALID_HANDLE )
 		{
-			lumpfileheader_t lumpHeader;
-			char lumpfilename[MAX_PATH];
+			Host_Error( "CMapLoadHelper::Init, failed to load lump file %s\n", lumpfilename );
+			return;
+		}
 
-			GenerateLumpFileName( s_szMapPathName, lumpfilename, MAX_PATH, iIndex );
-			if ( !g_pFileSystem->FileExists( lumpfilename ) )
-				break;
+		// Read the lump header
+		memset( &lumpHeader, 0, sizeof( lumpHeader ) );
+		g_pFileSystem->Read( &lumpHeader, sizeof( lumpfileheader_t ), lumpFile );
 
-			// Open the lump file
-			FileHandle_t lumpFile = g_pFileSystem->Open( lumpfilename, "rb" );
-			if ( lumpFile == FILESYSTEM_INVALID_HANDLE )
+		if ( lumpHeader.lumpID >= 0 && lumpHeader.lumpID < HEADER_LUMPS )
+		{
+			// We may find multiple lump files for the same lump ID. If so,
+			// close the earlier lump file, because the later one overwrites it.
+			if ( s_MapLumpFiles[lumpHeader.lumpID].file != FILESYSTEM_INVALID_HANDLE )
 			{
-				Host_Error( "CMapLoadHelper::Init, failed to load lump file %s\n", lumpfilename );
-				return;
+				g_pFileSystem->Close( s_MapLumpFiles[lumpHeader.lumpID].file );
 			}
 
-			// Read the lump header
-			memset( &lumpHeader, 0, sizeof( lumpHeader ) );
-			g_pFileSystem->Read( &lumpHeader, sizeof( lumpfileheader_t ), lumpFile );
-
-			if ( lumpHeader.lumpID >= 0 && lumpHeader.lumpID < HEADER_LUMPS )
-			{
-				// We may find multiple lump files for the same lump ID. If so,
-				// close the earlier lump file, because the later one overwrites it.
-				if ( s_MapLumpFiles[lumpHeader.lumpID].file != FILESYSTEM_INVALID_HANDLE )
-				{
-					g_pFileSystem->Close( s_MapLumpFiles[lumpHeader.lumpID].file );
-				}
-
-				s_MapLumpFiles[lumpHeader.lumpID].file = lumpFile;
-				s_MapLumpFiles[lumpHeader.lumpID].lumpfileindex = iIndex;
-				memcpy( &(s_MapLumpFiles[lumpHeader.lumpID].header), &lumpHeader, sizeof(lumpHeader) );
-			}
-			else
-			{
-				Warning( "Found invalid lump file '%s'. Lump Id: %d\n", lumpfilename, lumpHeader.lumpID );
-			}
+			s_MapLumpFiles[lumpHeader.lumpID].file = lumpFile;
+			s_MapLumpFiles[lumpHeader.lumpID].lumpfileindex = iIndex;
+			memcpy( &(s_MapLumpFiles[lumpHeader.lumpID].header), &lumpHeader, sizeof(lumpHeader) );
+		}
+		else
+		{
+			Warning( "Found invalid lump file '%s'. Lump Id: %d\n", lumpfilename, lumpHeader.lumpID );
 		}
 	}
 }
@@ -678,9 +662,7 @@ void CMapLoadHelper::Init( model_t *pMapModel, const char *pPathName )
 //-----------------------------------------------------------------------------
 void CMapLoadHelper::InitFromMemory( model_t *pMapModel, const void *pData, int nDataSize )
 {
-	// valid for consoles only 
-	// consoles have reorganized bsp format and no external lump files
-	Assert( IsGameConsole() && pData && nDataSize );
+	Assert( pData && nDataSize );
 
 	// the memory should be contained in s_MapBuffer
 	Assert( ( pData == s_MapBuffer.GetBase() ) && ( nDataSize == s_MapBuffer.GetUsed() ) );
@@ -743,18 +725,15 @@ void CMapLoadHelper::Shutdown( void )
 		s_MapFileHandle = FILESYSTEM_INVALID_HANDLE;
 	}
 
-	if ( IsPC() )
+	// Close our open lump files
+	for ( int i = 0; i < HEADER_LUMPS; i++ )
 	{
-		// Close our open lump files
-		for ( int i = 0; i < HEADER_LUMPS; i++ )
+		if ( s_MapLumpFiles[i].file != FILESYSTEM_INVALID_HANDLE )
 		{
-			if ( s_MapLumpFiles[i].file != FILESYSTEM_INVALID_HANDLE )
-			{
-				g_pFileSystem->Close( s_MapLumpFiles[i].file );
-			}
+			g_pFileSystem->Close( s_MapLumpFiles[i].file );
 		}
-		V_memset( &s_MapLumpFiles, 0, sizeof( s_MapLumpFiles ) );
 	}
+	V_memset( &s_MapLumpFiles, 0, sizeof( s_MapLumpFiles ) );
 
 	s_szMapPathName[ 0 ] = '\0';
 	V_memset( &s_MapHeader, 0, sizeof( s_MapHeader ) );
@@ -772,35 +751,6 @@ void CMapLoadHelper::Shutdown( void )
 //-----------------------------------------------------------------------------
 void CMapLoadHelper::FreeLightingLump( void )
 {
-	if ( IsGameConsole() && ( s_MapFileHandle == FILESYSTEM_INVALID_HANDLE ) && s_MapBuffer.GetUsed() )
-	{
-		int lightingLump = LumpSize( LUMP_LIGHTING_HDR ) ? LUMP_LIGHTING_HDR : LUMP_LIGHTING;
-		// Should never have both lighting lumps on 360
-		Assert( ( lightingLump == LUMP_LIGHTING ) || ( LumpSize( LUMP_LIGHTING ) == 0 ) );
-
-		if ( LumpSize( lightingLump ) )
-		{
-			// Check that the lighting lump is next to the last one in the BSP
-			// The pak file is expected to be last
-			int lightingOffset = LumpOffset( lightingLump );
-			for ( int i = 0; i < HEADER_LUMPS; i++ )
-			{
-				if ( ( LumpOffset( i ) > lightingOffset ) && ( i != LUMP_PAKFILE ) )
-				{
-					Warning( "CMapLoadHelper: Cannot free lighting lump (should be last before the PAK lump).\n" );
-					Warning( "Lumps may be now be incorrectly ordered. Regenerate the " PLATFORM_EXT ".bsp file with MakeGameData.\n" );
-					return;
-				}
-			}
-
-			// Flag the lighting chunk as gone from the BSP (principally, this sets 'filelen' to 0)
-			V_memset( &s_MapHeader.lumps[ lightingLump ], 0, sizeof( lump_t ) );
-
-			// Shrink the buffer to free up the space that was used by the lighting lump
-			// The pak file is not part of the original allocation
-			s_MapBuffer.FreeToAllocPoint( (MemoryStackMark_t)lightingOffset );
-		}
-	}
 }
 
 
@@ -810,7 +760,7 @@ void CMapLoadHelper::FreeLightingLump( void )
 int CMapLoadHelper::LumpSize( int lumpId )
 {
 	// If we have a lump file for this lump, return its length instead
-	if ( IsPC() && s_MapLumpFiles[lumpId].file != FILESYSTEM_INVALID_HANDLE )
+	if ( s_MapLumpFiles[lumpId].file != FILESYSTEM_INVALID_HANDLE )
 	{
 		return s_MapLumpFiles[lumpId].header.lumpLength;
 	}
@@ -818,17 +768,6 @@ int CMapLoadHelper::LumpSize( int lumpId )
 	lump_t *pLump = &s_MapHeader.lumps[ lumpId ];
 	Assert( pLump );
 
-	if ( IsGameConsole() )
-	{
-		// a compressed lump hides the uncompressed size in the unused fourCC
-		// otherwise, the data has to be loaded to determine original size
-		// all knowledge of compression is private, they expect and get the original size
-		int originalSize = BigLong( *((int *)s_MapHeader.lumps[lumpId].fourCC) );
-		if ( originalSize )
-		{
-			return originalSize;
-		}
-	}
 
 	return pLump->filelen;
 }
@@ -840,7 +779,7 @@ int CMapLoadHelper::LumpOffset( int lumpID  )
 {
 	// If we have a lump file for this lump, return 
 	// the offset to move past the lump file header.
-	if ( IsPC() && s_MapLumpFiles[lumpID].file != FILESYSTEM_INVALID_HANDLE )
+	if ( s_MapLumpFiles[lumpID].file != FILESYSTEM_INVALID_HANDLE )
 	{
 		return s_MapLumpFiles[lumpID].header.lumpOffset;
 	}
@@ -927,7 +866,7 @@ CMapLoadHelper::CMapLoadHelper( int lumpToLoad, bool bUncompress )
 	FileHandle_t fileToUse = s_MapFileHandle;
 
 	// If we have a lump file for this lump, use it instead
-	if ( IsPC() && s_MapLumpFiles[lumpToLoad].file != FILESYSTEM_INVALID_HANDLE )
+	if ( s_MapLumpFiles[lumpToLoad].file != FILESYSTEM_INVALID_HANDLE )
 	{
 		fileToUse = s_MapLumpFiles[lumpToLoad].file;
 		m_nLumpSize = s_MapLumpFiles[lumpToLoad].header.lumpLength;
@@ -988,18 +927,6 @@ CMapLoadHelper::CMapLoadHelper( int lumpToLoad, bool bUncompress )
 	}
 
 	m_nUncompressedLumpSize = m_nLumpSize;
-	if ( IsGameConsole() )
-	{
-		CLZMA lzma;
-		if ( lzma.IsCompressed( m_pData ) )
-		{
-			m_nUncompressedLumpSize = lzma.GetActualSize( m_pData );
-			if ( bUncompress )
-			{
-				UncompressLump();
-			}
-		}
-	}
 }
 
 //-----------------------------------------------------------------------------
@@ -1007,11 +934,6 @@ CMapLoadHelper::CMapLoadHelper( int lumpToLoad, bool bUncompress )
 //-----------------------------------------------------------------------------
 CMapLoadHelper::~CMapLoadHelper( void )
 {
-	if ( IsGameConsole() && m_pUncompressedData && !m_bUncompressedDataExternal )
-	{
-		free( m_pUncompressedData );
-	}
-
 	if ( m_pRawData )
 	{
 		g_pFileSystem->FreeOptimalReadBuffer( m_pRawData );
@@ -1038,20 +960,9 @@ void CMapLoadHelper::UncompressLump( void *pExternalBuffer )
 		m_pUncompressedData = (unsigned char *)malloc( m_nUncompressedLumpSize );
 		m_bUncompressedDataExternal = false;
 	}
-	CLZMA lzma;
-	int decodedLength;
-	if ( IsGameConsole() && lzma.IsCompressed( m_pData ) )
-	{
-		// Uncompress into the dest buffer
-		decodedLength = lzma.Uncompress( m_pData, m_pUncompressedData );
-		Assert( decodedLength == m_nUncompressedLumpSize );
-	}
-	else
-	{
-		// Copy into the dest buffer
-		Assert( m_nLumpSize == m_nUncompressedLumpSize );
-		memcpy( m_pUncompressedData, m_pData, m_nUncompressedLumpSize );
-	}
+	// Copy into the dest buffer
+	Assert( m_nLumpSize == m_nUncompressedLumpSize );
+	memcpy( m_pUncompressedData, m_pData, m_nUncompressedLumpSize );
 
 	// a user of the class sees the uncompressed data
 	m_pData     = m_pUncompressedData;
@@ -1085,7 +996,7 @@ char *CMapLoadHelper::GetLoadName( void )
 {
 	// If we have a custom lump file for the lump this helper 
 	// is loading, return it instead.
-	if ( IsPC() && s_MapLumpFiles[m_nLumpID].file != FILESYSTEM_INVALID_HANDLE )
+	if ( s_MapLumpFiles[m_nLumpID].file != FILESYSTEM_INVALID_HANDLE )
 	{
 		return m_szLumpFilename;
 	}
@@ -1141,13 +1052,6 @@ void EnableHDR( bool bEnable )
 
 	g_pMaterialSystemHardwareConfig->SetHDREnabled( bEnable );
 
-	if ( IsGameConsole() )
-	{
-		// cannot do what the pc does and ditch resources, we're loading!
-		// can safely do the state update only, knowing that the state change won't affect 360 resources
-		((MaterialSystem_Config_t *)g_pMaterialSystemConfig)->SetFlag( MATSYS_VIDCFG_FLAGS_ENABLE_HDR, bEnable );
-		return;
-	}
 
 	// And this is okay here!
 	materials->ReEnableRenderTargetAllocation_IRealizeIfICallThisAllTexturesWillBeUnloadedAndLoadTimeWillSufferHorribly();
@@ -1222,12 +1126,6 @@ bool Map_CheckForHDR( model_t *pModel, const char *pMapPathName )
 	CMapLoadHelper::Init( pModel, pMapPathName );
 
 	bool bHasHDR = false;
-	if ( IsGameConsole() )
-	{
-		// If this is true, the 360 MUST use HDR, because the LDR data gets stripped out.
-		bHasHDR = CMapLoadHelper::LumpSize( LUMP_LIGHTING_HDR ) > 0;
-	}
-	else
 	{
 		// might want to also consider the game lumps GAMELUMP_DETAIL_PROP_LIGHTING_HDR
 		bHasHDR = CMapLoadHelper::LumpSize( LUMP_LIGHTING_HDR ) > 0 &&
@@ -1240,8 +1138,7 @@ bool Map_CheckForHDR( model_t *pModel, const char *pMapPathName )
 		bHasHDR = false;
 	}
 	
-	bool bEnableHDR = ( IsGameConsole() && bHasHDR ) ||
-		bHasHDR && 
+	bool bEnableHDR = 		bHasHDR && 
 		( mat_hdr_level.GetInt() >= 2 ) && 
 		( g_pMaterialSystemHardwareConfig->GetHardwareHDRType() != HDR_TYPE_NONE );
 	EnableHDR( bEnableHDR );
@@ -1358,11 +1255,6 @@ void Mod_LoadLighting( bool bLoadHDR )
 	// Now pass in our buffer for decompression to occur (just a memcpy if the data is not compressed):
 	lh.UncompressLump( lh.GetMap()->lightdata );
 
-	if ( IsGameConsole() )
-	{
-		// Free the lighting lump, to increase the amount of memory free during the rest of loading
-		CMapLoadHelper::FreeLightingLump();
-	}
 }
 
 void Mod_LoadFaceBrushes()
@@ -2233,11 +2125,7 @@ void Mod_LoadFaces( void )
 			MSurf_Flags( surfID ) |= SURFDRAW_PLANEBACK;
 		}
 
-#ifndef _PS3
 		out2->plane = lh.GetMap()->planes + planenum;
-#else
-		out2->m_plane = *(lh.GetMap()->planes + planenum);
-#endif
 
 		ti = in->texinfo;
 		if (ti < 0 || ti >= lh.GetMap()->numtexinfo)
@@ -2803,10 +2691,6 @@ void Mod_LoadSimpleWorldModel( const char *pMapBaseName )
 #else
 	// We only load the world imposter models for multiplayer maps on consoles
 	// Note: This seems super-sketchy, but apparently we use the map name to decide if we are co-op or not in portal 2.
-	if ( !V_stristr( pMapBaseName, "mp_coop_" ) && IsGameConsole() )
-	{
-		return;
-	}
 #endif
 
 	char modelPath[MAX_PATH];
@@ -3112,7 +2996,7 @@ bool Mod_LoadGameLump( int lumpId, void *pOutBuffer, int size )
 		// Load file into buffer
 		char szNameOnDisk[MAX_PATH];
 		GetMapPathNameOnDisk( szNameOnDisk, g_GameLumpFilename, sizeof( szNameOnDisk ) );
-		FileHandle_t fileHandle = g_pFileSystem->OpenEx( szNameOnDisk, "rb", IsGameConsole() ? FSOPEN_NEVERINPACK : 0, IsGameConsole() ? "GAME" : NULL );
+		FileHandle_t fileHandle = g_pFileSystem->OpenEx( szNameOnDisk, "rb", 0, NULL );
 		if ( fileHandle == FILESYSTEM_INVALID_HANDLE )
 		{
 			return false;
@@ -3546,228 +3430,6 @@ void InitStudioModelState( model_t *pModel )
 	}
 }
 
-//-----------------------------------------------------------------------------
-// Resource loading for models
-//-----------------------------------------------------------------------------
-class CResourcePreloadModel : public CResourcePreload
-{
-	static void QueuedLoaderMapCallback( void *pContext, void *pContext2, const void *pData, int nSize, LoaderError_t loaderError )
-	{
-		if ( loaderError == LOADERERROR_NONE )
-		{
-			// 360 mounts its bsp entirely into memory
-			// this data is discarded at the conclusion of the entire load process
-			Assert( CMapLoadHelper::GetRefCount() == 0 );
-			CMapLoadHelper::InitFromMemory( (model_t *)pContext, pData, nSize );
-		}
-	}
-
-	virtual bool CreateResource( const char *pName )
-	{
-		modtype_t modType = g_ModelLoader.GetTypeFromName( pName );
-
-		// each model type resource has entirely differnt schemes for loading/creating
-		if ( modType == mod_brush )
-		{
-			// expect to be the map bsp model
-			MEM_ALLOC_CREDIT_( "CResourcePreloadModel(BSP)" );
-			model_t *pMapModel = g_ModelLoader.FindModelNoCreate( pName );
-			if ( pMapModel )
-			{
-				Assert( CMapLoadHelper::GetRefCount() == 0 );
-
-				// 360 reads its specialized bsp into memory up to the pack lump, guaranteed last
-				// the real size of the i/o operation is up to pack lump
-				CMapLoadHelper::Init( pMapModel, pMapModel->szPathName );
-				int nBytesToRead = CMapLoadHelper::LumpOffset( LUMP_PAKFILE );
-				CMapLoadHelper::Shutdown();
-
-				void *pTargetData = NULL;
-				Assert( ( s_MapBuffer.GetUsed() == 0 ) && ( s_MapBuffer.GetMaxSize() >= nBytesToRead ) );
-				if ( ( ( s_MapBuffer.GetUsed() == 0 ) && ( s_MapBuffer.GetMaxSize() >= nBytesToRead ) ) )
-					pTargetData = s_MapBuffer.Alloc( nBytesToRead );
-
-				// create a loader job to perform i/o operation to mount the .bsp
-				char szNameOnDisk[MAX_PATH];
-				GetMapPathNameOnDisk( szNameOnDisk, pMapModel->szPathName, sizeof( szNameOnDisk ) );
-				LoaderJob_t loaderJobBSP;
-				loaderJobBSP.m_pFilename = szNameOnDisk;
-				loaderJobBSP.m_pPathID = "GAME";
-				loaderJobBSP.m_pCallback = QueuedLoaderMapCallback;
-				loaderJobBSP.m_pContext = (void *)pMapModel;
-				loaderJobBSP.m_pTargetData = pTargetData;
-				loaderJobBSP.m_nBytesToRead = nBytesToRead;
-				loaderJobBSP.m_Priority = LOADERPRIORITY_DURINGPRELOAD;
-				g_pQueuedLoader->AddJob( &loaderJobBSP );
-
-				bool bPreventAIN = false;
-				const char *pGame = V_UnqualifiedFileName( com_gamedir );
-				bPreventAIN = StringHasPrefix( pGame, "csgo" ) || 
-								StringHasPrefix( pGame, "cstrike" ) || 
-								StringHasPrefix( pGame, "portal2" ) || 
-								StringHasPrefix( pGame, "left4dead" );
-				if ( !bPreventAIN )
-				{
-					// create an anonymous job to perform i/o operation to mount the .ain
-					// the .ain gets claimed later
-					char szLoadName[MAX_PATH];
-					V_FileBase( pMapModel->szPathName, szLoadName, sizeof( szLoadName ) );
-					V_snprintf( szNameOnDisk, sizeof( szNameOnDisk ), "maps/graphs/%s" PLATFORM_EXT ".ain", szLoadName );
-					LoaderJob_t loaderJobAIN;
-					loaderJobAIN.m_pFilename = szNameOnDisk;
-					loaderJobAIN.m_pPathID = "GAME";
-					loaderJobAIN.m_Priority = LOADERPRIORITY_DURINGPRELOAD;
-					g_pQueuedLoader->AddJob( &loaderJobAIN );
-				}
-
-				return true;
-			}
-		}
-		else if ( modType == mod_studio )
-		{
-			MEM_ALLOC_CREDIT_( "CResourcePreloadModel(MDL)" );
-
-			char szFilename[MAX_PATH];
-			V_ComposeFileName( "models", pName, szFilename, sizeof( szFilename ) );			
-	
-			// find model or create empty entry
-			model_t *pModel = g_ModelLoader.FindModel( szFilename );
-
-			if ( g_ModelLoader.IsModelInWeaponCache( pModel ) )
-			{
-				// ignore it, these cannot be loaded now
-				return true;
-			}
-
-			// mark as touched
-			pModel->nLoadFlags |= IModelLoader::FMODELLOADER_TOUCHED_BY_PRELOAD;
-
-			if ( pModel->nLoadFlags & ( IModelLoader::FMODELLOADER_LOADED|IModelLoader::FMODELLOADER_LOADED_BY_PRELOAD ) )
-			{
-				// already loaded or preloaded
-				return true;
-			}
-			
-			// the model in not supposed to be in memory
-			Assert( pModel->type == mod_bad );
-
-			// set its type
-			pModel->type = mod_studio;
-
-			// mark the model so that the normal studio load path can perform a final fixup
-			pModel->nLoadFlags |= IModelLoader::FMODELLOADER_LOADED_BY_PRELOAD;
-
-			// setup the new entry for preload to operate
-			pModel->studio = g_pMDLCache->FindMDL( pModel->szPathName );
-
-			// the model is not supposed to be in memory
-			// if this hits, the mdlcache is out of sync with the modelloder
-			// if this hits, the mdlcache has the model, but the modelloader doesn't think so
-			// if the refcounts go haywire, bad evil bugs will occur
-			Assert( g_pMDLCache->GetRef( pModel->studio ) == 1 );
-
-			g_pMDLCache->SetUserData( pModel->studio, pModel );
-
-			// get it into the cache
-			g_pMDLCache->PreloadModel( pModel->studio );
-			
-			return true;
-		}
-
-		// unknown
-		return false;
-	}
-
-	void PurgeModels( bool bPurgeAll )
-	{
-		bool bSpew = ( g_pQueuedLoader->GetSpewDetail() & LOADER_DETAIL_PURGES ) != 0;
-
-		// purge any model that was not touched by the preload process
-		int iIndex = -1;
-		CUtlVector< model_t* > firstList;
-		CUtlVector< model_t* > otherList;
-		for ( ;; )
-		{
-			model_t *pModel;
-			iIndex = g_ModelLoader.FindNext( iIndex, &pModel );
-			if ( iIndex == -1 || !pModel )
-			{
-				// end of list
-				break;
-			}
-			if ( pModel->type == mod_studio )
-			{
-				// models that were touched during the preload stay, otherwise purged
-				bool bDoPurge = bPurgeAll || !( pModel->nLoadFlags & IModelLoader::FMODELLOADER_TOUCHED_BY_PRELOAD );
-
-				pModel->nLoadFlags &= ~IModelLoader::FMODELLOADER_TOUCHED_BY_PRELOAD;
-
-				if ( bDoPurge )
-				{
-					if ( bSpew )
-					{
-						Msg( "CResourcePreloadModel: Purging: %s\n", pModel->szPathName );
-					}
-
-					// Models that have virtual models have to unload first to
-					// ensure they properly unreference their virtual models.
-					if ( g_pMDLCache->IsDataLoaded( pModel->studio, MDLCACHE_VIRTUALMODEL ) )
-					{
-						firstList.AddToTail( pModel );
-					}
-					else
-					{
-						otherList.AddToTail( pModel );
-					}
-				}
-			}
-		}
-
-		for ( int i=0; i<firstList.Count(); i++ )
-		{
-			g_ModelLoader.UnloadModel( firstList[i] );
-		}
-		for ( int i=0; i<otherList.Count(); i++ )
-		{
-			g_ModelLoader.UnloadModel( otherList[i] );
-		}
-
-		if ( bPurgeAll || !g_pQueuedLoader->IsSameMapLoading() )
-		{
-			g_pMDLCache->Flush( MDLCACHE_FLUSH_ANIMBLOCK );
-		}
-	}
-
-	//-----------------------------------------------------------------------------
-	// Called before queued loader i/o jobs are actually performed. Must free up memory
-	// to ensure i/o requests have enough memory to succeed. The models that were
-	// touched by the CreateResource() are the ones to keep, all others get purged.
-	//-----------------------------------------------------------------------------
-	virtual void PurgeUnreferencedResources()
-	{
-		PurgeModels( false );
-	}
-
-	virtual void PurgeAll()
-	{
-		PurgeModels( true );
-	}
-
-	virtual void OnEndMapLoading( bool bAbort )
-	{
-		// discard the memory mounted bsp
-		CMapLoadHelper::Shutdown();
-		Assert( CMapLoadHelper::GetRefCount() == 0 );
-	}
-
-#if defined( _PS3 )
-	virtual bool RequiresRendererLock()
-	{
-		return true;
-	}
-#endif // _PS3
-};
-static CResourcePreloadModel s_ResourcePreloadModel;
 
 bool ProcessWeaponModelCacheOperations()
 {
@@ -3794,15 +3456,6 @@ void CModelLoader::Init( void )
 	// Make sure we have physcollision and physprop interfaces
 	CollisionBSPData_LinkPhysics();
 
-	if ( IsGameConsole() && g_pQueuedLoader )
-	{
-		g_pQueuedLoader->InstallLoader( RESOURCEPRELOAD_MODEL, &s_ResourcePreloadModel );
-	}
-	if ( IsGameConsole() )
-	{
-		s_MapBuffer.Init( "s_MapBuffer", 32*1024*1024, 64*1024 );
-	}
-
 #if defined( PLATFORM_WINDOWS_PC ) || defined( DEDICATED )
 	// not compatible for any platform but the game consoles due to at least CMDLCache::UnloadQueuedHardwareData() concepts
 	m_bAllowWeaponModelCache = false;
@@ -3810,7 +3463,7 @@ void CModelLoader::Init( void )
 	m_bAllowWorldWeaponEviction = false;
 #else
 	// on for 360 by default
-	m_bAllowWeaponModelCache = IsX360() || IsPS3() || CommandLine()->FindParm( "-weaponmodelcache" ) != 0;
+	m_bAllowWeaponModelCache = CommandLine()->FindParm( "-weaponmodelcache" ) != 0;
 	if ( CommandLine()->FindParm( "-noweaponmodelcache" ) != 0 )
 	{
 		// explicit opt-out
@@ -3830,13 +3483,6 @@ void CModelLoader::Init( void )
 	// now invalid due to m_Models purge
 	m_nNumWeaponsPartialResident = 0;
 	m_WeaponModelCache.PurgeAndDeleteElements();
-
-#if !defined( DEDICATED )
-	if ( IsGameConsole() && m_bAllowWorldWeaponEviction && g_pMaterialSystem )
-	{
-		g_pMaterialSystem->AddEndFramePriorToNextContextFunc( ::ProcessWeaponModelCacheOperations );
-	}
-#endif
 }
 
 //-----------------------------------------------------------------------------
@@ -3852,15 +3498,7 @@ void CModelLoader::Shutdown( void )
 
 	m_ModelPool.Clear();
 
-	if ( IsGameConsole() )
-	{
-		s_MapBuffer.Term();
-	}
 
-	if ( IsGameConsole() && m_bAllowWorldWeaponEviction && g_pMaterialSystem )
-	{
-		g_pMaterialSystem->RemoveEndFramePriorToNextContextFunc( ::ProcessWeaponModelCacheOperations );
-	}
 }
 
 int CModelLoader::GetCount( void )
@@ -4080,15 +3718,6 @@ model_t *CModelLoader::ReferenceModel( const char *name, REFERENCETYPE reference
 	return model;
 }
 
-static void QueuedLoaderBeginMapLoadingCallback( int nStage )
-{
-	if ( IsGameConsole() )
-	{
-		// unload lightmap textures before loading the next map (PC does this in CMatLightmaps::BeginLightmapAllocation)
-		g_pMaterialSystem->CleanupLightmaps();
-	}
-}
-
 //-----------------------------------------------------------------------------
 // Purpose: 
 // Input  : *entry - 
@@ -4212,7 +3841,7 @@ model_t	*CModelLoader::LoadModel( model_t *mod, REFERENCETYPE *pReferencetype )
 
 			// the map may have explicit texture exclusion
 			// the texture state needs to be established before any loading work
-			if ( IsGameConsole() || mat_excludetextures.GetBool() )
+			if ( mat_excludetextures.GetBool() )
 			{
 #if defined( PORTAL2 )
 				char szExcludePath[MAX_PATH] = "";
@@ -4234,38 +3863,9 @@ model_t	*CModelLoader::LoadModel( model_t *mod, REFERENCETYPE *pReferencetype )
 
 			NotifyHunkBeginMapLoad( m_szBaseName );
 
-			bool bQueuedLoader = false;
-			if ( IsGameConsole() )
+			if ( mat_excludetextures.GetBool() )
 			{
-				// must establish the bsp feature set first to ensure proper state during queued loading
-				Map_CheckForHDR( mod, mod->szPathName );
-
-				// Do not optimize map-to-same-map loading in TF
-				// FIXME/HACK: this fixes a bug (when shipping Orange Box) where static props would sometimes
-				//             disappear when a client disconnects and reconnects to the same map+server
-				//             (static prop lighting data persists when loading map A after map A)
-				bool bIsTF = !V_stricmp( COM_GetModDirectory(), "tf" );
-				bool bIsCSGO = !V_stricmp( COM_GetModDirectory(), "csgo" );
-				bool bOptimizeMapReload = !bIsTF && !bIsCSGO;
-
-				// start the queued loading process
-				if ( developer.GetInt() > 1 )
-				{
-					DevMsg( "Loading map: BeginMapLoading...\n" );
-				}
-				bQueuedLoader = g_pQueuedLoader && g_pQueuedLoader->BeginMapLoading( mod->szPathName, g_pMaterialSystemHardwareConfig->GetHDREnabled(), bOptimizeMapReload, QueuedLoaderBeginMapLoadingCallback );
-			}
-
-			if ( !bQueuedLoader )
-			{
-				if ( IsGameConsole() || mat_excludetextures.GetBool() )
-				{
-					// the queued loader process needs to own the actual texture update
-					g_pMaterialSystem->UpdateExcludedTextures();
-				}
-
-				// This needs to get run if the queued loader did not call it:
-				QueuedLoaderBeginMapLoadingCallback( 1 );
+				g_pMaterialSystem->UpdateExcludedTextures();
 			}
 
 			if ( developer.GetInt() > 1 )
@@ -4489,15 +4089,6 @@ void CModelLoader::UnloadAllModels( bool bCheckReference )
 			model->nLoadFlags &= ~FMODELLOADER_REFERENCEMASK;
 		}
 
-		if ( IsGameConsole() &&
-			g_pQueuedLoader && g_pQueuedLoader->IsMapLoading() &&
-			( model->nLoadFlags & FMODELLOADER_LOADED_BY_PRELOAD ) )
-		{
-			// models preloaded by the queued loader are not initially claimed and MUST remain until the end of the load process
-			// unclaimed models get unloaded during the post load purge
-			continue;
-		}
-
 		if ( model->nLoadFlags & ( FMODELLOADER_LOADED | FMODELLOADER_LOADED_BY_PRELOAD ) )
 		{		
 			UnloadModel( model );
@@ -4587,7 +4178,6 @@ void CModelLoader::AllocateLightstyles( model_t *pModel, byte *pStyles, int nSty
 
 bool Mod_NeedsLightstyleUpdate( model_t *pModel )
 {
-#ifndef SWDS
 	if ( pModel->brush.nLightstyleCount != 0 )
 	{
 		byte *pLightstyles = g_ModelLoader.GetLightstyles( pModel );
@@ -4599,7 +4189,6 @@ bool Mod_NeedsLightstyleUpdate( model_t *pModel )
 				return true;
 		}
 	}
-#endif
 	return false;
 }
 
@@ -4712,13 +4301,6 @@ RenderableTranslucencyType_t Mod_ComputeTranslucencyType( model_t* mod, int nSki
 			studiohdr_t *pStudioHdr = g_pMDLCache->GetStudioHdr( mod->studio );
 			if ( pStudioHdr->flags & STUDIOHDR_FLAGS_FORCE_OPAQUE )
 				return RENDERABLE_IS_OPAQUE;
-
-			if ( IsGameConsole() && !g_ModelLoader.IsViewWeaponModelResident( mod ) )
-			{
-				// best guess
-				// purposely preventing any request that would cause the hwmesh to load
-				return RENDERABLE_IS_OPAQUE;
-			}
 
 			IMaterial *pMaterials[ 128 ];
 			int materialCount = g_pStudioRender->GetMaterialListFromBodyAndSkin( mod->studio, nSkin, nBody, ARRAYSIZE( pMaterials ), pMaterials );
@@ -5082,10 +4664,6 @@ void CModelLoader::Map_LoadModelGuts( model_t *mod )
 	// HDR and features must be established first
 	COM_TimestampedLog( "  Map_CheckForHDR" );
 	m_bMapHasHDRLighting = Map_CheckForHDR( mod, mod->szPathName );
-	if ( IsGameConsole() && !m_bMapHasHDRLighting )
-	{
-		Warning( "Map '%s' lacks exepected HDR data! 360 does not support accurate LDR visuals.\n", mod->szPathName );
-	}
 
 	// load the texinfo lump (used by many subsequent lumps in raw form)
 	CMapLoadHelper lhTexinfo( LUMP_TEXINFO );
@@ -5516,9 +5094,7 @@ static void GetSpriteInfo( const char *pName, bool bIsAVI, bool bIsBIK, int &nWi
 	// is that this code gets run on dedicated servers also.
 	IMaterial *pMaterial = NULL;
 	AVIMaterial_t hAVIMaterial = AVIMATERIAL_INVALID; 
-#if !defined( _GAMECONSOLE ) || defined( BINK_ENABLED_FOR_CONSOLE )
 	BIKMaterial_t hBIKMaterial = BIKMATERIAL_INVALID; 
-#endif
 	if ( bIsAVI )
 	{
 		hAVIMaterial = avi->CreateAVIMaterial( pName, pName, "GAME" );
@@ -5529,7 +5105,6 @@ static void GetSpriteInfo( const char *pName, bool bIsAVI, bool bIsBIK, int &nWi
 			pMaterial = avi->GetMaterial( hAVIMaterial );
 		}
 	}
-#if !defined( _GAMECONSOLE ) || defined( BINK_ENABLED_FOR_CONSOLE )
 	else if ( bIsBIK )
 	{
 		hBIKMaterial = bik->CreateMaterial( pName, pName, "GAME" );
@@ -5540,7 +5115,6 @@ static void GetSpriteInfo( const char *pName, bool bIsAVI, bool bIsBIK, int &nWi
 			pMaterial = bik->GetMaterial( hBIKMaterial );
 		}
 	}
-#endif
 	else
 	{
 		pMaterial = GL_LoadMaterial( pName, TEXTURE_GROUP_OTHER );
@@ -5563,12 +5137,10 @@ static void GetSpriteInfo( const char *pName, bool bIsAVI, bool bIsBIK, int &nWi
 		avi->DestroyAVIMaterial( hAVIMaterial );
 	}
 
-#if !defined( _GAMECONSOLE ) || defined( BINK_ENABLED_FOR_CONSOLE )
 	if ( hBIKMaterial != BIKMATERIAL_INVALID )
 	{
 		bik->DestroyMaterial( hBIKMaterial );
 	}
-#endif
 }
 
 
@@ -5905,11 +5477,6 @@ void CModelLoader::Studio_UnloadModel( model_t *pModel )
 	// leave these flags alone since we are going to return from alt-tab at some point.
 	//	Assert( !( mod->needload & FMODELLOADER_REFERENCEMASK ) );
 	pModel->nLoadFlags &= ~( FMODELLOADER_LOADED | FMODELLOADER_LOADED_BY_PRELOAD );
-	if ( IsGameConsole() )
-	{
-		// 360 doesn't need to keep the reference flags, but the PC does
-		pModel->nLoadFlags &= ~FMODELLOADER_REFERENCEMASK;
-	}
 
 #ifdef DBGFLAG_ASSERT
 	int nRef = 
@@ -6082,11 +5649,7 @@ void CModelLoader::Print( void )
 //-----------------------------------------------------------------------------
 int CModelLoader::UpdateOrCreate( const char *pSourceName, char *pTargetName, int targetLen, bool bForce )
 {
-#if defined( _GAMECONSOLE )
-	return ::UpdateOrCreate( pSourceName, pTargetName, targetLen, NULL, NULL, bForce );
-#else
 	return UOC_NOT_CREATED;
-#endif
 }
 
 //-----------------------------------------------------------------------------
@@ -6107,7 +5670,7 @@ bool CModelLoader::Map_IsValid( char const *pBaseMapName, bool bQuiet /* = false
 		return false;
 	}
 
-	if ( ( IsGameConsole() || sv.IsDedicated() ) && !V_stricmp( pBaseMapName, s_szBaseMapName ) )
+	if ( ( sv.IsDedicated() ) && !V_stricmp( pBaseMapName, s_szBaseMapName ) )
 	{
 		// already been checked, no reason to do multiple i/o validations
 		return true;
@@ -6118,14 +5681,8 @@ bool CModelLoader::Map_IsValid( char const *pBaseMapName, bool bQuiet /* = false
 	V_snprintf( mapname, sizeof( mapname ), "maps/%s.bsp", pBaseMapName );
 	V_FixSlashes( mapname );
 
-	if ( IsGameConsole() )
-	{
-		char szMapName360[MAX_PATH];
-		UpdateOrCreate( mapname, szMapName360, sizeof( szMapName360 ), false );
-		Q_strncpy( mapname, szMapName360, sizeof( mapname ) );
-	}
 
-	mapfile = g_pFileSystem->OpenEx( mapname, "rb", IsGameConsole() ? FSOPEN_NEVERINPACK : 0, "GAME" );
+	mapfile = g_pFileSystem->OpenEx( mapname, "rb", 0, "GAME" );
 	if ( mapfile != FILESYSTEM_INVALID_HANDLE )
 	{
 		BSPHeader_t header;
@@ -6899,7 +6456,7 @@ void CModelLoader::UpdateDynamicModelLoadQueue()
 	}
 
 	// If we're not working, and we have work to do, and the queued loader is open for business...
-	if ( !m_bDynamicLoadQueueHeadActive && m_DynamicModelLoadQueue.Count() > 0 && g_pQueuedLoader->IsFinished() )
+	if ( !m_bDynamicLoadQueueHeadActive && m_DynamicModelLoadQueue.Count() > 0 )
 	{
 		model_t *pModel = m_DynamicModelLoadQueue[0];
 		UtlHashHandle_t hDyn = m_DynamicModels.Find( pModel );
@@ -7328,7 +6885,7 @@ void Mod_LeafAmbientColorAtPos( Vector *pOut, const Vector &pos, int leafIndex )
 	}
 }
 
-#if defined( _X360 ) || defined( _PS3 ) || defined( PLATFORM_WINDOWS_PC )
+#if defined( PLATFORM_WINDOWS_PC )
 
 #if defined( PLATFORM_WINDOWS_PC )
 
@@ -7445,11 +7002,7 @@ CON_COMMAND( vx_model_list, "Dump models to VXConsole" )
 		modelInfo.numMeshes = numMeshes;
 	}
 
-#if defined( _X360 )
-	XBX_rModelList( numActualModels, modelList.Base() );
-#elif defined( _PS3 )
-	g_pValvePS3Console->ModelList( numActualModels, modelList.Base() ); // super stupid, it just gets copied into yet another cutlvec on the other side, but that's the way the 360 ver does it.
-#elif defined( PLATFORM_WINDOWS_PC )
+#if   defined( PLATFORM_WINDOWS_PC )
 	
 	extern IVEngineClient *engineClient;
 	char csvFileName[ MAX_PATH ];
@@ -7528,12 +7081,10 @@ void CModelLoader::DebugPrintDynamicModels()
 	}
 }
 
-#if !defined ( _CERT )
 CON_COMMAND( mod_combiner_info, "debug spew for Combiner Info" )
 {
 	((CModelLoader*)modelloader)->DebugCombinerInfo();
 }
-#endif
 
 
 void CModelLoader::DebugCombinerInfo()

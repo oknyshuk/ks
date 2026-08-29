@@ -49,10 +49,6 @@ ITexture *GetStereoParamTexture( void )
 static CTextureReference s_pPowerOfTwoFrameBufferTexture;
 ITexture *GetPowerOfTwoFrameBufferTexture( void )
 {
-	if ( IsGameConsole() )
-	{
-		return GetFullFrameFrameBufferTexture( 1 );
-	}
 
 	if ( !s_pPowerOfTwoFrameBufferTexture )
 	{
@@ -272,11 +268,6 @@ ITexture *GetSmallBuffer1( void )
 static CTextureReference s_TeenyTextures[MAX_TEENY_TEXTURES];
 ITexture *GetTeenyTexture( int which )
 {
-	if ( IsGameConsole() )
-	{
-		Assert( 0 );
-		return NULL;
-	}
 
 	Assert( which < MAX_TEENY_TEXTURES );
 

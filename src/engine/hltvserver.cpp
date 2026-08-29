@@ -84,9 +84,6 @@ ConVar tv_maxclients_relayreserved( "tv_maxclients_relayreserved", "0", FCVAR_RE
 	true, 0, true, 255 );
 
 ConVar tv_autorecord( "tv_autorecord", "0", FCVAR_RELEASE, "Automatically records all games as GOTV demos." );
-void OnTvBroadcast( IConVar *var, const char *pOldValue, float flOldValue );
-ConVar tv_broadcast( "tv_broadcast", "0", FCVAR_RELEASE, "Automatically broadcasts all games as GOTV demos through Steam.", OnTvBroadcast );
-ConVar tv_broadcast1( "tv_broadcast1", "0", FCVAR_RELEASE, "Automatically broadcasts all games as GOTV[1] demos through Steam.", OnTvBroadcast );
 ConVar tv_name( "tv_name", "GOTV", FCVAR_RELEASE, "GOTV host name", tv_name_changed_f );
 static ConVar tv_password( "tv_password", "", FCVAR_NOTIFY | FCVAR_PROTECTED | FCVAR_DONTRECORD | FCVAR_RELEASE, "GOTV password for all clients" );
 static ConVar tv_advertise_watchable( "tv_advertise_watchable", "0", FCVAR_NOTIFY | FCVAR_PROTECTED | FCVAR_DONTRECORD | FCVAR_RELEASE, "GOTV advertises the match as watchable via game UI, clients watching via UI will not need to type password" );
@@ -108,7 +105,6 @@ extern ConVar spec_replay_enable;
 extern ConVar spec_replay_message_time;
 ConVar	spec_replay_leadup_time( "spec_replay_leadup_time", "5.3438", FCVAR_RELEASE | FCVAR_REPLICATED, "Replay time in seconds before the highlighted event" );
 
-ConVar tv_broadcast_url( "tv_broadcast_url", "http://localhost:8080", FCVAR_RELEASE, "URL of the broadcast relay" );
 
 
 CHLTVServer::SHLTVDeltaFrame_t::SHLTVDeltaFrame_t() :
@@ -537,7 +533,6 @@ void CHLTVFrame::FreeBuffers( void )
 
 CHLTVServer::CHLTVServer( uint nInstanceIndex, float flSnapshotRate )
 	: m_DemoRecorder( this )
-	, m_Broadcast( this )
 	, m_ClientState( this )
 	, m_nInstanceIndex( nInstanceIndex )
 	, m_flSnapshotRate( flSnapshotRate )
@@ -727,22 +722,11 @@ void CHLTVServer::StartMaster(CGameClient *client)
 	{
 		m_DemoRecorder.StartAutoRecording();
 	}
-	m_Broadcast.OnMasterStarted();
-	if ( GetIndexedConVar( tv_broadcast, GetInstanceIndex() ).GetBool() )
-	{
-		StartBroadcast();
-	}
-
 	m_DemoEventWriteBuffer.StartWriting( m_DemoEventsBuffer, ARRAYSIZE( m_DemoEventsBuffer) );
 
 	ReconnectClients();
 }
 
-
-void CHLTVServer::StartBroadcast()
-{
-	m_Broadcast.StartRecording( tv_broadcast_url.GetString() );
-}
 
 void CHLTVServer::StartDemo( const char *filename )
 {
@@ -961,10 +945,6 @@ void CHLTVServer::GetGlobalStats( int &proxies, int &slots, int &clients )
 		numSlots = MAX( 0, numSlots );
 		
 		int numClients = GetNumClients();
-		if ( !numClients && m_Broadcast.IsRecording() )
-		{	// Always consider broadcast stream as a non-zero amount of clients
-			numClients = 1;
-		}
 
 		if ( numClients > numSlots )
 			numSlots = numClients;
@@ -1153,7 +1133,7 @@ void CHLTVServer::BroadcastEvent(IGameEvent *event)
 
 	BroadcastMessage( eventMsg, true, true );
 
-	if ( m_DemoRecorder.IsRecording() || m_Broadcast.IsRecording() )
+	if ( m_DemoRecorder.IsRecording() )
 	{
 		eventMsg.WriteToBuffer( m_DemoEventWriteBuffer );
 	}
@@ -2836,12 +2816,9 @@ void CHLTVServer::UpdateTick( void )
 			EntityPVSCheck( m_CurrentFrame );	
 		}
 
-		if ( ( m_DemoRecorder.IsRecording() || m_Broadcast.IsRecording() ) && m_CurrentFrame )
+		if ( m_DemoRecorder.IsRecording() && m_CurrentFrame )
 		{
-			if ( m_DemoRecorder.IsRecording() )
-				m_DemoRecorder.WriteFrame( m_CurrentFrame, &m_DemoEventWriteBuffer );
-			if ( m_Broadcast.IsRecording() )
-				m_Broadcast.WriteFrame( m_CurrentFrame, &m_DemoEventWriteBuffer );
+			m_DemoRecorder.WriteFrame( m_CurrentFrame, &m_DemoEventWriteBuffer );
 			m_DemoEventWriteBuffer.Reset();
 		}
 	}
@@ -2910,7 +2887,6 @@ void CHLTVServer::Init(bool bIsDedicated)
 
 void CHLTVServer::Changelevel( bool bInactivateClients )
 {
-	m_Broadcast.StopRecording();// We can't broadcast after level change, because the broadcast manifest (which includes map name) is immutable during broadcast.
 	StopRecordingAndFreeFrames( true );
 
 	if ( bInactivateClients )
@@ -2965,7 +2941,6 @@ void CHLTVServer::Shutdown( void )
 	m_nExternalLinkedViewers = 0;
 
 	//stop any recording, and free our client frame list
-	m_Broadcast.StopRecording();
 	StopRecordingAndFreeFrames( true );
 	UninstallStringTables();
 
@@ -3228,27 +3203,6 @@ static char const *Helper_HLTV_GenerateUniquePassword()
 	return "HLTV Official Password Must Be Encrypted";
 }
 
-#if 0
-CON_COMMAND( debug_make_hltv_encrypted_password, "" )
-{
-	char const *szPasswordProvidedByClient = args.Arg( 1 );
-	if ( !szPasswordProvidedByClient || !*szPasswordProvidedByClient || ( Q_strlen( szPasswordProvidedByClient ) != 32 ) )
-	{
-		Warning( "Bad password!\n" );
-		return;
-	}
-
-	char chClientHash[64]={0};
-	Q_snprintf( chClientHash, ARRAYSIZE( chClientHash ), "%08X%08X%08X",
-		CRC32_ProcessSingleBuffer( szPasswordProvidedByClient, 32 ),
-		CRC32_ProcessSingleBuffer( szPasswordProvidedByClient + 10, 22 ),
-		CRC32_ProcessSingleBuffer( szPasswordProvidedByClient + 20, 12 ) );
-	Q_snprintf( chClientHash + 24, ARRAYSIZE( chClientHash ) - 24, "%08X",
-		CRC32_ProcessSingleBuffer( chClientHash, 24 ) );
-
-	Msg( "{%s}->{%s}\n", szPasswordProvidedByClient, chClientHash );
-}
-#endif
 
 bool CHLTVServer::CheckHltvPasswordMatch( const char *szPasswordProvidedByClient, const char *szServerRequiredPassword, CSteamID steamidClient )
 {
@@ -3604,11 +3558,6 @@ CON_COMMAND( tv_status, "Show GOTV server status." )
 				COM_FormatSeconds( host_state.interval_per_tick * hltv->m_DemoRecorder.GetRecordingTick() ) );
 		}
 
-		if ( hltv->m_Broadcast.IsRecording() )
-		{
-			ConMsg( "Broadcasting\n" );
-		}
-
 		ConMsg( "\n" );
 
 		extern ConVar host_name;
@@ -3816,71 +3765,6 @@ CON_COMMAND( tv_record, "Starts GOTV demo recording [-instance <inst> ]" )
 }
 
 
-// tv_broadcast change callback
-void OnTvBroadcast( )
-{
-	for ( CActiveHltvServerIterator hltv; hltv; hltv.Next() )
-	{
-		if ( GetIndexedConVar( tv_broadcast, hltv.GetIndex() ).GetBool() )
-		{
-			if ( hltv->IsTVRelay() )
-			{
-				Warning( "GOTV[%d] is a relay.", hltv.GetIndex() );
-			}
-			else
-			{
-				if ( !hltv->m_Broadcast.IsRecording() )
-				{
-					hltv->StartBroadcast();
-					ConMsg( "Broadcast on GOTV[%d] started\n", hltv.GetIndex() );
-				}
-				else
-				{
-					ConMsg( "Broadcast on GOTV[%d] is already active\n", hltv.GetIndex() );
-				}
-			}
-		}
-		else
-		{
-			if ( hltv->m_Broadcast.IsRecording() )
-			{
-				hltv->m_Broadcast.StopRecording();
-				ConMsg( "Broadcast on GOTV[%d] stopped\n", hltv.GetIndex() );
-			}
-			else
-			{
-				ConMsg( "Broadcast on GOTV[%d] is not active\n", hltv.GetIndex() );
-			}
-		}
-	}
-}
-void OnTvBroadcast( IConVar *var, const char *pOldValue, float flOldValue ) { OnTvBroadcast(); }
-
-
-CON_COMMAND( tv_broadcast_status, "Print out broadcast status" )
-{
-	int nActiveServers = 0, nBroadcastingServers = 0;
-	for ( CActiveHltvServerIterator hltv; hltv; hltv.Next() )
-	{
-		nActiveServers++;
-		if ( hltv->m_Broadcast.IsRecording() )
-		{
-			nBroadcastingServers++;
-			Msg( "GOTV[%d] is broadcasting to %s: ", hltv.GetIndex(), hltv->m_Broadcast.GetUrl() );
-			hltv->m_Broadcast.DumpStats();
-		}
-	}
-	if ( !nBroadcastingServers )
-	{
-		// print something
-		if ( nActiveServers )
-			Msg( "GOTV is not broadcasting\n" );
-		else
-			Msg( "GOTV is not active\n" );
-	}
-}
-
-// tv_stopbroadcast is effectively accomplished by tv_broadcast 0
 
 CON_COMMAND( tv_stoprecord, "Stops GOTV demo recording [-instance <inst> ]" )
 {

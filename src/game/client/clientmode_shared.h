@@ -24,10 +24,6 @@ class CViewSetup;
 class C_BaseEntity;
 class C_BasePlayer;
 
-namespace vgui
-{
-class Panel;
-}
 
 #define ACHIEVEMENT_ANNOUNCEMENT_MIN_TIME 10
 #define USERID2PLAYER(i) ToBasePlayer( ClientEntityList().GetEnt( engine->GetPlayerForUserID( i ) ) )	

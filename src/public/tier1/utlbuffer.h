@@ -109,7 +109,6 @@ typedef unsigned short ushort;
 
 template < class A >
 static const char *GetFmtStr( int nRadix = 10, bool bPrint = true ) { Assert( 0 ); return ""; }
-#if defined( LINUX ) || defined( __clang__ ) || ( defined( _MSC_VER ) && _MSC_VER >= 1900 )
 template <> const char *GetFmtStr< short >	( int nRadix, bool bPrint ) { Assert( nRadix == 10 ); return "%hd"; }
 template <> const char *GetFmtStr< ushort >	( int nRadix, bool bPrint ) { Assert( nRadix == 10 ); return "%hu"; }
 template <> const char *GetFmtStr< int >		( int nRadix, bool bPrint ) { Assert( nRadix == 10 ); return "%d"; }
@@ -117,15 +116,6 @@ template <> const char *GetFmtStr< uint >	( int nRadix, bool bPrint ) { Assert( 
 template <> const char *GetFmtStr< int64 >	( int nRadix, bool bPrint ) { Assert( nRadix == 10 ); return "%lld"; }
 template <> const char *GetFmtStr< float >	( int nRadix, bool bPrint ) { Assert( nRadix == 10 ); return "%f"; }
 template <> const char *GetFmtStr< double >	( int nRadix, bool bPrint ) { Assert( nRadix == 10 ); return bPrint ? "%.15lf" : "%lf"; } // force Printf to print DBL_DIG=15 digits of precision for doubles - defaults to FLT_DIG=6
-#else
-template <> static const char *GetFmtStr< short >	( int nRadix, bool bPrint ) { Assert( nRadix == 10 ); return "%hd"; }
-template <> static const char *GetFmtStr< ushort >	( int nRadix, bool bPrint ) { Assert( nRadix == 10 ); return "%hu"; }
-template <> static const char *GetFmtStr< int >		( int nRadix, bool bPrint ) { Assert( nRadix == 10 ); return "%d"; }
-template <> static const char *GetFmtStr< uint >	( int nRadix, bool bPrint ) { Assert( nRadix == 10 || nRadix == 16 ); return nRadix == 16 ? "%x" : "%u"; }
-template <> static const char *GetFmtStr< int64 >	( int nRadix, bool bPrint ) { Assert( nRadix == 10 ); return "%lld"; }
-template <> static const char *GetFmtStr< float >	( int nRadix, bool bPrint ) { Assert( nRadix == 10 ); return "%f"; }
-template <> static const char *GetFmtStr< double >	( int nRadix, bool bPrint ) { Assert( nRadix == 10 ); return bPrint ? "%.15lf" : "%lf"; } // force Printf to print DBL_DIG=15 digits of precision for doubles - defaults to FLT_DIG=6
-#endif
 //-----------------------------------------------------------------------------
 // Command parsing..
 //-----------------------------------------------------------------------------
@@ -214,8 +204,6 @@ public:
 
 	FORCEINLINE void ActivateByteSwappingIfBigEndian( void )
 	{
-		if ( ( IsX360() || IsPS3() ) )
-			ActivateByteSwapping( true );
 	}
 
 
@@ -395,11 +383,9 @@ public:
 	// Temporarily disables pretty print
 	void EnableTabs( bool bEnable );
 
-#if !defined( _GAMECONSOLE )
 	// Swap my internal memory with another buffer,
 	// and copy all of its other members
 	void SwapCopy( CUtlBuffer &other ) ;
-#endif
 
 protected:
 	// error flags
@@ -470,9 +456,6 @@ protected:
 	unsigned char m_Error;
 	unsigned char m_Flags;
 	unsigned char m_Reserved;
-#if defined( _GAMECONSOLE )
-	unsigned char pad;
-#endif
 
 	int m_nTab;
 	int m_nMaxPut;
@@ -710,19 +693,8 @@ inline void CUtlBuffer::GetTypeBin< float >( float &dest )
 	if ( CheckGet( sizeof( float ) ) )
 	{
 		uintp pData = (uintp)PeekGet();
-		if ( ( IsX360() || IsPS3() ) && ( pData & 0x03 ) )
-		{
-			// handle unaligned read
-			((unsigned char*)&dest)[0] = ((unsigned char*)pData)[0];
-			((unsigned char*)&dest)[1] = ((unsigned char*)pData)[1];
-			((unsigned char*)&dest)[2] = ((unsigned char*)pData)[2];
-			((unsigned char*)&dest)[3] = ((unsigned char*)pData)[3];
-		}
-		else
-		{
-			// aligned read
-			dest = *(float *)pData;
-		}
+		// aligned read
+		dest = *(float *)pData;
 		if ( m_Byteswap.IsSwappingBytes() )
 		{
 			m_Byteswap.SwapBufferToTargetEndian< float >( &dest, &dest );
@@ -741,23 +713,8 @@ inline void CUtlBuffer::GetTypeBin< double >( double &dest )
 	if ( CheckGet( sizeof( double ) ) )
 	{
 		uintp pData = (uintp)PeekGet();
-		if ( ( IsX360() || IsPS3() ) && ( pData & 0x07 ) )
-		{
-			// handle unaligned read
-			((unsigned char*)&dest)[0] = ((unsigned char*)pData)[0];
-			((unsigned char*)&dest)[1] = ((unsigned char*)pData)[1];
-			((unsigned char*)&dest)[2] = ((unsigned char*)pData)[2];
-			((unsigned char*)&dest)[3] = ((unsigned char*)pData)[3];
-			((unsigned char*)&dest)[4] = ((unsigned char*)pData)[4];
-			((unsigned char*)&dest)[5] = ((unsigned char*)pData)[5];
-			((unsigned char*)&dest)[6] = ((unsigned char*)pData)[6];
-			((unsigned char*)&dest)[7] = ((unsigned char*)pData)[7];
-		}
-		else
-		{
-			// aligned read
-			dest = *(double *)pData;
-		}
+		// aligned read
+		dest = *(double *)pData;
 		if ( m_Byteswap.IsSwappingBytes() )
 		{
 			m_Byteswap.SwapBufferToTargetEndian< double >( &dest, &dest );
@@ -817,11 +774,7 @@ inline uint32 StringToNumber( char *pString, char **ppEnd, int nRadix )
 template <>
 inline int64 StringToNumber( char *pString, char **ppEnd, int nRadix )
 {
-#if defined(_PS3) || defined(POSIX)
 	return ( int64 )strtoll( pString, ppEnd, nRadix );
-#else // !_PS3
-	return ( int64 )_strtoi64( pString, ppEnd, nRadix );
-#endif // _PS3
 }
 
 template <>
@@ -1071,79 +1024,6 @@ inline void CUtlBuffer::PutTypeBin( T src )
 	}
 }
 
-#if defined( _GAMECONSOLE )
-template <>
-inline void CUtlBuffer::PutTypeBin< float >( float src )
-{
-	if ( CheckPut( sizeof( src ) ) )
-	{
-		if ( m_Byteswap.IsSwappingBytes() )
-		{
-			m_Byteswap.SwapBufferToTargetEndian<float>( &src, &src );
-		}
-
-		//
-		// Write the data
-		//
-		unsigned pData = (unsigned)PeekPut();
-		if ( pData & 0x03 )
-		{
-			// handle unaligned write
-			byte* dst = (byte*)pData;
-			byte* srcPtr = (byte*)&src;
-			dst[0] = srcPtr[0];
-			dst[1] = srcPtr[1];
-			dst[2] = srcPtr[2];
-			dst[3] = srcPtr[3];
-		}
-		else
-		{
-			*(float *)pData = src;
-		}
-
-		m_Put += sizeof(float);
-		AddNullTermination( m_Put );
-	}
-}
-
-template <>
-inline void CUtlBuffer::PutTypeBin< double >( double src )
-{
-	if ( CheckPut( sizeof( src ) ) )
-	{
-		if ( m_Byteswap.IsSwappingBytes() )
-		{
-			m_Byteswap.SwapBufferToTargetEndian<double>( &src, &src );
-		}
-
-		//
-		// Write the data
-		//
-		unsigned pData = (unsigned)PeekPut();
-		if ( pData & 0x07 )
-		{
-			// handle unaligned write
-			byte* dst = (byte*)pData;
-			byte* srcPtr = (byte*)&src;
-			dst[0] = srcPtr[0];
-			dst[1] = srcPtr[1];
-			dst[2] = srcPtr[2];
-			dst[3] = srcPtr[3];
-			dst[4] = srcPtr[4];
-			dst[5] = srcPtr[5];
-			dst[6] = srcPtr[6];
-			dst[7] = srcPtr[7];
-		}
-		else
-		{
-			*(double *)pData = src;
-		}
-
-		m_Put += sizeof(double);
-		AddNullTermination( m_Put );
-	}
-}
-#endif
 
 template <typename T> 
 inline void CUtlBuffer::PutType( T src )
@@ -1406,7 +1286,6 @@ inline void CUtlBuffer::Spew( )
 	}
 }
 
-#if !defined(_GAMECONSOLE)
 inline void CUtlBuffer::SwapCopy(  CUtlBuffer &other  )
 {
 	m_Get = other.m_Get;
@@ -1423,7 +1302,6 @@ inline void CUtlBuffer::SwapCopy(  CUtlBuffer &other  )
 
 	m_Memory.Swap( other.m_Memory );
 }
-#endif
 
 inline void CUtlBuffer::CopyBuffer( const CUtlBuffer &buffer )
 {

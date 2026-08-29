@@ -389,11 +389,8 @@ void CLocatorTarget::SetBinding( const char *pszBinding )
 	int nSlot = GET_ACTIVE_SPLITSCREEN_SLOT();
 	BindingLookupOption_t nBindingLookupFlags = BINDINGLOOKUP_ALL;
 
-	if ( !IsGameConsole() )
-	{
-		// Only show joystick binds if it's enabled and non-joystick if it's disabled
-		nBindingLookupFlags = input->ControllerModeActive() ? BINDINGLOOKUP_JOYSTICK_ONLY : BINDINGLOOKUP_KEYBOARD_ONLY;
-	}
+	// Only show joystick binds if it's enabled and non-joystick if it's disabled
+	nBindingLookupFlags = input->ControllerModeActive() ? BINDINGLOOKUP_JOYSTICK_ONLY : BINDINGLOOKUP_KEYBOARD_ONLY;
 
 	bool bIsControllerNow = ( nBindingLookupFlags != 0 );
 
@@ -453,11 +450,6 @@ const char *CLocatorTarget::UseBindingImage( char *pchIconTextureName, size_t bu
 {
 	if ( m_iBindingChoicesCount <= 0 )
 	{
-		if ( IsGameConsole() )
-		{
-			Q_strncpy( pchIconTextureName, "icon_blank_wide", bufSize );
-		}
-		else
 		{
 			Q_strncpy( pchIconTextureName, "icon_key_wide", bufSize );
 			return "#GameUI_Icons_NONE";
@@ -472,12 +464,6 @@ const char *CLocatorTarget::UseBindingImage( char *pchIconTextureName, size_t bu
 	// We counted at least one binding... this should not be NULL!
 	Assert( pchBinding );
 
-	if ( IsGameConsole() )
-	{
-		// Use a blank background for the button icons
-		Q_strncpy( pchIconTextureName, "icon_blank", bufSize );
-		return pchBinding;
-	}
 
 	//icon_blank_wide
 	/*

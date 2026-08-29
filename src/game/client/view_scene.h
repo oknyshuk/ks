@@ -1,4 +1,4 @@
-	//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
+	//========= Copyright ï¿½ 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -46,11 +46,6 @@ inline void UpdateRefractTexture( int x, int y, int w, int h, bool bForceUpdate 
 
 	CMatRenderContextPtr pRenderContext( materials );
 	ITexture *pTexture = GetPowerOfTwoFrameBufferTexture();
-#ifdef PORTAL2
-	if ( IsPC() || bForceUpdate || g_bAllowMultipleRefractUpdatesPerScenePerFrame || ( gpGlobals->framecount != g_viewscene_refractUpdateFrame ) || ( g_nRefractUpdatePortalRender != g_nCurrentPortalRender ) )
-#else
-	if ( IsPC() || bForceUpdate || g_bAllowMultipleRefractUpdatesPerScenePerFrame || ( gpGlobals->framecount != g_viewscene_refractUpdateFrame ) )
-#endif
 	{
 		// forced or only once per frame 
 		Rect_t rect;
@@ -58,7 +53,7 @@ inline void UpdateRefractTexture( int x, int y, int w, int h, bool bForceUpdate 
 		rect.y = y;
 		rect.width = w;
 		rect.height = h;
-		pRenderContext->CopyRenderTargetToTextureEx( pTexture, 0, &rect, IsPC() ? NULL : &rect );
+		pRenderContext->CopyRenderTargetToTextureEx( pTexture, 0, &rect, true ? NULL : &rect );
 
 #ifdef PORTAL2
 		g_nRefractUpdatePortalRender = g_nCurrentPortalRender;

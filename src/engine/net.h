@@ -110,15 +110,6 @@ void		NET_RunFrame( double realtime );
 // Check configuration state
 bool		NET_IsMultiplayer( void );
 bool		NET_IsDedicated( void );
-#ifdef SERVER_XLSP
-bool		NET_IsDedicatedForXbox( void );
-#else
-FORCEINLINE bool NET_IsDedicatedForXbox( void )
-{
-	return false;
-}
-#endif
-
 // Writes a error file with bad packet content
 void		NET_LogBadPacket(netpacket_t * packet);
 

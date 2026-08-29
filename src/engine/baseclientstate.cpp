@@ -25,7 +25,6 @@
 #include "replayserver.h"
 #include "replayhistorymanager.h"
 #endif
-#include "filesystem/IQueuedLoader.h"
 #include "serializedentity.h"
 #include "checksum_engine.h"
 
@@ -36,14 +35,10 @@
 
 #include "localize/ilocalize.h"
 #include "eiface.h"
-#include "cl_broadcast.h"
 
 #include "csgo_limits.h"
 #include "csgo_limits.inl"
 
-#if defined( _PS3 )
-		#include <sysutil/sysutil_userinfo.h>
-#endif
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -58,41 +53,6 @@ ConVar cl_teammate_color_5( "cl_teammate_color_5", "255 155 37" );
 void CL_NotifyRPTOfDisconnect( );
 #endif // ENABLE_RPT
 
-#if ( !defined( NO_STEAM ) && (!defined( DEDICATED ) ) )
-void UpdateNameFromSteamID( IConVar *pConVar, CSteamID *pSteamID )
-{
-#if !defined( DEDICATED )   
-	if ( !pConVar || !pSteamID || !Steam3Client().SteamFriends() )
-		return;
-
-#if defined( _PS3 )
-	CSteamID sPsnId = Steam3Client().SteamUser()->GetConsoleSteamID();
-	if ( sPsnId.IsValid() )
-	{
-		const char *pszName = Steam3Client().SteamFriends()->GetFriendPersonaName( sPsnId );
-		pConVar->SetValue( pszName );
-	}
-#else
-
-	Assert( pSteamID->GetAccountID() != 0 || CommandLine()->FindParm( "-ignoreSteamAsserts" ) );
-	const char *pszName = Steam3Client().SteamFriends()->GetFriendPersonaName( *pSteamID );
-	pConVar->SetValue( pszName );
-
-#endif  // _PS3
-#endif
-}
-
-void SetNameToSteamIDName( IConVar *pConVar )
-{
-#if !defined( DEDICATED )
-	if ( Steam3Client().SteamUtils() && Steam3Client().SteamFriends() && Steam3Client().SteamUser() )
-	{
-		CSteamID steamID = Steam3Client().SteamUser()->GetSteamID();
-		UpdateNameFromSteamID( pConVar, &steamID );
-	}
-#endif
-}
-#endif
 
 void CL_NameCvarChanged( IConVar *pConVar, const char *pOldString, float flOldValue )
 {
@@ -101,15 +61,6 @@ void CL_NameCvarChanged( IConVar *pConVar, const char *pOldString, float flOldVa
 		return;
 
 #ifndef DEDICATED
-#if !defined( NO_STEAM )
-	static bool bPreventRent = false;
-	if ( !bPreventRent )
-	{
-		bPreventRent = true;
-		SetNameToSteamIDName( pConVar );
-		bPreventRent = false;
-	}
-#endif
 #endif
 
 	ConVarRef var( pConVar );
@@ -127,7 +78,6 @@ void CL_NameCvarChanged( IConVar *pConVar, const char *pOldString, float flOldVa
 
 
 
-#ifndef SWDS
 extern IVEngineClient *engineClient;
 // ---------------------------------------------------------------------------------------- //
 static void SendClanTag( const char *pTag, const char *pName )
@@ -137,12 +87,10 @@ static void SendClanTag( const char *pTag, const char *pName )
 	kv->SetString( "name", pName );
 	engineClient->ServerCmdKeyValues( kv );
 }
-#endif
 
 // ---------------------------------------------------------------------------------------- //
 void CL_ClanIdChanged( IConVar *pConVar, const char *pOldString, float flOldValue )
 {
-#ifndef SWDS
 	// Get the clan ID we're trying to select
 	ConVarRef var( pConVar );
 	uint32 newId = var.GetInt();
@@ -153,34 +101,9 @@ void CL_ClanIdChanged( IConVar *pConVar, const char *pOldString, float flOldValu
 		return;
 	}
 
-#if !defined( NO_STEAM )
-	// Make sure this player is actually part of the desired clan
-	ISteamFriends *pFriends = Steam3Client().SteamFriends();
-	if ( pFriends )
-	{
-		int iGroupCount = pFriends->GetClanCount();
-		for ( int k = 0; k < iGroupCount; ++ k )
-		{
-			CSteamID clanID = pFriends->GetClanByIndex( k );
-			if ( clanID.GetAccountID() == newId )
-			{
-				CSteamID clanID( newId, Steam3Client().SteamUtils()->GetConnectedUniverse(), k_EAccountTypeClan );
-				// valid clan, accept the change
-				const char *szClanTag = pFriends->GetClanTag( clanID );
-				char chLimitedTag[ MAX_CLAN_TAG_LENGTH ];
-				CopyStringTruncatingMalformedUTF8Tail( chLimitedTag, szClanTag, MAX_CLAN_TAG_LENGTH );
-
-				const char *szClanName = pFriends->GetClanName( clanID );
-				SendClanTag( chLimitedTag, szClanName );
-				return;
-			}
-		}
-	}
-#endif // NO_STEAM
 
 	// Couldn't validate the ID, so clear to the default (no tag)
 	var.SetValue( 0 );
-#endif // !SWDS
 }
 
 ConVar	cl_resend	( "cl_resend", "2", FCVAR_RELEASE, "Delay in seconds before the client will resend the 'connect' attempt", true, CL_MIN_RESEND_TIME, true, CL_MAX_RESEND_TIME );
@@ -334,11 +257,7 @@ void CServerMsg_CheckReservation::SendMsg( const ns_address &serverAdr, int sock
 	msg.WriteLong( token );
 	msg.WriteLong( m_uiReservationStage );
 	msg.WriteLongLong( m_reservationCookie );
-#ifndef SWDS
 	msg.WriteLongLong( Steam3Client().SteamUser()->GetSteamID().ConvertToUint64() );
-#else
-	msg.WriteLongLong( 0 );
-#endif
 
 	NET_SendPacket( NULL, socket, serverAdr, msg.GetData(), msg.GetNumBytesWritten() );
 }
@@ -911,19 +830,7 @@ void CBaseClientState::SendConnectPacket ( const ns_address &netAdrRemote, int c
 bool CBaseClientState::PrepareSteamConnectResponse( uint64 unGSSteamID, bool bGSSecure, const ns_address &adr, bf_write &msg )
 {
 	// X360TBD: Network - Steam Dedicated Server hack
-	if ( IsX360() )
-	{
-		return true;
-	}
 
-#if !defined( NO_STEAM ) && !defined( DEDICATED )
-	if ( !Steam3Client().SteamUser() )
-	{
-		COM_ExplainDisconnection( true, "The server requires that you be running Steam.\n" );
-		Disconnect();
-		return false;
-	}
-#endif
 	
 #ifndef DEDICATED
 	// now append the steam3 cookie
@@ -1033,18 +940,6 @@ void CAddressList::AddRemote( char const *pchAddress, char const *pchAlias )
 void CBaseClientState::ConnectInternal( const char *pchPublicAddress, char const *pchPrivateAddress, int numPlayers, const char* szJoinType )
 {
 #ifndef DEDICATED
-#if !defined( NO_STEAM )
-	if ( !IsX360() )	// X360 matchmaking sets the forced user info values
-	{
-		// Get our name from steam. Needs to be done before connecting
-		// because we won't have triggered a check by changing our name.
-		IConVar *pVar = g_pCVar->FindVar( "name" );
-		if ( pVar )
-		{
-			SetNameToSteamIDName( pVar );
-		}
-	}
-#endif
 #endif
 
 	m_Remote.RemoveAll();
@@ -1430,9 +1325,7 @@ void CBaseClientState::CheckForResend ( bool bForceResendNow /* = false */ )
 		bShouldSendSteamRetry = true;
 	}
 
-	if ( IsX360() )
-		bShouldSendSteamRetry = false;
- 	else if ( m_ListenServerSteamID ) // PORTAL2-specific: force Steam cnx for P2P (todo: need latest Steam P2P APIs)
+if ( m_ListenServerSteamID ) // PORTAL2-specific: force Steam cnx for P2P (todo: need latest Steam P2P APIs)
  		bShouldSendSteamRetry = true;
 
 	if ( !bShouldSendSteamRetry )
@@ -1888,20 +1781,6 @@ bool CBaseClientState::ProcessConnectionlessPacket( netpacket_t *packet )
 	case A2A_ACK:			
 		ConMsg ("A2A_ACK from %s\n", ns_address_render( packet->from ).String() );
 
-#if defined( _GAMECONSOLE )
-		// skip \r\n
-		msg.ReadByte();
-		msg.ReadByte();
-
-		const void *pvData = msg.GetBasePointer() + ( msg.GetNumBitsRead() >> 3 );
-		int numBytes = msg.GetNumBytesLeft();
-
-		KeyValues *notify = new KeyValues( "A2A_ACK" );
-		notify->SetPtr( "ptr", const_cast< void * >( pvData ) );
-		notify->SetInt( "size", numBytes );
-
-		g_pMatchFramework->GetEventsSubscription()->BroadcastEvent( notify );
-#endif
 		break;
 
 	case A2A_CUSTOM:
@@ -1964,67 +1843,6 @@ bool CBaseClientState::ProcessConnectionlessPacket( netpacket_t *packet )
 		return true;
 #endif
 
-#if defined( _GAMECONSOLE )
-	case M2A_SERVER_BATCH:
-		{
-			// skip \n
-			msg.ReadByte();
-
-			const void *pvData = msg.GetBasePointer() + ( msg.GetNumBitsRead() >> 3 );
-			int numBytes = msg.GetNumBytesLeft();
-
-			KeyValues *notify = new KeyValues( "M2A_SERVER_BATCH" );
-			notify->SetPtr( "ptr", const_cast< void * >( pvData ) );
-			notify->SetInt( "size", numBytes );
-
-			g_pMatchFramework->GetEventsSubscription()->BroadcastEvent( notify );
-		}
-		break;
-
-	case A2A_KV_CMD:
-		{
-			int nVersion = msg.ReadByte();
-			if ( nVersion == A2A_KV_VERSION )
-			{
-				int nHeader = msg.ReadLong();
-				int nReplyId = msg.ReadLong();
-				int nChallenge = msg.ReadLong();
-				int nExtra = msg.ReadLong();
-				int numBytes = msg.ReadLong();
-
-				KeyValues *kvData = NULL;
-				if ( numBytes > 0 && numBytes <= MAX_ROUTABLE_PAYLOAD )
-				{
-					void *pvBytes = stackalloc( numBytes );
-					if ( msg.ReadBytes( pvBytes, numBytes ) )
-					{
-						kvData = new KeyValues( "" );
-						CUtlBuffer buf( pvBytes, numBytes, CUtlBuffer::READ_ONLY );
-						buf.ActivateByteSwapping( !CByteswap::IsMachineBigEndian() );
-						if ( !kvData->ReadAsBinary( buf ) )
-						{
-							kvData->deleteThis();
-							kvData = NULL;
-						}
-					}
-				}
-
-				KeyValues *notify = new KeyValues( "A2A_KV_CMD" );
-				if ( kvData )
-					notify->AddSubKey( kvData );
-
-				notify->SetInt( "version", nVersion );
-				notify->SetInt( "header", nHeader );
-				notify->SetInt( "replyid", nReplyId );
-				notify->SetInt( "challenge", nChallenge );
-				notify->SetInt( "extra", nExtra );
-				notify->SetInt( "size", numBytes );
-
-				g_pMatchFramework->GetEventsSubscription()->BroadcastEvent( notify );
-			}
-		}
-		break;
-#endif
 
 	case S2A_INFO_SRC:
 		{
@@ -2492,9 +2310,7 @@ bool CBaseClientState::SVCMsg_ServerInfo( const CSVCMsg_ServerInfo& msg )
 
 #ifndef DEDICATED
 	if ( !sv.IsActive() && 
-		 ( s_ClientBroadcastPlayer.IsPlayingBack() ||  // /*( demoplayer && demoplayer->IsPlayingBack() )*/
-			!( m_NetChannel->IsLoopback() || m_NetChannel->IsNull() || m_NetChannel->GetRemoteAddress().IsLocalhost() ) 
-		 )
+		!( m_NetChannel->IsLoopback() || m_NetChannel->IsNull() || m_NetChannel->GetRemoteAddress().IsLocalhost() ) 
 	)
 	{
 		// reset server enforced cvars
@@ -2606,11 +2422,6 @@ bool CBaseClientState::SVCMsg_ServerInfo( const CSVCMsg_ServerInfo& msg )
 		// materials has bsp dependencies (i.e. due to cubemap patching) so bsp load must be first.
 		// This also lets (fixes) the queued loader batch fast load the resources instead of the callbacks
 		// loading them via the slower synchronous method.
-		if ( IsGameConsole() && g_pQueuedLoader->IsMapLoading() )
-		{
-			Msg( "New CSVCMsg_ServerInfo message - loading map %s. Forcing current map load to end.\n", msg.map_name().c_str() );
-			g_pQueuedLoader->EndMapLoading( true );
-		}
 
 		SV_CheckForFlushMemory( m_szLastLevelNameShort, m_szLevelNameShort );
 		SV_FlushMemoryIfMarked();
@@ -2635,14 +2446,14 @@ bool CBaseClientState::SVCMsg_ServerInfo( const CSVCMsg_ServerInfo& msg )
 			char bspModelName[ MAX_PATH ];
 			Q_snprintf( bspModelName, sizeof( bspModelName ), "maps/%s.bsp", msg.map_name().c_str() );
 
-#if !defined( _GAMECONSOLE ) && !defined( DEDICATED )
+#if !defined( DEDICATED )
 			bool bCrcClientMapValid = false;
 			CRC32_t crcClientMap;
 			CRC32_Init( &crcClientMap );
 
 			// Compute CRC of client map on disk
 			{
-				FileHandle_t mapfile = g_pFileSystem->OpenEx( bspModelName, "rb", IsGameConsole() ? FSOPEN_NEVERINPACK : 0, "GAME" );
+				FileHandle_t mapfile = g_pFileSystem->OpenEx( bspModelName, "rb", 0, "GAME" );
 				if ( mapfile != FILESYSTEM_INVALID_HANDLE )
 				{
 					g_pFileSystem->Close( mapfile );
@@ -2705,7 +2516,7 @@ bool CBaseClientState::SVCMsg_ServerInfo( const CSVCMsg_ServerInfo& msg )
 						const_cast< CSVCMsg_ServerInfo & >( msg ).set_map_crc( uiRepackedWkshpCrc );
 
 						// Check if we already have the workshop file for the fallback version downloaded
-						FileHandle_t mapfile = g_pFileSystem->OpenEx( bspModelName, "rb", IsGameConsole() ? FSOPEN_NEVERINPACK : 0, "GAME" );
+						FileHandle_t mapfile = g_pFileSystem->OpenEx( bspModelName, "rb", 0, "GAME" );
 						if ( mapfile != FILESYSTEM_INVALID_HANDLE )
 						{
 							g_pFileSystem->Close( mapfile );
@@ -2885,10 +2696,6 @@ bool CBaseClientState::SVCMsg_UpdateStringTable( const CSVCMsg_UpdateStringTable
 
 bool CBaseClientState::SVCMsg_SetView( const CSVCMsg_SetView& msg )
 {
-#if !defined( LINUX )
-	// dkorus: may need this for online split screen
-	ASSERT_LOCAL_PLAYER_RESOLVABLE();
-#endif
 
 	m_nViewEntity = msg.entity_index();
 	return true;
@@ -3558,11 +3365,8 @@ void CBaseClientState::BuildReserveServerPayload( bf_write &msg, int nChallengeN
 	char	buffer[MAX_OOB_KEYVALUES+128];
 	bf_write payload(buffer,sizeof(buffer));
 
-	if ( !IsX360() )
-	{
-		// Magic # to ensure icey decrypt worked
-		payload.WriteLong( 0xfeedbeef );
-	}
+	// Magic # to ensure icey decrypt worked
+	payload.WriteLong( 0xfeedbeef );
 
 	// send the cookie that everyone in the joining party will provide to let them into the reserved server
 	payload.WriteLongLong( m_nServerReservationCookie );
@@ -3598,24 +3402,21 @@ void CBaseClientState::BuildReserveServerPayload( bf_write &msg, int nChallengeN
 		payload.WriteBytes( buf.Base(), nSettingsLength );
 	}
 
-	if ( !IsX360() )
+	// Pad it to multiple of 8 bytes
+	while ( payload.GetNumBytesWritten() % 8 )
 	{
-		// Pad it to multiple of 8 bytes
-		while ( payload.GetNumBytesWritten() % 8 )
-		{
-			payload.WriteByte( 0 );
-		}
-
-		IceKey cipher(1); /* medium encryption level */
-		unsigned char ucEncryptionKey[8] = { 0 };
-		*( int * )&ucEncryptionKey[ 0 ] = LittleDWord( nChallengeNr ^ 0x5ef8ce12 );
-		*( int * )&ucEncryptionKey[ 4 ] = LittleDWord( nChallengeNr ^ 0xaa98e42c );
-
-		cipher.set( ucEncryptionKey );
-
-		EncryptBuffer( cipher, (byte *)payload.GetBasePointer(), payload.GetNumBytesWritten() );
-		msg.WriteLong( payload.GetNumBytesWritten() );
+		payload.WriteByte( 0 );
 	}
+
+	IceKey cipher(1); /* medium encryption level */
+	unsigned char ucEncryptionKey[8] = { 0 };
+	*( int * )&ucEncryptionKey[ 0 ] = LittleDWord( nChallengeNr ^ 0x5ef8ce12 );
+	*( int * )&ucEncryptionKey[ 4 ] = LittleDWord( nChallengeNr ^ 0xaa98e42c );
+
+	cipher.set( ucEncryptionKey );
+
+	EncryptBuffer( cipher, (byte *)payload.GetBasePointer(), payload.GetNumBytesWritten() );
+	msg.WriteLong( payload.GetNumBytesWritten() );
 
 	msg.WriteBytes( payload.GetBasePointer(), payload.GetNumBytesWritten() );
 }
@@ -3625,31 +3426,9 @@ void CBaseClientState::BuildReserveServerPayload( bf_write &msg, int nChallengeN
 //-----------------------------------------------------------------------------
 void CBaseClientState::SendReserveServerMsg()
 {
-	if ( !IsX360() )
-	{
-		// The PC uses a more complicated challenge response system to prevent DDoS style attacks
-		SendReserveServerChallenge();
-		return;
-	}
-
-	Assert( m_pServerReservationCallback );
-
-	char	buffer[MAX_OOB_KEYVALUES+128];
-	bf_write msg(buffer,sizeof(buffer));
-
-	msg.WriteLong( CONNECTIONLESS_HEADER );
-	msg.WriteByte( A2S_RESERVE );
-	msg.WriteLong( GetHostVersion() );
-
-	BuildReserveServerPayload( msg, 0 );
-
-	for ( int i = 0; i < m_netadrReserveServer.Count(); ++i )
-	{
-		NET_SendPacket( NULL, m_Socket, m_netadrReserveServer.Get( i ).m_adrRemote, msg.GetData(), msg.GetNumBytesWritten() );
-	}
-
-	// Mark time of this attempt.
-	m_flReservationMsgSendTime = net_time;	// for retransmit requests
+	// The PC uses a more complicated challenge response system to prevent DDoS style attacks
+	SendReserveServerChallenge();
+	return;
 }
 
 #ifndef DEDICATED

@@ -10,7 +10,6 @@
 #pragma once
 #endif
 
-#if !defined( _X360 ) && !defined( NO_STEAM ) && !defined( SWDS )
 // Steam uses C-runtime calls in headers, need to remap
 	#ifdef strncpy
 		#undef strncpy
@@ -22,14 +21,11 @@
 	#endif
 #include "steam/steam_api.h"
 
-#endif
 
 extern class CSteamAPIContext *steamapicontext;
 
 void SteamApiContext_Init();
 void SteamApiContext_Shutdown();
-
-#include "steam_lobbyapi.h"
 
 
 #endif

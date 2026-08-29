@@ -833,7 +833,6 @@ static bool InternalWriteDeltaEntities( CBaseServer* pServer, CBaseClient *clien
 	u.m_nClientEntity = client->GetPropCullClient()->m_nEntityIndex;
 
 	CHLTVServer *hltv = pServer->IsHLTV() ? static_cast< CHLTVServer* >( pServer ) : NULL;
-#ifndef _XBOX
 #if defined( REPLAY_ENABLED )
 	if ( hltv || pServer->IsReplay() )
 #else
@@ -844,7 +843,6 @@ static bool InternalWriteDeltaEntities( CBaseServer* pServer, CBaseClient *clien
 		u.m_bCullProps = sv.IsActive();
 	}
 	else
-#endif
 	{
 		u.m_bCullProps = true;	// always cull props for players
 	}

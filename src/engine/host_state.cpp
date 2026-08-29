@@ -37,7 +37,6 @@
 #include "testscriptmgr.h"
 #include "cvar.h"
 #include "MapReslistGenerator.h"
-#include "filesystem/IQueuedLoader.h"
 #include "matchmaking/imatchframework.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
@@ -479,16 +478,6 @@ void CHostState::State_LoadGame()
 		return;
 	}
 
-#if 0
-	if ( IsX360() )
-	{
-		// On the 360 we need to return to the background map
-		g_ServerGlobalVariables.bMapLoadFailed = true;
-		Cbuf_Clear( Cbuf_GetCurrentPlayer() );
-		Cbuf_AddText( Cbuf_GetCurrentPlayer(), "startupmenu force" );
-		Cbuf_Execute();
-	}
-#endif
 }
 
 
@@ -669,33 +658,6 @@ void CHostState::State_GameShutdown()
 
 	MapReslistGenerator().OnLevelShutdown();
 
-	if ( IsGameConsole() )
-	{
-		if ( m_nextState == HS_GAME_SHUTDOWN )
-		{
-			// game consoles needs some memory to do main menu (movie, installer, etc)
-			// this is an attempt to purge map related data
-			g_pQueuedLoader->PurgeAll();			
-			g_pDataCache->Flush();
-			wavedatacache->Flush();
-			g_pMDLCache->ReleaseAnimBlockAllocator();
-			materials->OnLevelShutdown();
-			materials->UncacheUnusedMaterials(); 
-			// Record the fact that this memory flush completed
-			HostState_Post_FlushMapFromMemory();
-
-			// the above leaves resources in a bad state for Queued Loader
-			// this ensures there a full purge necessary before any map gets loaded
-			SV_FlushMemoryOnNextServer();
-
-			// When ejecting BD right after starting loading a savegame, the game sometimes never calls State_shutdown, never sets engine state to DLL_CLOSE and goes into infinite loop
-			// calling shutdown here to prevent that.
-			if( IsPS3QuitRequested() )
-			{
-				State_Shutdown();
-			}
-		}
-	}
 
 	if( IsPS3QuitRequested() && m_nextState == HS_GAME_SHUTDOWN )
 	{
@@ -918,11 +880,6 @@ void CHostState::OnClientConnected()
 		g_pFileSystem->FPrintf( fp, "vidmem total: %0.3fMB\n", total );
 #endif
 
-#if 0
-		g_pFileSystem->FPrintf( fp, "hunk total: %0.3fMB\n", Cache_TotalUsed() * ( 1.0f / ( 1024.0f * 1024.0f ) ) );
-		g_pFileSystem->FPrintf( fp, "hunk sound: %0.3fMB\n", Cache_TotalUsed_Sound() * ( 1.0f / ( 1024.0f * 1024.0f ) ) );
-		g_pFileSystem->FPrintf( fp, "hunk models: %0.3fMB\n", Cache_TotalUsed_Models() * ( 1.0f / ( 1024.0f * 1024.0f ) ) );
-#endif
 		g_pFileSystem->FPrintf( fp, "---------------------------------\n" );
 		g_pFileSystem->Close( fp );
 		Cbuf_AddText( Cbuf_GetCurrentPlayer(), "quit\n" );

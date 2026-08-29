@@ -17,9 +17,7 @@
 #include "materialsystem/imaterialproxyfactory.h"
 #include "IHardwareConfigInternal.h"
 #include "utlsymbol.h"
-#if !defined( _PS3 )
 #include <malloc.h>
-#endif //!_PS3
 #include "filesystem.h"
 #include <keyvalues.h>
 #include "mempool.h"
@@ -452,7 +450,6 @@ static inline bool IsVector( char const* v )
 //-----------------------------------------------------------------------------
 #include "tier0/memdbgoff.h"
 
-#ifndef _GAMECONSOLE
 struct EditorRenderStateList_t
 {
 	// Store combo of alpha, color, fixed-function baked lighting, flashlight, editor mode
@@ -460,7 +457,6 @@ struct EditorRenderStateList_t
 
 	DECLARE_FIXEDSIZE_ALLOCATOR( EditorRenderStateList_t );
 };
-#endif
 
 struct StandardRenderStateList_t
 {
@@ -472,9 +468,7 @@ struct StandardRenderStateList_t
 
 #include "tier0/memdbgon.h"
 
-#ifndef _GAMECONSOLE
 DEFINE_FIXEDSIZE_ALLOCATOR( EditorRenderStateList_t, 256, true );
-#endif
 DEFINE_FIXEDSIZE_ALLOCATOR( StandardRenderStateList_t, 256, true );
 
 
@@ -520,11 +514,6 @@ CMaterial::CMaterial( char const* materialName, const char *pTextureGroupName, K
 	Q_StripExtension( materialName, pTemp, len+1 );
 	Q_strlower( pTemp );
 
-#if defined( _X360 )
-	// material names are expected to be forward slashed for correct sort and find behavior!
-	// assert now to track alternate or regressed path that is source of inconsistency
-	Assert( strchr( pTemp, '\\' ) == NULL );
-#endif
 
 	// Convert it to a symbol
 	m_Name = pTemp;
@@ -691,20 +680,17 @@ void CMaterial::SetShaderAndParams( KeyValues *pKeyValues )
 RenderPassList_t *CMaterial::CreateRenderPassList()
 {
 	RenderPassList_t *pRenderPassList;
-	if ( IsGameConsole() || 
-		 !( MaterialSystem()->GetConfigurationFlags() & 
+	if ( !( MaterialSystem()->GetConfigurationFlags() & 
 			( MATCONFIG_FLAGS_SUPPORT_GBUFFER | MATCONFIG_FLAGS_SUPPORT_EDITOR ) ) )
 	{
 		StandardRenderStateList_t *pList = new StandardRenderStateList_t;
 		pRenderPassList = (RenderPassList_t*)pList->m_Snapshots;
 	}
-#ifndef _GAMECONSOLE
 	else
 	{
 		EditorRenderStateList_t *pList = new EditorRenderStateList_t;
 		pRenderPassList = (RenderPassList_t*)pList->m_Snapshots;
 	}
-#endif
 
 	int nSnapshotCount = SnapshotTypeCount();
 	memset( pRenderPassList, 0, nSnapshotCount * sizeof(RenderPassList_t) );
@@ -733,20 +719,17 @@ void CMaterial::DestroyRenderPassList( RenderPassList_t *pPassList )
 			}
 		}
 	}
-	if ( IsGameConsole() || 
-		 !( MaterialSystem()->GetConfigurationFlags() & 
+	if ( !( MaterialSystem()->GetConfigurationFlags() & 
 			( MATCONFIG_FLAGS_SUPPORT_GBUFFER | MATCONFIG_FLAGS_SUPPORT_EDITOR ) ) )
 	{
 		StandardRenderStateList_t *pList = (StandardRenderStateList_t*)pPassList;
 		delete pList;
 	}
-#ifndef _GAMECONSOLE
 	else
 	{
 		EditorRenderStateList_t *pList = (EditorRenderStateList_t*)pPassList;
 		delete pList;
 	}
-#endif
 }
 
 	
@@ -1265,11 +1248,11 @@ bool CMaterial::ShouldSkipVar( KeyValues *pVar, bool *pWasConditional )
 		}
 		else if ( ! stricmp( pCond, "srgb_gameconsole" ) )
 		{
-			bShouldSkip = !( HardwareConfig()->UsesSRGBCorrectBlending() && IsGameConsole() );
+			bShouldSkip = true;
 		}
 		else if ( ! stricmp( pCond, "srgb_pc" ) )
 		{
-			bShouldSkip = !( HardwareConfig()->UsesSRGBCorrectBlending() && IsPC() );
+			bShouldSkip = !HardwareConfig()->UsesSRGBCorrectBlending();
 		}
 		else if ( ! stricmp( pCond, "ldr" ) )
 		{
@@ -1301,15 +1284,15 @@ bool CMaterial::ShouldSkipVar( KeyValues *pVar, bool *pWasConditional )
 		}
 		else if ( ! stricmp( pCond, "360" ) )
 		{
-			bShouldSkip = !IsX360();
+			bShouldSkip = true;
 		}
 		else if ( ! stricmp( pCond, "SonyPS3" ) )
 		{
-			bShouldSkip = !IsPS3();
+			bShouldSkip = true;
 		}
 		else if ( ! stricmp( pCond, "gameconsole" ) )
 		{
-			bShouldSkip = !IsGameConsole();
+			bShouldSkip = true;
 		}
 		else if ( ! stricmp( pCond, "LowQualityCSM" ) )
 		{
@@ -2269,10 +2252,6 @@ void CMaterial::ReloadFromWhitelistIfMarked()
 		// to draw the material with.
 		m_Flags |= MATERIAL_IS_PRECACHED | MATERIAL_VARS_IS_PRECACHED;
 		#if DEBUG
-		if (IsOSX())
-		{
-			printf("\n ##### CMaterial::ReloadFromWhitelistIfMarked: GetShader failed on %s, calling SetupErrorShader", m_pDebugName );
-		}
 		#endif
 		
 		SetupErrorShader();
@@ -2529,9 +2508,6 @@ int CMaterial::GetNumAnimationFrames( )
 	}
 	else
 	{
-#ifndef POSIX
-		Warning( "CMaterial::GetNumAnimationFrames:\nno representative texture for material %s\n", GetName() );
-#endif
 		return 1;
 	}
 }
@@ -2676,11 +2652,6 @@ void CMaterial::SetEnumerationID( int id )
 //-----------------------------------------------------------------------------
 char const* CMaterial::GetPreviewImageName( void )
 {
-	if ( IsGameConsole() )
-	{
-		// not supporting
-		return NULL;
-	}
 
 	PrecacheVars_Inline();
 
@@ -2739,7 +2710,7 @@ PreviewImageRetVal_t CMaterial::GetPreviewImageProperties( int *width, int *heig
 				 		ImageFormat *imageFormat, bool* isTranslucent ) const
 {	
 	char const* pFileName = GetPreviewImageFileName();
-	if ( IsGameConsole() || !pFileName )
+	if ( !pFileName )
 	{
 		*width = *height = 0;
 		*imageFormat = IMAGE_FORMAT_RGBA8888;
@@ -2780,7 +2751,7 @@ PreviewImageRetVal_t CMaterial::GetPreviewImage( unsigned char *pData, int width
 	int nImageOffset, nImageSize;
 
 	char const* pFileName = GetPreviewImageFileName();
-	if ( IsGameConsole() || !pFileName )
+	if ( !pFileName )
 	{
 		return MATERIAL_NO_PREVIEW_IMAGE;
 	}

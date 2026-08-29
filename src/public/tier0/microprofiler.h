@@ -22,18 +22,11 @@ PLATFORM_INTERFACE void MicroProfilerAddTS( CMicroProfiler *pProfiler, uint64 nu
 PLATFORM_INTERFACE int64 GetHardwareClockReliably();
 
 
-#if defined( __aarch64__ )
-#include <sse2neon.h>
-#elif defined( IS_WINDOWS_PC )
+#if   defined( IS_WINDOWS_PC )
 #include <intrin.h>	// get __rdtsc
 #endif
 
 
-#if defined( __aarch64__ )
-
-inline unsigned long long GetTimebaseRegister( void ) { return ( unsigned long long )_rdtsc(); }
-
-#elif defined(_LINUX) || defined( OSX )
 
 inline unsigned long long GetTimebaseRegister( void )
 {
@@ -42,23 +35,6 @@ inline unsigned long long GetTimebaseRegister( void )
     return ( High << 32 ) | ( Low & 0xffffffff );
 }
 
-#else
-
-// Warning: THere's a hardware bug with 64-bit MFTB on PS3 (not sure about X360): sometimes it returns incorrect results (when low word overflows, the high word doesn't increment for some time)
-inline int64 GetTimebaseRegister()
-{
-#if defined( _X360 )
-	return __mftb32(); // X360: ~64 CPU ticks resolution
-#elif defined( _PS3 )
-	// The timebase frequency on PS/3 is 79.8 MHz, see sys_time_get_timebase_frequency()
-	// this works out to 40.10025 clock ticks per timebase tick
-	return __mftb();
-#else
-	return __rdtsc();
-#endif
-}
-
-#endif
 
 
 
@@ -198,19 +174,11 @@ public:
 
 	static float TimeBaseTicksToMilliseconds( uint64 numTimeBaseTicks )
 	{
-#if defined( _X360 ) || defined( _PS3 )
-		return numTimeBaseTicks / 79800.0 ;
-#else
 		return numTimeBaseTicks / ( GetCPUInformation().m_Speed * 0.001f );
-#endif
 	}
 	float GetAverageTicks() const
 	{
-#if defined( _X360 ) || defined( _PS3 )
-		return m_numTimeBaseTicks * 40.1f / m_numCalls; // timebase register is 79.8 MHz on these platforms
-#else
 		return float( m_numTimeBaseTicks / m_numCalls );
-#endif
 	}
 	friend const CMicroProfiler operator + ( const CMicroProfiler &left, const CMicroProfiler &right );
 	

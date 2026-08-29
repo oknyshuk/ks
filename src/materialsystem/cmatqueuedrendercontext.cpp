@@ -10,9 +10,7 @@
 #include "tier1/fmtstr.h"
 #include "itextureinternal.h"
 
-#ifndef _PS3
 #define MATSYS_INTERNAL
-#endif
 
 #include "cmatqueuedrendercontext.h"
 #include "cmaterialsystem.h" // @HACKHACK
@@ -23,9 +21,6 @@
 
 ConVar mat_report_queue_status( "mat_report_queue_status", "0", FCVAR_MATERIAL_SYSTEM_THREAD );
 
-#if defined( _PS3 ) || defined( _OSX )
-#define g_pShaderAPI ShaderAPI()
-#endif
 
 //-----------------------------------------------------------------------------
 // 
@@ -39,7 +34,6 @@ void FastCopy( byte *pDest, const byte *pSrc, size_t nBytes )
 		return;
 	}
 
-#if !defined( _X360 )
 	if ( (size_t)pDest % 16 == 0 && (size_t)pSrc % 16 == 0 )
 	{
 		const int BYTES_PER_FULL = 128;
@@ -78,25 +72,6 @@ void FastCopy( byte *pDest, const byte *pSrc, size_t nBytes )
 	{
 		memcpy( pDest, pSrc, nBytes );
 	}
-#else
-	if ( (size_t)pDest % 4 == 0 && nBytes % 4 == 0 )
-	{
-		XMemCpyStreaming_WriteCombined( pDest, pSrc, nBytes );
-	}
-	else
-	{
-		// work around a bug in memcpy
-		if ((size_t)pDest % 2 == 0 && nBytes == 4)
-		{
-			*(reinterpret_cast<short *>(pDest)) = *(reinterpret_cast<const short *>(pSrc));
-			*(reinterpret_cast<short *>(pDest)+1) = *(reinterpret_cast<const short *>(pSrc)+1);
-		}
-		else
-		{
-			memcpy( pDest, pSrc, nBytes );
-		}
-	}
-#endif
 }
 #else
 #define FastCopy memcpy
@@ -1208,9 +1183,6 @@ void CMatQueuedIndexBuffer::ValidateData( int nIndexCount, const IndexDesc_t &de
 CMemoryStack CMatQueuedRenderContext::s_Vertices[RENDER_CONTEXT_STACKS];
 CMemoryStack CMatQueuedRenderContext::s_Indices[RENDER_CONTEXT_STACKS];
 
-#ifdef _PS3
-CPs3gcmLocalMemoryBlock s_RSXMemory;
-#endif
 
 int CMatQueuedRenderContext::s_nCurStack = 0;
 bool CMatQueuedRenderContext::s_bInitializedStacks = false;
@@ -1228,11 +1200,6 @@ bool CMatQueuedRenderContext::s_bInitializedStacks = false;
 
 void AllocateScratchRSXMemory()
 {
-#if _PS3
-	s_RSXMemory.Alloc( kAllocPs3GcmDynamicBufferPool, 
-		RENDER_CONTEXT_STACKS * ( ( DYNAMIC_VERTEX_BUFFER_TOTAL_SIZE + DYNAMIC_VERTEX_BUFFER_ALIGNMENT ) +
-		( DYNAMIC_INDEX_BUFFER_TOTAL_SIZE + DYNAMIC_INDEX_BUFFER_ALIGNMENT ) ) );
-#endif
 }
 
 void CMatQueuedRenderContext::Init( CMaterialSystem *pMaterialSystem, CMatRenderContextBase *pHardwareContext )
@@ -1251,26 +1218,13 @@ void CMatQueuedRenderContext::Init( CMaterialSystem *pMaterialSystem, CMatRender
 #ifdef MS_NO_DYNAMIC_BUFFER_COPY
 	if ( !s_bInitializedStacks )
 	{
-#if _PS3
-		uint8 *pMem = (uint8*)s_RSXMemory.DataInLocalMemory();
-#endif
 		// NOTE: Allocation size must be at least double DYNAMIC_VERTEX_BUFFER_BLOCK_SIZE
 		// or DYNAMIC_INDEX_BUFFER_BLOCK_SIZE to avoid massive overflow
 		for ( int i = 0; i < RENDER_CONTEXT_STACKS; ++i )
 		{
 			CFmtStr verticesName( "CMatQueuedRenderContext::s_Vertices[%d]", i );
 			CFmtStr indicesName(  "CMatQueuedRenderContext::s_Vertices[%d]", i );
-#ifdef _X360
-			s_Vertices[i].InitPhysical( (const char *)verticesName, DYNAMIC_VERTEX_BUFFER_TOTAL_SIZE, 0, DYNAMIC_VERTEX_BUFFER_ALIGNMENT, PAGE_WRITECOMBINE );
-			s_Indices[i].InitPhysical( (const char *)indicesName, DYNAMIC_INDEX_BUFFER_TOTAL_SIZE, 0, DYNAMIC_INDEX_BUFFER_ALIGNMENT, PAGE_WRITECOMBINE );
-#elif defined( _PS3 )
-			s_Vertices[i].InitPhysical( (const char *)verticesName, DYNAMIC_VERTEX_BUFFER_TOTAL_SIZE, 0, DYNAMIC_VERTEX_BUFFER_ALIGNMENT, (uint32)pMem );
-			pMem += DYNAMIC_VERTEX_BUFFER_TOTAL_SIZE + DYNAMIC_VERTEX_BUFFER_ALIGNMENT;
-			s_Indices[i].InitPhysical( (const char *)indicesName, DYNAMIC_INDEX_BUFFER_TOTAL_SIZE, 0, DYNAMIC_INDEX_BUFFER_ALIGNMENT, (uint32)pMem );
-			pMem += DYNAMIC_INDEX_BUFFER_TOTAL_SIZE + DYNAMIC_INDEX_BUFFER_ALIGNMENT;
-#else
 #pragma error
-#endif
 		}
 		s_bInitializedStacks = true;
 	}
@@ -1285,10 +1239,6 @@ void CMatQueuedRenderContext::Init( CMaterialSystem *pMaterialSystem, CMatRender
 
 	unsigned int vertSize	= 16 * 1024 * 1024;
 	unsigned int indSize	= 16 * 1024 * 1024;
-#ifdef DX_TO_GL_ABSTRACTION
-	vertSize	= 12 * 1024 * 1024;
-	indSize		= 4 * 1024 * 1024;
-#endif
 
 	m_Vertices.Init( "CMatQueuedRenderContext::m_Vertices", vertSize, 128 * 1024 );
 	m_Indices.Init( "CMatQueuedRenderContext::m_Indices",  indSize, 128 * 1024 );
@@ -1493,7 +1443,7 @@ void CMatQueuedRenderContext::CallQueued( bool bTermAfterCall )
 
 	m_queue.CallQueued();
 
-#if defined( MS_NO_DYNAMIC_BUFFER_COPY ) && !defined( _CERT )
+#if defined( MS_NO_DYNAMIC_BUFFER_COPY )
 	static int s_nFrameCount = 0;
 	static int s_nVBOverflowCount = 0;
 	static int s_nIBOverflowCount = 0;
@@ -1538,46 +1488,6 @@ void CMatQueuedRenderContext::CallQueued( bool bTermAfterCall )
 	}
 #endif
 
-#if 0
-	static int s_nVHisto[ 33 ];
-	static int s_nIHisto[ 9 ];
-	static int s_nHistoCount;
-	int nMem = ( Vertices().GetUsed() + m_Vertices.GetUsed() + ( 64 * 1024 ) - 1 ) / ( 64 * 1024 );
-	nMem = clamp( nMem, 0, 32 );
-	s_nVHisto[ nMem ]++;
-	nMem = ( Indices().GetUsed() + m_Indices.GetUsed() + ( 32 * 1024 ) - 1 ) / ( 32 * 1024 );
-	nMem = clamp( nMem, 0, 8 );
-	s_nIHisto[ nMem ]++;
-	if ( ( ++s_nHistoCount % 1024 ) == 0 )
-	{
-		Msg( "Verts:" );
-		bool bFound = false;
-		for( int i = 32; i >= 0; --i )
-		{
-			if ( s_nVHisto[i] )
-			{
-				bFound = true;
-			}
-			if ( !bFound )
-				continue;
-			Msg( "[%dk %d] ", i * 64, s_nVHisto[i] );
-		}
-		Msg( "\n" );
-		Msg( "Indices: " );
-		bFound = false;
-		for( int i = 8; i >= 0; --i )
-		{
-			if ( s_nIHisto[i] )
-			{
-				bFound = true;
-			}
-			if ( !bFound )
-				continue;
-			Msg( "[%dk %d] ", i * 32, s_nIHisto[i] );
-		}
-		Msg( "\n" );
-	}
-#endif
 
 	m_Vertices.FreeAll( false );
 	m_Indices.FreeAll( false );

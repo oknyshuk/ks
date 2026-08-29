@@ -23,9 +23,6 @@
 	#pragma once
 #endif
 
-#ifdef OSX
-#pragma GCC diagnostic ignored "-Wreturn-type"			// control reaches end of non-void function, for unsupported assignment operators below
-#endif
 
 class CAsyncGroupRequest;
 

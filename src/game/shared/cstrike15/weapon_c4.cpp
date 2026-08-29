@@ -1501,9 +1501,6 @@ void CC4::PrimaryAttack()
 			{
 				// for console, we don't want to show the chat text because it almost always overlaps 
 				// with the bomb planted alert text in the center of the screen
-				if ( IsGameConsole() || engine->IsDedicatedServerForXbox() || engine->IsDedicatedServerForPS3() )
-					pPlayer->Radio( "PlantingBomb", "", true );
-				else
 					pPlayer->Radio( "PlantingBomb", "#Cstrike_TitlesTXT_Planting_Bomb", true );
 				pPlayer->m_flC4PlantTalkTimer = gpGlobals->curtime + 10.0f;
 			}

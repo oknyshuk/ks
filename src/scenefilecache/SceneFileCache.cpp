@@ -92,20 +92,6 @@ InitReturnVal_t CSceneFileCache::Init()
 		}
 		else
 		{
-			if ( IsX360() )
-			{
-				if ( filesystem->GetDVDMode() == DVDMODE_STRICT )
-				{
-					// mandatory
-					Error( "CSceneFileCache: Failed to load %s\n", pSceneImageName );
-				}
-				else
-				{
-					// relaxed
-					Warning( "CSceneFileCache: Failed to load %s, scene playback disabled.\n", pSceneImageName );
-					return INIT_OK;
-				}
-			}
 
 			m_SceneImageFile.Purge();
 		}
@@ -228,11 +214,7 @@ int CSceneFileCache::FindSceneInImage( const char *pSceneName )
 	char szCleanName[MAX_PATH];
 	V_strncpy( szCleanName, pSceneName, sizeof( szCleanName ) );
 	V_strlower( szCleanName );
-#ifdef POSIX
 	V_FixSlashes( szCleanName, '\\' );
-#else
-	V_FixSlashes( szCleanName );
-#endif
 	// Many vcd's in CSGO have a '.' in the filename, which breaks this call
 	// We're going to assume that all filenames have the correct extension
 //	V_SetExtension( szCleanName, ".vcd", sizeof( szCleanName ) );

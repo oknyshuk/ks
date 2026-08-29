@@ -901,64 +901,6 @@ void CNavArea::ComputeEarliestOccupyTimes( void )
  */
 void CNavMesh::ComputeBattlefrontAreas( void )
 {
-#if 0
-#ifdef CSTRIKE_DLL
-	ShortestPathCost cost;
-	CBaseEntity *tSpawn, *ctSpawn;
-
-	for( tSpawn = gEntList.FindEntityByClassname( NULL, "info_player_terrorist" );
-		 tSpawn;
-		 tSpawn = gEntList.FindEntityByClassname( tSpawn, "info_player_terrorist" ) )
-	{
-		CNavArea *tArea = TheNavMesh->GetNavArea( tSpawn->GetAbsOrigin() );
-		if (tArea == NULL)
-			continue;
-
-		for( ctSpawn = gEntList.FindEntityByClassname( NULL, "info_player_counterterrorist" );
-			 ctSpawn;
-			 ctSpawn = gEntList.FindEntityByClassname( ctSpawn, "info_player_counterterrorist" ) )
-		{
-			CNavArea *ctArea = TheNavMesh->GetNavArea( ctSpawn->GetAbsOrigin() );
-
-			if (ctArea == NULL)
-				continue;
-
-			if (tArea == ctArea)
-			{
-				m_isBattlefront = true;
-				return;
-			}
-
-			// build path between these two spawn points - assume if path fails, it at least got close
-			// (ie: imagine spawn points that you jump down from - can't path to)
-			CNavArea *goalArea = NULL;
-			NavAreaBuildPath( tArea, ctArea, NULL, cost, &goalArea );
-
-			if (goalArea == NULL)
-				continue;
-
-
-/**
- * @todo Need to enumerate ALL paths between all pairs of spawn points to find all battlefront areas
- */
-
-			// find the area with the earliest overlapping occupy times
-			CNavArea *battlefront = NULL;
-			float earliestTime = 999999.9f;
-
-			const float epsilon = 1.0f;
-			CNavArea *area;
-			for( area = goalArea; area; area = area->GetParent() )
-			{
-				if (fabs(area->GetEarliestOccupyTime( TEAM_TERRORIST ) - area->GetEarliestOccupyTime( TEAM_CT )) < epsilon)
-				{
-				}
-				
-			}
-		}
-	}
-#endif
-#endif
 }
 
 
@@ -1311,18 +1253,6 @@ const CUtlVector< Place > *CNavMesh::GetPlacesFromNavFile( bool *hasUnnamedPlace
 		}
 	}
 	
-	if ( IsGameConsole() )
-	{
-		// 360 has compressed NAVs
-		CLZMA lzma;
-		if ( lzma.IsCompressed( (unsigned char *)fileBuffer.Base() ) )
-		{
-			int originalSize = lzma.GetActualSize( (unsigned char *)fileBuffer.Base() );
-			unsigned char *pOriginalData = new unsigned char[originalSize];
-			lzma.Uncompress( (unsigned char *)fileBuffer.Base(), pOriginalData );
-			fileBuffer.AssumeMemory( pOriginalData, originalSize, originalSize, CUtlBuffer::READ_ONLY );
-		}
-	}
 
 	// check magic number
 	unsigned int magic = fileBuffer.GetUnsignedInt();
@@ -1401,28 +1331,6 @@ NavErrorType CNavMesh::Load( void )
 	bool navIsInBsp = false;
 	CUtlBuffer fileBuffer( 4096, 1024*1024, CUtlBuffer::READ_ONLY );
 
-	if ( IsGameConsole() )
-	{	
-		if ( !filesystem->ReadFile( filename, "GAME", fileBuffer ) )	// this ignores .nav files embedded in the .bsp ...
-		{
-			navIsInBsp = true;
-			if ( !filesystem->ReadFile( filename, "BSP", fileBuffer ) )	// ... and this looks for one if it's the only one around.
-			{
-				return NAV_CANT_ACCESS_FILE;
-			}
-		}
-
-		// 360 has compressed NAVs
-		CLZMA lzma;
-		if ( lzma.IsCompressed( (unsigned char *)fileBuffer.Base() ) )
-		{
-			int originalSize = lzma.GetActualSize( (unsigned char *)fileBuffer.Base() );
-			unsigned char *pOriginalData = new unsigned char[originalSize];
-			lzma.Uncompress( (unsigned char *)fileBuffer.Base(), pOriginalData );
-			fileBuffer.AssumeMemory( pOriginalData, originalSize, originalSize, CUtlBuffer::READ_ONLY );
-		}
-	}
-	else
 	{		
 		if ( !filesystem->ReadFile( filename, "MOD", fileBuffer ) )	// this ignores .nav files embedded in the .bsp ...
 		{
@@ -1477,17 +1385,14 @@ NavErrorType CNavMesh::Load( void )
 
 		if ( bspSize != saveBspSize && !navIsInBsp )
 		{     
-			if ( !IsGameConsole() )
+			if ( engine->IsDedicatedServer() )
 			{
-				if ( engine->IsDedicatedServer() )
-				{
-					// Warning doesn't print to the dedicated server console, so we'll use Msg instead
-					DevMsg( "The Navigation Mesh was built using a different version of this map.\n" );
-				}
-				else
-				{
-					DevWarning( "The Navigation Mesh was built using a different version of this map.\n" );
-				}
+				// Warning doesn't print to the dedicated server console, so we'll use Msg instead
+				DevMsg( "The Navigation Mesh was built using a different version of this map.\n" );
+			}
+			else
+			{
+				DevWarning( "The Navigation Mesh was built using a different version of this map.\n" );
 			}
 			m_isOutOfDate = true;
 		}

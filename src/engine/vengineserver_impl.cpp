@@ -1770,21 +1770,6 @@ public:
 	{
 		return MapReslistGenerator().IsEnabled();
 	}
-	virtual bool IsCreatingXboxReslist()
-	{
-		return MapReslistGenerator().IsCreatingForXbox();
-	}
-
-	virtual bool IsDedicatedServerForXbox()
-	{
-		return sv.IsDedicatedForXbox();
-	}
-
-	virtual bool IsDedicatedServerForPS3( void )
-	{
-		return sv.IsDedicatedForPS3();
-	}
-
 	virtual void Pause( bool bPause, bool bForce )
 	{
 		ConVarRef sv_pausable( "sv_pausable" );
@@ -2498,43 +2483,7 @@ float CVEngineServer::GetLatencyForChoreoSounds()
 {
 #ifdef DEDICATED
   return 0.0f;
-#elif LINUX
-  return 0.0f;
 #else
-	extern ConVar	snd_mixahead;
-	extern ConVar	snd_delay_for_choreo_enabled;
-	extern ConVar	snd_delay_for_choreo_reset_after_N_milliseconds;
-	extern float	g_fDelayForChoreo;
-	extern uint32	g_nDelayForChoreoLastCheckInMs;
-	extern int		g_nDelayForChoreoNumberOfSoundsPlaying;
-
-	float fResult = snd_mixahead.GetFloat();
-	if ( snd_delay_for_choreo_enabled.GetBool() )
-	{
-		float fDelayForChoreo = g_fDelayForChoreo;
-		if ( fDelayForChoreo != 0.0f )
-		{
-			// Let's see if we have to reset the delay due to choreo (do this just before we return any useful information from scene entity).
-			// Note that this access is not thread safe, however there is no dire consequence here in case of race conditions.
-			// Delay may be reset when it should not, or delay may not be reset when it should (that case would be corrected by a subsequent call anyway).
-			if ( g_nDelayForChoreoNumberOfSoundsPlaying == 0 )
-			{
-				// We only reset the delay if no other sound is still behind in term of latency. Several VCDs could be running in parallel.
-				// As if we do it later, like when the samples are ready, we are going to hit the timeout more easily. We would then lose previously accumulated delay,
-				// and the sound could be potentially cut off later.
-				uint32 nCurrentTime = Plat_MSTime();
-				uint32 nLastCheck = g_nDelayForChoreoLastCheckInMs;
-				if ( nLastCheck + snd_delay_for_choreo_reset_after_N_milliseconds.GetInt() < nCurrentTime )
-				{
-					// Msg( "Reset delay for choreo as no choreo has been executed for the past %f seconds. Old value=%f.\n", (float)( nCurrentTime - nLastCheck ) / 1000.0f, fDelayForChoreo );
-					g_fDelayForChoreo = fDelayForChoreo = 0.0f;
-				}
-			}
-		}
-
-		// Remove the delay to the mix-ahead, which is going to push back the latency.
-		fResult -= fDelayForChoreo;
-	}
-	return fResult;
+  return 0.0f;
 #endif
 }

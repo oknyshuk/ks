@@ -961,7 +961,7 @@ bool CParticleMgr::Init(unsigned long count, IMaterialSystem *pMaterials)
 	m_pMaterialSystem = pMaterials;
 
 	// Initialize the particle system
-	bool bPrecacheParticles = IsPC() && !engine->IsCreatingXboxReslist();
+	bool bPrecacheParticles = true;
 	g_pParticleSystemMgr->Init( g_pParticleSystemQuery, bPrecacheParticles );
 	// tell particle mgr to add the default simulation + rendering ops
 	g_pParticleSystemMgr->AddBuiltinSimulationOperators();
@@ -971,25 +971,6 @@ bool CParticleMgr::Init(unsigned long count, IMaterialSystem *pMaterials)
 	ParseParticleEffects( true );
 
 #ifdef TF_CLIENT_DLL
-	if ( IsGameConsole() )
-	{
-		//m_pThreadPool[0] = CreateNewThreadPool();
-		m_pThreadPool[1] = CreateNewThreadPool();
-
-		ThreadPoolStartParams_t startParams;
-		startParams.nThreads = 3;
-		startParams.nStackSize = 128*1024;
-		startParams.fDistribute = TRS_TRUE;
-		startParams.bUseAffinityTable = true;    
-		startParams.iAffinityTable[0] = XBOX_PROCESSOR_1;
-		startParams.iAffinityTable[1] = XBOX_PROCESSOR_3;
-		startParams.iAffinityTable[2] = XBOX_PROCESSOR_5;
-		//m_pThreadPool[0]->Start( startParams );
-
-		startParams.nThreads = 2;
-		startParams.iAffinityTable[1] = CommandLine()->FindParm( "-swapcores" ) ? XBOX_PROCESSOR_5 : XBOX_PROCESSOR_3;
-		m_pThreadPool[1]->Start( startParams, "Particle" );
-	}
 #endif
 
 	return true;
@@ -1822,7 +1803,7 @@ void CParticleMgr::UpdateNewEffects( float flTimeDelta )
 		}
 		else
 		{
-			int nAltCore = IsGameConsole() && particle_sim_alt_cores.GetInt();
+			int nAltCore = false;
 			if ( !m_pThreadPool[1] || nAltCore == 0 )
 			{
 				ParallelProcess( particlesToSimulate.Base(), nCount, ProcessPSystem, PreProcessPSystem, PostProcessPSystem );

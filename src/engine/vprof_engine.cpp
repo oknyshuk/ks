@@ -247,16 +247,7 @@ void PreUpdateProfile( float filteredtime )
 			}
 			if ( !vprof_counters_show_minmax.GetBool() )
 			{
-				if ( IsPC() )
-				{
-					Con_NPrintf( nprintIndex, "%s = %d\n", pName, val );
-				}
-				else if ( IsGameConsole() )
-				{
-#ifndef DEDICATED
-					CDebugOverlay::AddScreenTextOverlay( 0.05f, 0.05f, nprintIndex, 0.001f, 255, 255, 255, 255,  CFmtStr( "%s = %d", pName, val ) );
-#endif
-				}
+				Con_NPrintf( nprintIndex, "%s = %d\n", pName, val );
 			}
 			else
 			{
@@ -274,16 +265,7 @@ void PreUpdateProfile( float filteredtime )
 					valMax = MAX( valMax, history[j][i] );
 				}
 
-				if ( IsPC() )
-				{
-					Con_NPrintf( nprintIndex, "%s = %6d (%6d:%6d)\n", pName, val, valMin, valMax );
-				}
-				else if ( IsGameConsole() )
-				{
-#ifndef DEDICATED
-					CDebugOverlay::AddScreenTextOverlay( 0.05f, 0.05f, nprintIndex, 0.001f, 255, 255, 255, 255,  CFmtStr( "%s = %6d (%6d:%6d)", pName, val, valMin, valMax ) );
-#endif
-				}
+				Con_NPrintf( nprintIndex, "%s = %6d (%6d:%6d)\n", pName, val, valMin, valMax );
 			}
 			nprintIndex++;
 		}
@@ -424,15 +406,6 @@ DEFERRED_CON_COMMAND( vprof_on, "Turn on VProf profiler" )
 
 		g_VProfCurrentProfile.Start();
 		g_fVprofOnByUI = true;
-		if ( IsX360() && !g_bVProfNoVSyncOff )
-		{
-			ConVarRef mat_vsyncref( "mat_vsync" );
-			if ( mat_vsyncref.GetBool() )
-			{
-				Warning( "Disabling vsync (via mat_vsync) to increase profiling accuracy.\n" );
-				mat_vsyncref.SetValue( false );
-			}
-		}
 	}
 }
 
@@ -864,8 +837,6 @@ static int FindSentGroupIndex( VProfListenInfo_t &info, const char *pGroupName )
 //-----------------------------------------------------------------------------
 void WriteRemoteVProfGroupData( VProfListenInfo_t &info )
 {
-	if ( IsX360() )
-		return;
 
 	int nGroupCount = g_pVProfileForDisplay->GetNumBudgetGroups();
 	int nInitialCount = info.m_SentGroups.Count();
@@ -910,8 +881,6 @@ void WriteRemoteVProfGroupData( VProfListenInfo_t &info )
 static ConVar rpt_vprof_time( "rpt_vprof_time","0.25", FCVAR_HIDDEN | FCVAR_DONTRECORD, "" );
 void WriteRemoteVProfData()
 {
-	if ( IsX360() )
-		return;
 
 	// Throttle sending too much data
 	float flMaxDelta = rpt_vprof_time.GetFloat();

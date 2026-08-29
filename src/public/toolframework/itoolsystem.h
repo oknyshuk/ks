@@ -19,10 +19,6 @@ class KeyValues;
 struct SpatializationInfo_t;
 struct AudioState_t;
 
-namespace vgui
-{
-	typedef uintp VPANEL;
-}
 
 class CServerDemo;
 
@@ -149,7 +145,6 @@ public:
 	virtual void		UI_PreSimulate() = 0;
 	virtual void		UI_PostSimulate() = 0;
 
-	virtual vgui::VPANEL GetClientWorkspaceArea() = 0;
 };
 
 // Pointer to a member method of IGameSystem

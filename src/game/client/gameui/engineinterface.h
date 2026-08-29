@@ -20,8 +20,5 @@
 #include "matchmaking/imatchframework.h"
 
 extern class IEngineUI *engineuifuncs;
-#ifdef _GAMECONSOLE
-extern class IXOnline  *xonline;
-#endif
 
 #endif // ENGINEINTERFACE_H

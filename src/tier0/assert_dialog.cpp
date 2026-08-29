@@ -9,7 +9,7 @@
 #include "tier0/valve_off.h"
 #if defined( _WIN32 )
 #include <windows.h>
-#elif POSIX
+#else
 char *GetCommandLine();
 #endif
 #include "resource.h"
@@ -17,18 +17,14 @@ char *GetCommandLine();
 #include "tier0/threadtools.h"
 #include "tier0/icommandline.h"
 
-#if defined( LINUX ) || defined( OSX )
 #include <dlfcn.h>
-#endif
 
-#if defined( LINUX ) || defined( USE_SDL )
 // We lazily load the SDL shared object, and only reference functions if it's
 // available, so this can be included on the dedicated server too.
 #include <SDL3/SDL.h>
 
 typedef bool ( SDLCALL FUNC_SDL_ShowMessageBox )( const SDL_MessageBoxData *messageboxdata, int *buttonid );
 typedef SDL_Window* ( SDLCALL FUNC_SDL_GetKeyboardFocus )();
-#endif
 
 // NOTE: This has to be the last file included!
 #include "tier0/memdbgon.h"
@@ -199,7 +195,7 @@ CAssertDisable* IgnoreAssertsNearby( int nRange )
 }
 
 
-#if ( defined( _WIN32 ) && !defined( _X360 ) )
+#if ( defined( _WIN32 ) )
 INT_PTR CALLBACK AssertDialogProc(
   HWND hDlg,  // handle to dialog box
   UINT uMsg,     // message
@@ -376,7 +372,6 @@ PLATFORM_INTERFACE void SetAssertDialogDisabled( bool bAssertDialogDisabled )
 	g_bAssertDialogEnabled = !bAssertDialogDisabled;
 }
 
-#if defined( LINUX ) || ( defined( USE_SDL ) && defined( OSX ) )
 SDL_Window *g_SDLWindow = NULL;
 
 PLATFORM_INTERFACE void SetAssertDialogParent( struct SDL_Window *window )
@@ -388,7 +383,6 @@ PLATFORM_INTERFACE struct SDL_Window * GetAssertDialogParent()
 {
 	return g_SDLWindow;
 }
-#endif
 
 PLATFORM_INTERFACE bool ShouldUseNewAssertDialog()
 {
@@ -447,125 +441,7 @@ PLATFORM_INTERFACE bool DoNewAssertDialog( const tchar *pFilename, int line, con
 
 	g_bBreak = false;
 
-#if defined( _X360 )
-
-	char cmdString[XBX_MAX_RCMDLENGTH];
-
-	// Before calling VXConsole, init the global variable that receives the result
-	g_VXConsoleAssertReturnValue = -1;
-
-	// Message VXConsole to pop up a PC-side Assert dialog
-	_snprintf( cmdString, sizeof(cmdString), "Assert() 0x%.8x File: %s\tLine: %d\t%s",
-				&g_VXConsoleAssertReturnValue, pFilename, line, pExpression );
-	XBX_SendRemoteCommand( cmdString, false );
-
-	// We sent a synchronous message, so g_xbx_dbgVXConsoleAssertReturnValue should have been overwritten by now
-	if ( g_VXConsoleAssertReturnValue == -1 )
-	{
-		// VXConsole isn't connected/running - default to the old behaviour (break)
-		g_bBreak = true;
-	}
-	else
-	{
-		// Respond to what the user selected
-		switch( g_VXConsoleAssertReturnValue )
-		{
-		case ASSERT_ACTION_IGNORE_FILE:
-			IgnoreAssertsInCurrentFile();
-			break;
-		case ASSERT_ACTION_IGNORE_THIS:
-			// Ignore this Assert once
-			break;
-		case ASSERT_ACTION_BREAK:
-			// Break on this Assert
-			g_bBreak = true;
-			break;
-		case ASSERT_ACTION_IGNORE_ALL:
-			// Ignore all Asserts from now on
-			g_bAssertsEnabled = false;
-			break;
-		case ASSERT_ACTION_IGNORE_ALWAYS:
-			// Ignore this Assert from now on
-			IgnoreAssertsNearby( 0 );
-			break;
-		case ASSERT_ACTION_OTHER:
-		default:
-			// Error... just break
-			XBX_Error( "DoNewAssertDialog: invalid Assert response returned from VXConsole - breaking to debugger" );
-			g_bBreak = true;
-			break;
-		}
-	}
-#elif defined( _PS3 )
-	// There are a few ways to handle this sort of assert behavior with the PS3 / Target Manager API.
-	// One is to use a DebuggerBreak per usual, and then SNProcessContinue in the TMAPI to make 
-	// the game resume after a breakpoint. (You can use snIsDebuggerPresent() to determine if 
-	// the debugger is attached, although really it doesn't matter here.) 
-	// This doesn't work because the DebuggerBreak() is actually an interrupt op, and so Continue()
-	// won't continue past it -- you need to do that from inside the ProDG debugger itself.
-	// Another is to wait on a mutex here and then trip it from the TMAPI, but there isn't
-	// a clean way to trip sync primitives from TMAPI.
-	// Another way is to suspend the thread here and have TMAPI resume it.
-	// The simplest way is to spin-wait on a shared variable that you expect the 
-	// TMAPI to poke into memory. I'm trying that.
-
-	char cmdString[XBX_MAX_RCMDLENGTH];
-
-	// Before calling VXConsole, init the global variable that receives the result
-	g_VXConsoleAssertReturnValue = -1;
-
-	// Message VXConsole to pop up a PC-side Assert dialog
-	_snprintf( cmdString, sizeof(cmdString), "Assert() 0x%.8x File: %s\tLine: %d\t%s",
-		&g_VXConsoleAssertReturnValue, pFilename, line, pExpression );
-	XBX_SendRemoteCommand( cmdString, false );
-
-	if ( g_pValvePS3Console->IsConsoleConnected() )
-	{
-		// DebuggerBreak();
-
-		while ( g_VXConsoleAssertReturnValue == -1 )
-		{
-			ThreadSleep( 1000 );
-		}
-
-		// assume that the VX has poked the return value
-		// Respond to what the user selected
-		switch( g_VXConsoleAssertReturnValue )
-		{
-		case ASSERT_ACTION_IGNORE_FILE:
-			IgnoreAssertsInCurrentFile();
-			break;
-		case ASSERT_ACTION_IGNORE_THIS:
-			// Ignore this Assert once
-			break;
-		case ASSERT_ACTION_BREAK:
-			// Break on this Assert
-			g_bBreak = true;
-			break;
-		case ASSERT_ACTION_IGNORE_ALL:
-			// Ignore all Asserts from now on
-			g_bAssertsEnabled = false;
-			break;
-		case ASSERT_ACTION_IGNORE_ALWAYS:
-			// Ignore this Assert from now on
-			IgnoreAssertsNearby( 0 );
-			break;
-		case ASSERT_ACTION_OTHER:
-		default:
-			// nothing.
-			break;
-		}
-	}
-	else if ( g_pValvePS3Console->IsDebuggerPresent() )
-	{
-		g_bBreak = true;
-	}
-	else
-	{
-		// ignore the assert
-	}
-
-#elif defined( _WIN32 )
+#if   defined( _WIN32 )
 
 if ( !g_hTier0Instance || !ThreadInMainThread() )
 {
@@ -587,7 +463,7 @@ else
 	DialogBox( g_hTier0Instance, MAKEINTRESOURCE( IDD_ASSERT_DIALOG ), hParentWindow, AssertDialogProc );
 }
 
-#elif defined( LINUX ) || defined( USE_SDL )
+#else
 
 	#define COLOR_YELLOW 	"\033[1;33m"
 	#define COLOR_GREEN 	"\033[1;32m"
@@ -607,11 +483,7 @@ else
         pfnSDLGetKeyboardFocus = ( FUNC_SDL_GetKeyboardFocus * )GetProcAddress( ret, "SDL_GetKeyboardFocus" );
 #else
 
-#if defined( OSX )
-        void *ret = dlopen( "libSDL3.0.dylib", RTLD_LAZY );
-#else
         void *ret = dlopen( "libSDL3.so.0", RTLD_LAZY );
-#endif
 
         pfnSDLShowMessageBox = ( FUNC_SDL_ShowMessageBox * )dlsym( ret, "SDL_ShowMessageBox" );
         pfnSDLGetKeyboardFocus = ( FUNC_SDL_GetKeyboardFocus * )dlsym( ret, "SDL_GetKeyboardFocus" );
@@ -675,16 +547,6 @@ else
 	{
 		g_bBreak = true;
 	}
-
-#elif defined( POSIX )
-
-	fprintf(stderr, "%s %i %s\n", pFilename, line, pExpression);
-	if ( getenv( "RAISE_ON_ASSERT" ) )
-	{
-		g_bBreak = true;
-	}
-
-
 
 #endif
 

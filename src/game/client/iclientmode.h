@@ -18,10 +18,6 @@ class C_BasePlayer;
 class CUserCmd;
 class AudioState_t;
 
-namespace vgui
-{
-	class Panel;
-}
 
 // Message mode types
 enum

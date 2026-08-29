@@ -25,7 +25,7 @@
 
 void SaveInMemoryCallback( IConVar *var, const char *pOldString, float flOldValue );
 
-ConVar save_in_memory( "save_in_memory", IsX360() ? "1" : "0", 0, "Set to 1 to save to memory instead of disk (Xbox 360)", SaveInMemoryCallback );
+ConVar save_in_memory( "save_in_memory", "0", 0, "Set to 1 to save to memory instead of disk (Xbox 360)", SaveInMemoryCallback );
 
 #define INVALID_INDEX	(GetDirectory().InvalidIndex())
 enum { READ_ONLY, WRITE_ONLY };
@@ -756,13 +756,6 @@ void CSaveRestoreFileSystem::DirectoryCopy( const char *pPath, const char *pDest
 	}
 
 	// Fail to write
-#if defined( _X360 )
-	if ( nWriteSize > XBX_SAVEGAME_BYTES )
-	{
-		// FIXME: This error is now lost in the ether!
-		return;
-	}
-#endif
 
 	g_pFileSystem->AsyncWriteFile( pDestFileName, saveFile.pBuffer, saveFile.nSize, true, false );
 
@@ -842,7 +835,7 @@ bool CSaveRestoreFileSystem::LoadFileFromDisk( const char *pFilename )
 		return false;
 
 	// Open the file off the disk
-	FileHandle_t hDiskFile = g_pFileSystem->OpenEx( pFilename, "rb", ( IsX360() ) ? FSOPEN_NEVERINPACK : 0 );
+	FileHandle_t hDiskFile = g_pFileSystem->OpenEx( pFilename, "rb", 0 );
 	if ( !hDiskFile )
 		return false;
 
@@ -996,7 +989,6 @@ void CSaveRestoreFileSystem::AuditFiles( void )
 
 CON_COMMAND( audit_save_in_memory, "Audit the memory usage and files in the save-to-memory system" )
 {
-	if ( !IsX360() )
 		return;
 
 	g_pSaveRestoreFileSystem->AuditFiles();
@@ -1017,11 +1009,8 @@ ISaveRestoreFileSystem *g_pSaveRestoreFileSystem = &s_SaveRestoreFileSystemPasst
 //-----------------------------------------------------------------------------
 void SaveInMemoryCallback( IConVar *pConVar, const char *pOldString, float flOldValue )
 {
-	if ( !IsX360() )
-	{
-		Warning( "save_in_memory is compatible with only the Xbox 360!\n" );
-		return;
-	}
+	Warning( "save_in_memory is compatible with only the Xbox 360!\n" );
+	return;
 }
 
 //-----------------------------------------------------------------------------

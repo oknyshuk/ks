@@ -26,11 +26,7 @@
 
 static ConVar mat_depthfeather_enable( "mat_depthfeather_enable", "1", FCVAR_DEVELOPMENTONLY );
 
-#if defined( CSTRIKE15 ) && defined( _X360 )
-static ConVar r_shader_srgbread( "r_shader_srgbread", "1", 0, "1 = use shader srgb texture reads, 0 = use HW" );
-#else
 static ConVar r_shader_srgbread( "r_shader_srgbread", "0", 0, "1 = use shader srgb texture reads, 0 = use HW" );
-#endif
 
 int GetDefaultDepthFeatheringValue( void ) //Allow the command-line to go against the default soft-particle value
 {
@@ -182,7 +178,7 @@ BEGIN_VS_SHADER_FLAGS( Spritecard, "Help for Spritecard", SHADER_NOT_EDITABLE )
 
 		if ( !params[USEINSTANCING]->IsDefined() )
 		{
-			params[ USEINSTANCING ]->SetIntValue( IsX360() ? 1 : 0 );
+			params[ USEINSTANCING ]->SetIntValue( false ? 1 : 0 );
 		}
 
 		// srgb read 360
@@ -219,10 +215,6 @@ BEGIN_VS_SHADER_FLAGS( Spritecard, "Help for Spritecard", SHADER_NOT_EDITABLE )
 			params[INVERSEDEPTHBLEND]->SetIntValue( 0 );
 		}
 
-		if ( IsPS3() && !params[SCENEDEPTH]->IsDefined() )
-		{
-			params[SCENEDEPTH]->SetStringValue( "^PS3^DEPTHBUFFER" );
-		}
 
 		if ( g_pHardwareConfig->HasFullResolutionDepthTexture() )
 		{
@@ -256,10 +248,6 @@ BEGIN_VS_SHADER_FLAGS( Spritecard, "Help for Spritecard", SHADER_NOT_EDITABLE )
 			LoadTexture( RAMPTEXTURE, TEXTUREFLAGS_SRGB );
 		}
 
-		if( IsPS3() && params[SCENEDEPTH]->IsDefined() )
-		{
-			LoadTexture( SCENEDEPTH, 0 );
-		}
 
 		if ( g_pHardwareConfig->HasFullResolutionDepthTexture() )
 		{
@@ -286,11 +274,11 @@ BEGIN_VS_SHADER_FLAGS( Spritecard, "Help for Spritecard", SHADER_NOT_EDITABLE )
 		bool bAdditive2ndTexture = params[ADDBASETEXTURE2]->GetFloatValue() != 0.0;
 		bool bExtractGreenAlpha = ( params[EXTRACTGREENALPHA]->GetIntValue() != 0 );
 		int nSplineType = params[SPLINETYPE]->GetIntValue();
-		bool bUseInstancing = IsX360() ? ( params[ USEINSTANCING ]->GetIntValue() != 0 ) : false;
+		bool bUseInstancing = false ? ( params[ USEINSTANCING ]->GetIntValue() != 0 ) : false;
 #if defined( CSTRIKE15 )
-		bool bShaderSrgbRead = IsX360() && r_shader_srgbread.GetBool();
+		bool bShaderSrgbRead = false && r_shader_srgbread.GetBool();
 #else
-		bool bShaderSrgbRead = ( IsX360() && IS_PARAM_DEFINED( SHADERSRGBREAD360 ) && params[SHADERSRGBREAD360]->GetIntValue() );
+		bool bShaderSrgbRead = ( false && IS_PARAM_DEFINED( SHADERSRGBREAD360 ) && params[SHADERSRGBREAD360]->GetIntValue() );
 #endif
 		bool bCrop = ( params[CROPFACTOR]->GetVecValue()[0] != 1.0f ) || ( params[CROPFACTOR]->GetVecValue()[1] != 1.0f );
 		bool bSecondSequence = params[DUALSEQUENCE]->GetIntValue() != 0;
@@ -441,7 +429,7 @@ BEGIN_VS_SHADER_FLAGS( Spritecard, "Help for Spritecard", SHADER_NOT_EDITABLE )
 				SET_STATIC_VERTEX_SHADER_COMBO( ANIMBLEND_OR_MAXLUMFRAMEBLEND1, bBlendFrames || ( params[MAXLUMFRAMEBLEND1]->GetIntValue() != 0 ) );
 				SET_STATIC_VERTEX_SHADER_COMBO( CROP, bCrop );
 				SET_STATIC_VERTEX_SHADER_COMBO( PACKED_INTERPOLATOR, bPackedInterpolator );
-				SET_STATIC_VERTEX_SHADER_COMBO( HARDWAREFOGBLEND, !IsX360() && bFog && ( g_pHardwareConfig->GetDXSupportLevel() <= 90 ) );
+				SET_STATIC_VERTEX_SHADER_COMBO( HARDWAREFOGBLEND, !false && bFog && ( g_pHardwareConfig->GetDXSupportLevel() <= 90 ) );
 				SET_STATIC_VERTEX_SHADER_COMBO( PERPARTICLEOUTLINE, bPerParticleOutline );
 				SET_STATIC_VERTEX_SHADER( spritecard_vs20 );
 			}

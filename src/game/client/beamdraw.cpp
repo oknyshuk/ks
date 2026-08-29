@@ -916,43 +916,6 @@ void DrawSplineSegs( int noise_divisions, float *prgNoise,
 		// --------------------------------------------------------------
 		//  Draw halo on segment most facing the player 
 		// --------------------------------------------------------------
-		if (false&&pHaloMaterial)
-		{
-			Vector vHaloPos(0,0,0);
-			if (bestDot != 0)
-			{
-				Catmull_Rom_Spline(pPre, pStart, pEnd, pNext, fBestFraction, vHaloPos);
-			}
-			else 
-			{
-				Vector vBeamDir1;
-				VectorSubtract(pStart,pEnd,vBeamDir1);
-				VectorNormalize(vBeamDir1);
-
-				Vector vLookDir;
-				VectorSubtract(CurrentViewOrigin(),pStart,vLookDir);
-				VectorNormalize(vLookDir);
-
-				bestDot		= fabs(DotProduct(vBeamDir1,vLookDir));
-				static float thresh = 0.85;
-				if (bestDot > thresh)
-				{
-					fBestFraction = 0.5;
-					VectorAdd(pStart,pEnd,vHaloPos);
-					VectorScale(vHaloPos,0.5,vHaloPos);
-				}	
-			}
-			if (fBestFraction > 0)
-			{
-				float	fade	= pow(bestDot,60);
-				if (fade > 1.0) fade = 1.0;
-				float haloColor[3];
-				VectorScale( color, fade, haloColor );
-				pRenderContext->Bind(pHaloMaterial);
-				float curWidth = (fBestFraction*(endSegWidth-startSegWidth))+startSegWidth;
-				DrawHalo(pHaloMaterial,vHaloPos,flHaloScale*curWidth/endWidth,haloColor, flHDRColorScale);
-			}
-		}
 	}
 	
 	segDraw.End();

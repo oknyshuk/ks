@@ -1884,32 +1884,6 @@ inline bool CheckCliff( const Vector *fromPos, NavDirType dir, bool bExhaustive 
 {
 	// cliffs are half-baked, not used by any existing AI, and create poorly behaved nav areas (ie: long, thin, strips) (MSB 8/7/09)
 	return false;
-
-
-	Vector toPos( fromPos->x, fromPos->y, fromPos->z );
-	AddDirectionVector( &toPos, dir, GenerationStepSize );
-
-	trace_t trace;
-	// trace a step in specified direction and see where we'd find up
-	if ( TraceAdjacentNode( 0, *fromPos, toPos, &trace, DeathDrop * 10 ) && !trace.allsolid && !trace.startsolid )
-	{
-		float deltaZ = fromPos->z - trace.endpos.z;
-		// would we fall off a cliff?
-		if ( deltaZ > CliffHeight )
-			return true;
-
-		// if not, special case for south and east.  South and east edges are not considered part of a nav area, so
-		// we look ahead two steps for south and east.  This ensures that the n-1th row and column of nav nodes
-		// on the south and east sides of a nav area reflect any cliffs on the nth row and column.
-
-		// if we're looking to south or east, and the first node we found was approximately flat, and this is the top-level
-		// call, recurse one level to check one more step in this direction
-		if ( ( dir == SOUTH || dir == EAST ) && ( fabs( deltaZ ) < StepHeight ) && bExhaustive )
-		{	
-			return CheckCliff( &trace.endpos, dir, false ); 
-		}
-	}
-	return false;
 }
 
 
@@ -2751,45 +2725,6 @@ bool IsHeightDifferenceValid( float test, float other1, float other2, float othe
  */
 bool TestForValidJumpArea( CNavNode *node )
 {
-	return true;
-
-	CNavNode *east = node->GetConnectedNode( EAST );
-	CNavNode *south = node->GetConnectedNode( SOUTH );
-	if ( !east || !south )
-		return false;
-
-	CNavNode *southEast = east->GetConnectedNode( SOUTH );
-	if ( !southEast )
-		return false;
-
-	if ( !IsHeightDifferenceValid(
-		node->GetPosition()->z,
-		south->GetPosition()->z,
-		southEast->GetPosition()->z,
-		east->GetPosition()->z ) )
-		return false;
-
-	if ( !IsHeightDifferenceValid(
-		south->GetPosition()->z,
-		node->GetPosition()->z,
-		southEast->GetPosition()->z,
-		east->GetPosition()->z ) )
-		return false;
-
-	if ( !IsHeightDifferenceValid(
-		southEast->GetPosition()->z,
-		south->GetPosition()->z,
-		node->GetPosition()->z,
-		east->GetPosition()->z ) )
-		return false;
-
-	if ( !IsHeightDifferenceValid(
-		east->GetPosition()->z,
-		south->GetPosition()->z,
-		southEast->GetPosition()->z,
-		node->GetPosition()->z ) )
-		return false;
-
 	return true;
 }
 
