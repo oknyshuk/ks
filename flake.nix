@@ -15,7 +15,7 @@
         system:
         let
           pkgs = nixpkgs.legacyPackages.${system};
-          llvm = pkgs.llvmPackages_22;
+          stdenv = pkgs.gcc16Stdenv;
 
           runtimePath = lib.makeLibraryPath [
             pkgs.vulkan-loader
@@ -38,7 +38,7 @@
             mold
           ];
 
-          ks = llvm.stdenv.mkDerivation {
+          ks = stdenv.mkDerivation {
             pname = "ks";
             version = "0.1.0";
             src = ./src;
@@ -86,13 +86,13 @@
             };
           };
 
-          devShells.default = llvm.stdenv.mkDerivation {
+          devShells.default = stdenv.mkDerivation {
             name = "ks-dev";
             NIX_ENFORCE_NO_NATIVE = false;
             nativeBuildInputs = nativeBuildInputs ++ [
               pkgs.waf
               pkgs.ccache
-              llvm.clang-tools
+              pkgs.clang-tools
             ];
             inherit buildInputs;
             shellHook = ''

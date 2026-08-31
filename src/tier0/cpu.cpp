@@ -109,9 +109,9 @@ static bool cpuidex( unsigned long function, unsigned long subfunction, CpuIdRes
 #if   defined(GNUC)
 	unsigned long out_eax, out_ebx, out_ecx, out_edx;
 
-	asm( "mov %%ebx, %%esi\n\t"
+	asm( "mov %%rbx, %%rsi\n\t"
 		"cpuid\n\t"
-		"xchg %%esi, %%ebx"
+		"xchg %%rsi, %%rbx"
 		: "=a" ( out_eax ),
 		"=S" ( out_ebx ),
 		"=c" ( out_ecx ),

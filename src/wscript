@@ -125,7 +125,8 @@ Build.BuildContext.get_taskgen_count = _get_taskgen_count
 # --- Optimization flag tables ---
 
 OPTFLAGS = {
-    "fast": ["-O3", "-ffast-math"],
+    # no -ffast-math: under gcc it makes the dxvk/dxbc-spirv shader compiler
+    # spin forever while translating shaders (black screen on startup)
     "release": ["-O3"],
     "debug": ["-O0"],
     "sanitize": [
@@ -150,8 +151,8 @@ def options(opt):
         "--build-type",
         action="store",
         dest="BUILD_TYPE",
-        default="fast",
-        help="build type: fast, release, debug, sanitize",
+        default="release",
+        help="build type: release, debug, sanitize",
     )
     grp.add_option(
         "-w",
@@ -196,9 +197,6 @@ def configure(conf):
 
     conf.load("clang_compilation_database")
     conf.load("pch")
-    if conf.env.WITH_PCH and conf.env.COMPILER_CXX == "clang++":
-        conf.env.append_unique("CXXPCH_FLAGS", ["-fpch-instantiate-templates"])
-        conf.env.append_unique("CXXPCH_FLAGS", ["-Xclang", "-fno-pch-timestamp"])
 
     # --- PIC for all code ---
     for var in [
@@ -219,19 +217,13 @@ def configure(conf):
         "-g",
         "-fvisibility=hidden",
         "-gsplit-dwarf",
-        "-fno-standalone-debug",
-        "-fno-threadsafe-statics",
     ]
     cflags += OPTFLAGS[build_type]
-    cxxflags = list(cflags)
+    cxxflags = cflags + ["-fno-threadsafe-statics"]
 
     linkflags = ["-gsplit-dwarf"]
     if shutil.which("mold"):
         linkflags.append("-fuse-ld=mold")
-    if build_type == "fast":
-        cflags.append("-flto=thin")
-        cxxflags.append("-flto=thin")
-        linkflags.append("-flto=thin")
     if build_type == "sanitize":
         linkflags += ["-fsanitize=address,undefined", "-pthread"]
 
@@ -251,17 +243,14 @@ def configure(conf):
         conf.env.append_unique("CFLAGS", ["-w"])
         conf.env.append_unique("CXXFLAGS", ["-w"])
 
-    conf.env.append_unique("CFLAGS", ["-fcolor-diagnostics"])
-    conf.env.append_unique("CXXFLAGS", ["-fcolor-diagnostics", "-std=c++20"])
+    conf.env.append_unique("CFLAGS", ["-fdiagnostics-color=always"])
+    conf.env.append_unique("CXXFLAGS", ["-fdiagnostics-color=always", "-std=c++20"])
 
     conf.env.append_unique(
         "CXXFLAGS", ["-Wno-invalid-offsetof", "-Wno-free-nonheap-object"]
     )
     # Source Engine was written for MSVC which permits narrowing in brace init
-    conf.env.append_unique("CFLAGS", ["-Wno-narrowing"])
-    conf.env.append_unique("CXXFLAGS", ["-Wno-c++11-narrowing"])
-    # Source Engine predates C++11 override keyword
-    conf.env.append_unique("CXXFLAGS", ["-Wno-inconsistent-missing-override"])
+    conf.env.append_unique("CXXFLAGS", ["-Wno-narrowing"])
 
     # --- Includes ---
     includes = [
@@ -272,8 +261,7 @@ def configure(conf):
     ]
 
     # --- Defines ---
-    conf.define("COMPILER_CLANG", True)
-    conf.define("COMPILER_GCC", True)  # GCC-compatible
+    conf.define("COMPILER_GCC", True)
     conf.define("_POSIX", True)
     conf.define("POSIX", True)
     conf.define("USE_SDL", True)
