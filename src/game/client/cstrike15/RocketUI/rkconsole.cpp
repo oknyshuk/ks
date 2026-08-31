@@ -52,12 +52,16 @@ CON_COMMAND(rocket_console_clear, "Clear the RocketUI console") {
 
 RocketConsole::RocketConsole()
     : m_pDocument(nullptr), m_elemOutput(nullptr), m_elemInput(nullptr),
-      m_elemCompletionList(nullptr), m_bVisible(false), m_bGrabbingInput(false),
+      m_elemCompletionList(nullptr), m_bVisible(false),
       m_bInitialized(false), m_iHistoryPos(-1), m_iCompletionIndex(-1),
       m_bCompletionVisible(false), m_PrintColor(216, 222, 211, 255),
       m_DPrintColor(196, 181, 80, 255) {}
 
 RocketConsole::~RocketConsole() { Shutdown(); }
+
+bool RocketConsole::OwnsInput() const {
+  return m_bVisible && m_pDocument && m_pDocument->IsVisible();
+}
 
 static bool ConsoleKeyInputHandler(int buttonCode, bool down) {
   return RkConsole().HandleKeyInput(buttonCode, down);
@@ -163,11 +167,7 @@ void RocketConsole::UnloadDocument() {
   if (!m_pDocument)
     return;
 
-  if (m_bGrabbingInput) {
-    RocketUI()->DenyInputToGame(false, "RocketConsole");
-    RocketUI()->SetInputContext(nullptr);
-    m_bGrabbingInput = false;
-  }
+  RocketUI()->SetInputContext(nullptr);
 
   // Remove event listener before closing
   if (m_elemInput) {
@@ -195,15 +195,13 @@ void RocketConsole::Show() {
   if (!m_pDocument)
     return;
 
+  // Paint order is hud_console.rml's `z-index`, not this call: RmlUi only reorders
+  // documents as a side effect of focus changing.
   m_pDocument->Show();
   m_bVisible = true;
 
-  if (!m_bGrabbingInput) {
-    RocketUI()->DenyInputToGame(true, "RocketConsole");
-    RocketUI()->EnableCursor(true);
-    RocketUI()->SetInputContext(RocketUI()->AccessMenuContext());
-    m_bGrabbingInput = true;
-  }
+  // The console lives in the menu context; route input there while it is up.
+  RocketUI()->SetInputContext(RocketUI()->AccessMenuContext());
 
   // Focus the input element
   if (m_elemInput)
@@ -220,11 +218,7 @@ void RocketConsole::Hide() {
   m_pDocument->Hide();
   m_bVisible = false;
 
-  if (m_bGrabbingInput) {
-    RocketUI()->DenyInputToGame(false, "RocketConsole");
-    RocketUI()->SetInputContext(nullptr);
-    m_bGrabbingInput = false;
-  }
+  RocketUI()->SetInputContext(nullptr);
 
   HideCompletionList();
 }
@@ -289,8 +283,9 @@ bool RocketConsole::HandleKeyInput(int buttonCode, bool down) {
   ButtonCode_t key = (ButtonCode_t)buttonCode;
   bool inputFocused = IsInputFocused();
 
-  // Determine if this is a key we handle (need to consume both down and up)
-  bool isHandledKey = (key == KEY_ESCAPE || key == KEY_BACKQUOTE || key == KEY_TAB ||
+  // Note: the toggle key is deliberately not handled here. It is a normal engine
+  // binding (`toggleconsole`), so it stays rebindable and has exactly one owner.
+  bool isHandledKey = (key == KEY_ESCAPE || key == KEY_TAB ||
                        (inputFocused && (key == KEY_ENTER || key == KEY_PAD_ENTER ||
                                          key == KEY_UP || key == KEY_DOWN)));
 
@@ -305,10 +300,6 @@ bool RocketConsole::HandleKeyInput(int buttonCode, bool down) {
       HideCompletionList();
     else
       Hide();
-    return true;
-
-  case KEY_BACKQUOTE:
-    Hide();
     return true;
 
   case KEY_ENTER:

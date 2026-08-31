@@ -564,6 +564,10 @@ void Con_Shutdown (void)
 	if ( g_pNetConsoleMgr )
 		delete g_pNetConsoleMgr;
 #endif
+	// ConsoleLogManager holds the -condebug log open for the whole session; its own
+	// destructor runs at static teardown, by which point the filesystem has already
+	// reported the handle as never closed.
+	GetConsoleLogManager().CloseFileIfOpen();
 	con_initialized = false;
 }
 

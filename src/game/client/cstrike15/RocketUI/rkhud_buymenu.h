@@ -20,13 +20,14 @@ public:
     virtual void SetActive(bool bActive);
     virtual bool ShouldDraw(void);
     void ShowPanel(bool bShow, bool force);
+    // True while this panel legitimately owns mouse/keyboard input (polled).
+    bool OwnsInput() const;
 
     // CGameEventListener
     virtual void FireGameEvent( IGameEvent *event );
 
     Rml::ElementDocument *m_pInstance;
     bool		m_bVisible;
-    bool        m_bGrabbingInput;
     Rml::DataModelHandle m_dataModel;
 
     void UpdateBuyMenu();

@@ -709,7 +709,9 @@ bool GameTypes::LoadGameTypes( KeyValues *pKV )
 				}
 				else
 				{
-					Warning( "GameTypes: missing %s entry for game type/mode (%s/%s).\n", mapgroupsEntrySP, pKV_GameType->GetName(), pKV_GameMode->GetName() );
+					// Shipped gamemodes.txt has no SP mapgroups for the coop modes, which
+					// is not an error -- only report it when developing.
+					DevMsg( "GameTypes: no %s entry for game type/mode (%s/%s).\n", mapgroupsEntrySP, pKV_GameType->GetName(), pKV_GameMode->GetName() );
 				}
 
 				// Get the multiplayer mapgroups.

@@ -9,8 +9,12 @@
 
 Rml::ElementDocument *RocketTeamMenuDocument::m_pInstance = nullptr;
 bool RocketTeamMenuDocument::m_bVisible = false;
-bool RocketTeamMenuDocument::m_bGrabbingInput = false;
 RocketTeamMenuEventListener* RocketTeamMenuDocument::m_pEventListener = nullptr;
+
+bool RocketTeamMenuDocument::OwnsInput()
+{
+    return m_bVisible && m_pInstance && m_pInstance->IsVisible();
+}
 
 /* Event Listener added to each team-button */
 class RkTeamMenuButtons : public Rml::EventListener
@@ -143,23 +147,11 @@ void RocketTeamMenuDocument::ShowPanel(bool bShow, bool immediate)
             LoadDialog();
 
         m_pInstance->Show();
-
-        if( !m_bGrabbingInput )
-        {
-            RocketUI()->DenyInputToGame( true, "TeamMenu" );
-            m_bGrabbingInput = true;
-        }
     }
     else
     {
         if( m_pInstance )
             m_pInstance->Hide();
-
-        if( m_bGrabbingInput )
-        {
-            RocketUI()->DenyInputToGame( false, "TeamMenu" );
-            m_bGrabbingInput = false;
-        }
     }
 
     m_bVisible = bShow;

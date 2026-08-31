@@ -31,6 +31,11 @@ inline IRocketUI* RocketUI()
     return g_pRocketUI;
 }
 
+// Polled by RocketUI once per frame (and on every input event) to answer the
+// single question "does the UI layer own the mouse right now?". See
+// game/client/cstrike15/RocketUI/rkinputclaim.cpp for the one implementation.
+typedef bool (*InputClaimQueryFn)(void);
+
 typedef void (*LoadDocumentFn)(void);
 typedef void (*UnloadDocumentFn)(void);
 typedef void (*TogglePauseMenuFn)(void);
@@ -48,11 +53,12 @@ public:
     // Feed input into UI
     virtual bool HandleInputEvent(const InputEvent_t &event) = 0;
 
-    // Start consuming inputs, tell us why so we can debug input layers/leaks
-    virtual void DenyInputToGame(bool value, const char *why = "Unknown") = 0;
+    // Install the predicate that decides whether the UI owns mouse/keyboard input.
+    // Ownership is DERIVED (polled) rather than reference counted on purpose: a
+    // panel that forgets to "release" cannot strand the game without input, because
+    // nothing is stored here that could outlive the panel's own state.
+    virtual void SetInputClaimQuery(InputClaimQueryFn queryFunc) = 0;
     virtual bool IsConsumingInput(void) = 0;
-
-    virtual void EnableCursor(bool state) = 0;
 
     // Document manipulation
     // The Load/Unload functions are for hot-reloading, they will be called on rocket_reload.

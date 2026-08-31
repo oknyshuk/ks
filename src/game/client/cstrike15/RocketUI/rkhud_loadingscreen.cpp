@@ -9,7 +9,11 @@
 
 Rml::ElementDocument *RocketLoadingScreenDocument::m_pInstance = nullptr;
 bool RocketLoadingScreenDocument::m_bVisible = false;
-bool RocketLoadingScreenDocument::m_bGrabbingInput = false;
+
+bool RocketLoadingScreenDocument::OwnsInput()
+{
+    return m_bVisible && m_pInstance && m_pInstance->IsVisible();
+}
 
 /* Event Listener added to continue button */
 class RkLoadingScreenClick : public Rml::EventListener
@@ -50,10 +54,6 @@ void RocketLoadingScreenDocument::UnloadDialog()
         m_pInstance->Close();
         m_pInstance = nullptr;
     }
-    if( m_bGrabbingInput )
-    {
-        RocketUI()->DenyInputToGame( false, "LoadingScreen" );
-    }
 }
 
 void RocketLoadingScreenDocument::ShowPanel(bool bShow, bool immediate)
@@ -66,25 +66,11 @@ void RocketLoadingScreenDocument::ShowPanel(bool bShow, bool immediate)
             LoadDialog();
 
         m_pInstance->Show();
-
-        if( !m_bGrabbingInput )
-        {
-            RocketUI()->DenyInputToGame( true, "LoadingScreen" );
-            m_bGrabbingInput = true;
-        }
     }
     else
     {
-        if( m_pInstance ){
-            //UnloadDialog();
+        if( m_pInstance )
             m_pInstance->Hide();
-        }
-
-        if( m_bGrabbingInput )
-        {
-            RocketUI()->DenyInputToGame( false, "LoadingScreen" );
-            m_bGrabbingInput = false;
-        }
 
         // if we were visible, we need to join the game most likely and show the team select.
         if( m_bVisible )

@@ -3227,10 +3227,8 @@ inline CParticleSystemDefinition::CParticleSystemDefinition( void )
 	m_nPerParticleOutlineMaterialVarToken = 0;
 }
 
-static int s_nDestructorCount = 0;
 inline CParticleSystemDefinition::~CParticleSystemDefinition( void )
 {
-	s_nDestructorCount++;
 	// Ensure material ref is released before destruction
 	// (CMaterialReference destructor also calls Shutdown, but this ensures
 	// the ref is released even if called during early init when materials global might be NULL)

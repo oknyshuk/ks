@@ -3592,14 +3592,9 @@ void CShaderAPIDx8::ResetDXRenderState( void )
     SetSupportedRenderStateForce( D3DRS_BLENDFACTOR, 0xffffffff );
     SetSupportedRenderStateForce( D3DRS_SRGBWRITEENABLE, 0);
     SetSupportedRenderStateForce( D3DRS_DEPTHBIAS, dZero );
-    SetSupportedRenderStateForce( D3DRS_WRAP8, 0 );
-    SetSupportedRenderStateForce( D3DRS_WRAP9, 0 );
-    SetSupportedRenderStateForce( D3DRS_WRAP10, 0 );
-    SetSupportedRenderStateForce( D3DRS_WRAP11, 0 );
-    SetSupportedRenderStateForce( D3DRS_WRAP12, 0 );
-    SetSupportedRenderStateForce( D3DRS_WRAP13, 0 );
-    SetSupportedRenderStateForce( D3DRS_WRAP14, 0 );
-    SetSupportedRenderStateForce( D3DRS_WRAP15, 0 );
+    // D3DRS_WRAP8..15 deliberately not set: they only apply to texture stages 8+,
+    // which no D3D9 device exposes, so dxvk has no case for them and warns
+    // "Unhandled render state 136" for each. Zero is its default anyway.
     SetSupportedRenderStateForce( D3DRS_BLENDOP, D3DBLENDOP_ADD );
     SetSupportedRenderStateForce( D3DRS_BLENDOPALPHA, D3DBLENDOP_ADD );
 

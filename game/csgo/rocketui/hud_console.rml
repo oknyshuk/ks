@@ -4,6 +4,7 @@
 			body {
 				font-family: "Liberation Mono";
 				font-size: 13dp;
+				z-index: 100;
 				position: absolute;
 				left: 0;
 				top: 0;

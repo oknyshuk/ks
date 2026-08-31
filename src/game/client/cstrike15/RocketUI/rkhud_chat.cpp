@@ -306,12 +306,17 @@ static void LoadRkChat()
 // HudElementHelper::CreateAllElements
 RkHudChat::RkHudChat(const char *value) : CHudElement( value ),
                                           m_pInstance( nullptr ),
-                                          m_bVisible( false ),
                                           m_iMode( MM_NONE ),
-                                          m_bGrabbingInput( false ),
                                           m_iNumEntries( 0 )
 {
     SetHiddenBits( /* HIDEHUD_MISCSTATUS */ 0 );
+}
+
+// Chat's document is visible during normal gameplay (it draws chat history), so
+// only actually typing counts as owning input.
+bool RkHudChat::OwnsInput() const
+{
+    return m_iMode != MM_NONE && m_pInstance && m_pInstance->IsVisible();
 }
 
 RkHudChat::~RkHudChat() noexcept
@@ -331,9 +336,6 @@ void RkHudChat::LevelShutdown( void )
 {
     m_iMode = MM_NONE;
 
-    if( m_bGrabbingInput )
-        RocketUI()->DenyInputToGame( false, "Hud_Chat" );
-
     UnloadRkChat();
 }
 
@@ -345,24 +347,10 @@ void RkHudChat::ShowPanel(bool bShow, bool force)
 
     if( bShow )
     {
-        if( !m_bVisible )
-        {
-            m_bVisible = true;
-            m_bGrabbingInput = true;
-            RocketUI()->DenyInputToGame( true, "Hud_Chat" );
-        }
-
         m_pInstance->SetProperty( "opacity", std::to_string(rocket_hud_chat_active_opacity.GetFloat()) );
     }
     else
     {
-        if( m_bVisible )
-        {
-            m_bVisible = false;
-            m_bGrabbingInput = false;
-            RocketUI()->DenyInputToGame( false, "Hud_Chat" );
-        }
-
         // Do a fade out to the idle opacity level.
         float currentOpacity = m_pInstance->GetProperty("opacity")->Get<float>();
         if( currentOpacity > rocket_hud_chat_idle_opacity.GetFloat() )

@@ -16,6 +16,7 @@ typedef void *HDC;
 #endif
 
 #include "appframework/ilaunchermgr.h"
+#include "appframework/sdlwindow.h"
 
 #include "basetypes.h"
 #include "sysexternal.h"
@@ -319,8 +320,8 @@ bool CVideoMode_Common::SyncToActualWindowSize()
     if ( !g_pLauncherMgr )
         return false;
 
-    uint nWidth, nHeight;
-    g_pLauncherMgr->DisplayedSize( nWidth, nHeight );
+    int nWidth = 0, nHeight = 0;
+    SDL_GetWindowSizeInPixels( GetGameSDLWindow(), &nWidth, &nHeight );
 
     if ( nWidth <= 0 || nHeight <= 0 )
         return false;
@@ -1310,7 +1311,12 @@ void CVideoMode_Common::AdjustWindow( int nWidth, int nHeight, int nBPP, bool bW
 		WindowRect.right - WindowRect.left,
 		WindowRect.bottom - WindowRect.top );
 
-	g_pLauncherMgr->SizeWindow( WindowRect.right - WindowRect.left, WindowRect.bottom - WindowRect.top );
+	// SDL_SyncWindow(): apply before returning, so the RESIZED event this generates
+	// is pumped while we still know it was self-inflicted. Otherwise it lands a frame
+	// later, looks like a user resize, and bounces back into SetMode().
+	SDL_Window *pGameWindow = GetGameSDLWindow();
+	SDL_SetWindowSize( pGameWindow, WindowRect.right - WindowRect.left, WindowRect.bottom - WindowRect.top );
+	SDL_SyncWindow( pGameWindow );
 
 #elif defined( WIN32 )
 #else
@@ -1444,7 +1450,7 @@ void CVideoMode_Common::CenterEngineWindow( void *hWndCenter, int width, int hei
 	CenterY += rect.y;
 
 	game->SetWindowXY( CenterX, CenterY );
-	g_pLauncherMgr->MoveWindow( CenterX, CenterY );
+	SDL_SetWindowPosition( GetGameSDLWindow(), CenterX, CenterY );
 #elif defined( WIN32 ) 
     {
         // In windowed mode go through game->GetDesktopInfo because system metrics change

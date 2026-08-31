@@ -18,6 +18,7 @@
 	#include "tier0/dynfunction.h"
 #endif
 #include "appframework/ilaunchermgr.h"
+#include "appframework/sdlwindow.h"
 
 #include "igame.h"
 #include "cl_main.h"
@@ -864,7 +865,7 @@ bool CGame::CreateGameWindow( void )
 		g_pLauncherMgr->SetApplicationIcon( localPath );
 	}
 	
-	SetMainWindow( ( HWND )g_pLauncherMgr->GetWindowRef() );
+	SetMainWindow( ( HWND )GetGameSDLWindow() );
 
 	AttachToWindow( );
 	return true;
@@ -1531,8 +1532,7 @@ void *CGame::GetMainWindow( void )
 #if defined(USE_SDL)
 void** CGame::GetMainWindowAddress( void )
 {
-	if ( g_pLauncherMgr )
-		m_hWindow = (SDL_Window *)g_pLauncherMgr->GetWindowRef();
+	m_hWindow = GetGameSDLWindow();
 	return (void**)&m_hWindow;
 }
 #elif defined( WIN32 ) 

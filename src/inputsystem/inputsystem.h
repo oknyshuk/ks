@@ -430,6 +430,10 @@ private:
 	int m_nLastSampleTick;
 	int m_nPollCount;
 
+	// Mouse button bitmask in MOUSE_FIRST order (bit 0 = MOUSE_LEFT), maintained
+	// from SDL button events and handed to UpdateMouseButtonState().
+	int m_nMouseButtonState;
+
 	// Mouse wheel hack
 	UINT m_uiMouseWheel;
 

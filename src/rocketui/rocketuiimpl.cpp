@@ -34,7 +34,6 @@ EXPOSE_SINGLE_INTERFACE_GLOBALVAR(RocketUIImpl, IRocketUI,
                                   RocketUIImpl::m_Instance)
 
 ConVar rocket_enable("rocket_enable", "1", 0, "Enables RocketUI");
-ConVar rocket_verbose("rocket_verbose", "0", 0, "Enables more logging");
 
 CON_COMMAND_F(rocket_reload, "Reloads all RocketUI Documents", FCVAR_NONE) {
   if (RocketUIImpl::m_Instance.ReloadDocuments()) {
@@ -61,7 +60,7 @@ RocketUIImpl::RocketUIImpl()
       m_ctxHud(nullptr), m_ctxCurrent(nullptr), m_ctxInput(nullptr),
       m_isDebuggerOpen(false), m_togglePauseMenuFunc(nullptr),
       m_consoleKeyInputFunc(nullptr), m_consoleCharInputFunc(nullptr),
-      m_numInputConsumers(0) {
+      m_pInputClaimQuery(nullptr) {
 }
 
 bool RocketUIImpl::Connect(CreateInterfaceFn factory) {
@@ -351,42 +350,37 @@ void RocketUIImpl::RunFrame(float time) {
     m_ctxHud->Update();
   if (m_ctxMenu)
     m_ctxMenu->Update();
+
+  SyncCursorToInputOwner();
 }
 
-void RocketUIImpl::DenyInputToGame(bool value, const char *why) {
-  if (value) {
-    m_numInputConsumers++;
-    m_inputConsumers.AddToTail(CUtlString(why));
-  } else {
-    m_numInputConsumers--;
-    m_inputConsumers.FindAndRemove(CUtlString(why));
-  }
-
-  EnableCursor((m_numInputConsumers > 0));
-
-  if (rocket_verbose.GetBool()) {
-    ConMsg("input Consumers[%d]: ", m_numInputConsumers);
-    for (int i = 0; i < m_inputConsumers.Count(); i++) {
-      ConMsg("(%s) ", m_inputConsumers[i].Get());
-    }
-    ConMsg("\n");
-  }
+// Ownership of mouse/keyboard is asked for, never remembered: whatever the UI
+// layer reports this instant is the answer. A panel that fails to "release"
+// therefore cannot permanently strand the game without mouselook.
+bool RocketUIImpl::IsConsumingInput() {
+  if (m_isDebuggerOpen)
+    return true;
+  return m_pInputClaimQuery && m_pInputClaimQuery();
 }
 
-bool RocketUIImpl::IsConsumingInput() { return (m_numInputConsumers > 0); }
+void RocketUIImpl::SyncCursorToInputOwner() {
+  const bool bWantCursor = IsConsumingInput();
+  if (bWantCursor == m_bCursorVisible)
+    return;
 
-void RocketUIImpl::EnableCursor(bool state) {
+  m_bCursorVisible = bWantCursor;
+
+  // The client's mouselook gate lives in the client DLL, which RocketUI cannot
+  // call into directly; cl_mouseenable is the shared switch.
   ConVarRef cl_mouseenable("cl_mouseenable");
-  cl_mouseenable.SetValue(!state);
+  if (cl_mouseenable.IsValid())
+    cl_mouseenable.SetValue(!bWantCursor);
 
-  // Use same approach as VGUI - set cursor and visibility
-  if (state) {
+  if (bWantCursor) {
     m_pLauncherMgr->SetMouseCursor(
         RocketSystem::m_Instance.m_pCursors[SDL_SYSTEM_CURSOR_DEFAULT]);
   }
-  m_pLauncherMgr->SetMouseVisible(state);
-
-  m_bCursorVisible = state;
+  m_pLauncherMgr->SetMouseVisible(bWantCursor);
 }
 
 bool RocketUIImpl::HandleInputEvent(const InputEvent_t &event) {
@@ -747,11 +741,9 @@ void RocketUIImpl::ToggleDebugger() {
     }
     m_isDebuggerOpen = true;
     Rml::Debugger::SetVisible(true);
-    DenyInputToGame(true, "RocketUI Debugger");
   } else {
     ConMsg("[RocketUI] Closing Debugger\n");
     Rml::Debugger::SetVisible(false);
     m_isDebuggerOpen = false;
-    DenyInputToGame(false, "RocketUI Debugger");
   }
 }

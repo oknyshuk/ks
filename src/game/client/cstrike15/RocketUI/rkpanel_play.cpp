@@ -14,7 +14,11 @@
 
 Rml::ElementDocument *RocketPlayDocument::m_pInstance = nullptr;
 bool RocketPlayDocument::m_bVisible = false;
-bool RocketPlayDocument::m_bGrabbingInput = false;
+
+bool RocketPlayDocument::OwnsInput()
+{
+    return m_bVisible && m_pInstance && m_pInstance->IsVisible();
+}
 
 class RkPlayClickListener : public Rml::EventListener
 {
@@ -204,12 +208,6 @@ void RocketPlayDocument::UnloadDialog()
 
         m_pInstance->Close();
         m_pInstance = nullptr;
-
-        if( m_bGrabbingInput )
-        {
-            RocketUI()->DenyInputToGame( false, "PlayPanel" );
-            m_bGrabbingInput = false;
-        }
     }
 
     m_bVisible = false;
@@ -226,23 +224,11 @@ void RocketPlayDocument::ShowPanel( bool bShow, bool immediate )
         PopulateMapList();
 
         m_pInstance->Show();
-
-        if( !m_bGrabbingInput )
-        {
-            RocketUI()->DenyInputToGame( true, "PlayPanel" );
-            m_bGrabbingInput = true;
-        }
     }
     else
     {
         if( m_pInstance )
             m_pInstance->Hide();
-
-        if( m_bGrabbingInput )
-        {
-            RocketUI()->DenyInputToGame( false, "PlayPanel" );
-            m_bGrabbingInput = false;
-        }
     }
 
     m_bVisible = bShow;

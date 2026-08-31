@@ -7,7 +7,11 @@
 
 Rml::ElementDocument *RocketMainMenuDocument::m_pInstance = nullptr;
 bool RocketMainMenuDocument::showing = false;
-bool RocketMainMenuDocument::grabbingInput = false;
+
+bool RocketMainMenuDocument::OwnsInput()
+{
+    return showing && m_pInstance && m_pInstance->IsVisible();
+}
 
 class MainMenuEventListener : public Rml::EventListener
 {
@@ -44,11 +48,7 @@ void RocketMainMenuDocument::LoadDialog()
     {
         m_pInstance = RocketUI()->LoadDocumentFile( ROCKET_CONTEXT_MENU, "menu.rml", RocketMainMenuDocument::LoadDialog, RocketMainMenuDocument::UnloadDialog );
         m_pInstance->Show();
-        if( !grabbingInput )
-        {
-            RocketUI()->DenyInputToGame( true, "MainMenu" );
-            grabbingInput = true;
-        }
+        showing = true;
         if( !m_pInstance )
         {
             Error("Couldn't create rocketui menu!\n");
@@ -67,11 +67,6 @@ void RocketMainMenuDocument::UnloadDialog()
         m_pInstance->GetElementById("play-menu-btn")->RemoveEventListener(Rml::EventId::Click, &mainMenuEventListener);
         m_pInstance->Close();
         m_pInstance = nullptr;
-        if( grabbingInput )
-        {
-            RocketUI()->DenyInputToGame( false, "MainMenu" );
-            grabbingInput = false;
-        }
     }
 }
 
@@ -98,23 +93,11 @@ void RocketMainMenuDocument::ShowPanel(bool bShow, bool immediate)
             LoadDialog();
 
         m_pInstance->Show();
-
-        if( !grabbingInput )
-        {
-            RocketUI()->DenyInputToGame( true, "MainMenu" );
-            grabbingInput = true;
-        }
     }
     else
     {
         if( m_pInstance )
             m_pInstance->Hide();
-
-        if( grabbingInput )
-        {
-            RocketUI()->DenyInputToGame( false, "MainMenu" );
-            grabbingInput = false;
-        }
     }
 
     showing = bShow;

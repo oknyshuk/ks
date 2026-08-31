@@ -336,14 +336,6 @@
 				</div>
 			</div>
 			<div class="setting-row">
-				<span class="setting-label">Raw Input</span>
-				<input type="checkbox" id="m_rawinput" data-convar="m_rawinput" />
-			</div>
-			<div class="setting-row">
-				<span class="setting-label">Mouse Filter</span>
-				<input type="checkbox" id="m_filter" data-convar="m_filter" />
-			</div>
-			<div class="setting-row">
 				<span class="setting-label">Reverse Mouse</span>
 				<input type="checkbox" id="m_pitch" />
 			</div>

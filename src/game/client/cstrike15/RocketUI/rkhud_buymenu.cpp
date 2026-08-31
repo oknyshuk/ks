@@ -206,12 +206,6 @@ static void UnloadRkBuyMenu()
     pBuyMenu->m_pInstance->Close();
     pBuyMenu->m_pInstance = nullptr;
     pBuyMenu->m_bVisible = false;
-
-    if( pBuyMenu->m_bGrabbingInput )
-    {
-        RocketUI()->DenyInputToGame( false, "BuyMenu" );
-        pBuyMenu->m_bGrabbingInput = false;
-    }
 }
 
 static void LoadRkBuyMenu()
@@ -284,10 +278,14 @@ static void LoadRkBuyMenu()
 
 RkHudBuyMenu::RkHudBuyMenu(const char *value) : CHudElement( value ),
                                                 m_bVisible( false ),
-                                                m_bGrabbingInput( false ),
                                                 m_pInstance( nullptr )
 {
     SetHiddenBits( /* HIDEHUD_MISCSTATUS */ 0 );
+}
+
+bool RkHudBuyMenu::OwnsInput() const
+{
+    return m_bVisible && m_pInstance && m_pInstance->IsVisible();
 }
 
 RkHudBuyMenu::~RkHudBuyMenu() noexcept
@@ -320,7 +318,6 @@ void RkHudBuyMenu::ShowPanel(bool bShow, bool force)
         if( !m_bVisible )
         {
             UpdateBuyMenu();
-            RocketUI()->DenyInputToGame( true, "BuyMenu" );
             m_pInstance->Show();
         }
         OnNewFrameBuyMenu();
@@ -329,7 +326,6 @@ void RkHudBuyMenu::ShowPanel(bool bShow, bool force)
     {
         if( m_bVisible )
         {
-            RocketUI()->DenyInputToGame( false, "BuyMenu" );
             m_pInstance->Hide();
         }
     }

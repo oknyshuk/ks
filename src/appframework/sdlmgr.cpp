@@ -8,6 +8,7 @@
 #include <SDL3/SDL_vulkan.h>
 
 #include "appframework/ilaunchermgr.h"
+#include "appframework/sdlwindow.h"
 #include "tier1/keyvalues.h"
 #include "filesystem.h"
 
@@ -19,8 +20,6 @@
 // NOTE: This has to be the last file included! (turned off below, since this is included like a header)
 #include "tier0/memdbgon.h"
 
-ConVar sdl_double_click_size( "sdl_double_click_size", "2" );
-ConVar sdl_double_click_time( "sdl_double_click_time", "400" );
 
 static void DebugPrintf( const char *pMsg, ... )
 {
@@ -89,19 +88,18 @@ public:
 	virtual bool CreateGameWindow( const char *pTitle, bool bWindowed, int width, int height, bool bDesktopFriendlyFullscreen );
 
 	// Get the next N events. The function returns the number of events that were filled into your array.
-	virtual int GetEvents( CCocoaEvent *pEvents, int nMaxEventsToReturn );
+	virtual int GetEvents( SDL_Event *pEvents, int nMaxEventsToReturn );
 
 	// Set the mouse cursor position.
 	virtual void SetCursorPosition( int x, int y );
 	virtual void GetCursorPosition( int *px, int *py );
 
-	virtual void *GetWindowRef() { return (void *)m_Window; }
-
 	virtual void SetWindowFullScreen( bool bFullScreen, int nWidth, int nHeight, bool bDesktopFriendlyFullscreen );
-	virtual bool IsWindowFullScreen() { return m_bFullScreen; }
-	virtual void MoveWindow( int x, int y );
-	virtual void SizeWindow( int width, int tall );
 	virtual void PumpWindowsMessageLoop();
+
+	// Not part of ILauncherMgr; used internally by CreateGameWindow()/SetWindowFullScreen().
+	void MoveWindow( int x, int y );
+	void SizeWindow( int width, int tall );
 
 	virtual void DestroyGameWindow();
 	virtual void SetApplicationIcon( const char *pchAppIconFile );
@@ -109,13 +107,8 @@ public:
 	virtual void GetMouseDelta( float &x, float &y, bool bIgnoreNextMouseDelta = false );
 
 	virtual int GetActiveDisplayIndex();
-	virtual void GetNativeDisplayInfo( int nDisplay, uint &nWidth, uint &nHeight, uint &nRefreshHz ); // Retrieve the size of the monitor (desktop)
-	virtual void RenderedSize( uint &width, uint &height, bool set );	// either set or retrieve rendered size value (from dxabstract)
-	virtual void DisplayedSize( uint &width, uint &height );			// query backbuffer size (window size whether FS or windowed)
-
-	virtual void GetStackCrawl( CStackCrawlParams *params );
-
-	virtual void WaitUntilUserInput( int msSleepTime );
+	// Not part of ILauncherMgr; used internally by CreateGameWindow().
+	void GetNativeDisplayInfo( int nDisplay, uint &nWidth, uint &nHeight, uint &nRefreshHz );
 
   	virtual InputCursorHandle_t LoadCursorFromFile( const char *pchFileName );
 
@@ -123,20 +116,23 @@ public:
 	virtual void SetCursorIcon( const InputCursorHandle_t pchCursor );
 
 	// Post an event to the input event queue.
-	void PostEvent( const CCocoaEvent &theEvent );
+	void PostEvent( const SDL_Event &theEvent );
+
+	// Map SDL window coordinates into engine screen space.
+	virtual void WindowToEngineCoords( float wx, float wy, int &ex, int &ey );
+	void EngineToWindowCoords( int ex, int ey, float &wx, float &wy );
 
 	virtual void SetMouseVisible( bool bState );
+
+	// Push the desired pointer state to SDL. Called when intent changes, not per frame.
+	void ApplyPointerState();
 	virtual void SetMouseCursor( SDL_Cursor *hCursor );
 	virtual void SetForbidMouseGrab( bool bForbidMouseGrab ) { m_bForbidMouseGrab = bForbidMouseGrab; }
 
 	virtual void OnFrameRendered();
 
-	virtual double GetPrevGLSwapWindowTime() { return m_flPrevGLSwapWindowTime; }
-
 	// Returns all dependent libraries
 	virtual const AppSystemInfo_t* GetDependencies() {return NULL;}
-
-	virtual void SetGammaRamp( const uint16 *pRed, const uint16 *pGreen, const uint16 *pBlue );
 
 #if WITH_OVERLAY_CURSOR_VISIBILITY_WORKAROUND
 	virtual void ForceSystemCursorVisible();
@@ -158,17 +154,14 @@ public:
 	virtual bool IsSingleton() { return false; }
 
 private:
-	void handleKeyInput( const SDL_Event &event );
 
 
 	SDL_Window *m_Window;
 
 
 	bool m_bCursorVisible;
-	bool m_bSetMouseVisibleCalled;
 	int m_nFramesCursorInvisibleFor;
 	SDL_Cursor *m_hCursor;
-	bool m_bSetMouseCursorCalled;
 
 	bool m_bHasFocus;
 	bool m_bFullScreen;
@@ -181,8 +174,6 @@ private:
 	int m_ScreenWidth;
 	int m_ScreenHeight;
 
-	int m_renderedWidth;
-	int m_rendererHeight;
 
 	int m_WindowWidth;
 	int m_WindowHeight;
@@ -191,7 +182,6 @@ private:
     int  m_nMouseTargetX;
     int  m_nMouseTargetY;
     int  m_nWarpDelta;
-    bool m_bRawInput;
 
 	int m_lastKnownSwapInterval;	//-2 if unknown, 0/1/-1 otherwise
 	int m_lastKnownSwapLimit;		//-1 if unknown, 0/1 otherwise
@@ -199,27 +189,23 @@ private:
 	int m_pixelFormatAttribs[32];
 	int m_pixelFormatAttribCount;
 
-	float m_flMouseXScale;
-	float m_flMouseYScale;
 
-	// !!! FIXME: can we rename these from "Cocoa"?
 	// Event queue. Produced by PumpWindowsMessageLoop() and drained by
 	// CInputSystem::PollInputState_Linux(), which calls PumpWindowsMessageLoop()
 	// itself -- so this is single threaded and needs no lock. A fixed ring also
 	// avoids a heap allocation per event, which matters at high mouse polling rates.
-	static const int kMaxQueuedEvents = 256;
-	CCocoaEvent m_Events[ kMaxQueuedEvents ];
+	// Sized for two pumps per drain (2 x 100 SDL events x up to 2 entries each),
+	// since PostEvent() drops on overflow and a dropped KEY_UP is a stuck key.
+	static const int kMaxQueuedEvents = 512;
+	SDL_Event m_Events[ kMaxQueuedEvents ];
+	// Ring-owned copy of SDL_TextInputEvent::text. SDL allocates that string itself
+	// and recycles it on the next pump, so it must not be read after PostEvent()
+	// returns; each queued text event points at its slot here instead.
+	char m_EventText[ kMaxQueuedEvents ][ 64 ];
 	int m_nEventsHead;							// next slot to read
 	int m_nEventsCount;
 
-	uint m_keyModifierMask;
-	uint32_t m_keyModifiers;
-	uint32_t m_mouseButtons;
 
-	bool m_bGotMouseButtonDown;
-	Uint32 m_MouseButtonDownTimeStamp;
-	int m_MouseButtonDownX;
-	int m_MouseButtonDownY;
 
 #if WITH_OVERLAY_CURSOR_VISIBILITY_WORKAROUND
 	int m_nForceCursorVisible;
@@ -227,7 +213,6 @@ private:
 	SDL_Cursor* m_hSystemArrowCursor;
 #endif
 
-	double m_flPrevGLSwapWindowTime;
 
 	bool m_bTextMode;
 };
@@ -297,10 +282,10 @@ static int GetLargestDisplaySize( int& Width, int& Height )
 
 CON_COMMAND( grab_window, "grab/ungrab window." )
 {
-	if ( g_pLauncherMgr && g_pLauncherMgr->GetWindowRef() )
+	SDL_Window *pWindow = GetGameSDLWindow();
+	if ( pWindow )
 	{
 		bool bGrab;
-		SDL_Window *pWindow = ( SDL_Window * )g_pLauncherMgr->GetWindowRef();
 
 		if ( args.ArgC() >= 2 )
 		{
@@ -311,7 +296,8 @@ CON_COMMAND( grab_window, "grab/ungrab window." )
 			bGrab = SDL_GetWindowMouseGrab( pWindow ) ? false : true;
 		}
 
-		g_pLauncherMgr->SetForbidMouseGrab( !bGrab );
+		if ( g_pLauncherMgr )
+			g_pLauncherMgr->SetForbidMouseGrab( !bGrab );
 
 		if ( bGrab != SDL_GetWindowMouseGrab( pWindow ) )
 		{
@@ -320,7 +306,7 @@ CON_COMMAND( grab_window, "grab/ungrab window." )
 
 			// force non-fullscreen windows to the foreground if grabbed, so you can't
 			//  get your mouse locked to something in the background.
-			if ( bGrab && !g_pLauncherMgr->IsWindowFullScreen() )
+			if ( bGrab && !( SDL_GetWindowFlags( pWindow ) & SDL_WINDOW_FULLSCREEN ) )
 			{
 				SDL_RaiseWindow( pWindow );
 			}
@@ -347,8 +333,11 @@ InitReturnVal_t CSDLMgr::Init()
 	m_bTextMode = false;
 #endif
 
-	SDL_SetHint( SDL_HINT_VIDEO_DRIVER, "wayland" );
+	SDL_SetHint( SDL_HINT_VIDEO_DRIVER, "wayland,x11" );
 	SDL_SetHint( SDL_HINT_VIDEO_ALLOW_SCREENSAVER, "1" );
+	// Never run relative motion through the desktop pointer curve: mouselook wants
+	// the device deltas. This is SDL's default, stated because it is load-bearing.
+	SDL_SetHint( SDL_HINT_MOUSE_RELATIVE_SYSTEM_SCALE, "0" );
 
 	if (!m_bTextMode && !SDL_WasInit(SDL_INIT_VIDEO))
 	{
@@ -369,16 +358,11 @@ InitReturnVal_t CSDLMgr::Init()
 	}
 
 	m_bCursorVisible = true;
-	m_bSetMouseVisibleCalled = false;
 	m_nFramesCursorInvisibleFor = 0;
 	m_hCursor = NULL;
-	m_bSetMouseCursorCalled = false;
 
 
 	m_bHasFocus = true;
-	m_keyModifiers = 0;
-	m_keyModifierMask = 0;
-	m_mouseButtons = 0;
 
 	m_Window = NULL;
 	m_bFullScreen = false;
@@ -388,26 +372,17 @@ InitReturnVal_t CSDLMgr::Init()
 	m_flMouseYDelta = 0.0f;
 	m_ScreenWidth = 0;
 	m_ScreenHeight = 0;
-	m_renderedWidth = 0;
-	m_rendererHeight = 0;
 	m_WindowWidth = 0;
 	m_WindowHeight = 0;
 	m_pixelFormatAttribCount = 0;
 	m_lastKnownSwapInterval = -2;
 	m_lastKnownSwapLimit = -1;
-	m_flMouseXScale = 1.0f;
-	m_flMouseYScale = 1.0f;
 
-	m_bGotMouseButtonDown = false;
-	m_MouseButtonDownTimeStamp = 0;
-	m_MouseButtonDownX = 0;
-	m_MouseButtonDownY = 0;
 
 	m_bExpectSyntheticMouseMotion = false;
 	m_nMouseTargetX = 0;
 	m_nMouseTargetY = 0;
 	m_nWarpDelta = 0;
-	m_bRawInput = false;
 
 #if WITH_OVERLAY_CURSOR_VISIBILITY_WORKAROUND
 	m_nForceCursorVisible = 0;
@@ -415,7 +390,6 @@ InitReturnVal_t CSDLMgr::Init()
 	m_hSystemArrowCursor = SDL_CreateSystemCursor( SDL_SYSTEM_CURSOR_DEFAULT );
 #endif
 
-	m_flPrevGLSwapWindowTime = 0.0f;
 
 	memset(m_pixelFormatAttribs, '\0', sizeof (m_pixelFormatAttribs));
 
@@ -600,16 +574,20 @@ bool CSDLMgr::CreateHiddenGameWindow( const char *pTitle, bool bWindowed, int wi
 	if (m_Window == NULL)
 		Error( "Failed to create SDL window: %s", SDL_GetError() );
 
+	// Publish for every other module; see appframework/sdlwindow.h.
+	SetGameSDLWindow( m_Window );
+
 	SetAssertDialogParent( m_Window );
 
-	m_WindowWidth = width;
-	m_WindowHeight = height;
+	// The compositor decides the final size; latch what we actually got, since
+	// WindowToEngineCoords() divides by it.
+	SDL_GetWindowSize( m_Window, &m_WindowWidth, &m_WindowHeight );
 
 	return true;
 }
 
 
-int CSDLMgr::GetEvents( CCocoaEvent *pEvents, int nMaxEventsToReturn )
+int CSDLMgr::GetEvents( SDL_Event *pEvents, int nMaxEventsToReturn )
 {
 	SDLAPP_FUNC;
 
@@ -625,57 +603,90 @@ int CSDLMgr::GetEvents( CCocoaEvent *pEvents, int nMaxEventsToReturn )
 	return nToWrite;
 }
 
-// Set the mouse cursor position.
+// Set the mouse cursor position, given engine screen space coordinates.
 void CSDLMgr::SetCursorPosition( int x, int y )
 {
 	SDLAPP_FUNC;
 
-	int windowHeight = 0;
-	int windowWidth = 0;
-	SDL_GetWindowSize((SDL_Window*)GetWindowRef(), &windowWidth, &windowHeight);
-
-	CMatRenderContextPtr pRenderContext( g_pMaterialSystem );
-	int rx, ry, width, height;
-	pRenderContext->GetViewport( rx, ry, width, height );
-	if ( width != windowWidth || height != windowHeight  )
-	{
-		// Scale from viewport coords to window coords
-		x = x * (float)windowWidth/width;
-		y = y * (float)windowHeight/height;
-	}
+	float wx, wy;
+	EngineToWindowCoords( x, y, wx, wy );
 
     m_bExpectSyntheticMouseMotion = true;
-	m_nMouseTargetX = x;
-	m_nMouseTargetY = y;
+	m_nMouseTargetX = (int)wx;
+	m_nMouseTargetY = (int)wy;
 
-	SDL_WarpMouseInWindow(m_Window, (float)x, (float)y);
+	SDL_WarpMouseInWindow( m_Window, wx, wy );
+}
+
+// Map SDL window coordinates into engine screen space.
+//
+// The engine's screen space is the backbuffer: engine->GetScreenSize() calls
+// IMatRenderContext::GetWindowSize(), which delegates to
+// CShaderDeviceBase::GetWindowSize(), and under USE_SDL that returns
+// GetBackBufferDimensions(). VGUI and RocketUI therefore work in backbuffer
+// pixels, and this is the only conversion a cursor position needs.
+//
+// m_WindowWidth/Height are the LOGICAL window size (tracked from
+// SDL_EVENT_WINDOW_RESIZED), which is the same space SDL reports mouse
+// coordinates in. Normalising by them gives a [0,1] fraction, so scaling that by
+// the pixel-space backbuffer is correct at any pixel density. Do not substitute
+// SDL_GetWindowSizeInPixels() here: that mixes logical and pixel spaces, and only
+// happens to agree while the window lacks SDL_WINDOW_HIGH_PIXEL_DENSITY.
+//
+// Deliberately NOT IMatRenderContext::GetViewport(): the viewport is transient
+// render state (the 3D view installs a sub-rect partway through the frame), so a
+// viewport-based mapping silently depends on where in the frame the event was
+// pumped. Two of the three cursor paths used to do that, which is why they
+// disagreed with each other.
+void CSDLMgr::WindowToEngineCoords( float wx, float wy, int &ex, int &ey )
+{
+	int bw = 0, bh = 0;
+	if ( g_pMaterialSystem )
+		g_pMaterialSystem->GetBackBufferDimensions( bw, bh );
+
+	if ( bw > 0 && bh > 0 && m_WindowWidth > 0 && m_WindowHeight > 0 &&
+	     ( bw != m_WindowWidth || bh != m_WindowHeight ) )
+	{
+		ex = (int)( wx * (float)bw / (float)m_WindowWidth );
+		ey = (int)( wy * (float)bh / (float)m_WindowHeight );
+	}
+	else
+	{
+		ex = (int)wx;
+		ey = (int)wy;
+	}
+}
+
+// Inverse of WindowToEngineCoords: engine screen space back into SDL window
+// coordinates, for warping the cursor.
+void CSDLMgr::EngineToWindowCoords( int ex, int ey, float &wx, float &wy )
+{
+	int bw = 0, bh = 0;
+	// NULL before tier2 is connected and again after shutdown.
+	if ( g_pMaterialSystem )
+		g_pMaterialSystem->GetBackBufferDimensions( bw, bh );
+
+	if ( bw > 0 && bh > 0 && m_WindowWidth > 0 && m_WindowHeight > 0 &&
+	     ( bw != m_WindowWidth || bh != m_WindowHeight ) )
+	{
+		wx = (float)ex * (float)m_WindowWidth / (float)bw;
+		wy = (float)ey * (float)m_WindowHeight / (float)bh;
+	}
+	else
+	{
+		wx = (float)ex;
+		wy = (float)ey;
+	}
 }
 
 void CSDLMgr::GetCursorPosition( int *px, int *py )
 {
 	float fx, fy;
-	SDL_GetMouseState(&fx, &fy);
-	int x = (int)fx, y = (int)fy;
-
-	int windowHeight = 0;
-	int windowWidth = 0;
-	SDL_GetWindowSize((SDL_Window*)GetWindowRef(), &windowWidth, &windowHeight);
-
-	CMatRenderContextPtr pRenderContext( g_pMaterialSystem );
-	int rx, ry, width, height;
-	pRenderContext->GetViewport( rx, ry, width, height );
-
-	if ( width != windowWidth || height != windowHeight  )
-	{
-		// Scale from window coords to viewport coords so mouse matches VGUI
-		x = x * (float)width/windowWidth;
-		y = y * (float)height/windowHeight;
-	}
-	*px = x;
-	*py = y;
+	SDL_GetMouseState( &fx, &fy );
+	WindowToEngineCoords( fx, fy, *px, *py );
 }
 
-void CSDLMgr::PostEvent( const CCocoaEvent &theEvent )
+void CSDLMgr::PostEvent( const SDL_Event &theEvent )
 {
 	SDLAPP_FUNC;
 
@@ -686,16 +697,99 @@ void CSDLMgr::PostEvent( const CCocoaEvent &theEvent )
 		return;
 	}
 
-	m_Events[ ( m_nEventsHead + m_nEventsCount ) % kMaxQueuedEvents ] = theEvent;
+	const int nSlot = ( m_nEventsHead + m_nEventsCount ) % kMaxQueuedEvents;
+	m_Events[ nSlot ] = theEvent;
+
+	if ( theEvent.type == SDL_EVENT_TEXT_INPUT )
+	{
+		// See m_EventText: the string SDL handed us does not outlive this call.
+		V_strncpy( m_EventText[ nSlot ],
+		           theEvent.text.text ? theEvent.text.text : "",
+		           sizeof( m_EventText[ nSlot ] ) );
+
+		// V_strncpy truncates on a byte boundary, which can leave a partial UTF-8
+		// sequence at the end for a long IME commit; back up to the last start byte
+		// so the consumer never sees an invalid encoding.
+		char *pText = m_EventText[ nSlot ];
+		int nLen = V_strlen( pText );
+		while ( nLen > 0 && ( (unsigned char)pText[ nLen - 1 ] & 0xC0 ) == 0x80 )
+			--nLen;							// drop trailing continuation bytes
+		if ( nLen > 0 )
+		{
+			const unsigned char cLead = (unsigned char)pText[ nLen - 1 ];
+			const int nExpected = ( cLead < 0x80 ) ? 1 : ( cLead >= 0xF0 ) ? 4 : ( cLead >= 0xE0 ) ? 3 : ( cLead >= 0xC0 ) ? 2 : 1;
+			if ( V_strlen( pText ) - ( nLen - 1 ) < nExpected )
+				pText[ nLen - 1 ] = '\0';	// lead byte without its full sequence
+		}
+
+		m_Events[ nSlot ].text.text = m_EventText[ nSlot ];
+	}
+
 	m_nEventsCount++;
+}
+
+// SDL owns the pointer lifecycle: relative mode is a window flag
+// (SDL_WINDOW_MOUSE_RELATIVE_MODE) whose effects SDL scopes to focus itself, and the
+// Wayland backend re-derives the lock from that flag as focus moves. So state it once
+// per intent change and leave it alone -- do not clear it on focus loss, and do not
+// re-assert it per frame (SDL_SetWindowRelativeMouseMode flushes pending motion).
+void CSDLMgr::ApplyPointerState()
+{
+	if ( !m_Window )
+		return;
+
+	// Hidden cursor means mouselook: relative mode gives unaccelerated, sub-pixel
+	// deltas with the pointer locked, via the Wayland relative-pointer and
+	// pointer-constraints protocols.
+	const bool bRelativeMouseMode = !m_bCursorVisible;
+	const bool bWindowGrab = bRelativeMouseMode && !m_bForbidMouseGrab;
+	const bool bShowCursor = m_bCursorVisible && m_hCursor;
+
+	// Compare against SDL, never against a cached copy of what we last asked for. The
+	// window is recreated and reset underneath us (mode switches, device resets), so a
+	// cache says nothing about reality -- and SDL_SetWindowRelativeMouseMode flushes
+	// pending motion, so we must not call it when nothing actually changed either.
+	if ( SDL_GetWindowRelativeMouseMode( m_Window ) != bRelativeMouseMode )
+		SDL_SetWindowRelativeMouseMode( m_Window, bRelativeMouseMode );
+
+	if ( SDL_GetWindowMouseGrab( m_Window ) != bWindowGrab )
+		SDL_SetWindowMouseGrab( m_Window, bWindowGrab );
+
+	if ( bShowCursor )
+	{
+		SDL_SetCursor( m_hCursor );
+		if ( !SDL_CursorVisible() )
+			SDL_ShowCursor();
+	}
+	else if ( SDL_CursorVisible() )
+	{
+		SDL_HideCursor();
+	}
 }
 
 void CSDLMgr::SetMouseVisible( bool bState )
 {
 	SDLAPP_FUNC;
 
-    m_bCursorVisible = bState;
-    m_bSetMouseVisibleCalled = true;
+	const bool bBecameVisible = ( bState && !m_bCursorVisible );
+
+	m_bCursorVisible = bState;
+
+	// Warp before relative mode ends, per SDL: that is what decides where the cursor
+	// reappears. Only bother if mouselook has been holding the pointer for a while.
+	if ( bBecameVisible )
+	{
+		if ( m_nFramesCursorInvisibleFor > 60 )
+		{
+			int windowWidth = 0, windowHeight = 0;
+			SDL_GetWindowSize( m_Window, &windowWidth, &windowHeight );
+			SDL_WarpMouseInWindow( m_Window, (float)( windowWidth / 2 ), (float)( windowHeight / 2 ) );
+		}
+
+		m_nFramesCursorInvisibleFor = 0;
+	}
+
+	ApplyPointerState();
 }
 
 void CSDLMgr::SetMouseCursor( SDL_Cursor *hCursor )
@@ -704,18 +798,13 @@ void CSDLMgr::SetMouseCursor( SDL_Cursor *hCursor )
 
 	if ( m_hCursor != hCursor )
 	{
-		if ( !hCursor )
-		{
-			// SDL_SetCursor( NULL ) just forces a cursor redraw, so don't ever bother doing that.
-			SetMouseVisible( false );
-		}
-		else
-		{
-			SetMouseVisible( true );
-		}
-
 		m_hCursor = hCursor;
-		m_bSetMouseCursorCalled = true;
+
+		// SDL_SetCursor( NULL ) just forces a cursor redraw, so no cursor means hide.
+		SetMouseVisible( hCursor != NULL );
+
+		// ...and if visibility did not change, the cursor shape still did.
+		ApplyPointerState();
 	}
 }
 
@@ -753,62 +842,13 @@ void CSDLMgr::OnFrameRendered()
 	{
 		Assert( m_nForceCursorVisible == 0 );
 
-		// Make sure to give the normal processing a shot at putting things
-		// back correctly.
-		m_bSetMouseCursorCalled = true;
-		m_bSetMouseVisibleCalled = true;
+		// Overlay let go of the cursor: put our own intent back.
+		ApplyPointerState();
 	}
 
 	m_nForceCursorVisiblePrev = m_nForceCursorVisible;
 #endif
 
-	if ( m_bCursorVisible && m_bSetMouseCursorCalled )
-	{
-		SDL_SetCursor( m_hCursor );
-
-		m_bSetMouseCursorCalled = false;
-	}
-
-	if ( m_bSetMouseVisibleCalled )
-	{
-		ConVarRef rawinput( "m_rawinput" );
-
-		m_bRawInput = !m_bCursorVisible && rawinput.IsValid() && rawinput.GetBool();
-
-		bool bWindowGrab = !m_bCursorVisible;
-		bool bRelativeMouseMode = bWindowGrab;
-
-		if ( !m_bRawInput )
-		{
-			if ( m_bForbidMouseGrab )
-				bWindowGrab = false;
-
-			bRelativeMouseMode = false;
-		}
-
-		SDL_SetWindowMouseGrab( m_Window, bWindowGrab );
-		SDL_SetWindowRelativeMouseMode( m_Window, bRelativeMouseMode );
-
-		if ( m_bCursorVisible && m_hCursor )
-			SDL_ShowCursor();
-		else
-			SDL_HideCursor();
-
-		m_bSetMouseVisibleCalled = false;
-
-		if ( m_bCursorVisible )
-		{
-			//if we were invisible for any number of frames and are set back to visible, then center the cursor.
-			if ( m_nFramesCursorInvisibleFor > 60 )
-			{
-				int windowHeight = 0, windowWidth = 0;
-				SDL_GetWindowSize((SDL_Window*)GetWindowRef(), &windowWidth, &windowHeight);
-				SDL_WarpMouseInWindow( m_Window, (float)(windowWidth/2), (float)(windowHeight/2) );
-			}
-
-			m_nFramesCursorInvisibleFor = 0;
-		}
-	}
 }
 
 
@@ -938,42 +978,8 @@ void CSDLMgr::SetWindowFullScreen( bool bFullScreen, int nWidth, int nHeight, bo
 		SizeWindow( nWidth, nHeight );
 	}
 
-	if (bFullScreen)
-	{
-		int drawableW, drawableH;
-		SDL_GetWindowSizeInPixels(m_Window, &drawableW, &drawableH);
 
-		if ( drawableW > 0 && drawableH > 0 )
-		{
-			// Use drawable size for accurate mouse scaling
-			m_flMouseXScale = (float)nWidth / (float)drawableW;
-			m_flMouseYScale = (float)nHeight / (float)drawableH;
-		}
-		else
-		{
-			// Fallback: query desktop mode for the window's current display
-			SDL_DisplayID displayID = SDL_GetDisplayForWindow( m_Window );
-			if ( !displayID )
-				displayID = SDL_GetPrimaryDisplay();
-			const SDL_DisplayMode *desktopMode = SDL_GetDesktopDisplayMode( displayID );
-			if ( desktopMode )
-			{
-				m_flMouseXScale = (float)nWidth / (float)desktopMode->w;
-				m_flMouseYScale = (float)nHeight / (float)desktopMode->h;
-			}
-			else
-			{
-				m_flMouseXScale = 1.0f;
-				m_flMouseYScale = 1.0f;
-			}
-		}
-	}
-	else
-	{
-		// Use 1:1 scaling for windowed mode
-		m_flMouseXScale = 1.0f;
-		m_flMouseYScale = 1.0f;
-	}
+	ApplyPointerState();
 }
 
 
@@ -1003,95 +1009,37 @@ void CSDLMgr::SizeWindow( int width, int tall )
 		m_WindowWidth = width;
 		m_WindowHeight = tall;
 	}
+
+	ApplyPointerState();
 }
 
 
 // key input handler
-void CSDLMgr::handleKeyInput( const SDL_Event &event )
+// Events CInputSystem actually consumes. Anything else is handled locally (or
+// ignored) and must not take a slot in the ring: SDL emits a lot of traffic we do
+// not care about (window enter/leave/exposed, display changes, poll sentinels), and
+// PostEvent() drops on overflow -- dropping a real KEY_UP would leave a key stuck
+// down. This also keeps events carrying SDL-owned pointers (drop/clipboard) out of
+// a queue that outlives them.
+static bool IsForwardedToInputSystem( Uint32 nType )
 {
-	SDLAPP_FUNC;
-
-	Assert( ( event.type == SDL_EVENT_KEY_DOWN ) || ( event.type == SDL_EVENT_KEY_UP ) );
-
-
-	const bool bPressed = ( event.type == SDL_EVENT_KEY_DOWN );
-
-	// !!! FIXME: we should be getting text input from a different event...
-	CCocoaEvent theEvent;
-	theEvent.m_EventType = ( bPressed ) ? CocoaEvent_KeyDown : CocoaEvent_KeyUp;
-	theEvent.m_VirtualKeyCode = event.key.scancode;
-	theEvent.m_UnicodeKey = 0;
-	theEvent.m_UnicodeKeyUnmodified = 0;
-
-	// key modifiers aren't necessarily reliable in all the cases we'd want, so track it ourselves.
-	const uint32_t ModCAPSLOCK = (1 << 0);
-	const uint32_t ModSHIFTR   = (1 << 1);
-	const uint32_t ModSHIFTL   = (1 << 2);
-	const uint32_t ModCTRLR    = (1 << 3);
-	const uint32_t ModCTRLL    = (1 << 4);
-	const uint32_t ModALTR     = (1 << 5);
-	const uint32_t ModALTL     = (1 << 6);
-	const uint32_t ModGUIR     = (1 << 7);
-	const uint32_t ModGUIL     = (1 << 8);
-
-	#define KEYSYMCASE(mod,side,op,key) \
-		case SDLK_##side##mod: \
-			m_keyModifiers op Mod##mod##side; \
-			theEvent.m_VirtualKeyCode = -key; \
-			break
-
-	//bool bDropKey = false;
-	if (bPressed)
+	switch ( nType )
 	{
-		switch (event.key.key)
-		{
-			KEYSYMCASE(CAPSLOCK,,|=,KEY_CAPSLOCK);
-			KEYSYMCASE(SHIFT,R,|=,KEY_RSHIFT);
-			KEYSYMCASE(SHIFT,L,|=,KEY_LSHIFT);
-			KEYSYMCASE(CTRL,R,|=,KEY_RCONTROL);
-			KEYSYMCASE(CTRL,L,|=,KEY_LCONTROL);
-			KEYSYMCASE(GUI,R,|=,KEY_RWIN);
-			KEYSYMCASE(GUI,L,|=,KEY_LWIN);
-			KEYSYMCASE(ALT,R,|=,KEY_RALT);
-			KEYSYMCASE(ALT,L,|=,KEY_LALT);
-			default: break;  // don't care.
-		}
+		case SDL_EVENT_KEY_DOWN:
+		case SDL_EVENT_KEY_UP:
+		case SDL_EVENT_TEXT_INPUT:
+		case SDL_EVENT_MOUSE_MOTION:
+		case SDL_EVENT_MOUSE_BUTTON_DOWN:
+		case SDL_EVENT_MOUSE_BUTTON_UP:
+		case SDL_EVENT_MOUSE_WHEEL:
+		case SDL_EVENT_WINDOW_FOCUS_GAINED:
+		case SDL_EVENT_WINDOW_FOCUS_LOST:
+		case SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED:
+		case SDL_EVENT_QUIT:
+			return true;
+		default:
+			return false;
 	}
-	else
-	{
-		switch (event.key.key)
-		{
-			KEYSYMCASE(CAPSLOCK,,&= ~,KEY_CAPSLOCK);
-			KEYSYMCASE(SHIFT,R,&= ~,KEY_RSHIFT);
-			KEYSYMCASE(SHIFT,L,&= ~,KEY_LSHIFT);
-			KEYSYMCASE(CTRL,R,&= ~,KEY_RCONTROL);
-			KEYSYMCASE(CTRL,L,&= ~,KEY_LCONTROL);
-			KEYSYMCASE(GUI,R,&= ~,KEY_RWIN);
-			KEYSYMCASE(GUI,L,&= ~,KEY_LWIN);
-			KEYSYMCASE(ALT,R,&= ~,KEY_RALT);
-			KEYSYMCASE(ALT,L,&= ~,KEY_LALT);
-			default: break;  // don't care.
-		}
-	}
-
-	#undef KEYSYMCASE
-
-	m_keyModifierMask = 0;
-	if (m_keyModifiers & ModCAPSLOCK)
-		m_keyModifierMask |= (1<<eCapsLockKey);
-	if (m_keyModifiers & (ModSHIFTR | ModSHIFTL))
-		m_keyModifierMask |= (1<<eShiftKey);
-	if (m_keyModifiers & (ModCTRLR | ModCTRLL))
-		m_keyModifierMask |= (1<<eControlKey);
-	if (m_keyModifiers & (ModALTR | ModALTL))
-		m_keyModifierMask |= (1<<eAltKey);
-	if (m_keyModifiers & (ModGUIR | ModGUIL))
-		m_keyModifierMask |= (1<<eCommandKey);
-
-	theEvent.m_ModifierKeyMask = m_keyModifierMask;
-
-	// make a decision about this event - does it go in the normal evt queue or into the debug queue.
-	PostEvent( theEvent );
 }
 
 void CSDLMgr::PumpWindowsMessageLoop()
@@ -1100,320 +1048,136 @@ void CSDLMgr::PumpWindowsMessageLoop()
 
 	SDL_Event event;
 	int nEventsProcessed = 0;
-	while ( SDL_PollEvent(&event) && nEventsProcessed < 100 )
+	while ( SDL_PollEvent( &event ) && nEventsProcessed < 100 )
 	{
 		nEventsProcessed++;
+
+		// This switch only maintains state that CSDLMgr itself owns (focus, window
+		// size, cursor grab, and the relative-motion accumulator behind
+		// GetMouseDelta). It deliberately does not interpret input: every event is
+		// forwarded verbatim to CInputSystem, which is the single place that turns
+		// SDL events into Source input events.
+		bool bForward = true;
 
 		switch ( event.type )
 		{
 			case SDL_EVENT_MOUSE_MOTION:
 			{
-                if( m_bHasFocus == false )
-					{
+				if ( !m_bHasFocus )
+				{
+					bForward = false;
 					break;
-					}
+				}
 
-				// When SDL_WarpMouseInWindow is called, an SDL_EVENT_MOUSE_MOTION
-				// event is sent. We want to ignore such 'synthetic'
-				// mouse motion events.
-				if ( m_bExpectSyntheticMouseMotion &&
-					 (int)event.motion.x == m_nMouseTargetX &&
-					 (int)event.motion.y == m_nMouseTargetY )
+				// SDL_WarpMouseInWindow generates a motion event when the cursor is
+				// visible (in relative mode SDL_HINT_MOUSE_RELATIVE_WARP_MOTION
+				// defaults off). Swallow the one we asked for, and disarm either way:
+				// on Wayland the warp is advisory and may land elsewhere, which would
+				// otherwise leave this armed and eat a later real motion event.
+				if ( m_bExpectSyntheticMouseMotion )
 				{
 					m_bExpectSyntheticMouseMotion = false;
-					break;
-				}
 
-                // Keep sub-pixel precision. Wayland's relative pointer protocol
-                // delivers wl_fixed (1/256 px) deltas, so truncating each event to an
-                // int silently discarded all slow movement: with a high polling rate
-                // mouse, |xrel| < 1.0 per event floored to zero every time. The sink
-                // (CInput::PerUserInput_t::m_flAccumulatedMouse*Movement) is float, so
-                // there is no reason to quantise here.
-                m_flMouseXDelta += event.motion.xrel;
-                m_flMouseYDelta += event.motion.yrel;
-
-				CCocoaEvent theEvent;
-				theEvent.m_EventType = CocoaEvent_MouseMove;
-				// Scale mouse coords from window space to render resolution.
-				// SDL3 delivers mouse coords in LOGICAL window coordinates (points),
-				// while the backbuffer (bw/bh) is in PIXELS. m_WindowWidth/Height are
-				// kept in the same logical space as the event coords, so mx/m_WindowWidth
-				// is a normalized [0,1] fraction and multiplying by the pixel backbuffer
-				// yields the correct pixel coordinate. At 1.0x scale logical==pixel (no-op).
-				{
-					int mx = (int)event.motion.x;
-					int my = (int)event.motion.y;
-					if ( m_bCursorVisible )
+					if ( (int)event.motion.x == m_nMouseTargetX &&
+						 (int)event.motion.y == m_nMouseTargetY )
 					{
-						int bw, bh;
-						g_pMaterialSystem->GetBackBufferDimensions( bw, bh );
-						if ( bw > 0 && bh > 0 && m_WindowWidth > 0 && m_WindowHeight > 0 &&
-							 (bw != m_WindowWidth || bh != m_WindowHeight) )
-						{
-							mx = mx * bw / m_WindowWidth;
-							my = my * bh / m_WindowHeight;
-						}
+						bForward = false;
+						break;
 					}
-					theEvent.m_MousePos[0] = mx;
-					theEvent.m_MousePos[1] = my;
 				}
-				theEvent.m_MouseButtonFlags = m_mouseButtons;
-				PostEvent( theEvent );
+
+				// Keep sub-pixel precision. Wayland's relative pointer protocol
+				// delivers wl_fixed (1/256 px) deltas, so truncating each event to an
+				// int silently discarded all slow movement: with a high polling rate
+				// mouse, |xrel| < 1.0 per event floored to zero every time.
+				m_flMouseXDelta += event.motion.xrel;
+				m_flMouseYDelta += event.motion.yrel;
 				break;
 			}
 
-			case SDL_EVENT_MOUSE_BUTTON_UP:
-			case SDL_EVENT_MOUSE_BUTTON_DOWN:
+			case SDL_EVENT_KEY_DOWN:
 			{
-				// SDL buttons:
-				//  1 = Left button
-				//  2 = Middle button
-				//  3 = Right button
-				//  4 = Wheel Forward		; These events are handled by SDL_MOUSEWHEEL and don't come through here.
-				//  5 = Wheel Back			;
-				//  6 = Wheel Tilt Left		;
-				//  7 = Wheel Tilt Right	;
-				//  8 = Browser Back
-				//  9 = Browser Forward
-				//  10 = Task button (probably similar to Alt-Tab)
-
-				// every other platform does left(1), right(2), middle(3)...
-				int button;
-
-				switch( event.button.button )
+				if ( event.key.repeat &&
+					 ( event.key.key == SDLK_BACKSPACE || event.key.key == SDLK_DELETE ) )
 				{
-				case 1:	button = 1; break;
-				case 2: button = 3; break;
-				case 3: button = 2; break;
-				default:
-					// For all buttons above 4, map them to 4 & 5 forever. This is because different mice
-					//	will use different mappings. Ie, mousewheel mice can do this:
-					//    4 = Wheel Forward		; These events are handled by SDL_MOUSEWHEEL and don't come through here.
-					//    5 = Wheel Back		;
-					//    6 = Wheel Tilt Left	;
-					//    7 = Wheel Tilt Right	;
-					//    8 = Browser Back
-					//    9 = Browser Forward
-					//    10 = Task button (probably similar to Alt-Tab)
-					// Mice without wheels can do 4/5 as regular 4/5, etc.
-					button = 4 + ( event.button.button & 0x1 );
-					break;
+					// UI text fields want a keyup between auto-repeats rather than a
+					// run of keydowns with no release.
+					SDL_Event up = event;
+					up.type = SDL_EVENT_KEY_UP;
+					up.key.type = SDL_EVENT_KEY_UP;
+					up.key.down = false;
+					up.key.repeat = false;
+					PostEvent( up );
 				}
-
-				const bool bPressed = event.button.down;
-				const CocoaMouseButton_t cocoaButton = ( CocoaMouseButton_t )( 1 << (button - 1 ) );
-
-				if (bPressed)
-					m_mouseButtons |= cocoaButton;
-				else
-					m_mouseButtons &= ~cocoaButton;
-
-				bool bDoublePress = false;
-
-				if (bPressed)
-				{
-					if ( m_bGotMouseButtonDown &&
-						 ( (int)( event.button.timestamp - m_MouseButtonDownTimeStamp ) <= sdl_double_click_time.GetInt() ) &&
-						 ( abs( (int)event.button.x - m_MouseButtonDownX ) <= sdl_double_click_size.GetInt() ) &&
-						 ( abs( (int)event.button.y - m_MouseButtonDownY ) <= sdl_double_click_size.GetInt() ) )
-					{
-						bDoublePress = true;
-						m_bGotMouseButtonDown = false;
-					}
-					else
-					{
-						m_MouseButtonDownTimeStamp = event.button.timestamp;
-						m_MouseButtonDownX = (int)event.button.x;
-						m_MouseButtonDownY = (int)event.button.y;
-						m_bGotMouseButtonDown = true;
-					}
-				}
-
-				CCocoaEvent theEvent;
-				theEvent.m_EventType = (bPressed) ? CocoaEvent_MouseButtonDown : CocoaEvent_MouseButtonUp;
-				// Scale mouse coords from window space to viewport space to match VGUI
-				{
-					int mx = (int)event.button.x;
-					int my = (int)event.button.y;
-					if ( m_bCursorVisible )
-					{
-						CMatRenderContextPtr pRenderContext( g_pMaterialSystem );
-						int rx, ry, vw, vh;
-						pRenderContext->GetViewport( rx, ry, vw, vh );
-						if ( vw > 0 && vh > 0 && m_WindowWidth > 0 && m_WindowHeight > 0 &&
-							 (vw != m_WindowWidth || vh != m_WindowHeight) )
-						{
-							mx = mx * vw / m_WindowWidth;
-							my = my * vh / m_WindowHeight;
-						}
-					}
-					theEvent.m_MousePos[0] = mx;
-					theEvent.m_MousePos[1] = my;
-				}
-				theEvent.m_MouseButtonFlags = m_mouseButtons;
-				theEvent.m_nMouseClickCount = bDoublePress ? 2 : 1;
-				theEvent.m_MouseButton = cocoaButton;
-				PostEvent( theEvent );
-
 				break;
 			}
 
-			case SDL_EVENT_MOUSE_WHEEL:
+			case SDL_EVENT_WINDOW_ENTER_FULLSCREEN:
+			case SDL_EVENT_WINDOW_LEAVE_FULLSCREEN:
+			case SDL_EVENT_WINDOW_DISPLAY_CHANGED:
+			case SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED:
 			{
-				int scroll = event.wheel.y;
-
-
-				if ( scroll )
-				{
-					CCocoaEvent theEvent;
-					theEvent.m_EventType = CocoaEvent_MouseScroll;
-					theEvent.m_MousePos[0] = scroll;
-					theEvent.m_MousePos[1] = scroll;
-					PostEvent( theEvent );
-				}
+				// The surface was rebuilt: entering/leaving fullscreen or changing
+				// resolution does not reliably preserve the Wayland pointer
+				// constraint, and SDL's own warp emulation toggles relative mode on
+				// the way through. Focus changes do NOT need this -- SDL re-derives
+				// the lock from the window flag itself -- which is exactly why
+				// alt-tabbing recovered nothing while a mode change broke aiming.
+				ApplyPointerState();
 				break;
 			}
 
-			case SDL_EVENT_WINDOW_EXPOSED:
-			{
-				/*if ( ev.xexpose.count > 0 )
-					break; // multiple expose events queued
-				EVENT_LOG( "Got event Expose\n" );
-				int iPanel = m_mapWindowToVPanel.Find( ev.xexpose.window );
-				if ( iPanel != m_mapWindowToVPanel.InvalidIndex() )
-					drawVGUI( m_pXDisplay, ev.xexpose.window, m_mapWindowToVPanel[ iPanel ], m_GLContext );
-				m_mapSentInvalidate.RemoveAll();*/
-				break;
-			}
 			case SDL_EVENT_WINDOW_FOCUS_GAINED:
 			{
 				m_bHasFocus = true;
-				m_bSetMouseVisibleCalled = true;
 
 				// SDL3: text input is off by default and may be reset by
 				// compositor changes. Re-enable on every focus gain.
 				SDL_StartTextInput( m_Window );
-
-				CCocoaEvent theEvent;
-				theEvent.m_EventType = CocoaEvent_AppActivate;
-				theEvent.m_ModifierKeyMask = 1;
-				PostEvent( theEvent );
 				break;
 			}
+
 			case SDL_EVENT_WINDOW_FOCUS_LOST:
 			{
 				m_bHasFocus = false;
 
-				SDL_SetWindowMouseGrab( m_Window, false );
-				SDL_SetWindowRelativeMouseMode( m_Window, false );
-				SDL_ShowCursor();
+				// Deliberately NOT clearing relative mode or the grab here. Those are
+				// latched window flags that SDL already scopes to focus -- it stops
+				// constraining and reporting motion on its own, and re-establishes the
+				// lock when focus returns. Clearing them threw away the only record of
+				// our intent, so mouselook never came back.
 
-				CCocoaEvent theEvent;
-				theEvent.m_EventType = CocoaEvent_AppActivate;
-				theEvent.m_ModifierKeyMask = 0;
-				PostEvent( theEvent );
-
-				// Reset our key modifiers. This also happens in CocoaEvent_AppActivate in inputsystem.cpp for
-				//	the g_pInputSystem, and WM_ACTIVATEAPP on Windows in that file.
-				m_keyModifiers = 0;
-				// Reset SDL state as well. SDL_keyboard.modstate in SDL_keyboard.c gets waaay out of alignment.
+				// SDL_keyboard.modstate drifts out of alignment otherwise.
 				SDL_SetModState( SDL_KMOD_NONE );
 				break;
 			}
+
 			case SDL_EVENT_WINDOW_RESIZED:
 			{
-				int newWidth = event.window.data1;
-				int newHeight = event.window.data2;
-
-				if ( newWidth > 0 && newHeight > 0 )
+				// LOGICAL size: the space SDL reports mouse coordinates in, so latch
+				// it for WindowToEngineCoords() and keep it to ourselves. The engine
+				// works in pixels and hears about those from
+				// SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED instead; forwarding both would
+				// have it compare logical against pixel and bounce SetMode() back at
+				// us under fractional display scaling.
+				if ( event.window.data1 > 0 && event.window.data2 > 0 )
 				{
-					if ( newWidth != m_WindowWidth || newHeight != m_WindowHeight )
-					{
-						m_WindowWidth = newWidth;
-						m_WindowHeight = newHeight;
-
-						// Don't update sdl_displayindex here — automatic updates
-						// lock the convar to whichever monitor the compositor picked,
-						// preventing the user from moving the window.
-						// sdl_displayindex should only change via explicit user action.
-
-						CCocoaEvent theEvent;
-						theEvent.m_EventType = CocoaEvent_WindowSizeChanged;
-						theEvent.m_MousePos[0] = newWidth;
-						theEvent.m_MousePos[1] = newHeight;
-						PostEvent( theEvent );
-					}
+					// Don't update sdl_displayindex here -- automatic updates lock the
+					// convar to whichever monitor the compositor picked, preventing the
+					// user from moving the window. It should only change via explicit
+					// user action.
+					m_WindowWidth = event.window.data1;
+					m_WindowHeight = event.window.data2;
 				}
-				break;
-			}
-
-			case SDL_EVENT_KEY_UP:
-			case SDL_EVENT_KEY_DOWN:
-				if(event.type == SDL_EVENT_KEY_DOWN && event.key.repeat &&
-				   (event.key.key == SDLK_BACKSPACE ||
-				    event.key.key == SDLK_DELETE))
-				{
-					// If we have repeated keydown events, we want to
-					// generate a synthetic keyup event, since Scaleform
-					// doesn't behave well getting multiple keydown events
-					// without corresponding keyups.
-					event.type = SDL_EVENT_KEY_UP;
-					handleKeyInput(event);
-					event.type = SDL_EVENT_KEY_DOWN;
-				}
-
-				handleKeyInput(event);
-				break;
-
-			case SDL_EVENT_TEXT_INPUT:
-			{
-				const char *text = event.text.text;
-
-				if ( text && text[ 0 ] )
-				{
-					// SDL3: text is now a const char* (was fixed 32-byte array in SDL2)
-					static const int kMaxTextInputChars = 32;
-					wchar_t WBuf[ kMaxTextInputChars + 1 ];
-					WBuf[ 0 ] = 0;
-					V_UTF8ToUnicode( text, WBuf, sizeof( WBuf ) );
-
-					for ( int i = 0; i < kMaxTextInputChars; i++ )
-					{
-						wchar_t ch = WBuf[ i ];
-						if ( ch == '\0' )
-							break;
-
-						CCocoaEvent theEvent;
-						theEvent.m_EventType = CocoaEvent_KeyDown;
-						theEvent.m_VirtualKeyCode = 0;
-						theEvent.m_UnicodeKey = ch;
-						theEvent.m_UnicodeKeyUnmodified = ch;
-						theEvent.m_ModifierKeyMask = m_keyModifierMask;
-						PostEvent( theEvent );
-
-						theEvent.m_EventType = CocoaEvent_KeyUp;
-						theEvent.m_VirtualKeyCode = 0;
-						theEvent.m_UnicodeKey = 0;
-						theEvent.m_UnicodeKeyUnmodified = 0;
-						theEvent.m_ModifierKeyMask = m_keyModifierMask;
-						PostEvent( theEvent );
-					}
-				}
-				break;
-			}
-
-			case SDL_EVENT_QUIT:
-			{
-				CCocoaEvent theEvent;
-				theEvent.m_EventType = CocoaEvent_AppQuit;
-				PostEvent( theEvent );
 				break;
 			}
 
 			default:
 				break;
 		}
+
+		if ( bForward && IsForwardedToInputSystem( event.type ) )
+			PostEvent( event );
 	}
 }
 
@@ -1428,6 +1192,7 @@ void CSDLMgr::DestroyGameWindow()
 		SDL_SetWindowMouseGrab(m_Window, false);  // just in case.
 		SDL_DestroyWindow(m_Window);
 		m_Window = NULL;
+		SetGameSDLWindow( NULL );
 	}
 }
 
@@ -1448,8 +1213,10 @@ void CSDLMgr::GetMouseDelta( float &x, float &y, bool bIgnoreNextMouseDelta )
 {
 	SDLAPP_FUNC;
 
-    x = m_flMouseXDelta * (m_bCursorVisible ? m_flMouseXScale : 1.0f);
-    y = m_flMouseYDelta * (m_bCursorVisible ? m_flMouseYScale : 1.0f);
+	// Raw relative motion, exactly as SDL reported it. No screen-space scaling:
+	// these are pointer deltas, not positions, so a resolution ratio never applied.
+	x = m_flMouseXDelta;
+	y = m_flMouseYDelta;
 
 	m_flMouseXDelta = m_flMouseYDelta = 0.0f;
 }
@@ -1528,49 +1295,8 @@ void CSDLMgr::GetNativeDisplayInfo( int nDisplay, uint &nWidth, uint &nHeight, u
 }
 
 
-void CSDLMgr::RenderedSize( uint &width, uint &height, bool set )
-{
-	SDLAPP_FUNC;
 
-	if (set)
-	{
-		m_renderedWidth = width;
-		m_rendererHeight = height;	// latched from NotifyRenderedSize
-	}
-	else
-	{
-		width = m_renderedWidth;
-		height = m_rendererHeight;
-	}
-}
 
-void CSDLMgr::DisplayedSize( uint &width, uint &height )
-{
-	SDLAPP_FUNC;
-
-	// Report the PIXEL size of the drawable, not the logical (points) window
-	// size. This feeds SyncToActualWindowSize() -> the D3D9/DXVK backbuffer, and
-	// crispness requires backbuffer == surface pixel size. Under fractional
-	// display scaling logical != pixel; at 1.0x scale they are equal (no-op).
-	int w = 0, h = 0;
-	SDL_GetWindowSizeInPixels(m_Window, &w, &h);
-	width = (uint) w;
-	height = (uint) h;
-}
-
-void CSDLMgr::GetStackCrawl( CStackCrawlParams *params )
-{
-	SDLAPP_FUNC;
-}
-
-void CSDLMgr::WaitUntilUserInput( int msSleepTime )
-{
-	SDLAPP_FUNC;
-	if ( m_bTextMode )
-		return;
-
-	SDL_WaitEventTimeout(NULL, msSleepTime);
-}
 
 static KeyValues *LoadCursorResource()
 {
@@ -1636,18 +1362,6 @@ void CSDLMgr::SetCursorIcon( const InputCursorHandle_t pchCursor )
 
 
 //===============================================================================
-
-void CSDLMgr::SetGammaRamp( const uint16 *pRed, const uint16 *pGreen, const uint16 *pBlue )
-{
-	// SDL3: SDL_SetWindowGammaRamp was removed. Gamma ramp support is no longer
-	// available through SDL - use platform-specific or shader-based approaches instead.
-	static bool bWarned = false;
-	if ( !bWarned )
-	{
-		ConMsg( "SetGammaRamp: not supported in SDL3 (gamma ramp API removed)\n" );
-		bWarned = true;
-	}
-}
 
 #if WITH_OVERLAY_CURSOR_VISIBILITY_WORKAROUND
 //===============================================================================

@@ -167,7 +167,7 @@ void *ShaderFactory( const char *pName, int *pReturnCode )
 		return g_pShaderUtil;
 
 #if defined( USE_SDL )
-    if ( !Q_stricmp( pName, "SDLMgrInterface001" /*SDLMGR_INTERFACE_VERSION*/ ))
+    if ( !Q_stricmp( pName, "SDLMgrInterface002" /*SDLMGR_INTERFACE_VERSION*/ ))
 		return g_pLauncherMgr;
 #endif
 
@@ -476,7 +476,7 @@ bool CMaterialSystem::Connect( CreateInterfaceFn factory )
 
 #if defined( USE_SDL )
 
-	g_pLauncherMgr = (ILauncherMgr *)factory( "SDLMgrInterface001", NULL );
+	g_pLauncherMgr = (ILauncherMgr *)factory( "SDLMgrInterface002", NULL );
 
 #elif defined(_WIN32)
 

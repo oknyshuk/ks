@@ -56,6 +56,7 @@ static double s_rdtsc_to_ms;
 
 
 #include "appframework/ilaunchermgr.h"
+#include "appframework/sdlwindow.h"
 
 // NOTE: This has to be the last file included!
 #include "tier0/memdbgon.h"
@@ -1224,8 +1225,8 @@ void CShaderDeviceMgrDx8::GetCurrentModeInfo( ShaderDisplayMode_t* pInfo, int nA
 	// the actual window/display resolution.
 	if ( g_pLauncherMgr )
 	{
-		uint nWidth, nHeight;
-		g_pLauncherMgr->DisplayedSize( nWidth, nHeight );
+		int nWidth = 0, nHeight = 0;
+		SDL_GetWindowSizeInPixels( GetGameSDLWindow(), &nWidth, &nHeight );
 		if ( nWidth > 0 && nHeight > 0 )
 		{
 			mode.Width = nWidth;

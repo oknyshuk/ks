@@ -40,14 +40,14 @@ public:
     virtual void SetActive(bool bActive);
     virtual bool ShouldDraw(void);
     void ShowPanel(bool bShow, bool force);
+    // True while chat legitimately owns mouse/keyboard input (polled).
+    bool OwnsInput() const;
 
     Rml::ElementDocument *m_pInstance;
     // Some precached elements from the instance.
     Rml::Element *m_elemChatLines;
     Rml::Element *m_elemChatInput;
 
-    bool		m_bVisible;
-    bool        m_bGrabbingInput;
     int			m_iMode;
     int         m_iNumEntries;
 

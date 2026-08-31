@@ -396,16 +396,12 @@ bool CParticleSystemDefinition::ShouldAlwaysPrecache() const
 //-----------------------------------------------------------------------------
 // Precache/uncache
 //-----------------------------------------------------------------------------
-static int s_nPrecacheCount = 0;
-static int s_nUncacheCount = 0;
-
 void CParticleSystemDefinition::Precache()
 {
 	if ( m_bIsPrecached )
 		return;
 
 	m_bIsPrecached = true;
-	s_nPrecacheCount++;
 #ifndef DEDICATED
 	if ( !UTIL_IsDedicatedServer() &&  g_pMaterialSystem )
 	{
@@ -469,7 +465,6 @@ void CParticleSystemDefinition::Uncache()
 	if ( !m_bIsPrecached )
 		return;
 
-	s_nUncacheCount++;
 	m_bIsPrecached = false;
 
 	if ( HasFallback() )
@@ -3758,12 +3753,8 @@ void CParticleSystemMgr::LevelShutdown( void )
 #endif
 }
 
-extern int s_nDestructorCount;
 void CParticleSystemMgr::UncacheAllParticleSystems()
 {
-	FILE *f = fopen("/tmp/particle_debug.txt", "a");
-	if (f) { fprintf(f, "UncacheAllParticleSystems: Precache=%d, Uncache=%d, Destructors=%d (before)\n", s_nPrecacheCount, s_nUncacheCount, s_nDestructorCount); fclose(f); }
-
 	m_PrecacheLookup.RemoveAll();
 	m_ClientPrecacheLookup.RemoveAll();
 
@@ -3789,9 +3780,6 @@ void CParticleSystemMgr::UncacheAllParticleSystems()
 			}
 		}
 	}
-
-	f = fopen("/tmp/particle_debug.txt", "a");
-	if (f) { fprintf(f, "UncacheAllParticleSystems done: Uncache=%d, Destructors=%d (after)\n", s_nUncacheCount, s_nDestructorCount); fclose(f); }
 
 	// Flush sheets, as they can accumulate several MB of memory per map
 	FlushAllSheets();

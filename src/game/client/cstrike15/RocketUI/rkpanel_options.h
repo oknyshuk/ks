@@ -20,6 +20,8 @@ public:
     static void ShowPanel( bool bShow, bool immediate = false );
     static bool IsActive() { return m_pInstance != nullptr; }
     static bool IsVisible() { return m_bVisible; }
+    // True while this panel legitimately owns mouse/keyboard input (polled).
+    static bool OwnsInput();
     static Rml::ElementDocument *GetInstance() { return m_pInstance; }
 
 private:
@@ -29,7 +31,6 @@ private:
     static void SwitchTab( const char *tabId );
 
     static bool m_bVisible;
-    static bool m_bGrabbingInput;
     static bool m_bPopulating; // suppress Change events during PopulateControls
 };
 

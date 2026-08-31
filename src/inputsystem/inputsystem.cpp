@@ -19,6 +19,7 @@
 
 #if defined( USE_SDL )
 #include <SDL3/SDL.h>
+#include "appframework/sdlwindow.h"
 static void initKeymap(void);
 #endif
 
@@ -76,6 +77,7 @@ CInputSystem::CInputSystem()
 	m_nJoystickCount = 0;
 	m_nJoystickBaseline = 0;
 	m_nPollCount = 0;
+	m_nMouseButtonState = 0;
 	m_uiMouseWheel = 0;
 	m_bXController = false;
 	m_bRawInputSupported = false;
@@ -241,7 +243,7 @@ void CInputSystem::Shutdown()
 void CInputSystem::SleepUntilInput( int nMaxSleepTimeMS )
 {
 #if defined( USE_SDL ) || defined( OSX )
-	m_pLauncherMgr->WaitUntilUserInput( nMaxSleepTimeMS );
+	SDL_WaitEventTimeout( NULL, nMaxSleepTimeMS );
 #elif defined( _WIN32 ) 
 	if ( nMaxSleepTimeMS < 0 )
 	{
@@ -388,6 +390,9 @@ void CInputSystem::ClearInputState( bool bPurgeState )
 	}
 	memset( m_appXKeys, 0, XUSER_MAX_COUNT * XK_MAX_KEYS * sizeof(appKey_t) );
 	m_mouseRawAccumX = m_mouseRawAccumY = 0;
+	// Must follow m_ButtonState, or the next SDL button-up clears our bit, finds
+	// m_ButtonState already clear, and posts no IE_ButtonReleased.
+	m_nMouseButtonState = 0;
 	m_flLastControllerPollTime = 0;
 }
 
@@ -655,18 +660,35 @@ static void initKeymap(void)
 #endif
 
 
-bool MapCocoaVirtualKeyToButtonCode( int nCocoaVirtualKeyCode, ButtonCode_t *pOut )
+// SDL scancode -> Source ButtonCode_t.
+//
+// NOT named ScanCodeToButtonCode(): CInputSystem has a member of that name, so an
+// unqualified call from a member function silently binds to the member, which
+// decodes a Win32 lParam and maps every SDL scancode to KEY_NONE.
+static ButtonCode_t SDLScanCodeToButtonCode( int nScanCode )
 {
-	if ( nCocoaVirtualKeyCode < 0 )
-		*pOut = (ButtonCode_t)(-1 * nCocoaVirtualKeyCode);
-	else 
-	{
-		nCocoaVirtualKeyCode &= 0x000000ff;
-	
-		*pOut = (ButtonCode_t)scantokey[nCocoaVirtualKeyCode];
-	}
+	if ( nScanCode < 0 || nScanCode >= SDL_SCANCODE_COUNT )
+		return BUTTON_CODE_NONE;
 
-	return true;
+	return (ButtonCode_t)scantokey[ nScanCode ];
+}
+
+// SDL mouse button index -> Source ButtonCode_t.
+//
+// SDL orders them left(1), middle(2), right(3); Source orders left, right, middle.
+// Anything past 3 collapses onto MOUSE_4/MOUSE_5, because mice disagree wildly about
+// what buttons 6+ mean (wheel tilt, browser back/forward, task) and the wheel itself
+// arrives as SDL_EVENT_MOUSE_WHEEL rather than a button.
+static ButtonCode_t MouseButtonToButtonCode( Uint8 nSDLButton )
+{
+	switch ( nSDLButton )
+	{
+		case 0:					return BUTTON_CODE_NONE;
+		case SDL_BUTTON_LEFT:	return MOUSE_LEFT;
+		case SDL_BUTTON_MIDDLE:	return MOUSE_MIDDLE;
+		case SDL_BUTTON_RIGHT:	return MOUSE_RIGHT;
+		default:				return ( nSDLButton & 0x1 ) ? MOUSE_5 : MOUSE_4;
+	}
 }
 
 
@@ -677,191 +699,167 @@ void CInputSystem::PollInputState_Linux()
 
 	if (  m_bPumpEnabled )
 		m_pLauncherMgr->PumpWindowsMessageLoop();
-	// These are Carbon virtual key codes. AFAIK they don't have a header that defines these, but they are supposed to map
-	// to the same letters across international keyboards, so our mapping here should work.
-	CCocoaEvent events[32];
+
+	SDL_Event events[32];
 	while ( 1 )
 	{
 		int nEvents = m_pLauncherMgr->GetEvents( events, ARRAYSIZE( events ) );
 		if ( nEvents == 0 )
 			break;
 
-		for ( int iEvent=0; iEvent < nEvents; iEvent++ )
+		for ( int iEvent = 0; iEvent < nEvents; iEvent++ )
 		{
-			CCocoaEvent *pEvent = &events[iEvent];
+			const SDL_Event &event = events[iEvent];
 
-			switch( pEvent->m_EventType )
+			switch( event.type )
 			{
-				case CocoaEvent_Deleted:
+				case SDL_EVENT_KEY_DOWN:
+				{
+					ButtonCode_t code = SDLScanCodeToButtonCode( event.key.scancode );
+					if ( code == BUTTON_CODE_NONE )
+						break;		// key we have no ButtonCode_t for (media keys, ...)
+
+					PostButtonPressedEvent( IE_ButtonPressed, m_nLastSampleTick, code, code );
+
+					InputEvent_t ev;
+					memset( &ev, 0, sizeof(ev) );
+					ev.m_nTick = GetPollTick();
+					ev.m_nType = IE_KeyCodeTyped;
+					ev.m_nData = code;
+					g_pInputSystem->PostUserEvent( ev );
+
+					if ( code == KEY_BACKSPACE )
+					{
+						// UI text fields expect the control character too.
+						PostEvent( IE_KeyTyped, GetPollTick(), (wchar_t)8 );
+					}
 					break;
-
-				case CocoaEvent_KeyDown:
-				{
-					ButtonCode_t virtualCode;
-					if ( MapCocoaVirtualKeyToButtonCode( pEvent->m_VirtualKeyCode, &virtualCode ) )
-					{
-						ButtonCode_t scanCode = virtualCode;
-
-						if( scanCode != BUTTON_CODE_NONE )
-						{
-							// For SDL, hitting spacebar causes a SDL_KEYDOWN event, then SDL_TEXTINPUT with
-							//	event.text.text[0] = ' ', and then we get here and wind up sending two events
-							//	to PostButtonPressedEvent. The first is virtualCode = ' ', the 2nd has virtualCode = 0.
-							// This will confuse Button::OnKeyCodePressed(), which is checking for space keydown
-							//	followed by space keyup. So we ignore all BUTTON_CODE_NONE events here.
-							PostButtonPressedEvent( IE_ButtonPressed, m_nLastSampleTick, scanCode, virtualCode );
-						}
-						
-						InputEvent_t event;
-						memset( &event, 0, sizeof(event) );
-						event.m_nTick = GetPollTick();
-						event.m_nType = IE_KeyCodeTyped;
-						event.m_nData = scanCode;
-						g_pInputSystem->PostUserEvent( event );
-						
-						if ( scanCode == KEY_BACKSPACE )
-						{
-							// On Linux (and OS X, when using SDL), we need to fire this event to have backspace keypresses picked up by scaleform.
-							PostEvent( IE_KeyTyped, GetPollTick(), (wchar_t)8 );
-						}
-					}
-
-					if ( !(pEvent->m_ModifierKeyMask & (1<<eCommandKey) ) && pEvent->m_VirtualKeyCode >= 0 && pEvent->m_UnicodeKey > 0 )
-					{
-						InputEvent_t event;
-						memset( &event, 0, sizeof(event) );
-						event.m_nTick = GetPollTick();
-						event.m_nType = IE_KeyTyped;
-						event.m_nData = (int)pEvent->m_UnicodeKey;
-						g_pInputSystem->PostUserEvent( event );
-					}
-					
-#if defined ( CSTRIKE15 )
-					// [will] - HACK: Allow cmd+a, cmd+c, cmd+v, cmd+x to go through, and treat them as the ctrl modified versions.
-					// This allows these to work in the Scaleform chat window.
-					if ( pEvent->m_ModifierKeyMask & (1<<eCommandKey)
-						&& ( pEvent->m_UnicodeKey == 'a'
-						|| pEvent->m_UnicodeKey == 'c'
-						|| pEvent->m_UnicodeKey == 'v'
-						|| pEvent->m_UnicodeKey == 'x' ) )
-					{
-						InputEvent_t event;
-						memset( &event, 0, sizeof(event) );
-						event.m_nTick = GetPollTick();
-						event.m_nType = IE_KeyTyped;
-						event.m_nData = (int)pEvent->m_UnicodeKey - 96; // Subtract 96 to give the ctrl version of this character.
-						g_pInputSystem->PostUserEvent( event );
-					}
-#endif
-
 				}
-				break;
 
-				case CocoaEvent_KeyUp:
+				case SDL_EVENT_KEY_UP:
 				{
-					ButtonCode_t virtualCode;
-					if ( MapCocoaVirtualKeyToButtonCode( pEvent->m_VirtualKeyCode, &virtualCode ) )
+					ButtonCode_t code = SDLScanCodeToButtonCode( event.key.scancode );
+					if ( code != BUTTON_CODE_NONE )
 					{
-						ButtonCode_t scanCode = virtualCode;
-						PostButtonReleasedEvent( IE_ButtonReleased, m_nLastSampleTick, scanCode, virtualCode );
+						PostButtonReleasedEvent( IE_ButtonReleased, m_nLastSampleTick, code, code );
 					}
+					break;
 				}
-				break;
 
-				case CocoaEvent_MouseButtonDown:
+				case SDL_EVENT_TEXT_INPUT:
 				{
-					int nButtonMask = pEvent->m_MouseButtonFlags;
-					ButtonCode_t dblClickCode = BUTTON_CODE_INVALID;
-					if ( pEvent->m_nMouseClickCount > 1 )
+					// Character input, independent of the physical key that produced
+					// it (dead keys, compose, IME, non-US layouts).
+					wchar_t wbuf[ 64 ];
+					wbuf[0] = 0;
+					V_UTF8ToUnicode( event.text.text, wbuf, sizeof( wbuf ) );
+
+					for ( int i = 0; i < ARRAYSIZE( wbuf ) && wbuf[i] != L'\0'; i++ )
 					{
-						switch( pEvent->m_MouseButton )
-						{
-							default:
-							case COCOABUTTON_LEFT:
-								dblClickCode = MOUSE_LEFT;
-								break;
-							case COCOABUTTON_RIGHT:
-								dblClickCode = MOUSE_RIGHT;
-								break;
-							case COCOABUTTON_MIDDLE:
-								dblClickCode = MOUSE_MIDDLE;
-								break;
-							case COCOABUTTON_4:
-								dblClickCode = MOUSE_4;
-								break;
-							case COCOABUTTON_5:
-								dblClickCode = MOUSE_5;
-								break;
-						}
+						PostEvent( IE_KeyTyped, GetPollTick(), (wchar_t)wbuf[i] );
 					}
-					UpdateMouseButtonState( nButtonMask, dblClickCode );
+					break;
 				}
-				break;
 
-				case CocoaEvent_MouseButtonUp:
+				case SDL_EVENT_MOUSE_BUTTON_DOWN:
+				case SDL_EVENT_MOUSE_BUTTON_UP:
 				{
-					int nButtonMask = pEvent->m_MouseButtonFlags;
-					UpdateMouseButtonState( nButtonMask );
+					ButtonCode_t code = MouseButtonToButtonCode( event.button.button );
+					if ( code == BUTTON_CODE_NONE )
+						break;
+
+					const int nBit = 1 << ( code - MOUSE_FIRST );
+					if ( event.button.down )
+						m_nMouseButtonState |= nBit;
+					else
+						m_nMouseButtonState &= ~nBit;
+
+					// SDL tracks the click run for us, no hand-rolled time/space window.
+					ButtonCode_t dblClickCode = ( event.button.down && event.button.clicks > 1 )
+						? code : BUTTON_CODE_INVALID;
+
+					UpdateMouseButtonState( m_nMouseButtonState, dblClickCode );
+					break;
 				}
-				break;
 
-				case CocoaEvent_MouseMove:
+				case SDL_EVENT_MOUSE_MOTION:
 				{
-					UpdateMousePositionState( state, (short)pEvent->m_MousePos[0], (short)pEvent->m_MousePos[1] );
+					int x, y;
+					m_pLauncherMgr->WindowToEngineCoords( event.motion.x, event.motion.y, x, y );
+					UpdateMousePositionState( state, (short)x, (short)y );
 
-					InputEvent_t event;
-					memset( &event, 0, sizeof(event) );
-					event.m_nTick = GetPollTick();
-					event.m_nType = IE_LocateMouseClick;
-					event.m_nData = (short)pEvent->m_MousePos[0];
-					event.m_nData2 = (short)pEvent->m_MousePos[1];
-					g_pInputSystem->PostUserEvent( event );
+					InputEvent_t ev;
+					memset( &ev, 0, sizeof(ev) );
+					ev.m_nTick = GetPollTick();
+					ev.m_nType = IE_LocateMouseClick;
+					ev.m_nData = (short)x;
+					ev.m_nData2 = (short)y;
+					g_pInputSystem->PostUserEvent( ev );
+					break;
 				}
-				break;
-					
-				case CocoaEvent_MouseScroll:
+
+				case SDL_EVENT_MOUSE_WHEEL:
 				{
-					ButtonCode_t code = (short)pEvent->m_MousePos[1] > 0 ? MOUSE_WHEEL_UP : MOUSE_WHEEL_DOWN;
+					// integer_y is the accumulated whole-tick count, so high resolution
+					// wheels still produce exactly one notch per detent. SDL does not
+					// pre-flip for natural scrolling, it only flags it.
+					int nTicks = event.wheel.integer_y;
+					if ( event.wheel.direction == SDL_MOUSEWHEEL_FLIPPED )
+						nTicks = -nTicks;
+					if ( nTicks == 0 )
+						break;
+
+					ButtonCode_t code = ( nTicks > 0 ) ? MOUSE_WHEEL_UP : MOUSE_WHEEL_DOWN;
 					state.m_ButtonPressedTick[ code ] = state.m_ButtonReleasedTick[ code ] = m_nLastSampleTick;
 					PostEvent( IE_ButtonPressed, m_nLastSampleTick, code, code );
 					PostEvent( IE_ButtonReleased, m_nLastSampleTick, code, code );
-					
-					state.m_pAnalogDelta[ MOUSE_WHEEL ] = pEvent->m_MousePos[1];
-					state.m_pAnalogValue[ MOUSE_WHEEL ] += state.m_pAnalogDelta[ MOUSE_WHEEL ];
-					PostEvent( IE_AnalogValueChanged, m_nLastSampleTick, MOUSE_WHEEL, state.m_pAnalogValue[ MOUSE_WHEEL ], state.m_pAnalogDelta[ MOUSE_WHEEL ] );
-				}
-				break;
-					
-				case CocoaEvent_AppActivate:
-				{		
-					InputEvent_t event;
-					memset( &event, 0, sizeof(event) );
-					event.m_nType = IE_FirstAppEvent + 1;
-					event.m_nData = (bool)pEvent->m_ModifierKeyMask;
 
-					g_pInputSystem->PostUserEvent( event );
+					state.m_pAnalogDelta[ MOUSE_WHEEL ] = nTicks;
+					state.m_pAnalogValue[ MOUSE_WHEEL ] += nTicks;
+					PostEvent( IE_AnalogValueChanged, m_nLastSampleTick, MOUSE_WHEEL,
+							   state.m_pAnalogValue[ MOUSE_WHEEL ], state.m_pAnalogDelta[ MOUSE_WHEEL ] );
+					break;
 				}
-				break;
-				case CocoaEvent_AppQuit:
+
+				case SDL_EVENT_WINDOW_FOCUS_GAINED:
+				case SDL_EVENT_WINDOW_FOCUS_LOST:
 				{
+					// Release anything still held: whatever took focus keeps the key-up
+					// (alt-tab eats the ALT release) and nothing else ever resyncs.
+					if ( event.type == SDL_EVENT_WINDOW_FOCUS_LOST )
+					{
+						ReleaseAllButtons();
+						m_nMouseButtonState = 0;
+					}
+
+					InputEvent_t ev;
+					memset( &ev, 0, sizeof(ev) );
+					ev.m_nType = IE_FirstAppEvent + 1;		// IE_AppActivated
+					ev.m_nData = ( event.type == SDL_EVENT_WINDOW_FOCUS_GAINED );
+					g_pInputSystem->PostUserEvent( ev );
+					break;
+				}
+
+				case SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED:
+				{
+					// Pixel size, which is what the engine's mode/backbuffer bookkeeping
+					// works in (CVideoMode_Common uses SDL_GetWindowSizeInPixels).
+					InputEvent_t ev;
+					memset( &ev, 0, sizeof(ev) );
+					ev.m_nType = IE_WindowSizeChanged;
+					ev.m_nData = event.window.data1;
+					ev.m_nData2 = event.window.data2;
+					ev.m_nData3 = 0;						// not minimized
+					g_pInputSystem->PostUserEvent( ev );
+					break;
+				}
+
+				case SDL_EVENT_QUIT:
 					PostEvent( IE_Quit, m_nLastSampleTick );
+					break;
 
-				}
-				break;
-
-				case CocoaEvent_WindowSizeChanged:
-				{
-					// Window size changed (e.g., moved between displays on Wayland).
-					// m_MousePos[0] = new width, m_MousePos[1] = new height
-					InputEvent_t event;
-					memset( &event, 0, sizeof(event) );
-					event.m_nType = IE_WindowSizeChanged;
-					event.m_nData = pEvent->m_MousePos[0];
-					event.m_nData2 = pEvent->m_MousePos[1];
-					event.m_nData3 = 0; // Not minimized
-					g_pInputSystem->PostUserEvent( event );
-				}
-				break;
+				default:
+					break;
 			}
 		}
 	}
@@ -1435,6 +1433,7 @@ void CInputSystem::EnableMouseCapture( PlatWindow_t hWnd )
 	}
 #endif
 }
+
 
 void CInputSystem::GetRawMouseAccumulators( float& accumX, float& accumY )
 {

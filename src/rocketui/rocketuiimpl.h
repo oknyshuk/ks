@@ -43,7 +43,6 @@ protected:
   // Fonts need to stay for the lifetime of the program. Used directly by
   // freetype. Freed on shutdown.
   CUtlVector<unsigned char *> m_fontAllocs;
-  CUtlVector<CUtlString> m_inputConsumers;
   float m_fTime;
   bool m_bCursorVisible;
 
@@ -78,8 +77,9 @@ protected:
                       CUtlPair<LoadDocumentFn, UnloadDocumentFn>>>
       m_documentReloadFuncs;
 
-  // if > 0, we are stealing input from the game.
-  int m_numInputConsumers;
+  // Single source of truth for "the UI owns the mouse", owned by the client DLL
+  // and polled, never cached. nullptr (no client DLL yet) means the game owns it.
+  InputClaimQueryFn m_pInputClaimQuery;
 
   // Key repeat state: tracks keys that just received IE_ButtonPressed.
   // First IE_KeyCodeTyped after IE_ButtonPressed is a duplicate, not a repeat.
@@ -105,9 +105,10 @@ public:
   virtual void RunFrame(float time);
   virtual bool ReloadDocuments();
   virtual bool HandleInputEvent(const InputEvent_t &event);
-  virtual void DenyInputToGame(bool value, const char *why);
+  virtual void SetInputClaimQuery(InputClaimQueryFn queryFunc) {
+    m_pInputClaimQuery = queryFunc;
+  }
   virtual bool IsConsumingInput(void);
-  virtual void EnableCursor(bool state);
   virtual Rml::ElementDocument *
   LoadDocumentFile(RocketDesinationContext_t ctx, const char *filepath,
                    LoadDocumentFn loadDocumentFunc = nullptr,
@@ -143,6 +144,9 @@ public:
   void SetScreenSize(int width, int height);
 
 private:
+  // Push the derived input-ownership state out to the cursor and the client's
+  // mouse gate. Called once per frame from RunFrame.
+  void SyncCursorToInputOwner();
   bool LoadFont(const char *filepath, const char *path);
   bool LoadFonts();
   // Apply a pending resize (staged by SetScreenSize on the render thread) to

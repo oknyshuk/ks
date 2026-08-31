@@ -15,6 +15,7 @@
 
 #endif
 #include "appframework/ilaunchermgr.h"
+#include "appframework/sdlwindow.h"
 #include "keys.h"
 #include "console.h"
 #include "gl_matsysiface.h"
@@ -1261,13 +1262,12 @@ void CEngineUI::Simulate()
 	{
 		VPROF_BUDGET( "CEngineUI::Simulate", "UI_Simulate" );
 
-		int w, h;
+		int w = 0, h = 0;
 #if defined( USE_SDL ) || defined( OSX )
-		uint width,height;
-		g_pLauncherMgr->RenderedSize( width, height, false );	// false = get
-		w = width;
-		h = height;
-
+		// Pixel size of the drawable: this feeds the UI viewport, which must match the
+		// backbuffer. (Was ILauncherMgr::RenderedSize(), whose setter nobody ever called,
+		// so this had been silently setting a 0x0 viewport every frame.)
+		SDL_GetWindowSizeInPixels( GetGameSDLWindow(), &w, &h );
 #elif defined( WIN32 ) 
 		if ( ::IsIconic( *pmainwindow ) )
 		{

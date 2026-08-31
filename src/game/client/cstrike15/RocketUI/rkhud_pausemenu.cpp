@@ -11,7 +11,11 @@
 
 Rml::ElementDocument *RocketPauseMenuDocument::m_pInstance = nullptr;
 bool RocketPauseMenuDocument::m_bVisible = false;
-bool RocketPauseMenuDocument::m_bGrabbingInput = false;
+
+bool RocketPauseMenuDocument::OwnsInput()
+{
+    return m_bVisible && m_pInstance && m_pInstance->IsVisible();
+}
 
 /* Event Listener added to each button */
 class RkPauseMenuButtons : public Rml::EventListener
@@ -85,11 +89,6 @@ void RocketPauseMenuDocument::UnloadDialog()
         RocketUI()->RegisterPauseMenu( nullptr );
         m_pInstance->Close();
         m_pInstance = nullptr;
-        if( m_bGrabbingInput )
-        {
-            RocketUI()->DenyInputToGame( false, "PauseMenu" );
-            m_bGrabbingInput = false;
-        }
     }
 }
 
@@ -127,23 +126,11 @@ void RocketPauseMenuDocument::ShowPanel(bool bShow, bool immediate)
         }
 
         m_pInstance->Show();
-
-        if( !m_bGrabbingInput )
-        {
-            RocketUI()->DenyInputToGame( true, "PauseMenu" );
-            m_bGrabbingInput = true;
-        }
     }
     else
     {
         if( m_pInstance )
             m_pInstance->Hide();
-
-        if( m_bGrabbingInput )
-        {
-            RocketUI()->DenyInputToGame( false, "PauseMenu" );
-            m_bGrabbingInput = false;
-        }
     }
 
     m_bVisible = bShow;

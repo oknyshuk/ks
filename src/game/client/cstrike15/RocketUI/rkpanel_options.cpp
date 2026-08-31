@@ -18,8 +18,12 @@ extern IMaterialSystem *materials;
 
 Rml::ElementDocument *RocketOptionsDocument::m_pInstance = nullptr;
 bool RocketOptionsDocument::m_bVisible = false;
-bool RocketOptionsDocument::m_bGrabbingInput = false;
 bool RocketOptionsDocument::m_bPopulating = false;
+
+bool RocketOptionsDocument::OwnsInput()
+{
+    return m_bVisible && m_pInstance && m_pInstance->IsVisible();
+}
 
 // Helper: set a <select> element's value from a ConVar int
 static void SetSelectFromConVar( Rml::ElementDocument *doc, const char *elementId, const char *convarName )
@@ -568,8 +572,6 @@ void RocketOptionsDocument::PopulateControls()
     SetRangeFromConVar( m_pInstance, "sensitivity", "sensitivity" );
 
     // Mouse settings - simple convar checkboxes
-    SetCheckboxFromConVar( m_pInstance, "m_rawinput", "m_rawinput" );
-    SetCheckboxFromConVar( m_pInstance, "m_filter", "m_filter" );
 
     // Mouse settings - reverse mouse (positive m_pitch = not reversed)
     {
@@ -654,12 +656,6 @@ void RocketOptionsDocument::UnloadDialog()
 
         m_pInstance->Close();
         m_pInstance = nullptr;
-
-        if( m_bGrabbingInput )
-        {
-            RocketUI()->DenyInputToGame( false, "OptionsPanel" );
-            m_bGrabbingInput = false;
-        }
     }
 
     m_bVisible = false;
@@ -676,23 +672,11 @@ void RocketOptionsDocument::ShowPanel( bool bShow, bool immediate )
         PopulateControls();
 
         m_pInstance->Show();
-
-        if( !m_bGrabbingInput )
-        {
-            RocketUI()->DenyInputToGame( true, "OptionsPanel" );
-            m_bGrabbingInput = true;
-        }
     }
     else
     {
         if( m_pInstance )
             m_pInstance->Hide();
-
-        if( m_bGrabbingInput )
-        {
-            RocketUI()->DenyInputToGame( false, "OptionsPanel" );
-            m_bGrabbingInput = false;
-        }
     }
 
     m_bVisible = bShow;

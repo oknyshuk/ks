@@ -106,8 +106,6 @@ static ConVar m_mousespeed( "m_mousespeed", "1", FCVAR_ARCHIVE, "Windows mouse a
 static ConVar m_mouseaccel1( "m_mouseaccel1", "0", FCVAR_ARCHIVE, "Windows mouse acceleration initial threshold (2x movement).", true, 0, false, 0.0f );
 static ConVar m_mouseaccel2( "m_mouseaccel2", "0", FCVAR_ARCHIVE, "Windows mouse acceleration secondary threshold (4x movement).", true, 0, false, 0.0f );
 
-static ConVar m_rawinput( "m_rawinput", "1", FCVAR_ARCHIVE, "Use Raw Input for mouse input.");
-
 ConVar cl_mouselook( "cl_mouselook", "1", FCVAR_ARCHIVE | FCVAR_NOT_CONNECTED | FCVAR_SS, "Set to 1 to use mouse for look, 0 for keyboard look. Cannot be set while connected to a server." );
 
 
@@ -358,15 +356,11 @@ void CInput::GetAccumulatedMouseDeltasAndResetAccumulators( int nSlot, float *mx
 
 	PerUserInput_t &user = GetPerUser( nSlot );
 
-	if ( m_rawinput.GetBool() )
-	{
-		inputsystem->GetRawMouseAccumulators( *mx, *my );
-    }
-	else
-	{
-		*mx = user.m_flAccumulatedMouseXMovement;
-		*my = user.m_flAccumulatedMouseYMovement;
-    }
+	// SDL relative mouse mode is the only source: read the accumulated device delta
+	// and reset it. (Was selected by m_rawinput; the alternative measured how far the
+	// cursor had drifted from the window centre after warping it back every sample,
+	// which cannot coexist with SDL holding the pointer.)
+	engine->GetMouseDelta( *mx, *my );
 
 	user.m_flAccumulatedMouseXMovement = 0;
 	user.m_flAccumulatedMouseYMovement = 0;
@@ -609,49 +603,20 @@ void CInput::AccumulateMouse( int nSlot )
         return;
 	}
 
-	if ( m_rawinput.GetBool() ) 
-	{
-        return;
-	}
-
-	int w, h;
-	engine->GetScreenSize( w, h );
-
-	// x,y = screen center
-	int x = w >> 1;
-	int y = h >> 1;
-
-	//only accumulate mouse if we are not moving the camera with the mouse
+	// Nothing to accumulate for mouselook: SDL relative mouse mode delivers device
+	// deltas, latched in GetAccumulatedMouseDeltasAndResetAccumulators(). What is left
+	// is keeping a *visible* cursor inside the window while the third-person camera or
+	// the UI owns it, since those work in absolute coordinates.
 	PerUserInput_t &user = GetPerUser( nSlot );
 
-	if ( !user.m_fCameraInterceptingMouse && !RocketUI()->IsConsumingInput() )
+	if ( ( user.m_fCameraInterceptingMouse || RocketUI()->IsConsumingInput() ) && m_fMouseActive )
 	{
-#if defined( USE_SDL ) || defined( OSX )
-		float dx, dy;
-		engine->GetMouseDelta( dx, dy );
-		user.m_flAccumulatedMouseXMovement += dx;
-		user.m_flAccumulatedMouseYMovement += dy;
-#elif defined( WIN32 ) 
-		int current_posx, current_posy;
+		int w, h;
+		engine->GetScreenSize( w, h );
 
-		GetMousePos(current_posx, current_posy);
-
-		user.m_flAccumulatedMouseXMovement += current_posx - x;
-		user.m_flAccumulatedMouseYMovement += current_posy - y;
-#else
-#error
-#endif
-		// force the mouse to the center, so there's room to move
-		ResetMouse();
-	}
-	else if ( m_fMouseActive )
-	{
-		// Clamp
 		int ox, oy;
 		GetMousePos( ox, oy );
-        ox = clamp( ox, 0, w - 1 );
-		oy = clamp( oy, 0, h - 1 );
-        SetMousePos( ox, oy );
+		SetMousePos( clamp( ox, 0, w - 1 ), clamp( oy, 0, h - 1 ) );
 	}
 }
 
@@ -818,7 +783,8 @@ void CInput::ClearStates (void)
 		GetPerUser().m_flAccumulatedMouseYMovement = 0;
 	}
 
-	// clear raw mouse accumulated data
-	float rawX, rawY;
-	inputsystem->GetRawMouseAccumulators(rawX, rawY);
+	// Drop any delta SDL has already accumulated, so a state change (menu, console,
+	// level load) cannot fling the view with motion from before it.
+	float flDiscardX, flDiscardY;
+	engine->GetMouseDelta( flDiscardX, flDiscardY );
 }

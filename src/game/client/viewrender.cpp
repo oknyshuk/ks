@@ -3221,11 +3221,18 @@ void CViewRender::RenderView( const CViewSetup &view, const CViewSetup &hudViewS
 		// RocketUI HUD rendering (record on the main thread; the render thread
 		// replays the returned command list)
 		pRenderContext->RenderRocketHUD(g_pRocketUI ? g_pRocketUI->RecordHUD() : nullptr);
-		// RocketUI Menu rendering (for console, pause menu, etc.)
-		pRenderContext->RenderRocketMenu(g_pRocketUI ? g_pRocketUI->RecordMenu() : nullptr);
 
 		pRenderContext->Flush();
 	}
+
+	// RocketUI menu context (console, pause menu) is deliberately outside the
+	// RENDERVIEW_DRAWHUD block: that flag is clear whenever there is no local player
+	// (view.cpp: `flags = (pPlayer == NULL) ? 0 : RENDERVIEW_DRAWHUD`), i.e. on the
+	// loading and team-select screens. A world is loaded by then, so the engine's
+	// no-world fallback in V_RenderUIOnly_NoSwap() does not run either -- gating this
+	// too left the console unpaintable in exactly the states you most want it.
+	pRenderContext->RenderRocketMenu(g_pRocketUI ? g_pRocketUI->RecordMenu() : nullptr);
+	pRenderContext->Flush();
 
 	CDebugViewRender::Draw2DDebuggingInfo( hudViewSetup );
 

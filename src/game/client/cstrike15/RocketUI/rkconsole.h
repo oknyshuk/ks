@@ -34,6 +34,8 @@ public:
     void Hide();
     void Toggle();
     bool IsVisible() const { return m_bVisible; }
+    // True while the console legitimately owns mouse/keyboard input (polled).
+    bool OwnsInput() const;
 
     void Clear();
 
@@ -91,7 +93,6 @@ private:
     Rml::Element* m_elemCompletionList;
 
     bool m_bVisible;
-    bool m_bGrabbingInput;
     bool m_bInitialized;
 
     // Command history
