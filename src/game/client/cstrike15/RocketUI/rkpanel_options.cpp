@@ -504,7 +504,6 @@ void RocketOptionsDocument::PopulateControls()
     SetSelectFromConVar( m_pInstance, "mat_picmip", "mat_picmip" );
     SetSelectFromConVar( m_pInstance, "mat_forceaniso", "mat_forceaniso" );
     SetSelectFromConVar( m_pInstance, "mat_antialias", "mat_antialias" );
-    SetSelectFromConVar( m_pInstance, "mat_vsync", "mat_vsync" );
 
     // Video settings - range slider
     SetRangeFromConVar( m_pInstance, "mat_monitorgamma", "mat_monitorgamma" );

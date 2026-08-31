@@ -68,7 +68,6 @@ static VideoConfigSetting_t s_pVideoConfigSettingsWhitelist[] =
 	{ "setting.mat_antialias",									true,		true,		true,	true },				
 	{ "setting.mat_aaquality",									true,		true,		true,	true },				
 	{ "setting.mat_forceaniso",									true,		true,		true,	true },				
-	{ "setting.mat_vsync",										true,		true,		true },
 	{ "setting.mat_triplebuffered",								true,		true,		true },
 	{ "setting.mat_grain_scale_override",						true,		true,		true },
 //	{ "setting.mat_monitorgamma",								true,		true,		true },
@@ -504,11 +503,10 @@ bool CreateDefaultVideoKeyValues( VidMatConfigData_t &configData )
 	configData.pConfigKeys->SetInt( "VendorID", configData.nVendorID );
 	configData.pConfigKeys->SetInt( "DeviceID", configData.nDeviceID );
 
-	// Initial config always assume v-sync, normal aspect ratio, and fullscreen.
+	// Initial config: v-sync is not optional, normal aspect ratio, fullscreen.
 	configData.pConfigKeys->SetInt( "setting.fullscreen", 1 );
 	configData.pConfigKeys->SetInt( "setting.nowindowborder", 0 );
 	configData.pConfigKeys->SetInt( "setting.aspectratiomode", GetScreenAspectMode( configData.nPhysicalScreenWidth, configData.nPhysicalScreenHeight ) );
-	configData.pConfigKeys->SetInt( "setting.mat_vsync", false ? 1 : 0 );
 	configData.pConfigKeys->SetInt( "setting.mat_triplebuffered", 0 );
 	configData.pConfigKeys->SetFloat( "setting.mat_monitorgamma", 2.2f );
 	configData.pConfigKeys->SetInt( "setting.mat_queue_mode", -1 );

@@ -121,9 +121,12 @@ bool CShaderDeviceMgrDx8::Connect( CreateInterfaceFn factory )
 	if ( !BaseClass::Connect( factory ) )
 		return false;
 
-
 	setenv("DXVK_WSI_DRIVER", "SDL3", 0);
-	setenv("DXVK_CONFIG", "d3d9.hideIntelGpu = False", 0);
+	setenv("DXVK_CONFIG",
+	       "d3d9.hideIntelGpu = False;"
+	       "dxvk.latencySleep = True;"
+	       "d3d9.maxFrameLatency = 1",
+	       0);
 
 #if defined( DO_DX9_HOOK )
 	m_pD3D = Direct3DCreate9Hook(D3D_SDK_VERSION);
@@ -1609,19 +1612,12 @@ void CShaderDeviceDx8::SetPresentParameters( void* hWnd, int nAdapter, const Sha
 		m_PresentParameters.BackBufferWidth = useDefault ? mode.m_nWidth : info.m_DisplayMode.m_nWidth;
 		m_PresentParameters.BackBufferHeight = useDefault ? mode.m_nHeight : info.m_DisplayMode.m_nHeight;
 		m_PresentParameters.BackBufferFormat = ImageLoader::ImageFormatToD3DFormat( backBufferFormat );
-		if ( !info.m_bWaitForVSync || CommandLine()->FindParm( "-forcenovsync" ) )
-		{
-			// Not vsync'd so only double buffer
-			m_PresentParameters.BackBufferCount = 1;
-			m_PresentParameters.PresentationInterval = D3DPRESENT_INTERVAL_IMMEDIATE;
-		}
-		else
-		{
-			// We are vsync'd and fullscreen, so allow triple buffering
-			static ConVarRef mat_triplebuffered( "mat_triplebuffered" );
-			m_PresentParameters.BackBufferCount = mat_triplebuffered.GetInt() ? 2 : 1;
-			m_PresentParameters.PresentationInterval = D3DPRESENT_INTERVAL_ONE; // this is temporary until it's correctly defined on the PS3
-		}
+
+		// Always vsync. See the windowed branch below for the rationale; the only
+		// difference here is that fullscreen may triple buffer.
+		static ConVarRef mat_triplebuffered( "mat_triplebuffered" );
+		m_PresentParameters.BackBufferCount = mat_triplebuffered.GetInt() ? 2 : 1;
+		m_PresentParameters.PresentationInterval = D3DPRESENT_INTERVAL_ONE;
 
 		m_PresentParameters.FullScreen_RefreshRateInHz = info.m_DisplayMode.m_nRefreshRateDenominator ? 
 			info.m_DisplayMode.m_nRefreshRateNumerator / info.m_DisplayMode.m_nRefreshRateDenominator : D3DPRESENT_RATE_DEFAULT;
@@ -1629,8 +1625,26 @@ void CShaderDeviceDx8::SetPresentParameters( void* hWnd, int nAdapter, const Sha
 	}
 	else // if windowed
 	{
-		// NJS: We are seeing a lot of time spent in present in some cases when this isn't set.
-		m_PresentParameters.PresentationInterval = D3DPRESENT_INTERVAL_IMMEDIATE;
+		// Always vsync (FIFO). Valve forced INTERVAL_IMMEDIATE here unconditionally
+		// ("NJS: We are seeing a lot of time spent in present in some cases when this
+		// isn't set."), which silently made vsync a no-op outside fullscreen.
+		//
+		// Presenting unsynced is strictly worse on this stack and is no longer
+		// selectable:
+		//  - The compositor composites at refresh regardless, and GNOME/Mutter does not
+		//    implement wp_tearing_control_v1, so IMMEDIATE cannot actually tear. It only
+		//    renders frames that get discarded.
+		//  - dxvk only engages its refresh-rate pacing when SyncInterval != 0
+		//    (D3D9SwapChainEx::UpdateTargetFrameRate), so unsynced also throws away the
+		//    latency control enabled in CShaderDeviceMgrDx8::Connect.
+		//  - The engine-side frame limiter is gone (CEngine::FilterTime), so unsynced
+		//    would additionally be uncapped.
+		//
+		// FIFO is cheap here because Wayland exposes wp_fifo_v1 + wp_commit_timing_v1,
+		// so it no longer starves the swapchain or stalls while occluded, and
+		// d3d9.maxFrameLatency=1 keeps it from queueing frames.
+		m_PresentParameters.PresentationInterval = D3DPRESENT_INTERVAL_ONE;
+
 		if ( info.m_bResizing )
 		{
 			if ( info.m_bLimitWindowedSize &&

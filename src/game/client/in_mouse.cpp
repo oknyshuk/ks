@@ -150,7 +150,7 @@ void CInput::ActivateMouse (void)
 
 		g_pInputStackSystem->SetCursorIcon( m_hInputContext, INPUT_CURSOR_HANDLE_INVALID );
 #if defined( USE_SDL ) || defined( OSX )
-        int dx, dy;
+        float dx, dy;
 		engine->GetMouseDelta( dx, dy, true );
 #endif
 		ClearStates();
@@ -360,10 +360,7 @@ void CInput::GetAccumulatedMouseDeltasAndResetAccumulators( int nSlot, float *mx
 
 	if ( m_rawinput.GetBool() )
 	{
-		int rawMouseX, rawMouseY;
-		inputsystem->GetRawMouseAccumulators(rawMouseX, rawMouseY);
-		*mx = (float)rawMouseX;
-		*my = (float)rawMouseY;
+		inputsystem->GetRawMouseAccumulators( *mx, *my );
     }
 	else
 	{
@@ -630,7 +627,7 @@ void CInput::AccumulateMouse( int nSlot )
 	if ( !user.m_fCameraInterceptingMouse && !RocketUI()->IsConsumingInput() )
 	{
 #if defined( USE_SDL ) || defined( OSX )
-		int dx, dy;
+		float dx, dy;
 		engine->GetMouseDelta( dx, dy );
 		user.m_flAccumulatedMouseXMovement += dx;
 		user.m_flAccumulatedMouseYMovement += dy;
@@ -822,6 +819,6 @@ void CInput::ClearStates (void)
 	}
 
 	// clear raw mouse accumulated data
-	int rawX, rawY;
+	float rawX, rawY;
 	inputsystem->GetRawMouseAccumulators(rawX, rawY);
 }

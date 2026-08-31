@@ -194,7 +194,7 @@ public:
 	virtual void ResetCursorIcon() = 0;
 
 	// read and clear accumulated raw input values
-	virtual void GetRawMouseAccumulators( int& accumX, int& accumY ) = 0;
+	virtual void GetRawMouseAccumulators( float& accumX, float& accumY ) = 0;
 
 	// ========================================================================
 	// Platform Input Device Interface

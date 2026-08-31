@@ -704,7 +704,7 @@ public:
 
 #if defined( USE_SDL ) || defined( OSX )
 	// we need to pull delta's from the cocoa mgr, the engine vectors this for us
-	virtual void GetMouseDelta( int &x, int &y, bool bIgnoreNextMouseDelta = false ) = 0;
+	virtual void GetMouseDelta( float &x, float &y, bool bIgnoreNextMouseDelta = false ) = 0;
 #endif
 
 	// Given the string pBinding which may be bound to a key, 

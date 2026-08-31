@@ -274,13 +274,6 @@
 				</select>
 			</div>
 			<div class="setting-row">
-				<span class="setting-label">VSync</span>
-				<select id="mat_vsync" data-convar="mat_vsync">
-					<option value="0">Disabled</option>
-					<option value="1">Enabled</option>
-				</select>
-			</div>
-			<div class="setting-row">
 				<span class="setting-label">Brightness</span>
 				<div class="slider-group">
 					<input type="range" id="mat_monitorgamma" data-convar="mat_monitorgamma" min="1.6" max="2.6" step="0.05" value="2.2" />

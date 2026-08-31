@@ -653,7 +653,7 @@ public:
 	virtual bool IsClientLocalToActiveServer();
 	
 #if defined( USE_SDL ) || defined ( OSX )
-	virtual void GetMouseDelta( int &x, int &y, bool bIgnoreNextMouseDelta );
+	virtual void GetMouseDelta( float &x, float &y, bool bIgnoreNextMouseDelta );
 #endif	
 
 	// Callback for LevelInit to tick the progress bar during time consuming operations
@@ -785,7 +785,7 @@ Vector CEngineClient::GetLightForPointFast(const Vector &pos, bool bClamp)
 
 #if defined( OSX ) || defined( USE_SDL )
 
-void CEngineClient::GetMouseDelta( int &x, int &y, bool bIgnoreNextMouseDelta )
+void CEngineClient::GetMouseDelta( float &x, float &y, bool bIgnoreNextMouseDelta )
 {
 	g_pLauncherMgr->GetMouseDelta( x, y, bIgnoreNextMouseDelta );
 }

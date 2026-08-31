@@ -220,11 +220,6 @@ bool CMatSysApp::SetVideoMode( )
 		config.SetFlag( MATSYS_VIDCFG_FLAGS_RESIZING, true );
 	}
 
-	if ( CommandLine()->CheckParm( "-mat_vsync" ) )
-	{
-		config.SetFlag( MATSYS_VIDCFG_FLAGS_NO_WAIT_FOR_VSYNC, false );
-	}
-
 	config.m_nAASamples = CommandLine()->ParmValue( "-mat_antialias", 1 );
 	config.m_nAAQuality = CommandLine()->ParmValue( "-mat_aaquality", 0 );
 	

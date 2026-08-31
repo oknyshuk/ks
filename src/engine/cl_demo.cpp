@@ -2404,7 +2404,6 @@ void CDemoPlayer::WriteTimeDemoResults( void )
 	// Append a new line of data
 	static ConVarRef gpu_level( "gpu_level" );
 	static ConVarRef cpu_level( "cpu_level" );
-	static ConVarRef mat_vsync( "mat_vsync" );
 	static ConVarRef mat_antialias( "mat_antialias" );
 	static ConVarRef mat_forceaniso( "mat_forceaniso" );
 	static ConVarRef mat_picmip( "mat_picmip" );
@@ -2447,7 +2446,7 @@ void CDemoPlayer::WriteTimeDemoResults( void )
 	//g_pFileSystem->FPrintf( fileHandle, "0x%x,", info.m_Revision );
 	//g_pFileSystem->FPrintf( fileHandle, "%s,", g_pMaterialSystemHardwareConfig->GetShaderDLLName() );
 	g_pFileSystem->FPrintf( fileHandle, "%s,", CommandLine()->CheckParm( "-nosound" ) ? "disabled" : "enabled" );
-	g_pFileSystem->FPrintf( fileHandle, "%s,", CommandLine()->CheckParm( "-mat_vsync" ) || mat_vsync.GetBool() ? "enabled" : "disabled" );
+	g_pFileSystem->FPrintf( fileHandle, "%s,", "enabled" );  // vsync is always on
 	g_pFileSystem->FPrintf( fileHandle, "%d,", gpu_level.GetInt() );
 	g_pFileSystem->FPrintf( fileHandle, "%d,", cpu_level.GetInt() );
 	g_pFileSystem->FPrintf( fileHandle, "%s,", dateString.Access() );

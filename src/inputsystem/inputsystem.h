@@ -114,7 +114,7 @@ public:
 	virtual void SleepUntilInput( int nMaxSleepTimeMS );
 	virtual int GetPollCount() const;
 	virtual void SetCursorPosition( int x, int y );
-	void GetRawMouseAccumulators( int& accumX, int& accumY );
+	void GetRawMouseAccumulators( float& accumX, float& accumY );
 	virtual void GetCursorPosition( int *pX, int *pY );
 	virtual void SetMouseCursorVisible( bool bVisible );
 	virtual void AddUIEventListener();

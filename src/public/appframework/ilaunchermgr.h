@@ -55,7 +55,7 @@ public:
 #endif
 	
 	// Get the next N events. The function returns the number of events that were filled into your array.
-	virtual int GetEvents( CCocoaEvent *pEvents, int nMaxEventsToReturn, bool debugEvents = false ) = 0;
+	virtual int GetEvents( CCocoaEvent *pEvents, int nMaxEventsToReturn ) = 0;
 
 	// Set the mouse cursor position.
 	virtual void SetCursorPosition( int x, int y ) = 0;
@@ -73,7 +73,7 @@ public:
 	virtual void DestroyGameWindow() = 0;
 	virtual void SetApplicationIcon( const char *pchAppIconFile ) = 0;
 	
-	virtual void GetMouseDelta( int &x, int &y, bool bIgnoreNextMouseDelta = false ) = 0;
+	virtual void GetMouseDelta( float &x, float &y, bool bIgnoreNextMouseDelta = false ) = 0;
 
 	virtual void GetNativeDisplayInfo( int nDisplay, uint &nWidth, uint &nHeight, uint &nRefreshHz ) = 0; // Retrieve the size of the monitor (desktop)
 	virtual void RenderedSize( uint &width, uint &height, bool set ) = 0;	// either set or retrieve rendered size value (from dxabstract)

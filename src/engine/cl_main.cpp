@@ -2812,15 +2812,14 @@ void CL_SetSteamCrashComment()
 	ConVarRef csm_quality_level( "csm_quality_level" );
 	ConVarRef r_waterforceexpensive( "r_waterforceexpensive" );
 	ConVarRef r_waterforcereflectentities( "r_waterforcereflectentities" );
-	ConVarRef mat_vsync( "mat_vsync" );
 	ConVarRef r_rootlod( "r_rootlod" );
 	ConVarRef mat_motion_blur_enabled( "mat_motion_blur_enabled" );
 	ConVarRef mat_queue_mode( "mat_queue_mode" );
 	ConVarRef mat_triplebuffered( "mat_triplebuffered" );
 
-	Q_snprintf( videoinfo, sizeof(videoinfo), "picmip: %i\nforceaniso: %i\nantialias: %i (%i)\nvsync: %i\nrootlod: %i\nshadowrendertotexture: %i\nr_flashlightdepthtexture %i\n"\
+	Q_snprintf( videoinfo, sizeof(videoinfo), "picmip: %i\nforceaniso: %i\nantialias: %i (%i)\nvsync: 1\nrootlod: %i\nshadowrendertotexture: %i\nr_flashlightdepthtexture %i\n"\
 				"waterforceexpensive: %i\nwaterforcereflectentities: %i\nmat_motion_blur_enabled: %i\nmat_queue_mode %i\nmat_triplebuffered: %i\ncsm_quality_level: %i",
-				mat_picmip.GetInt(), mat_forceaniso.GetInt(), mat_antialias.GetInt(), mat_aaquality.GetInt(), mat_vsync.GetInt(), r_rootlod.GetInt(), r_shadowrendertotexture.GetInt(),
+				mat_picmip.GetInt(), mat_forceaniso.GetInt(), mat_antialias.GetInt(), mat_aaquality.GetInt(), r_rootlod.GetInt(), r_shadowrendertotexture.GetInt(),
 				r_flashlightdepthtexture.GetInt(), r_waterforceexpensive.GetInt(), r_waterforcereflectentities.GetInt(), mat_motion_blur_enabled.GetInt(), mat_queue_mode.GetInt(), 
 				mat_triplebuffered.GetInt(), csm_quality_level.GetInt() );
 	int latency = 0;

@@ -103,7 +103,6 @@ ConVar sv_hibernate_ms_ui( "sv_hibernate_ms_ui", "20", FCVAR_RELEASE, "# of mill
 static ConVar sv_hibernate_postgame_delay( "sv_hibernate_postgame_delay", "5", FCVAR_RELEASE, "# of seconds to wait after final client leaves before hibernating.");
 
 ConVar	host_flush_threshold( "host_flush_threshold", "12", FCVAR_RELEASE, "Memory threshold below which the host should flush caches between server instances" );
-extern ConVar fps_max;
 
 static ConVar sv_pausable_dev( "sv_pausable_dev", "1", FCVAR_DEVELOPMENTONLY, "Whether listen server is pausable when running -dev and playing solo against bots" );
 static ConVar sv_pausable_dev_ds( "sv_pausable_dev_ds", "0", FCVAR_DEVELOPMENTONLY, "Whether dedicated server is pausable when running -dev and playing solo against bots" );

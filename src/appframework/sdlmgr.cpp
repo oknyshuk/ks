@@ -89,7 +89,7 @@ public:
 	virtual bool CreateGameWindow( const char *pTitle, bool bWindowed, int width, int height, bool bDesktopFriendlyFullscreen );
 
 	// Get the next N events. The function returns the number of events that were filled into your array.
-	virtual int GetEvents( CCocoaEvent *pEvents, int nMaxEventsToReturn, bool debugEvents = false );
+	virtual int GetEvents( CCocoaEvent *pEvents, int nMaxEventsToReturn );
 
 	// Set the mouse cursor position.
 	virtual void SetCursorPosition( int x, int y );
@@ -106,7 +106,7 @@ public:
 	virtual void DestroyGameWindow();
 	virtual void SetApplicationIcon( const char *pchAppIconFile );
 
-	virtual void GetMouseDelta( int &x, int &y, bool bIgnoreNextMouseDelta = false );
+	virtual void GetMouseDelta( float &x, float &y, bool bIgnoreNextMouseDelta = false );
 
 	virtual int GetActiveDisplayIndex();
 	virtual void GetNativeDisplayInfo( int nDisplay, uint &nWidth, uint &nHeight, uint &nRefreshHz ); // Retrieve the size of the monitor (desktop)
@@ -123,11 +123,7 @@ public:
 	virtual void SetCursorIcon( const InputCursorHandle_t pchCursor );
 
 	// Post an event to the input event queue.
-	// if debugEvent is true, post it to the debug event queue.
-	void PostEvent( const CCocoaEvent &theEvent, bool debugEvent=false );
-
-	// ask if an event is debug flavor or not.
-	bool IsDebugEvent( CCocoaEvent& event );
+	void PostEvent( const CCocoaEvent &theEvent );
 
 	virtual void SetMouseVisible( bool bState );
 	virtual void SetMouseCursor( SDL_Cursor *hCursor );
@@ -179,8 +175,8 @@ private:
 	bool m_bForbidMouseGrab;  // temporary setting showing if the mouse should
 	                          // grab if possible.
 
-	int m_nMouseXDelta;
-	int m_nMouseYDelta;
+	float m_flMouseXDelta;
+	float m_flMouseYDelta;
 
 	int m_ScreenWidth;
 	int m_ScreenHeight;
@@ -207,9 +203,14 @@ private:
 	float m_flMouseYScale;
 
 	// !!! FIXME: can we rename these from "Cocoa"?
-	CThreadMutex m_CocoaEventsMutex;					// use for either queue below
-	CUtlLinkedList<CCocoaEvent,int> m_CocoaEvents;
-	CUtlLinkedList<CCocoaEvent,int> m_DebugEvents;		// intercepted keys which wil be passed over to GLM
+	// Event queue. Produced by PumpWindowsMessageLoop() and drained by
+	// CInputSystem::PollInputState_Linux(), which calls PumpWindowsMessageLoop()
+	// itself -- so this is single threaded and needs no lock. A fixed ring also
+	// avoids a heap allocation per event, which matters at high mouse polling rates.
+	static const int kMaxQueuedEvents = 256;
+	CCocoaEvent m_Events[ kMaxQueuedEvents ];
+	int m_nEventsHead;							// next slot to read
+	int m_nEventsCount;
 
 	uint m_keyModifierMask;
 	uint32_t m_keyModifiers;
@@ -381,8 +382,10 @@ InitReturnVal_t CSDLMgr::Init()
 
 	m_Window = NULL;
 	m_bFullScreen = false;
-	m_nMouseXDelta = 0;
-	m_nMouseYDelta = 0;
+	m_nEventsHead = 0;
+	m_nEventsCount = 0;
+	m_flMouseXDelta = 0.0f;
+	m_flMouseYDelta = 0.0f;
 	m_ScreenWidth = 0;
 	m_ScreenHeight = 0;
 	m_renderedWidth = 0;
@@ -606,45 +609,20 @@ bool CSDLMgr::CreateHiddenGameWindow( const char *pTitle, bool bWindowed, int wi
 }
 
 
-int CSDLMgr::GetEvents( CCocoaEvent *pEvents, int nMaxEventsToReturn, bool debugEvent )
+int CSDLMgr::GetEvents( CCocoaEvent *pEvents, int nMaxEventsToReturn )
 {
 	SDLAPP_FUNC;
 
-	m_CocoaEventsMutex.Lock();
+	const int nToWrite = MIN( m_nEventsCount, nMaxEventsToReturn );
 
-	CUtlLinkedList<CCocoaEvent,int> &queue = debugEvent ? m_CocoaEvents : m_DebugEvents;
-
-	int nAvailable = queue.Count();
-	int nToWrite = MIN( nAvailable, nMaxEventsToReturn );
-
-	CCocoaEvent *pCurEvent = pEvents;
-	for ( int i=0; i < nToWrite; i++ )
+	for ( int i = 0; i < nToWrite; i++ )
 	{
-		int iHead = queue.Head();
-		memcpy( pCurEvent, &queue[iHead], sizeof( CCocoaEvent ) );
-		queue.Remove( iHead );
-		++pCurEvent;
+		pEvents[i] = m_Events[ m_nEventsHead ];
+		m_nEventsHead = ( m_nEventsHead + 1 ) % kMaxQueuedEvents;
 	}
-
-	m_CocoaEventsMutex.Unlock();
+	m_nEventsCount -= nToWrite;
 
 	return nToWrite;
-}
-
-bool CSDLMgr::IsDebugEvent( CCocoaEvent& event )
-{
-	SDLAPP_FUNC;
-
-	bool result = false;
-
-	#if GLMDEBUG
-		// simple rule for now, if the option key is involved, it's a debug key
-		// but only if GLM debugging is builtin
-
-		result |= ( (event.m_EventType == CocoaEvent_KeyDown) && ((event.m_ModifierKeyMask & (1<<eControlKey))!=0) );
-	#endif
-
-	return result;
 }
 
 // Set the mouse cursor position.
@@ -697,16 +675,19 @@ void CSDLMgr::GetCursorPosition( int *px, int *py )
 	*py = y;
 }
 
-void CSDLMgr::PostEvent( const CCocoaEvent &theEvent, bool debugEvent )
+void CSDLMgr::PostEvent( const CCocoaEvent &theEvent )
 {
 	SDLAPP_FUNC;
 
-	m_CocoaEventsMutex.Lock();
+	if ( m_nEventsCount >= kMaxQueuedEvents )
+	{
+		// Dropping the newest event is better than overwriting one not yet read.
+		AssertMsg( false, "CSDLMgr event queue overflow" );
+		return;
+	}
 
-	CUtlLinkedList<CCocoaEvent,int> &queue = debugEvent ? m_CocoaEvents : m_DebugEvents;
-	queue.AddToTail( theEvent );
-
-	m_CocoaEventsMutex.Unlock();
+	m_Events[ ( m_nEventsHead + m_nEventsCount ) % kMaxQueuedEvents ] = theEvent;
+	m_nEventsCount++;
 }
 
 void CSDLMgr::SetMouseVisible( bool bState )
@@ -1110,35 +1091,7 @@ void CSDLMgr::handleKeyInput( const SDL_Event &event )
 	theEvent.m_ModifierKeyMask = m_keyModifierMask;
 
 	// make a decision about this event - does it go in the normal evt queue or into the debug queue.
-	bool debug = IsDebugEvent( theEvent );
-
-#if GLMDEBUG
-	bool bIsShifted = ( ((theEvent.m_ModifierKeyMask & (1<<eCapsLockKey))!=0) || ((theEvent.m_ModifierKeyMask & (1<<eShiftKey))!=0) );
-	theEvent.m_UnicodeKeyUnmodified = event.key.key;
-	if ( bIsShifted )
-	{
-		switch ( event.key.key )
-		{
-			case '[':
-				theEvent.m_UnicodeKeyUnmodified = '{';
-				break;
-			case ']':
-				theEvent.m_UnicodeKeyUnmodified = '}';
-				break;
-			case 'h':
-				theEvent.m_UnicodeKeyUnmodified = 'H';
-				break;
-			case ',':
-				theEvent.m_UnicodeKeyUnmodified = '<';
-				break;
-			case '.':
-				theEvent.m_UnicodeKeyUnmodified = '>';
-				break;
-		}
-	}
-#endif
-
-	PostEvent( theEvent, debug );
+	PostEvent( theEvent );
 }
 
 void CSDLMgr::PumpWindowsMessageLoop()
@@ -1171,8 +1124,14 @@ void CSDLMgr::PumpWindowsMessageLoop()
 					break;
 				}
 
-                m_nMouseXDelta += (int)event.motion.xrel;
-                m_nMouseYDelta += (int)event.motion.yrel;
+                // Keep sub-pixel precision. Wayland's relative pointer protocol
+                // delivers wl_fixed (1/256 px) deltas, so truncating each event to an
+                // int silently discarded all slow movement: with a high polling rate
+                // mouse, |xrel| < 1.0 per event floored to zero every time. The sink
+                // (CInput::PerUserInput_t::m_flAccumulatedMouse*Movement) is float, so
+                // there is no reason to quantise here.
+                m_flMouseXDelta += event.motion.xrel;
+                m_flMouseYDelta += event.motion.yrel;
 
 				CCocoaEvent theEvent;
 				theEvent.m_EventType = CocoaEvent_MouseMove;
@@ -1431,14 +1390,14 @@ void CSDLMgr::PumpWindowsMessageLoop()
 						theEvent.m_UnicodeKey = ch;
 						theEvent.m_UnicodeKeyUnmodified = ch;
 						theEvent.m_ModifierKeyMask = m_keyModifierMask;
-						PostEvent( theEvent, false );
+						PostEvent( theEvent );
 
 						theEvent.m_EventType = CocoaEvent_KeyUp;
 						theEvent.m_VirtualKeyCode = 0;
 						theEvent.m_UnicodeKey = 0;
 						theEvent.m_UnicodeKeyUnmodified = 0;
 						theEvent.m_ModifierKeyMask = m_keyModifierMask;
-						PostEvent( theEvent, false );
+						PostEvent( theEvent );
 					}
 				}
 				break;
@@ -1485,14 +1444,14 @@ void CSDLMgr::SetApplicationIcon( const char *pchAppIconFile )
 	}
 }
 
-void CSDLMgr::GetMouseDelta( int &x, int &y, bool bIgnoreNextMouseDelta )
+void CSDLMgr::GetMouseDelta( float &x, float &y, bool bIgnoreNextMouseDelta )
 {
 	SDLAPP_FUNC;
 
-    x = m_nMouseXDelta * (m_bCursorVisible ? m_flMouseXScale : 1.0);
-    y = m_nMouseYDelta * (m_bCursorVisible ? m_flMouseYScale : 1.0);
+    x = m_flMouseXDelta * (m_bCursorVisible ? m_flMouseXScale : 1.0f);
+    y = m_flMouseYDelta * (m_bCursorVisible ? m_flMouseYScale : 1.0f);
 
-	m_nMouseXDelta = m_nMouseYDelta = 0;
+	m_flMouseXDelta = m_flMouseYDelta = 0.0f;
 }
 
 //  Returns the current active display index

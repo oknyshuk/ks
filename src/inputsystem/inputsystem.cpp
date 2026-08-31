@@ -1436,7 +1436,7 @@ void CInputSystem::EnableMouseCapture( PlatWindow_t hWnd )
 #endif
 }
 
-void CInputSystem::GetRawMouseAccumulators( int& accumX, int& accumY )
+void CInputSystem::GetRawMouseAccumulators( float& accumX, float& accumY )
 {
 #if defined( USE_SDL )
 

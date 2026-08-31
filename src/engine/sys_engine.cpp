@@ -54,51 +54,24 @@ int Sys_InitGame( CreateInterfaceFn appSystemFactory,
 ConVar engine_no_focus_sleep( "engine_no_focus_sleep", "50", FCVAR_ARCHIVE );
 
 
-#define DEFAULT_FPS_MAX	300
-static int s_nDesiredFPSMax = DEFAULT_FPS_MAX;
-static bool s_bFPSMaxDrivenByPowerSavings = false;
-
 // Dedicated server fps locking to tickrate values
 extern float host_nexttick;
 
 //-----------------------------------------------------------------------------
 // ConVars and ConCommands
 //-----------------------------------------------------------------------------
-static void fps_max_callback( IConVar *var, const char *pOldValue, float flOldValue )
-{
-	// Only update s_nDesiredFPSMax when not driven by the mat_powersavingsmode ConVar (see below)
-	if ( !s_bFPSMaxDrivenByPowerSavings )
-	{
-		s_nDesiredFPSMax = ( (ConVar *)var)->GetInt();
-	}
-}
-ConVar fps_max( "fps_max", STRINGIFY( DEFAULT_FPS_MAX ), FCVAR_RELEASE, "Frame rate limiter", fps_max_callback );
+// The client-side frame rate limiter is gone (fps_max, fps_max_menu,
+// fps_max_splitscreen, mat_powersavingsmode). Frame pacing is owned by vsync plus
+// dxvk.latencySleep: dxvk limits to the display refresh rate and starts the CPU
+// frame just late enough that work lands before vblank. An engine-side sleep is
+// counted as CPU work by dxvk's estimator and makes it pace worse, and upstream
+// dxvk documents that latency sleep has no effect at all in games that limit
+// their own frame rate.
+//
+// sleep_when_meeting_framerate still applies to dedicated servers, which pace
+// themselves against host_nexttick in FilterTime().
+ConVar sleep_when_meeting_framerate( "sleep_when_meeting_framerate", "1", FCVAR_NONE, "Sleep instead of spinning when meeting the dedicated server tick rate." );
 
-// When set, this ConVar (typically driven from the advanced video settings) will drive fps_max (see above) to
-// half of the refresh rate, if the user hasn't otherwise set fps_max (via console, commandline etc)
-static void mat_powersavingsmode_callback( IConVar *var, const char *pOldValue, float flOldValue )
-{
-	s_bFPSMaxDrivenByPowerSavings = true;
-	int nRefresh = s_nDesiredFPSMax;
-
-	if ( ( (ConVar *)var)->GetBool() )
-	{
-		MaterialVideoMode_t mode;
-		materials->GetDisplayMode( mode );
-		nRefresh = MAX( 30, ( mode.m_RefreshRate + 1 ) >> 1 ); // Half of display refresh rate (min of 30Hz)
-	}
-
-	fps_max.SetValue( nRefresh );
-	s_bFPSMaxDrivenByPowerSavings = false;
-}
-static ConVar mat_powersavingsmode( "mat_powersavingsmode", "0", FCVAR_ARCHIVE, "Power Savings Mode", mat_powersavingsmode_callback );
-
-ConVar sleep_when_meeting_framerate( "sleep_when_meeting_framerate", "1", FCVAR_NONE, "Sleep instead of spinning if we're meeting the desired framerate." );
-
-static ConVar fps_max_splitscreen( "fps_max_splitscreen", STRINGIFY( DEFAULT_FPS_MAX ), 0, "Frame rate limiter, splitscreen" );
-#if !defined( DEDICATED )
-static ConVar fps_max_menu( "fps_max_menu", "120", FCVAR_RELEASE, "Frame rate limiter, main menu" );
-#endif
 static ConVar async_serialize( "async_serialize", "0", 0, "Force async reads to serialize for profiling" );
 #define ShouldSerializeAsync() async_serialize.GetBool()
 
@@ -261,53 +234,15 @@ bool CEngine::FilterTime( float dt )
 		return ( dt >= host_nexttick );
 	}
 
+	// The client does not pace itself: dxvk owns frame pacing via dxvk.latencySleep
+	// (see CShaderDeviceMgrDx8::Connect). It delays the start of the CPU frame so that
+	// work lands just before vblank, and under vsync it limits to the display refresh
+	// rate. An engine-side sleep here defeats that outright, because dxvk measures
+	// frameStart->queueSubmit as CPU time: our idle sleep would be counted as work and
+	// it would compensate by sleeping less. Upstream dxvk documents that latencySleep
+	// "will not have any effect in games with built-in frame rate limiters", so the
+	// client limiter is removed rather than merely bypassed.
 	m_flMinFrameTime = 0.0f;
-
-	// Dedicated's tic_rate regulates server frame rate.  Don't apply fps filter here.
-	// Only do this restriction on the client. Prevents clients from accomplishing certain
-	// hacks by pausing their client for a period of time.
-	if ( !sv.IsDedicated() && !CanCheat() && ( fps_max.GetFloat() < 30 ) && !Host_IsSinglePlayerGame() )
-	{
-		// Don't do anything if fps_max=0 (which means it's unlimited).
-		if ( fps_max.GetFloat() != 0.0f )
-		{
-			Warning( "sv_cheats is 0 and fps_max is being limited to a minimum of 30 (or set to 0).\n" );
-			fps_max.SetValue( 30.0f );
-		}
-	}
-
-	float fps = fps_max.GetFloat();
-
-#if !defined( DEDICATED )
-	extern IVEngineClient *engineClient;
-	if ( engineClient && !engineClient->IsConnected() && ( fps_max_menu.GetFloat() < fps ) )
-	{
-		fps = fps_max_menu.GetFloat();
-	}
-#endif
-
-	if ( fps > 0.0f )
-	{
-		// Limit fps to withing tolerable range
-//		fps = max( MIN_FPS, fps ); // red herring - since we're only checking if dt < 1/fps, clamping against MIN_FPS has no effect
-		fps = MIN( MAX_FPS, fps );
-
-		float minframetime = 1.0 / fps;
-
-		m_flMinFrameTime = minframetime;
-
-		if (
-#if !defined(DEDICATED)
-		    !demoplayer->IsPlayingTimeDemo() &&
-#endif
-			!g_bDedicatedServerBenchmarkMode &&
-			dt < minframetime )
-		{
-			// framerate is too high
-			return false;
-		}
-	}
-
 	return true;
 }
 
@@ -365,7 +300,8 @@ void CEngine::Frame( void )
 	if ( m_flFrameTime < 0.0f )
 		return;
 
-	// If the frametime is still too short, don't pass through
+	// If the frametime is still too short, don't pass through.
+	// Only dedicated servers gate here now; the client is paced by dxvk.
 	if ( !FilterTime( m_flFrameTime ) )
 	{
 		double fSleepNS = ( m_flMinFrameTime - m_flFrameTime ) * 1000000000.0;

@@ -371,12 +371,6 @@ static void OverrideMaterialSystemConfigFromCommandLine( MaterialSystem_Config_t
 		config.SetFlag( MATSYS_VIDCFG_FLAGS_RESIZING, CommandLine()->CheckParm( "-resizing" ) ? true : false );
 	}
 
-	if ( CommandLine()->FindParm( "-mat_vsync" ) )
-	{
-		int vsync = CommandLine()->ParmValue( "-mat_vsync", 0 );
-		config.SetFlag( MATSYS_VIDCFG_FLAGS_NO_WAIT_FOR_VSYNC, vsync == 0 );
-	}
-
 	if ( CommandLine()->FindParm( "-mat_antialias" ) )
 	{
 		config.m_nAASamples = CommandLine()->ParmValue( "-mat_antialias", config.m_nAASamples );

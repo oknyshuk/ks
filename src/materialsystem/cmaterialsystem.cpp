@@ -1578,7 +1578,6 @@ static void MatProxyCallback( IConVar *pConVar, const char *old, float flOldValu
 //-----------------------------------------------------------------------------
 // Convars that control the config record
 //-----------------------------------------------------------------------------
-ConVar mat_vsync( "mat_vsync", false ? "1" : "0", FCVAR_NONE, "Force sync to vertical retrace", true, 0.0, true, 1.0 );
 
 // Texture-related
 static ConVar mat_forceaniso( "mat_forceaniso", "1" ); // 0 = Bilinear, 1 = Trilinear, 2+ = Aniso
@@ -1656,7 +1655,10 @@ void CMaterialSystem::ReadConfigFromConVars( MaterialSystem_Config_t *pConfig )
 		return;
 
 	// video panel config items
-	pConfig->SetFlag( MATSYS_VIDCFG_FLAGS_NO_WAIT_FOR_VSYNC, !mat_vsync.GetBool() );
+	// Vsync is not optional: presenting unsynced cannot tear under a compositor that
+	// lacks wp_tearing_control_v1, and it would disable dxvk's refresh-rate pacing.
+	// See CShaderDeviceDx8::SetPresentParameters.
+	pConfig->SetFlag( MATSYS_VIDCFG_FLAGS_NO_WAIT_FOR_VSYNC, false );
 	pConfig->SetFlag( MATSYS_VIDCFG_FLAGS_DISABLE_SPECULAR, !mat_specular.GetBool() );
 	pConfig->SetFlag( MATSYS_VIDCFG_FLAGS_DISABLE_BUMPMAP, !mat_bumpmap.GetBool() );
 	pConfig->SetFlag( MATSYS_VIDCFG_FLAGS_DISABLE_DETAIL, !mat_detail_tex.GetBool() );
@@ -1724,7 +1726,6 @@ void CMaterialSystem::WriteConfigIntoConVars( const MaterialSystem_Config_t &con
 	if ( !g_pCVar )
 		return;
 
-	mat_vsync.SetValue( config.WaitForVSync() );
 	mat_specular.SetValue( config.UseSpecular() );
 	mat_bumpmap.SetValue( config.UseBumpmapping() );
 	mat_detail_tex.SetValue( config.UseDetailTexturing() );
