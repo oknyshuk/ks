@@ -95,7 +95,7 @@
 			}
 		</style>
 	</head>
-	<body>
+	<body data-model="hud" data-event-mousedown="dismiss_loadingscreen">
 		<div id="backdrop"/>
 		<div id="content">
 			<div id="logo-area">

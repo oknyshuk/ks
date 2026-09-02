@@ -1,5 +1,9 @@
 #include "rkmenu_main.h"
 
+#include "rkpanel.h"
+
+#include "rkhud_model.h"
+
 #include <rocketui/rmlui.h>
 
 #include "rkpanel_options.h"
@@ -8,73 +12,26 @@
 Rml::ElementDocument *RocketMainMenuDocument::m_pInstance = nullptr;
 bool RocketMainMenuDocument::showing = false;
 
-bool RocketMainMenuDocument::OwnsInput()
+// menu.rml names these on the buttons (data-event-click).
+static void BindMainMenu( Rml::DataModelConstructor &c )
 {
-    return showing && m_pInstance && m_pInstance->IsVisible();
+    c.BindEventCallback( "show_options", []( Rml::DataModelHandle, Rml::Event &, const Rml::VariantList & ) {
+        RocketOptionsDocument::ShowPanel( true );
+    } );
+    c.BindEventCallback( "show_play", []( Rml::DataModelHandle, Rml::Event &, const Rml::VariantList & ) {
+        RocketPlayDocument::ShowPanel( true );
+    } );
 }
-
-class MainMenuEventListener : public Rml::EventListener
-{
-public:
-    void ProcessEvent(Rml::Event &event) override
-    {
-        Rml::Element *current = event.GetCurrentElement();
-        if( !current )
-            return;
-
-        const Rml::String &id = current->GetId();
-
-        if( id == "options-menu-btn" )
-        {
-            RocketOptionsDocument::ShowPanel( true );
-        }
-        else if( id == "play-menu-btn" )
-        {
-            RocketPlayDocument::ShowPanel( true );
-        }
-
-        event.StopPropagation();
-    }
-};
-static MainMenuEventListener mainMenuEventListener;
-
-RocketMainMenuDocument::RocketMainMenuDocument()
-{
-}
+RK_HUD_SECTION( BindMainMenu );
 
 void RocketMainMenuDocument::LoadDialog()
 {
-    if( !m_pInstance )
-    {
-        m_pInstance = RocketUI()->LoadDocumentFile( ROCKET_CONTEXT_MENU, "menu.rml", RocketMainMenuDocument::LoadDialog, RocketMainMenuDocument::UnloadDialog );
-        m_pInstance->Show();
-        showing = true;
-        if( !m_pInstance )
-        {
-            Error("Couldn't create rocketui menu!\n");
-            /* Exit */
-        }
-        m_pInstance->GetElementById("options-menu-btn")->AddEventListener(Rml::EventId::Click, &mainMenuEventListener);
-        m_pInstance->GetElementById("play-menu-btn")->AddEventListener(Rml::EventId::Click, &mainMenuEventListener);
-    }
+    RkPanelLoad( m_pInstance, ROCKET_CONTEXT_MENU, "menu.rml", LoadDialog, UnloadDialog );
 }
 
 void RocketMainMenuDocument::UnloadDialog()
 {
-    if( m_pInstance )
-    {
-        m_pInstance->GetElementById("options-menu-btn")->RemoveEventListener(Rml::EventId::Click, &mainMenuEventListener);
-        m_pInstance->GetElementById("play-menu-btn")->RemoveEventListener(Rml::EventId::Click, &mainMenuEventListener);
-        m_pInstance->Close();
-        m_pInstance = nullptr;
-    }
-}
-
-void RocketMainMenuDocument::UpdateDialog()
-{
-    // I dont think this is needed here..
-    //if( m_pInstance )
-    //    m_pInstance->UpdateDocument()
+    RkPanelUnload( m_pInstance, showing );
 }
 
 void RocketMainMenuDocument::RestorePanel()
@@ -83,22 +40,11 @@ void RocketMainMenuDocument::RestorePanel()
     ShowPanel( true );
 }
 
+// Reached before the first frame in some paths, so it loads for the caller.
 void RocketMainMenuDocument::ShowPanel(bool bShow, bool immediate)
 {
-    // oh yeah buddy this'll get called before the loading sometimes
-    // so if it does, load it for the caller.
     if( bShow )
-    {
-        if( !m_pInstance )
-            LoadDialog();
+        LoadDialog();
 
-        m_pInstance->Show();
-    }
-    else
-    {
-        if( m_pInstance )
-            m_pInstance->Hide();
-    }
-
-    showing = bShow;
+    RkPanelShow( m_pInstance, showing, bShow );
 }

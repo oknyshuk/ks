@@ -1,8 +1,9 @@
 #include "rkpanel_popup.h"
 
+#include "rkhud_model.h"
+
 #include "cbase.h"
 #include "cdll_client_int.h" // extern globals to interfaces like engineclient
-
 
 #include <rocketui/rmlui.h>
 
@@ -24,7 +25,6 @@ CON_COMMAND(rocket_test_popup, "Create a Test Popup in RocketUI")
     }
 }
 
-
 void RocketPopupDocument::ProcessEvent(Rml::Event &event)
 {
     if( event.GetId() == Rml::EventId::Animationend )
@@ -39,10 +39,10 @@ RocketPopupDocument::RocketPopupDocument(const char *text, float timeout)
     V_strncpy( m_textBuffer, text, MAX_POPUP_TEXT );
     m_fTimeout = timeout;
 
-    m_pInstance = RocketUI()->LoadDocumentFile( ROCKET_CONTEXT_CURRENT, "panel_popup.rml" );
+    m_pInstance = RkLoadDocument( ROCKET_CONTEXT_CURRENT, "panel_popup.rml" );
     m_pInstance->AddEventListener(Rml::EventId::Animationend, this );
     m_pInstance->GetElementById("text")->SetInnerRML( m_textBuffer );
-    m_pInstance->Show();
+    m_pInstance->Show( Rml::ModalFlag::None, Rml::FocusFlag::None );
     m_pInstance->Animate("opacity", Rml::Property(0.0f, Rml::Unit::NUMBER), timeout, Rml::Tween(Rml::Tween::Quadratic));
 }
 

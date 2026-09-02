@@ -1,5 +1,7 @@
 #include "rkhud_roundtimer.h"
 
+#include "rkhud_model.h"
+
 #include "cbase.h"
 #include "hud_macros.h"
 #include "c_cs_player.h"
@@ -9,6 +11,8 @@
 
 DECLARE_HUDELEMENT( RkHudRoundTimer );
 
+const char *RkHudRoundTimer::kDocument = "hud_roundtimer.rml";
+
 // Struct layout for data-binding model.
 struct RoundTimerData
 {
@@ -17,118 +21,47 @@ struct RoundTimerData
     bool bombPlanted;
     int ctScore;
     int tScore;
+
+    bool operator==( const RoundTimerData & ) const = default;
 } roundTimerData;
 
-RkHudRoundTimer::RkHudRoundTimer(const char *value) : CHudElement( value ),
-                                                      m_bVisible( false ),
-                                                      m_pInstance( nullptr )
+static void BindRoundTimerData( Rml::DataModelConstructor &c )
+{
+    if ( auto h = c.RegisterStruct<RoundTimerData>() )
+    {
+        h.RegisterMember( "minutes_left", &RoundTimerData::MinutesLeft );
+        h.RegisterMember( "seconds_left", &RoundTimerData::SecondsLeft );
+        h.RegisterMember( "bomb_planted", &RoundTimerData::bombPlanted );
+        h.RegisterMember( "ct_score", &RoundTimerData::ctScore );
+        h.RegisterMember( "t_score", &RoundTimerData::tScore );
+    }
+    c.Bind( "roundtimer", &roundTimerData );
+}
+RK_HUD_SECTION( BindRoundTimerData );
+
+RkHudRoundTimer::RkHudRoundTimer(const char *value) : RkHudDocument( value )
 {
     SetHiddenBits( /* HIDEHUD_MISCSTATUS */ 0 );
 }
 
-static void UnloadRkRoundTimer()
-{
-    RkHudRoundTimer *pRoundTimer = GET_HUDELEMENT(RkHudRoundTimer);
-    if (!pRoundTimer)
-    {
-        Warning("Couldn't grab hud roundtimer to load!\n");
-        return;
-    }
-
-    // Not loaded
-    if( !pRoundTimer->m_pInstance )
-        return;
-
-    Rml::Context *hudCtx = RocketUI()->AccessHudContext();
-    if( hudCtx )
-    {
-        hudCtx->RemoveDataModel( "roundtimer_model" );
-        pRoundTimer->m_dataModel = nullptr;
-    }
-    else
-    {
-        Warning("Couldn't access hudctx to unload scoreboard datamodel!\n");
-    }
-
-    pRoundTimer->m_pInstance->Close();
-    pRoundTimer->m_pInstance = nullptr;
-}
-
-static void LoadRkRoundTimer()
-{
-    RkHudRoundTimer *pRoundTimer = GET_HUDELEMENT(RkHudRoundTimer);
-    if (!pRoundTimer)
-    {
-        Warning("Couldn't grab hud roundtimer to load!\n");
-        return;
-    }
-
-    Rml::Context *hudCtx = RocketUI()->AccessHudContext();
-    if (!hudCtx)
-    {
-        Error("Couldn't access hudctx!\n");
-        /* Exit */
-    }
-
-    if( pRoundTimer->m_pInstance || pRoundTimer->m_dataModel )
-    {
-        Warning( "RkRoundTimer already loaded, call unload first!\n");
-        return;
-    }
-
-    // Create the data binding, this will sync data between rocketui and the game.
-    Rml::DataModelConstructor constructor = hudCtx->CreateDataModel("roundtimer_model" );
-    if( !constructor )
-    {
-        Error( "Couldn't create datamodel for roundtimer!\n" );
-        /* Exit */
-    }
-
-    constructor.Bind( "minutes_left", &roundTimerData.MinutesLeft );
-    constructor.Bind( "seconds_left", &roundTimerData.SecondsLeft );
-    constructor.Bind( "bomb_planted", &roundTimerData.bombPlanted );
-    constructor.Bind( "ct_score", &roundTimerData.ctScore );
-    constructor.Bind( "t_score", &roundTimerData.tScore );
-
-    pRoundTimer->m_dataModel = constructor.GetModelHandle();
-
-    pRoundTimer->m_pInstance = RocketUI()->LoadDocumentFile( ROCKET_CONTEXT_HUD, "hud_roundtimer.rml", &LoadRkRoundTimer, &UnloadRkRoundTimer );
-
-    if( !pRoundTimer->m_pInstance )
-    {
-        Error( "Couldn't create hud_roundtimer document!\n" );
-        /* Exit */
-    }
-
-    pRoundTimer->ShowPanel( false, false );
-}
-
 RkHudRoundTimer::~RkHudRoundTimer() noexcept
 {
-    UnloadRkRoundTimer();
-}
-
-void RkHudRoundTimer::LevelInit()
-{
-    LoadRkRoundTimer();
-}
-
-void RkHudRoundTimer::LevelShutdown()
-{
-    UnloadRkRoundTimer();
+    Unload();
 }
 
 void RkHudRoundTimer::ShowPanel(bool bShow, bool force)
 {
-    if( !m_pInstance )
+    if( !m_pDocument )
         return;
 
     if( bShow )
     {
         if( !m_bVisible )
         {
-            m_pInstance->Show();
+            m_pDocument->Show( Rml::ModalFlag::None, Rml::FocusFlag::None );
         }
+
+        const RoundTimerData previous = roundTimerData;
 
         int remainingTime;
         if ( CSGameRules()->IsFreezePeriod() )
@@ -146,20 +79,15 @@ void RkHudRoundTimer::ShowPanel(bool bShow, bool force)
         roundTimerData.tScore = g_PR->GetTeamScore( TEAM_TERRORIST );
         roundTimerData.bombPlanted = CSGameRules()->m_bBombPlanted;
 
-
-        m_dataModel.DirtyVariable( "minutes_left" );
-        m_dataModel.DirtyVariable( "seconds_left" );
-        m_dataModel.DirtyVariable( "bomb_planted" );
-        m_dataModel.DirtyVariable( "ct_score" );
-        m_dataModel.DirtyVariable( "t_score" );
-
-        m_dataModel.DirtyAllVariables();
+        // A clock that ticks once a second, polled every frame.
+        if( !( roundTimerData == previous ) )
+            RkHudDirty( "roundtimer" );
     }
     else
     {
         if( m_bVisible )
         {
-            m_pInstance->Hide();
+            m_pDocument->Hide();
         }
     }
 

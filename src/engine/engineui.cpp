@@ -1392,20 +1392,13 @@ void UI_ActivateMouse()
 		return;
 	}
 		
-	/* 
-	//
-	// MIKE AND ALFRED: these panels should expose whether they want mouse input or not and 
-	// CalculateMouseVisible will take them into account.
-	//
-	// If showing game ui, make sure nothing else is hooking it
-	if ( Base().IsGameUIVisible() || Base().IsDebugSystemVisible() )
-	{
-		g_ClientDLL->IN_DeactivateMouse();
-		return;
-	}
-	*/
-			
-	if ( EngineUI()->IsGameUIVisible() || ( g_pRocketUI && g_pRocketUI->IsConsumingInput() ) )
+	// Mouse look is off exactly while an interactive UI document is on screen. Ask
+	// RocketUI, which derives that from the documents themselves and so cannot go stale.
+	// The engine's GameUI flag is not consulted: nothing draws a VGUI game UI in this
+	// fork (CGameUI::OnGameUIActivated only shows RmlUi documents), so it is a pause/state
+	// bit that any panel could leave set -- which used to kill mouse look until ESC. It is
+	// the fallback only when RocketUI is absent (tools, dedicated).
+	if ( g_pRocketUI ? g_pRocketUI->IsConsumingInput() : EngineUI()->IsGameUIVisible() )
 	{
 		g_ClientDLL->IN_DeactivateMouse();
 		return;

@@ -11,19 +11,17 @@
 				position: absolute;
 				background-color: #000;
 			}
-			/* Reticle: a crisp solid core + soft gradient "wings" that grow from the
-			   core as the shot spreads. Axis-native — the vertical line's wings fade
-			   across width (horizontal-gradient), the horizontal line's across height
-			   (vertical-gradient). Both gradient stops are black so alpha fades clean. */
 			/* Reticle. Steady -> thin sharp solid lines (.core). Moving -> Valve's
 			   scope_line_blur sprite (.blur), tinted black; the horizontal line uses a
 			   transposed copy (.t.vtf) so the soft falloff runs across its thickness.
-			   C++ shows one pair and collapses the other to zero size (the original's
-			   sharp<->blur toggle). */
-			.core   { position: absolute; background-color: #000; }
+			   The 'steady' class on the body picks the pair, so only one is ever laid
+			   out (C++ used to collapse the other to a zero-size rect). */
+			.core   { position: absolute; background-color: #000; display: none; }
 			.blur   { position: absolute; decorator: image(materials/sprites/scope_line_blur.vtf); image-color: #000; }
 			.blur-h { position: absolute; decorator: image(materials/sprites/scope_line_blur.t.vtf); image-color: #000; }
-			/* Scope square: C++ sizes/positions it to the viewport rect. Its four
+			.steady .core { display: block; }
+			.steady .blur, .steady .blur-h { display: none; }
+			/* Scope square: sized to the viewport rect from the data model. Its four
 			   corners are masked into a circle by Valve's original scope_arc
 			   sprite (decoded straight from VTF). */
 			#scope { position: absolute; }
@@ -50,25 +48,50 @@
 			#arc-bl { left: 0; bottom: 0; transform: scaleX(-1); }
 		</style>
 	</head>
-	<body>
+	<!-- Every rect below is bound: rkhud_scope.cpp works out the viewport and the
+	     shot-spread blur (that part is weapon physics, not layout) and publishes
+	     the results, so what a rect *is* stays here where it can be restyled. -->
+	<body data-model="hud" data-class-steady="scope.steady">
 		<!-- Lens dust overlay (under everything) -->
 		<div id="lens"/>
 		<!-- Black fills around scope viewport -->
-		<div id="fill-top" class="fill"/>
-		<div id="fill-bottom" class="fill"/>
-		<div id="fill-left" class="fill"/>
-		<div id="fill-right" class="fill"/>
+		<div id="fill-top" class="fill"
+		     data-style-left="'0px'" data-style-top="'0px'"
+		     data-style-width="scope.screen_w + 'px'" data-style-height="scope.top_h + 'px'"></div>
+		<div id="fill-bottom" class="fill"
+		     data-style-left="'0px'" data-style-top="scope.bottom_y + 'px'"
+		     data-style-width="scope.screen_w + 'px'" data-style-height="scope.bottom_h + 'px'"></div>
+		<div id="fill-left" class="fill"
+		     data-style-left="'0px'" data-style-top="scope.scope_y + 'px'"
+		     data-style-width="scope.left_w + 'px'" data-style-height="scope.scope_h + 'px'"></div>
+		<div id="fill-right" class="fill"
+		     data-style-left="scope.scope_x2 + 'px'" data-style-top="scope.scope_y + 'px'"
+		     data-style-width="scope.right_w + 'px'" data-style-height="scope.scope_h + 'px'"></div>
 		<!-- Circular corner mask -->
-		<div id="scope">
+		<div id="scope"
+		     data-style-left="scope.scope_x + 'px'" data-style-top="scope.scope_y + 'px'"
+		     data-style-width="scope.scope_w + 'px'" data-style-height="scope.scope_h + 'px'">
 			<div id="arc-tl" class="arc"/>
 			<div id="arc-tr" class="arc"/>
 			<div id="arc-br" class="arc"/>
 			<div id="arc-bl" class="arc"/>
 		</div>
 		<!-- Crosshair reticle: sharp solid lines (steady) + soft sprite lines (moving) -->
-		<div id="v-blur" class="blur"/>
-		<div id="h-blur" class="blur-h"/>
-		<div id="v-core" class="core"/>
-		<div id="h-core" class="core"/>
+		<div id="v-blur" class="blur"
+		     data-style-left="scope.blur_x + 'px'" data-style-top="'0px'"
+		     data-style-width="scope.blur + 'px'" data-style-height="scope.screen_h + 'px'"
+		     data-style-opacity="scope.opacity"></div>
+		<div id="h-blur" class="blur-h"
+		     data-style-left="'0px'" data-style-top="scope.blur_y + 'px'"
+		     data-style-width="scope.screen_w + 'px'" data-style-height="scope.blur + 'px'"
+		     data-style-opacity="scope.opacity"></div>
+		<div id="v-core" class="core"
+		     data-style-left="scope.core_x + 'px'" data-style-top="'0px'"
+		     data-style-width="scope.thickness + 'px'" data-style-height="scope.screen_h + 'px'"
+		     data-style-opacity="scope.opacity"></div>
+		<div id="h-core" class="core"
+		     data-style-left="'0px'" data-style-top="scope.core_y + 'px'"
+		     data-style-width="scope.screen_w + 'px'" data-style-height="scope.thickness + 'px'"
+		     data-style-opacity="scope.opacity"></div>
 	</body>
 </rml>

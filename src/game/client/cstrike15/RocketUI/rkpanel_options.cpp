@@ -1,5 +1,9 @@
 #include "rkpanel_options.h"
 
+#include "rkpanel.h"
+
+#include "rkhud_model.h"
+
 #include "cbase.h"
 #include "cdll_client_int.h" // extern globals to interfaces like engineclient
 #include "tier1/convar.h"
@@ -10,293 +14,212 @@
 extern IGameUIFuncs *gameuifuncs;
 extern IMaterialSystem *materials;
 
-
 #include <rocketui/rmlui.h>
+#include "rkhud_pausemenu.h"
+#include "rkmenu_main.h"
 
 Rml::ElementDocument *RocketOptionsDocument::m_pInstance = nullptr;
 bool RocketOptionsDocument::m_bVisible = false;
 bool RocketOptionsDocument::m_bPopulating = false;
 
-bool RocketOptionsDocument::OwnsInput()
+// Push the current ConVar value into one control. The mirror of
+// ApplyConVarFromControl, which reads it back out on change.
+static void PopulateControlFromConVar( Rml::Element *elem )
 {
-    return m_bVisible && m_pInstance && m_pInstance->IsVisible();
-}
-
-// Helper: set a <select> element's value from a ConVar int
-static void SetSelectFromConVar( Rml::ElementDocument *doc, const char *elementId, const char *convarName )
-{
-    Rml::Element *elem = doc->GetElementById( elementId );
-    if( !elem )
+    const Rml::String convarName = elem->GetAttribute<Rml::String>( "data-convar", "" );
+    if ( convarName.empty() )
         return;
 
-    auto *sel = rmlui_dynamic_cast<Rml::ElementFormControlSelect*>( elem );
-    if( !sel )
+    ConVarRef cvar( convarName.c_str() );
+    if ( !cvar.IsValid() )
         return;
 
-    ConVarRef cvar( convarName );
-    if( !cvar.IsValid() )
-        return;
-
+    const Rml::String tag = elem->GetTagName();
+    const Rml::String type = elem->GetAttribute<Rml::String>( "type", "" );
     char valBuf[32];
-    V_snprintf( valBuf, sizeof(valBuf), "%d", cvar.GetInt() );
-    sel->SetValue( Rml::String( valBuf ) );
-}
 
-// Helper: set a range input's value from a ConVar float
-static void SetRangeFromConVar( Rml::ElementDocument *doc, const char *elementId, const char *convarName )
-{
-    Rml::Element *elem = doc->GetElementById( elementId );
-    if( !elem )
-        return;
-
-    auto *input = rmlui_dynamic_cast<Rml::ElementFormControlInput*>( elem );
-    if( !input )
-        return;
-
-    ConVarRef cvar( convarName );
-    if( !cvar.IsValid() )
-        return;
-
-    char valBuf[32];
-    V_snprintf( valBuf, sizeof(valBuf), "%.2f", cvar.GetFloat() );
-    input->SetValue( Rml::String( valBuf ) );
-
-    // Update the value label if it exists
-    char labelId[64];
-    V_snprintf( labelId, sizeof(labelId), "%s_val", elementId );
-    Rml::Element *label = doc->GetElementById( labelId );
-    if( label )
-        label->SetInnerRML( Rml::String( valBuf ) );
-}
-
-// Helper: set a checkbox from a ConVar bool
-static void SetCheckboxFromConVar( Rml::ElementDocument *doc, const char *elementId, const char *convarName, bool negate = false )
-{
-    Rml::Element *elem = doc->GetElementById( elementId );
-    if( !elem )
-        return;
-
-    ConVarRef cvar( convarName );
-    if( !cvar.IsValid() )
-        return;
-
-    bool checked = negate ? !cvar.GetBool() : cvar.GetBool();
-    if( checked )
-        elem->SetAttribute( "checked", "" );
-    else
-        elem->RemoveAttribute( "checked" );
-}
-
-// Click listener for tabs and buttons only - NOT added to the whole document
-class RkOptionsClickListener : public Rml::EventListener
-{
-public:
-    void ProcessEvent( Rml::Event &event ) override
+    if ( tag == "select" )
     {
-        Rml::Element *current = event.GetCurrentElement();
-        if( !current )
-            return;
-
-        const Rml::String &id = current->GetId();
-
-        if( id == "tab-video" || id == "tab-audio" || id == "tab-mouse" )
-        {
-            RocketOptionsDocument::SwitchTab( id.c_str() );
-        }
-        else if( id == "close" )
-        {
-            RocketOptionsDocument::ShowPanel( false );
-            RocketOptionsDocument::UnloadDialog();
-        }
-        else if( id == "save" )
-        {
-            Msg( "Saving settings.\n" );
-            engine->ClientCmd_Unrestricted( "mat_savechanges" );
-            engine->ClientCmd_Unrestricted( "host_writeconfig" );
-        }
+        V_snprintf( valBuf, sizeof( valBuf ), "%d", cvar.GetInt() );
+        if ( auto *sel = rmlui_dynamic_cast<Rml::ElementFormControlSelect *>( elem ) )
+            sel->SetValue( Rml::String( valBuf ) );
     }
-};
+    else if ( type == "checkbox" )
+    {
+        if ( cvar.GetBool() )
+            elem->SetAttribute( "checked", "" );
+        else
+            elem->RemoveAttribute( "checked" );
+    }
+    else if ( type == "range" )
+    {
+        V_snprintf( valBuf, sizeof( valBuf ), "%.2f", cvar.GetFloat() );
+        if ( auto *input = rmlui_dynamic_cast<Rml::ElementFormControlInput *>( elem ) )
+            input->SetValue( Rml::String( valBuf ) );
+
+        char labelId[64];
+        V_snprintf( labelId, sizeof( labelId ), "%s_val", elem->GetId().c_str() );
+        if ( Rml::ElementDocument *doc = elem->GetOwnerDocument() )
+            if ( Rml::Element *label = doc->GetElementById( labelId ) )
+                label->SetInnerRML( Rml::String( valBuf ) );
+    }
+}
+
+// Walk the document once instead of naming fifteen controls by hand.
+static void PopulateConVarControls( Rml::Element *elem )
+{
+    if ( !elem )
+        return;
+
+    PopulateControlFromConVar( elem );
+
+    for ( int i = 0; i < elem->GetNumChildren(); i++ )
+        PopulateConVarControls( elem->GetChild( i ) );
+}
 
 // Forward declaration - defined below PopulateControls
 static void ApplyVideoMode( Rml::ElementDocument *doc );
 
-// Change listener for form controls - added to document to catch bubbling change events
-class RkOptionsChangeListener : public Rml::EventListener
+// Every control in panel_options.rml names what it does (data-event-click /
+// data-event-change), so the two Rml::EventListener subclasses that used to sit
+// here -- one walking a chain of `id == "..."` comparisons for the tabs and
+// buttons, the other another chain for the settings -- are gone. What is left is
+// the part that was never dispatch: the settings that are not a single ConVar.
+
+// A control whose value *is* one ConVar says so with data-convar, and this is
+// both halves of that: read on populate, written on change. Adding such an option
+// is an attribute in the .rml and nothing here.
+static void ApplyConVarFromControl( Rml::Element *target, const Rml::String &value )
 {
-public:
-    void ProcessEvent( Rml::Event &event ) override
+    const Rml::String convarName = target->GetAttribute<Rml::String>( "data-convar", "" );
+    if ( convarName.empty() )
+        return;
+
+    ConVarRef cvar( convarName.c_str() );
+    if ( !cvar.IsValid() )
+        return;
+
+    const Rml::String tag = target->GetTagName();
+    const Rml::String type = target->GetAttribute<Rml::String>( "type", "" );
+
+    if ( tag == "select" )
     {
-        // Don't process changes fired during PopulateControls — those are
-        // just syncing UI to current ConVar values, not user input
-        if( RocketOptionsDocument::m_bPopulating )
-            return;
+        cvar.SetValue( atoi( value.c_str() ) );
+    }
+    else if ( type == "checkbox" )
+    {
+        cvar.SetValue( target->HasAttribute( "checked" ) ? 1 : 0 );
+    }
+    else if ( type == "range" )
+    {
+        const float fVal = (float)atof( value.c_str() );
+        cvar.SetValue( fVal );
 
-        Rml::Element *target = event.GetTargetElement();
-        if( !target )
-            return;
-
-        const Rml::String &id = target->GetId();
-        Rml::String value = event.GetParameter<Rml::String>( "value", "" );
-
-        // Resolution changed — apply video mode
-        if( id == "resolution" )
+        // Sliders show their number in a sibling <id>_val.
+        char labelId[64];
+        V_snprintf( labelId, sizeof( labelId ), "%s_val", target->GetId().c_str() );
+        if ( Rml::ElementDocument *doc = target->GetOwnerDocument() )
         {
-            ApplyVideoMode( target->GetOwnerDocument() );
-            return;
-        }
-
-        // Display mode changed — apply and repopulate resolution list
-        // (windowed mode filters out modes larger than desktop)
-        if( id == "display_mode" )
-        {
-            ApplyVideoMode( target->GetOwnerDocument() );
-            RocketOptionsDocument::PopulateResolution();
-            return;
-        }
-
-        // Composite: sound quality
-        if( id == "snd_quality" )
-        {
-            int quality = atoi( value.c_str() );
-            ConVarRef sndPitch( "Snd_PitchQuality" );
-            ConVarRef dspSlow( "dsp_slow_cpu" );
-            ConVarRef dspStereo( "dsp_enhance_stereo" );
-            switch( quality )
+            if ( Rml::Element *label = doc->GetElementById( labelId ) )
             {
-            case 0: // Low
-                dspSlow.SetValue( true );
-                sndPitch.SetValue( false );
-                break;
-            case 1: // Medium
-                dspSlow.SetValue( false );
-                sndPitch.SetValue( false );
-                break;
-            case 2: // High
-            default:
-                dspSlow.SetValue( false );
-                sndPitch.SetValue( true );
-                break;
-            }
-            if( dspStereo.IsValid() )
-                dspStereo.SetValue( 0 );
-            return;
-        }
-
-        // Composite: closed captions
-        if( id == "closedcaptions" )
-        {
-            int ccMode = atoi( value.c_str() );
-            ConVarRef ccSub( "cc_subtitles" );
-            int closecaptionVal = 0;
-            switch( ccMode )
-            {
-            case 0: // Disabled
-                closecaptionVal = 0;
-                ccSub.SetValue( 0 );
-                break;
-            case 1: // Subtitles & Sound Effects
-                closecaptionVal = 1;
-                ccSub.SetValue( 0 );
-                break;
-            case 2: // Subtitles Only
-                closecaptionVal = 1;
-                ccSub.SetValue( 1 );
-                break;
-            }
-            char cmd[64];
-            V_snprintf( cmd, sizeof(cmd), "closecaption %d", closecaptionVal );
-            engine->ClientCmd_Unrestricted( cmd );
-            return;
-        }
-
-        // Reverse mouse: m_pitch negate (positive = not reversed)
-        if( id == "m_pitch" )
-        {
-            ConVarRef pitch( "m_pitch" );
-            if( pitch.IsValid() )
-            {
-                bool checked = target->HasAttribute( "checked" );
-                float absVal = fabsf( pitch.GetFloat() );
-                if( absVal < 0.0001f )
-                    absVal = 0.022f;
-                pitch.SetValue( checked ? -absVal : absVal );
-            }
-            return;
-        }
-
-        // Mouse acceleration: m_customaccel (0 or 3)
-        if( id == "m_customaccel" )
-        {
-            ConVarRef accel( "m_customaccel" );
-            if( accel.IsValid() )
-            {
-                bool checked = target->HasAttribute( "checked" );
-                accel.SetValue( checked ? 3 : 0 );
-            }
-            return;
-        }
-
-        // Simple convar from data-convar attribute
-        Rml::String convarName = target->GetAttribute<Rml::String>( "data-convar", "" );
-        if( convarName.empty() )
-            return;
-
-        // Determine element type
-        Rml::String tag = target->GetTagName();
-        if( tag == "select" )
-        {
-            ConVarRef cvar( convarName.c_str() );
-            if( cvar.IsValid() )
-                cvar.SetValue( atoi( value.c_str() ) );
-        }
-        else if( tag == "input" )
-        {
-            Rml::String type = target->GetAttribute<Rml::String>( "type", "" );
-            if( type == "range" )
-            {
-                float fVal = (float)atof( value.c_str() );
-                ConVarRef cvar( convarName.c_str() );
-                if( cvar.IsValid() )
-                    cvar.SetValue( fVal );
-
-                // Update the value label
-                char labelId[64];
-                V_snprintf( labelId, sizeof(labelId), "%s_val", target->GetId().c_str() );
-                Rml::ElementDocument *doc = target->GetOwnerDocument();
-                if( doc )
-                {
-                    Rml::Element *label = doc->GetElementById( labelId );
-                    if( label )
-                    {
-                        char valBuf[32];
-                        V_snprintf( valBuf, sizeof(valBuf), "%.2f", fVal );
-                        label->SetInnerRML( Rml::String( valBuf ) );
-                    }
-                }
-            }
-            else if( type == "checkbox" )
-            {
-                ConVarRef cvar( convarName.c_str() );
-                if( cvar.IsValid() )
-                {
-                    bool checked = target->HasAttribute( "checked" );
-                    cvar.SetValue( checked ? 1 : 0 );
-                }
+                char valBuf[32];
+                V_snprintf( valBuf, sizeof( valBuf ), "%.2f", fVal );
+                label->SetInnerRML( Rml::String( valBuf ) );
             }
         }
     }
-};
-
-static RkOptionsClickListener optionsClickListener;
-static RkOptionsChangeListener optionsChangeListener;
-
-RocketOptionsDocument::RocketOptionsDocument()
-{
 }
 
-RocketOptionsDocument::~RocketOptionsDocument()
+static void BindOptions( Rml::DataModelConstructor &c )
 {
+    using Args = const Rml::VariantList &;
+
+    c.BindEventCallback( "options_tab", []( Rml::DataModelHandle, Rml::Event &ev, Args args ) {
+        if ( !args.empty() )
+            RocketOptionsDocument::SwitchTab( args[0].Get<Rml::String>().c_str() );
+    } );
+    c.BindEventCallback( "options_close", []( Rml::DataModelHandle, Rml::Event &, Args ) {
+        RocketOptionsDocument::ShowPanel( false );
+        RocketOptionsDocument::UnloadDialog();
+    } );
+    c.BindEventCallback( "options_save", []( Rml::DataModelHandle, Rml::Event &, Args ) {
+        Msg( "Saving settings.\n" );
+        engine->ClientCmd_Unrestricted( "mat_savechanges" );
+        engine->ClientCmd_Unrestricted( "host_writeconfig" );
+    } );
+
+    // Resolution and display mode go through mat_setvideomode together; changing
+    // the mode also re-filters the resolution list (windowed hides modes larger
+    // than the desktop).
+    c.BindEventCallback( "apply_video_mode", []( Rml::DataModelHandle, Rml::Event &ev, Args ) {
+        if ( RocketOptionsDocument::m_bPopulating )
+            return;
+        Rml::Element *target = ev.GetTargetElement();
+        if ( !target )
+            return;
+        ApplyVideoMode( target->GetOwnerDocument() );
+        if ( target->GetId() == "display_mode" )
+            RocketOptionsDocument::PopulateResolution();
+    } );
+
+    // Settings that are not one ConVar.
+    c.BindEventCallback( "apply_snd_quality", []( Rml::DataModelHandle, Rml::Event &ev, Args ) {
+        if ( RocketOptionsDocument::m_bPopulating )
+            return;
+        const int quality = atoi( ev.GetParameter<Rml::String>( "value", "" ).c_str() );
+        ConVarRef sndPitch( "Snd_PitchQuality" );
+        ConVarRef dspSlow( "dsp_slow_cpu" );
+        ConVarRef dspStereo( "dsp_enhance_stereo" );
+        dspSlow.SetValue( quality == 0 );
+        sndPitch.SetValue( quality >= 2 );
+        if ( dspStereo.IsValid() )
+            dspStereo.SetValue( 0 );
+    } );
+
+    c.BindEventCallback( "apply_closedcaptions", []( Rml::DataModelHandle, Rml::Event &ev, Args ) {
+        if ( RocketOptionsDocument::m_bPopulating )
+            return;
+        const int ccMode = atoi( ev.GetParameter<Rml::String>( "value", "" ).c_str() );
+        ConVarRef ccSub( "cc_subtitles" );
+        ccSub.SetValue( ccMode == 2 ? 1 : 0 );
+
+        char cmd[64];
+        V_snprintf( cmd, sizeof( cmd ), "closecaption %d", ccMode ? 1 : 0 );
+        engine->ClientCmd_Unrestricted( cmd );
+    } );
+
+    // Reverse mouse is the *sign* of m_pitch, acceleration is m_customaccel 0/3.
+    c.BindEventCallback( "apply_m_pitch", []( Rml::DataModelHandle, Rml::Event &ev, Args ) {
+        if ( RocketOptionsDocument::m_bPopulating )
+            return;
+        Rml::Element *target = ev.GetTargetElement();
+        ConVarRef pitch( "m_pitch" );
+        if ( !target || !pitch.IsValid() )
+            return;
+        float absVal = fabsf( pitch.GetFloat() );
+        if ( absVal < 0.0001f )
+            absVal = 0.022f;
+        pitch.SetValue( target->HasAttribute( "checked" ) ? -absVal : absVal );
+    } );
+
+    c.BindEventCallback( "apply_m_customaccel", []( Rml::DataModelHandle, Rml::Event &ev, Args ) {
+        if ( RocketOptionsDocument::m_bPopulating )
+            return;
+        Rml::Element *target = ev.GetTargetElement();
+        ConVarRef accel( "m_customaccel" );
+        if ( target && accel.IsValid() )
+            accel.SetValue( target->HasAttribute( "checked" ) ? 3 : 0 );
+    } );
+
+    // Everything else: one control, one ConVar, named by data-convar.
+    c.BindEventCallback( "apply_convar", []( Rml::DataModelHandle, Rml::Event &ev, Args ) {
+        if ( RocketOptionsDocument::m_bPopulating )
+            return;
+        if ( Rml::Element *target = ev.GetTargetElement() )
+            ApplyConVarFromControl( target, ev.GetParameter<Rml::String>( "value", "" ) );
+    } );
 }
+RK_HUD_SECTION( BindOptions );
 
 void RocketOptionsDocument::SwitchTab( const char *tabId )
 {
@@ -496,25 +419,8 @@ void RocketOptionsDocument::PopulateControls()
     PopulateResolution();
     PopulateDisplayMode();
 
-    // Video settings - simple convar selects
-    SetSelectFromConVar( m_pInstance, "csm_quality_level", "csm_quality_level" );
-    SetSelectFromConVar( m_pInstance, "gpu_mem_level", "gpu_mem_level" );
-    SetSelectFromConVar( m_pInstance, "cpu_level", "cpu_level" );
-    SetSelectFromConVar( m_pInstance, "gpu_level", "gpu_level" );
-    SetSelectFromConVar( m_pInstance, "mat_queue_mode", "mat_queue_mode" );
-    SetSelectFromConVar( m_pInstance, "mat_picmip", "mat_picmip" );
-    SetSelectFromConVar( m_pInstance, "mat_forceaniso", "mat_forceaniso" );
-    SetSelectFromConVar( m_pInstance, "mat_antialias", "mat_antialias" );
-
-    // Video settings - range slider
-    SetRangeFromConVar( m_pInstance, "mat_monitorgamma", "mat_monitorgamma" );
-
-    // Audio settings - range sliders
-    SetRangeFromConVar( m_pInstance, "volume", "volume" );
-    SetRangeFromConVar( m_pInstance, "snd_musicvolume", "Snd_MusicVolume" );
-
-    // Audio settings - simple convar select
-    SetSelectFromConVar( m_pInstance, "snd_surround_speakers", "Snd_Surround_Speakers" );
+    // Every control that names a ConVar with data-convar, in one pass.
+    PopulateConVarControls( m_pInstance );
 
     // Audio settings - composite: sound quality
     {
@@ -565,11 +471,6 @@ void RocketOptionsDocument::PopulateControls()
         }
     }
 
-    // Mouse settings - range slider
-    SetRangeFromConVar( m_pInstance, "sensitivity", "sensitivity" );
-
-    // Mouse settings - simple convar checkboxes
-
     // Mouse settings - reverse mouse (positive m_pitch = not reversed)
     {
         ConVarRef pitch( "m_pitch" );
@@ -599,83 +500,40 @@ void RocketOptionsDocument::PopulateControls()
     m_bPopulating = false;
 }
 
-// Helper to attach click listener to a specific element by ID
-static void AttachClickListener( Rml::ElementDocument *doc, const char *elementId )
-{
-    Rml::Element *elem = doc->GetElementById( elementId );
-    if( elem )
-        elem->AddEventListener( Rml::EventId::Click, &optionsClickListener );
-}
-
-// Helper to remove click listener from a specific element by ID
-static void DetachClickListener( Rml::ElementDocument *doc, const char *elementId )
-{
-    Rml::Element *elem = doc->GetElementById( elementId );
-    if( elem )
-        elem->RemoveEventListener( Rml::EventId::Click, &optionsClickListener );
-}
-
 void RocketOptionsDocument::LoadDialog()
 {
-    if( !m_pInstance )
+    if( m_pInstance )
+        return;
+
+    // The controls fire `change` as they initialise, and those events reach us
+    // through the document itself (data-event-change) rather than a listener
+    // attached afterwards -- so the guard has to be up before the load, or the
+    // RML's default values would be written into the ConVars. PopulateControls
+    // drops it again.
+    m_bPopulating = true;
+
+    if( !RkPanelLoad( m_pInstance, ROCKET_CONTEXT_CURRENT, "panel_options.rml", LoadDialog, UnloadDialog ) )
     {
-        m_pInstance = RocketUI()->LoadDocumentFile( ROCKET_CONTEXT_CURRENT, "panel_options.rml", RocketOptionsDocument::LoadDialog, RocketOptionsDocument::UnloadDialog );
-        if( !m_pInstance )
-        {
-            Error( "Couldn't create rocketui options!\n" );
-            /* Exit */
-        }
-
-        // Attach click listeners to specific interactive elements only
-        AttachClickListener( m_pInstance, "tab-video" );
-        AttachClickListener( m_pInstance, "tab-audio" );
-        AttachClickListener( m_pInstance, "tab-mouse" );
-        AttachClickListener( m_pInstance, "save" );
-        AttachClickListener( m_pInstance, "close" );
-
-        // Change listener at document level to catch form control value changes
-        m_pInstance->AddEventListener( Rml::EventId::Change, &optionsChangeListener );
-
-        PopulateControls();
+        m_bPopulating = false;
+        return;
     }
+
+    PopulateControls();
 }
 
 void RocketOptionsDocument::UnloadDialog()
 {
-    if( m_pInstance )
-    {
-        DetachClickListener( m_pInstance, "tab-video" );
-        DetachClickListener( m_pInstance, "tab-audio" );
-        DetachClickListener( m_pInstance, "tab-mouse" );
-        DetachClickListener( m_pInstance, "save" );
-        DetachClickListener( m_pInstance, "close" );
-        m_pInstance->RemoveEventListener( Rml::EventId::Change, &optionsChangeListener );
-
-        m_pInstance->Close();
-        m_pInstance = nullptr;
-    }
-
-    m_bVisible = false;
+    RkPanelUnload( m_pInstance, m_bVisible );
 }
 
 void RocketOptionsDocument::ShowPanel( bool bShow, bool immediate )
 {
     if( bShow )
     {
-        if( !m_pInstance )
-            LoadDialog();
-
-        // Refresh controls each time panel is shown
-        PopulateControls();
-
-        m_pInstance->Show();
-    }
-    else
-    {
-        if( m_pInstance )
-            m_pInstance->Hide();
+        LoadDialog();
+        PopulateControls();   // ConVars can have moved since it was last open
     }
 
-    m_bVisible = bShow;
+    RkPanelShow( m_pInstance, m_bVisible, bShow );
 }
 

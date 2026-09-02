@@ -142,42 +142,42 @@
 			}
 		</style>
 	</head>
-	<body data-model="infobar_model">
+	<body data-model="hud">
 		<div id="container">
 			<div id="left-panel">
 				<div id="health-container">
 					<div id="health-icon">
 						<span class="icon-plus">+</span>
 					</div>
-					<span id="health-value">{{ hp }}</span>
+					<span id="health-value">{{ infobar.hp }}</span>
 				</div>
 				<div id="armor-container">
 					<div id="armor-icon">
 						<span class="icon-shield">O</span>
 					</div>
-					<span id="armor-value">{{ armor }}</span>
-					<span id="helmet-indicator" data-if="has_helmet">+H</span>
+					<span id="armor-value">{{ infobar.armor }}</span>
+					<span id="helmet-indicator" data-if="infobar.has_helmet">+H</span>
 				</div>
 			</div>
 			<div id="right-panel">
 				<div id="inventory-container">
-					<span class="weapon-slot">{{ primary_string }}</span>
-					<span class="weapon-slot">{{ secondary_string }}</span>
-					<span class="weapon-slot">{{ knife_string }}</span>
+					<span class="weapon-slot">{{ infobar.primary_string }}</span>
+					<span class="weapon-slot">{{ infobar.secondary_string }}</span>
+					<span class="weapon-slot">{{ infobar.knife_string }}</span>
 					<div class="equipment-row">
-						<span data-if="has_grenade" class="has-item">HE</span>
-						<span data-if="has_flash" class="has-item">FB</span>
-						<span data-if="has_flash_pair" class="has-item">FBx2</span>
-						<span data-if="has_smoke" class="has-item">SM</span>
-						<span data-if="has_fire" class="has-item">INC</span>
-						<span data-if="has_c4" class="has-c4">C4</span>
+						<span data-if="infobar.has_grenade" class="has-item">HE</span>
+						<span data-if="infobar.has_flash" class="has-item">FB</span>
+						<span data-if="infobar.has_flash_pair" class="has-item">FBx2</span>
+						<span data-if="infobar.has_smoke" class="has-item">SM</span>
+						<span data-if="infobar.has_fire" class="has-item">INC</span>
+						<span data-if="infobar.has_c4" class="has-c4">C4</span>
 					</div>
 				</div>
 				<div id="ammo-container">
-					<span id="ammo-current">{{ ammo }}</span>
+					<span id="ammo-current">{{ infobar.ammo }}</span>
 					<span id="ammo-separator">/</span>
-					<span id="ammo-reserve">{{ ammo_reserve }}</span>
-					<span id="firemode">{{ fire_mode_string }}</span>
+					<span id="ammo-reserve">{{ infobar.ammo_reserve }}</span>
+					<span id="firemode">{{ infobar.fire_mode_string }}</span>
 				</div>
 			</div>
 		</div>

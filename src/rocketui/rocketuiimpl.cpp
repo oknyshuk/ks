@@ -7,7 +7,6 @@
 
 #include <cstdio>
 #include <cstring>
-#include <fontconfig/fontconfig.h>
 
 #include "inputsystem/iinputsystem.h"
 #include "rocketkeys.h"
@@ -46,6 +45,15 @@ CON_COMMAND_F(rocket_debug, "Open/Close the RocketUI Debugger", FCVAR_NONE) {
   RocketUIImpl::m_Instance.ToggleDebugger();
 }
 
+// Names the document that currently takes the mouse, i.e. what IsConsumingInput()
+// is answering. Run it from a key bind: an open console is itself a claimant.
+CON_COMMAND_F(rocket_input_owner, "Name the document that owns mouse input",
+              FCVAR_NONE) {
+  Rml::ElementDocument *doc = RocketUIImpl::m_Instance.FindInputClaimant();
+  ConMsg("[RocketUI] mouse owner: %s\n",
+         doc ? doc->GetSourceURL().c_str() : "(none - the game has it)");
+}
+
 RocketUIImpl::RocketUIImpl()
     : m_pDevice(nullptr), m_pDeviceCallbacks(nullptr), m_bDeviceActive(false)
 #ifdef USE_SDL
@@ -53,13 +61,10 @@ RocketUIImpl::RocketUIImpl()
       m_pLauncherMgr(nullptr)
 #endif
       ,
-      m_pShaderDeviceMgr(nullptr), m_pShaderAPI(nullptr),
-      m_pGameUIFuncs(nullptr), m_pEngine(nullptr), m_pGameEventManager(nullptr),
-      m_fTime(0.0f), m_bCursorVisible(false), m_ctxMenu(nullptr),
-      m_ctxHud(nullptr), m_ctxCurrent(nullptr), m_ctxInput(nullptr),
-      m_isDebuggerOpen(false), m_togglePauseMenuFunc(nullptr),
-      m_consoleKeyInputFunc(nullptr), m_consoleCharInputFunc(nullptr),
-      m_pInputClaimQuery(nullptr) {
+      m_pShaderDeviceMgr(nullptr), m_pShaderAPI(nullptr), m_pEngine(nullptr),
+      m_fTime(0.0f), m_ctxMenu(nullptr),
+      m_ctxHud(nullptr), m_ctxCurrent(nullptr), m_debuggerHost(nullptr),
+      m_pInputHook(nullptr) {
 }
 
 bool RocketUIImpl::Connect(CreateInterfaceFn factory) {
@@ -69,22 +74,23 @@ bool RocketUIImpl::Connect(CreateInterfaceFn factory) {
   if (!BaseClass::Connect(factory))
     return false;
 
+  // Nothing in this library reaches the console without this: a ConVar or
+  // CON_COMMAND in a shared library is only a local object until it is published
+  // to g_pCVar. rocket_enable, rocket_reload, rocket_debug and rocket_input_owner
+  // were all invisible (and unsettable) before this call existed.
+  ConVar_Register();
+
 #ifdef USE_SDL
   m_pLauncherMgr = (ILauncherMgr *)factory(SDLMGR_INTERFACE_VERSION, nullptr);
 #endif
 
   m_pShaderDeviceMgr =
       (IShaderDeviceMgr *)factory(SHADER_DEVICE_MGR_INTERFACE_VERSION, nullptr);
-  m_pGameUIFuncs =
-      (IGameUIFuncs *)factory(VENGINE_GAMEUIFUNCS_VERSION, nullptr);
   m_pEngine =
       (IVEngineClient *)factory(VENGINE_CLIENT_INTERFACE_VERSION, nullptr);
-  m_pGameEventManager = (IGameEventManager2 *)factory(
-      INTERFACEVERSION_GAMEEVENTSMANAGER2, nullptr);
   m_pShaderAPI = (IShaderAPI *)factory(SHADERAPI_INTERFACE_VERSION, nullptr);
 
-  if (!m_pShaderDeviceMgr || !m_pGameUIFuncs || !m_pEngine ||
-      !m_pGameEventManager || !m_pShaderAPI) {
+  if (!m_pShaderDeviceMgr || !m_pEngine || !m_pShaderAPI) {
     Warning("RocketUI: missing expected interface\n");
     return false;
   }
@@ -93,6 +99,8 @@ bool RocketUIImpl::Connect(CreateInterfaceFn factory) {
 }
 
 void RocketUIImpl::Disconnect() {
+  ConVar_Unregister();
+
   if (m_pShaderDeviceMgr) {
     if (m_pDeviceCallbacks) {
       m_pShaderDeviceMgr->RemoveDeviceDependentObject(m_pDeviceCallbacks);
@@ -105,9 +113,7 @@ void RocketUIImpl::Disconnect() {
   m_pLauncherMgr = nullptr;
 #endif
   m_pShaderDeviceMgr = nullptr;
-  m_pGameUIFuncs = nullptr;
   m_pEngine = nullptr;
-  m_pGameEventManager = nullptr;
   m_pShaderAPI = nullptr;
 
   BaseClass::Disconnect();
@@ -122,100 +128,17 @@ void *RocketUIImpl::QueryInterface(const char *pInterfaceName) {
   return BaseClass::QueryInterface(pInterfaceName);
 }
 
-const AppSystemInfo_t *RocketUIImpl::GetDependencies(void) {
-  return BaseClass::GetDependencies();
-}
-
 Rml::Context *RocketUIImpl::AccessHudContext() { return m_ctxHud; }
 
 Rml::Context *RocketUIImpl::AccessMenuContext() { return m_ctxMenu; }
 
-// Find a font file path by family name using fontconfig
-static const char *FindSystemFont(const char *fontName) {
-  static char fontPath[512];
-  fontPath[0] = '\0';
-
-  if (!FcInit()) {
-    fprintf(stderr, "[RocketUI] fontconfig init failed\n");
-    return nullptr;
-  }
-
-  FcPattern *pattern = FcNameParse((const FcChar8 *)fontName);
-  FcConfigSubstitute(nullptr, pattern, FcMatchPattern);
-  FcDefaultSubstitute(pattern);
-
-  FcResult result;
-  FcPattern *match = FcFontMatch(nullptr, pattern, &result);
-
-  if (match) {
-    FcChar8 *file = nullptr;
-    if (FcPatternGetString(match, FC_FILE, 0, &file) == FcResultMatch) {
-      strncpy(fontPath, (const char *)file, sizeof(fontPath) - 1);
-      fontPath[sizeof(fontPath) - 1] = '\0';
-    }
-    FcPatternDestroy(match);
-  }
-
-  FcPatternDestroy(pattern);
-
-  return fontPath[0] ? fontPath : nullptr;
-}
-
-bool RocketUIImpl::LoadFont(const char *fontFamily, const char * /*unused*/) {
-  const char *fontPath = FindSystemFont(fontFamily);
-  if (!fontPath) {
-    fprintf(stderr, "[RocketUI] Failed to find font: %s\n", fontFamily);
-    return false;
-  }
-
-  // Load font file directly via stdio (RmlUi's FileInterface uses Source FS
-  // which can't access system paths)
-  FILE *fp = fopen(fontPath, "rb");
-  if (!fp) {
-    fprintf(stderr, "[RocketUI] Failed to open font file: %s\n", fontPath);
-    return false;
-  }
-
-  fseek(fp, 0, SEEK_END);
-  size_t fontLen = ftell(fp);
-  fseek(fp, 0, SEEK_SET);
-
-  if (fontLen >= (8 * 1024 * 1024)) {
-    fprintf(stderr, "[RocketUI] Font is over 8MB! Not loading: %s\n", fontPath);
-    fclose(fp);
-    return false;
-  }
-
-  unsigned char *fontBuffer = new unsigned char[fontLen];
-  m_fontAllocs.AddToTail(fontBuffer);
-
-  if (fread(fontBuffer, 1, fontLen, fp) != fontLen) {
-    fprintf(stderr, "[RocketUI] Failed to read font file: %s\n", fontPath);
-    fclose(fp);
-    return false;
-  }
-  fclose(fp);
-
-  // RmlUi 6.x API: LoadFontFace(Span<const byte> data, family, style, weight,
-  // fallback)
-  Rml::Span<const Rml::byte> fontSpan(fontBuffer, fontLen);
-  if (!Rml::LoadFontFace(fontSpan, fontFamily, Rml::Style::FontStyle::Normal,
-                         Rml::Style::FontWeight::Auto, true)) {
-    fprintf(stderr, "[RocketUI] Failed to load font face: %s\n", fontPath);
-    return false;
-  }
-
-  return true;
-}
-
-bool RocketUIImpl::LoadFonts() {
-  bool fontsOK = true;
-  // Load common fonts - fontconfig will find them on any Linux system
-  fontsOK &= LoadFont("Liberation Sans", nullptr);
-  fontsOK &= LoadFont("Liberation Sans:style=Bold", nullptr);
-  fontsOK &= LoadFont("Liberation Mono", nullptr);
-  fontsOK &= LoadFont("Liberation Mono:style=Bold", nullptr);
-  return fontsOK;
+// Font faces are declared in rocketui/fonts.rcss and shipped beside it, so they
+// come off the GAME search path like any other asset. Parsing the sheet is the
+// point: @font-face registers faces globally, so no document has to link it, and
+// RmlUi owns the buffers from here.
+void RocketUIImpl::LoadFonts() {
+  if (!Rml::Factory::InstanceStyleSheetFile("fonts.rcss"))
+    Warning("RocketUI: no rocketui/fonts.rcss; text will not render.\n");
 }
 
 Rml::ElementDocument *RocketUIImpl::LoadDocumentFile(
@@ -232,11 +155,6 @@ Rml::ElementDocument *RocketUIImpl::LoadDocumentFile(
     destinationCtx = m_ctxHud;
     break;
   case ROCKET_CONTEXT_CURRENT:
-    if (!m_ctxCurrent) {
-      Error("Couldn't load document: %s - loaded before 1st frame.\n",
-            filepath);
-      return nullptr;
-    }
     destinationCtx = m_ctxCurrent;
     break;
   default:
@@ -284,10 +202,8 @@ InitReturnVal_t RocketUIImpl::Init(void) {
     return INIT_FAILED;
   }
 
-  if (!LoadFonts()) {
-    Warning("RocketUI: Failed to load fonts.\n");
-    return INIT_FAILED;
-  }
+  // Not fatal: an unstyled UI beats refusing to initialise. RmlUi logs each face.
+  LoadFonts();
 
   m_ctxMenu = Rml::CreateContext("menu", Rml::Vector2i(width, height));
   m_ctxHud = Rml::CreateContext("hud", Rml::Vector2i(width, height));
@@ -301,20 +217,20 @@ InitReturnVal_t RocketUIImpl::Init(void) {
   m_ctxMenu->SetDensityIndependentPixelRatio(1.0f);
   m_ctxHud->SetDensityIndependentPixelRatio(1.0f);
 
+  // The game starts at the main menu; RunFrame re-derives this every frame.
+  // Never left null, so ROCKET_CONTEXT_CURRENT works before the first frame.
+  m_ctxCurrent = m_ctxMenu;
+
   return INIT_OK;
 }
 
 void RocketUIImpl::Shutdown() {
   Rml::Shutdown();
 
-  // freetype FT_Done_Face has been called. Time to free fonts.
-  for (int i = 0; i < m_fontAllocs.Count(); i++) {
-    unsigned char *fontAlloc = m_fontAllocs[i];
-    delete[] fontAlloc;
-  }
-
   RocketSystem::m_Instance.FreeCursors();
   RocketRenderD3D9::m_Instance.Shutdown();
+
+  m_debuggerHost = nullptr;
 
   if (m_pShaderDeviceMgr) {
     if (m_pDeviceCallbacks) {
@@ -327,6 +243,32 @@ void RocketUIImpl::Shutdown() {
   m_ctxCurrent = nullptr;
 
   BaseClass::Shutdown();
+}
+
+// Hidden and closed documents render nothing.
+static bool HasVisibleDocument(Rml::Context *ctx) {
+  for (int i = 0, n = ctx->GetNumDocuments(); i < n; i++) {
+    Rml::ElementDocument *doc = ctx->GetDocument(i);
+    if (doc && doc->IsVisible())
+      return true;
+  }
+  return false;
+}
+
+// Worth spending a frame on? RmlUi lowers its next-update delay when it wants a
+// callback (animations, smooth scrolling, our input/resize latches). Anything
+// visible counts too: the game writes data models and properties behind RmlUi's
+// back. Leaves the menu context idle during a match, and the HUD in the menu.
+static bool ContextIsLive(Rml::Context *ctx) {
+  return ctx && (ctx->GetNextUpdateDelay() <= 0.0 || HasVisibleDocument(ctx));
+}
+
+Rml::Context *RocketUIImpl::GetInputContext() {
+  // The menu context owns input whenever it has anything on screen -- every
+  // document it holds is interactive. Otherwise input follows the game.
+  if (m_ctxMenu && HasVisibleDocument(m_ctxMenu))
+    return m_ctxMenu;
+  return m_ctxCurrent;
 }
 
 void RocketUIImpl::RunFrame(float time) {
@@ -343,35 +285,55 @@ void RocketUIImpl::RunFrame(float time) {
   // Apply any resize staged by a device reset (render thread) before layout.
   ApplyPendingResize();
 
-  // Update both contexts - menu context needs updates even during gameplay
-  // (e.g., console is in menu context but rendered over HUD).
-  if (m_ctxHud)
+  // Which context the game is showing. The engine keeps a level loaded behind the
+  // main menu, hence the background check -- same test the HUD system uses.
+  m_ctxCurrent = (m_pEngine->IsInGame() && !m_pEngine->IsLevelMainMenuBackground())
+                     ? m_ctxHud
+                     : m_ctxMenu;
+
+  // The menu context keeps updating during a match: the console lives there.
+  if (ContextIsLive(m_ctxHud))
     m_ctxHud->Update();
-  if (m_ctxMenu)
+  if (ContextIsLive(m_ctxMenu))
     m_ctxMenu->Update();
 
   SyncCursorToInputOwner();
 }
 
-// Ownership of mouse/keyboard is asked for, never remembered: whatever the UI
-// layer reports this instant is the answer. A panel that fails to "release"
-// therefore cannot permanently strand the game without mouselook.
-bool RocketUIImpl::IsConsumingInput() {
-  if (m_isDebuggerOpen)
-    return true;
-  return m_pInputClaimQuery && m_pInputClaimQuery();
+// Ownership of mouse/keyboard is asked for, never remembered: it is read off the
+// documents themselves, so nothing can claim the mouse without being on screen, and
+// no panel has to remember to release it. A document opts in by allowing pointer
+// events -- the same declaration RmlUi hit-tests against -- so passive HUD documents
+// (crosshair, radar, killfeed, ...) declare `pointer-events: none` in their RCSS.
+Rml::ElementDocument *RocketUIImpl::FindInputClaimant() {
+  for (Rml::Context *ctx : {m_ctxMenu, m_ctxHud}) {
+    if (!ctx)
+      continue;
+    for (int i = 0, n = ctx->GetNumDocuments(); i < n; i++) {
+      Rml::ElementDocument *doc = ctx->GetDocument(i);
+      if (doc && doc->IsVisible() &&
+          doc->GetComputedValues().pointer_events() != Rml::Style::PointerEvents::None)
+        return doc;
+    }
+  }
+  return nullptr;
 }
 
+bool RocketUIImpl::IsConsumingInput() {
+  return Rml::Debugger::IsVisible() || FindInputClaimant() != nullptr;
+}
+
+// State the intent every frame, keeping no copy of it: both sinks diff against
+// their own authoritative state, and a mode switch rebuilds the window under us,
+// so a cache here only suppresses the write that would fix the mismatch -- which
+// is what made changing resolution kill mouselook until you pressed ESC twice.
 void RocketUIImpl::SyncCursorToInputOwner() {
   const bool bWantCursor = IsConsumingInput();
-  if (bWantCursor == m_bCursorVisible)
-    return;
-
-  m_bCursorVisible = bWantCursor;
 
   // The client's mouselook gate lives in the client DLL, which RocketUI cannot
-  // call into directly; cl_mouseenable is the shared switch.
-  ConVarRef cl_mouseenable("cl_mouseenable");
+  // call into directly; cl_mouseenable is the shared switch. ConVar setters drop
+  // writes that change nothing, so this is free to repeat.
+  static ConVarRef cl_mouseenable("cl_mouseenable");
   if (cl_mouseenable.IsValid())
     cl_mouseenable.SetValue(!bWantCursor);
 
@@ -383,13 +345,13 @@ void RocketUIImpl::SyncCursorToInputOwner() {
 }
 
 bool RocketUIImpl::HandleInputEvent(const InputEvent_t &event) {
-  if (!m_ctxCurrent)
-    return false;
-
   if (!rocket_enable.GetBool())
     return false;
 
-  Rml::Context *inputCtx = m_ctxInput ? m_ctxInput : m_ctxCurrent;
+  Rml::Context *inputCtx = GetInputContext();
+  if (!inputCtx)
+    return false;
+
   int modifiers = GetRmlKeyModifierState();
   ButtonCode_t key = (ButtonCode_t)event.m_nData;
   bool isKeyboard = !IsMouseCode(key);
@@ -412,54 +374,23 @@ bool RocketUIImpl::HandleInputEvent(const InputEvent_t &event) {
     }
   }
 
-  // Console input handling - highest priority
-  if (m_consoleKeyInputFunc || m_consoleCharInputFunc) {
-    switch (event.m_nType) {
-    case IE_ButtonPressed:
-    case IE_ButtonDoubleClicked:
-      if (m_consoleKeyInputFunc && isKeyboard) {
-        if (m_consoleKeyInputFunc(key, true))
-          return true;
-      }
-      break;
-    case IE_ButtonReleased:
-      if (m_consoleKeyInputFunc && isKeyboard) {
-        if (m_consoleKeyInputFunc(key, false))
-          return true;
-      }
-      break;
-    case IE_KeyCodeTyped:
-      // Key repeat - only process if it's an actual repeat, not first duplicate
-      if (!isFirstKeyCodeTyped && m_consoleKeyInputFunc && isKeyboard) {
-        if (m_consoleKeyInputFunc(key, true))
-          return true;
-      }
-      break;
-    case IE_KeyTyped:
-      if (m_consoleCharInputFunc) {
-        if (m_consoleCharInputFunc((wchar_t)event.m_nData))
-          return true;
-      }
-      break;
-    default:
-      break;
-    }
-  }
+  // Whatever we are about to hand it, this context is no longer idle.
+  inputCtx->RequestNextUpdate(0);
+
+  // Client UI policy gets first refusal (console keys, ESC). The duplicate
+  // IE_KeyCodeTyped is dropped here as well as below.
+  if (m_pInputHook && !isFirstKeyCodeTyped && m_pInputHook(event))
+    return true;
 
   // Always track mouse location
   if (event.m_nType == IE_AnalogValueChanged && event.m_nData == MOUSE_XY) {
     inputCtx->ProcessMouseMove(event.m_nData2, event.m_nData3, modifiers);
   }
 
-  // Global hotkeys
-  if (event.m_nType == IE_ButtonPressed) {
-    if (key == KEY_F8) {
-      ToggleDebugger();
-      return true;
-    }
-    if (key == KEY_ESCAPE && m_togglePauseMenuFunc && m_pEngine->IsInGame()) {
-      m_togglePauseMenuFunc();
-    }
+  // The debugger is ours, not the client's, so its hotkey stays here.
+  if (event.m_nType == IE_ButtonPressed && key == KEY_F8) {
+    ToggleDebugger();
+    return true;
   }
 
   // Skip RmlUi processing if nothing wants input or VGUI console is open
@@ -551,12 +482,10 @@ bool RocketUIImpl::HandleInputEvent(const InputEvent_t &event) {
 
 // Recording (MAIN thread): run Context::Render() into a command list which the
 // render thread later replays. Returns an opaque RocketCmdList* (or nullptr).
+// A context with nothing on screen is skipped: no list, no queued render call.
 void *RocketUIImpl::RecordHUD() {
-  if (!rocket_enable.GetBool() || !m_ctxHud)
+  if (!rocket_enable.GetBool() || !m_ctxHud || !HasVisibleDocument(m_ctxHud))
     return nullptr;
-
-  // HUD context is the default for input handling during gameplay.
-  m_ctxCurrent = m_ctxHud;
 
   void *list = RocketRenderD3D9::m_Instance.BeginRecord();
   m_ctxHud->Render();
@@ -565,13 +494,8 @@ void *RocketUIImpl::RecordHUD() {
 }
 
 void *RocketUIImpl::RecordMenu() {
-  if (!rocket_enable.GetBool() || !m_ctxMenu)
+  if (!rocket_enable.GetBool() || !m_ctxMenu || !HasVisibleDocument(m_ctxMenu))
     return nullptr;
-
-  // Main menu (no HUD recorded this frame): make the menu the current context
-  // for input. During gameplay the HUD stays current (heuristic preserved).
-  if (m_ctxCurrent != m_ctxHud)
-    m_ctxCurrent = m_ctxMenu;
 
   void *list = RocketRenderD3D9::m_Instance.BeginRecord();
   m_ctxMenu->Render();
@@ -605,7 +529,6 @@ void RocketUIImpl::RenderMenuFrame(void *cmdList) {
 
 bool RocketUIImpl::ReloadDocuments() {
   rocket_enable.SetValue(false);
-  ThreadSleep(100);
 
   // Reload runs on the main thread alongside recording; disabling rocket_enable
   // stops new recording while documents are torn down/rebuilt, and released
@@ -621,17 +544,25 @@ bool RocketUIImpl::ReloadDocuments() {
   m_documentReloadFuncs.Purge();
 
   for (int i = 0; i < copyOfPairs.Count(); i++) {
-    if (copyOfPairs[i].first == ROCKET_CONTEXT_HUD && m_ctxCurrent != m_ctxHud)
-      continue;
-    if (copyOfPairs[i].first == ROCKET_CONTEXT_MENU &&
-        m_ctxCurrent != m_ctxMenu)
-      continue;
+    // A document can only be rebuilt while its context is the one in play (a HUD
+    // element's loader needs a live HUD). Keep the rest registered, or
+    // `rocket_reload` from the menu costs the HUD its hot-reload hooks.
+    const bool bReloadable =
+        (copyOfPairs[i].first == ROCKET_CONTEXT_HUD && m_ctxCurrent == m_ctxHud) ||
+        (copyOfPairs[i].first == ROCKET_CONTEXT_MENU && m_ctxCurrent == m_ctxMenu);
+
     if (copyOfPairs[i].first == ROCKET_CONTEXT_CURRENT) {
+      // Transient panels: close them and let the next open re-register.
       copyOfPairs[i].second.second();
       continue;
     }
 
-    // Unload...
+    if (!bReloadable) {
+      m_documentReloadFuncs.AddToTail(copyOfPairs[i]);
+      continue;
+    }
+
+    // Unload... (the loader re-registers the pair via LoadDocumentFile)
     copyOfPairs[i].second.second();
     // Load...
     copyOfPairs[i].second.first();
@@ -708,41 +639,41 @@ void RocketUIImpl::ApplyPendingResize() {
     return;
   const int w = m_pendingW.load(std::memory_order_relaxed);
   const int h = m_pendingH.load(std::memory_order_relaxed);
-  m_ctxCurrent = nullptr;
-  if (m_ctxHud)
+  if (m_ctxHud) {
     m_ctxHud->SetDimensions(Rml::Vector2i(w, h));
-  if (m_ctxMenu)
+    m_ctxHud->RequestNextUpdate(0);
+  }
+  if (m_ctxMenu) {
     m_ctxMenu->SetDimensions(Rml::Vector2i(w, h));
+    m_ctxMenu->RequestNextUpdate(0);
+  }
 }
 
+// F8 / rocket_debug. One context hosts the debugger at a time, and it has to be
+// the one receiving input or the debugger's own widgets are dead. RmlUi 6.3 fixed
+// re-initialisation, so that host can follow input.
 void RocketUIImpl::ToggleDebugger() {
-  static bool open = false;
-  static bool firstTime = true;
-
-  open = !open;
-
-  if (!m_ctxCurrent)
-    return;
-
-  if (open) {
-    if (firstTime) {
-      if (Rml::Debugger::Initialise(m_ctxCurrent)) {
-        firstTime = false;
-      } else {
-        ConMsg("[RocketUI] Error Initializing Debugger\n");
-        return;
-      }
-    }
-    ConMsg("[RocketUI] Opening Debugger\n");
-    if (!Rml::Debugger::SetContext(m_ctxCurrent)) {
-      ConMsg("[RocketUI] Error setting context!\n");
-      return;
-    }
-    m_isDebuggerOpen = true;
-    Rml::Debugger::SetVisible(true);
-  } else {
+  if (Rml::Debugger::IsVisible()) {
     ConMsg("[RocketUI] Closing Debugger\n");
     Rml::Debugger::SetVisible(false);
-    m_isDebuggerOpen = false;
+    return;
   }
+
+  Rml::Context *host = GetInputContext();
+  if (!host)
+    return;
+
+  if (m_debuggerHost != host) {
+    if (m_debuggerHost)
+      Rml::Debugger::Shutdown();
+    m_debuggerHost = nullptr;
+    if (!Rml::Debugger::Initialise(host)) {
+      ConMsg("[RocketUI] Error initializing debugger\n");
+      return;
+    }
+    m_debuggerHost = host;
+  }
+
+  ConMsg("[RocketUI] Opening Debugger\n");
+  Rml::Debugger::SetVisible(true);
 }

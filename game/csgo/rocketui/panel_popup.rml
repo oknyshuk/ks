@@ -15,6 +15,7 @@
 				border-radius: 4dp;
 				padding: 24dp 32dp;
 				text-align: center;
+				pointer-events: none;
 			}
 			#text {
 				font-size: 16dp;

@@ -1,16 +1,64 @@
 #include "rkhud_radar.h"
 
+#include "rkhud_model.h"
+
 #include "cbase.h"
 #include "hud_macros.h"
 #include "c_cs_player.h"
+#include "c_playerresource.h"
 
 #include <rocketui/rmlui.h>
 
 DECLARE_HUDELEMENT( RkHudRadar );
+
+const char *RkHudRadar::kDocument = "hud_radar.rml";
 DECLARE_HUD_MESSAGE( RkHudRadar, ProcessSpottedEntityUpdate );
 
 ConVar rocket_hud_radar_info_linger_time( "rocket_hud_radar_info_linger_time", "3", FCVAR_ARCHIVE, "How long in seconds does the data stay visible after an update" );
 ConVar rocket_hud_radar_scale( "rocket_hud_radar_scale", "0.15", FCVAR_ARCHIVE, "scale for radar" );
+
+// What hud_radar.rml binds to. One blip per player slot; the document positions
+// and colours them, so this file only does the projection maths.
+struct RadarBlip
+{
+    int x = 0, y = 0;
+    bool ct = false;    // false = T; picks the .player-ct / .player-t colour
+    bool shown = false;
+
+    bool operator==( const RadarBlip & ) const = default;
+};
+struct RadarData
+{
+    int width = 0, height = 0;
+    Rml::Vector<RadarBlip> blips;
+
+    bool operator==( const RadarData & ) const = default;
+} radarData;
+
+static void BindRadar( Rml::DataModelConstructor &c )
+{
+    if ( auto blip = c.RegisterStruct<RadarBlip>() )
+    {
+        blip.RegisterMember( "x", &RadarBlip::x );
+        blip.RegisterMember( "y", &RadarBlip::y );
+        blip.RegisterMember( "ct", &RadarBlip::ct );
+        blip.RegisterMember( "shown", &RadarBlip::shown );
+    }
+    c.RegisterArray<Rml::Vector<RadarBlip>>();
+
+    if ( auto handle = c.RegisterStruct<RadarData>() )
+    {
+        handle.RegisterMember( "width", &RadarData::width );
+        handle.RegisterMember( "height", &RadarData::height );
+        handle.RegisterMember( "blips", &RadarData::blips );
+    }
+    // One blip per player slot for the lifetime of the model: data-for only
+    // instances elements when the array *size* changes, so a fixed size means the
+    // blips are created once and only ever moved afterwards.
+    radarData.blips.assign( MAX_PLAYERS, RadarBlip{} );
+    c.Bind( "radar", &radarData );
+}
+RK_HUD_SECTION( BindRadar );
 
 static void RadarSizeChanged( IConVar *pConvar, const char *szOldValue, float fOldValue )
 {
@@ -24,7 +72,6 @@ static void RadarSizeChanged( IConVar *pConvar, const char *szOldValue, float fO
 }
 ConVar rocket_hud_radar_height( "rocket_hud_radar_height", "400", FCVAR_ARCHIVE, "height in pixels for the radar", RadarSizeChanged );
 ConVar rocket_hud_radar_width( "rocket_hud_radar_width", "400", FCVAR_ARCHIVE, "width in pixels for the radar", RadarSizeChanged );
-
 
 bool RkHudRadar::MsgFunc_ProcessSpottedEntityUpdate(const CCSUsrMsg_ProcessSpottedEntityUpdate &msg)
 {
@@ -125,19 +172,19 @@ static inline void RotatePoint( float x, float y, float centerX, float centerY, 
 
 void RkHudRadar::UpdateRadarSize()
 {
-    if( !m_pInstance )
+    if( !m_pDocument )
         return;
 
-    // Bounds of radar
-    m_elemBody->SetProperty("width", Rml::String(rocket_hud_radar_width.GetString()) + "px");
-    m_elemBody->SetProperty("height", Rml::String(rocket_hud_radar_height.GetString()) + "px");
     m_radarWidth = rocket_hud_radar_width.GetFloat();
     m_radarHeight = rocket_hud_radar_height.GetFloat();
-    m_radarX = m_elemBody->GetAbsoluteLeft();
-    m_radarY = m_elemBody->GetAbsoluteTop();
-    // these are children so we dont need the x+ or y+
     m_radarCenterX = ( m_radarWidth / 2.0f );
     m_radarCenterY = ( m_radarHeight / 2.0f );
+
+    // hud_radar.rml sizes itself off these; blips are children, so their
+    // coordinates stay relative to the radar box.
+    radarData.width = (int)m_radarWidth;
+    radarData.height = (int)m_radarHeight;
+    RkHudDirty( "radar" );
 }
 
 void RkHudRadar::UpdateRadarFrame()
@@ -150,35 +197,46 @@ void RkHudRadar::UpdateRadarFrame()
     if( activePlayer->IsObserver() && (activePlayer->GetObserverMode() == OBS_MODE_IN_EYE || activePlayer->GetObserverMode() == OBS_MODE_CHASE) )
         activePlayer = ToCSPlayer(activePlayer->GetObserverTarget());
 
+    if( !activePlayer )
+        return;
+
+    IGameResources *gr = GameResources();
     float currTime = gpGlobals->curtime;
+    const RadarData previous = radarData;
 
     // The Radar packets are designed to supplement an existing regular radar.
     // We will do a regular radar, but with the dormant check, see if we have some recent maphack data from server.
     for( int i = 1; i <= MAX_PLAYERS; i++ )
     {
-        if( i == engine->GetLocalPlayer() )
-            continue;
-
-        // array index for the player elements
+        // array index for the blip
         int index = i - 1;
+        RadarBlip &blip = radarData.blips[index];
+
+        if( i == engine->GetLocalPlayer() )
+        {
+            blip.shown = false;
+            continue;
+        }
+
         CBasePlayer *player = UTIL_PlayerByIndex( i );
         const SpottedInfo &playerInfo = m_spottedPlayers[index];
 
         if( !player || !player->IsAlive() )
         {
-            m_playerElements[index]->SetProperty("opacity", "0");
+            blip.shown = false;
             continue;
         }
 
         // if dormant and we dont have any recent information from the server
         if( player->IsDormant() && ( ( currTime - playerInfo.timelastSpotted ) > rocket_hud_radar_info_linger_time.GetFloat() ) )
         {
-            m_playerElements[index]->SetProperty("opacity", "0");
+            blip.shown = false;
             continue;
         }
 
-        // At this point we either have a visible player or recent server radar data
-        m_playerElements[index]->SetProperty("opacity", "1");
+        // At this point we either have a visible player or recent server radar data.
+        // GameResources knows the team even while the entity is dormant.
+        blip.ct = gr && gr->GetTeam( i ) == TEAM_CT;
 
         float originDiffX;
         float originDiffY;
@@ -209,120 +267,52 @@ void RkHudRadar::UpdateRadarFrame()
         // these guys are off the radar. Go ahead and hide them.
         if( rotatedX > m_radarWidth || rotatedX < 0 || rotatedY > m_radarHeight || rotatedY < 0 )
         {
-            m_playerElements[index]->SetProperty("opacity", "0");
+            blip.shown = false;
             continue;
         }
 
-        m_playerElements[index]->SetProperty("left", std::to_string(int(rotatedX)) + "px");
-        m_playerElements[index]->SetProperty("top", std::to_string(int(rotatedY)) + "px");
+        blip.x = int( rotatedX );
+        blip.y = int( rotatedY );
+        blip.shown = true;
     }
+
+    // Everyone moves at once or not at all, so one compare covers the lot.
+    if( !( radarData == previous ) )
+        RkHudDirty( "radar" );
 }
 
-static void UnloadRkRadar()
+void RkHudRadar::OnLoad()
 {
-    RkHudRadar *pRadar = GET_HUDELEMENT( RkHudRadar );
-    if( !pRadar )
-    {
-        Warning( "Couldn't grab hud radar to unload!\n" );
-        return;
-    }
-
-    if( !pRadar->m_pInstance )
-        return;
-
-    pRadar->m_pInstance->Close();
-    pRadar->m_pInstance = nullptr;
-    pRadar->m_bVisible = false;
-}
-static void LoadRkRadar()
-{
-    RkHudRadar *pRadar = GET_HUDELEMENT( RkHudRadar );
-    if( !pRadar )
-    {
-        Warning( "Couldn't grab hud radar to load!\n" );
-        return;
-    }
-
-    if( pRadar->m_pInstance )
-    {
-        Warning( "RkRadar already loaded! call unload first!\n" );
-        return;
-    }
-
-    pRadar->m_pInstance = RocketUI()->LoadDocumentFile( ROCKET_CONTEXT_HUD, "hud_radar.rml", &LoadRkRadar, UnloadRkRadar );
-    if( !pRadar->m_pInstance )
-    {
-        Error( "Couldn't create hud_radar document!\n" );
-        /* Exit */
-    }
-
-    pRadar->m_elemBody = pRadar->m_pInstance->GetElementById( "body" );
-    if( !pRadar->m_elemBody )
-    {
-        Error("Couldn't find required element id 'body' in hud_radar\n" );
-        /* Exit */
-    }
-
-    pRadar->m_elemContainer = pRadar->m_pInstance->GetElementById( "container" );
-    if( !pRadar->m_elemContainer )
-    {
-        Error("Couldn't find required element id 'container' in hud_radar\n" );
-        /* Exit */
-    }
-
-    // Create all the player elements. These will be moved around, hidden and shown as the radar updates
-    for( int i = 0; i < MAX_PLAYERS; i++ )
-    {
-        Rml::ElementPtr ptr = pRadar->m_pInstance->CreateElement("div");
-        pRadar->m_playerElements[i] = ptr.get();
-        if( !pRadar->m_playerElements[i] )
-        {
-            Error("Couldn't create player element(%d) for radar!", i);
-            /* Exit */
-        }
-        pRadar->m_playerElements[i]->SetClass("player", true);
-        pRadar->m_playerElements[i]->SetProperty("opacity", "0");
-
-        pRadar->m_elemContainer->AppendChild( std::move(ptr) );
-    }
-
-    pRadar->UpdateRadarSize();
+    UpdateRadarSize();
 }
 
-RkHudRadar::RkHudRadar(const char *value) : CHudElement( value ),
-                                            m_bVisible( false ),
-                                            m_pInstance( nullptr )
+RkHudRadar::RkHudRadar(const char *value) : RkHudDocument( value )
 {
     SetHiddenBits( /* HIDEHUD_MISCSTATUS */ 0 );
 }
 
 RkHudRadar::~RkHudRadar() noexcept
 {
-    UnloadRkRadar();
+    Unload();
 }
 
 void RkHudRadar::LevelInit()
 {
-    LoadRkRadar();
+    RkHudDocument::LevelInit();
 
     HOOK_HUD_MESSAGE( RkHudRadar, ProcessSpottedEntityUpdate );
 }
 
-void RkHudRadar::LevelShutdown()
-{
-    UnloadRkRadar();
-}
-
 void RkHudRadar::ShowPanel(bool bShow, bool force)
 {
-    if( !m_pInstance )
+    if( !m_pDocument )
         return;
 
     if( bShow )
     {
         if( !m_bVisible )
         {
-            m_pInstance->Show();
+            m_pDocument->Show( Rml::ModalFlag::None, Rml::FocusFlag::None );
         }
         UpdateRadarFrame();
     }
@@ -330,7 +320,7 @@ void RkHudRadar::ShowPanel(bool bShow, bool force)
     {
         if( m_bVisible )
         {
-            m_pInstance->Hide();
+            m_pDocument->Hide();
         }
     }
 

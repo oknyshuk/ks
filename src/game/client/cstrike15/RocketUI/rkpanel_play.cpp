@@ -3,49 +3,34 @@
 
 #include "rkpanel_play.h"
 
+#include "rkpanel.h"
+
+#include "rkhud_model.h"
+
 #include "cbase.h"
 #include "cdll_client_int.h"
 #include "filesystem.h"
 #include "tier1/convar.h"
 
 #include <rocketui/rmlui.h>
+#include "rkhud_pausemenu.h"
+#include "rkmenu_main.h"
 
 Rml::ElementDocument *RocketPlayDocument::m_pInstance = nullptr;
 bool RocketPlayDocument::m_bVisible = false;
 
-bool RocketPlayDocument::OwnsInput()
+// panel_play.rml names these on its buttons (data-event-click).
+static void BindPlayPanel( Rml::DataModelConstructor &c )
 {
-    return m_bVisible && m_pInstance && m_pInstance->IsVisible();
+    c.BindEventCallback( "start_server", []( Rml::DataModelHandle, Rml::Event &, const Rml::VariantList & ) {
+        RocketPlayDocument::StartServer();
+    } );
+    c.BindEventCallback( "close_play", []( Rml::DataModelHandle, Rml::Event &, const Rml::VariantList & ) {
+        RocketPlayDocument::ShowPanel( false );
+        RocketPlayDocument::UnloadDialog();
+    } );
 }
-
-class RkPlayClickListener : public Rml::EventListener
-{
-public:
-    void ProcessEvent( Rml::Event &event ) override
-    {
-        Rml::Element *current = event.GetCurrentElement();
-        if( !current )
-            return;
-
-        const Rml::String &id = current->GetId();
-
-        if( id == "start" )
-        {
-            RocketPlayDocument::StartServer();
-        }
-        else if( id == "close" )
-        {
-            RocketPlayDocument::ShowPanel( false );
-            RocketPlayDocument::UnloadDialog();
-        }
-    }
-};
-
-static RkPlayClickListener playClickListener;
-
-RocketPlayDocument::RocketPlayDocument()
-{
-}
+RK_HUD_SECTION( BindPlayPanel );
 
 void RocketPlayDocument::PopulateMapList()
 {
@@ -165,69 +150,26 @@ void RocketPlayDocument::StartServer()
     engine->ClientCmd_Unrestricted( szMapCommand );
 }
 
-static void AttachClickListener( Rml::ElementDocument *doc, const char *elementId )
-{
-    Rml::Element *elem = doc->GetElementById( elementId );
-    if( elem )
-        elem->AddEventListener( Rml::EventId::Click, &playClickListener );
-}
-
-static void DetachClickListener( Rml::ElementDocument *doc, const char *elementId )
-{
-    Rml::Element *elem = doc->GetElementById( elementId );
-    if( elem )
-        elem->RemoveEventListener( Rml::EventId::Click, &playClickListener );
-}
-
 void RocketPlayDocument::LoadDialog()
 {
-    if( !m_pInstance )
-    {
-        m_pInstance = RocketUI()->LoadDocumentFile( ROCKET_CONTEXT_CURRENT, "panel_play.rml", RocketPlayDocument::LoadDialog, RocketPlayDocument::UnloadDialog );
-        if( !m_pInstance )
-        {
-            Error( "Couldn't create rocketui play panel!\n" );
-            /* Exit */
-        }
+    if( m_pInstance || !RkPanelLoad( m_pInstance, ROCKET_CONTEXT_CURRENT, "panel_play.rml", LoadDialog, UnloadDialog ) )
+        return;
 
-        AttachClickListener( m_pInstance, "start" );
-        AttachClickListener( m_pInstance, "close" );
-
-        PopulateMapList();
-    }
+    PopulateMapList();
 }
 
 void RocketPlayDocument::UnloadDialog()
 {
-    if( m_pInstance )
-    {
-        DetachClickListener( m_pInstance, "start" );
-        DetachClickListener( m_pInstance, "close" );
-
-        m_pInstance->Close();
-        m_pInstance = nullptr;
-    }
-
-    m_bVisible = false;
+    RkPanelUnload( m_pInstance, m_bVisible );
 }
 
 void RocketPlayDocument::ShowPanel( bool bShow, bool immediate )
 {
     if( bShow )
     {
-        if( !m_pInstance )
-            LoadDialog();
-
-        // Refresh map list each time panel is shown
-        PopulateMapList();
-
-        m_pInstance->Show();
-    }
-    else
-    {
-        if( m_pInstance )
-            m_pInstance->Hide();
+        LoadDialog();
+        PopulateMapList();   // the maps folder can change between openings
     }
 
-    m_bVisible = bShow;
+    RkPanelShow( m_pInstance, m_bVisible, bShow );
 }

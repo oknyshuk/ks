@@ -51,16 +51,16 @@
 			}
 		</style>
 	</head>
-	<body data-model="roundtimer_model">
+	<body data-model="hud">
 		<div id="container">
 			<div id="ct-score">
-				<span class="score">{{ ct_score }}</span>
+				<span class="score">{{ roundtimer.ct_score }}</span>
 			</div>
 			<div id="timer-container">
-				<span id="timer">{{ minutes_left }}:{{ seconds_left }}</span>
+				<span id="timer">{{ roundtimer.minutes_left }}:{{ roundtimer.seconds_left }}</span>
 			</div>
 			<div id="t-score">
-				<span class="score">{{ t_score }}</span>
+				<span class="score">{{ roundtimer.t_score }}</span>
 			</div>
 		</div>
 	</body>

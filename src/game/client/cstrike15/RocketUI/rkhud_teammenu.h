@@ -7,7 +7,6 @@
 class RocketTeamMenuEventListener : public CGameEventListener
 {
 public:
-    virtual ~RocketTeamMenuEventListener();
     void StartAlwaysListenEvents();
     void StopAlwaysListenEvents();
     virtual void FireGameEvent( IGameEvent *event );
@@ -18,16 +17,12 @@ class RocketTeamMenuDocument
 protected:
     static Rml::ElementDocument *m_pInstance;
 
-    RocketTeamMenuDocument( );
-    virtual ~RocketTeamMenuDocument();
 public:
     static void LoadDialog( void );
     static void UnloadDialog( void );
     static void ShowPanel( bool bShow, bool immediate = false );
     static bool IsActive() { return m_pInstance != nullptr; }
     static bool IsVisible() { return m_bVisible; }
-    // True while this panel legitimately owns mouse/keyboard input (polled).
-    static bool OwnsInput();
     static Rml::ElementDocument *GetInstance() { return m_pInstance; }
 
 private:

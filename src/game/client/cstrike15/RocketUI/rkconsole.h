@@ -22,8 +22,6 @@ namespace Rml {
 class RocketConsole : public IConsoleDisplayFunc
 {
 public:
-    static RocketConsole& Instance();
-
     RocketConsole();
     ~RocketConsole();
 
@@ -34,8 +32,6 @@ public:
     void Hide();
     void Toggle();
     bool IsVisible() const { return m_bVisible; }
-    // True while the console legitimately owns mouse/keyboard input (polled).
-    bool OwnsInput() const;
 
     void Clear();
 

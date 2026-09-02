@@ -54,8 +54,8 @@
 		</style>
 	</head>
 	<body>
-		<div id="killfeed-lines" data-model="killfeed_model">
-			<div data-for="entry : killfeed_entries">
+		<div id="killfeed-lines" data-model="hud">
+			<div data-for="entry : killfeed.entries">
 				<div class="killfeed-entry">
 					<span class="attacker-name">{{ entry.attacker_name }}</span>
 					<span class="weapon">[{{ entry.gun_name }}]</span>

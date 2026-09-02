@@ -26,17 +26,13 @@
 				position: absolute;
 				border-radius: 3dp;
 			}
+			/* A blip only has a colour once its team is known, which is also what
+			   keeps unused player slots invisible. */
 			.player-ct {
 				background-color: rgba(150, 200, 255, 255);
 			}
 			.player-t {
 				background-color: rgba(255, 200, 80, 255);
-			}
-			.player-local {
-				width: 8dp;
-				height: 8dp;
-				border-radius: 4dp;
-				background-color: rgba(100, 255, 100, 255);
 			}
 			#crosshair-x {
 				position: absolute;
@@ -56,10 +52,21 @@
 			}
 		</style>
 	</head>
-	<body id="body">
+	<body id="body" data-model="hud"
+	      data-style-width="radar.width + 'px'"
+	      data-style-height="radar.height + 'px'">
 		<div id="container">
 			<div id="crosshair-x"/>
 			<div id="crosshair-y"/>
+			<!-- One div per player slot, instanced once (the array never resizes);
+			     rkhud_radar.cpp only moves them and flips their team afterwards.
+			     Must not be self-closing: data-for takes the element's inner RML as
+			     its template, and a self-closed tag has none. -->
+			<div class="player" data-for="blip : radar.blips"
+			     data-class-player-ct="blip.shown &amp;&amp; blip.ct"
+			     data-class-player-t="blip.shown &amp;&amp; !blip.ct"
+			     data-style-left="blip.x + 'px'"
+			     data-style-top="blip.y + 'px'"></div>
 		</div>
 	</body>
 </rml>

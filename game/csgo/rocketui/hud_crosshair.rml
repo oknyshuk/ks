@@ -6,36 +6,91 @@
 				height: 100%;
 				pointer-events: none;
 			}
+
+			/* Geometry is bound, not written: every rect below is derived from the
+			   handful of integers rkhud_crosshair.cpp puts in the crosshair section
+			   of the HUD model, which are the same integers the legacy
+			   CHudCrosshair maths produced. Arithmetic stays in whole pixels (only
+			   + - and *2) so the lines land on pixel boundaries exactly as before. */
 			.line {
 				position: absolute;
-				background-color: rgba(50,250,50,200);
+				background-color: var(--xhair-color);
 			}
 			.outline {
 				position: absolute;
-				background-color: rgba(0,0,0,128);
-			}
-			#dot {
-				position: absolute;
+				background-color: var(--xhair-outline-color);
 				display: none;
 			}
-			#ol-dot {
-				position: absolute;
-				display: none;
-			}
+
+			/* cl_crosshair_drawoutline / cl_crosshairdot arrive as classes on the
+			   body, so toggling them costs one class change instead of ten display
+			   writes per frame. Specificity does the rest: the id rules below keep
+			   the dot hidden until 'dotted' is set. */
+			.outlined .outline { display: block; }
+			#dot { position: absolute; display: none; }
+			.dotted #dot { display: block; }
+			#ol-dot { display: none; }
+			.dotted.outlined #ol-dot { display: block; }
 		</style>
 	</head>
-	<body>
-		<!-- Outlines (rendered behind lines due to document order) -->
-		<div id="ol-top" class="outline"/>
-		<div id="ol-bottom" class="outline"/>
-		<div id="ol-left" class="outline"/>
-		<div id="ol-right" class="outline"/>
-		<div id="ol-dot" class="outline"/>
+	<body data-model="hud"
+	      data-class-outlined="crosshair.outlined"
+	      data-class-dotted="crosshair.dotted"
+	      data-style---xhair-color="crosshair.color"
+	      data-style---xhair-outline-color="crosshair.outline_color">
+		<!-- Outlines first: RmlUi paints in document order, so these end up behind
+		     the lines, which is what the legacy crosshair relied on too. -->
+		<div id="ol-top" class="outline"
+		     data-style-left="crosshair.x0 - crosshair.ol + 'px'"
+		     data-style-top="crosshair.cy - crosshair.gap - crosshair.bar - crosshair.ol + 'px'"
+		     data-style-width="crosshair.thick + 2 * crosshair.ol + 'px'"
+		     data-style-height="crosshair.bar + 2 * crosshair.ol + 'px'"></div>
+		<div id="ol-bottom" class="outline"
+		     data-style-left="crosshair.x0 - crosshair.ol + 'px'"
+		     data-style-top="crosshair.cy + crosshair.gap - crosshair.ol + 'px'"
+		     data-style-width="crosshair.thick + 2 * crosshair.ol + 'px'"
+		     data-style-height="crosshair.bar + 2 * crosshair.ol + 'px'"></div>
+		<div id="ol-left" class="outline"
+		     data-style-left="crosshair.cx - crosshair.gap - crosshair.bar - crosshair.ol + 'px'"
+		     data-style-top="crosshair.y0 - crosshair.ol + 'px'"
+		     data-style-width="crosshair.bar + 2 * crosshair.ol + 'px'"
+		     data-style-height="crosshair.thick + 2 * crosshair.ol + 'px'"></div>
+		<div id="ol-right" class="outline"
+		     data-style-left="crosshair.cx + crosshair.gap - crosshair.ol + 'px'"
+		     data-style-top="crosshair.y0 - crosshair.ol + 'px'"
+		     data-style-width="crosshair.bar + 2 * crosshair.ol + 'px'"
+		     data-style-height="crosshair.thick + 2 * crosshair.ol + 'px'"></div>
+		<div id="ol-dot" class="outline"
+		     data-style-left="crosshair.x0 - crosshair.ol + 'px'"
+		     data-style-top="crosshair.y0 - crosshair.ol + 'px'"
+		     data-style-width="crosshair.thick + 2 * crosshair.ol + 'px'"
+		     data-style-height="crosshair.thick + 2 * crosshair.ol + 'px'"></div>
+
 		<!-- Crosshair lines -->
-		<div id="line-top" class="line"/>
-		<div id="line-bottom" class="line"/>
-		<div id="line-left" class="line"/>
-		<div id="line-right" class="line"/>
-		<div id="dot" class="line"/>
+		<div id="line-top" class="line"
+		     data-style-left="crosshair.x0 + 'px'"
+		     data-style-top="crosshair.cy - crosshair.gap - crosshair.bar + 'px'"
+		     data-style-width="crosshair.thick + 'px'"
+		     data-style-height="crosshair.bar + 'px'"></div>
+		<div id="line-bottom" class="line"
+		     data-style-left="crosshair.x0 + 'px'"
+		     data-style-top="crosshair.cy + crosshair.gap + 'px'"
+		     data-style-width="crosshair.thick + 'px'"
+		     data-style-height="crosshair.bar + 'px'"></div>
+		<div id="line-left" class="line"
+		     data-style-left="crosshair.cx - crosshair.gap - crosshair.bar + 'px'"
+		     data-style-top="crosshair.y0 + 'px'"
+		     data-style-width="crosshair.bar + 'px'"
+		     data-style-height="crosshair.thick + 'px'"></div>
+		<div id="line-right" class="line"
+		     data-style-left="crosshair.cx + crosshair.gap + 'px'"
+		     data-style-top="crosshair.y0 + 'px'"
+		     data-style-width="crosshair.bar + 'px'"
+		     data-style-height="crosshair.thick + 'px'"></div>
+		<div id="dot" class="line"
+		     data-style-left="crosshair.x0 + 'px'"
+		     data-style-top="crosshair.y0 + 'px'"
+		     data-style-width="crosshair.thick + 'px'"
+		     data-style-height="crosshair.thick + 'px'"></div>
 	</body>
 </rml>

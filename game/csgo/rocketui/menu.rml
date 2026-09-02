@@ -107,7 +107,7 @@
 			}
 		</style>
 	</head>
-	<body template="window">
+	<body template="window" data-model="hud">
 		<div id="main-content">
 			<div id="header-bar">
 				<div id="logo">
@@ -115,8 +115,8 @@
 					<span id="logo-subtitle">GLOBAL OFFENSIVE</span>
 				</div>
 				<div id="nav-tabs">
-					<span class="nav-tab nav-tab-active" id="play-menu-btn">PLAY</span>
-					<span class="nav-tab" id="options-menu-btn">OPTIONS</span>
+					<span class="nav-tab nav-tab-active" id="play-menu-btn" data-event-click="show_play">PLAY</span>
+					<span class="nav-tab" id="options-menu-btn" data-event-click="show_options">OPTIONS</span>
 				</div>
 			</div>
 			<div id="center-content">

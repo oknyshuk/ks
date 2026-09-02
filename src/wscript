@@ -284,10 +284,6 @@ def configure(conf):
     includes += conf.env.INCLUDES_SDL3
     conf.check_cfg(package="freetype2", args="--cflags --libs", uselib_store="FREETYPE")
     includes += conf.env.INCLUDES_FREETYPE
-    conf.check_cfg(
-        package="fontconfig", args="--cflags --libs", uselib_store="FONTCONFIG"
-    )
-    includes += conf.env.INCLUDES_FONTCONFIG
     conf.check_cfg(package="zlib", args="--cflags --libs", uselib_store="ZLIB")
     conf.check_cfg(package="libjpeg", args="--cflags --libs", uselib_store="JPEG")
     conf.check_cfg(package="libpng", args="--cflags --libs", uselib_store="PNG")

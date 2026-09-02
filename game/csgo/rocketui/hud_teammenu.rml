@@ -103,21 +103,21 @@
 			}
 		</style>
 	</head>
-	<body>
+	<body data-model="hud">
 		<div id="modal">
 			<div id="header">
 				<div id="header-title">SELECT TEAM</div>
 			</div>
 			<div id="team-options">
-				<button id="team_ct" class="team-btn">
+				<button id="team_ct" class="team-btn" data-event-click="jointeam( 3 )">
 					<span class="team-label">COUNTER-TERRORIST</span>
 					<span class="team-key">[1]</span>
 				</button>
-				<button id="team_t" class="team-btn">
+				<button id="team_t" class="team-btn" data-event-click="jointeam( 2 )">
 					<span class="team-label">TERRORIST</span>
 					<span class="team-key">[2]</span>
 				</button>
-				<button id="team_spec" class="team-btn">
+				<button id="team_spec" class="team-btn" data-event-click="jointeam( 1 )">
 					<span class="team-label">SPECTATOR</span>
 					<span class="team-key">[3]</span>
 				</button>

@@ -1,5 +1,9 @@
 #include "rkhud_loadingscreen.h"
 
+#include "rkpanel.h"
+
+#include "rkhud_model.h"
+
 #include <rocketui/rmlui.h>
 
 #include "cbase.h"
@@ -10,75 +14,38 @@
 Rml::ElementDocument *RocketLoadingScreenDocument::m_pInstance = nullptr;
 bool RocketLoadingScreenDocument::m_bVisible = false;
 
-bool RocketLoadingScreenDocument::OwnsInput()
+// hud_loadingscreen.rml dismisses itself on any click (data-event-mousedown).
+static void BindLoadingScreen( Rml::DataModelConstructor &c )
 {
-    return m_bVisible && m_pInstance && m_pInstance->IsVisible();
-}
-
-/* Event Listener added to continue button */
-class RkLoadingScreenClick : public Rml::EventListener
-{
-public:
-    void ProcessEvent(Rml::Event& keyevent) override
-    {
-        // On any mousedown
+    c.BindEventCallback( "dismiss_loadingscreen", []( Rml::DataModelHandle, Rml::Event &, const Rml::VariantList & ) {
         RocketLoadingScreenDocument::ShowPanel( false );
-    }
-};
-
-static RkLoadingScreenClick loadingScreenClickListener;
-
-RocketLoadingScreenDocument::RocketLoadingScreenDocument()
-{
+    } );
 }
+RK_HUD_SECTION( BindLoadingScreen );
 
 void RocketLoadingScreenDocument::LoadDialog()
 {
-    if( !m_pInstance )
-    {
-        m_pInstance = RocketUI()->LoadDocumentFile( ROCKET_CONTEXT_HUD, "hud_loadingscreen.rml", RocketLoadingScreenDocument::LoadDialog, RocketLoadingScreenDocument::UnloadDialog );
-
-        if( !m_pInstance )
-        {
-            Error( "Couldn't create rocketui loadingscreen!\n");
-            /* Exit */
-        }
-        m_pInstance->AddEventListener( Rml::EventId::Mousedown, &loadingScreenClickListener );
-    }
+    RkPanelLoad( m_pInstance, ROCKET_CONTEXT_HUD, "hud_loadingscreen.rml", LoadDialog, UnloadDialog );
 }
 
 void RocketLoadingScreenDocument::UnloadDialog()
 {
-    if( m_pInstance )
-    {
-        m_pInstance->Close();
-        m_pInstance = nullptr;
-    }
+    RkPanelUnload( m_pInstance, m_bVisible );
 }
 
 void RocketLoadingScreenDocument::ShowPanel(bool bShow, bool immediate)
 {
-    // oh yeah buddy this'll get called before the loading sometimes
-    // so if it does, load it for the caller.
     if( bShow )
+        LoadDialog();
+
+    // Dismissing the loading screen is what joins the game and raises team select.
+    const bool bWasVisible = m_bVisible;
+
+    RkPanelShow( m_pInstance, m_bVisible, bShow );
+
+    if( !bShow && bWasVisible )
     {
-        if( !m_pInstance )
-            LoadDialog();
-
-        m_pInstance->Show();
+        engine->ClientCmd_Unrestricted( "joingame" );
+        RocketTeamMenuDocument::ShowPanel( true );
     }
-    else
-    {
-        if( m_pInstance )
-            m_pInstance->Hide();
-
-        // if we were visible, we need to join the game most likely and show the team select.
-        if( m_bVisible )
-        {
-            engine->ClientCmd_Unrestricted( "joingame" );
-            RocketTeamMenuDocument::ShowPanel( true );
-        }
-    }
-
-    m_bVisible = bShow;
 }

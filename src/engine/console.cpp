@@ -30,7 +30,7 @@ bool con_debuglog = false;
 bool con_initialized = false;
 bool con_debuglogmapprefixed = false;
 
-static ConVar con_timestamp( "con_timestamp", "0", 0, "Prefix console.log entries with timestamps" );
+static ConVar con_timestamp( "con_timestamp", "1", 0, "Prefix console.log entries with timestamps" );
 extern ConVar cl_hideserverip;
 
 // In order to avoid excessive opening and closing of the console log file
@@ -65,6 +65,16 @@ ConsoleLogManager& GetConsoleLogManager()
 	return object;
 }
 
+void Con_DebugLog( const char *fmt, ... );
+
+// csgo/console.log is written unless turned off: a run you cannot read back is a run
+// you cannot debug. -condebug still forces it on, -nocondebug opts out, -conclearlog
+// wipes the file first.
+static bool ConsoleLogWantedByDefault()
+{
+	return CommandLine()->FindParm( "-nocondebug" ) == 0;
+}
+
 void ConsoleLogFileCallback(IConVar *var, const char *pOldValue, float flOldValue )
 {
 	ConVarRef ref( var->GetName() );
@@ -73,7 +83,7 @@ void ConsoleLogFileCallback(IConVar *var, const char *pOldValue, float flOldValu
 	GetConsoleLogManager().CloseFileIfOpen();
 	if ( !COM_IsValidPath( logFile ) )
 	{
-		con_debuglog = CommandLine()->FindParm( "-condebug" ) != 0;
+		con_debuglog = ConsoleLogWantedByDefault();
 	}
 	else
 	{
@@ -538,7 +548,7 @@ void Con_Init (void)
 	con_debuglogmapprefixed = false;
 #else
 	bool bRPTClient = ( CommandLine()->FindParm( "-rpt" ) != 0 );
-	con_debuglog = bRPTClient || ( CommandLine()->FindParm( "-condebug" ) != 0 );
+	con_debuglog = bRPTClient || ConsoleLogWantedByDefault();
 	con_debuglogmapprefixed = CommandLine()->FindParm( "-makereslists" ) != 0 || CommandLine()->FindParm( "-mapname" ) != 0;
 	if ( con_debuglog )
 	{
@@ -547,6 +557,8 @@ void Con_Init (void)
 		{
 			GetConsoleLogManager().RemoveConsoleLogFile();
 		}
+		// Appended across runs, so mark where this one starts.
+		Con_DebugLog( "\n=== %s | %s ===\n", GetTimestampString(), CommandLine()->GetCmdLine() );
 	}
 #endif // !DEDICATED
 

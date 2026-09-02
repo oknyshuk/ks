@@ -3,6 +3,8 @@
 
 #include "rkhud_scope.h"
 
+#include "rkhud_model.h"
+
 #include "cbase.h"
 #include "hud_macros.h"
 #include "c_cs_player.h"
@@ -13,66 +15,57 @@
 
 DECLARE_HUDELEMENT_DEPTH( RkHudScope, 70 );
 
+const char *RkHudScope::kDocument = "hud_scope.rml";
+
 extern ConVar cl_crosshair_sniper_width;
 ConVar cl_crosshair_sniper_show_normal_inaccuracy( "cl_crosshair_sniper_show_normal_inaccuracy", "0", FCVAR_CLIENTDLL | FCVAR_ARCHIVE | FCVAR_SS, "Include standing inaccuracy when determining sniper crosshair blur" );
 
-static void UnloadRkScope()
+// What hud_scope.rml binds to. Whole pixels, already clamped: the viewport rect
+// and the shot-spread blur are weapon physics, worked out below, while what a
+// rect *looks like* stays in the document.
+struct ScopeData
 {
-    RkHudScope *pScope = GET_HUDELEMENT( RkHudScope );
-    if( !pScope )
-        return;
+    int screen_w, screen_h;
+    int scope_x, scope_y, scope_w, scope_h, scope_x2;
+    int top_h, bottom_y, bottom_h, left_w, right_w;
+    int core_x, core_y, thickness;   // sharp cross (steady)
+    int blur_x, blur_y, blur;        // soft sprite cross (moving)
+    Rml::String opacity;
+    bool steady;
 
-    if( !pScope->m_pDocument )
-        return;
+    bool operator==( const ScopeData & ) const = default;
+} scopeData;
 
-    pScope->m_pDocument->Close();
-    pScope->m_pDocument = nullptr;
-}
-
-static void LoadRkScope()
+static void BindScope( Rml::DataModelConstructor &c )
 {
-    RkHudScope *pScope = GET_HUDELEMENT( RkHudScope );
-    if( !pScope )
-        return;
-
-    Rml::Context *hudCtx = RocketUI()->AccessHudContext();
-    if( !hudCtx )
+    if ( auto h = c.RegisterStruct<ScopeData>() )
     {
-        Error( "Couldn't access hudctx!\n" );
+        h.RegisterMember( "screen_w", &ScopeData::screen_w );
+        h.RegisterMember( "screen_h", &ScopeData::screen_h );
+        h.RegisterMember( "scope_x", &ScopeData::scope_x );
+        h.RegisterMember( "scope_y", &ScopeData::scope_y );
+        h.RegisterMember( "scope_w", &ScopeData::scope_w );
+        h.RegisterMember( "scope_h", &ScopeData::scope_h );
+        h.RegisterMember( "scope_x2", &ScopeData::scope_x2 );
+        h.RegisterMember( "top_h", &ScopeData::top_h );
+        h.RegisterMember( "bottom_y", &ScopeData::bottom_y );
+        h.RegisterMember( "bottom_h", &ScopeData::bottom_h );
+        h.RegisterMember( "left_w", &ScopeData::left_w );
+        h.RegisterMember( "right_w", &ScopeData::right_w );
+        h.RegisterMember( "core_x", &ScopeData::core_x );
+        h.RegisterMember( "core_y", &ScopeData::core_y );
+        h.RegisterMember( "thickness", &ScopeData::thickness );
+        h.RegisterMember( "blur_x", &ScopeData::blur_x );
+        h.RegisterMember( "blur_y", &ScopeData::blur_y );
+        h.RegisterMember( "blur", &ScopeData::blur );
+        h.RegisterMember( "opacity", &ScopeData::opacity );
+        h.RegisterMember( "steady", &ScopeData::steady );
     }
-
-    if( pScope->m_pDocument )
-        return;
-
-    pScope->m_pDocument = RocketUI()->LoadDocumentFile( ROCKET_CONTEXT_HUD, "hud_scope.rml", &LoadRkScope, &UnloadRkScope );
-
-    if( !pScope->m_pDocument )
-    {
-        Error( "Couldn't create hud_scope document!\n" );
-    }
-
-    pScope->m_fillTop = pScope->m_pDocument->GetElementById( "fill-top" );
-    pScope->m_fillBottom = pScope->m_pDocument->GetElementById( "fill-bottom" );
-    pScope->m_fillLeft = pScope->m_pDocument->GetElementById( "fill-left" );
-    pScope->m_fillRight = pScope->m_pDocument->GetElementById( "fill-right" );
-    pScope->m_scope = pScope->m_pDocument->GetElementById( "scope" );
-
-    static const char *kReticleIds[4] = { "v-core", "h-core", "v-blur", "h-blur" };
-    for( int i = 0; i < 4; i++ )
-        pScope->m_reticle[i] = pScope->m_pDocument->GetElementById( kReticleIds[i] );
-
-    pScope->ShowPanel( false, false );
+    c.Bind( "scope", &scopeData );
 }
+RK_HUD_SECTION( BindScope );
 
-RkHudScope::RkHudScope( const char *pElementName ) : CHudElement( pElementName ),
-    m_bVisible( false ),
-    m_pDocument( nullptr ),
-    m_fillTop( nullptr ),
-    m_fillBottom( nullptr ),
-    m_fillLeft( nullptr ),
-    m_fillRight( nullptr ),
-    m_scope( nullptr ),
-    m_reticle{},
+RkHudScope::RkHudScope( const char *pElementName ) : RkHudDocument( pElementName ),
     m_fAnimInset( 1.0f ),
     m_fLineSpreadDistance( 1.0f )
 {
@@ -82,29 +75,7 @@ RkHudScope::RkHudScope( const char *pElementName ) : CHudElement( pElementName )
 
 RkHudScope::~RkHudScope() noexcept
 {
-    UnloadRkScope();
-}
-
-void RkHudScope::LevelInit()
-{
-    LoadRkScope();
-}
-
-void RkHudScope::LevelShutdown()
-{
-    UnloadRkScope();
-}
-
-static void SetReticleRect( Rml::Element *e, int x, int y, int w, int h, const char *op )
-{
-    if( !e )
-        return;
-    char b[32];
-    V_snprintf( b, sizeof(b), "%dpx", x ); e->SetProperty( "left", b );
-    V_snprintf( b, sizeof(b), "%dpx", y ); e->SetProperty( "top", b );
-    V_snprintf( b, sizeof(b), "%dpx", w ); e->SetProperty( "width", b );
-    V_snprintf( b, sizeof(b), "%dpx", h ); e->SetProperty( "height", b );
-    e->SetProperty( "opacity", op );
+    Unload();
 }
 
 void RkHudScope::UpdateScope()
@@ -192,71 +163,24 @@ void RkHudScope::UpdateScope()
     int centerX = ( screenWide / 2 ) + offsetX;
     int centerY = ( screenTall / 2 ) + offsetY;
 
-    char buf[32];
+    // --- publish -----------------------------------------------------------
+    // The clamps stay here: MAX(y1,0) and friends are logic about a viewport
+    // that can be pushed off-screen by the bob, not styling.
+    ScopeData next;
+    next.screen_w = screenWide;
+    next.screen_h = screenTall;
+    next.scope_x = x1;
+    next.scope_y = y1;
+    next.scope_w = x2 - x1;
+    next.scope_h = y2 - y1;
+    next.scope_x2 = x2;
+    next.top_h = MAX( y1, 0 );
+    next.bottom_y = y2;
+    next.bottom_h = MAX( screenTall - y2, 0 );
+    next.left_w = MAX( x1, 0 );
+    next.right_w = MAX( screenWide - x2, 0 );
 
-    // Size the circular corner-mask square to the scope viewport rect.
-    if( m_scope )
-    {
-        V_snprintf( buf, sizeof(buf), "%dpx", x1 );        m_scope->SetProperty( "left", buf );
-        V_snprintf( buf, sizeof(buf), "%dpx", y1 );        m_scope->SetProperty( "top", buf );
-        V_snprintf( buf, sizeof(buf), "%dpx", x2 - x1 );   m_scope->SetProperty( "width", buf );
-        V_snprintf( buf, sizeof(buf), "%dpx", y2 - y1 );   m_scope->SetProperty( "height", buf );
-    }
-
-    // Position fill rectangles (black areas around scope viewport)
-    // Top: full width, from 0 to y1
-    if( m_fillTop )
-    {
-        m_fillTop->SetProperty( "left", "0px" );
-        m_fillTop->SetProperty( "top", "0px" );
-        V_snprintf( buf, sizeof(buf), "%dpx", screenWide );
-        m_fillTop->SetProperty( "width", buf );
-        V_snprintf( buf, sizeof(buf), "%dpx", MAX( y1, 0 ) );
-        m_fillTop->SetProperty( "height", buf );
-    }
-
-    // Bottom: full width, from y2 to screen bottom
-    if( m_fillBottom )
-    {
-        m_fillBottom->SetProperty( "left", "0px" );
-        V_snprintf( buf, sizeof(buf), "%dpx", y2 );
-        m_fillBottom->SetProperty( "top", buf );
-        V_snprintf( buf, sizeof(buf), "%dpx", screenWide );
-        m_fillBottom->SetProperty( "width", buf );
-        V_snprintf( buf, sizeof(buf), "%dpx", MAX( screenTall - y2, 0 ) );
-        m_fillBottom->SetProperty( "height", buf );
-    }
-
-    // Left: from y1 to y2, left edge to x1
-    if( m_fillLeft )
-    {
-        m_fillLeft->SetProperty( "left", "0px" );
-        V_snprintf( buf, sizeof(buf), "%dpx", y1 );
-        m_fillLeft->SetProperty( "top", buf );
-        V_snprintf( buf, sizeof(buf), "%dpx", MAX( x1, 0 ) );
-        m_fillLeft->SetProperty( "width", buf );
-        V_snprintf( buf, sizeof(buf), "%dpx", y2 - y1 );
-        m_fillLeft->SetProperty( "height", buf );
-    }
-
-    // Right: from y1 to y2, x2 to right edge
-    if( m_fillRight )
-    {
-        V_snprintf( buf, sizeof(buf), "%dpx", x2 );
-        m_fillRight->SetProperty( "left", buf );
-        V_snprintf( buf, sizeof(buf), "%dpx", y1 );
-        m_fillRight->SetProperty( "top", buf );
-        V_snprintf( buf, sizeof(buf), "%dpx", MAX( screenWide - x2, 0 ) );
-        m_fillRight->SetProperty( "width", buf );
-        V_snprintf( buf, sizeof(buf), "%dpx", y2 - y1 );
-        m_fillRight->SetProperty( "height", buf );
-    }
-
-    // Reticle: a crisp solid core plus soft gradient wings that grow out of the
-    // core with movement/inaccuracy. Axis-native (no rotation); at rest the
-    // wings collapse to zero size, leaving only the crisp core. Spread magnitude
-    // mirrors the legacy CHudScope.
-    // Reticle: faithful port of the legacy CHudScope — a hard toggle between a
+    // Reticle: faithful port of the legacy CHudScope -- a hard toggle between a
     // thin sharp solid line (steady) and Valve's scope_line_blur sprite (moving),
     // the sprite widening + fading with shot spread. The sprite's soft alpha
     // profile (vs a solid bar) is what keeps the viewport from darkening.
@@ -266,33 +190,31 @@ void RkHudScope::UpdateScope()
 
     float fBlurWidth = powf( m_fLineSpreadDistance, 0.75f );
     float fScreenBlurWidth = fBlurWidth * screenTall / 640.0f;
-    bool steady = ( fScreenBlurWidth <= thickness + 0.5f );
+    next.steady = ( fScreenBlurWidth <= thickness + 0.5f );
 
-    float a = steady ? ( ( fBlurWidth < 1.0f ) ? 1.0f : 1.0f / fBlurWidth )
-                     : ( ( fBlurWidth < 1.8f ) ? 1.0f : 1.8f / fBlurWidth );
+    float a = next.steady ? ( ( fBlurWidth < 1.0f ) ? 1.0f : 1.0f / fBlurWidth )
+                          : ( ( fBlurWidth < 1.8f ) ? 1.0f : 1.8f / fBlurWidth );
     a = clamp( sqrtf( a ), 140.0f / 255.0f, 1.0f );
     char op[16];
     V_snprintf( op, sizeof(op), "%.3f", a );
+    next.opacity = op;
 
-    if( steady )
-    {
-        // Sharp thin solid cross; collapse the blur sprites to zero size.
-        SetReticleRect( m_reticle[0], centerX - thickness / 2, 0, thickness, screenTall, op );
-        SetReticleRect( m_reticle[1], 0, centerY - thickness / 2, screenWide, thickness, op );
-        SetReticleRect( m_reticle[2], 0, 0, 0, 0, op );
-        SetReticleRect( m_reticle[3], 0, 0, 0, 0, op );
-    }
-    else
-    {
-        // Soft blur sprite cross (widens + fades); collapse the sharp cross.
-        int bw = (int)( 2.0f * fScreenBlurWidth );
-        if( bw < 3 )
-            bw = 3; // keep the soft sprite from sampling to nothing near the toggle
-        SetReticleRect( m_reticle[2], centerX - bw / 2, 0, bw, screenTall, op );
-        SetReticleRect( m_reticle[3], 0, centerY - bw / 2, screenWide, bw, op );
-        SetReticleRect( m_reticle[0], 0, 0, 0, 0, op );
-        SetReticleRect( m_reticle[1], 0, 0, 0, 0, op );
-    }
+    int bw = (int)( 2.0f * fScreenBlurWidth );
+    if( bw < 3 )
+        bw = 3; // keep the soft sprite from sampling to nothing near the toggle
+
+    next.thickness = thickness;
+    next.core_x = centerX - thickness / 2;
+    next.core_y = centerY - thickness / 2;
+    next.blur = bw;
+    next.blur_x = centerX - bw / 2;
+    next.blur_y = centerY - bw / 2;
+
+    if( next == scopeData )
+        return;
+
+    scopeData = next;
+    RkHudDirty( "scope" );
 }
 
 void RkHudScope::ShowPanel( bool bShow, bool force )
@@ -303,7 +225,7 @@ void RkHudScope::ShowPanel( bool bShow, bool force )
     if( bShow )
     {
         if( !m_bVisible )
-            m_pDocument->Show();
+            m_pDocument->Show( Rml::ModalFlag::None, Rml::FocusFlag::None );
 
         UpdateScope();
     }

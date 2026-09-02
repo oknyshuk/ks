@@ -1,8 +1,11 @@
 #include "rkhud_teammenu.h"
 
+#include "rkpanel.h"
+
+#include "rkhud_model.h"
+
 #include "cbase.h"
 #include "cdll_client_int.h" // extern globals to interfaces like engineclient
-
 
 #include <rocketui/rmlui.h>
 
@@ -10,46 +13,22 @@ Rml::ElementDocument *RocketTeamMenuDocument::m_pInstance = nullptr;
 bool RocketTeamMenuDocument::m_bVisible = false;
 RocketTeamMenuEventListener* RocketTeamMenuDocument::m_pEventListener = nullptr;
 
-bool RocketTeamMenuDocument::OwnsInput()
+// One action with the team as an argument, named by the buttons themselves in
+// hud_teammenu.rml (data-event-click="jointeam( 3 )").
+static void BindTeamMenu( Rml::DataModelConstructor &c )
 {
-    return m_bVisible && m_pInstance && m_pInstance->IsVisible();
-}
-
-/* Event Listener added to each team-button */
-class RkTeamMenuButtons : public Rml::EventListener
-{
-public:
-    void ProcessEvent(Rml::Event& keyevent) override
-    {
-        // Currently, only mousedown events.
-        Rml::Element *elem = keyevent.GetTargetElement();
-        if( !elem )
+    c.BindEventCallback( "jointeam", []( Rml::DataModelHandle, Rml::Event &, const Rml::VariantList &arguments ) {
+        if ( arguments.empty() )
             return;
 
-        Rml::String id = elem->GetId();
-        if( id == "team_ct" )
-        {
-            RocketTeamMenuDocument::ShowPanel( false );
-            engine->ClientCmd_Unrestricted("jointeam 3");
-        }
-        else if( id == "team_t" )
-        {
-            RocketTeamMenuDocument::ShowPanel( false );
-            engine->ClientCmd_Unrestricted("jointeam 2");
-        }
-        else if( id == "team_spec" )
-        {
-            RocketTeamMenuDocument::ShowPanel( false );
-            engine->ClientCmd_Unrestricted( "jointeam 1");
-        }
-    }
-};
+        RocketTeamMenuDocument::ShowPanel( false );
 
-static RkTeamMenuButtons teamMenuButtonsListener;
-
-RocketTeamMenuEventListener::~RocketTeamMenuEventListener()
-{
+        char command[32];
+        V_snprintf( command, sizeof( command ), "jointeam %d", arguments[0].Get<int>() );
+        engine->ClientCmd_Unrestricted( command );
+    } );
 }
+RK_HUD_SECTION( BindTeamMenu );
 
 void RocketTeamMenuEventListener::StartAlwaysListenEvents()
 {
@@ -87,71 +66,32 @@ void RocketTeamMenuEventListener::FireGameEvent(IGameEvent *event)
     }
 }
 
-RocketTeamMenuDocument::RocketTeamMenuDocument()
-{
-
-}
-
-RocketTeamMenuDocument::~RocketTeamMenuDocument() noexcept
-{
-}
-
 void RocketTeamMenuDocument::LoadDialog()
 {
-    if( !m_pInstance )
-    {
-        m_pInstance = RocketUI()->LoadDocumentFile( ROCKET_CONTEXT_HUD, "hud_teammenu.rml", RocketTeamMenuDocument::LoadDialog, RocketTeamMenuDocument::UnloadDialog );
+    if( m_pInstance || !RkPanelLoad( m_pInstance, ROCKET_CONTEXT_HUD, "hud_teammenu.rml", LoadDialog, UnloadDialog ) )
+        return;
 
-        if( !m_pInstance )
-        {
-            Error( "Couldn't create rocketui team-menu!\n");
-            /* Exit */
-        }
-
-        // Add a listener to each button, this seems better than custom events for these
-        Rml::ElementList teamButtons;
-        m_pInstance->GetElementsByTagName( teamButtons, "button" );
-        for( Rml::Element *elem : teamButtons )
-        {
-            elem->AddEventListener( Rml::EventId::Mousedown, &teamMenuButtonsListener );
-        }
-
-        m_pEventListener = new RocketTeamMenuEventListener;
-        m_pEventListener->StartAlwaysListenEvents();
-    }
+    // Joining can fail or be pre-empted; the menu closes itself when it does.
+    m_pEventListener = new RocketTeamMenuEventListener;
+    m_pEventListener->StartAlwaysListenEvents();
 }
 
 void RocketTeamMenuDocument::UnloadDialog()
 {
-    if( m_pInstance )
+    if( m_pEventListener )
     {
-        m_pInstance->Close();
-        m_pInstance = nullptr;
-        if( m_pEventListener )
-        {
-            m_pEventListener->StopListeningForAllEvents();
-            delete m_pEventListener;
-            m_pEventListener = nullptr;
-        }
+        m_pEventListener->StopListeningForAllEvents();
+        delete m_pEventListener;
+        m_pEventListener = nullptr;
     }
+
+    RkPanelUnload( m_pInstance, m_bVisible );
 }
 
 void RocketTeamMenuDocument::ShowPanel(bool bShow, bool immediate)
 {
-    // oh yeah buddy this'll get called before the loading sometimes
-    // so if it does, load it for the caller.
     if( bShow )
-    {
-        if( !m_pInstance )
-            LoadDialog();
+        LoadDialog();
 
-        m_pInstance->Show();
-    }
-    else
-    {
-        if( m_pInstance )
-            m_pInstance->Hide();
-    }
-
-    m_bVisible = bShow;
+    RkPanelShow( m_pInstance, m_bVisible, bShow );
 }

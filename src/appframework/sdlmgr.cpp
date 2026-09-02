@@ -124,7 +124,7 @@ public:
 
 	virtual void SetMouseVisible( bool bState );
 
-	// Push the desired pointer state to SDL. Called when intent changes, not per frame.
+	// Push the desired pointer state to SDL. Cheap to repeat: diffs against SDL first.
 	void ApplyPointerState();
 	virtual void SetMouseCursor( SDL_Cursor *hCursor );
 	virtual void SetForbidMouseGrab( bool bForbidMouseGrab ) { m_bForbidMouseGrab = bForbidMouseGrab; }
@@ -730,9 +730,9 @@ void CSDLMgr::PostEvent( const SDL_Event &theEvent )
 
 // SDL owns the pointer lifecycle: relative mode is a window flag
 // (SDL_WINDOW_MOUSE_RELATIVE_MODE) whose effects SDL scopes to focus itself, and the
-// Wayland backend re-derives the lock from that flag as focus moves. So state it once
-// per intent change and leave it alone -- do not clear it on focus loss, and do not
-// re-assert it per frame (SDL_SetWindowRelativeMouseMode flushes pending motion).
+// Wayland backend re-derives the lock from that flag as focus moves. So do not clear
+// it on focus loss. Callers may re-state their intent as often as they like -- every
+// branch below diffs against SDL first, so an unchanged intent issues no SDL calls.
 void CSDLMgr::ApplyPointerState()
 {
 	if ( !m_Window )
@@ -757,7 +757,9 @@ void CSDLMgr::ApplyPointerState()
 
 	if ( bShowCursor )
 	{
-		SDL_SetCursor( m_hCursor );
+		// SDL_SetCursor also forces a redraw, so it is not free to repeat.
+		if ( SDL_GetCursor() != m_hCursor )
+			SDL_SetCursor( m_hCursor );
 		if ( !SDL_CursorVisible() )
 			SDL_ShowCursor();
 	}
@@ -1117,12 +1119,9 @@ void CSDLMgr::PumpWindowsMessageLoop()
 			case SDL_EVENT_WINDOW_DISPLAY_CHANGED:
 			case SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED:
 			{
-				// The surface was rebuilt: entering/leaving fullscreen or changing
-				// resolution does not reliably preserve the Wayland pointer
-				// constraint, and SDL's own warp emulation toggles relative mode on
-				// the way through. Focus changes do NOT need this -- SDL re-derives
-				// the lock from the window flag itself -- which is exactly why
-				// alt-tabbing recovered nothing while a mode change broke aiming.
+				// The surface was rebuilt (mode switch, fullscreen toggle): re-state the
+				// pointer intent. Focus changes do NOT need this -- SDL re-derives the
+				// lock from its own window flag as focus moves.
 				ApplyPointerState();
 				break;
 			}

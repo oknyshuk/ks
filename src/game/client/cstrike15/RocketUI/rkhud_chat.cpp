@@ -1,5 +1,7 @@
 #include "rkhud_chat.h"
 
+#include "rkhud_model.h"
+
 #include "cbase.h"
 #include "cs_gamerules.h"
 #include "hud_macros.h"
@@ -7,12 +9,13 @@
 #include "c_cs_playerresource.h"
 #include "localize/ilocalize.h"
 
-
 #include <rocketui/rmlui.h>
 
 #include "rkpanel_popup.h"
 
 DECLARE_HUDELEMENT( RkHudChat );
+
+const char *RkHudChat::kDocument = "hud_chat.rml";
 
 ConVar rocket_hud_chat_idle_opacity( "rocket_hud_chat_idle_opacity", "0.2", FCVAR_ARCHIVE, "The Opacity of the Chat while it is not active" );
 ConVar rocket_hud_chat_active_opacity( "rocket_hud_chat_active_opacity", "0.7", FCVAR_ARCHIVE, "The Opacity of the Chat while typing/new message" );
@@ -198,162 +201,133 @@ static bool __MsgFunc_TextMsg( const CCSUsrMsg_TextMsg &msg )
     return true;
 }
 
-class RkHudChatEventListener : public Rml::EventListener
+// hud_chat.rml routes its input's keydown here (data-event-keydown). Enter sends,
+// escape drops out of message mode; every other key belongs to the text field.
+// One line of chat. The sender only picks a colour, so it travels as the class
+// name hud_chat.rml should put on the username.
+struct ChatLine
 {
-public:
-    void ProcessEvent(Rml::Event& keyevent) override
-    {
-        char sayBuffer[1024];
-        switch (keyevent.GetId())
-        {
-            case Rml::EventId::Keydown:
-            {
-                const Rml::Dictionary& params = keyevent.GetParameters();
-                Rml::Input::KeyIdentifier key_identifier = (Rml::Input::KeyIdentifier) keyevent.GetParameter< int >("key_identifier", 0);
-                if (key_identifier == Rml::Input::KI_ESCAPE)
-                {
-                    // Close the chat.
-                    RkHudChat* pChat = GET_HUDELEMENT( RkHudChat );
-                    if( !pChat )
-                        break;
+    Rml::String username;
+    Rml::String message;
+    Rml::String sender_class;
 
-                    pChat->StopMessageMode();
-                }
-                else if (key_identifier == Rml::Input::KI_RETURN)
-                {
-                    // Submit the Chat
-                    RkHudChat* pChat = GET_HUDELEMENT( RkHudChat );
-                    if( !pChat )
-                        break;
-
-                    Rml::ElementFormControl *input = static_cast<Rml::ElementFormControl*>(pChat->m_elemChatInput);
-
-                    V_snprintf( sayBuffer, sizeof( sayBuffer ), "%s \"%s\"", pChat->GetMessageMode() == MM_SAY ? "say" : "say_team", input->GetValue().c_str() );
-
-                    engine->ClientCmd_Unrestricted( sayBuffer );
-                    input->SetValue("");
-
-                    pChat->StopMessageMode();
-                }
-            }
-                break;
-
-            default:
-                break;
-        }
-    }
+    bool operator==( const ChatLine & ) const = default;
 };
-
-static RkHudChatEventListener chatEventListener;
-
-static void UnloadRkChat()
+struct ChatData
 {
-    RkHudChat* pChat = GET_HUDELEMENT( RkHudChat );
-    if( !pChat )
-    {
-        Warning("Couldn't grab RkHudChat element to Unload\n");
-        return;
-    }
+    Rml::Vector<ChatLine> lines;
 
-    // Not loaded
-    if( !pChat->m_pInstance )
-        return;
+    bool operator==( const ChatData & ) const = default;
+} chatData;
 
-    pChat->m_pInstance->Close();
-    pChat->m_pInstance = nullptr;
-}
-
-static void LoadRkChat()
+static void BindChat( Rml::DataModelConstructor &c )
 {
-    RkHudChat* pChat = GET_HUDELEMENT( RkHudChat );
-    if( !pChat )
+    if ( auto line = c.RegisterStruct<ChatLine>() )
     {
-        Warning("Couldn't grab RkHudChat element to load\n");
-        return;
+        line.RegisterMember( "username", &ChatLine::username );
+        line.RegisterMember( "message", &ChatLine::message );
+        line.RegisterMember( "sender_class", &ChatLine::sender_class );
     }
+    c.RegisterArray<Rml::Vector<ChatLine>>();
 
-    pChat->m_pInstance = RocketUI()->LoadDocumentFile( ROCKET_CONTEXT_HUD, "hud_chat.rml", LoadRkChat, UnloadRkChat );
+    if ( auto h = c.RegisterStruct<ChatData>() )
+        h.RegisterMember( "lines", &ChatData::lines );
+    c.Bind( "chat", &chatData );
 
-    if( !pChat->m_pInstance )
-    {
-        Error("Couldn't create hud_chat document!\n");
-        /* Exit */
-    }
+    c.BindEventCallback( "chat_key", []( Rml::DataModelHandle, Rml::Event &ev, const Rml::VariantList & ) {
+        RkHudChat *pChat = GET_HUDELEMENT( RkHudChat );
+        if ( !pChat || !pChat->m_elemChatInput )
+            return;
 
-    pChat->m_elemChatLines = pChat->m_pInstance->GetElementById( "chat_lines" );
-    if( !pChat->m_elemChatLines )
-    {
-        Error( "Couldn't find required element id: 'chat_lines' in hud_chat\n" );
-        /* Exit */
-    }
+        const auto key = (Rml::Input::KeyIdentifier)ev.GetParameter<int>( "key_identifier", 0 );
 
-    pChat->m_elemChatInput = pChat->m_pInstance->GetElementById( "chat_input" );
-    if( !pChat->m_elemChatInput )
-    {
-        Error( "Couldn't find required element id: 'chat_input' in hud_chat\n" );
-        /* Exit */
-    }
+        if ( key == Rml::Input::KI_RETURN )
+        {
+            auto *input = static_cast<Rml::ElementFormControl *>( pChat->m_elemChatInput );
 
-    // Add a listener to both the Chat panel and the text-input element in case it changes focus.
-    pChat->m_pInstance->AddEventListener( Rml::EventId::Keydown, &chatEventListener );
-    pChat->m_elemChatInput->AddEventListener( Rml::EventId::Keydown, &chatEventListener );
+            char sayBuffer[1024];
+            V_snprintf( sayBuffer, sizeof( sayBuffer ), "%s \"%s\"",
+                        pChat->GetMessageMode() == MM_SAY ? "say" : "say_team",
+                        input->GetValue().c_str() );
+            engine->ClientCmd_Unrestricted( sayBuffer );
+            input->SetValue( "" );
+        }
+        else if ( key != Rml::Input::KI_ESCAPE )
+        {
+            return;
+        }
 
-    pChat->m_pInstance->Show();
+        pChat->StopMessageMode();
+    } );
 }
+RK_HUD_SECTION( BindChat );
 
 // Called on program startup by a Macro with the HUD UI system
+
+void RkHudChat::OnLoad()
+{
+    m_elemChatInput = m_pDocument->GetElementById( "chat_input" );
+    if ( !m_elemChatInput )
+    {
+        Warning( "hud_chat.rml is missing 'chat_input'\n" );
+        return;
+    }
+
+    // The chat is always on screen; only its opacity and input focus change.
+    m_pDocument->Show( Rml::ModalFlag::None, Rml::FocusFlag::None );
+}
+
+void RkHudChat::OnUnload()
+{
+    if ( m_elemChatInput )
+    m_elemChatInput = nullptr;
+}
+
 // HudElementHelper::CreateAllElements
-RkHudChat::RkHudChat(const char *value) : CHudElement( value ),
-                                          m_pInstance( nullptr ),
-                                          m_iMode( MM_NONE ),
-                                          m_iNumEntries( 0 )
+RkHudChat::RkHudChat(const char *value) : RkHudDocument( value ),
+    m_iMode( MM_NONE )
 {
     SetHiddenBits( /* HIDEHUD_MISCSTATUS */ 0 );
 }
 
 // Chat's document is visible during normal gameplay (it draws chat history), so
 // only actually typing counts as owning input.
-bool RkHudChat::OwnsInput() const
-{
-    return m_iMode != MM_NONE && m_pInstance && m_pInstance->IsVisible();
-}
-
 RkHudChat::~RkHudChat() noexcept
 {
-    UnloadRkChat();
+    Unload();
 }
 
-void RkHudChat::LevelInit( void )
+void RkHudChat::LevelInit()
 {
     HOOK_MESSAGE( SayText2 );
     HOOK_MESSAGE( TextMsg );
 
-    LoadRkChat();
+    RkHudDocument::LevelInit();
 }
 
-void RkHudChat::LevelShutdown( void )
+void RkHudChat::LevelShutdown()
 {
     m_iMode = MM_NONE;
 
-    UnloadRkChat();
+    RkHudDocument::LevelShutdown();
 }
 
 // this is called every frame, keep that in mind.
 void RkHudChat::ShowPanel(bool bShow, bool force)
 {
-    if( !m_pInstance )
+    if( !m_pDocument )
         return;
 
     if( bShow )
     {
-        m_pInstance->SetProperty( "opacity", std::to_string(rocket_hud_chat_active_opacity.GetFloat()) );
+        m_pDocument->SetProperty( "opacity", std::to_string(rocket_hud_chat_active_opacity.GetFloat()) );
     }
     else
     {
         // Do a fade out to the idle opacity level.
-        float currentOpacity = m_pInstance->GetProperty("opacity")->Get<float>();
+        float currentOpacity = m_pDocument->GetProperty("opacity")->Get<float>();
         if( currentOpacity > rocket_hud_chat_idle_opacity.GetFloat() )
-            m_pInstance->SetProperty("opacity", std::to_string(currentOpacity - 0.0075f) );
+            m_pDocument->SetProperty("opacity", std::to_string(currentOpacity - 0.0075f) );
     }
 }
 
@@ -384,6 +358,9 @@ void RkHudChat::StartMessageMode( int mode )
 
     m_iMode = mode;
 
+    // Claim the mouse for as long as we are typing (hud_chat.rml is otherwise
+    // `pointer-events: none`, so it does not).
+    m_pDocument->SetProperty( "pointer-events", "auto" );
     m_elemChatInput->Focus();
 }
 
@@ -391,6 +368,7 @@ void RkHudChat::StopMessageMode()
 {
     m_iMode = MM_NONE;
 
+    m_pDocument->SetProperty( "pointer-events", "none" );
     m_elemChatInput->Blur();
 }
 
@@ -401,80 +379,42 @@ bool RkHudChat::ChatRaised()
 
 void RkHudChat::ClearChatHistory()
 {
-    if( !m_pInstance )
-        return;
-
-    Rml::ElementList chatEntries;
-    m_pInstance->GetElementsByClassName( chatEntries, "chat_line" );
-    for( Rml::Element *elem : chatEntries )
-    {
-        elem->GetParentNode()->RemoveChild( elem );
-    }
-    m_iNumEntries = 0;
+    chatData.lines.clear();
+    RkHudDirty( "chat" );
 }
 
 void RkHudChat::AddChatString( const char *username, const char *message, MessageSender sender )
 {
-    // Max Number of Entries, delete old ones if needed.
-    m_iNumEntries++;
-    if( m_iNumEntries > rocket_hud_chat_max_entries.GetInt() )
-    {
-        ClearChatHistory();
-    }
-
-    Rml::ElementPtr chatLine = m_pInstance->CreateElement("#text");
-    Rml::ElementPtr br = m_pInstance->CreateElement("br");
-
-    if( !chatLine || !br )
+    if ( !message )
         return;
 
-    chatLine->SetClass("chat_line", true);
-    chatLine->AppendChild( std::move(br) );
-
-    if( username )
+    ChatLine line;
+    line.username = username ? ( Rml::String( username ) + ": " ) : Rml::String();
+    line.message = message;
+    switch ( sender )
     {
-        Rml::ElementPtr chatUsername = m_pInstance->CreateElement("#text");
-        Rml::String usernameText = username + Rml::String(": ");
-
-        if( !chatUsername )
-            return;
-
-        Rml::ElementText *chatUsernameElement = static_cast< Rml::ElementText* >( chatUsername.get() );
-        switch( sender )
-        {
-            case RkHudChat::SERVER:
-                chatUsernameElement->SetClass("chat_username_server", true);
-                break;
-            case RkHudChat::FRIEND:
-                chatUsernameElement->SetClass("chat_username_friend", true);
-                break;
-            case RkHudChat::FOE:
-                chatUsernameElement->SetClass("chat_username_foe", true);
-                break;
-        }
-        chatUsernameElement->SetText( usernameText );
-        chatLine->AppendChild( std::move(chatUsername) );
+    case RkHudChat::SERVER: line.sender_class = "chat_username_server"; break;
+    case RkHudChat::FRIEND: line.sender_class = "chat_username_friend"; break;
+    case RkHudChat::FOE:    line.sender_class = "chat_username_foe"; break;
     }
 
-    if( message )
-    {
-        Rml::ElementPtr chatMessage = m_pInstance->CreateElement("#text");
-        if( !chatMessage )
-            return;
+    chatData.lines.push_back( line );
 
-        Rml::ElementText *chatMessageElement = static_cast< Rml::ElementText* >( chatMessage.get() );
-        chatMessageElement->SetClass("chat_message", true);
-        chatMessageElement->SetText( message );
-        chatLine->AppendChild( std::move( chatMessage ) );
+    // FIFO scrollback. The old version tore down *every* line once the cap was
+    // reached; this drops just the oldest.
+    const int cap = MAX( 1, rocket_hud_chat_max_entries.GetInt() );
+    while ( (int)chatData.lines.size() > cap )
+        chatData.lines.erase( chatData.lines.begin() );
 
-        m_elemChatLines->AppendChild( std::move(chatLine) );
-    }
+    RkHudDirty( "chat" );
 
+    // The document has to lay the new line out before its height can be scrolled
+    // to. Only possible once the document exists -- messages can arrive before it.
+    if ( !m_pDocument )
+        return;
 
-    // Update the document so the scrollbar will take the new elements into account.
-    m_pInstance->UpdateDocument();
-    // Scroll to the bottom (1.0)
-    m_pInstance->SetScrollTop( 1.0f * ( m_pInstance->GetScrollHeight() ) - m_pInstance->GetClientHeight() );
+    m_pDocument->UpdateDocument();
+    m_pDocument->SetScrollTop( m_pDocument->GetScrollHeight() - m_pDocument->GetClientHeight() );
 }
 
 void RkHudChat::AddChatString( const wchar_t *username, const wchar_t *message, MessageSender sender )

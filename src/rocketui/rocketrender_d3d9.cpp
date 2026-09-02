@@ -378,124 +378,58 @@ void RocketRenderD3D9::ReleaseGeometry(Rml::CompiledGeometryHandle geometry) {
   m_deadGeom.emplace_back(g, m_frame);
 }
 
-#pragma pack(1)
-struct TGAHeader {
-  char idLength;
-  char colourMapType;
-  char dataType;
-  short int colourMapOrigin;
-  short int colourMapLength;
-  char colourMapDepth;
-  short int xOrigin;
-  short int yOrigin;
-  short int width;
-  short int height;
-  char bitsPerPixel;
-  char imageDescriptor;
-};
-#pragma pack()
-
+// RmlUi asks for a texture by name. The only source the UI actually uses is the
+// engine's own VTF sprites, which lets documents reference e.g.
+// "materials/sprites/scope_arc.vtf" and get the original artwork straight out of
+// a VPK. Anything else is refused: there was a hand-rolled TGA decoder here for
+// uncompressed 24/32-bit files, but no asset ever referenced a .tga, and if one
+// ever does the engine already ships TGALoader::LoadRGBA8888 (bitmap, already
+// linked) which handles RLE too.
 Rml::TextureHandle
 RocketRenderD3D9::LoadTexture(Rml::Vector2i &texture_dimensions,
                               const Rml::String &source) {
-  // Reuse original engine sprites directly: a ".vtf" source is decoded via the
-  // engine's VTF loader (which also reads from VPKs), so RmlUi documents can
-  // reference e.g. "materials/sprites/scope_arc.vtf".
-  if (source.size() >= 4 && source.compare(source.size() - 4, 4, ".vtf") == 0) {
-    // A ".t.vtf" suffix requests a transposed (90°-rotated) copy of the sprite,
-    // so a horizontal line can reuse a vertically-oriented sprite without
-    // rotating the element (the image decorator can't reorient texture UVs).
-    bool transpose = false;
-    Rml::String path = source;
-    const size_t tlen = 6; // ".t.vtf"
-    if (source.size() >= tlen &&
-        source.compare(source.size() - tlen, tlen, ".t.vtf") == 0) {
-      transpose = true;
-      path = source.substr(0, source.size() - tlen) + ".vtf";
-    }
-    std::vector<unsigned char> rgba;
-    int w = 0, h = 0;
-    if (!RocketLoadVTF_RGBA(path.c_str(), rgba, w, h))
-      return {};
-    if (transpose) {
-      std::vector<unsigned char> t((size_t)w * h * 4);
-      for (int y = 0; y < h; y++)
-        for (int x = 0; x < w; x++) {
-          const unsigned char *s = &rgba[((size_t)y * w + x) * 4];
-          unsigned char *d = &t[((size_t)x * h + y) * 4];
-          d[0] = s[0];
-          d[1] = s[1];
-          d[2] = s[2];
-          d[3] = s[3];
-        }
-      rgba.swap(t);
-      std::swap(w, h);
-    }
-    texture_dimensions.x = w;
-    texture_dimensions.y = h;
-    return GenerateTexture({rgba.data(), rgba.size()}, texture_dimensions);
-  }
-
-  Rml::FileInterface *file_interface = Rml::GetFileInterface();
-  Rml::FileHandle file_handle = file_interface->Open(source);
-  if (!file_handle)
-    return {};
-
-  file_interface->Seek(file_handle, 0, SEEK_END);
-  size_t buffer_size = file_interface->Tell(file_handle);
-  file_interface->Seek(file_handle, 0, SEEK_SET);
-
-  if (buffer_size <= sizeof(TGAHeader)) {
-    file_interface->Close(file_handle);
+  if (source.size() < 4 || source.compare(source.size() - 4, 4, ".vtf") != 0) {
+    Rml::Log::Message(Rml::Log::LT_WARNING,
+                      "RocketUI can only load .vtf textures, not '%s'.",
+                      source.c_str());
     return {};
   }
 
-  using Rml::byte;
-  Rml::UniquePtr<byte[]> buffer(new byte[buffer_size]);
-  file_interface->Read(buffer.get(), buffer_size, file_handle);
-  file_interface->Close(file_handle);
+  // A ".t.vtf" suffix requests a transposed (90-rotated) copy of the sprite, so
+  // a horizontal line can reuse a vertically-oriented sprite without rotating
+  // the element (the image decorator can't reorient texture UVs).
+  bool transpose = false;
+  Rml::String path = source;
+  const size_t tlen = 6; // ".t.vtf"
+  if (source.size() >= tlen &&
+      source.compare(source.size() - tlen, tlen, ".t.vtf") == 0) {
+    transpose = true;
+    path = source.substr(0, source.size() - tlen) + ".vtf";
+  }
 
-  TGAHeader header;
-  memcpy(&header, buffer.get(), sizeof(TGAHeader));
-
-  int color_mode = header.bitsPerPixel / 8;
-  const size_t image_size = header.width * header.height * 4;
-
-  if (header.dataType != 2 || color_mode < 3)
+  std::vector<unsigned char> rgba;
+  int w = 0, h = 0;
+  if (!RocketLoadVTF_RGBA(path.c_str(), rgba, w, h))
     return {};
 
-  const byte *image_src = buffer.get() + sizeof(TGAHeader);
-  Rml::UniquePtr<byte[]> image_dest_buffer(new byte[image_size]);
-  byte *image_dest = image_dest_buffer.get();
-  const bool top_to_bottom = ((header.imageDescriptor & 32) != 0);
-
-  for (long y = 0; y < header.height; y++) {
-    long read_index = y * header.width * color_mode;
-    long write_index = top_to_bottom
-                           ? (y * header.width * 4)
-                           : (header.height - y - 1) * header.width * 4;
-    for (long x = 0; x < header.width; x++) {
-      image_dest[write_index] = image_src[read_index + 2];
-      image_dest[write_index + 1] = image_src[read_index + 1];
-      image_dest[write_index + 2] = image_src[read_index];
-      if (color_mode == 4) {
-        const byte alpha = image_src[read_index + 3];
-        for (size_t j = 0; j < 3; j++)
-          image_dest[write_index + j] =
-              byte((image_dest[write_index + j] * alpha) / 255);
-        image_dest[write_index + 3] = alpha;
-      } else {
-        image_dest[write_index + 3] = 255;
+  if (transpose) {
+    std::vector<unsigned char> t((size_t)w * h * 4);
+    for (int y = 0; y < h; y++)
+      for (int x = 0; x < w; x++) {
+        const unsigned char *src = &rgba[((size_t)y * w + x) * 4];
+        unsigned char *dst = &t[((size_t)x * h + y) * 4];
+        dst[0] = src[0];
+        dst[1] = src[1];
+        dst[2] = src[2];
+        dst[3] = src[3];
       }
-      write_index += 4;
-      read_index += color_mode;
-    }
+    rgba.swap(t);
+    std::swap(w, h);
   }
 
-  texture_dimensions.x = header.width;
-  texture_dimensions.y = header.height;
-  return GenerateTexture({image_dest_buffer.get(), image_size},
-                         texture_dimensions);
+  texture_dimensions.x = w;
+  texture_dimensions.y = h;
+  return GenerateTexture({rgba.data(), rgba.size()}, texture_dimensions);
 }
 
 Rml::TextureHandle

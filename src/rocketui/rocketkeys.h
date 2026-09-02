@@ -1,196 +1,55 @@
 #pragma once
 
-#include <rocketui/rmlui.h>
+#include <RmlUi/Core/Input.h>
 #include <inputsystem/ButtonCode.h>
 
-// Keycode converter helper
-inline Rml::Input::KeyIdentifier ButtonToRocketKey(ButtonCode_t button) {
-  using namespace Rml::Input;
+// ButtonCode_t -> RmlUi key identifier.
+//
+// The digits, letters, keypad digits and function keys are each a contiguous run
+// in *both* enums, so they fold into four range checks. What is left is
+// punctuation and navigation, which follows no pattern in either enum and stays
+// an explicit table.
+inline Rml::Input::KeyIdentifier ButtonToRocketKey( ButtonCode_t button )
+{
+    using namespace Rml::Input;
 
-  switch (button) {
-  case KEY_0:
-    return KI_0;
-  case KEY_1:
-    return KI_1;
-  case KEY_2:
-    return KI_2;
-  case KEY_3:
-    return KI_3;
-  case KEY_4:
-    return KI_4;
-  case KEY_5:
-    return KI_5;
-  case KEY_6:
-    return KI_6;
-  case KEY_7:
-    return KI_7;
-  case KEY_8:
-    return KI_8;
-  case KEY_9:
-    return KI_9;
-  case KEY_A:
-    return KI_A;
-  case KEY_B:
-    return KI_B;
-  case KEY_C:
-    return KI_C;
-  case KEY_D:
-    return KI_D;
-  case KEY_E:
-    return KI_E;
-  case KEY_F:
-    return KI_F;
-  case KEY_G:
-    return KI_G;
-  case KEY_H:
-    return KI_H;
-  case KEY_I:
-    return KI_I;
-  case KEY_J:
-    return KI_J;
-  case KEY_K:
-    return KI_K;
-  case KEY_L:
-    return KI_L;
-  case KEY_M:
-    return KI_M;
-  case KEY_N:
-    return KI_N;
-  case KEY_O:
-    return KI_O;
-  case KEY_P:
-    return KI_P;
-  case KEY_Q:
-    return KI_Q;
-  case KEY_R:
-    return KI_R;
-  case KEY_S:
-    return KI_S;
-  case KEY_T:
-    return KI_T;
-  case KEY_U:
-    return KI_U;
-  case KEY_V:
-    return KI_V;
-  case KEY_W:
-    return KI_W;
-  case KEY_X:
-    return KI_X;
-  case KEY_Y:
-    return KI_Y;
-  case KEY_Z:
-    return KI_Z;
-  case KEY_PAD_0:
-    return KI_NUMPAD0;
-  case KEY_PAD_1:
-    return KI_NUMPAD1;
-  case KEY_PAD_2:
-    return KI_NUMPAD2;
-  case KEY_PAD_3:
-    return KI_NUMPAD3;
-  case KEY_PAD_4:
-    return KI_NUMPAD4;
-  case KEY_PAD_5:
-    return KI_NUMPAD5;
-  case KEY_PAD_6:
-    return KI_NUMPAD6;
-  case KEY_PAD_7:
-    return KI_NUMPAD7;
-  case KEY_PAD_8:
-    return KI_NUMPAD8;
-  case KEY_PAD_9:
-    return KI_NUMPAD9;
-  case KEY_PAD_DIVIDE:
-    return KI_DIVIDE;
-  case KEY_PAD_MULTIPLY:
-    return KI_MULTIPLY;
-  case KEY_PAD_MINUS:
-    return KI_SUBTRACT;
-  case KEY_PAD_PLUS:
-    return KI_ADD;
-  case KEY_PAD_ENTER:
-    return KI_NUMPADENTER;
-  case KEY_PAD_DECIMAL:
-    return KI_DECIMAL;
-  case KEY_LBRACKET:
-    return KI_OEM_4;
-  case KEY_RBRACKET:
-    return KI_OEM_6;
-  case KEY_SEMICOLON:
-    return KI_OEM_1;
-  case KEY_APOSTROPHE:
-    return KI_OEM_7;
-  case KEY_BACKQUOTE:
-    return KI_OEM_3;
-  case KEY_COMMA:
-    return KI_OEM_COMMA;
-  case KEY_PERIOD:
-    return KI_OEM_PERIOD;
-  case KEY_SLASH:
-    return KI_OEM_2;
-  case KEY_BACKSLASH:
-    return KI_OEM_5;
-  case KEY_MINUS:
-    return KI_OEM_MINUS;
-  case KEY_EQUAL:
-    return KI_OEM_PLUS;
-  case KEY_ENTER:
-    return KI_RETURN;
-  case KEY_SPACE:
-    return KI_SPACE;
-  case KEY_BACKSPACE:
-    return KI_BACK;
-  case KEY_TAB:
-    return KI_TAB;
-  case KEY_ESCAPE:
-    return KI_ESCAPE;
-  case KEY_INSERT:
-    return KI_INSERT;
-  case KEY_DELETE:
-    return KI_DELETE;
-  case KEY_HOME:
-    return KI_HOME;
-  case KEY_END:
-    return KI_END;
-  case KEY_PAGEUP:
-    return KI_PRIOR;
-  case KEY_PAGEDOWN:
-    return KI_NEXT;
-  case KEY_BREAK:
-    return KI_PAUSE;
-  case KEY_UP:
-    return KI_UP;
-  case KEY_LEFT:
-    return KI_LEFT;
-  case KEY_DOWN:
-    return KI_DOWN;
-  case KEY_RIGHT:
-    return KI_RIGHT;
-  case KEY_F1:
-    return KI_F1;
-  case KEY_F2:
-    return KI_F2;
-  case KEY_F3:
-    return KI_F3;
-  case KEY_F4:
-    return KI_F4;
-  case KEY_F5:
-    return KI_F5;
-  case KEY_F6:
-    return KI_F6;
-  case KEY_F7:
-    return KI_F7;
-  case KEY_F8:
-    return KI_F8;
-  case KEY_F9:
-    return KI_F9;
-  case KEY_F10:
-    return KI_F10;
-  case KEY_F11:
-    return KI_F11;
-  case KEY_F12:
-    return KI_F12;
-  default:
+    if ( button >= KEY_0 && button <= KEY_9 )
+        return KeyIdentifier( KI_0 + ( button - KEY_0 ) );
+    if ( button >= KEY_A && button <= KEY_Z )
+        return KeyIdentifier( KI_A + ( button - KEY_A ) );
+    if ( button >= KEY_PAD_0 && button <= KEY_PAD_9 )
+        return KeyIdentifier( KI_NUMPAD0 + ( button - KEY_PAD_0 ) );
+    if ( button >= KEY_F1 && button <= KEY_F12 )
+        return KeyIdentifier( KI_F1 + ( button - KEY_F1 ) );
+
+    struct Mapping
+    {
+        ButtonCode_t button;
+        KeyIdentifier key;
+    };
+    static constexpr Mapping kRest[] = {
+        { KEY_PAD_DIVIDE, KI_DIVIDE },     { KEY_PAD_MULTIPLY, KI_MULTIPLY },
+        { KEY_PAD_MINUS, KI_SUBTRACT },    { KEY_PAD_PLUS, KI_ADD },
+        { KEY_PAD_ENTER, KI_NUMPADENTER }, { KEY_PAD_DECIMAL, KI_DECIMAL },
+        { KEY_LBRACKET, KI_OEM_4 },        { KEY_RBRACKET, KI_OEM_6 },
+        { KEY_SEMICOLON, KI_OEM_1 },       { KEY_APOSTROPHE, KI_OEM_7 },
+        { KEY_BACKQUOTE, KI_OEM_3 },       { KEY_COMMA, KI_OEM_COMMA },
+        { KEY_PERIOD, KI_OEM_PERIOD },     { KEY_SLASH, KI_OEM_2 },
+        { KEY_BACKSLASH, KI_OEM_5 },       { KEY_MINUS, KI_OEM_MINUS },
+        { KEY_EQUAL, KI_OEM_PLUS },        { KEY_ENTER, KI_RETURN },
+        { KEY_SPACE, KI_SPACE },           { KEY_BACKSPACE, KI_BACK },
+        { KEY_TAB, KI_TAB },               { KEY_ESCAPE, KI_ESCAPE },
+        { KEY_INSERT, KI_INSERT },         { KEY_DELETE, KI_DELETE },
+        { KEY_HOME, KI_HOME },             { KEY_END, KI_END },
+        { KEY_PAGEUP, KI_PRIOR },          { KEY_PAGEDOWN, KI_NEXT },
+        { KEY_BREAK, KI_PAUSE },           { KEY_UP, KI_UP },
+        { KEY_LEFT, KI_LEFT },             { KEY_DOWN, KI_DOWN },
+        { KEY_RIGHT, KI_RIGHT },
+    };
+
+    for ( const Mapping &entry : kRest )
+        if ( entry.button == button )
+            return entry.key;
+
     return KI_UNKNOWN;
-  }
 }

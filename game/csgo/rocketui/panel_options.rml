@@ -181,31 +181,31 @@
 			}
 		</style>
 	</head>
-	<body>
+	<body data-model="hud">
 		<div id="tab-bar">
-			<div class="tab active" id="tab-video">VIDEO</div>
-			<div class="tab" id="tab-audio">AUDIO</div>
-			<div class="tab" id="tab-mouse">MOUSE</div>
+			<div class="tab active" id="tab-video" data-event-click="options_tab( 'tab-video' )">VIDEO</div>
+			<div class="tab" id="tab-audio" data-event-click="options_tab( 'tab-audio' )">AUDIO</div>
+			<div class="tab" id="tab-mouse" data-event-click="options_tab( 'tab-mouse' )">MOUSE</div>
 		</div>
 
 		<!-- VIDEO PAGE -->
 		<div id="page-video" class="page visible">
 			<div class="setting-row">
 				<span class="setting-label">Resolution</span>
-				<select id="resolution">
+				<select id="resolution" data-event-change="apply_video_mode">
 					<!-- populated from C++ -->
 				</select>
 			</div>
 			<div class="setting-row">
 				<span class="setting-label">Display Mode</span>
-				<select id="display_mode">
+				<select id="display_mode" data-event-change="apply_video_mode">
 					<option value="0">Fullscreen</option>
 					<option value="1">Windowed</option>
 				</select>
 			</div>
 			<div class="setting-row">
 				<span class="setting-label">Shadow Quality</span>
-				<select id="csm_quality_level" data-convar="csm_quality_level">
+				<select id="csm_quality_level" data-convar="csm_quality_level" data-event-change="apply_convar">
 					<option value="0">Very Low</option>
 					<option value="1">Low</option>
 					<option value="2">Medium</option>
@@ -214,7 +214,7 @@
 			</div>
 			<div class="setting-row">
 				<span class="setting-label">GPU Memory</span>
-				<select id="gpu_mem_level" data-convar="gpu_mem_level">
+				<select id="gpu_mem_level" data-convar="gpu_mem_level" data-event-change="apply_convar">
 					<option value="0">Low</option>
 					<option value="1">Medium</option>
 					<option value="2">High</option>
@@ -222,7 +222,7 @@
 			</div>
 			<div class="setting-row">
 				<span class="setting-label">Effect Detail</span>
-				<select id="cpu_level" data-convar="cpu_level">
+				<select id="cpu_level" data-convar="cpu_level" data-event-change="apply_convar">
 					<option value="0">Low</option>
 					<option value="1">Medium</option>
 					<option value="2">High</option>
@@ -230,7 +230,7 @@
 			</div>
 			<div class="setting-row">
 				<span class="setting-label">Shader Detail</span>
-				<select id="gpu_level" data-convar="gpu_level">
+				<select id="gpu_level" data-convar="gpu_level" data-event-change="apply_convar">
 					<option value="0">Low</option>
 					<option value="1">Medium</option>
 					<option value="2">High</option>
@@ -239,14 +239,14 @@
 			</div>
 			<div class="setting-row">
 				<span class="setting-label">Multi-Core Rendering</span>
-				<select id="mat_queue_mode" data-convar="mat_queue_mode">
+				<select id="mat_queue_mode" data-convar="mat_queue_mode" data-event-change="apply_convar">
 					<option value="-1">Enabled</option>
 					<option value="0">Disabled</option>
 				</select>
 			</div>
 			<div class="setting-row">
 				<span class="setting-label">Texture Quality</span>
-				<select id="mat_picmip" data-convar="mat_picmip">
+				<select id="mat_picmip" data-convar="mat_picmip" data-event-change="apply_convar">
 					<option value="0">High</option>
 					<option value="1">Medium</option>
 					<option value="2">Low</option>
@@ -256,7 +256,7 @@
 			</div>
 			<div class="setting-row">
 				<span class="setting-label">Texture Filtering</span>
-				<select id="mat_forceaniso" data-convar="mat_forceaniso">
+				<select id="mat_forceaniso" data-convar="mat_forceaniso" data-event-change="apply_convar">
 					<option value="0">Bilinear</option>
 					<option value="1">Trilinear</option>
 					<option value="2">Aniso 2x</option>
@@ -267,7 +267,7 @@
 			</div>
 			<div class="setting-row">
 				<span class="setting-label">Anti-Aliasing</span>
-				<select id="mat_antialias" data-convar="mat_antialias">
+				<select id="mat_antialias" data-convar="mat_antialias" data-event-change="apply_convar">
 					<option value="0">Disabled</option>
 					<option value="4">MSAA 4x</option>
 					<option value="8">MSAA 8x</option>
@@ -276,7 +276,7 @@
 			<div class="setting-row">
 				<span class="setting-label">Brightness</span>
 				<div class="slider-group">
-					<input type="range" id="mat_monitorgamma" data-convar="mat_monitorgamma" min="1.6" max="2.6" step="0.05" value="2.2" />
+					<input type="range" id="mat_monitorgamma" data-convar="mat_monitorgamma" data-event-change="apply_convar" min="1.6" max="2.6" step="0.05" value="2.2" />
 					<span class="range-value" id="mat_monitorgamma_val"></span>
 				</div>
 			</div>
@@ -287,20 +287,20 @@
 			<div class="setting-row">
 				<span class="setting-label">Master Volume</span>
 				<div class="slider-group">
-					<input type="range" id="volume" data-convar="volume" min="0.0" max="1.0" step="0.05" value="1.0" />
+					<input type="range" id="volume" data-convar="volume" data-event-change="apply_convar" min="0.0" max="1.0" step="0.05" value="1.0" />
 					<span class="range-value" id="volume_val"></span>
 				</div>
 			</div>
 			<div class="setting-row">
 				<span class="setting-label">Music Volume</span>
 				<div class="slider-group">
-					<input type="range" id="snd_musicvolume" data-convar="snd_musicvolume" min="0.0" max="1.0" step="0.05" value="0.5" />
+					<input type="range" id="snd_musicvolume" data-convar="snd_musicvolume" data-event-change="apply_convar" min="0.0" max="1.0" step="0.05" value="0.5" />
 					<span class="range-value" id="snd_musicvolume_val"></span>
 				</div>
 			</div>
 			<div class="setting-row">
 				<span class="setting-label">Speaker Setup</span>
-				<select id="snd_surround_speakers" data-convar="snd_surround_speakers">
+				<select id="snd_surround_speakers" data-convar="snd_surround_speakers" data-event-change="apply_convar">
 					<option value="0">Headphones</option>
 					<option value="2">2 Speakers</option>
 					<option value="4">4 Speakers</option>
@@ -310,7 +310,7 @@
 			</div>
 			<div class="setting-row">
 				<span class="setting-label">Sound Quality</span>
-				<select id="snd_quality">
+				<select id="snd_quality" data-event-change="apply_snd_quality">
 					<option value="0">Low</option>
 					<option value="1">Medium</option>
 					<option value="2">High</option>
@@ -318,7 +318,7 @@
 			</div>
 			<div class="setting-row">
 				<span class="setting-label">Closed Captions</span>
-				<select id="closedcaptions">
+				<select id="closedcaptions" data-event-change="apply_closedcaptions">
 					<option value="0">Disabled</option>
 					<option value="1">Subtitles &amp; Sound Effects</option>
 					<option value="2">Subtitles Only</option>
@@ -331,25 +331,25 @@
 			<div class="setting-row">
 				<span class="setting-label">Mouse Sensitivity</span>
 				<div class="slider-group">
-					<input type="range" id="sensitivity" data-convar="sensitivity" min="0.1" max="6.0" step="0.1" value="2.5" />
+					<input type="range" id="sensitivity" data-convar="sensitivity" data-event-change="apply_convar" min="0.1" max="6.0" step="0.1" value="2.5" />
 					<span class="range-value" id="sensitivity_val"></span>
 				</div>
 			</div>
 			<div class="setting-row">
 				<span class="setting-label">Reverse Mouse</span>
-				<input type="checkbox" id="m_pitch" />
+				<input type="checkbox" id="m_pitch" data-event-change="apply_m_pitch" />
 			</div>
 			<div class="setting-row">
 				<span class="setting-label">Mouse Acceleration</span>
-				<input type="checkbox" id="m_customaccel" />
+				<input type="checkbox" id="m_customaccel" data-event-change="apply_m_customaccel" />
 			</div>
 		</div>
 
 		<div id="footer">
 			<span id="footer-hint">Changes apply immediately</span>
 			<div id="footer-buttons">
-				<button id="save">SAVE</button>
-				<button id="close">CLOSE</button>
+				<button id="save" data-event-click="options_save">SAVE</button>
+				<button id="close" data-event-click="options_close">CLOSE</button>
 			</div>
 		</div>
 	</body>

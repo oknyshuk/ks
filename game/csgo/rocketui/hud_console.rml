@@ -103,12 +103,12 @@
 			}
 		</style>
 	</head>
-	<body>
+	<body data-model="hud">
 		<textarea id="console_output" readonly></textarea>
 		<div id="completion_list"></div>
 		<div id="input_container">
 			<span id="input_prompt">] </span>
-			<input type="text" id="console_input" />
+			<input type="text" id="console_input" data-event-change="console_input_changed" />
 		</div>
 	</body>
 </rml>

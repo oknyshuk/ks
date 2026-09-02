@@ -1,14 +1,17 @@
 #include "rkhud_killfeed.h"
 
+#include "rkhud_model.h"
+
 #include "cbase.h"
 #include "hud_macros.h"
 #include "c_cs_player.h"
-
 
 #include <rocketui/rmlui.h>
 #include <deque>
 
 DECLARE_HUDELEMENT( RkHudKillfeed );
+
+const char *RkHudKillfeed::kDocument = "hud_killfeed.rml";
 
 ConVar rocket_hud_killfeed_linger_time( "rocket_hud_killfeed_linger_time", "5", FCVAR_ARCHIVE, "How long in seconds to keep each killfeed entry on screen." );
 
@@ -27,6 +30,24 @@ struct KillFeedData
 {
     std::deque<KillfeedEntry> entries;
 } killFeedData;
+
+static void BindKillfeed( Rml::DataModelConstructor &c )
+{
+    if ( auto entry = c.RegisterStruct<KillfeedEntry>() )
+    {
+        entry.RegisterMember( "attacker_name", &KillfeedEntry::attackerName );
+        entry.RegisterMember( "gun_name", &KillfeedEntry::gunName );
+        entry.RegisterMember( "victim_name", &KillfeedEntry::victimName );
+        entry.RegisterMember( "headshot", &KillfeedEntry::headshot );
+        entry.RegisterMember( "wallbang", &KillfeedEntry::wallbang );
+    }
+    c.RegisterArray<std::deque<KillfeedEntry>>();
+
+    if ( auto h = c.RegisterStruct<KillFeedData>() )
+        h.RegisterMember( "entries", &KillFeedData::entries );
+    c.Bind( "killfeed", &killFeedData );
+}
+RK_HUD_SECTION( BindKillfeed );
 
 void RkHudKillfeed::OnPlayerDeath( IGameEvent *event )
 {
@@ -50,8 +71,7 @@ void RkHudKillfeed::OnPlayerDeath( IGameEvent *event )
 
     killFeedData.entries.push_back( entry );
 
-    m_dataModel.DirtyVariable( "killfeed_entries");
-    m_dataModel.DirtyAllVariables();
+    RkHudDirty( "killfeed" );
 }
 
 // called every frame
@@ -64,102 +84,17 @@ void RkHudKillfeed::CheckForOldEntries()
     if( (gpGlobals->curtime - killFeedData.entries.front().noticeSpawnTime) > rocket_hud_killfeed_linger_time.GetFloat() )
     {
         killFeedData.entries.pop_front();
-        m_dataModel.DirtyVariable( "killfeed_entries");
-        m_dataModel.DirtyAllVariables();
+        RkHudDirty( "killfeed" );
     }
 }
 
-static void UnloadRkKillFeed()
+// The killfeed has no open/close of its own: it is up whenever the HUD is.
+void RkHudKillfeed::OnLoad()
 {
-    RkHudKillfeed *pKillFeed = GET_HUDELEMENT( RkHudKillfeed );
-    if( !pKillFeed )
-    {
-        Warning( "Couldn't grab hud killfeed to load!\n" );
-        return;
-    }
-
-    // Not loaded.
-    if( !pKillFeed->m_pInstance )
-        return;
-
-    Rml::Context *hudCtx = RocketUI()->AccessHudContext();
-    if( hudCtx )
-    {
-        hudCtx->RemoveDataModel( "killfeed_model" );
-        pKillFeed ->m_dataModel = nullptr;
-    }
-    else
-    {
-        Warning( "couldn't access hudctx to unload killfeed datamodel!\n" );
-    }
-
-    pKillFeed->m_pInstance->Close();
-    pKillFeed->m_pInstance = nullptr;
-    pKillFeed->m_bVisible = false;
+    ShowPanel( true, false );
 }
 
-static void LoadRkKillFeed()
-{
-    RkHudKillfeed *pKillFeed = GET_HUDELEMENT( RkHudKillfeed );
-    if( !pKillFeed )
-    {
-        Warning( "Couldn't grab hud killfeed to load!\n" );
-        return;
-    }
-
-    Rml::Context *hudCtx = RocketUI()->AccessHudContext();
-    if( !hudCtx )
-    {
-        Error( "Couldn't access hudctx!\n" );
-        /* Exit */
-    }
-
-    if( pKillFeed->m_pInstance || pKillFeed->m_dataModel )
-    {
-        Warning( "RkKillFeed already loaded, call unload first!\n" );
-        return;
-    }
-
-    // Create the data binding, this will sync data between rocketui and the game.
-    Rml::DataModelConstructor constructor = hudCtx->CreateDataModel( "killfeed_model" );
-    if( !constructor )
-    {
-        Error( "Couldn't create datamodel for killfeed!\n" );
-        /* Exit */
-    }
-
-    // Register KillfeedEntry struct definition
-    if( auto killfeedentry_handle = constructor.RegisterStruct<KillfeedEntry>() )
-    {
-        killfeedentry_handle.RegisterMember( "attacker_name", &KillfeedEntry::attackerName );
-        killfeedentry_handle.RegisterMember( "gun_name", &KillfeedEntry::gunName );
-        killfeedentry_handle.RegisterMember( "victim_name", &KillfeedEntry::victimName );
-        killfeedentry_handle.RegisterMember( "headshot", &KillfeedEntry::headshot );
-        killfeedentry_handle.RegisterMember( "wallbang", &KillfeedEntry::wallbang );
-    }
-
-    // Register array-type of KillfeedEntry
-    constructor.RegisterArray<std::deque<KillfeedEntry>>();
-
-    // Bind the killfeed entry array
-    constructor.Bind( "killfeed_entries", &killFeedData.entries );
-
-    pKillFeed->m_dataModel = constructor.GetModelHandle();
-
-    // Load document from file.
-    pKillFeed->m_pInstance = RocketUI()->LoadDocumentFile( ROCKET_CONTEXT_HUD, "hud_killfeed.rml", &LoadRkKillFeed, &UnloadRkKillFeed );
-    if( !pKillFeed->m_pInstance )
-    {
-        Error( "Couldn't create hud_killfeed document!\n" );
-        /* Exit */
-    }
-
-    pKillFeed->ShowPanel( true, false );
-}
-
-RkHudKillfeed::RkHudKillfeed(const char *value) : CHudElement( value ),
-                                                  m_bVisible( false ),
-                                                  m_pInstance( nullptr )
+RkHudKillfeed::RkHudKillfeed(const char *value) : RkHudDocument( value )
 {
     SetHiddenBits( /* HIDEHUD_MISCSTATUS */ 0 );
 }
@@ -168,33 +103,33 @@ RkHudKillfeed::~RkHudKillfeed() noexcept
 {
     StopListeningForAllEvents();
 
-    UnloadRkKillFeed();
+    Unload();
 }
 
 void RkHudKillfeed::LevelInit()
 {
     ListenForGameEvent( "player_death" );
 
-    LoadRkKillFeed();
+    RkHudDocument::LevelInit();
 }
 
 void RkHudKillfeed::LevelShutdown()
 {
     killFeedData.entries.clear();
 
-    UnloadRkKillFeed();
+    RkHudDocument::LevelShutdown();
 }
 
 void RkHudKillfeed::ShowPanel(bool bShow, bool force)
 {
-    if( !m_pInstance )
+    if( !m_pDocument )
         return;
 
     if( bShow )
     {
         if( !m_bVisible )
         {
-            m_pInstance->Show();
+            m_pDocument->Show( Rml::ModalFlag::None, Rml::FocusFlag::None );
         }
         CheckForOldEntries();
     }
@@ -202,7 +137,7 @@ void RkHudKillfeed::ShowPanel(bool bShow, bool force)
     {
         if( m_bVisible )
         {
-            m_pInstance->Hide();
+            m_pDocument->Hide();
         }
     }
 

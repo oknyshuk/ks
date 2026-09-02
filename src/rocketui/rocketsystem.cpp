@@ -10,78 +10,53 @@ double RocketSystem::GetElapsedTime() {
 }
 
 bool RocketSystem::LogMessage(Rml::Log::Type type, const Rml::String &message) {
-  bool ret = false;
-  if (type == Rml::Log::LT_ERROR)
-    ret = true;
+  // Through tier0, so RmlUi's own document/RCSS/font errors land in the console and
+  // in csgo/console.log rather than only on stderr.
+  if (type == Rml::Log::LT_ERROR || type == Rml::Log::LT_ASSERT)
+    Warning("[RocketUI] %s\n", message.c_str());
+  else
+    Msg("[RocketUI] %s\n", message.c_str());
 
-  fprintf(stderr, "[RocketUI] %s\n", message.c_str());
-
-  return ret;
+  return true; // continue execution; false would break into the debugger
 }
 
+// Every system cursor SDL offers, indexed by its own enum: the whole array is
+// cheap and it means SetMouseCursor is a lookup rather than a chain.
 void RocketSystem::InitCursors() {
-#ifdef USE_SDL
-  m_pCursors[SDL_SYSTEM_CURSOR_DEFAULT] =
-      SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_DEFAULT);
-  m_pCursors[SDL_SYSTEM_CURSOR_TEXT] =
-      SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_TEXT);
-  m_pCursors[SDL_SYSTEM_CURSOR_WAIT] =
-      SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_WAIT);
-  m_pCursors[SDL_SYSTEM_CURSOR_CROSSHAIR] =
-      SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_CROSSHAIR);
-  m_pCursors[SDL_SYSTEM_CURSOR_PROGRESS] =
-      SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_PROGRESS);
-  m_pCursors[SDL_SYSTEM_CURSOR_NWSE_RESIZE] =
-      SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_NWSE_RESIZE);
-  m_pCursors[SDL_SYSTEM_CURSOR_NESW_RESIZE] =
-      SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_NESW_RESIZE);
-  m_pCursors[SDL_SYSTEM_CURSOR_EW_RESIZE] =
-      SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_EW_RESIZE);
-  m_pCursors[SDL_SYSTEM_CURSOR_NS_RESIZE] =
-      SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_NS_RESIZE);
-  m_pCursors[SDL_SYSTEM_CURSOR_MOVE] =
-      SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_MOVE);
-  m_pCursors[SDL_SYSTEM_CURSOR_NOT_ALLOWED] =
-      SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_NOT_ALLOWED);
-  m_pCursors[SDL_SYSTEM_CURSOR_POINTER] =
-      SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_POINTER);
-#endif
+  for (int i = 0; i < SDL_SYSTEM_CURSOR_COUNT; i++)
+    m_pCursors[i] = SDL_CreateSystemCursor((SDL_SystemCursor)i);
 }
 
 void RocketSystem::FreeCursors() {
-#ifdef USE_SDL
-  SDL_DestroyCursor(m_pCursors[SDL_SYSTEM_CURSOR_DEFAULT]);
-  SDL_DestroyCursor(m_pCursors[SDL_SYSTEM_CURSOR_TEXT]);
-  SDL_DestroyCursor(m_pCursors[SDL_SYSTEM_CURSOR_WAIT]);
-  SDL_DestroyCursor(m_pCursors[SDL_SYSTEM_CURSOR_CROSSHAIR]);
-  SDL_DestroyCursor(m_pCursors[SDL_SYSTEM_CURSOR_PROGRESS]);
-  SDL_DestroyCursor(m_pCursors[SDL_SYSTEM_CURSOR_NWSE_RESIZE]);
-  SDL_DestroyCursor(m_pCursors[SDL_SYSTEM_CURSOR_NESW_RESIZE]);
-  SDL_DestroyCursor(m_pCursors[SDL_SYSTEM_CURSOR_EW_RESIZE]);
-  SDL_DestroyCursor(m_pCursors[SDL_SYSTEM_CURSOR_NS_RESIZE]);
-  SDL_DestroyCursor(m_pCursors[SDL_SYSTEM_CURSOR_MOVE]);
-  SDL_DestroyCursor(m_pCursors[SDL_SYSTEM_CURSOR_NOT_ALLOWED]);
-  SDL_DestroyCursor(m_pCursors[SDL_SYSTEM_CURSOR_POINTER]);
-#endif
+  for (SDL_Cursor *&cursor : m_pCursors) {
+    SDL_DestroyCursor(cursor);
+    cursor = nullptr;
+  }
 }
 
+// RCSS `cursor` values, which are ours to name, mapped onto SDL's set.
 void RocketSystem::SetMouseCursor(const Rml::String &cursor_name) {
-#ifdef USE_SDL
-  if (cursor_name == "move")
-    SDL_SetCursor(m_pCursors[SDL_SYSTEM_CURSOR_CROSSHAIR]);
-  else if (cursor_name == "pointer")
-    SDL_SetCursor(m_pCursors[SDL_SYSTEM_CURSOR_POINTER]);
-  else if (cursor_name == "resize")
-    SDL_SetCursor(m_pCursors[SDL_SYSTEM_CURSOR_MOVE]);
-  else if (cursor_name == "cross")
-    SDL_SetCursor(m_pCursors[SDL_SYSTEM_CURSOR_CROSSHAIR]);
-  else if (cursor_name == "text")
-    SDL_SetCursor(m_pCursors[SDL_SYSTEM_CURSOR_TEXT]);
-  else if (cursor_name == "unavailable")
-    SDL_SetCursor(m_pCursors[SDL_SYSTEM_CURSOR_NOT_ALLOWED]);
-  else
-    SDL_SetCursor(m_pCursors[SDL_SYSTEM_CURSOR_DEFAULT]);
-#endif
+  struct Mapping {
+    const char *name;
+    SDL_SystemCursor cursor;
+  };
+  static constexpr Mapping kCursors[] = {
+      {"move", SDL_SYSTEM_CURSOR_MOVE},
+      {"pointer", SDL_SYSTEM_CURSOR_POINTER},
+      {"resize", SDL_SYSTEM_CURSOR_NWSE_RESIZE},
+      {"cross", SDL_SYSTEM_CURSOR_CROSSHAIR},
+      {"text", SDL_SYSTEM_CURSOR_TEXT},
+      {"unavailable", SDL_SYSTEM_CURSOR_NOT_ALLOWED},
+      {"wait", SDL_SYSTEM_CURSOR_WAIT},
+      {"progress", SDL_SYSTEM_CURSOR_PROGRESS},
+  };
+
+  SDL_SystemCursor wanted = SDL_SYSTEM_CURSOR_DEFAULT;
+  for (const Mapping &entry : kCursors)
+    if (cursor_name == entry.name)
+      wanted = entry.cursor;
+
+  SDL_SetCursor(m_pCursors[wanted]);
 }
 
 void RocketSystem::SetClipboardText(const Rml::String &text) {

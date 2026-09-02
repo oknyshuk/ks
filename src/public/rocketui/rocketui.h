@@ -31,16 +31,16 @@ inline IRocketUI* RocketUI()
     return g_pRocketUI;
 }
 
-// Polled by RocketUI once per frame (and on every input event) to answer the
-// single question "does the UI layer own the mouse right now?". See
-// game/client/cstrike15/RocketUI/rkinputclaim.cpp for the one implementation.
-typedef bool (*InputClaimQueryFn)(void);
+// First refusal on every input event, before RmlUi sees it. Return true to consume.
+// UI policy (which key opens what) belongs to the client, not here; see
+// RocketConsole::Initialize.
+//
+// The duplicate IE_KeyCodeTyped the engine emits alongside every IE_ButtonPressed is
+// filtered out first, so IE_KeyCodeTyped always means "key repeat".
+typedef bool (*InputHookFn)(const InputEvent_t &event);
 
 typedef void (*LoadDocumentFn)(void);
 typedef void (*UnloadDocumentFn)(void);
-typedef void (*TogglePauseMenuFn)(void);
-typedef bool (*ConsoleKeyInputFn)(int buttonCode, bool down);
-typedef bool (*ConsoleCharInputFn)(wchar_t ch);
 
 class IRocketUI : public IAppSystem
 {
@@ -57,8 +57,13 @@ public:
     // Ownership is DERIVED (polled) rather than reference counted on purpose: a
     // panel that forgets to "release" cannot strand the game without input, because
     // nothing is stored here that could outlive the panel's own state.
-    virtual void SetInputClaimQuery(InputClaimQueryFn queryFunc) = 0;
+    // Does the UI own the mouse right now? Derived from RmlUi: true while a visible
+    // document allows pointer events (see rocketui/fonts.rcss's siblings -- passive
+    // HUD documents declare `pointer-events: none`).
     virtual bool IsConsumingInput(void) = 0;
+
+    // Install the client's first-refusal input hook (see InputHookFn).
+    virtual void SetInputHook(InputHookFn hookFunc) = 0;
 
     // Document manipulation
     // The Load/Unload functions are for hot-reloading, they will be called on rocket_reload.
@@ -80,15 +85,6 @@ public:
     // Access to the actual contexts in case you need something specific like data-bindings.
     virtual Rml::Context* AccessHudContext() = 0;
     virtual Rml::Context* AccessMenuContext() = 0;
-
-    // The pause menu will register itself here so the library can open/close it via ESC
-    virtual void RegisterPauseMenu(TogglePauseMenuFn showPauseMenuFunc) = 0;
-
-    // Console input handlers - console registers these to receive input when visible
-    virtual void RegisterConsoleHandlers(ConsoleKeyInputFn keyHandler, ConsoleCharInputFn charHandler) = 0;
-
-    // Override which context receives mouse/input events (nullptr = use current render context)
-    virtual void SetInputContext(Rml::Context* ctx) = 0;
 
     virtual void AddDeviceDependentObject(IShaderDeviceDependentObject *pObject) = 0;
     virtual void RemoveDeviceDependentObject(IShaderDeviceDependentObject *pObject) = 0;

@@ -31,6 +31,4 @@ nix develop; cd src; waf {configure,install}  # incremental dev build env
 Mostly Valve's Source engine, governed by the Source 1 SDK license:
 see [LICENSE](LICENSE) and `thirdpartylegalnotices.txt`.
 Kisak's additions are public domain; OpenCSGO gave no formal license.
-No game files ship here.
-
-New files I wrote (no Valve header) are MIT © 2026 oknyshuk, marked per-file with SPDX.
+No game files ship here. New files I wrote (no Valve header) are MIT.

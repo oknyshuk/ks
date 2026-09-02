@@ -102,7 +102,6 @@
 #include "c_cs_player.h"
 #include "cstrike15/fatdemo.h"
 #include "cstrike15/RocketUI/rkconsole.h"
-#include "cstrike15/RocketUI/rkinputclaim.h"
 #include "cs_item_inventory.h"
 
 #include "mumble.h"
@@ -1484,10 +1483,8 @@ void CHLClient::PostInit()
 	}
 
 #if defined( CSTRIKE15 )
-	// Initialize RocketUI console to capture console output
+	// Captures console output, and installs RocketUI's input hook for its lifetime.
 	RkConsole().Initialize();
-	// Let RocketUI ask us who owns the mouse from here on.
-	RocketUI_InstallInputClaimQuery( true );
 #endif
 }
 
@@ -1497,9 +1494,7 @@ void CHLClient::PostInit()
 void CHLClient::Shutdown( void )
 {
 #if defined( CSTRIKE15 )
-	// RocketUI outlives the client DLL: stop it polling into us.
-	RocketUI_InstallInputClaimQuery( false );
-	// Shutdown RocketUI console
+	// RocketUI outlives the client DLL: this also clears its input hook.
 	RkConsole().Shutdown();
 #endif
 

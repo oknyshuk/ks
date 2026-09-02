@@ -11,6 +11,8 @@
 				border-radius: 4dp;
 				border-width: 1dp;
 				border-color: rgba(255, 255, 255, 20);
+				/* Raised for typing by RkHudChat::StartMessageMode. */
+				pointer-events: none;
 			}
 			#chat_lines {
 				max-height: 200dp;
@@ -62,9 +64,17 @@
 			}
 		</style>
 	</head>
-	<body>
+	<body data-model="hud">
+		<!-- One row per line in the chat section of the data model; the username's
+		     colour class travels with it. -->
 		<div id="chat_lines">
+			<div class="chat_line" data-for="line : chat.lines">
+				<span data-class-chat_username_server="line.sender_class == 'chat_username_server'"
+				      data-class-chat_username_friend="line.sender_class == 'chat_username_friend'"
+				      data-class-chat_username_foe="line.sender_class == 'chat_username_foe'"
+				      >{{ line.username }}</span><span class="chat_message">{{ line.message }}</span>
+			</div>
 		</div>
-		<input id="chat_input" type="text" maxlength="127"/>
+		<input id="chat_input" data-event-keydown="chat_key" type="text" maxlength="127"/>
 	</body>
 </rml>

@@ -80,17 +80,17 @@
 			}
 		</style>
 	</head>
-	<body>
+	<body data-model="hud">
 		<div id="modal">
 			<div id="header">
 				<div id="header-title">GAME PAUSED</div>
 			</div>
 			<div id="menu_buttons">
-				<button id="pm_resume">RESUME GAME</button>
-				<button id="pm_choose">CHANGE TEAM</button>
+				<button id="pm_resume" data-event-click="pm_resume">RESUME GAME</button>
+				<button id="pm_choose" data-event-click="pm_choose_team">CHANGE TEAM</button>
 				<button id="pm_callvote">CALL VOTE</button>
-				<button id="pm_options">OPTIONS</button>
-				<button id="pm_disconnect">DISCONNECT</button>
+				<button id="pm_options" data-event-click="pm_options">OPTIONS</button>
+				<button id="pm_disconnect" data-event-click="pm_disconnect">DISCONNECT</button>
 			</div>
 		</div>
 	</body>

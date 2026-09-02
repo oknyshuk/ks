@@ -1,5 +1,7 @@
 #include "rkhud_buymenu.h"
 
+#include "rkhud_model.h"
+
 #include "cbase.h"
 #include "hud_macros.h"
 #include "c_cs_player.h"
@@ -8,10 +10,14 @@
 
 DECLARE_HUDELEMENT( RkHudBuyMenu );
 
+const char *RkHudBuyMenu::kDocument = "hud_buymenu.rml";
+
 struct ItemListEntry
 {
     Rml::String itemName;
     int itemPrice;
+
+    bool operator==( const ItemListEntry & ) const = default;
 };
 
 // struct layout for data-binding model.
@@ -26,65 +32,75 @@ struct BuyMenuData
     Rml::Vector<ItemListEntry> rifleList;
     Rml::Vector<ItemListEntry> smgList;
     Rml::Vector<ItemListEntry> heavyList;
+
+    bool operator==( const BuyMenuData & ) const = default;
 } buyMenuData;
 
-class RkBuyMenuListener : public Rml::EventListener
+// Buying and closing are driven from the document (data-event-click / -keyup in
+// hud_buymenu.rml). The click used to arrive as a bubbled mousedown on some inner
+// span, from which this had to walk up to the .item container, QuerySelector the
+// .item_name, read its inner RML back out and re-parse the weapon name -- all to
+// recover the string the data model handed the document in the first place. The
+// document now passes it straight back.
+static void BuyItem( Rml::DataModelHandle, Rml::Event &, const Rml::VariantList &arguments )
 {
-public:
-    void ProcessEvent(Rml::Event &keyevent) override
+    if ( arguments.empty() )
+        return;
+
+    const Rml::String itemName = arguments[0].Get<Rml::String>();
+
+    // Names arrive as WEAPON_AK47 / EQUIPMENT_KEVLAR; `buy` wants the tail.
+    const char *underscore = V_strstr( itemName.c_str(), "_" );
+    if ( !underscore )
+        return;
+
+    char command[512];
+    V_snprintf( command, sizeof( command ), "buy %s", underscore + 1 );
+    engine->ExecuteClientCmd( command );
+
+    if ( RkHudBuyMenu *pBuyMenu = GET_HUDELEMENT( RkHudBuyMenu ) )
+        pBuyMenu->UpdateBuyMenu();
+}
+
+// Any key closes the menu, the same clientside event the open path uses.
+static void CloseBuyMenu( Rml::DataModelHandle, Rml::Event &, const Rml::VariantList & )
+{
+    C_BasePlayer *localPlayer = C_BasePlayer::GetLocalPlayer();
+    IGameEvent *pEvent = gameeventmanager->CreateEvent( "buymenu_close" );
+    if ( localPlayer && pEvent )
     {
-        Rml::EventId eventType = keyevent.GetId();
-
-        RkHudBuyMenu *pBuyMenu = GET_HUDELEMENT( RkHudBuyMenu );
-        if( !pBuyMenu )
-            return;
-
-        if( eventType == Rml::EventId::Keyup )
-        {
-            C_BasePlayer *localPlayer = C_BasePlayer::GetLocalPlayer();
-            IGameEvent *pEvent = gameeventmanager->CreateEvent( "buymenu_close" );
-            if ( localPlayer && pEvent )
-            {
-                pEvent->SetInt("userid", localPlayer->GetUserID() );
-                gameeventmanager->FireEventClientSide( pEvent );
-            }
-        }
-        else if( eventType == Rml::EventId::Mousedown )
-        {
-            Rml::Element *target = keyevent.GetTargetElement();
-            if( !target )
-                return;
-
-            // Walk up to find the .item container (click events bubble up)
-            Rml::Element *itemElement = target;
-            while( itemElement && !itemElement->IsClassSet("item") )
-            {
-                itemElement = itemElement->GetParentNode();
-            }
-
-            if( !itemElement )
-                return;
-
-            // Find item_name by class using QuerySelector
-            Rml::Element *nameElement = itemElement->QuerySelector(".item_name");
-            if( !nameElement )
-                return;
-
-            Rml::String itemName = nameElement->GetInnerRML();
-            const char* underscorePos = V_strstr(itemName.c_str(), "_");
-            if( underscorePos )
-            {
-                char buyBuffer[512];
-                V_snprintf( buyBuffer, sizeof( buyBuffer ), "buy %s", underscorePos + 1 );
-                DevMsg("buying [%s]\n", buyBuffer );
-                engine->ExecuteClientCmd( buyBuffer );
-                pBuyMenu->UpdateBuyMenu();
-            }
-        }
+        pEvent->SetInt( "userid", localPlayer->GetUserID() );
+        gameeventmanager->FireEventClientSide( pEvent );
     }
-};
+}
 
-static RkBuyMenuListener buyMenuListener;
+static void BindBuyMenu( Rml::DataModelConstructor &c )
+{
+    if ( auto entry = c.RegisterStruct<ItemListEntry>() )
+    {
+        entry.RegisterMember( "item_name", &ItemListEntry::itemName );
+        entry.RegisterMember( "item_price", &ItemListEntry::itemPrice );
+    }
+    c.RegisterArray<Rml::Vector<ItemListEntry>>();
+
+    if ( auto h = c.RegisterStruct<BuyMenuData>() )
+    {
+        h.RegisterMember( "player_cash", &BuyMenuData::playerCash );
+        h.RegisterMember( "player_teamnum", &BuyMenuData::playerTeamNum );
+        h.RegisterMember( "buy_time_left", &BuyMenuData::buyTimeLeft );
+        h.RegisterMember( "gear_list", &BuyMenuData::gearList );
+        h.RegisterMember( "grenade_list", &BuyMenuData::grenadeList );
+        h.RegisterMember( "pistol_list", &BuyMenuData::pistolList );
+        h.RegisterMember( "rifle_list", &BuyMenuData::rifleList );
+        h.RegisterMember( "smg_list", &BuyMenuData::smgList );
+        h.RegisterMember( "heavy_list", &BuyMenuData::heavyList );
+    }
+    c.Bind( "buymenu", &buyMenuData );
+
+    c.BindEventCallback( "buy_item", &BuyItem );
+    c.BindEventCallback( "close_buymenu", &CloseBuyMenu );
+}
+RK_HUD_SECTION( BindBuyMenu );
 
 // Updates the buy menu options via the game's weapon database.
 // Called sparingly when buymenu is opened/interacted.
@@ -145,19 +161,14 @@ void RkHudBuyMenu::UpdateBuyMenu()
         }
     }
 
-    m_dataModel.DirtyVariable( "gear_list" );
-    m_dataModel.DirtyVariable( "grenade_list" );
-    m_dataModel.DirtyVariable( "pistol_list" );
-    m_dataModel.DirtyVariable( "rifle_list" );
-    m_dataModel.DirtyVariable( "smg_list" );
-    m_dataModel.DirtyVariable( "heavy_list" );
-
-    m_dataModel.DirtyAllVariables();
+    RkHudDirty( "buymenu" );
 }
 
 // called 1x per frame
 void RkHudBuyMenu::OnNewFrameBuyMenu()
 {
+    const BuyMenuData previous = buyMenuData;
+
     float timeIntoRound = CSGameRules()->GetRoundElapsedTime();
     float buyTime = CSGameRules()->GetBuyTimeLength();
 
@@ -168,130 +179,23 @@ void RkHudBuyMenu::OnNewFrameBuyMenu()
     {
         buyMenuData.playerCash = localPlayer->GetAccount();
         buyMenuData.playerTeamNum = localPlayer->GetTeamNumber();
-        m_dataModel.DirtyVariable( "player_cash" );
-        m_dataModel.DirtyVariable( "player_teamnum" );
     }
 
-    m_dataModel.DirtyVariable("buy_time_left");
-
-    m_dataModel.DirtyAllVariables();
+    // Cash and the buy timer change once a second at most.
+    if( !( buyMenuData == previous ) )
+        RkHudDirty( "buymenu" );
 }
 
-static void UnloadRkBuyMenu()
-{
-    RkHudBuyMenu *pBuyMenu = GET_HUDELEMENT( RkHudBuyMenu );
-    if( !pBuyMenu )
-    {
-        Warning( "Couldn't grab RkBuyMenu to unload!\n" );
-        return;
-    }
-
-    if( !pBuyMenu->m_pInstance )
-        return;
-
-    Rml::Context *hudCtx = RocketUI()->AccessHudContext();
-    if( hudCtx )
-    {
-        hudCtx->RemoveDataModel( "buymenu_model" );
-        pBuyMenu->m_dataModel = nullptr;
-    }
-    else
-    {
-        Warning( "Couldn't access hudctx to unload buymenu datamodel!\n" );
-    }
-
-    pBuyMenu->m_pInstance->RemoveEventListener( Rml::EventId::Mousedown, &buyMenuListener );
-    pBuyMenu->m_pInstance->RemoveEventListener( Rml::EventId::Keyup, &buyMenuListener );
-    pBuyMenu->m_pInstance->Close();
-    pBuyMenu->m_pInstance = nullptr;
-    pBuyMenu->m_bVisible = false;
-}
-
-static void LoadRkBuyMenu()
-{
-    RkHudBuyMenu *pBuyMenu = GET_HUDELEMENT( RkHudBuyMenu );
-    if( !pBuyMenu )
-    {
-        Warning( "Couldn't grab hud buymenu to load!\n" );
-        return;
-    }
-
-    Rml::Context *hudCtx = RocketUI()->AccessHudContext();
-    if( !hudCtx )
-    {
-        Error( "Couldn't access hudctx!\n" );
-        /* Exit */
-    }
-
-    if( pBuyMenu->m_pInstance || pBuyMenu->m_dataModel )
-    {
-        Warning( "RkBuyMenu already loaded! call unload first!\n" );
-        return;
-    }
-
-    // Create the data binding, this will sync data between rocketui and the game.
-    Rml::DataModelConstructor constructor = hudCtx->CreateDataModel( "buymenu_model" );
-    if( !constructor )
-    {
-        Error( "Couldn't create datamodel for buymenu!\n" );
-        /* Exit */
-    }
-
-    // Register ItemListEntry struct
-    if( auto itemlist_handle = constructor.RegisterStruct<ItemListEntry>() )
-    {
-        itemlist_handle.RegisterMember( "item_name", &ItemListEntry::itemName );
-        itemlist_handle.RegisterMember( "item_price", &ItemListEntry::itemPrice );
-    }
-
-    // Register the array type
-    constructor.RegisterArray<Rml::Vector<ItemListEntry>>();
-
-    // Bind the Lists of items
-    constructor.Bind( "gear_list", &buyMenuData.gearList );
-    constructor.Bind( "grenade_list", &buyMenuData.grenadeList );
-    constructor.Bind( "pistol_list", &buyMenuData.pistolList );
-    constructor.Bind( "rifle_list", &buyMenuData.rifleList );
-    constructor.Bind( "smg_list", &buyMenuData.smgList );
-    constructor.Bind( "heavy_list", &buyMenuData.heavyList );
-
-    // Bind regular data
-    constructor.Bind( "player_cash", &buyMenuData.playerCash );
-    constructor.Bind( "player_teamnum", &buyMenuData.playerTeamNum );
-    constructor.Bind( "buy_time_left", &buyMenuData.buyTimeLeft );
-
-    pBuyMenu->m_dataModel = constructor.GetModelHandle();
-
-    // Load document from file.
-    pBuyMenu->m_pInstance = RocketUI()->LoadDocumentFile( ROCKET_CONTEXT_HUD, "hud_buymenu.rml", &LoadRkBuyMenu, &UnloadRkBuyMenu );
-    if( !pBuyMenu->m_pInstance )
-    {
-        Error( "Couldn't create hud_buymenu document!\n" );
-        /* Exit */
-    }
-
-    // Add event listener for input
-    pBuyMenu->m_pInstance->AddEventListener( Rml::EventId::Mousedown, &buyMenuListener );
-    pBuyMenu->m_pInstance->AddEventListener( Rml::EventId::Keyup, &buyMenuListener );
-}
-
-RkHudBuyMenu::RkHudBuyMenu(const char *value) : CHudElement( value ),
-                                                m_bVisible( false ),
-                                                m_pInstance( nullptr )
+RkHudBuyMenu::RkHudBuyMenu(const char *value) : RkHudDocument( value )
 {
     SetHiddenBits( /* HIDEHUD_MISCSTATUS */ 0 );
-}
-
-bool RkHudBuyMenu::OwnsInput() const
-{
-    return m_bVisible && m_pInstance && m_pInstance->IsVisible();
 }
 
 RkHudBuyMenu::~RkHudBuyMenu() noexcept
 {
     StopListeningForAllEvents();
 
-    UnloadRkBuyMenu();
+    Unload();
 }
 
 void RkHudBuyMenu::LevelInit()
@@ -299,17 +203,12 @@ void RkHudBuyMenu::LevelInit()
     ListenForGameEvent( "buymenu_open" );
     ListenForGameEvent( "buymenu_close" );
 
-    LoadRkBuyMenu();
-}
-
-void RkHudBuyMenu::LevelShutdown()
-{
-    UnloadRkBuyMenu();
+    RkHudDocument::LevelInit();
 }
 
 void RkHudBuyMenu::ShowPanel(bool bShow, bool force)
 {
-    if( !m_pInstance )
+    if( !m_pDocument )
         return;
 
     if( bShow )
@@ -317,7 +216,7 @@ void RkHudBuyMenu::ShowPanel(bool bShow, bool force)
         if( !m_bVisible )
         {
             UpdateBuyMenu();
-            m_pInstance->Show();
+            m_pDocument->Show( Rml::ModalFlag::None, Rml::FocusFlag::Auto, Rml::ScrollFlag::None );
         }
         OnNewFrameBuyMenu();
     }
@@ -325,7 +224,7 @@ void RkHudBuyMenu::ShowPanel(bool bShow, bool force)
     {
         if( m_bVisible )
         {
-            m_pInstance->Hide();
+            m_pDocument->Hide();
         }
     }
 

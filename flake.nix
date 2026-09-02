@@ -25,7 +25,6 @@
           buildInputs = with pkgs; [
             sdl3
             freetype
-            fontconfig
             vulkan-loader
             (zlib-ng.override { withZlibCompat = true; })
             libjpeg

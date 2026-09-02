@@ -1,13 +1,16 @@
 #include "rkhud_infobar.h"
 
+#include "rkhud_model.h"
+
 #include "cbase.h"
 #include "hud_macros.h"
 #include "c_cs_player.h"
 
-
 #include <rocketui/rmlui.h>
 
 DECLARE_HUDELEMENT( RkHudInfoBar );
+
+const char *RkHudInfoBar::kDocument = "hud_infobar.rml";
 
 // Struct layout for data-binding model.
 struct InfoBarData
@@ -28,8 +31,37 @@ struct InfoBarData
     bool hasSmoke;
     bool hasFire;
     bool hasC4;
+
+    bool operator==( const InfoBarData & ) const = default;
 } infoBarData;
 
+static void BindInfoBarData( Rml::DataModelConstructor &c )
+{
+    if ( auto h = c.RegisterStruct<InfoBarData>() )
+    {
+        h.RegisterMember( "hp", &InfoBarData::hp );
+        h.RegisterMember( "armor", &InfoBarData::armor );
+        h.RegisterMember( "ammo", &InfoBarData::ammo );
+        h.RegisterMember( "ammo_reserve", &InfoBarData::ammoReserve );
+        h.RegisterMember( "fire_mode_string", &InfoBarData::fireModeString );
+        h.RegisterMember( "has_helmet", &InfoBarData::hasHelmet );
+        h.RegisterMember( "primary_string", &InfoBarData::primaryString );
+        h.RegisterMember( "secondary_string", &InfoBarData::secondaryString );
+        h.RegisterMember( "knife_string", &InfoBarData::knifeString );
+        h.RegisterMember( "has_grenade", &InfoBarData::hasGrenade );
+        h.RegisterMember( "has_decoy", &InfoBarData::hasDecoy );
+        h.RegisterMember( "has_flash", &InfoBarData::hasFlash );
+        h.RegisterMember( "has_flash_pair", &InfoBarData::hasFlashPair );
+        h.RegisterMember( "has_smoke", &InfoBarData::hasSmoke );
+        h.RegisterMember( "has_fire", &InfoBarData::hasFire );
+        h.RegisterMember( "has_c4", &InfoBarData::hasC4 );
+    }
+    c.Bind( "infobar", &infoBarData );
+}
+RK_HUD_SECTION( BindInfoBarData );
+
+// Fills `infoBarData` from the player. Kept whole-struct so ShowPanel can tell
+// whether anything actually changed before waking the data bindings.
 static void UpdateInfoFromPlayer( const C_CSPlayer &pPlayer )
 {
     infoBarData.hp = pPlayer.GetHealth();
@@ -128,172 +160,52 @@ static void UpdateInfoFromPlayer( const C_CSPlayer &pPlayer )
     }
 }
 
-static void UnloadRkInfoBar()
-{
-    RkHudInfoBar *pInfoBar = GET_HUDELEMENT( RkHudInfoBar );
-    if( !pInfoBar )
-    {
-        Warning( "Couldn't grab RkHudInfoBar element to unload!\n");
-        return;
-    }
-
-    // Not loaded
-    if( !pInfoBar->m_pInstance )
-        return;
-
-    Rml::Context *hudCtx = RocketUI()->AccessHudContext();
-    if( hudCtx )
-    {
-        hudCtx->RemoveDataModel("infobar_model");
-        pInfoBar->m_dataModel = nullptr;
-    }
-    else
-    {
-        Warning("Couldn't access hudCtx to unload infobar datamodel\n");
-    }
-
-    pInfoBar->m_pInstance->Close();
-    pInfoBar->m_pInstance = nullptr;
-}
-
-static void LoadRkInfoBar()
-{
-    RkHudInfoBar *pInfoBar = GET_HUDELEMENT( RkHudInfoBar );
-    if( !pInfoBar )
-    {
-        Warning( "Couldn't grab hud infobar to load!\n");
-        return;
-    }
-
-    Rml::Context *hudCtx = RocketUI()->AccessHudContext();
-    if( !hudCtx )
-    {
-        Error("Couldn't access hudctx!\n");
-        /* Exit */
-    }
-
-    if( pInfoBar->m_pInstance || pInfoBar->m_dataModel )
-    {
-        Warning("RkInfoBar already loaded, call unload first!\n");
-        return;
-    }
-
-    // Create the data binding, this will sync data between rocketui and the game.
-    Rml::DataModelConstructor constructor = hudCtx->CreateDataModel("infobar_model");
-    if( !constructor )
-    {
-        Error( "Couldn't create datamodel for infobar!\n");
-        /* Exit */
-    }
-
-    constructor.Bind("hp", &infoBarData.hp);
-    constructor.Bind("armor", &infoBarData.armor);
-    constructor.Bind("ammo", &infoBarData.ammo);
-    constructor.Bind("ammo_reserve", &infoBarData.ammoReserve);
-    constructor.Bind("fire_mode_string", &infoBarData.fireModeString);
-    constructor.Bind("has_helmet", &infoBarData.hasHelmet);
-    constructor.Bind("primary_string", &infoBarData.primaryString);
-    constructor.Bind("secondary_string", &infoBarData.secondaryString);
-    constructor.Bind("knife_string", &infoBarData.knifeString);
-    constructor.Bind("has_grenade", &infoBarData.hasGrenade);
-    constructor.Bind("has_decoy", &infoBarData.hasDecoy);
-    constructor.Bind("has_flash", &infoBarData.hasFlash);
-    constructor.Bind("has_flash_pair", &infoBarData.hasFlashPair);
-    constructor.Bind("has_smoke", &infoBarData.hasSmoke);
-    constructor.Bind("has_fire", &infoBarData.hasFire);
-    constructor.Bind("has_c4", &infoBarData.hasC4);
-
-    pInfoBar->m_dataModel = constructor.GetModelHandle();
-
-    pInfoBar->m_pInstance = RocketUI()->LoadDocumentFile( ROCKET_CONTEXT_HUD, "hud_infobar.rml", LoadRkInfoBar, UnloadRkInfoBar );
-
-    if( !pInfoBar->m_pInstance )
-    {
-        Error("Couldn't create hud_infobar document!\n");
-        /* Exit */
-    }
-
-    //pInfoBar->m_pInstance->Show();
-    pInfoBar->ShowPanel( false, false );
-}
-
-RkHudInfoBar::RkHudInfoBar(const char *value) : CHudElement( value ),
-                                                m_bVisible( false ),
-                                                m_pInstance( nullptr )
+RkHudInfoBar::RkHudInfoBar(const char *value) : RkHudDocument( value )
 {
     SetHiddenBits( /* HIDEHUD_MISCSTATUS */ 0 );
 }
 
 RkHudInfoBar::~RkHudInfoBar() noexcept
 {
-    UnloadRkInfoBar();
+    Unload();
 }
 
-void RkHudInfoBar::LevelInit()
-{
-    LoadRkInfoBar();
-}
-
-void RkHudInfoBar::LevelShutdown()
-{
-    UnloadRkInfoBar();
-}
-
-// this is called every frame, keep that in mind.
+// Called every frame by the HUD system (CHud::DoElementThink -> SetActive).
 void RkHudInfoBar::ShowPanel(bool bShow, bool force)
 {
-    if( !m_pInstance )
+    if( !m_pDocument )
         return;
 
-    if( bShow )
-    {
-        if( !m_bVisible )
-        {
-            m_pInstance->Show();
-        }
-        C_CSPlayer *pPlayer = C_CSPlayer::GetLocalCSPlayer();
-
-        if( !pPlayer )
-            goto end;
-
-        // observing someone? switch to that player.
-        if( pPlayer->IsObserver() && (pPlayer->GetObserverMode() == OBS_MODE_IN_EYE || pPlayer->GetObserverMode() == OBS_MODE_CHASE) )
-            pPlayer = ToCSPlayer(pPlayer->GetObserverTarget());
-
-        if( !pPlayer )
-            goto end;
-
-        UpdateInfoFromPlayer( *pPlayer );
-
-        m_dataModel.DirtyVariable( "hp" );
-        m_dataModel.DirtyVariable( "ammo" );
-        m_dataModel.DirtyVariable( "ammo_reserve" );
-        m_dataModel.DirtyVariable( "fire_mode_string" );
-        m_dataModel.DirtyVariable( "armor" );
-        m_dataModel.DirtyVariable( "has_helmet" );
-        m_dataModel.DirtyVariable( "primary_string" );
-        m_dataModel.DirtyVariable( "secondary_string" );
-        m_dataModel.DirtyVariable( "knife_string" );
-        m_dataModel.DirtyVariable( "has_grenade" );
-        m_dataModel.DirtyVariable( "has_decoy" );
-        m_dataModel.DirtyVariable( "has_flash" );
-        m_dataModel.DirtyVariable( "has_flash_pair" );
-        m_dataModel.DirtyVariable( "has_smoke" );
-        m_dataModel.DirtyVariable( "has_fire" );
-        m_dataModel.DirtyVariable( "has_c4" );
-
-        m_dataModel.DirtyAllVariables();
-    }
-    else
+    if( !bShow )
     {
         if( m_bVisible )
-        {
-            m_pInstance->Hide();
-        }
+            m_pDocument->Hide();
+        m_bVisible = false;
+        return;
     }
 
-end:
-    m_bVisible = bShow;
+    if( !m_bVisible )
+        m_pDocument->Show( Rml::ModalFlag::None, Rml::FocusFlag::None );
+    m_bVisible = true;
+
+    C_CSPlayer *pPlayer = C_CSPlayer::GetLocalCSPlayer();
+
+    // observing someone? switch to that player.
+    if( pPlayer && pPlayer->IsObserver() &&
+        ( pPlayer->GetObserverMode() == OBS_MODE_IN_EYE || pPlayer->GetObserverMode() == OBS_MODE_CHASE ) )
+        pPlayer = ToCSPlayer( pPlayer->GetObserverTarget() );
+
+    if( !pPlayer )
+        return;
+
+    const InfoBarData previous = infoBarData;
+    UpdateInfoFromPlayer( *pPlayer );
+
+    // The HUD this drives changes a few times a second at most. Dirtying
+    // unconditionally made RmlUi re-evaluate every binding and re-shape the text
+    // on all of them, every frame.
+    if( !( infoBarData == previous ) )
+        RkHudDirty( "infobar" );
 }
 
 void RkHudInfoBar::SetActive(bool bActive)

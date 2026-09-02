@@ -2,7 +2,9 @@
 #define KISAKSTRIKE_RKHUD_RADAR_H
 
 #include <rocketui/rocketui.h>
-#include "hudelement.h"
+#include "rkhud_document.h"
+
+#include <rocketui/rmlui.h>
 
 extern ConVar cl_drawhud;
 
@@ -22,18 +24,20 @@ struct SpottedInfo
     float timelastSpotted;
 };
 
-class RkHudRadar : public CHudElement
+class RkHudRadar : public RkHudDocument<RkHudRadar>
 {
 public:
+    static const char *kDocument;
+
     explicit RkHudRadar( const char *value );
     virtual ~RkHudRadar();
 
     // Overrides from CHudElement
-    void LevelInit(void);
-    virtual void LevelShutdown(void);
+    void LevelInit() override;
     virtual void SetActive(bool bActive);
     virtual bool ShouldDraw(void);
     void ShowPanel(bool bShow, bool force);
+    void OnLoad();
 
     // Hooked msg
     bool MsgFunc_ProcessSpottedEntityUpdate( const CCSUsrMsg_ProcessSpottedEntityUpdate &msg );
@@ -41,25 +45,14 @@ public:
     void UpdateRadarFrame();
     void UpdateRadarSize();
 
-    Rml::ElementDocument    *m_pInstance;
-    bool		    m_bVisible;
 
-    float           m_radarX;
-    float           m_radarY;
     float           m_radarWidth;
     float           m_radarHeight;
     float           m_radarCenterX;
     float           m_radarCenterY;
-    Rml::Element    *m_playerElements[MAX_PLAYERS];
     SpottedInfo     m_spottedPlayers[MAX_PLAYERS];
-    Rml::Element    *m_defuserElement;
     SpottedInfo     m_spottedDefuser;
-    Rml::Element    *m_c4Element;
     SpottedInfo     m_spottedC4;
-
-    // Cached elements from instance.
-    Rml::Element *m_elemBody;
-    Rml::Element *m_elemContainer;
 
     CUserMessageBinder m_UMCMsgProcessSpottedEntityUpdate;
 };

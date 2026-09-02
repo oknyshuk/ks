@@ -1,0 +1,26 @@
+/* Parsed once at startup by RocketUIImpl::LoadFonts; paths resolve under "rocketui/". */
+@font-face {
+	font-family: "Liberation Sans";
+	src: "fonts/LiberationSans-Regular.ttf";
+	font-weight: normal;
+	/* Glyphs missing from the requested family come from this face. */
+	-rmlui-fallback-face: true;
+}
+
+@font-face {
+	font-family: "Liberation Sans";
+	src: "fonts/LiberationSans-Bold.ttf";
+	font-weight: bold;
+}
+
+@font-face {
+	font-family: "Liberation Mono";
+	src: "fonts/LiberationMono-Regular.ttf";
+	font-weight: normal;
+}
+
+@font-face {
+	font-family: "Liberation Mono";
+	src: "fonts/LiberationMono-Bold.ttf";
+	font-weight: bold;
+}

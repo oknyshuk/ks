@@ -2,32 +2,32 @@
 #define KISAKSTRIKE_RKHUD_KILLFEED_H
 
 #include <rocketui/rocketui.h>
-#include "hudelement.h"
+#include "rkhud_document.h"
 
 #include <rocketui/rmlui.h>
 
 extern ConVar cl_drawhud;
 
-class RkHudKillfeed : public CHudElement
+class RkHudKillfeed : public RkHudDocument<RkHudKillfeed>
 {
 public:
+    static const char *kDocument;
+
     explicit RkHudKillfeed( const char *value );
     virtual ~RkHudKillfeed();
 
     // Overrides from CHudElement
-    void LevelInit(void);
-    virtual void LevelShutdown(void);
+    void LevelInit() override;
+    void LevelShutdown() override;
     virtual void SetActive(bool bActive);
     virtual bool ShouldDraw(void);
     void ShowPanel(bool bShow, bool force);
+    void OnLoad();
 
     // CGameEventListener
     virtual void FireGameEvent( IGameEvent *event );
 
 
-    Rml::ElementDocument *m_pInstance;
-    bool m_bVisible;
-    Rml::DataModelHandle m_dataModel;
 
 private:
     void CheckForOldEntries();

@@ -2,6 +2,8 @@
 // Copyright (c) 2026 oknyshuk
 
 #include "rkconsole.h"
+
+#include "rkhud_model.h"
 #include "cbase.h"
 
 #include "cdll_int.h"
@@ -11,21 +13,17 @@
 
 #include <rocketui/rmlui.h>
 
-// Event listener for console input changes
-class ConsoleInputListener : public Rml::EventListener {
-public:
-  void ProcessEvent(Rml::Event &event) override {
-    if (event.GetId() == Rml::EventId::Change) {
-      RkConsole().OnInputChange();
-    }
-  }
-};
-
-static ConsoleInputListener s_InputListener;
+// hud_console.rml reports edits to the input here (data-event-change) so the
+// completion list can follow what is being typed.
+static void BindConsole(Rml::DataModelConstructor &c) {
+  c.BindEventCallback("console_input_changed",
+                      [](Rml::DataModelHandle, Rml::Event &, const Rml::VariantList &) {
+                        RkConsole().OnInputChange();
+                      });
+}
+RK_HUD_SECTION(BindConsole);
 
 static RocketConsole s_RocketConsole;
-
-RocketConsole &RocketConsole::Instance() { return s_RocketConsole; }
 
 RocketConsole &RkConsole() { return s_RocketConsole; }
 
@@ -57,16 +55,38 @@ RocketConsole::RocketConsole()
 
 RocketConsole::~RocketConsole() { Shutdown(); }
 
-bool RocketConsole::OwnsInput() const {
-  return m_bVisible && m_pDocument && m_pDocument->IsVisible();
-}
+// First refusal on input, before RmlUi sees it, installed for the lifetime of the
+// console: the console owns its toggle key outright and swallows the keys it edits
+// with. ESC is deliberately not here -- the engine consumes it before RocketUI is
+// asked (keys.cpp -> HandleGameUIKey -> gameui_activate/gameui_hide), and
+// CGameUI::OnGameUIActivated/Hidden is what raises and drops the pause menu.
+static bool RocketUI_HandleInput(const InputEvent_t &event) {
+  const ButtonCode_t key = (ButtonCode_t)event.m_nData;
+  const bool bKeyboard = !IsMouseCode(key);
 
-static bool ConsoleKeyInputHandler(int buttonCode, bool down) {
-  return RkConsole().HandleKeyInput(buttonCode, down);
-}
+  switch (event.m_nType) {
+  case IE_ButtonPressed:
+  case IE_ButtonDoubleClicked:
+  case IE_KeyCodeTyped: // repeat
+    if (bKeyboard && RkConsole().HandleKeyInput(key, true))
+      return true;
+    break;
 
-static bool ConsoleCharInputHandler(wchar_t ch) {
-  return RkConsole().HandleCharInput(ch);
+  case IE_ButtonReleased:
+    if (bKeyboard && RkConsole().HandleKeyInput(key, false))
+      return true;
+    break;
+
+  case IE_KeyTyped:
+    if (RkConsole().HandleCharInput((wchar_t)event.m_nData))
+      return true;
+    break;
+
+  default:
+    break;
+  }
+
+  return false;
 }
 
 void RocketConsole::Initialize() {
@@ -76,9 +96,7 @@ void RocketConsole::Initialize() {
   if (g_pCVar)
     g_pCVar->InstallConsoleDisplayFunc(this);
 
-  // Register input handlers with RocketUI
-  RocketUI()->RegisterConsoleHandlers(ConsoleKeyInputHandler,
-                                      ConsoleCharInputHandler);
+  RocketUI()->SetInputHook(RocketUI_HandleInput);
 
   m_bInitialized = true;
 }
@@ -89,8 +107,7 @@ void RocketConsole::Shutdown() {
 
   UnloadDocument();
 
-  // Unregister input handlers
-  RocketUI()->RegisterConsoleHandlers(nullptr, nullptr);
+  RocketUI()->SetInputHook(nullptr);
 
   if (g_pCVar)
     g_pCVar->RemoveConsoleDisplayFunc(this);
@@ -110,13 +127,10 @@ void RocketConsole::LoadDocument() {
   if (m_pDocument)
     return;
 
-  m_pDocument = RocketUI()->LoadDocumentFile(
-      ROCKET_CONTEXT_MENU, "hud_console.rml", LoadCallback, UnloadCallback);
-
-  if (!m_pDocument) {
-    Warning("RocketConsole: Failed to load hud_console.rml\n");
+  m_pDocument = RkLoadDocument(ROCKET_CONTEXT_MENU, "hud_console.rml", LoadCallback,
+                               UnloadCallback);
+  if (!m_pDocument)
     return;
-  }
 
   // Get the textarea output element
   if (Rml::Element *outputElem = m_pDocument->GetElementById("console_output")) {
@@ -128,10 +142,6 @@ void RocketConsole::LoadDocument() {
   // Get the native input element
   if (Rml::Element *inputElem = m_pDocument->GetElementById("console_input")) {
     m_elemInput = rmlui_dynamic_cast<Rml::ElementFormControlInput *>(inputElem);
-    if (m_elemInput) {
-      // Listen for input changes to auto-update completions
-      m_elemInput->AddEventListener(Rml::EventId::Change, &s_InputListener);
-    }
   }
 
   // Replay buffered output to the textarea
@@ -165,13 +175,6 @@ void RocketConsole::UnloadDocument() {
   if (!m_pDocument)
     return;
 
-  RocketUI()->SetInputContext(nullptr);
-
-  // Remove event listener before closing
-  if (m_elemInput) {
-    m_elemInput->RemoveEventListener(Rml::EventId::Change, &s_InputListener);
-  }
-
   m_pDocument->Close();
   m_pDocument = nullptr;
   m_elemOutput = nullptr;
@@ -195,11 +198,8 @@ void RocketConsole::Show() {
 
   // Paint order is hud_console.rml's `z-index`, not this call: RmlUi only reorders
   // documents as a side effect of focus changing.
-  m_pDocument->Show();
+  m_pDocument->Show( Rml::ModalFlag::None, Rml::FocusFlag::Auto, Rml::ScrollFlag::None );
   m_bVisible = true;
-
-  // The console lives in the menu context; route input there while it is up.
-  RocketUI()->SetInputContext(RocketUI()->AccessMenuContext());
 
   // Focus the input element
   if (m_elemInput)
@@ -215,8 +215,6 @@ void RocketConsole::Hide() {
 
   m_pDocument->Hide();
   m_bVisible = false;
-
-  RocketUI()->SetInputContext(nullptr);
 
   HideCompletionList();
 }

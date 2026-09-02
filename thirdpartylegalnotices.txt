@@ -924,5 +924,10 @@ Additional third-party code in this fork (see src/thirdparty/<name>/ for full te
 	DirectXMath ............................ MIT license
 	CELT ................................... BSD license
 	quickhull .............................. see src/thirdparty/quickhull/
-	SDL3, freetype, fontconfig, zlib-ng, libjpeg, libpng: system libraries,
+	SDL3, freetype, zlib-ng, libjpeg, libpng: system libraries,
 	  linked at build time under their own (permissive) licenses.
+
+	Liberation Fonts (game/csgo/rocketui/fonts/) ... SIL Open Font License 1.1
+	  Copyright (c) 2012 Red Hat, Inc. with Reserved Font Name Liberation.
+	  Digitized data copyright (c) 2010 Google Corporation with Reserved Font
+	  Name Arimo, Tinos and Cousine. Full text in that directory's LICENSE.

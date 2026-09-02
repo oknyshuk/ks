@@ -128,7 +128,7 @@
 			}
 		</style>
 	</head>
-	<body>
+	<body data-model="hud">
 		<div id="title">CREATE SERVER</div>
 
 		<div class="setting-row">
@@ -161,8 +161,8 @@
 
 		<div id="footer">
 			<div id="footer-buttons">
-				<button id="start">START</button>
-				<button id="close">BACK</button>
+				<button id="start" data-event-click="start_server">START</button>
+				<button id="close" data-event-click="close_play">BACK</button>
 			</div>
 		</div>
 	</body>

@@ -142,12 +142,12 @@
 			}
 		</style>
 	</head>
-	<body data-model="buymenu_model">
+	<body data-model="hud" data-event-keyup="close_buymenu">
 		<div id="main-container">
 			<div id="header">
 				<div id="player-info">
-					<span id="money">${{ player_cash }}</span>
-					<span id="buy-time">Buy Time: {{ buy_time_left }}</span>
+					<span id="money">${{ buymenu.player_cash }}</span>
+					<span id="buy-time">Buy Time: {{ buymenu.buy_time_left }}</span>
 				</div>
 				<div id="categories">
 					<span class="category-label">GEAR</span>
@@ -161,66 +161,66 @@
 			<div id="content-area">
 				<div class="item-column">
 					<div class="column-header">GEAR</div>
-					<div data-for="item : gear_list">
-						<div class="item">
+					<div data-for="item : buymenu.gear_list">
+						<div class="item" data-event-click="buy_item( item.item_name )">
 							<div class="item-info">
 								<span class="item_name">{{ item.item_name }}</span>
-								<span class="item_price" data-class-item_price_affordable="item.item_price <= player_cash">${{ item.item_price }}</span>
+								<span class="item_price" data-class-item_price_affordable="item.item_price <= buymenu.player_cash">${{ item.item_price }}</span>
 							</div>
 						</div>
 					</div>
 				</div>
 				<div class="item-column">
 					<div class="column-header">GRENADES</div>
-					<div data-for="item : grenade_list">
-						<div class="item">
+					<div data-for="item : buymenu.grenade_list">
+						<div class="item" data-event-click="buy_item( item.item_name )">
 							<div class="item-info">
 								<span class="item_name">{{ item.item_name }}</span>
-								<span class="item_price" data-class-item_price_affordable="item.item_price <= player_cash">${{ item.item_price }}</span>
+								<span class="item_price" data-class-item_price_affordable="item.item_price <= buymenu.player_cash">${{ item.item_price }}</span>
 							</div>
 						</div>
 					</div>
 				</div>
 				<div class="item-column">
 					<div class="column-header">PISTOLS</div>
-					<div data-for="item : pistol_list">
-						<div class="item">
+					<div data-for="item : buymenu.pistol_list">
+						<div class="item" data-event-click="buy_item( item.item_name )">
 							<div class="item-info">
 								<span class="item_name">{{ item.item_name }}</span>
-								<span class="item_price" data-class-item_price_affordable="item.item_price <= player_cash">${{ item.item_price }}</span>
+								<span class="item_price" data-class-item_price_affordable="item.item_price <= buymenu.player_cash">${{ item.item_price }}</span>
 							</div>
 						</div>
 					</div>
 				</div>
 				<div class="item-column">
 					<div class="column-header">RIFLES</div>
-					<div data-for="item : rifle_list">
-						<div class="item">
+					<div data-for="item : buymenu.rifle_list">
+						<div class="item" data-event-click="buy_item( item.item_name )">
 							<div class="item-info">
 								<span class="item_name">{{ item.item_name }}</span>
-								<span class="item_price" data-class-item_price_affordable="item.item_price <= player_cash">${{ item.item_price }}</span>
+								<span class="item_price" data-class-item_price_affordable="item.item_price <= buymenu.player_cash">${{ item.item_price }}</span>
 							</div>
 						</div>
 					</div>
 				</div>
 				<div class="item-column">
 					<div class="column-header">SMGS</div>
-					<div data-for="item : smg_list">
-						<div class="item">
+					<div data-for="item : buymenu.smg_list">
+						<div class="item" data-event-click="buy_item( item.item_name )">
 							<div class="item-info">
 								<span class="item_name">{{ item.item_name }}</span>
-								<span class="item_price" data-class-item_price_affordable="item.item_price <= player_cash">${{ item.item_price }}</span>
+								<span class="item_price" data-class-item_price_affordable="item.item_price <= buymenu.player_cash">${{ item.item_price }}</span>
 							</div>
 						</div>
 					</div>
 				</div>
 				<div class="item-column">
 					<div class="column-header">HEAVY</div>
-					<div data-for="item : heavy_list">
-						<div class="item">
+					<div data-for="item : buymenu.heavy_list">
+						<div class="item" data-event-click="buy_item( item.item_name )">
 							<div class="item-info">
 								<span class="item_name">{{ item.item_name }}</span>
-								<span class="item_price" data-class-item_price_affordable="item.item_price <= player_cash">${{ item.item_price }}</span>
+								<span class="item_price" data-class-item_price_affordable="item.item_price <= buymenu.player_cash">${{ item.item_price }}</span>
 							</div>
 						</div>
 					</div>

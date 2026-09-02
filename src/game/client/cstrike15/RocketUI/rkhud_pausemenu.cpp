@@ -1,5 +1,9 @@
 #include "rkhud_pausemenu.h"
 
+#include "rkpanel.h"
+
+#include "rkhud_model.h"
+
 #include <rocketui/rmlui.h>
 
 #include "cdll_client_int.h" // extern globals to interfaces like engineclient
@@ -8,130 +12,68 @@
 #include "rkhud_teammenu.h"
 #include "rkhud_buymenu.h"
 #include "rkpanel_options.h"
+#include "iengineui.h"
 
 Rml::ElementDocument *RocketPauseMenuDocument::m_pInstance = nullptr;
 bool RocketPauseMenuDocument::m_bVisible = false;
 
-bool RocketPauseMenuDocument::OwnsInput()
+// The engine keeps its own GameUI-visible flag, and while it is set UI_ActivateMouse()
+// deactivates the mouse every frame -- no mouse look, even with nothing on screen. So a
+// panel that means "back to the game" must not just hide itself: it asks the engine to
+// dismiss the GameUI, and CGameUI::OnGameUIHidden takes our documents down. One-way
+// flow (engine -> documents) instead of two half-wired state machines.
+void RocketUI_ReturnToGame()
 {
-    return m_bVisible && m_pInstance && m_pInstance->IsVisible();
+    if ( engine->IsInGame() && engineui && engineui->IsGameUIVisible() )
+        engine->ClientCmd_Unrestricted( "gameui_hide\n" );
 }
 
-/* Event Listener added to each button */
-class RkPauseMenuButtons : public Rml::EventListener
+// The buttons name their own action in hud_pausemenu.rml (data-event-click), so
+// there is no listener walking every <button> and no chain of id comparisons.
+static void BindPauseMenu( Rml::DataModelConstructor &c )
 {
-public:
-    void ProcessEvent(Rml::Event& mousedownevent) override
-    {
-        // Currently, only mousedown events.
-        Rml::Element *elem = mousedownevent.GetTargetElement();
-        if( !elem )
-            return;
-
-        Rml::String id = elem->GetId();
-        if( id == "pm_resume" )
-        {
-            RocketPauseMenuDocument::ShowPanel( false );
-        }
-        else if( id == "pm_choose" )
-        {
-            RocketTeamMenuDocument::ShowPanel( true );
-            RocketPauseMenuDocument::ShowPanel( false );
-        }
-        else if( id == "pm_callvote" )
-        {
-
-        }
-        else if( id == "pm_options" )
-        {
-            RocketOptionsDocument::ShowPanel( true );
-            RocketPauseMenuDocument::ShowPanel( false );
-        }
-        else if( id == "pm_disconnect" )
-        {
-            engine->ClientCmd_Unrestricted("disconnect");
-        }
-    }
-};
-
-static RkPauseMenuButtons pauseMenuButtonsListener;
-
-RocketPauseMenuDocument::RocketPauseMenuDocument()
-{
+    c.BindEventCallback( "pm_resume", []( Rml::DataModelHandle, Rml::Event &, const Rml::VariantList & ) {
+        RocketUI_ReturnToGame();
+    } );
+    c.BindEventCallback( "pm_choose_team", []( Rml::DataModelHandle, Rml::Event &, const Rml::VariantList & ) {
+        RocketTeamMenuDocument::ShowPanel( true );
+        RocketPauseMenuDocument::ShowPanel( false );
+    } );
+    c.BindEventCallback( "pm_options", []( Rml::DataModelHandle, Rml::Event &, const Rml::VariantList & ) {
+        RocketOptionsDocument::ShowPanel( true );
+        RocketPauseMenuDocument::ShowPanel( false );
+    } );
+    c.BindEventCallback( "pm_disconnect", []( Rml::DataModelHandle, Rml::Event &, const Rml::VariantList & ) {
+        engine->ClientCmd_Unrestricted( "disconnect" );
+    } );
 }
+RK_HUD_SECTION( BindPauseMenu );
 
 void RocketPauseMenuDocument::LoadDialog()
 {
-    if( !m_pInstance )
-    {
-        m_pInstance = RocketUI()->LoadDocumentFile( ROCKET_CONTEXT_HUD, "hud_pausemenu.rml", RocketPauseMenuDocument::LoadDialog, RocketPauseMenuDocument::UnloadDialog );
-        if( !m_pInstance )
-        {
-            Error( "Couldn't create rocketui pause menu!\n");
-            /* Exit */
-        }
-        RocketUI()->RegisterPauseMenu( RocketPauseMenuDocument::TogglePanel );
-
-        // Add a listener to each button, this seems better than custom events for these
-        Rml::ElementList menuButtons;
-        m_pInstance->GetElementsByTagName( menuButtons, "button" );
-        for( Rml::Element *elem : menuButtons )
-        {
-            elem->AddEventListener( Rml::EventId::Mousedown, &pauseMenuButtonsListener );
-        }
-    }
+    RkPanelLoad( m_pInstance, ROCKET_CONTEXT_HUD, "hud_pausemenu.rml", LoadDialog, UnloadDialog );
 }
 
 void RocketPauseMenuDocument::UnloadDialog()
 {
-    if( m_pInstance )
-    {
-        RocketUI()->RegisterPauseMenu( nullptr );
-        m_pInstance->Close();
-        m_pInstance = nullptr;
-    }
-}
-
-void RocketPauseMenuDocument::UpdateDialog()
-{
-}
-
-void RocketPauseMenuDocument::TogglePanel()
-{
-    ShowPanel( !m_bVisible );
+    RkPanelUnload( m_pInstance, m_bVisible );
 }
 
 void RocketPauseMenuDocument::ShowPanel(bool bShow, bool immediate)
 {
-    // oh yeah buddy this'll get called before the loading sometimes
-    // so if it does, load it for the caller.
     if( bShow )
     {
-        if( !m_pInstance )
-            LoadDialog();
+        LoadDialog();
 
+        // The chat and the buy menu are modal in their own right: ESC belongs to
+        // them while either is up.
         RkHudChat *pChat = GET_HUDELEMENT( RkHudChat );
         RkHudBuyMenu *pBuyMenu = GET_HUDELEMENT( RkHudBuyMenu );
-
         if( !pChat || !pBuyMenu )
             return;
-
-        if( pChat->ChatRaised() )
-        {
+        if( pChat->ChatRaised() || pBuyMenu->m_bVisible || !pBuyMenu->m_pDocument )
             return;
-        }
-        if( pBuyMenu->m_bVisible || !pBuyMenu->m_pInstance )
-        {
-            return;
-        }
-
-        m_pInstance->Show();
-    }
-    else
-    {
-        if( m_pInstance )
-            m_pInstance->Hide();
     }
 
-    m_bVisible = bShow;
+    RkPanelShow( m_pInstance, m_bVisible, bShow );
 }

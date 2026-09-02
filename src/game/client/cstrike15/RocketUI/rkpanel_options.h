@@ -3,35 +3,32 @@
 
 #include <rocketui/rocketui.h>
 
-class RkOptionsClickListener;
-
 class RocketOptionsDocument
 {
-    friend class RkOptionsClickListener;
-    friend class RkOptionsChangeListener;
 protected:
     static Rml::ElementDocument *m_pInstance;
 
-    RocketOptionsDocument( );
-    virtual ~RocketOptionsDocument();
 public:
     static void LoadDialog( void );
     static void UnloadDialog( void );
     static void ShowPanel( bool bShow, bool immediate = false );
     static bool IsActive() { return m_pInstance != nullptr; }
     static bool IsVisible() { return m_bVisible; }
-    // True while this panel legitimately owns mouse/keyboard input (polled).
-    static bool OwnsInput();
     static Rml::ElementDocument *GetInstance() { return m_pInstance; }
+
+    // Driven from panel_options.rml (data-event-click / data-event-change).
+    static void SwitchTab( const char *tabId );
+    static void PopulateResolution( void );
+
+    // True while PopulateControls syncs the controls to the current values, so
+    // the change actions can tell that apart from a user edit.
+    static bool m_bPopulating;
 
 private:
     static void PopulateControls( void );
-    static void PopulateResolution( void );
     static void PopulateDisplayMode( void );
-    static void SwitchTab( const char *tabId );
 
     static bool m_bVisible;
-    static bool m_bPopulating; // suppress Change events during PopulateControls
 };
 
 #endif //KISAKSTRIKE_RKPANEL_OPTIONS_H

@@ -44,7 +44,7 @@ def build(bld):
         target="rocketui_client",
         features="cxx",
         includes=includes,
-        use=libs + ["SDL3", "FREETYPE", "FONTCONFIG"],
+        use=libs + ["SDL3", "FREETYPE"],
         lib=[],
         install_path=bld.env.BINPATH,
         subsystem=bld.env.MSVC_SUBSYSTEM,
