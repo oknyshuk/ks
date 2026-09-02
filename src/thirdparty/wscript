@@ -308,8 +308,10 @@ def _dxvk(bld):
     # Consumers need <d3d9.h> and the win32 shims; nobody spells out a path.
     bld(name="dxvk", export_includes=_dirs(bld, root, "include/native/windows include/native/directx"))
 
+    CXX17 = ["-std=c++17", "-fno-reflection"]
+
     def lib(target, srcdir, incl="", **kw):
-        kw.setdefault("cxxflags", ["-std=c++17"])
+        kw.setdefault("cxxflags", CXX17)
         kw.setdefault("defines", DXVK_DEFINES)
         _lib(bld, target, root.find_dir(srcdir), root=root,
              includes=(incl + " " + DXVK_INCLUDES).split(), **kw)
@@ -331,7 +333,7 @@ def _dxvk(bld):
         root.find_dir("subprojects/dxbc-spirv"),
         root=root,
         includes=["subprojects/dxbc-spirv"],
-        cxxflags=["-std=c++17", "-fno-exceptions", "-DDXBC_SPV_ENABLE_SM3",
+        cxxflags=CXX17 + ["-fno-exceptions", "-DDXBC_SPV_ENABLE_SM3",
                   "-DDXBC_SPV_ENABLE_SM5", "-DDXBC_SPV_ENABLE_SPIRV"],
         defines=DXVK_DEFINES,
     )
@@ -341,7 +343,7 @@ def _dxvk(bld):
     lib("dxvk_vulkan", "src/vulkan")
     lib("wsi", "src/wsi", "src/wsi subprojects/libdisplay-info/include", use=["display-info"])
     lib("dxvk", "src/dxvk", "src/dxvk src subprojects/dxbc-spirv",
-        cxxflags=["-std=c++17", "-Wno-nontrivial-memcall"], use=["dxvk_generated"])
+        cxxflags=CXX17 + ["-Wno-nontrivial-memcall"], use=["dxvk_generated"])
     lib("d3d9", "src/d3d9", "src/d3d9 src subprojects/dxbc-spirv",
         shared=True, lib=["m"], install_path=bld.env.BINPATH,
         use=["dxvk_generated", "dxbc_spv", "display-info", "dxvk_vulkan", "dxvk",

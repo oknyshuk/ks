@@ -42,6 +42,7 @@ def build(bld):
         "NetAdr.cpp",
         "splitstring.cpp",
         "rangecheckedvar.cpp",
+        "reflect_test.cpp",
         "stringpool.cpp",
         "strtools.cpp",
         "strtools_unicode.cpp",

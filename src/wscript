@@ -184,7 +184,13 @@ def configure(conf):
                 "sloppiness": "include_file_mtime,include_file_ctime,time_macros,pch_defines,file_stat_matches,clang_index_store,locale,random_seed",
                 "hash_dir": "false",
                 "compression_level": "1",
-                "depend_mode": "true",
+                # Not depend_mode: that needs the compiler to emit -MD dependency info,
+                # and waf uses its own scanner and passes none. Without it ccache cannot
+                # tell which headers a TU uses, and the mtime sloppiness above removes the
+                # fallback -- so editing a nested header served stale objects, including
+                # stale PCHs. Preprocessor mode hashes the preprocessed source, so nested
+                # header edits are always seen.
+                "depend_mode": "false",
                 "inode_cache": "true",
             }.items():
                 f.write(f"{k} = {v}\n")
@@ -241,7 +247,9 @@ def configure(conf):
         conf.env.append_unique("CXXFLAGS", ["-w"])
 
     conf.env.append_unique("CFLAGS", ["-fdiagnostics-color=always"])
-    conf.env.append_unique("CXXFLAGS", ["-fdiagnostics-color=always", "-std=c++20"])
+    conf.env.append_unique(
+        "CXXFLAGS", ["-fdiagnostics-color=always", "-std=c++26", "-freflection"]
+    )
 
     conf.env.append_unique(
         "CXXFLAGS", ["-Wno-invalid-offsetof", "-Wno-free-nonheap-object"]
