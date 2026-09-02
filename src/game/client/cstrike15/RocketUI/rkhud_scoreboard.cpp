@@ -6,10 +6,9 @@
 #include "in_buttons.h"
 #include "c_playerresource.h"
 
-// min/max conflict handled by RMLUI_USE_CUSTOM_ASSERT
 #include <c_team.h>
 
-#include <RmlUi/Core.h>
+#include <rocketui/rmlui.h>
 
 DECLARE_HUDELEMENT( RkHudScoreboard );
 

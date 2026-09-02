@@ -10,7 +10,7 @@
 #include "tier1/utlstring.h"
 #include "GameEventListener.h"
 #include <rocketui/rocketui.h>
-#include <RmlUi/Core/Types.h>
+#include <rocketui/rmlui.h>
 
 namespace Rml {
     class ElementDocument;

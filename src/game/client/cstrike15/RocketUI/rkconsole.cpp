@@ -9,9 +9,7 @@
 #include "inputsystem/iinputsystem.h"
 #include "tier1/convar.h"
 
-#include <RmlUi/Core.h>
-#include <RmlUi/Core/Elements/ElementFormControlInput.h>
-#include <RmlUi/Core/Elements/ElementFormControlTextArea.h>
+#include <rocketui/rmlui.h>
 
 // Event listener for console input changes
 class ConsoleInputListener : public Rml::EventListener {

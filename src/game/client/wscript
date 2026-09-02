@@ -22,6 +22,7 @@ def build(bld):
         return
 
     libs = [
+        "rmlui",
         "tier0",
         "memoverride",
         "public_common",
@@ -62,7 +63,6 @@ def build(bld):
         "../shared/cstrike15/control",
         "../../generated_proto",
         "../../thirdparty/protobuf-2.6.1/src",
-        "../../thirdparty/RmlUi/Include",
         "../../public/rocketui",
     ]
 

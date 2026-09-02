@@ -1,7 +1,7 @@
 #ifndef ROCKETFILESYSTEM_H
 #define ROCKETFILESYSTEM_H
 
-#include <RmlUi/Core/FileInterface.h>
+#include <rocketui/rmlui.h>
 #include <vector>
 
 // Decode a Valve .vtf texture (from the game filesystem, incl. VPKs) to RGBA8888.

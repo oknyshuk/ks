@@ -3,9 +3,8 @@
 #include "cbase.h"
 #include "cdll_client_int.h" // extern globals to interfaces like engineclient
 
-// min/max conflict handled by RMLUI_USE_CUSTOM_ASSERT
 
-#include <RmlUi/Core.h>
+#include <rocketui/rmlui.h>
 
 Rml::ElementDocument *RocketTeamMenuDocument::m_pInstance = nullptr;
 bool RocketTeamMenuDocument::m_bVisible = false;

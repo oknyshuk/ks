@@ -4,9 +4,8 @@
 #include "hud_macros.h"
 #include "c_cs_player.h"
 
-// min/max conflict handled by RMLUI_USE_CUSTOM_ASSERT
 
-#include <RmlUi/Core.h>
+#include <rocketui/rmlui.h>
 #include <deque>
 
 DECLARE_HUDELEMENT( RkHudKillfeed );

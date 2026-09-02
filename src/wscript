@@ -80,19 +80,7 @@ PROJECTS = [
     "soundemittersystem",
     "soundsystem/lowlevel",
     "studiorender",
-    "thirdparty/celt-v0.11.3",
-    "thirdparty/dxvk-3.0.1-c850747/subprojects/libdisplay-info",
-    "thirdparty/dxvk-3.0.1-c850747/subprojects/dxbc-spirv",
-    "thirdparty/dxvk-3.0.1-c850747/src/util",
-    "thirdparty/dxvk-3.0.1-c850747/src/spirv",
-    "thirdparty/dxvk-3.0.1-c850747/src/vulkan",
-    "thirdparty/dxvk-3.0.1-c850747/src/wsi",
-    "thirdparty/dxvk-3.0.1-c850747/src/dxvk",
-    "thirdparty/dxvk-3.0.1-c850747/src/d3d9",
-    "thirdparty/JoltPhysics-4.0.2/Jolt",
-    "thirdparty/mojoAL",
-    "thirdparty/protobuf-2.6.1/src",
-    "thirdparty/RmlUi",
+    "thirdparty",
     "tier0",
     "tier1",
     "tier2",
@@ -139,6 +127,14 @@ OPTFLAGS = {
 
 
 # --- WAF entry points ---
+
+
+def _vendored(conf, pattern, *subdirs):
+    """Absolute paths inside the one vendored tree matching e.g. "dxvk-*"."""
+    trees = conf.path.ant_glob("thirdparty/" + pattern, dir=True, src=True, maxdepth=1)
+    if len(trees) != 1:
+        conf.fatal("expected exactly one thirdparty/%s, found %r" % (pattern, trees))
+    return [trees[0].find_dir(s).abspath() for s in subdirs]
 
 
 def options(opt):
@@ -212,6 +208,7 @@ def configure(conf):
     if build_type not in OPTFLAGS:
         conf.fatal(f"Invalid build type '{build_type}'. Valid: {', '.join(OPTFLAGS)}")
     conf.msg("Build type", build_type)
+    conf.env.BUILD_TYPE = build_type
 
     cflags = [
         "-g",
@@ -295,19 +292,18 @@ def configure(conf):
     conf.check_cfg(package="libjpeg", args="--cflags --libs", uselib_store="JPEG")
     conf.check_cfg(package="libpng", args="--cflags --libs", uselib_store="PNG")
 
-    includes += [
-        os.path.abspath("thirdparty/dxvk-3.0.1-c850747/include/native/windows"),
-        os.path.abspath("thirdparty/dxvk-3.0.1-c850747/include/native/directx"),
-    ]
+    # Vendored header directories needed project-wide. The version lives in the
+    # directory name, so it is globbed rather than spelled out; see
+    # thirdparty/wscript for how the trees are built.
+    includes += _vendored(conf, "dxvk-*", "include/native/windows", "include/native/directx")
 
     conf.env.append_unique("INCLUDES", includes)
 
     # System includes (suppress warnings in thirdparty headers)
-    for sysinc in [
-        "thirdparty/protobuf-2.6.1/src",
-        "thirdparty/DirectXMath-dec2023/Inc",
-    ]:
-        flag = f"-isystem{os.path.abspath(sysinc)}"
+    for sysinc in _vendored(conf, "protobuf-*", "src") + _vendored(
+        conf, "DirectXMath-*", "Inc"
+    ):
+        flag = f"-isystem{sysinc}"
         conf.env.append_unique("CFLAGS", [flag])
         conf.env.append_unique("CXXFLAGS", [flag])
 

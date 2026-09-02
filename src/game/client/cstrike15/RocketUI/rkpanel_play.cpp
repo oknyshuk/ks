@@ -8,9 +8,7 @@
 #include "filesystem.h"
 #include "tier1/convar.h"
 
-#include <RmlUi/Core.h>
-#include <RmlUi/Core/Elements/ElementFormControlSelect.h>
-#include <RmlUi/Core/Elements/ElementFormControlInput.h>
+#include <rocketui/rmlui.h>
 
 Rml::ElementDocument *RocketPlayDocument::m_pInstance = nullptr;
 bool RocketPlayDocument::m_bVisible = false;

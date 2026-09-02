@@ -10,11 +10,8 @@
 extern IGameUIFuncs *gameuifuncs;
 extern IMaterialSystem *materials;
 
-// min/max conflict handled by RMLUI_USE_CUSTOM_ASSERT
 
-#include <RmlUi/Core.h>
-#include <RmlUi/Core/Elements/ElementFormControlSelect.h>
-#include <RmlUi/Core/Elements/ElementFormControlInput.h>
+#include <rocketui/rmlui.h>
 
 Rml::ElementDocument *RocketOptionsDocument::m_pInstance = nullptr;
 bool RocketOptionsDocument::m_bVisible = false;

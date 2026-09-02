@@ -1,7 +1,7 @@
 #ifndef ROCKETRENDER_H
 #define ROCKETRENDER_H
 
-#include <RmlUi/Core/RenderInterface.h>
+#include <rocketui/rmlui.h>
 #include <atomic>
 #include <cstdint>
 #include <d3d9.h>

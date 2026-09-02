@@ -22,15 +22,6 @@ def build(bld):
         ".",
         "../public",
         "../public/rocketui",
-        "../thirdparty/RmlUi/Include",
-        "../thirdparty/dxvk-3.0.1-c850747/src/d3d9",
-        "../thirdparty/dxvk-3.0.1-c850747/include/native/windows",
-        "../thirdparty/dxvk-3.0.1-c850747/include/native/directx",
-    ]
-
-    defines = [
-        # Disable RmlUi asserts to avoid macro conflict with Source engine's Assert
-        "RMLUI_USE_CUSTOM_ASSERT=1",
     ]
 
     libs = [
@@ -43,6 +34,7 @@ def build(bld):
         "bitmap",
         "vtf",
         "mathlib",
+        "rmlui",
         "RmlCore",
         "RmlDebugger",
     ]
@@ -52,7 +44,6 @@ def build(bld):
         target="rocketui_client",
         features="cxx",
         includes=includes,
-        defines=defines,
         use=libs + ["SDL3", "FREETYPE", "FONTCONFIG"],
         lib=[],
         install_path=bld.env.BINPATH,

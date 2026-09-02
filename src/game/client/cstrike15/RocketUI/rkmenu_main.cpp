@@ -1,6 +1,6 @@
 #include "rkmenu_main.h"
 
-#include <RmlUi/Core.h>
+#include <rocketui/rmlui.h>
 
 #include "rkpanel_options.h"
 #include "rkpanel_play.h"

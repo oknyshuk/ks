@@ -1,6 +1,6 @@
 #pragma once
 
-#include <RmlUi/Core/Input.h>
+#include <rocketui/rmlui.h>
 #include <inputsystem/ButtonCode.h>
 
 // Keycode converter helper

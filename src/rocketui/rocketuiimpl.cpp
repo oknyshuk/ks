@@ -3,8 +3,7 @@
 #include "rocketrender.h"
 #include "rocketsystem.h"
 
-#include <RmlUi/Core.h>
-#include <RmlUi/Debugger.h>
+#include <rocketui/rmlui.h>
 
 #include <cstdio>
 #include <cstring>

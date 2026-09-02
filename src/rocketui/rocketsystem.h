@@ -1,7 +1,7 @@
 #ifndef ROCKETSYSTEM_H
 #define ROCKETSYSTEM_H
 
-#include <RmlUi/Core/SystemInterface.h>
+#include <rocketui/rmlui.h>
 
 #ifdef USE_SDL
 #include <SDL3/SDL.h>

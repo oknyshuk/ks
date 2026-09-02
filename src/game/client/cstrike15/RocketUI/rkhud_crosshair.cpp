@@ -8,8 +8,7 @@
 #include "c_cs_player.h"
 #include "weapon_csbase.h"
 
-// min/max conflict handled by RMLUI_USE_CUSTOM_ASSERT
-#include <RmlUi/Core.h>
+#include <rocketui/rmlui.h>
 
 DECLARE_HUDELEMENT( RkHudCrosshair );
 

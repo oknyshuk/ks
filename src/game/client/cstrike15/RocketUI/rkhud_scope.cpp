@@ -9,7 +9,7 @@
 #include "weapon_csbase.h"
 #include "predicted_viewmodel.h"
 
-#include <RmlUi/Core.h>
+#include <rocketui/rmlui.h>
 
 DECLARE_HUDELEMENT_DEPTH( RkHudScope, 70 );
 

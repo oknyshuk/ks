@@ -13,7 +13,7 @@
 #include "tier3/tier3.h"
 
 #include "rocketrender.h"
-#include <RmlUi/Core/ElementDocument.h>
+#include <rocketui/rmlui.h>
 #include <atomic>
 #include <unordered_set>
 

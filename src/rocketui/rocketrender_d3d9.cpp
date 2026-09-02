@@ -9,13 +9,9 @@
 // stage releases); the actual D3D9 work happens on the RENDER thread in
 // Replay(), which owns the finished command list. See rocketrender.h.
 
-#ifdef Assert
-#undef Assert
-#endif
-
 #include "rocketfilesystem.h"
 #include "rocketrender.h"
-#include <RmlUi/Core.h>
+#include <rocketui/rmlui.h>
 
 #include <d3d9.h>
 

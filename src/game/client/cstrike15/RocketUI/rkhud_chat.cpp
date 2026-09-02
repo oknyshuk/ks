@@ -7,9 +7,8 @@
 #include "c_cs_playerresource.h"
 #include "localize/ilocalize.h"
 
-// min/max conflict handled by RMLUI_USE_CUSTOM_ASSERT
 
-#include <RmlUi/Core.h>
+#include <rocketui/rmlui.h>
 
 #include "rkpanel_popup.h"
 

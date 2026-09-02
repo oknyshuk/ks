@@ -36,6 +36,7 @@
             python3
             pkg-config
             mold
+            glslang
           ];
 
           ks = stdenv.mkDerivation {

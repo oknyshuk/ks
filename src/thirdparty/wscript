@@ -1,0 +1,359 @@
+#! /usr/bin/env python
+
+PATCHES = {
+    # dxvk ships D3D9 here only, so src/d3d11 and src/dxgi are pruned -- and
+    # their interface headers were what pulled in dxvk::Logger.
+    "src/util/com/com_guid.cpp": [
+        (
+            '#include "../../d3d11/d3d11_interfaces.h"\n\n'
+            '#include "../../dxgi/dxgi_interfaces.h"',
+            '#include "../log/log.h"',
+        ),
+    ],
+    # RmlUi: honour a `readonly` attribute, so the console output pane can be
+    # scrolled, selected and copied but not edited. Upstream offers only
+    # `disabled`, which also blocks focus and selection. Guarding the three
+    # mutators covers typing, paste, backspace/delete and cut.
+    "Source/Core/Elements/WidgetTextInput.cpp": [
+        (
+            "bool WidgetTextInput::AddCharacters(String string)\n{",
+            "bool WidgetTextInput::AddCharacters(String string)\n{\n"
+            '\tif (parent->HasAttribute("readonly")) return false;',
+        ),
+        (
+            "bool WidgetTextInput::DeleteCharacters(CursorMovement direction)\n{",
+            "bool WidgetTextInput::DeleteCharacters(CursorMovement direction)\n{\n"
+            '\tif (parent->HasAttribute("readonly")) return false;',
+        ),
+        (
+            "void WidgetTextInput::DeleteSelection()\n{",
+            "void WidgetTextInput::DeleteSelection()\n{\n"
+            '\tif (parent->HasAttribute("readonly")) return;',
+        ),
+    ],
+}
+
+# Every .vert/.frag/.comp here becomes <basename>.h holding a uint32_t SPIR-V
+# blob named after the file, exactly as upstream's meson does. Sibling .glsl
+# files are includes, not entry points.
+DXVK_SHADERS = ["src/dxvk/shaders", "src/dxvk/hud/shaders", "src/d3d9/shaders"]
+
+# Header search paths shared by every dxvk target. dxvk tests the defines with
+# #if defined(), so they carry no value.
+DXVK_INCLUDES = "include include/native include/native/windows include/native/directx include/vulkan/include include/spirv/include"
+DXVK_DEFINES = ["DXVK_NATIVE", "DXVK_WSI_SDL3", "DXVK_PLATFORM_LINUX"]
+
+# protobuf is the one dependency that cannot be globbed: it is a curated subset
+# of the runtime (no compiler backends, no tests) in an order the unity build
+# depends on -- extension_set.cc and extension_set_heavy.cc both define
+# real_type() in an anonymous namespace, so they must land in different chunks.
+PROTOBUF_SOURCES = """
+    stubs/atomicops_internals_x86_gcc.cc stubs/atomicops_internals_x86_msvc.cc
+    stubs/common.cc stubs/once.cc stubs/stringprintf.cc extension_set.cc
+    generated_message_util.cc message_lite.cc repeated_field.cc
+    wire_format_lite.cc io/coded_stream.cc io/zero_copy_stream.cc
+    io/zero_copy_stream_impl_lite.cc stubs/strutil.cc stubs/substitute.cc
+    stubs/structurally_valid.cc descriptor.cc descriptor.pb.cc
+    descriptor_database.cc dynamic_message.cc extension_set_heavy.cc
+    generated_message_reflection.cc message.cc reflection_ops.cc service.cc
+    text_format.cc unknown_field_set.cc wire_format.cc io/gzip_stream.cc
+    io/printer.cc io/strtod.cc io/tokenizer.cc io/zero_copy_stream_impl.cc
+    compiler/importer.cc compiler/parser.cc
+"""
+
+
+def options(opt):
+    return
+
+
+def configure(conf):
+    conf.find_program(["glslang", "glslangValidator"], var="GLSLANG")
+
+
+# --- helpers ----------------------------------------------------------------
+
+
+def _tree(ctx, pattern):
+    """The one vendored directory matching e.g. "dxvk-*"."""
+    hits = ctx.path.ant_glob(pattern, dir=True, src=True, maxdepth=1)
+    if len(hits) != 1:
+        ctx.fatal("thirdparty: expected exactly one %s, found %r" % (pattern, hits))
+    return hits[0]
+
+
+def _dirs(ctx, root, paths):
+    return _nodes(ctx, root, paths, dir=True)
+
+
+def _nodes(ctx, root, paths, dir=False):
+    out = []
+    for p in (paths.split() if isinstance(paths, str) else paths):
+        n = root.find_dir(p) if dir else root.find_node(p)
+        if n is None:
+            ctx.fatal("thirdparty: no such path %r under %s" % (p, root))
+        out.append(n)
+    return out
+
+
+def _patch(bld, root, relpath):
+    """A substituted copy of relpath in the build dir, compiled in its place.
+
+    Returns (node, taskgen name); the name goes into the consumer's `use` so the
+    copy is produced whenever the consumer is built.
+    """
+    src = root.find_node(relpath)
+    subs = PATCHES[relpath]
+
+    def run(task):
+        text = task.inputs[0].read()
+        for find, repl in subs:
+            if text.count(find) != 1:
+                task.generator.bld.fatal(
+                    "thirdparty: patch for %s no longer applies, expected exactly "
+                    "one match of:\n%s" % (relpath, find)
+                )
+            text = text.replace(find, repl)
+        task.outputs[0].write(text)
+
+    out = bld.bldnode.make_node("patched/" + src.name)
+    name = "patch_" + src.name
+    bld(rule=run, source=src, target=out, name=name, idx=bld.get_taskgen_count())
+    return out, name
+
+
+def _lib(bld, target, srcdir, patterns="**/*.cpp", excl=None, sources=None, patch=None, **kw):
+    """A library from every source under srcdir, minus excl (or from `sources`).
+
+    patch names files (relative to the vendored root) to compile from a patched
+    copy instead; their original directory joins the include path so that their
+    relative includes still resolve.
+    """
+    root = kw.pop("root", srcdir)
+    if sources:
+        source = _nodes(bld, srcdir, sources)
+    else:
+        source = srcdir.ant_glob(patterns, excl=excl or [])
+    includes = _dirs(bld, root, kw.pop("includes", []))
+    use = kw.pop("use", [])
+    for relpath in patch or []:
+        original = root.find_node(relpath)
+        copy, name = _patch(bld, root, relpath)
+        source = [s for s in source if s != original] + [copy]
+        includes.append(original.parent)
+        use = use + [name]
+    kw.setdefault("features", "cxx")
+    (bld.shlib if kw.pop("shared", False) else bld.stlib)(
+        source=source,
+        target=target,
+        includes=includes,
+        use=use,
+        subsystem=bld.env.MSVC_SUBSYSTEM,
+        idx=bld.get_taskgen_count(),
+        **kw,
+    )
+
+
+# --- dependencies -----------------------------------------------------------
+
+
+def _celt(bld):
+    root = _tree(bld, "celt-v*")
+    _lib(
+        bld,
+        "celt",
+        root.find_dir("libcelt"),
+        "*.c",
+        excl=["static_modes_*.c"],  # #included by modes.c, never compiled alone
+        features="c",
+        defines=["USE_ALLOCA", "FLOAT_APPROX", "CUSTOM_MODES"],
+    )
+
+
+def _mojoal(bld):
+    root = _tree(bld, "mojoAL")
+    _lib(bld, "mojoAL", root, "*.c", root=root, includes="AL", defines=["AL_LIBTYPE_STATIC"])
+
+
+def _jolt(bld):
+    root = _tree(bld, "JoltPhysics-*")
+    jolt = root.find_dir("Jolt")
+    defines = ["JPH_DISABLE_CUSTOM_ALLOCATOR", "JPH_DEBUG_RENDERER"]
+
+    # Memory.cpp defines allocator symbols that clash with vphysics in unity mode
+    memory = jolt.find_node("Core/Memory.cpp")
+    bld.objects(
+        source=[memory],
+        target="joltphysics_memory",
+        features="cxx",
+        includes=[root],
+        defines=defines,
+        idx=bld.get_taskgen_count(),
+    )
+    _lib(
+        bld,
+        "joltphysics",
+        jolt,
+        excl=["Core/Memory.cpp"],
+        root=root,
+        includes=["."],
+        defines=defines,
+        features="cxx unity",
+        unity_size=30,
+        use=["joltphysics_memory"],
+    )
+
+
+def _protobuf(bld):
+    root = _tree(bld, "protobuf-*")
+    src = root.find_dir("src")
+    _lib(
+        bld,
+        "protobuf",
+        src,
+        sources=" ".join("google/protobuf/" + s for s in PROTOBUF_SOURCES.split()),
+        root=src,
+        includes=["."],
+        defines=[] if bld.env.DEST_OS == "win32" else ["HAVE_PTHREAD"],
+        features="cxx unity",
+        unity_size=10,
+        # false positives from GCC's LTO analysis
+        cxxflags=[] if bld.env.DEST_OS == "win32"
+        else ["-Wno-free-nonheap-object", "-Wno-nan-infinity-disabled"],
+    )
+
+
+def _rmlui(bld):
+    root = _tree(bld, "RmlUi-*")
+    include = root.find_dir("Include")
+    # Consumers get the header path with use="rmlui"; nobody spells out a path.
+    bld(name="rmlui", export_includes=[include])
+    for target, srcdir, use, patch in [
+        ("RmlCore", "Source/Core", ["FREETYPE"], ["Source/Core/Elements/WidgetTextInput.cpp"]),
+        ("RmlDebugger", "Source/Debugger", ["RmlCore"], []),
+    ]:
+        _lib(
+            bld,
+            target,
+            root.find_dir(srcdir),
+            root=root,
+            patch=patch,
+            shared=True,
+            includes=["Include"],
+            defines=["RMLUI_FONT_ENGINE_FREETYPE"],
+            use=use,
+            install_path=bld.env.BINPATH,
+        )
+
+
+def _dxvk_generated(bld, root):
+    """glslang blobs + version.h/buildenv.h. Consumers pull them in with
+    use="dxvk_generated", which posts this and exports the output directory."""
+    gen = bld.bldnode.make_node("dxvk-generated")
+    gen.mkdir()
+
+    shaders = []
+    for d in _dirs(bld, root, DXVK_SHADERS):
+        shaders += d.ant_glob("*.vert *.frag *.comp")
+    templates = [root.find_node(f) for f in ("version.h.in", "buildenv.h.in")]
+    # .glsl siblings are #included by the shaders above, never compiled alone.
+    # They are inputs all the same, so editing one rebuilds every shader (this is
+    # what upstream gets from glslang's --depfile).
+    includes = []
+    for d in _dirs(bld, root, DXVK_SHADERS):
+        includes += d.ant_glob("*.glsl")
+
+    def run(task):
+        n = len(task.outputs) - len(templates)
+        # upstream passes -gVS in debug builds: shader source in the SPIR-V
+        debug = ["-gVS"] if task.env.BUILD_TYPE == "debug" else []
+        for src, tgt in zip(task.inputs[:n], task.outputs[:n]):
+            ret = task.exec_command(
+                task.env.GLSLANG
+                + ["--quiet", "--target-env", "vulkan1.3", "--vn", tgt.name[:-2]]
+                + debug
+                + [src.abspath(), "-o", tgt.abspath()]
+            )
+            if ret:
+                return ret
+        # the directory name is the provenance and the reported version
+        subst = {
+            "VCS_TAG": "v" + root.name.split("-")[1],
+            "BUILD_TARGET": task.env.DEST_CPU or "x86_64",
+            "BUILD_COMPILER": task.env.CXX_NAME or "cc",
+            "BUILD_COMPILER_VERSION": ".".join(task.env.CC_VERSION or ()),
+        }
+        for src, tgt in zip(task.inputs[n:], task.outputs[n:]):
+            text = src.read()
+            for k, v in subst.items():
+                text = text.replace("@%s@" % k, v)
+            tgt.write(text)
+
+    bld(
+        name="dxvk_generated",
+        rule=run,
+        # order matters: run() pairs shaders and templates with their outputs by
+        # position, and the trailing .glsl includes have no output at all
+        source=shaders + templates + includes,
+        target=[gen.make_node(s.name.rsplit(".", 1)[0] + ".h") for s in shaders]
+        + [gen.make_node(t.name[:-3]) for t in templates],
+        export_includes=[gen],
+        vars=["GLSLANG", "BUILD_TYPE", "DEST_CPU", "CXX_NAME", "CC_VERSION"],
+        idx=bld.get_taskgen_count(),
+    )
+
+
+def _dxvk(bld):
+    root = _tree(bld, "dxvk-*")
+    _dxvk_generated(bld, root)
+    # Consumers need <d3d9.h> and the win32 shims; nobody spells out a path.
+    bld(name="dxvk", export_includes=_dirs(bld, root, "include/native/windows include/native/directx"))
+
+    def lib(target, srcdir, incl="", **kw):
+        kw.setdefault("cxxflags", ["-std=c++17"])
+        kw.setdefault("defines", DXVK_DEFINES)
+        _lib(bld, target, root.find_dir(srcdir), root=root,
+             includes=(incl + " " + DXVK_INCLUDES).split(), **kw)
+
+    _lib(
+        bld,
+        "display-info",
+        root.find_dir("subprojects/libdisplay-info"),
+        "**/*.c",
+        excl=["di-edid-decode/**"],  # a standalone CLI tool, not part of the lib
+        root=root,
+        includes=["subprojects/libdisplay-info/include"],
+        features="c",
+        cflags=["-std=c11", "-D_POSIX_C_SOURCE=200809L", "-Dstatic_array=static"],
+    )
+    _lib(
+        bld,
+        "dxbc_spv",
+        root.find_dir("subprojects/dxbc-spirv"),
+        root=root,
+        includes=["subprojects/dxbc-spirv"],
+        cxxflags=["-std=c++17", "-fno-exceptions", "-DDXBC_SPV_ENABLE_SM3",
+                  "-DDXBC_SPV_ENABLE_SM5", "-DDXBC_SPV_ENABLE_SPIRV"],
+        defines=DXVK_DEFINES,
+    )
+    lib("dxvk_util", "src/util", "src/util src", patterns="**/*.cpp **/*.c",
+        features="cxx unity", patch=["src/util/com/com_guid.cpp"])
+    lib("spirv", "src/spirv")
+    lib("dxvk_vulkan", "src/vulkan")
+    lib("wsi", "src/wsi", "src/wsi subprojects/libdisplay-info/include", use=["display-info"])
+    lib("dxvk", "src/dxvk", "src/dxvk src subprojects/dxbc-spirv",
+        cxxflags=["-std=c++17", "-Wno-nontrivial-memcall"], use=["dxvk_generated"])
+    lib("d3d9", "src/d3d9", "src/d3d9 src subprojects/dxbc-spirv",
+        shared=True, lib=["m"], install_path=bld.env.BINPATH,
+        use=["dxvk_generated", "dxbc_spv", "display-info", "dxvk_vulkan", "dxvk",
+             "dxvk_util", "wsi", "spirv", "SDL3"])
+
+
+def build(bld):
+    _celt(bld)
+    _mojoal(bld)
+    _jolt(bld)
+    _protobuf(bld)
+    if bld.env.DEST_OS == "win32":
+        return  # dxvk is the D3D9 implementation, and RmlUi renders through it
+    _dxvk(bld)
+    _rmlui(bld)
