@@ -666,11 +666,11 @@ IClient *CBaseServer::ConnectClient ( const ns_address &adr, int protocol, int c
 	{
 		if ( splitScreenClients.Count() )
 		{
-			const CMsg_CVars& convars = splitScreenClients[0]->convars();
-			for ( int i = 0; i< convars.cvars_size(); ++i )
+			const ks::net::CMsg_CVars& convars = splitScreenClients[0]->convars;
+			for ( int i = 0; i< convars.cvars.size(); ++i )
 			{
-				const char *cvname = NetMsgGetCVarUsingDictionary( convars.cvars(i) );
-				const char *value = convars.cvars(i).value().c_str();
+				const char *cvname = NetMsgGetCVarUsingDictionary( convars.cvars[ i ] );
+				const char *value = convars.cvars[ i ].value->c_str();
 				
 				if ( stricmp( cvname, "cl_session" ) )
 					continue;
@@ -716,12 +716,12 @@ IClient *CBaseServer::ConnectClient ( const ns_address &adr, int protocol, int c
 	char const *pchClientConnectionName = name;
 	if ( !pchClientConnectionName[ 0 ] && splitScreenClients.Count() )
 	{
-		for ( int iCvar = 0; iCvar < splitScreenClients[ 0 ]->convars().cvars().size(); ++iCvar )
+		for ( int iCvar = 0; iCvar < splitScreenClients[ 0 ]->convars->cvars.size(); ++iCvar )
 		{
-			CMsg_CVars::CVar const &rCvarInfo = splitScreenClients[ 0 ]->convars().cvars( iCvar );
+			ks::net::CMsg_CVars::CVar const &rCvarInfo = splitScreenClients[ 0 ]->convars->cvars[ iCvar ];
 			if ( !V_strcmp( "name", NetMsgGetCVarUsingDictionary( rCvarInfo ) ) )
 			{
-				pchClientConnectionName = rCvarInfo.value().c_str();
+				pchClientConnectionName = rCvarInfo.value->c_str();
 				break;
 			}
 		}
@@ -749,7 +749,7 @@ IClient *CBaseServer::ConnectClient ( const ns_address &adr, int protocol, int c
 	client->Connect( pchClientConnectionName, nNextUserID, netchan,
 		false,	// real client
 		clientPlatform,
-		(splitScreenClients.Count() > 0) ? &splitScreenClients[0]->convars() : NULL ); // userinfo if supplied
+		(splitScreenClients.Count() > 0) ? &splitScreenClients[0]->convars.get() : NULL ); // userinfo if supplied
 
 	client->m_bLowViolence = isClientLowViolence;
 
@@ -962,11 +962,11 @@ bool CBaseServer::ProcessConnectionlessPacket(netpacket_t * packet)
 										{
 											numPlayers = -1; // Trigger an error
 										}
-										else if ( pSplitPlayerConnect->convars().cvars_size() )
+										else if ( pSplitPlayerConnect->convars->cvars.size() )
 										{	// Make sure convars are expanded using dictionary
-											for ( int iCV = 0; iCV < pSplitPlayerConnect->convars().cvars_size(); ++ iCV )
+											for ( int iCV = 0; iCV < pSplitPlayerConnect->convars->cvars.size(); ++ iCV )
 											{
-												CMsg_CVars::CVar *convar = pSplitPlayerConnect->mutable_convars()->mutable_cvars( iCV );
+												ks::net::CMsg_CVars::CVar *convar = &pSplitPlayerConnect->convars.mut().cvars[ iCV ];
 												NetMsgExpandCVarUsingDictionary( convar );
 											}
 										}
@@ -1043,11 +1043,11 @@ bool CBaseServer::ProcessConnectionlessPacket(netpacket_t * packet)
 								AccountID_t unAccountIDfor3rdParties = 0;
 								if ( s_bExternalCryptKeys && splitScreenPlayers.Count() )
 								{
-									const CMsg_CVars& convars = splitScreenPlayers[ 0 ]->convars();
-									for ( int i = 0; i < convars.cvars_size(); ++i )
+									const ks::net::CMsg_CVars& convars = splitScreenPlayers[ 0 ]->convars;
+									for ( int i = 0; i < convars.cvars.size(); ++i )
 									{
-										const char *cvname = NetMsgGetCVarUsingDictionary( convars.cvars( i ) );
-										const char *value = convars.cvars( i ).value().c_str();
+										const char *cvname = NetMsgGetCVarUsingDictionary( convars.cvars[ i ] );
+										const char *value = convars.cvars[ i ].value->c_str();
 
 										if ( stricmp( cvname, "accountid" ) )
 											continue;
@@ -1531,52 +1531,52 @@ void CBaseServer::UserInfoChanged( int nClientIndex )
 	
 }
 
-void CBaseServer::FillServerInfo(CSVCMsg_ServerInfo &serverinfo)
+void CBaseServer::FillServerInfo(ks::net::CSVCMsg_ServerInfo &serverinfo)
 {
 	char gamedir[MAX_OSPATH];
 	Q_FileBase( com_gamedir, gamedir, sizeof( gamedir ) );
 
-	serverinfo.set_protocol( GetHostVersion() );
-	serverinfo.set_server_count( GetSpawnCount() );
-	serverinfo.set_map_crc( worldmapCRC );
-	serverinfo.set_client_crc( clientDllCRC );
-	serverinfo.set_string_table_crc( CRC32_ConvertToUnsignedLong( &stringTableCRC ) );
-	serverinfo.set_max_clients( GetMaxClients() );
-	serverinfo.set_max_classes( serverclasses );
-	serverinfo.set_is_dedicated( IsDedicated() );
+	serverinfo.protocol = GetHostVersion();
+	serverinfo.server_count = GetSpawnCount();
+	serverinfo.map_crc = worldmapCRC;
+	serverinfo.client_crc = clientDllCRC;
+	serverinfo.string_table_crc = CRC32_ConvertToUnsignedLong( &stringTableCRC );
+	serverinfo.max_clients = GetMaxClients();
+	serverinfo.max_classes = serverclasses;
+	serverinfo.is_dedicated = IsDedicated();
 	
 #ifdef _WIN32
-	serverinfo.set_c_os( 'W' );
+	serverinfo.c_os = 'W';
 #else
-	serverinfo.set_c_os( 'L' );
+	serverinfo.c_os = 'L';
 #endif
 
 	// HACK to signal that the server is "new"
-	serverinfo.set_c_os( tolower( serverinfo.c_os() ) );
+	serverinfo.c_os = tolower( serverinfo.c_os );
 
-	serverinfo.set_tick_interval( GetTickInterval() );
-	serverinfo.set_game_dir( gamedir );
-	serverinfo.set_map_name( GetMapName() );
-	serverinfo.set_map_group_name( GetMapGroupName() );
-	serverinfo.set_sky_name( m_szSkyname );
+	serverinfo.tick_interval = GetTickInterval();
+	serverinfo.game_dir = gamedir;
+	serverinfo.map_name = GetMapName();
+	serverinfo.map_group_name = GetMapGroupName();
+	serverinfo.sky_name = m_szSkyname;
 	extern ConVar host_name_store;
-	serverinfo.set_host_name( host_name_store.GetBool() ? GetName() : "Counter-Strike: Global Offensive" );
-	serverinfo.set_is_hltv( IsHLTV() );
-	serverinfo.set_is_redirecting_to_proxy_relay( false );
+	serverinfo.host_name = host_name_store.GetBool() ? GetName() : "Counter-Strike: Global Offensive";
+	serverinfo.is_hltv = IsHLTV();
+	serverinfo.is_redirecting_to_proxy_relay = false;
 	
 	char szMapPath[MAX_PATH];
 	V_ComposeFileName( "maps", GetMapName(), szMapPath, sizeof(szMapPath) );
-	serverinfo.set_ugc_map_id( serverGameDLL->GetUGCMapFileID( szMapPath ) );
+	serverinfo.ugc_map_id = serverGameDLL->GetUGCMapFileID( szMapPath );
 
 #if defined( REPLAY_ENABLED )
-	serverinfo.set_is_replay( IsReplay() );
+	serverinfo.is_replay = IsReplay();
 #endif
 
 // Don't expose server public IP in the server info, the client is already connected, so there's no reason to store it either
 // 	if( Steam3Server().SteamGameServer() == NULL )
-// 		serverinfo.set_public_ip( NULL );
+// 		serverinfo.public_ip = NULL;
 // 	else
-// 		serverinfo.set_public_ip( Steam3Server().SteamGameServer()->GetPublicIP() );
+// 		serverinfo.public_ip = Steam3Server().SteamGameServer()->GetPublicIP();
 }
 
 /*
@@ -2794,7 +2794,7 @@ void CBaseServer::SetPaused( bool paused )
 	}
 
 	CSVCMsg_SetPause_t setpause;
-	setpause.set_paused( paused );
+	setpause.paused = paused;
 	BroadcastMessage( setpause );
 }
 
@@ -3379,7 +3379,7 @@ void CBaseServer::BroadcastPrintf (const char *fmt, ...)
 	va_end (argptr);
 
 	CSVCMsg_Print_t print;
-	print.set_text( string );
+	print.text = string;
 	BroadcastMessage( print );	
 }
 
@@ -3579,10 +3579,10 @@ void CBaseServer::WriteTempEntities( CBaseClient *client, CFrameSnapshot *pCurre
 	// setting of the buffer size will require zeroing all of its bytes which is
 	// more expensive (as seen on CS:GO server profiles on Linux).
 	const int nBytesWritten = Bits2Bytes( buffer.GetNumBitsWritten() );
-	msg.set_entity_data( &tempEntityData[0], nBytesWritten );
+	msg.entity_data = std::string( ( const char * ) &tempEntityData[0], nBytesWritten );
 
 	// set num entries
-	msg.set_num_entries( nNumEntitiesWritten );
+	msg.num_entries = nNumEntitiesWritten;
 }
 
 void CBaseServer::SetMaxClients( int number )
@@ -3769,7 +3769,7 @@ void CBaseServer::RemoveTag( const char *pszTag, bool bSubTag )
 	sv_tags.SetValue( tmptags );
 }
 
-CBaseClient *CBaseServer::CreateSplitClient( const CMsg_CVars& vecUserInfo, CBaseClient *pAttachedTo )
+CBaseClient *CBaseServer::CreateSplitClient( const ks::net::CMsg_CVars& vecUserInfo, CBaseClient *pAttachedTo )
 {
 	// 0.0.0.0:0 signifies a split client. It'll plumb all the way down to winsock calls but it won't make them.
 	ns_address adr;

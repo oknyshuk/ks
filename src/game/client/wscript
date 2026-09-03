@@ -46,8 +46,6 @@ def build(bld):
         "JPEG",
         "PNG",
         "ZLIB",
-        "generated_proto",
-        "protobuf",
         "RmlCore",
     ]
 
@@ -61,12 +59,11 @@ def build(bld):
         "../shared",
         "../shared/cstrike15",
         "../shared/cstrike15/control",
-        "../../generated_proto",
-        "../../thirdparty/protobuf-2.6.1/src",
         "../../public/rocketui",
     ]
 
     source = [
+        "../../common/netmessages_codec.cpp",
         "hl2/C_Func_Monitor.cpp",
         "../shared/achievement_saverestore.cpp",
         "../shared/achievementmgr.cpp",

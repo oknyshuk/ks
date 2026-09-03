@@ -158,18 +158,18 @@ bool AddAccountToActiveCasters( const CSteamID &steamID )
 bool CServerGameDLL::ValidateAndAddActiveCaster( const CSteamID &steamID )
 {
 	// check if they are a player in the current game. Note: players can be casters sometimes (and might be in the casters list below), but we don't want their voice data "public" when they are playing
-	for ( int i = 0; i < CCSGameRules::sm_QueuedServerReservation.account_ids().size(); i++ )
+	for ( int i = 0; i < CCSGameRules::sm_QueuedServerReservation.account_ids.size(); i++ )
 	{
-		if ( steamID.GetAccountID() == CCSGameRules::sm_QueuedServerReservation.account_ids( i ) )
+		if ( steamID.GetAccountID() == CCSGameRules::sm_QueuedServerReservation.account_ids[ i ] )
 		{
 			// this is a player
 			return false;
 		}
 	}
 	// they weren't in the player list, so now check the caster list
-	for ( int i = 0; i < CCSGameRules::sm_QueuedServerReservation.tournament_casters_account_ids().size(); i++ )
+	for ( int i = 0; i < CCSGameRules::sm_QueuedServerReservation.tournament_casters_account_ids.size(); i++ )
 	{
-		if ( steamID.GetAccountID() == CCSGameRules::sm_QueuedServerReservation.tournament_casters_account_ids( i ) )
+		if ( steamID.GetAccountID() == CCSGameRules::sm_QueuedServerReservation.tournament_casters_account_ids[ i ] )
 		{
 			// this is a caster
 			return AddAccountToActiveCasters( steamID );
@@ -192,18 +192,18 @@ EncryptedMessageKeyType_t CServerGameDLL::GetMessageEncryptionKey( INetMessage *
 {
 	switch ( pMessage->GetType() )
 	{
-	case svc_VoiceData:
+	case ks::net::svc_VoiceData:
 		{
 			// check the voice data packets for being from an active caster and add the caster flag and use the public key
 			CSVCMsg_VoiceData_t *pVoiceData = ( CSVCMsg_VoiceData_t * ) pMessage;
-			CSteamID steamID( static_cast<uint64>( pVoiceData->xuid() ) );
+			CSteamID steamID( static_cast<uint64>( pVoiceData->xuid ) );
 			if ( steamID.GetAccountID() )
 			{
 				for ( int j = 0; j < CSGameRules()->m_arrTournamentActiveCasterAccounts.Count(); j++ )
 				{
 					if ( steamID.GetAccountID() == CSGameRules()->m_arrTournamentActiveCasterAccounts[ j ] )
 					{
-						pVoiceData->set_caster( true );
+						pVoiceData->caster = true;
 						return kEncryptedMessageKeyType_Public;
 					}
 				}
@@ -211,37 +211,37 @@ EncryptedMessageKeyType_t CServerGameDLL::GetMessageEncryptionKey( INetMessage *
 		}
 		return kEncryptedMessageKeyType_Private;
 
-	case svc_UserMessage:
+	case ks::net::svc_UserMessage:
 		{
 			CSVCMsg_UserMessage_t *pUsrMessageHeader = ( CSVCMsg_UserMessage_t * ) pMessage;
-			switch ( pUsrMessageHeader->msg_type() )
+			switch ( pUsrMessageHeader->msg_type )
 			{
-			case CS_UM_SayText:
+			case ks::net::CS_UM_SayText:
 				{
-					CCSUsrMsg_SayText usrMsg;
-					if ( usrMsg.ParseFromArray( &pUsrMessageHeader->msg_data().at( 0 ), pUsrMessageHeader->msg_data().size() ) )
+					ks::net::CCSUsrMsg_SayText usrMsg;
+					if ( ks::proto::read_bytes( usrMsg, &pUsrMessageHeader->msg_data->at( 0 ), pUsrMessageHeader->msg_data->size( ) ) )
 					{
-						if ( usrMsg.textallchat() )
+						if ( usrMsg.textallchat )
 							return kEncryptedMessageKeyType_Public;
 					}
 				}
 				return kEncryptedMessageKeyType_Private;
 			
-			case CS_UM_SayText2:
+			case ks::net::CS_UM_SayText2:
 				{
-					CCSUsrMsg_SayText2 usrMsg;
-					if ( usrMsg.ParseFromArray( &pUsrMessageHeader->msg_data().at( 0 ), pUsrMessageHeader->msg_data().size() ) )
+					ks::net::CCSUsrMsg_SayText2 usrMsg;
+					if ( ks::proto::read_bytes( usrMsg, &pUsrMessageHeader->msg_data->at( 0 ), pUsrMessageHeader->msg_data->size( ) ) )
 					{
-						if ( usrMsg.textallchat() )
+						if ( usrMsg.textallchat )
 							return kEncryptedMessageKeyType_Public;
 					}
 				}
 				return kEncryptedMessageKeyType_Private;
 
-			case CS_UM_TextMsg:
-			case CS_UM_RadioText:
-			case CS_UM_RawAudio:
-			case CS_UM_SendAudio:
+			case ks::net::CS_UM_TextMsg:
+			case ks::net::CS_UM_RadioText:
+			case ks::net::CS_UM_RawAudio:
+			case ks::net::CS_UM_SendAudio:
 				return kEncryptedMessageKeyType_Private;
 
 			default:
@@ -250,7 +250,7 @@ EncryptedMessageKeyType_t CServerGameDLL::GetMessageEncryptionKey( INetMessage *
 		}
 		return kEncryptedMessageKeyType_None;
 
-	case svc_EncryptedData:
+	case ks::net::svc_EncryptedData:
 	default:
 		return kEncryptedMessageKeyType_None;
 	}
@@ -288,7 +288,7 @@ void CServerGameDLL::OnEngineClientNetworkEvent( edict_t *edictClient, uint64 ul
 }
 
 // Game server notifying GC with its sync packet
-void CServerGameDLL::EngineGotvSyncPacket( const CEngineGotvSyncPacket *pPkt )
+void CServerGameDLL::EngineGotvSyncPacket( const ks::net::CEngineGotvSyncPacket *pPkt )
 {
 	/** Removed for partner depot **/
 }
@@ -471,17 +471,17 @@ const char * CServerGameClients::ClientNameHandler( uint64 xuid, const char *pch
 
 	// In tournament mode force names for the players according to the reservation
 	if ( steamID.IsValid() && steamID.BIndividualAccount() &&
-		CCSGameRules::sm_QueuedServerReservation.has_tournament_event() )
+		CCSGameRules::sm_QueuedServerReservation.tournament_event.has_value() )
 	{
-		for ( int32 iTeam = 0; iTeam < CCSGameRules::sm_QueuedServerReservation.tournament_teams().size(); ++iTeam )
+		for ( int32 iTeam = 0; iTeam < CCSGameRules::sm_QueuedServerReservation.tournament_teams.size(); ++iTeam )
 		{
-			TournamentTeam const &ttTeam = CCSGameRules::sm_QueuedServerReservation.tournament_teams( iTeam );
-			for ( int32 iTeamPlayer = 0; iTeamPlayer < ttTeam.players().size(); ++iTeamPlayer )
+			ks::net::TournamentTeam const &ttTeam = CCSGameRules::sm_QueuedServerReservation.tournament_teams[ iTeam ];
+			for ( int32 iTeamPlayer = 0; iTeamPlayer < ttTeam.players.size(); ++iTeamPlayer )
 			{
-				TournamentPlayer const &ttPlayer = ttTeam.players( iTeamPlayer );
-				if ( ttPlayer.account_id() && ( ttPlayer.account_id() == steamID.GetAccountID() ) )
+				ks::net::TournamentPlayer const &ttPlayer = ttTeam.players[ iTeamPlayer ];
+				if ( ttPlayer.account_id && ( ttPlayer.account_id == steamID.GetAccountID() ) )
 				{
-					return ( ttPlayer.player_nick().c_str() );
+					return ( ttPlayer.player_nick->c_str() );
 				}
 			}
 		}
@@ -507,10 +507,10 @@ void CServerGameClients::ClientSvcUserMessage( edict_t *pEntity, int nType, int 
 
 	switch ( nType )
 	{
-	case CS_UM_PlayerDecalDigitalSignature:
+	case ks::net::CS_UM_PlayerDecalDigitalSignature:
 		{
-			CCSUsrMsg_PlayerDecalDigitalSignature msg;
-			if ( msg.ParseFromArray( pvBuffer, cbSize ) )
+			ks::net::CCSUsrMsg_PlayerDecalDigitalSignature msg;
+			if ( ks::proto::read_bytes( msg, pvBuffer, cbSize ) )
 				pPlayer->SprayPaint( msg );
 		}
 		return;

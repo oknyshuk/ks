@@ -108,12 +108,12 @@ void ClientActive( edict_t *pEdict, bool bLoadGame )
 	user.MakeReliable();
 
 	// send the 4 end of match conditions.  long frag limit, long max rounds, long rounds needed won, and long time
-	CCSUsrMsg_MatchEndConditions msg;
-	msg.set_fraglimit( fraglimit.GetInt() );
-	msg.set_mp_maxrounds( mp_maxrounds.GetInt() );
-	msg.set_mp_winlimit( mp_winlimit.GetInt() );
-	msg.set_mp_timelimit( mp_timelimit.GetInt() );
-	SendUserMessage( user, CS_UM_MatchEndConditions, msg );
+	ks::net::CCSUsrMsg_MatchEndConditions msg;
+	msg.fraglimit = fraglimit.GetInt();
+	msg.mp_maxrounds = mp_maxrounds.GetInt();
+	msg.mp_winlimit = mp_winlimit.GetInt();
+	msg.mp_timelimit = mp_timelimit.GetInt();
+	SendUserMessage( user, ks::net::CS_UM_MatchEndConditions, msg );
 
 }
 

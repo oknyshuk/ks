@@ -435,28 +435,28 @@ bool C_FEPlayerDecal::BMakeDecalReadyToApplyToWorld()
 	VPROF( "C_FEPlayerDecal::BMakeDecalReadyToApplyToWorld" );
 
 	// Validate the signature before applying on the client
-	PlayerDecalDigitalSignature data;
-	data.set_accountid( m_unAccountID );
-	data.set_trace_id( m_unTraceID );
-	data.set_rtime( m_rtGcTime );
-	for ( int k = 0; k < 3; ++ k ) data.add_endpos( m_vecEndPos[k] );
-	for ( int k = 0; k < 3; ++ k ) data.add_startpos( m_vecStart[k] );
-	for ( int k = 0; k < 3; ++ k ) data.add_right( m_vecRight[k] );
-	for ( int k = 0; k < 3; ++ k ) data.add_normal( m_vecNormal[k] );
-	data.set_tx_defidx( m_nPlayer );
-	data.set_entindex( m_nEntity );
-	data.set_hitbox( m_nHitbox );
-	data.set_tint_id( m_nTintID );
-	data.set_creationtime( m_flCreationTime );
+	ks::net::PlayerDecalDigitalSignature data;
+	data.accountid = m_unAccountID;
+	data.trace_id = m_unTraceID;
+	data.rtime = m_rtGcTime;
+	for ( int k = 0; k < 3; ++ k ) data.endpos.emplace_back( m_vecEndPos[k] );
+	for ( int k = 0; k < 3; ++ k ) data.startpos.emplace_back( m_vecStart[k] );
+	for ( int k = 0; k < 3; ++ k ) data.right.emplace_back( m_vecRight[k] );
+	for ( int k = 0; k < 3; ++ k ) data.normal.emplace_back( m_vecNormal[k] );
+	data.tx_defidx = m_nPlayer;
+	data.entindex = m_nEntity;
+	data.hitbox = m_nHitbox;
+	data.tint_id = m_nTintID;
+	data.creationtime = m_flCreationTime;
 	if ( m_nVersion == PLAYERDECALS_SIGNATURE_VERSION )
-		data.set_signature( &m_ubSignature[0], PLAYERDECALS_SIGNATURE_BYTELEN );
+		data.signature = std::string( ( const char * ) &m_ubSignature[0], PLAYERDECALS_SIGNATURE_BYTELEN );
 #ifdef _DEBUG
 	{
-		float flendpos[ 3 ] = { data.endpos( 0 ), data.endpos( 1 ), data.endpos( 2 ) };
-		float flstartpos[ 3 ] = { data.startpos( 0 ), data.startpos( 1 ), data.startpos( 2 ) };
-		float flright[ 3 ] = { data.right( 0 ), data.right( 1 ), data.right( 2 ) };
-		float flnormal[ 3 ] = { data.normal( 0 ), data.normal( 1 ), data.normal( 2 ) };
-		DevMsg( "Client signature #%u e(%08X,%08X,%08X) s(%08X,%08X,%08X) r(%08X,%08X,%08X) n(%08X,%08X,%08X)\n", data.trace_id(),
+		float flendpos[ 3 ] = { data.endpos[ 0 ], data.endpos[ 1 ], data.endpos[ 2 ] };
+		float flstartpos[ 3 ] = { data.startpos[ 0 ], data.startpos[ 1 ], data.startpos[ 2 ] };
+		float flright[ 3 ] = { data.right[ 0 ], data.right[ 1 ], data.right[ 2 ] };
+		float flnormal[ 3 ] = { data.normal[ 0 ], data.normal[ 1 ], data.normal[ 2 ] };
+		DevMsg( "Client signature #%u e(%08X,%08X,%08X) s(%08X,%08X,%08X) r(%08X,%08X,%08X) n(%08X,%08X,%08X)\n", data.trace_id,
 			*reinterpret_cast< uint32 * >( &flendpos[ 0 ] ), *reinterpret_cast< uint32 * >( &flendpos[ 1 ] ), *reinterpret_cast< uint32 * >( &flendpos[ 2 ] ),
 			*reinterpret_cast< uint32 * >( &flstartpos[ 0 ] ), *reinterpret_cast< uint32 * >( &flstartpos[ 1 ] ), *reinterpret_cast< uint32 * >( &flstartpos[ 2 ] ),
 			*reinterpret_cast< uint32 * >( &flright[ 0 ] ), *reinterpret_cast< uint32 * >( &flright[ 1 ] ), *reinterpret_cast< uint32 * >( &flright[ 2 ] ),

@@ -591,12 +591,12 @@ C_BasePlayer::~C_BasePlayer()
 	}
 }
 
-bool MsgFunc_SendLastKillerDamageToClient( const CCSUsrMsg_SendLastKillerDamageToClient &msg )
+bool MsgFunc_SendLastKillerDamageToClient( const ks::net::CCSUsrMsg_SendLastKillerDamageToClient &msg )
 {
-	int nNumHitsGiven = msg.num_hits_given();
-	int nDamageGiven = msg.damage_given();
-	int nNumHitsTaken = msg.num_hits_taken();
-	int nDamageTaken = msg.damage_taken();
+	int nNumHitsGiven = msg.num_hits_given;
+	int nDamageGiven = msg.damage_given;
+	int nNumHitsTaken = msg.num_hits_taken;
+	int nDamageTaken = msg.damage_taken;
 
 	C_BasePlayer *pPlayer = C_BasePlayer::GetLocalPlayer();
 	if ( pPlayer )
@@ -612,7 +612,7 @@ bool MsgFunc_SendLastKillerDamageToClient( const CCSUsrMsg_SendLastKillerDamageT
 //-----------------------------------------------------------------------------
 void C_BasePlayer::Spawn( void )
 {
-	m_UMCMsg_SendLastKillerDamageToClient.Bind< CS_UM_SendLastKillerDamageToClient, CCSUsrMsg_SendLastKillerDamageToClient >
+	m_UMCMsg_SendLastKillerDamageToClient.Bind< ks::net::CS_UM_SendLastKillerDamageToClient, ks::net::CCSUsrMsg_SendLastKillerDamageToClient >
 		( UtlMakeDelegate( MsgFunc_SendLastKillerDamageToClient ));
 
 	// Clear all flags except for FL_FULLEDICT

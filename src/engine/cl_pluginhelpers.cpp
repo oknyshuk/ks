@@ -15,6 +15,6 @@ CPluginUIManager *g_PluginManager = &s_PluginManager;
 
 ConVar cl_showpluginmessages ( "cl_showpluginmessages", "1", FCVAR_ARCHIVE, "Allow plugins to display messages to you" );
 
-void PluginHelpers_Menu( const CSVCMsg_Menu& msg )
+void PluginHelpers_Menu( const ks::net::CSVCMsg_Menu& msg )
 {
 }

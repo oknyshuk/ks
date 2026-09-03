@@ -43,24 +43,6 @@ DXVK_SHADERS = ["src/dxvk/shaders", "src/dxvk/hud/shaders", "src/d3d9/shaders"]
 DXVK_INCLUDES = "include include/native include/native/windows include/native/directx include/vulkan/include include/spirv/include"
 DXVK_DEFINES = ["DXVK_NATIVE", "DXVK_WSI_SDL3", "DXVK_PLATFORM_LINUX"]
 
-# protobuf is the one dependency that cannot be globbed: it is a curated subset
-# of the runtime (no compiler backends, no tests) in an order the unity build
-# depends on -- extension_set.cc and extension_set_heavy.cc both define
-# real_type() in an anonymous namespace, so they must land in different chunks.
-PROTOBUF_SOURCES = """
-    stubs/atomicops_internals_x86_gcc.cc stubs/atomicops_internals_x86_msvc.cc
-    stubs/common.cc stubs/once.cc stubs/stringprintf.cc extension_set.cc
-    generated_message_util.cc message_lite.cc repeated_field.cc
-    wire_format_lite.cc io/coded_stream.cc io/zero_copy_stream.cc
-    io/zero_copy_stream_impl_lite.cc stubs/strutil.cc stubs/substitute.cc
-    stubs/structurally_valid.cc descriptor.cc descriptor.pb.cc
-    descriptor_database.cc dynamic_message.cc extension_set_heavy.cc
-    generated_message_reflection.cc message.cc reflection_ops.cc service.cc
-    text_format.cc unknown_field_set.cc wire_format.cc io/gzip_stream.cc
-    io/printer.cc io/strtod.cc io/tokenizer.cc io/zero_copy_stream_impl.cc
-    compiler/importer.cc compiler/parser.cc
-"""
-
 
 def options(opt):
     return
@@ -203,25 +185,6 @@ def _jolt(bld):
     )
 
 
-def _protobuf(bld):
-    root = _tree(bld, "protobuf-*")
-    src = root.find_dir("src")
-    _lib(
-        bld,
-        "protobuf",
-        src,
-        sources=" ".join("google/protobuf/" + s for s in PROTOBUF_SOURCES.split()),
-        root=src,
-        includes=["."],
-        defines=[] if bld.env.DEST_OS == "win32" else ["HAVE_PTHREAD"],
-        features="cxx unity",
-        unity_size=10,
-        # false positives from GCC's LTO analysis
-        cxxflags=[] if bld.env.DEST_OS == "win32"
-        else ["-Wno-free-nonheap-object", "-Wno-nan-infinity-disabled"],
-    )
-
-
 def _rmlui(bld):
     root = _tree(bld, "RmlUi-*")
     include = root.find_dir("Include")
@@ -354,7 +317,6 @@ def build(bld):
     _celt(bld)
     _mojoal(bld)
     _jolt(bld)
-    _protobuf(bld)
     if bld.env.DEST_OS == "win32":
         return  # dxvk is the D3D9 implementation, and RmlUi renders through it
     _dxvk(bld)

@@ -17,7 +17,7 @@
 
 #include "steam/steam_gameserver.h"
 
-class CEngineGotvSyncPacket;
+namespace ks::net { struct CEngineGotvSyncPacket; }
 
 extern INetworkStringTable *g_pStringTableInfoPanel;
 
@@ -236,7 +236,7 @@ public:
                                           uint64 ullSteamID, int nEventType,
                                           void *pvParam) OVERRIDE;
 
-  virtual void EngineGotvSyncPacket(const CEngineGotvSyncPacket *pPkt);
+  virtual void EngineGotvSyncPacket(const ks::net::CEngineGotvSyncPacket *pPkt);
 
   // GOTV client attempt redirect over SDR
   virtual bool OnEngineClientProxiedRedirect(uint64 ullClient,

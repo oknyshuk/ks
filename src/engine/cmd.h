@@ -89,7 +89,7 @@
 //    client could not execute themselves (that is, commands with both FCVAR_SERVER_CAN_EXECUTE 
 //    *and* FCVAR_CHEAT are executable on the client *only* when requested by the server).
 //
-//    Sent by any CNETMsg_StringCmd; Two canonical ways to send this message:
+//    Sent by any ks::net::CNETMsg_StringCmd; Two canonical ways to send this message:
 //    - SV_ExecuteRemoteCommand in sv_main.cpp
 //    - g_pVEngineServer->ClientCommand in vengineserver_impl.cpp (important
 //      note: "ClientCommand" here is different from "ClientCmd" below!!)

@@ -1300,48 +1300,48 @@ bool SendTable_WriteInfos( const SendTable *pTable, bf_write& bfWrite, bool bNee
 	{
 		// Write the end bit to signal no more send tables
 		Assert( !pTable && bIsEnd );
-		msg.set_is_end( true );
+		msg.is_end = true;
 		return msg.WriteToBuffer( bfWrite );
 	}
 
 	if ( bNeedsDecoder ) // only set if true, let the default false
 	{
-		msg.set_needs_decoder( bNeedsDecoder );
+		msg.needs_decoder = bNeedsDecoder;
 	}
 
-	msg.set_net_table_name( pTable->GetName() );
+	msg.net_table_name = pTable->GetName();
 
 	// Send each property.
 	for ( int iProp=0; iProp < pTable->m_nProps; iProp++ )
 	{
 		const SendProp *pProp = &pTable->m_pProps[iProp];
-		CSVCMsg_SendTable::sendprop_t *pSendProp = msg.add_props();
+		ks::net::CSVCMsg_SendTable::sendprop_t *pSendProp = &msg.props.emplace_back();
 
-		pSendProp->set_type( pProp->m_Type );
-		pSendProp->set_var_name( pProp->GetName() );
+		pSendProp->type = pProp->m_Type;
+		pSendProp->var_name = pProp->GetName();
 		// we now have some flags that aren't networked so strip them off
 		unsigned int networkFlags = pProp->GetFlags() & ((1<<SPROP_NUMFLAGBITS_NETWORKED)-1);
-		pSendProp->set_flags( networkFlags );
-		pSendProp->set_priority( pProp->GetPriority() );
+		pSendProp->flags = networkFlags;
+		pSendProp->priority = pProp->GetPriority();
 
 		if( pProp->m_Type == DPT_DataTable )
 		{
 			// Just write the name and it will be able to reuse the table with a matching name.
-			pSendProp->set_dt_name( pProp->GetDataTable()->m_pNetTableName );
+			pSendProp->dt_name = pProp->GetDataTable()->m_pNetTableName;
 		}
 		else if ( pProp->IsExcludeProp() )
 		{
-			pSendProp->set_dt_name( pProp->GetExcludeDTName() );
+			pSendProp->dt_name = pProp->GetExcludeDTName();
 		}
 		else if ( pProp->GetType() == DPT_Array )
 		{
-			pSendProp->set_num_elements( pProp->GetNumElements() );
+			pSendProp->num_elements = pProp->GetNumElements();
 		}
 		else
 		{			
-			pSendProp->set_low_value( pProp->m_fLowValue );
-			pSendProp->set_high_value( pProp->m_fHighValue );
-			pSendProp->set_num_bits( pProp->m_nBits );
+			pSendProp->low_value = pProp->m_fLowValue;
+			pSendProp->high_value = pProp->m_fHighValue;
+			pSendProp->num_bits = pProp->m_nBits;
 		}
 	}
 

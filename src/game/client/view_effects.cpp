@@ -212,14 +212,14 @@ static void ( *s_pfnFadeDoneCallback )( int parm1 );
 //			*pbuf - 
 // Output : static int
 //-----------------------------------------------------------------------------
-bool __MsgFunc_Shake( const CCSUsrMsg_Shake &msg )
+bool __MsgFunc_Shake( const ks::net::CCSUsrMsg_Shake &msg )
 {
 	ScreenShake_t shake;
 
-	shake.command	= (ShakeCommand_t)(msg.command());
-	shake.amplitude = msg.local_amplitude();
-	shake.frequency = msg.frequency();
-	shake.duration	= msg.duration();
+	shake.command	= (ShakeCommand_t)( msg.command.get() );
+	shake.amplitude = msg.local_amplitude;
+	shake.frequency = msg.frequency;
+	shake.duration	= msg.duration;
 
 	GetCViewEffects().Shake( shake );
 
@@ -279,17 +279,17 @@ void __MsgFunc_Tilt( bf_read &msg )
 //			*pbuf - 
 // Output : static int
 //-----------------------------------------------------------------------------
-bool __MsgFunc_Fade( const CCSUsrMsg_Fade &msg )
+bool __MsgFunc_Fade( const ks::net::CCSUsrMsg_Fade &msg )
 {
 	ScreenFade_t fade;
 
-	fade.duration = msg.duration(); // fade lasts this long
-	fade.holdTime = msg.hold_time(); // fade lasts this long
-	fade.fadeFlags = msg.flags(); // fade type (in / out)
-	fade.r = msg.clr().r(); // fade red
-	fade.g = msg.clr().g(); // fade green
-	fade.b = msg.clr().b(); // fade blue
-	fade.a = msg.clr().a(); // fade blue
+	fade.duration = msg.duration; // fade lasts this long
+	fade.holdTime = msg.hold_time; // fade lasts this long
+	fade.fadeFlags = msg.flags; // fade type (in / out)
+	fade.r = msg.clr->r; // fade red
+	fade.g = msg.clr->g; // fade green
+	fade.b = msg.clr->b; // fade blue
+	fade.a = msg.clr->a; // fade blue
 
 	GetCViewEffects().Fade( fade );
 

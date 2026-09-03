@@ -1825,7 +1825,7 @@ int Host_CountVariablesWithFlags( int flags, bool nonDefault )
 // Purpose:
 // Input  : msg -
 //-----------------------------------------------------------------------------
-void Host_BuildUserInfoUpdateMessage( int nSplitScreenSlot, CMsg_CVars *rCvarList, bool nonDefault )
+void Host_BuildUserInfoUpdateMessage( int nSplitScreenSlot, ks::net::CMsg_CVars *rCvarList, bool nonDefault )
 {
 	// Slot 0 does the easy version, all userinfo, except _ADDED ones
 	int nRequiredFlags = FCVAR_USERINFO;
@@ -1848,7 +1848,7 @@ void Host_BuildUserInfoUpdateMessage( int nSplitScreenSlot, CMsg_CVars *rCvarLis
 	if ( Steam3Client().SteamUser() && Steam3Client().SteamUser()->GetSteamID().GetAccountID() )
 	{
 		++ count;
-		NetMsgSetCVarUsingDictionary( rCvarList->add_cvars(), "accountid",
+		NetMsgSetCVarUsingDictionary( &rCvarList->cvars.emplace_back(), "accountid",
 			CFmtStr( "%u", Steam3Client().SteamUser()->GetSteamID().GetAccountID() ) );
 	}
 #endif
@@ -1872,26 +1872,26 @@ void Host_BuildUserInfoUpdateMessage( int nSplitScreenSlot, CMsg_CVars *rCvarLis
 		if ( pthiscvar->GetSplitScreenPlayerSlot() != nSplitScreenSlot )
 			continue;
 
-		NetMsgSetCVarUsingDictionary( rCvarList->add_cvars(), pthiscvar->GetBaseName(),
+		NetMsgSetCVarUsingDictionary( &rCvarList->cvars.emplace_back(), pthiscvar->GetBaseName(),
 			Host_CleanupConVarStringValue( pthiscvar->GetString() ) );
 	}
 
 	// Too many to send, error out and have mod author get a clue.
-	if ( rCvarList->cvars_size() > 255 )
+	if ( rCvarList->cvars.size() > 255 )
 	{
 		Sys_Error( "Engine only supports 255 ConVars marked %i\n", FCVAR_USERINFO );
 		return;
 	}
 
 	// Make sure this count matches original one
-	Assert( rCvarList->cvars_size() <= count );
+	Assert( rCvarList->cvars.size() <= count );
 }
 
 //-----------------------------------------------------------------------------
 // Purpose:
 // Input  : msg -
 //-----------------------------------------------------------------------------
-void Host_BuildConVarUpdateMessage( CMsg_CVars *rCvarList, int flags, bool nonDefault )
+void Host_BuildConVarUpdateMessage( ks::net::CMsg_CVars *rCvarList, int flags, bool nonDefault )
 {
 	int count = Host_CountVariablesWithFlags( flags, nonDefault );
 
@@ -1922,7 +1922,7 @@ void Host_BuildConVarUpdateMessage( CMsg_CVars *rCvarList, int flags, bool nonDe
 		if ( nonDefault && !Q_strcasecmp( pthiscvar->GetDefault(), pthiscvar->GetString() ) )
 			continue;
 
-		NetMsgSetCVarUsingDictionary( rCvarList->add_cvars(), pthiscvar->GetName(),
+		NetMsgSetCVarUsingDictionary( &rCvarList->cvars.emplace_back(), pthiscvar->GetName(),
 			Host_CleanupConVarStringValue( pthiscvar->GetString() ) );
 	}
 }
@@ -1947,25 +1947,25 @@ void CL_SendVoicePacket(bool bFinal)
 	{
 		CCLCMsg_VoiceData_t voiceMsg;
 
-		voiceMsg.set_data( uchVoiceData, nLength );
+		voiceMsg.data = std::string( ( const char * ) uchVoiceData, nLength );
 		if ( format == VoiceFormat_Steam )
 		{
-			voiceMsg.set_format( VOICEDATA_FORMAT_STEAM );
+			voiceMsg.format = ks::net::VOICEDATA_FORMAT_STEAM;
 		}
 		else
 		{
-			voiceMsg.set_format( VOICEDATA_FORMAT_ENGINE );
+			voiceMsg.format = ks::net::VOICEDATA_FORMAT_ENGINE;
 		}
 
 		player_info_t playerInfo;
 		if ( engineClient->GetPlayerInfo( engineClient->GetLocalPlayer(), &playerInfo ) )
 		{
-			voiceMsg.set_xuid( playerInfo.xuid );
+			voiceMsg.xuid = playerInfo.xuid;
 		}
 
-		voiceMsg.set_section_number( nSectionNumber );
-		voiceMsg.set_sequence_bytes( nSectionSequenceNumber );
-		voiceMsg.set_uncompressed_sample_offset( nUncompressedSampleOffset );
+		voiceMsg.section_number = nSectionNumber;
+		voiceMsg.sequence_bytes = nSectionSequenceNumber;
+		voiceMsg.uncompressed_sample_offset = nUncompressedSampleOffset;
 
 		GetBaseLocalClient().m_NetChannel->SendNetMsg( voiceMsg );
 	}

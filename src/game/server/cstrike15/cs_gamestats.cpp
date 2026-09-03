@@ -1283,7 +1283,7 @@ void CCSGameStats::SendStatsToPlayer( CCSPlayer * pPlayer, int iMinStatPriority 
 		CSingleUserRecipientFilter filter( pPlayer );
 		filter.MakeReliable();
 
-		CCSUsrMsg_PlayerStatsUpdate msg;
+		ks::net::CCSUsrMsg_PlayerStatsUpdate msg;
 		
 		CRC32_t crc;
 		CRC32_Init( &crc );
@@ -1295,7 +1295,7 @@ void CCSGameStats::SendStatsToPlayer( CCSPlayer * pPlayer, int iMinStatPriority 
 		// if we make any change to the ordering of the stats or this message format, update this value
 		const byte version = 0x03;
 		CRC32_ProcessBuffer( &crc, &version, sizeof(version));
-		msg.set_version(version);
+		msg.version = version;
 
 		CRC32Helper_ProcessInt16( crc, iStatsToSend );
 
@@ -1304,16 +1304,16 @@ void CCSGameStats::SendStatsToPlayer( CCSPlayer * pPlayer, int iMinStatPriority 
 			int iPriority = CSStatProperty_Table[iStat].flags & CSSTAT_PRIORITY_MASK;
 			if (deltaStats[iStat] != 0 && iPriority >= iMinStatPriority)
 			{
-				CCSUsrMsg_PlayerStatsUpdate::Stat *pStat = msg.add_stats();
+				ks::net::CCSUsrMsg_PlayerStatsUpdate::Stat *pStat = &msg.stats.emplace_back();
 
 				CRC32Helper_ProcessInt16( crc, iStat );
-				pStat->set_idx(iStat);
+				pStat->idx = iStat;
 
 				Assert(deltaStats[iStat] <= 0x7FFF && deltaStats[iStat] > 0);	// make sure we aren't truncating bits
 
 				short delta = deltaStats[iStat];
 				CRC32Helper_ProcessInt16( crc, delta );
-				pStat->set_delta( deltaStats[iStat]);
+				pStat->delta = deltaStats[iStat];
 
 				deltaStats[iStat] = 0;
 				--iStatsToSend;
@@ -1323,13 +1323,13 @@ void CCSGameStats::SendStatsToPlayer( CCSPlayer * pPlayer, int iMinStatPriority 
 		Assert(iStatsToSend == 0);
 
 		int userID = pPlayer->GetUserID();
-		msg.set_user_id( userID );
+		msg.user_id = userID;
 		CRC32Helper_ProcessInt32( crc, userID );
 
 		CRC32_Final( &crc );
-		msg.set_crc(crc);
+		msg.crc = crc;
 
-		SendUserMessage( filter, CS_UM_PlayerStatsUpdate, msg );
+		SendUserMessage( filter, ks::net::CS_UM_PlayerStatsUpdate, msg );
 	}
 }
 

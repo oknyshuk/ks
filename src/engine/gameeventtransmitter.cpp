@@ -102,7 +102,7 @@ void CGameEventTransmitter::TransmitGameEvent( IGameEvent *event )
 	CSVCMsg_GameEvent_t eventData;
 
 	// We send the event name instead of event ID becase the ID's can change depending on what the server sends to the clients
-	eventData.set_event_name( event->GetName() );
+	eventData.event_name = event->GetName();
 
 	// create bitstream from KeyValues
 	if ( g_GameEventManager.SerializeEvent( event, &eventData ) )

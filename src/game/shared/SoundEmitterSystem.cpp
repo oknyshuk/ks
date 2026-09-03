@@ -1099,23 +1099,23 @@ public:
 				{
 					if ( bForceSubtitle )
 					{
-						CCSUsrMsg_CloseCaptionDirect msg;
-						msg.set_hash( hash );
-						msg.set_duration( clamp( (int)( duration * 10.0f ), 0, 65535 ) );
-						msg.set_from_player( fromplayer ? 1 : 0 );
+						ks::net::CCSUsrMsg_CloseCaptionDirect msg;
+						msg.hash = hash;
+						msg.duration = clamp( (int)( duration * 10.0f ), 0, 65535 );
+						msg.from_player = fromplayer ? 1 : 0;
 
 						// Send forced caption and duration hint down to client
-						SendUserMessage( filterCopy, CS_UM_CloseCaptionDirect, msg );						
+						SendUserMessage( filterCopy, ks::net::CS_UM_CloseCaptionDirect, msg );						
 					}
 					else
 					{
-						CCSUsrMsg_CloseCaption msg;
-						msg.set_hash( hash );
-						msg.set_duration( clamp( (int)( duration * 10.0f ), 0, 65535 ) );
-						msg.set_from_player( fromplayer ? 1 : 0 );
+						ks::net::CCSUsrMsg_CloseCaption msg;
+						msg.hash = hash;
+						msg.duration = clamp( (int)( duration * 10.0f ), 0, 65535 );
+						msg.from_player = fromplayer ? 1 : 0;
 
 						// Send caption and duration hint down to client						
-						SendUserMessage( filterCopy, CS_UM_CloseCaption, msg );
+						SendUserMessage( filterCopy, ks::net::CS_UM_CloseCaption, msg );
 					}
 				}
 			}

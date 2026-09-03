@@ -27,7 +27,7 @@ public:
 	void VidInit( void );
 	void Reset( void );
 	virtual bool ShouldDraw( void );
-	bool MsgFunc_ShowMenu( const CCSUsrMsg_ShowMenu &msg );
+	bool MsgFunc_ShowMenu( const ks::net::CCSUsrMsg_ShowMenu &msg );
 	void HideMenu( void );
 	void ShowMenu( const char * menuName, int keySlot );
 	void ShowMenu_KeyValueItems( KeyValues *pKV );

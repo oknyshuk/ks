@@ -333,14 +333,14 @@ void CCSBot::SpeakAudio( const char *voiceFilename, float duration, int pitch )
 	CRecipientFilter filter;
 	ConstructRadioFilter( filter );
 
-	CCSUsrMsg_RawAudio msg;
+	ks::net::CCSUsrMsg_RawAudio msg;
 
-	msg.set_pitch( pitch );
-	msg.set_entidx( entindex() );
-	msg.set_duration( duration );
-	msg.set_voice_filename( voiceFilename );
+	msg.pitch = pitch;
+	msg.entidx = entindex();
+	msg.duration = duration;
+	msg.voice_filename = voiceFilename;
 
-	SendUserMessage ( filter, CS_UM_RawAudio, msg );
+	SendUserMessage ( filter, ks::net::CS_UM_RawAudio, msg );
 
 	GetChatter()->ResetRadioSilenceDuration();
 

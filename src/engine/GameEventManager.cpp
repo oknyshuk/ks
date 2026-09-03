@@ -262,7 +262,7 @@ bool CGameEventManager::HasClientListenersChanged( bool bReset /* = true  */)
 	return true;
 }
 
-void CGameEventManager::WriteEventList(CSVCMsg_GameEventList *msg)
+void CGameEventManager::WriteEventList(ks::net::CSVCMsg_GameEventList *msg)
 {
 	for (int i=0; i < m_GameEvents.Count(); i++ )
 	{
@@ -273,11 +273,11 @@ void CGameEventManager::WriteEventList(CSVCMsg_GameEventList *msg)
 
 		Assert( descriptor.eventid >= 0 && descriptor.eventid < MAX_EVENT_NUMBER );
 
-		CSVCMsg_GameEventList::descriptor_t *pDescriptor = msg->add_descriptors();
+		ks::net::CSVCMsg_GameEventList::descriptor_t *pDescriptor = &msg->descriptors.emplace_back();
 		const char *pName = m_EventMap.GetElementName( descriptor.elementIndex );
 
-		pDescriptor->set_eventid( descriptor.eventid );
-		pDescriptor->set_name( pName );
+		pDescriptor->eventid = descriptor.eventid;
+		pDescriptor->name = pName;
 
 		KeyValues *key = descriptor.keys->GetFirstSubKey();
 
@@ -287,10 +287,10 @@ void CGameEventManager::WriteEventList(CSVCMsg_GameEventList *msg)
 
 			if ( type != TYPE_LOCAL )
 			{
-				CSVCMsg_GameEventList::key_t *pKey = pDescriptor->add_keys();
+				ks::net::CSVCMsg_GameEventList::key_t *pKey = &pDescriptor->keys.emplace_back();
 
-				pKey->set_type( type );
-				pKey->set_name( key->GetName() );
+				pKey->type = type;
+				pKey->name = key->GetName();
 			}
 
 			key = key->GetNextKey();
@@ -298,7 +298,7 @@ void CGameEventManager::WriteEventList(CSVCMsg_GameEventList *msg)
 	}
 }
 
-bool CGameEventManager::ParseEventList(const CSVCMsg_GameEventList& msg)
+bool CGameEventManager::ParseEventList(const ks::net::CSVCMsg_GameEventList& msg)
 {
 	int i;
 	AUTO_LOCK_FM( m_mutex );
@@ -311,19 +311,19 @@ bool CGameEventManager::ParseEventList(const CSVCMsg_GameEventList& msg)
 	}
 
 	// map server event IDs
-	int nNumEvents = msg.descriptors_size();
+	int nNumEvents = msg.descriptors.size();
 	for (i = 0; i<nNumEvents; i++)
 	{
-		const CSVCMsg_GameEventList::descriptor_t& EventDescriptor = msg.descriptors( i );
+		const ks::net::CSVCMsg_GameEventList::descriptor_t& EventDescriptor = msg.descriptors[ i ];
 
-		const char *name = EventDescriptor.name().c_str();
+		const char *name = EventDescriptor.name->c_str();
 
 		CGameEventDescriptor *descriptor = GetEventDescriptor( name );
 
 		// if event is known to client...
 		if ( descriptor )
 		{
-			descriptor->eventid = EventDescriptor.eventid();
+			descriptor->eventid = EventDescriptor.eventid;
 
 			// remove old definition list
 			if ( descriptor->keys )
@@ -331,12 +331,12 @@ bool CGameEventManager::ParseEventList(const CSVCMsg_GameEventList& msg)
 
 			descriptor->keys = new KeyValues("descriptor");
 
-			int nNumKeys = EventDescriptor.keys_size();
+			int nNumKeys = EventDescriptor.keys.size();
 			for (int key = 0; key < nNumKeys; key++)
 			{
-				const CSVCMsg_GameEventList::key_t &Key = EventDescriptor.keys( key );
+				const ks::net::CSVCMsg_GameEventList::key_t &Key = EventDescriptor.keys[ key ];
 
-				descriptor->keys->SetInt( Key.name().c_str(), Key.type() );
+				descriptor->keys->SetInt( Key.name->c_str(), Key.type );
 			}
 		}
 	}
@@ -347,7 +347,7 @@ bool CGameEventManager::ParseEventList(const CSVCMsg_GameEventList& msg)
 	return true;
 }
 
-void CGameEventManager::WriteListenEventList(CCLCMsg_ListenEvents *msg)
+void CGameEventManager::WriteListenEventList(ks::net::CCLCMsg_ListenEvents *msg)
 {
 	CBitVec<MAX_EVENT_NUMBER> EventArray;
 
@@ -394,7 +394,7 @@ void CGameEventManager::WriteListenEventList(CCLCMsg_ListenEvents *msg)
 	int count = ( m_GameEvents.Count() + 31 ) / 32;
 	for( int i = 0; i < count; i++ )
 	{
-		msg->add_event_mask( EventArray.GetDWord( i ) );
+		msg->event_mask.emplace_back( EventArray.GetDWord( i ) );
 	}
 }
 
@@ -607,14 +607,14 @@ bool CGameEventManager::FireEventIntern( IGameEvent *event, bool bServerOnly, bo
 	return true;
 }
 
-bool CGameEventManager::SerializeEvent( IGameEvent *event, CSVCMsg_GameEvent *eventMsg )
+bool CGameEventManager::SerializeEvent( IGameEvent *event, ks::net::CSVCMsg_GameEvent *eventMsg )
 {
 	AUTO_LOCK_FM( m_mutex );
 	CGameEventDescriptor *descriptor = GetEventDescriptor( event );
 
 	Assert( descriptor );
 
-	eventMsg->set_eventid( descriptor->eventid );
+	eventMsg->eventid = descriptor->eventid;
 
 	// now iterate trough all fields described in gameevents.res and put them in the buffer
 
@@ -639,27 +639,27 @@ bool CGameEventManager::SerializeEvent( IGameEvent *event, CSVCMsg_GameEvent *ev
 
 		if( type != TYPE_LOCAL )
 		{
-			CSVCMsg_GameEvent::key_t *pKey = eventMsg->add_keys();
+			ks::net::CSVCMsg_GameEvent::key_t *pKey = &eventMsg->keys.emplace_back();
 
 			//Make sure every key is used in the event
 			// Assert( event->FindKey(keyName) && "GameEvent field not found in passed KeyValues" );
 
-			pKey->set_type( type );
+			pKey->type = type;
 
 			// see s_GameEventTypesMap for index
 			switch ( type )
 			{
-			case TYPE_STRING: pKey->set_val_string( event->GetString( keyName, "") ); break;
-			case TYPE_FLOAT : pKey->set_val_float( event->GetFloat( keyName, 0.0f) ); break;
-			case TYPE_LONG	: pKey->set_val_long( event->GetInt( keyName, 0) ); break;
-			case TYPE_SHORT	: pKey->set_val_short( event->GetInt( keyName, 0) ); break;
-			case TYPE_BYTE	: pKey->set_val_byte( event->GetInt( keyName, 0) ); break;
-			case TYPE_BOOL	: pKey->set_val_bool( !!event->GetInt( keyName, 0) ); break;
-			case TYPE_UINT64: pKey->set_val_uint64( event->GetUint64( keyName, 0) ); break;
+			case TYPE_STRING: pKey->val_string = event->GetString( keyName, ""); break;
+			case TYPE_FLOAT : pKey->val_float = event->GetFloat( keyName, 0.0f); break;
+			case TYPE_LONG	: pKey->val_long = event->GetInt( keyName, 0); break;
+			case TYPE_SHORT	: pKey->val_short = event->GetInt( keyName, 0); break;
+			case TYPE_BYTE	: pKey->val_byte = event->GetInt( keyName, 0); break;
+			case TYPE_BOOL	: pKey->val_bool = !!event->GetInt( keyName, 0); break;
+			case TYPE_UINT64: pKey->val_uint64 = event->GetUint64( keyName, 0); break;
 			case TYPE_WSTRING:
 				{
 					const wchar_t *pStr = event->GetWString( keyName, L"");
-					pKey->set_val_wstring( pStr, wcslen( pStr ) + 1 );
+					pKey->val_wstring = std::string( ( const char * ) pStr, wcslen( pStr ) + 1 );
 				}
 				break;
 			default: DevMsg(1, "CGameEventManager: unknown type %i for key '%s'.\n", type, key->GetName() ); break;
@@ -671,23 +671,23 @@ bool CGameEventManager::SerializeEvent( IGameEvent *event, CSVCMsg_GameEvent *ev
 
 	if ( net_showevents.GetInt() > 2 )
 	{
-		int nBytes = eventMsg->ByteSize();
+		int nBytes = int( ks::proto::byte_size( *eventMsg ) );
 		Msg( " took %d bits, %d bytes\n", nBytes * 8, nBytes );
 	}
 
 	descriptor->numSerialized++;
-	descriptor->totalSerializedBits += eventMsg->ByteSize() * 8;
+	descriptor->totalSerializedBits += int( ks::proto::byte_size( *eventMsg ) ) * 8;
 
 	return true;
 }
 
-IGameEvent *CGameEventManager::UnserializeEvent( const CSVCMsg_GameEvent& eventMsg )
+IGameEvent *CGameEventManager::UnserializeEvent( const ks::net::CSVCMsg_GameEvent& eventMsg )
 {
 	AUTO_LOCK_FM( m_mutex );
 
 	// read event id
 
-	int eventid = eventMsg.eventid();
+	int eventid = eventMsg.eventid;
 
 	// get event description
 	CGameEventDescriptor *descriptor = GetEventDescriptor( eventid );
@@ -708,34 +708,34 @@ IGameEvent *CGameEventManager::UnserializeEvent( const CSVCMsg_GameEvent& eventM
 		return NULL;
 	}
 
-	int nNumKeys = eventMsg.keys_size();
+	int nNumKeys = eventMsg.keys.size();
 	KeyValues * key = descriptor->keys->GetFirstSubKey();
 
 	for( int i = 0; key && ( i < nNumKeys ); i++, key = key->GetNextKey() )
 	{
-		const CSVCMsg_GameEvent::key_t &KeyEvent = eventMsg.keys( i );
+		const ks::net::CSVCMsg_GameEvent::key_t &KeyEvent = eventMsg.keys[ i ];
 		const char * keyName = key->GetName();
 
-		int type = KeyEvent.type();
+		int type = KeyEvent.type;
 
 		switch ( type )
 		{
 		case TYPE_LOCAL		: break; // ignore
-		case TYPE_STRING	: event->SetString( keyName, KeyEvent.val_string().c_str() ); break;
-		case TYPE_FLOAT		: event->SetFloat( keyName, KeyEvent.val_float() ); break;
-		case TYPE_LONG		: event->SetInt( keyName, KeyEvent.val_long() ); break;
-		case TYPE_SHORT		: event->SetInt( keyName, KeyEvent.val_short() ); break;
-		case TYPE_BYTE		: event->SetInt( keyName, KeyEvent.val_byte() ); break;
-		case TYPE_BOOL		: event->SetInt( keyName, KeyEvent.val_bool() ); break;
-		case TYPE_UINT64	: event->SetUint64( keyName, KeyEvent.val_uint64() ); break;
-		case TYPE_WSTRING	: event->SetWString( keyName, (wchar_t*)KeyEvent.val_wstring().data() ); break;
+		case TYPE_STRING	: event->SetString( keyName, KeyEvent.val_string->c_str() ); break;
+		case TYPE_FLOAT		: event->SetFloat( keyName, KeyEvent.val_float ); break;
+		case TYPE_LONG		: event->SetInt( keyName, KeyEvent.val_long ); break;
+		case TYPE_SHORT		: event->SetInt( keyName, KeyEvent.val_short ); break;
+		case TYPE_BYTE		: event->SetInt( keyName, KeyEvent.val_byte ); break;
+		case TYPE_BOOL		: event->SetInt( keyName, KeyEvent.val_bool ); break;
+		case TYPE_UINT64	: event->SetUint64( keyName, KeyEvent.val_uint64 ); break;
+		case TYPE_WSTRING	: event->SetWString( keyName, (wchar_t*)KeyEvent.val_wstring->data() ); break;
 
 		default: DevMsg(1, "CGameEventManager: unknown type %i for key '%s' [%s].\n", type, key->GetName(), pName ); break;
 		}
 	}
 
 	descriptor->numUnSerialized++;
-	descriptor->totalUnserializedBits += eventMsg.ByteSize() * 8;
+	descriptor->totalUnserializedBits += int( ks::proto::byte_size( eventMsg ) ) * 8;
 
 	return event;
 }

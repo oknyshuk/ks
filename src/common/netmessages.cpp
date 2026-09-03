@@ -5,6 +5,7 @@
 //=============================================================================//
 
 #include "netmessages.h"
+#include "proto.h"
 #include "bitbuf.h"
 #include "const.h"
 #include "../engine/net_chan.h"
@@ -58,72 +59,72 @@ static int FindCommonPrefix( const char *pStr )
 	return -1;
 }
 
-void CCLCMsg_FileCRCCheck_t::SetPath( CCLCMsg_FileCRCCheck& msg, const char *path )
+void CCLCMsg_FileCRCCheck_t::SetPath( ks::net::CCLCMsg_FileCRCCheck& msg, const char *path )
 {
 	int iCode = FindCommonPathID( path );
 	if ( iCode == -1 )
 	{
-		msg.set_code_path( -1 );
-		msg.set_path( path );
+		msg.code_path = -1;
+		msg.path = path;
 	}
 	else
 	{
-		msg.set_code_path( iCode );
+		msg.code_path = iCode;
 	}
 }
 
-const char *CCLCMsg_FileCRCCheck_t::GetPath( const CCLCMsg_FileCRCCheck& msg )
+const char *CCLCMsg_FileCRCCheck_t::GetPath( const ks::net::CCLCMsg_FileCRCCheck& msg )
 {
-	int iCode = msg.code_path();
+	int iCode = msg.code_path;
 	if( ( iCode >= 0 ) && ( iCode < ARRAYSIZE( g_MostCommonPathIDs ) ) )
 	{
 		return g_MostCommonPathIDs[ iCode ];
 	}
 
-	Assert( msg.code_path() == -1 );
-	return msg.path().c_str();
+	Assert( msg.code_path == -1 );
+	return msg.path->c_str();
 }
 
-void CCLCMsg_FileCRCCheck_t::SetFileName( CCLCMsg_FileCRCCheck& msg, const char *fileName )
+void CCLCMsg_FileCRCCheck_t::SetFileName( ks::net::CCLCMsg_FileCRCCheck& msg, const char *fileName )
 {
 	int iCode = FindCommonPrefix( fileName );
 	if ( iCode == -1 )
 	{
-		msg.set_code_filename( -1 );
-		msg.set_filename( fileName );
+		msg.code_filename = -1;
+		msg.filename = fileName;
 	}
 	else
 	{
-		msg.set_code_filename( iCode );
-		msg.set_filename( &fileName[ V_strlen( g_MostCommonPrefixes[ iCode ] ) + 1 ] );
+		msg.code_filename = iCode;
+		msg.filename = &fileName[ V_strlen( g_MostCommonPrefixes[ iCode ] ) + 1 ];
 	}
 }
 
-const char *CCLCMsg_FileCRCCheck_t::GetFileName( const CCLCMsg_FileCRCCheck& msg )
+const char *CCLCMsg_FileCRCCheck_t::GetFileName( const ks::net::CCLCMsg_FileCRCCheck& msg )
 {
-	int iCode = msg.code_filename();
+	int iCode = msg.code_filename;
 	if( ( iCode >= 0 ) && ( iCode < ARRAYSIZE( g_MostCommonPrefixes ) ) )
 	{
-		return va( "%s%c%s", g_MostCommonPrefixes[ iCode ], CORRECT_PATH_SEPARATOR, msg.filename().c_str() );
+		return va( "%s%c%s", g_MostCommonPrefixes[ iCode ], CORRECT_PATH_SEPARATOR, msg.filename->c_str() );
 	}
 
-	Assert( msg.code_filename() == -1 );
-	return msg.filename().c_str();
+	Assert( msg.code_filename == -1 );
+	return msg.filename->c_str();
 }
 
-void CmdKeyValuesHelper::CLCMsg_SetKeyValues( CCLCMsg_CmdKeyValues& msg, const KeyValues *keyValues )
+void CmdKeyValuesHelper::CLCMsg_SetKeyValues( ks::net::CCLCMsg_CmdKeyValues& msg, const KeyValues *keyValues )
 {
 	CUtlBuffer bufData;
 	keyValues->WriteAsBinary( bufData );
 	int numBytes = bufData.TellPut();
-	msg.set_keyvalues( bufData.Base(), numBytes );
+	msg.keyvalues = std::string( ( const char * ) bufData.Base(), numBytes );
 }
 
-KeyValues *CmdKeyValuesHelper::CLCMsg_GetKeyValues ( const CCLCMsg_CmdKeyValues& msg )
+KeyValues *CmdKeyValuesHelper::CLCMsg_GetKeyValues ( const ks::net::CCLCMsg_CmdKeyValues& msg )
 {
 	KeyValues *pKeyValues = new KeyValues( "" );
 
-	const std::string& msgStr = msg.keyvalues();
+	const std::string& msgStr = msg.keyvalues;
 	int numBytes = msgStr.size();
 
 	CUtlBuffer bufRead( msgStr.data(), numBytes, CUtlBuffer::READ_ONLY );
@@ -135,19 +136,19 @@ KeyValues *CmdKeyValuesHelper::CLCMsg_GetKeyValues ( const CCLCMsg_CmdKeyValues&
 	return pKeyValues;
 }
 
-void CmdKeyValuesHelper::SVCMsg_SetKeyValues( CSVCMsg_CmdKeyValues& msg, const KeyValues *keyValues )
+void CmdKeyValuesHelper::SVCMsg_SetKeyValues( ks::net::CSVCMsg_CmdKeyValues& msg, const KeyValues *keyValues )
 {
 	CUtlBuffer bufData;
 	keyValues->WriteAsBinary( bufData );
 	int numBytes = bufData.TellPut();
-	msg.set_keyvalues( bufData.Base(), numBytes );
+	msg.keyvalues = std::string( ( const char * ) bufData.Base(), numBytes );
 }
 
-KeyValues *CmdKeyValuesHelper::SVCMsg_GetKeyValues ( const CSVCMsg_CmdKeyValues& msg )
+KeyValues *CmdKeyValuesHelper::SVCMsg_GetKeyValues ( const ks::net::CSVCMsg_CmdKeyValues& msg )
 {
 	KeyValues *pKeyValues = new KeyValues( "" );
 
-	const std::string& msgStr = msg.keyvalues();
+	const std::string& msgStr = msg.keyvalues;
 	int numBytes = msgStr.size();
 
 	CUtlBuffer bufRead( msgStr.data(), numBytes, CUtlBuffer::READ_ONLY );
@@ -164,13 +165,14 @@ bool CmdEncryptedDataMessageCodec::SVCMsg_EncryptedData_EncryptMessage( CSVCMsg_
 {
 	static char const *szEncryptedTag = "[[ENCRYPTED_DATA]]";
 	static size_t nEncryptedLen = Q_strlen( szEncryptedTag );
-	int32 const numBytesWritten = msgPlaintextInput.ByteSize();
-	msgEncryptedResult.mutable_encrypted()->resize( nEncryptedLen + sizeof( int32 ) + numBytesWritten );
+	int32 const numBytesWritten = int32( ks::proto::byte_size( msgPlaintextInput ) );
+	msgEncryptedResult.encrypted.mut().resize( nEncryptedLen + sizeof( int32 ) + numBytesWritten );
 
-	Q_memcpy( &msgEncryptedResult.mutable_encrypted()->at(0), szEncryptedTag, nEncryptedLen );
+	Q_memcpy( &msgEncryptedResult.encrypted.mut().at(0), szEncryptedTag, nEncryptedLen );
 	int32 const numBytesWrittenWire = BigLong( numBytesWritten );	// byteswap for the wire
-	Q_memcpy( &msgEncryptedResult.mutable_encrypted()->at( nEncryptedLen ), &numBytesWrittenWire, sizeof( numBytesWrittenWire ) );
-	return msgPlaintextInput.SerializeWithCachedSizesToArray( ( uint8 * ) &msgEncryptedResult.mutable_encrypted()->at( nEncryptedLen + sizeof( int32 ) ) );
+	Q_memcpy( &msgEncryptedResult.encrypted.mut().at( nEncryptedLen ), &numBytesWrittenWire, sizeof( numBytesWrittenWire ) );
+	return ks::proto::write( msgPlaintextInput,
+		( std::byte * ) &msgEncryptedResult.encrypted.mut().at( nEncryptedLen + sizeof( int32 ) ) );
 }
 */
 
@@ -202,32 +204,32 @@ bool CmdEncryptedDataMessageCodec::SVCMsg_EncryptedData_EncryptMessage( CSVCMsg_
 	for ( int k = 0; k < numRandomFudgeBytes; ++ k )
 		pchRandomFudgeBytes[k] = RandomInt( 16, 250 );
 	
-	msgEncryptedResult.mutable_encrypted()->resize( numTotalEncryptedBytes );
+	msgEncryptedResult.encrypted.mut().resize( numTotalEncryptedBytes );
 
-	msgEncryptedResult.mutable_encrypted()->at(0) = numRandomFudgeBytes;
-	Q_memcpy( &msgEncryptedResult.mutable_encrypted()->at(1), pchRandomFudgeBytes, numRandomFudgeBytes );
+	msgEncryptedResult.encrypted.mut().at(0) = numRandomFudgeBytes;
+	Q_memcpy( &msgEncryptedResult.encrypted.mut().at(1), pchRandomFudgeBytes, numRandomFudgeBytes );
 	
 	int32 const numBytesWrittenWire = BigLong( numBytesWritten );	// byteswap for the wire
-	Q_memcpy( &msgEncryptedResult.mutable_encrypted()->at( 1 + numRandomFudgeBytes ), &numBytesWrittenWire, sizeof( numBytesWrittenWire ) );
-	Q_memcpy( &msgEncryptedResult.mutable_encrypted()->at( 1 + numRandomFudgeBytes + sizeof( int32 ) ), msg.GetBasePointer(), numBytesWritten );
+	Q_memcpy( &msgEncryptedResult.encrypted.mut().at( 1 + numRandomFudgeBytes ), &numBytesWrittenWire, sizeof( numBytesWrittenWire ) );
+	Q_memcpy( &msgEncryptedResult.encrypted.mut().at( 1 + numRandomFudgeBytes + sizeof( int32 ) ), msg.GetBasePointer(), numBytesWritten );
 
 	// Encrypt the message
 	unsigned char *pchCryptoBuffer = ( unsigned char * ) stackalloc( iceKey.blockSize() );
 	for ( int k = 0; k < numTotalEncryptedBytes; k += iceKey.blockSize() )
 	{
-		iceKey.encrypt( ( const unsigned char * ) &msgEncryptedResult.mutable_encrypted()->at(k), pchCryptoBuffer );
-		Q_memcpy( &msgEncryptedResult.mutable_encrypted()->at(k), pchCryptoBuffer, iceKey.blockSize() );
+		iceKey.encrypt( ( const unsigned char * ) &msgEncryptedResult.encrypted.mut().at(k), pchCryptoBuffer );
+		Q_memcpy( &msgEncryptedResult.encrypted.mut().at(k), pchCryptoBuffer, iceKey.blockSize() );
 	}
 	return true;
 }
 
-bool CmdEncryptedDataMessageCodec::SVCMsg_EncryptedData_Process( CSVCMsg_EncryptedData const &msgEncryptedInput, INetChannel *pProcessingChannelInterface, char const *key )
+bool CmdEncryptedDataMessageCodec::SVCMsg_EncryptedData_Process( ks::net::CSVCMsg_EncryptedData const &msgEncryptedInput, INetChannel *pProcessingChannelInterface, char const *key )
 {
 	CNetChan *pProcessingChannel = ( CNetChan * ) pProcessingChannelInterface;
 	if ( !pProcessingChannel )
 		return false;
 
-	if ( !msgEncryptedInput.has_encrypted() )
+	if ( !msgEncryptedInput.encrypted.has_value() )
 		return true;
 
 	if ( !key || !*key )
@@ -238,23 +240,23 @@ bool CmdEncryptedDataMessageCodec::SVCMsg_EncryptedData_Process( CSVCMsg_Encrypt
 	if ( iceKey.keySize() != Q_strlen( key ) )
 		return true; // we cannot decrypt with the supplied key
 	iceKey.set( ( const unsigned char * ) key );
-	if ( msgEncryptedInput.encrypted().size() % iceKey.blockSize() )
+	if ( msgEncryptedInput.encrypted->size() % iceKey.blockSize() )
 		return true; // message malformed, cannot decrypt
-	if ( msgEncryptedInput.encrypted().size() > NET_MAX_PAYLOAD )
+	if ( msgEncryptedInput.encrypted->size() > NET_MAX_PAYLOAD )
 		return true; // size too large, cannot decrypt
 
 	net_scratchbuffer_t scratch;
 	byte *buffer = scratch.GetBuffer();
 	unsigned char *pchCryptoBuffer = ( unsigned char * ) stackalloc( iceKey.blockSize() );
-	for ( int k = 0; k < ( int ) msgEncryptedInput.encrypted().size(); k += iceKey.blockSize() )
+	for ( int k = 0; k < ( int ) msgEncryptedInput.encrypted->size(); k += iceKey.blockSize() )
 	{
-		iceKey.decrypt( ( const unsigned char * ) &msgEncryptedInput.encrypted().at(k), pchCryptoBuffer );
+		iceKey.decrypt( ( const unsigned char * ) &msgEncryptedInput.encrypted->at(k), pchCryptoBuffer );
 		Q_memcpy( &buffer[k], pchCryptoBuffer, iceKey.blockSize() );
 	}
 
 	// Check how much random fudge we have
 	int numRandomFudgeBytes = *buffer;
-	if ( ( numRandomFudgeBytes > 0 ) && ( numRandomFudgeBytes + 1 + sizeof( int32 ) < msgEncryptedInput.encrypted().size() ) )
+	if ( ( numRandomFudgeBytes > 0 ) && ( numRandomFudgeBytes + 1 + sizeof( int32 ) < msgEncryptedInput.encrypted->size() ) )
 	{
 		// Fetch the size of the encrypted message
 		int32 numBytesWrittenWire = 0;
@@ -262,7 +264,7 @@ bool CmdEncryptedDataMessageCodec::SVCMsg_EncryptedData_Process( CSVCMsg_Encrypt
 		int32 const numBytesWritten = BigLong( numBytesWrittenWire );	// byteswap from the wire
 		
 		// Make sure the total size of the message matches the expectations
-		if ( numRandomFudgeBytes + 1 + sizeof( int32 ) + numBytesWritten == msgEncryptedInput.encrypted().size() )
+		if ( numRandomFudgeBytes + 1 + sizeof( int32 ) + numBytesWritten == msgEncryptedInput.encrypted->size() )
 		{
 			bf_read bufRead( &buffer[ 1 + numRandomFudgeBytes + sizeof( int32 ) ], numBytesWritten );
 			unsigned char cmd = bufRead.ReadVarInt32();

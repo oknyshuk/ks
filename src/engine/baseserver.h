@@ -125,7 +125,7 @@ public: // IConnectionlessPacketHandler implementation
 	virtual CBaseClient *CreateFakeClient(const char *name);
 	virtual void 	RemoveClientFromGame( CBaseClient *client ) {};
 	virtual void	SendClientMessages ( bool bSendSnapshots );
-	virtual void	FillServerInfo(CSVCMsg_ServerInfo &serverinfo);
+	virtual void	FillServerInfo(ks::net::CSVCMsg_ServerInfo &serverinfo);
 	virtual void	UserInfoChanged( int nClientIndex );
 
 	virtual bool	GetClassBaseline( ServerClass *pClass, SerializedEntityHandle_t *pHandle);
@@ -155,7 +155,7 @@ public: // IConnectionlessPacketHandler implementation
 	void	AddTag( const char *pszTag, const char *pszSubTagValue = NULL );
 	void	RemoveTag( const char *pszTag, bool bSubTag = false );
 
-	CBaseClient *CreateSplitClient( const CMsg_CVars& vecUserInfo, CBaseClient *pAttachedTo );
+	CBaseClient *CreateSplitClient( const ks::net::CMsg_CVars& vecUserInfo, CBaseClient *pAttachedTo );
 	CBaseClient *GetBaseUserForSplitClient( CBaseClient *pSplitUser );
 
 	void QueueSplitScreenDisconnect( CBaseClient *pSplitHost, CBaseClient *pSplitUser );

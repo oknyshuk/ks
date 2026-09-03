@@ -29,10 +29,10 @@ CON_COMMAND_F( rocket_hud_chat_clear, "Clears the Chat History", FCVAR_NONE )
     pChat->ClearChatHistory();
 }
 
-static bool __MsgFunc_SayText2( const CCSUsrMsg_SayText2 &msg )
+static bool __MsgFunc_SayText2( const ks::net::CCSUsrMsg_SayText2 &msg )
 {
-    int paramSize = msg.params_size();
-    int entID = msg.ent_idx();
+    int paramSize = msg.params.size();
+    int entID = msg.ent_idx;
 
     RkHudChat* pChat = GET_HUDELEMENT( RkHudChat );
 
@@ -42,7 +42,7 @@ static bool __MsgFunc_SayText2( const CCSUsrMsg_SayText2 &msg )
     // from server
     if( entID == 0 && paramSize > 1 )
     {
-        pChat->AddChatString( nullptr, msg.params(1).c_str(), RkHudChat::SERVER );
+        pChat->AddChatString( nullptr, msg.params[ 1 ].c_str(), RkHudChat::SERVER );
         return true;
     }
 
@@ -57,9 +57,9 @@ static bool __MsgFunc_SayText2( const CCSUsrMsg_SayText2 &msg )
     if( paramSize > 1 )
     {
         if( (speaker->GetTeamNumber() == localPlayer->GetTeamNumber()) )
-            pChat->AddChatString( msg.params(0).c_str(), msg.params(1).c_str(),RkHudChat::FRIEND);
+            pChat->AddChatString( msg.params[ 0 ].c_str(), msg.params[ 1 ].c_str(),RkHudChat::FRIEND);
         else
-            pChat->AddChatString( msg.params(0).c_str(), msg.params(1).c_str(),RkHudChat::FOE);
+            pChat->AddChatString( msg.params[ 0 ].c_str(), msg.params[ 1 ].c_str(),RkHudChat::FOE);
     }
 
     return true;
@@ -98,10 +98,10 @@ static void NullLastNewlineFromString( char *str )
 // any string that starts with the character '#' is a message name, and is used to look up the real message in titles.txt
 // the next ( optional) one to four strings are parameters for that string ( which can also be message names if they begin with '#')
 //-----------------------------------------------------------------------------
-static bool __MsgFunc_TextMsg( const CCSUsrMsg_TextMsg &msg )
+static bool __MsgFunc_TextMsg( const ks::net::CCSUsrMsg_TextMsg &msg )
 {
     char szString[2048] = {0};
-    int dest = msg.msg_dst();
+    int dest = msg.msg_dst;
 
     wchar_t szBuf[5][256] = {};
     wchar_t outputBuf[256] = {};
@@ -112,7 +112,7 @@ static bool __MsgFunc_TextMsg( const CCSUsrMsg_TextMsg &msg )
     for( int i = 0; i < 4; i++ )
     {
         // Allow localizing player names
-        if ( const char *pszEntIndex = StringAfterPrefix( msg.params(i).c_str(), "#ENTNAME[" ) )
+        if ( const char *pszEntIndex = StringAfterPrefix( msg.params[ i ].c_str(), "#ENTNAME[" ) )
         {
             int iEntIndex = V_atoi( pszEntIndex );
             wchar_t wszPlayerName[MAX_DECORATED_PLAYER_NAME_LENGTH] = {};
@@ -131,12 +131,12 @@ static bool __MsgFunc_TextMsg( const CCSUsrMsg_TextMsg &msg )
             }
             else
             {
-                V_strcpy_safe( szString, msg.params(i).c_str() );
+                V_strcpy_safe( szString, msg.params[ i ].c_str() );
             }
         }
         else
         {
-            V_strcpy_safe( szString, msg.params(i).c_str() );
+            V_strcpy_safe( szString, msg.params[ i ].c_str() );
         }
 
         if( szString[0] )

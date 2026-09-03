@@ -469,7 +469,7 @@ bool DataTable_LoadDataTablesFromBuffer( bf_read *pBuf, int nDemoProtocol )
 			return false;
 		}
 
-		if( msg.is_end() )
+		if( msg.is_end )
 			break;
 
 		if ( !RecvTable_RecvClassInfos( msg, nDemoProtocol ) )

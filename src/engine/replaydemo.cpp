@@ -285,7 +285,7 @@ int CReplayDemoRecorder::WriteSignonData()
 
 	// use your class infos, CRC is correct
 	CSVCMsg_ClassInfo_t classmsg;
-	classmsg.set_create_on_client( true );
+	classmsg.create_on_client = true;
 	classmsg.WriteToBuffer( msg );
 
 	// Write the regular signon now
@@ -300,7 +300,7 @@ int CReplayDemoRecorder::WriteSignonData()
 
 	// set view entity
 	CSVCMsg_SetView_t viewent;
-	viewent.set_entity_index( m_pReplayServer->m_nViewEntity );
+	viewent.entity_index = m_pReplayServer->m_nViewEntity;
 	viewent.WriteToBuffer( msg );
 
 	// Spawned into server, not fully active, though
@@ -383,7 +383,7 @@ void CReplayDemoRecorder::WriteMessages( unsigned char cmd, bf_write &message )
 	int nRemainingBits = message.GetNumBitsWritten() % 8;
 	if ( nRemainingBits > 0 &&  nRemainingBits <= (8-NETMSG_TYPE_BITS) )
 	{
-		message.WriteUBitLong( net_NOP, NETMSG_TYPE_BITS );
+		message.WriteUBitLong( ks::net::net_NOP, NETMSG_TYPE_BITS );
 	}
 
 	Assert( len < NET_MAX_MESSAGE );

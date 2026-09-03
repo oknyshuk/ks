@@ -37,7 +37,7 @@
 #define SUBCHANNEL_WAITING	2   // sbuchannel sent data, waiting for ACK
 #define SUBCHANNEL_DIRTY	3	// subchannel is marked as dirty during changelevel
 
-class CNETMsg_SplitScreenUser;
+namespace ks::net { struct CNETMsg_SplitScreenUser; }
 
 class CNetChan : public INetChannel
 {
@@ -298,10 +298,10 @@ private:
 
 private:
 
-	bool NETMsg_NOP( const CNETMsg_NOP& msg );
-	bool NETMsg_Disconnect( const CNETMsg_Disconnect& msg );
-	bool NETMsg_File( const CNETMsg_File& msg );
-	bool NETMsg_SplitScreenUser( const CNETMsg_SplitScreenUser& msg );
+	bool NETMsg_NOP( const ks::net::CNETMsg_NOP& msg );
+	bool NETMsg_Disconnect( const ks::net::CNETMsg_Disconnect& msg );
+	bool NETMsg_File( const ks::net::CNETMsg_File& msg );
+	bool NETMsg_SplitScreenUser( const ks::net::CNETMsg_SplitScreenUser& msg );
 
 	CNetMessageBinder m_NETMsgNOP;
 	CNetMessageBinder m_NETMsgDisconnect;

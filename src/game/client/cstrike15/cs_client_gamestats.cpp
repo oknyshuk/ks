@@ -45,7 +45,7 @@ extern ConVar cl_radar_rotate;
 
 CCSClientGameStats g_CSClientGameStats;
 
-bool MsgFunc_PlayerStatsUpdate( const CCSUsrMsg_PlayerStatsUpdate &msg )
+bool MsgFunc_PlayerStatsUpdate( const ks::net::CCSUsrMsg_PlayerStatsUpdate &msg )
 {
 	return g_CSClientGameStats.MsgFunc_PlayerStatsUpdate(msg);
 }
@@ -144,7 +144,7 @@ void CCSClientGameStats::PostInit()
 	for ( int hh = 0; hh < MAX_SPLITSCREEN_PLAYERS; ++hh )
 	{
 		ACTIVE_SPLITSCREEN_PLAYER_GUARD( hh );
-		m_UMCMsgPlayerStatsUpdate.Bind< CS_UM_PlayerStatsUpdate, CCSUsrMsg_PlayerStatsUpdate>( UtlMakeDelegate( ::MsgFunc_PlayerStatsUpdate ));
+		m_UMCMsgPlayerStatsUpdate.Bind< ks::net::CS_UM_PlayerStatsUpdate, ks::net::CCSUsrMsg_PlayerStatsUpdate>( UtlMakeDelegate( ::MsgFunc_PlayerStatsUpdate ));
 	}
 
 	m_RoundEndReason = Invalid_Round_End_Reason;
@@ -502,7 +502,7 @@ void CRC32Helper_ProcessUInt32( CRC32_t &crc, uint32 n )
 }
 
 
-bool CCSClientGameStats::MsgFunc_PlayerStatsUpdate( const CCSUsrMsg_PlayerStatsUpdate &msg )
+bool CCSClientGameStats::MsgFunc_PlayerStatsUpdate( const ks::net::CCSUsrMsg_PlayerStatsUpdate &msg )
 {
 	// Note: if any check fails while decoding this message, bail out and disregard this data to avoid 
 	// potentially polluting player stats 
@@ -519,20 +519,20 @@ bool CCSClientGameStats::MsgFunc_PlayerStatsUpdate( const CCSUsrMsg_PlayerStatsU
 	const byte version = 0x03;
 	CRC32_ProcessBuffer( &crc, &version, sizeof(version));
 
-	if (msg.version() != version)
+	if (msg.version != version)
 	{
 		Warning("PlayerStatsUpdate message: ignoring unsupported version\n");
 		return true;
 	}
 
-	short iStatsToRead = msg.stats_size();
+	short iStatsToRead = msg.stats.size();
 	CRC32Helper_ProcessInt16( crc, iStatsToRead );
 
 	for ( int i = 0; i < iStatsToRead; ++i)
 	{
-		const CCSUsrMsg_PlayerStatsUpdate::Stat &stat = msg.stats(i);
+		const ks::net::CCSUsrMsg_PlayerStatsUpdate::Stat &stat = msg.stats[ i ];
 
-		short iStat = stat.idx();
+		short iStat = stat.idx;
 		CRC32Helper_ProcessInt16( crc, iStat );
 
 		if (iStat >= CSSTAT_MAX)
@@ -540,16 +540,16 @@ bool CCSClientGameStats::MsgFunc_PlayerStatsUpdate( const CCSUsrMsg_PlayerStatsU
 			Warning("PlayerStatsUpdate: invalid statId encountered; ignoring stats update\n");
 			return true;
 		}
-		short delta = stat.delta();
+		short delta = stat.delta;
 		deltaStats[iStat] = delta;
 		CRC32Helper_ProcessInt16( crc, delta );
 	}
 
-	int userID = msg.user_id();
+	int userID = msg.user_id;
 	CRC32Helper_ProcessInt32( crc, userID );
 	
 	CRC32_Final( &crc );
-	CRC32_t readCRC = msg.crc();
+	CRC32_t readCRC = msg.crc;
 
 	if ( readCRC != crc )
 	{

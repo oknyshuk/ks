@@ -867,15 +867,15 @@ static bool InternalWriteDeltaEntities( CBaseServer* pServer, CBaseClient *clien
 
 	TRACE_PACKET(( "WriteDeltaEntities (%d)\n", u.m_pToSnapshot->m_nNumEntities ));
 
-	msg.set_max_entries( u.m_pToSnapshot->m_nNumEntities );
-	msg.set_is_delta( u.m_bAsDelta );
+	msg.max_entries = u.m_pToSnapshot->m_nNumEntities;
+	msg.is_delta = u.m_bAsDelta;
 
 	if ( u.m_bAsDelta )
 	{
-		msg.set_delta_from( u.m_pFrom->tick_count ); // This is the sequence # that we are updating from.
+		msg.delta_from = u.m_pFrom->tick_count; // This is the sequence # that we are updating from.
 	}
 
-	msg.set_baseline( client->m_nBaselineUsed );
+	msg.baseline = client->m_nBaselineUsed;
 
 #ifndef NO_SERVER_NET
 	// Don't work too hard if we're using the optimized single-player mode.
@@ -901,7 +901,7 @@ static bool InternalWriteDeltaEntities( CBaseServer* pServer, CBaseClient *clien
 	}
 #endif //NO_SERVER_NET
 
-	msg.set_updated_entries( u.m_nHeaderCount );
+	msg.updated_entries = u.m_nHeaderCount;
 
 	if( u.m_pBuf->IsOverflowed() )
 	{
@@ -910,7 +910,7 @@ static bool InternalWriteDeltaEntities( CBaseServer* pServer, CBaseClient *clien
 
 	// resize the buffer to the actual byte size
 	int nBytesWritten = Bits2Bytes( u.m_pBuf->GetNumBitsWritten() );
-	msg.mutable_entity_data()->assign( (const char*)pScratchBuffer, nBytesWritten);
+	msg.entity_data.mut().assign( (const char*)pScratchBuffer, nBytesWritten);
 
 	bool bUpdateBaseline = ( (client->m_nBaselineUpdateTick == -1) && 
 		(u.m_nFullProps > 0 || !u.m_bAsDelta) );
@@ -918,12 +918,12 @@ static bool InternalWriteDeltaEntities( CBaseServer* pServer, CBaseClient *clien
 	if ( bUpdateBaseline && u.m_pBaseline )
 	{
 		// tell client to use this snapshot as baseline update
-		msg.set_update_baseline( true );
+		msg.update_baseline = true;
 		client->m_nBaselineUpdateTick = to->tick_count;
 	}
 	else
 	{
-		msg.set_update_baseline( false );
+		msg.update_baseline = false;
 	}
 
 	return true;

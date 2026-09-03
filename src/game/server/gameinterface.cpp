@@ -857,8 +857,8 @@ void CServerGameDLL::DLLShutdown( void )
 		TheNavMesh = NULL;
 	}
 
-	s_SteamAPIContext.Clear(); // Steam API context shutdown
-	s_SteamGameServerAPIContext.Clear();	
+	s_SteamAPIContext = {}; // Steam API context shutdown
+	s_SteamGameServerAPIContext = {};	
 	// SteamAPI_Shutdown(); << Steam shutdown is controlled by engine
 	
 	DisconnectTier3Libraries();
@@ -3783,12 +3783,6 @@ void MessageWriteBits( const void *pIn, int nBits )
 		Error( "WriteBits called with no active message\n" );
 
 	g_pMsgBuffer->WriteBits( pIn, nBits );
-}
-
-//-----------------------------------------------------------------------------
-void SendUserMessage( IRecipientFilter& filter, int message, const ::google::protobuf::Message &msg )
-{
-	engine->SendUserMessage( filter, message, msg );
 }
 
 class CServerDLLSharedAppSystems : public IServerDLLSharedAppSystems

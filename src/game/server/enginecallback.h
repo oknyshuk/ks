@@ -16,7 +16,8 @@
 
 #include "tier3/tier3.h"
 #include "tier2/tier2_logging.h"
-#include "google/protobuf/message.h"
+#include "proto_types.h"
+#include <string>
 
 class IFileSystem;				// include FileSystem.h
 class IUniformRandomStream;		// include vstdlib/random.h
@@ -155,6 +156,13 @@ void MessageWriteBitVecIntegral( const Vector& vecValue );
 // Send a user message
 //-----------------------------------------------------------------------------
 class IRecipientFilter;
-void SendUserMessage( IRecipientFilter& filter, int message, const ::google::protobuf::Message &msg );
+// Serializes and hands the engine bytes, so the interface carries no schema.
+template < class T >
+void SendUserMessage( IRecipientFilter &filter, int message, const T &msg )
+{
+	std::string data( ks::proto::byte_size( msg ), '\0' );
+	ks::proto::write( msg, ( std::byte * ) data.data() );
+	engine->SendUserMessage( filter, message, data.data(), int( data.size() ) );
+}
 
 #endif		//ENGINECALLBACK_H

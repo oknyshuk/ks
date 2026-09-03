@@ -32,9 +32,7 @@ def build(bld):
         "mathlib",
         "vtf",
         "videocfg",
-        "generated_proto",
         "quickhull",
-        "protobuf",
         "JPEG",
         "ZLIB",
         "bzip2",
@@ -48,9 +46,7 @@ def build(bld):
         "audio/private",
         "audio/private/snd_op_sys",
         "audio/public",
-        "../generated_proto",
         "../thirdparty/quickhull",
-        "../thirdparty/protobuf-2.6.1/src",
     ]
 
     source = [
@@ -173,6 +169,7 @@ def build(bld):
         "net_ws_queued_packet_sender.cpp",
         "net_steamsocketmgr.cpp",
         "../common/netmessages.cpp",
+        "../common/netmessages_codec.cpp",
         "networkstringtable.cpp",
         "NetworkStringTableItem.cpp",
         "networkstringtableserver.cpp",

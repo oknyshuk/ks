@@ -62,7 +62,6 @@ class AchievementsAndStatsInterface;
 enum CPULevel_t;
 enum GPULevel_t;
 class IRenderToRTHelper;
-class CSVCMsg_UserMessage;
 
 extern IVModelRender *modelrender;
 extern IVEngineClient	*engine;
@@ -229,7 +228,6 @@ void RemoveRemoteSplitScreenViewPlayer( C_BasePlayer *pPlayer ); //removes a non
 C_BasePlayer *GetSplitScreenViewPlayer( int nSlot ); //allows return of split screen views of nonlocal players
 bool IsLocalSplitScreenPlayer( int nSlot ); //true is a full splitscreen player. false is just a view of a remote player
 
-bool BSerializeUserMessageToSVCMSG( CSVCMsg_UserMessage &svcmsg, int nType, const ::google::protobuf::Message &msg );
 
 #if defined( SPLIT_SCREEN_STUBS )
 

@@ -242,8 +242,8 @@ void WriteUsercmd( bf_write *buf, const CUserCmd *to, const CUserCmd *from )
 		int i;
 		for (i = 0; i < to->entitygroundcontact.Count(); i++)
 		{
-			LogUserCmd( "\t\t%s %d\n", "entitygroundcontact[%d].entindex", i, to->entitygroundcontact[i].entindex );
-			buf->WriteUBitLong( to->entitygroundcontact[i].entindex, MAX_EDICT_BITS );
+			LogUserCmd( "\t\t%s %d\n", "entitygroundcontact[%d].entindex()", i, to->entitygroundcontact[i].entindex() );
+			buf->WriteUBitLong( to->entitygroundcontact[i].entindex(), MAX_EDICT_BITS );
 
 			LogUserCmd( "\t\t%s %2.2f\n", "entitygroundcontact[%d].minheight", i, to->entitygroundcontact[i].minheight );
 			buf->WriteBitCoord( to->entitygroundcontact[i].minheight );

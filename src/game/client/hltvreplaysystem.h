@@ -65,7 +65,7 @@ public:
 	CHltvReplaySystem();
 	~CHltvReplaySystem();
 
-	void OnHltvReplay( const CSVCMsg_HltvReplay  &msg );
+	void OnHltvReplay( const ks::net::CSVCMsg_HltvReplay  &msg );
 	void OnHltvReplayTick();
 
 	void EmitTimeJump();

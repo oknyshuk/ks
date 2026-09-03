@@ -50,16 +50,16 @@ public:
 public: // IClientMessageHandlers
 		
 	
-	virtual bool CLCMsg_RespondCvarValue( const CCLCMsg_RespondCvarValue& msg ) OVERRIDE;
-	virtual bool CLCMsg_FileCRCCheck( const CCLCMsg_FileCRCCheck& msg ) OVERRIDE;
+	virtual bool CLCMsg_RespondCvarValue( const ks::net::CCLCMsg_RespondCvarValue& msg ) OVERRIDE;
+	virtual bool CLCMsg_FileCRCCheck( const ks::net::CCLCMsg_FileCRCCheck& msg ) OVERRIDE;
 
-	virtual bool NETMsg_SetConVar( const CNETMsg_SetConVar& msg ) OVERRIDE;
-	virtual bool NETMsg_PlayerAvatarData( const CNETMsg_PlayerAvatarData& msg ) OVERRIDE { return true; }
+	virtual bool NETMsg_SetConVar( const ks::net::CNETMsg_SetConVar& msg ) OVERRIDE;
+	virtual bool NETMsg_PlayerAvatarData( const ks::net::CNETMsg_PlayerAvatarData& msg ) OVERRIDE { return true; }
 	
-	virtual bool CLCMsg_Move( const CCLCMsg_Move& msg ) OVERRIDE;
-	virtual bool CLCMsg_ClientInfo( const CCLCMsg_ClientInfo& msg ) OVERRIDE;
-	virtual bool CLCMsg_VoiceData( const CCLCMsg_VoiceData& msg ) OVERRIDE;
-	virtual bool CLCMsg_ListenEvents( const CCLCMsg_ListenEvents& msg ) OVERRIDE;
+	virtual bool CLCMsg_Move( const ks::net::CCLCMsg_Move& msg ) OVERRIDE;
+	virtual bool CLCMsg_ClientInfo( const ks::net::CCLCMsg_ClientInfo& msg ) OVERRIDE;
+	virtual bool CLCMsg_VoiceData( const ks::net::CCLCMsg_VoiceData& msg ) OVERRIDE;
+	virtual bool CLCMsg_ListenEvents( const ks::net::CCLCMsg_ListenEvents& msg ) OVERRIDE;
 
 public:
 	CClientFrame *GetDeltaFrame( int nTick );

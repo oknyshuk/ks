@@ -74,7 +74,7 @@ bool CHLTVClient::SendSignonData( void )
 	{
 		// use your class infos, CRC is correct
 		CSVCMsg_ClassInfo_t classmsg;
-		classmsg.set_create_on_client( true );		
+		classmsg.create_on_client = true;		
 		m_NetChannel->SendNetMsg( classmsg );
 	}
 
@@ -100,7 +100,7 @@ bool CHLTVClient::ProcessSignonStateMsg(int state, int spawncount)
 	return true;
 }
 
-bool CHLTVClient::CLCMsg_ClientInfo( const CCLCMsg_ClientInfo& msg )
+bool CHLTVClient::CLCMsg_ClientInfo( const ks::net::CCLCMsg_ClientInfo& msg )
 {
 	if ( !CBaseClient::CLCMsg_ClientInfo( msg ) )
 		return false;
@@ -108,29 +108,29 @@ bool CHLTVClient::CLCMsg_ClientInfo( const CCLCMsg_ClientInfo& msg )
 	return true;
 }
 
-bool CHLTVClient::CLCMsg_Move( const CCLCMsg_Move& msg )
+bool CHLTVClient::CLCMsg_Move( const ks::net::CCLCMsg_Move& msg )
 {
 	// HLTV clients can't move
 	return true;
 }
 
-bool CHLTVClient::CLCMsg_ListenEvents( const CCLCMsg_ListenEvents& msg )
+bool CHLTVClient::CLCMsg_ListenEvents( const ks::net::CCLCMsg_ListenEvents& msg )
 {
 	// HLTV clients can't subscribe to events, we just send them
 	return true;
 }
 
-bool CHLTVClient::CLCMsg_RespondCvarValue( const CCLCMsg_RespondCvarValue& msg )
+bool CHLTVClient::CLCMsg_RespondCvarValue( const ks::net::CCLCMsg_RespondCvarValue& msg )
 {
 	return true;
 }
 
-bool CHLTVClient::CLCMsg_FileCRCCheck( const CCLCMsg_FileCRCCheck& msg )
+bool CHLTVClient::CLCMsg_FileCRCCheck( const ks::net::CCLCMsg_FileCRCCheck& msg )
 {
 	return true;
 }
 
-bool CHLTVClient::CLCMsg_VoiceData(const CCLCMsg_VoiceData& msg)
+bool CHLTVClient::CLCMsg_VoiceData(const ks::net::CCLCMsg_VoiceData& msg)
 {
 	// HLTV clients can't speak
 	return true;
@@ -357,7 +357,7 @@ void CHLTVClient::SpawnPlayer( void )
 
 	CSVCMsg_SetView_t setView;
 
-	setView.set_entity_index( m_pHLTV->m_nViewEntity );
+	setView.entity_index = m_pHLTV->m_nViewEntity;
 
 	SendNetMsg( setView );
 
@@ -394,7 +394,7 @@ void CHLTVClient::SetUpdateRate( float fUpdateRate, bool bForce)
 	m_fSnapshotInterval = 1.0f / m_pHLTV->GetSnapshotRate();
 }
 
-bool CHLTVClient::NETMsg_SetConVar(const CNETMsg_SetConVar& msg)
+bool CHLTVClient::NETMsg_SetConVar(const ks::net::CNETMsg_SetConVar& msg)
 {
 	if ( !CBaseClient::NETMsg_SetConVar( msg ) )
 		return false;
@@ -456,9 +456,9 @@ bool CHLTVClient::NETMsg_SetConVar(const CNETMsg_SetConVar& msg)
 			// additionally if the first variable is client accountid then use that to validate personalized password
 			CSteamID steamUserAccountID;
 			if ( Steam3Server().SteamGameServerUtils() &&
-				( msg.convars().cvars_size() > 1 ) &&
-				!Q_strcmp( NetMsgGetCVarUsingDictionary( msg.convars().cvars( 0 ) ), "accountid" ) )
-				steamUserAccountID = CSteamID( Q_atoi( msg.convars().cvars( 0 ).value().c_str() ), Steam3Server().SteamGameServerUtils()->GetConnectedUniverse(), k_EAccountTypeIndividual );
+				( msg.convars->cvars.size() > 1 ) &&
+				!Q_strcmp( NetMsgGetCVarUsingDictionary( msg.convars->cvars[ 0 ] ), "accountid" ) )
+				steamUserAccountID = CSteamID( Q_atoi( msg.convars->cvars[ 0 ].value->c_str() ), Steam3Server().SteamGameServerUtils()->GetConnectedUniverse(), k_EAccountTypeIndividual );
 			
 			if ( !m_pHLTV->CheckHltvPasswordMatch( m_szPassword, m_pHLTV->GetPassword(), steamUserAccountID ) )
 			{

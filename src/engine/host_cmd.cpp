@@ -2359,7 +2359,7 @@ CON_COMMAND_F( ss_connect, "If connected with available split screen slots, conn
 
 	// Grab convars for next available slot
 	CCLCMsg_SplitPlayerConnect_t msg;
-	Host_BuildUserInfoUpdateMessage( nSlot, msg.mutable_convars(), false );
+	Host_BuildUserInfoUpdateMessage( nSlot, &msg.convars.mut(), false );
 
 	GetBaseLocalClient().m_NetChannel->SendNetMsg( msg );
 }

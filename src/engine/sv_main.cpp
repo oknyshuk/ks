@@ -2200,16 +2200,16 @@ SERVER SPAWNING
 void SV_WriteVoiceCodec(bf_write &pBuf)
 {
 	CSVCMsg_VoiceInit_t voiceinit;
-	voiceinit.set_codec( sv.IsMultiplayer() ? sv_voicecodec.GetString() : "" );
-	voiceinit.set_quality( 5 );
-	voiceinit.set_version( VOICE_CURRENT_VERSION );
+	voiceinit.codec = sv.IsMultiplayer() ? sv_voicecodec.GetString() : "";
+	voiceinit.quality = 5;
+	voiceinit.version = VOICE_CURRENT_VERSION;
 	voiceinit.WriteToBuffer( pBuf );
 }
 
 // Gets voice data from a client and forwards it to anyone who can hear this client.
 ConVar voice_debugfeedbackfrom( "voice_debugfeedbackfrom", "0" );
 
-void SV_BroadcastVoiceData(IClient * cl, const CCLCMsg_VoiceData& msg )
+void SV_BroadcastVoiceData(IClient * cl, const ks::net::CCLCMsg_VoiceData& msg )
 {
     ConVarRef voice_verbose( "voice_verbose" );
 
@@ -2225,20 +2225,20 @@ void SV_BroadcastVoiceData(IClient * cl, const CCLCMsg_VoiceData& msg )
 
     // Build voice message once
 	CSVCMsg_VoiceData_t voiceData;
-	voiceData.set_client( cl->GetPlayerSlot() );
-	voiceData.set_voice_data( msg.data().c_str(), msg.data().size() );
-	if ( msg.xuid() )
+	voiceData.client = cl->GetPlayerSlot();
+	voiceData.voice_data = std::string( ( const char * ) msg.data->c_str(), msg.data->size() );
+	if ( msg.xuid )
 	{
-		voiceData.set_xuid( msg.xuid() );
+		voiceData.xuid = msg.xuid;
 	}
-	voiceData.set_format( msg.format() );
-	voiceData.set_sequence_bytes( msg.sequence_bytes() );
-	voiceData.set_section_number( msg.section_number() );
-	voiceData.set_uncompressed_sample_offset( msg.uncompressed_sample_offset() );
+	voiceData.format = msg.format;
+	voiceData.sequence_bytes = msg.sequence_bytes;
+	voiceData.section_number = msg.section_number;
+	voiceData.uncompressed_sample_offset = msg.uncompressed_sample_offset;
 
 	if ( voice_debugfeedbackfrom.GetBool() )
 	{
-		Msg( "Sending voice from: %s - playerslot: %d [ xuid %llx ]\n", cl->GetClientName(), cl->GetPlayerSlot() + 1, msg.xuid() );
+		Msg( "Sending voice from: %s - playerslot: %d [ xuid %llx ]\n", cl->GetClientName(), cl->GetPlayerSlot() + 1, msg.xuid );
 	}
 
     for(int i=0; i < sv.GetClientCount(); i++)
@@ -2253,7 +2253,7 @@ void SV_BroadcastVoiceData(IClient * cl, const CCLCMsg_VoiceData& msg )
             if ( voice_verbose.GetBool() )
             {
                 Msg( "* SV_BroadcastVoiceData:  Not active (SignonState %d).  Dropping %d bytes from %s (%s) to %s (%s)\n", 
-					((CBaseClient*)pDestClient)->GetSignonState(), voiceData.voice_data().size(), 
+					((CBaseClient*)pDestClient)->GetSignonState(), voiceData.voice_data->size(), 
 					cl->GetClientName(), 
 					cl->GetNetChannel() ? cl->GetNetChannel()->GetAddress() : "null", 
 					pDestClient->GetClientName(), pDestClient->GetNetChannel() ? pDestClient->GetNetChannel()->GetAddress() : "null" );
@@ -2268,25 +2268,25 @@ void SV_BroadcastVoiceData(IClient * cl, const CCLCMsg_VoiceData& msg )
         }
 
         // Does the game code want cl sending to this client?
-		bool bHearsPlayer = pDestClient->IsHearingClient( voiceData.client() );
-		voiceData.set_audible_mask(bHearsPlayer);
-		voiceData.set_proximity( pDestClient->IsProximityHearingClient( voiceData.client() ) );
+		bool bHearsPlayer = pDestClient->IsHearingClient( voiceData.client );
+		voiceData.audible_mask = bHearsPlayer;
+		voiceData.proximity = pDestClient->IsProximityHearingClient( voiceData.client );
 
 		// If any of the parasites of the host can hear it, send it to the host
 		for ( int i = 1; i < ARRAYSIZE( pDestClient->m_SplitScreenUsers ); ++i )
 		{
-			voiceData.set_audible_mask( voiceData.audible_mask() | ( i << 1) );
+			voiceData.audible_mask = voiceData.audible_mask | ( i << 1);
 			CBaseClient *splitUser = pDestClient->m_SplitScreenUsers[ i ];
 			if ( splitUser )
 			{
 				// Set which splitscreen players can hear this voice packet
-				bool bSplitUserHearsPlayer = splitUser->IsHearingClient( voiceData.client() );
+				bool bSplitUserHearsPlayer = splitUser->IsHearingClient( voiceData.client );
 
 				bHearsPlayer |= bSplitUserHearsPlayer;
-				voiceData.set_audible_mask( voiceData.audible_mask() | ( i << 1) );
-				if ( splitUser->IsProximityHearingClient( voiceData.client() ) )
+				voiceData.audible_mask = voiceData.audible_mask | ( i << 1);
+				if ( splitUser->IsProximityHearingClient( voiceData.client ) )
 				{
-					voiceData.set_proximity( true );
+					voiceData.proximity = true;
 				}
 			}
 		}
@@ -2296,7 +2296,7 @@ void SV_BroadcastVoiceData(IClient * cl, const CCLCMsg_VoiceData& msg )
             if ( voice_verbose.GetBool() )
             {
                 Msg( "* SV_BroadcastVoiceData:  Doesn't hear player.  Dropping %d bytes from %s (%s) to %s (%s)\n", 
-					voiceData.voice_data().size(), cl->GetClientName(), 
+					voiceData.voice_data->size(), cl->GetClientName(), 
 					cl->GetNetChannel() ? cl->GetNetChannel()->GetAddress() : "null", 
 					pDestClient->GetClientName(), pDestClient->GetNetChannel() ? pDestClient->GetNetChannel()->GetAddress() : "null" );
             }
@@ -2309,12 +2309,12 @@ void SV_BroadcastVoiceData(IClient * cl, const CCLCMsg_VoiceData& msg )
 			// Still send something, just zero length (this is so the client 
 			// can display something that shows knows the server knows it's talking).
 			CSVCMsg_VoiceData_t emptyVoiceMsg;
-			emptyVoiceMsg.set_client( voiceData.client() );
-			emptyVoiceMsg.set_audible_mask( voiceData.audible_mask() );
-			emptyVoiceMsg.set_proximity( voiceData.proximity() );
-			if ( voiceData.has_xuid())
+			emptyVoiceMsg.client = voiceData.client;
+			emptyVoiceMsg.audible_mask = voiceData.audible_mask;
+			emptyVoiceMsg.proximity = voiceData.proximity;
+			if ( voiceData.xuid.has_value())
 			{
-				emptyVoiceMsg.set_xuid( voiceData.xuid() );
+				emptyVoiceMsg.xuid = voiceData.xuid;
 			}
 
 			pDestClient->SendNetMsg( emptyVoiceMsg, false, true );
@@ -2326,7 +2326,7 @@ void SV_BroadcastVoiceData(IClient * cl, const CCLCMsg_VoiceData& msg )
 
         if ( voice_verbose.GetBool() )
         {
-            Msg( "* SV_BroadcastVoiceData: Sending %d bits (%d bytes) from %s (%s) to %s (%s).  Proximity %s.\n", voiceData.voice_data().size(), Bits2Bytes(voiceData.voice_data().size()), cl->GetClientName(), cl->GetNetChannel() ? cl->GetNetChannel()->GetAddress() : "null", pDestClient->GetClientName(), pDestClient->GetNetChannel() ? pDestClient->GetNetChannel()->GetAddress() : "null", voiceData.proximity() ? "true" : "false" );
+            Msg( "* SV_BroadcastVoiceData: Sending %d bits (%d bytes) from %s (%s) to %s (%s).  Proximity %s.\n", voiceData.voice_data->size(), Bits2Bytes(voiceData.voice_data->size()), cl->GetClientName(), cl->GetNetChannel() ? cl->GetNetChannel()->GetAddress() : "null", pDestClient->GetClientName(), pDestClient->GetNetChannel() ? pDestClient->GetNetChannel()->GetAddress() : "null", voiceData.proximity ? "true" : "false" );
         }
     }
 }

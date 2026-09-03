@@ -572,10 +572,10 @@ unsigned int CNetChan::RequestFile(const char *filename, bool bIsReplayDemoFile	
 	}
 
 	CNETMsg_File_t file;
-	file.set_transfer_id( m_FileRequestCounter );
-	file.set_file_name( filename );
-	file.set_is_replay_demo_file( bIsReplayDemoFile );
-	file.set_deny( 0 );
+	file.transfer_id = m_FileRequestCounter;
+	file.file_name = filename;
+	file.is_replay_demo_file = bIsReplayDemoFile;
+	file.deny = 0;
 	file.WriteToBuffer( m_StreamReliable );
 
 	return m_FileRequestCounter;
@@ -594,10 +594,10 @@ void CNetChan::DenyFile(const char *filename, unsigned int transferID, bool bIsR
 	}
 
 	CNETMsg_File_t file;
-	file.set_transfer_id( transferID );
-	file.set_file_name( filename );
-	file.set_is_replay_demo_file( bIsReplayDemoFile );
-	file.set_deny( 1 );
+	file.transfer_id = transferID;
+	file.file_name = filename;
+	file.is_replay_demo_file = bIsReplayDemoFile;
+	file.deny = 1;
 	file.WriteToBuffer( m_StreamReliable );
 }
 
@@ -707,7 +707,7 @@ void CNetChan::Shutdown(const char *pReason)
 	{
 		// send disconnect message
 		CNETMsg_Disconnect_t disconnect;
-		disconnect.set_text( pReason );
+		disconnect.text = pReason;
 		disconnect.WriteToBuffer( m_StreamUnreliable );
 		Transmit();	// push message out
 	}
@@ -2068,7 +2068,7 @@ int CNetChan::SendDatagram(bf_write *datagram)
 		nop.WriteToBuffer( send );
 	}
 
-	// Make sure we have enough bits to read a final net_NOP opcode before compressing 
+	// Make sure we have enough bits to read a final ks::net::net_NOP opcode before compressing 
 	int nRemainingBits = send.GetNumBitsWritten() % 8;
 	if ( nRemainingBits > 0 &&  nRemainingBits <= (8-NETMSG_TYPE_BITS) )
 	{
@@ -2203,40 +2203,40 @@ int CNetChan::SendDatagram(bf_write *datagram)
 	return m_nOutSequenceNr-1; // return send seq nr
 }
 
-bool CNetChan::NETMsg_NOP( const CNETMsg_NOP& msg )
+bool CNetChan::NETMsg_NOP( const ks::net::CNETMsg_NOP& msg )
 {
 	return true;
 }
 
-bool CNetChan::NETMsg_Disconnect( const CNETMsg_Disconnect& msg )
+bool CNetChan::NETMsg_Disconnect( const ks::net::CNETMsg_Disconnect& msg )
 {
 #ifdef DEDICATED
 	m_MessageHandler->ConnectionClosing( "Disconnect" );
 #else
-	m_MessageHandler->ConnectionClosing( msg.text().c_str() );
+	m_MessageHandler->ConnectionClosing( msg.text->c_str() );
 #endif
 	return false;
 }
 
-bool CNetChan::NETMsg_File( const CNETMsg_File& msg )
+bool CNetChan::NETMsg_File( const ks::net::CNETMsg_File& msg )
 {
-	const char *string = msg.file_name().c_str();
+	const char *string = msg.file_name->c_str();
 
-	if ( !msg.deny() && IsValidFileForTransfer( string ) )
+	if ( !msg.deny && IsValidFileForTransfer( string ) )
 	{
-		m_MessageHandler->FileRequested( string, msg.transfer_id(), msg.is_replay_demo_file() );
+		m_MessageHandler->FileRequested( string, msg.transfer_id, msg.is_replay_demo_file );
 	}
 	else
 	{
-		m_MessageHandler->FileDenied( string, msg.transfer_id(), msg.is_replay_demo_file() );
+		m_MessageHandler->FileDenied( string, msg.transfer_id, msg.is_replay_demo_file );
 	}
 
 	return true;
 }
 
-bool CNetChan::NETMsg_SplitScreenUser( const CNETMsg_SplitScreenUser& msg )
+bool CNetChan::NETMsg_SplitScreenUser( const ks::net::CNETMsg_SplitScreenUser& msg )
 {
-	return m_MessageHandler->ChangeSplitscreenUser( msg.slot() );
+	return m_MessageHandler->ChangeSplitscreenUser( msg.slot );
 }
 
 bool CNetChan::WasLastMessageReliable() const
@@ -3642,7 +3642,7 @@ void CNetChan::ChangeSplitUser( bf_write &out, int slot )
 {
 	// Msg( "Changing to slot %d on %s\n", slot, GetName() );
 	CNETMsg_SplitScreenUser_t SplitScreenUser;
-	SplitScreenUser.set_slot( slot );
+	SplitScreenUser.slot = slot;
 	SplitScreenUser.WriteToBuffer( out );
 }
 

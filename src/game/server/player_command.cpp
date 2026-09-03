@@ -56,7 +56,7 @@ void CPlayerMove::StartCommand( CBasePlayer *player, CUserCmd *cmd )
 	int i;
 	for (i = 0; i < cmd->entitygroundcontact.Count(); i++)
 	{
-		int entindex =  cmd->entitygroundcontact[i].entindex;
+		int entindex =  cmd->entitygroundcontact[i].entindex();
 		CBaseEntity *pEntity = CBaseEntity::Instance( INDEXENT( entindex) );
 		if (pEntity)
 		{

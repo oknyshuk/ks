@@ -222,8 +222,8 @@ void CLagCompensationManager::StartLagCompensation( CBasePlayer *player, LagComp
 
 		// Clear state
 		ld->m_bRestoreEntity = false;
-		ld->m_RestoreData.Clear();
-		ld->m_ChangeData.Clear();
+		ld->m_RestoreData = {};
+		ld->m_ChangeData = {};
 	}
 
 	// Wipe any deleted entities from the list

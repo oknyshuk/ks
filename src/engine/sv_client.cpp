@@ -223,7 +223,7 @@ CGameClient::~CGameClient()
 
 }
 
-bool CGameClient::CLCMsg_ClientInfo( const CCLCMsg_ClientInfo& msg )
+bool CGameClient::CLCMsg_ClientInfo( const ks::net::CCLCMsg_ClientInfo& msg )
 {
 	BaseClass::CLCMsg_ClientInfo( msg );
 
@@ -249,7 +249,7 @@ bool CGameClient::CLCMsg_ClientInfo( const CCLCMsg_ClientInfo& msg )
 	return true;
 }
 
-bool CGameClient::CLCMsg_Move( const CCLCMsg_Move& msg )
+bool CGameClient::CLCMsg_Move( const ks::net::CCLCMsg_Move& msg )
 {
 	// Don't process usercmds until the client is active. If we do, there can be weird behavior
 	// like the game trying to send reliable messages to the client and having those messages discarded.
@@ -265,7 +265,7 @@ bool CGameClient::CLCMsg_Move( const CCLCMsg_Move& msg )
 	m_LastMovementTick = sv.m_nTickCount; 
 
 	INetChannel *netchan = sv.GetBaseUserForSplitClient( this )->m_NetChannel;
-	int totalcmds = msg.num_backup_commands() + msg.num_new_commands();
+	int totalcmds = msg.num_backup_commands + msg.num_new_commands;
 
 	// Decrement drop count by held back packet count
 	int netdrop = netchan->GetDropNumber();
@@ -290,13 +290,13 @@ bool CGameClient::CLCMsg_Move( const CCLCMsg_Move& msg )
 	//		m_Client->netchan->incoming_sequence,
 	//		m_Client->netchan->incoming_sequence & SV_UPDATE_MASK );
 
-	bf_read DataIn( &msg.data()[0], msg.data().size() );
+	bf_read DataIn( msg.data->data(), msg.data->size() );
 
 	serverGameClients->ProcessUsercmds
 		( 
 		edict,								// Player edict
 		&DataIn,
-		msg.num_new_commands(),
+		msg.num_new_commands,
 		totalcmds,							// Commands in packet
 		netdrop,							// Number of dropped commands
 		ignore,								// Don't actually run anything
@@ -313,7 +313,7 @@ bool CGameClient::CLCMsg_Move( const CCLCMsg_Move& msg )
 	return true;
 }
 
-bool CGameClient::CLCMsg_VoiceData( const CCLCMsg_VoiceData& msg )
+bool CGameClient::CLCMsg_VoiceData( const ks::net::CCLCMsg_VoiceData& msg )
 {
 	serverGameClients->ClientVoice( edict );
 
@@ -322,7 +322,7 @@ bool CGameClient::CLCMsg_VoiceData( const CCLCMsg_VoiceData& msg )
 	return true;
 }
 
-bool CGameClient::CLCMsg_CmdKeyValues( const CCLCMsg_CmdKeyValues& msg )
+bool CGameClient::CLCMsg_CmdKeyValues( const ks::net::CCLCMsg_CmdKeyValues& msg )
 {
 	KeyValues *keyvalues = CmdKeyValuesHelper::CLCMsg_GetKeyValues( msg );
 	KeyValues::AutoDelete autodelete_keyvalues( keyvalues );
@@ -339,10 +339,10 @@ bool CGameClient::CLCMsg_CmdKeyValues( const CCLCMsg_CmdKeyValues& msg )
 	return true;
 }
 
-bool CGameClient::CLCMsg_HltvReplay( const CCLCMsg_HltvReplay &msg )
+bool CGameClient::CLCMsg_HltvReplay( const ks::net::CCLCMsg_HltvReplay &msg )
 {
-	int nRequest = msg.request();
-	if ( nRequest == REPLAY_EVENT_STUCK_NEED_FULL_UPDATE )
+	int nRequest = msg.request;
+	if ( nRequest == ks::net::REPLAY_EVENT_STUCK_NEED_FULL_UPDATE )
 	{
 		if ( m_nForceWaitForTick > 0 )
 		{
@@ -356,11 +356,11 @@ bool CGameClient::CLCMsg_HltvReplay( const CCLCMsg_HltvReplay &msg )
 		if ( params.m_flSlowdownRate > 0.01f && params.m_flSlowdownRate < 10.0f && params.m_flSlowdownLength > 0.01f &&  params.m_flSlowdownLength <= 5.0f )
 		{
 			// keep defaults in suspicious cases
-			params.m_flSlowdownRate = msg.slowdown_rate();
-			params.m_flSlowdownLength = msg.slowdown_length();
+			params.m_flSlowdownRate = msg.slowdown_rate;
+			params.m_flSlowdownLength = msg.slowdown_length;
 		}
-		params.m_nPrimaryTargetEntIndex = msg.primary_target_ent_index();
-		params.m_flEventTime = msg.event_time();
+		params.m_nPrimaryTargetEntIndex = msg.primary_target_ent_index;
+		params.m_flEventTime = msg.event_time;
 		serverGameClients->ClientReplayEvent( edict, params );
 	}
 	else
@@ -372,18 +372,18 @@ bool CGameClient::CLCMsg_HltvReplay( const CCLCMsg_HltvReplay &msg )
 	return true;
 }
 
-bool CGameClient::SVCMsg_UserMessage( const CSVCMsg_UserMessage &msg )
+bool CGameClient::SVCMsg_UserMessage( const ks::net::CSVCMsg_UserMessage &msg )
 {
-	serverGameClients->ClientSvcUserMessage( edict, msg.msg_type(), msg.passthrough(), msg.msg_data().size(), &msg.msg_data()[0] );
+	serverGameClients->ClientSvcUserMessage( edict, msg.msg_type, msg.passthrough, msg.msg_data->size(), msg.msg_data->data() );
 	return true;
 }
 
-bool CGameClient::CLCMsg_RespondCvarValue( const CCLCMsg_RespondCvarValue& msg )
+bool CGameClient::CLCMsg_RespondCvarValue( const ks::net::CCLCMsg_RespondCvarValue& msg )
 {
-	if ( msg.cookie() > 0 )
+	if ( msg.cookie > 0 )
 	{
 		if ( g_pServerPluginHandler )
-			g_pServerPluginHandler->OnQueryCvarValueFinished( ( EQueryCvarValueStatus )msg.cookie(), edict, ( EQueryCvarValueStatus )msg.status_code(), msg.name().c_str(), msg.value().c_str() );
+			g_pServerPluginHandler->OnQueryCvarValueFinished( ( EQueryCvarValueStatus )msg.cookie.get(), edict, ( EQueryCvarValueStatus )msg.status_code.get(), msg.name->c_str(), msg.value->c_str() );
 	}
 	else
 	{
@@ -391,7 +391,7 @@ bool CGameClient::CLCMsg_RespondCvarValue( const CCLCMsg_RespondCvarValue& msg )
 		if ( serverGameDLL && g_bServerGameDLLGreaterThanV5 )
 		{
 #ifdef REL_TO_STAGING_MERGE_TODO
-			serverGameDLL->OnQueryCvarValueFinished( msg.cookie(), edict, msg.status_code(), msg.name().c_str(), msg.value().c_str() );
+			serverGameDLL->OnQueryCvarValueFinished( msg.cookie, edict, msg.status_code, msg.name->c_str(), msg.value->c_str() );
 #endif
 		}
 	}
@@ -400,7 +400,7 @@ bool CGameClient::CLCMsg_RespondCvarValue( const CCLCMsg_RespondCvarValue& msg )
 }
 
 #include "pure_server.h"
-bool CGameClient::CLCMsg_FileCRCCheck( const CCLCMsg_FileCRCCheck& msg )
+bool CGameClient::CLCMsg_FileCRCCheck( const ks::net::CCLCMsg_FileCRCCheck& msg )
 {
 	// Ignore this message if we're not in pure server mode...
 	if ( !sv.IsInPureServerMode() )
@@ -410,16 +410,16 @@ bool CGameClient::CLCMsg_FileCRCCheck( const CCLCMsg_FileCRCCheck& msg )
 
 	// first check against all the other files users have sent
 	FileHash_t filehash;
-	V_memcpy( filehash.m_md5contents.bits, msg.md5().c_str(), MD5_DIGEST_LENGTH );
-	filehash.m_crcIOSequence = msg.crc();
-	filehash.m_eFileHashType = msg.file_hash_type();
-	filehash.m_cbFileLen = msg.file_len();
-	filehash.m_nPackFileNumber = msg.pack_file_number();
-	filehash.m_PackFileID = msg.pack_file_id();
+	V_memcpy( filehash.m_md5contents.bits, msg.md5->c_str(), MD5_DIGEST_LENGTH );
+	filehash.m_crcIOSequence = msg.crc;
+	filehash.m_eFileHashType = msg.file_hash_type;
+	filehash.m_cbFileLen = msg.file_len;
+	filehash.m_nPackFileNumber = msg.pack_file_number;
+	filehash.m_PackFileID = msg.pack_file_id;
 
 	const char *path = CCLCMsg_FileCRCCheck_t::GetPath( msg );
 	const char *fileName = CCLCMsg_FileCRCCheck_t::GetFileName( msg );
-	if ( g_PureFileTracker.DoesFileMatch( path, fileName, msg.file_fraction(), &filehash, GetNetworkID() ) )
+	if ( g_PureFileTracker.DoesFileMatch( path, fileName, msg.file_fraction, &filehash, GetNetworkID() ) )
 	{
 		// track successful file
 	}
@@ -484,7 +484,7 @@ void CGameClient::DownloadCustomizations()
 	}
 }
 
-void CGameClient::Connect(const char * szName, int nUserID, INetChannel *pNetChannel, bool bFakePlayer, CrossPlayPlatform_t clientPlatform, const CMsg_CVars *pVecCvars /*= NULL*/)
+void CGameClient::Connect(const char * szName, int nUserID, INetChannel *pNetChannel, bool bFakePlayer, CrossPlayPlatform_t clientPlatform, const ks::net::CMsg_CVars *pVecCvars /*= NULL*/)
 {
 	BaseClass::Connect( szName, nUserID, pNetChannel, bFakePlayer, clientPlatform, pVecCvars );
 
@@ -987,7 +987,7 @@ void CGameClient::SendSound( SoundInfo_t &sound, bool isReliable )
 		m_nSoundSequence = ( m_nSoundSequence + 1 ) & SOUND_SEQNUMBER_MASK;	// increase own sound sequence counter
 		sound.nSequenceNumber = 0; // don't transmit nSequenceNumber for reliable sounds
 
-		sndmsg->set_reliable_sound( true );
+		sndmsg->reliable_sound = true;
 
 		sound.WriteDelta( NULL, *sndmsg, sv.GetFinalTickTime() );
 
@@ -1050,7 +1050,7 @@ void CGameClient::WriteGameSounds( bf_write &buf, int nMaxSounds )
 
 static ConVar sv_sound_discardextraunreliable( "sv_sound_discardextraunreliable", "1" );
 
-int	CGameClient::FillSoundsMessage(CSVCMsg_Sounds &msg, int nMaxSounds )
+int	CGameClient::FillSoundsMessage(ks::net::CSVCMsg_Sounds &msg, int nMaxSounds )
 {
 	int i, count = m_Sounds.Count();
 
@@ -1065,7 +1065,7 @@ int	CGameClient::FillSoundsMessage(CSVCMsg_Sounds &msg, int nMaxSounds )
 	SoundInfo_t defaultSound;
 	SoundInfo_t *pDeltaSound = &defaultSound;
 
-	msg.set_reliable_sound( false );
+	msg.reliable_sound = false;
 
 	float finalTickTime = m_Server->GetFinalTickTime();
 	for ( i = 0 ; i < count; i++ )
@@ -1101,7 +1101,7 @@ int	CGameClient::FillSoundsMessage(CSVCMsg_Sounds &msg, int nMaxSounds )
 
 	Assert( m_Sounds.Count() <= nMaxSounds );
 
-	return msg.sounds_size();
+	return msg.sounds.size();
 }
 
 bool CGameClient::CheckConnect( void )
@@ -1210,7 +1210,7 @@ bool CGameClient::SendSignonData( void )
 	{
 		// use your class infos, CRC is correct
 		CSVCMsg_ClassInfo_t classmsg;
-		classmsg.set_create_on_client( true );
+		classmsg.create_on_client = true;
 		m_NetChannel->SendNetMsg( classmsg );
 	}
 
@@ -1247,7 +1247,7 @@ void CGameClient::SpawnPlayer( void )
 
 	// set view entity
 	CSVCMsg_SetView_t setView;
-	setView.set_entity_index( m_nEntityIndex );
+	setView.entity_index = m_nEntityIndex;
 	SendNetMsg( setView );
 
 	BaseClass::SpawnPlayer();
@@ -1298,20 +1298,20 @@ void CGameClient::WriteViewAngleUpdate()
 		if ( pl->fixangle == FIXANGLE_RELATIVE )
 		{
 			CSVCMsg_FixAngle_t fixAngle;
-			fixAngle.set_relative( true );
-			fixAngle.mutable_angle()->set_x( pl->anglechange.x );
-			fixAngle.mutable_angle()->set_y( pl->anglechange.y );
-			fixAngle.mutable_angle()->set_z( pl->anglechange.z );
+			fixAngle.relative = true;
+			fixAngle.angle.mut().x = pl->anglechange.x;
+			fixAngle.angle.mut().y = pl->anglechange.y;
+			fixAngle.angle.mut().z = pl->anglechange.z;
 			m_NetChannel->SendNetMsg( fixAngle );
 			pl->anglechange.Init(); // clear
 		}
 		else
 		{
 			CSVCMsg_FixAngle_t fixAngle;
-			fixAngle.set_relative( false );
-			fixAngle.mutable_angle()->set_x( pl->v_angle.x );
-			fixAngle.mutable_angle()->set_y( pl->v_angle.y );
-			fixAngle.mutable_angle()->set_z( pl->v_angle.z );
+			fixAngle.relative = false;
+			fixAngle.angle.mut().x = pl->v_angle.x;
+			fixAngle.angle.mut().y = pl->v_angle.y;
+			fixAngle.angle.mut().z = pl->v_angle.z;
 			m_NetChannel->SendNetMsg( fixAngle );
 		}
 		
@@ -1363,27 +1363,27 @@ bool CGameClient::SendNetMsg( INetMessage &msg, bool bForceReliable, bool bVoice
 #endif
 	if ( IsHltvReplay() )
 	{
-		if ( msg.GetType() != svc_VoiceData ) // let the voice messages through
+		if ( msg.GetType() != ks::net::svc_VoiceData ) // let the voice messages through
 		{
 			Assert( !bVoice );
 			bool bResult = true;
 
-			if ( msg.GetType() == svc_UserMessage )
+			if ( msg.GetType() == ks::net::svc_UserMessage )
 			{
 				// chat: see UTIL_SayText2Filter(), Say_Host()  and "player_say" GameMessage
 				CSVCMsg_UserMessage_t &userMessageHeader = ( CSVCMsg_UserMessage_t & )msg;
 				// Only send through those user messages that require real-time timeline on the client.
-				switch ( userMessageHeader.msg_type() )
+				switch ( userMessageHeader.msg_type )
 				{
-				case 22: // CS_UM_RadioText
-				case 5: //CS_UM_SayText
-				case 6: // CS_UM_SayText2
-				case 7: // CS_UM_TextMsg
-				case 18: // CS_UM_RawAudio
+				case 22: // ks::net::CS_UM_RadioText
+				case 5: //ks::net::CS_UM_SayText
+				case 6: // ks::net::CS_UM_SayText2
+				case 7: // ks::net::CS_UM_TextMsg
+				case 18: // ks::net::CS_UM_RawAudio
 					// mark this message as real-time and send with that flag, to distinguish it from the replay messages
-					userMessageHeader.set_passthrough( 1 );
+					userMessageHeader.passthrough = 1;
 					bResult = BaseClass::SendNetMsg( msg, bForceReliable, bVoice );
-					userMessageHeader.clear_passthrough();
+					userMessageHeader.passthrough.reset();
 					break;
 				}
 			}
@@ -1610,7 +1610,7 @@ bool CGameClient::SendSnapshot( CClientFrame * pFrame )
 		int maxEnts = tv_transmitall.GetBool()?255:64;
 		CSVCMsg_TempEntities_t tempentsmsg;
 		hltv->WriteTempEntities( this, pFrame->GetSnapshot(), m_pLastSnapshot.GetObject(), tempentsmsg, maxEnts );
-		if ( tempentsmsg.num_entries() )
+		if ( tempentsmsg.num_entries )
 		{
 			tempentsmsg.WriteToBuffer( *hltv->GetBuffer( HLTV_BUFFER_TEMPENTS ) );
 		}
@@ -1760,7 +1760,7 @@ bool CGameClient::SendHltvReplaySnapshot( CClientFrame * pFrame )
 
 	// send tick time
 	CNETMsg_Tick_t tickmsg( pFrame->tick_count, host_frameendtime_computationduration, host_frametime_stddeviation, host_framestarttime_stddeviation );
-	tickmsg.set_hltv_replay_flags( 1 );
+	tickmsg.hltv_replay_flags = 1;
 	tickmsg.WriteToBuffer( msg );
 
 	// Update shared client/server string tables. Must be done before sending entities
@@ -1927,19 +1927,19 @@ bool CGameClient::StartHltvReplay( const HltvReplayParams_t &params )
 			if ( nNewReplayDelay != m_nHltvReplayDelay )
 			{
 				CSVCMsg_HltvReplay_t msg;
-				msg.set_delay( nNewReplayDelay );
-				msg.set_primary_target( params.m_nPrimaryTargetEntIndex );
-				msg.set_replay_stop_at( nNewReplayStopAt );
-				msg.set_replay_start_at( m_nHltvReplayStartAt );
+				msg.delay = nNewReplayDelay;
+				msg.primary_target = params.m_nPrimaryTargetEntIndex;
+				msg.replay_stop_at = nNewReplayStopAt;
+				msg.replay_start_at = m_nHltvReplayStartAt;
 
 				if ( params.m_flSlowdownRate > 1.0f / 16.0f && params.m_flSlowdownBeginAt + 0.125f < params.m_flSlowdownEndAt )
 				{
 					m_flHltvReplaySlowdownRate = params.m_flSlowdownRate;
 					m_nHltvReplaySlowdownBeginAt = Max<int>( nServerTick - nNewReplayDelay, nServerTick + params.m_flSlowdownBeginAt / flTickInterval );
 					m_nHltvReplaySlowdownEndAt = Max<int>( m_nHltvReplaySlowdownBeginAt, nServerTick + params.m_flSlowdownEndAt / flTickInterval );
-					msg.set_replay_slowdown_rate( m_flHltvReplaySlowdownRate );
-					msg.set_replay_slowdown_begin( m_nHltvReplaySlowdownBeginAt );
-					msg.set_replay_slowdown_end( m_nHltvReplaySlowdownEndAt );
+					msg.replay_slowdown_rate = m_flHltvReplaySlowdownRate;
+					msg.replay_slowdown_begin = m_nHltvReplaySlowdownBeginAt;
+					msg.replay_slowdown_end = m_nHltvReplaySlowdownEndAt;
 				}
 				else
 				{

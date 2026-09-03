@@ -198,11 +198,11 @@ void CBaseMultiplayerPlayer::AwardAchievement( int iAchievement, int iCount )
 
 	int userID = GetPlayerInfo()->GetUserID();
 
-	CCSUsrMsg_AchievementEvent msg;
-	msg.set_achievement( iAchievement );
-	msg.set_count( iCount );
-	msg.set_user_id( userID );
-	SendUserMessage( filter, CS_UM_AchievementEvent, msg );
+	ks::net::CCSUsrMsg_AchievementEvent msg;
+	msg.achievement = iAchievement;
+	msg.count = iCount;
+	msg.user_id = userID;
+	SendUserMessage( filter, ks::net::CS_UM_AchievementEvent, msg );
 }
 
 #ifdef _DEBUG

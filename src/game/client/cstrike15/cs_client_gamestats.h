@@ -172,7 +172,7 @@ public:
 	// [jhail] Retrieve the per-round stats
 	const StatsCollection_t&	GetRoundStats( int nUserSlot );
 
-	bool		MsgFunc_PlayerStatsUpdate( const CCSUsrMsg_PlayerStatsUpdate &msg );
+	bool		MsgFunc_PlayerStatsUpdate( const ks::net::CCSUsrMsg_PlayerStatsUpdate &msg );
 
 	bool ValidateTitleBlockVersion( struct TitleDataFieldsDescription_t const *pFields, class IPlayerLocal *pPlayerLocal, CSSyncStatValueDirection_t eOp, int titleBlockNo );
 

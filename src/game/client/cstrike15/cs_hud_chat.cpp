@@ -109,20 +109,20 @@ void CHudChat::Reset( void )
 //-----------------------------------------------------------------------------
 // Purpose: Reads in a player's Radio text from the server
 //-----------------------------------------------------------------------------
-bool CHudChat::MsgFunc_RadioText( const CCSUsrMsg_RadioText &msg )
+bool CHudChat::MsgFunc_RadioText( const ks::net::CCSUsrMsg_RadioText &msg )
 {
-	int client = msg.client();
+	int client = msg.client;
 
 	wchar_t szBuf[6][128];
-	wchar_t *msg_text = ReadLocalizedString( msg.msg_name().c_str(), szBuf[0], sizeof( szBuf[0] ), false );
+	wchar_t *msg_text = ReadLocalizedString( msg.msg_name->c_str(), szBuf[0], sizeof( szBuf[0] ), false );
 
 	// keep reading strings and using C format strings for subsituting the strings into the localised text string
-	ReadChatTextString ( msg.params(0).c_str(), szBuf[1], sizeof( szBuf[1] ) );		// player name
-	ReadLocalizedString( msg.params(1).c_str(), szBuf[2], sizeof( szBuf[2] ), true );	// location
-	ReadLocalizedString( msg.params(2).c_str(), szBuf[3], sizeof( szBuf[3] ), true );	// radio text
-	ReadLocalizedString( msg.params(3).c_str(), szBuf[4], sizeof( szBuf[4] ), true );	// unused :(
+	ReadChatTextString ( msg.params[ 0 ].c_str(), szBuf[1], sizeof( szBuf[1] ) );		// player name
+	ReadLocalizedString( msg.params[ 1 ].c_str(), szBuf[2], sizeof( szBuf[2] ), true );	// location
+	ReadLocalizedString( msg.params[ 2 ].c_str(), szBuf[3], sizeof( szBuf[3] ), true );	// radio text
+	ReadLocalizedString( msg.params[ 3 ].c_str(), szBuf[4], sizeof( szBuf[4] ), true );	// unused :(
 
-	if ( V_strcmp( msg.params( 3 ).c_str(), "auto" ) != 0 && ( GetClientVoiceMgr()->IsPlayerBlocked( client ) || GetClientVoiceMgr()->ShouldHideCommunicationFromPlayer( client ) ) )
+	if ( V_strcmp( msg.params[ 3 ].c_str(), "auto" ) != 0 && ( GetClientVoiceMgr()->IsPlayerBlocked( client ) || GetClientVoiceMgr()->ShouldHideCommunicationFromPlayer( client ) ) )
 		return false;
 
 	g_pLocalize->ConstructString( szBuf[5], sizeof( szBuf[5] ), msg_text, 4, szBuf[1], szBuf[2], szBuf[3], szBuf[4] );
@@ -140,7 +140,7 @@ bool CHudChat::MsgFunc_RadioText( const CCSUsrMsg_RadioText &msg )
 //-----------------------------------------------------------------------------
 // Purpose: Reads in a player's Chat text from the server
 //-----------------------------------------------------------------------------
-bool CHudChat::MsgFunc_SayText2( const CCSUsrMsg_SayText2 &msg )
+bool CHudChat::MsgFunc_SayText2( const ks::net::CCSUsrMsg_SayText2 &msg )
 {
 	// Got message during connection
 	if ( !GetCSResources() )
@@ -152,20 +152,20 @@ bool CHudChat::MsgFunc_SayText2( const CCSUsrMsg_SayText2 &msg )
 			return true; // cannot print potentially personal details
 	}
 
-	int client = msg.ent_idx();
-	bool bWantsToChat = msg.chat() != 0;
+	int client = msg.ent_idx;
+	bool bWantsToChat = msg.chat != 0;
 
 	wchar_t szBuf[6][256];
 	char untranslated_msg_text[256];
-	wchar_t *msg_text = ReadLocalizedString( msg.msg_name().c_str(), szBuf[0], sizeof( szBuf[0] ), false, untranslated_msg_text, sizeof( untranslated_msg_text ) );
+	wchar_t *msg_text = ReadLocalizedString( msg.msg_name->c_str(), szBuf[0], sizeof( szBuf[0] ), false, untranslated_msg_text, sizeof( untranslated_msg_text ) );
 
 	// keep reading strings and using C format strings for subsituting the strings into the localised text string
-	ReadChatTextString ( msg.params(0).c_str(), szBuf[1], sizeof( szBuf[1] ) );		// player name
-	ReadChatTextString ( msg.params(1).c_str(), szBuf[2], sizeof( szBuf[2] ), true );	// location
-	ReadLocalizedString( msg.params(2).c_str(), szBuf[3], sizeof( szBuf[3] ), true );	// radio text
-	ReadLocalizedString( msg.params(3).c_str(), szBuf[4], sizeof( szBuf[4] ), true );	// unused :(
+	ReadChatTextString ( msg.params[ 0 ].c_str(), szBuf[1], sizeof( szBuf[1] ) );		// player name
+	ReadChatTextString ( msg.params[ 1 ].c_str(), szBuf[2], sizeof( szBuf[2] ), true );	// location
+	ReadLocalizedString( msg.params[ 2 ].c_str(), szBuf[3], sizeof( szBuf[3] ), true );	// radio text
+	ReadLocalizedString( msg.params[ 3 ].c_str(), szBuf[4], sizeof( szBuf[4] ), true );	// unused :(
 	
-	if ( V_strcmp( msg.params( 3 ).c_str(), "auto" ) != 0 && ( GetClientVoiceMgr()->IsPlayerBlocked( client ) || GetClientVoiceMgr()->ShouldHideCommunicationFromPlayer( client ) ) )
+	if ( V_strcmp( msg.params[ 3 ].c_str(), "auto" ) != 0 && ( GetClientVoiceMgr()->IsPlayerBlocked( client ) || GetClientVoiceMgr()->ShouldHideCommunicationFromPlayer( client ) ) )
 		bWantsToChat = false;
 
 	CEconQuestDefinition *pQuestDef = CSGameRules()->GetActiveAssassinationQuest();
@@ -227,12 +227,12 @@ int CHudChat::GetChatInputOffset( void )
 // Purpose: Reads in an Audio message from the server (wav file to be played
 //          via the player's voice, i.e. for bot chatter)
 //-----------------------------------------------------------------------------
-bool CHudChat::MsgFunc_RawAudio( const CCSUsrMsg_RawAudio &msg )
+bool CHudChat::MsgFunc_RawAudio( const ks::net::CCSUsrMsg_RawAudio &msg )
 {
-	int pitch = msg.pitch();
-	int playerIndex = msg.entidx();
-	float feedbackDuration = msg.duration();
-	const char *szString = msg.voice_filename().c_str();
+	int pitch = msg.pitch;
+	int playerIndex = msg.entidx;
+	float feedbackDuration = msg.duration;
+	const char *szString = msg.voice_filename->c_str();
 
 	EmitSound_t ep;
 	ep.m_nChannel = CHAN_VOICE;

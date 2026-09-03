@@ -69,9 +69,9 @@ struct InputEvent_t;
 struct SpatializationInfo_t;
 class IConVar;
 class CJob;
-class CSVCMsg_HltvReplay;
+namespace ks::net { struct CSVCMsg_HltvReplay; }
 class INetMessage;
-class CEngineGotvSyncPacket;
+namespace ks::net { struct CEngineGotvSyncPacket; }
 
 struct CDemoPlaybackParameters_t
 {
@@ -834,7 +834,7 @@ public:
 
 	virtual int GetConnectionDataProtocol() const = 0;
 
-	virtual bool EngineGotvSyncPacket( const CEngineGotvSyncPacket *pPkt ) = 0;
+	virtual bool EngineGotvSyncPacket( const ks::net::CEngineGotvSyncPacket *pPkt ) = 0;
 
 	virtual const char* AliasToCommandString( const char* szAliasName ) = 0;
 };
@@ -1113,7 +1113,7 @@ public:
 	// an error message of up to length bytes should be returned in errorMsg.
 	virtual bool			CanStopRecordDemo( char *errorMsg, int length ) const = 0;
 
-	virtual void OnHltvReplay( const CSVCMsg_HltvReplay &msg ) = 0;
+	virtual void OnHltvReplay( const ks::net::CSVCMsg_HltvReplay &msg ) = 0;
 	virtual void OnHltvReplayTick() = 0;
 	virtual int GetHltvReplayDelay() = 0;
 
@@ -1121,7 +1121,7 @@ public:
 	virtual void OnCommandDuringPlayback( char const *cmd ) = 0;
 
 	virtual void RetireAllPlayerDecals( bool bRenderContextValid ) = 0;
-	virtual void EngineGotvSyncPacket( const CEngineGotvSyncPacket *pPkt ) = 0; // Engine asking GC for a sync packet
+	virtual void EngineGotvSyncPacket( const ks::net::CEngineGotvSyncPacket *pPkt ) = 0; // Engine asking GC for a sync packet
 	virtual int GetInEyeEntity() const = 0;
 	virtual void OnTickPre( int tickcount ) = 0;
 };

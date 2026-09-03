@@ -238,11 +238,11 @@ void CBaseHudChat::Init( void )
 //			iSize - 
 //			*pbuf - 
 //-----------------------------------------------------------------------------
-bool CBaseHudChat::MsgFunc_SayText( const CCSUsrMsg_SayText &msg )
+bool CBaseHudChat::MsgFunc_SayText( const ks::net::CCSUsrMsg_SayText &msg )
 {
-	int client = msg.ent_idx();
-	const char *szString =  msg.text().c_str();
-	bool bWantsToChat = msg.chat() ? true : false;
+	int client = msg.ent_idx;
+	const char *szString =  msg.text->c_str();
+	bool bWantsToChat = msg.chat ? true : false;
 
 	if ( bWantsToChat )
 	{
@@ -275,24 +275,24 @@ int CBaseHudChat::GetFilterForString( const char *pString )
 //-----------------------------------------------------------------------------
 // Purpose: Reads in a player's Chat text from the server
 //-----------------------------------------------------------------------------
-bool CBaseHudChat::MsgFunc_SayText2( const CCSUsrMsg_SayText2 &msg )
+bool CBaseHudChat::MsgFunc_SayText2( const ks::net::CCSUsrMsg_SayText2 &msg )
 {
 	// Got message during connection
 	if ( !g_PR )
 		return true;;
 
-	int client = msg.ent_idx();
-	bool bWantsToChat = msg.chat() ? true : false;
+	int client = msg.ent_idx;
+	bool bWantsToChat = msg.chat ? true : false;
 
 	wchar_t szBuf[6][256];
 	char untranslated_msg_text[256];
-	wchar_t *msg_text = ReadLocalizedString( msg.msg_name().c_str(), szBuf[0], sizeof( szBuf[0] ), false, untranslated_msg_text, sizeof( untranslated_msg_text ) );
+	wchar_t *msg_text = ReadLocalizedString( msg.msg_name->c_str(), szBuf[0], sizeof( szBuf[0] ), false, untranslated_msg_text, sizeof( untranslated_msg_text ) );
 
 	// keep reading strings and using C format strings for subsituting the strings into the localised text string
-	ReadChatTextString ( msg.params(0).c_str(), szBuf[1], sizeof( szBuf[1] ) );		// player name
-	ReadChatTextString ( msg.params(1).c_str(), szBuf[2], sizeof( szBuf[2] ), true );		// chat text
-	ReadLocalizedString( msg.params(2).c_str(), szBuf[3], sizeof( szBuf[3] ), true );
-	ReadLocalizedString( msg.params(3).c_str(), szBuf[4], sizeof( szBuf[4] ), true );
+	ReadChatTextString ( msg.params[ 0 ].c_str(), szBuf[1], sizeof( szBuf[1] ) );		// player name
+	ReadChatTextString ( msg.params[ 1 ].c_str(), szBuf[2], sizeof( szBuf[2] ), true );		// chat text
+	ReadLocalizedString( msg.params[ 2 ].c_str(), szBuf[3], sizeof( szBuf[3] ), true );
+	ReadLocalizedString( msg.params[ 3 ].c_str(), szBuf[4], sizeof( szBuf[4] ), true );
 
 	g_pLocalize->ConstructString( szBuf[5], sizeof( szBuf[5] ), msg_text, 4, szBuf[1], szBuf[2], szBuf[3], szBuf[4] );
 
@@ -337,10 +337,10 @@ bool CBaseHudChat::MsgFunc_SayText2( const CCSUsrMsg_SayText2 &msg )
 // any string that starts with the character '#' is a message name, and is used to look up the real message in titles.txt
 // the next ( optional) one to four strings are parameters for that string ( which can also be message names if they begin with '#')
 //-----------------------------------------------------------------------------
-bool CBaseHudChat::MsgFunc_TextMsg( const CCSUsrMsg_TextMsg &msg )
+bool CBaseHudChat::MsgFunc_TextMsg( const ks::net::CCSUsrMsg_TextMsg &msg )
 {
 	char szString[2048] = {};
-	int msg_dest = msg.msg_dst();
+	int msg_dest = msg.msg_dst;
 
 	wchar_t szBuf[5][256] = {};
 	wchar_t outputBuf[256] = {};
@@ -348,7 +348,7 @@ bool CBaseHudChat::MsgFunc_TextMsg( const CCSUsrMsg_TextMsg &msg )
 	for ( int i=0; i<5; ++i )
 	{
 		// Allow localizing player names
-		if ( const char *pszEntIndex = StringAfterPrefix( msg.params(i).c_str(), "#ENTNAME[" ) )
+		if ( const char *pszEntIndex = StringAfterPrefix( msg.params[ i ].c_str(), "#ENTNAME[" ) )
 		{
 			int iEntIndex = V_atoi( pszEntIndex );
 			wchar_t wszPlayerName[MAX_DECORATED_PLAYER_NAME_LENGTH] = {};
@@ -367,12 +367,12 @@ bool CBaseHudChat::MsgFunc_TextMsg( const CCSUsrMsg_TextMsg &msg )
 			}
 			else
 			{
-				V_strcpy_safe( szString, msg.params(i).c_str() );
+				V_strcpy_safe( szString, msg.params[ i ].c_str() );
 			}
 		}
 		else
 		{
-			V_strcpy_safe( szString, msg.params(i).c_str() );
+			V_strcpy_safe( szString, msg.params[ i ].c_str() );
 		}
 
 		if ( szString[0] )

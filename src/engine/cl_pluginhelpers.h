@@ -19,4 +19,4 @@ public:
 extern CPluginUIManager *g_PluginManager;
 
 
-void PluginHelpers_Menu( const CSVCMsg_Menu& msg );
+void PluginHelpers_Menu( const ks::net::CSVCMsg_Menu& msg );

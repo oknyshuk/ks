@@ -145,7 +145,7 @@ CClientState::CClientState() {}
 CClientState::~CClientState() {}
 void CClientState::ConnectionStart( INetChannel *chan ){}
 void CClientState::ConnectionStop(){}
-bool CClientState::SVCMsg_HltvReplay( const CSVCMsg_HltvReplay &msg ){ return false; }
+bool CClientState::SVCMsg_HltvReplay( const ks::net::CSVCMsg_HltvReplay &msg ){ return false; }
 void CClientState::ConnectionClosing( const char * reason ) {}
 void CClientState::ConnectionCrashed( const char * reason ) {}
 bool CClientState::ProcessConnectionlessPacket( netpacket_t *packet ){ return false; }
@@ -154,7 +154,7 @@ void CClientState::PacketEnd( void ) {}
 void CClientState::FileRequested(const char *fileName, unsigned int transferID, bool bIsReplayDemoFile ) {}
 void CClientState::Disconnect( bool showmainmenu  ) {}
 void CClientState::FullConnect( const ns_address &adr, int nEncryptionKey ) {}
-bool CClientState::SetSignonState ( int state, int count, const CNETMsg_SignonState *msg ) { return false;}
+bool CClientState::SetSignonState ( int state, int count, const ks::net::CNETMsg_SignonState *msg ) { return false;}
 void CClientState::SendClientInfo( void ) {}
 void CClientState::SendLoadingProgress( int nProgress ) {}
 void CClientState::SendServerCmdKeyValues( KeyValues *pKeyValues ) {}
@@ -163,24 +163,24 @@ bool CClientState::InstallEngineStringTableCallback( char const *tableName ) { r
 void CClientState::ReadPacketEntities( CEntityReadInfo &u ) {}
 const char *CClientState::GetCDKeyHash( void ) { return "123";}
 void CClientState::Clear( void ) {}
-bool CClientState::SVCMsg_UserMessage( const CSVCMsg_UserMessage& msg ) { return true; }
-bool CClientState::SVCMsg_GameEvent( const CSVCMsg_GameEvent& msg) { return true; }
-bool CClientState::SVCMsg_BSPDecal( const CSVCMsg_BSPDecal& msg ) OVERRIDE { return true; }
-bool CClientState::SVCMsg_CrosshairAngle( const CSVCMsg_CrosshairAngle& msg ) OVERRIDE { return true; }
-bool CClientState::SVCMsg_FixAngle( const CSVCMsg_FixAngle &msg ) OVERRIDE { return true; }
-bool CClientState::SVCMsg_VoiceData( const CSVCMsg_VoiceData& msg ) OVERRIDE { return true; }
-bool CClientState::SVCMsg_VoiceInit( const CSVCMsg_VoiceInit& msg ) OVERRIDE { return true; }
-bool CClientState::SVCMsg_SetPause( const CSVCMsg_SetPause& msg ) OVERRIDE { return true; } 
-bool CClientState::SVCMsg_ClassInfo( const CSVCMsg_ClassInfo& msg ) OVERRIDE { return true; }
-bool CClientState::NETMsg_StringCmd( const CNETMsg_StringCmd& msg ) OVERRIDE { return true; }
-bool CClientState::SVCMsg_ServerInfo( const CSVCMsg_ServerInfo& msg ) OVERRIDE { return true; }
-bool CClientState::NETMsg_Tick( const CNETMsg_Tick& msg ) OVERRIDE { return true; }
-bool CClientState::SVCMsg_TempEntities( const CSVCMsg_TempEntities& msg ) { return true; }
-bool CClientState::SVCMsg_PacketEntities( const CSVCMsg_PacketEntities& msg ) { return true; }
-bool CClientState::SVCMsg_Sounds( const CSVCMsg_Sounds& msg ) OVERRIDE { return true; }
-bool CClientState::SVCMsg_Prefetch( const CSVCMsg_Prefetch& msg ) OVERRIDE { return true; }
-bool CClientState::SVCMsg_PaintmapData( const CSVCMsg_PaintmapData& msg ) { return true; }
-bool CClientState::SVCMsg_EntityMsg( const CSVCMsg_EntityMsg& msg ) { return true; }
+bool CClientState::SVCMsg_UserMessage( const ks::net::CSVCMsg_UserMessage& msg ) { return true; }
+bool CClientState::SVCMsg_GameEvent( const ks::net::CSVCMsg_GameEvent& msg) { return true; }
+bool CClientState::SVCMsg_BSPDecal( const ks::net::CSVCMsg_BSPDecal& msg ) OVERRIDE { return true; }
+bool CClientState::SVCMsg_CrosshairAngle( const ks::net::CSVCMsg_CrosshairAngle& msg ) OVERRIDE { return true; }
+bool CClientState::SVCMsg_FixAngle( const ks::net::CSVCMsg_FixAngle &msg ) OVERRIDE { return true; }
+bool CClientState::SVCMsg_VoiceData( const ks::net::CSVCMsg_VoiceData& msg ) OVERRIDE { return true; }
+bool CClientState::SVCMsg_VoiceInit( const ks::net::CSVCMsg_VoiceInit& msg ) OVERRIDE { return true; }
+bool CClientState::SVCMsg_SetPause( const ks::net::CSVCMsg_SetPause& msg ) OVERRIDE { return true; } 
+bool CClientState::SVCMsg_ClassInfo( const ks::net::CSVCMsg_ClassInfo& msg ) OVERRIDE { return true; }
+bool CClientState::NETMsg_StringCmd( const ks::net::CNETMsg_StringCmd& msg ) OVERRIDE { return true; }
+bool CClientState::SVCMsg_ServerInfo( const ks::net::CSVCMsg_ServerInfo& msg ) OVERRIDE { return true; }
+bool CClientState::NETMsg_Tick( const ks::net::CNETMsg_Tick& msg ) OVERRIDE { return true; }
+bool CClientState::SVCMsg_TempEntities( const ks::net::CSVCMsg_TempEntities& msg ) { return true; }
+bool CClientState::SVCMsg_PacketEntities( const ks::net::CSVCMsg_PacketEntities& msg ) { return true; }
+bool CClientState::SVCMsg_Sounds( const ks::net::CSVCMsg_Sounds& msg ) OVERRIDE { return true; }
+bool CClientState::SVCMsg_Prefetch( const ks::net::CSVCMsg_Prefetch& msg ) OVERRIDE { return true; }
+bool CClientState::SVCMsg_PaintmapData( const ks::net::CSVCMsg_PaintmapData& msg ) { return true; }
+bool CClientState::SVCMsg_EntityMsg( const ks::net::CSVCMsg_EntityMsg& msg ) { return true; }
 float CClientState::GetTime() const { return 0.0f;}
 void CClientState::FileDenied(const char *fileName, unsigned int transferID, bool bIsReplayDemoFile ){}
 void CClientState::FileReceived( const char * fileName, unsigned int transferID, bool bIsReplayDemoFile ) {}

@@ -260,7 +260,7 @@ bool CVoteController::SetupVote( int iEntIndex )
 		CSingleUserRecipientFilter filter( pVoteCaller );
 		filter.MakeReliable();
 		
-		CCSUsrMsg_VoteSetup msg;
+		ks::net::CCSUsrMsg_VoteSetup msg;
 		
 		for( int iIndex = 0; iIndex < m_potentialIssues.Count(); ++iIndex )
 		{
@@ -270,7 +270,7 @@ bool CVoteController::SetupVote( int iEntIndex )
 			{
 				if ( pCurrentIssue->IsEnabled() )
 				{
-					msg.add_potential_issues( pCurrentIssue->GetTypeString() );
+					msg.potential_issues.emplace_back( pCurrentIssue->GetTypeString() );
 				}
 				else
 				{
@@ -278,12 +278,12 @@ bool CVoteController::SetupVote( int iEntIndex )
 					V_strcpy( szDisabledIssueStr, pCurrentIssue->GetTypeString() );
 					V_strcat( szDisabledIssueStr, " (Disabled on Server)", sizeof(szDisabledIssueStr) );
 
-					msg.add_potential_issues( szDisabledIssueStr );
+					msg.potential_issues.emplace_back( szDisabledIssueStr );
 				}
 			}
 		}
 
-		SendUserMessage( filter, CS_UM_VoteSetup, msg );
+		SendUserMessage( filter, ks::net::CS_UM_VoteSetup, msg );
 	}
 
 	return true;
@@ -434,15 +434,15 @@ bool CVoteController::CreateVote( int iEntIndex, const char *pszTypeString, cons
 						CSingleUserRecipientFilter filter( pPlayer );					
 						filter.MakeReliable();
 						
-						CCSUsrMsg_VoteStart msg;
-						msg.set_team( m_iOnlyTeamToVote );			// move into the filter
-						msg.set_ent_idx( m_iEntityHoldingVote );
-						msg.set_vote_type( pCurrentIssue->GetVoteIssue() );
-						msg.set_disp_str( pCurrentIssue->GetDisplayString() );
-						msg.set_details_str( pCurrentIssue->GetDetailsString() );
-						msg.set_other_team_str( pCurrentIssue->GetOtherTeamDisplayString() );
-						msg.set_is_yes_no_vote( m_bIsYesNoVote );
-						SendUserMessage( filter, CS_UM_VoteStart, msg );
+						ks::net::CCSUsrMsg_VoteStart msg;
+						msg.team = m_iOnlyTeamToVote;			// move into the filter
+						msg.ent_idx = m_iEntityHoldingVote;
+						msg.vote_type = pCurrentIssue->GetVoteIssue();
+						msg.disp_str = pCurrentIssue->GetDisplayString();
+						msg.details_str = pCurrentIssue->GetDetailsString();
+						msg.other_team_str = pCurrentIssue->GetOtherTeamDisplayString();
+						msg.is_yes_no_vote = m_bIsYesNoVote;
+						SendUserMessage( filter, ks::net::CS_UM_VoteStart, msg );
 					}
 				}
 
@@ -495,10 +495,10 @@ void CVoteController::SendVoteFailedMessage( vote_create_failed_t nReason, CBase
 		CSingleUserRecipientFilter user( pVoteCaller );
 		user.MakeReliable();
 
-		CCSUsrMsg_CallVoteFailed msg;
-		msg.set_reason( nReason );
-		msg.set_time( nTime );
-		SendUserMessage( user, CS_UM_CallVoteFailed, msg );
+		ks::net::CCSUsrMsg_CallVoteFailed msg;
+		msg.reason = nReason;
+		msg.time = nTime;
+		SendUserMessage( user, ks::net::CS_UM_CallVoteFailed, msg );
 	}
 	else
 	{
@@ -509,10 +509,10 @@ void CVoteController::SendVoteFailedMessage( vote_create_failed_t nReason, CBase
 		CBroadcastRecipientFilter filter;
 		filter.MakeReliable();
 
-		CCSUsrMsg_VoteFailed msg;
-		msg.set_team( m_iOnlyTeamToVote );
-		msg.set_reason( nReason );
-		SendUserMessage( filter, CS_UM_VoteFailed, msg );
+		ks::net::CCSUsrMsg_VoteFailed msg;
+		msg.team = m_iOnlyTeamToVote;
+		msg.reason = nReason;
+		SendUserMessage( filter, ks::net::CS_UM_VoteFailed, msg );
 	}
 }
 
@@ -747,12 +747,12 @@ void CVoteController::VoteControllerThink( void )
 				CBroadcastRecipientFilter filter;
 				filter.MakeReliable();
 
-				CCSUsrMsg_VotePass msg;
-				msg.set_team( m_iOnlyTeamToVote );
-				msg.set_vote_type( pActiveIssue->GetVoteIssue() );
-				msg.set_disp_str( pActiveIssue->GetVotePassedString() );
-				msg.set_details_str( pActiveIssue->GetDetailsString() );
-				SendUserMessage( filter, CS_UM_VotePass, msg );
+				ks::net::CCSUsrMsg_VotePass msg;
+				msg.team = m_iOnlyTeamToVote;
+				msg.vote_type = pActiveIssue->GetVoteIssue();
+				msg.disp_str = pActiveIssue->GetVotePassedString();
+				msg.details_str = pActiveIssue->GetDetailsString();
+				SendUserMessage( filter, ks::net::CS_UM_VotePass, msg );
 			}
 			else
 			{

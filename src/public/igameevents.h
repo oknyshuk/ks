@@ -61,7 +61,7 @@ data field should not be broadcasted to clients, use the type "local".
 
 class KeyValues;
 class CGameEvent;
-class CSVCMsg_GameEvent;
+namespace ks::net { struct CSVCMsg_GameEvent; }
 
 // Class for visiting every key of data on an event
 abstract_class IGameEventVisitor2
@@ -163,8 +163,8 @@ public:
 	virtual void FreeEvent( IGameEvent *event ) = 0;
 
 	// write/read event to/from bitbuffer
-	virtual bool SerializeEvent( IGameEvent *event, CSVCMsg_GameEvent *eventMsg ) = 0;
-	virtual IGameEvent *UnserializeEvent( const CSVCMsg_GameEvent& eventMsg ) = 0; // create new KeyValues, must be deleted
+	virtual bool SerializeEvent( IGameEvent *event, ks::net::CSVCMsg_GameEvent *eventMsg ) = 0;
+	virtual IGameEvent *UnserializeEvent( const ks::net::CSVCMsg_GameEvent& eventMsg ) = 0; // create new KeyValues, must be deleted
 };
 
 // the old game event manager interface, don't use it. Rest is legacy support:

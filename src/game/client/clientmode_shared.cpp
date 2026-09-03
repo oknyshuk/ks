@@ -67,15 +67,15 @@ extern ConVar spec_show_xray;
 extern ConVar spec_hide_players;
 
 
-static bool __MsgFunc_Rumble( const CCSUsrMsg_Rumble &msg )
+static bool __MsgFunc_Rumble( const ks::net::CCSUsrMsg_Rumble &msg )
 {
 	unsigned char waveformIndex;
 	unsigned char rumbleData;
 	unsigned char rumbleFlags;
 
-	waveformIndex = msg.index();
-	rumbleData = msg.data();
-	rumbleFlags = msg.flags();
+	waveformIndex = msg.index;
+	rumbleData = msg.data;
+	rumbleFlags = msg.flags;
 
 	int userID = XBX_GetActiveUserId();
 
@@ -84,33 +84,33 @@ static bool __MsgFunc_Rumble( const CCSUsrMsg_Rumble &msg )
 	return true;
 }
 
-static bool __MsgFunc_VGUIMenu( const CCSUsrMsg_VGUIMenu &msg )
+static bool __MsgFunc_VGUIMenu( const ks::net::CCSUsrMsg_VGUIMenu &msg )
 {
-	bool bShow = msg.show();
+	bool bShow = msg.show;
 
 	ASSERT_LOCAL_PLAYER_RESOLVABLE();
 
 	KeyValues *keys = NULL;
 
-	if ( msg.subkeys_size() > 0 )
+	if ( msg.subkeys.size() > 0 )
 	{
 		keys = new KeyValues("data");
 
-		for (int i = 0; i < msg.subkeys_size(); i ++ )
+		for (int i = 0; i < msg.subkeys.size(); i ++ )
 		{
-			const CCSUsrMsg_VGUIMenu::Subkey& subkey = msg.subkeys( i );
+			const ks::net::CCSUsrMsg_VGUIMenu::Subkey& subkey = msg.subkeys[ i ];
 						
-			keys->SetString( subkey.name().c_str(), subkey.str().c_str() );
+			keys->SetString( subkey.name->c_str(), subkey.str->c_str() );
 		}
 	}
 
-	GetViewPortInterface()->ShowPanel( msg.name().c_str(), bShow, keys, true );
+	GetViewPortInterface()->ShowPanel( msg.name->c_str(), bShow, keys, true );
 
 	// Don't do this since ShowPanel auto-deletes the keys
 	// keys->deleteThis();
 
 	// is the server telling us to show the scoreboard (at the end of a map)?
-	if ( Q_stricmp( msg.name().c_str(), "scores" ) == 0 )
+	if ( Q_stricmp( msg.name->c_str(), "scores" ) == 0 )
 	{
 		if ( hud_takesshots.GetBool() == true )
 		{

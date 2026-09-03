@@ -175,12 +175,12 @@ void CCSPlayerResource::UpdatePlayerData( void )
 
 			if ( CSGameRules() && CSGameRules()->IsQueuedMatchmaking() )
 			{
-				for ( int k = 0; k < CCSGameRules::sm_QueuedServerReservation.rankings().size(); ++ k )
+				for ( int k = 0; k < CCSGameRules::sm_QueuedServerReservation.rankings.size(); ++ k )
 				{
-					if ( CCSGameRules::sm_QueuedServerReservation.rankings( k ).account_id() == pPlayer->GetHumanPlayerAccountID() )
+					if ( CCSGameRules::sm_QueuedServerReservation.rankings[ k ].account_id == pPlayer->GetHumanPlayerAccountID() )
 					{
-						m_iCompetitiveRanking.Set( i, CCSGameRules::sm_QueuedServerReservation.rankings( k ).rank_id() );
-						m_iCompetitiveWins.Set( i, CCSGameRules::sm_QueuedServerReservation.rankings( k ).wins() );
+						m_iCompetitiveRanking.Set( i, CCSGameRules::sm_QueuedServerReservation.rankings[ k ].rank_id );
+						m_iCompetitiveWins.Set( i, CCSGameRules::sm_QueuedServerReservation.rankings[ k ].wins );
 						bSetValidRanking = true;
 						break;
 					}

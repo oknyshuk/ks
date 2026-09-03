@@ -197,7 +197,7 @@ static inline void HLTV_CopyExitingEnt( CEntityReadInfo &u )
 // Purpose: A svc_signonnum has been received, perform a client side setup
 // Output : void CL_SignonReply
 //-----------------------------------------------------------------------------
-bool CHLTVClientState::SetSignonState ( int state, int count, const CNETMsg_SignonState *msg )
+bool CHLTVClientState::SetSignonState ( int state, int count, const ks::net::CNETMsg_SignonState *msg )
 {
 	//	ConDMsg ("CL_SignonReply: %i\n", GetBaseLocalClient().signon);
 
@@ -216,10 +216,10 @@ bool CHLTVClientState::SetSignonState ( int state, int count, const CNETMsg_Sign
 											m_NetChannel->Clear();
 											// set user settings (rate etc)
 											CNETMsg_SetConVar_t convars;
-											Host_BuildUserInfoUpdateMessage( 0, convars.mutable_convars(), false );
+											Host_BuildUserInfoUpdateMessage( 0, &convars.convars.mut(), false );
 
 											// also set all the userinfo vars that we will be modifying for accurate tracking
-											SetLocalInfoConvarsForUpstreamConnection( *convars.mutable_convars(), true );
+											SetLocalInfoConvarsForUpstreamConnection( convars.convars.mut(), true );
 
 											m_NetChannel->SendNetMsg( convars );
 										}
@@ -261,19 +261,19 @@ void CHLTVClientState::SendClientInfo( void )
 {
 	CCLCMsg_ClientInfo_t info;
 
-	info.set_send_table_crc( SendTable_GetCRC() );
-	info.set_server_count( m_nServerCount );
-	info.set_is_hltv( true );
+	info.send_table_crc = SendTable_GetCRC();
+	info.server_count = m_nServerCount;
+	info.is_hltv = true;
 #if defined( REPLAY_ENABLED )
-	info.set_is_replay( false );
+	info.is_replay = false;
 #endif
-	info.set_friends_id( 0 );
-	// info.set_friends_name( "" );
+	info.friends_id = 0;
+	// info.friends_name = "";
 
 	// CheckOwnCustomFiles(); // load & verfiy custom player files
 
 	// for ( int i=0; i< MAX_CUSTOM_FILES; i++ )
-	//	info.add_custom_files( "" );
+	//	info.custom_files.emplace_back( "" );
 
 	m_NetChannel->SendNetMsg( info );
 }
@@ -310,25 +310,25 @@ void CHLTVClientState::SendPacket()
 	}
 }
 
-bool CHLTVClientState::NETMsg_StringCmd(const CNETMsg_StringCmd& msg)
+bool CHLTVClientState::NETMsg_StringCmd(const ks::net::CNETMsg_StringCmd& msg)
 {
-	CNETMsg_StringCmd_t stringcmd( msg.command().c_str() );
+	CNETMsg_StringCmd_t stringcmd( msg.command->c_str() );
 	stringcmd.SetReliable( m_NetChannel->WasLastMessageReliable() );
 	return m_pHLTV->SendNetMsg( stringcmd ); // relay to server
 }
 
-bool CHLTVClientState::NETMsg_SetConVar(const CNETMsg_SetConVar& msg)
+bool CHLTVClientState::NETMsg_SetConVar(const ks::net::CNETMsg_SetConVar& msg)
 {
 	if ( !CBaseClientState::NETMsg_SetConVar( msg ) )
 		return false;
 
 	CNETMsg_SetConVar_t sendmsg;
 	sendmsg.CopyFrom( msg );
-	if ( sendmsg.convars().cvars_size() )
+	if ( sendmsg.convars->cvars.size() )
 	{	// Make sure convars are expanded using dictionary
-		for ( int iCV = 0; iCV < sendmsg.convars().cvars_size(); ++iCV )
+		for ( int iCV = 0; iCV < sendmsg.convars->cvars.size(); ++iCV )
 		{
-			CMsg_CVars::CVar *convar = sendmsg.mutable_convars()->mutable_cvars( iCV );
+			ks::net::CMsg_CVars::CVar *convar = &sendmsg.convars.mut().cvars[ iCV ];
 			NetMsgExpandCVarUsingDictionary( convar );
 		}
 	}
@@ -336,7 +336,7 @@ bool CHLTVClientState::NETMsg_SetConVar(const CNETMsg_SetConVar& msg)
 	return m_pHLTV->SendNetMsg( sendmsg ); // relay to server
 }
 
-bool CHLTVClientState::NETMsg_PlayerAvatarData( const CNETMsg_PlayerAvatarData& msg )
+bool CHLTVClientState::NETMsg_PlayerAvatarData( const ks::net::CNETMsg_PlayerAvatarData& msg )
 {
 	// Don't chain to the base client implementation
 	return m_pHLTV->NETMsg_PlayerAvatarData( msg ); // relay to server
@@ -353,7 +353,7 @@ void CHLTVClientState::Clear()
 	eventid_hltv_title = -1;
 }
 
-bool CHLTVClientState::SVCMsg_ServerInfo( const CSVCMsg_ServerInfo& msg )
+bool CHLTVClientState::SVCMsg_ServerInfo( const ks::net::CSVCMsg_ServerInfo& msg )
 {
 	// Reset client state
 	Clear();
@@ -361,7 +361,7 @@ bool CHLTVClientState::SVCMsg_ServerInfo( const CSVCMsg_ServerInfo& msg )
 	// is server a HLTV proxy or demo file ?
 	if ( !m_pHLTV->IsPlayingBack() )
 	{
-		if ( !msg.is_hltv() )
+		if ( !msg.is_hltv )
 		{
 			ConMsg ( "Server (%s) is not a GOTV proxy.\n", m_NetChannel->GetAddress() );
 			Disconnect();
@@ -395,22 +395,22 @@ bool CHLTVClientState::SVCMsg_ServerInfo( const CSVCMsg_ServerInfo& msg )
 	m_pHLTV->m_nPlayerSlot		= m_nPlayerSlot;
 
 	// copy other settings to HLTV server
-	m_pHLTV->worldmapCRC		= msg.map_crc();
-	m_pHLTV->clientDllCRC		= msg.client_crc();
-	m_pHLTV->stringTableCRC		= CRC32_ConvertFromUnsignedLong( msg.string_table_crc() );
-	m_pHLTV->m_flTickInterval	= msg.tick_interval();
+	m_pHLTV->worldmapCRC		= msg.map_crc;
+	m_pHLTV->clientDllCRC		= msg.client_crc;
+	m_pHLTV->stringTableCRC		= CRC32_ConvertFromUnsignedLong( msg.string_table_crc );
+	m_pHLTV->m_flTickInterval	= msg.tick_interval;
 
-	host_state.interval_per_tick = msg.tick_interval();
+	host_state.interval_per_tick = msg.tick_interval;
 
-	Q_strncpy( m_pHLTV->m_szMapname, msg.map_name().c_str(), sizeof(m_pHLTV->m_szMapname) );
-	Q_strncpy( m_pHLTV->m_szSkyname, msg.sky_name().c_str(), sizeof(m_pHLTV->m_szSkyname) );
+	Q_strncpy( m_pHLTV->m_szMapname, msg.map_name->c_str(), sizeof(m_pHLTV->m_szMapname) );
+	Q_strncpy( m_pHLTV->m_szSkyname, msg.sky_name->c_str(), sizeof(m_pHLTV->m_szSkyname) );
 
 	return true;
 }
 
-bool CHLTVClientState::SVCMsg_ClassInfo( const CSVCMsg_ClassInfo& msg )
+bool CHLTVClientState::SVCMsg_ClassInfo( const ks::net::CSVCMsg_ClassInfo& msg )
 {
-	if ( !msg.create_on_client() )
+	if ( !msg.create_on_client )
 	{
 		ConMsg("HLTV SendTable CRC differs from server.\n");
 		Disconnect();
@@ -486,7 +486,7 @@ void CHLTVClientState::InstallStringTableCallback( char const *tableName )
 	}
 }
 
-bool CHLTVClientState::SVCMsg_SetView( const CSVCMsg_SetView& msg )
+bool CHLTVClientState::SVCMsg_SetView( const ks::net::CSVCMsg_SetView& msg )
 {
 	if ( !CBaseClientState::SVCMsg_SetView( msg ) )
 		return false;
@@ -497,7 +497,7 @@ bool CHLTVClientState::SVCMsg_SetView( const CSVCMsg_SetView& msg )
 	return m_pHLTV->SendNetMsg( sendmsg );
 }
 
-bool CHLTVClientState::SVCMsg_VoiceInit( const CSVCMsg_VoiceInit& msg )
+bool CHLTVClientState::SVCMsg_VoiceInit( const ks::net::CSVCMsg_VoiceInit& msg )
 {
 	CSVCMsg_VoiceInit_t sendmsg;
 	sendmsg.CopyFrom( msg );
@@ -505,7 +505,7 @@ bool CHLTVClientState::SVCMsg_VoiceInit( const CSVCMsg_VoiceInit& msg )
 	return m_pHLTV->SendNetMsg( sendmsg ); // relay to server
 }
 
-bool CHLTVClientState::SVCMsg_VoiceData( const CSVCMsg_VoiceData &msg )
+bool CHLTVClientState::SVCMsg_VoiceData( const ks::net::CSVCMsg_VoiceData &msg )
 {   									 
 	CSVCMsg_VoiceData_t sendmsg;
 	sendmsg.CopyFrom( msg );
@@ -513,7 +513,7 @@ bool CHLTVClientState::SVCMsg_VoiceData( const CSVCMsg_VoiceData &msg )
 	return m_pHLTV->SendNetMsg( sendmsg ); // relay to server
 }
 
-bool CHLTVClientState::SVCMsg_EncryptedData( const CSVCMsg_EncryptedData& msg )
+bool CHLTVClientState::SVCMsg_EncryptedData( const ks::net::CSVCMsg_EncryptedData& msg )
 {   									 
 	CSVCMsg_EncryptedData_t sendmsg;
 	sendmsg.CopyFrom( msg );
@@ -521,7 +521,7 @@ bool CHLTVClientState::SVCMsg_EncryptedData( const CSVCMsg_EncryptedData& msg )
 	return m_pHLTV->SendNetMsg( sendmsg ); // relay to server
 }
 
-bool CHLTVClientState::SVCMsg_Sounds(const CSVCMsg_Sounds& msg)
+bool CHLTVClientState::SVCMsg_Sounds(const ks::net::CSVCMsg_Sounds& msg)
 {
 	CSVCMsg_Sounds_t sendmsg;
 	sendmsg.CopyFrom( msg );
@@ -529,7 +529,7 @@ bool CHLTVClientState::SVCMsg_Sounds(const CSVCMsg_Sounds& msg)
 	return m_pHLTV->SendNetMsg( sendmsg ); // relay to server
 }
 
-bool CHLTVClientState::SVCMsg_Prefetch( const CSVCMsg_Prefetch& msg )
+bool CHLTVClientState::SVCMsg_Prefetch( const ks::net::CSVCMsg_Prefetch& msg )
 {
 	CSVCMsg_Prefetch_t sendmsg;
 	sendmsg.CopyFrom( msg );
@@ -537,7 +537,7 @@ bool CHLTVClientState::SVCMsg_Prefetch( const CSVCMsg_Prefetch& msg )
 	return m_pHLTV->SendNetMsg( sendmsg ); // relay to server
 }
 
-bool CHLTVClientState::SVCMsg_FixAngle( const CSVCMsg_FixAngle& msg )
+bool CHLTVClientState::SVCMsg_FixAngle( const ks::net::CSVCMsg_FixAngle& msg )
 {
 	CSVCMsg_FixAngle_t sendmsg;
 	sendmsg.CopyFrom( msg );
@@ -545,7 +545,7 @@ bool CHLTVClientState::SVCMsg_FixAngle( const CSVCMsg_FixAngle& msg )
 	return m_pHLTV->SendNetMsg( sendmsg ); // relay to server
 }
 
-bool CHLTVClientState::SVCMsg_CrosshairAngle( const CSVCMsg_CrosshairAngle& msg )
+bool CHLTVClientState::SVCMsg_CrosshairAngle( const ks::net::CSVCMsg_CrosshairAngle& msg )
 {
 	CSVCMsg_CrosshairAngle_t sendmsg;
 	sendmsg.CopyFrom( msg );
@@ -553,7 +553,7 @@ bool CHLTVClientState::SVCMsg_CrosshairAngle( const CSVCMsg_CrosshairAngle& msg 
 	return m_pHLTV->SendNetMsg( sendmsg ); // relay to server
 }
 
-bool CHLTVClientState::SVCMsg_BSPDecal( const CSVCMsg_BSPDecal& msg )
+bool CHLTVClientState::SVCMsg_BSPDecal( const ks::net::CSVCMsg_BSPDecal& msg )
 {
 	CSVCMsg_BSPDecal_t sendmsg;
 	sendmsg.CopyFrom( msg );
@@ -561,13 +561,13 @@ bool CHLTVClientState::SVCMsg_BSPDecal( const CSVCMsg_BSPDecal& msg )
 	return m_pHLTV->SendNetMsg( sendmsg ); // relay to server
 }
 
-bool CHLTVClientState::SVCMsg_GameEvent( const CSVCMsg_GameEvent& msg )
+bool CHLTVClientState::SVCMsg_GameEvent( const ks::net::CSVCMsg_GameEvent& msg )
 {
-	const char *pszName = msg.event_name().c_str();
+	const char *pszName = msg.event_name->c_str();
 
 	bool bDontForward = false;
 
-	if ( msg.eventid() == eventid_hltv_status || Q_strcmp( pszName, "hltv_status" ) == 0 )
+	if ( msg.eventid == eventid_hltv_status || Q_strcmp( pszName, "hltv_status" ) == 0 )
 	{
 		IGameEvent *event = g_GameEventManager.UnserializeEvent( msg );
 		m_pHLTV->m_nGlobalSlots = event->GetInt("slots");
@@ -589,7 +589,7 @@ bool CHLTVClientState::SVCMsg_GameEvent( const CSVCMsg_GameEvent& msg )
 		if ( serverGameDLL && Steam3Server().GetGSSteamID().IsValid() )
 			serverGameDLL->UpdateGCInformation();
 	}
-	else if ( msg.eventid() == eventid_hltv_title || Q_strcmp( pszName, "hltv_title" ) == 0 )
+	else if ( msg.eventid == eventid_hltv_title || Q_strcmp( pszName, "hltv_title" ) == 0 )
 	{
 		// ignore title messages
 		bDontForward = true;
@@ -606,7 +606,7 @@ bool CHLTVClientState::SVCMsg_GameEvent( const CSVCMsg_GameEvent& msg )
 	return m_pHLTV->SendNetMsg( sendmsg ); // relay to server
 }
 
-bool CHLTVClientState::SVCMsg_GameEventList( const CSVCMsg_GameEventList& msg )
+bool CHLTVClientState::SVCMsg_GameEventList( const ks::net::CSVCMsg_GameEventList& msg )
 {
 	if ( !CBaseClientState::SVCMsg_GameEventList( msg ) )
 		return false;
@@ -630,7 +630,7 @@ bool CHLTVClientState::SVCMsg_GameEventList( const CSVCMsg_GameEventList& msg )
 	return m_pHLTV->SendNetMsg( sendmsg ); // relay to server
 }
 
-bool CHLTVClientState::SVCMsg_UserMessage( const CSVCMsg_UserMessage& msg )
+bool CHLTVClientState::SVCMsg_UserMessage( const ks::net::CSVCMsg_UserMessage& msg )
 {
 	CSVCMsg_UserMessage_t sendmsg;
 	sendmsg.CopyFrom( msg );
@@ -638,7 +638,7 @@ bool CHLTVClientState::SVCMsg_UserMessage( const CSVCMsg_UserMessage& msg )
 	return m_pHLTV->SendNetMsg( sendmsg ); // relay to server
 }
 
-bool CHLTVClientState::SVCMsg_EntityMsg( const CSVCMsg_EntityMsg& msg )
+bool CHLTVClientState::SVCMsg_EntityMsg( const ks::net::CSVCMsg_EntityMsg& msg )
 {
 	CSVCMsg_EntityMsg_t sendmsg;
 	sendmsg.CopyFrom( msg );
@@ -646,7 +646,7 @@ bool CHLTVClientState::SVCMsg_EntityMsg( const CSVCMsg_EntityMsg& msg )
 	return m_pHLTV->SendNetMsg( sendmsg ); // relay to server
 }
 
-bool CHLTVClientState::SVCMsg_Menu( const CSVCMsg_Menu& msg )
+bool CHLTVClientState::SVCMsg_Menu( const ks::net::CSVCMsg_Menu& msg )
 {
 	CSVCMsg_Menu_t sendmsg;
 	sendmsg.CopyFrom( msg );
@@ -654,7 +654,7 @@ bool CHLTVClientState::SVCMsg_Menu( const CSVCMsg_Menu& msg )
 	return m_pHLTV->SendNetMsg( sendmsg ); // relay to server
 }
 
-bool CHLTVClientState::SVCMsg_PacketEntities( const CSVCMsg_PacketEntities &msg )
+bool CHLTVClientState::SVCMsg_PacketEntities( const ks::net::CSVCMsg_PacketEntities &msg )
 {
 	CClientFrame *oldFrame = NULL;
 
@@ -663,16 +663,16 @@ bool CHLTVClientState::SVCMsg_PacketEntities( const CSVCMsg_PacketEntities &msg 
 		return false;
 #endif
 
-	if ( msg.is_delta() )
+	if ( msg.is_delta )
 	{
-		if ( GetServerTickCount() == msg.delta_from() )
+		if ( GetServerTickCount() == msg.delta_from )
 		{
 			Host_Error( "Update self-referencing, connection dropped.\n" );
 			return false;
 		}
 
 		// Otherwise, mark where we are valid to and point to the packet entities we'll be updating from.
-		oldFrame = m_pHLTV->GetClientFrame( msg.delta_from() );
+		oldFrame = m_pHLTV->GetClientFrame( msg.delta_from );
 	}
 
 	// create new empty snapshot
@@ -680,24 +680,24 @@ bool CHLTVClientState::SVCMsg_PacketEntities( const CSVCMsg_PacketEntities &msg 
 #ifdef DEBUG_SNAPSHOT_REFERENCES
 		"CHLTVClientState::SVCMsg_PacketEntities",
 #endif
-		GetServerTickCount(), msg.max_entries() );
+		GetServerTickCount(), msg.max_entries );
 
 	Assert( m_pNewClientFrame == NULL );
 	
 	m_pNewClientFrame = new CClientFrame( pSnapshot );
 
-	Assert( msg.baseline() >= 0 && msg.baseline() < 2 );
+	Assert( msg.baseline >= 0 && msg.baseline < 2 );
 
-	if ( msg.update_baseline() )
+	if ( msg.update_baseline )
 	{
 		// server requested to use this snapshot as baseline update
-		int nUpdateBaseline = (msg.baseline() == 0) ? 1 : 0;
-		CopyEntityBaseline( msg.baseline(), nUpdateBaseline );
+		int nUpdateBaseline = (msg.baseline == 0) ? 1 : 0;
+		CopyEntityBaseline( msg.baseline, nUpdateBaseline );
 
 		// send new baseline acknowledgement(as reliable)
 		CCLCMsg_BaselineAck_t baseline;
-		baseline.set_baseline_tick( GetServerTickCount() );
-		baseline.set_baseline_nr( msg.baseline() );
+		baseline.baseline_tick = GetServerTickCount();
+		baseline.baseline_nr = msg.baseline;
 		m_NetChannel->SendNetMsg( baseline, true );
 	}
 
@@ -721,14 +721,14 @@ bool CHLTVClientState::SVCMsg_PacketEntities( const CSVCMsg_PacketEntities &msg 
 	}
 
 	CEntityReadInfo u;
-	bf_read entityBuf( &msg.entity_data()[0], msg.entity_data().size() );
+	bf_read entityBuf( msg.entity_data->data(), msg.entity_data->size() );
 	u.m_pBuf = &entityBuf;
 	u.m_pFrom = oldFrame;
 	u.m_pTo = m_pNewClientFrame;
-	u.m_bAsDelta = msg.is_delta();
-	u.m_nHeaderCount = msg.updated_entries();
-	u.m_nBaseline = msg.baseline();
-	u.m_bUpdateBaselines = msg.update_baseline();
+	u.m_bAsDelta = msg.is_delta;
+	u.m_nHeaderCount = msg.updated_entries;
+	u.m_nBaseline = msg.baseline;
+	u.m_bUpdateBaselines = msg.update_baseline;
 
 	ReadPacketEntities( u );
 
@@ -738,7 +738,7 @@ bool CHLTVClientState::SVCMsg_PacketEntities( const CSVCMsg_PacketEntities &msg 
 	return CBaseClientState::SVCMsg_PacketEntities( msg );
 }
 
-bool CHLTVClientState::SVCMsg_TempEntities( const CSVCMsg_TempEntities &msg )
+bool CHLTVClientState::SVCMsg_TempEntities( const ks::net::CSVCMsg_TempEntities &msg )
 {
 	CSVCMsg_TempEntities_t copy;
 	copy.CopyFrom( msg );
@@ -746,7 +746,7 @@ bool CHLTVClientState::SVCMsg_TempEntities( const CSVCMsg_TempEntities &msg )
 	return m_pHLTV->SendNetMsg( copy ); // relay to server
 }
 
-bool CHLTVClientState::SVCMsg_PaintmapData( const CSVCMsg_PaintmapData& msg )
+bool CHLTVClientState::SVCMsg_PaintmapData( const ks::net::CSVCMsg_PaintmapData& msg )
 {
 	CSVCMsg_PaintmapData_t sendmsg;
 	sendmsg.CopyFrom( msg );
@@ -1078,7 +1078,7 @@ void CHLTVClientState::RunFrame()
 	UpdateStats();
 }
 
-void CHLTVClientState::SetLocalInfoConvarsForUpstreamConnection( CMsg_CVars &cvars, bool bMaxSlots )
+void CHLTVClientState::SetLocalInfoConvarsForUpstreamConnection( ks::net::CMsg_CVars &cvars, bool bMaxSlots )
 {
 	int proxies, slots, clients;
 
@@ -1104,10 +1104,10 @@ void CHLTVClientState::SetLocalInfoConvarsForUpstreamConnection( CMsg_CVars &cva
 	clients += numClients; // add own clients
 
 	// let server know that we are a proxy server and all our stats
-	NetMsgSetCVarUsingDictionary( cvars.add_cvars(), "tv_relay", "1" );
-	NetMsgSetCVarUsingDictionary( cvars.add_cvars(), "hltv_proxies", va( "%d", proxies ) );
-	NetMsgSetCVarUsingDictionary( cvars.add_cvars(), "hltv_clients", va( "%d", clients ) );
-	NetMsgSetCVarUsingDictionary( cvars.add_cvars(), "hltv_slots", va( "%d", slots ) );
+	NetMsgSetCVarUsingDictionary( &cvars.cvars.emplace_back(), "tv_relay", "1" );
+	NetMsgSetCVarUsingDictionary( &cvars.cvars.emplace_back(), "hltv_proxies", va( "%d", proxies ) );
+	NetMsgSetCVarUsingDictionary( &cvars.cvars.emplace_back(), "hltv_clients", va( "%d", clients ) );
+	NetMsgSetCVarUsingDictionary( &cvars.cvars.emplace_back(), "hltv_slots", va( "%d", slots ) );
 	
 	static ConVarRef ipname_relay( "ip_relay" );	// Override relay IP for NAT hosts
 	netadr_t netAdrHltvRelay( net_local_adr );
@@ -1122,7 +1122,7 @@ void CHLTVClientState::SetLocalInfoConvarsForUpstreamConnection( CMsg_CVars &cva
 			netAdrHltvRelay = netAdrIpRelay;
 		}
 	}
-	NetMsgSetCVarUsingDictionary( cvars.add_cvars(), "hltv_addr", va( "%s:%u", netAdrHltvRelay.ToString( true ), m_pHLTV->GetUDPPort() ) );
+	NetMsgSetCVarUsingDictionary( &cvars.cvars.emplace_back(), "hltv_addr", va( "%s:%u", netAdrHltvRelay.ToString( true ), m_pHLTV->GetUDPPort() ) );
 }
 
 void CHLTVClientState::UpdateStats()
@@ -1139,7 +1139,7 @@ void CHLTVClientState::UpdateStats()
 	m_fNextSendUpdateTime = net_time + 8.0f;
 
 	CNETMsg_SetConVar_t conVars;
-	SetLocalInfoConvarsForUpstreamConnection( *conVars.mutable_convars() );
+	SetLocalInfoConvarsForUpstreamConnection( conVars.convars.mut() );
 	m_NetChannel->SendNetMsg( conVars );
 }
 	

@@ -85,7 +85,7 @@ class	CHLTVServer;
 class	CReplayServer;
 class	CPerClientLogoInfo;
 class	CCommand;
-class 	CSVCMsg_Sounds;
+class 	ks::net::CSVCMsg_Sounds;
 class	CHLTVClient;
 
 //-----------------------------------------------------------------------------
@@ -114,7 +114,7 @@ public:
 	bool ProcessConnectionlessPacket( netpacket_t *packet );
 
 	// IClient interface
-	void	Connect(const char * szName, int nUserID, INetChannel *pNetChannel, bool bFakePlayer, CrossPlayPlatform_t clientPlatform, const CMsg_CVars *pVecCvars ) OVERRIDE;
+	void	Connect(const char * szName, int nUserID, INetChannel *pNetChannel, bool bFakePlayer, CrossPlayPlatform_t clientPlatform, const ks::net::CMsg_CVars *pVecCvars ) OVERRIDE;
 	void	Inactivate( void );
 	void	Reconnect( void );
 	void	Disconnect( const char *reason ) OVERRIDE;
@@ -135,17 +135,17 @@ public:
 
 public: // IClientMessageHandlers
 	
-	virtual bool CLCMsg_ClientInfo( const CCLCMsg_ClientInfo& msg ) OVERRIDE;
-	virtual bool CLCMsg_Move( const CCLCMsg_Move& msg ) OVERRIDE;
-	virtual bool CLCMsg_VoiceData( const CCLCMsg_VoiceData& msg ) OVERRIDE;
+	virtual bool CLCMsg_ClientInfo( const ks::net::CCLCMsg_ClientInfo& msg ) OVERRIDE;
+	virtual bool CLCMsg_Move( const ks::net::CCLCMsg_Move& msg ) OVERRIDE;
+	virtual bool CLCMsg_VoiceData( const ks::net::CCLCMsg_VoiceData& msg ) OVERRIDE;
 
-	virtual bool CLCMsg_RespondCvarValue( const CCLCMsg_RespondCvarValue& msg ) OVERRIDE;
-	virtual bool CLCMsg_FileCRCCheck( const CCLCMsg_FileCRCCheck& msg ) OVERRIDE;
-	virtual bool CLCMsg_CmdKeyValues( const CCLCMsg_CmdKeyValues& msg ) OVERRIDE;
+	virtual bool CLCMsg_RespondCvarValue( const ks::net::CCLCMsg_RespondCvarValue& msg ) OVERRIDE;
+	virtual bool CLCMsg_FileCRCCheck( const ks::net::CCLCMsg_FileCRCCheck& msg ) OVERRIDE;
+	virtual bool CLCMsg_CmdKeyValues( const ks::net::CCLCMsg_CmdKeyValues& msg ) OVERRIDE;
 
-	virtual bool CLCMsg_HltvReplay( const CCLCMsg_HltvReplay &msg ) OVERRIDE;
+	virtual bool CLCMsg_HltvReplay( const ks::net::CCLCMsg_HltvReplay &msg ) OVERRIDE;
 
-	virtual bool SVCMsg_UserMessage( const CSVCMsg_UserMessage &msg ) OVERRIDE;
+	virtual bool SVCMsg_UserMessage( const ks::net::CSVCMsg_UserMessage &msg ) OVERRIDE;
 	
 public:
 
@@ -188,7 +188,7 @@ protected:
 
 private:
 	bool	IsEngineClientCommand( const CCommand &args ) const;
-	int		FillSoundsMessage( CSVCMsg_Sounds &msg, int nMaxSounds );
+	int		FillSoundsMessage( ks::net::CSVCMsg_Sounds &msg, int nMaxSounds );
 			
 public:
 

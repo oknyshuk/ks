@@ -189,7 +189,7 @@ void CHLTVDemoRecorder::WriteServerInfo()
 	CNETMsg_SetConVar_t convars;
 	
 	// build a list of all replicated convars
-	Host_BuildConVarUpdateMessage( convars.mutable_convars(), FCVAR_REPLICATED, true );
+	Host_BuildConVarUpdateMessage( &convars.convars.mut(), FCVAR_REPLICATED, true );
 	if ( hltv->IsMasterProxy() )
 	{
 		// for SourceTV server demos write set "tv_transmitall 1" even
@@ -309,7 +309,7 @@ int CHLTVDemoRecorder::WriteSignonData()
 	// use your class infos, CRC is correct
 	// use your class infos, CRC is correct
 	CSVCMsg_ClassInfo_t classmsg;
-	classmsg.set_create_on_client( true );
+	classmsg.create_on_client = true;
 	classmsg.WriteToBuffer( msg );
 
 	// Write the regular signon now
@@ -334,7 +334,7 @@ int CHLTVDemoRecorder::WriteSignonData()
 	// set view entity
 	// set view entity
 	CSVCMsg_SetView_t viewent;
-	viewent.set_entity_index( hltv->m_nViewEntity );
+	viewent.entity_index = hltv->m_nViewEntity;
 	viewent.WriteToBuffer( msg );
 
 	// Spawned into server, not fully active, though
@@ -405,7 +405,7 @@ void CHLTVDemoRecorder::WriteFrame( CHLTVFrame *pFrame, bf_write *additionaldata
 	CSVCMsg_TempEntities_t tempentsmsg;
 	CFrameSnapshot * fromSnapshot = deltaFrame?deltaFrame->GetSnapshot():NULL;
 	sv.WriteTempEntities( hltv->m_MasterClient, pFrame->GetSnapshot(), fromSnapshot, tempentsmsg, 255 );
-	if ( tempentsmsg.num_entries() )
+	if ( tempentsmsg.num_entries )
 	{
 		tempentsmsg.WriteToBuffer( msg );
 	}

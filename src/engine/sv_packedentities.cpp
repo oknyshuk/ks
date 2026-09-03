@@ -809,15 +809,15 @@ void SV_WriteClassInfos(ServerClass *pClasses, bf_write &pBuf)
 
 	CSVCMsg_ClassInfo_t classinfomsg;
 
-	classinfomsg.set_create_on_client( false );
+	classinfomsg.create_on_client = false;
 
 	for ( ServerClass *pClass=pClasses; pClass; pClass=pClass->m_pNext )
 	{
-		CSVCMsg_ClassInfo::class_t *svclass = classinfomsg.add_classes();
+		ks::net::CSVCMsg_ClassInfo::class_t *svclass = &classinfomsg.classes.emplace_back();
 
-		svclass->set_class_id( pClass->m_ClassID );
-		svclass->set_data_table_name( pClass->m_pTable->GetName() );
-		svclass->set_class_name( pClass->m_pNetworkName );
+		svclass->class_id = pClass->m_ClassID;
+		svclass->data_table_name = pClass->m_pTable->GetName();
+		svclass->class_name = pClass->m_pNetworkName;
 	}
 
 	classinfomsg.WriteToBuffer( pBuf );

@@ -867,7 +867,7 @@ public:
 	virtual float GetUGCFileDownloadProgress( PublishedFileId_t id );
 
 	virtual void RecordUIEvent( const char* szEvent );
-	virtual void OnHltvReplay( const CSVCMsg_HltvReplay  &msg ) OVERRIDE { g_HltvReplaySystem.OnHltvReplay( msg ); }
+	virtual void OnHltvReplay( const ks::net::CSVCMsg_HltvReplay  &msg ) OVERRIDE { g_HltvReplaySystem.OnHltvReplay( msg ); }
 	virtual void OnHltvReplayTick() OVERRIDE { g_HltvReplaySystem.OnHltvReplayTick(); }
 	virtual int GetHltvReplayDelay() OVERRIDE { return g_HltvReplaySystem.GetHltvReplayDelay(); }
 	virtual void OnDemoPlaybackTimeJump();
@@ -886,7 +886,7 @@ public:
 
 	virtual void RetireAllPlayerDecals( bool bRenderContextValid );
 
-	virtual void EngineGotvSyncPacket( const CEngineGotvSyncPacket *pPkt ) OVERRIDE;
+	virtual void EngineGotvSyncPacket( const ks::net::CEngineGotvSyncPacket *pPkt ) OVERRIDE;
 
 	virtual void OnTickPre( int tickcount ) OVERRIDE;
 
@@ -2657,23 +2657,6 @@ bool CHLClient::DispatchUserMessage( int msg_type, int32 nPassthroughFlags, int 
 	return UserMessages()->DispatchUserMessage( msg_type, nPassthroughFlags, size, msg );
 }
 
-bool BSerializeUserMessageToSVCMSG( CSVCMsg_UserMessage &svcmsg, int nType, const ::google::protobuf::Message &msg )
-{
-	if ( !msg.IsInitialized() || !svcmsg.IsInitialized() )
-	{
-		return false;
-	}
-
-	int size = msg.ByteSize();
-	svcmsg.set_msg_type( nType );
-	svcmsg.mutable_msg_data()->resize( size );
-	if ( !msg.SerializeWithCachedSizesToArray( ( uint8* ) &( *svcmsg.mutable_msg_data() )[ 0 ] ) )
-	{
-		return false;
-	}
-
-	return true;
-}
 
 void SimulateEntities()
 {
@@ -4319,7 +4302,7 @@ void CHLClient::RetireAllPlayerDecals( bool bRenderContextValid )
 	}
 }
 
-void CHLClient::EngineGotvSyncPacket( const CEngineGotvSyncPacket *pPkt )
+void CHLClient::EngineGotvSyncPacket( const ks::net::CEngineGotvSyncPacket *pPkt )
 {
 	/* Removed for partner depot */
 }

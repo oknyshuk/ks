@@ -90,7 +90,7 @@
 #include "item_healthshot.h"
 #include "hltvdirector.h"
 #include "ihltv.h"
-#include "netmessages.pb.h"
+#include "netmessages_schema.h"
 #include "playerdecals_signature.h"
 #include "cs_item_inventory.h"
 
@@ -1850,27 +1850,27 @@ void CCSPlayer::SetHumanPlayerAccountID( uint32 uiAccountId )
 	}
 
 	// In tournament mode force clan tags for the players according to the reservation
-	if ( CCSGameRules::sm_QueuedServerReservation.has_tournament_event() )
+	if ( CCSGameRules::sm_QueuedServerReservation.tournament_event.has_value() )
 	{
-		for ( int32 iTeam = 0; iTeam < CCSGameRules::sm_QueuedServerReservation.tournament_teams().size(); ++ iTeam )
+		for ( int32 iTeam = 0; iTeam < CCSGameRules::sm_QueuedServerReservation.tournament_teams.size(); ++ iTeam )
 		{
-			TournamentTeam const &ttTeam = CCSGameRules::sm_QueuedServerReservation.tournament_teams( iTeam );
-			for ( int32 iTeamPlayer = 0; iTeamPlayer < ttTeam.players().size(); ++ iTeamPlayer )
+			ks::net::TournamentTeam const &ttTeam = CCSGameRules::sm_QueuedServerReservation.tournament_teams[ iTeam ];
+			for ( int32 iTeamPlayer = 0; iTeamPlayer < ttTeam.players.size(); ++ iTeamPlayer )
 			{
-				TournamentPlayer const &ttPlayer = ttTeam.players( iTeamPlayer );
-				if ( ttPlayer.account_id() && ( ttPlayer.account_id() == m_uiAccountId ) )
+				ks::net::TournamentPlayer const &ttPlayer = ttTeam.players[ iTeamPlayer ];
+				if ( ttPlayer.account_id && ( ttPlayer.account_id == m_uiAccountId ) )
 				{
 					// Set the clan tag and full team name
 					// SetClanTag( ttTeam.team_clantag().c_str() );
 					SetClanTag( "" );
-					SetClanName( ttTeam.team_name().c_str() );
+					SetClanName( ttTeam.team_name->c_str() );
 
 					// Set the player name as well
-					SetPlayerName( ttPlayer.player_nick().c_str() );
+					SetPlayerName( ttPlayer.player_nick->c_str() );
 
 					// break out of all loops
-					iTeam = CCSGameRules::sm_QueuedServerReservation.tournament_teams().size();
-					iTeamPlayer = ttTeam.players().size();
+					iTeam = CCSGameRules::sm_QueuedServerReservation.tournament_teams.size();
+					iTeamPlayer = ttTeam.players.size();
 				}
 			}
 		}
@@ -2130,20 +2130,20 @@ void CCSPlayer::GiveDefaultItems()
 		{
 			CSingleUserRecipientFilter filter(this );
 			filter.MakeReliable();
-			CCSUsrMsg_DisplayInventory msg;
-			msg.set_display( true );
-			msg.set_user_id( GetUserID() );
-			SendUserMessage( filter, CS_UM_DisplayInventory, msg );
+			ks::net::CCSUsrMsg_DisplayInventory msg;
+			msg.display = true;
+			msg.user_id = GetUserID();
+			SendUserMessage( filter, ks::net::CS_UM_DisplayInventory, msg );
 			return;
 		}
 		else
 		{
 			CSingleUserRecipientFilter filter(this );
 			filter.MakeReliable();
-			CCSUsrMsg_DisplayInventory msg;
-			msg.set_display( false );
-			msg.set_user_id( GetUserID() );
-			SendUserMessage( filter, CS_UM_DisplayInventory, msg );
+			ks::net::CCSUsrMsg_DisplayInventory msg;
+			msg.display = false;
+			msg.user_id = GetUserID();
+			SendUserMessage( filter, ks::net::CS_UM_DisplayInventory, msg );
 		}
 	}
 
@@ -3447,14 +3447,14 @@ bool CCSPlayer::IsShieldDrawn() const
 }
 
 
-void CCSPlayer::SprayPaint( CCSUsrMsg_PlayerDecalDigitalSignature const &msg )
+void CCSPlayer::SprayPaint( ks::net::CCSUsrMsg_PlayerDecalDigitalSignature const &msg )
 {
 	if ( !m_uiAccountId ) return;
 	if ( !CSGameRules() ) return;
-	if ( !msg.has_data() ) return;
-	if ( !msg.data().trace_id() ) return;
+	if ( !msg.data.has_value() ) return;
+	if ( !msg.data->trace_id ) return;
 
-	if ( !msg.data().endpos().size() )
+	if ( !msg.data->endpos.size() )
 	{
 		//
 		// This is user's initial request for traces to be performed
@@ -3463,14 +3463,14 @@ void CCSPlayer::SprayPaint( CCSUsrMsg_PlayerDecalDigitalSignature const &msg )
 		if ( gpGlobals->curtime < m_flNextDecalTime ) return;
 		PushAwayDecalPaintingTime( 0.2f );	// prevent trace spamming
 
-		if ( int( msg.data().equipslot() ) < 0 ) return;
-		if ( msg.data().equipslot() >= Q_ARRAYSIZE( m_unEquippedPlayerSprayIDs ) ) return;
-		if ( !m_unEquippedPlayerSprayIDs[ msg.data().equipslot() ] ) return;
+		if ( int( msg.data->equipslot ) < 0 ) return;
+		if ( msg.data->equipslot >= Q_ARRAYSIZE( m_unEquippedPlayerSprayIDs ) ) return;
+		if ( !m_unEquippedPlayerSprayIDs[ msg.data->equipslot ] ) return;
 
 		// relax the server-side check, clients should just have a spray equipped and client message will
 		// be authoritative about spraying
-		// if ( m_unEquippedPlayerSprayIDs[ msg.data().equipslot() ] != msg.data().tx_defidx() ) return;
-		if ( fabs( gpGlobals->curtime - msg.data().creationtime() ) > 10 ) return;
+		// if ( m_unEquippedPlayerSprayIDs[ msg.data->equipslot ] != msg.data->tx_defidx ) return;
+		if ( fabs( gpGlobals->curtime - msg.data->creationtime ) > 10 ) return;
 
 		//
 		// Perform all the traces to validate spray application
@@ -3491,17 +3491,17 @@ void CCSPlayer::SprayPaint( CCSUsrMsg_PlayerDecalDigitalSignature const &msg )
 		//
 		CCSGameRules::ServerPlayerDecalData_t data;
 		data.m_unAccountID = m_uiAccountId;
-		data.m_nTraceID = msg.data().trace_id();
+		data.m_nTraceID = msg.data->trace_id;
 		data.m_vecOrigin = tr.endpos;
 		data.m_vecRight = right;
 		data.m_vecNormal = tr.plane.normal;
-		data.m_nEquipSlot = msg.data().equipslot();
-		data.m_nPlayer = msg.data().tx_defidx();
+		data.m_nEquipSlot = msg.data->equipslot;
+		data.m_nPlayer = msg.data->tx_defidx;
 		data.m_nEntity = tr.m_pEnt->entindex();
 		data.m_nHitbox = tr.hitbox;
-		data.m_nTintID = msg.data().tint_id();
+		data.m_nTintID = msg.data->tint_id;
 		data.m_flCreationTime = gpGlobals->curtime;
-		data.m_rtGcTime = msg.data().rtime();
+		data.m_rtGcTime = msg.data->rtime;
 
 		// Always pretend the player was standing directly in front of the surface they hit.
 		// Matches code in QcCreatePreviewDecal, update that if you touch this.
@@ -3510,9 +3510,9 @@ void CCSPlayer::SprayPaint( CCSUsrMsg_PlayerDecalDigitalSignature const &msg )
 		CSGameRules()->m_arrServerPlayerDecalData.AddToTail( data );
 
 		CSingleUserRecipientFilter filter( this );
-		CCSUsrMsg_PlayerDecalDigitalSignature askuser;
+		ks::net::CCSUsrMsg_PlayerDecalDigitalSignature askuser;
 		data.CopyToMsg( askuser );
-		SendUserMessage( filter, CS_UM_PlayerDecalDigitalSignature, askuser );
+		SendUserMessage( filter, ks::net::CS_UM_PlayerDecalDigitalSignature, askuser );
 
 		CBroadcastRecipientFilter sprayCanFilter;
 		EmitSound( sprayCanFilter, entindex(), "SprayCan.Shake" );	// start playing the spray sound when the server confirms the trace
@@ -3535,10 +3535,10 @@ void CCSPlayer::SprayPaint( CCSUsrMsg_PlayerDecalDigitalSignature const &msg )
 		// Verify the signature of the user's spray paint
 #ifdef _DEBUG
 		{
-			float flendpos[3] = { msg.data().endpos( 0 ), msg.data().endpos( 1 ), msg.data().endpos( 2 ) };
-			float flstartpos[3] = { msg.data().startpos( 0 ), msg.data().startpos( 1 ), msg.data().startpos( 2 ) };
-			float flright[3] = { msg.data().right( 0 ), msg.data().right( 1 ), msg.data().right( 2 ) };
-			float flnormal[3] = { msg.data().normal( 0 ), msg.data().normal( 1 ), msg.data().normal( 2 ) };
+			float flendpos[3] = { msg.data->endpos[ 0 ], msg.data->endpos[ 1 ], msg.data->endpos[ 2 ] };
+			float flstartpos[3] = { msg.data->startpos[ 0 ], msg.data->startpos[ 1 ], msg.data->startpos[ 2 ] };
+			float flright[3] = { msg.data->right[ 0 ], msg.data->right[ 1 ], msg.data->right[ 2 ] };
+			float flnormal[3] = { msg.data->normal[ 0 ], msg.data->normal[ 1 ], msg.data->normal[ 2 ] };
 			DevMsg( "Server signature #%u e(%08X,%08X,%08X) s(%08X,%08X,%08X) r(%08X,%08X,%08X) n(%08X,%08X,%08X)\n", data.m_nTraceID,
 				*reinterpret_cast< uint32 * >( &flendpos[0] ), *reinterpret_cast< uint32 * >( &flendpos[1] ), *reinterpret_cast< uint32 * >( &flendpos[2] ),
 				*reinterpret_cast< uint32 * >( &flstartpos[0] ), *reinterpret_cast< uint32 * >( &flstartpos[1] ), *reinterpret_cast< uint32 * >( &flstartpos[2] ),
@@ -3547,14 +3547,14 @@ void CCSPlayer::SprayPaint( CCSUsrMsg_PlayerDecalDigitalSignature const &msg )
 				);
 		}
 #endif
-		if ( !BValidateClientPlayerDecalSignature( msg.data() ) )
+		if ( !BValidateClientPlayerDecalSignature( msg.data ) )
 			return;
 
 		// Follow through and apply the decal
 		CBroadcastRecipientFilter sprayCanFilter;
 		EmitSound( sprayCanFilter, entindex(), "SprayCan.Paint" );
 		extern void FE_PlayerDecal( CCSGameRules::ServerPlayerDecalData_t const &data, std::string const &signature );
-		FE_PlayerDecal( data, msg.data().signature() );
+		FE_PlayerDecal( data, msg.data->signature );
 	}
 
 	// Expire any digital signature requests that are too old
@@ -3571,40 +3571,40 @@ void CCSPlayer::SprayPaint( CCSUsrMsg_PlayerDecalDigitalSignature const &msg )
 	// must be removed!
 }
 
-void CCSGameRules::ServerPlayerDecalData_t::CopyToMsg( CCSUsrMsg_PlayerDecalDigitalSignature &msg ) const
+void CCSGameRules::ServerPlayerDecalData_t::CopyToMsg( ks::net::CCSUsrMsg_PlayerDecalDigitalSignature &msg ) const
 {
-	PlayerDecalDigitalSignature &ddata = *msg.mutable_data();
-	ddata.set_accountid( m_unAccountID );
-	ddata.set_trace_id( m_nTraceID );
-	ddata.set_rtime( m_rtGcTime );
-	for ( int i = 0; i < 3; ++ i ) ddata.add_endpos( m_vecOrigin[i] );
-	for ( int i = 0; i < 3; ++ i ) ddata.add_startpos( m_vecStart[i] );
-	for ( int i = 0; i < 3; ++ i ) ddata.add_right( m_vecRight[i] );
-	for ( int i = 0; i < 3; ++ i ) ddata.add_normal( m_vecNormal[i] );
-	ddata.set_equipslot( m_nEquipSlot );
-	ddata.set_tx_defidx( m_nPlayer );
-	ddata.set_entindex( m_nEntity );
-	ddata.set_hitbox( m_nHitbox );
-	ddata.set_tint_id( m_nTintID );
-	ddata.set_creationtime( m_flCreationTime );
+	ks::net::PlayerDecalDigitalSignature &ddata = msg.data.mut();
+	ddata.accountid = m_unAccountID;
+	ddata.trace_id = m_nTraceID;
+	ddata.rtime = m_rtGcTime;
+	for ( int i = 0; i < 3; ++ i ) ddata.endpos.emplace_back( m_vecOrigin[i] );
+	for ( int i = 0; i < 3; ++ i ) ddata.startpos.emplace_back( m_vecStart[i] );
+	for ( int i = 0; i < 3; ++ i ) ddata.right.emplace_back( m_vecRight[i] );
+	for ( int i = 0; i < 3; ++ i ) ddata.normal.emplace_back( m_vecNormal[i] );
+	ddata.equipslot = m_nEquipSlot;
+	ddata.tx_defidx = m_nPlayer;
+	ddata.entindex = m_nEntity;
+	ddata.hitbox = m_nHitbox;
+	ddata.tint_id = m_nTintID;
+	ddata.creationtime = m_flCreationTime;
 }
 
-void CCSGameRules::ServerPlayerDecalData_t::InitFromMsg( CCSUsrMsg_PlayerDecalDigitalSignature const &msg )
+void CCSGameRules::ServerPlayerDecalData_t::InitFromMsg( ks::net::CCSUsrMsg_PlayerDecalDigitalSignature const &msg )
 {
-	PlayerDecalDigitalSignature const &ddata = msg.data();
-	m_unAccountID = ddata.accountid();
-	m_nTraceID = ddata.trace_id();
-	m_rtGcTime = ddata.rtime();
-	if ( ddata.endpos_size() == 3 ) m_vecOrigin.Init( ddata.endpos( 0 ), ddata.endpos( 1 ), ddata.endpos( 2 ) );
-	if ( ddata.startpos_size() == 3 ) m_vecStart.Init( ddata.startpos( 0 ), ddata.startpos( 1 ), ddata.startpos( 2 ) );
-	if ( ddata.right_size() == 3 ) m_vecRight.Init( ddata.right( 0 ), ddata.right( 1 ), ddata.right( 2 ) );
-	if ( ddata.normal_size() == 3 ) m_vecNormal.Init( ddata.normal( 0 ), ddata.normal( 1 ), ddata.normal( 2 ) );
-	m_nEquipSlot = ddata.equipslot();
-	m_nPlayer = ddata.tx_defidx();
-	m_nEntity = ddata.entindex();
-	m_nHitbox = ddata.hitbox();
-	m_nTintID = ddata.tint_id();
-	m_flCreationTime = ddata.creationtime();
+	ks::net::PlayerDecalDigitalSignature const &ddata = msg.data;
+	m_unAccountID = ddata.accountid;
+	m_nTraceID = ddata.trace_id;
+	m_rtGcTime = ddata.rtime;
+	if ( ddata.endpos.size() == 3 ) m_vecOrigin.Init( ddata.endpos[ 0 ], ddata.endpos[ 1 ], ddata.endpos[ 2 ] );
+	if ( ddata.startpos.size() == 3 ) m_vecStart.Init( ddata.startpos[ 0 ], ddata.startpos[ 1 ], ddata.startpos[ 2 ] );
+	if ( ddata.right.size() == 3 ) m_vecRight.Init( ddata.right[ 0 ], ddata.right[ 1 ], ddata.right[ 2 ] );
+	if ( ddata.normal.size() == 3 ) m_vecNormal.Init( ddata.normal[ 0 ], ddata.normal[ 1 ], ddata.normal[ 2 ] );
+	m_nEquipSlot = ddata.equipslot;
+	m_nPlayer = ddata.tx_defidx;
+	m_nEntity = ddata.entindex;
+	m_nHitbox = ddata.hitbox;
+	m_nTintID = ddata.tint_id;
+	m_flCreationTime = ddata.creationtime;
 }
 
 void CCSPlayer::ImpulseCommands()
@@ -3620,8 +3620,8 @@ void CCSPlayer::ImpulseCommands()
 		// If this player doesn't have a spraycan equipped then swallow the spray request (this probably doesn't work)
 		if ( sv_cheats->GetBool() )
 		{
-			CCSUsrMsg_PlayerDecalDigitalSignature msg;
-			msg.mutable_data()->set_equipslot( iImpulse - 111 );
+			ks::net::CCSUsrMsg_PlayerDecalDigitalSignature msg;
+			msg.data.mut().equipslot = iImpulse - 111;
 			SprayPaint( msg );
 		}
 		break;
@@ -3852,33 +3852,33 @@ void CCSPlayer::UpdateAddonBits()
 
 
 void CCSPlayer::AppendSpottedEntityUpdateMessage( int entindex, bool bSpotted,
-	CCSUsrMsg_ProcessSpottedEntityUpdate::SpottedEntityUpdate *pMsg )
+	ks::net::CCSUsrMsg_ProcessSpottedEntityUpdate::SpottedEntityUpdate *pMsg )
 {
 	CBaseEntity * pEntity = UTIL_EntityByIndex( entindex );
 
 	if ( pEntity )
 	{
-		pMsg->set_entity_idx( entindex );
+		pMsg->entity_idx = entindex;
 
 		// Entity may not yet exist on client so we need to pass the class ID
-		pMsg->set_class_id( pEntity->GetServerClass()->m_ClassID );
+		pMsg->class_id = pEntity->GetServerClass()->m_ClassID;
 
 		// generic entity data
 		// write out position
-		pMsg->set_origin_x( pEntity->GetAbsOrigin().x/4 );
-		pMsg->set_origin_y( pEntity->GetAbsOrigin().y/4 );
-		pMsg->set_origin_z( pEntity->GetAbsOrigin().z/4 );
-		pMsg->set_angle_y(  AngleNormalize( pEntity->GetAbsAngles().y ) );
+		pMsg->origin_x = pEntity->GetAbsOrigin().x/4;
+		pMsg->origin_y = pEntity->GetAbsOrigin().y/4;
+		pMsg->origin_z = pEntity->GetAbsOrigin().z/4;
+		pMsg->angle_y = AngleNormalize( pEntity->GetAbsAngles().y );
 
 		// Clients are are unaware of the defuser class, so we need to flag defuse entities manually
-		pMsg->set_defuser( FClassnameIs( pEntity, "item_defuser" ) || FClassnameIs( pEntity, "item_cutters" ) );
+		pMsg->defuser = FClassnameIs( pEntity, "item_defuser" ) || FClassnameIs( pEntity, "item_cutters" );
 
 		// class specific data first
 		CCSPlayer * pPlayer = ToCSPlayer( UTIL_PlayerByIndex( entindex ) );
 		if ( pPlayer )
 		{
-			pMsg->set_player_has_defuser( pPlayer->HasDefuser() );	// has defuser
-			pMsg->set_player_has_c4( pPlayer->HasC4() );			// has bomb
+			pMsg->player_has_defuser = pPlayer->HasDefuser();	// has defuser
+			pMsg->player_has_c4 = pPlayer->HasC4();			// has bomb
 		}
 	}
 }
@@ -3900,9 +3900,9 @@ void CCSPlayer::ProcessSpottedEntityUpdate()
 	int nIndex = entities.FindNextSetBit( 0 );
 
 	CSingleUserRecipientFilter user( this );
-	CCSUsrMsg_ProcessSpottedEntityUpdate msg;
+	ks::net::CCSUsrMsg_ProcessSpottedEntityUpdate msg;
 
-	msg.set_new_update( true ); // Start of a new update frame. Signals the client to reset its spotting data.
+	msg.new_update = true; // Start of a new update frame. Signals the client to reset its spotting data.
 
 	int nMessageEntityCount = 0;	// The number of entities updated in this message
 
@@ -3913,21 +3913,21 @@ void CCSPlayer::ProcessSpottedEntityUpdate()
 			if ( nMessageEntityCount >= SPOTTED_ENTITY_COUNT_MESSAGE_MAX )
 			{
 				// We do not have enough space for this entity. Start a new message.
-				SendUserMessage( user, CS_UM_ProcessSpottedEntityUpdate, msg );
-				msg.Clear();
-				msg.set_new_update( false ); // Start of a partial update. Clients do not need to clear their spotting data.
+				SendUserMessage( user, ks::net::CS_UM_ProcessSpottedEntityUpdate, msg );
+				msg = {};
+				msg.new_update = false; // Start of a partial update. Clients do not need to clear their spotting data.
 				nMessageEntityCount = 0;
 				continue;
 			}
 
-			AppendSpottedEntityUpdateMessage( nIndex, true, msg.add_entity_updates() );
+			AppendSpottedEntityUpdateMessage( nIndex, true, &msg.entity_updates.emplace_back() );
 			nMessageEntityCount++;
 		}
 
 		nIndex = entities.FindNextSetBit( nIndex + 1 );
 	}
 
-	SendUserMessage( user, CS_UM_ProcessSpottedEntityUpdate, msg );
+	SendUserMessage( user, ks::net::CS_UM_ProcessSpottedEntityUpdate, msg );
 }
 
 void CCSPlayer::UpdateMouseoverHints()
@@ -5103,17 +5103,17 @@ int CCSPlayer::OnTakeDamage( const CTakeDamageInfo &inputInfo )
 	CSingleUserAndReplayRecipientFilter user( this );
 	user.MakeReliable();
 
-	CCSUsrMsg_Damage msg;
+	ks::net::CCSUsrMsg_Damage msg;
 
-	msg.set_amount( (int )info.GetDamage() );
-	msg.set_victim_entindex( entindex() );
+	msg.amount = (int )info.GetDamage();
+	msg.victim_entindex = entindex();
 
 	const Vector& inflictor = info.GetInflictor()->WorldSpaceCenter();
-	msg.mutable_inflictor_world_pos()->set_x( inflictor.x );
-	msg.mutable_inflictor_world_pos()->set_y( inflictor.y );
-	msg.mutable_inflictor_world_pos()->set_z( inflictor.z );
+	msg.inflictor_world_pos.mut().x = inflictor.x;
+	msg.inflictor_world_pos.mut().y = inflictor.y;
+	msg.inflictor_world_pos.mut().z = inflictor.z;
 
-	SendUserMessage( user, CS_UM_Damage, msg );
+	SendUserMessage( user, ks::net::CS_UM_Damage, msg );
 
 	// Do special explosion damage effect
 	if ( info.GetDamageType() & DMG_BLAST )
@@ -5993,9 +5993,9 @@ void CCSPlayer::AddAccount( int amount, bool bTrackChange, bool bItemBought, con
 
 	CSingleUserRecipientFilter user( this );
 
-	CCSUsrMsg_AdjustMoney msg;
-	msg.set_amount( amount );
-	SendUserMessage( user, CS_UM_AdjustMoney, msg );
+	ks::net::CCSUsrMsg_AdjustMoney msg;
+	msg.amount = amount;
+	SendUserMessage( user, ks::net::CS_UM_AdjustMoney, msg );
 
 	if ( CSGameRules()->ShouldRecordMatchStats() )
 	{
@@ -7264,10 +7264,10 @@ bool CCSPlayer::DropWeaponSlot( int nSlot, bool fromDeath )
 						CSingleUserRecipientFilter filter( this );
 						filter.MakeReliable();
 
-						CCSUsrMsg_ItemDrop msg;
-						msg.set_itemid( pItem->GetItemID() );
-						msg.set_death( true );
-						SendUserMessage( filter, CS_UM_ItemDrop, msg );
+						ks::net::CCSUsrMsg_ItemDrop msg;
+						msg.itemid = pItem->GetItemID();
+						msg.death = true;
+						SendUserMessage( filter, ks::net::CS_UM_ItemDrop, msg );
 					}
 				}
 			}
@@ -8282,33 +8282,33 @@ void CCSPlayer::HandleMenu_Radio3( int slot )
 
 void UTIL_CSRadioMessage( IRecipientFilter& filter, int iClient, int msg_dest, const char *msg_name, const char *param1 = NULL, const char *param2 = NULL, const char *param3 = NULL, const char *param4 = NULL )
 {
-	CCSUsrMsg_RadioText msg;
+	ks::net::CCSUsrMsg_RadioText msg;
 
-	msg.set_msg_dst( msg_dest );
-	msg.set_client( iClient );
-	msg.set_msg_name( msg_name );
+	msg.msg_dst = msg_dest;
+	msg.client = iClient;
+	msg.msg_name = msg_name;
 
 	if ( param1 )
-		msg.add_params( param1 );
+		msg.params.emplace_back( param1 );
 	else
-		msg.add_params( "" );
+		msg.params.emplace_back( "" );
 
 	if ( param2 )
-		msg.add_params( param2 );
+		msg.params.emplace_back( param2 );
 	else
-		msg.add_params( "" );
+		msg.params.emplace_back( "" );
 
 	if ( param3 )
-		msg.add_params( param3 );
+		msg.params.emplace_back( param3 );
 	else
-		msg.add_params( "" );
+		msg.params.emplace_back( "" );
 
 	if ( param4 )
-		msg.add_params( param4 );
+		msg.params.emplace_back( param4 );
 	else
-		msg.add_params( "" );
+		msg.params.emplace_back( "" );
 
-	SendUserMessage( filter, CS_UM_RadioText, msg );
+	SendUserMessage( filter, ks::net::CS_UM_RadioText, msg );
 }
 
 void CCSPlayer::ConstructRadioFilter( CRecipientFilter& filter )
@@ -8397,9 +8397,9 @@ void CCSPlayer::Radio( const char *pszRadioSound, const char *pszRadioText, bool
 	}
 	else
 	{
-		CCSUsrMsg_SendAudio msg;
-		msg.set_radio_sound( pszRadioSound );
-		SendUserMessage ( filter, CS_UM_SendAudio, msg );
+		ks::net::CCSUsrMsg_SendAudio msg;
+		msg.radio_sound = pszRadioSound;
+		SendUserMessage ( filter, ks::net::CS_UM_SendAudio, msg );
 	}
 
 	//icon over the head for teammates
@@ -10684,7 +10684,7 @@ bool CCSPlayer::StartHltvReplayEvent( const ClientReplayEventParams_t &params )
 	float flEventTime = params.m_flEventTime;
 	int nPrimaryTargetEntIndex = params.m_nPrimaryTargetEntIndex;
 
-	if ( params.m_nEventType == REPLAY_EVENT_DEATH )
+	if ( params.m_nEventType == ks::net::REPLAY_EVENT_DEATH )
 	{
 		flEventTime = GetDeathTime();
 
@@ -13536,12 +13536,12 @@ void CCSPlayer::SendLastKillerDamageToClient( CCSPlayer *pLastKiller )
 	//-----------------------------------------------------------------
 	CSingleUserRecipientFilter filter( this );
 	filter.MakeReliable();
-	CCSUsrMsg_SendLastKillerDamageToClient msg;
-	msg.set_num_hits_given( nNumHitsGiven );
-	msg.set_damage_given( nDamageGiven );
-	msg.set_num_hits_taken( nNumHitsTaken );
-	msg.set_damage_taken( nDamageTaken );
-	SendUserMessage( filter, CS_UM_SendLastKillerDamageToClient, msg );
+	ks::net::CCSUsrMsg_SendLastKillerDamageToClient msg;
+	msg.num_hits_given = nNumHitsGiven;
+	msg.damage_given = nDamageGiven;
+	msg.num_hits_taken = nNumHitsTaken;
+	msg.damage_taken = nDamageTaken;
+	SendUserMessage( filter, ks::net::CS_UM_SendLastKillerDamageToClient, msg );
 	//-----------------------------------------------------------------
 }
 
@@ -13783,22 +13783,22 @@ bool CCSPlayer::StartReplayMode( float fDelay, float fDuration, int iEntity )
 	CSingleUserRecipientFilter filter( this );
 	filter.MakeReliable();
 
-	CCSUsrMsg_KillCam msg;
+	ks::net::CCSUsrMsg_KillCam msg;
 
-	msg.set_obs_mode( OBS_MODE_IN_EYE );
+	msg.obs_mode = OBS_MODE_IN_EYE;
 
 		if ( m_hObserverTarget.Get() )
 		{
-		msg.set_first_target( m_hObserverTarget.Get()->entindex() );	// first target
-		msg.set_second_target( entindex() );	//second target
+		msg.first_target = m_hObserverTarget.Get()->entindex();	// first target
+		msg.second_target = entindex();	//second target
 		}
 		else
 		{
-		msg.set_first_target( entindex() );	// first target
-		msg.set_second_target( 0 );	//second target
+		msg.first_target = entindex();	// first target
+		msg.second_target = 0;	//second target
 		}
 
-	SendUserMessage( filter, CS_UM_KillCam, msg );
+	SendUserMessage( filter, ks::net::CS_UM_KillCam, msg );
 
 	ClientPrint( this, HUD_PRINTCENTER, "Kill Cam Replay" );
 
@@ -13853,7 +13853,7 @@ CON_COMMAND_F( replay_death, "start hltv replay of last death", FCVAR_CHEAT )
 	CCSPlayer *pPlayer = dynamic_cast< CCSPlayer* >( pBasePlayer );
 	if ( !pPlayer )
 		return;
-	ClientReplayEventParams_t params( REPLAY_EVENT_DEATH ) ;
+	ClientReplayEventParams_t params( ks::net::REPLAY_EVENT_DEATH ) ;
 	pPlayer->StartHltvReplayEvent( params );
 }
 
@@ -13874,13 +13874,13 @@ void CCSPlayer::StopReplayMode()
 	CSingleUserRecipientFilter filter( this );
 	filter.MakeReliable();
 
-	CCSUsrMsg_KillCam msg;
+	ks::net::CCSUsrMsg_KillCam msg;
 
-	msg.set_obs_mode( OBS_MODE_NONE );
-	msg.set_first_target( 0 );	// first target
-	msg.set_second_target( 0 );	//second target
+	msg.obs_mode = OBS_MODE_NONE;
+	msg.first_target = 0;	// first target
+	msg.second_target = 0;	//second target
 
-	SendUserMessage( filter, CS_UM_KillCam, msg );
+	SendUserMessage( filter, ks::net::CS_UM_KillCam, msg );
 }
 
 void CCSPlayer::PlayUseDenySound()

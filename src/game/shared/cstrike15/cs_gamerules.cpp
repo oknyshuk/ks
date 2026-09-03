@@ -583,8 +583,8 @@ void CCoopBonusCoin::CoinFadeOut( void )
 #endif
 
 #if defined ( CLIENT_DLL )
-	bool __MsgFunc_SendPlayerItemDrops( const CCSUsrMsg_SendPlayerItemDrops &msg );
-	bool __MsgFunc_SendPlayerItemFound( const CCSUsrMsg_SendPlayerItemFound &msg );
+	bool __MsgFunc_SendPlayerItemDrops( const ks::net::CCSUsrMsg_SendPlayerItemDrops &msg );
+	bool __MsgFunc_SendPlayerItemFound( const ks::net::CCSUsrMsg_SendPlayerItemFound &msg );
 #endif
 
 
@@ -819,32 +819,32 @@ ConVar mp_teammatchstat_cycletime( "mp_teammatchstat_cycletime", "45", FCVAR_REL
 #define COOPMISSION_SCORE_MULTIPLIER_DAMTAKEN -10
 #define COOPMISSION_SCORE_MULTIPLIER_ROUNDSFAILED -1000
 
-static uint32 Helper_ScoreLeaderboardData_FindEntryValue( uint32 nTag, const ::google::protobuf::RepeatedPtrField< ::ScoreLeaderboardData_Entry >&arr )
+static uint32 Helper_ScoreLeaderboardData_FindEntryValue( uint32 nTag, const std::vector< ks::net::ScoreLeaderboardData::Entry > &arr )
 {
 	for ( int i = 0; i < arr.size(); ++ i )
 	{
-		if ( arr.Get( i ).tag() == nTag )
-			return arr.Get( i ).val();
+		if ( arr[ i ].tag == nTag )
+			return arr[ i ].val;
 	}
 	return 0;
 }
-static uint32 Helper_ScoreLeaderboardData_FindEntryValueSum( uint32 nTag, const ::google::protobuf::RepeatedPtrField< ::ScoreLeaderboardData_AccountEntries >&arr )
+static uint32 Helper_ScoreLeaderboardData_FindEntryValueSum( uint32 nTag, const std::vector< ks::net::ScoreLeaderboardData::AccountEntries > &arr )
 {
 	uint32 val = 0;
 	for ( int i = 0; i < arr.size(); ++i )
 	{
-		val += Helper_ScoreLeaderboardData_FindEntryValue( nTag, arr.Get( i ).entries() );
+		val += Helper_ScoreLeaderboardData_FindEntryValue( nTag, arr[ i ].entries );
 	}
 	return val;
 }
 
-int32 CoopScoreGetRatingEntryFromLeaderboardData( ScoreLeaderboardData &sld, bool bBonus, int nIndex, bool bAsScore )
+int32 CoopScoreGetRatingEntryFromLeaderboardData( ks::net::ScoreLeaderboardData &sld, bool bBonus, int nIndex, bool bAsScore )
 {	// Note: this function should not be referencing gamerules because we can be looking at scores from Steam friends leaderboards
 	bool bGuardian = false;
 	bool bCoopMission = true;
-	if ( sld.quest_id() )
+	if ( sld.quest_id )
 	{
-		const CEconQuestDefinition *pQuest = GetItemSchema()->GetQuestDefinition( sld.quest_id() );
+		const CEconQuestDefinition *pQuest = GetItemSchema()->GetQuestDefinition( sld.quest_id );
 		if ( !pQuest )
 			return 0.0f;
 		if ( !V_stricmp( pQuest->GetGameMode(), "cooperative" ) )
@@ -875,8 +875,8 @@ int32 CoopScoreGetRatingEntryFromLeaderboardData( ScoreLeaderboardData &sld, boo
 		{
 			if ( nIndex == 0 )
 			{	// Damage to enemies ratio
-				uint32 numDmgInflicted = Helper_ScoreLeaderboardData_FindEntryValueSum( k_EScoreLeaderboardDataEntryTag_HpDmgInflicted, sld.accountentries() );
-				uint32 numDmgSuffered = Helper_ScoreLeaderboardData_FindEntryValueSum( k_EScoreLeaderboardDataEntryTag_HpDmgSuffered, sld.accountentries() );
+				uint32 numDmgInflicted = Helper_ScoreLeaderboardData_FindEntryValueSum( k_EScoreLeaderboardDataEntryTag_HpDmgInflicted, sld.accountentries );
+				uint32 numDmgSuffered = Helper_ScoreLeaderboardData_FindEntryValueSum( k_EScoreLeaderboardDataEntryTag_HpDmgSuffered, sld.accountentries );
 				if ( !numDmgInflicted )
 					nResult = 0;
 				else if ( numDmgSuffered )
@@ -894,7 +894,7 @@ int32 CoopScoreGetRatingEntryFromLeaderboardData( ScoreLeaderboardData &sld, boo
 			}
 			else if ( nIndex == 3 )
 			{	// Rounds failed penalty
-				nResult = Helper_ScoreLeaderboardData_FindEntryValue( k_EScoreLeaderboardDataEntryTag_RoundsPlayed, sld.matchentries() );
+				nResult = Helper_ScoreLeaderboardData_FindEntryValue( k_EScoreLeaderboardDataEntryTag_RoundsPlayed, sld.matchentries );
 				nResult = ( nResult > 1 ) ? ( nResult - 1 ) : 0;
 				if ( bAsScore )
 				{
@@ -906,7 +906,7 @@ int32 CoopScoreGetRatingEntryFromLeaderboardData( ScoreLeaderboardData &sld, boo
 		{
 			if ( nIndex == 0 )
 			{	// Time Remaining on the clock
-				nResult = Helper_ScoreLeaderboardData_FindEntryValue( k_EScoreLeaderboardDataEntryTag_TimeRemaining, sld.matchentries() );
+				nResult = Helper_ScoreLeaderboardData_FindEntryValue( k_EScoreLeaderboardDataEntryTag_TimeRemaining, sld.matchentries );
 				if ( bAsScore )
 				{
 					nResult = COOPMISSION_SCORE_MULTIPLIER_TIMELEFT*nResult;
@@ -914,7 +914,7 @@ int32 CoopScoreGetRatingEntryFromLeaderboardData( ScoreLeaderboardData &sld, boo
 			}
 			else if ( nIndex == 3 )
 			{	// Total damage taken
-				nResult = Helper_ScoreLeaderboardData_FindEntryValueSum( k_EScoreLeaderboardDataEntryTag_HpDmgSuffered, sld.accountentries() );
+				nResult = Helper_ScoreLeaderboardData_FindEntryValueSum( k_EScoreLeaderboardDataEntryTag_HpDmgSuffered, sld.accountentries );
 				if ( bAsScore )
 				{
 					nResult = COOPMISSION_SCORE_MULTIPLIER_DAMTAKEN*nResult;
@@ -926,8 +926,8 @@ int32 CoopScoreGetRatingEntryFromLeaderboardData( ScoreLeaderboardData &sld, boo
 		{	// Shared categories for Guardian and Coop Mission
 			if ( nIndex == 1 )
 			{	// Bullets Accuracy
-				uint32 numBulletsFired = Helper_ScoreLeaderboardData_FindEntryValueSum( k_EScoreLeaderboardDataEntryTag_ShotsFired, sld.accountentries() );
-				uint32 numBulletsOnTarget = Helper_ScoreLeaderboardData_FindEntryValueSum( k_EScoreLeaderboardDataEntryTag_ShotsOnTarget, sld.accountentries() );
+				uint32 numBulletsFired = Helper_ScoreLeaderboardData_FindEntryValueSum( k_EScoreLeaderboardDataEntryTag_ShotsFired, sld.accountentries );
+				uint32 numBulletsOnTarget = Helper_ScoreLeaderboardData_FindEntryValueSum( k_EScoreLeaderboardDataEntryTag_ShotsOnTarget, sld.accountentries );
 				if ( !numBulletsFired )
 					nResult = 0;
 				else if ( numBulletsFired > 0 && numBulletsOnTarget < numBulletsFired )
@@ -945,8 +945,8 @@ int32 CoopScoreGetRatingEntryFromLeaderboardData( ScoreLeaderboardData &sld, boo
 			}
 			else if ( nIndex == 2 )
 			{	// Headshots kill percentage
-				uint32 numHeadshots = Helper_ScoreLeaderboardData_FindEntryValueSum( k_EScoreLeaderboardDataEntryTag_Headshots, sld.accountentries() );
-				uint32 numKills = Helper_ScoreLeaderboardData_FindEntryValueSum( k_EScoreLeaderboardDataEntryTag_Kills, sld.accountentries() );
+				uint32 numHeadshots = Helper_ScoreLeaderboardData_FindEntryValueSum( k_EScoreLeaderboardDataEntryTag_Headshots, sld.accountentries );
+				uint32 numKills = Helper_ScoreLeaderboardData_FindEntryValueSum( k_EScoreLeaderboardDataEntryTag_Kills, sld.accountentries );
 				if ( !numKills )
 					nResult = 0;
 				else if ( numKills > 0 && numHeadshots < numKills )
@@ -975,7 +975,7 @@ int32 CoopScoreGetRatingEntryFromLeaderboardData( ScoreLeaderboardData &sld, boo
 		{
 			if ( nIndex == 0 )
 			{	// Under 3 rounds?
-				uint32 numRoundsPlayed = Helper_ScoreLeaderboardData_FindEntryValue( k_EScoreLeaderboardDataEntryTag_RoundsPlayed, sld.matchentries() );
+				uint32 numRoundsPlayed = Helper_ScoreLeaderboardData_FindEntryValue( k_EScoreLeaderboardDataEntryTag_RoundsPlayed, sld.matchentries );
 				nResult = numRoundsPlayed;
 				if ( bAsScore )
 				{
@@ -988,7 +988,7 @@ int32 CoopScoreGetRatingEntryFromLeaderboardData( ScoreLeaderboardData &sld, boo
 		{
 			if ( nIndex == 0 )
 			{	// No Deaths?
-				uint32 numDeaths = Helper_ScoreLeaderboardData_FindEntryValueSum( k_EScoreLeaderboardDataEntryTag_Deaths, sld.accountentries() );
+				uint32 numDeaths = Helper_ScoreLeaderboardData_FindEntryValueSum( k_EScoreLeaderboardDataEntryTag_Deaths, sld.accountentries );
 				nResult = numDeaths;
 				if ( bAsScore )
 				{
@@ -997,7 +997,7 @@ int32 CoopScoreGetRatingEntryFromLeaderboardData( ScoreLeaderboardData &sld, boo
 			}
 			else if ( nIndex == 1 )
 			{	// All Challenge Coins?
-				uint32 numChallenge = Helper_ScoreLeaderboardData_FindEntryValue( k_EScoreLeaderboardDataEntryTag_BonusChallenge, sld.matchentries() );
+				uint32 numChallenge = Helper_ScoreLeaderboardData_FindEntryValue( k_EScoreLeaderboardDataEntryTag_BonusChallenge, sld.matchentries );
 				nResult = numChallenge;
 				if ( bAsScore )
 				{
@@ -1006,7 +1006,7 @@ int32 CoopScoreGetRatingEntryFromLeaderboardData( ScoreLeaderboardData &sld, boo
 			}
 			else if ( nIndex == 2 )
 			{	// Pistols Only?
-				uint32 numPistolsOnly = Helper_ScoreLeaderboardData_FindEntryValue( k_EScoreLeaderboardDataEntryTag_BonusPistolOnly, sld.matchentries() );
+				uint32 numPistolsOnly = Helper_ScoreLeaderboardData_FindEntryValue( k_EScoreLeaderboardDataEntryTag_BonusPistolOnly, sld.matchentries );
 				nResult = numPistolsOnly;
 				if ( bAsScore )
 				{
@@ -1015,7 +1015,7 @@ int32 CoopScoreGetRatingEntryFromLeaderboardData( ScoreLeaderboardData &sld, boo
 			}
 			else if ( nIndex == 3 )
 			{	// Hard Mode?
-				uint32 numHardMode = Helper_ScoreLeaderboardData_FindEntryValue( k_EScoreLeaderboardDataEntryTag_BonusHardMode, sld.matchentries() );
+				uint32 numHardMode = Helper_ScoreLeaderboardData_FindEntryValue( k_EScoreLeaderboardDataEntryTag_BonusHardMode, sld.matchentries );
 				nResult = numHardMode;
 				if ( bAsScore )
 				{
@@ -1100,7 +1100,7 @@ static bool Helper_ShouldBroadcastCoopScoreLeaderboardData()
 	return false;
 }
 
-static void Helper_FillScoreLeaderboardData( ScoreLeaderboardData &sld )
+static void Helper_FillScoreLeaderboardData( ks::net::ScoreLeaderboardData &sld )
 {
 	//
 	// This function is used in both official and community server build
@@ -1117,49 +1117,49 @@ static void Helper_FillScoreLeaderboardData( ScoreLeaderboardData &sld )
 	FOR_EACH_MAP( CSGameRules()->m_mapQueuedMatchmakingPlayersData, i )
 	{
 		CCSGameRules::CQMMPlayerData_t const &qmm = *CSGameRules()->m_mapQueuedMatchmakingPlayersData.Element( i );
-		ScoreLeaderboardData_AccountEntries *pAcc = sld.add_accountentries();
-		pAcc->set_accountid( qmm.m_uiPlayerAccountId );
+		ks::net::ScoreLeaderboardData::AccountEntries *pAcc = &sld.accountentries.emplace_back();
+		pAcc->accountid = qmm.m_uiPlayerAccountId;
 		if ( int n = qmm.m_numEnemyKills )
 		{
-			ScoreLeaderboardData_Entry *pEnt = pAcc->add_entries();
-			pEnt->set_tag( k_EScoreLeaderboardDataEntryTag_Kills );
-			pEnt->set_val( n );
+			ks::net::ScoreLeaderboardData::Entry *pEnt = &pAcc->entries.emplace_back();
+			pEnt->tag = k_EScoreLeaderboardDataEntryTag_Kills;
+			pEnt->val = n;
 		}
 		if ( int n = qmm.m_numEnemyKillHeadshots )
 		{
-			ScoreLeaderboardData_Entry *pEnt = pAcc->add_entries();
-			pEnt->set_tag( k_EScoreLeaderboardDataEntryTag_Headshots );
-			pEnt->set_val( n );
+			ks::net::ScoreLeaderboardData::Entry *pEnt = &pAcc->entries.emplace_back();
+			pEnt->tag = k_EScoreLeaderboardDataEntryTag_Headshots;
+			pEnt->val = n;
 		}
 		if ( int n = qmm.m_numDeaths )
 		{
-			ScoreLeaderboardData_Entry *pEnt = pAcc->add_entries();
-			pEnt->set_tag( k_EScoreLeaderboardDataEntryTag_Deaths );
-			pEnt->set_val( n );
+			ks::net::ScoreLeaderboardData::Entry *pEnt = &pAcc->entries.emplace_back();
+			pEnt->tag = k_EScoreLeaderboardDataEntryTag_Deaths;
+			pEnt->val = n;
 		}
 		if ( int n = qmm.m_numHealthPointsRemovedTotal )
 		{
-			ScoreLeaderboardData_Entry *pEnt = pAcc->add_entries();
-			pEnt->set_tag( k_EScoreLeaderboardDataEntryTag_HpDmgSuffered );
-			pEnt->set_val( n );
+			ks::net::ScoreLeaderboardData::Entry *pEnt = &pAcc->entries.emplace_back();
+			pEnt->tag = k_EScoreLeaderboardDataEntryTag_HpDmgSuffered;
+			pEnt->val = n;
 		}
 		if ( int n = qmm.m_numHealthPointsDealtTotal )
 		{
-			ScoreLeaderboardData_Entry *pEnt = pAcc->add_entries();
-			pEnt->set_tag( k_EScoreLeaderboardDataEntryTag_HpDmgInflicted );
-			pEnt->set_val( n );
+			ks::net::ScoreLeaderboardData::Entry *pEnt = &pAcc->entries.emplace_back();
+			pEnt->tag = k_EScoreLeaderboardDataEntryTag_HpDmgInflicted;
+			pEnt->val = n;
 		}
 		if ( int n = qmm.m_numShotsFiredTotal )
 		{
-			ScoreLeaderboardData_Entry *pEnt = pAcc->add_entries();
-			pEnt->set_tag( k_EScoreLeaderboardDataEntryTag_ShotsFired );
-			pEnt->set_val( n );
+			ks::net::ScoreLeaderboardData::Entry *pEnt = &pAcc->entries.emplace_back();
+			pEnt->tag = k_EScoreLeaderboardDataEntryTag_ShotsFired;
+			pEnt->val = n;
 		}
 		if ( int n = qmm.m_numShotsOnTargetTotal )
 		{
-			ScoreLeaderboardData_Entry *pEnt = pAcc->add_entries();
-			pEnt->set_tag( k_EScoreLeaderboardDataEntryTag_ShotsOnTarget );
-			pEnt->set_val( n );
+			ks::net::ScoreLeaderboardData::Entry *pEnt = &pAcc->entries.emplace_back();
+			pEnt->tag = k_EScoreLeaderboardDataEntryTag_ShotsOnTarget;
+			pEnt->val = n;
 		}
 	}
 
@@ -1168,9 +1168,9 @@ static void Helper_FillScoreLeaderboardData( ScoreLeaderboardData &sld )
 	//
 	if ( int n = CSGameRules()->GetTotalRoundsPlayed() )
 	{
-		ScoreLeaderboardData_Entry *pEnt = sld.add_matchentries();
-		pEnt->set_tag( k_EScoreLeaderboardDataEntryTag_RoundsPlayed );
-		pEnt->set_val( n );
+		ks::net::ScoreLeaderboardData::Entry *pEnt = &sld.matchentries.emplace_back();
+		pEnt->tag = k_EScoreLeaderboardDataEntryTag_RoundsPlayed;
+		pEnt->val = n;
 	}
 
 	if ( CSGameRules()->IsPlayingCoopMission() )
@@ -1180,32 +1180,32 @@ static void Helper_FillScoreLeaderboardData( ScoreLeaderboardData &sld )
 			nRemainingTime = 0;
 		if ( int n = nRemainingTime )
 		{
-			ScoreLeaderboardData_Entry *pEnt = sld.add_matchentries();
-			pEnt->set_tag( k_EScoreLeaderboardDataEntryTag_TimeRemaining );
-			pEnt->set_val( n );
+			ks::net::ScoreLeaderboardData::Entry *pEnt = &sld.matchentries.emplace_back();
+			pEnt->tag = k_EScoreLeaderboardDataEntryTag_TimeRemaining;
+			pEnt->val = n;
 		}
 
 		static ConVarRef mp_coopmission_bot_difficulty_offset( "mp_coopmission_bot_difficulty_offset" );
 		int nHardMode = ( mp_coopmission_bot_difficulty_offset.GetInt() >= 3 ) ? 1 : 0;
 		if ( int n = nHardMode )
 		{
-			ScoreLeaderboardData_Entry *pEnt = sld.add_matchentries();
-			pEnt->set_tag( k_EScoreLeaderboardDataEntryTag_BonusHardMode );
-			pEnt->set_val( n );
+			ks::net::ScoreLeaderboardData::Entry *pEnt = &sld.matchentries.emplace_back();
+			pEnt->tag = k_EScoreLeaderboardDataEntryTag_BonusHardMode;
+			pEnt->val = n;
 		}
 
 		if ( int n = CSGameRules()->m_coopBonusPistolsOnly ? 1 : 0 )
 		{
-			ScoreLeaderboardData_Entry *pEnt = sld.add_matchentries();
-			pEnt->set_tag( k_EScoreLeaderboardDataEntryTag_BonusPistolOnly );
-			pEnt->set_val( n );
+			ks::net::ScoreLeaderboardData::Entry *pEnt = &sld.matchentries.emplace_back();
+			pEnt->tag = k_EScoreLeaderboardDataEntryTag_BonusPistolOnly;
+			pEnt->val = n;
 		}
 
 		if ( int n = ( CSGameRules()->m_coopBonusCoinsFound == 3 ) ? 1 : 0 )
 		{
-			ScoreLeaderboardData_Entry *pEnt = sld.add_matchentries();
-			pEnt->set_tag( k_EScoreLeaderboardDataEntryTag_BonusChallenge );
-			pEnt->set_val( n );
+			ks::net::ScoreLeaderboardData::Entry *pEnt = &sld.matchentries.emplace_back();
+			pEnt->tag = k_EScoreLeaderboardDataEntryTag_BonusChallenge;
+			pEnt->val = n;
 		}
 	}
 
@@ -1225,7 +1225,7 @@ static void Helper_FillScoreLeaderboardData( ScoreLeaderboardData &sld )
 			nScoreTier = 0;
 		nTotalScore += nScoreTier;
 	}
-	sld.set_score( nTotalScore );
+	sld.score = nTotalScore;
 }
 
 bool IsAssassinationQuest( const CEconQuestDefinition *pQuest )
@@ -1439,20 +1439,20 @@ CON_COMMAND_F ( send_round_backup_file_list, "", FCVAR_GAMEDLL | FCVAR_RELEASE |
 
 	s_mapLastRequestTime.InsertOrReplace( pPlayer->entindex(), ( int )gpGlobals->curtime );
 
-	CCSUsrMsg_RoundBackupFilenames msg;
+	ks::net::CCSUsrMsg_RoundBackupFilenames msg;
 
 	CBackupFilesEnumerator arrStrings;
 
 	// to avoid the proto message limit we're sending these in individual messages rather than one.
 	for ( int idx = 0; idx < Min( 10, arrStrings.Count() ); idx++ )
 	{
-		CCSUsrMsg_RoundBackupFilenames msg;
+		ks::net::CCSUsrMsg_RoundBackupFilenames msg;
 
-		msg.set_count( Min( 10, arrStrings.Count() ) );
+		msg.count = Min( 10, arrStrings.Count() );
 
-		msg.set_index( idx );
+		msg.index = idx;
 
-		msg.set_filename( arrStrings[ idx ] );
+		msg.filename = arrStrings[ idx ];
 
 		// create human readable name
 		KeyValues *kvSaveFile = new KeyValues( "" );
@@ -1476,11 +1476,11 @@ CON_COMMAND_F ( send_round_backup_file_list, "", FCVAR_GAMEDLL | FCVAR_RELEASE |
 				kvSaveFile->GetInt( "FirstHalfScore/team2" ) + kvSaveFile->GetInt( "SecondHalfScore/team2" ) + kvSaveFile->GetInt( "OvertimeScore/team2" ));
 		}
 
-		msg.set_nicename( nicefilename );
+		msg.nicename = nicefilename;
 
 		CSingleUserRecipientFilter filter( pPlayer );
 
-		SendUserMessage( filter, CS_UM_RoundBackupFilenames, msg );
+		SendUserMessage( filter, ks::net::CS_UM_RoundBackupFilenames, msg );
 	}
 
 
@@ -1535,7 +1535,7 @@ CON_COMMAND_F ( mp_backup_restore_load_file, "Loads player cash, KDA, scores and
 	CSGameRules()->LoadRoundDataInformation( args.Arg( 1 ) );
 }
 
-CMsgGCCStrike15_v2_MatchmakingGC2ServerReserve CCSGameRules::sm_QueuedServerReservation;
+ks::net::CMsgGCCStrike15_v2_MatchmakingGC2ServerReserve CCSGameRules::sm_QueuedServerReservation;
 #endif
 
 #ifdef CLIENT_DLL
@@ -3945,12 +3945,12 @@ ConVar cl_autohelp(
 			nextlevel.SetValue( STRING( gpGlobals->mapname ) );
 
 			// Set the tournament settings
-			if ( sm_QueuedServerReservation.has_tournament_event() &&
-				sm_QueuedServerReservation.tournament_event().has_event_name() )
-				Q_strncpy( m_szTournamentEventName.GetForModify(), sm_QueuedServerReservation.tournament_event().event_name().c_str(), MAX_PATH );
-			if ( sm_QueuedServerReservation.has_tournament_event() &&
-				sm_QueuedServerReservation.tournament_event().has_event_stage_name() )
-				Q_strncpy( m_szTournamentEventStage.GetForModify(), sm_QueuedServerReservation.tournament_event().event_stage_name().c_str(), MAX_PATH );
+			if ( sm_QueuedServerReservation.tournament_event.has_value() &&
+				sm_QueuedServerReservation.tournament_event->event_name.has_value() )
+				Q_strncpy( m_szTournamentEventName.GetForModify(), sm_QueuedServerReservation.tournament_event->event_name->c_str(), MAX_PATH );
+			if ( sm_QueuedServerReservation.tournament_event.has_value() &&
+				sm_QueuedServerReservation.tournament_event->event_stage_name.has_value() )
+				Q_strncpy( m_szTournamentEventStage.GetForModify(), sm_QueuedServerReservation.tournament_event->event_stage_name->c_str(), MAX_PATH );
 		}
 
 		// [tj] reset flawless and lossless round related flags
@@ -4211,9 +4211,9 @@ static bool Helper_CheckFieldAppliesToTeam( char const *szField, int nTeam )
 	void CCSGameRules::UpdateTeamPredictions()
 	{
 		int nWantPrediction = 0;
-		if ( ( sm_QueuedServerReservation.pre_match_data().predictions_pct() >= 1 ) &&
-			( sm_QueuedServerReservation.pre_match_data().predictions_pct() <= 99 ) )
-			nWantPrediction = int( sm_QueuedServerReservation.pre_match_data().predictions_pct() ); // but convar can override
+		if ( ( sm_QueuedServerReservation.pre_match_data->predictions_pct >= 1 ) &&
+			( sm_QueuedServerReservation.pre_match_data->predictions_pct <= 99 ) )
+			nWantPrediction = int( sm_QueuedServerReservation.pre_match_data->predictions_pct ); // but convar can override
 		if ( ( mp_teamprediction_pct.GetInt() >= 1 ) &&
 			( mp_teamprediction_pct.GetInt() <= 99 ) )
 			nWantPrediction = mp_teamprediction_pct.GetInt();
@@ -4226,8 +4226,8 @@ static bool Helper_CheckFieldAppliesToTeam( char const *szField, int nTeam )
 			Q_strncpy( m_szTournamentPredictionsTxt.GetForModify(), mp_teamprediction_txt.GetString(), MAX_PATH );
 
 		char const *szWantMatchStatTxt = mp_teammatchstat_txt.GetString(); // can override from reservation later
-		if ( sm_QueuedServerReservation.pre_match_data().stats().size() )
-			szWantMatchStatTxt = sm_QueuedServerReservation.pre_match_data().stats( 0 ).match_info_txt().c_str(); // to ensure that it is eligible for a pick
+		if ( sm_QueuedServerReservation.pre_match_data->stats.size() )
+			szWantMatchStatTxt = sm_QueuedServerReservation.pre_match_data->stats[ 0 ].match_info_txt->c_str(); // to ensure that it is eligible for a pick
 
 		//
 		// Here we must determine which statistics we are going to be showing
@@ -4235,7 +4235,7 @@ static bool Helper_CheckFieldAppliesToTeam( char const *szField, int nTeam )
 		if ( IsWarmupPeriod() )
 		{
 			// we are going to show the draft here
-			if ( sm_QueuedServerReservation.pre_match_data().stats().size() )
+			if ( sm_QueuedServerReservation.pre_match_data->stats.size() )
 				m_nMatchInfoShowType = 0;
 			else if ( *szWantMatchStatTxt )
 				m_nMatchInfoShowType = 0;
@@ -4256,32 +4256,32 @@ static bool Helper_CheckFieldAppliesToTeam( char const *szField, int nTeam )
 			bool bTeamsAreSwitched = AreTeamsPlayingSwitchedSides();
 			if ( nWantPrediction )
 				arrOptions.AddToTail( k_MapMatchInfoShownCounts_Predictions );
-			for ( int j = 0; j < sm_QueuedServerReservation.pre_match_data().stats().size(); ++ j )
+			for ( int j = 0; j < sm_QueuedServerReservation.pre_match_data->stats.size(); ++ j )
 			{
-				if ( sm_QueuedServerReservation.pre_match_data().stats( j ).match_info_teams().size() < 2 ) continue;
+				if ( sm_QueuedServerReservation.pre_match_data->stats[ j ].match_info_teams.size() < 2 ) continue;
 				if ( ( m_match.GetPhase() == GAMEPHASE_MATCH_ENDED ) && ( m_nMatchInfoShowType == k_MapMatchInfoShownCounts_None ) )
 				{
 					if (
-						( ( StringHasPrefix( sm_QueuedServerReservation.pre_match_data().stats( j ).match_info_teams(0).c_str(), "#CSGO_MatchInfoTeam_WinAdvan" ) ||
-						StringHasPrefix( sm_QueuedServerReservation.pre_match_data().stats( j ).match_info_teams(0).c_str(), "#CSGO_MatchInfoTeam_LossElim" ) ) &&
-						Helper_CheckFieldAppliesToTeam( sm_QueuedServerReservation.pre_match_data().stats( j ).match_info_teams(0).c_str(), bTeamsAreSwitched ? TEAM_TERRORIST : TEAM_CT ) )
+						( ( StringHasPrefix( sm_QueuedServerReservation.pre_match_data->stats[ j ].match_info_teams[ 0 ].c_str(), "#CSGO_MatchInfoTeam_WinAdvan" ) ||
+						StringHasPrefix( sm_QueuedServerReservation.pre_match_data->stats[ j ].match_info_teams[ 0 ].c_str(), "#CSGO_MatchInfoTeam_LossElim" ) ) &&
+						Helper_CheckFieldAppliesToTeam( sm_QueuedServerReservation.pre_match_data->stats[ j ].match_info_teams[ 0 ].c_str(), bTeamsAreSwitched ? TEAM_TERRORIST : TEAM_CT ) )
 						||
-						( ( StringHasPrefix( sm_QueuedServerReservation.pre_match_data().stats( j ).match_info_teams(1).c_str(), "#CSGO_MatchInfoTeam_WinAdvan" ) ||
-						StringHasPrefix( sm_QueuedServerReservation.pre_match_data().stats( j ).match_info_teams(1).c_str(), "#CSGO_MatchInfoTeam_LossElim" ) ) &&
-						Helper_CheckFieldAppliesToTeam( sm_QueuedServerReservation.pre_match_data().stats( j ).match_info_teams(1).c_str(), bTeamsAreSwitched ? TEAM_CT : TEAM_TERRORIST ) )
+						( ( StringHasPrefix( sm_QueuedServerReservation.pre_match_data->stats[ j ].match_info_teams[ 1 ].c_str(), "#CSGO_MatchInfoTeam_WinAdvan" ) ||
+						StringHasPrefix( sm_QueuedServerReservation.pre_match_data->stats[ j ].match_info_teams[ 1 ].c_str(), "#CSGO_MatchInfoTeam_LossElim" ) ) &&
+						Helper_CheckFieldAppliesToTeam( sm_QueuedServerReservation.pre_match_data->stats[ j ].match_info_teams[ 1 ].c_str(), bTeamsAreSwitched ? TEAM_CT : TEAM_TERRORIST ) )
 						)
 					{	// always conclude the match with advances/eliminated notification if such is applicable
 						m_nMatchInfoShowType = j;
 					}
 				}
 
-				if ( Helper_CheckFieldAppliesToTeam( sm_QueuedServerReservation.pre_match_data().stats( j ).match_info_teams(0).c_str(), bTeamsAreSwitched ? TEAM_TERRORIST : TEAM_CT ) ||
-					Helper_CheckFieldAppliesToTeam( sm_QueuedServerReservation.pre_match_data().stats( j ).match_info_teams(1).c_str(), bTeamsAreSwitched ? TEAM_CT : TEAM_TERRORIST ) )
+				if ( Helper_CheckFieldAppliesToTeam( sm_QueuedServerReservation.pre_match_data->stats[ j ].match_info_teams[ 0 ].c_str(), bTeamsAreSwitched ? TEAM_TERRORIST : TEAM_CT ) ||
+					Helper_CheckFieldAppliesToTeam( sm_QueuedServerReservation.pre_match_data->stats[ j ].match_info_teams[ 1 ].c_str(), bTeamsAreSwitched ? TEAM_CT : TEAM_TERRORIST ) )
 				{
 					arrOptions.AddToTail( j );
 				}
 			}
-			if ( ( !arrOptions.Count() || !sm_QueuedServerReservation.pre_match_data().stats().size() ) && *szWantMatchStatTxt )
+			if ( ( !arrOptions.Count() || !sm_QueuedServerReservation.pre_match_data->stats.size() ) && *szWantMatchStatTxt )
 				arrOptions.AddToTail( 0 );
 			if ( arrOptions.Count() && ( m_nMatchInfoShowType == k_MapMatchInfoShownCounts_None ) )
 			{
@@ -4349,12 +4349,12 @@ static bool Helper_CheckFieldAppliesToTeam( char const *szField, int nTeam )
 
 		if ( m_nMatchInfoShowType < k_MapMatchInfoShownCounts_None )
 		{
-			if ( sm_QueuedServerReservation.pre_match_data().stats().size() > m_nMatchInfoShowType )
+			if ( sm_QueuedServerReservation.pre_match_data->stats.size() > m_nMatchInfoShowType )
 			{
 				int idxMatchTxt = m_nMatchInfoShowType;
-				if ( sm_QueuedServerReservation.pre_match_data().stats( m_nMatchInfoShowType ).has_match_info_idxtxt() )
-					idxMatchTxt = sm_QueuedServerReservation.pre_match_data().stats( m_nMatchInfoShowType ).match_info_idxtxt();
-				szWantMatchStatTxt = sm_QueuedServerReservation.pre_match_data().stats( idxMatchTxt ).match_info_txt().c_str();
+				if ( sm_QueuedServerReservation.pre_match_data->stats[ m_nMatchInfoShowType ].match_info_idxtxt.has_value() )
+					idxMatchTxt = sm_QueuedServerReservation.pre_match_data->stats[ m_nMatchInfoShowType ].match_info_idxtxt;
+				szWantMatchStatTxt = sm_QueuedServerReservation.pre_match_data->stats[ idxMatchTxt ].match_info_txt->c_str();
 			}
 		}
 
@@ -4374,14 +4374,14 @@ static bool Helper_CheckFieldAppliesToTeam( char const *szField, int nTeam )
 		const char *(pTeamNames[ 2 ]) = { mp_teamname_2.GetString(), mp_teamname_1.GetString() };
 
 		// If we have a competitive reservation then override team names from it
-		if ( ( sm_QueuedServerReservation.tournament_teams().size() > 0 ) &&
-			sm_QueuedServerReservation.tournament_teams(0).has_team_name() &&
-			* sm_QueuedServerReservation.tournament_teams(0).team_name().c_str() )
-			pTeamNames[1] = sm_QueuedServerReservation.tournament_teams(0).team_name().c_str();
-		if ( ( sm_QueuedServerReservation.tournament_teams().size() > 1 ) &&
-			sm_QueuedServerReservation.tournament_teams(1).has_team_name() &&
-			* sm_QueuedServerReservation.tournament_teams(1).team_name().c_str() )
-			pTeamNames[0] = sm_QueuedServerReservation.tournament_teams(1).team_name().c_str();
+		if ( ( sm_QueuedServerReservation.tournament_teams.size() > 0 ) &&
+			sm_QueuedServerReservation.tournament_teams[ 0 ].team_name.has_value() &&
+			* sm_QueuedServerReservation.tournament_teams[ 0 ].team_name->c_str() )
+			pTeamNames[1] = sm_QueuedServerReservation.tournament_teams[ 0 ].team_name->c_str();
+		if ( ( sm_QueuedServerReservation.tournament_teams.size() > 1 ) &&
+			sm_QueuedServerReservation.tournament_teams[ 1 ].team_name.has_value() &&
+			* sm_QueuedServerReservation.tournament_teams[ 1 ].team_name->c_str() )
+			pTeamNames[0] = sm_QueuedServerReservation.tournament_teams[ 1 ].team_name->c_str();
 
 		int nTeamIndex = ( nTeam - TEAM_TERRORIST ); //  nTeamIndex == 0 if Terrorist, 1 if CT
 
@@ -4427,26 +4427,26 @@ static bool Helper_CheckFieldAppliesToTeam( char const *szField, int nTeam )
 		int arrMapsWon[ 2 ] = { mp_teamscore_2.GetInt(), mp_teamscore_1.GetInt() };
 
 		// If we have a competitive reservation then override team flags from it
-		if ( ( sm_QueuedServerReservation.tournament_teams().size() > 0 ) &&
-			sm_QueuedServerReservation.tournament_teams(0).has_team_flag() &&
-			* sm_QueuedServerReservation.tournament_teams(0).team_flag().c_str() )
-			pTeamFlags[1] = sm_QueuedServerReservation.tournament_teams(0).team_flag().c_str();
+		if ( ( sm_QueuedServerReservation.tournament_teams.size() > 0 ) &&
+			sm_QueuedServerReservation.tournament_teams[ 0 ].team_flag.has_value() &&
+			* sm_QueuedServerReservation.tournament_teams[ 0 ].team_flag->c_str() )
+			pTeamFlags[1] = sm_QueuedServerReservation.tournament_teams[ 0 ].team_flag->c_str();
 
-		if ( ( sm_QueuedServerReservation.tournament_teams().size() > 1 ) &&
-			sm_QueuedServerReservation.tournament_teams(1).has_team_flag() &&
-			* sm_QueuedServerReservation.tournament_teams(1).team_flag().c_str() )
-			pTeamFlags[0] = sm_QueuedServerReservation.tournament_teams(1).team_flag().c_str();
+		if ( ( sm_QueuedServerReservation.tournament_teams.size() > 1 ) &&
+			sm_QueuedServerReservation.tournament_teams[ 1 ].team_flag.has_value() &&
+			* sm_QueuedServerReservation.tournament_teams[ 1 ].team_flag->c_str() )
+			pTeamFlags[0] = sm_QueuedServerReservation.tournament_teams[ 1 ].team_flag->c_str();
 
 		// get the logos
-		if ( ( sm_QueuedServerReservation.tournament_teams().size() > 0 ) &&
-			 sm_QueuedServerReservation.tournament_teams( 0 ).has_team_tag() &&
-			 * sm_QueuedServerReservation.tournament_teams( 0 ).team_tag().c_str() )
-			 pTeamLogos[1] = sm_QueuedServerReservation.tournament_teams( 0 ).team_tag().c_str() ;
+		if ( ( sm_QueuedServerReservation.tournament_teams.size() > 0 ) &&
+			 sm_QueuedServerReservation.tournament_teams[ 0 ].team_tag.has_value() &&
+			 * sm_QueuedServerReservation.tournament_teams[ 0 ].team_tag->c_str() )
+			 pTeamLogos[1] = sm_QueuedServerReservation.tournament_teams[ 0 ].team_tag->c_str() ;
 
-		if ( ( sm_QueuedServerReservation.tournament_teams().size() > 01 ) &&
-			 sm_QueuedServerReservation.tournament_teams( 1 ).has_team_tag() &&
-			 * sm_QueuedServerReservation.tournament_teams( 1 ).team_tag().c_str() )
-			 pTeamLogos[0] = sm_QueuedServerReservation.tournament_teams( 1 ).team_tag().c_str();
+		if ( ( sm_QueuedServerReservation.tournament_teams.size() > 01 ) &&
+			 sm_QueuedServerReservation.tournament_teams[ 1 ].team_tag.has_value() &&
+			 * sm_QueuedServerReservation.tournament_teams[ 1 ].team_tag->c_str() )
+			 pTeamLogos[0] = sm_QueuedServerReservation.tournament_teams[ 1 ].team_tag->c_str();
 
 		// Set the team names to the convars depending on what half phase it is.
 		if ( !bTeamsAreSwitched )
@@ -4476,12 +4476,12 @@ static bool Helper_CheckFieldAppliesToTeam( char const *szField, int nTeam )
 		bool bUsingReservation = false;
 		if ( m_nMatchInfoShowType < k_MapMatchInfoShownCounts_None )
 		{
-			if ( ( sm_QueuedServerReservation.pre_match_data().stats().size() > m_nMatchInfoShowType ) &&
-				( sm_QueuedServerReservation.pre_match_data().stats( m_nMatchInfoShowType ).match_info_teams().size() >= 2 ) )
+			if ( ( sm_QueuedServerReservation.pre_match_data->stats.size() > m_nMatchInfoShowType ) &&
+				( sm_QueuedServerReservation.pre_match_data->stats[ m_nMatchInfoShowType ].match_info_teams.size() >= 2 ) )
 			{
 				bUsingReservation = true;
-				pTeamMatchStats[1] = sm_QueuedServerReservation.pre_match_data().stats( m_nMatchInfoShowType ).match_info_teams(0).c_str();
-				pTeamMatchStats[0] = sm_QueuedServerReservation.pre_match_data().stats( m_nMatchInfoShowType ).match_info_teams(1).c_str();
+				pTeamMatchStats[1] = sm_QueuedServerReservation.pre_match_data->stats[ m_nMatchInfoShowType ].match_info_teams[ 0 ].c_str();
+				pTeamMatchStats[0] = sm_QueuedServerReservation.pre_match_data->stats[ m_nMatchInfoShowType ].match_info_teams[ 1 ].c_str();
 			}
 		}
 		else
@@ -5061,9 +5061,9 @@ static bool Helper_CheckFieldAppliesToTeam( char const *szField, int nTeam )
             filter.AddRecipientsByTeam( GetGlobalTeam(team) );
         }
 
-		CCSUsrMsg_SendAudio msg;
-		msg.set_radio_sound( sound ) ;
-        SendUserMessage( filter, CS_UM_SendAudio, msg );
+		ks::net::CCSUsrMsg_SendAudio msg;
+		msg.radio_sound = sound ;
+        SendUserMessage( filter, ks::net::CS_UM_SendAudio, msg );
     }
 
 
@@ -9304,7 +9304,7 @@ static bool Helper_CheckFieldAppliesToTeam( char const *szField, int nTeam )
 			if ( IsQueuedMatchmaking() )
 			{
 				// if all humans are present and warmup time left is greater than mp_warmuptime_all_players_connected, reduce warmup time to mp_warmuptime_all_players_connected
-				if ( ( UTIL_HumansInGame( true, false ) == ( int ) MatchmakingGameTypeGameMaxPlayers( MatchmakingGameTypeToGame( sm_QueuedServerReservation.game_type() ) ) )
+				if ( ( UTIL_HumansInGame( true, false ) == ( int ) MatchmakingGameTypeGameMaxPlayers( MatchmakingGameTypeToGame( sm_QueuedServerReservation.game_type ) ) )
 					&& ( mp_warmuptime_all_players_connected.GetFloat() > 0 ) && ( GetWarmupPeriodEndTime() - mp_warmuptime_all_players_connected.GetFloat() >= gpGlobals->curtime ) )
 				{
 					m_fWarmupPeriodStart = gpGlobals->curtime;
@@ -9330,7 +9330,7 @@ static bool Helper_CheckFieldAppliesToTeam( char const *szField, int nTeam )
 
                 CBroadcastRecipientFilter filter;
 
-				if ( IsQueuedMatchmaking() && ( UTIL_HumansInGame(true, false) < ( int ) MatchmakingGameTypeGameMaxPlayers( MatchmakingGameTypeToGame( sm_QueuedServerReservation.game_type() ) ) ) )
+				if ( IsQueuedMatchmaking() && ( UTIL_HumansInGame(true, false) < ( int ) MatchmakingGameTypeGameMaxPlayers( MatchmakingGameTypeToGame( sm_QueuedServerReservation.game_type ) ) ) )
 				{
 					UTIL_ClientPrintFilter( filter, HUD_PRINTTALK, "#SFUI_Notice_Match_Will_Start_Waiting_Chat" );
 				}
@@ -9377,8 +9377,8 @@ static bool Helper_CheckFieldAppliesToTeam( char const *szField, int nTeam )
 
 						{
 							CReliableBroadcastRecipientFilter filter;
-							CCSUsrMsg_WarmupHasEnded msg;
-							SendUserMessage( filter, CS_UM_WarmupHasEnded, msg );
+							ks::net::CCSUsrMsg_WarmupHasEnded msg;
+							SendUserMessage( filter, ks::net::CS_UM_WarmupHasEnded, msg );
 						}
                     }
 
@@ -9780,9 +9780,9 @@ void ServerThinkReplayUploader()
 						if ( m_pQueuedMatchmakingReportedRoundStats )
 						{
 							uint32 numHumansPresent = 0;
-							for ( int k = 0; k < m_pQueuedMatchmakingReportedRoundStats->pings().size(); ++ k )
+							for ( int k = 0; k < m_pQueuedMatchmakingReportedRoundStats->pings.size(); ++ k )
 							{
-								if ( m_pQueuedMatchmakingReportedRoundStats->pings(k) > 0 )
+								if ( m_pQueuedMatchmakingReportedRoundStats->pings[ k ] > 0 )
 									++ numHumansPresent;
 							}
 							if ( numHumansPresent == m_numQueuedMatchmakingAccounts )
@@ -9843,11 +9843,11 @@ void ServerThinkReplayUploader()
 
 					{
 						CReliableBroadcastRecipientFilter filter;
-						CCSUsrMsg_ServerRankRevealAll msg;
+						ks::net::CCSUsrMsg_ServerRankRevealAll msg;
 						static char const * s_pchTournamentServer = CommandLine()->ParmValue( "-tournament", ( char const * ) NULL );
 						if ( s_pchTournamentServer )
-							msg.set_seconds_till_shutdown( MAX( 0, mp_competitive_endofmatch_extra_time.GetInt() ) );
-						SendUserMessage( filter, CS_UM_ServerRankRevealAll, msg );
+							msg.seconds_till_shutdown = MAX( 0, mp_competitive_endofmatch_extra_time.GetInt() );
+						SendUserMessage( filter, ks::net::CS_UM_ServerRankRevealAll, msg );
 					}
 					break;
 
@@ -9867,8 +9867,8 @@ void ServerThinkReplayUploader()
 					{
 						// Tell all clients to return to the lobby
 						CReliableBroadcastRecipientFilter filter;
-						CCSUsrMsg_DisconnectToLobby msg;
-						SendUserMessage( filter, CS_UM_DisconnectToLobby, msg );
+						ks::net::CCSUsrMsg_DisconnectToLobby msg;
+						SendUserMessage( filter, ks::net::CS_UM_DisconnectToLobby, msg );
 					}
 					break;	// let the normal logic proceed and change level
 				}
@@ -10152,8 +10152,8 @@ void ServerThinkReplayUploader()
 				{
 					// Tell all clients to return to the lobby
 					CReliableBroadcastRecipientFilter filter;
-					CCSUsrMsg_DisconnectToLobby msg;
-					SendUserMessage( filter, CS_UM_DisconnectToLobby, msg );
+					ks::net::CCSUsrMsg_DisconnectToLobby msg;
+					SendUserMessage( filter, ks::net::CS_UM_DisconnectToLobby, msg );
 				}
                 else if ( bWantsChangeLevel )
                 {
@@ -10702,8 +10702,8 @@ void ServerThinkReplayUploader()
 		if ( !IsQueuedMatchmaking() )
 		{
 			CReliableBroadcastRecipientFilter filter;
-			CCSUsrMsg_ServerRankRevealAll msg;
-			SendUserMessage( filter, CS_UM_ServerRankRevealAll, msg );
+			ks::net::CCSUsrMsg_ServerRankRevealAll msg;
+			SendUserMessage( filter, ks::net::CS_UM_ServerRankRevealAll, msg );
 		}
     }
 
@@ -13499,9 +13499,9 @@ void ServerThinkReplayUploader()
 			if ( Helper_ShouldBroadcastCoopScoreLeaderboardData() )
 			{
 				CReliableBroadcastRecipientFilter filter;
-				CCSUsrMsg_ScoreLeaderboardData msg;
-				Helper_FillScoreLeaderboardData( *msg.mutable_data() );
-				SendUserMessage( filter, CS_UM_ScoreLeaderboardData, msg );
+				ks::net::CCSUsrMsg_ScoreLeaderboardData msg;
+				Helper_FillScoreLeaderboardData( msg.data.mut() );
+				SendUserMessage( filter, ks::net::CS_UM_ScoreLeaderboardData, msg );
 			}
 
 			if ( IsPlayingCoopGuardian()
@@ -13576,7 +13576,7 @@ void ServerThinkReplayUploader()
 			m_nEndMatchMapGroupVoteOptions.Set( iVoteOption, arrVoteCandidates.IsValidIndex( iVoteOption ) ? arrVoteCandidates[iVoteOption] : -1 );
 	}
 
-	void CCSGameRules::ReportRoundEndStatsToGC( CMsgGCCStrike15_v2_MatchmakingServerRoundStats **ppAllocateStats )
+	void CCSGameRules::ReportRoundEndStatsToGC( ks::net::CMsgGCCStrike15_v2_MatchmakingServerRoundStats **ppAllocateStats )
 	{
 	/** Removed for partner depot **/
 	}
@@ -15869,16 +15869,16 @@ void CCSGameRules::ClearItemsDroppedDuringMatch( void )
 	m_ItemsPtrDroppedDuringMatch.PurgeAndDeleteElements(); 
 }
 
-void CCSGameRules::RecordPlayerItemDrop( const CEconItemPreviewDataBlock &iteminfo )
+void CCSGameRules::RecordPlayerItemDrop( const ks::net::CEconItemPreviewDataBlock &iteminfo )
 {
-	if ( !iteminfo.accountid() )
+	if ( !iteminfo.accountid )
 		return;
 
 	for ( int i = 0; i < m_ItemsPtrDroppedDuringMatch.Count(); i++ )
 	{
 		// if we've recorded this item already, don't record it again
-		if ( m_ItemsPtrDroppedDuringMatch[i]->itemid() == iteminfo.itemid() &&
-			m_ItemsPtrDroppedDuringMatch[i]->accountid() == iteminfo.accountid() )
+		if ( m_ItemsPtrDroppedDuringMatch[i]->itemid == iteminfo.itemid &&
+			m_ItemsPtrDroppedDuringMatch[i]->accountid == iteminfo.accountid )
 			return;
 	}
 
@@ -15913,7 +15913,7 @@ void CCSGameRules::RecordPlayerItemDrop( const CEconItemPreviewDataBlock &itemin
 		{
 			CSteamID steamID;
 			pPlayer->GetSteamID( &steamID );
-			if ( steamID.GetAccountID() == iteminfo.accountid() )
+			if ( steamID.GetAccountID() == iteminfo.accountid )
 			{
 				bFoundPlayer = true;
 				break;
@@ -15923,10 +15923,10 @@ void CCSGameRules::RecordPlayerItemDrop( const CEconItemPreviewDataBlock &itemin
 	
 	// check to see if this player is still connected
 	if ( bFoundPlayer )
-		m_ItemsPtrDroppedDuringMatch.AddToTail( new CEconItemPreviewDataBlock( iteminfo ) );
+		m_ItemsPtrDroppedDuringMatch.AddToTail( new ks::net::CEconItemPreviewDataBlock( iteminfo ) );
 
 #else
-	m_ItemsPtrDroppedDuringMatch.AddToTail( new CEconItemPreviewDataBlock( iteminfo ) );
+	m_ItemsPtrDroppedDuringMatch.AddToTail( new ks::net::CEconItemPreviewDataBlock( iteminfo ) );
 #endif
 }
 
@@ -16144,7 +16144,7 @@ void CCSGameRules::ClientSettingsChanged( CBasePlayer *pPlayer )
 
 bool CCSGameRules::CanClientCustomizeOwnIdentity()
 {
-	return !CCSGameRules::sm_QueuedServerReservation.tournament_teams().size();
+	return !CCSGameRules::sm_QueuedServerReservation.tournament_teams.size();
 }
 
 bool CCSGameRules::FAllowNPCs( void )
@@ -16344,18 +16344,18 @@ CCSMatch* CCSGameRules::GetMatch( void )
 void CCSGameRules::SendPlayerItemDropsToClient()
 {
 	CReliableBroadcastRecipientFilter broadcastFilter;
-	CCSUsrMsg_SendPlayerItemDrops msg;
+	ks::net::CCSUsrMsg_SendPlayerItemDrops msg;
 
 	// first randomize the list before we send it
 	VectorShuffle( m_ItemsPtrDroppedDuringMatch );
 
-	msg.mutable_entity_updates()->Reserve( m_ItemsPtrDroppedDuringMatch.Count() );
+	msg.entity_updates.reserve( m_ItemsPtrDroppedDuringMatch.Count() );
 	for ( int i = 0; i < m_ItemsPtrDroppedDuringMatch.Count(); i++ )
 	{
-		*msg.add_entity_updates() = *m_ItemsPtrDroppedDuringMatch[i];
+		msg.entity_updates.emplace_back() = *m_ItemsPtrDroppedDuringMatch[i];
 	}
 
-	SendUserMessage( broadcastFilter, CS_UM_SendPlayerItemDrops, msg );
+	SendUserMessage( broadcastFilter, ks::net::CS_UM_SendPlayerItemDrops, msg );
 
 	m_bPlayerItemsHaveBeenDisplayed = true;
 }
@@ -17026,15 +17026,15 @@ CCSGameRules::~CCSGameRules()
 }
 
 // CLIENT
-bool __MsgFunc_SendPlayerItemDrops( const CCSUsrMsg_SendPlayerItemDrops &msg )
+bool __MsgFunc_SendPlayerItemDrops( const ks::net::CCSUsrMsg_SendPlayerItemDrops &msg )
 {
 	//IViewPortPanel* panel = GetViewPortInterface()->FindPanelByName( PANEL_SCOREBOARD );
 	if ( CSGameRules() )
 	{
 		CSGameRules()->ClearItemsDroppedDuringMatch();
-		for ( int i = 0; i < msg.entity_updates_size(); i ++ )
+		for ( int i = 0; i < msg.entity_updates.size(); i ++ )
 		{
-			const CEconItemPreviewDataBlock &update = msg.entity_updates(i);
+			const ks::net::CEconItemPreviewDataBlock &update = msg.entity_updates[ i ];
 			CSGameRules()->RecordPlayerItemDrop( update );
 		}	
 	}
@@ -17247,7 +17247,7 @@ float CCSGameRules::GetCMMItemDropRevealDuration()
 		float flItemDropTime = 2.0f;
 		for ( int i = 0; i < m_ItemsPtrDroppedDuringMatch.Count(); i++ )
 		{
-			switch ( m_ItemsPtrDroppedDuringMatch[i]->rarity() )
+			switch ( m_ItemsPtrDroppedDuringMatch[i]->rarity )
 			{
 			case 6:
 			case 5:
@@ -17542,7 +17542,7 @@ void CCSGameRules::InitializeGameTypeAndMode( void )
 
 		if ( CSGameRules()->IsPlayingCooperativeGametype() )
 		{
-			uint32 unQuestID = MatchmakingGameTypeToMapGroup(CCSGameRules::sm_QueuedServerReservation.game_type() ); 
+			uint32 unQuestID = MatchmakingGameTypeToMapGroup(CCSGameRules::sm_QueuedServerReservation.game_type ); 
 			const CEconQuestDefinition *pQuest = GetItemSchema()->GetQuestDefinition( unQuestID );
 			if ( pQuest && !StringIsEmpty ( pQuest->GetQuestConVars() ) )
 			{

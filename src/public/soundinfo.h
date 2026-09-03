@@ -169,15 +169,15 @@ struct SoundInfo_t
 	}
 
 	// this cries for Send/RecvTables:
-	void WriteDelta( const SoundInfo_t *delta, CSVCMsg_Sounds& Msg, float finalTickTime )
+	void WriteDelta( const SoundInfo_t *delta, ks::net::CSVCMsg_Sounds& Msg, float finalTickTime )
 	{
-#define WRITE_DELTA_FIELD( _name, _protobufname)	\
-	if( delta->_name != _name ) pSoundData->set_ ## _protobufname( _name );
-#define WRITE_DELTA_FIELD_SCALED( _name, _protobufname, _scaled_val )	\
-	if( delta->_name != _name ) pSoundData->set_ ## _protobufname( _scaled_val );
+#define WRITE_DELTA_FIELD( _name, _field)	\
+	if( delta->_name != _name ) pSoundData->_field = _name;
+#define WRITE_DELTA_FIELD_SCALED( _name, _field, _scaled_val )	\
+	if( delta->_name != _name ) pSoundData->_field = _scaled_val;
 
 		SoundInfo_t	defaultSound( SOUNDINFO_NO_SETDEFAULT );
-		CSVCMsg_Sounds::sounddata_t *pSoundData = Msg.add_sounds();
+		ks::net::CSVCMsg_Sounds::sounddata_t *pSoundData = &Msg.sounds.emplace_back();
 
 		if( !delta )
 		{
@@ -223,7 +223,7 @@ struct SoundInfo_t
 			}
 			if ( delayValue != delta->fDelay )
 			{
-				pSoundData->set_delay_value( delayValue );
+				pSoundData->delay_value = delayValue;
 			}
 
 			// don't transmit sounds with high precision
@@ -242,12 +242,12 @@ struct SoundInfo_t
 #undef WRITE_DELTA_FIELD_SCALED
 	};
 
-	void ReadDelta( const SoundInfo_t *delta, const CSVCMsg_Sounds::sounddata_t& SoundData)
+	void ReadDelta( const SoundInfo_t *delta, const ks::net::CSVCMsg_Sounds::sounddata_t& SoundData)
 	{
-#define READ_DELTA_FIELD( _name, _protobufname ) \
-	_name = ( SoundData.has_ ## _protobufname() ) ? SoundData._protobufname() : delta->_name;
-#define READ_DELTA_FIELD_SCALED( _name, _protobufname, _scale ) \
-	_name = ( SoundData.has_ ## _protobufname() ) ? ( SoundData._protobufname() * ( _scale ) ) : delta->_name;
+#define READ_DELTA_FIELD( _name, _field ) \
+	_name = SoundData._field.has_value() ? SoundData._field.get() : delta->_name;
+#define READ_DELTA_FIELD_SCALED( _name, _field, _scale ) \
+	_name = SoundData._field.has_value() ? ( SoundData._field.get() * ( _scale ) ) : delta->_name;
 
 		READ_DELTA_FIELD( nEntityIndex, entity_index );
 
@@ -274,7 +274,7 @@ struct SoundInfo_t
 
 			READ_DELTA_FIELD_SCALED( fVolume, volume, ( 1.0f / 127.0f ) );
 
-			Soundlevel = ( soundlevel_t )( SoundData.has_sound_level() ? SoundData.sound_level() : delta->Soundlevel );
+			Soundlevel = ( soundlevel_t )( SoundData.sound_level.has_value() ? SoundData.sound_level.get() : delta->Soundlevel );
 
 			READ_DELTA_FIELD( nPitch, pitch );
 

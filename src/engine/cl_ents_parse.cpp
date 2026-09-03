@@ -565,7 +565,7 @@ static void CL_CallPostDataUpdates( CEntityReadInfo &u )
 //			*playerbits - 
 // Output : void CL_ParsePacketEntities
 //-----------------------------------------------------------------------------
-bool CL_ProcessPacketEntities( const CSVCMsg_PacketEntities &msg )
+bool CL_ProcessPacketEntities( const ks::net::CSVCMsg_PacketEntities &msg )
 {
 	VPROF( "_CL_ParsePacketEntities" );
 
@@ -583,19 +583,19 @@ bool CL_ProcessPacketEntities( const CSVCMsg_PacketEntities &msg )
 		return false;
 	}
 
-	if ( msg.is_delta() )
+	if ( msg.is_delta )
 	{
 		if ( replay_debug.GetInt() > 10 && GetBaseLocalClient().m_nHltvReplayDelay )
-			Msg( "Replay delta-%d update at tick %d, %s bytes\n", GetBaseLocalClient().GetServerTickCount() - msg.delta_from(), GetBaseLocalClient().GetServerTickCount(), V_pretifynum( msg.ByteSize() ) );
+			Msg( "Replay delta-%d update at tick %d, %s bytes\n", GetBaseLocalClient().GetServerTickCount() - msg.delta_from, GetBaseLocalClient().GetServerTickCount(), V_pretifynum( int( ks::proto::byte_size( msg ) ) ) );
 
-		if ( GetBaseLocalClient().GetServerTickCount() == msg.delta_from() )
+		if ( GetBaseLocalClient().GetServerTickCount() == msg.delta_from )
 		{
 			Host_Error( "Update self-referencing, connection dropped.\n" );
 			return false;
 		}
 
 		// Otherwise, mark where we are valid to and point to the packet entities we'll be updating from.
-		oldFrame = GetBaseLocalClient().GetClientFrame( msg.delta_from() );
+		oldFrame = GetBaseLocalClient().GetClientFrame( msg.delta_from );
 
 		if ( !oldFrame )
 		{
@@ -608,7 +608,7 @@ bool CL_ProcessPacketEntities( const CSVCMsg_PacketEntities &msg )
 		if ( replay_debug.GetBool() )
 			Msg( "Full tick %d update\n", GetBaseLocalClient().GetServerTickCount() );
 		if ( developer.GetInt() != 0 )
-			ConColorMsg( Color( 255, 100, 255 ), "Receiving uncompressed update from server, baseline %d, byte size %d \n", msg.baseline(), msg.ByteSize() );
+			ConColorMsg( Color( 255, 100, 255 ), "Receiving uncompressed update from server, baseline %d, byte size %d \n", msg.baseline, int( ks::proto::byte_size( msg ) ) );
 
 		// Clear out the client's entity states..
 		for ( int i=0; i <= entitylist->GetHighestEntityIndex(); i++ )
@@ -624,33 +624,33 @@ bool CL_ProcessPacketEntities( const CSVCMsg_PacketEntities &msg )
 	// signal client DLL that we have started updating entities
 	ClientDLL_FrameStageNotify( FRAME_NET_UPDATE_START );
 
-	Assert( msg.baseline() >= 0 && msg.baseline() < 2 );
+	Assert( msg.baseline >= 0 && msg.baseline < 2 );
 
-	if ( msg.update_baseline() )
+	if ( msg.update_baseline )
 	{
 		// server requested to use this snapshot as baseline update
-		int nUpdateBaseline = ( msg.baseline() == 0) ? 1 : 0;
-		GetBaseLocalClient().CopyEntityBaseline( msg.baseline(), nUpdateBaseline );
+		int nUpdateBaseline = ( msg.baseline == 0) ? 1 : 0;
+		GetBaseLocalClient().CopyEntityBaseline( msg.baseline, nUpdateBaseline );
 
 		// send new baseline acknowledgement(as reliable)
 		// Used a (brilliantly named) named temporary because SendNetMsg
 		// takes a non-const reference because INetMessage::WriteToBuffer
 		// is non-const.
 		CCLCMsg_BaselineAck_t namedTemporary;
-		namedTemporary.set_baseline_tick( GetBaseLocalClient().GetServerTickCount() );
-		namedTemporary.set_baseline_nr( msg.baseline() );
+		namedTemporary.baseline_tick = GetBaseLocalClient().GetServerTickCount();
+		namedTemporary.baseline_nr = msg.baseline;
 		GetBaseLocalClient().m_NetChannel->SendNetMsg( namedTemporary, true );		
 	}
 
 	CEntityReadInfo u;
-	bf_read entityBuf( &msg.entity_data()[0], msg.entity_data().size() );
+	bf_read entityBuf( msg.entity_data->data(), msg.entity_data->size() );
 	u.m_pBuf = &entityBuf;
 	u.m_pFrom = oldFrame;
 	u.m_pTo = newFrame;
-	u.m_bAsDelta = msg.is_delta();
-	u.m_nHeaderCount = msg.updated_entries();
-	u.m_nBaseline = msg.baseline();
-	u.m_bUpdateBaselines = msg.update_baseline();
+	u.m_bAsDelta = msg.is_delta;
+	u.m_nHeaderCount = msg.updated_entries;
+	u.m_nBaseline = msg.baseline;
+	u.m_bUpdateBaselines = msg.update_baseline;
 	
 	// update the entities
 	{
@@ -679,7 +679,7 @@ bool CL_ProcessPacketEntities( const CSVCMsg_PacketEntities &msg )
 	GetBaseLocalClient().m_NetChannel->UpdateMessageStats( INetChannelInfo::OTHERPLAYERS, u.m_nOtherPlayerBits );
 	GetBaseLocalClient().m_NetChannel->UpdateMessageStats( INetChannelInfo::ENTITIES, -(u.m_nLocalPlayerBits+u.m_nOtherPlayerBits) );
 
- 	GetBaseLocalClient().DeleteClientFrames( msg.delta_from() );
+ 	GetBaseLocalClient().DeleteClientFrames( msg.delta_from );
 
 	// If the client has more than 64 frames, the host will start to eat too much memory.
 	// TODO: We should enforce this somehow.

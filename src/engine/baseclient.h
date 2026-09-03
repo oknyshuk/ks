@@ -90,7 +90,7 @@ public:
 	const char		*GetFriendsName() const { return m_FriendsName; }
 	void			UpdateName( const char *pszDefault );
 
-	virtual	void	Connect(const char * szName, int nUserID, INetChannel *pNetChannel, bool bFakePlayer, CrossPlayPlatform_t clientPlatform, const CMsg_CVars *pVecCvars = NULL );
+	virtual	void	Connect(const char * szName, int nUserID, INetChannel *pNetChannel, bool bFakePlayer, CrossPlayPlatform_t clientPlatform, const ks::net::CMsg_CVars *pVecCvars = NULL );
 	virtual	void	Inactivate( void )OVERRIDE;
 	virtual	void	Reconnect( void )OVERRIDE;
 	virtual	void	Disconnect( const char *reason ) OVERRIDE;
@@ -136,26 +136,26 @@ public:
 
 public: // Message Handlers
 	
-	bool NETMsg_Tick( const CNETMsg_Tick& msg );
-	bool NETMsg_StringCmd( const CNETMsg_StringCmd& msg );
-	bool NETMsg_SignonState( const CNETMsg_SignonState& msg );
-	virtual bool NETMsg_PlayerAvatarData( const CNETMsg_PlayerAvatarData& msg );
-	virtual bool NETMsg_SetConVar( const CNETMsg_SetConVar& msg );
+	bool NETMsg_Tick( const ks::net::CNETMsg_Tick& msg );
+	bool NETMsg_StringCmd( const ks::net::CNETMsg_StringCmd& msg );
+	bool NETMsg_SignonState( const ks::net::CNETMsg_SignonState& msg );
+	virtual bool NETMsg_PlayerAvatarData( const ks::net::CNETMsg_PlayerAvatarData& msg );
+	virtual bool NETMsg_SetConVar( const ks::net::CNETMsg_SetConVar& msg );
 
-	virtual bool CLCMsg_ClientInfo( const CCLCMsg_ClientInfo& msg );
-	virtual bool CLCMsg_Move( const CCLCMsg_Move& msg ) { Assert( 0 ); return true; }
-	virtual bool CLCMsg_VoiceData( const CCLCMsg_VoiceData& msg ) { Assert( 0 ); return true; }
+	virtual bool CLCMsg_ClientInfo( const ks::net::CCLCMsg_ClientInfo& msg );
+	virtual bool CLCMsg_Move( const ks::net::CCLCMsg_Move& msg ) { Assert( 0 ); return true; }
+	virtual bool CLCMsg_VoiceData( const ks::net::CCLCMsg_VoiceData& msg ) { Assert( 0 ); return true; }
 
-	bool CLCMsg_BaselineAck( const CCLCMsg_BaselineAck& msg );
-	virtual bool CLCMsg_ListenEvents( const CCLCMsg_ListenEvents& msg );
-	virtual bool CLCMsg_RespondCvarValue( const CCLCMsg_RespondCvarValue& msg ) { Assert( 0 ); return true; }
-	bool CLCMsg_LoadingProgress( const CCLCMsg_LoadingProgress& msg );	
-	bool CLCMsg_SplitPlayerConnect( const CCLCMsg_SplitPlayerConnect& msg );
-	virtual bool CLCMsg_FileCRCCheck( const CCLCMsg_FileCRCCheck& msg ) { Assert( 0 ); return true; }
-	virtual bool CLCMsg_CmdKeyValues( const CCLCMsg_CmdKeyValues& msg );
-	virtual bool CLCMsg_HltvReplay( const CCLCMsg_HltvReplay &msg ) { return false; }
+	bool CLCMsg_BaselineAck( const ks::net::CCLCMsg_BaselineAck& msg );
+	virtual bool CLCMsg_ListenEvents( const ks::net::CCLCMsg_ListenEvents& msg );
+	virtual bool CLCMsg_RespondCvarValue( const ks::net::CCLCMsg_RespondCvarValue& msg ) { Assert( 0 ); return true; }
+	bool CLCMsg_LoadingProgress( const ks::net::CCLCMsg_LoadingProgress& msg );	
+	bool CLCMsg_SplitPlayerConnect( const ks::net::CCLCMsg_SplitPlayerConnect& msg );
+	virtual bool CLCMsg_FileCRCCheck( const ks::net::CCLCMsg_FileCRCCheck& msg ) { Assert( 0 ); return true; }
+	virtual bool CLCMsg_CmdKeyValues( const ks::net::CCLCMsg_CmdKeyValues& msg );
+	virtual bool CLCMsg_HltvReplay( const ks::net::CCLCMsg_HltvReplay &msg ) { return false; }
 
-	virtual bool SVCMsg_UserMessage( const CSVCMsg_UserMessage &msg ) { return true; }
+	virtual bool SVCMsg_UserMessage( const ks::net::CSVCMsg_UserMessage &msg ) { return true; }
 
 
 	enum
@@ -231,7 +231,7 @@ public:
 
 	void			DisconnectSplitScreenUser( CBaseClient *pSplitClient );
 
-	void			ApplyConVars( const CMsg_CVars& list, bool bCreateIfNotExisting );
+	void			ApplyConVars( const ks::net::CMsg_CVars& list, bool bCreateIfNotExisting );
 	
 	void			FillSignOnFullServerInfo( class CNETMsg_SignonState_t& state );
 	bool			IsSplitScreenPartner( const CBaseClient *pOther ) const;

@@ -39,32 +39,32 @@
 // Private key must be used only on GC.
 //
 
-inline bool BClientPlayerDecalSignatureComposeSignBuffer( PlayerDecalDigitalSignature const &data, CUtlBuffer &buf )
+inline bool BClientPlayerDecalSignatureComposeSignBuffer( ks::net::PlayerDecalDigitalSignature const &data, CUtlBuffer &buf )
 {
-	if ( data.endpos_size() != 3 ) return false;
-	for ( int k = 0; k < 3; ++ k ) buf.PutFloat( data.endpos( k ) );
-	if ( data.startpos_size() != 3 ) return false;
-	for ( int k = 0; k < 3; ++k ) buf.PutFloat( data.startpos( k ) );
-	if ( data.right_size() != 3 ) return false;
-	for ( int k = 0; k < 3; ++k ) buf.PutFloat( data.right( k ) );
-	if ( data.normal_size() != 3 ) return false;
-	for ( int k = 0; k < 3; ++k ) buf.PutFloat( data.normal( k ) );
+	if ( data.endpos.size() != 3 ) return false;
+	for ( int k = 0; k < 3; ++ k ) buf.PutFloat( data.endpos[ k ] );
+	if ( data.startpos.size() != 3 ) return false;
+	for ( int k = 0; k < 3; ++k ) buf.PutFloat( data.startpos[ k ] );
+	if ( data.right.size() != 3 ) return false;
+	for ( int k = 0; k < 3; ++k ) buf.PutFloat( data.right[ k ] );
+	if ( data.normal.size() != 3 ) return false;
+	for ( int k = 0; k < 3; ++k ) buf.PutFloat( data.normal[ k ] );
 	
-	buf.PutInt( data.tx_defidx() );
-	buf.PutInt( data.tint_id() );
-	buf.PutInt( data.entindex() );
-	buf.PutInt( data.hitbox() );
+	buf.PutInt( data.tx_defidx );
+	buf.PutInt( data.tint_id );
+	buf.PutInt( data.entindex );
+	buf.PutInt( data.hitbox );
 	
-	buf.PutFloat( data.creationtime() );
+	buf.PutFloat( data.creationtime );
 
-	buf.PutUnsignedInt( data.accountid() );
-	buf.PutUnsignedInt( data.rtime() );
-	buf.PutUnsignedInt( data.trace_id() );
+	buf.PutUnsignedInt( data.accountid );
+	buf.PutUnsignedInt( data.rtime );
+	buf.PutUnsignedInt( data.trace_id );
 
 	return true;
 }
 
-inline bool BValidateClientPlayerDecalSignature( PlayerDecalDigitalSignature const &data )
+inline bool BValidateClientPlayerDecalSignature( ks::net::PlayerDecalDigitalSignature const &data )
 {
 	CUtlBuffer bufData;
 	bufData.EnsureCapacity( PLAYERDECALS_SIGNATURE_BYTELEN );

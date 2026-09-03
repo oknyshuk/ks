@@ -34,8 +34,6 @@ def build(bld):
         "interfaces",
         "vstdlib",
         "mathlib",
-        "generated_proto",
-        "protobuf",
         "ZLIB",
     ]
 
@@ -50,11 +48,10 @@ def build(bld):
         "../shared/cstrike15",
         "../shared/cstrike15/bot",
         "../../utils/common",
-        "../../generated_proto",
-        "../../thirdparty/protobuf-2.6.1/src",
     ]
 
     source = [
+        "../../common/netmessages_codec.cpp",
         "../shared/achievement_saverestore.cpp",
         "../shared/achievementmgr.cpp",
         "../shared/achievements_hlx.cpp",

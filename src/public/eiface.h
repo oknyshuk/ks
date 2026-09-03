@@ -13,7 +13,6 @@
 #pragma once
 #endif
 
-#include <google/protobuf/message.h>
 
 #include "convar.h"
 #include "icvar.h"
@@ -63,7 +62,7 @@ class CGamestatsData;
 class CSteamID;
 class ISPSharedMemory;
 class CGamestatsData;
-class CEngineGotvSyncPacket;	// forward declare protobuf message here
+namespace ks::net { struct CEngineGotvSyncPacket; }
 
 typedef struct player_info_s player_info_t;
 
@@ -248,8 +247,8 @@ public:
 	// Finish the Entity or UserMessage and dispatch to network layer
 	virtual void		MessageEnd( void ) = 0;
 
-	// Send a protobuf based user message
-	virtual void		SendUserMessage( IRecipientFilter& filter, int message, const ::google::protobuf::Message &msg ) = 0;
+	// Send a serialized user message; see game/server/enginecallback.h for the wrapper.
+	virtual void		SendUserMessage( IRecipientFilter& filter, int message, const void *data, int size ) = 0;
 
 	// Print szMsg to the client console.
 	virtual void		ClientPrintf( edict_t *pEdict, const char *szMsg ) = 0;
@@ -708,7 +707,7 @@ public:
 	virtual void OnEngineClientNetworkEvent( edict_t *edictClient, uint64 ullSteamID, int nEventType, void *pvParam ) = 0;
 
 	// Engine notifying GC with a message
-	virtual void EngineGotvSyncPacket( const CEngineGotvSyncPacket *pPkt ) = 0;
+	virtual void EngineGotvSyncPacket( const ks::net::CEngineGotvSyncPacket *pPkt ) = 0;
 
 	// GOTV client attempt redirect over SDR
 	virtual bool OnEngineClientProxiedRedirect( uint64 ullClient, const char *adrProxiedRedirect, const char *adrRegular ) = 0;

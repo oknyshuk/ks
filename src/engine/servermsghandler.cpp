@@ -258,7 +258,7 @@ void CClientState::Disconnect( bool bShowMainMenu )
 
 static bool s_bClientWaitingForHltvReplayTick = false;
 
-bool CClientState::NETMsg_Tick( const CNETMsg_Tick& msg )
+bool CClientState::NETMsg_Tick( const ks::net::CNETMsg_Tick& msg )
 {
 	if ( g_ClientDLL )
 	{
@@ -266,22 +266,22 @@ bool CClientState::NETMsg_Tick( const CNETMsg_Tick& msg )
 		g_ClientDLL->OnTickPre( host_tickcount );
 	}
 
-	int tick = msg.tick();
+	int tick = msg.tick;
 
 	{
 		if ( m_nHltvReplayDelay )
 		{
-			if ( !msg.hltv_replay_flags() )
+			if ( !msg.hltv_replay_flags )
 				DevMsg( "%d. Msg_Tick %d cl:delayed sv:real-time\n", GetClientTickCount(), tick );
 		}
 		else
 		{
-			if ( msg.hltv_replay_flags() )
+			if ( msg.hltv_replay_flags )
 				DevMsg( "%d. Msg_Tick %d cl:real-time sv:replay\n", GetClientTickCount(), tick );
 		}
 	}
 
-	if ( m_nHltvReplayDelay && !msg.hltv_replay_flags() )
+	if ( m_nHltvReplayDelay && !msg.hltv_replay_flags )
 	{
 		// client is in hltv replay state, but server doesn't remember it - maybe there was a connection issue or something. 
 		DevMsg( "Inconsistent Client Replay state: tick without replay during replay. Force Stop Replay.\n" );
@@ -290,9 +290,9 @@ bool CClientState::NETMsg_Tick( const CNETMsg_Tick& msg )
 	}
 
 	m_NetChannel->SetRemoteFramerate(
-		CNETMsg_Tick_t::FrametimeToFloat( msg.host_computationtime() ),
-		CNETMsg_Tick_t::FrametimeToFloat( msg.host_computationtime_std_deviation() ),
-		CNETMsg_Tick_t::FrametimeToFloat( msg.host_framestarttime_std_deviation() ) );
+		CNETMsg_Tick_t::FrametimeToFloat( msg.host_computationtime ),
+		CNETMsg_Tick_t::FrametimeToFloat( msg.host_computationtime_std_deviation ),
+		CNETMsg_Tick_t::FrametimeToFloat( msg.host_framestarttime_std_deviation ) );
 
 	m_ClockDriftMgr.SetServerTick( tick );
 
@@ -319,7 +319,7 @@ bool CClientState::NETMsg_Tick( const CNETMsg_Tick& msg )
 	return true;
 }
 
-bool CClientState::NETMsg_StringCmd( const CNETMsg_StringCmd& msg )
+bool CClientState::NETMsg_StringCmd( const ks::net::CNETMsg_StringCmd& msg )
 {
 	// Even though this is just forwarding to the base class, do not remove this function.
 	// There are multiple implementations of CClientState and the one in cl_null.cpp
@@ -327,7 +327,7 @@ bool CClientState::NETMsg_StringCmd( const CNETMsg_StringCmd& msg )
 	return BaseClass::NETMsg_StringCmd( msg );
 }
 
-bool CClientState::SVCMsg_ServerInfo( const CSVCMsg_ServerInfo& msg )
+bool CClientState::SVCMsg_ServerInfo( const ks::net::CSVCMsg_ServerInfo& msg )
 {
 	// Reset client state
 	CL_ClearState();
@@ -352,21 +352,21 @@ bool CClientState::SVCMsg_ServerInfo( const CSVCMsg_ServerInfo& msg )
 	}
 
 	// is server a HLTV proxy ?
-	ishltv = msg.is_hltv();
+	ishltv = msg.is_hltv;
 
 #if defined( REPLAY_ENABLED )
 	// is server a replay proxy ?
-	isreplay = msg.is_replay();
+	isreplay = msg.is_replay;
 #endif
 
 	// The CRC of the server map must match the CRC of the client map. or else
 	//  the client is probably cheating.
-	serverCRC = msg.map_crc();
+	serverCRC = msg.map_crc;
 	// The client side DLL CRC check.
-	serverClientSideDllCRC = msg.client_crc();
+	serverClientSideDllCRC = msg.client_crc;
 
 	g_ClientGlobalVariables.maxClients = m_nMaxClients;
-	g_ClientGlobalVariables.network_protocol = msg.protocol();
+	g_ClientGlobalVariables.network_protocol = msg.protocol;
 
 #ifdef SHARED_NET_STRING_TABLES
 	// use same instance of StringTableContainer as the server does
@@ -381,16 +381,16 @@ bool CClientState::SVCMsg_ServerInfo( const CSVCMsg_ServerInfo& msg )
 
 	if ( sv.IsPaused() )
 	{
-		if ( msg.tick_interval() != host_state.interval_per_tick )
+		if ( msg.tick_interval != host_state.interval_per_tick )
 		{
 			Host_Error( "Expecting interval_per_tick %f, got %f\n", 
-				host_state.interval_per_tick, msg.tick_interval() );
+				host_state.interval_per_tick, msg.tick_interval );
 			return false;
 		}
 	}
 	else
 	{
-		host_state.interval_per_tick = msg.tick_interval();
+		host_state.interval_per_tick = msg.tick_interval;
 	}
 
 	// Re-init hud video, especially if we changed game directories
@@ -406,9 +406,9 @@ bool CClientState::SVCMsg_ServerInfo( const CSVCMsg_ServerInfo& msg )
 	return true;
 }
 
-bool CClientState::SVCMsg_ClassInfo( const CSVCMsg_ClassInfo& msg )
+bool CClientState::SVCMsg_ClassInfo( const ks::net::CSVCMsg_ClassInfo& msg )
 {
-	if ( msg.create_on_client() )
+	if ( msg.create_on_client )
 	{
 		if ( !demoplayer->IsPlayingBack() )
 		{
@@ -445,24 +445,24 @@ bool CClientState::SVCMsg_ClassInfo( const CSVCMsg_ClassInfo& msg )
 	return true;
 }
 
-bool CClientState::SVCMsg_SetPause( const CSVCMsg_SetPause& msg )
+bool CClientState::SVCMsg_SetPause( const ks::net::CSVCMsg_SetPause& msg )
 {
 	CBaseClientState::SVCMsg_SetPause( msg );
 
 	return true;
 }
 
-bool CClientState::SVCMsg_VoiceInit( const CSVCMsg_VoiceInit& msg )
+bool CClientState::SVCMsg_VoiceInit( const ks::net::CSVCMsg_VoiceInit& msg )
 {
 #if !defined( NO_VOICE )
-	if( msg.codec().size() == 0 )
+	if( msg.codec->size() == 0 )
 	{
 		Voice_Deinit();
 	}
 	else
 	{
 #define SPEEX_QUALITY 4
-		Voice_Init( msg.codec().c_str(), msg.has_version() ? msg.version() : SPEEX_QUALITY );
+		Voice_Init( msg.codec->c_str(), msg.version.has_value() ? msg.version : SPEEX_QUALITY );
 	}
 #endif
 	return true;
@@ -470,16 +470,16 @@ bool CClientState::SVCMsg_VoiceInit( const CSVCMsg_VoiceInit& msg )
 
 ConVar voice_debugfeedback( "voice_debugfeedback", "0" );
 
-bool CClientState::SVCMsg_VoiceData( const CSVCMsg_VoiceData &msg )
+bool CClientState::SVCMsg_VoiceData( const ks::net::CSVCMsg_VoiceData &msg )
 {
 
 #if !defined( NO_VOICE )
 	if ( voice_debugfeedback.GetBool() )
 	{
-		Msg( "Received voice from: %d\n", msg.client() + 1 );
+		Msg( "Received voice from: %d\n", msg.client + 1 );
 	}
 
-	int iEntity = msg.client() + 1;
+	int iEntity = msg.client + 1;
 	if ( iEntity == (m_nPlayerSlot + 1) )
 	{ 
 		Voice_LocalPlayerTalkingAck( m_nSplitScreenSlot );
@@ -494,13 +494,13 @@ bool CClientState::SVCMsg_VoiceData( const CSVCMsg_VoiceData &msg )
 		return true;
 
 	// Data length can be zero when the server is just acking a client's voice data.
-	if ( msg.voice_data().size() == 0 )
+	if ( msg.voice_data->size() == 0 )
 		return true;
 
 	if ( !Voice_SystemEnabled() )
 		return true;
 
-	bool bIsCaster = msg.has_caster() && msg.caster();
+	bool bIsCaster = msg.caster.has_value() && msg.caster;
 
 	// if this voice data is for a caster that is not enabled, then bail
 	if ( bIsCaster && !Voice_CasterEnabled( voicePlayer.GetAccountID() ) )
@@ -515,7 +515,7 @@ bool CClientState::SVCMsg_VoiceData( const CSVCMsg_VoiceData &msg )
 		{
 			// Create a channel in the voice engine and a channel in the sound engine for this guy.
 			float flBufferTime = GetBaseLocalClient().ishltv ? cl_voice_hltv_buffer_time.GetFloat() : cl_voice_buffer_time.GetFloat();
-			nChannel = Voice_AssignChannel( iEntity, msg.proximity(), bIsCaster, flBufferTime );
+			nChannel = Voice_AssignChannel( iEntity, msg.proximity, bIsCaster, flBufferTime );
 			if ( nChannel == VOICE_CHANNEL_ERROR )
 			{
 				// If they used -nosound, then it's not a problem.
@@ -529,21 +529,21 @@ bool CClientState::SVCMsg_VoiceData( const CSVCMsg_VoiceData &msg )
 
 		// Give the voice engine the data (it in turn gives it to the mixer for the sound engine).
 		Voice_AddIncomingData( nChannel, 
-							   &msg.voice_data()[0], 
-							   msg.voice_data().size(),
-							   msg.has_section_number() ? msg.section_number() : 0,
-							   msg.has_sequence_bytes() ? msg.sequence_bytes() : 0,
-							   msg.has_uncompressed_sample_offset() ? msg.uncompressed_sample_offset() : 0,
-							   ( msg.has_format() && ( msg.format() == VOICEDATA_FORMAT_STEAM ) ) ? VoiceFormat_Steam : VoiceFormat_Engine );
+							   msg.voice_data->data(), 
+							   msg.voice_data->size(),
+							   msg.section_number.has_value() ? msg.section_number : 0,
+							   msg.sequence_bytes.has_value() ? msg.sequence_bytes : 0,
+							   msg.uncompressed_sample_offset.has_value() ? msg.uncompressed_sample_offset : 0,
+							   ( msg.format.has_value() && ( msg.format == ks::net::VOICEDATA_FORMAT_STEAM ) ) ? VoiceFormat_Steam : VoiceFormat_Engine );
 	}
 
 #endif
 	return true;
 };
 
-bool CClientState::SVCMsg_Prefetch( const CSVCMsg_Prefetch& msg )
+bool CClientState::SVCMsg_Prefetch( const ks::net::CSVCMsg_Prefetch& msg )
 {
-	char const *soundname = GetBaseLocalClient().GetSoundName( msg.sound_index() );
+	char const *soundname = GetBaseLocalClient().GetSoundName( msg.sound_index );
 	if ( soundname && soundname [ 0 ] )
 	{
 		EngineSoundClient()->PrefetchSound( soundname );
@@ -551,23 +551,23 @@ bool CClientState::SVCMsg_Prefetch( const CSVCMsg_Prefetch& msg )
 	return true;
 }
 
-bool CClientState::SVCMsg_Sounds( const CSVCMsg_Sounds& msg )
+bool CClientState::SVCMsg_Sounds( const ks::net::CSVCMsg_Sounds& msg )
 {
 	SoundInfo_t defaultSound;
 
 	SoundInfo_t *pDeltaSound = &defaultSound;
 	SoundInfo_t sound;
 
-	int nNumSounds = msg.sounds_size();
+	int nNumSounds = msg.sounds.size();
 	for ( int i=0; i<nNumSounds; i++ )
 	{
-		const CSVCMsg_Sounds::sounddata_t& SoundData = msg.sounds( i );
+		const ks::net::CSVCMsg_Sounds::sounddata_t& SoundData = msg.sounds[ i ];
 
 		sound.ReadDelta( pDeltaSound, SoundData );
 
 		pDeltaSound = &sound;	// copy delta values
 
-		if ( msg.reliable_sound() )
+		if ( msg.reliable_sound )
 		{
 			// client is incrementing the reliable sequence numbers itself
 			m_nSoundSequence = ( m_nSoundSequence + 1 ) & SOUND_SEQNUMBER_MASK;
@@ -584,10 +584,10 @@ bool CClientState::SVCMsg_Sounds( const CSVCMsg_Sounds& msg )
 	return true;
 }
 
-bool CClientState::SVCMsg_FixAngle( const CSVCMsg_FixAngle &msg )
+bool CClientState::SVCMsg_FixAngle( const ks::net::CSVCMsg_FixAngle &msg )
 {
-	const CMsgQAngle& angle = msg.angle();
-	QAngle qangle( angle.x(), angle.y(), angle.z() );
+	const ks::net::CMsgQAngle& angle = msg.angle;
+	QAngle qangle( angle.x, angle.y, angle.z );
 
 	for (int i=0 ; i<3 ; i++)
 	{
@@ -598,7 +598,7 @@ bool CClientState::SVCMsg_FixAngle( const CSVCMsg_FixAngle &msg )
 		}
 	}
 
-	if ( msg.relative() )
+	if ( msg.relative )
 	{
 		// Update running counter
 		addangletotal += qangle[YAW];
@@ -618,23 +618,23 @@ bool CClientState::SVCMsg_FixAngle( const CSVCMsg_FixAngle &msg )
 	return true;
 }
 
-bool CClientState::SVCMsg_CrosshairAngle( const CSVCMsg_CrosshairAngle& msg )
+bool CClientState::SVCMsg_CrosshairAngle( const ks::net::CSVCMsg_CrosshairAngle& msg )
 {
-	const CMsgQAngle& angle = msg.angle();
-	const QAngle qangle( angle.x(), angle.y(), angle.z() );
+	const ks::net::CMsgQAngle& angle = msg.angle;
+	const QAngle qangle( angle.x, angle.y, angle.z );
 
 	g_ClientDLL->SetCrosshairAngle( qangle );
 
 	return true;
 }
 
-bool CClientState::SVCMsg_BSPDecal( const CSVCMsg_BSPDecal& msg )
+bool CClientState::SVCMsg_BSPDecal( const ks::net::CSVCMsg_BSPDecal& msg )
 {
 	model_t	* model;
 
-	if ( msg.entity_index() )
+	if ( msg.entity_index )
 	{
-		model = GetModel( msg.model_index() );
+		model = GetModel( msg.model_index );
 	}
 	else
 	{
@@ -647,7 +647,7 @@ bool CClientState::SVCMsg_BSPDecal( const CSVCMsg_BSPDecal& msg )
 
 	if ( model == NULL )
 	{
-		IMaterial *mat = Draw_DecalMaterial( msg.decal_texture_index() );
+		IMaterial *mat = Draw_DecalMaterial( msg.decal_texture_index );
 		char const *matname = "???";
 		if ( mat )
 		{
@@ -656,31 +656,31 @@ bool CClientState::SVCMsg_BSPDecal( const CSVCMsg_BSPDecal& msg )
 
 		Warning( "Warning! Static BSP decal (%s), on NULL model index %i for entity index %i.\n", 
 			matname,
-			msg.model_index(), 
-			msg.entity_index() );
+			msg.model_index, 
+			msg.entity_index );
 		return true;
 	}
 
 	if (r_decals.GetInt())
 	{
-		const CMsgVector& pos = msg.pos();
-		const Vector vecPos( pos.x(), pos.y(), pos.z() );
+		const ks::net::CMsgVector& pos = msg.pos;
+		const Vector vecPos( pos.x, pos.y, pos.z );
 
 		g_pEfx->DecalShoot(
-			msg.decal_texture_index(),
-			msg.entity_index(),
+			msg.decal_texture_index,
+			msg.entity_index,
 			model,
 			vec3_origin,
 			vec3_angle,
 			vecPos,
 			NULL,
-			msg.low_priority() ? 0 : FDECAL_PERMANENT );
+			msg.low_priority ? 0 : FDECAL_PERMANENT );
 	}
 
 	return true;
 }
 
-bool CClientState::SVCMsg_GameEvent(const CSVCMsg_GameEvent& msg)
+bool CClientState::SVCMsg_GameEvent(const ks::net::CSVCMsg_GameEvent& msg)
 {
 	IGameEvent *event = g_GameEventManager.UnserializeEvent( msg );
 
@@ -690,7 +690,7 @@ bool CClientState::SVCMsg_GameEvent(const CSVCMsg_GameEvent& msg)
 		return true;
 	}
 
-	if ( msg.passthrough() == 1 )
+	if ( msg.passthrough == 1 )
 	{
 		// this should only come to clients while they have replay in progress
 		event->SetBool( "realtime_passthrough", true );
@@ -701,11 +701,11 @@ bool CClientState::SVCMsg_GameEvent(const CSVCMsg_GameEvent& msg)
 	return true;
 }
 
-bool CClientState::SVCMsg_UserMessage( const CSVCMsg_UserMessage &msg)
+bool CClientState::SVCMsg_UserMessage( const ks::net::CSVCMsg_UserMessage &msg)
 {
-	if ( !g_ClientDLL->DispatchUserMessage( msg.msg_type(), msg.passthrough(), msg.msg_data().size(), &msg.msg_data()[0] ) )
+	if ( !g_ClientDLL->DispatchUserMessage( msg.msg_type, msg.passthrough, msg.msg_data->size(), msg.msg_data->data() ) )
 	{
-		ConMsg( "Couldn't dispatch user message (%i)\n", msg.msg_type() );
+		ConMsg( "Couldn't dispatch user message (%i)\n", msg.msg_type );
 		return false;
 	}
 
@@ -713,17 +713,17 @@ bool CClientState::SVCMsg_UserMessage( const CSVCMsg_UserMessage &msg)
 }
 
 
-bool CClientState::SVCMsg_EntityMsg( const CSVCMsg_EntityMsg& msg )
+bool CClientState::SVCMsg_EntityMsg( const ks::net::CSVCMsg_EntityMsg& msg )
 {
 	// Look up entity
-	IClientNetworkable *entity = entitylist->GetClientNetworkable( msg.ent_index() );
+	IClientNetworkable *entity = entitylist->GetClientNetworkable( msg.ent_index );
 
 	if ( !entity )
 	{
 		int idx = queuedmessage.AddToTail();
 
 		CQueuedEntityMessage *pMessage = &queuedmessage[idx];
-		pMessage->m_msg.CopyFrom( msg );	
+		pMessage->m_msg = msg;	
 		return true;
 	}
 
@@ -731,18 +731,18 @@ bool CClientState::SVCMsg_EntityMsg( const CSVCMsg_EntityMsg& msg )
 	MDLCACHE_CRITICAL_SECTION_( g_pMDLCache );
 
 	bf_read entMsg;
-	entMsg.StartReading( msg.ent_data().data(), msg.ent_data().size() );
-	entity->ReceiveMessage( msg.class_id(), entMsg );
+	entMsg.StartReading( msg.ent_data->data(), msg.ent_data->size() );
+	entity->ReceiveMessage( msg.class_id, entMsg );
 
 	return true;
 }
 
 
-bool CClientState::SVCMsg_PacketEntities( const CSVCMsg_PacketEntities &msg )
+bool CClientState::SVCMsg_PacketEntities( const ks::net::CSVCMsg_PacketEntities &msg )
 {
 	CL_PreprocessEntities(); // setup client prediction
 
-	if ( !msg.is_delta() )
+	if ( !msg.is_delta )
 	{
 		// Delta too old or is initial message
 		// we can start recording now that we've received an uncompressed packet
@@ -763,8 +763,8 @@ bool CClientState::SVCMsg_PacketEntities( const CSVCMsg_PacketEntities &msg )
 		}
 	}
 	
-	TRACE_PACKET(( "CL Receive (%d <-%d)\n", m_nCurrentSequence, msg.delta_from() ));
-	TRACE_PACKET(( "CL Num Ents (%d)\n", msg.updated_entries() ));
+	TRACE_PACKET(( "CL Receive (%d <-%d)\n", m_nCurrentSequence, msg.delta_from ));
+	TRACE_PACKET(( "CL Num Ents (%d)\n", msg.updated_entries ));
 
 	if ( g_pLocalNetworkBackdoor )
 	{
@@ -786,9 +786,9 @@ bool CClientState::SVCMsg_PacketEntities( const CSVCMsg_PacketEntities &msg )
 }
 
 
-bool CClientState::SVCMsg_TempEntities( const CSVCMsg_TempEntities &msg )
+bool CClientState::SVCMsg_TempEntities( const ks::net::CSVCMsg_TempEntities &msg )
 {
-	bool bReliable = msg.reliable();
+	bool bReliable = msg.reliable;
 
 	float fire_time = GetBaseLocalClient().GetTime();
 
@@ -799,7 +799,7 @@ bool CClientState::SVCMsg_TempEntities( const CSVCMsg_TempEntities &msg )
 		fire_time += flInterpAmount;
 	}
 
-	int numEntries = msg.num_entries();
+	int numEntries = msg.num_entries;
 	if ( numEntries == 0 )
 	{
 		bReliable = true;
@@ -814,7 +814,7 @@ bool CClientState::SVCMsg_TempEntities( const CSVCMsg_TempEntities &msg )
 		return true;
 	}
 
-	bf_read buffer( &msg.entity_data()[0], msg.entity_data().size() );
+	bf_read buffer( msg.entity_data->data(), msg.entity_data->size() );
 
 	int classID = -1;
 	void *from = NULL;
@@ -911,14 +911,14 @@ bool CClientState::SVCMsg_TempEntities( const CSVCMsg_TempEntities &msg )
 	return true;
 }
 
-bool CClientState::SVCMsg_PaintmapData( const CSVCMsg_PaintmapData& msg )
+bool CClientState::SVCMsg_PaintmapData( const ks::net::CSVCMsg_PaintmapData& msg )
 {
-	int nDword = ( Bits2Bytes( msg.paintmap().size() ) + 3 ) / 4;
+	int nDword = ( Bits2Bytes( msg.paintmap->size() ) + 3 ) / 4;
 	CUtlVector< uint32 > data;
 	data.SetCount( nDword );
 
 	bf_read dataIn;
-	dataIn.ReadBits( const_cast<char*>(msg.paintmap().data()), msg.paintmap().size() );
+	dataIn.ReadBits( const_cast<char*>(msg.paintmap->data()), msg.paintmap->size() );
 	
 	//handle endian issue between platforms
 	CByteswap swap;
@@ -934,19 +934,19 @@ bool CClientState::SVCMsg_PaintmapData( const CSVCMsg_PaintmapData& msg )
 }
 
 
-bool CClientState::SVCMsg_HltvReplay( const CSVCMsg_HltvReplay &msg )
+bool CClientState::SVCMsg_HltvReplay( const ks::net::CSVCMsg_HltvReplay &msg )
 {
 	VPROF( "HltvReplayStart" );
-	DevMsg( "%d. Msg_HltvReplay %s->%s\n", GetClientTickCount(), m_nHltvReplayDelay ? "replay" : "real-time", msg.delay() ? "replay" : "real-time" );
+	DevMsg( "%d. Msg_HltvReplay %s->%s\n", GetClientTickCount(), m_nHltvReplayDelay ? "replay" : "real-time", msg.delay ? "replay" : "real-time" );
 	int nWasDelay = m_nHltvReplayDelay;
-	m_nHltvReplayDelay = msg.delay();
-	m_nHltvReplayStopAt = msg.replay_stop_at();
-	m_nHltvReplayStartAt = msg.replay_start_at();
-	float flRate = msg.replay_slowdown_rate();
+	m_nHltvReplayDelay = msg.delay;
+	m_nHltvReplayStopAt = msg.replay_stop_at;
+	m_nHltvReplayStartAt = msg.replay_start_at;
+	float flRate = msg.replay_slowdown_rate;
 	if ( flRate > 0 )
 	{
-		m_nHltvReplaySlowdownBeginAt = msg.replay_slowdown_begin();
-		m_nHltvReplaySlowdownEndAt = msg.replay_slowdown_end();
+		m_nHltvReplaySlowdownBeginAt = msg.replay_slowdown_begin;
+		m_nHltvReplaySlowdownEndAt = msg.replay_slowdown_end;
 		m_flHltvReplaySlowdownRate = flRate;
 	}
 	else

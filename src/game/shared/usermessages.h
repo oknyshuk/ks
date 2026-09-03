@@ -23,7 +23,8 @@
 #undef TYPE_BOOL
 #endif
 
-#include "cstrike15_usermessages.pb.h"
+#include "usermessages_schema.h"
+#include "proto_types.h"
 
 //-----------------------------------------------------------------------------
 class IUserMessageBinder;
@@ -57,8 +58,17 @@ class IUserMessageBinder
 public:
 	virtual ~IUserMessageBinder() = 0;
 	virtual int GetType() const = 0;
-	virtual ::google::protobuf::Message *Parse( int32 nPassthroughFlags, const void *msg, int size, bool &bSilentIgnore ) = 0;
-	virtual bool Invoke( ::google::protobuf::Message const *msg ) = 0;
+
+	// A parsed message is passed back type-erased so that every handler bound to the same
+	// message id shares one parse. Only the binder knows the concrete type, so it also
+	// owns destruction and description.
+	virtual void *Parse( int32 nPassthroughFlags, const void *msg, int size, bool &bSilentIgnore ) = 0;
+	virtual bool Invoke( const void *msg ) = 0;
+	virtual void Destroy( void *msg ) const = 0;
+	virtual const char *TypeName() const = 0;
+	virtual std::size_t ByteSize( const void *msg ) const = 0;
+	virtual std::string Describe( const void *msg ) const = 0;
+
 	virtual const CUtlAbstractDelegate &GetAbstractDelegate() = 0;
 };
 
@@ -123,7 +133,7 @@ private:
 			return msgType;
 		}
 
-		virtual ::google::protobuf::Message *Parse( int32 nPassthroughFlags, const void *msg, int size, bool &bSilentIgnore ) OVERRIDE
+		virtual void *Parse( int32 nPassthroughFlags, const void *msg, int size, bool &bSilentIgnore ) OVERRIDE
 		{
 			if ( size < 0 || size > NET_MAX_PAYLOAD )
 			{
@@ -141,9 +151,9 @@ private:
 				}
 			}
 
-			::google::protobuf::Message *pMsg = new PB_OBJECT_TYPE();
+			PB_OBJECT_TYPE *pMsg = new PB_OBJECT_TYPE();
 
-			if ( !pMsg->ParseFromArray( msg, size ) )
+			if ( !ks::proto::read_bytes( *pMsg, msg, size ) )
 			{
 				delete pMsg;
 				return NULL;
@@ -152,14 +162,29 @@ private:
 			return pMsg;
 		}
 
-
-		virtual bool Invoke( ::google::protobuf::Message const *msg )
+		virtual bool Invoke( const void *msg ) OVERRIDE
 		{
-			if ( msg )
-			{
-				return m_handler( static_cast< PB_OBJECT_TYPE const & >( *msg ) );
-			}
-			return false;
+			return msg && m_handler( *static_cast< const PB_OBJECT_TYPE * >( msg ) );
+		}
+
+		virtual void Destroy( void *msg ) const OVERRIDE
+		{
+			delete static_cast< PB_OBJECT_TYPE * >( msg );
+		}
+
+		virtual const char *TypeName() const OVERRIDE
+		{
+			return ks::proto::type_name< PB_OBJECT_TYPE >();
+		}
+
+		virtual std::size_t ByteSize( const void *msg ) const OVERRIDE
+		{
+			return ks::proto::byte_size( *static_cast< const PB_OBJECT_TYPE * >( msg ) );
+		}
+
+		virtual std::string Describe( const void *msg ) const OVERRIDE
+		{
+			return ks::proto::to_text( *static_cast< const PB_OBJECT_TYPE * >( msg ) );
 		}
 
 		virtual const CUtlAbstractDelegate &GetAbstractDelegate()

@@ -1240,15 +1240,15 @@ bool CReplayServer::SendNetMsg( INetMessage &msg, bool bForceReliable )
 	{
 		buffer = REPLAY_BUFFER_RELIABLE;
 	}
-	else if ( msg.GetType() == svc_Sounds )
+	else if ( msg.GetType() == ks::net::svc_Sounds )
 	{
 		buffer = REPLAY_BUFFER_SOUNDS;
 	}
-	else if ( msg.GetType() == svc_VoiceData )
+	else if ( msg.GetType() == ks::net::svc_VoiceData )
 	{
 		buffer = REPLAY_BUFFER_VOICE;
 	}
-	else if ( msg.GetType() == svc_TempEntities )
+	else if ( msg.GetType() == ks::net::svc_TempEntities )
 	{
 		buffer = REPLAY_BUFFER_TEMPENTS;
 	}
@@ -1390,12 +1390,12 @@ const char *CReplayServer::GetName( void ) const
 	return replay_name.GetString();
 }
 
-void CReplayServer::FillServerInfo(CSVCMsg_ServerInfo &serverinfo)
+void CReplayServer::FillServerInfo(ks::net::CSVCMsg_ServerInfo &serverinfo)
 {
 	CBaseServer::FillServerInfo( serverinfo );
 
-	serverinfo.set_player_slot( m_nPlayerSlot ); // all spectators think they're the Replay client
-	serverinfo.set_max_clients( m_nGameServerMaxClients );
+	serverinfo.player_slot = m_nPlayerSlot; // all spectators think they're the Replay client
+	serverinfo.max_clients = m_nGameServerMaxClients;
 }
 
 void CReplayServer::Clear( void )

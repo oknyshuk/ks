@@ -205,21 +205,21 @@ void CClientState::SendClientInfo( void )
 {
 	CCLCMsg_ClientInfo_t info;
 
-	info.set_send_table_crc( SendTable_GetCRC() );
-	info.set_server_count( m_nServerCount );
-	info.set_is_hltv( false );
+	info.send_table_crc = SendTable_GetCRC();
+	info.server_count = m_nServerCount;
+	info.is_hltv = false;
 #if defined( REPLAY_ENABLED )
-	info.set_is_replay( false );
+	info.is_replay = false;
 #endif
 
-	info.set_friends_id( 0 );
-	info.set_friends_name( m_FriendsName );
+	info.friends_id = 0;
+	info.friends_name = m_FriendsName;
 
 	CheckOwnCustomFiles(); // load & verfiy custom player files
 
 	for ( int i=0; i< MAX_CUSTOM_FILES; i++ )
 	{
-		info.add_custom_files( m_nCustomFiles[i].crc );
+		info.custom_files.emplace_back( m_nCustomFiles[i].crc );
 	}
 	
 	m_NetChannel->SendNetMsg( info );
@@ -233,7 +233,7 @@ void CClientState::SendLoadingProgress( int nProgress )
 	}
 
 	CCLCMsg_LoadingProgress_t info;
-	info.set_progress( nProgress );
+	info.progress = nProgress;
 	m_nLastProgressPercent = nProgress;
 
 	m_NetChannel->SendNetMsg( info );
@@ -271,7 +271,7 @@ extern IVEngineClient *engineClient;
 // Purpose: A svc_signonnum has been received, perform a client side setup
 // Output : void CL_SignonReply
 //-----------------------------------------------------------------------------
-bool CClientState::SetSignonState ( int state, int count, const CNETMsg_SignonState *msg )
+bool CClientState::SetSignonState ( int state, int count, const ks::net::CNETMsg_SignonState *msg )
 {
 	int nOldSignonState = m_nSignonState;
 
@@ -312,7 +312,7 @@ bool CClientState::SetSignonState ( int state, int count, const CNETMsg_SignonSt
 				
 				// set user settings (rate etc)
 				CNETMsg_SetConVar_t convars;
-				Host_BuildUserInfoUpdateMessage( m_nSplitScreenSlot, convars.mutable_convars(), false );
+				Host_BuildUserInfoUpdateMessage( m_nSplitScreenSlot, &convars.convars.mut(), false );
 				m_NetChannel->SendNetMsg( convars );
 			}
 			break;
@@ -403,7 +403,7 @@ bool CClientState::SetSignonState ( int state, int count, const CNETMsg_SignonSt
 				// start progress bar immediately for multiplayer level transitions
 				EngineUI()->EnabledProgressBarForNextLoad();
 			}
-			SCR_BeginLoadingPlaque( msg->map_name().c_str() );
+			SCR_BeginLoadingPlaque( msg->map_name->c_str() );
 			if ( m_nMaxClients > 1 )
 			{
 				EngineUI()->UpdateProgressBar(PROGRESS_CHANGELEVEL);
@@ -809,7 +809,7 @@ void CClientState::StopHltvReplay()
 	m_nHltvReplayStartAt = 0;
 	if ( g_ClientDLL )
 	{
-		CSVCMsg_HltvReplay msg;
+		ks::net::CSVCMsg_HltvReplay msg;
 		g_ClientDLL->OnHltvReplay( msg );
 	}
 }
@@ -1842,13 +1842,13 @@ void CClientState::CheckFileCRCsWithServer()
 		CCLCMsg_FileCRCCheck_t crcCheck;
 		CCLCMsg_FileCRCCheck_t::SetPath( crcCheck, rgUnverifiedFiles[i].m_PathID );
 		CCLCMsg_FileCRCCheck_t::SetFileName( crcCheck, rgUnverifiedFiles[i].m_Filename );
-		crcCheck.set_file_fraction( rgUnverifiedFiles[i].m_nFileFraction );
-		crcCheck.set_md5( (void*)(rgUnverifiedFiles[i].m_FileHash.m_md5contents.bits), MD5_DIGEST_LENGTH );
-		crcCheck.set_crc ( CRC32_ConvertToUnsignedLong( &rgUnverifiedFiles[i].m_FileHash.m_crcIOSequence ) );
-		crcCheck.set_file_hash_type ( rgUnverifiedFiles[i].m_FileHash.m_eFileHashType );
-		crcCheck.set_file_len ( rgUnverifiedFiles[i].m_FileHash.m_cbFileLen );
-		crcCheck.set_pack_file_number( rgUnverifiedFiles[i].m_FileHash.m_nPackFileNumber );
-		crcCheck.set_pack_file_id( rgUnverifiedFiles[i].m_FileHash.m_PackFileID );
+		crcCheck.file_fraction = rgUnverifiedFiles[i].m_nFileFraction;
+		crcCheck.md5 = std::string( ( const char * ) (void*)(rgUnverifiedFiles[i].m_FileHash.m_md5contents.bits), MD5_DIGEST_LENGTH );
+		crcCheck.crc = CRC32_ConvertToUnsignedLong( &rgUnverifiedFiles[i].m_FileHash.m_crcIOSequence );
+		crcCheck.file_hash_type = rgUnverifiedFiles[i].m_FileHash.m_eFileHashType;
+		crcCheck.file_len = rgUnverifiedFiles[i].m_FileHash.m_cbFileLen;
+		crcCheck.pack_file_number = rgUnverifiedFiles[i].m_FileHash.m_nPackFileNumber;
+		crcCheck.pack_file_id = rgUnverifiedFiles[i].m_FileHash.m_PackFileID;
 
 		m_NetChannel->SendNetMsg( crcCheck );
 	}

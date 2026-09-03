@@ -194,7 +194,7 @@ public:
 		bool m_bIsEventQuest;
 	};
 	static CUtlMap< uint32, CQuestUncommittedProgress_t, uint32, CDefLess< uint32 > > sm_mapQuestProgressUncommitted;
-	static ScoreLeaderboardData s_ScoreLeaderboardData;
+	static ks::net::ScoreLeaderboardData s_ScoreLeaderboardData;
 	static uint32 s_numLevelTransitions;
 };
 

@@ -24,7 +24,7 @@
 #include "utlmap.h"
 
 #include "matchmaking/imatchasync.h"
-#include "netmessages.pb.h"
+#include "netmessages_schema.h"
 
  // Only send this many requests before timing out.
 #define CL_CONNECTION_RETRIES		4 
@@ -264,40 +264,40 @@ public: // INetMsgHandler interface:
 
 public: // IServerMessageHandlers
 	
-	virtual bool NETMsg_Tick( const CNETMsg_Tick& msg );
-	static bool NETMsg_Tick_Delegate( CBaseClientState *pThis, const CNETMsg_Tick& msg ) { return pThis->NETMsg_Tick( msg ); }
-	virtual bool NETMsg_StringCmd( const CNETMsg_StringCmd& msg );
-	bool NETMsg_SignonState( const CNETMsg_SignonState& msg );
-	virtual bool NETMsg_PlayerAvatarData( const CNETMsg_PlayerAvatarData& msg );
-	virtual bool NETMsg_SetConVar( const CNETMsg_SetConVar& msg );
+	virtual bool NETMsg_Tick( const ks::net::CNETMsg_Tick& msg );
+	static bool NETMsg_Tick_Delegate( CBaseClientState *pThis, const ks::net::CNETMsg_Tick& msg ) { return pThis->NETMsg_Tick( msg ); }
+	virtual bool NETMsg_StringCmd( const ks::net::CNETMsg_StringCmd& msg );
+	bool NETMsg_SignonState( const ks::net::CNETMsg_SignonState& msg );
+	virtual bool NETMsg_PlayerAvatarData( const ks::net::CNETMsg_PlayerAvatarData& msg );
+	virtual bool NETMsg_SetConVar( const ks::net::CNETMsg_SetConVar& msg );
 
-	bool SVCMsg_CmdKeyValues( const CSVCMsg_CmdKeyValues& msg);
-	virtual bool SVCMsg_EncryptedData( const CSVCMsg_EncryptedData& msg );
-	bool SVCMsg_SendTable( const CSVCMsg_SendTable& msg );
-	bool SVCMsg_Print( const CSVCMsg_Print& msg );
-	virtual bool SVCMsg_ServerInfo( const CSVCMsg_ServerInfo& msg );
-	virtual bool SVCMsg_ClassInfo( const CSVCMsg_ClassInfo& msg );
-	virtual bool SVCMsg_SetPause( const CSVCMsg_SetPause& msg );
-	virtual bool SVCMsg_SetView( const CSVCMsg_SetView& msg );
-	virtual bool SVCMsg_CreateStringTable( const CSVCMsg_CreateStringTable& msg );
-	virtual bool SVCMsg_UpdateStringTable( const CSVCMsg_UpdateStringTable& msg );
-	virtual bool SVCMsg_VoiceInit( const CSVCMsg_VoiceInit& msg ) = 0;
-	virtual bool SVCMsg_VoiceData( const CSVCMsg_VoiceData& msg ) = 0;
-	virtual bool SVCMsg_FixAngle( const CSVCMsg_FixAngle& msg ) = 0;
-	virtual bool SVCMsg_Prefetch( const CSVCMsg_Prefetch& msg ) = 0;
-	virtual bool SVCMsg_CrosshairAngle( const CSVCMsg_CrosshairAngle& msg ) = 0;
-	virtual bool SVCMsg_BSPDecal( const CSVCMsg_BSPDecal& msg ) = 0;
-	virtual bool SVCMsg_SplitScreen( const CSVCMsg_SplitScreen& msg );
-	virtual bool SVCMsg_GetCvarValue( const CSVCMsg_GetCvarValue& msg );
-	virtual bool SVCMsg_Menu( const CSVCMsg_Menu& msg );
-	virtual bool SVCMsg_UserMessage( const CSVCMsg_UserMessage& msg ) = 0;
-	virtual bool SVCMsg_PaintmapData( const CSVCMsg_PaintmapData& msg ) = 0;
-	virtual bool SVCMsg_GameEvent( const CSVCMsg_GameEvent& msg ) = 0;
-	virtual bool SVCMsg_GameEventList( const CSVCMsg_GameEventList &msg );
-	virtual bool SVCMsg_TempEntities( const CSVCMsg_TempEntities& msg ) = 0;
-	virtual bool SVCMsg_PacketEntities( const CSVCMsg_PacketEntities& msg );
-	virtual bool SVCMsg_Sounds( const CSVCMsg_Sounds& msg ) = 0;
-	virtual bool SVCMsg_EntityMsg( const CSVCMsg_EntityMsg& msg ) = 0;
+	bool SVCMsg_CmdKeyValues( const ks::net::CSVCMsg_CmdKeyValues& msg);
+	virtual bool SVCMsg_EncryptedData( const ks::net::CSVCMsg_EncryptedData& msg );
+	bool SVCMsg_SendTable( const ks::net::CSVCMsg_SendTable& msg );
+	bool SVCMsg_Print( const ks::net::CSVCMsg_Print& msg );
+	virtual bool SVCMsg_ServerInfo( const ks::net::CSVCMsg_ServerInfo& msg );
+	virtual bool SVCMsg_ClassInfo( const ks::net::CSVCMsg_ClassInfo& msg );
+	virtual bool SVCMsg_SetPause( const ks::net::CSVCMsg_SetPause& msg );
+	virtual bool SVCMsg_SetView( const ks::net::CSVCMsg_SetView& msg );
+	virtual bool SVCMsg_CreateStringTable( const ks::net::CSVCMsg_CreateStringTable& msg );
+	virtual bool SVCMsg_UpdateStringTable( const ks::net::CSVCMsg_UpdateStringTable& msg );
+	virtual bool SVCMsg_VoiceInit( const ks::net::CSVCMsg_VoiceInit& msg ) = 0;
+	virtual bool SVCMsg_VoiceData( const ks::net::CSVCMsg_VoiceData& msg ) = 0;
+	virtual bool SVCMsg_FixAngle( const ks::net::CSVCMsg_FixAngle& msg ) = 0;
+	virtual bool SVCMsg_Prefetch( const ks::net::CSVCMsg_Prefetch& msg ) = 0;
+	virtual bool SVCMsg_CrosshairAngle( const ks::net::CSVCMsg_CrosshairAngle& msg ) = 0;
+	virtual bool SVCMsg_BSPDecal( const ks::net::CSVCMsg_BSPDecal& msg ) = 0;
+	virtual bool SVCMsg_SplitScreen( const ks::net::CSVCMsg_SplitScreen& msg );
+	virtual bool SVCMsg_GetCvarValue( const ks::net::CSVCMsg_GetCvarValue& msg );
+	virtual bool SVCMsg_Menu( const ks::net::CSVCMsg_Menu& msg );
+	virtual bool SVCMsg_UserMessage( const ks::net::CSVCMsg_UserMessage& msg ) = 0;
+	virtual bool SVCMsg_PaintmapData( const ks::net::CSVCMsg_PaintmapData& msg ) = 0;
+	virtual bool SVCMsg_GameEvent( const ks::net::CSVCMsg_GameEvent& msg ) = 0;
+	virtual bool SVCMsg_GameEventList( const ks::net::CSVCMsg_GameEventList &msg );
+	virtual bool SVCMsg_TempEntities( const ks::net::CSVCMsg_TempEntities& msg ) = 0;
+	virtual bool SVCMsg_PacketEntities( const ks::net::CSVCMsg_PacketEntities& msg );
+	virtual bool SVCMsg_Sounds( const ks::net::CSVCMsg_Sounds& msg ) = 0;
+	virtual bool SVCMsg_EntityMsg( const ks::net::CSVCMsg_EntityMsg& msg ) = 0;
 	
 	CNetMessageBinder m_NETMsgTick;
 	CNetMessageBinder m_NETMsgStringCmd;
@@ -344,7 +344,7 @@ public:
 	virtual void FullConnect( const ns_address &adr, int nEncryptionKey ); // a connection was established
 	virtual void Connect( const char *pchPublicAddress, char const *pchPrivateAddress, const char* szJoinType ); // start a connection challenge
 	virtual void ConnectSplitScreen( const char *pchPublicAddress, char const *pchPrivateAddress, int numPlayers, const char* szJoinType ); // start a connection challenge
-	virtual bool SetSignonState ( int state, int count, const CNETMsg_SignonState *msg );
+	virtual bool SetSignonState ( int state, int count, const ks::net::CNETMsg_SignonState *msg );
 	virtual void Disconnect( bool bShowMainMenu = true );
 	virtual void SendConnectPacket ( const ns_address &netAdrRemote, int challengeNr, int authProtocol, uint64 unGSSteamID, bool bGSSecure );
 	virtual const char *GetCDKeyHash() { return "123"; }
@@ -411,7 +411,7 @@ public:
 	virtual bool IsClientStateTv() const { return false; }
 protected:
 
-	bool InternalProcessStringCmd( const CNETMsg_StringCmd& msg );
+	bool InternalProcessStringCmd( const ks::net::CNETMsg_StringCmd& msg );
 
 private:
 	bool PrepareSteamConnectResponse( uint64 unGSSteamID, bool bGSSecure, const ns_address &adr, bf_write &msg );

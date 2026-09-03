@@ -1492,7 +1492,7 @@ static bool NET_ReceiveDatagram_Helper( const int sock, netpacket_t * packet, bo
 				fixup.StartWriting( packet->data, NET_MAX_MESSAGE, unPacketBits );
 				fixup.WriteBits( bufVoice.Base(), nVoiceBits );
 
-				// Make sure we have enough bits to read a final net_NOP opcode before compressing 
+				// Make sure we have enough bits to read a final ks::net::net_NOP opcode before compressing 
 				int nRemainingBits = fixup.GetNumBitsWritten() % 8;
 				if ( nRemainingBits > 0 &&  nRemainingBits <= (8-NETMSG_TYPE_BITS) )
 				{

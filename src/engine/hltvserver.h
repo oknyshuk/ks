@@ -105,7 +105,7 @@ public: // CBaseServer interface:
 	void	Clear( void );
 	bool	IsHLTV( void ) const { return true; };
 	bool	IsMultiplayer( void ) const { return true; };
-	void	FillServerInfo(CSVCMsg_ServerInfo &serverinfo);
+	void	FillServerInfo(ks::net::CSVCMsg_ServerInfo &serverinfo);
 	void	GetNetStats( float &avgIn, float &avgOut );
 	int		GetChallengeType ( const ns_address &adr );
 	const char *GetName( void ) const;
@@ -201,7 +201,7 @@ public:
 	void	StartDemo(const char *filename); // starts playing back a demo file
 	void    StartRelay( void ); // start HLTV server as relay proxy
 	bool	SendNetMsg( INetMessage &msg, bool bForceReliable = false, bool bVoice = false );
-	bool	NETMsg_PlayerAvatarData( const CNETMsg_PlayerAvatarData& msg );
+	bool	NETMsg_PlayerAvatarData( const ks::net::CNETMsg_PlayerAvatarData& msg );
 	void	RunFrame();
 	void	SetMaxClients( int number );
 	void	Changelevel( bool bInactivateClients );

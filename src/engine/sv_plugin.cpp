@@ -38,16 +38,16 @@ QueryCvarCookie_t SendCvarValueQueryToClient( IClient *client, const char *pCvar
 {
 	// Send a message to the client asking for the value.
 	CSVCMsg_GetCvarValue_t msg;
-	msg.set_cookie( g_iQueryCvarCookie++ );
-	msg.set_cvar_name( pCvarName );
+	msg.cookie = g_iQueryCvarCookie++;
+	msg.cvar_name = pCvarName;
 
 	// If the query came from the game DLL instead of from a plugin, then we negate the cookie
 	// so it knows who to callback on when the value arrives back from the client.
 	if ( !bPluginQuery )
-		msg.set_cookie( -msg.cookie() );
+		msg.cookie = -msg.cookie;
 
 	client->SendNetMsg( msg );
-	return msg.cookie();
+	return msg.cookie;
 }
 
 
@@ -722,8 +722,8 @@ void  CServerPlugin::CreateMessage( edict_t *pEntity, DIALOG_TYPE type, KeyValue
 
 	data->WriteAsBinary( buf );
 
-	menu.set_dialog_type( type );
-	menu.set_menu_key_values( buf.Base(), buf.TellPut() );
+	menu.dialog_type = type;
+	menu.menu_key_values = std::string( ( const char * ) buf.Base(), buf.TellPut() );
 
 	client->SendNetMsg( menu );
 }

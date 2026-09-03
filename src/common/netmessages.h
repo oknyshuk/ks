@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
+//========= Copyright ï¿½ 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose:
 //
@@ -46,8 +46,14 @@
 #endif
 // lwss end
 
-#include "netmessages.pb.h"
+#include "netmessages_schema.h"
+#include "proto_types.h"
 
+// The schema keeps its own namespace: protobuf's classes of the same names are still
+// reachable through the user-message headers, which reference two of these types.
+
+// The message body is the schema struct itself; this adds the framing the net channel
+// needs around it.
 template< int msgType, typename PB_OBJECT_TYPE, int groupType = INetChannelInfo::GENERIC, bool bReliable = true >
 class CNetMessagePB : public INetMessage, public PB_OBJECT_TYPE
 {
@@ -56,163 +62,87 @@ public:
 	typedef PB_OBJECT_TYPE PBType_t;
 	static const int sk_Type = msgType;
 
-	CNetMessagePB() :
-	m_bReliable( bReliable )
-	{
-	}
-
-	virtual ~CNetMessagePB()
-	{
-	}
+	CNetMessagePB() : m_bReliable( bReliable ) {}
+	virtual ~CNetMessagePB() {}
 
 	virtual bool ReadFromBuffer( bf_read &buffer )
 	{
-		int size = buffer.ReadVarInt32();
-		if ( size < 0 || size > NET_MAX_PAYLOAD )
-		{
+		const int size = buffer.ReadVarInt32();
+		if ( size < 0 || size > NET_MAX_PAYLOAD || size > buffer.GetNumBytesLeft() )
 			return false;
-		}
 
-		// Check its valid
-		if ( size > buffer.GetNumBytesLeft() )
-		{
-			return false;
-		}
-
-		// If the read buffer is byte aligned, we can parse right out of it
+		// A byte-aligned buffer can be parsed in place.
 		if ( ( buffer.GetNumBitsRead() % 8 ) == 0 )
 		{
-			bool parseResult = PB_OBJECT_TYPE::ParseFromArray( buffer.GetBasePointer() + buffer.GetNumBytesRead(), size );
+			const bool ok = ks::proto::read_bytes( body(),
+				buffer.GetBasePointer() + buffer.GetNumBytesRead(), size );
 			buffer.SeekRelative( size * 8 );
-			return parseResult;
+			return ok;
 		}
 
-		// otherwise we have to do a temp allocation so we can read it all shifted
-#ifdef NET_SHOW_UNALIGNED_MSGS
-		DevMsg("Warning: unaligned read of protobuf message %s (%d bytes)\n", PB_OBJECT_TYPE::GetTypeName().c_str(), size );
-#endif
-
-		void *parseBuffer = stackalloc( size );
-		if ( !buffer.ReadBytes( parseBuffer, size ) )
-		{
-			return false;
-		}
-
-		if ( ! PB_OBJECT_TYPE::ParseFromArray( parseBuffer, size ) )
-		{
-			return false;
-		}
-
-		return true;
+		void *shifted = stackalloc( size );
+		return buffer.ReadBytes( shifted, size ) &&
+		       ks::proto::read_bytes( body(), shifted, size );
 	}
 
 	virtual bool WriteToBuffer( bf_write &buffer ) const
 	{
-		if ( !PB_OBJECT_TYPE::IsInitialized() )
-		{
-			Msg("WriteToBuffer Message %s is not initialized! Probably missing required fields!\n", PB_OBJECT_TYPE::GetTypeName().c_str() );
-		}
+		const int size = int( ks::proto::byte_size( body() ) );
 
-		int size = PB_OBJECT_TYPE::ByteSize();
-
-		// If the write is byte aligned we can go direct
 		if ( ( buffer.GetNumBitsWritten() % 8 ) == 0 )
 		{
-			int sizeWithHeader = size + 1 + buffer.ByteSizeVarInt32( GetType() ) + buffer.ByteSizeVarInt32( size );
+			const int framed = size + 1 + buffer.ByteSizeVarInt32( GetType() ) +
+			                   buffer.ByteSizeVarInt32( size );
+			if ( buffer.GetNumBytesLeft() < framed )
+				return false;
 
-			if ( buffer.GetNumBytesLeft() >= sizeWithHeader )
-			{
-				buffer.WriteVarInt32( GetType() );
-				buffer.WriteVarInt32( size );
-
-				if ( !PB_OBJECT_TYPE::SerializeWithCachedSizesToArray( ( google::protobuf::uint8 * )buffer.GetData() + buffer.GetNumBytesWritten() ) )
-				{
-					return false;
-				}
-
-				// Tell the buffer we just splatted into it
-				buffer.SeekToBit( buffer.GetNumBitsWritten() + ( size * 8 ) );
-				return true;
-			}
-
-			// Won't fit
-			return false;
+			buffer.WriteVarInt32( GetType() );
+			buffer.WriteVarInt32( size );
+			ks::proto::write( body(), (std::byte *)buffer.GetData() + buffer.GetNumBytesWritten() );
+			buffer.SeekToBit( buffer.GetNumBitsWritten() + size * 8 );
+			return true;
 		}
 
-		// otherwise we have to do a temp allocation so we can write it all shifted
-#ifdef NET_SHOW_UNALIGNED_MSGS
-		DevMsg("Warning: unaligned write of protobuf message %s (%d bytes)\n", PB_OBJECT_TYPE::GetTypeName().c_str(), size );
-#endif
-
-		void *serializeBuffer = stackalloc( size );
-
-		if ( ! PB_OBJECT_TYPE::SerializeWithCachedSizesToArray( ( google::protobuf::uint8 * )serializeBuffer ) )
-		{
-			return false;
-		}
-
+		void *shifted = stackalloc( size );
+		ks::proto::write( body(), (std::byte *)shifted );
 		buffer.WriteVarInt32( GetType() );
 		buffer.WriteVarInt32( size );
-		return buffer.WriteBytes( serializeBuffer, size );
+		return buffer.WriteBytes( shifted, size );
 	}
 
 	virtual const char *ToString() const
 	{
-		m_toString = PB_OBJECT_TYPE::DebugString();
+		m_toString = ks::proto::to_text( body() );
 		return m_toString.c_str();
 	}
 
-	virtual int GetType() const
-	{
-		return msgType;
-	}
+	virtual int GetType() const { return msgType; }
+	virtual size_t GetSize() const { return sizeof( *this ); }
+	virtual const char *GetName() const { return ks::proto::type_name<PBType_t>(); }
+	virtual int GetGroup() const { return groupType; }
 
-	virtual size_t GetSize() const
-	{
-		return sizeof( *this );
-	}
-
-	virtual const char *GetName() const
-	{
-		if ( s_typeName.empty() )
-		{
-			s_typeName = PB_OBJECT_TYPE::GetTypeName();
-		}
-		return s_typeName.c_str();
-	}
-
-	virtual int GetGroup() const
-	{
-		return groupType;
-	}
-
-	virtual void SetReliable( bool state )
-	{
-		m_bReliable = state;
-	}
-
-	virtual bool IsReliable() const
-	{
-		return m_bReliable;
-	}
+	virtual void SetReliable( bool state ) { m_bReliable = state; }
+	virtual bool IsReliable() const { return m_bReliable; }
 
 	virtual INetMessage *Clone() const
 	{
 		MyType_t *pClone = new MyType_t;
-		pClone->CopyFrom( *this );
+		pClone->body() = body();
 		pClone->m_bReliable = m_bReliable;
-
 		return pClone;
 	}
 
+	PBType_t &body() { return *this; }
+	const PBType_t &body() const { return *this; }
+
+	void Clear() { body() = PBType_t{}; }
+	void CopyFrom( const PBType_t &o ) { body() = o; }
+
 protected:
-	bool m_bReliable; // true if message should be sent reliable
-	mutable std::string	m_toString; // cached copy of ToString()
-	static std::string s_typeName;
+	bool m_bReliable;
+	mutable std::string m_toString;
 };
 
-template< int msgType, typename PB_OBJECT_TYPE, int groupType , bool bReliable >
-std::string CNetMessagePB< msgType, PB_OBJECT_TYPE, groupType , bReliable >::s_typeName;
 
 class CNetMessageBinder
 {
@@ -320,7 +250,7 @@ private:
 // bidirectional net messages:
 ///////////////////////////////////////////////////////////////////////////////////////
 
-class CNETMsg_Tick_t : public CNetMessagePB< net_Tick, CNETMsg_Tick >
+class CNETMsg_Tick_t : public CNetMessagePB< ks::net::net_Tick, ks::net::CNETMsg_Tick >
 {
 public:
 	static float FrametimeToFloat( uint32 frametime ) { return ( float )frametime / 1000000.0f; }
@@ -328,23 +258,23 @@ public:
 	CNETMsg_Tick_t( int tick, float host_computationtime, float host_computationtime_stddeviation, float host_framestarttime_std_deviation )
 	{
 		SetReliable( false );
-		set_tick( tick );
-		set_host_computationtime( MIN( ( uint32 )( 1000000.0 * host_computationtime ), 1000000u ) );
-		set_host_computationtime_std_deviation( MIN( ( uint32 )( 1000000.0 * host_computationtime_stddeviation ), 1000000u ) );
-		set_host_framestarttime_std_deviation( MIN( ( uint32 )( 1000000.0 * host_framestarttime_std_deviation ), 1000000u ) );
+		this->tick = tick;
+		this->host_computationtime = MIN( ( uint32 )( 1000000.0 * host_computationtime ), 1000000u );
+		this->host_computationtime_std_deviation = MIN( ( uint32 )( 1000000.0 * host_computationtime_stddeviation ), 1000000u );
+		this->host_framestarttime_std_deviation = MIN( ( uint32 )( 1000000.0 * host_framestarttime_std_deviation ), 1000000u );
 	}
 };
 
-class CNETMsg_StringCmd_t : public CNetMessagePB< net_StringCmd, CNETMsg_StringCmd, INetChannelInfo::STRINGCMD >
+class CNETMsg_StringCmd_t : public CNetMessagePB< ks::net::net_StringCmd, ks::net::CNETMsg_StringCmd, INetChannelInfo::STRINGCMD >
 {
 public:
 	CNETMsg_StringCmd_t( const char *command )
 	{
-		set_command( command );
+		this->command = command;
 	}
 };
 
-class CNETMsg_PlayerAvatarData_t : public CNetMessagePB< net_PlayerAvatarData, CNETMsg_PlayerAvatarData, INetChannelInfo::PAINTMAP >
+class CNETMsg_PlayerAvatarData_t : public CNetMessagePB< ks::net::net_PlayerAvatarData, ks::net::CNETMsg_PlayerAvatarData, INetChannelInfo::PAINTMAP >
 {
 	// 12 KB player avatar 64x64 rgb only no alpha
 	// WARNING-WARNING-WARNING
@@ -357,25 +287,25 @@ public:
 	CNETMsg_PlayerAvatarData_t() {}
 	CNETMsg_PlayerAvatarData_t( uint32 unAccountID, void const *pvData, uint32 cbData )
 	{
-		set_accountid( unAccountID );
-		set_rgb( ( const char * ) pvData, cbData );
+		accountid = unAccountID;
+		rgb = std::string( ( const char * ) pvData, cbData );
 	}
 };
 
-class CNETMsg_SignonState_t : public CNetMessagePB< net_SignonState, CNETMsg_SignonState, INetChannelInfo::SIGNON >
+class CNETMsg_SignonState_t : public CNetMessagePB< ks::net::net_SignonState, ks::net::CNETMsg_SignonState, INetChannelInfo::SIGNON >
 {
 public:
 	CNETMsg_SignonState_t( int state, int spawncount )
 	{
-		set_signon_state( state );
-		set_spawn_count( spawncount );
-		set_num_server_players( 0 );
+		signon_state = state;
+		spawn_count = spawncount;
+		num_server_players = 0;
 	}
 };
 
-inline void NetMsgSetCVarUsingDictionary( CMsg_CVars::CVar *convar, char const * name, char const * value )
+inline void NetMsgSetCVarUsingDictionary( ks::net::CMsg_CVars::CVar *convar, char const * name, char const * value )
 {
-	convar->set_value( value );
+	convar->value = value;
 
 	if ( 0 ) ( void ) 0;
 	/** Removed for partner depot **/
@@ -384,40 +314,40 @@ inline void NetMsgSetCVarUsingDictionary( CMsg_CVars::CVar *convar, char const *
 #ifdef _DEBUG
 		DevWarning( "Missing dictionary entry for cvar '%s'\n", name );
 #endif
-		convar->set_name( name );
+		convar->name = name;
 	}
 }
 
-inline void NetMsgExpandCVarUsingDictionary( CMsg_CVars::CVar *convar )
+inline void NetMsgExpandCVarUsingDictionary( ks::net::CMsg_CVars::CVar *convar )
 {
-	if ( convar->has_name() )
+	if ( convar->name.has_value() )
 		return;
-	switch ( convar->dictionary_name() )
+	switch ( convar->dictionary_name )
 	{
 	case 0: return;
 	/** Removed for partner depot **/
 	default:
-		DevWarning( "Invalid dictionary entry for cvar # %d\n", convar->dictionary_name() );
-		convar->set_name( "undefined" );
+		DevWarning( "Invalid dictionary entry for cvar # %d\n", uint32( convar->dictionary_name ) );
+		convar->name = "undefined";
 		break;
 	}
 }
 
-inline const char * NetMsgGetCVarUsingDictionary( CMsg_CVars::CVar const &convar )
+inline const char * NetMsgGetCVarUsingDictionary( ks::net::CMsg_CVars::CVar const &convar )
 {
-	if ( convar.has_name() )
-		return convar.name().c_str();
-	switch ( convar.dictionary_name() )
+	if ( convar.name.has_value() )
+		return convar.name->c_str();
+	switch ( convar.dictionary_name )
 	{
 	case 0: return "";
 	/** Removed for partner depot **/
 default:
-	DevWarning( "Invalid dictionary entry for cvar # %d\n", convar.dictionary_name() );
+	DevWarning( "Invalid dictionary entry for cvar # %d\n", uint32( convar.dictionary_name ) );
 	return "undefined";
 	}
 }
 
-class CNETMsg_SetConVar_t : public CNetMessagePB< net_SetConVar, CNETMsg_SetConVar, INetChannelInfo::STRINGCMD >
+class CNETMsg_SetConVar_t : public CNetMessagePB< ks::net::net_SetConVar, ks::net::CNETMsg_SetConVar, INetChannelInfo::STRINGCMD >
 {
 public:
 	CNETMsg_SetConVar_t() {}
@@ -427,73 +357,73 @@ public:
 	}
 	void AddToTail( const char * name, const char * value )
 	{
-		NetMsgSetCVarUsingDictionary( mutable_convars()->add_cvars(), name, value );
+		NetMsgSetCVarUsingDictionary( &convars.mut().cvars.emplace_back(), name, value );
 	}
 };
 
-typedef CNetMessagePB< net_NOP, CNETMsg_NOP >											CNETMsg_NOP_t;
-typedef CNetMessagePB< net_Disconnect, CNETMsg_Disconnect >								CNETMsg_Disconnect_t;
-typedef CNetMessagePB< net_File, CNETMsg_File >											CNETMsg_File_t;
-typedef CNetMessagePB< net_SplitScreenUser, CNETMsg_SplitScreenUser >					CNETMsg_SplitScreenUser_t;
+typedef CNetMessagePB< ks::net::net_NOP, ks::net::CNETMsg_NOP >											CNETMsg_NOP_t;
+typedef CNetMessagePB< ks::net::net_Disconnect, ks::net::CNETMsg_Disconnect >								CNETMsg_Disconnect_t;
+typedef CNetMessagePB< ks::net::net_File, ks::net::CNETMsg_File >											CNETMsg_File_t;
+typedef CNetMessagePB< ks::net::net_SplitScreenUser, ks::net::CNETMsg_SplitScreenUser >					CNETMsg_SplitScreenUser_t;
 
 ///////////////////////////////////////////////////////////////////////////////////////
 // Client messages: Sent from the client to the server
 ///////////////////////////////////////////////////////////////////////////////////////
 
-typedef CNetMessagePB< clc_SplitPlayerConnect, CCLCMsg_SplitPlayerConnect >							CCLCMsg_SplitPlayerConnect_t;
-typedef CNetMessagePB< clc_Move, CCLCMsg_Move, INetChannelInfo::MOVE, false >						CCLCMsg_Move_t;
-typedef CNetMessagePB< clc_ClientInfo, CCLCMsg_ClientInfo > 										CCLCMsg_ClientInfo_t;
-typedef CNetMessagePB< clc_VoiceData, CCLCMsg_VoiceData, INetChannelInfo::VOICE, false >			CCLCMsg_VoiceData_t;
-typedef CNetMessagePB< clc_BaselineAck, CCLCMsg_BaselineAck >										CCLCMsg_BaselineAck_t;
-typedef CNetMessagePB< clc_ListenEvents, CCLCMsg_ListenEvents >										CCLCMsg_ListenEvents_t;
-typedef CNetMessagePB< clc_RespondCvarValue, CCLCMsg_RespondCvarValue >								CCLCMsg_RespondCvarValue_t;
-typedef CNetMessagePB< clc_LoadingProgress, CCLCMsg_LoadingProgress >								CCLCMsg_LoadingProgress_t;
-typedef CNetMessagePB< clc_CmdKeyValues, CCLCMsg_CmdKeyValues >										CCLCMsg_CmdKeyValues_t;
-typedef CNetMessagePB< clc_HltvReplay, CCLCMsg_HltvReplay >											CCLCMsg_HltvReplay_t;
+typedef CNetMessagePB< ks::net::clc_SplitPlayerConnect, ks::net::CCLCMsg_SplitPlayerConnect >							CCLCMsg_SplitPlayerConnect_t;
+typedef CNetMessagePB< ks::net::clc_Move, ks::net::CCLCMsg_Move, INetChannelInfo::MOVE, false >						CCLCMsg_Move_t;
+typedef CNetMessagePB< ks::net::clc_ClientInfo, ks::net::CCLCMsg_ClientInfo > 										CCLCMsg_ClientInfo_t;
+typedef CNetMessagePB< ks::net::clc_VoiceData, ks::net::CCLCMsg_VoiceData, INetChannelInfo::VOICE, false >			CCLCMsg_VoiceData_t;
+typedef CNetMessagePB< ks::net::clc_BaselineAck, ks::net::CCLCMsg_BaselineAck >										CCLCMsg_BaselineAck_t;
+typedef CNetMessagePB< ks::net::clc_ListenEvents, ks::net::CCLCMsg_ListenEvents >										CCLCMsg_ListenEvents_t;
+typedef CNetMessagePB< ks::net::clc_RespondCvarValue, ks::net::CCLCMsg_RespondCvarValue >								CCLCMsg_RespondCvarValue_t;
+typedef CNetMessagePB< ks::net::clc_LoadingProgress, ks::net::CCLCMsg_LoadingProgress >								CCLCMsg_LoadingProgress_t;
+typedef CNetMessagePB< ks::net::clc_CmdKeyValues, ks::net::CCLCMsg_CmdKeyValues >										CCLCMsg_CmdKeyValues_t;
+typedef CNetMessagePB< ks::net::clc_HltvReplay, ks::net::CCLCMsg_HltvReplay >											CCLCMsg_HltvReplay_t;
 
-class CCLCMsg_FileCRCCheck_t : public CNetMessagePB< clc_FileCRCCheck, CCLCMsg_FileCRCCheck >
+class CCLCMsg_FileCRCCheck_t : public CNetMessagePB< ks::net::clc_FileCRCCheck, ks::net::CCLCMsg_FileCRCCheck >
 {
 public:
 	// Warning: These routines may use the va() function...
-	static void SetPath( CCLCMsg_FileCRCCheck& msg, const char *path );
-	static const char *GetPath( const CCLCMsg_FileCRCCheck& msg );
-	static void SetFileName( CCLCMsg_FileCRCCheck& msg, const char *fileName );
-	static const char *GetFileName( const CCLCMsg_FileCRCCheck& msg );
+	static void SetPath( ks::net::CCLCMsg_FileCRCCheck& msg, const char *path );
+	static const char *GetPath( const ks::net::CCLCMsg_FileCRCCheck& msg );
+	static void SetFileName( ks::net::CCLCMsg_FileCRCCheck& msg, const char *fileName );
+	static const char *GetFileName( const ks::net::CCLCMsg_FileCRCCheck& msg );
 };
 
 ///////////////////////////////////////////////////////////////////////////////////////
 // Server messages: Sent from the server to the client
 ///////////////////////////////////////////////////////////////////////////////////////
 
-typedef CNetMessagePB< svc_ServerInfo, CSVCMsg_ServerInfo, INetChannelInfo::SIGNON >					CSVCMsg_ServerInfo_t;
-typedef CNetMessagePB< svc_ClassInfo, CSVCMsg_ClassInfo, INetChannelInfo::SIGNON >						CSVCMsg_ClassInfo_t;
-typedef CNetMessagePB< svc_SendTable, CSVCMsg_SendTable, INetChannelInfo::SIGNON >					    CSVCMsg_SendTable_t;
-typedef CNetMessagePB< svc_Print, CSVCMsg_Print, INetChannelInfo::GENERIC, false >						CSVCMsg_Print_t;
-typedef CNetMessagePB< svc_SetPause, CSVCMsg_SetPause >													CSVCMsg_SetPause_t;
-typedef CNetMessagePB< svc_SetView, CSVCMsg_SetView >												    CSVCMsg_SetView_t;
-typedef CNetMessagePB< svc_CreateStringTable, CSVCMsg_CreateStringTable, INetChannelInfo::SIGNON >	    CSVCMsg_CreateStringTable_t;
-typedef CNetMessagePB< svc_UpdateStringTable, CSVCMsg_UpdateStringTable, INetChannelInfo::STRINGTABLE >	CSVCMsg_UpdateStringTable_t;
-typedef CNetMessagePB< svc_VoiceInit, CSVCMsg_VoiceInit, INetChannelInfo::SIGNON >						CSVCMsg_VoiceInit_t;
-typedef CNetMessagePB< svc_VoiceData, CSVCMsg_VoiceData, INetChannelInfo::VOICE, false >				CSVCMsg_VoiceData_t;
-typedef CNetMessagePB< svc_FixAngle, CSVCMsg_FixAngle, INetChannelInfo::GENERIC, false >			    CSVCMsg_FixAngle_t;
-typedef CNetMessagePB< svc_Prefetch, CSVCMsg_Prefetch, INetChannelInfo::SOUNDS >					    CSVCMsg_Prefetch_t;
-typedef CNetMessagePB< svc_CrosshairAngle, CSVCMsg_CrosshairAngle >									    CSVCMsg_CrosshairAngle_t;
-typedef CNetMessagePB< svc_BSPDecal, CSVCMsg_BSPDecal >												    CSVCMsg_BSPDecal_t;
-typedef CNetMessagePB< svc_SplitScreen, CSVCMsg_SplitScreen >										    CSVCMsg_SplitScreen_t;
-typedef CNetMessagePB< svc_GetCvarValue, CSVCMsg_GetCvarValue >										    CSVCMsg_GetCvarValue_t;
-typedef CNetMessagePB< svc_Menu, CSVCMsg_Menu, INetChannelInfo::GENERIC, false >					    CSVCMsg_Menu_t;
-typedef CNetMessagePB< svc_UserMessage, CSVCMsg_UserMessage, INetChannelInfo::USERMESSAGES, false >		CSVCMsg_UserMessage_t;
-typedef CNetMessagePB< svc_PaintmapData, CSVCMsg_PaintmapData, INetChannelInfo::PAINTMAP >			    CSVCMsg_PaintmapData_t;
-typedef CNetMessagePB< svc_GameEvent, CSVCMsg_GameEvent, INetChannelInfo::EVENTS >					    CSVCMsg_GameEvent_t;
-typedef CNetMessagePB< svc_GameEventList, CSVCMsg_GameEventList >									    CSVCMsg_GameEventList_t;
-typedef CNetMessagePB< svc_TempEntities, CSVCMsg_TempEntities, INetChannelInfo::TEMPENTS, false >	    CSVCMsg_TempEntities_t;
-typedef CNetMessagePB< svc_PacketEntities, CSVCMsg_PacketEntities, INetChannelInfo::ENTITIES >		    CSVCMsg_PacketEntities_t;
-typedef CNetMessagePB< svc_Sounds, CSVCMsg_Sounds, INetChannelInfo::SOUNDS >							CSVCMsg_Sounds_t;
-typedef CNetMessagePB< svc_EntityMessage, CSVCMsg_EntityMsg, INetChannelInfo::ENTMESSAGES, false >		CSVCMsg_EntityMsg_t;
-typedef CNetMessagePB< svc_CmdKeyValues, CSVCMsg_CmdKeyValues >											CSVCMsg_CmdKeyValues_t;
-typedef CNetMessagePB< svc_EncryptedData, CSVCMsg_EncryptedData, INetChannelInfo::ENCRYPTED >			CSVCMsg_EncryptedData_t;
-typedef CNetMessagePB< svc_HltvReplay, CSVCMsg_HltvReplay, INetChannelInfo::ENTITIES >					CSVCMsg_HltvReplay_t;
-typedef CNetMessagePB< svc_Broadcast_Command, CSVCMsg_Broadcast_Command, INetChannelInfo::STRINGCMD >	CSVCMsg_Broadcast_Command_t;
+typedef CNetMessagePB< ks::net::svc_ServerInfo, ks::net::CSVCMsg_ServerInfo, INetChannelInfo::SIGNON >					CSVCMsg_ServerInfo_t;
+typedef CNetMessagePB< ks::net::svc_ClassInfo, ks::net::CSVCMsg_ClassInfo, INetChannelInfo::SIGNON >						CSVCMsg_ClassInfo_t;
+typedef CNetMessagePB< ks::net::svc_SendTable, ks::net::CSVCMsg_SendTable, INetChannelInfo::SIGNON >					    CSVCMsg_SendTable_t;
+typedef CNetMessagePB< ks::net::svc_Print, ks::net::CSVCMsg_Print, INetChannelInfo::GENERIC, false >						CSVCMsg_Print_t;
+typedef CNetMessagePB< ks::net::svc_SetPause, ks::net::CSVCMsg_SetPause >													CSVCMsg_SetPause_t;
+typedef CNetMessagePB< ks::net::svc_SetView, ks::net::CSVCMsg_SetView >												    CSVCMsg_SetView_t;
+typedef CNetMessagePB< ks::net::svc_CreateStringTable, ks::net::CSVCMsg_CreateStringTable, INetChannelInfo::SIGNON >	    CSVCMsg_CreateStringTable_t;
+typedef CNetMessagePB< ks::net::svc_UpdateStringTable, ks::net::CSVCMsg_UpdateStringTable, INetChannelInfo::STRINGTABLE >	CSVCMsg_UpdateStringTable_t;
+typedef CNetMessagePB< ks::net::svc_VoiceInit, ks::net::CSVCMsg_VoiceInit, INetChannelInfo::SIGNON >						CSVCMsg_VoiceInit_t;
+typedef CNetMessagePB< ks::net::svc_VoiceData, ks::net::CSVCMsg_VoiceData, INetChannelInfo::VOICE, false >				CSVCMsg_VoiceData_t;
+typedef CNetMessagePB< ks::net::svc_FixAngle, ks::net::CSVCMsg_FixAngle, INetChannelInfo::GENERIC, false >			    CSVCMsg_FixAngle_t;
+typedef CNetMessagePB< ks::net::svc_Prefetch, ks::net::CSVCMsg_Prefetch, INetChannelInfo::SOUNDS >					    CSVCMsg_Prefetch_t;
+typedef CNetMessagePB< ks::net::svc_CrosshairAngle, ks::net::CSVCMsg_CrosshairAngle >									    CSVCMsg_CrosshairAngle_t;
+typedef CNetMessagePB< ks::net::svc_BSPDecal, ks::net::CSVCMsg_BSPDecal >												    CSVCMsg_BSPDecal_t;
+typedef CNetMessagePB< ks::net::svc_SplitScreen, ks::net::CSVCMsg_SplitScreen >										    CSVCMsg_SplitScreen_t;
+typedef CNetMessagePB< ks::net::svc_GetCvarValue, ks::net::CSVCMsg_GetCvarValue >										    CSVCMsg_GetCvarValue_t;
+typedef CNetMessagePB< ks::net::svc_Menu, ks::net::CSVCMsg_Menu, INetChannelInfo::GENERIC, false >					    CSVCMsg_Menu_t;
+typedef CNetMessagePB< ks::net::svc_UserMessage, ks::net::CSVCMsg_UserMessage, INetChannelInfo::USERMESSAGES, false >		CSVCMsg_UserMessage_t;
+typedef CNetMessagePB< ks::net::svc_PaintmapData, ks::net::CSVCMsg_PaintmapData, INetChannelInfo::PAINTMAP >			    CSVCMsg_PaintmapData_t;
+typedef CNetMessagePB< ks::net::svc_GameEvent, ks::net::CSVCMsg_GameEvent, INetChannelInfo::EVENTS >					    CSVCMsg_GameEvent_t;
+typedef CNetMessagePB< ks::net::svc_GameEventList, ks::net::CSVCMsg_GameEventList >									    CSVCMsg_GameEventList_t;
+typedef CNetMessagePB< ks::net::svc_TempEntities, ks::net::CSVCMsg_TempEntities, INetChannelInfo::TEMPENTS, false >	    CSVCMsg_TempEntities_t;
+typedef CNetMessagePB< ks::net::svc_PacketEntities, ks::net::CSVCMsg_PacketEntities, INetChannelInfo::ENTITIES >		    CSVCMsg_PacketEntities_t;
+typedef CNetMessagePB< ks::net::svc_Sounds, ks::net::CSVCMsg_Sounds, INetChannelInfo::SOUNDS >							CSVCMsg_Sounds_t;
+typedef CNetMessagePB< ks::net::svc_EntityMessage, ks::net::CSVCMsg_EntityMsg, INetChannelInfo::ENTMESSAGES, false >		CSVCMsg_EntityMsg_t;
+typedef CNetMessagePB< ks::net::svc_CmdKeyValues, ks::net::CSVCMsg_CmdKeyValues >											CSVCMsg_CmdKeyValues_t;
+typedef CNetMessagePB< ks::net::svc_EncryptedData, ks::net::CSVCMsg_EncryptedData, INetChannelInfo::ENCRYPTED >			CSVCMsg_EncryptedData_t;
+typedef CNetMessagePB< ks::net::svc_HltvReplay, ks::net::CSVCMsg_HltvReplay, INetChannelInfo::ENTITIES >					CSVCMsg_HltvReplay_t;
+typedef CNetMessagePB< ks::net::svc_Broadcast_Command, ks::net::CSVCMsg_Broadcast_Command, INetChannelInfo::STRINGCMD >	CSVCMsg_Broadcast_Command_t;
 
 
 ///////////////////////////////////////////////////////////////////////////////////////
@@ -504,11 +434,11 @@ class CmdKeyValuesHelper
 {
 public:
 
-	static void CLCMsg_SetKeyValues( CCLCMsg_CmdKeyValues& msg, const KeyValues *keyValues );
-	static KeyValues* CLCMsg_GetKeyValues ( const CCLCMsg_CmdKeyValues& msg );
+	static void CLCMsg_SetKeyValues( ks::net::CCLCMsg_CmdKeyValues& msg, const KeyValues *keyValues );
+	static KeyValues* CLCMsg_GetKeyValues ( const ks::net::CCLCMsg_CmdKeyValues& msg );
 
-	static void SVCMsg_SetKeyValues( CSVCMsg_CmdKeyValues& msg, const KeyValues *keyValues );
-	static KeyValues *SVCMsg_GetKeyValues ( const CSVCMsg_CmdKeyValues& msg );
+	static void SVCMsg_SetKeyValues( ks::net::CSVCMsg_CmdKeyValues& msg, const KeyValues *keyValues );
+	static KeyValues *SVCMsg_GetKeyValues ( const ks::net::CSVCMsg_CmdKeyValues& msg );
 };
 
 class INetChannel;
@@ -516,7 +446,7 @@ class CmdEncryptedDataMessageCodec
 {
 public:
 	static bool SVCMsg_EncryptedData_EncryptMessage( CSVCMsg_EncryptedData_t &msgEncryptedResult, INetMessage *pMsgPlaintextInput, char const *key );
-	static bool SVCMsg_EncryptedData_Process( CSVCMsg_EncryptedData const &msgEncryptedInput, INetChannel *pProcessingChannel, char const *key );
+	static bool SVCMsg_EncryptedData_Process( ks::net::CSVCMsg_EncryptedData const &msgEncryptedInput, INetChannel *pProcessingChannel, char const *key );
 };
 
 //////////////////////////////////////////////////////////////////////////

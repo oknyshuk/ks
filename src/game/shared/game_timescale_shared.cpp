@@ -78,9 +78,9 @@ void CGameTimescale::SetCurrentTimescale( float flTimescale )
 
 	// Pass the change info to the client so it can do prediction
 	CReliableBroadcastRecipientFilter filter;
-	CCSUsrMsg_CurrentTimescale msg;
-	msg.set_cur_timescale( m_flCurrentTimescale );
-	SendUserMessage( filter, CS_UM_CurrentTimescale, msg );
+	ks::net::CCSUsrMsg_CurrentTimescale msg;
+	msg.cur_timescale = m_flCurrentTimescale;
+	SendUserMessage( filter, ks::net::CS_UM_CurrentTimescale, msg );
 #endif
 }
 
@@ -114,12 +114,12 @@ void CGameTimescale::SetDesiredTimescale( float flDesiredTimescale, float flDura
 #ifndef CLIENT_DLL
 	// Pass the change info to the client so it can do prediction
 	CReliableBroadcastRecipientFilter filter;
-	CCSUsrMsg_DesiredTimescale msg;
-	msg.set_desired_timescale( m_flDesiredTimescale );
-	msg.set_duration_realtime_sec( m_flDurationRealTimeSeconds );
-	msg.set_interpolator_type( m_nInterpolatorType );
-	msg.set_start_blend_time( m_flStartBlendTime );
-	SendUserMessage( filter, CS_UM_DesiredTimescale, msg );
+	ks::net::CCSUsrMsg_DesiredTimescale msg;
+	msg.desired_timescale = m_flDesiredTimescale;
+	msg.duration_realtime_sec = m_flDurationRealTimeSeconds;
+	msg.interpolator_type = m_nInterpolatorType;
+	msg.start_blend_time = m_flStartBlendTime;
+	SendUserMessage( filter, ks::net::CS_UM_DesiredTimescale, msg );
 #endif
 }
 
@@ -187,20 +187,20 @@ void CGameTimescale::ResetTimescale( void )
 
 #ifdef CLIENT_DLL
 
-bool __MsgFunc_CurrentTimescale( const CCSUsrMsg_CurrentTimescale &msg )
+bool __MsgFunc_CurrentTimescale( const ks::net::CCSUsrMsg_CurrentTimescale &msg )
 {
-	GameTimescale()->SetCurrentTimescale( msg.cur_timescale() );
+	GameTimescale()->SetCurrentTimescale( msg.cur_timescale );
 
 	return true;
 }
 USER_MESSAGE_REGISTER( CurrentTimescale );
 
-bool __MsgFunc_DesiredTimescale( const CCSUsrMsg_DesiredTimescale &msg )
+bool __MsgFunc_DesiredTimescale( const ks::net::CCSUsrMsg_DesiredTimescale &msg )
 {
-	float flDesiredTimescale = msg.desired_timescale();
-	float flDurationRealTimeSeconds = msg.duration_realtime_sec();
-	CGameTimescale::Interpolators_e nInterpolatorType = static_cast< CGameTimescale::Interpolators_e >( msg.interpolator_type() );
-	float flStartBlendTime = msg.start_blend_time();
+	float flDesiredTimescale = msg.desired_timescale;
+	float flDurationRealTimeSeconds = msg.duration_realtime_sec;
+	CGameTimescale::Interpolators_e nInterpolatorType = static_cast< CGameTimescale::Interpolators_e >( msg.interpolator_type.get() );
+	float flStartBlendTime = msg.start_blend_time;
 
 	GameTimescale()->SetDesiredTimescaleAtTime( flDesiredTimescale, flDurationRealTimeSeconds, nInterpolatorType, flStartBlendTime );
 

@@ -18,7 +18,7 @@
 #include "soundflags.h"
 #include "tier1/bitbuf.h"
 #include "SoundEmitterSystem/isoundemittersystembase.h"
-#include "netmessages.pb.h"
+#include "netmessages_schema.h"
 
 class CGameClient;
 
@@ -100,7 +100,7 @@ void SV_InitSendTables( ServerClass *pClasses );
 void SV_TermSendTables( ServerClass *pClasses );
 
 // send voice data from cl to other clients
-void SV_BroadcastVoiceData(IClient * cl, const CCLCMsg_VoiceData& msg );
+void SV_BroadcastVoiceData(IClient * cl, const ks::net::CCLCMsg_VoiceData& msg );
 void SV_SendRestoreMsg( bf_write &dest );
 
 // A client has uploaded its logo to us;

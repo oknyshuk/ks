@@ -251,7 +251,7 @@ void CEngineSoundServer::PrefetchSound( const char *pSample )
 
 	// Tell clients to prefetch the sound
 	CSVCMsg_Prefetch_t msg;
-	msg.set_sound_index( idx );
+	msg.sound_index = idx;
 
 	sv.BroadcastMessage( msg, true, false );
 }

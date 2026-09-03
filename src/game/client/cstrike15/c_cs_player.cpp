@@ -1374,24 +1374,24 @@ bool C_CSPlayer::ShouldRegenerateOriginFromCellBits() const
 	return false;
 }
 
-bool __MsgFunc_ItemDrop( const CCSUsrMsg_ItemDrop &msg )
+bool __MsgFunc_ItemDrop( const ks::net::CCSUsrMsg_ItemDrop &msg )
 {
 	return true;	
 }
 USER_MESSAGE_REGISTER( ItemDrop );
 
-bool __MsgFunc_ReloadEffect( const CCSUsrMsg_ReloadEffect &msg )
+bool __MsgFunc_ReloadEffect( const ks::net::CCSUsrMsg_ReloadEffect &msg )
 {
-	int iPlayer = msg.entidx();
-	int iActAnimID = msg.has_actanim() ? msg.actanim() : ACT_VM_RELOAD;
+	int iPlayer = msg.entidx;
+	int iActAnimID = msg.actanim.has_value() ? msg.actanim : ACT_VM_RELOAD;
 
 	Vector origin;
 	Vector *pOrigin = NULL;
-	if ( msg.has_origin_x() )
+	if ( msg.origin_x.has_value() )
 	{
-		origin.x = msg.origin_x();
-		origin.y = msg.origin_y();
-		origin.z = msg.origin_z();
+		origin.x = msg.origin_x;
+		origin.y = msg.origin_y;
+		origin.z = msg.origin_z;
 		pOrigin = &origin;
 	}
 
@@ -2846,12 +2846,12 @@ void C_CSPlayer::FireGameEvent( IGameEvent *event )
 // It became obsolete when we started using a separate seed for client and server
 // to eliminate 'rage' hacks.
 //
-bool __MsgFunc_ReportHit( const CCSUsrMsg_ReportHit &msg )
+bool __MsgFunc_ReportHit( const ks::net::CCSUsrMsg_ReportHit &msg )
 {
-	if ( msg.has_pos_x() && msg.has_pos_y() && msg.has_pos_z() && msg.has_timestamp() )
+	if ( msg.pos_x.has_value() && msg.pos_y.has_value() && msg.pos_z.has_value() && msg.timestamp.has_value() )
 	{
-		Vector vecServerHitPos = Vector( msg.pos_x(), msg.pos_y(), msg.pos_z() );
-		float flServerHitTime = msg.timestamp();
+		Vector vecServerHitPos = Vector( msg.pos_x, msg.pos_y, msg.pos_z );
+		float flServerHitTime = msg.timestamp;
 
 		C_BasePlayer *pPlayer = C_BasePlayer::GetLocalPlayer();
 		if ( pPlayer )

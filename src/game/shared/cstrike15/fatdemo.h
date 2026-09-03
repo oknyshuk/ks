@@ -29,7 +29,6 @@ public:
 	void OnTickPre( int tickcount );
 
 private:
-	void OutputProtobuf( ::google::protobuf::Message* pTick );
 
 	void BeginFile();
 	void FinalizeFile();

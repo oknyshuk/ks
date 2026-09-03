@@ -23,7 +23,7 @@
 #include "bot/bot_constants.h"
 #include "../../../common/input_device.h"
 #include "cstrike15_gcconstants.h"
-#include "cstrike15_gcmessages.pb.h"
+#include "usermessages_schema.h"
 #include "usermessages.h"
 #if defined( GAME_DLL )
 #include "maprules.h"
@@ -251,8 +251,8 @@ static GGWeaponAliasName ggWeaponAliasNameList[] =
 	{ WEAPON_NONE, "" }
 };
 
-class CEconItemPreviewDataBlock; // forward declare item data
-class CCSUsrMsg_PlayerDecalDigitalSignature; // forward declare proto message
+namespace ks::net { struct CEconItemPreviewDataBlock; } // forward declare item data
+namespace ks::net { struct CCSUsrMsg_PlayerDecalDigitalSignature; } // forward declare proto message
 
 #ifndef CLIENT_DLL
 	extern ConVar mp_autoteambalance;
@@ -267,8 +267,8 @@ class CCSUsrMsg_PlayerDecalDigitalSignature; // forward declare proto message
 #if !defined( CLIENT_DLL )
 
 // forward declare GC message
-class CMsgGCCStrike15_v2_MatchmakingServerRoundStats;
-class CMsgGCCStrike15_v2_MatchmakingGC2ServerReserve;
+namespace ks::net { struct CMsgGCCStrike15_v2_MatchmakingServerRoundStats; }
+namespace ks::net { struct CMsgGCCStrike15_v2_MatchmakingGC2ServerReserve; }
 
 int ScramblePlayersSort( CCSPlayer* const *p1, CCSPlayer* const *p2 );
 
@@ -766,13 +766,13 @@ public:
 	CNetworkArray( int, m_nEndMatchMapGroupVoteOptions, MAX_ENDMATCH_VOTE_PANELS );				// For mapgroups >10 maps these will be vote options
 
 	// these functions cover recording and sending item drops for display in game modes where you don't allow drops during the match/round
-	CUtlVector< CEconItemPreviewDataBlock * > m_ItemsPtrDroppedDuringMatch;
-	const CUtlVector< CEconItemPreviewDataBlock * >& GetItemsDroppedDuringMatch( void ) const
+	CUtlVector< ks::net::CEconItemPreviewDataBlock * > m_ItemsPtrDroppedDuringMatch;
+	const CUtlVector< ks::net::CEconItemPreviewDataBlock * >& GetItemsDroppedDuringMatch( void ) const
 	{
 		return m_ItemsPtrDroppedDuringMatch;
 	}
 	void ClearItemsDroppedDuringMatch( void );
-	void RecordPlayerItemDrop( const CEconItemPreviewDataBlock &iteminfo );
+	void RecordPlayerItemDrop( const ks::net::CEconItemPreviewDataBlock &iteminfo );
 
 	static int GetMaxPlayers(); // always available
 
@@ -1201,9 +1201,9 @@ public:
 	uint32 m_numSpectatorsCountMax;
 	uint32 m_numSpectatorsCountMaxTV;
 	uint32 m_numSpectatorsCountMaxLnk;
-	CMsgGCCStrike15_v2_MatchmakingServerRoundStats *m_pQueuedMatchmakingReportedRoundStats;
-	static CMsgGCCStrike15_v2_MatchmakingGC2ServerReserve sm_QueuedServerReservation;
-	void ReportRoundEndStatsToGC( CMsgGCCStrike15_v2_MatchmakingServerRoundStats **ppAllocateStats = NULL );
+	ks::net::CMsgGCCStrike15_v2_MatchmakingServerRoundStats *m_pQueuedMatchmakingReportedRoundStats;
+	static ks::net::CMsgGCCStrike15_v2_MatchmakingGC2ServerReserve sm_QueuedServerReservation;
+	void ReportRoundEndStatsToGC( ks::net::CMsgGCCStrike15_v2_MatchmakingServerRoundStats **ppAllocateStats = NULL );
 
 	struct CQMMPlayerData_t
 	{
@@ -1344,8 +1344,8 @@ public:
 		float m_flCreationTime;
 		uint32 m_rtGcTime;	// not participating in memcmp (set by GC, authoritative)
 
-		void CopyToMsg( CCSUsrMsg_PlayerDecalDigitalSignature &msg ) const;
-		void InitFromMsg( CCSUsrMsg_PlayerDecalDigitalSignature const &msg );
+		void CopyToMsg( ks::net::CCSUsrMsg_PlayerDecalDigitalSignature &msg ) const;
+		void InitFromMsg( ks::net::CCSUsrMsg_PlayerDecalDigitalSignature const &msg );
 	};
 	CUtlVector< ServerPlayerDecalData_t > m_arrServerPlayerDecalData;
 #endif

@@ -3498,23 +3498,23 @@ void ShowViewPortPanelToAll( const char * name, bool bShow, KeyValues *data )
 		subkey = data->GetFirstSubKey(); // reset 
 	}
 
-	CCSUsrMsg_VGUIMenu msg;
+	ks::net::CCSUsrMsg_VGUIMenu msg;
 
-	msg.set_name( name );
-	msg.set_show( bShow );
+	msg.name = name;
+	msg.show = bShow;
 
 	// write additional data (be careful not more than 192 bytes!)
 	while ( subkey )
 	{
-		CCSUsrMsg_VGUIMenu::Subkey *pMsgSubkey = msg.add_subkeys();
+		ks::net::CCSUsrMsg_VGUIMenu::Subkey *pMsgSubkey = &msg.subkeys.emplace_back();
 
-		pMsgSubkey->set_name( subkey->GetName() );
-		pMsgSubkey->set_str( subkey-> GetString() );
+		pMsgSubkey->name = subkey->GetName();
+		pMsgSubkey->str = subkey-> GetString();
 
 		subkey = subkey->GetNextKey();
 	}
 
-	SendUserMessage( filter, CS_UM_VGUIMenu, msg );
+	SendUserMessage( filter, ks::net::CS_UM_VGUIMenu, msg );
 }
 
 

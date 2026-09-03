@@ -21,8 +21,8 @@
 #include <utldict.h>
 #include "netmessages.h"
 
-class CSVCMsg_GameEventList;
-class CCLCMsg_ListenEvents;
+namespace ks::net { struct CSVCMsg_GameEventList; }
+namespace ks::net { struct CCLCMsg_ListenEvents; }
 
 class CGameEventCallback
 {
@@ -146,8 +146,8 @@ public:	// IGameEventManager functions
 	bool FireEventClientSide( IGameEvent *event );
 	void FreeEvent( IGameEvent *event );
 
-	bool SerializeEvent( IGameEvent *event, CSVCMsg_GameEvent *eventMsg );
-	IGameEvent *UnserializeEvent( const CSVCMsg_GameEvent& eventMsg );
+	bool SerializeEvent( IGameEvent *event, ks::net::CSVCMsg_GameEvent *eventMsg );
+	IGameEvent *UnserializeEvent( const ks::net::CSVCMsg_GameEvent& eventMsg );
 
 	virtual KeyValues* GetEventDataTypes( IGameEvent* event );
 
@@ -163,10 +163,10 @@ public:
 	CGameEventDescriptor *GetEventDescriptor( IGameEvent *event );
 	CGameEventDescriptor *GetEventDescriptor( int eventid );
 
-	void WriteEventList(CSVCMsg_GameEventList *msg);
-	bool ParseEventList(const CSVCMsg_GameEventList& msg);
+	void WriteEventList(ks::net::CSVCMsg_GameEventList *msg);
+	bool ParseEventList(const ks::net::CSVCMsg_GameEventList& msg);
 
-	void WriteListenEventList(CCLCMsg_ListenEvents *msg);
+	void WriteListenEventList(ks::net::CCLCMsg_ListenEvents *msg);
 	bool HasClientListenersChanged( bool bReset = true );
 	void ConPrintEvent( IGameEvent *event);
 	

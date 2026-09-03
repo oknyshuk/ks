@@ -105,7 +105,7 @@ public: // CBaseServer interface:
 	virtual void	Init( bool bIsDedicated ) OVERRIDE;
 	virtual void	Clear() OVERRIDE;
 	virtual void	Shutdown() OVERRIDE;
-	virtual void	FillServerInfo(CSVCMsg_ServerInfo &serverinfo) OVERRIDE;
+	virtual void	FillServerInfo(ks::net::CSVCMsg_ServerInfo &serverinfo) OVERRIDE;
 	virtual void	GetNetStats( float &avgIn, float &avgOut ) OVERRIDE;
 	virtual int		GetChallengeType ( const ns_address &adr ) OVERRIDE;
 	virtual const char *GetName() const OVERRIDE;

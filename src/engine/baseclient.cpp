@@ -139,7 +139,7 @@ void CBaseClient::ClientPrintf (const char *fmt, ...)
 	va_end (argptr);
 
 	CSVCMsg_Print_t print;
-	print.set_text( string );
+	print.text = string;
 	
 	SendNetMsg( print, print.IsReliable(), false );
 }
@@ -401,8 +401,8 @@ bool CBaseClient::ProcessSignonStateMsg(int state, int spawncount)
 
 												if ( pbufUseRgb )
 												{
-													m_msgAvatarData.set_rgb( pbufUseRgb->Base(), pbufUseRgb->TellPut() );
-													m_msgAvatarData.set_accountid( m_SteamID.GetAccountID() );
+													m_msgAvatarData.rgb = std::string( ( const char * ) pbufUseRgb->Base(), pbufUseRgb->TellPut() );
+													m_msgAvatarData.accountid = m_SteamID.GetAccountID();
 
 													OnPlayerAvatarDataChanged();
 
@@ -426,7 +426,7 @@ bool CBaseClient::ProcessSignonStateMsg(int state, int spawncount)
 													if ( pClient == this )
 														continue;
 
-													if ( pClient->m_msgAvatarData.rgb().size() != 64 * 64 * 3 )
+													if ( pClient->m_msgAvatarData.rgb->size() != 64 * 64 * 3 )
 														continue;
 
 													pMyNetChannel->EnqueueVeryLargeAsyncTransfer( pClient->m_msgAvatarData );
@@ -614,7 +614,7 @@ void CBaseClient::SpawnPlayer( void )
 	CNETMsg_Tick_t tick( m_Server->GetTick(), host_frameendtime_computationduration, host_frametime_stddeviation, host_framestarttime_stddeviation );
 	if ( GetHltvReplayDelay() )
 	{
-		tick.set_hltv_replay_flags( 1 );
+		tick.hltv_replay_flags = 1;
 	}
 	SendNetMsg( tick, true );
 	
@@ -651,7 +651,7 @@ bool CBaseClient::SendSignonData( void )
 	return m_NetChannel->SendNetMsg( signonState );
 }
 
-void CBaseClient::Connect( const char *szName, int nUserID, INetChannel *pNetChannel, bool bFakePlayer, CrossPlayPlatform_t clientPlatform, const CMsg_CVars *pVecCvars /*= NULL*/ )
+void CBaseClient::Connect( const char *szName, int nUserID, INetChannel *pNetChannel, bool bFakePlayer, CrossPlayPlatform_t clientPlatform, const ks::net::CMsg_CVars *pVecCvars /*= NULL*/ )
 {
 	COM_TimestampedLog( "CBaseClient::Connect" );
 
@@ -818,7 +818,7 @@ void CBaseClient::FireGameEvent( IGameEvent *event, bool bPassthrough )
 		if ( m_NetChannel )
 		{
 			if ( bPassthrough )
-				eventMsg.set_passthrough( 1 );
+				eventMsg.passthrough = 1;
 			m_NetChannel->SendNetMsg( eventMsg, event->IsReliable() );
 
 			// This is our last chance to deliver this message out since the
@@ -867,7 +867,7 @@ bool CBaseClient::SendServerInfo( void )
 			m_Server->GetSpawnCount() );
 
 		CSVCMsg_Print_t printMsg;
-		printMsg.set_text( devtext );
+		printMsg.text = devtext;
 		printMsg.WriteToBuffer( msg );
 	}
 
@@ -887,7 +887,7 @@ bool CBaseClient::SendServerInfo( void )
 
 	CSVCMsg_ServerInfo_t serverinfo;	// create serverinfo message
 
-	serverinfo.set_player_slot( m_nClientSlot ); // own slot number
+	serverinfo.player_slot = m_nClientSlot; // own slot number
 
 	m_Server->FillServerInfo( serverinfo ); // fill rest of info message
 
@@ -911,7 +911,7 @@ bool CBaseClient::SendServerInfo( void )
 	if ( !m_NetChannel->IsLoopback() )
 	{
 		CNETMsg_SetConVar_t convars;
-		Host_BuildConVarUpdateMessage( convars.mutable_convars(), FCVAR_REPLICATED, true );
+		Host_BuildConVarUpdateMessage( &convars.convars.mut(), FCVAR_REPLICATED, true );
 		if ( m_Server->IsHLTV() )
 		{
 			static_cast< CHLTVServer* >( m_Server )->FixupConvars( convars );
@@ -1015,16 +1015,16 @@ void CBaseClient::ConnectionStop( )
 	m_NetMessages[ NETMSG_UserMessage ].Unbind();
 }
 
-bool CBaseClient::NETMsg_Tick( const CNETMsg_Tick& msg )
+bool CBaseClient::NETMsg_Tick( const ks::net::CNETMsg_Tick& msg )
 {
 	// framerate stats is the same whether we're in replay or not
 	m_NetChannel->SetRemoteFramerate(
-		CNETMsg_Tick_t::FrametimeToFloat( msg.host_computationtime() ),
-		CNETMsg_Tick_t::FrametimeToFloat( msg.host_computationtime_std_deviation() ),
-		CNETMsg_Tick_t::FrametimeToFloat( msg.host_framestarttime_std_deviation() ) );
-	int nTick = msg.tick();
+		CNETMsg_Tick_t::FrametimeToFloat( msg.host_computationtime ),
+		CNETMsg_Tick_t::FrametimeToFloat( msg.host_computationtime_std_deviation ),
+		CNETMsg_Tick_t::FrametimeToFloat( msg.host_framestarttime_std_deviation ) );
+	int nTick = msg.tick;
 	if ( nTick == -1 // tick == -1 is a call from client to send the full frame update, the client may be in bad state w.r.t. hltv replay
-	  || !msg.hltv_replay_flags() == !GetHltvReplayDelay() ) // the ack should be from the frame from the same timeline as we're feeding the player. Real-time-line acks shouldn't mix up with Replay-time-line acks
+	  || !msg.hltv_replay_flags == !GetHltvReplayDelay() ) // the ack should be from the frame from the same timeline as we're feeding the player. Real-time-line acks shouldn't mix up with Replay-time-line acks
 	{
 		return UpdateAcknowledgedFramecount( nTick );
 	}
@@ -1035,21 +1035,21 @@ bool CBaseClient::NETMsg_Tick( const CNETMsg_Tick& msg )
 	}
 }
 
-bool CBaseClient::NETMsg_StringCmd( const CNETMsg_StringCmd& msg )
+bool CBaseClient::NETMsg_StringCmd( const ks::net::CNETMsg_StringCmd& msg )
 {
-	ExecuteStringCommand( msg.command().c_str() );
+	ExecuteStringCommand( msg.command->c_str() );
 	return true;
 }
 
-bool CBaseClient::NETMsg_PlayerAvatarData( const CNETMsg_PlayerAvatarData& msg )
+bool CBaseClient::NETMsg_PlayerAvatarData( const ks::net::CNETMsg_PlayerAvatarData& msg )
 {
 	if ( sv_reliableavatardata.GetInt() != 1 )
 		return true;
 
-	if ( ( GetServer() == &sv ) && ( msg.rgb().size() == 64*64*3 ) )
+	if ( ( GetServer() == &sv ) && ( msg.rgb->size() == 64*64*3 ) )
 	{
 		m_msgAvatarData.CopyFrom( msg );
-		m_msgAvatarData.set_accountid( m_SteamID.GetAccountID() );
+		m_msgAvatarData.accountid = m_SteamID.GetAccountID();
 
 		OnPlayerAvatarDataChanged();
 	}
@@ -1086,14 +1086,14 @@ void CBaseClient::OnPlayerAvatarDataChanged()
 	}
 }
 
-void CBaseClient::ApplyConVars( const CMsg_CVars& list, bool bCreateIfNotExisting )
+void CBaseClient::ApplyConVars( const ks::net::CMsg_CVars& list, bool bCreateIfNotExisting )
 {
-	int convars_size = list.cvars_size();
+	int convars_size = list.cvars.size();
 
 	for ( int i = 0; i < convars_size; ++i )
 	{
-		const char *name = NetMsgGetCVarUsingDictionary( list.cvars(i) );
-		const char *value = list.cvars(i).value().c_str();
+		const char *name = NetMsgGetCVarUsingDictionary( list.cvars[ i ] );
+		const char *value = list.cvars[ i ].value->c_str();
 
 		if ( !V_stricmp( name, "name" ) )
 		{
@@ -1120,22 +1120,22 @@ void CBaseClient::ApplyConVars( const CMsg_CVars& list, bool bCreateIfNotExistin
 	}
 }
 
-bool CBaseClient::NETMsg_SetConVar( const CNETMsg_SetConVar& msg )
+bool CBaseClient::NETMsg_SetConVar( const ks::net::CNETMsg_SetConVar& msg )
 {
-	ApplyConVars( msg.convars(), false );	// followup cvars, must be set on connect
+	ApplyConVars( msg.convars, false );	// followup cvars, must be set on connect
 	return true;
 }
 
-bool CBaseClient::NETMsg_SignonState( const CNETMsg_SignonState& msg )
+bool CBaseClient::NETMsg_SignonState( const ks::net::CNETMsg_SignonState& msg )
 {
-	if ( msg.signon_state() == SIGNONSTATE_CHANGELEVEL )
+	if ( msg.signon_state == SIGNONSTATE_CHANGELEVEL )
 	{
 		return true; // ignore this message
 	}
 
-	if ( msg.signon_state() > SIGNONSTATE_CONNECTED )
+	if ( msg.signon_state > SIGNONSTATE_CONNECTED )
 	{
-		if ( msg.spawn_count() != (uint32)m_Server->GetSpawnCount() )
+		if ( msg.spawn_count != (uint32)m_Server->GetSpawnCount() )
 		{
 			Reconnect();
 			return true;
@@ -1143,37 +1143,37 @@ bool CBaseClient::NETMsg_SignonState( const CNETMsg_SignonState& msg )
 	}
 
 	// client must acknowledge our current state, otherwise start again
-	if ( msg.signon_state() != (uint32)GetSignonState() )
+	if ( msg.signon_state != (uint32)GetSignonState() )
 	{
 		Reconnect();
 		return true;
 	}
 
-	return ProcessSignonStateMsg( msg.signon_state(), msg.spawn_count() );
+	return ProcessSignonStateMsg( msg.signon_state, msg.spawn_count );
 }
 
-bool CBaseClient::CLCMsg_ClientInfo( const CCLCMsg_ClientInfo& msg )
+bool CBaseClient::CLCMsg_ClientInfo( const ks::net::CCLCMsg_ClientInfo& msg )
 {
-	m_nSendtableCRC = msg.send_table_crc();
+	m_nSendtableCRC = msg.send_table_crc;
 
-	m_bIsHLTV = msg.is_hltv();
+	m_bIsHLTV = msg.is_hltv;
 
 #if defined( REPLAY_ENABLED )
-	m_bIsReplay = msg.is_replay();
+	m_bIsReplay = msg.is_replay;
 #endif
 
 	m_nFilesDownloaded = 0;
-	Q_strncpy( m_FriendsName, msg.friends_name().c_str(), sizeof(m_FriendsName) );
+	Q_strncpy( m_FriendsName, msg.friends_name->c_str(), sizeof(m_FriendsName) );
 
 	for ( int i=0; i<MAX_CUSTOM_FILES; i++ ) 
 	{
-		CRC32_t crc = ( i < msg.custom_files_size() ) ? msg.custom_files( i ) : 0;
+		CRC32_t crc = ( i < msg.custom_files.size() ) ? msg.custom_files[ i ] : 0;
 
 		m_nCustomFiles[i].crc = crc;
 		m_nCustomFiles[i].reqID = 0;
 	}
 
-	if ( msg.server_count() != ( uint32 )m_Server->GetSpawnCount() )
+	if ( msg.server_count != ( uint32 )m_Server->GetSpawnCount() )
 	{
 		Reconnect();	// client still in old game, reconnect
 	}
@@ -1181,23 +1181,23 @@ bool CBaseClient::CLCMsg_ClientInfo( const CCLCMsg_ClientInfo& msg )
 	return true;
 }
 
-bool CBaseClient::CLCMsg_LoadingProgress( const CCLCMsg_LoadingProgress& msg )
+bool CBaseClient::CLCMsg_LoadingProgress( const ks::net::CCLCMsg_LoadingProgress& msg )
 {
-	m_nLoadingProgress = msg.progress();
+	m_nLoadingProgress = msg.progress;
 	return true;
 }
 
-bool CBaseClient::CLCMsg_BaselineAck( const CCLCMsg_BaselineAck& msg )
+bool CBaseClient::CLCMsg_BaselineAck( const ks::net::CCLCMsg_BaselineAck& msg )
 {
-	if ( msg.baseline_tick() != m_nBaselineUpdateTick )
+	if ( msg.baseline_tick != m_nBaselineUpdateTick )
 	{
 		// This occurs when there are multiple ack's queued up for processing from a client.
 		return true;
 	}
 
-	if ( msg.baseline_nr() != m_nBaselineUsed )
+	if ( msg.baseline_nr != m_nBaselineUsed )
 	{
-		DevMsg("CBaseClient::ProcessBaselineAck: wrong baseline nr received (%i)\n", msg.baseline_tick() );
+		DevMsg("CBaseClient::ProcessBaselineAck: wrong baseline nr received (%i)\n", msg.baseline_tick );
 		return true;
 	}
 
@@ -1264,7 +1264,7 @@ bool CBaseClient::CLCMsg_BaselineAck( const CCLCMsg_BaselineAck& msg )
 	return true;
 }
 
-bool CBaseClient::CLCMsg_ListenEvents( const CCLCMsg_ListenEvents& msg )
+bool CBaseClient::CLCMsg_ListenEvents( const ks::net::CCLCMsg_ListenEvents& msg )
 {
 	// first remove the client as listener
 	g_GameEventManager.RemoveListener( this );
@@ -1272,16 +1272,16 @@ bool CBaseClient::CLCMsg_ListenEvents( const CCLCMsg_ListenEvents& msg )
 	CBitVec<MAX_EVENT_NUMBER> EventArray;
 
 	//lwss add - Prevent stack overflow (yes this is in retail too)
-	if( msg.event_mask_size() > 15 )
+	if( msg.event_mask.size() > 15 )
     {
 	    DevMsg("ProcessListenEvents: Overflow! Too many event masks in protobuf!\n");
 	    return false;
     }
 	//lwss end
 
-	for( int i = 0; i < msg.event_mask_size(); i++ )
+	for( int i = 0; i < msg.event_mask.size(); i++ )
 	{
-		EventArray.SetDWord( i, msg.event_mask( i ) );
+		EventArray.SetDWord( i, msg.event_mask[ i ] );
 	}
 
 	int index = EventArray.FindNextSetBit( 0 );
@@ -1506,7 +1506,7 @@ bool CBaseClient::SendSnapshot( CClientFrame *pFrame )
 	// send max 64 events in multi player, 255 in SP
 	int nMaxTempEnts = m_Server->IsMultiplayer() ? sv_multiplayer_maxtempentities.GetInt() : 255;
 	m_Server->WriteTempEntities( this, pFrame->GetSnapshot(), m_pLastSnapshot.GetObject(), m_tempentsmsg, nMaxTempEnts );
-	if ( m_tempentsmsg.num_entries() )
+	if ( m_tempentsmsg.num_entries )
 	{
 		m_tempentsmsg.WriteToBuffer( msg );
 	}
@@ -1979,7 +1979,7 @@ void CBaseClient::FillSignOnFullServerInfo( CNETMsg_SignonState_t &state )
 
 
 	const char *pMapname = HostState_GetNewLevel();
-	state.set_map_name( pMapname ? pMapname : "" );
+	state.map_name = pMapname ? pMapname : "";
 }
 
 struct SessionClient_t
@@ -2109,7 +2109,7 @@ bool CBaseClient::CheckConnect()
 	return true;
 }
 
-bool CBaseClient::CLCMsg_SplitPlayerConnect( const CCLCMsg_SplitPlayerConnect& msg )
+bool CBaseClient::CLCMsg_SplitPlayerConnect( const ks::net::CCLCMsg_SplitPlayerConnect& msg )
 {
 	int slot = GetAvailableSplitScreenSlot();
 	if ( slot == -1 )
@@ -2119,7 +2119,7 @@ bool CBaseClient::CLCMsg_SplitPlayerConnect( const CCLCMsg_SplitPlayerConnect& m
 		return true;
 	}
 
-	CBaseClient *pSplitClient = sv.CreateSplitClient( msg.convars(), this );
+	CBaseClient *pSplitClient = sv.CreateSplitClient( msg.convars, this );
 	if ( pSplitClient )
 	{
 		Assert( pSplitClient->m_bSplitScreenUser );
@@ -2129,9 +2129,9 @@ bool CBaseClient::CLCMsg_SplitPlayerConnect( const CCLCMsg_SplitPlayerConnect& m
 		m_SplitScreenUsers[ slot ] = pSplitClient;
 		
 		CSVCMsg_SplitScreen_t splitscreenmsg;
-		splitscreenmsg.set_player_index( pSplitClient->m_nEntityIndex );
-		splitscreenmsg.set_slot( slot );
-		splitscreenmsg.set_type( MSG_SPLITSCREEN_ADDUSER );
+		splitscreenmsg.player_index = pSplitClient->m_nEntityIndex;
+		splitscreenmsg.slot = slot;
+		splitscreenmsg.type = ks::net::MSG_SPLITSCREEN_ADDUSER;
 
 		m_NetChannel->AttachSplitPlayer( slot, pSplitClient->m_NetChannel );
 
@@ -2147,7 +2147,7 @@ bool CBaseClient::CLCMsg_SplitPlayerConnect( const CCLCMsg_SplitPlayerConnect& m
 	return true;
 }
 
-bool CBaseClient::CLCMsg_CmdKeyValues( const CCLCMsg_CmdKeyValues& msg )
+bool CBaseClient::CLCMsg_CmdKeyValues( const ks::net::CCLCMsg_CmdKeyValues& msg )
 {
 	return true;
 }
@@ -2175,9 +2175,9 @@ void CBaseClient::DisconnectSplitScreenUser( CBaseClient *pSplitClient )
 {
 	sv.QueueSplitScreenDisconnect( this, pSplitClient );
 	CSVCMsg_SplitScreen_t msg;
-	msg.set_player_index( pSplitClient->m_nEntityIndex );
-	msg.set_slot( pSplitClient->m_nSplitScreenPlayerSlot );
-	msg.set_type( MSG_SPLITSCREEN_REMOVEUSER );
+	msg.player_index = pSplitClient->m_nEntityIndex;
+	msg.slot = pSplitClient->m_nSplitScreenPlayerSlot;
+	msg.type = ks::net::MSG_SPLITSCREEN_REMOVEUSER;
 
 	m_NetChannel->DetachSplitPlayer( pSplitClient->m_nSplitScreenPlayerSlot );
 

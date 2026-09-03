@@ -590,7 +590,7 @@ void CBaseClientState::ConnectionClosing( const char *reason )
 // Purpose: A svc_signonnum has been received, perform a client side setup
 // Output : void CL_SignonReply
 //-----------------------------------------------------------------------------
-bool CBaseClientState::SetSignonState ( int state, int count, const CNETMsg_SignonState *msg )
+bool CBaseClientState::SetSignonState ( int state, int count, const ks::net::CNETMsg_SignonState *msg )
 {
 	//	ConDMsg ("CL_SignonReply: %i\n", GetBaseLocalClient().signon);
 
@@ -702,17 +702,17 @@ void CBaseClientState::SendConnectPacket ( const ns_address &netAdrRemote, int c
 	for( int playerCount = 0; playerCount < m_nNumPlayersToConnect; ++playerCount )
 	{
 		CCLCMsg_SplitPlayerConnect_t splitMsg;
-		Host_BuildUserInfoUpdateMessage( playerCount, splitMsg.mutable_convars(), false );
+		Host_BuildUserInfoUpdateMessage( playerCount, &splitMsg.convars.mut(), false );
 		if ( CHLTVClientState *pHLTVClientState = dynamic_cast< CHLTVClientState * >( this ) )
 		{
-			pHLTVClientState->SetLocalInfoConvarsForUpstreamConnection( *splitMsg.mutable_convars(), true );
+			pHLTVClientState->SetLocalInfoConvarsForUpstreamConnection( splitMsg.convars.mut(), true );
 		}
 #ifdef _DEBUG
-		for ( int ii = 0; ii < splitMsg.convars().cvars_size(); ++ ii )
+		for ( int ii = 0; ii < splitMsg.convars->cvars.size(); ++ ii )
 		{
-			CMsg_CVars::CVar cvinfo( splitMsg.convars().cvars( ii ) );
+			ks::net::CMsg_CVars::CVar cvinfo( splitMsg.convars->cvars[ ii ] );
 			NetMsgExpandCVarUsingDictionary( &cvinfo );
-			DevMsg( "[NET] connect user info: '%s' = '%s'\n", cvinfo.name().c_str(), cvinfo.value().c_str() );
+			DevMsg( "[NET] connect user info: '%s' = '%s'\n", cvinfo.name->c_str(), cvinfo.value->c_str() );
 		}
 #endif
 		splitMsg.WriteToBuffer( msg );
@@ -2063,19 +2063,19 @@ void CBaseClientState::HandleDeferredConnection()
 }
 
 
-bool CBaseClientState::NETMsg_Tick( const CNETMsg_Tick& msg )
+bool CBaseClientState::NETMsg_Tick( const ks::net::CNETMsg_Tick& msg )
 {
 	VPROF( "ProcessTick" );
 
 	m_NetChannel->SetRemoteFramerate(
-		CNETMsg_Tick_t::FrametimeToFloat( msg.host_computationtime() ),
-		CNETMsg_Tick_t::FrametimeToFloat( msg.host_computationtime_std_deviation() ),
-		CNETMsg_Tick_t::FrametimeToFloat( msg.host_framestarttime_std_deviation() ) );
+		CNETMsg_Tick_t::FrametimeToFloat( msg.host_computationtime ),
+		CNETMsg_Tick_t::FrametimeToFloat( msg.host_computationtime_std_deviation ),
+		CNETMsg_Tick_t::FrametimeToFloat( msg.host_framestarttime_std_deviation ) );
 
 	// Note: CClientState separates the client and server clock states and drifts
 	// the client's clock to match the server's, but right here, we keep the two clocks in sync.
-	SetClientTickCount( msg.tick() );
-	SetServerTickCount( msg.tick() );
+	SetClientTickCount( msg.tick );
+	SetServerTickCount( msg.tick );
 
 	if ( m_StringTableContainer )
 	{
@@ -2100,7 +2100,7 @@ void CBaseClientState::SendStringCmd(const char * command)
 	}
 }
 
-bool CBaseClientState::NETMsg_StringCmd( const CNETMsg_StringCmd& msg )
+bool CBaseClientState::NETMsg_StringCmd( const ks::net::CNETMsg_StringCmd& msg )
 {
 	VPROF( "ProcessStringCmd" );
 
@@ -2108,9 +2108,9 @@ bool CBaseClientState::NETMsg_StringCmd( const CNETMsg_StringCmd& msg )
 }
 
 
-bool CBaseClientState::InternalProcessStringCmd( const CNETMsg_StringCmd& msg )
+bool CBaseClientState::InternalProcessStringCmd( const ks::net::CNETMsg_StringCmd& msg )
 {
-	const char *command = msg.command().c_str();
+	const char *command = msg.command->c_str();
 
 	// Don't restrict commands from the server in single player or if cl_restrict_stuffed_commands is 0.
 	if ( !m_bRestrictServerCommands || sv.IsActive() )
@@ -2132,9 +2132,9 @@ bool CBaseClientState::InternalProcessStringCmd( const CNETMsg_StringCmd& msg )
 }
 
 
-bool CBaseClientState::NETMsg_PlayerAvatarData( const CNETMsg_PlayerAvatarData& msg )
+bool CBaseClientState::NETMsg_PlayerAvatarData( const ks::net::CNETMsg_PlayerAvatarData& msg )
 {
-	PlayerAvatarDataMap_t::IndexType_t idxData = m_mapPlayerAvatarData.Find( msg.accountid() );
+	PlayerAvatarDataMap_t::IndexType_t idxData = m_mapPlayerAvatarData.Find( msg.accountid );
 	if ( idxData != m_mapPlayerAvatarData.InvalidIndex() )
 	{
 		delete m_mapPlayerAvatarData.Element( idxData );
@@ -2143,7 +2143,7 @@ bool CBaseClientState::NETMsg_PlayerAvatarData( const CNETMsg_PlayerAvatarData& 
 
 	CNETMsg_PlayerAvatarData_t *pClientDataCopy = new CNETMsg_PlayerAvatarData_t;
 	pClientDataCopy->CopyFrom( msg );
-	m_mapPlayerAvatarData.Insert( pClientDataCopy->accountid(), pClientDataCopy );
+	m_mapPlayerAvatarData.Insert( pClientDataCopy->accountid, pClientDataCopy );
 
 	return true;
 }
@@ -2196,7 +2196,7 @@ CNETMsg_PlayerAvatarData_t * CBaseClientState::AllocOwnPlayerAvatarData() const
 	return NULL;
 }
 
-bool CBaseClientState::NETMsg_SetConVar( const CNETMsg_SetConVar& msg )
+bool CBaseClientState::NETMsg_SetConVar( const ks::net::CNETMsg_SetConVar& msg )
 {
 	VPROF( "ProcessSetConVar" );
 
@@ -2204,10 +2204,10 @@ bool CBaseClientState::NETMsg_SetConVar( const CNETMsg_SetConVar& msg )
 	if ( m_NetChannel->IsLoopback() )
 		return true;
 
-	for ( int i=0; i<msg.convars().cvars_size(); i++ )
+	for ( int i=0; i<msg.convars->cvars.size(); i++ )
 	{
-		const char *name = NetMsgGetCVarUsingDictionary( msg.convars().cvars(i) );
-		const char *value = msg.convars().cvars(i).value().c_str();
+		const char *name = NetMsgGetCVarUsingDictionary( msg.convars->cvars[ i ] );
+		const char *value = msg.convars->cvars[ i ].value->c_str();
 
 		// De-constify
 		ConVarRef var( name );
@@ -2238,22 +2238,22 @@ bool CBaseClientState::NETMsg_SetConVar( const CNETMsg_SetConVar& msg )
 	return true;
 }
 
-bool CBaseClientState::NETMsg_SignonState( const CNETMsg_SignonState& msg )
+bool CBaseClientState::NETMsg_SignonState( const ks::net::CNETMsg_SignonState& msg )
 {
 	VPROF( "ProcessSignonState" );
 
-	return SetSignonState( msg.signon_state(), msg.spawn_count(), &msg ) ;	
+	return SetSignonState( msg.signon_state, msg.spawn_count, &msg ) ;	
 }
 
-bool CBaseClientState::SVCMsg_Print( const CSVCMsg_Print& msg )
+bool CBaseClientState::SVCMsg_Print( const ks::net::CSVCMsg_Print& msg )
 {
 	VPROF( "SVCMsg_Print" );
 
-	ConMsg( "%s", msg.text().c_str() );
+	ConMsg( "%s", msg.text->c_str() );
 	return true;
 }
 
-bool CBaseClientState::SVCMsg_Menu( const CSVCMsg_Menu& msg )
+bool CBaseClientState::SVCMsg_Menu( const ks::net::CSVCMsg_Menu& msg )
 {
 	VPROF( "SVCMsg_Menu" );
 
@@ -2263,7 +2263,7 @@ bool CBaseClientState::SVCMsg_Menu( const CSVCMsg_Menu& msg )
 	return true;
 }
 
-bool CBaseClientState::SVCMsg_ServerInfo( const CSVCMsg_ServerInfo& msg )
+bool CBaseClientState::SVCMsg_ServerInfo( const ks::net::CSVCMsg_ServerInfo& msg )
 {
 	VPROF( "SVCMsg_ServerInfo" );
 
@@ -2273,27 +2273,27 @@ bool CBaseClientState::SVCMsg_ServerInfo( const CSVCMsg_ServerInfo& msg )
 
 	COM_TimestampedLog( " CBaseClient::SVCMsg_ServerInfo" );
 	
-	if ( msg.protocol() != GetHostVersion() )
+	if ( msg.protocol != GetHostVersion() )
 	{
 #if !defined( DEDICATED )
 		if ( demoplayer && demoplayer->IsPlayingBack() )
 		{
-			ConMsg ( "WARNING: Server demo version %i, client version %i.\n", msg.protocol(), GetHostVersion() );
+			ConMsg ( "WARNING: Server demo version %i, client version %i.\n", msg.protocol, GetHostVersion() );
 		}
 		else
 #endif
 		{
-			ConMsg ( "WARNING: Server version %i, client version %i.\n", msg.protocol(), GetHostVersion() );
+			ConMsg ( "WARNING: Server version %i, client version %i.\n", msg.protocol, GetHostVersion() );
 		}
 	}
 
 	// Parse servercount (i.e., # of servers spawned since server .exe started)
 	// So that we can detect new server startup during download, etc.
-	m_nServerCount = msg.server_count();
+	m_nServerCount = msg.server_count;
 
-	m_nMaxClients = msg.max_clients();
+	m_nMaxClients = msg.max_clients;
 
-	m_nServerClasses = msg.max_classes();
+	m_nServerClasses = msg.max_classes;
 	m_nServerClassBits = Q_log2( m_nServerClasses ) + 1;
 	
 	if ( m_nMaxClients < 1 || m_nMaxClients > ABSOLUTE_PLAYER_LIMIT )
@@ -2328,29 +2328,29 @@ bool CBaseClientState::SVCMsg_ServerInfo( const CSVCMsg_ServerInfo& msg )
 	g_GameEventManager.HasClientListenersChanged( true );
 	
 #ifndef DEDICATED
-	splitscreen->AddBaseUser( 0, msg.player_slot() + 1 );
+	splitscreen->AddBaseUser( 0, msg.player_slot + 1 );
 #endif
-	m_nPlayerSlot = msg.player_slot();
-	m_nViewEntity = msg.player_slot() + 1; 
+	m_nPlayerSlot = msg.player_slot;
+	m_nViewEntity = msg.player_slot + 1; 
 	
-	if ( msg.tick_interval() < MINIMUM_TICK_INTERVAL ||
-		 msg.tick_interval() > MAXIMUM_TICK_INTERVAL )
+	if ( msg.tick_interval < MINIMUM_TICK_INTERVAL ||
+		 msg.tick_interval > MAXIMUM_TICK_INTERVAL )
 	{
 		ConMsg ("Interval_per_tick %f out of range [%f to %f]\n",
-			msg.tick_interval(), MINIMUM_TICK_INTERVAL, MAXIMUM_TICK_INTERVAL );
+			msg.tick_interval, MINIMUM_TICK_INTERVAL, MAXIMUM_TICK_INTERVAL );
 		return false;
 	}
 	
-	if ( !COM_CheckGameDirectory( msg.game_dir().c_str() ) )
+	if ( !COM_CheckGameDirectory( msg.game_dir->c_str() ) )
 	{
 		return false;
 	}
 
-	Q_snprintf( m_szLevelName, sizeof( m_szLevelName ), "maps/%s%s.bsp", msg.map_name().c_str(), GetPlatformExt() );
+	Q_snprintf( m_szLevelName, sizeof( m_szLevelName ), "maps/%s%s.bsp", msg.map_name->c_str(), GetPlatformExt() );
 	Q_FixSlashes( m_szLevelName );
-	Q_strncpy( m_szLevelNameShort, msg.map_name().c_str(), sizeof( m_szLevelNameShort ) );
-	Q_strncpy( m_szMapGroupName, msg.map_group_name().c_str(), sizeof( m_szMapGroupName ) );
-	m_unUGCMapFileID = msg.ugc_map_id();
+	Q_strncpy( m_szLevelNameShort, msg.map_name->c_str(), sizeof( m_szLevelNameShort ) );
+	Q_strncpy( m_szMapGroupName, msg.map_group_name->c_str(), sizeof( m_szMapGroupName ) );
+	m_unUGCMapFileID = msg.ugc_map_id;
 
 #if !defined(DEDICATED)
 	EngineUI()->SetProgressLevelName( m_szLevelNameShort );
@@ -2360,7 +2360,7 @@ bool CBaseClientState::SVCMsg_ServerInfo( const CSVCMsg_ServerInfo& msg )
 	ConVarRef skyname( "sv_skyname" );
 	if ( skyname.IsValid() )
 	{
-		skyname.SetValue( msg.sky_name().c_str() );
+		skyname.SetValue( msg.sky_name->c_str() );
 	}
 
 	m_nDeltaTick = -1;	// no valid snapshot for this game yet
@@ -2369,7 +2369,7 @@ bool CBaseClientState::SVCMsg_ServerInfo( const CSVCMsg_ServerInfo& msg )
 	IGameEvent *pEvent = g_GameEventManager.CreateEvent( "server_spawn" );
 	if ( pEvent )
 	{
-		pEvent->SetString( "hostname", msg.host_name().c_str() );
+		pEvent->SetString( "hostname", msg.host_name->c_str() );
 
 		ns_address adr = m_NetChannel->GetRemoteAddress();
 		if ( adr.IsType<netadr_t>() )
@@ -2382,13 +2382,13 @@ bool CBaseClientState::SVCMsg_ServerInfo( const CSVCMsg_ServerInfo& msg )
 			pEvent->SetString( "address", ns_address_render( adr ).String() );
 		}
 
-		pEvent->SetString( "game", msg.game_dir().c_str() );
-		pEvent->SetString( "mapname", msg.map_name().c_str() );
-		pEvent->SetInt(    "maxplayers", msg.max_clients() );
+		pEvent->SetString( "game", msg.game_dir->c_str() );
+		pEvent->SetString( "mapname", msg.map_name->c_str() );
+		pEvent->SetInt(    "maxplayers", msg.max_clients );
 		pEvent->SetInt(	   "password", 0 );				// TODO
-		pEvent->SetString( "os", Q_strupr( va("%c", msg.c_os() ) ) );
-		pEvent->SetBool(    "dedicated", msg.is_dedicated() );
-		pEvent->SetBool(    "official", msg.is_official_valve_server() );
+		pEvent->SetString( "os", Q_strupr( va("%c", msg.c_os ) ) );
+		pEvent->SetBool(    "dedicated", msg.is_dedicated );
+		pEvent->SetBool(    "official", msg.is_official_valve_server );
 		if ( m_ulGameServerSteamID != 0 )
 		{
 			pEvent->SetString( "steamid", CSteamID( m_ulGameServerSteamID ).Render() );
@@ -2401,7 +2401,7 @@ bool CBaseClientState::SVCMsg_ServerInfo( const CSVCMsg_ServerInfo& msg )
 	// Verify that the client doesn't play on the server with mismatching version
 	if ( m_nServerProtocolVersion && ( GetHostVersion() > m_nServerProtocolVersion ) )
 	{
-		if ( !msg.is_hltv() && !msg.is_redirecting_to_proxy_relay() )
+		if ( !msg.is_hltv && !msg.is_redirecting_to_proxy_relay )
 		{
 			// Newer client attempts to play on an older server which is not GOTV, bail here
 			Warning( "Failed to connect to a gameserver, client version %d, server version %d\n", GetHostVersion(), m_nServerProtocolVersion );
@@ -2412,9 +2412,9 @@ bool CBaseClientState::SVCMsg_ServerInfo( const CSVCMsg_ServerInfo& msg )
 
 	// must be set BEFORE loading bsp which indicates above dependent code has completed
 	m_bServerInfoProcessed = true;
-	m_nServerInfoMsgProtocol = msg.protocol();
+	m_nServerInfoMsgProtocol = msg.protocol;
 
-	if ( !sv.IsActive() && ( !msg.is_hltv() || !msg.is_redirecting_to_proxy_relay() ) )
+	if ( !sv.IsActive() && ( !msg.is_hltv || !msg.is_redirecting_to_proxy_relay ) )
 	{
 		// For a non-local connection, the bsp needs to be loaded first, BEFORE any server string table
 		// callbacks occur.  These occur after this function and before the SIGNONSTATE_NEW,
@@ -2444,7 +2444,7 @@ bool CBaseClientState::SVCMsg_ServerInfo( const CSVCMsg_ServerInfo& msg )
 		if ( !bIsRelay ) // not a single one of the hltv servers is relay
 		{
 			char bspModelName[ MAX_PATH ];
-			Q_snprintf( bspModelName, sizeof( bspModelName ), "maps/%s.bsp", msg.map_name().c_str() );
+			Q_snprintf( bspModelName, sizeof( bspModelName ), "maps/%s.bsp", msg.map_name->c_str() );
 
 #if !defined( DEDICATED )
 			bool bCrcClientMapValid = false;
@@ -2466,7 +2466,7 @@ bool CBaseClientState::SVCMsg_ServerInfo( const CSVCMsg_ServerInfo& msg )
 			{
 				// We are playing a demo
 				// Can we use the map on disk directly?
-				if ( bCrcClientMapValid && msg.map_crc() && ( crcClientMap == msg.map_crc() ) )
+				if ( bCrcClientMapValid && msg.map_crc && ( crcClientMap == msg.map_crc ) )
 				{
 					// Seems like everything looks good on disk and we can proceed with map on disk
 				}
@@ -2477,7 +2477,7 @@ bool CBaseClientState::SVCMsg_ServerInfo( const CSVCMsg_ServerInfo& msg )
 					// There are some known official maps that we can redirect into proper version
 					// on Steam Workshop.
 					char chMapName[ MAX_PATH ] = { 0 };
-					V_sprintf_safe( chMapName, "%s", msg.map_name().c_str() );
+					V_sprintf_safe( chMapName, "%s", msg.map_name->c_str() );
 					// Check if it's Valve official Workshop symbolic link
 					if ( char const *szPastWorkshop = StringAfterPrefix( chMapName, "workshop/" ) )
 					{
@@ -2499,12 +2499,12 @@ bool CBaseClientState::SVCMsg_ServerInfo( const CSVCMsg_ServerInfo& msg )
 					if ( debug_map_crc.GetBool() && !uiKnownVersionWkshpId )
 					{	// Force a debug error when debugging map CRC's
 						Warning( "debug_map_crc: Map version mismatch for %s CRC=%u, no fallback version specified in csgo_official_map_versions!\n",
-							chMapName, msg.map_crc() );
+							chMapName, msg.map_crc );
 					}
 
 					if ( uiKnownVersionWkshpId )
 					{	// We have a fallback version specified for the CRC mismatch
-						Msg( "Map version fallback for %s CRC=%u: %llu (CRC=%u)\n", chMapName, msg.map_crc(), uiKnownVersionWkshpId, uiRepackedWkshpCrc );
+						Msg( "Map version fallback for %s CRC=%u: %llu (CRC=%u)\n", chMapName, msg.map_crc, uiKnownVersionWkshpId, uiRepackedWkshpCrc );
 						Q_snprintf( m_szLevelName, sizeof( m_szLevelName ), "maps/workshop/%llu/%s.bsp", uiKnownVersionWkshpId, chMapName );
 						Q_FixSlashes( m_szLevelName );
 						Q_snprintf( m_szLevelNameShort, sizeof( m_szLevelNameShort ), "workshop/%llu/%s", uiKnownVersionWkshpId, chMapName );
@@ -2513,7 +2513,7 @@ bool CBaseClientState::SVCMsg_ServerInfo( const CSVCMsg_ServerInfo& msg )
 						m_unUGCMapFileID = uiKnownVersionWkshpId;
 
 						// Dirty method: patch in a different map crc for derived class processing to pick up repacked crc value
-						const_cast< CSVCMsg_ServerInfo & >( msg ).set_map_crc( uiRepackedWkshpCrc );
+						const_cast< ks::net::CSVCMsg_ServerInfo & >( msg ).map_crc = uiRepackedWkshpCrc;
 
 						// Check if we already have the workshop file for the fallback version downloaded
 						FileHandle_t mapfile = g_pFileSystem->OpenEx( bspModelName, "rb", 0, "GAME" );
@@ -2530,7 +2530,7 @@ bool CBaseClientState::SVCMsg_ServerInfo( const CSVCMsg_ServerInfo& msg )
 			else
 			{
 				// We are not playing a demo
-				if ( bCrcClientMapValid && msg.map_crc() && ( crcClientMap != msg.map_crc() ) && ( m_unUGCMapFileID != 0 ) )
+				if ( bCrcClientMapValid && msg.map_crc && ( crcClientMap != msg.map_crc ) && ( m_unUGCMapFileID != 0 ) )
 					bClientHasMap = false; // If the crc doesn't match servers delay map load until after downloading new version from the workshop
 			}
 
@@ -2543,7 +2543,7 @@ bool CBaseClientState::SVCMsg_ServerInfo( const CSVCMsg_ServerInfo& msg )
 	} // not a relay
 
 	// If we connect to a dedicated server, we need to load up the dictionary file
-	CRC32_t crc = CRC32_ConvertFromUnsignedLong( msg.string_table_crc() );
+	CRC32_t crc = CRC32_ConvertFromUnsignedLong( msg.string_table_crc );
 	if ( !g_pStringTableDictionary->OnLevelLoadStart( bClientHasMap ? m_szLevelNameShort : NULL, &crc ) )
 	{
 		// Allow us to continue with a mismatch string table
@@ -2562,7 +2562,7 @@ bool CBaseClientState::SVCMsg_ServerInfo( const CSVCMsg_ServerInfo& msg )
 	return true;
 }
 
-bool CBaseClientState::SVCMsg_SendTable( const CSVCMsg_SendTable& msg )
+bool CBaseClientState::SVCMsg_SendTable( const ks::net::CSVCMsg_SendTable& msg )
 {
 	VPROF( "SVCMsg_SendTable" );
 
@@ -2575,13 +2575,13 @@ bool CBaseClientState::SVCMsg_SendTable( const CSVCMsg_SendTable& msg )
 	return true;
 }
 
-bool CBaseClientState::SVCMsg_ClassInfo( const CSVCMsg_ClassInfo& msg )
+bool CBaseClientState::SVCMsg_ClassInfo( const ks::net::CSVCMsg_ClassInfo& msg )
 {
 	VPROF( "SVCMsg_ClassInfo" );
 
 	COM_TimestampedLog( " CBaseClient::SVCMsg_ClassInfo" );
 
-	if ( msg.create_on_client() )
+	if ( msg.create_on_client )
 	{
 		ConMsg ( "Can't create class tables.\n");
 		Assert( 0 );
@@ -2593,7 +2593,7 @@ bool CBaseClientState::SVCMsg_ClassInfo( const CSVCMsg_ClassInfo& msg )
 		delete [] m_pServerClasses;
 	}
 
-	m_nServerClasses = msg.classes_size();
+	m_nServerClasses = msg.classes.size();
 	m_pServerClasses = new C_ServerClassInfo[ m_nServerClasses ];
 
 	if ( !m_pServerClasses )
@@ -2605,22 +2605,22 @@ bool CBaseClientState::SVCMsg_ClassInfo( const CSVCMsg_ClassInfo& msg )
 	// copy class names and class IDs from message to CClientState
 	for (int i=0; i<m_nServerClasses; i++)
 	{
-		const CSVCMsg_ClassInfo::class_t& svclass = msg.classes( i );
+		const ks::net::CSVCMsg_ClassInfo::class_t& svclass = msg.classes[ i ];
 
-		if( svclass.class_id() >= m_nServerClasses )
+		if( svclass.class_id >= m_nServerClasses )
 		{
-			Host_EndGame(true, "SVCMsg_ClassInfo: invalid class index (%d).\n", svclass.class_id());
+			Host_EndGame(true, "SVCMsg_ClassInfo: invalid class index (%d).\n", svclass.class_id);
 			return false;
 		}
 
-		C_ServerClassInfo * svclassinfo = &m_pServerClasses[svclass.class_id()];
+		C_ServerClassInfo * svclassinfo = &m_pServerClasses[svclass.class_id];
 
-		int len = Q_strlen(svclass.class_name().c_str()) + 1;
+		int len = Q_strlen(svclass.class_name->c_str()) + 1;
 		svclassinfo->m_ClassName = new char[ len ];
-		Q_strncpy( svclassinfo->m_ClassName, svclass.class_name().c_str(), len );
-		len = Q_strlen(svclass.data_table_name().c_str()) + 1;
+		Q_strncpy( svclassinfo->m_ClassName, svclass.class_name->c_str(), len );
+		len = Q_strlen(svclass.data_table_name->c_str()) + 1;
 		svclassinfo->m_DatatableName = new char[ len ];
-		Q_strncpy( svclassinfo->m_DatatableName,svclass.data_table_name().c_str(), len );
+		Q_strncpy( svclassinfo->m_DatatableName,svclass.data_table_name->c_str(), len );
 	}
 
 	COM_TimestampedLog( " CBaseClient::SVCMsg_ClassInfo(done)" );
@@ -2628,16 +2628,16 @@ bool CBaseClientState::SVCMsg_ClassInfo( const CSVCMsg_ClassInfo& msg )
 	return LinkClasses();	// link server and client classes
 }
 
-bool CBaseClientState::SVCMsg_SetPause( const CSVCMsg_SetPause& msg )
+bool CBaseClientState::SVCMsg_SetPause( const ks::net::CSVCMsg_SetPause& msg )
 {
 	VPROF( "SVCMsg_SetPause" );
 
-	m_bPaused = msg.paused();
+	m_bPaused = msg.paused;
 	return true;
 }
 
 
-bool CBaseClientState::SVCMsg_CreateStringTable( const CSVCMsg_CreateStringTable &msg )
+bool CBaseClientState::SVCMsg_CreateStringTable( const ks::net::CSVCMsg_CreateStringTable &msg )
 {
 	VPROF( "SVCMsg_CreateStringTable" );
 
@@ -2645,31 +2645,31 @@ bool CBaseClientState::SVCMsg_CreateStringTable( const CSVCMsg_CreateStringTable
 	EngineUI()->UpdateProgressBar(PROGRESS_PROCESSSTRINGTABLE);
 #endif
 
-	COM_TimestampedLog( " CBaseClient::ProcessCreateStringTable(%s)", msg.name().c_str() );
+	COM_TimestampedLog( " CBaseClient::ProcessCreateStringTable(%s)", msg.name->c_str() );
 	m_StringTableContainer->AllowCreation( true );
 
 #ifndef SHARED_NET_STRING_TABLES
 	CNetworkStringTable *table = (CNetworkStringTable*)
-		m_StringTableContainer->CreateStringTable( msg.name().c_str(), msg.max_entries(), msg.user_data_size(), msg.user_data_size_bits(), msg.flags() );
+		m_StringTableContainer->CreateStringTable( msg.name->c_str(), msg.max_entries, msg.user_data_size, msg.user_data_size_bits, msg.flags );
 
 	Assert ( table );
 
 	table->SetTick( GetServerTickCount() ); // set creation tick
 
-	HookClientStringTable( msg.name().c_str() );
+	HookClientStringTable( msg.name->c_str() );
 	
-	bf_read data( &msg.string_data()[0], msg.string_data().size() );
-	table->ParseUpdate( data, msg.num_entries() );
+	bf_read data( msg.string_data->data(), msg.string_data->size() );
+	table->ParseUpdate( data, msg.num_entries );
 
 #endif
 
 	m_StringTableContainer->AllowCreation( false );
 
-	COM_TimestampedLog( " CBaseClient::ProcessCreateStringTable(%s)-done", msg.name().c_str() );
+	COM_TimestampedLog( " CBaseClient::ProcessCreateStringTable(%s)-done", msg.name->c_str() );
 	return true;
 }
 
-bool CBaseClientState::SVCMsg_UpdateStringTable( const CSVCMsg_UpdateStringTable &msg )
+bool CBaseClientState::SVCMsg_UpdateStringTable( const ks::net::CSVCMsg_UpdateStringTable &msg )
 {
 	VPROF( "ProcessUpdateStringTable" );
 
@@ -2680,10 +2680,10 @@ bool CBaseClientState::SVCMsg_UpdateStringTable( const CSVCMsg_UpdateStringTable
 	if(m_StringTableContainer != NULL)
 	{
 		CNetworkStringTable *table = (CNetworkStringTable*)
-			m_StringTableContainer->GetTable( msg.table_id() );
+			m_StringTableContainer->GetTable( msg.table_id );
 
-		bf_read data( &msg.string_data()[0], msg.string_data().size() );
-		table->ParseUpdate( data, msg.num_changed_entries() );
+		bf_read data( msg.string_data->data(), msg.string_data->size() );
+		table->ParseUpdate( data, msg.num_changed_entries );
 	}
 	else
 	{
@@ -2694,14 +2694,14 @@ bool CBaseClientState::SVCMsg_UpdateStringTable( const CSVCMsg_UpdateStringTable
 	return true;
 }
 
-bool CBaseClientState::SVCMsg_SetView( const CSVCMsg_SetView& msg )
+bool CBaseClientState::SVCMsg_SetView( const ks::net::CSVCMsg_SetView& msg )
 {
 
-	m_nViewEntity = msg.entity_index();
+	m_nViewEntity = msg.entity_index;
 	return true;
 }
 
-bool CBaseClientState::SVCMsg_PacketEntities( const CSVCMsg_PacketEntities &msg )
+bool CBaseClientState::SVCMsg_PacketEntities( const ks::net::CSVCMsg_PacketEntities &msg )
 {
 	VPROF( "ProcessPacketEntities" );
 
@@ -2715,7 +2715,7 @@ bool CBaseClientState::SVCMsg_PacketEntities( const CSVCMsg_PacketEntities &msg 
 
 	if ( m_nSignonState == SIGNONSTATE_SPAWN )
 	{
-		if ( !msg.is_delta() )
+		if ( !msg.is_delta )
 		{
 			// We are done with signon sequence.
 			SetSignonState( SIGNONSTATE_FULL, m_nServerCount, NULL );
@@ -2728,7 +2728,7 @@ bool CBaseClientState::SVCMsg_PacketEntities( const CSVCMsg_PacketEntities &msg 
 	}
 
 	// overwrite a -1 delta_tick only if packet was uncompressed
-	if ( (m_nDeltaTick >= 0) || !msg.is_delta() )
+	if ( (m_nDeltaTick >= 0) || !msg.is_delta )
 	{
 		// we received this snapshot successfully, now this is our delta reference
 		m_nDeltaTick = GetServerTickCount();
@@ -2957,39 +2957,39 @@ bool CBaseClientState::GetClassBaseline( int iClass, SerializedEntityHandle_t *p
 	return *pHandle != SERIALIZED_ENTITY_HANDLE_INVALID;
 }
 
-bool CBaseClientState::SVCMsg_GameEventList( const CSVCMsg_GameEventList& msg )
+bool CBaseClientState::SVCMsg_GameEventList( const ks::net::CSVCMsg_GameEventList& msg )
 {
 	VPROF( "SVCMsg_GameEventList" );
 
 	return g_GameEventManager.ParseEventList( msg );
 }
 
-bool CBaseClientState::SVCMsg_GetCvarValue( const CSVCMsg_GetCvarValue& msg )
+bool CBaseClientState::SVCMsg_GetCvarValue( const ks::net::CSVCMsg_GetCvarValue& msg )
 {
 	VPROF( "SVCMsg_GetCvarValue" );
 
 	// Prepare the response.
 	CCLCMsg_RespondCvarValue_t returnMsg;
 
-	returnMsg.set_cookie( msg.cookie() );
-	returnMsg.set_name( msg.cvar_name().c_str() );
-	returnMsg.set_value( "" );
-	returnMsg.set_status_code( eQueryCvarValueStatus_CvarNotFound );
+	returnMsg.cookie = msg.cookie;
+	returnMsg.name = msg.cvar_name->c_str();
+	returnMsg.value = "";
+	returnMsg.status_code = eQueryCvarValueStatus_CvarNotFound;
 
 	char tempValue[256];
 
 	// Does any ConCommand exist with this name?
-	const ConVar *pVar = g_pCVar->FindVar( msg.cvar_name().c_str() );
+	const ConVar *pVar = g_pCVar->FindVar( msg.cvar_name->c_str() );
 	if ( pVar )
 	{
 		if ( pVar->IsFlagSet( FCVAR_SERVER_CANNOT_QUERY ) )
 		{
 			// The server isn't allowed to query this.
-			returnMsg.set_status_code( eQueryCvarValueStatus_CvarProtected );
+			returnMsg.status_code = eQueryCvarValueStatus_CvarProtected;
 		}
 		else
 		{
-			returnMsg.set_status_code( eQueryCvarValueStatus_ValueIntact );
+			returnMsg.status_code = eQueryCvarValueStatus_ValueIntact;
 
 			if ( pVar->IsFlagSet( FCVAR_NEVER_AS_STRING ) )
 			{
@@ -3002,21 +3002,21 @@ bool CBaseClientState::SVCMsg_GetCvarValue( const CSVCMsg_GetCvarValue& msg )
 				{
 					Q_snprintf( tempValue, sizeof( tempValue ), "%f", pVar->GetFloat() );
 				}
-				returnMsg.set_value( tempValue );
+				returnMsg.value = tempValue;
 			}
 			else
 			{
 				// The easy case..
-				returnMsg.set_value( pVar->GetString() );
+				returnMsg.value = pVar->GetString();
 			}
 		}				
 	}
 	else
 	{
-		if ( g_pCVar->FindCommand( msg.cvar_name().c_str() ) )
-			returnMsg.set_status_code( eQueryCvarValueStatus_NotACvar ); // It's a command, not a cvar.
+		if ( g_pCVar->FindCommand( msg.cvar_name->c_str() ) )
+			returnMsg.status_code = eQueryCvarValueStatus_NotACvar; // It's a command, not a cvar.
 		else
-			returnMsg.set_status_code( eQueryCvarValueStatus_CvarNotFound );
+			returnMsg.status_code = eQueryCvarValueStatus_CvarNotFound;
 	}
 
 	// Send back.
@@ -3024,22 +3024,22 @@ bool CBaseClientState::SVCMsg_GetCvarValue( const CSVCMsg_GetCvarValue& msg )
 	return true;
 }
 
-bool CBaseClientState::SVCMsg_SplitScreen( const CSVCMsg_SplitScreen& msg )
+bool CBaseClientState::SVCMsg_SplitScreen( const ks::net::CSVCMsg_SplitScreen& msg )
 {
 #ifndef DEDICATED
-	switch ( msg.type() )
+	switch ( msg.type )
 	{
 	default:
 		Assert( 0 );
 		break;
-	case MSG_SPLITSCREEN_ADDUSER:
+	case ks::net::MSG_SPLITSCREEN_ADDUSER:
 		{
-			splitscreen->AddSplitScreenUser( msg.slot(), msg.player_index() );
+			splitscreen->AddSplitScreenUser( msg.slot, msg.player_index );
 		}
 		break;
-	case MSG_SPLITSCREEN_REMOVEUSER:
+	case ks::net::MSG_SPLITSCREEN_REMOVEUSER:
 		{
-			splitscreen->RemoveSplitScreenUser( msg.slot(), msg.player_index() );
+			splitscreen->RemoveSplitScreenUser( msg.slot, msg.player_index );
 		}
 		break;
 	}
@@ -3061,7 +3061,7 @@ bool CBaseClientState::ChangeSplitscreenUser( int nSplitScreenUserSlot )
 	return true;
 }
 
-bool CBaseClientState::SVCMsg_CmdKeyValues( const CSVCMsg_CmdKeyValues& msg )
+bool CBaseClientState::SVCMsg_CmdKeyValues( const ks::net::CSVCMsg_CmdKeyValues& msg )
 {
 #ifndef DEDICATED
 	KeyValues *pMsgKeyValues = CmdKeyValuesHelper::SVCMsg_GetKeyValues( msg );
@@ -3083,12 +3083,12 @@ bool CBaseClientState::SVCMsg_CmdKeyValues( const CSVCMsg_CmdKeyValues& msg )
 	return true;
 }
 
-bool CBaseClientState::SVCMsg_EncryptedData( const CSVCMsg_EncryptedData& msg )
+bool CBaseClientState::SVCMsg_EncryptedData( const ks::net::CSVCMsg_EncryptedData& msg )
 {
 #ifndef DEDICATED
 	// Decrypt the message and process embedded data
 	char const *szKey = "";
-	switch ( msg.key_type() )
+	switch ( msg.key_type )
 	{
 	case kEncryptedMessageKeyType_Private:
 		szKey = cl_decryptdata_key.GetString();

@@ -794,7 +794,7 @@ public:
 		{
 			CSVCMsg_Sounds_t sndmsg;
 
-			sndmsg.set_reliable_sound( true );
+			sndmsg.reliable_sound = true;
 			sound.WriteDelta( NULL, sndmsg, sv.GetFinalTickTime() );
 
 			 // write into signon buffer
@@ -1046,13 +1046,13 @@ public:
 	{
 		CSVCMsg_BSPDecal_t decal;
 
-		decal.mutable_pos()->set_x( origin.x );
-		decal.mutable_pos()->set_y( origin.y );
-		decal.mutable_pos()->set_z( origin.z );
-		decal.set_decal_texture_index( decalIndex );
-		decal.set_entity_index( entityIndex );
-		decal.set_model_index( modelIndex );
-		decal.set_low_priority( lowpriority );
+		decal.pos.mut().x = origin.x;
+		decal.pos.mut().y = origin.y;
+		decal.pos.mut().z = origin.z;
+		decal.decal_texture_index = decalIndex;
+		decal.entity_index = entityIndex;
+		decal.model_index = modelIndex;
+		decal.low_priority = lowpriority;
 
 		if ( sv.allowsignonwrites )
 		{
@@ -1094,8 +1094,8 @@ public:
 
 		s_MsgData.started = true;
 
-		s_MsgData.entityMsg.set_ent_index( ent_index );
-		s_MsgData.entityMsg.set_class_id( ent_class->m_ClassID );
+		s_MsgData.entityMsg.ent_index = ent_index;
+		s_MsgData.entityMsg.class_id = ent_class->m_ClassID;
 		s_MsgData.m_DataOut.Reset();
 
 		return &s_MsgData.m_DataOut;
@@ -1110,7 +1110,7 @@ public:
 		if ( bytesWritten > MAX_ENTITY_MSG_DATA )	// TODO use a define or so
 		{
 			Warning( "Entity Message to %i, %i bytes written (max is %d)\n",
-				s_MsgData.entityMsg.ent_index(), bytesWritten, MAX_ENTITY_MSG_DATA );
+				s_MsgData.entityMsg.ent_index, bytesWritten, MAX_ENTITY_MSG_DATA );
 			return -1;
 		}
 
@@ -1134,7 +1134,7 @@ public:
 			return;
 		}
 
-		s_MsgData.entityMsg.set_ent_data( s_MsgData.entitydata, s_MsgData.m_DataOut.GetNumBytesWritten() );
+		s_MsgData.entityMsg.ent_data = std::string( ( const char * ) s_MsgData.entitydata, s_MsgData.m_DataOut.GetNumBytesWritten() );
 
 		if ( s_MsgData.filter )
 		{
@@ -1150,31 +1150,14 @@ public:
 		s_MsgData.Reset(); // clear message data
 	}
 
-	virtual void SendUserMessage( IRecipientFilter& filter, int message, const ::google::protobuf::Message &msg )
+	virtual void SendUserMessage( IRecipientFilter& filter, int message, const void *data, int size )
 	{
-		CSVCMsg_UserMessage_t _userMsg;
-
-		if ( !msg.IsInitialized() )
-		{
-			Msg("SendUserMessage %s(%d) is not initialized! Probably missing required fields!\n", msg.GetTypeName().c_str(), message );
-		}
-
-		int size = msg.ByteSize();
-
 		if ( sv_show_usermessage.GetBool() )
-		{
-			Msg("SendUserMessage - %s(%d) bytes: %d\n", msg.GetTypeName().c_str(), message, size );
-			if( sv_show_usermessage.GetInt() > 1 )
-				Msg("%s", msg.DebugString().c_str() );
-		}
+			Msg( "SendUserMessage - %d bytes: %d\n", message, size );
 
-		_userMsg.set_msg_type( message );
-		_userMsg.mutable_msg_data()->resize( size );
-		if ( !msg.SerializeWithCachedSizesToArray( (uint8*)&(*_userMsg.mutable_msg_data())[0] ) )
-		{
-			Msg( "SendUserMessage: Error serializing %s!\n", msg.GetTypeName().c_str() );
-			return;
-		}
+		CSVCMsg_UserMessage_t _userMsg;
+		_userMsg.msg_type = message;
+		_userMsg.msg_data = std::string( ( const char * ) data, size );
 
 		sv.BroadcastMessage( _userMsg, filter );
 	}
@@ -1243,7 +1226,7 @@ public:
 		client->m_pViewEntity = viewent;
 
 		CSVCMsg_SetView_t view;
-		view.set_entity_index( NUM_FOR_EDICT(viewent) );
+		view.entity_index = NUM_FOR_EDICT(viewent);
 
 		client->SendNetMsg( view );
 	}
@@ -1268,9 +1251,9 @@ public:
 
 		CSVCMsg_CrosshairAngle_t crossHairMsg;
 
-		crossHairMsg.mutable_angle()->set_x( pitch );
-		crossHairMsg.mutable_angle()->set_y( yaw );
-		crossHairMsg.mutable_angle()->set_z( 0 );
+		crossHairMsg.angle.mut().x = pitch;
+		crossHairMsg.angle.mut().y = yaw;
+		crossHairMsg.angle.mut().z = 0;
 
 		client->SendNetMsg( crossHairMsg );
 	}
@@ -1857,7 +1840,7 @@ public:
 
 			CSVCMsg_PaintmapData_t svcPaintmap;
 			int nBytes = data.Count() * sizeof( data.Base()[0] );
-			svcPaintmap.set_paintmap( (void*)data.Base(), nBytes );
+			svcPaintmap.paintmap = std::string( ( const char * ) (void*)data.Base(), nBytes );
 
 			client->SendNetMsg( svcPaintmap, true );
 		}
@@ -2058,13 +2041,13 @@ static void WriteReliableEvent( const SendTable *pST, float delay, int classID, 
 {
 	CSVCMsg_TempEntities_t eventMsg;
 
-	eventMsg.set_reliable( true );
+	eventMsg.reliable = true;
 
 	// special case 0 signals single reliable event
-	eventMsg.set_num_entries( 0 );
+	eventMsg.num_entries = 0;
 
-	eventMsg.mutable_entity_data()->resize( CEventInfo::MAX_EVENT_DATA );
-	bf_write buffer( &(*eventMsg.mutable_entity_data())[0], eventMsg.entity_data().size() );
+	eventMsg.entity_data.mut().resize( CEventInfo::MAX_EVENT_DATA );
+	bf_write buffer( &(eventMsg.entity_data.mut())[0], eventMsg.entity_data->size() );
 
 	if ( delay == 0.0f )
 	{

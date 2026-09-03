@@ -83,15 +83,15 @@ void CHltvReplaySystem::StopHltvReplay()
 {
 	if ( m_nHltvReplayDelay )
 	{
-		CSVCMsg_HltvReplay msg;
+		ks::net::CSVCMsg_HltvReplay msg;
 		OnHltvReplay( msg );
 	}
 }
 
 
-void CHltvReplaySystem::OnHltvReplay( const CSVCMsg_HltvReplay  &msg )
+void CHltvReplaySystem::OnHltvReplay( const ks::net::CSVCMsg_HltvReplay  &msg )
 {
-	int nNewReplayDelay = msg.delay();
+	int nNewReplayDelay = msg.delay;
 	DevMsg( "%.2f OnHltvReplay %s\n", gpGlobals->curtime, nNewReplayDelay ? "START" : "END" );
 
 	extern bool g_bForceCLPredictOff;
@@ -131,7 +131,7 @@ void CHltvReplaySystem::OnHltvReplay( const CSVCMsg_HltvReplay  &msg )
 			m_DelayedReplay.Invalidate(); // we don't do delayed replay if we are about to do the replay
 			CacheRagdollBones();
 			// we're about to go into HLTV replay. Current time is real time.
-			HLTVCamera()->SetPrimaryTarget( m_nHltvReplayPrimaryTarget = msg.primary_target() );
+			HLTVCamera()->SetPrimaryTarget( m_nHltvReplayPrimaryTarget = msg.primary_target );
 			HLTVCamera()->SetMode( OBS_MODE_IN_EYE );
 			GetHud().ResetHUD();
 			/*IGameEvent *pEvent = gameeventmanager->CreateEvent( "hide_freezepanel" );
@@ -157,11 +157,11 @@ void CHltvReplaySystem::OnHltvReplay( const CSVCMsg_HltvReplay  &msg )
 				pSoundmixer->SetValue( "DeathCam_Replay_Mix" );
 			}
 			engine->SetMixLayerLevel( s_nReplayLayerIndex, 1.0f );
-			if ( int nSlowdownRatio = msg.replay_slowdown_rate() )
+			if ( int nSlowdownRatio = msg.replay_slowdown_rate )
 			{
 				m_flHltvReplaySlowdownRate = 1.0f / nSlowdownRatio;
-				m_nHltvReplaySlowdownBegin = msg.replay_slowdown_begin();
-				m_nHltvReplaySlowdownEnd = msg.replay_slowdown_end();
+				m_nHltvReplaySlowdownBegin = msg.replay_slowdown_begin;
+				m_nHltvReplaySlowdownEnd = msg.replay_slowdown_end;
 			}
 			else
 			{
@@ -172,7 +172,7 @@ void CHltvReplaySystem::OnHltvReplay( const CSVCMsg_HltvReplay  &msg )
 
 			m_nExperimentalEvents |= EE_REPLAY_STARTED;
 			// currently, Hltv Replay Active (m_nHltvReplayDelay!=0)
-			StartFadeout( msg.replay_stop_at() * gpGlobals->interval_per_tick, spec_replay_fadeout.GetFloat() );
+			StartFadeout( msg.replay_stop_at * gpGlobals->interval_per_tick, spec_replay_fadeout.GetFloat() );
 		}
 		else
 		{
@@ -190,8 +190,8 @@ void CHltvReplaySystem::OnHltvReplay( const CSVCMsg_HltvReplay  &msg )
 	m_nHltvReplayDelay = nNewReplayDelay;
 	//enginesound->SetReplayMusicGain( nNewReplayDelay ? 0.0f : 1.0f ); 
 
-	m_nHltvReplayStopAt = msg.replay_stop_at(); // we'll stop at this current tick, more or less; we'll jump back in time and stop here
-	m_nHltvReplayStartAt = msg.replay_start_at() - nNewReplayDelay;
+	m_nHltvReplayStopAt = msg.replay_stop_at; // we'll stop at this current tick, more or less; we'll jump back in time and stop here
+	m_nHltvReplayStartAt = msg.replay_start_at - nNewReplayDelay;
 	// I'd like to call ParticleMgr()->RemoveAllEffects(); but there are still some entities referencing the particles in question
 	view->FreezeFrame( 0.0f );
 	Update();
@@ -258,7 +258,7 @@ void CHltvReplaySystem::Update()
 
 			m_flStartedWaitingForHltvReplayTickRealTime = gpGlobals->realtime;
 			CCLCMsg_HltvReplay_t msgReplay;
-			msgReplay.set_request( REPLAY_EVENT_STUCK_NEED_FULL_UPDATE ); // request full update
+			msgReplay.request = ks::net::REPLAY_EVENT_STUCK_NEED_FULL_UPDATE; // request full update
 			engine->SendMessageToServer( &msgReplay );
 		}
 	}
@@ -642,34 +642,34 @@ void CHltvReplaySystem::CancelDelayedHltvReplay()
 void CHltvReplaySystem::RequestHltvReplayDeath()
 {
 	ReplayParams_t rp;
-	rp.nRequest = REPLAY_EVENT_DEATH;
+	rp.nRequest = ks::net::REPLAY_EVENT_DEATH;
 	RequestHltvReplay( rp );
 }
 
 void CHltvReplaySystem::RequestHltvReplay( const ReplayParams_t &replay )
 {
 	CCLCMsg_HltvReplay_t msgReplay;
-	msgReplay.set_request( replay.nRequest );
+	msgReplay.request = replay.nRequest;
 	float flSlowdown = spec_replay_rate_slowdown.GetFloat();
 	if ( flSlowdown != 1.0f )
 	{
 		float flSlowdownLength = spec_replay_rate_slowdown_length.GetFloat();
 		if ( flSlowdownLength > 0.01f && flSlowdownLength < 5.0f )
 		{
-			msgReplay.set_slowdown_length( flSlowdownLength );
-			msgReplay.set_slowdown_rate( flSlowdown );
+			msgReplay.slowdown_length = flSlowdownLength;
+			msgReplay.slowdown_rate = flSlowdown;
 		}
 	}
-	if ( replay.nRequest != REPLAY_EVENT_DEATH )
+	if ( replay.nRequest != ks::net::REPLAY_EVENT_DEATH )
 	{
-		msgReplay.set_primary_target_ent_index( replay.nPrimaryTargetEntIndex );
-		msgReplay.set_event_time( replay.flEventTime );
+		msgReplay.primary_target_ent_index = replay.nPrimaryTargetEntIndex;
+		msgReplay.event_time = replay.flEventTime;
 	}
 
 	// if we want to always see from victim's perspective, always set the primary target to victim
 	if ( spec_replay_victim_pov.GetBool() && replay.nPrimaryVictimEntIndex > 0 )
 	{
-		msgReplay.set_primary_target_ent_index( replay.nPrimaryVictimEntIndex );
+		msgReplay.primary_target_ent_index = replay.nPrimaryVictimEntIndex;
 	}
 
 	engine->SendMessageToServer( &msgReplay );
@@ -686,7 +686,7 @@ void CHltvReplaySystem::RequestCancelHltvReplay( bool bSuppressFadeout )
 	if ( GetHltvReplayDelay() )
 	{
 		CCLCMsg_HltvReplay_t msgReplay;
-		msgReplay.set_request( 0 ); // cancel replay
+		msgReplay.request = 0; // cancel replay
 		engine->SendMessageToServer( &msgReplay );
 		if ( bSuppressFadeout )
 		{
@@ -768,7 +768,7 @@ void CHltvReplaySystem::OnPlayerDeath( IGameEvent *event )
 			m_DelayedReplay.bFinalKillOfRound = false;
 			if ( PrepareHltvReplayCountdown() )
 			{
-				m_DelayedReplay.nRequest = REPLAY_EVENT_DEATH;
+				m_DelayedReplay.nRequest = ks::net::REPLAY_EVENT_DEATH;
 			}
 		}
 	}
@@ -791,7 +791,7 @@ void CHltvReplaySystem::OnPlayerDeath( IGameEvent *event )
 					if ( PrepareHltvReplayCountdown() )
 					{
 						// we're dead anyway... request a replay, it may be interesting
-						m_DelayedReplay.nRequest = REPLAY_EVENT_GENERIC;
+						m_DelayedReplay.nRequest = ks::net::REPLAY_EVENT_GENERIC;
 						//extern void CS_FreezePanel_ResetDamageText( int iPlayerIndexKiller, int iPlayerIndexVictim );
 						//CS_FreezePanel_ResetDamageText( iPlayerIndexKiller, iPlayerIndexVictim );
 					}

@@ -577,9 +577,9 @@ void CTeam::AwardAchievement( int iAchievement )
 		}
 	}
 
-	CCSUsrMsg_AchievementEvent msg;
-	msg.set_achievement( iAchievement );
-	SendUserMessage( filter, CS_UM_AchievementEvent, msg );
+	ks::net::CCSUsrMsg_AchievementEvent msg;
+	msg.achievement = iAchievement;
+	SendUserMessage( filter, ks::net::CS_UM_AchievementEvent, msg );
 }
 
 int CTeam::GetAliveMembers( void )

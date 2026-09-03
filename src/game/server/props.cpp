@@ -2546,9 +2546,9 @@ void CDynamicProp::InputSetGlowDisabled( inputdata_t &inputdata )
 	CReliableBroadcastRecipientFilter filter;
 	filter.MakeReliable();
 
-	CCSUsrMsg_GlowPropTurnOff msg;
-	msg.set_entidx( entindex() );	// this prop
-	SendUserMessage( filter, CS_UM_GlowPropTurnOff, msg );	
+	ks::net::CCSUsrMsg_GlowPropTurnOff msg;
+	msg.entidx = entindex();	// this prop
+	SendUserMessage( filter, ks::net::CS_UM_GlowPropTurnOff, msg );	
 }
 
 void CDynamicProp::InputSetGlowColor(inputdata_t &inputdata)

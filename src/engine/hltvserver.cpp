@@ -822,7 +822,7 @@ bool CHLTVServer::DispatchToRelay( CHLTVClient *pClient )
 	// otherwise it's might ignore the "connect" command
 	CSVCMsg_ServerInfo_t serverInfo;
 	FillServerInfo( serverInfo ); 
-	serverInfo.set_is_redirecting_to_proxy_relay( true );
+	serverInfo.is_redirecting_to_proxy_relay = true;
 	pClient->SendNetMsg( serverInfo, true );
 	
 	// tell the client to connect to this new address
@@ -2404,20 +2404,20 @@ void CHLTVServer::FixupConvars( CNETMsg_SetConVar_t &convars )
 		char rate[ 32 ];
 		V_snprintf( rate, sizeof( rate ), "%g", GetSnapshotRate() );
 		bool bReplaced = false;
-		for ( int i = 0; i < convars.convars().cvars_size(); ++i )
+		for ( int i = 0; i < convars.convars->cvars.size(); ++i )
 		{
-			if ( convars.convars().cvars( i ).name() == "tv_snapshotrate" )
+			if ( convars.convars->cvars[ i ].name == "tv_snapshotrate" )
 			{
-				convars.mutable_convars()->mutable_cvars( i )->set_value( rate );
+				convars.convars.mut().cvars[ i ].value = rate;
 				bReplaced = true;
 				break;
 			}
 		}
 		if ( !bReplaced )
 		{
-			CMsg_CVars_CVar *pCVar = convars.mutable_convars()->add_cvars();
-			pCVar->set_name( "tv_snapshotrate" );
-			pCVar->set_value( rate );
+			ks::net::CMsg_CVars::CVar *pCVar = &convars.convars.mut().cvars.emplace_back();
+			pCVar->name = "tv_snapshotrate";
+			pCVar->value = rate;
 		}
 	}
 }
@@ -2559,9 +2559,9 @@ void CHLTVServer::UpdateStats( void )
 
 }
 
-bool CHLTVServer::NETMsg_PlayerAvatarData( const CNETMsg_PlayerAvatarData& msg )
+bool CHLTVServer::NETMsg_PlayerAvatarData( const ks::net::CNETMsg_PlayerAvatarData& msg )
 {
-	PlayerAvatarDataMap_t::IndexType_t idxData = m_mapPlayerAvatarData.Find( msg.accountid() );
+	PlayerAvatarDataMap_t::IndexType_t idxData = m_mapPlayerAvatarData.Find( msg.accountid );
 	if ( idxData != m_mapPlayerAvatarData.InvalidIndex() )
 	{
 		delete m_mapPlayerAvatarData.Element( idxData );
@@ -2570,7 +2570,7 @@ bool CHLTVServer::NETMsg_PlayerAvatarData( const CNETMsg_PlayerAvatarData& msg )
 
 	CNETMsg_PlayerAvatarData_t *pHtlvDataCopy = new CNETMsg_PlayerAvatarData_t;
 	pHtlvDataCopy->CopyFrom( msg );
-	m_mapPlayerAvatarData.Insert( pHtlvDataCopy->accountid(), pHtlvDataCopy );
+	m_mapPlayerAvatarData.Insert( pHtlvDataCopy->accountid, pHtlvDataCopy );
 
 	// Enqueue this message for all fully connected clients immediately
 	for ( int iClient = 0; iClient < GetClientCount(); ++iClient )
@@ -2600,7 +2600,7 @@ bool CHLTVServer::SendNetMsg( INetMessage &msg, bool bForceReliable, bool bVoice
 	//
 	if ( serverGameDLL &&
 		( *tv_encryptdata_key.GetString() || *tv_encryptdata_key_pub.GetString() ) &&
-		( msg.GetType() != svc_EncryptedData ) )
+		( msg.GetType() != ks::net::svc_EncryptedData ) )
 	{
 		EncryptedMessageKeyType_t eKeyType = serverGameDLL->GetMessageEncryptionKey( &msg );
 		char const *szEncryptionKey = "";
@@ -2618,7 +2618,7 @@ bool CHLTVServer::SendNetMsg( INetMessage &msg, bool bForceReliable, bool bVoice
 			CSVCMsg_EncryptedData_t encryptedMessage;
 			if ( !CmdEncryptedDataMessageCodec::SVCMsg_EncryptedData_EncryptMessage( encryptedMessage, &msg, szEncryptionKey ) )
 				return false;
-			encryptedMessage.set_key_type( eKeyType );
+			encryptedMessage.key_type = eKeyType;
 			return SendNetMsg( encryptedMessage, true, false ); // recurse and send the generated messages as reliable
 		}
 	}
@@ -2626,9 +2626,9 @@ bool CHLTVServer::SendNetMsg( INetMessage &msg, bool bForceReliable, bool bVoice
 	//
 	// Special message handling for avatar data
 	//
-	if ( msg.GetType() == net_PlayerAvatarData )
+	if ( msg.GetType() == ks::net::net_PlayerAvatarData )
 	{
-		CNETMsg_PlayerAvatarData const *pPlayerAvatarData = dynamic_cast< CNETMsg_PlayerAvatarData * >( &msg );
+		ks::net::CNETMsg_PlayerAvatarData const *pPlayerAvatarData = dynamic_cast< ks::net::CNETMsg_PlayerAvatarData * >( &msg );
 		if ( !pPlayerAvatarData )
 			return false;
 
@@ -2649,15 +2649,15 @@ bool CHLTVServer::SendNetMsg( INetMessage &msg, bool bForceReliable, bool bVoice
 	{
 		buffer = HLTV_BUFFER_RELIABLE;
 	}
-	else if ( msg.GetType() == svc_Sounds )
+	else if ( msg.GetType() == ks::net::svc_Sounds )
 	{
 		buffer = HLTV_BUFFER_SOUNDS;
 	}
-	else if ( msg.GetType() == svc_VoiceData )
+	else if ( msg.GetType() == ks::net::svc_VoiceData )
 	{
 		buffer = HLTV_BUFFER_VOICE;
 	}
-	else if ( msg.GetType() == svc_TempEntities )
+	else if ( msg.GetType() == ks::net::svc_TempEntities )
 	{
 		buffer = HLTV_BUFFER_TEMPENTS;
 	}
@@ -2843,12 +2843,12 @@ const char *CHLTVServer::GetName( void ) const
 	return tv_name.GetString();
 }
 
-void CHLTVServer::FillServerInfo(CSVCMsg_ServerInfo &serverinfo)
+void CHLTVServer::FillServerInfo(ks::net::CSVCMsg_ServerInfo &serverinfo)
 {
 	CBaseServer::FillServerInfo( serverinfo );
 
-	serverinfo.set_player_slot( m_nPlayerSlot ); // all spectators think they're the HLTV client
-	serverinfo.set_max_clients( m_nGameServerMaxClients );
+	serverinfo.player_slot = m_nPlayerSlot; // all spectators think they're the HLTV client
+	serverinfo.max_clients = m_nGameServerMaxClients;
 }
 
 void CHLTVServer::Clear( void )
@@ -3334,11 +3334,11 @@ bool CHLTVServer::GetRedirectAddressForConnectClient( const ns_address &adr, CUt
 
 	if ( splitScreenClients.Count() )
 	{
-		const CMsg_CVars& convars = splitScreenClients[0]->convars();
-		for ( int i = 0; i< convars.cvars_size(); ++i )
+		const ks::net::CMsg_CVars& convars = splitScreenClients[0]->convars;
+		for ( int i = 0; i< convars.cvars.size(); ++i )
 		{
-			const char *cvname = NetMsgGetCVarUsingDictionary( convars.cvars(i) );
-			const char *value = convars.cvars(i).value().c_str();
+			const char *cvname = NetMsgGetCVarUsingDictionary( convars.cvars[ i ] );
+			const char *value = convars.cvars[ i ].value->c_str();
 				
 			if ( stricmp( cvname, "tv_relay" ) )
 				continue;

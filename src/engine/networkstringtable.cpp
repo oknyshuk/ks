@@ -1792,24 +1792,24 @@ bool CNetworkStringTable::WriteBaselines( CSVCMsg_CreateStringTable_t &msg )
 	msg.Clear();
 
 	// allocate the temp buffer for the packet ents
-	msg.mutable_string_data()->resize( sv_temp_baseline_string_table_buffer_size.GetInt() );
-	bf_write string_data_buf( &(*msg.mutable_string_data())[0], msg.string_data().size() );
+	msg.string_data.mut().resize( sv_temp_baseline_string_table_buffer_size.GetInt() );
+	bf_write string_data_buf( &(msg.string_data.mut())[0], msg.string_data->size() );
 
-	msg.set_flags( m_nFlags );
-	msg.set_name( GetTableName() );
-	msg.set_max_entries( GetMaxStrings() );
-	msg.set_num_entries( GetNumStrings() );
-	msg.set_user_data_fixed_size( IsUserDataFixedSize() );
-	msg.set_user_data_size( GetUserDataSize() );
-	msg.set_user_data_size_bits( GetUserDataSizeBits() );
+	msg.flags = m_nFlags;
+	msg.name = GetTableName();
+	msg.max_entries = GetMaxStrings();
+	msg.num_entries = GetNumStrings();
+	msg.user_data_fixed_size = IsUserDataFixedSize();
+	msg.user_data_size = GetUserDataSize();
+	msg.user_data_size_bits = GetUserDataSizeBits();
 
 	// tick = -1 ensures that all entries are updated = baseline
 	int entries = WriteUpdate( NULL, string_data_buf, -1 );
 
 	// resize the buffer to the actual byte size
-	msg.mutable_string_data()->resize( Bits2Bytes( string_data_buf.GetNumBitsWritten() ) );
+	msg.string_data.mut().resize( Bits2Bytes( string_data_buf.GetNumBitsWritten() ) );
 
-	return entries == msg.num_entries();
+	return entries == msg.num_entries;
 }
 
 #endif
@@ -2055,17 +2055,17 @@ void CNetworkStringTableContainer::WriteUpdateMessage( CBaseClient *client, int 
 		//setup a writer for the bits that go to our temporary buffer so we can assign it over later
 		bf_write string_data_buf( StringTableBuff, sizeof( StringTableBuff ) );
 
-		msg.set_table_id( table->GetTableId() );
-		msg.set_num_changed_entries( table->WriteUpdate( client, string_data_buf, tick_ack ) );
+		msg.table_id = table->GetTableId();
+		msg.num_changed_entries = table->WriteUpdate( client, string_data_buf, tick_ack );
 
 		//handle the situation where the data may have been truncated
 		if( string_data_buf.IsOverflowed() )
 			return;
 
-		Assert( msg.num_changed_entries() > 0 ); // don't send unnecessary empty updates
+		Assert( msg.num_changed_entries > 0 ); // don't send unnecessary empty updates
 
 		//copy over the data we wrote into the actual message
-		msg.mutable_string_data()->assign( StringTableBuff, StringTableBuff + Bits2Bytes( string_data_buf.GetNumBitsWritten() ) );
+		msg.string_data.mut().assign( StringTableBuff, StringTableBuff + Bits2Bytes( string_data_buf.GetNumBitsWritten() ) );
 
 		if ( !msg.WriteToBuffer( buf ) )
 			return;

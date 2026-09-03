@@ -816,13 +816,13 @@ inline void TransmitShakeEvent( CBasePlayer *pPlayer, float localAmplitude, floa
 
 		CSingleUserRecipientFilter user( pPlayer );
 		user.MakeReliable();
-		CCSUsrMsg_Shake msg;
-		msg.set_command( eCommand );					// shake command (SHAKE_START, STOP, FREQUENCY, AMPLITUDE)
-		msg.set_local_amplitude( localAmplitude );		// shake magnitude/amplitude
-		msg.set_frequency( frequency	 );				// shake noise frequency
-		msg.set_duration( duration );					// shake lasts this long
+		ks::net::CCSUsrMsg_Shake msg;
+		msg.command = eCommand;					// shake command (SHAKE_START, STOP, FREQUENCY, AMPLITUDE)
+		msg.local_amplitude = localAmplitude;		// shake magnitude/amplitude
+		msg.frequency = frequency;				// shake noise frequency
+		msg.duration = duration;					// shake lasts this long
 
-		SendUserMessage( user, CS_UM_Shake, msg );
+		SendUserMessage( user, ks::net::CS_UM_Shake, msg );
 	}
 }
 
@@ -1065,17 +1065,17 @@ void UTIL_ScreenFadeWrite( const ScreenFade_t &fade, CBaseEntity *pEntity )
 	CSingleUserRecipientFilter user( pRecipient );
 	user.MakeReliable();
 
-	CCSUsrMsg_Fade msg;
+	ks::net::CCSUsrMsg_Fade msg;
 
-	msg.set_duration( fade.duration );		// fade lasts this long
-	msg.set_hold_time( fade.holdTime );		// fade lasts this long
-	msg.set_flags( fade.fadeFlags );		// fade type (in / out)
-	msg.mutable_clr()->set_r( fade.r );				// fade red
-	msg.mutable_clr()->set_g( fade.g );				// fade green
-	msg.mutable_clr()->set_b( fade.b );				// fade blue
-	msg.mutable_clr()->set_a( fade.a );				// fade blue
+	msg.duration = fade.duration;		// fade lasts this long
+	msg.hold_time = fade.holdTime;		// fade lasts this long
+	msg.flags = fade.fadeFlags;		// fade type (in / out)
+	msg.clr.mut().r = fade.r;				// fade red
+	msg.clr.mut().g = fade.g;				// fade green
+	msg.clr.mut().b = fade.b;				// fade blue
+	msg.clr.mut().a = fade.a;				// fade blue
 
-	SendUserMessage( user, CS_UM_Fade, msg );		
+	SendUserMessage( user, ks::net::CS_UM_Fade, msg );		
 }
 
 
@@ -1120,25 +1120,25 @@ void UTIL_HudMessage( CBasePlayer *pToPlayer, const hudtextparms_t &textparms, c
 
 	filter.MakeReliable();
 
-	CCSUsrMsg_HudMsg msg;
-	msg.set_channel( textparms.channel & 0xFF );
-	msg.mutable_pos()->set_x( textparms.x );
-	msg.mutable_pos()->set_y( textparms.y );
-	msg.mutable_clr1()->set_r( textparms.r1 );
-	msg.mutable_clr1()->set_g( textparms.g1 );
-	msg.mutable_clr1()->set_b( textparms.b1 );
-	msg.mutable_clr1()->set_a( textparms.a1 );
-	msg.mutable_clr2()->set_r( textparms.r2 );
-	msg.mutable_clr2()->set_g( textparms.g2 );
-	msg.mutable_clr2()->set_b( textparms.b2 );
-	msg.mutable_clr2()->set_a( textparms.a2 );
-	msg.set_effect ( textparms.effect );
-	msg.set_fade_in_time( textparms.fadeinTime );
-	msg.set_fade_out_time( textparms.fadeoutTime );
-	msg.set_hold_time( textparms.holdTime );
-	msg.set_fx_time( textparms.fxTime );
-	msg.set_text( pMessage );
-	SendUserMessage( filter, CS_UM_HudMsg, msg );
+	ks::net::CCSUsrMsg_HudMsg msg;
+	msg.channel = textparms.channel & 0xFF;
+	msg.pos.mut().x = textparms.x;
+	msg.pos.mut().y = textparms.y;
+	msg.clr1.mut().r = textparms.r1;
+	msg.clr1.mut().g = textparms.g1;
+	msg.clr1.mut().b = textparms.b1;
+	msg.clr1.mut().a = textparms.a1;
+	msg.clr2.mut().r = textparms.r2;
+	msg.clr2.mut().g = textparms.g2;
+	msg.clr2.mut().b = textparms.b2;
+	msg.clr2.mut().a = textparms.a2;
+	msg.effect = textparms.effect;
+	msg.fade_in_time = textparms.fadeinTime;
+	msg.fade_out_time = textparms.fadeoutTime;
+	msg.hold_time = textparms.holdTime;
+	msg.fx_time = textparms.fxTime;
+	msg.text = pMessage;
+	SendUserMessage( filter, ks::net::CS_UM_HudMsg, msg );
 }
 
 void UTIL_HudMessageAll( const hudtextparms_t &textparms, const char *pMessage )
@@ -1154,39 +1154,39 @@ void UTIL_HudHintText( CBaseEntity *pEntity, const char *pMessage )
 	CSingleUserRecipientFilter user( (CBasePlayer *)pEntity );
 	user.MakeReliable();
 
-	CCSUsrMsg_KeyHintText msg;
-	msg.add_hints( pMessage );
-	SendUserMessage( user, CS_UM_KeyHintText, msg );
+	ks::net::CCSUsrMsg_KeyHintText msg;
+	msg.hints.emplace_back( pMessage );
+	SendUserMessage( user, ks::net::CS_UM_KeyHintText, msg );
 }
 
 void UTIL_ClientPrintFilter( IRecipientFilter& filter, int msg_dest, const char *msg_name, const char *param1, const char *param2, const char *param3, const char *param4 )
 {
-	CCSUsrMsg_TextMsg msg;
+	ks::net::CCSUsrMsg_TextMsg msg;
 
-	msg.set_msg_dst( msg_dest );
-	msg.add_params( msg_name );
+	msg.msg_dst = msg_dest;
+	msg.params.emplace_back( msg_name );
 
 	if ( param1 )
-		msg.add_params( param1 );
+		msg.params.emplace_back( param1 );
 	else
-		msg.add_params( "" );
+		msg.params.emplace_back( "" );
 
 	if ( param2 )
-		msg.add_params( param2 );
+		msg.params.emplace_back( param2 );
 	else
-		msg.add_params( "" );
+		msg.params.emplace_back( "" );
 
 	if ( param3 )
-		msg.add_params( param3 );
+		msg.params.emplace_back( param3 );
 	else
-		msg.add_params( "" );
+		msg.params.emplace_back( "" );
 
 	if ( param4 )
-		msg.add_params( param4 );
+		msg.params.emplace_back( param4 );
 	else
-		msg.add_params( "" );
+		msg.params.emplace_back( "" );
 
-	SendUserMessage( filter, CS_UM_TextMsg, msg );
+	SendUserMessage( filter, ks::net::CS_UM_TextMsg, msg );
 }
 					 
 void UTIL_ClientPrintAll( int msg_dest, const char *msg_name, const char *param1, const char *param2, const char *param3, const char *param4 )
@@ -1209,61 +1209,61 @@ void ClientPrint( CBasePlayer *player, int msg_dest, const char *msg_name, const
 
 void UTIL_SayTextFilter( IRecipientFilter& filter, const char *pText, CBasePlayer *pPlayer, EUtilSayTextMessageType_t eMessageType )
 {
-	CCSUsrMsg_SayText msg;
+	ks::net::CCSUsrMsg_SayText msg;
 	
 	if ( pPlayer ) 
 	{
-		msg.set_ent_idx( pPlayer->entindex() );
+		msg.ent_idx = pPlayer->entindex();
 	}
 	else
 	{
-		msg.set_ent_idx( 0 ); // world, dedicated server says
+		msg.ent_idx = 0; // world, dedicated server says
 	}
-	msg.set_text( pText );
-	msg.set_chat( ( eMessageType == kEUtilSayTextMessageType_TeamonlyChat ) || ( eMessageType == kEUtilSayTextMessageType_AllChat ) );
-	msg.set_textallchat( eMessageType == kEUtilSayTextMessageType_AllChat );
+	msg.text = pText;
+	msg.chat = ( eMessageType == kEUtilSayTextMessageType_TeamonlyChat ) || ( eMessageType == kEUtilSayTextMessageType_AllChat );
+	msg.textallchat = eMessageType == kEUtilSayTextMessageType_AllChat;
 
-	SendUserMessage( filter, CS_UM_SayText, msg );
+	SendUserMessage( filter, ks::net::CS_UM_SayText, msg );
 }
 
 void UTIL_SayText2Filter( IRecipientFilter& filter, CBasePlayer *pEntity, EUtilSayTextMessageType_t eMessageType, const char *msg_name, const char *param1, const char *param2, const char *param3, const char *param4 )
 {
-	CCSUsrMsg_SayText2 msg;
+	ks::net::CCSUsrMsg_SayText2 msg;
 
 	if ( pEntity )
 	{
-		msg.set_ent_idx( pEntity->entindex() );
+		msg.ent_idx = pEntity->entindex();
 	}
 	else
 	{
-		msg.set_ent_idx( 0 ); // world, dedicated server says
+		msg.ent_idx = 0; // world, dedicated server says
 	}
 
-	msg.set_chat( ( eMessageType == kEUtilSayTextMessageType_TeamonlyChat ) || ( eMessageType == kEUtilSayTextMessageType_AllChat ) );
-	msg.set_textallchat( eMessageType == kEUtilSayTextMessageType_AllChat );
-	msg.set_msg_name( msg_name );
+	msg.chat = ( eMessageType == kEUtilSayTextMessageType_TeamonlyChat ) || ( eMessageType == kEUtilSayTextMessageType_AllChat );
+	msg.textallchat = eMessageType == kEUtilSayTextMessageType_AllChat;
+	msg.msg_name = msg_name;
 
 	if ( param1 )
-		msg.add_params( param1 );
+		msg.params.emplace_back( param1 );
 	else
-		msg.add_params( "" );
+		msg.params.emplace_back( "" );
 
 	if ( param2 )
-		msg.add_params( param2 );
+		msg.params.emplace_back( param2 );
 	else
-		msg.add_params( "" );
+		msg.params.emplace_back( "" );
 
 	if ( param3 )
-		msg.add_params( param3 );
+		msg.params.emplace_back( param3 );
 	else
-		msg.add_params( "" );
+		msg.params.emplace_back( "" );
 
 	if ( param4 )
-		msg.add_params( param4 );
+		msg.params.emplace_back( param4 );
 	else
-		msg.add_params( "" );
+		msg.params.emplace_back( "" );
 
-	SendUserMessage( filter, CS_UM_SayText2, msg );
+	SendUserMessage( filter, ks::net::CS_UM_SayText2, msg );
 }
 
 void UTIL_SayText( const char *pText, CBasePlayer *pToPlayer )
@@ -1298,9 +1298,9 @@ void UTIL_ShowMessage( const char *pString, CBasePlayer *pPlayer )
 	
 	filter.MakeReliable();
 
-	CCSUsrMsg_HudText msg;
-	msg.set_text( pString );
-	SendUserMessage( filter, CS_UM_HudText, msg );
+	ks::net::CCSUsrMsg_HudText msg;
+	msg.text = pString;
+	SendUserMessage( filter, ks::net::CS_UM_HudText, msg );
 }
 
 
@@ -1317,9 +1317,9 @@ void UTIL_MessageTextAll( const char *text, Color color )
 	// Gurjeets - Not used in CSGO
 	//CReliableBroadcastRecipientFilter filter;
 	//UserMessageBegin( filter, "MessageText" );
-	//	WRITE_BYTE( color.r() );
-	//	WRITE_BYTE( color.g() );
-	//	WRITE_BYTE( color.b() );
+	//	WRITE_BYTE( color.r );
+	//	WRITE_BYTE( color.g );
+	//	WRITE_BYTE( color.b );
 	//	WRITE_STRING( text );
 	//MessageEnd();
 }
@@ -1333,9 +1333,9 @@ void UTIL_MessageText( CBasePlayer *player, const char *text, Color color )
 	//CSingleUserRecipientFilter filter( player );
 	//filter.MakeReliable();
 	//UserMessageBegin( filter, "MessageText" );
-	//	WRITE_BYTE( color.r() );
-	//	WRITE_BYTE( color.g() );
-	//	WRITE_BYTE( color.b() );
+	//	WRITE_BYTE( color.r );
+	//	WRITE_BYTE( color.g );
+	//	WRITE_BYTE( color.b );
 	//	WRITE_STRING( text );
 	//MessageEnd();
 }

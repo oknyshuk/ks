@@ -20,7 +20,7 @@
 struct model_t;
 struct AudioState_t;
 class KeyValues;
-class CMsg_CVars;
+namespace ks::net { struct CMsg_CVars; }
 
 class CCommonHostState
 {
@@ -160,8 +160,8 @@ extern float host_time;
 
 struct NetMessageCvar_t;
 
-void Host_BuildConVarUpdateMessage( CMsg_CVars *rCvarList, int flags, bool nonDefault );
-void		Host_BuildUserInfoUpdateMessage( int nSplitScreenSlot, CMsg_CVars *rCvarList, bool nonDefault );
+void Host_BuildConVarUpdateMessage( ks::net::CMsg_CVars *rCvarList, int flags, bool nonDefault );
+void		Host_BuildUserInfoUpdateMessage( int nSplitScreenSlot, ks::net::CMsg_CVars *rCvarList, bool nonDefault );
 char const *Host_CleanupConVarStringValue( char const *invalue );
 void		Host_SetAudioState( const AudioState_t &audioState );
 

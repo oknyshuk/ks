@@ -914,7 +914,7 @@ void RunDataTableTest()
 			break;
 		}
 
-		if( msg.is_end() )
+		if( msg.is_end )
 			break;
 
 		if( !RecvTable_RecvClassInfos( msg ) )

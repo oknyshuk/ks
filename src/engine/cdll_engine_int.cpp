@@ -495,7 +495,7 @@ public:
 	virtual CDemoPlaybackParameters_t const * GetDemoPlaybackParameters() OVERRIDE;
 	virtual bool IsDemoSkipping( void ) OVERRIDE;
 	virtual int GetConnectionDataProtocol() const OVERRIDE;
-	virtual bool EngineGotvSyncPacket( const CEngineGotvSyncPacket *pPkt ) OVERRIDE;
+	virtual bool EngineGotvSyncPacket( const ks::net::CEngineGotvSyncPacket *pPkt ) OVERRIDE;
 	virtual void SetDemoImportantEventData( const KeyValues *pData ) OVERRIDE;
 	virtual bool IsPaused( void );
 	virtual float GetTimescale( void ) const;
@@ -1620,7 +1620,7 @@ int CEngineClient::GetConnectionDataProtocol() const
 	return GetBaseLocalClient().m_nServerInfoMsgProtocol;
 }
 
-bool CEngineClient::EngineGotvSyncPacket( const CEngineGotvSyncPacket *pPkt )
+bool CEngineClient::EngineGotvSyncPacket( const ks::net::CEngineGotvSyncPacket *pPkt )
 {
 	return false;
 }

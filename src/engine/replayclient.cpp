@@ -72,14 +72,14 @@ bool CReplayClient::SendSignonData( void )
 	{
 		// use your class infos, CRC is correct
 		CSVCMsg_ClassInfo_t classmsg;
-		classmsg.set_create_on_client( true );
+		classmsg.create_on_client = true;
 		m_NetChannel->SendNetMsg( classmsg );;
 	}
 
 	 return CBaseClient::SendSignonData();
 }
 
-bool CHLTVClient::CLCMsg_ClientInfo( const CCLCMsg_ClientInfo& msg )
+bool CHLTVClient::CLCMsg_ClientInfo( const ks::net::CCLCMsg_ClientInfo& msg )
 {
 	if ( !CBaseClient::CLCMsg_ClientInfo( msg ) )
 		return false;
@@ -87,29 +87,29 @@ bool CHLTVClient::CLCMsg_ClientInfo( const CCLCMsg_ClientInfo& msg )
 	return true;
 }
 
-bool CReplayClient::CLCMsg_Move( const CCLCMsg_Move& msg )
+bool CReplayClient::CLCMsg_Move( const ks::net::CCLCMsg_Move& msg )
 {
 	// Replay clients can't move
 	return true;
 }
 
-bool CReplayClient::CLCMsg_ListenEvents( const CCLCMsg_ListenEvents& msg )
+bool CReplayClient::CLCMsg_ListenEvents( const ks::net::CCLCMsg_ListenEvents& msg )
 {
 	// Replay clients can't subscribe to events, we just send them
 	return true;
 }
 
-bool CReplayClient::CLCMsg_RespondCvarValue( const CCLCMsg_RespondCvarValue& msg );
+bool CReplayClient::CLCMsg_RespondCvarValue( const ks::net::CCLCMsg_RespondCvarValue& msg );
 {
 	return true;
 }
 
-bool CReplayClient::CLCMsg_FileCRCCheck( const CCLCMsg_FileCRCCheck& msg )
+bool CReplayClient::CLCMsg_FileCRCCheck( const ks::net::CCLCMsg_FileCRCCheck& msg )
 {
 	return true;
 }
 
-bool CReplayClient::CLCMsg_VoiceData(const CCLCMsg_VoiceData& msg)
+bool CReplayClient::CLCMsg_VoiceData(const ks::net::CCLCMsg_VoiceData& msg)
 {
 	// Replay clients can't speak
 	return true;
@@ -287,7 +287,7 @@ void CReplayClient::SpawnPlayer( void )
 	// set view entity
 
 	CSVCMsg_SetView_t setView;
-	setView.set_entity_index( m_pReplay->m_nViewEntity );
+	setView.entity_index = m_pReplay->m_nViewEntity;
 	SendNetMsg( setView );
 
 	m_pReplay->BroadcastLocalTitle( this ); 
@@ -323,7 +323,7 @@ void CReplayClient::SetUpdateRate( float fUpdateRate, bool bForce)
 	m_fSnapshotInterval = 1.0f / 100.0f;
 }
 
-bool CReplayClient::NETMsg_SetConVar(const CNETMsg_SetConVar& msg)
+bool CReplayClient::NETMsg_SetConVar(const ks::net::CNETMsg_SetConVar& msg)
 {
 	if ( !CBaseClient::ProcessSetConVar( msg ) )
 		return false;

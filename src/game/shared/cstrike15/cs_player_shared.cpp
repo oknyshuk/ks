@@ -1605,16 +1605,16 @@ void CCSPlayer::FireBullet(
 		//
 		CSingleUserRecipientFilter user( this );
 
-		CCSUsrMsg_ReportHit msg;
-		msg.set_pos_x( tr.endpos.x );
-		msg.set_pos_y( tr.endpos.y );
-		msg.set_pos_z( tr.endpos.z );
-		msg.set_timestamp( gpGlobals->realtime );
+		ks::net::CCSUsrMsg_ReportHit msg;
+		msg.pos_x = tr.endpos.x;
+		msg.pos_y = tr.endpos.y;
+		msg.pos_z = tr.endpos.z;
+		msg.timestamp = gpGlobals->realtime;
 
 		// only compare shots that were server hits
 		if ( tr.m_pEnt && tr.m_pEnt->IsPlayer() )
 		{
-			SendUserMessage( user, CS_UM_ReportHit, msg );
+			SendUserMessage( user, ks::net::CS_UM_ReportHit, msg );
 		}
 		
 		// end bullet registration recording

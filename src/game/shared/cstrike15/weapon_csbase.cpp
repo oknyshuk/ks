@@ -3080,16 +3080,16 @@ void CWeaponCSBase::SendActivityEvents( int nActEvents )
 	CPASFilter filter( pPlayer->GetAbsOrigin() );
 	filter.RemoveRecipient( pPlayer );
 
-	CCSUsrMsg_ReloadEffect msg;
-	msg.set_entidx( pPlayer->entindex() );
-	msg.set_actanim( nActEvents );
+	ks::net::CCSUsrMsg_ReloadEffect msg;
+	msg.entidx = pPlayer->entindex();
+	msg.actanim = nActEvents;
 
 	const Vector& origin = pPlayer->GetAbsOrigin();
-	msg.set_origin_x( origin.x );
-	msg.set_origin_y( origin.y );
-	msg.set_origin_z( origin.z );
+	msg.origin_x = origin.x;
+	msg.origin_y = origin.y;
+	msg.origin_z = origin.z;
 
-	SendUserMessage( filter, CS_UM_ReloadEffect, msg );
+	SendUserMessage( filter, ks::net::CS_UM_ReloadEffect, msg );
 
 	if ( nActEvents == ACT_VM_RELOAD || nActEvents == ACT_SECONDARY_VM_RELOAD )
 	{

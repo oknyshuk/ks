@@ -2179,8 +2179,8 @@ void CL_SendMove( void )
 		// How many real new commands have queued up
 		int nNewCommands = clamp( nChokedCommands + 1, 0, MAX_NEW_COMMANDS );
 
-		moveMsg.set_num_backup_commands( nBackupCommands );
-		moveMsg.set_num_new_commands( nNewCommands );
+		moveMsg.num_backup_commands = nBackupCommands;
+		moveMsg.num_new_commands = nNewCommands;
 
 		int numcmds = nNewCommands + nBackupCommands;
 		int from = -1;	// first command is deltaed against zeros 
@@ -2197,7 +2197,7 @@ void CL_SendMove( void )
 
 		if ( bOK )
 		{
-			moveMsg.set_data( ( const char * )DataOut.GetData(), DataOut.GetNumBytesWritten() );
+			moveMsg.data = std::string( ( const char * ) ( const char * )DataOut.GetData(), DataOut.GetNumBytesWritten() );
 
 			// only write message if all CUserCmds were written correctly, otherwise parsing would fail
 			GetLocalClient().m_NetChannel->SendNetMsg( moveMsg );
@@ -2363,7 +2363,7 @@ void CL_Move(float accumulated_extra_samples, bool bFinalTick )
 		CNETMsg_Tick_t mymsg( tick, host_frameendtime_computationduration, host_frametime_stddeviation, host_framestarttime_stddeviation );
 		if ( cl.GetHltvReplayDelay() )
 		{
-			mymsg.set_hltv_replay_flags( 1 ); // signal that this ack is from hltv replay
+			mymsg.hltv_replay_flags = 1; // signal that this ack is from hltv replay
 		}
 		cl.m_NetChannel->SendNetMsg( mymsg );
 	}

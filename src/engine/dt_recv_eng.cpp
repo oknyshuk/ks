@@ -488,54 +488,54 @@ static char* AllocString( const char *pStr )
 	return pOut;
 }
 
-SendTable *RecvTable_ReadInfos( const CSVCMsg_SendTable& msg, int nDemoProtocol )
+SendTable *RecvTable_ReadInfos( const ks::net::CSVCMsg_SendTable& msg, int nDemoProtocol )
 {
 	SendTable *pTable = new SendTable;
 
-	pTable->m_pNetTableName = AllocString( msg.net_table_name().c_str() );
+	pTable->m_pNetTableName = AllocString( msg.net_table_name->c_str() );
 
 	// Read the property list.
-	pTable->m_nProps = msg.props_size();
+	pTable->m_nProps = msg.props.size();
 	pTable->m_pProps = pTable->m_nProps ? new SendProp[ pTable->m_nProps ] : NULL;
 
 	for ( int iProp=0; iProp < pTable->m_nProps; iProp++ )
 	{
 		SendProp *pProp = &pTable->m_pProps[iProp];
-		const CSVCMsg_SendTable::sendprop_t& sendProp = msg.props( iProp );
+		const ks::net::CSVCMsg_SendTable::sendprop_t& sendProp = msg.props[ iProp ];
 
-		pProp->m_Type = (SendPropType)sendProp.type();
-		pProp->m_pVarName = AllocString( sendProp.var_name().c_str() );
+		pProp->m_Type = (SendPropType)sendProp.type.get();
+		pProp->m_pVarName = AllocString( sendProp.var_name->c_str() );
 
-		pProp->SetFlags( sendProp.flags() );
-		pProp->SetPriority( sendProp.priority() );
+		pProp->SetFlags( sendProp.flags );
+		pProp->SetPriority( sendProp.priority );
 
 		if ( ( pProp->m_Type == DPT_DataTable ) || ( pProp->IsExcludeProp() ) )
 		{
-			pProp->m_pExcludeDTName = AllocString( sendProp.dt_name().c_str() );
+			pProp->m_pExcludeDTName = AllocString( sendProp.dt_name->c_str() );
 		}
 		else if ( pProp->GetType() == DPT_Array )
 		{
-			pProp->SetNumElements( sendProp.num_elements() );
+			pProp->SetNumElements( sendProp.num_elements );
 		}
 		else
 		{
-			pProp->m_fLowValue = sendProp.low_value();
-			pProp->m_fHighValue = sendProp.high_value();
-			pProp->m_nBits = sendProp.num_bits();
+			pProp->m_fLowValue = sendProp.low_value;
+			pProp->m_fHighValue = sendProp.high_value;
+			pProp->m_nBits = sendProp.num_bits;
 		}
 	}
 
 	return pTable;
 }
 
-bool RecvTable_RecvClassInfos( const CSVCMsg_SendTable& msg, int nDemoProtocol )
+bool RecvTable_RecvClassInfos( const ks::net::CSVCMsg_SendTable& msg, int nDemoProtocol )
 {
 	SendTable *pSendTable = RecvTable_ReadInfos( msg, nDemoProtocol );
 
 	if ( !pSendTable )
 		return false;
 
-	bool ret = DataTable_SetupReceiveTableFromSendTable( pSendTable, msg.needs_decoder() );
+	bool ret = DataTable_SetupReceiveTableFromSendTable( pSendTable, msg.needs_decoder );
 
 	RecvTable_FreeSendTable( pSendTable );
 

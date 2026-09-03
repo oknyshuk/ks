@@ -73,32 +73,32 @@ static void RadarSizeChanged( IConVar *pConvar, const char *szOldValue, float fO
 ConVar rocket_hud_radar_height( "rocket_hud_radar_height", "400", FCVAR_ARCHIVE, "height in pixels for the radar", RadarSizeChanged );
 ConVar rocket_hud_radar_width( "rocket_hud_radar_width", "400", FCVAR_ARCHIVE, "width in pixels for the radar", RadarSizeChanged );
 
-bool RkHudRadar::MsgFunc_ProcessSpottedEntityUpdate(const CCSUsrMsg_ProcessSpottedEntityUpdate &msg)
+bool RkHudRadar::MsgFunc_ProcessSpottedEntityUpdate(const ks::net::CCSUsrMsg_ProcessSpottedEntityUpdate &msg)
 {
-    if( msg.new_update() )
+    if( msg.new_update )
     {
         // Clear everything.
         //for( int i = 0; i < MAX_PLAYERS; i++ )
         //    m_spottedPlayers[i].timelastSpotted = 0.0f;
     }
 
-    for( int i = 0; i < msg.entity_updates_size(); i++ )
+    for( int i = 0; i < msg.entity_updates.size(); i++ )
     {
-        const auto &update = msg.entity_updates(i);
+        const auto &update = msg.entity_updates[ i ];
 
-        int entID = update.entity_idx();
+        int entID = update.entity_idx;
         // make sure this is a valid id for any type of entity.
         if( entID < 1 || entID >= MAX_EDICTS )
             continue;
 
         // these are sent from the server as /4
-        int x = update.origin_x() * 4;
-        int y = update.origin_y() * 4;
-        int z = update.origin_z() * 4;
-        int yaw = update.angle_y();
+        int x = update.origin_x * 4;
+        int y = update.origin_y * 4;
+        int z = update.origin_z * 4;
+        int yaw = update.angle_y;
 
         const char *szEntClassName;
-        int classID = update.class_id();
+        int classID = update.class_id;
         for ( ClientClass *pCur = g_pClientClassHead; pCur; pCur = pCur->m_pNext )
         {
             if( pCur->m_ClassID == classID )
@@ -114,7 +114,7 @@ bool RkHudRadar::MsgFunc_ProcessSpottedEntityUpdate(const CCSUsrMsg_ProcessSpott
         }
 
         // Clients are unaware of the defuser class type, so we need to flag defuse entities manually
-        if( update.defuser() )
+        if( update.defuser )
         {
             // TODO: this is the defuser!
         }
@@ -126,17 +126,17 @@ bool RkHudRadar::MsgFunc_ProcessSpottedEntityUpdate(const CCSUsrMsg_ProcessSpott
 
             // subtract 1 to convert 1-64 to 0-63
             SpottedInfo &playerInfo = m_spottedPlayers[ (entID-1) ];
-            playerInfo.entId = update.entity_idx();
+            playerInfo.entId = update.entity_idx;
             playerInfo.originX = x;
             playerInfo.originY = y;
             playerInfo.originZ = z;
             playerInfo.angleYaw = yaw;
-            if( update.has_player_has_defuser() )
+            if( update.player_has_defuser.has_value() )
             {
                 playerInfo.playerWithDefuser = true;
                 // TODO: set defuser pos
             }
-            if( update.player_has_c4() )
+            if( update.player_has_c4 )
             {
                 playerInfo.playerWithC4 = true;
                 // TODO: set bomb pos

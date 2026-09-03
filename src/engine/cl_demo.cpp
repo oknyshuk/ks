@@ -390,9 +390,9 @@ void CDemoRecorder::WriteSplitScreenPlayers()
 			continue;
 
 		CSVCMsg_SplitScreen_t ss;
-		ss.set_type( MSG_SPLITSCREEN_ADDUSER );
-		ss.set_slot( i );
-		ss.set_player_index( splitscreen->GetSplitScreenPlayerEntity( i ) );
+		ss.type = ks::net::MSG_SPLITSCREEN_ADDUSER;
+		ss.slot = i;
+		ss.player_index = splitscreen->GetSplitScreenPlayerEntity( i );
 
 		ss.WriteToBuffer( msg );
 	}
@@ -428,12 +428,12 @@ void CDemoRecorder::WriteBSPDecals()
 		
 		const model_t * pModel = clientEntity->GetModel();
 
-		decal.mutable_pos()->set_x( entry->position.x );
-		decal.mutable_pos()->set_y( entry->position.y );
-		decal.mutable_pos()->set_z( entry->position.z );
-		decal.set_entity_index( entry->entityIndex );
-		decal.set_decal_texture_index( Draw_DecalIndexFromName( entry->name, &found ) );
-		decal.set_model_index( pModel ? GetBaseLocalClient().LookupModelIndex( modelloader->GetName( pModel ) ) : 0 );
+		decal.pos.mut().x = entry->position.x;
+		decal.pos.mut().y = entry->position.y;
+		decal.pos.mut().z = entry->position.z;
+		decal.entity_index = entry->entityIndex;
+		decal.decal_texture_index = Draw_DecalIndexFromName( entry->name, &found );
+		decal.model_index = pModel ? GetBaseLocalClient().LookupModelIndex( modelloader->GetName( pModel ) ) : 0;
 		decal.WriteToBuffer( msg );
 	}
 
@@ -736,7 +736,7 @@ void CDemoRecorder::StartupDemoFile( void )
 		CNETMsg_PlayerAvatarData_t &msgPlayerAvatarData = *GetBaseLocalClient().m_mapPlayerAvatarData.Element( iData );
 
 		// if the server authoritative data overrides local version of avatar data then don't write local version
-		if ( pMsgMyOwnAvatarData && ( msgPlayerAvatarData.accountid() == pMsgMyOwnAvatarData->accountid() ) )
+		if ( pMsgMyOwnAvatarData && ( msgPlayerAvatarData.accountid == pMsgMyOwnAvatarData->accountid ) )
 		{
 			delete pMsgMyOwnAvatarData;
 			pMsgMyOwnAvatarData = NULL;
@@ -2639,7 +2639,7 @@ void CDemoPlayer::SetHighlightXuid( uint64 xuid, bool bLowlights )
 
 void ParseEventKeys( CSVCMsg_GameEvent_t *msg, CGameEventDescriptor *pDescriptor, const char *pszEventName, KeyValues **ppKeys )
 {
-	int nKeyCount = msg->keys().size();
+	int nKeyCount = msg->keys.size();
 	if ( nKeyCount > 0 )
 	{
 		// build proper key values from descriptor plus message keys
@@ -2649,34 +2649,34 @@ void ParseEventKeys( CSVCMsg_GameEvent_t *msg, CGameEventDescriptor *pDescriptor
 			KeyValues *pDescriptorKey =	pDescriptor->keys->GetFirstSubKey();
 			for( int nKey = 0; nKey < nKeyCount; nKey++ )
 			{
-				const CSVCMsg_GameEvent::key_t& KeyValue = msg->keys( nKey );
-				if( KeyValue.has_val_string() )
+				const ks::net::CSVCMsg_GameEvent::key_t& KeyValue = msg->keys[ nKey ];
+				if( KeyValue.val_string.has_value() )
 				{
-					(*ppKeys)->SetString( pDescriptorKey->GetName(), KeyValue.val_string().c_str() );
+					(*ppKeys)->SetString( pDescriptorKey->GetName(), KeyValue.val_string->c_str() );
 				}
-				else if( KeyValue.has_val_float() )
+				else if( KeyValue.val_float.has_value() )
 				{
-					(*ppKeys)->SetFloat( pDescriptorKey->GetName(), KeyValue.val_float() );
+					(*ppKeys)->SetFloat( pDescriptorKey->GetName(), KeyValue.val_float );
 				}
-				else if( KeyValue.has_val_long() )
+				else if( KeyValue.val_long.has_value() )
 				{
-					(*ppKeys)->SetInt( pDescriptorKey->GetName(), KeyValue.val_long() );
+					(*ppKeys)->SetInt( pDescriptorKey->GetName(), KeyValue.val_long );
 				}
-				else if( KeyValue.has_val_short() )
+				else if( KeyValue.val_short.has_value() )
 				{
-					(*ppKeys)->SetInt( pDescriptorKey->GetName(), KeyValue.val_short() );
+					(*ppKeys)->SetInt( pDescriptorKey->GetName(), KeyValue.val_short );
 				}
-				else if( KeyValue.has_val_byte() )
+				else if( KeyValue.val_byte.has_value() )
 				{
-					(*ppKeys)->SetInt( pDescriptorKey->GetName(), KeyValue.val_byte() );
+					(*ppKeys)->SetInt( pDescriptorKey->GetName(), KeyValue.val_byte );
 				}
-				else if( KeyValue.has_val_bool() )
+				else if( KeyValue.val_bool.has_value() )
 				{
-					(*ppKeys)->SetBool( pDescriptorKey->GetName(), KeyValue.val_bool() );
+					(*ppKeys)->SetBool( pDescriptorKey->GetName(), KeyValue.val_bool );
 				}
-				else if( KeyValue.has_val_uint64() )
+				else if( KeyValue.val_uint64.has_value() )
 				{
-					(*ppKeys)->SetUint64( pDescriptorKey->GetName(), KeyValue.val_uint64() );
+					(*ppKeys)->SetUint64( pDescriptorKey->GetName(), KeyValue.val_uint64 );
 				}
 
 				pDescriptorKey = pDescriptorKey->GetNextKey();
@@ -2861,14 +2861,14 @@ void CDemoPlayer::ScanForImportantTicks()
 				if ( pMsgBind )
 				{
 					INetMessage	*netmsg = pMsgBind->CreateFromBuffer( message );
-					if ( netmsg && netmsg->GetType() == svc_GameEvent ) // only care about game events
+					if ( netmsg && netmsg->GetType() == ks::net::svc_GameEvent ) // only care about game events
 					{
 						CSVCMsg_GameEvent_t *msg = static_cast< CSVCMsg_GameEvent_t * >( netmsg );
 
-						CGameEventDescriptor *pDescriptor = g_GameEventManager.GetEventDescriptor( msg->eventid() );
+						CGameEventDescriptor *pDescriptor = g_GameEventManager.GetEventDescriptor( msg->eventid );
 						for ( int nEvent = 0; nEvent < m_ImportantGameEvents.Count(); nEvent++ )
 						{
-							if ( msg->eventid() == m_ImportantGameEvents[ nEvent ].nEventID )
+							if ( msg->eventid == m_ImportantGameEvents[ nEvent ].nEventID )
 							{
 								DemoImportantTick_t importantTick;
 								importantTick.nTick = tick;
@@ -2910,15 +2910,15 @@ void CDemoPlayer::ScanForImportantTicks()
 							}
 						}
 					}
-					else if ( netmsg && netmsg->GetType() == svc_UpdateStringTable )
+					else if ( netmsg && netmsg->GetType() == ks::net::svc_UpdateStringTable )
 					{
 						CSVCMsg_UpdateStringTable_t *msg = static_cast< CSVCMsg_UpdateStringTable_t * >( netmsg );
 
 						CNetworkStringTable *table = (CNetworkStringTable*)
-							demoScanStringTables.GetTable( msg->table_id() );
+							demoScanStringTables.GetTable( msg->table_id );
 
-						bf_read data( &msg->string_data()[0], msg->string_data().size() );
-						table->ParseUpdate( data, msg->num_changed_entries() );
+						bf_read data( msg->string_data->data(), msg->string_data->size() );
+						table->ParseUpdate( data, msg->num_changed_entries );
 					}
 					delete netmsg;
 				}

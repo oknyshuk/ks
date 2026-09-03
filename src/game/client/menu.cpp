@@ -323,10 +323,10 @@ void CHudMenu::ShowMenu_KeyValueItems( KeyValues *pKV )
 //		string: menu string to display
 //  if this message is never received, then scores will simply be the combined totals of the players.
 //-----------------------------------------------------------------------------
-bool CHudMenu::MsgFunc_ShowMenu( const CCSUsrMsg_ShowMenu &msg)
+bool CHudMenu::MsgFunc_ShowMenu( const ks::net::CCSUsrMsg_ShowMenu &msg)
 {
-	m_bitsValidSlots = msg.bits_valid_slots();
-	int DisplayTime = msg.display_time();
+	m_bitsValidSlots = msg.bits_valid_slots;
+	int DisplayTime = msg.display_time;
 	
 	if ( DisplayTime > 0 )
 	{
@@ -340,7 +340,7 @@ bool CHudMenu::MsgFunc_ShowMenu( const CCSUsrMsg_ShowMenu &msg)
 
 	if ( m_bitsValidSlots )
 	{
-		Q_strncpy( g_szPrelocalisedMenuString, msg.menu_string().c_str(), sizeof( g_szPrelocalisedMenuString ) );
+		Q_strncpy( g_szPrelocalisedMenuString, msg.menu_string->c_str(), sizeof( g_szPrelocalisedMenuString ) );
 
 		GetClientMode()->GetViewportAnimationController()->StartAnimationSequence("MenuOpen");
 		m_nSelectedItem = -1;

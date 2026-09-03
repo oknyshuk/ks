@@ -34,7 +34,7 @@ CUserMessages::~CUserMessages()
 
 // we might wanna move this definition here::
 // template< int msgType, typename PB_OBJECT_TYPE, int32 nExpectedPassthroughInReplay >
-// virtual ::google::protobuf::Message * CUserMessageBinder::BindParams<msgType, PB_OBJECT_TYPE, nExpectedPassthroughInReplay >::Parse( int32 nPassthroughFlags, const void *msg, int size )
+// virtual void * CUserMessageBinder::BindParams<msgType, PB_OBJECT_TYPE, nExpectedPassthroughInReplay >::Parse( int32 nPassthroughFlags, const void *msg, int size )
 
 //-----------------------------------------------------------------------------
 bool CUserMessages::DispatchUserMessage( int msg_type, int32 nPassthroughFlags, int size, const void *msg )
@@ -62,12 +62,12 @@ bool CUserMessages::DispatchUserMessage( int msg_type, int32 nPassthroughFlags, 
 	}
 
 	bool bSilentIgnore = false;
-	::google::protobuf::Message *pMsg = pHandler->Parse( nPassthroughFlags, msg, size, bSilentIgnore );
+	void *pMsg = pHandler->Parse( nPassthroughFlags, msg, size, bSilentIgnore );
 
 	if ( bSilentIgnore )
 	{
 		if ( pMsg )
-			delete pMsg;
+			pHandler->Destroy( pMsg );
 		//DevMsg( "CUserMessages::DispatchUserMessage: Silently ignoring alt-timeline msg type %i\n", msg_type );
 		return true;
 	}
@@ -82,10 +82,10 @@ bool CUserMessages::DispatchUserMessage( int msg_type, int32 nPassthroughFlags, 
 	//handle logging to the console if this is enabled
 	if ( cl_show_usermessage.GetBool() )
 	{
-		Msg("DispatchUserMessage - %s(%d) bytes: %d\n", pMsg->GetTypeName().c_str(), msg_type, pMsg->ByteSize() );
+		Msg("DispatchUserMessage - %s(%d) bytes: %d\n", pHandler->TypeName(), msg_type, int( pHandler->ByteSize( pMsg ) ) );
 		//handle message content display if they have it set to a value > 1
 		if( cl_show_usermessage.GetInt() > 1 )
-			Msg("%s", pMsg->DebugString().c_str() );
+			Msg("%s", pHandler->Describe( pMsg ).c_str() );
 	}
 
 	bool result = true;
@@ -103,7 +103,7 @@ bool CUserMessages::DispatchUserMessage( int msg_type, int32 nPassthroughFlags, 
 		}
 	}
 
-	delete pMsg;
+	pHandler->Destroy( pMsg );
 
 	return result;
 }

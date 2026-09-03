@@ -18,7 +18,7 @@
 #include "tier1/utlvector.h"
 
 class CStandardSendProxies;
-class CSVCMsg_SendTable;
+namespace ks::net { struct CSVCMsg_SendTable; }
 
 typedef intp SerializedEntityHandle_t;
 
@@ -34,7 +34,7 @@ void		RecvTable_Term( bool clearall = true );
 // as the server sends its SendTables over. If msg needs decoder
 // it will precalculate the necessary data to actually decode this type of
 // SendTable from the server. nDemoProtocol = 0 means current version.
-bool RecvTable_RecvClassInfos( const CSVCMsg_SendTable& msg, int nDemoProtocol = 0 );
+bool RecvTable_RecvClassInfos( const ks::net::CSVCMsg_SendTable& msg, int nDemoProtocol = 0 );
 
 // After ALL the SendTables have been received, call this and it will create CRecvDecoders
 // for all the SendTable->RecvTable matches it finds.

@@ -107,9 +107,9 @@ class CAI_GlobalScheduleNamespace
 public:
 	void Clear()
 	{
-		m_ScheduleNamespace.Clear();
-		m_TaskNamespace.Clear();
-		m_ConditionNamespace.Clear();
+		m_ScheduleNamespace = {};
+		m_TaskNamespace = {};
+		m_ConditionNamespace = {};
 	}
 
 	void 		AddSchedule( const char *pszSchedule, int scheduleID );

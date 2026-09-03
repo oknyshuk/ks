@@ -40,7 +40,7 @@ public:
     void OnLoad();
 
     // Hooked msg
-    bool MsgFunc_ProcessSpottedEntityUpdate( const CCSUsrMsg_ProcessSpottedEntityUpdate &msg );
+    bool MsgFunc_ProcessSpottedEntityUpdate( const ks::net::CCSUsrMsg_ProcessSpottedEntityUpdate &msg );
 
     void UpdateRadarFrame();
     void UpdateRadarSize();

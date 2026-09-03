@@ -40,9 +40,9 @@ public:
 
 	virtual void	ChatPrintf(int iPlayerIndex, int iFilter, PRINTF_FORMAT_STRING const char* fmt, ...) FMTFUNCTION(4, 5);
 
-	bool			MsgFunc_SayText2( const CCSUsrMsg_SayText2 &msg );
-	bool			MsgFunc_RadioText( const CCSUsrMsg_RadioText &msg );
-	bool			MsgFunc_RawAudio( const CCSUsrMsg_RawAudio &msg );
+	bool			MsgFunc_SayText2( const ks::net::CCSUsrMsg_SayText2 &msg );
+	bool			MsgFunc_RadioText( const ks::net::CCSUsrMsg_RadioText &msg );
+	bool			MsgFunc_RawAudio( const ks::net::CCSUsrMsg_RawAudio &msg );
 
 	int				GetChatInputOffset( void );
 

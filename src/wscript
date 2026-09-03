@@ -58,7 +58,6 @@ PROJECTS = [
     "filesystem",
     "game/client",
     "game/server",
-    "generated_proto",
     "inputsystem",
     "interfaces",
     "launcher",
@@ -112,17 +111,19 @@ Build.BuildContext.get_taskgen_count = _get_taskgen_count
 
 # --- Optimization flag tables ---
 
+SANITIZERS = ["-fsanitize=address,undefined", "-pthread"]
+
 OPTFLAGS = {
-    # no -ffast-math: under gcc it makes the dxvk/dxbc-spirv shader compiler
-    # spin forever while translating shaders (black screen on startup)
-    "release": ["-O3"],
-    "debug": ["-O0"],
-    "sanitize": [
-        "-O0",
-        "-fno-omit-frame-pointer",
-        "-fsanitize=address,undefined",
-        "-pthread",
-    ],
+    "dev": ["-O1", "-g", "-gsplit-dwarf"],
+    # no -ffast-math: under gcc dxbc-spirv shader compiler spins forever translating shaders
+    "release": ["-O3", "-flto=auto", "-fno-semantic-interposition"],
+    "sanitize": ["-O0", "-g", "-gsplit-dwarf", "-fno-omit-frame-pointer"] + SANITIZERS,
+}
+
+LINKFLAGS = {
+    "dev": ["-gsplit-dwarf"],
+    "release": ["-flto=auto", "-fno-semantic-interposition"],
+    "sanitize": ["-gsplit-dwarf"] + SANITIZERS,
 }
 
 
@@ -147,8 +148,8 @@ def options(opt):
         "--build-type",
         action="store",
         dest="BUILD_TYPE",
-        default="release",
-        help="build type: release, debug, sanitize",
+        default="dev",
+        help="build type: dev, release, sanitize",
     )
     grp.add_option(
         "-w",
@@ -216,19 +217,12 @@ def configure(conf):
     conf.msg("Build type", build_type)
     conf.env.BUILD_TYPE = build_type
 
-    cflags = [
-        "-g",
-        "-fvisibility=hidden",
-        "-gsplit-dwarf",
-    ]
-    cflags += OPTFLAGS[build_type]
+    cflags = ["-fvisibility=hidden"] + OPTFLAGS[build_type]
     cxxflags = cflags + ["-fno-threadsafe-statics"]
 
-    linkflags = ["-gsplit-dwarf"]
+    linkflags = list(LINKFLAGS[build_type])
     if shutil.which("mold"):
         linkflags.append("-fuse-ld=mold")
-    if build_type == "sanitize":
-        linkflags += ["-fsanitize=address,undefined", "-pthread"]
 
     conf.check_cc(
         cflags=cflags, linkflags=linkflags, msg="Checking for required C flags"
@@ -304,9 +298,7 @@ def configure(conf):
     conf.env.append_unique("INCLUDES", includes)
 
     # System includes (suppress warnings in thirdparty headers)
-    for sysinc in _vendored(conf, "protobuf-*", "src") + _vendored(
-        conf, "DirectXMath-*", "Inc"
-    ):
+    for sysinc in _vendored(conf, "DirectXMath-*", "Inc"):
         flag = f"-isystem{sysinc}"
         conf.env.append_unique("CFLAGS", [flag])
         conf.env.append_unique("CXXFLAGS", [flag])

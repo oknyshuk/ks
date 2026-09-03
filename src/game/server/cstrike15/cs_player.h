@@ -25,7 +25,7 @@ class CHintMessageQueue;
 class CNavArea;
 class CCSBot;
 class CEconPersonaDataPublic;
-class CCSUsrMsg_PlayerDecalDigitalSignature;
+namespace ks::net { struct CCSUsrMsg_PlayerDecalDigitalSignature; }
 
 #include "matchmaking/cstrike15/imatchext_cstrike15.h"
 #include "matchmaking/iplayerrankingdata.h"
@@ -297,7 +297,7 @@ public:
 	virtual void		PlayerRunCommand( CUserCmd *ucmd, IMoveHelper *moveHelper );
 	virtual void		PostThink();
 
-	void				SprayPaint( CCSUsrMsg_PlayerDecalDigitalSignature const &msg );
+	void				SprayPaint( ks::net::CCSUsrMsg_PlayerDecalDigitalSignature const &msg );
 
 	class ITakeDamageListener
 	{
@@ -755,7 +755,7 @@ private:
 	void UpdateAddonBits();
 	void ProcessSpottedEntityUpdate();
 	void AppendSpottedEntityUpdateMessage( int entindex, bool bSpotted,
-		CCSUsrMsg_ProcessSpottedEntityUpdate::SpottedEntityUpdate *pMsg );
+		ks::net::CCSUsrMsg_ProcessSpottedEntityUpdate::SpottedEntityUpdate *pMsg );
 	//void UpdateTeamMoney();
 	int GetAccountForScoreboard();
 

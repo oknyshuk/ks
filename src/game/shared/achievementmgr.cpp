@@ -154,7 +154,7 @@ bool CAchievementMgr::Init()
 	for ( int hh = 0; hh < MAX_SPLITSCREEN_PLAYERS; ++hh )
 	{
 		ACTIVE_SPLITSCREEN_PLAYER_GUARD( hh );
-		m_UMCMsgAchievementEvent.Bind< CS_UM_AchievementEvent, CCSUsrMsg_AchievementEvent >( UtlMakeDelegate( MsgFunc_AchievementEvent ) );
+		m_UMCMsgAchievementEvent.Bind< ks::net::CS_UM_AchievementEvent, ks::net::CCSUsrMsg_AchievementEvent >( UtlMakeDelegate( MsgFunc_AchievementEvent ) );
 	}
 	ListenForGameEvent( "read_game_titledata" );
 	ListenForGameEvent( "write_game_titledata" );
@@ -1701,15 +1701,15 @@ void CAchievementMgr::ResetAchievement_Internal( CBaseAchievement *pAchievement 
 
 #ifdef CLIENT_DLL
 
-bool MsgFunc_AchievementEvent( const CCSUsrMsg_AchievementEvent &msg )
+bool MsgFunc_AchievementEvent( const ks::net::CCSUsrMsg_AchievementEvent &msg )
 {
-	int iAchievementID = (int) msg.achievement();
+	int iAchievementID = (int) msg.achievement;
 	CAchievementMgr *pAchievementMgr = CAchievementMgr::GetInstance();
 	if ( !pAchievementMgr )
 		return true;
 
-	int iCount = (int) msg.count();
-	int userID = (int) msg.user_id();
+	int iCount = (int) msg.count;
+	int userID = (int) msg.user_id;
 
 	// Fix unused variable warning
 	NOTE_UNUSED(iCount);
