@@ -24,7 +24,6 @@
 #include "netmessages.h"
 #include "usermessages.h"
 
-#include "cstrike15_gcmessages.pb.h"
 
 // NOTE: This has to be the last file included!
 #include "tier0/memdbgon.h"
@@ -65,61 +64,6 @@ void CServerGameDLL::LevelInit_ParseAllEntities( const char *pMapEntities )
 	}
 }
 
-void GCCStrikeWelcomeMessageReceived( CMsgCStrike15Welcome const &msgCStrike )
-{
-}
-
-bool Helper_FillServerReservationStateAndPlayers( CMsgGCCStrike15_v2_MatchmakingServerReservationResponse &msgbody )
-{
-	if ( !engine->IsDedicatedServer() )
-		return false;
-
-	msgbody.set_server_version( ( ( INetSupport * ) g_pMatchFramework->GetMatchExtensions()->GetRegisteredExtensionInterface( INETSUPPORT_VERSION_STRING ) )->GetEngineBuildNumber() );
-	msgbody.set_map( STRING( gpGlobals->mapname ) );
-	static ConVarRef sv_steamdatagramtransport_port( "sv_steamdatagramtransport_port" );
-
-	// Expose information about our community server GOTV port so that clients could connect
-	static ConVarRef tv_advertise_watchable( "tv_advertise_watchable" );
-	static int s_nTvPort = 0;	// make the TV port sticky: if we reported it non-zero once then keep reporting
-	CEngineHltvInfo_t engineHltvInfo;
-	if ( tv_advertise_watchable.GetBool() &&
-		engine->GetEngineHltvInfo( engineHltvInfo ) && engineHltvInfo.m_bBroadcastActive )
-	{
-		s_nTvPort = engineHltvInfo.m_nTvPort;
-	}
-	if ( s_nTvPort )
-	{
-		msgbody.mutable_tv_info()->set_tv_udp_port( s_nTvPort );
-	}
-
-	// Build the list of players who are actively playing on the game server
-	for ( int i = 1; i <= gpGlobals->maxClients; i++ )
-	{
-		CBasePlayer *pPlayer = UTIL_PlayerByIndex( i );
-		if ( pPlayer )
-		{
-			if ( pPlayer->IsBot() )
-				continue;
-			CSteamID steamIdPlayer;
-			if ( !pPlayer->GetSteamID( &steamIdPlayer ) )
-				continue;
-			if ( !steamIdPlayer.IsValid() )
-				continue;
-			switch ( pPlayer->GetTeamNumber() )
-			{
-			case TEAM_CT:
-			case TEAM_TERRORIST:
-				msgbody.add_reward_player_accounts( steamIdPlayer.GetAccountID() );
-				break;
-			default:
-				msgbody.add_idle_player_accounts( steamIdPlayer.GetAccountID() );
-				break;
-			}
-		}
-	}
-
-	return true;
-}
 
 
 void CServerGameDLL::UpdateGCInformation()

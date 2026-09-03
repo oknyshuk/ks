@@ -133,7 +133,6 @@
 #include "engine/iblackbox.h"
 #include "c_rumble.h"
 #include "viewpostprocess.h"
-#include "cstrike15_gcmessages.pb.h"
 
 #include "achievements_and_stats_interface.h"
 

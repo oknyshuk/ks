@@ -76,7 +76,6 @@ extern void longjmp( jmp_buf, int ) __attribute__((noreturn));
 
 
 #if ( defined(GAME_DLL) || defined(CLIENT_DLL) )
-	#include "base_gcmessages.pb.h"
 #endif //!defined( _GAMECONSOLE )
 
 // memdbgon must be the last include file in a .cpp file!!!

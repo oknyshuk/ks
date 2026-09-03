@@ -44,7 +44,6 @@
 #include "steam/steam_api.h"
 #include "gameui_util.h"
 #include "cdll_client_int.h"
-#include "cstrike15_gcmessages.pb.h"
 #include "cstrike15_gcconstants.h"
 #include "engine/inetsupport.h"
 

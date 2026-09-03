@@ -15,12 +15,10 @@ def build(bld):
     includes = ["../thirdparty/protobuf-2.6.1/src"]
 
     source = [
-        "base_gcmessages.pb.cc",
         "cstrike15_gcmessages.pb.cc",
         "cstrike15_usermessages.pb.cc",
         "engine_gcmessages.pb.cc",
         "netmessages.pb.cc",
-        "network_connection.pb.cc",
         "steammessages.pb.cc",
     ]
 

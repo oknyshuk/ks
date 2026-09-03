@@ -101,7 +101,6 @@
 
 #include "physpropclientside.h"			// for dropping physics mags
 
-#include "cstrike15_gcmessages.pb.h"
 #include "csgo_playeranimstate.h"
 
 #include "c_props.h"

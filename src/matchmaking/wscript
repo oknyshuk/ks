@@ -24,14 +24,11 @@ def build(bld):
         "interfaces",
         "vstdlib",
         "mathlib",
-        "generated_proto",
-        "protobuf",
     ]
 
     includes = [
         "../common/xlast_csgo",
         "../game/shared",
-        "../thirdparty/protobuf-2.6.1/src",
     ]
 
     source = [
