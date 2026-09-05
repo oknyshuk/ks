@@ -2048,7 +2048,7 @@ static inline void save_glibc_hooks(void);
 static inline void set_glibc_hooks(void);
 static inline void set_override_hooks(void);
 
-CThreadMutex g_HookMutex;
+CThreadMutex g_HookMutex CONSTRUCT_EARLY;
 /*
  * Our overriding hooks...they call through to the original C runtime
  *  implementations and report to the monitoring daemon.

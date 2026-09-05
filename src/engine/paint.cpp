@@ -50,7 +50,7 @@ int GetDiameter( int radius )
 }
 
 
-BYTE GetColorIndex( BYTE byte )
+static BYTE GetColorIndex( BYTE byte )
 {
 	return ( PAINT_COLOR_BITS & byte ) >> NUM_ALPHA_BITS;
 }

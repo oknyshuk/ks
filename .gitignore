@@ -6,7 +6,7 @@
 .envrc
 /.direnv
 
-src/build/
+src/build*/
 src/.lock-waf*
 src/.cache/
 src/ccache.conf

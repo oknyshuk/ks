@@ -315,7 +315,7 @@ CBaseEntity *CDecal::GetDecalEntityAndPosition( Vector *pPosition, bool bStatic 
 		if ( trace.DidHitNonWorldEntity() )
 		{
 			*pPosition = trace.endpos;
-			return trace.m_pEnt;
+			return trace.Ent<CBaseEntity>();
 		}
 	}
 	else

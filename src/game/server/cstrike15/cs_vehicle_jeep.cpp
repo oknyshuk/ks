@@ -1004,7 +1004,7 @@ void CPropJeep::FireChargedCannon( void )
 	//FIXME: Use ConVars!
 	float flDamage = 15 + ( ( 250 - 15 ) * flChargeAmount );
 
-	CBaseEntity *pHit = tr.m_pEnt;
+	CBaseEntity *pHit = tr.Ent<CBaseEntity>();
 	
 	//Look for wall penetration
 	if ( tr.DidHitWorld() && !(tr.surface.flags & SURF_SKY) )
@@ -1152,7 +1152,7 @@ void CPropJeep::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE use
 	Vector vecStart = pPlayer->EyePosition();
 	UTIL_TraceLine( vecStart, vecStart + vecForward * 1024, MASK_SOLID | CONTENTS_DEBRIS | CONTENTS_HITBOX, pPlayer, COLLISION_GROUP_NONE, &tr );
 	
-	if ( tr.m_pEnt == this && tr.hitgroup == JEEP_AMMOCRATE_HITGROUP )
+	if ( tr.Ent<CBaseEntity>() == this && tr.hitgroup == JEEP_AMMOCRATE_HITGROUP )
 	{
 		// Player's using the crate.
 		// Fill up his SMG ammo.

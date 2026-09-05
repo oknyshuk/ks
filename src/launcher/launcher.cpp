@@ -100,7 +100,7 @@ extern bool DoesFileExistIn( const char *pDirectoryName, const char *pFilename )
 //-----------------------------------------------------------------------------
 static IEngineAPI *g_pEngineAPI;
 
-bool g_bTextMode = false;
+static bool g_bTextMode = false;
 
 static char g_szBasedir[MAX_PATH];
 static char g_szGamedir[MAX_PATH];
@@ -180,7 +180,7 @@ void SetGameDirectory( const char *game )
 //-----------------------------------------------------------------------------
 // Gets the executable name
 //-----------------------------------------------------------------------------
-bool GetExecutableName( char *out, int outSize )
+static bool GetExecutableName( char *out, int outSize )
 {
 #ifdef WIN32
 	if ( !::GetModuleFileName( ( HINSTANCE )GetModuleHandle( NULL ), out, outSize ) )
@@ -591,64 +591,39 @@ bool CSourceAppSystemGroup::Create()
 	CoInitialize( NULL );
 #endif
 
-	AppSystemInfo_t appSystems[] =
+	static const char * const pBuiltinSystems[] =
 	{
-#define LAUNCHER_APPSYSTEM( name ) name DLL_EXT_STRING
-		{ LAUNCHER_APPSYSTEM( "engine" ),				CVAR_QUERY_INTERFACE_VERSION },	// NOTE: This one must be first!!
-		{ LAUNCHER_APPSYSTEM( "inputsystem" ),			INPUTSYSTEM_INTERFACE_VERSION },
-		{ LAUNCHER_APPSYSTEM( "inputsystem" ),			INPUTSTACKSYSTEM_INTERFACE_VERSION },
-		{ LAUNCHER_APPSYSTEM( "localize" ),				LOCALIZE_INTERFACE_VERSION },
-		{ LAUNCHER_APPSYSTEM( "vphysics" ),				VPHYSICS_INTERFACE_VERSION },
-		{ LAUNCHER_APPSYSTEM( "materialsystem" ),		MATERIAL_SYSTEM_INTERFACE_VERSION },
-		{ LAUNCHER_APPSYSTEM( "datacache" ),			DATACACHE_INTERFACE_VERSION },
-		{ LAUNCHER_APPSYSTEM( "datacache" ),			MDLCACHE_INTERFACE_VERSION },
-		{ LAUNCHER_APPSYSTEM( "datacache" ),			STUDIO_DATA_CACHE_INTERFACE_VERSION },
-		{ LAUNCHER_APPSYSTEM( "studiorender" ),			STUDIO_RENDER_INTERFACE_VERSION },
-		{ LAUNCHER_APPSYSTEM( "soundemittersystem" ),	SOUNDEMITTERSYSTEM_INTERFACE_VERSION },
-		{ LAUNCHER_APPSYSTEM( "vscript" ),				VSCRIPT_INTERFACE_VERSION },
-#ifdef WIN32
-		{ LAUNCHER_APPSYSTEM("soundsystem"),			SOUNDSYSTEM_INTERFACE_VERSION },
-#endif
-
-    #if defined ( AVI_VIDEO )
- 		{ LAUNCHER_APPSYSTEM( "valve_avi" ),			AVI_INTERFACE_VERSION },
-    #endif
-    #if defined ( BINK_VIDEO )
- 		{ LAUNCHER_APPSYSTEM( "valve_avi" ),			BIK_INTERFACE_VERSION },
- 	#endif
-	#if defined( QUICKTIME_VIDEO )
- 		{ LAUNCHER_APPSYSTEM( "valve_avi" ),			QUICKTIME_INTERFACE_VERSION },
-    #endif
-		{ LAUNCHER_APPSYSTEM( "engine" ),				VENGINE_LAUNCHER_API_VERSION },
-
-		{ "", "" }					// Required to terminate the list
+		CVAR_QUERY_INTERFACE_VERSION,			// NOTE: This one must be first!!
+		INPUTSYSTEM_INTERFACE_VERSION,
+		INPUTSTACKSYSTEM_INTERFACE_VERSION,
+		LOCALIZE_INTERFACE_VERSION,
+		VPHYSICS_INTERFACE_VERSION,
+		MATERIAL_SYSTEM_INTERFACE_VERSION,
+		DATACACHE_INTERFACE_VERSION,
+		MDLCACHE_INTERFACE_VERSION,
+		STUDIO_DATA_CACHE_INTERFACE_VERSION,
+		STUDIO_RENDER_INTERFACE_VERSION,
+		SOUNDEMITTERSYSTEM_INTERFACE_VERSION,
+		VSCRIPT_INTERFACE_VERSION,
+		VENGINE_LAUNCHER_API_VERSION,
+		ROCKETUI_INTERFACE_VERSION,
 	};
 
 #if defined( USE_SDL )
     AddSystem( (IAppSystem *)CreateSDLMgr(),	SDLMGR_INTERFACE_VERSION );
 #endif
 
-	if ( !AddSystems( appSystems ) )
-		return false;
-
-	// Load RocketUI
+	AppModule_t builtinModule = LoadModule( Sys_GetFactoryThis() );
+	for ( const char *pInterfaceName : pBuiltinSystems )
 	{
-		AppSystemInfo_t rocketuiInfo[] =
-		{
-			{ LAUNCHER_APPSYSTEM( "rocketui_client" ),		ROCKETUI_INTERFACE_VERSION },
-			{ "", "" }
-		};
-
-		if ( !AddSystems( rocketuiInfo ) )
+		if ( !AddSystem( builtinModule, pInterfaceName ) )
 			return false;
 	}
-
 
 	if ( CommandLine()->FindParm( "-dev" ) )
 	{
 		// Used to guarantee precache consistency
-		AppModule_t datacacheModule = LoadModule( LAUNCHER_APPSYSTEM( "datacache" ) );
-		IResourceAccessControl *pResourceAccess = (IResourceAccessControl*)AddSystem( datacacheModule, RESOURCE_ACCESS_CONTROL_INTERFACE_VERSION );
+		IResourceAccessControl *pResourceAccess = (IResourceAccessControl*)AddSystem( builtinModule, RESOURCE_ACCESS_CONTROL_INTERFACE_VERSION );
 		if ( !pResourceAccess )
 			return false;
 	}

@@ -101,8 +101,6 @@ public:
 // member variables.  Client & server threads can call into this class simultaneously
 class CGameEventManager : public IGameEventManager2
 {
-	friend class CGameEventManagerOld;
-
 public:	// IGameEventManager functions
 
 	enum

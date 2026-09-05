@@ -424,7 +424,7 @@ bool C_LocalTempEntity::Frame( float frametime, int framenumber )
 				if  ( 
 					(trace.fraction != 1) && 
 						( (trace.DidHitWorld()) || 
-						  (trace.m_pEnt != ClientEntityList().GetEnt(clientIndex)) ) 
+						  (trace.Ent<CBaseEntity>() != ClientEntityList().GetEnt(clientIndex)) ) 
 					)
 				{
 					traceFraction = trace.fraction;
@@ -500,9 +500,9 @@ bool C_LocalTempEntity::Frame( float frametime, int framenumber )
 					}
 				}
 
-				if ( trace.m_pEnt )
+				if ( trace.Ent<CBaseEntity>() )
 				{
-					data.m_hEntity = ClientEntityList().EntIndexToHandle( trace.m_pEnt->entindex() );
+					data.m_hEntity = ClientEntityList().EntIndexToHandle( trace.Ent<CBaseEntity>()->entindex() );
 				}
 				DispatchEffect( m_pszImpactEffect, data );
 			}

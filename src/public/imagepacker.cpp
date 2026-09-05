@@ -1,12 +1,11 @@
-//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
+//========= Copyright ï¿½ 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
 //=====================================================================================//
 
 #include "imagepacker.h"
-#include "materialsystem_global.h"
-#include "IHardwareConfigInternal.h"
+#include "mathlib/mathlib.h"
 
 // NOTE: This has to be the last file included
 #include "tier0/memdbgon.h"
@@ -156,14 +155,13 @@ bool CImagePacker::AddBlock( int width, int height,
 	return true;
 }
 
-void CImagePacker::GetMinimumDimensions( int *pReturnWidth, int *pReturnHeight )
+void CImagePacker::GetMinimumDimensions( int *pReturnWidth, int *pReturnHeight, int nMaxAspectRatio )
 {
 	*pReturnWidth = CeilPow2( m_MaxLightmapWidth );
 	*pReturnHeight = CeilPow2( m_MinimumHeight );
 
-	int aspect = *pReturnWidth / *pReturnHeight;
-	if (aspect > HardwareConfig()->MaxTextureAspectRatio())
+	if ( nMaxAspectRatio > 0 && *pReturnWidth / *pReturnHeight > nMaxAspectRatio )
 	{
-		*pReturnHeight = *pReturnWidth / HardwareConfig()->MaxTextureAspectRatio(); 
+		*pReturnHeight = *pReturnWidth / nMaxAspectRatio;
 	}
 }

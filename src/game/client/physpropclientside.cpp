@@ -146,7 +146,7 @@ void C_PhysPropClientside::HitSurface( C_BaseEntity *pOther )
 	{
 		trace_t	tr;
 		tr = BaseClass::GetTouchTrace();
-		if ( tr.m_pEnt )
+		if ( tr.Ent<CBaseEntity>() )
 		{
 			UTIL_BloodDecalTrace( &tr, BLOOD_COLOR_RED );
 		}

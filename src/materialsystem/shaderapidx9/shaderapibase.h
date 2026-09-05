@@ -70,14 +70,14 @@ class CPixEvent
 public:
 	CPixEvent( unsigned long color, const char *szName )
 	{
-		if ( g_pShaderAPI )
-			g_pShaderAPI->BeginPIXEvent( color, szName );
+		if ( g_pShaderAPIBase )
+			g_pShaderAPIBase->BeginPIXEvent( color, szName );
 	}
 
 	~CPixEvent()
 	{
-		if ( g_pShaderAPI )
-			g_pShaderAPI->EndPIXEvent();
+		if ( g_pShaderAPIBase )
+			g_pShaderAPIBase->EndPIXEvent();
 	}
 };
 

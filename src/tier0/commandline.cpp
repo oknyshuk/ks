@@ -91,10 +91,10 @@ private:
 //-----------------------------------------------------------------------------
 // Instance singleton and expose interface to rest of code
 //-----------------------------------------------------------------------------
-static CCommandLine g_CmdLine;
 ICommandLine *CommandLine()
 {
-	return &g_CmdLine;
+	static CCommandLine s_CmdLine;
+	return &s_CmdLine;
 }
 
 

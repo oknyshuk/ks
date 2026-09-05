@@ -21,6 +21,12 @@
 #include "tier2/tier2.h"
 #include "dedicated.h"
 #include "vstdlib/cvar.h"
+#include "istudiorender.h"
+#include "datacache/imdlcache.h"
+#include "vphysics_interface.h"
+#include "vscript/ivscript.h"
+#include "SoundEmitterSystem/isoundemittersystembase.h"
+#include "materialsystem/imaterialsystem.h"
 #include <mcheck.h>
 #include <unistd.h>
 #define _chdir chdir
@@ -28,8 +34,6 @@
 bool InitInstance( );
 void ProcessConsoleInput( void );
 const char *UTIL_GetExecutableDir( );
-bool NET_Init( void );
-void NET_Shutdown( void );
 const char *UTIL_GetBaseDir( void );
 
 const char *g_gameName = "csgo";
@@ -193,6 +197,26 @@ bool CDedicatedAppSystemGroup::Create( )
 	if ( !pSystem )
 		return false;
 
+	static const char * const pBuiltinSystems[] =
+	{
+		CVAR_QUERY_INTERFACE_VERSION,
+		MATERIAL_SYSTEM_INTERFACE_VERSION,
+		STUDIO_RENDER_INTERFACE_VERSION,
+		VPHYSICS_INTERFACE_VERSION,
+		DATACACHE_INTERFACE_VERSION,
+		MDLCACHE_INTERFACE_VERSION,
+		STUDIO_DATA_CACHE_INTERFACE_VERSION,
+		SOUNDEMITTERSYSTEM_INTERFACE_VERSION,
+		VSCRIPT_INTERFACE_VERSION,
+		VENGINE_HLDS_API_VERSION,
+	};
+
+	for ( const char *pInterfaceName : pBuiltinSystems )
+	{
+		if ( !AddSystem( dedicatedModule, pInterfaceName ) )
+			return false;
+	}
+
 	return sys->LoadModules( this );
 }
 
@@ -217,9 +241,6 @@ bool CDedicatedAppSystemGroup::PreInit( )
 	fsInfo.m_pDirectoryName = steamInfo.m_GameInfoPath;
 
 	if ( FileSystem_MountContent( fsInfo ) != FS_OK )
-		return false;
-
-	if ( !NET_Init() )
 		return false;
 
 	// Needs to be done prior to init material system config
@@ -263,7 +284,6 @@ void CDedicatedAppSystemGroup::PostShutdown()
 {
 	sys->DestroyConsoleWindow();
 	console.ShutDown();
-	NET_Shutdown();
 	BaseClass::PostShutdown();
 }
 
@@ -276,7 +296,7 @@ void CDedicatedAppSystemGroup::Destroy()
 //-----------------------------------------------------------------------------
 // Gets the executable name
 //-----------------------------------------------------------------------------
-bool GetExecutableName( char *out, int nMaxLen )
+static bool GetExecutableName( char *out, int nMaxLen )
 {
 	Q_strncpy( out, g_szEXEName, nMaxLen );
 	return true;

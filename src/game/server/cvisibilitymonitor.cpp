@@ -272,7 +272,7 @@ bool CVisibilityMonitor::EntityIsVisibleToPlayer( const visibility_target_t &tar
 		trace_t tr;
 		UTIL_TraceLine( vecPlayerOrigin, vecTargetOrigin, mask, pEyeEntity, COLLISION_GROUP_NONE, &tr );
 
-		if( tr.fraction == 1.0f || tr.m_pEnt == target.entity )
+		if( tr.fraction == 1.0f || tr.Ent<CBaseEntity>() == target.entity )
 			return true;
 
 		if( debug_visibility_monitor.GetInt() > 1 )

@@ -26,9 +26,9 @@ extern ConVar mat_ambient_light_g;
 extern ConVar mat_ambient_light_b;
 
 
-static ConVar r_shader_srgbread( "r_shader_srgbread", "0", 0, "1 = use shader srgb texture reads, 0 = use HW" );
+static ConVar r_shader_srgbread( "r_shader_srgbread", "0", FCVAR_MATERIAL_SYSTEM_THREAD, "1 = use shader srgb texture reads, 0 = use HW" );
 
-static ConVar mat_force_vertexfog( "mat_force_vertexfog", "0", FCVAR_DEVELOPMENTONLY );
+static ConVar mat_force_vertexfog( "mat_force_vertexfog", "0", FCVAR_MATERIAL_SYSTEM_THREAD | FCVAR_DEVELOPMENTONLY );
 
 void InitParamsLightmapped_4WayBlend_DX9( CBaseVSShader *pShader, IMaterialVar** params, const char *pMaterialName, Lightmapped_4WayBlend_DX9_Vars_t &info )
 {

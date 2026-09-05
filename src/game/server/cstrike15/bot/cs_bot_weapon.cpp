@@ -1411,7 +1411,7 @@ bool CCSBot::IsFriendInLineOfFire( void )
 
 	if (result.DidHitNonWorldEntity())
 	{
-		CBaseEntity *victim = result.m_pEnt;
+		CBaseEntity *victim = result.Ent<CBaseEntity>();
 
 		if (victim && victim->IsPlayer() && victim->IsAlive())
 		{

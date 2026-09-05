@@ -312,5 +312,7 @@ public:
 	}
 };
 
+const char *COM_GetModDirectory();
+
 #endif // FILEUTILS_H
 

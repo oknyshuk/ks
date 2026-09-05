@@ -748,9 +748,9 @@ void CBeam::BeamDamage( trace_t *ptr )
 {
 	RelinkBeam();
 #if !defined( CLIENT_DLL )
-	if ( ptr->fraction != 1.0 && ptr->m_pEnt != NULL )
+	if ( ptr->fraction != 1.0 && ptr->Ent<CBaseEntity>() != NULL )
 	{
-		CBaseEntity *pHit = ptr->m_pEnt;
+		CBaseEntity *pHit = ptr->Ent<CBaseEntity>();
 		if ( pHit )
 		{
 			ClearMultiDamage();

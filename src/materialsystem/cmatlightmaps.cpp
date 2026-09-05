@@ -391,7 +391,7 @@ void CMatLightmaps::EndLightmapAllocation()
 	// Compute the dimensions of the last lightmap 
 	int lastLightmapPageWidth, lastLightmapPageHeight;
 	int nLastIdx = m_ImagePackers.Count();
-	m_ImagePackers[nLastIdx - 1].GetMinimumDimensions( &lastLightmapPageWidth, &lastLightmapPageHeight );
+	m_ImagePackers[nLastIdx - 1].GetMinimumDimensions( &lastLightmapPageWidth, &lastLightmapPageHeight, HardwareConfig()->MaxTextureAspectRatio() );
 	m_ImagePackers.Purge();
 
 	m_pLightmapPages = new LightmapPageInfo_t[GetNumLightmapPages()];

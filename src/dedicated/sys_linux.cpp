@@ -42,7 +42,6 @@ void ProcessConsoleInput( void );
 #define stringize(a) #a
 #define engine_binary(a,b,c) a stringize(b) c
 
-static const char *g_pszengine = "engine" DLL_EXT_STRING;
 
 char g_szEXEName[ 256 ];
 
@@ -264,24 +263,6 @@ GameInit
 */
 bool CSys::LoadModules( CDedicatedAppSystemGroup *pAppSystemGroup )
 {
-	AppSystemInfo_t appSystems[] = 
-	{
- 		{ g_pszengine,								CVAR_QUERY_INTERFACE_VERSION },
-		{ "materialsystem" DLL_EXT_STRING,		MATERIAL_SYSTEM_INTERFACE_VERSION },
-		{ "studiorender" DLL_EXT_STRING,		STUDIO_RENDER_INTERFACE_VERSION },
-		{ "vphysics" DLL_EXT_STRING,			VPHYSICS_INTERFACE_VERSION },
-		{ "datacache" DLL_EXT_STRING,			DATACACHE_INTERFACE_VERSION },
-		{ "datacache" DLL_EXT_STRING,			MDLCACHE_INTERFACE_VERSION },
-		{ "datacache" DLL_EXT_STRING,			STUDIO_DATA_CACHE_INTERFACE_VERSION },
-		{ "soundemittersystem" DLL_EXT_STRING,	SOUNDEMITTERSYSTEM_INTERFACE_VERSION },
-		{ "vscript" DLL_EXT_STRING,			VSCRIPT_INTERFACE_VERSION },
-
-		{ g_pszengine,						VENGINE_HLDS_API_VERSION },
-		{ "", "" }	// Required to terminate the list
-	};
-
-	if ( !pAppSystemGroup->AddSystems( appSystems ) ) 
-		return false;
 	
 	engine = (IDedicatedServerAPI *)pAppSystemGroup->FindSystem( VENGINE_HLDS_API_VERSION );
 															// obsolete i think SetCVarIF( (ICvar*)pAppSystemGroup->FindSystem( VENGINE_CVAR_INTERFACE_VERSION ) );
@@ -291,15 +272,6 @@ bool CSys::LoadModules( CDedicatedAppSystemGroup *pAppSystemGroup )
 
 
 	return true;
-}
-
-bool NET_Init()
-{
-	return true;
-}
-
-void NET_Shutdown()
-{
 }
 
 extern int main(int argc, char *argv[]);

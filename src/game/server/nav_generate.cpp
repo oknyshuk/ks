@@ -4640,9 +4640,9 @@ bool IsWalkableTraceLineClear( const Vector &from, const Vector &to, unsigned in
 		UTIL_TraceLine( useFrom, to, MASK_PLAYERSOLID, &traceFilter, &result );
 
 		// if we hit a walkable entity, try again
-		if (result.fraction != 1.0f && IsEntityWalkable( result.m_pEnt, flags ))
+		if (result.fraction != 1.0f && IsEntityWalkable( result.Ent<CBaseEntity>(), flags ))
 		{
-			ignore = result.m_pEnt;
+			ignore = result.Ent<CBaseEntity>();
 
 			// start from just beyond where we hit to avoid infinite loops
 			Vector dir = to - from;
@@ -4673,7 +4673,7 @@ bool IsWalkableTraceHullClear( const Vector &from, const Vector &to, const Vecto
 
 	UTIL_TraceHull( from, to, mins, maxs, MASK_PLAYERSOLID, &traceFilter, &result );
 
-	if ( result.DidHitNonWorldEntity() && IsEntityWalkable( result.m_pEnt, flags ) )
+	if ( result.DidHitNonWorldEntity() && IsEntityWalkable( result.Ent<CBaseEntity>(), flags ) )
 	{
 		return true;
 	}

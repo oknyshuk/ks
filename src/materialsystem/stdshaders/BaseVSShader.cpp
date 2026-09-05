@@ -33,7 +33,7 @@
 #include "tier0/memdbgon.h"
 
 // NOTE: This is externed in BaseVSShader.h so it needs to be here
-ConVar r_flashlightbrightness( "r_flashlightbrightness", "0.25", FCVAR_CHEAT );
+ConVar r_flashlightbrightness( "r_flashlightbrightness", "0.25", FCVAR_MATERIAL_SYSTEM_THREAD | FCVAR_CHEAT );
 
 // These functions are to be called from the shaders.
 
@@ -581,8 +581,8 @@ void CBaseVSShader::ColorVarsToVector( int colorVar, int alphaVar, Vector4D &col
 }
 
 #ifdef _DEBUG
-ConVar mat_envmaptintoverride( "mat_envmaptintoverride", "-1" );
-ConVar mat_envmaptintscale( "mat_envmaptintscale", "-1" );
+ConVar mat_envmaptintoverride( "mat_envmaptintoverride", "-1", FCVAR_MATERIAL_SYSTEM_THREAD );
+ConVar mat_envmaptintscale( "mat_envmaptintscale", "-1", FCVAR_MATERIAL_SYSTEM_THREAD );
 #endif
 
 //-----------------------------------------------------------------------------

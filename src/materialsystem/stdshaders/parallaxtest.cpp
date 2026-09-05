@@ -11,8 +11,8 @@
 #include "parallaxtest_vs30.inc"
 #include "parallaxtest_ps30.inc"
 
-ConVar mat_parallaxmapsamplesmin( "mat_parallaxmapsamplesmin", "12" );
-ConVar mat_parallaxmapsamplesmax( "mat_parallaxmapsamplesmax", "50" );
+ConVar mat_parallaxmapsamplesmin( "mat_parallaxmapsamplesmin", "12", FCVAR_MATERIAL_SYSTEM_THREAD );
+ConVar mat_parallaxmapsamplesmax( "mat_parallaxmapsamplesmax", "50", FCVAR_MATERIAL_SYSTEM_THREAD );
 
 BEGIN_VS_SHADER( ParallaxTest,
 				 "Help for ParallaxTest" )

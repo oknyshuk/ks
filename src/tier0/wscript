@@ -64,13 +64,11 @@ def build(bld):
     else:
         source += ["cpu_posix.cpp", "platform_posix.cpp", "pme_posix.cpp"]
 
-    bld.shlib(
+    bld.objects(
         source=source,
         target="tier0",
         features="cxx",
         includes=includes,
         use=libs,
-        install_path=bld.env.BINPATH,
-        subsystem=bld.env.MSVC_SUBSYSTEM,
         idx=bld.get_taskgen_count(),
     )

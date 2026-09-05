@@ -3399,20 +3399,20 @@ bool CBaseEntity::FVisible( CBaseEntity *pEntity, int traceMask, CBaseEntity **p
 	if (tr.fraction != 1.0 || tr.startsolid )
 	{
 		// If we hit the entity we're looking for, it's visible
-		if ( tr.m_pEnt == pEntity )
+		if ( tr.Ent<CBaseEntity>() == pEntity )
 			return true;
 
 		// Got line of sight on the vehicle the player is driving!
 		if ( pEntity && pEntity->IsPlayer() )
 		{
 			CBasePlayer *pPlayer = assert_cast<CBasePlayer*>( pEntity );
-			if ( tr.m_pEnt == pPlayer->GetVehicleEntity() )
+			if ( tr.Ent<CBaseEntity>() == pPlayer->GetVehicleEntity() )
 				return true;
 		}
 
 		if (ppBlocker)
 		{
-			*ppBlocker = tr.m_pEnt;
+			*ppBlocker = tr.Ent<CBaseEntity>();
 		}
 
 		return false;// Line of sight is not established
@@ -3469,7 +3469,7 @@ bool CBaseEntity::FVisible( const Vector &vecTarget, int traceMask, CBaseEntity 
 	{
 		if (ppBlocker)
 		{
-			*ppBlocker = tr.m_pEnt;
+			*ppBlocker = tr.Ent<CBaseEntity>();
 		}
 		return false;// Line of sight is not established
 	}

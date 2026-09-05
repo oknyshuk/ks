@@ -10,7 +10,7 @@
 #include "common_hlsl_cpp_consts.h" // hack hack hack!
 #include "convar.h"
 
-ConVar r_buildingmapforworld( "r_buildingmapforworld", "0" );
+extern ConVar r_buildingmapforworld;
 
 #include "WaterCheap_vs20.inc"
 #include "WaterCheap_ps20.inc"

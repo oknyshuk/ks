@@ -87,6 +87,7 @@ CSteamApplication::CSteamApplication( CSteamAppSystemGroup *pAppSystemGroup )
 {
 	m_pChildAppSystemGroup = pAppSystemGroup;
 	m_pFileSystem = NULL;
+	m_bSteam = false;
 }
 
 
@@ -97,19 +98,15 @@ bool CSteamApplication::Create( )
 {
 	FileSystem_SetErrorMode( FS_ERRORMODE_NONE );
 
-	char pFileSystemDLL[MAX_PATH];
-	if ( FileSystem_GetFileSystemDLLName( pFileSystemDLL, MAX_PATH, m_bSteam ) != FS_OK )
-		return false;
-
 	// Add in the cvar factory
 	AppModule_t cvarModule = LoadModule( VStdLib_GetICVarFactory() );
 	AddSystem( cvarModule, CVAR_INTERFACE_VERSION );	
 
-	AppModule_t fileSystemModule = LoadModule( pFileSystemDLL );
+	AppModule_t fileSystemModule = LoadModule( Sys_GetFactoryThis() );
 	m_pFileSystem = (IFileSystem*)AddSystem( fileSystemModule, FILESYSTEM_INTERFACE_VERSION );
 	if ( !m_pFileSystem )
 	{
-		Error( "Unable to load %s", pFileSystemDLL );
+		Error( "Unable to create the file system" );
 		return false;
 	}
 

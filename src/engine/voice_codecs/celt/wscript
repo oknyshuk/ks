@@ -24,13 +24,11 @@ def build(bld):
         "voiceencoder_celt.cpp",
     ]
 
-    bld.shlib(
+    bld.objects(
         source=source,
         target="vaudio_celt",
         features="cxx",
         includes=includes,
         use=libs,
-        install_path=bld.env.BINPATH,
-        subsystem=bld.env.MSVC_SUBSYSTEM,
         idx=bld.get_taskgen_count(),
     )

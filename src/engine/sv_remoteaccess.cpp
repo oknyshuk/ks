@@ -30,7 +30,6 @@
 extern IServerGameDLL	*serverGameDLL;
 
 CServerRemoteAccess g_ServerRemoteAccess;
-EXPOSE_SINGLE_INTERFACE_GLOBALVAR(CServerRemoteAccess, IGameServerData, GAMESERVERDATA_INTERFACE_VERSION, g_ServerRemoteAccess);
 
 ConVar sv_rcon_log( "sv_rcon_log", "1", 0, "Enable/disable rcon logging." );
 

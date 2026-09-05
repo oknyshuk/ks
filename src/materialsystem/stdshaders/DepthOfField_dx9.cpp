@@ -12,8 +12,8 @@
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
-ConVar mat_dof_max_blur_radius( "mat_dof_max_blur_radius", "10" );
-ConVar mat_dof_quality( "mat_dof_quality", "0" );
+ConVar mat_dof_max_blur_radius( "mat_dof_max_blur_radius", "10", FCVAR_MATERIAL_SYSTEM_THREAD );
+ConVar mat_dof_quality( "mat_dof_quality", "0", FCVAR_MATERIAL_SYSTEM_THREAD );
 
 // 8 samples
 static const float s_flPoissonConstsQuality0[16] = {

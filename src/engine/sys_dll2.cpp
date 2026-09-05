@@ -92,7 +92,6 @@
 IDedicatedExports *dedicated = NULL;
 extern CreateInterfaceFn g_AppSystemFactory;
 IPhysics *g_pPhysics = NULL;
-ILauncherMgr *g_pLauncherMgr = NULL;
 IAvi *avi = NULL;
 IBik *bik = NULL;
 
@@ -103,7 +102,6 @@ extern CreateInterfaceFn g_ClientFactory;
 bool g_bRunningFromPerforce;
 AppId_t g_unSteamAppID = k_uAppIdInvalid;
 
-CSysModule *g_pMatchmakingDllModule = NULL;
 CreateInterfaceFn g_pfnMatchmakingFactory = NULL;
 
 IMatchFramework *g_pIfaceMatchFramework = NULL;
@@ -1341,7 +1339,7 @@ bool CModAppSystemGroup::AddLegacySystems()
 
 	AppSystemInfo_t appSystems[] = 
 	{
-		{ "soundemittersystem"  DLL_EXT_STRING, SOUNDEMITTERSYSTEM_INTERFACE_VERSION },
+		{ "engine"  DLL_EXT_STRING, SOUNDEMITTERSYSTEM_INTERFACE_VERSION },
 		{ "", "" }					// Required to terminate the list
 	};
 
@@ -1714,47 +1712,14 @@ bool CModAppSystemGroup::Create()
 	// Matchmaking
 	//
 
-	Assert ( !g_pMatchmakingDllModule );
-
-	// Check the signature on the client dll.  If this fails we load it anyway but put this client
-	// into insecure mode so it won't connect to secure servers and get VAC banned
-	if ( !IsServerOnly() && !Host_AllowLoadModule( "matchmaking" DLL_EXT_STRING, "GAMEBIN", false ) )
+	g_pfnMatchmakingFactory = Sys_GetFactoryThis();
+	g_pIfaceMatchFramework = ( IMatchFramework * ) g_pfnMatchmakingFactory( IMATCHFRAMEWORK_VERSION_STRING, NULL );
+	if ( !g_pIfaceMatchFramework )
 	{
-		// not supposed to load this but we will anyway
-		Host_DisallowSecureServers();
+		Sys_Error( "Could not create the match framework" );
 	}
 
-	// loads the matchmaking.dll
-	g_pMatchmakingDllModule = g_pFileSystem->LoadModule(
-		IsServerOnly() ? ( "matchmaking_ds" DLL_EXT_STRING ) : ( "matchmaking" DLL_EXT_STRING ),
-		"GAMEBIN", false );
-
-	if ( g_pMatchmakingDllModule )
-	{
-		g_pfnMatchmakingFactory = Sys_GetFactory( g_pMatchmakingDllModule );
-		if ( g_pfnMatchmakingFactory )
-		{
-			g_pIfaceMatchFramework = ( IMatchFramework * ) g_pfnMatchmakingFactory( IMATCHFRAMEWORK_VERSION_STRING, NULL );
-
-			if ( !g_pIfaceMatchFramework )
-			{
-Sys_Error( "Could not get matchmaking.dll interface from library matchmaking" );
-			}
-			
-			// matchmaking.dll wasn't loaded by the time tier2 libraries were connecting,
-			// set it up in engine now
-			g_pMatchFramework = g_pIfaceMatchFramework;
-		}
-		else
-		{
-Sys_Error( "Could not find factory interface in library matchmaking" );
-		}
-	}
-	else
-	{	
-		// library failed to load
-Sys_Error( "Could not load library matchmaking" );
-	}
+	g_pMatchFramework = g_pIfaceMatchFramework;
 
 	AddSystem( g_pIfaceMatchFramework, IMATCHFRAMEWORK_VERSION_STRING );
 	
@@ -1864,15 +1829,9 @@ bool CModAppSystemGroup::ModuleAlreadyInList( CUtlVector< AppSystemInfo_t >& lis
 {
 	for ( int i = 0; i < list.Count(); ++i )
 	{
-		if ( !Q_stricmp( list[ i ].m_pModuleName, moduleName ) )
-		{
-			if ( Q_stricmp( list[ i ].m_pInterfaceName, interfaceName ) )
-			{
-				Error( "Game and client .dlls requesting different versions '%s' vs. '%s' from '%s'\n",
-					list[ i ].m_pInterfaceName, interfaceName, moduleName );
-			}
+		if ( !Q_stricmp( list[ i ].m_pModuleName, moduleName ) &&
+			 !Q_stricmp( list[ i ].m_pInterfaceName, interfaceName ) )
 			return true;
-		}
 	}
 
 	return false;
@@ -1969,10 +1928,7 @@ void CModAppSystemGroup::Destroy()
 		g_pMatchFramework = NULL;
 	}
 
-	FileSystem_UnloadModule( g_pMatchmakingDllModule );
-
 	g_pIfaceMatchFramework = NULL;
-	g_pMatchmakingDllModule = NULL;
 	g_pfnMatchmakingFactory = NULL;
 
 	/// vjobs

@@ -17,6 +17,7 @@
 #include "shadersystem.h"
 #include "texturemanager.h"
 #include "shaderlib/ShaderDLL.h"
+#include "shaderapi_builtin.h"
 #include "tier1/callqueue.h"
 #include "tier1/smartptr.h"
 #include "vstdlib/jobthread.h"
@@ -34,7 +35,7 @@
 #endif
 
 // this is hooked into the engines convar
-ConVar mat_debugalttab( "mat_debugalttab", "0", FCVAR_CHEAT );
+ConVar mat_debugalttab( "mat_debugalttab", "0", FCVAR_MATERIAL_SYSTEM_THREAD | FCVAR_CHEAT );
 ConVar gpu_level( "gpu_level", "3", 0, "GPU Level - Default: High" );
 ConVar mat_force_vertexfog( "mat_force_vertexfog", "0", FCVAR_DEVELOPMENTONLY );
 static ConVar mat_forcemanagedtextureintohardware( "mat_forcemanagedtextureintohardware", "1", FCVAR_CHEAT | FCVAR_DEVELOPMENTONLY );
@@ -146,7 +147,7 @@ IShaderUtil *g_pShaderUtil = &g_MaterialSystem;
 #if defined( USE_SDL ) || defined( OSX )
 
 #include "appframework/ilaunchermgr.h"
-ILauncherMgr *g_pLauncherMgr = NULL;	// set in CMaterialSystem::Connect
+
 
 #endif
 
@@ -389,6 +390,12 @@ CreateInterfaceFn CMaterialSystem::CreateShaderAPI( char const* pShaderDLL )
 
 	// Clean up the old shader
 	DestroyShaderAPI();
+
+	// Both shader APIs are linked in; the name selects one.
+	if ( !V_stricmp( pShaderDLL, "shaderapidx9" DLL_EXT_STRING ) )
+		return Sys_GetFactoryThis();
+	if ( !V_stricmp( pShaderDLL, "shaderapiempty" DLL_EXT_STRING ) )
+		return ShaderApiEmptyFactory();
 
 	// Load the new shader
 	m_ShaderHInst = Sys_LoadModule( pShaderDLL );

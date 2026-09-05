@@ -47,14 +47,12 @@ def build(bld):
         "vjolt_surfaceprops.cpp",
     ]
 
-    bld.shlib(
+    bld.objects(
         source=source,
         target="vphysics",
         features="pch cxx",
         headers="cbase.h",
         includes=includes,
         use=libs,
-        install_path=bld.env.BINPATH,
-        subsystem=bld.env.MSVC_SUBSYSTEM,
         idx=bld.get_taskgen_count(),
     )

@@ -436,10 +436,10 @@ CON_COMMAND_F( cast_ray, "Tests collision detection", FCVAR_CHEAT )
 
 	if ( tr.DidHit() )
 	{
-		DevMsg(1, "Hit %s\nposition %.2f, %.2f, %.2f\nangles %.2f, %.2f, %.2f\n", tr.m_pEnt->GetClassname(),
-			tr.m_pEnt->GetAbsOrigin().x, tr.m_pEnt->GetAbsOrigin().y, tr.m_pEnt->GetAbsOrigin().z,
-			tr.m_pEnt->GetAbsAngles().x, tr.m_pEnt->GetAbsAngles().y, tr.m_pEnt->GetAbsAngles().z );
-		DevMsg(1, "Hit: hitbox %d, hitgroup %d, physics bone %d, solid %d, surface %s, surfaceprop %s, contents %08x\n", tr.hitbox, tr.hitgroup, tr.physicsbone, tr.m_pEnt->GetSolid(), tr.surface.name, physprops->GetPropName( tr.surface.surfaceProps ), tr.contents );
+		DevMsg(1, "Hit %s\nposition %.2f, %.2f, %.2f\nangles %.2f, %.2f, %.2f\n", tr.Ent<CBaseEntity>()->GetClassname(),
+			tr.Ent<CBaseEntity>()->GetAbsOrigin().x, tr.Ent<CBaseEntity>()->GetAbsOrigin().y, tr.Ent<CBaseEntity>()->GetAbsOrigin().z,
+			tr.Ent<CBaseEntity>()->GetAbsAngles().x, tr.Ent<CBaseEntity>()->GetAbsAngles().y, tr.Ent<CBaseEntity>()->GetAbsAngles().z );
+		DevMsg(1, "Hit: hitbox %d, hitgroup %d, physics bone %d, solid %d, surface %s, surfaceprop %s, contents %08x\n", tr.hitbox, tr.hitgroup, tr.physicsbone, tr.Ent<CBaseEntity>()->GetSolid(), tr.surface.name, physprops->GetPropName( tr.surface.surfaceProps ), tr.contents );
 		NDebugOverlay::Line( start, tr.endpos, 0, 255, 0, false, 10 );
 		NDebugOverlay::Line( tr.endpos, tr.endpos + tr.plane.normal * 12, 255, 255, 0, false, 10 );
 	}
@@ -459,10 +459,10 @@ CON_COMMAND_F( cast_hull, "Tests hull collision detection", FCVAR_CHEAT )
 	UTIL_TraceHull(start, start + forward * MAX_COORD_RANGE, -extents, extents, MASK_SOLID, pPlayer, COLLISION_GROUP_NONE, &tr );
 	if ( tr.DidHit() )
 	{
-		DevMsg(1, "Hit %s\nposition %.2f, %.2f, %.2f\nangles %.2f, %.2f, %.2f\n", tr.m_pEnt->GetClassname(),
-			tr.m_pEnt->GetAbsOrigin().x, tr.m_pEnt->GetAbsOrigin().y, tr.m_pEnt->GetAbsOrigin().z,
-			tr.m_pEnt->GetAbsAngles().x, tr.m_pEnt->GetAbsAngles().y, tr.m_pEnt->GetAbsAngles().z );
-		DevMsg(1, "Hit: hitbox %d, hitgroup %d, physics bone %d, solid %d, surface %s, surfaceprop %s\n", tr.hitbox, tr.hitgroup, tr.physicsbone, tr.m_pEnt->GetSolid(), tr.surface.name, physprops->GetPropName( tr.surface.surfaceProps ) );
+		DevMsg(1, "Hit %s\nposition %.2f, %.2f, %.2f\nangles %.2f, %.2f, %.2f\n", tr.Ent<CBaseEntity>()->GetClassname(),
+			tr.Ent<CBaseEntity>()->GetAbsOrigin().x, tr.Ent<CBaseEntity>()->GetAbsOrigin().y, tr.Ent<CBaseEntity>()->GetAbsOrigin().z,
+			tr.Ent<CBaseEntity>()->GetAbsAngles().x, tr.Ent<CBaseEntity>()->GetAbsAngles().y, tr.Ent<CBaseEntity>()->GetAbsAngles().z );
+		DevMsg(1, "Hit: hitbox %d, hitgroup %d, physics bone %d, solid %d, surface %s, surfaceprop %s\n", tr.hitbox, tr.hitgroup, tr.physicsbone, tr.Ent<CBaseEntity>()->GetSolid(), tr.surface.name, physprops->GetPropName( tr.surface.surfaceProps ) );
 		NDebugOverlay::SweptBox( start, tr.endpos, -extents, extents, vec3_angle, 0, 0, 255, 0, 10 );
 		Vector end = tr.endpos;// - tr.plane.normal * DotProductAbs( tr.plane.normal, extents );
 		NDebugOverlay::Line( end, end + tr.plane.normal * 24, 255, 255, 64, false, 10 );

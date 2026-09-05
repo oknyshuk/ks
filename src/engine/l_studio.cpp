@@ -3847,7 +3847,7 @@ void CModelRender::ComputeModelVertexLightingOld( mstudiomodel_t *pModel,
 
 
 	const thinModelVertices_t		*thinVertData	= NULL;
-	const mstudio_modelvertexdata_t	*vertData		= pModel->GetVertexData();
+	const mstudio_modelvertexdata_t	*vertData		= pModel->GetVertexData( m_pStudioHdr );
 	mstudiovertex_t					*pFatVerts		= NULL;
 	if ( vertData )
 	{
@@ -3855,7 +3855,7 @@ void CModelRender::ComputeModelVertexLightingOld( mstudiomodel_t *pModel,
 	}
 	else
 	{
-		thinVertData = pModel->GetThinVertexData();
+		thinVertData = pModel->GetThinVertexData( m_pStudioHdr );
 		Assert( thinVertData );
 		if ( !thinVertData )
 			return;
@@ -3930,7 +3930,7 @@ void CModelRender::ComputeModelVertexLighting( IHandleEntity *pProp,
 	unsigned char *pInSolid = (unsigned char*)stackalloc( ((pModel->numvertices + 7) >> 3) * sizeof(unsigned char) );
 	Vector worldPos, worldNormal;
 
-	const mstudio_modelvertexdata_t *vertData = pModel->GetVertexData();
+	const mstudio_modelvertexdata_t *vertData = pModel->GetVertexData( m_pStudioHdr );
 	Assert( vertData );
 	if ( !vertData )
 		return;
@@ -5048,13 +5048,6 @@ void CModelRender::RemoveAllDecalsFromAllModels( bool bRenderContextValid )
 		g_ClientDLL->RetireAllPlayerDecals( bRenderContextValid );
 	}
 #endif
-}
-
-const vertexFileHeader_t * mstudiomodel_t::CacheVertexData( void *pModelData )
-{
-	// make requested data resident
-	Assert( pModelData == NULL );
-	return s_ModelRender.CacheVertexData();
 }
 
 bool CheckVarRange_r_rootlod()

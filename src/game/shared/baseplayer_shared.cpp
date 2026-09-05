@@ -1360,7 +1360,7 @@ CBaseEntity *CBasePlayer::FindUseEntity()
 			VectorNormalize(down);
 			UTIL_TraceHull( searchCenter, searchCenter + down * 72, -Vector(16,16,16), Vector(16,16,16), useableContents, this, COLLISION_GROUP_NONE, &tr );
 		}
-		pObject = tr.m_pEnt;
+		pObject = tr.Ent<CBaseEntity>();
 
 #ifndef CLIENT_DLL
 		pFoundByTrace = pObject;
@@ -1488,7 +1488,7 @@ CBaseEntity *CBasePlayer::FindUseEntity()
 			trace_t trCheckOccluded;
 			UTIL_TraceLine( searchCenter, point, useableContents, this, COLLISION_GROUP_NONE, &trCheckOccluded );
 
-			if ( trCheckOccluded.fraction == 1.0 || trCheckOccluded.m_pEnt == pObject )
+			if ( trCheckOccluded.fraction == 1.0 || trCheckOccluded.Ent<CBaseEntity>() == pObject )
 			{
 				pNearest = pObject;
 				nearestDist = dist;
@@ -1504,10 +1504,10 @@ CBaseEntity *CBasePlayer::FindUseEntity()
 		trace_t trAllies;
 		UTIL_TraceLine( searchCenter, searchCenter + forward * PLAYER_USE_RADIUS, MASK_OPAQUE_AND_NPCS, this, COLLISION_GROUP_NONE, &trAllies );
 
-		if ( trAllies.m_pEnt && IsUseableEntity( trAllies.m_pEnt, 0 ) && trAllies.m_pEnt->MyNPCPointer() && trAllies.m_pEnt->MyNPCPointer()->IsPlayerAlly( this ) )
+		if ( trAllies.Ent<CBaseEntity>() && IsUseableEntity( trAllies.Ent<CBaseEntity>(), 0 ) && trAllies.Ent<CBaseEntity>()->MyNPCPointer() && trAllies.Ent<CBaseEntity>()->MyNPCPointer()->IsPlayerAlly( this ) )
 		{
 			// This is an NPC, take it!
-			pNearest = trAllies.m_pEnt;
+			pNearest = trAllies.Ent<CBaseEntity>();
 		}
 	}
 
@@ -1579,7 +1579,7 @@ void CBasePlayer::PlayerUse ( void )
 		UTIL_TraceLine( searchCenter, searchCenter + forward * 96.0f, MASK_SOLID, &filter, &tr );
 
 		// try the hit entity if there is one, or the ground entity if there isn't.
-		CBaseEntity *entity = tr.m_pEnt;
+		CBaseEntity *entity = tr.Ent<CBaseEntity>();
 
 		if ( entity )
 		{
@@ -3239,7 +3239,7 @@ void CBasePlayer::VPhysicsShadowUpdate( IPhysicsObject *pPhysics )
 		if ( trace.allsolid || trace.startsolid )
 		{
 			// STUCK!?!?!
-			//Warning( "Checkstuck failed.  Stuck on %s!!\n", trace.m_pEnt->GetClassname() );
+			//Warning( "Checkstuck failed.  Stuck on %s!!\n", trace.Ent<CBaseEntity>()->GetClassname() );
 			SetAbsOrigin( lastValidPosition );
 		}
 	}

@@ -600,7 +600,7 @@ static bool TraceToExit( Vector start, Vector dir, Vector &end, trace_t &trEnter
 			if ( trExit.startsolid == true && (trExit.surface.flags & SURF_HITBOX)/*( nStartContents & CONTENTS_HITBOX ) == 0 && (nCurrentContents & CONTENTS_HITBOX)*/ )
 			{
 				// do another trace, but skip the player to get the actual exit surface 
-				UTIL_TraceLine( end, start, CS_MASK_SHOOT, trExit.m_pEnt, COLLISION_GROUP_NONE, &trExit );
+				UTIL_TraceLine( end, start, CS_MASK_SHOOT, trExit.Ent<CBaseEntity>(), COLLISION_GROUP_NONE, &trExit );
 				if ( trExit.DidHit() && trExit.startsolid == false )
 				{
 					end = trExit.endpos;
@@ -611,7 +611,7 @@ static bool TraceToExit( Vector start, Vector dir, Vector &end, trace_t &trEnter
 			{
 				bool bStartIsNodraw = !!( trEnter.surface.flags & (SURF_NODRAW) );
 				bool bExitIsNodraw = !!( trExit.surface.flags & (SURF_NODRAW) );
-				if ( bExitIsNodraw && IsBreakableEntity( trExit.m_pEnt ) && IsBreakableEntity( trEnter.m_pEnt ) )
+				if ( bExitIsNodraw && IsBreakableEntity( trExit.Ent<CBaseEntity>() ) && IsBreakableEntity( trEnter.Ent<CBaseEntity>() ) )
 				{
 					// we have a case where we have a breakable object, but the mapper put a nodraw on the backside
 					end = trExit.endpos;
@@ -629,7 +629,7 @@ static bool TraceToExit( Vector start, Vector dir, Vector &end, trace_t &trEnter
 					}
 				}
 			}
-			else if ( trEnter.DidHitNonWorldEntity() && IsBreakableEntity( trEnter.m_pEnt ) )
+			else if ( trEnter.DidHitNonWorldEntity() && IsBreakableEntity( trEnter.Ent<CBaseEntity>() ) )
 			{
 				// if we hit a breakable, make the assumption that we broke it if we can't find an exit (hopefully..)
 				// fake the end pos
@@ -1260,7 +1260,7 @@ void CCSPlayer::FireBullet(
 			vHitLocation = tr.endpos;
 		}
 
-		lastPlayerHit = dynamic_cast<const CBaseCombatCharacter *>(tr.m_pEnt);
+		lastPlayerHit = dynamic_cast<const CBaseCombatCharacter *>(tr.Ent<CBaseEntity>());
 
 #ifndef CLIENT_DLL
 		if ( sv_showbullethits.GetInt() == 1 && !lastPlayerHit )
@@ -1268,7 +1268,7 @@ void CCSPlayer::FireBullet(
 			trace_t tr_bulletmiss;
 			UTIL_TraceLine( vecSrc, vecEnd, CS_MASK_SHOOT, this, COLLISION_GROUP_NONE, &tr_bulletmiss );
 
-			CCSPlayer *playerMissed = ToCSPlayer( tr_bulletmiss.m_pEnt );
+			CCSPlayer *playerMissed = ToCSPlayer( tr_bulletmiss.Ent<CBaseEntity>() );
 			if ( tr_bulletmiss.DidHit() && !tr_bulletmiss.startsolid && playerMissed )
 			{
 				Vector vecPelvisPos;
@@ -1612,16 +1612,16 @@ void CCSPlayer::FireBullet(
 		msg.timestamp = gpGlobals->realtime;
 
 		// only compare shots that were server hits
-		if ( tr.m_pEnt && tr.m_pEnt->IsPlayer() )
+		if ( tr.Ent<CBaseEntity>() && tr.Ent<CBaseEntity>()->IsPlayer() )
 		{
 			SendUserMessage( user, ks::net::CS_UM_ReportHit, msg );
 		}
 		
 		// end bullet registration recording
 
-		if ( sv_showbullethits.GetInt() == 1 && tr.m_pEnt && tr.m_pEnt->IsPlayer() )
+		if ( sv_showbullethits.GetInt() == 1 && tr.Ent<CBaseEntity>() && tr.Ent<CBaseEntity>()->IsPlayer() )
 		{
-			CCSPlayer *pPlayer = ToCSPlayer( tr.m_pEnt );
+			CCSPlayer *pPlayer = ToCSPlayer( tr.Ent<CBaseEntity>() );
 			IGameEvent * bullet_hit_marker_event = gameeventmanager->CreateEvent( "add_bullet_hit_marker" );
 			if ( bullet_hit_marker_event )
 			{
@@ -1657,7 +1657,7 @@ void CCSPlayer::FireBullet(
 #endif
 
 		// client-server hit comparison.
-		if ( tr.m_pEnt && tr.m_pEnt->IsPlayer() && !IsControllingBot()  )
+		if ( tr.Ent<CBaseEntity>() && tr.Ent<CBaseEntity>()->IsPlayer() && !IsControllingBot()  )
 		{
 #ifndef CLIENT_DLL
 			if ( m_totalHitsOnServer < 255 ) // clamp at 8 bits
@@ -1743,7 +1743,7 @@ void CCSPlayer::FireBullet(
 				// Don't decal nodraw surfaces
 				if ( !( tr.surface.flags & (SURF_SKY|SURF_NODRAW|SURF_HINT|SURF_SKIP) ) )
 				{
-					//CBaseEntity *pEntity = tr.m_pEnt;
+					//CBaseEntity *pEntity = tr.Ent<CBaseEntity>();
 					UTIL_ImpactTrace( &tr, iDamageType );
 				}
 			}
@@ -1752,7 +1752,7 @@ void CCSPlayer::FireBullet(
 #ifndef CLIENT_DLL
 		// decal players on the server to eliminate the disparity between where the client thinks the decal went and where it actually went
 		// we want to eliminate the case where a player sees a blood decal on someone, but they are at 100 health
-		if ( sv_server_verify_blood_on_player.GetBool() && tr.DidHit() && tr.m_pEnt && tr.m_pEnt->IsPlayer() )
+		if ( sv_server_verify_blood_on_player.GetBool() && tr.DidHit() && tr.Ent<CBaseEntity>() && tr.Ent<CBaseEntity>()->IsPlayer() )
 		{
 			UTIL_ImpactTrace( &tr, iDamageType );
 		}
@@ -1766,7 +1766,7 @@ void CCSPlayer::FireBullet(
 		// add damage to entity that we hit
 		
 #ifndef CLIENT_DLL
-		CBaseEntity *pEntity = tr.m_pEnt;	
+		CBaseEntity *pEntity = tr.Ent<CBaseEntity>();	
 
 	//
 	// DAMAGE MUST BE DEFERRED TILL LATER IF WE DECIDE TO SHIP IT
@@ -1866,7 +1866,7 @@ void CCSPlayer::FireBullet(
 		CTakeDamageInfo &info = arrPendingDamage[idxDamage].m_info;
 		trace_t &tr = arrPendingDamage[idxDamage].m_tr;
 
-		CBaseEntity *pEntity = tr.m_pEnt;
+		CBaseEntity *pEntity = tr.Ent<CBaseEntity>();
 		bool bWasAlive = pEntity->IsAlive();
 
 		pEntity->DispatchTraceAttack( info, vecDir, &tr );
@@ -2019,7 +2019,7 @@ bool CCSPlayer::HandleBulletPenetration( float &flPenetration,
 			flDamageModifier = 0.99f;
 		}
 		else if ( iEnterMaterial == CHAR_TEX_FLESH && ff_damage_reduction_bullets.GetFloat() == 0 
-				  && tr.m_pEnt && tr.m_pEnt->IsPlayer() && tr.m_pEnt->GetTeamNumber() == GetTeamNumber() )
+				  && tr.Ent<CBaseEntity>() && tr.Ent<CBaseEntity>()->IsPlayer() && tr.Ent<CBaseEntity>()->GetTeamNumber() == GetTeamNumber() )
 		{
 			if ( ff_damage_bullet_penetration.GetFloat() == 0 )
 			{
@@ -2090,7 +2090,7 @@ bool CCSPlayer::HandleBulletPenetration( float &flPenetration,
 	#ifndef CLIENT_DLL
 		// decal players on the server to eliminate the disparity between where the client thinks the decal went and where it actually went
 		// we want to eliminate the case where a player sees a blood decal on someone, but they are at 100 health
-		if ( sv_server_verify_blood_on_player.GetBool() && tr.DidHit() && tr.m_pEnt && tr.m_pEnt->IsPlayer() )
+		if ( sv_server_verify_blood_on_player.GetBool() && tr.DidHit() && tr.Ent<CBaseEntity>() && tr.Ent<CBaseEntity>()->IsPlayer() )
 		{
 			UTIL_ImpactTrace( &tr, iDamageType );
 		}
@@ -2165,7 +2165,7 @@ bool CCSPlayer::HandleBulletPenetration( float &flPenetration,
 	#ifndef CLIENT_DLL
 		// decal players on the server to eliminate the disparity between where the client thinks the decal went and where it actually went
 		// we want to eliminate the case where a player sees a blood decal on someone, but they are at 100 health
-		if ( sv_server_verify_blood_on_player.GetBool() && tr.DidHit() && tr.m_pEnt && tr.m_pEnt->IsPlayer() )
+		if ( sv_server_verify_blood_on_player.GetBool() && tr.DidHit() && tr.Ent<CBaseEntity>() && tr.Ent<CBaseEntity>()->IsPlayer() )
 		{
 			UTIL_ImpactTrace( &tr, iDamageType );
 		}
@@ -2281,9 +2281,9 @@ void CCSPlayer::ImpactTrace( trace_t *pTrace, int iDamageType, const char *pCust
 		return;
 
 	VPROF( "CCSPlayer::ImpactTrace" );
-	Assert( pTrace->m_pEnt );
+	Assert( pTrace->Ent<CBaseEntity>() );
 
-	CBaseEntity *pEntity = pTrace->m_pEnt;
+	CBaseEntity *pEntity = pTrace->Ent<CBaseEntity>();
 
 	// Build the impact data
 	CEffectData data;

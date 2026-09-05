@@ -38,7 +38,7 @@
 // InterfaceReg.
 // ------------------------------------------------------------------------------------ //
 DLL_GLOBAL_EXPORT
-InterfaceReg *s_pInterfaceRegs;
+static InterfaceReg *s_pInterfaceRegs;
 
 InterfaceReg::InterfaceReg( InstantiateInterfaceFn fn, const char *pName ) :
 	m_pName(pName)

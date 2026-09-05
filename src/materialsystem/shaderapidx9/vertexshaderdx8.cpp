@@ -102,14 +102,14 @@ int BZ2_bzBuffToBuffDecompress(
 
 #endif
 
-static ConVar mat_remoteshadercompile( "mat_remoteshadercompile", "127.0.0.1", FCVAR_CHEAT );
+static ConVar mat_remoteshadercompile( "mat_remoteshadercompile", "127.0.0.1", FCVAR_MATERIAL_SYSTEM_THREAD | FCVAR_CHEAT );
 
 #ifdef DYNAMIC_SHADER_COMPILE
-	static ConVar mat_dynamic_shader_compile_force_reload( "mat_dynamic_shader_compile_force_reload", "0" );
+	static ConVar mat_dynamic_shader_compile_force_reload( "mat_dynamic_shader_compile_force_reload", "0", FCVAR_MATERIAL_SYSTEM_THREAD );
 #endif
 
 #ifdef DYNAMIC_SHADER_COMPILE_VERBOSE
-	static ConVar mat_dynamic_shader_substring( "mat_dynamic_shader_substring", "" );
+	static ConVar mat_dynamic_shader_substring( "mat_dynamic_shader_substring", "", FCVAR_MATERIAL_SYSTEM_THREAD );
 #endif
 
 //#define PROFILE_SHADER_CREATE
@@ -156,12 +156,6 @@ template class CShaderBuffer< ID3DXBuffer >;
 
 
 //-----------------------------------------------------------------------------
-bool ToolsEnabled()
-{
-	static bool bToolsMode = ( CommandLine()->CheckParm( "-tools" ) != NULL );
-	return bToolsMode;
-}
-
 
 //-----------------------------------------------------------------------------
 // Used to find unique shaders
@@ -3269,7 +3263,7 @@ void CShaderManager::BindPixelShader( PixelShaderHandle_t hPixelShader )
 }
 
 #if defined ( DYNAMIC_SHADER_COMPILE ) && defined ( DEBUG )
-ConVar mat_flushshaders_async( "mat_flushshaders_async", "0" );
+ConVar mat_flushshaders_async( "mat_flushshaders_async", "0", FCVAR_MATERIAL_SYSTEM_THREAD );
 #endif
 
 //-----------------------------------------------------------------------------

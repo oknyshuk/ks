@@ -814,7 +814,7 @@ void CBaseShader::SetNormalBlendingShadowState( int textureVar, bool isBaseTextu
 	}
 }
 
-//ConVar mat_debug_flashlight_only( "mat_debug_flashlight_only", "0" );
+//ConVar mat_debug_flashlight_only( "mat_debug_flashlight_only", "0", FCVAR_MATERIAL_SYSTEM_THREAD );
 void CBaseShader::SetAdditiveBlendingShadowState( int textureVar, bool isBaseTexture )
 {
 	Assert( IsSnapshotting() );

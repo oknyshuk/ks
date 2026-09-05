@@ -123,10 +123,10 @@ mat_fullbright 1 doesn't work properly on alpha materials in testroom_standards
 
 #if ( ( defined( _WIN32 ) || defined( LINUX ) ) && ( !defined( DYNAMIC_SHADER_COMPILE ) ) )
 
-ConVar mat_vtxlit_new_path( "mat_vtxlit_new_path", "1", FCVAR_DEVELOPMENTONLY );
-ConVar mat_unlit_new_path( "mat_unlit_new_path", "1", FCVAR_DEVELOPMENTONLY );
-ConVar mat_lmap_new_path( "mat_lmap_new_path", "1", FCVAR_DEVELOPMENTONLY );
-ConVar mat_depthwrite_new_path( "mat_depthwrite_new_path", "1", FCVAR_DEVELOPMENTONLY );
+ConVar mat_vtxlit_new_path( "mat_vtxlit_new_path", "1", FCVAR_MATERIAL_SYSTEM_THREAD | FCVAR_DEVELOPMENTONLY );
+ConVar mat_unlit_new_path( "mat_unlit_new_path", "1", FCVAR_MATERIAL_SYSTEM_THREAD | FCVAR_DEVELOPMENTONLY );
+ConVar mat_lmap_new_path( "mat_lmap_new_path", "1", FCVAR_MATERIAL_SYSTEM_THREAD | FCVAR_DEVELOPMENTONLY );
+ConVar mat_depthwrite_new_path( "mat_depthwrite_new_path", "1", FCVAR_MATERIAL_SYSTEM_THREAD | FCVAR_DEVELOPMENTONLY );
 
 
 CON_COMMAND( toggleVtxLitPath, "toggleVtxLitPath" )
@@ -155,16 +155,16 @@ CON_COMMAND( toggleShadowPath, "Toggles CSM generation method" )
 
 #else
 
-ConVar mat_vtxlit_new_path( "mat_vtxlit_new_path", "0", FCVAR_DEVELOPMENTONLY );
-ConVar mat_unlit_new_path( "mat_unlit_new_path", "0", FCVAR_DEVELOPMENTONLY );
-ConVar mat_lmap_new_path( "mat_lmap_new_path", "0", FCVAR_DEVELOPMENTONLY );
-ConVar mat_depthwrite_new_path( "mat_depthwrite_new_path", "0", FCVAR_DEVELOPMENTONLY );
+ConVar mat_vtxlit_new_path( "mat_vtxlit_new_path", "0", FCVAR_MATERIAL_SYSTEM_THREAD | FCVAR_DEVELOPMENTONLY );
+ConVar mat_unlit_new_path( "mat_unlit_new_path", "0", FCVAR_MATERIAL_SYSTEM_THREAD | FCVAR_DEVELOPMENTONLY );
+ConVar mat_lmap_new_path( "mat_lmap_new_path", "0", FCVAR_MATERIAL_SYSTEM_THREAD | FCVAR_DEVELOPMENTONLY );
+ConVar mat_depthwrite_new_path( "mat_depthwrite_new_path", "0", FCVAR_MATERIAL_SYSTEM_THREAD | FCVAR_DEVELOPMENTONLY );
 
 #endif
 
 // On OSX, this does 
 // This convar only does something on OSX, but is referenced from Windows and Linux. Just leave a dummy here for them to find.
-ConVar r_frameratesmoothing( "r_frameratesmoothing", "0", FCVAR_NONE, "", true, 0, true, 0 );
+ConVar r_frameratesmoothing( "r_frameratesmoothing", "0", FCVAR_MATERIAL_SYSTEM_THREAD | FCVAR_NONE, "", true, 0, true, 0 );
 
 
 // If you need to debug refcounting issues, enable this. As of this writing, only Z side is 
@@ -201,21 +201,21 @@ ConVar r_frameratesmoothing( "r_frameratesmoothing", "0", FCVAR_NONE, "", true, 
 	#define SPEW_REFCOUNT_EXPECTED( pObj, op, expected ) /* nothing if we're not spewing */
 #endif
 
-ConVar mat_texture_limit( "mat_texture_limit", "-1", FCVAR_NEVER_AS_STRING, 
+ConVar mat_texture_limit( "mat_texture_limit", "-1", FCVAR_MATERIAL_SYSTEM_THREAD | FCVAR_NEVER_AS_STRING, 
 	"If this value is not -1, the material system will limit the amount of texture memory it uses in a frame."
 	" Useful for identifying performance cliffs. The value is in kilobytes." );
 
 // This feature is useful because world static mesh size (in vertex count) is computed while the dynamic VBs are shrunk to save memory on map load/unload.  Setting this 
 // var to 1 will not shrink the VBs, which will increase the number of vertices allowed in a single batch.
-ConVar mat_do_not_shrink_dynamic_vb( "mat_do_not_shrink_dynamic_vb", "0", 0, "Do not shrink the size of dynamic vertex buffers during map load/unload to save memory." );
+ConVar mat_do_not_shrink_dynamic_vb( "mat_do_not_shrink_dynamic_vb", "0", FCVAR_MATERIAL_SYSTEM_THREAD, "Do not shrink the size of dynamic vertex buffers during map load/unload to save memory." );
 
-ConVar mat_frame_sync_enable( "mat_frame_sync_enable", "1", FCVAR_CHEAT );
-ConVar mat_frame_sync_force_texture( "mat_frame_sync_force_texture", "0", FCVAR_CHEAT, "Force frame syncing to lock a managed texture." );
+ConVar mat_frame_sync_enable( "mat_frame_sync_enable", "1", FCVAR_MATERIAL_SYSTEM_THREAD | FCVAR_CHEAT );
+ConVar mat_frame_sync_force_texture( "mat_frame_sync_force_texture", "0", FCVAR_MATERIAL_SYSTEM_THREAD | FCVAR_CHEAT, "Force frame syncing to lock a managed texture." );
 
 
-static ConVar r_pixelfog( "r_pixelfog", "1" );
+static ConVar r_pixelfog( "r_pixelfog", "1", FCVAR_MATERIAL_SYSTEM_THREAD );
 
-ConVar r_force_first_dynamic_light_to_directional_for_csm( "r_force_first_dynamic_light_to_directional_for_csm", "1", FCVAR_CHEAT|FCVAR_DEVELOPMENTONLY, "" );
+ConVar r_force_first_dynamic_light_to_directional_for_csm( "r_force_first_dynamic_light_to_directional_for_csm", "1", FCVAR_MATERIAL_SYSTEM_THREAD | FCVAR_CHEAT|FCVAR_DEVELOPMENTONLY, "" );
 
 
 extern ConVar mat_debugalttab;
@@ -223,7 +223,7 @@ extern ConVar mat_debugalttab;
 #define ALLOW_SMP_ACCESS 0
 
 #if ALLOW_SMP_ACCESS
-static ConVar mat_use_smp( "mat_use_smp", "0" );
+static ConVar mat_use_smp( "mat_use_smp", "0", FCVAR_MATERIAL_SYSTEM_THREAD );
 #endif
 
 // [mhansen] Enable PIX in debug and profile builds (Xbox 360 only)
@@ -233,8 +233,8 @@ static ConVar mat_use_smp( "mat_use_smp", "0" );
 
 
 // Convars for driving PIX (not all hooked up yet...JasonM)
-static ConVar r_pix_start( "r_pix_start", "0" );
-static ConVar r_pix_recordframes( "r_pix_recordframes", "0" );
+static ConVar r_pix_start( "r_pix_start", "0", FCVAR_MATERIAL_SYSTEM_THREAD );
+static ConVar r_pix_recordframes( "r_pix_recordframes", "0", FCVAR_MATERIAL_SYSTEM_THREAD );
 
 
 //-----------------------------------------------------------------------------
@@ -2488,7 +2488,7 @@ bool CShaderAPIDx8::OnAdapterSet()
 	if ( !DetermineHardwareCaps( ) )
 		return false;
 
-	// FIXME: Check g_pHardwareConfig->ActualCaps() for a preferred DX level
+	// FIXME: Check g_pHardwareConfigDx8->ActualCaps() for a preferred DX level
 	OverrideCaps( 0 );
 
 	m_bAdapterSet = true;
@@ -2526,7 +2526,7 @@ void CShaderAPIDx8::AcquireInternalRenderTargets()
 	}
 
 	Assert( m_pBackBufferSurfaces.Count() > BACK_BUFFER_INDEX_HDR );
-	if( ( g_pHardwareConfig->GetHDRType() == HDR_TYPE_FLOAT ) &&
+	if( ( g_pHardwareConfigDx8->GetHDRType() == HDR_TYPE_FLOAT ) &&
 		( m_pBackBufferSurfaces[BACK_BUFFER_INDEX_HDR] == NULL ) )
 	{
 		// create a float16 HDR rendertarget
@@ -2634,7 +2634,7 @@ bool CShaderAPIDx8::OnDeviceInit()
 {
 	AcquireInternalRenderTargets();
 	
-	g_pHardwareConfig->CapsForEdit().m_TextureMemorySize = g_pShaderDeviceMgrDx8->GetVidMemBytes( m_nAdapter );
+	g_pHardwareConfigDx8->CapsForEdit().m_TextureMemorySize = g_pShaderDeviceMgrDx8->GetVidMemBytes( m_nAdapter );
 
 	CreateMatrixStacks();
 
@@ -2735,9 +2735,9 @@ bool CShaderAPIDx8::SetMode( void* VD3DHWND, int nAdapter, const ShaderDeviceInf
 
 	LOCK_SHADERAPI();
 	Assert( D3D() );
-	Assert( nAdapter < g_pShaderDeviceMgr->GetAdapterCount() );
+	Assert( nAdapter < g_pShaderDeviceMgrBase->GetAdapterCount() );
 
-	const HardwareCaps_t& actualCaps = g_pShaderDeviceMgr->GetHardwareCaps( nAdapter );
+	const HardwareCaps_t& actualCaps = g_pShaderDeviceMgrBase->GetHardwareCaps( nAdapter );
 
 	ShaderDeviceInfo_t actualInfo = info;
 	int nDXLevel = actualInfo.m_nDXLevel ? actualInfo.m_nDXLevel : actualCaps.m_nDXSupportLevel;
@@ -2745,13 +2745,13 @@ bool CShaderAPIDx8::SetMode( void* VD3DHWND, int nAdapter, const ShaderDeviceInf
 	{
 		nDXLevel = actualCaps.m_nMaxDXSupportLevel;
 	}
-	actualInfo.m_nDXLevel = g_pShaderDeviceMgr->GetClosestActualDXLevel( nDXLevel );
+	actualInfo.m_nDXLevel = g_pShaderDeviceMgrBase->GetClosestActualDXLevel( nDXLevel );
 
 	if ( !g_pShaderDeviceMgrDx8->ValidateMode( nAdapter, actualInfo ) )
 		return false;
 
-	g_pShaderAPI = this;
-	g_pShaderDevice = this;
+	g_pShaderAPIBase = this;
+	g_pShaderDeviceBase = this;
 	g_pShaderShadow = ShaderShadow();
 	bool bOk = InitDevice( VD3DHWND, nAdapter, actualInfo );
 	if ( !bOk )
@@ -2794,14 +2794,14 @@ void CShaderAPIDx8::CreateMatrixStacks()
 //-----------------------------------------------------------------------------
 void CShaderAPIDx8::EnableAlphaToCoverage( void )
 {
-	if( !g_pHardwareConfig->ActualCaps().m_bSupportsAlphaToCoverage || !IsAAEnabled() )
+	if( !g_pHardwareConfigDx8->ActualCaps().m_bSupportsAlphaToCoverage || !IsAAEnabled() )
 		return;
 
 	if ( ( m_PresentParameters.MultiSampleType < D3DMULTISAMPLE_4_SAMPLES ) )
 		return;
 
-	D3DRENDERSTATETYPE renderState = (D3DRENDERSTATETYPE)g_pHardwareConfig->Caps().m_AlphaToCoverageState;
-	SetRenderState( renderState, g_pHardwareConfig->Caps().m_AlphaToCoverageEnableValue );	// Vendor dependent state
+	D3DRENDERSTATETYPE renderState = (D3DRENDERSTATETYPE)g_pHardwareConfigDx8->Caps().m_AlphaToCoverageState;
+	SetRenderState( renderState, g_pHardwareConfigDx8->Caps().m_AlphaToCoverageEnableValue );	// Vendor dependent state
 }
 
 //-----------------------------------------------------------------------------
@@ -2809,14 +2809,14 @@ void CShaderAPIDx8::EnableAlphaToCoverage( void )
 //-----------------------------------------------------------------------------
 void CShaderAPIDx8::DisableAlphaToCoverage()
 {
-	if( !g_pHardwareConfig->ActualCaps().m_bSupportsAlphaToCoverage || !IsAAEnabled() )
+	if( !g_pHardwareConfigDx8->ActualCaps().m_bSupportsAlphaToCoverage || !IsAAEnabled() )
 		return;
 
 	if ( ( m_PresentParameters.MultiSampleType < D3DMULTISAMPLE_4_SAMPLES ) )
 		return;
 
-	D3DRENDERSTATETYPE renderState = (D3DRENDERSTATETYPE)g_pHardwareConfig->Caps().m_AlphaToCoverageState;
-	SetRenderState( renderState, g_pHardwareConfig->Caps().m_AlphaToCoverageDisableValue );	// Vendor dependent state
+	D3DRENDERSTATETYPE renderState = (D3DRENDERSTATETYPE)g_pHardwareConfigDx8->Caps().m_AlphaToCoverageState;
+	SetRenderState( renderState, g_pHardwareConfigDx8->Caps().m_AlphaToCoverageDisableValue );	// Vendor dependent state
 }
 
 //-----------------------------------------------------------------------------
@@ -2824,7 +2824,7 @@ void CShaderAPIDx8::DisableAlphaToCoverage()
 //-----------------------------------------------------------------------------
 bool CShaderAPIDx8::DetermineHardwareCaps( )
 {
-	HardwareCaps_t& actualCaps = g_pHardwareConfig->ActualCapsForEdit();
+	HardwareCaps_t& actualCaps = g_pHardwareConfigDx8->ActualCapsForEdit();
 	if ( !g_pShaderDeviceMgrDx8->ComputeCapsFromD3D( &actualCaps, m_DisplayAdapter ) )
 		return false;
 
@@ -2853,11 +2853,11 @@ void CShaderAPIDx8::OverrideCaps( int nForcedDXLevel )
 	// Just use the actual caps if we can't use what was requested or if the default is requested
 	if ( nForcedDXLevel <= 0 ) 
 	{
-		nForcedDXLevel = g_pHardwareConfig->ActualCaps().m_nDXSupportLevel;
+		nForcedDXLevel = g_pHardwareConfigDx8->ActualCaps().m_nDXSupportLevel;
 	}
-	nForcedDXLevel = g_pShaderDeviceMgr->GetClosestActualDXLevel( nForcedDXLevel );
+	nForcedDXLevel = g_pShaderDeviceMgrBase->GetClosestActualDXLevel( nForcedDXLevel );
 
-	g_pHardwareConfig->SetupHardwareCaps( nForcedDXLevel, g_pHardwareConfig->ActualCaps() );
+	g_pHardwareConfigDx8->SetupHardwareCaps( nForcedDXLevel, g_pHardwareConfigDx8->ActualCaps() );
 }
 
 
@@ -2876,7 +2876,7 @@ void CShaderAPIDx8::DXSupportLevelChanged( int nDXLevel )
 //-----------------------------------------------------------------------------
 int CShaderAPIDx8::GetActualSamplerCount() const
 {
-	return g_pHardwareConfig->GetActualSamplerCount();
+	return g_pHardwareConfigDx8->GetActualSamplerCount();
 }
 
 int CShaderAPIDx8::StencilBufferBits() const
@@ -3084,7 +3084,7 @@ static void CommitSetScissorRect( D3DDeviceWrapper *pDevice, const DynamicState_
 inline void CShaderAPIDx8::SetScissorRect( const int nLeft, const int nTop, const int nRight, const int nBottom, const bool bEnableScissor )
 {
 	Assert( (nLeft <= nRight) && (nTop <= nBottom) ); //360 craps itself if this isn't true
-	if ( !g_pHardwareConfig->Caps().m_bScissorSupported )
+	if ( !g_pHardwareConfigDx8->Caps().m_bScissorSupported )
 		return;
 
 	DWORD dwEnableScissor = bEnableScissor ? TRUE : FALSE;
@@ -3164,7 +3164,7 @@ void CShaderAPIDx8::SetStandardVertexShaderConstants( float fOverbright )
 	SetVertexShaderConstantInternal( VERTEX_SHADER_LIGHT_INDEX, standardVertexShaderConstant.Base(), 1 );
 
 	/*
-	if ( g_pHardwareConfig->Caps().m_SupportsVertexShaders_3_0 )
+	if ( g_pHardwareConfigDx8->Caps().m_SupportsVertexShaders_3_0 )
 	{
 		Vector4D factors[4];
 		factors[0].Init( 1, 0, 0, 0 );
@@ -3193,48 +3193,48 @@ void CShaderAPIDx8::InitVertexAndPixelShaders()
 		{
 			delete[] m_DynamicState.m_pVectorPixelShaderConstant;
 		}
-		m_DynamicState.m_pVectorPixelShaderConstant = new Vector4D[g_pHardwareConfig->Caps().m_NumPixelShaderConstants];
+		m_DynamicState.m_pVectorPixelShaderConstant = new Vector4D[g_pHardwareConfigDx8->Caps().m_NumPixelShaderConstants];
 
 		if (m_DesiredState.m_pVectorPixelShaderConstant)
 		{
 			delete[] m_DesiredState.m_pVectorPixelShaderConstant;
 		}
-		m_DesiredState.m_pVectorPixelShaderConstant = new Vector4D[g_pHardwareConfig->Caps().m_NumPixelShaderConstants];
+		m_DesiredState.m_pVectorPixelShaderConstant = new Vector4D[g_pHardwareConfigDx8->Caps().m_NumPixelShaderConstants];
 
 		if (m_DynamicState.m_pBooleanPixelShaderConstant)
 		{
 			delete[] m_DynamicState.m_pBooleanPixelShaderConstant;
 		}
-		m_DynamicState.m_pBooleanPixelShaderConstant = new BOOL[g_pHardwareConfig->Caps().m_NumBooleanPixelShaderConstants];
+		m_DynamicState.m_pBooleanPixelShaderConstant = new BOOL[g_pHardwareConfigDx8->Caps().m_NumBooleanPixelShaderConstants];
 
 		if (m_DesiredState.m_pBooleanPixelShaderConstant)
 		{
 			delete[] m_DesiredState.m_pBooleanPixelShaderConstant;
 		}
-		m_DesiredState.m_pBooleanPixelShaderConstant = new BOOL[g_pHardwareConfig->Caps().m_NumBooleanPixelShaderConstants];
+		m_DesiredState.m_pBooleanPixelShaderConstant = new BOOL[g_pHardwareConfigDx8->Caps().m_NumBooleanPixelShaderConstants];
 	
 		if (m_DynamicState.m_pIntegerPixelShaderConstant)
 		{
 			delete[] m_DynamicState.m_pIntegerPixelShaderConstant;
 		}
-		m_DynamicState.m_pIntegerPixelShaderConstant = new IntVector4D[g_pHardwareConfig->Caps().m_NumIntegerPixelShaderConstants];
+		m_DynamicState.m_pIntegerPixelShaderConstant = new IntVector4D[g_pHardwareConfigDx8->Caps().m_NumIntegerPixelShaderConstants];
 
 		if (m_DesiredState.m_pIntegerPixelShaderConstant)
 		{
 			delete[] m_DesiredState.m_pIntegerPixelShaderConstant;
 		}
-		m_DesiredState.m_pIntegerPixelShaderConstant = new IntVector4D[g_pHardwareConfig->Caps().m_NumIntegerPixelShaderConstants];
+		m_DesiredState.m_pIntegerPixelShaderConstant = new IntVector4D[g_pHardwareConfigDx8->Caps().m_NumIntegerPixelShaderConstants];
 
 		// force reset vector pixel constants
 		int i;
-		for ( i = 0; i < g_pHardwareConfig->Caps().m_NumPixelShaderConstants; ++i )
+		for ( i = 0; i < g_pHardwareConfigDx8->Caps().m_NumPixelShaderConstants; ++i )
 		{
 			m_DesiredState.m_pVectorPixelShaderConstant[i].Init();
 		}
-		SetPixelShaderConstantInternal( 0, m_DesiredState.m_pVectorPixelShaderConstant[0].Base(), g_pHardwareConfig->Caps().m_NumPixelShaderConstants, true );
+		SetPixelShaderConstantInternal( 0, m_DesiredState.m_pVectorPixelShaderConstant[0].Base(), g_pHardwareConfigDx8->Caps().m_NumPixelShaderConstants, true );
 
 		// force reset boolean pixel constants
-		int nNumBooleanPixelShaderConstants = g_pHardwareConfig->Caps().m_NumBooleanPixelShaderConstants;
+		int nNumBooleanPixelShaderConstants = g_pHardwareConfigDx8->Caps().m_NumBooleanPixelShaderConstants;
 		if ( nNumBooleanPixelShaderConstants )
 		{
 			for ( i = 0; i < nNumBooleanPixelShaderConstants; ++i )
@@ -3245,7 +3245,7 @@ void CShaderAPIDx8::InitVertexAndPixelShaders()
 		}
 
 		// force reset integer pixel constants
-		int nNumIntegerPixelShaderConstants = g_pHardwareConfig->Caps().m_NumIntegerPixelShaderConstants;
+		int nNumIntegerPixelShaderConstants = g_pHardwareConfigDx8->Caps().m_NumIntegerPixelShaderConstants;
 		if ( nNumIntegerPixelShaderConstants )
 		{
 			for ( i = 0; i < nNumIntegerPixelShaderConstants; ++i )
@@ -3262,60 +3262,60 @@ void CShaderAPIDx8::InitVertexAndPixelShaders()
 		{
 			delete[] m_DynamicState.m_pVectorVertexShaderConstant;
 		}
-		m_DynamicState.m_pVectorVertexShaderConstant = new Vector4D[g_pHardwareConfig->Caps().m_NumVertexShaderConstants];
+		m_DynamicState.m_pVectorVertexShaderConstant = new Vector4D[g_pHardwareConfigDx8->Caps().m_NumVertexShaderConstants];
 
 		if (m_DesiredState.m_pVectorVertexShaderConstant)
 		{
 			delete[] m_DesiredState.m_pVectorVertexShaderConstant;
 		}
-		m_DesiredState.m_pVectorVertexShaderConstant = new Vector4D[g_pHardwareConfig->Caps().m_NumVertexShaderConstants];
+		m_DesiredState.m_pVectorVertexShaderConstant = new Vector4D[g_pHardwareConfigDx8->Caps().m_NumVertexShaderConstants];
 
 		if (m_DynamicState.m_pBooleanVertexShaderConstant)
 		{
 			delete[] m_DynamicState.m_pBooleanVertexShaderConstant;
 		}
-		m_DynamicState.m_pBooleanVertexShaderConstant = new BOOL[g_pHardwareConfig->Caps().m_NumBooleanVertexShaderConstants];
+		m_DynamicState.m_pBooleanVertexShaderConstant = new BOOL[g_pHardwareConfigDx8->Caps().m_NumBooleanVertexShaderConstants];
 
 		if (m_DesiredState.m_pBooleanVertexShaderConstant)
 		{
 			delete[] m_DesiredState.m_pBooleanVertexShaderConstant;
 		}
-		m_DesiredState.m_pBooleanVertexShaderConstant = new BOOL[g_pHardwareConfig->Caps().m_NumBooleanVertexShaderConstants];
+		m_DesiredState.m_pBooleanVertexShaderConstant = new BOOL[g_pHardwareConfigDx8->Caps().m_NumBooleanVertexShaderConstants];
 
 		if (m_DynamicState.m_pIntegerVertexShaderConstant)
 		{
 			delete[] m_DynamicState.m_pIntegerVertexShaderConstant;
 		}
-		m_DynamicState.m_pIntegerVertexShaderConstant = new IntVector4D[g_pHardwareConfig->Caps().m_NumIntegerVertexShaderConstants];
+		m_DynamicState.m_pIntegerVertexShaderConstant = new IntVector4D[g_pHardwareConfigDx8->Caps().m_NumIntegerVertexShaderConstants];
 
 		if (m_DesiredState.m_pIntegerVertexShaderConstant)
 		{
 			delete[] m_DesiredState.m_pIntegerVertexShaderConstant;
 		}
-		m_DesiredState.m_pIntegerVertexShaderConstant = new IntVector4D[g_pHardwareConfig->Caps().m_NumIntegerVertexShaderConstants];
+		m_DesiredState.m_pIntegerVertexShaderConstant = new IntVector4D[g_pHardwareConfigDx8->Caps().m_NumIntegerVertexShaderConstants];
 
 		// force reset vector vertex constants
 
 
 		int i;
-		for ( i = 0; i < g_pHardwareConfig->Caps().m_NumVertexShaderConstants; ++i )
+		for ( i = 0; i < g_pHardwareConfigDx8->Caps().m_NumVertexShaderConstants; ++i )
 		{
 			m_DesiredState.m_pVectorVertexShaderConstant[i].Init();
 		}
-		SetVertexShaderConstantInternal( 0, m_DesiredState.m_pVectorVertexShaderConstant[0].Base(), g_pHardwareConfig->Caps().m_NumVertexShaderConstants, true );
+		SetVertexShaderConstantInternal( 0, m_DesiredState.m_pVectorVertexShaderConstant[0].Base(), g_pHardwareConfigDx8->Caps().m_NumVertexShaderConstants, true );
 		// force reset boolean vertex constants
-		for ( i = 0; i < g_pHardwareConfig->Caps().m_NumBooleanVertexShaderConstants; ++i )
+		for ( i = 0; i < g_pHardwareConfigDx8->Caps().m_NumBooleanVertexShaderConstants; ++i )
 		{
 			m_DesiredState.m_pBooleanVertexShaderConstant[i] = 0;
 		}
-		SetBooleanVertexShaderConstant( 0, m_DesiredState.m_pBooleanVertexShaderConstant, g_pHardwareConfig->Caps().m_NumBooleanVertexShaderConstants, true );
+		SetBooleanVertexShaderConstant( 0, m_DesiredState.m_pBooleanVertexShaderConstant, g_pHardwareConfigDx8->Caps().m_NumBooleanVertexShaderConstants, true );
 
 		// force reset integer vertex constants
-		for ( i = 0; i < g_pHardwareConfig->Caps().m_NumIntegerVertexShaderConstants; ++i )
+		for ( i = 0; i < g_pHardwareConfigDx8->Caps().m_NumIntegerVertexShaderConstants; ++i )
 		{
 			m_DesiredState.m_pIntegerVertexShaderConstant[i].Init();
 		}
-		SetIntegerVertexShaderConstant( 0, m_DesiredState.m_pIntegerVertexShaderConstant[0].Base(), g_pHardwareConfig->Caps().m_NumIntegerVertexShaderConstants, true );
+		SetIntegerVertexShaderConstant( 0, m_DesiredState.m_pIntegerVertexShaderConstant[0].Base(), g_pHardwareConfigDx8->Caps().m_NumIntegerVertexShaderConstants, true );
 	}
 
 
@@ -3535,20 +3535,20 @@ void CShaderAPIDx8::ResetDXRenderState( void )
 	// -disable_d3d9_hacks is for debugging. For example, the "CENT" driver hack thing causes the flashlight pass to appear much brighter on NVidia drivers.
 	if ( !IsOpenGL() && !CommandLine()->CheckParm( "-disable_d3d9_hacks" ) )
 	{	
-		if ( g_pHardwareConfig->Caps().m_bNeedsATICentroidHack )
+		if ( g_pHardwareConfigDx8->Caps().m_bNeedsATICentroidHack )
 		{
 			SetSupportedRenderStateForce( D3DRS_POINTSIZE, MAKEFOURCC( 'C', 'E', 'N', 'T' ) );
 		}
-		else if ( g_pHardwareConfig->Caps().m_VendorID == VENDORID_NVIDIA )
+		else if ( g_pHardwareConfigDx8->Caps().m_VendorID == VENDORID_NVIDIA )
 		{
 			// NVIDIA has a bug in their driver, so we can't call this on DX10 hardware right now
-			if ( !g_pHardwareConfig->UsesSRGBCorrectBlending() )
+			if ( !g_pHardwareConfigDx8->UsesSRGBCorrectBlending() )
 			{
 				// This helps the driver to know to turn on fast z reject for NVidia dx80 hardware
 				SetSupportedRenderStateForce( D3DRS_POINTSIZE, MAKEFOURCC( 'H', 'L', '2', 'A' ) );
 			}
 		}
-		if( g_pHardwareConfig->Caps().m_bDisableShaderOptimizations )
+		if( g_pHardwareConfigDx8->Caps().m_bDisableShaderOptimizations )
 		{
 			SetSupportedRenderStateForce( D3DRS_ADAPTIVETESS_Y, MAKEFOURCC( 'C', 'O', 'P', 'M' ) );
 		}
@@ -3660,13 +3660,13 @@ void CShaderAPIDx8::ResetRenderState( bool bFullReset )
 	else
 	{
 		// just need to dirty the dynamic state, desired state gets copied into below
-		Q_memset( m_DynamicState.m_pVectorPixelShaderConstant, 0, g_pHardwareConfig->Caps().m_NumPixelShaderConstants * sizeof( Vector4D ) );
-		Q_memset( m_DynamicState.m_pBooleanPixelShaderConstant, 0, g_pHardwareConfig->Caps().m_NumBooleanPixelShaderConstants * sizeof( BOOL ) );
-		Q_memset( m_DynamicState.m_pIntegerPixelShaderConstant, 0, g_pHardwareConfig->Caps().m_NumIntegerPixelShaderConstants * sizeof( IntVector4D ) );
+		Q_memset( m_DynamicState.m_pVectorPixelShaderConstant, 0, g_pHardwareConfigDx8->Caps().m_NumPixelShaderConstants * sizeof( Vector4D ) );
+		Q_memset( m_DynamicState.m_pBooleanPixelShaderConstant, 0, g_pHardwareConfigDx8->Caps().m_NumBooleanPixelShaderConstants * sizeof( BOOL ) );
+		Q_memset( m_DynamicState.m_pIntegerPixelShaderConstant, 0, g_pHardwareConfigDx8->Caps().m_NumIntegerPixelShaderConstants * sizeof( IntVector4D ) );
 
-		Q_memset( m_DynamicState.m_pVectorVertexShaderConstant, 0, g_pHardwareConfig->Caps().m_NumVertexShaderConstants * sizeof( Vector4D ) );
-		Q_memset( m_DynamicState.m_pBooleanVertexShaderConstant, 0, g_pHardwareConfig->Caps().m_NumBooleanVertexShaderConstants * sizeof( BOOL ) );
-		Q_memset( m_DynamicState.m_pIntegerVertexShaderConstant, 0, g_pHardwareConfig->Caps().m_NumIntegerVertexShaderConstants * sizeof( IntVector4D ) );
+		Q_memset( m_DynamicState.m_pVectorVertexShaderConstant, 0, g_pHardwareConfigDx8->Caps().m_NumVertexShaderConstants * sizeof( Vector4D ) );
+		Q_memset( m_DynamicState.m_pBooleanVertexShaderConstant, 0, g_pHardwareConfigDx8->Caps().m_NumBooleanVertexShaderConstants * sizeof( BOOL ) );
+		Q_memset( m_DynamicState.m_pIntegerVertexShaderConstant, 0, g_pHardwareConfigDx8->Caps().m_NumIntegerVertexShaderConstants * sizeof( IntVector4D ) );
 
 		SetStandardVertexShaderConstants( OVERBRIGHT );
 	}
@@ -3676,7 +3676,7 @@ void CShaderAPIDx8::ResetRenderState( bool bFullReset )
 	m_DynamicState.m_nPaintmapSamplers = 0;
 	
 	// Set the default compressed depth range written to dest alpha. Only need to compress it for 8bit alpha to get a useful gradient.
-	SetFloatRenderingParameter( FLOAT_RENDERPARM_DEST_ALPHA_DEPTH_SCALE, ( g_pHardwareConfig->GetHDRType() == HDR_TYPE_FLOAT )  ? 8192.0f : 192.0f );
+	SetFloatRenderingParameter( FLOAT_RENDERPARM_DEST_ALPHA_DEPTH_SCALE, ( g_pHardwareConfigDx8->GetHDRType() == HDR_TYPE_FLOAT )  ? 8192.0f : 192.0f );
 
 	// Fog
 	m_VertexShaderFogParams[0] = m_VertexShaderFogParams[1] = 0.0f;
@@ -3723,10 +3723,10 @@ void CShaderAPIDx8::ResetRenderState( bool bFullReset )
 	// It's safe and not a perf problem to always enable this renderstate, even for single-sample rendertargets
 	SetRenderState( D3DRS_MULTISAMPLEANTIALIAS, true );
 	
-	if ( g_pHardwareConfig->ActualCaps().m_bSupportsAlphaToCoverage )
+	if ( g_pHardwareConfigDx8->ActualCaps().m_bSupportsAlphaToCoverage )
 	{
-		D3DRENDERSTATETYPE renderState = (D3DRENDERSTATETYPE)g_pHardwareConfig->ActualCaps().m_AlphaToCoverageState;
-		SetRenderState( renderState, g_pHardwareConfig->ActualCaps().m_AlphaToCoverageDisableValue );	// Vendor dependent state
+		D3DRENDERSTATETYPE renderState = (D3DRENDERSTATETYPE)g_pHardwareConfigDx8->ActualCaps().m_AlphaToCoverageState;
+		SetRenderState( renderState, g_pHardwareConfigDx8->ActualCaps().m_AlphaToCoverageDisableValue );	// Vendor dependent state
 	}
 	// Anisotropic filtering is disabled by default
 	if ( bFullReset )
@@ -3734,7 +3734,7 @@ void CShaderAPIDx8::ResetRenderState( bool bFullReset )
 		SetAnisotropicLevel( 1 );
 	}
 
-	for ( int i = 0; i < g_pHardwareConfig->ActualCaps().m_NumSamplers; ++i )
+	for ( int i = 0; i < g_pHardwareConfigDx8->ActualCaps().m_NumSamplers; ++i )
 	{
 		SamplerState(i).m_BoundTexture = INVALID_SHADERAPI_TEXTURE_HANDLE;						  
 		SamplerState(i).m_UTexWrap = D3DTADDRESS_WRAP;
@@ -3761,7 +3761,7 @@ void CShaderAPIDx8::ResetRenderState( bool bFullReset )
 	}
 
 	// FIXME!!!!! : This barfs with the debug runtime on 6800.
-	for( int i = 0; i < g_pHardwareConfig->ActualCaps().m_NumVertexSamplers; i++ )
+	for( int i = 0; i < g_pHardwareConfigDx8->ActualCaps().m_NumVertexSamplers; i++ )
 	{
 		m_DynamicState.m_VertexTextureState[i].m_BoundVertexTexture = INVALID_SHADERAPI_TEXTURE_HANDLE;
 		Dx9Device()->SetTexture( D3DVERTEXTEXTURESAMPLER0 + i, NULL );
@@ -3842,7 +3842,7 @@ void CShaderAPIDx8::ResetRenderState( bool bFullReset )
 	m_DynamicState.m_UserClipPlaneEnabled = 0;
 	m_DynamicState.m_UserClipPlaneChanged = 0;
 	m_DynamicState.m_UserClipLastUpdatedUsingFixedFunction = false;
-	for ( int i = 0; i < g_pHardwareConfig->MaxUserClipPlanes(); i++ )
+	for ( int i = 0; i < g_pHardwareConfigDx8->MaxUserClipPlanes(); i++ )
 	{
 		// Make sure that our state is dirty.
 		m_DynamicState.m_UserClipPlaneWorld[i][0] = -1.0f;
@@ -3852,7 +3852,7 @@ void CShaderAPIDx8::ResetRenderState( bool bFullReset )
 		EnableClipPlane( i, false );
 		Assert( m_DynamicState.m_UserClipPlaneEnabled == 0 );
 	}
-	Assert( m_DynamicState.m_UserClipPlaneChanged == ((1 << g_pHardwareConfig->MaxUserClipPlanes()) - 1) );
+	Assert( m_DynamicState.m_UserClipPlaneChanged == ((1 << g_pHardwareConfigDx8->MaxUserClipPlanes()) - 1) );
 
 	m_DynamicState.m_FastClipEnabled = false;
 	m_DynamicState.m_bFastClipPlaneChanged = true;
@@ -3894,35 +3894,35 @@ void CShaderAPIDx8::ResetRenderState( bool bFullReset )
 	{
 		// Full reset has already allocated and inited the default values and sent them (above).
 		// Normal reset sends the desired values.
-		if ( g_pHardwareConfig->Caps().m_NumVertexShaderConstants != 0 )
+		if ( g_pHardwareConfigDx8->Caps().m_NumVertexShaderConstants != 0 )
 		{
 			// 217 on X360 to play nice with fast blatting code
-			SetVertexShaderConstantInternal( 0, m_DesiredState.m_pVectorVertexShaderConstant[0].Base(), false ? 217 : g_pHardwareConfig->Caps().m_NumVertexShaderConstants, true );
+			SetVertexShaderConstantInternal( 0, m_DesiredState.m_pVectorVertexShaderConstant[0].Base(), false ? 217 : g_pHardwareConfigDx8->Caps().m_NumVertexShaderConstants, true );
 		}
 		
-		if ( g_pHardwareConfig->Caps().m_NumIntegerVertexShaderConstants != 0 )
+		if ( g_pHardwareConfigDx8->Caps().m_NumIntegerVertexShaderConstants != 0 )
 		{
-			SetIntegerVertexShaderConstant( 0, (int *)m_DesiredState.m_pIntegerVertexShaderConstant, g_pHardwareConfig->Caps().m_NumIntegerVertexShaderConstants, true );
+			SetIntegerVertexShaderConstant( 0, (int *)m_DesiredState.m_pIntegerVertexShaderConstant, g_pHardwareConfigDx8->Caps().m_NumIntegerVertexShaderConstants, true );
 		}
 		
-		if ( g_pHardwareConfig->Caps().m_NumBooleanVertexShaderConstants != 0 )
+		if ( g_pHardwareConfigDx8->Caps().m_NumBooleanVertexShaderConstants != 0 )
 		{
-			SetBooleanVertexShaderConstant( 0, m_DesiredState.m_pBooleanVertexShaderConstant, g_pHardwareConfig->Caps().m_NumBooleanVertexShaderConstants, true );
+			SetBooleanVertexShaderConstant( 0, m_DesiredState.m_pBooleanVertexShaderConstant, g_pHardwareConfigDx8->Caps().m_NumBooleanVertexShaderConstants, true );
 		}
 
-		if ( g_pHardwareConfig->Caps().m_NumPixelShaderConstants != 0 )
+		if ( g_pHardwareConfigDx8->Caps().m_NumPixelShaderConstants != 0 )
 		{
-			SetPixelShaderConstantInternal( 0, m_DesiredState.m_pVectorPixelShaderConstant[0].Base(), g_pHardwareConfig->Caps().m_NumPixelShaderConstants, true );
+			SetPixelShaderConstantInternal( 0, m_DesiredState.m_pVectorPixelShaderConstant[0].Base(), g_pHardwareConfigDx8->Caps().m_NumPixelShaderConstants, true );
 		}
 
-		if ( g_pHardwareConfig->Caps().m_NumIntegerPixelShaderConstants != 0 )
+		if ( g_pHardwareConfigDx8->Caps().m_NumIntegerPixelShaderConstants != 0 )
 		{
-			SetIntegerPixelShaderConstant( 0, (int *)m_DesiredState.m_pIntegerPixelShaderConstant, g_pHardwareConfig->Caps().m_NumIntegerPixelShaderConstants, true );
+			SetIntegerPixelShaderConstant( 0, (int *)m_DesiredState.m_pIntegerPixelShaderConstant, g_pHardwareConfigDx8->Caps().m_NumIntegerPixelShaderConstants, true );
 		}
 
-		if ( g_pHardwareConfig->Caps().m_NumBooleanPixelShaderConstants != 0 )
+		if ( g_pHardwareConfigDx8->Caps().m_NumBooleanPixelShaderConstants != 0 )
 		{
-			SetBooleanPixelShaderConstant( 0, m_DesiredState.m_pBooleanPixelShaderConstant, g_pHardwareConfig->Caps().m_NumBooleanPixelShaderConstants, true );
+			SetBooleanPixelShaderConstant( 0, m_DesiredState.m_pBooleanPixelShaderConstant, g_pHardwareConfigDx8->Caps().m_NumBooleanPixelShaderConstants, true );
 		}
 	}
 
@@ -4977,7 +4977,7 @@ void CShaderAPIDx8::RestoreShaderObjects()
 }
 
 #if defined( PIX_INSTRUMENTATION )
-ConVar pix_break_on_event( "pix_break_on_event", "" );
+ConVar pix_break_on_event( "pix_break_on_event", "", FCVAR_MATERIAL_SYSTEM_THREAD );
 #endif
 
 //--------------------------------------------------------------------
@@ -5242,10 +5242,10 @@ static void OnDepthBiasChanged( IConVar *var, const char *pOldValue, float flOld
 	g_ShaderAPIDX8.UpdateDepthBiasState();
 }
 
-static ConVar mat_slopescaledepthbias_decal( "mat_slopescaledepthbias_decal", "-2", FCVAR_CHEAT | FCVAR_DEVELOPMENTONLY, "", OnDepthBiasChanged );
-static ConVar mat_depthbias_decal( "mat_depthbias_decal", "-0.0000038", FCVAR_CHEAT | FCVAR_DEVELOPMENTONLY, "", OnDepthBiasChanged );
-static ConVar mat_slopescaledepthbias_normal( "mat_slopescaledepthbias_normal", "0.0f", FCVAR_CHEAT | FCVAR_DEVELOPMENTONLY, "", OnDepthBiasChanged );
-static ConVar mat_depthbias_normal( "mat_depthbias_normal", "0.0f", FCVAR_CHEAT | FCVAR_DEVELOPMENTONLY, "", OnDepthBiasChanged );
+static ConVar mat_slopescaledepthbias_decal( "mat_slopescaledepthbias_decal", "-2", FCVAR_MATERIAL_SYSTEM_THREAD | FCVAR_CHEAT | FCVAR_DEVELOPMENTONLY, "", OnDepthBiasChanged );
+static ConVar mat_depthbias_decal( "mat_depthbias_decal", "-0.0000038", FCVAR_MATERIAL_SYSTEM_THREAD | FCVAR_CHEAT | FCVAR_DEVELOPMENTONLY, "", OnDepthBiasChanged );
+static ConVar mat_slopescaledepthbias_normal( "mat_slopescaledepthbias_normal", "0.0f", FCVAR_MATERIAL_SYSTEM_THREAD | FCVAR_CHEAT | FCVAR_DEVELOPMENTONLY, "", OnDepthBiasChanged );
+static ConVar mat_depthbias_normal( "mat_depthbias_normal", "0.0f", FCVAR_MATERIAL_SYSTEM_THREAD | FCVAR_CHEAT | FCVAR_DEVELOPMENTONLY, "", OnDepthBiasChanged );
 
 void CShaderAPIDx8::UpdateDepthBiasState()
 {
@@ -5269,7 +5269,7 @@ void CShaderAPIDx8::ApplyZBias( const DepthTestState_t& shaderState )
     float d = m_ZBias.m_flOODepthBias;
 
 	// bias = (s * D3DRS_SLOPESCALEDEPTHBIAS) + D3DRS_DEPTHBIAS, where s is the maximum depth slope of the triangle being rendered
-    if ( g_pHardwareConfig->Caps().m_ZBiasAndSlopeScaledDepthBiasSupported )
+    if ( g_pHardwareConfigDx8->Caps().m_ZBiasAndSlopeScaledDepthBiasSupported )
     {
 		float fSlopeScaleDepthBias, fDepthBias;
 		if ( shaderState.m_ZBias == SHADER_POLYOFFSET_DECAL )
@@ -5498,7 +5498,7 @@ void CShaderAPIDx8::GetBufferedState( BufferedState_t& state )
 	memcpy( &state.m_Viewport, &m_DynamicState.m_Viewport, sizeof(state.m_Viewport) );
 	state.m_PixelShader = ShaderManager()->GetCurrentPixelShader();
 	state.m_VertexShader = ShaderManager()->GetCurrentVertexShader();
-	for (int i = 0; i < g_pHardwareConfig->GetSamplerCount(); ++i)
+	for (int i = 0; i < g_pHardwareConfigDx8->GetSamplerCount(); ++i)
 	{
 		state.m_BoundTexture[i] = m_DynamicState.m_SamplerState[i].m_BoundTexture;
 	}
@@ -5679,7 +5679,7 @@ void CShaderAPIDx8::FlipCullMode( void )
 	SetCullModeState( m_DynamicState.m_bCullEnabled, m_DynamicState.m_DesiredCullMode );	
 }
 
-static ConVar mat_alphacoverage( "mat_alphacoverage", false ? "0" : "1", FCVAR_DEVELOPMENTONLY );
+static ConVar mat_alphacoverage( "mat_alphacoverage", false ? "0" : "1", FCVAR_MATERIAL_SYSTEM_THREAD | FCVAR_DEVELOPMENTONLY );
 void CShaderAPIDx8::ApplyAlphaToCoverage( bool bEnable )
 {
 	if ( mat_alphacoverage.GetBool() )
@@ -5804,7 +5804,7 @@ void CShaderAPIDx8::SetHeightClipMode( MaterialHeightClipMode_t heightClipMode )
 void CShaderAPIDx8::SetClipPlane( int index, const float *pPlane )
 {
 	LOCK_SHADERAPI();
-	Assert( index < g_pHardwareConfig->MaxUserClipPlanes() && index >= 0 );
+	Assert( index < g_pHardwareConfigDx8->MaxUserClipPlanes() && index >= 0 );
 
 	// NOTE: The plane here is specified in *world space*
 	// NOTE: This is done because they assume Ax+By+Cz+Dw = 0 (where w = 1 in real space)
@@ -5842,7 +5842,7 @@ void CShaderAPIDx8::VMatrixToD3DXMatrix( const VMatrix &in, D3DXMATRIX &out )
 //-----------------------------------------------------------------------------
 void CShaderAPIDx8::MarkAllUserClipPlanesDirty()
 {
-	m_DynamicState.m_UserClipPlaneChanged |= ( 1 << g_pHardwareConfig->MaxUserClipPlanes() ) - 1;
+	m_DynamicState.m_UserClipPlaneChanged |= ( 1 << g_pHardwareConfigDx8->MaxUserClipPlanes() ) - 1;
 	m_DynamicState.m_bFastClipPlaneChanged = true;
 }
 
@@ -5887,7 +5887,7 @@ void CShaderAPIDx8::UserClipTransform( const VMatrix &worldToProjection )
 void CShaderAPIDx8::EnableClipPlane( int index, bool bEnable )
 {
 	LOCK_SHADERAPI();
-	Assert( index < g_pHardwareConfig->MaxUserClipPlanes() && index >= 0 );
+	Assert( index < g_pHardwareConfigDx8->MaxUserClipPlanes() && index >= 0 );
 	if( ( m_DynamicState.m_UserClipPlaneEnabled & ( 1 << index ) ? true : false ) != bEnable )
 	{
 		if ( bEnable )
@@ -5942,7 +5942,7 @@ void ApplyClipPlaneToProjectionMatrix( D3DXMATRIX &projMatrix, const Vector4D& c
 	projMatrix._43 = c.w;
 }
 
-ConVar mat_alternatefastclipalgorithm( "mat_alternatefastclipalgorithm", "1" );
+ConVar mat_alternatefastclipalgorithm( "mat_alternatefastclipalgorithm", "1", FCVAR_MATERIAL_SYSTEM_THREAD );
 
 //-----------------------------------------------------------------------------
 // Recomputes the fast-clip plane matrices based on the current fast-clip plane
@@ -5989,7 +5989,7 @@ void CShaderAPIDx8::CommitFastClipPlane( )
 #define ALLOW_FOR_FASTCLIPDUMPS 0
 
 #if (ALLOW_FOR_FASTCLIPDUMPS == 1)
-		static ConVar shader_dumpfastclipprojectioncoords( "shader_dumpfastclipprojectioncoords", "0", 0, "dump fast clip projected matrix" );
+		static ConVar shader_dumpfastclipprojectioncoords( "shader_dumpfastclipprojectioncoords", "0", FCVAR_MATERIAL_SYSTEM_THREAD, "dump fast clip projected matrix" );
 		if( shader_dumpfastclipprojectioncoords.GetBool() )
 			DevMsg( "Fast clip plane projected coordinates: %f %f %f %f", clipPlane.x, clipPlane.y, clipPlane.z, clipPlane.w );
 #endif
@@ -6174,11 +6174,11 @@ void CShaderAPIDx8::EnabledSRGBWrite( bool bEnabled )
 {
 	m_DynamicState.m_bSRGBWritesEnabled = bEnabled;
 
-	if ( g_pHardwareConfig->GetDXSupportLevel() >= 92 )
+	if ( g_pHardwareConfigDx8->GetDXSupportLevel() >= 92 )
 	{
 		UpdatePixelFogColorConstant();
 
-		//if ( bEnabled && g_pHardwareConfig->NeedsShaderSRGBConversion() )
+		//if ( bEnabled && g_pHardwareConfigDx8->NeedsShaderSRGBConversion() )
 		//	BindTexture( SHADER_SAMPLER15, m_hLinearToGammaTableTexture );
 		//else
 		//	BindTexture( SHADER_SAMPLER15, m_hLinearToGammaTableIdentityTexture );
@@ -6227,7 +6227,7 @@ void CShaderAPIDx8::UpdatePixelFogColorConstant( bool bMultiplyByToneMapScale )
 		case MATERIAL_FOG_LINEAR_BELOW_FOG_Z:
 			{
 				//water fog has been around a while and has never tonemap scaled, and has always been in linear space
-				if( g_pHardwareConfig->NeedsShaderSRGBConversion() )
+				if( g_pHardwareConfigDx8->NeedsShaderSRGBConversion() )
 				{
 					// srgb in ps2b uses the 2.2 curve
 					for( int i = 0; i < 3; ++i )
@@ -6245,7 +6245,7 @@ void CShaderAPIDx8::UpdatePixelFogColorConstant( bool bMultiplyByToneMapScale )
 			NO_DEFAULT;
 	};	
 
-	if( bMultiplyByToneMapScale && ( (!m_DynamicState.m_bFogGammaCorrectionDisabled) && (g_pHardwareConfig->GetHDRType() == HDR_TYPE_INTEGER ) ) )
+	if( bMultiplyByToneMapScale && ( (!m_DynamicState.m_bFogGammaCorrectionDisabled) && (g_pHardwareConfigDx8->GetHDRType() == HDR_TYPE_INTEGER ) ) )
 	{
 		vecFogColor.AsVector3D() *= m_ToneMappingScale.x;
 	}
@@ -6577,15 +6577,15 @@ void CShaderAPIDx8::GetSceneFogColor( unsigned char *r, unsigned char *g, unsign
 D3DCOLOR CShaderAPIDx8::ComputeGammaCorrectedFogColor( unsigned char r, unsigned char g, unsigned char b, bool bSRGBWritesEnabled )
 {
 #ifdef _DEBUG
-	if( g_pHardwareConfig->GetHDRType() == HDR_TYPE_FLOAT && !bSRGBWritesEnabled )
+	if( g_pHardwareConfigDx8->GetHDRType() == HDR_TYPE_FLOAT && !bSRGBWritesEnabled )
 	{
 //		Assert( 0 );
 	}
 #endif
-	bool bLinearSpace =   g_pHardwareConfig->Caps().m_bFogColorAlwaysLinearSpace ||
-						( bSRGBWritesEnabled && ( g_pHardwareConfig->Caps().m_bFogColorSpecifiedInLinearSpace || g_pHardwareConfig->GetHDRType() == HDR_TYPE_FLOAT ) );
+	bool bLinearSpace =   g_pHardwareConfigDx8->Caps().m_bFogColorAlwaysLinearSpace ||
+						( bSRGBWritesEnabled && ( g_pHardwareConfigDx8->Caps().m_bFogColorSpecifiedInLinearSpace || g_pHardwareConfigDx8->GetHDRType() == HDR_TYPE_FLOAT ) );
 
-	bool bScaleFogByToneMappingScale = g_pHardwareConfig->GetHDRType() == HDR_TYPE_INTEGER;
+	bool bScaleFogByToneMappingScale = g_pHardwareConfigDx8->GetHDRType() == HDR_TYPE_INTEGER;
 
 	float fr = ( r / 255.0f );
 	float fg = ( g / 255.0f );
@@ -6666,7 +6666,7 @@ FORCEINLINE void CShaderAPIDx8::SetVertexShaderConstantInternal( int var, float 
 	Assert( numVecs > 0 );
 	Assert( pVec );
 
-	Assert( var + numVecs <= g_pHardwareConfig->NumVertexShaderConstants() );
+	Assert( var + numVecs <= g_pHardwareConfigDx8->NumVertexShaderConstants() );
 
 	if ( !bForce && memcmp( pVec, &m_DynamicState.m_pVectorVertexShaderConstant[var], numVecs * 4 * sizeof( float ) ) == 0 )
 		return;
@@ -6721,7 +6721,7 @@ void CShaderAPIDx8::NotifyShaderConstantsChangedInRenderPass()
 void CShaderAPIDx8::SetBooleanVertexShaderConstant( int var, int const* pVec, int numBools, bool bForce )
 {
 	Assert( pVec );
-	Assert( var + numBools <= g_pHardwareConfig->NumBooleanVertexShaderConstants() );
+	Assert( var + numBools <= g_pHardwareConfigDx8->NumBooleanVertexShaderConstants() );
 
 	if ( !bForce && memcmp( pVec, &m_DesiredState.m_pBooleanVertexShaderConstant[var], numBools * sizeof( BOOL ) ) == 0 )
 	{
@@ -6742,7 +6742,7 @@ void CShaderAPIDx8::SetBooleanVertexShaderConstant( int var, int const* pVec, in
 void CShaderAPIDx8::SetIntegerVertexShaderConstant( int var, int const* pVec, int numIntVecs, bool bForce )
 {
 	Assert( pVec );
-	Assert( var + numIntVecs <= g_pHardwareConfig->NumIntegerVertexShaderConstants() );
+	Assert( var + numIntVecs <= g_pHardwareConfigDx8->NumIntegerVertexShaderConstants() );
 
 	if ( !bForce && memcmp( pVec, &m_DesiredState.m_pIntegerVertexShaderConstant[var], numIntVecs * sizeof( IntVector4D ) ) == 0 )
 	{
@@ -6758,7 +6758,7 @@ void CShaderAPIDx8::SetIntegerVertexShaderConstant( int var, int const* pVec, in
 
 FORCEINLINE void CShaderAPIDx8::SetPixelShaderConstantInternal( int nStartConst, float const* pValues, int nNumConsts, bool bForce )
 {
-	Assert( nStartConst + nNumConsts <= g_pHardwareConfig->NumPixelShaderConstants() );
+	Assert( nStartConst + nNumConsts <= g_pHardwareConfigDx8->NumPixelShaderConstants() );
 
 	if ( !bForce )
 	{
@@ -7005,7 +7005,7 @@ void CShaderAPIDx8::ExecuteCommandBuffer( uint8 *pCmdBuf )
 
 				// DX10 hardware and single pass flashlight require a hack scalar since the flashlight is added in linear space
 				float flashlightColor[4] = { m_pFlashlightColor[0], m_pFlashlightColor[1], m_pFlashlightColor[2], m_pFlashlightColor[3] };
-				if ( ( g_pHardwareConfig->UsesSRGBCorrectBlending() ) || ( bSinglePassFlashlight ) )
+				if ( ( g_pHardwareConfigDx8->UsesSRGBCorrectBlending() ) || ( bSinglePassFlashlight ) )
 				{
 					// Magic number that works well on the 360 and NVIDIA 8800
 					flashlightColor[0] *= 2.5f;
@@ -7083,7 +7083,7 @@ void CShaderAPIDx8::ExecuteCommandBuffer( uint8 *pCmdBuf )
 
 
 
-//ConVar mat_use_old_gamma( "mat_use_old_gamma", "1" );
+//ConVar mat_use_old_gamma( "mat_use_old_gamma", "1", FCVAR_MATERIAL_SYSTEM_THREAD );
 #define USE_OLD_GAMMA ( false )
 
 //-----------------------------------------------------------------------------
@@ -7700,7 +7700,7 @@ void CShaderAPIDx8::ExecuteInstanceCommandBuffer( const unsigned char *pCmdBuf, 
 void CShaderAPIDx8::SetBooleanPixelShaderConstant( int var, int const* pVec, int numBools, bool bForce )
 {
 	Assert( pVec );
-	Assert( var + numBools <= g_pHardwareConfig->NumBooleanPixelShaderConstants() );
+	Assert( var + numBools <= g_pHardwareConfigDx8->NumBooleanPixelShaderConstants() );
 
 	if ( !bForce && memcmp( pVec, &m_DesiredState.m_pBooleanPixelShaderConstant[var], numBools * sizeof( BOOL ) ) == 0 )
 	{
@@ -7721,7 +7721,7 @@ void CShaderAPIDx8::SetBooleanPixelShaderConstant( int var, int const* pVec, int
 void CShaderAPIDx8::SetIntegerPixelShaderConstant( int var, int const* pVec, int numIntVecs, bool bForce )
 {
 	Assert( pVec );
-	Assert( var + numIntVecs <= g_pHardwareConfig->NumIntegerPixelShaderConstants() );
+	Assert( var + numIntVecs <= g_pHardwareConfigDx8->NumIntegerPixelShaderConstants() );
 
 	if ( !bForce && memcmp( pVec, &m_DesiredState.m_pIntegerPixelShaderConstant[var], numIntVecs * sizeof( IntVector4D ) ) == 0 )
 	{
@@ -7948,7 +7948,7 @@ void CShaderAPIDx8::SetTextureState( Sampler_t sampler, TextureBindFlags_t nBind
 
 	// Set SHADOWFILTER or ATI Fetch4
 #if !defined( DX_TO_VK_ABSTRACTION )
-	if ( g_pHardwareConfig->SupportsFetch4() )
+	if ( g_pHardwareConfigDx8->SupportsFetch4() )
 	{
 		const uint nNewFetch4State = ( nBindFlags & TEXTURE_BINDFLAGS_SHADOWDEPTH ) ? ATI_FETCH4_ENABLE : ATI_FETCH4_DISABLE;
 		SETSAMPLESTATEANDMIRROR( sampler, samplerState, ATISAMP_FETCH4, m_bShadowFilterEnable, nNewFetch4State );
@@ -8428,7 +8428,7 @@ void CShaderAPIDx8::CreateTextures(
 
 		if ( bIsRenderTarget )
 		{
-			if ( ( g_pHardwareConfig->Caps().m_VendorID == VENDORID_ATI ) &&  
+			if ( ( g_pHardwareConfigDx8->Caps().m_VendorID == VENDORID_ATI ) &&  
 				 ( ( dstImageFormat == IMAGE_FORMAT_D16_SHADOW ) || ( dstImageFormat == IMAGE_FORMAT_D24X8_SHADOW ) ) )
 			{
 				pTexture->m_MinFilter = pTexture->m_MagFilter = D3DTEXF_POINT;
@@ -8580,7 +8580,7 @@ void CShaderAPIDx8::DeleteD3DTexture( ShaderAPITextureHandle_t hTexture )
 void CShaderAPIDx8::UnbindTexture( ShaderAPITextureHandle_t hTexture )
 {
 	// Make sure no texture units are currently bound to it...
-	for ( int unit = 0; unit < g_pHardwareConfig->GetSamplerCount(); ++unit )
+	for ( int unit = 0; unit < g_pHardwareConfigDx8->GetSamplerCount(); ++unit )
 	{
 		if ( hTexture == SamplerState( unit ).m_BoundTexture )
 		{
@@ -8591,7 +8591,7 @@ void CShaderAPIDx8::UnbindTexture( ShaderAPITextureHandle_t hTexture )
 		}
 	}
 
-	int nVertexSamplerCount = g_pHardwareConfig->GetVertexSamplerCount();
+	int nVertexSamplerCount = g_pHardwareConfigDx8->GetVertexSamplerCount();
 	for ( int nSampler = 0; nSampler < nVertexSamplerCount; ++nSampler )
 	{
 		if ( hTexture == m_DynamicState.m_VertexTextureState[ nSampler ].m_BoundVertexTexture )
@@ -8706,7 +8706,7 @@ void CShaderAPIDx8::ReleaseAllTextures()
 	}
 
 	// Make sure all texture units are pointing to nothing
-	for (int unit = 0; unit < g_pHardwareConfig->GetSamplerCount(); ++unit )
+	for (int unit = 0; unit < g_pHardwareConfigDx8->GetSamplerCount(); ++unit )
 	{
 		SamplerState( unit ).m_BoundTexture = INVALID_SHADERAPI_TEXTURE_HANDLE;
 		SetTextureState( (Sampler_t)unit, TEXTURE_BINDFLAGS_NONE, INVALID_SHADERAPI_TEXTURE_HANDLE );
@@ -9185,7 +9185,7 @@ void CShaderAPIDx8::TexImage2D(
 	if ( !m_Textures.IsValidIndex( GetModifyTextureHandle() ) )
 		return;
 
-	Assert( (width <= g_pHardwareConfig->Caps().m_MaxTextureWidth) && (height <= g_pHardwareConfig->Caps().m_MaxTextureHeight) );
+	Assert( (width <= g_pHardwareConfigDx8->Caps().m_MaxTextureWidth) && (height <= g_pHardwareConfigDx8->Caps().m_MaxTextureHeight) );
 
 	// This test here just makes sure we don't try to download mipmap levels
 	// if we weren't able to create them in the first place
@@ -9360,7 +9360,7 @@ bool CShaderAPIDx8::IsTextureResident( ShaderAPITextureHandle_t textureHandle )
 //-----------------------------------------------------------------------------
 // Level of anisotropic filtering
 //-----------------------------------------------------------------------------
-ConVar mat_aniso_disable( "mat_aniso_disable", "0", FCVAR_CHEAT, "NOTE: You must change mat_forceaniso after changing this convar for this to take effect" );
+ConVar mat_aniso_disable( "mat_aniso_disable", "0", FCVAR_MATERIAL_SYSTEM_THREAD | FCVAR_CHEAT, "NOTE: You must change mat_forceaniso after changing this convar for this to take effect" );
 void CShaderAPIDx8::SetAnisotropicLevel( int nAnisotropyLevel )
 {
 	LOCK_SHADERAPI();
@@ -9382,7 +9382,7 @@ void CShaderAPIDx8::SetAnisotropicLevel( int nAnisotropyLevel )
 		int nAnisotropyLevelOverride = 1;
 		{
 			// Set it to 1/2 the max but at least 2
-			nAnisotropyLevelOverride = MAX( 2, g_pHardwareConfig->Caps().m_nMaxAnisotropy / 2 );
+			nAnisotropyLevelOverride = MAX( 2, g_pHardwareConfigDx8->Caps().m_nMaxAnisotropy / 2 );
 		}
 
 		// Use the larger value
@@ -9390,10 +9390,10 @@ void CShaderAPIDx8::SetAnisotropicLevel( int nAnisotropyLevel )
 	}
 
 	// Make sure the value is in range
-	nAnisotropyLevel = MIN( nAnisotropyLevel, g_pHardwareConfig->Caps().m_nMaxAnisotropy );
+	nAnisotropyLevel = MIN( nAnisotropyLevel, g_pHardwareConfigDx8->Caps().m_nMaxAnisotropy );
 
 	// Set the D3D max anisotropy state for all samplers
-	for ( int i = 0; i < g_pHardwareConfig->Caps().m_NumSamplers; ++i)
+	for ( int i = 0; i < g_pHardwareConfigDx8->Caps().m_NumSamplers; ++i)
 	{
 		SamplerState(i).m_nAnisotropicLevel = nAnisotropyLevel;
 		SetSamplerState( i, D3DSAMP_MAXANISOTROPY, SamplerState(i).m_nAnisotropicLevel );
@@ -9550,7 +9550,7 @@ void CShaderAPIDx8::TexMagFilter( ShaderTexFilterMode_t texFilterMode )
 		Warning( "CShaderAPIDx8::TexMagFilter: SHADER_TEXFILTERMODE_LINEAR_MIPMAP_LINEAR is invalid\n" );
 		break;
 	case SHADER_TEXFILTERMODE_ANISOTROPIC:
-		GetTexture( hModifyTexture ).m_MagFilter = g_pHardwareConfig->Caps().m_bSupportsMagAnisotropicFiltering ? D3DTEXF_ANISOTROPIC : D3DTEXF_LINEAR;
+		GetTexture( hModifyTexture ).m_MagFilter = g_pHardwareConfigDx8->Caps().m_bSupportsMagAnisotropicFiltering ? D3DTEXF_ANISOTROPIC : D3DTEXF_LINEAR;
 		break;
 	default:
 		Warning( "CShaderAPIDx8::TexMAGFilter: Unknown texFilterMode\n" );
@@ -9621,7 +9621,7 @@ void CShaderAPIDx8::SetLights( int nCount, const LightDesc_t* pDesc )
 	nCount = 0;
 #endif
 
-	int nMaxLight = MIN( g_pHardwareConfig->Caps().m_MaxNumLights, MATERIAL_MAX_LIGHT_COUNT );
+	int nMaxLight = MIN( g_pHardwareConfigDx8->Caps().m_MaxNumLights, MATERIAL_MAX_LIGHT_COUNT );
 	nCount = MIN( nMaxLight, nCount );
 
 	m_DynamicState.m_LightingState.m_nLocalLightCount = nCount;
@@ -9814,7 +9814,7 @@ void CShaderAPIDx8::CopyRenderTargetToTextureEx( ShaderAPITextureHandle_t textur
 #if   defined( _WIN32 ) && !defined( DX_TO_GL_ABSTRACTION )
 	static ConVarRef mat_resolveFullFrameDepth( "mat_resolveFullFrameDepth" );
 
-	if ( ( nRenderTargetID == -1 ) && g_pHardwareConfig->SupportsResolveDepth() && g_pHardwareConfig->HasFullResolutionDepthTexture() )
+	if ( ( nRenderTargetID == -1 ) && g_pHardwareConfigDx8->SupportsResolveDepth() && g_pHardwareConfigDx8->HasFullResolutionDepthTexture() )
 	{
 		// z buffer resolve tricks
 
@@ -9822,7 +9822,7 @@ void CShaderAPIDx8::CopyRenderTargetToTextureEx( ShaderAPITextureHandle_t textur
 		not supporting this path yet
 		benefit is no depth resolve required (if MSAA off)
 		downside is risk of using/modifying depth buffer while rendering (now or in the future), and in managing depth surfaces - resolve at this stage is a much cleaner/safer way of using depth
-		if ( g_pHardwareConfig->ActualCaps().m_bSupportsINTZ && ( config.m_nAASamples <= 1 ) )
+		if ( g_pHardwareConfigDx8->ActualCaps().m_bSupportsINTZ && ( config.m_nAASamples <= 1 ) )
 		{
 		// Supports INTZ and MSAA must be OFF
 		// Can 'use' the depth stencil surface as is, without need to resolve
@@ -9830,7 +9830,7 @@ void CShaderAPIDx8::CopyRenderTargetToTextureEx( ShaderAPITextureHandle_t textur
 		}
 		else
 		*/
-		if ( g_pHardwareConfig->ActualCaps().m_bSupportsRESZ )
+		if ( g_pHardwareConfigDx8->ActualCaps().m_bSupportsRESZ )
 		{
 			// Supports RESZ (ATI and Intel only)
 			// Use a dummy draw call to set sampler 0 to our destination depth texture 
@@ -9876,7 +9876,7 @@ void CShaderAPIDx8::CopyRenderTargetToTextureEx( ShaderAPITextureHandle_t textur
 			SamplerState( 0 ).m_BoundTexture = INVALID_SHADERAPI_TEXTURE_HANDLE;
 			Dx9Device()->SetTexture( 0, 0 );
 		}
-		else if ( g_pHardwareConfig->ActualCaps().m_VendorID == VENDORID_NVIDIA )
+		else if ( g_pHardwareConfigDx8->ActualCaps().m_VendorID == VENDORID_NVIDIA )
 		{
 			// Use NvAPI_D3D9_StretchRectEx to perform the resolve
 			// Works with or without MSAA
@@ -9972,7 +9972,7 @@ void CShaderAPIDx8::CopyRenderTargetToTextureEx( ShaderAPITextureHandle_t textur
 #else
 	static ConVarRef mat_resolveFullFrameDepth( "mat_resolveFullFrameDepth" );
 
-	if ( ( nRenderTargetID == -1 ) && g_pHardwareConfig->SupportsResolveDepth() && g_pHardwareConfig->HasFullResolutionDepthTexture() )
+	if ( ( nRenderTargetID == -1 ) && g_pHardwareConfigDx8->SupportsResolveDepth() && g_pHardwareConfigDx8->HasFullResolutionDepthTexture() )
 	{
 		Assert( m_pZBufferSurface );
 
@@ -10506,7 +10506,7 @@ void CShaderAPIDx8::RenderPass( const unsigned char *pInstanceCommandBuffer, int
 	// Make sure that we bound a texture for every stage that is enabled
 	// NOTE: not enabled/finished yet... see comment in CShaderAPIDx8::ApplyTextureEnable
 //	int nSampler;
-//	for ( nSampler = 0; nSampler < g_pHardwareConfig->GetSamplerCount(); nSampler++ )
+//	for ( nSampler = 0; nSampler < g_pHardwareConfigDx8->GetSamplerCount(); nSampler++ )
 //	{
 //		if ( SamplerState( nSampler ).m_TextureEnable )
 //		{
@@ -10594,7 +10594,7 @@ void CShaderAPIDx8::CacheWorldSpaceCamera()
 void CShaderAPIDx8::ComputePolyOffsetMatrix( const D3DXMATRIX& matProjection, D3DXMATRIX &matProjectionOffset )
 {
 	// We never need to do this on hardware that can handle zbias
-	if ( g_pHardwareConfig->Caps().m_ZBiasAndSlopeScaledDepthBiasSupported )
+	if ( g_pHardwareConfigDx8->Caps().m_ZBiasAndSlopeScaledDepthBiasSupported )
 		return;
 
 	float offsetVal = 
@@ -10886,7 +10886,7 @@ void CShaderAPIDx8::SetFlexWeights( int nFirstWeight, int nCount, const MorphWei
 {
 
 	LOCK_SHADERAPI();
-	if ( g_pHardwareConfig->Caps().m_NumVertexShaderConstants < VERTEX_SHADER_FLEX_WEIGHTS + VERTEX_SHADER_MAX_FLEX_WEIGHT_COUNT )
+	if ( g_pHardwareConfigDx8->Caps().m_NumVertexShaderConstants < VERTEX_SHADER_FLEX_WEIGHTS + VERTEX_SHADER_MAX_FLEX_WEIGHT_COUNT )
 		return;
 
 	if ( nFirstWeight + nCount > VERTEX_SHADER_MAX_FLEX_WEIGHT_COUNT )	
@@ -11087,7 +11087,7 @@ inline bool CShaderAPIDx8::VertexShaderTransformChanged( int i )
 const D3DXMATRIX &CShaderAPIDx8::GetProjectionMatrix( void )
 {
 	bool bUsingZBiasProjectionMatrix = 
-		!g_pHardwareConfig->Caps().m_ZBiasAndSlopeScaledDepthBiasSupported &&
+		!g_pHardwareConfigDx8->Caps().m_ZBiasAndSlopeScaledDepthBiasSupported &&
 		( m_TransitionTable.CurrentSnapshot() != -1 ) &&
 		m_TransitionTable.CurrentShadowState() &&
 		m_TransitionTable.CurrentShadowState()->m_DepthTestState.m_ZBias;
@@ -11363,7 +11363,7 @@ static const MaterialLightingState_t *CanonicalizeMaterialLightingStateForCSM( c
 		return pOrigLightingState;
 
 	// Nothing to do if there are no local lights (the shader will be adding in no light at all, so the occlusion term can't affect anything.)
-	if ( ( !pOrigLightingState->m_nLocalLightCount ) || ( !g_pHardwareConfig->SupportsCascadedShadowMapping() ) )
+	if ( ( !pOrigLightingState->m_nLocalLightCount ) || ( !g_pHardwareConfigDx8->SupportsCascadedShadowMapping() ) )
 		return pOrigLightingState;
 
 	// Also nothing to do if there's >= 1 light, and the first light is a directional light.
@@ -11430,7 +11430,7 @@ void CShaderAPIDx8::CompileVertexShaderLocalLights( CompiledLightingState_t *pCo
 	const MaterialLightingState_t *pLightingState = CanonicalizeMaterialLightingStateForCSM( pOrigLightingState, canonicalizedLightingState, bStaticLight );
 	
 	// We can just use the data for this specific instance
-	nLightCount = MIN( pLightingState->m_nLocalLightCount, g_pHardwareConfig->MaxNumLights() );
+	nLightCount = MIN( pLightingState->m_nLocalLightCount, g_pHardwareConfigDx8->MaxNumLights() );
 	pCompiledState->m_nLocalLightCount = nLightCount;
 
 	// Set the lighting state
@@ -11570,18 +11570,18 @@ void CShaderAPIDx8::CommitVertexShaderLighting( CompiledLightingState_t *pLighti
 	// Set the lighting state
 	if ( pLightingState->m_nLocalLightCount > 0 )
 	{
-		SetVertexShaderConstantInternal( VERTEX_SHADER_LIGHTS, pLightingState->m_VertexShaderLocalLights[0].Base(), 5 * MIN( pLightingState->m_nLocalLightCount, g_pHardwareConfig->MaxNumLights() ) );
+		SetVertexShaderConstantInternal( VERTEX_SHADER_LIGHTS, pLightingState->m_VertexShaderLocalLights[0].Base(), 5 * MIN( pLightingState->m_nLocalLightCount, g_pHardwareConfigDx8->MaxNumLights() ) );
 	}
 
 	// Zero out subsequent lights if we don't support static control flow
-	if ( ( pLightingState->m_nLocalLightCount < g_pHardwareConfig->MaxNumLights() ) && !g_pHardwareConfig->SupportsStaticControlFlow() )
+	if ( ( pLightingState->m_nLocalLightCount < g_pHardwareConfigDx8->MaxNumLights() ) && !g_pHardwareConfigDx8->SupportsStaticControlFlow() )
 	{
-		int nLightsToSet = g_pHardwareConfig->MaxNumLights() - pLightingState->m_nLocalLightCount;
+		int nLightsToSet = g_pHardwareConfigDx8->MaxNumLights() - pLightingState->m_nLocalLightCount;
 
 		// The following logic breaks if max lights is more than two
-		Assert( g_pHardwareConfig->MaxNumLights() == 2 );
+		Assert( g_pHardwareConfigDx8->MaxNumLights() == 2 );
 
-		SetVertexShaderConstantInternal( VERTEX_SHADER_LIGHTS + 5 * (g_pHardwareConfig->MaxNumLights() - nLightsToSet), s_pTwoEmptyLights, 5 * nLightsToSet );
+		SetVertexShaderConstantInternal( VERTEX_SHADER_LIGHTS + 5 * (g_pHardwareConfigDx8->MaxNumLights() - nLightsToSet), s_pTwoEmptyLights, 5 * nLightsToSet );
 	}
 	
 	// On PS3, we don't have integer constants, so the shader code relies on the boolean flags instead
@@ -11592,7 +11592,7 @@ void CShaderAPIDx8::CommitVertexShaderLighting( CompiledLightingState_t *pLighti
 
 void CShaderAPIDx8::CommitPixelShaderLighting( int pshReg, CompiledLightingState_t *pLightingState )
 {
-	if( g_pHardwareConfig->MaxNumLights() == 2 )
+	if( g_pHardwareConfigDx8->MaxNumLights() == 2 )
 	{
 		SetPixelShaderConstantInternal( pshReg, pLightingState->m_PixelShaderLocalLights[0].Base(), 4, false );
 	}
@@ -11626,7 +11626,7 @@ void CShaderAPIDx8::CommitUserClipPlanes( )
 
 	D3DXMATRIX worldToProjectionInvTrans;
 #ifndef _DEBUG
-	if( m_DynamicState.m_UserClipPlaneChanged & m_DynamicState.m_UserClipPlaneEnabled & ((1 << g_pHardwareConfig->MaxUserClipPlanes()) - 1) )
+	if( m_DynamicState.m_UserClipPlaneChanged & m_DynamicState.m_UserClipPlaneEnabled & ((1 << g_pHardwareConfigDx8->MaxUserClipPlanes()) - 1) )
 #endif
 	{
 		worldToProjectionInvTrans = GetUserClipTransform( ) * GetTransform( MATERIAL_PROJECTION );
@@ -11635,7 +11635,7 @@ void CShaderAPIDx8::CommitUserClipPlanes( )
 		D3DXMatrixTranspose(&worldToProjectionInvTrans, &worldToProjectionInvTrans);
 	}
 
-	for (int i = 0; i < g_pHardwareConfig->MaxUserClipPlanes(); ++i)
+	for (int i = 0; i < g_pHardwareConfigDx8->MaxUserClipPlanes(); ++i)
 	{
 		// Don't bother with the plane if it's not enabled
 		if ( (m_DynamicState.m_UserClipPlaneEnabled & (1 << i)) == 0 )
@@ -12895,7 +12895,7 @@ void CShaderAPIDx8::RecomputeAggregateLightingState( void )
 		}
 
 #ifdef _DEBUG
-		if ( g_pHardwareConfig->GetDXSupportLevel() >= 92 )
+		if ( g_pHardwareConfigDx8->GetDXSupportLevel() >= 92 )
 		{
 			Assert( pLightingState->m_nLocalLightCount <= MATERIAL_MAX_LIGHT_COUNT );		// 2b hardware gets four lights
 		}
@@ -12911,7 +12911,7 @@ void CShaderAPIDx8::RecomputeAggregateLightingState( void )
 		if ( nNumLights &&
 			 ( ( !m_DynamicState.m_ShaderLightState.m_bStaticLight ) || m_DynamicState.m_ShaderLightState.m_bStaticLightIndirectOnly ) &&
 			 r_force_first_dynamic_light_to_directional_for_csm.GetBool() &&
-			 g_pHardwareConfig->SupportsCascadedShadowMapping() )
+			 g_pHardwareConfigDx8->SupportsCascadedShadowMapping() )
 		{
 			int j;
 			for ( j = 0; j < nNumLights; ++j )
@@ -12930,7 +12930,7 @@ void CShaderAPIDx8::RecomputeAggregateLightingState( void )
 
 		m_DynamicState.m_ShaderLightState.m_nNumLights = MAX( m_DynamicState.m_ShaderLightState.m_nNumLights, nNumLights );
 		// Cap it to the maximum number of lights supported by the hardware
-		m_DynamicState.m_ShaderLightState.m_nNumLights = MIN( m_DynamicState.m_ShaderLightState.m_nNumLights, g_pHardwareConfig->MaxNumLights() );
+		m_DynamicState.m_ShaderLightState.m_nNumLights = MIN( m_DynamicState.m_ShaderLightState.m_nNumLights, g_pHardwareConfigDx8->MaxNumLights() );
 
 	}
 }
@@ -13179,7 +13179,7 @@ void CShaderAPIDx8::SetFlashlightState( const FlashlightState_t &state, const VM
 FORCEINLINE float ShadowAttenFromState( const FlashlightState_t &state )
 {
 	// DX10 requires some hackery due to sRGB/blend ordering change from DX9, which makes the shadows too light
-	if ( g_pHardwareConfig->UsesSRGBCorrectBlending() )
+	if ( g_pHardwareConfigDx8->UsesSRGBCorrectBlending() )
 		return state.m_flShadowAtten * 0.1f; // magic number
 
 	return state.m_flShadowAtten;
@@ -13207,7 +13207,7 @@ FORCEINLINE void HashShadow2DJitter( const float fJitterSeed, float *fU, float* 
 void SetupUberlightFromState( UberlightRenderState_t *pUberlight, const FlashlightState_t &state )
 {
 	// Bail if we can't do ps30 or we don't even want an uberlight
-	if ( !( g_pHardwareConfig->GetDXSupportLevel() < 95 ) || !state.m_bUberlight )
+	if ( !( g_pHardwareConfigDx8->GetDXSupportLevel() < 95 ) || !state.m_bUberlight )
 		return;
 
 	const UberlightState_t &u = state.m_uberlightState;
@@ -13233,7 +13233,7 @@ void SetupUberlightFromState( UberlightRenderState_t *pUberlight, const Flashlig
 	MatrixInverseGeneral( viewMatrixInverse, pUberlight->m_WorldToLight );
 }
 
-ConVar r_flashlightbrightness( "r_flashlightbrightness", "0.25", FCVAR_CHEAT );
+extern ConVar r_flashlightbrightness;
 
 void CShaderAPIDx8::SetFlashlightStateEx( const FlashlightState_t &state, const VMatrix &worldToTexture, ITexture *pFlashlightDepthTexture )
 {
@@ -13243,7 +13243,7 @@ void CShaderAPIDx8::SetFlashlightStateEx( const FlashlightState_t &state, const 
 	m_FlashlightWorldToTexture = worldToTexture;
 	m_pFlashlightDepthTexture = pFlashlightDepthTexture;
 
-	if ( g_pHardwareConfig->GetDXSupportLevel() < 92 )
+	if ( g_pHardwareConfigDx8->GetDXSupportLevel() < 92 )
 	{
 		m_FlashlightState.m_bEnableShadows = false;
 		m_pFlashlightDepthTexture = NULL;
@@ -13266,7 +13266,7 @@ void CShaderAPIDx8::SetFlashlightStateEx( const FlashlightState_t &state, const 
 
 	float flFlashlightScale = r_flashlightbrightness.GetFloat();
 
-	if ( !g_pHardwareConfig->GetHDREnabled() )
+	if ( !g_pHardwareConfigDx8->GetHDREnabled() )
 	{
 		// Non-HDR path requires 2.0 flashlight
 		flFlashlightScale = 2.0f;
@@ -13339,7 +13339,7 @@ bool CShaderAPIDx8::SupportsCSAAMode( int nNumSamples, int nQualityLevel )
 {
 
 	// Only nVidia does this kind of AA
-	if ( g_pHardwareConfig->Caps().m_VendorID != VENDORID_NVIDIA )
+	if ( g_pHardwareConfigDx8->Caps().m_VendorID != VENDORID_NVIDIA )
 		return false;
 
 	DWORD dwQualityLevels = 0;
@@ -13428,7 +13428,7 @@ void CShaderAPIDx8::PurgeUnusedVertexAndPixelShaders()
 
 bool CShaderAPIDx8::UsingSoftwareVertexProcessing() const
 {
-	return g_pHardwareConfig->Caps().m_bSoftwareVertexProcessing;
+	return g_pHardwareConfigDx8->Caps().m_bSoftwareVertexProcessing;
 }
 
 ITexture *CShaderAPIDx8::GetRenderTargetEx( int nRenderTargetID ) const
@@ -13463,7 +13463,7 @@ void CShaderAPIDx8::SetToneMappingScaleLinear( const Vector &scale )
 	}
 
 
-	m_ToneMappingScale.y = g_pHardwareConfig->GetLightMapScaleFactor();	// light map scale
+	m_ToneMappingScale.y = g_pHardwareConfigDx8->GetLightMapScaleFactor();	// light map scale
 
 	// w component gets gamma scale
 	m_ToneMappingScale.w = LinearToGammaFullRange( m_ToneMappingScale.x );
@@ -13736,7 +13736,7 @@ float CShaderAPIDx8::LinearToGamma_HardwareSpecific( float fLinear ) const
 
 bool CShaderAPIDx8::ShouldWriteDepthToDestAlpha( void ) const
 {
-	return g_pHardwareConfig->GetDXSupportLevel() >= 92 &&
+	return g_pHardwareConfigDx8->GetDXSupportLevel() >= 92 &&
 			(m_SceneFogMode != MATERIAL_FOG_LINEAR_BELOW_FOG_Z) && 
 			(GetIntRenderingParameter(INT_RENDERPARM_WRITE_DEPTH_TO_DESTALPHA) != 0);
 }

@@ -2111,7 +2111,7 @@ void CViewRenderBeams::ClipBeam( C_Beam * RESTRICT pcbeam, Beam_t * RESTRICT pbe
 	if ( tr.fraction < 1.0f )
 	{
 		// move the endpoint to wherever the trace stopped
-		// if ( test_spam.GetBool() ) Msg( "(%s) %s\n", tr.startsolid ? "x" : " ", tr.m_pEnt->GetDebugName() );
+		// if ( test_spam.GetBool() ) Msg( "(%s) %s\n", tr.startsolid ? "x" : " ", tr.Ent<CBaseEntity>()->GetDebugName() );
 		if ( BeamDebugOverlay() )
 			NDebugOverlay::Cross( tr.endpos, 8, 255, 255, 0, false, 0.2f );
 

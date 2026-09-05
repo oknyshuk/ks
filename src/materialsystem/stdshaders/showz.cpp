@@ -17,7 +17,7 @@
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
-static ConVar r_showz_power( "r_showz_power", "1.0f", FCVAR_CHEAT );
+static ConVar r_showz_power( "r_showz_power", "1.0f", FCVAR_MATERIAL_SYSTEM_THREAD | FCVAR_CHEAT );
 
 BEGIN_VS_SHADER_FLAGS( showz, "Help for ShowZ", SHADER_NOT_EDITABLE )
 	BEGIN_SHADER_PARAMS

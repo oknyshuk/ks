@@ -89,9 +89,9 @@ void C_BaseEntity::PhysicsPushEntity( const Vector& push, trace_t *pTrace )
 
 //	InvalidatePhysicsRecursive( POSITION_CHANGED | ANGLES_CHANGED );
 
-	if ( pTrace->m_pEnt )
+	if ( pTrace->Ent<CBaseEntity>() )
 	{
-		PhysicsImpact( pTrace->m_pEnt, *pTrace );
+		PhysicsImpact( pTrace->Ent<CBaseEntity>(), *pTrace );
 	}
 }
 

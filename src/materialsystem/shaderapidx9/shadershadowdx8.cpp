@@ -185,7 +185,7 @@ CShaderShadowDX8::~CShaderShadowDX8()
 //-----------------------------------------------------------------------------
 void CShaderShadowDX8::Init( )
 {
-	m_pHardwareConfig = g_pHardwareConfig;
+	m_pHardwareConfig = g_pHardwareConfigDx8;
 	
 	// Clear out the shadow state
 	memset( &m_ShadowState, 0, sizeof(m_ShadowState) );
@@ -665,7 +665,7 @@ void CShaderShadowDX8::SetPixelShader( const char* pFileName, int nStaticPshInde
 //-----------------------------------------------------------------------------
 float CShaderShadowDX8::GetLightMapScaleFactor( void ) const
 {
-	return g_pHardwareConfig->GetLightMapScaleFactor();
+	return g_pHardwareConfigDx8->GetLightMapScaleFactor();
 }
 
 

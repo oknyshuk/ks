@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
+//========= Copyright ï¿½ 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose:
 //
@@ -38,6 +38,9 @@ class CAI_GlobalNamespace
 public:
 	CAI_GlobalNamespace();
 	~CAI_GlobalNamespace();
+
+	CAI_GlobalNamespace( const CAI_GlobalNamespace & ) = delete;
+	CAI_GlobalNamespace &operator=( const CAI_GlobalNamespace & ) = delete;
 
 	void Clear();
 
@@ -107,9 +110,9 @@ class CAI_GlobalScheduleNamespace
 public:
 	void Clear()
 	{
-		m_ScheduleNamespace = {};
-		m_TaskNamespace = {};
-		m_ConditionNamespace = {};
+		m_ScheduleNamespace.Clear();
+		m_TaskNamespace.Clear();
+		m_ConditionNamespace.Clear();
 	}
 
 	void 		AddSchedule( const char *pszSchedule, int scheduleID );

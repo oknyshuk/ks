@@ -31,34 +31,34 @@
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
-static ConVar r_lightwarpidentity( "r_lightwarpidentity","0", FCVAR_CHEAT );
-static ConVar mat_phong( "mat_phong", "1" );
-static ConVar mat_displacementmap( "mat_displacementmap", "1", FCVAR_CHEAT );
+static ConVar r_lightwarpidentity( "r_lightwarpidentity","0", FCVAR_MATERIAL_SYSTEM_THREAD | FCVAR_CHEAT );
+static ConVar mat_phong( "mat_phong", "1", FCVAR_MATERIAL_SYSTEM_THREAD );
+static ConVar mat_displacementmap( "mat_displacementmap", "1", FCVAR_MATERIAL_SYSTEM_THREAD | FCVAR_CHEAT );
 
 extern ConVar lm_test;
-static ConVar mat_force_vertexfog( "mat_force_vertexfog", "0", FCVAR_DEVELOPMENTONLY );
+static ConVar mat_force_vertexfog( "mat_force_vertexfog", "0", FCVAR_MATERIAL_SYSTEM_THREAD | FCVAR_DEVELOPMENTONLY );
 
-static ConVar r_shader_srgbread( "r_shader_srgbread", "0", 0, "1 = use shader srgb texture reads, 0 = use HW" );
+static ConVar r_shader_srgbread( "r_shader_srgbread", "0", FCVAR_MATERIAL_SYSTEM_THREAD, "1 = use shader srgb texture reads, 0 = use HW" );
 
 
 // r_staticlight_streams
 //	defines format of lighting for static props.
 //	"1"	= lighting comes as 4 bytes per vertex and is lighting with regard to vertex normal
 //	"3" = lighting comes as 12 bytes per vertex and is lighting with regard to hl2-basis
-ConVar r_staticlight_streams( "r_staticlight_streams", "1", FCVAR_HIDDEN );
+ConVar r_staticlight_streams( "r_staticlight_streams", "1", FCVAR_MATERIAL_SYSTEM_THREAD | FCVAR_HIDDEN );
 
 // r_staticlight_streams_indirect_only
 //	defines format of lighting for static props using vertexlitgeneric_bump shader
 //	"0"	= lighting stream colors have sunlight baked in
 //	"1" = lighting stream colors store indirect only
 //  Prequisite: 3 lighting streams enabled
-ConVar r_staticlight_streams_indirect_only( "r_staticlight_streams_indirect_only", "-", FCVAR_HIDDEN );
+ConVar r_staticlight_streams_indirect_only( "r_staticlight_streams_indirect_only", "-", FCVAR_MATERIAL_SYSTEM_THREAD | FCVAR_HIDDEN );
 
 static void r_staticlight_mode_changed( IConVar *var, const char *pOldValue, float flOldValue )
 {
 	g_pMaterialSystem->ReloadMaterials( NULL );
 }
-ConVar r_staticlight_mode( "r_staticlight_mode", "0", FCVAR_DEVELOPMENTONLY, "0 - support three color streams, 1 - use avg of three streams, 2 - single color stream", r_staticlight_mode_changed );
+ConVar r_staticlight_mode( "r_staticlight_mode", "0", FCVAR_MATERIAL_SYSTEM_THREAD | FCVAR_DEVELOPMENTONLY, "0 - support three color streams, 1 - use avg of three streams, 2 - single color stream", r_staticlight_mode_changed );
 
 
 static inline bool WantsPhongShaderInternal( IMaterialVar** params, const VertexLitGeneric_DX9_Vars_t &info )
@@ -458,7 +458,7 @@ void InitVertexLitGeneric_DX9( CBaseVSShader *pShader, IMaterialVar** params, bo
 //     "Quick fix to keep Phong shader from being run if the mat_bumpmap convar is set to zero."
 // This change caused shader problems in HLMV (use ep2/Hunter model as an example) and I was told to fix it. -Jeep
 //
-//extern ConVar mat_bumpmap( "mat_bumpmap", "1" );
+//extern ConVar mat_bumpmap( "mat_bumpmap", "1", FCVAR_MATERIAL_SYSTEM_THREAD );
 
 class CVertexLitGeneric_DX9_Context : public CBasePerMaterialContextData
 {

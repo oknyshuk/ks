@@ -227,7 +227,7 @@ void CWeaponBaseItem::ItemPostFrame( void )
 // //--------------------------------------------------------------------------------------------------------
 // bool CWeaponBaseItem::OnHit( trace_t &trace, const Vector &swingVector, bool firstTime ) 
 // {
-// 	if ( trace.m_pEnt && trace.m_pEnt->IsPlayer() && IsASurvivorTeam( trace.m_pEnt->GetTeamNumber() ) )
+// 	if ( trace.Ent<CBaseEntity>() && trace.Ent<CBaseEntity>()->IsPlayer() && IsASurvivorTeam( trace.Ent<CBaseEntity>()->GetTeamNumber() ) )
 // 		return false;	// don't hit survivors who are outside of heal range if we're trying to get close and heal them.
 // 
 // 	return BaseClass::OnHit( trace, swingVector, firstTime );

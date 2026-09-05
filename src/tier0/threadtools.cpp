@@ -155,7 +155,7 @@ public:
 	CThreadHandleToIDMap *m_pNext;
 };
 static CThreadHandleToIDMap *g_pThreadHandleToIDMaps = NULL;
-static CThreadMutex g_ThreadHandleToIDMapMutex;
+static CThreadMutex g_ThreadHandleToIDMapMutex CONSTRUCT_EARLY;
 static volatile int g_nThreadHandleToIDMaps = 0;
 
 static void AddThreadHandleToIDMap( HANDLE hThread, uint threadID )
@@ -1406,7 +1406,7 @@ bool ThreadInterlockedAssignIf64( int64 volatile * pDest, int64 value, int64 com
 #else
 // This will perform horribly,
 #error "Falling back to mutexed interlocked operations, you really don't have intrinsics you can use?"ß
-CThreadMutex g_InterlockedMutex;
+CThreadMutex g_InterlockedMutex CONSTRUCT_EARLY;
 
 long ThreadInterlockedIncrement( long volatile *pDest )
 {

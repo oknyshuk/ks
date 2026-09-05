@@ -413,7 +413,7 @@ static bool HasValidDirection(trace_t *pTrace)
 //------------------------------------------------------------------------------
 void UTIL_ImpactTrace( trace_t *pTrace, int iDamageType, const char *pCustomImpactName )
 {
-	C_BaseEntity *pEntity = pTrace->m_pEnt;
+	C_BaseEntity *pEntity = pTrace->Ent<CBaseEntity>();
 
 	// Is the entity valid, is the surface sky?
 	if ( !pEntity || (pTrace->surface.flags & SURF_SKY) )

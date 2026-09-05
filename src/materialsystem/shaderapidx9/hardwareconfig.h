@@ -279,7 +279,7 @@ protected:
 //-----------------------------------------------------------------------------
 // Singleton hardware config
 //-----------------------------------------------------------------------------
-extern CHardwareConfig *g_pHardwareConfig;
+extern CHardwareConfig *g_pHardwareConfigDx8;
 
 
 #endif // HARDWARECONFIG_H

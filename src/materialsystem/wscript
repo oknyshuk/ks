@@ -38,7 +38,6 @@ def build(bld):
         "cmatnullrendercontext.cpp",
         "colorspace.cpp",
         "ctexture.cpp",
-        "imagepacker.cpp",
         "mat_stub.cpp",
         "materialsystem_global.cpp",
         "morph.cpp",
@@ -58,13 +57,11 @@ def build(bld):
         "cmatqueuedrendercontext.cpp",
     ]
 
-    bld.shlib(
+    bld.objects(
         source=source,
         target="materialsystem",
         features="cxx",
         includes=includes,
         use=libs,
-        install_path=bld.env.BINPATH,
-        subsystem=bld.env.MSVC_SUBSYSTEM,
         idx=bld.get_taskgen_count(),
     )

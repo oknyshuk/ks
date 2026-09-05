@@ -451,6 +451,14 @@ void CCvar::RegisterConCommand( ConCommandBase *variable )
 	AssertMsg1(FindCommandBase(variable->GetName()) == NULL, "Console command %s added twice!",
 		variable->GetName());
 	m_CommandHash.Insert(variable);
+
+	if ( !variable->IsCommand() )
+	{
+		if ( const char *pValue = GetCommandLineValue( pName ) )
+		{
+			static_cast< ConVar * >( variable )->SetValue( pValue );
+		}
+	}
 }
 
 void CCvar::AddSplitScreenConVars()

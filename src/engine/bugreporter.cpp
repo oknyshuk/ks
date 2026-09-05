@@ -25,7 +25,6 @@ public:
 };
 
 static CBugReporterDefaultUsername g_ExposeBugreporterUsername;
-EXPOSE_SINGLE_INTERFACE_GLOBALVAR( CBugReporterDefaultUsername,IBugReporterDefaultUsername, INTERFACEVERSION_BUGREPORTER_DEFAULT_USER_NAME, g_ExposeBugreporterUsername );
 
 class CStubBugReporter : public IEngineBugReporter
 {

@@ -255,7 +255,7 @@ void CMolotovProjectile::BounceTouch( CBaseEntity *other )
 	}
 
 	const trace_t &hitTrace = GetTouchTrace();
-	if ( hitTrace.m_pEnt && hitTrace.m_pEnt->MyCombatCharacterPointer() )
+	if ( hitTrace.Ent<CBaseEntity>() && hitTrace.Ent<CBaseEntity>()->MyCombatCharacterPointer() )
 	{
 		// don't break if we hit an actor - wait until we hit the environment
 		return;

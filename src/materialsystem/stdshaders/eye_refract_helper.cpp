@@ -19,8 +19,8 @@
 #include "tier0/memdbgon.h"
 
 
-static ConVar r_lightwarpidentity( "r_lightwarpidentity","0", FCVAR_CHEAT );
-static ConVar mat_displacementmap( "mat_displacementmap", "1", FCVAR_CHEAT );
+static ConVar r_lightwarpidentity( "r_lightwarpidentity","0", FCVAR_MATERIAL_SYSTEM_THREAD | FCVAR_CHEAT );
+static ConVar mat_displacementmap( "mat_displacementmap", "1", FCVAR_MATERIAL_SYSTEM_THREAD | FCVAR_CHEAT );
 
 void InitParams_Eyes_Refract( CBaseVSShader *pShader, IMaterialVar** params, const char *pMaterialName, Eye_Refract_Vars_t &info )
 {

@@ -132,7 +132,7 @@ void TE_ProjectDecal( IRecipientFilter& filter, float delay,
 		return;
 	}
 
-	C_BaseEntity* ent = tr.m_pEnt;
+	C_BaseEntity* ent = tr.Ent<CBaseEntity>();
 	Assert( ent );
 
 	int hitbox = tr.hitbox;

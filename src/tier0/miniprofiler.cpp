@@ -39,7 +39,7 @@ public:
 		s_pLastMiniProfilerTS = this;
 	}
 };
-CRootMiniProfiler g_rootMiniProfiler;
+CRootMiniProfiler g_rootMiniProfiler CONSTRUCT_EARLY;
 
 // in static link scenario, we don't need any extra linkage specified where we define our variables
 #undef MINIPROFILER_DLL_LINKAGE
@@ -71,7 +71,7 @@ CMiniProfiler* PushMiniProfilerTS( CMiniProfiler *pProfiler )
 }
 
 
-CThreadFastMutex g_ProfilerListMutex;
+CThreadFastMutex g_ProfilerListMutex CONSTRUCT_EARLY;
 //CInterlockedInt g_LinkedMiniProfilerIdCount;
 
 void AppendMiniProfilerToList( CLinkedMiniProfiler *pProfiler, CLinkedMiniProfiler **ppList )

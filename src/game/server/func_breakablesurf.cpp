@@ -1259,7 +1259,7 @@ void CBreakableSurface::VPhysicsCollision( int index, gamevcollisionevent_t *pEv
 				UTIL_TraceLine ( damagePos - normal, damagePos + normal, MASK_SOLID_BRUSHONLY, NULL, COLLISION_GROUP_NONE, &tr );
 
 				// Only place decals and draw effects if we hit something valid
-				if ( tr.m_pEnt && tr.m_pEnt == this )
+				if ( tr.Ent<CBaseEntity>() && tr.Ent<CBaseEntity>() == this )
 				{
 					// Build the impact data
 					CEffectData data;

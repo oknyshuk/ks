@@ -27,13 +27,11 @@ def build(bld):
     if bld.env.DEST_OS != "win32":
         source += ["linux_support.cpp"]
 
-    bld.shlib(
+    bld.objects(
         source=source,
         target="filesystem_stdio",
         features="cxx",
         includes=includes,
         use=libs,
-        install_path=bld.env.BINPATH,
-        subsystem=bld.env.MSVC_SUBSYSTEM,
         idx=bld.get_taskgen_count(),
     )

@@ -313,16 +313,16 @@ bool IsExplosionTraceBlocked( trace_t *ptr )
 	if( ptr->DidHitWorld() )
 		return true;
 
-	if( ptr->m_pEnt == NULL )
+	if( ptr->Ent<CBaseEntity>() == NULL )
 		return false;
 
-	if( ptr->m_pEnt->GetMoveType() == MOVETYPE_PUSH )
+	if( ptr->Ent<CBaseEntity>()->GetMoveType() == MOVETYPE_PUSH )
 	{
 		// All doors are push, but not all things that push are doors. This 
 		// narrows the search before we start to do classname compares.
-		if( FClassnameIs(ptr->m_pEnt, "prop_door_rotating") ||
-        FClassnameIs(ptr->m_pEnt, "func_door") ||
-        FClassnameIs(ptr->m_pEnt, "func_door_rotating") )
+		if( FClassnameIs(ptr->Ent<CBaseEntity>(), "prop_door_rotating") ||
+        FClassnameIs(ptr->Ent<CBaseEntity>(), "func_door") ||
+        FClassnameIs(ptr->Ent<CBaseEntity>(), "func_door_rotating") )
 			return true;
 	}
 
@@ -396,7 +396,7 @@ void CGameRules::RadiusDamage( const CTakeDamageInfo &info, const Vector &vecSrc
 
 		if( old_radius_damage.GetBool() )
 		{
-			if ( tr.fraction != 1.0 && tr.m_pEnt != pEntity )
+			if ( tr.fraction != 1.0 && tr.Ent<CBaseEntity>() != pEntity )
 			continue;
 		}
 		else
@@ -446,12 +446,12 @@ void CGameRules::RadiusDamage( const CTakeDamageInfo &info, const Vector &vecSrc
 
 				// UNDONE: Probably shouldn't let children block parents either?  Or maybe those guys should set their owner if they want this behavior?
 				// HL2 - Dissolve damage is not reduced by interposing non-world objects
-				if( tr.m_pEnt && tr.m_pEnt != pEntity && tr.m_pEnt->GetOwnerEntity() != pEntity )
+				if( tr.Ent<CBaseEntity>() && tr.Ent<CBaseEntity>() != pEntity && tr.Ent<CBaseEntity>()->GetOwnerEntity() != pEntity )
 				{
 					// Some entity was hit by the trace, meaning the explosion does not have clear
 					// line of sight to the entity that it's trying to hurt. If the world is also
 					// blocking, we do no damage.
-					CBaseEntity *pBlockingEntity = tr.m_pEnt;
+					CBaseEntity *pBlockingEntity = tr.Ent<CBaseEntity>();
 					//Msg( "%s may be blocked by %s...", pEntity->GetClassname(), pBlockingEntity->GetClassname() );
 
 					UTIL_TraceLine( vecSrc, vecSpot, CONTENTS_SOLID, info.GetInflictor(), COLLISION_GROUP_NONE, &tr );
@@ -535,7 +535,7 @@ void CGameRules::RadiusDamage( const CTakeDamageInfo &info, const Vector &vecSrc
 			adjustedInfo.SetDamagePosition( vecSrc );
 		}
 
-		if ( tr.fraction != 1.0 && pEntity == tr.m_pEnt )
+		if ( tr.fraction != 1.0 && pEntity == tr.Ent<CBaseEntity>() )
 		{
 			ClearMultiDamage( );
 			pEntity->DispatchTraceAttack( adjustedInfo, dir, &tr );
@@ -550,7 +550,7 @@ void CGameRules::RadiusDamage( const CTakeDamageInfo &info, const Vector &vecSrc
 		pEntity->TraceAttackToTriggers( adjustedInfo, vecSrc, tr.endpos, dir );
 
 #if defined( GAME_DLL )
-		if ( info.GetAttacker() && info.GetAttacker()->IsPlayer() && ToBaseCombatCharacter( tr.m_pEnt ) )
+		if ( info.GetAttacker() && info.GetAttacker()->IsPlayer() && ToBaseCombatCharacter( tr.Ent<CBaseEntity>() ) )
 		{
 
 			// This is a total hack!!!

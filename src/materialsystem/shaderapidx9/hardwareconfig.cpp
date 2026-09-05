@@ -21,7 +21,7 @@
 
 extern ConVar mat_slopescaledepthbias_shadowmap;
 extern ConVar mat_depthbias_shadowmap;
-static ConVar developer( "developer", "0", FCVAR_RELEASE, "Set developer message level" ); 
+static ConVar developer( "developer", "0", FCVAR_MATERIAL_SYSTEM_THREAD | FCVAR_RELEASE, "Set developer message level" ); 
 
 //-----------------------------------------------------------------------------
 //
@@ -29,7 +29,7 @@ static ConVar developer( "developer", "0", FCVAR_RELEASE, "Set developer message
 //
 //-----------------------------------------------------------------------------
 static CHardwareConfig s_HardwareConfig;
-CHardwareConfig *g_pHardwareConfig = &s_HardwareConfig;
+CHardwareConfig *g_pHardwareConfigDx8 = &s_HardwareConfig;
 
 EXPOSE_SINGLE_INTERFACE_GLOBALVAR( CHardwareConfig, IMaterialSystemHardwareConfig, 
 	MATERIALSYSTEM_HARDWARECONFIG_INTERFACE_VERSION, s_HardwareConfig )
@@ -233,7 +233,7 @@ void CHardwareConfig::SetupHardwareCaps( int nDXLevel, const HardwareCaps_t &act
 	}
 
 	// Read dxsupport.cfg which has config overrides for particular cards.
-	g_pShaderDeviceMgr->ReadHardwareCaps( m_Caps, m_Caps.m_nDXSupportLevel );
+	g_pShaderDeviceMgrBase->ReadHardwareCaps( m_Caps, m_Caps.m_nDXSupportLevel );
 
 	// This is the spot to validate read in caps versus actual caps.
 	if ( m_Caps.m_MaxUserClipPlanes > m_ActualCaps.m_MaxUserClipPlanes )
@@ -305,9 +305,9 @@ bool CHardwareConfig::HasStencilBuffer() const
 
 int	 CHardwareConfig::GetFrameBufferColorDepth() const
 {
-	if ( !g_pShaderDevice )
+	if ( !g_pShaderDeviceBase )
 		return 0;
-	return ShaderUtil()->ImageFormatInfo( g_pShaderDevice->GetBackBufferFormat() ).m_nNumBytes;
+	return ShaderUtil()->ImageFormatInfo( g_pShaderDeviceBase->GetBackBufferFormat() ).m_nNumBytes;
 }
 
 int CHardwareConfig::GetSamplerCount() const
@@ -448,8 +448,8 @@ ShadowFilterMode_t CHardwareConfig::GetShadowFilterMode( bool bForceLowQualitySh
 	return SHADOWFILTERMODE_DEFAULT;
 }
 
-static ConVar r_shader_srgb( "r_shader_srgb", "0", 0, "-1 = use hardware caps. 0 = use hardware srgb. 1 = use shader srgb(software lookup)" );		// -1=use caps 0=off 1=on
-static ConVar r_shader_srgbread( "r_shader_srgbread", "0", 0, "1 = use shader srgb texture reads, 0 = use HW" );
+static ConVar r_shader_srgb( "r_shader_srgb", "0", FCVAR_MATERIAL_SYSTEM_THREAD, "-1 = use hardware caps. 0 = use hardware srgb. 1 = use shader srgb(software lookup)" );		// -1=use caps 0=off 1=on
+static ConVar r_shader_srgbread( "r_shader_srgbread", "0", FCVAR_MATERIAL_SYSTEM_THREAD, "1 = use shader srgb texture reads, 0 = use HW" );
 
 int CHardwareConfig::NeedsShaderSRGBConversion() const
 {
@@ -475,7 +475,7 @@ bool CHardwareConfig::UsesSRGBCorrectBlending() const
 	return ( cValue == 0 ) && ( m_ActualCaps.m_bDX10Blending );
 }
 
-static ConVar mat_disablehwmorph( "mat_disablehwmorph", "0", FCVAR_DEVELOPMENTONLY, "Disables HW morphing for particular mods" );
+static ConVar mat_disablehwmorph( "mat_disablehwmorph", "0", FCVAR_MATERIAL_SYSTEM_THREAD | FCVAR_DEVELOPMENTONLY, "Disables HW morphing for particular mods" );
 static int s_bEnableFastVertexTextures = -1;
 static bool s_bDisableHWMorph = false;
 bool CHardwareConfig::HasFastVertexTextures() const
@@ -707,7 +707,7 @@ bool CHardwareConfig::SupportsGLMixedSizeTargets() const
 
 bool CHardwareConfig::IsAAEnabled() const
 {
-	return g_pShaderDevice ? g_pShaderDevice->IsAAEnabled() : false;
+	return g_pShaderDeviceBase ? g_pShaderDeviceBase->IsAAEnabled() : false;
 //	bool bAntialiasing = ( m_PresentParameters.MultiSampleType != D3DMULTISAMPLE_NONE );
 //	return bAntialiasing;
 }
@@ -721,7 +721,7 @@ HDRType_t CHardwareConfig::GetHDRType() const
 {
 	// On MacOS / Linux, this value comes down from the engine, which read it from the registry...which doesn't exist, so we're slamming to true here
 #if defined( DX_TO_GL_ABSTRACTION ) || defined( DX_TO_VK_ABSTRACTION )
-	g_pHardwareConfig->SetHDREnabled( true );
+	g_pHardwareConfigDx8->SetHDREnabled( true );
 #endif
 
 	bool enabled = m_bHDREnabled;
@@ -780,7 +780,7 @@ bool CHardwareConfig::SupportsStreamOffset() const
 
 int CHardwareConfig::StencilBufferBits() const
 {
-	return g_pShaderDevice ? g_pShaderDevice->StencilBufferBits() : 0;
+	return g_pShaderDeviceBase ? g_pShaderDeviceBase->StencilBufferBits() : 0;
 }
 
 int CHardwareConfig:: MaxViewports() const
@@ -896,8 +896,8 @@ bool CHardwareConfig::SupportsResolveDepth( void ) const
 		}
 #else
 		{
-			if ( g_pHardwareConfig->ActualCaps().m_bSupportsINTZ &&
-				 ( g_pHardwareConfig->ActualCaps().m_bSupportsRESZ || ( g_pHardwareConfig->ActualCaps().m_VendorID == VENDORID_NVIDIA ) ) )
+			if ( g_pHardwareConfigDx8->ActualCaps().m_bSupportsINTZ &&
+				 ( g_pHardwareConfigDx8->ActualCaps().m_bSupportsRESZ || ( g_pHardwareConfigDx8->ActualCaps().m_VendorID == VENDORID_NVIDIA ) ) )
 			{
 				return true;
 			}

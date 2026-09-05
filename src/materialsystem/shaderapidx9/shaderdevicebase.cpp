@@ -29,42 +29,19 @@
 //-----------------------------------------------------------------------------
 // Globals
 //-----------------------------------------------------------------------------
-CShaderDeviceBase *g_pShaderDevice;
-CShaderAPIBase *g_pShaderAPI;
-CShaderDeviceMgrBase *g_pShaderDeviceMgr;
-IShaderShadow *g_pShaderShadow;
-IShaderUtil* g_pShaderUtil;		// The main shader utility interface
+CShaderDeviceBase *g_pShaderDeviceBase;
+CShaderAPIBase *g_pShaderAPIBase;
+CShaderDeviceMgrBase *g_pShaderDeviceMgrBase;
 
 bool g_bUseShaderMutex = false;	// Shader mutex globals
 bool g_bShaderAccessDisallowed;
 CShaderMutex g_ShaderMutex;
 
-//-----------------------------------------------------------------------------
-// FIXME: Hack related to setting command-line values for convars. Remove!!!
-//-----------------------------------------------------------------------------
-class CShaderAPIConVarAccessor : public IConCommandBaseAccessor
-{
-public:
-	virtual bool RegisterConCommandBase( ConCommandBase *pCommand )
-	{
-		// Link to engine's list instead
-		g_pCVar->RegisterConCommand( pCommand );
-
-		char const *pValue = g_pCVar->GetCommandLineValue( pCommand->GetName() );
-		if( pValue && !pCommand->IsCommand() )
-		{
-			( ( ConVar * )pCommand )->SetValue( pValue );
-		}
-		return true;
-	}
-};
-
 static void InitShaderAPICVars( )
 {
-	static CShaderAPIConVarAccessor g_ConVarAccessor;
 	if ( g_pCVar )
 	{
-		ConVar_Register( FCVAR_MATERIAL_SYSTEM_THREAD, &g_ConVarAccessor );
+		ConVar_Register();
 	}
 }
 
@@ -128,7 +105,7 @@ bool CShaderDeviceMgrBase::Connect( CreateInterfaceFn factory )
 {
 	LOCK_SHADERAPI();
 
-	Assert( !g_pShaderDeviceMgr );
+	Assert( !g_pShaderDeviceMgrBase );
 
 	s_TempFactory = factory;
 
@@ -140,11 +117,11 @@ bool CShaderDeviceMgrBase::Connect( CreateInterfaceFn factory )
 	if ( !g_pShaderUtil )
 		g_pShaderUtil = (IShaderUtil*)ShaderDeviceFactory( SHADER_UTIL_INTERFACE_VERSION, NULL );
 
-	g_pShaderDeviceMgr = this;
+	g_pShaderDeviceMgrBase = this;
 
 	s_TempFactory = NULL;
 
-	if ( !g_pShaderUtil || !g_pFullFileSystem || !g_pShaderDeviceMgr )
+	if ( !g_pShaderUtil || !g_pFullFileSystem || !g_pShaderDeviceMgrBase )
 	{
 		Warning( "ShaderAPIDx10 was unable to access the required interfaces!\n" );
 		return false;
@@ -159,7 +136,7 @@ void CShaderDeviceMgrBase::Disconnect()
 {
 	LOCK_SHADERAPI();
 
-	g_pShaderDeviceMgr = NULL;
+	g_pShaderDeviceMgrBase = NULL;
 	g_pShaderUtil = NULL;
 	DisconnectTier2Libraries();
 	ConVar_Unregister();
@@ -181,7 +158,7 @@ void *CShaderDeviceMgrBase::QueryInterface( const char *pInterfaceName )
 	if ( !Q_stricmp( pInterfaceName, SHADER_DEVICE_MGR_INTERFACE_VERSION ) )
 		return ( IShaderDeviceMgr* )this;
 	if ( !Q_stricmp( pInterfaceName, MATERIALSYSTEM_HARDWARECONFIG_INTERFACE_VERSION ) )
-		return ( IMaterialSystemHardwareConfig* )g_pHardwareConfig;
+		return ( IMaterialSystemHardwareConfig* )g_pHardwareConfigDx8;
 	return NULL;
 }
 
@@ -598,7 +575,7 @@ bool CShaderDeviceMgrBase::GetRecommendedVideoConfig( int nAdapter, int nVendorI
 	int nTextureMemorySize = GetVidMemBytes( nAdapter );
 	configData.nVideoMemory = nTextureMemorySize / ( 1024 * 1024 );
 	configData.bIsVideo = true;
-	configData.nDXLevel = g_pHardwareConfig->GetMaxDXSupportLevel();
+	configData.nDXLevel = g_pHardwareConfigDx8->GetMaxDXSupportLevel();
 	GetDesktopResolution( &configData.nPhysicalScreenWidth, &configData.nPhysicalScreenHeight, nAdapter );
 
 	int nModeCount = GetModeCount( nAdapter );
@@ -638,7 +615,7 @@ bool CShaderDeviceMgrBase::GetRecommendedConfigurationInfo( int nAdapter, int nD
 	int nTextureMemorySize = GetVidMemBytes( nAdapter );
 	configData.nVideoMemory = nTextureMemorySize / ( 1024 * 1024 );
 	configData.bIsVideo = false;
-	configData.nDXLevel = g_pHardwareConfig->GetMaxDXSupportLevel();
+	configData.nDXLevel = g_pHardwareConfigDx8->GetMaxDXSupportLevel();
 	GetDesktopResolution( &configData.nPhysicalScreenWidth, &configData.nPhysicalScreenHeight, nAdapter );
 
 	int nModeCount = GetModeCount( nAdapter );
@@ -770,9 +747,9 @@ void* CShaderDeviceMgrBase::ShaderInterfaceFactory( const char *pInterfaceName, 
 		*pReturnCode = IFACE_OK;
 	}
 	if ( !Q_stricmp( pInterfaceName, SHADER_DEVICE_INTERFACE_VERSION ) )
-		return static_cast< IShaderDevice* >( g_pShaderDevice );
+		return static_cast< IShaderDevice* >( g_pShaderDeviceBase );
 	if ( !Q_stricmp( pInterfaceName, SHADERAPI_INTERFACE_VERSION ) )
-		return static_cast< IShaderAPI* >( g_pShaderAPI );
+		return static_cast< IShaderAPI* >( g_pShaderAPIBase );
 	if ( !Q_stricmp( pInterfaceName, SHADERSHADOW_INTERFACE_VERSION ) )
 		return static_cast< IShaderShadow* >( g_pShaderShadow );
 
@@ -884,7 +861,7 @@ static BOOL CALLBACK EnumWindowsProc( VD3DHWND hWnd, LPARAM lParam )
 
 static BOOL CALLBACK EnumWindowsProcNotThis( VD3DHWND hWnd, LPARAM lParam )
 {
-	if ( g_pShaderDevice && ( GetTopmostParentWindow( (VD3DHWND)g_pShaderDevice->GetIPCHWnd() ) == hWnd ) )
+	if ( g_pShaderDeviceBase && ( GetTopmostParentWindow( (VD3DHWND)g_pShaderDeviceBase->GetIPCHWnd() ) == hWnd ) )
 		return TRUE;
 
 	EnumChildWindows( hWnd, EnumChildWindowsProc, lParam );
@@ -915,7 +892,7 @@ static LRESULT CALLBACK ShaderDX8WndProc(VD3DHWND hWnd, UINT msg, WPARAM wParam,
 	{
 	case WM_COPYDATA:
 		{
-			if ( !g_pShaderDevice )
+			if ( !g_pShaderDeviceBase )
 				break;
 
 			COPYDATASTRUCT* pData = (COPYDATASTRUCT*)lParam;
@@ -923,15 +900,15 @@ static LRESULT CALLBACK ShaderDX8WndProc(VD3DHWND hWnd, UINT msg, WPARAM wParam,
 			// that number is our magic cookie number
 			if ( pData->dwData == CShaderDeviceBase::RELEASE_MESSAGE )
 			{
-				g_pShaderDevice->OtherAppInitializing(true);
+				g_pShaderDeviceBase->OtherAppInitializing(true);
 			}
 			else if ( pData->dwData == CShaderDeviceBase::REACQUIRE_MESSAGE )  
 			{
-				g_pShaderDevice->OtherAppInitializing(false);
+				g_pShaderDeviceBase->OtherAppInitializing(false);
 			}
 			else if ( pData->dwData == CShaderDeviceBase::EVICT_MESSAGE )  
 			{
-				g_pShaderDevice->EvictManagedResourcesInternal( );
+				g_pShaderDeviceBase->EvictManagedResourcesInternal( );
 			}
 		}
 		break;
@@ -1080,7 +1057,7 @@ void CShaderDeviceBase::SetView( void* hWnd )
 	LOCK_SHADERAPI();
 
 	ShaderViewport_t viewport;
-	g_pShaderAPI->GetViewports( &viewport, 1 );
+	g_pShaderAPIBase->GetViewports( &viewport, 1 );
 
 	// Get the window (*not* client) rect of the view window
 	m_ViewHWnd = (VD3DHWND)hWnd;
@@ -1088,7 +1065,7 @@ void CShaderDeviceBase::SetView( void* hWnd )
 
 	// Reset the viewport (takes into account the view rect)
 	// Don't need to set the viewport if it's not ready
-	g_pShaderAPI->SetViewports( 1, &viewport );
+	g_pShaderAPIBase->SetViewports( 1, &viewport );
 }
 
 
@@ -1100,7 +1077,7 @@ void CShaderDeviceBase::GetWindowSize( int& nWidth, int& nHeight ) const
 #if defined( USE_SDL )
 
 	// this matches up to what the threaded material system does
-	g_pShaderAPI->GetBackBufferDimensions( nWidth, nHeight );
+	g_pShaderAPIBase->GetBackBufferDimensions( nWidth, nHeight );
 
 #else
 

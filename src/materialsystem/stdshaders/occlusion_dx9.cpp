@@ -16,8 +16,8 @@
 
 // Enables alpha blending workaround for an (apparently) weird color/alpha write disable bug on NVidia GL drivers.
 // For NVidia, the actual bug is in glBlitFramebuffer() (it doesn't ignore the currently set colormask), which we fix in glmgr.cpp Blit2(), so I'm disabling this more expensive workaround.
-ConVar gl_nvidia_occlusion_workaround( "gl_nvidia_occlusion_workaround", "0" );
-ConVar gl_amd_occlusion_workaround( "gl_amd_occlusion_workaround", "1" );
+ConVar gl_nvidia_occlusion_workaround( "gl_nvidia_occlusion_workaround", "0", FCVAR_MATERIAL_SYSTEM_THREAD );
+ConVar gl_amd_occlusion_workaround( "gl_amd_occlusion_workaround", "1", FCVAR_MATERIAL_SYSTEM_THREAD );
 
 DEFINE_FALLBACK_SHADER( Occlusion, Occlusion_DX9 )
 

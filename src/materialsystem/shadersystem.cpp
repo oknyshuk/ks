@@ -307,25 +307,6 @@ void CShaderSystem::LoadAllShaderDLLs( )
 	// Add the shaders to the dictionary of shaders...
 	SetupShaderDictionary( i );
 
-
-	// 360 has the the debug shaders in its dx9 dll
-	// Always need the debug shaders
-	LoadShaderDLL( "stdshader_dbg" );
-
-	// Load up standard shader DLLs...
-	int dxSupportLevel = HardwareConfig()->GetMaxDXSupportLevel();
-	Assert( dxSupportLevel >= 60 );
-	dxSupportLevel /= 10;
-
-	// 360 only supports its dx9 dll
-	int dxStart = 9;
-	char buf[32];
-	for ( i = dxStart; i <= dxSupportLevel; ++i )
-	{
-		Q_snprintf( buf, sizeof( buf ), "stdshader_dx%d", i );
-		LoadShaderDLL( buf );
-	}
-
 	const char *pShaderName = NULL;
 #ifdef _DEBUG
 	pShaderName = CommandLine()->ParmValue( "-shader" );

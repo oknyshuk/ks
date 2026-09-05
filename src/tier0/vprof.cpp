@@ -54,7 +54,7 @@ bool g_VProfSignalSpike;
 
 //-----------------------------------------------------------------------------
 
-CVProfile g_VProfCurrentProfile;
+CVProfile g_VProfCurrentProfile CONSTRUCT_EARLY;
 
 int CVProfNode::s_iCurrentUniqueNodeID = 0;
 

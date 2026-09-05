@@ -356,9 +356,9 @@ static void PerformNewCustomEffects( const Vector &vecOrigin, trace_t &tr, const
 	if ( !pEffect->IsValid() )
 		return;
 
-	SetImpactControlPoint( pEffect.GetObject(), 0, vecImpactPoint, tr.plane.normal, tr.m_pEnt ); 
-	SetImpactControlPoint( pEffect.GetObject(), 1, vecImpactPoint, vecReflect,		tr.m_pEnt ); 
-	SetImpactControlPoint( pEffect.GetObject(), 2, vecImpactPoint, vecShotBackward,	tr.m_pEnt ); 
+	SetImpactControlPoint( pEffect.GetObject(), 0, vecImpactPoint, tr.plane.normal, tr.Ent<CBaseEntity>() ); 
+	SetImpactControlPoint( pEffect.GetObject(), 1, vecImpactPoint, vecReflect,		tr.Ent<CBaseEntity>() ); 
+	SetImpactControlPoint( pEffect.GetObject(), 2, vecImpactPoint, vecShotBackward,	tr.Ent<CBaseEntity>() ); 
 	pEffect->SetControlPoint( 3, Vector( iScale, iScale, iScale ) );
 
 	if ( pEffect->m_pDef->ReadsControlPoint( 4 ) )
@@ -396,7 +396,7 @@ void PlayImpactSound( CBaseEntity *pEntity, trace_t &tr, Vector &vecServerOrigin
 	// If the client-side trace hit a different entity than the server, or
 	// the server didn't specify a surfaceprop, then use the client-side trace 
 	// material if it's valid.
-	if ( tr.DidHit() && (pEntity != tr.m_pEnt || nServerSurfaceProp == 0) )
+	if ( tr.DidHit() && (pEntity != tr.Ent<CBaseEntity>() || nServerSurfaceProp == 0) )
 	{
 		nServerSurfaceProp = tr.surface.surfaceProps;
 	}

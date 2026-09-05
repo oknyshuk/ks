@@ -53,12 +53,14 @@ struct VideoConfigSetting_t
 	bool		m_bUseAutoOption;
 };
 
+namespace {
 struct RatioToAspectMode_t
 {
 	AspectRatioMode_t m_Mode;
 	int m_nWidth;
 	int m_nHeight;
 };
+}
 
 static VideoConfigSetting_t s_pVideoConfigSettingsWhitelist[] =
 {

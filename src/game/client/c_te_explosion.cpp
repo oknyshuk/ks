@@ -68,7 +68,7 @@ CRagdollExplosionEnumerator::~CRagdollExplosionEnumerator()
 
 		// debugoverlay->AddLineOverlay( m_vecOrigin, position, 0,255,0, true, 18.0 );
 
-		if ( tr.fraction < 1.0f && tr.m_pEnt != pModel )
+		if ( tr.fraction < 1.0f && tr.Ent<CBaseEntity>() != pModel )
 			continue;	
 
 		dir *= force; // scale force

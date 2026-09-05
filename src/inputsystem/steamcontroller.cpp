@@ -13,8 +13,7 @@
 // memdbgon must be the last include file in a .cpp file!!!
 #include <tier0/memdbgon.h>
 
-static CSteamAPIContext s_SteamAPIContext;	
-CSteamAPIContext *steamapicontext = &s_SteamAPIContext;
+extern CSteamAPIContext *steamapicontext;
 
 ConVar sc_joystick_map( "sc_joystick_map", "1", FCVAR_ARCHIVE, "How to map the analog joystick deadzone and extents 0 = Scaled Cross, 1 = Concentric Mapping to Square." );
 
@@ -27,9 +26,9 @@ bool CInputSystem::InitializeSteamControllers()
 		s_bSteamControllerInitAttempted = true;
 
 		SteamAPI_InitSafe();
-		s_SteamAPIContext.Init();
+		steamapicontext->Init();
 
-		if( s_SteamAPIContext.SteamController() )
+		if( steamapicontext->SteamController() )
 		{
 			m_flLastSteamControllerInput = -FLT_MAX;
 
@@ -44,7 +43,7 @@ bool CInputSystem::InitializeSteamControllers()
 			}
 
 			m_nJoystickBaseline = m_nJoystickCount;
-			s_SteamAPIContext.SteamController()->ActivateActionSet( STEAM_CONTROLLER_HANDLE_ALL_CONTROLLERS, s_SteamAPIContext.SteamController()->GetActionSetHandle( "MenuControls" ) );
+			steamapicontext->SteamController()->ActivateActionSet( STEAM_CONTROLLER_HANDLE_ALL_CONTROLLERS, steamapicontext->SteamController()->GetActionSetHandle( "MenuControls" ) );
 		}
 	}
 
@@ -89,7 +88,7 @@ bool CInputSystem::PollSteamControllers( void )
 	unsigned int unNumConnected = 0;
 	if ( InitializeSteamControllers() )
 	{
-		ISteamController& ctrl = *s_SteamAPIContext.SteamController();
+		ISteamController& ctrl = *steamapicontext->SteamController();
 		ctrl.RunFrame();
 
 		ControllerHandle_t handles[MAX_STEAM_CONTROLLERS];
@@ -185,7 +184,7 @@ static const char *GetCurrentSteamControllerMode()
 
 void CInputSystem::SetSteamControllerMode( const char *pSteamControllerMode, const void *obj )
 {
-	if ( !s_SteamAPIContext.SteamController() )
+	if ( !steamapicontext->SteamController() )
 	{
 		return;
 	}
@@ -239,32 +238,32 @@ void CInputSystem::SetSteamControllerMode( const char *pSteamControllerMode, con
 
 	g_pSteamControllerMode = pNewMode;
 
-	s_SteamAPIContext.SteamController()->ActivateActionSet( STEAM_CONTROLLER_HANDLE_ALL_CONTROLLERS, s_SteamAPIContext.SteamController()->GetActionSetHandle( pNewMode ) );
+	steamapicontext->SteamController()->ActivateActionSet( STEAM_CONTROLLER_HANDLE_ALL_CONTROLLERS, steamapicontext->SteamController()->GetActionSetHandle( pNewMode ) );
 
 }
 
 CON_COMMAND( steam_controller_status, "Spew report of steam controller status" )
 {
-	if ( !s_SteamAPIContext.SteamController() )
+	if ( !steamapicontext->SteamController() )
 	{
 		Msg( "Steam controller API is unavailable" );
 		return;
 	}
 
-	ControllerDigitalActionHandle_t handleAction = s_SteamAPIContext.SteamController()->GetActionSetHandle( GetCurrentSteamControllerMode() );
+	ControllerDigitalActionHandle_t handleAction = steamapicontext->SteamController()->GetActionSetHandle( GetCurrentSteamControllerMode() );
 
 	Msg( "Steam controller mode: %s (%d)\n", GetCurrentSteamControllerMode(), (int)handleAction );
 
 	ControllerHandle_t handles[MAX_STEAM_CONTROLLERS];
-	int nControllers = s_SteamAPIContext.SteamController()->GetConnectedControllers( handles );
+	int nControllers = steamapicontext->SteamController()->GetConnectedControllers( handles );
 
 	Msg( "Controllers connected: %d\n", nControllers );
 	for ( int i = 0; i < nControllers; ++i )
 	{
-		Msg( "  Controller %d, action set = %d\n", i, (int)s_SteamAPIContext.SteamController()->GetCurrentActionSet( handles[ i ] ) );
+		Msg( "  Controller %d, action set = %d\n", i, (int)steamapicontext->SteamController()->GetCurrentActionSet( handles[ i ] ) );
 		for ( int j = 0; j < STEAM_CONTROLLER_MAX_DIGITAL_ACTIONS; ++j )
 		{
-			ControllerDigitalActionData_t data = s_SteamAPIContext.SteamController()->GetDigitalActionData( handles[ i ], (int)j );
+			ControllerDigitalActionData_t data = steamapicontext->SteamController()->GetDigitalActionData( handles[ i ], (int)j );
 			if ( data.bState && data.bActive )
 			{
 				Msg( "    active action: %d\n", j );

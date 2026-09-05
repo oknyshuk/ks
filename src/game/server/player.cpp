@@ -3974,8 +3974,8 @@ void CBasePlayer::HandleFuncTrain(void)
 			UTIL_TraceLine( GetAbsOrigin(), GetAbsOrigin() + Vector(0,0,-38), 
 				MASK_PLAYERSOLID_BRUSHONLY, this, COLLISION_GROUP_NONE, &trainTrace );
 
-			if ( trainTrace.fraction != 1.0 && trainTrace.m_pEnt )
-				pTrain = trainTrace.m_pEnt;
+			if ( trainTrace.fraction != 1.0 && trainTrace.Ent<CBaseEntity>() )
+				pTrain = trainTrace.Ent<CBaseEntity>();
 
 
 			if ( !pTrain || !(pTrain->ObjectCaps() & FCAP_DIRECTIONAL_USE) || !pTrain->OnControls(this) )
@@ -5877,7 +5877,7 @@ CBaseEntity* CBasePlayer::FindEntityClassForward( char *classname )
 		MASK_SOLID, this, COLLISION_GROUP_NONE, &tr );
 	if ( tr.fraction != 1.0 && tr.DidHitNonWorldEntity() )
 	{
-		CBaseEntity *pHit = tr.m_pEnt;
+		CBaseEntity *pHit = tr.Ent<CBaseEntity>();
 		if (FClassnameIs( pHit,classname ) )
 		{
 			return pHit;
@@ -5915,7 +5915,7 @@ CBaseEntity* CBasePlayer::FindEntityForward( bool fHull )
 		mask, this, COLLISION_GROUP_NONE, &tr );
 	if ( tr.fraction != 1.0 && tr.DidHitNonWorldEntity() )
 	{
-		return tr.m_pEnt;
+		return tr.Ent<CBaseEntity>();
 	}
 	return NULL;
 }
@@ -6348,8 +6348,8 @@ void CBasePlayer::CheatImpulseCommands( int iImpulse )
 			EyeVectors( &forward );
 			Vector end = start + forward * 1024;
 			UTIL_TraceLine( start, end, MASK_SOLID_BRUSHONLY, this, COLLISION_GROUP_NONE, &tr );
-			if ( tr.m_pEnt )
-				pWorld = tr.m_pEnt->edict();
+			if ( tr.Ent<CBaseEntity>() )
+				pWorld = tr.Ent<CBaseEntity>()->edict();
 
 			const char *pTextureName = tr.surface.name;
 
@@ -7433,7 +7433,7 @@ QAngle CBasePlayer::AutoaimDeflection( Vector &vecSrc, autoaim_params_t &params 
 	UTIL_TraceLine( vecSrc, vecSrc + bestdir * MAX_COORD_FLOAT, MASK_SHOT, &traceFilter, &tr );
 
 	// check for on-target
-	CBaseEntity *pEntHit = tr.m_pEnt;
+	CBaseEntity *pEntHit = tr.Ent<CBaseEntity>();
 	if ( pEntHit && pEntHit->m_takedamage != DAMAGE_NO && pEntHit->IsAlive() )
 	{
 		// don't look through water
@@ -7554,7 +7554,7 @@ QAngle CBasePlayer::AutoaimDeflection( Vector &vecSrc, autoaim_params_t &params 
 
 			UTIL_TraceLine( vecSrc, center, MASK_SHOT, &traceFilter, &tr );
 
-			if (tr.fraction != 1.0 && tr.m_pEnt != pEntity )
+			if (tr.fraction != 1.0 && tr.Ent<CBaseEntity>() != pEntity )
 			{
 				// Msg( "hit %s, can't see %s\n", STRING( tr.u.ent->classname ), STRING( pEdict->classname ) );
 				continue;
@@ -8659,11 +8659,11 @@ CBaseEntity *CBasePlayer::DoubleCheckUseNPC( CBaseEntity *pNPC, const Vector &ve
 
 	UTIL_TraceLine( vecSrc, vecSrc + vecDir * 1024, MASK_SHOT, this, COLLISION_GROUP_NONE, &tr );
 
-	if( tr.m_pEnt != NULL && tr.m_pEnt->MyNPCPointer() && tr.m_pEnt != pNPC )
+	if( tr.Ent<CBaseEntity>() != NULL && tr.Ent<CBaseEntity>()->MyNPCPointer() && tr.Ent<CBaseEntity>() != pNPC )
 	{
 		// Player is selecting a different NPC through some negative space
 		// in the first NPC's hitboxes (between legs, over shoulder, etc).
-		return tr.m_pEnt;
+		return tr.Ent<CBaseEntity>();
 	}
 
 	return pNPC;

@@ -64,7 +64,7 @@ typedef void* (*CreateInterfaceFn)(const char *pName, int *pReturnCode);
 typedef void* (*InstantiateInterfaceFn)();
 
 // Used internally to register classes.
-class InterfaceReg
+class __attribute__(( visibility( "hidden" ) )) InterfaceReg
 {
 public:
 	InterfaceReg(InstantiateInterfaceFn fn, const char *pName);

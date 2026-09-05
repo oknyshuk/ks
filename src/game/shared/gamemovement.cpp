@@ -933,8 +933,8 @@ CBaseHandle CGameMovement::TestPlayerPosition( const Vector& pos, int collisionG
 	ITraceFilter *filter = LockTraceFilter( collisionGroup );
 	UTIL_TraceRay( ray, PlayerSolidMask(), filter, &pm );
 	UnlockTraceFilter( filter );
-	if ( (pm.contents & PlayerSolidMask()) && pm.m_pEnt )
-		return pm.m_pEnt->GetRefEHandle();
+	if ( (pm.contents & PlayerSolidMask()) && pm.Ent<CBaseEntity>() )
+		return pm.Ent<CBaseEntity>()->GetRefEHandle();
 	return INVALID_EHANDLE;
 }
 
@@ -1545,7 +1545,7 @@ void CGameMovement::CheckWaterJump( void )
 	TracePlayerBBox( vecStart, vecEnd, PlayerSolidMask(), COLLISION_GROUP_PLAYER_MOVEMENT, tr );
 	if ( tr.fraction < 1.0 )		// solid at waist
 	{
-		IPhysicsObject *pPhysObj = tr.m_pEnt->VPhysicsGetObject();
+		IPhysicsObject *pPhysObj = tr.Ent<CBaseEntity>()->VPhysicsGetObject();
 		if ( pPhysObj )
 		{
 			if ( pPhysObj->GetGameFlags() & FVPHYSICS_PLAYER_HELD )
@@ -3957,7 +3957,7 @@ bool CGameMovement::CheckWater( void )
 
 void CGameMovement::SetGroundEntity( trace_t *pm )
 {
-	CBaseEntity *newGround = pm ? pm->m_pEnt : NULL;
+	CBaseEntity *newGround = pm ? pm->Ent<CBaseEntity>() : NULL;
 
 	CBaseEntity *oldGround = player->GetGroundEntity();
 	Vector vecBaseVelocity = player->GetBaseVelocity();
@@ -4036,7 +4036,7 @@ void TracePlayerBBoxForGround( ITraceListData *pTraceListData, const Vector& sta
 	maxs.Init( MIN( 0, maxsSrc.x ), MIN( 0, maxsSrc.y ), maxsSrc.z );
 	ray.Init( start, end, mins, maxs );
 	DoTrace( pTraceListData, ray, fMask, filter, &pm, pCounter );
-	if ( pm.m_pEnt && pm.plane.normal[2] >= minGroundNormalZ)
+	if ( pm.Ent<CBaseEntity>() && pm.plane.normal[2] >= minGroundNormalZ)
 	{
 		if ( overwriteEndpos )
 		{
@@ -4051,7 +4051,7 @@ void TracePlayerBBoxForGround( ITraceListData *pTraceListData, const Vector& sta
 	maxs = maxsSrc;
 	ray.Init( start, end, mins, maxs );
 	DoTrace( pTraceListData, ray, fMask, filter, &pm, pCounter );
-	if ( pm.m_pEnt && pm.plane.normal[2] >= minGroundNormalZ)
+	if ( pm.Ent<CBaseEntity>() && pm.plane.normal[2] >= minGroundNormalZ)
 	{
 		if ( overwriteEndpos )
 		{
@@ -4066,7 +4066,7 @@ void TracePlayerBBoxForGround( ITraceListData *pTraceListData, const Vector& sta
 	maxs.Init( MIN( 0, maxsSrc.x ), maxsSrc.y, maxsSrc.z );
 	ray.Init( start, end, mins, maxs );
 	DoTrace( pTraceListData, ray, fMask, filter, &pm, pCounter );
-	if ( pm.m_pEnt && pm.plane.normal[2] >= 0.7)
+	if ( pm.Ent<CBaseEntity>() && pm.plane.normal[2] >= 0.7)
 	{
 		if ( overwriteEndpos )
 		{
@@ -4081,7 +4081,7 @@ void TracePlayerBBoxForGround( ITraceListData *pTraceListData, const Vector& sta
 	maxs.Init( maxsSrc.x, MIN( 0, maxsSrc.y ), maxsSrc.z );
 	ray.Init( start, end, mins, maxs );
 	DoTrace( pTraceListData, ray, fMask, filter, &pm, pCounter );
-	if ( pm.m_pEnt && pm.plane.normal[2] >= minGroundNormalZ)
+	if ( pm.Ent<CBaseEntity>() && pm.plane.normal[2] >= minGroundNormalZ)
 	{
 		if ( overwriteEndpos )
 		{
@@ -4101,14 +4101,14 @@ void TracePlayerBBoxForGround( ITraceListData *pTraceListData, const Vector& sta
 bool CGameMovement::CheckValidStandableGroundCandidate( trace_t &pm, float flStandableZ )
 {
 	//if the trace didn't hit or it hit something bogus, it's not standable.
-	if ( !pm.DidHit() || !pm.m_pEnt )
+	if ( !pm.DidHit() || !pm.Ent<CBaseEntity>() )
 		return false;
 
 	//players are a special case. Strictly speaking they ARE standable. Note this is not 
 	//where we check for and prevent stacks of players, this is just an answer to the question
 	//can I stand on this thing, and in the case of players the answer is Yes until 
 	//we prove otherwise elsewhere in code.
-	if ( pm.m_pEnt->IsPlayer() )
+	if ( pm.Ent<CBaseEntity>()->IsPlayer() )
 		return true;
 	
 	//can't stand if the floor is too steep.
@@ -4230,10 +4230,10 @@ void CGameMovement::CategorizePosition( void )
 			{
 
 #ifndef CLIENT_DLL
-				CBaseCSGrenadeProjectile* pGrenadeProjectile = dynamic_cast<CBaseCSGrenadeProjectile*>( pm.m_pEnt );
+				CBaseCSGrenadeProjectile* pGrenadeProjectile = dynamic_cast<CBaseCSGrenadeProjectile*>( pm.Ent<CBaseEntity>() );
 				if ( pGrenadeProjectile )
 				{
-					pm.m_pEnt->SetCollisionGroup( COLLISION_GROUP_DEBRIS );
+					pm.Ent<CBaseEntity>()->SetCollisionGroup( COLLISION_GROUP_DEBRIS );
 				}
 				else
 #endif
@@ -4245,10 +4245,10 @@ void CGameMovement::CategorizePosition( void )
 		else
 		{
 #ifndef CLIENT_DLL
-			CBaseCSGrenadeProjectile* pGrenadeProjectile = dynamic_cast<CBaseCSGrenadeProjectile*>( pm.m_pEnt );
+			CBaseCSGrenadeProjectile* pGrenadeProjectile = dynamic_cast<CBaseCSGrenadeProjectile*>( pm.Ent<CBaseEntity>() );
 			if ( pGrenadeProjectile )
 			{
-				pm.m_pEnt->SetCollisionGroup( COLLISION_GROUP_DEBRIS );
+				pm.Ent<CBaseEntity>()->SetCollisionGroup( COLLISION_GROUP_DEBRIS );
 			}
 			else
 #endif
@@ -4289,10 +4289,10 @@ void CGameMovement::CategorizePosition( void )
 		pm.fraction < 1.0f ) 			// must hit something
 	{
 #ifndef CLIENT_DLL
-		CBaseCSGrenadeProjectile* pGrenadeProjectile = dynamic_cast<CBaseCSGrenadeProjectile*>( pm.m_pEnt );
+		CBaseCSGrenadeProjectile* pGrenadeProjectile = dynamic_cast<CBaseCSGrenadeProjectile*>( pm.Ent<CBaseEntity>() );
 		if ( pGrenadeProjectile )
 		{
-			pm.m_pEnt->SetCollisionGroup( COLLISION_GROUP_DEBRIS );
+			pm.Ent<CBaseEntity>()->SetCollisionGroup( COLLISION_GROUP_DEBRIS );
 		}
 		else
 #endif

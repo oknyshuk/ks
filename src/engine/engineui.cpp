@@ -954,7 +954,7 @@ void CEngineUI::ShowErrorMessage()
 // Purpose: Updates progress
 //-----------------------------------------------------------------------------
 #define LOADING_PRESENT_UPDATE_INTERVAL 0.05f
-double g_flLastUpdateTime = 0.0f;
+static double g_flLastUpdateTime = 0.0f;
 void CEngineUI::UpdateProgressBar( LevelLoadingProgress_e progress, bool showDialog )
 {
 	if (!staticGameUIFuncs)

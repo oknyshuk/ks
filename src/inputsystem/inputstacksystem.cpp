@@ -68,7 +68,7 @@ EXPOSE_SINGLE_INTERFACE_GLOBALVAR( CInputStackSystem, IInputStackSystem,
 //-----------------------------------------------------------------------------
 static AppSystemInfo_t s_Dependencies[] =
 {
-	{ "inputsystem" DLL_EXT_STRING, INPUTSYSTEM_INTERFACE_VERSION },
+	{ "engine" DLL_EXT_STRING, INPUTSYSTEM_INTERFACE_VERSION },
 	{ NULL, NULL }
 };
 

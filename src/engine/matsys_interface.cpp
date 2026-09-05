@@ -72,7 +72,7 @@ void RestoreMaterialSystemObjects( int nChangeFlags );
 
 static ConVar mat_shadowstate( "mat_shadowstate", "1" );
 static ConVar mat_maxframelatency( "mat_maxframelatency", "1" );
-ConVar mat_debugalttab( "mat_debugalttab", "0", FCVAR_CHEAT );
+extern ConVar mat_debugalttab;
 
 // Static pointers to renderable textures
 static CTextureReference g_PowerOfTwoFBTexture;
@@ -195,7 +195,7 @@ void mat_hdr_level_Callback( IConVar *var, const char *pOldString, float flOldVa
 }
 
 // Convar range change to [2,2] since CS:GO does not support any other setting.
-ConVar mat_hdr_level( "mat_hdr_level", "2", FCVAR_DEVELOPMENTONLY, 
+ConVar mat_hdr_level( "mat_hdr_level", "2", FCVAR_MATERIAL_SYSTEM_THREAD | FCVAR_DEVELOPMENTONLY, 
 					  "Set to 0 for no HDR, 1 for LDR+bloom on HDR maps, and 2 for full HDR on HDR maps.",
 					  mat_hdr_level_Callback );
 
@@ -277,6 +277,7 @@ static void ReadMaterialSystemConfigFromRegistry( MaterialSystem_Config_t &confi
 
 //=============================================================================
 // FIXME! This was copied from VUI\perfwizardpanel.cpp
+namespace {
 struct RatioToAspectMode_t
 {
 	int anamorphic;
@@ -289,6 +290,7 @@ RatioToAspectMode_t g_RatioToAspectModes[] =
 	{	2,		16.0f / 10.0f },
 	{	2,		1.0f },
 };
+}
 
 //--------------------------------------------------------------------------------------------------------------
 int GetScreenAspectMode( int width, int height )

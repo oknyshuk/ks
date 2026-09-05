@@ -24,9 +24,9 @@
 
 #define DEFAULT_PARTICLE_FEATHERING_ENABLED 1
 
-static ConVar mat_depthfeather_enable( "mat_depthfeather_enable", "1", FCVAR_DEVELOPMENTONLY );
+static ConVar mat_depthfeather_enable( "mat_depthfeather_enable", "1", FCVAR_MATERIAL_SYSTEM_THREAD | FCVAR_DEVELOPMENTONLY );
 
-static ConVar r_shader_srgbread( "r_shader_srgbread", "0", 0, "1 = use shader srgb texture reads, 0 = use HW" );
+static ConVar r_shader_srgbread( "r_shader_srgbread", "0", FCVAR_MATERIAL_SYSTEM_THREAD, "1 = use shader srgb texture reads, 0 = use HW" );
 
 int GetDefaultDepthFeatheringValue( void ) //Allow the command-line to go against the default soft-particle value
 {

@@ -2633,7 +2633,7 @@ void CCSPlayer::Event_Killed( const CTakeDamageInfo &info )
 						// the target was aiming at this player, now do a quick trace to them to see if they could actually shoot them
 						trace_t result;
 						UTIL_TraceLine( EyePosition(), pPlayer->EyePosition(), MASK_SOLID, this, COLLISION_GROUP_NONE, &result );
-						if ( !result.m_pEnt || result.m_pEnt != pPlayer )
+						if ( !result.Ent<CBaseEntity>() || result.Ent<CBaseEntity>() != pPlayer )
 							continue;
 
 						if ( GetActiveCSWeapon() )
@@ -3497,7 +3497,7 @@ void CCSPlayer::SprayPaint( ks::net::CCSUsrMsg_PlayerDecalDigitalSignature const
 		data.m_vecNormal = tr.plane.normal;
 		data.m_nEquipSlot = msg.data->equipslot;
 		data.m_nPlayer = msg.data->tx_defidx;
-		data.m_nEntity = tr.m_pEnt->entindex();
+		data.m_nEntity = tr.Ent<CBaseEntity>()->entindex();
 		data.m_nHitbox = tr.hitbox;
 		data.m_nTintID = msg.data->tint_id;
 		data.m_flCreationTime = gpGlobals->curtime;
@@ -3960,9 +3960,9 @@ void CCSPlayer::UpdateMouseoverHints()
 
 	if ( tr.fraction != 1.0f )
 	{
-		if (tr.DidHitNonWorldEntity() && tr.m_pEnt )
+		if (tr.DidHitNonWorldEntity() && tr.Ent<CBaseEntity>() )
 		{
-			CBaseEntity *pObject = tr.m_pEnt;
+			CBaseEntity *pObject = tr.Ent<CBaseEntity>();
 			switch ( pObject->Classify() )
 			{
 
@@ -5599,7 +5599,7 @@ void CCSPlayer::TraceAttack( const CTakeDamageInfo &info, const Vector &vecDir, 
 		CEffectData	data;
 		data.m_vOrigin = ptr->endpos;
 		data.m_vNormal = vecDir * -1;
-		data.m_nEntIndex = ptr->m_pEnt ?  ptr->m_pEnt->entindex() : 0;
+		data.m_nEntIndex = ptr->Ent<CBaseEntity>() ?  ptr->Ent<CBaseEntity>()->entindex() : 0;
 		data.m_flMagnitude = flDamage;
 
 		// reduce blood effect if target has armor
@@ -12189,10 +12189,10 @@ CBaseEntity *CCSPlayer::FindUseEntity()
 		trace_t result;
 		UTIL_TraceLine( EyePosition(), EyePosition() + MAX_WEAPON_NAME_POPUP_RANGE * aimDir, MASK_ALL, this, COLLISION_GROUP_NONE, &result );
 
-		if ( result.DidHitNonWorldEntity() && result.m_pEnt->IsBaseCombatWeapon() )
+		if ( result.DidHitNonWorldEntity() && result.Ent<CBaseEntity>()->IsBaseCombatWeapon() )
 		{
 
-				CWeaponCSBase *pWeapon = dynamic_cast< CWeaponCSBase * >( result.m_pEnt );
+				CWeaponCSBase *pWeapon = dynamic_cast< CWeaponCSBase * >( result.Ent<CBaseEntity>() );
 				CSWeaponType nType = pWeapon->GetWeaponType();
 				if ( CSGameRules()->IsPlayingCoopMission() || IsPrimaryOrSecondaryWeapon( nType ) )
 				{
@@ -14629,7 +14629,7 @@ CBaseEntity* CCSPlayer::GetNearestSurfaceBelow(float maxTrace )
 	ray.Init( traceStart, traceEnd, minExtent, maxExtent );
 	UTIL_TraceRay( ray, MASK_PLAYERSOLID, this, COLLISION_GROUP_PLAYER_MOVEMENT, &trace );
 
-	return trace.m_pEnt;
+	return trace.Ent<CBaseEntity>();
 }
 
 // [tj] Added a way to react to the round ending before we reset.

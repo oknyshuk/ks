@@ -3973,7 +3973,7 @@ public:
 		trace_t tr;
 		Vector vecOrigin = pEntity->GetAbsOrigin();
 		AI_TraceHull( vecOrigin, vecOrigin, m_hActor->WorldAlignMins(), m_hActor->WorldAlignMaxs(), MASK_SOLID, m_hActor, COLLISION_GROUP_NONE, &tr );
-		if ( !tr.startsolid || tr.m_pEnt == m_hActor)
+		if ( !tr.startsolid || tr.Ent<CBaseEntity>() == m_hActor)
 		{
 			float dist1 = (m_vecPos1 - pEntity->GetAbsOrigin()).Length();
 			float dist2 = (m_vecPos2 - pEntity->GetAbsOrigin()).Length();

@@ -16,12 +16,6 @@
 #include "ihandleentity.h"
 #include "ispatialpartition.h"
 
-#if defined( CLIENT_DLL )
-	class C_BaseEntity;
-#else
-	class CBaseEntity;
-#endif
-
 
 //-----------------------------------------------------------------------------
 // Purpose: A trace is returned when a box is swept through the world
@@ -45,12 +39,7 @@ public:
 	// Returns true if there was any kind of impact at all
 	bool DidHit() const;
 
-	// The engine doesn't know what a CBaseEntity is, so it has a backdoor to 
-	// let it get at the edict.
-#if defined( ENGINE_DLL )
-	void SetEdict( edict_t *pEdict );
-	edict_t* GetEdict() const;
-#endif	
+	template < class E > E *Ent() const { return reinterpret_cast< E * >( m_pEnt ); }
 
 
 public:
@@ -63,11 +52,7 @@ public:
 	short			physicsbone;		// physics bone hit by trace in studio
 	unsigned short	worldSurfaceIndex;	// Index of the msurface2_t, if applicable
 
-#if defined( CLIENT_DLL )
-		C_BaseEntity *m_pEnt;
-#else
-		CBaseEntity *m_pEnt;
-#endif
+	void			*m_pEnt;
 
 	// NOTE: this member is overloaded.
 	// If hEnt points at the world entity, then this is the static prop index.

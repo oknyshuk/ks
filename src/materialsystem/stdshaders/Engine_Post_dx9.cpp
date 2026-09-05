@@ -19,17 +19,17 @@
 // NOTE: This has to be the last file included!
 #include "tier0/memdbgon.h"
 
-ConVar mat_screen_blur_override( "mat_screen_blur_override", "-1.0", FCVAR_CHEAT | FCVAR_DEVELOPMENTONLY );
-ConVar mat_depth_blur_focal_distance_override( "mat_depth_blur_focal_distance_override", "-1.0", FCVAR_CHEAT | FCVAR_DEVELOPMENTONLY );
-ConVar mat_depth_blur_strength_override( "mat_depth_blur_strength_override", "-1.0", FCVAR_CHEAT | FCVAR_DEVELOPMENTONLY );
-ConVar mat_grain_scale_override( "mat_grain_scale_override", "-1.0", FCVAR_CHEAT | FCVAR_DEVELOPMENTONLY );
-ConVar mat_local_contrast_scale_override( "mat_local_contrast_scale_override", "0.0", FCVAR_CHEAT );
-ConVar mat_local_contrast_midtone_mask_override( "mat_local_contrast_midtone_mask_override", "-1.0", FCVAR_CHEAT );
-ConVar mat_local_contrast_vignette_start_override( "mat_local_contrast_vignette_start_override", "-1.0", FCVAR_CHEAT );
-ConVar mat_local_contrast_vignette_end_override( "mat_local_contrast_vignette_end_override", "-1.0", FCVAR_CHEAT );
-ConVar mat_local_contrast_edge_scale_override( "mat_local_contrast_edge_scale_override", "-1000.0", FCVAR_CHEAT );
-ConVar mat_vignette_enable( "mat_vignette_enable", "1", FCVAR_REPLICATED );
-ConVar mat_noise_enable( "mat_noise_enable", "0", FCVAR_CHEAT | FCVAR_DEVELOPMENTONLY );
+ConVar mat_screen_blur_override( "mat_screen_blur_override", "-1.0", FCVAR_MATERIAL_SYSTEM_THREAD | FCVAR_CHEAT | FCVAR_DEVELOPMENTONLY );
+ConVar mat_depth_blur_focal_distance_override( "mat_depth_blur_focal_distance_override", "-1.0", FCVAR_MATERIAL_SYSTEM_THREAD | FCVAR_CHEAT | FCVAR_DEVELOPMENTONLY );
+ConVar mat_depth_blur_strength_override( "mat_depth_blur_strength_override", "-1.0", FCVAR_MATERIAL_SYSTEM_THREAD | FCVAR_CHEAT | FCVAR_DEVELOPMENTONLY );
+ConVar mat_grain_scale_override( "mat_grain_scale_override", "-1.0", FCVAR_MATERIAL_SYSTEM_THREAD | FCVAR_CHEAT | FCVAR_DEVELOPMENTONLY );
+ConVar mat_local_contrast_scale_override( "mat_local_contrast_scale_override", "0.0", FCVAR_MATERIAL_SYSTEM_THREAD | FCVAR_CHEAT );
+ConVar mat_local_contrast_midtone_mask_override( "mat_local_contrast_midtone_mask_override", "-1.0", FCVAR_MATERIAL_SYSTEM_THREAD | FCVAR_CHEAT );
+ConVar mat_local_contrast_vignette_start_override( "mat_local_contrast_vignette_start_override", "-1.0", FCVAR_MATERIAL_SYSTEM_THREAD | FCVAR_CHEAT );
+ConVar mat_local_contrast_vignette_end_override( "mat_local_contrast_vignette_end_override", "-1.0", FCVAR_MATERIAL_SYSTEM_THREAD | FCVAR_CHEAT );
+ConVar mat_local_contrast_edge_scale_override( "mat_local_contrast_edge_scale_override", "-1000.0", FCVAR_MATERIAL_SYSTEM_THREAD | FCVAR_CHEAT );
+ConVar mat_vignette_enable( "mat_vignette_enable", "1", FCVAR_MATERIAL_SYSTEM_THREAD | FCVAR_REPLICATED );
+ConVar mat_noise_enable( "mat_noise_enable", "0", FCVAR_MATERIAL_SYSTEM_THREAD | FCVAR_CHEAT | FCVAR_DEVELOPMENTONLY );
 
 
 DEFINE_FALLBACK_SHADER( Engine_Post, Engine_Post_dx9 )

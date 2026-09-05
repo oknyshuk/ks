@@ -20,7 +20,7 @@
 #include "cs_grass_ps20b.inc"
 #include "cs_grass_ps30.inc"
 
-ConVar cl_detail_scale( "cl_detail_scale", "2", FCVAR_CHEAT, "" );
+ConVar cl_detail_scale( "cl_detail_scale", "2", FCVAR_MATERIAL_SYSTEM_THREAD | FCVAR_CHEAT, "" );
 
 BEGIN_VS_SHADER( Grass, "Help for Grass" )
 			  

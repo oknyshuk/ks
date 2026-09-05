@@ -452,7 +452,7 @@ bool CLagCompensationManager::BacktrackEntity( CBaseEntity *entity, float flTarg
 			if ( sv_unlag_debug.GetBool() )
 				DevMsg( "WARNING: BackupPlayer trying to back player into a bad position - client %d\n", entity->entindex() );
 
-			CBaseEntity *pHitEntity = tr.m_pEnt;
+			CBaseEntity *pHitEntity = tr.Ent<CBaseEntity>();
 			// don't lag compensate the current player
 			if ( pHitEntity && ( pHitEntity != m_pCurrentPlayer ) )	
 			{

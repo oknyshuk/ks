@@ -521,11 +521,11 @@ void CBreakableProp::HandleFirstCollisionInteractions( int index, gamevcollision
 		trace_t tr;
 		UTIL_TraceLine( vecPos, vecPos + (vecVelocity * 64), MASK_SHOT, this, COLLISION_GROUP_NONE, &tr );
 
-		if ( tr.m_pEnt )
+		if ( tr.Ent<CBaseEntity>() )
 		{
 #ifdef HL2_DLL
 			// Don't paintsplat friendlies
-			int iClassify = tr.m_pEnt->Classify();
+			int iClassify = tr.Ent<CBaseEntity>()->Classify();
 			if ( iClassify != CLASS_PLAYER_ALLY_VITAL && iClassify != CLASS_PLAYER_ALLY && 
 				 iClassify != CLASS_CITIZEN_PASSIVE && iClassify != CLASS_CITIZEN_REBEL ) 
 #endif
@@ -5757,9 +5757,9 @@ bool CPropDoorRotating::CheckDoorClear( doorCheck_e state )
 		{
 			NDebugOverlay::Box( GetAbsOrigin(), moveMins, moveMaxs, 255, 0, 0, true, 10.0f );
 
-			if ( tr.m_pEnt )
+			if ( tr.Ent<CBaseEntity>() )
 			{
-				NDebugOverlay::Box( tr.m_pEnt->GetAbsOrigin(), tr.m_pEnt->CollisionProp()->OBBMins(), tr.m_pEnt->CollisionProp()->OBBMaxs(), 220, 220, 0, true, 10.0f );
+				NDebugOverlay::Box( tr.Ent<CBaseEntity>()->GetAbsOrigin(), tr.Ent<CBaseEntity>()->CollisionProp()->OBBMins(), tr.Ent<CBaseEntity>()->CollisionProp()->OBBMaxs(), 220, 220, 0, true, 10.0f );
 			}
 		}
 

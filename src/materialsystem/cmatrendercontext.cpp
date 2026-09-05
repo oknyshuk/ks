@@ -11,6 +11,7 @@
 #include <math.h>
 #include "cmatrendercontext.h"
 #include "tier2/renderutils.h"
+#include "tier2/fileutils.h"
 #include "cmaterialsystem.h"
 #include "occlusionquerymgr.h"
 #include "texturemanager.h"
@@ -145,23 +146,6 @@ CMatRenderContextBase::CMatRenderContextBase() :
 }
 
 
-const char *COM_GetModDirectory()
-{
-	static char modDir[MAX_PATH];
-	if ( Q_strlen( modDir ) == 0 )
-	{
-		const char *gamedir = CommandLine()->ParmValue("-game", CommandLine()->ParmValue( "-defaultgamedir", "hl2" ) );
-		Q_strncpy( modDir, gamedir, sizeof(modDir) );
-		if ( strchr( modDir, '/' ) || strchr( modDir, '\\' ) )
-		{
-			Q_StripLastDir( modDir, sizeof(modDir) );
-			int dirlen = Q_strlen( modDir );
-			Q_strncpy( modDir, gamedir + dirlen, sizeof(modDir) - dirlen );
-		}
-	}
-
-	return modDir;
-}
 
 //-----------------------------------------------------------------------------
 // Init, shutdown

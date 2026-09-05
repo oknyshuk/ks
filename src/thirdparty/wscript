@@ -190,9 +190,9 @@ def _rmlui(bld):
     include = root.find_dir("Include")
     # Consumers get the header path with use="rmlui"; nobody spells out a path.
     bld(name="rmlui", export_includes=[include])
-    for target, srcdir, use, patch in [
-        ("RmlCore", "Source/Core", ["FREETYPE"], ["Source/Core/Elements/WidgetTextInput.cpp"]),
-        ("RmlDebugger", "Source/Debugger", ["RmlCore"], []),
+    for target, srcdir, use, patch, shared in [
+        ("RmlCore", "Source/Core", ["FREETYPE"], ["Source/Core/Elements/WidgetTextInput.cpp"], True),
+        ("RmlDebugger", "Source/Debugger", ["RmlCore"], [], False),
     ]:
         _lib(
             bld,
@@ -200,11 +200,11 @@ def _rmlui(bld):
             root.find_dir(srcdir),
             root=root,
             patch=patch,
-            shared=True,
+            shared=shared,
             includes=["Include"],
             defines=["RMLUI_FONT_ENGINE_FREETYPE"],
             use=use,
-            install_path=bld.env.BINPATH,
+            **({"install_path": bld.env.BINPATH} if shared else {}),
         )
 
 

@@ -118,7 +118,7 @@ void GetColorForSurface( trace_t *trace, Vector *color )
 	else
 	{
 		// In this case, we hit an entity. Find out the model associated with it
-		C_BaseEntity *pEnt = trace->m_pEnt;
+		C_BaseEntity *pEnt = trace->Ent<CBaseEntity>();
 		if ( !pEnt )
 		{
 			Msg("Couldn't find surface in GetColorForSurface()\n");
@@ -524,9 +524,9 @@ void FX_AntlionImpact( const Vector &pos, trace_t *trace )
 	Vector	spawnOffset	= trace->endpos + ( shotDir * 2.0f );
 
 	Vector vWorldMins, vWorldMaxs;
-	if ( trace->m_pEnt )
+	if ( trace->Ent<CBaseEntity>() )
 	{
-		float scale = trace->m_pEnt->CollisionProp()->BoundingRadius();
+		float scale = trace->Ent<CBaseEntity>()->CollisionProp()->BoundingRadius();
 		vWorldMins[0] = spawnOffset[0] - scale;
 		vWorldMins[1] = spawnOffset[1] - scale;
 		vWorldMins[2] = spawnOffset[2] - scale;

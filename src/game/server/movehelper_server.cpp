@@ -174,10 +174,10 @@ bool CMoveHelperServer::AddToTouched( const trace_t &tr, const Vector& impactvel
 	Assert( m_pHost );
 
 	// Trace missed
-	if ( !tr.m_pEnt )
+	if ( !tr.Ent<CBaseEntity>() )
 		return false;
 
-	if ( tr.m_pEnt == m_pHost )
+	if ( tr.Ent<CBaseEntity>() == m_pHost )
 	{
 		Assert( !"CMoveHelperServer::AddToTouched:  Tried to add self to touchlist!!!" );
 		return false;
@@ -189,7 +189,7 @@ bool CMoveHelperServer::AddToTouched( const trace_t &tr, const Vector& impactvel
 	// Check for duplicate entities
 	for ( int j = m_TouchList.Count(); --j >= 0; )
 	{
-		if ( m_TouchList[j].trace.m_pEnt == tr.m_pEnt )
+		if ( m_TouchList[j].trace.Ent<CBaseEntity>() == tr.Ent<CBaseEntity>() )
 		{
 			return false;
 		}
@@ -232,7 +232,7 @@ void CMoveHelperServer::ProcessImpacts( void )
 	// Touch other objects that were intersected during the movement.
 	for (int i = 0 ; i < m_TouchList.Count(); i++)
 	{
-		CBaseHandle entindex = m_TouchList[i].trace.m_pEnt->GetRefEHandle();
+		CBaseHandle entindex = m_TouchList[i].trace.Ent<CBaseEntity>()->GetRefEHandle();
 
 		// We should have culled negative indices by now
 		Assert( entindex.IsValid() );

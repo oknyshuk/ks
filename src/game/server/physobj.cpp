@@ -1017,7 +1017,7 @@ void CPhysExplosion::Explode( CBaseEntity *pActivator, CBaseEntity *pCaller )
 						&tr );
 
 					// Shielded
-					if ( tr.fraction < 1.0f && tr.m_pEnt != pEntity )
+					if ( tr.fraction < 1.0f && tr.Ent<CBaseEntity>() != pEntity )
 						continue;
 				}
 
@@ -1245,7 +1245,7 @@ void CPhysImpact::InputImpact( inputdata_t &inputdata )
 		{
 			trace.plane.normal = -dir;
 		}
-		CBaseEntity	*pEnt = trace.m_pEnt;
+		CBaseEntity	*pEnt = trace.Ent<CBaseEntity>();
 	
 		IPhysicsObject *pPhysics = pEnt->VPhysicsGetObject();
 		//If the entity is valid, hit it
@@ -1830,7 +1830,7 @@ void CPhysMagnet::DoMagnetSuck( CBaseEntity *pOther )
 			// Do we have line of sight to it?
 			trace_t tr;
 			UTIL_TraceLine( GetAbsOrigin(), pEntity->GetAbsOrigin(), MASK_SHOT, this, 0, &tr );
-			if ( tr.fraction == 1.0 || tr.m_pEnt == pEntity )
+			if ( tr.fraction == 1.0 || tr.Ent<CBaseEntity>() == pEntity )
 			{
 				// Pull it towards the magnet
 				Vector vecVelocity = (vecSuckPoint - pEntity->GetAbsOrigin());

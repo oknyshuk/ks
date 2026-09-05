@@ -19,7 +19,7 @@
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
-static ConVar mat_displacementmap( "mat_displacementmap", "1", FCVAR_CHEAT );
+static ConVar mat_displacementmap( "mat_displacementmap", "1", FCVAR_MATERIAL_SYSTEM_THREAD | FCVAR_CHEAT );
 
 BEGIN_VS_SHADER_FLAGS( DebugNormalMap, "Help for DebugNormalMap", SHADER_NOT_EDITABLE )
 			  

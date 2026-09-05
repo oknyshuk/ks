@@ -9,7 +9,7 @@
 
 #include "tier0/perfstats.h"
 
-CPerfStatsData g_PerfStats;
+CPerfStatsData g_PerfStats CONSTRUCT_EARLY;
 
 CPerfStatsData::CPerfStatsData()
 {

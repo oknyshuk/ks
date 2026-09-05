@@ -92,9 +92,9 @@ ConVar r_oldlightselection("r_oldlightselection", "0", FCVAR_CHEAT, "Set this to
 ConVar r_lightcache_radiusfactor( "r_lightcache_radiusfactor", "1000", FCVAR_CHEAT, "Allow lights to influence lightcaches beyond the lights' radii" );
 
 // global ambient term test convars
-ConVar mat_ambient_light_r( "mat_ambient_light_r", "0.0", FCVAR_CHEAT );
-ConVar mat_ambient_light_g( "mat_ambient_light_g", "0.0", FCVAR_CHEAT );
-ConVar mat_ambient_light_b( "mat_ambient_light_b", "0.0", FCVAR_CHEAT );
+ConVar mat_ambient_light_r( "mat_ambient_light_r", "0.0", FCVAR_MATERIAL_SYSTEM_THREAD | FCVAR_CHEAT );
+ConVar mat_ambient_light_g( "mat_ambient_light_g", "0.0", FCVAR_MATERIAL_SYSTEM_THREAD | FCVAR_CHEAT );
+ConVar mat_ambient_light_b( "mat_ambient_light_b", "0.0", FCVAR_MATERIAL_SYSTEM_THREAD | FCVAR_CHEAT );
 
 
 static void ComputeAmbientFromSphericalSamples( const Vector& start, 

@@ -836,23 +836,6 @@ void COM_SetupLogDir( const char *mapname )
 COM_GetModDirectory - return the final directory in the game dir (i.e "cstrike", "hl2", rather than c:\blah\cstrike )
 ================
 */
-const char *COM_GetModDirectory()
-{
-	static char modDir[MAX_PATH];
-	if ( Q_strlen( modDir ) == 0 )
-	{
-		const char *gamedir = CommandLine()->ParmValue("-game", CommandLine()->ParmValue( "-defaultgamedir", "hl2" ) );
-		Q_strncpy( modDir, gamedir, sizeof(modDir) );
-		if ( strchr( modDir, '/' ) || strchr( modDir, '\\' ) )
-		{
-			Q_StripLastDir( modDir, sizeof(modDir) );
-			int dirlen = Q_strlen( modDir );
-			Q_strncpy( modDir, gamedir + dirlen, sizeof(modDir) - dirlen );
-		}
-	}
-
-	return modDir;
-}
 
 /*
 ================
@@ -878,6 +861,7 @@ void COM_InitFilesystem( const char *pFullModPath )
 #endif
 	
 	initInfo.m_pFileSystem = g_pFileSystem;
+	initInfo.m_pfnAddonSearchPaths = FileSystem_UpdateAddonSearchPaths;
 	initInfo.m_pDirectoryName = pFullModPath;
 	if ( !initInfo.m_pDirectoryName )
 	{

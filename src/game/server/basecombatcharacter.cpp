@@ -485,20 +485,20 @@ bool CBaseCombatCharacter::FVisibleThroughPortal( const CPortal_Base2D *pPortal,
 	if (tr.fraction != 1.0 || tr.startsolid )
 	{
 		// If we hit the entity we're looking for, it's visible
-		if ( tr.m_pEnt == pEntity )
+		if ( tr.Ent<CBaseEntity>() == pEntity )
 			return true;
 
 		// Got line of sight on the vehicle the player is driving!
 		if ( pEntity && pEntity->IsPlayer() )
 		{
 			CBasePlayer *pPlayer = assert_cast<CBasePlayer*>( pEntity );
-			if ( tr.m_pEnt == pPlayer->GetVehicleEntity() )
+			if ( tr.Ent<CBaseEntity>() == pPlayer->GetVehicleEntity() )
 				return true;
 		}
 
 		if (ppBlocker)
 		{
-			*ppBlocker = tr.m_pEnt;
+			*ppBlocker = tr.Ent<CBaseEntity>();
 		}
 
 		return false;// Line of sight is not established
@@ -1720,7 +1720,7 @@ void CBaseCombatCharacter::DropWeaponForWeaponStrip( CBaseCombatWeapon *pWeapon,
 	trace_t	tr;
 	UTIL_TraceLine( vecOrigin, vecOffsetOrigin, MASK_SOLID_BRUSHONLY, this, COLLISION_GROUP_NONE, &tr );
 		
-	if ( tr.startsolid || tr.allsolid || ( tr.fraction < 1.0f && tr.m_pEnt != pWeapon ) )
+	if ( tr.startsolid || tr.allsolid || ( tr.fraction < 1.0f && tr.Ent<CBaseEntity>() != pWeapon ) )
 	{
 		//FIXME: Throw towards a known safe spot?
 		vecThrow.Negate();

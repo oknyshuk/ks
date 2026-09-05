@@ -34,7 +34,7 @@ static double g_FakeBenchmarkTime = 0;
 static double g_FakeBenchmarkTimeInc = 1.0 / 66.0;
 #endif
 
-static CThreadFastMutex g_LocalTimeMutex;
+static CThreadFastMutex g_LocalTimeMutex CONSTRUCT_EARLY;
 
 //our global error callback function. Note that this is not initialized, but static space guarantees this is NULL at app start.
 //If you initialize, it will set to zero again when the CPP runs its static initializers, which could stomp the value if another

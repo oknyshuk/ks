@@ -41,9 +41,9 @@ inline IShaderUtil* ShaderUtil()
 	return g_pShaderUtil;
 }
 
-extern CShaderDeviceBase *g_pShaderDevice;
-extern CShaderDeviceMgrBase *g_pShaderDeviceMgr;
-extern CShaderAPIBase *g_pShaderAPI;
+extern CShaderDeviceBase *g_pShaderDeviceBase;
+extern CShaderDeviceMgrBase *g_pShaderDeviceMgrBase;
+extern CShaderAPIBase *g_pShaderAPIBase;
 extern IShaderShadow *g_pShaderShadow;
 
 

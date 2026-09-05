@@ -20,4 +20,4 @@ double g_ClockSpeedMillisecondsMultiplier;
 double g_ClockSpeedSecondsMultiplier;
 
 // Constructor init the clock speed.
-CClockSpeedInit g_ClockSpeedInit;
+CClockSpeedInit g_ClockSpeedInit CONSTRUCT_EARLY;

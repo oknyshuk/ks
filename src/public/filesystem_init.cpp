@@ -209,6 +209,7 @@ CFSSearchPathsInit::CFSSearchPathsInit()
 {
 	m_pDirectoryName = NULL;
 	m_pLanguage = NULL;
+	m_pfnAddonSearchPaths = NULL;
 	m_ModPath[0] = 0;
 }
 
@@ -617,10 +618,6 @@ bool FileSystem_IsHldsUpdateToolDedicatedServer()
 	return ( pLastDir && V_stricmp( pLastDir, "orangebox" ) == 0 );
 }
 
-#ifdef ENGINE_DLL
-	extern void FileSystem_UpdateAddonSearchPaths( IFileSystem *pFileSystem );
-#endif
-
 FSReturnCode_t FileSystem_LoadSearchPaths( CFSSearchPathsInit &initInfo )
 {
 	if ( !initInfo.m_pFileSystem || !initInfo.m_pDirectoryName )
@@ -693,9 +690,10 @@ FSReturnCode_t FileSystem_LoadSearchPaths( CFSSearchPathsInit &initInfo )
 	//
 	// Set up search paths for add-ons
 	//
-#ifdef ENGINE_DLL
-	FileSystem_UpdateAddonSearchPaths( initInfo.m_pFileSystem );
-#endif
+	if ( initInfo.m_pfnAddonSearchPaths )
+	{
+		initInfo.m_pfnAddonSearchPaths( initInfo.m_pFileSystem );
+	}
 
 	// Add the "platform" directory as a game searchable path
 	char pPlatformPath[MAX_PATH];

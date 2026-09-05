@@ -1408,7 +1408,7 @@ bool CIndexBufferDx8::Lock( int nMaxIndexCount, bool bAppend, IndexDesc_t &desc 
 
 	desc.m_pIndices = (unsigned short*)( pLockedData );
 	desc.m_nIndexSize = IndexSize() >> 1;
-	if ( g_pHardwareConfig->SupportsStreamOffset() )
+	if ( g_pHardwareConfigDx8->SupportsStreamOffset() )
 	{
 		desc.m_nFirstIndex = 0;
 		desc.m_nOffset = m_nFirstUnwrittenOffset;
@@ -1700,7 +1700,7 @@ void CVertexBufferDx8::BeginCastBuffer( VertexFormat_t format )
 
 	// snap current position up to the next position based on expected size
 	// so append can safely guarantee nooverwrite regardless of a format growth or shrinkage 
-	if ( !g_pHardwareConfig->SupportsStreamOffset() )
+	if ( !g_pHardwareConfigDx8->SupportsStreamOffset() )
 	{
 		m_nFirstUnwrittenOffset = ( m_nFirstUnwrittenOffset + nVertexSize - 1 ) / nVertexSize;
 		m_nFirstUnwrittenOffset *= nVertexSize;
@@ -1829,7 +1829,7 @@ bool CVertexBufferDx8::Lock( int nMaxVertexCount, bool bAppend, VertexDesc_t &de
 	}
 
 	ComputeVertexDescription( (unsigned char*)pLockedData, m_VertexFormat, desc );
-	if ( g_pHardwareConfig->SupportsStreamOffset() )
+	if ( g_pHardwareConfigDx8->SupportsStreamOffset() )
 	{
 		desc.m_nFirstVertex = 0;
 		desc.m_nOffset = m_nFirstUnwrittenOffset;
@@ -2618,7 +2618,7 @@ bool CMeshDX8::Lock( int nVertexCount, bool bAppend, VertexDesc_t &desc )
 	// Lock it baby
 	int nMaxVerts, nMaxIndices;
 	g_MeshMgr.GetMaxToRender( this, false, &nMaxVerts, &nMaxIndices );
-	if ( !g_pHardwareConfig->SupportsStreamOffset() )
+	if ( !g_pHardwareConfigDx8->SupportsStreamOffset() )
 	{
 		// Without stream offset, we can't use VBs greater than 65535 verts (due to our using 16-bit indices)
 		Assert( nVertexCount <= nMaxVerts );
@@ -2937,7 +2937,7 @@ TessellationMode_t CMeshDX8::GetTessellationType() const
 
 bool CMeshDX8::IsUsingVertexID() const
 {
-	return ( g_pHardwareConfig->ActualHasFastVertexTextures() &&
+	return ( g_pHardwareConfigDx8->ActualHasFastVertexTextures() &&
 			 ShaderAPI()->GetBoundMaterial()->IsUsingVertexID() &&
 			 ( GetTessellationType() > 0 || ( !m_pVertexBuffer->IsDynamic() && !m_pVertexBuffer->IsExternal() ) ) );
 }
@@ -3087,7 +3087,7 @@ static bool IsValidVertexFormat_Internal( VertexFormat_t meshFormat, IMaterial* 
 			{
 				// NOTE: ComputeVertexFormat() will make sure no materials support VERTEX_FORMAT_COMPRESSED
 				//       if vertex compression is disabled in the config
-				if ( g_pHardwareConfig->SupportsCompressedVertices() == VERTEX_COMPRESSION_NONE )
+				if ( g_pHardwareConfigDx8->SupportsCompressedVertices() == VERTEX_COMPRESSION_NONE )
 					Warning( "ERROR: Compressed vertices in use but vertex compression is disabled (or not supported on this hardware)!\n" );
 				else
 					Warning( "ERROR: Compressed vertices in use but material does not support them!\n" );
@@ -3111,13 +3111,13 @@ static bool IsValidVertexFormat_Internal( VertexFormat_t meshFormat, IMaterial* 
 	// The -1 here is because if we have N bones, we can have only (N-1) weights,
 	// since the Nth is implied (the weights sum to 1).
 	int nWeightCount = NumBoneWeights( meshFormat );
-	bIsValid = bIsValid && ( nWeightCount >= ( g_pShaderAPI->GetCurrentNumBones() - 1 ) );
+	bIsValid = bIsValid && ( nWeightCount >= ( g_pShaderAPIBase->GetCurrentNumBones() - 1 ) );
 
 #ifdef _DEBUG
 	if ( !bIsValid )
 	{
 		Warning( "Material Format:" );
-		if ( g_pShaderAPI->GetCurrentNumBones() > 0 )
+		if ( g_pShaderAPIBase->GetCurrentNumBones() > 0 )
 		{
 			materialFormat |= VERTEX_BONE_INDEX;
 			materialFormat &= ~VERTEX_BONE_WEIGHT_MASK;
@@ -3169,7 +3169,7 @@ void CMeshDX8::SetVertexIDStreamState( int nIDOffsetBytes )
 
 			// NOTE: SubDivivison surfaces are now using vertex id for the instanced patch case.
 			// These are dynamic buffers, so now we've bifurcated the VertexID code for dynamic buffers.
-			Assert( !g_pShaderAPI->IsHWMorphingEnabled() || !m_pVertexBuffer->IsDynamic() || GetTessellationType() > 0 );
+			Assert( !g_pShaderAPIBase->IsHWMorphingEnabled() || !m_pVertexBuffer->IsDynamic() || GetTessellationType() > 0 );
 
 			CVertexBuffer *pVertexIDBuffer = g_MeshMgr.GetVertexIDBuffer( );
 			RECORD_COMMAND( DX8_SET_STREAM_SOURCE, 4 );
@@ -3448,7 +3448,7 @@ void CMeshDX8::SetIndexStreamState( int firstVertexIdx )
 	}
 }
 
-static ConVar mat_tessellationlevel( "mat_tessellationlevel", "6", FCVAR_CHEAT );
+static ConVar mat_tessellationlevel( "mat_tessellationlevel", "6", FCVAR_MATERIAL_SYSTEM_THREAD | FCVAR_CHEAT );
 
 bool CMeshDX8::SetRenderState( int nVertexOffsetInBytes, int nFirstVertexIdx, int nIDOffsetBytes, VertexFormat_t vertexFormat )
 {
@@ -4989,7 +4989,7 @@ void CMeshMgr::CreateVertexIDBuffer()
 
 	// Track mesh allocations
 	g_VBAllocTracker->TrackMeshAllocations( "CreateVertexIDBuffer" );
-	if ( g_pHardwareConfig->ActualHasFastVertexTextures() )
+	if ( g_pHardwareConfigDx8->ActualHasFastVertexTextures() )
 	{
 		m_pVertexIDBuffer = new CVertexBuffer( Dx9Device(), 0, 0, sizeof(float), 
 			VERTEX_BUFFER_SIZE, TEXTURE_GROUP_STATIC_VERTEX_BUFFER_OTHER, ShaderAPI()->UsingSoftwareVertexProcessing() );
@@ -5160,7 +5160,7 @@ void CMeshMgr::CreatePreTessPatchIndexBuffers()
 
 	DestroyPreTessPatchIndexBuffers();
 
-	if ( g_pHardwareConfig->ActualHasFastVertexTextures() )
+	if ( g_pHardwareConfigDx8->ActualHasFastVertexTextures() )
 	{
 		for ( int i = 0; i < MAX_TESS_DIVISIONS_PER_SIDE; ++i )
 		{
@@ -5184,7 +5184,7 @@ void CMeshMgr::CreatePreTessPatchVertexBuffers()
 
 	// Track mesh allocations
 	g_VBAllocTracker->TrackMeshAllocations( "CreatePreTessPatchVertexBuffers" );
-	if ( g_pHardwareConfig->ActualHasFastVertexTextures() )
+	if ( g_pHardwareConfigDx8->ActualHasFastVertexTextures() )
 	{
 		for ( int i = 0; i < MAX_TESS_DIVISIONS_PER_SIDE; ++i )
 		{
@@ -5638,7 +5638,7 @@ VertexFormat_t CMeshMgr::ComputeVertexFormat( unsigned int flags,
 	// Construct a bitfield that makes sense and is unique from the standard FVF formats
 	VertexFormat_t fmt = flags & ~VERTEX_FORMAT_USE_EXACT_FORMAT;
 
-	if ( g_pHardwareConfig->SupportsCompressedVertices() == VERTEX_COMPRESSION_NONE )
+	if ( g_pHardwareConfigDx8->SupportsCompressedVertices() == VERTEX_COMPRESSION_NONE )
 	{
 		// Vertex compression is disabled - make sure all materials
 		// say "No!" to compressed verts ( tested in IsValidVertexFormat() )

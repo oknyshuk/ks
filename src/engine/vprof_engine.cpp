@@ -753,7 +753,6 @@ private:
 CVProfExport g_VProfExport;
 IVProfExport *g_pVProfExport = &g_VProfExport;
 
-EXPOSE_SINGLE_INTERFACE_GLOBALVAR( CVProfExport, IVProfExport, VPROF_EXPORT_INTERFACE_VERSION, g_VProfExport );
 
 void VProfExport_SnapshotVProfHistory()
 {

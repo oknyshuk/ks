@@ -347,7 +347,7 @@ void CCSBot::BreakablesCheck( void )
 				UTIL_TraceLine( EyePosition(), EyePosition() + FarBreakableCheckDist * aimDir, MASK_PLAYERSOLID, this, COLLISION_GROUP_NONE, &result );
 				if ( result.DidHitNonWorldEntity() )
 				{
-					LOSbreakable.EnumElement( result.m_pEnt );
+					LOSbreakable.EnumElement( result.Ent<CBaseEntity>() );
 					if ( LOSbreakable.m_nAlreadyHit == 1 && LOSbreakable.m_AlreadyHit[ 0 ] == breakable )
 					{
 						shouldShoot = true;

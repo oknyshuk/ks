@@ -854,7 +854,7 @@ void CClient_Precipitation::CreateAshParticle( void )
 
 				UTIL_TraceModel( vTraceStart, tr.endpos, Vector( -1, -1, -1 ), Vector( 1, 1, 1 ), this, COLLISION_GROUP_NONE, &tr2 );
 
-				if ( tr2.m_pEnt == this )
+				if ( tr2.Ent<CBaseEntity>() == this )
 				{
 					m_Ash[ hh ].m_bActiveAshEmitter = true;
 

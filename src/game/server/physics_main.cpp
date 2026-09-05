@@ -76,7 +76,7 @@ static void Physics_TraceEntity( CBaseEntity* pBaseEntity, const Vector &vecAbsS
 			UTIL_TraceEntity( pBaseEntity, vecAbsStart, vecAbsEnd, mask & ~CONTENTS_GRENADECLIP, ptr );
 		}
 
-		if ( pGrenadeProjectile && ptr->DidHit() && ptr->m_pEnt && ptr->m_pEnt->IsPlayer() )
+		if ( pGrenadeProjectile && ptr->DidHit() && ptr->Ent<CBaseEntity>() && ptr->Ent<CBaseEntity>()->IsPlayer() )
 		{
 			UTIL_ClearTrace( *ptr );
 			//why does traceline respect hitmoxes in the mask param but traceentity and tracehull do not?
@@ -615,9 +615,9 @@ void CPhysicsPushedEntities::FinishPush( bool bIsRotPush, const RotatingPushMove
 
 
 		// Register physics impacts...
-		if (info.m_Trace.m_pEnt)
+		if (info.m_Trace.Ent<CBaseEntity>())
 		{
-			pPushedEntity->PhysicsImpact( info.m_Trace.m_pEnt, info.m_Trace );
+			pPushedEntity->PhysicsImpact( info.m_Trace.Ent<CBaseEntity>(), info.m_Trace );
 		}
 
 		if (bIsRotPush)
@@ -666,9 +666,9 @@ CBaseEntity *CPhysicsPushedEntities::RegisterBlockage()
 
 	// Generate a PhysicsImpact against the blocker...
 	PhysicsPushedInfo_t &info = m_rgMoved[m_nBlocker];
-	if ( info.m_Trace.m_pEnt )
+	if ( info.m_Trace.Ent<CBaseEntity>() )
 	{
-		info.m_pEntity->PhysicsImpact( info.m_Trace.m_pEnt, info.m_Trace );
+		info.m_pEntity->PhysicsImpact( info.m_Trace.Ent<CBaseEntity>(), info.m_Trace );
 	}
 
 	// This is the dude 
@@ -1269,7 +1269,7 @@ int CBaseEntity::PhysicsTryMove( float flTime, trace_t *steptrace )
 		if (trace.fraction == 1)
 			 break;		// moved the entire distance
 
-		if (!trace.m_pEnt)
+		if (!trace.Ent<CBaseEntity>())
 		{
 			SetAbsVelocity( vecAbsVelocity );
 			Warning( "PhysicsTryMove: !trace.u.ent" );
@@ -1280,15 +1280,15 @@ int CBaseEntity::PhysicsTryMove( float flTime, trace_t *steptrace )
 		if (trace.plane.normal[2] > 0.7)
 		{
 			blocked |= 1;		// floor
-			if (CanStandOn( trace.m_pEnt ))
+			if (CanStandOn( trace.Ent<CBaseEntity>() ))
 			{
 				// keep track of time when changing ground entity
-				if (GetGroundEntity() != trace.m_pEnt)
+				if (GetGroundEntity() != trace.Ent<CBaseEntity>())
 				{
 					SetGroundChangeTime( gpGlobals->curtime + (flTime - (1 - trace.fraction) * time_left) );
 				}
 
-				SetGroundEntity( trace.m_pEnt );
+				SetGroundEntity( trace.Ent<CBaseEntity>() );
 			}
 		}
 		if (!trace.plane.normal[2])
@@ -1300,7 +1300,7 @@ int CBaseEntity::PhysicsTryMove( float flTime, trace_t *steptrace )
 
 		// run the impact function
 		Vector vecCurrentVelocity = GetAbsVelocity();
-		PhysicsImpact( trace.m_pEnt, trace );
+		PhysicsImpact( trace.Ent<CBaseEntity>(), trace );
 		// Removed by the impact function
 		if ( IsMarkedForDeletion() || IsEdictFree() )
 			break;
@@ -1479,9 +1479,9 @@ void CBaseEntity::PhysicsPushEntity( const Vector& push, trace_t *pTrace )
 	// to test the swept ray from previous to current location for trigger intersections
 	PhysicsTouchTriggers( &prevOrigin );
 
-	if ( pTrace->m_pEnt )
+	if ( pTrace->Ent<CBaseEntity>() )
 	{
-		PhysicsImpact( pTrace->m_pEnt, *pTrace );
+		PhysicsImpact( pTrace->Ent<CBaseEntity>(), *pTrace );
 	}
 }
 
@@ -1505,7 +1505,7 @@ bool CBaseEntity::PhysicsTestEntityPosition( CBaseEntity **ppEntity /*=NULL*/ )
 	{
 		if ( ppEntity )
 		{
-			*ppEntity = trace.m_pEnt;
+			*ppEntity = trace.Ent<CBaseEntity>();
 		}
 		return true;
 	}
@@ -2068,7 +2068,7 @@ void CBaseEntity::PhysicsStepRecheckGround()
 
 			if ( trace.startsolid )
 			{
-				SetGroundEntity( trace.m_pEnt );
+				SetGroundEntity( trace.Ent<CBaseEntity>() );
 				return;
 			}
 		}

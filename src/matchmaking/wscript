@@ -59,17 +59,14 @@ def build(bld):
         "main.cpp",
     ]
 
-    for target in ("matchmaking", "matchmaking_ds"):
-        bld.shlib(
-            source=source,
-            target=target,
-            features="cxx",
-            includes=includes,
-            use=libs,
-            install_path=bld.env.GAMEBIN,
-            subsystem=bld.env.MSVC_SUBSYSTEM,
-            idx=bld.get_taskgen_count(),
-        )
+    bld.objects(
+        source=source,
+        target="matchmaking",
+        features="cxx",
+        includes=includes,
+        use=libs,
+        idx=bld.get_taskgen_count(),
+    )
 
     bld.stlib(
         source=source_matchmaking_base,

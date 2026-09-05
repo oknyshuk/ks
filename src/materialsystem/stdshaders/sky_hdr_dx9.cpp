@@ -21,7 +21,7 @@
 #include "tier0/memdbgon.h"
 
 
-static ConVar mat_use_compressed_hdr_textures( "mat_use_compressed_hdr_textures", "1" );
+static ConVar mat_use_compressed_hdr_textures( "mat_use_compressed_hdr_textures", "1", FCVAR_MATERIAL_SYSTEM_THREAD );
 
 DEFINE_FALLBACK_SHADER( Sky, Sky_HDR_DX9 )
 

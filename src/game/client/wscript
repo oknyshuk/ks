@@ -23,7 +23,7 @@ def build(bld):
 
     libs = [
         "rmlui",
-        "tier0",
+        "engine",
         "memoverride",
         "public_common",
         "bonesetup",
@@ -38,7 +38,6 @@ def build(bld):
         "tier2",
         "tier3",
         "interfaces",
-        "vstdlib",
         "mathlib",
         "vtf",
         "videocfg",

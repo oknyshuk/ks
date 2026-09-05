@@ -404,7 +404,7 @@ void CAI_FreePass::Update( )
 		{
 			trace_t tr;
 			UTIL_TraceLine( pTarget->EyePosition(), GetOuter()->EyePosition(), MASK_BLOCKLOS, GetOuter(), COLLISION_GROUP_NONE, &tr );
-			if ( tr.fraction != 1.0 && tr.m_pEnt != pTarget )
+			if ( tr.fraction != 1.0 && tr.Ent<CBaseEntity>() != pTarget )
 			{
 				float dist = (tr.endpos - tr.startpos).Length() * tr.fraction;
 
@@ -494,7 +494,7 @@ bool CAI_FreePass::ShouldAllowFVisible(bool bBaseResult )
 			trace_t	tr;
 
 			UTIL_TraceLine( GetOuter()->EyePosition(), pTarget->EyePosition() + (vecRight * m_Params.peekEyeDist - Vector( 0, 0, m_Params.peekEyeDistZ )), MASK_BLOCKLOS, GetOuter(), COLLISION_GROUP_NONE, &tr );
-			if ( tr.fraction != 1.0 && tr.m_pEnt != pTarget )
+			if ( tr.fraction != 1.0 && tr.Ent<CBaseEntity>() != pTarget )
 			{
 				if ( free_pass_peek_debug.GetBool() )
 					NDebugOverlay::Line( tr.startpos, tr.endpos - Vector( 0, 0, 2), 0, 255, 0, false, 0.1 );
@@ -504,7 +504,7 @@ bool CAI_FreePass::ShouldAllowFVisible(bool bBaseResult )
 			if ( bIsVisible )
 			{
 				UTIL_TraceLine( GetOuter()->EyePosition(), pTarget->EyePosition() + (-vecRight * m_Params.peekEyeDist - Vector( 0, 0, m_Params.peekEyeDistZ )), MASK_BLOCKLOS, GetOuter(), COLLISION_GROUP_NONE, &tr );
-				if ( tr.fraction != 1.0 && tr.m_pEnt != pTarget )
+				if ( tr.fraction != 1.0 && tr.Ent<CBaseEntity>() != pTarget )
 				{
 					if ( free_pass_peek_debug.GetBool() )
 						NDebugOverlay::Line( tr.startpos, tr.endpos - Vector( 0, 0, 2), 0, 255, 0, false, 0.1 );

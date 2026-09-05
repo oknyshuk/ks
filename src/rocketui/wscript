@@ -39,14 +39,12 @@ def build(bld):
         "RmlDebugger",
     ]
 
-    bld.shlib(
+    bld.objects(
         source=source,
         target="rocketui_client",
         features="cxx",
         includes=includes,
         use=libs + ["SDL3", "FREETYPE"],
         lib=[],
-        install_path=bld.env.BINPATH,
-        subsystem=bld.env.MSVC_SUBSYSTEM,
         idx=bld.get_taskgen_count(),
     )

@@ -30,19 +30,16 @@ def build(bld):
         "vtfcombine.cpp",
         "resourceaccesscontrol.cpp",
         "precachesystem.cpp",
-        "../public/studio.cpp",
         "../public/studio_virtualmodel.cpp",
         "../common/studiobyteswap.cpp",
         "../utils/common/datalinker.cpp",
     ]
 
-    bld.shlib(
+    bld.objects(
         source=source,
         target="datacache",
         features="cxx",
         includes=includes,
         use=libs,
-        install_path=bld.env.BINPATH,
-        subsystem=bld.env.MSVC_SUBSYSTEM,
         idx=bld.get_taskgen_count(),
     )

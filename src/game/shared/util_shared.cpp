@@ -925,7 +925,7 @@ void UTIL_DecalTrace( trace_t *pTrace, char const *decalName )
 	if (pTrace->fraction == 1.0)
 		return;
 
-	CBaseEntity *pEntity = pTrace->m_pEnt;
+	CBaseEntity *pEntity = pTrace->Ent<CBaseEntity>();
 	if ( !pEntity )
 		return;
 	pEntity->DecalTrace( pTrace, decalName );

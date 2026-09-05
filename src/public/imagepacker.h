@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
+//========= Copyright ï¿½ 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -29,7 +29,7 @@ public:
 	bool Reset( int nSortId, int maxLightmapWidth, int maxLightmapHeight );
 	bool AddBlock( int width, int height, 
 		int *returnX, int *returnY );
-	void GetMinimumDimensions( int *returnWidth, int *returnHeight );
+	void GetMinimumDimensions( int *returnWidth, int *returnHeight, int nMaxAspectRatio = 0 );
 	float GetEfficiency( void );
 	int GetSortId() const;
 	void IncrementSortId();

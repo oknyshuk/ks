@@ -46,7 +46,7 @@ static const BYTE NUM_ALPHA_BITS = 5;
 static const BYTE PAINT_COLOR_BITS = 7 << NUM_ALPHA_BITS; // 224
 static const BYTE PAINT_ALPHA_BITS	= PAINT_COLOR_BITS ^ 0xFF; // 31
 
-BYTE GetColorIndex( BYTE byte )
+static BYTE GetColorIndex( BYTE byte )
 {
 	return ( PAINT_COLOR_BITS & byte ) >> NUM_ALPHA_BITS;
 }

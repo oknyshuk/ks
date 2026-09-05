@@ -158,6 +158,9 @@ public:
 	// This is the filesystem FileSystem_LoadSearchPaths is talking to.
 	IFileSystem		*m_pFileSystem;
 
+	// Supplied by the engine, which is the only caller that wants addons.
+	void			(*m_pfnAddonSearchPaths)( IFileSystem *pFileSystem );
+
 // Outputs.
 public:
 	// This is the location of the first search path called "game", which also becomes your "mod" search path.

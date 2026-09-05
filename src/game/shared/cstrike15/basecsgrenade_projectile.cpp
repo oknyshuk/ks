@@ -348,7 +348,7 @@ END_NETWORK_TABLE()
 		const float kSleepVelocitySquared = kSleepVelocity * kSleepVelocity; 
 
 		// Verify that we have an entity.
-		CBaseEntity *pEntity = trace.m_pEnt;
+		CBaseEntity *pEntity = trace.Ent<CBaseEntity>();
 		Assert( pEntity );
 		
 		if ( pEntity )

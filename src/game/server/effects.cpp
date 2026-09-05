@@ -2545,7 +2545,7 @@ void CEnvGunfire::FireBullet(
 			flDist_aim = ( tr.fraction != 1.0 ) ? ( tr.startpos - tr.endpos ).Length() : 0;
 		}
 
-		lastPlayerHit = dynamic_cast< const CBaseCombatCharacter * >( tr.m_pEnt );
+		lastPlayerHit = dynamic_cast< const CBaseCombatCharacter * >( tr.Ent<CBaseEntity>() );
 
 		if ( lastPlayerHit )
 		{
@@ -2658,7 +2658,7 @@ void CEnvGunfire::FireBullet(
 				// Don't decal nodraw surfaces
 				if ( !( tr.surface.flags & ( SURF_SKY | SURF_NODRAW | SURF_HINT | SURF_SKIP ) ) )
 				{
-					//CBaseEntity *pEntity = tr.m_pEnt;
+					//CBaseEntity *pEntity = tr.Ent<CBaseEntity>();
 					UTIL_ImpactTrace( &tr, iDamageType );
 				}
 			}
@@ -2667,7 +2667,7 @@ void CEnvGunfire::FireBullet(
 #ifndef CLIENT_DLL
 		// decal players on the server to eliminate the disparity between where the client thinks the decal went and where it actually went
 		// we want to eliminate the case where a player sees a blood decal on someone, but they are at 100 health
-		if ( tr.DidHit() && tr.m_pEnt && tr.m_pEnt->IsPlayer() )
+		if ( tr.DidHit() && tr.Ent<CBaseEntity>() && tr.Ent<CBaseEntity>()->IsPlayer() )
 		{
 			UTIL_ImpactTrace( &tr, iDamageType );
 		}
@@ -2683,7 +2683,7 @@ void CEnvGunfire::FireBullet(
 		// add damage to entity that we hit
 
 #ifndef CLIENT_DLL
-		// CBaseEntity *pEntity = tr.m_pEnt;
+		// CBaseEntity *pEntity = tr.Ent<CBaseEntity>();
 
 		//Shooting dropped grenades detonates them
 		//
@@ -2741,7 +2741,7 @@ void CEnvGunfire::FireBullet(
 		CTakeDamageInfo &info = arrPendingDamage[idxDamage].m_info;
 		trace_t &tr = arrPendingDamage[idxDamage].m_tr;
 
-		CBaseEntity *pEntity = tr.m_pEnt;
+		CBaseEntity *pEntity = tr.Ent<CBaseEntity>();
 		//bool bWasAlive = pEntity->IsAlive();
 
 		pEntity->DispatchTraceAttack( info, vecDir, &tr );

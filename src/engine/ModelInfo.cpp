@@ -383,45 +383,6 @@ int CModelInfo::GetAutoplayList( const studiohdr_t *pStudioHdr, unsigned short *
 
 
 //-----------------------------------------------------------------------------
-// Purpose: bind studiohdr_t support functions to engine
-// FIXME: This should be moved into studio.cpp?
-//-----------------------------------------------------------------------------
-const studiohdr_t *studiohdr_t::FindModel( void **cache, char const *pModelName ) const
-{
-	MDLHandle_t handle = g_pMDLCache->FindMDL( pModelName );
-	*cache = (void*)(uintp)handle;
-	return g_pMDLCache->GetStudioHdr( handle );
-}
-
-virtualmodel_t *studiohdr_t::GetVirtualModel( void ) const
-{
-	if ( numincludemodels == 0 )
-		return NULL;
-	return g_pMDLCache->GetVirtualModelFast( this, VoidPtrToMDLHandle( VirtualModel() ) );
-}
-
-byte *studiohdr_t::GetAnimBlock( int i, bool preloadIfMissing ) const
-{
-	return g_pMDLCache->GetAnimBlock( VoidPtrToMDLHandle( VirtualModel() ), i, preloadIfMissing );
-}
-
-bool studiohdr_t::hasAnimBlockBeenPreloaded( int i ) const
-{
-	return g_pMDLCache->HasAnimBlockBeenPreloaded( VoidPtrToMDLHandle( VirtualModel() ), i );
-}
-
-int	studiohdr_t::GetAutoplayList( unsigned short **pOut ) const
-{
-	return g_pMDLCache->GetAutoplayList( VoidPtrToMDLHandle( VirtualModel() ), pOut );
-}
-
-const studiohdr_t *virtualgroup_t::GetStudioHdr( void ) const
-{
-	return g_pMDLCache->GetStudioHdr( VoidPtrToMDLHandle( cache ) );
-}
-
-
-//-----------------------------------------------------------------------------
 // Purpose:
 //-----------------------------------------------------------------------------
 bool CModelInfo::ModelHasMaterialProxy( const model_t *model ) const

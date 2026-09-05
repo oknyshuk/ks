@@ -4287,7 +4287,7 @@ void MaterialFootstepSound( C_BaseAnimating *pEnt, bool bLeftFoot, float flVolum
 	pEnt->GetAttachment( attachment, traceStart, angles );
 
 	UTIL_TraceLine( traceStart, traceStart - Vector( 0, 0, 48.0f), MASK_SHOT_HULL, pEnt, COLLISION_GROUP_NONE, &tr );
-	if( tr.fraction < 1.0 && tr.m_pEnt )
+	if( tr.fraction < 1.0 && tr.Ent<CBaseEntity>() )
 	{
 		surfacedata_t *psurf = physprops->GetSurfaceData( tr.surface.surfaceProps );
 		if( psurf )

@@ -2114,7 +2114,7 @@ void CStaticPropMgr::DrawStaticProps_FastPipeline( IClientRenderable **pProps, c
 
 // NOTE: Set this to zero to revert to the previous static prop lighting behavior
 ConVar pipeline_static_props("pipeline_static_props", "1");
-ConVar cl_skipslowpath( "cl_skipslowpath", "0", FCVAR_CHEAT, "Set to 1 to skip any models that don't go through the model fast path" );
+extern ConVar cl_skipslowpath;
 void CStaticPropMgr::DrawStaticProps( IClientRenderable **pProps, const RenderableInstance_t *pInstances, int count, bool bShadowDepth, bool drawVCollideWireframe )
 {
 	VPROF_BUDGET( "CStaticPropMgr::DrawStaticProps", VPROF_BUDGETGROUP_STATICPROP_RENDERING );

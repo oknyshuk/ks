@@ -15,7 +15,6 @@
 #include "tier0/memdbgon.h"
 
 // Needed for debugging
-const char *g_pszModule = "tier0";
 bool g_bInitMemory = true;
 
 #if defined(PLATFORM_POSIX)

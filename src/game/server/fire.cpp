@@ -340,7 +340,7 @@ bool FireSystem_CanAddFire( Vector *position, float separationRadius, fireType_e
 		}
 
 		//TODO: If we've hit an entity here, start it on fire
-		CBaseEntity *pEntity = tr.m_pEnt;
+		CBaseEntity *pEntity = tr.Ent<CBaseEntity>();
 
 		if ( ENTINDEX( pEntity->edict() ) != 0 )
 		{

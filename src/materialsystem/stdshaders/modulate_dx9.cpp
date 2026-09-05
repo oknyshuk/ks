@@ -20,7 +20,7 @@
 #include "tier0/memdbgon.h"
 #include "cloak_blended_pass_helper.h"
 
-static ConVar mat_displacementmap( "mat_displacementmap", "1", FCVAR_CHEAT );
+static ConVar mat_displacementmap( "mat_displacementmap", "1", FCVAR_MATERIAL_SYSTEM_THREAD | FCVAR_CHEAT );
 
 
 DEFINE_FALLBACK_SHADER( Modulate, Modulate_DX9 )

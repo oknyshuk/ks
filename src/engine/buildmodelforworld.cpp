@@ -977,7 +977,7 @@ static int WriteSMD( const CUtlVector<CPackedSurfaceInfo> &packedSurfaces, int n
 	return nSurfaces;
 }
 
-ConVar r_buildingmapforworld( "r_buildingmapforworld", "0" );
+ConVar r_buildingmapforworld( "r_buildingmapforworld", "0", FCVAR_MATERIAL_SYSTEM_THREAD );
 
 CON_COMMAND( buildmodelforworld, "buildmodelforworld" )
 {

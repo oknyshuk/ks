@@ -332,7 +332,7 @@ void EndWatchdogTimer( void )
 	alarm( 0 );
 }
 
-static CThreadMutex g_LocalTimeMutex;
+static CThreadMutex g_LocalTimeMutex CONSTRUCT_EARLY;
 
 
 void Plat_GetLocalTime( struct tm *pNow )

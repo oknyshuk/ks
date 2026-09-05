@@ -74,7 +74,7 @@ static int g_nLastIgnoreNumTimes = 1;
 // Set to true if they want to break in the debugger.
 static bool g_bBreak = false;
 
-static CDialogInitInfo g_Info;
+static CDialogInitInfo g_Info CONSTRUCT_EARLY;
 
 static bool g_bDisableAsserts = false;
 

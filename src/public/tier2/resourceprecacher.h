@@ -30,13 +30,13 @@ enum PrecacheSystem_t
 	SHARED_SYSTEM,		// Precache lists which are reused and can be referenced as a resource type
 
 	PRECACHE_SYSTEM_COUNT,
-
-#if defined( GAME_DLL )	
-	GLOBAL = SERVERGLOBAL,
-#elif defined( CLIENT_DLL ) || defined( GAMEUI_EXPORTS )
-	GLOBAL = CLIENTGLOBAL,
-#endif
 };
+
+#if defined( GAME_DLL )
+constexpr PrecacheSystem_t GLOBAL = SERVERGLOBAL;
+#elif defined( CLIENT_DLL ) || defined( GAMEUI_EXPORTS )
+constexpr PrecacheSystem_t GLOBAL = CLIENTGLOBAL;
+#endif
 
 //-----------------------------------------------------------------------------
 // Resource types

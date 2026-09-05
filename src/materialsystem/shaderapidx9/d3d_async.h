@@ -440,7 +440,7 @@ public:
 
 	void ReportDeviceReset( void )
 	{
-		g_pShaderDeviceMgr->InvokeDeviceResetNotifications( m_pD3DDevice, m_pPresentParameters, m_pHWnd );
+		g_pShaderDeviceMgrBase->InvokeDeviceResetNotifications( m_pD3DDevice, m_pPresentParameters, m_pHWnd );
 	}
 
 	void SetSupportsTessellation( bool bSupportsTessellation )

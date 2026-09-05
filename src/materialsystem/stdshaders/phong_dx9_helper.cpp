@@ -22,16 +22,16 @@
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
-static ConVar mat_displacementmap( "mat_displacementmap", "1", FCVAR_CHEAT );
-static ConVar r_lightwarpidentity( "r_lightwarpidentity", "0", FCVAR_CHEAT );
-static ConVar r_rimlight( "r_rimlight", "1", FCVAR_CHEAT );
+static ConVar mat_displacementmap( "mat_displacementmap", "1", FCVAR_MATERIAL_SYSTEM_THREAD | FCVAR_CHEAT );
+static ConVar r_lightwarpidentity( "r_lightwarpidentity", "0", FCVAR_MATERIAL_SYSTEM_THREAD | FCVAR_CHEAT );
+static ConVar r_rimlight( "r_rimlight", "1", FCVAR_MATERIAL_SYSTEM_THREAD | FCVAR_CHEAT );
 
-static ConVar cl_teamid_min( "cl_teamid_min", "200", FCVAR_RELEASE );
-static ConVar cl_teamid_max( "cl_teamid_max", "1000", FCVAR_RELEASE );
+static ConVar cl_teamid_min( "cl_teamid_min", "200", FCVAR_MATERIAL_SYSTEM_THREAD | FCVAR_RELEASE );
+static ConVar cl_teamid_max( "cl_teamid_max", "1000", FCVAR_MATERIAL_SYSTEM_THREAD | FCVAR_RELEASE );
 
-static ConVar r_shader_srgbread( "r_shader_srgbread", "0", 0, "1 = use shader srgb texture reads, 0 = use HW" );
+static ConVar r_shader_srgbread( "r_shader_srgbread", "0", FCVAR_MATERIAL_SYSTEM_THREAD, "1 = use shader srgb texture reads, 0 = use HW" );
 
-static ConVar r_csm_viewmodelquality( "r_csm_viewmodelquality", "1" );
+static ConVar r_csm_viewmodelquality( "r_csm_viewmodelquality", "1", FCVAR_MATERIAL_SYSTEM_THREAD );
 
 // Textures may be bound to the following samplers:
 //	SHADER_SAMPLER0	 Base (Albedo) / Gloss in alpha

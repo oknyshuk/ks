@@ -460,7 +460,7 @@ void CCSPhysicsPushEntities::MovePlayer( CBaseEntity *pBlocker, PhysicsPushedInf
 			iSteps = iTest + 1;
 		}
 
-		if ( info.m_Trace.fraction == 1.0f || !info.m_Trace.m_pEnt )
+		if ( info.m_Trace.fraction == 1.0f || !info.m_Trace.Ent<CBaseEntity>() )
 			break;
 
 		// New test distance and position.

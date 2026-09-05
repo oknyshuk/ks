@@ -1122,6 +1122,4 @@ void EngineTool_OverrideSampleRate( int& rate )
 }
 
 // Expose complex interface
-EXPOSE_SINGLE_INTERFACE_GLOBALVAR( CEngineTool, IEngineTool, VENGINETOOL_INTERFACE_VERSION, g_EngineTool );
 // Expose simple interface
-EXPOSE_SINGLE_INTERFACE_GLOBALVAR( CEngineTool, IEngineToolFramework, VENGINETOOLFRAMEWORK_INTERFACE_VERSION, g_EngineTool );

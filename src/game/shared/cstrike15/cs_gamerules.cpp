@@ -5086,11 +5086,11 @@ static bool Helper_CheckFieldAppliesToTeam( char const *szField, int nTeam )
         {
             retval = 1.0;
         }
-        else if (!(tr.DidHitWorld()) && (tr.m_pEnt != NULL) && (tr.m_pEnt != pEntityToIgnore) && (tr.m_pEnt->GetOwnerEntity() != pEntityToIgnore))
+        else if (!(tr.DidHitWorld()) && (tr.Ent<CBaseEntity>() != NULL) && (tr.Ent<CBaseEntity>() != pEntityToIgnore) && (tr.Ent<CBaseEntity>()->GetOwnerEntity() != pEntityToIgnore))
         {
             // if we didn't hit world geometry perhaps there's still damage to be done here.
 
-            CBaseEntity *blockingEntity = tr.m_pEnt;
+            CBaseEntity *blockingEntity = tr.Ent<CBaseEntity>();
 
             // check to see if this part of the player is visible if entities are ignored.
             UTIL_TraceLine(vecSrc, vecEnd, CONTENTS_SOLID, NULL, COLLISION_GROUP_NONE, &tr);

@@ -1139,9 +1139,9 @@ void CFuncTank::ControllerPostFrame( void )
 		
 		UTIL_TraceHull( start, start + forward * 8192, -Vector(8,8,8), Vector(8,8,8), MASK_SHOT, this, COLLISION_GROUP_NONE, &tr );
 		
-		if( tr.m_pEnt && tr.m_pEnt->m_takedamage != DAMAGE_NO && (tr.m_pEnt->GetFlags() & FL_AIMTARGET) )
+		if( tr.Ent<CBaseEntity>() && tr.Ent<CBaseEntity>()->m_takedamage != DAMAGE_NO && (tr.Ent<CBaseEntity>()->GetFlags() & FL_AIMTARGET) )
 		{
-			forward = tr.m_pEnt->WorldSpaceCenter() - start;
+			forward = tr.Ent<CBaseEntity>()->WorldSpaceCenter() - start;
 			VectorNormalize( forward );
 		}
 	}
@@ -1859,7 +1859,7 @@ void CFuncTank::AimFuncTankAtTarget( void )
 		}
 
 		// No line of sight, don't track
-		if ( tr.fraction == 1.0 || tr.m_pEnt == pTarget || (pTargetVehicle && (tr.m_pEnt == pTargetVehicle)) )
+		if ( tr.fraction == 1.0 || tr.Ent<CBaseEntity>() == pTarget || (pTargetVehicle && (tr.Ent<CBaseEntity>() == pTargetVehicle)) )
 		{
 			if ( InRange2( range2 ) && pTarget && pTarget->IsAlive() )
 			{
@@ -1919,7 +1919,7 @@ void CFuncTank::AimFuncTankAtTarget( void )
 		{
 			AI_TraceLine( barrelEnd, pTarget->WorldSpaceCenter(), MASK_SHOT, this, COLLISION_GROUP_NONE, &tr );
 
-			if ( tr.fraction == 1.0f || (tr.m_pEnt && tr.m_pEnt == pTarget) )
+			if ( tr.fraction == 1.0f || (tr.Ent<CBaseEntity>() && tr.Ent<CBaseEntity>() == pTarget) )
 			{
 				fire = true;
 			}
@@ -2242,7 +2242,7 @@ bool CFuncTank::HasLOSTo( CBaseEntity *pEntity )
 	CTraceFilterSkipTwoEntities traceFilter( this, GetParent(), COLLISION_GROUP_NONE );
 	AI_TraceLine( vecBarrelEnd, vecTarget, MASK_OPAQUE_AND_NPCS, &traceFilter, &tr );
 	
-	CBaseEntity	*pHitEntity = tr.m_pEnt;
+	CBaseEntity	*pHitEntity = tr.Ent<CBaseEntity>();
 	
 	CBasePlayer *pPlayer = ToBasePlayer( pEntity );
 
@@ -2257,7 +2257,7 @@ bool CFuncTank::HasLOSTo( CBaseEntity *pEntity )
 			return true;
 	}
 
-	return ( tr.fraction == 1.0 || tr.m_pEnt == pEntity );
+	return ( tr.fraction == 1.0 || tr.Ent<CBaseEntity>() == pEntity );
 }
 
 // #############################################################################
@@ -3465,7 +3465,7 @@ void CMortarShell::Impact( void )
 	CEffectData	data;
 
 	// Do an extra effect if we struck the world
-	if ( tr.m_pEnt && tr.m_pEnt->IsWorld() )
+	if ( tr.Ent<CBaseEntity>() && tr.Ent<CBaseEntity>()->IsWorld() )
 	{
 		data.m_flRadius = flRadius * 0.5f;
 		data.m_vNormal	= tr.plane.normal;

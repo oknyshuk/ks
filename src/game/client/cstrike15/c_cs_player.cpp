@@ -1951,7 +1951,7 @@ public:
 
 bool UTIL_clipwalls_hitvalid( const trace_t &tr )
 {
-	return ( tr.DidHit() && !tr.m_pEnt->IsPlayer() && !(tr.surface.flags & SURF_TRANS) );
+	return ( tr.DidHit() && !tr.Ent<CBaseEntity>()->IsPlayer() && !(tr.surface.flags & SURF_TRANS) );
 }
 
 void UTIL_clipwalls_debugline( const trace_t &tr )
@@ -2123,13 +2123,13 @@ float *	C_CSPlayer::GetRenderClipPlane( void )
 				// edge cases to prevent odd special cases, like preventing the weapon from clipping due to narrow objects
 				// like signposts, railing, or ladder rungs.
 
-				if ( tr_StockToMuzzle.m_pEnt )
-					m_bClipHitStaticWorld = tr_StockToMuzzle.m_pEnt->IsWorld();
+				if ( tr_StockToMuzzle.Ent<CBaseEntity>() )
+					m_bClipHitStaticWorld = tr_StockToMuzzle.Ent<CBaseEntity>()->IsWorld();
 
 				bool bClipHitPropDoor = false;
 				if ( !m_bClipHitStaticWorld )
 				{
-					C_BasePropDoor *pPropDoor = dynamic_cast<C_BasePropDoor*>(tr_StockToMuzzle.m_pEnt);
+					C_BasePropDoor *pPropDoor = dynamic_cast<C_BasePropDoor*>(tr_StockToMuzzle.Ent<CBaseEntity>());
 					if ( pPropDoor )
 					{
 						bClipHitPropDoor = true;
@@ -5360,7 +5360,7 @@ void C_CSPlayer::UpdateIDTarget()
 
 	if ( !tr.startsolid && tr.DidHitNonWorldEntity() )
 	{
-		C_BaseEntity *pEntity = tr.m_pEnt;
+		C_BaseEntity *pEntity = tr.Ent<CBaseEntity>();
 
 
 		if ( pEntity && (pEntity != this ) )
@@ -5424,9 +5424,9 @@ void C_CSPlayer::UpdateTargetedWeapon( void )
 	CTraceFilterOmitPlayers traceFilter; // don't hit players with this trace
 	UTIL_TraceLine( EyePosition(), EyePosition() + MAX_WEAPON_NAME_POPUP_RANGE * aimDir, MASK_SHOT, &traceFilter, &result );
 
-	if ( result.DidHitNonWorldEntity() && result.m_pEnt->IsBaseCombatWeapon() )
+	if ( result.DidHitNonWorldEntity() && result.Ent<CBaseEntity>()->IsBaseCombatWeapon() )
 	{
-		if ( LineGoesThroughSmoke( EyePosition(), result.m_pEnt->WorldSpaceCenter(), 1.0f ) )
+		if ( LineGoesThroughSmoke( EyePosition(), result.Ent<CBaseEntity>()->WorldSpaceCenter(), 1.0f ) )
 			return;
 
 		//now that we have a weapon, we check to see if we are also looking at a bomb
@@ -5436,7 +5436,7 @@ void C_CSPlayer::UpdateTargetedWeapon( void )
 			return;
 		
 		// Set if to point at the weapon
-		m_iTargetedWeaponEntIndex = result.m_pEnt->entindex();
+		m_iTargetedWeaponEntIndex = result.Ent<CBaseEntity>()->entindex();
 	}
 }
 
@@ -7962,9 +7962,9 @@ bool C_CSPlayer::IsCursorOnAutoAimTarget()
 
 	if ( tr.fraction != 1.0f )
 	{
-		if (tr.DidHitNonWorldEntity() && tr.m_pEnt )
+		if (tr.DidHitNonWorldEntity() && tr.Ent<CBaseEntity>() )
 		{
-			CBaseEntity *pEntity = tr.m_pEnt;
+			CBaseEntity *pEntity = tr.Ent<CBaseEntity>();
 			// Autoaim at enemy players or at any entity that specifically requests it.
 			if ( pEntity && ( ( pEntity->IsPlayer() && !InSameTeam(pEntity ) ) || pEntity->IsAutoaimTarget() ) ) 
 			{

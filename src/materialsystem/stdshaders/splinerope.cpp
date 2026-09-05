@@ -10,9 +10,9 @@
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
-static ConVar rope_min_pixel_diameter( "rope_min_pixel_diameter", "2.0", FCVAR_CHEAT );
+static ConVar rope_min_pixel_diameter( "rope_min_pixel_diameter", "2.0", FCVAR_MATERIAL_SYSTEM_THREAD | FCVAR_CHEAT );
 
-static ConVar r_shader_srgbread( "r_shader_srgbread", "0", 0, "1 = use shader srgb texture reads, 0 = use HW" );
+static ConVar r_shader_srgbread( "r_shader_srgbread", "0", FCVAR_MATERIAL_SYSTEM_THREAD, "1 = use shader srgb texture reads, 0 = use HW" );
 
 BEGIN_VS_SHADER( SplineRope, "Help for SplineRope" )
 	BEGIN_SHADER_PARAMS

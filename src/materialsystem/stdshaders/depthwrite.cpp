@@ -19,7 +19,7 @@
 // NOTE: This has to be the last file included!
 #include "tier0/memdbgon.h"
 
-static ConVar mat_displacementmap( "mat_displacementmap", "1", FCVAR_CHEAT );
+static ConVar mat_displacementmap( "mat_displacementmap", "1", FCVAR_MATERIAL_SYSTEM_THREAD | FCVAR_CHEAT );
 
 BEGIN_VS_SHADER_FLAGS( DepthWrite, "Help for Depth Write", SHADER_NOT_EDITABLE )
 

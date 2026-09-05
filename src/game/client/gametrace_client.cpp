@@ -12,7 +12,7 @@
 
 bool CGameTrace::DidHitWorld() const
 {
-	return m_pEnt == ClientEntityList().GetBaseEntity( 0 );
+	return Ent<CBaseEntity>() == ClientEntityList().GetBaseEntity( 0 );
 }
 
 
@@ -25,7 +25,7 @@ bool CGameTrace::DidHitNonWorldEntity() const
 int CGameTrace::GetEntityIndex() const
 {
 	if ( m_pEnt )
-		return m_pEnt->entindex();
+		return Ent<CBaseEntity>()->entindex();
 	else
 		return -1;
 }

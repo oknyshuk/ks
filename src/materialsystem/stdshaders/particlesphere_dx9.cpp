@@ -15,7 +15,7 @@
 
 #include "cpp_shader_constant_register_map.h"
 
-static ConVar mat_depthfeather_enable( "mat_depthfeather_enable", "1", FCVAR_DEVELOPMENTONLY );
+static ConVar mat_depthfeather_enable( "mat_depthfeather_enable", "1", FCVAR_MATERIAL_SYSTEM_THREAD | FCVAR_DEVELOPMENTONLY );
 
 int GetDefaultDepthFeatheringValue( void ); //defined in spritecard.cpp
 

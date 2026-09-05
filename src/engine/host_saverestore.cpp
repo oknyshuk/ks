@@ -1539,7 +1539,7 @@ void CSaveRestore::ReapplyDecal( bool adjacent, RestoreLookupTable *table, decal
 			if ( dot >= 0.99 )
 			{
 				// Hack, have to use server traceline stuff to get at an actuall index here
-				edict_t *hit = tr.GetEdict();
+				edict_t *hit = serverGameEnts->BaseEntityToEdict( tr.Ent<CBaseEntity>() );
 				if ( hit != NULL )
 				{
 					// Looks like a good match for original splat plane, reapply the decal

@@ -106,7 +106,7 @@ float PercentageOfFlashForPlayer(CBaseEntity *player, Vector flashPos, CBaseEnti
 	ray.Init( flashPos, pos );
 	enginetrace->TraceRay( ray, FLASH_MASK, &traceFilter,  &tr );
 
-	if ((tr.fraction == 1.0f) || (tr.m_pEnt == player))
+	if ((tr.fraction == 1.0f) || (tr.Ent<CBaseEntity>() == player))
 	{
 		return 1.0f;
 	}
@@ -122,7 +122,7 @@ float PercentageOfFlashForPlayer(CBaseEntity *player, Vector flashPos, CBaseEnti
 	ray.Init( tr.endpos, pos );
 	enginetrace->TraceRay( ray, FLASH_MASK, &traceFilter,  &tr );
 
-	if ((tr.fraction == 1.0f) || (tr.m_pEnt == player))
+	if ((tr.fraction == 1.0f) || (tr.Ent<CBaseEntity>() == player))
 	{
 		retval += FLASH_FRACTION;
 	}
@@ -136,7 +136,7 @@ float PercentageOfFlashForPlayer(CBaseEntity *player, Vector flashPos, CBaseEnti
 	ray.Init( tr.endpos, pos );
 	enginetrace->TraceRay( ray, FLASH_MASK, &traceFilter,  &tr );
 
-	if ((tr.fraction == 1.0f) || (tr.m_pEnt == player))
+	if ((tr.fraction == 1.0f) || (tr.Ent<CBaseEntity>() == player))
 	{
 		retval += FLASH_FRACTION;
 	}
@@ -150,7 +150,7 @@ float PercentageOfFlashForPlayer(CBaseEntity *player, Vector flashPos, CBaseEnti
 	ray.Init( tr.endpos, pos );
 	enginetrace->TraceRay( ray, FLASH_MASK, &traceFilter,  &tr );
 
-	if ((tr.fraction == 1.0f) || (tr.m_pEnt == player))
+	if ((tr.fraction == 1.0f) || (tr.Ent<CBaseEntity>() == player))
 	{
 		retval += FLASH_FRACTION;
 	}

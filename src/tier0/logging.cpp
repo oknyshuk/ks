@@ -64,7 +64,7 @@ END_DEFINE_LOGGING_CHANNEL();
 // for the fact that there's no reason to have more than one in existence.
 bool g_bEnforceLoggingSystemSingleton = false;
 
-CTHREADLOCALINT g_nThreadLocalStateIndex;
+CTHREADLOCALINT g_nThreadLocalStateIndex CONSTRUCT_EARLY;
 
 //////////////////////////////////////////////////////////////////////////
 // Implementation

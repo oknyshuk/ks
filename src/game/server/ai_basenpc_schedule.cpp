@@ -4174,10 +4174,10 @@ void CAI_BaseNPC::RunTask( const Task_t *pTask )
 				trace_t trace;
 				m_pMoveProbe->TraceHull( vecStart, vecDown, mins, maxs, GetAITraceMask(), &trace );
 
-				if( trace.m_pEnt )
+				if( trace.Ent<CBaseEntity>() )
 				{
 					// Found something!
-					SetGroundEntity( trace.m_pEnt );
+					SetGroundEntity( trace.Ent<CBaseEntity>() );
 					TaskComplete();
 				}
 				else

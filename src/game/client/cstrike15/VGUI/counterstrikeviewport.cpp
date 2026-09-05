@@ -346,5 +346,4 @@ Sets the location of the input for chat text
 		}
 	}
 
-	EXPOSE_SINGLE_INTERFACE( CounterStrikeViewport, IClientVGUI, CLIENTVGUI_INTERFACE_VERSION );
 */

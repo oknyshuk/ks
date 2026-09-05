@@ -18,7 +18,7 @@ def build(bld):
         return
 
     libs = [
-        "tier0",
+        "engine",
         "memoverride",
         "public_common",
         "responserules_runtime",
@@ -32,7 +32,6 @@ def build(bld):
         "tier2",
         "tier3",
         "interfaces",
-        "vstdlib",
         "mathlib",
         "ZLIB",
     ]
@@ -312,7 +311,6 @@ def build(bld):
         "player_command.cpp",
         "player_lagcompensation.cpp",
         "player_resource.cpp",
-        "playerinfomanager.cpp",
         "playerlocaldata.cpp",
         "player_voice_listener.cpp",
         "plugin_check.cpp",

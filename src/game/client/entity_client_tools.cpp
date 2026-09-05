@@ -188,7 +188,6 @@ int CClientTools::s_nNextHandle = 1;
 //-----------------------------------------------------------------------------
 static CClientTools s_ClientTools;
 IClientTools *clienttools = &s_ClientTools;
-EXPOSE_SINGLE_INTERFACE_GLOBALVAR( CClientTools, IClientTools, VCLIENTTOOLS_INTERFACE_VERSION, s_ClientTools );
 
 
 //-----------------------------------------------------------------------------

@@ -73,7 +73,6 @@ public:
 static CServerTools g_ServerTools;
 IServerTools *g_pServerTools = &g_ServerTools;
 
-EXPOSE_SINGLE_INTERFACE_GLOBALVAR( CServerTools, IServerTools, VSERVERTOOLS_INTERFACE_VERSION, g_ServerTools );
 
 
 IServerEntity *CServerTools::GetIServerEntity( IClientEntity *pClientEntity )

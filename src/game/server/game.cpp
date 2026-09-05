@@ -66,16 +66,7 @@ public:
 		// Link to engine's list instead
 		cvar->RegisterConCommand( pCommand );
 
-		// Apply any command-line values.
-		const char *pValue = cvar->GetCommandLineValue( pCommand->GetName() );
-		if( pValue )
-		{
-			if ( !pCommand->IsCommand() )
-			{
-				( ( ConVar * )pCommand )->SetValue( pValue );
-			}
-		}
-		else
+		if ( !cvar->GetCommandLineValue( pCommand->GetName() ) )
 		{
 			// NOTE:  If not overridden at the command line, then if it's a replicated cvar, make sure that it's
 			//  value is the server's value.  This solves a problem where think_limit is defined in shared

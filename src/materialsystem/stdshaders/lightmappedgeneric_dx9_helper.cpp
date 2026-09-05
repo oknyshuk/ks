@@ -22,21 +22,21 @@
 
 #include "tier0/memdbgon.h"
 
-ConVar mat_disable_fancy_blending( "mat_disable_fancy_blending", "0" );
+ConVar mat_disable_fancy_blending( "mat_disable_fancy_blending", "0", FCVAR_MATERIAL_SYSTEM_THREAD );
 
-ConVar mat_ambient_light_r( "mat_ambient_light_r", "0.0", FCVAR_CHEAT );
-ConVar mat_ambient_light_g( "mat_ambient_light_g", "0.0", FCVAR_CHEAT );
-ConVar mat_ambient_light_b( "mat_ambient_light_b", "0.0", FCVAR_CHEAT );
+extern ConVar mat_ambient_light_r;
+extern ConVar mat_ambient_light_g;
+extern ConVar mat_ambient_light_b;
 
 static void mat_phong_lightmappedgeneric_changed( IConVar *var, const char *pOldValue, float flOldValue )
 {
 	g_pMaterialSystem->ReloadMaterials( NULL );
 }
-ConVar mat_phong_lightmappedgeneric( "mat_phong_lightmappedgeneric", "1", FCVAR_DEVELOPMENTONLY, "0 = disable, 1 = default, 2 = visualize phong component only (no diffuse)", mat_phong_lightmappedgeneric_changed );
+ConVar mat_phong_lightmappedgeneric( "mat_phong_lightmappedgeneric", "1", FCVAR_MATERIAL_SYSTEM_THREAD | FCVAR_DEVELOPMENTONLY, "0 = disable, 1 = default, 2 = visualize phong component only (no diffuse)", mat_phong_lightmappedgeneric_changed );
 
-static ConVar r_shader_srgbread( "r_shader_srgbread", "0", 0, "1 = use shader srgb texture reads, 0 = use HW" );
+static ConVar r_shader_srgbread( "r_shader_srgbread", "0", FCVAR_MATERIAL_SYSTEM_THREAD, "1 = use shader srgb texture reads, 0 = use HW" );
 
-static ConVar mat_force_vertexfog( "mat_force_vertexfog", "0", FCVAR_DEVELOPMENTONLY );
+static ConVar mat_force_vertexfog( "mat_force_vertexfog", "0", FCVAR_MATERIAL_SYSTEM_THREAD | FCVAR_DEVELOPMENTONLY );
 
 void InitParamsLightmappedGeneric_DX9( CBaseVSShader *pShader, IMaterialVar** params, const char *pMaterialName, LightmappedGeneric_DX9_Vars_t &info )
 {

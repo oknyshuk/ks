@@ -14,10 +14,10 @@
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
-static ConVar r_bloomtintr( "r_bloomtintr", "0.3" );
-static ConVar r_bloomtintg( "r_bloomtintg", "0.59" );
-static ConVar r_bloomtintb( "r_bloomtintb", "0.11" );
-static ConVar r_bloomtintexponent( "r_bloomtintexponent", "2.2" );
+static ConVar r_bloomtintr( "r_bloomtintr", "0.3", FCVAR_MATERIAL_SYSTEM_THREAD );
+static ConVar r_bloomtintg( "r_bloomtintg", "0.59", FCVAR_MATERIAL_SYSTEM_THREAD );
+static ConVar r_bloomtintb( "r_bloomtintb", "0.11", FCVAR_MATERIAL_SYSTEM_THREAD );
+static ConVar r_bloomtintexponent( "r_bloomtintexponent", "2.2", FCVAR_MATERIAL_SYSTEM_THREAD );
 
 BEGIN_VS_SHADER_FLAGS( Downsample_nohdr, "Help for Downsample_nohdr", SHADER_NOT_EDITABLE )
 

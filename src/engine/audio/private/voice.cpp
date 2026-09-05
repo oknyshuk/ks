@@ -183,7 +183,6 @@ static bool		g_bLocalPlayerTalkingAck[ MAX_SPLITSCREEN_CLIENTS ];
 static float	g_LocalPlayerTalkingTimeout[ MAX_SPLITSCREEN_CLIENTS ];
 
 
-CSysModule *g_hVoiceCodecDLL = 0;
 
 // Voice recorder. Can be waveIn, DSound, or whatever.
 static IVoiceRecord *g_pVoiceRecord = NULL;
@@ -815,26 +814,19 @@ bool Voice_Init(const char *pCodecName, int iVersion )
 	EngineUI()->UpdateProgressBar( PROGRESS_DEFAULT );
 
 	// Get the codec.
-	CreateInterfaceFn createCodecFn;
+	CreateInterfaceFn createCodecFn = NULL;
 	//
-	// We must explicitly check codec DLL strings against valid codecs
-	// to avoid remote code execution by loading a module supplied in server string
-	// See security issue disclosed 12-Jan-2016
+	// The codec name arrives in a server string, so only our own built-in codec
+	// is ever accepted. See security issue disclosed 12-Jan-2016
 	//
-	if (   !V_strcmp( pCodecName, "vaudio_celt" )
-		|| !V_strcmp( pCodecName, "vaudio_speex" )
-		|| !V_strcmp( pCodecName, "vaudio_miles" ) )
+	if ( !V_strcmp( pCodecName, "vaudio_celt" ) )
 	{
-		g_hVoiceCodecDLL = FileSystem_LoadModule( pCodecName );
-	}
-	else
-	{
-		g_hVoiceCodecDLL = NULL;
+		createCodecFn = Sys_GetFactoryThis();
 	}
 
 	EngineUI()->UpdateProgressBar( PROGRESS_DEFAULT );
 
-	if ( !g_hVoiceCodecDLL || (createCodecFn = Sys_GetFactory(g_hVoiceCodecDLL)) == NULL ||
+	if ( !createCodecFn ||
 		 (g_pEncodeCodec = (IVoiceCodec*)createCodecFn(pCodecName, NULL)) == NULL || !g_pEncodeCodec->Init( iVersion ) )
 	{
 		Msg("Unable to load voice codec '%s'. Voice disabled.\n", pCodecName);
@@ -945,12 +937,6 @@ void Voice_Deinit()
 	{
 		g_pEncodeCodec->Release();
 		g_pEncodeCodec = NULL;
-	}
-
-	if(g_hVoiceCodecDLL)
-	{
-		FileSystem_UnloadModule(g_hVoiceCodecDLL);
-		g_hVoiceCodecDLL = NULL;
 	}
 
 	if(g_pVoiceRecord)

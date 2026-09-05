@@ -130,7 +130,7 @@ bool CMoveHelperClient::AddToTouched( const trace_t& tr, const Vector& impactvel
 	// Look for duplicates
 	for (i = 0; i < m_TouchList.Count(); i++)
 	{
-		if (m_TouchList[i].trace.m_pEnt == tr.m_pEnt)
+		if (m_TouchList[i].trace.Ent<CBaseEntity>() == tr.Ent<CBaseEntity>())
 		{
 			return false;
 		}
@@ -158,7 +158,7 @@ void CMoveHelperClient::ProcessImpacts( void )
 	for (int i = 0 ; i < m_TouchList.Count(); i++)
 	{
 		// Run the impact function as if we had run it during movement.
-		C_BaseEntity *entity = ClientEntityList().GetEnt( m_TouchList[i].trace.m_pEnt->entindex() );
+		C_BaseEntity *entity = ClientEntityList().GetEnt( m_TouchList[i].trace.Ent<CBaseEntity>()->entindex() );
 		if ( !entity )
 			continue;
 

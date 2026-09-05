@@ -40,10 +40,10 @@
 #ifdef DO_DX9_HOOK
 
 #if D3D_BATCH_PERF_ANALYSIS
-ConVar d3d_batch_vis( "d3d_batch_vis", "0" );
-ConVar d3d_batch_vis_abs_scale( "d3d_batch_vis_abs_scale", ".050" );
-ConVar d3d_present_vis_abs_scale( "d3d_batch_vis_abs_scale", ".050" );
-ConVar d3d_batch_vis_y_scale( "d3d_batch_vis_y_scale", "0.0" );
+ConVar d3d_batch_vis( "d3d_batch_vis", "0", FCVAR_MATERIAL_SYSTEM_THREAD );
+ConVar d3d_batch_vis_abs_scale( "d3d_batch_vis_abs_scale", ".050", FCVAR_MATERIAL_SYSTEM_THREAD );
+ConVar d3d_present_vis_abs_scale( "d3d_batch_vis_abs_scale", ".050", FCVAR_MATERIAL_SYSTEM_THREAD );
+ConVar d3d_batch_vis_y_scale( "d3d_batch_vis_y_scale", "0.0", FCVAR_MATERIAL_SYSTEM_THREAD );
 uint64 g_nTotalD3DCalls, g_nTotalD3DCycles;
 static double s_rdtsc_to_ms;
 #endif
@@ -62,7 +62,7 @@ static double s_rdtsc_to_ms;
 #include "tier0/memdbgon.h"
 
 // A logging channel used during engine initialization
-DEFINE_LOGGING_CHANNEL_NO_TAGS( LOG_EngineInitialization, "EngineInitialization" );
+DECLARE_LOGGING_CHANNEL( LOG_EngineInitialization );
 
 
 //-----------------------------------------------------------------------------
@@ -82,13 +82,13 @@ EXPOSE_SINGLE_INTERFACE_GLOBALVAR( CShaderDeviceMgrDx8, IShaderDeviceMgr,
 
 
 // hook into mat_forcedynamic from the engine.
-static ConVar mat_forcedynamic( "mat_forcedynamic", "0", FCVAR_CHEAT );
+static ConVar mat_forcedynamic( "mat_forcedynamic", "0", FCVAR_MATERIAL_SYSTEM_THREAD | FCVAR_CHEAT );
 
 // Turn this on to record frames that are longer than what CERT requires on the 360.
-ConVar mat_spew_long_frames( "mat_spew_long_frames", "0", 0, "warn about frames that go over 66ms for CERT purposes." );
+ConVar mat_spew_long_frames( "mat_spew_long_frames", "0", FCVAR_MATERIAL_SYSTEM_THREAD, "warn about frames that go over 66ms for CERT purposes." );
 
 // this is hooked into the engines convar
-ConVar mat_debugalttab( "mat_debugalttab", "0", FCVAR_CHEAT );
+extern ConVar mat_debugalttab;
 
 //-----------------------------------------------------------------------------
 //
@@ -190,14 +190,14 @@ void CShaderDeviceMgrDx8::Shutdown( )
 	
 // BeginPIXEvent( PIX_VALVE_ORANGE, "Shutdown" );
 	
-	if ( g_pShaderAPI )
+	if ( g_pShaderAPIBase )
 	{
-		g_pShaderAPI->OnDeviceShutdown();
+		g_pShaderAPIBase->OnDeviceShutdown();
 	}
 	
-	if ( g_pShaderDevice )
+	if ( g_pShaderDeviceBase )
 	{
-		g_pShaderDevice->ShutdownDevice();
+		g_pShaderDeviceBase->ShutdownDevice();
 		g_pMaterialSystemHardwareConfig = NULL;
 	}
 
@@ -511,7 +511,7 @@ void CShaderDeviceMgrDx8::CheckVendorDependentDepthResolveSupport( HardwareCaps_
 	Msg( "INTZ %sSUPPORTED!\n", pCaps->m_bSupportsINTZ ? "" : "NOT " );
 }
 
-ConVar mat_hdr_level( "mat_hdr_level", "2" );
+extern ConVar mat_hdr_level;
 
 #if   defined( DX_TO_GL_ABSTRACTION ) || defined( DX_TO_VK_ABSTRACTION )
 #define SHADOWMAP_SLOPESCALEDEPTHBIAS	"8"
@@ -521,11 +521,11 @@ ConVar mat_hdr_level( "mat_hdr_level", "2" );
 #define SHADOWMAP_DEPTHBIAS				".000025"
 #endif
 
-ConVar mat_slopescaledepthbias_shadowmap( "mat_slopescaledepthbias_shadowmap", SHADOWMAP_SLOPESCALEDEPTHBIAS, FCVAR_NONE );
-ConVar mat_depthbias_shadowmap(	"mat_depthbias_shadowmap", SHADOWMAP_DEPTHBIAS, FCVAR_NONE );
+ConVar mat_slopescaledepthbias_shadowmap( "mat_slopescaledepthbias_shadowmap", SHADOWMAP_SLOPESCALEDEPTHBIAS, FCVAR_MATERIAL_SYSTEM_THREAD | FCVAR_NONE );
+ConVar mat_depthbias_shadowmap(	"mat_depthbias_shadowmap", SHADOWMAP_DEPTHBIAS, FCVAR_MATERIAL_SYSTEM_THREAD | FCVAR_NONE );
 
 // For testing Fast Clip
-ConVar mat_fastclip( "mat_fastclip", "0", FCVAR_CHEAT  );
+ConVar mat_fastclip( "mat_fastclip", "0", FCVAR_MATERIAL_SYSTEM_THREAD | FCVAR_CHEAT );
 
 //-----------------------------------------------------------------------------
 // Determine capabilities
@@ -1152,7 +1152,7 @@ bool CShaderDeviceMgrDx8::SetAdapter( int nAdapter, int nAdapterFlags )
 //		return false;
 //	}
 
-	g_pShaderDevice = g_pShaderDeviceDx8;
+	g_pShaderDeviceBase = g_pShaderDeviceDx8;
 
 	return true;
 }
@@ -1278,22 +1278,22 @@ CreateInterfaceFn CShaderDeviceMgrDx8::SetMode( void *hWnd, int nAdapter, const 
 		return NULL;
 
 	bool bReacquireResourcesNeeded = false;
-	if ( g_pShaderDevice )
+	if ( g_pShaderDeviceBase )
 	{
 		bReacquireResourcesNeeded = true;
-		g_pShaderDevice->ReleaseResources();
+		g_pShaderDeviceBase->ReleaseResources();
 	}
 
-	if ( g_pShaderAPI )
+	if ( g_pShaderAPIBase )
 	{
-		g_pShaderAPI->OnDeviceShutdown();
-		g_pShaderAPI = NULL;
+		g_pShaderAPIBase->OnDeviceShutdown();
+		g_pShaderAPIBase = NULL;
 	}
 
-	if ( g_pShaderDevice )
+	if ( g_pShaderDeviceBase )
 	{
-		g_pShaderDevice->ShutdownDevice();
-		g_pShaderDevice = NULL;
+		g_pShaderDeviceBase->ShutdownDevice();
+		g_pShaderDeviceBase = NULL;
 	}
 
 	g_pShaderShadow = NULL;
@@ -1306,13 +1306,13 @@ CreateInterfaceFn CShaderDeviceMgrDx8::SetMode( void *hWnd, int nAdapter, const 
 	if ( !g_pShaderAPIDX8->OnDeviceInit() )
 		return NULL;
 
-	g_pShaderDevice = g_pShaderDeviceDx8;
-	g_pShaderAPI = g_pShaderAPIDX8;
+	g_pShaderDeviceBase = g_pShaderDeviceDx8;
+	g_pShaderAPIBase = g_pShaderAPIDX8;
 	g_pShaderShadow = g_pShaderShadowDx8;
 
 	if ( bReacquireResourcesNeeded )
 	{
-		g_pShaderDevice->ReacquireResources();
+		g_pShaderDeviceBase->ReacquireResources();
 	}
 
 	return ShaderInterfaceFactory;
@@ -1508,7 +1508,7 @@ void CShaderDeviceDx8::CalcBackBufferDimensions( const ShaderDisplayMode_t &mode
 void CShaderDeviceDx8::SetPresentParameters( void* hWnd, int nAdapter, const ShaderDeviceInfo_t &info, bool bSetSymbolsOnly )
 {
 	ShaderDisplayMode_t mode;
-	g_pShaderDeviceMgr->GetCurrentModeInfo( &mode, nAdapter );
+	g_pShaderDeviceMgrBase->GetCurrentModeInfo( &mode, nAdapter );
 
 	int backBufferWidth  = 0;
 	int backBufferHeight = 0;
@@ -1810,7 +1810,7 @@ void CShaderDeviceDx8::SpewDriverInfo() const
 		ident.VendorId, ident.DeviceId, ident.SubSysId, ident.Revision );
 
 	ShaderDisplayMode_t mode;
-	g_pShaderDeviceMgr->GetCurrentModeInfo( &mode, m_nAdapter );
+	g_pShaderDeviceMgrBase->GetCurrentModeInfo( &mode, m_nAdapter );
 	Warning("Display mode : %d x %d @%dHz (%s)\n", 
 		mode.m_nWidth, mode.m_nHeight, mode.m_nRefreshRateNumerator, ImageLoader::GetName( mode.m_Format ) );
 	Warning("Vertex Shader Version : %d.%d Pixel Shader Version : %d.%d\n",
@@ -1857,7 +1857,7 @@ void CShaderDeviceDx8::SpewDriverInfo() const
 		(caps.RasterCaps & D3DPRASTERCAPS_DEPTHBIAS) ? " Y " : " N ",
 		(caps.RasterCaps & D3DPRASTERCAPS_ZTEST) ? " Y " : "*N*" );
 
-	Warning("Size of Texture Memory : %d kb\n", g_pHardwareConfig->Caps().m_TextureMemorySize / 1024 );
+	Warning("Size of Texture Memory : %d kb\n", g_pHardwareConfigDx8->Caps().m_TextureMemorySize / 1024 );
 	Warning("Max Texture Dimensions : %d x %d\n", 
 		caps.MaxTextureWidth, caps.MaxTextureHeight );
 	if (caps.MaxTextureAspectRatio != 0)
@@ -1872,36 +1872,36 @@ void CShaderDeviceDx8::SpewDriverInfo() const
 		(caps.TextureCaps & D3DPTEXTURECAPS_MIPCUBEMAP) ? " Y " : " N ",
 		(caps.TextureCaps & D3DPTEXTURECAPS_SQUAREONLY) ? "*Y*" : " N " );
 
-	Warning( "vendor id: 0x%x\n", g_pHardwareConfig->ActualCaps().m_VendorID );
-	Warning( "device id: 0x%x\n", g_pHardwareConfig->ActualCaps().m_DeviceID );
+	Warning( "vendor id: 0x%x\n", g_pHardwareConfigDx8->ActualCaps().m_VendorID );
+	Warning( "device id: 0x%x\n", g_pHardwareConfigDx8->ActualCaps().m_DeviceID );
 
 	Warning( "SHADERAPI CAPS:\n" );
-	Warning( "m_NumSamplers: %d\n", g_pHardwareConfig->Caps().m_NumSamplers );
-	Warning( "m_NumVertexSamplers: %d\n", g_pHardwareConfig->Caps().m_NumVertexSamplers );
-	Warning( "m_HasSetDeviceGammaRamp: %s\n", g_pHardwareConfig->Caps().m_HasSetDeviceGammaRamp ? "yes" : "no" );
-	Warning( "m_SupportsPixelShaders_2_b: %s\n", g_pHardwareConfig->Caps().m_SupportsPixelShaders_2_b ? "yes" : "no" );
-	Warning( "m_SupportsShaderModel_3_0: %s\n", g_pHardwareConfig->Caps().m_SupportsShaderModel_3_0 ? "yes" : "no" );
-	Warning( "m_SupportsCompressedVertices: %d\n", g_pHardwareConfig->Caps().m_SupportsCompressedVertices );
-	Warning( "m_bSupportsAnisotropicFiltering: %s\n", g_pHardwareConfig->Caps().m_bSupportsAnisotropicFiltering ? "yes" : "no" );
-	Warning( "m_nMaxAnisotropy: %d\n", g_pHardwareConfig->Caps().m_nMaxAnisotropy );
-	Warning( "m_MaxTextureWidth: %d\n", g_pHardwareConfig->Caps().m_MaxTextureWidth );
-	Warning( "m_MaxTextureHeight: %d\n", g_pHardwareConfig->Caps().m_MaxTextureHeight );
-	Warning( "m_MaxTextureAspectRatio: %d\n", g_pHardwareConfig->Caps().m_MaxTextureAspectRatio );
-	Warning( "m_MaxPrimitiveCount: %d\n", g_pHardwareConfig->Caps().m_MaxPrimitiveCount );
-	Warning( "m_ZBiasAndSlopeScaledDepthBiasSupported: %s\n", g_pHardwareConfig->Caps().m_ZBiasAndSlopeScaledDepthBiasSupported ? "yes" : "no" );
-	Warning( "m_NumPixelShaderConstants: %d\n", g_pHardwareConfig->Caps().m_NumPixelShaderConstants );
-	Warning( "m_NumVertexShaderConstants: %d\n", g_pHardwareConfig->Caps().m_NumVertexShaderConstants );
-	Warning( "m_NumBooleanVertexShaderConstants: %d\n", g_pHardwareConfig->Caps().m_NumBooleanVertexShaderConstants );
-	Warning( "m_NumIntegerVertexShaderConstants: %d\n", g_pHardwareConfig->Caps().m_NumIntegerVertexShaderConstants );
-	Warning( "m_TextureMemorySize: %d\n", g_pHardwareConfig->Caps().m_TextureMemorySize );
-	Warning( "m_MaxNumLights: %d\n", g_pHardwareConfig->Caps().m_MaxNumLights );
-	Warning( "m_MaxVertexShaderBlendMatrices: %d\n", g_pHardwareConfig->Caps().m_MaxVertexShaderBlendMatrices );
-	Warning( "m_SupportsMipmappedCubemaps: %s\n", g_pHardwareConfig->Caps().m_SupportsMipmappedCubemaps ? "yes" : "no" );
-	Warning( "m_nDXSupportLevel: %d\n", g_pHardwareConfig->Caps().m_nDXSupportLevel );
-	Warning( "m_PreferDynamicTextures: %s\n", g_pHardwareConfig->Caps().m_PreferDynamicTextures ? "yes" : "no" );
-	Warning( "m_MaxUserClipPlanes: %d\n", g_pHardwareConfig->Caps().m_MaxUserClipPlanes );
-	Warning( "m_SupportsSRGB: %s\n", g_pHardwareConfig->Caps().m_SupportsSRGB ? "yes" : "no" );
-	switch( g_pHardwareConfig->Caps().m_HDRType )
+	Warning( "m_NumSamplers: %d\n", g_pHardwareConfigDx8->Caps().m_NumSamplers );
+	Warning( "m_NumVertexSamplers: %d\n", g_pHardwareConfigDx8->Caps().m_NumVertexSamplers );
+	Warning( "m_HasSetDeviceGammaRamp: %s\n", g_pHardwareConfigDx8->Caps().m_HasSetDeviceGammaRamp ? "yes" : "no" );
+	Warning( "m_SupportsPixelShaders_2_b: %s\n", g_pHardwareConfigDx8->Caps().m_SupportsPixelShaders_2_b ? "yes" : "no" );
+	Warning( "m_SupportsShaderModel_3_0: %s\n", g_pHardwareConfigDx8->Caps().m_SupportsShaderModel_3_0 ? "yes" : "no" );
+	Warning( "m_SupportsCompressedVertices: %d\n", g_pHardwareConfigDx8->Caps().m_SupportsCompressedVertices );
+	Warning( "m_bSupportsAnisotropicFiltering: %s\n", g_pHardwareConfigDx8->Caps().m_bSupportsAnisotropicFiltering ? "yes" : "no" );
+	Warning( "m_nMaxAnisotropy: %d\n", g_pHardwareConfigDx8->Caps().m_nMaxAnisotropy );
+	Warning( "m_MaxTextureWidth: %d\n", g_pHardwareConfigDx8->Caps().m_MaxTextureWidth );
+	Warning( "m_MaxTextureHeight: %d\n", g_pHardwareConfigDx8->Caps().m_MaxTextureHeight );
+	Warning( "m_MaxTextureAspectRatio: %d\n", g_pHardwareConfigDx8->Caps().m_MaxTextureAspectRatio );
+	Warning( "m_MaxPrimitiveCount: %d\n", g_pHardwareConfigDx8->Caps().m_MaxPrimitiveCount );
+	Warning( "m_ZBiasAndSlopeScaledDepthBiasSupported: %s\n", g_pHardwareConfigDx8->Caps().m_ZBiasAndSlopeScaledDepthBiasSupported ? "yes" : "no" );
+	Warning( "m_NumPixelShaderConstants: %d\n", g_pHardwareConfigDx8->Caps().m_NumPixelShaderConstants );
+	Warning( "m_NumVertexShaderConstants: %d\n", g_pHardwareConfigDx8->Caps().m_NumVertexShaderConstants );
+	Warning( "m_NumBooleanVertexShaderConstants: %d\n", g_pHardwareConfigDx8->Caps().m_NumBooleanVertexShaderConstants );
+	Warning( "m_NumIntegerVertexShaderConstants: %d\n", g_pHardwareConfigDx8->Caps().m_NumIntegerVertexShaderConstants );
+	Warning( "m_TextureMemorySize: %d\n", g_pHardwareConfigDx8->Caps().m_TextureMemorySize );
+	Warning( "m_MaxNumLights: %d\n", g_pHardwareConfigDx8->Caps().m_MaxNumLights );
+	Warning( "m_MaxVertexShaderBlendMatrices: %d\n", g_pHardwareConfigDx8->Caps().m_MaxVertexShaderBlendMatrices );
+	Warning( "m_SupportsMipmappedCubemaps: %s\n", g_pHardwareConfigDx8->Caps().m_SupportsMipmappedCubemaps ? "yes" : "no" );
+	Warning( "m_nDXSupportLevel: %d\n", g_pHardwareConfigDx8->Caps().m_nDXSupportLevel );
+	Warning( "m_PreferDynamicTextures: %s\n", g_pHardwareConfigDx8->Caps().m_PreferDynamicTextures ? "yes" : "no" );
+	Warning( "m_MaxUserClipPlanes: %d\n", g_pHardwareConfigDx8->Caps().m_MaxUserClipPlanes );
+	Warning( "m_SupportsSRGB: %s\n", g_pHardwareConfigDx8->Caps().m_SupportsSRGB ? "yes" : "no" );
+	switch( g_pHardwareConfigDx8->Caps().m_HDRType )
 	{
 	case HDR_TYPE_NONE:
 		Warning( "m_HDRType: HDR_TYPE_NONE\n" );
@@ -1916,16 +1916,16 @@ void CShaderDeviceDx8::SpewDriverInfo() const
 		Assert( 0 );
 		break;
 	}
-	Warning( "m_UseFastClipping: %s\n", g_pHardwareConfig->Caps().m_UseFastClipping ? "yes" : "no" );
-	Warning( "m_pShaderDLL: %s\n", g_pHardwareConfig->Caps().m_pShaderDLL );
-	Warning( "m_bNeedsATICentroidHack: %s\n", g_pHardwareConfig->Caps().m_bNeedsATICentroidHack ? "yes" : "no" );
-	Warning( "m_bDisableShaderOptimizations: %s\n", g_pHardwareConfig->Caps().m_bDisableShaderOptimizations ? "yes" : "no" );
-	Warning( "m_MaxSimultaneousRenderTargets: %d\n", g_pHardwareConfig->Caps().m_MaxSimultaneousRenderTargets );
-	Warning( "m_bPreferZPrepass: %s\n", g_pHardwareConfig->Caps().m_bPreferZPrepass ? "yes" : "no" );
-	Warning( "m_bSuppressPixelShaderCentroidHackFixup: %s\n", g_pHardwareConfig->Caps().m_bSuppressPixelShaderCentroidHackFixup ? "yes" : "no" );
-	Warning( "m_bPreferTexturesInHWMemory: %s\n", g_pHardwareConfig->Caps().m_bPreferTexturesInHWMemory ? "yes" : "no" );
-	Warning( "m_bPreferHardwareSync: %s\n", g_pHardwareConfig->Caps().m_bPreferHardwareSync ? "yes" : "no" );
-	Warning( "m_bUnsupported: %s\n", g_pHardwareConfig->Caps().m_bUnsupported ? "yes" : "no" );
+	Warning( "m_UseFastClipping: %s\n", g_pHardwareConfigDx8->Caps().m_UseFastClipping ? "yes" : "no" );
+	Warning( "m_pShaderDLL: %s\n", g_pHardwareConfigDx8->Caps().m_pShaderDLL );
+	Warning( "m_bNeedsATICentroidHack: %s\n", g_pHardwareConfigDx8->Caps().m_bNeedsATICentroidHack ? "yes" : "no" );
+	Warning( "m_bDisableShaderOptimizations: %s\n", g_pHardwareConfigDx8->Caps().m_bDisableShaderOptimizations ? "yes" : "no" );
+	Warning( "m_MaxSimultaneousRenderTargets: %d\n", g_pHardwareConfigDx8->Caps().m_MaxSimultaneousRenderTargets );
+	Warning( "m_bPreferZPrepass: %s\n", g_pHardwareConfigDx8->Caps().m_bPreferZPrepass ? "yes" : "no" );
+	Warning( "m_bSuppressPixelShaderCentroidHackFixup: %s\n", g_pHardwareConfigDx8->Caps().m_bSuppressPixelShaderCentroidHackFixup ? "yes" : "no" );
+	Warning( "m_bPreferTexturesInHWMemory: %s\n", g_pHardwareConfigDx8->Caps().m_bPreferTexturesInHWMemory ? "yes" : "no" );
+	Warning( "m_bPreferHardwareSync: %s\n", g_pHardwareConfigDx8->Caps().m_bPreferHardwareSync ? "yes" : "no" );
+	Warning( "m_bUnsupported: %s\n", g_pHardwareConfigDx8->Caps().m_bUnsupported ? "yes" : "no" );
 }
 
 
@@ -2019,7 +2019,7 @@ IDirect3DDevice9* CShaderDeviceDx8::InvokeCreateDevice( void* hWnd, int nAdapter
 
 	if ( !FAILED( hr ) && pD3DDevice )
 	{
-		g_pShaderDeviceMgr->InvokeDeviceResetNotifications( pD3DDevice, &m_PresentParameters, hWnd );
+		g_pShaderDeviceMgrBase->InvokeDeviceResetNotifications( pD3DDevice, &m_PresentParameters, hWnd );
 #ifdef DX_TO_VK_ABSTRACTION
 		// DXVK: flush backbuffer init commands before heavy resource allocation begins.
 		// Without this sync point, vertex explosions occur during map loading.
@@ -2128,9 +2128,9 @@ bool CShaderDeviceDx8::CreateD3DDevice( void* pHWnd, int nAdapter, const ShaderD
 	m_ViewHWnd = hWnd;
 	GetWindowSize( m_nWindowWidth, m_nWindowHeight );
 
-	g_pHardwareConfig->SetupHardwareCaps( info, g_ShaderDeviceMgrDx8.GetHardwareCaps( nAdapter ) );
+	g_pHardwareConfigDx8->SetupHardwareCaps( info, g_ShaderDeviceMgrDx8.GetHardwareCaps( nAdapter ) );
 
-	g_pHardwareConfig->CapsForEdit().m_SupportsCompressedTextures = COMPRESSED_TEXTURES_ON;
+	g_pHardwareConfigDx8->CapsForEdit().m_SupportsCompressedTextures = COMPRESSED_TEXTURES_ON;
 
 	return ( !FAILED( hr ) );
 }
@@ -2380,7 +2380,7 @@ void CShaderDeviceDx8::ReleaseResources( bool bReleaseManagedResources /*= true*
 	int nRestoreFlags = bReleaseManagedResources ? MATERIAL_RESTORE_RELEASE_MANAGED_RESOURCES : 0;
 	ShaderUtil()->ReleaseShaderObjects( nRestoreFlags );
 	MeshMgr()->ReleaseBuffers();
-	g_pShaderAPI->ReleaseShaderObjects( bReleaseManagedResources );
+	g_pShaderAPIBase->ReleaseShaderObjects( bReleaseManagedResources );
 
 #ifdef _DEBUG
 	if ( MeshMgr()->BufferCount() != 0 )
@@ -2455,7 +2455,7 @@ void CShaderDeviceDx8::ReacquireResourcesInternal( bool bResetState, bool bForce
 	VPROF_INCREMENT_GROUP_COUNTER( "reacquire_resources", COUNTER_GROUP_NO_RESET, 1 );
 #endif
 
-	g_pShaderAPI->RestoreShaderObjects();
+	g_pShaderAPIBase->RestoreShaderObjects();
 	AllocFrameSyncObjects();
 	AllocNonInteractiveRefreshObjects();
 	MeshMgr()->RestoreBuffers();
@@ -2480,10 +2480,10 @@ bool CShaderDeviceDx8::ResizeWindow( const ShaderDeviceInfo_t &info )
 	// this is not the "real" set, but an earlier call to just update the dependencies
 	SetPresentParameters( (HWND)m_hWnd, m_DisplayAdapter, info, true );
 
-	g_pShaderDeviceMgr->InvokeModeChangeCallbacks( info.m_DisplayMode.m_nWidth, info.m_DisplayMode.m_nHeight ); 
+	g_pShaderDeviceMgrBase->InvokeModeChangeCallbacks( info.m_DisplayMode.m_nWidth, info.m_DisplayMode.m_nHeight ); 
 	SetPresentParameters( (VD3DHWND)m_hWnd, m_DisplayAdapter, info );
 
-	g_pShaderDeviceMgr->InvokeDeviceLostNotifications();
+	g_pShaderDeviceMgrBase->InvokeDeviceLostNotifications();
 
 	// We were ok, now we're not. Release resources
 	ReleaseResources( ( g_pShaderUtil->GetThreadMode() != MATERIAL_QUEUED_THREADED ) );
@@ -2510,7 +2510,7 @@ void CShaderDeviceDx8::MarkDeviceLost( )
 // Checks if the device was lost
 //-----------------------------------------------------------------------------
 #if defined( _DEBUG )
-ConVar mat_forcelostdevice( "mat_forcelostdevice", "0" );
+ConVar mat_forcelostdevice( "mat_forcelostdevice", "0", FCVAR_MATERIAL_SYSTEM_THREAD );
 #endif
 
 void CShaderDeviceDx8::CheckDeviceLost( bool bOtherAppInitializing )
@@ -2560,7 +2560,7 @@ void CShaderDeviceDx8::CheckDeviceLost( bool bOtherAppInitializing )
 		{
 			// purge unreferenced materials
 			g_pShaderUtil->UncacheUnusedMaterials( true );
-			g_pShaderDeviceMgr->InvokeDeviceLostNotifications();
+			g_pShaderDeviceMgrBase->InvokeDeviceLostNotifications();
 
 			// We were ok, now we're not. Release resources
 			ReleaseResources( bReleaseManagedResources );
@@ -2570,7 +2570,7 @@ void CShaderDeviceDx8::CheckDeviceLost( bool bOtherAppInitializing )
 		{
 			// purge unreferenced materials
 			g_pShaderUtil->UncacheUnusedMaterials( true );
-			g_pShaderDeviceMgr->InvokeDeviceLostNotifications();
+			g_pShaderDeviceMgrBase->InvokeDeviceLostNotifications();
 
 			// We were ok, now we're not. Release resources
 			ReleaseResources( bReleaseManagedResources );
@@ -2784,7 +2784,7 @@ void CShaderDeviceDx8::UpdatePresentStats()
 // at least on PS/3, framerate is capped at 30 fps (33ms) and trying to Present every 
 // 15 ms will cause a backlog of frames to render, which will effectively stall every Present after the first 2 for 33ms
 #define LOADING_PRESENT_UPDATE_INTERVAL 0.05f
-float g_flLastUpdateTime = 0.0f;
+static float g_flLastUpdateTime = 0.0f;
 bool g_bInSwap = false;
 
 
@@ -2855,7 +2855,7 @@ void CShaderDeviceDx8::Present()
 	LOCK_SHADERAPI();
 
 	// flush the dynamic buffer and execute the per-draw call queuene
-	g_pShaderAPI->OnPresent();
+	g_pShaderAPIBase->OnPresent();
 
 	if ( !IsDeactivated() )
 	{
@@ -2884,7 +2884,7 @@ void CShaderDeviceDx8::Present()
 	// Copy the back buffer into the non-interactive temp buffer
 	if ( m_NonInteractiveRefresh.m_Mode == MATERIAL_NON_INTERACTIVE_MODE_LEVEL_LOAD )
 	{
-		g_pShaderAPI->CopyRenderTargetToTextureEx( m_NonInteractiveRefresh.m_Info.m_hTempFullscreenTexture, 0, NULL, NULL );
+		g_pShaderAPIBase->CopyRenderTargetToTextureEx( m_NonInteractiveRefresh.m_Info.m_hTempFullscreenTexture, 0, NULL, NULL );
 	}
 
 	// If we're not iconified, try to present (without this check, we can flicker when Alt-Tabbed away)
@@ -2900,7 +2900,7 @@ void CShaderDeviceDx8::Present()
 			GetClientRect( ( HWND )m_ViewHWnd, &destRect );
 
 			ShaderViewport_t viewport;
-			g_pShaderAPI->GetViewports( &viewport, 1 );
+			g_pShaderAPIBase->GetViewports( &viewport, 1 );
 
 			RECT srcRect;
 			srcRect.left = viewport.m_nTopLeftX;
@@ -2913,7 +2913,7 @@ void CShaderDeviceDx8::Present()
 		}
 		else
 		{
-			g_pShaderAPI->OwnGPUResources( false );
+			g_pShaderAPIBase->OwnGPUResources( false );
 			MICRO_PROFILE( g_mp_Present );
 			hr = Dx9Device()->Present( 0, 0, 0, 0 );
 		}
@@ -2937,12 +2937,12 @@ void CShaderDeviceDx8::Present()
 	{
 		RECORD_COMMAND( DX8_KEYFRAME, 0 );
 
-		g_pShaderAPI->ResetRenderState();
+		g_pShaderAPIBase->ResetRenderState();
 		frame = 0;
 	}
 #endif
 
-	g_pShaderAPI->AdvancePIXFrame();
+	g_pShaderAPIBase->AdvancePIXFrame();
 
 	if ( !IsDeactivated() )
 	{
@@ -2960,11 +2960,11 @@ void CShaderDeviceDx8::Present()
 		// instead of only changed parts. For gameplay this is negligible; complex menus
 		// may see minor impact. D3DSWAPEFFECT_COPY alone doesn't suffice because DXVK's
 		// Vulkan swapchain still rotates images underneath.
-		g_pShaderAPI->ClearBuffers( true, true, true, -1, -1 );
+		g_pShaderAPIBase->ClearBuffers( true, true, true, -1, -1 );
 #else
 		if ( ( ShaderUtil()->GetConfig().bMeasureFillRate || ShaderUtil()->GetConfig().bVisualizeFillRate ) )
 		{
-			g_pShaderAPI->ClearBuffers( true, true, true, -1, -1 );
+			g_pShaderAPIBase->ClearBuffers( true, true, true, -1, -1 );
 		}
 #endif
 
@@ -2983,13 +2983,13 @@ void CShaderDeviceDx8::Present()
 // TV's generally have a 2.5 gamma, so we need to convert our 2.2 frame buffer into a 2.5 frame buffer for display on a TV
 
 #if defined( CSTRIKE15 )
-ConVar mat_monitorgamma_pwl2srgb( "mat_monitorgamma_pwl2srgb", "0" );
-ConVar mat_monitorgamma_vganonpwlgamma( "mat_monitorgamma_vganonpwlgamma", "2.2" );
+ConVar mat_monitorgamma_pwl2srgb( "mat_monitorgamma_pwl2srgb", "0", FCVAR_MATERIAL_SYSTEM_THREAD );
+ConVar mat_monitorgamma_vganonpwlgamma( "mat_monitorgamma_vganonpwlgamma", "2.2", FCVAR_MATERIAL_SYSTEM_THREAD );
 #else
-ConVar mat_monitorgamma_pwl2srgb( "mat_monitorgamma_pwl2srgb", "1" );
-ConVar mat_monitorgamma_vganonpwlgamma( "mat_monitorgamma_vganonpwlgamma", "2.11" );
+ConVar mat_monitorgamma_pwl2srgb( "mat_monitorgamma_pwl2srgb", "1", FCVAR_MATERIAL_SYSTEM_THREAD );
+ConVar mat_monitorgamma_vganonpwlgamma( "mat_monitorgamma_vganonpwlgamma", "2.11", FCVAR_MATERIAL_SYSTEM_THREAD );
 #endif
-ConVar mat_monitorgamma_force_480_full_tv_range( "mat_monitorgamma_force_480_full_tv_range", "1" );
+ConVar mat_monitorgamma_force_480_full_tv_range( "mat_monitorgamma_force_480_full_tv_range", "1", FCVAR_MATERIAL_SYSTEM_THREAD );
 
 void CShaderDeviceDx8::SetHardwareGammaRamp( float fGamma, float fGammaTVRangeMin, float fGammaTVRangeMax, float fGammaTVExponent, bool bTVEnabled )
 {

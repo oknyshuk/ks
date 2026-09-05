@@ -21,7 +21,7 @@
 #include "tier0/memdbgon.h"
 
 
-static ConVar r_lightwarpidentity( "r_lightwarpidentity", "0", FCVAR_CHEAT );
+static ConVar r_lightwarpidentity( "r_lightwarpidentity", "0", FCVAR_MATERIAL_SYSTEM_THREAD | FCVAR_CHEAT );
 
 // FIXME: doesn't support fresnel!
 void InitParamsCloak_DX9( CBaseVSShader *pShader, IMaterialVar** params, const char *pMaterialName, Cloak_DX9_Vars_t &info )

@@ -221,7 +221,7 @@ static const ElementData elementTable[] = {	positionElement,
 											texCoord4D0Element, texCoord4D1Element, texCoord4D2Element, texCoord4D3Element, texCoord4D4Element, texCoord4D5Element, texCoord4D6Element, texCoord4D7Element,
 											};
 
-static ConVar mem_vballocspew( "mem_vballocspew", "0", FCVAR_CHEAT, "How often to spew vertex buffer allocation stats - 1: every alloc, 2+: every 2+ allocs, 0: off" );
+static ConVar mem_vballocspew( "mem_vballocspew", "0", FCVAR_MATERIAL_SYSTEM_THREAD | FCVAR_CHEAT, "How often to spew vertex buffer allocation stats - 1: every alloc, 2+: every 2+ allocs, 0: off" );
 
 #endif // ENABLE_VB_ALLOC_TRACKER
 

@@ -144,7 +144,7 @@ int APIENTRY WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdL
 
 int main( int argc, char *argv[] )
 {
-	const char *pLauncherPath = "bin/liblauncher" DLL_EXT_STRING;
+	const char *pLauncherPath = "bin/libengine" DLL_EXT_STRING;
 
 	void *launcher = dlopen( pLauncherPath, RTLD_NOW );
 	

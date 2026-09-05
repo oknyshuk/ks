@@ -314,7 +314,7 @@ int UTIL_DropToFloor( CBaseEntity *pEntity, unsigned int mask, CBaseEntity *pIgn
 		return 0;
 
 	pEntity->SetAbsOrigin( trace.endpos );
-	pEntity->SetGroundEntity( trace.m_pEnt );
+	pEntity->SetGroundEntity( trace.Ent<CBaseEntity>() );
 
 	return 1;
 }
@@ -1561,7 +1561,7 @@ Vector UTIL_RandomBloodVector( void )
 //------------------------------------------------------------------------------
 void UTIL_ImpactTrace( trace_t *pTrace, int iDamageType, const char *pCustomImpactName )
 {
-	CBaseEntity *pEntity = pTrace->m_pEnt;
+	CBaseEntity *pEntity = pTrace->Ent<CBaseEntity>();
 
 	// Is the entity valid, is the surface sky?
 	if ( !pEntity || !UTIL_IsValidEntity( pEntity ) || (pTrace->surface.flags & SURF_SKY) )
@@ -1591,7 +1591,7 @@ void UTIL_PlayerDecalTrace( trace_t *pTrace, Vector const &right, int playernum 
 	filter.SetIgnorePredictionCull( true );	// need to ignore prediction cull for the person who is spraying
 
 	te->PlayerDecal( filter, 0.0,
-		&pTrace->endpos, &pTrace->startpos, &right, playernum, pTrace->m_pEnt->entindex(), pTrace->hitbox );
+		&pTrace->endpos, &pTrace->startpos, &right, playernum, pTrace->Ent<CBaseEntity>()->entindex(), pTrace->hitbox );
 }
 
 bool UTIL_TeamsMatch( const char *pTeamName1, const char *pTeamName2 )

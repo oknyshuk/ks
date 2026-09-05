@@ -1642,7 +1642,7 @@ int g_iNextFreeSlot;
 #define LMDToHeader( pUserPtr )		( ((AllocHeader_t *)(pUserPtr)) - 1 )
 #define LMDFromHeader( pHeader )	( (byte *)((pHeader) + 1) )
 
-CThreadFastMutex g_LMDMutex;
+CThreadFastMutex g_LMDMutex CONSTRUCT_EARLY;
 
 const char *g_pLMDFileName = NULL;
 int g_nLMDLine;

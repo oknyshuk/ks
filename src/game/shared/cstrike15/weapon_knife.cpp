@@ -345,7 +345,7 @@ bool CKnife::SwingOrStab( CSWeaponMode weaponMode )
 		{
 			// Calculate the point of intersection of the line (or hull) and the object we hit
 			// This is and approximation of the "best" intersection
-			CBaseEntity *pHit = tr.m_pEnt;
+			CBaseEntity *pHit = tr.Ent<CBaseEntity>();
 			if ( !pHit || pHit->IsBSPModel() )
 				FindHullIntersection( vecSrc, tr, VEC_DUCK_HULL_MIN, VEC_DUCK_HULL_MAX, pPlayer );
 			vecEnd = tr.endpos;	// This is the point on the actual surface (the hull could have hit space)
@@ -391,7 +391,7 @@ bool CKnife::SwingOrStab( CSWeaponMode weaponMode )
 	if ( bDidHit )
 	{
 		// server side damage calculations
-		CBaseEntity *pEntity = tr.m_pEnt;
+		CBaseEntity *pEntity = tr.Ent<CBaseEntity>();
 
 #ifndef CLIENT_DLL
 		// player "shoot" animation
@@ -469,12 +469,12 @@ bool CKnife::SwingOrStab( CSWeaponMode weaponMode )
 		ApplyMultiDamage();
 #endif
 
-		if ( tr.m_pEnt )
+		if ( tr.Ent<CBaseEntity>() )
 		{
 			CPASAttenuationFilter filter( this );
 			filter.UsePredictionRules();
 
-			if ( tr.m_pEnt->IsPlayer()  )
+			if ( tr.Ent<CBaseEntity>()->IsPlayer()  )
 			{
 				EmitSound( filter, entindex(),  (weaponMode == Secondary_Mode) ? "Weapon_Knife.Stab" : "Weapon_Knife.Hit" );
 			}
@@ -491,9 +491,9 @@ bool CKnife::SwingOrStab( CSWeaponMode weaponMode )
 		data.m_nDamageType = DMG_SLASH;
 		data.m_nHitBox = tr.hitbox;
 #ifdef CLIENT_DLL
-		data.m_hEntity = tr.m_pEnt->GetRefEHandle();
+		data.m_hEntity = tr.Ent<CBaseEntity>()->GetRefEHandle();
 #else
-		data.m_nEntIndex = tr.m_pEnt->entindex();
+		data.m_nEntIndex = tr.Ent<CBaseEntity>()->entindex();
 #endif
 
 		CPASFilter filter( data.m_vOrigin );

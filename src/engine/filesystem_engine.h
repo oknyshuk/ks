@@ -32,5 +32,6 @@ CSysModule *FileSystem_LoadModule(const char *path);
 void FileSystem_UnloadModule(CSysModule *pModule);
 
 void FileSystem_SetWhitelistSpewFlags();
+void FileSystem_UpdateAddonSearchPaths( IFileSystem *pFileSystem );
 
 #endif // FILESYSTEM_ENGINE_H

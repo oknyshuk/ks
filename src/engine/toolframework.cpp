@@ -1543,7 +1543,6 @@ void CToolFrameworkInternal::RenderFrameEnd()
 }
 
 // Exposed because it's an IAppSystem
-EXPOSE_SINGLE_INTERFACE_GLOBALVAR( CToolFrameworkInternal, IToolFrameworkInternal, VTOOLFRAMEWORK_INTERFACE_VERSION, g_ToolFrameworkInternal );
 
 //-----------------------------------------------------------------------------
 // Purpose: exposed from engine to client .dll

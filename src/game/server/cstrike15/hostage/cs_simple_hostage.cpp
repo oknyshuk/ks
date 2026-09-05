@@ -526,7 +526,7 @@ void CHostage::TraceAttack( const CTakeDamageInfo &info, const Vector &vecDir, t
 		CEffectData	data;
 		data.m_vOrigin = ptr->endpos;
 		data.m_vNormal = vecDir * -1;
-		data.m_nEntIndex = ptr->m_pEnt ?  ptr->m_pEnt->entindex() : 0;
+		data.m_nEntIndex = ptr->Ent<CBaseEntity>() ?  ptr->Ent<CBaseEntity>()->entindex() : 0;
 		data.m_flMagnitude =  info.GetDamage();
 
 		DispatchEffect( "csblood", data );

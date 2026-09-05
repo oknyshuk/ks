@@ -137,21 +137,7 @@ int main( int argc, char *argv[] )
 		printf( "%s\n", strerror(errno) );
 	}
 
-	void *tier0 = dlopen( "libtier0" DLL_EXT_STRING, RTLD_NOW );
-	if ( !tier0 )
-	{
-		printf( "Failed to open %s (%s)\n", "libtier0" DLL_EXT_STRING, dlerror());
-		return -1;
-	}
-
-	void *vstdlib = dlopen( "libvstdlib" DLL_EXT_STRING, RTLD_NOW );
-	if ( !vstdlib )
-	{
-		printf( "Failed to open %s (%s)\n", "libvstdlib" DLL_EXT_STRING, dlerror());
-		return -1;
-	}
-
-	const char *pBinaryName = "bin/libdedicated" DLL_EXT_STRING;
+	const char *pBinaryName = "bin/libengine" DLL_EXT_STRING;
 
 	void *dedicated = dlopen( pBinaryName, RTLD_NOW );
 	if ( !dedicated )

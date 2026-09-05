@@ -1550,7 +1550,7 @@ void CBaseEntity::UpdateShotStatistics( const trace_t &tr )
 		if ( pNpc )
 		{
 			pNpc->m_TotalShots++;
-			if ( tr.m_pEnt == pNpc->GetEnemy() )
+			if ( tr.Ent<CBaseEntity>() == pNpc->GetEnemy() )
 			{
 				pNpc->m_TotalHits++;
 			}
@@ -4614,21 +4614,21 @@ void CAI_BaseNPC::CheckOnGround( void )
 					}
 					else
 					{
-						if ( trace.startsolid && trace.m_pEnt->GetMoveType() == MOVETYPE_VPHYSICS && 
-							trace.m_pEnt->VPhysicsGetObject() && trace.m_pEnt->VPhysicsGetObject()->GetMass() < VPHYSICS_LARGE_OBJECT_MASS )
+						if ( trace.startsolid && trace.Ent<CBaseEntity>()->GetMoveType() == MOVETYPE_VPHYSICS && 
+							trace.Ent<CBaseEntity>()->VPhysicsGetObject() && trace.Ent<CBaseEntity>()->VPhysicsGetObject()->GetMass() < VPHYSICS_LARGE_OBJECT_MASS )
 						{
 							// stuck inside a small physics object?  
 							m_CheckOnGroundTimer.Set(0.1f);
-							NPCPhysics_CreateSolver( this, trace.m_pEnt, true, 0.25f );
+							NPCPhysics_CreateSolver( this, trace.Ent<CBaseEntity>(), true, 0.25f );
 							if ( VPhysicsGetObject() )
 							{
 								VPhysicsGetObject()->RecheckContactPoints();
 							}
 						}
 						// Check to see if someone changed the ground on us...
-						if ( trace.m_pEnt && trace.m_pEnt != GetGroundEntity() )
+						if ( trace.Ent<CBaseEntity>() && trace.Ent<CBaseEntity>() != GetGroundEntity() )
 						{
-							SetGroundEntity( trace.m_pEnt );
+							SetGroundEntity( trace.Ent<CBaseEntity>() );
 						}
 					}
 				}
@@ -5414,7 +5414,7 @@ bool CAI_BaseNPC::InnateWeaponLOSCondition( const Vector &ownerPos, const Vector
 		return true;
 	}
 	
-	CBaseEntity	*pHitEntity = tr.m_pEnt;
+	CBaseEntity	*pHitEntity = tr.Ent<CBaseEntity>();
 	
 	// Translate a hit vehicle into its passenger if found
 	if ( GetEnemy() != NULL )
@@ -5449,7 +5449,7 @@ bool CAI_BaseNPC::InnateWeaponLOSCondition( const Vector &ownerPos, const Vector
 	else if (bSetConditions)
 	{
 		SetCondition(COND_WEAPON_SIGHT_OCCLUDED);
-		SetEnemyOccluder(tr.m_pEnt);
+		SetEnemyOccluder(tr.Ent<CBaseEntity>());
 	}
 
 	return false;
@@ -6593,7 +6593,7 @@ float CAI_BaseNPC::ThrowLimit(	const Vector &vecStart,
 
 		if (tr.startsolid || tr.fraction < 1.0)
 		{
-			CBaseEntity *pEntity = tr.m_pEnt;
+			CBaseEntity *pEntity = tr.Ent<CBaseEntity>();
 
 			// If we hit the target we are good to go!
 			if (pEntity == pTarget)
@@ -9618,7 +9618,7 @@ void CAI_BaseNPC::CollectShotStats( const Vector &vecShootOrigin, const Vector &
 			trace_t tr;
 			AI_TraceLine( vecShootOrigin, vecEnd, MASK_SHOT, this, COLLISION_GROUP_NONE, &tr);
 
-			if( tr.m_pEnt && tr.m_pEnt == GetEnemy() )
+			if( tr.Ent<CBaseEntity>() && tr.Ent<CBaseEntity>() == GetEnemy() )
 			{
 				iHits++;
 			}
@@ -9842,7 +9842,7 @@ Vector CAI_BaseNPC::GetActualShootTrajectory( const Vector &shootOrigin )
 
 		AI_TraceLine(shootOrigin, vecEnd, MASK_SHOT, this, COLLISION_GROUP_NONE, &tr);
 
-		if( tr.fraction != 1.0 && tr.m_pEnt && tr.m_pEnt->m_takedamage != DAMAGE_NO )
+		if( tr.fraction != 1.0 && tr.Ent<CBaseEntity>() && tr.Ent<CBaseEntity>()->m_takedamage != DAMAGE_NO )
 		{
 			// Hit something we can harm. Just shoot it.
 			return manipulator.GetResult();
@@ -12607,7 +12607,7 @@ int CAI_BaseNPC::WalkMove( const Vector& vecPosition, unsigned int mask )
 	}
 
 	// the move is ok
-	SetGroundEntity( trace.m_pEnt );
+	SetGroundEntity( trace.Ent<CBaseEntity>() );
 	PhysicsTouchTriggers();
 	return true;
 }
@@ -12754,7 +12754,7 @@ bool CAI_BaseNPC::IsCoverPosition( const Vector &vecThreat, const Vector &vecPos
 
 	if( tr.fraction != 1.0 && hl2_episodic.GetBool() )
 	{
-		if( tr.m_pEnt->m_iClassname == m_iClassname )
+		if( tr.Ent<CBaseEntity>()->m_iClassname == m_iClassname )
 		{
 			// Don't hide behind buddies!
 			return false;
@@ -13882,7 +13882,7 @@ bool CAI_BaseNPC::InteractionCouldStart( CAI_BaseNPC *pOtherNPC, ScriptedNPCInte
 	// If we start getting interactions that start a fair distance apart, we're going to need to do more work here.
  	trace_t tr;
 	AI_TraceLine( EyePosition(), pOtherNPC->EyePosition(), GetAITraceMask(), this, COLLISION_GROUP_NONE, &tr);
-	if ( tr.fraction != 1.0 && tr.m_pEnt != pOtherNPC )
+	if ( tr.fraction != 1.0 && tr.Ent<CBaseEntity>() != pOtherNPC )
 	{
 		if ( bDebug )
 		{
@@ -13903,7 +13903,7 @@ bool CAI_BaseNPC::InteractionCouldStart( CAI_BaseNPC *pOtherNPC, ScriptedNPCInte
 	CollisionProp()->NormalizedToWorldSpace( Vector(0,0,0.25f), &vecMyKnee );
 	pOtherNPC->CollisionProp()->NormalizedToWorldSpace( Vector(0,0,0.25f), &vecOtherKnee );
 	AI_TraceLine( vecMyKnee, vecOtherKnee, GetAITraceMask(), this, COLLISION_GROUP_NONE, &tr);
-	if ( tr.fraction != 1.0 && tr.m_pEnt != pOtherNPC )
+	if ( tr.fraction != 1.0 && tr.Ent<CBaseEntity>() != pOtherNPC )
 	{
 		if ( bDebug )
 		{

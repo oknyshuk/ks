@@ -24,7 +24,6 @@
 
 #define	MAXPRINTMSG	4096
 
-DEFINE_LOGGING_CHANNEL_NO_TAGS( LOG_CONSOLE, "Console" );
 
 bool con_debuglog = false;
 bool con_initialized = false;

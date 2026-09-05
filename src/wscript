@@ -336,6 +336,8 @@ def build(bld):
         source=[
             "public/filesystem_helpers.cpp",
             "public/collisionutils.cpp",
+            "public/filesystem_init.cpp",
+            "public/imagepacker.cpp",
             "public/networkvar.cpp",
             "public/registry.cpp",
             "public/scratchpad3d.cpp",
@@ -438,7 +440,7 @@ def check(bld):
 # Every shipped .so is checked for unresolved symbols, then srcds loads a map
 # and runs for a few seconds. Catches the "compiles fine, dies on startup" class.
 #
-#   waf smoke                            de_dust2, 12s
+#   waf smoke                            de_dust2, 12s (+ client)
 #   SECS=30 MAPS="de_nuke cs_office" waf smoke
 
 
@@ -492,8 +494,6 @@ def smoke(bld):
                 r = subprocess.run(argv, cwd=prefix, capture_output=True, text=True, timeout=secs)
                 rc, log = r.returncode, r.stdout
             except subprocess.TimeoutExpired as e:
-                # timed out means srcds was still alive after `secs`: a pass.
-                # (on POSIX, TimeoutExpired carries raw bytes even with text=True)
                 out = e.stdout or b""
                 rc, log = 124, out.decode("utf-8", "replace") if isinstance(out, bytes) else out
 
@@ -509,6 +509,38 @@ def smoke(bld):
                 Logs.info("ok   %-16s %5d lines" % (m, log.count("\n")))
     finally:
         os.remove(cfg)
+
+    if os.environ.get("DISPLAY") and os.path.isfile(os.path.join(prefix, "srceng")):
+        conlog = os.path.join(prefix, "csgo", "console.log")
+        at = os.path.getsize(conlog) if os.path.isfile(conlog) else 0
+        argv = [
+            os.path.join(prefix, "srceng"), "-game", "csgo", "-novid",
+            "-windowed", "-w", "640", "-h", "480", "+sv_lan", "1", "+map", maps[0],
+        ]
+        try:
+            r = subprocess.run(argv, cwd=prefix, capture_output=True, text=True, timeout=secs * 3)
+            rc, log = r.returncode, r.stdout
+        except subprocess.TimeoutExpired as e:
+            out = e.stdout or b""
+            rc, log = 124, out.decode("utf-8", "replace") if isinstance(out, bytes) else out
+
+        con = ""
+        if os.path.isfile(conlog):
+            with open(conlog, errors="replace") as f:
+                f.seek(at)
+                con = f.read()
+
+        rendered = ("Host_NewGame on map %s" % maps[0]) in con
+        if not rendered:
+            bad += 1
+            Logs.error("FAIL client (never rendered %s, exit %s)" % (maps[0], rc))
+            for line in (con or log).splitlines()[-3:]:
+                Logs.error("       | " + line)
+        elif rc < 0:
+            Logs.warn("ok   %-16s %5d lines (crashed on shutdown, signal %d)"
+                      % ("client", con.count("\n"), -rc))
+        else:
+            Logs.info("ok   %-16s %5d lines" % ("client", con.count("\n")))
 
     if bad:
         bld.fatal("smoke: %d check(s) failed" % bad)

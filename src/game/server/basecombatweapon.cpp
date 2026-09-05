@@ -295,7 +295,7 @@ bool CBaseCombatWeapon::WeaponLOSCondition( const Vector &ownerPos, const Vector
 		return true;
 	}
 
-	CBaseEntity	*pHitEnt = tr.m_pEnt;
+	CBaseEntity	*pHitEnt = tr.Ent<CBaseEntity>();
 
 	CBasePlayer *pEnemyPlayer = ToBasePlayer( npcOwner->GetEnemy() );
 

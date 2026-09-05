@@ -80,7 +80,7 @@ void GetCrosshairOrNamedEntities( const CCommand &args, CUtlVector<CBaseEntity*>
 
 		if ( tr.DidHit() && !tr.DidHitWorld() )
 		{
-			entities.AddToTail( tr.m_pEnt );
+			entities.AddToTail( tr.Ent<CBaseEntity>() );
 		}
 	}
 	else

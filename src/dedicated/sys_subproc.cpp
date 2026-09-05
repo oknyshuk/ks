@@ -49,12 +49,12 @@
 #include "tier0/memdbgon.h"
 
 static netadr_t	net_local_adr;
-unsigned short NET_HostToNetShort( unsigned short us_in )
+static unsigned short NET_HostToNetShort( unsigned short us_in )
 {
 	return htons( us_in );
 }
 
-unsigned short NET_NetToHostShort( unsigned short us_in )
+static unsigned short NET_NetToHostShort( unsigned short us_in )
 {
 	return ntohs( us_in );
 }
@@ -65,7 +65,7 @@ unsigned short NET_NetToHostShort( unsigned short us_in )
 //			*sadr - 
 // Output : bool	NET_StringToSockaddr
 //-----------------------------------------------------------------------------
-bool NET_StringToSockaddr( const char *s, struct sockaddr *sadr )
+static bool NET_StringToSockaddr( const char *s, struct sockaddr *sadr )
 {
 	char	*colon;
 	char	copy[128];
@@ -111,7 +111,7 @@ idnewt:28000
 192.246.40.70:28000
 =============
 */
-bool NET_StringToAdr ( const char *s, netadr_t *a)
+static bool NET_StringToAdr ( const char *s, netadr_t *a)
 {
 	struct sockaddr saddr;
 
@@ -136,7 +136,7 @@ bool NET_StringToAdr ( const char *s, netadr_t *a)
 }
 
 
-void NET_GetLocalAddress (void)
+static void NET_GetLocalAddress (void)
 {
 	net_local_adr.Clear();
 
@@ -152,6 +152,7 @@ void NET_GetLocalAddress (void)
 #define MAX_STATUS_STRING_LENGTH 1024
 #define MAX_INPUT_FROM_CHILD 2048
 
+namespace {
 class CConnectedNetConsoleData
 {
 public:
@@ -164,6 +165,7 @@ public:
 		m_bAuthorized = false;
 	}
 };
+}
 
 class CParentProcessNetConsoleMgr : public ISocketCreatorListener
 {
