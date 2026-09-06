@@ -6,6 +6,8 @@
 
 #ifndef WEAPON_CSBASE_H
 #define WEAPON_CSBASE_H
+
+#include "reflect_annotations.h"
 #ifdef _WIN32
 #pragma once
 #endif
@@ -110,7 +112,13 @@ void AddViewModelBobHelper( Vector &origin, QAngle &angles, BobState_t *pBobStat
 class CCSWeaponVisualsDataProcessor;
 #endif
 
-class CWeaponCSBase : public CBaseCombatWeapon
+class [[= ks::reflect::NetTable{ .name = "DT_WeaponCSBase" } ]]
+      [[= ks::reflect::Exclude{ .table = "DT_AnimTimeMustBeFirst", .prop = "m_flAnimTime" } ]]
+      [[= ks::reflect::Exclude{ .table = "DT_BaseAnimating", .prop = "m_nSequence" } ]]
+      [[= ks::reflect::PredFrom<"m_flTimeWeaponIdle", ks::reflect::Pred{ .flags = FTYPEDESC_OVERRIDE | FTYPEDESC_NOERRORCHECK }>{} ]]
+      [[= ks::reflect::PredFrom<"m_flNextPrimaryAttack", ks::reflect::Pred{ .flags = FTYPEDESC_OVERRIDE | FTYPEDESC_NOERRORCHECK }>{} ]]
+      [[= ks::reflect::PredFrom<"m_flNextSecondaryAttack", ks::reflect::Pred{ .flags = FTYPEDESC_OVERRIDE | FTYPEDESC_NOERRORCHECK }>{} ]]
+      CWeaponCSBase : public CBaseCombatWeapon
 {
 public:
 	DECLARE_CLASS( CWeaponCSBase, CBaseCombatWeapon );
@@ -333,7 +341,7 @@ public:
 
 	void			ItemPostFrame_RevolverResetHaulback();
 
-	CNetworkVar( CSWeaponMode, m_weaponMode);
+	CNetworkVar( CSWeaponMode, m_weaponMode, [[= ks::reflect::Net{ .bits = 1, .flags = SPROP_UNSIGNED } ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] );
 
 	virtual float GetInaccuracy() const;
 #if defined( WEAPON_FIRE_BULLETS_ACCURACY_FISHTAIL_FEATURE )
@@ -344,26 +352,26 @@ public:
 
 	virtual void UpdateAccuracyPenalty();
 
-	CNetworkVar( float, m_fAccuracyPenalty );
+	CNetworkVar( float, m_fAccuracyPenalty, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_CHANGES_OFTEN } ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE, .tolerance = TD_MSECTOLERANCE } ]] );
 #if defined( WEAPON_FIRE_BULLETS_ACCURACY_FISHTAIL_FEATURE )
 	CNetworkVar( float, m_fAccuracyFishtail );
 #endif
 	float m_fAccuracySmoothedForZoom;
 	float m_fScopeZoomEndTime;
-	CNetworkVar( int, m_iRecoilIndex );	// DEPRECATED. Kept for old demo compatibility.
-	CNetworkVar( float, m_flRecoilIndex );
-	CNetworkVar( bool, m_bBurstMode );
+	CNetworkVar( int, m_iRecoilIndex, [[= ks::reflect::Net{ .side = ks::reflect::WIRE_RECV } ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] );	// DEPRECATED. Kept for old demo compatibility.
+	CNetworkVar( float, m_flRecoilIndex, [[= ks::reflect::Net{ .bits = 32 } ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] );
+	CNetworkVar( bool, m_bBurstMode, [[= ks::reflect::Net{} ]] );
 
-	CNetworkVar( float, m_flPostponeFireReadyTime );
+	CNetworkVar( float, m_flPostponeFireReadyTime, [[= ks::reflect::Net{} ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_OVERRIDE | FTYPEDESC_NOERRORCHECK } ]] );
 	void ResetPostponeFireReadyTime( void ) { m_flPostponeFireReadyTime = FLT_MAX; }
 	void SetPostponeFireReadyTime( float flFutureTime ) { m_flPostponeFireReadyTime = flFutureTime; }
 	bool IsPostponFireReadyTimeElapsed( void ) { return (m_flPostponeFireReadyTime < gpGlobals->curtime); }
 
 	virtual bool IsReloadVisuallyComplete() {return m_bReloadVisuallyComplete; }
-	CNetworkVar( bool, m_bReloadVisuallyComplete );
+	CNetworkVar( bool, m_bReloadVisuallyComplete, [[= ks::reflect::Net{} ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] );
 
-	CNetworkVar( bool, m_bSilencerOn );
-	CNetworkVar( float, m_flDoneSwitchingSilencer );	// soonest time switching the silencer will be complete
+	CNetworkVar( bool, m_bSilencerOn, [[= ks::reflect::Net{} ]] );
+	CNetworkVar( float, m_flDoneSwitchingSilencer, [[= ks::reflect::Net{} ]] );	// soonest time switching the silencer will be complete
 	CNetworkVar( float, m_flDroppedAtTime ); // when was this weapon last dropped
 
 	bool IsSwitchingSilencer( void ) { return ( m_flDoneSwitchingSilencer >= gpGlobals->curtime ); }
@@ -391,7 +399,7 @@ public:
 	virtual uint64 GetOriginalOwnerXuid() const OVERRIDE { return 0; }
 	virtual void SetOriginalOwnerXuid( uint32, uint32 ) OVERRIDE {}
 
-	CNetworkVar( int, m_iOriginalTeamNumber );
+	CNetworkVar( int, m_iOriginalTeamNumber, [[= ks::reflect::Net{ .bits = -1 } ]] );
 
 	int GetOriginalTeamNumber()	{ return m_iOriginalTeamNumber; }
 
@@ -408,11 +416,11 @@ protected:
 	float CalculateNextAttackTime( float flCycleTime );
 	void Recoil( CSWeaponMode weaponMode );
 
-	bool m_bCanBePickedUp;
+	[[= ks::reflect::Key{ .name = "CanBePickedUp" } ]] bool m_bCanBePickedUp;
 
 private:
 	CEconItemView m_EconItemView;
-	CNetworkVar( int, m_nEconItemDefIndex );
+	CNetworkVar( int, m_nEconItemDefIndex, [[= ks::reflect::Net{ .bits = 16, .flags = SPROP_UNSIGNED } ]] );
 
 	CWeaponCSBase( const CWeaponCSBase & );
 
@@ -431,7 +439,7 @@ private:
 	float	m_nextOwnerTouchTime;
 	float	m_nextPrevOwnerTouchTime;
 
-	CNetworkHandle( CBasePlayer, m_hPrevOwner );
+	CNetworkHandle( CBasePlayer, m_hPrevOwner, [[= ks::reflect::Net{} ]] );
 
 	int m_iDefaultExtraAmmo;
 
@@ -445,7 +453,7 @@ private:
 	void ResetGunHeat( void );
 	void UpdateGunHeat( float heat, int iAttachmentIndex );
 
-	CNetworkVar( float, m_fLastShotTime );
+	CNetworkVar( float, m_fLastShotTime, [[= ks::reflect::Net{ .bits = 32 } ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] );
 
 	bool m_bWasOwnedByCT;
 	bool m_bWasOwnedByTerrorist;
@@ -476,7 +484,7 @@ public:
 	CIronSightController *GetIronSightController( void );
 	void				 UpdateIronSightController( void );
 	CIronSightController *m_IronSightController;
-	CNetworkVar( int, m_iIronSightMode );
+	CNetworkVar( int, m_iIronSightMode, [[= ks::reflect::Net{ .bits = 2, .flags = SPROP_UNSIGNED } ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] );
 #endif //IRONSIGHT
 
 

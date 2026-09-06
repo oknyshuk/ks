@@ -81,7 +81,6 @@ public:
 		return m_hFlame.Get();
 	}
 
-	DECLARE_DATADESC();
 
 
 public:

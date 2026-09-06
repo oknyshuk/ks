@@ -120,15 +120,24 @@ float SimpleConstraintSoundProfile::GetVolume(float inVel)
 class CPhysConstraint;
 /** This class encapsulates the data and behavior necessary for a constraint to play sounds.
 
-	For the moment I have no easy means of populating this from an entity's datadesc.
-	You should explicitly fill out the fields with eg
+	An embedding entity does not inherit these keys: it has to name them itself. Give the
+	entity class one KeyFrom<> annotation per key, with a dotted path from the entity to the
+	member. The three float thresholds derive their type; the three sound names do not --
+	they are string_t, and FIELD_SOUNDNAME versus FIELD_STRING is a semantic distinction no
+	type carries, so those need an explicit .as:
 
-	DEFINE_KEYFIELD( m_soundInfo.m_soundProfile.m_keyPoints[SimpleConstraintSoundProfile::kMIN_THRESHOLD] , FIELD_FLOAT, "minSoundThreshold" ),
-	DEFINE_KEYFIELD( m_soundInfo.m_soundProfile.m_keyPoints[SimpleConstraintSoundProfile::kMIN_FULL] , FIELD_FLOAT, "maxSoundThreshold" ),
-	DEFINE_KEYFIELD( m_soundInfo.m_iszTravelSoundFwd, FIELD_SOUNDNAME, "slidesoundfwd" ),
-	DEFINE_KEYFIELD( m_soundInfo.m_iszTravelSoundBack, FIELD_SOUNDNAME, "slidesoundback" ),
-	DEFINE_KEYFIELD( m_soundInfo.m_iszReversalSound, FIELD_SOUNDNAME, "reversalsound" ),
-	DEFINE_KEYFIELD( m_soundInfo.m_soundProfile.m_reversalSoundThreshold , FIELD_FLOAT, "reversalsoundthreshold" ),
+	class [[= ks::reflect::KeyFrom<"m_soundInfo.m_iszTravelSoundFwd",
+	            ks::reflect::Key{ .name = "slidesoundfwd", .as = FIELD_SOUNDNAME } >{} ]]
+	      [[= ks::reflect::KeyFrom<"m_soundInfo.m_soundProfile.m_reversalSoundThreshold",
+	            ks::reflect::Key{ .name = "reversalsoundthreshold" } >{} ]]
+	      CMyConstraint : public CPhysConstraint { ... };
+
+	The two m_keyPoints entries are elements of an array, so they take Key{ .index = N }.
+	Note that .index shifts the offset but does not appear in the entry's fieldName, whereas
+	the old macro stringified the whole subscripted expression -- and find_member_path parses
+	only decimal subscripts, not enumerators like kMIN_THRESHOLD. If a save-game field name
+	has to match the old form exactly, that needs a fieldName override that does not exist yet.
+	No entity keys these today: nothing in the tree reads minSoundThreshold and friends.
 
  */
 class ConstraintSoundInfo

@@ -5,6 +5,15 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_annotations.h"
+#ifdef CLIENT_DLL
+#include "reflect_recvtable.h"
+#endif
+#include "reflect_predmap.h"
+#include "reflect_annotations.h"
+#ifdef GAME_DLL
+#include "reflect_sendtable.h"
+#endif
 #include "weapon_csbase.h"
 #include "../../client/weapon_selection.h"
 #include "gamerules.h"
@@ -38,38 +47,12 @@
 
 IMPLEMENT_NETWORKCLASS_ALIASED( BaseCSGrenade, DT_BaseCSGrenade )
 
-BEGIN_NETWORK_TABLE(CBaseCSGrenade, DT_BaseCSGrenade)
-
-#ifndef CLIENT_DLL
-	SendPropBool( SENDINFO(m_bRedraw) ),
-	SendPropBool( SENDINFO(m_bIsHeldByPlayer) ),
-	SendPropBool( SENDINFO(m_bPinPulled) ),
-	SendPropFloat( SENDINFO(m_fThrowTime), 0, SPROP_NOSCALE ),
-	SendPropBool( SENDINFO( m_bLoopingSoundPlaying ) ),
-#ifdef GRENADE_UNDERHAND_FEATURE_ENABLED
-	SendPropFloat( SENDINFO(m_flThrowStrength), 0, SPROP_NOSCALE ),
-#endif
-#else
-	RecvPropBool( RECVINFO(m_bRedraw) ),
-	RecvPropBool( RECVINFO(m_bIsHeldByPlayer) ),
-	RecvPropBool( RECVINFO(m_bPinPulled) ),
-	RecvPropFloat( RECVINFO(m_fThrowTime) ),
-	RecvPropBool( RECVINFO( m_bLoopingSoundPlaying ) ),
-#ifdef GRENADE_UNDERHAND_FEATURE_ENABLED
-	RecvPropFloat( RECVINFO(m_flThrowStrength) ),
-#endif
-#endif
-
-END_NETWORK_TABLE()
+IMPLEMENT_REFLECT_TABLE( CBaseCSGrenade, DT_BaseCSGrenade );
 
 #if defined CLIENT_DLL
-BEGIN_PREDICTION_DATA( CBaseCSGrenade )
-	DEFINE_PRED_FIELD( m_bRedraw, FIELD_BOOLEAN, FTYPEDESC_INSENDTABLE ),
-	DEFINE_PRED_FIELD( m_bPinPulled, FIELD_BOOLEAN, FTYPEDESC_INSENDTABLE ),
-#ifdef GRENADE_UNDERHAND_FEATURE_ENABLED
-	DEFINE_PRED_FIELD( m_flThrowStrength, FIELD_FLOAT, FTYPEDESC_INSENDTABLE ),
+#ifdef CLIENT_DLL
+IMPLEMENT_REFLECT_PREDMAP( CBaseCSGrenade );
 #endif
-END_PREDICTION_DATA()
 #endif
 
 LINK_ENTITY_TO_CLASS_ALIASED( weapon_basecsgrenade, BaseCSGrenade );
@@ -497,10 +480,6 @@ void CBaseCSGrenade::ItemPostFrame()
 
 #else
 
-	BEGIN_DATADESC( CBaseCSGrenade )
-		DEFINE_FIELD( m_bRedraw, FIELD_BOOLEAN ),
-		DEFINE_FIELD( m_bIsHeldByPlayer, FIELD_BOOLEAN ),
-	END_DATADESC()
 
 	int CBaseCSGrenade::CapabilitiesGet()
 	{

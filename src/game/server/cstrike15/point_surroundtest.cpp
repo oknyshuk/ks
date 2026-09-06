@@ -5,6 +5,8 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_annotations.h"
 
 // NOTE: This has to be the last file included!
 #include "tier0/memdbgon.h"
@@ -15,26 +17,21 @@ class CSurroundTest : public CPointEntity
 public:
 	DECLARE_CLASS( CSurroundTest, CPointEntity );
 
-	void	FireCorrectOutput( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "FireCorrectOutput", .type = FIELD_VOID } ]] void	FireCorrectOutput( inputdata_t &inputdata );
 	void	Spawn( void );
 
 private:
 	
-	COutputEvent m_On2Speakers;
-	COutputEvent m_On4Speakers;
-	COutputEvent m_On51Speakers;
+	[[= ks::reflect::Key{ .name = "On2Speakers" } ]] COutputEvent m_On2Speakers;
+	[[= ks::reflect::Key{ .name = "On4Speakers" } ]] COutputEvent m_On4Speakers;
+	[[= ks::reflect::Key{ .name = "On51Speakers" } ]] COutputEvent m_On51Speakers;
 
 	DECLARE_DATADESC();
 };
 
 LINK_ENTITY_TO_CLASS( point_surroundtest, CSurroundTest );
 
-BEGIN_DATADESC( CSurroundTest )
-	DEFINE_INPUTFUNC( FIELD_VOID, "FireCorrectOutput", FireCorrectOutput ),
-	DEFINE_OUTPUT( m_On2Speakers, "On2Speakers" ),
-	DEFINE_OUTPUT( m_On4Speakers, "On4Speakers" ),
-	DEFINE_OUTPUT( m_On51Speakers, "On51Speakers" ),
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CSurroundTest )
 
 enum
 {

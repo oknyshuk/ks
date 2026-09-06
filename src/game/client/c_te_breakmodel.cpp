@@ -7,6 +7,8 @@
 // $NoKeywords: $
 //===========================================================================//
 #include "cbase.h"
+#include "reflect_recvtable.h"
+#include "reflect_annotations.h"
 #include "c_basetempentity.h"
 #include "c_te_legacytempents.h"
 #include "tier1/keyvalues.h"
@@ -19,7 +21,8 @@
 //-----------------------------------------------------------------------------
 // Purpose: Breakable Model TE
 //-----------------------------------------------------------------------------
-class C_TEBreakModel : public C_BaseTempEntity
+class [[= ks::reflect::NetTable{ .name = "DT_TEBreakModel" } ]]
+      C_TEBreakModel : public C_BaseTempEntity
 {
 public:
 	DECLARE_CLASS( C_TEBreakModel, C_BaseTempEntity );
@@ -31,34 +34,22 @@ public:
 	virtual void	PostDataUpdate( DataUpdateType_t updateType );
 
 public:
-	Vector			m_vecOrigin;
-	QAngle			m_angRotation;
-	Vector			m_vecSize;
-	Vector			m_vecVelocity;
-	int				m_nRandomization;
-	int				m_nModelIndex;
-	int				m_nCount;
-	float			m_fTime;
-	int				m_nFlags;
+	[[= ks::reflect::Net{} ]] Vector			m_vecOrigin;
+	[[= ks::reflect::Net{ .index = 2 } ]] [[= ks::reflect::Net{ .index = 1 } ]] [[= ks::reflect::Net{ .index = 0 } ]] QAngle			m_angRotation;
+	[[= ks::reflect::Net{} ]] Vector			m_vecSize;
+	[[= ks::reflect::Net{} ]] Vector			m_vecVelocity;
+	[[= ks::reflect::Net{} ]] int				m_nRandomization;
+	[[= ks::reflect::Net{} ]] int				m_nModelIndex;
+	[[= ks::reflect::Net{} ]] int				m_nCount;
+	[[= ks::reflect::Net{} ]] float			m_fTime;
+	[[= ks::reflect::Net{} ]] int				m_nFlags;
 };
 
 
 //-----------------------------------------------------------------------------
 // Networking
 //-----------------------------------------------------------------------------
-IMPLEMENT_CLIENTCLASS_EVENT_DT(C_TEBreakModel, DT_TEBreakModel, CTEBreakModel)
-	RecvPropVector( RECVINFO(m_vecOrigin)),
-	RecvPropFloat( RECVINFO( m_angRotation[0] ) ),
-	RecvPropFloat( RECVINFO( m_angRotation[1] ) ),
-	RecvPropFloat( RECVINFO( m_angRotation[2] ) ),
-	RecvPropVector( RECVINFO(m_vecSize)),
-	RecvPropVector( RECVINFO(m_vecVelocity)),
-	RecvPropInt( RECVINFO(m_nModelIndex)),
-	RecvPropInt( RECVINFO(m_nRandomization)),
-	RecvPropInt( RECVINFO(m_nCount)),
-	RecvPropFloat( RECVINFO(m_fTime)),
-	RecvPropInt( RECVINFO(m_nFlags)),
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS_EVENT( C_TEBreakModel, DT_TEBreakModel, CTEBreakModel )
 
 
 //-----------------------------------------------------------------------------

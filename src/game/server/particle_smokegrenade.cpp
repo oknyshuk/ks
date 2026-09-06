@@ -7,32 +7,17 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_sendtable.h"
+#include "reflect_annotations.h"
 #include "particle_smokegrenade.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
-IMPLEMENT_SERVERCLASS_ST(ParticleSmokeGrenade, DT_ParticleSmokeGrenade)
-	SendPropTime( SENDINFO(m_flSpawnTime) ),
-	SendPropFloat( SENDINFO(m_FadeStartTime), 0, SPROP_NOSCALE),
-	SendPropFloat( SENDINFO(m_FadeEndTime), 0, SPROP_NOSCALE),
-	SendPropVector( SENDINFO(m_MinColor), 0, SPROP_NOSCALE),
-	SendPropVector( SENDINFO(m_MaxColor), 0, SPROP_NOSCALE),
-	SendPropInt( SENDINFO(m_CurrentStage), 1, SPROP_UNSIGNED),
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( ParticleSmokeGrenade, DT_ParticleSmokeGrenade )
 
 LINK_ENTITY_TO_CLASS( env_particlesmokegrenade, ParticleSmokeGrenade );
 
-BEGIN_DATADESC( ParticleSmokeGrenade )
-
-	DEFINE_FIELD( m_CurrentStage, FIELD_CHARACTER ),
-	DEFINE_FIELD( m_FadeStartTime, FIELD_TIME ),
-	DEFINE_FIELD( m_FadeEndTime, FIELD_TIME ),
-	DEFINE_FIELD( m_MinColor, FIELD_VECTOR ),
-	DEFINE_FIELD( m_MaxColor, FIELD_VECTOR ),
-	DEFINE_FIELD( m_flSpawnTime, FIELD_TIME ),
-
-END_DATADESC()
 
 
 ParticleSmokeGrenade::ParticleSmokeGrenade()

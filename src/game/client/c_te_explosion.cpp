@@ -5,6 +5,8 @@
 // $NoKeywords: $
 //===========================================================================//
 #include "cbase.h"
+#include "reflect_recvtable.h"
+#include "reflect_annotations.h"
 #include "tempentity.h"  // FLAGS
 #include "c_te_particlesystem.h"
 #include "ragdollexplosionenumerator.h"
@@ -86,7 +88,8 @@ CRagdollExplosionEnumerator::~CRagdollExplosionEnumerator()
 //-----------------------------------------------------------------------------
 // Purpose: Explosion TE
 //-----------------------------------------------------------------------------
-class C_TEExplosion : public C_TEParticleSystem
+class [[= ks::reflect::NetTable{ .name = "DT_TEExplosion" } ]]
+      C_TEExplosion : public C_TEParticleSystem
 {
 public:
 	DECLARE_CLASS( C_TEExplosion, C_TEParticleSystem );
@@ -106,14 +109,14 @@ private:
 public:
 	void			AffectRagdolls( void );
 
-	int				m_nModelIndex;
-	float			m_fScale;
-	int				m_nFrameRate;
-	int				m_nFlags;
-	Vector			m_vecNormal;
-	char			m_chMaterialType;
-	int				m_nRadius;
-	int				m_nMagnitude;
+	[[= ks::reflect::Net{} ]] int				m_nModelIndex;
+	[[= ks::reflect::Net{} ]] float			m_fScale;
+	[[= ks::reflect::Net{} ]] int				m_nFrameRate;
+	[[= ks::reflect::Net{} ]] int				m_nFlags;
+	[[= ks::reflect::Net{} ]] Vector			m_vecNormal;
+	[[= ks::reflect::Net{} ]] char			m_chMaterialType;
+	[[= ks::reflect::Net{} ]] int				m_nRadius;
+	[[= ks::reflect::Net{} ]] int				m_nMagnitude;
 
 	//CParticleCollision	m_ParticleCollision;
 	CParticleMgr		*m_pParticleMgr;
@@ -125,16 +128,7 @@ public:
 //-----------------------------------------------------------------------------
 // Networking 
 //-----------------------------------------------------------------------------
-IMPLEMENT_CLIENTCLASS_EVENT_DT(C_TEExplosion, DT_TEExplosion, CTEExplosion)
-	RecvPropInt( RECVINFO(m_nModelIndex)),
-	RecvPropFloat( RECVINFO(m_fScale )),
-	RecvPropInt( RECVINFO(m_nFrameRate)),
-	RecvPropInt( RECVINFO(m_nFlags)),
-	RecvPropVector( RECVINFO(m_vecNormal)),
-	RecvPropInt( RECVINFO(m_chMaterialType)),
-	RecvPropInt( RECVINFO(m_nRadius)),
-	RecvPropInt( RECVINFO(m_nMagnitude)),
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS_EVENT( C_TEExplosion, DT_TEExplosion, CTEExplosion )
 
 
 //-----------------------------------------------------------------------------

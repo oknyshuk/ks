@@ -6,6 +6,8 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_annotations.h"
 #include "lights.h"
 #include "world.h"
 #include "env_cascade_light.h"
@@ -15,26 +17,7 @@
 
 LINK_ENTITY_TO_CLASS( light, CLight );
 
-BEGIN_DATADESC( CLight )
-
-	DEFINE_FIELD( m_iCurrentFade, FIELD_CHARACTER),
-	DEFINE_FIELD( m_iTargetFade, FIELD_CHARACTER),
-
-	DEFINE_KEYFIELD( m_iStyle, FIELD_INTEGER, "style" ),
-	DEFINE_KEYFIELD( m_iDefaultStyle, FIELD_INTEGER, "defaultstyle" ),
-	DEFINE_KEYFIELD( m_iszPattern, FIELD_STRING, "pattern" ),
-
-	// Fuctions
-	DEFINE_FUNCTION( FadeThink ),
-
-	// Inputs
-	DEFINE_INPUTFUNC( FIELD_STRING, "SetPattern", InputSetPattern ),
-	DEFINE_INPUTFUNC( FIELD_STRING, "FadeToPattern", InputFadeToPattern ),
-	DEFINE_INPUTFUNC( FIELD_VOID,	"Toggle", InputToggle ),
-	DEFINE_INPUTFUNC( FIELD_VOID,	"TurnOn", InputTurnOn ),
-	DEFINE_INPUTFUNC( FIELD_VOID,	"TurnOff", InputTurnOff ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CLight )
 
 
 

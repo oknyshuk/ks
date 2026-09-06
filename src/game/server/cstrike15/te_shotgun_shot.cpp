@@ -11,6 +11,8 @@
 // $NoKeywords: $
 //=============================================================================//
 #include "cbase.h"
+#include "reflect_sendtable.h"
+#include "reflect_annotations.h"
 #include "basetempentity.h"
 #include "fx_cs_shared.h"
 
@@ -21,7 +23,8 @@
 //-----------------------------------------------------------------------------
 // Purpose: Display's a blood sprite
 //-----------------------------------------------------------------------------
-class CTEFireBullets : public CBaseTempEntity
+class [[= ks::reflect::NetTable{ .name = "DT_TEFireBullets", .base = false } ]]
+      CTEFireBullets : public CBaseTempEntity
 {
 public:
 	DECLARE_CLASS( CTEFireBullets, CBaseTempEntity );
@@ -31,20 +34,20 @@ public:
 	virtual			~CTEFireBullets( void );
 
 public:
-	CNetworkVar( int, m_iPlayer );
-	CNetworkVar( uint16, m_nItemDefIndex );
-	CNetworkVector( m_vecOrigin );
-	CNetworkQAngle( m_vecAngles );
-	CNetworkVar( int, m_iWeaponID );
-	CNetworkVar( int, m_iMode );
-	CNetworkVar( int, m_iSeed );
-	CNetworkVar( float, m_fInaccuracy );
-	CNetworkVar( float, m_flRecoilIndex );
-	CNetworkVar( float, m_fSpread );
+	CNetworkVar( int, m_iPlayer, [[= ks::reflect::Net{ .bits = 6, .flags = SPROP_UNSIGNED } ]] );
+	CNetworkVar( uint16, m_nItemDefIndex, [[= ks::reflect::Net{ .bits = 16, .flags = SPROP_UNSIGNED } ]] );
+	CNetworkVector( m_vecOrigin, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD, .enc = ks::reflect::ENC_VECTOR } ]] );
+	CNetworkQAngle( m_vecAngles, [[= ks::reflect::Net{ .bits = 13, .index = 1 } ]]  [[= ks::reflect::Net{ .bits = 13, .index = 0 } ]] );
+	CNetworkVar( int, m_iWeaponID, [[= ks::reflect::Net{ .bits = 6, .flags = SPROP_UNSIGNED } ]] );
+	CNetworkVar( int, m_iMode, [[= ks::reflect::Net{ .bits = 1, .flags = SPROP_UNSIGNED } ]] );
+	CNetworkVar( int, m_iSeed, [[= ks::reflect::Net{ .bits = NUM_BULLET_SEED_BITS, .flags = SPROP_UNSIGNED } ]] );
+	CNetworkVar( float, m_fInaccuracy, [[= ks::reflect::Net{ .bits = 10, .low = 0, .high = 1 } ]] );
+	CNetworkVar( float, m_flRecoilIndex, [[= ks::reflect::Net{ .bits = 10, .low = 0, .high = 1000 } ]] );
+	CNetworkVar( float, m_fSpread, [[= ks::reflect::Net{ .bits = 8, .low = 0, .high = 0.1f } ]] );
 #if defined( WEAPON_FIRE_BULLETS_ACCURACY_FISHTAIL_FEATURE )
 	CNetworkVar( float, m_fAccuracyFishtail );
 #endif
-	CNetworkVar( int, m_iSoundType );
+	CNetworkVar( int, m_iSoundType, [[= ks::reflect::Net{ .bits = 6, .flags = SPROP_UNSIGNED } ]] );
 };
 
 //-----------------------------------------------------------------------------
@@ -63,23 +66,7 @@ CTEFireBullets::~CTEFireBullets( void )
 {
 }
 
-IMPLEMENT_SERVERCLASS_ST_NOBASE(CTEFireBullets, DT_TEFireBullets)
-	SendPropVector( SENDINFO(m_vecOrigin), -1, SPROP_COORD ),
-	SendPropAngle( SENDINFO_VECTORELEM( m_vecAngles, 0 ), 13, 0 ),
-	SendPropAngle( SENDINFO_VECTORELEM( m_vecAngles, 1 ), 13, 0 ),
-	SendPropInt( SENDINFO( m_iWeaponID ), 6, SPROP_UNSIGNED ), // max 63 weapons
-	SendPropInt( SENDINFO( m_iMode ), 1, SPROP_UNSIGNED ),
-	SendPropInt( SENDINFO( m_iSeed ), NUM_BULLET_SEED_BITS, SPROP_UNSIGNED ),
-	SendPropInt( SENDINFO( m_iPlayer ), 6, SPROP_UNSIGNED ), 	// max 64 players, see MAX_PLAYERS
-	SendPropFloat( SENDINFO( m_fInaccuracy ), 10, 0, 0, 1 ),	
-	SendPropFloat( SENDINFO( m_flRecoilIndex ), 10, 0, 0, 1000 ),
-	SendPropFloat( SENDINFO( m_fSpread ), 8, 0, 0, 0.1f ),	
-	SendPropInt( SENDINFO( m_nItemDefIndex ), 16, SPROP_UNSIGNED ),
-	SendPropInt( SENDINFO( m_iSoundType ), 6, SPROP_UNSIGNED ),
-#if defined( WEAPON_FIRE_BULLETS_ACCURACY_FISHTAIL_FEATURE )
-	SendPropFloat( SENDINFO( m_fAccuracyFishtail ), 10, 0, -10.0f, 10.0f ),	
-#endif
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CTEFireBullets, DT_TEFireBullets )
 
 
 // Singleton
@@ -131,7 +118,8 @@ void TE_FireBullets(
 //-----------------------------------------------------------------------------
 // Purpose: Displays a bomb plant animation
 //-----------------------------------------------------------------------------
-class CTEPlantBomb : public CBaseTempEntity
+class [[= ks::reflect::NetTable{ .name = "DT_TEPlantBomb", .base = false } ]]
+      CTEPlantBomb : public CBaseTempEntity
 {
 public:
 	DECLARE_CLASS( CTEPlantBomb, CBaseTempEntity );
@@ -141,9 +129,9 @@ public:
 	virtual			~CTEPlantBomb( void );
 
 public:
-	CNetworkVar( int, m_iPlayer );
-	CNetworkVector( m_vecOrigin );
-	CNetworkVar( PlantBombOption_t, m_option );
+	CNetworkVar( int, m_iPlayer, [[= ks::reflect::Net{ .bits = 6, .flags = SPROP_UNSIGNED } ]] );
+	CNetworkVector( m_vecOrigin, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD, .enc = ks::reflect::ENC_VECTOR } ]] );
+	CNetworkVar( PlantBombOption_t, m_option, [[= ks::reflect::Net{ .bits = 1, .flags = SPROP_UNSIGNED } ]] );
 };
 
 //-----------------------------------------------------------------------------
@@ -162,11 +150,7 @@ CTEPlantBomb::~CTEPlantBomb( void )
 {
 }
 
-IMPLEMENT_SERVERCLASS_ST_NOBASE(CTEPlantBomb, DT_TEPlantBomb)
-	SendPropVector( SENDINFO(m_vecOrigin), -1, SPROP_COORD ),
-	SendPropInt( SENDINFO( m_iPlayer ), 6, SPROP_UNSIGNED ), 	// max 64 players, see MAX_PLAYERS
-	SendPropInt( SENDINFO( m_option ), 1, SPROP_UNSIGNED ),
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CTEPlantBomb, DT_TEPlantBomb )
 
 
 // Singleton

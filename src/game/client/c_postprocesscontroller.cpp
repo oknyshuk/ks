@@ -5,6 +5,8 @@
 //=============================================================================
 #include "cbase.h"
 #include "c_postprocesscontroller.h"
+#include "reflect_recvtable.h"
+#include "reflect_annotations.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -13,10 +15,7 @@
 #undef CPostProcessController
 #endif
 
-IMPLEMENT_CLIENTCLASS_DT( C_PostProcessController, DT_PostProcessController, CPostProcessController )
-	RecvPropArray3( RECVINFO_NAME( m_PostProcessParameters.m_flParameters[0], m_flPostProcessParameters ), POST_PROCESS_PARAMETER_COUNT, RecvPropFloat( RECVINFO_NAME( m_PostProcessParameters.m_flParameters[0], m_flPostProcessParameters[0] ) ) ),
-	RecvPropBool( RECVINFO(m_bMaster) )
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS( C_PostProcessController, DT_PostProcessController, CPostProcessController )
 
 C_PostProcessController* C_PostProcessController::ms_pMasterController = NULL;
 

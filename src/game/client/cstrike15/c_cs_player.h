@@ -6,6 +6,8 @@
 
 #ifndef C_CS_PLAYER_H
 #define C_CS_PLAYER_H
+
+#include "reflect_annotations.h"
 #ifdef _WIN32
 #pragma once
 #endif
@@ -245,7 +247,36 @@ protected:
 
 
 //-----------------------------------------------------------------------------
-class C_CSPlayer : public C_BasePlayer, public CGameEventListener, public ICSPlayerAnimStateHelpers
+namespace DT_CSLocalPlayerExclusive { extern RecvTable g_RecvTable; }
+namespace DT_CSNonLocalPlayerExclusive { extern RecvTable g_RecvTable; }
+
+// Receive proxies named by the annotations below; defined in c_cs_player.cpp.
+void RecvProxy_HasDefuser( const CRecvProxyData *pData, void *pStruct, void *pOut );
+void RecvProxy_NightVision( const CRecvProxyData *pData, void *pStruct, void *pOut );
+void RecvProxy_FlashTime( const CRecvProxyData *pData, void *pStruct, void *pOut );
+
+class
+      [[= ks::reflect::PredFrom<"m_flCycle", ks::reflect::Pred{ .flags = FTYPEDESC_OVERRIDE | FTYPEDESC_PRIVATE | FTYPEDESC_NOERRORCHECK } >{} ]]
+      [[= ks::reflect::NetTable{ .name = "DT_CSLocalPlayerExclusive", .base = false } ]]
+      [[= ks::reflect::From<"m_vecNetworkOrigin",
+            ks::reflect::Net{ .enc = ks::reflect::ENC_VECTORXY, .wire = "m_vecOrigin", .table = "DT_CSLocalPlayerExclusive" }>{} ]]
+      [[= ks::reflect::From<"m_vecNetworkOrigin",
+            ks::reflect::Net{ .wire = "m_vecOrigin", .table = "DT_CSLocalPlayerExclusive", .index = 2 }>{} ]]
+      [[= ks::reflect::NetTable{ .name = "DT_CSNonLocalPlayerExclusive", .base = false } ]]
+      [[= ks::reflect::From<"m_vecNetworkOrigin",
+            ks::reflect::Net{ .enc = ks::reflect::ENC_VECTORXY, .wire = "m_vecOrigin", .table = "DT_CSNonLocalPlayerExclusive" }>{} ]]
+      [[= ks::reflect::From<"m_vecNetworkOrigin",
+            ks::reflect::Net{ .wire = "m_vecOrigin", .table = "DT_CSNonLocalPlayerExclusive", .index = 2 }>{} ]]
+      [[= ks::reflect::NetTable{ .name = "DT_CSPlayer" } ]]
+      [[= ks::reflect::SubTable<"cslocaldata", &DT_CSLocalPlayerExclusive::g_RecvTable,
+                                nullptr, true>{} ]]
+      [[= ks::reflect::SubTable<"csnonlocaldata", &DT_CSNonLocalPlayerExclusive::g_RecvTable,
+                                nullptr, true>{} ]]
+      // Two lanes of m_angEyeAngles, which also sends whole as a QAngles prop; a member cannot
+      // carry both shapes at once, so the lanes come through From<>.
+      [[= ks::reflect::From<"m_angEyeAngles", ks::reflect::Net{ .index = 0 }>{} ]]
+      [[= ks::reflect::From<"m_angEyeAngles", ks::reflect::Net{ .index = 1 }>{} ]]
+      C_CSPlayer : public C_BasePlayer, public CGameEventListener, public ICSPlayerAnimStateHelpers
 #if !defined( NO_STEAM ) && !defined( NO_STEAM_GAMECOORDINATOR )
 	, public IHasAttributes
 #endif
@@ -608,50 +639,50 @@ public:
 	// Used to control animation state.
 	Activity m_Activity;
 
-	CNetworkVar( bool, m_bIsScoped );
-	CNetworkVar( bool, m_bIsWalking );
+	CNetworkVar( bool, m_bIsScoped, [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] [[= ks::reflect::Net{} ]] );
+	CNetworkVar( bool, m_bIsWalking, [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] [[= ks::reflect::Net{} ]] );
 	// Predicted variables.
-	CNetworkVar( bool, m_bResumeZoom );
-	CNetworkVar( CSPlayerState, m_iPlayerState );	// SupraFiend: this gives the current state in the joining process, the states are listed above
-	CNetworkVar( bool, m_bIsDefusing );			// tracks whether this player is currently defusing a bomb
-	CNetworkVar( bool, m_bIsGrabbingHostage );			// tracks whether this player is currently defusing a bomb
-	CNetworkVar( bool, m_bIsRescuing );			// tracks whether this player is currently rescuing a hostage
-	CNetworkVar( float, m_fImmuneToGunGameDamageTime );	// When gun game spawn damage immunity will expire
+	CNetworkVar( bool, m_bResumeZoom, [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] [[= ks::reflect::Net{} ]] );
+	CNetworkVar( CSPlayerState, m_iPlayerState, [[= ks::reflect::Net{} ]] );	// SupraFiend: this gives the current state in the joining process, the states are listed above
+	CNetworkVar( bool, m_bIsDefusing, [[= ks::reflect::Net{} ]] );			// tracks whether this player is currently defusing a bomb
+	CNetworkVar( bool, m_bIsGrabbingHostage, [[= ks::reflect::Net{} ]] );			// tracks whether this player is currently defusing a bomb
+	CNetworkVar( bool, m_bIsRescuing, [[= ks::reflect::Net{} ]] );			// tracks whether this player is currently rescuing a hostage
+	CNetworkVar( float, m_fImmuneToGunGameDamageTime, [[= ks::reflect::Net{} ]] );	// When gun game spawn damage immunity will expire
 	float m_fImmuneToGunGameDamageTimeLast;
-	CNetworkVar( bool, m_bGunGameImmunity );	// tracks whether this player is currently immune in gun game
-	CNetworkVar( bool, m_bHasMovedSinceSpawn ); // Whether player has moved from spawn position
-	CNetworkVar( bool, m_bMadeFinalGunGameProgressiveKill );
-	CNetworkVar( int, m_iGunGameProgressiveWeaponIndex ); // index of current gun game weapon
-	CNetworkVar( int, m_iNumGunGameTRKillPoints );	// number of kill points accumulated so far in TR Gun Game mode (resets to 0 when weapon is upgraded)
-	CNetworkVar( int, m_iNumGunGameKillsWithCurrentWeapon );
-	CNetworkVar( int, m_iNumRoundKills );	// number of kills a player has gotten in a round
-	CNetworkVar( int, m_iNumRoundKillsHeadshots );	// number of headshot kills a player has gotten in a round
-	CNetworkVar( float, m_fMolotovUseTime );	// Molotov can be used if current time is after this time
-	CNetworkVar( float, m_fMolotovDamageTime );	// Last time when this player was burnt by Molotov damage
-	CNetworkVar( bool, m_bInBombZone );
-	CNetworkVar( bool, m_bInBuyZone );
-	CNetworkVar( bool, m_bInNoDefuseArea );
-	CNetworkVar( int, m_iThrowGrenadeCounter );	// used to trigger grenade throw animations.
-	CNetworkVar( bool, m_bWaitForNoAttack );	// flag to indicate player cannot attack until the attack button is released
-	CNetworkVar( bool, m_bIsRespawningForDMBonus ); // flag to indicate player wants to spawn with the deathmatch bonus weapons
-	CNetworkVar( float, m_flGuardianTooFarDistFrac );
-	CNetworkVar( float, m_flDetectedByEnemySensorTime );
+	CNetworkVar( bool, m_bGunGameImmunity, [[= ks::reflect::Net{} ]] );	// tracks whether this player is currently immune in gun game
+	CNetworkVar( bool, m_bHasMovedSinceSpawn, [[= ks::reflect::Net{} ]] ); // Whether player has moved from spawn position
+	CNetworkVar( bool, m_bMadeFinalGunGameProgressiveKill, [[= ks::reflect::Net{} ]] );
+	CNetworkVar( int, m_iGunGameProgressiveWeaponIndex, [[= ks::reflect::Net{} ]] ); // index of current gun game weapon
+	CNetworkVar( int, m_iNumGunGameTRKillPoints, [[= ks::reflect::Net{} ]] );	// number of kill points accumulated so far in TR Gun Game mode (resets to 0 when weapon is upgraded)
+	CNetworkVar( int, m_iNumGunGameKillsWithCurrentWeapon, [[= ks::reflect::Net{} ]] );
+	CNetworkVar( int, m_iNumRoundKills, [[= ks::reflect::Net{} ]] );	// number of kills a player has gotten in a round
+	CNetworkVar( int, m_iNumRoundKillsHeadshots, [[= ks::reflect::Net{} ]] );	// number of headshot kills a player has gotten in a round
+	CNetworkVar( float, m_fMolotovUseTime, [[= ks::reflect::Net{} ]] );	// Molotov can be used if current time is after this time
+	CNetworkVar( float, m_fMolotovDamageTime, [[= ks::reflect::Net{} ]] );	// Last time when this player was burnt by Molotov damage
+	CNetworkVar( bool, m_bInBombZone, [[= ks::reflect::Net{} ]] );
+	CNetworkVar( bool, m_bInBuyZone, [[= ks::reflect::Net{} ]] );
+	CNetworkVar( bool, m_bInNoDefuseArea, [[= ks::reflect::Net{} ]] );
+	CNetworkVar( int, m_iThrowGrenadeCounter, [[= ks::reflect::Net{} ]] );	// used to trigger grenade throw animations.
+	CNetworkVar( bool, m_bWaitForNoAttack, [[= ks::reflect::Net{} ]] );	// flag to indicate player cannot attack until the attack button is released
+	CNetworkVar( bool, m_bIsRespawningForDMBonus, [[= ks::reflect::Net{} ]] ); // flag to indicate player wants to spawn with the deathmatch bonus weapons
+	CNetworkVar( float, m_flGuardianTooFarDistFrac, [[= ks::reflect::Net{} ]] );
+	CNetworkVar( float, m_flDetectedByEnemySensorTime, [[= ks::reflect::Net{} ]] );
 	float m_flNextGuardianTooFarWarning;
 
-	CNetworkVar( bool, m_bKilledByTaser );
-	CNetworkVar( int, m_iMoveState );		// Is the player trying to run or walk or idle?  Tells us what the player is "trying" to do.
+	CNetworkVar( bool, m_bKilledByTaser, [[= ks::reflect::Net{} ]] );
+	CNetworkVar( int, m_iMoveState, [[= ks::reflect::Net{} ]] );		// Is the player trying to run or walk or idle?  Tells us what the player is "trying" to do.
 
-	CNetworkVar( bool, m_bCanMoveDuringFreezePeriod );
+	CNetworkVar( bool, m_bCanMoveDuringFreezePeriod, [[= ks::reflect::Net{} ]] );
 
-	CNetworkVar( bool, m_isCurrentGunGameLeader );
-	CNetworkVar( bool, m_isCurrentGunGameTeamLeader );
+	CNetworkVar( bool, m_isCurrentGunGameLeader, [[= ks::reflect::Net{} ]] );
+	CNetworkVar( bool, m_isCurrentGunGameTeamLeader, [[= ks::reflect::Net{} ]] );
 		
-	CNetworkString( m_szArmsModel, MAX_MODEL_STRING_SIZE );		// Which arms we're using for the view model.
+	CNetworkString( m_szArmsModel, MAX_MODEL_STRING_SIZE, [[= ks::reflect::Net{} ]] );		// Which arms we're using for the view model.
 	
 	const PlayerViewmodelArmConfig *m_pViewmodelArmConfig;
 
-	CNetworkVar( float, m_flLowerBodyYawTarget );
-	CNetworkVar( bool, m_bStrafing );
+	CNetworkVar( float, m_flLowerBodyYawTarget, [[= ks::reflect::Net{} ]] );
+	CNetworkVar( bool, m_bStrafing, [[= ks::reflect::Net{} ]] );
 
 	bool m_bUseNewAnimstate;
 
@@ -667,42 +698,43 @@ public:
 	bool IsInHostageRescueZone( void );
 
 	// This is a combination of the ADDON_ flags in cs_shareddefs.h.
-	CNetworkVar( int, m_iAddonBits );
+	CNetworkVar( int, m_iAddonBits, [[= ks::reflect::Net{} ]] );
 
 	// Clients don't know about holstered weapons, so we need to be told about them here
-	CNetworkVar( int, m_iPrimaryAddon );
-	CNetworkVar( int, m_iSecondaryAddon );
+	CNetworkVar( int, m_iPrimaryAddon, [[= ks::reflect::Net{} ]] );
+	CNetworkVar( int, m_iSecondaryAddon, [[= ks::reflect::Net{} ]] );
 
 	// How long the progress bar takes to get to the end. If this is 0, then the progress bar
 	// should not be drawn.
-	CNetworkVar( int, m_iProgressBarDuration );
+	CNetworkVar( int, m_iProgressBarDuration, [[= ks::reflect::Net{} ]] );
 	
 	// When the progress bar should start.
-	CNetworkVar( float, m_flProgressBarStartTime );
+	CNetworkVar( float, m_flProgressBarStartTime, [[= ks::reflect::Net{} ]] );
 
-	CNetworkVar( float, m_flStamina );
-	CNetworkVar( int, m_iDirection );	// The current lateral kicking direction; 1 = right,  0 = left
-	CNetworkVar( int, m_iShotsFired );	// number of shots fired recently
-	CNetworkVar( int, m_nNumFastDucks ); // UNUSED.  Kept for backwards demo compatibility.  $$$REI TODO: Investigate safely removing variables
-	CNetworkVar( bool, m_bDuckOverride ); // force the player to duck regardless of if they're holding crouch
+	CNetworkVar( float, m_flStamina, [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE, .tolerance = 0.1f } ]]
+                                 [[= ks::reflect::Net{ .table = "DT_CSLocalPlayerExclusive" } ]] );
+	CNetworkVar( int, m_iDirection, [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] [[= ks::reflect::Net{ .table = "DT_CSLocalPlayerExclusive" } ]] );	// The current lateral kicking direction; 1 = right,  0 = left
+	CNetworkVar( int, m_iShotsFired, [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] [[= ks::reflect::Net{ .table = "DT_CSLocalPlayerExclusive" } ]] );	// number of shots fired recently
+	CNetworkVar( int, m_nNumFastDucks, [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] [[= ks::reflect::Net{ .table = "DT_CSLocalPlayerExclusive" } ]] ); // UNUSED.  Kept for backwards demo compatibility.  $$$REI TODO: Investigate safely removing variables
+	CNetworkVar( bool, m_bDuckOverride, [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] [[= ks::reflect::Net{ .table = "DT_CSLocalPlayerExclusive" } ]] ); // force the player to duck regardless of if they're holding crouch
 	
-	CNetworkVar( bool, m_bNightVisionOn );
-	CNetworkVar( bool, m_bHasNightVision );
-	CNetworkVar( float, m_flVelocityModifier );
-	CNetworkVar( float, m_flGroundAccelLinearFracLastTime );
+	CNetworkVar( bool, m_bNightVisionOn, [[= ks::reflect::Net{ .enc = ks::reflect::ENC_INT } ]] [[= ks::reflect::Proxy<RecvProxy_NightVision, ks::reflect::WIRE_RECV>{} ]] );
+	CNetworkVar( bool, m_bHasNightVision, [[= ks::reflect::Net{} ]] );
+	CNetworkVar( float, m_flVelocityModifier, [[= ks::reflect::Net{ .table = "DT_CSLocalPlayerExclusive" } ]] );
+	CNetworkVar( float, m_flGroundAccelLinearFracLastTime, [[= ks::reflect::Net{} ]] );
 
-	CNetworkVar( int, m_iStartAccount );		// how much cash the player started the round with
+	CNetworkVar( int, m_iStartAccount, [[= ks::reflect::Net{} ]] );		// how much cash the player started the round with
 
-	CNetworkVar( int, m_totalHitsOnServer );
+	CNetworkVar( int, m_totalHitsOnServer, [[= ks::reflect::Net{} ]] );
 
 	CNetworkVar( bool, m_bIsBuyMenuOpen );
 	bool IsBuyMenuOpen( void ) { return m_bIsBuyMenuOpen; } 
 	void SetBuyMenuOpen( bool bOpen ); 
 
-	EHANDLE	m_hRagdoll;
+	[[= ks::reflect::Net{} ]] EHANDLE	m_hRagdoll;
 
-	EHANDLE	m_hCarriedHostage;
-	EHANDLE	m_hCarriedHostageProp;
+	[[= ks::reflect::Net{} ]] EHANDLE	m_hCarriedHostage;
+	[[= ks::reflect::Net{} ]] EHANDLE	m_hCarriedHostageProp;
 	bool	m_bPlayingHostageCarrySound;
 
 	CWeaponCSBase* GetActiveCSWeapon() const;
@@ -743,8 +775,8 @@ public:
 	float GetFlashTimeElapsed( void ) { return MAX( gpGlobals->curtime - GetFlashStartTime(), 0.0f ); }
 
 	bool IsBlinded( void ) { return (m_flFlashBangTime - 1.0f) > gpGlobals->curtime; }
-	CNetworkVar( float, m_flFlashMaxAlpha );
-	CNetworkVar( float, m_flFlashDuration );	
+	CNetworkVar( float, m_flFlashMaxAlpha, [[= ks::reflect::Net{} ]] );
+	CNetworkVar( float, m_flFlashDuration, [[= ks::reflect::Net{} ]] [[= ks::reflect::Proxy<RecvProxy_FlashTime, ks::reflect::WIRE_RECV>{} ]] );	
 
 	float GetLastFiredWeaponTime( void ) { return m_flLastFiredWeaponTime; }
 	float m_flLastFiredWeaponTime;
@@ -809,19 +841,19 @@ public:
 	float m_flHealthFadeAlpha;
 
 	// Match Stats data
-	int m_iMatchStats_Kills[ MAX_MATCH_STATS_ROUNDS ];				//kills, per round
-	int m_iMatchStats_Damage[ MAX_MATCH_STATS_ROUNDS ];				//damage, per round
-	int m_iMatchStats_EquipmentValue[ MAX_MATCH_STATS_ROUNDS ];				//Equipment value, per round
-	int m_iMatchStats_MoneySaved[ MAX_MATCH_STATS_ROUNDS ];			//Saved money, per round
-	int m_iMatchStats_KillReward[ MAX_MATCH_STATS_ROUNDS ];
-	int m_iMatchStats_LiveTime[ MAX_MATCH_STATS_ROUNDS ];
-	int m_iMatchStats_Deaths[ MAX_MATCH_STATS_ROUNDS ];
-	int m_iMatchStats_Assists[ MAX_MATCH_STATS_ROUNDS ];
-	int m_iMatchStats_HeadShotKills[ MAX_MATCH_STATS_ROUNDS ];
-	int m_iMatchStats_Objective[ MAX_MATCH_STATS_ROUNDS ];
-	int m_iMatchStats_CashEarned[ MAX_MATCH_STATS_ROUNDS ];
-	int m_iMatchStats_UtilityDamage[ MAX_MATCH_STATS_ROUNDS ];
-	int m_iMatchStats_EnemiesFlashed[ MAX_MATCH_STATS_ROUNDS ];
+	[[= ks::reflect::Net{} ]] int m_iMatchStats_Kills[ MAX_MATCH_STATS_ROUNDS ];				//kills, per round
+	[[= ks::reflect::Net{} ]] int m_iMatchStats_Damage[ MAX_MATCH_STATS_ROUNDS ];				//damage, per round
+	[[= ks::reflect::Net{} ]] int m_iMatchStats_EquipmentValue[ MAX_MATCH_STATS_ROUNDS ];				//Equipment value, per round
+	[[= ks::reflect::Net{} ]] int m_iMatchStats_MoneySaved[ MAX_MATCH_STATS_ROUNDS ];			//Saved money, per round
+	[[= ks::reflect::Net{} ]] int m_iMatchStats_KillReward[ MAX_MATCH_STATS_ROUNDS ];
+	[[= ks::reflect::Net{} ]] int m_iMatchStats_LiveTime[ MAX_MATCH_STATS_ROUNDS ];
+	[[= ks::reflect::Net{} ]] int m_iMatchStats_Deaths[ MAX_MATCH_STATS_ROUNDS ];
+	[[= ks::reflect::Net{} ]] int m_iMatchStats_Assists[ MAX_MATCH_STATS_ROUNDS ];
+	[[= ks::reflect::Net{} ]] int m_iMatchStats_HeadShotKills[ MAX_MATCH_STATS_ROUNDS ];
+	[[= ks::reflect::Net{} ]] int m_iMatchStats_Objective[ MAX_MATCH_STATS_ROUNDS ];
+	[[= ks::reflect::Net{} ]] int m_iMatchStats_CashEarned[ MAX_MATCH_STATS_ROUNDS ];
+	[[= ks::reflect::Net{} ]] int m_iMatchStats_UtilityDamage[ MAX_MATCH_STATS_ROUNDS ];
+	[[= ks::reflect::Net{} ]] int m_iMatchStats_EnemiesFlashed[ MAX_MATCH_STATS_ROUNDS ];
 
 	CUtlReference<CNewParticleEffect> m_ARScreenGlowEffect;
 
@@ -845,15 +877,15 @@ private:
 
 	bool	m_bOldIsScoped;
 	
-	CNetworkVar( QuestProgress::Reason, m_nQuestProgressReason );
+	CNetworkVar( QuestProgress::Reason, m_nQuestProgressReason, [[= ks::reflect::Net{ .table = "DT_CSLocalPlayerExclusive" } ]] );
 
-	CNetworkVar( uint16, m_unCurrentEquipmentValue );
-	CNetworkVar( uint16, m_unRoundStartEquipmentValue );
-	CNetworkVar( uint16, m_unFreezetimeEndEquipmentValue );
+	CNetworkVar( uint16, m_unCurrentEquipmentValue, [[= ks::reflect::Net{} ]] );
+	CNetworkVar( uint16, m_unRoundStartEquipmentValue, [[= ks::reflect::Net{} ]] );
+	CNetworkVar( uint16, m_unFreezetimeEndEquipmentValue, [[= ks::reflect::Net{} ]] );
 
-	CNetworkArray( MedalRank_t, m_rank, MEDAL_CATEGORY_COUNT );
+	CNetworkArray( MedalRank_t, m_rank, MEDAL_CATEGORY_COUNT, [[= ks::reflect::Net{} ]] );
 
-	CNetworkVar( uint16, m_unMusicID );
+	CNetworkVar( uint16, m_unMusicID, [[= ks::reflect::Net{} ]] );
 
 	void ProcessSpottedEntityUpdate( void );
 	void UpdateSoundEvents( void );
@@ -886,14 +918,14 @@ private:
 	//=============================================================================
 
 
-	int		m_iAccount;	
-	bool	m_bHasHelmet;
-	bool	m_bHasHeavyArmor;
-	int		m_iClass;
-	int		m_ArmorValue;
-	QAngle	m_angEyeAngles;
-	bool	m_bHasDefuser;
-	bool	m_bInHostageRescueZone;
+	[[= ks::reflect::Net{} ]] int		m_iAccount;	
+	[[= ks::reflect::Net{} ]] bool	m_bHasHelmet;
+	[[= ks::reflect::Net{} ]] bool	m_bHasHeavyArmor;
+	[[= ks::reflect::Net{} ]] int		m_iClass;
+	[[= ks::reflect::Net{} ]] int		m_ArmorValue;
+	[[= ks::reflect::Net{} ]] QAngle	m_angEyeAngles;
+	[[= ks::reflect::Net{ .enc = ks::reflect::ENC_INT } ]] [[= ks::reflect::Proxy<RecvProxy_HasDefuser, ks::reflect::WIRE_RECV>{} ]] bool	m_bHasDefuser;
+	[[= ks::reflect::Net{} ]] bool	m_bInHostageRescueZone;
 	float	m_fNextThinkPushAway;
 
 	// Glow stuff
@@ -921,12 +953,12 @@ private:
 	bool	m_bShieldDrawn;
 #endif
 
-	bool	m_bHud_MiniScoreHidden;
-	bool	m_bHud_RadarHidden;
+	[[= ks::reflect::Net{} ]] bool	m_bHud_MiniScoreHidden;
+	[[= ks::reflect::Net{} ]] bool	m_bHud_RadarHidden;
 
-	int m_nLastKillerIndex;
-	int m_nLastConcurrentKilled;
-	int m_nDeathCamMusic;
+	[[= ks::reflect::Net{} ]] int m_nLastKillerIndex;
+	[[= ks::reflect::Net{} ]] int m_nLastConcurrentKilled;
+	[[= ks::reflect::Net{} ]] int m_nDeathCamMusic;
 
 	CInterpolatedVar< QAngle >	m_iv_angEyeAngles;
 
@@ -971,22 +1003,22 @@ private:
 	CUtlReference<CNewParticleEffect> m_hC4AddonLED;
 	CUtlReference<CNewParticleEffect> m_hC4WeaponLED;
 
-	int m_cycleLatch;				// server periodically updates this to fix up our anims, here it is a 4 bit fixed point
+	[[= ks::reflect::Net{} ]] [[= ks::reflect::Proxy<&C_CSPlayer::RecvProxy_CycleLatch, ks::reflect::WIRE_RECV>{} ]] int m_cycleLatch;				// server periodically updates this to fix up our anims, here it is a 4 bit fixed point
 	float m_serverIntendedCycle;	// server periodically updates this to fix up our anims, here it is the float we want, or -1 for no override
 
 	// [tj] Network variables that track who are dominating and being dominated by
-	CNetworkArray( bool, m_bPlayerDominated, MAX_PLAYERS+1 );		// array of state per other player whether player is dominating other players
-	CNetworkArray( bool, m_bPlayerDominatingMe, MAX_PLAYERS+1 );	// array of state per other player whether other players are dominating this player
+	CNetworkArray( bool, m_bPlayerDominated, MAX_PLAYERS+1, [[= ks::reflect::Net{ .table = "DT_CSLocalPlayerExclusive" } ]] );		// array of state per other player whether player is dominating other players
+	CNetworkArray( bool, m_bPlayerDominatingMe, MAX_PLAYERS+1, [[= ks::reflect::Net{ .table = "DT_CSLocalPlayerExclusive" } ]] );	// array of state per other player whether other players are dominating this player
 
-	CNetworkArray( int, m_iWeaponPurchasesThisRound, MAX_WEAPONS );		// number of times each weapon purchased this round; used to limit repurchases
+	CNetworkArray( int, m_iWeaponPurchasesThisRound, MAX_WEAPONS, [[= ks::reflect::Net{ .table = "DT_CSLocalPlayerExclusive" } ]] );		// number of times each weapon purchased this round; used to limit repurchases
 
 	CNetworkVar( bool, m_bIsTaunting );
 	CNetworkVar( bool, m_bIsThirdPersonTaunt );
 	CNetworkVar( bool, m_bIsHoldingTaunt );
 	CNetworkVar( float, m_flTauntYaw );
 
-	CNetworkVar( bool, m_bIsLookingAtWeapon );
-	CNetworkVar( bool, m_bIsHoldingLookAtWeapon );
+	CNetworkVar( bool, m_bIsLookingAtWeapon, [[= ks::reflect::Net{} ]] );
+	CNetworkVar( bool, m_bIsHoldingLookAtWeapon, [[= ks::reflect::Net{} ]] );
 
 	bool				m_bWasTaunting;
 	bool				m_bTauntInterpolating;
@@ -997,7 +1029,7 @@ private:
 	QAngle				m_angTauntEngViewAngles;
 
 public:
-	float m_flThirdpersonRecoil;
+	[[= ks::reflect::Net{} ]] float m_flThirdpersonRecoil;
 
 	// taser items
 	float m_nextTaserShakeTime;
@@ -1030,7 +1062,7 @@ public:
 	bool IsAssassinationTarget( void ) const;
 
 private:
-	CNetworkVar( bool, m_bIsAssassinationTarget );	// This player is an assassination target for an active mission
+	CNetworkVar( bool, m_bIsAssassinationTarget, [[= ks::reflect::Net{} ]] );	// This player is an assassination target for an active mission
 
 #if CS_CONTROLLABLE_BOTS_ENABLED
 
@@ -1045,17 +1077,17 @@ public:
 	virtual	bool	GetAttachment( int number, Vector &origin, QAngle &angles );
 
 private:
-	bool		m_bIsControllingBot;	// Are we controlling a bot? 
+	[[= ks::reflect::Net{} ]] bool		m_bIsControllingBot;	// Are we controlling a bot? 
 	// Note that this can be TRUE even if GetControlledPlayer() returns NULL, IFF we started controlling a bot and then the bot was deleted for some reason. 
-	bool		m_bCanControlObservedBot;	// True if the player can control the bot s/he is observing
-	int			m_iControlledBotEntIndex;
+	[[= ks::reflect::Net{} ]] bool		m_bCanControlObservedBot;	// True if the player can control the bot s/he is observing
+	[[= ks::reflect::Net{} ]] int			m_iControlledBotEntIndex;
 
 
 	void	UpdateFirstPersonShadowCasters( void );
 
 	float		m_flNextMagDropTime;
 	int			m_nLastMagDropAttachmentIndex;
-	CNetworkVar( bool, m_bHasControlledBotThisRound );
+	CNetworkVar( bool, m_bHasControlledBotThisRound, [[= ks::reflect::Net{} ]] );
 
 #endif
 
@@ -1184,7 +1216,14 @@ void RemoveSmokeGrenadeHandle( EHANDLE hGrenade );
 bool LineGoesThroughSmoke( Vector from, Vector to, bool grenadeBloat );
 void TruncatePlayerName( wchar_t *pCleanedHTMLName, int destLen, int nTruncateAt, bool bSkipHTML = false );
 
-class C_CSRagdoll : public C_BaseAnimatingOverlay
+class [[= ks::reflect::NetTable{ .name = "DT_CSRagdoll", .base = false } ]]
+      [[= ks::reflect::From<"m_vecNetworkOrigin", ks::reflect::Net{ .wire = "m_vecOrigin" }>{} ]]
+      [[= ks::reflect::From<"m_nModelIndex", ks::reflect::Net{}>{} ]]
+      [[= ks::reflect::From<"m_nForceBone", ks::reflect::Net{}>{} ]]
+      [[= ks::reflect::From<"m_vecForce", ks::reflect::Net{}>{} ]]
+      [[= ks::reflect::From<"m_iTeamNum", ks::reflect::Net{}>{} ]]
+      [[= ks::reflect::From<"m_bClientSideAnimation", ks::reflect::Net{}>{} ]]
+      C_CSRagdoll : public C_BaseAnimatingOverlay
 {
 public:
 	DECLARE_CLASS( C_CSRagdoll, C_BaseAnimatingOverlay );
@@ -1228,16 +1267,16 @@ private:
 
 private:
 
-	EHANDLE	m_hPlayer;
+	[[= ks::reflect::Net{} ]] EHANDLE	m_hPlayer;
 	CHandle<C_BaseAnimating> m_hHolidayHatAddon;
 	CHandle<C_BaseAnimating> m_hHolidayGhostAddon;
 	CHandle<C_BaseAnimating> m_hAssassinationTargetAddon;
-	CNetworkVector( m_vecRagdollVelocity );
-	CNetworkVector( m_vecRagdollOrigin );
-	CNetworkVar(int, m_iDeathPose );
-	CNetworkVar(int, m_iDeathFrame );
-	CNetworkVar(float, m_flDeathYaw );
-	CNetworkVar(float, m_flAbsYaw );
+	CNetworkVector( m_vecRagdollVelocity, [[= ks::reflect::Net{} ]] );
+	CNetworkVector( m_vecRagdollOrigin, [[= ks::reflect::Net{} ]] );
+	CNetworkVar(int, m_iDeathPose, [[= ks::reflect::Net{} ]] );
+	CNetworkVar(int, m_iDeathFrame, [[= ks::reflect::Net{} ]] );
+	CNetworkVar(float, m_flDeathYaw, [[= ks::reflect::Net{} ]] );
+	CNetworkVar(float, m_flAbsYaw, [[= ks::reflect::Net{} ]] );
 	bool m_bInitialized;
 
 	int m_nGlowObjectHandle;

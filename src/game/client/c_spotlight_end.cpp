@@ -6,6 +6,8 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_recvtable.h"
+#include "reflect_annotations.h"
 #include "dlight.h"
 #include "iefx.h"
 
@@ -17,7 +19,8 @@
 // PlasmaBeamNode - generates plasma embers
 //
 //##################################################################
-class C_SpotlightEnd : public C_BaseEntity
+class [[= ks::reflect::NetTable{ .name = "DT_SpotlightEnd" } ]]
+      C_SpotlightEnd : public C_BaseEntity
 {
 public:
 	DECLARE_CLASS( C_SpotlightEnd, C_BaseEntity );
@@ -36,8 +39,8 @@ public:
 
 //	Vector	m_vSpotlightOrg;
 //	Vector	m_vSpotlightDir;
-	float	m_flLightScale;
-	float	m_Radius;
+	[[= ks::reflect::Net{} ]] float	m_flLightScale;
+	[[= ks::reflect::Net{} ]] float	m_Radius;
 
 private:
 	dlight_t*	m_pDynamicLight;
@@ -150,9 +153,4 @@ void C_SpotlightEnd::ClientThink(void)
 	SetNextClientThink( CLIENT_THINK_ALWAYS );
 }
 
-IMPLEMENT_CLIENTCLASS_DT(C_SpotlightEnd, DT_SpotlightEnd, CSpotlightEnd)
-	RecvPropFloat	(RECVINFO(m_flLightScale)),
-	RecvPropFloat	(RECVINFO(m_Radius)),
-//	RecvPropVector	(RECVINFO(m_vSpotlightOrg)),
-//	RecvPropVector	(RECVINFO(m_vSpotlightDir)),
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS( C_SpotlightEnd, DT_SpotlightEnd, CSpotlightEnd )

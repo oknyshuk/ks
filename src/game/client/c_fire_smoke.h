@@ -8,6 +8,9 @@
 #ifndef C_FIRE_SMOKE_H
 #define C_FIRE_SMOKE_H
 
+#include "reflect_annotations.h"
+#include "dt_recv.h"
+
 #include "particles_simple.h"
 #include "tempent.h"
 #include "glow_overlay.h"
@@ -15,6 +18,10 @@
 #include "particle_litsmokeemitter.h"
 #include "tier1/utlobjectreference.h"
 
+
+void RecvProxy_Scale( const CRecvProxyData *pData, void *pStruct, void *pOut );
+
+void RecvProxy_ScaleTime( const CRecvProxyData *pData, void *pStruct, void *pOut );
 
 class CFireOverlay;
 
@@ -109,7 +116,8 @@ class C_FireFromAboveSprite : public C_Sprite
 #define	OVERLAY_MAX_VISIBLE_RANGE	512.0f
 
 
-class C_FireSmoke : public C_BaseEntity
+class [[= ks::reflect::NetTable{ .name = "DT_FireSmoke" } ]]
+      C_FireSmoke : public C_BaseEntity
 {
 public:
 	DECLARE_CLIENTCLASS();
@@ -142,12 +150,12 @@ public:
 	
 //From the server
 public:
-	float	m_flStartScale;
-	float	m_flScale;
-	float	m_flScaleTime;
-	int		m_nFlags;
-	int		m_nFlameModelIndex;
-	int		m_nFlameFromAboveModelIndex;
+	[[= ks::reflect::Net{} ]] float	m_flStartScale;
+	[[= ks::reflect::Net{} ]] [[= ks::reflect::Proxy<RecvProxy_Scale, ks::reflect::WIRE_RECV>{} ]] float	m_flScale;
+	[[= ks::reflect::Net{} ]] [[= ks::reflect::Proxy<RecvProxy_ScaleTime, ks::reflect::WIRE_RECV>{} ]] float	m_flScaleTime;
+	[[= ks::reflect::Net{} ]] int		m_nFlags;
+	[[= ks::reflect::Net{} ]] int		m_nFlameModelIndex;
+	[[= ks::reflect::Net{} ]] int		m_nFlameFromAboveModelIndex;
 
 //Client-side only
 public:

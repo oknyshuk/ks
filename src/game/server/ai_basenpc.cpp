@@ -5,6 +5,9 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_sendtable.h"
+#include "reflect_annotations.h"
 
 #include "ai_basenpc.h"
 #include "fmtstr.h"
@@ -61,12 +64,10 @@
 #include "tier1/strtools.h"
 #include "doors.h"
 #include "BasePropDoor.h"
-#include "saverestore_utlvector.h"
 #include "npcevent.h"
 #include "movevars_shared.h"
 #include "te_effect_dispatch.h"
 #include "globals.h"
-#include "saverestore_bitstring.h"
 #include "checksum_crc.h"
 #include "iservervehicle.h"
 #include "filters.h"
@@ -10618,300 +10619,24 @@ CBaseCombatCharacter* CAI_BaseNPC::GetEnemyCombatCharacterPointer()
 // This should be an exact copy of the var's in the header.  Fields
 // that aren't save/restored are commented out
 
-BEGIN_DATADESC( CAI_BaseNPC )
+IMPLEMENT_REFLECT_DATAMAP( CAI_BaseNPC )
 
-	//								m_pSchedule  (reacquired on restore)
-	DEFINE_EMBEDDED( m_ScheduleState ),
-	DEFINE_FIELD( m_IdealSchedule,				FIELD_INTEGER ), // handled specially but left in for "virtual" schedules
-	DEFINE_FIELD( m_failSchedule,				FIELD_INTEGER ), // handled specially but left in for "virtual" schedules
-	DEFINE_FIELD( m_bUsingStandardThinkTime,	FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_flLastRealThinkTime,		FIELD_TIME ),
-	//								m_iFrameBlocked (not saved)
-	//								m_bInChoreo (not saved)
-	//								m_bDoPostRestoreRefindPath (not saved)
-	//								gm_flTimeLastSpawn (static)
-	//								gm_nSpawnedThisFrame (static)
-	//								m_Conditions (custom save)
-	//								m_CustomInterruptConditions (custom save)
-	//								m_ConditionsPreIgnore (custom save)
-	//								m_InverseIgnoreConditions (custom save)
-	//								m_poseAim_Pitch (not saved; recomputed on restore)
-	//								m_poseAim_Yaw (not saved; recomputed on restore)
-	//								m_poseMove_Yaw (not saved; recomputed on restore)
-	DEFINE_FIELD( m_flTimePingEffect,			FIELD_TIME ),
-	DEFINE_FIELD( m_flFrozenMoveBlock,			FIELD_FLOAT ),
-	DEFINE_FIELD( m_bForceConditionsGather,		FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_bConditionsGathered,		FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_bSkippedChooseEnemy,		FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_NPCState,					FIELD_INTEGER ),
-	DEFINE_FIELD( m_IdealNPCState,				FIELD_INTEGER ),
-	DEFINE_FIELD( m_flLastStateChangeTime,		FIELD_TIME ),
-	DEFINE_FIELD( m_Efficiency,					FIELD_INTEGER ),
-	DEFINE_FIELD( m_MoveEfficiency,				FIELD_INTEGER ),
-	DEFINE_FIELD( m_flNextDecisionTime,			FIELD_TIME ),
-	DEFINE_KEYFIELD( m_SleepState,				FIELD_INTEGER, "sleepstate" ),
-	DEFINE_FIELD( m_SleepFlags,					FIELD_INTEGER ),
-	DEFINE_KEYFIELD( m_flWakeRadius, FIELD_FLOAT, "wakeradius" ),
-	DEFINE_KEYFIELD( m_bWakeSquad, FIELD_BOOLEAN, "wakesquad" ),
-	DEFINE_FIELD( m_nWakeTick, FIELD_TICK ),
-	
-	DEFINE_CUSTOM_FIELD( m_Activity,				ActivityDataOps() ),
-	DEFINE_CUSTOM_FIELD( m_translatedActivity,		ActivityDataOps() ),
-	DEFINE_CUSTOM_FIELD( m_IdealActivity,			ActivityDataOps() ),
-	DEFINE_CUSTOM_FIELD( m_IdealTranslatedActivity,	ActivityDataOps() ),
-	DEFINE_CUSTOM_FIELD( m_IdealWeaponActivity,		ActivityDataOps() ),
-
-	DEFINE_FIELD( m_nIdealSequence,				FIELD_INTEGER ),
-	DEFINE_EMBEDDEDBYREF( m_pSenses ),
-	DEFINE_EMBEDDEDBYREF( m_pLockedBestSound ),
-  	DEFINE_FIELD( m_hEnemy,						FIELD_EHANDLE ),
-	DEFINE_FIELD( m_flTimeEnemyAcquired,		FIELD_TIME ),
-	DEFINE_FIELD( m_hTargetEnt,					FIELD_EHANDLE ),
-	DEFINE_EMBEDDED( m_GiveUpOnDeadEnemyTimer ),
-	DEFINE_EMBEDDED( m_FailChooseEnemyTimer ),
-	DEFINE_FIELD( m_EnemiesSerialNumber,		FIELD_INTEGER ),
-	DEFINE_FIELD( m_flAcceptableTimeSeenEnemy,	FIELD_TIME ),
-	DEFINE_EMBEDDED( m_UpdateEnemyPosTimer ),
-	//		m_flTimeAnyUpdateEnemyPos (static)
-	DEFINE_FIELD( m_vecCommandGoal,				FIELD_VECTOR ),
-	DEFINE_EMBEDDED( m_CommandMoveMonitor ),
-	DEFINE_FIELD( m_flSoundWaitTime,			FIELD_TIME ),
-	DEFINE_FIELD( m_nSoundPriority,				FIELD_INTEGER ),
-	DEFINE_FIELD( m_flIgnoreDangerSoundsUntil,	FIELD_TIME ),
-	DEFINE_FIELD( m_afCapability,				FIELD_INTEGER ),
-	DEFINE_FIELD( m_flMoveWaitFinished,			FIELD_TIME ),
-	DEFINE_FIELD( m_hOpeningDoor,				FIELD_EHANDLE ),
-	DEFINE_EMBEDDEDBYREF( m_pNavigator ),
-	DEFINE_EMBEDDEDBYREF( m_pLocalNavigator ),
-	DEFINE_EMBEDDEDBYREF( m_pPathfinder ),
-	DEFINE_EMBEDDEDBYREF( m_pMoveProbe ),
-	DEFINE_EMBEDDEDBYREF( m_pMotor ),
-	DEFINE_UTLVECTOR(m_UnreachableEnts,		FIELD_EMBEDDED),
-	DEFINE_FIELD( m_hInteractionPartner,	FIELD_EHANDLE ),
-	DEFINE_FIELD( m_hLastInteractionTestTarget,	FIELD_EHANDLE ),
-	DEFINE_FIELD( m_hForcedInteractionPartner,	FIELD_EHANDLE ),
-	DEFINE_FIELD( m_flForcedInteractionTimeout, FIELD_TIME ),
-	DEFINE_FIELD( m_vecForcedWorldPosition,	FIELD_POSITION_VECTOR ),
-	DEFINE_FIELD( m_bCannotDieDuringInteraction, FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_iInteractionState,		FIELD_INTEGER ),
-	DEFINE_FIELD( m_iInteractionPlaying,	FIELD_INTEGER ),
-	DEFINE_UTLVECTOR(m_ScriptedInteractions,FIELD_EMBEDDED),
-	DEFINE_FIELD( m_flInteractionYaw,		FIELD_FLOAT ),
-	DEFINE_EMBEDDED( m_CheckOnGroundTimer ),
-	DEFINE_FIELD( m_vDefaultEyeOffset,		FIELD_VECTOR ),
-  	DEFINE_FIELD( m_flNextEyeLookTime,		FIELD_TIME ),
-    DEFINE_FIELD( m_flEyeIntegRate,			FIELD_FLOAT ),
-    DEFINE_FIELD( m_vEyeLookTarget,			FIELD_POSITION_VECTOR ),
-    DEFINE_FIELD( m_vCurEyeTarget,			FIELD_POSITION_VECTOR ),
-	DEFINE_FIELD( m_hEyeLookTarget,			FIELD_EHANDLE ),
-    DEFINE_FIELD( m_flHeadYaw,				FIELD_FLOAT ),
-    DEFINE_FIELD( m_flHeadPitch,				FIELD_FLOAT ),
-    DEFINE_FIELD( m_flOriginalYaw,			FIELD_FLOAT ),
-	DEFINE_FIELD( m_bInAScript,				FIELD_BOOLEAN ),
-    DEFINE_FIELD( m_scriptState,				FIELD_INTEGER ),
-	DEFINE_FIELD( m_hCine,					FIELD_EHANDLE ),
-	DEFINE_CUSTOM_FIELD( m_ScriptArrivalActivity,	ActivityDataOps() ),
-	DEFINE_FIELD( m_strScriptArrivalSequence,	FIELD_STRING ),
-	DEFINE_FIELD( m_flSceneTime,			FIELD_TIME ),
-	DEFINE_FIELD( m_iszSceneCustomMoveSeq,	FIELD_STRING ),
-	// 							m_pEnemies					Saved specially in ai_saverestore.cpp
-	DEFINE_FIELD( m_afMemory,					FIELD_INTEGER ),
-  	DEFINE_FIELD( m_hEnemyOccluder,			FIELD_EHANDLE ),
-  	DEFINE_FIELD( m_flSumDamage,				FIELD_FLOAT ),
-  	DEFINE_FIELD( m_flLastDamageTime,			FIELD_TIME ),
-  	DEFINE_FIELD( m_flLastPlayerDamageTime,			FIELD_TIME ),
-	DEFINE_FIELD( m_flLastSawPlayerTime,			FIELD_TIME ),
-  	DEFINE_FIELD( m_flLastAttackTime,			FIELD_TIME ),
-	DEFINE_FIELD( m_flLastEnemyTime,			FIELD_TIME ),
-  	DEFINE_FIELD( m_flNextWeaponSearchTime,	FIELD_TIME ),
-	DEFINE_FIELD( m_iszPendingWeapon,		FIELD_STRING ),
-	DEFINE_KEYFIELD( m_bIgnoreUnseenEnemies, FIELD_BOOLEAN , "ignoreunseenenemies"),
-	DEFINE_EMBEDDED( m_ShotRegulator ),
-	DEFINE_FIELD( m_iDesiredWeaponState,	FIELD_INTEGER ),
-	// 							m_pSquad					Saved specially in ai_saverestore.cpp
-	DEFINE_KEYFIELD(m_SquadName,				FIELD_STRING, "squadname" ),
-    DEFINE_FIELD( m_iMySquadSlot,				FIELD_INTEGER ),
-	DEFINE_KEYFIELD( m_strHintGroup,			FIELD_STRING, "hintgroup" ),
-	DEFINE_KEYFIELD( m_bHintGroupNavLimiting,	FIELD_BOOLEAN, "hintlimiting" ),
- 	DEFINE_EMBEDDEDBYREF( m_pTacticalServices ),
- 	DEFINE_FIELD( m_flWaitFinished,			FIELD_TIME ),
-	DEFINE_FIELD( m_flNextFlinchTime,		FIELD_TIME ),
-	DEFINE_FIELD( m_flNextDodgeTime,		FIELD_TIME ),
-	DEFINE_EMBEDDED( m_MoveAndShootOverlay ),
-	DEFINE_FIELD( m_vecLastPosition,			FIELD_POSITION_VECTOR ),
-	DEFINE_FIELD( m_vSavePosition,			FIELD_POSITION_VECTOR ),
-	DEFINE_FIELD( m_vInterruptSavePosition,		FIELD_POSITION_VECTOR ),
-	DEFINE_FIELD( m_pHintNode,				FIELD_EHANDLE),
-	DEFINE_FIELD( m_cAmmoLoaded,				FIELD_INTEGER ),
-    DEFINE_FIELD( m_flDistTooFar,				FIELD_FLOAT ),
-	DEFINE_FIELD( m_hGoalEnt,					FIELD_EHANDLE ),
-	DEFINE_FIELD( m_flTimeLastMovement,			FIELD_TIME ),
-	DEFINE_KEYFIELD(m_spawnEquipment,			FIELD_STRING, "additionalequipment" ),
-  	DEFINE_FIELD( m_fNoDamageDecal,			FIELD_BOOLEAN ),
-  	DEFINE_FIELD( m_hStoredPathTarget,			FIELD_EHANDLE ),
-	DEFINE_FIELD( m_vecStoredPathGoal,		FIELD_POSITION_VECTOR ),
-	DEFINE_FIELD( m_nStoredPathType,			FIELD_INTEGER ),
-	DEFINE_FIELD( m_fStoredPathFlags,			FIELD_INTEGER ),
-	DEFINE_FIELD( m_bDidDeathCleanup,			FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_bCrouchDesired,				FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_bForceCrouch,				FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_bIsCrouching,				FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_bPerformAvoidance,			FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_bIsMoving,					FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_bFadeCorpse,				FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_iDeathPose,					FIELD_INTEGER ),
-	DEFINE_FIELD( m_iDeathFrame,				FIELD_INTEGER ),
-	DEFINE_FIELD( m_bCheckContacts,				FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_bSpeedModActive,			FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_iSpeedModRadius,			FIELD_INTEGER ),
-	DEFINE_FIELD( m_iSpeedModSpeed,				FIELD_INTEGER ),
-	DEFINE_FIELD( m_hEnemyFilter,				FIELD_EHANDLE ),
-	DEFINE_KEYFIELD( m_iszEnemyFilterName,		FIELD_STRING, "enemyfilter" ),
-	DEFINE_FIELD( m_bImportanRagdoll,			FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_bPlayerAvoidState,			FIELD_BOOLEAN ),
-
-	// Satisfy classcheck
-	// DEFINE_FIELD( m_ScheduleHistory, CUtlVector < AIScheduleChoice_t > ),
-
-	//							m_fIsUsingSmallHull			TODO -- This needs more consideration than simple save/load
-	// 							m_failText					DEBUG
-	// 							m_interruptText				DEBUG
-	// 							m_failedSchedule			DEBUG
-	// 							m_interuptSchedule			DEBUG
-	// 							m_nDebugCurIndex			DEBUG
-
-	// 							m_LastShootAccuracy			DEBUG
-	// 							m_RecentShotAccuracy		DEBUG
-	// 							m_TotalShots				DEBUG
-	// 							m_TotalHits					DEBUG
-	//							m_bSelected					DEBUG
-	// 							m_TimeLastShotMark			DEBUG
-	//							m_bDeferredNavigation
+IMPLEMENT_REFLECT_DATAMAP_SIMPLE( AIScheduleState_t )
 
 
-	// Outputs
-	DEFINE_OUTPUT( m_OnDamaged,				"OnDamaged" ),
-	DEFINE_OUTPUT( m_OnDeath,					"OnDeath" ),
-	DEFINE_OUTPUT( m_OnHalfHealth,				"OnHalfHealth" ),
-	DEFINE_OUTPUT( m_OnFoundEnemy,				"OnFoundEnemy" ),
-	DEFINE_OUTPUT( m_OnLostEnemyLOS,			"OnLostEnemyLOS" ),
-	DEFINE_OUTPUT( m_OnLostEnemy,				"OnLostEnemy" ),
-	DEFINE_OUTPUT( m_OnFoundPlayer,			"OnFoundPlayer" ),
-	DEFINE_OUTPUT( m_OnLostPlayerLOS,			"OnLostPlayerLOS" ),
-	DEFINE_OUTPUT( m_OnLostPlayer,				"OnLostPlayer" ),
-	DEFINE_OUTPUT( m_OnHearWorld,				"OnHearWorld" ),
-	DEFINE_OUTPUT( m_OnHearPlayer,				"OnHearPlayer" ),
-	DEFINE_OUTPUT( m_OnHearCombat,				"OnHearCombat" ),
-	DEFINE_OUTPUT( m_OnDamagedByPlayer,		"OnDamagedByPlayer" ),
-	DEFINE_OUTPUT( m_OnDamagedByPlayerSquad,	"OnDamagedByPlayerSquad" ),
-	DEFINE_OUTPUT( m_OnDenyCommanderUse,		"OnDenyCommanderUse" ),
-	DEFINE_OUTPUT( m_OnRappelTouchdown,			"OnRappelTouchdown" ),
-	DEFINE_OUTPUT( m_OnWake,					"OnWake" ),
-	DEFINE_OUTPUT( m_OnSleep,					"OnSleep" ),
-	DEFINE_OUTPUT( m_OnForcedInteractionStarted,	"OnForcedInteractionStarted" ),
-	DEFINE_OUTPUT( m_OnForcedInteractionAborted,	"OnForcedInteractionAborted" ),
-	DEFINE_OUTPUT( m_OnForcedInteractionFinished,	"OnForcedInteractionFinished" ),
-
-	// Inputs
-	DEFINE_INPUTFUNC( FIELD_STRING, "SetRelationship", InputSetRelationship ),
-	DEFINE_INPUTFUNC( FIELD_STRING, "SetEnemyFilter", InputSetEnemyFilter ),
-	DEFINE_INPUTFUNC( FIELD_INTEGER, "SetHealth", InputSetHealth ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "BeginRappel", InputBeginRappel ),
-	DEFINE_INPUTFUNC( FIELD_STRING, "SetSquad", InputSetSquad ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "Wake", InputWake ),
-	DEFINE_INPUTFUNC( FIELD_STRING, "ForgetEntity", InputForgetEntity ),
-	DEFINE_INPUTFUNC( FIELD_FLOAT, "IgnoreDangerSounds", InputIgnoreDangerSounds ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "Break", InputBreak ),
-	DEFINE_INPUTFUNC( FIELD_VOID,	"StartScripting",	InputStartScripting ),
-	DEFINE_INPUTFUNC( FIELD_VOID,	"StopScripting",	InputStopScripting ),
-	DEFINE_INPUTFUNC( FIELD_VOID,	"GagEnable",	InputGagEnable ),
-	DEFINE_INPUTFUNC( FIELD_VOID,	"GagDisable",	InputGagDisable ),
-	DEFINE_INPUTFUNC( FIELD_VOID,	"InsideTransition",	InputInsideTransition ),
-	DEFINE_INPUTFUNC( FIELD_VOID,	"OutsideTransition",	InputOutsideTransition ),
-	DEFINE_INPUTFUNC( FIELD_VOID,	"ActivateSpeedModifier", InputActivateSpeedModifier ),
-	DEFINE_INPUTFUNC( FIELD_VOID,	"DisableSpeedModifier", InputDisableSpeedModifier ),
-	DEFINE_INPUTFUNC( FIELD_INTEGER, "SetSpeedModRadius", InputSetSpeedModifierRadius ),
-	DEFINE_INPUTFUNC( FIELD_INTEGER, "SetSpeedModSpeed", InputSetSpeedModifierSpeed ),
-	DEFINE_INPUTFUNC( FIELD_VOID,	"HolsterWeapon", InputHolsterWeapon ),
-	DEFINE_INPUTFUNC( FIELD_VOID,	"HolsterAndDestroyWeapon", InputHolsterAndDestroyWeapon ),
-	DEFINE_INPUTFUNC( FIELD_VOID,	"UnholsterWeapon", InputUnholsterWeapon ),
-	DEFINE_INPUTFUNC( FIELD_STRING,	"ForceInteractionWithNPC", InputForceInteractionWithNPC ),
-	DEFINE_INPUTFUNC( FIELD_STRING, "UpdateEnemyMemory", InputUpdateEnemyMemory ),
-	DEFINE_INPUTFUNC( FIELD_STRING, "CreateAddon", InputCreateAddon ),
-
-	// Function pointers
-	DEFINE_USEFUNC( NPCUse ),
-	DEFINE_THINKFUNC( CallNPCThink ),
-	DEFINE_THINKFUNC( CorpseFallThink ),
-	DEFINE_THINKFUNC( NPCInitThink ),
-
-END_DATADESC()
-
-BEGIN_SIMPLE_DATADESC( AIScheduleState_t )
-	DEFINE_FIELD( iCurTask,				FIELD_INTEGER ),
-	DEFINE_FIELD( fTaskStatus,			FIELD_INTEGER ),
-	DEFINE_FIELD( timeStarted,			FIELD_TIME ),
-	DEFINE_FIELD( timeCurTaskStarted,	FIELD_TIME ),
-	DEFINE_FIELD( taskFailureCode,		FIELD_INTEGER ),
-	DEFINE_FIELD( iTaskInterrupt,		FIELD_INTEGER ),
-	DEFINE_FIELD( bTaskRanAutomovement,	FIELD_BOOLEAN ),
-	DEFINE_FIELD( bTaskUpdatedYaw,		FIELD_BOOLEAN ),
-	DEFINE_FIELD( bScheduleWasInterrupted, FIELD_BOOLEAN ),
-END_DATADESC()
-
-
-IMPLEMENT_SERVERCLASS_ST( CAI_BaseNPC, DT_AI_BaseNPC )
-	SendPropInt( SENDINFO( m_lifeState ), 3, SPROP_UNSIGNED ),
-	SendPropBool( SENDINFO( m_bPerformAvoidance ) ),
-	SendPropBool( SENDINFO( m_bIsMoving ) ),
-	SendPropBool( SENDINFO( m_bFadeCorpse ) ),
-	SendPropInt( SENDINFO( m_iDeathPose ), ANIMATION_SEQUENCE_BITS ),
-	SendPropInt( SENDINFO( m_iDeathFrame ), 5 ),
-	SendPropBool( SENDINFO( m_bSpeedModActive ) ),
-	SendPropInt( SENDINFO( m_iSpeedModRadius ) ),
-	SendPropInt( SENDINFO( m_iSpeedModSpeed ) ),
-	SendPropBool( SENDINFO( m_bImportanRagdoll ) ),
-	SendPropFloat( SENDINFO( m_flTimePingEffect ) ),
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CAI_BaseNPC, DT_AI_BaseNPC )
 
 //-------------------------------------
 
-BEGIN_SIMPLE_DATADESC( UnreachableEnt_t )
-
-	DEFINE_FIELD( hUnreachableEnt,			FIELD_EHANDLE	),
-	DEFINE_FIELD( fExpireTime,				FIELD_TIME		),
-	DEFINE_FIELD( vLocationWhenUnreachable,	FIELD_POSITION_VECTOR	),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP_SIMPLE( UnreachableEnt_t )
 
 //-------------------------------------
 
-BEGIN_SIMPLE_DATADESC( ScriptedNPCInteraction_Phases_t )
-DEFINE_FIELD( iszSequence,					FIELD_STRING	),
-DEFINE_FIELD( iActivity,					FIELD_INTEGER	),
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP_SIMPLE( ScriptedNPCInteraction_Phases_t )
 
 //-------------------------------------
 
-BEGIN_SIMPLE_DATADESC( ScriptedNPCInteraction_t )
-	DEFINE_FIELD( iszInteractionName,			FIELD_STRING	),
-	DEFINE_FIELD( iFlags,						FIELD_INTEGER	),
-	DEFINE_FIELD( iTriggerMethod,				FIELD_INTEGER	),
-	DEFINE_FIELD( iLoopBreakTriggerMethod,		FIELD_INTEGER	),
-	DEFINE_FIELD( vecRelativeOrigin,			FIELD_VECTOR	),
-	DEFINE_FIELD( angRelativeAngles,			FIELD_VECTOR	),
-	DEFINE_FIELD( vecRelativeVelocity,			FIELD_VECTOR	),
-	DEFINE_FIELD( flCameraDistance,				FIELD_FLOAT		),
-	DEFINE_FIELD( angCameraAngles,				FIELD_VECTOR	),
-	DEFINE_FIELD( flDelay,						FIELD_FLOAT		),
-	DEFINE_FIELD( flDistSqr,					FIELD_FLOAT		),
-	DEFINE_FIELD( iszMyWeapon,					FIELD_STRING	),
-	DEFINE_FIELD( iszTheirWeapon,				FIELD_STRING	),
-	DEFINE_EMBEDDED_ARRAY( sPhases, SNPCINT_NUM_PHASES ),
-	DEFINE_FIELD( matDesiredLocalToWorld,		FIELD_VMATRIX	),
-	DEFINE_FIELD( bValidOnCurrentEnemy,			FIELD_BOOLEAN	),
-	DEFINE_FIELD( flNextAttemptTime,			FIELD_TIME		),
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP_SIMPLE( ScriptedNPCInteraction_t )
 
 //-------------------------------------
 
@@ -11018,98 +10743,7 @@ enum AIExtendedSaveHeaderFlags_t
 
 //-------------------------------------
 
-BEGIN_SIMPLE_DATADESC( AIExtendedSaveHeader_t )
-	DEFINE_FIELD( 		version,		FIELD_SHORT ),
-	DEFINE_FIELD( 		flags,			FIELD_INTEGER ),
-	DEFINE_AUTO_ARRAY(	szSchedule,		FIELD_CHARACTER ),
-	DEFINE_FIELD( 		scheduleCrc,	FIELD_INTEGER ),
-	DEFINE_AUTO_ARRAY(	szIdealSchedule,	FIELD_CHARACTER ),
-	DEFINE_AUTO_ARRAY(	szFailSchedule,		FIELD_CHARACTER ),
-	DEFINE_AUTO_ARRAY(	szSequence,		FIELD_CHARACTER ),
-END_DATADESC()
-
-//-------------------------------------
-
-int CAI_BaseNPC::Save( ISave &save )
-{
-	AIExtendedSaveHeader_t saveHeader;
-	
-	if ( GetEnemy() )
-		saveHeader.flags |= AIESH_HAD_ENEMY;
-	if ( GetTarget() )
-		saveHeader.flags |= AIESH_HAD_TARGET;
-	if ( GetNavigator()->IsGoalActive() )
-		saveHeader.flags |= AIESH_HAD_NAVGOAL;
-	
-	if ( m_pSchedule )
-	{
-		const char *pszSchedule = m_pSchedule->GetName();
-
-		Assert( Q_strlen( pszSchedule ) < sizeof( saveHeader.szSchedule ) - 1 );
-		Q_strncpy( saveHeader.szSchedule, pszSchedule, sizeof( saveHeader.szSchedule ) );
-
-		CRC32_Init( &saveHeader.scheduleCrc );
-		CRC32_ProcessBuffer( &saveHeader.scheduleCrc, (void *)m_pSchedule->GetTaskList(), m_pSchedule->NumTasks() * sizeof(Task_t) );
-		CRC32_Final( &saveHeader.scheduleCrc );
-	}
-	else
-	{
-		saveHeader.szSchedule[0] = 0;
-		saveHeader.scheduleCrc = 0;
-	}
-
-	int idealSchedule = GetGlobalScheduleId( m_IdealSchedule );
-
-	if ( idealSchedule != -1 && idealSchedule != AI_RemapToGlobal( SCHED_NONE ) && idealSchedule != AI_RemapToGlobal( SCHED_AISCRIPT ) )
-	{
-		CAI_Schedule *pIdealSchedule = GetSchedule( m_IdealSchedule );
-		if ( pIdealSchedule )
-		{
-			const char *pszIdealSchedule = pIdealSchedule->GetName();
-			Assert( Q_strlen( pszIdealSchedule ) < sizeof( saveHeader.szIdealSchedule ) - 1 );
-			Q_strncpy( saveHeader.szIdealSchedule, pszIdealSchedule, sizeof( saveHeader.szIdealSchedule ) );
-		}
-	}
-
-	int failSchedule = GetGlobalScheduleId( m_failSchedule );
-	if ( failSchedule != -1 && failSchedule != AI_RemapToGlobal( SCHED_NONE ) && failSchedule != AI_RemapToGlobal( SCHED_AISCRIPT ) )
-	{
-		CAI_Schedule *pFailSchedule = GetSchedule( m_failSchedule );
-		if ( pFailSchedule )
-		{
-			const char *pszFailSchedule = pFailSchedule->GetName();
-			Assert( Q_strlen( pszFailSchedule ) < sizeof( saveHeader.szFailSchedule ) - 1 );
-			Q_strncpy( saveHeader.szFailSchedule, pszFailSchedule, sizeof( saveHeader.szFailSchedule ) );
-		}
-	}
-
-	if ( GetSequence() != ACT_INVALID && GetModelPtr() )
-	{
-		const char *pszSequenceName = GetSequenceName( GetSequence() );
-		if ( pszSequenceName && *pszSequenceName )
-		{
-			Assert( Q_strlen( pszSequenceName ) < sizeof( saveHeader.szSequence ) - 1 );
-			Q_strncpy( saveHeader.szSequence, pszSequenceName, sizeof(saveHeader.szSequence) );
-		}
-	}
-
-	save.WriteAll( &saveHeader );
-
-	save.StartBlock();
-	SaveConditions( save, m_Conditions );
-	SaveConditions( save, m_CustomInterruptConditions );
-	SaveConditions( save, m_ConditionsPreIgnore );
-	CAI_ScheduleBits ignoreConditions;
-	m_InverseIgnoreConditions.Not( &ignoreConditions );
-	SaveConditions( save, ignoreConditions );
-	save.EndBlock();
-
-	save.StartBlock();
-	GetNavigator()->Save( save );
-	save.EndBlock();
-
-	return BaseClass::Save(save);
-}
+IMPLEMENT_REFLECT_DATAMAP_SIMPLE( AIExtendedSaveHeader_t )
 
 //-------------------------------------
 
@@ -11160,144 +10794,6 @@ void CAI_BaseNPC::OnRestore()
 	}
 	BaseClass::OnRestore();
 	m_bCheckContacts = true;
-}
-
-
-//-------------------------------------
-
-int CAI_BaseNPC::Restore( IRestore &restore )
-{
-	AIExtendedSaveHeader_t saveHeader;
-	restore.ReadAll( &saveHeader );
-
-	if ( saveHeader.version >= AI_EXTENDED_SAVE_HEADER_FIRST_VERSION_WITH_CONDITIONS )
-	{
-		restore.StartBlock();
-		RestoreConditions( restore, &m_Conditions );
-		RestoreConditions( restore, &m_CustomInterruptConditions );
-		RestoreConditions( restore, &m_ConditionsPreIgnore );
-		CAI_ScheduleBits ignoreConditions;
-		RestoreConditions( restore, &ignoreConditions );
-		ignoreConditions.Not( &m_InverseIgnoreConditions );
-		restore.EndBlock();
-	}
-
-	if ( saveHeader.version >= AI_EXTENDED_SAVE_HEADER_FIRST_VERSION_WITH_NAVIGATOR_SAVE )
-	{
-		restore.StartBlock();
-		GetNavigator()->Restore( restore );
-		restore.EndBlock();
-	}
-	
-	// do a normal restore
-	int status = BaseClass::Restore(restore);
-	if ( !status )
-		return 0;
-
-	// Do schedule fix-up
-	if ( saveHeader.version >= AI_EXTENDED_SAVE_HEADER_FIRST_VERSION_WITH_SCHEDULE_ID_FIXUP )
-	{
-		if ( saveHeader.szIdealSchedule[0] )
-		{
-			CAI_Schedule *pIdealSchedule = g_AI_SchedulesManager.GetScheduleByName( saveHeader.szIdealSchedule );
-			m_IdealSchedule = ( pIdealSchedule ) ? pIdealSchedule->GetId() : SCHED_NONE;
-		}
-
-		if ( saveHeader.szFailSchedule[0] )
-		{
-			CAI_Schedule *pFailSchedule = g_AI_SchedulesManager.GetScheduleByName( saveHeader.szFailSchedule );
-			m_failSchedule = ( pFailSchedule ) ? pFailSchedule->GetId() : SCHED_NONE;
-		}
-	}
-
-	bool bLostSequence = false;
-	if ( saveHeader.version >= AI_EXTENDED_SAVE_HEADER_FIRST_VERSION_WITH_SEQUENCE && saveHeader.szSequence[0] && GetModelPtr() )
-	{
-		SetSequence( LookupSequence( saveHeader.szSequence ) );
-		if ( GetSequence() == ACT_INVALID )
-		{
-			DevMsg( this, AIMF_IGNORE_SELECTED, "Discarding missing sequence %s on load.\n", saveHeader.szSequence );
-			SetSequence( 0 );
-			bLostSequence = true;
-		}
-
-		Assert( IsValidSequence( GetSequence() ) );
-	}
-
-	bool bLostScript = ( m_NPCState == NPC_STATE_SCRIPT && m_hCine == NULL );
-	bool bDiscardScheduleState = ( bLostScript || 
-								   bLostSequence ||
-								   saveHeader.szSchedule[0] == 0 ||
-								   saveHeader.version < AI_EXTENDED_SAVE_HEADER_RESET_VERSION ||
-								   ( (saveHeader.flags & AIESH_HAD_ENEMY) && !GetEnemy() ) ||
-								   ( (saveHeader.flags & AIESH_HAD_TARGET) && !GetTarget() ) );
-
-	if ( m_ScheduleState.taskFailureCode >= NUM_FAIL_CODES )
-		m_ScheduleState.taskFailureCode = FAIL_NO_TARGET; // must have been a string, gotta punt
-
-	if ( !bDiscardScheduleState )
-	{
-		m_pSchedule = g_AI_SchedulesManager.GetScheduleByName( saveHeader.szSchedule );
-		if ( m_pSchedule )
-		{
-			CRC32_t scheduleCrc;
-			CRC32_Init( &scheduleCrc );
-			CRC32_ProcessBuffer( &scheduleCrc, (void *)m_pSchedule->GetTaskList(), m_pSchedule->NumTasks() * sizeof(Task_t) );
-			CRC32_Final( &scheduleCrc );
-
-			if ( scheduleCrc != saveHeader.scheduleCrc )
-			{
-				m_pSchedule = NULL;
-			}
-		}
-	}
-
-	if ( !m_pSchedule )
-		bDiscardScheduleState = true;
-
-	if ( !bDiscardScheduleState )
-		m_bDoPostRestoreRefindPath = ( ( saveHeader.flags & AIESH_HAD_NAVGOAL) != 0 );
-	else 
-	{
-		m_bDoPostRestoreRefindPath = false;
-		DiscardScheduleState();
-	}
-
-	return status;
-}
-
-//-------------------------------------
-
-void CAI_BaseNPC::SaveConditions( ISave &save, const CAI_ScheduleBits &conditions )
-{
-	for (int i = 0; i < MAX_CONDITIONS; i++)
-	{
-		if (conditions.IsBitSet(i))
-		{
-			const char *pszConditionName = ConditionName(AI_RemapToGlobal(i));
-			if ( !pszConditionName )
-				break;
-			save.WriteString( pszConditionName );
-		}
-	}
-	save.WriteString( "" );
-}
-
-//-------------------------------------
-
-void CAI_BaseNPC::RestoreConditions( IRestore &restore, CAI_ScheduleBits *pConditions )
-{
-	pConditions->ClearAll();
-	char szCondition[256];
-	for (;;)
-	{
-		restore.ReadString( szCondition, sizeof(szCondition), 0 );
-		if ( !szCondition[0] )
-			break;
-		int iCondition = GetSchedulingSymbols()->ConditionSymbolToId( szCondition );
-		if ( iCondition != -1 )
-			pConditions->Set( AI_RemapFromGlobal( iCondition ) );
-	}
 }
 
 //-----------------------------------------------------------------------------

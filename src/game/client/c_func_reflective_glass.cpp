@@ -5,13 +5,16 @@
 // $NoKeywords: $
 //===========================================================================//
 #include "cbase.h"
+#include "reflect_recvtable.h"
+#include "reflect_annotations.h"
 #include "view_shared.h"
 #include "c_func_brush.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
-class C_FuncReflectiveGlass : public C_FuncBrush
+class [[= ks::reflect::NetTable{ .name = "DT_FuncReflectiveGlass" } ]]
+      C_FuncReflectiveGlass : public C_FuncBrush
 {
 public:
 	DECLARE_CLASS( C_FuncReflectiveGlass, C_FuncBrush );
@@ -27,8 +30,7 @@ public:
 	C_FuncReflectiveGlass	*m_pNext;
 };
 
-IMPLEMENT_CLIENTCLASS_DT( C_FuncReflectiveGlass, DT_FuncReflectiveGlass, CFuncReflectiveGlass )
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS( C_FuncReflectiveGlass, DT_FuncReflectiveGlass, CFuncReflectiveGlass )
 
 
 //-----------------------------------------------------------------------------

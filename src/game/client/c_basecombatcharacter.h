@@ -8,6 +8,8 @@
 #ifndef C_BASECOMBATCHARACTER_H
 #define C_BASECOMBATCHARACTER_H
 
+#include "reflect_annotations.h"
+
 #ifdef _WIN32
 #pragma once
 #endif
@@ -20,7 +22,17 @@
 class C_BaseCombatWeapon;
 class C_WeaponCombatShield;
 
-class C_BaseCombatCharacter : public C_BaseFlex
+namespace DT_BCCLocalPlayerExclusive { extern RecvTable g_RecvTable; }
+namespace DT_BCCNonLocalPlayerExclusive { extern RecvTable g_RecvTable; }
+
+class [[= ks::reflect::NetTable{ .name = "DT_BaseCombatCharacter" } ]]
+      [[= ks::reflect::NetTable{ .name = "DT_BCCLocalPlayerExclusive", .base = false } ]]
+      [[= ks::reflect::NetTable{ .name = "DT_BCCNonLocalPlayerExclusive", .base = false } ]]
+      [[= ks::reflect::SubTable<"bcc_localdata", &DT_BCCLocalPlayerExclusive::g_RecvTable,
+                                nullptr, true>{} ]]
+      [[= ks::reflect::SubTable<"bcc_nonlocaldata", &DT_BCCNonLocalPlayerExclusive::g_RecvTable,
+                                nullptr, true>{} ]]
+      C_BaseCombatCharacter : public C_BaseFlex
 {
 	DECLARE_CLASS( C_BaseCombatCharacter, C_BaseFlex );
 public:
@@ -101,20 +113,20 @@ public:
 public:
 
 // BEGIN PREDICTION DATA COMPACTION (these fields are together to allow for faster copying in prediction system)
-	float			m_flNextAttack;
+	[[= ks::reflect::Net{ .table = "DT_BCCLocalPlayerExclusive" } ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] float			m_flNextAttack;
 
 private:
 	bool ComputeLOS( const Vector &vecEyePosition, const Vector &vecTarget ) const;
 
 public:
-	int m_LastHitGroup;
+	[[= ks::reflect::Net{} ]] int m_LastHitGroup;
 
 private:
-	CNetworkArray( int, m_iAmmo, MAX_AMMO_TYPES );
-	CHandle<C_BaseCombatWeapon>		m_hMyWeapons[MAX_WEAPONS];
-	CHandle< C_BaseCombatWeapon > m_hActiveWeapon;
-	float m_flTimeOfLastInjury;
-	RelativeDamagedDirection_t m_nRelativeDirectionOfLastInjury;
+	CNetworkArray( int, m_iAmmo, MAX_AMMO_TYPES, [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] );
+	[[= ks::reflect::Net{} ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] CHandle<C_BaseCombatWeapon>		m_hMyWeapons[MAX_WEAPONS];
+	[[= ks::reflect::Net{} ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] CHandle< C_BaseCombatWeapon > m_hActiveWeapon;
+	[[= ks::reflect::Net{} ]] [[= ks::reflect::As{ FIELD_TIME } ]] float m_flTimeOfLastInjury;
+	[[= ks::reflect::Net{} ]] RelativeDamagedDirection_t m_nRelativeDirectionOfLastInjury;
 
 // END PREDICTION DATA COMPACTION
 

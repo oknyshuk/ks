@@ -5,6 +5,8 @@
 // $NoKeywords: $
 //===========================================================================//
 #include "cbase.h"
+#include "reflect_recvtable.h"
+#include "reflect_annotations.h"
 
 #include "c_spatialentity.h"
 #include "spatialentitymgr.h"
@@ -20,9 +22,7 @@ static ConVar cl_ambient_light_disableentities( "cl_ambient_light_disableentitie
 static CSpatialEntityMgr s_EnvAmbientLightMgr;
 
 
-IMPLEMENT_CLIENTCLASS_DT( C_EnvAmbientLight, DT_EnvAmbientLight, CEnvAmbientLight )
-	RecvPropVector( RECVINFO_NAME( m_Value, m_vecColor ) ),
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS( C_EnvAmbientLight, DT_EnvAmbientLight, CEnvAmbientLight )
 
 
 void C_EnvAmbientLight::ApplyAccumulation( void )

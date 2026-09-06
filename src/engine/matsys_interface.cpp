@@ -34,7 +34,6 @@
 #include "cdll_engine_int.h"
 #include "utldict.h"
 #include "filesystem.h"
-#include "host_saverestore.h"
 #include "server.h"
 #include "game/client/iclientrendertargets.h"
 #include "tier2/tier2.h"
@@ -182,7 +181,6 @@ void mat_hdr_level_Callback( IConVar *var, const char *pOldString, float flOldVa
 	// given the current map and hardware.
 #ifndef DEDICATED
 	if ( g_pMaterialSystemHardwareConfig->GetHardwareHDRType() != HDR_TYPE_NONE &&
-         saverestore->IsValidSave() &&
 		 modelloader->LastLoadedMapHasHDRLighting() &&
 		 sv.GetMaxClients() == 1 &&
 		 !sv.IsLevelMainMenuBackground()

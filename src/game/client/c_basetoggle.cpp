@@ -2,19 +2,17 @@
 // Copyright (c) 2007 Turtle Rock Studios, Inc.
 
 #include "cbase.h"
+#include "reflect_predmap.h"
+#include "reflect_recvtable.h"
+#include "reflect_annotations.h"
 #include "c_basetoggle.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
-IMPLEMENT_CLIENTCLASS_DT( C_BaseToggle, DT_BaseToggle, CBaseToggle )
-	RecvPropVector( RECVINFO( m_vecFinalDest ) ),
-	RecvPropInt( RECVINFO( m_movementType ) ),
-	RecvPropFloat( RECVINFO( m_flMoveTargetTime ) ),
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS( C_BaseToggle, DT_BaseToggle, CBaseToggle )
 
-BEGIN_PREDICTION_DATA( C_BaseToggle )
-END_PREDICTION_DATA()
+IMPLEMENT_REFLECT_PREDMAP( C_BaseToggle );
 
 
 ConVar cl_predict_basetoggles("cl_predict_basetoggles", "1" );
@@ -108,9 +106,7 @@ Vector C_BaseToggle::PredictPosition( float fCurTime )
 
 
 //--------------------------------------------------------------------------------------------------------
-IMPLEMENT_CLIENTCLASS_DT( C_BaseButton, DT_BaseButton, CBaseButton )
-	RecvPropBool( RECVINFO( m_usable ) ),
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS( C_BaseButton, DT_BaseButton, CBaseButton )
 
 
 //--------------------------------------------------------------------------------------------------------

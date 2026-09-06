@@ -6,6 +6,8 @@
 // $NoKeywords: $
 //===========================================================================//
 #include "cbase.h"
+#include "reflect_recvtable.h"
+#include "reflect_annotations.h"
 #include "c_basetempentity.h"
 #include "particle_simple3d.h"
 #include "tier1/keyvalues.h"
@@ -40,7 +42,8 @@ ConVar fx_glass_velocity_cap("fx_glass_velocity_cap", "0", 0, "Maximum downwards
 //###################################################
 // > C_TEShatterSurface
 //###################################################
-class C_TEShatterSurface : public C_BaseTempEntity
+class [[= ks::reflect::NetTable{ .name = "DT_TEShatterSurface" } ]]
+      C_TEShatterSurface : public C_BaseTempEntity
 {
 public:
 	DECLARE_CLASS( C_TEShatterSurface, C_BaseTempEntity );
@@ -56,39 +59,24 @@ private:
 	void RecordShatterSurface( );
 
 public:
-	Vector					m_vecOrigin;
-	QAngle					m_vecAngles;
-	Vector					m_vecForce;
-	Vector					m_vecForcePos;
-	float					m_flWidth;
-	float					m_flHeight;
-	float					m_flShardSize;
+	[[= ks::reflect::Net{} ]] Vector					m_vecOrigin;
+	[[= ks::reflect::Net{} ]] QAngle					m_vecAngles;
+	[[= ks::reflect::Net{} ]] Vector					m_vecForce;
+	[[= ks::reflect::Net{} ]] Vector					m_vecForcePos;
+	[[= ks::reflect::Net{} ]] float					m_flWidth;
+	[[= ks::reflect::Net{} ]] float					m_flHeight;
+	[[= ks::reflect::Net{} ]] float					m_flShardSize;
 	PMaterialHandle			m_pMaterialHandle;
-	int						m_nSurfaceType;
-	byte					m_uchFrontColor[3];
-	byte					m_uchBackColor[3];
+	[[= ks::reflect::Net{} ]] int						m_nSurfaceType;
+	[[= ks::reflect::Net{ .index = 2 } ]] [[= ks::reflect::Net{ .index = 1 } ]] [[= ks::reflect::Net{ .index = 0 } ]] byte					m_uchFrontColor[3];
+	[[= ks::reflect::Net{ .index = 2 } ]] [[= ks::reflect::Net{ .index = 1 } ]] [[= ks::reflect::Net{ .index = 0 } ]] byte					m_uchBackColor[3];
 };
 
 
 //------------------------------------------------------------------------------
 // Networking
 //------------------------------------------------------------------------------
-IMPLEMENT_CLIENTCLASS_EVENT_DT(C_TEShatterSurface, DT_TEShatterSurface, CTEShatterSurface)
-	RecvPropVector( RECVINFO(m_vecOrigin)),
-	RecvPropVector( RECVINFO(m_vecAngles)),
-	RecvPropVector( RECVINFO(m_vecForce)),
-	RecvPropVector( RECVINFO(m_vecForcePos)),
-	RecvPropFloat( RECVINFO(m_flWidth)),
-	RecvPropFloat( RECVINFO(m_flHeight)),
-	RecvPropFloat( RECVINFO(m_flShardSize)),
-	RecvPropInt( RECVINFO(m_nSurfaceType)),	
-	RecvPropInt( RECVINFO(m_uchFrontColor[0])),
-	RecvPropInt( RECVINFO(m_uchFrontColor[1])),
-	RecvPropInt( RECVINFO(m_uchFrontColor[2])),
-	RecvPropInt( RECVINFO(m_uchBackColor[0])),
-	RecvPropInt( RECVINFO(m_uchBackColor[1])),
-	RecvPropInt( RECVINFO(m_uchBackColor[2])),
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS_EVENT( C_TEShatterSurface, DT_TEShatterSurface, CTEShatterSurface )
 
 
 //------------------------------------------------------------------------------

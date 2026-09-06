@@ -9,12 +9,13 @@
 #define C_ENTITY_FLAME_H
 
 #include "c_baseentity.h"
+#include "reflect_annotations.h"
 
 //
 // Entity flame, client-side implementation
 //
 
-class C_EntityFlame : public C_BaseEntity
+class [[= ks::reflect::NetTable{ .name = "DT_EntityFlame" } ]] C_EntityFlame : public C_BaseEntity
 {
 public:
 	DECLARE_CLIENTCLASS();
@@ -28,7 +29,7 @@ public:
 	virtual void	OnDataChanged( DataUpdateType_t updateType );
 	virtual void	ClientThink( void );
 
-	EHANDLE				m_hEntAttached;		// The entity that we are burning (attached to).
+	[[= ks::reflect::Net{} ]] EHANDLE	m_hEntAttached;		// The entity that we are burning (attached to).
 
 private:
 	void	CreateEffect( void );
@@ -36,7 +37,7 @@ private:
 
 	CUtlReference<CNewParticleEffect> m_hEffect;
 	EHANDLE				m_hOldAttached;
-	bool				m_bCheapEffect;
+	[[= ks::reflect::Net{} ]] bool				m_bCheapEffect;
 };
 
 

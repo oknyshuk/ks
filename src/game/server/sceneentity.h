@@ -6,6 +6,8 @@
 //=============================================================================//
 #ifndef SCENEENTITY_H
 #define SCENEENTITY_H
+
+#include "reflect_annotations.h"
 #ifdef _WIN32
 #pragma once
 #endif

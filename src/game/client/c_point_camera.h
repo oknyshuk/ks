@@ -7,6 +7,9 @@
 
 #ifndef C_POINTCAMERA_H
 #define C_POINTCAMERA_H
+
+#include "reflect_annotations.h"
+#include "dt_recv.h"
 #ifdef _WIN32
 #pragma once
 #endif
@@ -14,7 +17,8 @@
 #include "c_baseentity.h"
 #include "basetypes.h"
 
-class C_PointCamera : public C_BaseEntity
+class [[= ks::reflect::NetTable{ .name = "DT_PointCamera" } ]]
+      C_PointCamera : public C_BaseEntity
 {
 public:
 	DECLARE_CLASS( C_PointCamera, C_BaseEntity );
@@ -41,15 +45,15 @@ public:
 	virtual void	GetToolRecordingState( KeyValues *msg );
 
 protected:
-	float m_FOV;
-	float m_Resolution;
-	bool m_bFogEnable;
-	color32 m_FogColor;
-	float m_flFogStart;
-	float m_flFogEnd;
-	float m_flFogMaxDensity;
-	bool m_bActive;
-	bool m_bUseScreenAspectRatio;
+	[[= ks::reflect::Net{} ]] float m_FOV;
+	[[= ks::reflect::Net{} ]] float m_Resolution;
+	[[= ks::reflect::Net{} ]] bool m_bFogEnable;
+	[[= ks::reflect::Net{} ]] [[= ks::reflect::Proxy<RecvProxy_Int32ToColor32, ks::reflect::WIRE_RECV>{} ]] color32 m_FogColor;
+	[[= ks::reflect::Net{} ]] float m_flFogStart;
+	[[= ks::reflect::Net{} ]] float m_flFogEnd;
+	[[= ks::reflect::Net{} ]] float m_flFogMaxDensity;
+	[[= ks::reflect::Net{} ]] bool m_bActive;
+	[[= ks::reflect::Net{} ]] bool m_bUseScreenAspectRatio;
 
 public:
 	C_PointCamera	*m_pNext;

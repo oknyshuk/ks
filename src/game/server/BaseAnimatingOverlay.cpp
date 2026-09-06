@@ -7,13 +7,15 @@
 //===========================================================================//
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_sendtable.h"
+#include "reflect_annotations.h"
 #include "animation.h"
 #include "studio.h"
 #include "bone_setup.h"
 #include "ai_basenpc.h"
 #include "npcevent.h"
 
-#include "saverestore_utlvector.h"
 #include "dt_utlvector_send.h"
 
 #include "datacache/imdlcache.h"
@@ -28,69 +30,19 @@
 extern ConVar ai_sequence_debug;
 
 
-BEGIN_SIMPLE_DATADESC( CAnimationLayer )
-
-//	DEFINE_FIELD( m_pOwnerEntity, CBaseAnimatingOverlay ),
-	DEFINE_FIELD( m_fFlags, FIELD_INTEGER ),
-	DEFINE_FIELD( m_bSequenceFinished, FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_bLooping, FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_nSequence, FIELD_INTEGER ),
-	DEFINE_FIELD( m_flCycle, FIELD_FLOAT ),
-	DEFINE_FIELD( m_flPrevCycle, FIELD_FLOAT ),
-	DEFINE_FIELD( m_flPlaybackRate, FIELD_FLOAT),
-	DEFINE_FIELD( m_flWeight, FIELD_FLOAT),
-	DEFINE_FIELD( m_flWeightDeltaRate, FIELD_FLOAT),
-	DEFINE_FIELD( m_flBlendIn, FIELD_FLOAT ),
-	DEFINE_FIELD( m_flBlendOut, FIELD_FLOAT ),
-	DEFINE_FIELD( m_flKillRate, FIELD_FLOAT ),
-	DEFINE_FIELD( m_flKillDelay, FIELD_FLOAT ),
-	DEFINE_CUSTOM_FIELD( m_nActivity, ActivityDataOps() ),
-	DEFINE_FIELD( m_nPriority, FIELD_INTEGER ),
-	DEFINE_FIELD( m_nOrder, FIELD_INTEGER ),
-	DEFINE_FIELD( m_flLastEventCheck, FIELD_FLOAT ),
-	DEFINE_FIELD( m_flLastAccess, FIELD_TIME ),
-	DEFINE_FIELD( m_flLayerAnimtime, FIELD_FLOAT ),
-	DEFINE_FIELD( m_flLayerFadeOuttime, FIELD_FLOAT ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP_SIMPLE( CAnimationLayer )
 
 
-BEGIN_DATADESC( CBaseAnimatingOverlay )
-
-	DEFINE_UTLVECTOR( m_AnimOverlay, FIELD_EMBEDDED ),
-
-	// DEFINE_FIELD( m_nActiveLayers, FIELD_INTEGER ),
-	// DEFINE_FIELD( m_nActiveBaseLayers, FIELD_INTEGER ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CBaseAnimatingOverlay )
 
 
-#define ORDER_BITS			4
-#define WEIGHT_BITS			8
-
-BEGIN_SEND_TABLE_NOBASE(CAnimationLayer, DT_Animationlayer)
-	SendPropInt		(SENDINFO(m_nSequence),		ANIMATION_SEQUENCE_BITS,SPROP_UNSIGNED),
-	SendPropFloat	(SENDINFO(m_flCycle),		ANIMATION_CYCLE_BITS,	SPROP_ROUNDDOWN,	0.0f,   1.0f),
-	SendPropFloat	(SENDINFO(m_flPlaybackRate),WEIGHT_BITS,			SPROP_NOSCALE ),
-	SendPropFloat	(SENDINFO(m_flPrevCycle),	ANIMATION_CYCLE_BITS,	SPROP_ROUNDDOWN,	0.0f,   1.0f),
-	SendPropFloat	(SENDINFO(m_flWeight),		WEIGHT_BITS,			0,	0.0f,	1.0f),
-	SendPropFloat	(SENDINFO(m_flWeightDeltaRate),WEIGHT_BITS,			SPROP_NOSCALE ),
-	SendPropInt		(SENDINFO(m_nOrder),		ORDER_BITS,				SPROP_UNSIGNED),
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_TABLE( CAnimationLayer, DT_Animationlayer );
 
 
-BEGIN_SEND_TABLE_NOBASE( CBaseAnimatingOverlay, DT_OverlayVars )
-	SendPropUtlVector( 
-		SENDINFO_UTLVECTOR( m_AnimOverlay ),
-		CBaseAnimatingOverlay::MAX_OVERLAYS, // max elements
-		SendPropDataTable( NULL, 0, &REFERENCE_SEND_TABLE( DT_Animationlayer ) )  )
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_TABLE_IN( CBaseAnimatingOverlay, DT_OverlayVars );
 
 
-IMPLEMENT_SERVERCLASS_ST( CBaseAnimatingOverlay, DT_BaseAnimatingOverlay )
-	// These are in their own separate data table so CCSPlayer can exclude all of these.
-	SendPropDataTable( "overlay_vars", 0, &REFERENCE_SEND_TABLE( DT_OverlayVars ) )
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CBaseAnimatingOverlay, DT_BaseAnimatingOverlay )
 
 
 

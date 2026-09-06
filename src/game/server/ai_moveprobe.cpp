@@ -5,6 +5,8 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_annotations.h"
+#include "reflect_datamap.h"
 
 #include "modelentities.h"
 #include "iservervehicle.h"
@@ -63,12 +65,7 @@ CON_COMMAND( ai_set_move_height_epsilon, "Set how high AI bumps up ground walker
 
 //-----------------------------------------------------------------------------
 
-BEGIN_SIMPLE_DATADESC(CAI_MoveProbe)
-	//					m_pTraceListData (not saved, a cached item)
-	DEFINE_FIELD( m_bIgnoreTransientEntities,		FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_hLastBlockingEnt,				FIELD_EHANDLE ),
-
-END_DATADESC();
+IMPLEMENT_REFLECT_DATAMAP_SIMPLE( CAI_MoveProbe )
 
 
 //-----------------------------------------------------------------------------

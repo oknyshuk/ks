@@ -7,6 +7,8 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_annotations.h"
 #include "EnvLaser.h"
 #include "Sprite.h"
 
@@ -15,23 +17,7 @@
 
 LINK_ENTITY_TO_CLASS( env_laser, CEnvLaser );
 
-BEGIN_DATADESC( CEnvLaser )
-
-	DEFINE_KEYFIELD( m_iszLaserTarget, FIELD_STRING, "LaserTarget" ),
-	DEFINE_FIELD( m_pSprite, FIELD_CLASSPTR ),
-	DEFINE_KEYFIELD( m_iszSpriteName, FIELD_STRING, "EndSprite" ),
-	DEFINE_FIELD( m_firePosition, FIELD_VECTOR ),
-	DEFINE_KEYFIELD( m_flStartFrame, FIELD_FLOAT, "framestart" ),
-
-	// Function Pointers
-	DEFINE_FUNCTION( StrikeThink ),
-
-	// Input functions
-	DEFINE_INPUTFUNC( FIELD_VOID, "TurnOn", InputTurnOn ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "TurnOff", InputTurnOff ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "Toggle", InputToggle ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CEnvLaser )
 
 
 //-----------------------------------------------------------------------------

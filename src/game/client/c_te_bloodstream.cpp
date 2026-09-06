@@ -6,6 +6,8 @@
 // $NoKeywords: $
 //===========================================================================//
 #include "cbase.h"
+#include "reflect_recvtable.h"
+#include "reflect_annotations.h"
 #include "c_te_particlesystem.h"
 #include "tier1/keyvalues.h"
 #include "toolframework_client.h"
@@ -17,7 +19,12 @@
 //-----------------------------------------------------------------------------
 // Purpose: Blood Stream TE
 //-----------------------------------------------------------------------------
-class C_TEBloodStream : public C_TEParticleSystem
+class [[= ks::reflect::NetTable{ .name = "DT_TEBloodStream" } ]]
+      [[= ks::reflect::From<"r", ks::reflect::Net{}>{} ]]
+      [[= ks::reflect::From<"g", ks::reflect::Net{}>{} ]]
+      [[= ks::reflect::From<"b", ks::reflect::Net{}>{} ]]
+      [[= ks::reflect::From<"a", ks::reflect::Net{}>{} ]]
+      C_TEBloodStream : public C_TEParticleSystem
 {
 public:
 	DECLARE_CLASS( C_TEBloodStream, C_TEParticleSystem );
@@ -29,23 +36,16 @@ public:
 	virtual void	PostDataUpdate( DataUpdateType_t updateType );
 
 public:
-	Vector			m_vecDirection;
+	[[= ks::reflect::Net{} ]] Vector			m_vecDirection;
 	int				r, g, b, a;
-	int				m_nAmount;
+	[[= ks::reflect::Net{} ]] int				m_nAmount;
 };
 
 
 //-----------------------------------------------------------------------------
 // Networking
 //-----------------------------------------------------------------------------
-IMPLEMENT_CLIENTCLASS_EVENT_DT(C_TEBloodStream, DT_TEBloodStream, CTEBloodStream)
-	RecvPropVector( RECVINFO(m_vecDirection)),
-	RecvPropInt( RECVINFO(r)),
-	RecvPropInt( RECVINFO(g)),
-	RecvPropInt( RECVINFO(b)),
-	RecvPropInt( RECVINFO(a)),
-	RecvPropInt( RECVINFO(m_nAmount)),
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS_EVENT( C_TEBloodStream, DT_TEBloodStream, CTEBloodStream )
 
 
 //-----------------------------------------------------------------------------

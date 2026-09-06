@@ -11,6 +11,8 @@
 // $NoKeywords: $
 //=============================================================================//
 #include "cbase.h"
+#include "reflect_sendtable.h"
+#include "reflect_annotations.h"
 #include "basetempentity.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
@@ -19,7 +21,8 @@
 //-----------------------------------------------------------------------------
 // Purpose: Dispatches decal tempentity
 //-----------------------------------------------------------------------------
-class CTEDecal : public CBaseTempEntity
+class [[= ks::reflect::NetTable{ .name = "DT_TEDecal" } ]]
+      CTEDecal : public CBaseTempEntity
 {
 public:
 	DECLARE_CLASS( CTEDecal, CBaseTempEntity );
@@ -32,11 +35,11 @@ public:
 	DECLARE_SERVERCLASS();
 
 public:
-	CNetworkVector( m_vecOrigin );
-	CNetworkVector( m_vecStart );
-	CNetworkVar( int, m_nEntity );
-	CNetworkVar( int, m_nHitbox );
-	CNetworkVar( int, m_nIndex );
+	CNetworkVector( m_vecOrigin, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD, .enc = ks::reflect::ENC_VECTOR } ]] );
+	CNetworkVector( m_vecStart, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD, .enc = ks::reflect::ENC_VECTOR } ]] );
+	CNetworkVar( int, m_nEntity, [[= ks::reflect::Net{ .bits = MAX_EDICT_BITS, .flags = SPROP_UNSIGNED } ]] );
+	CNetworkVar( int, m_nHitbox, [[= ks::reflect::Net{ .bits = 16, .flags = SPROP_UNSIGNED } ]] );
+	CNetworkVar( int, m_nIndex, [[= ks::reflect::Net{ .bits = 9, .flags = SPROP_UNSIGNED } ]] );
 };
 
 //-----------------------------------------------------------------------------
@@ -94,13 +97,7 @@ void CTEDecal::Test( const Vector& current_origin, const QAngle& current_angles 
 }
 
 
-IMPLEMENT_SERVERCLASS_ST(CTEDecal, DT_TEDecal)
-	SendPropVector( SENDINFO(m_vecOrigin), -1, SPROP_COORD),
-	SendPropVector( SENDINFO(m_vecStart), -1, SPROP_COORD),
-	SendPropInt( SENDINFO(m_nEntity), MAX_EDICT_BITS, SPROP_UNSIGNED ),
-	SendPropInt( SENDINFO(m_nHitbox), 16, SPROP_UNSIGNED ), // this is the max number of static props that can be decalled
-	SendPropInt( SENDINFO(m_nIndex), 9, SPROP_UNSIGNED ),
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CTEDecal, DT_TEDecal )
 
 
 // Singleton to fire TEDecal objects

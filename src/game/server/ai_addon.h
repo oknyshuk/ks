@@ -2,6 +2,8 @@
 
 #ifndef AI_ADDON_H
 #define AI_ADDON_H
+
+#include "reflect_annotations.h"
 #ifdef _WIN32
 #pragma once
 #endif
@@ -54,27 +56,9 @@ public:
 		return true;
 	}
 
-	int Save( ISave &save )
-	{
-		int result = CBaseAnimating::Save( save );
-		if ( result )
-		{
-			result = CAI_Agent::Save( save );
-		}
-		return result;
-	}
 
 	//-------------------------------------
 
-	int Restore( IRestore &restore )
-	{
-		int result = CBaseAnimating::Restore( restore );
-		if ( result )
-		{
-			result = CAI_Agent::Restore( restore );
-		}
-		return result;
-	}
 
 	//---------------------------------
 	// Agent stuff
@@ -122,8 +106,8 @@ public:
 	//---------------------------------
 	// Entity I/O
 	//---------------------------------
-	void InputInstall( inputdata_t &data );
-	void InputRemove( inputdata_t &data );
+	[[= ks::reflect::Input{ .name = "Install", .type = FIELD_STRING } ]] void InputInstall( inputdata_t &data );
+	[[= ks::reflect::Input{ .name = "Remove", .type = FIELD_VOID } ]] void InputRemove( inputdata_t &data );
 
 	//---------------------------------
 	// Schedule/Task/Conditions
@@ -292,48 +276,9 @@ class CAI_AddOnBehaviorConnector : public ADDON
 
 	//-------------------------------------
 
-	int Save( ISave &save )
-	{
-		int result = BaseClass::Save( save );
-		if ( result )
-		{
-			bool bSaved = false;
-			BEHAVIOR *pBehavior;
-			if ( this->m_hNPCHost && this->m_hNPCHost->GetBehavior( &pBehavior ) )
-			{
-				bSaved = true;
-				CAI_BehaviorBase::SaveBehaviors( save, pBehavior, (CAI_BehaviorBase **)&pBehavior, 1, false );
-			}
-
-			if ( !bSaved )
-			{
-				CAI_BehaviorBase::SaveBehaviors( save, NULL, NULL, 0 );
-			}
-		}
-
-		return result;
-	}
 
 	//-------------------------------------
 
-	int Restore( IRestore &restore )
-	{
-		int result = BaseClass::Restore( restore );
-		if ( result )
-		{
-			Bind();
-			BEHAVIOR *pBehavior;
-			if ( this->m_hNPCHost && this->m_hNPCHost->GetBehavior( &pBehavior ) )
-			{
-				CAI_BehaviorBase::RestoreBehaviors( restore, (CAI_BehaviorBase **)&pBehavior, 1, false );
-			}
-			else
-			{
-				CAI_BehaviorBase::RestoreBehaviors( restore, NULL, 0,false );
-			}
-		}
-		return result;
-	}
 
 };
 

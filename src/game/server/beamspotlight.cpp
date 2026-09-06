@@ -7,6 +7,9 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_sendtable.h"
+#include "reflect_annotations.h"
+#include "reflect_datamap.h"
 #include "EnvLaser.h"
 #include "Sprite.h"
 
@@ -25,7 +28,8 @@ enum BeamSpotlightSpawnFlags_t
 };
 
 
-class CBeamSpotlight : public CBaseEntity
+class [[= ks::reflect::NetTable{ .name = "DT_BeamSpotlight" } ]]
+      CBeamSpotlight : public CBaseEntity
 {
 	DECLARE_CLASS( CBeamSpotlight, CBaseEntity );
 public:
@@ -37,11 +41,11 @@ public:
 	void	Spawn( void );
 	void	Precache( void );
 
-	void InputTurnOn( inputdata_t &inputdata );
-	void InputTurnOff( inputdata_t &inputdata );
-	void InputStart( inputdata_t &inputdata );
-	void InputStop( inputdata_t &inputdata );
-	void InputReverse( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "LightOn",  .type = FIELD_VOID } ]] void InputTurnOn( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "LightOff", .type = FIELD_VOID } ]] void InputTurnOff( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Start",    .type = FIELD_VOID } ]] void InputStart( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Stop",     .type = FIELD_VOID } ]] void InputStop( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Reverse",  .type = FIELD_VOID } ]] void InputReverse( inputdata_t &inputdata );
 
 protected:
 	bool KeyValue( const char *szKeyName, const char *szValue );
@@ -50,62 +54,34 @@ private:
 	int  UpdateTransmitState();
 	void RecalcRotation( void );
 
-	CNetworkVar( int, m_nHaloIndex );
+	CNetworkVar( int, m_nHaloIndex , [[= ks::reflect::Net{ .bits = 16, .flags = SPROP_UNSIGNED } ]]);
 
-	CNetworkVar( bool, m_bSpotlightOn );
-	CNetworkVar( bool, m_bHasDynamicLight );
+	CNetworkVar( bool, m_bSpotlightOn , [[= ks::reflect::Net{} ]]);
+	CNetworkVar( bool, m_bHasDynamicLight , [[= ks::reflect::Net{} ]]);
 
-	CNetworkVar( float, m_flSpotlightMaxLength );
-	CNetworkVar( float,	m_flSpotlightGoalWidth );
-	CNetworkVar( float,	m_flHDRColorScale );
+	CNetworkVar( float, m_flSpotlightMaxLength, [[= ks::reflect::Key{ .name = "SpotlightLength" } ]] [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE } ]]);
+	CNetworkVar( float,	m_flSpotlightGoalWidth, [[= ks::reflect::Key{ .name = "SpotlightWidth" } ]] [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE } ]]);
+	CNetworkVar( float,	m_flHDRColorScale, [[= ks::reflect::Key{ .name = "HDRColorScale" } ]] [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE } ]]);
 	CNetworkVar( int, m_nMinDXLevel );
-	CNetworkVar( int, m_nRotationAxis );
-	CNetworkVar( float, m_flRotationSpeed );
+	CNetworkVar( int, m_nRotationAxis , [[= ks::reflect::Net{ .bits = 2, .flags = SPROP_UNSIGNED } ]]);
+	CNetworkVar( float, m_flRotationSpeed , [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE } ]]);
 
-	float m_flmaxSpeed;
+	[[= ks::reflect::Key{ .name = "maxspeed" } ]] float m_flmaxSpeed;
 	bool m_isRotating;
 	bool m_isReversed;
 
 public:
-	COutputEvent m_OnOn, m_OnOff;     ///< output fires when turned on, off
+	// Split from one declaration: each output needs its own external name.
+	[[= ks::reflect::Key{ .name = "OnLightOn" } ]]  COutputEvent m_OnOn;
+	[[= ks::reflect::Key{ .name = "OnLightOff" } ]] COutputEvent m_OnOff;
 };
 
 
 LINK_ENTITY_TO_CLASS( beam_spotlight, CBeamSpotlight );
 
-BEGIN_DATADESC( CBeamSpotlight )
-	DEFINE_FIELD( m_nHaloIndex, FIELD_MODELINDEX ),
-	DEFINE_FIELD( m_bSpotlightOn, FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_bHasDynamicLight, FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_flRotationSpeed, FIELD_FLOAT ),
-	DEFINE_FIELD( m_isRotating, FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_isReversed, FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_nRotationAxis, FIELD_INTEGER ),
+IMPLEMENT_REFLECT_DATAMAP( CBeamSpotlight )
 
-	DEFINE_KEYFIELD( m_flmaxSpeed, FIELD_FLOAT, "maxspeed" ),
-	DEFINE_KEYFIELD( m_flSpotlightMaxLength,FIELD_FLOAT, "SpotlightLength"),
-	DEFINE_KEYFIELD( m_flSpotlightGoalWidth,FIELD_FLOAT, "SpotlightWidth"),
-	DEFINE_KEYFIELD( m_flHDRColorScale, FIELD_FLOAT, "HDRColorScale" ),
-
-	DEFINE_INPUTFUNC( FIELD_VOID, "LightOn", InputTurnOn ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "LightOff", InputTurnOff ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "Start", InputStart ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "Stop", InputStop ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "Reverse", InputReverse ),
-	DEFINE_OUTPUT( m_OnOn, "OnLightOn" ),
-	DEFINE_OUTPUT( m_OnOff, "OnLightOff" ),
-END_DATADESC()
-
-IMPLEMENT_SERVERCLASS_ST(CBeamSpotlight, DT_BeamSpotlight)
-	SendPropInt( SENDINFO(m_nHaloIndex),	16, SPROP_UNSIGNED ),
-	SendPropBool( SENDINFO(m_bSpotlightOn) ),
-	SendPropBool( SENDINFO(m_bHasDynamicLight) ),
-	SendPropFloat( SENDINFO(m_flSpotlightMaxLength), 0, SPROP_NOSCALE ),
-	SendPropFloat( SENDINFO(m_flSpotlightGoalWidth), 0, SPROP_NOSCALE ),
-	SendPropFloat( SENDINFO(m_flHDRColorScale), 0, SPROP_NOSCALE ),
-	SendPropFloat( SENDINFO(m_flRotationSpeed), 0, SPROP_NOSCALE ),
-	SendPropInt( SENDINFO(m_nRotationAxis),	2, SPROP_UNSIGNED ),
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CBeamSpotlight, DT_BeamSpotlight )
 
 //-----------------------------------------------------------------------------
 // Purpose: 

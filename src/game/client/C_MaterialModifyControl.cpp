@@ -5,6 +5,7 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_recvtable.h"
 #include "proxyentity.h"
 #include "materialsystem/imaterial.h"
 #include "materialsystem/imaterialvar.h"
@@ -50,7 +51,7 @@ struct materialfloatlerpcommands_t
 // FIXME: This really should inherit from something	more lightweight
 //------------------------------------------------------------------------------
 
-class C_MaterialModifyControl : public C_BaseEntity
+class [[= ks::reflect::NetTable{ .name = "DT_MaterialModifyControl" } ]] C_MaterialModifyControl : public C_BaseEntity
 {
 public:
 
@@ -93,46 +94,32 @@ public:
 	}
 private:
 
-	char m_szMaterialName[MATERIAL_MODIFY_STRING_SIZE];
-	char m_szMaterialVar[MATERIAL_MODIFY_STRING_SIZE];
-	char m_szMaterialVarValue[MATERIAL_MODIFY_STRING_SIZE];
+	[[= ks::reflect::Net{} ]] char m_szMaterialName[MATERIAL_MODIFY_STRING_SIZE];
+	[[= ks::reflect::Net{} ]] char m_szMaterialVar[MATERIAL_MODIFY_STRING_SIZE];
+	[[= ks::reflect::Net{} ]] char m_szMaterialVarValue[MATERIAL_MODIFY_STRING_SIZE];
 	IMaterial		*m_pMaterial;
 
 	bool	m_bHasNewAnimationCommands;
 
 	// Animation commands from the server
-	int		m_iFrameStart;
-	int		m_iFrameEnd;
-	bool	m_bWrap;
-	float	m_flFramerate;
-	bool	m_bNewAnimCommandsSemaphore;
+	[[= ks::reflect::Net{} ]] int		m_iFrameStart;
+	[[= ks::reflect::Net{} ]] int		m_iFrameEnd;
+	[[= ks::reflect::Net{} ]] bool	m_bWrap;
+	[[= ks::reflect::Net{} ]] float	m_flFramerate;
+	[[= ks::reflect::Net{} ]] bool	m_bNewAnimCommandsSemaphore;
 	bool	m_bOldAnimCommandsSemaphore;
 
 	// Float lerp commands from the server
-	float	m_flFloatLerpStartValue;
-	float	m_flFloatLerpEndValue;
-	float	m_flFloatLerpTransitionTime;
-	bool	m_bFloatLerpWrap;
+	[[= ks::reflect::Net{} ]] float	m_flFloatLerpStartValue;
+	[[= ks::reflect::Net{} ]] float	m_flFloatLerpEndValue;
+	[[= ks::reflect::Net{} ]] float	m_flFloatLerpTransitionTime;
+	[[= ks::reflect::Net{} ]] bool	m_bFloatLerpWrap;
 	float	m_flAnimationStartTime;
 
-	int		m_nModifyMode;
+	[[= ks::reflect::Net{} ]] int		m_nModifyMode;
 };
 
-IMPLEMENT_CLIENTCLASS_DT(C_MaterialModifyControl, DT_MaterialModifyControl, CMaterialModifyControl)
-	RecvPropString( RECVINFO( m_szMaterialName ) ),
-	RecvPropString( RECVINFO( m_szMaterialVar ) ),
-	RecvPropString( RECVINFO( m_szMaterialVarValue ) ),
-	RecvPropInt( RECVINFO(m_iFrameStart) ),
-	RecvPropInt( RECVINFO(m_iFrameEnd) ),
-	RecvPropInt( RECVINFO(m_bWrap) ),
-	RecvPropFloat( RECVINFO(m_flFramerate) ),
-	RecvPropInt( RECVINFO(m_bNewAnimCommandsSemaphore) ),
-	RecvPropFloat( RECVINFO(m_flFloatLerpStartValue) ),
-	RecvPropFloat( RECVINFO(m_flFloatLerpEndValue) ),
-	RecvPropFloat( RECVINFO(m_flFloatLerpTransitionTime) ),
-	RecvPropInt( RECVINFO(m_bFloatLerpWrap) ),
-	RecvPropInt( RECVINFO(m_nModifyMode) ),
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS( C_MaterialModifyControl, DT_MaterialModifyControl, CMaterialModifyControl )
 
 //------------------------------------------------------------------------------
 // Purpose:

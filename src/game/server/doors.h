@@ -7,6 +7,8 @@
 
 #ifndef DOORS_H
 #define DOORS_H
+
+#include "reflect_annotations.h"
 #pragma once
 
 
@@ -46,7 +48,10 @@ enum FuncDoorSpawnPos_t
 };
 
 
-class CBaseDoor : public CBaseToggle
+class [[= ks::reflect::NetTable{ .name = "DT_BaseDoor" } ]]
+      [[= ks::reflect::KeyFrom<"m_ls.sLockedSound", ks::reflect::Key{ .name = "locked_sound", .as = FIELD_SOUNDNAME } >{} ]]
+      [[= ks::reflect::KeyFrom<"m_ls.sUnlockedSound", ks::reflect::Key{ .name = "unlocked_sound", .as = FIELD_SOUNDNAME } >{} ]]
+      CBaseDoor : public CBaseToggle
 {
 public:
 	DECLARE_CLASS( CBaseDoor, CBaseToggle );
@@ -77,7 +82,7 @@ public:
 	DECLARE_DATADESC();
 
 	// This is ONLY used by the node graph to test movement through a door
-	void InputSetToggleState( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetToggleState", .type = FIELD_FLOAT } ]] void InputSetToggleState( inputdata_t &inputdata );
 	virtual void SetToggleState( int state );
 
 	virtual bool IsRotatingDoor() { return false; }
@@ -97,53 +102,53 @@ public:
 	int GetDoorMovementGroup( CBaseDoor *pDoorList[], int listMax );
 
 	// Input handlers
-	void InputClose( inputdata_t &inputdata );
-	void InputLock( inputdata_t &inputdata );
-	void InputOpen( inputdata_t &inputdata );
-	void InputToggle( inputdata_t &inputdata );
-	void InputUnlock( inputdata_t &inputdata );
-	void InputSetSpeed( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Close", .type = FIELD_VOID } ]] void InputClose( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Lock", .type = FIELD_VOID } ]] void InputLock( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Open", .type = FIELD_VOID } ]] void InputOpen( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Toggle", .type = FIELD_VOID } ]] void InputToggle( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Unlock", .type = FIELD_VOID } ]] void InputUnlock( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetSpeed", .type = FIELD_FLOAT } ]] void InputSetSpeed( inputdata_t &inputdata );
 
-	Vector m_vecMoveDir;		// The direction of motion for linear moving doors.
+	[[= ks::reflect::Key{ .name = "movedir" } ]] Vector m_vecMoveDir;		// The direction of motion for linear moving doors.
 
 	locksound_t m_ls;			// door lock sounds
 	
 	byte	m_bLockedSentence;	
 	byte	m_bUnlockedSentence;
 
-	bool	m_bForceClosed;			// If set, always close, even if we're blocked.
+	[[= ks::reflect::Key{ .name = "forceclosed" } ]] bool	m_bForceClosed;			// If set, always close, even if we're blocked.
 	bool	m_bDoorGroup;
 	bool	m_bLocked;				// Whether the door is locked
-	bool	m_bIgnoreDebris;
+	[[= ks::reflect::Key{ .name = "ignoredebris" } ]] bool	m_bIgnoreDebris;
 	
-	FuncDoorSpawnPos_t m_eSpawnPosition;
+	[[= ks::reflect::Key{ .name = "spawnpos" } ]] FuncDoorSpawnPos_t m_eSpawnPosition;
 
-	float	m_flBlockDamage;		// Damage inflicted when blocked.
-	string_t	m_NoiseMoving;		//Start/Looping sound
-	string_t	m_NoiseArrived;		//End sound
-	string_t	m_NoiseMovingClosed;		//Start/Looping sound
-	string_t	m_NoiseArrivedClosed;		//End sound
-	string_t	m_ChainTarget;		///< Entity name to pass Touch and Use events to
+	[[= ks::reflect::Key{ .name = "dmg" } ]] float	m_flBlockDamage;		// Damage inflicted when blocked.
+	[[= ks::reflect::As{ FIELD_SOUNDNAME } ]] [[= ks::reflect::Key{ .name = "noise1" } ]] string_t	m_NoiseMoving;		//Start/Looping sound
+	[[= ks::reflect::As{ FIELD_SOUNDNAME } ]] [[= ks::reflect::Key{ .name = "noise2" } ]] string_t	m_NoiseArrived;		//End sound
+	[[= ks::reflect::As{ FIELD_SOUNDNAME } ]] [[= ks::reflect::Key{ .name = "startclosesound" } ]] string_t	m_NoiseMovingClosed;		//Start/Looping sound
+	[[= ks::reflect::As{ FIELD_SOUNDNAME } ]] [[= ks::reflect::Key{ .name = "closesound" } ]] string_t	m_NoiseArrivedClosed;		//End sound
+	[[= ks::reflect::Key{ .name = "chainstodoor" } ]] string_t	m_ChainTarget;		///< Entity name to pass Touch and Use events to
 
-	CNetworkVar( float, m_flWaveHeight );
+	CNetworkVar( float, m_flWaveHeight, [[= ks::reflect::Net{ .bits = 8, .low = 0.0f, .high = 8.0f, .flags = SPROP_ROUNDUP } ]] [[= ks::reflect::Key{ .name = "WaveHeight" } ]] );
 
 	// Outputs
-	COutputEvent m_OnBlockedClosing;		// Triggered when the door becomes blocked while closing.
-	COutputEvent m_OnBlockedOpening;		// Triggered when the door becomes blocked while opening.
-	COutputEvent m_OnUnblockedClosing;		// Triggered when the door becomes unblocked while closing.
-	COutputEvent m_OnUnblockedOpening;		// Triggered when the door becomes unblocked while opening.
-	COutputEvent m_OnFullyClosed;			// Triggered when the door reaches the fully closed position.
-	COutputEvent m_OnFullyOpen;				// Triggered when the door reaches the fully open position.
-	COutputEvent m_OnClose;					// Triggered when the door is told to close.
-	COutputEvent m_OnOpen;					// Triggered when the door is told to open.
-	COutputEvent m_OnLockedUse;				// Triggered when the user tries to open a locked door.
+	[[= ks::reflect::Key{ .name = "OnBlockedClosing" } ]] COutputEvent m_OnBlockedClosing;		// Triggered when the door becomes blocked while closing.
+	[[= ks::reflect::Key{ .name = "OnBlockedOpening" } ]] COutputEvent m_OnBlockedOpening;		// Triggered when the door becomes blocked while opening.
+	[[= ks::reflect::Key{ .name = "OnUnblockedClosing" } ]] COutputEvent m_OnUnblockedClosing;		// Triggered when the door becomes unblocked while closing.
+	[[= ks::reflect::Key{ .name = "OnUnblockedOpening" } ]] COutputEvent m_OnUnblockedOpening;		// Triggered when the door becomes unblocked while opening.
+	[[= ks::reflect::Key{ .name = "OnFullyClosed" } ]] COutputEvent m_OnFullyClosed;			// Triggered when the door reaches the fully closed position.
+	[[= ks::reflect::Key{ .name = "OnFullyOpen" } ]] COutputEvent m_OnFullyOpen;				// Triggered when the door reaches the fully open position.
+	[[= ks::reflect::Key{ .name = "OnClose" } ]] COutputEvent m_OnClose;					// Triggered when the door is told to close.
+	[[= ks::reflect::Key{ .name = "OnOpen" } ]] COutputEvent m_OnOpen;					// Triggered when the door is told to open.
+	[[= ks::reflect::Key{ .name = "OnLockedUse" } ]] COutputEvent m_OnLockedUse;				// Triggered when the user tries to open a locked door.
 
 	void			StartMovingSound( void );
 	virtual void	StopMovingSound( void );
 	void			MovingSoundThink( void );
 	
 	bool		ShouldLoopMoveSound( void ) { return m_bLoopMoveSound; }
-	bool		m_bLoopMoveSound;			// Move sound loops until stopped
+	[[= ks::reflect::Key{ .name = "loopmovesound" } ]] bool		m_bLoopMoveSound;			// Move sound loops until stopped
 
 private:
 	void ChainUse( void );	///< Chains +use on through to m_ChainTarget

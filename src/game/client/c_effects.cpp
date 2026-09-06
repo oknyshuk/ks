@@ -6,6 +6,8 @@
 //
 //===========================================================================//
 #include "cbase.h"
+#include "reflect_recvtable.h"
+#include "reflect_annotations.h"
 #include "c_effects.h"
 #include "c_tracer.h"
 #include "view.h"
@@ -97,8 +99,7 @@ CUtlVector< RayTracingEnvironment* > g_RayTraceEnvironments;
 //-----------------------------------------------------------------------------
 
 // Just receive the normal data table stuff
-IMPLEMENT_CLIENTCLASS_DT(C_PrecipitationBlocker, DT_PrecipitationBlocker, CPrecipitationBlocker)
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS( C_PrecipitationBlocker, DT_PrecipitationBlocker, CPrecipitationBlocker )
 
 
 static CUtlVector< C_PrecipitationBlocker * > g_PrecipitationBlockers;
@@ -128,12 +129,9 @@ bool ParticleIsBlocked( const Vector &end, const Vector &start )
 }
 
 // Just receive the normal data table stuff
-IMPLEMENT_CLIENTCLASS_DT(CClient_Precipitation, DT_Precipitation, CPrecipitation)
-	RecvPropInt( RECVINFO( m_nPrecipType ) ),
+IMPLEMENT_REFLECT_CLIENTCLASS( CClient_Precipitation, DT_Precipitation, CPrecipitation )
 #ifdef INFESTED_DLL
-	RecvPropInt( RECVINFO( m_nSnowDustAmount ) ),
 #endif
-END_RECV_TABLE()
 
 static ConVar r_SnowEnable( "r_SnowEnable", "1", FCVAR_CHEAT, "Snow Enable" );
 static ConVar r_SnowParticles( "r_SnowParticles", "500", FCVAR_CHEAT, "Snow." );
@@ -1562,7 +1560,8 @@ CPrecipHack g_PrecipHack( "CPrecipHack" );
 //-----------------------------------------------------------------------------
 // EnvWind - global wind info
 //-----------------------------------------------------------------------------
-class C_EnvWind : public C_BaseEntity
+class [[= ks::reflect::NetTable{ .name = "DT_EnvWind" } ]]
+      C_EnvWind : public C_BaseEntity
 {
 public:
 	C_EnvWind();
@@ -1578,29 +1577,13 @@ public:
 private:
 	C_EnvWind( const C_EnvWind & );
 
-	CEnvWindShared m_EnvWindShared;
+	[[= ks::reflect::Net{} ]] CEnvWindShared m_EnvWindShared;
 };
 
 // Receive datatables
-BEGIN_RECV_TABLE_NOBASE(CEnvWindShared, DT_EnvWindShared)
-	RecvPropInt		(RECVINFO(m_iMinWind)),
-	RecvPropInt		(RECVINFO(m_iMaxWind)),
-	RecvPropInt		(RECVINFO(m_iMinGust)),
-	RecvPropInt		(RECVINFO(m_iMaxGust)),
-	RecvPropFloat	(RECVINFO(m_flMinGustDelay)),
-	RecvPropFloat	(RECVINFO(m_flMaxGustDelay)),
-	RecvPropInt		(RECVINFO(m_iGustDirChange)),
-	RecvPropInt		(RECVINFO(m_iWindSeed)),
-	RecvPropInt		(RECVINFO(m_iInitialWindDir)),
-	RecvPropFloat	(RECVINFO(m_flInitialWindSpeed)),
-	RecvPropFloat	(RECVINFO(m_flStartTime)),
-	RecvPropFloat	(RECVINFO(m_flGustDuration)),
-//	RecvPropInt		(RECVINFO(m_iszGustSound)),
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_TABLE( CEnvWindShared, DT_EnvWindShared );
 
-IMPLEMENT_CLIENTCLASS_DT( C_EnvWind, DT_EnvWind, CEnvWind )
-	RecvPropDataTable(RECVINFO_DT(m_EnvWindShared), 0, &REFERENCE_RECV_TABLE(DT_EnvWindShared)),
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS( C_EnvWind, DT_EnvWind, CEnvWind )
 
 
 C_EnvWind::C_EnvWind()
@@ -1703,7 +1686,8 @@ Vector CEmberEmitter::UpdateColor( const SimpleParticle *pParticle )
 // C_Embers
 //==================================================
 
-class C_Embers : public C_BaseEntity
+class [[= ks::reflect::NetTable{ .name = "DT_Embers" } ]]
+      C_Embers : public C_BaseEntity
 {
 public:
 	DECLARE_CLIENTCLASS();
@@ -1719,10 +1703,10 @@ public:
 	virtual bool	Simulate( void );
 
 	//Server-side
-	int		m_nDensity;
-	int		m_nLifetime;
-	int		m_nSpeed;
-	bool	m_bEmit;
+	[[= ks::reflect::Net{} ]] int		m_nDensity;
+	[[= ks::reflect::Net{} ]] int		m_nLifetime;
+	[[= ks::reflect::Net{} ]] int		m_nSpeed;
+	[[= ks::reflect::Net{} ]] bool	m_bEmit;
 
 protected:
 
@@ -1735,12 +1719,7 @@ protected:
 };
 
 //Receive datatable
-IMPLEMENT_CLIENTCLASS_DT( C_Embers, DT_Embers, CEmbers )
-	RecvPropInt( RECVINFO( m_nDensity ) ),
-	RecvPropInt( RECVINFO( m_nLifetime ) ),
-	RecvPropInt( RECVINFO( m_nSpeed ) ),
-	RecvPropInt( RECVINFO( m_bEmit ) ),
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS( C_Embers, DT_Embers, CEmbers )
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -1864,7 +1843,8 @@ void C_Embers::SpawnEmber( void )
 //-----------------------------------------------------------------------------
 #include "beamdraw.h"
 
-class C_QuadraticBeam : public C_BaseEntity
+class [[= ks::reflect::NetTable{ .name = "DT_QuadraticBeam" } ]]
+      C_QuadraticBeam : public C_BaseEntity
 {
 public:
 	DECLARE_CLIENTCLASS();
@@ -1886,19 +1866,14 @@ public:
 
 protected:
 
-	Vector		m_targetPosition;
-	Vector		m_controlPosition;
-	float		m_scrollRate;
-	float		m_flWidth;
+	[[= ks::reflect::Net{} ]] Vector		m_targetPosition;
+	[[= ks::reflect::Net{} ]] Vector		m_controlPosition;
+	[[= ks::reflect::Net{} ]] float		m_scrollRate;
+	[[= ks::reflect::Net{} ]] float		m_flWidth;
 };
 
 //Receive datatable
-IMPLEMENT_CLIENTCLASS_DT( C_QuadraticBeam, DT_QuadraticBeam, CEnvQuadraticBeam )
-	RecvPropVector( RECVINFO(m_targetPosition) ),
-	RecvPropVector( RECVINFO(m_controlPosition) ),
-	RecvPropFloat( RECVINFO(m_scrollRate) ),
-	RecvPropFloat( RECVINFO(m_flWidth) ),
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS( C_QuadraticBeam, DT_QuadraticBeam, CEnvQuadraticBeam )
 
 Vector Color24ToVector( const color24 &color )
 {

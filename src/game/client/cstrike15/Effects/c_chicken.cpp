@@ -9,16 +9,15 @@
 #include "c_chicken.h"
 #include "c_breakableprop.h"
 #include "c_cs_player.h"
+#include "reflect_recvtable.h"
+#include "reflect_annotations.h"
 
 // NOTE: This has to be the last file included!
 #include "tier0/memdbgon.h"
 
 #undef CChicken
 
-IMPLEMENT_CLIENTCLASS_DT( C_CChicken, DT_CChicken, CChicken )
-RecvPropInt( RECVINFO( m_jumpedThisFrame ), 0, C_CChicken::RecvProxy_Jumped ),
-RecvPropEHandle( RECVINFO( m_leader ) ),
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS( C_CChicken, DT_CChicken, CChicken )
 
 
 //-----------------------------------------------------------------------------------------------

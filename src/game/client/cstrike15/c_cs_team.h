@@ -7,6 +7,8 @@
 
 #ifndef C_CS_TEAM_H
 #define C_CS_TEAM_H
+
+#include "reflect_annotations.h"
 #ifdef _WIN32
 #pragma once
 #endif
@@ -21,7 +23,8 @@ class CBaseTechnology;
 //-----------------------------------------------------------------------------
 // Purpose: TF's Team manager
 //-----------------------------------------------------------------------------
-class C_CSTeam : public C_Team
+class [[= ks::reflect::NetTable{ .name = "DT_CSTeam" } ]]
+      C_CSTeam : public C_Team
 {
 	DECLARE_CLASS( C_CSTeam, C_Team );
 public:

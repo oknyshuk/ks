@@ -6,6 +6,8 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_annotations.h"
 #include "entitylist.h"
 #include "entityoutput.h"
 #include "keyframe/keyframe.h" // BUG: this needs to move if keyframe is a standard thing
@@ -65,7 +67,7 @@ public:
 	QAngle m_Angles;	// euler angles PITCH YAW ROLL (Y Z X)
 	Quaternion m_qAngle;	// quaternion angle (generated from m_Angles)
 
-	string_t m_iNextKey;
+	[[= ks::reflect::Key{ .name = "NextKey" } ]] string_t m_iNextKey;
 	float m_flNextTime;
 
 	CPathKeyFrame *NextKey( int direction );
@@ -81,26 +83,14 @@ protected:
 	CPathKeyFrame *m_pNextKey;
 	CPathKeyFrame *m_pPrevKey;
 
-	float m_flSpeed;
+	[[= ks::reflect::Key{ .name = "MoveSpeed" } ]] float m_flSpeed;
 
 	DECLARE_DATADESC();
 };
 
 LINK_ENTITY_TO_CLASS( keyframe_track, CPathKeyFrame );
 
-BEGIN_DATADESC( CPathKeyFrame )
-
-	DEFINE_FIELD( m_Origin, FIELD_VECTOR ),
-	DEFINE_FIELD( m_Angles, FIELD_VECTOR ),
-	DEFINE_FIELD( m_qAngle, FIELD_QUATERNION ),
-
-	DEFINE_KEYFIELD( m_iNextKey, FIELD_STRING, "NextKey" ),
-	DEFINE_FIELD( m_flNextTime, FIELD_FLOAT ),	// derived from speed
-	DEFINE_KEYFIELD( m_flSpeed, FIELD_FLOAT, "MoveSpeed" ),
-	DEFINE_FIELD( m_pNextKey, FIELD_CLASSPTR ),
-	DEFINE_FIELD( m_pPrevKey, FIELD_CLASSPTR ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CPathKeyFrame )
 
 
 //-----------------------------------------------------------------------------
@@ -284,8 +274,8 @@ public:
 
 	// interpolation functions
 //	int m_iTimeModifier;
-	int m_iPositionInterpolator;
-	int m_iRotationInterpolator;
+	[[= ks::reflect::Key{ .name = "PositionInterpolator" } ]] int m_iPositionInterpolator;
+	[[= ks::reflect::Key{ .name = "RotationInterpolator" } ]] int m_iRotationInterpolator;
 
 	// animation vars
 	float m_flAnimStartTime;
@@ -305,24 +295,7 @@ public:
 
 LINK_ENTITY_TO_CLASS( move_keyframed, CBaseMoveBehavior );
 
-BEGIN_DATADESC( CBaseMoveBehavior )
-
-//	DEFINE_KEYFIELD( m_iTimeModifier, FIELD_INTEGER, "TimeModifier" ),
-	DEFINE_KEYFIELD( m_iPositionInterpolator, FIELD_INTEGER, "PositionInterpolator" ),
-	DEFINE_KEYFIELD( m_iRotationInterpolator, FIELD_INTEGER, "RotationInterpolator" ),
-
-	DEFINE_FIELD( m_pCurrentKeyFrame, FIELD_CLASSPTR ),
-	DEFINE_FIELD( m_pTargetKeyFrame, FIELD_CLASSPTR ),
-	DEFINE_FIELD( m_pPreKeyFrame, FIELD_CLASSPTR ),
-	DEFINE_FIELD( m_pPostKeyFrame, FIELD_CLASSPTR ),
-	
-	DEFINE_FIELD( m_flAnimStartTime, FIELD_FLOAT ),
-	DEFINE_FIELD( m_flAnimEndTime, FIELD_FLOAT ),
-	DEFINE_FIELD( m_flAverageSpeedAcrossFrame, FIELD_FLOAT ),
-	DEFINE_FIELD( m_flTimeIntoFrame, FIELD_FLOAT ),
-	DEFINE_FIELD( m_iDirection, FIELD_INTEGER ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CBaseMoveBehavior )
 
 
 void CBaseMoveBehavior::Spawn( void )

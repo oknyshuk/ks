@@ -10,9 +10,6 @@
 
 LINK_ENTITY_TO_CLASS( func_no_defuse, CNoDefuseArea );
 
-BEGIN_DATADESC( CNoDefuseArea )
-	DEFINE_FUNCTION( NoDefuseAreaTouch ),
-END_DATADESC()
 
 void CNoDefuseArea::Spawn()
 {

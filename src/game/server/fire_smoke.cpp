@@ -6,6 +6,8 @@
 //
 //=============================================================================//
 #include "cbase.h"
+#include "reflect_sendtable.h"
+#include "reflect_annotations.h"
 #include "fire_smoke.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
@@ -14,14 +16,6 @@
 //---------------------------------------------------------
 // Save/Restore
 //---------------------------------------------------------
-BEGIN_DATADESC( CBaseFire )
-
-	DEFINE_FIELD( m_flStartScale, FIELD_FLOAT ),
-	DEFINE_FIELD( m_flScale, FIELD_FLOAT ),
-	DEFINE_FIELD( m_flScaleTime, FIELD_TIME ),
-	DEFINE_FIELD( m_nFlags, FIELD_INTEGER ),
-
-END_DATADESC()
 
 
 //==================================================
@@ -90,26 +84,9 @@ void CBaseFire::Enable( int state )
 LINK_ENTITY_TO_CLASS( _firesmoke, CFireSmoke );
 
 //Send datatable
-IMPLEMENT_SERVERCLASS_ST( CFireSmoke, DT_FireSmoke )
-	SendPropFloat(  SENDINFO( m_flStartScale ), 0,	SPROP_NOSCALE),
-	SendPropFloat(	SENDINFO( m_flScale ),		0,	SPROP_NOSCALE),
-	SendPropFloat(	SENDINFO( m_flScaleTime ),	0,	SPROP_NOSCALE),
-	SendPropInt(	SENDINFO( m_nFlags ),		8,  SPROP_UNSIGNED ),
-	SendPropModelIndex(	SENDINFO( m_nFlameModelIndex ) ),
-	SendPropModelIndex(	SENDINFO( m_nFlameFromAboveModelIndex ) ),
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CFireSmoke, DT_FireSmoke )
 
 //Data description 
-BEGIN_DATADESC( CFireSmoke )
-
-	DEFINE_FIELD( m_flStartScale,		FIELD_FLOAT ),
-	DEFINE_FIELD( m_flScale,			FIELD_FLOAT ),
-	DEFINE_FIELD( m_flScaleTime,		FIELD_FLOAT ),
-	DEFINE_FIELD( m_nFlags,				FIELD_INTEGER ),
-	DEFINE_FIELD( m_nFlameModelIndex,	FIELD_MODELINDEX ),
-	DEFINE_FIELD( m_nFlameFromAboveModelIndex,	FIELD_MODELINDEX ),
-
-END_DATADESC()
 
 //-----------------------------------------------------------------------------
 // Purpose: 

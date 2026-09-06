@@ -7,6 +7,8 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_annotations.h"
 #include "player.h"
 #include "tier1/strtools.h"
 
@@ -21,22 +23,17 @@ class CTargetCDAudioRep : public CPointEntity
 public:
 	DECLARE_CLASS( CTargetCDAudioRep, CPointEntity );
 
-	void InputChangeCDTrack( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "ChangeCDTrack", .type = FIELD_VOID } ]] void InputChangeCDTrack( inputdata_t &inputdata );
 	
 	DECLARE_DATADESC();
 
 private:
-	int m_iTrack;  // CD track to change to when fired
+	[[= ks::reflect::Key{ .name = "track" } ]] int m_iTrack;  // CD track to change to when fired
 };
 
 LINK_ENTITY_TO_CLASS( target_cdaudio, CTargetCDAudioRep );
 
-BEGIN_DATADESC( CTargetCDAudioRep )
-
-	DEFINE_KEYFIELD( m_iTrack, FIELD_INTEGER, "track" ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "ChangeCDTrack", InputChangeCDTrack ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CTargetCDAudioRep )
 
 
 
@@ -93,24 +90,17 @@ public:
 
 	DECLARE_DATADESC();
 
-	void InputChangeGrav( inputdata_t &inputdata );
-	void InputResetGrav( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "ChangeGrav", .type = FIELD_VOID } ]] void InputChangeGrav( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "ResetGrav", .type = FIELD_VOID } ]] void InputResetGrav( inputdata_t &inputdata );
 
-	int m_iGravity;
+	[[= ks::reflect::Key{ .name = "gravity" } ]] int m_iGravity;
 
 	int m_iOldGrav;
 };
 
 LINK_ENTITY_TO_CLASS( target_changegravity, CTargetChangeGravity );
 
-BEGIN_DATADESC( CTargetChangeGravity )
-
-	DEFINE_KEYFIELD( m_iGravity, FIELD_INTEGER, "gravity" ),
-	DEFINE_FIELD( m_iOldGrav, FIELD_INTEGER ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "ChangeGrav", InputChangeGrav ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "ResetGrav", InputResetGrav ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CTargetChangeGravity )
 
 
 

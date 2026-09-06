@@ -6,6 +6,7 @@
 //===========================================================================//
 
 #include "cbase.h"
+#include "reflect_recvtable.h"
 
 #include "c_entityfreezing.h"
 #include "studio.h"
@@ -38,12 +39,7 @@ ConVar cl_blobulator_freezing_max_metaball_radius( "cl_blobulator_freezing_max_m
 //-----------------------------------------------------------------------------
 // Networking
 //-----------------------------------------------------------------------------
-IMPLEMENT_CLIENTCLASS_DT( C_EntityFreezing, DT_EntityFreezing, CEntityFreezing )
-	RecvPropVector( RECVINFO(m_vFreezingOrigin) ),
-	RecvPropArray3( RECVINFO_ARRAY(m_flFrozenPerHitbox), RecvPropFloat( RECVINFO( m_flFrozenPerHitbox[0] ) ) ),
-	RecvPropFloat( RECVINFO(m_flFrozen) ),
-	RecvPropBool( RECVINFO(m_bFinishFreezing) ),
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS( C_EntityFreezing, DT_EntityFreezing, CEntityFreezing )
 
 
 //-----------------------------------------------------------------------------

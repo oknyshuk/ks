@@ -298,8 +298,6 @@ public:
 
 	// --------------------------------
 
-	void Save( ISave &save );
-	void Restore( IRestore &restore );
 	
 	// --------------------------------
 	// Methods to issue movement directives

@@ -7,6 +7,15 @@
 //===========================================================================//
 
 #include "cbase.h"
+#include "reflect_predmap.h"
+#include "reflect_annotations.h"
+#ifdef CLIENT_DLL
+#include "reflect_recvtable.h"
+#endif
+#include "reflect_annotations.h"
+#ifdef GAME_DLL
+#include "reflect_sendtable.h"
+#endif
 #include "baseparticleentity.h"
 
 #ifdef CLIENT_DLL
@@ -19,11 +28,11 @@
 
 IMPLEMENT_NETWORKCLASS_ALIASED( BaseParticleEntity, DT_BaseParticleEntity )
 
-BEGIN_NETWORK_TABLE( CBaseParticleEntity, DT_BaseParticleEntity )
-END_NETWORK_TABLE()
+IMPLEMENT_REFLECT_TABLE( CBaseParticleEntity, DT_BaseParticleEntity );
 
-BEGIN_PREDICTION_DATA(	CBaseParticleEntity )
-END_PREDICTION_DATA()
+#ifdef CLIENT_DLL
+IMPLEMENT_REFLECT_PREDMAP( CBaseParticleEntity );
+#endif
 
 #ifdef CLIENT_DLL
 REGISTER_EFFECT( CBaseParticleEntity );

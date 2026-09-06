@@ -4,6 +4,8 @@
 // Copyright (c) 2005 Turtle Rock Studios, Inc. - All Rights Reserved
 
 #include "cbase.h"
+#include "reflect_recvtable.h"
+#include "reflect_annotations.h"
 #include "C_NextBot.h"
 #include "debugoverlay_shared.h"
 #include <bitbuf.h>
@@ -17,8 +19,7 @@
 ConVar NextBotShadowDist( "nb_shadow_dist", "400" );
 
 //-----------------------------------------------------------------------------
-IMPLEMENT_CLIENTCLASS_DT( C_NextBotCombatCharacter, DT_NextBot, NextBotCombatCharacter )
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS( C_NextBotCombatCharacter, DT_NextBot, NextBotCombatCharacter )
 
 
 //-----------------------------------------------------------------------------

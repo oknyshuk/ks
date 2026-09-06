@@ -14,6 +14,8 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_annotations.h"
 #include "ai_schedule.h"
 #include "ai_default.h"
 #include "ai_motor.h"
@@ -42,80 +44,7 @@ ConVar ai_task_pre_script(  "ai_task_pre_script", "0", FCVAR_NONE );
 // spawnflags - (stop if blocked, stop if player seen)
 //
 
-BEGIN_DATADESC( CAI_ScriptedSequence )
-
-	DEFINE_KEYFIELD( m_iszEntry, FIELD_STRING, "m_iszEntry" ),
-	DEFINE_KEYFIELD( m_iszPreIdle, FIELD_STRING, "m_iszIdle" ),
-	DEFINE_KEYFIELD( m_iszPlay, FIELD_STRING, "m_iszPlay" ),
-	DEFINE_KEYFIELD( m_iszPostIdle, FIELD_STRING, "m_iszPostIdle" ),
-	DEFINE_KEYFIELD( m_iszCustomMove, FIELD_STRING, "m_iszCustomMove" ),
-	DEFINE_KEYFIELD( m_iszNextScript, FIELD_STRING, "m_iszNextScript" ),
-	DEFINE_KEYFIELD( m_iszEntity, FIELD_STRING, "m_iszEntity" ),
-	DEFINE_KEYFIELD( m_fMoveTo, FIELD_INTEGER, "m_fMoveTo" ),
-	DEFINE_KEYFIELD( m_flRadius, FIELD_FLOAT, "m_flRadius" ),
-	DEFINE_KEYFIELD( m_flRepeat, FIELD_FLOAT, "m_flRepeat" ),
-
-	DEFINE_FIELD( m_bIsPlayingEntry, FIELD_BOOLEAN ),
-	DEFINE_KEYFIELD( m_bLoopActionSequence, FIELD_BOOLEAN, "m_bLoopActionSequence" ),
-	DEFINE_KEYFIELD( m_bSynchPostIdles, FIELD_BOOLEAN, "m_bSynchPostIdles" ),
-	DEFINE_KEYFIELD( m_bIgnoreGravity, FIELD_BOOLEAN, "m_bIgnoreGravity" ),
-	DEFINE_KEYFIELD( m_bDisableNPCCollisions, FIELD_BOOLEAN, "m_bDisableNPCCollisions" ),
-
-	DEFINE_FIELD( m_iDelay, FIELD_INTEGER ),
-	DEFINE_FIELD( m_bDelayed, FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_startTime, FIELD_TIME ),
-	DEFINE_FIELD( m_bWaitForBeginSequence, FIELD_BOOLEAN ),
-
-	DEFINE_FIELD( m_saved_effects, FIELD_INTEGER ),
-	DEFINE_FIELD( m_savedFlags, FIELD_INTEGER ),
-	DEFINE_FIELD( m_savedCollisionGroup, FIELD_INTEGER ),
-	
-	DEFINE_FIELD( m_interruptable, FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_sequenceStarted, FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_hTargetEnt, FIELD_EHANDLE ),
-	DEFINE_FIELD( m_hNextCine, FIELD_EHANDLE ),
-	DEFINE_FIELD( m_hLastFoundEntity, FIELD_EHANDLE ),
-	DEFINE_FIELD( m_hForcedTarget, FIELD_EHANDLE ),
-	DEFINE_FIELD( m_bDontCancelOtherSequences, FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_bForceSynch, FIELD_BOOLEAN ),
-	
-	DEFINE_FIELD( m_bThinking, FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_bInitiatedSelfDelete, FIELD_BOOLEAN ),
-
-	DEFINE_FIELD( m_bIsTeleportingDueToMoveTo, FIELD_BOOLEAN ),
-
-	DEFINE_FIELD( m_matInteractionPosition, FIELD_VMATRIX ),
-	DEFINE_FIELD( m_hInteractionRelativeEntity, FIELD_EHANDLE ),
-
-	DEFINE_FIELD( m_bTargetWasAsleep, FIELD_BOOLEAN ),
-
-	// Function Pointers
-	DEFINE_THINKFUNC( ScriptThink ),
-
-	// Inputs
-	DEFINE_INPUTFUNC( FIELD_VOID, "MoveToPosition", InputMoveToPosition ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "BeginSequence", InputBeginSequence ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "CancelSequence", InputCancelSequence ),
-
-	DEFINE_KEYFIELD( m_iPlayerDeathBehavior, FIELD_INTEGER, "onplayerdeath" ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "ScriptPlayerDeath", InputScriptPlayerDeath ),
-
-	// Outputs
-	DEFINE_OUTPUT(m_OnBeginSequence, "OnBeginSequence"),
-	DEFINE_OUTPUT(m_OnEndSequence, "OnEndSequence"),
-	DEFINE_OUTPUT(m_OnPostIdleEndSequence, "OnPostIdleEndSequence"),
-	DEFINE_OUTPUT(m_OnCancelSequence, "OnCancelSequence"),
-	DEFINE_OUTPUT(m_OnCancelFailedSequence, "OnCancelFailedSequence"),
-	DEFINE_OUTPUT(m_OnScriptEvent[0], "OnScriptEvent01"),
-	DEFINE_OUTPUT(m_OnScriptEvent[1], "OnScriptEvent02"),
-	DEFINE_OUTPUT(m_OnScriptEvent[2], "OnScriptEvent03"),
-	DEFINE_OUTPUT(m_OnScriptEvent[3], "OnScriptEvent04"),
-	DEFINE_OUTPUT(m_OnScriptEvent[4], "OnScriptEvent05"),
-	DEFINE_OUTPUT(m_OnScriptEvent[5], "OnScriptEvent06"),
-	DEFINE_OUTPUT(m_OnScriptEvent[6], "OnScriptEvent07"),
-	DEFINE_OUTPUT(m_OnScriptEvent[7], "OnScriptEvent08"),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CAI_ScriptedSequence )
 
 
 LINK_ENTITY_TO_CLASS( scripted_sequence, CAI_ScriptedSequence );
@@ -1567,8 +1496,8 @@ private:
 	void ScriptThink( void );
 
 	// Input handlers
-	void InputStartSchedule( inputdata_t &inputdata );
-	void InputStopSchedule( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "StartSchedule", .type = FIELD_VOID } ]] void InputStartSchedule( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "StopSchedule", .type = FIELD_VOID } ]] void InputStopSchedule( inputdata_t &inputdata );
 
 	CAI_BaseNPC *FindScriptEntity(  bool bCyclic );
 
@@ -1590,16 +1519,16 @@ private:
 	EHANDLE 	m_hLastFoundEntity;
 	EHANDLE		m_hActivator;		// Held from the input to allow procedural calls
 
-	string_t 	m_iszEntity;		// Entity that is wanted for this script
-	float 		m_flRadius;			// Range to search for an NPC to possess.
+	[[= ks::reflect::Key{ .name = "m_iszEntity" } ]] string_t 	m_iszEntity;		// Entity that is wanted for this script
+	[[= ks::reflect::Key{ .name = "m_flRadius" } ]] float 		m_flRadius;			// Range to search for an NPC to possess.
 
-	string_t 	m_sGoalEnt;
-	Schedule_t	m_nSchedule;
-	int 		m_nForceState;
+	[[= ks::reflect::Key{ .name = "goalent" } ]] string_t 	m_sGoalEnt;
+	[[= ks::reflect::Key{ .name = "schedule" } ]] Schedule_t	m_nSchedule;
+	[[= ks::reflect::Key{ .name = "forcestate" } ]] int 		m_nForceState;
 	
-	bool		m_bGrabAll;
+	[[= ks::reflect::Key{ .name = "graball" } ]] bool		m_bGrabAll;
 
-	Interruptability_t m_Interruptability;
+	[[= ks::reflect::Key{ .name = "interruptability" } ]] Interruptability_t m_Interruptability;
 
 	bool		m_bDidFireOnce;
 	
@@ -1609,27 +1538,7 @@ private:
 
 };
 
-BEGIN_DATADESC( CAI_ScriptedSchedule )
-
-	DEFINE_FIELD( m_hLastFoundEntity, FIELD_EHANDLE ),
-	DEFINE_KEYFIELD( m_flRadius, FIELD_FLOAT, "m_flRadius" ),
-	
-	DEFINE_KEYFIELD( m_iszEntity, FIELD_STRING, "m_iszEntity" ),
-	DEFINE_KEYFIELD( m_nSchedule, FIELD_INTEGER, "schedule" ),
-	DEFINE_KEYFIELD( m_nForceState, FIELD_INTEGER, "forcestate" ),
-	DEFINE_KEYFIELD( m_sGoalEnt, FIELD_STRING, "goalent" ),
-	DEFINE_KEYFIELD( m_bGrabAll, FIELD_BOOLEAN, "graball" ),
-	DEFINE_KEYFIELD( m_Interruptability, FIELD_INTEGER, "interruptability"),
-
-	DEFINE_FIELD( m_bDidFireOnce, FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_hActivator, FIELD_EHANDLE ),
-
-	DEFINE_THINKFUNC( ScriptThink ),
-
-	DEFINE_INPUTFUNC( FIELD_VOID, "StartSchedule", InputStartSchedule ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "StopSchedule", InputStopSchedule ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CAI_ScriptedSchedule )
 
 
 LINK_ENTITY_TO_CLASS( aiscripted_schedule, CAI_ScriptedSchedule );
@@ -1915,7 +1824,7 @@ public:
 	int	 ObjectCaps( void ) { return (BaseClass::ObjectCaps() & ~FCAP_ACROSS_TRANSITION); }
 
 	// Input handlers
-	void InputBeginSentence( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "BeginSentence", .type = FIELD_VOID } ]] void InputBeginSentence( inputdata_t &inputdata );
 
 	DECLARE_DATADESC();
 
@@ -1924,20 +1833,20 @@ public:
 	int StartSentence( CAI_BaseNPC *pTarget );
 
 private:
-	string_t m_iszSentence;		// string index for sentence name
-	string_t m_iszEntity;	// entity that is wanted for this sentence
-	float	m_flRadius;		// range to search
-	float	m_flDelay;	// How long the sentence lasts
-	float	m_flRepeat;	// repeat rate
+	[[= ks::reflect::Key{ .name = "sentence" } ]] string_t m_iszSentence;		// string index for sentence name
+	[[= ks::reflect::Key{ .name = "entity" } ]] string_t m_iszEntity;	// entity that is wanted for this sentence
+	[[= ks::reflect::Key{ .name = "radius" } ]] float	m_flRadius;		// range to search
+	[[= ks::reflect::Key{ .name = "delay" } ]] float	m_flDelay;	// How long the sentence lasts
+	[[= ks::reflect::Key{ .name = "refire" } ]] float	m_flRepeat;	// repeat rate
 	soundlevel_t	m_iSoundLevel;
-	int		m_TempAttenuation;
+	[[= ks::reflect::Key{ .name = "attenuation" } ]] int		m_TempAttenuation;
 	float	m_flVolume;
 	bool	m_active;
-	string_t m_iszListener;	// name of entity to look at while talking
+	[[= ks::reflect::Key{ .name = "listener" } ]] string_t m_iszListener;	// name of entity to look at while talking
 	CBaseEntity *m_pActivator;
 
-	COutputEvent m_OnBeginSentence;
-	COutputEvent m_OnEndSentence;
+	[[= ks::reflect::Key{ .name = "OnBeginSentence" } ]] COutputEvent m_OnBeginSentence;
+	[[= ks::reflect::Key{ .name = "OnEndSentence" } ]] COutputEvent m_OnEndSentence;
 };
 
 
@@ -1947,34 +1856,7 @@ private:
 #define SF_SENTENCE_CONCURRENT			0x0008	// allow other people to keep talking
 #define SF_SENTENCE_SPEAKTOACTIVATOR	0x0010
 
-BEGIN_DATADESC( CAI_ScriptedSentence )
-
-	DEFINE_KEYFIELD( m_iszSentence, FIELD_STRING, "sentence" ),
-	DEFINE_KEYFIELD( m_iszEntity, FIELD_STRING, "entity" ),
-	DEFINE_KEYFIELD( m_flRadius, FIELD_FLOAT, "radius" ),
-	DEFINE_KEYFIELD( m_flDelay, FIELD_FLOAT, "delay" ),
-	DEFINE_KEYFIELD( m_flRepeat, FIELD_FLOAT, "refire" ),
-	DEFINE_KEYFIELD( m_iszListener, FIELD_STRING, "listener" ),
-
-	DEFINE_KEYFIELD( m_TempAttenuation, FIELD_INTEGER, "attenuation" ),
-
-	DEFINE_FIELD( m_iSoundLevel, FIELD_INTEGER ),
-	DEFINE_FIELD( m_flVolume, FIELD_FLOAT ),
-	DEFINE_FIELD( m_active, FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_pActivator, FIELD_EHANDLE ),
-
-	// Function Pointers
-	DEFINE_FUNCTION( FindThink ),
-	DEFINE_FUNCTION( DelayThink ),
-
-	// Inputs
-	DEFINE_INPUTFUNC(FIELD_VOID, "BeginSentence", InputBeginSentence),
-
-	// Outputs
-	DEFINE_OUTPUT(m_OnBeginSentence, "OnBeginSentence"),
-	DEFINE_OUTPUT(m_OnEndSentence, "OnEndSentence"),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CAI_ScriptedSentence )
 
 
 

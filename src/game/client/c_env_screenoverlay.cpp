@@ -5,6 +5,8 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_recvtable.h"
+#include "reflect_annotations.h"
 #include "shareddefs.h"
 #include "materialsystem/imesh.h"
 #include "materialsystem/imaterial.h"
@@ -23,7 +25,8 @@
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-class C_EnvScreenOverlay : public C_BaseEntity
+class [[= ks::reflect::NetTable{ .name = "DT_EnvScreenOverlay" } ]]
+      C_EnvScreenOverlay : public C_BaseEntity
 {
 	DECLARE_CLASS( C_EnvScreenOverlay, C_BaseEntity );
 public:
@@ -39,24 +42,18 @@ public:
 	void	ClientThink( void );
 
 protected:
-	char	m_iszOverlayNames[ MAX_SCREEN_OVERLAYS ][255];
-	float	m_flOverlayTimes[ MAX_SCREEN_OVERLAYS ];
-	float	m_flStartTime;
-	int     m_iDesiredOverlay;
-	bool	m_bIsActive;
+	[[= ks::reflect::Net{ .enc = ks::reflect::ENC_STRING, .varlen = true } ]] char	m_iszOverlayNames[ MAX_SCREEN_OVERLAYS ][255];
+	[[= ks::reflect::Net{ .varlen = true } ]] float	m_flOverlayTimes[ MAX_SCREEN_OVERLAYS ];
+	[[= ks::reflect::Net{} ]] float	m_flStartTime;
+	[[= ks::reflect::Net{} ]] int     m_iDesiredOverlay;
+	[[= ks::reflect::Net{} ]] bool	m_bIsActive;
 	bool	m_bWasActive;
 	int		m_iCachedDesiredOverlay;
 	int		m_iCurrentOverlay;
 	float	m_flCurrentOverlayTime;
 };
 
-IMPLEMENT_CLIENTCLASS_DT( C_EnvScreenOverlay, DT_EnvScreenOverlay, CEnvScreenOverlay )
-	RecvPropArray( RecvPropString( RECVINFO( m_iszOverlayNames[0]) ), m_iszOverlayNames ),
-	RecvPropArray( RecvPropFloat( RECVINFO( m_flOverlayTimes[0] ) ), m_flOverlayTimes ),
-	RecvPropFloat( RECVINFO( m_flStartTime ) ),
-	RecvPropInt( RECVINFO( m_iDesiredOverlay ) ),
-	RecvPropBool( RECVINFO( m_bIsActive ) ),
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS( C_EnvScreenOverlay, DT_EnvScreenOverlay, CEnvScreenOverlay )
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -197,7 +194,8 @@ enum
 //  Screenspace effect
 // ============================================================================
 
-class C_EnvScreenEffect : public C_BaseEntity
+class [[= ks::reflect::NetTable{ .name = "DT_EnvScreenEffect" } ]]
+      C_EnvScreenEffect : public C_BaseEntity
 {
 	DECLARE_CLASS( C_EnvScreenEffect, C_BaseEntity );
 public:
@@ -206,14 +204,11 @@ public:
 	virtual void ReceiveMessage( int classID, bf_read &msg );
 
 private:
-	float	m_flDuration;
-	int		m_nType;
+	[[= ks::reflect::Net{} ]] float	m_flDuration;
+	[[= ks::reflect::Net{} ]] int		m_nType;
 };
 
-IMPLEMENT_CLIENTCLASS_DT( C_EnvScreenEffect, DT_EnvScreenEffect, CEnvScreenEffect )
-	RecvPropFloat( RECVINFO( m_flDuration ) ),
-	RecvPropInt( RECVINFO( m_nType ) ),
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS( C_EnvScreenEffect, DT_EnvScreenEffect, CEnvScreenEffect )
 
 //-----------------------------------------------------------------------------
 // Purpose: 

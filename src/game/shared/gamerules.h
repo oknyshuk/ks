@@ -7,6 +7,8 @@
 
 #ifndef GAMERULES_H
 #define GAMERULES_H
+
+#include "reflect_annotations.h"
 #ifdef _WIN32
 #pragma once
 #endif
@@ -84,7 +86,8 @@ enum
 
 
 // This class has the data tables and gets the CGameRules data to the client.
-class CGameRulesProxy : public CBaseEntity
+class [[= ks::reflect::NetTable{ .name = "DT_GameRulesProxy", .base = false } ]]
+      CGameRulesProxy : public CBaseEntity
 {
 public:
 	DECLARE_CLASS( CGameRulesProxy, CBaseEntity );

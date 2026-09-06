@@ -10,6 +10,8 @@
 // Author: Michael S. Booth, April 2005
 
 #include "cbase.h"
+#include "reflect_recvtable.h"
+#include "reflect_annotations.h"
 #include <bitbuf.h>
 #include "engine/ivdebugoverlay.h"
 
@@ -26,7 +28,18 @@ ConVar FishDebug( "fish_debug", "0", FCVAR_CHEAT, "Show debug info for fish" );
 /**
  * Client-side fish entity
  */
-class C_Fish : public C_BaseAnimating
+void RecvProxy_FishOriginX( const CRecvProxyData *pData, void *pStruct, void *pOut );
+
+void RecvProxy_FishOriginY( const CRecvProxyData *pData, void *pStruct, void *pOut );
+
+class [[= ks::reflect::NetTable{ .name = "DT_CFish", .base = false } ]]
+      [[= ks::reflect::From<"m_actualPos.x", ks::reflect::Net{ .wire = "m_x" }, RecvProxy_FishOriginX>{} ]]
+      [[= ks::reflect::From<"m_actualPos.y", ks::reflect::Net{ .wire = "m_y" }, RecvProxy_FishOriginY>{} ]]
+      [[= ks::reflect::From<"m_actualPos.z", ks::reflect::Net{ .wire = "m_z" }>{} ]]
+      [[= ks::reflect::From<"m_actualAngles.y", ks::reflect::Net{ .wire = "m_angle" }>{} ]]
+      [[= ks::reflect::From<"m_nModelIndex", ks::reflect::Net{}>{} ]]
+      [[= ks::reflect::From<"m_lifeState", ks::reflect::Net{}>{} ]]
+      C_Fish : public C_BaseAnimating
 {
 public:
 	DECLARE_CLASS( C_Fish, C_BaseAnimating );
@@ -58,8 +71,8 @@ private:
 	Vector m_actualPos;					///< position from server
 	QAngle m_actualAngles;				///< angles from server
 
-	Vector m_poolOrigin;
-	float m_waterLevel;					///< Z coordinate of water surface
+	[[= ks::reflect::Net{} ]] Vector m_poolOrigin;
+	[[= ks::reflect::Net{} ]] float m_waterLevel;					///< Z coordinate of water surface
 
 	bool m_gotUpdate;					///< true after we have received a network update
 
@@ -89,22 +102,7 @@ void RecvProxy_FishOriginY( const CRecvProxyData *pData, void *pStruct, void *pO
 }
 
 
-IMPLEMENT_CLIENTCLASS_DT_NOBASE( C_Fish, DT_CFish, CFish )
-
-	RecvPropVector( RECVINFO(m_poolOrigin) ),
-
-	RecvPropFloat( RECVINFO_NAME( m_actualPos.x, m_x ), 0, RecvProxy_FishOriginX ),
-	RecvPropFloat( RECVINFO_NAME( m_actualPos.y, m_y ), 0, RecvProxy_FishOriginY ),
-	RecvPropFloat( RECVINFO_NAME( m_actualPos.z, m_z ) ),
-
-	RecvPropFloat( RECVINFO_NAME( m_actualAngles.y, m_angle ) ),
-
-	RecvPropInt( RECVINFO(m_nModelIndex) ),
-	RecvPropInt( RECVINFO(m_lifeState) ),
-
-	RecvPropFloat( RECVINFO(m_waterLevel) ),		///< get this from the server in case we die when slightly out of the water due to error correction
-
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS( C_Fish, DT_CFish, CFish )
 
 
 

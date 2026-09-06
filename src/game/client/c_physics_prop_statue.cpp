@@ -6,19 +6,15 @@
 //===========================================================================//
 
 #include "cbase.h"
+#include "reflect_recvtable.h"
+#include "reflect_annotations.h"
 #include "c_physics_prop_statue.h"
 #include "debugoverlay_shared.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
-IMPLEMENT_CLIENTCLASS_DT(C_StatueProp, DT_StatueProp, CStatueProp)
-	RecvPropEHandle( RECVINFO( m_hInitBaseAnimating ) ),
-	RecvPropBool( RECVINFO( m_bShatter ) ),
-	RecvPropInt( RECVINFO( m_nShatterFlags ) ),
-	RecvPropVector( RECVINFO( m_vShatterPosition ) ),
-	RecvPropVector( RECVINFO( m_vShatterForce ) ),
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS( C_StatueProp, DT_StatueProp, CStatueProp )
 
 C_StatueProp::C_StatueProp()
 {

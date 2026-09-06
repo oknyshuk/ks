@@ -6,6 +6,8 @@
 
 #ifndef WEAPON_WATERBULLET_H
 #define WEAPON_WATERBULLET_H
+
+#include "reflect_annotations.h"
 #ifdef _WIN32
 #pragma once
 #endif
@@ -14,7 +16,8 @@
 
 //=========================================================
 //=========================================================
-class CWaterBullet : public CBaseAnimating
+class [[= ks::reflect::NetTable{ .name = "DT_WaterBullet" } ]]
+      CWaterBullet : public CBaseAnimating
 {
 	DECLARE_CLASS( CWaterBullet, CBaseAnimating );
 
@@ -24,7 +27,6 @@ public:
 	void Touch( CBaseEntity *pOther );
 	void BulletThink();
 
-	DECLARE_DATADESC();
 	DECLARE_SERVERCLASS();
 };
 

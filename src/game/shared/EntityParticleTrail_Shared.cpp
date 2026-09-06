@@ -5,6 +5,15 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_annotations.h"
+#ifdef CLIENT_DLL
+#include "reflect_recvtable.h"
+#endif
+#include "reflect_annotations.h"
+#ifdef GAME_DLL
+#include "reflect_sendtable.h"
+#endif
 #include "entityparticletrail_shared.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
@@ -26,33 +35,14 @@ EntityParticleTrailInfo_t::EntityParticleTrailInfo_t()
 //-----------------------------------------------------------------------------
 #ifndef CLIENT_DLL
 
-BEGIN_SIMPLE_DATADESC( EntityParticleTrailInfo_t )
-
-	DEFINE_KEYFIELD( m_strMaterialName,	FIELD_STRING,	"ParticleTrailMaterial" ),
-	DEFINE_KEYFIELD( m_flLifetime,		FIELD_FLOAT,	"ParticleTrailLifetime" ),
-	DEFINE_KEYFIELD( m_flStartSize,		FIELD_FLOAT,	"ParticleTrailStartSize" ),
-	DEFINE_KEYFIELD( m_flEndSize,		FIELD_FLOAT,	"ParticleTrailEndSize" ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP_SIMPLE( EntityParticleTrailInfo_t )
 
 #endif
 
 //-----------------------------------------------------------------------------
 // Networking
 //-----------------------------------------------------------------------------
-BEGIN_NETWORK_TABLE_NOBASE( EntityParticleTrailInfo_t, DT_EntityParticleTrailInfo )
-
-#ifdef CLIENT_DLL
-	RecvPropFloat( RECVINFO( m_flLifetime ) ),
-	RecvPropFloat( RECVINFO( m_flStartSize ) ),
-	RecvPropFloat( RECVINFO( m_flEndSize ) ),
-#else
-	SendPropFloat( SENDINFO( m_flLifetime ), 0, SPROP_NOSCALE ),
-	SendPropFloat( SENDINFO( m_flStartSize ), 0, SPROP_NOSCALE ),
-	SendPropFloat( SENDINFO( m_flEndSize ), 0, SPROP_NOSCALE ),
-#endif
-
-END_NETWORK_TABLE()
+IMPLEMENT_REFLECT_TABLE( EntityParticleTrailInfo_t, DT_EntityParticleTrailInfo );
 
 
 

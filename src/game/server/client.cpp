@@ -5,6 +5,8 @@
 //===============================================================================
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_annotations.h"
 #include "player.h"
 #include "client.h"
 #include "soundent.h"
@@ -594,7 +596,7 @@ public:
 	DECLARE_CLASS( CPointClientCommand, CPointEntity );
 	DECLARE_DATADESC();
 
-	void InputCommand( inputdata_t& inputdata );
+	[[= ks::reflect::Input{ .name = "Command", .type = FIELD_STRING } ]] void InputCommand( inputdata_t& inputdata );
 };
 
 void CPointClientCommand::InputCommand( inputdata_t& inputdata )
@@ -623,9 +625,7 @@ void CPointClientCommand::InputCommand( inputdata_t& inputdata )
 	engine->ClientCommand( pClient, "%s\n", inputdata.value.String() );
 }
 
-BEGIN_DATADESC( CPointClientCommand )
-	DEFINE_INPUTFUNC( FIELD_STRING, "Command", InputCommand ),
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CPointClientCommand )
 
 LINK_ENTITY_TO_CLASS( point_clientcommand, CPointClientCommand );
 
@@ -637,7 +637,7 @@ class CPointServerCommand : public CPointEntity
 public:
 	DECLARE_CLASS( CPointServerCommand, CPointEntity );
 	DECLARE_DATADESC();
-	void InputCommand( inputdata_t& inputdata );
+	[[= ks::reflect::Input{ .name = "Command", .type = FIELD_STRING } ]] void InputCommand( inputdata_t& inputdata );
 };
 
 //-----------------------------------------------------------------------------
@@ -676,9 +676,7 @@ void CPointServerCommand::InputCommand( inputdata_t& inputdata )
 	engine->ServerCommand( UTIL_VarArgs( "%s\n", inputdata.value.String() ) );
 }
 
-BEGIN_DATADESC( CPointServerCommand )
-	DEFINE_INPUTFUNC( FIELD_STRING, "Command", InputCommand ),
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CPointServerCommand )
 
 LINK_ENTITY_TO_CLASS( point_servercommand, CPointServerCommand );
 
@@ -690,7 +688,7 @@ class CPointBroadcastClientCommand : public CPointEntity
 public:
 	DECLARE_CLASS( CPointBroadcastClientCommand, CPointEntity );
 	DECLARE_DATADESC();
-	void InputCommand( inputdata_t& inputdata );
+	[[= ks::reflect::Input{ .name = "Command", .type = FIELD_STRING } ]] void InputCommand( inputdata_t& inputdata );
 };
 
 //-----------------------------------------------------------------------------
@@ -716,9 +714,7 @@ void CPointBroadcastClientCommand::InputCommand( inputdata_t& inputdata )
 	}
 }
 
-BEGIN_DATADESC( CPointBroadcastClientCommand )
-DEFINE_INPUTFUNC( FIELD_STRING, "Command", InputCommand ),
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CPointBroadcastClientCommand )
 
 LINK_ENTITY_TO_CLASS( point_broadcastclientcommand, CPointBroadcastClientCommand );
 

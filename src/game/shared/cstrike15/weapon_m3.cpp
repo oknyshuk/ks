@@ -5,6 +5,15 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_annotations.h"
+#ifdef CLIENT_DLL
+#include "reflect_recvtable.h"
+#endif
+#include "reflect_predmap.h"
+#include "reflect_annotations.h"
+#ifdef GAME_DLL
+#include "reflect_sendtable.h"
+#endif
 #include "weapon_csbase.h"
 #include "fx_cs_shared.h"
 
@@ -22,7 +31,8 @@
 #endif
 
 
-class CWeaponM3 : public CWeaponCSBase
+class [[= ks::reflect::NetTable{ .name = "DT_WeaponM3" } ]]
+      CWeaponM3 : public CWeaponCSBase
 {
 public:
 	DECLARE_CLASS( CWeaponM3, CWeaponCSBase );
@@ -44,24 +54,18 @@ private:
 	CWeaponM3( const CWeaponM3 & );
 
 	float m_flPumpTime;
-	CNetworkVar( int, m_reloadState );
+	CNetworkVar( int, m_reloadState, [[= ks::reflect::Net{ .bits = 2, .flags = SPROP_UNSIGNED } ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] );
 
 };
 
 IMPLEMENT_NETWORKCLASS_ALIASED( WeaponM3, DT_WeaponM3 )
 
-BEGIN_NETWORK_TABLE( CWeaponM3, DT_WeaponM3 )
-#ifdef CLIENT_DLL
-	RecvPropInt( RECVINFO( m_reloadState ) )
-#else
-	SendPropInt( SENDINFO( m_reloadState ), 2, SPROP_UNSIGNED )
-#endif
-END_NETWORK_TABLE()
+IMPLEMENT_REFLECT_TABLE( CWeaponM3, DT_WeaponM3 );
 
 #if defined(CLIENT_DLL)
-BEGIN_PREDICTION_DATA( CWeaponM3 )
-DEFINE_PRED_FIELD( m_reloadState, FIELD_INTEGER, FTYPEDESC_INSENDTABLE ),
-END_PREDICTION_DATA()
+#ifdef CLIENT_DLL
+IMPLEMENT_REFLECT_PREDMAP( CWeaponM3 );
+#endif
 #endif
 
 LINK_ENTITY_TO_CLASS_ALIASED( weapon_m3, WeaponM3 );

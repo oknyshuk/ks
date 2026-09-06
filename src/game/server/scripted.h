@@ -6,6 +6,8 @@
 
 #ifndef SCRIPTED_H
 #define SCRIPTED_H
+
+#include "reflect_annotations.h"
 #ifdef _WIN32
 #pragma once
 #endif
@@ -101,9 +103,9 @@ public:
 	CBaseEntity *GetTarget( void ) { return m_hTargetEnt; };
 
 	// Input handlers
-	void InputBeginSequence( inputdata_t &inputdata );
-	void InputCancelSequence( inputdata_t &inputdata );
-	void InputMoveToPosition( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "BeginSequence", .type = FIELD_VOID } ]] void InputBeginSequence( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "CancelSequence", .type = FIELD_VOID } ]] void InputCancelSequence( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "MoveToPosition", .type = FIELD_VOID } ]] void InputMoveToPosition( inputdata_t &inputdata );
 
 	bool IsTimeToStart( void );
 	bool IsWaitingForBegin( void );
@@ -145,28 +147,28 @@ public:
 	virtual int DrawDebugTextOverlays( void );
 	virtual void DrawDebugGeometryOverlays( void );
 
-	void InputScriptPlayerDeath( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "ScriptPlayerDeath", .type = FIELD_VOID } ]] void InputScriptPlayerDeath( inputdata_t &inputdata );
 
 private:
 	friend class CAI_BaseNPC;	// should probably try to eliminate this relationship
 
-	string_t m_iszEntry;		// String index for animation that must be played before entering the main action anim
-	string_t m_iszPreIdle;		// String index for idle animation to play before playing the action anim (only played while waiting for the script to begin)
-	string_t m_iszPlay;			// String index for scripted action animation
-	string_t m_iszPostIdle;		// String index for idle animation to play before playing the action anim
-	string_t m_iszCustomMove;	// String index for custom movement animation
-	string_t m_iszNextScript;	// Name of the script to run immediately after this one.
-	string_t m_iszEntity;		// Entity that is wanted for this script
+	[[= ks::reflect::Key{ .name = "m_iszEntry" } ]] string_t m_iszEntry;		// String index for animation that must be played before entering the main action anim
+	[[= ks::reflect::Key{ .name = "m_iszIdle" } ]] string_t m_iszPreIdle;		// String index for idle animation to play before playing the action anim (only played while waiting for the script to begin)
+	[[= ks::reflect::Key{ .name = "m_iszPlay" } ]] string_t m_iszPlay;			// String index for scripted action animation
+	[[= ks::reflect::Key{ .name = "m_iszPostIdle" } ]] string_t m_iszPostIdle;		// String index for idle animation to play before playing the action anim
+	[[= ks::reflect::Key{ .name = "m_iszCustomMove" } ]] string_t m_iszCustomMove;	// String index for custom movement animation
+	[[= ks::reflect::Key{ .name = "m_iszNextScript" } ]] string_t m_iszNextScript;	// Name of the script to run immediately after this one.
+	[[= ks::reflect::Key{ .name = "m_iszEntity" } ]] string_t m_iszEntity;		// Entity that is wanted for this script
 
-	int m_fMoveTo;
+	[[= ks::reflect::Key{ .name = "m_fMoveTo" } ]] int m_fMoveTo;
 	bool m_bIsPlayingEntry;
-	bool m_bLoopActionSequence;
-	bool m_bSynchPostIdles;
-	bool m_bIgnoreGravity;
-	bool m_bDisableNPCCollisions;	// Used when characters must interpenetrate while riding on elevators, trains, etc.
+	[[= ks::reflect::Key{ .name = "m_bLoopActionSequence" } ]] bool m_bLoopActionSequence;
+	[[= ks::reflect::Key{ .name = "m_bSynchPostIdles" } ]] bool m_bSynchPostIdles;
+	[[= ks::reflect::Key{ .name = "m_bIgnoreGravity" } ]] bool m_bIgnoreGravity;
+	[[= ks::reflect::Key{ .name = "m_bDisableNPCCollisions" } ]] bool m_bDisableNPCCollisions;	// Used when characters must interpenetrate while riding on elevators, trains, etc.
 
-	float m_flRadius;			// Range to search for an NPC to possess.
-	float m_flRepeat;			// Repeat rate
+	[[= ks::reflect::Key{ .name = "m_flRadius" } ]] float m_flRadius;			// Range to search for an NPC to possess.
+	[[= ks::reflect::Key{ .name = "m_flRepeat" } ]] float m_flRepeat;			// Repeat rate
 
 	int m_iDelay;					// A counter indicating how many scripts are NOT ready to start.
 
@@ -205,12 +207,12 @@ private:
 
 	bool	m_bTargetWasAsleep;
 
-	COutputEvent m_OnBeginSequence;
-	COutputEvent m_OnEndSequence;
-	COutputEvent m_OnPostIdleEndSequence;
-	COutputEvent m_OnCancelSequence;
-	COutputEvent m_OnCancelFailedSequence;	// Fired when a scene is cancelled before it's ever run
-	COutputEvent m_OnScriptEvent[MAX_SCRIPT_EVENTS];
+	[[= ks::reflect::Key{ .name = "OnBeginSequence" } ]] COutputEvent m_OnBeginSequence;
+	[[= ks::reflect::Key{ .name = "OnEndSequence" } ]] COutputEvent m_OnEndSequence;
+	[[= ks::reflect::Key{ .name = "OnPostIdleEndSequence" } ]] COutputEvent m_OnPostIdleEndSequence;
+	[[= ks::reflect::Key{ .name = "OnCancelSequence" } ]] COutputEvent m_OnCancelSequence;
+	[[= ks::reflect::Key{ .name = "OnCancelFailedSequence" } ]] COutputEvent m_OnCancelFailedSequence;	// Fired when a scene is cancelled before it's ever run
+	[[= ks::reflect::Key{ .name = "OnScriptEvent01", .index = 0 } ]] [[= ks::reflect::Key{ .name = "OnScriptEvent02", .index = 1 } ]] [[= ks::reflect::Key{ .name = "OnScriptEvent03", .index = 2 } ]] [[= ks::reflect::Key{ .name = "OnScriptEvent04", .index = 3 } ]] [[= ks::reflect::Key{ .name = "OnScriptEvent05", .index = 4 } ]] [[= ks::reflect::Key{ .name = "OnScriptEvent06", .index = 5 } ]] [[= ks::reflect::Key{ .name = "OnScriptEvent07", .index = 6 } ]] [[= ks::reflect::Key{ .name = "OnScriptEvent08", .index = 7 } ]] COutputEvent m_OnScriptEvent[MAX_SCRIPT_EVENTS];
 
 	static void ScriptEntityCancel( CBaseEntity *pentCine, bool bPretendSuccess = false );
 
@@ -222,7 +224,7 @@ private:
 	VMatrix		m_matInteractionPosition;
 	EHANDLE		m_hInteractionRelativeEntity;
 
-	int			m_iPlayerDeathBehavior;
+	[[= ks::reflect::Key{ .name = "onplayerdeath" } ]] int			m_iPlayerDeathBehavior;
 };
 
 

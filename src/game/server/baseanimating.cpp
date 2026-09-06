@@ -5,6 +5,9 @@
 //===========================================================================//
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_sendtable.h"
+#include "reflect_annotations.h"
 #include "baseanimating.h"
 #include "animation.h"
 #include "activitylist.h"
@@ -41,150 +44,18 @@
 
 ConVar ai_sequence_debug( "ai_sequence_debug", "0" );
 
-class CIKSaveRestoreOps : public CClassPtrSaveRestoreOps
-{
-	// save data type interface
-	void Save( const SaveRestoreFieldInfo_t &fieldInfo, ISave *pSave )
-	{
-		Assert( fieldInfo.pTypeDesc->fieldSize == 1 );
-		CIKContext **pIK = (CIKContext **)fieldInfo.pField;
-		bool bHasIK = (*pIK) != 0;
-		pSave->WriteBool( &bHasIK );
-	}
-
-	void Restore( const SaveRestoreFieldInfo_t &fieldInfo, IRestore *pRestore )
-	{
-		Assert( fieldInfo.pTypeDesc->fieldSize == 1 );
-		CIKContext **pIK = (CIKContext **)fieldInfo.pField;
-
-		bool bHasIK;
-		pRestore->ReadBool( &bHasIK );
-		*pIK = (bHasIK) ? new CIKContext : NULL;
-	}
-};
-
-static CIKSaveRestoreOps s_IKSaveRestoreOp;
 
 
-BEGIN_DATADESC( CBaseAnimating )
 
-	DEFINE_FIELD( m_flGroundSpeed, FIELD_FLOAT ),
-	DEFINE_FIELD( m_flLastEventCheck, FIELD_TIME ),
-	DEFINE_FIELD( m_bSequenceFinished, FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_bSequenceLoops, FIELD_BOOLEAN ),
-
-//	DEFINE_FIELD( m_nForceBone, FIELD_INTEGER ),
-//	DEFINE_FIELD( m_vecForce, FIELD_VECTOR ),
-
-	DEFINE_KEYFIELD( m_nSkin, FIELD_INTEGER, "ModelSkin" ),
-	DEFINE_INPUT( m_nSkin, FIELD_INTEGER, "skin" ),
-	DEFINE_KEYFIELD( m_nBody, FIELD_INTEGER, "body" ),
-	DEFINE_INPUT( m_nBody, FIELD_INTEGER, "SetBodyGroup" ),
-	DEFINE_KEYFIELD( m_nHitboxSet, FIELD_INTEGER, "hitboxset" ),
-	DEFINE_KEYFIELD( m_nSequence, FIELD_INTEGER, "sequence" ),
-	DEFINE_ARRAY( m_flPoseParameter, FIELD_FLOAT, CBaseAnimating::NUM_POSEPAREMETERS ),
-	DEFINE_ARRAY( m_flEncodedController,	FIELD_FLOAT, CBaseAnimating::NUM_BONECTRLS ),
-	DEFINE_KEYFIELD( m_flPlaybackRate, FIELD_FLOAT, "playbackrate" ),
-	DEFINE_KEYFIELD( m_flCycle, FIELD_FLOAT, "cycle" ),
-//	DEFINE_FIELD( m_flIKGroundContactTime, FIELD_TIME ),
-//	DEFINE_FIELD( m_flIKGroundMinHeight, FIELD_FLOAT ),
-//	DEFINE_FIELD( m_flIKGroundMaxHeight, FIELD_FLOAT ),
-//	DEFINE_FIELD( m_flEstIkFloor, FIELD_FLOAT ),
-//	DEFINE_FIELD( m_flEstIkOffset, FIELD_FLOAT ),
-//	DEFINE_FIELD( m_pStudioHdr, CStudioHdr ),
-//	DEFINE_FIELD( m_StudioHdrInitLock, CThreadFastMutex ),
-//	DEFINE_FIELD( m_BoneSetupMutex, CThreadFastMutex ),
-	DEFINE_CUSTOM_FIELD( m_pIk, &s_IKSaveRestoreOp ),
-	DEFINE_FIELD( m_iIKCounter, FIELD_INTEGER ),
-	DEFINE_FIELD( m_bClientSideAnimation, FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_bClientSideFrameReset, FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_nNewSequenceParity, FIELD_INTEGER ),
-	DEFINE_FIELD( m_nResetEventsParity, FIELD_INTEGER ),
-	DEFINE_FIELD( m_nMuzzleFlashParity, FIELD_CHARACTER ),
-
-	DEFINE_KEYFIELD( m_iszLightingOriginRelative, FIELD_STRING, "LightingOriginHack" ),
-	DEFINE_KEYFIELD( m_iszLightingOrigin, FIELD_STRING, "LightingOrigin" ),
-	DEFINE_FIELD( m_hLightingOrigin, FIELD_EHANDLE ),
-	DEFINE_FIELD( m_hLightingOriginRelative, FIELD_EHANDLE ),
-
-	DEFINE_KEYFIELD( m_flModelScale, FIELD_FLOAT, "ModelScale" ),
-	DEFINE_FIELD( m_flDissolveStartTime, FIELD_TIME ),
-
- // DEFINE_FIELD( m_boneCacheHandle, memhandle_t ),
-
-	DEFINE_INPUTFUNC( FIELD_VOID, "Ignite", InputIgnite ),
-	DEFINE_INPUTFUNC( FIELD_FLOAT, "IgniteLifetime", InputIgniteLifetime ),
-
-#ifndef HL2_EP3
-	DEFINE_INPUTFUNC( FIELD_INTEGER, "IgniteNumHitboxFires", InputIgnite ),
-	DEFINE_INPUTFUNC( FIELD_FLOAT, "IgniteHitboxFireScale", InputIgnite ),
-#endif
-	DEFINE_INPUTFUNC( FIELD_VOID, "BecomeRagdoll", InputBecomeRagdoll ),
-	DEFINE_INPUTFUNC( FIELD_STRING, "SetLightingOriginHack", InputSetLightingOriginRelative ),
-	DEFINE_INPUTFUNC( FIELD_STRING, "SetLightingOrigin", InputSetLightingOrigin ),
-	DEFINE_OUTPUT( m_OnIgnite, "OnIgnite" ),
-
-	DEFINE_FIELD( m_flFrozen, FIELD_FLOAT ),
-	DEFINE_FIELD( m_flFrozenThawRate, FIELD_FLOAT ),
-	DEFINE_FIELD( m_flFrozenMax, FIELD_FLOAT ),
-
-	DEFINE_FIELD( m_fBoneCacheFlags, FIELD_SHORT ),
-
-#ifdef PORTAL2
-	DEFINE_OUTPUT( m_OnFizzled, "OnFizzled" ),
-#endif // PORTAL2
-
-	DEFINE_KEYFIELD( m_bSuppressAnimSounds, FIELD_BOOLEAN, "SuppressAnimSounds" ),
-
-	END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CBaseAnimating )
 
 // Sendtable for fields we don't want to send to clientside animating entities
-BEGIN_SEND_TABLE_NOBASE( CBaseAnimating, DT_ServerAnimationData )
-	// ANIMATION_CYCLE_BITS is defined in shareddefs.h
-	SendPropFloat	(SENDINFO(m_flCycle),		ANIMATION_CYCLE_BITS, SPROP_CHANGES_OFTEN|SPROP_ROUNDDOWN,	0.0f,   1.0f)
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_TABLE_IN( CBaseAnimating, DT_ServerAnimationData );
 
 void *SendProxy_ClientSideAnimation( const SendProp *pProp, const void *pStruct, const void *pVarData, CSendProxyRecipients *pRecipients, int objectID );
 
 // SendTable stuff.
-IMPLEMENT_SERVERCLASS_ST(CBaseAnimating, DT_BaseAnimating)
-	SendPropInt		( SENDINFO(m_nForceBone), 8, 0 ),
-	SendPropVector	( SENDINFO(m_vecForce) ),
-
-	SendPropInt		( SENDINFO(m_nSkin), ANIMATION_SKIN_BITS),
-	SendPropInt		( SENDINFO(m_nBody), ANIMATION_BODY_BITS),
-
-	SendPropInt		( SENDINFO(m_nHitboxSet),ANIMATION_HITBOXSET_BITS, SPROP_UNSIGNED ),
-
-	SendPropFloat	( SENDINFO(m_flModelScale) ),
-
-	SendPropArray3  ( SENDINFO_ARRAY3(m_flPoseParameter), SendPropFloat(SENDINFO_ARRAY(m_flPoseParameter), ANIMATION_POSEPARAMETER_BITS, 0, 0.0f, 1.0f ) ),
-	
-	SendPropInt		( SENDINFO(m_nSequence), ANIMATION_SEQUENCE_BITS, SPROP_UNSIGNED ),
-	SendPropFloat	( SENDINFO(m_flPlaybackRate), ANIMATION_PLAYBACKRATE_BITS, SPROP_ROUNDUP, -4.0, 12.0f ), // NOTE: if this isn't a power of 2 than "1.0" can't be encoded correctly
-
-	SendPropArray3 	(SENDINFO_ARRAY3(m_flEncodedController), SendPropFloat(SENDINFO_ARRAY(m_flEncodedController), 11, SPROP_ROUNDDOWN, 0.0f, 1.0f ) ),
-
-	SendPropInt( SENDINFO( m_bClientSideAnimation ), 1, SPROP_UNSIGNED ),
-	SendPropInt( SENDINFO( m_bClientSideFrameReset ), 1, SPROP_UNSIGNED ),
-	SendPropBool( SENDINFO( m_bClientSideRagdoll ) ),
-
-	SendPropInt( SENDINFO( m_nNewSequenceParity ), EF_PARITY_BITS, SPROP_UNSIGNED ),
-	SendPropInt( SENDINFO( m_nResetEventsParity ), EF_PARITY_BITS, SPROP_UNSIGNED ),
-	SendPropInt( SENDINFO( m_nMuzzleFlashParity ), EF_MUZZLEFLASH_BITS, SPROP_UNSIGNED ),
-
-	SendPropEHandle( SENDINFO( m_hLightingOrigin ) ),
-	// SendPropEHandle( SENDINFO( m_hLightingOriginRelative ) ),
-
-	SendPropDataTable( "serveranimdata", 0, &REFERENCE_SEND_TABLE( DT_ServerAnimationData ), SendProxy_ClientSideAnimation ),
-
-	SendPropFloat( SENDINFO( m_flFrozen ) ),
-
-	SendPropInt( SENDINFO( m_ScaleType ) ),
-
-	SendPropBool( SENDINFO( m_bSuppressAnimSounds ) )
-
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CBaseAnimating, DT_BaseAnimating )
 
 
 BEGIN_ENT_SCRIPTDESC( CBaseAnimating, CBaseEntity, "Animating models" )
@@ -302,15 +173,6 @@ void CBaseAnimating::SetTransmit( CCheckTransmitInfo *pInfo, bool bAlways )
 	{
 		m_hLightingOriginRelative->SetTransmit( pInfo, bAlways );
 	}
-}
-
-//-----------------------------------------------------------------------------
-//-----------------------------------------------------------------------------
-int CBaseAnimating::Restore( IRestore &restore )
-{
-	int result = BaseClass::Restore( restore );
-	LockStudioHdr();
-	return result;
 }
 
 //-----------------------------------------------------------------------------

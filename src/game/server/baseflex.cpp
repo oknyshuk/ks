@@ -5,6 +5,9 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_sendtable.h"
+#include "reflect_datamap.h"
+#include "reflect_annotations.h"
 #include "animation.h"
 #include "baseflex.h"
 #include "filesystem.h"
@@ -58,44 +61,10 @@ void* SendProxy_FlexWeights( const SendProp *pProp, const void *pStruct, const v
 REGISTER_SEND_PROXY_NON_MODIFIED_POINTER( SendProxy_FlexWeights );
 
 // SendTable stuff.
-IMPLEMENT_SERVERCLASS_ST(CBaseFlex, DT_BaseFlex)
-// Note we can't totally disabled flexweights transmission since some things like blink and eye tracking are still done by the server
-	SendPropArray3	(SENDINFO_ARRAY3(m_flexWeight), SendPropFloat(SENDINFO_ARRAY(m_flexWeight), 12, SPROP_ROUNDDOWN, 0.0f, 1.0f ) /*, SendProxy_FlexWeights*/ ),
-	SendPropInt		(SENDINFO(m_blinktoggle), 1, SPROP_UNSIGNED ),
-	SendPropVector	(SENDINFO(m_viewtarget), -1, SPROP_COORD),
-#ifdef HL2_DLL
-	SendPropFloat	( SENDINFO_VECTORELEM(m_vecViewOffset, 0), 0, SPROP_NOSCALE ),
-	SendPropFloat	( SENDINFO_VECTORELEM(m_vecViewOffset, 1), 0, SPROP_NOSCALE ),
-	SendPropFloat	( SENDINFO_VECTORELEM(m_vecViewOffset, 2), 0, SPROP_NOSCALE ),
-
-	SendPropVector	( SENDINFO(m_vecLean), -1, SPROP_COORD ),
-	SendPropVector	( SENDINFO(m_vecShift), -1, SPROP_COORD ),
-#endif
-
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CBaseFlex, DT_BaseFlex )
 
 
-BEGIN_DATADESC( CBaseFlex )
-
-	//						m_blinktoggle
-	DEFINE_ARRAY( m_flexWeight, FIELD_FLOAT, MAXSTUDIOFLEXCTRL ),
-	DEFINE_FIELD( m_viewtarget, FIELD_POSITION_VECTOR ),
-	//						m_SceneEvents
-	//						m_FileList
-	DEFINE_FIELD( m_flAllowResponsesEndTime, FIELD_TIME ),
-	//						m_ActiveChoreoScenes
-	// DEFINE_FIELD( m_LocalToGlobal, CUtlRBTree < FS_LocalToGlobal_t , unsigned short > ),
-	//						m_bUpdateLayerPriorities
-	DEFINE_FIELD( m_flLastFlexAnimationTime, FIELD_TIME ),
-
-#ifdef HL2_DLL
-	//DEFINE_FIELD( m_vecPrevOrigin, FIELD_POSITION_VECTOR ),
-	//DEFINE_FIELD( m_vecPrevVelocity, FIELD_VECTOR ),
-	DEFINE_FIELD( m_vecLean, FIELD_VECTOR ),
-	DEFINE_FIELD( m_vecShift, FIELD_VECTOR ),
-#endif
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CBaseFlex )
 
 BEGIN_ENT_SCRIPTDESC( CBaseFlex, CBaseAnimating, "Animated characters who have vertex flex capability." )
 	DEFINE_SCRIPTFUNC_NAMED( ScriptGetOldestScene, "GetCurrentScene", "Returns the instance of the oldest active scene entity (if any)." )
@@ -2319,21 +2288,7 @@ float CSceneEventInfo::UpdateWeight( CBaseFlex *pActor )
 	return m_flWeight;
 }
 
-BEGIN_DATADESC( CFlexCycler )
-
-DEFINE_FIELD( m_flextime, FIELD_TIME ),
-DEFINE_FIELD( m_flexnum, FIELD_INTEGER ),
-DEFINE_ARRAY( m_flextarget, FIELD_FLOAT, 64 ),
-DEFINE_FIELD( m_blinktime, FIELD_TIME ),
-DEFINE_FIELD( m_looktime, FIELD_TIME ),
-DEFINE_FIELD( m_lookTarget, FIELD_POSITION_VECTOR ),
-DEFINE_FIELD( m_speaktime, FIELD_TIME ),
-DEFINE_FIELD( m_istalking, FIELD_INTEGER ),
-DEFINE_FIELD( m_phoneme, FIELD_INTEGER ),
-DEFINE_KEYFIELD( m_iszSentence, FIELD_STRING, "Sentence" ),
-DEFINE_FIELD( m_sentence, FIELD_INTEGER ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CFlexCycler )
 
 LINK_ENTITY_TO_CLASS( cycler_flex, CGenericFlexCycler );
 
@@ -2744,32 +2699,11 @@ void CFlexCycler::ProcessSceneEvents( void )
 
 
 BEGIN_BYTESWAP_DATADESC( flexsettinghdr_t )
-	DEFINE_FIELD( id, FIELD_INTEGER ),
-	DEFINE_FIELD( version, FIELD_INTEGER ),
-	DEFINE_ARRAY( name, FIELD_CHARACTER, 64 ),
-	DEFINE_FIELD( length, FIELD_INTEGER ),
-	DEFINE_FIELD( numflexsettings, FIELD_INTEGER ),
-	DEFINE_FIELD( flexsettingindex, FIELD_INTEGER ),
-	DEFINE_FIELD( nameindex, FIELD_INTEGER ),
-	DEFINE_FIELD( numindexes, FIELD_INTEGER ),
-	DEFINE_FIELD( indexindex, FIELD_INTEGER ),
-	DEFINE_FIELD( numkeys, FIELD_INTEGER ),
-	DEFINE_FIELD( keynameindex, FIELD_INTEGER ),
-	DEFINE_FIELD( keymappingindex, FIELD_INTEGER ),
 END_BYTESWAP_DATADESC()
 
 BEGIN_BYTESWAP_DATADESC( flexsetting_t )
-	DEFINE_FIELD( nameindex, FIELD_INTEGER ),
-	DEFINE_FIELD( obsolete1, FIELD_INTEGER ),
-	DEFINE_FIELD( numsettings, FIELD_INTEGER ),
-	DEFINE_FIELD( index, FIELD_INTEGER ),
-	DEFINE_FIELD( obsolete2, FIELD_INTEGER ),
-	DEFINE_FIELD( settingindex, FIELD_INTEGER ),
 END_BYTESWAP_DATADESC()
 
 BEGIN_BYTESWAP_DATADESC( flexweight_t )
-	DEFINE_FIELD( key, FIELD_INTEGER ),
-	DEFINE_FIELD( weight, FIELD_FLOAT ),
-	DEFINE_FIELD( influence, FIELD_FLOAT ),
 END_BYTESWAP_DATADESC()
 

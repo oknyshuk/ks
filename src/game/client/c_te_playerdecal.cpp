@@ -7,6 +7,8 @@
 // $NoKeywords: $
 //=============================================================================//
 #include "cbase.h"
+#include "reflect_recvtable.h"
+#include "reflect_annotations.h"
 #include "c_basetempentity.h"
 #include "iefx.h"
 #include "fx.h"
@@ -41,7 +43,8 @@ void QcCreatePreviewDecal( uint32 nStickerKitDefinition, uint32 nTintID, const t
 //-----------------------------------------------------------------------------
 // Purpose: Player Decal TE
 //-----------------------------------------------------------------------------
-class C_TEPlayerDecal : public C_BaseTempEntity
+class [[= ks::reflect::NetTable{ .name = "DT_TEPlayerDecal" } ]]
+      C_TEPlayerDecal : public C_BaseTempEntity
 {
 public:
 	DECLARE_CLASS( C_TEPlayerDecal, C_BaseTempEntity );
@@ -55,12 +58,12 @@ public:
 	virtual void	Precache( void );
 
 public:
-	int				m_nPlayer;
-	Vector			m_vecOrigin;
-	Vector			m_vecStart;
-	Vector			m_vecRight;
-	int				m_nEntity;
-	int				m_nHitbox;
+	[[= ks::reflect::Net{} ]] int				m_nPlayer;
+	[[= ks::reflect::Net{} ]] Vector			m_vecOrigin;
+	[[= ks::reflect::Net{} ]] Vector			m_vecStart;
+	[[= ks::reflect::Net{} ]] Vector			m_vecRight;
+	[[= ks::reflect::Net{} ]] int				m_nEntity;
+	[[= ks::reflect::Net{} ]] int				m_nHitbox;
 };
 
 int g_nPlayerLogoProxyForPreviewKey = ( 8 << 24 ) | 0x1FFFF; // used for preview (model panel and in-game)
@@ -164,7 +167,8 @@ void OnPlayerDecalsLevelShutdown()
 	s_mapPlayerDecalsUniqueIDsRecreating.RemoveAll();
 }
 
-class C_FEPlayerDecal : public C_BaseEntity
+class [[= ks::reflect::NetTable{ .name = "DT_FEPlayerDecal" } ]]
+      C_FEPlayerDecal : public C_BaseEntity
 {
 public:
 	DECLARE_CLASS( C_FEPlayerDecal, C_BaseEntity );
@@ -226,21 +230,21 @@ public:
 	void MakeDecalReady( int nKey );
 
 public:
-	int m_nUniqueID;
-	uint32 m_unAccountID;
-	uint32 m_unTraceID;
-	uint32 m_rtGcTime;
-	Vector m_vecEndPos;
-	Vector m_vecStart;
-	Vector m_vecRight;
-	Vector m_vecNormal;
-	int m_nPlayer;
-	int m_nEntity;
-	int m_nHitbox;
-	int m_nTintID;
-	float m_flCreationTime;
-	uint8 m_nVersion;
-	uint8 m_ubSignature[ PLAYERDECALS_SIGNATURE_BYTELEN ];
+	[[= ks::reflect::Net{} ]] int m_nUniqueID;
+	[[= ks::reflect::Net{} ]] uint32 m_unAccountID;
+	[[= ks::reflect::Net{} ]] uint32 m_unTraceID;
+	[[= ks::reflect::Net{} ]] uint32 m_rtGcTime;
+	[[= ks::reflect::Net{} ]] Vector m_vecEndPos;
+	[[= ks::reflect::Net{} ]] Vector m_vecStart;
+	[[= ks::reflect::Net{} ]] Vector m_vecRight;
+	[[= ks::reflect::Net{} ]] Vector m_vecNormal;
+	[[= ks::reflect::Net{} ]] int m_nPlayer;
+	[[= ks::reflect::Net{} ]] int m_nEntity;
+	[[= ks::reflect::Net{} ]] int m_nHitbox;
+	[[= ks::reflect::Net{} ]] int m_nTintID;
+	[[= ks::reflect::Net{} ]] float m_flCreationTime;
+	[[= ks::reflect::Net{} ]] uint8 m_nVersion;
+	[[= ks::reflect::Net{} ]] uint8 m_ubSignature[ PLAYERDECALS_SIGNATURE_BYTELEN ];
 
 private:
 	bool m_bDecalReadyToApplyToWorld;
@@ -593,32 +597,9 @@ void C_TEPlayerDecal::PostDataUpdate( DataUpdateType_t updateType )
 	TE_PlayerDecal(  filter, 0.0f, &m_vecOrigin, &m_vecStart, &m_vecRight, m_nPlayer, m_nEntity, m_nHitbox, 0 );
 }
 
-IMPLEMENT_CLIENTCLASS_EVENT_DT(C_TEPlayerDecal, DT_TEPlayerDecal, CTEPlayerDecal)
-	RecvPropVector( RECVINFO(m_vecOrigin)),
-	RecvPropVector( RECVINFO(m_vecStart)),
-	RecvPropVector( RECVINFO(m_vecRight)),
-	RecvPropInt( RECVINFO(m_nEntity)),
-	RecvPropInt( RECVINFO(m_nPlayer)),
-	RecvPropInt( RECVINFO(m_nHitbox)),
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS_EVENT( C_TEPlayerDecal, DT_TEPlayerDecal, CTEPlayerDecal )
 
-IMPLEMENT_CLIENTCLASS_DT(C_FEPlayerDecal, DT_FEPlayerDecal, CFEPlayerDecal)
-	RecvPropInt( RECVINFO( m_nUniqueID ) ),
-	RecvPropInt( RECVINFO( m_unAccountID ) ),
-	RecvPropInt( RECVINFO( m_unTraceID ) ),
-	RecvPropInt( RECVINFO( m_rtGcTime ) ),
-	RecvPropVector( RECVINFO(m_vecEndPos)),
-	RecvPropVector( RECVINFO(m_vecStart)),
-	RecvPropVector( RECVINFO(m_vecRight)),
-	RecvPropVector( RECVINFO(m_vecNormal)),
-	RecvPropInt( RECVINFO(m_nEntity)),
-	RecvPropInt( RECVINFO(m_nPlayer)),
-	RecvPropInt( RECVINFO(m_nHitbox)),
-	RecvPropInt( RECVINFO(m_nTintID)),
-	RecvPropFloat( RECVINFO( m_flCreationTime ) ),
-	RecvPropInt( RECVINFO(m_nVersion)),
-	RecvPropArray3( RECVINFO_ARRAY( m_ubSignature ), RecvPropInt( RECVINFO( m_ubSignature[0] ) ) ),
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS( C_FEPlayerDecal, DT_FEPlayerDecal, CFEPlayerDecal )
 
 
 

@@ -8,6 +8,8 @@
 #ifndef C_SPATIALENTITY_H
 #define C_SPATIALENTITY_H
 
+#include "reflect_annotations.h"
+
 #ifdef _WIN32
 #pragma once
 #endif
@@ -17,7 +19,8 @@
 //------------------------------------------------------------------------------
 // Purpose : Spatial entity with radial falloff
 //------------------------------------------------------------------------------
-class C_SpatialEntity : public C_BaseEntity
+class [[= ks::reflect::NetTable{ .name = "DT_SpatialEntity" } ]]
+      C_SpatialEntity : public C_BaseEntity
 {
 public:
 	DECLARE_CLASS( C_SpatialEntity, C_BaseEntity );
@@ -46,14 +49,14 @@ protected:
 	virtual void RemoveFromPersonalSpatialEntityMgr( void ) {};
 
 private:
-	Vector	m_vecOrigin;
+	[[= ks::reflect::Net{} ]] Vector	m_vecOrigin;
 
-	float	m_minFalloff;
-	float	m_maxFalloff;
-	float	m_flCurWeight;
+	[[= ks::reflect::Net{} ]] float	m_minFalloff;
+	[[= ks::reflect::Net{} ]] float	m_maxFalloff;
+	[[= ks::reflect::Net{} ]] float	m_flCurWeight;
 	char	m_netLookupFilename[MAX_PATH];
 
-	bool	m_bEnabled;
+	[[= ks::reflect::Net{} ]] bool	m_bEnabled;
 
 protected:
 	float	m_flWeight;		// Interpolator for how much it's value adds to the total

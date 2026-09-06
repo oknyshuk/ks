@@ -7,6 +7,8 @@
 // $NoKeywords: $
 //=============================================================================//
 #include "cbase.h"
+#include "reflect_recvtable.h"
+#include "reflect_annotations.h"
 #include "c_basetempentity.h"
 #include "c_te_legacytempents.h"
 #include "tier0/vprof.h"
@@ -17,7 +19,8 @@
 //-----------------------------------------------------------------------------
 // Purpose: Kills Player Attachments
 //-----------------------------------------------------------------------------
-class C_TEKillPlayerAttachments : public C_BaseTempEntity
+class [[= ks::reflect::NetTable{ .name = "DT_TEKillPlayerAttachments" } ]]
+      C_TEKillPlayerAttachments : public C_BaseTempEntity
 {
 public:
 	DECLARE_CLASS( C_TEKillPlayerAttachments, C_BaseTempEntity );
@@ -29,7 +32,7 @@ public:
 	virtual void	PostDataUpdate( DataUpdateType_t updateType );
 
 public:
-	int				m_nPlayer;
+	[[= ks::reflect::Net{} ]] int				m_nPlayer;
 };
 
 //-----------------------------------------------------------------------------
@@ -64,6 +67,4 @@ void TE_KillPlayerAttachments( IRecipientFilter& filter, float delay,
 	tempents->KillAttachedTents( player );
 }
 
-IMPLEMENT_CLIENTCLASS_EVENT_DT(C_TEKillPlayerAttachments, DT_TEKillPlayerAttachments, CTEKillPlayerAttachments)
-	RecvPropInt( RECVINFO(m_nPlayer)),
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS_EVENT( C_TEKillPlayerAttachments, DT_TEKillPlayerAttachments, CTEKillPlayerAttachments )

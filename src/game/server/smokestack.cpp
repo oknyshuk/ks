@@ -6,6 +6,9 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_sendtable.h"
+#include "reflect_annotations.h"
 #include "smokestack.h"
 #include "particle_light.h"
 #include "filesystem.h"
@@ -15,78 +18,16 @@
 
 
 //Networking
-IMPLEMENT_SERVERCLASS_ST(CSmokeStack, DT_SmokeStack)
-	SendPropFloat(SENDINFO(m_SpreadSpeed), 0, SPROP_NOSCALE),
-	SendPropFloat(SENDINFO(m_Speed), 0, SPROP_NOSCALE),
-	SendPropFloat(SENDINFO(m_StartSize), 0, SPROP_NOSCALE),
-	SendPropFloat(SENDINFO(m_EndSize), 0, SPROP_NOSCALE),
-	SendPropFloat(SENDINFO(m_Rate), 0, SPROP_NOSCALE),
-	SendPropFloat(SENDINFO(m_JetLength), 0, SPROP_NOSCALE),
-	SendPropInt(SENDINFO(m_bEmit), 1, SPROP_UNSIGNED),
-	SendPropFloat(SENDINFO(m_flBaseSpread), 0, SPROP_NOSCALE),
-	SendPropFloat(SENDINFO( m_flRollSpeed ), 0, SPROP_NOSCALE ),
-
-	// Note: the base color is specified in the smokestack entity, but the directional
-	// and ambient light must come from env_particlelight entities.
-	SendPropVector( SENDINFO_NOCHECK(m_DirLight.m_vPos), 0, SPROP_NOSCALE ),
-	SendPropVector( SENDINFO_NOCHECK(m_DirLight.m_vColor), 0, SPROP_NOSCALE ),
-	SendPropFloat( SENDINFO_NOCHECK(m_DirLight.m_flIntensity), 0, SPROP_NOSCALE ),
-
-	SendPropVector( SENDINFO_NOCHECK(m_AmbientLight.m_vPos), 0, SPROP_NOSCALE ),
-	SendPropVector( SENDINFO_NOCHECK(m_AmbientLight.m_vColor), 0, SPROP_NOSCALE ),
-	SendPropFloat( SENDINFO_NOCHECK(m_AmbientLight.m_flIntensity), 0, SPROP_NOSCALE ),
-
-	SendPropVector(SENDINFO(m_vWind), 0, SPROP_NOSCALE),
-	SendPropFloat(SENDINFO(m_flTwist), 0, SPROP_NOSCALE),
-	SendPropIntWithMinusOneFlag( SENDINFO(m_iMaterialModel), 16 )
-
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CSmokeStack, DT_SmokeStack )
 
 LINK_ENTITY_TO_CLASS( env_smokestack, CSmokeStack );
 
 
 //Save/restore
 
-BEGIN_SIMPLE_DATADESC( CSmokeStackLightInfo )
-	DEFINE_FIELD( m_vPos,			FIELD_POSITION_VECTOR	),
-	DEFINE_FIELD( m_vColor,		FIELD_VECTOR	),
-	DEFINE_FIELD( m_flIntensity,	FIELD_FLOAT	),
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP_SIMPLE( CSmokeStackLightInfo )
 
-BEGIN_DATADESC( CSmokeStack )
-
-	//Keyvalue fields
-	DEFINE_KEYFIELD( m_StartSize,		FIELD_FLOAT,	"StartSize" ),
-	DEFINE_KEYFIELD( m_EndSize,		FIELD_FLOAT,	"EndSize" ),
-	DEFINE_KEYFIELD( m_InitialState,	FIELD_BOOLEAN,	"InitialState" ),
-	DEFINE_KEYFIELD( m_flBaseSpread,	FIELD_FLOAT,	"BaseSpread" ),
-	DEFINE_KEYFIELD( m_flTwist,		FIELD_FLOAT,	"Twist" ),
-	DEFINE_KEYFIELD( m_flRollSpeed, FIELD_FLOAT,	"Roll" ),
-
-	DEFINE_FIELD( m_strMaterialModel, FIELD_STRING ),
-	DEFINE_FIELD( m_iMaterialModel,FIELD_INTEGER ),
-
-	DEFINE_EMBEDDED( m_AmbientLight ),
-	DEFINE_EMBEDDED( m_DirLight ),
-
-	DEFINE_KEYFIELD( m_WindAngle, FIELD_INTEGER,	"WindAngle" ),
-	DEFINE_KEYFIELD( m_WindSpeed, FIELD_INTEGER,	"WindSpeed" ),
-
-	//Regular fields
-	DEFINE_FIELD( m_vWind,	FIELD_VECTOR ),
-	DEFINE_FIELD( m_bEmit,	FIELD_INTEGER ),
-
-	// Inputs
-	DEFINE_INPUT( m_JetLength, FIELD_FLOAT, "JetLength" ),
-	DEFINE_INPUT( m_SpreadSpeed, FIELD_FLOAT, "SpreadSpeed" ),
-	DEFINE_INPUT( m_Speed, FIELD_FLOAT, "Speed" ),
-	DEFINE_INPUT( m_Rate, FIELD_FLOAT, "Rate" ),
-
-	DEFINE_INPUTFUNC( FIELD_VOID, "TurnOn", InputTurnOn ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "TurnOff", InputTurnOff ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "Toggle", InputToggle ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CSmokeStack )
 
 
 

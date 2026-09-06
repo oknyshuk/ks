@@ -145,6 +145,7 @@ RecvProp::RecvProp()
 	m_Offset = 0;
 	m_RecvType = DPT_Int;
 	m_Flags = 0;
+	m_StringBufferSize = 0;
 	m_ProxyFn = NULL;
 	m_DataTableProxyFn = NULL;
 	m_pDataTable = NULL;
@@ -152,6 +153,7 @@ RecvProp::RecvProp()
 	m_ElementStride = -1;
 	m_pArrayProp = NULL;
 	m_ArrayLengthProxy = NULL;
+	m_pParentArrayPropName = NULL;
 	m_bInsideArray = false;
 }
 

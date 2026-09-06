@@ -5,6 +5,15 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_predmap.h"
+#include "reflect_annotations.h"
+#ifdef CLIENT_DLL
+#include "reflect_recvtable.h"
+#endif
+#include "reflect_annotations.h"
+#ifdef GAME_DLL
+#include "reflect_sendtable.h"
+#endif
 #include "weapon_csbase.h"
 #include "gamerules.h"
 #include "npcevent.h"
@@ -25,19 +34,17 @@
 
 IMPLEMENT_NETWORKCLASS_ALIASED( MolotovGrenade, DT_MolotovGrenade )
 
-BEGIN_NETWORK_TABLE( CMolotovGrenade, DT_MolotovGrenade )
-END_NETWORK_TABLE()
+IMPLEMENT_REFLECT_TABLE( CMolotovGrenade, DT_MolotovGrenade );
 
-BEGIN_PREDICTION_DATA( CMolotovGrenade )
-END_PREDICTION_DATA()
+#ifdef CLIENT_DLL
+IMPLEMENT_REFLECT_PREDMAP( CMolotovGrenade );
+#endif
 
 LINK_ENTITY_TO_CLASS_ALIASED( weapon_molotov, MolotovGrenade );
 PRECACHE_REGISTER( weapon_molotov );
 
 #if !defined( CLIENT_DLL )
 
-BEGIN_DATADESC( CMolotovGrenade )
-END_DATADESC()
 
 void CMolotovGrenade::EmitGrenade( Vector vecSrc, QAngle vecAngles, Vector vecVel, AngularImpulse angImpulse, CBasePlayer *pPlayer, const CCSWeaponInfo& weaponInfo )
 {
@@ -175,8 +182,7 @@ void CMolotovGrenade::Drop(const Vector& vecVelocity)
 
 IMPLEMENT_NETWORKCLASS_ALIASED( IncendiaryGrenade, DT_IncendiaryGrenade )
 
-	BEGIN_NETWORK_TABLE( CIncendiaryGrenade, DT_IncendiaryGrenade )
-	END_NETWORK_TABLE()
+	IMPLEMENT_REFLECT_TABLE( CIncendiaryGrenade, DT_IncendiaryGrenade );
 
 	//BEGIN_PREDICTION_DATA( CIncendiaryGrenade )
 	//END_PREDICTION_DATA()

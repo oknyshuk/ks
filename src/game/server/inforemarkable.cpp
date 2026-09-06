@@ -13,6 +13,8 @@
 
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_annotations.h"
 #include "inforemarkable.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
@@ -70,7 +72,4 @@ LINK_ENTITY_TO_CLASS( info_remarkable, CInfoRemarkable );
 
 
 //--------------------------------------------------------------------------------------------------------
-BEGIN_DATADESC( CInfoRemarkable )
-DEFINE_KEYFIELD( m_szRemarkContext,	FIELD_STRING, "contextsubject" ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CInfoRemarkable )

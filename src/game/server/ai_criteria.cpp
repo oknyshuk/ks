@@ -6,6 +6,8 @@
 //
 //===========================================================================//
 #include "cbase.h"
+#include "reflect_annotations.h"
+#include "reflect_datamap.h"
 #include "ai_criteria.h"
 #include "ai_speech.h"
 #include <keyvalues.h>
@@ -16,19 +18,7 @@
 
 
 
-BEGIN_SIMPLE_DATADESC( AI_ResponseParams )
-	DEFINE_FIELD( flags,	FIELD_SHORT ),
-	DEFINE_FIELD( odds,	FIELD_SHORT ),	
-	DEFINE_FIELD( soundlevel,	FIELD_CHARACTER ),	
-	DEFINE_FIELD( delay,	FIELD_INTEGER ),		// These are compressed down to two float16s, so treat as an INT for saverestore
-	DEFINE_FIELD( respeakdelay,	FIELD_INTEGER ),	//  
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP_SIMPLE( AI_ResponseParams )
 
-BEGIN_SIMPLE_DATADESC( AI_Response )
-	DEFINE_FIELD( m_Type,	FIELD_CHARACTER ),
-	DEFINE_ARRAY( m_szResponseName, FIELD_CHARACTER, AI_Response::MAX_RESPONSE_NAME ),	
-	DEFINE_ARRAY( m_szMatchingRule, FIELD_CHARACTER, AI_Response::MAX_RULE_NAME ),	
-	// DEFINE_FIELD( m_pCriteria, FIELD_??? ), // Don't need to save this probably
-	DEFINE_EMBEDDED( m_Params ),
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP_SIMPLE( AI_Response )
 

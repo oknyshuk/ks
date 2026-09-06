@@ -6,6 +6,9 @@
 //===========================================================================//
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_sendtable.h"
+#include "reflect_annotations.h"
 
 #include "spatialentity.h"
 
@@ -20,42 +23,10 @@ static const char *s_pFadeInContextThink = "SpatialEntityFadeInThink";
 static const char *s_pFadeOutContextThink = "SpatialEntityFadeOutThink";
 
 
-BEGIN_DATADESC( CSpatialEntity )
-
-	DEFINE_THINKFUNC( FadeInThink ),
-	DEFINE_THINKFUNC( FadeOutThink ),
-
-	DEFINE_FIELD( m_flCurWeight,	      FIELD_FLOAT ),
-	DEFINE_FIELD( m_flTimeStartFadeIn,	  FIELD_FLOAT ),
-	DEFINE_FIELD( m_flTimeStartFadeOut,	  FIELD_FLOAT ),
-	DEFINE_FIELD( m_flStartFadeInWeight,  FIELD_FLOAT ),
-	DEFINE_FIELD( m_flStartFadeOutWeight, FIELD_FLOAT ),
-
-	DEFINE_KEYFIELD( m_MinFalloff,		  FIELD_FLOAT,   "minfalloff" ),
-	DEFINE_KEYFIELD( m_MaxFalloff,		  FIELD_FLOAT,   "maxfalloff" ),
-	DEFINE_KEYFIELD( m_flMaxWeight,		  FIELD_FLOAT,	 "maxweight" ),
-	DEFINE_KEYFIELD( m_flFadeInDuration,  FIELD_FLOAT,	 "fadeInDuration" ),
-	DEFINE_KEYFIELD( m_flFadeOutDuration,  FIELD_FLOAT,	 "fadeOutDuration" ),
-	DEFINE_KEYFIELD( m_lookupFilename,	  FIELD_STRING,  "filename" ),
-
-	DEFINE_KEYFIELD( m_bEnabled,		  FIELD_BOOLEAN, "enabled" ),
-	DEFINE_KEYFIELD( m_bStartDisabled,    FIELD_BOOLEAN, "StartDisabled" ),
-
-	DEFINE_INPUTFUNC( FIELD_VOID, "Enable", InputEnable ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "Disable", InputDisable ),
-	DEFINE_INPUTFUNC( FIELD_FLOAT, "SetFadeInDuration", InputSetFadeInDuration ),
-	DEFINE_INPUTFUNC( FIELD_FLOAT, "SetFadeOutDuration", InputSetFadeOutDuration ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CSpatialEntity )
 
 extern void SendProxy_Origin( const SendProp *pProp, const void *pStruct, const void *pData, DVariant *pOut, int iElement, int objectID );
-IMPLEMENT_SERVERCLASS_ST_NOBASE(CSpatialEntity, DT_SpatialEntity)
-	SendPropVector( SENDINFO(m_vecOrigin), -1,  SPROP_NOSCALE, 0.0f, HIGH_DEFAULT, SendProxy_Origin ),
-	SendPropFloat(  SENDINFO(m_MinFalloff) ),
-	SendPropFloat(  SENDINFO(m_MaxFalloff) ),
-	SendPropFloat(  SENDINFO(m_flCurWeight) ),
-	SendPropBool( SENDINFO(m_bEnabled) ),
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CSpatialEntity, DT_SpatialEntity )
 
 
 CSpatialEntity::CSpatialEntity() : BaseClass()

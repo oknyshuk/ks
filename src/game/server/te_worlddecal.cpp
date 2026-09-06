@@ -11,6 +11,8 @@
 // $NoKeywords: $
 //=============================================================================//
 #include "cbase.h"
+#include "reflect_sendtable.h"
+#include "reflect_annotations.h"
 #include "basetempentity.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
@@ -19,7 +21,8 @@
 //-----------------------------------------------------------------------------
 // Purpose: Dispatches world decal tempentity
 //-----------------------------------------------------------------------------
-class CTEWorldDecal : public CBaseTempEntity
+class [[= ks::reflect::NetTable{ .name = "DT_TEWorldDecal" } ]]
+      CTEWorldDecal : public CBaseTempEntity
 {
 public:
 	DECLARE_CLASS( CTEWorldDecal, CBaseTempEntity );
@@ -32,8 +35,8 @@ public:
 	DECLARE_SERVERCLASS();
 
 public:
-	CNetworkVector( m_vecOrigin );
-	CNetworkVar( int, m_nIndex );
+	CNetworkVector( m_vecOrigin, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD, .enc = ks::reflect::ENC_VECTOR } ]] );
+	CNetworkVar( int, m_nIndex, [[= ks::reflect::Net{ .bits = 9, .flags = SPROP_UNSIGNED } ]] );
 };
 
 //-----------------------------------------------------------------------------
@@ -88,14 +91,7 @@ void CTEWorldDecal::Test( const Vector& current_origin, const QAngle& current_an
 	Create( filter, 0.0 );
 }
 
-IMPLEMENT_SERVERCLASS_ST(CTEWorldDecal, DT_TEWorldDecal)
-#if defined( TF_DLL )
-	SendPropVector( SENDINFO(m_vecOrigin), -1, SPROP_COORD_MP_INTEGRAL ),
-#else
-	SendPropVector( SENDINFO(m_vecOrigin), -1, SPROP_COORD),
-#endif
-	SendPropInt( SENDINFO(m_nIndex), 9, SPROP_UNSIGNED ),
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CTEWorldDecal, DT_TEWorldDecal )
 
 
 // Singleton to fire TEWorldDecal objects

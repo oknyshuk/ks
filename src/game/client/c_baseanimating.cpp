@@ -5,6 +5,9 @@
 // $NoKeywords: $
 //===========================================================================//
 #include "cbase.h"
+#include "reflect_recvtable.h"
+#include "reflect_predmap.h"
+#include "reflect_annotations.h"
 #include "c_baseanimating.h"
 #include "c_sprite.h"
 #include "model_types.h"
@@ -29,7 +32,6 @@
 #include "datacache/imdlcache.h"
 #include "eventlist.h"
 #include "saverestore.h"
-#include "physics_saverestore.h"
 #include "vphysics/constraints.h"
 #include "ragdoll_shared.h"
 #include "view.h"
@@ -142,9 +144,7 @@ const unsigned int FCLIENTANIM_SEQUENCE_CYCLE = 0x00000001;
 
 static CUtlVector< clientanimating_t >	g_ClientSideAnimationList;
 
-BEGIN_RECV_TABLE_NOBASE( C_BaseAnimating, DT_ServerAnimationData )
-	RecvPropFloat(RECVINFO(m_flCycle)),
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_TABLE_IN( C_BaseAnimating, DT_ServerAnimationData );
 
 
 void RecvProxy_Sequence( const CRecvProxyData *pData, void *pStruct, void *pOut )
@@ -171,117 +171,12 @@ void RecvProxy_Sequence( const CRecvProxyData *pData, void *pStruct, void *pOut 
 	*/
 }
 
-IMPLEMENT_CLIENTCLASS_DT(C_BaseAnimating, DT_BaseAnimating, CBaseAnimating)
-	RecvPropInt(RECVINFO(m_nSequence), 0, RecvProxy_Sequence),
-	RecvPropInt(RECVINFO(m_nForceBone)),
-	RecvPropVector(RECVINFO(m_vecForce)),
-	RecvPropInt(RECVINFO(m_nSkin)),
-	RecvPropInt(RECVINFO(m_nBody)),
-	RecvPropInt(RECVINFO(m_nHitboxSet)),
-	RecvPropFloat(RECVINFO(m_flModelScale)),
+IMPLEMENT_REFLECT_CLIENTCLASS( C_BaseAnimating, DT_BaseAnimating, CBaseAnimating )
 
-//	RecvPropArray(RecvPropFloat(RECVINFO(m_flPoseParameter[0])), m_flPoseParameter),
-	RecvPropArray3(RECVINFO_ARRAY(m_flPoseParameter), RecvPropFloat(RECVINFO(m_flPoseParameter[0])) ),
-	
-	RecvPropFloat(RECVINFO(m_flPlaybackRate)),
-
-	RecvPropArray3( RECVINFO_ARRAY(m_flEncodedController), RecvPropFloat(RECVINFO(m_flEncodedController[0]))),
-
-	RecvPropInt( RECVINFO( m_bClientSideAnimation )),
-	RecvPropInt( RECVINFO( m_bClientSideFrameReset )),
-	RecvPropBool( RECVINFO( m_bClientSideRagdoll )),
-
-	RecvPropInt( RECVINFO( m_nNewSequenceParity )),
-	RecvPropInt( RECVINFO( m_nResetEventsParity )),
-	RecvPropInt( RECVINFO( m_nMuzzleFlashParity ) ),
-
-	RecvPropEHandle(RECVINFO(m_hLightingOrigin)),
-
-	RecvPropDataTable( "serveranimdata", 0, 0, &REFERENCE_RECV_TABLE( DT_ServerAnimationData ) ),
-
-	RecvPropFloat( RECVINFO( m_flFrozen ) ), 
-	RecvPropInt( RECVINFO( m_ScaleType ) ),
-	RecvPropBool( RECVINFO( m_bSuppressAnimSounds ) )
-
-END_RECV_TABLE()
-
-BEGIN_PREDICTION_DATA( C_BaseAnimating )
-
-	DEFINE_PRED_FIELD( m_nSkin, FIELD_INTEGER, FTYPEDESC_INSENDTABLE ),
-	DEFINE_PRED_FIELD( m_nBody, FIELD_INTEGER, FTYPEDESC_INSENDTABLE ),
-//	DEFINE_PRED_FIELD( m_nHitboxSet, FIELD_INTEGER, FTYPEDESC_INSENDTABLE ),
-//	DEFINE_PRED_FIELD( m_flModelScale, FIELD_FLOAT, FTYPEDESC_INSENDTABLE ),
-	//DEFINE_PRED_FIELD( m_nSequence, FIELD_INTEGER, FTYPEDESC_INSENDTABLE | FTYPEDESC_NOERRORCHECK ),
-	DEFINE_PRED_FIELD( m_flPlaybackRate, FIELD_FLOAT, FTYPEDESC_INSENDTABLE | FTYPEDESC_NOERRORCHECK ),
-	//DEFINE_PRED_FIELD( m_flCycle, FIELD_FLOAT, FTYPEDESC_INSENDTABLE | FTYPEDESC_NOERRORCHECK ),
-//	DEFINE_PRED_ARRAY( m_flPoseParameter, FIELD_FLOAT, MAXSTUDIOPOSEPARAM, FTYPEDESC_INSENDTABLE ),
-	DEFINE_PRED_ARRAY_TOL( m_flEncodedController, FIELD_FLOAT, MAXSTUDIOBONECTRLS, FTYPEDESC_INSENDTABLE, 0.02f ),
-
-	//DEFINE_FIELD( m_flPrevEventCycle, FIELD_FLOAT ),
-	//DEFINE_FIELD( m_flEventCycle, FIELD_FLOAT ),
-	//DEFINE_FIELD( m_nEventSequence, FIELD_INTEGER ),
-
-	DEFINE_PRED_FIELD( m_nNewSequenceParity, FIELD_INTEGER, FTYPEDESC_INSENDTABLE | FTYPEDESC_NOERRORCHECK ),
-	DEFINE_PRED_FIELD( m_nResetEventsParity, FIELD_INTEGER, FTYPEDESC_INSENDTABLE | FTYPEDESC_NOERRORCHECK ),
-	// DEFINE_PRED_FIELD( m_nPrevResetEventsParity, FIELD_INTEGER, 0 ),
-
-	DEFINE_PRED_FIELD( m_nMuzzleFlashParity, FIELD_CHARACTER, FTYPEDESC_INSENDTABLE ),
-	//DEFINE_FIELD( m_nOldMuzzleFlashParity, FIELD_CHARACTER ),
-
-	//DEFINE_FIELD( m_nPrevNewSequenceParity, FIELD_INTEGER ),
-
-	// DEFINE_PRED_FIELD( m_vecForce, FIELD_VECTOR, FTYPEDESC_INSENDTABLE ),
-	// DEFINE_PRED_FIELD( m_nForceBone, FIELD_INTEGER, FTYPEDESC_INSENDTABLE ),
-	// DEFINE_PRED_FIELD( m_bClientSideAnimation, FIELD_BOOLEAN, FTYPEDESC_INSENDTABLE ),
-	// DEFINE_PRED_FIELD( m_bClientSideFrameReset, FIELD_BOOLEAN, FTYPEDESC_INSENDTABLE ),
-	
-	// DEFINE_FIELD( m_pRagdollInfo, RagdollInfo_t ),
-	// DEFINE_FIELD( m_CachedBones, CUtlVector < CBoneCacheEntry > ),
-	// DEFINE_FIELD( m_pActualAttachmentAngles, FIELD_VECTOR ),
-	// DEFINE_FIELD( m_pActualAttachmentOrigin, FIELD_VECTOR ),
-
-	// DEFINE_FIELD( m_animationQueue, CUtlVector < CAnimationLayer > ),
-	// DEFINE_FIELD( m_pIk, CIKContext ),
-	// DEFINE_FIELD( m_bLastClientSideFrameReset, FIELD_BOOLEAN ),
-	// DEFINE_FIELD( hdr, studiohdr_t ),
-	// DEFINE_FIELD( m_pRagdoll, IRagdoll ),
-	// DEFINE_FIELD( m_bStoreRagdollInfo, FIELD_BOOLEAN ),
-
-	// DEFINE_FIELD( C_BaseFlex, m_iEyeAttachment, FIELD_INTEGER ),
-
-END_PREDICTION_DATA()
+IMPLEMENT_REFLECT_PREDMAP( C_BaseAnimating );
 
 LINK_ENTITY_TO_CLASS_CLIENTONLY( client_ragdoll, C_ClientRagdoll );
 
-BEGIN_DATADESC( C_ClientRagdoll )
-	DEFINE_FIELD( m_bFadeOut, FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_bImportant, FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_iCurrentFriction, FIELD_INTEGER ),
-	DEFINE_FIELD( m_iMinFriction, FIELD_INTEGER ),
-	DEFINE_FIELD( m_iMaxFriction, FIELD_INTEGER ),
-	DEFINE_FIELD( m_flFrictionModTime, FIELD_FLOAT ),
-	DEFINE_FIELD( m_flFrictionTime, FIELD_TIME ),
-	DEFINE_FIELD( m_iFrictionAnimState, FIELD_INTEGER ),
-	DEFINE_FIELD( m_bReleaseRagdoll, FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_nBody, FIELD_INTEGER ),
-	DEFINE_FIELD( m_nSkin, FIELD_INTEGER ),
-	DEFINE_FIELD( m_nRenderFX, FIELD_CHARACTER ),
-	DEFINE_FIELD( m_nRenderMode, FIELD_CHARACTER ),
-	DEFINE_FIELD( m_clrRender, FIELD_COLOR32 ),
-	DEFINE_FIELD( m_flEffectTime, FIELD_TIME ),
-	DEFINE_FIELD( m_bFadingOut, FIELD_BOOLEAN ),
-
-	DEFINE_AUTO_ARRAY( m_flScaleEnd, FIELD_FLOAT ),
-	DEFINE_AUTO_ARRAY( m_flScaleTimeStart, FIELD_FLOAT ),
-	DEFINE_AUTO_ARRAY( m_flScaleTimeEnd, FIELD_FLOAT ),
-	DEFINE_EMBEDDEDBYREF( m_pRagdoll ),
-
-	DEFINE_AUTO_ARRAY( m_flScaleEnd, FIELD_FLOAT ),
-	DEFINE_AUTO_ARRAY( m_flScaleTimeStart, FIELD_FLOAT ),
-	DEFINE_AUTO_ARRAY( m_flScaleTimeEnd, FIELD_FLOAT ),
-	//DEFINE_EMBEDDEDBYREF( m_pRagdoll ), // TODO: FIX: This is dynamically-typed
-
-END_DATADESC()
 
 BEGIN_ENT_SCRIPTDESC( C_BaseAnimating, C_BaseEntity, "Animating models client-side" )
 	DEFINE_SCRIPTFUNC_NAMED( ScriptSetPoseParameter, "SetPoseParameter", "Set the specified pose parameter to the specified value"  )
@@ -7081,7 +6976,8 @@ void C_BaseAnimating::SetCustomMaterial( ICustomMaterial *pCustomMaterial, int n
 //			Bone followers WON'T be sent to the client if VISUALIZE_FOLLOWERS is
 //			undefined in the server's physics_bone_followers.cpp
 //-----------------------------------------------------------------------------
-class C_BoneFollower : public C_BaseEntity
+class [[= ks::reflect::NetTable{ .name = "DT_BoneFollower" } ]]
+      C_BoneFollower : public C_BaseEntity
 {
 	DECLARE_CLASS( C_BoneFollower, C_BaseEntity );
 	DECLARE_CLIENTCLASS();
@@ -7095,14 +6991,11 @@ public:
 	bool	TestCollision( const Ray_t &ray, unsigned int mask, trace_t& trace );
 
 private:
-	int m_modelIndex;
-	int m_solidIndex;
+	[[= ks::reflect::Net{} ]] int m_modelIndex;
+	[[= ks::reflect::Net{} ]] int m_solidIndex;
 };
 
-IMPLEMENT_CLIENTCLASS_DT( C_BoneFollower, DT_BoneFollower, CBoneFollower )
-	RecvPropInt( RECVINFO( m_modelIndex ) ),
-	RecvPropInt( RECVINFO( m_solidIndex ) ),
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS( C_BoneFollower, DT_BoneFollower, CBoneFollower )
 
 void VCollideWireframe_ChangeCallback( IConVar *pConVar, char const *pOldString, float flOldValue )
 {

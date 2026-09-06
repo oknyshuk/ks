@@ -23,7 +23,5 @@ ResponseRules::IResponseSystem *PrecacheCustomResponseSystem( const char *script
 ResponseRules::IResponseSystem *BuildCustomResponseSystemGivenCriteria( const char *pszBaseFile, const char *pszCustomName, AI_CriteriaSet &criteriaSet, float flCriteriaScore );
 void DestroyCustomResponseSystems();
 
-class ISaveRestoreBlockHandler *GetDefaultResponseSystemSaveRestoreBlockHandler();
-class ISaveRestoreOps *GetResponseSystemSaveRestoreOps();
 
 #endif // AI_RESPONSESYSTEM_H

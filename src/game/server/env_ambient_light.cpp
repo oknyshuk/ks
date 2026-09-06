@@ -6,6 +6,9 @@
 //===========================================================================//
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_sendtable.h"
+#include "reflect_annotations.h"
 #include "spatialentity.h"
 #include "env_ambient_light.h"
 
@@ -17,15 +20,9 @@
 
 LINK_ENTITY_TO_CLASS(env_ambient_light, CEnvAmbientLight);
 
-BEGIN_DATADESC( CEnvAmbientLight )
-	DEFINE_KEYFIELD(	m_Color,	FIELD_COLOR32,	"Color" ),
-	DEFINE_FIELD(		m_vecColor, FIELD_VECTOR ),
-	DEFINE_INPUTFUNC( FIELD_COLOR32, "SetColor",  InputSetColor ),
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CEnvAmbientLight )
 
-IMPLEMENT_SERVERCLASS_ST(CEnvAmbientLight, DT_EnvAmbientLight)
-	SendPropVector( SENDINFO(m_vecColor), 0, SPROP_NOSCALE),
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CEnvAmbientLight, DT_EnvAmbientLight )
 
 
 void CEnvAmbientLight::Spawn( void )

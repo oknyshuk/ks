@@ -5,6 +5,8 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_annotations.h"
+#include "reflect_datamap.h"
 
 #include "ai_agent.h"
 #include "datacache/imdlcache.h"
@@ -650,45 +652,9 @@ void CAI_Agent::OnScheduleChange ( void )
 // This should be an exact copy of the var's in the header.  Fields
 // that aren't save/restored are commented out
 
-BEGIN_SIMPLE_DATADESC( CAI_Agent )
+IMPLEMENT_REFLECT_DATAMAP_SIMPLE( CAI_Agent )
 
-	//								m_pSchedule  (reacquired on restore)
-	DEFINE_EMBEDDED( m_ScheduleState ),
-	DEFINE_FIELD( m_IdealSchedule,				FIELD_INTEGER ), // handled specially but left in for "virtual" schedules
-	DEFINE_FIELD( m_failSchedule,				FIELD_INTEGER ), // handled specially but left in for "virtual" schedules
-	//								m_Conditions (custom save)
-	//								m_CustomInterruptConditions (custom save)
-	//								m_ConditionsPreIgnore (custom save)
-	//								m_InverseIgnoreConditions (custom save)
-	DEFINE_FIELD( m_bForceConditionsGather,		FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_bConditionsGathered,		FIELD_BOOLEAN ),
-
-	//							m_fIsUsingSmallHull			TODO -- This needs more consideration than simple save/load
-	// 							m_failText					DEBUG
-	// 							m_interruptText				DEBUG
-	// 							m_failedSchedule			DEBUG
-	// 							m_interuptSchedule			DEBUG
-	// 							m_nDebugCurIndex			DEBUG
-
-	// 							m_LastShootAccuracy			DEBUG
-	// 							m_RecentShotAccuracy		DEBUG
-	// 							m_TotalShots				DEBUG
-	// 							m_TotalHits					DEBUG
-	//							m_bSelected					DEBUG
-	// 							m_TimeLastShotMark			DEBUG
-	//							m_bDeferredNavigation
-
-END_DATADESC()
-
-BEGIN_SIMPLE_DATADESC( AIAgentScheduleState_t )
-	DEFINE_FIELD( iCurTask,				FIELD_INTEGER ),
-	DEFINE_FIELD( fTaskStatus,			FIELD_INTEGER ),
-	DEFINE_FIELD( timeStarted,			FIELD_TIME ),
-	DEFINE_FIELD( timeCurTaskStarted,	FIELD_TIME ),
-	DEFINE_FIELD( taskFailureCode,		FIELD_INTEGER ),
-	DEFINE_FIELD( iTaskInterrupt,		FIELD_INTEGER ),
-	DEFINE_FIELD( bScheduleWasInterrupted, FIELD_BOOLEAN ),
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP_SIMPLE( AIAgentScheduleState_t )
 
 //-----------------------------------------------------------------------------
 
@@ -726,77 +692,7 @@ struct AIAgentSaveHeader_t
 
 //-------------------------------------
 
-BEGIN_SIMPLE_DATADESC( AIAgentSaveHeader_t )
-	DEFINE_FIELD( 		version,		FIELD_SHORT ),
-	DEFINE_FIELD( 		flags,			FIELD_INTEGER ),
-	DEFINE_AUTO_ARRAY(	szSchedule,		FIELD_CHARACTER ),
-	DEFINE_FIELD( 		scheduleCrc,	FIELD_INTEGER ),
-	DEFINE_AUTO_ARRAY(	szIdealSchedule,	FIELD_CHARACTER ),
-	DEFINE_AUTO_ARRAY(	szFailSchedule,		FIELD_CHARACTER ),
-	DEFINE_AUTO_ARRAY(	szSequence,		FIELD_CHARACTER ),
-END_DATADESC()
-
-//-------------------------------------
-
-int CAI_Agent::Save( ISave &save )
-{
-	AIAgentSaveHeader_t saveHeader;
-	
-	if ( m_pSchedule )
-	{
-		const char *pszSchedule = m_pSchedule->GetName();
-
-		Assert( Q_strlen( pszSchedule ) < sizeof( saveHeader.szSchedule ) - 1 );
-		Q_strncpy( saveHeader.szSchedule, pszSchedule, sizeof( saveHeader.szSchedule ) );
-
-		CRC32_Init( &saveHeader.scheduleCrc );
-		CRC32_ProcessBuffer( &saveHeader.scheduleCrc, (void *)m_pSchedule->GetTaskList(), m_pSchedule->NumTasks() * sizeof(Task_t) );
-		CRC32_Final( &saveHeader.scheduleCrc );
-	}
-	else
-	{
-		saveHeader.szSchedule[0] = 0;
-		saveHeader.scheduleCrc = 0;
-	}
-
-	int idealSchedule = GetGlobalScheduleId( m_IdealSchedule );
-
-	if ( idealSchedule != -1 && idealSchedule != AI_RemapToGlobal( SCHED_NONE ) )
-	{
-		CAI_Schedule *pIdealSchedule = GetSchedule( m_IdealSchedule );
-		if ( pIdealSchedule )
-		{
-			const char *pszIdealSchedule = pIdealSchedule->GetName();
-			Assert( Q_strlen( pszIdealSchedule ) < sizeof( saveHeader.szIdealSchedule ) - 1 );
-			Q_strncpy( saveHeader.szIdealSchedule, pszIdealSchedule, sizeof( saveHeader.szIdealSchedule ) );
-		}
-	}
-
-	int failSchedule = GetGlobalScheduleId( m_failSchedule );
-	if ( failSchedule != -1 && failSchedule != AI_RemapToGlobal( SCHED_NONE ) )
-	{
-		CAI_Schedule *pFailSchedule = GetSchedule( m_failSchedule );
-		if ( pFailSchedule )
-		{
-			const char *pszFailSchedule = pFailSchedule->GetName();
-			Assert( Q_strlen( pszFailSchedule ) < sizeof( saveHeader.szFailSchedule ) - 1 );
-			Q_strncpy( saveHeader.szFailSchedule, pszFailSchedule, sizeof( saveHeader.szFailSchedule ) );
-		}
-	}
-
-	save.WriteAll( &saveHeader );
-
-	save.StartBlock();
-	SaveConditions( save, m_Conditions );
-	SaveConditions( save, m_CustomInterruptConditions );
-	SaveConditions( save, m_ConditionsPreIgnore );
-	CAI_ScheduleBits ignoreConditions;
-	m_InverseIgnoreConditions.Not( &ignoreConditions );
-	SaveConditions( save, ignoreConditions );
-	save.EndBlock();
-
-	return 1;
-}
+IMPLEMENT_REFLECT_DATAMAP_SIMPLE( AIAgentSaveHeader_t )
 
 //-------------------------------------
 
@@ -806,115 +702,6 @@ void CAI_Agent::DiscardScheduleState()
 	ClearSchedule( "Restoring NPC" );
 
 	m_Conditions.ClearAll();
-}
-
-//-------------------------------------
-
-int CAI_Agent::Restore( IRestore &restore )
-{
-	AIAgentSaveHeader_t saveHeader;
-	restore.ReadAll( &saveHeader );
-
-	restore.StartBlock();
-	RestoreConditions( restore, &m_Conditions );
-	RestoreConditions( restore, &m_CustomInterruptConditions );
-	RestoreConditions( restore, &m_ConditionsPreIgnore );
-	CAI_ScheduleBits ignoreConditions;
-	RestoreConditions( restore, &ignoreConditions );
-	ignoreConditions.Not( &m_InverseIgnoreConditions );
-	restore.EndBlock();
-
-#ifdef TODO
-	// do a normal restore
-	int status = BaseClass::Restore(restore);
-	if ( !status )
-		return 0;
-#else
-	int status = 1;
-#endif
-
-	// Do schedule fix-up
-	if ( saveHeader.version >= AI_EXTENDED_SAVE_HEADER_FIRST_VERSION_WITH_SCHEDULE_ID_FIXUP )
-	{
-		if ( saveHeader.szIdealSchedule[0] )
-		{
-			CAI_Schedule *pIdealSchedule = g_AI_AgentSchedulesManager.GetScheduleByName( saveHeader.szIdealSchedule );
-			m_IdealSchedule = ( pIdealSchedule ) ? pIdealSchedule->GetId() : SCHED_NONE;
-		}
-
-		if ( saveHeader.szFailSchedule[0] )
-		{
-			CAI_Schedule *pFailSchedule = g_AI_AgentSchedulesManager.GetScheduleByName( saveHeader.szFailSchedule );
-			m_failSchedule = ( pFailSchedule ) ? pFailSchedule->GetId() : SCHED_NONE;
-		}
-	}
-
-	bool bDiscardScheduleState = ( saveHeader.szSchedule[0] == 0 ||
-								   saveHeader.version < AI_EXTENDED_SAVE_HEADER_RESET_VERSION );
-
-	if ( m_ScheduleState.taskFailureCode >= NUM_FAIL_CODES )
-		m_ScheduleState.taskFailureCode = FAIL_NO_TARGET; // must have been a string, gotta punt
-
-	if ( !bDiscardScheduleState )
-	{
-		m_pSchedule = g_AI_AgentSchedulesManager.GetScheduleByName( saveHeader.szSchedule );
-		if ( m_pSchedule )
-		{
-			CRC32_t scheduleCrc;
-			CRC32_Init( &scheduleCrc );
-			CRC32_ProcessBuffer( &scheduleCrc, (void *)m_pSchedule->GetTaskList(), m_pSchedule->NumTasks() * sizeof(Task_t) );
-			CRC32_Final( &scheduleCrc );
-
-			if ( scheduleCrc != saveHeader.scheduleCrc )
-			{
-				m_pSchedule = NULL;
-			}
-		}
-	}
-
-	if ( !m_pSchedule )
-		bDiscardScheduleState = true;
-
-	if ( bDiscardScheduleState )
-	{
-		DiscardScheduleState();
-	}
-
-	return status;
-}
-
-//-------------------------------------
-
-void CAI_Agent::SaveConditions( ISave &save, const CAI_ScheduleBits &conditions )
-{
-	for (int i = 0; i < MAX_CONDITIONS; i++)
-	{
-		if (conditions.IsBitSet(i))
-		{
-			const char *pszConditionName = ConditionName(AI_RemapToGlobal(i));
-			if ( !pszConditionName )
-				break;
-			save.WriteString( pszConditionName );
-		}
-	}
-	save.WriteString( "" );
-}
-
-//-------------------------------------
-
-void CAI_Agent::RestoreConditions( IRestore &restore, CAI_ScheduleBits *pConditions )
-{
-	pConditions->ClearAll();
-	char szCondition[256];
-	for (;;)
-	{
-		restore.ReadString( szCondition, sizeof(szCondition), 0 );
-		if ( !szCondition[0] )
-			break;
-		int iCondition = GetSchedulingSymbols()->ConditionSymbolToId( szCondition );
-		if ( iCondition != -1 )
-			pConditions->Set( AI_RemapFromGlobal( iCondition ) );
-	}
 }
 
 //-----------------------------------------------------------------------------

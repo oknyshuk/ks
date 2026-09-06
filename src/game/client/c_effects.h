@@ -6,6 +6,8 @@
 
 #ifndef C_EFFECTS_H
 #define C_EFFECTS_H
+
+#include "reflect_annotations.h"
 #ifdef _WIN32
 #pragma once
 #endif
@@ -61,7 +63,8 @@ private:
 //-----------------------------------------------------------------------------
 // Precipitation blocker entity
 //-----------------------------------------------------------------------------
-class C_PrecipitationBlocker : public C_BaseEntity
+class [[= ks::reflect::NetTable{ .name = "DT_PrecipitationBlocker" } ]]
+      C_PrecipitationBlocker : public C_BaseEntity
 {
 public:
 	DECLARE_CLASS( C_PrecipitationBlocker, C_BaseEntity );
@@ -74,7 +77,8 @@ public:
 //-----------------------------------------------------------------------------
 // Precipitation base entity
 //-----------------------------------------------------------------------------
-class CClient_Precipitation : public C_BaseEntity
+class [[= ks::reflect::NetTable{ .name = "DT_Precipitation" } ]]
+      CClient_Precipitation : public C_BaseEntity
 {
 	class CPrecipitationEffect;
 	friend class CClient_Precipitation::CPrecipitationEffect;
@@ -152,7 +156,7 @@ private:
 	float			m_Speed;		// Precip speed
 	float			m_Width;		// Tracer width
 	float			m_Remainder;	// particles we should render next time
-	PrecipitationType_t	m_nPrecipType;			// Precip type
+	[[= ks::reflect::Net{} ]] PrecipitationType_t	m_nPrecipType;			// Precip type
 	float			m_flHalfScreenWidth;	// Precalculated each frame.
 
 	float			m_flDensity;

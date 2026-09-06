@@ -6,6 +6,8 @@
 
 #ifndef FUNC_LADDER_H
 #define FUNC_LADDER_H
+
+#include "reflect_annotations.h"
 #ifdef _WIN32
 #pragma once
 #endif
@@ -15,7 +17,8 @@
 #define CInfoLadderDismount C_InfoLadderDismount
 #endif
 
-class CInfoLadderDismount : public CBaseEntity
+class [[= ks::reflect::NetTable{ .name = "DT_InfoLadderDismount" } ]]
+      CInfoLadderDismount : public CBaseEntity
 {
 public:
 	DECLARE_CLASS( CInfoLadderDismount, CBaseEntity );
@@ -32,7 +35,8 @@ typedef CHandle< CInfoLadderDismount > CInfoLadderDismountHandle;
 //-----------------------------------------------------------------------------
 // Purpose: A player-climbable ladder
 //-----------------------------------------------------------------------------
-class CFuncLadder : public CBaseEntity
+class [[= ks::reflect::NetTable{ .name = "DT_FuncLadder" } ]]
+      CFuncLadder : public CBaseEntity
 {
 public:
 
@@ -56,8 +60,8 @@ public:
 
 	void	SetEndPoints( const Vector& p1, const Vector& p2 );
 
-	void	InputEnable( inputdata_t &inputdata );
-	void	InputDisable( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Enable", .type = FIELD_VOID } ]] void	InputEnable( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Disable", .type = FIELD_VOID } ]] void	InputDisable( inputdata_t &inputdata );
 
 	bool	IsEnabled() const;
 
@@ -82,25 +86,25 @@ private:
 	void	SearchForDismountPoints();
 
 	// Movement vector from "bottom" to "top" of ladder
-	CNetworkVector( m_vecLadderDir );
+	CNetworkVector( m_vecLadderDir, [[= ks::reflect::Net{ .bits = SPROP_COORD, .flags = SPROP_NOSCALE, .enc = ks::reflect::ENC_VECTOR } ]] );
 
 	// Dismount points near top/bottom of ladder, precomputed
 	CUtlVector< CInfoLadderDismountHandle > m_Dismounts;
 
 	// Endpoints for checking for mount/dismount
-	CNetworkVector( m_vecPlayerMountPositionTop );
-	CNetworkVector( m_vecPlayerMountPositionBottom );
+	CNetworkVector( m_vecPlayerMountPositionTop, [[= ks::reflect::Net{ .bits = SPROP_COORD, .flags = SPROP_NOSCALE, .enc = ks::reflect::ENC_VECTOR } ]] [[= ks::reflect::Key{ .name = "point0" } ]] );
+	CNetworkVector( m_vecPlayerMountPositionBottom, [[= ks::reflect::Net{ .bits = SPROP_COORD, .flags = SPROP_NOSCALE, .enc = ks::reflect::ENC_VECTOR } ]] [[= ks::reflect::Key{ .name = "point1" } ]] );
 
-	bool		m_bDisabled;
-	CNetworkVar( bool,	m_bFakeLadder );
+	[[= ks::reflect::Key{ .name = "StartDisabled" } ]] bool		m_bDisabled;
+	CNetworkVar( bool,	m_bFakeLadder, [[= ks::reflect::Net{} ]] );
 
 #if defined( GAME_DLL )
-	string_t	m_surfacePropName;
+	[[= ks::reflect::Key{ .name = "ladderSurfaceProperties" } ]] string_t	m_surfacePropName;
 	//-----------------------------------------------------
 	//	Outputs
 	//-----------------------------------------------------
-	COutputEvent	m_OnPlayerGotOnLadder;
-	COutputEvent	m_OnPlayerGotOffLadder;
+	[[= ks::reflect::Key{ .name = "OnPlayerGotOnLadder" } ]] COutputEvent	m_OnPlayerGotOnLadder;
+	[[= ks::reflect::Key{ .name = "OnPlayerGotOffLadder" } ]] COutputEvent	m_OnPlayerGotOffLadder;
 
 	virtual int UpdateTransmitState();
 #endif

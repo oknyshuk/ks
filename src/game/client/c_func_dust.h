@@ -7,6 +7,9 @@
 
 #ifndef C_FUNC_DUST_H
 #define C_FUNC_DUST_H
+
+#include "reflect_annotations.h"
+#include "dt_recv.h"
 #ifdef _WIN32
 #pragma once
 #endif
@@ -54,7 +57,10 @@ private:
 // C_Func_Dust class.
 // ------------------------------------------------------------------------------------ //
 
-class C_Func_Dust : public C_BaseEntity
+class [[= ks::reflect::NetTable{ .name = "DT_Func_Dust", .base = false } ]]
+      [[= ks::reflect::From<"m_nModelIndex", ks::reflect::Net{}>{} ]]
+      [[= ks::reflect::From<"m_Collision", ks::reflect::Net{}>{} ]]
+      C_Func_Dust : public C_BaseEntity
 {
 public:
 	DECLARE_CLASS( C_Func_Dust, C_BaseEntity );
@@ -76,25 +82,25 @@ private:
 // Vars from server.
 public:
 
-	color32			m_Color;
-	int				m_SpawnRate;
+	[[= ks::reflect::Net{} ]] [[= ks::reflect::Proxy<RecvProxy_Int32ToColor32, ks::reflect::WIRE_RECV>{} ]] color32			m_Color;
+	[[= ks::reflect::Net{} ]] int				m_SpawnRate;
 	
-	float			m_flSizeMin;
-	float			m_flSizeMax;
+	[[= ks::reflect::Net{} ]] float			m_flSizeMin;
+	[[= ks::reflect::Net{} ]] float			m_flSizeMax;
 
-	int				m_SpeedMax;
+	[[= ks::reflect::Net{} ]] int				m_SpeedMax;
 
-	int				m_LifetimeMin;
-	int				m_LifetimeMax;
+	[[= ks::reflect::Net{} ]] int				m_LifetimeMin;
+	[[= ks::reflect::Net{} ]] int				m_LifetimeMax;
 
-	int				m_DistMax;
+	[[= ks::reflect::Net{} ]] int				m_DistMax;
 
-	float			m_FallSpeed;	// extra 'gravity'
-	bool			m_bAffectedByWind;
+	[[= ks::reflect::Net{} ]] float			m_FallSpeed;	// extra 'gravity'
+	[[= ks::reflect::Net{} ]] bool			m_bAffectedByWind;
 
 public:
 
-	int				m_DustFlags;	// Combination of DUSTFLAGS_
+	[[= ks::reflect::Net{} ]] int				m_DustFlags;	// Combination of DUSTFLAGS_
 
 
 

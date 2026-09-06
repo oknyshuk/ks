@@ -6,6 +6,8 @@
 #ifndef _C_NEXT_BOT_H_
 #define _C_NEXT_BOT_H_
 
+#include "reflect_annotations.h"
+
 #include "c_ai_basenpc.h"
 
 //----------------------------------------------------------------------------------------------------------------
@@ -30,7 +32,8 @@ public:
 /**
  * The client-side implementation of the NextBot
  */
-class C_NextBotCombatCharacter : public C_BaseCombatCharacter
+class [[= ks::reflect::NetTable{ .name = "DT_NextBot" } ]]
+      C_NextBotCombatCharacter : public C_BaseCombatCharacter
 {
 public:
 	DECLARE_CLASS( C_NextBotCombatCharacter, C_BaseCombatCharacter );

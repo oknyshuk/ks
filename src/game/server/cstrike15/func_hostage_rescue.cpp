@@ -10,12 +10,6 @@
 //============================================================================
 LINK_ENTITY_TO_CLASS( func_hostage_rescue, CHostageRescueZone );
 
-BEGIN_DATADESC( CHostageRescueZone )
-
-	//Functions
-	DEFINE_FUNCTION( HostageRescueTouch ),
-
-END_DATADESC()
 
 
 void CHostageRescueZone::Spawn()
@@ -94,9 +88,6 @@ void CHostageRescueZone::HostageRescueTouch( CBaseEntity *pOther )
 //-----------------------------------------------------------------------------
 LINK_ENTITY_TO_CLASS( info_hostage_rescue_zone_hint, CInfoInstructorHintHostageRescueZone );
 
-BEGIN_DATADESC( CInfoInstructorHintHostageRescueZone )
-
-END_DATADESC()
 
 void CInfoInstructorHintHostageRescueZone::Spawn( void )
 {

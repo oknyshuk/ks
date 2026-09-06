@@ -6,6 +6,8 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_annotations.h"
 #include "ai_speechfilter.h"
 #ifndef CSTRIKE_DLL
 #include "ai_playerally.h"
@@ -16,17 +18,7 @@
 
 LINK_ENTITY_TO_CLASS( ai_speechfilter, CAI_SpeechFilter );
 
-BEGIN_DATADESC( CAI_SpeechFilter )
-	DEFINE_KEYFIELD( m_iszSubject,		FIELD_STRING, "subject" ),
-	DEFINE_KEYFIELD( m_flIdleModifier,	FIELD_FLOAT, "IdleModifier" ),
-	DEFINE_KEYFIELD( m_bNeverSayHello,	FIELD_BOOLEAN, "NeverSayHello" ),
-	DEFINE_KEYFIELD( m_bDisabled,		FIELD_BOOLEAN, "StartDisabled" ),
-
-	DEFINE_INPUTFUNC( FIELD_VOID, "Enable", InputEnable ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "Disable", InputDisable ),
-	DEFINE_INPUTFUNC( FIELD_FLOAT, "SetIdleModifier", InputSetIdleModifier ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CAI_SpeechFilter )
 
 //-----------------------------------------------------------------------------
 // Purpose: 

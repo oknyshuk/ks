@@ -5,6 +5,8 @@
 //=============================================================================
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_annotations.h"
 
 #include "ai_behavior_fightfromcover.h"
 #include "ai_hint.h"
@@ -16,11 +18,6 @@
 // 
 //-----------------------------------------------------------------------------
 
-BEGIN_DATADESC( CAI_FightFromCoverBehavior )
-	DEFINE_FIELD( m_hGoal, FIELD_EHANDLE ),
-	DEFINE_EMBEDDED( m_FrontMoveMonitor ),
-	DEFINE_EMBEDDED( m_FrontTimer ),
-END_DATADESC();
 
 //-----------------------------------------------------------------------------
 // 
@@ -610,19 +607,7 @@ AI_END_CUSTOM_SCHEDULE_PROVIDER()
 //
 //-----------------------------------------------------------------------------
 
-BEGIN_DATADESC( CAI_FightFromCoverGoal )
-	DEFINE_KEYFIELD( m_DirectionalMarker, FIELD_STRING, "DirectionalMarker" ),
-	DEFINE_KEYFIELD( m_GenericHintType, FIELD_STRING, "GenericHintType" ),
-	DEFINE_KEYFIELD( m_WidthZone, FIELD_FLOAT, "width" ),
-	DEFINE_KEYFIELD( m_LengthZone, FIELD_FLOAT, "length" ),
-	DEFINE_KEYFIELD( m_HeightZone, FIELD_FLOAT, "height" ),
-	DEFINE_KEYFIELD( m_BiasZone, FIELD_FLOAT, "bias" ),
-	DEFINE_FIELD( m_vFront, FIELD_POSITION_VECTOR ),
-
-	DEFINE_INPUTFUNC( FIELD_EHANDLE, "SetDirectionalMarker", InputSetDirectionalMarker ),
-	DEFINE_THINKFUNC( FrontThink ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CAI_FightFromCoverGoal )
 
 //-------------------------------------
 

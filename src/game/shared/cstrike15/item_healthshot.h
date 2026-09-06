@@ -8,6 +8,8 @@
 #ifndef _ITEM_HEALTHSHOT_H_
 #define _ITEM_HEALTHSHOT_H_
 
+#include "reflect_annotations.h"
+
 #ifdef _WIN32
 #pragma once
 #endif
@@ -23,7 +25,8 @@
 /**
 * Healthshot. When used, give the player speed boost for a short amount of time
 */
-class CItem_Healthshot : public CWeaponBaseItem
+class [[= ks::reflect::NetTable{ .name = "DT_Item_Healthshot" } ]]
+      CItem_Healthshot : public CWeaponBaseItem
 {
 public:
 	DECLARE_CLASS( CItem_Healthshot, CWeaponBaseItem );

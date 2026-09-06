@@ -6,6 +6,8 @@
 
 #ifndef FUNC_TANK_H
 #define FUNC_TANK_H
+
+#include "reflect_annotations.h"
 #ifdef _WIN32
 #pragma once
 #endif
@@ -155,20 +157,20 @@ private:
 	void	StopRotSound( void );
 
 	// Input handlers.
-	void InputActivate( inputdata_t &inputdata );
-	void InputDeactivate( inputdata_t &inputdata );
-	void InputSetFireRate( inputdata_t &inputdata );
-	void InputSetDamage( inputdata_t &inputdata );
-	void InputSetTargetDir( inputdata_t &inputdata );
-	void InputSetTargetPosition( inputdata_t &inputdata );
-	void InputSetTargetEntityName( inputdata_t &inputdata );
-	void InputSetTargetEntity( inputdata_t &inputdata );
-	void InputClearTargetEntity( inputdata_t &inputdata );
-	void InputFindNPCToManTank( inputdata_t &inputdata );
-	void InputStopFindingNPCs( inputdata_t &inputdata );
-	void InputStartFindingNPCs( inputdata_t &inputdata );
-	void InputForceNPCOff( inputdata_t &inputdata );
-	void InputSetMaxRange( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Activate", .type = FIELD_VOID } ]] void InputActivate( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Deactivate", .type = FIELD_VOID } ]] void InputDeactivate( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetFireRate", .type = FIELD_FLOAT } ]] void InputSetFireRate( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetDamage", .type = FIELD_INTEGER } ]] void InputSetDamage( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetTargetDir", .type = FIELD_VECTOR } ]] void InputSetTargetDir( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetTargetPosition", .type = FIELD_VECTOR } ]] void InputSetTargetPosition( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetTargetEntityName", .type = FIELD_STRING } ]] void InputSetTargetEntityName( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetTargetEntity", .type = FIELD_EHANDLE } ]] void InputSetTargetEntity( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "ClearTargetEntity", .type = FIELD_VOID } ]] void InputClearTargetEntity( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "FindNPCToManTank", .type = FIELD_STRING } ]] void InputFindNPCToManTank( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "StopFindingNPCs", .type = FIELD_VOID } ]] void InputStopFindingNPCs( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "StartFindingNPCs", .type = FIELD_VOID } ]] void InputStartFindingNPCs( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "ForceNPCOff", .type = FIELD_VOID } ]] void InputForceNPCOff( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetMaxRange", .type = FIELD_FLOAT } ]] void InputSetMaxRange( inputdata_t &inputdata );
 
 	void TankActivate(void);
 	void TankDeactivate(void);
@@ -215,19 +217,19 @@ protected:
 	virtual void ControllerPostFrame( void );
 
 	float					m_fireLast;		// Last time I fired
-	float					m_fireRate;		// How many rounds/second
+	[[= ks::reflect::Key{ .name = "firerate" } ]] float					m_fireRate;		// How many rounds/second
 
 	EHANDLE					m_hTarget;
 
-	TANKBULLET				m_bulletType;	// Bullet type
-	int						m_iBulletDamage; // 0 means use Bullet type's default damage
-	int						m_iBulletDamageVsPlayer; // Damage vs player. 0 means use m_iBulletDamage
+	[[= ks::reflect::Key{ .name = "bullet" } ]] TANKBULLET				m_bulletType;	// Bullet type
+	[[= ks::reflect::Key{ .name = "bullet_damage" } ]] int						m_iBulletDamage; // 0 means use Bullet type's default damage
+	[[= ks::reflect::Key{ .name = "bullet_damage_vs_player" } ]] int						m_iBulletDamageVsPlayer; // Damage vs player. 0 means use m_iBulletDamage
 
 	int						m_iSmallAmmoType;
 	int						m_iMediumAmmoType;
 	int						m_iLargeAmmoType;
 
-	int						m_spread;		// firing spread
+	[[= ks::reflect::Key{ .name = "firespread" } ]] int						m_spread;		// firing spread
 
 	EntityMatrix			m_parentMatrix;
 
@@ -247,42 +249,42 @@ private:
 	
 	float					m_yawCenter;	// "Center" yaw
 	float					m_yawCenterWorld;	// "Center" yaw in world space
-	float					m_yawRate;		// Max turn rate to track targets
-	float					m_yawRange;		// Range of turning motion (one-sided: 30 is +/- 30 degress from center)
+	[[= ks::reflect::Key{ .name = "yawrate" } ]] float					m_yawRate;		// Max turn rate to track targets
+	[[= ks::reflect::Key{ .name = "yawrange" } ]] float					m_yawRange;		// Range of turning motion (one-sided: 30 is +/- 30 degress from center)
 											// Zero is full rotation
-	float					m_yawTolerance;	// Tolerance angle
+	[[= ks::reflect::Key{ .name = "yawtolerance" } ]] float					m_yawTolerance;	// Tolerance angle
 
 	float					m_pitchCenter;	// "Center" pitch
 	float					m_pitchCenterWorld;	// "Center" pitch in world space
-	float					m_pitchRate;	// Max turn rate on pitch
-	float					m_pitchRange;	// Range of pitch motion as above
-	float					m_pitchTolerance;	// Tolerance angle
+	[[= ks::reflect::Key{ .name = "pitchrate" } ]] float					m_pitchRate;	// Max turn rate on pitch
+	[[= ks::reflect::Key{ .name = "pitchrange" } ]] float					m_pitchRange;	// Range of pitch motion as above
+	[[= ks::reflect::Key{ .name = "pitchtolerance" } ]] float					m_pitchTolerance;	// Tolerance angle
 
 	float					m_fireTime;		// How much time has been used to fire the weapon so far.
 	float					m_lastSightTime;// Last time I saw target
-	float					m_persist;		// Persistence of firing (how long do I shoot when I can't see)
-	float					m_persist2;		// Secondary persistence of firing (randomly shooting when I can't see)
+	[[= ks::reflect::Key{ .name = "persistence" } ]] float					m_persist;		// Persistence of firing (how long do I shoot when I can't see)
+	[[= ks::reflect::Key{ .name = "persistence2" } ]] float					m_persist2;		// Secondary persistence of firing (randomly shooting when I can't see)
 	float					m_persist2burst;// How long secondary persistence burst lasts
-	float					m_minRange;		// Minimum range to aim/track
-	float					m_maxRange;		// Max range to aim/track
+	[[= ks::reflect::Key{ .name = "minRange" } ]] float					m_minRange;		// Minimum range to aim/track
+	[[= ks::reflect::Key{ .name = "maxRange" } ]] float					m_maxRange;		// Max range to aim/track
 	float					m_flMinRange2;
 	float					m_flMaxRange2;
-	int						m_iAmmoCount;	// ammo 
+	[[= ks::reflect::Key{ .name = "ammo_count" } ]] int						m_iAmmoCount;	// ammo 
 
 	Vector					m_barrelPos;	// Length of the freakin barrel
-	float					m_spriteScale;	// Scale of any sprites we shoot
-	string_t				m_iszSpriteSmoke;
-	string_t				m_iszSpriteFlash;
+	[[= ks::reflect::Key{ .name = "spritescale" } ]] float					m_spriteScale;	// Scale of any sprites we shoot
+	[[= ks::reflect::Key{ .name = "spritesmoke" } ]] string_t				m_iszSpriteSmoke;
+	[[= ks::reflect::Key{ .name = "spriteflash" } ]] string_t				m_iszSpriteFlash;
 
-	string_t				m_iszMaster;	// Master entity (game_team_master or multisource)
+	[[= ks::reflect::Key{ .name = "master" } ]] string_t				m_iszMaster;	// Master entity (game_team_master or multisource)
 
-	string_t				m_soundStartRotate;
-	string_t				m_soundStopRotate;
-	string_t				m_soundLoopRotate;
+	[[= ks::reflect::As{ FIELD_SOUNDNAME } ]] [[= ks::reflect::Key{ .name = "rotatestartsound" } ]] string_t				m_soundStartRotate;
+	[[= ks::reflect::As{ FIELD_SOUNDNAME } ]] [[= ks::reflect::Key{ .name = "rotatestopsound" } ]] string_t				m_soundStopRotate;
+	[[= ks::reflect::As{ FIELD_SOUNDNAME } ]] [[= ks::reflect::Key{ .name = "rotatesound" } ]] string_t				m_soundLoopRotate;
 
-	float					m_flPlayerGracePeriod;
-	float					m_flIgnoreGraceUpto;
-	float					m_flPlayerLockTimeBeforeFire;
+	[[= ks::reflect::Key{ .name = "playergraceperiod" } ]] float					m_flPlayerGracePeriod;
+	[[= ks::reflect::Key{ .name = "ignoregraceupto" } ]] float					m_flIgnoreGraceUpto;
+	[[= ks::reflect::Key{ .name = "playerlocktimebeforefire" } ]] float					m_flPlayerLockTimeBeforeFire;
 	float					m_flLastSawNonPlayer;
 
 	string_t				m_targetEntityName;
@@ -290,45 +292,45 @@ private:
 	Vector					m_vecNPCIdleTarget;
 
 	// Used for when the gun is attached to another entity
-	string_t				m_iszBarrelAttachment;
+	[[= ks::reflect::Key{ .name = "gun_barrel_attach" } ]] string_t				m_iszBarrelAttachment;
 	int						m_nBarrelAttachment;
-	string_t				m_iszBaseAttachment;
+	[[= ks::reflect::Key{ .name = "gun_base_attach" } ]] string_t				m_iszBaseAttachment;
 
 	// Used when the gun is actually a part of the parent entity, and pose params aim it
-	string_t				m_iszYawPoseParam;
-	string_t				m_iszPitchPoseParam;
-	float					m_flYawPoseCenter;
-	float					m_flPitchPoseCenter;
+	[[= ks::reflect::Key{ .name = "gun_yaw_pose_param" } ]] string_t				m_iszYawPoseParam;
+	[[= ks::reflect::Key{ .name = "gun_pitch_pose_param" } ]] string_t				m_iszPitchPoseParam;
+	[[= ks::reflect::Key{ .name = "gun_yaw_pose_center" } ]] float					m_flYawPoseCenter;
+	[[= ks::reflect::Key{ .name = "gun_pitch_pose_center" } ]] float					m_flPitchPoseCenter;
 	bool					m_bUsePoseParameters;
 
 	// Lead the target?
-	bool					m_bPerformLeading;
+	[[= ks::reflect::Key{ .name = "LeadTarget" } ]] bool					m_bPerformLeading;
 	float					m_flStartLeadFactor;
 	float					m_flStartLeadFactorTime;
 	float					m_flNextLeadFactor;
 	float					m_flNextLeadFactorTime;
 
-	COutputEvent			m_OnFire;
-	COutputEvent			m_OnLoseTarget;
-	COutputEvent			m_OnAquireTarget;
-	COutputEvent			m_OnAmmoDepleted;
-	COutputEvent			m_OnGotController;
-	COutputEvent			m_OnLostController;
-	COutputEvent			m_OnGotPlayerController;
-	COutputEvent			m_OnLostPlayerController;
-	COutputEvent			m_OnReadyToFire;
+	[[= ks::reflect::Key{ .name = "OnFire" } ]] COutputEvent			m_OnFire;
+	[[= ks::reflect::Key{ .name = "OnLoseTarget" } ]] COutputEvent			m_OnLoseTarget;
+	[[= ks::reflect::Key{ .name = "OnAquireTarget" } ]] COutputEvent			m_OnAquireTarget;
+	[[= ks::reflect::Key{ .name = "OnAmmoDepleted" } ]] COutputEvent			m_OnAmmoDepleted;
+	[[= ks::reflect::Key{ .name = "OnGotController" } ]] COutputEvent			m_OnGotController;
+	[[= ks::reflect::Key{ .name = "OnLostController" } ]] COutputEvent			m_OnLostController;
+	[[= ks::reflect::Key{ .name = "OnGotPlayerController" } ]] COutputEvent			m_OnGotPlayerController;
+	[[= ks::reflect::Key{ .name = "OnLostPlayerController" } ]] COutputEvent			m_OnLostPlayerController;
+	[[= ks::reflect::Key{ .name = "OnReadyToFire" } ]] COutputEvent			m_OnReadyToFire;
 
 	CHandle<CBaseTrigger>	m_hControlVolume;
-	string_t				m_iszControlVolume;
+	[[= ks::reflect::Key{ .name = "control_volume" } ]] string_t				m_iszControlVolume;
 
 	float					m_flNextControllerSearch;
 	bool					m_bShouldFindNPCs;
 	bool					m_bNPCInRoute;
-	string_t				m_iszNPCManPoint; 
+	[[= ks::reflect::Key{ .name = "npc_man_point" } ]] string_t				m_iszNPCManPoint; 
 
 	bool					m_bReadyToFire;
 
-	int						m_iEffectHandling;
+	[[= ks::reflect::Key{ .name = "effecthandling" } ]] int						m_iEffectHandling;
 };
 
 #endif // FUNC_TANK_H

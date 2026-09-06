@@ -5,6 +5,8 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_annotations.h"
 
 #include "info_camera_link.h"
 #include "point_camera.h"
@@ -29,13 +31,13 @@ public:
 	virtual void Activate();
 
 private:
-	void InputSetCamera(inputdata_t &inputdata);
+	[[= ks::reflect::Input{ .name = "SetCamera", .type = FIELD_STRING } ]] void InputSetCamera(inputdata_t &inputdata);
 	void InputSetTargetEntity(inputdata_t &inputdata);
 	void SetCameraByName(const char *szName);
 
 	CHandle<CPointCamera> m_hCamera;
 	EHANDLE m_hTargetEntity;
-	string_t m_strPointCamera;
+	[[= ks::reflect::Key{ .name = "PointCamera" } ]] string_t m_strPointCamera;
 
 	friend CBaseEntity *CreateInfoCameraLink( CBaseEntity *pTarget, CPointCamera *pCamera );
 	friend void PointCameraSetupVisibility( CBaseEntity *pPlayer, int area, unsigned char *pvs, int pvssize );
@@ -51,17 +53,7 @@ CUtlFixedLinkedList<CInfoCameraLink *> g_InfoCameraLinkList;
 //-----------------------------------------------------------------------------
 // Save/load
 //-----------------------------------------------------------------------------
-BEGIN_DATADESC( CInfoCameraLink )
-
-	DEFINE_KEYFIELD( m_strPointCamera, FIELD_STRING, "PointCamera" ),
-
-	DEFINE_FIELD( m_hCamera,		FIELD_EHANDLE ),
-	DEFINE_FIELD( m_hTargetEntity,	FIELD_EHANDLE ),
-
-	// Outputs
-	DEFINE_INPUTFUNC( FIELD_STRING, "SetCamera", InputSetCamera ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CInfoCameraLink )
 
 
 LINK_ENTITY_TO_CLASS( info_camera_link, CInfoCameraLink );

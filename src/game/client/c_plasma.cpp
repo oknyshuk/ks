@@ -6,6 +6,8 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_recvtable.h"
+#include "reflect_annotations.h"
 #include "particles_simple.h"
 #include "tempent.h"
 #include "iefx.h"
@@ -38,7 +40,12 @@ public:
 };
 
 
-class C_Plasma : public C_BaseEntity
+void RecvProxy_PlasmaScale( const CRecvProxyData *pData, void *pStruct, void *pOut );
+
+void RecvProxy_PlasmaScaleTime( const CRecvProxyData *pData, void *pStruct, void *pOut );
+
+class [[= ks::reflect::NetTable{ .name = "DT_Plasma" } ]]
+      C_Plasma : public C_BaseEntity
 {
 public:
 	DECLARE_CLIENTCLASS();
@@ -67,13 +74,13 @@ public:
 
 //From the server
 public:
-	float	m_flStartScale;
-	float	m_flScale;
-	float	m_flScaleTime;
-	int		m_nFlags;
-	int		m_nPlasmaModelIndex;
-	int		m_nPlasmaModelIndex2;
-	int		m_nGlowModelIndex;
+	[[= ks::reflect::Net{} ]] float	m_flStartScale;
+	[[= ks::reflect::Net{} ]] [[= ks::reflect::Proxy<RecvProxy_PlasmaScale, ks::reflect::WIRE_RECV>{} ]] float	m_flScale;
+	[[= ks::reflect::Net{} ]] [[= ks::reflect::Proxy<RecvProxy_PlasmaScaleTime, ks::reflect::WIRE_RECV>{} ]] float	m_flScaleTime;
+	[[= ks::reflect::Net{} ]] int		m_nFlags;
+	[[= ks::reflect::Net{} ]] int		m_nPlasmaModelIndex;
+	[[= ks::reflect::Net{} ]] int		m_nPlasmaModelIndex2;
+	[[= ks::reflect::Net{} ]] int		m_nGlowModelIndex;
 
 //Client-side only
 public:
@@ -157,15 +164,7 @@ void RecvProxy_PlasmaScaleTime( const CRecvProxyData *pData, void *pStruct, void
 }
 
 //Receive datatable
-IMPLEMENT_CLIENTCLASS_DT( C_Plasma, DT_Plasma, CPlasma )
-	RecvPropFloat( RECVINFO( m_flStartScale )),
-	RecvPropFloat( RECVINFO( m_flScale ), 0, RecvProxy_PlasmaScale ),
-	RecvPropFloat( RECVINFO( m_flScaleTime ), 0, RecvProxy_PlasmaScaleTime ),
-	RecvPropInt( RECVINFO( m_nFlags ) ),
-	RecvPropInt( RECVINFO( m_nPlasmaModelIndex ) ),
-	RecvPropInt( RECVINFO( m_nPlasmaModelIndex2 ) ),
-	RecvPropInt( RECVINFO( m_nGlowModelIndex ) ),
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS( C_Plasma, DT_Plasma, CPlasma )
 
 //==================================================
 // C_Plasma

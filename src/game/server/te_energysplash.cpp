@@ -11,6 +11,8 @@
 // $NoKeywords: $
 //=============================================================================//
 #include "cbase.h"
+#include "reflect_sendtable.h"
+#include "reflect_annotations.h"
 #include "te_particlesystem.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
@@ -19,7 +21,8 @@
 //-----------------------------------------------------------------------------
 // Purpose: Dispatches energy splashes
 //-----------------------------------------------------------------------------
-class CTEEnergySplash : public CBaseTempEntity
+class [[= ks::reflect::NetTable{ .name = "DT_TEEnergySplash", .base = false } ]]
+      CTEEnergySplash : public CBaseTempEntity
 {
 DECLARE_CLASS( CTEEnergySplash, CBaseTempEntity );
 
@@ -32,9 +35,9 @@ public:
 	DECLARE_SERVERCLASS();
 
 public:
-	CNetworkVector( m_vecPos );
-	CNetworkVector( m_vecDir );
-	CNetworkVar( bool, m_bExplosive );
+	CNetworkVector( m_vecPos, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD, .enc = ks::reflect::ENC_VECTOR } ]] );
+	CNetworkVector( m_vecDir, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD, .enc = ks::reflect::ENC_VECTOR } ]] );
+	CNetworkVar( bool, m_bExplosive, [[= ks::reflect::Net{ .bits = 1, .flags = SPROP_UNSIGNED } ]] );
 };
 
 //-----------------------------------------------------------------------------
@@ -82,11 +85,7 @@ void CTEEnergySplash::Test( const Vector& current_origin, const QAngle& current_
 	Create( filter, 0.0 );
 }
 
-IMPLEMENT_SERVERCLASS_ST_NOBASE( CTEEnergySplash, DT_TEEnergySplash)
-	SendPropVector( SENDINFO(m_vecPos), -1, SPROP_COORD),
-	SendPropVector( SENDINFO(m_vecDir), -1, SPROP_COORD),
-	SendPropInt( SENDINFO(m_bExplosive), 1, SPROP_UNSIGNED),
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CTEEnergySplash, DT_TEEnergySplash )
 
 // Singleton to fire TEEnergySplash objects
 static CTEEnergySplash g_TEEnergySplash( "Energy Splash" );

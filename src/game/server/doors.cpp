@@ -6,6 +6,9 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_sendtable.h"
+#include "reflect_annotations.h"
 #include "doors.h"
 #include "entitylist.h"
 #include "physics.h"
@@ -22,60 +25,7 @@
 
 #define CLOSE_AREAPORTAL_THINK_CONTEXT "CloseAreaportalThink"
 
-BEGIN_DATADESC( CBaseDoor )
-
-	DEFINE_KEYFIELD( m_vecMoveDir, FIELD_VECTOR, "movedir" ),
-
-	DEFINE_FIELD( m_bLockedSentence, FIELD_CHARACTER ),
-	DEFINE_FIELD( m_bUnlockedSentence, FIELD_CHARACTER ),	
-	DEFINE_KEYFIELD( m_NoiseMoving, FIELD_SOUNDNAME, "noise1" ),
-	DEFINE_KEYFIELD( m_NoiseArrived, FIELD_SOUNDNAME, "noise2" ),
-	DEFINE_KEYFIELD( m_NoiseMovingClosed, FIELD_SOUNDNAME, "startclosesound" ),
-	DEFINE_KEYFIELD( m_NoiseArrivedClosed, FIELD_SOUNDNAME, "closesound" ),
-	DEFINE_KEYFIELD( m_ChainTarget, FIELD_STRING, "chainstodoor" ),
-	// DEFINE_FIELD( m_isChaining, FIELD_BOOLEAN ),
-	// DEFINE_FIELD( m_ls, locksound_t ),
-	DEFINE_KEYFIELD( m_ls.sLockedSound, FIELD_SOUNDNAME, "locked_sound" ),
-	DEFINE_KEYFIELD( m_ls.sUnlockedSound, FIELD_SOUNDNAME, "unlocked_sound" ),
-	DEFINE_FIELD( m_bLocked, FIELD_BOOLEAN ),
-	DEFINE_KEYFIELD( m_flWaveHeight, FIELD_FLOAT, "WaveHeight" ),
-	DEFINE_KEYFIELD( m_flBlockDamage, FIELD_FLOAT, "dmg" ),
-	DEFINE_KEYFIELD( m_eSpawnPosition, FIELD_INTEGER, "spawnpos" ),
-
-	DEFINE_KEYFIELD( m_bForceClosed, FIELD_BOOLEAN, "forceclosed" ),
-	DEFINE_FIELD( m_bDoorGroup, FIELD_BOOLEAN ),
-
-	DEFINE_KEYFIELD( m_bLoopMoveSound, FIELD_BOOLEAN, "loopmovesound" ),
-	DEFINE_KEYFIELD( m_bIgnoreDebris, FIELD_BOOLEAN, "ignoredebris" ),
-
-	DEFINE_INPUTFUNC( FIELD_VOID, "Open", InputOpen ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "Close", InputClose ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "Toggle", InputToggle ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "Lock", InputLock ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "Unlock", InputUnlock ),
-	DEFINE_INPUTFUNC( FIELD_FLOAT, "SetSpeed", InputSetSpeed ),
-	DEFINE_INPUTFUNC( FIELD_FLOAT, "SetToggleState", InputSetToggleState ),
-
-	DEFINE_OUTPUT( m_OnBlockedOpening, "OnBlockedOpening" ),
-	DEFINE_OUTPUT( m_OnBlockedClosing, "OnBlockedClosing" ),
-	DEFINE_OUTPUT( m_OnUnblockedOpening, "OnUnblockedOpening" ),
-	DEFINE_OUTPUT( m_OnUnblockedClosing, "OnUnblockedClosing" ),
-	DEFINE_OUTPUT( m_OnFullyClosed, "OnFullyClosed" ),
-	DEFINE_OUTPUT( m_OnFullyOpen, "OnFullyOpen" ),
-	DEFINE_OUTPUT( m_OnClose, "OnClose" ),
-	DEFINE_OUTPUT( m_OnOpen, "OnOpen" ),
-	DEFINE_OUTPUT( m_OnLockedUse, "OnLockedUse" ),
-
-	// Function Pointers
-	DEFINE_FUNCTION( DoorTouch ),
-	DEFINE_FUNCTION( DoorGoUp ),
-	DEFINE_FUNCTION( DoorGoDown ),
-	DEFINE_FUNCTION( DoorHitTop ),
-	DEFINE_FUNCTION( DoorHitBottom ),
-	DEFINE_THINKFUNC( MovingSoundThink ),
-	DEFINE_THINKFUNC( CloseAreaPortalsThink ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CBaseDoor )
 
 
 LINK_ENTITY_TO_CLASS( func_door, CBaseDoor );
@@ -87,9 +37,7 @@ LINK_ENTITY_TO_CLASS( func_water, CBaseDoor );
 
 
 // SendTable stuff.
-IMPLEMENT_SERVERCLASS_ST(CBaseDoor, DT_BaseDoor)
-	SendPropFloat	(SENDINFO(m_flWaveHeight),		8,	SPROP_ROUNDUP,	0.0f,	8.0f),
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CBaseDoor, DT_BaseDoor )
 
 #define DOOR_SENTENCEWAIT	6
 #define DOOR_SOUNDWAIT		1
@@ -1300,16 +1248,14 @@ public:
 	virtual void SetToggleState( int state );
 	virtual bool IsRotatingDoor() { return true; }
 
-	bool m_bSolidBsp;
+	[[= ks::reflect::Key{ .name = "solidbsp" } ]] bool m_bSolidBsp;
 
 	DECLARE_DATADESC();
 };
 
 LINK_ENTITY_TO_CLASS( func_door_rotating, CRotDoor );
 
-BEGIN_DATADESC( CRotDoor )
-	DEFINE_KEYFIELD( m_bSolidBsp, FIELD_BOOLEAN, "solidbsp" ),
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CRotDoor )
 
 //-----------------------------------------------------------------------------
 // Purpose: 

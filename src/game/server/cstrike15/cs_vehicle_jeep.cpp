@@ -6,6 +6,9 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_sendtable.h"
+#include "reflect_annotations.h"
 #include "vehicle_base.h"
 #include "engine/IEngineSound.h"
 #include "in_buttons.h"
@@ -66,14 +69,7 @@ struct JeepWaterData_t
 	DECLARE_SIMPLE_DATADESC();
 };
 
-BEGIN_SIMPLE_DATADESC( JeepWaterData_t )
-	DEFINE_ARRAY( m_bWheelInWater,			FIELD_BOOLEAN,	JEEP_WHEEL_COUNT ),
-	DEFINE_ARRAY( m_bWheelWasInWater,			FIELD_BOOLEAN,	JEEP_WHEEL_COUNT ),
-	DEFINE_ARRAY( m_vecWheelContactPoints,	FIELD_VECTOR,	JEEP_WHEEL_COUNT ),
-	DEFINE_ARRAY( m_flNextRippleTime,			FIELD_TIME,		JEEP_WHEEL_COUNT ),
-	DEFINE_FIELD( m_bBodyInWater,				FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_bBodyWasInWater,			FIELD_BOOLEAN ),
-END_DATADESC()	
+IMPLEMENT_REFLECT_DATAMAP_SIMPLE( JeepWaterData_t )
 
 //-----------------------------------------------------------------------------
 // Purpose: Four wheel physics vehicle server vehicle with weaponry
@@ -91,7 +87,8 @@ public:
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-class CPropJeep : public CPropVehicleDriveable
+class [[= ks::reflect::NetTable{ .name = "DT_PropJeep" } ]]
+      CPropJeep : public CPropVehicleDriveable
 {
 	DECLARE_CLASS( CPropJeep, CPropVehicleDriveable );
 
@@ -163,8 +160,8 @@ private:
 	void		DampenForwardMotion( Vector &vecVehicleEyePos, QAngle &vecVehicleEyeAngles, float flFrameTime );
 	void		DampenUpMotion( Vector &vecVehicleEyePos, QAngle &vecVehicleEyeAngles, float flFrameTime );
 
-	void		InputStartRemoveTauCannon( inputdata_t &inputdata );
-	void		InputFinishRemoveTauCannon( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "StartRemoveTauCannon", .type = FIELD_VOID } ]] void		InputStartRemoveTauCannon( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "FinishRemoveTauCannon", .type = FIELD_VOID } ]] void		InputFinishRemoveTauCannon( inputdata_t &inputdata );
 
 private:
 
@@ -204,49 +201,12 @@ private:
 	EHANDLE			m_hLastPlayerInVehicle;
 	bool			m_bHasPoop;
 
-	CNetworkVar( bool, m_bHeadlightIsOn );
+	CNetworkVar( bool, m_bHeadlightIsOn, [[= ks::reflect::Net{} ]] );
 };
 
-BEGIN_DATADESC( CPropJeep )
-	DEFINE_FIELD( m_bGunHasBeenCutOff, FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_flDangerSoundTime, FIELD_TIME ),
-	DEFINE_FIELD( m_nBulletType, FIELD_INTEGER ),
-	DEFINE_FIELD( m_bCannonCharging, FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_flCannonTime, FIELD_TIME ),
-	DEFINE_FIELD( m_flCannonChargeStartTime, FIELD_TIME ),
-	DEFINE_FIELD( m_vecGunOrigin, FIELD_POSITION_VECTOR ),
-	DEFINE_SOUNDPATCH( m_sndCannonCharge ),
-	DEFINE_FIELD( m_nSpinPos, FIELD_INTEGER ),
-	DEFINE_FIELD( m_aimYaw, FIELD_FLOAT ),
-	DEFINE_FIELD( m_aimPitch, FIELD_FLOAT ),
-	DEFINE_FIELD( m_throttleDisableTime, FIELD_TIME ),
-	DEFINE_FIELD( m_flHandbrakeTime, FIELD_TIME ),
-	DEFINE_FIELD( m_bInitialHandbrake, FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_flOverturnedTime, FIELD_TIME ),
-	DEFINE_FIELD( m_flAmmoCrateCloseTime, FIELD_FLOAT ),
-	DEFINE_FIELD( m_vecLastEyePos, FIELD_POSITION_VECTOR ),
-	DEFINE_FIELD( m_vecLastEyeTarget, FIELD_POSITION_VECTOR ),
-	DEFINE_FIELD( m_vecEyeSpeed, FIELD_POSITION_VECTOR ),
-	DEFINE_FIELD( m_vecTargetSpeed, FIELD_POSITION_VECTOR ),
-	DEFINE_FIELD( m_bHeadlightIsOn, FIELD_BOOLEAN ),
-	DEFINE_EMBEDDED( m_WaterData ),
+IMPLEMENT_REFLECT_DATAMAP( CPropJeep )
 
-	DEFINE_FIELD( m_iNumberOfEntries, FIELD_INTEGER ),
-	DEFINE_FIELD( m_nAmmoType, FIELD_INTEGER ),
-
-	DEFINE_FIELD( m_flPlayerExitedTime, FIELD_TIME ),
-	DEFINE_FIELD( m_flLastSawPlayerAt, FIELD_TIME ),
-	DEFINE_FIELD( m_hLastPlayerInVehicle, FIELD_EHANDLE ),
-	DEFINE_FIELD( m_bHasPoop, FIELD_BOOLEAN ),
-
-	DEFINE_INPUTFUNC( FIELD_VOID, "StartRemoveTauCannon", InputStartRemoveTauCannon ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "FinishRemoveTauCannon", InputFinishRemoveTauCannon ),
-
-END_DATADESC()
-
-IMPLEMENT_SERVERCLASS_ST( CPropJeep, DT_PropJeep )
-	SendPropBool( SENDINFO( m_bHeadlightIsOn ) ),
-END_SEND_TABLE();
+IMPLEMENT_REFLECT_SERVERCLASS( CPropJeep, DT_PropJeep );
 
 //LINK_ENTITY_TO_CLASS( prop_vehicle_jeep, CPropJeep );
 

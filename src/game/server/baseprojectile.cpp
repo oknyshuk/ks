@@ -11,14 +11,7 @@
 #include "tier0/memdbgon.h"
 
 
-BEGIN_DATADESC( CBaseProjectile )
-	DEFINE_FIELD( m_flDamage, FIELD_FLOAT ),
-	DEFINE_FIELD( m_iDamageType, FIELD_INTEGER ),
-	DEFINE_FIELD( m_flDamageScale, FIELD_FLOAT ),
-
-	DEFINE_FUNCTION( ProjectileTouch ),
-	DEFINE_THINKFUNC( FlyThink ),
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CBaseProjectile )
 
 LINK_ENTITY_TO_CLASS( proj_base, CBaseProjectile );
 

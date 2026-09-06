@@ -13,7 +13,15 @@
 
 #include "ichoreoeventcallback.h"
 
-class C_SceneEntity : public C_BaseEntity, public IChoreoEventCallback
+#include "reflect_annotations.h"
+
+// named by the Proxy<> annotation below; defined in c_sceneentity.cpp
+void RecvProxy_ForcedClientTime( const CRecvProxyData *pData, void *pStruct, void *pOut );
+
+// IMPLEMENT_CLIENTCLASS_DT, so this half carries a baseclass prop; the server half is _NOBASE
+class [[= ks::reflect::NetTable{ .name = "DT_SceneEntity" } ]]
+      [[= ks::reflect::UtlVec<"m_hActorList", MAX_ACTORS_IN_SCENE, nullptr>{} ]]
+      C_SceneEntity : public C_BaseEntity, public IChoreoEventCallback
 {
 	friend class CChoreoEventCallback;
 
@@ -86,12 +94,12 @@ private:
 	void					WipeQueuedEvents();
 	void					QueueStartEvent( float starttime, CChoreoScene *scene, CChoreoEvent *event );
 
-	bool		m_bIsPlayingBack;
-	bool		m_bPaused;
-	bool		m_bMultiplayer;
+	[[= ks::reflect::Net{} ]] bool		m_bIsPlayingBack;
+	[[= ks::reflect::Net{} ]] bool		m_bPaused;
+	[[= ks::reflect::Net{} ]] bool		m_bMultiplayer;
 	float		m_flCurrentTime;
-	float		m_flForceClientTime;
-	int			m_nSceneStringIndex;
+	[[= ks::reflect::Net{} ]] [[= ks::reflect::Proxy<RecvProxy_ForcedClientTime, ks::reflect::WIRE_RECV>{} ]] float		m_flForceClientTime;
+	[[= ks::reflect::Net{} ]] int			m_nSceneStringIndex;
 	bool		m_bClientOnly;
 
 	CHandle< C_BaseFlex >	m_hOwner; // if set, this overrides the m_hActorList in FindNamedActor()

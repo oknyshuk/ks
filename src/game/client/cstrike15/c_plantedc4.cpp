@@ -6,6 +6,8 @@
 //
 //=============================================================================//
 #include "cbase.h"
+#include "reflect_recvtable.h"
+#include "reflect_annotations.h"
 #include "c_plantedc4.h"
 #include "engine/IEngineSound.h"
 #include "cs_gamerules.h"
@@ -21,15 +23,7 @@
 
 extern ConVar spec_show_xray;
 
-IMPLEMENT_CLIENTCLASS_DT(C_PlantedC4, DT_PlantedC4, CPlantedC4)
-	RecvPropBool( RECVINFO(m_bBombTicking) ),
-	RecvPropFloat( RECVINFO(m_flC4Blow) ),
-	RecvPropFloat( RECVINFO(m_flTimerLength) ),
-	RecvPropFloat( RECVINFO(m_flDefuseLength) ),
-	RecvPropFloat( RECVINFO(m_flDefuseCountDown) ),
-	RecvPropBool( RECVINFO(m_bBombDefused) ),
-	RecvPropEHandle( RECVINFO(m_hBombDefuser) ),
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS( C_PlantedC4, DT_PlantedC4, CPlantedC4 )
 
 // PRECACHE_REGISTER_BEGIN( GLOBAL, C_PlantedC4 )
 // PRECACHE( PARTICLE_SYSTEM, "bomb_explosion_huge" )

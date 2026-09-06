@@ -7,6 +7,8 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_annotations.h"
 #include "tier0/icommandline.h"
 #include "igamesystem.h"
 #include "filesystem.h"
@@ -38,18 +40,11 @@ public:
 	virtual int UpdateTransmitState();
 
 private:
-	string_t	m_iszCameraName;
-	int			m_iFOV;
+	[[= ks::reflect::Key{ .name = "cameraname" } ]] string_t	m_iszCameraName;
+	[[= ks::reflect::Key{ .name = "FOV" } ]] int			m_iFOV;
 };
 
-BEGIN_DATADESC( CPointDevShotCamera )
-	DEFINE_FUNCTION( DevShotThink_Setup ),
-	DEFINE_FUNCTION( DevShotThink_TakeShot ),
-	DEFINE_FUNCTION( DevShotThink_PostShot ),
-
-	DEFINE_KEYFIELD( m_iszCameraName,	FIELD_STRING,	"cameraname" ),
-	DEFINE_KEYFIELD( m_iFOV,	FIELD_INTEGER,	"FOV" ),
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CPointDevShotCamera )
 
 LINK_ENTITY_TO_CLASS( point_devshot_camera, CPointDevShotCamera );
 

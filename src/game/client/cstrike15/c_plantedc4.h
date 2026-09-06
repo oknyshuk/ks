@@ -8,6 +8,8 @@
 #ifndef C_PLANTEDC4_H
 #define C_PLANTEDC4_H
 
+#include "reflect_annotations.h"
+
 #include "cbase.h"
 #include "in_buttons.h"
 #include "decals.h"
@@ -23,7 +25,8 @@
 // network vars?
 // ------------------------------------------------------------------------------------------ //
 
-class C_PlantedC4 : public C_BaseAnimating
+class [[= ks::reflect::NetTable{ .name = "DT_PlantedC4" } ]]
+      C_PlantedC4 : public C_BaseAnimating
 {
 public:
 	DECLARE_CLASS( C_PlantedC4, CBaseAnimating );
@@ -41,21 +44,21 @@ public:
 	int GetSecondsRemaining( void ) { return ceil( m_flC4Blow - gpGlobals->curtime ); }
 
 	inline bool IsBombActive( void ) { return m_bBombTicking; }
-	CNetworkVar( bool, m_bBombTicking );
+	CNetworkVar( bool, m_bBombTicking, [[= ks::reflect::Net{} ]] );
 
 	float m_flNextGlow;
 	float m_flNextBeep;
 
-	float m_flC4Blow;
-	float m_flTimerLength;
+	[[= ks::reflect::Net{} ]] float m_flC4Blow;
+	[[= ks::reflect::Net{} ]] float m_flTimerLength;
 	float m_bTenSecWarning;
 	float m_bTriggerWarning;
 	float m_bExplodeWarning;
 
-	CNetworkVar( float, m_flDefuseLength );	
-	CNetworkVar( float, m_flDefuseCountDown ); 
-	CNetworkVar( bool, m_bBombDefused ); 
-	CNetworkVar( CHandle<CCSPlayer>, m_hBombDefuser );
+	CNetworkVar( float, m_flDefuseLength, [[= ks::reflect::Net{} ]] );	
+	CNetworkVar( float, m_flDefuseCountDown, [[= ks::reflect::Net{} ]] ); 
+	CNetworkVar( bool, m_bBombDefused, [[= ks::reflect::Net{} ]] ); 
+	CNetworkVar( CHandle<CCSPlayer>, m_hBombDefuser, [[= ks::reflect::Net{} ]] );
 
 	CGlowObject m_GlowObject;
 

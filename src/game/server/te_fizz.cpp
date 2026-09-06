@@ -11,6 +11,8 @@
 // $NoKeywords: $
 //=============================================================================//
 #include "cbase.h"
+#include "reflect_sendtable.h"
+#include "reflect_annotations.h"
 #include "basetempentity.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
@@ -19,7 +21,8 @@
 //-----------------------------------------------------------------------------
 // Purpose: Dispatches Fizz tempentity
 //-----------------------------------------------------------------------------
-class CTEFizz : public CBaseTempEntity
+class [[= ks::reflect::NetTable{ .name = "DT_TEFizz" } ]]
+      CTEFizz : public CBaseTempEntity
 {
 public:
 	DECLARE_CLASS( CTEFizz, CBaseTempEntity );
@@ -34,10 +37,10 @@ public:
 	DECLARE_SERVERCLASS();
 
 public:
-	CNetworkVar( int, m_nEntity );
-	CNetworkVar( int, m_nModelIndex );
-	CNetworkVar( int, m_nDensity );
-	CNetworkVar( int, m_nCurrent );
+	CNetworkVar( int, m_nEntity, [[= ks::reflect::Net{ .bits = MAX_EDICT_BITS, .flags = SPROP_UNSIGNED } ]] );
+	CNetworkVar( int, m_nModelIndex, [[= ks::reflect::Net{ .enc = ks::reflect::ENC_MODELINDEX } ]] );
+	CNetworkVar( int, m_nDensity, [[= ks::reflect::Net{ .bits = 8, .flags = SPROP_UNSIGNED } ]] );
+	CNetworkVar( int, m_nCurrent, [[= ks::reflect::Net{ .bits = 16 } ]] );
 };
 
 //-----------------------------------------------------------------------------
@@ -86,12 +89,7 @@ void CTEFizz::Precache( void )
 }
 
 
-IMPLEMENT_SERVERCLASS_ST(CTEFizz, DT_TEFizz)
-	SendPropInt( SENDINFO(m_nEntity), MAX_EDICT_BITS, SPROP_UNSIGNED ),
-	SendPropModelIndex( SENDINFO(m_nModelIndex) ),
-	SendPropInt( SENDINFO(m_nDensity), 8, SPROP_UNSIGNED ),
-	SendPropInt(SENDINFO(m_nCurrent), 16 ),
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CTEFizz, DT_TEFizz )
 
 
 // Singleton to fire TEFizz objects

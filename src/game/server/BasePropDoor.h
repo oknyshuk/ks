@@ -14,6 +14,8 @@
 
 #ifndef BASEPROPDOOR_H
 #define BASEPROPDOOR_H
+
+#include "reflect_annotations.h"
 #ifdef _WIN32
 #pragma once
 #endif
@@ -33,7 +35,16 @@ struct opendata_t
 };
 
 
-abstract_class CBasePropDoor : public CDynamicProp
+abstract_class [[= ks::reflect::NetTable{ .name = "DT_BasePropDoor" } ]]
+      [[= ks::reflect::Exclude{ .table = "DT_BaseAnimating", .prop = "m_flPoseParameter" } ]]
+      [[= ks::reflect::Exclude{ .table = "DT_BaseAnimating", .prop = "m_flPlaybackRate" } ]]
+      [[= ks::reflect::Exclude{ .table = "DT_BaseAnimating", .prop = "m_nMuzzleFlashParity" } ]]
+      [[= ks::reflect::Exclude{ .table = "DT_BaseAnimatingOverlay", .prop = "overlay_vars" } ]]
+      [[= ks::reflect::Exclude{ .table = "DT_BaseFlex", .prop = "m_flexWeight" } ]]
+      [[= ks::reflect::Exclude{ .table = "DT_BaseFlex", .prop = "m_blinktoggle" } ]]
+      [[= ks::reflect::KeyFrom<"m_ls.sLockedSound", ks::reflect::Key{ .name = "soundlockedoverride", .as = FIELD_SOUNDNAME } >{} ]]
+      [[= ks::reflect::KeyFrom<"m_ls.sUnlockedSound", ks::reflect::Key{ .name = "soundunlockedoverride", .as = FIELD_SOUNDNAME } >{} ]]
+      CBasePropDoor : public CDynamicProp
 {
 public:
 
@@ -108,12 +119,12 @@ protected:
 
 	virtual void CalcDoorSounds();
 
-	float m_flAutoReturnDelay;	// How many seconds to wait before automatically closing, -1 never closes automatically.
+	[[= ks::reflect::Key{ .name = "returndelay" } ]] float m_flAutoReturnDelay;	// How many seconds to wait before automatically closing, -1 never closes automatically.
 	CUtlVector< CHandle< CBasePropDoor > >	m_hDoorList;	// List of doors linked to us
 
 	inline CBaseEntity *GetActivator();
 
-	int		m_nHardwareType;
+	[[= ks::reflect::Key{ .name = "hardware" } ]] int		m_nHardwareType;
 
 	// Called when the door becomes fully closed.
 	virtual void OnDoorClosed() {}
@@ -173,12 +184,12 @@ private:
 	void OnEndBlocked( void );
 
 	// Input handlers
-	void InputClose(inputdata_t &inputdata);
-	void InputLock(inputdata_t &inputdata);
-	void InputOpen(inputdata_t &inputdata);
-	void InputOpenAwayFrom(inputdata_t &inputdata);
-	void InputToggle(inputdata_t &inputdata);
-	void InputUnlock(inputdata_t &inputdata);
+	[[= ks::reflect::Input{ .name = "Close", .type = FIELD_VOID } ]] void InputClose(inputdata_t &inputdata);
+	[[= ks::reflect::Input{ .name = "Lock", .type = FIELD_VOID } ]] void InputLock(inputdata_t &inputdata);
+	[[= ks::reflect::Input{ .name = "Open", .type = FIELD_VOID } ]] void InputOpen(inputdata_t &inputdata);
+	[[= ks::reflect::Input{ .name = "OpenAwayFrom", .type = FIELD_STRING } ]] void InputOpenAwayFrom(inputdata_t &inputdata);
+	[[= ks::reflect::Input{ .name = "Toggle", .type = FIELD_VOID } ]] void InputToggle(inputdata_t &inputdata);
+	[[= ks::reflect::Input{ .name = "Unlock", .type = FIELD_VOID } ]] void InputUnlock(inputdata_t &inputdata);
 
 	void SetDoorBlocker( CBaseEntity *pBlocker );
 
@@ -194,11 +205,11 @@ private:
 
 protected:
 	bool	m_bLocked;				// True if the door is locked.
-	bool m_bForceClosed;			// True if this door must close no matter what.
+	[[= ks::reflect::Key{ .name = "forceclosed" } ]] bool m_bForceClosed;			// True if this door must close no matter what.
 
-	string_t m_SoundMoving;
-	string_t m_SoundOpen;
-	string_t m_SoundClose;
+	[[= ks::reflect::As{ FIELD_SOUNDNAME } ]] [[= ks::reflect::Key{ .name = "soundmoveoverride" } ]] string_t m_SoundMoving;
+	[[= ks::reflect::As{ FIELD_SOUNDNAME } ]] [[= ks::reflect::Key{ .name = "soundopenoverride" } ]] string_t m_SoundOpen;
+	[[= ks::reflect::As{ FIELD_SOUNDNAME } ]] [[= ks::reflect::Key{ .name = "soundcloseoverride" } ]] string_t m_SoundClose;
 
 	int m_nPhysicsMaterial;
 
@@ -207,22 +218,22 @@ protected:
 
 	DECLARE_DATADESC();
 
-	string_t m_SlaveName;
+	[[= ks::reflect::Key{ .name = "slavename" } ]] string_t m_SlaveName;
 
 	CHandle< CBasePropDoor > m_hMaster;
 
 	static void RegisterPrivateActivities();
 
 	// Outputs
-	COutputEvent m_OnBlockedClosing;		// Triggered when the door becomes blocked while closing.
-	COutputEvent m_OnBlockedOpening;		// Triggered when the door becomes blocked while opening.
-	COutputEvent m_OnUnblockedClosing;		// Triggered when the door becomes unblocked while closing.
-	COutputEvent m_OnUnblockedOpening;		// Triggered when the door becomes unblocked while opening.
-	COutputEvent m_OnFullyClosed;			// Triggered when the door reaches the fully closed position.
-	COutputEvent m_OnFullyOpen;				// Triggered when the door reaches the fully open position.
-	COutputEvent m_OnClose;					// Triggered when the door is told to close.
-	COutputEvent m_OnOpen;					// Triggered when the door is told to open.
-	COutputEvent m_OnLockedUse;				// Triggered when the user tries to open a locked door.
+	[[= ks::reflect::Key{ .name = "OnBlockedClosing" } ]] COutputEvent m_OnBlockedClosing;		// Triggered when the door becomes blocked while closing.
+	[[= ks::reflect::Key{ .name = "OnBlockedOpening" } ]] COutputEvent m_OnBlockedOpening;		// Triggered when the door becomes blocked while opening.
+	[[= ks::reflect::Key{ .name = "OnUnblockedClosing" } ]] COutputEvent m_OnUnblockedClosing;		// Triggered when the door becomes unblocked while closing.
+	[[= ks::reflect::Key{ .name = "OnUnblockedOpening" } ]] COutputEvent m_OnUnblockedOpening;		// Triggered when the door becomes unblocked while opening.
+	[[= ks::reflect::Key{ .name = "OnFullyClosed" } ]] COutputEvent m_OnFullyClosed;			// Triggered when the door reaches the fully closed position.
+	[[= ks::reflect::Key{ .name = "OnFullyOpen" } ]] COutputEvent m_OnFullyOpen;				// Triggered when the door reaches the fully open position.
+	[[= ks::reflect::Key{ .name = "OnClose" } ]] COutputEvent m_OnClose;					// Triggered when the door is told to close.
+	[[= ks::reflect::Key{ .name = "OnOpen" } ]] COutputEvent m_OnOpen;					// Triggered when the door is told to open.
+	[[= ks::reflect::Key{ .name = "OnLockedUse" } ]] COutputEvent m_OnLockedUse;				// Triggered when the user tries to open a locked door.
 };
 
 
@@ -309,7 +320,8 @@ enum PropDoorRotatingOpenDirection_e
 	DOOR_ROTATING_OPEN_FORWARD,
 	DOOR_ROTATING_OPEN_BACKWARD,
 };
-class CPropDoorRotating : public CBasePropDoor
+class [[= ks::reflect::NetTable{ .name = "DT_PropDoorRotating" } ]]
+      CPropDoorRotating : public CBasePropDoor
 {
 	DECLARE_CLASS( CPropDoorRotating, CBasePropDoor );
 
@@ -343,7 +355,7 @@ class CPropDoorRotating : public CBasePropDoor
 
 	bool	OverridePropdata() { return true; }
 
-	void	InputSetSpeed( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetSpeed", .type = FIELD_FLOAT } ]] void	InputSetSpeed( inputdata_t &inputdata );
 
 	virtual void ComputeDoorExtent( Extent *extent, unsigned int extentType );	// extent contains the volume encompassing open + closed states
 
@@ -363,18 +375,18 @@ class CPropDoorRotating : public CBasePropDoor
 
 	doorCheck_e	GetOpenState( void );
 
-	void	InputSetRotationDistance( inputdata_t &inputdata );			// Set the degree difference between open and closed
-	void	InputMoveToRotationDistance( inputdata_t &inputdata );			// Set the degree difference between open and closed and move to open
+	[[= ks::reflect::Input{ .name = "SetRotationDistance", .type = FIELD_FLOAT } ]] void	InputSetRotationDistance( inputdata_t &inputdata );			// Set the degree difference between open and closed
+	[[= ks::reflect::Input{ .name = "MoveToRotationDistance", .type = FIELD_FLOAT } ]] void	InputMoveToRotationDistance( inputdata_t &inputdata );			// Set the degree difference between open and closed and move to open
 
 	void	CalcOpenAngles( void );		// Subroutine to setup the m_angRotation QAngles based on the m_flDistance variable
 
-	Vector	m_vecAxis;					// The axis of rotation.
-	float	m_flDistance;				// How many degrees we rotate between open and closed.
+	[[= ks::reflect::Key{ .name = "axis" } ]] Vector	m_vecAxis;					// The axis of rotation.
+	[[= ks::reflect::Key{ .name = "distance" } ]] float	m_flDistance;				// How many degrees we rotate between open and closed.
 
-	PropDoorRotatingSpawnPos_t m_eSpawnPosition;
-	PropDoorRotatingOpenDirection_e m_eOpenDirection;
+	[[= ks::reflect::Key{ .name = "spawnpos" } ]] PropDoorRotatingSpawnPos_t m_eSpawnPosition;
+	[[= ks::reflect::Key{ .name = "opendir" } ]] PropDoorRotatingOpenDirection_e m_eOpenDirection;
 
-	QAngle	m_angRotationAjar;			// Angles to spawn at if we are set to spawn ajar.
+	[[= ks::reflect::Key{ .name = "ajarangles" } ]] QAngle	m_angRotationAjar;			// Angles to spawn at if we are set to spawn ajar.
 	QAngle	m_angRotationClosed;		// Our angles when we are fully closed.
 	QAngle	m_angRotationOpenForward;	// Our angles when we are fully open towards our forward vector.
 	QAngle	m_angRotationOpenBack;		// Our angles when we are fully open away from our forward vector.
@@ -386,7 +398,7 @@ class CPropDoorRotating : public CBasePropDoor
 	Vector	m_vecBackBoundsMin;
 	Vector	m_vecBackBoundsMax;
 
-	COutputEvent m_OnRotationDone;		// Triggered when we finish rotating.
+	[[= ks::reflect::Key{ .name = "OnRotationDone" } ]] COutputEvent m_OnRotationDone;		// Triggered when we finish rotating.
 
 	CHandle<CEntityBlocker>	m_hDoorBlocker;
 };
@@ -407,8 +419,8 @@ class CPropDoorRotatingBreakable : public CPropDoorRotating
 	virtual int OnTakeDamage( const CTakeDamageInfo &info );
 	virtual void Event_Killed( const CTakeDamageInfo &info );
 	void InputSetRotationDistance( inputdata_t &inputdata );
-	void InputSetUnbreakable( inputdata_t &inputdata );
-	void InputSetBreakable( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetUnbreakable", .type = FIELD_VOID } ]] void InputSetUnbreakable( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetBreakable", .type = FIELD_VOID } ]] void InputSetBreakable( inputdata_t &inputdata );
 	virtual bool IsAbleToCloseAreaPortals( void ) const;
 	virtual int DrawDebugTextOverlays( void );
 	bool IsBreakable( void ) { return m_bBreakable; }

@@ -17,7 +17,8 @@
 
 #define CChicken C_CChicken
 
-class C_CChicken : public C_DynamicProp
+class [[= ks::reflect::NetTable{ .name = "DT_CChicken" } ]]
+      C_CChicken : public C_DynamicProp
 {
 public:
 	DECLARE_CLASS( C_CChicken, C_DynamicProp );
@@ -43,8 +44,9 @@ private:
 	CHandle<C_BaseAnimating> m_hHolidayHatAddon;
 	Activity m_lastActivity;
 
-	CNetworkVar( bool, m_jumpedThisFrame );
-	CNetworkVar( EHANDLE, m_leader );				// who we are following, or NULL
+	CNetworkVar( bool, m_jumpedThisFrame, [[= ks::reflect::Net{ .enc = ks::reflect::ENC_INT } ]]
+	                    [[= ks::reflect::Proxy<RecvProxy_Jumped, ks::reflect::WIRE_RECV>{} ]] );
+	CNetworkVar( EHANDLE, m_leader, [[= ks::reflect::Net{} ]] );				// who we are following, or NULL
 
 };
 

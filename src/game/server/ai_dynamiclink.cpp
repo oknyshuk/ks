@@ -9,13 +9,14 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_annotations.h"
 #include "collisionutils.h"
 #include "ai_dynamiclink.h"
 #include "ai_node.h"
 #include "ai_link.h"
 #include "ai_network.h"
 #include "ai_networkmanager.h"
-#include "saverestore_utlvector.h"
 #include "editor_sendcommand.h"
 #include "bitstring.h"
 #include "tier0/vprof.h"
@@ -27,22 +28,7 @@
 
 LINK_ENTITY_TO_CLASS(info_node_link_controller, CAI_DynamicLinkController);
 
-BEGIN_DATADESC( CAI_DynamicLinkController )
-
-	DEFINE_KEYFIELD( m_nLinkState, FIELD_INTEGER, "initialstate" ),
-	DEFINE_KEYFIELD( m_strAllowUse, FIELD_STRING, "AllowUse" ),
-	DEFINE_KEYFIELD( m_bInvertAllow, FIELD_BOOLEAN, "InvertAllow" ),
-	DEFINE_KEYFIELD( m_nPriority, FIELD_INTEGER, "Priority" ),
-	DEFINE_KEYFIELD( m_bUseAirLinkRadius, FIELD_BOOLEAN, "useairlinkradius" ),
-	//				 m_ControlledLinks (rebuilt)
-
-	DEFINE_INPUTFUNC( FIELD_VOID, "TurnOn", InputTurnOn ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "TurnOff", InputTurnOff ),
-
-	DEFINE_INPUTFUNC( FIELD_STRING, "SetAllowed", InputSetAllowed ),
-	DEFINE_INPUTFUNC( FIELD_BOOLEAN, "SetInvert", InputSetInvert ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CAI_DynamicLinkController )
 
 void CAI_DynamicLinkController::GenerateLinksFromVolume()
 {
@@ -175,26 +161,7 @@ void CAI_DynamicLinkController::InputSetInvert( inputdata_t &inputdata )
 
 LINK_ENTITY_TO_CLASS(info_node_link, CAI_DynamicLink);
 
-BEGIN_DATADESC( CAI_DynamicLink )
-
-	//								m_pNextDynamicLink
-	DEFINE_KEYFIELD( m_nLinkState, FIELD_INTEGER, "initialstate" ),
-	DEFINE_KEYFIELD( m_nSrcEditID,	FIELD_INTEGER, "startnode" ),
-	DEFINE_KEYFIELD( m_nDestEditID,	FIELD_INTEGER, "endnode" ),
-	DEFINE_KEYFIELD( m_nLinkType, FIELD_INTEGER, "linktype" ),
-	DEFINE_FIELD( m_bInvertAllow, FIELD_BOOLEAN ),
-	DEFINE_KEYFIELD( m_nPriority, FIELD_INTEGER, "Priority" ),
-	DEFINE_KEYFIELD( m_bPreciseMovement, FIELD_BOOLEAN, "preciseMovement" ),
-	//				m_nSrcID (rebuilt)
-	//				m_nDestID (rebuilt)
-	DEFINE_KEYFIELD( m_strAllowUse, FIELD_STRING, "AllowUse" ),
-	//				m_bFixedUpIds (part of rebuild)
-	//				m_bNotSaved (rebuilt)
-
-DEFINE_INPUTFUNC( FIELD_VOID, "TurnOn", InputTurnOn ),
-DEFINE_INPUTFUNC( FIELD_VOID, "TurnOff", InputTurnOff ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CAI_DynamicLink )
 
 //-----------------------------------------------------------------------------
 // Init static variables
@@ -604,13 +571,7 @@ CAI_DynamicLink::~CAI_DynamicLink(void) {
 
 LINK_ENTITY_TO_CLASS(info_radial_link_controller, CAI_RadialLinkController);
 
-BEGIN_DATADESC( CAI_RadialLinkController )
-DEFINE_KEYFIELD( m_flRadius, FIELD_FLOAT, "radius" ),
-DEFINE_FIELD( m_vecAtRestOrigin, FIELD_POSITION_VECTOR ),
-DEFINE_FIELD( m_bAtRest, FIELD_BOOLEAN ),
-
-DEFINE_THINKFUNC( PollMotionThink ),
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CAI_RadialLinkController )
 
 //---------------------------------------------------------
 //---------------------------------------------------------

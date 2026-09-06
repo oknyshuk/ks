@@ -5,7 +5,8 @@
 //=============================================================================//
 
 #include "cbase.h"
-#include "saverestore_utlvector.h"
+#include "reflect_datamap.h"
+#include "reflect_annotations.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -25,35 +26,21 @@ public:
 	void	Activate( void );
 	void	ConstraintThink( void );
 
-	void	InputTurnOn( inputdata_t &inputdata );
-	void	InputTurnOff( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "TurnOn", .type = FIELD_VOID } ]] void	InputTurnOn( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "TurnOff", .type = FIELD_VOID } ]] void	InputTurnOff( inputdata_t &inputdata );
 
 private:
-	float				m_flRadius;	
-	float				m_flConstraintWidth;
-	float				m_flSpeedFactor;
+	[[= ks::reflect::Key{ .name = "radius" } ]] float				m_flRadius;	
+	[[= ks::reflect::Key{ .name = "width" } ]] float				m_flConstraintWidth;
+	[[= ks::reflect::Key{ .name = "speedfactor" } ]] float				m_flSpeedFactor;
 	float				m_flRadiusSquared;	
 	CUtlVector<EHANDLE>	m_hConstrainedPlayers;
-	COutputEvent		m_OnConstraintBroken;
+	[[= ks::reflect::Key{ .name = "OnConstraintBroken" } ]] COutputEvent		m_OnConstraintBroken;
 };
 
 LINK_ENTITY_TO_CLASS( point_playermoveconstraint, CPointPlayerMoveConstraint );
 
-BEGIN_DATADESC( CPointPlayerMoveConstraint )
-
-	DEFINE_KEYFIELD( m_flRadius, FIELD_FLOAT, "radius" ),
-	DEFINE_KEYFIELD( m_flConstraintWidth, FIELD_FLOAT, "width" ),
-	DEFINE_KEYFIELD( m_flSpeedFactor, FIELD_FLOAT, "speedfactor" ),
-	// DEFINE_FIELD( m_flRadiusSquared, FIELD_FLOAT ),		// Don't Save
-	DEFINE_UTLVECTOR( m_hConstrainedPlayers, FIELD_EHANDLE ),
-
-	DEFINE_THINKFUNC( ConstraintThink ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "TurnOn", InputTurnOn ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "TurnOff", InputTurnOff ),
-
-	DEFINE_OUTPUT( m_OnConstraintBroken, "OnConstraintBroken" ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CPointPlayerMoveConstraint )
 
 //-----------------------------------------------------------------------------
 // Purpose: 

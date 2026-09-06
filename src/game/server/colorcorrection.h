@@ -7,6 +7,9 @@
 
 #ifndef COLOR_CORRECTION_H
 #define COLOR_CORRECTION_H
+
+#include "reflect_annotations.h"
+#include "dt_common.h"
 #ifdef _WIN32
 #pragma once
 #endif
@@ -27,7 +30,12 @@
 //------------------------------------------------------------------------------
 // Purpose : Shadow control entity
 //------------------------------------------------------------------------------
-class CColorCorrection : public CBaseEntity
+void SendProxy_Origin( const SendProp *pProp, const void *pStruct,
+    const void *pData, DVariant *pOut, int iElement, int objectID );
+
+class [[= ks::reflect::NetTable{ .name = "DT_ColorCorrection", .base = false } ]]
+      [[= ks::reflect::From<"m_vecOrigin", ks::reflect::Net{ .bits = -1, .low = 0.0f, .high = HIGH_DEFAULT, .flags = SPROP_NOSCALE, .enc = ks::reflect::ENC_VECTOR }, SendProxy_Origin>{} ]]
+      CColorCorrection : public CBaseEntity
 {
 	DECLARE_CLASS( CColorCorrection, CBaseEntity );
 public:
@@ -49,10 +57,10 @@ public:
 	bool IsExclusive( void ) const { return m_bExclusive; }
 
 	// Inputs
-	void	InputEnable( inputdata_t &inputdata );
-	void	InputDisable( inputdata_t &inputdata );
-	void	InputSetFadeInDuration ( inputdata_t &inputdata );
-	void	InputSetFadeOutDuration ( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Enable", .type = FIELD_VOID } ]] void	InputEnable( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Disable", .type = FIELD_VOID } ]] void	InputDisable( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetFadeInDuration", .type = FIELD_FLOAT } ]] void	InputSetFadeInDuration ( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetFadeOutDuration", .type = FIELD_FLOAT } ]] void	InputSetFadeOutDuration ( inputdata_t &inputdata );
 
 private:
 	void	FadeIn ( void );
@@ -63,27 +71,27 @@ private:
 
 	
 	
-	CNetworkVar( float, m_flFadeInDuration );	// Duration for a full 0->MaxWeight transition
-	CNetworkVar( float, m_flFadeOutDuration );	// Duration for a full Max->0 transition
+	CNetworkVar( float, m_flFadeInDuration, [[= ks::reflect::Net{ .bits = 32 } ]] [[= ks::reflect::Key{ .name = "fadeInDuration" } ]] );	// Duration for a full 0->MaxWeight transition
+	CNetworkVar( float, m_flFadeOutDuration, [[= ks::reflect::Net{ .bits = 32 } ]] [[= ks::reflect::Key{ .name = "fadeOutDuration" } ]] );	// Duration for a full Max->0 transition
 	float	m_flStartFadeInWeight;
 	float	m_flStartFadeOutWeight;
 	float	m_flTimeStartFadeIn;
 	float	m_flTimeStartFadeOut;
 	
-	CNetworkVar( float, m_flMaxWeight );
+	CNetworkVar( float, m_flMaxWeight, [[= ks::reflect::Net{ .bits = 32 } ]] [[= ks::reflect::Key{ .name = "maxweight" } ]] );
 
-	bool	m_bStartDisabled;
-	CNetworkVar( bool, m_bEnabled );
-	CNetworkVar( bool, m_bMaster );
-	CNetworkVar( bool, m_bClientSide );
-	CNetworkVar( bool, m_bExclusive );
+	[[= ks::reflect::Key{ .name = "StartDisabled" } ]] bool	m_bStartDisabled;
+	CNetworkVar( bool, m_bEnabled, [[= ks::reflect::Net{} ]] [[= ks::reflect::Key{ .name = "enabled" } ]] );
+	CNetworkVar( bool, m_bMaster, [[= ks::reflect::Net{} ]] );
+	CNetworkVar( bool, m_bClientSide, [[= ks::reflect::Net{} ]] );
+	CNetworkVar( bool, m_bExclusive, [[= ks::reflect::Net{} ]] [[= ks::reflect::Key{ .name = "exclusive" } ]] );
 
-	CNetworkVar( float, m_MinFalloff );
-	CNetworkVar( float, m_MaxFalloff );
-	CNetworkVar( float, m_flCurWeight );
-	CNetworkString( m_netlookupFilename, MAX_PATH );
+	CNetworkVar( float, m_MinFalloff, [[= ks::reflect::Net{ .bits = 32 } ]] [[= ks::reflect::Key{ .name = "minfalloff" } ]] );
+	CNetworkVar( float, m_MaxFalloff, [[= ks::reflect::Net{ .bits = 32 } ]] [[= ks::reflect::Key{ .name = "maxfalloff" } ]] );
+	CNetworkVar( float, m_flCurWeight, [[= ks::reflect::Net{ .bits = 32 } ]] );
+	CNetworkString( m_netlookupFilename, MAX_PATH, [[= ks::reflect::Net{} ]] );
 
-	string_t	m_lookupFilename;
+	[[= ks::reflect::Key{ .name = "filename" } ]] string_t	m_lookupFilename;
 };
 
 //=============================================================================

@@ -10,6 +10,8 @@
 //=============================================================================
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_annotations.h"
 #include "entityinput.h"
 #include "entityoutput.h"
 #include "eventqueue.h"
@@ -25,24 +27,7 @@ const int SF_ALLOW_FAST_RETRIGGER		= 0x002;	// Unless set, relay will disable it
 LINK_ENTITY_TO_CLASS(logic_relay, CLogicRelay);
 
 
-BEGIN_DATADESC( CLogicRelay )
-
-	DEFINE_FIELD(m_bWaitForRefire, FIELD_BOOLEAN),
-	DEFINE_KEYFIELD(m_bDisabled, FIELD_BOOLEAN, "StartDisabled"),
-
-	// Inputs
-	DEFINE_INPUTFUNC(FIELD_VOID, "Enable", InputEnable),
-	DEFINE_INPUTFUNC(FIELD_VOID, "EnableRefire", InputEnableRefire),
-	DEFINE_INPUTFUNC(FIELD_VOID, "Disable", InputDisable),
-	DEFINE_INPUTFUNC(FIELD_VOID, "Toggle", InputToggle),
-	DEFINE_INPUTFUNC(FIELD_VOID, "Trigger", InputTrigger),
-	DEFINE_INPUTFUNC(FIELD_VOID, "CancelPending", InputCancelPending),
-
-	// Outputs
-	DEFINE_OUTPUT(m_OnTrigger, "OnTrigger"),
-	DEFINE_OUTPUT(m_OnSpawn, "OnSpawn"),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CLogicRelay )
 
 
 

@@ -4,6 +4,15 @@
 //
 //=============================================================================//
 #include "cbase.h"
+#include "reflect_annotations.h"
+#ifdef CLIENT_DLL
+#include "reflect_recvtable.h"
+#endif
+#include "reflect_annotations.h"
+#ifdef GAME_DLL
+#include "reflect_sendtable.h"
+#endif
+#include "reflect_datamap.h"
 #include "func_ladder.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
@@ -428,46 +437,14 @@ const char *CFuncLadder::GetSurfacePropName()
 
 IMPLEMENT_NETWORKCLASS_ALIASED( FuncLadder, DT_FuncLadder );
 
-BEGIN_NETWORK_TABLE( CFuncLadder, DT_FuncLadder )
-#if !defined( CLIENT_DLL )
-	SendPropVector( SENDINFO( m_vecPlayerMountPositionTop ), SPROP_COORD ),
-	SendPropVector( SENDINFO( m_vecPlayerMountPositionBottom ), SPROP_COORD ),
-	SendPropVector( SENDINFO( m_vecLadderDir ), SPROP_COORD ),
-	SendPropBool( SENDINFO( m_bFakeLadder ) ),
-//	SendPropStringT( SENDINFO(m_surfacePropName) ),
-#else
-	RecvPropVector( RECVINFO( m_vecPlayerMountPositionTop ) ),
-	RecvPropVector( RECVINFO( m_vecPlayerMountPositionBottom )),
-	RecvPropVector( RECVINFO( m_vecLadderDir )),
-	RecvPropBool( RECVINFO( m_bFakeLadder ) ),
-#endif
-END_NETWORK_TABLE()
+IMPLEMENT_REFLECT_TABLE( CFuncLadder, DT_FuncLadder );
 
 LINK_ENTITY_TO_CLASS_ALIASED( func_useableladder, FuncLadder );
 
 //---------------------------------------------------------
 // Save/Restore
 //---------------------------------------------------------
-BEGIN_DATADESC( CFuncLadder )
-	DEFINE_KEYFIELD( m_vecPlayerMountPositionTop,	FIELD_VECTOR, "point0" ),
-	DEFINE_KEYFIELD( m_vecPlayerMountPositionBottom,	FIELD_VECTOR, "point1" ),
-
-	DEFINE_FIELD( m_vecLadderDir, FIELD_VECTOR ),
-	// DEFINE_FIELD( m_Dismounts, FIELD_UTLVECTOR ),
-
-	DEFINE_FIELD( m_bFakeLadder, FIELD_BOOLEAN ),
-	DEFINE_KEYFIELD( m_bDisabled,	FIELD_BOOLEAN,	"StartDisabled" ),
-
-#if !defined( CLIENT_DLL )
-	DEFINE_KEYFIELD( m_surfacePropName,FIELD_STRING,	"ladderSurfaceProperties" ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "Enable", InputEnable ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "Disable", InputDisable ),
-
-	DEFINE_OUTPUT(	m_OnPlayerGotOnLadder,	"OnPlayerGotOnLadder" ),
-	DEFINE_OUTPUT(	m_OnPlayerGotOffLadder,	"OnPlayerGotOffLadder" ),
-#endif
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CFuncLadder )
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -494,8 +471,7 @@ int CFuncLadder::UpdateTransmitState()
 
 IMPLEMENT_NETWORKCLASS_ALIASED( InfoLadderDismount, DT_InfoLadderDismount );
 
-BEGIN_NETWORK_TABLE( CInfoLadderDismount, DT_InfoLadderDismount )
-END_NETWORK_TABLE()
+IMPLEMENT_REFLECT_TABLE( CInfoLadderDismount, DT_InfoLadderDismount );
 
 LINK_ENTITY_TO_CLASS_ALIASED( info_ladder_dismount, InfoLadderDismount );
 

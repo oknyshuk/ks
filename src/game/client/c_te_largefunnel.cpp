@@ -6,6 +6,8 @@
 // $NoKeywords: $
 //=============================================================================//
 #include "cbase.h"
+#include "reflect_recvtable.h"
+#include "reflect_annotations.h"
 #include "c_te_particlesystem.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
@@ -14,7 +16,8 @@
 //-----------------------------------------------------------------------------
 // Purpose: Large Funnel TE
 //-----------------------------------------------------------------------------
-class C_TELargeFunnel : public C_TEParticleSystem
+class [[= ks::reflect::NetTable{ .name = "DT_TELargeFunnel" } ]]
+      C_TELargeFunnel : public C_TEParticleSystem
 {
 public:
 	DECLARE_CLASS( C_TELargeFunnel, C_TEParticleSystem );
@@ -29,8 +32,8 @@ public:
 public:
 	void			CreateFunnel( void );
 
-	int				m_nModelIndex;
-	int				m_nReversed;
+	[[= ks::reflect::Net{} ]] int				m_nModelIndex;
+	[[= ks::reflect::Net{} ]] int				m_nReversed;
 };
 
 //-----------------------------------------------------------------------------
@@ -144,10 +147,7 @@ void C_TELargeFunnel::PostDataUpdate( DataUpdateType_t updateType )
 	CreateFunnel();
 }
 
-IMPLEMENT_CLIENTCLASS_EVENT_DT(C_TELargeFunnel, DT_TELargeFunnel, CTELargeFunnel)
-	RecvPropInt( RECVINFO(m_nModelIndex)),
-	RecvPropInt( RECVINFO(m_nReversed)),
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS_EVENT( C_TELargeFunnel, DT_TELargeFunnel, CTELargeFunnel )
 
 void TE_LargeFunnel( IRecipientFilter& filter, float delay,
 	const Vector* pos, int modelindex, int reversed )

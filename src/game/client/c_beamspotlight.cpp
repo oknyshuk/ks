@@ -5,6 +5,8 @@
 //===========================================================================//
 
 #include "cbase.h"
+#include "reflect_recvtable.h"
+#include "reflect_annotations.h"
 #include "dlight.h"
 #include "iefx.h"
 
@@ -42,7 +44,8 @@ public:
 
 static const int NUM_CACHE_ENTRIES = 64;
 
-class C_BeamSpotLight : public C_BaseEntity
+class [[= ks::reflect::NetTable{ .name = "DT_BeamSpotlight" } ]]
+      C_BeamSpotLight : public C_BaseEntity
 {
 public:
 	DECLARE_CLASS( C_BeamSpotLight, C_BaseEntity );
@@ -67,17 +70,17 @@ private:
 
 private:
 
-	int		m_nHaloIndex;
-	int		m_nRotationAxis;
-	float	m_flRotationSpeed;
+	[[= ks::reflect::Net{} ]] int		m_nHaloIndex;
+	[[= ks::reflect::Net{} ]] int		m_nRotationAxis;
+	[[= ks::reflect::Net{} ]] float	m_flRotationSpeed;
 	
 
-	bool m_bSpotlightOn;
-	bool m_bHasDynamicLight;
+	[[= ks::reflect::Net{} ]] bool m_bSpotlightOn;
+	[[= ks::reflect::Net{} ]] bool m_bHasDynamicLight;
 
-	float m_flSpotlightMaxLength;
-	float m_flSpotlightGoalWidth;
-	float m_flHDRColorScale;
+	[[= ks::reflect::Net{} ]] float m_flSpotlightMaxLength;
+	[[= ks::reflect::Net{} ]] float m_flSpotlightGoalWidth;
+	[[= ks::reflect::Net{} ]] float m_flHDRColorScale;
 
 	Vector	m_vSpotlightTargetPos;
 	Vector	m_vSpotlightCurrentPos;
@@ -95,16 +98,7 @@ private:
 	CSpotlightTraceCacheEntry *m_pCache;
 };
 
-IMPLEMENT_CLIENTCLASS_DT( C_BeamSpotLight, DT_BeamSpotlight, CBeamSpotlight )
-	RecvPropInt(   RECVINFO(m_nHaloIndex) ),
-	RecvPropBool(  RECVINFO(m_bSpotlightOn) ),
-	RecvPropBool(  RECVINFO(m_bHasDynamicLight) ),
-	RecvPropFloat( RECVINFO(m_flSpotlightMaxLength) ),
-	RecvPropFloat( RECVINFO(m_flSpotlightGoalWidth) ),
-	RecvPropFloat( RECVINFO(m_flHDRColorScale) ),
-	RecvPropInt(   RECVINFO(m_nRotationAxis) ),
-	RecvPropFloat( RECVINFO(m_flRotationSpeed) ),
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS( C_BeamSpotLight, DT_BeamSpotlight, CBeamSpotlight )
 
 
 LINK_ENTITY_TO_CLASS( beam_spotlight, C_BeamSpotLight );

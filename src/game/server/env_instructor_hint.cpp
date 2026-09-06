@@ -6,6 +6,8 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_annotations.h"
 #include "baseentity.h"
 #include "world.h"
 
@@ -27,61 +29,35 @@ public:
 	DECLARE_DATADESC();
 
 private:
-	void InputShowHint( inputdata_t &inputdata );
-	void InputEndHint( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "ShowHint", .type = FIELD_STRING } ]] void InputShowHint( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "EndHint", .type = FIELD_VOID } ]] void InputEndHint( inputdata_t &inputdata );
 	
-	string_t	m_iszReplace_Key;
-	string_t	m_iszHintTargetEntity;
-	int			m_iTimeout;
-	string_t	m_iszIcon_Onscreen;
-	string_t	m_iszIcon_Offscreen;
-	string_t	m_iszCaption;
-	string_t	m_iszActivatorCaption;
-	color32		m_Color;
-	float		m_fIconOffset;
-	float		m_fRange;
-	uint8		m_iPulseOption;
-	uint8		m_iAlphaOption;
-	uint8		m_iShakeOption;
-	bool		m_bStatic;
-	bool		m_bNoOffscreen;
-	bool		m_bForceCaption;
-	string_t	m_iszBinding;
-	string_t	m_iszGamepadBinding;
-	bool		m_bAllowNoDrawTarget;
-	bool		m_bLocalPlayerOnly;
+	[[= ks::reflect::Key{ .name = "hint_replace_key" } ]] string_t	m_iszReplace_Key;
+	[[= ks::reflect::Key{ .name = "hint_target" } ]] string_t	m_iszHintTargetEntity;
+	[[= ks::reflect::Key{ .name = "hint_timeout" } ]] int			m_iTimeout;
+	[[= ks::reflect::Key{ .name = "hint_icon_onscreen" } ]] string_t	m_iszIcon_Onscreen;
+	[[= ks::reflect::Key{ .name = "hint_icon_offscreen" } ]] string_t	m_iszIcon_Offscreen;
+	[[= ks::reflect::Key{ .name = "hint_caption" } ]] string_t	m_iszCaption;
+	[[= ks::reflect::Key{ .name = "hint_activator_caption" } ]] string_t	m_iszActivatorCaption;
+	[[= ks::reflect::Key{ .name = "hint_color" } ]] color32		m_Color;
+	[[= ks::reflect::Key{ .name = "hint_icon_offset" } ]] float		m_fIconOffset;
+	[[= ks::reflect::Key{ .name = "hint_range" } ]] float		m_fRange;
+	[[= ks::reflect::Key{ .name = "hint_pulseoption" } ]] uint8		m_iPulseOption;
+	[[= ks::reflect::Key{ .name = "hint_alphaoption" } ]] uint8		m_iAlphaOption;
+	[[= ks::reflect::Key{ .name = "hint_shakeoption" } ]] uint8		m_iShakeOption;
+	[[= ks::reflect::Key{ .name = "hint_static" } ]] bool		m_bStatic;
+	[[= ks::reflect::Key{ .name = "hint_nooffscreen" } ]] bool		m_bNoOffscreen;
+	[[= ks::reflect::Key{ .name = "hint_forcecaption" } ]] bool		m_bForceCaption;
+	[[= ks::reflect::Key{ .name = "hint_binding" } ]] string_t	m_iszBinding;
+	[[= ks::reflect::Key{ .name = "hint_gamepad_binding" } ]] string_t	m_iszGamepadBinding;
+	[[= ks::reflect::Key{ .name = "hint_allow_nodraw_target" } ]] bool		m_bAllowNoDrawTarget;
+	[[= ks::reflect::Key{ .name = "hint_local_player_only" } ]] bool		m_bLocalPlayerOnly;
 };
 
 
 LINK_ENTITY_TO_CLASS( env_instructor_hint, CEnvInstructorHint );
 
-BEGIN_DATADESC( CEnvInstructorHint )
-
-	DEFINE_KEYFIELD( m_iszReplace_Key, FIELD_STRING, "hint_replace_key" ),
-	DEFINE_KEYFIELD( m_iszHintTargetEntity, FIELD_STRING, "hint_target" ),
-	DEFINE_KEYFIELD( m_iTimeout, FIELD_INTEGER, "hint_timeout" ),
-	DEFINE_KEYFIELD( m_iszIcon_Onscreen, FIELD_STRING, "hint_icon_onscreen" ),
-	DEFINE_KEYFIELD( m_iszIcon_Offscreen, FIELD_STRING, "hint_icon_offscreen" ),
-	DEFINE_KEYFIELD( m_iszCaption, FIELD_STRING, "hint_caption" ),
-	DEFINE_KEYFIELD( m_iszActivatorCaption, FIELD_STRING, "hint_activator_caption" ),
-	DEFINE_KEYFIELD( m_Color, FIELD_COLOR32, "hint_color" ),
-	DEFINE_KEYFIELD( m_fIconOffset, FIELD_FLOAT, "hint_icon_offset" ),
-	DEFINE_KEYFIELD( m_fRange, FIELD_FLOAT, "hint_range" ),
-	DEFINE_KEYFIELD( m_iPulseOption, FIELD_CHARACTER, "hint_pulseoption" ),
-	DEFINE_KEYFIELD( m_iAlphaOption, FIELD_CHARACTER, "hint_alphaoption" ),
-	DEFINE_KEYFIELD( m_iShakeOption, FIELD_CHARACTER, "hint_shakeoption" ),
-	DEFINE_KEYFIELD( m_bStatic, FIELD_BOOLEAN, "hint_static" ),
-	DEFINE_KEYFIELD( m_bNoOffscreen, FIELD_BOOLEAN, "hint_nooffscreen" ),
-	DEFINE_KEYFIELD( m_bForceCaption, FIELD_BOOLEAN, "hint_forcecaption" ),
-	DEFINE_KEYFIELD( m_iszBinding, FIELD_STRING, "hint_binding" ),
-	DEFINE_KEYFIELD( m_iszGamepadBinding, FIELD_STRING, "hint_gamepad_binding" ),
-	DEFINE_KEYFIELD( m_bAllowNoDrawTarget, FIELD_BOOLEAN, "hint_allow_nodraw_target" ),	
-	DEFINE_KEYFIELD( m_bLocalPlayerOnly, FIELD_BOOLEAN, "hint_local_player_only" ),
-	
-	DEFINE_INPUTFUNC( FIELD_STRING,	"ShowHint",	InputShowHint ),
-	DEFINE_INPUTFUNC( FIELD_VOID,	"EndHint",	InputEndHint ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CEnvInstructorHint )
 
 
 #define LOCATOR_ICON_FX_PULSE_SLOW		0x00000001
@@ -210,11 +186,7 @@ public:
 		return SetTransmitState( FL_EDICT_ALWAYS );
 	}
 
-	DECLARE_DATADESC();
 };
 
 LINK_ENTITY_TO_CLASS( info_target_instructor_hint, CInfoInstructorHintTarget );
 
-BEGIN_DATADESC( CInfoInstructorHintTarget )
-
-END_DATADESC()

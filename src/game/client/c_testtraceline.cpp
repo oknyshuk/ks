@@ -6,6 +6,8 @@
 //===========================================================================//
 
 #include "cbase.h"
+#include "reflect_recvtable.h"
+#include "reflect_annotations.h"
 #include "materialsystem/imesh.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
@@ -14,7 +16,14 @@
 // -------------------------------------------------------------------------------- //
 // An entity used to test traceline
 // -------------------------------------------------------------------------------- //
-class C_TestTraceline : public C_BaseEntity
+class [[= ks::reflect::NetTable{ .name = "DT_TestTraceline", .base = false } ]]
+      [[= ks::reflect::From<"m_clrRender", ks::reflect::Net{}, RecvProxy_Int32ToColor32>{} ]]
+      [[= ks::reflect::From<"m_vecNetworkOrigin", ks::reflect::Net{ .wire = "m_vecOrigin" }>{} ]]
+      [[= ks::reflect::From<"m_angNetworkAngles", ks::reflect::Net{ .wire = "m_angRotation", .index = 0 }>{} ]]
+      [[= ks::reflect::From<"m_angNetworkAngles", ks::reflect::Net{ .wire = "m_angRotation", .index = 1 }>{} ]]
+      [[= ks::reflect::From<"m_angNetworkAngles", ks::reflect::Net{ .wire = "m_angRotation", .index = 2 }>{} ]]
+      [[= ks::reflect::From<"m_hNetworkMoveParent", ks::reflect::Net{ .wire = "moveparent" }, RecvProxy_IntToMoveParent>{} ]]
+      C_TestTraceline : public C_BaseEntity
 {
 public:
 	DECLARE_CLASS( C_TestTraceline, C_BaseEntity );
@@ -36,14 +45,7 @@ private:
 // Expose it to the engine.
 IMPLEMENT_CLIENTCLASS(C_TestTraceline, DT_TestTraceline, CTestTraceline);
 
-BEGIN_RECV_TABLE_NOBASE(C_TestTraceline, DT_TestTraceline)
-	RecvPropInt(RECVINFO(m_clrRender), 0, RecvProxy_Int32ToColor32 ),
-	RecvPropVector( RECVINFO_NAME( m_vecNetworkOrigin, m_vecOrigin ) ),
-	RecvPropFloat( RECVINFO_NAME( m_angNetworkAngles[0], m_angRotation[0] ) ),
-	RecvPropFloat( RECVINFO_NAME( m_angNetworkAngles[1], m_angRotation[1] ) ),
-	RecvPropFloat( RECVINFO_NAME( m_angNetworkAngles[2], m_angRotation[2] ) ),
-	RecvPropInt( RECVINFO_NAME(m_hNetworkMoveParent, moveparent), 0, RecvProxy_IntToMoveParent ),
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_TABLE( C_TestTraceline, DT_TestTraceline );
 
 
 // -------------------------------------------------------------------------------- //

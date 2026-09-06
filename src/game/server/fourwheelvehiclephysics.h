@@ -8,6 +8,8 @@
 #ifndef FOUR_WHEEL_VEHICLE_PHYSICS_H
 #define FOUR_WHEEL_VEHICLE_PHYSICS_H
 
+#include "reflect_annotations.h"
+
 #ifdef _WIN32
 #pragma once
 #endif
@@ -154,7 +156,7 @@ private:
 	float				m_wheelTotalHeight[4];
 	int					m_poseParameters[12];
 	float				m_actionValue;
-	float				m_actionScale;
+	[[= ks::reflect::Key{ .name = "actionScale" } ]] float				m_actionScale;
 	float				m_debugRadius;
 	float				m_throttleRate;
 	float				m_throttleStartTime;

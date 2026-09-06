@@ -11,6 +11,8 @@
 // $NoKeywords: $
 //=============================================================================//
 #include "cbase.h"
+#include "reflect_recvtable.h"
+#include "reflect_annotations.h"
 #include "c_basetempentity.h"
 #include "c_cs_player.h"
 #include "radio_status.h"
@@ -21,7 +23,8 @@
 //-----------------------------------------------------------------------------
 // Purpose: Kills Player Attachments
 //-----------------------------------------------------------------------------
-class C_TERadioIcon : public C_BaseTempEntity
+class [[= ks::reflect::NetTable{ .name = "DT_TERadioIcon" } ]]
+      C_TERadioIcon : public C_BaseTempEntity
 {
 public:
 	DECLARE_CLASS( C_TERadioIcon, C_BaseTempEntity );
@@ -33,7 +36,7 @@ public:
 	virtual void	PostDataUpdate( DataUpdateType_t updateType );
 
 public:
-	int m_iAttachToClient;
+	[[= ks::reflect::Net{} ]] int m_iAttachToClient;
 };
 
 //-----------------------------------------------------------------------------
@@ -68,6 +71,4 @@ void C_TERadioIcon::PostDataUpdate( DataUpdateType_t updateType )
 	
 }
 
-IMPLEMENT_CLIENTCLASS_EVENT_DT(C_TERadioIcon, DT_TERadioIcon, CTERadioIcon)
-	RecvPropInt( RECVINFO(m_iAttachToClient)),
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS_EVENT( C_TERadioIcon, DT_TERadioIcon, CTERadioIcon )

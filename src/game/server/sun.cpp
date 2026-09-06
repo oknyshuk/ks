@@ -6,6 +6,9 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_sendtable.h"
+#include "reflect_annotations.h"
 #include "baseentity.h"
 #include "sendproxy.h"
 #include "sun_shared.h"
@@ -14,7 +17,9 @@
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
-class CSun : public CBaseEntity
+class [[= ks::reflect::NetTable{ .name = "DT_Sun", .base = false } ]]
+      [[= ks::reflect::From<"m_clrRender", ks::reflect::Net{ .bits = 32, .flags = SPROP_UNSIGNED }, SendProxy_Color32ToInt32>{} ]]
+      CSun : public CBaseEntity
 {
 public:
 	DECLARE_CLASS( CSun, CBaseEntity );
@@ -26,72 +31,38 @@ public:
 	virtual void	Activate();
 
 	// Input handlers
-	void InputTurnOn( inputdata_t &inputdata );
-	void InputTurnOff( inputdata_t &inputdata );
-	void InputSetColor( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "TurnOn", .type = FIELD_VOID } ]] void InputTurnOn( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "TurnOff", .type = FIELD_VOID } ]] void InputTurnOff( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetColor", .type = FIELD_COLOR32 } ]] void InputSetColor( inputdata_t &inputdata );
 
 	virtual int UpdateTransmitState();
 
 public:
-	CNetworkVector( m_vDirection );
+	CNetworkVector( m_vDirection, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NORMAL, .enc = ks::reflect::ENC_VECTOR } ]] );
 	
-	string_t	m_strMaterial;
-	string_t	m_strOverlayMaterial;
+	[[= ks::reflect::Key{ .name = "material" } ]] string_t	m_strMaterial;
+	[[= ks::reflect::Key{ .name = "overlaymaterial" } ]] string_t	m_strOverlayMaterial;
 
-	int		m_bUseAngles;
-	float	m_flPitch;
-	float	m_flYaw;
+	[[= ks::reflect::Key{ .name = "use_angles" } ]] int		m_bUseAngles;
+	[[= ks::reflect::Key{ .name = "pitch" } ]] float	m_flPitch;
+	[[= ks::reflect::Key{ .name = "angle" } ]] float	m_flYaw;
 	
-	CNetworkVar( int, m_nSize );		// Size of the main core image
-	CNetworkVar( int, m_nOverlaySize ); // Size for the glow overlay
-	CNetworkVar( color32, m_clrOverlay );
-	CNetworkVar( bool, m_bOn );
-	CNetworkVar( int, m_nMaterial );
-	CNetworkVar( int, m_nOverlayMaterial );
-	CNetworkVar( float, m_flHDRColorScale );
+	CNetworkVar( int, m_nSize, [[= ks::reflect::Net{ .bits = 10, .flags = SPROP_UNSIGNED } ]] [[= ks::reflect::Key{ .name = "size" } ]] );		// Size of the main core image
+	CNetworkVar( int, m_nOverlaySize, [[= ks::reflect::Net{ .bits = 10, .flags = SPROP_UNSIGNED } ]] [[= ks::reflect::Key{ .name = "overlaysize" } ]] ); // Size for the glow overlay
+	CNetworkVar( color32, m_clrOverlay, [[= ks::reflect::Net{ .bits = 32, .flags = SPROP_UNSIGNED } ]] [[= ks::reflect::Proxy<SendProxy_Color32ToInt32, ks::reflect::WIRE_SEND>{} ]] [[= ks::reflect::Key{ .name = "overlaycolor" } ]] );
+	CNetworkVar( bool, m_bOn, [[= ks::reflect::Net{ .bits = 1, .flags = SPROP_UNSIGNED } ]] );
+	CNetworkVar( int, m_nMaterial, [[= ks::reflect::Net{ .bits = 32, .flags = SPROP_UNSIGNED } ]] );
+	CNetworkVar( int, m_nOverlayMaterial, [[= ks::reflect::Net{ .bits = 32, .flags = SPROP_UNSIGNED } ]] );
+	CNetworkVar( float, m_flHDRColorScale, [[= ks::reflect::Net{ .bits = 0, .low = 0.0f, .high = 100.0f, .flags = SPROP_NOSCALE, .wire = "HDRColorScale" } ]] [[= ks::reflect::Key{ .name = "HDRColorScale" } ]] );
 };
 
-IMPLEMENT_SERVERCLASS_ST_NOBASE( CSun, DT_Sun )
-	SendPropInt( SENDINFO(m_clrRender), 32, SPROP_UNSIGNED, SendProxy_Color32ToInt32 ),
-	SendPropInt( SENDINFO(m_clrOverlay), 32, SPROP_UNSIGNED, SendProxy_Color32ToInt32 ),
-	SendPropVector( SENDINFO(m_vDirection), 0, SPROP_NORMAL ),
-	SendPropInt( SENDINFO(m_bOn), 1, SPROP_UNSIGNED ),
-	SendPropInt( SENDINFO(m_nSize), 10, SPROP_UNSIGNED ),
-	SendPropInt( SENDINFO(m_nOverlaySize), 10, SPROP_UNSIGNED ),
-	SendPropInt( SENDINFO(m_nMaterial), 32, SPROP_UNSIGNED ),
-	SendPropInt( SENDINFO(m_nOverlayMaterial), 32, SPROP_UNSIGNED ),
-	SendPropFloat( SENDINFO_NAME( m_flHDRColorScale, HDRColorScale ), 0,	SPROP_NOSCALE,	0.0f,	100.0f ),
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CSun, DT_Sun )
 
 
 LINK_ENTITY_TO_CLASS( env_sun, CSun );
 
 
-BEGIN_DATADESC( CSun )
-
-	DEFINE_FIELD( m_vDirection,		FIELD_VECTOR ),
-	
-	DEFINE_KEYFIELD( m_bUseAngles, FIELD_INTEGER, "use_angles" ),
-	DEFINE_KEYFIELD( m_flPitch, FIELD_FLOAT, "pitch" ),
-	DEFINE_KEYFIELD( m_flYaw, FIELD_FLOAT, "angle" ),
-	DEFINE_KEYFIELD( m_nSize, FIELD_INTEGER, "size" ),
-	DEFINE_KEYFIELD( m_clrOverlay, FIELD_COLOR32, "overlaycolor" ),
-	DEFINE_KEYFIELD( m_nOverlaySize, FIELD_INTEGER, "overlaysize" ),
-	DEFINE_KEYFIELD( m_strMaterial, FIELD_STRING, "material" ),
-	DEFINE_KEYFIELD( m_strOverlayMaterial, FIELD_STRING, "overlaymaterial" ),
-	
-	// NOT SAVED
-	// m_nOverlayMaterial
-	// m_nMaterial
-
-	DEFINE_FIELD( m_bOn, FIELD_BOOLEAN ),
-
-	DEFINE_INPUTFUNC( FIELD_VOID, "TurnOn", InputTurnOn ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "TurnOff", InputTurnOff ),
-	DEFINE_INPUTFUNC( FIELD_COLOR32, "SetColor", InputSetColor ),
-
-	DEFINE_KEYFIELD( m_flHDRColorScale,		FIELD_FLOAT,	"HDRColorScale" ),
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CSun )
 
 CSun::CSun()
 {

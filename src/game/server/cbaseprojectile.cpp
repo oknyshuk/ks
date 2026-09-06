@@ -32,13 +32,6 @@ LINK_ENTITY_TO_CLASS( baseprojectile, CBaseProjectile );
 //---------------------------------------------------------
 // Save/Restore
 //---------------------------------------------------------
-BEGIN_DATADESC( CBaseProjectile )
-
-DEFINE_FIELD( m_iDmg,		FIELD_INTEGER ),
-DEFINE_FIELD( m_iDmgType,	FIELD_INTEGER ),
-DEFINE_FIELD( m_hIntendedTarget, FIELD_EHANDLE ),
-
-END_DATADESC()
 
 //---------------------------------------------------------
 //---------------------------------------------------------

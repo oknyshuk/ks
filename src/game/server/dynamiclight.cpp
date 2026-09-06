@@ -6,6 +6,9 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_sendtable.h"
+#include "reflect_annotations.h"
 #include "dlight.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
@@ -17,7 +20,8 @@
 #define MAX_DL_EXPONENT_VALUE	((1 << (NUM_DL_EXPONENT_BITS-1)) - 1)
 
 
-class CDynamicLight : public CBaseEntity
+class [[= ks::reflect::NetTable{ .name = "DT_DynamicLight" } ]]
+      CDynamicLight : public CBaseEntity
 {
 public:
 	DECLARE_CLASS( CDynamicLight, CBaseEntity );
@@ -30,57 +34,28 @@ public:
 	DECLARE_DATADESC();
 
 	// Turn on and off the light
-	void InputTurnOn( inputdata_t &inputdata );
-	void InputTurnOff( inputdata_t &inputdata );
-	void InputToggle( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "TurnOn", .type = FIELD_VOID } ]] void InputTurnOn( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "TurnOff", .type = FIELD_VOID } ]] void InputTurnOff( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Toggle", .type = FIELD_VOID } ]] void InputToggle( inputdata_t &inputdata );
 
 public:
 	unsigned char m_ActualFlags;
-	CNetworkVar( unsigned char, m_Flags );
-	CNetworkVar( unsigned char, m_LightStyle );
+	CNetworkVar( unsigned char, m_Flags, [[= ks::reflect::Net{ .bits = 4, .flags = SPROP_UNSIGNED } ]] );
+	CNetworkVar( unsigned char, m_LightStyle, [[= ks::reflect::Net{ .bits = 4, .flags = SPROP_UNSIGNED } ]] [[= ks::reflect::Key{ .name = "style", .input = true } ]] );
 	bool	m_On;
-	CNetworkVar( float, m_Radius );
-	CNetworkVar( int, m_Exponent );
-	CNetworkVar( float, m_InnerAngle );
-	CNetworkVar( float, m_OuterAngle );
-	CNetworkVar( float, m_SpotRadius );
+	CNetworkVar( float, m_Radius, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE } ]] [[= ks::reflect::Key{ .name = "distance", .input = true } ]] );
+	CNetworkVar( int, m_Exponent, [[= ks::reflect::Net{ .bits = NUM_DL_EXPONENT_BITS } ]] [[= ks::reflect::Key{ .name = "brightness", .input = true } ]] );
+	CNetworkVar( float, m_InnerAngle, [[= ks::reflect::Net{ .bits = 8, .low = 0.0, .high = 360.0f } ]] [[= ks::reflect::Key{ .name = "_inner_cone", .input = true } ]] );
+	CNetworkVar( float, m_OuterAngle, [[= ks::reflect::Net{ .bits = 8, .low = 0.0, .high = 360.0f } ]] [[= ks::reflect::Key{ .name = "_cone", .input = true } ]] );
+	CNetworkVar( float, m_SpotRadius, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE } ]] [[= ks::reflect::Key{ .name = "spotlight_radius", .input = true } ]] );
 };
 
 LINK_ENTITY_TO_CLASS(light_dynamic, CDynamicLight);
 
-BEGIN_DATADESC( CDynamicLight )
-
-	DEFINE_FIELD( m_ActualFlags, FIELD_CHARACTER ),
-	DEFINE_FIELD( m_Flags, FIELD_CHARACTER ),
-	DEFINE_FIELD( m_On, FIELD_BOOLEAN ),
-
-	DEFINE_THINKFUNC( DynamicLightThink ),
-
-	// Inputs
-	DEFINE_INPUT( m_Radius,		FIELD_FLOAT,	"distance" ),
-	DEFINE_INPUT( m_Exponent,	FIELD_INTEGER,	"brightness" ),
-	DEFINE_INPUT( m_InnerAngle,	FIELD_FLOAT,	"_inner_cone" ),
-	DEFINE_INPUT( m_OuterAngle,	FIELD_FLOAT,	"_cone" ),
-	DEFINE_INPUT( m_SpotRadius,	FIELD_FLOAT,	"spotlight_radius" ),
-	DEFINE_INPUT( m_LightStyle,	FIELD_CHARACTER,"style" ),
-	
-	// Input functions
-	DEFINE_INPUTFUNC( FIELD_VOID, "TurnOn", InputTurnOn ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "TurnOff", InputTurnOff ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "Toggle", InputToggle ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CDynamicLight )
 
 
-IMPLEMENT_SERVERCLASS_ST(CDynamicLight, DT_DynamicLight)
-	SendPropInt( SENDINFO(m_Flags), 4, SPROP_UNSIGNED ),
-	SendPropInt( SENDINFO(m_LightStyle), 4, SPROP_UNSIGNED ),
-	SendPropFloat( SENDINFO(m_Radius), 0, SPROP_NOSCALE),
-	SendPropInt( SENDINFO(m_Exponent), NUM_DL_EXPONENT_BITS),
-	SendPropFloat( SENDINFO(m_InnerAngle), 8, 0, 0.0, 360.0f ),
-	SendPropFloat( SENDINFO(m_OuterAngle), 8, 0, 0.0, 360.0f ),
-	SendPropFloat( SENDINFO(m_SpotRadius), 0, SPROP_NOSCALE),
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CDynamicLight, DT_DynamicLight )
 
 //-----------------------------------------------------------------------------
 // Purpose: 

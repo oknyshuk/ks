@@ -5,6 +5,8 @@
 //============================================================================//
 
 #include "cbase.h"
+#include "reflect_annotations.h"
+#include "reflect_datamap.h"
 
 #include "c_baselesson.h"
 #include "c_gameinstructor.h"
@@ -1023,19 +1025,6 @@ void CIconLesson::UpdateLocatorTarget( CLocatorTarget *pLocatorTarget, C_BaseEnt
 		varType = FIELD_STRING; \
 	}
 
-// Data desc
-#define DEFINE_GAMEINSTRUCTOR_SYMBOL(name) \
-	{ FIELD_CUSTOM, #name, offsetof(classNameTypedef,name), 1, FTYPEDESC_SAVE, NULL, GetGameInstructorSymbolSaveRestoreOps( ), NULL }
-
-#define LESSON_VARIABLE_DATADESC_INFO( _varEnum, _varName, _varType ) \
-	DEFINE_FIELD( _varName, LessonParamTypeFromString( #_varType ) ),
-
-#define LESSON_VARIABLE_DATADESC_INFO_EHANDLE( _varEnum, _varName, _varType ) \
-	DEFINE_FIELD( _varName, FIELD_EHANDLE ),
-
-#define LESSON_VARIABLE_DATADESC_INFO_STRING( _varEnum, _varName, _varType ) \
-	DEFINE_GAMEINSTRUCTOR_SYMBOL(_varName),
-
 // Copy defaults into this scripted lesson into a new one
 #define LESSON_VARIABLE_DEFAULT( _varEnum, _varName, _varType ) ( _varName = m_pDefaultHolder->_varName );
 
@@ -1266,21 +1255,7 @@ ISaveRestoreOps *GetGameInstructorSymbolSaveRestoreOps( )
 }
 
 
-BEGIN_SIMPLE_DATADESC( CScriptedIconLesson )
-
-	DEFINE_GAMEINSTRUCTOR_SYMBOL( m_stringName ),
-
-#define LESSON_VARIABLE_MACRO			LESSON_VARIABLE_DATADESC_INFO
-#define LESSON_VARIABLE_MACRO_BOOL		LESSON_VARIABLE_DATADESC_INFO
-#define LESSON_VARIABLE_MACRO_EHANDLE	LESSON_VARIABLE_DATADESC_INFO_EHANDLE
-#define LESSON_VARIABLE_MACRO_STRING	LESSON_VARIABLE_DATADESC_INFO_STRING
-	LESSON_VARIABLE_FACTORY
-#undef LESSON_VARIABLE_MACRO
-#undef LESSON_VARIABLE_MACRO_BOOL
-#undef LESSON_VARIABLE_MACRO_EHANDLE
-#undef LESSON_VARIABLE_MACRO_STRING
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP_SIMPLE( CScriptedIconLesson )
 
 
 CScriptedIconLesson::~CScriptedIconLesson( void )

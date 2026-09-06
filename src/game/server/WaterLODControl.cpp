@@ -6,6 +6,9 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_sendtable.h"
+#include "reflect_annotations.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -18,7 +21,8 @@
 //------------------------------------------------------------------------------
 // Purpose : Water LOD control entity
 //------------------------------------------------------------------------------
-class CWaterLODControl : public CBaseEntity
+class [[= ks::reflect::NetTable{ .name = "DT_WaterLODControl", .base = false } ]]
+      CWaterLODControl : public CBaseEntity
 {
 public:
 	DECLARE_CLASS( CWaterLODControl, CBaseEntity );
@@ -37,28 +41,16 @@ public:
 	DECLARE_DATADESC();
 
 private:
-	CNetworkVar( float, m_flCheapWaterStartDistance );
-	CNetworkVar( float, m_flCheapWaterEndDistance );
+	CNetworkVar( float, m_flCheapWaterStartDistance, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE } ]] [[= ks::reflect::Key{ .name = "cheapwaterstartdistance" } ]] [[= ks::reflect::Key{ .name = "SetCheapWaterStartDistance", .input = true } ]] );
+	CNetworkVar( float, m_flCheapWaterEndDistance, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE } ]] [[= ks::reflect::Key{ .name = "cheapwaterenddistance" } ]] [[= ks::reflect::Key{ .name = "SetCheapWaterEndDistance", .input = true } ]] );
 };
 
 LINK_ENTITY_TO_CLASS(water_lod_control, CWaterLODControl);
 
-BEGIN_DATADESC( CWaterLODControl )
-
-	DEFINE_KEYFIELD( m_flCheapWaterStartDistance, FIELD_FLOAT, "cheapwaterstartdistance" ),
-	DEFINE_KEYFIELD( m_flCheapWaterEndDistance, FIELD_FLOAT, "cheapwaterenddistance" ),
-
-	// Inputs
-	DEFINE_INPUT( m_flCheapWaterStartDistance,	FIELD_FLOAT, "SetCheapWaterStartDistance" ),
-	DEFINE_INPUT( m_flCheapWaterEndDistance,	FIELD_FLOAT, "SetCheapWaterEndDistance" ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CWaterLODControl )
 
 
-IMPLEMENT_SERVERCLASS_ST_NOBASE(CWaterLODControl, DT_WaterLODControl)
-	SendPropFloat(SENDINFO(m_flCheapWaterStartDistance), 0, SPROP_NOSCALE ),
-	SendPropFloat(SENDINFO(m_flCheapWaterEndDistance), 0, SPROP_NOSCALE ),
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CWaterLODControl, DT_WaterLODControl )
 
 
 CWaterLODControl::CWaterLODControl()

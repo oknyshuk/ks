@@ -7,6 +7,8 @@
 // $NoKeywords: $
 //=============================================================================//
 #include "cbase.h"
+#include "reflect_recvtable.h"
+#include "reflect_annotations.h"
 #include "c_basetempentity.h"
 #include "iefx.h"
 #include "fx.h"
@@ -20,7 +22,8 @@
 // Purpose: Footprint Decal TE
 //-----------------------------------------------------------------------------
 
-class C_TEFootprintDecal : public C_BaseTempEntity
+class [[= ks::reflect::NetTable{ .name = "DT_TEFootprintDecal" } ]]
+      C_TEFootprintDecal : public C_BaseTempEntity
 {
 public:
 	DECLARE_CLASS( C_TEFootprintDecal, C_BaseTempEntity );
@@ -34,21 +37,15 @@ public:
 	virtual void	Precache( void );
 
 public:
-	Vector			m_vecOrigin;
-	Vector			m_vecDirection;
+	[[= ks::reflect::Net{} ]] Vector			m_vecOrigin;
+	[[= ks::reflect::Net{} ]] Vector			m_vecDirection;
 	Vector			m_vecStart;
-	int				m_nEntity;
-	int				m_nIndex;
-	char			m_chMaterialType;
+	[[= ks::reflect::Net{} ]] int				m_nEntity;
+	[[= ks::reflect::Net{} ]] int				m_nIndex;
+	[[= ks::reflect::Net{} ]] char			m_chMaterialType;
 };
 
-IMPLEMENT_CLIENTCLASS_EVENT_DT(C_TEFootprintDecal, DT_TEFootprintDecal, CTEFootprintDecal)
-	RecvPropVector( RECVINFO(m_vecOrigin)),
-	RecvPropVector( RECVINFO(m_vecDirection)),
-	RecvPropInt( RECVINFO(m_nEntity)),
-	RecvPropInt( RECVINFO(m_nIndex)),
-	RecvPropInt( RECVINFO(m_chMaterialType)),
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS_EVENT( C_TEFootprintDecal, DT_TEFootprintDecal, CTEFootprintDecal )
 
 
 //-----------------------------------------------------------------------------

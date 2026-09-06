@@ -7,6 +7,8 @@
 // $NoKeywords: $
 //=============================================================================//
 #include "cbase.h"
+#include "reflect_recvtable.h"
+#include "reflect_annotations.h"
 #include "c_basetempentity.h"
 #include "tier0/vprof.h"
 
@@ -15,7 +17,8 @@
 
 extern IPhysicsSurfaceProps *physprops;
 
-class C_TEImpact : public C_BaseTempEntity
+class [[= ks::reflect::NetTable{ .name = "DT_TEImpact" } ]]
+      C_TEImpact : public C_BaseTempEntity
 {
 public:
 	DECLARE_CLASS( C_TEImpact, C_BaseTempEntity );
@@ -31,10 +34,10 @@ public:
 	virtual void	PlayImpactSound( trace_t &tr );
 	virtual void	PerformCustomEffects( trace_t &tr, Vector &shotDir );
 public:
-	Vector			m_vecOrigin;
-	Vector			m_vecNormal;
-	int				m_iType;
-	byte			m_ucFlags;
+	[[= ks::reflect::Net{} ]] Vector			m_vecOrigin;
+	[[= ks::reflect::Net{} ]] Vector			m_vecNormal;
+	[[= ks::reflect::Net{} ]] int				m_iType;
+	[[= ks::reflect::Net{} ]] byte			m_ucFlags;
 };
 
 //-----------------------------------------------------------------------------
@@ -90,9 +93,4 @@ void C_TEImpact::PerformCustomEffects( trace_t &tr, Vector &shotDir )
 }
 
 //Receive data table
-IMPLEMENT_CLIENTCLASS_EVENT_DT( C_TEImpact, DT_TEImpact, CTEImpact)
-	RecvPropVector( RECVINFO( m_vecOrigin ) ),
-	RecvPropVector( RECVINFO( m_vecNormal ) ),
-	RecvPropInt( RECVINFO( m_iType ) ),
-	RecvPropInt( RECVINFO( m_ucFlags ) ),
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS_EVENT( C_TEImpact, DT_TEImpact, CTEImpact )

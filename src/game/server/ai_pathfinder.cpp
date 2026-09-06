@@ -6,6 +6,8 @@
 //===========================================================================//
 
 #include "cbase.h"
+#include "reflect_annotations.h"
+#include "reflect_datamap.h"
 
 #include "ndebugoverlay.h"
 
@@ -39,14 +41,7 @@ const float MAX_LOCAL_NAV_DIST_FLY[2] = { (750*12), (750*12) };
 // CAI_Pathfinder
 //
 
-BEGIN_SIMPLE_DATADESC( CAI_Pathfinder )
-
-	//								m_TriDebugOverlay
-	//								m_bIgnoreStaleLinks
-  	DEFINE_FIELD( m_flLastStaleLinkCheckTime,		FIELD_TIME ),
-	//								m_pNetwork
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP_SIMPLE( CAI_Pathfinder )
 
 //-----------------------------------------------------------------------------
 // Compute move type bits to nav type

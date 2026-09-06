@@ -5,6 +5,15 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_predmap.h"
+#include "reflect_annotations.h"
+#ifdef CLIENT_DLL
+#include "reflect_recvtable.h"
+#endif
+#include "reflect_annotations.h"
+#ifdef GAME_DLL
+#include "reflect_sendtable.h"
+#endif
 #include "weapon_csbase.h"
 #include "gamerules.h"
 #include "npcevent.h"
@@ -27,11 +36,11 @@
 
 IMPLEMENT_NETWORKCLASS_ALIASED( SmokeGrenade, DT_SmokeGrenade )
 
-BEGIN_NETWORK_TABLE(CSmokeGrenade, DT_SmokeGrenade)
-END_NETWORK_TABLE()
+IMPLEMENT_REFLECT_TABLE( CSmokeGrenade, DT_SmokeGrenade );
 
-BEGIN_PREDICTION_DATA( CSmokeGrenade )
-END_PREDICTION_DATA()
+#ifdef CLIENT_DLL
+IMPLEMENT_REFLECT_PREDMAP( CSmokeGrenade );
+#endif
 
 LINK_ENTITY_TO_CLASS_ALIASED( weapon_smokegrenade, SmokeGrenade );
 PRECACHE_REGISTER( weapon_smokegrenade );
@@ -39,8 +48,6 @@ PRECACHE_REGISTER( weapon_smokegrenade );
 
 #ifndef CLIENT_DLL
 
-	BEGIN_DATADESC( CSmokeGrenade )
-	END_DATADESC()
 
 	void CSmokeGrenade::EmitGrenade( Vector vecSrc, QAngle vecAngles, Vector vecVel, AngularImpulse angImpulse, CBasePlayer *pPlayer, const CCSWeaponInfo& weaponInfo )
 	{

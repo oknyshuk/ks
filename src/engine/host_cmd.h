@@ -17,7 +17,6 @@
 #endif
 
 #include "savegame_version.h"
-#include "host_saverestore.h"
 #include "convar.h"
 
 // The launcher includes this file, too

@@ -5,6 +5,8 @@
 //=============================================================================
 
 #include "cbase.h"
+#include "reflect_recvtable.h"
+#include "reflect_annotations.h"
 
 // NOTE: This has to be the last file included!
 #include "tier0/memdbgon.h"
@@ -23,7 +25,8 @@ EHANDLE g_hDOFControllerInUse = INVALID_EHANDLE;
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-class C_EnvDOFController : public C_BaseEntity
+class [[= ks::reflect::NetTable{ .name = "DT_EnvDOFController" } ]]
+      C_EnvDOFController : public C_BaseEntity
 {
 	DECLARE_CLASS( C_EnvDOFController, C_BaseEntity );
 public:
@@ -34,27 +37,19 @@ public:
 	virtual void	OnDataChanged( DataUpdateType_t updateType );
 
 private:
-	bool  m_bDOFEnabled;
-	float m_flNearBlurDepth;
-	float m_flNearFocusDepth;
-	float m_flFarFocusDepth;
-	float m_flFarBlurDepth;
-	float m_flNearBlurRadius;
-	float m_flFarBlurRadius;
+	[[= ks::reflect::Net{} ]] bool  m_bDOFEnabled;
+	[[= ks::reflect::Net{} ]] float m_flNearBlurDepth;
+	[[= ks::reflect::Net{} ]] float m_flNearFocusDepth;
+	[[= ks::reflect::Net{} ]] float m_flFarFocusDepth;
+	[[= ks::reflect::Net{} ]] float m_flFarBlurDepth;
+	[[= ks::reflect::Net{} ]] float m_flNearBlurRadius;
+	[[= ks::reflect::Net{} ]] float m_flFarBlurRadius;
 
 private:
 	C_EnvDOFController( const C_EnvDOFController & );
 };
 
-IMPLEMENT_CLIENTCLASS_DT( C_EnvDOFController, DT_EnvDOFController, CEnvDOFController )
-	RecvPropInt( RECVINFO(m_bDOFEnabled) ),
-	RecvPropFloat( RECVINFO(m_flNearBlurDepth) ),
-	RecvPropFloat( RECVINFO(m_flNearFocusDepth) ),
-	RecvPropFloat( RECVINFO(m_flFarFocusDepth) ),
-	RecvPropFloat( RECVINFO(m_flFarBlurDepth) ),
-	RecvPropFloat( RECVINFO(m_flNearBlurRadius) ),
-	RecvPropFloat( RECVINFO(m_flFarBlurRadius) )
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS( C_EnvDOFController, DT_EnvDOFController, CEnvDOFController )
 
 //-----------------------------------------------------------------------------
 // Purpose: 

@@ -5,11 +5,12 @@
 //===========================================================================//
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_annotations.h"
 #include "soundscape.h"
 #include "datamap.h"
 #include "soundscape_system.h"
 #include "triggers.h"
-#include "saverestore_utlvector.h"
 #include "gamerules.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
@@ -23,11 +24,7 @@ ConVar soundscape_debug( "soundscape_debug", "0", FCVAR_CHEAT, "When on, draws l
 
 LINK_ENTITY_TO_CLASS( env_soundscape_proxy, CEnvSoundscapeProxy );
 
-BEGIN_DATADESC( CEnvSoundscapeProxy )
-	
-	DEFINE_KEYFIELD( m_MainSoundscapeName, FIELD_STRING, "MainSoundscapeName" )
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CEnvSoundscapeProxy )
 
 
 CEnvSoundscapeProxy::CEnvSoundscapeProxy()
@@ -70,37 +67,7 @@ void CEnvSoundscapeProxy::Activate()
 
 LINK_ENTITY_TO_CLASS( env_soundscape, CEnvSoundscape );
 
-BEGIN_DATADESC( CEnvSoundscape )
-
-	DEFINE_KEYFIELD( m_flRadius, FIELD_FLOAT, "radius" ),
-	// don't save, recomputed on load
-	//DEFINE_FIELD( m_soundscapeIndex, FIELD_INTEGER ),
-	//DEFINE_FIELD( m_soundscapeEntityId, FIELD_INTEGER ),
-	DEFINE_FIELD( m_soundscapeName, FIELD_STRING ),
-	DEFINE_FIELD( m_hProxySoundscape, FIELD_EHANDLE ),
-
-// Silence, Classcheck!
-//	DEFINE_ARRAY( m_positionNames, FIELD_STRING, 4 ),
-
-	DEFINE_KEYFIELD( m_positionNames[0], FIELD_STRING, "position0" ),
-	DEFINE_KEYFIELD( m_positionNames[1], FIELD_STRING, "position1" ),
-	DEFINE_KEYFIELD( m_positionNames[2], FIELD_STRING, "position2" ),
-	DEFINE_KEYFIELD( m_positionNames[3], FIELD_STRING, "position3" ),
-	DEFINE_KEYFIELD( m_positionNames[4], FIELD_STRING, "position4" ),
-	DEFINE_KEYFIELD( m_positionNames[5], FIELD_STRING, "position5" ),
-	DEFINE_KEYFIELD( m_positionNames[6], FIELD_STRING, "position6" ),
-	DEFINE_KEYFIELD( m_positionNames[7], FIELD_STRING, "position7" ),
-
-	DEFINE_KEYFIELD( m_bDisabled,	FIELD_BOOLEAN,	"StartDisabled" ),
-
-	DEFINE_INPUTFUNC( FIELD_VOID, "Enable", InputEnable ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "Disable", InputDisable ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "ToggleEnabled", InputToggleEnabled ),
-
-	DEFINE_OUTPUT( m_OnPlay, "OnPlay" ),
-
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CEnvSoundscape )
 
 CEnvSoundscape::CEnvSoundscape()
 {
@@ -408,8 +375,6 @@ void CEnvSoundscape::DrawDebugGeometryOverlays( void )
 
 LINK_ENTITY_TO_CLASS( env_soundscape_triggerable, CEnvSoundscapeTriggerable );
 
-BEGIN_DATADESC( CEnvSoundscapeTriggerable )
-END_DATADESC()
 
 
 CEnvSoundscapeTriggerable::CEnvSoundscapeTriggerable()
@@ -489,7 +454,7 @@ public:
 
 private:
 	CHandle<CEnvSoundscapeTriggerable> m_hSoundscape;
-	string_t m_SoundscapeName;
+	[[= ks::reflect::Key{ .name = "soundscape" } ]] string_t m_SoundscapeName;
 
 	CUtlVector<CBasePlayerHandle> m_spectators; // spectators in our volume
 };
@@ -497,12 +462,7 @@ private:
 
 LINK_ENTITY_TO_CLASS( trigger_soundscape, CTriggerSoundscape );
 
-BEGIN_DATADESC( CTriggerSoundscape )
-	DEFINE_THINKFUNC( PlayerUpdateThink ),
-	DEFINE_KEYFIELD( m_SoundscapeName, FIELD_STRING, "soundscape" ),
-	DEFINE_FIELD( m_hSoundscape, FIELD_EHANDLE ),
-	DEFINE_UTLVECTOR( m_spectators, FIELD_EHANDLE ), 
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CTriggerSoundscape )
 
 
 CTriggerSoundscape::CTriggerSoundscape()

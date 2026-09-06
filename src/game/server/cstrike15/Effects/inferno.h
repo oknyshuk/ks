@@ -6,6 +6,9 @@
 #ifndef _INFERNO_H_
 #define _INFERNO_H_
 
+#include "reflect_annotations.h"
+#include "coordsize.h"
+
 #include "nav.h"			// for extent class - should be moved somewhere more general
 #include "GameEventListener.h"
 
@@ -26,12 +29,12 @@ enum
 	INFERNO_TYPE_FIREWORKS,
 };
 
-class CInferno : public CBaseEntity, public CGameEventListener
+class [[= ks::reflect::NetTable{ .name = "DT_Inferno" } ]]
+      CInferno : public CBaseEntity, public CGameEventListener
 {
 public:
 	DECLARE_CLASS( CInferno, CBaseEntity );
 	DECLARE_SERVERCLASS();
-	DECLARE_DATADESC();
 
 	CInferno();
 	virtual ~CInferno();
@@ -94,12 +97,12 @@ private:
 		k_ECreateFireResult_InSmoke,
 		k_ECreateFireResult_AllSolid,
 	};
-	CNetworkArray( int, m_fireXDelta, MAX_INFERNO_FIRES );
-	CNetworkArray( int, m_fireYDelta, MAX_INFERNO_FIRES );
-	CNetworkArray( int, m_fireZDelta, MAX_INFERNO_FIRES );
-	CNetworkArray( bool, m_bFireIsBurning, MAX_INFERNO_FIRES );
+	CNetworkArray( int, m_fireXDelta, MAX_INFERNO_FIRES, [[= ks::reflect::Net{ .bits = COORD_INTEGER_BITS+1 } ]] );
+	CNetworkArray( int, m_fireYDelta, MAX_INFERNO_FIRES, [[= ks::reflect::Net{ .bits = COORD_INTEGER_BITS+1 } ]] );
+	CNetworkArray( int, m_fireZDelta, MAX_INFERNO_FIRES, [[= ks::reflect::Net{ .bits = COORD_INTEGER_BITS+1 } ]] );
+	CNetworkArray( bool, m_bFireIsBurning, MAX_INFERNO_FIRES, [[= ks::reflect::Net{} ]] );
 	CNetworkArray( Vector, m_BurnNormal, MAX_INFERNO_FIRES );
-	CNetworkVar( int, m_fireCount );				// total number of flames spawned
+	CNetworkVar( int, m_fireCount, [[= ks::reflect::Net{ .bits = 7, .flags = SPROP_UNSIGNED } ]] );				// total number of flames spawned
 	CNetworkVar( int, m_nInfernoType );
 
 	bool m_bWasCreatedInSmoke;
@@ -147,7 +150,8 @@ private:
 	const CCSWeaponInfo* m_pWeaponInfo;
 };
 
-class CFireCrackerBlast : public CInferno
+class [[= ks::reflect::NetTable{ .name = "DT_FireCrackerBlast" } ]]
+      CFireCrackerBlast : public CInferno
 {
 public:
 	DECLARE_CLASS( CFireCrackerBlast, CInferno );

@@ -5,6 +5,8 @@
 // $NoKeywords: $
 //=============================================================================//
 #include "cbase.h"
+#include "reflect_sendtable.h"
+#include "reflect_annotations.h"
 #include "cs_team.h"
 #include "entitylist.h"
 
@@ -12,8 +14,7 @@
 #include "tier0/memdbgon.h"
 
 // Datatable
-IMPLEMENT_SERVERCLASS_ST(CCSTeam, DT_CSTeam)
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CCSTeam, DT_CSTeam )
 
 LINK_ENTITY_TO_CLASS( cs_team_manager, CCSTeam );
 

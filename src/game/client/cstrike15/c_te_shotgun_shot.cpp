@@ -5,6 +5,8 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_recvtable.h"
+#include "reflect_annotations.h"
 #include "fx_cs_shared.h"
 #include "c_cs_player.h"
 #include "c_basetempentity.h"
@@ -13,7 +15,8 @@
 // NOTE: This has to be the last file included!
 #include "tier0/memdbgon.h"
 
-class C_TEFireBullets : public C_BaseTempEntity
+class [[= ks::reflect::NetTable{ .name = "DT_TEFireBullets", .base = false } ]]
+      C_TEFireBullets : public C_BaseTempEntity
 {
 public:
 	DECLARE_CLASS( C_TEFireBullets, C_BaseTempEntity );
@@ -24,20 +27,20 @@ public:
 	virtual void	PostDataUpdate( DataUpdateType_t updateType );
 
 public:
-	int				m_iPlayer;
-	uint16			m_nItemDefIndex;
-	Vector			m_vecOrigin;
-	QAngle			m_vecAngles;
-	CSWeaponID		m_iWeaponID;
-	int				m_iMode;
-	int				m_iSeed;
-	float			m_fInaccuracy;
-	float			m_flRecoilIndex;
-	float			m_fSpread;
+	[[= ks::reflect::Net{} ]] int				m_iPlayer;
+	[[= ks::reflect::Net{} ]] uint16			m_nItemDefIndex;
+	[[= ks::reflect::Net{} ]] Vector			m_vecOrigin;
+	[[= ks::reflect::Net{ .index = 1 } ]] [[= ks::reflect::Net{ .index = 0 } ]] QAngle			m_vecAngles;
+	[[= ks::reflect::Net{} ]] CSWeaponID		m_iWeaponID;
+	[[= ks::reflect::Net{} ]] int				m_iMode;
+	[[= ks::reflect::Net{} ]] int				m_iSeed;
+	[[= ks::reflect::Net{} ]] float			m_fInaccuracy;
+	[[= ks::reflect::Net{} ]] float			m_flRecoilIndex;
+	[[= ks::reflect::Net{} ]] float			m_fSpread;
 #if defined( WEAPON_FIRE_BULLETS_ACCURACY_FISHTAIL_FEATURE )
 	float			m_fAccuracyFishtail;
 #endif
-	WeaponSound_t	m_iSoundType;
+	[[= ks::reflect::Net{} ]] WeaponSound_t	m_iSoundType;
 };
 
 C_TEFireBullets::C_TEFireBullets()
@@ -103,26 +106,11 @@ void C_TEFireBullets::PostDataUpdate( DataUpdateType_t updateType )
 IMPLEMENT_CLIENTCLASS_EVENT( C_TEFireBullets, DT_TEFireBullets, CTEFireBullets );
 
 
-BEGIN_RECV_TABLE_NOBASE(C_TEFireBullets, DT_TEFireBullets)
-	RecvPropVector( RECVINFO( m_vecOrigin ) ),
-	RecvPropFloat( RECVINFO( m_vecAngles[0] ) ),
-	RecvPropFloat( RECVINFO( m_vecAngles[1] ) ),
-	RecvPropInt( RECVINFO( m_iWeaponID ) ),
-	RecvPropInt( RECVINFO( m_iMode ) ), 
-	RecvPropInt( RECVINFO( m_iSeed ) ),
-	RecvPropInt( RECVINFO( m_iPlayer ) ),
-	RecvPropFloat( RECVINFO( m_fInaccuracy ) ),
-	RecvPropFloat( RECVINFO( m_fSpread ) ),
-	RecvPropInt( RECVINFO( m_nItemDefIndex ) ),
-	RecvPropInt( RECVINFO( m_iSoundType ) ),
-#if defined( WEAPON_FIRE_BULLETS_ACCURACY_FISHTAIL_FEATURE )
-	RecvPropFloat( RECVINFO( m_fAccuracyFishtail) ),
-#endif
-	RecvPropFloat( RECVINFO( m_flRecoilIndex ) ),
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_TABLE( C_TEFireBullets, DT_TEFireBullets );
 
 
-class C_TEPlantBomb : public C_BaseTempEntity
+class [[= ks::reflect::NetTable{ .name = "DT_TEPlantBomb", .base = false } ]]
+      C_TEPlantBomb : public C_BaseTempEntity
 {
 public:
 	DECLARE_CLASS( C_TEPlantBomb, C_BaseTempEntity );
@@ -131,9 +119,9 @@ public:
 	virtual void	PostDataUpdate( DataUpdateType_t updateType );
 
 public:
-	int		m_iPlayer;
-	Vector	m_vecOrigin;
-	PlantBombOption_t	m_option;
+	[[= ks::reflect::Net{} ]] int		m_iPlayer;
+	[[= ks::reflect::Net{} ]] Vector	m_vecOrigin;
+	[[= ks::reflect::Net{} ]] PlantBombOption_t	m_option;
 };
 
 
@@ -147,10 +135,6 @@ void C_TEPlantBomb::PostDataUpdate( DataUpdateType_t updateType )
 IMPLEMENT_CLIENTCLASS_EVENT( C_TEPlantBomb, DT_TEPlantBomb, CTEPlantBomb );
 
 
-BEGIN_RECV_TABLE_NOBASE(C_TEPlantBomb, DT_TEPlantBomb)
-	RecvPropVector( RECVINFO( m_vecOrigin ) ),
-	RecvPropInt( RECVINFO( m_iPlayer ) ),
-	RecvPropInt( RECVINFO( m_option ) ),
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_TABLE( C_TEPlantBomb, DT_TEPlantBomb );
 
 

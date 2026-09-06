@@ -11,6 +11,8 @@
 // $NoKeywords: $
 //=============================================================================//
 #include "cbase.h"
+#include "reflect_sendtable.h"
+#include "reflect_annotations.h"
 #include "basetempentity.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
@@ -21,7 +23,8 @@ extern int	g_sModelIndexSmoke;			// (in combatweapon.cpp) holds the index for th
 //-----------------------------------------------------------------------------
 // Purpose: Dispatches smoke tempentity
 //-----------------------------------------------------------------------------
-class CTESmoke : public CBaseTempEntity
+class [[= ks::reflect::NetTable{ .name = "DT_TESmoke" } ]]
+      CTESmoke : public CBaseTempEntity
 {
 public:
 	DECLARE_CLASS( CTESmoke, CBaseTempEntity );
@@ -34,10 +37,10 @@ public:
 	DECLARE_SERVERCLASS();
 
 public:
-	CNetworkVector( m_vecOrigin );
-	CNetworkVar( int, m_nModelIndex );
-	CNetworkVar( float, m_fScale );
-	CNetworkVar( int, m_nFrameRate );
+	CNetworkVector( m_vecOrigin, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD, .enc = ks::reflect::ENC_VECTOR } ]] );
+	CNetworkVar( int, m_nModelIndex, [[= ks::reflect::Net{ .enc = ks::reflect::ENC_MODELINDEX } ]] );
+	CNetworkVar( float, m_fScale, [[= ks::reflect::Net{ .bits = 8, .low = 0.0, .high = 25.6, .flags = SPROP_ROUNDDOWN } ]] );
+	CNetworkVar( int, m_nFrameRate, [[= ks::reflect::Net{ .bits = 8, .flags = SPROP_UNSIGNED } ]] );
 };
 
 //-----------------------------------------------------------------------------
@@ -88,12 +91,7 @@ void CTESmoke::Test( const Vector& current_origin, const QAngle& current_angles 
 	Create( filter, 0.0 );
 }
 
-IMPLEMENT_SERVERCLASS_ST(CTESmoke, DT_TESmoke)
-	SendPropVector( SENDINFO(m_vecOrigin), -1, SPROP_COORD),
-	SendPropModelIndex( SENDINFO(m_nModelIndex) ),
-	SendPropFloat( SENDINFO(m_fScale ), 8, SPROP_ROUNDDOWN, 0.0, 25.6 ),
-	SendPropInt( SENDINFO(m_nFrameRate), 8, SPROP_UNSIGNED ),
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CTESmoke, DT_TESmoke )
 
 
 // Singleton to fire TESmoke objects

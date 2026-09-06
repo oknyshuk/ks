@@ -5,6 +5,8 @@
 //===========================================================================//
 
 #include "cbase.h"
+#include "reflect_recvtable.h"
+#include "reflect_annotations.h"
 #include "c_basetempentity.h"
 #include "iefx.h"
 #include "tier1/keyvalues.h"
@@ -18,7 +20,8 @@
 //-----------------------------------------------------------------------------
 // Purpose: World Decal TE
 //-----------------------------------------------------------------------------
-class C_TEWorldDecal : public C_BaseTempEntity
+class [[= ks::reflect::NetTable{ .name = "DT_TEWorldDecal" } ]]
+      C_TEWorldDecal : public C_BaseTempEntity
 {
 public:
 	DECLARE_CLASS( C_TEWorldDecal, C_BaseTempEntity );
@@ -32,18 +35,15 @@ public:
 	virtual void	Precache( void );
 
 public:
-	Vector			m_vecOrigin;
-	int				m_nIndex;
+	[[= ks::reflect::Net{} ]] Vector			m_vecOrigin;
+	[[= ks::reflect::Net{} ]] int				m_nIndex;
 };
 
 
 //-----------------------------------------------------------------------------
 // Networking 
 //-----------------------------------------------------------------------------
-IMPLEMENT_CLIENTCLASS_EVENT_DT(C_TEWorldDecal, DT_TEWorldDecal, CTEWorldDecal)
-	RecvPropVector( RECVINFO(m_vecOrigin)),
-	RecvPropInt( RECVINFO(m_nIndex)),
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS_EVENT( C_TEWorldDecal, DT_TEWorldDecal, CTEWorldDecal )
 
 
 //-----------------------------------------------------------------------------

@@ -7,6 +7,8 @@
 
 #ifndef C_PROPS_H
 #define C_PROPS_H
+
+#include "reflect_annotations.h"
 #ifdef _WIN32
 #pragma once
 #endif
@@ -19,7 +21,8 @@
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-class C_DynamicProp : public C_BreakableProp
+class [[= ks::reflect::NetTable{ .name = "DT_DynamicProp" } ]]
+      C_DynamicProp : public C_BreakableProp
 {
 	DECLARE_CLASS( C_DynamicProp, C_BreakableProp );
 public:
@@ -44,21 +47,22 @@ public:
 private:
 	C_DynamicProp( const C_DynamicProp & );
 
-	bool	m_bUseHitboxesForRenderBox;
+	[[= ks::reflect::Net{} ]] bool	m_bUseHitboxesForRenderBox;
 	int		m_iCachedFrameCount;
 	Vector	m_vecCachedRenderMins;
 	Vector	m_vecCachedRenderMaxs;
 
-	float		m_flGlowMaxDist;
-	bool		m_bShouldGlow;
-	color32		m_clrGlow;
-	int			m_nGlowStyle;
+	[[= ks::reflect::Net{} ]] float		m_flGlowMaxDist;
+	[[= ks::reflect::Net{} ]] bool		m_bShouldGlow;
+	[[= ks::reflect::Net{} ]] [[= ks::reflect::Proxy<RecvProxy_Int32ToColor32, ks::reflect::WIRE_RECV>{} ]] color32		m_clrGlow;
+	[[= ks::reflect::Net{} ]] int			m_nGlowStyle;
 };
 
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-class C_BasePropDoor : public C_DynamicProp
+class [[= ks::reflect::NetTable{ .name = "DT_BasePropDoor" } ]]
+      C_BasePropDoor : public C_DynamicProp
 {
 	DECLARE_CLASS( C_BasePropDoor, C_DynamicProp );
 public:

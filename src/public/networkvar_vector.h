@@ -12,24 +12,24 @@
 
 
 // This is the normal case.. you've got a SendPropVector to match your CNetworkVector
-#define CNetworkVector( name ) CNetworkVectorInternal( Vector, name, NetworkStateChanged, CNetworkVectorBase )
+#define CNetworkVector( name, ... ) CNetworkVectorInternal( Vector, name, NetworkStateChanged, CNetworkVectorBase __VA_OPT__(,) __VA_ARGS__ )
 
 // This variant of a CNetworkVector should be used if you want to use SendPropFloat
 // on each individual component of the vector.
-#define CNetworkVectorXYZ( name ) CNetworkVectorInternal( Vector, name, NetworkStateChanged, CNetworkVectorXYZBase )
+#define CNetworkVectorXYZ( name, ... ) CNetworkVectorInternal( Vector, name, NetworkStateChanged, CNetworkVectorXYZBase __VA_OPT__(,) __VA_ARGS__ )
 
 // This variant of a CNetworkVector should be used if you want to use SendPropVectorXY
 // for the XY components and SendPropFloat for the Z component.
-#define CNetworkVectorXY_SeparateZ( name ) CNetworkVectorInternal( Vector, name, NetworkStateChanged, CNetworkVectorXY_SeparateZBase )
+#define CNetworkVectorXY_SeparateZ( name, ... ) CNetworkVectorInternal( Vector, name, NetworkStateChanged, CNetworkVectorXY_SeparateZBase __VA_OPT__(,) __VA_ARGS__ )
 
 
 
 // This is the normal case.. you've got a SendPropQAngle to match your CNetworkQAngle
-#define CNetworkQAngle( name ) CNetworkVectorInternal( QAngle, name, NetworkStateChanged, CNetworkVectorBase  )
+#define CNetworkQAngle( name, ... ) CNetworkVectorInternal( QAngle, name, NetworkStateChanged, CNetworkVectorBase __VA_OPT__(,) __VA_ARGS__ )
 
 // This variant of a CNetworkQAngle should be used if you want to use SendPropFloat
 // on each individual component of the vector.
-#define CNetworkQAngleXYZ( name ) CNetworkVectorInternal( QAngle, name, NetworkStateChanged, CNetworkVectorXYZBase )
+#define CNetworkQAngleXYZ( name, ... ) CNetworkVectorInternal( QAngle, name, NetworkStateChanged, CNetworkVectorXYZBase __VA_OPT__(,) __VA_ARGS__ )
 
 
 
@@ -37,22 +37,22 @@
 // Use these variants if you want the networkvar to not trigger a change in the baseclass
 // version but you might want it to trigger changes in derived classes that do network that variable.
 //
-#define CNetworkVectorForDerived( name ) \
+#define CNetworkVectorForDerived( name, ... ) \
 	virtual void NetworkStateChanged_##name() {} \
 	virtual void NetworkStateChanged_##name( void *pVar ) {} \
-	CNetworkVectorInternal( Vector, name, NetworkStateChanged_##name, CNetworkVectorBase )
+	CNetworkVectorInternal( Vector, name, NetworkStateChanged_##name, CNetworkVectorBase __VA_OPT__(,) __VA_ARGS__ )
 		
-#define CNetworkVectorXYZForDerived( name ) \
+#define CNetworkVectorXYZForDerived( name, ... ) \
 	virtual void NetworkStateChanged_##name() {} \
 	virtual void NetworkStateChanged_##name( void *pVar ) {} \
-	CNetworkVectorInternal( Vector, name, NetworkStateChanged_##name, CNetworkVectorXYZBase )
+	CNetworkVectorInternal( Vector, name, NetworkStateChanged_##name, CNetworkVectorXYZBase __VA_OPT__(,) __VA_ARGS__ )
 
 
 
 
-#define CNetworkVectorInternal( type, name, stateChangedFn, baseClass ) \
+#define CNetworkVectorInternal( type, name, stateChangedFn, baseClass, ... ) \
 	NETWORK_VAR_START( type, name ) \
-	NETWORK_VAR_END( type, name, baseClass, stateChangedFn )
+	NETWORK_VAR_END( type, name, baseClass, stateChangedFn __VA_OPT__(,) __VA_ARGS__ )
 
 
 
@@ -142,7 +142,7 @@ class CNetworkVectorBase : public CNetworkVectorCommonBase< Type, Changer >
 {
 	typedef CNetworkVarBase< Type, Changer > base;
 public:
-	static FORCEINLINE int GetNetworkVarFlags() { return NETWORKVAR_IS_A_VECTOR; }
+	static constexpr int GetNetworkVarFlags() { return NETWORKVAR_IS_A_VECTOR; }
 
 	FORCEINLINE const Type& operator=( const Type &val ) 
 	{ 
@@ -175,7 +175,7 @@ class CNetworkVectorXYZBase : public CNetworkVectorCommonBase< Type, Changer >
 	typedef CNetworkVectorCommonBase< Type, Changer > base;
 public:
 	
-	static FORCEINLINE int GetNetworkVarFlags() { return NETWORKVAR_IS_A_VECTOR | NETWORKVAR_VECTOR_XYZ_FLAG; }
+	static constexpr int GetNetworkVarFlags() { return NETWORKVAR_IS_A_VECTOR | NETWORKVAR_VECTOR_XYZ_FLAG; }
 
 	FORCEINLINE const Type& operator=( const Type &val ) 
 	{ 
@@ -263,7 +263,7 @@ class CNetworkVectorXY_SeparateZBase : public CNetworkVectorCommonBase< Type, Ch
 	typedef CNetworkVectorCommonBase< Type, Changer > base;
 public:
 	
-	static FORCEINLINE int GetNetworkVarFlags() { return NETWORKVAR_IS_A_VECTOR | NETWORKVAR_VECTOR_XY_SEPARATEZ_FLAG; }
+	static constexpr int GetNetworkVarFlags() { return NETWORKVAR_IS_A_VECTOR | NETWORKVAR_VECTOR_XY_SEPARATEZ_FLAG; }
 
 	FORCEINLINE const Type& operator=( const Type &val ) 
 	{ 

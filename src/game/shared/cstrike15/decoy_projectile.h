@@ -6,6 +6,8 @@
 
 #ifndef DECOY_PROJECTILE_H
 #define DECOY_PROJECTILE_H
+
+#include "reflect_annotations.h"
 #ifdef _WIN32
 #pragma once
 #endif
@@ -17,7 +19,8 @@
 
 #if defined( CLIENT_DLL )
 
-class C_DecoyProjectile : public C_BaseCSGrenadeProjectile
+class [[= ks::reflect::NetTable{ .name = "DT_DecoyProjectile" } ]]
+      C_DecoyProjectile : public C_BaseCSGrenadeProjectile
 {
 public:
 	DECLARE_CLASS( C_DecoyProjectile, C_BaseCSGrenadeProjectile );
@@ -37,12 +40,12 @@ private:
 
 struct DecoyWeaponProfile;
 
-class CDecoyProjectile : public CBaseCSGrenadeProjectile
+class [[= ks::reflect::NetTable{ .name = "DT_DecoyProjectile" } ]]
+      CDecoyProjectile : public CBaseCSGrenadeProjectile
 {
 public:
 	DECLARE_CLASS( CDecoyProjectile, CBaseCSGrenadeProjectile );
 	DECLARE_NETWORKCLASS();
-	DECLARE_DATADESC();
 
 // Overrides.
 public:

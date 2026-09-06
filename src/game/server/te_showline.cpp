@@ -11,6 +11,8 @@
 // $NoKeywords: $
 //=============================================================================//
 #include "cbase.h"
+#include "reflect_sendtable.h"
+#include "reflect_annotations.h"
 #include "te_particlesystem.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
@@ -19,7 +21,8 @@
 //-----------------------------------------------------------------------------
 // Purpose: Dispatches line
 //-----------------------------------------------------------------------------
-class CTEShowLine : public CTEParticleSystem
+class [[= ks::reflect::NetTable{ .name = "DT_TEShowLine" } ]]
+      CTEShowLine : public CTEParticleSystem
 {
 public:
 	DECLARE_CLASS( CTEShowLine, CTEParticleSystem );
@@ -32,7 +35,7 @@ public:
 
 
 public:
-	CNetworkVector( m_vecEnd );
+	CNetworkVector( m_vecEnd, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD, .enc = ks::reflect::ENC_VECTOR } ]] );
 };
 
 //-----------------------------------------------------------------------------
@@ -79,9 +82,7 @@ void CTEShowLine::Test( const Vector& current_origin, const QAngle& current_angl
 	Create( filter, 0.0 );
 }
 
-IMPLEMENT_SERVERCLASS_ST( CTEShowLine, DT_TEShowLine)
-	SendPropVector( SENDINFO(m_vecEnd), -1, SPROP_COORD),
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CTEShowLine, DT_TEShowLine )
 
 
 // Singleton to fire TEShowLine objects

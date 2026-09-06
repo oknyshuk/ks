@@ -10,10 +10,13 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_annotations.h"
 #include "EntityDissolve.h"
 #include "baseanimating.h"
 #include "physics_prop_ragdoll.h"
 #include "ai_basenpc.h"
+#include "reflect_sendtable.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -39,42 +42,13 @@ static const char *s_pElectroThinkContext = "ElectroThinkContext";
 //-----------------------------------------------------------------------------
 // Save/load 
 //-----------------------------------------------------------------------------
-BEGIN_DATADESC( CEntityDissolve )
-
-	DEFINE_FIELD( m_flStartTime, FIELD_TIME ),
-	DEFINE_FIELD( m_flFadeInStart, FIELD_FLOAT ),
-	DEFINE_FIELD( m_flFadeInLength, FIELD_FLOAT ),
-	DEFINE_FIELD( m_flFadeOutModelStart, FIELD_FLOAT ),
-	DEFINE_FIELD( m_flFadeOutModelLength, FIELD_FLOAT ),
-	DEFINE_FIELD( m_flFadeOutStart, FIELD_FLOAT ),
-	DEFINE_FIELD( m_flFadeOutLength, FIELD_FLOAT ),
-	DEFINE_KEYFIELD( m_nDissolveType, FIELD_INTEGER, "dissolvetype" ),
-	DEFINE_FIELD( m_vDissolverOrigin, FIELD_VECTOR ),
-	DEFINE_KEYFIELD( m_nMagnitude, FIELD_INTEGER, "magnitude" ),
-
-	DEFINE_FUNCTION( DissolveThink ),
-	DEFINE_FUNCTION( ElectrocuteThink ),
-
-	DEFINE_INPUTFUNC( FIELD_STRING, "Dissolve", InputDissolve ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CEntityDissolve )
 
 
 //-----------------------------------------------------------------------------
 // Networking
 //-----------------------------------------------------------------------------
-IMPLEMENT_SERVERCLASS_ST( CEntityDissolve, DT_EntityDissolve )
-	SendPropTime( SENDINFO( m_flStartTime ) ),
-	SendPropFloat( SENDINFO( m_flFadeInStart ), 0, SPROP_NOSCALE ),
-	SendPropFloat( SENDINFO( m_flFadeInLength ), 0, SPROP_NOSCALE ),
-	SendPropFloat( SENDINFO( m_flFadeOutModelStart ), 0, SPROP_NOSCALE ),
-	SendPropFloat( SENDINFO( m_flFadeOutModelLength ), 0, SPROP_NOSCALE ),
-	SendPropFloat( SENDINFO( m_flFadeOutStart ), 0, SPROP_NOSCALE ),
-	SendPropFloat( SENDINFO( m_flFadeOutLength ), 0, SPROP_NOSCALE ),
-	SendPropInt( SENDINFO( m_nDissolveType ), ENTITY_DISSOLVE_BITS, SPROP_UNSIGNED ),
-	SendPropVector	(SENDINFO(m_vDissolverOrigin), 0, SPROP_NOSCALE ),
-	SendPropInt( SENDINFO( m_nMagnitude ), 8, SPROP_UNSIGNED ),
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CEntityDissolve, DT_EntityDissolve )
 
 LINK_ENTITY_TO_CLASS( env_entity_dissolver, CEntityDissolve );
 

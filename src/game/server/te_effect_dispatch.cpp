@@ -11,6 +11,8 @@
 // $NoKeywords: $
 //=============================================================================//
 #include "cbase.h"
+#include "reflect_sendtable.h"
+#include "reflect_annotations.h"
 #include "basetempentity.h"
 #include "te_effect_dispatch.h"
 #include "networkstringtable_gamedll.h"
@@ -21,7 +23,10 @@
 //-----------------------------------------------------------------------------
 // Purpose: This TE provides a simple interface to dispatch effects by name using DispatchEffect().
 //-----------------------------------------------------------------------------
-class CTEEffectDispatch : public CBaseTempEntity
+class [[= ks::reflect::NetTable{ .name = "DT_TEEffectDispatch" } ]]
+      [[= ks::reflect::From<"m_EffectData", ks::reflect::Net{}, nullptr,
+                            &REFERENCE_SEND_TABLE( DT_EffectData )>{} ]]
+      CTEEffectDispatch : public CBaseTempEntity
 {
 public:
 	DECLARE_CLASS( CTEEffectDispatch, CBaseTempEntity );
@@ -51,9 +56,7 @@ CTEEffectDispatch::~CTEEffectDispatch( void )
 {
 }
 
-IMPLEMENT_SERVERCLASS_ST( CTEEffectDispatch, DT_TEEffectDispatch )
-	SendPropDataTable( SENDINFO_DT( m_EffectData ), &REFERENCE_SEND_TABLE( DT_EffectData ) )
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CTEEffectDispatch, DT_TEEffectDispatch )
 
 
 // Singleton to fire TEEffectDispatch objects

@@ -7,6 +7,8 @@
 
 #ifndef FLEX_EXPRESSER_H
 #define FLEX_EXPRESSER_H
+
+#include "reflect_annotations.h"
 #ifdef _WIN32
 #pragma once
 #endif
@@ -42,13 +44,13 @@ public:
 	virtual void Spawn();
 	void Think( void );
 	virtual int OnTakeDamage( const CTakeDamageInfo &info ); //< stubbed out, does nothing, flexexpressers are immortal
-	void InputSpeakResponseConcept( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SpeakResponseConcept", .type = FIELD_STRING } ]] void InputSpeakResponseConcept( inputdata_t &inputdata );
 
 	/// given a pointer to a CBaseEntity, return a CFlexExpresser * if that base entity is a prop_talker, NULL otherwise
 	/// (hopefully faster than dynamic_cast). Passing NULL is safe.
 	static CFlexExpresser *AsFlexExpresser( CBaseEntity *pEntity );
 
-	float m_flThenAnyMaxDist; //< if nonzero, override the maximum dispatch distance for a THEN ANY followup.
+	[[= ks::reflect::Key{ .name = "maxThenAnyDispatchDist" } ]] float m_flThenAnyMaxDist; //< if nonzero, override the maximum dispatch distance for a THEN ANY followup.
 protected:
 	CAI_Expresser *CreateExpresser( void );
 

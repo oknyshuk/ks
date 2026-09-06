@@ -5,6 +5,9 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_sendtable.h"
+#include "reflect_annotations.h"
 #include "ai_basenpc.h"
 #include "trains.h"
 #include "ndebugoverlay.h"
@@ -22,7 +25,10 @@ static void PlatSpawnInsideTrigger(edict_t *pevPlatform);
 
 #define SF_PLAT_TOGGLE				0x0001
 
-class CBasePlatTrain : public CBaseToggle
+class [[= ks::reflect::KeyFrom<"m_flLip", ks::reflect::Key{ .name = "lip" } >{} ]]
+      [[= ks::reflect::KeyFrom<"m_flWait", ks::reflect::Key{ .name = "wait" } >{} ]]
+      [[= ks::reflect::KeyFrom<"m_flHeight", ks::reflect::Key{ .name = "height" } >{} ]]
+      CBasePlatTrain : public CBaseToggle
 {
 	DECLARE_CLASS( CBasePlatTrain, CBaseToggle );
 
@@ -39,32 +45,17 @@ public:
 	void	PlayMovingSound();
 	void	StopMovingSound();
 
-	string_t	m_NoiseMoving;	// sound a plat makes while moving
-	string_t	m_NoiseArrived;
+	[[= ks::reflect::As{ FIELD_SOUNDNAME } ]] [[= ks::reflect::Key{ .name = "noise1" } ]] string_t	m_NoiseMoving;	// sound a plat makes while moving
+	[[= ks::reflect::As{ FIELD_SOUNDNAME } ]] [[= ks::reflect::Key{ .name = "noise2" } ]] string_t	m_NoiseArrived;
 
 	CSoundPatch *m_pMovementSound;
 
-	float	m_volume;			// Sound volume
+	[[= ks::reflect::Key{ .name = "volume" } ]] float	m_volume;			// Sound volume
 	float	m_flTWidth;
 	float	m_flTLength;
 };
 
-BEGIN_DATADESC( CBasePlatTrain )
-
-	DEFINE_KEYFIELD( m_NoiseMoving, FIELD_SOUNDNAME, "noise1" ),
-	DEFINE_KEYFIELD( m_NoiseArrived, FIELD_SOUNDNAME, "noise2" ),
-
-	DEFINE_SOUNDPATCH( m_pMovementSound ),
-
-	DEFINE_KEYFIELD( m_volume, FIELD_FLOAT, "volume" ),
-
-	DEFINE_FIELD( m_flTWidth, FIELD_FLOAT ),
-	DEFINE_FIELD( m_flTLength, FIELD_FLOAT ),
-	DEFINE_KEYFIELD( m_flLip, FIELD_FLOAT, "lip" ),
-	DEFINE_KEYFIELD( m_flWait, FIELD_FLOAT, "wait" ),
-	DEFINE_KEYFIELD( m_flHeight, FIELD_FLOAT, "height" ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CBasePlatTrain )
 
 
 bool CBasePlatTrain::KeyValue( const char *szKeyName, const char *szValue )
@@ -148,9 +139,9 @@ public:
 	virtual void HitTop( void );
 	virtual void HitBottom( void );
 
-	void InputToggle(inputdata_t &data);
-	void InputGoUp(inputdata_t &data);
-	void InputGoDown(inputdata_t &data);
+	[[= ks::reflect::Input{ .name = "Toggle", .type = FIELD_VOID } ]] void InputToggle(inputdata_t &data);
+	[[= ks::reflect::Input{ .name = "GoUp", .type = FIELD_VOID } ]] void InputGoUp(inputdata_t &data);
+	[[= ks::reflect::Input{ .name = "GoDown", .type = FIELD_VOID } ]] void InputGoDown(inputdata_t &data);
 
 	DECLARE_DATADESC();
 
@@ -160,22 +151,7 @@ private:
 };
 
 
-BEGIN_DATADESC( CFuncPlat )
-
-	DEFINE_FIELD( m_sNoise, FIELD_STRING ),
-
-	// Function Pointers
-	DEFINE_FUNCTION( PlatUse ),
-	DEFINE_FUNCTION( CallGoDown ),
-	DEFINE_FUNCTION( CallHitTop ),
-	DEFINE_FUNCTION( CallHitBottom ),
-
-	// Inputs
-	DEFINE_INPUTFUNC( FIELD_VOID, "Toggle", InputToggle ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "GoUp", InputGoUp ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "GoDown", InputGoDown ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CFuncPlat )
 
 
 LINK_ENTITY_TO_CLASS( func_plat, CFuncPlat );
@@ -542,12 +518,7 @@ public:
 
 LINK_ENTITY_TO_CLASS( func_platrot, CFuncPlatRot );
 
-BEGIN_DATADESC( CFuncPlatRot )
-
-	DEFINE_FIELD( m_end, FIELD_VECTOR ),
-	DEFINE_FIELD( m_start, FIELD_VECTOR ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CFuncPlatRot )
 
 
 void CFuncPlatRot::SetupRotation( void )
@@ -648,9 +619,9 @@ public:
 	void Next( void );
 
 	//Inputs
-	void InputToggle(inputdata_t &data);
-	void InputStart(inputdata_t &data);
-	void InputStop(inputdata_t &data);
+	[[= ks::reflect::Input{ .name = "Toggle", .type = FIELD_VOID } ]] void InputToggle(inputdata_t &data);
+	[[= ks::reflect::Input{ .name = "Start", .type = FIELD_VOID } ]] void InputStart(inputdata_t &data);
+	[[= ks::reflect::Input{ .name = "Stop", .type = FIELD_VOID } ]] void InputStop(inputdata_t &data);
 
 	void Start( void );
 	void Stop( void );
@@ -662,7 +633,7 @@ public:
 	
 	bool		m_activated;
 	EHANDLE		m_hEnemy;
-	float		m_flBlockDamage;		// Damage to inflict when blocked.
+	[[= ks::reflect::Key{ .name = "dmg" } ]] float		m_flBlockDamage;		// Damage to inflict when blocked.
 	float		m_flNextBlockTime;
 	string_t m_iszLastTarget;
 
@@ -671,26 +642,7 @@ public:
 LINK_ENTITY_TO_CLASS( func_train, CFuncTrain );
 
 
-BEGIN_DATADESC( CFuncTrain )
-
-	DEFINE_FIELD( m_hCurrentTarget, FIELD_EHANDLE ),
-	DEFINE_FIELD( m_activated, FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_hEnemy, FIELD_EHANDLE ),
-	DEFINE_FIELD( m_iszLastTarget, FIELD_STRING ),
-	DEFINE_FIELD( m_flNextBlockTime, FIELD_TIME ),
-
-	DEFINE_KEYFIELD( m_flBlockDamage, FIELD_FLOAT, "dmg" ),
-
-	// Function Pointers
-	DEFINE_FUNCTION( Wait ),
-	DEFINE_FUNCTION( Next ),
-
-	// Inputs
-	DEFINE_INPUTFUNC( FIELD_VOID, "Toggle", InputToggle ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "Start",	InputStart ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "Stop",	InputStop ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CFuncTrain )
 
 //-----------------------------------------------------------------------------
 // Purpose: Handles a train being blocked by an entity.
@@ -1075,71 +1027,7 @@ void CFuncTrain::Stop( void )
 	}
 }
 
-BEGIN_DATADESC( CFuncTrackTrain )
-
-	DEFINE_KEYFIELD( m_length, FIELD_FLOAT, "wheels" ),
-	DEFINE_KEYFIELD( m_height, FIELD_FLOAT, "height" ),
-	DEFINE_KEYFIELD( m_maxSpeed, FIELD_FLOAT, "startspeed" ),
-	DEFINE_KEYFIELD( m_flBank, FIELD_FLOAT, "bank" ),
-	DEFINE_KEYFIELD( m_flBlockDamage, FIELD_FLOAT, "dmg" ),
-	DEFINE_KEYFIELD( m_iszSoundMove, FIELD_SOUNDNAME, "MoveSound" ),
-	DEFINE_KEYFIELD( m_iszSoundMovePing, FIELD_SOUNDNAME, "MovePingSound" ),
-	DEFINE_KEYFIELD( m_iszSoundStart, FIELD_SOUNDNAME, "StartSound" ),
-	DEFINE_KEYFIELD( m_iszSoundStop, FIELD_SOUNDNAME, "StopSound" ),
-	DEFINE_KEYFIELD( m_nMoveSoundMinPitch, FIELD_INTEGER, "MoveSoundMinPitch" ),
-	DEFINE_KEYFIELD( m_nMoveSoundMaxPitch, FIELD_INTEGER, "MoveSoundMaxPitch" ),
-	DEFINE_KEYFIELD( m_flMoveSoundMinTime, FIELD_FLOAT, "MoveSoundMinTime" ),
-	DEFINE_KEYFIELD( m_flMoveSoundMaxTime, FIELD_FLOAT, "MoveSoundMaxTime" ),
-	DEFINE_FIELD( m_flNextMoveSoundTime, FIELD_TIME ),
-	DEFINE_KEYFIELD( m_eVelocityType, FIELD_INTEGER, "velocitytype" ),
-	DEFINE_KEYFIELD( m_eOrientationType, FIELD_INTEGER, "orientationtype" ),
-
-	DEFINE_FIELD( m_ppath, FIELD_CLASSPTR ),
-	DEFINE_FIELD( m_dir, FIELD_FLOAT ),
-	DEFINE_FIELD( m_controlMins, FIELD_VECTOR ),
-	DEFINE_FIELD( m_controlMaxs, FIELD_VECTOR ),
-	DEFINE_FIELD( m_flVolume, FIELD_FLOAT ),
-	DEFINE_FIELD( m_oldSpeed, FIELD_FLOAT ),
-	DEFINE_FIELD( m_strPathTarget, FIELD_STRING ),
-
-	//DEFINE_FIELD( m_lastBlockPos, FIELD_POSITION_VECTOR ), // temp values for blocking, don't save
-	//DEFINE_FIELD( m_lastBlockTick, FIELD_INTEGER ),
-
-	DEFINE_FIELD( m_bSoundPlaying, FIELD_BOOLEAN ),
-
-	DEFINE_KEYFIELD( m_bManualSpeedChanges, FIELD_BOOLEAN, "ManualSpeedChanges" ),
-	DEFINE_KEYFIELD( m_flAccelSpeed, FIELD_FLOAT, "ManualAccelSpeed" ),
-	DEFINE_KEYFIELD( m_flDecelSpeed, FIELD_FLOAT, "ManualDecelSpeed" ),
-
-	// Inputs
-	DEFINE_INPUTFUNC( FIELD_VOID, "Stop", InputStop ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "StartForward", InputStartForward ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "StartBackward", InputStartBackward ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "Toggle", InputToggle ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "Resume", InputResume ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "Reverse", InputReverse ),
-	DEFINE_INPUTFUNC( FIELD_FLOAT, "SetSpeed", InputSetSpeed ),
-	DEFINE_INPUTFUNC( FIELD_FLOAT, "SetSpeedDir", InputSetSpeedDir ),
-	DEFINE_INPUTFUNC( FIELD_FLOAT, "SetSpeedReal", InputSetSpeedReal ),
-	DEFINE_INPUTFUNC( FIELD_FLOAT, "SetMaxSpeed", InputSetMaxSpeed ),
-	DEFINE_INPUTFUNC( FIELD_FLOAT, "SetSpeedDirAccel", InputSetSpeedDirAccel ),
-	DEFINE_INPUTFUNC( FIELD_STRING, "MoveToPathNode", InputMoveToPathNode ),
-	DEFINE_INPUTFUNC( FIELD_STRING, "TeleportToPathNode", InputTeleportToPathNode ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "LockOrientation", InputLockOrientation ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "UnlockOrientation", InputUnlockOrientation ),
-
-	// Outputs
-	DEFINE_OUTPUT( m_OnStart, "OnStart" ),
-	DEFINE_OUTPUT( m_OnNext, "OnNextPoint" ),
-	DEFINE_OUTPUT( m_OnArrivedAtDestinationNode, "OnArrivedAtDestinationNode" ),
-
-	// Function Pointers
-	DEFINE_FUNCTION( Next ),
-	DEFINE_FUNCTION( Find ),
-	DEFINE_FUNCTION( NearestPath ),
-	DEFINE_FUNCTION( DeadEnd ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CFuncTrackTrain )
 
 BEGIN_ENT_SCRIPTDESC( CFuncTrackTrain, CBaseEntity, "func_train" )
 DEFINE_SCRIPTFUNC_NAMED( ScriptGetFuturePosition, "GetFuturePosition", "Get a position on the track x seconds in the future" )
@@ -1150,8 +1038,7 @@ LINK_ENTITY_TO_CLASS( func_tracktrain, CFuncTrackTrain );
 //-----------------------------------------------------------------------------
 // Datatable
 //-----------------------------------------------------------------------------
-IMPLEMENT_SERVERCLASS_ST( CFuncTrackTrain, DT_FuncTrackTrain )
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CFuncTrackTrain, DT_FuncTrackTrain )
 
 
 //-----------------------------------------------------------------------------
@@ -2835,15 +2722,8 @@ public:
 	void Spawn( void );
 	void Find( void );
 
-	DECLARE_DATADESC();
 };
 
-BEGIN_DATADESC( CFuncTrainControls )
-
-	// Function Pointers
-	DEFINE_FUNCTION( Find ),
-
-END_DATADESC()
 
 LINK_ENTITY_TO_CLASS( func_traincontrols, CFuncTrainControls );
 
@@ -2931,9 +2811,9 @@ public:
 
 	CFuncTrackTrain	*m_train;
 
-	string_t		m_trackTopName;
-	string_t		m_trackBottomName;
-	string_t		m_trainName;
+	[[= ks::reflect::Key{ .name = "toptrack", .global = true } ]] string_t		m_trackTopName;
+	[[= ks::reflect::Key{ .name = "bottomtrack", .global = true } ]] string_t		m_trackBottomName;
+	[[= ks::reflect::Key{ .name = "train", .global = true } ]] string_t		m_trainName;
 	TRAIN_CODE		m_code;
 	int				m_targetState;
 	int				m_use;
@@ -2941,22 +2821,7 @@ public:
 
 LINK_ENTITY_TO_CLASS( func_trackchange, CFuncTrackChange );
 
-BEGIN_DATADESC( CFuncTrackChange )
-
-	DEFINE_GLOBAL_FIELD( m_trackTop, FIELD_CLASSPTR ),
-	DEFINE_GLOBAL_FIELD( m_trackBottom, FIELD_CLASSPTR ),
-	DEFINE_GLOBAL_FIELD( m_train, FIELD_CLASSPTR ),
-	DEFINE_GLOBAL_KEYFIELD( m_trackTopName, FIELD_STRING, "toptrack" ),
-	DEFINE_GLOBAL_KEYFIELD( m_trackBottomName, FIELD_STRING, "bottomtrack" ),
-	DEFINE_GLOBAL_KEYFIELD( m_trainName, FIELD_STRING, "train" ),
-	DEFINE_FIELD( m_code, FIELD_INTEGER ),
-	DEFINE_FIELD( m_targetState, FIELD_INTEGER ),
-	DEFINE_FIELD( m_use, FIELD_INTEGER ),
-
-	// Function Pointers
-	DEFINE_FUNCTION( Find ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CFuncTrackChange )
 
 
 void CFuncTrackChange::Spawn( void )
@@ -3283,14 +3148,12 @@ class CFuncTrackAuto : public CFuncTrackChange
 public:
 	void			Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
 	virtual void	UpdateAutoTargets( int toggleState );
-	void			TriggerTrackChange( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Trigger", .type = FIELD_VOID } ]] void			TriggerTrackChange( inputdata_t &inputdata );
 
 	DECLARE_DATADESC();
 };
 
-BEGIN_DATADESC( CFuncTrackAuto )
-	DEFINE_INPUTFUNC( FIELD_VOID, "Trigger", TriggerTrackChange ),
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CFuncTrackAuto )
 
 LINK_ENTITY_TO_CLASS( func_trackautochange, CFuncTrackAuto );
 

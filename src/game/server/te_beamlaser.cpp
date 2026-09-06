@@ -5,6 +5,8 @@
 // $NoKeywords: $
 //=============================================================================//
 #include "cbase.h"
+#include "reflect_sendtable.h"
+#include "reflect_annotations.h"
 #include "basetempentity.h"
 #include "te_basebeam.h"
 
@@ -16,7 +18,8 @@ extern int	g_sModelIndexSmoke;			// (in combatweapon.cpp) holds the index for th
 //-----------------------------------------------------------------------------
 // Purpose: Beam used for Laser sights. Fades out when it's perpendicular to the viewpoint.
 //-----------------------------------------------------------------------------
-class CTEBeamLaser : public CTEBaseBeam
+class [[= ks::reflect::NetTable{ .name = "DT_TEBeamLaser" } ]]
+      CTEBeamLaser : public CTEBaseBeam
 {
 	DECLARE_CLASS( CTEBeamLaser, CTEBaseBeam );
 public:
@@ -28,8 +31,8 @@ public:
 	virtual void	Test( const Vector& current_origin, const QAngle& current_angles );
 	
 public:
-	CNetworkVar( int, m_nStartEntity );
-	CNetworkVar( int, m_nEndEntity );
+	CNetworkVar( int, m_nStartEntity, [[= ks::reflect::Net{ .bits = 24, .flags = SPROP_UNSIGNED } ]] );
+	CNetworkVar( int, m_nEndEntity, [[= ks::reflect::Net{ .bits = 24, .flags = SPROP_UNSIGNED } ]] );
 };
 
 //-----------------------------------------------------------------------------
@@ -76,10 +79,7 @@ void CTEBeamLaser::Test( const Vector& current_origin, const QAngle& current_ang
 	Create( filter, 0.0 );
 }
 
-IMPLEMENT_SERVERCLASS_ST( CTEBeamLaser, DT_TEBeamLaser)
-	SendPropInt( SENDINFO(m_nStartEntity), 24, SPROP_UNSIGNED ),
-	SendPropInt( SENDINFO(m_nEndEntity), 24, SPROP_UNSIGNED ),
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CTEBeamLaser, DT_TEBeamLaser )
 
 
 // Singleton to fire TEBeamLaser objects

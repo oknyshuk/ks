@@ -6,6 +6,8 @@
 
 #ifndef WEAPON_HEGRENADE_H
 #define WEAPON_HEGRENADE_H
+
+#include "reflect_annotations.h"
 #ifdef _WIN32
 #pragma once
 #endif
@@ -23,7 +25,8 @@
 //-----------------------------------------------------------------------------
 // Fragmentation grenades
 //-----------------------------------------------------------------------------
-class CHEGrenade : public CBaseCSGrenade
+class [[= ks::reflect::NetTable{ .name = "DT_HEGrenade" } ]]
+      CHEGrenade : public CBaseCSGrenade
 {
 public:
 	DECLARE_CLASS( CHEGrenade, CBaseCSGrenade );
@@ -37,7 +40,6 @@ public:
 #ifdef CLIENT_DLL
 
 #else
-	DECLARE_DATADESC();
 
 	virtual void EmitGrenade( Vector vecSrc, QAngle vecAngles, Vector vecVel, AngularImpulse angImpulse, CBasePlayer *pPlayer, const CCSWeaponInfo& weaponInfo );
 	

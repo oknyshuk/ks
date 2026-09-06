@@ -6,6 +6,9 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_sendtable.h"
+#include "reflect_annotations.h"
+#include "reflect_datamap.h"
 #include "cs_player.h"
 #include "cs_gamerules.h"
 #include "trains.h"
@@ -298,7 +301,14 @@ static CPhysicsPlayerCallback playerCallback;
 // Ragdoll entities.
 // -------------------------------------------------------------------------------- //
 
-class CCSRagdoll : public CBaseAnimatingOverlay
+class [[= ks::reflect::NetTable{ .name = "DT_CSRagdoll", .base = false } ]]
+      [[= ks::reflect::From<"m_vecOrigin", ks::reflect::Net{ .bits = -1, .low = 0.0f, .high = HIGH_DEFAULT, .flags = SPROP_COORD|SPROP_CHANGES_OFTEN, .enc = ks::reflect::ENC_VECTOR }, SendProxy_Origin>{} ]]
+      [[= ks::reflect::From<"m_nModelIndex", ks::reflect::Net{ .enc = ks::reflect::ENC_MODELINDEX }>{} ]]
+      [[= ks::reflect::From<"m_nForceBone", ks::reflect::Net{ .bits = 8 }>{} ]]
+      [[= ks::reflect::From<"m_vecForce", ks::reflect::Net{ .bits = 32, .flags = SPROP_NOSCALE, .enc = ks::reflect::ENC_VECTOR }>{} ]]
+      [[= ks::reflect::From<"m_iTeamNum", ks::reflect::Net{ .bits = TEAMNUM_NUM_BITS }>{} ]]
+      [[= ks::reflect::From<"m_bClientSideAnimation", ks::reflect::Net{ .bits = 1, .flags = SPROP_UNSIGNED }>{} ]]
+      CCSRagdoll : public CBaseAnimatingOverlay
 {
 public:
 	DECLARE_CLASS( CCSRagdoll, CBaseAnimatingOverlay );
@@ -332,39 +342,26 @@ public:
 	// In case the client has the player entity, we transmit the player index.
 	// In case the client doesn't have it, we transmit the player's model index, origin, and angles
 	// so they can create a ragdoll in the right place.
-	CNetworkHandle( CBaseEntity, m_hPlayer );	// networked entity handle
-	CNetworkVector( m_vecRagdollVelocity );
-	CNetworkVector( m_vecRagdollOrigin );
-	CNetworkVar(int, m_iDeathPose );
-	CNetworkVar(int, m_iDeathFrame );
-	CNetworkVar(float, m_flDeathYaw );
-	CNetworkVar(float, m_flAbsYaw );
+	CNetworkHandle( CBaseEntity, m_hPlayer, [[= ks::reflect::Net{} ]] );	// networked entity handle
+	CNetworkVector( m_vecRagdollVelocity, [[= ks::reflect::Net{ .bits = 32, .flags = SPROP_NOSCALE, .enc = ks::reflect::ENC_VECTOR } ]] );
+	CNetworkVector( m_vecRagdollOrigin, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD, .enc = ks::reflect::ENC_VECTOR } ]] );
+	CNetworkVar(int, m_iDeathPose, [[= ks::reflect::Net{ .bits = ANIMATION_SEQUENCE_BITS, .flags = SPROP_UNSIGNED } ]] );
+	CNetworkVar(int, m_iDeathFrame, [[= ks::reflect::Net{ .bits = 5 } ]] );
+	CNetworkVar(float, m_flDeathYaw, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE } ]] );
+	CNetworkVar(float, m_flAbsYaw, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE } ]] );
 };
 
 LINK_ENTITY_TO_CLASS( cs_ragdoll, CCSRagdoll );
 
-IMPLEMENT_SERVERCLASS_ST_NOBASE( CCSRagdoll, DT_CSRagdoll )
-	SendPropVector	(SENDINFO(m_vecOrigin ), -1,  SPROP_COORD|SPROP_CHANGES_OFTEN, 0.0f, HIGH_DEFAULT, SendProxy_Origin ),
-	SendPropVector( SENDINFO(m_vecRagdollOrigin ), -1,  SPROP_COORD ),
-	SendPropEHandle( SENDINFO( m_hPlayer ) ),
-	SendPropModelIndex( SENDINFO( m_nModelIndex ) ),
-	SendPropInt		( SENDINFO(m_nForceBone ), 8, 0 ),
-	SendPropVector	( SENDINFO( m_vecForce ) ),
-	SendPropVector( SENDINFO( m_vecRagdollVelocity ) ),
-	SendPropInt( SENDINFO( m_iDeathPose ), ANIMATION_SEQUENCE_BITS, SPROP_UNSIGNED ),
-	SendPropInt( SENDINFO( m_iDeathFrame ), 5 ),
-	SendPropInt( SENDINFO(m_iTeamNum ), TEAMNUM_NUM_BITS, 0 ),
-	SendPropInt( SENDINFO( m_bClientSideAnimation ), 1, SPROP_UNSIGNED ),
-	SendPropFloat( SENDINFO( m_flDeathYaw ), 0, SPROP_NOSCALE ),
-	SendPropFloat( SENDINFO( m_flAbsYaw ), 0, SPROP_NOSCALE )
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CCSRagdoll, DT_CSRagdoll )
 
 
 // -------------------------------------------------------------------------------- //
 // Player animation event. Sent to the client when a player fires, jumps, reloads, etc..
 // -------------------------------------------------------------------------------- //
 
-class CTEPlayerAnimEvent : public CBaseTempEntity
+class [[= ks::reflect::NetTable{ .name = "DT_TEPlayerAnimEvent", .base = false } ]]
+      CTEPlayerAnimEvent : public CBaseTempEntity
 {
 public:
 	DECLARE_CLASS( CTEPlayerAnimEvent, CBaseTempEntity );
@@ -374,16 +371,13 @@ public:
 					{
 					}
 
-	CNetworkHandle( CBasePlayer, m_hPlayer );
-	CNetworkVar( int, m_iEvent );
-	CNetworkVar( int, m_nData );
+	CNetworkHandle( CBasePlayer, m_hPlayer, [[= ks::reflect::Net{} ]] );
+	// bits: Q_log2( PLAYERANIMEVENT_COUNT ) + 1, spelled out because Q_log2 is a runtime call.
+	CNetworkVar( int, m_iEvent, [[= ks::reflect::Net{ .bits = 5, .flags = SPROP_UNSIGNED } ]] );
+	CNetworkVar( int, m_nData, [[= ks::reflect::Net{ .bits = 32 } ]] );
 };
 
-IMPLEMENT_SERVERCLASS_ST_NOBASE( CTEPlayerAnimEvent, DT_TEPlayerAnimEvent )
-	SendPropEHandle( SENDINFO( m_hPlayer ) ),
-	SendPropInt( SENDINFO( m_iEvent ), Q_log2( PLAYERANIMEVENT_COUNT ) + 1, SPROP_UNSIGNED ),
-	SendPropInt( SENDINFO( m_nData ), 32 )
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CTEPlayerAnimEvent, DT_TEPlayerAnimEvent )
 
 static CTEPlayerAnimEvent g_TEPlayerAnimEvent( "PlayerAnimEvent" );
 
@@ -406,194 +400,16 @@ PRECACHE_REGISTER(player );
 
 
 
-BEGIN_SEND_TABLE_NOBASE( CCSPlayer, DT_CSLocalPlayerExclusive )
-	SendPropVectorXY(SENDINFO(m_vecOrigin),               -1, SPROP_NOSCALE|SPROP_CHANGES_OFTEN, 0.0f, HIGH_DEFAULT, SendProxy_OriginXY, SENDPROP_LOCALPLAYER_ORIGINXY_PRIORITY ),
-	SendPropFloat   (SENDINFO_VECTORELEM(m_vecOrigin, 2), -1, SPROP_NOSCALE|SPROP_CHANGES_OFTEN, 0.0f, HIGH_DEFAULT, SendProxy_OriginZ, SENDPROP_LOCALPLAYER_ORIGINZ_PRIORITY ),
-
-	SendPropFloat( SENDINFO( m_flStamina ), 14, 0, 0, 100.0f  ),
-	SendPropInt( SENDINFO( m_iDirection ), 1, SPROP_UNSIGNED ),
-	SendPropInt( SENDINFO( m_iShotsFired ), 8, SPROP_UNSIGNED ),
-	SendPropInt( SENDINFO( m_nNumFastDucks ), 8, SPROP_UNSIGNED ), // unused
-
-	SendPropBool( SENDINFO( m_bDuckOverride ) ),
-
-	SendPropFloat( SENDINFO( m_flVelocityModifier ), 8, 0, 0, 1 ),
-
-	// [tj]Set up the send table for per-client domination data
-	SendPropArray3( SENDINFO_ARRAY3( m_bPlayerDominated ), SendPropBool( SENDINFO_ARRAY( m_bPlayerDominated ) ) ),
-	SendPropArray3( SENDINFO_ARRAY3( m_bPlayerDominatingMe ), SendPropBool( SENDINFO_ARRAY( m_bPlayerDominatingMe ) ) ),
-
-	SendPropArray3( SENDINFO_ARRAY3( m_iWeaponPurchasesThisRound ), SendPropInt( SENDINFO_ARRAY( m_iWeaponPurchasesThisRound ), 4, SPROP_UNSIGNED ) ),
-
-	SendPropInt( SENDINFO( m_nQuestProgressReason ), QuestProgress::QuestReasonBits, SPROP_UNSIGNED ),
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_TABLE_IN( CCSPlayer, DT_CSLocalPlayerExclusive );
 
 
-BEGIN_SEND_TABLE_NOBASE( CCSPlayer, DT_CSNonLocalPlayerExclusive )
-	SendPropVectorXY(SENDINFO(m_vecOrigin),               -1, SPROP_NOSCALE|SPROP_CHANGES_OFTEN, 0.0f, HIGH_DEFAULT, SendProxy_OriginXY, SENDPROP_NONLOCALPLAYER_ORIGINXY_PRIORITY ),
-	SendPropFloat   (SENDINFO_VECTORELEM(m_vecOrigin, 2), -1, SPROP_NOSCALE|SPROP_CHANGES_OFTEN, 0.0f, HIGH_DEFAULT, SendProxy_OriginZ, SENDPROP_NONLOCALPLAYER_ORIGINZ_PRIORITY ),
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_TABLE_IN( CCSPlayer, DT_CSNonLocalPlayerExclusive );
 
 
-IMPLEMENT_SERVERCLASS_ST( CCSPlayer, DT_CSPlayer )
-	SendPropExclude( "DT_BaseAnimating", "m_flPoseParameter" ),
-	SendPropExclude( "DT_BaseAnimating", "m_flPlaybackRate" ),
-	SendPropExclude( "DT_BaseAnimating", "m_nSequence" ),
-	SendPropExclude( "DT_BaseAnimating", "m_nNewSequenceParity" ),
-	SendPropExclude( "DT_BaseAnimating", "m_nResetEventsParity" ),
-	SendPropExclude( "DT_BaseAnimating", "m_nMuzzleFlashParity" ),
-	SendPropExclude( "DT_BaseEntity", "m_angRotation" ),
-	//SendPropExclude( "DT_BaseAnimatingOverlay", "overlay_vars" ),
-	SendPropExclude( "DT_BaseEntity", "m_vecOrigin" ),
-	SendPropExclude( "DT_BaseEntity", "m_cellbits" ),
-	SendPropExclude( "DT_BaseEntity", "m_cellX" ),
-	SendPropExclude( "DT_BaseEntity", "m_cellY" ),
-	SendPropExclude( "DT_BaseEntity", "m_cellZ" ),
-
-	// cs_playeranimstate and clientside animation takes care of these on the client
-	SendPropExclude( "DT_ServerAnimationData" , "m_flCycle" ),
-	SendPropExclude( "DT_AnimTimeMustBeFirst" , "m_flAnimTime" ),
-
-	// Data that only gets sent to the local player.
-	SendPropDataTable( "cslocaldata", 0, &REFERENCE_SEND_TABLE(DT_CSLocalPlayerExclusive ), SendProxy_SendLocalDataTable ),
-	SendPropDataTable( "csnonlocaldata", 0, &REFERENCE_SEND_TABLE(DT_CSNonLocalPlayerExclusive ), SendProxy_SendNonLocalDataTable ),
+IMPLEMENT_REFLECT_SERVERCLASS( CCSPlayer, DT_CSPlayer )
 
 
-	SendPropAngle( SENDINFO_VECTORELEM( m_angEyeAngles, 0 ), -1, SPROP_NOSCALE | SPROP_CHANGES_OFTEN ),
-	SendPropAngle( SENDINFO_VECTORELEM( m_angEyeAngles, 1 ), -1, SPROP_NOSCALE | SPROP_CHANGES_OFTEN ),
-
-	SendPropInt( SENDINFO( m_iAddonBits ), NUM_ADDON_BITS, SPROP_UNSIGNED ),
-	SendPropInt( SENDINFO( m_iPrimaryAddon ), 8, SPROP_UNSIGNED ),
-	SendPropInt( SENDINFO( m_iSecondaryAddon ), 8, SPROP_UNSIGNED ),
-	SendPropInt( SENDINFO( m_iThrowGrenadeCounter ), THROWGRENADE_COUNTER_BITS, SPROP_UNSIGNED ),
-	SendPropBool( SENDINFO( m_bWaitForNoAttack ) ),
-	SendPropBool( SENDINFO( m_bIsRespawningForDMBonus ) ),
-	SendPropInt( SENDINFO( m_iPlayerState ), Q_log2( NUM_PLAYER_STATES )+1, SPROP_UNSIGNED ),
-	SendPropInt( SENDINFO( m_iAccount ), 16, SPROP_UNSIGNED ),
-	SendPropInt( SENDINFO( m_iStartAccount ), 16, SPROP_UNSIGNED ),
-	SendPropInt( SENDINFO( m_totalHitsOnServer ), 8, SPROP_UNSIGNED ),
-	SendPropInt( SENDINFO( m_bInBombZone ), 1, SPROP_UNSIGNED ),
-	SendPropInt( SENDINFO( m_bInBuyZone ), 1, SPROP_UNSIGNED ),
-	SendPropInt( SENDINFO( m_bInNoDefuseArea ), 1, SPROP_UNSIGNED ),
-	SendPropBool( SENDINFO( m_bKilledByTaser ) ),
-	SendPropInt( SENDINFO( m_iMoveState ), 0, SPROP_CHANGES_OFTEN ),
-	SendPropInt( SENDINFO( m_iClass ), Q_log2( CS_MAX_PLAYER_MODELS )+1, SPROP_UNSIGNED ),
-	SendPropInt( SENDINFO( m_ArmorValue ), 8, SPROP_UNSIGNED ),
-	SendPropInt( SENDINFO( m_bHasDefuser ), 1, SPROP_UNSIGNED ),
-	SendPropInt( SENDINFO( m_bNightVisionOn ), 1, SPROP_UNSIGNED ),	//send as int so we can use a RecvProxy on the client
-	SendPropBool( SENDINFO( m_bHasNightVision ) ),
-	SendPropBool( SENDINFO( m_bInHostageRescueZone ) ),
-	SendPropBool( SENDINFO( m_bIsDefusing ) ),
-	SendPropBool( SENDINFO( m_bIsGrabbingHostage ) ),
-	SendPropBool( SENDINFO( m_bIsScoped ) ),
-	SendPropBool( SENDINFO( m_bIsWalking ) ),
-	SendPropBool( SENDINFO( m_bResumeZoom ) ),
-	SendPropFloat( SENDINFO( m_fImmuneToGunGameDamageTime ) ),
-	SendPropBool( SENDINFO( m_bGunGameImmunity ) ),
-	SendPropBool( SENDINFO( m_bHasMovedSinceSpawn ) ),
-	SendPropBool( SENDINFO( m_bMadeFinalGunGameProgressiveKill ) ),
-	SendPropInt( SENDINFO( m_iGunGameProgressiveWeaponIndex ), 32, SPROP_UNSIGNED | SPROP_CHANGES_OFTEN ),
-	SendPropInt( SENDINFO( m_iNumGunGameTRKillPoints ) ),
-	SendPropInt( SENDINFO( m_iNumGunGameKillsWithCurrentWeapon ) ),
-	SendPropInt( SENDINFO( m_iNumRoundKills ) ),
-	SendPropFloat( SENDINFO( m_fMolotovUseTime ) ),
-	SendPropFloat( SENDINFO( m_fMolotovDamageTime ) ),
-	SendPropString( SENDINFO( m_szArmsModel ) ),
-	SendPropEHandle( SENDINFO( m_hCarriedHostage ) ),
-	SendPropEHandle( SENDINFO( m_hCarriedHostageProp ) ),
-	SendPropBool( SENDINFO( m_bIsRescuing ) ),
-	SendPropFloat( SENDINFO( m_flGroundAccelLinearFracLastTime ), 0, SPROP_CHANGES_OFTEN ),
-	SendPropFloat( SENDINFO( m_flGuardianTooFarDistFrac ) ),
-	SendPropFloat( SENDINFO( m_flDetectedByEnemySensorTime ) ),
-
-	SendPropBool( SENDINFO( m_bCanMoveDuringFreezePeriod ) ),
-	SendPropBool( SENDINFO( m_isCurrentGunGameLeader ) ),
-	SendPropBool( SENDINFO( m_isCurrentGunGameTeamLeader ) ),
-
-	SendPropArray3( SENDINFO_ARRAY3(m_rank), SendPropInt( SENDINFO_ARRAY(m_rank), 0, SPROP_UNSIGNED ) ),
-
-	SendPropInt( SENDINFO( m_unMusicID ), 16, SPROP_UNSIGNED ),
-
-#ifdef CS_SHIELD_ENABLED
-	SendPropBool( SENDINFO( m_bHasShield ) ),
-	SendPropBool( SENDINFO( m_bShieldDrawn ) ),
-#endif
-
-	SendPropBool( SENDINFO( m_bHasHelmet ) ),
-	SendPropBool( SENDINFO( m_bHasHeavyArmor ) ),
-	SendPropFloat	(SENDINFO(m_flFlashDuration ), 0, SPROP_NOSCALE ),
-	SendPropFloat( SENDINFO(m_flFlashMaxAlpha ), 0, SPROP_NOSCALE ),
-	SendPropInt( SENDINFO( m_iProgressBarDuration ), 4, SPROP_UNSIGNED ),
-	SendPropFloat( SENDINFO( m_flProgressBarStartTime ), 0, SPROP_NOSCALE ),
-	SendPropEHandle( SENDINFO( m_hRagdoll ) ),
-	SendPropInt( SENDINFO( m_cycleLatch ), 4, SPROP_UNSIGNED | SPROP_CHANGES_OFTEN ),
-
-	SendPropInt( SENDINFO( m_unCurrentEquipmentValue ), 16, SPROP_UNSIGNED ),
-	SendPropInt( SENDINFO( m_unRoundStartEquipmentValue ), 16, SPROP_UNSIGNED ),
-	SendPropInt( SENDINFO( m_unFreezetimeEndEquipmentValue ), 16, SPROP_UNSIGNED ),
-
-#if CS_CONTROLLABLE_BOTS_ENABLED
-	SendPropBool( SENDINFO( m_bIsControllingBot ) ),
-	SendPropBool( SENDINFO( m_bHasControlledBotThisRound ) ),
-	SendPropBool( SENDINFO( m_bCanControlObservedBot ) ),
-	SendPropInt( SENDINFO( m_iControlledBotEntIndex ) ),
-#endif
-
-
-	// data used to show and hide hud via scripts in the training map
-	SendPropBool( SENDINFO( m_bHud_MiniScoreHidden ) ),
-	SendPropBool( SENDINFO( m_bHud_RadarHidden ) ),
-
-	SendPropInt( SENDINFO( m_nLastKillerIndex ), 8, SPROP_UNSIGNED ),
-	// when a player dies, we send to the client the number of unbroken  times in a row the player has been killed by their last killer
-	SendPropInt( SENDINFO( m_nLastConcurrentKilled ), 8, SPROP_UNSIGNED ),
-	SendPropInt( SENDINFO( m_nDeathCamMusic ), 8, SPROP_UNSIGNED ),
-
-	SendPropBool( SENDINFO( m_bIsLookingAtWeapon ) ),
-	SendPropBool( SENDINFO( m_bIsHoldingLookAtWeapon ) ),
-	SendPropInt( SENDINFO( m_iNumRoundKillsHeadshots ) ),
-
-	SendPropArray3( SENDINFO_ARRAY3(m_iMatchStats_Kills), SendPropInt( SENDINFO_ARRAY(m_iMatchStats_Kills), 0, SPROP_UNSIGNED, 0, SENDPROP_MATCHSTATS_PRIORITY ) ),
-	SendPropArray3( SENDINFO_ARRAY3(m_iMatchStats_Damage), SendPropInt( SENDINFO_ARRAY(m_iMatchStats_Damage), 0, SPROP_UNSIGNED, 0, SENDPROP_MATCHSTATS_PRIORITY ) ),
-	SendPropArray3( SENDINFO_ARRAY3(m_iMatchStats_EquipmentValue), SendPropInt( SENDINFO_ARRAY(m_iMatchStats_EquipmentValue), 0, SPROP_UNSIGNED, 0, SENDPROP_MATCHSTATS_PRIORITY ) ),
-	SendPropArray3( SENDINFO_ARRAY3(m_iMatchStats_MoneySaved), SendPropInt( SENDINFO_ARRAY(m_iMatchStats_MoneySaved), 0, SPROP_UNSIGNED, 0, SENDPROP_MATCHSTATS_PRIORITY ) ),
-	SendPropArray3( SENDINFO_ARRAY3(m_iMatchStats_KillReward), SendPropInt( SENDINFO_ARRAY(m_iMatchStats_KillReward), 0, SPROP_UNSIGNED, 0, SENDPROP_MATCHSTATS_PRIORITY ) ),
-	SendPropArray3( SENDINFO_ARRAY3(m_iMatchStats_LiveTime), SendPropInt( SENDINFO_ARRAY(m_iMatchStats_LiveTime), 0, SPROP_UNSIGNED, 0, SENDPROP_MATCHSTATS_PRIORITY ) ),
-	SendPropArray3( SENDINFO_ARRAY3(m_iMatchStats_Deaths), SendPropInt( SENDINFO_ARRAY(m_iMatchStats_Deaths), 0, SPROP_UNSIGNED, 0, SENDPROP_MATCHSTATS_PRIORITY ) ),
-	SendPropArray3( SENDINFO_ARRAY3(m_iMatchStats_Assists), SendPropInt( SENDINFO_ARRAY(m_iMatchStats_Assists), 0, SPROP_UNSIGNED, 0, SENDPROP_MATCHSTATS_PRIORITY ) ),
-	SendPropArray3( SENDINFO_ARRAY3(m_iMatchStats_HeadShotKills), SendPropInt( SENDINFO_ARRAY(m_iMatchStats_HeadShotKills), 0, SPROP_UNSIGNED, 0, SENDPROP_MATCHSTATS_PRIORITY ) ),
-	SendPropArray3( SENDINFO_ARRAY3(m_iMatchStats_Objective), SendPropInt( SENDINFO_ARRAY(m_iMatchStats_Objective), 0, SPROP_UNSIGNED, 0, SENDPROP_MATCHSTATS_PRIORITY ) ),
-	SendPropArray3( SENDINFO_ARRAY3(m_iMatchStats_CashEarned), SendPropInt( SENDINFO_ARRAY(m_iMatchStats_CashEarned), 0, SPROP_UNSIGNED, 0, SENDPROP_MATCHSTATS_PRIORITY ) ),
-	SendPropArray3( SENDINFO_ARRAY3( m_iMatchStats_UtilityDamage ), SendPropInt( SENDINFO_ARRAY( m_iMatchStats_UtilityDamage ), 0, SPROP_UNSIGNED, 0, SENDPROP_MATCHSTATS_PRIORITY ) ),
-	SendPropArray3( SENDINFO_ARRAY3( m_iMatchStats_EnemiesFlashed ), SendPropInt( SENDINFO_ARRAY( m_iMatchStats_EnemiesFlashed ), 0, SPROP_UNSIGNED, 0, SENDPROP_MATCHSTATS_PRIORITY ) ),
-
-
-
-#if defined( PLAYER_TAUNT_SHIPPING_FEATURE )
-	SendPropBool( SENDINFO( m_bIsTaunting ) ),
-	SendPropBool( SENDINFO( m_bIsThirdPersonTaunt ) ),
-	SendPropBool( SENDINFO( m_bIsHoldingTaunt ) ),
-	SendPropFloat( SENDINFO( m_flTauntYaw ), 0, SPROP_NOSCALE ),
-#endif
-
-#if defined( USE_PLAYER_ATTRIBUTE_MANAGER )
-	SendPropDataTable( SENDINFO_DT( m_AttributeManager ), &REFERENCE_SEND_TABLE(DT_AttributeManager) ),
-#endif
-
-	SendPropFloat( SENDINFO( m_flLowerBodyYawTarget ), 8, SPROP_NOSCALE ),
-	SendPropBool( SENDINFO( m_bStrafing ) ),
-
-	SendPropFloat( SENDINFO( m_flThirdpersonRecoil ), 8, SPROP_NOSCALE ),
-
-END_SEND_TABLE()
-
-
-BEGIN_DATADESC( CCSPlayer )
-
-	DEFINE_INPUTFUNC( FIELD_VOID, "OnRescueZoneTouch", RescueZoneTouch ),
-	DEFINE_THINKFUNC( PushawayThink )
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CCSPlayer )
 
 
 // has to be included after above macros

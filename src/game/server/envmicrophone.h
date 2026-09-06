@@ -6,6 +6,8 @@
 
 #ifndef ENVMICROPHONE_H
 #define ENVMICROPHONE_H
+
+#include "reflect_annotations.h"
 #ifdef _WIN32
 #pragma once
 #endif
@@ -53,9 +55,9 @@ public:
 	void SetSpeakerName( string_t iszSpeakerName );
 	void SetSpeaker( string_t iszSpeakerName, EHANDLE hSpeaker );
 
-	void InputEnable( inputdata_t &inputdata );
-	void InputDisable( inputdata_t &inputdata );
-	void InputSetSpeakerName( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Enable", .type = FIELD_VOID } ]] void InputEnable( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Disable", .type = FIELD_VOID } ]] void InputDisable( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetSpeakerName", .type = FIELD_STRING } ]] void InputSetSpeakerName( inputdata_t &inputdata );
 
 	DECLARE_DATADESC();
 
@@ -73,22 +75,22 @@ private:
 
 	void SoundStopped( const char *soundname );
 
-	bool		m_bDisabled;			// If true, the microphone will not measure sound.
+	[[= ks::reflect::Key{ .name = "StartDisabled" } ]] bool		m_bDisabled;			// If true, the microphone will not measure sound.
 	EHANDLE		m_hMeasureTarget;		// Point at which to measure sound level.
-	int			m_nSoundMask;			// Which sound types we are interested in.
-	float		m_flSensitivity;		// 0 = deaf, 1 = default, 10 = maximum sensitivity
-	float		m_flSmoothFactor;		// 0 = no smoothing of samples, 0.9 = maximum smoothing
-	float		m_flMaxRange;			// Maximum sound hearing range, irrelevant of attenuation
-	string_t	m_iszSpeakerName;		// Name of a speaker to output any heard sounds through
+	[[= ks::reflect::Key{ .name = "SoundMask" } ]] int			m_nSoundMask;			// Which sound types we are interested in.
+	[[= ks::reflect::Key{ .name = "Sensitivity" } ]] float		m_flSensitivity;		// 0 = deaf, 1 = default, 10 = maximum sensitivity
+	[[= ks::reflect::Key{ .name = "SmoothFactor" } ]] float		m_flSmoothFactor;		// 0 = no smoothing of samples, 0.9 = maximum smoothing
+	[[= ks::reflect::Key{ .name = "MaxRange" } ]] float		m_flMaxRange;			// Maximum sound hearing range, irrelevant of attenuation
+	[[= ks::reflect::Key{ .name = "SpeakerName" } ]] string_t	m_iszSpeakerName;		// Name of a speaker to output any heard sounds through
 	EHANDLE		m_hSpeaker;				// Speaker to output any heard sounds through
 	bool		m_bAvoidFeedback;
-	int			m_iSpeakerDSPPreset;	// Speaker DSP preset to use when this microphone is enabled
-	string_t	m_iszListenFilter;
+	[[= ks::reflect::Key{ .name = "speaker_dsp_preset" } ]] int			m_iSpeakerDSPPreset;	// Speaker DSP preset to use when this microphone is enabled
+	[[= ks::reflect::Key{ .name = "ListenFilter" } ]] string_t	m_iszListenFilter;
 	CHandle<CBaseFilter>	m_hListenFilter;
 
-	COutputFloat m_SoundLevel;			// Fired when the sampled volume level changes.
-	COutputEvent m_OnRoutedSound;		// Fired when a sound has been played through our speaker
-	COutputEvent m_OnHeardSound;		// Heard sound.
+	[[= ks::reflect::Key{ .name = "SoundLevel" } ]] COutputFloat m_SoundLevel;			// Fired when the sampled volume level changes.
+	[[= ks::reflect::Key{ .name = "OnRoutedSound" } ]] COutputEvent m_OnRoutedSound;		// Fired when a sound has been played through our speaker
+	[[= ks::reflect::Key{ .name = "OnHeardSound" } ]] COutputEvent m_OnHeardSound;		// Heard sound.
 
 	char		m_szLastSound[256];
 };

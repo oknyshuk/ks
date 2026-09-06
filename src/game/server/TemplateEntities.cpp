@@ -16,6 +16,8 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_annotations.h"
+#include "reflect_datamap.h"
 #include "igamesystem.h"
 #include "mapentities_shared.h"
 #include "point_template.h"
@@ -48,15 +50,7 @@ struct TemplateEntityData_t
 	DECLARE_SIMPLE_DATADESC();
 };
 
-BEGIN_SIMPLE_DATADESC( TemplateEntityData_t )
-	//DEFINE_FIELD( pszName,			FIELD_STRING	),		// Saved custom, see below
-	//DEFINE_FIELD( pszMapData,			FIELD_STRING	),		// Saved custom, see below
-	DEFINE_FIELD( iszMapData,				FIELD_STRING	),
-	DEFINE_FIELD( iMapDataLength,			FIELD_INTEGER	),
-	DEFINE_FIELD( bNeedsEntityIOFixup,	FIELD_BOOLEAN	),
-
-	//DEFINE_FIELD( pszFixedMapData,	FIELD_STRING	),		// Not saved at all
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP_SIMPLE( TemplateEntityData_t )
 
 struct grouptemplate_t
 {
@@ -448,92 +442,9 @@ CTemplatesHook g_TemplateEntityHook( "CTemplatesHook" );
 //-----------------------------------------------------------------------------
 static short TEMPLATE_SAVE_RESTORE_VERSION = 1;
 
-class CTemplate_SaveRestoreBlockHandler : public CDefSaveRestoreBlockHandler
-{
-public:
-	const char *GetBlockName()
-	{
-		return "Templates";
-	}
-
-	//---------------------------------
-
-	void Save( ISave *pSave )
-	{
-		pSave->WriteInt( &g_iCurrentTemplateInstance );
-
-		short nCount = g_Templates.Count();
-		pSave->WriteShort( &nCount );
-		for ( int i = 0; i < nCount; i++ )
-		{
-			TemplateEntityData_t *pTemplate = g_Templates[i];
-			pSave->WriteAll( pTemplate );
-			pSave->WriteString( pTemplate->pszName );
-			pSave->WriteString( pTemplate->pszMapData );
-		}
-	}
-
-	//---------------------------------
-
-	void WriteSaveHeaders( ISave *pSave )
-	{
-		pSave->WriteShort( &TEMPLATE_SAVE_RESTORE_VERSION );
-	}
-	
-	//---------------------------------
-
-	void ReadRestoreHeaders( IRestore *pRestore )
-	{
-		// No reason why any future version shouldn't try to retain backward compatability. The default here is to not do so.
-		short version;
-		pRestore->ReadShort( &version );
-		m_fDoLoad = ( version == TEMPLATE_SAVE_RESTORE_VERSION );
-	}
-
-	//---------------------------------
-
-	void Restore( IRestore *pRestore, bool createPlayers )
-	{
-		if ( m_fDoLoad )
-		{
-			Templates_RemoveAll();
-			g_Templates.Purge();
-			g_iCurrentTemplateInstance = pRestore->ReadInt();
-
-			int iTemplates = pRestore->ReadShort();
-			while ( iTemplates-- )
-			{
-				TemplateEntityData_t *pNewTemplate = (TemplateEntityData_t *)malloc(sizeof(TemplateEntityData_t));
-				pRestore->ReadAll( pNewTemplate );
-
-				int sizeData = 0;//pRestore->SkipHeader();
-				char szName[MAPKEY_MAXLENGTH];
-				pRestore->ReadString( szName, MAPKEY_MAXLENGTH, sizeData );
-				pNewTemplate->pszName = strdup( szName );
-				//sizeData = pRestore->SkipHeader();
-				pNewTemplate->pszMapData = (char *)malloc( pNewTemplate->iMapDataLength );
-				pRestore->ReadString( pNewTemplate->pszMapData, pNewTemplate->iMapDataLength, sizeData );
-
-				// Set this to NULL so it'll be created the first time it gets used
-				pNewTemplate->pszFixedMapData = NULL;
-
-				g_Templates.AddToTail( pNewTemplate );
-			}
-		}
-		
-	}
-
-private:
-	bool m_fDoLoad;
-};
 
 //-----------------------------------------------------------------------------
 
-CTemplate_SaveRestoreBlockHandler g_Template_SaveRestoreBlockHandler;
 
 //-------------------------------------
 
-ISaveRestoreBlockHandler *GetTemplateSaveRestoreBlockHandler()
-{
-	return &g_Template_SaveRestoreBlockHandler;
-}

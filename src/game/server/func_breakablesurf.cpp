@@ -8,6 +8,9 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_sendtable.h"
+#include "reflect_annotations.h"
 #include "ndebugoverlay.h"
 #include "filters.h"
 #include "player.h"
@@ -49,13 +52,6 @@
 // func_breakable - bmodel that breaks into pieces after taking damage
 //
 LINK_ENTITY_TO_CLASS( window_pane, CWindowPane );
-BEGIN_DATADESC( CWindowPane )
-
-	// Function Pointers
-	DEFINE_FUNCTION( Die ),
-	DEFINE_FUNCTION( PaneTouch ),
-
-END_DATADESC()
 
 
 //------------------------------------------------------------------------------
@@ -145,52 +141,10 @@ CWindowPane* CWindowPane::CreateWindowPane( const Vector &vecOrigin, const QAngl
 //####################################################################################
 LINK_ENTITY_TO_CLASS( func_breakable_surf, CBreakableSurface );
 
-BEGIN_DATADESC( CBreakableSurface )
-
-	DEFINE_KEYFIELD( m_nSurfaceType,		FIELD_INTEGER,	"surfacetype"),
-	DEFINE_KEYFIELD( m_nFragility,		FIELD_INTEGER,	"fragility"),
-	DEFINE_KEYFIELD( m_vLLVertex,		FIELD_VECTOR,  "lowerleft" ),
-	DEFINE_KEYFIELD( m_vULVertex,		FIELD_VECTOR,  "upperleft" ),
-	DEFINE_KEYFIELD( m_vLRVertex,		FIELD_VECTOR,  "lowerright" ),
-	DEFINE_KEYFIELD( m_vURVertex,		FIELD_VECTOR,  "upperright" ),
-	DEFINE_KEYFIELD( m_nQuadError,		FIELD_INTEGER, "error" ),
-
-	DEFINE_FIELD( m_nNumWide,			FIELD_INTEGER),	
-	DEFINE_FIELD( m_nNumHigh,			FIELD_INTEGER),	
-	DEFINE_FIELD( m_flPanelWidth,		FIELD_FLOAT),	
-	DEFINE_FIELD( m_flPanelHeight,	FIELD_FLOAT),	
-	DEFINE_FIELD( m_vNormal,			FIELD_VECTOR),	
-	DEFINE_FIELD( m_vCorner,			FIELD_POSITION_VECTOR),	
-	DEFINE_FIELD( m_bIsBroken,		FIELD_BOOLEAN),	
-	DEFINE_FIELD( m_nNumBrokenPanes,	FIELD_INTEGER),	
-	
-	// UNDONE: How to load save this?  Need a way to update
-	//		   the client about the state of the window upon load...
-	//			We should use client-side save/load to fix this problem.
-	DEFINE_AUTO_ARRAY2D( m_flSupport,	FIELD_FLOAT),	
-	DEFINE_ARRAY( m_RawPanelBitVec, FIELD_BOOLEAN, MAX_NUM_PANELS*MAX_NUM_PANELS ),
-
-	// Function Pointers
-	DEFINE_THINKFUNC( BreakThink ),
-	DEFINE_ENTITYFUNC( SurfaceTouch ),
-
-	DEFINE_INPUTFUNC( FIELD_VECTOR,	"Shatter", InputShatter ),
-
-	// DEFINE_FIELD( m_ForceUpdateClientData, CBitVec < MAX_PLAYERS > ),  // No need to save/restore this, it's just a temporary flag field
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CBreakableSurface )
 
 
-IMPLEMENT_SERVERCLASS_ST(CBreakableSurface, DT_BreakableSurface)
-	SendPropInt(SENDINFO(m_nNumWide), 8,  SPROP_UNSIGNED),
-	SendPropInt(SENDINFO(m_nNumHigh), 8, SPROP_UNSIGNED),
-	SendPropFloat(SENDINFO(m_flPanelWidth), 0, SPROP_NOSCALE),
-	SendPropFloat(SENDINFO(m_flPanelHeight), 0, SPROP_NOSCALE),
-	SendPropVector(SENDINFO(m_vNormal), -1, SPROP_COORD),
-	SendPropVector(SENDINFO(m_vCorner), -1, SPROP_COORD),
-	SendPropInt(SENDINFO(m_bIsBroken), 1, SPROP_UNSIGNED),
-	SendPropInt(SENDINFO(m_nSurfaceType), 2, SPROP_UNSIGNED),
-	SendPropArray3(SENDINFO_ARRAY3(m_RawPanelBitVec), SendPropInt( SENDINFO_ARRAY( m_RawPanelBitVec ), 1, SPROP_UNSIGNED ) ),
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CBreakableSurface, DT_BreakableSurface )
 
 
 //-----------------------------------------------------------------------------

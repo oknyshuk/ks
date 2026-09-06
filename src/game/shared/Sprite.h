@@ -7,6 +7,9 @@
 
 #ifndef SPRITE_H
 #define SPRITE_H
+
+#include "reflect_annotations.h"
+#include "dt_recv.h"
 #ifdef _WIN32
 #pragma once
 #endif
@@ -17,6 +20,12 @@
 #define SF_SPRITE_STARTON		0x0001
 #define SF_SPRITE_ONCE			0x0002
 #define SF_SPRITE_TEMPORARY		0x8000
+
+constexpr float MAX_GLOW_PROXY_SIZE = 64.0f;
+
+constexpr float MAX_SPRITE_SCALE = 64.0f;
+
+void RecvProxy_SpriteScale( const CRecvProxyData *pData, void *pStruct, void *pOut );
 
 class CBasePlayer;
 
@@ -80,7 +89,8 @@ protected:
 
 #endif
 
-class CSprite : public CBaseEntity
+class [[= ks::reflect::NetTable{ .name = "DT_Sprite" } ]]
+      CSprite : public CBaseEntity
 #if defined( CLIENT_DLL )
 	, public C_SpriteRenderer
 #endif
@@ -142,12 +152,12 @@ public:
 #if !defined( CLIENT_DLL )
 	void Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
 	// Input handlers
-	void InputHideSprite( inputdata_t &inputdata );
-	void InputShowSprite( inputdata_t &inputdata );
-	void InputToggleSprite( inputdata_t &inputdata );
-	void InputColorRedValue( inputdata_t &inputdata );
-	void InputColorBlueValue( inputdata_t &inputdata );
-	void InputColorGreenValue( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "HideSprite", .type = FIELD_VOID } ]] void InputHideSprite( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "ShowSprite", .type = FIELD_VOID } ]] void InputShowSprite( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "ToggleSprite", .type = FIELD_VOID } ]] void InputToggleSprite( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "ColorRedValue", .type = FIELD_FLOAT } ]] void InputColorRedValue( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "ColorBlueValue", .type = FIELD_FLOAT } ]] void InputColorBlueValue( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "ColorGreenValue", .type = FIELD_FLOAT } ]] void InputColorGreenValue( inputdata_t &inputdata );
 #endif
 
 	inline void SetAttachment( CBaseEntity *pEntity, int attachment )
@@ -254,23 +264,23 @@ public:
 #endif // CLIENT_DLL
 
 public:
-	CNetworkHandle( CBaseEntity, m_hAttachedToEntity );
-	CNetworkVar( int, m_nAttachment );
-	CNetworkVar( float, m_flSpriteFramerate );
-	CNetworkVar( float, m_flFrame );
+	CNetworkHandle( CBaseEntity, m_hAttachedToEntity, [[= ks::reflect::Net{} ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] );
+	CNetworkVar( int, m_nAttachment, [[= ks::reflect::Net{ .bits = 8 } ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] );
+	CNetworkVar( float, m_flSpriteFramerate, [[= ks::reflect::Net{ .bits = 8, .low = 0, .high = 60.0f, .flags = SPROP_ROUNDUP } ]] [[= ks::reflect::Key{ .name = "framerate" } ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] );
+	CNetworkVar( float, m_flFrame, [[= ks::reflect::Net{ .bits = 20, .low = 0.0f, .high = 256.0f, .flags = SPROP_ROUNDDOWN } ]] [[= ks::reflect::Key{ .name = "frame" } ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] );
 
 	float		m_flDieTime;
 
 private:
 
-	CNetworkVar( int, m_nBrightness );
-	CNetworkVar( float, m_flBrightnessTime );
+	CNetworkVar( int, m_nBrightness, [[= ks::reflect::Net{ .bits = 8, .flags = SPROP_UNSIGNED } ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] );
+	CNetworkVar( float, m_flBrightnessTime, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE } ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] );
 	
-	CNetworkVar( float, m_flSpriteScale );
-	CNetworkVar( float, m_flScaleTime );
-	CNetworkVar( bool, m_bWorldSpaceScale );
-	CNetworkVar( float, m_flGlowProxySize );
-	CNetworkVar( float, m_flHDRColorScale );
+	CNetworkVar( float, m_flSpriteScale, [[= ks::reflect::Net{ .bits = 8, .low = 0.0f, .high = MAX_SPRITE_SCALE, .flags = SPROP_ROUNDUP } ]] [[= ks::reflect::Proxy<RecvProxy_SpriteScale, ks::reflect::WIRE_RECV>{} ]] [[= ks::reflect::Key{ .name = "scale" } ]] [[= ks::reflect::Key{ .name = "SetScale", .input = true } ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]]);
+	CNetworkVar( float, m_flScaleTime, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE } ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] );
+	CNetworkVar( bool, m_bWorldSpaceScale, [[= ks::reflect::Net{} ]] );
+	CNetworkVar( float, m_flGlowProxySize, [[= ks::reflect::Net{ .bits = 6, .low = 0.0f, .high = MAX_GLOW_PROXY_SIZE, .flags = SPROP_ROUNDUP } ]] [[= ks::reflect::Key{ .name = "GlowProxySize" } ]] );
+	CNetworkVar( float, m_flHDRColorScale, [[= ks::reflect::Net{ .bits = 0, .low = 0.0f, .high = 100.0f, .flags = SPROP_NOSCALE } ]] [[= ks::reflect::Key{ .name = "HDRColorScale" } ]] );
 
 	float		m_flLastTime;
 	float		m_flMaxFrame;
@@ -288,7 +298,8 @@ private:
 };
 
 
-class CSpriteOriented : public CSprite
+class [[= ks::reflect::NetTable{ .name = "DT_SpriteOriented" } ]]
+      CSpriteOriented : public CSprite
 {
 public:
 	DECLARE_CLASS( CSpriteOriented, CSprite );

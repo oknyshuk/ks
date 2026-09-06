@@ -5,6 +5,8 @@
 // $NoKeywords: $ 
 //=============================================================================//
 #include "cbase.h"
+#include "reflect_recvtable.h"
+#include "reflect_annotations.h"
 #include "c_cs_hostage.h"
 #include <bitbuf.h>
 #include "ragdoll_shared.h"
@@ -145,8 +147,7 @@ void C_HostageCarriableProp::ClientThink()
 	SetRenderAlpha( a );
 }
 
-IMPLEMENT_CLIENTCLASS_DT(C_HostageCarriableProp, DT_HostageCarriableProp, CHostageCarriableProp)
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS( C_HostageCarriableProp, DT_HostageCarriableProp, CHostageCarriableProp )
 
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
@@ -310,26 +311,7 @@ void C_CHostage::RecvProxy_Jumped( const CRecvProxyData *pData, void *pStruct, v
 }
 
 //-----------------------------------------------------------------------------
-IMPLEMENT_CLIENTCLASS_DT(C_CHostage, DT_CHostage, CHostage)
-	
-	RecvPropInt( RECVINFO( m_isRescued ), 0, C_CHostage::RecvProxy_Rescued ),
-	RecvPropInt( RECVINFO( m_jumpedThisFrame ), 0, C_CHostage::RecvProxy_Jumped ),
-	
-	RecvPropInt( RECVINFO( m_iHealth ) ),
-	RecvPropInt( RECVINFO( m_iMaxHealth ) ),
-	RecvPropInt( RECVINFO( m_lifeState ) ),
-	RecvPropInt( RECVINFO( m_fFlags ) ),// Needed for on ground detection for hostage jumping.
-
-	RecvPropInt( RECVINFO( m_nHostageState ) ),
-
-	RecvPropFloat( RECVINFO( m_flRescueStartTime ) ),
-	RecvPropFloat( RECVINFO( m_flGrabSuccessTime ) ),
-	RecvPropFloat( RECVINFO( m_flDropStartTime ) ),
-
-	RecvPropVector( RECVINFO( m_vel ) ),
-	RecvPropEHandle( RECVINFO( m_leader ) ),
-
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS( C_CHostage, DT_CHostage, CHostage )
 
 //-----------------------------------------------------------------------------
 // Purpose: 

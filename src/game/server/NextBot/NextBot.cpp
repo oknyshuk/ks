@@ -60,16 +60,12 @@ CON_COMMAND_F( nb_command, "Sends a command string to all bots", FCVAR_CHEAT )
 
 
 //-----------------------------------------------------------------------------------------------------
-BEGIN_DATADESC( NextBotCombatCharacter )
-
-	DEFINE_THINKFUNC( DoThink ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( NextBotCombatCharacter )
 
 
 //-----------------------------------------------------------------------------------------------------
-IMPLEMENT_SERVERCLASS_ST( NextBotCombatCharacter, DT_NextBot )
-END_SEND_TABLE()
+// NextBot.cpp is in no wscript and NextBot.h does not exist in the tree: this file is not built.
+IMPLEMENT_REFLECT_SERVERCLASS( NextBotCombatCharacter, DT_NextBot )
 
 
 //-----------------------------------------------------------------------------------------------------

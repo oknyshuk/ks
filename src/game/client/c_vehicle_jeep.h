@@ -5,6 +5,8 @@
 //=============================================================================//
 #ifndef C_VEHICLE_JEEP_H
 #define C_VEHICLE_JEEP_H
+
+#include "reflect_annotations.h"
 #pragma once
 
 #include "cbase.h"
@@ -22,7 +24,8 @@
 //
 // Client-side Jeep Class
 //
-class C_PropJeep : public C_PropVehicleDriveable
+class [[= ks::reflect::NetTable{ .name = "DT_PropJeep" } ]]
+      C_PropJeep : public C_PropVehicleDriveable
 {
 
 	DECLARE_CLASS( C_PropJeep, C_PropVehicleDriveable );
@@ -60,7 +63,7 @@ private:
 
 	float		m_flJeepFOV;
 	CHeadlightEffect *m_pHeadlight;
-	bool		m_bHeadlightIsOn;
+	[[= ks::reflect::Net{} ]] bool		m_bHeadlightIsOn;
 };
 
 #endif // C_VEHICLE_JEEP_H

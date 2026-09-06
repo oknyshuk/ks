@@ -6,6 +6,8 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_annotations.h"
 #include "particle_light.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
@@ -15,15 +17,7 @@ LINK_ENTITY_TO_CLASS( env_particlelight, CParticleLight );
 
 
 //Save/restore
-BEGIN_DATADESC( CParticleLight )
-
-	//Keyvalue fields
-	DEFINE_KEYFIELD( m_flIntensity,		FIELD_FLOAT,	"Intensity" ),
-	DEFINE_KEYFIELD( m_vColor,			FIELD_VECTOR,	"Color" ),
-	DEFINE_KEYFIELD( m_PSName,			FIELD_STRING,	"PSName" ),
-	DEFINE_KEYFIELD( m_bDirectional,	FIELD_BOOLEAN,	"Directional" )
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CParticleLight )
 
 
 

@@ -4,6 +4,14 @@
 //
 //=============================================================================//
 #include "cbase.h"
+#include "reflect_annotations.h"
+#ifdef CLIENT_DLL
+#include "reflect_recvtable.h"
+#endif
+#include "reflect_annotations.h"
+#ifdef GAME_DLL
+#include "reflect_sendtable.h"
+#endif
 #include "predicted_viewmodel.h"
 
 #ifdef CLIENT_DLL
@@ -19,8 +27,7 @@
 IMPLEMENT_NETWORKCLASS_ALIASED( PredictedViewModel, DT_PredictedViewModel )
 LINK_ENTITY_TO_CLASS_ALIASED( predicted_viewmodel, PredictedViewModel );
 
-BEGIN_NETWORK_TABLE( CPredictedViewModel, DT_PredictedViewModel )
-END_NETWORK_TABLE()
+IMPLEMENT_REFLECT_TABLE( CPredictedViewModel, DT_PredictedViewModel );
 
 //-----------------------------------------------------------------------------
 // Purpose: 

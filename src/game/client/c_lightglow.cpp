@@ -5,6 +5,8 @@
 // $NoKeywords: $
 //=============================================================================//
 #include "cbase.h"
+#include "reflect_recvtable.h"
+#include "reflect_annotations.h"
 #include "glow_overlay.h"
 #include "view.h"
 #include "c_pixel_visibility.h"
@@ -76,7 +78,21 @@ protected:
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-class C_LightGlow : public C_BaseEntity
+// Defined below, but named by the Bare<> annotation on the class, so it needs a declaration
+// above it. TU-local, so it stays static -- c_sun.cpp's counterpart had to be given external
+// linkage only because C_Sun is declared in a header.
+static void RecvProxy_HDRColorScale( const CRecvProxyData *pData, void *pStruct, void *pOut );
+
+class [[= ks::reflect::NetTable{ .name = "DT_LightGlow", .base = false } ]]
+      [[= ks::reflect::From<"m_clrRender", ks::reflect::Net{}, RecvProxy_Int32ToColor32>{} ]]
+      [[= ks::reflect::From<"m_vecNetworkOrigin", ks::reflect::Net{ .wire = "m_vecOrigin" }>{} ]]
+      [[= ks::reflect::From<"m_angNetworkAngles", ks::reflect::Net{ .wire = "m_angRotation" }>{} ]]
+      [[= ks::reflect::From<"m_hNetworkMoveParent",
+            ks::reflect::Net{ .enc = ks::reflect::ENC_INT, .wire = "moveparent" },
+            RecvProxy_IntToMoveParent>{} ]]
+      [[= ks::reflect::Bare<"HDRColorScale",
+            ks::reflect::Net{ .enc = ks::reflect::ENC_FLOAT }, RecvProxy_HDRColorScale>{} ]]
+      C_LightGlow : public C_BaseEntity
 {
 public:
 	DECLARE_CLASS( C_LightGlow, C_BaseEntity );
@@ -93,15 +109,15 @@ public:
 
 public:
 	
-	int					m_nHorizontalSize;
-	int					m_nVerticalSize;
-	int					m_nMinDist;
-	int					m_nMaxDist;
-	int					m_nOuterMaxDist;
-	int					m_spawnflags;
+	[[= ks::reflect::Net{} ]] int					m_nHorizontalSize;
+	[[= ks::reflect::Net{} ]] int					m_nVerticalSize;
+	[[= ks::reflect::Net{} ]] int					m_nMinDist;
+	[[= ks::reflect::Net{} ]] int					m_nMaxDist;
+	[[= ks::reflect::Net{} ]] int					m_nOuterMaxDist;
+	[[= ks::reflect::Net{} ]] int					m_spawnflags;
 	C_LightGlowOverlay	m_Glow;
 
-	float				m_flGlowProxySize;
+	[[= ks::reflect::Net{} ]] float				m_flGlowProxySize;
 };
 
 static void RecvProxy_HDRColorScale( const CRecvProxyData *pData, void *pStruct, void *pOut )
@@ -111,20 +127,7 @@ static void RecvProxy_HDRColorScale( const CRecvProxyData *pData, void *pStruct,
 	pLightGlow->m_Glow.m_flHDRColorScale = pData->m_Value.m_Float;
 }
 
-IMPLEMENT_CLIENTCLASS_DT_NOBASE( C_LightGlow, DT_LightGlow, CLightGlow )
-	RecvPropInt( RECVINFO(m_clrRender), 0, RecvProxy_Int32ToColor32 ),
-	RecvPropInt( RECVINFO( m_nHorizontalSize ) ),
-	RecvPropInt( RECVINFO( m_nVerticalSize ) ),
-	RecvPropInt( RECVINFO( m_nMinDist ) ),
-	RecvPropInt( RECVINFO( m_nMaxDist ) ),
-	RecvPropInt( RECVINFO( m_nOuterMaxDist ) ),
-	RecvPropInt( RECVINFO( m_spawnflags ) ),
-	RecvPropVector( RECVINFO_NAME( m_vecNetworkOrigin, m_vecOrigin ) ),
-	RecvPropQAngles( RECVINFO_NAME( m_angNetworkAngles, m_angRotation ) ),
-	RecvPropInt( RECVINFO_NAME(m_hNetworkMoveParent, moveparent), 0, RecvProxy_IntToMoveParent ),
-	RecvPropFloat(RECVINFO(m_flGlowProxySize)),
-	RecvPropFloat("HDRColorScale", 0, SIZEOF_IGNORE, 0, RecvProxy_HDRColorScale),
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS( C_LightGlow, DT_LightGlow, CLightGlow )
 
 //-----------------------------------------------------------------------------
 // Constructor 

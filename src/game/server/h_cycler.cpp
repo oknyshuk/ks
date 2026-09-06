@@ -5,6 +5,9 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_sendtable.h"
+#include "reflect_annotations.h"
 #include "ai_basenpc.h"
 #include "ai_motor.h"
 #include "basecombatweapon.h"
@@ -20,15 +23,7 @@
 
 extern int		g_sModelIndexSmoke; // (in combatweapon.cpp) holds the index for the smoke cloud
 
-BEGIN_DATADESC( CCycler )
-
-	// Fields
-	DEFINE_FIELD( m_animate, FIELD_INTEGER ),
-
-	// Inputs
-	DEFINE_INPUTFUNC( FIELD_STRING, "SetSequence", InputSetSequence ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CCycler )
 
 //
 // we should get rid of all the other cyclers and replace them with this.
@@ -217,9 +212,9 @@ void CCycler::InputSetSequence( inputdata_t &inputdata )
 
 // FIXME: this doesn't work anymore, and hasn't for a while now.
 
-class CWeaponCycler : public CBaseCombatWeapon
+class [[= ks::reflect::NetTable{ .name = "DT_WeaponCycler" } ]]
+      CWeaponCycler : public CBaseCombatWeapon
 {
-	DECLARE_DATADESC();
 public:
 	DECLARE_CLASS( CWeaponCycler, CBaseCombatWeapon );
 
@@ -235,20 +230,13 @@ public:
 	int m_iModel;
 };
 
-IMPLEMENT_SERVERCLASS_ST(CWeaponCycler, DT_WeaponCycler)
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CWeaponCycler, DT_WeaponCycler )
 
 LINK_ENTITY_TO_CLASS( cycler_weapon, CWeaponCycler );
 
 //---------------------------------------------------------
 // Save/Restore
 //---------------------------------------------------------
-BEGIN_DATADESC( CWeaponCycler )
-
-	DEFINE_FIELD( m_iszModel,	FIELD_STRING ),
-	DEFINE_FIELD( m_iModel,		FIELD_INTEGER ),
-
-END_DATADESC()
 
 void CWeaponCycler::Spawn( )
 {
@@ -333,7 +321,6 @@ class CWreckage : public CAI_BaseNPC
 public:
 	DECLARE_CLASS( CWreckage, CAI_BaseNPC );
 
-	DECLARE_DATADESC();
 
 	void Spawn( void );
 	void Precache( void );
@@ -343,12 +330,6 @@ public:
 	float m_flDieTime;
 };
 
-BEGIN_DATADESC( CWreckage )
-
-	DEFINE_FIELD( m_flStartTime, FIELD_TIME ),
-	DEFINE_FIELD( m_flDieTime, FIELD_TIME ),
-
-END_DATADESC()
 
 
 LINK_ENTITY_TO_CLASS( cycler_wreckage, CWreckage );
@@ -408,7 +389,6 @@ void CWreckage::Think( void )
 // Used to demonstrate animation blending
 class CBlendingCycler : public CCycler
 {
-	DECLARE_DATADESC();
 public:
 	DECLARE_CLASS( CBlendingCycler, CCycler );
 
@@ -428,15 +408,6 @@ LINK_ENTITY_TO_CLASS( cycler_blender, CBlendingCycler );
 //---------------------------------------------------------
 // Save/Restore
 //---------------------------------------------------------
-BEGIN_DATADESC( CBlendingCycler )
-
-	DEFINE_FIELD( m_iLowerBound,	FIELD_INTEGER ),
-	DEFINE_FIELD( m_iUpperBound,	FIELD_INTEGER ),
-	DEFINE_FIELD( m_iCurrent,		FIELD_INTEGER ),
-	DEFINE_FIELD( m_iBlendspeed,	FIELD_INTEGER ),
-	DEFINE_FIELD( m_iszSequence,	FIELD_STRING ),
-
-END_DATADESC()
 
 void CBlendingCycler::Spawn( void )
 {

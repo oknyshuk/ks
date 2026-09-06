@@ -10,14 +10,22 @@
 
 #ifndef BASE_ANIMATING_OVERLAY_H
 #define BASE_ANIMATING_OVERLAY_H
+
+#include "reflect_annotations.h"
+#include "shareddefs.h"
 #ifdef _WIN32
 #pragma once
 #endif
 
+#define ORDER_BITS			4
+
+#define WEIGHT_BITS			8
+
 class CBaseAnimatingOverlay;
 class IBoneSetup;
 
-class CAnimationLayer : public CMemZeroOnNew
+class [[= ks::reflect::NetTable{ .name = "DT_Animationlayer", .base = false } ]]
+      CAnimationLayer : public CMemZeroOnNew
 {
 public:	
 	DECLARE_CLASS_NOBASE( CAnimationLayer );
@@ -51,12 +59,12 @@ public:
 	bool	m_bSequenceFinished;
 	bool	m_bLooping;
 	
-	CNetworkVar( int, m_nSequence );
-	CNetworkVar( float, m_flCycle );
-	CNetworkVar( float, m_flPlaybackRate );
-	CNetworkVar( float, m_flPrevCycle );
-	CNetworkVar( float, m_flWeight );
-	CNetworkVar( float, m_flWeightDeltaRate );
+	CNetworkVar( int, m_nSequence, [[= ks::reflect::Net{ .bits = ANIMATION_SEQUENCE_BITS, .flags = SPROP_UNSIGNED } ]] );
+	CNetworkVar( float, m_flCycle, [[= ks::reflect::Net{ .bits = ANIMATION_CYCLE_BITS, .low = 0.0f, .high = 1.0f, .flags = SPROP_ROUNDDOWN } ]] );
+	CNetworkVar( float, m_flPlaybackRate, [[= ks::reflect::Net{ .bits = WEIGHT_BITS, .flags = SPROP_NOSCALE } ]] );
+	CNetworkVar( float, m_flPrevCycle, [[= ks::reflect::Net{ .bits = ANIMATION_CYCLE_BITS, .low = 0.0f, .high = 1.0f, .flags = SPROP_ROUNDDOWN } ]] );
+	CNetworkVar( float, m_flWeight, [[= ks::reflect::Net{ .bits = WEIGHT_BITS, .low = 0.0f, .high = 1.0f } ]] );
+	CNetworkVar( float, m_flWeightDeltaRate, [[= ks::reflect::Net{ .bits = WEIGHT_BITS, .flags = SPROP_NOSCALE } ]] );
 
 	float	m_flBlendIn; // start and end blend frac (0.0 for now blend)
 	float	m_flBlendOut; 
@@ -77,7 +85,7 @@ public:
 
 	// order of layering on client
 	int		m_nPriority;
-	CNetworkVar( int, m_nOrder );
+	CNetworkVar( int, m_nOrder, [[= ks::reflect::Net{ .bits = ORDER_BITS, .flags = SPROP_UNSIGNED } ]] );
 	int		GetOrder( void ) { return m_nOrder; }
 
 	bool	IsActive( void ) { return ((m_fFlags & ANIM_LAYER_ACTIVE) != 0); }
@@ -203,7 +211,16 @@ FORCEINLINE float CAnimationLayer::GetWeightDeltaRate( ) const
 	return m_flWeightDeltaRate;
 }
 
-class CBaseAnimatingOverlay : public CBaseAnimating
+namespace DT_OverlayVars { extern SendTable g_SendTable; }
+
+namespace DT_Animationlayer { extern SendTable g_SendTable; }
+
+class [[= ks::reflect::NetTable{ .name = "DT_BaseAnimatingOverlay" } ]]
+      [[= ks::reflect::SubTable<"overlay_vars", &DT_OverlayVars::g_SendTable, nullptr, true>{} ]]
+      [[= ks::reflect::NetTable{ .name = "DT_OverlayVars", .base = false } ]]
+      // 15, i.e. CBaseAnimatingOverlay::MAX_OVERLAYS -- the class is incomplete here
+      [[= ks::reflect::UtlVec<"m_AnimOverlay", 15, &DT_Animationlayer::g_SendTable, nullptr, "DT_OverlayVars">{} ]]
+      CBaseAnimatingOverlay : public CBaseAnimating
 {
 	DECLARE_CLASS( CBaseAnimatingOverlay, CBaseAnimating );
 

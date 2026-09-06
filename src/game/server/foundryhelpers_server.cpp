@@ -5,6 +5,8 @@
 //=============================================================================
 
 #include "cbase.h"
+#include "reflect_sendtable.h"
+#include "reflect_annotations.h"
 #include "foundryhelpers_server.h"
 #include "basetempentity.h"
 
@@ -15,7 +17,8 @@
 //-----------------------------------------------------------------------------
 // Purpose: This just marshalls certain FoundryHelpers_ calls to the client.
 //-----------------------------------------------------------------------------
-class CTEFoundryHelpers : public CBaseTempEntity
+class [[= ks::reflect::NetTable{ .name = "DT_TEFoundryHelpers" } ]]
+      CTEFoundryHelpers : public CBaseTempEntity
 {
 public:
 	DECLARE_CLASS( CTEFoundryHelpers, CBaseTempEntity );
@@ -27,12 +30,10 @@ public:
 	}
 
 public:
-	CNetworkVar( int, m_iEntity );	// -1 means turn the effect off for all entities.
+	CNetworkVar( int, m_iEntity, [[= ks::reflect::Net{ .bits = 32 } ]] );	// -1 means turn the effect off for all entities.
 };
 
-IMPLEMENT_SERVERCLASS_ST( CTEFoundryHelpers, DT_TEFoundryHelpers )
-	SendPropInt( SENDINFO(m_iEntity), 32, 0 ),
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CTEFoundryHelpers, DT_TEFoundryHelpers )
 
 // Singleton to fire TEMuzzleFlash objects
 static CTEFoundryHelpers g_TEFoundryHelpers( "FoundryHelpers" );

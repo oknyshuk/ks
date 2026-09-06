@@ -7,6 +7,8 @@
 
 #ifndef TF_TEAMSPAWNPOINT_H
 #define TF_TEAMSPAWNPOINT_H
+
+#include "reflect_annotations.h"
 #pragma once
 
 #include "baseentity.h"
@@ -25,14 +27,14 @@ public:
 	void	Activate( void );
 	virtual bool	IsValid( CBasePlayer *pPlayer );
 
-	COutputEvent m_OnPlayerSpawn;
+	[[= ks::reflect::Key{ .name = "OnPlayerSpawn" } ]] COutputEvent m_OnPlayerSpawn;
 
 protected:	
-	int		m_iDisabled;
+	[[= ks::reflect::Key{ .name = "StartDisabled" } ]] int		m_iDisabled;
 
 	// Input handlers
-	void InputEnable( inputdata_t &inputdata );
-	void InputDisable( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Enable", .type = FIELD_VOID } ]] void InputEnable( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Disable", .type = FIELD_VOID } ]] void InputDisable( inputdata_t &inputdata );
 
 	DECLARE_DATADESC();
 };
@@ -47,7 +49,7 @@ public:
 	void	Activate( void );
 	bool	IsValid( void );
 
-	COutputEvent m_OnVehicleSpawn;
+	[[= ks::reflect::Key{ .name = "OnVehicleSpawn" } ]] COutputEvent m_OnVehicleSpawn;
 
 	DECLARE_DATADESC();
 };

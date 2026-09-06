@@ -9,6 +9,8 @@
 // Generic NPC - purely for scripted sequence work.
 //=========================================================
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_annotations.h"
 #include "shareddefs.h"
 #include "npcevent.h"
 #include "ai_basenpc.h"
@@ -48,17 +50,13 @@ public:
 
 	void	TempGunEffect( void );
 
-	string_t			m_strHullName;
+	[[= ks::reflect::Key{ .name = "hull_name" } ]] string_t			m_strHullName;
 
 	DECLARE_DATADESC();
 };
 LINK_ENTITY_TO_CLASS( generic_actor, CGenericActor );
 
-BEGIN_DATADESC( CGenericActor )
-
-	DEFINE_KEYFIELD(m_strHullName,			FIELD_STRING, "hull_name" ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CGenericActor )
 
 
 //=========================================================
@@ -221,28 +219,14 @@ public:
 	int	m_istalking;
 	int	m_phoneme;
 
-	string_t m_iszSentence;
+	[[= ks::reflect::Key{ .name = "Sentence" } ]] string_t m_iszSentence;
 	int m_sentence;
 
 	void SetFlexTarget( LocalFlexController_t flexnum, float value );
 	LocalFlexController_t LookupFlex( const char *szTarget );
 };
 
-BEGIN_DATADESC( CFlextalkActor )
-
-	DEFINE_FIELD( m_flextime, FIELD_TIME ),
-	DEFINE_FIELD( m_flexnum, FIELD_INTEGER ),
-	DEFINE_ARRAY( m_flextarget, FIELD_FLOAT, 64 ),
-	DEFINE_FIELD( m_blinktime, FIELD_TIME ),
-	DEFINE_FIELD( m_looktime, FIELD_TIME ),
-	DEFINE_FIELD( m_lookTarget, FIELD_POSITION_VECTOR ),
-	DEFINE_FIELD( m_speaktime, FIELD_TIME ),
-	DEFINE_FIELD( m_istalking, FIELD_INTEGER ),
-	DEFINE_FIELD( m_phoneme, FIELD_INTEGER ),
-	DEFINE_KEYFIELD( m_iszSentence, FIELD_STRING, "Sentence" ),
-	DEFINE_FIELD( m_sentence, FIELD_INTEGER ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CFlextalkActor )
 
 
 

@@ -5,6 +5,8 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_sendtable.h"
+#include "reflect_annotations.h"
 #include "EntityParticleTrail.h"
 #include "networkstringtable_gamedll.h"
 
@@ -20,26 +22,12 @@ static const char *s_pRetireContext = "RetireContext";
 //-----------------------------------------------------------------------------
 // Save/load 
 //-----------------------------------------------------------------------------
-BEGIN_DATADESC( CEntityParticleTrail )
-
-	DEFINE_FIELD( m_iMaterialName, FIELD_MATERIALINDEX ),
-	DEFINE_EMBEDDED( m_Info ),
-	DEFINE_FIELD( m_hConstraintEntity, FIELD_EHANDLE ),
-
-	// Think this should be handled by StartTouch/etc.
-//	DEFINE_FIELD( m_nRefCount, FIELD_INTEGER ),
-
-END_DATADESC()
 
 
 //-----------------------------------------------------------------------------
 // Networking
 //-----------------------------------------------------------------------------
-IMPLEMENT_SERVERCLASS_ST( CEntityParticleTrail, DT_EntityParticleTrail )
-	SendPropInt(SENDINFO(m_iMaterialName), MAX_MATERIAL_STRING_BITS, SPROP_UNSIGNED ),
-	SendPropDataTable( SENDINFO_DT( m_Info ), &REFERENCE_SEND_TABLE( DT_EntityParticleTrailInfo ) ),
-	SendPropEHandle(SENDINFO(m_hConstraintEntity)),
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CEntityParticleTrail, DT_EntityParticleTrail )
 
 
 LINK_ENTITY_TO_CLASS( env_particle_trail, CEntityParticleTrail );

@@ -5,6 +5,16 @@
 // $NoKeywords: $
 //=============================================================================//
 #include "cbase.h"
+#include "reflect_annotations.h"
+#ifdef CLIENT_DLL
+#include "reflect_recvtable.h"
+#endif
+#include "reflect_predmap.h"
+#include "reflect_annotations.h"
+#ifdef GAME_DLL
+#include "reflect_sendtable.h"
+#include "reflect_datamap.h"
+#endif
 #include "Sprite.h"
 #include "model_types.h"
 #include "engine/ivmodelinfo.h"
@@ -22,86 +32,17 @@
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
-const float MAX_SPRITE_SCALE = 64.0f;
-const float MAX_GLOW_PROXY_SIZE = 64.0f;
-
 #if !defined( CLIENT_DLL )
 LINK_ENTITY_TO_CLASS( env_glow, CSprite ); // For backwards compatibility, remove when no longer needed.
 LINK_ENTITY_TO_CLASS( env_sprite_clientside, CSprite );
 #endif
 
 #if !defined( CLIENT_DLL )
-BEGIN_DATADESC( CSprite )
-
-	DEFINE_FIELD( m_flLastTime, FIELD_TIME ),
-	DEFINE_FIELD( m_flMaxFrame, FIELD_FLOAT ),
-	DEFINE_FIELD( m_hAttachedToEntity, FIELD_EHANDLE ),
-	DEFINE_FIELD( m_nAttachment, FIELD_INTEGER ),
-	DEFINE_FIELD( m_flDieTime, FIELD_TIME ),
-
-	DEFINE_FIELD( m_nBrightness,		FIELD_INTEGER ),
-	DEFINE_FIELD( m_flBrightnessTime,	FIELD_FLOAT ),
-
-	DEFINE_KEYFIELD( m_flSpriteScale, FIELD_FLOAT, "scale" ),
-	DEFINE_KEYFIELD( m_flSpriteFramerate, FIELD_FLOAT, "framerate" ),
-	DEFINE_KEYFIELD( m_flFrame, FIELD_FLOAT, "frame" ),
-	DEFINE_KEYFIELD( m_flHDRColorScale, FIELD_FLOAT, "HDRColorScale" ),
-
-	DEFINE_KEYFIELD( m_flGlowProxySize,	FIELD_FLOAT, "GlowProxySize" ),
-	
-	DEFINE_FIELD( m_flScaleTime,		FIELD_FLOAT ),
-	DEFINE_FIELD( m_flStartScale,		FIELD_FLOAT ),
-	DEFINE_FIELD( m_flDestScale,		FIELD_FLOAT ),
-	DEFINE_FIELD( m_flScaleTimeStart,	FIELD_TIME ),
-	DEFINE_FIELD( m_nStartBrightness,	FIELD_INTEGER ),
-	DEFINE_FIELD( m_nDestBrightness,	FIELD_INTEGER ),
-	DEFINE_FIELD( m_flBrightnessTimeStart, FIELD_TIME ),
-	DEFINE_FIELD( m_bWorldSpaceScale,	FIELD_BOOLEAN ),
-
-	// Function Pointers
-	DEFINE_FUNCTION( AnimateThink ),
-	DEFINE_FUNCTION( ExpandThink ),
-	DEFINE_FUNCTION( AnimateUntilDead ),
-	DEFINE_FUNCTION( BeginFadeOutThink ),
-
-	// Inputs
-	DEFINE_INPUT( m_flSpriteScale, FIELD_FLOAT, "SetScale" ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "HideSprite", InputHideSprite ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "ShowSprite", InputShowSprite ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "ToggleSprite", InputToggleSprite ),
-	DEFINE_INPUTFUNC( FIELD_FLOAT, "ColorRedValue", InputColorRedValue ),
-	DEFINE_INPUTFUNC( FIELD_FLOAT, "ColorGreenValue", InputColorGreenValue ),
-	DEFINE_INPUTFUNC( FIELD_FLOAT, "ColorBlueValue", InputColorBlueValue ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CSprite )
 
 #else
 
-BEGIN_PREDICTION_DATA( CSprite )
-
-	// Networked
-	DEFINE_PRED_FIELD( m_hAttachedToEntity, FIELD_EHANDLE, FTYPEDESC_INSENDTABLE ),
-	DEFINE_PRED_FIELD( m_nAttachment, FIELD_INTEGER, FTYPEDESC_INSENDTABLE ),
-	DEFINE_PRED_FIELD( m_flScaleTime, FIELD_FLOAT, FTYPEDESC_INSENDTABLE ),
-	DEFINE_PRED_FIELD( m_flSpriteScale, FIELD_FLOAT, FTYPEDESC_INSENDTABLE ),
-	DEFINE_PRED_FIELD( m_flSpriteFramerate, FIELD_FLOAT, FTYPEDESC_INSENDTABLE ),
-	DEFINE_PRED_FIELD( m_flFrame, FIELD_FLOAT, FTYPEDESC_INSENDTABLE ),
-	DEFINE_PRED_FIELD( m_flBrightnessTime, FIELD_FLOAT, FTYPEDESC_INSENDTABLE ),
-	DEFINE_PRED_FIELD( m_nBrightness, FIELD_INTEGER, FTYPEDESC_INSENDTABLE ),
-
-	DEFINE_FIELD( m_flLastTime, FIELD_FLOAT ),
-	DEFINE_FIELD( m_flMaxFrame, FIELD_FLOAT ),
-	DEFINE_FIELD( m_flDieTime, FIELD_FLOAT ),
-
-//	DEFINE_FIELD( m_flHDRColorScale, FIELD_FLOAT ),
-//	DEFINE_FIELD( m_flStartScale, FIELD_FLOAT ),			//Starting scale
-//	DEFINE_FIELD( m_flDestScale, FIELD_FLOAT ),			//Destination scale
-//	DEFINE_FIELD( m_flScaleTimeStart, FIELD_FLOAT ),		//Real time for start of scale
-//	DEFINE_FIELD( m_nStartBrightness, FIELD_INTEGER ),		//Starting brightness
-//	DEFINE_FIELD( m_nDestBrightness, FIELD_INTEGER ),		//Destination brightness
-//	DEFINE_FIELD( m_flBrightnessTimeStart, FIELD_FLOAT ),	//Real time for brightness
-
-END_PREDICTION_DATA()
+IMPLEMENT_REFLECT_PREDMAP( CSprite );
 
 #endif
 
@@ -109,49 +50,14 @@ IMPLEMENT_NETWORKCLASS_ALIASED( Sprite, DT_Sprite );
 
 #if defined( CLIENT_DLL )
 
-static void RecvProxy_SpriteScale( const CRecvProxyData *pData, void *pStruct, void *pOut )
+ void RecvProxy_SpriteScale( const CRecvProxyData *pData, void *pStruct, void *pOut )
 {
 	((CSprite*)pStruct)->SetSpriteScale( pData->m_Value.m_Float );
 }
 
 #endif
 
-BEGIN_NETWORK_TABLE( CSprite, DT_Sprite )
-#if !defined( CLIENT_DLL )
-	SendPropEHandle( SENDINFO(m_hAttachedToEntity )),
-	SendPropInt( SENDINFO(m_nAttachment ), 8 ),
-	SendPropFloat( SENDINFO(m_flScaleTime ), 0,	SPROP_NOSCALE ),
-
-#ifdef HL2_DLL
-	SendPropFloat( SENDINFO(m_flSpriteScale ), 0,	SPROP_NOSCALE),
-#else
-	SendPropFloat( SENDINFO(m_flSpriteScale ), 8,	SPROP_ROUNDUP,	0.0f,	MAX_SPRITE_SCALE),
-#endif
-	SendPropFloat( SENDINFO(m_flGlowProxySize ), 6,	SPROP_ROUNDUP,	0.0f,	MAX_GLOW_PROXY_SIZE),
-
-	SendPropFloat( SENDINFO(m_flHDRColorScale ), 0,	SPROP_NOSCALE,	0.0f,	100.0f),
-
-	SendPropFloat( SENDINFO(m_flSpriteFramerate ), 8,	SPROP_ROUNDUP,	0,	60.0f),
-	SendPropFloat( SENDINFO(m_flFrame),		20, SPROP_ROUNDDOWN,	0.0f,   256.0f),
-	SendPropFloat( SENDINFO(m_flBrightnessTime ), 0,	SPROP_NOSCALE ),
-	SendPropInt( SENDINFO(m_nBrightness), 8, SPROP_UNSIGNED ),
-	SendPropBool( SENDINFO(m_bWorldSpaceScale) ),
-#else
-	RecvPropEHandle(RECVINFO(m_hAttachedToEntity)),
-	RecvPropInt(RECVINFO(m_nAttachment)),
-	RecvPropFloat(RECVINFO(m_flScaleTime)),
-	RecvPropFloat(RECVINFO(m_flSpriteScale), 0, RecvProxy_SpriteScale),
-	RecvPropFloat(RECVINFO(m_flSpriteFramerate)),
-	RecvPropFloat(RECVINFO(m_flGlowProxySize)),
-
-	RecvPropFloat( RECVINFO(m_flHDRColorScale )),
-
-	RecvPropFloat(RECVINFO(m_flFrame)),
-	RecvPropFloat(RECVINFO(m_flBrightnessTime)),
-	RecvPropInt(RECVINFO(m_nBrightness)),
-	RecvPropBool( RECVINFO(m_bWorldSpaceScale) ),
-#endif
-END_NETWORK_TABLE()
+IMPLEMENT_REFLECT_TABLE( CSprite, DT_Sprite );
 
 
 LINK_ENTITY_TO_CLASS_ALIASED( env_sprite, Sprite );
@@ -863,13 +769,11 @@ const Vector& CSprite::GetRenderOrigin()
 //-----------------------------------------------------------------------------
 
 #if !defined( CLIENT_DLL )
-IMPLEMENT_SERVERCLASS_ST( CSpriteOriented, DT_SpriteOriented )
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CSpriteOriented, DT_SpriteOriented )
 #else
 #undef CSpriteOriented
-IMPLEMENT_CLIENTCLASS_DT(C_SpriteOriented, DT_SpriteOriented, CSpriteOriented)
+IMPLEMENT_REFLECT_CLIENTCLASS( C_SpriteOriented, DT_SpriteOriented, CSpriteOriented )
 #define CSpriteOriented C_SpriteOriented
-END_RECV_TABLE()
 #endif
 LINK_ENTITY_TO_CLASS_ALIASED( env_sprite_oriented, SpriteOriented );
 

@@ -6,6 +6,8 @@
 //===========================================================================//
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_annotations.h"
 #include "func_areaportalbase.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
@@ -22,13 +24,7 @@ CUtlLinkedList<CFuncAreaPortalBase*, unsigned short> g_AreaPortals;
 //---------------------------------------------------------
 // Save/Restore
 //---------------------------------------------------------
-BEGIN_DATADESC( CFuncAreaPortalBase )
-
-	DEFINE_FIELD( m_portalNumber,			FIELD_INTEGER ),
-	DEFINE_KEYFIELD( m_iPortalVersion,		FIELD_INTEGER, "PortalVersion" )
-//	DEFINE_FIELD( m_AreaPortalsElement,		FIELD_SHORT ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CFuncAreaPortalBase )
 
 
 

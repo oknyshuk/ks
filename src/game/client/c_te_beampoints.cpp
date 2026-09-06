@@ -7,6 +7,8 @@
 // $NoKeywords: $
 //=============================================================================//
 #include "cbase.h"
+#include "reflect_recvtable.h"
+#include "reflect_annotations.h"
 #include "c_te_basebeam.h"
 #include "iviewrender_beams.h"
 
@@ -16,7 +18,8 @@
 //-----------------------------------------------------------------------------
 // Purpose: BeamPoints TE
 //-----------------------------------------------------------------------------
-class C_TEBeamPoints : public C_TEBaseBeam
+class [[= ks::reflect::NetTable{ .name = "DT_TEBeamPoints" } ]]
+      C_TEBeamPoints : public C_TEBaseBeam
 {
 public:
 	DECLARE_CLASS( C_TEBeamPoints, C_TEBaseBeam );
@@ -28,8 +31,8 @@ public:
 	virtual void	PostDataUpdate( DataUpdateType_t updateType );
 
 public:
-	Vector			m_vecStartPoint;
-	Vector			m_vecEndPoint;
+	[[= ks::reflect::Net{} ]] Vector			m_vecStartPoint;
+	[[= ks::reflect::Net{} ]] Vector			m_vecEndPoint;
 };
 
 //-----------------------------------------------------------------------------
@@ -69,8 +72,5 @@ void C_TEBeamPoints::PostDataUpdate( DataUpdateType_t updateType )
 		m_nStartFrame, 0.1 * m_nFrameRate, r, g, b );
 }
 
-IMPLEMENT_CLIENTCLASS_EVENT_DT(C_TEBeamPoints, DT_TEBeamPoints, CTEBeamPoints)
-	RecvPropVector( RECVINFO(m_vecStartPoint)),
-	RecvPropVector( RECVINFO(m_vecEndPoint)),
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS_EVENT( C_TEBeamPoints, DT_TEBeamPoints, CTEBeamPoints )
 

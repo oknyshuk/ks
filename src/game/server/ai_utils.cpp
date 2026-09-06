@@ -5,6 +5,8 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_annotations.h"
+#include "reflect_datamap.h"
 #include "ai_utils.h"
 #include "ai_memory.h"
 #include "ai_basenpc.h"
@@ -17,25 +19,11 @@
 
 //-----------------------------------------------------------------------------
 
-BEGIN_SIMPLE_DATADESC( CAI_MoveMonitor )
-	DEFINE_FIELD( m_vMark, FIELD_POSITION_VECTOR ), 
-	DEFINE_FIELD( m_flMarkTolerance, FIELD_FLOAT )
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP_SIMPLE( CAI_MoveMonitor )
 
 //-----------------------------------------------------------------------------
 
-BEGIN_SIMPLE_DATADESC( CAI_ShotRegulator )
-	DEFINE_FIELD( m_flNextShotTime, FIELD_TIME ),
-	DEFINE_FIELD( m_bInRestInterval, FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_nBurstShotsRemaining, FIELD_SHORT ),
-	DEFINE_FIELD( m_nMinBurstShots, FIELD_SHORT ),
-	DEFINE_FIELD( m_nMaxBurstShots, FIELD_SHORT ),
-	DEFINE_FIELD( m_flMinRestInterval, FIELD_FLOAT ),
-	DEFINE_FIELD( m_flMaxRestInterval, FIELD_FLOAT ),
-	DEFINE_FIELD( m_flMinBurstInterval, FIELD_FLOAT ),
-	DEFINE_FIELD( m_flMaxBurstInterval, FIELD_FLOAT ),
-	DEFINE_FIELD( m_bDisabled, FIELD_BOOLEAN ),
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP_SIMPLE( CAI_ShotRegulator )
 
 //-----------------------------------------------------------------------------
 
@@ -234,14 +222,7 @@ void CAI_ShotRegulator::DisableShooting( void )
 //
 //-----------------------------------------------------------------------------
 
-BEGIN_SIMPLE_DATADESC( CAI_AccelDecay )
-	DEFINE_FIELD( m_velocity,		FIELD_FLOAT ),
-	DEFINE_FIELD( m_maxVelocity,	FIELD_FLOAT ),
-	DEFINE_FIELD( m_minVelocity,	FIELD_FLOAT ),
-	DEFINE_FIELD( m_invDecay,		FIELD_FLOAT ),
-	DEFINE_FIELD( m_decayTime,		FIELD_FLOAT ),
-	DEFINE_FIELD( m_accel,			FIELD_FLOAT ),
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP_SIMPLE( CAI_AccelDecay )
 
 
 void CAI_AccelDecay::SetParameters( float minVelocity, float maxVelocity, float accelPercentPerTick, float decelPercentPerTick )
@@ -327,28 +308,9 @@ void CAI_AccelDecay::SetMaxVelocity( float maxVelocity )
 
 ConVar free_pass_peek_debug( "free_pass_peek_debug", "0" );
 
-BEGIN_SIMPLE_DATADESC( AI_FreePassParams_t )
+IMPLEMENT_REFLECT_DATAMAP_SIMPLE( AI_FreePassParams_t )
 
-	DEFINE_KEYFIELD( timeToTrigger,			FIELD_FLOAT, "freepass_timetotrigger"),
-	DEFINE_KEYFIELD( duration,				FIELD_FLOAT, "freepass_duration"),
-	DEFINE_KEYFIELD( moveTolerance,			FIELD_FLOAT, "freepass_movetolerance"),
-	DEFINE_KEYFIELD( refillRate,			FIELD_FLOAT, "freepass_refillrate"),
-	DEFINE_FIELD(	 coverDist,				FIELD_FLOAT),
-	DEFINE_KEYFIELD( peekTime,				FIELD_FLOAT, "freepass_peektime"),
-	DEFINE_FIELD(	 peekTimeAfterDamage,	FIELD_FLOAT),
-	DEFINE_FIELD(	 peekEyeDist,			FIELD_FLOAT),
-	DEFINE_FIELD(	 peekEyeDistZ,			FIELD_FLOAT),
-
-END_DATADESC()
-
-BEGIN_SIMPLE_DATADESC( CAI_FreePass )
-
-	DEFINE_FIELD( m_hTarget, FIELD_EHANDLE ),
-	DEFINE_FIELD( m_FreePassTimeRemaining,	FIELD_FLOAT ),
-	DEFINE_EMBEDDED( m_FreePassMoveMonitor ), 
-	DEFINE_EMBEDDED( m_Params ), 
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP_SIMPLE( CAI_FreePass )
 
 //---------------------------------------------------------
 //---------------------------------------------------------

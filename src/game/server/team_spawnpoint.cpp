@@ -5,6 +5,8 @@
 // $NoKeywords: $
 //=============================================================================//
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_annotations.h"
 #include "entitylist.h"
 #include "entityoutput.h"
 #include "player.h"
@@ -18,19 +20,7 @@
 
 LINK_ENTITY_TO_CLASS( info_player_teamspawn, CTeamSpawnPoint );
 
-BEGIN_DATADESC( CTeamSpawnPoint )
-
-	// keys
-	DEFINE_KEYFIELD( m_iDisabled, FIELD_INTEGER, "StartDisabled" ),
-
-	// input functions
-	DEFINE_INPUTFUNC( FIELD_VOID, "Enable", InputEnable ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "Disable", InputDisable ),
-
-	// outputs
-	DEFINE_OUTPUT( m_OnPlayerSpawn, "OnPlayerSpawn" ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CTeamSpawnPoint )
 
 
 //-----------------------------------------------------------------------------
@@ -89,12 +79,7 @@ void CTeamSpawnPoint::InputDisable( inputdata_t &inputdata )
 //===========================================================================================================
 LINK_ENTITY_TO_CLASS( info_vehicle_groundspawn, CTeamVehicleSpawnPoint );
 
-BEGIN_DATADESC( CTeamVehicleSpawnPoint )
-
-	// outputs
-	DEFINE_OUTPUT( m_OnVehicleSpawn, "OnVehicleSpawn" ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CTeamVehicleSpawnPoint )
 
 
 //-----------------------------------------------------------------------------

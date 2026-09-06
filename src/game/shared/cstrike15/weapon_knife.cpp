@@ -5,6 +5,15 @@
 //===========================================================================//
 
 #include "cbase.h"
+#include "reflect_predmap.h"
+#include "reflect_annotations.h"
+#ifdef CLIENT_DLL
+#include "reflect_recvtable.h"
+#endif
+#include "reflect_annotations.h"
+#ifdef GAME_DLL
+#include "reflect_sendtable.h"
+#endif
 #include "weapon_knife.h"
 #include "cs_gamerules.h"
 #include "datacache/imdlcache.h"
@@ -94,11 +103,11 @@ Vector head_hull_maxs( 16, 16, 18 );
 
 IMPLEMENT_NETWORKCLASS_ALIASED( Knife, DT_WeaponKnife )
 
-BEGIN_NETWORK_TABLE( CKnife, DT_WeaponKnife )
-END_NETWORK_TABLE()
+IMPLEMENT_REFLECT_TABLE( CKnife, DT_WeaponKnife );
 
-BEGIN_PREDICTION_DATA( CKnife )
-END_PREDICTION_DATA()
+#ifdef CLIENT_DLL
+IMPLEMENT_REFLECT_PREDMAP( CKnife );
+#endif
 
 
 LINK_ENTITY_TO_CLASS_ALIASED( weapon_knife, Knife );
@@ -556,11 +565,11 @@ bool CKnife::CanDrop()
 
 IMPLEMENT_NETWORKCLASS_ALIASED( KnifeGG, DT_WeaponKnifeGG )
 
-BEGIN_NETWORK_TABLE( CKnifeGG, DT_WeaponKnifeGG )
-END_NETWORK_TABLE()
+IMPLEMENT_REFLECT_TABLE( CKnifeGG, DT_WeaponKnifeGG );
 
-BEGIN_PREDICTION_DATA( CKnifeGG )
-END_PREDICTION_DATA()
+#ifdef CLIENT_DLL
+IMPLEMENT_REFLECT_PREDMAP( CKnifeGG );
+#endif
 
 LINK_ENTITY_TO_CLASS_ALIASED( weapon_knifegg, KnifeGG );
 PRECACHE_REGISTER( weapon_knifegg );

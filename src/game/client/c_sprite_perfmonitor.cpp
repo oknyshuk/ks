@@ -5,6 +5,8 @@
 //=============================================================================
 
 #include "cbase.h"
+#include "reflect_recvtable.h"
+#include "reflect_annotations.h"
 
 // NOTE: This has to be the last file included!
 #include "tier0/memdbgon.h"
@@ -18,7 +20,8 @@ void ResetParticlePerformanceCounters( void );
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-class C_ParticlePerformanceMonitor : public C_BaseEntity
+class [[= ks::reflect::NetTable{ .name = "DT_ParticlePerformanceMonitor" } ]]
+      C_ParticlePerformanceMonitor : public C_BaseEntity
 {
 	DECLARE_CLASS( C_ParticlePerformanceMonitor, C_BaseEntity );
 public:
@@ -29,16 +32,13 @@ public:
 	virtual void	OnDataChanged( DataUpdateType_t updateType );
 
 private:
-	bool m_bDisplayPerf;
-	bool m_bMeasurePerf;
+	[[= ks::reflect::Net{} ]] bool m_bDisplayPerf;
+	[[= ks::reflect::Net{} ]] bool m_bMeasurePerf;
 private:
 	C_ParticlePerformanceMonitor( const C_ParticlePerformanceMonitor & );
 };
 
-IMPLEMENT_CLIENTCLASS_DT( C_ParticlePerformanceMonitor, DT_ParticlePerformanceMonitor, CParticlePerformanceMonitor )
-	RecvPropInt( RECVINFO(m_bMeasurePerf) ),
-	RecvPropInt( RECVINFO(m_bDisplayPerf) ),
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS( C_ParticlePerformanceMonitor, DT_ParticlePerformanceMonitor, CParticlePerformanceMonitor )
 
 //-----------------------------------------------------------------------------
 // Purpose: 

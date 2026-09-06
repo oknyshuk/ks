@@ -7,6 +7,11 @@
 
 #ifndef ROPE_H
 #define ROPE_H
+
+#include "reflect_annotations.h"
+#include "rope_shared.h"
+#include "baseentity_shared.h"
+#include "videocfg/videocfg.h"
 #ifdef _WIN32
 #pragma once
 #endif
@@ -16,7 +21,15 @@
 
 #include "positionwatcher.h"
 
-class CRopeKeyframe : public CBaseEntity, public IPositionWatcher
+class [[= ks::reflect::NetTable{ .name = "DT_RopeKeyframe", .base = false } ]]
+      [[= ks::reflect::From<"m_vecOrigin", ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD, .enc = ks::reflect::ENC_VECTOR }>{} ]]
+      [[= ks::reflect::From<"m_hMoveParent", ks::reflect::Net{ .wire = "moveparent" }>{} ]]
+      [[= ks::reflect::From<"m_iParentAttachment", ks::reflect::Net{ .bits = NUM_PARENTATTACHMENT_BITS, .flags = SPROP_UNSIGNED }>{} ]]
+      [[= ks::reflect::From<"m_nMinCPULevel", ks::reflect::Net{ .bits = CPU_LEVEL_BIT_COUNT, .flags = SPROP_UNSIGNED }>{} ]]
+      [[= ks::reflect::From<"m_nMaxCPULevel", ks::reflect::Net{ .bits = CPU_LEVEL_BIT_COUNT, .flags = SPROP_UNSIGNED }>{} ]]
+      [[= ks::reflect::From<"m_nMinGPULevel", ks::reflect::Net{ .bits = GPU_LEVEL_BIT_COUNT, .flags = SPROP_UNSIGNED }>{} ]]
+      [[= ks::reflect::From<"m_nMaxGPULevel", ks::reflect::Net{ .bits = GPU_LEVEL_BIT_COUNT, .flags = SPROP_UNSIGNED }>{} ]]
+      CRopeKeyframe : public CBaseEntity, public IPositionWatcher
 {
 	DECLARE_CLASS( CRopeKeyframe, CBaseEntity );
 public:
@@ -89,9 +102,9 @@ public:
 // Input functions.
 public:
 
-	void InputSetScrollSpeed( inputdata_t &inputdata );
-	void InputSetForce( inputdata_t &inputdata );
-	void InputBreak( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetScrollSpeed", .type = FIELD_FLOAT } ]] void InputSetScrollSpeed( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetForce", .type = FIELD_VECTOR } ]] void InputSetForce( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Break", .type = FIELD_VOID } ]] void InputBreak( inputdata_t &inputdata );
 
 public:
 
@@ -144,45 +157,45 @@ private:
 
 public:
 
-	CNetworkVar( int, m_RopeFlags );		// Combination of ROPE_ defines in rope_shared.h
+	CNetworkVar( int, m_RopeFlags, [[= ks::reflect::Net{ .bits = ROPE_NUMFLAGS, .flags = SPROP_UNSIGNED } ]] );		// Combination of ROPE_ defines in rope_shared.h
 	
-	string_t	m_iNextLinkName;
-	CNetworkVar( int, m_Slack );
-	CNetworkVar( float, m_Width );
-	CNetworkVar( float, m_TextureScale );
-	CNetworkVar( int, m_nSegments );		// Number of segments.
-	CNetworkVar( bool, m_bConstrainBetweenEndpoints );
+	[[= ks::reflect::Key{ .name = "NextKey" } ]] string_t	m_iNextLinkName;
+	CNetworkVar( int, m_Slack, [[= ks::reflect::Net{ .bits = 13 } ]] [[= ks::reflect::Key{ .name = "Slack" } ]] );
+	CNetworkVar( float, m_Width, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE } ]] [[= ks::reflect::Key{ .name = "Width" } ]] );
+	CNetworkVar( float, m_TextureScale, [[= ks::reflect::Net{ .bits = 10, .low = 0.1f, .high = 10.0f } ]] [[= ks::reflect::Key{ .name = "TextureScale" } ]] );
+	CNetworkVar( int, m_nSegments, [[= ks::reflect::Net{ .bits = 4, .flags = SPROP_UNSIGNED } ]] );		// Number of segments.
+	CNetworkVar( bool, m_bConstrainBetweenEndpoints, [[= ks::reflect::Net{} ]] );
 
 	string_t m_strRopeMaterialModel;
-	CNetworkVar( int, m_iRopeMaterialModelIndex );	// Index of sprite model with the rope's material.
+	CNetworkVar( int, m_iRopeMaterialModelIndex, [[= ks::reflect::Net{ .bits = 16, .flags = SPROP_UNSIGNED } ]] );	// Index of sprite model with the rope's material.
 	
 	// Number of subdivisions in between segments.
-	CNetworkVar( int, m_Subdiv );
+	CNetworkVar( int, m_Subdiv, [[= ks::reflect::Net{ .bits = 4, .flags = SPROP_UNSIGNED } ]] [[= ks::reflect::Key{ .name = "Subdiv" } ]] );
 	
 	// Used simply to wake up rope on the client side if it has gone to sleep
-	CNetworkVar( unsigned char, m_nChangeCount );
+	CNetworkVar( unsigned char, m_nChangeCount, [[= ks::reflect::Net{ .bits = 8, .flags = SPROP_UNSIGNED } ]] );
 
 	//EHANDLE		m_hNextLink;
 	
-	CNetworkVar( int, m_RopeLength );	// Rope length at startup, used to calculate tension.
+	CNetworkVar( int, m_RopeLength, [[= ks::reflect::Net{ .bits = 15 } ]] );	// Rope length at startup, used to calculate tension.
 
-	CNetworkVar( int, m_fLockedPoints );
+	CNetworkVar( int, m_fLockedPoints, [[= ks::reflect::Net{ .bits = 4, .flags = SPROP_UNSIGNED } ]] );
 
 	bool		m_bCreatedFromMapFile; // set to false when creating at runtime
 
-	CNetworkVar( float, m_flScrollSpeed );
+	CNetworkVar( float, m_flScrollSpeed, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE } ]] [[= ks::reflect::Key{ .name = "ScrollSpeed" } ]] );
 
-	CNetworkVar( int, m_iDefaultRopeMaterialModelIndex );
+	CNetworkVar( int, m_iDefaultRopeMaterialModelIndex, [[= ks::reflect::Net{ .bits = 16, .flags = SPROP_UNSIGNED } ]] );
 
 private:
 	// Used to detect changes.
 	bool		m_bStartPointValid;
 	bool		m_bEndPointValid;
 	
-	CNetworkHandle( CBaseEntity, m_hStartPoint );		// StartPoint/EndPoint are entities
-	CNetworkHandle( CBaseEntity, m_hEndPoint );
-	CNetworkVar( short, m_iStartAttachment );	// StartAttachment/EndAttachment are attachment points.
-	CNetworkVar( short, m_iEndAttachment );
+	CNetworkHandle( CBaseEntity, m_hStartPoint, [[= ks::reflect::Net{} ]] );		// StartPoint/EndPoint are entities
+	CNetworkHandle( CBaseEntity, m_hEndPoint, [[= ks::reflect::Net{} ]] );
+	CNetworkVar( short, m_iStartAttachment, [[= ks::reflect::Net{ .bits = 5 } ]] );	// StartAttachment/EndAttachment are attachment points.
+	CNetworkVar( short, m_iEndAttachment, [[= ks::reflect::Net{ .bits = 5 } ]] );
 };
 
 

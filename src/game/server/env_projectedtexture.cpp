@@ -5,6 +5,9 @@
 //=============================================================================
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_sendtable.h"
+#include "reflect_annotations.h"
 #include "shareddefs.h"
 #include "env_projectedtexture.h"
 #include "world.h"
@@ -14,76 +17,9 @@
 
 LINK_ENTITY_TO_CLASS( env_projectedtexture, CEnvProjectedTexture );
 
-BEGIN_DATADESC( CEnvProjectedTexture )
-	DEFINE_FIELD( m_hTargetEntity, FIELD_EHANDLE ),
-	DEFINE_FIELD( m_bState, FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_bAlwaysUpdate, FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_bSimpleProjection, FIELD_BOOLEAN ),
-	DEFINE_KEYFIELD( m_flLightFOV, FIELD_FLOAT, "lightfov" ),
-	DEFINE_KEYFIELD( m_bEnableShadows, FIELD_BOOLEAN, "enableshadows" ),
-	DEFINE_KEYFIELD( m_bSimpleProjection, FIELD_BOOLEAN, "simpleprojection" ),
-	DEFINE_KEYFIELD( m_bLightOnlyTarget, FIELD_BOOLEAN, "lightonlytarget" ),
-	DEFINE_KEYFIELD( m_bLightWorld, FIELD_BOOLEAN, "lightworld" ),
-	DEFINE_KEYFIELD( m_bCameraSpace, FIELD_BOOLEAN, "cameraspace" ),
-	DEFINE_KEYFIELD( m_flAmbient, FIELD_FLOAT, "ambient" ),
-	DEFINE_AUTO_ARRAY_KEYFIELD( m_SpotlightTextureName, FIELD_CHARACTER, "texturename" ),
-	DEFINE_KEYFIELD( m_nSpotlightTextureFrame, FIELD_INTEGER, "textureframe" ),
-	DEFINE_KEYFIELD( m_flNearZ, FIELD_FLOAT, "nearz" ),
-	DEFINE_KEYFIELD( m_flFarZ, FIELD_FLOAT, "farz" ),
-	DEFINE_KEYFIELD( m_nShadowQuality, FIELD_INTEGER, "shadowquality" ),
-	DEFINE_KEYFIELD( m_flBrightnessScale, FIELD_FLOAT, "brightnessscale" ),
-	DEFINE_FIELD( m_LightColor, FIELD_COLOR32 ), 
-	DEFINE_KEYFIELD( m_flColorTransitionTime, FIELD_FLOAT, "colortransitiontime" ),
-	DEFINE_KEYFIELD( m_flProjectionSize, FIELD_FLOAT, "projection_size" ),
-	DEFINE_KEYFIELD( m_flRotation, FIELD_FLOAT, "projection_rotation" ),
+IMPLEMENT_REFLECT_DATAMAP( CEnvProjectedTexture )
 
-	DEFINE_KEYFIELD( m_iStyle, FIELD_INTEGER, "style" ),
-	DEFINE_KEYFIELD( m_iDefaultStyle, FIELD_INTEGER, "defaultstyle" ),
-	DEFINE_KEYFIELD( m_iszPattern, FIELD_STRING, "pattern" ),
-
-	DEFINE_INPUTFUNC( FIELD_VOID, "TurnOn", InputTurnOn ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "TurnOff", InputTurnOff ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "AlwaysUpdateOn", InputAlwaysUpdateOn ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "AlwaysUpdateOff", InputAlwaysUpdateOff ),
-	DEFINE_INPUTFUNC( FIELD_FLOAT, "FOV", InputSetFOV ),
-	DEFINE_INPUTFUNC( FIELD_EHANDLE, "Target", InputSetTarget ),
-	DEFINE_INPUTFUNC( FIELD_BOOLEAN, "CameraSpace", InputSetCameraSpace ),
-	DEFINE_INPUTFUNC( FIELD_BOOLEAN, "LightOnlyTarget", InputSetLightOnlyTarget ),
-	DEFINE_INPUTFUNC( FIELD_BOOLEAN, "LightWorld", InputSetLightWorld ),
-	DEFINE_INPUTFUNC( FIELD_BOOLEAN, "EnableShadows", InputSetEnableShadows ),
-	DEFINE_INPUTFUNC( FIELD_COLOR32, "LightColor", InputSetLightColor ),
-	DEFINE_INPUTFUNC( FIELD_FLOAT, "Ambient", InputSetAmbient ),
-	DEFINE_INPUTFUNC( FIELD_STRING, "SpotlightTexture", InputSetSpotlightTexture ),
-	DEFINE_INPUTFUNC( FIELD_INTEGER, "SetLightStyle", InputSetLightStyle ),
-	DEFINE_INPUTFUNC( FIELD_STRING, "SetPattern", InputSetPattern ),
-	DEFINE_INPUTFUNC( FIELD_FLOAT, "SetNearZ", InputSetNearZ ),
-	DEFINE_INPUTFUNC( FIELD_FLOAT, "SetFarZ", InputSetFarZ ),
-	DEFINE_THINKFUNC( InitialThink ),
-END_DATADESC()
-
-IMPLEMENT_SERVERCLASS_ST( CEnvProjectedTexture, DT_EnvProjectedTexture )
-	SendPropEHandle( SENDINFO( m_hTargetEntity ) ),
-	SendPropBool( SENDINFO( m_bState ) ),
-	SendPropBool( SENDINFO( m_bAlwaysUpdate ) ),
-	SendPropFloat( SENDINFO( m_flLightFOV ) ),
-	SendPropBool( SENDINFO( m_bEnableShadows ) ),
-	SendPropBool( SENDINFO( m_bSimpleProjection ) ),
-	SendPropBool( SENDINFO( m_bLightOnlyTarget ) ),
-	SendPropBool( SENDINFO( m_bLightWorld ) ),
-	SendPropBool( SENDINFO( m_bCameraSpace ) ),
-	SendPropFloat( SENDINFO( m_flBrightnessScale ) ),
-	SendPropInt( SENDINFO ( m_LightColor ),	32, SPROP_UNSIGNED, SendProxy_Color32ToInt32 ),
-	SendPropFloat( SENDINFO( m_flColorTransitionTime ) ),
-	SendPropFloat( SENDINFO( m_flAmbient ) ),
-	SendPropString( SENDINFO( m_SpotlightTextureName ) ),
-	SendPropInt( SENDINFO( m_nSpotlightTextureFrame ) ),
-	SendPropFloat( SENDINFO( m_flNearZ ), 16, SPROP_ROUNDDOWN, 0.0f,  500.0f ),
-	SendPropFloat( SENDINFO( m_flFarZ ),  18, SPROP_ROUNDDOWN, 0.0f, 2500.0f ),
-	SendPropInt( SENDINFO( m_nShadowQuality ), 1, SPROP_UNSIGNED ),  // Just one bit for now
-	SendPropFloat( SENDINFO( m_flProjectionSize ) ),
-	SendPropFloat( SENDINFO( m_flRotation ) ),
-	SendPropInt( SENDINFO( m_iStyle ) ),
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CEnvProjectedTexture, DT_EnvProjectedTexture )
 
 //-----------------------------------------------------------------------------
 // Purpose: 

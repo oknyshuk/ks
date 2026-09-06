@@ -11,6 +11,8 @@
 // $NoKeywords: $
 //=============================================================================//
 #include "cbase.h"
+#include "reflect_sendtable.h"
+#include "reflect_annotations.h"
 #include "basetempentity.h"
 #include "te_basebeam.h"
 
@@ -22,7 +24,8 @@ extern int	g_sModelIndexSmoke;			// (in combatweapon.cpp) holds the index for th
 //-----------------------------------------------------------------------------
 // Purpose: Dispatches a beam ring between two entities
 //-----------------------------------------------------------------------------
-class CTEBeamRingPoint : public CTEBaseBeam
+class [[= ks::reflect::NetTable{ .name = "DT_TEBeamRingPoint" } ]]
+      CTEBeamRingPoint : public CTEBaseBeam
 {
 public:
 	DECLARE_CLASS( CTEBeamRingPoint, CTEBaseBeam );
@@ -34,9 +37,9 @@ public:
 	virtual void	Test( const Vector& current_origin, const QAngle& current_angles );
 
 public:
-	CNetworkVector( m_vecCenter );
-	CNetworkVar( float, m_flStartRadius );
-	CNetworkVar( float, m_flEndRadius );
+	CNetworkVector( m_vecCenter, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD, .enc = ks::reflect::ENC_VECTOR } ]] );
+	CNetworkVar( float, m_flStartRadius, [[= ks::reflect::Net{ .bits = 16, .low = 0.0f, .high = 4096.0f, .flags = SPROP_ROUNDUP } ]] );
+	CNetworkVar( float, m_flEndRadius, [[= ks::reflect::Net{ .bits = 16, .low = 0.0f, .high = 4096.0f, .flags = SPROP_ROUNDUP } ]] );
 };
 
 //-----------------------------------------------------------------------------
@@ -86,11 +89,7 @@ void CTEBeamRingPoint::Test( const Vector& current_origin, const QAngle& current
 }
 
 
-IMPLEMENT_SERVERCLASS_ST( CTEBeamRingPoint, DT_TEBeamRingPoint)
-	SendPropVector( SENDINFO(m_vecCenter), -1, SPROP_COORD ),
-	SendPropFloat( SENDINFO(m_flStartRadius), 16, SPROP_ROUNDUP, 0.0f, 4096.0f ),
-	SendPropFloat( SENDINFO(m_flEndRadius), 16, SPROP_ROUNDUP, 0.0f, 4096.0f ),
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CTEBeamRingPoint, DT_TEBeamRingPoint )
 
 
 // Singleton to fire TEBeamRingPoint objects

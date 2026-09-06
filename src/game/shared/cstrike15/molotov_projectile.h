@@ -7,6 +7,8 @@
 #if !defined( MOLOTOV_PROJECTILE_H )
 #define MOLOTOV_PROJECTILE_H
 
+#include "reflect_annotations.h"
+
 #if defined( _WIN32 )
 	#pragma once
 #endif
@@ -15,7 +17,9 @@
 
 #if defined( CLIENT_DLL )
 	
-class C_MolotovProjectile : public C_BaseCSGrenadeProjectile
+class [[= ks::reflect::NetTable{ .name = "DT_MolotovProjectile" } ]]
+      [[= ks::reflect::From<"m_bIsIncGrenade", ks::reflect::Net{}>{} ]]
+      C_MolotovProjectile : public C_BaseCSGrenadeProjectile
 {
 public:
 	DECLARE_CLASS( C_MolotovProjectile, C_BaseCSGrenadeProjectile );
@@ -36,7 +40,8 @@ private:
 
 #else // GAME_DLL
 
-class CMolotovProjectile : public CBaseCSGrenadeProjectile
+class [[= ks::reflect::NetTable{ .name = "DT_MolotovProjectile" } ]]
+      CMolotovProjectile : public CBaseCSGrenadeProjectile
 {
 public:
 	DECLARE_CLASS( CMolotovProjectile, CBaseCSGrenadeProjectile );
@@ -69,10 +74,10 @@ public:
 		CBaseCombatCharacter *pOwner,
 		const CCSWeaponInfo& weaponInfo );
 
-	void	InitializeSpawnFromWorld( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "InitializeSpawnFromWorld", .type = FIELD_VOID } ]] void	InitializeSpawnFromWorld( inputdata_t &inputdata );
 
 protected:
-	CNetworkVar( bool, m_bIsIncGrenade );
+	CNetworkVar( bool, m_bIsIncGrenade, [[= ks::reflect::Net{} ]] );
 
 private:
 	void DetonateThink( void );

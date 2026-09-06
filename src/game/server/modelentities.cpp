@@ -5,6 +5,9 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_sendtable.h"
+#include "reflect_annotations.h"
 #include "entityoutput.h"
 #include "ndebugoverlay.h"
 #include "modelentities.h"
@@ -19,24 +22,9 @@ extern ConVar	showtriggers;
 
 LINK_ENTITY_TO_CLASS( func_brush, CFuncBrush );
 
-BEGIN_DATADESC( CFuncBrush )
+IMPLEMENT_REFLECT_DATAMAP( CFuncBrush )
 
-	DEFINE_INPUTFUNC( FIELD_VOID, "Enable", InputTurnOn ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "Disable", InputTurnOff ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "Toggle", InputToggle ),
-	DEFINE_KEYFIELD( m_iDisabled, FIELD_INTEGER, "StartDisabled" ),
-	DEFINE_KEYFIELD( m_iSolidity, FIELD_INTEGER, "Solidity" ),
-	DEFINE_KEYFIELD( m_bSolidBsp, FIELD_BOOLEAN, "solidbsp" ),
-	DEFINE_KEYFIELD( m_iszExcludedClass, FIELD_STRING, "excludednpc" ),
-	DEFINE_KEYFIELD( m_bInvertExclusion, FIELD_BOOLEAN, "invert_exclusion" ),
-
-	DEFINE_INPUTFUNC( FIELD_STRING, "SetExcluded", InputSetExcluded ),
-	DEFINE_INPUTFUNC( FIELD_BOOLEAN, "SetInvert", InputSetInvert ),
-
-END_DATADESC()
-
-IMPLEMENT_SERVERCLASS_ST(CFuncBrush, DT_FuncBrush)
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CFuncBrush, DT_FuncBrush )
 
 void CFuncBrush::Spawn( void )
 {
@@ -266,44 +254,32 @@ public:
 	bool PassesInputFilter( CBaseEntity *pOther, int filter );
 
 	// input functions
-	void InputEnable( inputdata_t &inputdata )
+	[[= ks::reflect::Input{ .name = "Enable", .type = FIELD_VOID } ]] void InputEnable( inputdata_t &inputdata )
 	{
 		RemoveFlag( FL_DONTTOUCH );
 	}
 
-	void InputDisable( inputdata_t &inputdata )
+	[[= ks::reflect::Input{ .name = "Disable", .type = FIELD_VOID } ]] void InputDisable( inputdata_t &inputdata )
 	{
 		// this ensures that all the remaining EndTouch() calls still get passed through
 		AddFlag( FL_DONTTOUCH );
 	}
 
 	// outputs
-	COutputEvent m_OnStartTouch;
-	COutputEvent m_OnEndTouch;
-	COutputEvent m_OnUse;
+	[[= ks::reflect::Key{ .name = "OnStartTouch" } ]] COutputEvent m_OnStartTouch;
+	[[= ks::reflect::Key{ .name = "OnEndTouch" } ]] COutputEvent m_OnEndTouch;
+	[[= ks::reflect::Key{ .name = "OnUse" } ]] COutputEvent m_OnUse;
 
 	// data
-	int m_iInputFilter;
-	int m_iDontMessageParent;
+	[[= ks::reflect::Key{ .name = "InputFilter" } ]] int m_iInputFilter;
+	[[= ks::reflect::Key{ .name = "DontMessageParent" } ]] int m_iDontMessageParent;
 
 	DECLARE_DATADESC();
 };
 
 LINK_ENTITY_TO_CLASS( trigger_brush, CTriggerBrush );
 
-BEGIN_DATADESC( CTriggerBrush )
-
-	DEFINE_KEYFIELD( m_iInputFilter, FIELD_INTEGER, "InputFilter" ),
-	DEFINE_KEYFIELD( m_iDontMessageParent, FIELD_INTEGER, "DontMessageParent" ),
-
-	DEFINE_OUTPUT( m_OnStartTouch, "OnStartTouch" ),
-	DEFINE_OUTPUT( m_OnEndTouch, "OnEndTouch" ),
-	DEFINE_OUTPUT( m_OnUse, "OnUse" ),
-
-	DEFINE_INPUTFUNC( FIELD_VOID, "Disable", InputDisable ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "Enable", InputEnable ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CTriggerBrush )
 
 
 void CTriggerBrush::Spawn( void )

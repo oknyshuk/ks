@@ -5,6 +5,9 @@
 //=============================================================================
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_sendtable.h"
+#include "reflect_annotations.h"
 #include "postprocesscontroller.h"
 #include "entityinput.h"
 #include "entityoutput.h"
@@ -30,37 +33,9 @@ CPostProcessSystem *PostProcessSystem( void )
 
 LINK_ENTITY_TO_CLASS( postprocess_controller, CPostProcessController );
 
-BEGIN_DATADESC( CPostProcessController )
-	DEFINE_KEYFIELD( m_flPostProcessParameters[ PPPN_FADE_TIME ], FIELD_FLOAT,	"fadetime" ),
-	DEFINE_KEYFIELD( m_flPostProcessParameters[ PPPN_LOCAL_CONTRAST_STRENGTH ], FIELD_FLOAT,	"localcontraststrength" ),
-	DEFINE_KEYFIELD( m_flPostProcessParameters[ PPPN_LOCAL_CONTRAST_EDGE_STRENGTH ], FIELD_FLOAT,	"localcontrastedgestrength" ),
-	DEFINE_KEYFIELD( m_flPostProcessParameters[ PPPN_VIGNETTE_START ], FIELD_TIME,	"vignettestart" ),
-	DEFINE_KEYFIELD( m_flPostProcessParameters[ PPPN_VIGNETTE_END ], FIELD_TIME,	"vignetteend" ),
-	DEFINE_KEYFIELD( m_flPostProcessParameters[ PPPN_VIGNETTE_BLUR_STRENGTH ], FIELD_FLOAT,	"vignetteblurstrength" ),
-	DEFINE_KEYFIELD( m_flPostProcessParameters[ PPPN_FADE_TO_BLACK_STRENGTH ], FIELD_FLOAT,	"fadetoblackstrength" ),
-	DEFINE_KEYFIELD( m_flPostProcessParameters[ PPPN_DEPTH_BLUR_FOCAL_DISTANCE ], FIELD_FLOAT, "depthblurfocaldistance" ),
-	DEFINE_KEYFIELD( m_flPostProcessParameters[ PPPN_DEPTH_BLUR_STRENGTH ], FIELD_FLOAT, "depthblurstrength" ),
-	DEFINE_KEYFIELD( m_flPostProcessParameters[ PPPN_SCREEN_BLUR_STRENGTH ], FIELD_FLOAT, "screenblurstrength" ),
-	DEFINE_KEYFIELD( m_flPostProcessParameters[ PPPN_FILM_GRAIN_STRENGTH ], FIELD_FLOAT, "filmgrainstrength" ),
+IMPLEMENT_REFLECT_DATAMAP( CPostProcessController )
 
-	// Inputs
-	DEFINE_INPUTFUNC( FIELD_FLOAT, "SetFadeTime", InputSetFadeTime ),
-	DEFINE_INPUTFUNC( FIELD_FLOAT, "SetLocalContrastStrength", InputSetLocalContrastStrength ),
-	DEFINE_INPUTFUNC( FIELD_FLOAT, "SetLocalContrastEdgeStrength", InputSetLocalContrastEdgeStrength ),
-	DEFINE_INPUTFUNC( FIELD_FLOAT, "SetVignetteStart", InputSetVignetteStart ),
-	DEFINE_INPUTFUNC( FIELD_FLOAT, "SetVignetteEnd", InputSetVignetteEnd ),
-	DEFINE_INPUTFUNC( FIELD_FLOAT, "SetVignetteBlurStrength", InputSetVignetteBlurStrength ),
-	DEFINE_INPUTFUNC( FIELD_FLOAT, "SetFadeToBlackStrength", InputSetFadeToBlackStrength ),
-	DEFINE_INPUTFUNC( FIELD_FLOAT, "SetDepthBlurFocalDistance", InputSetDepthBlurFocalDistance),
-	DEFINE_INPUTFUNC( FIELD_FLOAT, "SetDepthBlurStrength", InputSetDepthBlurStrength ),
-	DEFINE_INPUTFUNC( FIELD_FLOAT, "SetScreenBlurStrength", InputSetScreenBlurStrength ),
-	DEFINE_INPUTFUNC( FIELD_FLOAT, "SetFilmGrainStrength", InputSetFilmGrainStrength ),
-END_DATADESC()
-
-IMPLEMENT_SERVERCLASS_ST( CPostProcessController, DT_PostProcessController )
-	SendPropArray3( SENDINFO_ARRAY3( m_flPostProcessParameters ), SendPropFloat( SENDINFO_ARRAY( m_flPostProcessParameters ) ) ),
-	SendPropBool( SENDINFO(m_bMaster) ),
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CPostProcessController, DT_PostProcessController )
 
 
 CPostProcessController::CPostProcessController()

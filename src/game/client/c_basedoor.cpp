@@ -5,6 +5,8 @@
 // $NoKeywords: $
 //=============================================================================//
 #include "cbase.h"
+#include "reflect_recvtable.h"
+#include "reflect_annotations.h"
 #include "c_basedoor.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
@@ -14,9 +16,7 @@
 #undef CBaseDoor
 #endif
 
-IMPLEMENT_CLIENTCLASS_DT(C_BaseDoor, DT_BaseDoor, CBaseDoor)
-	RecvPropFloat(RECVINFO(m_flWaveHeight)),
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS( C_BaseDoor, DT_BaseDoor, CBaseDoor )
 
 C_BaseDoor::C_BaseDoor( void )
 {

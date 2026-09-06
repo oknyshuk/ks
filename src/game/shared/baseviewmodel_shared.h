@@ -7,6 +7,11 @@
 
 #ifndef BASEVIEWMODEL_SHARED_H
 #define BASEVIEWMODEL_SHARED_H
+
+#include "reflect_annotations.h"
+#include "dt_recv.h"
+#include "const.h"
+#include "shareddefs.h"
 #ifdef _WIN32
 #pragma once
 #endif
@@ -20,6 +25,17 @@
 #ifdef CSTRIKE15
 #include "cs_shareddefs.h"
 #endif
+
+void RecvProxy_EffectFlags( const CRecvProxyData *pData, void *pStruct, void *pOut );
+
+
+void RecvProxy_Viewmodel( const CRecvProxyData *pData, void *pStruct, void *pOut );
+
+void RecvProxy_ViewmodelSequenceNum( const CRecvProxyData *pData, void *pStruct, void *pOut );
+
+void RecvProxy_Weapon( const CRecvProxyData *pData, void *pStruct, void *pOut );
+
+void RecvProxy_Owner( const CRecvProxyData *pData, void *pStruct, void *pOut );
 
 class CBaseCombatWeapon;
 class CBaseCombatCharacter;
@@ -54,7 +70,28 @@ private:
 
 #define VIEWMODEL_INDEX_BITS 1
 
-class CBaseViewModel : public CBaseAnimating, public IHasOwner
+class [[= ks::reflect::NetTable{ .name = "DT_BaseViewModel", .base = false } ]]
+      [[= ks::reflect::From<"m_nModelIndex", ks::reflect::Net{ .enc = ks::reflect::ENC_MODELINDEX, .side = ks::reflect::WIRE_SEND }>{} ]]
+      [[= ks::reflect::From<"m_nModelIndex", ks::reflect::Net{ .side = ks::reflect::WIRE_RECV }, RecvProxy_Viewmodel>{} ]]
+      [[= ks::reflect::From<"m_nBody", ks::reflect::Net{ .bits = ANIMATION_BODY_BITS }>{} ]]
+      [[= ks::reflect::From<"m_nSkin", ks::reflect::Net{ .bits = 10 }>{} ]]
+      [[= ks::reflect::From<"m_nSequence", ks::reflect::Net{ .bits = 8, .flags = SPROP_UNSIGNED, .side = ks::reflect::WIRE_SEND }>{} ]]
+      [[= ks::reflect::From<"m_nSequence", ks::reflect::Net{ .side = ks::reflect::WIRE_RECV }, RecvProxy_ViewmodelSequenceNum>{} ]]
+      [[= ks::reflect::From<"m_flPlaybackRate", ks::reflect::Net{ .bits = 8, .low = -4.0, .high = 12.0f, .flags = SPROP_ROUNDUP }>{} ]]
+      [[= ks::reflect::From<"m_fEffects", ks::reflect::Net{ .bits = EF_MAX_BITS, .flags = SPROP_UNSIGNED, .side = ks::reflect::WIRE_SEND }>{} ]]
+      [[= ks::reflect::From<"m_fEffects", ks::reflect::Net{ .side = ks::reflect::WIRE_RECV }, RecvProxy_EffectFlags>{} ]]
+      [[= ks::reflect::From<"m_nNewSequenceParity", ks::reflect::Net{ .bits = EF_PARITY_BITS, .flags = SPROP_UNSIGNED }>{} ]]
+      [[= ks::reflect::From<"m_nResetEventsParity", ks::reflect::Net{ .bits = EF_PARITY_BITS, .flags = SPROP_UNSIGNED }>{} ]]
+      [[= ks::reflect::From<"m_nMuzzleFlashParity", ks::reflect::Net{ .bits = EF_MUZZLEFLASH_BITS, .flags = SPROP_UNSIGNED }>{} ]]
+      [[= ks::reflect::PredFrom<"m_nModelIndex", ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE | FTYPEDESC_MODELINDEX } >{} ]]
+      [[= ks::reflect::PredFrom<"m_nSkin", ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } >{} ]]
+      [[= ks::reflect::PredFrom<"m_nBody", ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } >{} ]]
+      [[= ks::reflect::PredFrom<"m_nSequence", ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } >{} ]]
+      [[= ks::reflect::PredFrom<"m_flPlaybackRate", ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE, .tolerance = 0.125f } >{} ]]
+      [[= ks::reflect::PredFrom<"m_fEffects", ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE | FTYPEDESC_OVERRIDE } >{} ]]
+      [[= ks::reflect::PredFrom<"m_flAnimTime", ks::reflect::Pred{ .flags = 0 } >{} ]]
+      [[= ks::reflect::PredFrom<"m_flCycle", ks::reflect::Pred{ .flags = FTYPEDESC_PRIVATE | FTYPEDESC_OVERRIDE | FTYPEDESC_NOERRORCHECK } >{} ]]
+      CBaseViewModel : public CBaseAnimating, public IHasOwner
 {
 	DECLARE_CLASS( CBaseViewModel, CBaseAnimating );
 public:
@@ -63,7 +100,6 @@ public:
 	DECLARE_PREDICTABLE();
 
 #if !defined( CLIENT_DLL )
-	DECLARE_DATADESC();
 #endif
 
 							CBaseViewModel( void );
@@ -135,7 +171,7 @@ public:
 	void					RemoveViewmodelStatTrak( void );
 	void					RemoveViewmodelStickers( void );
 
-	CNetworkVar(bool, m_bShouldIgnoreOffsetAndAccuracy );
+	CNetworkVar(bool, m_bShouldIgnoreOffsetAndAccuracy, [[= ks::reflect::Net{} ]] );
 	virtual void			SetShouldIgnoreOffsetAndAccuracy( bool bIgnore ) { m_bShouldIgnoreOffsetAndAccuracy = bIgnore; }
 
 #if !defined( CLIENT_DLL )
@@ -222,13 +258,13 @@ private:
 private:
 	typedef CHandle< CBaseCombatWeapon > CBaseCombatWeaponHandle;
 // FTYPEDESC_INSENDTABLE STUFF
-	CNetworkVar( int, m_nViewModelIndex );		// Which viewmodel is it?
+	CNetworkVar( int, m_nViewModelIndex, [[= ks::reflect::Net{ .bits = VIEWMODEL_INDEX_BITS, .flags = SPROP_UNSIGNED } ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] );		// Which viewmodel is it?
 	// Used to force restart on client, only needs a few bits
-	CNetworkVar( int, m_nAnimationParity );
-	CNetworkVar( CBaseCombatWeaponHandle, m_hWeapon );
+	CNetworkVar( int, m_nAnimationParity, [[= ks::reflect::Net{ .bits = 3, .flags = SPROP_UNSIGNED } ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] );
+	CNetworkVar( CBaseCombatWeaponHandle, m_hWeapon, [[= ks::reflect::Net{} ]] [[= ks::reflect::Proxy<RecvProxy_Weapon, ks::reflect::WIRE_RECV>{} ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] );
 // FTYPEDESC_INSENDTABLE STUFF (end)
 
-	CNetworkHandle( CBaseEntity, m_hOwner );				// Player or AI carrying this weapon
+	CNetworkHandle( CBaseEntity, m_hOwner, [[= ks::reflect::Net{} ]] [[= ks::reflect::Proxy<RecvProxy_Owner, ks::reflect::WIRE_RECV>{} ]] );				// Player or AI carrying this weapon
 
 	// soonest time Update will call WeaponIdle
 	float					m_flTimeWeaponIdle;							

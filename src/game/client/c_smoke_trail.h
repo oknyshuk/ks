@@ -11,6 +11,8 @@
 #ifndef PARTICLE_SMOKETRAIL_H
 #define PARTICLE_SMOKETRAIL_H
 
+#include "reflect_annotations.h"
+
 #include "particlemgr.h"
 #include "particle_prototype.h"
 #include "particle_util.h"
@@ -24,7 +26,8 @@
 // Smoke Trail
 //
 
-class C_SmokeTrail : public C_BaseParticleEntity, public IPrototypeAppEffect
+class [[= ks::reflect::NetTable{ .name = "DT_SmokeTrail" } ]]
+      C_SmokeTrail : public C_BaseParticleEntity, public IPrototypeAppEffect
 {
 public:
 	DECLARE_CLASS( C_SmokeTrail, C_BaseParticleEntity );
@@ -64,31 +67,31 @@ public:
 
 public:
 	// Effect parameters. These will assume default values but you can change them.
-	float			m_SpawnRate;			// How many particles per second.
+	[[= ks::reflect::Net{} ]] float			m_SpawnRate;			// How many particles per second.
 
-	Vector			m_StartColor;			// Fade between these colors.
-	Vector			m_EndColor;
-	float			m_Opacity;
+	[[= ks::reflect::Net{} ]] Vector			m_StartColor;			// Fade between these colors.
+	[[= ks::reflect::Net{} ]] Vector			m_EndColor;
+	[[= ks::reflect::Net{} ]] float			m_Opacity;
 
-	float			m_ParticleLifetime;		// How long do the particles live?
-	float			m_StopEmitTime;			// When do I stop emitting particles? (-1 = never)
+	[[= ks::reflect::Net{} ]] float			m_ParticleLifetime;		// How long do the particles live?
+	[[= ks::reflect::Net{} ]] float			m_StopEmitTime;			// When do I stop emitting particles? (-1 = never)
 	
-	float			m_MinSpeed;				// Speed range.
-	float			m_MaxSpeed;
+	[[= ks::reflect::Net{} ]] float			m_MinSpeed;				// Speed range.
+	[[= ks::reflect::Net{} ]] float			m_MaxSpeed;
 	
-	float			m_MinDirectedSpeed;		// Directed speed range.
-	float			m_MaxDirectedSpeed;
+	[[= ks::reflect::Net{} ]] float			m_MinDirectedSpeed;		// Directed speed range.
+	[[= ks::reflect::Net{} ]] float			m_MaxDirectedSpeed;
 
-	float			m_StartSize;			// Size ramp.
-	float			m_EndSize;
+	[[= ks::reflect::Net{} ]] float			m_StartSize;			// Size ramp.
+	[[= ks::reflect::Net{} ]] float			m_EndSize;
 
-	float			m_SpawnRadius;
+	[[= ks::reflect::Net{} ]] float			m_SpawnRadius;
 
 	Vector			m_VelocityOffset;		// Emit the particles in a certain direction.
 
-	bool			m_bEmit;				// Keep emitting particles?
+	[[= ks::reflect::Net{} ]] bool			m_bEmit;				// Keep emitting particles?
 
-	int				m_nAttachment;
+	[[= ks::reflect::Net{} ]] int				m_nAttachment;
 
 private:
 	C_SmokeTrail( const C_SmokeTrail & );
@@ -104,7 +107,8 @@ private:
 // C_RocketTrail
 //==================================================
 
-class C_RocketTrail : public C_BaseParticleEntity, public IPrototypeAppEffect
+class [[= ks::reflect::NetTable{ .name = "DT_RocketTrail" } ]]
+      C_RocketTrail : public C_BaseParticleEntity, public IPrototypeAppEffect
 {
 public:
 	DECLARE_CLASS( C_RocketTrail, C_BaseParticleEntity );
@@ -142,32 +146,32 @@ public:
 
 public:
 	// Effect parameters. These will assume default values but you can change them.
-	float			m_SpawnRate;			// How many particles per second.
+	[[= ks::reflect::Net{} ]] float			m_SpawnRate;			// How many particles per second.
 
-	Vector			m_StartColor;			// Fade between these colors.
-	Vector			m_EndColor;
-	float			m_Opacity;
+	[[= ks::reflect::Net{} ]] Vector			m_StartColor;			// Fade between these colors.
+	[[= ks::reflect::Net{} ]] Vector			m_EndColor;
+	[[= ks::reflect::Net{} ]] float			m_Opacity;
 
-	float			m_ParticleLifetime;		// How long do the particles live?
-	float			m_StopEmitTime;			// When do I stop emitting particles? (-1 = never)
+	[[= ks::reflect::Net{} ]] float			m_ParticleLifetime;		// How long do the particles live?
+	[[= ks::reflect::Net{} ]] float			m_StopEmitTime;			// When do I stop emitting particles? (-1 = never)
 	
-	float			m_MinSpeed;				// Speed range.
-	float			m_MaxSpeed;
+	[[= ks::reflect::Net{} ]] float			m_MinSpeed;				// Speed range.
+	[[= ks::reflect::Net{} ]] float			m_MaxSpeed;
 	
-	float			m_StartSize;			// Size ramp.
-	float			m_EndSize;
+	[[= ks::reflect::Net{} ]] float			m_StartSize;			// Size ramp.
+	[[= ks::reflect::Net{} ]] float			m_EndSize;
 
-	float			m_SpawnRadius;
+	[[= ks::reflect::Net{} ]] float			m_SpawnRadius;
 
 	Vector			m_VelocityOffset;		// Emit the particles in a certain direction.
 
-	bool			m_bEmit;				// Keep emitting particles?
-	bool			m_bDamaged;				// Has been shot down (should be on fire, etc)
+	[[= ks::reflect::Net{} ]] bool			m_bEmit;				// Keep emitting particles?
+	[[= ks::reflect::Net{} ]] bool			m_bDamaged;				// Has been shot down (should be on fire, etc)
 
-	int				m_nAttachment;
+	[[= ks::reflect::Net{} ]] int				m_nAttachment;
 
 	Vector			m_vecLastPosition;		// Last known position of the rocket
-	float			m_flFlareScale;			// Size of the flare
+	[[= ks::reflect::Net{} ]] float			m_flFlareScale;			// Size of the flare
 
 private:
 	C_RocketTrail( const C_RocketTrail & );
@@ -204,7 +208,8 @@ private:
 // C_SporeExplosion
 //==================================================
 
-class C_SporeExplosion : public C_BaseParticleEntity, public IPrototypeAppEffect
+class [[= ks::reflect::NetTable{ .name = "DT_SporeExplosion" } ]]
+      C_SporeExplosion : public C_BaseParticleEntity, public IPrototypeAppEffect
 {
 public:
 	DECLARE_CLASS( C_SporeExplosion, C_BaseParticleEntity );
@@ -231,15 +236,15 @@ public:
 
 
 public:
-	float	m_flSpawnRate;
-	float	m_flParticleLifetime;
-	float	m_flStartSize;
-	float	m_flEndSize;
-	float	m_flSpawnRadius;
+	[[= ks::reflect::Net{} ]] float	m_flSpawnRate;
+	[[= ks::reflect::Net{} ]] float	m_flParticleLifetime;
+	[[= ks::reflect::Net{} ]] float	m_flStartSize;
+	[[= ks::reflect::Net{} ]] float	m_flEndSize;
+	[[= ks::reflect::Net{} ]] float	m_flSpawnRadius;
 	float	m_flPreviousSpawnRate;
 
-	bool	m_bEmit;
-	bool	m_bDontRemove;
+	[[= ks::reflect::Net{} ]] bool	m_bEmit;
+	[[= ks::reflect::Net{} ]] bool	m_bDontRemove;
 
 private:
 	C_SporeExplosion( const C_SporeExplosion & );
@@ -259,7 +264,10 @@ private:
 
 class CSmokeParticle;
 
-class C_FireTrail : public C_ParticleTrail
+class [[= ks::reflect::NetTable{ .name = "DT_FireTrail" } ]]
+      [[= ks::reflect::From<"m_nAttachment", ks::reflect::Net{}>{} ]]
+      [[= ks::reflect::From<"m_flLifetime", ks::reflect::Net{}>{} ]]
+      C_FireTrail : public C_ParticleTrail
 {
 public:
 	DECLARE_CLASS( C_FireTrail, C_ParticleTrail );
@@ -355,7 +363,8 @@ private:
 // C_DustTrail
 //==================================================
 
-class C_DustTrail : public C_BaseParticleEntity, public IPrototypeAppEffect
+class [[= ks::reflect::NetTable{ .name = "DT_DustTrail" } ]]
+      C_DustTrail : public C_BaseParticleEntity, public IPrototypeAppEffect
 {
 public:
 	DECLARE_CLASS( C_DustTrail, C_BaseParticleEntity );
@@ -392,29 +401,29 @@ public:
 
 public:
 	// Effect parameters. These will assume default values but you can change them.
-	float			m_SpawnRate;			// How many particles per second.
+	[[= ks::reflect::Net{} ]] float			m_SpawnRate;			// How many particles per second.
 
-	Vector			m_Color;
-	float			m_Opacity;
+	[[= ks::reflect::Net{} ]] Vector			m_Color;
+	[[= ks::reflect::Net{} ]] float			m_Opacity;
 
-	float			m_ParticleLifetime;		// How long do the particles live?
+	[[= ks::reflect::Net{} ]] float			m_ParticleLifetime;		// How long do the particles live?
 	float			m_StartEmitTime;		// When did I start emitting particles?
-	float			m_StopEmitTime;			// When do I stop emitting particles? (-1 = never)
+	[[= ks::reflect::Net{} ]] float			m_StopEmitTime;			// When do I stop emitting particles? (-1 = never)
 	
-	float			m_MinSpeed;				// Speed range.
-	float			m_MaxSpeed;
+	[[= ks::reflect::Net{} ]] float			m_MinSpeed;				// Speed range.
+	[[= ks::reflect::Net{} ]] float			m_MaxSpeed;
 	
-	float			m_MinDirectedSpeed;		// Directed speed range.
-	float			m_MaxDirectedSpeed;
+	[[= ks::reflect::Net{} ]] float			m_MinDirectedSpeed;		// Directed speed range.
+	[[= ks::reflect::Net{} ]] float			m_MaxDirectedSpeed;
 
-	float			m_StartSize;			// Size ramp.
-	float			m_EndSize;
+	[[= ks::reflect::Net{} ]] float			m_StartSize;			// Size ramp.
+	[[= ks::reflect::Net{} ]] float			m_EndSize;
 
-	float			m_SpawnRadius;
+	[[= ks::reflect::Net{} ]] float			m_SpawnRadius;
 
 	Vector			m_VelocityOffset;		// Emit the particles in a certain direction.
 
-	bool			m_bEmit;				// Keep emitting particles?
+	[[= ks::reflect::Net{} ]] bool			m_bEmit;				// Keep emitting particles?
 
 private:
 	C_DustTrail( const C_DustTrail & );

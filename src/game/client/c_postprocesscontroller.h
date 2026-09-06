@@ -11,12 +11,16 @@
 #endif
 
 #include "postprocess_shared.h"
+#include "reflect_annotations.h"
 
 //=============================================================================
 //
 // Class Postprocess Controller:
 //
-class C_PostProcessController : public C_BaseEntity
+class [[= ks::reflect::NetTable{ .name = "DT_PostProcessController" } ]]
+      [[= ks::reflect::From<"m_PostProcessParameters.m_flParameters",
+                            ks::reflect::Net{ .wire = "m_flPostProcessParameters" }>{} ]]
+      C_PostProcessController : public C_BaseEntity
 {
 	DECLARE_CLASS( C_PostProcessController, C_BaseEntity );
 public:
@@ -32,7 +36,7 @@ public:
 	PostProcessParameters_t	m_PostProcessParameters;
 	
 private:
-	bool m_bMaster;
+	[[= ks::reflect::Net{} ]] bool m_bMaster;
 
 	static C_PostProcessController* ms_pMasterController;
 };

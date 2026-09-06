@@ -10,6 +10,8 @@
 #ifndef C_PHYSICS_PROP_STATUE_H
 #define C_PHYSICS_PROP_STATUE_H
 
+#include "reflect_annotations.h"
+
 #ifdef _WIN32
 #pragma once
 #endif
@@ -20,7 +22,8 @@
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-class C_StatueProp : public C_PhysicsProp
+class [[= ks::reflect::NetTable{ .name = "DT_StatueProp" } ]]
+      C_StatueProp : public C_PhysicsProp
 {
 public:
 	DECLARE_CLASS( C_StatueProp, C_PhysicsProp );
@@ -37,12 +40,12 @@ public:
 
 public:
 
-	CHandle<CBaseAnimating>		m_hInitBaseAnimating;
+	[[= ks::reflect::Net{} ]] CHandle<CBaseAnimating>		m_hInitBaseAnimating;
 
-	bool	m_bShatter;
-	int		m_nShatterFlags;
-	Vector	m_vShatterPosition;
-	Vector	m_vShatterForce;
+	[[= ks::reflect::Net{} ]] bool	m_bShatter;
+	[[= ks::reflect::Net{} ]] int		m_nShatterFlags;
+	[[= ks::reflect::Net{} ]] Vector	m_vShatterPosition;
+	[[= ks::reflect::Net{} ]] Vector	m_vShatterForce;
 };
 
 

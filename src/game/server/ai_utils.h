@@ -243,13 +243,13 @@ private:
 
 struct AI_FreePassParams_t
 {
-	float timeToTrigger;		// How long after not detected to issue pass
-	float duration;				// How long in the open pass before revoked
-	float moveTolerance;		// How far in open needed to move to revoke pass
-	float refillRate;			// After hiding again during pass, how quickly to reinstitute pass(seconds per second)
+	[[= ks::reflect::Key{ .name = "freepass_timetotrigger" } ]] float timeToTrigger;		// How long after not detected to issue pass
+	[[= ks::reflect::Key{ .name = "freepass_duration" } ]] float duration;				// How long in the open pass before revoked
+	[[= ks::reflect::Key{ .name = "freepass_movetolerance" } ]] float moveTolerance;		// How far in open needed to move to revoke pass
+	[[= ks::reflect::Key{ .name = "freepass_refillrate" } ]] float refillRate;			// After hiding again during pass, how quickly to reinstitute pass(seconds per second)
 	float coverDist;			// When hiding, how far from an obstructing object needed to be considered in cover
 	
-	float peekTime;				// How long allowed to peek
+	[[= ks::reflect::Key{ .name = "freepass_peektime" } ]] float peekTime;				// How long allowed to peek
 	float peekTimeAfterDamage;	// How long allowed to peek after damaged by
 	float peekEyeDist;			// how far spaced out the eyes are
 	float peekEyeDistZ;			// how far below eye position to test eyes (handles peek up)

@@ -12,6 +12,8 @@
 #ifndef PARTICLE_BASEEFFECT_H
 #define PARTICLE_BASEEFFECT_H
 
+#include "reflect_annotations.h"
+
 #include "predictable_entity.h"
 #include "baseentity_shared.h"
 
@@ -22,7 +24,8 @@
 
 #endif 
 
-class CBaseParticleEntity : public CBaseEntity
+class [[= ks::reflect::NetTable{ .name = "DT_BaseParticleEntity" } ]]
+      CBaseParticleEntity : public CBaseEntity
 #if defined( CLIENT_DLL )
 , public IParticleEffect
 #endif

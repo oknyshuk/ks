@@ -4,6 +4,8 @@
 //
 //===========================================================================//
 #include "cbase.h"
+#include "reflect_recvtable.h"
+#include "reflect_annotations.h"
 #include "model_types.h"
 #include "vcollide.h"
 #include "vcollide_parse.h"
@@ -23,10 +25,7 @@
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
-IMPLEMENT_CLIENTCLASS_DT(C_PhysicsProp, DT_PhysicsProp, CPhysicsProp)
-	RecvPropBool( RECVINFO( m_bAwake ) ),
-	RecvPropInt( RECVINFO( m_spawnflags ) ),
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS( C_PhysicsProp, DT_PhysicsProp, CPhysicsProp )
 
 // We discard VVD data on consoles to save memory, so we cannot compute static lighting for models at run-time:
 ConVar r_PhysPropStaticLighting( "r_PhysPropStaticLighting", "0" ); // Disabled for CS:GO on the PC

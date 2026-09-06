@@ -7,6 +7,8 @@
 
 #ifndef FLEXCYCLER_H
 #define FLEXCYCLER_H
+
+#include "reflect_annotations.h"
 #ifdef _WIN32
 #pragma once
 #endif
@@ -46,7 +48,7 @@ public:
 	int	m_istalking;
 	int	m_phoneme;
 
-	string_t m_iszSentence;
+	[[= ks::reflect::Key{ .name = "Sentence" } ]] string_t m_iszSentence;
 	int m_sentence;
 
 	void SetFlexTarget( LocalFlexController_t flexnum );

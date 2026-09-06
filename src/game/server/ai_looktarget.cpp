@@ -7,6 +7,8 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_annotations.h"
 #include "game.h"
 #include "ai_looktarget.h"
 
@@ -17,18 +19,7 @@
 // Mothballing this entity to get rid of it. info_hint does its job better (sjb)
 //LINK_ENTITY_TO_CLASS( ai_looktarget, CAI_LookTarget );
 
-BEGIN_DATADESC( CAI_LookTarget )
-
-	// Keyfields
-	DEFINE_KEYFIELD( m_bDisabled, FIELD_BOOLEAN, "StartDisabled" ),
-	DEFINE_KEYFIELD( m_iContext, FIELD_INTEGER, "context" ),
-	DEFINE_KEYFIELD( m_iPriority, FIELD_INTEGER, "priority" ),
-	DEFINE_KEYFIELD( m_flMaxDist, FIELD_FLOAT, "maxdist" ),
-
-	// Fields
-	DEFINE_FIELD( m_flTimeNextAvailable, FIELD_TIME ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CAI_LookTarget )
 
 //---------------------------------------------------------
 //---------------------------------------------------------

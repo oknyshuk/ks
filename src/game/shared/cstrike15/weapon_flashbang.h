@@ -6,6 +6,8 @@
 
 #ifndef WEAPON_FLASHBANG_H
 #define WEAPON_FLASHBANG_H
+
+#include "reflect_annotations.h"
 #ifdef _WIN32
 #pragma once
 #endif
@@ -22,7 +24,8 @@
 //-----------------------------------------------------------------------------
 // Fragmentation grenades
 //-----------------------------------------------------------------------------
-class CFlashbang : public CBaseCSGrenade
+class [[= ks::reflect::NetTable{ .name = "DT_Flashbang" } ]]
+      CFlashbang : public CBaseCSGrenade
 {
 public:
 	DECLARE_CLASS( CFlashbang, CBaseCSGrenade );
@@ -37,7 +40,6 @@ public:
 #ifdef CLIENT_DLL
 
 #else
-	DECLARE_DATADESC();
 
 		virtual void EmitGrenade( Vector vecSrc, QAngle vecAngles, Vector vecVel, AngularImpulse angImpulse, CBasePlayer *pPlayer, const CCSWeaponInfo& weaponInfo );
 #endif

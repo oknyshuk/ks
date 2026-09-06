@@ -57,7 +57,14 @@ protected:
 // Sun entity
 //
 
-class C_Sun : public C_BaseEntity
+// named by the Bare<> annotation below, so it cannot be a .cpp static
+void RecvProxy_SunHDRColorScale( const CRecvProxyData *pData, void *pStruct, void *pOut );
+
+class [[= ks::reflect::NetTable{ .name = "DT_Sun", .base = false } ]]
+      [[= ks::reflect::From<"m_clrRender", ks::reflect::Net{}, RecvProxy_Int32ToColor32>{} ]]
+      [[= ks::reflect::Bare<"HDRColorScale",
+            ks::reflect::Net{ .enc = ks::reflect::ENC_FLOAT }, RecvProxy_SunHDRColorScale>{} ]]
+      C_Sun : public C_BaseEntity
 {
 public:
 	DECLARE_CLASS( C_Sun, C_BaseEntity );
@@ -72,14 +79,14 @@ public:
 	C_SunGlowOverlay	m_Overlay;
 	C_SunGlowOverlay	m_GlowOverlay;
 	
-	color32				m_clrOverlay;
-	int					m_nSize;
-	int					m_nOverlaySize;
-	Vector				m_vDirection;
-	bool				m_bOn;
+	[[= ks::reflect::Net{} ]] [[= ks::reflect::Proxy<RecvProxy_Int32ToColor32, ks::reflect::WIRE_RECV>{} ]] color32				m_clrOverlay;
+	[[= ks::reflect::Net{} ]] int					m_nSize;
+	[[= ks::reflect::Net{} ]] int					m_nOverlaySize;
+	[[= ks::reflect::Net{} ]] Vector				m_vDirection;
+	[[= ks::reflect::Net{ .enc = ks::reflect::ENC_INT } ]] bool				m_bOn;
 
-	int					m_nMaterial;
-	int					m_nOverlayMaterial;
+	[[= ks::reflect::Net{} ]] int					m_nMaterial;
+	[[= ks::reflect::Net{} ]] int					m_nOverlayMaterial;
 };
 
 

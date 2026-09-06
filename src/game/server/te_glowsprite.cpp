@@ -11,6 +11,8 @@
 // $NoKeywords: $
 //=============================================================================//
 #include "cbase.h"
+#include "reflect_sendtable.h"
+#include "reflect_annotations.h"
 #include "basetempentity.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
@@ -21,7 +23,8 @@ extern int	g_sModelIndexSmoke;			// (in combatweapon.cpp) holds the index for th
 //-----------------------------------------------------------------------------
 // Purpose: Dispatches Sprite tempentity
 //-----------------------------------------------------------------------------
-class CTEGlowSprite : public CBaseTempEntity
+class [[= ks::reflect::NetTable{ .name = "DT_TEGlowSprite" } ]]
+      CTEGlowSprite : public CBaseTempEntity
 {
 public:
 	DECLARE_CLASS( CTEGlowSprite, CBaseTempEntity );
@@ -34,11 +37,11 @@ public:
 	DECLARE_SERVERCLASS();
 
 public:
-	CNetworkVector( m_vecOrigin );
-	CNetworkVar( int, m_nModelIndex );
-	CNetworkVar( float, m_fScale );
-	CNetworkVar( float, m_fLife );
-	CNetworkVar( int, m_nBrightness );
+	CNetworkVector( m_vecOrigin, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD, .enc = ks::reflect::ENC_VECTOR } ]] );
+	CNetworkVar( int, m_nModelIndex, [[= ks::reflect::Net{ .enc = ks::reflect::ENC_MODELINDEX } ]] );
+	CNetworkVar( float, m_fScale, [[= ks::reflect::Net{ .bits = 8, .low = 0.0, .high = 25.6, .flags = SPROP_ROUNDDOWN } ]] );
+	CNetworkVar( float, m_fLife, [[= ks::reflect::Net{ .bits = 8, .low = 0.0, .high = 25.6, .flags = SPROP_ROUNDDOWN } ]] );
+	CNetworkVar( int, m_nBrightness, [[= ks::reflect::Net{ .bits = 8, .flags = SPROP_UNSIGNED } ]] );
 };
 
 //-----------------------------------------------------------------------------
@@ -92,13 +95,7 @@ void CTEGlowSprite::Test( const Vector& current_origin, const QAngle& current_an
 }
 
 
-IMPLEMENT_SERVERCLASS_ST(CTEGlowSprite, DT_TEGlowSprite)
-	SendPropVector( SENDINFO(m_vecOrigin), -1, SPROP_COORD),
-	SendPropModelIndex( SENDINFO(m_nModelIndex) ),
-	SendPropFloat( SENDINFO(m_fScale ), 8, SPROP_ROUNDDOWN, 0.0, 25.6 ),
-	SendPropFloat( SENDINFO(m_fLife ), 8, SPROP_ROUNDDOWN, 0.0, 25.6 ),
-	SendPropInt( SENDINFO(m_nBrightness), 8, SPROP_UNSIGNED ),
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CTEGlowSprite, DT_TEGlowSprite )
 
 
 // Singleton to fire TEGlowSprite objects

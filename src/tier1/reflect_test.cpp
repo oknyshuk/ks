@@ -55,6 +55,18 @@ static_assert( unwrap( ^^MockNetworkVar<int> ) == ^^int );
 static_assert( unwrap( ^^MockNetworkVar<MockNetworkVar<float>> ) == ^^float );
 static_assert( unwrap( ^^int ) == ^^int );
 
+// The vector, quaternion and color32 wrappers inherit m_Value instead of declaring it.
+// Missing this reads every one of them as FIELD_EMBEDDED.
+struct MockVectorBase : MockNetworkVar<Vector> {};
+struct MockVectorDerived : MockVectorBase {};
+static_assert( unwrap( ^^MockVectorBase ) == ^^Vector );
+static_assert( unwrap( ^^MockVectorDerived ) == ^^Vector );
+static_assert( tag_of_type( ^^MockVectorDerived ) == FIELD_VECTOR );
+
+// A class that genuinely has no payload stays itself, so embedded members still resolve.
+static_assert( unwrap( ^^FireBurst ) == ^^FireBurst );
+static_assert( tag_of_type( ^^FireBurst ) == FIELD_EMBEDDED );
+
 // ---- participation -----------------------------------------------------------
 static_assert( members<Net,  Weapon>.size() == 3 );
 static_assert( members<Pred, Weapon>.size() == 1 );
@@ -154,5 +166,51 @@ consteval std::size_t net_bytes()
 	return n;
 }
 static_assert( net_bytes() == sizeof( float ) + sizeof( int ) );
+
+// ---- inherited members -------------------------------------------------------
+// A table may send a member declared in a base -- every _NOBASE table does. offset_of is
+// relative to the declaring class and nonstatic_data_members_of does not cross a base, so the
+// lookup has to accumulate base subobject offsets to land in the derived class.
+struct PlainBase { int m_first; float m_second; };
+struct PlainMid : PlainBase { short m_third; };
+struct PlainLeaf : PlainMid { double m_fourth; };
+
+static_assert( find_member( ^^PlainLeaf, "m_first" ).found );
+static_assert( !find_member( ^^PlainLeaf, "m_absent" ).found );
+static_assert( find_member( ^^PlainLeaf, "m_first" ).offset == __builtin_offsetof( PlainLeaf, m_first ) );
+static_assert( find_member( ^^PlainLeaf, "m_second" ).offset == __builtin_offsetof( PlainLeaf, m_second ) );
+static_assert( find_member( ^^PlainLeaf, "m_third" ).offset == __builtin_offsetof( PlainLeaf, m_third ) );
+static_assert( find_member( ^^PlainLeaf, "m_fourth" ).offset == __builtin_offsetof( PlainLeaf, m_fourth ) );
+
+// The member reflection comes back too, so its type drives the tag exactly as an own member's does.
+static_assert( tag_of_type( std::meta::type_of( find_member( ^^PlainLeaf, "m_second" ).member ) ) == FIELD_FLOAT );
+
+// A private base member is still reachable: the lookup enumerates with unchecked access, which
+// is what lets a derived table name it the way SENDINFO did.
+class PrivBase { int m_hidden; public: int m_open; };
+struct PrivLeaf : PrivBase {};
+static_assert( find_member( ^^PrivLeaf, "m_hidden" ).found );
+static_assert( find_member( ^^PrivLeaf, "m_open" ).offset == __builtin_offsetof( PrivLeaf, m_open ) );
+
+// A derived member of the same name shadows the base one, matching normal lookup.
+struct ShadowBase { int m_x; int m_pad; };
+struct ShadowLeaf : ShadowBase { int m_x; };
+static_assert( find_member( ^^ShadowLeaf, "m_x" ).offset == __builtin_offsetof( ShadowLeaf, m_x ) );
+
+// The unsigned and width-named integers need tags too: an unsigned char member otherwise has
+// none at all, which the macros never noticed because they derive everything from sizeof.
+static_assert( tag_of_type( ^^unsigned char ) == FIELD_CHARACTER );
+static_assert( tag_of_type( ^^signed char ) == FIELD_CHARACTER );
+static_assert( tag_of_type( ^^unsigned short ) == FIELD_SHORT );
+static_assert( tag_of_type( ^^unsigned int ) == FIELD_INTEGER );
+static_assert( tag_of_type( ^^long long ) == FIELD_INTEGER64 );
+static_assert( tag_of_type( ^^double ) == FIELD_VOID );   // still genuinely unmapped
+
+// Enums are networked as their underlying integer; ShatterSurface_t and friends are declared
+// exactly this way.
+enum PlainEnum { PE_A };
+enum class ByteEnum : unsigned char { BE_A };
+static_assert( tag_of_type( ^^PlainEnum ) == FIELD_INTEGER );
+static_assert( tag_of_type( ^^ByteEnum ) == FIELD_CHARACTER );
 
 } // namespace

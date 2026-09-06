@@ -13,8 +13,10 @@
 
 #include "shareddefs.h"
 #include "GameEventListener.h"
+#include "reflect_annotations.h"
 
-class C_VoteController : public C_BaseEntity, public CGameEventListener
+class [[= ks::reflect::NetTable{ .name = "DT_VoteController" } ]]
+      C_VoteController : public C_BaseEntity, public CGameEventListener
 {
 	DECLARE_CLASS( C_VoteController, C_BaseEntity );
 public:
@@ -33,14 +35,16 @@ public:
 protected:
 	void			ResetData();
 
-	int				m_iActiveIssueIndex;
-	int				m_iOnlyTeamToVote;
-	int				m_nVoteOptionCount[MAX_VOTE_OPTIONS];
+	[[= ks::reflect::Net{} ]]
+	[[= ks::reflect::Proxy<RecvProxy_VoteType, ks::reflect::WIRE_RECV>{} ]] int				m_iActiveIssueIndex;
+	[[= ks::reflect::Net{} ]] int				m_iOnlyTeamToVote;
+	[[= ks::reflect::Net{} ]]
+	[[= ks::reflect::Proxy<RecvProxy_VoteOption, ks::reflect::WIRE_RECV>{} ]] int				m_nVoteOptionCount[MAX_VOTE_OPTIONS];
 	int				m_iVoteChoiceIndex;
-	int				m_nPotentialVotes;
+	[[= ks::reflect::Net{} ]] int				m_nPotentialVotes;
 	bool			m_bVotesDirty;	// Received a vote, so remember to tell the Hud
 	bool			m_bTypeDirty;	// Vote type changed, so show or hide the Hud
-	bool			m_bIsYesNoVote;
+	[[= ks::reflect::Net{} ]] bool			m_bIsYesNoVote;
 };
 
 #endif // C_VoteController_H

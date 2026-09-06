@@ -6,6 +6,9 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_sendtable.h"
+#include "reflect_annotations.h"
 #include "func_tank.h"
 #include "Sprite.h"
 #include "EnvLaser.h"
@@ -48,115 +51,7 @@
 
 ConVar mortar_visualize("mortar_visualize", "0" );
 
-BEGIN_DATADESC( CFuncTank )
-	DEFINE_KEYFIELD( m_yawRate, FIELD_FLOAT, "yawrate" ),
-	DEFINE_KEYFIELD( m_yawRange, FIELD_FLOAT, "yawrange" ),
-	DEFINE_KEYFIELD( m_yawTolerance, FIELD_FLOAT, "yawtolerance" ),
-	DEFINE_KEYFIELD( m_pitchRate, FIELD_FLOAT, "pitchrate" ),
-	DEFINE_KEYFIELD( m_pitchRange, FIELD_FLOAT, "pitchrange" ),
-	DEFINE_KEYFIELD( m_pitchTolerance, FIELD_FLOAT, "pitchtolerance" ),
-	DEFINE_KEYFIELD( m_fireRate, FIELD_FLOAT, "firerate" ),
-	DEFINE_FIELD( m_fireTime, FIELD_TIME ),
-	DEFINE_KEYFIELD( m_persist, FIELD_FLOAT, "persistence" ),
-	DEFINE_KEYFIELD( m_persist2, FIELD_FLOAT, "persistence2" ),
-	DEFINE_KEYFIELD( m_minRange, FIELD_FLOAT, "minRange" ),
-	DEFINE_KEYFIELD( m_maxRange, FIELD_FLOAT, "maxRange" ),
-	DEFINE_FIELD( m_flMinRange2, FIELD_FLOAT ),
-	DEFINE_FIELD( m_flMaxRange2, FIELD_FLOAT ),
-	DEFINE_KEYFIELD( m_iAmmoCount, FIELD_INTEGER, "ammo_count" ),
-	DEFINE_KEYFIELD( m_spriteScale, FIELD_FLOAT, "spritescale" ),
-	DEFINE_KEYFIELD( m_iszSpriteSmoke, FIELD_STRING, "spritesmoke" ),
-	DEFINE_KEYFIELD( m_iszSpriteFlash, FIELD_STRING, "spriteflash" ),
-	DEFINE_KEYFIELD( m_bulletType, FIELD_INTEGER, "bullet" ),
-	DEFINE_FIELD( m_nBulletCount, FIELD_INTEGER ),
-	DEFINE_KEYFIELD( m_spread, FIELD_INTEGER, "firespread" ),
-	DEFINE_KEYFIELD( m_iBulletDamage, FIELD_INTEGER, "bullet_damage" ),
-	DEFINE_KEYFIELD( m_iBulletDamageVsPlayer, FIELD_INTEGER, "bullet_damage_vs_player" ),
-	DEFINE_KEYFIELD( m_iszMaster, FIELD_STRING, "master" ),
-	DEFINE_FIELD( m_iSmallAmmoType, FIELD_INTEGER ),
-	DEFINE_FIELD( m_iMediumAmmoType, FIELD_INTEGER ),
-	DEFINE_FIELD( m_iLargeAmmoType, FIELD_INTEGER ),
-	DEFINE_KEYFIELD( m_soundStartRotate, FIELD_SOUNDNAME, "rotatestartsound" ),
-	DEFINE_KEYFIELD( m_soundStopRotate, FIELD_SOUNDNAME, "rotatestopsound" ),
-	DEFINE_KEYFIELD( m_soundLoopRotate, FIELD_SOUNDNAME, "rotatesound" ),
-	DEFINE_KEYFIELD( m_flPlayerGracePeriod, FIELD_FLOAT, "playergraceperiod" ),
-	DEFINE_KEYFIELD( m_flIgnoreGraceUpto, FIELD_FLOAT, "ignoregraceupto" ),
-	DEFINE_KEYFIELD( m_flPlayerLockTimeBeforeFire, FIELD_FLOAT, "playerlocktimebeforefire" ),
-	DEFINE_FIELD( m_flLastSawNonPlayer, FIELD_TIME ),
-
-	DEFINE_FIELD( m_yawCenter, FIELD_FLOAT ),
-	DEFINE_FIELD( m_yawCenterWorld, FIELD_FLOAT ),
-	DEFINE_FIELD( m_pitchCenter, FIELD_FLOAT ),
-	DEFINE_FIELD( m_pitchCenterWorld, FIELD_FLOAT ),
-	DEFINE_FIELD( m_fireLast, FIELD_TIME ),
-	DEFINE_FIELD( m_lastSightTime, FIELD_TIME ),
-	DEFINE_FIELD( m_barrelPos, FIELD_VECTOR ),
-	DEFINE_FIELD( m_sightOrigin, FIELD_POSITION_VECTOR ),
-	DEFINE_FIELD( m_hFuncTankTarget, FIELD_EHANDLE ),
-	DEFINE_FIELD( m_hController, FIELD_EHANDLE ),
-	DEFINE_FIELD( m_vecControllerUsePos, FIELD_VECTOR ),
-	DEFINE_FIELD( m_flNextAttack, FIELD_TIME ),
-	DEFINE_FIELD( m_targetEntityName, FIELD_STRING ),
-	DEFINE_FIELD( m_hTarget, FIELD_EHANDLE ),
-	DEFINE_FIELD( m_vTargetPosition, FIELD_POSITION_VECTOR ),
-	DEFINE_FIELD( m_vecNPCIdleTarget, FIELD_POSITION_VECTOR ),
-	DEFINE_FIELD( m_persist2burst, FIELD_FLOAT),
-	//DEFINE_FIELD( m_parentMatrix, FIELD_MATRIX ), // DON'T SAVE
-	DEFINE_FIELD( m_hControlVolume, FIELD_EHANDLE ),
-	DEFINE_KEYFIELD( m_iszControlVolume, FIELD_STRING, "control_volume" ),
-	DEFINE_FIELD( m_flNextControllerSearch, FIELD_TIME ),
-	DEFINE_FIELD( m_bShouldFindNPCs, FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_bNPCInRoute, FIELD_BOOLEAN ),
-	DEFINE_KEYFIELD( m_iszNPCManPoint, FIELD_STRING, "npc_man_point" ),
-	DEFINE_FIELD( m_bReadyToFire, FIELD_BOOLEAN ),
-
-	DEFINE_KEYFIELD( m_bPerformLeading, FIELD_BOOLEAN, "LeadTarget" ),
-	DEFINE_FIELD( m_flStartLeadFactor, FIELD_FLOAT ),
-	DEFINE_FIELD( m_flStartLeadFactorTime, FIELD_TIME ),
-	DEFINE_FIELD( m_flNextLeadFactor, FIELD_FLOAT ),
-	DEFINE_FIELD( m_flNextLeadFactorTime, FIELD_TIME ),
-
-	// Used for when the gun is attached to another entity
-	DEFINE_KEYFIELD( m_iszBaseAttachment, FIELD_STRING, "gun_base_attach" ),
-	DEFINE_KEYFIELD( m_iszBarrelAttachment, FIELD_STRING, "gun_barrel_attach" ),
-//	DEFINE_FIELD( m_nBarrelAttachment, FIELD_INTEGER ),
-
-	// Used when the gun is actually a part of the parent entity, and pose params aim it
-	DEFINE_KEYFIELD( m_iszYawPoseParam, FIELD_STRING, "gun_yaw_pose_param" ),
-	DEFINE_KEYFIELD( m_iszPitchPoseParam, FIELD_STRING, "gun_pitch_pose_param" ),
-	DEFINE_KEYFIELD( m_flYawPoseCenter, FIELD_FLOAT, "gun_yaw_pose_center" ),
-	DEFINE_KEYFIELD( m_flPitchPoseCenter, FIELD_FLOAT, "gun_pitch_pose_center" ),
-	DEFINE_FIELD( m_bUsePoseParameters, FIELD_BOOLEAN ),
-
-	DEFINE_KEYFIELD( m_iEffectHandling, FIELD_INTEGER, "effecthandling" ),
-
-	// Inputs
-	DEFINE_INPUTFUNC( FIELD_VOID, "Activate", InputActivate ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "Deactivate", InputDeactivate ),
-	DEFINE_INPUTFUNC( FIELD_FLOAT, "SetFireRate", InputSetFireRate ),
-	DEFINE_INPUTFUNC( FIELD_INTEGER, "SetDamage", InputSetDamage ),
-	DEFINE_INPUTFUNC( FIELD_VECTOR, "SetTargetPosition", InputSetTargetPosition ),
-	DEFINE_INPUTFUNC( FIELD_VECTOR, "SetTargetDir", InputSetTargetDir ),
-	DEFINE_INPUTFUNC( FIELD_STRING, "SetTargetEntityName", InputSetTargetEntityName ),
-	DEFINE_INPUTFUNC( FIELD_EHANDLE, "SetTargetEntity", InputSetTargetEntity ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "ClearTargetEntity", InputClearTargetEntity ),
-	DEFINE_INPUTFUNC( FIELD_STRING, "FindNPCToManTank", InputFindNPCToManTank ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "StopFindingNPCs", InputStopFindingNPCs ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "StartFindingNPCs", InputStartFindingNPCs ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "ForceNPCOff", InputForceNPCOff ),
-	DEFINE_INPUTFUNC( FIELD_FLOAT, "SetMaxRange", InputSetMaxRange ),
-
-	// Outputs
-	DEFINE_OUTPUT(m_OnFire,					"OnFire"),
-	DEFINE_OUTPUT(m_OnLoseTarget,			"OnLoseTarget"),
-	DEFINE_OUTPUT(m_OnAquireTarget,			"OnAquireTarget"),
-	DEFINE_OUTPUT(m_OnAmmoDepleted,			"OnAmmoDepleted"),
-	DEFINE_OUTPUT(m_OnGotController,		"OnGotController"),
-	DEFINE_OUTPUT(m_OnLostController,		"OnLostController"),
-	DEFINE_OUTPUT(m_OnGotPlayerController,	"OnGotPlayerController"),
-	DEFINE_OUTPUT(m_OnLostPlayerController,	"OnLostPlayerController"),
-	DEFINE_OUTPUT(m_OnReadyToFire,			"OnReadyToFire"),
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CFuncTank )
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -2333,25 +2228,16 @@ public:
 	void Precache();
 	void Fire( int bulletCount, const Vector &barrelEnd, const Vector &forward, CBaseEntity *pAttacker );
 
-	float		m_flPulseSpeed;
-	float		m_flPulseWidth;
-	color32		m_flPulseColor;
-	float		m_flPulseLife;
-	float		m_flPulseLag;
-	string_t	m_sPulseFireSound;
+	[[= ks::reflect::Key{ .name = "PulseSpeed" } ]] float		m_flPulseSpeed;
+	[[= ks::reflect::Key{ .name = "PulseWidth" } ]] float		m_flPulseWidth;
+	[[= ks::reflect::Key{ .name = "PulseColor" } ]] color32		m_flPulseColor;
+	[[= ks::reflect::Key{ .name = "PulseLife" } ]] float		m_flPulseLife;
+	[[= ks::reflect::Key{ .name = "PulseLag" } ]] float		m_flPulseLag;
+	[[= ks::reflect::As{ FIELD_SOUNDNAME } ]] [[= ks::reflect::Key{ .name = "PulseFireSound" } ]] string_t	m_sPulseFireSound;
 };
 LINK_ENTITY_TO_CLASS( func_tankpulselaser, CFuncTankPulseLaser );
 
-BEGIN_DATADESC( CFuncTankPulseLaser )
-
-	DEFINE_KEYFIELD( m_flPulseSpeed,	 FIELD_FLOAT,		"PulseSpeed" ),
-	DEFINE_KEYFIELD( m_flPulseWidth,	 FIELD_FLOAT,		"PulseWidth" ),
-	DEFINE_KEYFIELD( m_flPulseColor,	 FIELD_COLOR32,		"PulseColor" ),
-	DEFINE_KEYFIELD( m_flPulseLife,	 FIELD_FLOAT,		"PulseLife" ),
-	DEFINE_KEYFIELD( m_flPulseLag,		 FIELD_FLOAT,		"PulseLag" ),
-	DEFINE_KEYFIELD( m_sPulseFireSound, FIELD_SOUNDNAME,	"PulseFireSound" ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CFuncTankPulseLaser )
 
 //------------------------------------------------------------------------------
 // Purpose :
@@ -2435,18 +2321,11 @@ public:
 private:
 	CEnvLaser	*m_pLaser;
 	float	m_laserTime;
-	string_t m_iszLaserName;
+	[[= ks::reflect::Key{ .name = "laserentity" } ]] string_t m_iszLaserName;
 };
 LINK_ENTITY_TO_CLASS( func_tanklaser, CFuncTankLaser );
 
-BEGIN_DATADESC( CFuncTankLaser )
-
-	DEFINE_KEYFIELD( m_iszLaserName, FIELD_STRING, "laserentity" ),
-
-	DEFINE_FIELD( m_pLaser, FIELD_CLASSPTR ),
-	DEFINE_FIELD( m_laserTime, FIELD_TIME ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CFuncTankLaser )
 
 
 void CFuncTankLaser::Activate( void )
@@ -2530,16 +2409,12 @@ public:
 	virtual float GetShotSpeed() { return m_flRocketSpeed; }
 
 protected:
-	float	m_flRocketSpeed;
+	[[= ks::reflect::Key{ .name = "rocketspeed" } ]] float	m_flRocketSpeed;
 
 	DECLARE_DATADESC();
 };
 
-BEGIN_DATADESC( CFuncTankRocket )
-
-	DEFINE_KEYFIELD( m_flRocketSpeed, FIELD_FLOAT, "rocketspeed" ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CFuncTankRocket )
 
 LINK_ENTITY_TO_CLASS( func_tankrocket, CFuncTankRocket );
 
@@ -2601,7 +2476,7 @@ private:
     float		m_flNextHeavyShotTime;
 	bool		m_bIsFiring;
 
-	string_t	m_iszAirboatGunModel;
+	[[= ks::reflect::Key{ .name = "airboat_gun_model" } ]] string_t	m_iszAirboatGunModel;
 	CHandle<CBaseAnimating> m_hAirboatGunModel;
 	int			m_nGunBarrelAttachment;
 	float		m_flLastImpactEffectTime;
@@ -2611,17 +2486,7 @@ private:
 //-----------------------------------------------------------------------------
 // Save/load: 
 //-----------------------------------------------------------------------------
-BEGIN_DATADESC( CFuncTankAirboatGun )
-
-	DEFINE_SOUNDPATCH( m_pGunFiringSound ),
-	DEFINE_FIELD( m_flNextHeavyShotTime,	FIELD_TIME ),
-	DEFINE_FIELD( m_bIsFiring,				FIELD_BOOLEAN ),
-	DEFINE_KEYFIELD( m_iszAirboatGunModel,	FIELD_STRING, "airboat_gun_model" ),
-//	DEFINE_FIELD( m_hAirboatGunModel,		FIELD_EHANDLE ),
-//	DEFINE_FIELD( m_nGunBarrelAttachment,	FIELD_INTEGER ),
-	DEFINE_FIELD( m_flLastImpactEffectTime,	FIELD_TIME ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CFuncTankAirboatGun )
 
 LINK_ENTITY_TO_CLASS( func_tankairboatgun, CFuncTankAirboatGun );
 
@@ -2871,30 +2736,20 @@ public:
 	virtual float GetShotSpeed() { return m_flRocketSpeed; }
 
 protected:
-	void InputDeathVolley( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "DeathVolley", .type = FIELD_VOID } ]] void InputDeathVolley( inputdata_t &inputdata );
 	void FireDying( const Vector &barrelEnd );
 
 	EHANDLE	m_hLaserDot;
-	float	m_flRocketSpeed;
+	[[= ks::reflect::Key{ .name = "rocketspeed" } ]] float	m_flRocketSpeed;
 	int 	m_nSide;
-	int		m_nBurstCount;
+	[[= ks::reflect::Key{ .name = "burstcount" } ]] int		m_nBurstCount;
 	bool	m_bDying;
 
 	DECLARE_DATADESC();
 };
 
 
-BEGIN_DATADESC( CFuncTankAPCRocket )
-
-	DEFINE_KEYFIELD( m_flRocketSpeed, FIELD_FLOAT, "rocketspeed" ),
-	DEFINE_FIELD( m_hLaserDot, FIELD_EHANDLE ),
-	DEFINE_FIELD( m_nSide, FIELD_INTEGER ),
-	DEFINE_KEYFIELD( m_nBurstCount, FIELD_INTEGER, "burstcount" ),
-	DEFINE_FIELD( m_bDying, FIELD_BOOLEAN ),
-
-	DEFINE_INPUTFUNC( FIELD_VOID, "DeathVolley", InputDeathVolley ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CFuncTankAPCRocket )
 
 LINK_ENTITY_TO_CLASS( func_tankapcrocket, CFuncTankAPCRocket );
 
@@ -3046,7 +2901,8 @@ void CFuncTankAPCRocket::InputDeathVolley( inputdata_t &inputdata )
 //-----------------------------------------------------------------------------
 // Mortar shell
 //-----------------------------------------------------------------------------
-class CMortarShell : public CBaseEntity
+class [[= ks::reflect::NetTable{ .name = "DT_MortarShell" } ]]
+      CMortarShell : public CBaseEntity
 {
 public:
 	DECLARE_CLASS( CMortarShell, CBaseEntity );
@@ -3078,41 +2934,17 @@ private:
 
 	CHandle<CBeam>	m_pBeamEffect[4];
 
-	CNetworkVar( float, m_flLifespan );
-	CNetworkVar( float, m_flRadius );
-	CNetworkVar( Vector, m_vecSurfaceNormal );
+	CNetworkVar( float, m_flLifespan, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_NOSCALE } ]] );
+	CNetworkVar( float, m_flRadius, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_NOSCALE } ]] );
+	CNetworkVar( Vector, m_vecSurfaceNormal, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NORMAL, .enc = ks::reflect::ENC_VECTOR } ]] );
 
-	DECLARE_DATADESC();
 	DECLARE_SERVERCLASS();
 };
 
 LINK_ENTITY_TO_CLASS( mortarshell, CMortarShell );
 
-BEGIN_DATADESC( CMortarShell )
-	DEFINE_FIELD( m_flImpactTime,	FIELD_TIME ),
-	DEFINE_FIELD( m_flFadeTime,		FIELD_TIME ),
-	DEFINE_FIELD( m_flWarnTime,		FIELD_TIME ),
-	DEFINE_FIELD( m_flNPCWarnTime, 	FIELD_TIME ),
-	DEFINE_FIELD( m_warnSound,		FIELD_STRING ),
-	DEFINE_FIELD( m_iSpriteTexture,	FIELD_INTEGER ),
-	DEFINE_FIELD( m_bHasWarned,		FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_flLifespan,		FIELD_FLOAT ),
-	DEFINE_FIELD( m_vecFiredFrom,	FIELD_POSITION_VECTOR ),
-	DEFINE_FIELD( m_vecFlyDir,		FIELD_VECTOR ),
-	DEFINE_FIELD( m_flSpawnedTime,	FIELD_TIME ),
-	DEFINE_AUTO_ARRAY( m_pBeamEffect,	FIELD_EHANDLE),
-	DEFINE_FIELD( m_flRadius,		FIELD_FLOAT ),
-	DEFINE_FIELD( m_vecSurfaceNormal, FIELD_VECTOR ),
-	
-	DEFINE_FUNCTION( FlyThink ),
-	DEFINE_FUNCTION( FadeThink ),
-END_DATADESC()
 
-IMPLEMENT_SERVERCLASS_ST( CMortarShell, DT_MortarShell )
-	SendPropFloat( SENDINFO( m_flLifespan ), -1, SPROP_NOSCALE ),
-	SendPropFloat( SENDINFO( m_flRadius ), -1, SPROP_NOSCALE ),
-	SendPropVector( SENDINFO( m_vecSurfaceNormal ), 0, SPROP_NORMAL ),
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CMortarShell, DT_MortarShell )
 
 #define	MORTAR_TEST_RADIUS	16.0f
 
@@ -3600,19 +3432,19 @@ public:
 	void SetNextAttack( float flWait );
 	
 	// Input handlers.
-	void InputShootGun( inputdata_t &inputdata );
-	void InputFireAtWill( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "ShootGun", .type = FIELD_VOID } ]] void InputShootGun( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "FireAtWill", .type = FIELD_VOID } ]] void InputFireAtWill( inputdata_t &inputdata );
 
 	DECLARE_DATADESC();
 
-	int			m_Magnitude;
-	float		m_fireDelay;
-	string_t	m_fireStartSound;
+	[[= ks::reflect::Key{ .name = "iMagnitude" } ]] int			m_Magnitude;
+	[[= ks::reflect::Key{ .name = "firedelay" } ]] float		m_fireDelay;
+	[[= ks::reflect::Key{ .name = "firestartsound" } ]] string_t	m_fireStartSound;
 	//string_t	m_fireEndSound;
 
-	string_t	m_incomingSound;
-	float		m_flWarningTime;
-	float		m_flFireVariance;
+	[[= ks::reflect::Key{ .name = "incomingsound" } ]] string_t	m_incomingSound;
+	[[= ks::reflect::As{ FIELD_TIME } ]] [[= ks::reflect::Key{ .name = "warningtime" } ]] float		m_flWarningTime;
+	[[= ks::reflect::As{ FIELD_TIME } ]] [[= ks::reflect::Key{ .name = "firevariance" } ]] float		m_flFireVariance;
 
 	bool		m_fLastShotMissed;
 
@@ -3622,24 +3454,7 @@ public:
 
 LINK_ENTITY_TO_CLASS( func_tankmortar, CFuncTankMortar );
 
-BEGIN_DATADESC( CFuncTankMortar )
-
-	DEFINE_KEYFIELD( m_Magnitude, FIELD_INTEGER, "iMagnitude" ),
-	DEFINE_KEYFIELD( m_fireDelay, FIELD_FLOAT, "firedelay" ),
-	DEFINE_KEYFIELD( m_fireStartSound, FIELD_STRING, "firestartsound" ),
-	//DEFINE_KEYFIELD( m_fireEndSound, FIELD_STRING, "fireendsound" ),
-	DEFINE_KEYFIELD( m_incomingSound, FIELD_STRING, "incomingsound" ),
-	DEFINE_KEYFIELD( m_flWarningTime, FIELD_TIME, "warningtime" ),
-	DEFINE_KEYFIELD( m_flFireVariance, FIELD_TIME, "firevariance" ),
-
-	DEFINE_FIELD( m_fLastShotMissed, FIELD_BOOLEAN ),
-
-	DEFINE_FIELD( m_pAttacker, FIELD_CLASSPTR ),
-
-	// Inputs
-	DEFINE_INPUTFUNC( FIELD_VOID, "ShootGun", InputShootGun ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "FireAtWill", InputFireAtWill ),
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CFuncTankMortar )
 
 
 void CFuncTankMortar::Spawn()
@@ -3813,18 +3628,13 @@ public:
 	void Fire( int bulletCount, const Vector &barrelEnd, const Vector &forward, CBaseEntity *pAttacker );
 
 protected:
-	string_t				m_iszBarrelVolume;
+	[[= ks::reflect::Key{ .name = "barrel_volume" } ]] string_t				m_iszBarrelVolume;
 	CHandle<CBaseTrigger>	m_hBarrelVolume;
 };
 
 LINK_ENTITY_TO_CLASS( func_tankphyscannister, CFuncTankPhysCannister );
 
-BEGIN_DATADESC( CFuncTankPhysCannister )
-
-	DEFINE_KEYFIELD( m_iszBarrelVolume, FIELD_STRING, "barrel_volume" ),
-	DEFINE_FIELD( m_hBarrelVolume, FIELD_EHANDLE ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CFuncTankPhysCannister )
 
 //-----------------------------------------------------------------------------
 // Purpose: 

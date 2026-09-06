@@ -7,6 +7,8 @@
 
 #ifndef MODELENTITIES_H
 #define MODELENTITIES_H
+
+#include "reflect_annotations.h"
 #ifdef _WIN32
 #pragma once
 #endif
@@ -22,7 +24,8 @@
 // enabled state:	brush is visible
 // disabled staute:	brush not visible
 //-----------------------------------------------------------------------------
-class CFuncBrush : public CBaseEntity
+class [[= ks::reflect::NetTable{ .name = "DT_FuncBrush" } ]]
+      CFuncBrush : public CBaseEntity
 {
 public:
 	DECLARE_CLASS( CFuncBrush, CBaseEntity );
@@ -39,11 +42,11 @@ public:
 	void TurnOn( void );
 
 	// Input handlers
-	void InputTurnOff( inputdata_t &inputdata );
-	void InputTurnOn( inputdata_t &inputdata );
-	void InputToggle( inputdata_t &inputdata );
-	void InputSetExcluded( inputdata_t &inputdata );
-	void InputSetInvert( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Disable", .type = FIELD_VOID } ]] void InputTurnOff( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Enable", .type = FIELD_VOID } ]] void InputTurnOn( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Toggle", .type = FIELD_VOID } ]] void InputToggle( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetExcluded", .type = FIELD_STRING } ]] void InputSetExcluded( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetInvert", .type = FIELD_BOOLEAN } ]] void InputSetInvert( inputdata_t &inputdata );
 
 	enum BrushSolidities_e {
 		BRUSHSOLID_TOGGLE = 0,
@@ -51,11 +54,11 @@ public:
 		BRUSHSOLID_ALWAYS = 2,
 	};
 
-	BrushSolidities_e m_iSolidity;
-	int m_iDisabled;
-	string_t m_iszExcludedClass;
-	bool m_bSolidBsp;
-	bool m_bInvertExclusion;
+	[[= ks::reflect::Key{ .name = "Solidity" } ]] BrushSolidities_e m_iSolidity;
+	[[= ks::reflect::Key{ .name = "StartDisabled" } ]] int m_iDisabled;
+	[[= ks::reflect::Key{ .name = "excludednpc" } ]] string_t m_iszExcludedClass;
+	[[= ks::reflect::Key{ .name = "solidbsp" } ]] bool m_bSolidBsp;
+	[[= ks::reflect::Key{ .name = "invert_exclusion" } ]] bool m_bInvertExclusion;
 
 	DECLARE_DATADESC();
 	DECLARE_SERVERCLASS();

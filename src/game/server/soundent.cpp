@@ -6,6 +6,8 @@
 //
 //=============================================================================//
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_annotations.h"
 #include "soundent.h"
 #include "game.h"
 #include "world.h"
@@ -27,23 +29,7 @@ LINK_ENTITY_TO_CLASS( soundent, CSoundEnt );
 
 static CSoundEnt *g_pSoundEnt = NULL;
 
-BEGIN_SIMPLE_DATADESC( CSound )
-
-	DEFINE_FIELD( m_hOwner,				FIELD_EHANDLE ),
-	DEFINE_FIELD( m_iVolume,			FIELD_INTEGER ),
-	DEFINE_FIELD( m_flOcclusionScale,	FIELD_FLOAT ),
-	DEFINE_FIELD( m_iType,				FIELD_INTEGER ),
-//	DEFINE_FIELD( m_iNextAudible,		FIELD_INTEGER ),
-	DEFINE_FIELD( m_bNoExpirationTime,	FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_flExpireTime,		FIELD_TIME ),
-	DEFINE_FIELD( m_iNext,				FIELD_SHORT ),
-	DEFINE_FIELD( m_ownerChannelIndex,	FIELD_INTEGER ),
-	DEFINE_FIELD( m_vecOrigin,			FIELD_POSITION_VECTOR ),
-	DEFINE_FIELD( m_bHasOwner,			FIELD_BOOLEAN ),
-//	DEFINE_FIELD( m_iMyIndex,			FIELD_INTEGER ),
-	DEFINE_FIELD( m_hTarget,			FIELD_EHANDLE ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP_SIMPLE( CSound )
 
 
 //=========================================================
@@ -197,14 +183,6 @@ const Vector &CSound::GetSoundReactOrigin( void )
 //-----------------------------------------------------------------------------
 // Save/load
 //-----------------------------------------------------------------------------
-BEGIN_DATADESC( CSoundEnt )
-
-	DEFINE_FIELD( m_iFreeSound,			FIELD_INTEGER ),
-	DEFINE_FIELD( m_iActiveSound,		FIELD_INTEGER ),
-	DEFINE_FIELD( m_cLastActiveSounds,	FIELD_INTEGER ),
-	DEFINE_EMBEDDED_ARRAY( m_SoundPool, MAX_WORLD_SOUNDS_SP ),
-
-END_DATADESC()
 
 
 //-----------------------------------------------------------------------------
@@ -775,31 +753,20 @@ public:
 	DECLARE_DATADESC();
 
 	// data
-	int			m_iSoundType;
-	int			m_iSoundContext;
-	int			m_iVolume;
-	float		m_flDuration;
-	string_t	m_iszProxyEntityName;
+	[[= ks::reflect::Key{ .name = "soundtype" } ]] int			m_iSoundType;
+	[[= ks::reflect::Key{ .name = "soundcontext" } ]] int			m_iSoundContext;
+	[[= ks::reflect::Key{ .name = "volume" } ]] int			m_iVolume;
+	[[= ks::reflect::Key{ .name = "duration" } ]] float		m_flDuration;
+	[[= ks::reflect::Key{ .name = "locationproxy" } ]] string_t	m_iszProxyEntityName;
 
 	// Input handlers
-	void InputInsertSound( inputdata_t &inputdata );
-	void InputEmitAISound( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "InsertSound", .type = FIELD_INTEGER } ]] void InputInsertSound( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "EmitAISound", .type = FIELD_VOID } ]] void InputEmitAISound( inputdata_t &inputdata );
 };
 
 LINK_ENTITY_TO_CLASS( ai_sound, CAISound );
 
-BEGIN_DATADESC( CAISound )
-
-	DEFINE_KEYFIELD( m_iSoundType, FIELD_INTEGER, "soundtype" ),
-	DEFINE_KEYFIELD( m_iSoundContext, FIELD_INTEGER, "soundcontext" ),
-	DEFINE_KEYFIELD( m_iVolume, FIELD_INTEGER, "volume" ),
-	DEFINE_KEYFIELD( m_flDuration, FIELD_FLOAT, "duration" ),
-	DEFINE_KEYFIELD( m_iszProxyEntityName, FIELD_STRING, "locationproxy" ),
-
-	DEFINE_INPUTFUNC( FIELD_INTEGER, "InsertSound", InputInsertSound ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "EmitAISound", InputEmitAISound ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CAISound )
 
 //-----------------------------------------------------------------------------
 // Purpose: *** OBSOLETE **** Here for legacy support only!

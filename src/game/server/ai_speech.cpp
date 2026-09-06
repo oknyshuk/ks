@@ -6,6 +6,8 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_annotations.h"
+#include "reflect_datamap.h"
 
 #include "ai_speech.h"
 
@@ -60,104 +62,9 @@ ConceptHistory_t& ConceptHistory_t::operator =( const ConceptHistory_t& src )
 	return *this;
 }
 
-BEGIN_SIMPLE_DATADESC( ConceptHistory_t )
-	DEFINE_FIELD( timeSpoken,	FIELD_TIME ),  // Relative to server time
-	// DEFINE_EMBEDDED( response,	FIELD_??? ),	// This is manually saved/restored by the ConceptHistory saverestore ops below
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP_SIMPLE( ConceptHistory_t )
 
-class CConceptHistoriesDataOps : public CDefSaveRestoreOps
-{
-public:
-	virtual void Save( const SaveRestoreFieldInfo_t &fieldInfo, ISave *pSave )
-	{
-		CUtlDict< ConceptHistory_t, int > *ch = ((CUtlDict< ConceptHistory_t, int > *)fieldInfo.pField);
-		int count = ch->Count();
-		pSave->WriteInt( &count );
-		for ( int i = 0 ; i < count; i++ )
-		{
-			ConceptHistory_t *pHistory = &(*ch)[ i ];
 
-			pSave->StartBlock();
-			{
-
-				// Write element name
-				pSave->WriteString( ch->GetElementName( i ) );
-
-				// Write data
-				pSave->WriteAll( pHistory );
-				// Write response blob
-				bool hasresponse = !pHistory->m_response.IsEmpty() ;
-				pSave->WriteBool( &hasresponse );
-				if ( hasresponse )
-				{
-					pSave->WriteAll( &pHistory->m_response );
-				}
-				// TODO: Could blat out pHistory->criteria pointer here, if it's needed
-			}
-			pSave->EndBlock();
-		}
-	}
-
-	virtual void Restore( const SaveRestoreFieldInfo_t &fieldInfo, IRestore *pRestore )
-	{
-		CUtlDict< ConceptHistory_t, int > *ch = ((CUtlDict< ConceptHistory_t, int > *)fieldInfo.pField);
-
-		int count = pRestore->ReadInt();
-		Assert( count >= 0 );
-		for ( int i = 0 ; i < count; i++ )
-		{
-			char conceptname[ 512 ];
-			conceptname[ 0 ] = 0;
-			ConceptHistory_t history;
-
-			pRestore->StartBlock();
-			{
-				pRestore->ReadString( conceptname, sizeof( conceptname ), 0 );
-
-				pRestore->ReadAll( &history );
-
-				bool hasresponse = false;
-
-				pRestore->ReadBool( &hasresponse );
-				if ( hasresponse )
-				{
-					history.m_response;
-					pRestore->ReadAll( &history.m_response );
-				}
-				else
-				{
-					history.m_response.Invalidate();
-				}
-			}
-
-			pRestore->EndBlock();
-
-			// TODO: Could restore pHistory->criteria pointer here, if it's needed
-
-			// Add to utldict
-			if ( conceptname[0] != 0 )
-			{
-				ch->Insert( conceptname, history );
-			}
-			else
-			{
-				Assert( !"Error restoring ConceptHistory_t, discarding!" );
-			}
-		}
-	}
-
-	virtual void MakeEmpty( const SaveRestoreFieldInfo_t &fieldInfo )
-	{
-	}
-
-	virtual bool IsEmpty( const SaveRestoreFieldInfo_t &fieldInfo )
-	{
-		CUtlDict< ConceptHistory_t, int > *ch = ((CUtlDict< ConceptHistory_t, int > *)fieldInfo.pField);
-		return ch->Count() == 0 ? true : false;
-	}
-};
-
-CConceptHistoriesDataOps g_ConceptHistoriesSaveDataOps;
 
 /////////////////////////////////////////////////
 // context operators
@@ -242,16 +149,7 @@ bool RR::CToggleOperator::Apply( const char *pOldValue, const char *pOperator, c
 // CLASS: CAI_Expresser
 //
 
-BEGIN_SIMPLE_DATADESC( CAI_Expresser )
-	//									m_pSink		(reconnected on load)
-//	DEFINE_FIELD( m_pOuter, CHandle < CBaseFlex > ),
-	DEFINE_CUSTOM_FIELD( m_ConceptHistories,	&g_ConceptHistoriesSaveDataOps ),
-	DEFINE_FIELD(		m_flStopTalkTime,		FIELD_TIME		),
-	DEFINE_FIELD(		m_flStopTalkTimeWithoutDelay, FIELD_TIME		),
-	DEFINE_FIELD(		m_flBlockedTalkTime, 	FIELD_TIME		),
-	DEFINE_FIELD(		m_voicePitch,			FIELD_INTEGER	),
-	DEFINE_FIELD(		m_flLastTimeAcceptedSpeak, 	FIELD_TIME		),
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP_SIMPLE( CAI_Expresser )
 
 //-------------------------------------
 

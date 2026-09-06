@@ -54,8 +54,6 @@ public:
 	bool IsLessonOfSameTypeOpen( const CBaseLesson *pLesson ) const;
 
 	// Save / Restore
-	void SaveGameBlock( ISave *pSave );
-	void RestoreGameBlock( IRestore *pRestore, bool );
 
 	bool ReadSaveData( void );
 	bool WriteSaveData( void );

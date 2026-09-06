@@ -5,6 +5,8 @@
 // $NoKeywords: $
 //=============================================================================//
 #include "cbase.h"
+#include "reflect_recvtable.h"
+#include "reflect_annotations.h"
 
 #include "c_env_cascade_light.h"
 
@@ -100,15 +102,7 @@ static ConCommand cl_csm_status("cl_csm_status", CC_CSM_Status, "Usage:\n   cl_c
 
 CCascadeLightManager g_CascadeLightManager;
 
-IMPLEMENT_CLIENTCLASS_DT(C_CascadeLight, DT_CascadeLight, CCascadeLight)
-	RecvPropVector(RECVINFO(m_shadowDirection)),
-	RecvPropVector(RECVINFO(m_envLightShadowDirection)),
-	RecvPropBool(RECVINFO(m_bEnabled)),
-	RecvPropBool(RECVINFO(m_bUseLightEnvAngles)),
-	RecvPropInt(RECVINFO(m_LightColor), 0, RecvProxy_Int32ToColor32),
-	RecvPropInt(RECVINFO(m_LightColorScale), 0, RecvProxy_Int32ToInt32 ),
-	RecvPropFloat(RECVINFO(m_flMaxShadowDist) )
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS( C_CascadeLight, DT_CascadeLight, CCascadeLight )
 
 LINK_ENTITY_TO_CLASS(env_cascade_light, C_CascadeLight);
 

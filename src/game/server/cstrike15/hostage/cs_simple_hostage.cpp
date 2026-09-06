@@ -12,6 +12,10 @@
 // Bugs Fixed by: Everyone else
 
 #include "cbase.h"
+#include "reflect_predmap.h"
+#include "reflect_datamap.h"
+#include "reflect_sendtable.h"
+#include "reflect_annotations.h"
 #include "cs_simple_hostage.h"
 #include "cs_player.h"
 #include "cs_gamerules.h"
@@ -76,14 +80,12 @@ ConVar mp_hostages_run_speed_modifier( "mp_hostages_run_speed_modifier", "1.0", 
 LINK_ENTITY_TO_CLASS( hostage_carriable_prop, CHostageCarriableProp );
 PRECACHE_REGISTER( hostage_carriable_prop );
 
-BEGIN_DATADESC( CHostageCarriableProp )
-END_DATADESC()
 
-IMPLEMENT_SERVERCLASS_ST( CHostageCarriableProp, DT_HostageCarriableProp )
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CHostageCarriableProp, DT_HostageCarriableProp )
 
-BEGIN_PREDICTION_DATA( CHostageCarriableProp )
-END_PREDICTION_DATA()
+#ifdef CLIENT_DLL
+IMPLEMENT_REFLECT_PREDMAP( CHostageCarriableProp );
+#endif
 
 const int DEFAULT_NUM_HOSTAGE_MODELS = 4;
 static const char *HostageModel[DEFAULT_NUM_HOSTAGE_MODELS] =
@@ -107,49 +109,11 @@ LINK_ENTITY_TO_CLASS( info_hostage_spawn, CHostage );
 LINK_ENTITY_TO_CLASS( hostage_entity, CHostage );
 
 //-----------------------------------------------------------------------------------------------------
-BEGIN_DATADESC( CHostage )
-
-	DEFINE_INPUTFUNC( FIELD_VOID, "OnRescueZoneTouch", HostageRescueZoneTouch ),
-
-	DEFINE_USEFUNC( HostageUse ),
-	DEFINE_THINKFUNC( HostageThink ),
-
-	//Outputs
-	DEFINE_OUTPUT( m_OnHostageBeginGrab, "OnHostageBeginGrab" ),
-	DEFINE_OUTPUT( m_OnFirstPickedUp, "OnFirstPickedUp" ),
-	DEFINE_OUTPUT( m_OnDroppedNotRescued, "OnDroppedNotRescued" ),
-	DEFINE_OUTPUT( m_OnRescued, "OnRescued" ),
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CHostage )
 
 
 //-----------------------------------------------------------------------------------------------------
-IMPLEMENT_SERVERCLASS_ST( CHostage, DT_CHostage )
-	SendPropExclude( "DT_BaseAnimating", "m_flPoseParameter" ),
-	SendPropExclude( "DT_BaseAnimating", "m_flPlaybackRate" ),
-	SendPropExclude( "DT_BaseAnimating", "m_nSequence" ),
-	SendPropExclude( "DT_BaseAnimating", "m_nNewSequenceParity" ),
-	SendPropExclude( "DT_BaseAnimating", "m_nResetEventsParity" ),
-	SendPropExclude( "DT_BaseAnimatingOverlay", "overlay_vars" ),
-
-	// cs_playeranimstate and clientside animation takes care of these on the client
-	SendPropExclude( "DT_ServerAnimationData" , "m_flCycle" ),
-	SendPropExclude( "DT_AnimTimeMustBeFirst" , "m_flAnimTime" ),
-
-	SendPropBool( SENDINFO(m_isRescued) ),
-	SendPropBool( SENDINFO(m_jumpedThisFrame) ),
-	SendPropInt( SENDINFO(m_iHealth), 10 ),
-	SendPropInt( SENDINFO(m_iMaxHealth), 10 ),
-	SendPropInt( SENDINFO(m_lifeState), 3, SPROP_UNSIGNED ),
-	SendPropInt( SENDINFO(m_fFlags), PLAYER_FLAG_BITS, SPROP_UNSIGNED, SendProxy_CropFlagsToPlayerFlagBitsLength ),
-	SendPropVector( SENDINFO( m_vel ), 12, 0x0, -MAX_HOSTAGE_MOVE_FORCE, MAX_HOSTAGE_MOVE_FORCE ),
-	SendPropEHandle( SENDINFO(m_leader) ),
-	SendPropInt( SENDINFO(m_nHostageState) ),
-
-	SendPropFloat( SENDINFO(m_flRescueStartTime) ),
-	SendPropFloat( SENDINFO(m_flGrabSuccessTime) ),
-	SendPropFloat( SENDINFO(m_flDropStartTime) ),
-
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CHostage, DT_CHostage )
 
 
 //-----------------------------------------------------------------------------------------------------

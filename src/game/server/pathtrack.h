@@ -6,6 +6,8 @@
 
 #ifndef PATHTRACK_H
 #define PATHTRACK_H
+
+#include "reflect_annotations.h"
 #ifdef _WIN32
 #pragma once
 #endif
@@ -93,25 +95,25 @@ private:
 	
 	static CPathTrack *Instance( edict_t *pent );
 
-	void InputPass( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "InPass", .type = FIELD_VOID } ]] void InputPass( inputdata_t &inputdata );
 	
-	void InputToggleAlternatePath( inputdata_t &inputdata );
-	void InputEnableAlternatePath( inputdata_t &inputdata );
-	void InputDisableAlternatePath( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "ToggleAlternatePath", .type = FIELD_VOID } ]] void InputToggleAlternatePath( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "EnableAlternatePath", .type = FIELD_VOID } ]] void InputEnableAlternatePath( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "DisableAlternatePath", .type = FIELD_VOID } ]] void InputDisableAlternatePath( inputdata_t &inputdata );
 
-	void InputTogglePath( inputdata_t &inputdata );
-	void InputEnablePath( inputdata_t &inputdata );
-	void InputDisablePath( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "TogglePath", .type = FIELD_VOID } ]] void InputTogglePath( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "EnablePath", .type = FIELD_VOID } ]] void InputEnablePath( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "DisablePath", .type = FIELD_VOID } ]] void InputDisablePath( inputdata_t &inputdata );
 
 	DECLARE_DATADESC();
 
-	float		m_flRadius;
+	[[= ks::reflect::Key{ .name = "radius" } ]] float		m_flRadius;
 	float		m_length;
-	string_t	m_altName;
+	[[= ks::reflect::Key{ .name = "altpath" } ]] string_t	m_altName;
     int			m_nIterVal;
-	TrackOrientationType_t m_eOrientationType;
+	[[= ks::reflect::Key{ .name = "orientationtype" } ]] TrackOrientationType_t m_eOrientationType;
 
-	COutputEvent m_OnPass;
+	[[= ks::reflect::Key{ .name = "OnPass" } ]] COutputEvent m_OnPass;
 
 	static int	s_nCurrIterVal;
 	static bool s_bIsIterating;

@@ -5,6 +5,15 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_annotations.h"
+#ifdef CLIENT_DLL
+#include "reflect_recvtable.h"
+#endif
+#include "reflect_predmap.h"
+#include "reflect_annotations.h"
+#ifdef GAME_DLL
+#include "reflect_sendtable.h"
+#endif
 #include "weapon_csbasegun.h"
 #include "fx_cs_shared.h"
 #include "in_buttons.h"
@@ -25,23 +34,12 @@
 
 IMPLEMENT_NETWORKCLASS_ALIASED( WeaponCSBaseGun, DT_WeaponCSBaseGun )
 
-	BEGIN_NETWORK_TABLE( CWeaponCSBaseGun, DT_WeaponCSBaseGun )
-#if defined( GAME_DLL )
-	SendPropInt( SENDINFO( m_zoomLevel ), 2, SPROP_UNSIGNED ),
-	SendPropInt( SENDINFO( m_iBurstShotsRemaining ) ),
-#else
-	RecvPropInt( RECVINFO( m_zoomLevel ) ),
-	RecvPropInt( RECVINFO( m_iBurstShotsRemaining ) ),
-#endif
-
-	END_NETWORK_TABLE()
+	IMPLEMENT_REFLECT_TABLE( CWeaponCSBaseGun, DT_WeaponCSBaseGun );
 
 #if defined( CLIENT_DLL )
-	BEGIN_PREDICTION_DATA( CWeaponCSBaseGun )
-	DEFINE_PRED_FIELD( m_zoomLevel, FIELD_INTEGER, FTYPEDESC_INSENDTABLE ),
-	DEFINE_PRED_FIELD( m_iBurstShotsRemaining, FIELD_INTEGER, FTYPEDESC_INSENDTABLE ),
-	DEFINE_PRED_FIELD( m_fNextBurstShot, FIELD_FLOAT, 0 ),
-	END_PREDICTION_DATA()
+#ifdef CLIENT_DLL
+IMPLEMENT_REFLECT_PREDMAP( CWeaponCSBaseGun );
+#endif
 #endif
 
 LINK_ENTITY_TO_CLASS_ALIASED( weapon_csbase_gun, WeaponCSBaseGun );

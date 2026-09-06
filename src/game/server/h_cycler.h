@@ -6,6 +6,8 @@
 
 #ifndef H_CYCLER_H
 #define H_CYCLER_H
+
+#include "reflect_annotations.h"
 #ifdef _WIN32
 #pragma once
 #endif
@@ -31,7 +33,7 @@ public:
 	virtual bool IsAlive( void ) { return false; }
 
 	// Inputs
-	void	InputSetSequence( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetSequence", .type = FIELD_STRING } ]] void	InputSetSequence( inputdata_t &inputdata );
 
 	DECLARE_DATADESC();
 

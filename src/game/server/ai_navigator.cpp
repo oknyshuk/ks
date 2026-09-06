@@ -7,6 +7,8 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_annotations.h"
+#include "reflect_datamap.h"
 
 #include <float.h> // for FLT_MAX
 
@@ -14,7 +16,6 @@
 #include "collisionutils.h"
 #include "ndebugoverlay.h"
 #include "isaverestore.h"
-#include "saverestore_utlvector.h"
 
 #include "ai_navigator.h"
 #include "ai_node.h"
@@ -120,46 +121,7 @@ const Vector AIN_NO_DEST( FLT_MAX, FLT_MAX, FLT_MAX );
 // class CAI_Navigator
 //-----------------------------------------------------------------------------
 
-BEGIN_SIMPLE_DATADESC( CAI_Navigator )
-
-	DEFINE_FIELD( m_navType,					FIELD_INTEGER ),
-	//								m_pMotor
-	//								m_pMoveProbe
-	//								m_pLocalNavigator
-	//								m_pAINetwork
-	DEFINE_EMBEDDEDBYREF( m_pPath ),
-	//								m_pClippedWaypoints	(not saved)
-	//								m_flTimeClipped		(not saved)
-	//								m_PreviousMoveActivity (not saved)
-	//								m_PreviousArrivalActivity (not saved)
-	DEFINE_FIELD( m_bValidateActivitySpeed,		FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_bCalledStartMove,			FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_fNavComplete,				FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_bNotOnNetwork,				FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_bLastNavFailed,				FIELD_BOOLEAN ),
-  	DEFINE_FIELD( m_flNextSimplifyTime,			FIELD_TIME ),
-	DEFINE_FIELD( m_bForcedSimplify,			FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_flLastSuccessfulSimplifyTime, FIELD_TIME ),
-	DEFINE_FIELD( m_flTimeLastAvoidanceTriangulate, FIELD_TIME ),
-  	DEFINE_FIELD( m_timePathRebuildMax,			FIELD_FLOAT ),
-  	DEFINE_FIELD( m_timePathRebuildDelay,		FIELD_FLOAT ),
-  	DEFINE_FIELD( m_timePathRebuildFail,		FIELD_TIME ),
-  	DEFINE_FIELD( m_timePathRebuildNext,		FIELD_TIME ),
-	DEFINE_FIELD( m_fRememberStaleNodes,		FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_bNoPathcornerPathfinds,		FIELD_BOOLEAN ),
-	// 								m_fPeerMoveWait		(think transient)
-	//								m_hPeerWaitingOn	(peer move fields do not need to be saved, tied to current schedule and path, which are not saved)
-	//								m_PeerWaitMoveTimer	(ibid)
-	//								m_PeerWaitClearTimer(ibid)
-	//								m_NextSidestepTimer	(ibid)
-	DEFINE_FIELD( m_hBigStepGroundEnt,			FIELD_EHANDLE ),
-	DEFINE_FIELD( m_hLastBlockingEnt,			FIELD_EHANDLE ),
-	//								m_vPosBeginFailedSteer (reset on load)
-	//								m_timeBeginFailedSteer (reset on load)
-	//								m_nNavFailCounter  (reset on load)
-	//								m_flLastNavFailTime  (reset on load)
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP_SIMPLE( CAI_Navigator )
 
 
 //-----------------------------------------------------------------------------
@@ -235,57 +197,6 @@ CAI_Navigator::~CAI_Navigator()
 //-----------------------------------------------------------------------------
 
 const short AI_NAVIGATOR_SAVE_VERSION = 1;
-
-void CAI_Navigator::Save( ISave &save )
-{
-	save.WriteShort( &AI_NAVIGATOR_SAVE_VERSION );
-
-	CUtlVector<AI_Waypoint_t> minPathArray;
-
-	AI_Waypoint_t *pCurWaypoint = GetPath()->GetCurWaypoint();
-	if ( pCurWaypoint )
-	{
-		if ( ( pCurWaypoint->NavType() == NAV_CLIMB || pCurWaypoint->NavType() == NAV_JUMP ) )
-		{	
-			CAI_WaypointList minCompletionPath;
-			if ( GetStoppingPath( &minCompletionPath ) && !minCompletionPath.IsEmpty() )
-			{
-				AI_Waypoint_t *pCurrent = minCompletionPath.GetLast();
-				while ( pCurrent )
-				{
-					minPathArray.AddToTail( *pCurrent );
-					pCurrent = pCurrent->GetPrev();
-				}
-				minCompletionPath.RemoveAll();
-			}
-		}
-	}
-
-	SaveUtlVector( &save, &minPathArray, FIELD_EMBEDDED );
-}
-
-//-----------------------------------------------------------------------------
-
-void CAI_Navigator::Restore( IRestore &restore )
-{
-	short version = restore.ReadShort();
-
-	if ( version != AI_NAVIGATOR_SAVE_VERSION )
-		return;
-
-	CUtlVector<AI_Waypoint_t> minPathArray;
-	RestoreUtlVector( &restore, &minPathArray, FIELD_EMBEDDED );
-
-	if ( minPathArray.Count() )
-	{
-		for ( int i = 0; i < minPathArray.Count(); i++ )
-		{
-			m_pClippedWaypoints->PrependWaypoint( minPathArray[i].GetPos(), minPathArray[i].NavType(), ( minPathArray[i].Flags() & ~bits_WP_TO_PATHCORNER ), minPathArray[i].flYaw );
-		}
-		m_flTimeClipped = gpGlobals->curtime + 1000; // time passes between restore and onrestore
-	}
-
-}
 
 //-----------------------------------------------------------------------------
 

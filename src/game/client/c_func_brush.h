@@ -5,11 +5,14 @@
 
 #ifndef C_FUNC_BRUSH_H
 #define C_FUNC_BRUSH_H
+
+#include "reflect_annotations.h"
 #ifdef _WIN32
 #pragma once
 #endif
 
-class C_FuncBrush : public C_BaseEntity
+class [[= ks::reflect::NetTable{ .name = "DT_FuncBrush" } ]]
+      C_FuncBrush : public C_BaseEntity
 {
 public:
 	DECLARE_CLASS( C_FuncBrush, C_BaseEntity );

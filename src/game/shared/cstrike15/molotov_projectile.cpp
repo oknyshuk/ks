@@ -5,6 +5,15 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_annotations.h"
+#ifdef CLIENT_DLL
+#include "reflect_recvtable.h"
+#endif
+#include "reflect_annotations.h"
+#ifdef GAME_DLL
+#include "reflect_sendtable.h"
+#include "reflect_datamap.h"
+#endif
 #include "molotov_projectile.h"
 
 #include "keyvalues.h"
@@ -28,9 +37,7 @@ ConVar molotov_throw_detonate_time( "molotov_throw_detonate_time", "2.0", FCVAR_
 
 #if defined( CLIENT_DLL )
 
-IMPLEMENT_CLIENTCLASS_DT( C_MolotovProjectile, DT_MolotovProjectile, CMolotovProjectile )
-	RecvPropBool( RECVINFO(m_bIsIncGrenade) ),
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS( C_MolotovProjectile, DT_MolotovProjectile, CMolotovProjectile )
 
 
 
@@ -94,16 +101,9 @@ ConVar weapon_molotov_maxdetonateslope(
 LINK_ENTITY_TO_CLASS( molotov_projectile, CMolotovProjectile );
 PRECACHE_REGISTER( molotov_projectile );
 
-BEGIN_DATADESC( CMolotovProjectile )
+IMPLEMENT_REFLECT_DATAMAP( CMolotovProjectile )
 
-// Inputs
-DEFINE_INPUTFUNC( FIELD_VOID, "InitializeSpawnFromWorld", InitializeSpawnFromWorld ),
-
-END_DATADESC()
-
-IMPLEMENT_SERVERCLASS_ST( CMolotovProjectile, DT_MolotovProjectile )
-	SendPropBool( SENDINFO(m_bIsIncGrenade) ),
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CMolotovProjectile, DT_MolotovProjectile )
 
 CMolotovProjectile *CMolotovProjectile::Create( const Vector &position, const QAngle &angles, 
 												const Vector &velocity, const AngularImpulse &angVelocity, 

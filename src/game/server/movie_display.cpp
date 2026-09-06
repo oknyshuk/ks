@@ -5,6 +5,9 @@
 //=====================================================================================//
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_sendtable.h"
+#include "reflect_annotations.h"
 #include "EnvMessage.h"
 #include "fmtstr.h"
 #include "filesystem.h"
@@ -12,7 +15,8 @@
 // NOTE: This has to be the last file included!
 #include "tier0/memdbgon.h"
 
-class CMovieDisplay : public CBaseEntity
+class [[= ks::reflect::NetTable{ .name = "DT_MovieDisplay" } ]]
+      CMovieDisplay : public CBaseEntity
 {
 public:
 
@@ -41,19 +45,19 @@ public:
 	void	Disable( void );
 	void	Enable( void );
 
-	void	InputDisable( inputdata_t &inputdata );
-	void	InputEnable( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Disable", .type = FIELD_VOID } ]] void	InputDisable( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Enable", .type = FIELD_VOID } ]] void	InputEnable( inputdata_t &inputdata );
 
-	void	InputSetDisplayText( inputdata_t &inputdata );
-	void	InputTakeOverAsMaster( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetDisplayText", .type = FIELD_STRING } ]] void	InputSetDisplayText( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "TakeOverAsMaster", .type = FIELD_VOID } ]] void	InputTakeOverAsMaster( inputdata_t &inputdata );
 
-	void	InputSetMovie( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetMovie", .type = FIELD_STRING } ]] void	InputSetMovie( inputdata_t &inputdata );
 
-	void	InputSetUseCustomUVs( inputdata_t &inputdata );
-	void	InputSetUMin( inputdata_t &inputdata );
-	void	InputSetVMin( inputdata_t &inputdata );
-	void	InputSetUMax( inputdata_t &inputdata );
-	void	InputSetVMax( inputdata_t &inputdata );	
+	[[= ks::reflect::Input{ .name = "SetUseCustomUVs", .type = FIELD_BOOLEAN } ]] void	InputSetUseCustomUVs( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetUMin", .type = FIELD_FLOAT } ]] void	InputSetUMin( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetVMin", .type = FIELD_FLOAT } ]] void	InputSetVMin( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetUMax", .type = FIELD_FLOAT } ]] void	InputSetUMax( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetVMax", .type = FIELD_FLOAT } ]] void	InputSetVMax( inputdata_t &inputdata );	
 
 private:
 
@@ -64,31 +68,31 @@ private:
 	void RestoreControlPanels( void );
 
 private:
-	CNetworkVar( bool, m_bEnabled );
-	CNetworkVar( bool, m_bLooping );
-	CNetworkVar( bool, m_bStretchToFill );
-	CNetworkVar( bool, m_bForcedSlave );
-	bool m_bForcePrecache;
+	CNetworkVar( bool, m_bEnabled, [[= ks::reflect::Net{} ]] );
+	CNetworkVar( bool, m_bLooping, [[= ks::reflect::Net{} ]] [[= ks::reflect::Key{ .name = "looping" } ]] );
+	CNetworkVar( bool, m_bStretchToFill, [[= ks::reflect::Net{} ]] [[= ks::reflect::Key{ .name = "stretch" } ]] );
+	CNetworkVar( bool, m_bForcedSlave, [[= ks::reflect::Net{} ]] [[= ks::reflect::Key{ .name = "forcedslave" } ]] );
+	[[= ks::reflect::Key{ .name = "forceprecache" } ]] bool m_bForcePrecache;
 
-	CNetworkVar( bool, m_bUseCustomUVs );
-	CNetworkVar( float, m_flUMin );
-	CNetworkVar( float, m_flUMax );
-	CNetworkVar( float, m_flVMin );
-	CNetworkVar( float, m_flVMax );
+	CNetworkVar( bool, m_bUseCustomUVs, [[= ks::reflect::Net{} ]] );
+	CNetworkVar( float, m_flUMin, [[= ks::reflect::Net{ .bits = 32 } ]] );
+	CNetworkVar( float, m_flUMax, [[= ks::reflect::Net{ .bits = 32 } ]] );
+	CNetworkVar( float, m_flVMin, [[= ks::reflect::Net{ .bits = 32 } ]] );
+	CNetworkVar( float, m_flVMax, [[= ks::reflect::Net{ .bits = 32 } ]] );
 
 	CNetworkString( m_szDisplayText, 128 );
 
 	// Filename of the movie to play
-	CNetworkString( m_szMovieFilename, 128 );
-	string_t	m_strMovieFilename;
+	CNetworkString( m_szMovieFilename, 128, [[= ks::reflect::Net{} ]] );
+	[[= ks::reflect::Key{ .name = "moviefilename" } ]] string_t	m_strMovieFilename;
 
 	// "Group" name.  Screens of the same group name will play the same movie at the same time
 	// Effectively this lets multiple screens tune to the same "channel" in the world
-	CNetworkString( m_szGroupName, 128 );
-	string_t	m_strGroupName;
+	CNetworkString( m_szGroupName, 128, [[= ks::reflect::Net{} ]] );
+	[[= ks::reflect::Key{ .name = "groupname" } ]] string_t	m_strGroupName;
 
-	int			m_iScreenWidth;
-	int			m_iScreenHeight;
+	[[= ks::reflect::Key{ .name = "width" } ]] int			m_iScreenWidth;
+	[[= ks::reflect::Key{ .name = "height" } ]] int			m_iScreenHeight;
 
 	bool		m_bDoFullTransmit;
 };
@@ -98,62 +102,9 @@ LINK_ENTITY_TO_CLASS( vgui_movie_display, CMovieDisplay );
 //-----------------------------------------------------------------------------
 // Save/load 
 //-----------------------------------------------------------------------------
-BEGIN_DATADESC( CMovieDisplay )
+IMPLEMENT_REFLECT_DATAMAP( CMovieDisplay )
 
-	DEFINE_FIELD( m_bEnabled, FIELD_BOOLEAN ),
-
-	DEFINE_AUTO_ARRAY_KEYFIELD( m_szDisplayText, FIELD_CHARACTER, "displaytext" ),
-
-	DEFINE_AUTO_ARRAY( m_szMovieFilename, FIELD_CHARACTER ),
-	DEFINE_KEYFIELD( m_strMovieFilename, FIELD_STRING, "moviefilename" ),
-
-	DEFINE_AUTO_ARRAY( m_szGroupName, FIELD_CHARACTER ),
-	DEFINE_KEYFIELD( m_strGroupName, FIELD_STRING, "groupname" ),
-
-	DEFINE_KEYFIELD( m_iScreenWidth, FIELD_INTEGER, "width" ),
-	DEFINE_KEYFIELD( m_iScreenHeight, FIELD_INTEGER, "height" ),
-	DEFINE_KEYFIELD( m_bLooping, FIELD_BOOLEAN, "looping" ),
-	DEFINE_KEYFIELD( m_bStretchToFill, FIELD_BOOLEAN, "stretch" ),
-	DEFINE_KEYFIELD( m_bForcedSlave, FIELD_BOOLEAN, "forcedslave" ),
-	DEFINE_KEYFIELD( m_bForcePrecache, FIELD_BOOLEAN, "forceprecache" ),
-
-	DEFINE_FIELD( m_bUseCustomUVs, FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_flUMin, FIELD_FLOAT ),
-	DEFINE_FIELD( m_flUMax, FIELD_FLOAT ),
-	DEFINE_FIELD( m_flVMin, FIELD_FLOAT ),
-	DEFINE_FIELD( m_flVMax, FIELD_FLOAT ),
-
-	DEFINE_FIELD( m_bDoFullTransmit, FIELD_BOOLEAN ),
-
-	DEFINE_INPUTFUNC( FIELD_VOID, "Disable", InputDisable ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "Enable", InputEnable ),
-
-	DEFINE_INPUTFUNC( FIELD_STRING, "SetDisplayText", InputSetDisplayText ),
-
-	DEFINE_INPUTFUNC( FIELD_STRING, "SetMovie", InputSetMovie ),
-
-	DEFINE_INPUTFUNC( FIELD_BOOLEAN, "SetUseCustomUVs", InputSetUseCustomUVs ),
-	DEFINE_INPUTFUNC( FIELD_FLOAT, "SetUMin", InputSetUMin ),
-	DEFINE_INPUTFUNC( FIELD_FLOAT, "SetUMax", InputSetUMax ),
-	DEFINE_INPUTFUNC( FIELD_FLOAT, "SetVMin", InputSetVMin ),
-	DEFINE_INPUTFUNC( FIELD_FLOAT, "SetVMax", InputSetVMax ),
-
-	DEFINE_INPUTFUNC( FIELD_VOID, "TakeOverAsMaster", InputTakeOverAsMaster ),
-END_DATADESC()
-
-IMPLEMENT_SERVERCLASS_ST( CMovieDisplay, DT_MovieDisplay )
-	SendPropBool( SENDINFO( m_bEnabled ) ),
-	SendPropBool( SENDINFO( m_bLooping ) ),
-	SendPropString( SENDINFO( m_szMovieFilename ) ),
-	SendPropString( SENDINFO( m_szGroupName ) ),
-	SendPropBool( SENDINFO( m_bStretchToFill ) ),
-	SendPropBool( SENDINFO( m_bForcedSlave ) ),
-	SendPropBool( SENDINFO( m_bUseCustomUVs ) ),
-	SendPropFloat( SENDINFO( m_flUMin ) ),
-	SendPropFloat( SENDINFO( m_flUMax ) ),
-	SendPropFloat( SENDINFO( m_flVMin ) ),
-	SendPropFloat( SENDINFO( m_flVMax ) ),
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CMovieDisplay, DT_MovieDisplay )
 
 CMovieDisplay::~CMovieDisplay()
 {

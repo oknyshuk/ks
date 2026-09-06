@@ -6,6 +6,8 @@
 
 #ifndef WEAPON_CSBASE_GUN_H
 #define WEAPON_CSBASE_GUN_H
+
+#include "reflect_annotations.h"
 #ifdef _WIN32
 #pragma once
 #endif
@@ -23,7 +25,8 @@
 #endif
 
 
-class CWeaponCSBaseGun : public CWeaponCSBase
+class [[= ks::reflect::NetTable{ .name = "DT_WeaponCSBaseGun" } ]]
+      CWeaponCSBaseGun : public CWeaponCSBase
 {
 public:
 	
@@ -62,7 +65,7 @@ public:
 	virtual CCSWeaponInfo const	&GetCSWpnData() const;
 	virtual int GetCSZoomLevel() {return m_zoomLevel; }
 
-	CNetworkVar( int, m_zoomLevel );
+	CNetworkVar( int, m_zoomLevel, [[= ks::reflect::Net{ .bits = 2, .flags = SPROP_UNSIGNED } ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] );
 
 	virtual bool HasZoom( void );
 	virtual bool IsZoomed( void ) const;
@@ -83,8 +86,8 @@ public:
 
 	virtual bool SendWeaponAnim( int iActivity );
 
-	CNetworkVar( int, m_iBurstShotsRemaining );	
-	float	m_fNextBurstShot;			// time to shoot the next bullet in burst fire mode
+	CNetworkVar( int, m_iBurstShotsRemaining, [[= ks::reflect::Net{ .bits = -1 } ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] );	
+	[[= ks::reflect::Pred{ .flags = 0 } ]] float	m_fNextBurstShot;			// time to shoot the next bullet in burst fire mode
 
 	virtual Activity GetDeployActivity( void );
 

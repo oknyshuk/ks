@@ -11,6 +11,7 @@
 #pragma once
 #endif
 
+#include "reflect_annotations.h"
 #include "shareddefs.h"
 #include "utlvector.h"
 #include "client_thinklist.h"
@@ -18,7 +19,15 @@
 
 class C_BasePlayer;
 
-class C_Team : public C_BaseEntity
+// named by the BareArray<> annotation below; both live in c_team.cpp
+void RecvProxy_PlayerList( const CRecvProxyData *pData, void *pStruct, void *pOut );
+void RecvProxyArrayLength_PlayerArray( void *pStruct, int objectID, int currentArrayLength );
+
+class [[= ks::reflect::NetTable{ .name = "DT_Team", .base = false } ]]
+      [[= ks::reflect::BareArray<"player_array_element", "\"player_array\"", MAX_PLAYERS, 0,
+            SIZEOF_IGNORE, ks::reflect::Net{},
+            RecvProxy_PlayerList, RecvProxyArrayLength_PlayerArray>{} ]]
+      C_Team : public C_BaseEntity
 {
 	DECLARE_CLASS( C_Team, C_BaseEntity );
 public:
@@ -69,26 +78,26 @@ public:
 
 	// Data received from the server
 	CUtlVector< int > m_aPlayers;
-	char	m_szTeamname[ MAX_TEAM_NAME_LENGTH ];
-	char	m_szClanTeamname[ MAX_TEAM_NAME_LENGTH ];
-	char	m_szTeamFlagImage[ MAX_TEAM_FLAG_ICON_LENGTH ];
-	char	m_szTeamLogoImage[ MAX_TEAM_LOGO_ICON_LENGTH ];
-	char	m_szTeamMatchStat[ MAX_PATH ];
-	int		m_scoreTotal;
-	int		m_scoreFirstHalf;
-	int		m_scoreSecondHalf;	
-	int		m_scoreOvertime;
-	int		m_nGGLeaderEntIndex_CT;
-	int		m_nGGLeaderEntIndex_T;
-	uint32	m_iClanID;
+	[[= ks::reflect::Pred{ .flags = FTYPEDESC_PRIVATE } ]] [[= ks::reflect::Net{} ]] char	m_szTeamname[ MAX_TEAM_NAME_LENGTH ];
+	[[= ks::reflect::Pred{ .flags = FTYPEDESC_PRIVATE } ]] [[= ks::reflect::Net{} ]] char	m_szClanTeamname[ MAX_TEAM_NAME_LENGTH ];
+	[[= ks::reflect::Pred{ .flags = FTYPEDESC_PRIVATE } ]] [[= ks::reflect::Net{} ]] char	m_szTeamFlagImage[ MAX_TEAM_FLAG_ICON_LENGTH ];
+	[[= ks::reflect::Pred{ .flags = FTYPEDESC_PRIVATE } ]] [[= ks::reflect::Net{} ]] char	m_szTeamLogoImage[ MAX_TEAM_LOGO_ICON_LENGTH ];
+	[[= ks::reflect::Pred{ .flags = FTYPEDESC_PRIVATE } ]] [[= ks::reflect::Net{} ]] char	m_szTeamMatchStat[ MAX_PATH ];
+	[[= ks::reflect::Pred{ .flags = FTYPEDESC_PRIVATE } ]] [[= ks::reflect::Net{} ]] int		m_scoreTotal;
+	[[= ks::reflect::Pred{ .flags = FTYPEDESC_PRIVATE } ]] [[= ks::reflect::Net{} ]] int		m_scoreFirstHalf;
+	[[= ks::reflect::Pred{ .flags = FTYPEDESC_PRIVATE } ]] [[= ks::reflect::Net{} ]] int		m_scoreSecondHalf;	
+	[[= ks::reflect::Pred{ .flags = FTYPEDESC_PRIVATE } ]] [[= ks::reflect::Net{} ]] int		m_scoreOvertime;
+	[[= ks::reflect::Net{} ]] int		m_nGGLeaderEntIndex_CT;
+	[[= ks::reflect::Net{} ]] int		m_nGGLeaderEntIndex_T;
+	[[= ks::reflect::Pred{ .flags = FTYPEDESC_PRIVATE } ]] [[= ks::reflect::Net{} ]] uint32	m_iClanID;
 
 	// Data for the scoreboard
-	int		m_iDeaths;
-	int		m_iPing;
-	int		m_iPacketloss;
-	int		m_iTeamNum;
-	int		m_bSurrendered;
-	int		m_numMapVictories;
+	[[= ks::reflect::Pred{ .flags = FTYPEDESC_PRIVATE } ]] int		m_iDeaths;
+	[[= ks::reflect::Pred{ .flags = FTYPEDESC_PRIVATE } ]] int		m_iPing;
+	[[= ks::reflect::Pred{ .flags = FTYPEDESC_PRIVATE } ]] int		m_iPacketloss;
+	[[= ks::reflect::Pred{ .flags = FTYPEDESC_PRIVATE } ]] [[= ks::reflect::Net{} ]] int		m_iTeamNum;
+	[[= ks::reflect::Pred{ .flags = FTYPEDESC_PRIVATE } ]] [[= ks::reflect::Net{} ]] int		m_bSurrendered;
+	[[= ks::reflect::Net{} ]] int		m_numMapVictories;
 };
 
 

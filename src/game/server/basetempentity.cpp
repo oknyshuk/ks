@@ -11,14 +11,15 @@
 // $NoKeywords: $
 //=============================================================================//
 #include "cbase.h"
+#include "reflect_sendtable.h"
+#include "reflect_annotations.h"
 #include "mathlib/mathlib.h"
 #include "basetempentity.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
-IMPLEMENT_SERVERCLASS_ST_NOBASE(CBaseTempEntity, DT_BaseTempEntity)
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CBaseTempEntity, DT_BaseTempEntity )
 
 
 

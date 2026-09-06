@@ -10,6 +10,8 @@
 #ifndef CS_GAMERULES_H
 #define CS_GAMERULES_H
 
+#include "reflect_annotations.h"
+
 #ifdef _WIN32
 #pragma once
 #endif
@@ -342,13 +344,13 @@ public:
 	SpawnPoint();
 	void Spawn( void );
 	bool IsEnabled() { return m_bEnabled; }
-	void InputSetEnabled( inputdata_t &inputdata );
-	void InputSetDisabled( inputdata_t &inputdata );
-	void InputToggleEnabled( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetEnabled", .type = FIELD_VOID } ]] void InputSetEnabled( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetDisabled", .type = FIELD_VOID } ]] void InputSetDisabled( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "ToggleEnabled", .type = FIELD_VOID } ]] void InputToggleEnabled( inputdata_t &inputdata );
 	void SetSpawnEnabled( bool bEnabled );
 
-	int		m_iPriority;
-	bool	m_bEnabled;
+	[[= ks::reflect::Key{ .name = "priority" } ]] int		m_iPriority;
+	[[= ks::reflect::Key{ .name = "enabled" } ]] bool	m_bEnabled;
 	int		m_nType;
 
 	enum Type
@@ -388,20 +390,37 @@ public:
 	void SetDefaultBehavior( BotDefaultBehavior_t val ) { m_nDefaultBehavior = val; }
 
 protected:
-	string_t	m_szWeaponsToGive;
-	string_t	m_szPlayerModelToUse;
-	int			m_nArmorToSpawnWith;
-	BotDefaultBehavior_t m_nDefaultBehavior;
-	int			m_nBotDifficulty;
-	bool		m_bIsAgressive;
-	bool		m_bStartAsleep;
-	float		m_flHideRadius;
+	[[= ks::reflect::Key{ .name = "weapons_to_give" } ]] string_t	m_szWeaponsToGive;
+	[[= ks::reflect::Key{ .name = "model_to_use" } ]] string_t	m_szPlayerModelToUse;
+	[[= ks::reflect::Key{ .name = "armor_to_give" } ]] int			m_nArmorToSpawnWith;
+	[[= ks::reflect::Key{ .name = "default_behavior" } ]] BotDefaultBehavior_t m_nDefaultBehavior;
+	[[= ks::reflect::Key{ .name = "bot_difficulty" } ]] int			m_nBotDifficulty;
+	[[= ks::reflect::Key{ .name = "is_agressive" } ]] bool		m_bIsAgressive;
+	[[= ks::reflect::Key{ .name = "start_asleep" } ]] bool		m_bStartAsleep;
+	[[= ks::reflect::Key{ .name = "hide_radius" } ]] float		m_flHideRadius;
 	CNavArea	*m_pMyArea;
 };
 
 #endif  //!CLIENT_DLL
 
-class CCSGameRulesProxy : public CGameRulesProxy
+#ifdef GAME_DLL
+namespace DT_CSGameRules { extern SendTable g_SendTable; }
+void *SendProxy_CSGameRules( const SendProp *pProp, const void *pStruct,
+    const void *pVarData, CSendProxyRecipients *pRecipients,
+    int objectID );
+#else
+namespace DT_CSGameRules { extern RecvTable g_RecvTable; }
+void RecvProxy_CSGameRules( const RecvProp *pProp, void **pOut, void *pData,
+    int objectID );
+#endif
+
+class [[= ks::reflect::NetTable{ .name = "DT_CSGameRulesProxy" } ]]
+#ifdef GAME_DLL
+      [[= ks::reflect::SubTable<"cs_gamerules_data", &DT_CSGameRules::g_SendTable, SendProxy_CSGameRules, true>{} ]]
+#else
+      [[= ks::reflect::SubTable<"cs_gamerules_data", &DT_CSGameRules::g_RecvTable, RecvProxy_CSGameRules, true>{} ]]
+#endif
+      CCSGameRulesProxy : public CGameRulesProxy
 {
 public:
 	DECLARE_CLASS( CCSGameRulesProxy, CGameRulesProxy );
@@ -409,7 +428,8 @@ public:
 };
 
 
-class CCSGameRules : public CTeamplayRules
+class [[= ks::reflect::NetTable{ .name = "DT_CSGameRules", .base = false } ]]
+      CCSGameRules : public CTeamplayRules
 {
 public:
 	DECLARE_CLASS( CCSGameRules, CTeamplayRules );
@@ -608,64 +628,64 @@ private:
 	float GetExplosionDamageAdjustment(Vector & vecSrc, Vector & vecEnd, CBaseEntity *pEntityToIgnore); // returns multiplier between 0.0 and 1.0 that is the percentage of any damage done from vecSrc to vecEnd that actually makes it.
 	float GetAmountOfEntityVisible(Vector & src, CBaseEntity *player); // returns a value from 0 to 1 that is the percentage of player visible from src.
 
-	CNetworkVar( bool, m_bFreezePeriod );	 // TRUE at beginning of round, set to FALSE when the period expires
-	CNetworkVar( bool, m_bWarmupPeriod );	 // 
-	CNetworkVar( float, m_fWarmupPeriodEnd ); // OBSOLETE. LEFT IN FOR DEMO COMPATIBILITY.
-	CNetworkVar( float, m_fWarmupPeriodStart );
+	CNetworkVar( bool, m_bFreezePeriod, [[= ks::reflect::Net{} ]] );	 // TRUE at beginning of round, set to FALSE when the period expires
+	CNetworkVar( bool, m_bWarmupPeriod, [[= ks::reflect::Net{} ]] );	 // 
+	CNetworkVar( float, m_fWarmupPeriodEnd, [[= ks::reflect::Net{ .bits = 32 } ]] ); // OBSOLETE. LEFT IN FOR DEMO COMPATIBILITY.
+	CNetworkVar( float, m_fWarmupPeriodStart, [[= ks::reflect::Net{ .bits = 32 } ]] );
 
-	CNetworkVar( bool, m_bTerroristTimeOutActive );
-	CNetworkVar( bool, m_bCTTimeOutActive );
-	CNetworkVar( float, m_flTerroristTimeOutRemaining );
-	CNetworkVar( float, m_flCTTimeOutRemaining );
-	CNetworkVar( int, m_nTerroristTimeOuts );
-	CNetworkVar( int, m_nCTTimeOuts );
+	CNetworkVar( bool, m_bTerroristTimeOutActive, [[= ks::reflect::Net{} ]] );
+	CNetworkVar( bool, m_bCTTimeOutActive, [[= ks::reflect::Net{} ]] );
+	CNetworkVar( float, m_flTerroristTimeOutRemaining, [[= ks::reflect::Net{ .bits = 32 } ]] );
+	CNetworkVar( float, m_flCTTimeOutRemaining, [[= ks::reflect::Net{ .bits = 32 } ]] );
+	CNetworkVar( int, m_nTerroristTimeOuts, [[= ks::reflect::Net{ .bits = -1 } ]] );
+	CNetworkVar( int, m_nCTTimeOuts, [[= ks::reflect::Net{ .bits = -1 } ]] );
 
-	CNetworkVar( bool, m_bMatchWaitingForResume ); // When mp_pause_match is called, this state becomes true and will prevent the next freezetime from ending.
-	CNetworkVar( int, m_iRoundTime );		 // (From mp_roundtime) - How many seconds long this round is.	
-	CNetworkVar( float, m_fMatchStartTime ); // time when match has started
-	CNetworkVar( float, m_fRoundStartTime ); // time round has started		
-	CNetworkVar( float, m_flRestartRoundTime ); // the global time when the round is supposed to end, if this is not 0
-	CNetworkVar( bool, m_bGameRestart ); // True = mp_restartgame is being processed
-	CNetworkVar( float, m_flGameStartTime );
-	CNetworkVar( float, m_timeUntilNextPhaseStarts );
-	CNetworkVar( int, m_gamePhase );
-	CNetworkVar( int, m_totalRoundsPlayed);
-	CNetworkVar( int, m_nOvertimePlaying);
-	CNetworkVar( int, m_iHostagesRemaining );
-	CNetworkVar( bool, m_bAnyHostageReached );
-	CNetworkVar( bool, m_bMapHasBombTarget );
-	CNetworkVar( bool, m_bMapHasRescueZone );
-	CNetworkVar( bool, m_bMapHasBuyZone );	
-	CNetworkVar( bool, m_bIsQueuedMatchmaking );	
-	CNetworkVar( bool, m_bIsValveDS );
-	CNetworkVar( bool, m_bLogoMap );		 // If there's an info_player_logo entity, then it's a logo map.
-	CNetworkVar( int,  m_iNumGunGameProgressiveWeaponsCT );	// total number of CT gun game progressive weapons
-	CNetworkVar( int,  m_iNumGunGameProgressiveWeaponsT );	// total number of T gun game progressive weapons
-	CNetworkVar( int,  m_iSpectatorSlotCount );				// max spectator slots available				
-	CNetworkArray( int, m_GGProgressiveWeaponOrderCT, 60 );				// CT gun game weapon order and # kills per weapon. Size is meant to be larger than the current number of different weapons defined in the CSWeaponID enum
-	CNetworkArray( int, m_GGProgressiveWeaponOrderT, 60 );				// T gun game weapon order and # kills per weapon. Size is meant to be larger than the current number of different weapons defined in the CSWeaponID enum
-	CNetworkArray( int, m_GGProgressiveWeaponKillUpgradeOrderCT, 60 );	// CT gun game number of kills per weapon. Size is meant to be larger than the current number of different weapons defined in the CSWeaponID enum
-	CNetworkArray( int, m_GGProgressiveWeaponKillUpgradeOrderT, 60 );	// T gun game number of kills per weapon. Size is meant to be larger than the current number of different weapons defined in the CSWeaponID enum
-	CNetworkVar( int, m_MatchDevice );
-	CNetworkVar( bool, m_bHasMatchStarted );
-	CNetworkVar( float, m_flDMBonusStartTime );
-	CNetworkVar( float, m_flDMBonusTimeLength );
-	CNetworkVar( uint16, m_unDMBonusWeaponLoadoutSlot );
-	CNetworkVar( bool, m_bDMBonusActive );
-	CNetworkVar( int, m_nNextMapInMapgroup );
-	CNetworkString( m_szTournamentEventName, MAX_PATH );
-	CNetworkString( m_szTournamentEventStage, MAX_PATH );
-	CNetworkString( m_szMatchStatTxt, MAX_PATH );
-	CNetworkString( m_szTournamentPredictionsTxt, MAX_PATH );
-	CNetworkVar( int, m_nTournamentPredictionsPct );
-	CNetworkVar( float, m_flCMMItemDropRevealStartTime );
-	CNetworkVar( float, m_flCMMItemDropRevealEndTime );
-	CNetworkVar( bool, m_bIsDroppingItems );	 // 
-	CNetworkVar( bool, m_bIsQuestEligible );
+	CNetworkVar( bool, m_bMatchWaitingForResume, [[= ks::reflect::Net{} ]] ); // When mp_pause_match is called, this state becomes true and will prevent the next freezetime from ending.
+	CNetworkVar( int, m_iRoundTime, [[= ks::reflect::Net{ .bits = 16 } ]] );		 // (From mp_roundtime) - How many seconds long this round is.	
+	CNetworkVar( float, m_fMatchStartTime, [[= ks::reflect::Net{ .bits = 32, .flags = SPROP_NOSCALE } ]] ); // time when match has started
+	CNetworkVar( float, m_fRoundStartTime, [[= ks::reflect::Net{ .bits = 32, .flags = SPROP_NOSCALE } ]] ); // time round has started		
+	CNetworkVar( float, m_flRestartRoundTime, [[= ks::reflect::Net{ .bits = 32 } ]] ); // the global time when the round is supposed to end, if this is not 0
+	CNetworkVar( bool, m_bGameRestart, [[= ks::reflect::Net{} ]] ); // True = mp_restartgame is being processed
+	CNetworkVar( float, m_flGameStartTime, [[= ks::reflect::Net{ .bits = 32, .flags = SPROP_NOSCALE } ]] );
+	CNetworkVar( float, m_timeUntilNextPhaseStarts, [[= ks::reflect::Net{ .bits = 32, .flags = SPROP_NOSCALE } ]] );
+	CNetworkVar( int, m_gamePhase, [[= ks::reflect::Net{ .bits = 4, .flags = SPROP_UNSIGNED } ]] );
+	CNetworkVar( int, m_totalRoundsPlayed, [[= ks::reflect::Net{ .bits = 16 } ]] );
+	CNetworkVar( int, m_nOvertimePlaying, [[= ks::reflect::Net{ .bits = 16 } ]] );
+	CNetworkVar( int, m_iHostagesRemaining, [[= ks::reflect::Net{ .bits = 4 } ]] );
+	CNetworkVar( bool, m_bAnyHostageReached, [[= ks::reflect::Net{} ]] );
+	CNetworkVar( bool, m_bMapHasBombTarget, [[= ks::reflect::Net{} ]] );
+	CNetworkVar( bool, m_bMapHasRescueZone, [[= ks::reflect::Net{} ]] );
+	CNetworkVar( bool, m_bMapHasBuyZone, [[= ks::reflect::Net{} ]] );	
+	CNetworkVar( bool, m_bIsQueuedMatchmaking, [[= ks::reflect::Net{} ]] );	
+	CNetworkVar( bool, m_bIsValveDS, [[= ks::reflect::Net{} ]] );
+	CNetworkVar( bool, m_bLogoMap, [[= ks::reflect::Net{} ]] );		 // If there's an info_player_logo entity, then it's a logo map.
+	CNetworkVar( int,  m_iNumGunGameProgressiveWeaponsCT, [[= ks::reflect::Net{ .bits = -1 } ]] );	// total number of CT gun game progressive weapons
+	CNetworkVar( int,  m_iNumGunGameProgressiveWeaponsT, [[= ks::reflect::Net{ .bits = -1 } ]] );	// total number of T gun game progressive weapons
+	CNetworkVar( int,  m_iSpectatorSlotCount, [[= ks::reflect::Net{ .bits = -1 } ]] );				// max spectator slots available				
+	CNetworkArray( int, m_GGProgressiveWeaponOrderCT, 60, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_UNSIGNED } ]] );				// CT gun game weapon order and # kills per weapon. Size is meant to be larger than the current number of different weapons defined in the CSWeaponID enum
+	CNetworkArray( int, m_GGProgressiveWeaponOrderT, 60, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_UNSIGNED } ]] );				// T gun game weapon order and # kills per weapon. Size is meant to be larger than the current number of different weapons defined in the CSWeaponID enum
+	CNetworkArray( int, m_GGProgressiveWeaponKillUpgradeOrderCT, 60, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_UNSIGNED } ]] );	// CT gun game number of kills per weapon. Size is meant to be larger than the current number of different weapons defined in the CSWeaponID enum
+	CNetworkArray( int, m_GGProgressiveWeaponKillUpgradeOrderT, 60, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_UNSIGNED } ]] );	// T gun game number of kills per weapon. Size is meant to be larger than the current number of different weapons defined in the CSWeaponID enum
+	CNetworkVar( int, m_MatchDevice, [[= ks::reflect::Net{ .bits = -1 } ]] );
+	CNetworkVar( bool, m_bHasMatchStarted, [[= ks::reflect::Net{} ]] );
+	CNetworkVar( float, m_flDMBonusStartTime, [[= ks::reflect::Net{ .bits = 32 } ]] );
+	CNetworkVar( float, m_flDMBonusTimeLength, [[= ks::reflect::Net{ .bits = 32 } ]] );
+	CNetworkVar( uint16, m_unDMBonusWeaponLoadoutSlot, [[= ks::reflect::Net{ .bits = -1 } ]] );
+	CNetworkVar( bool, m_bDMBonusActive, [[= ks::reflect::Net{} ]] );
+	CNetworkVar( int, m_nNextMapInMapgroup, [[= ks::reflect::Net{ .bits = -1 } ]] );
+	CNetworkString( m_szTournamentEventName, MAX_PATH, [[= ks::reflect::Net{} ]] );
+	CNetworkString( m_szTournamentEventStage, MAX_PATH, [[= ks::reflect::Net{} ]] );
+	CNetworkString( m_szMatchStatTxt, MAX_PATH, [[= ks::reflect::Net{} ]] );
+	CNetworkString( m_szTournamentPredictionsTxt, MAX_PATH, [[= ks::reflect::Net{} ]] );
+	CNetworkVar( int, m_nTournamentPredictionsPct, [[= ks::reflect::Net{ .bits = -1 } ]] );
+	CNetworkVar( float, m_flCMMItemDropRevealStartTime, [[= ks::reflect::Net{ .bits = 32, .flags = SPROP_NOSCALE } ]] );
+	CNetworkVar( float, m_flCMMItemDropRevealEndTime, [[= ks::reflect::Net{ .bits = 32, .flags = SPROP_NOSCALE } ]] );
+	CNetworkVar( bool, m_bIsDroppingItems, [[= ks::reflect::Net{} ]] );	 // 
+	CNetworkVar( bool, m_bIsQuestEligible, [[= ks::reflect::Net{} ]] );
 
-	CNetworkVar( int, m_nGuardianModeWaveNumber );
-	CNetworkVar( int, m_nGuardianModeSpecialKillsRemaining );
-	CNetworkVar( int, m_nGuardianModeSpecialWeaponNeeded );	
+	CNetworkVar( int, m_nGuardianModeWaveNumber, [[= ks::reflect::Net{ .bits = -1 } ]] );
+	CNetworkVar( int, m_nGuardianModeSpecialKillsRemaining, [[= ks::reflect::Net{ .bits = -1 } ]] );
+	CNetworkVar( int, m_nGuardianModeSpecialWeaponNeeded, [[= ks::reflect::Net{ .bits = -1 } ]] );	
 	int m_nGuardianGrenadesToGiveBots;
 public:
 
@@ -674,19 +694,19 @@ public:
 	//
 	// Holiday gifts global presence
 	//
-	CNetworkVar( uint32, m_numGlobalGiftsGiven );
-	CNetworkVar( uint32, m_numGlobalGifters );
-	CNetworkVar( uint32, m_numGlobalGiftsPeriodSeconds );
-	CNetworkArray( uint32, m_arrFeaturedGiftersAccounts, MAX_GIFT_GIVERS_FEATURED_COUNT );
-	CNetworkArray( uint32, m_arrFeaturedGiftersGifts, MAX_GIFT_GIVERS_FEATURED_COUNT );
+	CNetworkVar( uint32, m_numGlobalGiftsGiven, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_UNSIGNED } ]] );
+	CNetworkVar( uint32, m_numGlobalGifters, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_UNSIGNED } ]] );
+	CNetworkVar( uint32, m_numGlobalGiftsPeriodSeconds, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_UNSIGNED } ]] );
+	CNetworkArray( uint32, m_arrFeaturedGiftersAccounts, MAX_GIFT_GIVERS_FEATURED_COUNT, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_UNSIGNED } ]] );
+	CNetworkArray( uint32, m_arrFeaturedGiftersGifts, MAX_GIFT_GIVERS_FEATURED_COUNT, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_UNSIGNED } ]] );
 
 #define MAX_PROHIBITED_ITEMS 100
-	CNetworkArray( uint16, m_arrProhibitedItemIndices, MAX_PROHIBITED_ITEMS );
+	CNetworkArray( uint16, m_arrProhibitedItemIndices, MAX_PROHIBITED_ITEMS, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_UNSIGNED } ]] );
 
 	//
 	// Tournament Casters
 	//
-	CNetworkArray( uint32, m_arrTournamentActiveCasterAccounts, MAX_TOURNAMENT_ACTIVE_CASTER_COUNT );
+	CNetworkArray( uint32, m_arrTournamentActiveCasterAccounts, MAX_TOURNAMENT_ACTIVE_CASTER_COUNT, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_UNSIGNED } ]] );
 
 	
 	// These three are part of a hack to move an expensive network call (ClientPrint) out of 
@@ -695,30 +715,30 @@ public:
 // 	float m_flDeferredCallDispatchTime;
 
 	// Tournament best-of-N
-	CNetworkVar( int, m_numBestOfMaps );
+	CNetworkVar( int, m_numBestOfMaps, [[= ks::reflect::Net{ .bits = 4, .flags = SPROP_UNSIGNED } ]] );
 
 	// halloween mask seed
-	CNetworkVar( int, m_nHalloweenMaskListSeed );
+	CNetworkVar( int, m_nHalloweenMaskListSeed, [[= ks::reflect::Net{ .bits = -1 } ]] );
 
-	CNetworkVar( bool,  m_bBombDropped );
-	CNetworkVar( bool,	m_bBombPlanted );
-	CNetworkVar( int, m_iRoundWinStatus );	// 1 == CT's won last round, 2 == Terrorists did, 3 == Draw, no winner	
-	CNetworkVar( int, m_eRoundWinReason );	// see: e_RoundEndReason
-	CNetworkVar( bool, m_bTCantBuy );			// Who can and can't buy.
-	CNetworkVar( bool, m_bCTCantBuy );
-	CNetworkVar( float, m_flGuardianBuyUntilTime );
+	CNetworkVar( bool,  m_bBombDropped, [[= ks::reflect::Net{} ]] );
+	CNetworkVar( bool,	m_bBombPlanted, [[= ks::reflect::Net{} ]] );
+	CNetworkVar( int, m_iRoundWinStatus, [[= ks::reflect::Net{ .bits = -1 } ]] );	// 1 == CT's won last round, 2 == Terrorists did, 3 == Draw, no winner	
+	CNetworkVar( int, m_eRoundWinReason, [[= ks::reflect::Net{ .bits = -1 } ]] );	// see: e_RoundEndReason
+	CNetworkVar( bool, m_bTCantBuy, [[= ks::reflect::Net{} ]] );			// Who can and can't buy.
+	CNetworkVar( bool, m_bCTCantBuy, [[= ks::reflect::Net{} ]] );
+	CNetworkVar( float, m_flGuardianBuyUntilTime, [[= ks::reflect::Net{ .bits = 32 } ]] );
 
-	CNetworkArray( int, m_iMatchStats_RoundResults, MAX_MATCH_STATS_ROUNDS );	
-	CNetworkArray( int, m_iMatchStats_PlayersAlive_CT, MAX_MATCH_STATS_ROUNDS );
-	CNetworkArray( int, m_iMatchStats_PlayersAlive_T, MAX_MATCH_STATS_ROUNDS );
+	CNetworkArray( int, m_iMatchStats_RoundResults, MAX_MATCH_STATS_ROUNDS, [[= ks::reflect::Net{ .bits = 8, .flags = SPROP_UNSIGNED } ]] );	
+	CNetworkArray( int, m_iMatchStats_PlayersAlive_CT, MAX_MATCH_STATS_ROUNDS, [[= ks::reflect::Net{ .bits = 6, .flags = SPROP_UNSIGNED } ]] );
+	CNetworkArray( int, m_iMatchStats_PlayersAlive_T, MAX_MATCH_STATS_ROUNDS, [[= ks::reflect::Net{ .bits = 6, .flags = SPROP_UNSIGNED } ]] );
 
-	CNetworkArray( float,		m_TeamRespawnWaveTimes, MAX_TEAMS );	// Time between each team's respawn wave
+	CNetworkArray( float,		m_TeamRespawnWaveTimes, MAX_TEAMS, [[= ks::reflect::Net{ .bits = 32 } ]] );	// Time between each team's respawn wave
 
 	CEconQuestDefinition* GetActiveAssassinationQuest( void ) const;
 	int GetActiveServerQuestID( void ) const { return m_iActiveAssassinationTargetMissionID; }
 protected:
-	CNetworkArray( float,		m_flNextRespawnWave, MAX_TEAMS );		// Minor waste, but cleaner code
-	CNetworkVar( int, m_iActiveAssassinationTargetMissionID );			// we cannot change the name of this field for networking compatibility, but in coopgametypes this means the server questid
+	CNetworkArray( float,		m_flNextRespawnWave, MAX_TEAMS, [[= ks::reflect::Net{} ]] );		// Minor waste, but cleaner code
+	CNetworkVar( int, m_iActiveAssassinationTargetMissionID, [[= ks::reflect::Net{ .bits = -1 } ]] );			// we cannot change the name of this field for networking compatibility, but in coopgametypes this means the server questid
 	bool m_bDontIncrementCoopWave;
 
 public:
@@ -763,7 +783,7 @@ public:
 	bool			IsEndMatchVotingForNextMapEnabled();
 
 	// End Match Voting
-	CNetworkArray( int, m_nEndMatchMapGroupVoteOptions, MAX_ENDMATCH_VOTE_PANELS );				// For mapgroups >10 maps these will be vote options
+	CNetworkArray( int, m_nEndMatchMapGroupVoteOptions, MAX_ENDMATCH_VOTE_PANELS, [[= ks::reflect::Net{ .bits = -1 } ]] );				// For mapgroups >10 maps these will be vote options
 
 	// these functions cover recording and sending item drops for display in game modes where you don't allow drops during the match/round
 	CUtlVector< ks::net::CEconItemPreviewDataBlock * > m_ItemsPtrDroppedDuringMatch;

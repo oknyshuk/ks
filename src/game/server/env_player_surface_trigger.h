@@ -6,6 +6,8 @@
 
 #ifndef ENV_PLAYER_SURFACE_TRIGGER_H
 #define ENV_PLAYER_SURFACE_TRIGGER_H
+
+#include "reflect_annotations.h"
 #ifdef _WIN32
 #pragma once
 #endif
@@ -33,17 +35,17 @@ public:
 
 private:
 	void	PlayerSurfaceChanged( CBasePlayer *pPlayer, char gameMaterial );
-	void	InputDisable( inputdata_t &inputdata );
-	void	InputEnable( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Disable", .type = FIELD_VOID } ]] void	InputDisable( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Enable", .type = FIELD_VOID } ]] void	InputEnable( inputdata_t &inputdata );
 
 private:
-	int		m_iTargetGameMaterial;
+	[[= ks::reflect::Key{ .name = "gamematerial" } ]] int		m_iTargetGameMaterial;
 	int		m_iCurrentGameMaterial;
 	bool	m_bDisabled;
 
 	// Outputs
-	COutputEvent m_OnSurfaceChangedToTarget;
-	COutputEvent m_OnSurfaceChangedFromTarget;
+	[[= ks::reflect::Key{ .name = "OnSurfaceChangedToTarget" } ]] COutputEvent m_OnSurfaceChangedToTarget;
+	[[= ks::reflect::Key{ .name = "OnSurfaceChangedFromTarget" } ]] COutputEvent m_OnSurfaceChangedFromTarget;
 };
 
 #endif // ENV_PLAYER_SURFACE_TRIGGER_H

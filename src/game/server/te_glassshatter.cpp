@@ -11,6 +11,8 @@
 // $NoKeywords: $
 //=============================================================================//
 #include "cbase.h"
+#include "reflect_sendtable.h"
+#include "reflect_annotations.h"
 #include "basetempentity.h"
 #include "shattersurfacetypes.h"
 
@@ -20,7 +22,14 @@
 //-----------------------------------------------------------------------------
 // Purpose: Dispatches Glass Shatter tempentity
 //-----------------------------------------------------------------------------
-class CTEShatterSurface : public CBaseTempEntity
+class [[= ks::reflect::NetTable{ .name = "DT_TEShatterSurface" } ]]
+      [[= ks::reflect::From<"m_uchFrontColor[0]", ks::reflect::Net{ .bits = 8, .flags = SPROP_UNSIGNED, .wire = "m_uchFrontColor[0]" }>{} ]]
+      [[= ks::reflect::From<"m_uchFrontColor[1]", ks::reflect::Net{ .bits = 8, .flags = SPROP_UNSIGNED, .wire = "m_uchFrontColor[1]" }>{} ]]
+      [[= ks::reflect::From<"m_uchFrontColor[2]", ks::reflect::Net{ .bits = 8, .flags = SPROP_UNSIGNED, .wire = "m_uchFrontColor[2]" }>{} ]]
+      [[= ks::reflect::From<"m_uchBackColor[0]", ks::reflect::Net{ .bits = 8, .flags = SPROP_UNSIGNED, .wire = "m_uchBackColor[0]" }>{} ]]
+      [[= ks::reflect::From<"m_uchBackColor[1]", ks::reflect::Net{ .bits = 8, .flags = SPROP_UNSIGNED, .wire = "m_uchBackColor[1]" }>{} ]]
+      [[= ks::reflect::From<"m_uchBackColor[2]", ks::reflect::Net{ .bits = 8, .flags = SPROP_UNSIGNED, .wire = "m_uchBackColor[2]" }>{} ]]
+      CTEShatterSurface : public CBaseTempEntity
 {
 public:
 	DECLARE_CLASS( CTEShatterSurface, CBaseTempEntity );
@@ -32,14 +41,14 @@ public:
 	DECLARE_SERVERCLASS();
 
 public:
-	CNetworkVector( m_vecOrigin );
-	CNetworkQAngle( m_vecAngles );
-	CNetworkVector( m_vecForce );
-	CNetworkVector( m_vecForcePos );
-	CNetworkVar( float, m_flWidth );
-	CNetworkVar( float, m_flHeight );
-	CNetworkVar( float, m_flShardSize );
-	CNetworkVar( int, m_nSurfaceType );
+	CNetworkVector( m_vecOrigin, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD } ]] );
+	CNetworkQAngle( m_vecAngles, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD, .enc = ks::reflect::ENC_VECTOR } ]] );
+	CNetworkVector( m_vecForce, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD } ]] );
+	CNetworkVector( m_vecForcePos, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD } ]] );
+	CNetworkVar( float, m_flWidth, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE } ]] );
+	CNetworkVar( float, m_flHeight, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE } ]] );
+	CNetworkVar( float, m_flShardSize, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE } ]] );
+	CNetworkVar( int, m_nSurfaceType, [[= ks::reflect::Net{ .bits = 2, .flags = SPROP_UNSIGNED } ]] );
 	CNetworkArray( byte, m_uchFrontColor, 3 );
 	CNetworkArray( byte, m_uchBackColor, 3 );
 };
@@ -99,22 +108,7 @@ void CTEShatterSurface::Test( const Vector& current_origin, const QAngle& curren
 	Create( filter, 0.0 );
 }
 
-IMPLEMENT_SERVERCLASS_ST(CTEShatterSurface, DT_TEShatterSurface)
-	SendPropVector( SENDINFO(m_vecOrigin), -1, SPROP_COORD),
-	SendPropVector( SENDINFO(m_vecAngles), -1, SPROP_COORD),
-	SendPropVector( SENDINFO(m_vecForce), -1, SPROP_COORD),
-	SendPropVector( SENDINFO(m_vecForcePos), -1, SPROP_COORD),
-	SendPropFloat( SENDINFO(m_flWidth), 0, SPROP_NOSCALE ),
-	SendPropFloat( SENDINFO(m_flHeight), 0, SPROP_NOSCALE ),
-	SendPropFloat( SENDINFO(m_flShardSize), 0, SPROP_NOSCALE ),
-	SendPropInt( SENDINFO(m_nSurfaceType), 2, SPROP_UNSIGNED ),
-	SendPropInt( SENDINFO_ARRAYELEM( m_uchFrontColor, 0 ), 8, SPROP_UNSIGNED ),
-	SendPropInt( SENDINFO_ARRAYELEM( m_uchFrontColor, 1 ), 8, SPROP_UNSIGNED ),
-	SendPropInt( SENDINFO_ARRAYELEM( m_uchFrontColor, 2 ), 8, SPROP_UNSIGNED ),
-	SendPropInt( SENDINFO_ARRAYELEM( m_uchBackColor, 0 ), 8, SPROP_UNSIGNED ),
-	SendPropInt( SENDINFO_ARRAYELEM( m_uchBackColor, 1 ), 8, SPROP_UNSIGNED ),
-	SendPropInt( SENDINFO_ARRAYELEM( m_uchBackColor, 2 ), 8, SPROP_UNSIGNED ),
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CTEShatterSurface, DT_TEShatterSurface )
 
 
 // Singleton to fire TEShatterSurface objects

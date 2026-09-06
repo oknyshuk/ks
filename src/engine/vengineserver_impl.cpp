@@ -11,7 +11,6 @@
 #include "vox.h"
 #include "sound.h"
 #include "gl_model_private.h"
-#include "host_saverestore.h"
 #include "world.h"
 #include "l_studio.h"
 #include "decal.h"
@@ -720,21 +719,7 @@ public:
 		}
 	}
 
-	virtual void		*SaveAllocMemory( size_t num, size_t size )
-	{
-#ifndef DEDICATED
-		return ::SaveAllocMemory(num, size);
-#else
-		return NULL;
-#endif
-	}
 
-	virtual void		SaveFreeMemory( void *pSaveMem )
-	{
-#ifndef DEDICATED
-		::SaveFreeMemory(pSaveMem);
-#endif
-	}
 
 	/*
 	=================
@@ -1426,7 +1411,7 @@ public:
 	virtual char const *GetMostRecentlyLoadedFileName()
 	{
 #if !defined( DEDICATED )
-		return saverestore->GetMostRecentlyLoadedFileName();
+		return NULL;
 #else
 		return "";
 #endif
@@ -1435,7 +1420,7 @@ public:
 	virtual char const *GetSaveFileName()
 	{
 #if !defined( DEDICATED )
-		return saverestore->GetSaveFileName();
+		return "";
 #else
 		return "";
 #endif
@@ -2196,7 +2181,7 @@ bool CVEngineServer::IsLogEnabled()
 bool CVEngineServer::LoadGameState( char const *pMapName, bool createPlayers )
 {
 #ifndef DEDICATED
-	return saverestore->LoadGameState( pMapName, createPlayers ) != 0;
+	return false;
 #else
 	return 0;
 #endif
@@ -2205,7 +2190,7 @@ bool CVEngineServer::LoadGameState( char const *pMapName, bool createPlayers )
 bool CVEngineServer::IsOverrideLoadGameEntsOn()
 {
 #ifndef DEDICATED
-	return saverestore->IsOverrideLoadGameEntsOn();
+	return false;
 #else
 	return false;
 #endif
@@ -2222,21 +2207,18 @@ void CVEngineServer::ForceFlushEntity( int iEntity )
 void CVEngineServer::LoadAdjacentEnts( const char *pOldLevel, const char *pLandmarkName )
 {
 #ifndef DEDICATED
-	saverestore->LoadAdjacentEnts( pOldLevel, pLandmarkName );
 #endif
 }
 
 void CVEngineServer::ClearSaveDir()
 {
 #ifndef DEDICATED
-	saverestore->ClearSaveDir();
 #endif
 }
 
 void CVEngineServer::ClearSaveDirAfterClientLoad()
 {
 #ifndef DEDICATED
-	saverestore->RequestClearSaveDir();
 #endif
 }
 

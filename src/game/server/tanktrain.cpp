@@ -6,6 +6,8 @@
 //===========================================================================//
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_annotations.h"
 #include "trains.h"
 #include "entitylist.h"
 #include "soundenvelope.h"
@@ -51,17 +53,12 @@ public:
 
 private:
 
-	COutputEvent m_OnDeath;
+	[[= ks::reflect::Key{ .name = "OnDeath" } ]] COutputEvent m_OnDeath;
 };
 
 LINK_ENTITY_TO_CLASS( func_tanktrain, CFuncTankTrain );
 
-BEGIN_DATADESC( CFuncTankTrain )
-
-	// Outputs
-	DEFINE_OUTPUT(m_OnDeath, "OnDeath"),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CFuncTankTrain )
 
 
 void CFuncTankTrain::Spawn( void )
@@ -111,17 +108,12 @@ public:
 
 private:
 	variant_t	m_newTarget;
-	string_t	m_newTargetName;
+	[[= ks::reflect::Key{ .name = "newtarget" } ]] string_t	m_newTargetName;
 };
 
 LINK_ENTITY_TO_CLASS( tanktrain_aitarget, CTankTargetChange );
 
-BEGIN_DATADESC( CTankTargetChange )
-
-	// DEFINE_FIELD( m_newTarget, variant_t ),
-	DEFINE_KEYFIELD( m_newTargetName, FIELD_STRING, "newtarget" ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CTankTargetChange )
 
 
 void CTankTargetChange::Precache( void )
@@ -169,7 +161,7 @@ public:
 	DECLARE_DATADESC();
 
 	// INPUTS
-	void InputTargetEntity( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "TargetEntity", .type = FIELD_STRING } ]] void InputTargetEntity( inputdata_t &inputdata );
 
 private:
 	CHandle<CFuncTrackTrain>	m_hTrain;
@@ -179,31 +171,15 @@ private:
 	CSoundPatch		*m_soundTreads;
 	CSoundPatch		*m_soundEngine;
 
-	string_t		m_startSoundName;
-	string_t		m_engineSoundName;
-	string_t		m_movementSoundName;
+	[[= ks::reflect::Key{ .name = "startsound" } ]] string_t		m_startSoundName;
+	[[= ks::reflect::Key{ .name = "enginesound" } ]] string_t		m_engineSoundName;
+	[[= ks::reflect::Key{ .name = "movementsound" } ]] string_t		m_movementSoundName;
 	string_t		m_targetEntityName;
 };
 
 LINK_ENTITY_TO_CLASS( tanktrain_ai, CTankTrainAI );
 
-BEGIN_DATADESC( CTankTrainAI )
-
-	DEFINE_FIELD( m_hTrain, FIELD_EHANDLE),
-	DEFINE_FIELD( m_hTargetEntity, FIELD_EHANDLE),
-	DEFINE_FIELD( m_soundPlaying, FIELD_INTEGER),
-	DEFINE_SOUNDPATCH( m_soundTreads ),
-	DEFINE_SOUNDPATCH( m_soundEngine ),
-
-	DEFINE_KEYFIELD( m_startSoundName, FIELD_STRING, "startsound" ),
-	DEFINE_KEYFIELD( m_engineSoundName, FIELD_STRING, "enginesound" ),
-	DEFINE_KEYFIELD( m_movementSoundName, FIELD_STRING, "movementsound" ),
-	DEFINE_FIELD( m_targetEntityName, FIELD_STRING),
-
-	// Inputs
-	DEFINE_INPUTFUNC( FIELD_STRING, "TargetEntity", InputTargetEntity ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CTankTrainAI )
 
 
 

@@ -8,6 +8,8 @@
 #ifndef ITEMS_H
 #define ITEMS_H
 
+#include "reflect_annotations.h"
+
 #ifdef _WIN32
 #pragma once
 #endif
@@ -86,8 +88,8 @@ private:
 
 private:
 	bool		m_bActivateWhenAtRest;
-	COutputEvent m_OnPlayerTouch;
-	COutputEvent m_OnCacheInteraction;
+	[[= ks::reflect::Key{ .name = "OnPlayerTouch" } ]] COutputEvent m_OnPlayerTouch;
+	[[= ks::reflect::Key{ .name = "OnCacheInteraction" } ]] COutputEvent m_OnCacheInteraction;
 	
 	Vector		m_vOriginalSpawnOrigin;
 	QAngle		m_vOriginalSpawnAngles;

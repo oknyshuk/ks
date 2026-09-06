@@ -6,6 +6,8 @@
 
 #ifndef C_TESLA_H
 #define C_TESLA_H
+
+#include "reflect_annotations.h"
 #ifdef _WIN32
 #pragma once
 #endif
@@ -16,7 +18,8 @@
 #include "utllinkedlist.h"
 
 
-class C_Tesla : public C_BaseEntity
+class [[= ks::reflect::NetTable{ .name = "DT_Tesla" } ]]
+      C_Tesla : public C_BaseEntity
 {
 public:
 	
@@ -32,8 +35,8 @@ public:
 public:
 
 	CUtlLinkedList<CTeslaInfo,int> m_QueuedCommands;
-	char m_SoundName[64];
-	char m_iszSpriteName[256];
+	[[= ks::reflect::Net{} ]] char m_SoundName[64];
+	[[= ks::reflect::Net{} ]] char m_iszSpriteName[256];
 };
 
 

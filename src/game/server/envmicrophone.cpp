@@ -10,6 +10,8 @@
 //=============================================================================
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_annotations.h"
 #include "entityinput.h"
 #include "entityoutput.h"
 #include "eventqueue.h"
@@ -33,31 +35,7 @@ static CUtlVector< CHandle<CEnvMicrophone> > s_Microphones;
 
 LINK_ENTITY_TO_CLASS(env_microphone, CEnvMicrophone);
 
-BEGIN_DATADESC( CEnvMicrophone )
-
-	DEFINE_KEYFIELD(m_bDisabled, FIELD_BOOLEAN, "StartDisabled"),
-	DEFINE_FIELD(m_hMeasureTarget, FIELD_EHANDLE),
-	DEFINE_KEYFIELD(m_nSoundMask, FIELD_INTEGER, "SoundMask"),
-	DEFINE_KEYFIELD(m_flSensitivity, FIELD_FLOAT, "Sensitivity"),
-	DEFINE_KEYFIELD(m_flSmoothFactor, FIELD_FLOAT, "SmoothFactor"),
-	DEFINE_KEYFIELD(m_iszSpeakerName, FIELD_STRING, "SpeakerName"),
-	DEFINE_KEYFIELD(m_iszListenFilter, FIELD_STRING, "ListenFilter"),
-	DEFINE_FIELD(m_hListenFilter, FIELD_EHANDLE),
-	DEFINE_FIELD(m_hSpeaker, FIELD_EHANDLE),
-	// DEFINE_FIELD(m_bAvoidFeedback, FIELD_BOOLEAN),	// DONT SAVE
-	DEFINE_KEYFIELD(m_iSpeakerDSPPreset, FIELD_INTEGER, "speaker_dsp_preset" ),
-	DEFINE_KEYFIELD(m_flMaxRange, FIELD_FLOAT, "MaxRange"),
-	DEFINE_AUTO_ARRAY(m_szLastSound, FIELD_CHARACTER),
-
-	DEFINE_INPUTFUNC(FIELD_VOID, "Enable", InputEnable),
-	DEFINE_INPUTFUNC(FIELD_VOID, "Disable", InputDisable),
-	DEFINE_INPUTFUNC(FIELD_STRING, "SetSpeakerName", InputSetSpeakerName),
-
-	DEFINE_OUTPUT(m_SoundLevel, "SoundLevel"),
-	DEFINE_OUTPUT(m_OnRoutedSound, "OnRoutedSound" ),
-	DEFINE_OUTPUT(m_OnHeardSound, "OnHeardSound" ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CEnvMicrophone )
 
 
 //-----------------------------------------------------------------------------

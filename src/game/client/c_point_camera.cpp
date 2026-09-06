@@ -6,6 +6,8 @@
 //===========================================================================//
 
 #include "cbase.h"
+#include "reflect_recvtable.h"
+#include "reflect_annotations.h"
 #include "c_point_camera.h"
 #include "toolframework/itoolframework.h"
 #include "toolframework_client.h"
@@ -15,17 +17,7 @@
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
-IMPLEMENT_CLIENTCLASS_DT( C_PointCamera, DT_PointCamera, CPointCamera )
-	RecvPropFloat( RECVINFO( m_FOV ) ), 
-	RecvPropFloat( RECVINFO( m_Resolution ) ), 
-	RecvPropInt( RECVINFO( m_bFogEnable ) ),
-	RecvPropInt( RECVINFO( m_FogColor ), 0, RecvProxy_Int32ToColor32 ),
-	RecvPropFloat( RECVINFO( m_flFogStart ) ), 
-	RecvPropFloat( RECVINFO( m_flFogEnd ) ), 
-	RecvPropFloat( RECVINFO( m_flFogMaxDensity ) ), 
-	RecvPropInt( RECVINFO( m_bActive ) ),
-	RecvPropInt( RECVINFO( m_bUseScreenAspectRatio ) ),
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS( C_PointCamera, DT_PointCamera, CPointCamera )
 
 C_EntityClassList<C_PointCamera> g_PointCameraList;
 template<> C_PointCamera *C_EntityClassList<C_PointCamera>::m_pClassList = NULL;

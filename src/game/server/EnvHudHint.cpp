@@ -6,6 +6,8 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_annotations.h"
 #include "engine/IEngineSound.h"
 #include "baseentity.h"
 #include "entityoutput.h"
@@ -27,21 +29,15 @@ public:
 	void	Precache( void );
 
 private:
-	void InputShowHudHint( inputdata_t &inputdata );
-	void InputHideHudHint( inputdata_t &inputdata );
-	string_t m_iszMessage;
+	[[= ks::reflect::Input{ .name = "ShowHudHint", .type = FIELD_VOID } ]] void InputShowHudHint( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "HideHudHint", .type = FIELD_VOID } ]] void InputHideHudHint( inputdata_t &inputdata );
+	[[= ks::reflect::Key{ .name = "message" } ]] string_t m_iszMessage;
 	DECLARE_DATADESC();
 };
 
 LINK_ENTITY_TO_CLASS( env_hudhint, CEnvHudHint );
 
-BEGIN_DATADESC( CEnvHudHint )
-
-	DEFINE_KEYFIELD( m_iszMessage, FIELD_STRING, "message" ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "ShowHudHint", InputShowHudHint ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "HideHudHint", InputHideHudHint ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CEnvHudHint )
 
 
 

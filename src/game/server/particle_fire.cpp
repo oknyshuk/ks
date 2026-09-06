@@ -6,6 +6,8 @@
 //
 //=============================================================================//
 #include "cbase.h"
+#include "reflect_sendtable.h"
+#include "reflect_annotations.h"
 
 #include "particle_fire.h"
 
@@ -13,22 +15,13 @@
 #include "tier0/memdbgon.h"
 
 
-IMPLEMENT_SERVERCLASS_ST_NOBASE(CParticleFire, DT_ParticleFire)
-	SendPropVector(SENDINFO(m_vOrigin),    0, SPROP_COORD),
-	SendPropVector(SENDINFO(m_vDirection), 0, SPROP_NOSCALE)
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CParticleFire, DT_ParticleFire )
 
 LINK_ENTITY_TO_CLASS( env_particlefire, CParticleFire );
 
 //---------------------------------------------------------
 // Save/Restore
 //---------------------------------------------------------
-BEGIN_DATADESC( CParticleFire )
-
-	DEFINE_FIELD( m_vOrigin,		FIELD_POSITION_VECTOR ),
-	DEFINE_FIELD( m_vDirection,	FIELD_VECTOR ),
-
-END_DATADESC()
 
 
 CParticleFire::CParticleFire()

@@ -7,6 +7,9 @@
 
 #ifndef C_PLAYERRESOURCE_H
 #define C_PLAYERRESOURCE_H
+
+#include "reflect_annotations.h"
+#include "dt_recv.h"
 #ifdef _WIN32
 #pragma once
 #endif
@@ -19,7 +22,10 @@
 #define PLAYER_UNCONNECTED_NAME	"unconnected"
 #define PLAYER_ERROR_NAME		"ERRORNAME"
 
-class C_PlayerResource : public C_BaseEntity, public IGameResources, public IShaderDeviceDependentObject
+void RecvProxy_ChangedTeam( const CRecvProxyData *pData, void *pStruct, void *pOut );
+
+class [[= ks::reflect::NetTable{ .name = "DT_PlayerResource", .base = false } ]]
+      C_PlayerResource : public C_BaseEntity, public IGameResources, public IShaderDeviceDependentObject
 {
 	DECLARE_CLASS( C_PlayerResource, C_BaseEntity );
 public:
@@ -76,18 +82,18 @@ protected:
 
 	// Data for each player that's propagated to all clients
 	// Stored in individual arrays so they can be sent down via datatables
-	string_t	m_szName[MAX_PLAYERS+1];
-	int		m_iPing[MAX_PLAYERS+1];
-	int		m_iKills[MAX_PLAYERS+1];
-	int		m_iAssists[MAX_PLAYERS+1];
-	int		m_iDeaths[MAX_PLAYERS+1];
-	bool	m_bConnected[MAX_PLAYERS+1];
-	int		m_iTeam[MAX_PLAYERS+1];
-	int		m_iPendingTeam[MAX_PLAYERS+1];
-	bool	m_bAlive[MAX_PLAYERS+1];
-	int		m_iHealth[MAX_PLAYERS+1];
+	[[= ks::reflect::Pred{ .flags = FTYPEDESC_PRIVATE } ]] string_t	m_szName[MAX_PLAYERS+1];
+	[[= ks::reflect::Net{} ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_PRIVATE } ]] int		m_iPing[MAX_PLAYERS+1];
+	[[= ks::reflect::Net{} ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_PRIVATE } ]] int		m_iKills[MAX_PLAYERS+1];
+	[[= ks::reflect::Net{} ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_PRIVATE } ]] int		m_iAssists[MAX_PLAYERS+1];
+	[[= ks::reflect::Net{} ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_PRIVATE } ]] int		m_iDeaths[MAX_PLAYERS+1];
+	[[= ks::reflect::Net{} ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_PRIVATE } ]] bool	m_bConnected[MAX_PLAYERS+1];
+	[[= ks::reflect::Net{} ]] [[= ks::reflect::Proxy<RecvProxy_ChangedTeam, ks::reflect::WIRE_RECV>{} ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_PRIVATE } ]] int		m_iTeam[MAX_PLAYERS+1];
+	[[= ks::reflect::Net{} ]] [[= ks::reflect::Proxy<RecvProxy_ChangedTeam, ks::reflect::WIRE_RECV>{} ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_PRIVATE } ]] int		m_iPendingTeam[MAX_PLAYERS+1];
+	[[= ks::reflect::Net{} ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_PRIVATE } ]] bool	m_bAlive[MAX_PLAYERS+1];
+	[[= ks::reflect::Net{} ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_PRIVATE } ]] int		m_iHealth[MAX_PLAYERS+1];
 	Color	m_Colors[MAX_TEAMS];
-	int		m_iCoachingTeam[MAX_PLAYERS+1];
+	[[= ks::reflect::Net{} ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_PRIVATE } ]] int		m_iCoachingTeam[MAX_PLAYERS+1];
 	
 	XUID	m_Xuids[MAX_PLAYERS+1];
 };

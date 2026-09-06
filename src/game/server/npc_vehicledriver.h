@@ -6,6 +6,8 @@
 
 #ifndef NPC_VEHICLEDRIVER_H
 #define NPC_VEHICLEDRIVER_H
+
+#include "reflect_annotations.h"
 #ifdef _WIN32
 #pragma once
 #endif
@@ -160,16 +162,16 @@ public:
 	Disposition_t	IRelationType( CBaseEntity *pTarget );
 
 	// Inputs
-	void			InputSetDriversMaxSpeed( inputdata_t &inputdata );
-	void			InputSetDriversMinSpeed( inputdata_t &inputdata );
-	void			InputStartForward( inputdata_t &inputdata );
-	void			InputStop( inputdata_t &inputdata );
-	void			InputStartFiring( inputdata_t &inputdata );
-	void			InputStopFiring( inputdata_t &inputdata );
-	void			InputGotoPathCorner( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetDriversMaxSpeed", .type = FIELD_FLOAT } ]] void			InputSetDriversMaxSpeed( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetDriversMinSpeed", .type = FIELD_FLOAT } ]] void			InputSetDriversMinSpeed( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "StartForward", .type = FIELD_VOID } ]] void			InputStartForward( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Stop", .type = FIELD_VOID } ]] void			InputStop( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "StartFiring", .type = FIELD_VOID } ]] void			InputStartFiring( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "StopFiring", .type = FIELD_VOID } ]] void			InputStopFiring( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "GotoPathCorner", .type = FIELD_STRING } ]] void			InputGotoPathCorner( inputdata_t &inputdata );
 
 public:
-	string_t		m_iszVehicleName;
+	[[= ks::reflect::Key{ .name = "vehicle" } ]] string_t		m_iszVehicleName;
 	IServerVehicle	*m_pVehicleInterface;
 	EHANDLE			m_hVehicleEntity;
 
@@ -184,8 +186,8 @@ public:
 	Vector				m_vecPostPoint;
 	Vector				m_vecPostPostPoint;
 	float				m_flDistanceAlongSpline;
-	float				m_flDriversMaxSpeed;
-	float				m_flDriversMinSpeed;
+	[[= ks::reflect::Key{ .name = "drivermaxspeed" } ]] float				m_flDriversMaxSpeed;
+	[[= ks::reflect::Key{ .name = "driverminspeed" } ]] float				m_flDriversMinSpeed;
 
 	// Speed
 	float				m_flMaxSpeed;		// Maximum speed this driver will go

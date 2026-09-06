@@ -6,6 +6,8 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_annotations.h"
 
 // NOTE: This has to be the last file included!
 #include "tier0/memdbgon.h"
@@ -21,10 +23,10 @@ public:
 	void Spawn( void );
 	bool CreateVPhysics( void );
 
-	COutputEvent m_OnPressed;				// After threshold weight has been reached
-	COutputEvent m_OnReleased;				// After weight has been removed to go below weight threshold
+	[[= ks::reflect::Key{ .name = "OnPressed" } ]] COutputEvent m_OnPressed;				// After threshold weight has been reached
+	[[= ks::reflect::Key{ .name = "OnReleased" } ]] COutputEvent m_OnReleased;				// After weight has been removed to go below weight threshold
 
-	float m_fStressToActivate;				// Amount of weight required to activate
+	[[= ks::reflect::Key{ .name = "WeightToActivate" } ]] float m_fStressToActivate;				// Amount of weight required to activate
 	bool m_bHasBeenPressed;					// Once the button has been pressed, fire one 
 											// output until the weight is reduced below the threshold
 
@@ -34,17 +36,7 @@ public:
 
 LINK_ENTITY_TO_CLASS( func_weight_button, CWeightButton );
 
-BEGIN_DATADESC( CWeightButton )
-
-	DEFINE_KEYFIELD( m_fStressToActivate, FIELD_FLOAT, "WeightToActivate" ),
-	DEFINE_FIELD( m_bHasBeenPressed, FIELD_BOOLEAN ),
-
-	DEFINE_OUTPUT( m_OnPressed, "OnPressed" ),
-	DEFINE_OUTPUT( m_OnReleased, "OnReleased" ),
-	
-	DEFINE_THINKFUNC( TriggerThink ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CWeightButton )
 
 
 void CWeightButton::Spawn()

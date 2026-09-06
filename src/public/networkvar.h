@@ -248,11 +248,14 @@ public:
 	}
 };
 
-#define CNetworkVarEmbedded( type, name ) \
+// The trailing ... is the annotation pass-through every other wrapper in this family has; an
+// embedded member needs one too, because DEFINE_PRED_TYPEDESCRIPTION names one (C_BasePlayer's
+// m_Local).
+#define CNetworkVarEmbedded( type, name, ... ) \
     struct GetOffset_##name{ static FORCEINLINE int Get() { return MyOffsetOf( ThisClass, name ); } }; \
 	typedef NetworkVarEmbedded< type, ThisClass, GetOffset_##name > NetworkVar_##name; \
 	friend class NetworkVarEmbedded< type, ThisClass, GetOffset_##name >; \
-	NetworkVar_##name name;
+	__VA_ARGS__ NetworkVar_##name name;
 
 // Zero the object -- necessary for CNetworkVar and possibly other cases.
 template<typename T>
@@ -265,7 +268,7 @@ class CNetworkVarFlagsBase
 public:
 	// A combination of NETWORKVAR_ flags. SendProps store these for additional information
 	// about what kind of CNetworkVar the SendProp is linked to.
-	static FORCEINLINE int GetNetworkVarFlags() { return 0; }
+	static constexpr int GetNetworkVarFlags() { return 0; }
 };
 
 
@@ -659,38 +662,38 @@ private:
 
 
 
-	#define CNetworkHandle( type, name ) CNetworkHandleInternal( type, name, NetworkStateChanged )
+	#define CNetworkHandle( type, name, ... ) CNetworkHandleInternal( type, name, NetworkStateChanged __VA_OPT__(,) __VA_ARGS__ )
 
-	#define CNetworkHandleInternal( type, name, stateChangedFn ) \
+	#define CNetworkHandleInternal( type, name, stateChangedFn, ... ) \
 		NETWORK_VAR_START( type, name ) \
-		NETWORK_VAR_END( type, name, CNetworkHandleBase, stateChangedFn )
+		NETWORK_VAR_END( type, name, CNetworkHandleBase, stateChangedFn __VA_OPT__(,) __VA_ARGS__ )
 #endif
 
 
 // Use this macro to define a network variable.
-#define CNetworkVar( type, name ) \
+#define CNetworkVar( type, name, ... ) \
 	NETWORK_VAR_START( type, name ) \
-	NETWORK_VAR_END( type, name, CNetworkVarBase, NetworkStateChanged )
+	NETWORK_VAR_END( type, name, CNetworkVarBase, NetworkStateChanged __VA_OPT__(,) __VA_ARGS__ )
 
 
 // Use this macro when you have a base class with a variable, and it doesn't have that variable in a SendTable,
 // but a derived class does. Then, the entity is only flagged as changed when the variable is changed in
 // an entity that wants to transmit the variable.
-	#define CNetworkVarForDerived( type, name ) \
+	#define CNetworkVarForDerived( type, name, ... ) \
 		virtual void NetworkStateChanged_##name() {} \
 		virtual void NetworkStateChanged_##name( void *pVar ) {} \
 		NETWORK_VAR_START( type, name ) \
-		NETWORK_VAR_END( type, name, CNetworkVarBase, NetworkStateChanged_##name )
+		NETWORK_VAR_END( type, name, CNetworkVarBase, NetworkStateChanged_##name __VA_OPT__(,) __VA_ARGS__ )
 
-	#define CNetworkHandleForDerived( type, name ) \
+	#define CNetworkHandleForDerived( type, name, ... ) \
 		virtual void NetworkStateChanged_##name() {} \
 		virtual void NetworkStateChanged_##name( void *pVar ) {} \
-		CNetworkHandleInternal( type, name, NetworkStateChanged_##name )
+		CNetworkHandleInternal( type, name, NetworkStateChanged_##name __VA_OPT__(,) __VA_ARGS__ )
 		
-	#define CNetworkArrayForDerived( type, name, count ) \
+	#define CNetworkArrayForDerived( type, name, count, ... ) \
 		virtual void NetworkStateChanged_##name() {} \
 		virtual void NetworkStateChanged_##name( void *pVar ) {} \
-		CNetworkArrayInternal( type, name, count, NetworkStateChanged_##name )
+		CNetworkArrayInternal( type, name, count, NetworkStateChanged_##name __VA_OPT__(,) __VA_ARGS__ )
 
 	#define IMPLEMENT_NETWORK_VAR_FOR_DERIVED( name ) \
 		virtual void NetworkStateChanged_##name() { CHECK_USENETWORKVARS NetworkStateChanged(); } \
@@ -701,11 +704,11 @@ private:
 // Use this when you have a base class in which MOST of its derived classes use this variable
 // in their SendTables, but there are a couple that don't (and they
 // can use DISABLE_NETWORK_VAR_FOR_DERIVED).
-	#define CNetworkVarForDerived_OnByDefault( type, name ) \
+	#define CNetworkVarForDerived_OnByDefault( type, name, ... ) \
 		virtual void NetworkStateChanged_##name() { CHECK_USENETWORKVARS NetworkStateChanged(); } \
 		virtual void NetworkStateChanged_##name( void *pVar ) { CHECK_USENETWORKVARS NetworkStateChanged( pVar ); } \
 		NETWORK_VAR_START( type, name ) \
-		NETWORK_VAR_END( type, name, CNetworkVarBase, NetworkStateChanged_##name )
+		NETWORK_VAR_END( type, name, CNetworkVarBase, NetworkStateChanged_##name __VA_OPT__(,) __VA_ARGS__ )
 
 	#define DISABLE_NETWORK_VAR_FOR_DERIVED( name ) \
 		virtual void NetworkStateChanged_##name() {} \
@@ -713,17 +716,17 @@ private:
 
 
 
-#define CNetworkQuaternion( name ) \
+#define CNetworkQuaternion( name, ... ) \
 	NETWORK_VAR_START( Quaternion, name ) \
-	NETWORK_VAR_END( Quaternion, name, CNetworkQuaternionBase, NetworkStateChanged )
+	NETWORK_VAR_END( Quaternion, name, CNetworkQuaternionBase, NetworkStateChanged __VA_OPT__(,) __VA_ARGS__ )
 
 // Helper for color32's. Contains GetR(), SetR(), etc.. functions.
-#define CNetworkColor32( name ) \
+#define CNetworkColor32( name, ... ) \
 	NETWORK_VAR_START( color32, name ) \
-	NETWORK_VAR_END( color32, name, CNetworkColor32Base, NetworkStateChanged )
+	NETWORK_VAR_END( color32, name, CNetworkColor32Base, NetworkStateChanged __VA_OPT__(,) __VA_ARGS__ )
 
 
-#define CNetworkString( name, length ) \
+#define CNetworkString( name, length, ... ) \
 	class NetworkVar_##name; \
 	friend class NetworkVar_##name; \
 	typedef ThisClass MakeANetworkVar_##name; \
@@ -749,14 +752,14 @@ private:
 		char m_Value[length]; \
 	}; \
 	typedef NetworkVar_##name NetworkVarType_##name; \
-	NetworkVar_##name name;
+	__VA_ARGS__ NetworkVar_##name name;
 
 
 
 
 // Use this to define networked arrays.
 // You can access elements for reading with operator[], and you can set elements with the Set() function.
-#define CNetworkArrayInternal( type, name, count, stateChangedFn ) \
+#define CNetworkArrayInternal( type, name, count, stateChangedFn, ... ) \
 	class NetworkVar_##name; \
 	friend class NetworkVar_##name; \
 	typedef ThisClass MakeANetworkVar_##name; \
@@ -803,10 +806,10 @@ private:
 			END_CHECK_USENETWORKVARS \
 		} \
 	}; \
-	NetworkVar_##name name;
+	__VA_ARGS__ NetworkVar_##name name;
 
 
-#define CNetworkArray( type, name, count )  CNetworkArrayInternal( type, name, count, NetworkStateChanged )
+#define CNetworkArray( type, name, count, ... )  CNetworkArrayInternal( type, name, count, NetworkStateChanged __VA_OPT__(,) __VA_ARGS__ )
 
 
 // Internal macros used in definitions of network vars.
@@ -821,7 +824,9 @@ private:
 
 
 // pChangedPtr could be the Y or Z component of a vector, so possibly != to pNetworkVar.
-#define NETWORK_VAR_END( networkVarType, networkVarName, baseClassName, stateChangedFn ) \
+// Trailing ... carries annotations onto the member declared on the last line; an attribute
+// before CNetworkVar(...) would silently attach to the NetworkVar_##name forward decl.
+#define NETWORK_VAR_END( networkVarType, networkVarName, baseClassName, stateChangedFn, ... ) \
 	public: \
 		static inline void NetworkStateChanged( void *pNetworkVar, void *pChangedPtr ) \
 		{ \
@@ -836,7 +841,7 @@ private:
 		} \
 	}; \
 	typedef baseClassName< networkVarType, NetworkVar_##networkVarName > NetworkVarType_##networkVarName; \
-	baseClassName< networkVarType, NetworkVar_##networkVarName > networkVarName;
+	__VA_ARGS__ baseClassName< networkVarType, NetworkVar_##networkVarName > networkVarName;
 
 
 

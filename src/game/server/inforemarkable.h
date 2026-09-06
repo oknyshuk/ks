@@ -13,6 +13,8 @@
 
 #ifndef INFOREMARKABLE_H
 #define INFOREMARKABLE_H
+
+#include "reflect_annotations.h"
 #ifdef _WIN32
 #pragma once
 #endif
@@ -38,7 +40,7 @@ public:
 	int m_iTimesRemarkedUpon;
 
 //FIX protected:
-	string_t	m_szRemarkContext;
+	[[= ks::reflect::Key{ .name = "contextsubject" } ]] string_t	m_szRemarkContext;
 };
 
 #endif

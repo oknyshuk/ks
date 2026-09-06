@@ -6,6 +6,8 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_annotations.h"
 
 #include "ai_hint.h"
 #include "ai_node.h"
@@ -61,9 +63,9 @@ class CAI_BattleLine : public CBaseEntity
 	DECLARE_CLASS( CAI_BattleLine, CBaseEntity );
 
 public:
-	string_t		m_iszActor;
-	bool			m_fActive;
-	bool			m_fStrict;
+	[[= ks::reflect::Key{ .name = "Actor" } ]] string_t		m_iszActor;
+	[[= ks::reflect::Key{ .name = "Active" } ]] bool			m_fActive;
+	[[= ks::reflect::Key{ .name = "Strict" } ]] bool			m_fStrict;
 
 	void Spawn()
 	{
@@ -75,7 +77,7 @@ public:
 		}
 	}
 
-	virtual void InputActivate( inputdata_t &inputdata )		
+	[[= ks::reflect::Input{ .name = "Activate", .type = FIELD_VOID } ]] virtual void InputActivate( inputdata_t &inputdata )		
 	{ 
 		if ( !m_fActive )
 		{
@@ -88,7 +90,7 @@ public:
 		}
 	}
 	
-	virtual void InputDeactivate( inputdata_t &inputdata )	
+	[[= ks::reflect::Input{ .name = "Deactivate", .type = FIELD_VOID } ]] virtual void InputDeactivate( inputdata_t &inputdata )	
 	{ 
 		if ( m_fActive )
 		{
@@ -158,19 +160,7 @@ private:
 
 LINK_ENTITY_TO_CLASS( ai_battle_line, CAI_BattleLine );
 
-BEGIN_DATADESC( CAI_BattleLine )
-	DEFINE_KEYFIELD(	m_iszActor,				FIELD_STRING, 	"Actor"					),
-	DEFINE_KEYFIELD(	m_fActive,				FIELD_BOOLEAN,  "Active"				),
-	DEFINE_KEYFIELD(	m_fStrict,				FIELD_BOOLEAN,  "Strict"				),
-	DEFINE_EMBEDDED( 	m_SelfMoveMonitor ),
-
-	// Inputs
-	DEFINE_INPUTFUNC( FIELD_VOID, "Activate", 		InputActivate ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "Deactivate",		InputDeactivate ),
-	
-	DEFINE_THINKFUNC( MovementThink ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CAI_BattleLine )
 
 
 //-----------------------------------------------------------------------------
@@ -179,45 +169,8 @@ END_DATADESC()
 //
 //-----------------------------------------------------------------------------
 
-BEGIN_SIMPLE_DATADESC( AI_StandoffParams_t )
-	DEFINE_FIELD( hintChangeReaction,	FIELD_INTEGER ),
-	DEFINE_FIELD( fPlayerIsBattleline,	FIELD_BOOLEAN ),
-	DEFINE_FIELD( fCoverOnReload,		FIELD_BOOLEAN ),
-	DEFINE_FIELD( minTimeShots,			FIELD_FLOAT ),
-	DEFINE_FIELD( maxTimeShots,			FIELD_FLOAT ),
-	DEFINE_FIELD( minShots,				FIELD_INTEGER ),
-	DEFINE_FIELD( maxShots,				FIELD_INTEGER ),
-	DEFINE_FIELD( oddsCover,			FIELD_INTEGER ),
-	DEFINE_FIELD( fStayAtCover,			FIELD_BOOLEAN ),
-	DEFINE_FIELD( flAbandonTimeLimit,	FIELD_FLOAT ),
-END_DATADESC();
+IMPLEMENT_REFLECT_DATAMAP_SIMPLE( AI_StandoffParams_t )
 
-BEGIN_DATADESC( CAI_StandoffBehavior )
-	DEFINE_FIELD( 		m_fActive, 						FIELD_BOOLEAN ),
-	DEFINE_FIELD(		m_fTestNoDamage,				FIELD_BOOLEAN ),
-	DEFINE_FIELD( 		m_vecStandoffGoalPosition, 		FIELD_POSITION_VECTOR ),
-	DEFINE_FIELD( 		m_posture, 						FIELD_INTEGER ),
-	DEFINE_EMBEDDED(	m_params ),
-	DEFINE_FIELD(		m_hStandoffGoal,				FIELD_EHANDLE ),
-	DEFINE_FIELD( 		m_fTakeCover, 					FIELD_BOOLEAN ),
-	DEFINE_FIELD( 		m_SavedDistTooFar, 				FIELD_FLOAT ),
-	DEFINE_FIELD( 		m_fForceNewEnemy, 				FIELD_BOOLEAN ),
-	DEFINE_EMBEDDED( 	m_PlayerMoveMonitor ),
-	DEFINE_EMBEDDED( 	m_TimeForceCoverHint ),
-	DEFINE_EMBEDDED( 	m_TimePreventForceNewEnemy ),
-	DEFINE_EMBEDDED( 	m_RandomCoverChangeTimer ),
-	// 											m_UpdateBattleLinesSemaphore 	(not saved, only an in-think item)
-	// 											m_BattleLines 					(not saved, rebuilt)
-	DEFINE_FIELD( 		m_fIgnoreFronts, 				FIELD_BOOLEAN ),
-	//											m_ActivityMap 					(not saved, rebuilt)
-	//											m_bHasLowCoverActivity			(not saved, rebuilt)
-
-	DEFINE_FIELD( 		m_nSavedMinShots, 				FIELD_INTEGER ),
-	DEFINE_FIELD( 		m_nSavedMaxShots, 				FIELD_INTEGER ),
-	DEFINE_FIELD( 		m_flSavedMinRest, 				FIELD_FLOAT ),
-	DEFINE_FIELD( 		m_flSavedMaxRest, 				FIELD_FLOAT ),
-
-END_DATADESC();
 
 //-------------------------------------
 
@@ -1177,7 +1130,14 @@ AI_StandoffParams_t g_StandoffParamsByAgression[] =
 
 //-------------------------------------
 
-class CAI_StandoffGoal : public CAI_GoalEntity
+class
+      [[= ks::reflect::KeyFrom<"m_customParams.fCoverOnReload", ks::reflect::Key{ .name = "CustomCoverOnReload" } >{} ]]
+      [[= ks::reflect::KeyFrom<"m_customParams.minTimeShots", ks::reflect::Key{ .name = "CustomMinTimeShots" } >{} ]]
+      [[= ks::reflect::KeyFrom<"m_customParams.maxTimeShots", ks::reflect::Key{ .name = "CustomMaxTimeShots" } >{} ]]
+      [[= ks::reflect::KeyFrom<"m_customParams.minShots", ks::reflect::Key{ .name = "CustomMinShots" } >{} ]]
+      [[= ks::reflect::KeyFrom<"m_customParams.maxShots", ks::reflect::Key{ .name = "CustomMaxShots" } >{} ]]
+      [[= ks::reflect::KeyFrom<"m_customParams.oddsCover", ks::reflect::Key{ .name = "CustomOddsCover" } >{} ]]
+      CAI_StandoffGoal : public CAI_GoalEntity
 {
 	DECLARE_CLASS( CAI_StandoffGoal, CAI_GoalEntity );
 
@@ -1226,7 +1186,7 @@ public:
 		BaseClass::InputDeactivate( inputdata );
 	}
 	
-	void InputSetAggressiveness( inputdata_t &inputdata )
+	[[= ks::reflect::Input{ .name = "SetAggressiveness", .type = FIELD_INTEGER } ]] void InputSetAggressiveness( inputdata_t &inputdata )
 	{
 		int newVal = inputdata.value.Int();
 		
@@ -1299,11 +1259,11 @@ private:
 		AGGR_CUSTOM,
 	};
 
-	Aggressiveness_t 		m_aggressiveness;	
-	AI_HintChangeReaction_t m_HintChangeReaction;
-	bool					m_fPlayerIsBattleline;
-	bool					m_fStayAtCover;
-	bool					m_bAbandonIfEnemyHides;
+	[[= ks::reflect::Key{ .name = "Aggressiveness" } ]] Aggressiveness_t 		m_aggressiveness;	
+	[[= ks::reflect::Key{ .name = "HintGroupChangeReaction" } ]] AI_HintChangeReaction_t m_HintChangeReaction;
+	[[= ks::reflect::Key{ .name = "PlayerBattleline" } ]] bool					m_fPlayerIsBattleline;
+	[[= ks::reflect::Key{ .name = "StayAtCover" } ]] bool					m_fStayAtCover;
+	[[= ks::reflect::Key{ .name = "AbandonIfEnemyHides" } ]] bool					m_bAbandonIfEnemyHides;
 	AI_StandoffParams_t		m_customParams;
 };
 
@@ -1311,22 +1271,6 @@ private:
 
 LINK_ENTITY_TO_CLASS( ai_goal_standoff, CAI_StandoffGoal );
 
-BEGIN_DATADESC( CAI_StandoffGoal )
-	DEFINE_KEYFIELD( m_aggressiveness,				FIELD_INTEGER, 	"Aggressiveness" ),
-	//								   m_customParams  (individually)
-	DEFINE_KEYFIELD( m_HintChangeReaction,			FIELD_INTEGER, 	"HintGroupChangeReaction" ),
-	DEFINE_KEYFIELD( m_fPlayerIsBattleline,			FIELD_BOOLEAN,	"PlayerBattleline" ),
-	DEFINE_KEYFIELD( m_fStayAtCover,				FIELD_BOOLEAN,	"StayAtCover" ),
-	DEFINE_KEYFIELD( m_bAbandonIfEnemyHides,		FIELD_BOOLEAN, 	"AbandonIfEnemyHides" ),
-	DEFINE_KEYFIELD( m_customParams.fCoverOnReload,	FIELD_BOOLEAN, 	"CustomCoverOnReload" ),
-	DEFINE_KEYFIELD( m_customParams.minTimeShots,	FIELD_FLOAT, 	"CustomMinTimeShots" ),
-	DEFINE_KEYFIELD( m_customParams.maxTimeShots,	FIELD_FLOAT, 	"CustomMaxTimeShots" ),
-	DEFINE_KEYFIELD( m_customParams.minShots,		FIELD_INTEGER, 	"CustomMinShots" ),
-	DEFINE_KEYFIELD( m_customParams.maxShots,		FIELD_INTEGER, 	"CustomMaxShots" ),
-	DEFINE_KEYFIELD( m_customParams.oddsCover,		FIELD_INTEGER, 	"CustomOddsCover" ),
-
-	// Inputs
-	DEFINE_INPUTFUNC( FIELD_INTEGER, "SetAggressiveness", InputSetAggressiveness ),
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CAI_StandoffGoal )
 
 ///-----------------------------------------------------------------------------

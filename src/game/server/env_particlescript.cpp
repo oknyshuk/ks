@@ -6,6 +6,9 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_sendtable.h"
+#include "reflect_annotations.h"
 #include "baseanimating.h"
 #include "SkyCamera.h"
 #include "studio.h"
@@ -19,7 +22,8 @@
 //-----------------------------------------------------------------------------
 // An entity which emits other entities at points 
 //-----------------------------------------------------------------------------
-class CEnvParticleScript : public CBaseAnimating
+class [[= ks::reflect::NetTable{ .name = "DT_EnvParticleScript" } ]]
+      CEnvParticleScript : public CBaseAnimating
 {
 public:
 	DECLARE_CLASS( CEnvParticleScript, CBaseAnimating );
@@ -33,27 +37,20 @@ public:
 	virtual void Activate();
 	virtual int  UpdateTransmitState();
 
-	void InputSetSequence( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetSequence", .type = FIELD_STRING } ]] void InputSetSequence( inputdata_t &inputdata );
 
 private:
 
 	void	PrecacheAnimationEventMaterials();
 
-	CNetworkVar( float, m_flSequenceScale );
+	CNetworkVar( float, m_flSequenceScale, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE } ]] );
 };
 
 
 //-----------------------------------------------------------------------------
 // Save/load 
 //-----------------------------------------------------------------------------
-BEGIN_DATADESC( CEnvParticleScript )
-
-	DEFINE_FIELD( m_flSequenceScale, FIELD_FLOAT ),
-	
-	// Inputs
-	DEFINE_INPUTFUNC( FIELD_STRING, "SetSequence", InputSetSequence ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CEnvParticleScript )
 
 LINK_ENTITY_TO_CLASS( env_particlescript, CEnvParticleScript );
 
@@ -61,9 +58,7 @@ LINK_ENTITY_TO_CLASS( env_particlescript, CEnvParticleScript );
 //-----------------------------------------------------------------------------
 // Datatable
 //-----------------------------------------------------------------------------
-IMPLEMENT_SERVERCLASS_ST( CEnvParticleScript, DT_EnvParticleScript )
-	SendPropFloat(SENDINFO(m_flSequenceScale), 0, SPROP_NOSCALE),
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CEnvParticleScript, DT_EnvParticleScript )
 
 
 //-----------------------------------------------------------------------------

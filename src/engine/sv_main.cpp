@@ -1950,46 +1950,6 @@ void CGameServer::UpdateHibernationState()
 
 void CGameServer::FinishRestore()
 {
-#ifndef DEDICATED
-    CSaveRestoreData currentLevelData;
-    char			name[MAX_OSPATH];
-
-    if ( !m_bLoadgame )
-        return;
-
-    g_ServerGlobalVariables.pSaveData = &currentLevelData;
-    // Build the adjacent map list
-    serverGameDLL->BuildAdjacentMapList();
-
-    if ( !saverestore->IsXSave() )
-    {
-        Q_snprintf( name, sizeof( name ), "%s%s.HL2", saverestore->GetSaveDir(), m_szMapname );
-    }
-    else
-    {
-        Q_snprintf( name, sizeof( name ), "%s:\\%s.HL2", GetCurrentMod(), m_szMapname );
-    }
-
-    Q_FixSlashes( name );
-
-    saverestore->RestoreClientState( name, false );
-
-    if ( g_ServerGlobalVariables.eLoadType == MapLoad_Transition )
-    {
-        for ( int i = 0; i < currentLevelData.levelInfo.connectionCount; i++ )
-        {
-            saverestore->RestoreAdjacenClientState( currentLevelData.levelInfo.levelList[i].mapName );
-        }
-    }
-
-    saverestore->OnFinishedClientRestore();
-
-    g_ServerGlobalVariables.pSaveData = NULL;
-
-    // Reset
-    m_bLoadgame = false;
-    saverestore->SetIsXSave( false );
-#endif
 }
 
 void CGameServer::CopyTempEntities( CFrameSnapshot* pSnapshot )	

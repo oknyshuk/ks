@@ -34,6 +34,5 @@ char		*Templates_GetEntityIOFixedMapData( int iIndex );
 void		Templates_RemoveByHammerID( int nHammerID );
 
 // Save / Restore
-ISaveRestoreBlockHandler *GetTemplateSaveRestoreBlockHandler( void );
 
 #endif // TEMPLATEENTITIES_H

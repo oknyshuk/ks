@@ -5,6 +5,14 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_annotations.h"
+#ifdef CLIENT_DLL
+#include "reflect_recvtable.h"
+#endif
+#include "reflect_annotations.h"
+#ifdef GAME_DLL
+#include "reflect_sendtable.h"
+#endif
 #include "decoy_projectile.h"
 #include "engine/IEngineSound.h"
 #include "keyvalues.h"
@@ -25,8 +33,7 @@
 
 #if defined( CLIENT_DLL )
 
-IMPLEMENT_CLIENTCLASS_DT( C_DecoyProjectile, DT_DecoyProjectile, CDecoyProjectile )
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS( C_DecoyProjectile, DT_DecoyProjectile, CDecoyProjectile )
 
 
 //--------------------------------------------------------------------------------------------------------
@@ -79,13 +86,8 @@ bool C_DecoyProjectile::Simulate( void )
 LINK_ENTITY_TO_CLASS( decoy_projectile, CDecoyProjectile );
 PRECACHE_REGISTER( decoy_projectile );
 
-IMPLEMENT_SERVERCLASS_ST( CDecoyProjectile, DT_DecoyProjectile )
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CDecoyProjectile, DT_DecoyProjectile )
 
-BEGIN_DATADESC( CDecoyProjectile )
-	DEFINE_THINKFUNC( Think_Detonate ),
-	DEFINE_THINKFUNC( GunfireThink )
-END_DATADESC()
 
 
 struct DecoyWeaponProfile

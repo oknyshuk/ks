@@ -5,6 +5,8 @@
 //===========================================================================//
 
 #include "cbase.h"
+#include "reflect_recvtable.h"
+#include "reflect_annotations.h"
 #include "materialsystem/imaterialproxy.h"
 #include "materialsystem/imaterial.h"
 #include "materialsystem/imaterialvar.h"
@@ -16,7 +18,8 @@
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
-class C_FuncConveyor : public C_BaseEntity
+class [[= ks::reflect::NetTable{ .name = "DT_FuncConveyor" } ]]
+      C_FuncConveyor : public C_BaseEntity
 {
 public:
 	DECLARE_CLASS( C_FuncConveyor, C_BaseEntity );
@@ -27,13 +30,11 @@ public:
 	float GetConveyorSpeed() { return m_flConveyorSpeed; }
 
 private:
-	float m_flConveyorSpeed;
+	[[= ks::reflect::Net{} ]] float m_flConveyorSpeed;
 };
 
 
-IMPLEMENT_CLIENTCLASS_DT( C_FuncConveyor, DT_FuncConveyor, CFuncConveyor )
-	RecvPropFloat( RECVINFO( m_flConveyorSpeed ) ),
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS( C_FuncConveyor, DT_FuncConveyor, CFuncConveyor )
 
 
 C_FuncConveyor::C_FuncConveyor()

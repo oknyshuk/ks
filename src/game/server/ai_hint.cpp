@@ -8,6 +8,8 @@
 // @TODO (toml 03-04-03): there is far too much duplicate code in here
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_annotations.h"
 #include "ai_hint.h"
 #include "ai_network.h"
 #include "ai_node.h"
@@ -885,27 +887,7 @@ void CAI_HintManager::DrawHintOverlays(float flDrawDuration)
 //##################################################################
 LINK_ENTITY_TO_CLASS( ai_hint, CAI_Hint );
 
-BEGIN_DATADESC( CAI_Hint )
-
-	DEFINE_EMBEDDED( m_NodeData ),
-	//				m_nTargetNodeID (reset on load)
-
-	DEFINE_FIELD(	 m_hHintOwner,		FIELD_EHANDLE),
-	DEFINE_FIELD(	 m_flNextUseTime,	FIELD_TIME),
-	DEFINE_FIELD(	 m_vecForward,		FIELD_VECTOR),
-	DEFINE_KEYFIELD( m_nodeFOV,			FIELD_FLOAT,	"nodeFOV" ),
-
-	DEFINE_THINKFUNC( EnableThink ),
-
-	// Inputs
-	DEFINE_INPUTFUNC( FIELD_VOID,		"EnableHint",		InputEnableHint ),
-	DEFINE_INPUTFUNC( FIELD_VOID,		"DisableHint",		InputDisableHint ),
-
-	// Outputs
-	DEFINE_OUTPUT( m_OnNPCStartedUsing,	"OnNPCStartedUsing" ),
-	DEFINE_OUTPUT( m_OnNPCStoppedUsing,	"OnNPCStoppedUsing" ),
-
-END_DATADESC( );
+IMPLEMENT_REFLECT_DATAMAP( CAI_Hint )
 
 //------------------------------------------------------------------------------
 // Purpose : 

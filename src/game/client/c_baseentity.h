@@ -11,6 +11,9 @@
 
 #ifndef C_BASEENTITY_H
 #define C_BASEENTITY_H
+
+#include "reflect_annotations.h"
+#include "dt_recv.h"
 #ifdef _WIN32
 #pragma once
 #endif
@@ -38,6 +41,8 @@
 
 #include "vscript/ivscript.h"
 #include "vscript_shared.h"
+
+void RecvProxy_AnimTime( const CRecvProxyData *pData, void *pStruct, void *pOut );
 
 class C_Team;
 class IPhysicsObject;
@@ -393,10 +398,38 @@ inline void CDiscontinuousInterpolatedVar<QAngle>::TransformValue( const matrix3
 	Value = TransformAnglesToWorldSpace( Value, matTransform );
 }
 
+// Named by C_BaseEntity's prediction annotation on m_vecNetworkOrigin, so it has to be a
+// constant expression here rather than a const float in the .cpp.
+#include "coordsize.h"
+constexpr float coordTolerance = 2.0f / (float)( 1 << COORD_FRACTIONAL_BITS );
+
+// DT_BaseEntity names DT_AnimTimeMustBeFirst as a sub-table prop; the global is defined by
+// IMPLEMENT_REFLECT_TABLE_IN in c_baseentity.cpp.
+namespace DT_AnimTimeMustBeFirst { extern RecvTable g_RecvTable; }
+
+// Defined in c_baseentity.cpp and named by C_BaseEntity's network annotations, which have to
+// be constant expressions here rather than only beside the table.
+void RecvProxy_SimulationTime( const CRecvProxyData *pData, void *pStruct, void *pOut );
+void RecvProxy_EffectFlags( const CRecvProxyData *pData, void *pStruct, void *pOut );
+void RecvProxy_ClrRender( const CRecvProxyData *pData, void *pStruct, void *pOut );
+// The two props named by a bare wire string: the proxy writes into the entity through
+// SetMoveType/SetMoveCollide and no member is named, so there is nothing to annotate but the
+// class. They were .cpp statics; a Bare<> annotation needs external linkage.
+void RecvProxy_MoveType( const CRecvProxyData *pData, void *pStruct, void *pOut );
+void RecvProxy_MoveCollide( const CRecvProxyData *pData, void *pStruct, void *pOut );
+
 //-----------------------------------------------------------------------------
 // Purpose: Base client side entity object
 //-----------------------------------------------------------------------------
-class C_BaseEntity : public IClientEntity, public IClientModelRenderable
+class [[= ks::reflect::NetTable{ .name = "DT_AnimTimeMustBeFirst", .base = false } ]]
+      [[= ks::reflect::NetTable{ .name = "DT_BaseEntity", .base = false } ]]
+      [[= ks::reflect::SubTable<"AnimTimeMustBeFirst", &DT_AnimTimeMustBeFirst::g_RecvTable,
+            nullptr, true>{} ]]
+      [[= ks::reflect::Bare<"movetype",
+            ks::reflect::Net{ .enc = ks::reflect::ENC_INT }, RecvProxy_MoveType>{} ]]
+      [[= ks::reflect::Bare<"movecollide",
+            ks::reflect::Net{ .enc = ks::reflect::ENC_INT }, RecvProxy_MoveCollide>{} ]]
+      C_BaseEntity : public IClientEntity, public IClientModelRenderable
 {
 // Construction
 	DECLARE_CLASS_NOBASE( C_BaseEntity );
@@ -502,7 +535,7 @@ public:
 	HSCRIPT			m_hScriptInstance = nullptr;
 	string_t		m_iszScriptId;
 
-	float m_flLastMadeNoiseTime;
+	[[= ks::reflect::Net{} ]] float m_flLastMadeNoiseTime;
 
 
 // IClientUnknown overrides.
@@ -664,14 +697,10 @@ public:
 	// capabilities for save/restore
 	virtual int						ObjectCaps( void );
 	// only overload these if you have special data to serialize
-	virtual int						Save( ISave &save );
-	virtual int						Restore( IRestore &restore );
 
 	bool IsRenderingInFastReflections() const;
 
 private:
-	int SaveDataDescBlock( ISave &save, datamap_t *dmap );
-	int RestoreDataDescBlock( IRestore &restore, datamap_t *dmap );
 	bool ComputeIsRenderingInFastReflections() const;
 
 	// Client code should call this under any circumstances where fast reflection rendering type may change
@@ -1250,7 +1279,7 @@ public:
 protected:
 	static bool				sm_bDisableTouchFuncs;	// Disables PhysicsTouch and PhysicsStartTouch function calls
 
-	bool					m_bIsAutoaimTarget;
+	[[= ks::reflect::Net{} ]] bool					m_bIsAutoaimTarget;
 
 public:
 	touchlink_t				*PhysicsMarkEntityAsTouched( C_BaseEntity *other );
@@ -1656,15 +1685,15 @@ private:
 	
 	// Model for rendering
 	const model_t					*model;
-	CNetworkColor32( m_clrRender );
+	CNetworkColor32( m_clrRender, [[= ks::reflect::Net{} ]] [[= ks::reflect::Proxy<RecvProxy_ClrRender, ks::reflect::WIRE_RECV>{} ]] );
 
 public:
 protected: // Cell data is available to derived classes for RecvProxy issues
-	int								m_cellbits;
+	[[= ks::reflect::Net{} ]] [[= ks::reflect::Proxy<C_BaseEntity::RecvProxy_CellBits, ks::reflect::WIRE_RECV>{} ]] int								m_cellbits;
 	int								m_cellwidth;
-	int								m_cellX;
-	int								m_cellY;
-	int								m_cellZ;
+	[[= ks::reflect::Net{} ]] [[= ks::reflect::Proxy<C_BaseEntity::RecvProxy_CellX, ks::reflect::WIRE_RECV>{} ]] int								m_cellX;
+	[[= ks::reflect::Net{} ]] [[= ks::reflect::Proxy<C_BaseEntity::RecvProxy_CellY, ks::reflect::WIRE_RECV>{} ]] int								m_cellY;
+	[[= ks::reflect::Net{} ]] [[= ks::reflect::Proxy<C_BaseEntity::RecvProxy_CellZ, ks::reflect::WIRE_RECV>{} ]] int								m_cellZ;
 	Vector							m_vecCellOrigin; // cached cell offset position
 // BEGIN PREDICTION DATA COMPACTION (these fields are together to allow for faster copying in prediction system)
 // FTYPEDESC_INSENDTABLE STUFF
@@ -1693,38 +1722,38 @@ private:
 // FTYPEDESC_INSENDTABLE STUFF (end)
 private:
 	// Effects to apply
-	int								m_fEffects;
+	[[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] [[= ks::reflect::Net{} ]] [[= ks::reflect::Proxy<RecvProxy_EffectFlags, ks::reflect::WIRE_RECV>{} ]] int								m_fEffects;
 public:
 	// Team Handling
-	int								m_iTeamNum;
-	int								m_iPendingTeamNum;
+	[[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] [[= ks::reflect::Net{} ]] int								m_iTeamNum;
+	[[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] [[= ks::reflect::Net{} ]] int								m_iPendingTeamNum;
 	int								m_nNextThinkTick;
 	int								m_iHealth;
 private:
-	int								m_fFlags; // Behavior flags
+	[[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] int								m_fFlags; // Behavior flags
 protected:
 	// Object eye position
-	Vector							m_vecViewOffset;
+	[[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE, .tolerance = 0.25f } ]] Vector							m_vecViewOffset;
 private:
 	// Object velocity
-	Vector							m_vecVelocity;
+	[[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE, .tolerance = 0.5f } ]] Vector							m_vecVelocity;
 	Vector							m_vecBaseVelocity;	// Base velocity
 
-	QAngle							m_angNetworkAngles;
+	[[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE | FTYPEDESC_NOERRORCHECK } ]] [[= ks::reflect::Net{ .wire = "m_angRotation" } ]] QAngle							m_angNetworkAngles;
 
 	// Last values to come over the wire. Used for interpolation.
-	Vector							m_vecNetworkOrigin;
+	[[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE, .tolerance = coordTolerance } ]] [[= ks::reflect::Net{ .wire = "m_vecOrigin" } ]] [[= ks::reflect::Proxy<C_BaseEntity::RecvProxy_CellOrigin, ks::reflect::WIRE_RECV>{} ]] Vector							m_vecNetworkOrigin;
 
 	// Friction.
-	float							m_flFriction;      
+	[[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] float							m_flFriction;      
 
 	// The moveparent received from networking data
-	CHandle<C_BaseEntity>			m_hNetworkMoveParent;
+	[[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] [[= ks::reflect::Net{ .enc = ks::reflect::ENC_INT, .wire = "moveparent" } ]] [[= ks::reflect::Proxy<RecvProxy_IntToMoveParent, ks::reflect::WIRE_RECV>{} ]] CHandle<C_BaseEntity>			m_hNetworkMoveParent;
 	// The owner!
-	EHANDLE							m_hOwnerEntity;
+	[[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] [[= ks::reflect::Net{} ]] EHANDLE							m_hOwnerEntity;
 	EHANDLE							m_hGroundEntity;
 
-	char							m_iName[MAX_PATH];
+	[[= ks::reflect::Net{} ]] char							m_iName[MAX_PATH];
 
 #ifdef PORTAL2
 	char							m_iSignifierName[MAX_PATH];
@@ -1732,12 +1761,12 @@ private:
 
 public:
 	// Object model index
-	short							m_nModelIndex;
+	[[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE | FTYPEDESC_MODELINDEX } ]] [[= ks::reflect::Net{} ]] short							m_nModelIndex;
 private:
-	unsigned char					m_nRenderFX;
-	unsigned char 					m_nRenderMode;
-	unsigned char					m_MoveType;
-	unsigned char					m_MoveCollide;
+	[[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] [[= ks::reflect::Net{} ]] unsigned char					m_nRenderFX;
+	[[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] [[= ks::reflect::Net{} ]] unsigned char 					m_nRenderMode;
+	[[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] unsigned char					m_MoveType;
+	[[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] unsigned char					m_MoveCollide;
 	unsigned char					m_nWaterLevel;
 
 public:
@@ -1748,10 +1777,10 @@ public:
 
 public:
 	// Time animation sequence or frame was last changed
-	float							m_flAnimTime;
+	[[= ks::reflect::Net{ .enc = ks::reflect::ENC_INT, .table = "DT_AnimTimeMustBeFirst" } ]] [[= ks::reflect::Proxy<RecvProxy_AnimTime, ks::reflect::WIRE_RECV>{} ]] float							m_flAnimTime;
 	float							m_flOldAnimTime;
 
-	float							m_flSimulationTime;
+	[[= ks::reflect::Net{ .enc = ks::reflect::ENC_INT } ]] [[= ks::reflect::Proxy<RecvProxy_SimulationTime, ks::reflect::WIRE_RECV>{} ]] float							m_flSimulationTime;
 	float							m_flOldSimulationTime;
 	
 #if defined(ENABLE_CREATE_TIME)
@@ -1963,7 +1992,7 @@ private:
 
 	void CleanUpAlphaProperty();
 
-	float							m_flUseLookAtAngle;
+	[[= ks::reflect::Net{} ]] float							m_flUseLookAtAngle;
 
 #if !defined( NO_ENTITY_PREDICTION )
 	// It's still in the list for "fixup purposes" and simulation, but don't try to render it any more...
@@ -1990,7 +2019,7 @@ private:
 
 	ClientThinkHandle_t				m_hThink;
 
-	unsigned char					m_iParentAttachment; // 0 if we're relative to the parent's absorigin and absangles.
+	[[= ks::reflect::Net{} ]] unsigned char					m_iParentAttachment; // 0 if we're relative to the parent's absorigin and absangles.
 	unsigned char					m_iOldParentAttachment;
 
 
@@ -2005,9 +2034,9 @@ protected:
 	bool							m_bDisableSimulationFix;
 
 	// Fades
-	float							m_fadeMinDist;
-	float							m_fadeMaxDist;
-	float							m_flFadeScale;
+	[[= ks::reflect::Net{} ]] float							m_fadeMinDist;
+	[[= ks::reflect::Net{} ]] float							m_fadeMaxDist;
+	[[= ks::reflect::Net{} ]] float							m_flFadeScale;
 
 public:
 
@@ -2025,14 +2054,14 @@ private:
 
 	string_t						m_ModelName;
 
-	CNetworkVarEmbedded( CCollisionProperty, m_Collision );
+	CNetworkVarEmbedded( CCollisionProperty, m_Collision, [[= ks::reflect::Pred{} ]] [[= ks::reflect::Net{} ]] );
 	CNetworkVarEmbedded( CParticleProperty, m_Particles );
 	CClientAlphaProperty			*m_pClientAlphaProperty;
 
 	// Physics state
-	float							m_flElasticity;
+	[[= ks::reflect::Net{} ]] float							m_flElasticity;
 
-	float							m_flShadowCastDistance;
+	[[= ks::reflect::Net{} ]] float							m_flShadowCastDistance;
 	EHANDLE							m_ShadowDirUseOtherEntity;
 
 	float							m_flGroundChangeTime;
@@ -2051,7 +2080,7 @@ private:
 	matrix3x4_t						m_rgflCoordinateFrame;
 
 	// used to cull collision tests
-	int								m_CollisionGroup;
+	[[= ks::reflect::Net{} ]] int								m_CollisionGroup;
 
 #if !defined( NO_ENTITY_PREDICTION )
 	// For storing prediction results and pristine network state
@@ -2066,23 +2095,23 @@ private:
 	bool							m_bIsPlayerSimulated = false;
 #endif
 
-	CNetworkVar( bool, m_bSimulatedEveryTick );
-	CNetworkVar( bool, m_bAnimatedEveryTick );
-	CNetworkVar( bool, m_bAlternateSorting );
+	CNetworkVar( bool, m_bSimulatedEveryTick, [[= ks::reflect::Net{ .enc = ks::reflect::ENC_INT } ]] [[= ks::reflect::Proxy<RecvProxy_InterpolationAmountChanged, ks::reflect::WIRE_RECV>{} ]] );
+	CNetworkVar( bool, m_bAnimatedEveryTick, [[= ks::reflect::Net{ .enc = ks::reflect::ENC_INT } ]] [[= ks::reflect::Proxy<RecvProxy_InterpolationAmountChanged, ks::reflect::WIRE_RECV>{} ]] );
+	CNetworkVar( bool, m_bAlternateSorting, [[= ks::reflect::Net{} ]] );
 	//CNetworkVar( bool, m_bSpotted );
 
-	bool m_bSpotted;
-	bool m_bSpottedBy[MAX_PLAYERS + 1]; // OBSELETE USED BY OLD DEMOS
+	[[= ks::reflect::Net{} ]] bool m_bSpotted;
+	[[= ks::reflect::Net{ .enc = ks::reflect::ENC_INT } ]] [[= ks::reflect::Proxy<C_BaseEntity::RecvProxyOldSpottedByMask, ks::reflect::WIRE_RECV>{} ]] bool m_bSpottedBy[MAX_PLAYERS + 1]; // OBSELETE USED BY OLD DEMOS
 
-	CNetworkArray( uint32, m_bSpottedByMask, kNumSpottedByMask );
+	CNetworkArray( uint32, m_bSpottedByMask, kNumSpottedByMask, [[= ks::reflect::Net{} ]] );
 
-	unsigned char m_nMinCPULevel;
-	unsigned char m_nMaxCPULevel;
-	unsigned char m_nMinGPULevel;
-	unsigned char m_nMaxGPULevel;
+	[[= ks::reflect::Net{} ]] unsigned char m_nMinCPULevel;
+	[[= ks::reflect::Net{} ]] unsigned char m_nMaxCPULevel;
+	[[= ks::reflect::Net{} ]] unsigned char m_nMinGPULevel;
+	[[= ks::reflect::Net{} ]] unsigned char m_nMaxGPULevel;
 
 	//Adrian
-	unsigned char					m_iTextureFrameIndex;
+	[[= ks::reflect::Net{} ]] unsigned char					m_iTextureFrameIndex;
 
 	// Bbox visualization
 	unsigned char					m_fBBoxVisFlags;
@@ -2099,7 +2128,7 @@ private:
 #endif
 
 
-	EHANDLE							m_hEffectEntity;
+	[[= ks::reflect::Net{} ]] EHANDLE							m_hEffectEntity;
 	
 	// This is a random seed used by the networking code to allow client - side prediction code
 	//  randon number generators to spit out the same random numbers on both sides for a particular

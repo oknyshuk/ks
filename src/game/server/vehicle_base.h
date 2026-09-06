@@ -7,6 +7,8 @@
 
 #ifndef VEHICLE_BASE_H
 #define VEHICLE_BASE_H
+
+#include "reflect_annotations.h"
 #ifdef _WIN32
 #pragma once
 #endif
@@ -88,7 +90,6 @@ public:
 	// CBaseEntity
 	virtual void	Precache();
 	void			Spawn( void );
-	virtual int		Restore( IRestore &restore );
 	void			VPhysicsUpdate( IPhysicsObject *pPhysics );
 	void			DrawDebugGeometryOverlays();
 	int				DrawDebugTextOverlays();
@@ -103,11 +104,11 @@ public:
 	virtual void DampenEyePosition( Vector &vecVehicleEyePos, QAngle &vecVehicleEyeAngles ) {}
 
 	// Inputs
-	void InputThrottle( inputdata_t &inputdata );
-	void InputSteering( inputdata_t &inputdata );
-	void InputAction( inputdata_t &inputdata );
-	void InputHandBrakeOn( inputdata_t &inputdata );
-	void InputHandBrakeOff( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Throttle", .type = FIELD_FLOAT } ]] void InputThrottle( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Steer", .type = FIELD_FLOAT } ]] void InputSteering( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Action", .type = FIELD_FLOAT } ]] void InputAction( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "HandBrakeOn", .type = FIELD_VOID } ]] void InputHandBrakeOn( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "HandBrakeOff", .type = FIELD_VOID } ]] void InputHandBrakeOff( inputdata_t &inputdata );
 
 	DECLARE_DATADESC();
 
@@ -131,7 +132,7 @@ protected:
 protected:
 	CFourWheelVehiclePhysics		m_VehiclePhysics;
 	unsigned int					m_nVehicleType;
-	string_t						m_vehicleScript;
+	[[= ks::reflect::Key{ .name = "VehicleScript" } ]] string_t						m_vehicleScript;
 
 #ifdef HL2_EPISODIC
 	CUtlVector<EHANDLE>				m_hPhysicsChildren;	// List of entities who wish to get physics callbacks from the vehicle
@@ -162,7 +163,8 @@ public:
 //-----------------------------------------------------------------------------
 // Purpose: Drivable four wheel physics vehicles
 //-----------------------------------------------------------------------------
-class CPropVehicleDriveable : public CPropVehicle, public IDrivableVehicle, public INPCPassengerCarrier
+class [[= ks::reflect::NetTable{ .name = "DT_PropVehicleDriveable" } ]]
+      CPropVehicleDriveable : public CPropVehicle, public IDrivableVehicle, public INPCPassengerCarrier
 {
 	DECLARE_CLASS( CPropVehicleDriveable, CPropVehicle );
 	DECLARE_SERVERCLASS();
@@ -173,7 +175,6 @@ public:
 
 	virtual void	Precache( void );
 	virtual void	Spawn( void );
-	virtual int		Restore( IRestore &restore );
 	virtual void	OnRestore();
 	virtual void	CreateServerVehicle( void );
 	virtual int		ObjectCaps( void ) { return BaseClass::ObjectCaps() | FCAP_IMPULSE_USE; };
@@ -189,10 +190,10 @@ public:
 	virtual int		VPhysicsGetObjectList( IPhysicsObject **pList, int listMax );
 
 	// Inputs
-	void	InputLock( inputdata_t &inputdata );
-	void	InputUnlock( inputdata_t &inputdata );
-	void	InputTurnOn( inputdata_t &inputdata );
-	void	InputTurnOff( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Lock", .type = FIELD_VOID } ]] void	InputLock( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Unlock", .type = FIELD_VOID } ]] void	InputUnlock( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "TurnOn", .type = FIELD_VOID } ]] void	InputTurnOn( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "TurnOff", .type = FIELD_VOID } ]] void	InputTurnOff( inputdata_t &inputdata );
 
 	// Locals
 	void	ResetUseKey( CBasePlayer *pPlayer );
@@ -243,31 +244,31 @@ protected:
 	// Contained IServerVehicle
 	CFourWheelServerVehicle	*m_pServerVehicle;
 
-	COutputEvent		m_playerOn;
-	COutputEvent		m_playerOff;
+	[[= ks::reflect::Key{ .name = "PlayerOn" } ]] COutputEvent		m_playerOn;
+	[[= ks::reflect::Key{ .name = "PlayerOff" } ]] COutputEvent		m_playerOff;
 
-	COutputEvent		m_pressedAttack;
-	COutputEvent		m_pressedAttack2;
+	[[= ks::reflect::Key{ .name = "PressedAttack" } ]] COutputEvent		m_pressedAttack;
+	[[= ks::reflect::Key{ .name = "PressedAttack2" } ]] COutputEvent		m_pressedAttack2;
 
-	COutputFloat		m_attackaxis;
-	COutputFloat		m_attack2axis;
+	[[= ks::reflect::Key{ .name = "AttackAxis" } ]] COutputFloat		m_attackaxis;
+	[[= ks::reflect::Key{ .name = "Attack2Axis" } ]] COutputFloat		m_attack2axis;
 
-	CNetworkHandle( CBasePlayer, m_hPlayer );
+	CNetworkHandle( CBasePlayer, m_hPlayer, [[= ks::reflect::Net{} ]] );
 public:
 
-	CNetworkVar( int, m_nSpeed );
-	CNetworkVar( int, m_nRPM );
-	CNetworkVar( float, m_flThrottle );
-	CNetworkVar( int, m_nBoostTimeLeft );
-	CNetworkVar( int, m_nHasBoost );
+	CNetworkVar( int, m_nSpeed, [[= ks::reflect::Net{ .bits = 8 } ]] );
+	CNetworkVar( int, m_nRPM, [[= ks::reflect::Net{ .bits = 13 } ]] );
+	CNetworkVar( float, m_flThrottle, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE } ]] );
+	CNetworkVar( int, m_nBoostTimeLeft, [[= ks::reflect::Net{ .bits = 8 } ]] );
+	CNetworkVar( int, m_nHasBoost, [[= ks::reflect::Net{ .bits = 1, .flags = SPROP_UNSIGNED } ]] );
 
-	CNetworkVector( m_vecEyeExitEndpoint );
-	CNetworkVector( m_vecGunCrosshair );
-	CNetworkVar( bool, m_bUnableToFire );
-	CNetworkVar( bool, m_bHasGun );
+	CNetworkVector( m_vecEyeExitEndpoint, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD, .enc = ks::reflect::ENC_VECTOR } ]] );
+	CNetworkVector( m_vecGunCrosshair, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD, .enc = ks::reflect::ENC_VECTOR } ]] );
+	CNetworkVar( bool, m_bUnableToFire, [[= ks::reflect::Net{ .bits = 1, .flags = SPROP_UNSIGNED } ]] );
+	CNetworkVar( bool, m_bHasGun, [[= ks::reflect::Net{} ]] [[= ks::reflect::Key{ .name = "EnableGun", .input = true } ]] );
 
-	CNetworkVar( bool, m_nScannerDisabledWeapons );
-	CNetworkVar( bool, m_nScannerDisabledVehicle );
+	CNetworkVar( bool, m_nScannerDisabledWeapons, [[= ks::reflect::Net{ .bits = 1, .flags = SPROP_UNSIGNED } ]] );
+	CNetworkVar( bool, m_nScannerDisabledVehicle, [[= ks::reflect::Net{ .bits = 1, .flags = SPROP_UNSIGNED } ]] );
 
 	// NPC Driver
 	CHandle<CNPC_VehicleDriver>	 m_hNPCDriver;
@@ -294,10 +295,10 @@ public:
 protected:
 	// Entering / Exiting
 	bool		m_bEngineLocked;	// Mapmaker override on whether the vehicle's allowed to be turned on/off
-	bool		m_bLocked;
+	[[= ks::reflect::Key{ .name = "VehicleLocked" } ]] bool		m_bLocked;
 	float		m_flMinimumSpeedToEnterExit;
-	CNetworkVar( bool, m_bEnterAnimOn );
-	CNetworkVar( bool, m_bExitAnimOn );
+	CNetworkVar( bool, m_bEnterAnimOn, [[= ks::reflect::Net{ .bits = 1, .flags = SPROP_UNSIGNED } ]] );
+	CNetworkVar( bool, m_bExitAnimOn, [[= ks::reflect::Net{ .bits = 1, .flags = SPROP_UNSIGNED } ]] );
 	
 	// Used to turn the keepupright off after a short time
 	float		m_flTurnOffKeepUpright;

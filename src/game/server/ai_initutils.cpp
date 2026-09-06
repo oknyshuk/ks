@@ -12,6 +12,8 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_annotations.h"
+#include "reflect_datamap.h"
 #include "ai_node.h"
 #include "ai_hull.h"
 #include "ai_hint.h"
@@ -159,33 +161,11 @@ int CNodeEnt::m_nNodeCount = 0;
 // -------------
 // Data table
 // -------------
-BEGIN_SIMPLE_DATADESC( HintNodeData )
-
-	DEFINE_FIELD(	 strEntityName,		FIELD_STRING ),
-	//	DEFINE_FIELD(	 vecPosition,		FIELD_VECTOR ),		// Don't save
-	DEFINE_KEYFIELD( nHintType,			FIELD_SHORT,	"hinttype" ),
-	DEFINE_KEYFIELD( strGroup,			FIELD_STRING,	"Group" ),
-	DEFINE_KEYFIELD( iDisabled,			FIELD_INTEGER,	"StartHintDisabled" ),
-	DEFINE_FIELD(	 nNodeID,			FIELD_INTEGER ),
-	DEFINE_KEYFIELD( iszGenericType,	FIELD_STRING,	"generictype" ),
-	DEFINE_KEYFIELD( iszActivityName,	FIELD_STRING,	"hintactivity" ),
-    DEFINE_KEYFIELD( nTargetWCNodeID,	FIELD_INTEGER, "TargetNode" ),
-	DEFINE_KEYFIELD( nWCNodeID,			FIELD_INTEGER,	"nodeid" ),
-	DEFINE_KEYFIELD( fIgnoreFacing,		FIELD_INTEGER,	"IgnoreFacing" ),
-	DEFINE_KEYFIELD( minState,			FIELD_INTEGER,	"MinimumState" ),
-	DEFINE_KEYFIELD( maxState,			FIELD_INTEGER,	"MaximumState" ),
-	DEFINE_KEYFIELD( nRadius,			FIELD_INTEGER,  "radius" ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP_SIMPLE( HintNodeData )
 
 // -------------
 // Data table
 // -------------
-BEGIN_DATADESC( CNodeEnt )
-
-	DEFINE_EMBEDDED( m_NodeData ),
-
-END_DATADESC()
 
 //=========================================================
 //=========================================================

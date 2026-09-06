@@ -5,6 +5,8 @@
 //=============================================================================
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_annotations.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -22,19 +24,15 @@ public:
 	virtual void Spawn( void );
 	virtual void Precache( void );
 
-	void InputTrigger( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Trigger", .type = FIELD_VOID } ]] void InputTrigger( inputdata_t &inputdata );
 
 protected:
-	string_t m_iszSkyboxName;
+	[[= ks::reflect::Key{ .name = "SkyboxName" } ]] string_t m_iszSkyboxName;
 };
 
 LINK_ENTITY_TO_CLASS(skybox_swapper, CSkyboxSwapper);
 
-BEGIN_DATADESC( CSkyboxSwapper )
-	DEFINE_KEYFIELD( m_iszSkyboxName, FIELD_STRING, "SkyboxName" ),
-	// Inputs
-	DEFINE_INPUTFUNC(FIELD_VOID, "Trigger", InputTrigger),
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CSkyboxSwapper )
 
 
 //-----------------------------------------------------------------------------

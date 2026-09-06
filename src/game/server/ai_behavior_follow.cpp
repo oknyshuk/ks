@@ -5,6 +5,8 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_annotations.h"
 #include "tier1/utllinkedlist.h"
 #include "bitstring.h"
 #include "utlvector.h"
@@ -179,54 +181,10 @@ int AIGetNumFollowers( CBaseEntity *pEntity, string_t iszClassname )
 //
 //-----------------------------------------------------------------------------
 
-BEGIN_SIMPLE_DATADESC( AI_FollowNavInfo_t )
-	DEFINE_FIELD( flags, FIELD_INTEGER ),
-	DEFINE_FIELD( position, FIELD_POSITION_VECTOR ),
-	DEFINE_FIELD( range, FIELD_FLOAT ),
-	DEFINE_FIELD( Zrange, FIELD_FLOAT ),
-	DEFINE_FIELD( tolerance, FIELD_FLOAT ),
-	DEFINE_FIELD( followPointTolerance, FIELD_FLOAT ),
-	DEFINE_FIELD( targetMoveTolerance, FIELD_FLOAT ),
-	DEFINE_FIELD( repathOnRouteTolerance, FIELD_FLOAT ),
-	DEFINE_FIELD( walkTolerance, FIELD_FLOAT ),
-	DEFINE_FIELD( coverTolerance, FIELD_FLOAT ),
-	DEFINE_FIELD( enemyLOSTolerance, FIELD_FLOAT ),
-	DEFINE_FIELD( chaseEnemyTolerance, FIELD_FLOAT ),
-END_DATADESC();
+IMPLEMENT_REFLECT_DATAMAP_SIMPLE( AI_FollowNavInfo_t )
 
-BEGIN_SIMPLE_DATADESC( AI_FollowParams_t )
-	DEFINE_FIELD( formation, FIELD_INTEGER ),
-	DEFINE_FIELD( bNormalMemoryDiscard, FIELD_BOOLEAN ),
+IMPLEMENT_REFLECT_DATAMAP_SIMPLE( AI_FollowParams_t )
 
-END_DATADESC();
-
-BEGIN_DATADESC( CAI_FollowBehavior )
-	DEFINE_FIELD( m_hFollowTarget, FIELD_EHANDLE ),
-	DEFINE_EMBEDDED( m_FollowNavGoal ),
-	DEFINE_FIELD( m_flTimeUpdatedFollowPosition, FIELD_TIME ),
-	DEFINE_FIELD( m_bFirstFacing, FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_flTimeFollowTargetVisible, FIELD_TIME ),
-	DEFINE_EMBEDDED( m_TargetMonitor ),
-	DEFINE_FIELD( m_bTargetUnreachable, FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_bFollowNavFailed, FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_bMovingToCover, FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_flOriginalEnemyDiscardTime, FIELD_FLOAT ),
-	DEFINE_FIELD( m_SavedDistTooFar, FIELD_FLOAT ),
-	DEFINE_EMBEDDED( m_FollowDelay ),
-	DEFINE_EMBEDDED( m_RepathOnFollowTimer ),
-	DEFINE_CUSTOM_FIELD( m_CurrentFollowActivity,	ActivityDataOps() ),
-	DEFINE_EMBEDDED( m_TimeBlockUseWaitPoint ),
-	DEFINE_EMBEDDED( m_TimeCheckForWaitPoint ),
-	DEFINE_FIELD( m_pInterruptWaitPoint, FIELD_CLASSPTR ),
-	DEFINE_EMBEDDED( m_TimeBeforeSpreadFacing ),
-	DEFINE_EMBEDDED( m_TimeNextSpreadFacing ),
-	//				m_hFollowManagerInfo	(reset on load)
-	DEFINE_EMBEDDED( m_params ),
-	DEFINE_FIELD( m_hFollowGoalEnt, FIELD_EHANDLE ),
-	DEFINE_FIELD( m_nFailedFollowAttempts, FIELD_INTEGER ),
-	DEFINE_FIELD( m_flTimeFailFollowStarted, FIELD_TIME ),
-	DEFINE_FIELD( m_vFollowMoveAnchor, FIELD_POSITION_VECTOR ),
-END_DATADESC();
 
 //-------------------------------------
 
@@ -2102,13 +2060,7 @@ bool CAI_FollowBehavior::ShouldAlwaysThink()
 //
 //-----------------------------------------------------------------------------
 
-BEGIN_DATADESC( CAI_FollowGoal )
-	DEFINE_KEYFIELD(	m_iFormation, FIELD_INTEGER, "Formation" ),
-
-#ifdef HL2_EPISODIC
-	DEFINE_INPUTFUNC( FIELD_VOID, "OutsideTransition",	InputOutsideTransition ),
-#endif
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CAI_FollowGoal )
 
 //-------------------------------------
 

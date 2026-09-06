@@ -5,9 +5,10 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_annotations.h"
 
 #include "utlrbtree.h"
-#include "saverestore_utlvector.h"
 #include "ai_goalentity.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
@@ -18,25 +19,7 @@
 // CAI_GoalEntity implementation
 //
 
-BEGIN_DATADESC( CAI_GoalEntity )
-
-	DEFINE_KEYFIELD(	m_iszActor,				FIELD_STRING, 	"Actor"					),
-	DEFINE_KEYFIELD(	m_iszGoal,				FIELD_STRING, 	"Goal"					),
-	DEFINE_KEYFIELD(	m_fStartActive,			FIELD_BOOLEAN,  "StartActive"			),
-	DEFINE_KEYFIELD(	m_iszConceptModifiers,	FIELD_STRING, 	"BaseConceptModifiers"	),
-	DEFINE_KEYFIELD(	m_SearchType,			FIELD_INTEGER, 	"SearchType"			),
-	DEFINE_UTLVECTOR(	m_actors, 				FIELD_EHANDLE 							),
-	DEFINE_FIELD(		m_hGoalEntity, 			FIELD_EHANDLE 							),
-	DEFINE_FIELD(		m_flags, 				FIELD_INTEGER 							),
-
-	DEFINE_THINKFUNC( DelayedRefresh ),
-
-	// Inputs
-	DEFINE_INPUTFUNC( FIELD_VOID, "Activate", 		InputActivate ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "UpdateActors",	InputUpdateActors ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "Deactivate",		InputDeactivate ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CAI_GoalEntity )
 
 
 //-------------------------------------

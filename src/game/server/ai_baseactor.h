@@ -8,6 +8,8 @@
 #ifndef AI_BASEACTOR_H
 #define AI_BASEACTOR_H
 
+#include "reflect_annotations.h"
+
 #include "ai_basehumanoid.h"
 #include "ai_speech.h"
 #include "AI_Interest_Target.h"
@@ -226,7 +228,7 @@ private:
 	void					UpdateLatchedValues( void );
 
 	// Input handlers.
-	void InputSetExpressionOverride( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetExpressionOverride", .type = FIELD_STRING } ]] void InputSetExpressionOverride( inputdata_t &inputdata );
 
 	//---------------------------------
 
@@ -261,7 +263,7 @@ private:
 	EHANDLE					m_hExpressionSceneEnt;
 	float					m_flNextRandomExpressionTime;
 
-	string_t				m_iszExpressionOverride;
+	[[= ks::reflect::Key{ .name = "ExpressionOverride" } ]] string_t				m_iszExpressionOverride;
 
 protected:
 	string_t				m_iszIdleExpression;
@@ -322,7 +324,7 @@ public:
 	virtual bool UseSemaphore( void );
 
 protected:
-	bool	m_bDontUseSemaphore;
+	[[= ks::reflect::Key{ .name = "DontUseSpeechSemaphore" } ]] bool	m_bDontUseSemaphore;
 
 public:
 	//---------------------------------

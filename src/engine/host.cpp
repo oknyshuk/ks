@@ -76,7 +76,6 @@
 #include "filesystem.h"
 #include "filesystem_engine.h"
 #include "traceinit.h"
-#include "host_saverestore.h"
 #include "l_studio.h"
 #include "cl_demo.h"
 #include "cdll_engine_int.h"
@@ -2619,7 +2618,6 @@ void _Host_RunFrame_Render()
 
 	g_HostTimes.EndFrameSegment( FRAME_SEGMENT_RENDER );
 
-	saverestore->OnFrameRendered();
 
 #ifdef USE_SDL
 	if ( g_pLauncherMgr )
@@ -4233,7 +4231,6 @@ void Host_Init( bool bDedicated )
 	TRACEINIT( COM_Init(), COM_Shutdown() );
 
 #if !defined(DEDICATED) && !defined(LEFT4DEAD)
-	TRACEINIT( saverestore->Init(), saverestore->Shutdown() );
 #endif
 
 	TRACEINIT( Filter_Init(), Filter_Shutdown() );
@@ -4535,9 +4532,6 @@ void Host_Changelevel( bool loadfromsavedgame, const char *mapname, char *mapGro
 	char			_startspot[ MAX_QPATH ];
 	char			*startspot;
 	char			oldlevel[ MAX_QPATH ];
-#if !defined(DEDICATED)
-	bool bTransitionBySave = false;
-#endif
 
 	if ( !sv.IsActive() )
 	{
@@ -4586,60 +4580,20 @@ void Host_Changelevel( bool loadfromsavedgame, const char *mapname, char *mapGro
 	materials->OnLevelShutdown();
 
 #if !defined( DEDICATED )
-	// Add on time passed since the last time we kept track till this transition
-	int iAdditionalSeconds = g_ServerGlobalVariables.curtime - saverestore->GetMostRecentElapsedTimeSet();
-	int iElapsedSeconds = saverestore->GetMostRecentElapsedSeconds() + iAdditionalSeconds;
-	int iElapsedMinutes = saverestore->GetMostRecentElapsedMinutes() + ( iElapsedSeconds / 60 );
-	saverestore->SetMostRecentElapsedMinutes( iElapsedMinutes );
-	saverestore->SetMostRecentElapsedSeconds( ( iElapsedSeconds % 60 ) );
+	// Elapsed time for this level; the running total used to be kept by the save system.
+	int iElapsedSeconds = (int)g_ServerGlobalVariables.curtime;
+	int iElapsedMinutes = iElapsedSeconds / 60;
 
 	KeyValues *kvChangelevelEvent = new KeyValues( "OnHostChangeLevel" );
 	kvChangelevelEvent->SetString( "map", mapname );
 	kvChangelevelEvent->SetUint64( "elapsed", iElapsedMinutes * 60 + iElapsedSeconds % 60 );
-	kvChangelevelEvent->SetInt( "bysave", !!bTransitionBySave );
+	kvChangelevelEvent->SetInt( "bysave", 0 );
 	g_pMatchFramework->GetEventsSubscription()->BroadcastEvent( kvChangelevelEvent );
 
-	if ( bTransitionBySave )
-	{
-		char comment[ 80 ];
-		// Pass in the total elapsed time so it gets added to the elapsed time for this map.
-		serverGameDLL->GetSaveComment(
-			comment,
-			sizeof( comment ),
-			saverestore->GetMostRecentElapsedMinutes(),
-			saverestore->GetMostRecentElapsedSeconds() );
-
-		if ( !saverestore->SaveGameSlot( "_transition", comment, false, true, mapname, startspot ) )
-		{
-			Warning( "Failed to save data for transition\n" );
-			SCR_EndLoadingPlaque();
-			return;
-		}
-
-		// Not going to load a save after the transition, so add this map's elapsed time to the total elapsed time
-		int totalSeconds = g_ServerGlobalVariables.curtime + saverestore->GetMostRecentElapsedSeconds();
-		saverestore->SetMostRecentElapsedMinutes( ( int )( totalSeconds / 60.0f ) + saverestore->GetMostRecentElapsedMinutes() );
-		saverestore->SetMostRecentElapsedSeconds( ( int )fmod( totalSeconds, 60.0f ) );
-	}
 #endif
 
 	Q_strncpy( oldlevel, sv.GetMapName(), sizeof( oldlevel ) );
 
-#if !defined(DEDICATED)
-	if ( loadfromsavedgame )
-	{
-		if ( !bTransitionBySave )
-		{
-			// save the current level's state
-			if ( !saverestore->SaveGameState( true, NULL ) )
-			{
-				Warning( "Failed to save data for transition\n" );
-				SCR_EndLoadingPlaque();
-				return;
-			}
-		}
-	}
-#endif
 	g_pServerPluginHandler->LevelShutdown();
 
 #if !defined(DEDICATED)
@@ -4649,7 +4603,6 @@ void Host_Changelevel( bool loadfromsavedgame, const char *mapname, char *mapGro
 	sv.InactivateClients();
 
 #if !defined(DEDICATED)
-	saverestore->FinishAsyncSave();
 #endif
 
 	if ( sv.RestartOnLevelChange() )
@@ -4695,9 +4648,6 @@ void Host_Changelevel( bool loadfromsavedgame, const char *mapname, char *mapGro
 	int maptime = sv.GetTime();
 	int minutes = ( int )( maptime / 60.0f );
 	int seconds = ( int )fmod( maptime, 60.0f );
-	saverestore->SetMostRecentElapsedMinutes( saverestore->GetMostRecentElapsedMinutes() - minutes );
-	saverestore->SetMostRecentElapsedSeconds( saverestore->GetMostRecentElapsedSeconds() - seconds );
-	saverestore->ForgetRecentSave();
 #endif
 
 	NotifyDedicatedServerUI( "UpdateMap" );
@@ -4842,11 +4792,8 @@ bool Host_NewGame( char *mapName, char *mapGroupName, bool loadGame, bool bBackg
 	if ( !loadGame )
 	{
 		// clear the most recent remember save, so the level will just restart if the player dies
-		saverestore->ForgetRecentSave();
 	}
 
-	saverestore->SetMostRecentElapsedMinutes( 0 );
-	saverestore->SetMostRecentElapsedSeconds( 0 );
 #endif
 
 
@@ -5064,7 +5011,6 @@ void Host_Shutdown(void)
 	TRACESHUTDOWN( Filter_Shutdown() );
 
 #if !defined(DEDICATED) && !defined(LEFT4DEAD)
-	TRACESHUTDOWN( saverestore->Shutdown() );
 #endif
 
 	TRACESHUTDOWN( COM_Shutdown() );

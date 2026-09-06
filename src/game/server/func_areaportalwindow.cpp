@@ -6,6 +6,9 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_sendtable.h"
+#include "reflect_annotations.h"
 #include "func_areaportalwindow.h"
 #include "entitylist.h"
 
@@ -20,28 +23,10 @@
 LINK_ENTITY_TO_CLASS( func_areaportalwindow, CFuncAreaPortalWindow );
 
 
-IMPLEMENT_SERVERCLASS_ST( CFuncAreaPortalWindow, DT_FuncAreaPortalWindow )
-	SendPropFloat( SENDINFO(m_flFadeDist), 0, SPROP_NOSCALE ),
-	SendPropFloat( SENDINFO(m_flFadeStartDist), 0, SPROP_NOSCALE ),
-	SendPropFloat( SENDINFO(m_flTranslucencyLimit), 0, SPROP_NOSCALE ),
-
-	SendPropModelIndex(SENDINFO(m_iBackgroundModelIndex) ),
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CFuncAreaPortalWindow, DT_FuncAreaPortalWindow )
 
 
-BEGIN_DATADESC( CFuncAreaPortalWindow )
-
-	DEFINE_KEYFIELD( m_portalNumber, FIELD_INTEGER,	"portalnumber" ),
-	DEFINE_KEYFIELD( m_flFadeStartDist,	FIELD_FLOAT,	"FadeStartDist" ),
-	DEFINE_KEYFIELD( m_flFadeDist,	FIELD_FLOAT,	"FadeDist" ),
-	DEFINE_KEYFIELD( m_flTranslucencyLimit,	FIELD_FLOAT,	"TranslucencyLimit" ),
-	DEFINE_KEYFIELD( m_iBackgroundBModelName,FIELD_STRING,	"BackgroundBModel" ),
-//	DEFINE_KEYFIELD( m_iBackgroundModelIndex,FIELD_INTEGER ),
-	
-	DEFINE_INPUTFUNC( FIELD_FLOAT, "SetFadeStartDistance", InputSetFadeStartDistance ),
-	DEFINE_INPUTFUNC( FIELD_FLOAT, "SetFadeEndDistance", InputSetFadeEndDistance ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CFuncAreaPortalWindow )
 
 
 

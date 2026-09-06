@@ -11,6 +11,8 @@
 // $NoKeywords: $
 //=============================================================================//
 #include "cbase.h"
+#include "reflect_sendtable.h"
+#include "reflect_annotations.h"
 #include "basetempentity.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
@@ -19,7 +21,8 @@
 //-----------------------------------------------------------------------------
 // Purpose: Dispatches blood stream tempentity
 //-----------------------------------------------------------------------------
-class CTEKillPlayerAttachments : public CBaseTempEntity
+class [[= ks::reflect::NetTable{ .name = "DT_TEKillPlayerAttachments" } ]]
+      CTEKillPlayerAttachments : public CBaseTempEntity
 {
 public:
 	DECLARE_CLASS( CTEKillPlayerAttachments, CBaseTempEntity );
@@ -32,7 +35,7 @@ public:
 	DECLARE_SERVERCLASS();
 
 public:
-	CNetworkVar( int, m_nPlayer );
+	CNetworkVar( int, m_nPlayer, [[= ks::reflect::Net{ .bits = 5, .flags = SPROP_UNSIGNED } ]] );
 };
 
 //-----------------------------------------------------------------------------
@@ -66,9 +69,7 @@ void CTEKillPlayerAttachments::Test( const Vector& current_origin, const QAngle&
 }
 
 
-IMPLEMENT_SERVERCLASS_ST(CTEKillPlayerAttachments, DT_TEKillPlayerAttachments)
-	SendPropInt( SENDINFO(m_nPlayer), 5, SPROP_UNSIGNED ),
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CTEKillPlayerAttachments, DT_TEKillPlayerAttachments )
 
 
 // Singleton to fire TEKillPlayerAttachments objects

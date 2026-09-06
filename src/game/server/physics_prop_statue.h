@@ -6,6 +6,8 @@
 
 #ifndef PHYSICS_PROP_STATUE_H
 #define PHYSICS_PROP_STATUE_H
+
+#include "reflect_annotations.h"
 #ifdef _WIN32
 #pragma once
 #endif
@@ -30,11 +32,11 @@ struct outer_collision_obb_t
 //-----------------------------------------------------------------------------
 
 // UNDONE: Move this to a private header
-class CStatueProp : public CPhysicsProp
+class [[= ks::reflect::NetTable{ .name = "DT_StatueProp" } ]]
+      CStatueProp : public CPhysicsProp
 {
 	DECLARE_CLASS( CStatueProp, CPhysicsProp );
 	DECLARE_SERVERCLASS();
-	DECLARE_DATADESC();
 
 public:
 	CStatueProp( void );
@@ -63,12 +65,12 @@ private:
 
 public:
 
-	CNetworkHandle( CBaseAnimating,	m_hInitBaseAnimating );
+	CNetworkHandle( CBaseAnimating,	m_hInitBaseAnimating, [[= ks::reflect::Net{} ]] );
 
-	CNetworkVar( bool, m_bShatter );
-	CNetworkVar( int, m_nShatterFlags );
-	CNetworkVector( m_vShatterPosition );
-	CNetworkVector( m_vShatterForce );
+	CNetworkVar( bool, m_bShatter, [[= ks::reflect::Net{} ]] );
+	CNetworkVar( int, m_nShatterFlags, [[= ks::reflect::Net{ .bits = 3 } ]] );
+	CNetworkVector( m_vShatterPosition, [[= ks::reflect::Net{ .bits = 32, .flags = SPROP_NOSCALE, .enc = ks::reflect::ENC_VECTOR } ]] );
+	CNetworkVector( m_vShatterForce, [[= ks::reflect::Net{ .bits = 32, .flags = SPROP_NOSCALE, .enc = ks::reflect::ENC_VECTOR } ]] );
 
 	const CUtlVector<outer_collision_obb_t>	*m_pInitOBBs;
 };

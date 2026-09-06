@@ -5,6 +5,10 @@
 // $NoKeywords: $
 //===========================================================================//
 #include "cbase.h"
+#include "reflect_predmap.h"
+#include "reflect_datamap.h"
+#include "reflect_recvtable.h"
+#include "reflect_annotations.h"
 #include "c_baseentity.h"
 #include "prediction.h"
 #include "model_types.h"
@@ -493,22 +497,24 @@ void RecvProxy_ToolRecording( const CRecvProxyData *pData, void *pStruct, void *
 // Expose it to the engine.
 IMPLEMENT_CLIENTCLASS(C_BaseEntity, DT_BaseEntity, CBaseEntity);
 
-static void RecvProxy_MoveType( const CRecvProxyData *pData, void *pStruct, void *pOut )
+// Not static: named by C_BaseEntity's Bare<> annotation, which is parsed wherever the class
+// is included. Declared in c_baseentity.h.
+void RecvProxy_MoveType( const CRecvProxyData *pData, void *pStruct, void *pOut )
 {
 	((C_BaseEntity*)pStruct)->SetMoveType( (MoveType_t)(pData->m_Value.m_Int) );
 }
 
-static void RecvProxy_MoveCollide( const CRecvProxyData *pData, void *pStruct, void *pOut )
+void RecvProxy_MoveCollide( const CRecvProxyData *pData, void *pStruct, void *pOut )
 {
 	((C_BaseEntity*)pStruct)->SetMoveCollide( (MoveCollide_t)(pData->m_Value.m_Int) );
 }
 
-static void RecvProxy_Solid( const CRecvProxyData *pData, void *pStruct, void *pOut )
+ static void RecvProxy_Solid_Entity( const CRecvProxyData *pData, void *pStruct, void *pOut )
 {
 	((C_BaseEntity*)pStruct)->SetSolid( (SolidType_t)pData->m_Value.m_Int );
 }
 
-static void RecvProxy_SolidFlags( const CRecvProxyData *pData, void *pStruct, void *pOut )
+ static void RecvProxy_SolidFlags_Entity( const CRecvProxyData *pData, void *pStruct, void *pOut )
 {
 	((C_BaseEntity*)pStruct)->SetSolidFlags( pData->m_Value.m_Int );
 }
@@ -537,9 +543,7 @@ void C_BaseEntity::RecvProxyOldSpottedByMask( const CRecvProxyData *pData, void 
 	pEnt->SetIsSpottedBy( nPlayerIndex );
 }
 
-BEGIN_RECV_TABLE_NOBASE( C_BaseEntity, DT_AnimTimeMustBeFirst )
-	RecvPropInt( RECVINFO(m_flAnimTime), 0, RecvProxy_AnimTime ),
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_TABLE_IN( C_BaseEntity, DT_AnimTimeMustBeFirst );
 
 BEGIN_ENT_SCRIPTDESC_ROOT( C_BaseEntity, "Root class of all client-side entities" )
 	DEFINE_SCRIPTFUNC_NAMED( GetAbsOrigin, "GetOrigin", ""  )
@@ -550,189 +554,22 @@ BEGIN_ENT_SCRIPTDESC_ROOT( C_BaseEntity, "Root class of all client-side entities
 END_SCRIPTDESC();
 
 
-#if !defined( NO_ENTITY_PREDICTION ) && defined( USE_PREDICTABLEID )
-BEGIN_RECV_TABLE_NOBASE( C_BaseEntity, DT_PredictableId )
-	RecvPropPredictableId( RECVINFO( m_PredictableID ) ),
-	RecvPropInt( RECVINFO( m_bIsPlayerSimulated ) ),
-END_RECV_TABLE()
-#endif
 
-BEGIN_RECV_TABLE_NOBASE(C_BaseEntity, DT_BaseEntity)
-	RecvPropDataTable( "AnimTimeMustBeFirst", 0, 0, &REFERENCE_RECV_TABLE(DT_AnimTimeMustBeFirst) ),
-	RecvPropInt( RECVINFO(m_flSimulationTime), 0, RecvProxy_SimulationTime ),
+IMPLEMENT_REFLECT_TABLE( C_BaseEntity, DT_BaseEntity );
 #if defined(ENABLE_CREATE_TIME)
-	RecvPropFloat( RECVINFO( m_flCreateTime ) ),
 #endif
-	RecvPropInt( RECVINFO( m_cellbits ), 0, C_BaseEntity::RecvProxy_CellBits ),
-//	RecvPropArray( RecvPropInt( RECVINFO(m_cellXY[0]) ), m_cellXY ),
-	RecvPropInt( RECVINFO( m_cellX ), 0, C_BaseEntity::RecvProxy_CellX ),
-	RecvPropInt( RECVINFO( m_cellY ), 0, C_BaseEntity::RecvProxy_CellY ),
-	RecvPropInt( RECVINFO( m_cellZ ), 0, C_BaseEntity::RecvProxy_CellZ ),
-	RecvPropVector( RECVINFO_NAME( m_vecNetworkOrigin, m_vecOrigin ), 0, C_BaseEntity::RecvProxy_CellOrigin ),
 #if PREDICTION_ERROR_CHECK_LEVEL > 1 
-	RecvPropVector( RECVINFO_NAME( m_angNetworkAngles, m_angRotation ) ),
 #else
-	RecvPropQAngles( RECVINFO_NAME( m_angNetworkAngles, m_angRotation ) ),
 #endif
-	RecvPropInt(RECVINFO(m_nModelIndex) ),
-
-	RecvPropInt(RECVINFO(m_fEffects), 0, RecvProxy_EffectFlags ),
-	RecvPropInt(RECVINFO(m_nRenderMode)),
-	RecvPropInt(RECVINFO(m_nRenderFX)),
-	RecvPropInt(RECVINFO(m_clrRender), 0, RecvProxy_ClrRender ),
-	RecvPropInt(RECVINFO(m_iTeamNum)),
-	RecvPropInt(RECVINFO(m_iPendingTeamNum)),
-	RecvPropInt(RECVINFO(m_CollisionGroup)),
-	RecvPropFloat(RECVINFO(m_flElasticity)),
-	RecvPropFloat(RECVINFO(m_flShadowCastDistance)),
-	RecvPropEHandle( RECVINFO(m_hOwnerEntity) ),
-	RecvPropEHandle( RECVINFO(m_hEffectEntity) ),
-	RecvPropInt( RECVINFO_NAME(m_hNetworkMoveParent, moveparent), 0, RecvProxy_IntToMoveParent ),
-	RecvPropInt( RECVINFO( m_iParentAttachment ) ),
-
-	RecvPropString( RECVINFO( m_iName ) ),
-
 #if defined ( PORTAL2 )
-	RecvPropString( RECVINFO( m_iSignifierName ) ),
 #endif
-
-	RecvPropInt( "movetype", 0, SIZEOF_IGNORE, 0, RecvProxy_MoveType ),
-	RecvPropInt( "movecollide", 0, SIZEOF_IGNORE, 0, RecvProxy_MoveCollide ),
-	RecvPropDataTable( RECVINFO_DT( m_Collision ), 0, &REFERENCE_RECV_TABLE(DT_CollisionProperty) ),
-	
-	RecvPropInt( RECVINFO ( m_iTextureFrameIndex ) ),
-	
 #if defined ( PORTAL2 )
-	RecvPropInt		( RECVINFO( m_iObjectCapsCache ) ),
 #endif
-	
 #if !defined( NO_ENTITY_PREDICTION ) && defined( USE_PREDICTABLEID )
-	RecvPropEHandle (RECVINFO(m_hPlayerSimulationOwner)),
-	RecvPropDataTable( "predictable_id", 0, 0, &REFERENCE_RECV_TABLE( DT_PredictableId ) ),
 #endif
 
-	RecvPropInt		( RECVINFO( m_bSimulatedEveryTick ), 0, RecvProxy_InterpolationAmountChanged ),
-	RecvPropInt		( RECVINFO( m_bAnimatedEveryTick ), 0, RecvProxy_InterpolationAmountChanged ),
-	RecvPropBool	( RECVINFO( m_bAlternateSorting ) ),
-	RecvPropBool	( RECVINFO( m_bSpotted ) ),
-	RecvPropArray3	( RECVINFO_ARRAY( m_bSpottedBy ), RecvPropInt( RECVINFO( m_bSpottedBy[0] ), SPROP_UNSIGNED, C_BaseEntity::RecvProxyOldSpottedByMask ) ), // OLD SPOTTED BY FOR DEMOS
-	RecvPropArray3  ( RECVINFO_ARRAY( m_bSpottedByMask ), RecvPropInt( RECVINFO( m_bSpottedByMask[0] ), SPROP_UNSIGNED ) ),
 
-	RecvPropBool	( RECVINFO( m_bIsAutoaimTarget ) ),
-
-	RecvPropFloat( RECVINFO( m_fadeMinDist ) ), 
-	RecvPropFloat( RECVINFO( m_fadeMaxDist ) ), 
-	RecvPropFloat( RECVINFO( m_flFadeScale ) ), 
-
-// #ifndef _GAMECONSOLE -- X360 client and Win32 XLSP dedicated server need equivalent SendTables
-	RecvPropInt( RECVINFO( m_nMinCPULevel ) ), 
-	RecvPropInt( RECVINFO( m_nMaxCPULevel ) ), 
-	RecvPropInt( RECVINFO( m_nMinGPULevel ) ), 
-	RecvPropInt( RECVINFO( m_nMaxGPULevel ) ), 
-
-	RecvPropFloat( RECVINFO( m_flUseLookAtAngle ) ),
-
-	RecvPropFloat( RECVINFO( m_flLastMadeNoiseTime ) ),
-
-END_RECV_TABLE()
-
-const float coordTolerance = 2.0f / (float)( 1 << COORD_FRACTIONAL_BITS );
-
-BEGIN_PREDICTION_DATA_NO_BASE( C_BaseEntity )
-
-	// These have a special proxy to handle send/receive
-	DEFINE_PRED_TYPEDESCRIPTION( m_Collision, CCollisionProperty ),
-
-	DEFINE_PRED_FIELD( m_MoveType, FIELD_CHARACTER, FTYPEDESC_INSENDTABLE ),
-	DEFINE_PRED_FIELD( m_MoveCollide, FIELD_CHARACTER, FTYPEDESC_INSENDTABLE ),
-
-	DEFINE_FIELD( m_vecAbsVelocity, FIELD_VECTOR ),
-	DEFINE_PRED_FIELD_TOL( m_vecVelocity, FIELD_VECTOR, FTYPEDESC_INSENDTABLE, 0.5f ),
-	DEFINE_PRED_FIELD( m_fEffects, FIELD_INTEGER, FTYPEDESC_INSENDTABLE ),
-	DEFINE_PRED_FIELD( m_nRenderMode, FIELD_CHARACTER, FTYPEDESC_INSENDTABLE ),
-	DEFINE_PRED_FIELD( m_nRenderFX, FIELD_CHARACTER, FTYPEDESC_INSENDTABLE ),
-//	DEFINE_PRED_FIELD( m_flAnimTime, FIELD_FLOAT, FTYPEDESC_INSENDTABLE ),
-//	DEFINE_PRED_FIELD( m_flSimulationTime, FIELD_FLOAT, FTYPEDESC_INSENDTABLE ),
-	DEFINE_PRED_FIELD( m_fFlags, FIELD_INTEGER, FTYPEDESC_INSENDTABLE ),
-	DEFINE_PRED_FIELD_TOL( m_vecViewOffset, FIELD_VECTOR, FTYPEDESC_INSENDTABLE, 0.25f ),
-	DEFINE_PRED_FIELD( m_nModelIndex, FIELD_SHORT, FTYPEDESC_INSENDTABLE | FTYPEDESC_MODELINDEX ),
-	DEFINE_PRED_FIELD( m_flFriction, FIELD_FLOAT, FTYPEDESC_INSENDTABLE ),
-	DEFINE_PRED_FIELD( m_iTeamNum, FIELD_INTEGER, FTYPEDESC_INSENDTABLE ),
-	DEFINE_PRED_FIELD( m_iPendingTeamNum, FIELD_INTEGER, FTYPEDESC_INSENDTABLE ),
-#ifndef INFESTED_DLL // alien swarm is temporarily unpredicting health to see if prediction is cause of a bug
-	DEFINE_FIELD( m_iHealth, FIELD_INTEGER ),
-#endif
-	DEFINE_PRED_FIELD( m_hOwnerEntity, FIELD_EHANDLE, FTYPEDESC_INSENDTABLE ),
-
-//	DEFINE_FIELD( m_nSimulationTick, FIELD_INTEGER ),
-
-	DEFINE_PRED_FIELD( m_hNetworkMoveParent, FIELD_EHANDLE, FTYPEDESC_INSENDTABLE ),
-//	DEFINE_PRED_FIELD( m_pMoveParent, FIELD_EHANDLE ),
-//	DEFINE_PRED_FIELD( m_pMoveChild, FIELD_EHANDLE ),
-//	DEFINE_PRED_FIELD( m_pMovePeer, FIELD_EHANDLE ),
-//	DEFINE_PRED_FIELD( m_pMovePrevPeer, FIELD_EHANDLE ),
-
-	DEFINE_PRED_FIELD_TOL( m_vecNetworkOrigin, FIELD_VECTOR, FTYPEDESC_INSENDTABLE, coordTolerance ),
-	DEFINE_PRED_FIELD( m_angNetworkAngles, FIELD_VECTOR, FTYPEDESC_INSENDTABLE | FTYPEDESC_NOERRORCHECK ),
-	DEFINE_FIELD( m_vecAbsOrigin, FIELD_VECTOR ),
-	DEFINE_FIELD( m_angAbsRotation, FIELD_VECTOR ),
-	DEFINE_FIELD( m_vecOrigin, FIELD_VECTOR ),
-	DEFINE_FIELD( m_angRotation, FIELD_VECTOR ),
-
-	DEFINE_FIELD( m_hGroundEntity, FIELD_EHANDLE ),
-	DEFINE_FIELD( m_nWaterLevel, FIELD_CHARACTER ),
-	DEFINE_FIELD( m_nWaterType, FIELD_CHARACTER ),
-	DEFINE_FIELD( m_vecAngVelocity, FIELD_VECTOR ),
-//	DEFINE_FIELD( m_vecAbsAngVelocity, FIELD_VECTOR ),
-
-//	DEFINE_FIELD( m_nMinCPULevel, FIELD_CHARACTER ),
-//	DEFINE_FIELD( m_nMaxCPULevel, FIELD_CHARACTER ),
-//	DEFINE_FIELD( m_nMinGPULevel, FIELD_CHARACTER ),
-//	DEFINE_FIELD( m_nMaxGPULevel, FIELD_CHARACTER ),
-
-//	DEFINE_FIELD( model, FIELD_INTEGER ), // writing pointer literally
-//	DEFINE_FIELD( index, FIELD_INTEGER ),
-//	DEFINE_FIELD( m_ClientHandle, FIELD_SHORT ),
-//	DEFINE_FIELD( m_Partition, FIELD_SHORT ),
-//	DEFINE_FIELD( m_hRender, FIELD_SHORT ),
-//	DEFINE_FIELD( m_bDormant, FIELD_BOOLEAN ),
-//	DEFINE_FIELD( current_position, FIELD_INTEGER ),
-//	DEFINE_FIELD( m_flLastMessageTime, FIELD_FLOAT ),
-	DEFINE_FIELD( m_vecBaseVelocity, FIELD_VECTOR ),
-	DEFINE_FIELD( m_iEFlags, FIELD_INTEGER ),
-	DEFINE_FIELD( m_flGravity, FIELD_FLOAT ),
-//	DEFINE_FIELD( m_ModelInstance, FIELD_SHORT ),
-	DEFINE_FIELD( m_flProxyRandomValue, FIELD_FLOAT ),
-
-	DEFINE_FIELD( m_bEverHadPredictionErrorsForThisCommand, FIELD_BOOLEAN ),
-
-#if defined( USE_PREDICTABLEID )
-	DEFINE_PRED_FIELD( m_hPlayerSimulationOwner, FIELD_EHANDLE, FTYPEDESC_INSENDTABLE ),	
-//	DEFINE_FIELD( m_PredictableID, FIELD_INTEGER ),
-//	DEFINE_FIELD( m_pPredictionContext, FIELD_POINTER ),
-#endif
-	// Stuff specific to rendering and therefore not to be copied back and forth
-	// DEFINE_PRED_FIELD( m_clrRender, color32, FTYPEDESC_INSENDTABLE  ),
-	// DEFINE_FIELD( m_bReadyToDraw, FIELD_BOOLEAN ),
-	// DEFINE_FIELD( anim, CLatchedAnim ),
-	// DEFINE_FIELD( mouth, CMouthInfo ),
-	// DEFINE_FIELD( GetAbsOrigin(), FIELD_VECTOR ),
-	// DEFINE_FIELD( GetAbsAngles(), FIELD_VECTOR ),
-	// DEFINE_FIELD( m_nNumAttachments, FIELD_SHORT ),
-	// DEFINE_FIELD( m_pAttachmentAngles, FIELD_VECTOR ),
-	// DEFINE_FIELD( m_pAttachmentOrigin, FIELD_VECTOR ),
-	// DEFINE_FIELD( m_listentry, CSerialEntity ),
-	// DEFINE_FIELD( m_ShadowHandle, ClientShadowHandle_t ),
-	// DEFINE_FIELD( m_hThink, ClientThinkHandle_t ),
-	// Definitely private and not copied around
-	// DEFINE_FIELD( m_bPredictable, FIELD_BOOLEAN ),
-	// DEFINE_FIELD( m_CollisionGroup, FIELD_INTEGER ),
-	// DEFINE_FIELD( m_DataChangeEventRef, FIELD_INTEGER ),
-#if !defined( CLIENT_DLL )
-	// DEFINE_FIELD( m_bPredictionEligible, FIELD_BOOLEAN ),
-#endif
-	DEFINE_FIELD( m_flUseLookAtAngle, FIELD_FLOAT ),
-END_PREDICTION_DATA()
+IMPLEMENT_REFLECT_PREDMAP_NO_BASE( C_BaseEntity );
 
 //-----------------------------------------------------------------------------
 // Helper functions.
@@ -6503,13 +6340,7 @@ bool C_BaseEntity::IsFloating()
 }
 
 
-BEGIN_DATADESC_NO_BASE( C_BaseEntity )
-	DEFINE_FIELD( m_ModelName, FIELD_STRING ),
-	DEFINE_FIELD( m_vecAbsOrigin, FIELD_POSITION_VECTOR ),
-	DEFINE_FIELD( m_angAbsRotation, FIELD_VECTOR ),
-	DEFINE_ARRAY( m_rgflCoordinateFrame, FIELD_FLOAT, 12 ), // NOTE: MUST BE IN LOCAL SPACE, NOT POSITION_VECTOR!!! (see CBaseEntity::Restore)
-	DEFINE_FIELD( m_fFlags, FIELD_INTEGER ),
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP_NO_BASE( C_BaseEntity )
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -6545,67 +6376,9 @@ void C_BaseEntity::OnRestore()
 	UpdateVisibility();
 }
 
-//-----------------------------------------------------------------------------
-// Purpose: Saves the current object out to disk, by iterating through the objects
-//			data description hierarchy
-// Input  : &save - save buffer which the class data is written to
-// Output : int	- 0 if the save failed, 1 on success
-//-----------------------------------------------------------------------------
-int C_BaseEntity::Save( ISave &save )
-{
-	// loop through the data description list, saving each data desc block
-	int status = SaveDataDescBlock( save, GetDataDescMap() );
-
-	return status;
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: Recursively saves all the classes in an object, in reverse order (top down)
-// Output : int 0 on failure, 1 on success
-//-----------------------------------------------------------------------------
-int C_BaseEntity::SaveDataDescBlock( ISave &save, datamap_t *dmap )
-{
-	int nResult = save.WriteAll( this, dmap );
-	return nResult;
-}
-
 void C_BaseEntity::SetClassname( const char *className )
 {
 	m_iClassname = MAKE_STRING( className );
-}
-
-
-//-----------------------------------------------------------------------------
-// Purpose: Restores the current object from disk, by iterating through the objects
-//			data description hierarchy
-// Input  : &restore - restore buffer which the class data is read from
-// Output : int	- 0 if the restore failed, 1 on success
-//-----------------------------------------------------------------------------
-int C_BaseEntity::Restore( IRestore &restore )
-{
-	// loops through the data description list, restoring each data desc block in order
-	int status = RestoreDataDescBlock( restore, GetDataDescMap() );
-
-	// NOTE: Do *not* use GetAbsOrigin() here because it will
-	// try to recompute m_rgflCoordinateFrame!
-	MatrixSetColumn( m_vecAbsOrigin, 3, m_rgflCoordinateFrame );
-
-	// Restablish ground entity
-	if ( m_hGroundEntity != NULL )
-	{
-		m_hGroundEntity->AddEntityToGroundList( this );
-	}
-
-	return status;
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: Recursively restores all the classes in an object, in reverse order (top down)
-// Output : int 0 on failure, 1 on success
-//-----------------------------------------------------------------------------
-int C_BaseEntity::RestoreDataDescBlock( IRestore &restore, datamap_t *dmap )
-{
-	return restore.ReadAll( this, dmap );
 }
 
 //-----------------------------------------------------------------------------

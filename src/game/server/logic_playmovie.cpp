@@ -5,6 +5,8 @@
 //===========================================================================//
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_annotations.h"
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -23,38 +25,23 @@ public:
 	
 private:
 
-	void		InputPlayMovie( inputdata_t &data );
-	void		InputPlayMovieForAllPlayers( inputdata_t &data );
-	void		InputPlayLevelTransitionMovie( inputdata_t &data );
-	void		InputFadeAllMovies( inputdata_t &data );
-	void		InputMovieFinished( inputdata_t &data );
+	[[= ks::reflect::Input{ .name = "PlayMovie", .type = FIELD_VOID } ]] void		InputPlayMovie( inputdata_t &data );
+	[[= ks::reflect::Input{ .name = "PlayMovieForAllPlayers", .type = FIELD_VOID } ]] void		InputPlayMovieForAllPlayers( inputdata_t &data );
+	[[= ks::reflect::Input{ .name = "PlayLevelTransitionMovie", .type = FIELD_VOID } ]] void		InputPlayLevelTransitionMovie( inputdata_t &data );
+	[[= ks::reflect::Input{ .name = "FadeAllMovies", .type = FIELD_VOID } ]] void		InputFadeAllMovies( inputdata_t &data );
+	[[= ks::reflect::Input{ .name = "__MovieFinished", .type = FIELD_VOID } ]] void		InputMovieFinished( inputdata_t &data );
 
-	string_t	m_strMovieFilename;
-	bool		m_bAllowUserSkip;
-	bool		m_bLoopVideo;
-	float		m_bFadeInTime;
+	[[= ks::reflect::Key{ .name = "MovieFilename" } ]] string_t	m_strMovieFilename;
+	[[= ks::reflect::Key{ .name = "allowskip" } ]] bool		m_bAllowUserSkip;
+	[[= ks::reflect::Key{ .name = "loopvideo" } ]] bool		m_bLoopVideo;
+	[[= ks::reflect::Key{ .name = "fadeintime" } ]] float		m_bFadeInTime;
 
-	COutputEvent	m_OnPlaybackFinished;
+	[[= ks::reflect::Key{ .name = "OnPlaybackFinished" } ]] COutputEvent	m_OnPlaybackFinished;
 };
 
 LINK_ENTITY_TO_CLASS( logic_playmovie, CLogicPlayMovie );
 
-BEGIN_DATADESC( CLogicPlayMovie )
-
-	DEFINE_KEYFIELD( m_strMovieFilename, FIELD_STRING, "MovieFilename" ),
-	DEFINE_KEYFIELD( m_bAllowUserSkip, FIELD_BOOLEAN, "allowskip" ),
-	DEFINE_KEYFIELD( m_bLoopVideo, FIELD_BOOLEAN, "loopvideo" ),
-	DEFINE_KEYFIELD( m_bFadeInTime, FIELD_FLOAT, "fadeintime" ),
-
-	DEFINE_INPUTFUNC( FIELD_VOID, "PlayMovie", InputPlayMovie ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "PlayMovieForAllPlayers", InputPlayMovieForAllPlayers ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "PlayLevelTransitionMovie", InputPlayLevelTransitionMovie ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "FadeAllMovies", InputFadeAllMovies ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "__MovieFinished", InputMovieFinished ),
-
-	DEFINE_OUTPUT( m_OnPlaybackFinished, "OnPlaybackFinished" ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CLogicPlayMovie )
 
 //-----------------------------------------------------------------------------
 // Purpose: 

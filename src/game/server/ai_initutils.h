@@ -33,19 +33,19 @@ struct HintNodeData
 {
 	string_t	strEntityName;
 	Vector		vecPosition;
-	short		nHintType;
+	[[= ks::reflect::Key{ .name = "hinttype" } ]] short		nHintType;
 	int			nNodeID;
-	string_t	strGroup;
-	int			iDisabled;
-	string_t	iszGenericType;
-	string_t	iszActivityName;
-	int			nTargetWCNodeID;
-	HintIgnoreFacing_t fIgnoreFacing;
-	NPC_STATE	minState;
-	NPC_STATE	maxState;
-	int			nRadius;
+	[[= ks::reflect::Key{ .name = "Group" } ]] string_t	strGroup;
+	[[= ks::reflect::Key{ .name = "StartHintDisabled" } ]] int			iDisabled;
+	[[= ks::reflect::Key{ .name = "generictype" } ]] string_t	iszGenericType;
+	[[= ks::reflect::Key{ .name = "hintactivity" } ]] string_t	iszActivityName;
+	[[= ks::reflect::Key{ .name = "TargetNode" } ]] int			nTargetWCNodeID;
+	[[= ks::reflect::Key{ .name = "IgnoreFacing" } ]] HintIgnoreFacing_t fIgnoreFacing;
+	[[= ks::reflect::Key{ .name = "MinimumState" } ]] NPC_STATE	minState;
+	[[= ks::reflect::Key{ .name = "MaximumState" } ]] NPC_STATE	maxState;
+	[[= ks::reflect::Key{ .name = "radius" } ]] int			nRadius;
 
-	int			nWCNodeID;			// Node ID assigned by worldcraft (not same as engine!)
+	[[= ks::reflect::Key{ .name = "nodeid" } ]] int			nWCNodeID;			// Node ID assigned by worldcraft (not same as engine!)
 
 	DECLARE_SIMPLE_DATADESC();
 };
@@ -69,7 +69,6 @@ public:
 	void	Spawn( void );
 	int		Spawn( const char *pMapData );
 
-	DECLARE_DATADESC();
 
 	CNodeEnt(void);
 

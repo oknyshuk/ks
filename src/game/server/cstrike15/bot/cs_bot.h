@@ -460,7 +460,6 @@ class CCSBot : public CBot< CCSPlayer >
 {
 public:
 	DECLARE_CLASS( CCSBot, CBot< CCSPlayer > );
-	DECLARE_DATADESC();
 
 	CCSBot( void );												///< constructor initializes all values to zero
 	virtual ~CCSBot();

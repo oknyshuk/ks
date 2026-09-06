@@ -6,11 +6,14 @@
 //
 //===========================================================================//
 #include "cbase.h"
+#include "reflect_recvtable.h"
+#include "reflect_annotations.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
-class C_FuncOccluder : public C_BaseEntity
+class [[= ks::reflect::NetTable{ .name = "DT_FuncOccluder" } ]]
+      C_FuncOccluder : public C_BaseEntity
 {
 public:
 	DECLARE_CLIENTCLASS();
@@ -23,14 +26,11 @@ public:
 	virtual void	OnDataChanged( DataUpdateType_t updateType );
 
 private:
-	int m_nOccluderIndex;
-	bool m_bActive;
+	[[= ks::reflect::Net{} ]] int m_nOccluderIndex;
+	[[= ks::reflect::Net{} ]] bool m_bActive;
 };
 
-IMPLEMENT_CLIENTCLASS_DT( C_FuncOccluder, DT_FuncOccluder, CFuncOccluder )
-	RecvPropBool( RECVINFO( m_bActive ) ),
-	RecvPropInt( RECVINFO(m_nOccluderIndex) ),
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS( C_FuncOccluder, DT_FuncOccluder, CFuncOccluder )
 
 
 void C_FuncOccluder::OnDataChanged( DataUpdateType_t updateType )

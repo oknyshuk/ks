@@ -5,6 +5,9 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_sendtable.h"
+#include "reflect_annotations.h"
 #include "point_camera.h"
 #include "modelentities.h"
 #include "info_camera_link.h"
@@ -12,7 +15,8 @@
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
-class CFuncMonitor : public CFuncBrush
+class [[= ks::reflect::NetTable{ .name = "DT_FuncMonitor" } ]]
+      CFuncMonitor : public CFuncBrush
 {
 	DECLARE_DATADESC();
 	DECLARE_CLASS( CFuncMonitor, CFuncBrush );
@@ -23,7 +27,7 @@ public:
 	virtual void UpdateOnRemove();
 
 private:
-	void InputSetCamera(inputdata_t &inputdata);
+	[[= ks::reflect::Input{ .name = "SetCamera", .type = FIELD_STRING } ]] void InputSetCamera(inputdata_t &inputdata);
 	void SetCameraByName(const char *szName);
 	void ReleaseCameraLink();
 
@@ -31,21 +35,13 @@ private:
 };
 
 // automatically hooks in the system's callbacks
-BEGIN_DATADESC( CFuncMonitor )
-
-	DEFINE_FIELD( m_hInfoCameraLink, FIELD_EHANDLE ),
-
-	// Outputs
-	DEFINE_INPUTFUNC( FIELD_STRING, "SetCamera", InputSetCamera ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CFuncMonitor )
 
 
 LINK_ENTITY_TO_CLASS( func_monitor, CFuncMonitor );
 
 
-IMPLEMENT_SERVERCLASS_ST( CFuncMonitor, DT_FuncMonitor )
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CFuncMonitor, DT_FuncMonitor )
 
 
 //-----------------------------------------------------------------------------

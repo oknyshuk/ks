@@ -9,6 +9,7 @@
 #define C_ENTITY_FREEZING_H
 
 #include "cbase.h"
+#include "reflect_annotations.h"
 
 
 struct EntityFreezingHitboxBlobData_t
@@ -20,7 +21,7 @@ struct EntityFreezingHitboxBlobData_t
 //-----------------------------------------------------------------------------
 // Entity Dissolve, client-side implementation
 //-----------------------------------------------------------------------------
-class C_EntityFreezing : public C_BaseEntity
+class [[= ks::reflect::NetTable{ .name = "DT_EntityFreezing" } ]] C_EntityFreezing : public C_BaseEntity
 {
 public:
 	DECLARE_CLIENTCLASS();
@@ -35,10 +36,10 @@ public:
 	void			ClientThink( void );
 
 private:
-	Vector	m_vFreezingOrigin;
-	float	m_flFrozenPerHitbox[ 50 ];
-	float	m_flFrozen;
-	bool	m_bFinishFreezing;
+	[[= ks::reflect::Net{} ]] Vector	m_vFreezingOrigin;
+	[[= ks::reflect::Net{} ]] float	m_flFrozenPerHitbox[ 50 ];
+	[[= ks::reflect::Net{} ]] float	m_flFrozen;
+	[[= ks::reflect::Net{} ]] bool	m_bFinishFreezing;
 
 	CUtlVector<EntityFreezingHitboxBlobData_t> m_HitboxBlobData;
 };

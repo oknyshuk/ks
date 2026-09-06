@@ -7,6 +7,8 @@
 //=============================================================================//
 #ifndef	__PLASMA__
 #define __PLASMA__
+
+#include "reflect_annotations.h"
 #pragma once
 
 #include "fire_smoke.h"
@@ -18,7 +20,11 @@
 //NOTENOTE: Mirrored in cl_dll/c_plasma.cpp
 #define	bitsPLASMA_FREE		0x00000002
 
-class CPlasma : public CBaseFire
+class [[= ks::reflect::NetTable{ .name = "DT_Plasma" } ]]
+      [[= ks::reflect::From<"m_flScale", ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE }>{} ]]
+      [[= ks::reflect::From<"m_flScaleTime", ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE }>{} ]]
+      [[= ks::reflect::From<"m_nFlags", ks::reflect::Net{ .bits = 8, .flags = SPROP_UNSIGNED }>{} ]]
+      CPlasma : public CBaseFire
 {
 public:
 	DECLARE_CLASS( CPlasma, CBaseFire );
@@ -30,14 +36,13 @@ public:
 	void	Precache( void );
 
 	DECLARE_SERVERCLASS();
-	DECLARE_DATADESC();
 
 public:
 
 	//Client-side
-	CNetworkVar( int, m_nPlasmaModelIndex );
-	CNetworkVar( int, m_nPlasmaModelIndex2 );
-	CNetworkVar( int, m_nGlowModelIndex );
+	CNetworkVar( int, m_nPlasmaModelIndex, [[= ks::reflect::Net{ .enc = ks::reflect::ENC_MODELINDEX } ]] );
+	CNetworkVar( int, m_nPlasmaModelIndex2, [[= ks::reflect::Net{ .enc = ks::reflect::ENC_MODELINDEX } ]] );
+	CNetworkVar( int, m_nGlowModelIndex, [[= ks::reflect::Net{ .enc = ks::reflect::ENC_MODELINDEX } ]] );
 
 	//Server-side
 };

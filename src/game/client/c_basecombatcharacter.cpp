@@ -11,6 +11,9 @@
 // $NoKeywords: $
 //=============================================================================//
 #include "cbase.h"
+#include "reflect_recvtable.h"
+#include "reflect_annotations.h"
+#include "reflect_predmap.h"
 #include "c_basecombatcharacter.h"
 #include "c_cs_player.h"
 // memdbgon must be the last include file in a .cpp file!!!
@@ -165,38 +168,14 @@ float C_BaseCombatCharacter::GetTimeSinceLastInjury( void ) const
 IMPLEMENT_CLIENTCLASS(C_BaseCombatCharacter, DT_BaseCombatCharacter, CBaseCombatCharacter);
 
 // Only send active weapon index to local player
-BEGIN_RECV_TABLE_NOBASE( C_BaseCombatCharacter, DT_BCCLocalPlayerExclusive )
-	RecvPropTime( RECVINFO( m_flNextAttack ) ),
-END_RECV_TABLE();
+IMPLEMENT_REFLECT_TABLE_IN( C_BaseCombatCharacter, DT_BCCLocalPlayerExclusive );
 
-BEGIN_RECV_TABLE_NOBASE( C_BaseCombatCharacter, DT_BCCNonLocalPlayerExclusive )
-#if defined( CSTRIKE15 )
-	// In CS:GO send active weapon index to all players except local
-	RecvPropArray3( RECVINFO_ARRAY(m_hMyWeapons), RecvPropEHandle( RECVINFO( m_hMyWeapons[0] ) ) ),
-#endif
-END_RECV_TABLE();
+// The server's DT_BCCNonLocalPlayerExclusive is empty -- no member claims it -- so the
+// m_hMyWeapons entry this used to carry under CSTRIKE15 could never be resolved: the decoder
+// walks the props the server actually transmits. The array is in the primary table on both sides.
+IMPLEMENT_REFLECT_TABLE_IN( C_BaseCombatCharacter, DT_BCCNonLocalPlayerExclusive );
 
-BEGIN_RECV_TABLE(C_BaseCombatCharacter, DT_BaseCombatCharacter)
-	RecvPropDataTable( "bcc_localdata", 0, 0, &REFERENCE_RECV_TABLE(DT_BCCLocalPlayerExclusive) ),
-	RecvPropDataTable( "bcc_nonlocaldata", 0, 0, &REFERENCE_RECV_TABLE(DT_BCCNonLocalPlayerExclusive) ),
-	RecvPropInt( RECVINFO( m_LastHitGroup ) ),
-	RecvPropEHandle( RECVINFO( m_hActiveWeapon ) ),
-	RecvPropTime( RECVINFO( m_flTimeOfLastInjury ) ),
-	RecvPropInt( RECVINFO( m_nRelativeDirectionOfLastInjury ) ),
-	RecvPropArray3( RECVINFO_ARRAY(m_hMyWeapons), RecvPropEHandle( RECVINFO( m_hMyWeapons[0] ) ) ),
-
-#ifdef INVASION_CLIENT_DLL
-	RecvPropInt( RECVINFO( m_iPowerups ) ),
-#endif
-
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_TABLE( C_BaseCombatCharacter, DT_BaseCombatCharacter );
 
 
-BEGIN_PREDICTION_DATA( C_BaseCombatCharacter )
-
-	DEFINE_PRED_ARRAY( m_iAmmo, FIELD_INTEGER,  MAX_AMMO_TYPES, FTYPEDESC_INSENDTABLE ),
-	DEFINE_PRED_FIELD( m_flNextAttack, FIELD_FLOAT, FTYPEDESC_INSENDTABLE ),
-	DEFINE_PRED_FIELD( m_hActiveWeapon, FIELD_EHANDLE, FTYPEDESC_INSENDTABLE ),
-	DEFINE_PRED_ARRAY( m_hMyWeapons, FIELD_EHANDLE, MAX_WEAPONS, FTYPEDESC_INSENDTABLE ),
-
-END_PREDICTION_DATA()
+IMPLEMENT_REFLECT_PREDMAP( C_BaseCombatCharacter );

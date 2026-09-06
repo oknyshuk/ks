@@ -6,6 +6,8 @@
 
 #ifndef PHYS_CONTROLLER_H
 #define PHYS_CONTROLLER_H
+
+#include "reflect_annotations.h"
 #ifdef _WIN32
 #pragma once
 #endif

@@ -7,6 +7,8 @@
 #ifndef AI_GOALENTITY_H
 #define AI_GOALENTITY_H
 
+#include "reflect_annotations.h"
+
 #include "ai_basenpc.h"
 #include "utlvector.h"
 
@@ -48,9 +50,9 @@ public:
 	virtual void OnActivate() {}
 	virtual void OnDeactivate() {}
 	
-	virtual void 	InputActivate( inputdata_t &inputdata );
-	virtual void 	InputUpdateActors( inputdata_t &inputdata );
-	virtual void 	InputDeactivate( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Activate", .type = FIELD_VOID } ]] virtual void 	InputActivate( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "UpdateActors", .type = FIELD_VOID } ]] virtual void 	InputUpdateActors( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Deactivate", .type = FIELD_VOID } ]] virtual void 	InputDeactivate( inputdata_t &inputdata );
 	
 	// Goal entities can become Dormant if they're left behind on previous maps.
 	// Transitioning back to the map with cause a dormant goal entity to reactivate itself.
@@ -104,11 +106,11 @@ protected:
 	void PruneActors();
 	
 	// From Worldcraft
-	string_t				m_iszActor;
-	string_t 				m_iszGoal;
-	bool					m_fStartActive;
-	SearchType_t			m_SearchType;
-	string_t				m_iszConceptModifiers;
+	[[= ks::reflect::Key{ .name = "Actor" } ]] string_t				m_iszActor;
+	[[= ks::reflect::Key{ .name = "Goal" } ]] string_t 				m_iszGoal;
+	[[= ks::reflect::Key{ .name = "StartActive" } ]] bool					m_fStartActive;
+	[[= ks::reflect::Key{ .name = "SearchType" } ]] SearchType_t			m_SearchType;
+	[[= ks::reflect::Key{ .name = "BaseConceptModifiers" } ]] string_t				m_iszConceptModifiers;
 	
 	CUtlVector<AIHANDLE>	m_actors;
 	EHANDLE					m_hGoalEntity;

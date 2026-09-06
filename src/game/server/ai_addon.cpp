@@ -1,5 +1,7 @@
 // ai_addon.cpp
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_annotations.h"
 #include "ai_addon.h"
 #include "ai_basenpc.h"
 #include "ai_behavior_addonhost.h"
@@ -99,23 +101,7 @@ int CountAddOns( CAI_BaseNPC *pHost )
 
 //---------------------------------------------------------
 //---------------------------------------------------------
-BEGIN_DATADESC( CAI_AddOn )
-	DEFINE_FIELD( m_hNPCHost, FIELD_EHANDLE ),
-	DEFINE_THINKFUNC( DispatchAddOnThink ),
-
-	DEFINE_FIELD( m_hPhysReplacement, FIELD_EHANDLE ),
-	DEFINE_FIELD( m_iPhysReplacementSolidFlags, FIELD_INTEGER ),
-	DEFINE_FIELD( m_iPhysReplacementMoveType, FIELD_INTEGER ),
-	DEFINE_FIELD( m_angPhysReplacementLocalOrientation, FIELD_VECTOR ),
-	DEFINE_FIELD( m_vecPhysReplacementDetatchForce, FIELD_VECTOR ),
-
-	DEFINE_FIELD( m_bWasAttached, FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_flWaitFinished, FIELD_TIME ),
-	DEFINE_FIELD( m_flNextAttachTime, FIELD_FLOAT ),
-
-	DEFINE_INPUTFUNC( FIELD_STRING, "Install", InputInstall ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "Remove", InputRemove ),
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CAI_AddOn )
 
 //---------------------------------------------------------
 //---------------------------------------------------------

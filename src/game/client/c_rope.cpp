@@ -5,6 +5,8 @@
 // $NoKeywords: $
 //===========================================================================//
 #include "cbase.h"
+#include "reflect_recvtable.h"
+#include "reflect_annotations.h"
 #include "c_rope.h"
 #include "beamdraw.h"
 #include "view.h"
@@ -43,38 +45,7 @@ void RecvProxy_RecomputeSprings( const CRecvProxyData *pData, void *pStruct, voi
 }
 
 
-IMPLEMENT_CLIENTCLASS_DT_NOBASE( C_RopeKeyframe, DT_RopeKeyframe, CRopeKeyframe )
-	RecvPropInt( RECVINFO(m_nChangeCount) ),
-	RecvPropInt( RECVINFO(m_iRopeMaterialModelIndex) ),
-	RecvPropEHandle( RECVINFO(m_hStartPoint) ),
-	RecvPropEHandle( RECVINFO(m_hEndPoint) ),
-	RecvPropInt( RECVINFO(m_iStartAttachment) ),
-	RecvPropInt( RECVINFO(m_iEndAttachment) ),
-
-	RecvPropInt( RECVINFO(m_fLockedPoints) ),
-	RecvPropInt( RECVINFO(m_Slack), 0, RecvProxy_RecomputeSprings ),
-	RecvPropInt( RECVINFO(m_RopeLength), 0, RecvProxy_RecomputeSprings ),
-	RecvPropInt( RECVINFO(m_RopeFlags) ),
-	RecvPropFloat( RECVINFO(m_TextureScale) ),
-	RecvPropInt( RECVINFO(m_nSegments) ),
-	RecvPropBool( RECVINFO(m_bConstrainBetweenEndpoints) ),
-	RecvPropInt( RECVINFO(m_Subdiv) ),
-
-	RecvPropFloat( RECVINFO(m_Width) ),
-	RecvPropFloat( RECVINFO(m_flScrollSpeed) ),
-	RecvPropVector( RECVINFO_NAME( m_vecNetworkOrigin, m_vecOrigin ) ),
-	RecvPropInt( RECVINFO_NAME(m_hNetworkMoveParent, moveparent), 0, RecvProxy_IntToMoveParent ),
-	
-	RecvPropInt( RECVINFO( m_iParentAttachment ) ),
-	RecvPropInt( RECVINFO( m_iDefaultRopeMaterialModelIndex ) ),	
-	
-// #ifndef _GAMECONSOLE -- X360 client and Win32 XLSP dedicated server need equivalent SendTables
-	RecvPropInt( RECVINFO( m_nMinCPULevel ) ), 
-	RecvPropInt( RECVINFO( m_nMaxCPULevel ) ), 
-	RecvPropInt( RECVINFO( m_nMinGPULevel ) ), 
-	RecvPropInt( RECVINFO( m_nMaxGPULevel ) ), 
-
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS( C_RopeKeyframe, DT_RopeKeyframe, CRopeKeyframe )
 
 #define ROPE_IMPULSE_SCALE	20
 #define ROPE_IMPULSE_DECAY	0.95

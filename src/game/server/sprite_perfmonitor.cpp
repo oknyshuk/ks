@@ -6,6 +6,9 @@
 //=============================================================================
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_sendtable.h"
+#include "reflect_annotations.h"
 #include "baseentity.h"
 #include "entityoutput.h"
 #include "convar.h"
@@ -15,7 +18,8 @@
 //-----------------------------------------------------------------------------
 // Purpose: Entity that particle performance measuring
 //-----------------------------------------------------------------------------
-class CParticlePerformanceMonitor : public CPointEntity
+class [[= ks::reflect::NetTable{ .name = "DT_ParticlePerformanceMonitor" } ]]
+      CParticlePerformanceMonitor : public CPointEntity
 {
 	DECLARE_CLASS( CParticlePerformanceMonitor, CPointEntity );
 public:
@@ -26,33 +30,21 @@ public:
 	int		UpdateTransmitState( void );
 
 	// Inputs
-	void	InputTurnOnDisplay( inputdata_t &inputdata );
-	void	InputTurnOffDisplay( inputdata_t &inputdata );
-	void	InputStartMeasuring( inputdata_t &inputdata );
-	void	InputStopMeasuring( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "TurnOnDisplay", .type = FIELD_VOID } ]] void	InputTurnOnDisplay( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "TurnOffDisplay", .type = FIELD_VOID } ]] void	InputTurnOffDisplay( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "StartMeasuring", .type = FIELD_VOID } ]] void	InputStartMeasuring( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "StopMeasuring", .type = FIELD_VOID } ]] void	InputStopMeasuring( inputdata_t &inputdata );
 
 private:
-	CNetworkVar( bool, m_bDisplayPerf );
-	CNetworkVar( bool, m_bMeasurePerf );
+	CNetworkVar( bool, m_bDisplayPerf, [[= ks::reflect::Net{ .bits = 1, .flags = SPROP_UNSIGNED } ]] );
+	CNetworkVar( bool, m_bMeasurePerf, [[= ks::reflect::Net{ .bits = 1, .flags = SPROP_UNSIGNED } ]] );
 };
 
 LINK_ENTITY_TO_CLASS( env_particle_performance_monitor, CParticlePerformanceMonitor );
 
-BEGIN_DATADESC( CParticlePerformanceMonitor )
-	DEFINE_FIELD( m_bDisplayPerf, FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_bMeasurePerf, FIELD_BOOLEAN ),
+IMPLEMENT_REFLECT_DATAMAP( CParticlePerformanceMonitor )
 
-	// Inputs
-	DEFINE_INPUTFUNC( FIELD_VOID, "TurnOnDisplay", InputTurnOnDisplay ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "TurnOffDisplay", InputTurnOffDisplay ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "StartMeasuring", InputStartMeasuring ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "StopMeasuring", InputStopMeasuring ),
-END_DATADESC()
-
-IMPLEMENT_SERVERCLASS_ST( CParticlePerformanceMonitor, DT_ParticlePerformanceMonitor )
-	SendPropInt( SENDINFO(m_bDisplayPerf), 1, SPROP_UNSIGNED ),
-	SendPropInt( SENDINFO(m_bMeasurePerf), 1, SPROP_UNSIGNED ),
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CParticlePerformanceMonitor, DT_ParticlePerformanceMonitor )
 
 //-----------------------------------------------------------------------------
 // Purpose: 

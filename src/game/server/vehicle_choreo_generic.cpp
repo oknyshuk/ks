@@ -5,13 +5,15 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_sendtable.h"
+#include "reflect_annotations.h"
 #include "npcevent.h"
 #include "vehicle_base.h"
 #include "engine/IEngineSound.h"
 #include "in_buttons.h"
 #include "soundenvelope.h"
 #include "soundent.h"
-#include "physics_saverestore.h"
 #include "vphysics/constraints.h"
 #include "vcollide_parse.h"
 #include "ndebugoverlay.h"
@@ -35,18 +37,6 @@
 #define CHOREO_VEHICLE_VIEW_PITCH_MIN	-90
 #define CHOREO_VEHICLE_VIEW_PITCH_MAX	38	
 
-BEGIN_DATADESC_NO_BASE( vehicleview_t )
-	DEFINE_FIELD( bClampEyeAngles, FIELD_BOOLEAN ),
-	DEFINE_FIELD( flPitchCurveZero, FIELD_FLOAT ),
-	DEFINE_FIELD( flPitchCurveLinear, FIELD_FLOAT ),
-	DEFINE_FIELD( flRollCurveZero, FIELD_FLOAT ),
-	DEFINE_FIELD( flRollCurveLinear, FIELD_FLOAT ),
-	DEFINE_FIELD( flFOV, FIELD_FLOAT ),
-	DEFINE_FIELD( flYawMin, FIELD_FLOAT ),
-	DEFINE_FIELD( flYawMax, FIELD_FLOAT ),
-	DEFINE_FIELD( flPitchMin, FIELD_FLOAT ),
-	DEFINE_FIELD( flPitchMax, FIELD_FLOAT ),
-END_DATADESC()
 
 //
 // Anim events.
@@ -113,17 +103,24 @@ void CChoreoGenericServerVehicle::SetPlayerCanShoot( bool bCanShoot, int nRole /
 	}
 }
 
-BEGIN_SIMPLE_DATADESC( CChoreoGenericServerVehicle )
-
-DEFINE_FIELD( m_bPlayerCanShoot, FIELD_BOOLEAN ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP_SIMPLE( CChoreoGenericServerVehicle )
 
 
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-class CPropVehicleChoreoGeneric : public CDynamicProp, public IDrivableVehicle
+class [[= ks::reflect::NetTable{ .name = "DT_PropVehicleChoreoGeneric" } ]]
+      [[= ks::reflect::From<"m_vehicleView.bClampEyeAngles", ks::reflect::Net{}>{} ]]
+      [[= ks::reflect::From<"m_vehicleView.flPitchCurveZero", ks::reflect::Net{ .bits = 32 }>{} ]]
+      [[= ks::reflect::From<"m_vehicleView.flPitchCurveLinear", ks::reflect::Net{ .bits = 32 }>{} ]]
+      [[= ks::reflect::From<"m_vehicleView.flRollCurveZero", ks::reflect::Net{ .bits = 32 }>{} ]]
+      [[= ks::reflect::From<"m_vehicleView.flRollCurveLinear", ks::reflect::Net{ .bits = 32 }>{} ]]
+      [[= ks::reflect::From<"m_vehicleView.flFOV", ks::reflect::Net{ .bits = 32 }>{} ]]
+      [[= ks::reflect::From<"m_vehicleView.flYawMin", ks::reflect::Net{ .bits = 32 }>{} ]]
+      [[= ks::reflect::From<"m_vehicleView.flYawMax", ks::reflect::Net{ .bits = 32 }>{} ]]
+      [[= ks::reflect::From<"m_vehicleView.flPitchMin", ks::reflect::Net{ .bits = 32 }>{} ]]
+      [[= ks::reflect::From<"m_vehicleView.flPitchMax", ks::reflect::Net{ .bits = 32 }>{} ]]
+      CPropVehicleChoreoGeneric : public CDynamicProp, public IDrivableVehicle
 {
 	DECLARE_CLASS( CPropVehicleChoreoGeneric, CDynamicProp );
 
@@ -177,27 +174,27 @@ public:
 	void HandleAnimEvent( animevent_t *pEvent );
 
 	// Inputs
-	void InputEnterVehicleImmediate( inputdata_t &inputdata );
-	void InputEnterVehicle( inputdata_t &inputdata );
-	void InputExitVehicle( inputdata_t &inputdata );
-	void InputLock( inputdata_t &inputdata );
-	void InputUnlock( inputdata_t &inputdata );
-	void InputOpen( inputdata_t &inputdata );
-	void InputClose( inputdata_t &inputdata );
-	void InputViewlock( inputdata_t &inputdata );
-	void InputSetCanShoot( inputdata_t &inputdata );
-	void InputUseAttachmentEyes( inputdata_t &inputdata );
-	void InputSetMaxPitch( inputdata_t &inputdata );
-	void InputSetMinPitch( inputdata_t &inputdata );
-	void InputSetMaxYaw( inputdata_t &inputdata );
-	void InputSetMinYaw( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "EnterVehicleImmediate", .type = FIELD_VOID } ]] void InputEnterVehicleImmediate( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "EnterVehicle", .type = FIELD_VOID } ]] void InputEnterVehicle( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "ExitVehicle", .type = FIELD_VOID } ]] void InputExitVehicle( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Lock", .type = FIELD_VOID } ]] void InputLock( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Unlock", .type = FIELD_VOID } ]] void InputUnlock( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Open", .type = FIELD_VOID } ]] void InputOpen( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Close", .type = FIELD_VOID } ]] void InputClose( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Viewlock", .type = FIELD_BOOLEAN } ]] void InputViewlock( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetCanShoot", .type = FIELD_BOOLEAN } ]] void InputSetCanShoot( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "UseAttachmentEyes", .type = FIELD_BOOLEAN } ]] void InputUseAttachmentEyes( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetMaxPitch", .type = FIELD_FLOAT } ]] void InputSetMaxPitch( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetMinPitch", .type = FIELD_FLOAT } ]] void InputSetMinPitch( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetMaxYaw", .type = FIELD_FLOAT } ]] void InputSetMaxYaw( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetMinYaw", .type = FIELD_FLOAT } ]] void InputSetMinYaw( inputdata_t &inputdata );
 
 	bool ShouldIgnoreParent( void ) { return m_bIgnoreMoveParent; }
 
 	// Tuned to match HL2s definition, but this should probably return false in all cases
 	virtual bool	PassengerShouldReceiveDamage( CTakeDamageInfo &info ) { return (info.GetDamageType() & (DMG_BLAST|DMG_RADIATION)) == 0; }
 
-	CNetworkHandle( CBasePlayer, m_hPlayer );
+	CNetworkHandle( CBasePlayer, m_hPlayer, [[= ks::reflect::Net{} ]] );
 
 	CNetworkVarEmbedded( vehicleview_t, m_vehicleView );
 private:
@@ -229,7 +226,7 @@ public:
 
 	bool ShouldCollide( int collisionGroup, int contentsMask ) const;
 
-	bool				m_bForcePlayerEyePoint;			// Uses player's eyepoint instead of 'vehicle_driver_eyes' attachment
+	[[= ks::reflect::Key{ .name = "useplayereyes" } ]] bool				m_bForcePlayerEyePoint;			// Uses player's eyepoint instead of 'vehicle_driver_eyes' attachment
 
 protected:
 
@@ -239,93 +236,33 @@ protected:
 private:
 
 	// Entering / Exiting
-	bool				m_bLocked;
-	CNetworkVar( bool,	m_bEnterAnimOn );
-	CNetworkVar( bool,	m_bExitAnimOn );
-	CNetworkVector(		m_vecEyeExitEndpoint );
+	[[= ks::reflect::Key{ .name = "vehiclelocked" } ]] bool				m_bLocked;
+	CNetworkVar( bool,	m_bEnterAnimOn, [[= ks::reflect::Net{} ]] );
+	CNetworkVar( bool,	m_bExitAnimOn, [[= ks::reflect::Net{} ]] );
+	CNetworkVector(		m_vecEyeExitEndpoint, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD } ]] );
 	bool				m_bForcedExit;
-	bool				m_bIgnoreMoveParent;
-	bool				m_bIgnorePlayerCollisions;
+	[[= ks::reflect::Key{ .name = "ignoremoveparent" } ]] bool				m_bIgnoreMoveParent;
+	[[= ks::reflect::Key{ .name = "ignoreplayer" } ]] bool				m_bIgnorePlayerCollisions;
 
-	bool				m_bPlayerCanShoot;
-	CNetworkVar( bool, m_bForceEyesToAttachment );
+	[[= ks::reflect::Key{ .name = "playercanshoot" } ]] bool				m_bPlayerCanShoot;
+	CNetworkVar( bool, m_bForceEyesToAttachment, [[= ks::reflect::Key{ .name = "useattachmenteyes" } ]] [[= ks::reflect::Net{} ]] );
 
 	// Vehicle script filename
-	string_t			m_vehicleScript;
+	[[= ks::reflect::Key{ .name = "vehiclescript" } ]] string_t			m_vehicleScript;
 
-	COutputEvent		m_playerOn;
-	COutputEvent		m_playerOff;
-	COutputEvent		m_OnOpen;
-	COutputEvent		m_OnClose;
+	[[= ks::reflect::Key{ .name = "PlayerOn" } ]] COutputEvent		m_playerOn;
+	[[= ks::reflect::Key{ .name = "PlayerOff" } ]] COutputEvent		m_playerOff;
+	[[= ks::reflect::Key{ .name = "OnOpen" } ]] COutputEvent		m_OnOpen;
+	[[= ks::reflect::Key{ .name = "OnClose" } ]] COutputEvent		m_OnClose;
 };
 
 LINK_ENTITY_TO_CLASS( prop_vehicle_choreo_generic, CPropVehicleChoreoGeneric );
 
-BEGIN_DATADESC( CPropVehicleChoreoGeneric )
+IMPLEMENT_REFLECT_DATAMAP( CPropVehicleChoreoGeneric )
 
-	// Inputs
-	DEFINE_INPUTFUNC( FIELD_VOID, "Lock",	InputLock ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "Unlock",	InputUnlock ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "EnterVehicle", InputEnterVehicle ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "EnterVehicleImmediate", InputEnterVehicleImmediate ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "ExitVehicle", InputExitVehicle ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "Open", InputOpen ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "Close", InputClose ),
-	DEFINE_INPUTFUNC( FIELD_BOOLEAN, "Viewlock", InputViewlock ),
-	DEFINE_INPUTFUNC( FIELD_BOOLEAN, "SetCanShoot", InputSetCanShoot ),
-	DEFINE_INPUTFUNC( FIELD_BOOLEAN, "UseAttachmentEyes", InputUseAttachmentEyes ),
+IMPLEMENT_REFLECT_SERVERCLASS( CPropVehicleChoreoGeneric, DT_PropVehicleChoreoGeneric )
 
-	DEFINE_INPUTFUNC( FIELD_BOOLEAN, "SetCanShoot", InputSetCanShoot ),
-	DEFINE_INPUTFUNC( FIELD_FLOAT, "SetMaxPitch", InputSetMaxPitch ),
-	DEFINE_INPUTFUNC( FIELD_FLOAT, "SetMinPitch", InputSetMinPitch ),
-	DEFINE_INPUTFUNC( FIELD_FLOAT, "SetMaxYaw", InputSetMaxYaw  ),
-	DEFINE_INPUTFUNC( FIELD_FLOAT, "SetMinYaw", InputSetMinYaw ),
 
-	// Keys
-	DEFINE_EMBEDDED( m_ServerVehicle ),
-
-	DEFINE_FIELD( m_hPlayer, FIELD_EHANDLE ),
-	DEFINE_FIELD( m_bEnterAnimOn, FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_bExitAnimOn, FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_bForcedExit, FIELD_BOOLEAN ),
- 	DEFINE_FIELD( m_vecEyeExitEndpoint, FIELD_POSITION_VECTOR ),
-
-	DEFINE_KEYFIELD( m_vehicleScript, FIELD_STRING, "vehiclescript" ),
-	DEFINE_KEYFIELD( m_bLocked, FIELD_BOOLEAN, "vehiclelocked" ),
-
-	DEFINE_KEYFIELD( m_bIgnoreMoveParent, FIELD_BOOLEAN, "ignoremoveparent" ),
-	DEFINE_KEYFIELD( m_bIgnorePlayerCollisions, FIELD_BOOLEAN, "ignoreplayer" ),
-	DEFINE_KEYFIELD( m_bForcePlayerEyePoint, FIELD_BOOLEAN, "useplayereyes" ),
-	DEFINE_KEYFIELD( m_bPlayerCanShoot, FIELD_BOOLEAN, "playercanshoot" ),
-	DEFINE_KEYFIELD( m_bForceEyesToAttachment , FIELD_BOOLEAN, "useattachmenteyes" ),
-
-	DEFINE_OUTPUT( m_playerOn, "PlayerOn" ),
-	DEFINE_OUTPUT( m_playerOff, "PlayerOff" ),
-	DEFINE_OUTPUT( m_OnOpen, "OnOpen" ),
-	DEFINE_OUTPUT( m_OnClose, "OnClose" ),
-
-	DEFINE_EMBEDDED( m_vehicleView ),
-	DEFINE_EMBEDDED( m_savedVehicleView ),
-
-END_DATADESC()
-
-IMPLEMENT_SERVERCLASS_ST(CPropVehicleChoreoGeneric, DT_PropVehicleChoreoGeneric)
-	SendPropEHandle(SENDINFO(m_hPlayer)),
-	SendPropBool(SENDINFO(m_bEnterAnimOn)),
-	SendPropBool(SENDINFO(m_bExitAnimOn)),
-	SendPropBool(SENDINFO(m_bForceEyesToAttachment)),
-	SendPropVector(SENDINFO(m_vecEyeExitEndpoint), -1, SPROP_COORD),
-	SendPropBool( SENDINFO_STRUCTELEM( vehicleview_t, m_vehicleView, bClampEyeAngles ) ),
-	SendPropFloat( SENDINFO_STRUCTELEM( vehicleview_t, m_vehicleView, flPitchCurveZero ) ),
-	SendPropFloat( SENDINFO_STRUCTELEM( vehicleview_t, m_vehicleView, flPitchCurveLinear ) ),
-	SendPropFloat( SENDINFO_STRUCTELEM( vehicleview_t, m_vehicleView, flRollCurveZero ) ),
-	SendPropFloat( SENDINFO_STRUCTELEM( vehicleview_t, m_vehicleView, flRollCurveLinear ) ),
-	SendPropFloat( SENDINFO_STRUCTELEM( vehicleview_t, m_vehicleView, flFOV ) ),
-	SendPropFloat( SENDINFO_STRUCTELEM( vehicleview_t, m_vehicleView, flYawMin ) ),
-	SendPropFloat( SENDINFO_STRUCTELEM( vehicleview_t, m_vehicleView, flYawMax ) ),
-	SendPropFloat( SENDINFO_STRUCTELEM( vehicleview_t, m_vehicleView, flPitchMin ) ),
-	SendPropFloat( SENDINFO_STRUCTELEM( vehicleview_t, m_vehicleView, flPitchMax ) ),
-END_SEND_TABLE();
 
 
 bool ShouldVehicleIgnoreEntity( CBaseEntity *pVehicle, CBaseEntity *pCollide )

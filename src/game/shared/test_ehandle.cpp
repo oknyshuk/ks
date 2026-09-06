@@ -7,6 +7,14 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_annotations.h"
+#ifdef CLIENT_DLL
+#include "reflect_recvtable.h"
+#endif
+#include "reflect_annotations.h"
+#ifdef GAME_DLL
+#include "reflect_sendtable.h"
+#endif
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -21,7 +29,8 @@
 	// ------------------------------------------------------------------------------------ //
 	// The main entity class (class A).
 	// ------------------------------------------------------------------------------------ //
-	class CHandleTest : public CBaseEntity
+	class [[= ks::reflect::NetTable{ .name = "DT_HandleTest" } ]]
+      CHandleTest : public CBaseEntity
 	{
 	public:
 		DECLARE_CLASS( CHandleTest, CBaseEntity );
@@ -50,14 +59,11 @@
 				m_Handle->SetTransmit( pInfo, bAlways );
 		}
 
-		CNetworkHandle( CBaseEntity, m_Handle );
-		CNetworkVar( bool, m_bSendHandle );
+		CNetworkHandle( CBaseEntity, m_Handle, [[= ks::reflect::Net{} ]] );
+		CNetworkVar( bool, m_bSendHandle, [[= ks::reflect::Net{ .bits = -1 } ]] );
 	};
 
-	IMPLEMENT_SERVERCLASS_ST( CHandleTest, DT_HandleTest )
-		SendPropEHandle( SENDINFO( m_Handle ) ),
-		SendPropInt( SENDINFO( m_bSendHandle ) )
-	END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CHandleTest, DT_HandleTest )
 	
 	LINK_ENTITY_TO_CLASS( handle_test, CHandleTest );
 
@@ -95,7 +101,8 @@
 
 #else
 
-	class C_HandleTest : public C_BaseEntity
+	class [[= ks::reflect::NetTable{ .name = "DT_HandleTest" } ]]
+      C_HandleTest : public C_BaseEntity
 	{
 	public:
 		DECLARE_CLASS( C_HandleTest, C_BaseEntity );
@@ -110,14 +117,11 @@
 			Msg( "m_bSendHandle: %d, m_Handle.Get: 0x%p\n", m_bSendHandle, m_Handle.Get() );
 		}
 
-		EHANDLE m_Handle;
-		bool m_bSendHandle;
+		[[= ks::reflect::Net{} ]] EHANDLE m_Handle;
+		[[= ks::reflect::Net{} ]] bool m_bSendHandle;
 	};
 
-	IMPLEMENT_CLIENTCLASS_DT( C_HandleTest, DT_HandleTest, CHandleTest )
-		RecvPropEHandle( RECVINFO( m_Handle ) ),
-		RecvPropInt( RECVINFO( m_bSendHandle ) )
-	END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS( C_HandleTest, DT_HandleTest, CHandleTest )
 
 
 #endif

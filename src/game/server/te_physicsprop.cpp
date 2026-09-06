@@ -7,6 +7,8 @@
 // $NoKeywords: $
 //=============================================================================//
 #include "cbase.h"
+#include "reflect_sendtable.h"
+#include "reflect_annotations.h"
 #include "basetempentity.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
@@ -15,7 +17,8 @@
 //-----------------------------------------------------------------------------
 // Purpose: create clientside physics prop, as breaks model if needed
 //-----------------------------------------------------------------------------
-class CTEPhysicsProp : public CBaseTempEntity
+class [[= ks::reflect::NetTable{ .name = "DT_TEPhysicsProp" } ]]
+      CTEPhysicsProp : public CBaseTempEntity
 {
 public:
 	DECLARE_CLASS( CTEPhysicsProp, CBaseTempEntity );
@@ -26,14 +29,17 @@ public:
 	DECLARE_SERVERCLASS();
 
 public:
-	CNetworkVector( m_vecOrigin );
-	CNetworkQAngle( m_angRotation );
-	CNetworkVector( m_vecVelocity );
-	CNetworkVar( int, m_nModelIndex );
-	CNetworkVar( int, m_nSkin );
-	CNetworkVar( int, m_nFlags );
-	CNetworkVar( int, m_nEffects );
-	CNetworkColor32( m_clrRender );
+	CNetworkVector( m_vecOrigin, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD, .enc = ks::reflect::ENC_VECTOR } ]] );
+	CNetworkQAngle( m_angRotation,
+	    [[= ks::reflect::Net{ .bits = 13, .enc = ks::reflect::ENC_ANGLE, .index = 0 } ]]
+	    [[= ks::reflect::Net{ .bits = 13, .enc = ks::reflect::ENC_ANGLE, .index = 1 } ]]
+	    [[= ks::reflect::Net{ .bits = 13, .enc = ks::reflect::ENC_ANGLE, .index = 2 } ]] );
+	CNetworkVector( m_vecVelocity, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD, .enc = ks::reflect::ENC_VECTOR } ]] );
+	CNetworkVar( int, m_nModelIndex, [[= ks::reflect::Net{ .enc = ks::reflect::ENC_MODELINDEX } ]] );
+	CNetworkVar( int, m_nSkin, [[= ks::reflect::Net{ .bits = ANIMATION_SKIN_BITS } ]] );
+	CNetworkVar( int, m_nFlags, [[= ks::reflect::Net{ .bits = 2, .flags = SPROP_UNSIGNED } ]] );
+	CNetworkVar( int, m_nEffects, [[= ks::reflect::Net{ .bits = EF_MAX_BITS, .flags = SPROP_UNSIGNED } ]] );
+	CNetworkColor32( m_clrRender, [[= ks::reflect::Net{ .bits = 32, .flags = SPROP_UNSIGNED } ]] [[= ks::reflect::Proxy<SendProxy_Color32ToInt32, ks::reflect::WIRE_SEND>{} ]] );
 };
 
 //-----------------------------------------------------------------------------
@@ -62,18 +68,7 @@ CTEPhysicsProp::~CTEPhysicsProp( void )
 {
 }
 
-IMPLEMENT_SERVERCLASS_ST(CTEPhysicsProp, DT_TEPhysicsProp)
-	SendPropVector( SENDINFO(m_vecOrigin), -1, SPROP_COORD),
-	SendPropAngle( SENDINFO_VECTORELEM(m_angRotation, 0), 13 ),
-	SendPropAngle( SENDINFO_VECTORELEM(m_angRotation, 1), 13 ),
-	SendPropAngle( SENDINFO_VECTORELEM(m_angRotation, 2), 13 ),
-	SendPropVector( SENDINFO(m_vecVelocity), -1, SPROP_COORD),
-	SendPropModelIndex( SENDINFO(m_nModelIndex) ),
-	SendPropInt( SENDINFO(m_nSkin), ANIMATION_SKIN_BITS),
-	SendPropInt( SENDINFO(m_nFlags), 2, SPROP_UNSIGNED ),
-	SendPropInt( SENDINFO(m_nEffects), EF_MAX_BITS, SPROP_UNSIGNED),
-	SendPropInt( SENDINFO(m_clrRender), 32,	SPROP_UNSIGNED, SendProxy_Color32ToInt32 ),
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CTEPhysicsProp, DT_TEPhysicsProp )
 
 // Singleton to fire TEBreakModel objects
 static CTEPhysicsProp s_TEPhysicsProp( "physicsprop" );

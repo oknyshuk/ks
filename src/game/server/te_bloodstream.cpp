@@ -11,6 +11,8 @@
 // $NoKeywords: $
 //=============================================================================//
 #include "cbase.h"
+#include "reflect_sendtable.h"
+#include "reflect_annotations.h"
 #include "te_particlesystem.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
@@ -19,7 +21,8 @@
 //-----------------------------------------------------------------------------
 // Purpose: Dispatches blood stream tempentity
 //-----------------------------------------------------------------------------
-class CTEBloodStream : public CTEParticleSystem
+class [[= ks::reflect::NetTable{ .name = "DT_TEBloodStream" } ]]
+      CTEBloodStream : public CTEParticleSystem
 {
 public:
 	DECLARE_CLASS( CTEBloodStream, CTEParticleSystem );
@@ -32,12 +35,12 @@ public:
 	DECLARE_SERVERCLASS();
 
 public:
-	CNetworkVector( m_vecDirection );
-	CNetworkVar( int, r );
-	CNetworkVar( int, g );
-	CNetworkVar( int, b );
-	CNetworkVar( int, a );
-	CNetworkVar( int, m_nAmount );
+	CNetworkVector( m_vecDirection, [[= ks::reflect::Net{ .bits = 11, .low = -10.0, .high = 10.0, .enc = ks::reflect::ENC_VECTOR } ]] );
+	CNetworkVar( int, r, [[= ks::reflect::Net{ .bits = 8, .flags = SPROP_UNSIGNED } ]] );
+	CNetworkVar( int, g, [[= ks::reflect::Net{ .bits = 8, .flags = SPROP_UNSIGNED } ]] );
+	CNetworkVar( int, b, [[= ks::reflect::Net{ .bits = 8, .flags = SPROP_UNSIGNED } ]] );
+	CNetworkVar( int, a, [[= ks::reflect::Net{ .bits = 8, .flags = SPROP_UNSIGNED } ]] );
+	CNetworkVar( int, m_nAmount, [[= ks::reflect::Net{ .bits = 8, .flags = SPROP_UNSIGNED } ]] );
 };
 
 //-----------------------------------------------------------------------------
@@ -93,14 +96,7 @@ void CTEBloodStream::Test( const Vector& current_origin, const QAngle& current_a
 	Create( filter, 0.0 );
 }
 
-IMPLEMENT_SERVERCLASS_ST(CTEBloodStream, DT_TEBloodStream)
-	SendPropVector( SENDINFO(m_vecDirection), 11, 0, -10.0, 10.0 ),
-	SendPropInt( SENDINFO(r), 8, SPROP_UNSIGNED ),
-	SendPropInt( SENDINFO(g), 8, SPROP_UNSIGNED ),
-	SendPropInt( SENDINFO(b), 8, SPROP_UNSIGNED ),
-	SendPropInt( SENDINFO(a), 8, SPROP_UNSIGNED ),
-	SendPropInt( SENDINFO(m_nAmount), 8, SPROP_UNSIGNED ),
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CTEBloodStream, DT_TEBloodStream )
 
 // Singleton to fire TEBloodStream objects
 static CTEBloodStream g_TEBloodStream( "Blood Stream" );

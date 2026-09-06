@@ -8,6 +8,8 @@
 #ifndef C_SLIDESHOW_DISPLAY_H
 #define C_SLIDESHOW_DISPLAY_H
 
+#include "reflect_annotations.h"
+
 #include "cbase.h"
 #include "utlvector.h"
 
@@ -20,7 +22,8 @@ struct SlideMaterialList_t
 };
 
 
-class C_SlideshowDisplay : public C_BaseEntity
+class [[= ks::reflect::NetTable{ .name = "DT_SlideshowDisplay" } ]]
+      C_SlideshowDisplay : public C_BaseEntity
 {
 public:
 	DECLARE_CLASS( C_SlideshowDisplay, CBaseEntity );
@@ -49,24 +52,24 @@ private:
 
 private:
 
-	bool	m_bEnabled;
+	[[= ks::reflect::Net{} ]] bool	m_bEnabled;
 
-	char	m_szDisplayText[ 128 ];
+	[[= ks::reflect::Net{} ]] char	m_szDisplayText[ 128 ];
 
-	char	m_szSlideshowDirectory[ 128 ];
+	[[= ks::reflect::Net{} ]] char	m_szSlideshowDirectory[ 128 ];
 
 	CUtlVector<SlideMaterialList_t*>	m_SlideMaterialLists;
-	unsigned char						m_chCurrentSlideLists[ 16 ];
+	[[= ks::reflect::Net{} ]] unsigned char						m_chCurrentSlideLists[ 16 ];
 	int									m_iCurrentMaterialIndex;
 	int									m_iCurrentSlideIndex;
 
-	float	m_fMinSlideTime;
-	float	m_fMaxSlideTime;
+	[[= ks::reflect::Net{} ]] float	m_fMinSlideTime;
+	[[= ks::reflect::Net{} ]] float	m_fMaxSlideTime;
 
 	float	m_NextSlideTime;
 
-	int		m_iCycleType;
-	bool	m_bNoListRepeats;
+	[[= ks::reflect::Net{} ]] int		m_iCycleType;
+	[[= ks::reflect::Net{} ]] bool	m_bNoListRepeats;
 	int		m_iCurrentSlideList;
 	int		m_iCurrentSlide;
 };

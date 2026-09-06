@@ -11,6 +11,8 @@
 // $NoKeywords: $
 //=============================================================================//
 #include "cbase.h"
+#include "reflect_sendtable.h"
+#include "reflect_annotations.h"
 #include "basetempentity.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
@@ -19,7 +21,8 @@
 //-----------------------------------------------------------------------------
 // Purpose: Dispatches Gunshot decal tempentity
 //-----------------------------------------------------------------------------
-class CTEImpact : public CBaseTempEntity
+class [[= ks::reflect::NetTable{ .name = "DT_TEImpact" } ]]
+      CTEImpact : public CBaseTempEntity
 {
 public:
 	DECLARE_CLASS( CTEImpact, CBaseTempEntity );
@@ -34,9 +37,9 @@ public:
 
 public:
 
-	CNetworkVector( m_vecOrigin );
-	CNetworkVector( m_vecNormal );	//NOTENOTE: In a multi-play setup we'll probably want non-oriented effects for bandwidth
-	CNetworkVar( int, m_iType );
+	CNetworkVector( m_vecOrigin, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD, .enc = ks::reflect::ENC_VECTOR } ]] );
+	CNetworkVector( m_vecNormal, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD, .enc = ks::reflect::ENC_VECTOR } ]] );	//NOTENOTE: In a multi-play setup we'll probably want non-oriented effects for bandwidth
+	CNetworkVar( int, m_iType, [[= ks::reflect::Net{ .bits = 32, .flags = SPROP_UNSIGNED } ]] );
 };
 
 //-----------------------------------------------------------------------------
@@ -75,11 +78,7 @@ void CTEImpact::Test( const Vector& current_origin, const Vector& current_normal
 
 
 //Server class implementation
-IMPLEMENT_SERVERCLASS_ST( CTEImpact, DT_TEImpact)
-	SendPropVector( SENDINFO( m_vecOrigin ), -1, SPROP_COORD ),
-	SendPropVector( SENDINFO( m_vecNormal ), -1, SPROP_COORD ),
-	SendPropInt( SENDINFO( m_iType ), 32, SPROP_UNSIGNED ),
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CTEImpact, DT_TEImpact )
 
 // Singleton to fire TEImpact objects
 static CTEImpact g_TEImpact( "Impact" );

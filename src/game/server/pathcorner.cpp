@@ -5,6 +5,8 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_annotations.h"
 #include "trains.h"
 #include "entitylist.h"
 #include "ndebugoverlay.h"
@@ -23,14 +25,14 @@ public:
 	void	DrawDebugGeometryOverlays(void);
 
 	// Input handlers	
-	void InputSetNextPathCorner( inputdata_t &inputdata );
-	void InputInPass( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetNextPathCorner", .type = FIELD_STRING } ]] void InputSetNextPathCorner( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "InPass", .type = FIELD_VOID } ]] void InputInPass( inputdata_t &inputdata );
 
 	DECLARE_DATADESC();
 
 private:
-	float			m_flWait;
-	COutputEvent	m_OnPass;
+	[[= ks::reflect::Key{ .name = "wait" } ]] float			m_flWait;
+	[[= ks::reflect::Key{ .name = "OnPass" } ]] COutputEvent	m_OnPass;
 };
 
 LINK_ENTITY_TO_CLASS( path_corner, CPathCorner );
@@ -44,20 +46,7 @@ class CPathCornerCrash : public CPathCorner
 LINK_ENTITY_TO_CLASS( path_corner_crash, CPathCornerCrash );
 
 
-BEGIN_DATADESC( CPathCorner )
-
-	DEFINE_KEYFIELD( m_flWait, FIELD_FLOAT, "wait" ),
-
-	// Inputs
-	DEFINE_INPUTFUNC( FIELD_STRING, "SetNextPathCorner", InputSetNextPathCorner),
-
-	// Internal inputs - not exposed in the FGD
-	DEFINE_INPUTFUNC( FIELD_VOID, "InPass", InputInPass ),
-
-	// Outputs
-	DEFINE_OUTPUT( m_OnPass, "OnPass"),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CPathCorner )
 
 
 //-----------------------------------------------------------------------------

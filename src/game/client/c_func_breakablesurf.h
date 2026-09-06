@@ -7,6 +7,8 @@
 //===========================================================================//
 #ifndef C_FUNC_BREAKABLESURF_H
 #define C_FUNC_BREAKABLESURF_H
+
+#include "reflect_annotations.h"
 #ifdef _WIN32
 #pragma once
 #endif
@@ -60,22 +62,22 @@ struct EdgeTexture_t
 	CTextureReference	m_pMaterialEdgeTexture;
 };
 
-class C_BreakableSurface : public C_BaseEntity, public IBrushRenderer
+class [[= ks::reflect::NetTable{ .name = "DT_BreakableSurface" } ]]
+      C_BreakableSurface : public C_BaseEntity, public IBrushRenderer
 {
 public:
 	DECLARE_CLASS( C_BreakableSurface, C_BaseEntity );
-	DECLARE_DATADESC();
 	DECLARE_CLIENTCLASS();
 
 
-	int				m_nNumWide;
-	int				m_nNumHigh;
-	float			m_flPanelWidth;
-	float			m_flPanelHeight;
-	Vector			m_vNormal;
-	Vector			m_vCorner;
-	bool			m_bIsBroken;
-	int				m_nSurfaceType;
+	[[= ks::reflect::Net{} ]] int				m_nNumWide;
+	[[= ks::reflect::Net{} ]] int				m_nNumHigh;
+	[[= ks::reflect::Net{} ]] float			m_flPanelWidth;
+	[[= ks::reflect::Net{} ]] float			m_flPanelHeight;
+	[[= ks::reflect::Net{} ]] Vector			m_vNormal;
+	[[= ks::reflect::Net{} ]] Vector			m_vCorner;
+	[[= ks::reflect::Net{} ]] bool			m_bIsBroken;
+	[[= ks::reflect::Net{} ]] int				m_nSurfaceType;
 
 						
 	// This is the texture we're going to use to multiply by the cracked base texture
@@ -105,7 +107,7 @@ public:
 
 private:
 	// One bit per pane
-	CNetworkArray( bool, m_RawPanelBitVec, MAX_NUM_PANELS * MAX_NUM_PANELS );
+	CNetworkArray( bool, m_RawPanelBitVec, MAX_NUM_PANELS * MAX_NUM_PANELS, [[= ks::reflect::Net{} ]] );
 	bool m_PrevRawPanelBitVec[ MAX_NUM_PANELS * MAX_NUM_PANELS ];
 	
 	// 2 bits of flags and 2 bits of edge type

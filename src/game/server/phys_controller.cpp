@@ -6,10 +6,11 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_annotations.h"
 #include "entitylist.h"
 #include "physics.h"
 #include "vphysics/constraints.h"
-#include "physics_saverestore.h"
 #include "phys_controller.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
@@ -42,13 +43,7 @@ public:
 	AngularImpulse	m_angularSave;
 };
 
-BEGIN_SIMPLE_DATADESC( CConstantForceController )
-	DEFINE_FIELD( m_controlType,	FIELD_INTEGER ),
-	DEFINE_FIELD( m_linear,		FIELD_VECTOR ),
-	DEFINE_FIELD( m_angular,		FIELD_VECTOR ),
-	DEFINE_FIELD( m_linearSave,	FIELD_VECTOR ),
-	DEFINE_FIELD( m_angularSave,	FIELD_VECTOR ),
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP_SIMPLE( CConstantForceController )
 
 
 void CConstantForceController::SetConstantForce( const Vector &linear, const AngularImpulse &angular )
@@ -100,9 +95,9 @@ public:
 	void SetAttachedObject( EHANDLE hObject ) { m_attachedObject = hObject; }
 
 	// Input handlers
-	void InputActivate( inputdata_t &inputdata );
-	void InputDeactivate( inputdata_t &inputdata );
-	void InputForceScale( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Activate", .type = FIELD_VOID } ]] void InputActivate( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Deactivate", .type = FIELD_VOID } ]] void InputDeactivate( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "scale", .type = FIELD_FLOAT } ]] void InputForceScale( inputdata_t &inputdata );
 
 	void SaveForce( void );
 	void ScaleForce( float scale );
@@ -116,34 +111,16 @@ public:
 protected:	
 	IPhysicsMotionController	*m_pController;
 
-	string_t		m_nameAttach;
-	float			m_force;
-	float			m_forceTime;
+	[[= ks::reflect::Key{ .name = "attach1" } ]] string_t		m_nameAttach;
+	[[= ks::reflect::Key{ .name = "force" } ]] float			m_force;
+	[[= ks::reflect::Key{ .name = "forcetime" } ]] float			m_forceTime;
 	EHANDLE			m_attachedObject;
 	bool			m_wasRestored;
 
 	CConstantForceController m_integrator;
 };
 
-BEGIN_DATADESC( CPhysForce )
-
-	DEFINE_PHYSPTR( m_pController ),
-	DEFINE_KEYFIELD( m_nameAttach, FIELD_STRING, "attach1" ),
-	DEFINE_KEYFIELD( m_force, FIELD_FLOAT, "force" ),
-	DEFINE_KEYFIELD( m_forceTime, FIELD_FLOAT, "forcetime" ),
-
-	DEFINE_FIELD( m_attachedObject, FIELD_EHANDLE ),
-	//DEFINE_FIELD( m_wasRestored, FIELD_BOOLEAN ), // NOTE: DO NOT save/load this - it's used to detect loads
-	DEFINE_EMBEDDED( m_integrator ),
-	
-	DEFINE_INPUTFUNC( FIELD_VOID, "Activate", InputActivate ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "Deactivate", InputDeactivate ),
-	DEFINE_INPUTFUNC( FIELD_FLOAT, "scale", InputForceScale ),
-	
-	// Function Pointers
-	DEFINE_FUNCTION( ForceOff ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CPhysForce )
 
 
 CPhysForce::CPhysForce( void )
@@ -316,7 +293,6 @@ class CPhysThruster : public CPhysForce
 {
 	DECLARE_CLASS( CPhysThruster, CPhysForce );
 public:
-	DECLARE_DATADESC();
 
 	virtual void OnActivate( void );
 	virtual void SetupForces( IPhysicsObject *pPhys, Vector &linear, AngularImpulse &angular );
@@ -329,11 +305,6 @@ private:
 
 LINK_ENTITY_TO_CLASS( phys_thruster, CPhysThruster );
 
-BEGIN_DATADESC( CPhysThruster )
-
-	DEFINE_FIELD( m_localOrigin, FIELD_VECTOR ),
-
-END_DATADESC()
 
 //-----------------------------------------------------------------------------
 // Purpose: Use this to spawn a keepupright controller via code instead of map-placed
@@ -438,14 +409,10 @@ public:
 	void Spawn( void );
 	virtual void SetupForces( IPhysicsObject *pPhys, Vector &linear, AngularImpulse &angular );
 private:	
-	Vector m_axis;
+	[[= ks::reflect::Key{ .name = "axis" } ]] Vector m_axis;
 };
 
-BEGIN_DATADESC( CPhysTorque )
-
-	DEFINE_KEYFIELD( m_axis, FIELD_VECTOR, "axis" ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CPhysTorque )
 
 LINK_ENTITY_TO_CLASS( phys_torque, CPhysTorque );
 
@@ -491,8 +458,8 @@ public:
 	IMotionEvent::simresult_e Simulate( IPhysicsMotionController *pController, IPhysicsObject *pObject, float deltaTime, Vector &linear, AngularImpulse &angular );
 	float		m_speed;
 	float		m_maxTorque;
-	Vector		m_axis;
-	float		m_inertiaFactor;
+	[[= ks::reflect::Key{ .name = "axis" } ]] Vector		m_axis;
+	[[= ks::reflect::Key{ .name = "inertiafactor" } ]] float		m_inertiaFactor;
 
 	float		m_lastSpeed;
 	float		m_lastAcceleration;
@@ -500,18 +467,7 @@ public:
 	float		m_restistanceDamping;
 };
 
-BEGIN_SIMPLE_DATADESC( CMotorController )
-
-	DEFINE_FIELD( m_speed,				FIELD_FLOAT ),
-	DEFINE_FIELD( m_maxTorque,			FIELD_FLOAT ),
-	DEFINE_KEYFIELD( m_axis,				FIELD_VECTOR, "axis" ),
-	DEFINE_KEYFIELD( m_inertiaFactor,		FIELD_FLOAT, "inertiafactor" ),
-	DEFINE_FIELD( m_lastSpeed,			FIELD_FLOAT ),
-	DEFINE_FIELD( m_lastAcceleration,		FIELD_FLOAT ),
-	DEFINE_FIELD( m_lastForce,			FIELD_FLOAT ),
-	DEFINE_FIELD( m_restistanceDamping,	FIELD_FLOAT ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP_SIMPLE( CMotorController )
 
 
 IMotionEvent::simresult_e CMotorController::Simulate( IPhysicsMotionController *pController, IPhysicsObject *pObject, float deltaTime, Vector &linear, AngularImpulse &angular )
@@ -609,15 +565,15 @@ public:
 	void TargetSpeedChanged( void );
 	void OnRestore();
 
-	void InputSetTargetSpeed( inputdata_t &inputdata );
-	void InputTurnOn( inputdata_t &inputdata );
-	void InputTurnOff( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetSpeed", .type = FIELD_FLOAT } ]] void InputSetTargetSpeed( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "TurnOn", .type = FIELD_VOID } ]] void InputTurnOn( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "TurnOff", .type = FIELD_VOID } ]] void InputTurnOff( inputdata_t &inputdata );
 	void CalculateAcceleration();
 
-	string_t	m_nameAttach;
+	[[= ks::reflect::Key{ .name = "attach1" } ]] string_t	m_nameAttach;
 	EHANDLE		m_attachedObject;
-	float		m_spinUp;
-	float		m_additionalAcceleration;
+	[[= ks::reflect::Key{ .name = "spinup" } ]] float		m_spinUp;
+	[[= ks::reflect::Key{ .name = "addangaccel" } ]] float		m_additionalAcceleration;
 	float		m_angularAcceleration;
 	float		m_lastTime;
 	// FIXME: can we remove m_flSpeed from CBaseEntity?
@@ -629,24 +585,7 @@ public:
 };
 
 
-BEGIN_DATADESC( CPhysMotor )
-
-	DEFINE_KEYFIELD( m_nameAttach, FIELD_STRING, "attach1" ),
-	DEFINE_FIELD( m_attachedObject, FIELD_EHANDLE ),
-	DEFINE_KEYFIELD( m_spinUp, FIELD_FLOAT, "spinup" ),
-	DEFINE_KEYFIELD( m_additionalAcceleration, FIELD_FLOAT, "addangaccel" ),
-	DEFINE_FIELD( m_angularAcceleration, FIELD_FLOAT ),
-	DEFINE_FIELD( m_lastTime, FIELD_TIME ),
-	DEFINE_PHYSPTR( m_pHinge ),
-	DEFINE_PHYSPTR( m_pController ),
-	
-	DEFINE_INPUTFUNC( FIELD_FLOAT, "SetSpeed", InputSetTargetSpeed ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "TurnOn", InputTurnOn ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "TurnOff", InputTurnOff ),
-
-	DEFINE_EMBEDDED( m_motor ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CPhysMotor )
 
 LINK_ENTITY_TO_CLASS( phys_motor, CPhysMotor );
 
@@ -870,16 +809,16 @@ public:
 	virtual simresult_e	Simulate( IPhysicsMotionController *pController, IPhysicsObject *pObject, float deltaTime, Vector &linear, AngularImpulse &angular );
 
 	// Inputs
-	void InputTurnOn( inputdata_t &inputdata )
+	[[= ks::reflect::Input{ .name = "TurnOn", .type = FIELD_VOID } ]] void InputTurnOn( inputdata_t &inputdata )
 	{
 		m_bActive = true;
 	}
-	void InputTurnOff( inputdata_t &inputdata )
+	[[= ks::reflect::Input{ .name = "TurnOff", .type = FIELD_VOID } ]] void InputTurnOff( inputdata_t &inputdata )
 	{
 		m_bActive = false;
 	}
 
-	void InputSetAngularLimit( inputdata_t &inputdata )
+	[[= ks::reflect::Input{ .name = "SetAngularLimit", .type = FIELD_FLOAT } ]] void InputSetAngularLimit( inputdata_t &inputdata )
 	{
 		m_angularLimit = inputdata.value.Float();
 	}
@@ -890,9 +829,9 @@ private:
 	Vector						m_worldGoalAxis;
 	Vector						m_localTestAxis;
 	IPhysicsMotionController	*m_pController;
-	string_t					m_nameAttach;
+	[[= ks::reflect::Key{ .name = "attach1" } ]] string_t					m_nameAttach;
 	EHANDLE						m_attachedObject;
-	float						m_angularLimit;
+	[[= ks::reflect::Key{ .name = "angularlimit" } ]] float						m_angularLimit;
 	bool						m_bActive;
 	bool						m_bDampAllRotation;
 };
@@ -901,22 +840,7 @@ private:
 
 LINK_ENTITY_TO_CLASS( phys_keepupright, CKeepUpright );
 
-BEGIN_DATADESC( CKeepUpright )
-
-	DEFINE_FIELD( m_worldGoalAxis, FIELD_VECTOR ),
-	DEFINE_FIELD( m_localTestAxis, FIELD_VECTOR ),
-	DEFINE_PHYSPTR( m_pController ),
-	DEFINE_KEYFIELD( m_nameAttach, FIELD_STRING, "attach1" ),
-	DEFINE_FIELD( m_attachedObject, FIELD_EHANDLE ),
-	DEFINE_KEYFIELD( m_angularLimit, FIELD_FLOAT, "angularlimit" ),
-	DEFINE_FIELD( m_bActive, FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_bDampAllRotation, FIELD_BOOLEAN ),
-
-	DEFINE_INPUTFUNC( FIELD_VOID, "TurnOn", InputTurnOn ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "TurnOff", InputTurnOff ),
-	DEFINE_INPUTFUNC( FIELD_FLOAT, "SetAngularLimit", InputSetAngularLimit ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CKeepUpright )
 
 CKeepUpright::CKeepUpright()
 {

@@ -68,10 +68,53 @@ enum PlayerRenderMode_t
 
 bool IsInFreezeCam( void );
 
+// DT_LocalPlayerExclusive is named as the "localdata" prop of DT_BasePlayer, so the table has to be
+// visible where the annotation sits.
+namespace DT_LocalPlayerExclusive { extern RecvTable g_RecvTable; }
+
 //-----------------------------------------------------------------------------
 // Purpose: Base Player class
 //-----------------------------------------------------------------------------
-class C_BasePlayer : public C_BaseCombatCharacter
+// named by the From<> annotations below, so they cannot be class statics
+void RecvProxy_LocalVelocityX( const CRecvProxyData *pData, void *pStruct, void *pOut );
+void RecvProxy_LocalVelocityY( const CRecvProxyData *pData, void *pStruct, void *pOut );
+void RecvProxy_LocalVelocityZ( const CRecvProxyData *pData, void *pStruct, void *pOut );
+
+class [[= ks::reflect::NetTable{ .name = "DT_BasePlayer" } ]]
+      [[= ks::reflect::SubTable<"localdata", &DT_LocalPlayerExclusive::g_RecvTable,
+                                nullptr, true>{} ]]
+      [[= ks::reflect::From<"m_iHealth", ks::reflect::Net{}>{} ]]
+      [[= ks::reflect::From<"m_lifeState", ks::reflect::Net{}>{} ]]
+      [[= ks::reflect::From<"m_iAmmo", ks::reflect::Net{}>{} ]]
+      [[= ks::reflect::From<"m_fFlags", ks::reflect::Net{}>{} ]]
+      [[= ks::reflect::From<"m_hGroundEntity", ks::reflect::Net{}>{} ]]
+      [[= ks::reflect::From<"m_PlayerFog.m_hCtrl", ks::reflect::Net{}>{} ]]
+      [[= ks::reflect::PredFrom<"m_iHealth", ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } >{} ]]
+      [[= ks::reflect::PredFrom<"m_nNextThinkTick", ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } >{} ]]
+      [[= ks::reflect::PredFrom<"m_lifeState", ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } >{} ]]
+      [[= ks::reflect::PredFrom<"m_nWaterLevel", ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } >{} ]]
+      [[= ks::reflect::PredFrom<"m_vecBaseVelocity", ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE, .tolerance = 0.05 } >{} ]]
+      [[= ks::reflect::PredFrom<"m_hGroundEntity", ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } >{} ]]
+      [[= ks::reflect::From<"m_flFriction", ks::reflect::Net{ .table = "DT_LocalPlayerExclusive" }>{} ]]
+      [[= ks::reflect::From<"m_nNextThinkTick", ks::reflect::Net{ .table = "DT_LocalPlayerExclusive" }>{} ]]
+      [[= ks::reflect::From<"m_vecBaseVelocity", ks::reflect::Net{ .table = "DT_LocalPlayerExclusive" }>{} ]]
+      [[= ks::reflect::From<"m_nWaterLevel", ks::reflect::Net{ .table = "DT_LocalPlayerExclusive" }>{} ]]
+      [[= ks::reflect::From<"m_vecViewOffset",
+            ks::reflect::Net{ .table = "DT_LocalPlayerExclusive", .index = 0 }>{} ]]
+      [[= ks::reflect::From<"m_vecViewOffset",
+            ks::reflect::Net{ .table = "DT_LocalPlayerExclusive", .index = 1 }>{} ]]
+      [[= ks::reflect::From<"m_vecViewOffset",
+            ks::reflect::Net{ .table = "DT_LocalPlayerExclusive", .index = 2 }>{} ]]
+      [[= ks::reflect::From<"m_vecVelocity",
+            ks::reflect::Net{ .table = "DT_LocalPlayerExclusive", .index = 0 },
+            RecvProxy_LocalVelocityX>{} ]]
+      [[= ks::reflect::From<"m_vecVelocity",
+            ks::reflect::Net{ .table = "DT_LocalPlayerExclusive", .index = 1 },
+            RecvProxy_LocalVelocityY>{} ]]
+      [[= ks::reflect::From<"m_vecVelocity",
+            ks::reflect::Net{ .table = "DT_LocalPlayerExclusive", .index = 2 },
+            RecvProxy_LocalVelocityZ>{} ]]
+      C_BasePlayer : public C_BaseCombatCharacter
 {
 public:
 	DECLARE_CLASS( C_BasePlayer, C_BaseCombatCharacter );
@@ -526,7 +569,7 @@ public:
 	bool					HasFiredWeapon( void ) { return m_bFiredWeapon; }
 	void					SetFiredWeapon( bool bFlag ) { m_bFiredWeapon = bFlag; }
 
-	CNetworkVar( int, m_iCoachingTeam );	// When on TEAM_SPECTATOR, is this player restricted to a team, aka 'coaching' a team
+	CNetworkVar( int, m_iCoachingTeam, [[= ks::reflect::Net{} ]] );	// When on TEAM_SPECTATOR, is this player restricted to a team, aka 'coaching' a team
 
 protected:
 	fogparams_t				m_CurrentFog;
@@ -534,9 +577,6 @@ protected:
 
 public:
 	// RecvProxies
-	static void RecvProxy_LocalVelocityX( const CRecvProxyData *pData, void *pStruct, void *pOut );
-	static void RecvProxy_LocalVelocityY( const CRecvProxyData *pData, void *pStruct, void *pOut );
-	static void RecvProxy_LocalVelocityZ( const CRecvProxyData *pData, void *pStruct, void *pOut );
 	
 	static void RecvProxy_ObserverTarget( const CRecvProxyData *pData, void *pStruct, void *pOut );
 	static void RecvProxy_ObserverMode( const CRecvProxyData *pData, void *pStruct, void *pOut );
@@ -557,35 +597,35 @@ public:
 public:
 	int m_StuckLast;
 
-	CNetworkVar( float, m_flDuckAmount );
-	CNetworkVar( float, m_flDuckSpeed );
+	CNetworkVar( float, m_flDuckAmount, [[= ks::reflect::Net{} ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] );
+	CNetworkVar( float, m_flDuckSpeed, [[= ks::reflect::Net{} ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] );
 	Vector2D m_vecLastPositionAtFullCrouchSpeed;
 
 	// Data for only the local player
-	CNetworkVarEmbedded( CPlayerLocalData, m_Local );
+	CNetworkVarEmbedded( CPlayerLocalData, m_Local, [[= ks::reflect::Pred{} ]] [[= ks::reflect::Net{ .table = "DT_LocalPlayerExclusive" } ]] );
 
-	EHANDLE					m_hTonemapController;
+	[[= ks::reflect::Net{ .table = "DT_LocalPlayerExclusive" } ]] EHANDLE m_hTonemapController;
 
 	// Data common to all other players, too
-	CPlayerState			pl;
+	[[= ks::reflect::Net{} ]] [[= ks::reflect::Pred{} ]] CPlayerState			pl;
 
 public:
 // BEGIN PREDICTION DATA COMPACTION (these fields are together to allow for faster copying in prediction system)
 
 // FTYPEDESC_INSENDTABLE STUFF
 	// Player FOV values
-	int						m_iFOV;				// field of view
-	int						m_iFOVStart;		// starting value of the FOV changing over time (client only)
+	[[= ks::reflect::Net{} ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] int						m_iFOV;				// field of view
+	[[= ks::reflect::Net{} ]] [[= ks::reflect::Pred{ .flags = 0 } ]] int						m_iFOVStart;		// starting value of the FOV changing over time (client only)
 	int						m_afButtonLast;
 	int						m_afButtonPressed;
 	int						m_afButtonReleased;
 	int						m_nButtons;
 protected:
 	int						m_nImpulse;
-	CNetworkVar( int, m_ladderSurfaceProps );
+	CNetworkVar( int, m_ladderSurfaceProps, [[= ks::reflect::Net{} ]] );
 	int						m_flPhysics;
 public:
-	float					m_flFOVTime;		// starting time of the FOV zoom
+	[[= ks::reflect::Net{} ]] [[= ks::reflect::Pred{ .flags = 0 } ]] float					m_flFOVTime;		// starting time of the FOV zoom
 private:
 	float					m_flWaterJumpTime;  // used to be called teleport_time
 	float					m_flSwimSoundTime;
@@ -595,7 +635,7 @@ protected:
 	float					m_flStepSoundTime;
 	float					m_surfaceFriction;
 private:
-	CNetworkVector( m_vecLadderNormal );
+	CNetworkVector( m_vecLadderNormal, [[= ks::reflect::Net{} ]] );
 
 // FTYPEDESC_INSENDTABLE STUFF (end)
 public:
@@ -603,21 +643,21 @@ public:
 private:
 	int						m_nOldTickBase;
 private:
-	int						m_iBonusProgress;
-	int						m_iBonusChallenge;
+	[[= ks::reflect::Net{} ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] int						m_iBonusProgress;
+	[[= ks::reflect::Net{} ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] int						m_iBonusChallenge;
 
 private:
-	float					m_flMaxspeed;
+	[[= ks::reflect::Net{} ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE, .tolerance = 0.5f } ]] float					m_flMaxspeed;
 
 
 public:
-	EHANDLE					m_hZoomOwner;		// This is a pointer to the entity currently controlling the player's zoom
+	[[= ks::reflect::Net{} ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] EHANDLE					m_hZoomOwner;		// This is a pointer to the entity currently controlling the player's zoom
 protected:
 	//HACKHACK: these 9 are only partially ported from server counterpart
 	IPhysicsPlayerController	*m_pPhysicsController;
 	IPhysicsObject				*m_pShadowStand;
 	IPhysicsObject				*m_pShadowCrouch;
-	int							m_vphysicsCollisionState;
+	[[= ks::reflect::Net{} ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] int							m_vphysicsCollisionState;
 	Vector						m_oldOrigin;
 	bool						m_bTouchedPhysObject;
 	bool						m_bPhysicsWasFrozen;
@@ -625,12 +665,12 @@ protected:
 	Vector						m_vNewVPhysicsVelocity;
 	CUserCmd					m_LastCmd;
 
-	unsigned int			m_afPhysicsFlags;
-	EHANDLE					m_hVehicle;
+	[[= ks::reflect::Net{} ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE | FTYPEDESC_NOERRORCHECK } ]] unsigned int			m_afPhysicsFlags;
+	[[= ks::reflect::Net{} ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] EHANDLE					m_hVehicle;
 	typedef CHandle<C_BaseCombatWeapon> CBaseCombatWeaponHandle;
-	CBaseCombatWeaponHandle	m_hLastWeapon;
+	[[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] [[= ks::reflect::Net{ .table = "DT_LocalPlayerExclusive" } ]] CBaseCombatWeaponHandle	m_hLastWeapon;
 	// players own view models, left & right hand
-	CHandle< C_BaseViewModel >	m_hViewModel[ MAX_VIEWMODELS ];	
+	[[= ks::reflect::Net{ .varlen = true } ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] CHandle< C_BaseViewModel >	m_hViewModel[ MAX_VIEWMODELS ];	
 
 	CUtlReference< CNewParticleEffect > m_speechVOIPParticleEffect;
 
@@ -642,39 +682,39 @@ public:
 	int m_nLastKillerHitsGiven;
 public:
 	// For weapon prediction
-	bool					m_fOnTarget;		//Is the crosshair on a target?
+	[[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] [[= ks::reflect::Net{ .table = "DT_LocalPlayerExclusive" } ]] bool					m_fOnTarget;		//Is the crosshair on a target?
 
 
-	EHANDLE			m_hUseEntity;
+	[[= ks::reflect::Net{} ]] EHANDLE			m_hUseEntity;
 
 // END PREDICTION DATA COMPACTION
 public:
 
 
-	int						m_iDefaultFOV;		// default FOV if no other zooms are occurring
+	[[= ks::reflect::Net{} ]] int						m_iDefaultFOV;		// default FOV if no other zooms are occurring
 												// Only this entity can change the zoom state once it has ownership
 	int				m_afButtonForced;	// These are forced onto the player's inputs
 
 
 	CUserCmd		*m_pCurrentCommand;
 
-	EHANDLE			m_hViewEntity;
-	bool			m_bShouldDrawPlayerWhileUsingViewEntity;
+	[[= ks::reflect::Net{} ]] EHANDLE			m_hViewEntity;
+	[[= ks::reflect::Net{} ]] bool			m_bShouldDrawPlayerWhileUsingViewEntity;
 
 	// Movement constraints
-	EHANDLE			m_hConstraintEntity;
-	Vector			m_vecConstraintCenter;
-	float			m_flConstraintRadius;
-	float			m_flConstraintWidth;
-	float			m_flConstraintSpeedFactor;
-	bool			m_bConstraintPastRadius;
+	[[= ks::reflect::Net{ .table = "DT_LocalPlayerExclusive" } ]] EHANDLE m_hConstraintEntity;
+	[[= ks::reflect::Net{ .table = "DT_LocalPlayerExclusive" } ]] Vector m_vecConstraintCenter;
+	[[= ks::reflect::Net{ .table = "DT_LocalPlayerExclusive" } ]] float m_flConstraintRadius;
+	[[= ks::reflect::Net{ .table = "DT_LocalPlayerExclusive" } ]] float m_flConstraintWidth;
+	[[= ks::reflect::Net{ .table = "DT_LocalPlayerExclusive" } ]] float m_flConstraintSpeedFactor;
+	[[= ks::reflect::Net{ .table = "DT_LocalPlayerExclusive" } ]] bool m_bConstraintPastRadius;
 
 	CUserMessageBinder m_UMCMsg_SendLastKillerDamageToClient;
 
 	// Record hits on client and server for comparison.
 	int m_totalHitsOnClient; 
 
-	int			m_iDeathPostEffect;
+	[[= ks::reflect::Net{} ]] int			m_iDeathPostEffect;
 
 
 protected:
@@ -706,19 +746,19 @@ protected:
 	bool			JustEnteredVehicle();
 
 // DATA
-	int				m_iObserverMode;	// if in spectator mode != 0
-	bool			m_bActiveCameraMan;
-	bool			m_bCameraManXRay;
-	bool			m_bCameraManOverview;
-	bool			m_bCameraManScoreBoard;
-	uint8			m_uCameraManGraphs;
+	[[= ks::reflect::Net{} ]] [[= ks::reflect::Proxy<C_BasePlayer::RecvProxy_ObserverMode, ks::reflect::WIRE_RECV>{} ]] int				m_iObserverMode;	// if in spectator mode != 0
+	[[= ks::reflect::Net{} ]] bool			m_bActiveCameraMan;
+	[[= ks::reflect::Net{} ]] bool			m_bCameraManXRay;
+	[[= ks::reflect::Net{} ]] bool			m_bCameraManOverview;
+	[[= ks::reflect::Net{} ]] bool			m_bCameraManScoreBoard;
+	[[= ks::reflect::Net{} ]] uint8			m_uCameraManGraphs;
 	bool			m_bLastActiveCameraManState;
 	bool			m_bLastCameraManXRayState;
 	bool			m_bLastCameraManOverviewState;
 	bool			m_bLastCameraManScoreBoardState;
 	uint8			m_uLastCameraManGraphsState;
 	int				m_iOldObserverMode;
-	EHANDLE			m_hObserverTarget;	// current observer target
+	[[= ks::reflect::Net{} ]] [[= ks::reflect::Proxy<C_BasePlayer::RecvProxy_ObserverTarget, ks::reflect::WIRE_RECV>{} ]] EHANDLE			m_hObserverTarget;	// current observer target
 	float			m_flObserverChaseDistance; // last distance to observer traget
 	float			m_flObserverChaseApproach;
 	Vector			m_vecObserverEyeDirPrevious;
@@ -728,9 +768,9 @@ protected:
 	bool			m_bWasFreezeFraming; 
 	float			m_flFreezePanelExtendedStartTime;
 	bool			m_bWasFreezePanelExtended;
-	float			m_flDeathTime;		// last time player died
-	float			m_flNextDecalTime;	// next time player can paint a decal
-	float			m_fForceTeam;		// last time player died
+	[[= ks::reflect::Net{ .table = "DT_LocalPlayerExclusive" } ]] float m_flDeathTime;		// last time player died
+	[[= ks::reflect::Net{ .table = "DT_LocalPlayerExclusive" } ]] float m_flNextDecalTime;	// next time player can paint a decal
+	[[= ks::reflect::Net{ .table = "DT_LocalPlayerExclusive" } ]] float m_fForceTeam;		// last time player died
 	CDiscontinuousInterpolatedVar< Vector >	m_iv_vecViewOffset;
 
 private:
@@ -753,7 +793,7 @@ protected:
 private:
 	bool			m_bWasFrozen;
 
-	int				m_nTickBase;
+	[[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] [[= ks::reflect::Net{ .table = "DT_LocalPlayerExclusive" } ]] int				m_nTickBase;
 	int				m_nFinalPredictedTick;
 
 	EHANDLE			m_pCurrentVguiScreen;
@@ -816,7 +856,7 @@ protected:
 	virtual float GetFallVelocity( void ) { return m_Local.m_flFallVelocity; }
 	void ForceSetupBonesAtTimeFakeInterpolation( matrix3x4a_t *pBonesOut, float curtimeOffset );
 
-	float m_flLaggedMovementValue;
+	[[= ks::reflect::Net{ .table = "DT_LocalPlayerExclusive" } ]] float m_flLaggedMovementValue;
 
 	// These are used to smooth out prediction corrections. They're most useful when colliding with
 	// vphysics objects. The server will be sending constant prediction corrections, and these can help
@@ -826,7 +866,7 @@ protected:
 	
 	Vector m_vecPreviouslyPredictedOrigin; // Used to determine if non-gamemovement game code has teleported, or tweaked the player's origin
 
-	char m_szLastPlaceName[MAX_PLACE_NAME_LENGTH];	// received from the server
+	[[= ks::reflect::Net{} ]] char m_szLastPlaceName[MAX_PLACE_NAME_LENGTH];	// received from the server
 
 	// Texture names and surface data, used by CGameMovement
 	int				m_surfaceProps;
@@ -837,7 +877,7 @@ protected:
 	bool			m_bAbortedFreezeFrame;
 	bool			m_bSentFreezeFrame;
 	float			m_flFreezeZOffset;
-	byte			m_ubEFNoInterpParity;
+	[[= ks::reflect::Net{} ]] byte			m_ubEFNoInterpParity;
 	byte			m_ubOldEFNoInterpParity;
 
 	float			m_flNextAchievementAnnounceTime;
@@ -884,8 +924,8 @@ public:
 private:
 	friend class CMoveHelperClient;
 
-	CNetworkHandle( CPostProcessController, m_hPostProcessCtrl );	// active postprocessing controller
-	CNetworkHandle( CColorCorrection, m_hColorCorrectionCtrl );		// active FXVolume color correction
+	CNetworkHandle( CPostProcessController, m_hPostProcessCtrl, [[= ks::reflect::Net{} ]] );	// active postprocessing controller
+	CNetworkHandle( CColorCorrection, m_hColorCorrectionCtrl, [[= ks::reflect::Net{} ]] );		// active FXVolume color correction
 
 	// fog params
 	fogplayerparams_t		m_PlayerFog;

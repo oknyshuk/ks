@@ -709,81 +709,6 @@ bool C_GameInstructor::IsLessonOfSameTypeOpen( const CBaseLesson *pLesson ) cons
 	return false;
 }
 
-void C_GameInstructor::SaveGameBlock( ISave *pSave )
-{
-	ACTIVE_SPLITSCREEN_PLAYER_GUARD( m_nSplitScreenSlot );
-
-	if ( gameinstructor_save_restore_lessons.GetBool() )
-	{
-		// Save the lessons
-		int nCount = m_OpenOpportunities.Count();
-		pSave->WriteInt( &nCount );
-		for ( int i = 0; i < nCount; i++ )
-		{
-			pSave->StartBlock();
-			pSave->WriteAll( static_cast< CScriptedIconLesson * >( m_OpenOpportunities[ i ] ) );
-			pSave->EndBlock();
-		}
-	}
-	else
-	{
-		int nCount = 0;
-		pSave->WriteInt( &nCount );
-	}
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: 
-// Input  : *pRestore - 
-//			fCreatePlayers - 
-//-----------------------------------------------------------------------------
-void C_GameInstructor::RestoreGameBlock( IRestore *pRestore, bool fCreatePlayers )
-{
-	ACTIVE_SPLITSCREEN_PLAYER_GUARD( m_nSplitScreenSlot );
-
-	CGameSaveRestoreInfo *pSaveData = pRestore->GetGameSaveRestoreInfo();
-
-	// Game Instructor is a singleton so we only need to restore it once,
-	// from the level that we are going into.
-	if( !pSaveData->levelInfo.fUseLandmark )
-	{
-		CloseAllOpenOpportunities();
-
-		if ( gameinstructor_save_restore_lessons.GetBool() )
-		{
-			// Read in the lessons
-			int nCount = pRestore->ReadInt();
-			for ( int i = 0; i < nCount; i++ )
-			{
-				CScriptedIconLesson *pOpenLesson = new CScriptedIconLesson( "", false, true, m_nSplitScreenSlot );
-
-				pRestore->StartBlock();
-				pRestore->ReadAll( pOpenLesson );
-				pRestore->EndBlock();
-
-				const CScriptedIconLesson *pRootLesson = static_cast<const CScriptedIconLesson *>( GetLesson( pOpenLesson->GetName() ) );
-				pOpenLesson->SetRoot( const_cast<CScriptedIconLesson *>( pRootLesson ) );
-
-				GetGameInstructor().OpenOpportunity( pOpenLesson );
-			}
-		}
-		else
-		{
-			CScriptedIconLesson *pOpenLessonDummy = new CScriptedIconLesson( "", false, true, m_nSplitScreenSlot );
-
-			int nCount = pRestore->ReadInt();
-			for ( int i = 0; i < nCount; i++ )
-			{
-				pRestore->StartBlock();
-				pRestore->ReadAll( pOpenLessonDummy );
-				pRestore->EndBlock();
-			}
-
-			delete pOpenLessonDummy;
-		}
-	}	
-}
-
 bool C_GameInstructor::ReadSaveData( void )
 {
 	// for external playtests, don't ever read in persisted instructor state, always start fresh
@@ -1461,56 +1386,8 @@ void C_GameInstructor::InitLessonPrerequisites( void )
 //====================================================================================================
 static short GAMEINSTRUCTOR_SAVE_RESTORE_VERSION = 1;
 
-class CGameInstructorSaveRestoreBlockHandler :	public CDefSaveRestoreBlockHandler
-{
-	struct QueuedItem_t;
-public:
-	CGameInstructorSaveRestoreBlockHandler()
-	{
-	}
 
-	const char *GetBlockName()
-	{
-		return "GameInstructor";
-	}
 
-	virtual void Save( ISave *pSave ) 
-	{
-		ACTIVE_SPLITSCREEN_PLAYER_GUARD( 0 );
-		GetGameInstructor().SaveGameBlock( pSave );
-	}
-
-	virtual void WriteSaveHeaders( ISave *pSave )
-	{
-		pSave->WriteShort( &GAMEINSTRUCTOR_SAVE_RESTORE_VERSION );
-	}
-
-	virtual void ReadRestoreHeaders( IRestore *pRestore )
-	{
-		// No reason why any future version shouldn't try to retain backward compatibility. The default here is to not do so.
-		short version = pRestore->ReadShort();
-		m_bDoLoad = ( version == GAMEINSTRUCTOR_SAVE_RESTORE_VERSION );
-	}
-
-	virtual void Restore( IRestore *pRestore, bool fCreatePlayers ) 
-	{
-		if ( m_bDoLoad )
-		{
-			ACTIVE_SPLITSCREEN_PLAYER_GUARD( 0 );
-			GetGameInstructor().RestoreGameBlock( pRestore, fCreatePlayers );
-		}
-	}
-
-private:
-	bool	m_bDoLoad;
-};
-
-CGameInstructorSaveRestoreBlockHandler g_GameInstructorSaveRestoreBlockHandler;
-
-ISaveRestoreBlockHandler *GetGameInstructorRestoreBlockHandler()
-{
-	return &g_GameInstructorSaveRestoreBlockHandler;
-}
 
 
 CON_COMMAND_F( gameinstructor_reload_lessons, "Shuts down all open lessons and reloads them from the script file.", FCVAR_CHEAT )

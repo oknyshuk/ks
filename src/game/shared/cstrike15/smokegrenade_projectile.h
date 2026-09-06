@@ -6,6 +6,8 @@
 
 #ifndef SMOKEGRENADE_PROJECTILE_H
 #define SMOKEGRENADE_PROJECTILE_H
+
+#include "reflect_annotations.h"
 #ifdef _WIN32
 #pragma once
 #endif
@@ -14,7 +16,10 @@
 
 #if defined( CLIENT_DLL )
 
-class C_SmokeGrenadeProjectile : public C_BaseCSGrenadeProjectile
+class [[= ks::reflect::NetTable{ .name = "DT_SmokeGrenadeProjectile" } ]]
+      [[= ks::reflect::From<"m_bDidSmokeEffect", ks::reflect::Net{}>{} ]]
+      [[= ks::reflect::From<"m_nSmokeEffectTickBegin", ks::reflect::Net{}>{} ]]
+      C_SmokeGrenadeProjectile : public C_BaseCSGrenadeProjectile
 {
 	public:
 	DECLARE_CLASS( C_SmokeGrenadeProjectile, C_BaseCSGrenadeProjectile );
@@ -36,14 +41,14 @@ class C_SmokeGrenadeProjectile : public C_BaseCSGrenadeProjectile
 };
 
 #else // GAME_DLL
-class CSmokeGrenadeProjectile : public CBaseCSGrenadeProjectile
+class [[= ks::reflect::NetTable{ .name = "DT_SmokeGrenadeProjectile" } ]]
+      CSmokeGrenadeProjectile : public CBaseCSGrenadeProjectile
 {
 public:
 	DECLARE_CLASS( CSmokeGrenadeProjectile, CBaseCSGrenadeProjectile );
 	DECLARE_NETWORKCLASS();
 
 public:
-	DECLARE_DATADESC();
 // Overrides.
 public:
 	virtual void Spawn();
@@ -76,8 +81,8 @@ public:
 
 	void SetTimer( float timer );
 
-	CNetworkVar( int, m_nSmokeEffectTickBegin );
-	CNetworkVar( bool, m_bDidSmokeEffect );
+	CNetworkVar( int, m_nSmokeEffectTickBegin, [[= ks::reflect::Net{ .bits = -1 } ]] );
+	CNetworkVar( bool, m_bDidSmokeEffect, [[= ks::reflect::Net{} ]] );
 	Vector m_vSmokeColor;
 	float m_flLastBounce;
 };

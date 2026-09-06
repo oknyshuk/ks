@@ -27,7 +27,31 @@ class CColorCorrection;
 //-----------------------------------------------------------------------------
 // Purpose: Player specific data ( sent only to local player, too )
 //-----------------------------------------------------------------------------
-class CPlayerLocalData
+class [[= ks::reflect::NetTable{ .name = "DT_Local", .base = false } ]]
+      [[= ks::reflect::From<"m_skybox3d.scale", ks::reflect::Net{}>{} ]]
+      [[= ks::reflect::From<"m_skybox3d.origin", ks::reflect::Net{}>{} ]]
+      [[= ks::reflect::From<"m_skybox3d.area", ks::reflect::Net{}>{} ]]
+      [[= ks::reflect::From<"m_skybox3d.fog.enable", ks::reflect::Net{}>{} ]]
+      [[= ks::reflect::From<"m_skybox3d.fog.blend", ks::reflect::Net{}>{} ]]
+      [[= ks::reflect::From<"m_skybox3d.fog.dirPrimary", ks::reflect::Net{}>{} ]]
+      [[= ks::reflect::From<"m_skybox3d.fog.colorPrimary", ks::reflect::Net{}, RecvProxy_Int32ToColor32>{} ]]
+      [[= ks::reflect::From<"m_skybox3d.fog.colorSecondary", ks::reflect::Net{}, RecvProxy_Int32ToColor32>{} ]]
+      [[= ks::reflect::From<"m_skybox3d.fog.start", ks::reflect::Net{}>{} ]]
+      [[= ks::reflect::From<"m_skybox3d.fog.end", ks::reflect::Net{}>{} ]]
+      [[= ks::reflect::From<"m_skybox3d.fog.maxdensity", ks::reflect::Net{}>{} ]]
+      [[= ks::reflect::From<"m_skybox3d.fog.HDRColorScale", ks::reflect::Net{}>{} ]]
+      [[= ks::reflect::From<"m_audio.localSound[0]", ks::reflect::Net{}>{} ]]
+      [[= ks::reflect::From<"m_audio.localSound[1]", ks::reflect::Net{}>{} ]]
+      [[= ks::reflect::From<"m_audio.localSound[2]", ks::reflect::Net{}>{} ]]
+      [[= ks::reflect::From<"m_audio.localSound[3]", ks::reflect::Net{}>{} ]]
+      [[= ks::reflect::From<"m_audio.localSound[4]", ks::reflect::Net{}>{} ]]
+      [[= ks::reflect::From<"m_audio.localSound[5]", ks::reflect::Net{}>{} ]]
+      [[= ks::reflect::From<"m_audio.localSound[6]", ks::reflect::Net{}>{} ]]
+      [[= ks::reflect::From<"m_audio.localSound[7]", ks::reflect::Net{}>{} ]]
+      [[= ks::reflect::From<"m_audio.soundscapeIndex", ks::reflect::Net{}>{} ]]
+      [[= ks::reflect::From<"m_audio.localBits", ks::reflect::Net{}>{} ]]
+      [[= ks::reflect::From<"m_audio.entIndex", ks::reflect::Net{}>{} ]]
+      CPlayerLocalData
 {
 public:
 	DECLARE_PREDICTABLE();
@@ -85,36 +109,39 @@ public:
 		m_fTBeamEndTime = 0.0f;
 	}
 
-	unsigned char			m_chAreaBits[MAX_AREA_STATE_BYTES];				// Area visibility flags.
-	unsigned char			m_chAreaPortalBits[MAX_AREA_PORTAL_STATE_BYTES];// Area portal visibility flags.
+	[[= ks::reflect::Net{} ]] unsigned char			m_chAreaBits[MAX_AREA_STATE_BYTES];				// Area visibility flags.
+	[[= ks::reflect::Net{} ]] unsigned char			m_chAreaPortalBits[MAX_AREA_PORTAL_STATE_BYTES];// Area portal visibility flags.
 
 // BEGIN PREDICTION DATA COMPACTION (these fields are together to allow for faster copying in prediction system)
 	int						m_nStepside;
 	int						m_nOldButtons;
-	float					m_flFOVRate;		// rate at which the FOV changes
+	[[= ks::reflect::Net{} ]] float					m_flFOVRate;		// rate at which the FOV changes
 
-	int						m_iHideHUD;			// bitfields containing sections of the HUD to hide
-	int						m_nDuckTimeMsecs;
-	int						m_nDuckJumpTimeMsecs;
-	int						m_nJumpTimeMsecs;
+	[[= ks::reflect::Net{} ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] int						m_iHideHUD;			// bitfields containing sections of the HUD to hide
+	[[= ks::reflect::Net{} ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] int						m_nDuckTimeMsecs;
+	[[= ks::reflect::Net{} ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] int						m_nDuckJumpTimeMsecs;
+	[[= ks::reflect::Net{} ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] int						m_nJumpTimeMsecs;
 
-	float					m_flFallVelocity;
+	[[= ks::reflect::Net{} ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE, .tolerance = 0.5f } ]] float					m_flFallVelocity;
 	float					m_flOldFallVelocity;
-	float					m_flStepSize;
+	[[= ks::reflect::Net{} ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] float					m_flStepSize;
 
-	CNetworkQAngle( m_viewPunchAngle );			// auto-decaying view angle adjustment
-	CNetworkQAngle( m_aimPunchAngle );			// auto-decaying aim angle adjustment
-	CNetworkQAngle( m_aimPunchAngleVel );		// velocity of auto-decaying aim angle adjustment
+	CNetworkQAngle( m_viewPunchAngle, [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE, .tolerance = 0.125f } ]]
+	                    [[= ks::reflect::Net{ .enc = ks::reflect::ENC_VECTOR } ]] );			// auto-decaying view angle adjustment
+	CNetworkQAngle( m_aimPunchAngle, [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE, .tolerance = 0.125f } ]]
+	                    [[= ks::reflect::Net{ .enc = ks::reflect::ENC_VECTOR } ]] );			// auto-decaying aim angle adjustment
+	CNetworkQAngle( m_aimPunchAngleVel, [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE, .tolerance = 0.125f } ]]
+	                    [[= ks::reflect::Net{ .enc = ks::reflect::ENC_VECTOR } ]] );		// velocity of auto-decaying aim angle adjustment
 
-	bool					m_bDucked;			// Set exactly between FinishDuck() and FinishUnDuck(); marks that our position may have been moved by ducking
-	bool					m_bDucking;			// Set if we are currently in a duck transition (that is, m_bDucked != the state of the user-pressed duck button)
-	float					m_flLastDuckTime;	// last time the player pressed duck
+	[[= ks::reflect::Net{ .enc = ks::reflect::ENC_INT } ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] bool					m_bDucked;			// Set exactly between FinishDuck() and FinishUnDuck(); marks that our position may have been moved by ducking
+	[[= ks::reflect::Net{ .enc = ks::reflect::ENC_INT } ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] bool					m_bDucking;			// Set if we are currently in a duck transition (that is, m_bDucked != the state of the user-pressed duck button)
+	[[= ks::reflect::Net{} ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] float					m_flLastDuckTime;	// last time the player pressed duck
 
-	bool					m_bInDuckJump;
-	bool					m_bDrawViewmodel;
-	bool					m_bWearingSuit;
-	bool					m_bPoisoned;
-	bool					m_bAllowAutoMovement;
+	[[= ks::reflect::Net{ .enc = ks::reflect::ENC_INT } ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] bool					m_bInDuckJump;
+	[[= ks::reflect::Net{ .enc = ks::reflect::ENC_INT } ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] bool					m_bDrawViewmodel;
+	[[= ks::reflect::Net{ .enc = ks::reflect::ENC_INT } ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] bool					m_bWearingSuit;
+	[[= ks::reflect::Net{} ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] bool					m_bPoisoned;
+	[[= ks::reflect::Net{ .enc = ks::reflect::ENC_INT } ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] bool					m_bAllowAutoMovement;
 // END PREDICTION DATA COMPACTION
 
 	bool					m_bInLanding;

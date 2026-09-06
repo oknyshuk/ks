@@ -4,12 +4,15 @@
 //
 //=============================================================================//
 #include "cbase.h"
+#include "reflect_recvtable.h"
+#include "reflect_annotations.h"
 #include "ragdoll_shared.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
-class C_RagdollManager : public C_BaseEntity
+class [[= ks::reflect::NetTable{ .name = "DT_RagdollManager", .base = false } ]]
+      C_RagdollManager : public C_BaseEntity
 {
 public:
 	DECLARE_CLASS( C_RagdollManager, C_BaseEntity );
@@ -24,12 +27,10 @@ public:
 
 public:
 
-	int		m_iCurrentMaxRagdollCount;
+	[[= ks::reflect::Net{} ]] int		m_iCurrentMaxRagdollCount;
 };
 
-IMPLEMENT_CLIENTCLASS_DT_NOBASE( C_RagdollManager, DT_RagdollManager, CRagdollManager )
-	RecvPropInt( RECVINFO( m_iCurrentMaxRagdollCount ) ),
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS( C_RagdollManager, DT_RagdollManager, CRagdollManager )
 
 //-----------------------------------------------------------------------------
 // Constructor 

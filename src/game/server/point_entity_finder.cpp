@@ -6,6 +6,8 @@
 //-----------------------------------------------------------------------------
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_annotations.h"
 #include "filters.h"
 
 // NOTE: This has to be the last file included!
@@ -28,43 +30,29 @@ class CPointEntityFinder : public CBaseEntity
 private:
 
 	EHANDLE						m_hEntity;
-	string_t					m_iFilterName;
+	[[= ks::reflect::Key{ .name = "filtername" } ]] string_t					m_iFilterName;
 	CHandle<class CBaseFilter>	m_hFilter;
-	string_t					m_iRefName;
+	[[= ks::reflect::Key{ .name = "referencename" } ]] string_t					m_iRefName;
 	EHANDLE						m_hReference;
 
-	EntFinderMethod_t			m_FindMethod;
+	[[= ks::reflect::Key{ .name = "method" } ]] EntFinderMethod_t			m_FindMethod;
 
 	void FindEntity( void );
 	void FindByDistance( void );
 	void FindByRandom( void );
 
 	// Input handlers
-	void InputFindEntity( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "FindEntity", .type = FIELD_VOID } ]] void InputFindEntity( inputdata_t &inputdata );
 
 	// Output handlers
-	COutputEvent m_OnFoundEntity;
+	[[= ks::reflect::Key{ .name = "OnFoundEntity" } ]] COutputEvent m_OnFoundEntity;
 
 	DECLARE_DATADESC();
 };
 
 LINK_ENTITY_TO_CLASS( point_entity_finder, CPointEntityFinder );
 
-BEGIN_DATADESC( CPointEntityFinder )
-
-	DEFINE_KEYFIELD(	m_FindMethod,	FIELD_INTEGER,	"method" ),
-	DEFINE_KEYFIELD(	m_iFilterName,	FIELD_STRING,	"filtername" ),
-	DEFINE_FIELD(		m_hFilter,		FIELD_EHANDLE ),
-	DEFINE_KEYFIELD(	m_iRefName,		FIELD_STRING,	"referencename" ),
-	DEFINE_FIELD(		m_hReference,	FIELD_EHANDLE ),
-
-	DEFINE_OUTPUT( m_OnFoundEntity, "OnFoundEntity" ),
-
-	//---------------------------------
-
-	DEFINE_INPUTFUNC( FIELD_VOID, "FindEntity", InputFindEntity ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CPointEntityFinder )
 
 
 void CPointEntityFinder::Activate( void )

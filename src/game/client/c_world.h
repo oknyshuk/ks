@@ -6,6 +6,8 @@
 //=============================================================================//
 #if !defined( C_WORLD_H )
 #define C_WORLD_H
+
+#include "reflect_annotations.h"
 #ifdef _WIN32
 #pragma once
 #endif
@@ -16,7 +18,10 @@
 #define CWorld C_World
 #endif
 
-class C_World : public C_BaseEntity
+class [[= ks::reflect::NetTable{ .name = "DT_World" } ]]
+      [[= ks::reflect::From<"m_flWaveHeight", ks::reflect::Net{}>{} ]]
+      [[= ks::reflect::From<"m_iszDetailSpriteMaterial", ks::reflect::Net{}>{} ]]
+      C_World : public C_BaseEntity
 {
 public:
 	DECLARE_CLASS( C_World, C_BaseEntity );
@@ -52,15 +57,15 @@ public:
 	};
 
 	float	m_flWaveHeight;
-	Vector	m_WorldMins;
-	Vector	m_WorldMaxs;
-	bool	m_bStartDark;
-	float	m_flMaxOccludeeArea;
-	float	m_flMinOccluderArea;
-	float	m_flMinPropScreenSpaceWidth;
-	float	m_flMaxPropScreenSpaceWidth;
-	bool	m_bColdWorld;
-	int		m_iTimeOfDay;
+	[[= ks::reflect::Net{} ]] Vector	m_WorldMins;
+	[[= ks::reflect::Net{} ]] Vector	m_WorldMaxs;
+	[[= ks::reflect::Net{} ]] bool	m_bStartDark;
+	[[= ks::reflect::Net{} ]] float	m_flMaxOccludeeArea;
+	[[= ks::reflect::Net{} ]] float	m_flMinOccluderArea;
+	[[= ks::reflect::Net{} ]] float	m_flMinPropScreenSpaceWidth;
+	[[= ks::reflect::Net{} ]] float	m_flMaxPropScreenSpaceWidth;
+	[[= ks::reflect::Net{} ]] bool	m_bColdWorld;
+	[[= ks::reflect::Net{} ]] int		m_iTimeOfDay;
 
 private:
 	char	m_iszDetailSpriteMaterial[MAX_DETAIL_SPRITE_MATERIAL_NAME_LENGTH];

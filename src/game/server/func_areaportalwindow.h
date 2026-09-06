@@ -7,6 +7,8 @@
 
 #ifndef FUNC_AREAPORTALWINDOW_H
 #define FUNC_AREAPORTALWINDOW_H
+
+#include "reflect_annotations.h"
 #ifdef _WIN32
 #pragma once
 #endif
@@ -17,7 +19,9 @@
 #include "func_areaportalbase.h"
 
 
-class CFuncAreaPortalWindow : public CFuncAreaPortalBase
+class [[= ks::reflect::NetTable{ .name = "DT_FuncAreaPortalWindow" } ]]
+      [[= ks::reflect::KeyFrom<"m_portalNumber", ks::reflect::Key{ .name = "portalnumber" } >{} ]]
+      CFuncAreaPortalWindow : public CFuncAreaPortalBase
 {
 public:
 	DECLARE_CLASS( CFuncAreaPortalWindow, CFuncAreaPortalBase );	
@@ -48,18 +52,18 @@ public:
 
 public:
 	
-	CNetworkVar( float, m_flFadeStartDist );	// Distance at which it starts fading (when <= this, alpha=m_flTranslucencyLimit).
-	CNetworkVar( float, m_flFadeDist );		// Distance at which it becomes solid.
+	CNetworkVar( float, m_flFadeStartDist, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE } ]] [[= ks::reflect::Key{ .name = "FadeStartDist" } ]] );	// Distance at which it starts fading (when <= this, alpha=m_flTranslucencyLimit).
+	CNetworkVar( float, m_flFadeDist, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE } ]] [[= ks::reflect::Key{ .name = "FadeDist" } ]] );		// Distance at which it becomes solid.
 
 	// 0-1 value - minimum translucency it's allowed to get to.
-	CNetworkVar( float, m_flTranslucencyLimit );
+	CNetworkVar( float, m_flTranslucencyLimit, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE } ]] [[= ks::reflect::Key{ .name = "TranslucencyLimit" } ]] );
 
-	string_t 		m_iBackgroundBModelName;	// string name of background bmodel
-	CNetworkVar( int, m_iBackgroundModelIndex );
+	[[= ks::reflect::Key{ .name = "BackgroundBModel" } ]] string_t 		m_iBackgroundBModelName;	// string name of background bmodel
+	CNetworkVar( int, m_iBackgroundModelIndex, [[= ks::reflect::Net{ .enc = ks::reflect::ENC_MODELINDEX } ]] );
 
 	//Input handlers
-	void InputSetFadeStartDistance( inputdata_t &inputdata );
-	void InputSetFadeEndDistance( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetFadeStartDistance", .type = FIELD_FLOAT } ]] void InputSetFadeStartDistance( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetFadeEndDistance", .type = FIELD_FLOAT } ]] void InputSetFadeEndDistance( inputdata_t &inputdata );
 };
 
 

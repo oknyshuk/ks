@@ -5,12 +5,14 @@
 // $NoKeywords: $
 //=============================================================================//
 #include "cbase.h"
+#include "reflect_recvtable.h"
+#include "reflect_annotations.h"
 #include "c_sun.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
-static void RecvProxy_HDRColorScale( const CRecvProxyData *pData, void *pStruct, void *pOut )
+void RecvProxy_SunHDRColorScale( const CRecvProxyData *pData, void *pStruct, void *pOut )
 {
 	C_Sun *pSun = ( C_Sun * )pStruct;
 
@@ -18,19 +20,7 @@ static void RecvProxy_HDRColorScale( const CRecvProxyData *pData, void *pStruct,
 	pSun->m_GlowOverlay.m_flHDRColorScale = pData->m_Value.m_Float;
 }
 
-IMPLEMENT_CLIENTCLASS_DT_NOBASE( C_Sun, DT_Sun, CSun )
-	
-	RecvPropInt( RECVINFO(m_clrRender), 0, RecvProxy_Int32ToColor32 ),
-	RecvPropInt( RECVINFO(m_clrOverlay), 0, RecvProxy_Int32ToColor32 ),
-	RecvPropVector( RECVINFO( m_vDirection ) ),
-	RecvPropInt( RECVINFO( m_bOn ) ),
-	RecvPropInt( RECVINFO( m_nSize ) ),
-	RecvPropInt( RECVINFO( m_nOverlaySize ) ),
-	RecvPropInt( RECVINFO( m_nMaterial ) ),
-	RecvPropInt( RECVINFO( m_nOverlayMaterial ) ),
-	RecvPropFloat("HDRColorScale", 0, SIZEOF_IGNORE, 0, RecvProxy_HDRColorScale),
-	
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS( C_Sun, DT_Sun, CSun )
 
 C_Sun::C_Sun()
 {

@@ -5,6 +5,8 @@
 // $NoKeywords: $
 //=============================================================================//
 #include "cbase.h"
+#include "reflect_recvtable.h"
+#include "reflect_annotations.h"
 #include "c_triggers.h"
 #include "in_buttons.h"
 #include "c_func_brush.h"
@@ -13,15 +15,13 @@
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
-IMPLEMENT_CLIENTCLASS_DT( C_BaseTrigger, DT_BaseTrigger, CBaseTrigger )
-	RecvPropBool( RECVINFO( m_bClientSidePredicted ) ),
-	RecvPropInt( RECVINFO( m_spawnflags ) ),
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS( C_BaseTrigger, DT_BaseTrigger, CBaseTrigger )
 
 //-----------------------------------------------------------------------------
 // Purpose: Disables auto movement on players that touch it
 //-----------------------------------------------------------------------------
-class C_TriggerPlayerMovement : public C_BaseTrigger
+class [[= ks::reflect::NetTable{ .name = "DT_TriggerPlayerMovement" } ]]
+      C_TriggerPlayerMovement : public C_BaseTrigger
 {
 public:
 	DECLARE_CLASS( C_TriggerPlayerMovement, C_BaseTrigger );
@@ -41,8 +41,7 @@ public:
 	C_TriggerPlayerMovement	*m_pNext;
 };
 
-IMPLEMENT_CLIENTCLASS_DT( C_TriggerPlayerMovement, DT_TriggerPlayerMovement, CTriggerPlayerMovement )
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS( C_TriggerPlayerMovement, DT_TriggerPlayerMovement, CTriggerPlayerMovement )
 
 C_EntityClassList< C_TriggerPlayerMovement > g_TriggerPlayerMovementList;
 template<> C_TriggerPlayerMovement *C_EntityClassList<C_TriggerPlayerMovement>::m_pClassList = NULL;
@@ -211,9 +210,7 @@ void C_TriggerPlayerMovement::EndTouch( C_BaseEntity *pOther )
 }
 
 
-IMPLEMENT_CLIENTCLASS_DT( C_BaseVPhysicsTrigger, DT_BaseVPhysicsTrigger, CBaseVPhysicsTrigger )
-	//RecvPropBool	( RECVINFO( m_bDisabled ) )
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS( C_BaseVPhysicsTrigger, DT_BaseVPhysicsTrigger, CBaseVPhysicsTrigger )
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -221,7 +218,8 @@ END_RECV_TABLE()
 // Sound operator trigger
 //
 
-class C_TriggerSoundOperator : public C_BaseTrigger
+class [[= ks::reflect::NetTable{ .name = "DT_TriggerSoundOperator" } ]]
+      C_TriggerSoundOperator : public C_BaseTrigger
 {
 public:
 	DECLARE_CLASS( C_TriggerSoundOperator, C_BaseTrigger );
@@ -236,16 +234,14 @@ public:
 protected:
 	virtual void UpdatePartitionListEntry();
 
-	int m_nSoundOperator;
+	[[= ks::reflect::Net{} ]] int m_nSoundOperator;
 	void UpdateSosVar( bool bTouchingNow );
 
 public:
 	C_TriggerSoundOperator	*m_pNext;
 };
 
-IMPLEMENT_CLIENTCLASS_DT( C_TriggerSoundOperator, DT_TriggerSoundOperator, CTriggerSoundOperator )
-	RecvPropInt( RECVINFO( m_nSoundOperator ) ),
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS( C_TriggerSoundOperator, DT_TriggerSoundOperator, CTriggerSoundOperator )
 
 C_EntityClassList< C_TriggerSoundOperator > g_TriggerSoundOperators;
 template<> C_TriggerSoundOperator *C_EntityClassList<C_TriggerSoundOperator>::m_pClassList = NULL;

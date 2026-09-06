@@ -6,6 +6,8 @@
 
 #ifndef C_TRIGGERS_H
 #define C_TRIGGERS_H
+
+#include "reflect_annotations.h"
 #ifdef _WIN32
 #pragma once
 #endif
@@ -13,17 +15,20 @@
 #include "c_basetoggle.h"
 #include "triggers_shared.h"
 
-class C_BaseTrigger : public C_BaseToggle
+class [[= ks::reflect::NetTable{ .name = "DT_BaseTrigger" } ]]
+      [[= ks::reflect::From<"m_spawnflags", ks::reflect::Net{}>{} ]]
+      C_BaseTrigger : public C_BaseToggle
 {
 	DECLARE_CLASS( C_BaseTrigger, C_BaseToggle );
 	DECLARE_CLIENTCLASS();
 
 public:
 
-	bool	m_bClientSidePredicted;
+	[[= ks::reflect::Net{} ]] bool	m_bClientSidePredicted;
 };
 
-class C_BaseVPhysicsTrigger : public C_BaseEntity
+class [[= ks::reflect::NetTable{ .name = "DT_BaseVPhysicsTrigger" } ]]
+      C_BaseVPhysicsTrigger : public C_BaseEntity
 {
 	DECLARE_CLASS( C_BaseVPhysicsTrigger , C_BaseEntity );
 	DECLARE_CLIENTCLASS();

@@ -6,6 +6,8 @@
 //
 //=============================================================================//
 #include "cbase.h"
+#include "reflect_sendtable.h"
+#include "reflect_annotations.h"
 #include "movie_explosion.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
@@ -14,8 +16,7 @@
 #define MOVIEEXPLOSION_ENTITYNAME	"env_movieexplosion"
 
 
-IMPLEMENT_SERVERCLASS_ST(MovieExplosion, DT_MovieExplosion)
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( MovieExplosion, DT_MovieExplosion )
 
 LINK_ENTITY_TO_CLASS(env_movieexplosion, MovieExplosion);
 

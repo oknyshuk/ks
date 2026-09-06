@@ -5,6 +5,8 @@
 //====================================================================
 
 #include "cbase.h"
+#include "reflect_recvtable.h"
+#include "reflect_annotations.h"
 #include "particles/particles.h"
 #include "c_te_effect_dispatch.h"
 #include "particles_new.h"
@@ -18,7 +20,16 @@
 //-----------------------------------------------------------------------------
 // Purpose: An entity that spawns and controls a particle system
 //-----------------------------------------------------------------------------
-class C_ParticleSystem : public C_BaseEntity
+void RecvProxy_EffectFlags( const CRecvProxyData *pData, void *pStruct, void *pOut );
+
+class [[= ks::reflect::NetTable{ .name = "DT_ParticleSystem", .base = false } ]]
+      [[= ks::reflect::From<"m_vecNetworkOrigin", ks::reflect::Net{ .wire = "m_vecOrigin" }>{} ]]
+      [[= ks::reflect::From<"m_fEffects", ks::reflect::Net{}, RecvProxy_EffectFlags>{} ]]
+      [[= ks::reflect::From<"m_hOwnerEntity", ks::reflect::Net{}>{} ]]
+      [[= ks::reflect::From<"m_hNetworkMoveParent", ks::reflect::Net{ .wire = "moveparent" }, RecvProxy_IntToMoveParent>{} ]]
+      [[= ks::reflect::From<"m_iParentAttachment", ks::reflect::Net{}>{} ]]
+      [[= ks::reflect::From<"m_angNetworkAngles", ks::reflect::Net{ .enc = ks::reflect::ENC_QANGLES, .wire = "m_angRotation" }>{} ]]
+      C_ParticleSystem : public C_BaseEntity
 {
 	DECLARE_CLASS( C_ParticleSystem, C_BaseEntity );
 public:
@@ -33,16 +44,16 @@ public:
 protected:
 	~C_ParticleSystem( void );
 
-	int			m_iEffectIndex;
-	int			m_nStopType;
-	bool		m_bActive;
+	[[= ks::reflect::Net{} ]] int			m_iEffectIndex;
+	[[= ks::reflect::Net{} ]] int			m_nStopType;
+	[[= ks::reflect::Net{} ]] bool		m_bActive;
 	bool		m_bOldActive;
-	float		m_flStartTime;	// Time at which the effect started
-	char		m_szSnapshotFileName[ MAX_PATH ];
+	[[= ks::reflect::Net{} ]] float		m_flStartTime;	// Time at which the effect started
+	[[= ks::reflect::Net{} ]] char		m_szSnapshotFileName[ MAX_PATH ];
 
 	//server controlled control points (variables in particle effects instead of literal follow points)
-	Vector		m_vServerControlPoints[4];
-	uint8		m_iServerControlPointAssignments[4];
+	[[= ks::reflect::Net{} ]] Vector		m_vServerControlPoints[4];
+	[[= ks::reflect::Net{} ]] uint8		m_iServerControlPointAssignments[4];
 
 	CUtlReference< CNewParticleEffect > m_pEffect;
 	CParticleSnapshot *m_pSnapshot;
@@ -58,34 +69,16 @@ protected:
 		NUM_STOP_TYPES
 	};
 	
-	EHANDLE		m_hControlPointEnts[kMAXCONTROLPOINTS];
+	[[= ks::reflect::Net{} ]] EHANDLE		m_hControlPointEnts[kMAXCONTROLPOINTS];
 	//	SendPropArray3( SENDINFO_ARRAY3(m_iControlPointParents), SendPropInt( SENDINFO_ARRAY(m_iControlPointParents), 3, SPROP_UNSIGNED ) ),
-	unsigned char m_iControlPointParents[kMAXCONTROLPOINTS];
+	[[= ks::reflect::Net{} ]] unsigned char m_iControlPointParents[kMAXCONTROLPOINTS];
 };
 
 extern void RecvProxy_EffectFlags( const CRecvProxyData *pData, void *pStruct, void *pOut );
 
 IMPLEMENT_CLIENTCLASS(C_ParticleSystem, DT_ParticleSystem, CParticleSystem);
 
-BEGIN_RECV_TABLE_NOBASE( C_ParticleSystem, DT_ParticleSystem )
-	RecvPropVector( RECVINFO_NAME( m_vecNetworkOrigin, m_vecOrigin ) ),
-	RecvPropInt(RECVINFO(m_fEffects), 0, RecvProxy_EffectFlags ),
-	RecvPropEHandle( RECVINFO(m_hOwnerEntity) ),
-	RecvPropInt( RECVINFO_NAME(m_hNetworkMoveParent, moveparent), 0, RecvProxy_IntToMoveParent ),
-	RecvPropInt( RECVINFO( m_iParentAttachment ) ),
-	RecvPropQAngles( RECVINFO_NAME( m_angNetworkAngles, m_angRotation ) ),
-
-	RecvPropInt( RECVINFO( m_iEffectIndex ) ),
-	RecvPropBool( RECVINFO( m_bActive ) ),
-	RecvPropInt( RECVINFO( m_nStopType ) ),
-	RecvPropFloat( RECVINFO( m_flStartTime ) ),
-	RecvPropString( RECVINFO( m_szSnapshotFileName ) ),
-	RecvPropArray3( RECVINFO_ARRAY(m_vServerControlPoints), RecvPropVector( RECVINFO( m_vServerControlPoints[0] ) ) ),
-	RecvPropArray3( RECVINFO_ARRAY(m_iServerControlPointAssignments), RecvPropInt( RECVINFO(m_iServerControlPointAssignments[0]))), 
-
-	RecvPropArray3( RECVINFO_ARRAY(m_hControlPointEnts), RecvPropEHandle( RECVINFO( m_hControlPointEnts[0] ) ) ),
-	RecvPropArray3( RECVINFO_ARRAY(m_iControlPointParents), RecvPropInt( RECVINFO(m_iControlPointParents[0]))), 
-END_RECV_TABLE();
+IMPLEMENT_REFLECT_TABLE( C_ParticleSystem, DT_ParticleSystem );
 
 //-----------------------------------------------------------------------------
 // Purpose: 

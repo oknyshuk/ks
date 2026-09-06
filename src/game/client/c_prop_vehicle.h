@@ -6,11 +6,14 @@
 
 #ifndef C_PROP_VEHICLE_H
 #define C_PROP_VEHICLE_H
+
+#include "reflect_annotations.h"
 #pragma once
 
 #include "iclientvehicle.h"
 #include "vehicle_viewblend_shared.h"
-class C_PropVehicleDriveable : public C_BaseAnimating, public IClientVehicle
+class [[= ks::reflect::NetTable{ .name = "DT_PropVehicleDriveable" } ]]
+      C_PropVehicleDriveable : public C_BaseAnimating, public IClientVehicle
 {
 
 	DECLARE_CLASS( C_PropVehicleDriveable, C_BaseAnimating );
@@ -90,14 +93,14 @@ protected:
 
 protected:
 
-	CHandle<C_BasePlayer>		m_hPlayer;
-	int							m_nSpeed;
-	int							m_nRPM;
-	float						m_flThrottle;
-	int							m_nBoostTimeLeft;
-	int							m_nHasBoost;
-	int							m_nScannerDisabledWeapons;
-	int							m_nScannerDisabledVehicle;
+	[[= ks::reflect::Net{} ]] CHandle<C_BasePlayer>		m_hPlayer;
+	[[= ks::reflect::Net{} ]] int							m_nSpeed;
+	[[= ks::reflect::Net{} ]] int							m_nRPM;
+	[[= ks::reflect::Net{} ]] float						m_flThrottle;
+	[[= ks::reflect::Net{} ]] int							m_nBoostTimeLeft;
+	[[= ks::reflect::Net{} ]] int							m_nHasBoost;
+	[[= ks::reflect::Net{} ]] int							m_nScannerDisabledWeapons;
+	[[= ks::reflect::Net{} ]] int							m_nScannerDisabledVehicle;
 
 	// timers/flags for flashing icons on hud
 	int							m_iFlashTimer;
@@ -113,15 +116,15 @@ protected:
 	bool						m_bScannerVehicleIcon;
 
 	float						m_flSequenceChangeTime;
-	bool						m_bEnterAnimOn;
-	bool						m_bExitAnimOn;
+	[[= ks::reflect::Net{} ]] bool						m_bEnterAnimOn;
+	[[= ks::reflect::Net{} ]] bool						m_bExitAnimOn;
 	float						m_flFOV;
 
-	Vector						m_vecGunCrosshair;
+	[[= ks::reflect::Net{} ]] Vector						m_vecGunCrosshair;
 	CInterpolatedVar<Vector>	m_iv_vecGunCrosshair;
-	Vector						m_vecEyeExitEndpoint;
-	bool						m_bHasGun;
-	bool						m_bUnableToFire;
+	[[= ks::reflect::Net{} ]] Vector						m_vecEyeExitEndpoint;
+	[[= ks::reflect::Net{} ]] bool						m_bHasGun;
+	[[= ks::reflect::Net{} ]] bool						m_bUnableToFire;
 
 	// Used to smooth view entry
 	CHandle<C_BasePlayer>		m_hPrevPlayer;

@@ -5,6 +5,8 @@
 // $NoKeywords: $
 //=============================================================================//
 #include "cbase.h"
+#include "reflect_sendtable.h"
+#include "reflect_annotations.h"
 #include "vote_controller.h"
 #include "shareddefs.h"
 #include "eiface.h"
@@ -23,17 +25,8 @@
 #include "tier0/memdbgon.h"
 
 // Datatable
-IMPLEMENT_SERVERCLASS_ST( CVoteController, DT_VoteController )
-	SendPropInt( SENDINFO( m_iActiveIssueIndex ) ),
-	SendPropInt( SENDINFO( m_iOnlyTeamToVote ) ),
-	SendPropArray3( SENDINFO_ARRAY3( m_nVoteOptionCount ), SendPropInt( SENDINFO_ARRAY( m_nVoteOptionCount ), 8, SPROP_UNSIGNED ) ),
-	SendPropInt( SENDINFO( m_nPotentialVotes ) ),
-	SendPropBool( SENDINFO( m_bIsYesNoVote ) )
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CVoteController, DT_VoteController )
 
-BEGIN_DATADESC( CVoteController )
-	DEFINE_THINKFUNC( VoteControllerThink ),
-END_DATADESC()
 
 LINK_ENTITY_TO_CLASS( vote_controller, CVoteController );
 

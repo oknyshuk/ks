@@ -7,6 +7,8 @@
 
 #ifndef ENVMESSAGE_H
 #define ENVMESSAGE_H
+
+#include "reflect_annotations.h"
 #ifdef _WIN32
 #pragma once
 #endif
@@ -32,17 +34,17 @@ public:
 
 private:
 
-	void InputShowMessage( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "ShowMessage", .type = FIELD_VOID } ]] void InputShowMessage( inputdata_t &inputdata );
 
-	string_t m_iszMessage;		// Message to display.
-	float m_MessageVolume;
-	int m_MessageAttenuation;
+	[[= ks::reflect::Key{ .name = "message" } ]] string_t m_iszMessage;		// Message to display.
+	[[= ks::reflect::Key{ .name = "messagevolume" } ]] float m_MessageVolume;
+	[[= ks::reflect::Key{ .name = "messageattenuation" } ]] int m_MessageAttenuation;
 	float m_Radius;
 
 	DECLARE_DATADESC();
 
-	string_t m_sNoise;
-	COutputEvent m_OnShowMessage;
+	[[= ks::reflect::As{ FIELD_SOUNDNAME } ]] [[= ks::reflect::Key{ .name = "messagesound" } ]] string_t m_sNoise;
+	[[= ks::reflect::Key{ .name = "OnShowMessage" } ]] COutputEvent m_OnShowMessage;
 };
 
 #endif // ENVMESSAGE_H

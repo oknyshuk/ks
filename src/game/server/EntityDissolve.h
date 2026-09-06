@@ -11,7 +11,9 @@
 #pragma once
 #endif
 
-class CEntityDissolve : public CBaseEntity 
+#include "reflect_annotations.h"
+
+class [[= ks::reflect::NetTable{ .name = "DT_EntityDissolve" } ]] CEntityDissolve : public CBaseEntity 
 {
 public:
 	DECLARE_SERVERCLASS();
@@ -42,22 +44,22 @@ public:
 
 	DECLARE_DATADESC();
 
-	CNetworkVar( float, m_flStartTime );
-	CNetworkVar( float, m_flFadeInStart );
-	CNetworkVar( float, m_flFadeInLength );
-	CNetworkVar( float, m_flFadeOutModelStart );
-	CNetworkVar( float, m_flFadeOutModelLength );
-	CNetworkVar( float, m_flFadeOutStart );
-	CNetworkVar( float, m_flFadeOutLength );
+	CNetworkVar( float, m_flStartTime, [[= ks::reflect::As{ FIELD_TIME } ]] [[= ks::reflect::Net{} ]] );
+	CNetworkVar( float, m_flFadeInStart,        [[= ks::reflect::Net{ .flags = SPROP_NOSCALE } ]] );
+	CNetworkVar( float, m_flFadeInLength,       [[= ks::reflect::Net{ .flags = SPROP_NOSCALE } ]] );
+	CNetworkVar( float, m_flFadeOutModelStart,  [[= ks::reflect::Net{ .flags = SPROP_NOSCALE } ]] );
+	CNetworkVar( float, m_flFadeOutModelLength, [[= ks::reflect::Net{ .flags = SPROP_NOSCALE } ]] );
+	CNetworkVar( float, m_flFadeOutStart,       [[= ks::reflect::Net{ .flags = SPROP_NOSCALE } ]] );
+	CNetworkVar( float, m_flFadeOutLength,      [[= ks::reflect::Net{ .flags = SPROP_NOSCALE } ]] );
 
 protected:
-	void	InputDissolve( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Dissolve", .type = FIELD_STRING } ]] void	InputDissolve( inputdata_t &inputdata );
 	void	DissolveThink( void );
 	void	ElectrocuteThink( void );
 
-	CNetworkVar( int, m_nDissolveType );
-	CNetworkVector( m_vDissolverOrigin );
-	CNetworkVar( int, m_nMagnitude );
+	CNetworkVar( int, m_nDissolveType, [[= ks::reflect::Net{ .bits = ENTITY_DISSOLVE_BITS, .flags = SPROP_UNSIGNED } ]] [[= ks::reflect::Key{ .name = "dissolvetype" } ]] );
+	CNetworkVector( m_vDissolverOrigin, [[= ks::reflect::Net{ .flags = SPROP_NOSCALE } ]] );
+	CNetworkVar( int, m_nMagnitude, [[= ks::reflect::Net{ .bits = 8, .flags = SPROP_UNSIGNED } ]] [[= ks::reflect::Key{ .name = "magnitude" } ]] );
 };
 
 #endif // ENTITYDISSOLVE_H

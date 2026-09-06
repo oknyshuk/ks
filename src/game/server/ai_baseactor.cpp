@@ -5,6 +5,8 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_annotations.h"
 
 #include "sceneentity.h"
 #include "choreoevent.h"
@@ -12,7 +14,6 @@
 #include "choreoactor.h"
 #include "ai_baseactor.h"
 #include "ai_navigator.h"
-#include "saverestore_utlvector.h"
 #include "bone_setup.h"
 #include "physics_npc_solver.h"
 #include "inforemarkable.h"
@@ -29,86 +30,10 @@ ConVar ai_debug_expressions( "ai_debug_expressions", "0", FCVAR_NONE, "Show rand
 static ConVar scene_showfaceto( "scene_showfaceto", "0", FCVAR_ARCHIVE, "When playing back, show the directions of faceto events." );
 
 
-BEGIN_DATADESC( CAI_BaseActor )
-
-	DEFINE_FIELD( m_fLatchedPositions, FIELD_INTEGER ),
-	DEFINE_FIELD( m_latchedEyeOrigin, FIELD_VECTOR ),
-	DEFINE_FIELD( m_latchedEyeDirection, FIELD_VECTOR ),
-	DEFINE_FIELD( m_latchedHeadDirection, FIELD_VECTOR ),
-	DEFINE_FIELD( m_goalHeadDirection, FIELD_VECTOR ),
-	DEFINE_FIELD( m_goalHeadInfluence, FIELD_FLOAT ),
-	DEFINE_FIELD( m_goalSpineYaw, FIELD_FLOAT ),
-	DEFINE_FIELD( m_goalBodyYaw, FIELD_FLOAT ),
-	DEFINE_FIELD( m_goalHeadCorrection, FIELD_VECTOR ),
-	DEFINE_FIELD( m_flBlinktime, FIELD_TIME ),
-	DEFINE_FIELD( m_hLookTarget, FIELD_EHANDLE ),
-	DEFINE_UTLVECTOR( m_lookQueue,	FIELD_EMBEDDED ), 
-	DEFINE_UTLVECTOR( m_randomLookQueue, FIELD_EMBEDDED ),
-	DEFINE_UTLVECTOR( m_syntheticLookQueue,	FIELD_EMBEDDED ), 
-	DEFINE_FIELD( m_flNextRandomLookTime, FIELD_TIME ),
-	DEFINE_FIELD( m_iszExpressionScene, FIELD_STRING ),
-	DEFINE_FIELD( m_hExpressionSceneEnt, FIELD_EHANDLE ),
-	DEFINE_FIELD( m_flNextRandomExpressionTime, FIELD_TIME ),
-	DEFINE_FIELD( m_iszIdleExpression, FIELD_STRING ),
-	DEFINE_FIELD( m_iszAlertExpression, FIELD_STRING ),
-	DEFINE_FIELD( m_iszCombatExpression, FIELD_STRING ),
-	DEFINE_FIELD( m_iszDeathExpression, FIELD_STRING ),
-	//DEFINE_FIELD( m_ParameterBodyTransY, FIELD_INTEGER ),
-	//DEFINE_FIELD( m_ParameterBodyTransX, FIELD_INTEGER ),
-	//DEFINE_FIELD( m_ParameterBodyLift, FIELD_INTEGER ),
-	DEFINE_FIELD( m_ParameterBodyYaw, FIELD_INTEGER ),
-	//DEFINE_FIELD( m_ParameterBodyPitch, FIELD_INTEGER ),
-	//DEFINE_FIELD( m_ParameterBodyRoll, FIELD_INTEGER ),
-	DEFINE_FIELD( m_ParameterSpineYaw, FIELD_INTEGER ),
-	//DEFINE_FIELD( m_ParameterSpinePitch, FIELD_INTEGER ),
-	//DEFINE_FIELD( m_ParameterSpineRoll, FIELD_INTEGER ),
-	DEFINE_FIELD( m_ParameterNeckTrans, FIELD_INTEGER ),
-	DEFINE_FIELD( m_ParameterHeadYaw, FIELD_INTEGER ),
-	DEFINE_FIELD( m_ParameterHeadPitch, FIELD_INTEGER ),
-	DEFINE_FIELD( m_ParameterHeadRoll, FIELD_INTEGER ),
-	//DEFINE_FIELD( m_FlexweightMoveRightLeft, FIELD_INTEGER ),
-	//DEFINE_FIELD( m_FlexweightMoveForwardBack, FIELD_INTEGER ),
-	//DEFINE_FIELD( m_FlexweightMoveUpDown, FIELD_INTEGER ),
-	DEFINE_FIELD( m_FlexweightBodyRightLeft, FIELD_INTEGER ),
-	//DEFINE_FIELD( m_FlexweightBodyUpDown, FIELD_INTEGER ),
-	//DEFINE_FIELD( m_FlexweightBodyTilt, FIELD_INTEGER ),
-	DEFINE_FIELD( m_FlexweightChestRightLeft, FIELD_INTEGER ),
-	//DEFINE_FIELD( m_FlexweightChestUpDown, FIELD_INTEGER ),
-	//DEFINE_FIELD( m_FlexweightChestTilt, FIELD_INTEGER ),
-	DEFINE_FIELD( m_FlexweightHeadForwardBack, FIELD_INTEGER ),
-	DEFINE_FIELD( m_FlexweightHeadRightLeft, FIELD_INTEGER ),
-	DEFINE_FIELD( m_FlexweightHeadUpDown, FIELD_INTEGER ),
-	DEFINE_FIELD( m_FlexweightHeadTilt, FIELD_INTEGER ),
-
-	DEFINE_FIELD( m_ParameterGestureHeight, FIELD_INTEGER ),
-	DEFINE_FIELD( m_ParameterGestureWidth, FIELD_INTEGER ),
-	DEFINE_FIELD( m_FlexweightGestureUpDown, FIELD_INTEGER ),
-	DEFINE_FIELD( m_FlexweightGestureRightLeft, FIELD_INTEGER ),
-	DEFINE_FIELD( m_flAccumYawDelta, FIELD_FLOAT ),
-	DEFINE_FIELD( m_flAccumYawScale, FIELD_FLOAT ),
-
-	DEFINE_ARRAY( m_flextarget, FIELD_FLOAT, 64 ),
-
-	DEFINE_KEYFIELD( m_bDontUseSemaphore, FIELD_BOOLEAN, "DontUseSpeechSemaphore" ),
-
-	DEFINE_KEYFIELD( m_iszExpressionOverride, FIELD_STRING, "ExpressionOverride" ),
-
-	DEFINE_EMBEDDEDBYREF( m_pExpresser ),
-
-	DEFINE_INPUTFUNC( FIELD_STRING,	"SetExpressionOverride",	InputSetExpressionOverride ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CAI_BaseActor )
 
 
-BEGIN_SIMPLE_DATADESC( CAI_InterestTarget_t )
-	DEFINE_FIELD( m_eType,		FIELD_INTEGER ),
-	DEFINE_FIELD( m_hTarget,		FIELD_EHANDLE ),
-	DEFINE_FIELD( m_vecPosition,	FIELD_POSITION_VECTOR ),
-	DEFINE_FIELD( m_flStartTime,	FIELD_TIME ),
-	DEFINE_FIELD( m_flEndTime,	FIELD_TIME ),
-	DEFINE_FIELD( m_flRamp,		FIELD_FLOAT ),
-	DEFINE_FIELD( m_flInterest,	FIELD_FLOAT ),
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP_SIMPLE( CAI_InterestTarget_t )
 
 
 

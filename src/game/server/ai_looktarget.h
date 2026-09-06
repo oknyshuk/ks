@@ -7,6 +7,8 @@
 #ifndef AI_LOOKTARGET_H
 #define AI_LOOKTARGET_H
 
+#include "reflect_annotations.h"
+
 #define SF_LOOKTARGET_ONLYONCE	0x00000001
 
 //=============================================================================
@@ -32,16 +34,16 @@ public:
 	static CAI_LookTarget *GetFirstLookTarget();
 	static CAI_LookTarget *GetNextLookTarget( CAI_LookTarget *pCurrentTarget );
 
-	int		m_iContext;
-	int		m_iPriority;
+	[[= ks::reflect::Key{ .name = "context" } ]] int		m_iContext;
+	[[= ks::reflect::Key{ .name = "priority" } ]] int		m_iPriority;
 
 	void	Enable()	{ m_bDisabled = false; }
 	void	Disable()	{ m_bDisabled = true; }
 
 private:
-	bool	m_bDisabled;
+	[[= ks::reflect::Key{ .name = "StartDisabled" } ]] bool	m_bDisabled;
 	float	m_flTimeNextAvailable;
-	float	m_flMaxDist;
+	[[= ks::reflect::Key{ .name = "maxdist" } ]] float	m_flMaxDist;
 };
 
 #endif//AI_LOOKTARGET_H

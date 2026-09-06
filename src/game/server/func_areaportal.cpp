@@ -10,6 +10,8 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_annotations.h"
 #include "func_areaportalbase.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
@@ -22,7 +24,8 @@ enum areaportal_state
 };
 
 
-class CAreaPortal : public CFuncAreaPortalBase
+class [[= ks::reflect::KeyFrom<"m_portalNumber", ks::reflect::Key{ .name = "portalnumber" } >{} ]]
+      CAreaPortal : public CFuncAreaPortalBase
 {
 public:
 	DECLARE_CLASS( CAreaPortal, CFuncAreaPortalBase );
@@ -36,9 +39,9 @@ public:
 	virtual int		UpdateTransmitState();
 
 	// Input handlers
-	void InputOpen( inputdata_t &inputdata );
-	void InputClose( inputdata_t &inputdata );
-	void InputToggle( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Open", .type = FIELD_VOID } ]] [[= ks::reflect::Input{ .name = "TurnOff", .type = FIELD_VOID } ]] void InputOpen( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Close", .type = FIELD_VOID } ]] [[= ks::reflect::Input{ .name = "TurnOn", .type = FIELD_VOID } ]] void InputClose( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Toggle", .type = FIELD_VOID } ]] void InputToggle( inputdata_t &inputdata );
 
 	virtual bool	UpdateVisibility( const CUtlVector< Vector > &vecOrigins, float fovDistanceAdjustFactor, bool &bIsOpenOnClient );
 
@@ -52,21 +55,7 @@ private:
 
 LINK_ENTITY_TO_CLASS( func_areaportal, CAreaPortal );
 
-BEGIN_DATADESC( CAreaPortal )
-
-	DEFINE_KEYFIELD( m_portalNumber, FIELD_INTEGER, "portalnumber" ),
-	DEFINE_FIELD( m_state, FIELD_INTEGER ),
-
-	// Inputs
-	DEFINE_INPUTFUNC( FIELD_VOID, "Open",  InputOpen ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "Close", InputClose ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "Toggle",  InputToggle ),
-
-	// TODO: obsolete! remove	
-	DEFINE_INPUTFUNC( FIELD_VOID, "TurnOn",  InputClose ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "TurnOff", InputOpen ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CAreaPortal )
 
 
 

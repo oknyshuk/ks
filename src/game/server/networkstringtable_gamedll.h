@@ -13,7 +13,6 @@
 
 #include "networkstringtabledefs.h"
 
-class CStringTableSaveRestoreOps;
 
 // String tables used by the game DLL
 #define MAX_VGUI_SCREEN_STRING_BITS		8
@@ -43,7 +42,6 @@ extern INetworkStringTable *g_pStringTableClientSideChoreoScenes;
 #define MAX_INFOPANEL_STRINGS			128
 
 // save/load
-extern CStringTableSaveRestoreOps g_VguiScreenStringOps;
 
 
 #endif // NETWORKSTRINGTABLE_GAMEDLL_H

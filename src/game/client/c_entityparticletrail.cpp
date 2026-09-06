@@ -6,6 +6,8 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_recvtable.h"
+#include "reflect_annotations.h"
 #include "baseparticleentity.h"
 #include "entityparticletrail_shared.h"
 #include "particlemgr.h"
@@ -18,7 +20,8 @@
 //-----------------------------------------------------------------------------
 // Entity particle trail, client-side implementation
 //-----------------------------------------------------------------------------
-class C_EntityParticleTrail : public C_BaseParticleEntity
+class [[= ks::reflect::NetTable{ .name = "DT_EntityParticleTrail" } ]]
+      C_EntityParticleTrail : public C_BaseParticleEntity
 {
 public:
 	DECLARE_CLIENTCLASS();
@@ -42,9 +45,9 @@ private:
 	void Start( );
 	void AddParticle( float flInitialDeltaTime, const Vector &vecMins, const Vector &vecMaxs, const matrix3x4_t &boxToWorld );
 
-	int		m_iMaterialName;
-	EntityParticleTrailInfo_t	m_Info;
-	EHANDLE m_hConstraintEntity;
+	[[= ks::reflect::Net{} ]] int		m_iMaterialName;
+	[[= ks::reflect::Net{} ]] EntityParticleTrailInfo_t	m_Info;
+	[[= ks::reflect::Net{} ]] EHANDLE m_hConstraintEntity;
 
 	PMaterialHandle		m_hMaterial;
 	TimedEvent			m_teParticleSpawn;
@@ -54,11 +57,7 @@ private:
 //-----------------------------------------------------------------------------
 // Networking
 //-----------------------------------------------------------------------------
-IMPLEMENT_CLIENTCLASS_DT( C_EntityParticleTrail, DT_EntityParticleTrail, CEntityParticleTrail )
-	RecvPropInt(RECVINFO(m_iMaterialName)),
-	RecvPropDataTable( RECVINFO_DT( m_Info ), 0, &REFERENCE_RECV_TABLE(DT_EntityParticleTrailInfo) ),
-	RecvPropEHandle(RECVINFO(m_hConstraintEntity)),
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS( C_EntityParticleTrail, DT_EntityParticleTrail, CEntityParticleTrail )
 
 
 //-----------------------------------------------------------------------------

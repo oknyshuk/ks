@@ -11,6 +11,8 @@
 // $NoKeywords: $
 //=============================================================================//
 #include "cbase.h"
+#include "reflect_sendtable.h"
+#include "reflect_annotations.h"
 #include "basetempentity.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
@@ -19,7 +21,8 @@
 //-----------------------------------------------------------------------------
 // Purpose: Displays a dynamic light
 //-----------------------------------------------------------------------------
-class CTEDynamicLight : public CBaseTempEntity
+class [[= ks::reflect::NetTable{ .name = "DT_TEDynamicLight" } ]]
+      CTEDynamicLight : public CBaseTempEntity
 {
 public:
 	DECLARE_CLASS( CTEDynamicLight, CBaseTempEntity );
@@ -32,14 +35,14 @@ public:
 	DECLARE_SERVERCLASS();
 
 public:
-	CNetworkVector( m_vecOrigin );
-	CNetworkVar( float, m_fRadius );
-	CNetworkVar( int, r );
-	CNetworkVar( int, g );
-	CNetworkVar( int, b );
-	CNetworkVar( int, exponent );
-	CNetworkVar( float, m_fTime );
-	CNetworkVar( float, m_fDecay );
+	CNetworkVector( m_vecOrigin, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD, .enc = ks::reflect::ENC_VECTOR } ]] );
+	CNetworkVar( float, m_fRadius, [[= ks::reflect::Net{ .bits = 8, .low = 0, .high = 2560.0, .flags = SPROP_ROUNDUP } ]] );
+	CNetworkVar( int, r, [[= ks::reflect::Net{ .bits = 8, .flags = SPROP_UNSIGNED } ]] );
+	CNetworkVar( int, g, [[= ks::reflect::Net{ .bits = 8, .flags = SPROP_UNSIGNED } ]] );
+	CNetworkVar( int, b, [[= ks::reflect::Net{ .bits = 8, .flags = SPROP_UNSIGNED } ]] );
+	CNetworkVar( int, exponent, [[= ks::reflect::Net{ .bits = 8 } ]] );
+	CNetworkVar( float, m_fTime, [[= ks::reflect::Net{ .bits = 8, .low = 0, .high = 25.6, .flags = SPROP_ROUNDDOWN } ]] );
+	CNetworkVar( float, m_fDecay, [[= ks::reflect::Net{ .bits = 8, .low = 0, .high = 2560.0, .flags = SPROP_ROUNDDOWN } ]] );
 };
 
 //-----------------------------------------------------------------------------
@@ -97,16 +100,7 @@ void CTEDynamicLight::Test( const Vector& current_origin, const QAngle& current_
 	Create( filter, 0.0 );
 }
 
-IMPLEMENT_SERVERCLASS_ST(CTEDynamicLight, DT_TEDynamicLight)
-	SendPropVector( SENDINFO(m_vecOrigin), -1, SPROP_COORD),
-	SendPropInt( SENDINFO(r), 8, SPROP_UNSIGNED ),
-	SendPropInt( SENDINFO(g), 8, SPROP_UNSIGNED ),
-	SendPropInt( SENDINFO(b), 8, SPROP_UNSIGNED ),
-	SendPropInt( SENDINFO(exponent), 8, 0 ),
-	SendPropFloat( SENDINFO(m_fRadius), 8, SPROP_ROUNDUP, 0, 2560.0 ),
-	SendPropFloat( SENDINFO(m_fTime), 8, SPROP_ROUNDDOWN, 0, 25.6 ),
-	SendPropFloat( SENDINFO(m_fDecay), 8, SPROP_ROUNDDOWN, 0, 2560.0 ),
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CTEDynamicLight, DT_TEDynamicLight )
 
 
 // Singleton

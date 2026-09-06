@@ -1,4 +1,4 @@
-//===== Copyright © 1996-2005, Valve Corporation, All rights reserved. ======//
+//===== Copyright ï¿½ 1996-2005, Valve Corporation, All rights reserved. ======//
 //
 // Purpose: Base combat character with no AI
 //
@@ -12,6 +12,7 @@
 #pragma once
 #endif
 
+#include "reflect_annotations.h"
 #include "baseflex.h"
 #include "damagemodifier.h"
 #include "utllinkedlist.h"
@@ -120,7 +121,25 @@ struct Relationship_t
 // Purpose: This should contain all of the combat entry points / functionality 
 // that are common between NPCs and players
 //-----------------------------------------------------------------------------
-class CBaseCombatCharacter : public CBaseFlex
+// The two exclusive sub-tables are named as props of DT_BaseCombatCharacter, so both the tables
+// and the proxies that gate them have to be visible where the annotation sits.
+namespace DT_BCCLocalPlayerExclusive { extern SendTable g_SendTable; }
+namespace DT_BCCNonLocalPlayerExclusive { extern SendTable g_SendTable; }
+void *SendProxy_SendBaseCombatCharacterLocalDataTable( const SendProp *pProp, const void *pStruct,
+    const void *pVarData, CSendProxyRecipients *pRecipients, int objectID );
+void *SendProxy_SendBaseCombatCharacterNonLocalDataTable( const SendProp *pProp, const void *pStruct,
+    const void *pVarData, CSendProxyRecipients *pRecipients, int objectID );
+
+class [[= ks::reflect::NetTable{ .name = "DT_BaseCombatCharacter" } ]]
+      [[= ks::reflect::SubTable<"bcc_localdata", &DT_BCCLocalPlayerExclusive::g_SendTable,
+                                SendProxy_SendBaseCombatCharacterLocalDataTable, true>{} ]]
+      [[= ks::reflect::SubTable<"bcc_nonlocaldata", &DT_BCCNonLocalPlayerExclusive::g_SendTable,
+                                SendProxy_SendBaseCombatCharacterNonLocalDataTable, true>{} ]]
+      [[= ks::reflect::NetTable{ .name = "DT_BCCLocalPlayerExclusive", .base = false } ]]
+      [[= ks::reflect::NetTable{ .name = "DT_BCCNonLocalPlayerExclusive", .base = false } ]]
+      [[= ks::reflect::From<"m_flTimeOfLastInjury", ks::reflect::Net{}>{} ]]
+      [[= ks::reflect::From<"m_nRelativeDirectionOfLastInjury", ks::reflect::Net{ .bits = 3, .flags = SPROP_UNSIGNED }>{} ]]
+      CBaseCombatCharacter : public CBaseFlex
 {
 	DECLARE_CLASS( CBaseCombatCharacter, CBaseFlex );
 
@@ -138,7 +157,6 @@ public:
 
 	virtual void		Precache();
 
-	virtual int			Restore( IRestore &restore );
 
 	virtual const impactdamagetable_t	&GetPhysicsImpactDamageTable( void );
 
@@ -316,7 +334,7 @@ public:
 	virtual bool			ShouldDropActiveWeaponWhenKilled() { return true; }
 
 	// Killed a character
-	void InputKilledNPC( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "KilledNPC", .type = FIELD_VOID } ]] void InputKilledNPC( inputdata_t &inputdata );
 	virtual void OnKilledNPC( CBaseCombatCharacter *pKilled ) {}; 
 
 	// Exactly one of these happens immediately after killed (gibbed may happen later when the corpse gibs)
@@ -462,21 +480,21 @@ protected:
 	void SetLastHitGroup( int nHitGroup )	{ m_LastHitGroup = nHitGroup; }
 
 public:
-	CNetworkVar( float, m_flNextAttack );			// cannot attack again until this time
+	CNetworkVar( float, m_flNextAttack, [[= ks::reflect::As{ FIELD_TIME } ]] [[= ks::reflect::Net{ .table = "DT_BCCLocalPlayerExclusive" } ]] );			// cannot attack again until this time
 
 private:
-	Hull_t		m_eHull;
+	[[= ks::reflect::Key{ .name = "HullType" } ]] Hull_t		m_eHull;
 
 protected:
-	int			m_bloodColor;			// color of blood particless
+	[[= ks::reflect::Key{ .name = "BloodColor" } ]] int			m_bloodColor;			// color of blood particless
 
 	// -------------------
 	// combat ability data
 	// -------------------
 	float		m_flFieldOfView;		// cosine of field of view for this character
 	Vector		m_HackedGunPos;			// HACK until we can query end of gun
-	string_t	m_RelationshipString;	// Used to load up relationship keyvalues
-	float		m_impactEnergyScale;// scale the amount of energy used to calculate damage this ent takes due to physics
+	[[= ks::reflect::Key{ .name = "Relationship" } ]] string_t	m_RelationshipString;	// Used to load up relationship keyvalues
+	[[= ks::reflect::Key{ .name = "physdamagescale", .input = true } ]] float		m_impactEnergyScale;// scale the amount of energy used to calculate damage this ent takes due to physics
 
 	byte		m_weaponIDToIndex[WEAPON_MAX];
 
@@ -506,7 +524,7 @@ protected:
 
 public:
 	// attack/damage
-	CNetworkVar( int, m_LastHitGroup );			// the last body region that took damage
+	CNetworkVar( int, m_LastHitGroup, [[= ks::reflect::Net{ .bits = 4, .flags = SPROP_UNSIGNED } ]] );			// the last body region that took damage
 
 private:
 	float				m_flDamageAccumulator;	// so very small amounts of damage do not get lost.
@@ -531,8 +549,8 @@ protected:
 	CNetworkArrayForDerived( int, m_iAmmo, MAX_AMMO_TYPES );
 
 	// Usable character items 
-	CNetworkArray( CBaseCombatWeaponHandle, m_hMyWeapons, MAX_WEAPONS );
-	CNetworkHandle( CBaseCombatWeapon, m_hActiveWeapon );
+	CNetworkArray( CBaseCombatWeaponHandle, m_hMyWeapons, MAX_WEAPONS, [[= ks::reflect::Net{} ]] );
+	CNetworkHandle( CBaseCombatWeapon, m_hActiveWeapon, [[= ks::reflect::Net{} ]] );
 
 	IntervalTimer m_aliveTimer;
 

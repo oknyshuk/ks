@@ -5,6 +5,9 @@
 //====================================================================
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_sendtable.h"
+#include "reflect_annotations.h"
 #include "doors.h"
 #include "ndebugoverlay.h"
 #include "spark.h"
@@ -33,55 +36,12 @@ string_t MakeButtonSound( int sound );				// get string of button sound number
 #define SF_BUTTON_NOTSOLID				16384
 
 
-BEGIN_DATADESC( CBaseButton )
-
-	DEFINE_KEYFIELD( m_vecMoveDir, FIELD_VECTOR, "movedir" ),
-	DEFINE_FIELD( m_fStayPushed, FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_fRotating, FIELD_BOOLEAN ),
-
-	DEFINE_FIELD( m_bLockedSound, FIELD_CHARACTER ),
-	DEFINE_FIELD( m_bLockedSentence, FIELD_CHARACTER ),
-	DEFINE_FIELD( m_bUnlockedSound, FIELD_CHARACTER ),	
-	DEFINE_FIELD( m_bUnlockedSentence, FIELD_CHARACTER ),
-	DEFINE_FIELD( m_bLocked, FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_sNoise, FIELD_SOUNDNAME ),
-	DEFINE_FIELD( m_flUseLockedTime, FIELD_TIME ),
-	DEFINE_FIELD( m_bSolidBsp, FIELD_BOOLEAN ),
-	
-	DEFINE_KEYFIELD( m_sounds, FIELD_INTEGER, "sounds" ),
-	
-//	DEFINE_FIELD( m_ls, FIELD_SOUNDNAME ),   // This is restored in Precache()
-//  DEFINE_FIELD( m_nState, FIELD_INTEGER ),
-
-	// Function Pointers
-	DEFINE_FUNCTION( ButtonTouch ),
-	DEFINE_FUNCTION( ButtonSpark ),
-	DEFINE_FUNCTION( TriggerAndWait ),
-	DEFINE_FUNCTION( ButtonReturn ),
-	DEFINE_FUNCTION( ButtonBackHome ),
-	DEFINE_FUNCTION( ButtonUse ),
-
-	// Inputs
-	DEFINE_INPUTFUNC( FIELD_VOID, "Lock", InputLock ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "Unlock", InputUnlock ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "Press", InputPress ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "PressIn", InputPressIn ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "PressOut", InputPressOut ),
-
-	// Outputs
-	DEFINE_OUTPUT( m_OnDamaged, "OnDamaged" ),
-	DEFINE_OUTPUT( m_OnPressed, "OnPressed" ),
-	DEFINE_OUTPUT( m_OnUseLocked, "OnUseLocked" ),
-	DEFINE_OUTPUT( m_OnIn, "OnIn" ),
-	DEFINE_OUTPUT( m_OnOut, "OnOut" ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CBaseButton )
 
 
 LINK_ENTITY_TO_CLASS( func_button, CBaseButton );
 
-IMPLEMENT_SERVERCLASS_ST( CBaseButton, DT_BaseButton )
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CBaseButton, DT_BaseButton )
 
 
 void CBaseButton::Precache( void )
@@ -944,44 +904,7 @@ bool CRotButton::CreateVPhysics( void )
 #define SF_MOMENTARY_AUTO_RETURN	16
 
 
-BEGIN_DATADESC( CMomentaryRotButton )
-
-	DEFINE_FIELD( m_lastUsed, FIELD_INTEGER ),
-	DEFINE_FIELD( m_start, FIELD_VECTOR ),
-	DEFINE_FIELD( m_end, FIELD_VECTOR ),
-	DEFINE_FIELD( m_IdealYaw, FIELD_FLOAT ),
-	DEFINE_FIELD( m_sNoise, FIELD_SOUNDNAME ),
-	DEFINE_FIELD( m_bUpdateTarget, FIELD_BOOLEAN ),
-
-	DEFINE_KEYFIELD( m_direction, FIELD_INTEGER, "StartDirection" ),
-	DEFINE_KEYFIELD( m_returnSpeed, FIELD_FLOAT, "returnspeed" ),
-	DEFINE_KEYFIELD( m_flStartPosition, FIELD_FLOAT, "StartPosition"),
-	DEFINE_KEYFIELD( m_bSolidBsp, FIELD_BOOLEAN, "solidbsp" ),
-
-	// Function Pointers
-	DEFINE_FUNCTION( UseMoveDone ),
-	DEFINE_FUNCTION( ReturnMoveDone ),
-	DEFINE_FUNCTION( SetPositionMoveDone ),
-	DEFINE_FUNCTION( UpdateThink ),
-
-	// Inputs
-	DEFINE_INPUTFUNC( FIELD_FLOAT, "SetPosition", InputSetPosition ),
-	DEFINE_INPUTFUNC( FIELD_FLOAT, "SetPositionImmediately", InputSetPositionImmediately ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "_DisableUpdateTarget", InputDisableUpdateTarget ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "_EnableUpdateTarget", InputEnableUpdateTarget ),
-
-	// Outputs
-	DEFINE_OUTPUT( m_Position, "Position" ),
-	DEFINE_OUTPUT( m_OnUnpressed, "OnUnpressed" ),
-	DEFINE_OUTPUT( m_OnFullyClosed, "OnFullyClosed" ),
-	DEFINE_OUTPUT( m_OnFullyOpen, "OnFullyOpen" ),
-	DEFINE_OUTPUT( m_OnReachedPosition, "OnReachedPosition" ),
-
-	DEFINE_INPUTFUNC( FIELD_VOID,	"Enable",	InputEnable ),
-	DEFINE_INPUTFUNC( FIELD_VOID,	"Disable",	InputDisable ),
-	DEFINE_FIELD( m_bDisabled, FIELD_BOOLEAN )
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CMomentaryRotButton )
 
 
 LINK_ENTITY_TO_CLASS( momentary_rot_button, CMomentaryRotButton );

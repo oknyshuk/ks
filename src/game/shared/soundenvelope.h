@@ -96,10 +96,7 @@ public:
 //-----------------------------------------------------------------------------
 class ISaveRestoreOps;
 
-ISaveRestoreOps *GetSoundSaveRestoreOps( );
 
-#define DEFINE_SOUNDPATCH(name) \
-	{ FIELD_CUSTOM, #name, (int)offsetof(classNameTypedef,name), 1, FTYPEDESC_SAVE, NULL, GetSoundSaveRestoreOps( ), NULL }
 
 
 #endif // SOUNDENVELOPE_H

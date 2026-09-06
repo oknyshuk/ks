@@ -6,6 +6,16 @@
 //===========================================================================//
 
 #include "cbase.h"
+#include "reflect_predmap.h"
+#include "reflect_datamap.h"
+#include "reflect_annotations.h"
+#ifdef CLIENT_DLL
+#include "reflect_recvtable.h"
+#endif
+#include "reflect_annotations.h"
+#ifdef GAME_DLL
+#include "reflect_sendtable.h"
+#endif
 #include "collisionproperty.h"
 #include "igamesystem.h"
 #include "utlvector.h"
@@ -268,39 +278,14 @@ void CDirtySpatialPartitionEntityList::OnPostQuery( SpatialPartitionListMask_t l
 
 #ifndef CLIENT_DLL
 
-	BEGIN_DATADESC_NO_BASE( CCollisionProperty )
-
-//		DEFINE_FIELD( m_pOuter, FIELD_CLASSPTR ),
-		DEFINE_GLOBAL_FIELD( m_vecMins, FIELD_VECTOR ),
-		DEFINE_GLOBAL_FIELD( m_vecMaxs, FIELD_VECTOR ),
-		DEFINE_KEYFIELD( m_nSolidType, FIELD_CHARACTER, "solid" ),
-		DEFINE_FIELD( m_usSolidFlags, FIELD_SHORT ),
-		DEFINE_FIELD( m_nSurroundType, FIELD_CHARACTER ),
-		DEFINE_FIELD( m_flRadius, FIELD_FLOAT ),
-		DEFINE_FIELD( m_triggerBloat, FIELD_CHARACTER ),
-		DEFINE_FIELD( m_vecSpecifiedSurroundingMins, FIELD_VECTOR ),
-		DEFINE_FIELD( m_vecSpecifiedSurroundingMaxs, FIELD_VECTOR ),
-		DEFINE_FIELD( m_vecSurroundingMins, FIELD_VECTOR ),
-		DEFINE_FIELD( m_vecSurroundingMaxs, FIELD_VECTOR ),
-//		DEFINE_FIELD( m_Partition, FIELD_SHORT ),
-//		DEFINE_PHYSPTR( m_pPhysicsObject ),
-
-	END_DATADESC()
+	IMPLEMENT_REFLECT_DATAMAP_NO_BASE( CCollisionProperty )
 
 #else
 
 //-----------------------------------------------------------------------------
 // Prediction
 //-----------------------------------------------------------------------------
-BEGIN_PREDICTION_DATA_NO_BASE( CCollisionProperty )
-
-	DEFINE_PRED_FIELD( m_vecMins, FIELD_VECTOR, FTYPEDESC_INSENDTABLE ),
-	DEFINE_PRED_FIELD( m_vecMaxs, FIELD_VECTOR, FTYPEDESC_INSENDTABLE ),
-	DEFINE_PRED_FIELD( m_nSolidType, FIELD_CHARACTER, FTYPEDESC_INSENDTABLE ),
-	DEFINE_PRED_FIELD( m_usSolidFlags, FIELD_SHORT, FTYPEDESC_INSENDTABLE ),
-	DEFINE_PRED_FIELD( m_triggerBloat, FIELD_CHARACTER, FTYPEDESC_INSENDTABLE ),
-
-END_PREDICTION_DATA()
+IMPLEMENT_REFLECT_PREDMAP_NO_BASE( CCollisionProperty );
 
 #endif
 
@@ -309,31 +294,31 @@ END_PREDICTION_DATA()
 //-----------------------------------------------------------------------------
 #ifdef CLIENT_DLL
 
-static void RecvProxy_Solid( const CRecvProxyData *pData, void *pStruct, void *pOut )
+ void RecvProxy_Solid( const CRecvProxyData *pData, void *pStruct, void *pOut )
 {
 	((CCollisionProperty*)pStruct)->SetSolid( (SolidType_t)pData->m_Value.m_Int );
 }
 
-static void RecvProxy_SolidFlags( const CRecvProxyData *pData, void *pStruct, void *pOut )
+ void RecvProxy_SolidFlags( const CRecvProxyData *pData, void *pStruct, void *pOut )
 {
 	((CCollisionProperty*)pStruct)->SetSolidFlags( pData->m_Value.m_Int );
 }
 
-static void RecvProxy_OBBMins( const CRecvProxyData *pData, void *pStruct, void *pOut )
+ void RecvProxy_OBBMins( const CRecvProxyData *pData, void *pStruct, void *pOut )
 {
 	CCollisionProperty *pProp = ((CCollisionProperty*)pStruct);
 	Vector &vecMins = *((Vector*)pData->m_Value.m_Vector);
 	pProp->SetCollisionBounds( vecMins, pProp->OBBMaxs() );
 }
 
-static void RecvProxy_OBBMaxs( const CRecvProxyData *pData, void *pStruct, void *pOut )
+ void RecvProxy_OBBMaxs( const CRecvProxyData *pData, void *pStruct, void *pOut )
 {
 	CCollisionProperty *pProp = ((CCollisionProperty*)pStruct);
 	Vector &vecMaxs = *((Vector*)pData->m_Value.m_Vector);
 	pProp->SetCollisionBounds( pProp->OBBMins(), vecMaxs );
 }
 
-static void RecvProxy_VectorDirtySurround( const CRecvProxyData *pData, void *pStruct, void *pOut )
+ void RecvProxy_VectorDirtySurround( const CRecvProxyData *pData, void *pStruct, void *pOut )
 {
 	Vector &vecold = *((Vector*)pOut);
 	Vector vecnew( pData->m_Value.m_Vector[0], pData->m_Value.m_Vector[1], pData->m_Value.m_Vector[2] );
@@ -345,7 +330,7 @@ static void RecvProxy_VectorDirtySurround( const CRecvProxyData *pData, void *pS
 	}
 }
 
-static void RecvProxy_IntDirtySurround( const CRecvProxyData *pData, void *pStruct, void *pOut )
+ void RecvProxy_IntDirtySurround( const CRecvProxyData *pData, void *pStruct, void *pOut )
 {
 	if ( *((unsigned char*)pOut) != pData->m_Value.m_Int )
 	{
@@ -356,41 +341,19 @@ static void RecvProxy_IntDirtySurround( const CRecvProxyData *pData, void *pStru
 
 #else
 
-static void SendProxy_Solid( const SendProp *pProp, const void *pStruct, const void *pData, DVariant *pOut, int iElement, int objectID )
+ void SendProxy_Solid( const SendProp *pProp, const void *pStruct, const void *pData, DVariant *pOut, int iElement, int objectID )
 {
 	pOut->m_Int = ((CCollisionProperty*)pStruct)->GetSolid();
 }
 
-static void SendProxy_SolidFlags( const SendProp *pProp, const void *pStruct, const void *pData, DVariant *pOut, int iElement, int objectID )
+ void SendProxy_SolidFlags( const SendProp *pProp, const void *pStruct, const void *pData, DVariant *pOut, int iElement, int objectID )
 {
 	pOut->m_Int = ((CCollisionProperty*)pStruct)->GetSolidFlags();
 }
 
 #endif
 
-BEGIN_NETWORK_TABLE_NOBASE( CCollisionProperty, DT_CollisionProperty )
-
-#ifdef CLIENT_DLL
-	RecvPropVector( RECVINFO(m_vecMins), 0, RecvProxy_OBBMins ),
-	RecvPropVector( RECVINFO(m_vecMaxs), 0, RecvProxy_OBBMaxs ),
-	RecvPropInt( RECVINFO( m_nSolidType ),		0, RecvProxy_Solid ),
-	RecvPropInt( RECVINFO( m_usSolidFlags ),	0, RecvProxy_SolidFlags ),
-	RecvPropInt( RECVINFO(m_nSurroundType), 0, RecvProxy_IntDirtySurround ),
-	RecvPropInt( RECVINFO(m_triggerBloat), 0, RecvProxy_IntDirtySurround ), 
-	RecvPropVector( RECVINFO(m_vecSpecifiedSurroundingMins), 0, RecvProxy_VectorDirtySurround ),
-	RecvPropVector( RECVINFO(m_vecSpecifiedSurroundingMaxs), 0, RecvProxy_VectorDirtySurround ),
-#else
-	SendPropVector( SENDINFO(m_vecMins), 0, SPROP_NOSCALE),
-	SendPropVector( SENDINFO(m_vecMaxs), 0, SPROP_NOSCALE),
-	SendPropInt( SENDINFO( m_nSolidType ),		3, SPROP_UNSIGNED, SendProxy_Solid ),
-	SendPropInt( SENDINFO( m_usSolidFlags ),	FSOLID_MAX_BITS, SPROP_UNSIGNED, SendProxy_SolidFlags ),
-	SendPropInt( SENDINFO( m_nSurroundType ), SURROUNDING_TYPE_BIT_COUNT, SPROP_UNSIGNED ),
-	SendPropInt( SENDINFO(m_triggerBloat), 0, SPROP_UNSIGNED),
-	SendPropVector( SENDINFO(m_vecSpecifiedSurroundingMins), 0, SPROP_NOSCALE),
-	SendPropVector( SENDINFO(m_vecSpecifiedSurroundingMaxs), 0, SPROP_NOSCALE),
-#endif
-
-END_NETWORK_TABLE()
+IMPLEMENT_REFLECT_TABLE( CCollisionProperty, DT_CollisionProperty );
 
 																							
 //-----------------------------------------------------------------------------

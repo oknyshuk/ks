@@ -5,10 +5,12 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_sendtable.h"
+#include "reflect_annotations.h"
 #include "baseanimating.h"
 #include "studio.h"
 #include "physics.h"
-#include "physics_saverestore.h"
 #include "ai_basenpc.h"
 #include "vphysics/constraints.h"
 #include "datacache/imdlcache.h"
@@ -56,92 +58,10 @@ LINK_ENTITY_TO_CLASS( physics_prop_ragdoll, CRagdollProp );
 LINK_ENTITY_TO_CLASS( prop_ragdoll, CRagdollProp );
 EXTERN_SEND_TABLE(DT_Ragdoll)
 
-IMPLEMENT_SERVERCLASS_ST(CRagdollProp, DT_Ragdoll)
-	SendPropArray	(SendPropQAngles(SENDINFO_ARRAY(m_ragAngles), 13, 0 ), m_ragAngles),
-	SendPropArray	(SendPropVector(SENDINFO_ARRAY(m_ragPos), -1, SPROP_COORD ), m_ragPos),
-	SendPropEHandle(SENDINFO( m_hUnragdoll ) ),
-	SendPropFloat(SENDINFO(m_flBlendWeight), 8, SPROP_ROUNDDOWN, 0.0f, 1.0f ),
-	SendPropInt(SENDINFO(m_nOverlaySequence), 11),
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CRagdollProp, DT_Ragdoll )
 
-#define DEFINE_RAGDOLL_ELEMENT( i ) \
-	DEFINE_FIELD( m_ragdoll.list[i].originParentSpace, FIELD_VECTOR ), \
-	DEFINE_PHYSPTR( m_ragdoll.list[i].pObject ), \
-	DEFINE_PHYSPTR( m_ragdoll.list[i].pConstraint ), \
-	DEFINE_FIELD( m_ragdoll.list[i].parentIndex, FIELD_INTEGER )
 
-BEGIN_DATADESC(CRagdollProp)
-//					m_ragdoll (custom handling)
-	DEFINE_AUTO_ARRAY	( m_ragdoll.boneIndex,	FIELD_INTEGER	),
-	DEFINE_AUTO_ARRAY	( m_ragPos,		FIELD_POSITION_VECTOR	),
-	DEFINE_AUTO_ARRAY	( m_ragAngles,	FIELD_VECTOR	),
-	DEFINE_KEYFIELD(m_anglesOverrideString,	FIELD_STRING, "angleOverride" ),
-	DEFINE_FIELD( m_lastUpdateTickCount, FIELD_INTEGER ),
-	DEFINE_FIELD( m_allAsleep, FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_hDamageEntity, FIELD_EHANDLE ),
-	DEFINE_FIELD( m_hKiller, FIELD_EHANDLE ),
-
-	DEFINE_KEYFIELD( m_bStartDisabled, FIELD_BOOLEAN, "StartDisabled" ),
-
-	DEFINE_INPUTFUNC( FIELD_VOID, "StartRagdollBoogie", InputStartRadgollBoogie ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "EnableMotion", InputEnableMotion ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "DisableMotion", InputDisableMotion ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "Enable",		InputTurnOn ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "Disable",	InputTurnOff ),
-	DEFINE_INPUTFUNC( FIELD_FLOAT, "FadeAndRemove", InputFadeAndRemove ),
-
-	DEFINE_FIELD( m_hUnragdoll, FIELD_EHANDLE ),
-	DEFINE_FIELD( m_bFirstCollisionAfterLaunch, FIELD_BOOLEAN ),
-
-	DEFINE_FIELD( m_flBlendWeight, FIELD_FLOAT ),
-	DEFINE_FIELD( m_nOverlaySequence, FIELD_INTEGER ),
-	DEFINE_AUTO_ARRAY( m_ragdollMins, FIELD_VECTOR ),
-	DEFINE_AUTO_ARRAY( m_ragdollMaxs, FIELD_VECTOR ),
-
-	// Physics Influence
-	DEFINE_FIELD( m_hPhysicsAttacker, FIELD_EHANDLE ),
-	DEFINE_FIELD( m_flLastPhysicsInfluenceTime, FIELD_TIME ),
-	DEFINE_FIELD( m_flFadeOutStartTime, FIELD_TIME ),
-	DEFINE_FIELD( m_flFadeTime,	FIELD_FLOAT),
-	DEFINE_FIELD( m_strSourceClassName, FIELD_STRING ),
-	DEFINE_FIELD( m_bHasBeenPhysgunned, FIELD_BOOLEAN ),
-
-	// think functions
-	DEFINE_THINKFUNC( SetDebrisThink ),
-	DEFINE_THINKFUNC( ClearFlagsThink ),
-	DEFINE_THINKFUNC( FadeOutThink ),
-
-	DEFINE_FIELD( m_ragdoll.listCount, FIELD_INTEGER ),
-	DEFINE_FIELD( m_ragdoll.allowStretch, FIELD_BOOLEAN ),
-	DEFINE_PHYSPTR( m_ragdoll.pGroup ),
-	DEFINE_FIELD( m_flDefaultFadeScale, FIELD_FLOAT ),
-
-	//DEFINE_RAGDOLL_ELEMENT( 0 ),
-	DEFINE_RAGDOLL_ELEMENT( 1 ),
-	DEFINE_RAGDOLL_ELEMENT( 2 ),
-	DEFINE_RAGDOLL_ELEMENT( 3 ),
-	DEFINE_RAGDOLL_ELEMENT( 4 ),
-	DEFINE_RAGDOLL_ELEMENT( 5 ),
-	DEFINE_RAGDOLL_ELEMENT( 6 ),
-	DEFINE_RAGDOLL_ELEMENT( 7 ),
-	DEFINE_RAGDOLL_ELEMENT( 8 ),
-	DEFINE_RAGDOLL_ELEMENT( 9 ),
-	DEFINE_RAGDOLL_ELEMENT( 10 ),
-	DEFINE_RAGDOLL_ELEMENT( 11 ),
-	DEFINE_RAGDOLL_ELEMENT( 12 ),
-	DEFINE_RAGDOLL_ELEMENT( 13 ),
-	DEFINE_RAGDOLL_ELEMENT( 14 ),
-	DEFINE_RAGDOLL_ELEMENT( 15 ),
-	DEFINE_RAGDOLL_ELEMENT( 16 ),
-	DEFINE_RAGDOLL_ELEMENT( 17 ),
-	DEFINE_RAGDOLL_ELEMENT( 18 ),
-	DEFINE_RAGDOLL_ELEMENT( 19 ),
-	DEFINE_RAGDOLL_ELEMENT( 20 ),
-	DEFINE_RAGDOLL_ELEMENT( 21 ),
-	DEFINE_RAGDOLL_ELEMENT( 22 ),
-	DEFINE_RAGDOLL_ELEMENT( 23 ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CRagdollProp )
 
 //-----------------------------------------------------------------------------
 // Disable auto fading under dx7 or when level fades are specified
@@ -158,7 +78,6 @@ void CRagdollProp::Spawn( void )
 	// Starts out as the default fade scale value
 	m_flDefaultFadeScale = GetGlobalFadeScale();
 
-	// NOTE: If this fires, then the assert or the datadesc is wrong!  (see DEFINE_RAGDOLL_ELEMENT above)
 	Assert( RAGDOLL_MAX_ELEMENTS == 24 );
 	Precache();
 	SetModel( STRING( GetModelName() ) );
@@ -252,7 +171,6 @@ void CRagdollProp::UpdateOnRemove( void )
 	{
 		if ( m_ragdoll.list[i].pObject )
 		{
-			g_pPhysSaveRestoreManager->ForgetModel( m_ragdoll.list[i].pObject );
 		}
 	}
 
@@ -753,7 +671,6 @@ void CRagdollProp::InitRagdoll( const Vector &forceVector, int forceBone, const 
 	for ( int i = 0; i < m_ragdoll.listCount; i++ )
 	{
 		UpdateNetworkDataFromVPhysics( m_ragdoll.list[i].pObject, i );
-		g_pPhysSaveRestoreManager->AssociateModel( m_ragdoll.list[i].pObject, GetModelIndex() );
 		physcollision->CollideGetAABB( &m_ragdollMins[i], &m_ragdollMaxs[i], m_ragdoll.list[i].pObject->GetCollide(), vec3_origin, vec3_angle );
 	}
 	VPhysicsSetObject( m_ragdoll.list[0].pObject );
@@ -1199,7 +1116,8 @@ void CRagdollProp::SetUnragdoll( CBaseAnimating *pOther )
 //===============================================================================================================
 // RagdollPropAttached
 //===============================================================================================================
-class CRagdollPropAttached : public CRagdollProp
+class [[= ks::reflect::NetTable{ .name = "DT_Ragdoll_Attached" } ]]
+      CRagdollPropAttached : public CRagdollProp
 {
 	DECLARE_CLASS( CRagdollPropAttached, CRagdollProp );
 public:
@@ -1220,14 +1138,13 @@ public:
 	void VPhysicsUpdate( IPhysicsObject *pPhysics );
 
 	DECLARE_SERVERCLASS();
-	DECLARE_DATADESC();
 
 private:
 	void Detach();
-	CNetworkVar( int, m_boneIndexAttached );
-	CNetworkVar( int, m_ragdollAttachedObjectIndex );
-	CNetworkVector( m_attachmentPointBoneSpace );
-	CNetworkVector( m_attachmentPointRagdollSpace );
+	CNetworkVar( int, m_boneIndexAttached, [[= ks::reflect::Net{ .bits = MAXSTUDIOBONEBITS, .flags = SPROP_UNSIGNED } ]] );
+	CNetworkVar( int, m_ragdollAttachedObjectIndex, [[= ks::reflect::Net{ .bits = RAGDOLL_INDEX_BITS, .flags = SPROP_UNSIGNED } ]] );
+	CNetworkVector( m_attachmentPointBoneSpace, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD, .enc = ks::reflect::ENC_VECTOR } ]] );
+	CNetworkVector( m_attachmentPointRagdollSpace, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD, .enc = ks::reflect::ENC_VECTOR } ]] );
 	bool		m_bShouldDetach;
 	IPhysicsConstraint	*m_pAttachConstraint;
 };
@@ -1235,21 +1152,8 @@ private:
 LINK_ENTITY_TO_CLASS( prop_ragdoll_attached, CRagdollPropAttached );
 EXTERN_SEND_TABLE(DT_Ragdoll_Attached)
 
-IMPLEMENT_SERVERCLASS_ST(CRagdollPropAttached, DT_Ragdoll_Attached)
-	SendPropInt( SENDINFO( m_boneIndexAttached ), MAXSTUDIOBONEBITS, SPROP_UNSIGNED ),
-	SendPropInt( SENDINFO( m_ragdollAttachedObjectIndex ), RAGDOLL_INDEX_BITS, SPROP_UNSIGNED ),
-	SendPropVector(SENDINFO(m_attachmentPointBoneSpace), -1,  SPROP_COORD ),
-	SendPropVector(SENDINFO(m_attachmentPointRagdollSpace), -1,  SPROP_COORD ),
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CRagdollPropAttached, DT_Ragdoll_Attached )
 
-BEGIN_DATADESC(CRagdollPropAttached)
-	DEFINE_FIELD( m_boneIndexAttached,	FIELD_INTEGER ),
-	DEFINE_FIELD( m_ragdollAttachedObjectIndex, FIELD_INTEGER ),
-	DEFINE_FIELD( m_attachmentPointBoneSpace,	FIELD_VECTOR ),
-	DEFINE_FIELD( m_attachmentPointRagdollSpace, FIELD_VECTOR ),
-	DEFINE_FIELD( m_bShouldDetach, FIELD_BOOLEAN ),
-	DEFINE_PHYSPTR( m_pAttachConstraint ),
-END_DATADESC()
 
 
 static void SyncAnimatingWithPhysics( CBaseAnimating *pAnimating )

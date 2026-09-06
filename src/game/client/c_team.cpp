@@ -5,6 +5,9 @@
 // $NoKeywords: $
 //=============================================================================//
 #include "cbase.h"
+#include "reflect_predmap.h"
+#include "reflect_recvtable.h"
+#include "reflect_annotations.h"
 #include "c_team.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
@@ -29,52 +32,9 @@ void RecvProxyArrayLength_PlayerArray( void *pStruct, int objectID, int currentA
 }
 
 
-IMPLEMENT_CLIENTCLASS_DT_NOBASE(C_Team, DT_Team, CTeam)
-	RecvPropInt( RECVINFO( m_iTeamNum ) ),
-	RecvPropInt( RECVINFO( m_bSurrendered ) ),
-	RecvPropInt( RECVINFO( m_scoreTotal ) ),
-	RecvPropInt( RECVINFO( m_scoreFirstHalf ) ),
-	RecvPropInt( RECVINFO( m_scoreSecondHalf) ),
-	RecvPropInt( RECVINFO( m_scoreOvertime ) ),
-	RecvPropInt( RECVINFO( m_iClanID ) ),
-	
-	RecvPropString( RECVINFO(m_szTeamname)),
-	RecvPropString( RECVINFO(m_szClanTeamname)),
-	RecvPropString( RECVINFO(m_szTeamFlagImage)),
-	RecvPropString( RECVINFO(m_szTeamLogoImage)),
-	RecvPropString( RECVINFO( m_szTeamMatchStat ) ),
-	
-	RecvPropInt( RECVINFO( m_nGGLeaderEntIndex_CT ) ),
-	RecvPropInt( RECVINFO( m_nGGLeaderEntIndex_T ) ),
+IMPLEMENT_REFLECT_CLIENTCLASS( C_Team, DT_Team, CTeam )
 
-	RecvPropInt( RECVINFO( m_numMapVictories ) ),
-
-	RecvPropArray2( 
-		RecvProxyArrayLength_PlayerArray,
-		RecvPropInt( "player_array_element", 0, SIZEOF_IGNORE, 0, RecvProxy_PlayerList ), 
-		MAX_PLAYERS, 
-		0, 
-		"player_array"
-		)
-END_RECV_TABLE()
-
-BEGIN_PREDICTION_DATA( C_Team )
-	DEFINE_PRED_ARRAY( m_szTeamname, FIELD_CHARACTER, MAX_TEAM_NAME_LENGTH, FTYPEDESC_PRIVATE ),
-	DEFINE_PRED_ARRAY( m_szClanTeamname, FIELD_CHARACTER, MAX_TEAM_NAME_LENGTH, FTYPEDESC_PRIVATE ),
-	DEFINE_PRED_ARRAY( m_szTeamFlagImage, FIELD_CHARACTER, MAX_TEAM_FLAG_ICON_LENGTH, FTYPEDESC_PRIVATE ),
-	DEFINE_PRED_ARRAY( m_szTeamLogoImage, FIELD_CHARACTER, MAX_TEAM_LOGO_ICON_LENGTH, FTYPEDESC_PRIVATE ),
-	DEFINE_PRED_ARRAY( m_szTeamMatchStat, FIELD_CHARACTER, MAX_PATH, FTYPEDESC_PRIVATE ),
-	DEFINE_PRED_FIELD( m_scoreTotal, FIELD_INTEGER, FTYPEDESC_PRIVATE ),
-	DEFINE_PRED_FIELD( m_scoreFirstHalf, FIELD_INTEGER, FTYPEDESC_PRIVATE ),
-	DEFINE_PRED_FIELD( m_scoreSecondHalf, FIELD_INTEGER, FTYPEDESC_PRIVATE ),	
-	DEFINE_PRED_FIELD( m_scoreOvertime, FIELD_INTEGER, FTYPEDESC_PRIVATE ),	
-	DEFINE_PRED_FIELD( m_iDeaths, FIELD_INTEGER, FTYPEDESC_PRIVATE ),
-	DEFINE_PRED_FIELD( m_iPing, FIELD_INTEGER, FTYPEDESC_PRIVATE ),
-	DEFINE_PRED_FIELD( m_iPacketloss, FIELD_INTEGER, FTYPEDESC_PRIVATE ),
-	DEFINE_PRED_FIELD( m_iTeamNum, FIELD_INTEGER, FTYPEDESC_PRIVATE ),
-	DEFINE_PRED_FIELD( m_bSurrendered, FIELD_INTEGER, FTYPEDESC_PRIVATE ),
-	DEFINE_PRED_FIELD( m_iClanID, FIELD_INTEGER, FTYPEDESC_PRIVATE ),
-END_PREDICTION_DATA();
+IMPLEMENT_REFLECT_PREDMAP( C_Team );
 
 // Global list of client side team entities
 CUtlVector< C_Team * > g_Teams;

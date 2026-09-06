@@ -5,6 +5,15 @@
 //=============================================================================
 
 #include "cbase.h"
+#include "reflect_predmap.h"
+#include "reflect_annotations.h"
+#ifdef CLIENT_DLL
+#include "reflect_recvtable.h"
+#endif
+#include "reflect_annotations.h"
+#ifdef GAME_DLL
+#include "reflect_sendtable.h"
+#endif
 #include "particle_property.h"
 #include "utlvector.h"
 
@@ -29,29 +38,20 @@
 //-----------------------------------------------------------------------------
 // Save/load
 //-----------------------------------------------------------------------------
-BEGIN_DATADESC_NO_BASE( CParticleProperty )
-	//		DEFINE_FIELD( m_pOuter, FIELD_CLASSPTR ),
-END_DATADESC()
 
 #ifdef CLIENT_DLL
 //-----------------------------------------------------------------------------
 // Prediction
 //-----------------------------------------------------------------------------
-BEGIN_PREDICTION_DATA_NO_BASE( CParticleProperty )
-	//DEFINE_PRED_FIELD( m_vecMins, FIELD_VECTOR, FTYPEDESC_INSENDTABLE ),
-END_PREDICTION_DATA()
+#ifdef CLIENT_DLL
+IMPLEMENT_REFLECT_PREDMAP_NO_BASE( CParticleProperty );
+#endif
 #endif
 
 //-----------------------------------------------------------------------------
 // Networking
 //-----------------------------------------------------------------------------
-BEGIN_NETWORK_TABLE_NOBASE( CParticleProperty, DT_ParticleProperty )
-#ifdef CLIENT_DLL
-//RecvPropVector( RECVINFO(m_vecMins), 0, RecvProxy_OBBMins ),
-#else
-//SendPropVector( SENDINFO(m_vecMins), 0, SPROP_NOSCALE),
-#endif
-END_NETWORK_TABLE()
+IMPLEMENT_REFLECT_TABLE( CParticleProperty, DT_ParticleProperty );
 
 
 //-----------------------------------------------------------------------------

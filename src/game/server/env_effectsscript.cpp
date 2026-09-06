@@ -6,6 +6,8 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_annotations.h"
 #include "baseanimating.h"
 #include "Sprite.h"
 #include "SpriteTrail.h"
@@ -99,7 +101,7 @@ public:
 	virtual void Spawn();
 	virtual int  UpdateTransmitState();
 
-	void InputSetSequence( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetSequence", .type = FIELD_STRING } ]] void InputSetSequence( inputdata_t &inputdata );
 	void ParseScriptFile( void );
 	void LoadFromBuffer( const char *scriptfile, const char *buffer );
 
@@ -120,7 +122,7 @@ public:
 
 private:
 	
-	string_t m_iszScriptName;
+	[[= ks::reflect::Key{ .name = "scriptfile" } ]] string_t m_iszScriptName;
 		
 	CUtlVector< CEffectScriptElement > m_ScriptElements;
 
@@ -178,15 +180,7 @@ inline bool TokenWaiting( void )
 //-----------------------------------------------------------------------------
 // Save/load 
 //-----------------------------------------------------------------------------
-BEGIN_DATADESC( CEnvEffectsScript )
-	// Inputs
-	DEFINE_INPUTFUNC( FIELD_STRING, "SetSequence", InputSetSequence ),
-	DEFINE_KEYFIELD( m_iszScriptName, FIELD_STRING, "scriptfile" ),
-	// DEFINE_FIELD( m_ScriptElements, CUtlVector < CEffectScriptElement > ),
-
-	DEFINE_FUNCTION( Think ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CEnvEffectsScript )
 
 LINK_ENTITY_TO_CLASS( env_effectscript, CEnvEffectsScript );
 

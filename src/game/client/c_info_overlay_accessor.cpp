@@ -6,6 +6,8 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_recvtable.h"
+#include "reflect_annotations.h"
 #include "materialsystem/imesh.h"
 #include "toolframework_client.h"
 
@@ -15,7 +17,9 @@
 // -------------------------------------------------------------------------------- //
 // An entity used to access overlays (and change their texture)
 // -------------------------------------------------------------------------------- //
-class C_InfoOverlayAccessor : public C_BaseEntity
+class [[= ks::reflect::NetTable{ .name = "DT_InfoOverlayAccessor", .base = false } ]]
+      [[= ks::reflect::From<"m_iTextureFrameIndex", ks::reflect::Net{}>{} ]]
+      C_InfoOverlayAccessor : public C_BaseEntity
 {
 public:
 
@@ -32,16 +36,13 @@ public:
 
 private:
 
-	int		m_iOverlayID;
+	[[= ks::reflect::Net{} ]] int		m_iOverlayID;
 };
 
 // Expose it to the engine.
 IMPLEMENT_CLIENTCLASS(C_InfoOverlayAccessor, DT_InfoOverlayAccessor, CInfoOverlayAccessor);
 
-BEGIN_RECV_TABLE_NOBASE(C_InfoOverlayAccessor, DT_InfoOverlayAccessor)
-	RecvPropInt(RECVINFO(m_iTextureFrameIndex)),
-	RecvPropInt(RECVINFO(m_iOverlayID)),
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_TABLE( C_InfoOverlayAccessor, DT_InfoOverlayAccessor );
 
 
 // -------------------------------------------------------------------------------- //

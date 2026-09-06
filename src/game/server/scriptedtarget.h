@@ -7,6 +7,8 @@
 
 #ifndef SCRIPTEDTARGET_H
 #define SCRIPTEDTARGET_H
+
+#include "reflect_annotations.h"
 #ifdef _WIN32
 #pragma once
 #endif
@@ -34,8 +36,8 @@ public:
 	void TurnOff(void);
 
 	// Input handlers
-	void InputEnable( inputdata_t &inputdata );
-	void InputDisable( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Enable", .type = FIELD_VOID } ]] void InputEnable( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Disable", .type = FIELD_VOID } ]] void InputDisable( inputdata_t &inputdata );
 
 	CScriptedTarget*	NextScriptedTarget(void);
 	float				MoveSpeed(void)			{ return m_nMoveSpeed; };
@@ -48,17 +50,17 @@ public:
 	Vector				m_vLastPosition;	// Last position that's been reached
 	
 private:
-	int					m_iDisabled;		// Initial state
-	string_t			m_iszEntity;		// entity that is wanted for this script
-	float				m_flRadius;			// range to search
+	[[= ks::reflect::Key{ .name = "StartDisabled" } ]] int					m_iDisabled;		// Initial state
+	[[= ks::reflect::Key{ .name = "m_iszEntity" } ]] string_t			m_iszEntity;		// entity that is wanted for this script
+	[[= ks::reflect::Key{ .name = "m_flRadius" } ]] float				m_flRadius;			// range to search
 
-	int					m_nMoveSpeed;		// How fast do I burn from target to target
-	float				m_flPauseDuration;	// How long to pause at this target
+	[[= ks::reflect::Key{ .name = "MoveSpeed" } ]] int					m_nMoveSpeed;		// How fast do I burn from target to target
+	[[= ks::reflect::Key{ .name = "PauseDuration" } ]] float				m_flPauseDuration;	// How long to pause at this target
 	float				m_flPauseDoneTime;	// When is pause over
-	float				m_flEffectDuration;	// How long should any associated effect last?
+	[[= ks::reflect::Key{ .name = "EffectDuration" } ]] float				m_flEffectDuration;	// How long should any associated effect last?
 
-	COutputEvent		m_AtTarget;			// Fired when scripted target has been reached
-	COutputEvent		m_LeaveTarget;		// Fired when scripted target is left
+	[[= ks::reflect::Key{ .name = "AtTarget" } ]] COutputEvent		m_AtTarget;			// Fired when scripted target has been reached
+	[[= ks::reflect::Key{ .name = "LeaveTarget" } ]] COutputEvent		m_LeaveTarget;		// Fired when scripted target is left
 };
 
 #endif // SCRIPTEDTARGET_H

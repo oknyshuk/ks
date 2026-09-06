@@ -6,6 +6,8 @@
 
 #ifndef FLASHBANG_PROJECTILE_H
 #define FLASHBANG_PROJECTILE_H
+
+#include "reflect_annotations.h"
 #ifdef _WIN32
 #pragma once
 #endif
@@ -32,7 +34,7 @@ public:
 	virtual void BounceSound( void );
 	virtual void Detonate();
 	
-	void	InputSetTimer( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetTimer", .type = FIELD_FLOAT } ]] void	InputSetTimer( inputdata_t &inputdata );
 
 	virtual GrenadeType_t GetGrenadeType( void ) { return GRENADE_TYPE_FLASH; }
 

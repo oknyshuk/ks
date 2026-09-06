@@ -5,6 +5,8 @@
 //=============================================================================
 
 #include "cbase.h"
+#include "reflect_recvtable.h"
+#include "reflect_annotations.h"
 #include "c_team_objectiveresource.h"
 #include "igameevents.h"
 #include "teamplayroundbased_gamerules.h"
@@ -21,7 +23,8 @@ extern ConVar mp_capdeteriorate_time;
 //-----------------------------------------------------------------------------
 // Purpose: Owner recv proxy
 //-----------------------------------------------------------------------------
-void RecvProxy_Owner( const CRecvProxyData *pData, void *pStruct, void *pOut )
+// Not static: named by a Proxy annotation, declared in c_team_objectiveresource.h.
+void RecvProxy_ObjectiveResourceOwner( const CRecvProxyData *pData, void *pStruct, void *pOut )
 {
 	// hacks? Not sure how else to get the index of the integer that is 
 	// being transmitted.
@@ -48,39 +51,7 @@ void RecvProxy_CapLayout( const CRecvProxyData *pData, void *pStruct, void *pOut
 	ObjectiveResource()->SetCapLayout( pData->m_Value.m_pString );
 }
 
-IMPLEMENT_CLIENTCLASS_DT_NOBASE(C_BaseTeamObjectiveResource, DT_BaseTeamObjectiveResource, CBaseTeamObjectiveResource)
-	RecvPropInt( RECVINFO(m_iTimerToShowInHUD) ),
-	RecvPropInt( RECVINFO(m_iStopWatchTimer) ),
-
-	RecvPropInt( RECVINFO(m_iNumControlPoints) ),
-	RecvPropBool( RECVINFO(m_bPlayingMiniRounds) ),
-	RecvPropBool( RECVINFO(m_bControlPointsReset) ),
-	RecvPropInt( RECVINFO(m_iUpdateCapHudParity) ),
-
-	RecvPropArray( RecvPropVector(RECVINFO(m_vCPPositions[0])), m_vCPPositions),
-	RecvPropArray3( RECVINFO_ARRAY(m_bCPIsVisible),		RecvPropInt( RECVINFO(m_bCPIsVisible[0]) ) ),
-	RecvPropArray3( RECVINFO_ARRAY(m_flLazyCapPerc),	RecvPropFloat( RECVINFO(m_flLazyCapPerc[0]) ) ),
-	RecvPropArray3( RECVINFO_ARRAY(m_iTeamIcons),		RecvPropInt( RECVINFO(m_iTeamIcons[0]) ) ),
-	RecvPropArray3( RECVINFO_ARRAY(m_iTeamOverlays),	RecvPropInt( RECVINFO(m_iTeamOverlays[0]) ) ),
-	RecvPropArray3( RECVINFO_ARRAY(m_iTeamReqCappers),	RecvPropInt( RECVINFO(m_iTeamReqCappers[0]) ) ),
-	RecvPropArray3( RECVINFO_ARRAY(m_flTeamCapTime),	RecvPropTime( RECVINFO(m_flTeamCapTime[0]) ) ),
-	RecvPropArray3( RECVINFO_ARRAY(m_iPreviousPoints),	RecvPropInt( RECVINFO(m_iPreviousPoints[0]) ) ),
-	RecvPropArray3( RECVINFO_ARRAY(m_bTeamCanCap),		RecvPropBool( RECVINFO(m_bTeamCanCap[0]) ) ),
-	RecvPropArray3( RECVINFO_ARRAY(m_iTeamBaseIcons),	RecvPropInt( RECVINFO(m_iTeamBaseIcons[0]) ) ),
-	RecvPropArray3( RECVINFO_ARRAY(m_iBaseControlPoints), RecvPropInt( RECVINFO(m_iBaseControlPoints[0]) ) ),
-	RecvPropArray3( RECVINFO_ARRAY(m_bInMiniRound),		RecvPropBool( RECVINFO(m_bInMiniRound[0]) ) ),
-	RecvPropArray3( RECVINFO_ARRAY(m_iWarnOnCap),		RecvPropInt( RECVINFO(m_iWarnOnCap[0]) ) ),
-	RecvPropArray( RecvPropString( RECVINFO( m_iszWarnSound[0]) ), m_iszWarnSound ),
-	RecvPropArray3( RECVINFO_ARRAY(m_flPathDistance),	RecvPropFloat( RECVINFO(m_flPathDistance[0]) ) ),
-
-	// state variables
-	RecvPropArray3( RECVINFO_ARRAY(m_iNumTeamMembers),	RecvPropInt( RECVINFO(m_iNumTeamMembers[0]) ) ),
-	RecvPropArray3( RECVINFO_ARRAY(m_iCappingTeam),		RecvPropInt( RECVINFO(m_iCappingTeam[0]), 0, RecvProxy_CappingTeam ) ),
-	RecvPropArray3( RECVINFO_ARRAY(m_iTeamInZone),		RecvPropInt( RECVINFO(m_iTeamInZone[0]) ) ),
-	RecvPropArray3( RECVINFO_ARRAY(m_bBlocked),		RecvPropInt( RECVINFO(m_bBlocked[0]) ) ),
-	RecvPropArray3( RECVINFO_ARRAY(m_iOwner),			RecvPropInt( RECVINFO(m_iOwner[0]), 0, RecvProxy_Owner ) ),
-	RecvPropString( RECVINFO(m_pszCapLayoutInHUD), 0, RecvProxy_CapLayout ),
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS( C_BaseTeamObjectiveResource, DT_BaseTeamObjectiveResource, CBaseTeamObjectiveResource )
 
 C_BaseTeamObjectiveResource *g_pObjectiveResource = NULL;
 

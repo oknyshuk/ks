@@ -7,6 +7,8 @@
 
 #ifndef FIRE_H
 #define FIRE_H
+
+#include "reflect_annotations.h"
 #ifdef _WIN32
 #pragma once
 #endif

@@ -8,6 +8,8 @@
 //=============================================================================//
 #if !defined( C_TE_BASEBEAM_H )
 #define C_TE_BASEBEAM_H
+
+#include "reflect_annotations.h"
 #ifdef _WIN32
 #pragma once
 #endif
@@ -17,7 +19,12 @@
 //-----------------------------------------------------------------------------
 // Purpose: Base entity for beam te's
 //-----------------------------------------------------------------------------
-class C_TEBaseBeam : public C_BaseTempEntity
+class [[= ks::reflect::NetTable{ .name = "DT_BaseBeam", .base = false } ]]
+      [[= ks::reflect::From<"r", ks::reflect::Net{}>{} ]]
+      [[= ks::reflect::From<"g", ks::reflect::Net{}>{} ]]
+      [[= ks::reflect::From<"b", ks::reflect::Net{}>{} ]]
+      [[= ks::reflect::From<"a", ks::reflect::Net{}>{} ]]
+      C_TEBaseBeam : public C_BaseTempEntity
 {
 public:
 	DECLARE_CLASS( C_TEBaseBeam, C_BaseTempEntity );
@@ -34,18 +41,18 @@ public:
 	virtual void	PostDataUpdate( DataUpdateType_t updateType );
 
 public:
-	int				m_nModelIndex;
-	int				m_nHaloIndex;
-	int				m_nStartFrame;
-	int				m_nFrameRate;
-	float			m_fLife;
-	float			m_fWidth;
-	float			m_fEndWidth;
-	int				m_nFadeLength;
-	float			m_fAmplitude;
+	[[= ks::reflect::Net{} ]] int				m_nModelIndex;
+	[[= ks::reflect::Net{} ]] int				m_nHaloIndex;
+	[[= ks::reflect::Net{} ]] int				m_nStartFrame;
+	[[= ks::reflect::Net{} ]] int				m_nFrameRate;
+	[[= ks::reflect::Net{} ]] float			m_fLife;
+	[[= ks::reflect::Net{} ]] float			m_fWidth;
+	[[= ks::reflect::Net{} ]] float			m_fEndWidth;
+	[[= ks::reflect::Net{} ]] int				m_nFadeLength;
+	[[= ks::reflect::Net{} ]] float			m_fAmplitude;
 	int				r, g, b, a;
-	int				m_nSpeed;
-	int				m_nFlags;
+	[[= ks::reflect::Net{} ]] int				m_nSpeed;
+	[[= ks::reflect::Net{} ]] int				m_nFlags;
 };
 
 EXTERN_RECV_TABLE(DT_BaseBeam);

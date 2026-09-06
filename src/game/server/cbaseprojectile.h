@@ -18,7 +18,6 @@ enum MoveCollide_t;
 //=============================================================================
 class CBaseProjectile : public CBaseAnimating
 {
-	DECLARE_DATADESC();
 	DECLARE_CLASS( CBaseProjectile, CBaseAnimating );
 
 public:

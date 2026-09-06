@@ -5,6 +5,9 @@
 //=============================================================================
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_sendtable.h"
+#include "reflect_annotations.h"
 #include "env_tonemap_controller.h"
 #include "baseentity.h"
 #include "entityoutput.h"
@@ -24,7 +27,8 @@
 //-----------------------------------------------------------------------------
 // Purpose: Entity that controls player's tonemap
 //-----------------------------------------------------------------------------
-class CEnvTonemapController : public CPointEntity
+class [[= ks::reflect::NetTable{ .name = "DT_EnvTonemapController" } ]]
+      CEnvTonemapController : public CPointEntity
 {
 	DECLARE_CLASS( CEnvTonemapController, CPointEntity );
 public:
@@ -39,86 +43,41 @@ public:
 	bool	IsMaster( void ) const					{ return HasSpawnFlags( SF_TONEMAP_MASTER ); }
 
 	// Inputs
-	void	InputSetTonemapRate( inputdata_t &inputdata );
-	void	InputSetAutoExposureMin( inputdata_t &inputdata );
-	void	InputSetAutoExposureMax( inputdata_t &inputdata );
-	void	InputUseDefaultAutoExposure( inputdata_t &inputdata );
-	void	InputSetBloomScale( inputdata_t &inputdata );
-	void	InputUseDefaultBloomScale( inputdata_t &inputdata );
-	void	InputSetBloomScaleRange( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetTonemapRate", .type = FIELD_FLOAT } ]] void	InputSetTonemapRate( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetAutoExposureMin", .type = FIELD_FLOAT } ]] void	InputSetAutoExposureMin( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetAutoExposureMax", .type = FIELD_FLOAT } ]] void	InputSetAutoExposureMax( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "UseDefaultAutoExposure", .type = FIELD_VOID } ]] void	InputUseDefaultAutoExposure( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetBloomScale", .type = FIELD_FLOAT } ]] void	InputSetBloomScale( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "UseDefaultBloomScale", .type = FIELD_VOID } ]] void	InputUseDefaultBloomScale( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetBloomScaleRange", .type = FIELD_FLOAT } ]] void	InputSetBloomScaleRange( inputdata_t &inputdata );
 
-	void	InputSetBloomExponent( inputdata_t &inputdata );
-	void	InputSetBloomSaturation( inputdata_t &inputdata );
-	void	InputSetTonemapPercentTarget( inputdata_t &inputdata );
-	void	InputSetTonemapPercentBrightPixels( inputdata_t &inputdata );
-	void	InputSetTonemapMinAvgLum( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetBloomExponent", .type = FIELD_FLOAT } ]] void	InputSetBloomExponent( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetBloomSaturation", .type = FIELD_FLOAT } ]] void	InputSetBloomSaturation( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetTonemapPercentTarget", .type = FIELD_FLOAT } ]] void	InputSetTonemapPercentTarget( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetTonemapPercentBrightPixels", .type = FIELD_FLOAT } ]] void	InputSetTonemapPercentBrightPixels( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetTonemapMinAvgLum", .type = FIELD_FLOAT } ]] void	InputSetTonemapMinAvgLum( inputdata_t &inputdata );
 
 public:
-	CNetworkVar( bool, m_bUseCustomAutoExposureMin );
-	CNetworkVar( bool, m_bUseCustomAutoExposureMax );
-	CNetworkVar( bool, m_bUseCustomBloomScale );
-	CNetworkVar( float, m_flCustomAutoExposureMin );
-	CNetworkVar( float, m_flCustomAutoExposureMax );
-	CNetworkVar( float, m_flCustomBloomScale);
-	CNetworkVar( float, m_flCustomBloomScaleMinimum);
-	CNetworkVar( float, m_flBloomExponent);
-	CNetworkVar( float, m_flBloomSaturation);
-	CNetworkVar( float, m_flTonemapPercentTarget );
-	CNetworkVar( float, m_flTonemapPercentBrightPixels );
-	CNetworkVar( float, m_flTonemapMinAvgLum );
-	CNetworkVar( float, m_flTonemapRate );
+	CNetworkVar( bool, m_bUseCustomAutoExposureMin, [[= ks::reflect::Net{ .bits = 1, .flags = SPROP_UNSIGNED } ]] );
+	CNetworkVar( bool, m_bUseCustomAutoExposureMax, [[= ks::reflect::Net{ .bits = 1, .flags = SPROP_UNSIGNED } ]] );
+	CNetworkVar( bool, m_bUseCustomBloomScale, [[= ks::reflect::Net{ .bits = 1, .flags = SPROP_UNSIGNED } ]] );
+	CNetworkVar( float, m_flCustomAutoExposureMin, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE } ]] );
+	CNetworkVar( float, m_flCustomAutoExposureMax, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE } ]] );
+	CNetworkVar( float, m_flCustomBloomScale, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE } ]] );
+	CNetworkVar( float, m_flCustomBloomScaleMinimum, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE } ]] );
+	CNetworkVar( float, m_flBloomExponent, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE } ]] );
+	CNetworkVar( float, m_flBloomSaturation, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE } ]] );
+	CNetworkVar( float, m_flTonemapPercentTarget, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE } ]] );
+	CNetworkVar( float, m_flTonemapPercentBrightPixels, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE } ]] );
+	CNetworkVar( float, m_flTonemapMinAvgLum, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE } ]] );
+	CNetworkVar( float, m_flTonemapRate, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE } ]] );
 };
 
 LINK_ENTITY_TO_CLASS( env_tonemap_controller, CEnvTonemapController );
 
-BEGIN_DATADESC( CEnvTonemapController )
-	DEFINE_FIELD( m_bUseCustomAutoExposureMin, FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_bUseCustomAutoExposureMax, FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_flCustomAutoExposureMin, FIELD_FLOAT ),
-	DEFINE_FIELD( m_flCustomAutoExposureMax, FIELD_FLOAT ),
-	DEFINE_FIELD( m_flCustomBloomScale, FIELD_FLOAT ),
-	DEFINE_FIELD( m_flCustomBloomScaleMinimum, FIELD_FLOAT ),
-	DEFINE_FIELD( m_bUseCustomBloomScale, FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_flTonemapPercentTarget, FIELD_FLOAT ),
-	DEFINE_FIELD( m_flTonemapPercentBrightPixels, FIELD_FLOAT ),
-	DEFINE_FIELD( m_flTonemapMinAvgLum, FIELD_FLOAT ),
-	DEFINE_FIELD( m_flTonemapRate, FIELD_FLOAT ),
+IMPLEMENT_REFLECT_DATAMAP( CEnvTonemapController )
 
-	DEFINE_FIELD( m_flBloomExponent, FIELD_FLOAT ),
-	DEFINE_FIELD( m_flBloomSaturation, FIELD_FLOAT ),
-
-	// Inputs
-	DEFINE_INPUTFUNC( FIELD_FLOAT, "SetTonemapRate", InputSetTonemapRate ),
-	DEFINE_INPUTFUNC( FIELD_FLOAT, "SetAutoExposureMin", InputSetAutoExposureMin ),
-	DEFINE_INPUTFUNC( FIELD_FLOAT, "SetAutoExposureMax", InputSetAutoExposureMax ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "UseDefaultAutoExposure", InputUseDefaultAutoExposure ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "UseDefaultBloomScale", InputUseDefaultBloomScale ),
-	DEFINE_INPUTFUNC( FIELD_FLOAT, "SetBloomScale", InputSetBloomScale ),
-	DEFINE_INPUTFUNC( FIELD_FLOAT, "SetBloomScaleRange", InputSetBloomScaleRange ),
-
-	DEFINE_INPUTFUNC( FIELD_FLOAT, "SetBloomExponent", InputSetBloomExponent ),
-	DEFINE_INPUTFUNC( FIELD_FLOAT, "SetBloomSaturation", InputSetBloomSaturation ),
-	DEFINE_INPUTFUNC( FIELD_FLOAT, "SetTonemapPercentTarget", InputSetTonemapPercentTarget ),
-	DEFINE_INPUTFUNC( FIELD_FLOAT, "SetTonemapPercentBrightPixels", InputSetTonemapPercentBrightPixels ),
-	DEFINE_INPUTFUNC( FIELD_FLOAT, "SetTonemapMinAvgLum", InputSetTonemapMinAvgLum ),
-END_DATADESC()
-
-IMPLEMENT_SERVERCLASS_ST( CEnvTonemapController, DT_EnvTonemapController )
-	SendPropInt( SENDINFO(m_bUseCustomAutoExposureMin), 1, SPROP_UNSIGNED ),
-	SendPropInt( SENDINFO(m_bUseCustomAutoExposureMax), 1, SPROP_UNSIGNED ),
-	SendPropInt( SENDINFO(m_bUseCustomBloomScale), 1, SPROP_UNSIGNED ),
-	SendPropFloat( SENDINFO(m_flCustomAutoExposureMin), 0, SPROP_NOSCALE),
-	SendPropFloat( SENDINFO(m_flCustomAutoExposureMax), 0, SPROP_NOSCALE),
-	SendPropFloat( SENDINFO(m_flCustomBloomScale), 0, SPROP_NOSCALE),
-	SendPropFloat( SENDINFO(m_flCustomBloomScaleMinimum), 0, SPROP_NOSCALE),
-
-	SendPropFloat( SENDINFO(m_flBloomExponent), 0, SPROP_NOSCALE),
-	SendPropFloat( SENDINFO(m_flBloomSaturation), 0, SPROP_NOSCALE),
-	SendPropFloat( SENDINFO(m_flTonemapPercentTarget), 0, SPROP_NOSCALE ),
-	SendPropFloat( SENDINFO(m_flTonemapPercentBrightPixels), 0, SPROP_NOSCALE ),
-	SendPropFloat( SENDINFO(m_flTonemapMinAvgLum), 0, SPROP_NOSCALE ),
-	SendPropFloat( SENDINFO(m_flTonemapRate), 0, SPROP_NOSCALE ),
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CEnvTonemapController, DT_EnvTonemapController )
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -262,9 +221,7 @@ void CEnvTonemapController::InputSetTonemapRate( inputdata_t &inputdata )
 //--------------------------------------------------------------------------------------------------------
 LINK_ENTITY_TO_CLASS( trigger_tonemap, CTonemapTrigger );
 
-BEGIN_DATADESC( CTonemapTrigger )
-	DEFINE_KEYFIELD( m_tonemapControllerName,	FIELD_STRING,	"TonemapName" ),
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CTonemapTrigger )
 
 
 //--------------------------------------------------------------------------------------------------------

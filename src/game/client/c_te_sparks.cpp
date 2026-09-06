@@ -5,6 +5,8 @@
 // $NoKeywords: $
 //===========================================================================//
 #include "cbase.h"
+#include "reflect_recvtable.h"
+#include "reflect_annotations.h"
 #include "c_te_particlesystem.h"
 #include "IEffects.h"
 #include "tier1/keyvalues.h"
@@ -16,7 +18,8 @@
 //-----------------------------------------------------------------------------
 // Purpose: Sparks TE
 //-----------------------------------------------------------------------------
-class C_TESparks : public C_TEParticleSystem
+class [[= ks::reflect::NetTable{ .name = "DT_TESparks" } ]]
+      C_TESparks : public C_TEParticleSystem
 {
 public:
 	DECLARE_CLASS( C_TESparks, C_TEParticleSystem );
@@ -28,9 +31,9 @@ public:
 	virtual void	PostDataUpdate( DataUpdateType_t updateType );
 	virtual void	Precache( void );
 
-	int m_nMagnitude;
-	int m_nTrailLength;
-	Vector m_vecDir;
+	[[= ks::reflect::Net{} ]] int m_nMagnitude;
+	[[= ks::reflect::Net{} ]] int m_nTrailLength;
+	[[= ks::reflect::Net{} ]] Vector m_vecDir;
 };
 
 //-----------------------------------------------------------------------------
@@ -98,8 +101,4 @@ void TE_Sparks( IRecipientFilter& filter, float delay,
 	RecordSparks( *pos, nMagnitude, nTrailLength, *pDir );
 }
 
-IMPLEMENT_CLIENTCLASS_EVENT_DT(C_TESparks, DT_TESparks, CTESparks)
-	RecvPropInt( RECVINFO( m_nMagnitude ) ),
-	RecvPropInt( RECVINFO( m_nTrailLength ) ),
-	RecvPropVector( RECVINFO( m_vecDir ) ),
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS_EVENT( C_TESparks, DT_TESparks, CTESparks )

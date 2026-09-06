@@ -5,6 +5,8 @@
 // $NoKeywords: $
 //=============================================================================//
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_annotations.h"
 #include "game.h"
 #include "CRagdollMagnet.h"
 #include "cplane.h"
@@ -15,16 +17,7 @@ ConVar ai_debug_ragdoll_magnets( "ai_debug_ragdoll_magnets", "0");
 #include "tier0/memdbgon.h"
 
 LINK_ENTITY_TO_CLASS( phys_ragdollmagnet, CRagdollMagnet );
-BEGIN_DATADESC( CRagdollMagnet )
-	DEFINE_KEYFIELD( m_radius,		FIELD_FLOAT, "radius" ),
-	DEFINE_KEYFIELD( m_force,		FIELD_FLOAT, "force" ),
-	DEFINE_KEYFIELD( m_axis,		FIELD_VECTOR, "axis" ),
-	DEFINE_KEYFIELD( m_bDisabled,	FIELD_BOOLEAN,	"StartDisabled" ),
-
-	DEFINE_INPUTFUNC( FIELD_VOID, "Enable", InputEnable ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "Disable", InputDisable ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CRagdollMagnet )
 
 //-----------------------------------------------------------------------------
 // Purpose: 

@@ -11,6 +11,8 @@
 // $NoKeywords: $
 //=============================================================================//
 #include "cbase.h"
+#include "reflect_sendtable.h"
+#include "reflect_annotations.h"
 #include "basetempentity.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
@@ -22,7 +24,8 @@
 
 #define FOOTPRINT_DECAY_TIME 3.0f
 
-class CTEFootprintDecal : public CBaseTempEntity
+class [[= ks::reflect::NetTable{ .name = "DT_TEFootprintDecal" } ]]
+      CTEFootprintDecal : public CBaseTempEntity
 {
 public:
 	DECLARE_CLASS( CTEFootprintDecal, CBaseTempEntity );
@@ -33,20 +36,14 @@ public:
 	DECLARE_SERVERCLASS();
 
 public:
-	CNetworkVector( m_vecOrigin );
-	CNetworkVector( m_vecDirection );											
-	CNetworkVar( int, m_nEntity );
-	CNetworkVar( int, m_nIndex );
-	CNetworkVar( unsigned char, m_chMaterialType );
+	CNetworkVector( m_vecOrigin, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD, .enc = ks::reflect::ENC_VECTOR } ]] );
+	CNetworkVector( m_vecDirection, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD, .enc = ks::reflect::ENC_VECTOR } ]] );											
+	CNetworkVar( int, m_nEntity, [[= ks::reflect::Net{ .bits = 11, .flags = SPROP_UNSIGNED } ]] );
+	CNetworkVar( int, m_nIndex, [[= ks::reflect::Net{ .bits = 8, .flags = SPROP_UNSIGNED } ]] );
+	CNetworkVar( unsigned char, m_chMaterialType, [[= ks::reflect::Net{ .bits = 8, .flags = SPROP_UNSIGNED } ]] );
 };
 
-IMPLEMENT_SERVERCLASS_ST(CTEFootprintDecal, DT_TEFootprintDecal)
-	SendPropVector( SENDINFO(m_vecOrigin),		-1, SPROP_COORD),
-	SendPropVector( SENDINFO(m_vecDirection),	-1, SPROP_COORD),
-	SendPropInt(  SENDINFO(m_nEntity),			11, SPROP_UNSIGNED ),
-	SendPropInt(  SENDINFO(m_nIndex),			8,	SPROP_UNSIGNED ),
-	SendPropInt(   SENDINFO(m_chMaterialType),	8,	SPROP_UNSIGNED ),
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CTEFootprintDecal, DT_TEFootprintDecal )
 
 
 // Singleton to fire TEFootprintDecal objects

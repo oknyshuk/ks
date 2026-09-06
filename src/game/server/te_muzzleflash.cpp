@@ -6,6 +6,8 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_sendtable.h"
+#include "reflect_annotations.h"
 #include "basetempentity.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
@@ -14,7 +16,8 @@
 //-----------------------------------------------------------------------------
 // Purpose: Dispatches user tracer stream tempentity
 //-----------------------------------------------------------------------------
-class CTEMuzzleFlash : public CBaseTempEntity
+class [[= ks::reflect::NetTable{ .name = "DT_TEMuzzleFlash" } ]]
+      CTEMuzzleFlash : public CBaseTempEntity
 {
 public:
 	DECLARE_CLASS( CTEMuzzleFlash, CBaseTempEntity );
@@ -28,10 +31,10 @@ public:
 
 public:
 
-	CNetworkVector( m_vecOrigin );
-	CNetworkQAngle( m_vecAngles );
-	CNetworkVar( float, m_flScale );
-	CNetworkVar( int, m_nType );
+	CNetworkVector( m_vecOrigin, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD, .enc = ks::reflect::ENC_VECTOR } ]] );
+	CNetworkQAngle( m_vecAngles, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD, .enc = ks::reflect::ENC_VECTOR } ]] );
+	CNetworkVar( float, m_flScale, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_NOSCALE } ]] );
+	CNetworkVar( int, m_nType, [[= ks::reflect::Net{ .bits = 32, .flags = SPROP_UNSIGNED } ]] );
 };
 
 //-----------------------------------------------------------------------------
@@ -65,12 +68,7 @@ void CTEMuzzleFlash::Test( const Vector& current_origin, const QAngle& current_a
 }
 
 
-IMPLEMENT_SERVERCLASS_ST( CTEMuzzleFlash, DT_TEMuzzleFlash )
-	SendPropVector( SENDINFO(m_vecOrigin), -1, SPROP_COORD ),
-	SendPropVector( SENDINFO(m_vecAngles), -1, SPROP_COORD ),
-	SendPropFloat( SENDINFO(m_flScale), -1, SPROP_NOSCALE ),
-	SendPropInt( SENDINFO(m_nType), 32, SPROP_UNSIGNED ),
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CTEMuzzleFlash, DT_TEMuzzleFlash )
 
 // Singleton to fire TEMuzzleFlash objects
 static CTEMuzzleFlash g_TEMuzzleFlash( "MuzzleFlash" );

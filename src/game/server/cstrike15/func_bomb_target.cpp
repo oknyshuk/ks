@@ -5,6 +5,8 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_annotations.h"
 #include "cs_player.h"
 #include "weapon_csbase.h"
 #include "func_bomb_target.h"
@@ -13,23 +15,7 @@
 
 LINK_ENTITY_TO_CLASS( func_bomb_target, CBombTarget );
 
-BEGIN_DATADESC( CBombTarget )
-	DEFINE_FUNCTION( BombTargetTouch ),
-	DEFINE_FUNCTION( BombTargetUse ),			//needed?
-
-	// Inputs
-	DEFINE_INPUTFUNC( FIELD_VOID, "BombExplode", OnBombExplode ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "BombPlanted", OnBombPlanted ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "BombDefused", OnBombDefused ),
-
-	// Outputs
-	DEFINE_OUTPUT( m_OnBombExplode,	"BombExplode" ),
-	DEFINE_OUTPUT( m_OnBombPlanted,	"BombPlanted" ),
-	DEFINE_OUTPUT( m_OnBombDefused,	"BombDefused" ),
-	DEFINE_KEYFIELD( m_bIsHeistBombTarget, FIELD_BOOLEAN, "heistbomb" ),
-	DEFINE_KEYFIELD( m_szMountTarget, FIELD_STRING, "bomb_mount_target" ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CBombTarget )
 
 CBombTarget::CBombTarget( void )
 {
@@ -152,9 +138,6 @@ void CInfoInstructorHintBombTargetA::Spawn( void )
 
 LINK_ENTITY_TO_CLASS( info_bomb_target_hint_A, CInfoInstructorHintBombTargetA );
 
-BEGIN_DATADESC( CInfoInstructorHintBombTargetA )
-
-END_DATADESC()
 
 
 //-----------------------------------------------------------------------------
@@ -167,6 +150,3 @@ void CInfoInstructorHintBombTargetB::Spawn( void )
 
 LINK_ENTITY_TO_CLASS( info_bomb_target_hint_B, CInfoInstructorHintBombTargetB );
 
-BEGIN_DATADESC( CInfoInstructorHintBombTargetB )
-
-END_DATADESC()

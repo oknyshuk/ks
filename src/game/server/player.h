@@ -6,6 +6,9 @@
 
 #ifndef PLAYER_H
 #define PLAYER_H
+
+#include "reflect_annotations.h"
+#include "sendprop_priorities.h"
 #ifdef _WIN32
 #pragma once
 #endif
@@ -209,7 +212,37 @@ private:
 
 
 
-class CBasePlayer : public CBaseCombatCharacter
+// DT_LocalPlayerExclusive is named as the "localdata" prop of DT_BasePlayer, and its proxy decides
+// which clients receive it, so both have to be visible where CBasePlayer is declared.
+namespace DT_LocalPlayerExclusive { extern SendTable g_SendTable; }
+void* SendProxy_SendLocalDataTable( const SendProp *pProp, const void *pStruct, const void *pVarData,
+    CSendProxyRecipients *pRecipients, int objectID );
+void SendProxy_CropFlagsToPlayerFlagBitsLength( const SendProp *pProp, const void *pStruct,
+    const void *pVarData, DVariant *pOut, int iElement, int objectID );
+
+class [[= ks::reflect::NetTable{ .name = "DT_BasePlayer" } ]]
+      [[= ks::reflect::NetTable{ .name = "DT_LocalPlayerExclusive", .base = false } ]]
+      [[= ks::reflect::From<"m_iHealth", ks::reflect::Net{ .bits = 16 }>{} ]]
+      [[= ks::reflect::From<"m_lifeState", ks::reflect::Net{ .bits = 3, .flags = SPROP_UNSIGNED }>{} ]]
+      [[= ks::reflect::From<"m_iAmmo", ks::reflect::Net{ .bits = 10, .flags = SPROP_UNSIGNED }>{} ]]
+      [[= ks::reflect::From<"m_fFlags",
+            ks::reflect::Net{ .bits = PLAYER_FLAG_BITS, .flags = SPROP_UNSIGNED|SPROP_CHANGES_OFTEN },
+            SendProxy_CropFlagsToPlayerFlagBitsLength>{} ]]
+      [[= ks::reflect::From<"m_hGroundEntity", ks::reflect::Net{}>{} ]]
+      [[= ks::reflect::From<"m_PlayerFog.m_hCtrl", ks::reflect::Net{}>{} ]]
+      [[= ks::reflect::SubTable<"localdata", &DT_LocalPlayerExclusive::g_SendTable,
+                                SendProxy_SendLocalDataTable>{} ]]
+      [[= ks::reflect::From<"m_vecViewOffset", ks::reflect::Net{ .bits = 8, .low = -32.0, .high = 32.0f, .flags = SPROP_ROUNDDOWN, .table = "DT_LocalPlayerExclusive", .index = 0 }>{} ]]
+      [[= ks::reflect::From<"m_vecViewOffset", ks::reflect::Net{ .bits = 8, .low = -32.0, .high = 32.0f, .flags = SPROP_ROUNDDOWN, .table = "DT_LocalPlayerExclusive", .index = 1 }>{} ]]
+      [[= ks::reflect::From<"m_vecViewOffset", ks::reflect::Net{ .bits = 10, .low = 0.0f, .high = 128.0f, .flags = SPROP_CHANGES_OFTEN, .table = "DT_LocalPlayerExclusive", .index = 2 }>{} ]]
+      [[= ks::reflect::From<"m_flFriction", ks::reflect::Net{ .bits = 8, .low = 0.0f, .high = 4.0f, .flags = SPROP_ROUNDDOWN, .table = "DT_LocalPlayerExclusive" }>{} ]]
+      [[= ks::reflect::From<"m_nNextThinkTick", ks::reflect::Net{ .table = "DT_LocalPlayerExclusive" }>{} ]]
+      [[= ks::reflect::From<"m_vecVelocity", ks::reflect::Net{ .bits = 32, .flags = SPROP_NOSCALE, .table = "DT_LocalPlayerExclusive", .index = 0, .priority = SENDPROP_PLAYER_VELOCITY_XY_PRIORITY }>{} ]]
+      [[= ks::reflect::From<"m_vecVelocity", ks::reflect::Net{ .bits = 32, .flags = SPROP_NOSCALE, .table = "DT_LocalPlayerExclusive", .index = 1, .priority = SENDPROP_PLAYER_VELOCITY_XY_PRIORITY }>{} ]]
+      [[= ks::reflect::From<"m_vecVelocity", ks::reflect::Net{ .bits = 32, .flags = SPROP_NOSCALE, .table = "DT_LocalPlayerExclusive", .index = 2, .priority = SENDPROP_PLAYER_VELOCITY_Z_PRIORITY }>{} ]]
+      [[= ks::reflect::From<"m_vecBaseVelocity", ks::reflect::Net{ .bits = 20, .low = -1000, .high = 1000, .flags = 0, .table = "DT_LocalPlayerExclusive" }>{} ]]
+      [[= ks::reflect::From<"m_nWaterLevel", ks::reflect::Net{ .bits = 2, .flags = SPROP_UNSIGNED, .table = "DT_LocalPlayerExclusive" }>{} ]]
+      CBasePlayer : public CBaseCombatCharacter
 {
 public:
 	DECLARE_CLASS( CBasePlayer, CBaseCombatCharacter );
@@ -400,8 +433,6 @@ public:
 	virtual void			CalcViewBob( Vector& eyeOrigin );
 	virtual void			CalcAddViewmodelCameraAnimation( Vector& eyeOrigin, QAngle& eyeAngles );
 
-	virtual int				Save( ISave &save );
-	virtual int				Restore( IRestore &restore );
 	virtual bool			ShouldSavePhysics();
 	virtual void			OnRestore( void );
 
@@ -865,8 +896,8 @@ public:
 	//---------------------------------
 	// Inputs
 	//---------------------------------
-	void	InputSetHealth( inputdata_t &inputdata );
-	void	InputSetHUDVisibility( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetHealth", .type = FIELD_INTEGER } ]] void	InputSetHealth( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetHUDVisibility", .type = FIELD_BOOLEAN } ]] void	InputSetHUDVisibility( inputdata_t &inputdata );
 
 	surfacedata_t *GetSurfaceData( void ) const { return m_pSurfaceData; }
 	void SetLadderNormal( Vector vecLadderNormal ) { m_vecLadderNormal = vecLadderNormal; }
@@ -908,26 +939,26 @@ public:
 	// FIXME: Make these protected or private!
 	
 
-	CNetworkVar( float, m_flDuckAmount );
-	CNetworkVar( float, m_flDuckSpeed );
+	CNetworkVar( float, m_flDuckAmount, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_CHANGES_OFTEN } ]] );
+	CNetworkVar( float, m_flDuckSpeed, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_CHANGES_OFTEN } ]] );
 	Vector2D m_vecLastPositionAtFullCrouchSpeed;
 
 	int m_nSuicides;
 
 	// This player's data that should only be replicated to 
 	//  the player and not to other players.
-	CNetworkVarEmbedded( CPlayerLocalData, m_Local );
+	CNetworkVarEmbedded( CPlayerLocalData, m_Local, [[= ks::reflect::Net{ .table = "DT_LocalPlayerExclusive" } ]] );
 
 	CNetworkVarEmbedded( fogplayerparams_t, m_PlayerFog );
 	void InitFogController( void );
-	void InputSetFogController( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetFogController", .type = FIELD_STRING } ]] void InputSetFogController( inputdata_t &inputdata );
 
 	void OnTonemapTriggerStartTouch( CTonemapTrigger *pTonemapTrigger );
 	void OnTonemapTriggerEndTouch( CTonemapTrigger *pTonemapTrigger );
 	CUtlVector< CHandle< CTonemapTrigger > > m_hTriggerTonemapList;
 
-	CNetworkHandle( CPostProcessController, m_hPostProcessCtrl );	// active postprocessing controller
-	CNetworkHandle( CColorCorrection, m_hColorCorrectionCtrl );		// active FXVolume color correction
+	CNetworkHandle( CPostProcessController, m_hPostProcessCtrl, [[= ks::reflect::Net{} ]] );	// active postprocessing controller
+	CNetworkHandle( CColorCorrection, m_hColorCorrectionCtrl, [[= ks::reflect::Net{} ]] );		// active FXVolume color correction
 	void InitPostProcessController( void );
 	void InputSetPostProcessController( inputdata_t &inputdata );
 	void InitColorCorrectionController( void );
@@ -939,7 +970,7 @@ public:
 	CUtlVector<EHANDLE> m_hTriggerSoundscapeList;
 
 	// Player data that's sometimes needed by the engine
-	CNetworkVarEmbedded( CPlayerState, pl );
+	CNetworkVarEmbedded( CPlayerState, pl, [[= ks::reflect::Net{} ]] );
 
 	IMPLEMENT_NETWORK_VAR_FOR_DERIVED( m_fFlags );
 
@@ -956,7 +987,7 @@ public:
 	IMPLEMENT_NETWORK_VAR_FOR_DERIVED( m_vecVelocity );
 	IMPLEMENT_NETWORK_VAR_FOR_DERIVED( m_nWaterLevel );
 
-	CNetworkVar( int, m_iCoachingTeam );	// When on TEAM_SPECTATOR, is this player restricted to a team, aka 'coaching' a team
+	CNetworkVar( int, m_iCoachingTeam, [[= ks::reflect::Net{ .bits = 3, .flags = SPROP_UNSIGNED } ]] );	// When on TEAM_SPECTATOR, is this player restricted to a team, aka 'coaching' a team
 	
 	int						m_nButtons;
 	int						m_afButtonPressed;
@@ -965,7 +996,7 @@ public:
 	int						m_afButtonDisabled;	// A mask of input flags that are cleared automatically
 	int						m_afButtonForced;	// These are forced onto the player's inputs
 
-	CNetworkVar( bool, m_fOnTarget );		//Is the crosshair on a target?
+	CNetworkVar( bool, m_fOnTarget, [[= ks::reflect::Net{ .bits = 2, .flags = SPROP_UNSIGNED, .table = "DT_LocalPlayerExclusive" } ]] );		//Is the crosshair on a target?
 
 	char					m_szAnimExtension[32];
 
@@ -1015,23 +1046,23 @@ protected:
 
 	bool					m_bDropEnabled;
 	bool					m_bDuckEnabled;
-	CNetworkHandle( CBaseEntity, m_hUseEntity );			// the player is currently controlling this entity because of +USE latched, NULL if no entity
+	CNetworkHandle( CBaseEntity, m_hUseEntity, [[= ks::reflect::Net{} ]] );			// the player is currently controlling this entity because of +USE latched, NULL if no entity
 
 	int						m_iTrain;				// Train control position
 
 	float					m_iRespawnFrames;	// used in PlayerDeathThink() to make sure players can always respawn
- 	CNetworkVar( unsigned int, m_afPhysicsFlags );	// physics flags - set when 'normal' physics should be revisited or overriden
+ 	CNetworkVar( unsigned int, m_afPhysicsFlags, [[= ks::reflect::Net{ .bits = 6, .flags = SPROP_UNSIGNED } ]] );	// physics flags - set when 'normal' physics should be revisited or overriden
 	
 	// Vehicles
-	CNetworkHandle( CBaseEntity, m_hVehicle );
+	CNetworkHandle( CBaseEntity, m_hVehicle, [[= ks::reflect::Net{} ]] );
 
 	int						m_iVehicleAnalogBias;
 
 	void					UpdateButtonState( int nUserCmdButtonMask );
 
 	bool	m_bPauseBonusProgress;
-	CNetworkVar( int, m_iBonusProgress );
-	CNetworkVar( int, m_iBonusChallenge );
+	CNetworkVar( int, m_iBonusProgress, [[= ks::reflect::Net{ .bits = 15 } ]] );
+	CNetworkVar( int, m_iBonusChallenge, [[= ks::reflect::Net{ .bits = 4 } ]] );
 
 	float m_flTimeLastTouchedGround;
 
@@ -1044,27 +1075,27 @@ protected:
 	int						m_bitsDamageType;	// what types of damage has player taken
 	int						m_bitsHUDDamage;	// Damage bits for the current fame. These get sent to the hud via gmsgDamage
 
-	CNetworkVar( float, m_flDeathTime );		// the time at which the player died  (used in PlayerDeathThink())
+	CNetworkVar( float, m_flDeathTime, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE, .table = "DT_LocalPlayerExclusive" } ]] );		// the time at which the player died  (used in PlayerDeathThink())
 	float					m_flDeathAnimTime;	// the time at which the player finished their death anim (used in PlayerDeathThink() and ShouldTransmit())
 
-	CNetworkVar( float, m_fForceTeam );			// the time at which the player will be forced onto a team ( use in PlayerForceTeamThink())
+	CNetworkVar( float, m_fForceTeam, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE, .table = "DT_LocalPlayerExclusive" } ]] );			// the time at which the player will be forced onto a team ( use in PlayerForceTeamThink())
 
-	CNetworkVar( int, m_iObserverMode );	// if in spectator mode != 0
-	CNetworkVar( bool, m_bActiveCameraMan );		// the player is an active cameraman for gotv viewers.
-	CNetworkVar( bool, m_bCameraManXRay );			// XRay state for cameraman
-	CNetworkVar( bool, m_bCameraManOverview );		// Overview state for cameraman
-	CNetworkVar( bool, m_bCameraManScoreBoard );	// ScoreBoard state for cameraman
-	CNetworkVar( uint8, m_uCameraManGraphs );		// Graphs state for cameraman
-	CNetworkVar( int,	m_iFOV );			// field of view
-	CNetworkVar( int,	m_iDefaultFOV );	// default field of view
-	CNetworkVar( int,	m_iFOVStart );		// What our FOV started at
-	CNetworkVar( float,	m_flFOVTime );		// Time our FOV change started
+	CNetworkVar( int, m_iObserverMode, [[= ks::reflect::Net{ .bits = 3, .flags = SPROP_UNSIGNED } ]] );	// if in spectator mode != 0
+	CNetworkVar( bool, m_bActiveCameraMan, [[= ks::reflect::Net{} ]] );		// the player is an active cameraman for gotv viewers.
+	CNetworkVar( bool, m_bCameraManXRay, [[= ks::reflect::Net{} ]] );			// XRay state for cameraman
+	CNetworkVar( bool, m_bCameraManOverview, [[= ks::reflect::Net{} ]] );		// Overview state for cameraman
+	CNetworkVar( bool, m_bCameraManScoreBoard, [[= ks::reflect::Net{} ]] );	// ScoreBoard state for cameraman
+	CNetworkVar( uint8, m_uCameraManGraphs, [[= ks::reflect::Net{ .bits = 4, .flags = SPROP_UNSIGNED } ]] );		// Graphs state for cameraman
+	CNetworkVar( int,	m_iFOV, [[= ks::reflect::Net{ .bits = 8, .flags = SPROP_UNSIGNED|SPROP_CHANGES_OFTEN } ]] );			// field of view
+	CNetworkVar( int,	m_iDefaultFOV, [[= ks::reflect::Net{ .bits = 8, .flags = SPROP_UNSIGNED } ]] );	// default field of view
+	CNetworkVar( int,	m_iFOVStart, [[= ks::reflect::Net{ .bits = 8, .flags = SPROP_UNSIGNED } ]] );		// What our FOV started at
+	CNetworkVar( float,	m_flFOVTime, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_CHANGES_OFTEN } ]] );		// Time our FOV change started
 	
 	int						m_iObserverLastMode; // last used observer mode
-	CNetworkHandle( CBaseEntity, m_hObserverTarget );	// entity handle to m_iObserverTarget
+	CNetworkHandle( CBaseEntity, m_hObserverTarget, [[= ks::reflect::Net{} ]] );	// entity handle to m_iObserverTarget
 	bool					m_bForcedObserverMode; // true, player was forced by invalid targets to switch mode
 	
-	CNetworkHandle( CBaseEntity, m_hZoomOwner );	//This is a pointer to the entity currently controlling the player's zoom
+	CNetworkHandle( CBaseEntity, m_hZoomOwner, [[= ks::reflect::Net{} ]] );	//This is a pointer to the entity currently controlling the player's zoom
 													//Only this entity can change the zoom state once it has ownership
 
 	float					m_tbdPrev;				// Time-based damage timer
@@ -1076,7 +1107,7 @@ protected:
 	BYTE					m_rgbTimeBasedDamage[CDMG_TIMEBASED];
 
 	// Player Physics Shadow
-	CNetworkVar( int, m_vphysicsCollisionState );
+	CNetworkVar( int, m_vphysicsCollisionState, [[= ks::reflect::Net{} ]] );
 
 	virtual int SpawnArmorValue( void ) const { return 0; }
 
@@ -1089,12 +1120,12 @@ protected:
 	int						m_iReplayEntity;	// follow this entity in replay
 
 	virtual void UpdateTonemapController( void );
-	CNetworkHandle( CBaseEntity, m_hTonemapController );
+	CNetworkHandle( CBaseEntity, m_hTonemapController, [[= ks::reflect::Net{ .table = "DT_LocalPlayerExclusive" } ]] );
 
 	bool m_bKilledByHeadshot;
 
 public:
-	CNetworkVar( int, m_iDeathPostEffect );		// which deathcam post effect to use
+	CNetworkVar( int, m_iDeathPostEffect, [[= ks::reflect::Net{} ]] );		// which deathcam post effect to use
 
 
 private:
@@ -1113,7 +1144,7 @@ protected: //used to be private, but need access for portal mod (Dave Kircher)
 	Vector						m_vecSmoothedVelocity;
 	bool						m_bTouchedPhysObject;
 	bool						m_bPhysicsWasFrozen;
-	CNetworkVar( float, m_flNextDecalTime );	// next time this player can spray a decal
+	CNetworkVar( float, m_flNextDecalTime, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE, .table = "DT_LocalPlayerExclusive" } ]] );	// next time this player can spray a decal
 	bool			m_bNextDecalTimeExpedited;	// whether decal time was shortened already
 
 private:
@@ -1175,7 +1206,7 @@ protected:
 
 	// the player's personal view model
 	typedef CHandle<CBaseViewModel> CBaseViewModelHandle;
-	CNetworkArray( CBaseViewModelHandle, m_hViewModel, MAX_VIEWMODELS );
+	CNetworkArray( CBaseViewModelHandle, m_hViewModel, MAX_VIEWMODELS, [[= ks::reflect::Net{ .varlen = true } ]] );
 
 	// Last received usercmd (in case we drop a lot of packets )
 	CUserCmd				m_LastCmd;
@@ -1195,9 +1226,9 @@ protected:
 private:
 
 // Replicated to all clients
-	CNetworkVar( float, m_flMaxspeed );
-	CNetworkVar( int, m_ladderSurfaceProps );
-	CNetworkVector( m_vecLadderNormal );	// Clients may need this for climbing anims
+	CNetworkVar( float, m_flMaxspeed, [[= ks::reflect::Net{ .bits = 12, .low = 0.0f, .high = 2048.0f, .flags = SPROP_ROUNDDOWN } ]] );
+	CNetworkVar( int, m_ladderSurfaceProps, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_UNSIGNED } ]] );
+	CNetworkVector( m_vecLadderNormal, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NORMAL } ]] );	// Clients may need this for climbing anims
 	
 protected:
 // Not transmitted
@@ -1231,12 +1262,12 @@ private:
 	bool					m_bForceOrigin;	
 
 	// Clients try to run on their own realtime clock, this is this client's clock
-	CNetworkVar( int, m_nTickBase );
+	CNetworkVar( int, m_nTickBase, [[= ks::reflect::Net{ .bits = -1, .flags = 0, .table = "DT_LocalPlayerExclusive", .priority = SENDPROP_TICKBASE_PRIORITY } ]] );
 
 	bool					m_bGamePaused;
 	float					m_fLastPlayerTalkTime;
 	
-	CNetworkVar( CBaseCombatWeaponHandle, m_hLastWeapon );
+	CNetworkVar( CBaseCombatWeaponHandle, m_hLastWeapon, [[= ks::reflect::Net{ .table = "DT_LocalPlayerExclusive" } ]] );
 
 #if !defined( NO_ENTITY_PREDICTION )
 	CUtlVector< CHandle< CBaseEntity > > m_SimulatedByThisPlayer;
@@ -1247,16 +1278,16 @@ private:
 
 	bool					m_bPlayerUnderwater;
 
-	CNetworkHandle( CBaseEntity, m_hViewEntity );
-	CNetworkVar( bool, m_bShouldDrawPlayerWhileUsingViewEntity );
+	CNetworkHandle( CBaseEntity, m_hViewEntity, [[= ks::reflect::Net{} ]] );
+	CNetworkVar( bool, m_bShouldDrawPlayerWhileUsingViewEntity, [[= ks::reflect::Net{} ]] );
 
 	// Movement constraints
-	CNetworkHandle( CBaseEntity, m_hConstraintEntity );
-	CNetworkVector( m_vecConstraintCenter );
-	CNetworkVar( float, m_flConstraintRadius );
-	CNetworkVar( float, m_flConstraintWidth );
-	CNetworkVar( float, m_flConstraintSpeedFactor );
-	CNetworkVar( bool, m_bConstraintPastRadius );
+	CNetworkHandle( CBaseEntity, m_hConstraintEntity, [[= ks::reflect::Net{ .table = "DT_LocalPlayerExclusive" } ]] );
+	CNetworkVector( m_vecConstraintCenter, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE, .table = "DT_LocalPlayerExclusive" } ]] );
+	CNetworkVar( float, m_flConstraintRadius, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE, .table = "DT_LocalPlayerExclusive" } ]] );
+	CNetworkVar( float, m_flConstraintWidth, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE, .table = "DT_LocalPlayerExclusive" } ]] );
+	CNetworkVar( float, m_flConstraintSpeedFactor, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE, .table = "DT_LocalPlayerExclusive" } ]] );
+	CNetworkVar( bool, m_bConstraintPastRadius, [[= ks::reflect::Net{ .table = "DT_LocalPlayerExclusive" } ]] );
 
 	friend class CPlayerMove;
 	friend class CPlayerClass;
@@ -1283,7 +1314,7 @@ protected:
 	bool IsDucking( void ) const { return m_Local.m_bDucking; }
 	float GetStepSize( void ) const { return m_Local.m_flStepSize; }
 
-	CNetworkVar( float,  m_flLaggedMovementValue );
+	CNetworkVar( float,  m_flLaggedMovementValue, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE, .table = "DT_LocalPlayerExclusive" } ]] );
 
 	// These are generated while running usercmds, then given to UpdateVPhysicsPosition after running all queued commands.
 #if defined( DEBUG_MOTION_CONTROLLERS )
@@ -1302,7 +1333,7 @@ protected:
 	Vector m_vecPreviouslyPredictedOrigin; // Used to determine if non-gamemovement game code has teleported, or tweaked the player's origin
 	int		m_nBodyPitchPoseParam;
 
-	CNetworkString( m_szLastPlaceName, MAX_PLACE_NAME_LENGTH );
+	CNetworkString( m_szLastPlaceName, MAX_PLACE_NAME_LENGTH, [[= ks::reflect::Net{} ]] );
 	unsigned int    m_nTicksSinceLastPlaceUpdate;
 
 	char m_szNetworkIDString[MAX_NETWORKID_LENGTH];
@@ -1317,7 +1348,7 @@ protected:
 
 	bool			m_bSinglePlayerGameEnding;
 
-	CNetworkVar( int, m_ubEFNoInterpParity );
+	CNetworkVar( int, m_ubEFNoInterpParity, [[= ks::reflect::Net{ .bits = 2, .flags = SPROP_UNSIGNED } ]] );	// bits: NOINTERP_PARITY_MAX_BITS
 
 	EHANDLE			m_hPlayerProxy;	// Handle to a player proxy entity for quicker reference
 

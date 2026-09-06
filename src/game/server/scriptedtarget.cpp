@@ -6,6 +6,8 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_annotations.h"
 #include "ai_default.h"
 #include "scriptedtarget.h"
 #include "entitylist.h"
@@ -21,31 +23,7 @@ int	g_interactionScriptedTarget		= 0;
 
 LINK_ENTITY_TO_CLASS( scripted_target, CScriptedTarget );
 
-BEGIN_DATADESC( CScriptedTarget )
-
-	DEFINE_FIELD( m_vLastPosition,	FIELD_POSITION_VECTOR ),
-
-	DEFINE_KEYFIELD( m_iDisabled,		FIELD_INTEGER,	"StartDisabled" ),
-	DEFINE_KEYFIELD( m_iszEntity,		FIELD_STRING,	"m_iszEntity" ),
-	DEFINE_KEYFIELD( m_flRadius,			FIELD_FLOAT,	"m_flRadius" ),
-
-	DEFINE_KEYFIELD( m_nMoveSpeed,		FIELD_INTEGER,	"MoveSpeed" ),
-	DEFINE_KEYFIELD( m_flPauseDuration,	FIELD_FLOAT,	"PauseDuration" ),
-	DEFINE_FIELD( m_flPauseDoneTime,	FIELD_TIME ),
-	DEFINE_KEYFIELD( m_flEffectDuration,	FIELD_FLOAT,	"EffectDuration" ),
-
-	// Function Pointers
-	DEFINE_THINKFUNC( ScriptThink ),
-
-	// Inputs
-	DEFINE_INPUTFUNC( FIELD_VOID, "Enable", InputEnable ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "Disable", InputDisable ),
-
-	// Outputs
-	DEFINE_OUTPUT(m_AtTarget,			"AtTarget" ),
-	DEFINE_OUTPUT(m_LeaveTarget,		"LeaveTarget" ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CScriptedTarget )
 
 
 //------------------------------------------------------------------------------

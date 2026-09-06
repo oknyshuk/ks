@@ -5,6 +5,16 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_predmap.h"
+#include "reflect_annotations.h"
+#ifdef CLIENT_DLL
+#include "reflect_recvtable.h"
+#endif
+#include "reflect_annotations.h"
+#ifdef GAME_DLL
+#include "reflect_sendtable.h"
+#include "reflect_datamap.h"
+#endif
 #include "weapon_c4.h"
 #include "in_buttons.h"
 #include "cs_gamerules.h"
@@ -74,28 +84,15 @@ CON_COMMAND_F( clear_bombs, "", FCVAR_CHEAT )
 LINK_ENTITY_TO_CLASS( planted_c4, CPlantedC4 );
 PRECACHE_REGISTER( planted_c4 );
 
-BEGIN_DATADESC( CPlantedC4 )
-	DEFINE_FUNCTION( C4Think ),
-	//Outputs
-	DEFINE_OUTPUT( m_OnBombBeginDefuse, "OnBombBeginDefuse" ),
-	DEFINE_OUTPUT( m_OnBombDefused, "OnBombDefused" ),
-	DEFINE_OUTPUT( m_OnBombDefuseAborted, "OnBombDefuseAborted" ),
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CPlantedC4 )
 	
 
-IMPLEMENT_SERVERCLASS_ST( CPlantedC4, DT_PlantedC4 )
-	SendPropBool( SENDINFO(m_bBombTicking) ),
-	SendPropFloat( SENDINFO(m_flC4Blow), 0, SPROP_NOSCALE ),
-	SendPropFloat( SENDINFO(m_flTimerLength), 0, SPROP_NOSCALE ),
-	SendPropFloat( SENDINFO(m_flDefuseLength), 0, SPROP_NOSCALE ),
-	SendPropFloat( SENDINFO(m_flDefuseCountDown), 0, SPROP_NOSCALE ),
-	SendPropBool( SENDINFO(m_bBombDefused) ),
-	SendPropEHandle( SENDINFO(m_hBombDefuser) ),
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CPlantedC4, DT_PlantedC4 )
 
 	
-BEGIN_PREDICTION_DATA( CPlantedC4 )
-END_PREDICTION_DATA()
+#ifdef CLIENT_DLL
+IMPLEMENT_REFLECT_PREDMAP( CPlantedC4 );
+#endif
 
 
 
@@ -1006,17 +1003,11 @@ END_PREDICTION_DATA()
 	LINK_ENTITY_TO_CLASS( planted_c4_training, CPlantedC4Training );
 	PRECACHE_REGISTER( planted_c4_training );
 
-	BEGIN_PREDICTION_DATA( CPlantedC4Training )
-	END_PREDICTION_DATA()
+#ifdef CLIENT_DLL
+IMPLEMENT_REFLECT_PREDMAP( CPlantedC4Training );
+#endif
 
-	BEGIN_DATADESC( CPlantedC4Training )
-
-	// Inputs
-	DEFINE_INPUTFUNC( FIELD_FLOAT, "ActivateSetTimerLength", InputActivateSetTimerLength ),
-	//Outputs
-	DEFINE_OUTPUT( m_OnBombExploded, "OnBombExploded" ),
-
-	END_DATADESC()
+	IMPLEMENT_REFLECT_DATAMAP( CPlantedC4Training )
 
 	void CPlantedC4Training::InputActivateSetTimerLength( inputdata_t &inputdata )
 	{
@@ -1063,30 +1054,10 @@ END_PREDICTION_DATA()
 
 IMPLEMENT_NETWORKCLASS_ALIASED( C4, DT_WeaponC4 )
 
-BEGIN_NETWORK_TABLE( CC4, DT_WeaponC4 )
-	#ifdef CLIENT_DLL
-		RecvPropBool( RECVINFO( m_bStartedArming ) ),
-		RecvPropBool( RECVINFO( m_bBombPlacedAnimation ) ),
-		RecvPropFloat( RECVINFO( m_fArmedTime ) ),
-		RecvPropBool( RECVINFO( m_bShowC4LED ) ),
-		RecvPropBool( RECVINFO( m_bIsPlantingViaUse ) )
-	#else
-		SendPropBool( SENDINFO( m_bStartedArming ) ),
-		SendPropBool( SENDINFO( m_bBombPlacedAnimation ) ),
-		SendPropFloat( SENDINFO( m_fArmedTime ), 0, SPROP_NOSCALE ),
-		SendPropBool( SENDINFO( m_bShowC4LED ) ),
-		SendPropBool( SENDINFO( m_bIsPlantingViaUse ) )	
-	#endif
-END_NETWORK_TABLE()
+IMPLEMENT_REFLECT_TABLE( CC4, DT_WeaponC4 );
 
 #if defined CLIENT_DLL
-BEGIN_PREDICTION_DATA( CC4 )
-	DEFINE_PRED_FIELD( m_bStartedArming, FIELD_INTEGER, FTYPEDESC_INSENDTABLE ),
-	DEFINE_PRED_FIELD( m_bBombPlacedAnimation, FIELD_INTEGER, FTYPEDESC_INSENDTABLE ),
-	DEFINE_PRED_FIELD( m_fArmedTime, FIELD_FLOAT, FTYPEDESC_INSENDTABLE ),
-	DEFINE_PRED_FIELD( m_bShowC4LED, FIELD_INTEGER, FTYPEDESC_INSENDTABLE ),
-	DEFINE_PRED_FIELD( m_bIsPlantingViaUse, FIELD_INTEGER, FTYPEDESC_INSENDTABLE ),
-END_PREDICTION_DATA()
+IMPLEMENT_REFLECT_PREDMAP( CC4 );
 #endif
 
 LINK_ENTITY_TO_CLASS_ALIASED( weapon_c4, C4 );

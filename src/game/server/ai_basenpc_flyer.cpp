@@ -6,6 +6,8 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_annotations.h"
+#include "reflect_datamap.h"
 #include "ai_basenpc_flyer.h"
 #include "ai_route.h"
 #include "ai_navigator.h"
@@ -14,16 +16,7 @@
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
-BEGIN_DATADESC( CAI_BaseFlyingBot )
-
-	DEFINE_FIELD( m_vCurrentVelocity,			FIELD_VECTOR),
-	DEFINE_FIELD( m_vCurrentAngularVelocity, FIELD_VECTOR ),
-	DEFINE_FIELD( m_vCurrentBanking,			FIELD_VECTOR),
-	DEFINE_FIELD( m_vNoiseMod,				FIELD_VECTOR),
-	DEFINE_FIELD( m_fHeadYaw,					FIELD_FLOAT),
-	DEFINE_FIELD( m_vLastPatrolDir,			FIELD_VECTOR),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CAI_BaseFlyingBot )
 
 
 //------------------------------------------------------------------------------

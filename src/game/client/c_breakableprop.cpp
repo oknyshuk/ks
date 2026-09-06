@@ -4,6 +4,8 @@
 //
 //=============================================================================//
 #include "cbase.h"
+#include "reflect_recvtable.h"
+#include "reflect_annotations.h"
 #include "model_types.h"
 #include "vcollide.h"
 #include "vcollide_parse.h"
@@ -26,10 +28,7 @@ void RecvProxy_UnmodifiedQAngles( const CRecvProxyData *pData, void *pStruct, vo
 	((float*)pOut)[2] = v[2];
 }
 
-IMPLEMENT_CLIENTCLASS_DT(C_BreakableProp, DT_BreakableProp, CBreakableProp)
-	RecvPropQAngles( RECVINFO( m_qPreferredPlayerCarryAngles ), 0, RecvProxy_UnmodifiedQAngles ),
-	RecvPropBool( RECVINFO( m_bClientPhysics ) ),
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS( C_BreakableProp, DT_BreakableProp, CBreakableProp )
 
 //-----------------------------------------------------------------------------
 // Purpose: 

@@ -6,6 +6,8 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_annotations.h"
 #include "beam_shared.h"
 #include "ndebugoverlay.h"
 #include "filters.h"
@@ -25,7 +27,8 @@ enum Touch_t
 	touch_player_or_npc_or_physicsprop,
 };
 
-class CEnvBeam : public CBeam
+class [[= ks::reflect::KeyFrom<"m_nClipStyle", ks::reflect::Key{ .name = "ClipStyle" } >{} ]]
+      CEnvBeam : public CBeam
 {
 public:
 	DECLARE_CLASS( CEnvBeam, CBeam );
@@ -44,10 +47,10 @@ public:
 
 	bool	PassesTouchFilters(CBaseEntity *pOther);
 
-	void InputTurnOn( inputdata_t &inputdata );
-	void InputTurnOff( inputdata_t &inputdata );
-	void InputToggle( inputdata_t &inputdata );
-	void InputStrikeOnce( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "TurnOn", .type = FIELD_VOID } ]] void InputTurnOn( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "TurnOff", .type = FIELD_VOID } ]] void InputTurnOff( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Toggle", .type = FIELD_VOID } ]] void InputToggle( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "StrikeOnce", .type = FIELD_VOID } ]] void InputStrikeOnce( inputdata_t &inputdata );
 
 	void TurnOn( void );
 	void TurnOff( void );
@@ -74,15 +77,15 @@ protected:
 	int		m_active;
 	int		m_spriteTexture;
 
-	string_t m_iszStartEntity;
-	string_t m_iszEndEntity;
-	float	m_life;
-	float	m_boltWidth;
-	float	m_noiseAmplitude;
-	int		m_speed;
-	float	m_restrike;
-	string_t m_iszSpriteName;
-	int		m_frameStart;
+	[[= ks::reflect::Key{ .name = "LightningStart" } ]] string_t m_iszStartEntity;
+	[[= ks::reflect::Key{ .name = "LightningEnd" } ]] string_t m_iszEndEntity;
+	[[= ks::reflect::Key{ .name = "life" } ]] float	m_life;
+	[[= ks::reflect::Key{ .name = "BoltWidth" } ]] float	m_boltWidth;
+	[[= ks::reflect::Key{ .name = "NoiseAmplitude" } ]] float	m_noiseAmplitude;
+	[[= ks::reflect::Key{ .name = "TextureScroll" } ]] int		m_speed;
+	[[= ks::reflect::Key{ .name = "StrikeTime" } ]] float	m_restrike;
+	[[= ks::reflect::Key{ .name = "texture" } ]] string_t m_iszSpriteName;
+	[[= ks::reflect::Key{ .name = "framestart" } ]] int		m_frameStart;
 
 	// endpoint may be optionally specified as a vecline instead of a target entity. 
 	// note: this mechanism seems rather roundabout, because the parent CBeam has
@@ -91,58 +94,23 @@ protected:
 	// implement this behavior was to put this bit of redundant data in the child
 	// class and have it get written back every frame. If this bothers you, 
 	// please fix it.
-	Vector m_vEndPointWorld;  // this is the point as read from the level spec; however it's not used, because
+	[[= ks::reflect::Key{ .name = "targetpoint" } ]] Vector m_vEndPointWorld;  // this is the point as read from the level spec; however it's not used, because
 	Vector m_vEndPointRelative; // on spawn, endpoint is transformed into local space here.
 
-	float	m_radius;
+	[[= ks::reflect::Key{ .name = "Radius" } ]] float	m_radius;
 
-	Touch_t		m_TouchType;
-	string_t	m_iFilterName;
+	[[= ks::reflect::Key{ .name = "TouchType" } ]] Touch_t		m_TouchType;
+	[[= ks::reflect::Key{ .name = "filtername" } ]] string_t	m_iFilterName;
 	EHANDLE		m_hFilter;
 
-	string_t		m_iszDecal;
+	[[= ks::reflect::Key{ .name = "decalname" } ]] string_t		m_iszDecal;
 
-	COutputEvent	m_OnTouchedByEntity;
+	[[= ks::reflect::Key{ .name = "OnTouchedByEntity" } ]] COutputEvent	m_OnTouchedByEntity;
 };
 
 LINK_ENTITY_TO_CLASS( env_beam, CEnvBeam );
 
-BEGIN_DATADESC( CEnvBeam )
-
-	DEFINE_FIELD( m_active, FIELD_INTEGER ),
-	DEFINE_FIELD( m_spriteTexture, FIELD_INTEGER ),
-
-	DEFINE_KEYFIELD( m_iszStartEntity, FIELD_STRING, "LightningStart" ),
-	DEFINE_KEYFIELD( m_iszEndEntity, FIELD_STRING, "LightningEnd" ),
-	DEFINE_KEYFIELD( m_vEndPointWorld, FIELD_VECTOR, "targetpoint" ),
-	DEFINE_KEYFIELD( m_life, FIELD_FLOAT, "life" ),
-	DEFINE_KEYFIELD( m_boltWidth, FIELD_FLOAT, "BoltWidth" ),
-	DEFINE_KEYFIELD( m_noiseAmplitude, FIELD_FLOAT, "NoiseAmplitude" ),
-	DEFINE_KEYFIELD( m_speed, FIELD_INTEGER, "TextureScroll" ),
-	DEFINE_KEYFIELD( m_restrike, FIELD_FLOAT, "StrikeTime" ),
-	DEFINE_KEYFIELD( m_iszSpriteName, FIELD_STRING, "texture" ),
-	DEFINE_KEYFIELD( m_frameStart, FIELD_INTEGER, "framestart" ),
-	DEFINE_KEYFIELD( m_radius, FIELD_FLOAT, "Radius" ),
-	DEFINE_KEYFIELD( m_TouchType, FIELD_INTEGER, "TouchType" ),
-	DEFINE_KEYFIELD( m_iFilterName,	FIELD_STRING,	"filtername" ),
-	DEFINE_KEYFIELD( m_iszDecal, FIELD_STRING, "decalname" ),
-	DEFINE_KEYFIELD( m_nClipStyle, FIELD_INTEGER, "ClipStyle" ),
-
-	DEFINE_FIELD( m_hFilter,	FIELD_EHANDLE ),
-
-	// Function Pointers
-	DEFINE_FUNCTION( StrikeThink ),
-	DEFINE_FUNCTION( UpdateThink ),
-
-	// Input functions
-	DEFINE_INPUTFUNC( FIELD_VOID, "TurnOn", InputTurnOn ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "TurnOff", InputTurnOff ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "Toggle", InputToggle ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "StrikeOnce", InputStrikeOnce ),
-
-	DEFINE_OUTPUT( m_OnTouchedByEntity, "OnTouchedByEntity" ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CEnvBeam )
 
 
 

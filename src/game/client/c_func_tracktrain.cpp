@@ -6,6 +6,8 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_recvtable.h"
+#include "reflect_annotations.h"
 #include "c_baseentity.h"
 #include "soundinfo.h"
 
@@ -15,7 +17,8 @@
 //-----------------------------------------------------------------------------
 // An entity which emits other entities at points 
 //-----------------------------------------------------------------------------
-class C_FuncTrackTrain : public C_BaseEntity
+class [[= ks::reflect::NetTable{ .name = "DT_FuncTrackTrain" } ]]
+      C_FuncTrackTrain : public C_BaseEntity
 {
 public:
 	DECLARE_CLASS( C_FuncTrackTrain, C_BaseEntity );
@@ -38,8 +41,7 @@ private:
 //-----------------------------------------------------------------------------
 // Datatable
 //-----------------------------------------------------------------------------
-IMPLEMENT_CLIENTCLASS_DT( C_FuncTrackTrain, DT_FuncTrackTrain, CFuncTrackTrain )
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS( C_FuncTrackTrain, DT_FuncTrackTrain, CFuncTrackTrain )
 
 
 //-----------------------------------------------------------------------------

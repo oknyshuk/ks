@@ -57,7 +57,6 @@
 #include "filesystem_engine.h"
 #include "tier0/icommandline.h"
 #include "client_textmessage.h"
-#include "host_saverestore.h"
 #include "cl_main.h"
 #include "demo.h"
 #include "engineui.h"
@@ -481,8 +480,6 @@ public:
 	virtual void ActivateOccluder( int nOccluderIndex, bool bActive );
 	virtual bool IsOccluded( int occlusionViewId, const Vector &vecAbsMins, const Vector &vecAbsMaxs );
 	virtual int	GetOcclusionViewId() const;
-	virtual void *SaveAllocMemory( size_t num, size_t size );
-	virtual void SaveFreeMemory( void *pSaveMem );
 	virtual INetChannelInfo *GetNetChannelInfo( void );
 	virtual bool IsPlayingDemo( void );
 	virtual bool IsRecordingDemo( void );
@@ -538,16 +535,10 @@ public:
 	virtual void				SetMapLoadFailed( bool bState );
 
 	virtual bool				IsLowViolence();
-	virtual const char			*GetMostRecentSaveGame( bool bEnsureExists );
-	virtual void				SetMostRecentSaveGame( const char *lpszFilename );
 
 	virtual void				StartXboxExitingProcess();
 
-	virtual bool				IsSaveInProgress();
-	virtual bool				IsAutoSaveDangerousInProgress();
-	virtual bool				IsAutoSaveInProgress();
 
-	virtual const char *		GetSaveDirName(); // get a pointer to the path where saves should go (with a trailing slash already added)
 
 	
 	virtual uint				OnStorageDeviceAttached( int iController );
@@ -665,7 +656,6 @@ public:
 
 	virtual bool IsUsingLocalNetworkBackdoor();
 
-	virtual bool SaveGame( const char *pSaveFilename, bool bIsXSave, char *pOutName, int nOutNameSize, char *pOutComment, int nOutCommentSize );
 
 	// Request 'generic' memory stats (returns a list of N named values; caller should assume this list will change over time)
 	virtual int GetGenericMemoryStats( GenericMemoryStat_t **ppMemoryStats );
@@ -675,7 +665,6 @@ public:
 
 	virtual void FinishContainerWrites( int iController );
 
-	virtual void FinishAsyncSave();
 
 	const char *GetModDirectory( void );
 
@@ -1331,7 +1320,7 @@ void CEngineClient::Mat_Stub( IMaterialSystem *pMatSys )
 
 void CEngineClient::GetChapterName( char *pchBuff, int iMaxLength )
 {
-	serverGameDLL->GetSaveComment( pchBuff, iMaxLength, 0.0f, 0.0f, true );
+	if ( pchBuff && iMaxLength > 0 ) pchBuff[0] = 0;
 }
 
 char const *CEngineClient::GetLevelName( void )
@@ -1390,11 +1379,6 @@ void CEngineClient::GetStartupImage( char *dest, int destlen )
 bool CEngineClient::IsUsingLocalNetworkBackdoor()
 {
 	return ( g_pLocalNetworkBackdoor != NULL );
-}
-
-bool CEngineClient::SaveGame( const char *pSaveFilename, bool bIsXSave, char *pOutName, int nOutNameSize, char *pOutComment, int nOutCommentSize )
-{
-	return saverestore->SaveGame( pSaveFilename, bIsXSave, pOutName, nOutNameSize, pOutComment, nOutCommentSize );
 }
 
 // Occlusion system control
@@ -1575,15 +1559,7 @@ int	CEngineClient::GetOcclusionViewId() const
 	return OcclusionSystem()->GetViewId();
 }
 
-void *CEngineClient::SaveAllocMemory( size_t num, size_t size )
-{
-	return ::SaveAllocMemory( num, size );
-}
 
-void CEngineClient::SaveFreeMemory( void *pSaveMem )
-{
-	::SaveFreeMemory( pSaveMem );
-}
 
 INetChannelInfo *CEngineClient::GetNetChannelInfo( void )
 {
@@ -1805,21 +1781,6 @@ bool CEngineClient::IsLowViolence()
 	return g_bLowViolence;
 }
 
-const char *CEngineClient::GetMostRecentSaveGame( bool bEnsureExists )
-{
-	const char *pszResult = saverestore->GetMostRecentlyLoadedFileName();
-	
-	if ( pszResult && bEnsureExists && !saverestore->SaveFileExists( pszResult ) )
-		pszResult = NULL;
-
-	return pszResult;
-}
-
-void CEngineClient::SetMostRecentSaveGame( const char *lpszFilename )
-{
-	saverestore->SetMostRecentSaveGame( lpszFilename );
-}
-
 //-----------------------------------------------------------------------------
 // Called by gameui to hint the engine that an exiting process has started.
 // The Engine needs to stabilize to a safe quiet state. More frames are going
@@ -1829,26 +1790,6 @@ void CEngineClient::StartXboxExitingProcess()
 {
 	// not for PC
 	return;
-}
-
-bool CEngineClient::IsSaveInProgress()
-{
-	return saverestore->IsSaveInProgress();
-}
-
-bool CEngineClient::IsAutoSaveDangerousInProgress()
-{
-	return saverestore->IsAutoSaveDangerousInProgress();
-}
-
-bool CEngineClient::IsAutoSaveInProgress()
-{
-	return saverestore->IsAutoSaveInProgress();
-}
-
-const char *CEngineClient::GetSaveDirName() // get a pointer to the path where saves should go (with a trailing slash already added)
-{
-	return saverestore->GetSaveDir();
 }
 
 
@@ -1866,11 +1807,6 @@ void CEngineClient::OnStorageDeviceDetached( int iController )
 
 void CEngineClient::FinishContainerWrites( int iController )
 {
-}
-
-void CEngineClient::FinishAsyncSave()
-{
-	saverestore->FinishAsyncSave();
 }
 
 void CEngineClient::ResetDemoInterpolation( void )

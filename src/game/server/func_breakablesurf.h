@@ -7,6 +7,8 @@
 
 #ifndef FUNC_BREAKABLESURF_H
 #define FUNC_BREAKABLESURF_H
+
+#include "reflect_annotations.h"
 #ifdef _WIN32
 #pragma once
 #endif
@@ -32,7 +34,6 @@ public:
 	void			Precache( void );
 	void			PaneTouch( CBaseEntity *pOther );
 	void			Die( void );
-	DECLARE_DATADESC();
 };
 
 //#############################################################################
@@ -40,30 +41,31 @@ public:
 //
 //  A breakable surface
 //#############################################################################
-class CBreakableSurface : public CBreakable
+class [[= ks::reflect::NetTable{ .name = "DT_BreakableSurface" } ]]
+      CBreakableSurface : public CBreakable
 {
 	DECLARE_CLASS( CBreakableSurface, CBreakable );
 	DECLARE_DATADESC();
 	DECLARE_SERVERCLASS();
 
 public:
-	CNetworkVar( int, m_nNumWide );
-	CNetworkVar( int, m_nNumHigh );
-	CNetworkVar( float, m_flPanelWidth );
-	CNetworkVar( float, m_flPanelHeight );
-	CNetworkVector( m_vNormal );
-	CNetworkVector( m_vCorner );
-	CNetworkVar( bool, m_bIsBroken );
-	CNetworkVar( ShatterSurface_t, m_nSurfaceType );
+	CNetworkVar( int, m_nNumWide, [[= ks::reflect::Net{ .bits = 8, .flags = SPROP_UNSIGNED } ]] );
+	CNetworkVar( int, m_nNumHigh, [[= ks::reflect::Net{ .bits = 8, .flags = SPROP_UNSIGNED } ]] );
+	CNetworkVar( float, m_flPanelWidth, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE } ]] );
+	CNetworkVar( float, m_flPanelHeight, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE } ]] );
+	CNetworkVector( m_vNormal, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD, .enc = ks::reflect::ENC_VECTOR } ]] );
+	CNetworkVector( m_vCorner, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD, .enc = ks::reflect::ENC_VECTOR } ]] );
+	CNetworkVar( bool, m_bIsBroken, [[= ks::reflect::Net{ .bits = 1, .flags = SPROP_UNSIGNED } ]] );
+	CNetworkVar( ShatterSurface_t, m_nSurfaceType, [[= ks::reflect::Net{ .bits = 2, .flags = SPROP_UNSIGNED } ]] [[= ks::reflect::Key{ .name = "surfacetype" } ]] );
 	int					m_nNumBrokenPanes;
 	float				m_flSupport[MAX_NUM_PANELS][MAX_NUM_PANELS]; //UNDONE: allocate dynamically?
 
-	int					m_nFragility;
-	Vector				m_vLLVertex;
-	Vector				m_vULVertex;
-	Vector				m_vLRVertex;
-	Vector				m_vURVertex;
-	int					m_nQuadError;
+	[[= ks::reflect::Key{ .name = "fragility" } ]] int					m_nFragility;
+	[[= ks::reflect::Key{ .name = "lowerleft" } ]] Vector				m_vLLVertex;
+	[[= ks::reflect::Key{ .name = "upperleft" } ]] Vector				m_vULVertex;
+	[[= ks::reflect::Key{ .name = "lowerright" } ]] Vector				m_vLRVertex;
+	[[= ks::reflect::Key{ .name = "upperright" } ]] Vector				m_vURVertex;
+	[[= ks::reflect::Key{ .name = "error" } ]] int					m_nQuadError;
 
 	void			SurfaceTouch( CBaseEntity *pOther );
 	void			PanePos(const Vector &vPos, float *flWidth, float *flHeight);
@@ -91,11 +93,11 @@ public:
 	void			Event_Killed( CBaseEntity *pInflictor, CBaseEntity *pAttacker, float flDamage, int bitsDamageType );
 	void			TraceAttack( const CTakeDamageInfo &info, const Vector &vecDir, trace_t *ptr );
 	int				OnTakeDamage( const CTakeDamageInfo &info );
-	void			InputShatter( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Shatter", .type = FIELD_VECTOR } ]] void			InputShatter( inputdata_t &inputdata );
 	void			VPhysicsCollision( int index, gamevcollisionevent_t *pEvent );
 private:
 	// One bit per pane
-	CNetworkArray( bool, m_RawPanelBitVec, MAX_NUM_PANELS * MAX_NUM_PANELS );
+	CNetworkArray( bool, m_RawPanelBitVec, MAX_NUM_PANELS * MAX_NUM_PANELS, [[= ks::reflect::Net{ .bits = 1, .flags = SPROP_UNSIGNED } ]] );
 };
 
 #endif // FUNC_BREAKABLESURF_H

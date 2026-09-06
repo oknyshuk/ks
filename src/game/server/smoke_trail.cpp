@@ -6,6 +6,9 @@
 //
 //=============================================================================//
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_sendtable.h"
+#include "reflect_annotations.h"
 #include "smoke_trail.h"
 #include "dt_send.h"
 
@@ -20,45 +23,11 @@
 //-----------------------------------------------------------------------------
 //Data table
 //-----------------------------------------------------------------------------
-IMPLEMENT_SERVERCLASS_ST(SmokeTrail, DT_SmokeTrail)
-	SendPropFloat(SENDINFO(m_SpawnRate), 8, 0, 1, 1024),
-	SendPropVector(SENDINFO(m_StartColor), 8, 0, 0, 1),
-	SendPropVector(SENDINFO(m_EndColor), 8, 0, 0, 1),
-	SendPropFloat(SENDINFO(m_ParticleLifetime), 16, SPROP_ROUNDUP, 0.1, 100),
-	SendPropFloat(SENDINFO(m_StopEmitTime), 0, SPROP_NOSCALE),
-	SendPropFloat(SENDINFO(m_MinSpeed), -1, SPROP_NOSCALE),
-	SendPropFloat(SENDINFO(m_MaxSpeed), -1, SPROP_NOSCALE),
-	SendPropFloat(SENDINFO(m_MinDirectedSpeed), -1, SPROP_NOSCALE),
-	SendPropFloat(SENDINFO(m_MaxDirectedSpeed), -1, SPROP_NOSCALE),
-	SendPropFloat(SENDINFO(m_StartSize), -1, SPROP_NOSCALE),
-	SendPropFloat(SENDINFO(m_EndSize), -1, SPROP_NOSCALE),
-	SendPropFloat(SENDINFO(m_SpawnRadius), -1, SPROP_NOSCALE),
-	SendPropBool(SENDINFO(m_bEmit) ),
-	SendPropInt(SENDINFO(m_nAttachment), 32 ),	
-	SendPropFloat(SENDINFO(m_Opacity), -1, SPROP_NOSCALE),
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( SmokeTrail, DT_SmokeTrail )
 
 LINK_ENTITY_TO_CLASS(env_smoketrail, SmokeTrail);
 
-BEGIN_DATADESC( SmokeTrail )
-
-	DEFINE_FIELD( m_StartColor, FIELD_VECTOR ),
-	DEFINE_FIELD( m_EndColor, FIELD_VECTOR ),
-	DEFINE_KEYFIELD( m_Opacity, FIELD_FLOAT, "opacity" ),
-	DEFINE_KEYFIELD( m_SpawnRate, FIELD_FLOAT, "spawnrate" ),
-	DEFINE_KEYFIELD( m_ParticleLifetime, FIELD_FLOAT, "lifetime" ),
-	DEFINE_FIELD( m_StopEmitTime, FIELD_TIME ),
-	DEFINE_KEYFIELD( m_MinSpeed, FIELD_FLOAT, "minspeed" ),
-	DEFINE_KEYFIELD( m_MaxSpeed, FIELD_FLOAT, "maxspeed" ),
-	DEFINE_KEYFIELD( m_MinDirectedSpeed, FIELD_FLOAT, "mindirectedspeed" ),
-	DEFINE_KEYFIELD( m_MaxDirectedSpeed, FIELD_FLOAT, "maxdirectedspeed" ),
-	DEFINE_KEYFIELD( m_StartSize, FIELD_FLOAT, "startsize" ),
-	DEFINE_KEYFIELD( m_EndSize, FIELD_FLOAT, "endsize" ),
-	DEFINE_KEYFIELD( m_SpawnRadius, FIELD_FLOAT, "spawnradius" ),
-	DEFINE_FIELD( m_bEmit, FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_nAttachment, FIELD_INTEGER ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( SmokeTrail )
 
 
 //-----------------------------------------------------------------------------
@@ -176,45 +145,10 @@ void SmokeTrail::FollowEntity( CBaseEntity *pEntity, const char *pAttachmentName
 //==================================================
 
 //Data table
-IMPLEMENT_SERVERCLASS_ST(RocketTrail, DT_RocketTrail)
-	SendPropFloat(SENDINFO(m_SpawnRate), 8, 0, 1, 1024),
-	SendPropVector(SENDINFO(m_StartColor), 8, 0, 0, 1),
-	SendPropVector(SENDINFO(m_EndColor), 8, 0, 0, 1),
-	SendPropFloat(SENDINFO(m_ParticleLifetime), 16, SPROP_ROUNDUP, 0.1, 100),
-	SendPropFloat(SENDINFO(m_StopEmitTime), 0, SPROP_NOSCALE),
-	SendPropFloat(SENDINFO(m_MinSpeed), -1, SPROP_NOSCALE),
-	SendPropFloat(SENDINFO(m_MaxSpeed), -1, SPROP_NOSCALE),
-	SendPropFloat(SENDINFO(m_StartSize), -1, SPROP_NOSCALE),
-	SendPropFloat(SENDINFO(m_EndSize), -1, SPROP_NOSCALE),
-	SendPropFloat(SENDINFO(m_SpawnRadius), -1, SPROP_NOSCALE),
-	SendPropBool(SENDINFO(m_bEmit)),
-	SendPropInt(SENDINFO(m_nAttachment), 32 ),	
-	SendPropFloat(SENDINFO(m_Opacity), -1, SPROP_NOSCALE),
-	SendPropInt	(SENDINFO(m_bDamaged), 1, SPROP_UNSIGNED),
-	SendPropFloat(SENDINFO(m_flFlareScale), -1, SPROP_NOSCALE),
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( RocketTrail, DT_RocketTrail )
 
 LINK_ENTITY_TO_CLASS( env_rockettrail, RocketTrail );
 
-BEGIN_DATADESC( RocketTrail )
-
-	DEFINE_FIELD( m_StartColor, FIELD_VECTOR ),
-	DEFINE_FIELD( m_EndColor, FIELD_VECTOR ),
-	DEFINE_FIELD( m_Opacity, FIELD_FLOAT ),
-	DEFINE_FIELD( m_SpawnRate, FIELD_FLOAT ),
-	DEFINE_FIELD( m_ParticleLifetime, FIELD_FLOAT ),
-	DEFINE_FIELD( m_StopEmitTime, FIELD_TIME ),
-	DEFINE_FIELD( m_MinSpeed, FIELD_FLOAT ),
-	DEFINE_FIELD( m_MaxSpeed, FIELD_FLOAT ),
-	DEFINE_FIELD( m_StartSize, FIELD_FLOAT ),
-	DEFINE_FIELD( m_EndSize, FIELD_FLOAT ),
-	DEFINE_FIELD( m_SpawnRadius, FIELD_FLOAT ),
-	DEFINE_FIELD( m_bEmit, FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_nAttachment, FIELD_INTEGER ),
-	DEFINE_FIELD( m_bDamaged, FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_flFlareScale, FIELD_FLOAT ),
-
-END_DATADESC()
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -298,29 +232,10 @@ void RocketTrail::FollowEntity( CBaseEntity *pEntity, const char *pAttachmentNam
 // SporeTrail
 //==================================================
 
-IMPLEMENT_SERVERCLASS_ST( SporeTrail, DT_SporeTrail )
-	SendPropFloat	(SENDINFO(m_flSpawnRate), 8, 0, 1, 1024),
-	SendPropVector	(SENDINFO(m_vecEndColor), 8, 0, 0, 1),
-	SendPropFloat	(SENDINFO(m_flParticleLifetime), 16, SPROP_ROUNDUP, 0.1, 100),
-	SendPropFloat	(SENDINFO(m_flStartSize), -1, SPROP_NOSCALE),
-	SendPropFloat	(SENDINFO(m_flEndSize), -1, SPROP_NOSCALE),
-	SendPropFloat	(SENDINFO(m_flSpawnRadius), -1, SPROP_NOSCALE),
-	SendPropBool	(SENDINFO(m_bEmit)),
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( SporeTrail, DT_SporeTrail )
 
 LINK_ENTITY_TO_CLASS(env_sporetrail, SporeTrail);
 
-BEGIN_DATADESC( SporeTrail )
-
-	DEFINE_FIELD( m_vecEndColor, FIELD_VECTOR ),
-	DEFINE_FIELD( m_flSpawnRate, FIELD_FLOAT ),
-	DEFINE_FIELD( m_flParticleLifetime, FIELD_FLOAT ),
-	DEFINE_FIELD( m_flStartSize, FIELD_FLOAT ),
-	DEFINE_FIELD( m_flEndSize, FIELD_FLOAT ),
-	DEFINE_FIELD( m_flSpawnRadius, FIELD_FLOAT ),
-	DEFINE_FIELD( m_bEmit, FIELD_BOOLEAN ),
-
-END_DATADESC()
 
 SporeTrail::SporeTrail( void )
 {
@@ -365,33 +280,11 @@ SporeTrail* SporeTrail::CreateSporeTrail()
 // SporeExplosion
 //==================================================
 
-IMPLEMENT_SERVERCLASS_ST( SporeExplosion, DT_SporeExplosion )
-	SendPropFloat	(SENDINFO(m_flSpawnRate), 8, 0, 1, 1024),
-	SendPropFloat	(SENDINFO(m_flParticleLifetime), 16, SPROP_ROUNDUP, 0.1, 100),
-	SendPropFloat	(SENDINFO(m_flStartSize), -1, SPROP_NOSCALE),
-	SendPropFloat	(SENDINFO(m_flEndSize), -1, SPROP_NOSCALE),
-	SendPropFloat	(SENDINFO(m_flSpawnRadius), -1, SPROP_NOSCALE),
-	SendPropBool	(SENDINFO(m_bEmit) ),
-	SendPropBool	(SENDINFO(m_bDontRemove) ),
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( SporeExplosion, DT_SporeExplosion )
 
 LINK_ENTITY_TO_CLASS( env_sporeexplosion, SporeExplosion );
 
-BEGIN_DATADESC( SporeExplosion )
-
-	DEFINE_KEYFIELD( m_flSpawnRate, FIELD_FLOAT, "spawnrate" ),
-	DEFINE_FIELD( m_flParticleLifetime, FIELD_FLOAT ),
-	DEFINE_FIELD( m_flStartSize, FIELD_FLOAT ),
-	DEFINE_FIELD( m_flEndSize, FIELD_FLOAT ),
-	DEFINE_FIELD( m_flSpawnRadius, FIELD_FLOAT ),
-	DEFINE_FIELD( m_bEmit, FIELD_BOOLEAN ),
-	DEFINE_KEYFIELD( m_bDisabled, FIELD_BOOLEAN, "startdisabled" ),
-	DEFINE_FIELD( m_bDontRemove, FIELD_BOOLEAN ),
-
-	DEFINE_INPUTFUNC( FIELD_VOID, "Disable", InputDisable ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "Enable", InputEnable ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( SporeExplosion )
 
 SporeExplosion::SporeExplosion( void )
 {
@@ -455,17 +348,8 @@ void SporeExplosion::InputDisable( inputdata_t &inputdata )
 	m_bEmit = false;
 }
 
-BEGIN_DATADESC( CFireTrail )
 
-	DEFINE_FIELD( m_flLifetime, FIELD_FLOAT ),
-	DEFINE_FIELD( m_nAttachment, FIELD_INTEGER ),
-
-END_DATADESC()
-
-IMPLEMENT_SERVERCLASS_ST( CFireTrail, DT_FireTrail )
-	SendPropInt( SENDINFO( m_nAttachment ), 32 ),
-	SendPropFloat( SENDINFO( m_flLifetime ), 0, SPROP_NOSCALE ),
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CFireTrail, DT_FireTrail )
 
 LINK_ENTITY_TO_CLASS( env_fire_trail, CFireTrail );
 
@@ -529,42 +413,11 @@ CFireTrail *CFireTrail::CreateFireTrail( void )
 //-----------------------------------------------------------------------------
 //Data table
 //-----------------------------------------------------------------------------
-IMPLEMENT_SERVERCLASS_ST(DustTrail, DT_DustTrail)
-	SendPropFloat(SENDINFO(m_SpawnRate), 8, 0, 1, 1024),
-	SendPropVector(SENDINFO(m_Color), 8, 0, 0, 1),
-	SendPropFloat(SENDINFO(m_ParticleLifetime), 16, SPROP_ROUNDUP, 0.1, 100),
-	SendPropFloat(SENDINFO(m_StopEmitTime), 0, SPROP_NOSCALE),
-	SendPropFloat(SENDINFO(m_MinSpeed), -1, SPROP_NOSCALE),
-	SendPropFloat(SENDINFO(m_MaxSpeed), -1, SPROP_NOSCALE),
-	SendPropFloat(SENDINFO(m_MinDirectedSpeed), -1, SPROP_NOSCALE),
-	SendPropFloat(SENDINFO(m_MaxDirectedSpeed), -1, SPROP_NOSCALE),
-	SendPropFloat(SENDINFO(m_StartSize), -1, SPROP_NOSCALE),
-	SendPropFloat(SENDINFO(m_EndSize), -1, SPROP_NOSCALE),
-	SendPropFloat(SENDINFO(m_SpawnRadius), -1, SPROP_NOSCALE),
-	SendPropBool(SENDINFO(m_bEmit) ),
-	SendPropFloat(SENDINFO(m_Opacity), -1, SPROP_NOSCALE),
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( DustTrail, DT_DustTrail )
 
 LINK_ENTITY_TO_CLASS( env_dusttrail, DustTrail);
 
-BEGIN_DATADESC( DustTrail )
-
-	DEFINE_FIELD( m_Color, FIELD_VECTOR ),
-	DEFINE_KEYFIELD( m_Opacity, FIELD_FLOAT, "opacity" ),
-	DEFINE_KEYFIELD( m_SpawnRate, FIELD_FLOAT, "spawnrate" ),
-	DEFINE_KEYFIELD( m_ParticleLifetime, FIELD_FLOAT, "lifetime" ),
-	DEFINE_FIELD( m_StopEmitTime, FIELD_TIME ),
-	DEFINE_KEYFIELD( m_MinSpeed, FIELD_FLOAT, "minspeed" ),
-	DEFINE_KEYFIELD( m_MaxSpeed, FIELD_FLOAT, "maxspeed" ),
-	DEFINE_KEYFIELD( m_MinDirectedSpeed, FIELD_FLOAT, "mindirectedspeed" ),
-	DEFINE_KEYFIELD( m_MaxDirectedSpeed, FIELD_FLOAT, "maxdirectedspeed" ),
-	DEFINE_KEYFIELD( m_StartSize, FIELD_FLOAT, "startsize" ),
-	DEFINE_KEYFIELD( m_EndSize, FIELD_FLOAT, "endsize" ),
-	DEFINE_KEYFIELD( m_SpawnRadius, FIELD_FLOAT, "spawnradius" ),
-	DEFINE_FIELD( m_bEmit, FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_nAttachment, FIELD_INTEGER ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( DustTrail )
 
 
 //-----------------------------------------------------------------------------

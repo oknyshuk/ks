@@ -5,6 +5,8 @@
 // $NoKeywords: $
 //=============================================================================//
 #include "cbase.h"
+#include "reflect_recvtable.h"
+#include "reflect_annotations.h"
 #include "engine/IEngineSound.h"
 #include "hud.h"
 #include "recvproxy.h"
@@ -15,8 +17,7 @@
 #include "tier0/memdbgon.h"
 
 
-IMPLEMENT_CLIENTCLASS_DT(C_CSTeam, DT_CSTeam, CCSTeam)
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS( C_CSTeam, DT_CSTeam, CCSTeam )
 
 //-----------------------------------------------------------------------------
 // Purpose: 

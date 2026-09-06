@@ -6,6 +6,8 @@
 
 #ifndef HEGRENADE_PROJECTILE_H
 #define HEGRENADE_PROJECTILE_H
+
+#include "reflect_annotations.h"
 #ifdef _WIN32
 #pragma once
 #endif
@@ -47,7 +49,7 @@ public:
 
 	void SetTimer( float timer );
 
-	void	InitializeSpawnFromWorld( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "InitializeSpawnFromWorld", .type = FIELD_VOID } ]] void	InitializeSpawnFromWorld( inputdata_t &inputdata );
 
 private:
 	float m_flDetonateTime;

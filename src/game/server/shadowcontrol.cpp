@@ -6,6 +6,9 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_sendtable.h"
+#include "reflect_annotations.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -18,7 +21,8 @@
 //------------------------------------------------------------------------------
 // Purpose : Shadow control entity
 //------------------------------------------------------------------------------
-class CShadowControl : public CBaseEntity
+class [[= ks::reflect::NetTable{ .name = "DT_ShadowControl", .base = false } ]]
+      CShadowControl : public CBaseEntity
 {
 public:
 	DECLARE_CLASS( CShadowControl, CBaseEntity );
@@ -28,7 +32,7 @@ public:
 	void Spawn( void );
 	bool KeyValue( const char *szKeyName, const char *szValue );
 	int  UpdateTransmitState();
-	void InputSetAngles( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetAngles", .type = FIELD_STRING } ]] void InputSetAngles( inputdata_t &inputdata );
 
 	virtual int	ObjectCaps( void ) { return BaseClass::ObjectCaps() & ~FCAP_ACROSS_TRANSITION; }
 
@@ -36,40 +40,19 @@ public:
 	DECLARE_DATADESC();
 
 private:
-	CNetworkVector( m_shadowDirection );
-	CNetworkColor32( m_shadowColor );
-	CNetworkVar( float, m_flShadowMaxDist );
-	CNetworkVar( bool, m_bDisableShadows );
-	CNetworkVar( bool, m_bEnableLocalLightShadows );
+	CNetworkVector( m_shadowDirection, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_NOSCALE, .enc = ks::reflect::ENC_VECTOR } ]] [[= ks::reflect::Key{ .name = "direction", .input = true } ]] );
+	CNetworkColor32( m_shadowColor, [[= ks::reflect::Net{ .bits = 32, .flags = SPROP_UNSIGNED } ]] [[= ks::reflect::Proxy<SendProxy_Color32ToInt32, ks::reflect::WIRE_SEND>{} ]] [[= ks::reflect::Key{ .name = "color", .input = true } ]] );
+	CNetworkVar( float, m_flShadowMaxDist, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE } ]] [[= ks::reflect::Key{ .name = "distance" } ]] [[= ks::reflect::Key{ .name = "SetDistance", .input = true } ]] );
+	CNetworkVar( bool, m_bDisableShadows, [[= ks::reflect::Net{} ]] [[= ks::reflect::Key{ .name = "disableallshadows" } ]] [[= ks::reflect::Key{ .name = "SetShadowsDisabled", .input = true } ]] );
+	CNetworkVar( bool, m_bEnableLocalLightShadows, [[= ks::reflect::Net{} ]] [[= ks::reflect::Key{ .name = "enableshadowsfromlocallights" } ]] [[= ks::reflect::Key{ .name = "SetShadowsFromLocalLightsEnabled", .input = true } ]] );
 };
 
 LINK_ENTITY_TO_CLASS(shadow_control, CShadowControl);
 
-BEGIN_DATADESC( CShadowControl )
-
-	DEFINE_KEYFIELD( m_flShadowMaxDist, FIELD_FLOAT, "distance" ),
-	DEFINE_KEYFIELD( m_bDisableShadows, FIELD_BOOLEAN, "disableallshadows" ),
-	DEFINE_KEYFIELD( m_bEnableLocalLightShadows, FIELD_BOOLEAN, "enableshadowsfromlocallights" ),
-
-	// Inputs
-	DEFINE_INPUT( m_shadowColor,		FIELD_COLOR32, "color" ),
-	DEFINE_INPUT( m_shadowDirection,	FIELD_VECTOR, "direction" ),
-	DEFINE_INPUT( m_flShadowMaxDist,	FIELD_FLOAT, "SetDistance" ),
-	DEFINE_INPUT( m_bDisableShadows,	FIELD_BOOLEAN, "SetShadowsDisabled" ),
-	DEFINE_INPUT( m_bEnableLocalLightShadows,	FIELD_BOOLEAN, "SetShadowsFromLocalLightsEnabled" ),
-
-	DEFINE_INPUTFUNC( FIELD_STRING, "SetAngles", InputSetAngles ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CShadowControl )
 
 
-IMPLEMENT_SERVERCLASS_ST_NOBASE(CShadowControl, DT_ShadowControl)
-	SendPropVector(SENDINFO(m_shadowDirection), -1,  SPROP_NOSCALE ),
-	SendPropInt(SENDINFO(m_shadowColor),	32, SPROP_UNSIGNED, SendProxy_Color32ToInt32 ),
-	SendPropFloat(SENDINFO(m_flShadowMaxDist), 0, SPROP_NOSCALE ),
-	SendPropBool(SENDINFO(m_bDisableShadows)),
-	SendPropBool(SENDINFO(m_bEnableLocalLightShadows)),
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CShadowControl, DT_ShadowControl )
 
 
 CShadowControl::CShadowControl()

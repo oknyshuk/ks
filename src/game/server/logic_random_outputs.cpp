@@ -6,6 +6,8 @@
 //=============================================================================
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_annotations.h"
 #include "entityinput.h"
 #include "entityoutput.h"
 #include "eventqueue.h"
@@ -21,33 +23,7 @@ const int SF_ALLOW_FAST_RETRIGGER		= 0x002;	// Unless set, entity will disable i
 LINK_ENTITY_TO_CLASS(logic_random_outputs, CLogicRandomOutputs);
 
 
-BEGIN_DATADESC( CLogicRandomOutputs )
-
-	DEFINE_FIELD(m_bWaitForRefire, FIELD_BOOLEAN),
-	DEFINE_KEYFIELD(m_bDisabled, FIELD_BOOLEAN, "StartDisabled"),
-
-	DEFINE_AUTO_ARRAY( m_flOnTriggerChance, FIELD_FLOAT ),
-
-	// Inputs
-	DEFINE_INPUTFUNC(FIELD_VOID, "Enable", InputEnable),
-	DEFINE_INPUTFUNC(FIELD_VOID, "EnableRefire", InputEnableRefire),
-	DEFINE_INPUTFUNC(FIELD_VOID, "Disable", InputDisable),
-	DEFINE_INPUTFUNC(FIELD_VOID, "Toggle", InputToggle),
-	DEFINE_INPUTFUNC(FIELD_VOID, "Trigger", InputTrigger),
-	DEFINE_INPUTFUNC(FIELD_VOID, "CancelPending", InputCancelPending),
-
-	// Outputs
-	DEFINE_OUTPUT(m_OnSpawn, "OnSpawn"),
-	DEFINE_OUTPUT(m_Output[0], "OnTrigger1"),
-	DEFINE_OUTPUT(m_Output[1], "OnTrigger2"),
-	DEFINE_OUTPUT(m_Output[2], "OnTrigger3"),
-	DEFINE_OUTPUT(m_Output[3], "OnTrigger4"),
-	DEFINE_OUTPUT(m_Output[4], "OnTrigger5"),
-	DEFINE_OUTPUT(m_Output[5], "OnTrigger6"),
-	DEFINE_OUTPUT(m_Output[6], "OnTrigger7"),
-	DEFINE_OUTPUT(m_Output[7], "OnTrigger8"),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CLogicRandomOutputs )
 
 
 

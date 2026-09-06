@@ -6,6 +6,8 @@
 //===========================================================================//
 
 #include "cbase.h"
+#include "reflect_recvtable.h"
+#include "reflect_annotations.h"
 #include "c_basetempentity.h"
 #include "c_te_legacytempents.h"
 #include "tempent.h"
@@ -20,7 +22,8 @@
 //-----------------------------------------------------------------------------
 // Purpose: Glow Sprite TE
 //-----------------------------------------------------------------------------
-class C_TEGlowSprite : public C_BaseTempEntity
+class [[= ks::reflect::NetTable{ .name = "DT_TEGlowSprite" } ]]
+      C_TEGlowSprite : public C_BaseTempEntity
 {
 public:
 	DECLARE_CLASS( C_TEGlowSprite, C_BaseTempEntity );
@@ -32,24 +35,18 @@ public:
 	virtual void	PostDataUpdate( DataUpdateType_t updateType );
 
 public:
-	Vector			m_vecOrigin;
-	int				m_nModelIndex;
-	float			m_fScale;
-	float			m_fLife;
-	int				m_nBrightness;
+	[[= ks::reflect::Net{} ]] Vector			m_vecOrigin;
+	[[= ks::reflect::Net{} ]] int				m_nModelIndex;
+	[[= ks::reflect::Net{} ]] float			m_fScale;
+	[[= ks::reflect::Net{} ]] float			m_fLife;
+	[[= ks::reflect::Net{} ]] int				m_nBrightness;
 };
 
 
 //-----------------------------------------------------------------------------
 // Networking
 //-----------------------------------------------------------------------------
-IMPLEMENT_CLIENTCLASS_EVENT_DT(C_TEGlowSprite, DT_TEGlowSprite, CTEGlowSprite)
-	RecvPropVector( RECVINFO(m_vecOrigin)),
-	RecvPropInt( RECVINFO(m_nModelIndex)),
-	RecvPropFloat( RECVINFO(m_fScale )),
-	RecvPropFloat( RECVINFO(m_fLife )),
-	RecvPropInt( RECVINFO(m_nBrightness)),
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS_EVENT( C_TEGlowSprite, DT_TEGlowSprite, CTEGlowSprite )
 
 
 //-----------------------------------------------------------------------------

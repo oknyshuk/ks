@@ -12,6 +12,8 @@
 //=============================================================================//
 #if !defined( BASETEMPENTITY_H )
 #define BASETEMPENTITY_H
+
+#include "reflect_annotations.h"
 #ifdef _WIN32
 #pragma once
 #endif
@@ -20,7 +22,8 @@
 
 // This is the base class for TEMP ENTITIES that use the 
 //  event system to propagate
-class CBaseTempEntity
+class [[= ks::reflect::NetTable{ .name = "DT_BaseTempEntity", .base = false } ]]
+      CBaseTempEntity
 {
 public:
 	DECLARE_CLASS_NOBASE( CBaseTempEntity );

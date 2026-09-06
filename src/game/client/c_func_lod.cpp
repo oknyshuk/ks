@@ -6,6 +6,8 @@
 //
 //===========================================================================//
 #include "cbase.h"
+#include "reflect_recvtable.h"
+#include "reflect_annotations.h"
 #include "view.h"
 #include "iviewrender.h"
 #include "clientalphaproperty.h"
@@ -13,7 +15,8 @@
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
-class C_Func_LOD : public C_BaseEntity
+class [[= ks::reflect::NetTable{ .name = "DT_Func_LOD" } ]]
+      C_Func_LOD : public C_BaseEntity
 {
 public:
 	DECLARE_CLASS( C_Func_LOD, C_BaseEntity );
@@ -30,8 +33,8 @@ public:
 // Replicated vars from the server.
 // These are documented in the server-side entity.
 public:
-	int m_nDisappearMinDist;
-	int m_nDisappearMaxDist;
+	[[= ks::reflect::Net{} ]] int m_nDisappearMinDist;
+	[[= ks::reflect::Net{} ]] int m_nDisappearMaxDist;
 };
 
 
@@ -40,10 +43,7 @@ public:
 // ------------------------------------------------------------------------- //
 
 // Datatable..
-IMPLEMENT_CLIENTCLASS_DT(C_Func_LOD, DT_Func_LOD, CFunc_LOD)
-	RecvPropInt(RECVINFO(m_nDisappearMinDist)),
-	RecvPropInt(RECVINFO(m_nDisappearMaxDist)),
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS( C_Func_LOD, DT_Func_LOD, CFunc_LOD )
 
 
 

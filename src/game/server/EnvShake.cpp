@@ -8,8 +8,9 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_annotations.h"
 #include "shake.h"
-#include "physics_saverestore.h"
 #include "rope.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
@@ -35,18 +36,16 @@ public:
 	Vector  m_force;
 };
 
-BEGIN_SIMPLE_DATADESC( CPhysicsShake )
-	DEFINE_FIELD( m_force, FIELD_VECTOR ),
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP_SIMPLE( CPhysicsShake )
 
 
 class CEnvShake : public CPointEntity
 {
 private:
-	float m_Amplitude;
-	float m_Frequency;
-	float m_Duration;
-	float m_Radius;			// radius of 0 means all players
+	[[= ks::reflect::Key{ .name = "amplitude" } ]] float m_Amplitude;
+	[[= ks::reflect::Key{ .name = "frequency" } ]] float m_Frequency;
+	[[= ks::reflect::Key{ .name = "duration" } ]] float m_Duration;
+	[[= ks::reflect::Key{ .name = "radius" } ]] float m_Radius;			// radius of 0 means all players
 	float m_stopTime;
 	float m_nextShake;
 	float m_currentAmp;
@@ -78,10 +77,10 @@ public:
 	int DrawDebugTextOverlays(void);
 
 	// Input handlers
-	void InputStartShake( inputdata_t &inputdata );
-	void InputStopShake( inputdata_t &inputdata );
-	void InputAmplitude( inputdata_t &inputdata );
-	void InputFrequency( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "StartShake", .type = FIELD_VOID } ]] void InputStartShake( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "StopShake", .type = FIELD_VOID } ]] void InputStopShake( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Amplitude", .type = FIELD_FLOAT } ]] void InputAmplitude( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Frequency", .type = FIELD_FLOAT } ]] void InputFrequency( inputdata_t &inputdata );
 
 	// Causes the camera/physics shakes to happen:
 	void ApplyShake( ShakeCommand_t command ); 
@@ -90,25 +89,7 @@ public:
 
 LINK_ENTITY_TO_CLASS( env_shake, CEnvShake );
 
-BEGIN_DATADESC( CEnvShake )
-
-	DEFINE_KEYFIELD( m_Amplitude,	FIELD_FLOAT, "amplitude" ),
-	DEFINE_KEYFIELD( m_Frequency,	FIELD_FLOAT, "frequency" ),
-	DEFINE_KEYFIELD( m_Duration,		FIELD_FLOAT, "duration" ),
-	DEFINE_KEYFIELD( m_Radius,		FIELD_FLOAT, "radius" ),
-	DEFINE_FIELD( m_stopTime,		FIELD_TIME ),
-	DEFINE_FIELD( m_nextShake,	FIELD_TIME ),
-	DEFINE_FIELD( m_currentAmp,	FIELD_FLOAT ),
-	DEFINE_FIELD( m_maxForce,		FIELD_VECTOR ),
-	DEFINE_PHYSPTR( m_pShakeController ),
-	DEFINE_EMBEDDED( m_shakeCallback ),
-
-	DEFINE_INPUTFUNC( FIELD_VOID, "StartShake", InputStartShake ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "StopShake", InputStopShake ),
-	DEFINE_INPUTFUNC( FIELD_FLOAT, "Amplitude", InputAmplitude ),
-	DEFINE_INPUTFUNC( FIELD_FLOAT, "Frequency", InputFrequency ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CEnvShake )
 
 
 
@@ -425,9 +406,9 @@ static ConCommand shake("shake", CC_Shake, "Shake the screen.", FCVAR_CHEAT );
 class CEnvTilt : public CPointEntity
 {
 private:
-	float m_Duration;
-	float m_Radius;			// radius of 0 means all players
-	float m_TiltTime;
+	[[= ks::reflect::Key{ .name = "duration" } ]] float m_Duration;
+	[[= ks::reflect::Key{ .name = "radius" } ]] float m_Radius;			// radius of 0 means all players
+	[[= ks::reflect::Key{ .name = "tilttime" } ]] [[= ks::reflect::As{ FIELD_TIME } ]] float m_TiltTime;
 	float m_stopTime;
 
 	DECLARE_DATADESC();
@@ -448,8 +429,8 @@ public:
 	int DrawDebugTextOverlays(void);
 
 	// Input handlers
-	void InputStartTilt( inputdata_t &inputdata );
-	void InputStopTilt( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "StartTilt", .type = FIELD_VOID } ]] void InputStartTilt( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "StopTilt", .type = FIELD_VOID } ]] void InputStopTilt( inputdata_t &inputdata );
 
 	// Causes the camera/physics shakes to happen:
 	void ApplyTilt( ShakeCommand_t command ); 
@@ -457,17 +438,7 @@ public:
 
 LINK_ENTITY_TO_CLASS( env_tilt, CEnvTilt );
 
-BEGIN_DATADESC( CEnvTilt )
-
-	DEFINE_KEYFIELD( m_Duration,	FIELD_FLOAT, "duration" ),
-	DEFINE_KEYFIELD( m_Radius,		FIELD_FLOAT, "radius" ),
-	DEFINE_KEYFIELD( m_TiltTime,	FIELD_TIME, "tilttime" ),
-	DEFINE_FIELD( m_stopTime,		FIELD_TIME ),
-
-	DEFINE_INPUTFUNC( FIELD_VOID, "StartTilt", InputStartTilt ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "StopTilt", InputStopTilt ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CEnvTilt )
 
 
 QAngle CEnvTilt::TiltAngle( void )

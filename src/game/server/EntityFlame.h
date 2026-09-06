@@ -25,11 +25,12 @@
 class CAI_Link;
 
 
-class CEntityFlame : public CBaseEntity 
+#include "reflect_annotations.h"
+
+class [[= ks::reflect::NetTable{ .name = "DT_EntityFlame" } ]] CEntityFlame : public CBaseEntity 
 {
 	DECLARE_SERVERCLASS();
 	DECLARE_CLASS( CEntityFlame, CBaseEntity );
-	DECLARE_DATADESC();
 
 public:
 	static CEntityFlame	*Create( CBaseEntity *pTarget, float flLifetime, float flSize = 0.0f, bool bUseHitboxes = true );
@@ -63,15 +64,15 @@ public:
 protected:
 	void	FlameThink( void );
 
-	CNetworkHandle( CBaseEntity, m_hEntAttached );		// The entity that we are burning (attached to).
-	CNetworkVar( bool, m_bCheapEffect );
+	CNetworkHandle( CBaseEntity, m_hEntAttached, [[= ks::reflect::Net{} ]] );		// The entity that we are burning (attached to).
+	CNetworkVar( bool, m_bCheapEffect, [[= ks::reflect::Net{} ]] );
 
 	CNetworkVar( float, m_flSize );
 	CNetworkVar( bool, m_bUseHitboxes );
 	CNetworkVar( int, m_iNumHitboxFires );
 	CNetworkVar( float, m_flHitboxFireScale );
 
-	CNetworkVar( float, m_flLifetime );
+	CNetworkVar( float, m_flLifetime, [[= ks::reflect::Key{ .name = "lifetime" } ]] );
 	string_t	m_iszPlayingSound;	// Track the sound so we can StopSound later
 
 	EHANDLE m_hAttacker;

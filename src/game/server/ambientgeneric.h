@@ -6,6 +6,8 @@
 
 #ifndef AMBIENTGENERIC_H
 #define AMBIENTGENERIC_H
+
+#include "reflect_annotations.h"
 #ifdef _WIN32
 #pragma once
 #endif
@@ -83,17 +85,17 @@ public:
 	virtual void SendSound( SoundFlags_t flags );
 
 	// Input handlers
-	void InputPlaySound( inputdata_t &inputdata );
-	void InputStopSound( inputdata_t &inputdata );
-	void InputToggleSound( inputdata_t &inputdata );
-	void InputPitch( inputdata_t &inputdata );
-	void InputVolume( inputdata_t &inputdata );
-	void InputFadeIn( inputdata_t &inputdata );
-	void InputFadeOut( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "PlaySound", .type = FIELD_VOID } ]] void InputPlaySound( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "StopSound", .type = FIELD_VOID } ]] void InputStopSound( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "ToggleSound", .type = FIELD_VOID } ]] void InputToggleSound( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Pitch", .type = FIELD_FLOAT } ]] void InputPitch( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Volume", .type = FIELD_FLOAT } ]] void InputVolume( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "FadeIn", .type = FIELD_FLOAT } ]] void InputFadeIn( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "FadeOut", .type = FIELD_FLOAT } ]] void InputFadeOut( inputdata_t &inputdata );
 
 	DECLARE_DATADESC();
 
-	float m_radius;
+	[[= ks::reflect::Key{ .name = "radius" } ]] float m_radius;
 	float m_flMaxRadius;
 	soundlevel_t m_iSoundLevel;		// dB value
 	dynpitchvol_t m_dpv;	
@@ -101,8 +103,8 @@ public:
 	bool m_fActive;		// only true when the entity is playing a looping sound
 	bool m_fLooping;		// true when the sound played will loop
 
-	string_t m_iszSound;			// Path/filename of WAV file to play.
-	string_t m_sSourceEntName;
+	[[= ks::reflect::As{ FIELD_SOUNDNAME } ]] [[= ks::reflect::Key{ .name = "message" } ]] string_t m_iszSound;			// Path/filename of WAV file to play.
+	[[= ks::reflect::Key{ .name = "SourceEntityName" } ]] string_t m_sSourceEntName;
 	EHANDLE m_hSoundSource;	// entity from which the sound comes
 	int		m_nSoundSourceEntIndex; // In case the entity goes away before we finish stopping the sound...
 };

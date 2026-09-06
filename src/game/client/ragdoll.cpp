@@ -6,6 +6,9 @@
 //===========================================================================//
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_recvtable.h"
+#include "reflect_annotations.h"
 #include "mathlib/vmatrix.h"
 #include "ragdoll_shared.h"
 #include "bone_setup.h"
@@ -14,7 +17,6 @@
 #include "iviewrender.h"
 #include "tier0/vprof.h"
 #include "view.h"
-#include "physics_saverestore.h"
 #include "vphysics/constraints.h"
 #include "clientalphaproperty.h"
 
@@ -36,53 +38,8 @@ CRagdoll::CRagdoll()
 	m_lastUpdate = -FLT_MAX;
 }
 
-#define DEFINE_RAGDOLL_ELEMENT( i ) \
-	DEFINE_FIELD( m_ragdoll.list[i].originParentSpace, FIELD_VECTOR ), \
-	DEFINE_PHYSPTR( m_ragdoll.list[i].pObject ), \
-	DEFINE_PHYSPTR( m_ragdoll.list[i].pConstraint ), \
-	DEFINE_FIELD( m_ragdoll.list[i].parentIndex, FIELD_INTEGER )
 
-BEGIN_SIMPLE_DATADESC( CRagdoll )
-
-	DEFINE_AUTO_ARRAY( m_ragdoll.boneIndex,	FIELD_INTEGER ),
-	DEFINE_FIELD( m_ragdoll.listCount, FIELD_INTEGER ),
-	DEFINE_FIELD( m_ragdoll.allowStretch, FIELD_BOOLEAN ),
-	DEFINE_PHYSPTR( m_ragdoll.pGroup ),
-
-	DEFINE_RAGDOLL_ELEMENT( 0 ),
-	DEFINE_RAGDOLL_ELEMENT( 1 ),
-	DEFINE_RAGDOLL_ELEMENT( 2 ),
-	DEFINE_RAGDOLL_ELEMENT( 3 ),
-	DEFINE_RAGDOLL_ELEMENT( 4 ),
-	DEFINE_RAGDOLL_ELEMENT( 5 ),
-	DEFINE_RAGDOLL_ELEMENT( 6 ),
-	DEFINE_RAGDOLL_ELEMENT( 7 ),
-	DEFINE_RAGDOLL_ELEMENT( 8 ),
-	DEFINE_RAGDOLL_ELEMENT( 9 ),
-	DEFINE_RAGDOLL_ELEMENT( 10 ),
-	DEFINE_RAGDOLL_ELEMENT( 11 ),
-	DEFINE_RAGDOLL_ELEMENT( 12 ),
-	DEFINE_RAGDOLL_ELEMENT( 13 ),
-	DEFINE_RAGDOLL_ELEMENT( 14 ),
-	DEFINE_RAGDOLL_ELEMENT( 15 ),
-	DEFINE_RAGDOLL_ELEMENT( 16 ),
-	DEFINE_RAGDOLL_ELEMENT( 17 ),
-	DEFINE_RAGDOLL_ELEMENT( 18 ),
-	DEFINE_RAGDOLL_ELEMENT( 19 ),
-	DEFINE_RAGDOLL_ELEMENT( 20 ),
-	DEFINE_RAGDOLL_ELEMENT( 21 ),
-	DEFINE_RAGDOLL_ELEMENT( 22 ),
-	DEFINE_RAGDOLL_ELEMENT( 23 ),
-	DEFINE_RAGDOLL_ELEMENT( 24 ),
-	DEFINE_RAGDOLL_ELEMENT( 25 ),
-	DEFINE_RAGDOLL_ELEMENT( 26 ),
-	DEFINE_RAGDOLL_ELEMENT( 27 ),
-	DEFINE_RAGDOLL_ELEMENT( 28 ),
-	DEFINE_RAGDOLL_ELEMENT( 29 ),
-	DEFINE_RAGDOLL_ELEMENT( 30 ),
-	DEFINE_RAGDOLL_ELEMENT( 31 ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP_SIMPLE( CRagdoll )
 
 IPhysicsObject *CRagdoll::GetElement( int elementNum )
 { 
@@ -166,11 +123,6 @@ void CRagdoll::Init(
 
 	BuildRagdollBounds( ent );
 
-	for ( int i = 0; i < m_ragdoll.listCount; i++ )
-	{
-		g_pPhysSaveRestoreManager->AssociateModel( m_ragdoll.list[i].pObject, ent->GetModelIndex() );
-	}
-
 #if RAGDOLL_VISUALIZE
 	memcpy( m_savedBone1, &pDeltaBones0[0], sizeof(matrix3x4_t) * pstudiohdr->numbones() );
 	memcpy( m_savedBone2, &pDeltaBones1[0], sizeof(matrix3x4_t) * pstudiohdr->numbones() );
@@ -185,7 +137,6 @@ CRagdoll::~CRagdoll( void )
 		IPhysicsObject *pObject = m_ragdoll.list[i].pObject;
 		if ( pObject )
 		{
-			g_pPhysSaveRestoreManager->ForgetModel( m_ragdoll.list[i].pObject );
 			// Disable collision on all ragdoll parts before calling RagdollDestroy
 			// (which might cause touch callbacks on the ragdoll otherwise, which is
 			// very bad for a half deleted ragdoll).
@@ -428,7 +379,8 @@ CRagdoll *CreateRagdoll(
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-class C_ServerRagdoll : public C_BaseAnimating
+class [[= ks::reflect::NetTable{ .name = "DT_Ragdoll" } ]]
+      C_ServerRagdoll : public C_BaseAnimating
 {
 public:
 	DECLARE_CLASS( C_ServerRagdoll, C_BaseAnimating );
@@ -458,8 +410,8 @@ public:
 
 
 	// Incoming from network
-	Vector		m_ragPos[RAGDOLL_MAX_ELEMENTS];
-	QAngle		m_ragAngles[RAGDOLL_MAX_ELEMENTS];
+	[[= ks::reflect::Net{ .varlen = true } ]] Vector		m_ragPos[RAGDOLL_MAX_ELEMENTS];
+	[[= ks::reflect::Net{ .varlen = true } ]] QAngle		m_ragAngles[RAGDOLL_MAX_ELEMENTS];
 
 	CInterpolatedVarArray< Vector, RAGDOLL_MAX_ELEMENTS >	m_iv_ragPos;
 	CInterpolatedVarArray< QAngle, RAGDOLL_MAX_ELEMENTS >	m_iv_ragAngles;
@@ -471,22 +423,16 @@ private:
 	C_ServerRagdoll( const C_ServerRagdoll &src );
 
 	typedef CHandle<C_BaseAnimating> CBaseAnimatingHandle;
-	CNetworkVar( CBaseAnimatingHandle, m_hUnragdoll );
-	CNetworkVar( float, m_flBlendWeight );
+	CNetworkVar( CBaseAnimatingHandle, m_hUnragdoll, [[= ks::reflect::Net{} ]] );
+	CNetworkVar( float, m_flBlendWeight, [[= ks::reflect::Net{} ]] );
 	float m_flBlendWeightCurrent;
-	CNetworkVar( int, m_nOverlaySequence );
+	CNetworkVar( int, m_nOverlaySequence, [[= ks::reflect::Net{} ]] );
 	float m_flLastBoneChangeTime;
 };
 
 
 EXTERN_RECV_TABLE(DT_Ragdoll);
-IMPLEMENT_CLIENTCLASS_DT(C_ServerRagdoll, DT_Ragdoll, CRagdollProp)
-	RecvPropArray(RecvPropQAngles(RECVINFO(m_ragAngles[0])), m_ragAngles),
-	RecvPropArray(RecvPropVector(RECVINFO(m_ragPos[0])), m_ragPos),
-	RecvPropEHandle(RECVINFO(m_hUnragdoll)),
-	RecvPropFloat(RECVINFO(m_flBlendWeight)),
-	RecvPropInt(RECVINFO(m_nOverlaySequence)),
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS( C_ServerRagdoll, DT_Ragdoll, CRagdollProp )
 
 
 C_ServerRagdoll::C_ServerRagdoll( void ) :
@@ -772,7 +718,8 @@ static int GetHighestBit( int flags )
 }
 
 #define ATTACH_INTERP_TIME	0.2
-class C_ServerRagdollAttached : public C_ServerRagdoll
+class [[= ks::reflect::NetTable{ .name = "DT_Ragdoll_Attached" } ]]
+      C_ServerRagdollAttached : public C_ServerRagdoll
 {
 	DECLARE_CLASS( C_ServerRagdollAttached, C_ServerRagdoll );
 public:
@@ -854,11 +801,11 @@ public:
 	void OnDataChanged( DataUpdateType_t updateType );
 	virtual float LastBoneChangedTime() { return FLT_MAX; }
 
-	Vector		m_attachmentPointBoneSpace;
+	[[= ks::reflect::Net{} ]] Vector		m_attachmentPointBoneSpace;
 	Vector		m_vecOffset;
-	Vector		m_attachmentPointRagdollSpace;
-	int			m_ragdollAttachedObjectIndex;
-	int			m_boneIndexAttached;
+	[[= ks::reflect::Net{} ]] Vector		m_attachmentPointRagdollSpace;
+	[[= ks::reflect::Net{} ]] int			m_ragdollAttachedObjectIndex;
+	[[= ks::reflect::Net{} ]] int			m_boneIndexAttached;
 	float		m_parentTime;
 	bool		m_bHasParent;
 private:
@@ -866,12 +813,7 @@ private:
 };
 
 EXTERN_RECV_TABLE(DT_Ragdoll_Attached);
-IMPLEMENT_CLIENTCLASS_DT(C_ServerRagdollAttached, DT_Ragdoll_Attached, CRagdollPropAttached)
-	RecvPropInt( RECVINFO( m_boneIndexAttached ) ),
-	RecvPropInt( RECVINFO( m_ragdollAttachedObjectIndex ) ),
-	RecvPropVector(RECVINFO(m_attachmentPointBoneSpace) ),
-	RecvPropVector(RECVINFO(m_attachmentPointRagdollSpace) ),
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS( C_ServerRagdollAttached, DT_Ragdoll_Attached, CRagdollPropAttached )
 
 void C_ServerRagdollAttached::OnDataChanged( DataUpdateType_t updateType )
 {

@@ -5,6 +5,8 @@
 //=============================================================================
 
 #include "cbase.h"
+#include "reflect_annotations.h"
+#include "reflect_datamap.h"
 #include "achievementmgr.h"
 #include "icommandline.h"
 #ifdef CLIENT_DLL
@@ -24,14 +26,8 @@
 CBaseAchievementHelper *CBaseAchievementHelper::s_pFirst = NULL;
 static int g_nAchivementBitchCount = 0;
 
-BEGIN_DATADESC_NO_BASE( CBaseAchievement )
-DEFINE_FIELD( m_iCount,						FIELD_INTEGER ),
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP_NO_BASE( CBaseAchievement )
 
-BEGIN_DATADESC( CFailableAchievement )
-DEFINE_FIELD( m_bActivated,					FIELD_BOOLEAN ),
-DEFINE_FIELD( m_bFailed,					FIELD_BOOLEAN ),
-END_DATADESC()
 
 //-----------------------------------------------------------------------------
 // Purpose: constructor

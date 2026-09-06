@@ -7,11 +7,15 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_sendtable.h"
+#include "reflect_annotations.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
-class CFunc_LOD : public CBaseEntity
+class [[= ks::reflect::NetTable{ .name = "DT_Func_LOD" } ]]
+      CFunc_LOD : public CBaseEntity
 {
 	DECLARE_DATADESC();
 	DECLARE_CLASS( CFunc_LOD, CBaseEntity );
@@ -27,8 +31,8 @@ public:
 	// (m_fNonintrusiveDist and m_fDisappearDist):	the bmodel is trying to appear or disappear nonintrusively
 	//												(waits until it's out of the view frustrum or until there's a lot of motion)
 	// (m_fDisappearDist+):							the bmodel is forced to be invisible
-	CNetworkVar( int, m_nDisappearMinDist );
-	CNetworkVar( int, m_nDisappearMaxDist );
+	CNetworkVar( int, m_nDisappearMinDist, [[= ks::reflect::Net{ .bits = 16, .flags = SPROP_UNSIGNED } ]] [[= ks::reflect::Key{ .name = "DisappearMinDist" } ]] );
+	CNetworkVar( int, m_nDisappearMaxDist, [[= ks::reflect::Net{ .bits = 16, .flags = SPROP_UNSIGNED } ]] [[= ks::reflect::Key{ .name = "DisappearMaxDist" } ]] );
 
 // CBaseEntity overrides.
 public:
@@ -40,10 +44,7 @@ public:
 };
 
 
-IMPLEMENT_SERVERCLASS_ST(CFunc_LOD, DT_Func_LOD)
-	SendPropInt( SENDINFO(m_nDisappearMinDist), 16, SPROP_UNSIGNED ),
-	SendPropInt( SENDINFO(m_nDisappearMaxDist), 16, SPROP_UNSIGNED ),
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CFunc_LOD, DT_Func_LOD )
 
 
 LINK_ENTITY_TO_CLASS(func_lod, CFunc_LOD);
@@ -52,12 +53,7 @@ LINK_ENTITY_TO_CLASS(func_lod, CFunc_LOD);
 //---------------------------------------------------------
 // Save/Restore
 //---------------------------------------------------------
-BEGIN_DATADESC( CFunc_LOD )
-
-	DEFINE_KEYFIELD( m_nDisappearMinDist,	FIELD_INTEGER, "DisappearMinDist" ),
-	DEFINE_KEYFIELD( m_nDisappearMaxDist,	FIELD_INTEGER, "DisappearMaxDist" ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CFunc_LOD )
 
 
 // ------------------------------------------------------------------------------------- //

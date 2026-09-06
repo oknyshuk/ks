@@ -120,13 +120,7 @@ public:
 													&dataTable::g_RecvTable);
 
 // The IMPLEMENT_CLIENTCLASS_DT macros do IMPLEMENT_CLIENT_CLASS and also do BEGIN_RECV_TABLE.
-#define IMPLEMENT_CLIENTCLASS_DT(clientClassName, dataTable, serverClassName)\
-	IMPLEMENT_CLIENTCLASS(clientClassName, dataTable, serverClassName)\
-	BEGIN_RECV_TABLE(clientClassName, dataTable)
 
-#define IMPLEMENT_CLIENTCLASS_DT_NOBASE(clientClassName, dataTable, serverClassName)\
-	IMPLEMENT_CLIENTCLASS(clientClassName, dataTable, serverClassName)\
-	BEGIN_RECV_TABLE_NOBASE(clientClassName, dataTable)
 	
 
 // Using IMPLEMENT_CLIENTCLASS_EVENT means the engine thinks the entity is an event so the entity
@@ -140,10 +134,6 @@ public:
 													_##clientClassName##_CreateObject, \
 													&dataTable::g_RecvTable);
 
-#define IMPLEMENT_CLIENTCLASS_EVENT_DT(clientClassName, dataTable, serverClassName)\
-	namespace dataTable {extern RecvTable g_RecvTable;}\
-	IMPLEMENT_CLIENTCLASS_EVENT(clientClassName, dataTable, serverClassName)\
-	BEGIN_RECV_TABLE(clientClassName, dataTable)
 
 
 // Register a client event singleton but specify a pointer to give to the engine rather than

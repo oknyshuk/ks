@@ -11,6 +11,8 @@
 // $NoKeywords: $
 //=============================================================================//
 #include "cbase.h"
+#include "reflect_sendtable.h"
+#include "reflect_annotations.h"
 #include "basetempentity.h"
 #include "te_basebeam.h"
 
@@ -20,7 +22,8 @@
 //-----------------------------------------------------------------------------
 // Purpose: Dispatches a beam ring between two entities
 //-----------------------------------------------------------------------------
-class CTEBeamFollow : public CTEBaseBeam
+class [[= ks::reflect::NetTable{ .name = "DT_TEBeamFollow" } ]]
+      CTEBeamFollow : public CTEBaseBeam
 {
 	DECLARE_CLASS( CTEBeamFollow, CTEBaseBeam );
 public:
@@ -34,7 +37,7 @@ public:
 
 public:
 
-	CNetworkVar( int, m_iEntIndex );
+	CNetworkVar( int, m_iEntIndex, [[= ks::reflect::Net{ .bits = 24, .flags = SPROP_UNSIGNED } ]] );
 };
 
 //-----------------------------------------------------------------------------
@@ -64,9 +67,7 @@ void CTEBeamFollow::Test( const Vector& current_origin, const QAngle& current_an
 	m_iEntIndex	= 1;
 }
 
-IMPLEMENT_SERVERCLASS_ST(CTEBeamFollow, DT_TEBeamFollow)
-	SendPropInt( SENDINFO(m_iEntIndex), 24, SPROP_UNSIGNED ),
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CTEBeamFollow, DT_TEBeamFollow )
 
 
 // Singleton to fire TEBeamEntPoint objects

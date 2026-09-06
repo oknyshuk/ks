@@ -5,11 +5,12 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_annotations.h"
 #include "entityinput.h"
 #include "entityoutput.h"
 #include "TemplateEntities.h"
 #include "point_template.h"
-#include "saverestore_utlvector.h"
 #include "mapentities.h"
 #include "tier0/icommandline.h"
 #include "mapentities_shared.h"
@@ -159,44 +160,9 @@ function __FinishSpawn()
 
 LINK_ENTITY_TO_CLASS(point_template, CPointTemplate);
 
-BEGIN_SIMPLE_DATADESC( template_t )
-	DEFINE_FIELD( iTemplateIndex,	FIELD_INTEGER ),
-	DEFINE_FIELD( matEntityToTemplate, FIELD_VMATRIX ),
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP_SIMPLE( template_t )
 
-BEGIN_DATADESC( CPointTemplate )
-	// Keys
-
-	// Silence, Classcheck!
-	// DEFINE_ARRAY( m_iszTemplateEntityNames, FIELD_STRING, MAX_NUM_TEMPLATES ),
-
-	DEFINE_KEYFIELD( m_iszTemplateEntityNames[0], FIELD_STRING, "Template01"),
-	DEFINE_KEYFIELD( m_iszTemplateEntityNames[1], FIELD_STRING, "Template02"),
-	DEFINE_KEYFIELD( m_iszTemplateEntityNames[2], FIELD_STRING, "Template03"),
-	DEFINE_KEYFIELD( m_iszTemplateEntityNames[3], FIELD_STRING, "Template04"),
-	DEFINE_KEYFIELD( m_iszTemplateEntityNames[4], FIELD_STRING, "Template05"),
-	DEFINE_KEYFIELD( m_iszTemplateEntityNames[5], FIELD_STRING, "Template06"),
-	DEFINE_KEYFIELD( m_iszTemplateEntityNames[6], FIELD_STRING, "Template07"),
-	DEFINE_KEYFIELD( m_iszTemplateEntityNames[7], FIELD_STRING, "Template08"),
-	DEFINE_KEYFIELD( m_iszTemplateEntityNames[8], FIELD_STRING, "Template09"),
-	DEFINE_KEYFIELD( m_iszTemplateEntityNames[9], FIELD_STRING, "Template10"),
-	DEFINE_KEYFIELD( m_iszTemplateEntityNames[10], FIELD_STRING, "Template11"),
-	DEFINE_KEYFIELD( m_iszTemplateEntityNames[11], FIELD_STRING, "Template12"),
-	DEFINE_KEYFIELD( m_iszTemplateEntityNames[12], FIELD_STRING, "Template13"),
-	DEFINE_KEYFIELD( m_iszTemplateEntityNames[13], FIELD_STRING, "Template14"),
-	DEFINE_KEYFIELD( m_iszTemplateEntityNames[14], FIELD_STRING, "Template15"),
-	DEFINE_KEYFIELD( m_iszTemplateEntityNames[15], FIELD_STRING, "Template16"),
-	DEFINE_UTLVECTOR( m_hTemplateEntities, FIELD_CLASSPTR ),
-
-	DEFINE_UTLVECTOR( m_hTemplates, FIELD_EMBEDDED ),
-
-	// Inputs
-	DEFINE_INPUTFUNC( FIELD_VOID, "ForceSpawn", InputForceSpawn ),
-
-	// Outputs
-	DEFINE_OUTPUT( m_pOutputOnSpawned, "OnEntitySpawned" ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CPointTemplate )
 
 //-----------------------------------------------------------------------------
 // Purpose: A simple system to help precache point_template entities ... ywb

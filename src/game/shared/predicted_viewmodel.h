@@ -7,6 +7,8 @@
 
 #ifndef PREDICTED_VIEWMODEL_H
 #define PREDICTED_VIEWMODEL_H
+
+#include "reflect_annotations.h"
 #ifdef _WIN32
 #pragma once
 #endif
@@ -26,7 +28,8 @@
 #define CPredictedViewModel C_PredictedViewModel
 #endif
 
-class CPredictedViewModel : public CBaseViewModel
+class [[= ks::reflect::NetTable{ .name = "DT_PredictedViewModel" } ]]
+      CPredictedViewModel : public CBaseViewModel
 {
 	DECLARE_CLASS( CPredictedViewModel, CBaseViewModel );
 public:

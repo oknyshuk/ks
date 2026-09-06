@@ -11,6 +11,8 @@
 // $NoKeywords: $
 //===========================================================================//
 #include "cbase.h"
+#include "reflect_sendtable.h"
+#include "reflect_annotations.h"
 #include "te_particlesystem.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
@@ -21,7 +23,8 @@ extern int	g_sModelIndexFireball;			// (in combatweapon.cpp) holds the index for
 //-----------------------------------------------------------------------------
 // Purpose: Dispatches explosion tempentity
 //-----------------------------------------------------------------------------
-class CTEExplosion : public CTEParticleSystem
+class [[= ks::reflect::NetTable{ .name = "DT_TEExplosion" } ]]
+      CTEExplosion : public CTEParticleSystem
 {
 public:
 	DECLARE_CLASS( CTEExplosion, CTEParticleSystem );
@@ -34,14 +37,14 @@ public:
 	
 
 public:
-	CNetworkVar( int, m_nModelIndex );
-	CNetworkVar( float, m_fScale );
-	CNetworkVar( int, m_nFrameRate );
-	CNetworkVar( int, m_nFlags );
-	CNetworkVector( m_vecNormal );
-	CNetworkVar( unsigned char, m_chMaterialType );
-	CNetworkVar( int, m_nRadius );
-	CNetworkVar( int, m_nMagnitude );
+	CNetworkVar( int, m_nModelIndex, [[= ks::reflect::Net{ .enc = ks::reflect::ENC_MODELINDEX } ]] );
+	CNetworkVar( float, m_fScale, [[= ks::reflect::Net{ .bits = 9, .low = 0.0, .high = 51.2 } ]] );
+	CNetworkVar( int, m_nFrameRate, [[= ks::reflect::Net{ .bits = 8, .flags = SPROP_UNSIGNED } ]] );
+	CNetworkVar( int, m_nFlags, [[= ks::reflect::Net{ .bits = 10, .flags = SPROP_UNSIGNED } ]] );
+	CNetworkVector( m_vecNormal, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD, .enc = ks::reflect::ENC_VECTOR } ]] );
+	CNetworkVar( unsigned char, m_chMaterialType, [[= ks::reflect::Net{ .bits = 8, .flags = SPROP_UNSIGNED } ]] );
+	CNetworkVar( int, m_nRadius, [[= ks::reflect::Net{ .bits = 32, .flags = SPROP_UNSIGNED } ]] );
+	CNetworkVar( int, m_nMagnitude, [[= ks::reflect::Net{ .bits = 32, .flags = SPROP_UNSIGNED } ]] );
 };
 
 //-----------------------------------------------------------------------------
@@ -96,16 +99,7 @@ void CTEExplosion::Test( const Vector& current_origin, const QAngle& current_ang
 	Create( filter, 0.0 );
 }
 
-IMPLEMENT_SERVERCLASS_ST(CTEExplosion, DT_TEExplosion)
-	SendPropModelIndex( SENDINFO(m_nModelIndex) ),
-	SendPropFloat( SENDINFO(m_fScale ), 9, 0, 0.0, 51.2 ),
-	SendPropInt( SENDINFO(m_nFrameRate), 8, SPROP_UNSIGNED ),
-	SendPropInt( SENDINFO(m_nFlags), 10, SPROP_UNSIGNED ),
-	SendPropVector( SENDINFO(m_vecNormal), -1, SPROP_COORD),
-	SendPropInt( SENDINFO(m_chMaterialType), 8, SPROP_UNSIGNED ),
-	SendPropInt( SENDINFO(m_nRadius), 32, SPROP_UNSIGNED ),
-	SendPropInt( SENDINFO(m_nMagnitude), 32, SPROP_UNSIGNED ),
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CTEExplosion, DT_TEExplosion )
 
 // Singleton to fire TEExplosion objects
 static CTEExplosion g_TEExplosion( "Explosion" );

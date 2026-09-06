@@ -2,6 +2,8 @@
 // Copyright (c) 2007 Turtle Rock Studios, Inc. - All Rights Reserved
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_annotations.h"
 #include "fogvolume.h"
 #include "collisionutils.h"
 
@@ -16,21 +18,7 @@ ConVar fog_volume_debug( "fog_volume_debug", "0", 0, "If enabled, prints diagnos
 //--------------------------------------------------------------------------------------------------------
 LINK_ENTITY_TO_CLASS(fog_volume, CFogVolume);
 
-BEGIN_DATADESC( CFogVolume )
-
-	DEFINE_INPUTFUNC( FIELD_VOID, "Enable", InputEnable ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "Disable", InputDisable ),
-
-	DEFINE_KEYFIELD( m_fogName, FIELD_STRING, "FogName" ),
-	DEFINE_KEYFIELD( m_postProcessName, FIELD_STRING, "PostProcessName" ),
-	DEFINE_KEYFIELD( m_colorCorrectionName, FIELD_STRING, "ColorCorrectionName" ),
-	DEFINE_KEYFIELD( m_bDisabled, FIELD_BOOLEAN,	"StartDisabled" ),
-
-	DEFINE_FIELD( m_hFogController, FIELD_EHANDLE ),
-	DEFINE_FIELD( m_hPostProcessController, FIELD_EHANDLE ),
-	DEFINE_FIELD( m_hColorCorrectionController, FIELD_EHANDLE ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CFogVolume )
 
 
 //--------------------------------------------------------------------------------------------------------

@@ -6,6 +6,8 @@
 //
 //=============================================================================
 #include "cbase.h"
+#include "reflect_sendtable.h"
+#include "reflect_annotations.h"
 #include "team_objectiveresource.h"
 #include "shareddefs.h"
 #include <coordsize.h>
@@ -20,73 +22,8 @@
 #define LAZY_UPDATE_TIME		3
 
 // Datatable
-IMPLEMENT_SERVERCLASS_ST_NOBASE(CBaseTeamObjectiveResource, DT_BaseTeamObjectiveResource)
+IMPLEMENT_REFLECT_SERVERCLASS( CBaseTeamObjectiveResource, DT_BaseTeamObjectiveResource )
 
-	SendPropInt( SENDINFO(m_iTimerToShowInHUD), MAX_EDICT_BITS, SPROP_UNSIGNED ),
-	SendPropInt( SENDINFO(m_iStopWatchTimer), MAX_EDICT_BITS, SPROP_UNSIGNED ),
-
-	SendPropInt( SENDINFO(m_iNumControlPoints), 4, SPROP_UNSIGNED ),
-	SendPropBool( SENDINFO(m_bPlayingMiniRounds) ),
-	SendPropBool( SENDINFO(m_bControlPointsReset) ),
-	SendPropInt( SENDINFO(m_iUpdateCapHudParity), CAPHUD_PARITY_BITS, SPROP_UNSIGNED ),
-
-	// data variables
-	SendPropArray( SendPropVector( SENDINFO_ARRAY(m_vCPPositions), -1, SPROP_COORD), m_vCPPositions ),
-	SendPropArray3( SENDINFO_ARRAY3(m_bCPIsVisible), SendPropInt( SENDINFO_ARRAY(m_bCPIsVisible), 1, SPROP_UNSIGNED ) ),
-	SendPropArray3( SENDINFO_ARRAY3(m_flLazyCapPerc), SendPropFloat( SENDINFO_ARRAY(m_flLazyCapPerc) ) ),
-	SendPropArray3( SENDINFO_ARRAY3(m_iTeamIcons), SendPropInt( SENDINFO_ARRAY(m_iTeamIcons), 8, SPROP_UNSIGNED ) ),
-	SendPropArray3( SENDINFO_ARRAY3(m_iTeamOverlays), SendPropInt( SENDINFO_ARRAY(m_iTeamOverlays), 8, SPROP_UNSIGNED ) ),
-	SendPropArray3( SENDINFO_ARRAY3(m_iTeamReqCappers), SendPropInt( SENDINFO_ARRAY(m_iTeamReqCappers), 4, SPROP_UNSIGNED ) ),
-	SendPropArray3( SENDINFO_ARRAY3(m_flTeamCapTime), SendPropTime( SENDINFO_ARRAY(m_flTeamCapTime) ) ),
-	SendPropArray3( SENDINFO_ARRAY3(m_iPreviousPoints), SendPropInt( SENDINFO_ARRAY(m_iPreviousPoints), 8 ) ),
-	SendPropArray3( SENDINFO_ARRAY3(m_bTeamCanCap), SendPropBool( SENDINFO_ARRAY(m_bTeamCanCap) ) ),
-	SendPropArray3( SENDINFO_ARRAY3(m_iTeamBaseIcons), SendPropInt( SENDINFO_ARRAY(m_iTeamBaseIcons), 8 ) ),
-	SendPropArray3( SENDINFO_ARRAY3(m_iBaseControlPoints), SendPropInt( SENDINFO_ARRAY(m_iBaseControlPoints), 8 ) ),
-	SendPropArray3( SENDINFO_ARRAY3(m_bInMiniRound), SendPropBool( SENDINFO_ARRAY(m_bInMiniRound) ) ),
-	SendPropArray3( SENDINFO_ARRAY3(m_iWarnOnCap), SendPropInt( SENDINFO_ARRAY(m_iWarnOnCap), 4, SPROP_UNSIGNED ) ),
-	SendPropArray( SendPropStringT( SENDINFO_ARRAY( m_iszWarnSound ) ), m_iszWarnSound ),
-	SendPropArray3( SENDINFO_ARRAY3(m_flPathDistance), SendPropFloat( SENDINFO_ARRAY(m_flPathDistance), 8, 0, 0.0f, 1.0f ) ),
-
-	// state variables
-	SendPropArray3( SENDINFO_ARRAY3(m_iNumTeamMembers), SendPropInt( SENDINFO_ARRAY(m_iNumTeamMembers), 4, SPROP_UNSIGNED ) ),
-	SendPropArray3( SENDINFO_ARRAY3(m_iCappingTeam), SendPropInt( SENDINFO_ARRAY(m_iCappingTeam), 4, SPROP_UNSIGNED ) ),
-	SendPropArray3( SENDINFO_ARRAY3(m_iTeamInZone), SendPropInt( SENDINFO_ARRAY(m_iTeamInZone), 4, SPROP_UNSIGNED ) ),
-	SendPropArray3( SENDINFO_ARRAY3(m_bBlocked), SendPropInt( SENDINFO_ARRAY(m_bBlocked), 1, SPROP_UNSIGNED ) ),
-	SendPropArray3( SENDINFO_ARRAY3(m_iOwner), SendPropInt( SENDINFO_ARRAY(m_iOwner), 4, SPROP_UNSIGNED ) ),
-	SendPropString( SENDINFO(m_pszCapLayoutInHUD) ),
-
-END_SEND_TABLE()
-
-BEGIN_DATADESC( CBaseTeamObjectiveResource )
-	DEFINE_FIELD( m_iTimerToShowInHUD, FIELD_INTEGER ),
-	DEFINE_FIELD( m_iStopWatchTimer, FIELD_INTEGER ),
-	DEFINE_FIELD( m_iNumControlPoints, FIELD_INTEGER ),
-	DEFINE_FIELD( m_bPlayingMiniRounds, FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_bControlPointsReset, FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_iUpdateCapHudParity, FIELD_INTEGER ),
-	DEFINE_ARRAY( m_vCPPositions, FIELD_VECTOR, MAX_CONTROL_POINTS ),
-	DEFINE_ARRAY( m_bCPIsVisible, FIELD_INTEGER, MAX_CONTROL_POINTS ),
-	DEFINE_ARRAY( m_flLazyCapPerc, FIELD_FLOAT, MAX_CONTROL_POINTS ),
-	DEFINE_ARRAY( m_iTeamIcons, FIELD_INTEGER, MAX_CONTROL_POINTS*MAX_CONTROL_POINT_TEAMS ),
-	DEFINE_ARRAY( m_iTeamOverlays, FIELD_INTEGER, MAX_CONTROL_POINTS*MAX_CONTROL_POINT_TEAMS ),
-	DEFINE_ARRAY( m_iTeamReqCappers, FIELD_INTEGER, MAX_CONTROL_POINTS*MAX_CONTROL_POINT_TEAMS ),
-	DEFINE_ARRAY( m_flTeamCapTime, FIELD_FLOAT, MAX_CONTROL_POINTS*MAX_CONTROL_POINT_TEAMS ),
-	DEFINE_ARRAY( m_iPreviousPoints, FIELD_INTEGER, MAX_CONTROL_POINTS*MAX_CONTROL_POINT_TEAMS*MAX_PREVIOUS_POINTS ),
-	DEFINE_ARRAY( m_bTeamCanCap, FIELD_BOOLEAN, MAX_CONTROL_POINTS*MAX_CONTROL_POINT_TEAMS ),
-	DEFINE_ARRAY( m_iTeamBaseIcons, FIELD_INTEGER, MAX_TEAMS ),
-	DEFINE_ARRAY( m_iBaseControlPoints, FIELD_INTEGER, MAX_TEAMS ),
-	DEFINE_ARRAY( m_bInMiniRound, FIELD_BOOLEAN, MAX_CONTROL_POINTS ),
-	DEFINE_ARRAY( m_iWarnOnCap, FIELD_INTEGER, MAX_CONTROL_POINTS ),
-	DEFINE_ARRAY( m_iszWarnSound, FIELD_STRING, MAX_CONTROL_POINTS ),
-	DEFINE_ARRAY( m_iNumTeamMembers, FIELD_INTEGER, MAX_CONTROL_POINTS*MAX_CONTROL_POINT_TEAMS ),
-	DEFINE_ARRAY( m_iCappingTeam, FIELD_INTEGER, MAX_CONTROL_POINTS ),
-	DEFINE_ARRAY( m_iTeamInZone, FIELD_INTEGER, MAX_CONTROL_POINTS ),
-	DEFINE_ARRAY( m_bBlocked, FIELD_BOOLEAN, MAX_CONTROL_POINTS ),
-	DEFINE_ARRAY( m_iOwner, FIELD_INTEGER, MAX_CONTROL_POINTS ),
-	DEFINE_ARRAY( m_pszCapLayoutInHUD, FIELD_CHARACTER, MAX_CAPLAYOUT_LENGTH ),
-	DEFINE_ARRAY( m_flCapPercentages, FIELD_FLOAT,  MAX_CONTROL_POINTS  ),
-	DEFINE_THINKFUNC( ObjectiveThink ),
-END_DATADESC()
 
 CBaseTeamObjectiveResource *g_pObjectiveResource = NULL;
 

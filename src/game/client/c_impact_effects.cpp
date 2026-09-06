@@ -5,6 +5,8 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_recvtable.h"
+#include "reflect_annotations.h"
 #include "fx.h"
 #include "fx_sparks.h"
 #include "precache_register.h"
@@ -1057,7 +1059,8 @@ void FX_GaussExplosion( const Vector &pos, const Vector &dir, int type )
 	FX_ElectricSpark( pos, 1, 1, &vDir );
 }
 
-class C_TEGaussExplosion : public C_TEParticleSystem
+class [[= ks::reflect::NetTable{ .name = "DT_TEGaussExplosion" } ]]
+      C_TEGaussExplosion : public C_TEParticleSystem
 {
 public:
 	DECLARE_CLASS( C_TEGaussExplosion, C_TEParticleSystem );
@@ -1072,14 +1075,11 @@ public:
 
 public:
 
-	int			m_nType;
-	Vector		m_vecDirection;
+	[[= ks::reflect::Net{} ]] int			m_nType;
+	[[= ks::reflect::Net{} ]] Vector		m_vecDirection;
 };
 
-IMPLEMENT_CLIENTCLASS_EVENT_DT( C_TEGaussExplosion, DT_TEGaussExplosion, CTEGaussExplosion )
-	RecvPropInt(RECVINFO(m_nType)),
-	RecvPropVector(RECVINFO(m_vecDirection)),
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS_EVENT( C_TEGaussExplosion, DT_TEGaussExplosion, CTEGaussExplosion )
 
 //==================================================
 // C_TEGaussExplosion

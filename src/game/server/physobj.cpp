@@ -6,6 +6,9 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_sendtable.h"
+#include "reflect_annotations.h"
 #include "player.h"
 #include "vphysics_interface.h"
 #include "physics.h"
@@ -18,8 +21,6 @@
 #include "engine/IEngineSound.h"
 #include "model_types.h"
 #include "props.h"
-#include "physics_saverestore.h"
-#include "saverestore_utlvector.h"
 #include "vphysics/constraints.h"
 #include "collisionutils.h"
 #include "decals.h"
@@ -57,9 +58,9 @@ public:
 	void	Activate( void );
 
 	// Inputs
-	void InputSetSpringConstant( inputdata_t &inputdata );
-	void InputSetSpringDamping( inputdata_t &inputdata );
-	void InputSetSpringLength( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetSpringConstant", .type = FIELD_FLOAT } ]] void InputSetSpringConstant( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetSpringDamping", .type = FIELD_FLOAT } ]] void InputSetSpringDamping( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetSpringLength", .type = FIELD_FLOAT } ]] void InputSetSpringLength( inputdata_t &inputdata );
 
 	// Debug
 	int		DrawDebugTextOverlays(void);
@@ -77,45 +78,21 @@ private:
 	bool			m_isLocal;
 
 	// These are "template" values used to construct the spring.  After creation, they are not needed
-	float			m_tempConstant;
-	float			m_tempLength;	// This is the "ideal" length of the spring, not the length it is currently stretched to.
-	float			m_tempDamping;
-	float			m_tempRelativeDamping;
+	[[= ks::reflect::Key{ .name = "constant" } ]] float			m_tempConstant;
+	[[= ks::reflect::Key{ .name = "length" } ]] float			m_tempLength;	// This is the "ideal" length of the spring, not the length it is currently stretched to.
+	[[= ks::reflect::Key{ .name = "damping" } ]] float			m_tempDamping;
+	[[= ks::reflect::Key{ .name = "relativedamping" } ]] float			m_tempRelativeDamping;
 
-	string_t		m_nameAttachStart;
-	string_t		m_nameAttachEnd;
+	[[= ks::reflect::Key{ .name = "attach1" } ]] string_t		m_nameAttachStart;
+	[[= ks::reflect::Key{ .name = "attach2" } ]] string_t		m_nameAttachEnd;
 	Vector			m_start;
-	Vector			m_end;
+	[[= ks::reflect::As{ FIELD_POSITION_VECTOR } ]] [[= ks::reflect::Key{ .name = "springaxis" } ]] Vector			m_end;
 	unsigned int 	m_teleportTick;
 };
 
 LINK_ENTITY_TO_CLASS( phys_spring, CPhysicsSpring );
 
-BEGIN_DATADESC( CPhysicsSpring )
-
-	DEFINE_PHYSPTR( m_pSpring ),
-
-	DEFINE_KEYFIELD( m_tempConstant, FIELD_FLOAT, "constant" ),
-	DEFINE_KEYFIELD( m_tempLength, FIELD_FLOAT, "length" ),
-	DEFINE_KEYFIELD( m_tempDamping, FIELD_FLOAT, "damping" ),
-	DEFINE_KEYFIELD( m_tempRelativeDamping, FIELD_FLOAT, "relativedamping" ),
-
-	DEFINE_KEYFIELD( m_nameAttachStart, FIELD_STRING, "attach1" ),
-	DEFINE_KEYFIELD( m_nameAttachEnd, FIELD_STRING, "attach2" ),
-
-	DEFINE_FIELD( m_start, FIELD_POSITION_VECTOR ),
-	DEFINE_KEYFIELD( m_end, FIELD_POSITION_VECTOR, "springaxis" ),
-	DEFINE_FIELD( m_isLocal, FIELD_BOOLEAN ),
-
-	// Not necessary to save... it's only there to make sure 
-//	DEFINE_FIELD( m_teleportTick, FIELD_INTEGER ),
-
-	// Inputs
-	DEFINE_INPUTFUNC( FIELD_FLOAT, "SetSpringConstant", InputSetSpringConstant ),
-	DEFINE_INPUTFUNC( FIELD_FLOAT, "SetSpringLength", InputSetSpringLength ),
-	DEFINE_INPUTFUNC( FIELD_FLOAT, "SetSpringDamping", InputSetSpringDamping ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CPhysicsSpring )
 
 // debug function - slow, uses dynamic_cast<> - use this to query the attached objects
 // physics_debug_entity toggles the constraint system for an object using this
@@ -369,49 +346,11 @@ void CPhysicsSpring::NotifySystemEvent( CBaseEntity *pNotify, notify_system_even
 // ---------------------------------------------------------------------
 
 // SendTable stuff.
-IMPLEMENT_SERVERCLASS_ST(CPhysBox, DT_PhysBox)
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CPhysBox, DT_PhysBox )
 
 LINK_ENTITY_TO_CLASS( func_physbox, CPhysBox );
 
-BEGIN_DATADESC( CPhysBox )
-
-	DEFINE_FIELD( m_hCarryingPlayer, FIELD_EHANDLE ),
-
-	DEFINE_KEYFIELD( m_massScale, FIELD_FLOAT, "massScale" ),
-	DEFINE_KEYFIELD( m_damageType, FIELD_INTEGER, "Damagetype" ),
-	DEFINE_KEYFIELD( m_iszOverrideScript, FIELD_STRING, "overridescript" ),
-	DEFINE_KEYFIELD( m_damageToEnableMotion, FIELD_INTEGER, "damagetoenablemotion" ),
-	DEFINE_KEYFIELD( m_flForceToEnableMotion, FIELD_FLOAT, "forcetoenablemotion" ), 
-	DEFINE_KEYFIELD( m_angPreferredCarryAngles, FIELD_VECTOR, "preferredcarryangles" ),
-	DEFINE_KEYFIELD( m_bNotSolidToWorld, FIELD_BOOLEAN, "notsolid" ),
-	DEFINE_KEYFIELD( m_iExploitableByPlayer, FIELD_INTEGER, "ExploitableByPlayer" ),
-
-	DEFINE_INPUTFUNC( FIELD_VOID, "Wake", InputWake ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "Sleep", InputSleep ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "EnableMotion", InputEnableMotion ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "DisableMotion", InputDisableMotion ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "ForceDrop", InputForceDrop ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "DisableFloating", InputDisableFloating ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "BecomeDebris", InputBecomeDebris ),
-
-	DEFINE_INPUTFUNC( FIELD_VOID, "Enable", InputEnable),
-	DEFINE_INPUTFUNC( FIELD_VOID, "Disable", InputDisable),
-
-	// Function pointers
-	DEFINE_ENTITYFUNC( BreakTouch ),
-
-	// Outputs
-	DEFINE_OUTPUT( m_OnDamaged, "OnDamaged" ),
-	DEFINE_OUTPUT( m_OnAwakened, "OnAwakened" ),
-	DEFINE_OUTPUT( m_OnMotionEnabled, "OnMotionEnabled" ),
-	DEFINE_OUTPUT( m_OnPhysGunPickup, "OnPhysGunPickup" ),
-	DEFINE_OUTPUT( m_OnPhysGunPunt, "OnPhysGunPunt" ),
-	DEFINE_OUTPUT( m_OnPhysGunOnlyPickup, "OnPhysGunOnlyPickup" ),
-	DEFINE_OUTPUT( m_OnPhysGunDrop, "OnPhysGunDrop" ),
-	DEFINE_OUTPUT( m_OnPlayerUse, "OnPlayerUse" ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CPhysBox )
 
 // UNDONE: Save/Restore needs to take the physics object's properties into account
 // UNDONE: Acceleration, velocity, angular velocity, etc. must be preserved
@@ -892,21 +831,7 @@ bool CPhysBox::HasPreferredCarryAnglesForPlayer( CBasePlayer *pPlayer )
 
 LINK_ENTITY_TO_CLASS( env_physexplosion, CPhysExplosion );
 
-BEGIN_DATADESC( CPhysExplosion )
-
-	DEFINE_KEYFIELD( m_damage, FIELD_FLOAT, "magnitude" ),
-	DEFINE_KEYFIELD( m_radius, FIELD_FLOAT, "radius" ),
-	DEFINE_KEYFIELD( m_targetEntityName, FIELD_STRING, "targetentityname" ),
-	DEFINE_KEYFIELD( m_flInnerRadius, FIELD_FLOAT, "inner_radius" ),
-
-	// Inputs
-	DEFINE_INPUTFUNC( FIELD_VOID, "Explode", InputExplode ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "ExplodeAndRemove", InputExplodeAndRemove ),
-
-	// Outputs 
-	DEFINE_OUTPUT( m_OnPushedPlayer, "OnPushedPlayer" ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CPhysExplosion )
 
 
 void CPhysExplosion::Spawn( void )
@@ -1154,18 +1079,7 @@ void CreatePhysExplosion( Vector origin, float magnitude, float radius, string_t
 #define	DEFAULT_EXPLODE_DISTANCE	256
 LINK_ENTITY_TO_CLASS( env_physimpact, CPhysImpact );
 
-BEGIN_DATADESC( CPhysImpact )
-
-	DEFINE_KEYFIELD( m_damage,				FIELD_FLOAT,	"magnitude" ),
-	DEFINE_KEYFIELD( m_distance,			FIELD_FLOAT,	"distance" ),
-	DEFINE_KEYFIELD( m_directionEntityName,FIELD_STRING,	"directionentityname" ),
-
-	// Function pointers
-	DEFINE_FUNCTION( PointAtEntity ),
-
-	DEFINE_INPUTFUNC( FIELD_VOID, "Impact", InputImpact ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CPhysImpact )
 
 
 //-----------------------------------------------------------------------------
@@ -1407,32 +1321,21 @@ class CPhysConvert : public CLogicalEntity
 
 public:
 	CPhysConvert( void ) : m_flMassOverride( 0.0f ) {};
-	COutputEvent m_OnConvert;	
+	[[= ks::reflect::Key{ .name = "OnConvert" } ]] COutputEvent m_OnConvert;	
 
 	// Input handlers
-	void InputConvertTarget( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "ConvertTarget", .type = FIELD_VOID } ]] void InputConvertTarget( inputdata_t &inputdata );
 
 	DECLARE_DATADESC();
 
 private:
-	string_t		m_swapModel;
-	float			m_flMassOverride;
+	[[= ks::reflect::Key{ .name = "swapmodel" } ]] string_t		m_swapModel;
+	[[= ks::reflect::Key{ .name = "massoverride" } ]] float			m_flMassOverride;
 };
 
 LINK_ENTITY_TO_CLASS( phys_convert, CPhysConvert );
 
-BEGIN_DATADESC( CPhysConvert )
-
-	DEFINE_KEYFIELD( m_swapModel,		FIELD_STRING,	"swapmodel" ),
-	DEFINE_KEYFIELD( m_flMassOverride,	FIELD_FLOAT,	"massoverride" ),
-	
-	// Inputs
-	DEFINE_INPUTFUNC( FIELD_VOID, "ConvertTarget", InputConvertTarget ),
-
-	// Outputs
-	DEFINE_OUTPUT( m_OnConvert, "OnConvert"),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CPhysConvert )
 
 
 
@@ -1522,40 +1425,9 @@ void CPhysConvert::InputConvertTarget( inputdata_t &inputdata )
 LINK_ENTITY_TO_CLASS( phys_magnet, CPhysMagnet );
 
 // BUGBUG: This won't work!  Right now you can't save physics pointers inside an embedded type!
-BEGIN_SIMPLE_DATADESC( magnetted_objects_t )
+IMPLEMENT_REFLECT_DATAMAP_SIMPLE( magnetted_objects_t )
 
-	DEFINE_PHYSPTR( pConstraint ),
-	DEFINE_FIELD( hEntity,	FIELD_EHANDLE	),
-
-END_DATADESC()
-
-BEGIN_DATADESC( CPhysMagnet )
-	// Outputs
-	DEFINE_OUTPUT( m_OnMagnetAttach, "OnAttach" ),
-	DEFINE_OUTPUT( m_OnMagnetDetach, "OnDetach" ),
-
-	// Keys
-	DEFINE_KEYFIELD( m_massScale, FIELD_FLOAT, "massScale" ),
-	DEFINE_KEYFIELD( m_iszOverrideScript, FIELD_STRING, "overridescript" ),
-	DEFINE_KEYFIELD( m_iMaxObjectsAttached, FIELD_INTEGER, "maxobjects" ),
-	DEFINE_KEYFIELD( m_forceLimit, FIELD_FLOAT, "forcelimit" ),
-	DEFINE_KEYFIELD( m_torqueLimit, FIELD_FLOAT, "torquelimit" ),
-
-	DEFINE_UTLVECTOR( m_MagnettedEntities, FIELD_EMBEDDED ),
-	DEFINE_PHYSPTR( m_pConstraintGroup ),
-
-	DEFINE_FIELD( m_bActive, FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_bHasHitSomething, FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_flTotalMass, FIELD_FLOAT ),
-	DEFINE_FIELD( m_flRadius, FIELD_FLOAT ),
-	DEFINE_FIELD( m_flNextSuckTime, FIELD_FLOAT ),
-
-	// Inputs
-	DEFINE_INPUTFUNC( FIELD_VOID, "Toggle", InputToggle ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "TurnOn", InputTurnOn ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "TurnOff", InputTurnOff ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CPhysMagnet )
 
 //-----------------------------------------------------------------------------
 // Purpose: SendProxy that converts the magnet's attached object UtlVector to entindexes
@@ -1577,20 +1449,7 @@ int SendProxyArrayLength_MagnetAttachedArray( const void *pStruct, int objectID 
 	return pMagnet->GetNumAttachedObjects();
 }
 
-IMPLEMENT_SERVERCLASS_ST( CPhysMagnet, DT_PhysMagnet )
-
-	// ROBIN: Disabled because we don't need it anymore
-	/*
-	SendPropArray2( 
-		SendProxyArrayLength_MagnetAttachedArray,
-		SendPropInt("magnetattached_array_element", 0, 4, 10, SPROP_UNSIGNED, SendProxy_MagnetAttachedObjectList), 
-		128, 
-		0, 
-		"magnetattached_array"
-		)
-	*/
-
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CPhysMagnet, DT_PhysMagnet )
 
 //-----------------------------------------------------------------------------
 // Purpose: 

@@ -85,7 +85,6 @@ private:
 	CHandle<CBeam> m_hLine;
 	Vector	m_vecRopeAnchor;
 	
-	DECLARE_DATADESC();
 };
 
 #endif // AI_BEHAVIOR_RAPPEL_H

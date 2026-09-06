@@ -4,6 +4,8 @@
 //
 //=============================================================================//
 #include "cbase.h"
+#include "reflect_recvtable.h"
+#include "reflect_annotations.h"
 #include "c_baseentity.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
@@ -12,7 +14,8 @@
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-class C_PhysMagnet : public C_BaseAnimating
+class [[= ks::reflect::NetTable{ .name = "DT_PhysMagnet" } ]]
+      C_PhysMagnet : public C_BaseAnimating
 {
 	DECLARE_CLASS( C_PhysMagnet, C_BaseAnimating );
 public:
@@ -50,20 +53,7 @@ void RecvProxyArrayLength_MagnetAttachedArray( void *pStruct, int objectID, int 
 		pMagnet->m_aAttachedObjectsFromServer.SetSize( currentArrayLength );
 }
 
-IMPLEMENT_CLIENTCLASS_DT(C_PhysMagnet, DT_PhysMagnet, CPhysMagnet)
-
-	// ROBIN: Disabled because we don't need it anymore
-	/*
-	RecvPropArray2( 
-		RecvProxyArrayLength_MagnetAttachedArray,
-		RecvPropInt( "magnetattached_array_element", 0, SIZEOF_IGNORE, 0, RecvProxy_MagnetAttachedObjectList ), 
-		128, 
-		0, 
-		"magnetattached_array"
-		)
-	*/
-
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS( C_PhysMagnet, DT_PhysMagnet, CPhysMagnet )
 
 //-----------------------------------------------------------------------------
 // Purpose: 

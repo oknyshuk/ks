@@ -496,8 +496,6 @@ public:
 
 	// The save restore system allocates memory from a shared memory pool, use this allocator to allocate/free saverestore 
 	//  memory.
-	virtual void		*SaveAllocMemory( size_t num, size_t size ) = 0;
-	virtual void		SaveFreeMemory( void *pSaveMem ) = 0;
 
 	// returns info interface for client netchannel
 	virtual INetChannelInfo	*GetNetChannelInfo( void ) = 0;
@@ -625,18 +623,13 @@ public:
 	virtual void			SetMapLoadFailed( bool bState ) = 0;
 	
 	virtual bool			IsLowViolence() = 0;
-	virtual const char		*GetMostRecentSaveGame( bool bEnsureExists = false ) = 0;
-	virtual void			SetMostRecentSaveGame( const char *lpszFilename ) = 0;
 
 	virtual void			StartXboxExitingProcess() = 0;
 
-	virtual bool			IsSaveInProgress() = 0;
-	virtual bool			IsAutoSaveDangerousInProgress() = 0;
 
 	virtual uint			OnStorageDeviceAttached( int iController ) = 0;
 	virtual void			OnStorageDeviceDetached( int iController ) = 0;
 
-	virtual const char *	GetSaveDirName() = 0; // get a pointer to the path where saves should go (with a trailing slash already added)
 
 	// generic screenshot writing
 	virtual void			WriteScreenshot( const char *pFilename ) = 0;
@@ -781,7 +774,6 @@ public:
 	// For the rare case when the client DLL needs to do something different if network backdoor is on.
 	virtual bool IsUsingLocalNetworkBackdoor() = 0;
 
-	virtual bool SaveGame( const char *pSaveFilename, bool bIsXSave, char *pOutName, int nOutNameSize, char *pOutComment, int nOutCommentSize ) = 0;
 
 	// Request 'generic' memory stats (returns a list of N named values; caller should assume this list will change over time)
 	virtual int GetGenericMemoryStats( GenericMemoryStat_t **ppMemoryStats ) = 0;
@@ -794,7 +786,6 @@ public:
 
 	virtual void FinishContainerWrites( int iController ) = 0;
 
-	virtual void FinishAsyncSave() = 0;
 	
 	virtual int GetServerTick( void ) = 0;
 
@@ -803,7 +794,6 @@ public:
 
 	virtual void AudioLanguageChanged() = 0;
 
-	virtual bool IsAutoSaveInProgress() = 0;
 	
 	virtual void StartLoadingScreenForCommand( const char* command ) = 0;
 
@@ -959,14 +949,6 @@ public:
 	virtual bool			DispatchUserMessage( int msg_type, int32 nFlags, int size, const void *msg ) = 0;	// New protobuf version
 
 	// Save/restore system hooks
-	virtual CSaveRestoreData  *SaveInit( int size ) = 0;
-	virtual void			SaveWriteFields( CSaveRestoreData *, const char *, void *, datamap_t *, typedescription_t *, int ) = 0;
-	virtual void			SaveReadFields( CSaveRestoreData *, const char *, void *, datamap_t *, typedescription_t *, int ) = 0;
-	virtual void			PreSave( CSaveRestoreData * ) = 0;
-	virtual void			Save( CSaveRestoreData * ) = 0;
-	virtual void			WriteSaveHeaders( CSaveRestoreData * ) = 0;
-	virtual void			ReadRestoreHeaders( CSaveRestoreData * ) = 0;
-	virtual void			Restore( CSaveRestoreData *, bool ) = 0;
 	virtual void			DispatchOnRestore() = 0;
 	
 	// Hand over the StandardRecvProxies in the client DLL's module.

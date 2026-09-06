@@ -5,6 +5,8 @@
 //=============================================================================
 
 #include "cbase.h"
+#include "reflect_annotations.h"
+#include "reflect_datamap.h"
 #include "vehicle_viewblend_shared.h"
 
 #ifdef CLIENT_DLL
@@ -32,28 +34,7 @@ extern ConVar default_fov;
 
 extern ConVar r_VehicleViewDampen;
 
-BEGIN_SIMPLE_DATADESC( ViewSmoothingData_t )
-	DEFINE_FIELD( vecAnglesSaved, FIELD_VECTOR ),
-	DEFINE_FIELD( vecOriginSaved, FIELD_POSITION_VECTOR ),
-	DEFINE_FIELD( vecAngleDiffSaved, FIELD_VECTOR ),
-	DEFINE_FIELD( vecAngleDiffMin, FIELD_VECTOR ),
-	DEFINE_FIELD( bRunningEnterExit, FIELD_BOOLEAN ),
-	DEFINE_FIELD( bWasRunningAnim, FIELD_BOOLEAN ),
-	DEFINE_FIELD( flEnterExitStartTime, FIELD_FLOAT ),
-	DEFINE_FIELD( flEnterExitDuration, FIELD_FLOAT ),
-	DEFINE_FIELD( flFOV, FIELD_FLOAT ),
-
-	// These are filled out in the vehicle's constructor:
-	//CBaseAnimating	*pVehicle;
-	//bool	bClampEyeAngles;
-	//float	flPitchCurveZero;
-	//float	flPitchCurveLinear;
-	//float	flRollCurveZero;
-	//float	flRollCurveLinear;
-	//ViewLockData_t pitchLockData;
-	//ViewLockData_t rollLockData;
-	//bool bDampenEyePosition;
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP_SIMPLE( ViewSmoothingData_t )
 
 // remaps an angular variable to a 3 band function:
 // 0 <= t < start :		f(t) = 0

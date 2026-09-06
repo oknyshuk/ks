@@ -9,6 +9,8 @@
 #ifndef PARTICLE_SMOKEGRENADE_H
 #define PARTICLE_SMOKEGRENADE_H
 
+#include "reflect_annotations.h"
+
 
 #include "baseparticleentity.h"
 
@@ -18,9 +20,9 @@
 #define MIN_SMOKE_TINT 0.5f
 #define MAX_SMOKE_TINT 0.6f
 
-class ParticleSmokeGrenade : public CBaseParticleEntity
+class [[= ks::reflect::NetTable{ .name = "DT_ParticleSmokeGrenade" } ]]
+      ParticleSmokeGrenade : public CBaseParticleEntity
 {
-	DECLARE_DATADESC();
 public:
 	DECLARE_CLASS( ParticleSmokeGrenade, CBaseParticleEntity );
 	DECLARE_SERVERCLASS();
@@ -54,15 +56,15 @@ public:
 	
 	// Stage 0 (default): make a smoke trail that follows the entity it's following.
 	// Stage 1          : fill a volume with smoke.
-	CNetworkVar( unsigned char, m_CurrentStage );
+	CNetworkVar( unsigned char, m_CurrentStage, [[= ks::reflect::Net{ .bits = 1, .flags = SPROP_UNSIGNED } ]] );
 
-	CNetworkVar( float, m_flSpawnTime );
+	CNetworkVar( float, m_flSpawnTime, [[= ks::reflect::Net{} ]] );
 
 	// When to fade in and out.
-	CNetworkVar( float, m_FadeStartTime );
-	CNetworkVar( float, m_FadeEndTime );
-	CNetworkVar( Vector, m_MinColor );
-	CNetworkVar( Vector, m_MaxColor );
+	CNetworkVar( float, m_FadeStartTime, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE } ]] );
+	CNetworkVar( float, m_FadeEndTime, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE } ]] );
+	CNetworkVar( Vector, m_MinColor, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE, .enc = ks::reflect::ENC_VECTOR } ]] );
+	CNetworkVar( Vector, m_MaxColor, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE, .enc = ks::reflect::ENC_VECTOR } ]] );
 
 protected:
     

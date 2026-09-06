@@ -7,6 +7,8 @@
 // $NoKeywords: $
 //===========================================================================//
 #include "cbase.h"
+#include "reflect_recvtable.h"
+#include "reflect_annotations.h"
 #include "c_basetempentity.h"
 #include "iefx.h"
 #include "engine/IStaticPropMgr.h"
@@ -23,7 +25,8 @@
 //-----------------------------------------------------------------------------
 // Purpose: Projected Decal TE
 //-----------------------------------------------------------------------------
-class C_TEProjectedDecal : public C_BaseTempEntity
+class [[= ks::reflect::NetTable{ .name = "DT_TEProjectedDecal" } ]]
+      C_TEProjectedDecal : public C_BaseTempEntity
 {
 public:
 	DECLARE_CLASS( C_TEProjectedDecal, C_BaseTempEntity );
@@ -37,22 +40,17 @@ public:
 	virtual void	Precache( void );
 
 public:
-	Vector			m_vecOrigin;
-	QAngle			m_angRotation;
-	float			m_flDistance;
-	int				m_nIndex;
+	[[= ks::reflect::Net{} ]] Vector			m_vecOrigin;
+	[[= ks::reflect::Net{ .enc = ks::reflect::ENC_QANGLES } ]] QAngle			m_angRotation;
+	[[= ks::reflect::Net{} ]] float			m_flDistance;
+	[[= ks::reflect::Net{} ]] int				m_nIndex;
 };
 
 
 //-----------------------------------------------------------------------------
 // Networking
 //-----------------------------------------------------------------------------
-IMPLEMENT_CLIENTCLASS_EVENT_DT(C_TEProjectedDecal, DT_TEProjectedDecal, CTEProjectedDecal)
-	RecvPropVector( RECVINFO(m_vecOrigin)),
-	RecvPropQAngles( RECVINFO( m_angRotation )),
-	RecvPropFloat( RECVINFO(m_flDistance)),
-	RecvPropInt( RECVINFO(m_nIndex)),
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS_EVENT( C_TEProjectedDecal, DT_TEProjectedDecal, CTEProjectedDecal )
 
 
 //-----------------------------------------------------------------------------

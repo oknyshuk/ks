@@ -6,6 +6,9 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_sendtable.h"
+#include "reflect_annotations.h"
 #include "baseentity.h"
 #include "sendproxy.h"
 #include "sun_shared.h"
@@ -19,7 +22,16 @@
 #define LIGHTGLOW_OUTERMAXDIST_BITS	16
 #define LIGHTGLOW_OUTERMAXDIST_MAX_VALUE	((1 << LIGHTGLOW_OUTERMAXDIST_BITS)-1)
 
-class CLightGlow : public CBaseEntity
+void SendProxy_Angles( const SendProp *pProp, const void *pStruct,
+    const void *pData, DVariant *pOut, int iElement, int objectID );
+
+class [[= ks::reflect::NetTable{ .name = "DT_LightGlow", .base = false } ]]
+      [[= ks::reflect::From<"m_clrRender", ks::reflect::Net{ .bits = 32, .flags = SPROP_UNSIGNED }, SendProxy_Color32ToInt32>{} ]]
+      [[= ks::reflect::From<"m_spawnflags", ks::reflect::Net{ .bits = 8, .flags = SPROP_UNSIGNED }>{} ]]
+      [[= ks::reflect::From<"m_vecOrigin", ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD, .enc = ks::reflect::ENC_VECTOR }>{} ]]
+      [[= ks::reflect::From<"m_angRotation", ks::reflect::Net{ .bits = 13, .enc = ks::reflect::ENC_QANGLES }, SendProxy_Angles>{} ]]
+      [[= ks::reflect::From<"m_hMoveParent", ks::reflect::Net{ .wire = "moveparent" }>{} ]]
+      CLightGlow : public CBaseEntity
 {
 public:
 	DECLARE_CLASS( CLightGlow, CBaseEntity );
@@ -32,50 +44,26 @@ public:
 	virtual void	Activate( void );
 	virtual int		UpdateTransmitState( void );
 
-	void InputColor(inputdata_t &data);
+	[[= ks::reflect::Input{ .name = "Color", .type = FIELD_COLOR32 } ]] void InputColor(inputdata_t &data);
 
 public:
-	CNetworkVar( int, m_nHorizontalSize );
-	CNetworkVar( int, m_nVerticalSize );
-	CNetworkVar( int, m_nMinDist );
-	CNetworkVar( int, m_nMaxDist );
-	CNetworkVar( int, m_nOuterMaxDist );
+	CNetworkVar( int, m_nHorizontalSize, [[= ks::reflect::Net{ .bits = 16, .flags = SPROP_UNSIGNED } ]] [[= ks::reflect::Key{ .name = "HorizontalGlowSize" } ]] );
+	CNetworkVar( int, m_nVerticalSize, [[= ks::reflect::Net{ .bits = 16, .flags = SPROP_UNSIGNED } ]] [[= ks::reflect::Key{ .name = "VerticalGlowSize" } ]] );
+	CNetworkVar( int, m_nMinDist, [[= ks::reflect::Net{ .bits = 16, .flags = SPROP_UNSIGNED } ]] [[= ks::reflect::Key{ .name = "MinDist" } ]] );
+	CNetworkVar( int, m_nMaxDist, [[= ks::reflect::Net{ .bits = LIGHTGLOW_MAXDIST_BITS, .flags = SPROP_UNSIGNED } ]] [[= ks::reflect::Key{ .name = "MaxDist" } ]] );
+	CNetworkVar( int, m_nOuterMaxDist, [[= ks::reflect::Net{ .bits = LIGHTGLOW_OUTERMAXDIST_BITS, .flags = SPROP_UNSIGNED } ]] [[= ks::reflect::Key{ .name = "OuterMaxDist" } ]] );
 
-	CNetworkVar( float, m_flGlowProxySize );
-	CNetworkVar( float, m_flHDRColorScale );
+	CNetworkVar( float, m_flGlowProxySize, [[= ks::reflect::Net{ .bits = 6, .low = 0.0f, .high = 64.0f, .flags = SPROP_ROUNDUP } ]] [[= ks::reflect::Key{ .name = "GlowProxySize" } ]] );
+	CNetworkVar( float, m_flHDRColorScale, [[= ks::reflect::Net{ .bits = 0, .low = 0.0f, .high = 100.0f, .flags = SPROP_NOSCALE, .wire = "HDRColorScale" } ]] [[= ks::reflect::Key{ .name = "HDRColorScale" } ]] );
 };
 
 extern void SendProxy_Angles( const SendProp *pProp, const void *pStruct, const void *pData, DVariant *pOut, int iElement, int objectID );
 
-IMPLEMENT_SERVERCLASS_ST_NOBASE( CLightGlow, DT_LightGlow )
-	SendPropInt( SENDINFO(m_clrRender), 32, SPROP_UNSIGNED, SendProxy_Color32ToInt32 ),
-	SendPropInt( SENDINFO(m_nHorizontalSize), 16, SPROP_UNSIGNED ),
-	SendPropInt( SENDINFO(m_nVerticalSize), 16, SPROP_UNSIGNED ),
-	SendPropInt( SENDINFO(m_nMinDist), 16, SPROP_UNSIGNED ),
-	SendPropInt( SENDINFO(m_nMaxDist), LIGHTGLOW_MAXDIST_BITS, SPROP_UNSIGNED ),
-	SendPropInt( SENDINFO(m_nOuterMaxDist), LIGHTGLOW_OUTERMAXDIST_BITS, SPROP_UNSIGNED ),
-	SendPropInt( SENDINFO(m_spawnflags), 8, SPROP_UNSIGNED ),
-	SendPropVector(SENDINFO(m_vecOrigin), -1,  SPROP_COORD ),
-	SendPropQAngles	(SENDINFO(m_angRotation), 13, 0, SendProxy_Angles ),
-	SendPropEHandle (SENDINFO_NAME(m_hMoveParent, moveparent)),
-	SendPropFloat( SENDINFO(m_flGlowProxySize ), 6,	SPROP_ROUNDUP,	0.0f,	64.0f ),
-	SendPropFloat( SENDINFO_NAME( m_flHDRColorScale, HDRColorScale ), 0,	SPROP_NOSCALE,	0.0f,	100.0f ),
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CLightGlow, DT_LightGlow )
 
 LINK_ENTITY_TO_CLASS( env_lightglow, CLightGlow );
 
-BEGIN_DATADESC( CLightGlow )
-
-	DEFINE_KEYFIELD( m_nVerticalSize,		FIELD_INTEGER,	"VerticalGlowSize" ),
-	DEFINE_KEYFIELD( m_nHorizontalSize,		FIELD_INTEGER,	"HorizontalGlowSize" ),
-	DEFINE_KEYFIELD( m_nMinDist,			FIELD_INTEGER,	"MinDist" ),
-	DEFINE_KEYFIELD( m_nMaxDist,			FIELD_INTEGER,	"MaxDist" ),
-	DEFINE_KEYFIELD( m_nOuterMaxDist,		FIELD_INTEGER,	"OuterMaxDist" ),
-	DEFINE_KEYFIELD( m_flGlowProxySize,		FIELD_FLOAT,	"GlowProxySize" ),
-	DEFINE_KEYFIELD( m_flHDRColorScale,		FIELD_FLOAT,	"HDRColorScale" ),
-	DEFINE_INPUTFUNC( FIELD_COLOR32, "Color",  InputColor ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CLightGlow )
 
 //-----------------------------------------------------------------------------
 // Constructor 

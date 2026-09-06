@@ -16,6 +16,8 @@
 
 #ifndef AI_DYNAMICLINK_H
 #define AI_DYNAMICLINK_H
+
+#include "reflect_annotations.h"
 #pragma once
 
 enum DynamicLinkState_t
@@ -45,20 +47,20 @@ public:
 	static CAI_DynamicLink*		m_pAllDynamicLinks;		// A linked list of all dynamic link
 	CAI_DynamicLink*			m_pNextDynamicLink;		// The next dynamic link in the list of dynamic links
 
-	int							m_nSrcEditID;			// the node that 'owns' this link
-	int							m_nDestEditID;			// the node on the other end of the link. 
+	[[= ks::reflect::Key{ .name = "startnode" } ]] int							m_nSrcEditID;			// the node that 'owns' this link
+	[[= ks::reflect::Key{ .name = "endnode" } ]] int							m_nDestEditID;			// the node on the other end of the link. 
 
 	int							m_nSrcID;				// the node that 'owns' this link
 	int							m_nDestID;				// the node on the other end of the link. 
-	DynamicLinkState_t			m_nLinkState;			// 
-	string_t					m_strAllowUse;			// Only this entity name or classname may use the link
+	[[= ks::reflect::Key{ .name = "initialstate" } ]] DynamicLinkState_t			m_nLinkState;			// 
+	[[= ks::reflect::Key{ .name = "AllowUse" } ]] string_t					m_strAllowUse;			// Only this entity name or classname may use the link
 	bool						m_bInvertAllow;			// Instead of only allowing the m_strAllowUse entity, exclude only it
-	bool						m_bPreciseMovement;		// Movement must be precise near here
+	[[= ks::reflect::Key{ .name = "preciseMovement" } ]] bool						m_bPreciseMovement;		// Movement must be precise near here
 
 	bool						m_bFixedUpIds;
 	bool						m_bNotSaved;
-	int							m_nLinkType;
-	int							m_nPriority;
+	[[= ks::reflect::Key{ .name = "linktype" } ]] int							m_nLinkType;
+	[[= ks::reflect::Key{ .name = "Priority" } ]] int							m_nPriority;
 
 	void						SetLinkState( void );
 	bool						IsLinkValid( void );
@@ -70,8 +72,8 @@ public:
 	// ----------------
 	//	Inputs
 	// ----------------
-	void InputTurnOn( inputdata_t &inputdata );
-	void InputTurnOff( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "TurnOn", .type = FIELD_VOID } ]] void InputTurnOn( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "TurnOff", .type = FIELD_VOID } ]] void InputTurnOff( inputdata_t &inputdata );
 	DECLARE_DATADESC();
 
 	CAI_DynamicLink();
@@ -90,17 +92,17 @@ public:
 	// ----------------
 	//	Inputs
 	// ----------------
-	void InputTurnOn( inputdata_t &inputdata );
-	void InputTurnOff( inputdata_t &inputdata );
-	void InputSetAllowed( inputdata_t &inputdata );
-	void InputSetInvert( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "TurnOn", .type = FIELD_VOID } ]] void InputTurnOn( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "TurnOff", .type = FIELD_VOID } ]] void InputTurnOff( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetAllowed", .type = FIELD_STRING } ]] void InputSetAllowed( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetInvert", .type = FIELD_BOOLEAN } ]] void InputSetInvert( inputdata_t &inputdata );
 	
 	CUtlVector< CHandle<CAI_DynamicLink> > m_ControlledLinks;
-	DynamicLinkState_t			m_nLinkState;
-	string_t					m_strAllowUse;		// Only this entity name or classname may use the link
-	int							m_nPriority;
-	bool						m_bInvertAllow;		// Instead of only allowing the m_strAllowUse entity, exclude only it
-	bool						m_bUseAirLinkRadius;
+	[[= ks::reflect::Key{ .name = "initialstate" } ]] DynamicLinkState_t			m_nLinkState;
+	[[= ks::reflect::Key{ .name = "AllowUse" } ]] string_t					m_strAllowUse;		// Only this entity name or classname may use the link
+	[[= ks::reflect::Key{ .name = "Priority" } ]] int							m_nPriority;
+	[[= ks::reflect::Key{ .name = "InvertAllow" } ]] bool						m_bInvertAllow;		// Instead of only allowing the m_strAllowUse entity, exclude only it
+	[[= ks::reflect::Key{ .name = "useairlinkradius" } ]] bool						m_bUseAirLinkRadius;
 
 	DECLARE_DATADESC();
 };
@@ -118,7 +120,7 @@ public:
 	void	ModifyNodeLinks( bool bMakeStale );
 
 public:
-	float	m_flRadius;
+	[[= ks::reflect::Key{ .name = "radius" } ]] float	m_flRadius;
 	Vector	m_vecAtRestOrigin;
 	bool	m_bAtRest;
 

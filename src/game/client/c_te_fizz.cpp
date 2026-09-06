@@ -11,6 +11,8 @@
 // $NoKeywords: $
 //=============================================================================//
 #include "cbase.h"
+#include "reflect_recvtable.h"
+#include "reflect_annotations.h"
 #include "c_basetempentity.h"
 #include "c_te_legacytempents.h"
 #include "tier0/vprof.h"
@@ -21,7 +23,8 @@
 //-----------------------------------------------------------------------------
 // Purpose: Fizz TE
 //-----------------------------------------------------------------------------
-class C_TEFizz : public C_BaseTempEntity
+class [[= ks::reflect::NetTable{ .name = "DT_TEFizz" } ]]
+      C_TEFizz : public C_BaseTempEntity
 {
 public:
 	DECLARE_CLASS( C_TEFizz, C_BaseTempEntity );
@@ -33,10 +36,10 @@ public:
 	virtual void	PostDataUpdate( DataUpdateType_t updateType );
 
 public:
-	int				m_nEntity;
-	int				m_nModelIndex;
-	int				m_nDensity;
-	int				m_nCurrent;
+	[[= ks::reflect::Net{} ]] int				m_nEntity;
+	[[= ks::reflect::Net{} ]] int				m_nModelIndex;
+	[[= ks::reflect::Net{} ]] int				m_nDensity;
+	[[= ks::reflect::Net{} ]] int				m_nCurrent;
 };
 
 //-----------------------------------------------------------------------------
@@ -82,11 +85,6 @@ void TE_Fizz( IRecipientFilter& filter, float delay,
 	}
 }
 
-IMPLEMENT_CLIENTCLASS_EVENT_DT(C_TEFizz, DT_TEFizz, CTEFizz)
-	RecvPropInt( RECVINFO(m_nEntity)),
-	RecvPropInt( RECVINFO(m_nModelIndex)),
-	RecvPropInt( RECVINFO(m_nDensity)),
-	RecvPropInt( RECVINFO(m_nCurrent)),
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS_EVENT( C_TEFizz, DT_TEFizz, CTEFizz )
 
 

@@ -1,3 +1,5 @@
+
+#include "reflect_annotations.h"
 //========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: Bomb Target Area ent
@@ -23,21 +25,21 @@ public:
 	void EXPORT BombTargetTouch( CBaseEntity* pOther );
 	void EXPORT BombTargetUse( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
 
-	void OnBombExplode( inputdata_t &inputdata );
-	void OnBombPlanted( inputdata_t &inputdata );
-	void OnBombDefused( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "BombExplode", .type = FIELD_VOID } ]] void OnBombExplode( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "BombPlanted", .type = FIELD_VOID } ]] void OnBombPlanted( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "BombDefused", .type = FIELD_VOID } ]] void OnBombDefused( inputdata_t &inputdata );
 
 	bool	IsHeistBombTarget( void ) { return m_bIsHeistBombTarget; }
 	const char *GetBombMountTarget( void ){ return STRING( m_szMountTarget ); }
 
 private:
-	COutputEvent m_OnBombExplode;	//Fired when the bomb explodes
-	COutputEvent m_OnBombPlanted;	//Fired when the bomb is planted
-	COutputEvent m_OnBombDefused;	//Fired when the bomb is defused
+	[[= ks::reflect::Key{ .name = "BombExplode" } ]] COutputEvent m_OnBombExplode;	//Fired when the bomb explodes
+	[[= ks::reflect::Key{ .name = "BombPlanted" } ]] COutputEvent m_OnBombPlanted;	//Fired when the bomb is planted
+	[[= ks::reflect::Key{ .name = "BombDefused" } ]] COutputEvent m_OnBombDefused;	//Fired when the bomb is defused
 
-	bool		m_bIsHeistBombTarget;
+	[[= ks::reflect::Key{ .name = "heistbomb" } ]] bool		m_bIsHeistBombTarget;
 	bool		m_bBombPlantedHere;
-	string_t	m_szMountTarget;
+	[[= ks::reflect::Key{ .name = "bomb_mount_target" } ]] string_t	m_szMountTarget;
 	EHANDLE		m_hInstructorHint;		// Hint that's used by the instructor system
 };
 
@@ -55,7 +57,6 @@ public:
 		return SetTransmitState( FL_EDICT_ALWAYS );
 	}
 
-	DECLARE_DATADESC();
 };
 
 //-----------------------------------------------------------------------------
@@ -72,5 +73,4 @@ public:
 		return SetTransmitState( FL_EDICT_ALWAYS );
 	}
 
-	DECLARE_DATADESC();
 };

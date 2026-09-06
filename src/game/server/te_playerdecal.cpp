@@ -11,6 +11,8 @@
 // $NoKeywords: $
 //=============================================================================//
 #include "cbase.h"
+#include "reflect_sendtable.h"
+#include "reflect_annotations.h"
 #include "basetempentity.h"
 #include "cstrike15/cs_gamerules.h"
 #include "playerdecals_signature.h"
@@ -22,7 +24,8 @@
 //-----------------------------------------------------------------------------
 // Purpose: Dispatches decal tempentity
 //-----------------------------------------------------------------------------
-class CTEPlayerDecal : public CBaseTempEntity
+class [[= ks::reflect::NetTable{ .name = "DT_TEPlayerDecal" } ]]
+      CTEPlayerDecal : public CBaseTempEntity
 {
 public:
 	DECLARE_CLASS( CTEPlayerDecal, CBaseTempEntity );
@@ -35,15 +38,16 @@ public:
 	DECLARE_SERVERCLASS();
 
 public:
-	CNetworkVar( int, m_nPlayer );
-	CNetworkVector( m_vecOrigin );
-	CNetworkVector( m_vecStart );
-	CNetworkVector( m_vecRight );
-	CNetworkVar( int, m_nEntity );
-	CNetworkVar( int, m_nHitbox );
+	CNetworkVar( int, m_nPlayer, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_UNSIGNED } ]] );
+	CNetworkVector( m_vecOrigin, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD, .enc = ks::reflect::ENC_VECTOR } ]] );
+	CNetworkVector( m_vecStart, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD, .enc = ks::reflect::ENC_VECTOR } ]] );
+	CNetworkVector( m_vecRight, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD, .enc = ks::reflect::ENC_VECTOR } ]] );
+	CNetworkVar( int, m_nEntity, [[= ks::reflect::Net{ .bits = MAX_EDICT_BITS, .flags = SPROP_UNSIGNED } ]] );
+	CNetworkVar( int, m_nHitbox, [[= ks::reflect::Net{ .bits = 16, .flags = SPROP_UNSIGNED } ]] );
 };
 
-class CFEPlayerDecal : public CBaseEntity
+class [[= ks::reflect::NetTable{ .name = "DT_FEPlayerDecal" } ]]
+      CFEPlayerDecal : public CBaseEntity
 {
 public:
 	DECLARE_CLASS( CFEPlayerDecal, CBaseEntity );
@@ -105,21 +109,21 @@ public:
 	DECLARE_SERVERCLASS();
 
 public:
-	CNetworkVar( int, m_nUniqueID );
-	CNetworkVar( uint32, m_unAccountID );
-	CNetworkVar( uint32, m_unTraceID );
-	CNetworkVar( uint32, m_rtGcTime );
-	CNetworkVector( m_vecEndPos );
-	CNetworkVector( m_vecStart );
-	CNetworkVector( m_vecRight );
-	CNetworkVector( m_vecNormal );
-	CNetworkVar( int, m_nPlayer );
-	CNetworkVar( int, m_nEntity );
-	CNetworkVar( int, m_nHitbox );
-	CNetworkVar( float, m_flCreationTime );
-	CNetworkVar( int, m_nTintID );
-	CNetworkVar( uint8, m_nVersion );
-	CNetworkArray( uint8, m_ubSignature, PLAYERDECALS_SIGNATURE_BYTELEN );
+	CNetworkVar( int, m_nUniqueID, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_UNSIGNED } ]] );
+	CNetworkVar( uint32, m_unAccountID, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_UNSIGNED } ]] );
+	CNetworkVar( uint32, m_unTraceID, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_UNSIGNED } ]] );
+	CNetworkVar( uint32, m_rtGcTime, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_UNSIGNED } ]] );
+	CNetworkVector( m_vecEndPos, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_NOSCALE, .enc = ks::reflect::ENC_VECTOR } ]] );
+	CNetworkVector( m_vecStart, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_NOSCALE, .enc = ks::reflect::ENC_VECTOR } ]] );
+	CNetworkVector( m_vecRight, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_NOSCALE, .enc = ks::reflect::ENC_VECTOR } ]] );
+	CNetworkVector( m_vecNormal, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_NOSCALE, .enc = ks::reflect::ENC_VECTOR } ]] );
+	CNetworkVar( int, m_nPlayer, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_UNSIGNED } ]] );
+	CNetworkVar( int, m_nEntity, [[= ks::reflect::Net{ .bits = MAX_EDICT_BITS, .flags = SPROP_UNSIGNED } ]] );
+	CNetworkVar( int, m_nHitbox, [[= ks::reflect::Net{ .bits = 16, .flags = SPROP_UNSIGNED } ]] );
+	CNetworkVar( float, m_flCreationTime, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE } ]] );
+	CNetworkVar( int, m_nTintID, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_UNSIGNED } ]] );
+	CNetworkVar( uint8, m_nVersion, [[= ks::reflect::Net{ .bits = 3, .flags = SPROP_UNSIGNED } ]] );
+	CNetworkArray( uint8, m_ubSignature, PLAYERDECALS_SIGNATURE_BYTELEN, [[= ks::reflect::Net{ .bits = 8, .flags = SPROP_UNSIGNED } ]] );
 
 private:
 	static CUtlVector< CFEPlayerDecal * > s_arrFEPlayerDecals;
@@ -183,32 +187,9 @@ void CTEPlayerDecal::Test( const Vector& current_origin, const QAngle& current_a
 	Create( filter, 0.0 );
 }
 
-IMPLEMENT_SERVERCLASS_ST(CTEPlayerDecal, DT_TEPlayerDecal)
-	SendPropVector( SENDINFO(m_vecOrigin), -1, SPROP_COORD),
-	SendPropVector( SENDINFO(m_vecStart), -1, SPROP_COORD),
-	SendPropVector( SENDINFO(m_vecRight), -1, SPROP_COORD),
-	SendPropInt( SENDINFO(m_nEntity), MAX_EDICT_BITS, SPROP_UNSIGNED ),
-	SendPropInt( SENDINFO(m_nPlayer), -1, SPROP_UNSIGNED ),
-	SendPropInt( SENDINFO(m_nHitbox), 16, SPROP_UNSIGNED ), // this is the max number of static props that can be decalled
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CTEPlayerDecal, DT_TEPlayerDecal )
 
-IMPLEMENT_SERVERCLASS_ST(CFEPlayerDecal, DT_FEPlayerDecal)
-	SendPropInt( SENDINFO(m_nUniqueID), -1, SPROP_UNSIGNED ),
-	SendPropInt( SENDINFO(m_unAccountID), -1, SPROP_UNSIGNED ),
-	SendPropInt( SENDINFO(m_unTraceID), -1, SPROP_UNSIGNED ),
-	SendPropInt( SENDINFO(m_rtGcTime), -1, SPROP_UNSIGNED ),
-	SendPropVector( SENDINFO(m_vecEndPos), -1, SPROP_NOSCALE),
-	SendPropVector( SENDINFO(m_vecStart), -1, SPROP_NOSCALE),
-	SendPropVector( SENDINFO(m_vecRight), -1, SPROP_NOSCALE),
-	SendPropVector( SENDINFO(m_vecNormal), -1, SPROP_NOSCALE),
-	SendPropInt( SENDINFO(m_nEntity), MAX_EDICT_BITS, SPROP_UNSIGNED ),
-	SendPropInt( SENDINFO(m_nPlayer), -1, SPROP_UNSIGNED ),
-	SendPropInt( SENDINFO(m_nHitbox), 16, SPROP_UNSIGNED ), // this is the max number of static props that can be decalled
-	SendPropInt( SENDINFO( m_nTintID ), -1, SPROP_UNSIGNED ),
-	SendPropFloat( SENDINFO( m_flCreationTime ), 0, SPROP_NOSCALE ),
-	SendPropInt( SENDINFO( m_nVersion ), 3, SPROP_UNSIGNED ), // support versions 0..7 initially
-	SendPropArray3( SENDINFO_ARRAY3( m_ubSignature ), SendPropInt( SENDINFO_ARRAY( m_ubSignature ), 8, SPROP_UNSIGNED ) ),
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CFEPlayerDecal, DT_FEPlayerDecal )
 LINK_ENTITY_TO_CLASS( cfe_player_decal, CFEPlayerDecal );
 
 void FE_PlayerDecal( CCSGameRules::ServerPlayerDecalData_t const &data, std::string const &signature )

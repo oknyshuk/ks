@@ -7,6 +7,8 @@
 // $NoKeywords: $
 //=============================================================================//
 #include "cbase.h"
+#include "reflect_recvtable.h"
+#include "reflect_annotations.h"
 #include "c_basetempentity.h"
 #include "IEffects.h"
 #include "tier0/vprof.h"
@@ -17,7 +19,8 @@
 //-----------------------------------------------------------------------------
 // Purpose: Energy Splash TE
 //-----------------------------------------------------------------------------
-class C_TEEnergySplash : public C_BaseTempEntity
+class [[= ks::reflect::NetTable{ .name = "DT_TEEnergySplash", .base = false } ]]
+      C_TEEnergySplash : public C_BaseTempEntity
 {
 public:
 	DECLARE_CLIENTCLASS();
@@ -30,9 +33,9 @@ public:
 	virtual void	Precache( void );
 
 public:
-	Vector			m_vecPos;
-	Vector			m_vecDir;
-	bool			m_bExplosive;
+	[[= ks::reflect::Net{} ]] Vector			m_vecPos;
+	[[= ks::reflect::Net{} ]] Vector			m_vecDir;
+	[[= ks::reflect::Net{} ]] bool			m_bExplosive;
 
 	const struct model_t *m_pModel;
 };
@@ -82,9 +85,5 @@ void TE_EnergySplash( IRecipientFilter& filter, float delay,
 // Expose the TE to the engine.
 IMPLEMENT_CLIENTCLASS_EVENT( C_TEEnergySplash, DT_TEEnergySplash, CTEEnergySplash );
 
-BEGIN_RECV_TABLE_NOBASE(C_TEEnergySplash, DT_TEEnergySplash)
-	RecvPropVector(RECVINFO(m_vecPos)),
-	RecvPropVector(RECVINFO(m_vecDir)),
-	RecvPropInt(RECVINFO(m_bExplosive)),
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_TABLE( C_TEEnergySplash, DT_TEEnergySplash );
 

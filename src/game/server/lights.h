@@ -6,6 +6,8 @@
 
 #ifndef LIGHTS_H
 #define LIGHTS_H
+
+#include "reflect_annotations.h"
 #ifdef _WIN32
 #pragma once
 #endif
@@ -28,19 +30,19 @@ public:
 	void	Toggle( void );
 
 	// Input handlers
-	void	InputSetPattern( inputdata_t &inputdata );
-	void	InputFadeToPattern( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetPattern", .type = FIELD_STRING } ]] void	InputSetPattern( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "FadeToPattern", .type = FIELD_STRING } ]] void	InputFadeToPattern( inputdata_t &inputdata );
 
-	void	InputToggle( inputdata_t &inputdata );
-	void	InputTurnOn( inputdata_t &inputdata );
-	void	InputTurnOff( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Toggle", .type = FIELD_VOID } ]] void	InputToggle( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "TurnOn", .type = FIELD_VOID } ]] void	InputTurnOn( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "TurnOff", .type = FIELD_VOID } ]] void	InputTurnOff( inputdata_t &inputdata );
 
 	DECLARE_DATADESC();
 
 private:
-	int		m_iStyle;
-	int		m_iDefaultStyle;
-	string_t m_iszPattern;
+	[[= ks::reflect::Key{ .name = "style" } ]] int		m_iStyle;
+	[[= ks::reflect::Key{ .name = "defaultstyle" } ]] int		m_iDefaultStyle;
+	[[= ks::reflect::Key{ .name = "pattern" } ]] string_t m_iszPattern;
 	char	m_iCurrentFade;
 	char	m_iTargetFade;
 };

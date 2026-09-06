@@ -5,6 +5,8 @@
 //===========================================================================//
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_annotations.h"
 #include "beam_shared.h"
 #include "spotlightend.h"
 
@@ -44,10 +46,10 @@ private:
 	// ------------------------------
 	//  Inputs
 	// ------------------------------
-	void InputLightOn( inputdata_t &inputdata );
-	void InputLightOff( inputdata_t &inputdata );
-	void InputSetColor( inputdata_t &inputdata );
-	void InputForceUpdate( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "LightOn", .type = FIELD_VOID } ]] void InputLightOn( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "LightOff", .type = FIELD_VOID } ]] void InputLightOff( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetColor", .type = FIELD_COLOR32 } ]] void InputSetColor( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "ForceUpdate", .type = FIELD_VOID } ]] void InputForceUpdate( inputdata_t &inputdata );
 
 	// Creates the efficient spotlight 
 	void CreateEfficientSpotlight();
@@ -65,46 +67,17 @@ private:
 	CHandle<CBeam>			m_hSpotlight;
 	CHandle<CSpotlightEnd>	m_hSpotlightTarget;
 	
-	float	m_flSpotlightMaxLength;
+	[[= ks::reflect::Key{ .name = "SpotlightLength" } ]] float	m_flSpotlightMaxLength;
 	float	m_flSpotlightCurLength;
-	float	m_flSpotlightGoalWidth;
-	float	m_flHDRColorScale;
+	[[= ks::reflect::Key{ .name = "SpotlightWidth" } ]] float	m_flSpotlightGoalWidth;
+	[[= ks::reflect::Key{ .name = "HDRColorScale" } ]] float	m_flHDRColorScale;
 
 public:
-	COutputEvent m_OnOn, m_OnOff;     ///< output fires when turned on, off
+	[[= ks::reflect::Key{ .name = "OnLightOn" } ]] COutputEvent m_OnOn;     ///< output fires when turned on
+	[[= ks::reflect::Key{ .name = "OnLightOff" } ]] COutputEvent m_OnOff;    ///< output fires when turned off
 };
 
-BEGIN_DATADESC( CPointSpotlight )
-	DEFINE_FIELD( m_flSpotlightCurLength, FIELD_FLOAT ),
-
-	DEFINE_FIELD( m_bSpotlightOn,			FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_bEfficientSpotlight,	FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_vSpotlightTargetPos,	FIELD_POSITION_VECTOR ),
-	DEFINE_FIELD( m_vSpotlightCurrentPos,	FIELD_POSITION_VECTOR ),
-
-	// Robin: Don't Save, recreated after restore/transition
-	//DEFINE_FIELD( m_hSpotlight,			FIELD_EHANDLE ),
-	//DEFINE_FIELD( m_hSpotlightTarget,		FIELD_EHANDLE ),
-
-	DEFINE_FIELD( m_vSpotlightDir,			FIELD_VECTOR ),
-	DEFINE_FIELD( m_nHaloSprite,			FIELD_INTEGER ),
-
-	DEFINE_KEYFIELD( m_flSpotlightMaxLength,FIELD_FLOAT, "SpotlightLength"),
-	DEFINE_KEYFIELD( m_flSpotlightGoalWidth,FIELD_FLOAT, "SpotlightWidth"),
-	DEFINE_KEYFIELD( m_flHDRColorScale, FIELD_FLOAT, "HDRColorScale" ),
-
-	// Inputs
-	DEFINE_INPUTFUNC( FIELD_VOID,		"LightOn",		InputLightOn ),
-	DEFINE_INPUTFUNC( FIELD_VOID,		"LightOff",		InputLightOff ),
-	DEFINE_INPUTFUNC( FIELD_COLOR32,	"SetColor",		InputSetColor ),
-	DEFINE_INPUTFUNC( FIELD_VOID,		"ForceUpdate",	InputForceUpdate ),
-
-	DEFINE_OUTPUT( m_OnOn, "OnLightOn" ),
-	DEFINE_OUTPUT( m_OnOff, "OnLightOff" ),
-
-	DEFINE_THINKFUNC( SpotlightThink ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CPointSpotlight )
 
 
 LINK_ENTITY_TO_CLASS(point_spotlight, CPointSpotlight);

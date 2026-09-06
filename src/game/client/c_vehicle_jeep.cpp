@@ -5,6 +5,8 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_recvtable.h"
+#include "reflect_annotations.h"
 #include "c_vehicle_jeep.h"
 #include "movevars_shared.h"
 #include "view.h"
@@ -26,9 +28,7 @@ ConVar r_JeepViewBlendToTime( "r_JeepViewBlendToTime", "1.5", FCVAR_CHEAT );
 #define JEEP_FRAMETIME_MIN		1e-6
 #define JEEP_HEADLIGHT_DISTANCE 1000
 
-IMPLEMENT_CLIENTCLASS_DT( C_PropJeep, DT_PropJeep, CPropJeep )
-	RecvPropBool( RECVINFO( m_bHeadlightIsOn ) ),
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS( C_PropJeep, DT_PropJeep, CPropJeep )
 
 //-----------------------------------------------------------------------------
 // Purpose: Constructor

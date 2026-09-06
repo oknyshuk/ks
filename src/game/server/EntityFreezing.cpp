@@ -10,8 +10,11 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_annotations.h"
 
 #include "EntityFreezing.h"
+#include "reflect_sendtable.h"
 #include "baseanimating.h"
 #include "ai_basenpc.h"
 #include "dt_utlvector_send.h"
@@ -30,28 +33,13 @@ static const char *s_pElectroThinkContext = "ElectroThinkContext";
 //-----------------------------------------------------------------------------
 // Save/load 
 //-----------------------------------------------------------------------------
-BEGIN_DATADESC( CEntityFreezing )
-
-	DEFINE_FIELD( m_vFreezingOrigin, FIELD_VECTOR ),
-	DEFINE_AUTO_ARRAY( m_flFrozenPerHitbox, FIELD_FLOAT ),
-	DEFINE_KEYFIELD( m_flFrozen, FIELD_FLOAT, "frozen" ),
-
-	DEFINE_FIELD( m_bFinishFreezing, FIELD_BOOLEAN ),
-
-	DEFINE_INPUTFUNC( FIELD_STRING, "Freeze", InputFreeze ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CEntityFreezing )
 
 
 //-----------------------------------------------------------------------------
 // Networking
 //-----------------------------------------------------------------------------
-IMPLEMENT_SERVERCLASS_ST( CEntityFreezing, DT_EntityFreezing )
-	SendPropVector( SENDINFO(m_vFreezingOrigin), 0, SPROP_NOSCALE ),
-	SendPropArray3( SENDINFO_ARRAY3(m_flFrozenPerHitbox), SendPropFloat( SENDINFO_ARRAY(m_flFrozenPerHitbox) ) ),
-	SendPropFloat( SENDINFO( m_flFrozen ) ),
-	SendPropBool( SENDINFO( m_bFinishFreezing ) ),
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CEntityFreezing, DT_EntityFreezing )
 
 LINK_ENTITY_TO_CLASS( env_entity_freezing, CEntityFreezing );
 PRECACHE_REGISTER( env_entity_freezing );

@@ -192,7 +192,6 @@ protected:
 	bool	m_bFailed;			// has this achievement failed
 	
 public:
-	DECLARE_DATADESC();
 };
 
 class CMapAchievement : public CBaseAchievement

@@ -6,6 +6,8 @@
  */
 
 #include "cbase.h"
+#include "reflect_sendtable.h"
+#include "reflect_annotations.h"
 #include "inferno.h"
 #include "engine/IEngineSound.h"
 #include "SoundEmitterSystem/isoundemittersystembase.h"
@@ -24,27 +26,16 @@
 // NOTE: This has to be the last file included!
 #include "tier0/memdbgon.h"
 
-IMPLEMENT_SERVERCLASS_ST( CInferno, DT_Inferno )
-	SendPropArray3( SENDINFO_ARRAY3(m_fireXDelta), SendPropInt( SENDINFO_ARRAY(m_fireXDelta), COORD_INTEGER_BITS+1, 0 ) ),
-	SendPropArray3( SENDINFO_ARRAY3(m_fireYDelta), SendPropInt( SENDINFO_ARRAY(m_fireYDelta), COORD_INTEGER_BITS+1, 0 ) ),
-	SendPropArray3( SENDINFO_ARRAY3(m_fireZDelta), SendPropInt( SENDINFO_ARRAY(m_fireZDelta), COORD_INTEGER_BITS+1, 0 ) ),
-	SendPropArray3( SENDINFO_ARRAY3(m_bFireIsBurning), SendPropBool( SENDINFO_ARRAY(m_bFireIsBurning) ) ),	
-	//SendPropArray3( SENDINFO_ARRAY3(m_BurnNormal), SendPropVector( SENDINFO_NOCHECK( m_BurnNormal ), 0, SPROP_NORMAL ) ),
-	SendPropInt( SENDINFO(m_fireCount), 7, SPROP_UNSIGNED ),
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CInferno, DT_Inferno )
 
 
-BEGIN_DATADESC( CInferno )
-	DEFINE_THINKFUNC( InfernoThink ),
-END_DATADESC()
 
 
 LINK_ENTITY_TO_CLASS( inferno, CInferno );
 PRECACHE_REGISTER( inferno );
 
 
-IMPLEMENT_SERVERCLASS_ST( CFireCrackerBlast, DT_FireCrackerBlast )
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CFireCrackerBlast, DT_FireCrackerBlast )
 
 LINK_ENTITY_TO_CLASS( fire_cracker_blast, CFireCrackerBlast );
 PRECACHE_REGISTER( fire_cracker_blast );

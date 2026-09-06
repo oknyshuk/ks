@@ -7,6 +7,11 @@
 
 #ifndef COLLISIONPROPERTY_H
 #define COLLISIONPROPERTY_H
+
+#include "reflect_annotations.h"
+#include "dt_recv.h"
+#include "collisionproperty.h"
+#include "const.h"
 #ifdef _WIN32
 #pragma once
 #endif
@@ -20,6 +25,26 @@
 //-----------------------------------------------------------------------------
 // Forward declarations
 //-----------------------------------------------------------------------------
+void SendProxy_Solid( const SendProp *pProp, const void *pStruct,
+    const void *pData, DVariant *pOut, int iElement, int objectID );
+
+void SendProxy_SolidFlags( const SendProp *pProp, const void *pStruct,
+    const void *pData, DVariant *pOut, int iElement, int objectID );
+
+void RecvProxy_IntDirtySurround( const CRecvProxyData *pData, void *pStruct, void *pOut );
+
+void RecvProxy_OBBMaxs( const CRecvProxyData *pData, void *pStruct, void *pOut );
+
+void RecvProxy_OBBMins( const CRecvProxyData *pData, void *pStruct, void *pOut );
+
+
+
+void RecvProxy_VectorDirtySurround( const CRecvProxyData *pData, void *pStruct, void *pOut );
+
+void RecvProxy_Solid( const CRecvProxyData *pData, void *pStruct, void *pOut );
+
+void RecvProxy_SolidFlags( const CRecvProxyData *pData, void *pStruct, void *pOut );
+
 class CBaseEntity;
 class IHandleEntity;
 class QAngle;
@@ -55,7 +80,8 @@ enum SurroundingBoundsType_t
 //-----------------------------------------------------------------------------
 // Encapsulates collision representation for an entity
 //-----------------------------------------------------------------------------
-class CCollisionProperty : public ICollideable
+class [[= ks::reflect::NetTable{ .name = "DT_CollisionProperty", .base = false } ]]
+      CCollisionProperty : public ICollideable
 {
 	DECLARE_CLASS_NOBASE( CCollisionProperty );
 	DECLARE_EMBEDDED_NETWORKVAR();
@@ -244,25 +270,25 @@ private:
 	CBaseEntity *m_pOuter;
 
 // BEGIN PREDICTION DATA COMPACTION (these fields are together to allow for faster copying in prediction system)
-	CNetworkVector( m_vecMins );
-	CNetworkVector( m_vecMaxs );
-	CNetworkVar( unsigned short, m_usSolidFlags );
+	CNetworkVector( m_vecMins, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE, .enc = ks::reflect::ENC_VECTOR } ]] [[= ks::reflect::Proxy<RecvProxy_OBBMins, ks::reflect::WIRE_RECV>{} ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]]);
+	CNetworkVector( m_vecMaxs, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE, .enc = ks::reflect::ENC_VECTOR } ]] [[= ks::reflect::Proxy<RecvProxy_OBBMaxs, ks::reflect::WIRE_RECV>{} ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]]);
+	CNetworkVar( unsigned short, m_usSolidFlags, [[= ks::reflect::Net{ .bits = FSOLID_MAX_BITS, .flags = SPROP_UNSIGNED } ]] [[= ks::reflect::Proxy<SendProxy_SolidFlags, ks::reflect::WIRE_SEND>{} ]] [[= ks::reflect::Proxy<RecvProxy_SolidFlags, ks::reflect::WIRE_RECV>{} ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]]);
 	// One of the SOLID_ defines. Use GetSolid/SetSolid.
-	CNetworkVar( unsigned char, m_nSolidType );			
-	CNetworkVar( unsigned char , m_triggerBloat );
+	CNetworkVar( unsigned char, m_nSolidType, [[= ks::reflect::Net{ .bits = 3, .flags = SPROP_UNSIGNED } ]] [[= ks::reflect::Key{ .name = "solid" } ]] [[= ks::reflect::Proxy<SendProxy_Solid, ks::reflect::WIRE_SEND>{} ]] [[= ks::reflect::Proxy<RecvProxy_Solid, ks::reflect::WIRE_RECV>{} ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]]);			
+	CNetworkVar( unsigned char , m_triggerBloat, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_UNSIGNED } ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] );
 // END PREDICTION DATA COMPACTION
 
 	float m_flRadius;
 
 	// Spatial partition
 	SpatialPartitionHandle_t m_Partition;
-	CNetworkVar( unsigned char, m_nSurroundType );
+	CNetworkVar( unsigned char, m_nSurroundType, [[= ks::reflect::Net{ .bits = SURROUNDING_TYPE_BIT_COUNT, .flags = SPROP_UNSIGNED } ]] [[= ks::reflect::Proxy<RecvProxy_IntDirtySurround, ks::reflect::WIRE_RECV>{} ]]);
 
 	// SUCKY: We didn't use to have to store this previously
 	// but storing it here means that we can network it + avoid a ton of
 	// client-side mismatch problems
-	CNetworkVector( m_vecSpecifiedSurroundingMins );
-	CNetworkVector( m_vecSpecifiedSurroundingMaxs );
+	CNetworkVector( m_vecSpecifiedSurroundingMins, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE, .enc = ks::reflect::ENC_VECTOR } ]] );
+	CNetworkVector( m_vecSpecifiedSurroundingMaxs, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE, .enc = ks::reflect::ENC_VECTOR } ]] [[= ks::reflect::Proxy<RecvProxy_VectorDirtySurround, ks::reflect::WIRE_RECV>{} ]]);
 
 	// Cached off world-aligned surrounding bounds
 	Vector	m_vecSurroundingMins;

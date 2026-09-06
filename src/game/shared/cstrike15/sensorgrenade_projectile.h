@@ -6,6 +6,8 @@
 
 #ifndef SENSORGRENADE_PROJECTILE_H
 #define SENSORGRENADE_PROJECTILE_H
+
+#include "reflect_annotations.h"
 #ifdef _WIN32
 #pragma once
 #endif
@@ -20,7 +22,8 @@
 
 #if defined( CLIENT_DLL )
 
-class C_SensorGrenadeProjectile : public C_BaseCSGrenadeProjectile//, public C_BreakableProp
+class [[= ks::reflect::NetTable{ .name = "DT_SensorGrenadeProjectile" } ]]
+      C_SensorGrenadeProjectile : public C_BaseCSGrenadeProjectile//, public C_BreakableProp
 {
 public:
 	DECLARE_CLASS( C_SensorGrenadeProjectile, C_BaseCSGrenadeProjectile );
@@ -40,12 +43,12 @@ private:
 
 struct SensorGrenadeWeaponProfile;
 
-class CSensorGrenadeProjectile : public CBaseCSGrenadeProjectile//, public CBreakableProp
+class [[= ks::reflect::NetTable{ .name = "DT_SensorGrenadeProjectile" } ]]
+      CSensorGrenadeProjectile : public CBaseCSGrenadeProjectile//, public CBreakableProp
 {
 public:
 	DECLARE_CLASS( CSensorGrenadeProjectile, CBaseCSGrenadeProjectile );
 	DECLARE_NETWORKCLASS();
-	DECLARE_DATADESC();
 
 // Overrides.
 public:

@@ -11,6 +11,8 @@
 // $NoKeywords: $
 //=============================================================================//
 #include "cbase.h"
+#include "reflect_sendtable.h"
+#include "reflect_annotations.h"
 #include "basetempentity.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
@@ -21,7 +23,8 @@ extern int	g_sModelIndexBubbles;// holds the index for the bubbles model
 //-----------------------------------------------------------------------------
 // Purpose: Dispatches bubbles
 //-----------------------------------------------------------------------------
-class CTEBubbles : public CBaseTempEntity
+class [[= ks::reflect::NetTable{ .name = "DT_TEBubbles" } ]]
+      CTEBubbles : public CBaseTempEntity
 {
 public:
 	DECLARE_CLASS( CTEBubbles, CBaseTempEntity );
@@ -34,12 +37,12 @@ public:
 	DECLARE_SERVERCLASS();
 
 public:
-	CNetworkVector( m_vecMins );
-	CNetworkVector( m_vecMaxs );
-	CNetworkVar( float, m_fHeight );
-	CNetworkVar( int, m_nModelIndex );
-	CNetworkVar( int, m_nCount );
-	CNetworkVar( float, m_fSpeed );
+	CNetworkVector( m_vecMins, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD, .enc = ks::reflect::ENC_VECTOR } ]] );
+	CNetworkVector( m_vecMaxs, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD, .enc = ks::reflect::ENC_VECTOR } ]] );
+	CNetworkVar( float, m_fHeight, [[= ks::reflect::Net{ .bits = 17, .low = MIN_COORD_INTEGER, .high = MAX_COORD_INTEGER } ]] );
+	CNetworkVar( int, m_nModelIndex, [[= ks::reflect::Net{ .enc = ks::reflect::ENC_MODELINDEX } ]] );
+	CNetworkVar( int, m_nCount, [[= ks::reflect::Net{ .bits = 8, .flags = SPROP_UNSIGNED } ]] );
+	CNetworkVar( float, m_fSpeed, [[= ks::reflect::Net{ .bits = 17, .low = MIN_COORD_INTEGER, .high = MAX_COORD_INTEGER } ]] );
 };
 
 //-----------------------------------------------------------------------------
@@ -96,14 +99,7 @@ void CTEBubbles::Test( const Vector& current_origin, const QAngle& current_angle
 	Create( filter, 0.0 );
 }
 
-IMPLEMENT_SERVERCLASS_ST(CTEBubbles, DT_TEBubbles)
-	SendPropVector( SENDINFO(m_vecMins), -1, SPROP_COORD),
-	SendPropVector( SENDINFO(m_vecMaxs), -1, SPROP_COORD),
-	SendPropModelIndex( SENDINFO(m_nModelIndex) ),
-	SendPropFloat( SENDINFO(m_fHeight ), 17, 0, MIN_COORD_INTEGER, MAX_COORD_INTEGER ),
-	SendPropInt( SENDINFO(m_nCount), 8, SPROP_UNSIGNED ),
-	SendPropFloat( SENDINFO(m_fSpeed ), 17, 0, MIN_COORD_INTEGER, MAX_COORD_INTEGER ),
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CTEBubbles, DT_TEBubbles )
 
 
 // Singleton to fire TEBubbles objects

@@ -7,6 +7,8 @@
 
 #ifndef PARTICLE_LIGHT_H
 #define PARTICLE_LIGHT_H
+
+#include "reflect_annotations.h"
 #ifdef _WIN32
 #pragma once
 #endif
@@ -31,10 +33,10 @@ public:
 
 
 public:
-	float			m_flIntensity;
-	Vector			m_vColor;	// 0-255
-	string_t		m_PSName;	// Name of the particle system entity this light affects.
-	bool			m_bDirectional;
+	[[= ks::reflect::Key{ .name = "Intensity" } ]] float			m_flIntensity;
+	[[= ks::reflect::Key{ .name = "Color" } ]] Vector			m_vColor;	// 0-255
+	[[= ks::reflect::Key{ .name = "PSName" } ]] string_t		m_PSName;	// Name of the particle system entity this light affects.
+	[[= ks::reflect::Key{ .name = "Directional" } ]] bool			m_bDirectional;
 };
 
 

@@ -6,6 +6,8 @@
 //
 //=============================================================================//
 #include "cbase.h"
+#include "reflect_predmap.h"
+#include "reflect_annotations.h"
 
 #if !defined( NO_ENTITY_PREDICTION )
 
@@ -122,20 +124,9 @@ public:
 
 };
 
-BEGIN_PREDICTION_DATA_NO_BASE( CCopyTesterData )
-
-DEFINE_FIELD( m_CharValue, FIELD_CHARACTER ),
-DEFINE_FIELD( m_ShortValue, FIELD_SHORT ),
-DEFINE_FIELD( m_IntValue, FIELD_INTEGER ),
-DEFINE_FIELD( m_FloatValue, FIELD_FLOAT ),
-DEFINE_FIELD( m_szValue, FIELD_STRING ),
-DEFINE_FIELD( m_Vector, FIELD_VECTOR ),
-DEFINE_FIELD( m_Quaternion, FIELD_QUATERNION ),
-DEFINE_FIELD( m_Bool, FIELD_BOOLEAN ),
-DEFINE_FIELD( m_Clr, FIELD_COLOR32 ),
-//	DEFINE_FIELD( m_hEHandle, FIELD_EHANDLE ),
-
-END_PREDICTION_DATA()
+#ifdef CLIENT_DLL
+IMPLEMENT_REFLECT_PREDMAP_NO_BASE( CCopyTesterData );
+#endif
 
 class CCopyTesterData2 : public C_BaseEntity
 {
@@ -162,22 +153,14 @@ public:
 	DECLARE_PREDICTABLE();
 
 	char	m_CharValueA;
-	CCopyTesterData	m_FooData;
+	[[= ks::reflect::Pred{} ]] CCopyTesterData	m_FooData;
 	int		m_IntValueA;
 	short	m_ShortValueA;
 	float	m_FloatValueA;
 
 };
 
-BEGIN_PREDICTION_DATA_NO_BASE( CCopyTesterData2 )
-
-DEFINE_FIELD( m_CharValueA, FIELD_CHARACTER ),
-DEFINE_FIELD( m_ShortValueA, FIELD_SHORT ),
-DEFINE_PRED_TYPEDESCRIPTION( m_FooData, CCopyTesterData ),
-DEFINE_FIELD( m_IntValueA, FIELD_INTEGER ),
-DEFINE_FIELD( m_FloatValueA, FIELD_FLOAT ),
-
-END_PREDICTION_DATA()
+IMPLEMENT_REFLECT_PREDMAP_NO_BASE( CCopyTesterData2 );
 
 void CPredictionCopyTester::RunTests( void )
 {

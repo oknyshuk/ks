@@ -6,6 +6,15 @@
 //=====================================================================================//
 
 #include "cbase.h"
+#include "reflect_annotations.h"
+#ifdef CLIENT_DLL
+#include "reflect_recvtable.h"
+#endif
+#include "reflect_predmap.h"
+#include "reflect_annotations.h"
+#ifdef GAME_DLL
+#include "reflect_sendtable.h"
+#endif
 #include "weapon_baseitem.h"
 #include "cs_gamerules.h"
 
@@ -20,26 +29,16 @@
 
 IMPLEMENT_NETWORKCLASS_ALIASED( WeaponBaseItem, DT_WeaponBaseItem )
 
-BEGIN_NETWORK_TABLE( CWeaponBaseItem, DT_WeaponBaseItem )
-#ifndef CLIENT_DLL
-SendPropBool( SENDINFO( m_bRedraw ) ),
-#else
-RecvPropBool( RECVINFO( m_bRedraw ) ),
-#endif
-
-END_NETWORK_TABLE()
+IMPLEMENT_REFLECT_TABLE( CWeaponBaseItem, DT_WeaponBaseItem );
 
 #if defined CLIENT_DLL
-BEGIN_PREDICTION_DATA( CWeaponBaseItem )
-DEFINE_PRED_FIELD( m_bRedraw, FIELD_BOOLEAN, FTYPEDESC_INSENDTABLE ),
-END_PREDICTION_DATA()
+#ifdef CLIENT_DLL
+IMPLEMENT_REFLECT_PREDMAP( CWeaponBaseItem );
+#endif
 #endif
 
 
 #ifndef CLIENT_DLL
-BEGIN_DATADESC( CWeaponBaseItem )
-DEFINE_FIELD( m_bRedraw, FIELD_BOOLEAN ),
-END_DATADESC()
 #endif
 
 CWeaponBaseItem::CWeaponBaseItem()

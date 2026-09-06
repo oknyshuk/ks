@@ -7,6 +7,8 @@
 #ifndef ENTITYPARTICLETRAIL_SHARED_H
 #define ENTITYPARTICLETRAIL_SHARED_H
 
+#include "reflect_annotations.h"
+
 #ifdef _WIN32
 #pragma once
 #endif
@@ -25,7 +27,11 @@ EXTERN_SEND_TABLE( DT_EntityParticleTrailInfo );
 //-----------------------------------------------------------------------------
 // Particle trail info
 //-----------------------------------------------------------------------------
-struct EntityParticleTrailInfo_t
+struct [[= ks::reflect::NetTable{ .name = "DT_EntityParticleTrailInfo", .base = false } ]]
+      [[= ks::reflect::From<"m_flLifetime", ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE }>{} ]]
+      [[= ks::reflect::From<"m_flStartSize", ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE }>{} ]]
+      [[= ks::reflect::From<"m_flEndSize", ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE }>{} ]]
+      EntityParticleTrailInfo_t
 {
 	EntityParticleTrailInfo_t();
 
@@ -33,10 +39,10 @@ struct EntityParticleTrailInfo_t
 	DECLARE_SIMPLE_DATADESC();
 	DECLARE_EMBEDDED_NETWORKVAR();
 
-	string_t m_strMaterialName;
-	CNetworkVar( float, m_flLifetime );
-	CNetworkVar( float, m_flStartSize );
-	CNetworkVar( float, m_flEndSize );
+	[[= ks::reflect::Key{ .name = "ParticleTrailMaterial" } ]] string_t m_strMaterialName;
+	CNetworkVar( float, m_flLifetime, [[= ks::reflect::Key{ .name = "ParticleTrailLifetime" } ]] );
+	CNetworkVar( float, m_flStartSize, [[= ks::reflect::Key{ .name = "ParticleTrailStartSize" } ]] );
+	CNetworkVar( float, m_flEndSize, [[= ks::reflect::Key{ .name = "ParticleTrailEndSize" } ]] );
 };
 
 

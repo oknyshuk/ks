@@ -6,6 +6,8 @@
 
 #ifndef WEAPON_BASECSGRENADE_H
 #define WEAPON_BASECSGRENADE_H
+
+#include "reflect_annotations.h"
 #ifdef _WIN32
 #pragma once
 #endif
@@ -23,7 +25,8 @@
 #define GRENADE_UNDERHAND_THRESHOLD 0.33f
 #endif
 
-class CBaseCSGrenade : public CWeaponCSBase
+class [[= ks::reflect::NetTable{ .name = "DT_BaseCSGrenade" } ]]
+      CBaseCSGrenade : public CWeaponCSBase
 {
 public:
 	DECLARE_CLASS( CBaseCSGrenade, CWeaponCSBase );
@@ -77,7 +80,6 @@ public:
 #endif
 
 #ifndef CLIENT_DLL
-	DECLARE_DATADESC();
 
 	virtual bool AllowsAutoSwitchFrom( void ) const;
 
@@ -88,14 +90,14 @@ public:
 #endif
 
 protected:
-	CNetworkVar( bool, m_bRedraw );	// Draw the weapon again after throwing a grenade
-	CNetworkVar( bool, m_bIsHeldByPlayer );	// is true when held by player, false when it's been thrown or dropped
-	CNetworkVar( bool, m_bPinPulled );	// Set to true when the pin has been pulled but the grenade hasn't been thrown yet.
-	CNetworkVar( float, m_fThrowTime ); // the time at which the grenade will be thrown.  If this value is 0 then the time hasn't been set yet.
+	CNetworkVar( bool, m_bRedraw, [[= ks::reflect::Net{} ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] );	// Draw the weapon again after throwing a grenade
+	CNetworkVar( bool, m_bIsHeldByPlayer, [[= ks::reflect::Net{} ]] );	// is true when held by player, false when it's been thrown or dropped
+	CNetworkVar( bool, m_bPinPulled, [[= ks::reflect::Net{} ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] );	// Set to true when the pin has been pulled but the grenade hasn't been thrown yet.
+	CNetworkVar( float, m_fThrowTime, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE } ]] ); // the time at which the grenade will be thrown.  If this value is 0 then the time hasn't been set yet.
 
-	CNetworkVar( bool, m_bLoopingSoundPlaying );	// Set to true when the grenade is playing a looping sound
+	CNetworkVar( bool, m_bLoopingSoundPlaying, [[= ks::reflect::Net{} ]] );	// Set to true when the grenade is playing a looping sound
 #ifdef GRENADE_UNDERHAND_FEATURE_ENABLED
-	CNetworkVar( float, m_flThrowStrength );
+	CNetworkVar( float, m_flThrowStrength, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE } ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] );
 #endif
 private:
 	CBaseCSGrenade( const CBaseCSGrenade & ) {}

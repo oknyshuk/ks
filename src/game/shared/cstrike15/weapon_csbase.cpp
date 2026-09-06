@@ -6,6 +6,16 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_annotations.h"
+#ifdef CLIENT_DLL
+#include "reflect_recvtable.h"
+#endif
+#include "reflect_predmap.h"
+#include "reflect_annotations.h"
+#ifdef GAME_DLL
+#include "reflect_sendtable.h"
+#include "reflect_datamap.h"
+#endif
 #include "in_buttons.h"
 #include "takedamageinfo.h"
 #include "weapon_csbase.h"
@@ -292,73 +302,10 @@ int GetShellForAmmoType( const char *ammoname )
 
 IMPLEMENT_NETWORKCLASS_ALIASED( WeaponCSBase, DT_WeaponCSBase )
 
-BEGIN_NETWORK_TABLE( CWeaponCSBase, DT_WeaponCSBase )
-#if !defined( CLIENT_DLL )
-SendPropInt( SENDINFO( m_weaponMode ), 1, SPROP_UNSIGNED ),
-SendPropFloat( SENDINFO( m_fAccuracyPenalty ), 0, SPROP_CHANGES_OFTEN ),
-SendPropFloat( SENDINFO( m_fLastShotTime ) ),
-//SendPropInt( SENDINFO( m_iRecoilIndex ) ),	//DEPRECATED
-SendPropFloat( SENDINFO( m_flRecoilIndex ) ),
-// world weapon models have no aminations
-SendPropExclude( "DT_AnimTimeMustBeFirst", "m_flAnimTime" ),
-SendPropExclude( "DT_BaseAnimating", "m_nSequence" ),
-SendPropEHandle( SENDINFO( m_hPrevOwner ) ),
-SendPropBool( SENDINFO( m_bBurstMode ) ),
-SendPropTime( SENDINFO( m_flPostponeFireReadyTime ) ),
-SendPropBool( SENDINFO( m_bReloadVisuallyComplete ) ),
-//	SendPropExclude( "DT_LocalActiveWeaponData", "m_flTimeWeaponIdle" ),
-SendPropBool( SENDINFO( m_bSilencerOn ) ),
-SendPropTime( SENDINFO( m_flDoneSwitchingSilencer ) ),
-SendPropInt( SENDINFO( m_iOriginalTeamNumber ) ),
-SendPropInt( SENDINFO( m_nEconItemDefIndex ), 16, SPROP_UNSIGNED ),
-#if defined( WEAPON_FIRE_BULLETS_ACCURACY_FISHTAIL_FEATURE )
-SendPropFloat( SENDINFO( m_fAccuracyFishtail ) ),
-#endif
-#ifdef IRONSIGHT
-SendPropInt( SENDINFO( m_iIronSightMode ), 2, SPROP_UNSIGNED ),
-#endif //IRONSIGHT
-#else
-RecvPropInt( RECVINFO( m_weaponMode ) ),
-RecvPropFloat( RECVINFO( m_fAccuracyPenalty ) ),
-RecvPropFloat( RECVINFO( m_fLastShotTime ) ),
-RecvPropInt( RECVINFO( m_iRecoilIndex ) ),	// DEPRECATED. Kept for old demo compatibility.
-RecvPropFloat( RECVINFO( m_flRecoilIndex ) ),
-RecvPropEHandle( RECVINFO( m_hPrevOwner ) ),
-RecvPropBool( RECVINFO( m_bBurstMode ) ),
-RecvPropTime( RECVINFO( m_flPostponeFireReadyTime ) ),
-RecvPropBool( RECVINFO( m_bReloadVisuallyComplete ) ),
-RecvPropBool( RECVINFO( m_bSilencerOn ) ),
-RecvPropTime( RECVINFO( m_flDoneSwitchingSilencer ) ),
-RecvPropInt( RECVINFO( m_iOriginalTeamNumber ) ),
-RecvPropInt( RECVINFO( m_nEconItemDefIndex ) ),
-#if defined( WEAPON_FIRE_BULLETS_ACCURACY_FISHTAIL_FEATURE )
-RecvPropFloat( RECVINFO( m_fAccuracyFishtail ) ),
-#endif
-#ifdef IRONSIGHT
-RecvPropInt( RECVINFO( m_iIronSightMode ) ),
-#endif //IRONSIGHT
-#endif
-END_NETWORK_TABLE()
+IMPLEMENT_REFLECT_TABLE( CWeaponCSBase, DT_WeaponCSBase );
 
 #if defined( CLIENT_DLL )
-BEGIN_PREDICTION_DATA( CWeaponCSBase )
-	DEFINE_PRED_FIELD( m_flTimeWeaponIdle, FIELD_FLOAT, FTYPEDESC_OVERRIDE | FTYPEDESC_NOERRORCHECK ),
-	DEFINE_PRED_FIELD( m_flNextPrimaryAttack, FIELD_FLOAT, FTYPEDESC_OVERRIDE | FTYPEDESC_NOERRORCHECK ),
-	DEFINE_PRED_FIELD( m_flNextSecondaryAttack, FIELD_FLOAT, FTYPEDESC_OVERRIDE | FTYPEDESC_NOERRORCHECK ),
-	DEFINE_PRED_FIELD( m_weaponMode, FIELD_INTEGER, FTYPEDESC_INSENDTABLE ),
-	DEFINE_PRED_FIELD_TOL( m_fAccuracyPenalty, FIELD_FLOAT, FTYPEDESC_INSENDTABLE, TD_MSECTOLERANCE ),
-#if defined( WEAPON_FIRE_BULLETS_ACCURACY_FISHTAIL_FEATURE )
-	DEFINE_PRED_FIELD_TOL( m_fAccuracyFishtail, FIELD_FLOAT, FTYPEDESC_INSENDTABLE, TD_MSECTOLERANCE ),
-#endif
-	DEFINE_PRED_FIELD( m_fLastShotTime, FIELD_FLOAT, FTYPEDESC_INSENDTABLE ),
-	DEFINE_PRED_FIELD( m_iRecoilIndex, FIELD_INTEGER, FTYPEDESC_INSENDTABLE ),
-	DEFINE_PRED_FIELD( m_flRecoilIndex, FIELD_FLOAT, FTYPEDESC_INSENDTABLE ),
-	DEFINE_PRED_FIELD( m_bReloadVisuallyComplete, FIELD_BOOLEAN, FTYPEDESC_INSENDTABLE ),
-#ifdef IRONSIGHT
-	DEFINE_PRED_FIELD( m_iIronSightMode, FIELD_INTEGER, FTYPEDESC_INSENDTABLE ),
-#endif
-	DEFINE_PRED_FIELD( m_flPostponeFireReadyTime, FIELD_FLOAT, FTYPEDESC_OVERRIDE | FTYPEDESC_NOERRORCHECK ),
-END_PREDICTION_DATA()
+IMPLEMENT_REFLECT_PREDMAP( CWeaponCSBase );
 #endif
 
 
@@ -371,15 +318,7 @@ LINK_ENTITY_TO_CLASS_ALIASED( weapon_cs_base, WeaponCSBase );
 #define REMOVEUNOWNEDWEAPON_THINK_INTERVAL			0.2
 #define REMOVEUNOWNEDWEAPON_THINK_REMOVE			3
 
-	BEGIN_DATADESC( CWeaponCSBase )
-
-		//DEFINE_FUNCTION( DefaultTouch ),
-		DEFINE_THINKFUNC( FallThink ),
-		DEFINE_THINKFUNC( RemoveUnownedWeaponThink ),
-
-		DEFINE_KEYFIELD( m_bCanBePickedUp, FIELD_BOOLEAN, "CanBePickedUp" )
-
-	END_DATADESC()
+	IMPLEMENT_REFLECT_DATAMAP( CWeaponCSBase )
 
 #endif
 

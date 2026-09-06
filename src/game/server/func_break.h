@@ -8,6 +8,8 @@
 
 #ifndef FUNC_BREAK_H
 #define FUNC_BREAK_H
+
+#include "reflect_annotations.h"
 #pragma once
 
 #include "entityoutput.h"
@@ -52,11 +54,11 @@ public:
 	void Break( CBaseEntity *pBreaker );
 
 	// Input handlers
-	void InputAddHealth( inputdata_t &inputdata );
-	void InputBreak( inputdata_t &inputdata );
-	void InputRemoveHealth( inputdata_t &inputdata );
-	void InputSetHealth( inputdata_t &inputdata );
-	void InputSetMass( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "AddHealth", .type = FIELD_INTEGER } ]] void InputAddHealth( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Break", .type = FIELD_VOID } ]] void InputBreak( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "RemoveHealth", .type = FIELD_INTEGER } ]] void InputRemoveHealth( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetHealth", .type = FIELD_INTEGER } ]] void InputSetHealth( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetMass", .type = FIELD_FLOAT } ]] void InputSetMass( inputdata_t &inputdata );
 
 
 	// breakables use an overridden takedamage
@@ -126,13 +128,13 @@ protected:
 
 private:
 
-	Explosions	m_Explosion;
-	QAngle		m_GibDir;
+	[[= ks::reflect::Key{ .name = "explosion" } ]] Explosions	m_Explosion;
+	[[= ks::reflect::Key{ .name = "gibdir" } ]] QAngle		m_GibDir;
 	string_t 	m_iszGibModel;
 	string_t 	m_iszSpawnObject;
-	int			m_ExplosionMagnitude;
-	float		m_flPressureDelay;		// Delay before breaking when destoyed by pressure
-	int			m_iMinHealthDmg;		// minimum damage attacker must have to cause damage
+	[[= ks::reflect::Key{ .name = "explodemagnitude" } ]] int			m_ExplosionMagnitude;
+	[[= ks::reflect::Key{ .name = "PressureDelay" } ]] float		m_flPressureDelay;		// Delay before breaking when destoyed by pressure
+	[[= ks::reflect::Key{ .name = "minhealthdmg" } ]] int			m_iMinHealthDmg;		// minimum damage attacker must have to cause damage
 	bool		m_bTookPhysicsDamage;
 
 	string_t	m_iszPropData;
@@ -142,10 +144,10 @@ protected:
 
 	bool		UpdateHealth( int iNewHealth, CBaseEntity *pActivator );
 
-	float		m_impactEnergyScale;
+	[[= ks::reflect::Key{ .name = "physdamagescale", .input = true } ]] float		m_impactEnergyScale;
 
-	COutputEvent m_OnBreak;
-	COutputFloat m_OnHealthChanged;
+	[[= ks::reflect::Key{ .name = "OnBreak" } ]] COutputEvent m_OnBreak;
+	[[= ks::reflect::Key{ .name = "OnHealthChanged" } ]] COutputFloat m_OnHealthChanged;
 
 	// Prop data storage
 	float			m_flDmgModBullet;
@@ -159,7 +161,7 @@ protected:
 	int				m_iMaxBreakableSize;
 	string_t		m_iszBasePropData;	
 	int				m_iInteractions;
-	PerformanceMode_t m_PerformanceMode;
+	[[= ks::reflect::Key{ .name = "PerformanceMode" } ]] PerformanceMode_t m_PerformanceMode;
 
 	float			m_explodeRadius;
 

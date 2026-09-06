@@ -8,6 +8,10 @@
 
 #include "cbase.h"
 #include "props_shared.h"
+#ifdef GAME_DLL
+#include "reflect_annotations.h"
+#include "reflect_datamap.h"
+#endif
 #include "filesystem.h"
 #include "animation.h"
 #include <vcollide_parse.h>
@@ -794,16 +798,16 @@ private:
 
 	void UpdateMaxPieces();
 
-	void InputSetMaxPieces( inputdata_t &inputdata );
-	void InputSetMaxPiecesDX8( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetMaxPieces", .type = FIELD_INTEGER } ]] void InputSetMaxPieces( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetMaxPiecesDX8", .type = FIELD_INTEGER } ]] void InputSetMaxPiecesDX8( inputdata_t &inputdata );
 
 	typedef CHandle<CBaseAnimating> CGibHandle;
 	CUtlLinkedList< CGibHandle > m_LRU; 
 
-	bool		m_bAllowNewGibs;
+	[[= ks::reflect::Key{ .name = "allownewgibs" } ]] bool		m_bAllowNewGibs;
 
 	int			m_iCurrentMaxPieces;
-	int			m_iMaxPieces;
+	[[= ks::reflect::Key{ .name = "maxpieces" } ]] int			m_iMaxPieces;
 	int			m_iLastFrame;
 };
 
@@ -821,16 +825,7 @@ CGameGibManager::~CGameGibManager()
 	}
 }
 
-BEGIN_DATADESC( CGameGibManager )
-	// Silence perfidous classcheck!
-	//DEFINE_FIELD( m_iCurrentMaxPieces, FIELD_INTEGER ),
-	//DEFINE_FIELD( m_iLastFrame, FIELD_INTEGER ),
-	DEFINE_KEYFIELD( m_iMaxPieces, FIELD_INTEGER, "maxpieces" ),
-	DEFINE_KEYFIELD( m_bAllowNewGibs, FIELD_BOOLEAN, "allownewgibs" ),
-
-	DEFINE_INPUTFUNC( FIELD_INTEGER, "SetMaxPieces", InputSetMaxPieces ),
-	DEFINE_INPUTFUNC( FIELD_INTEGER, "SetMaxPiecesDX8", InputSetMaxPiecesDX8 ),
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CGameGibManager )
 
 LINK_ENTITY_TO_CLASS( game_gib_manager, CGameGibManager );
 

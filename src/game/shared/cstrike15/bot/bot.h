@@ -232,8 +232,6 @@ public:
 	virtual void AvoidPlayers( CUserCmd *pCmd ) { }				///< some game types allow players to pass through each other, this method pushes them apart
 	virtual void SetModel( const char *modelName );
 
-	int Save( CSave &save )	const						{ return 0; }
-	int Restore( CRestore &restore ) const	{ return 0; }
 	virtual void Think( void ) { }
 
 	const BotProfile *GetProfile( void ) const		{ return m_profile; }	///< return our personality profile

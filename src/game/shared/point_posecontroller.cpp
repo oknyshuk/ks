@@ -5,6 +5,15 @@
 //===========================================================================//
 
 #include "cbase.h"
+#include "reflect_annotations.h"
+#ifdef CLIENT_DLL
+#include "reflect_recvtable.h"
+#endif
+#include "reflect_annotations.h"
+#ifdef GAME_DLL
+#include "reflect_sendtable.h"
+#include "reflect_datamap.h"
+#endif
 #include "point_posecontroller.h"
 
 #ifndef CLIENT_DLL
@@ -21,60 +30,13 @@
 // SERVER CLASS
 //-----------------------------------------------------------------------------
 
-#define MAX_POSE_INTERPOLATION_TIME 10.0f
-#define MAX_POSE_CYCLE_FREQUENCY 10.0f
-#define MAX_POSE_FMOD_RATE 10.0f
-#define MAX_POSE_FMOD_AMPLITUDE 10.0f
-
-
 LINK_ENTITY_TO_CLASS( point_posecontroller, CPoseController );	
 
 
-BEGIN_DATADESC( CPoseController )
-	DEFINE_AUTO_ARRAY( m_hProps, FIELD_EHANDLE ),
-	DEFINE_AUTO_ARRAY( m_chPoseIndex, FIELD_CHARACTER ),
-	DEFINE_FIELD( m_bDisablePropLookup, FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_bPoseValueParity, FIELD_BOOLEAN ),
-	// Keys
-	DEFINE_KEYFIELD( m_iszPropName, FIELD_STRING, "PropName" ),
-	DEFINE_KEYFIELD( m_iszPoseParameterName, FIELD_STRING, "PoseParameterName" ),
-	DEFINE_KEYFIELD( m_fPoseValue, FIELD_FLOAT, "PoseValue" ),
-	DEFINE_KEYFIELD( m_fInterpolationTime, FIELD_FLOAT, "InterpolationTime" ),
-	DEFINE_KEYFIELD( m_bInterpolationWrap, FIELD_BOOLEAN, "InterpolationWrap" ),
-	DEFINE_KEYFIELD( m_fCycleFrequency, FIELD_FLOAT, "CycleFrequency" ),
-	DEFINE_KEYFIELD( m_nFModType, FIELD_INTEGER, "FModType" ),
-	DEFINE_KEYFIELD( m_fFModTimeOffset, FIELD_FLOAT, "FModTimeOffset" ),
-	DEFINE_KEYFIELD( m_fFModRate, FIELD_FLOAT, "FModRate" ),
-	DEFINE_KEYFIELD( m_fFModAmplitude, FIELD_FLOAT, "FModAmplitude" ),
-	// Functions
-	DEFINE_FUNCTION( Think ),
-	// Inputs
-	DEFINE_INPUTFUNC( FIELD_STRING,	"SetPoseParameterName", InputSetPoseParameterName ),
-	DEFINE_INPUTFUNC( FIELD_FLOAT, "SetPoseValue", InputSetPoseValue ),
-	DEFINE_INPUTFUNC( FIELD_FLOAT, "SetInterpolationTime", InputSetInterpolationTime ),
-	DEFINE_INPUTFUNC( FIELD_FLOAT, "SetCycleFrequency", InputSetCycleFrequency ),
-	DEFINE_INPUTFUNC( FIELD_INTEGER, "SetFModType", InputSetFModType ),
-	DEFINE_INPUTFUNC( FIELD_FLOAT, "SetFModTimeOffset", InputSetFModTimeOffset ),
-	DEFINE_INPUTFUNC( FIELD_FLOAT, "SetFModRate", InputSetFModRate ),
-	DEFINE_INPUTFUNC( FIELD_FLOAT, "SetFModAmplitude", InputSetFModAmplitude ),
-	DEFINE_INPUTFUNC( FIELD_FLOAT, "RandomizeFMod", InputRandomizeFMod ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "GetFMod", InputGetFMod ),
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CPoseController )
 
 
-IMPLEMENT_SERVERCLASS_ST(CPoseController, DT_PoseController)
-	SendPropArray3( SENDINFO_ARRAY3(m_hProps), SendPropEHandle( SENDINFO_ARRAY(m_hProps) ) ),
-	SendPropArray3( SENDINFO_ARRAY3(m_chPoseIndex), SendPropInt( SENDINFO_ARRAY(m_chPoseIndex), 5, SPROP_UNSIGNED ) ),	// bits sent must be enough to represent MAXSTUDIOPOSEPARAM
-	SendPropBool( SENDINFO(m_bPoseValueParity) ),
-	SendPropFloat( SENDINFO(m_fPoseValue), 11, 0, 0.0f, 1.0f ),
-	SendPropFloat( SENDINFO(m_fInterpolationTime), 11, 0, 0.0f, MAX_POSE_INTERPOLATION_TIME ),
-	SendPropBool( SENDINFO(m_bInterpolationWrap) ),
-	SendPropFloat( SENDINFO(m_fCycleFrequency), 11, 0, -MAX_POSE_CYCLE_FREQUENCY, MAX_POSE_CYCLE_FREQUENCY ),
-	SendPropInt( SENDINFO(m_nFModType), 3, SPROP_UNSIGNED ),
-	SendPropFloat( SENDINFO(m_fFModTimeOffset), 11, 0, -1.0f, 1.0f ),
-	SendPropFloat( SENDINFO(m_fFModRate), 11, 0, -MAX_POSE_FMOD_RATE, MAX_POSE_FMOD_RATE ),
-	SendPropFloat( SENDINFO(m_fFModAmplitude), 11, 0, 0.0f, MAX_POSE_FMOD_AMPLITUDE ),
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CPoseController, DT_PoseController )
 
 
 void CPoseController::Spawn( void )
@@ -336,19 +298,7 @@ void CPoseController::InputGetFMod( inputdata_t &inputdata )
 //-----------------------------------------------------------------------------
 
 
-IMPLEMENT_CLIENTCLASS_DT( C_PoseController, DT_PoseController, CPoseController )
-	RecvPropArray3( RECVINFO_ARRAY(m_hProps), RecvPropEHandle( RECVINFO(m_hProps[0]) ) ),
-	RecvPropArray3( RECVINFO_ARRAY(m_chPoseIndex), RecvPropInt( RECVINFO(m_chPoseIndex[0]) ) ),
-	RecvPropBool( RECVINFO(m_bPoseValueParity) ),
-	RecvPropFloat( RECVINFO(m_fPoseValue) ),
-	RecvPropFloat( RECVINFO(m_fInterpolationTime) ),
-	RecvPropBool( RECVINFO(m_bInterpolationWrap) ),
-	RecvPropFloat( RECVINFO(m_fCycleFrequency) ),
-	RecvPropInt( RECVINFO(m_nFModType) ),
-	RecvPropFloat( RECVINFO(m_fFModTimeOffset) ),
-	RecvPropFloat( RECVINFO(m_fFModRate) ),
-	RecvPropFloat( RECVINFO(m_fFModAmplitude) ),
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS( C_PoseController, DT_PoseController, CPoseController )
 
 
 void C_PoseController::Spawn( void )

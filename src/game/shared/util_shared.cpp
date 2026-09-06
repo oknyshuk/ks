@@ -5,6 +5,15 @@
 //===========================================================================//
 
 #include "cbase.h"
+#include "reflect_annotations.h"
+#ifdef CLIENT_DLL
+#include "reflect_recvtable.h"
+#endif
+#include "reflect_predmap.h"
+#include "reflect_annotations.h"
+#ifdef GAME_DLL
+#include "reflect_sendtable.h"
+#endif
 #include "mathlib/mathlib.h"
 #include "util_shared.h"
 #include "model_types.h"
@@ -1175,70 +1184,33 @@ float CountdownTimer::Now( void ) const
 }
 
 
-BEGIN_DATADESC_NO_BASE( IntervalTimer )
-END_DATADESC()
 
-BEGIN_NETWORK_TABLE_NOBASE( IntervalTimer, DT_IntervalTimer )
+IMPLEMENT_REFLECT_TABLE( IntervalTimer, DT_IntervalTimer );
+
 #ifdef CLIENT_DLL
-	RecvPropFloat(RECVINFO(m_timestamp)),
+#ifdef CLIENT_DLL
+IMPLEMENT_REFLECT_PREDMAP_NO_BASE( IntervalTimer );
+#endif
+
+#ifdef CLIENT_DLL
+#endif	
+#endif
+
+
+#ifdef CLIENT_DLL
+IMPLEMENT_REFLECT_TABLE( CountdownTimer, DT_CountdownTimer );
+#ifdef CLIENT_DLL
+IMPLEMENT_REFLECT_PREDMAP_NO_BASE( CountdownTimer );
+#endif
+
+#ifdef CLIENT_DLL
+#endif	
 #else
-	SendPropFloat	(SENDINFO(m_timestamp), 0, SPROP_NOSCALE ),
-#endif
-END_NETWORK_TABLE()
-
-#ifdef CLIENT_DLL
-BEGIN_PREDICTION_DATA_NO_BASE( IntervalTimer )
-	DEFINE_PRED_FIELD( m_timestamp, FIELD_FLOAT, FTYPEDESC_INSENDTABLE ),
-END_PREDICTION_DATA()	
+IMPLEMENT_REFLECT_TABLE( CountdownTimer, DT_CountdownTimer );
 #endif
 
 
-#ifdef CLIENT_DLL
-BEGIN_RECV_TABLE_NOBASE( CountdownTimer, DT_CountdownTimer )
-	RecvPropFloat(RECVINFO(m_duration)),
-	RecvPropFloat(RECVINFO(m_timestamp)),
-END_RECV_TABLE()
-BEGIN_PREDICTION_DATA_NO_BASE( CountdownTimer )
-	DEFINE_PRED_FIELD( m_duration, FIELD_FLOAT, FTYPEDESC_INSENDTABLE ),
-	DEFINE_PRED_FIELD( m_timestamp, FIELD_FLOAT, FTYPEDESC_INSENDTABLE ),
-END_PREDICTION_DATA()	
-#else
-BEGIN_SEND_TABLE_NOBASE( CountdownTimer, DT_CountdownTimer )
-	SendPropFloat	(SENDINFO(m_duration), 0, SPROP_NOSCALE ),
-	SendPropFloat	(SENDINFO(m_timestamp), 0, SPROP_NOSCALE ),
-END_SEND_TABLE()
-#endif
-
-
-BEGIN_DATADESC( CTimeline )
-	DEFINE_ARRAY( m_flValues, FIELD_FLOAT, TIMELINE_ARRAY_SIZE ),
-	DEFINE_ARRAY( m_nValueCounts, FIELD_FLOAT, TIMELINE_ARRAY_SIZE ),
-	DEFINE_FIELD( m_nBucketCount, FIELD_INTEGER ),
-	DEFINE_FIELD( m_flInterval, FIELD_FLOAT ),
-	DEFINE_FIELD( m_flFinalValue, FIELD_FLOAT ),
-	DEFINE_FIELD( m_nCompressionType, FIELD_INTEGER ),
-	DEFINE_FIELD( m_bStopped, FIELD_BOOLEAN ),
-END_DATADESC()
-
-BEGIN_NETWORK_TABLE_NOBASE( CTimeline, DT_Timeline )
-#ifdef CLIENT_DLL
-	RecvPropArray3( RECVINFO_ARRAY( m_flValues ), RecvPropFloat( RECVINFO( m_flValues[0] ) ) ),
-	RecvPropArray3( RECVINFO_ARRAY( m_nValueCounts ), RecvPropFloat( RECVINFO( m_nValueCounts[0] ) ) ),
-	RecvPropInt( RECVINFO( m_nBucketCount ) ),
-	RecvPropFloat( RECVINFO( m_flInterval ) ),
-	RecvPropFloat( RECVINFO( m_flFinalValue ) ),
-	RecvPropInt( RECVINFO( m_nCompressionType ) ),
-	RecvPropBool( RECVINFO( m_bStopped ) ),
-#else
-	SendPropArray3( SENDINFO_ARRAY3( m_flValues ), SendPropFloat( SENDINFO_ARRAY( m_flValues ), 0, SPROP_NOSCALE ) ),
-	SendPropArray3( SENDINFO_ARRAY3( m_nValueCounts ), SendPropFloat( SENDINFO_ARRAY( m_nValueCounts ), 0, SPROP_NOSCALE ) ),
-	SendPropInt( SENDINFO( m_nBucketCount ), NumBitsForCount( TIMELINE_ARRAY_SIZE ), SPROP_UNSIGNED ),
-	SendPropFloat( SENDINFO( m_flInterval ), 0, SPROP_NOSCALE ),
-	SendPropFloat( SENDINFO( m_flFinalValue ), 0, SPROP_NOSCALE ),
-	SendPropInt( SENDINFO( m_nCompressionType ), -1, SPROP_UNSIGNED ),
-	SendPropBool( SENDINFO( m_bStopped ) ),
-#endif
-END_NETWORK_TABLE()
+IMPLEMENT_REFLECT_TABLE( CTimeline, DT_Timeline );
 
 void CTimeline::ClearValues( void )
 {

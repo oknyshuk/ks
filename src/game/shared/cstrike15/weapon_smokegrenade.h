@@ -7,6 +7,8 @@
 
 #ifndef WEAPON_SMOKEGRENADE_H
 #define WEAPON_SMOKEGRENADE_H
+
+#include "reflect_annotations.h"
 #ifdef _WIN32
 #pragma once
 #endif
@@ -25,7 +27,8 @@
 //-----------------------------------------------------------------------------
 // Smoke grenades
 //-----------------------------------------------------------------------------
-class CSmokeGrenade : public CBaseCSGrenade
+class [[= ks::reflect::NetTable{ .name = "DT_SmokeGrenade" } ]]
+      CSmokeGrenade : public CBaseCSGrenade
 {
 public:
 	DECLARE_CLASS( CSmokeGrenade, CBaseCSGrenade );
@@ -39,7 +42,6 @@ public:
 #ifdef CLIENT_DLL
 
 #else
-	DECLARE_DATADESC();
 
 	void EmitGrenade( Vector vecSrc, QAngle vecAngles, Vector vecVel, AngularImpulse angImpulse, CBasePlayer *pPlayer, const CCSWeaponInfo& weaponInfo );
 

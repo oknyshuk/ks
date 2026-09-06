@@ -7,6 +7,8 @@
 // $NoKeywords: $
 //=============================================================================//
 #include "cbase.h"
+#include "reflect_recvtable.h"
+#include "reflect_annotations.h"
 #include "c_basetempentity.h"
 #include "iefx.h"
 #include "fx.h"
@@ -21,7 +23,8 @@
 //-----------------------------------------------------------------------------
 // Purpose: BSP Decal TE
 //-----------------------------------------------------------------------------
-class C_TEBSPDecal : public C_BaseTempEntity
+class [[= ks::reflect::NetTable{ .name = "DT_TEBSPDecal" } ]]
+      C_TEBSPDecal : public C_BaseTempEntity
 {
 public:
 	DECLARE_CLASS( C_TEBSPDecal, C_BaseTempEntity );
@@ -35,9 +38,9 @@ public:
 	virtual void	Precache( void );
 
 public:
-	Vector			m_vecOrigin;
-	int				m_nEntity;
-	int				m_nIndex;
+	[[= ks::reflect::Net{} ]] Vector			m_vecOrigin;
+	[[= ks::reflect::Net{} ]] int				m_nEntity;
+	[[= ks::reflect::Net{} ]] int				m_nIndex;
 };
 
 //-----------------------------------------------------------------------------
@@ -101,9 +104,5 @@ void C_TEBSPDecal::PostDataUpdate( DataUpdateType_t updateType )
 	}
 }
 
-IMPLEMENT_CLIENTCLASS_EVENT_DT(C_TEBSPDecal, DT_TEBSPDecal, CTEBSPDecal)
-	RecvPropVector( RECVINFO(m_vecOrigin)),
-	RecvPropInt( RECVINFO(m_nEntity)),
-	RecvPropInt( RECVINFO(m_nIndex)),
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS_EVENT( C_TEBSPDecal, DT_TEBSPDecal, CTEBSPDecal )
 

@@ -4,6 +4,8 @@
 // Copyright (c) 2005 Turtle Rock Studios, Inc. - All Rights Reserved
 
 #include "cbase.h"
+#include "reflect_recvtable.h"
+#include "reflect_annotations.h"
 #include "igamesystem.h"
 #include "hud_macros.h"
 #include "view.h"
@@ -35,14 +37,7 @@ enum FireMaskType
 	NEW_FIRE_MASK = 2
 };
 
-IMPLEMENT_CLIENTCLASS_DT( C_Inferno, DT_Inferno, CInferno )
-	RecvPropArray3( RECVINFO_ARRAY( m_fireXDelta ), RecvPropInt( RECVINFO(m_fireXDelta[0] ) ) ),
-	RecvPropArray3( RECVINFO_ARRAY( m_fireYDelta ), RecvPropInt( RECVINFO(m_fireYDelta[0] ) ) ),
-	RecvPropArray3( RECVINFO_ARRAY( m_fireZDelta ), RecvPropInt( RECVINFO(m_fireZDelta[0] ) ) ),
-	RecvPropArray3( RECVINFO_ARRAY( m_bFireIsBurning ), RecvPropBool( RECVINFO(m_bFireIsBurning[0] ) ) ),
-	//RecvPropArray3( RECVINFO_ARRAY( m_BurnNormal ), RecvPropVector( RECVINFO(m_BurnNormal[0] ) ) ),
-	RecvPropInt( RECVINFO( m_fireCount ) ),
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS( C_Inferno, DT_Inferno, CInferno )
 
 //-----------------------------------------------------------------------------------------------
 C_Inferno::C_Inferno()
@@ -625,5 +620,4 @@ void C_Inferno::DrawFire( C_Inferno::Drawable *fire, IMesh *mesh )
 }
 
 
-IMPLEMENT_CLIENTCLASS_DT( C_FireCrackerBlast, DT_FireCrackerBlast, CFireCrackerBlast )
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS( C_FireCrackerBlast, DT_FireCrackerBlast, CFireCrackerBlast )

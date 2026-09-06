@@ -7,6 +7,9 @@
 #ifndef AI_BASENPC_H
 #define AI_BASENPC_H
 
+#include "reflect_annotations.h"
+#include "shareddefs.h"
+
 #ifdef _WIN32
 #pragma once
 #endif
@@ -503,7 +506,9 @@ public:
 //
 //=============================================================================
 
-class CAI_BaseNPC : public CBaseCombatCharacter, 
+class [[= ks::reflect::NetTable{ .name = "DT_AI_BaseNPC" } ]]
+      [[= ks::reflect::From<"m_lifeState", ks::reflect::Net{ .bits = 3, .flags = SPROP_UNSIGNED }>{} ]]
+      CAI_BaseNPC : public CBaseCombatCharacter, 
 					public CAI_DefMovementSink,
 					public IAI_BehaviorBridge
 {
@@ -523,11 +528,7 @@ public:
 	DECLARE_DATADESC();
 	DECLARE_SERVERCLASS();
 
-	virtual int			Save( ISave &save ); 
-	virtual int			Restore( IRestore &restore );
 	virtual void		OnRestore();
-	void				SaveConditions( ISave &save, const CAI_ScheduleBits &conditions );
-	void				RestoreConditions( IRestore &restore, CAI_ScheduleBits *pConditions );
 
 	bool				ShouldSavePhysics()	{ return false; }
 	virtual unsigned int	PhysicsSolidMaskForEntity( void ) const;
@@ -975,10 +976,10 @@ private:
 	AI_MoveEfficiency_t m_MoveEfficiency;
 	float				m_flNextDecisionTime;
 
-	AI_SleepState_t		m_SleepState;
+	[[= ks::reflect::Key{ .name = "sleepstate" } ]] AI_SleepState_t		m_SleepState;
 	int					m_SleepFlags;
-	float				m_flWakeRadius;
-	bool				m_bWakeSquad;
+	[[= ks::reflect::Key{ .name = "wakeradius" } ]] float				m_flWakeRadius;
+	[[= ks::reflect::Key{ .name = "wakesquad" } ]] bool				m_bWakeSquad;
 	int					m_nWakeTick;
 
 public:
@@ -1024,8 +1025,8 @@ private:
 	Activity			m_IdealTranslatedActivity;		// Desired actual translated animation state
 	Activity			m_IdealWeaponActivity;			// Desired weapon animation state
 
-	CNetworkVar(int, m_iDeathPose );
-	CNetworkVar(int, m_iDeathFrame );
+	CNetworkVar(int, m_iDeathPose, [[= ks::reflect::Net{ .bits = ANIMATION_SEQUENCE_BITS } ]] );
+	CNetworkVar(int, m_iDeathFrame, [[= ks::reflect::Net{ .bits = 5 } ]] );
 
 public:
 	//-----------------------------------------------------
@@ -1211,7 +1212,7 @@ protected:
 	void SetInteractionCantDie( bool bCantDie ) { m_bCannotDieDuringInteraction = bCantDie; }
 	bool HasInteractionCantDie( void );
 
-	void InputForceInteractionWithNPC( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "ForceInteractionWithNPC", .type = FIELD_STRING } ]] void InputForceInteractionWithNPC( inputdata_t &inputdata );
 	void StartForcedInteraction( CAI_BaseNPC *pNPC, int iInteraction );
 	void CleanupForcedInteraction( void );
 	void CalculateForcedInteractionPosition( void );
@@ -1526,16 +1527,16 @@ public:
 	//-----------------------------------------------------
 	inline bool			IsInAScript( void ) { return m_bInAScript; }
 	inline void			SetInAScript( bool bScript ) { m_bInAScript = bScript; }
-	void				InputStartScripting( inputdata_t &inputdata ) { m_bInAScript = true; }
-	void				InputStopScripting( inputdata_t &inputdata ) { m_bInAScript = false; }
+	[[= ks::reflect::Input{ .name = "StartScripting", .type = FIELD_VOID } ]] void				InputStartScripting( inputdata_t &inputdata ) { m_bInAScript = true; }
+	[[= ks::reflect::Input{ .name = "StopScripting", .type = FIELD_VOID } ]] void				InputStopScripting( inputdata_t &inputdata ) { m_bInAScript = false; }
 
-	void				InputGagEnable( inputdata_t &inputdata ) { AddSpawnFlags(SF_NPC_GAG); }
-	void				InputGagDisable( inputdata_t &inputdata ) { RemoveSpawnFlags(SF_NPC_GAG); }
+	[[= ks::reflect::Input{ .name = "GagEnable", .type = FIELD_VOID } ]] void				InputGagEnable( inputdata_t &inputdata ) { AddSpawnFlags(SF_NPC_GAG); }
+	[[= ks::reflect::Input{ .name = "GagDisable", .type = FIELD_VOID } ]] void				InputGagDisable( inputdata_t &inputdata ) { RemoveSpawnFlags(SF_NPC_GAG); }
 
 	bool				HandleInteraction(int interactionType, void *data, CBaseCombatCharacter* sourceEnt);
 
-	virtual void		InputOutsideTransition( inputdata_t &inputdata );
-	virtual void		InputInsideTransition( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "OutsideTransition", .type = FIELD_VOID } ]] virtual void		InputOutsideTransition( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "InsideTransition", .type = FIELD_VOID } ]] virtual void		InputInsideTransition( inputdata_t &inputdata );
 
 	void				CleanupScriptsOnTeleport( bool bEnrouteAsWell );
 
@@ -1630,9 +1631,9 @@ public:
 	virtual bool		CanHolsterWeapon( void );
 	virtual int			HolsterWeapon( void );
 	virtual int			UnholsterWeapon( void );
-	void				InputHolsterWeapon( inputdata_t &inputdata );
-	void				InputHolsterAndDestroyWeapon( inputdata_t &inputdata );
-	void				InputUnholsterWeapon( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "HolsterWeapon", .type = FIELD_VOID } ]] void				InputHolsterWeapon( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "HolsterAndDestroyWeapon", .type = FIELD_VOID } ]] void				InputHolsterAndDestroyWeapon( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "UnholsterWeapon", .type = FIELD_VOID } ]] void				InputUnholsterWeapon( inputdata_t &inputdata );
 	bool				IsWeaponHolstered( void );
 	bool				IsWeaponStateChanging( void );
 	void				SetDesiredWeaponState( DesiredWeaponState_t iState ) { m_iDesiredWeaponState = iState; }
@@ -1658,7 +1659,7 @@ protected:
 	float				m_flLastEnemyTime;
 	float				m_flNextWeaponSearchTime;	// next time to search for a better weapon
 	string_t			m_iszPendingWeapon;			// THe NPC should create and equip this weapon.
-	bool				m_bIgnoreUnseenEnemies;
+	[[= ks::reflect::Key{ .name = "ignoreunseenenemies" } ]] bool				m_bIgnoreUnseenEnemies;
 
 private:
 	CAI_ShotRegulator	m_ShotRegulator;			// When should I shoot next?
@@ -1722,13 +1723,13 @@ protected:
 	virtual void		OnChangeHintGroup( string_t oldGroup, string_t newGroup ) {}
 
 	CAI_Squad *			m_pSquad;		// The squad that I'm on
-	string_t			m_SquadName;
+	[[= ks::reflect::Key{ .name = "squadname" } ]] string_t			m_SquadName;
 
 	int					m_iMySquadSlot;	// this is the behaviour slot that the npc currently holds in the squad. 
 
 private:
-	string_t			m_strHintGroup;
-	bool				m_bHintGroupNavLimiting;
+	[[= ks::reflect::Key{ .name = "hintgroup" } ]] string_t			m_strHintGroup;
+	[[= ks::reflect::Key{ .name = "hintlimiting" } ]] bool				m_bHintGroupNavLimiting;
 	CAI_TacticalServices *m_pTacticalServices;
 
 public:
@@ -1884,16 +1885,16 @@ public:
 	//---------------------------------
 	// Inputs
 	//---------------------------------
-	void InputSetRelationship( inputdata_t &inputdata );
-	void InputSetEnemyFilter( inputdata_t &inputdata );
-	void InputSetHealth( inputdata_t &inputdata );
-	void InputBeginRappel( inputdata_t &inputdata );
-	void InputSetSquad( inputdata_t &inputdata );
-	void InputWake( inputdata_t &inputdata );
-	void InputForgetEntity( inputdata_t &inputdata );
-	void InputIgnoreDangerSounds( inputdata_t &inputdata );
-	void InputUpdateEnemyMemory( inputdata_t &inputdata );
-	void InputCreateAddon( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetRelationship", .type = FIELD_STRING } ]] void InputSetRelationship( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetEnemyFilter", .type = FIELD_STRING } ]] void InputSetEnemyFilter( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetHealth", .type = FIELD_INTEGER } ]] void InputSetHealth( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "BeginRappel", .type = FIELD_VOID } ]] void InputBeginRappel( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetSquad", .type = FIELD_STRING } ]] void InputSetSquad( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Wake", .type = FIELD_VOID } ]] void InputWake( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "ForgetEntity", .type = FIELD_STRING } ]] void InputForgetEntity( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "IgnoreDangerSounds", .type = FIELD_FLOAT } ]] void InputIgnoreDangerSounds( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "UpdateEnemyMemory", .type = FIELD_STRING } ]] void InputUpdateEnemyMemory( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "CreateAddon", .type = FIELD_STRING } ]] void InputCreateAddon( inputdata_t &inputdata );
 
 	//---------------------------------
 	
@@ -1936,7 +1937,7 @@ private:
 public:
 	int					m_cAmmoLoaded;				// how much ammo is in the weapon (used to trigger reload anim sequences)
 	float				m_flDistTooFar;				// if enemy farther away than this, bits_COND_ENEMY_TOOFAR set in GatherEnemyConditions
-	string_t			m_spawnEquipment;
+	[[= ks::reflect::Key{ .name = "additionalequipment" } ]] string_t			m_spawnEquipment;
 
 	bool				m_fNoDamageDecal;
 
@@ -1946,7 +1947,7 @@ public:
 	int					m_fStoredPathFlags;			//
 
 	CHandle<CBaseFilter>	m_hEnemyFilter;
-	string_t				m_iszEnemyFilterName;
+	[[= ks::reflect::Key{ .name = "enemyfilter" } ]] string_t				m_iszEnemyFilterName;
 
 	bool					m_bDidDeathCleanup;
 
@@ -1956,27 +1957,27 @@ public:
 	//---------------------------------
 	//	Outputs
 	//---------------------------------
-	COutputEvent		m_OnDamaged;
-	COutputEvent		m_OnDeath;
-	COutputEvent		m_OnHalfHealth;
-	COutputEHANDLE		m_OnFoundEnemy; 
-	COutputEvent		m_OnLostEnemyLOS; 
-	COutputEvent		m_OnLostEnemy; 
-	COutputEHANDLE		m_OnFoundPlayer;
-	COutputEvent		m_OnLostPlayerLOS;
-	COutputEvent		m_OnLostPlayer; 
-	COutputEvent		m_OnHearWorld;
-	COutputEvent		m_OnHearPlayer;
-	COutputEvent		m_OnHearCombat;
-	COutputEvent		m_OnDamagedByPlayer;
-	COutputEvent		m_OnDamagedByPlayerSquad;
-	COutputEvent		m_OnDenyCommanderUse;
-	COutputEvent		m_OnRappelTouchdown;
-	COutputEvent		m_OnSleep;
-	COutputEvent		m_OnWake;
-	COutputEvent		m_OnForcedInteractionStarted;
-	COutputEvent		m_OnForcedInteractionAborted;
-	COutputEvent		m_OnForcedInteractionFinished;
+	[[= ks::reflect::Key{ .name = "OnDamaged" } ]] COutputEvent		m_OnDamaged;
+	[[= ks::reflect::Key{ .name = "OnDeath" } ]] COutputEvent		m_OnDeath;
+	[[= ks::reflect::Key{ .name = "OnHalfHealth" } ]] COutputEvent		m_OnHalfHealth;
+	[[= ks::reflect::Key{ .name = "OnFoundEnemy" } ]] COutputEHANDLE		m_OnFoundEnemy; 
+	[[= ks::reflect::Key{ .name = "OnLostEnemyLOS" } ]] COutputEvent		m_OnLostEnemyLOS; 
+	[[= ks::reflect::Key{ .name = "OnLostEnemy" } ]] COutputEvent		m_OnLostEnemy; 
+	[[= ks::reflect::Key{ .name = "OnFoundPlayer" } ]] COutputEHANDLE		m_OnFoundPlayer;
+	[[= ks::reflect::Key{ .name = "OnLostPlayerLOS" } ]] COutputEvent		m_OnLostPlayerLOS;
+	[[= ks::reflect::Key{ .name = "OnLostPlayer" } ]] COutputEvent		m_OnLostPlayer; 
+	[[= ks::reflect::Key{ .name = "OnHearWorld" } ]] COutputEvent		m_OnHearWorld;
+	[[= ks::reflect::Key{ .name = "OnHearPlayer" } ]] COutputEvent		m_OnHearPlayer;
+	[[= ks::reflect::Key{ .name = "OnHearCombat" } ]] COutputEvent		m_OnHearCombat;
+	[[= ks::reflect::Key{ .name = "OnDamagedByPlayer" } ]] COutputEvent		m_OnDamagedByPlayer;
+	[[= ks::reflect::Key{ .name = "OnDamagedByPlayerSquad" } ]] COutputEvent		m_OnDamagedByPlayerSquad;
+	[[= ks::reflect::Key{ .name = "OnDenyCommanderUse" } ]] COutputEvent		m_OnDenyCommanderUse;
+	[[= ks::reflect::Key{ .name = "OnRappelTouchdown" } ]] COutputEvent		m_OnRappelTouchdown;
+	[[= ks::reflect::Key{ .name = "OnSleep" } ]] COutputEvent		m_OnSleep;
+	[[= ks::reflect::Key{ .name = "OnWake" } ]] COutputEvent		m_OnWake;
+	[[= ks::reflect::Key{ .name = "OnForcedInteractionStarted" } ]] COutputEvent		m_OnForcedInteractionStarted;
+	[[= ks::reflect::Key{ .name = "OnForcedInteractionAborted" } ]] COutputEvent		m_OnForcedInteractionAborted;
+	[[= ks::reflect::Key{ .name = "OnForcedInteractionFinished" } ]] COutputEvent		m_OnForcedInteractionFinished;
 
 public:
 	// use this to shrink the bbox temporarily
@@ -2177,7 +2178,7 @@ private:
 
 	// Break into pieces!
 	void				Break( CBaseEntity *pBreaker );
-	void				InputBreak( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Break", .type = FIELD_VOID } ]] void				InputBreak( inputdata_t &inputdata );
 
 	friend void 		CC_NPC_Go();
 	friend void 		CC_NPC_GoRandom();
@@ -2185,22 +2186,22 @@ private:
 
 public:
 
-	CNetworkVar( bool,  m_bPerformAvoidance );
-	CNetworkVar( bool,	m_bIsMoving );
-	CNetworkVar( bool,  m_bFadeCorpse );
-	CNetworkVar( bool,  m_bImportanRagdoll );
+	CNetworkVar( bool,  m_bPerformAvoidance, [[= ks::reflect::Net{} ]] );
+	CNetworkVar( bool,	m_bIsMoving, [[= ks::reflect::Net{} ]] );
+	CNetworkVar( bool,  m_bFadeCorpse, [[= ks::reflect::Net{} ]] );
+	CNetworkVar( bool,  m_bImportanRagdoll, [[= ks::reflect::Net{} ]] );
 
-	CNetworkVar( bool,  m_bSpeedModActive );
-	CNetworkVar( int,   m_iSpeedModRadius );
-	CNetworkVar( int,   m_iSpeedModSpeed );
-	CNetworkVar( float, m_flTimePingEffect );			// Display the pinged effect until this time
+	CNetworkVar( bool,  m_bSpeedModActive, [[= ks::reflect::Net{} ]] );
+	CNetworkVar( int,   m_iSpeedModRadius, [[= ks::reflect::Net{ .bits = -1 } ]] );
+	CNetworkVar( int,   m_iSpeedModSpeed, [[= ks::reflect::Net{ .bits = -1 } ]] );
+	CNetworkVar( float, m_flTimePingEffect, [[= ks::reflect::Net{ .bits = 32 } ]] );			// Display the pinged effect until this time
 
 	float	m_flFrozenMoveBlock;	// entity can't move after it's frozen past this amount
 
-	void				InputActivateSpeedModifier( inputdata_t &inputdata ) { m_bSpeedModActive = true; }
-	void				InputDisableSpeedModifier( inputdata_t &inputdata ) { m_bSpeedModActive = false; }
-	void				InputSetSpeedModifierRadius( inputdata_t &inputdata );
-	void				InputSetSpeedModifierSpeed( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "ActivateSpeedModifier", .type = FIELD_VOID } ]] void				InputActivateSpeedModifier( inputdata_t &inputdata ) { m_bSpeedModActive = true; }
+	[[= ks::reflect::Input{ .name = "DisableSpeedModifier", .type = FIELD_VOID } ]] void				InputDisableSpeedModifier( inputdata_t &inputdata ) { m_bSpeedModActive = false; }
+	[[= ks::reflect::Input{ .name = "SetSpeedModRadius", .type = FIELD_INTEGER } ]] void				InputSetSpeedModifierRadius( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetSpeedModSpeed", .type = FIELD_INTEGER } ]] void				InputSetSpeedModifierSpeed( inputdata_t &inputdata );
 
 	virtual bool		ShouldProbeCollideAgainstEntity( CBaseEntity *pEntity );
 
@@ -3170,13 +3171,8 @@ public:
 };
 
 // Base Class for any NPC that wants to be interactable by other NPCS (i.e. Alyx Hackable)
-// NOTE: YOU MUST DEFINE THE OUTPUTS IN YOUR CLASS'S DATADESC!
-//		 THE DO SO, INSERT THE FOLLOWING MACRO INTO YOUR CLASS'S DATADESC.
-//		
-#define	DEFINE_BASENPCINTERACTABLE_DATADESC() \
-	DEFINE_OUTPUT( m_OnAlyxStartedInteraction,				"OnAlyxStartedInteraction" ),	\
-	DEFINE_OUTPUT( m_OnAlyxFinishedInteraction,				"OnAlyxFinishedInteraction" ),  \
-	DEFINE_INPUTFUNC( FIELD_VOID, "InteractivePowerDown", InputPowerdown )
+// The outputs and the input below are annotated on their declarations; nothing has to be
+// inserted into a derived class's datadesc any more.
 
 template <class NPC_CLASS>
 class CNPCBaseInteractive : public NPC_CLASS, public INPCInteractive

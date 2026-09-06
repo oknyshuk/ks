@@ -10,11 +10,15 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_sendtable.h"
+#include "reflect_annotations.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
-class CFuncOccluder : public CBaseEntity
+class [[= ks::reflect::NetTable{ .name = "DT_FuncOccluder", .base = false } ]]
+      CFuncOccluder : public CBaseEntity
 {
 public:
 	DECLARE_CLASS( CFuncOccluder, CBaseEntity );
@@ -25,39 +29,24 @@ public:
 	virtual int		UpdateTransmitState( void );
 
 	// Input handlers
-	void InputActivate( inputdata_t &inputdata );
-	void InputDeactivate( inputdata_t &inputdata );
-	void InputToggle( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Activate", .type = FIELD_VOID } ]] void InputActivate( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Deactivate", .type = FIELD_VOID } ]] void InputDeactivate( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Toggle", .type = FIELD_VOID } ]] void InputToggle( inputdata_t &inputdata );
 
 	DECLARE_DATADESC();
 	DECLARE_SERVERCLASS();
 
 private:
-	CNetworkVar( bool, m_bActive );
-	CNetworkVar( int, m_nOccluderIndex );
+	CNetworkVar( bool, m_bActive, [[= ks::reflect::Net{} ]] [[= ks::reflect::Key{ .name = "StartActive" } ]] );
+	CNetworkVar( int, m_nOccluderIndex, [[= ks::reflect::Net{ .bits = 10, .flags = SPROP_UNSIGNED } ]] [[= ks::reflect::Key{ .name = "occludernumber" } ]] );
 };
 
 LINK_ENTITY_TO_CLASS( func_occluder, CFuncOccluder );
 
-IMPLEMENT_SERVERCLASS_ST_NOBASE(CFuncOccluder, DT_FuncOccluder)
-	SendPropBool( SENDINFO(m_bActive) ),
-	SendPropInt(SENDINFO(m_nOccluderIndex),	10, SPROP_UNSIGNED ),
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CFuncOccluder, DT_FuncOccluder )
 
 
-BEGIN_DATADESC( CFuncOccluder )
-
-	DEFINE_KEYFIELD( m_bActive, FIELD_BOOLEAN, "StartActive" ),
-
-	// NOTE: This keyfield is computed + inserted by VBSP
-	DEFINE_KEYFIELD( m_nOccluderIndex, FIELD_INTEGER, "occludernumber" ),
-
-	// Inputs
-	DEFINE_INPUTFUNC( FIELD_VOID, "Deactivate",  InputDeactivate ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "Activate", InputActivate ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "Toggle",  InputToggle ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CFuncOccluder )
 
 
 //------------------------------------------------------------------------------

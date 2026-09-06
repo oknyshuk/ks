@@ -5,6 +5,8 @@
 // $NoKeywords: $
 //===========================================================================//
 #include "cbase.h"
+#include "reflect_recvtable.h"
+#include "reflect_annotations.h"
 
 #include "c_colorcorrection.h"
 #include "filesystem.h"
@@ -25,20 +27,7 @@ static ConVar mat_colcorrection_forceentitiesclientside( "mat_colcorrection_forc
 #undef CColorCorrection
 #endif
 
-IMPLEMENT_CLIENTCLASS_DT(C_ColorCorrection, DT_ColorCorrection, CColorCorrection)
-	RecvPropVector( RECVINFO(m_vecOrigin) ),
-	RecvPropFloat(  RECVINFO(m_minFalloff) ),
-	RecvPropFloat(  RECVINFO(m_maxFalloff) ),
-	RecvPropFloat(  RECVINFO(m_flCurWeight) ),
-	RecvPropFloat(  RECVINFO(m_flMaxWeight) ),
-	RecvPropFloat(  RECVINFO(m_flFadeInDuration) ),
-	RecvPropFloat(  RECVINFO(m_flFadeOutDuration) ),
-	RecvPropString( RECVINFO(m_netLookupFilename) ),
-	RecvPropBool(   RECVINFO(m_bEnabled) ),
-	RecvPropBool(   RECVINFO(m_bMaster) ),
-	RecvPropBool(   RECVINFO(m_bClientSide) ),
-	RecvPropBool(	RECVINFO(m_bExclusive) )
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS( C_ColorCorrection, DT_ColorCorrection, CColorCorrection )
 
 
 //------------------------------------------------------------------------------

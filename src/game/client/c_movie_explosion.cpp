@@ -6,6 +6,8 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_recvtable.h"
+#include "reflect_annotations.h"
 #include "particle_prototype.h"
 #include "particle_util.h"
 #include "baseparticleentity.h"
@@ -34,7 +36,8 @@ public:
 };
 
 
-class C_MovieExplosion : public C_BaseParticleEntity, public IPrototypeAppEffect
+class [[= ks::reflect::NetTable{ .name = "DT_MovieExplosion" } ]]
+      C_MovieExplosion : public C_BaseParticleEntity, public IPrototypeAppEffect
 {
 public:
 	DECLARE_CLASS( C_MovieExplosion, C_BaseParticleEntity );
@@ -76,8 +79,7 @@ private:
 // Expose to the particle app.
 EXPOSE_PROTOTYPE_EFFECT(MovieExplosion, C_MovieExplosion);
 
-IMPLEMENT_CLIENTCLASS_DT(C_MovieExplosion, DT_MovieExplosion, MovieExplosion)
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS( C_MovieExplosion, DT_MovieExplosion, MovieExplosion )
 
 
 

@@ -6,6 +6,9 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_sendtable.h"
+#include "reflect_annotations.h"
 #include "effects.h"
 #include "gib.h"
 #include "beam_shared.h"
@@ -49,7 +52,8 @@
 #define SF_SHOOTER_STRICT_REMOVE	(1<<2)	// remove this gib even if it is in the player's view
 
 // UNDONE: This should be client-side and not use TempEnts
-class CBubbling : public CBaseEntity
+class [[= ks::reflect::KeyFrom<"m_flSpeed", ks::reflect::Key{ .name = "current" } >{} ]]
+      CBubbling : public CBaseEntity
 {
 public:
 	DECLARE_CLASS( CBubbling, CBaseEntity );
@@ -60,13 +64,13 @@ public:
 	void	FizzThink( void );
 
 	// Input handlers.
-	void	InputActivate( inputdata_t &inputdata );
-	void	InputDeactivate( inputdata_t &inputdata );
-	void	InputToggle( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Activate", .type = FIELD_VOID } ]] void	InputActivate( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Deactivate", .type = FIELD_VOID } ]] void	InputDeactivate( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Toggle", .type = FIELD_VOID } ]] void	InputToggle( inputdata_t &inputdata );
 
-	void	InputSetCurrent( inputdata_t &inputdata );
-	void	InputSetDensity( inputdata_t &inputdata );
-	void	InputSetFrequency( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetCurrent", .type = FIELD_INTEGER } ]] void	InputSetCurrent( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetDensity", .type = FIELD_INTEGER } ]] void	InputSetDensity( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetFrequency", .type = FIELD_INTEGER } ]] void	InputSetFrequency( inputdata_t &inputdata );
 
 	DECLARE_DATADESC();
 
@@ -76,35 +80,15 @@ private:
 	void TurnOff();
 	void Toggle();
 
-	int		m_density;
-	int		m_frequency;
+	[[= ks::reflect::Key{ .name = "density" } ]] int		m_density;
+	[[= ks::reflect::Key{ .name = "frequency" } ]] int		m_frequency;
 	int		m_bubbleModel;
 	int		m_state;
 };
 
 LINK_ENTITY_TO_CLASS( env_bubbles, CBubbling );
 
-BEGIN_DATADESC( CBubbling )
-
-	DEFINE_KEYFIELD( m_flSpeed, FIELD_FLOAT, "current" ),
-	DEFINE_KEYFIELD( m_density, FIELD_INTEGER, "density" ),
-	DEFINE_KEYFIELD( m_frequency, FIELD_INTEGER, "frequency" ),
-
-	DEFINE_FIELD( m_state, FIELD_INTEGER ),
-	// Let spawn restore this!
-	//	DEFINE_FIELD( m_bubbleModel, FIELD_INTEGER ),
-
-	// Function Pointers
-	DEFINE_FUNCTION( FizzThink ),
-
-	DEFINE_INPUTFUNC( FIELD_VOID, "Activate", InputActivate ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "Deactivate", InputDeactivate ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "Toggle", InputToggle ),
-	DEFINE_INPUTFUNC( FIELD_INTEGER, "SetCurrent", InputSetCurrent ),
-	DEFINE_INPUTFUNC( FIELD_INTEGER, "SetDensity", InputSetDensity ),
-	DEFINE_INPUTFUNC( FIELD_INTEGER, "SetFrequency", InputSetFrequency ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CBubbling )
 
 
 
@@ -260,21 +244,12 @@ public:
 	DECLARE_DATADESC();
 
 	Vector m_vecEnd;
-	float  m_flDelay;
+	[[= ks::reflect::Key{ .name = "delay" } ]] float  m_flDelay;
 };
 
 LINK_ENTITY_TO_CLASS( env_tracer, CEnvTracer );
 
-BEGIN_DATADESC( CEnvTracer )
-
-	DEFINE_KEYFIELD( m_flDelay, FIELD_FLOAT, "delay" ),
-
-	DEFINE_FIELD( m_vecEnd, FIELD_POSITION_VECTOR ),
-
-	// Function Pointers
-	DEFINE_FUNCTION( TracerThink ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CEnvTracer )
 
 
 
@@ -351,57 +326,31 @@ private:
 	void ShootThink( void );
 
 protected:
-	int		m_iGibs;
+	[[= ks::reflect::Key{ .name = "m_iGibs" } ]] int		m_iGibs;
 	int		m_iGibCapacity;
 	int		m_iGibMaterial;
 	int		m_iGibModelIndex;
-	float	m_flGibVelocity;
-	QAngle	m_angGibRotation;
-	float	m_flGibAngVelocity;
-	float	m_flVariance;
-	float	m_flGibLife;
-	int		m_nSimulationType;
+	[[= ks::reflect::Key{ .name = "m_flVelocity" } ]] float	m_flGibVelocity;
+	[[= ks::reflect::Key{ .name = "gibangles" } ]] QAngle	m_angGibRotation;
+	[[= ks::reflect::Key{ .name = "gibanglevelocity" } ]] float	m_flGibAngVelocity;
+	[[= ks::reflect::Key{ .name = "m_flVariance" } ]] float	m_flVariance;
+	[[= ks::reflect::Key{ .name = "m_flGibLife" } ]] float	m_flGibLife;
+	[[= ks::reflect::Key{ .name = "Simulation" } ]] int		m_nSimulationType;
 	int		m_nMaxGibModelFrame;
-	float	m_flDelay;
+	[[= ks::reflect::Key{ .name = "delay" } ]] float	m_flDelay;
 
-	bool	m_bNoGibShadows;
+	[[= ks::reflect::Key{ .name = "nogibshadows" } ]] bool	m_bNoGibShadows;
 
 	bool	m_bIsSprite;
-	string_t m_iszLightingOrigin;
+	[[= ks::reflect::Key{ .name = "LightingOrigin" } ]] string_t m_iszLightingOrigin;
 
 	// ----------------
 	//	Inputs
 	// ----------------
-	void InputShoot( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Shoot", .type = FIELD_VOID } ]] void InputShoot( inputdata_t &inputdata );
 };
 
-BEGIN_DATADESC( CGibShooter )
-
-	DEFINE_KEYFIELD( m_iGibs, FIELD_INTEGER, "m_iGibs" ),
-	DEFINE_KEYFIELD( m_flGibVelocity, FIELD_FLOAT, "m_flVelocity" ),
-	DEFINE_KEYFIELD( m_flVariance, FIELD_FLOAT, "m_flVariance" ),
-	DEFINE_KEYFIELD( m_flGibLife, FIELD_FLOAT, "m_flGibLife" ),
-	DEFINE_KEYFIELD( m_nSimulationType, FIELD_INTEGER, "Simulation" ),
-	DEFINE_KEYFIELD( m_flDelay, FIELD_FLOAT, "delay" ),
-	DEFINE_KEYFIELD( m_angGibRotation, FIELD_VECTOR, "gibangles" ),
-	DEFINE_KEYFIELD( m_flGibAngVelocity, FIELD_FLOAT, "gibanglevelocity"),
-	DEFINE_FIELD( m_bIsSprite, FIELD_BOOLEAN ),
-
-	DEFINE_FIELD( m_iGibCapacity, FIELD_INTEGER ),
-	DEFINE_FIELD( m_iGibMaterial, FIELD_INTEGER ),
-	DEFINE_FIELD( m_iGibModelIndex, FIELD_INTEGER ),
-	DEFINE_FIELD( m_nMaxGibModelFrame, FIELD_INTEGER ),
-
-	DEFINE_KEYFIELD( m_iszLightingOrigin, FIELD_STRING, "LightingOrigin" ),
-	DEFINE_KEYFIELD( m_bNoGibShadows, FIELD_BOOLEAN, "nogibshadows" ),
-
-	// Inputs
-	DEFINE_INPUTFUNC( FIELD_VOID,	"Shoot", InputShoot ),
-
-	// Function Pointers
-	DEFINE_FUNCTION( ShootThink ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CGibShooter )
 
 LINK_ENTITY_TO_CLASS( gibshooter, CGibShooter );
 
@@ -658,26 +607,16 @@ public:
 
 public:
 
-	int m_nSkin;
-	float m_flGibScale;
-	float m_flGibGravityScale;
+	[[= ks::reflect::Key{ .name = "skin" } ]] int m_nSkin;
+	[[= ks::reflect::Key{ .name = "scale" } ]] float m_flGibScale;
+	[[= ks::reflect::Key{ .name = "gibgravityscale" } ]] float m_flGibGravityScale;
 
 #if HL2_EPISODIC
 	float m_flMassOverride;	// allow designer to force a mass for gibs in some cases
 #endif
 };
 
-BEGIN_DATADESC( CEnvShooter )
-
-	DEFINE_KEYFIELD( m_nSkin, FIELD_INTEGER, "skin" ),
-	DEFINE_KEYFIELD( m_flGibScale, FIELD_FLOAT ,"scale" ),
-	DEFINE_KEYFIELD( m_flGibGravityScale, FIELD_FLOAT, "gibgravityscale" ),
-
-#if HL2_EPISODIC
-	DEFINE_KEYFIELD( m_flMassOverride, FIELD_FLOAT, "massoverride" ),
-#endif
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CEnvShooter )
 
 
 LINK_ENTITY_TO_CLASS( env_shooter, CEnvShooter );
@@ -824,8 +763,8 @@ public:
 
 private:
 	// Amount of time we need to spend under the rotor before we shoot
-	float m_flTimeUnderRotor;
-	float m_flTimeUnderRotorVariance;
+	[[= ks::reflect::Key{ .name = "rotortime" } ]] float m_flTimeUnderRotor;
+	[[= ks::reflect::Key{ .name = "rotortimevariance" } ]] float m_flTimeUnderRotorVariance;
 
 	// Last time we were hit with a wash...
 	float m_flLastWashStartTime;
@@ -839,14 +778,7 @@ LINK_ENTITY_TO_CLASS( env_rotorshooter, CRotorWashShooter );
 //-----------------------------------------------------------------------------
 // Save/load
 //-----------------------------------------------------------------------------
-BEGIN_DATADESC( CRotorWashShooter )
-
-	DEFINE_KEYFIELD( m_flTimeUnderRotor,	FIELD_FLOAT ,"rotortime" ),
-	DEFINE_KEYFIELD( m_flTimeUnderRotorVariance,	FIELD_FLOAT ,"rotortimevariance" ),
-	DEFINE_FIELD( m_flLastWashStartTime,	FIELD_TIME ),
-	DEFINE_FIELD( m_flNextGibTime, FIELD_TIME ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CRotorWashShooter )
 
 
 
@@ -1028,15 +960,15 @@ public:
 	inline	void SetColor( int color ) { m_Color = color; }
 
 	// Input handlers
-	void InputEmitBlood( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "EmitBlood", .type = FIELD_VOID } ]] void InputEmitBlood( inputdata_t &inputdata );
 
 	Vector	Direction( void );
 	Vector	BloodPosition( CBaseEntity *pActivator );
 
 	DECLARE_DATADESC();
 
-	Vector m_vecSprayDir;
-	float m_flAmount;
+	[[= ks::reflect::Key{ .name = "spraydir" } ]] Vector m_vecSprayDir;
+	[[= ks::reflect::Key{ .name = "amount" } ]] float m_flAmount;
 	int m_Color;
 
 private:
@@ -1044,15 +976,7 @@ private:
 
 LINK_ENTITY_TO_CLASS( env_blood, CBlood );
 
-BEGIN_DATADESC( CBlood )
-
-	DEFINE_KEYFIELD( m_vecSprayDir, FIELD_VECTOR, "spraydir" ),
-	DEFINE_KEYFIELD( m_flAmount, FIELD_FLOAT, "amount" ),
-	DEFINE_FIELD( m_Color, FIELD_INTEGER ),
-
-	DEFINE_INPUTFUNC( FIELD_VOID, "EmitBlood", InputEmitBlood ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CBlood )
 
 
 #define SF_BLOOD_RANDOM		0x0001
@@ -1236,7 +1160,6 @@ void CBlood::InputEmitBlood( inputdata_t &inputdata )
 //-----------------------------------------------------------------------------
 class CEnvFunnel : public CBaseEntity
 {
-	DECLARE_DATADESC();
 public:
 	DECLARE_CLASS( CEnvFunnel, CBaseEntity );
 
@@ -1252,11 +1175,6 @@ LINK_ENTITY_TO_CLASS( env_funnel, CEnvFunnel );
 //---------------------------------------------------------
 // Save/Restore
 //---------------------------------------------------------
-BEGIN_DATADESC( CEnvFunnel )
-
-//	DEFINE_FIELD( m_iSprite,	FIELD_INTEGER ),
-
-END_DATADESC()
 
 
 
@@ -1297,7 +1215,7 @@ public:
 	bool	KeyValue( const char *szKeyName, const char *szValue );
 
 	// Input handlers.
-	void	InputActivate( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Activate", .type = FIELD_VOID } ]] void	InputActivate( inputdata_t &inputdata );
 
 	DECLARE_DATADESC();
 
@@ -1311,12 +1229,7 @@ void CEnvBeverage::Precache ( void )
 	PrecacheModel( "models/can.mdl" );
 }
 
-BEGIN_DATADESC( CEnvBeverage )
-	DEFINE_FIELD( m_CanInDispenser, FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_nBeverageType, FIELD_INTEGER ),
-
-	DEFINE_INPUTFUNC( FIELD_VOID, "Activate", InputActivate ),
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CEnvBeverage )
 
 LINK_ENTITY_TO_CLASS( env_beverage, CEnvBeverage );
 
@@ -1393,17 +1306,9 @@ public:
 	void	CanThink ( void );
 	void	CanTouch ( CBaseEntity *pOther );
 
-	DECLARE_DATADESC();
 };
 
 
-BEGIN_DATADESC( CItemSoda )
-
-	// Function Pointers
-	DEFINE_FUNCTION( CanThink ),
-	DEFINE_FUNCTION( CanTouch ),
-
-END_DATADESC()
 
 LINK_ENTITY_TO_CLASS( item_sodacan, CItemSoda );
 
@@ -1470,7 +1375,8 @@ void CItemSoda::CanTouch ( CBaseEntity *pOther )
 // technology demo
 //=========================================================
 
-class CPrecipitation : public CBaseEntity
+class [[= ks::reflect::NetTable{ .name = "DT_Precipitation" } ]]
+      CPrecipitation : public CBaseEntity
 {
 public:
 	DECLARE_CLASS( CPrecipitation, CBaseEntity );
@@ -1481,28 +1387,19 @@ public:
 	int UpdateTransmitState();
 	void	Spawn( void );
 
-	CNetworkVar( PrecipitationType_t, m_nPrecipType );
+	// bits: Q_log2( NUM_PRECIPITATION_TYPES ) + 1, spelled out because Q_log2 is a runtime call.
+	CNetworkVar( PrecipitationType_t, m_nPrecipType, [[= ks::reflect::Net{ .bits = 4, .flags = SPROP_UNSIGNED } ]] [[= ks::reflect::Key{ .name = "preciptype" } ]] );
 #ifdef INFESTED_DLL
-	CNetworkVar( int, m_nSnowDustAmount );
+	CNetworkVar( int, m_nSnowDustAmount, [[= ks::reflect::Net{} ]] );
 #endif
 };
 
 LINK_ENTITY_TO_CLASS( func_precipitation, CPrecipitation );
 
-BEGIN_DATADESC( CPrecipitation )
-	DEFINE_KEYFIELD( m_nPrecipType, FIELD_INTEGER, "preciptype" ),
-#ifdef INFESTED_DLL
-	DEFINE_KEYFIELD( m_nSnowDustAmount, FIELD_INTEGER, "snowDustAmt" ),
-#endif
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CPrecipitation )
 
 // Just send the normal entity crap
-IMPLEMENT_SERVERCLASS_ST( CPrecipitation, DT_Precipitation)
-	SendPropInt( SENDINFO( m_nPrecipType ), Q_log2( NUM_PRECIPITATION_TYPES ) + 1, SPROP_UNSIGNED ),
-#ifdef INFESTED_DLL
-	SendPropInt( SENDINFO( m_nSnowDustAmount ) ),
-#endif
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CPrecipitation, DT_Precipitation )
 
 
 CPrecipitation::CPrecipitation()
@@ -1556,11 +1453,11 @@ void CPrecipitation::Spawn( void )
 // func_precipitation_blocker - prevents precipitation from happening in this volume
 //=========================================================
 
-class CPrecipitationBlocker : public CBaseEntity
+class [[= ks::reflect::NetTable{ .name = "DT_PrecipitationBlocker" } ]]
+      CPrecipitationBlocker : public CBaseEntity
 {
 public:
 	DECLARE_CLASS( CPrecipitationBlocker, CBaseEntity );
-	DECLARE_DATADESC();
 	DECLARE_SERVERCLASS();
 
 	CPrecipitationBlocker();
@@ -1570,12 +1467,9 @@ public:
 
 LINK_ENTITY_TO_CLASS( func_precipitation_blocker, CPrecipitationBlocker );
 
-BEGIN_DATADESC( CPrecipitationBlocker )
-END_DATADESC()
 
 // Just send the normal entity crap
-IMPLEMENT_SERVERCLASS_ST( CPrecipitationBlocker, DT_PrecipitationBlocker )
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CPrecipitationBlocker, DT_PrecipitationBlocker )
 
 
 CPrecipitationBlocker::CPrecipitationBlocker()
@@ -1614,7 +1508,18 @@ LINK_ENTITY_TO_CLASS( func_detail_blocker, CDetailBlocker );
 //-----------------------------------------------------------------------------
 // EnvWind - global wind info
 //-----------------------------------------------------------------------------
-class CEnvWind : public CBaseEntity
+class [[= ks::reflect::NetTable{ .name = "DT_EnvWind", .base = false } ]]
+      [[= ks::reflect::KeyFrom<"m_EnvWindShared.m_iMinWind", ks::reflect::Key{ .name = "minwind" } >{} ]]
+      [[= ks::reflect::KeyFrom<"m_EnvWindShared.m_iMaxWind", ks::reflect::Key{ .name = "maxwind" } >{} ]]
+      [[= ks::reflect::KeyFrom<"m_EnvWindShared.m_iMinGust", ks::reflect::Key{ .name = "mingust" } >{} ]]
+      [[= ks::reflect::KeyFrom<"m_EnvWindShared.m_iMaxGust", ks::reflect::Key{ .name = "maxgust" } >{} ]]
+      [[= ks::reflect::KeyFrom<"m_EnvWindShared.m_flMinGustDelay", ks::reflect::Key{ .name = "mingustdelay" } >{} ]]
+      [[= ks::reflect::KeyFrom<"m_EnvWindShared.m_flMaxGustDelay", ks::reflect::Key{ .name = "maxgustdelay" } >{} ]]
+      [[= ks::reflect::KeyFrom<"m_EnvWindShared.m_iGustDirChange", ks::reflect::Key{ .name = "gustdirchange" } >{} ]]
+      [[= ks::reflect::KeyFrom<"m_EnvWindShared.m_flGustDuration", ks::reflect::Key{ .name = "gustduration" } >{} ]]
+      [[= ks::reflect::KeyFrom<"m_EnvWindShared.m_OnGustStart", ks::reflect::Key{ .name = "OnGustStart" } >{} ]]
+      [[= ks::reflect::KeyFrom<"m_EnvWindShared.m_OnGustEnd", ks::reflect::Key{ .name = "OnGustEnd" } >{} ]]
+      CEnvWind : public CBaseEntity
 {
 public:
 	DECLARE_CLASS( CEnvWind, CBaseEntity );
@@ -1629,7 +1534,7 @@ public:
 
 private:
 #ifdef GNUC
-	CEnvWindShared m_EnvWindShared; // FIXME - fails to compile as networked var due to operator= problem
+	[[= ks::reflect::Net{} ]] CEnvWindShared m_EnvWindShared; // FIXME - fails to compile as networked var due to operator= problem
 #else
 	CNetworkVarEmbedded( CEnvWindShared, m_EnvWindShared );
 #endif
@@ -1637,58 +1542,13 @@ private:
 
 LINK_ENTITY_TO_CLASS( env_wind, CEnvWind );
 
-BEGIN_DATADESC( CEnvWind )
-
-	DEFINE_KEYFIELD( m_EnvWindShared.m_iMinWind, FIELD_INTEGER, "minwind" ),
-	DEFINE_KEYFIELD( m_EnvWindShared.m_iMaxWind, FIELD_INTEGER, "maxwind" ),
-	DEFINE_KEYFIELD( m_EnvWindShared.m_iMinGust, FIELD_INTEGER, "mingust" ),
-	DEFINE_KEYFIELD( m_EnvWindShared.m_iMaxGust, FIELD_INTEGER, "maxgust" ),
-	DEFINE_KEYFIELD( m_EnvWindShared.m_flMinGustDelay, FIELD_FLOAT, "mingustdelay" ),
-	DEFINE_KEYFIELD( m_EnvWindShared.m_flMaxGustDelay, FIELD_FLOAT, "maxgustdelay" ),
-	DEFINE_KEYFIELD( m_EnvWindShared.m_iGustDirChange, FIELD_INTEGER, "gustdirchange" ),
-	DEFINE_KEYFIELD( m_EnvWindShared.m_flGustDuration, FIELD_FLOAT, "gustduration" ),
-//	DEFINE_KEYFIELD( m_EnvWindShared.m_iszGustSound, FIELD_STRING, "gustsound" ),
-
-// Just here to quiet down classcheck
-	// DEFINE_FIELD( m_EnvWindShared, CEnvWindShared ),
-
-	DEFINE_FIELD( m_EnvWindShared.m_iWindDir, FIELD_INTEGER ),
-	DEFINE_FIELD( m_EnvWindShared.m_flWindSpeed, FIELD_FLOAT ),
-
-	DEFINE_OUTPUT( m_EnvWindShared.m_OnGustStart, "OnGustStart" ),
-	DEFINE_OUTPUT( m_EnvWindShared.m_OnGustEnd,	"OnGustEnd" ),
-
-	// Function Pointers
-	DEFINE_FUNCTION( WindThink ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CEnvWind )
 
 
-BEGIN_SEND_TABLE_NOBASE(CEnvWindShared, DT_EnvWindShared)
-	// These are parameters that are used to generate the entire motion
-	SendPropInt		(SENDINFO(m_iMinWind),		10, SPROP_UNSIGNED ),
-	SendPropInt		(SENDINFO(m_iMaxWind),		10, SPROP_UNSIGNED ),
-	SendPropInt		(SENDINFO(m_iMinGust),		10, SPROP_UNSIGNED ),
-	SendPropInt		(SENDINFO(m_iMaxGust),		10, SPROP_UNSIGNED ),
-	SendPropFloat	(SENDINFO(m_flMinGustDelay), 0, SPROP_NOSCALE),		// NOTE: Have to do this, so it's *exactly* the same on client
-	SendPropFloat	(SENDINFO(m_flMaxGustDelay), 0, SPROP_NOSCALE),
-	SendPropInt		(SENDINFO(m_iGustDirChange), 9, SPROP_UNSIGNED ),
-	SendPropInt		(SENDINFO(m_iWindSeed),		32, SPROP_UNSIGNED ),
-
-	// These are related to initial state
-	SendPropInt		(SENDINFO(m_iInitialWindDir),9, SPROP_UNSIGNED ),
-	SendPropFloat	(SENDINFO(m_flInitialWindSpeed),0, SPROP_NOSCALE ),
-	SendPropFloat	(SENDINFO(m_flStartTime),	 0, SPROP_NOSCALE ),
-
-	SendPropFloat	(SENDINFO(m_flGustDuration), 0, SPROP_NOSCALE),
-	// Sound related
-//	SendPropInt		(SENDINFO(m_iszGustSound),	10, SPROP_UNSIGNED ),
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_TABLE( CEnvWindShared, DT_EnvWindShared );
 
 // This table encodes the CBaseEntity data.
-IMPLEMENT_SERVERCLASS_ST_NOBASE(CEnvWind, DT_EnvWind)
-	SendPropDataTable(SENDINFO_DT(m_EnvWindShared), &REFERENCE_SEND_TABLE(DT_EnvWindShared)),
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CEnvWind, DT_EnvWind )
 
 void CEnvWind::Precache ( void )
 {
@@ -1731,7 +1591,8 @@ void CEnvWind::WindThink( void )
 #define	bitsSF_EMBERS_TOGGLE	0x00000002
 
 // UNDONE: This is a brush effect-in-volume entity, move client side.
-class CEmbers : public CBaseEntity
+class [[= ks::reflect::NetTable{ .name = "DT_Embers" } ]]
+      CEmbers : public CBaseEntity
 {
 public:
 	DECLARE_CLASS( CEmbers, CBaseEntity );
@@ -1741,11 +1602,11 @@ public:
 
 	void	EmberUse( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
 
-	CNetworkVar( int, m_nDensity );
-	CNetworkVar( int, m_nLifetime );
-	CNetworkVar( int, m_nSpeed );
+	CNetworkVar( int, m_nDensity, [[= ks::reflect::Net{ .bits = 32, .flags = SPROP_UNSIGNED } ]] [[= ks::reflect::Key{ .name = "density" } ]] );
+	CNetworkVar( int, m_nLifetime, [[= ks::reflect::Net{ .bits = 32, .flags = SPROP_UNSIGNED } ]] [[= ks::reflect::Key{ .name = "lifetime" } ]] );
+	CNetworkVar( int, m_nSpeed, [[= ks::reflect::Net{ .bits = 32, .flags = SPROP_UNSIGNED } ]] [[= ks::reflect::Key{ .name = "speed" } ]] );
 
-	CNetworkVar( bool, m_bEmit );
+	CNetworkVar( bool, m_bEmit, [[= ks::reflect::Net{ .bits = 2, .flags = SPROP_UNSIGNED } ]] );
 
 	DECLARE_DATADESC();
 	DECLARE_SERVERCLASS();
@@ -1754,27 +1615,11 @@ public:
 LINK_ENTITY_TO_CLASS( env_embers, CEmbers );
 
 //Data description
-BEGIN_DATADESC( CEmbers )
-
-	DEFINE_KEYFIELD( m_nDensity,	FIELD_INTEGER, "density" ),
-	DEFINE_KEYFIELD( m_nLifetime,	FIELD_INTEGER, "lifetime" ),
-	DEFINE_KEYFIELD( m_nSpeed,		FIELD_INTEGER, "speed" ),
-
-	DEFINE_FIELD( m_bEmit,	FIELD_BOOLEAN ),
-
-	//Function pointers
-	DEFINE_FUNCTION( EmberUse ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CEmbers )
 
 
 //Data table
-IMPLEMENT_SERVERCLASS_ST( CEmbers, DT_Embers )
-	SendPropInt(	SENDINFO( m_nDensity ),		32,	SPROP_UNSIGNED ),
-	SendPropInt(	SENDINFO( m_nLifetime ),	32,	SPROP_UNSIGNED ),
-	SendPropInt(	SENDINFO( m_nSpeed ),		32,	SPROP_UNSIGNED ),
-	SendPropInt(	SENDINFO( m_bEmit ),		2,	SPROP_UNSIGNED ),
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CEmbers, DT_Embers )
 
 //-----------------------------------------------------------------------------
 // Purpose:
@@ -1856,22 +1701,12 @@ protected:
 
 	bool SetupPhysics( void );
 
-	int		m_nDensity;
+	[[= ks::reflect::Key{ .name = "Density" } ]] int		m_nDensity;
 };
 
 LINK_ENTITY_TO_CLASS( env_physwire, CPhysicsWire );
 
-BEGIN_DATADESC( CPhysicsWire )
-
-	DEFINE_KEYFIELD( m_nDensity,	FIELD_INTEGER, "Density" ),
-//	DEFINE_KEYFIELD( m_frequency, FIELD_INTEGER, "frequency" ),
-
-//	DEFINE_FIELD( m_flFoo, FIELD_FLOAT ),
-
-	// Function Pointers
-//	DEFINE_FUNCTION( WireThink ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CPhysicsWire )
 
 
 //-----------------------------------------------------------------------------
@@ -1957,22 +1792,15 @@ public:
 	virtual void Spawn();
 
 	// Input handlers
-	void	InputFire( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Fire", .type = FIELD_VOID } ]] void	InputFire( inputdata_t &inputdata );
 
 	DECLARE_DATADESC();
 
-	float	m_flScale;
-	string_t m_iszParentAttachment;
+	[[= ks::reflect::Key{ .name = "scale" } ]] float	m_flScale;
+	[[= ks::reflect::Key{ .name = "parentattachment" } ]] string_t m_iszParentAttachment;
 };
 
-BEGIN_DATADESC( CEnvMuzzleFlash )
-
-	DEFINE_KEYFIELD( m_flScale, FIELD_FLOAT, "scale" ),
-	DEFINE_KEYFIELD( m_iszParentAttachment, FIELD_STRING, "parentattachment" ),
-
-	DEFINE_INPUTFUNC( FIELD_VOID, "Fire", InputFire ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CEnvMuzzleFlash )
 
 
 LINK_ENTITY_TO_CLASS( env_muzzleflash, CEnvMuzzleFlash );
@@ -2021,20 +1849,16 @@ public:
 	virtual void Spawn();
 
 	// Input handlers
-	void	InputSplash( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Splash", .type = FIELD_VOID } ]] void	InputSplash( inputdata_t &inputdata );
 
 protected:
 
-	float	m_flScale;
+	[[= ks::reflect::Key{ .name = "scale" } ]] float	m_flScale;
 
 	DECLARE_DATADESC();
 };
 
-BEGIN_DATADESC( CEnvSplash )
-	DEFINE_KEYFIELD( m_flScale, FIELD_FLOAT, "scale" ),
-
-	DEFINE_INPUTFUNC( FIELD_VOID, "Splash", InputSplash ),
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CEnvSplash )
 
 LINK_ENTITY_TO_CLASS( env_splash, CEnvSplash );
 
@@ -2154,32 +1978,32 @@ public:
 		const char *pszTracerName
 		);
 
-	void InputEnable( inputdata_t &inputdata );
-	void InputDisable( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Enable", .type = FIELD_VOID } ]] void InputEnable( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Disable", .type = FIELD_VOID } ]] void InputDisable( inputdata_t &inputdata );
 
-	int	m_iMinBurstSize;
-	int m_iMaxBurstSize;
+	[[= ks::reflect::Key{ .name = "minburstsize" } ]] int	m_iMinBurstSize;
+	[[= ks::reflect::Key{ .name = "maxburstsize" } ]] int m_iMaxBurstSize;
 
-	float m_flMinBurstDelay;
-	float m_flMaxBurstDelay;
+	[[= ks::reflect::As{ FIELD_TIME } ]] [[= ks::reflect::Key{ .name = "minburstdelay" } ]] float m_flMinBurstDelay;
+	[[= ks::reflect::As{ FIELD_TIME } ]] [[= ks::reflect::Key{ .name = "maxburstdelay" } ]] float m_flMaxBurstDelay;
 
-	float m_flRateOfFire;
+	[[= ks::reflect::Key{ .name = "rateoffire" } ]] float m_flRateOfFire;
 
-	string_t	m_iszShootSound;
-	string_t	m_iszTracerType;
-	string_t	m_iszWeaponName;
+	[[= ks::reflect::Key{ .name = "shootsound" } ]] string_t	m_iszShootSound;
+	[[= ks::reflect::Key{ .name = "tracertype" } ]] string_t	m_iszTracerType;
+	[[= ks::reflect::Key{ .name = "weaponname" } ]] string_t	m_iszWeaponName;
 
-	bool m_bDisabled;
+	[[= ks::reflect::Key{ .name = "startdisabled" } ]] bool m_bDisabled;
 
 	int	m_iShotsRemaining;
 
-	int		m_iSpread;
+	[[= ks::reflect::Key{ .name = "spread" } ]] int		m_iSpread;
 	Vector	m_vecSpread;
 	Vector	m_vecTargetPosition;
 	float	m_flTargetDist;
 
-	float	m_flBias;
-	bool	m_bCollide;
+	[[= ks::reflect::Key{ .name = "bias" } ]] float	m_flBias;
+	[[= ks::reflect::Key{ .name = "collisions" } ]] bool	m_bCollide;
 
 	EHANDLE m_hTarget;
 
@@ -2187,32 +2011,7 @@ public:
 	DECLARE_DATADESC();
 };
 
-BEGIN_DATADESC( CEnvGunfire )
-	DEFINE_KEYFIELD( m_iMinBurstSize, FIELD_INTEGER, "minburstsize" ),
-	DEFINE_KEYFIELD( m_iMaxBurstSize, FIELD_INTEGER, "maxburstsize" ),
-	DEFINE_KEYFIELD( m_flMinBurstDelay, FIELD_TIME, "minburstdelay" ),
-	DEFINE_KEYFIELD( m_flMaxBurstDelay, FIELD_TIME, "maxburstdelay" ),
-	DEFINE_KEYFIELD( m_flRateOfFire, FIELD_FLOAT, "rateoffire" ),
-	DEFINE_KEYFIELD( m_iszShootSound, FIELD_STRING, "shootsound" ),
-	DEFINE_KEYFIELD( m_iszTracerType, FIELD_STRING, "tracertype" ),
-	DEFINE_KEYFIELD( m_bDisabled, FIELD_BOOLEAN, "startdisabled" ),
-	DEFINE_KEYFIELD( m_iSpread, FIELD_INTEGER, "spread" ),
-	DEFINE_KEYFIELD( m_flBias, FIELD_FLOAT, "bias" ),
-	DEFINE_KEYFIELD( m_bCollide, FIELD_BOOLEAN, "collisions" ),
-	DEFINE_KEYFIELD( m_iszWeaponName, FIELD_STRING, "weaponname" ),
-
-	DEFINE_FIELD( m_iShotsRemaining, FIELD_INTEGER ),
-	DEFINE_FIELD( m_vecSpread, FIELD_VECTOR ),
-	DEFINE_FIELD( m_vecTargetPosition, FIELD_VECTOR ),
-	DEFINE_FIELD( m_flTargetDist, FIELD_FLOAT ),
-
-	DEFINE_FIELD( m_hTarget, FIELD_EHANDLE ),
-
-	DEFINE_THINKFUNC( ShootThink ),
-
-	DEFINE_INPUTFUNC( FIELD_VOID, "Enable", InputEnable ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "Disable", InputDisable ),
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CEnvGunfire )
 LINK_ENTITY_TO_CLASS( env_gunfire, CEnvGunfire );
 
 //-----------------------------------------------------------------------------
@@ -2812,21 +2611,10 @@ void CEnvGunfire::InputDisable( inputdata_t &inputdata )
 //-----------------------------------------------------------------------------
 // Quadratic spline beam effect
 //-----------------------------------------------------------------------------
-BEGIN_DATADESC( CEnvQuadraticBeam )
-	DEFINE_FIELD( m_targetPosition, FIELD_POSITION_VECTOR ),
-	DEFINE_FIELD( m_controlPosition, FIELD_POSITION_VECTOR ),
-	DEFINE_FIELD( m_scrollRate, FIELD_FLOAT ),
-	DEFINE_FIELD( m_flWidth, FIELD_FLOAT ),
-END_DATADESC()
 
 LINK_ENTITY_TO_CLASS( env_quadraticbeam, CEnvQuadraticBeam );
 
-IMPLEMENT_SERVERCLASS_ST( CEnvQuadraticBeam, DT_QuadraticBeam )
-	SendPropVector(SENDINFO(m_targetPosition), -1, SPROP_COORD),
-	SendPropVector(SENDINFO(m_controlPosition), -1, SPROP_COORD),
-	SendPropFloat(SENDINFO(m_scrollRate), 8, 0, -4, 4),
-	SendPropFloat(SENDINFO(m_flWidth), -1, SPROP_NOSCALE),
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CEnvQuadraticBeam, DT_QuadraticBeam )
 
 void CEnvQuadraticBeam::Spawn()
 {
@@ -2868,12 +2656,12 @@ public:
 	virtual void Spawn();
 
 	// Input handlers
-	void InputViewPunch( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "ViewPunch", .type = FIELD_VOID } ]] void InputViewPunch( inputdata_t &inputdata );
 
 private:
 
-	float m_flRadius;
-	QAngle m_angViewPunch;
+	[[= ks::reflect::Key{ .name = "radius" } ]] float m_flRadius;
+	[[= ks::reflect::Key{ .name = "punchangle" } ]] QAngle m_angViewPunch;
 
 	void DoViewPunch();
 
@@ -2882,14 +2670,7 @@ private:
 
 LINK_ENTITY_TO_CLASS( env_viewpunch, CEnvViewPunch );
 
-BEGIN_DATADESC( CEnvViewPunch )
-
-	DEFINE_KEYFIELD( m_angViewPunch, FIELD_VECTOR, "punchangle" ),
-	DEFINE_KEYFIELD( m_flRadius, FIELD_FLOAT, "radius" ),
-
-	DEFINE_INPUTFUNC( FIELD_VOID, "ViewPunch", InputViewPunch ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CEnvViewPunch )
 
 #define SF_PUNCH_EVERYONE	0x0001		// Don't check radius
 #define SF_PUNCH_IN_AIR		0x0002		// Punch players in air

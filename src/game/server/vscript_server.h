@@ -18,7 +18,6 @@
 class ISaveRestoreBlockHandler;
 
 bool VScriptServerReplaceClosures( const char *pszScriptName, HSCRIPT hScope, bool bWarnMissing = false );
-ISaveRestoreBlockHandler *GetVScriptSaveRestoreBlockHandler();
 
 
 class CBaseEntityScriptInstanceHelper : public IScriptInstanceHelper

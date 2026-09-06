@@ -6,54 +6,22 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_sendtable.h"
+#include "reflect_annotations.h"
 #include "steamjet.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
 //Networking
-IMPLEMENT_SERVERCLASS_ST(CSteamJet, DT_SteamJet)
-	SendPropFloat(SENDINFO(m_SpreadSpeed), 0, SPROP_NOSCALE),
-	SendPropFloat(SENDINFO(m_Speed), 0, SPROP_NOSCALE),
-	SendPropFloat(SENDINFO(m_StartSize), 0, SPROP_NOSCALE),
-	SendPropFloat(SENDINFO(m_EndSize), 0, SPROP_NOSCALE),
-	SendPropFloat(SENDINFO(m_Rate), 0, SPROP_NOSCALE),
-	SendPropFloat(SENDINFO(m_JetLength), 0, SPROP_NOSCALE),
-	SendPropInt(SENDINFO(m_bEmit), 1, SPROP_UNSIGNED),
-	SendPropInt(SENDINFO(m_bFaceLeft), 1, SPROP_UNSIGNED), // For support of legacy env_steamjet, which faced left instead of forward.
-	SendPropInt(SENDINFO(m_nType), 32, SPROP_UNSIGNED),
-	SendPropInt( SENDINFO(m_spawnflags), 8, SPROP_UNSIGNED ),
-	SendPropFloat(SENDINFO(m_flRollSpeed), 0, SPROP_NOSCALE),
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CSteamJet, DT_SteamJet )
 
 LINK_ENTITY_TO_CLASS( env_steam, CSteamJet );
 LINK_ENTITY_TO_CLASS( env_steamjet, CSteamJet ); // For support of legacy env_steamjet, which faced left instead of forward.
 
 //Save/restore
-BEGIN_DATADESC( CSteamJet )
-
-	//Keyvalue fields
-	DEFINE_KEYFIELD( m_StartSize,	FIELD_FLOAT,	"StartSize" ),
-	DEFINE_KEYFIELD( m_EndSize,		FIELD_FLOAT,	"EndSize" ),
-	DEFINE_KEYFIELD( m_InitialState,	FIELD_BOOLEAN,	"InitialState" ),
-	DEFINE_KEYFIELD( m_nType,		FIELD_INTEGER,	"Type" ),
-	DEFINE_KEYFIELD( m_flRollSpeed, FIELD_FLOAT, "RollSpeed" ),
-
-	//Regular fields
-	DEFINE_FIELD( m_bEmit, FIELD_INTEGER ),
-	DEFINE_FIELD( m_bFaceLeft, FIELD_BOOLEAN ),
-
-	// Inputs
-	DEFINE_INPUT( m_JetLength, FIELD_FLOAT, "JetLength" ),
-	DEFINE_INPUT( m_SpreadSpeed, FIELD_FLOAT, "SpreadSpeed" ),
-	DEFINE_INPUT( m_Speed, FIELD_FLOAT, "Speed" ),
-	DEFINE_INPUT( m_Rate, FIELD_FLOAT, "Rate" ),
-
-	DEFINE_INPUTFUNC( FIELD_VOID, "TurnOn", InputTurnOn ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "TurnOff", InputTurnOff ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "Toggle", InputToggle ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CSteamJet )
 
 
 CSteamJet::CSteamJet( void )

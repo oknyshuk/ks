@@ -6,6 +6,8 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_annotations.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -16,145 +18,78 @@ public:
 	DECLARE_CLASS( CFuncInstanceIoProxy, CBaseEntity );
 
 	// Input handlers
-	void InputProxyRelay1( inputdata_t &inputdata );
-	void InputProxyRelay2( inputdata_t &inputdata );
-	void InputProxyRelay3( inputdata_t &inputdata );
-	void InputProxyRelay4( inputdata_t &inputdata );
-	void InputProxyRelay5( inputdata_t &inputdata );
-	void InputProxyRelay6( inputdata_t &inputdata );
-	void InputProxyRelay7( inputdata_t &inputdata );
-	void InputProxyRelay8( inputdata_t &inputdata );
-	void InputProxyRelay9( inputdata_t &inputdata );
-	void InputProxyRelay10( inputdata_t &inputdata );
-	void InputProxyRelay11( inputdata_t &inputdata );
-	void InputProxyRelay12( inputdata_t &inputdata );
-	void InputProxyRelay13( inputdata_t &inputdata );
-	void InputProxyRelay14( inputdata_t &inputdata );
-	void InputProxyRelay15( inputdata_t &inputdata );
-	void InputProxyRelay16( inputdata_t &inputdata );
-	void InputProxyRelay17( inputdata_t &inputdata );
-	void InputProxyRelay18( inputdata_t &inputdata );
-	void InputProxyRelay19( inputdata_t &inputdata );
-	void InputProxyRelay20( inputdata_t &inputdata );
-	void InputProxyRelay21( inputdata_t &inputdata );
-	void InputProxyRelay22( inputdata_t &inputdata );
-	void InputProxyRelay23( inputdata_t &inputdata );
-	void InputProxyRelay24( inputdata_t &inputdata );
-	void InputProxyRelay25( inputdata_t &inputdata );
-	void InputProxyRelay26( inputdata_t &inputdata );
-	void InputProxyRelay27( inputdata_t &inputdata );
-	void InputProxyRelay28( inputdata_t &inputdata );
-	void InputProxyRelay29( inputdata_t &inputdata );
-	void InputProxyRelay30( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "OnProxyRelay1", .type = FIELD_STRING } ]] void InputProxyRelay1( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "OnProxyRelay2", .type = FIELD_STRING } ]] void InputProxyRelay2( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "OnProxyRelay3", .type = FIELD_STRING } ]] void InputProxyRelay3( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "OnProxyRelay4", .type = FIELD_STRING } ]] void InputProxyRelay4( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "OnProxyRelay5", .type = FIELD_STRING } ]] void InputProxyRelay5( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "OnProxyRelay6", .type = FIELD_STRING } ]] void InputProxyRelay6( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "OnProxyRelay7", .type = FIELD_STRING } ]] void InputProxyRelay7( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "OnProxyRelay8", .type = FIELD_STRING } ]] void InputProxyRelay8( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "OnProxyRelay9", .type = FIELD_STRING } ]] void InputProxyRelay9( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "OnProxyRelay10", .type = FIELD_STRING } ]] void InputProxyRelay10( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "OnProxyRelay11", .type = FIELD_STRING } ]] void InputProxyRelay11( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "OnProxyRelay12", .type = FIELD_STRING } ]] void InputProxyRelay12( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "OnProxyRelay13", .type = FIELD_STRING } ]] void InputProxyRelay13( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "OnProxyRelay14", .type = FIELD_STRING } ]] void InputProxyRelay14( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "OnProxyRelay15", .type = FIELD_STRING } ]] void InputProxyRelay15( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "OnProxyRelay16", .type = FIELD_STRING } ]] void InputProxyRelay16( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "OnProxyRelay17", .type = FIELD_STRING } ]] void InputProxyRelay17( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "OnProxyRelay18", .type = FIELD_STRING } ]] void InputProxyRelay18( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "OnProxyRelay19", .type = FIELD_STRING } ]] void InputProxyRelay19( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "OnProxyRelay20", .type = FIELD_STRING } ]] void InputProxyRelay20( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "OnProxyRelay21", .type = FIELD_STRING } ]] void InputProxyRelay21( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "OnProxyRelay22", .type = FIELD_STRING } ]] void InputProxyRelay22( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "OnProxyRelay23", .type = FIELD_STRING } ]] void InputProxyRelay23( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "OnProxyRelay24", .type = FIELD_STRING } ]] void InputProxyRelay24( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "OnProxyRelay25", .type = FIELD_STRING } ]] void InputProxyRelay25( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "OnProxyRelay26", .type = FIELD_STRING } ]] void InputProxyRelay26( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "OnProxyRelay27", .type = FIELD_STRING } ]] void InputProxyRelay27( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "OnProxyRelay28", .type = FIELD_STRING } ]] void InputProxyRelay28( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "OnProxyRelay29", .type = FIELD_STRING } ]] void InputProxyRelay29( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "OnProxyRelay30", .type = FIELD_STRING } ]] void InputProxyRelay30( inputdata_t &inputdata );
 ;
 
 	DECLARE_DATADESC();
 
 private:
 
-	COutputEvent m_OnProxyRelay1;
-	COutputEvent m_OnProxyRelay2;
-	COutputEvent m_OnProxyRelay3;
-	COutputEvent m_OnProxyRelay4;
-	COutputEvent m_OnProxyRelay5;
-	COutputEvent m_OnProxyRelay6;
-	COutputEvent m_OnProxyRelay7;
-	COutputEvent m_OnProxyRelay8;
-	COutputEvent m_OnProxyRelay9;
-	COutputEvent m_OnProxyRelay10;
-	COutputEvent m_OnProxyRelay11;
-	COutputEvent m_OnProxyRelay12;
-	COutputEvent m_OnProxyRelay13;
-	COutputEvent m_OnProxyRelay14;
-	COutputEvent m_OnProxyRelay15;
-	COutputEvent m_OnProxyRelay16;
-	COutputEvent m_OnProxyRelay17;
-	COutputEvent m_OnProxyRelay18;
-	COutputEvent m_OnProxyRelay19;
-	COutputEvent m_OnProxyRelay20;
-	COutputEvent m_OnProxyRelay21;
-	COutputEvent m_OnProxyRelay22;
-	COutputEvent m_OnProxyRelay23;
-	COutputEvent m_OnProxyRelay24;
-	COutputEvent m_OnProxyRelay25;
-	COutputEvent m_OnProxyRelay26;
-	COutputEvent m_OnProxyRelay27;
-	COutputEvent m_OnProxyRelay28;
-	COutputEvent m_OnProxyRelay29;
-	COutputEvent m_OnProxyRelay30;
+	[[= ks::reflect::Key{ .name = "OnProxyRelay1" } ]] COutputEvent m_OnProxyRelay1;
+	[[= ks::reflect::Key{ .name = "OnProxyRelay2" } ]] COutputEvent m_OnProxyRelay2;
+	[[= ks::reflect::Key{ .name = "OnProxyRelay3" } ]] COutputEvent m_OnProxyRelay3;
+	[[= ks::reflect::Key{ .name = "OnProxyRelay4" } ]] COutputEvent m_OnProxyRelay4;
+	[[= ks::reflect::Key{ .name = "OnProxyRelay5" } ]] COutputEvent m_OnProxyRelay5;
+	[[= ks::reflect::Key{ .name = "OnProxyRelay6" } ]] COutputEvent m_OnProxyRelay6;
+	[[= ks::reflect::Key{ .name = "OnProxyRelay7" } ]] COutputEvent m_OnProxyRelay7;
+	[[= ks::reflect::Key{ .name = "OnProxyRelay8" } ]] COutputEvent m_OnProxyRelay8;
+	[[= ks::reflect::Key{ .name = "OnProxyRelay9" } ]] COutputEvent m_OnProxyRelay9;
+	[[= ks::reflect::Key{ .name = "OnProxyRelay10" } ]] COutputEvent m_OnProxyRelay10;
+	[[= ks::reflect::Key{ .name = "OnProxyRelay11" } ]] COutputEvent m_OnProxyRelay11;
+	[[= ks::reflect::Key{ .name = "OnProxyRelay12" } ]] COutputEvent m_OnProxyRelay12;
+	[[= ks::reflect::Key{ .name = "OnProxyRelay13" } ]] COutputEvent m_OnProxyRelay13;
+	[[= ks::reflect::Key{ .name = "OnProxyRelay14" } ]] COutputEvent m_OnProxyRelay14;
+	[[= ks::reflect::Key{ .name = "OnProxyRelay15" } ]] COutputEvent m_OnProxyRelay15;
+	[[= ks::reflect::Key{ .name = "OnProxyRelay16" } ]] COutputEvent m_OnProxyRelay16;
+	[[= ks::reflect::Key{ .name = "OnProxyRelay17" } ]] COutputEvent m_OnProxyRelay17;
+	[[= ks::reflect::Key{ .name = "OnProxyRelay18" } ]] COutputEvent m_OnProxyRelay18;
+	[[= ks::reflect::Key{ .name = "OnProxyRelay19" } ]] COutputEvent m_OnProxyRelay19;
+	[[= ks::reflect::Key{ .name = "OnProxyRelay20" } ]] COutputEvent m_OnProxyRelay20;
+	[[= ks::reflect::Key{ .name = "OnProxyRelay21" } ]] COutputEvent m_OnProxyRelay21;
+	[[= ks::reflect::Key{ .name = "OnProxyRelay22" } ]] COutputEvent m_OnProxyRelay22;
+	[[= ks::reflect::Key{ .name = "OnProxyRelay23" } ]] COutputEvent m_OnProxyRelay23;
+	[[= ks::reflect::Key{ .name = "OnProxyRelay24" } ]] COutputEvent m_OnProxyRelay24;
+	[[= ks::reflect::Key{ .name = "OnProxyRelay25" } ]] COutputEvent m_OnProxyRelay25;
+	[[= ks::reflect::Key{ .name = "OnProxyRelay26" } ]] COutputEvent m_OnProxyRelay26;
+	[[= ks::reflect::Key{ .name = "OnProxyRelay27" } ]] COutputEvent m_OnProxyRelay27;
+	[[= ks::reflect::Key{ .name = "OnProxyRelay28" } ]] COutputEvent m_OnProxyRelay28;
+	[[= ks::reflect::Key{ .name = "OnProxyRelay29" } ]] COutputEvent m_OnProxyRelay29;
+	[[= ks::reflect::Key{ .name = "OnProxyRelay30" } ]] COutputEvent m_OnProxyRelay30;
 
 };
 
 LINK_ENTITY_TO_CLASS( func_instance_io_proxy, CFuncInstanceIoProxy );
 
-BEGIN_DATADESC( CFuncInstanceIoProxy )
-
-	// Inputs
-	DEFINE_INPUTFUNC( FIELD_STRING, "OnProxyRelay1",  InputProxyRelay1 ),
-	DEFINE_INPUTFUNC( FIELD_STRING, "OnProxyRelay2",  InputProxyRelay2 ),
-	DEFINE_INPUTFUNC( FIELD_STRING, "OnProxyRelay3",  InputProxyRelay3 ),
-	DEFINE_INPUTFUNC( FIELD_STRING, "OnProxyRelay4",  InputProxyRelay4 ),
-	DEFINE_INPUTFUNC( FIELD_STRING, "OnProxyRelay5",  InputProxyRelay5 ),
-	DEFINE_INPUTFUNC( FIELD_STRING, "OnProxyRelay6",  InputProxyRelay6 ),
-	DEFINE_INPUTFUNC( FIELD_STRING, "OnProxyRelay7",  InputProxyRelay7 ),
-	DEFINE_INPUTFUNC( FIELD_STRING, "OnProxyRelay8",  InputProxyRelay8 ),
-	DEFINE_INPUTFUNC( FIELD_STRING, "OnProxyRelay9",  InputProxyRelay9 ),
-	DEFINE_INPUTFUNC( FIELD_STRING, "OnProxyRelay10",  InputProxyRelay10 ),
-	DEFINE_INPUTFUNC( FIELD_STRING, "OnProxyRelay11",  InputProxyRelay11 ),
-	DEFINE_INPUTFUNC( FIELD_STRING, "OnProxyRelay12",  InputProxyRelay12 ),
-	DEFINE_INPUTFUNC( FIELD_STRING, "OnProxyRelay13",  InputProxyRelay13 ),
-	DEFINE_INPUTFUNC( FIELD_STRING, "OnProxyRelay14",  InputProxyRelay14 ),
-	DEFINE_INPUTFUNC( FIELD_STRING, "OnProxyRelay15",  InputProxyRelay15 ),
-	DEFINE_INPUTFUNC( FIELD_STRING, "OnProxyRelay16",  InputProxyRelay16 ),
-	DEFINE_INPUTFUNC( FIELD_STRING, "OnProxyRelay17",  InputProxyRelay17 ),
-	DEFINE_INPUTFUNC( FIELD_STRING, "OnProxyRelay18",  InputProxyRelay18 ),
-	DEFINE_INPUTFUNC( FIELD_STRING, "OnProxyRelay19",  InputProxyRelay19 ),
-	DEFINE_INPUTFUNC( FIELD_STRING, "OnProxyRelay20",  InputProxyRelay20 ),
-	DEFINE_INPUTFUNC( FIELD_STRING, "OnProxyRelay21",  InputProxyRelay21 ),
-	DEFINE_INPUTFUNC( FIELD_STRING, "OnProxyRelay22",  InputProxyRelay22 ),
-	DEFINE_INPUTFUNC( FIELD_STRING, "OnProxyRelay23",  InputProxyRelay23 ),
-	DEFINE_INPUTFUNC( FIELD_STRING, "OnProxyRelay24",  InputProxyRelay24 ),
-	DEFINE_INPUTFUNC( FIELD_STRING, "OnProxyRelay25",  InputProxyRelay25 ),
-	DEFINE_INPUTFUNC( FIELD_STRING, "OnProxyRelay26",  InputProxyRelay26 ),
-	DEFINE_INPUTFUNC( FIELD_STRING, "OnProxyRelay27",  InputProxyRelay27 ),
-	DEFINE_INPUTFUNC( FIELD_STRING, "OnProxyRelay28",  InputProxyRelay28 ),
-	DEFINE_INPUTFUNC( FIELD_STRING, "OnProxyRelay29",  InputProxyRelay29 ),
-	DEFINE_INPUTFUNC( FIELD_STRING, "OnProxyRelay30",  InputProxyRelay30 ),
-
-	// Outputs
-	DEFINE_OUTPUT( m_OnProxyRelay1, "OnProxyRelay1" ),
-	DEFINE_OUTPUT( m_OnProxyRelay2, "OnProxyRelay2" ),
-	DEFINE_OUTPUT( m_OnProxyRelay3, "OnProxyRelay3" ),
-	DEFINE_OUTPUT( m_OnProxyRelay4, "OnProxyRelay4" ),
-	DEFINE_OUTPUT( m_OnProxyRelay5, "OnProxyRelay5" ),
-	DEFINE_OUTPUT( m_OnProxyRelay6, "OnProxyRelay6" ),
-	DEFINE_OUTPUT( m_OnProxyRelay7, "OnProxyRelay7" ),
-	DEFINE_OUTPUT( m_OnProxyRelay8, "OnProxyRelay8" ),
-	DEFINE_OUTPUT( m_OnProxyRelay9, "OnProxyRelay9" ),
-	DEFINE_OUTPUT( m_OnProxyRelay10, "OnProxyRelay10" ),
-	DEFINE_OUTPUT( m_OnProxyRelay11, "OnProxyRelay11" ),
-	DEFINE_OUTPUT( m_OnProxyRelay12, "OnProxyRelay12" ),
-	DEFINE_OUTPUT( m_OnProxyRelay13, "OnProxyRelay13" ),
-	DEFINE_OUTPUT( m_OnProxyRelay14, "OnProxyRelay14" ),
-	DEFINE_OUTPUT( m_OnProxyRelay15, "OnProxyRelay15" ),
-	DEFINE_OUTPUT( m_OnProxyRelay16, "OnProxyRelay16" ),	
-	DEFINE_OUTPUT( m_OnProxyRelay16, "OnProxyRelay16" ),
-	DEFINE_OUTPUT( m_OnProxyRelay17, "OnProxyRelay17" ),
-	DEFINE_OUTPUT( m_OnProxyRelay18, "OnProxyRelay18" ),
-	DEFINE_OUTPUT( m_OnProxyRelay19, "OnProxyRelay19" ),
-	DEFINE_OUTPUT( m_OnProxyRelay20, "OnProxyRelay20" ),
-	DEFINE_OUTPUT( m_OnProxyRelay21, "OnProxyRelay21" ),
-	DEFINE_OUTPUT( m_OnProxyRelay22, "OnProxyRelay22" ),
-	DEFINE_OUTPUT( m_OnProxyRelay23, "OnProxyRelay23" ),
-	DEFINE_OUTPUT( m_OnProxyRelay24, "OnProxyRelay24" ),
-	DEFINE_OUTPUT( m_OnProxyRelay25, "OnProxyRelay25" ),
-	DEFINE_OUTPUT( m_OnProxyRelay26, "OnProxyRelay26" ),
-	DEFINE_OUTPUT( m_OnProxyRelay27, "OnProxyRelay27" ),
-	DEFINE_OUTPUT( m_OnProxyRelay28, "OnProxyRelay28" ),
-	DEFINE_OUTPUT( m_OnProxyRelay29, "OnProxyRelay29" ),
-	DEFINE_OUTPUT( m_OnProxyRelay30, "OnProxyRelay30" ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CFuncInstanceIoProxy )
 
 //------------------------------------------------------------------------------
 // Purpose : Route the incomming to the outgoing proxy messages. 

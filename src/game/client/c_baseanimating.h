@@ -8,6 +8,9 @@
 #ifndef C_BASEANIMATING_H
 #define C_BASEANIMATING_H
 
+#include "reflect_annotations.h"
+#include "dt_recv.h"
+
 #ifdef _WIN32
 #pragma once
 #endif
@@ -102,7 +105,15 @@ typedef unsigned int			ClientSideAnimationListHandle_t;
 
 #define		INVALID_CLIENTSIDEANIMATION_LIST_HANDLE	(ClientSideAnimationListHandle_t)~0
 
-class C_BaseAnimating : public C_BaseEntity, public CCustomMaterialOwner
+namespace DT_ServerAnimationData { extern RecvTable g_RecvTable; }
+void RecvProxy_Sequence( const CRecvProxyData *pData, void *pStruct, void *pOut );
+
+class [[= ks::reflect::NetTable{ .name = "DT_ServerAnimationData", .base = false } ]]
+      [[= ks::reflect::From<"m_flCycle", ks::reflect::Net{ .table = "DT_ServerAnimationData" }>{} ]]
+      [[= ks::reflect::NetTable{ .name = "DT_BaseAnimating" } ]]
+      [[= ks::reflect::From<"m_bClientSideRagdoll", ks::reflect::Net{}>{} ]]
+      [[= ks::reflect::SubTable<"serveranimdata", &DT_ServerAnimationData::g_RecvTable, nullptr, false>{} ]]
+      C_BaseAnimating : public C_BaseEntity, public CCustomMaterialOwner
 {
 public:
 	DECLARE_CLASS( C_BaseAnimating, C_BaseEntity );
@@ -583,7 +594,7 @@ public:
 	CBaseAnimating					*m_pClientsideRagdoll;
 
 	// Hitbox set to use (default 0)
-	int								m_nHitboxSet;
+	[[= ks::reflect::Net{} ]] int								m_nHitboxSet;
 
 	CSequenceTransitioner			m_SequenceTransitioner;
 private:
@@ -597,12 +608,12 @@ protected:
 	// can assign it to values far out of range. Interpolation vars will only
 	// clamp range checked vars.
 	CRangeCheckedVar<float, -2, 2, 0>		m_flCycle;
-	float							m_flPlaybackRate;// Animation playback framerate
+	[[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE | FTYPEDESC_NOERRORCHECK } ]] [[= ks::reflect::Net{} ]] float							m_flPlaybackRate;// Animation playback framerate
 
 // FTYPEDESC_INSENDTABLE STUFF (end)
 public:
-	int								m_nSkin;// Texture group to use
-	int								m_nBody;// Object bodygroup
+	[[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] [[= ks::reflect::Net{} ]] int								m_nSkin;// Texture group to use
+	[[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] [[= ks::reflect::Net{} ]] int								m_nBody;// Object bodygroup
 
 	int								m_nCustomBlendingRuleMask;
 
@@ -618,15 +629,15 @@ public:
 	float							m_flDistanceFromCamera;
 
 protected:
-	int								m_nNewSequenceParity;
-	int								m_nResetEventsParity;
+	[[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE | FTYPEDESC_NOERRORCHECK } ]] [[= ks::reflect::Net{} ]] int								m_nNewSequenceParity;
+	[[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE | FTYPEDESC_NOERRORCHECK } ]] [[= ks::reflect::Net{} ]] int								m_nResetEventsParity;
 	int								m_nPrevNewSequenceParity;
 	int								m_nPrevResetEventsParity;
 
-	float							m_flEncodedController[MAXSTUDIOBONECTRLS];	
+	[[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE, .tolerance = 0.02f } ]] [[= ks::reflect::Net{} ]] float							m_flEncodedController[MAXSTUDIOBONECTRLS];	
 private:
 	// This is compared against m_nOldMuzzleFlashParity to determine if the entity should muzzle flash.
-	unsigned char					m_nMuzzleFlashParity;
+	[[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] [[= ks::reflect::Net{} ]] unsigned char					m_nMuzzleFlashParity;
 // END PREDICTION DATA COMPACTION
 
 	bool							ShouldSkipAnimationFrame( float currentTime );
@@ -644,8 +655,8 @@ protected:
 	// Decomposed ragdoll info
 	bool							m_bStoreRagdollInfo;
 	RagdollInfo_t					*m_pRagdollInfo;
-	Vector							m_vecForce;
-	int								m_nForceBone;
+	[[= ks::reflect::Net{} ]] Vector							m_vecForce;
+	[[= ks::reflect::Net{} ]] int								m_nForceBone;
 
 	// Is bone cache valid
 	// bone transformation matrix
@@ -664,7 +675,7 @@ protected:
 	ClientSideAnimationListHandle_t	m_ClientSideAnimationListHandle;
 
 	// Client-side animation
-	bool							m_bClientSideFrameReset;
+	[[= ks::reflect::Net{ .enc = ks::reflect::ENC_INT } ]] bool							m_bClientSideFrameReset;
 
 	// Bone attachments. Used for attaching one BaseAnimating to another's bones.
 	// Client side only.
@@ -676,7 +687,7 @@ protected:
 
 protected:
 
-	float							m_flFrozen;
+	[[= ks::reflect::Net{} ]] float							m_flFrozen;
 
 	// Can we use the fast rendering path?
 	bool							m_bCanUseFastPath;
@@ -692,8 +703,8 @@ private:
 	// Mouth lipsync/envelope following values
 	CMouthInfo						m_mouth;
 
-	CNetworkVar( float, m_flModelScale );
-	CNetworkVar( ModelScaleType_t, m_ScaleType );
+	CNetworkVar( float, m_flModelScale, [[= ks::reflect::Net{} ]] );
+	CNetworkVar( ModelScaleType_t, m_ScaleType, [[= ks::reflect::Net{} ]] );
 
 	// Ropes that got spawned when the model was created.
 	CUtlLinkedList<C_RopeKeyframe*,unsigned short> m_Ropes;
@@ -703,7 +714,7 @@ private:
 	int								m_nEventSequence;
 
 	// Animation blending factors
-	float							m_flPoseParameter[MAXSTUDIOPOSEPARAM];
+	[[= ks::reflect::Net{} ]] float							m_flPoseParameter[MAXSTUDIOPOSEPARAM];
 	CInterpolatedVarArray< float, MAXSTUDIOPOSEPARAM >		m_iv_flPoseParameter;
 	float							m_flOldPoseParameters[MAXSTUDIOPOSEPARAM];
 
@@ -711,7 +722,7 @@ private:
 	float							m_flOldEncodedController[MAXSTUDIOBONECTRLS];
 
 	// Clientside animation
-	bool							m_bClientSideAnimation;
+	[[= ks::reflect::Net{ .enc = ks::reflect::ENC_INT } ]] bool							m_bClientSideAnimation;
 	bool							m_bLastClientSideFrameReset;
 
 	Vector							m_vecPreRagdollMins;
@@ -721,7 +732,7 @@ private:
 	bool							m_bIsStaticProp;
 
 	// Current animation sequence
-	int								m_nSequence;
+	[[= ks::reflect::Net{} ]] [[= ks::reflect::Proxy<RecvProxy_Sequence, ks::reflect::WIRE_RECV>{} ]] int								m_nSequence;
 
 	// Current cycle location from server
 protected:
@@ -758,7 +769,7 @@ private:
 	CUtlVector<CAttachmentData>		m_Attachments;
 
 	void							SetupBones_AttachmentHelper( CStudioHdr *pStudioHdr );
-	EHANDLE							m_hLightingOrigin;
+	[[= ks::reflect::Net{} ]] EHANDLE							m_hLightingOrigin;
 
 	unsigned char					m_nOldMuzzleFlashParity;
 
@@ -767,7 +778,7 @@ private:
 	static bool						m_bBoneListInUse;
 	static CBoneList				m_recordingBoneList;
 
-	bool							m_bSuppressAnimSounds;
+	[[= ks::reflect::Net{} ]] bool							m_bSuppressAnimSounds;
 
 private:
 	mutable CStudioHdr				*m_pStudioHdr;
@@ -804,7 +815,6 @@ public:
 	C_ClientRagdoll( bool bRestoring = true , bool fullInit = true);
 public:
 	DECLARE_CLASS( C_ClientRagdoll, C_BaseAnimating );
-	DECLARE_DATADESC();
 
 	// inherited from IClientUnknown
 	virtual IClientModelRenderable*	GetClientModelRenderable();

@@ -7,6 +7,8 @@
 
 #ifndef TRIGGERS_H
 #define TRIGGERS_H
+
+#include "reflect_annotations.h"
 #ifdef _WIN32
 #pragma once
 #endif
@@ -20,7 +22,9 @@
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-class CBaseTrigger : public CBaseToggle
+class [[= ks::reflect::NetTable{ .name = "DT_BaseTrigger" } ]]
+      [[= ks::reflect::From<"m_spawnflags", ks::reflect::Net{ .bits = -1, .flags = SPROP_NOSCALE }>{} ]]
+      CBaseTrigger : public CBaseToggle
 {
 	DECLARE_CLASS( CBaseTrigger, CBaseToggle );
 	DECLARE_SERVERCLASS();
@@ -39,13 +43,13 @@ public:
 	void TouchTest(  void );
 
 	// Input handlers
-	virtual void InputEnable( inputdata_t &inputdata );
-	virtual void InputDisable( inputdata_t &inputdata );
-	virtual void InputToggle( inputdata_t &inputdata );
-	virtual void InputTouchTest ( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Enable", .type = FIELD_VOID } ]] virtual void InputEnable( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Disable", .type = FIELD_VOID } ]] virtual void InputDisable( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Toggle", .type = FIELD_VOID } ]] virtual void InputToggle( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "TouchTest", .type = FIELD_VOID } ]] virtual void InputTouchTest ( inputdata_t &inputdata );
 
-	virtual void InputStartTouch( inputdata_t &inputdata );
-	virtual void InputEndTouch( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "StartTouch", .type = FIELD_VOID } ]] virtual void InputStartTouch( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "EndTouch", .type = FIELD_VOID } ]] virtual void InputEndTouch( inputdata_t &inputdata );
 
 	virtual bool UsesFilter( void ){ return ( m_hFilter.Get() != NULL ); }
 	virtual bool PassesTriggerFilters(CBaseEntity *pOther);
@@ -64,8 +68,8 @@ public:
 	// by default, triggers don't deal with TraceAttack
 	void TraceAttack(CBaseEntity *pAttacker, float flDamage, const Vector &vecDir, trace_t *ptr, int bitsDamageType) {}
 
-	CNetworkVarForDerived( bool, m_bDisabled );
-	string_t	m_iFilterName;
+	CNetworkVarForDerived( bool, m_bDisabled, [[= ks::reflect::Key{ .name = "StartDisabled" } ]] );
+	[[= ks::reflect::Key{ .name = "filtername" } ]] string_t	m_iFilterName;
 	CHandle<class CBaseFilter>	m_hFilter;
 
 	const CUtlVector< EHANDLE > *GetTouchingEntities( void ) const
@@ -76,12 +80,12 @@ public:
 protected:
 
 	// Outputs
-	COutputEvent m_OnStartTouch;
-	COutputEvent m_OnStartTouchAll;
-	COutputEvent m_OnEndTouch;
-	COutputEvent m_OnEndTouchAll;
-	COutputEvent m_OnTouching;
-	COutputEvent m_OnNotTouching;
+	[[= ks::reflect::Key{ .name = "OnStartTouch" } ]] COutputEvent m_OnStartTouch;
+	[[= ks::reflect::Key{ .name = "OnStartTouchAll" } ]] COutputEvent m_OnStartTouchAll;
+	[[= ks::reflect::Key{ .name = "OnEndTouch" } ]] COutputEvent m_OnEndTouch;
+	[[= ks::reflect::Key{ .name = "OnEndTouchAll" } ]] COutputEvent m_OnEndTouchAll;
+	[[= ks::reflect::Key{ .name = "OnTouching" } ]] COutputEvent m_OnTouching;
+	[[= ks::reflect::Key{ .name = "OnNotTouching" } ]] COutputEvent m_OnNotTouching;
 
 	// Entities currently being touched by this trigger
 	CUtlVector< EHANDLE >	m_hTouchingEntities;
@@ -89,7 +93,7 @@ protected:
 	DECLARE_DATADESC();
 
 	// True if trigger participates in client side prediction
-	CNetworkVar( bool, m_bClientSidePredicted );
+	CNetworkVar( bool, m_bClientSidePredicted, [[= ks::reflect::Net{} ]] );
 };
 
 //-----------------------------------------------------------------------------
@@ -109,7 +113,7 @@ public:
 	DECLARE_DATADESC();
 
 	// Outputs
-	COutputEvent m_OnTrigger;
+	[[= ks::reflect::Key{ .name = "OnTrigger" } ]] COutputEvent m_OnTrigger;
 };
 
 // Global list of triggers that care about weapon fire
@@ -123,7 +127,8 @@ extern CUtlVector< CHandle<CTriggerMultiple> >	g_hWeaponFireTriggers;
 //------------------------------------------------------------------------------
 #define SF_VPHYSICS_MOTION_MOVEABLE	0x1000
 
-class CBaseVPhysicsTrigger : public CBaseEntity
+class [[= ks::reflect::NetTable{ .name = "DT_BaseVPhysicsTrigger" } ]]
+      CBaseVPhysicsTrigger : public CBaseEntity
 {
 	DECLARE_CLASS( CBaseVPhysicsTrigger , CBaseEntity );
 	DECLARE_SERVERCLASS();
@@ -143,14 +148,14 @@ public:
 	virtual void StartTouch( CBaseEntity *pOther );
 	virtual void EndTouch( CBaseEntity *pOther );
 
-	void InputToggle( inputdata_t &inputdata );
-	void InputEnable( inputdata_t &inputdata );
-	void InputDisable( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Toggle", .type = FIELD_VOID } ]] void InputToggle( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Enable", .type = FIELD_VOID } ]] void InputEnable( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Disable", .type = FIELD_VOID } ]] void InputDisable( inputdata_t &inputdata );
 	
 
 protected:
-	CNetworkVarForDerived( bool, m_bDisabled );
-	string_t					m_iFilterName;
+	CNetworkVarForDerived( bool, m_bDisabled, [[= ks::reflect::Key{ .name = "StartDisabled" } ]] );
+	[[= ks::reflect::Key{ .name = "filtername" } ]] string_t					m_iFilterName;
 	CHandle<class CBaseFilter>	m_hFilter;
 };
 
@@ -182,13 +187,13 @@ public:
 	DECLARE_DATADESC();
 
 	float	m_flOriginalDamage;	// Damage as specified by the level designer.
-	float	m_flDamage;			// Damage per second.
-	float	m_flDamageCap;		// Maximum damage per second.
+	[[= ks::reflect::Key{ .name = "damage" } ]] [[= ks::reflect::Key{ .name = "SetDamage", .input = true } ]] float	m_flDamage;			// Damage per second.
+	[[= ks::reflect::Key{ .name = "damagecap" } ]] float	m_flDamageCap;		// Maximum damage per second.
 	float	m_flLastDmgTime;	// Time that we last applied damage.
 	float	m_flDmgResetTime;	// For forgiveness, the time to reset the counter that accumulates damage.
-	int		m_bitsDamageInflict;	// DMG_ damage type that the door or tigger does
-	int		m_damageModel;
-	bool	m_bNoDmgForce;		// Should damage from this trigger impart force on what it's hurting
+	[[= ks::reflect::Key{ .name = "damagetype" } ]] int		m_bitsDamageInflict;	// DMG_ damage type that the door or tigger does
+	[[= ks::reflect::Key{ .name = "damagemodel" } ]] int		m_damageModel;
+	[[= ks::reflect::Key{ .name = "nodmgforce" } ]] bool	m_bNoDmgForce;		// Should damage from this trigger impart force on what it's hurting
 
 	enum
 	{
@@ -197,8 +202,8 @@ public:
 	};
 
 	// Outputs
-	COutputEvent m_OnHurt;
-	COutputEvent m_OnHurtPlayer;
+	[[= ks::reflect::Key{ .name = "OnHurt" } ]] COutputEvent m_OnHurt;
+	[[= ks::reflect::Key{ .name = "OnHurtPlayer" } ]] COutputEvent m_OnHurtPlayer;
 
 	CUtlVector<EHANDLE>	m_hurtEntities;
 };
@@ -273,19 +278,19 @@ public:
 	DECLARE_DATADESC();
 
 	// Input handlers
-	void InputEnable( inputdata_t &inputdata );
-	void InputDisable( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Enable", .type = FIELD_VOID } ]] void InputEnable( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Disable", .type = FIELD_VOID } ]] void InputDisable( inputdata_t &inputdata );
 
-	void InputSetTarget( inputdata_t &inputdata );
-	void InputSetTargetAttachment( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetTarget", .type = FIELD_STRING } ]] void InputSetTarget( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetTargetAttachment", .type = FIELD_STRING } ]] void InputSetTargetAttachment( inputdata_t &inputdata );
 
-	void InputReturnToEyes( inputdata_t &inputdata );
-	void InputTeleportToView( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "ReturnToEyes", .type = FIELD_VOID } ]] void InputReturnToEyes( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "TeleportToView", .type = FIELD_VOID } ]] void InputTeleportToView( inputdata_t &inputdata );
 	
 
-	void InputSetTrackSpeed( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetTrackSpeed", .type = FIELD_FLOAT } ]] void InputSetTrackSpeed( inputdata_t &inputdata );
 
-	void InputSetPath( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetPath", .type = FIELD_STRING } ]] void InputSetPath( inputdata_t &inputdata );
 
 private:
 	EHANDLE m_hPlayer;
@@ -305,11 +310,11 @@ private:
 	int	  m_state;
 	Vector m_vecMoveDir;
 
-	float m_fov;
-	float m_fovSpeed;
-	float m_trackSpeed;
+	[[= ks::reflect::Key{ .name = "fov" } ]] float m_fov;
+	[[= ks::reflect::Key{ .name = "fov_rate" } ]] float m_fovSpeed;
+	[[= ks::reflect::Key{ .name = "trackspeed" } ]] float m_trackSpeed;
 
-	string_t m_iszTargetAttachment;
+	[[= ks::reflect::Key{ .name = "targetattachment" } ]] string_t m_iszTargetAttachment;
 	int	  m_iAttachmentIndex;
 	bool  m_bSnapToGoal;
 
@@ -327,7 +332,7 @@ private:
 	int m_nOldTakeDamage;
 
 private:
-	COutputEvent m_OnEndFollow;
+	[[= ks::reflect::Key{ .name = "OnEndFollow" } ]] COutputEvent m_OnEndFollow;
 };
 
 //-----------------------------------------------------------------------------
@@ -355,34 +360,34 @@ public:
 	DECLARE_DATADESC();
 
 	// Input handlers
-	void InputEnable( inputdata_t &inputdata );
-	void InputDisable( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Enable", .type = FIELD_VOID } ]] void InputEnable( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Disable", .type = FIELD_VOID } ]] void InputDisable( inputdata_t &inputdata );
 
-	void InputTeleportPlayerToProxy( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "TeleportPlayerToProxy", .type = FIELD_VOID } ]] void InputTeleportPlayerToProxy( inputdata_t &inputdata );
 
 
 private:
 	EHANDLE m_hPlayer;
 
 	CBaseEntity *m_pProxy;
-	string_t m_sProxy;
-	string_t m_sProxyAttachment;
+	[[= ks::reflect::Key{ .name = "proxy" } ]] string_t m_sProxy;
+	[[= ks::reflect::Key{ .name = "proxyattachment" } ]] string_t m_sProxyAttachment;
 	int m_nParentAttachment;
 	int	m_state;
-	int	m_nOffsetType;
+	[[= ks::reflect::Key{ .name = "offsettype" } ]] int	m_nOffsetType;
 	Vector m_vecInitialPosition;
 	Vector m_vecLastPosition;
 	Vector m_vecLastVelocity;
 	Vector m_vecInitialOffset;
 
-	float m_flTiltFraction;
+	[[= ks::reflect::Key{ .name = "tiltfraction" } ]] float m_flTiltFraction;
 	float m_flStartTime;
 
-	bool m_bUseFakeAcceleration;
-	bool m_bSkewAccelerationForward;
-	float m_flAccelerationScalar;
+	[[= ks::reflect::Key{ .name = "usefakeacceleration" } ]] bool m_bUseFakeAcceleration;
+	[[= ks::reflect::Key{ .name = "skewaccelerationforward" } ]] bool m_bSkewAccelerationForward;
+	[[= ks::reflect::Key{ .name = "accelerationscalar" } ]] float m_flAccelerationScalar;
 
-	bool m_bEaseAnglesToCamera;
+	[[= ks::reflect::Key{ .name = "easeanglestocamera" } ]] bool m_bEaseAnglesToCamera;
 
 	int m_nPlayerButtons;
 	int m_nOldTakeDamage;

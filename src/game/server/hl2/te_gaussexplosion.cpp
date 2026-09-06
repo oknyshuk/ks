@@ -5,6 +5,8 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_sendtable.h"
+#include "reflect_annotations.h"
 #include "te_particlesystem.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
@@ -14,7 +16,8 @@
 // Gauss explosion
 //=============================================================================
 
-class CTEGaussExplosion : public CTEParticleSystem
+class [[= ks::reflect::NetTable{ .name = "DT_TEGaussExplosion" } ]]
+      CTEGaussExplosion : public CTEParticleSystem
 {
 public:
 	DECLARE_CLASS( CTEGaussExplosion, CTEParticleSystem );
@@ -25,8 +28,8 @@ public:
 
 	virtual void	Test( const Vector& current_origin, const QAngle& current_angles ) { };
 
-	CNetworkVar( int, m_nType );
-	CNetworkVector( m_vecDirection );
+	CNetworkVar( int, m_nType, [[= ks::reflect::Net{ .bits = 2, .flags = SPROP_UNSIGNED } ]] );
+	CNetworkVector( m_vecDirection, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD, .enc = ks::reflect::ENC_VECTOR } ]] );
 };
 
 
@@ -40,10 +43,7 @@ CTEGaussExplosion::~CTEGaussExplosion( void )
 {
 }
 
-IMPLEMENT_SERVERCLASS_ST( CTEGaussExplosion, DT_TEGaussExplosion )
-	SendPropInt( SENDINFO(m_nType), 2, SPROP_UNSIGNED ),
-	SendPropVector( SENDINFO(m_vecDirection), -1, SPROP_COORD ),
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CTEGaussExplosion, DT_TEGaussExplosion )
 
 static CTEGaussExplosion g_TEGaussExplosion( "GaussExplosion" );
 

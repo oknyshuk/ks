@@ -6,6 +6,8 @@
 //
 //=============================================================================//
 #include "cbase.h"
+#include "reflect_sendtable.h"
+#include "reflect_annotations.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -14,7 +16,14 @@
 // An entity used to test traceline
 // -------------------------------------------------------------------------------- //
 
-class CTestTraceline : public CPointEntity
+class [[= ks::reflect::NetTable{ .name = "DT_TestTraceline", .base = false } ]]
+      [[= ks::reflect::From<"m_clrRender", ks::reflect::Net{ .bits = 32, .flags = SPROP_UNSIGNED }, SendProxy_Color32ToInt32>{} ]]
+      [[= ks::reflect::From<"m_vecOrigin", ks::reflect::Net{ .bits = 19, .low = MIN_COORD_INTEGER, .high = MAX_COORD_INTEGER, .enc = ks::reflect::ENC_VECTOR }>{} ]]
+      [[= ks::reflect::From<"m_angRotation", ks::reflect::Net{ .bits = 19, .low = MIN_COORD_INTEGER, .high = MAX_COORD_INTEGER, .enc = ks::reflect::ENC_FLOAT, .index = 0 }>{} ]]
+      [[= ks::reflect::From<"m_angRotation", ks::reflect::Net{ .bits = 19, .low = MIN_COORD_INTEGER, .high = MAX_COORD_INTEGER, .enc = ks::reflect::ENC_FLOAT, .index = 1 }>{} ]]
+      [[= ks::reflect::From<"m_angRotation", ks::reflect::Net{ .bits = 19, .low = MIN_COORD_INTEGER, .high = MAX_COORD_INTEGER, .enc = ks::reflect::ENC_FLOAT, .index = 2 }>{} ]]
+      [[= ks::reflect::From<"m_hMoveParent", ks::reflect::Net{ .wire = "moveparent" }>{} ]]
+      CTestTraceline : public CPointEntity
 {
 public:
 	DECLARE_CLASS( CTestTraceline, CPointEntity );
@@ -23,7 +32,6 @@ public:
 	int  	UpdateTransmitState();
 
 	DECLARE_SERVERCLASS();
-	DECLARE_DATADESC();
 
 private:
 	void	Spin( void );
@@ -31,23 +39,10 @@ private:
 							  
 
 // This table encodes the CBaseEntity data.
-IMPLEMENT_SERVERCLASS_ST_NOBASE(CTestTraceline, DT_TestTraceline)
-	SendPropInt		(SENDINFO(m_clrRender),	32, SPROP_UNSIGNED, SendProxy_Color32ToInt32 ),
-	SendPropVector (SENDINFO(m_vecOrigin), 19, 0,	MIN_COORD_INTEGER, MAX_COORD_INTEGER),
-	SendPropFloat	(SENDINFO_VECTORELEM(m_angRotation, 0), 19, 0,	MIN_COORD_INTEGER, MAX_COORD_INTEGER),
-	SendPropFloat	(SENDINFO_VECTORELEM(m_angRotation, 1), 19, 0,	MIN_COORD_INTEGER, MAX_COORD_INTEGER),
-	SendPropFloat	(SENDINFO_VECTORELEM(m_angRotation, 2), 19, 0,	MIN_COORD_INTEGER, MAX_COORD_INTEGER),
-	SendPropEHandle (SENDINFO_NAME(m_hMoveParent, moveparent)),
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CTestTraceline, DT_TestTraceline )
 
 LINK_ENTITY_TO_CLASS( test_traceline, CTestTraceline );
 
-BEGIN_DATADESC( CTestTraceline )
-
-	// Function Pointers
-	DEFINE_FUNCTION( Spin ),
-
-END_DATADESC()
 
 
 void	CTestTraceline::Spawn( void )

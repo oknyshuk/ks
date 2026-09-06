@@ -11,6 +11,8 @@
 // $NoKeywords: $
 //=============================================================================//
 #include "cbase.h"
+#include "reflect_sendtable.h"
+#include "reflect_annotations.h"
 #include "basetempentity.h"
 #include "te_basebeam.h"
 
@@ -22,7 +24,8 @@ extern int	g_sModelIndexSmoke;			// (in combatweapon.cpp) holds the index for th
 //-----------------------------------------------------------------------------
 // Purpose: Dispatches a beam between two entities
 //-----------------------------------------------------------------------------
-class CTEBeamEnts : public CTEBaseBeam
+class [[= ks::reflect::NetTable{ .name = "DT_TEBeamEnts" } ]]
+      CTEBeamEnts : public CTEBaseBeam
 {
 public:
 	DECLARE_CLASS( CTEBeamEnts, CTEBaseBeam );
@@ -35,8 +38,8 @@ public:
 
 
 public:
-	CNetworkVar( int, m_nStartEntity );
-	CNetworkVar( int, m_nEndEntity );
+	CNetworkVar( int, m_nStartEntity, [[= ks::reflect::Net{ .bits = 24, .flags = SPROP_UNSIGNED } ]] );
+	CNetworkVar( int, m_nEndEntity, [[= ks::reflect::Net{ .bits = 24, .flags = SPROP_UNSIGNED } ]] );
 };
 
 //-----------------------------------------------------------------------------
@@ -83,10 +86,7 @@ void CTEBeamEnts::Test( const Vector& current_origin, const QAngle& current_angl
 	Create( filter, 0.0 );
 }
 
-IMPLEMENT_SERVERCLASS_ST(CTEBeamEnts, DT_TEBeamEnts)
-	SendPropInt( SENDINFO(m_nStartEntity), 24, SPROP_UNSIGNED ),
-	SendPropInt( SENDINFO(m_nEndEntity), 24, SPROP_UNSIGNED ),
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CTEBeamEnts, DT_TEBeamEnts )
 
 
 // Singleton to fire TEBeamEnts objects

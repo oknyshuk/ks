@@ -5,6 +5,8 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_annotations.h"
 #include "animation.h"
 #include "flex_expresser.h"
 #include "entitylist.h"
@@ -240,9 +242,6 @@ CFlexExpresser * CFlexExpresser::AsFlexExpresser( CBaseEntity *pEntity )
 }
 
 
-BEGIN_DATADESC( CFlexExpresser )
-DEFINE_INPUTFUNC( FIELD_STRING,	"SpeakResponseConcept",	InputSpeakResponseConcept ),
-DEFINE_KEYFIELD( m_flThenAnyMaxDist, FIELD_FLOAT, "maxThenAnyDispatchDist" ),
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CFlexExpresser )
 
 LINK_ENTITY_TO_CLASS( prop_talker , CFlexExpresser ); 

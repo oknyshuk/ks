@@ -5,6 +5,8 @@
 // $NoKeywords: $
 //===========================================================================//
 #include "cbase.h"
+#include "reflect_recvtable.h"
+#include "reflect_annotations.h"
 #include "c_basetempentity.h"
 #include "IEffects.h"
 #include "tier1/keyvalues.h"
@@ -18,7 +20,8 @@
 //-----------------------------------------------------------------------------
 // Purpose: User Tracer TE
 //-----------------------------------------------------------------------------
-class C_TEMuzzleFlash : public C_BaseTempEntity
+class [[= ks::reflect::NetTable{ .name = "DT_TEMuzzleFlash" } ]]
+      C_TEMuzzleFlash : public C_BaseTempEntity
 {
 public:
 	DECLARE_CLASS( C_TEMuzzleFlash, C_BaseTempEntity );
@@ -31,10 +34,10 @@ public:
 	virtual void	PostDataUpdate( DataUpdateType_t updateType );
 
 public:
-	Vector		m_vecOrigin;
-	QAngle		m_vecAngles;
-	float		m_flScale;
-	int			m_nType;
+	[[= ks::reflect::Net{} ]] Vector		m_vecOrigin;
+	[[= ks::reflect::Net{} ]] QAngle		m_vecAngles;
+	[[= ks::reflect::Net{} ]] float		m_flScale;
+	[[= ks::reflect::Net{} ]] int			m_nType;
 };
 
 //-----------------------------------------------------------------------------
@@ -104,9 +107,4 @@ void TE_MuzzleFlash( IRecipientFilter& filter, float delay,
 	RecordMuzzleFlash( start, angles, scale, 0 ); 
 }
 
-IMPLEMENT_CLIENTCLASS_EVENT_DT(C_TEMuzzleFlash, DT_TEMuzzleFlash, CTEMuzzleFlash)
-	RecvPropVector( RECVINFO(m_vecOrigin)),
-	RecvPropVector( RECVINFO(m_vecAngles)),
-	RecvPropFloat( RECVINFO(m_flScale)),
-	RecvPropInt( RECVINFO(m_nType)),
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS_EVENT( C_TEMuzzleFlash, DT_TEMuzzleFlash, CTEMuzzleFlash )

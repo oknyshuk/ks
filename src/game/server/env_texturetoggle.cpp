@@ -5,6 +5,8 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_annotations.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -14,8 +16,8 @@ class CTextureToggle : public CPointEntity
 public:
 	DECLARE_CLASS( CTextureToggle, CPointEntity );
 
-	void	InputIncrementBrushTexIndex( inputdata_t &inputdata );
-	void	InputSetBrushTexIndex( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "IncrementTextureIndex", .type = FIELD_VOID } ]] void	InputIncrementBrushTexIndex( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetTextureIndex", .type = FIELD_INTEGER } ]] void	InputSetBrushTexIndex( inputdata_t &inputdata );
 
 private:
 	
@@ -24,12 +26,7 @@ private:
 
 LINK_ENTITY_TO_CLASS( env_texturetoggle, CTextureToggle );
 
-BEGIN_DATADESC( CTextureToggle )
-
-	DEFINE_INPUTFUNC( FIELD_VOID, "IncrementTextureIndex", InputIncrementBrushTexIndex ),
-	DEFINE_INPUTFUNC( FIELD_INTEGER, "SetTextureIndex", InputSetBrushTexIndex ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CTextureToggle )
 
 //-----------------------------------------------------------------------------
 // Purpose: 

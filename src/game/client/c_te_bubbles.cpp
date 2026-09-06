@@ -7,6 +7,8 @@
 // $NoKeywords: $
 //=============================================================================//
 #include "cbase.h"
+#include "reflect_recvtable.h"
+#include "reflect_annotations.h"
 #include "c_basetempentity.h"
 #include "c_te_legacytempents.h"
 #include "tier0/vprof.h"
@@ -17,7 +19,8 @@
 //-----------------------------------------------------------------------------
 // Purpose: Bubbles TE
 //-----------------------------------------------------------------------------
-class C_TEBubbles : public C_BaseTempEntity
+class [[= ks::reflect::NetTable{ .name = "DT_TEBubbles" } ]]
+      C_TEBubbles : public C_BaseTempEntity
 {
 public:
 	DECLARE_CLASS( C_TEBubbles, C_BaseTempEntity );
@@ -29,12 +32,12 @@ public:
 	virtual void	PostDataUpdate( DataUpdateType_t updateType );
 
 public:
-	Vector			m_vecMins;
-	Vector			m_vecMaxs;
-	float			m_fHeight;
-	int				m_nModelIndex;
-	int				m_nCount;
-	float			m_fSpeed;
+	[[= ks::reflect::Net{} ]] Vector			m_vecMins;
+	[[= ks::reflect::Net{} ]] Vector			m_vecMaxs;
+	[[= ks::reflect::Net{} ]] float			m_fHeight;
+	[[= ks::reflect::Net{} ]] int				m_nModelIndex;
+	[[= ks::reflect::Net{} ]] int				m_nCount;
+	[[= ks::reflect::Net{} ]] float			m_fSpeed;
 };
 
 //-----------------------------------------------------------------------------
@@ -74,12 +77,5 @@ void C_TEBubbles::PostDataUpdate( DataUpdateType_t updateType )
 	tempents->Bubbles( m_vecMins, m_vecMaxs, m_fHeight, m_nModelIndex, m_nCount, m_fSpeed );
 }
 
-IMPLEMENT_CLIENTCLASS_EVENT_DT(C_TEBubbles, DT_TEBubbles, CTEBubbles)
-	RecvPropVector( RECVINFO(m_vecMins)),
-	RecvPropVector( RECVINFO(m_vecMaxs)),
-	RecvPropInt( RECVINFO(m_nModelIndex)),
-	RecvPropFloat( RECVINFO(m_fHeight )),
-	RecvPropInt( RECVINFO(m_nCount)),
-	RecvPropFloat( RECVINFO(m_fSpeed )),
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS_EVENT( C_TEBubbles, DT_TEBubbles, CTEBubbles )
 

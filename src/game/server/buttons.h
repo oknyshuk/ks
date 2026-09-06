@@ -6,12 +6,15 @@
 
 #ifndef BUTTONS_H
 #define BUTTONS_H
+
+#include "reflect_annotations.h"
 #ifdef _WIN32
 #pragma once
 #endif
 
 
-class CBaseButton : public CBaseToggle
+class [[= ks::reflect::NetTable{ .name = "DT_BaseButton" } ]]
+      CBaseButton : public CBaseToggle
 {
 public:
 
@@ -43,11 +46,11 @@ protected:
 	virtual void Unlock();
 
 	// Input handlers
-	void InputLock( inputdata_t &inputdata );
-	void InputUnlock( inputdata_t &inputdata );
-	void InputPress( inputdata_t &inputdata );
-	void InputPressIn( inputdata_t &inputdata );
-	void InputPressOut( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Lock", .type = FIELD_VOID } ]] void InputLock( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Unlock", .type = FIELD_VOID } ]] void InputUnlock( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Press", .type = FIELD_VOID } ]] void InputPress( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "PressIn", .type = FIELD_VOID } ]] void InputPressIn( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "PressOut", .type = FIELD_VOID } ]] void InputPressOut( inputdata_t &inputdata );
 
 	virtual int OnTakeDamage( const CTakeDamageInfo &info );
 	
@@ -60,7 +63,7 @@ protected:
 
 	virtual int	ObjectCaps(void);
 
-	Vector m_vecMoveDir;
+	[[= ks::reflect::Key{ .name = "movedir" } ]] Vector m_vecMoveDir;
 
 	bool	m_fStayPushed;		// button stays pushed in until touched again?
 	bool	m_fRotating;		// a rotating button?  default is a sliding button.
@@ -72,18 +75,18 @@ protected:
 	byte	m_bUnlockedSound;	
 	byte	m_bUnlockedSentence;
 	bool	m_bLocked;
-	int		m_sounds;
+	[[= ks::reflect::Key{ .name = "sounds" } ]] int		m_sounds;
 	float	m_flUseLockedTime;		// Controls how often we fire the OnUseLocked output.
 
 	bool	m_bSolidBsp;
 
 	string_t	m_sNoise;			// The actual WAV file name of the sound.
 
-	COutputEvent m_OnDamaged;
-	COutputEvent m_OnPressed;
-	COutputEvent m_OnUseLocked;
-	COutputEvent m_OnIn;
-	COutputEvent m_OnOut;
+	[[= ks::reflect::Key{ .name = "OnDamaged" } ]] COutputEvent m_OnDamaged;
+	[[= ks::reflect::Key{ .name = "OnPressed" } ]] COutputEvent m_OnPressed;
+	[[= ks::reflect::Key{ .name = "OnUseLocked" } ]] COutputEvent m_OnUseLocked;
+	[[= ks::reflect::Key{ .name = "OnIn" } ]] COutputEvent m_OnIn;
+	[[= ks::reflect::Key{ .name = "OnOut" } ]] COutputEvent m_OnOut;
 
 	int		m_nState;
 };
@@ -103,7 +106,8 @@ public:
 };
 
 
-class CMomentaryRotButton : public CRotButton
+class [[= ks::reflect::KeyFrom<"m_bSolidBsp", ks::reflect::Key{ .name = "solidbsp" } >{} ]]
+      CMomentaryRotButton : public CRotButton
 {
 	DECLARE_CLASS( CMomentaryRotButton, CRotButton );
 
@@ -133,24 +137,24 @@ public:
 	virtual void Unlock();
 
 	// Input handlers
-	void InputSetPosition( inputdata_t &inputdata );
-	void InputSetPositionImmediately( inputdata_t &inputdata );
-	void InputDisableUpdateTarget( inputdata_t &inputdata );
-	void InputEnableUpdateTarget( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetPosition", .type = FIELD_FLOAT } ]] void InputSetPosition( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetPositionImmediately", .type = FIELD_FLOAT } ]] void InputSetPositionImmediately( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "_DisableUpdateTarget", .type = FIELD_VOID } ]] void InputDisableUpdateTarget( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "_EnableUpdateTarget", .type = FIELD_VOID } ]] void InputEnableUpdateTarget( inputdata_t &inputdata );
 
-	void InputEnable( inputdata_t &inputdata );
-	void InputDisable( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Enable", .type = FIELD_VOID } ]] void InputEnable( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Disable", .type = FIELD_VOID } ]] void InputDisable( inputdata_t &inputdata );
 
 	virtual void Enable( void );
 	virtual void Disable( void );
 
 	bool	m_bDisabled;
 
-	COutputFloat m_Position;
-	COutputEvent m_OnUnpressed;
-	COutputEvent m_OnFullyOpen;
-	COutputEvent m_OnFullyClosed;
-	COutputEvent m_OnReachedPosition;
+	[[= ks::reflect::Key{ .name = "Position" } ]] COutputFloat m_Position;
+	[[= ks::reflect::Key{ .name = "OnUnpressed" } ]] COutputEvent m_OnUnpressed;
+	[[= ks::reflect::Key{ .name = "OnFullyOpen" } ]] COutputEvent m_OnFullyOpen;
+	[[= ks::reflect::Key{ .name = "OnFullyClosed" } ]] COutputEvent m_OnFullyClosed;
+	[[= ks::reflect::Key{ .name = "OnReachedPosition" } ]] COutputEvent m_OnReachedPosition;
 
 	int			m_lastUsed;
 	QAngle		m_start;
@@ -160,9 +164,9 @@ public:
 
 	bool		m_bUpdateTarget;		// Used when jiggling so that we don't jiggle the target (door, etc)
 
-	int			m_direction;
-	float		m_returnSpeed;
-	float		m_flStartPosition;
+	[[= ks::reflect::Key{ .name = "StartDirection" } ]] int			m_direction;
+	[[= ks::reflect::Key{ .name = "returnspeed" } ]] float		m_returnSpeed;
+	[[= ks::reflect::Key{ .name = "StartPosition" } ]] float		m_flStartPosition;
 
 protected:
 

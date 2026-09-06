@@ -8,6 +8,8 @@
 #ifndef ENV_WIND_SHARED_H
 #define ENV_WIND_SHARED_H
 
+#include "reflect_annotations.h"
+
 #include "utllinkedlist.h"
 #include "vstdlib/random.h"
 #include "tier0/dbg.h"
@@ -138,7 +140,20 @@ inline const T &CTimedEventQueue<T,I>::GetEventData( I i ) const
 //-----------------------------------------------------------------------------
 // Implementation of the class that computes windspeed
 //-----------------------------------------------------------------------------
-class CEnvWindShared
+class [[= ks::reflect::NetTable{ .name = "DT_EnvWindShared", .base = false } ]]
+      [[= ks::reflect::From<"m_iMinWind", ks::reflect::Net{ .bits = 10, .flags = SPROP_UNSIGNED }>{} ]]
+      [[= ks::reflect::From<"m_iMaxWind", ks::reflect::Net{ .bits = 10, .flags = SPROP_UNSIGNED }>{} ]]
+      [[= ks::reflect::From<"m_iMinGust", ks::reflect::Net{ .bits = 10, .flags = SPROP_UNSIGNED }>{} ]]
+      [[= ks::reflect::From<"m_iMaxGust", ks::reflect::Net{ .bits = 10, .flags = SPROP_UNSIGNED }>{} ]]
+      [[= ks::reflect::From<"m_flMinGustDelay", ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE }>{} ]]
+      [[= ks::reflect::From<"m_flMaxGustDelay", ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE }>{} ]]
+      [[= ks::reflect::From<"m_iGustDirChange", ks::reflect::Net{ .bits = 9, .flags = SPROP_UNSIGNED }>{} ]]
+      [[= ks::reflect::From<"m_iWindSeed", ks::reflect::Net{ .bits = 32, .flags = SPROP_UNSIGNED }>{} ]]
+      [[= ks::reflect::From<"m_iInitialWindDir", ks::reflect::Net{ .bits = 9, .flags = SPROP_UNSIGNED }>{} ]]
+      [[= ks::reflect::From<"m_flInitialWindSpeed", ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE }>{} ]]
+      [[= ks::reflect::From<"m_flStartTime", ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE }>{} ]]
+      [[= ks::reflect::From<"m_flGustDuration", ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE }>{} ]]
+      CEnvWindShared
 {
 public:
 	DECLARE_CLASS_NOBASE( CEnvWindShared );

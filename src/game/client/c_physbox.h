@@ -12,13 +12,16 @@
 
 #ifndef C_PHYSBOX_H
 #define C_PHYSBOX_H
+
+#include "reflect_annotations.h"
 #pragma once
 
 
 #include "c_baseentity.h"
 
 
-class C_PhysBox : public C_BaseEntity
+class [[= ks::reflect::NetTable{ .name = "DT_PhysBox" } ]]
+      C_PhysBox : public C_BaseEntity
 {
 public:
 	DECLARE_CLASS( C_PhysBox, C_BaseEntity );
@@ -29,7 +32,7 @@ public:
 	virtual ShadowType_t ShadowCastType();
 	
 public:
-	float			m_mass;	// TEST..
+	[[= ks::reflect::Net{} ]] float			m_mass;	// TEST..
 };
 
 

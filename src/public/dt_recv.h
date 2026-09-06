@@ -254,9 +254,6 @@ inline bool RecvTable::IsInMainList() const
 // ------------------------------------------------------------------------------------------------------ //
 // See notes on BEGIN_SEND_TABLE for a description. These macros work similarly.
 // ------------------------------------------------------------------------------------------------------ //
-#define BEGIN_RECV_TABLE(className, tableName) \
-	BEGIN_RECV_TABLE_NOBASE(className, tableName) \
-		RecvPropDataTable("baseclass", 0, 0, className::BaseClass::m_pClassRecvTable, DataTableRecvProxy_StaticDataTable),
 
 #define BEGIN_RECV_TABLE_NOBASE(className, tableName) \
 	template <typename T> int ClientClassInit(T *); \

@@ -24,7 +24,6 @@
 //-----------------------------------------------------------------------------
 class CRagdollBoogie : public CBaseEntity 
 {
-	DECLARE_DATADESC();
 	DECLARE_CLASS( CRagdollBoogie, CBaseEntity );
 
 public:

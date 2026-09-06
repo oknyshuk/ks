@@ -4,6 +4,9 @@
 //===============================================================================
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_sendtable.h"
+#include "reflect_annotations.h"
 #include "rope.h"
 #include "entitylist.h"
 #include "rope_shared.h"
@@ -27,73 +30,10 @@
 LINK_ENTITY_TO_CLASS( move_rope, CRopeKeyframe );
 LINK_ENTITY_TO_CLASS( keyframe_rope, CRopeKeyframe );
 
-IMPLEMENT_SERVERCLASS_ST_NOBASE( CRopeKeyframe, DT_RopeKeyframe )
-	SendPropEHandle(SENDINFO(m_hStartPoint)),
-	SendPropEHandle(SENDINFO(m_hEndPoint)),
-	SendPropInt( SENDINFO(m_iStartAttachment), 5, 0 ),
-	SendPropInt( SENDINFO(m_iEndAttachment), 5, 0 ),
-	
-	SendPropInt( SENDINFO(m_Slack), 13 ),
-	SendPropInt( SENDINFO(m_RopeLength), 15 ),
-	SendPropInt( SENDINFO(m_fLockedPoints), 4, SPROP_UNSIGNED ),
-	SendPropInt( SENDINFO(m_nChangeCount), 8, SPROP_UNSIGNED ),
-	SendPropInt( SENDINFO(m_RopeFlags), ROPE_NUMFLAGS, SPROP_UNSIGNED ),
-	SendPropInt( SENDINFO(m_nSegments), 4, SPROP_UNSIGNED ),
-	SendPropBool( SENDINFO(m_bConstrainBetweenEndpoints) ),
-	SendPropInt( SENDINFO(m_iRopeMaterialModelIndex), 16, SPROP_UNSIGNED ),
-	SendPropInt( SENDINFO(m_Subdiv), 4, SPROP_UNSIGNED ),
-
-	SendPropFloat( SENDINFO(m_TextureScale), 10, 0, 0.1f, 10.0f ),
-	SendPropFloat( SENDINFO(m_Width), 0, SPROP_NOSCALE ),
-	SendPropFloat( SENDINFO(m_flScrollSpeed), 0, SPROP_NOSCALE ),
-
-	SendPropVector(SENDINFO(m_vecOrigin), -1,  SPROP_COORD ),
-	SendPropEHandle(SENDINFO_NAME(m_hMoveParent, moveparent) ),
-
-	SendPropInt		(SENDINFO(m_iParentAttachment), NUM_PARENTATTACHMENT_BITS, SPROP_UNSIGNED),
-	SendPropInt		(SENDINFO(m_iDefaultRopeMaterialModelIndex), 16, SPROP_UNSIGNED ),  
-
-// #ifndef _X360 -- X360 client and Win32 XLSP dedicated server need equivalent SendTables
-	SendPropInt( SENDINFO(m_nMinCPULevel),				CPU_LEVEL_BIT_COUNT, SPROP_UNSIGNED ),
-	SendPropInt( SENDINFO(m_nMaxCPULevel),				CPU_LEVEL_BIT_COUNT, SPROP_UNSIGNED ),
-	SendPropInt( SENDINFO(m_nMinGPULevel),				GPU_LEVEL_BIT_COUNT, SPROP_UNSIGNED ),
-	SendPropInt( SENDINFO(m_nMaxGPULevel),				GPU_LEVEL_BIT_COUNT, SPROP_UNSIGNED ),
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CRopeKeyframe, DT_RopeKeyframe )
 
 
-BEGIN_DATADESC( CRopeKeyframe )
-
-	DEFINE_FIELD( m_RopeFlags,		FIELD_INTEGER ),
-
-	DEFINE_KEYFIELD( m_iNextLinkName,	FIELD_STRING,	"NextKey" ),
-	DEFINE_KEYFIELD( m_Slack,			FIELD_INTEGER,	"Slack" ),
-	DEFINE_KEYFIELD( m_Width,			FIELD_FLOAT,	"Width" ),
-	DEFINE_KEYFIELD( m_TextureScale,		FIELD_FLOAT,	"TextureScale" ),
-	DEFINE_FIELD( m_nSegments,		FIELD_INTEGER ),
-	DEFINE_FIELD( m_bConstrainBetweenEndpoints,		FIELD_BOOLEAN ),
-
-	DEFINE_FIELD( m_strRopeMaterialModel, FIELD_STRING ),
-	DEFINE_FIELD( m_iRopeMaterialModelIndex, FIELD_MODELINDEX ),
-	DEFINE_KEYFIELD( m_Subdiv,			FIELD_INTEGER,	"Subdiv" ),
-	DEFINE_FIELD( m_RopeLength,		FIELD_INTEGER ),
-	DEFINE_FIELD( m_fLockedPoints,	FIELD_INTEGER ),
-	DEFINE_FIELD( m_bCreatedFromMapFile, FIELD_BOOLEAN ),
-	DEFINE_KEYFIELD( m_flScrollSpeed,	FIELD_FLOAT,	"ScrollSpeed" ),
-
-	DEFINE_FIELD( m_bStartPointValid, FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_bEndPointValid,	FIELD_BOOLEAN ),
-
-	DEFINE_FIELD( m_hStartPoint,		FIELD_EHANDLE ),
-	DEFINE_FIELD( m_hEndPoint,		FIELD_EHANDLE ),
-	DEFINE_FIELD( m_iStartAttachment,	FIELD_SHORT ),
-	DEFINE_FIELD( m_iEndAttachment,	FIELD_SHORT ),
-	
-	// Inputs
-	DEFINE_INPUTFUNC( FIELD_FLOAT,	"SetScrollSpeed",	InputSetScrollSpeed ),
-	DEFINE_INPUTFUNC( FIELD_VECTOR,	"SetForce",			InputSetForce ),
-	DEFINE_INPUTFUNC( FIELD_VOID,	"Break",			InputBreak ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CRopeKeyframe )
 
 
 

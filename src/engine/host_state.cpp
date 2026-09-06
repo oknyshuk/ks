@@ -158,32 +158,6 @@ void HostState_NewGame( char const *pMapName, bool remember_location, bool backg
 //-----------------------------------------------------------------------------
 void HostState_LoadGame( char const *pSaveFileName, bool remember_location, bool bLetToolsOverrideLoadGameEnts )
 {
-#ifndef DEDICATED
-	// Make sure the freaking save file exists....
-	if ( !saverestore->SaveFileExists( pSaveFileName ) )
-	{
-			Warning("Save file %s can't be found!\n", pSaveFileName );
-			SCR_EndLoadingPlaque();
-			return;
-	}
-
-	Q_strncpy( g_HostState.m_saveName, pSaveFileName, sizeof( g_HostState.m_saveName )  );
-
-	// Tell the game .dll we are loading another game
-	serverGameDLL->PreSaveGameLoaded( pSaveFileName, sv.IsActive() );
-
-	g_HostState.m_bRememberLocation = remember_location;
-	g_HostState.m_bBackgroundLevel = false;
-	g_HostState.m_bWaitingForConnection = true;
-	g_HostState.m_bSplitScreenConnect = false;
-	g_HostState.m_bLetToolsOverrideLoadGameEnts = bLetToolsOverrideLoadGameEnts;
-	if ( remember_location )
-	{
-		g_HostState.RememberLocation();
-	}
-
-	g_HostState.SetNextState( HS_LOAD_GAME );
-#endif
 }
 
 // change level (single player style - smooth transition)
@@ -451,33 +425,6 @@ void CHostState::State_NewGame()
 
 void CHostState::State_LoadGame()
 {
-	materials->OnDebugEvent( "CHostState::State_LoadGame" );
-
-#ifndef DEDICATED
-	HostState_RunGameInit();
-	
-	if ( saverestore->LoadGame( m_saveName, m_bLetToolsOverrideLoadGameEnts ) )
-	{
-		// succesfully started the new game
-        GetTestScriptMgr()->CheckPoint( "load_game" );
-		SetState( HS_RUN, true );
-		return;
-	}
-#endif
-
-	SCR_EndLoadingPlaque();
-
-	// load game failed
-	GameShutdown();
-	// run the server at the console
-	SetState( HS_RUN, true );
-
-	if ( g_pMatchFramework->GetMatchSession() )
-	{
-		g_pMatchFramework->CloseSession();
-		return;
-	}
-
 }
 
 
@@ -652,7 +599,6 @@ void CHostState::State_GameShutdown()
 
 	GameShutdown();
 #ifndef DEDICATED
-	saverestore->ClearSaveDir();
 #endif
 	Host_ShutdownServer();
 

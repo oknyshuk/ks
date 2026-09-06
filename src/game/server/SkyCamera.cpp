@@ -5,6 +5,8 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_annotations.h"
 #include "igamesystem.h"
 #include "entitylist.h"
 #include "SkyCamera.h"
@@ -58,33 +60,7 @@ CSkyCamera*	GetSkyCameraList()
 
 LINK_ENTITY_TO_CLASS( sky_camera, CSkyCamera );
 
-BEGIN_DATADESC( CSkyCamera )
-
-	DEFINE_KEYFIELD( m_skyboxData.scale, FIELD_INTEGER, "scale" ),
-	DEFINE_FIELD( m_skyboxData.origin, FIELD_VECTOR ),
-	DEFINE_FIELD( m_skyboxData.area, FIELD_INTEGER ),
-
-	// Quiet down classcheck
-	// DEFINE_FIELD( m_skyboxData, sky3dparams_t ),
-
-	// This is re-set up in the constructor
-	// DEFINE_FIELD( m_pNext, CSkyCamera ),
-
-	// fog data for 3d skybox
-	DEFINE_KEYFIELD( m_bUseAngles,						FIELD_BOOLEAN,	"use_angles" ),
-	DEFINE_KEYFIELD( m_skyboxData.fog.enable,			FIELD_BOOLEAN, "fogenable" ),
-	DEFINE_KEYFIELD( m_skyboxData.fog.blend,			FIELD_BOOLEAN, "fogblend" ),
-	DEFINE_KEYFIELD( m_skyboxData.fog.dirPrimary,		FIELD_VECTOR, "fogdir" ),
-	DEFINE_KEYFIELD( m_skyboxData.fog.colorPrimary,		FIELD_COLOR32, "fogcolor" ),
-	DEFINE_KEYFIELD( m_skyboxData.fog.colorSecondary,	FIELD_COLOR32, "fogcolor2" ),
-	DEFINE_KEYFIELD( m_skyboxData.fog.start,			FIELD_FLOAT, "fogstart" ),
-	DEFINE_KEYFIELD( m_skyboxData.fog.end,				FIELD_FLOAT, "fogend" ),
-	DEFINE_KEYFIELD( m_skyboxData.fog.maxdensity,		FIELD_FLOAT, "fogmaxdensity" ),
-	DEFINE_KEYFIELD( m_skyboxData.fog.HDRColorScale,	FIELD_FLOAT, "HDRColorScale" ),
-
-	DEFINE_INPUTFUNC( FIELD_VOID,	"ActivateSkybox",	InputActivateSkybox ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CSkyCamera )
 
 
 //-----------------------------------------------------------------------------

@@ -5,6 +5,8 @@
 //=============================================================================
 
 #include "cbase.h"
+#include "reflect_sendtable.h"
+#include "reflect_annotations.h"
 #include "basetempentity.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
@@ -13,7 +15,8 @@
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-class CTEClientProjectile : public CBaseTempEntity
+class [[= ks::reflect::NetTable{ .name = "DT_TEClientProjectile" } ]]
+      CTEClientProjectile : public CBaseTempEntity
 {
 public:
 	DECLARE_CLASS( CTEClientProjectile, CBaseTempEntity );
@@ -26,11 +29,11 @@ public:
 	DECLARE_SERVERCLASS();
 
 public:
-	CNetworkVector( m_vecOrigin );
-	CNetworkVector( m_vecVelocity );
-	CNetworkVar( int, m_nModelIndex );
-	CNetworkVar( int, m_nLifeTime );
-	CNetworkHandle( CBaseEntity, m_hOwner );
+	CNetworkVector( m_vecOrigin, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD, .enc = ks::reflect::ENC_VECTOR } ]] );
+	CNetworkVector( m_vecVelocity, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD, .enc = ks::reflect::ENC_VECTOR } ]] );
+	CNetworkVar( int, m_nModelIndex, [[= ks::reflect::Net{ .enc = ks::reflect::ENC_MODELINDEX } ]] );
+	CNetworkVar( int, m_nLifeTime, [[= ks::reflect::Net{ .bits = 6, .flags = SPROP_UNSIGNED } ]] );
+	CNetworkHandle( CBaseEntity, m_hOwner, [[= ks::reflect::Net{} ]] );
 };
 
 //-----------------------------------------------------------------------------
@@ -78,13 +81,7 @@ void CTEClientProjectile::Test( const Vector& current_origin, const QAngle& curr
 	Create( filter, 0.0 );
 }
 
-IMPLEMENT_SERVERCLASS_ST(CTEClientProjectile, DT_TEClientProjectile)
-	SendPropVector( SENDINFO(m_vecOrigin), -1, SPROP_COORD),
-	SendPropVector( SENDINFO(m_vecVelocity), -1, SPROP_COORD),
-	SendPropModelIndex( SENDINFO(m_nModelIndex) ),
-	SendPropInt( SENDINFO(m_nLifeTime),	6, SPROP_UNSIGNED ),
-	SendPropEHandle(SENDINFO(m_hOwner)),
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CTEClientProjectile, DT_TEClientProjectile )
 
 
 // Singleton to fire TEClientProjectile objects

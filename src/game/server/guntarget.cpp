@@ -12,6 +12,8 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_annotations.h"
 #include "entityoutput.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
@@ -41,9 +43,9 @@ public:
 	virtual Vector BodyTarget( const Vector &posSrc, bool bNoisy = true ) { return GetAbsOrigin(); }
 
 	// Input handlers
-	void InputStart( inputdata_t &inputdata );
-	void InputStop( inputdata_t &inputdata );
-	void InputToggle( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Start", .type = FIELD_VOID } ]] void InputStart( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Stop", .type = FIELD_VOID } ]] void InputStop( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Toggle", .type = FIELD_VOID } ]] void InputToggle( inputdata_t &inputdata );
 
 	DECLARE_DATADESC();
 
@@ -60,31 +62,13 @@ private:
 	EHANDLE			m_hTargetEnt;
 
 	// Outputs
-	COutputEvent	m_OnDeath;
+	[[= ks::reflect::Key{ .name = "OnDeath" } ]] COutputEvent	m_OnDeath;
 };
 
 
 LINK_ENTITY_TO_CLASS( func_guntarget, CGunTarget );
 
-BEGIN_DATADESC( CGunTarget )
-
-	DEFINE_FIELD( m_on, FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_hTargetEnt, FIELD_EHANDLE ),
-
-	// Function Pointers
-	DEFINE_FUNCTION( Next ),
-	DEFINE_FUNCTION( Start ),
-	DEFINE_FUNCTION( Wait ),
-
-	// Inputs
-	DEFINE_INPUTFUNC( FIELD_VOID, "Start", InputStart ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "Stop", InputStop ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "Toggle", InputToggle ),
-
-	// Outputs
-	DEFINE_OUTPUT(m_OnDeath, "OnDeath"),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CGunTarget )
 
 
 

@@ -6,6 +6,13 @@
 
 #ifndef COMBATWEAPON_SHARED_H
 #define COMBATWEAPON_SHARED_H
+
+#include "reflect_annotations.h"
+#ifdef CLIENT_DLL
+#include "dt_recv.h"
+#endif
+#include "const.h"
+#include "shareddefs.h"
 #ifdef _WIN32
 #pragma once
 #endif
@@ -30,7 +37,34 @@ extern void OnBaseCombatWeaponCreated( CBaseCombatWeapon * );
 extern void OnBaseCombatWeaponDestroyed( CBaseCombatWeapon * );
 
 void *SendProxy_SendLocalWeaponDataTable( const SendProp *pProp, const void *pStruct, const void *pVarData, CSendProxyRecipients *pRecipients, int objectID );
+void *SendProxy_SendActiveLocalWeaponDataTable( const SendProp *pProp, const void *pStruct, const void *pVarData, CSendProxyRecipients *pRecipients, int objectID );
+
+// The two exclusive sub-tables are named as props of DT_BaseCombatWeapon rather than derived from a
+// member, so both the tables and the proxies that gate them have to be visible where the annotation
+// sits.
+namespace DT_LocalWeaponData { extern SendTable g_SendTable; }
+namespace DT_LocalActiveWeaponData { extern SendTable g_SendTable; }
+#else
+namespace DT_LocalWeaponData { extern RecvTable g_RecvTable; }
+namespace DT_LocalActiveWeaponData { extern RecvTable g_RecvTable; }
 #endif
+
+void RecvProxy_EffectFlagsWeaponWorldmodel( const CRecvProxyData *pData, void *pStruct, void *pOut );
+
+void RecvProxy_WeaponWorldmodel( const CRecvProxyData *pData, void *pStruct, void *pOut );
+
+void RecvProxy_WeaponWorldmodelCosmetics( const CRecvProxyData *pData, void *pStruct, void *pOut );
+
+void RecvProxy_IntToMoveParent( const CRecvProxyData *pData, void *pStruct, void *pOut );
+void RecvProxy_WeaponWorldmodel( const CRecvProxyData *pData, void *pStruct, void *pOut );
+void RecvProxy_EffectFlagsWeaponWorldmodel( const CRecvProxyData *pData, void *pStruct, void *pOut );
+
+void SendProxy_IntAddOne( const SendProp *pProp, const void *pStruct, const void *pVarData, DVariant *pOut, int iElement, int objectID );
+void RecvProxy_IntSubOne( const CRecvProxyData *pData, void *pStruct, void *pOut );
+
+// DT_BaseCombatWeapon receives m_iState through this; it is defined in the client half of
+// basecombatweapon_shared.cpp.
+void RecvProxy_State( const CRecvProxyData *pData, void *pStruct, void *pOut );
 
 class CBasePlayer;
 class CBaseCombatCharacter;
@@ -139,14 +173,24 @@ enum WeaponModelClassification_t
 	WEAPON_MODEL_IS_UNRECOGNIZED
 };
 
-class CBaseWeaponWorldModel : public CBaseAnimatingOverlay
+class [[= ks::reflect::NetTable{ .name = "DT_BaseWeaponWorldModel", .base = false } ]]
+      [[= ks::reflect::From<"m_nModelIndex", ks::reflect::Net{ .enc = ks::reflect::ENC_MODELINDEX, .side = ks::reflect::WIRE_SEND }>{} ]]
+      [[= ks::reflect::From<"m_nModelIndex", ks::reflect::Net{ .side = ks::reflect::WIRE_RECV }, RecvProxy_WeaponWorldmodel>{} ]]
+      [[= ks::reflect::From<"m_nBody", ks::reflect::Net{ .bits = ANIMATION_BODY_BITS }>{} ]]
+      [[= ks::reflect::From<"m_fEffects", ks::reflect::Net{ .bits = EF_MAX_BITS, .flags = SPROP_UNSIGNED, .side = ks::reflect::WIRE_SEND }>{} ]]
+      [[= ks::reflect::From<"m_fEffects", ks::reflect::Net{ .side = ks::reflect::WIRE_RECV }, RecvProxy_EffectFlagsWeaponWorldmodel>{} ]]
+      [[= ks::reflect::From<"m_hMoveParent", ks::reflect::Net{ .side = ks::reflect::WIRE_SEND, .wire = "moveparent" }>{} ]]
+      [[= ks::reflect::From<"m_hNetworkMoveParent", ks::reflect::Net{ .side = ks::reflect::WIRE_RECV, .wire = "moveparent" }, RecvProxy_IntToMoveParent>{} ]]
+      [[= ks::reflect::PredFrom<"m_nModelIndex", ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE | FTYPEDESC_MODELINDEX } >{} ]]
+      [[= ks::reflect::PredFrom<"m_nBody", ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } >{} ]]
+      [[= ks::reflect::PredFrom<"m_fEffects", ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE | FTYPEDESC_OVERRIDE } >{} ]]
+      CBaseWeaponWorldModel : public CBaseAnimatingOverlay
 {
 	DECLARE_CLASS( CBaseWeaponWorldModel, CBaseAnimatingOverlay );
 	DECLARE_NETWORKCLASS();
 	DECLARE_PREDICTABLE();
 
 #ifndef CLIENT_DLL
-	DECLARE_DATADESC();
 #endif
 
 public:
@@ -188,7 +232,7 @@ public:
 	bool HasDormantOwner( void );
 
 	typedef CHandle<CBaseCombatWeapon> CBaseCombatWeaponHandle;
-	CNetworkVar( CBaseCombatWeaponHandle, m_hCombatWeaponParent );
+	CNetworkVar( CBaseCombatWeaponHandle, m_hCombatWeaponParent, [[= ks::reflect::Net{} ]] [[= ks::reflect::Proxy<RecvProxy_WeaponWorldmodelCosmetics, ks::reflect::WIRE_RECV>{} ]]);
 
 private:
 	WeaponHoldsPlayerAnimCapability_t m_nHoldsPlayerAnims;
@@ -209,7 +253,24 @@ private:
 // Purpose: Client side rep of CBaseTFCombatWeapon 
 //-----------------------------------------------------------------------------
 // Hacky
-class CBaseCombatWeapon : public BASECOMBATWEAPON_DERIVED_FROM
+class
+      [[= ks::reflect::NetTable{ .name = "DT_BaseCombatWeapon" } ]]
+      [[= ks::reflect::NetTable{ .name = "DT_LocalWeaponData", .base = false } ]]
+      [[= ks::reflect::NetTable{ .name = "DT_LocalActiveWeaponData", .base = false } ]]
+#if !defined( CLIENT_DLL )
+      [[= ks::reflect::SubTable<"LocalWeaponData", &DT_LocalWeaponData::g_SendTable,
+                                SendProxy_SendLocalWeaponDataTable, true>{} ]]
+      [[= ks::reflect::SubTable<"LocalActiveWeaponData", &DT_LocalActiveWeaponData::g_SendTable,
+                                SendProxy_SendActiveLocalWeaponDataTable, true>{} ]]
+#else
+      [[= ks::reflect::SubTable<"LocalWeaponData", &DT_LocalWeaponData::g_RecvTable,
+                                nullptr, true>{} ]]
+      [[= ks::reflect::SubTable<"LocalActiveWeaponData", &DT_LocalActiveWeaponData::g_RecvTable,
+                                nullptr, true>{} ]]
+#endif
+      [[= ks::reflect::From<"m_nNextThinkTick", ks::reflect::Net{ .bits = -1, .table = "DT_LocalActiveWeaponData" }>{} ]]
+      [[= ks::reflect::PredFrom<"m_nNextThinkTick", ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE | FTYPEDESC_NOERRORCHECK } >{} ]]
+      CBaseCombatWeapon : public BASECOMBATWEAPON_DERIVED_FROM
 {
 public:
 	DECLARE_CLASS( CBaseCombatWeapon, BASECOMBATWEAPON_DERIVED_FROM );
@@ -511,7 +572,7 @@ public:
 
 	virtual int				UpdateTransmitState( void );
 
-	void					InputHideWeapon( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "HideWeapon", .type = FIELD_VOID } ]] void					InputHideWeapon( inputdata_t &inputdata );
 	void					Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
 
 	virtual void			MakeWeaponNameFromEntity( CBaseEntity *pOther );
@@ -610,26 +671,26 @@ public:
 // FTYPEDESC_INSENDTABLE STUFF
 private:
 	typedef CHandle< CBaseCombatCharacter > CBaseCombatCharacterHandle;
-	CNetworkVar( CBaseCombatCharacterHandle, m_hOwner );				// Player carrying this weapon
+	CNetworkVar( CBaseCombatCharacterHandle, m_hOwner , [[= ks::reflect::Net{} ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] );				// Player carrying this weapon
 public:
 	// Networked fields
-	CNetworkVar( int, m_nViewModelIndex );
+	CNetworkVar( int, m_nViewModelIndex , [[= ks::reflect::Net{ .bits = VIEWMODEL_INDEX_BITS, .flags = SPROP_UNSIGNED, .table = "DT_LocalWeaponData" } ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] );
 	// Weapon firing
-	CNetworkVar( float, m_flNextPrimaryAttack );						// soonest time ItemPostFrame will call PrimaryAttack
-	CNetworkVar( float, m_flNextSecondaryAttack );						// soonest time ItemPostFrame will call SecondaryAttack
+	CNetworkVar( float, m_flNextPrimaryAttack, [[= ks::reflect::Net{ .table = "DT_LocalActiveWeaponData" } ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE, .tolerance = TD_MSECTOLERANCE } ]] );						// soonest time ItemPostFrame will call PrimaryAttack
+	CNetworkVar( float, m_flNextSecondaryAttack, [[= ks::reflect::Net{ .table = "DT_LocalActiveWeaponData" } ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE, .tolerance = TD_MSECTOLERANCE } ]] );						// soonest time ItemPostFrame will call SecondaryAttack
 
 	// Weapon art
-	CNetworkVar( int, m_iViewModelIndex );
-	CNetworkVar( int, m_iWorldModelIndex );
+	CNetworkVar( int, m_iViewModelIndex , [[= ks::reflect::Net{ .enc = ks::reflect::ENC_MODELINDEX } ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE | FTYPEDESC_MODELINDEX } ]] );
+	CNetworkVar( int, m_iWorldModelIndex , [[= ks::reflect::Net{ .enc = ks::reflect::ENC_MODELINDEX } ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE | FTYPEDESC_MODELINDEX } ]] );
 
-	CNetworkVar( int, m_iWorldDroppedModelIndex );
+	CNetworkVar( int, m_iWorldDroppedModelIndex , [[= ks::reflect::Net{ .enc = ks::reflect::ENC_MODELINDEX } ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE | FTYPEDESC_MODELINDEX } ]] );
 
-	CNetworkVar( int, m_iWeaponModule );
+	CNetworkVar( int, m_iWeaponModule , [[= ks::reflect::Net{ .bits = 8, .table = "DT_LocalWeaponData" } ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] );
 
-	CNetworkVar( int, m_iNumEmptyAttacks );
+	CNetworkVar( int, m_iNumEmptyAttacks , [[= ks::reflect::Net{ .bits = 8 } ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] );
 
 	typedef CHandle<CBaseWeaponWorldModel> CBaseWeaponWorldModelHandle;
-	CNetworkVar( CBaseWeaponWorldModelHandle, m_hWeaponWorldModel );
+	CNetworkVar( CBaseWeaponWorldModelHandle, m_hWeaponWorldModel, [[= ks::reflect::Net{} ]] );
 
 	CBaseWeaponWorldModel* GetWeaponWorldModel( void ) { return m_hWeaponWorldModel->Get(); }
 
@@ -639,14 +700,14 @@ public:
 			
 public:
 	// Weapon data
-	CNetworkVar( int, m_iState );				// See WEAPON_* definition
-	CNetworkVar( int, m_iPrimaryAmmoType );		// "primary" ammo index into the ammo info array 
-	CNetworkVar( int, m_iSecondaryAmmoType );	// "secondary" ammo index into the ammo info array
-	CNetworkVar( int, m_iClip1 );				// number of shots left in the primary weapon clip, -1 it not used
-	CNetworkVar( int, m_iClip2 );				// number of shots left in the secondary weapon clip, -1 it not used
+	CNetworkVar( int, m_iState , [[= ks::reflect::Net{ .bits = 2, .flags = SPROP_UNSIGNED } ]] [[= ks::reflect::Proxy<RecvProxy_State, ks::reflect::WIRE_RECV>{} ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] );				// See WEAPON_* definition
+	CNetworkVar( int, m_iPrimaryAmmoType , [[= ks::reflect::Net{ .bits = 8, .table = "DT_LocalWeaponData" } ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] );		// "primary" ammo index into the ammo info array 
+	CNetworkVar( int, m_iSecondaryAmmoType , [[= ks::reflect::Net{ .bits = 8, .table = "DT_LocalWeaponData" } ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] );	// "secondary" ammo index into the ammo info array
+	CNetworkVar( int, m_iClip1 , [[= ks::reflect::Net{ .bits = 8, .flags = SPROP_UNSIGNED } ]] [[= ks::reflect::Proxy<SendProxy_IntAddOne, ks::reflect::WIRE_SEND>{} ]] [[= ks::reflect::Proxy<RecvProxy_IntSubOne, ks::reflect::WIRE_RECV>{} ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] );				// number of shots left in the primary weapon clip, -1 it not used
+	CNetworkVar( int, m_iClip2 , [[= ks::reflect::Net{ .bits = 8, .flags = SPROP_UNSIGNED } ]] [[= ks::reflect::Proxy<SendProxy_IntAddOne, ks::reflect::WIRE_SEND>{} ]] [[= ks::reflect::Proxy<RecvProxy_IntSubOne, ks::reflect::WIRE_RECV>{} ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] );				// number of shots left in the secondary weapon clip, -1 it not used
 
-	CNetworkVar( int, m_iPrimaryReserveAmmoCount);	// amount of reserve ammo. This used to be on the player ( m_iAmmo ) but we're moving it to the weapon.
-	CNetworkVar( int, m_iSecondaryReserveAmmoCount);	// amount of reserve ammo. This used to be on the player ( m_iAmmo ) but we're moving it to the weapon.
+	CNetworkVar( int, m_iPrimaryReserveAmmoCount, [[= ks::reflect::Net{ .bits = 10 } ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]]);	// amount of reserve ammo. This used to be on the player ( m_iAmmo ) but we're moving it to the weapon.
+	CNetworkVar( int, m_iSecondaryReserveAmmoCount, [[= ks::reflect::Net{ .bits = 10 } ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]]);	// amount of reserve ammo. This used to be on the player ( m_iAmmo ) but we're moving it to the weapon.
 
 public:
 
@@ -656,7 +717,7 @@ public:
 #endif
 
 // Non-networked prediction fields
-	CNetworkVar( float, m_flTimeWeaponIdle );							// soonest time ItemPostFrame will call WeaponIdle
+	CNetworkVar( float, m_flTimeWeaponIdle, [[= ks::reflect::Net{ .table = "DT_LocalActiveWeaponData" } ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE, .tolerance = TD_MSECTOLERANCE } ]] );							// soonest time ItemPostFrame will call WeaponIdle
 	// Sounds
 	float					m_flNextEmptySoundTime;				// delay on empty sound playing
 	float					m_fMinRange1;			// What's the closest this weapon can be used?
@@ -709,9 +770,9 @@ public:
 	float					m_flUnlockTime;
 	EHANDLE					m_hLocker;				// Who locked this weapon.
 
-	CNetworkVar( bool, m_bFlipViewModel );
+	CNetworkVar( bool, m_bFlipViewModel, [[= ks::reflect::Net{ .bits = -1, .table = "DT_LocalWeaponData" } ]] );
 	
-	CNetworkVar( int, m_iWeaponOrigin );			// How the player acquired the weapon
+	CNetworkVar( int, m_iWeaponOrigin, [[= ks::reflect::Net{ .bits = -1, .table = "DT_LocalWeaponData" } ]] );			// How the player acquired the weapon
 
 	IPhysicsConstraint		*GetConstraint() { return m_pConstraint; }
 
@@ -738,10 +799,10 @@ private:
 
 	// Outputs
 protected:
-	COutputEvent			m_OnPlayerUse;		// Fired when the player uses the weapon.
-	COutputEvent			m_OnPlayerPickup;	// Fired when the player picks up the weapon.
-	COutputEvent			m_OnNPCPickup;		// Fired when an NPC picks up the weapon.
-	COutputEvent			m_OnCacheInteraction;	// For awarding lambda cache achievements in HL2 on 360. See .FGD file for details 
+	[[= ks::reflect::Key{ .name = "OnPlayerUse" } ]] COutputEvent			m_OnPlayerUse;		// Fired when the player uses the weapon.
+	[[= ks::reflect::Key{ .name = "OnPlayerPickup" } ]] COutputEvent			m_OnPlayerPickup;	// Fired when the player picks up the weapon.
+	[[= ks::reflect::Key{ .name = "OnNPCPickup" } ]] COutputEvent			m_OnNPCPickup;		// Fired when an NPC picks up the weapon.
+	[[= ks::reflect::Key{ .name = "OnCacheInteraction" } ]] COutputEvent			m_OnCacheInteraction;	// For awarding lambda cache achievements in HL2 on 360. See .FGD file for details 
 
 #else // Client .dll only
 	bool					m_bJustRestored;

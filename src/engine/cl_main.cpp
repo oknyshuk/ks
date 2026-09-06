@@ -36,7 +36,6 @@
 #include "LocalNetworkBackdoor.h"
 #include <tier0/icommandline.h>
 #include "GameEventManager.h"
-#include "host_saverestore.h"
 #include "ivideomode.h"
 #include "decal.h"
 #include "sv_rcon.h"
@@ -1659,7 +1658,6 @@ void CL_TakeSnapshotAndSwap()
 	}
 
 	// take a screenshot for savegames if necessary
-	saverestore->UpdateSaveGameScreenshots();
 
 	// take screenshot for bx movie maker
 	EngineTool_UpdateScreenshot();

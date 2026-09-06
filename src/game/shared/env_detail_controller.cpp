@@ -6,6 +6,14 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_annotations.h"
+#ifdef CLIENT_DLL
+#include "reflect_recvtable.h"
+#endif
+#include "reflect_annotations.h"
+#ifdef GAME_DLL
+#include "reflect_sendtable.h"
+#endif
 
 #include "env_detail_controller.h"
 
@@ -15,15 +23,7 @@
 IMPLEMENT_NETWORKCLASS_ALIASED( EnvDetailController, DT_DetailController )
 LINK_ENTITY_TO_CLASS_ALIASED(env_detail_controller,	EnvDetailController);
 
-BEGIN_NETWORK_TABLE_NOBASE( CEnvDetailController, DT_DetailController )
-	#ifdef CLIENT_DLL
-		RecvPropFloat( RECVINFO( m_flFadeStartDist ) ),
-		RecvPropFloat( RECVINFO( m_flFadeEndDist ) ),
-	#else
-		SendPropFloat( SENDINFO( m_flFadeStartDist ) ),
-		SendPropFloat( SENDINFO( m_flFadeEndDist ) ),
-	#endif
-END_NETWORK_TABLE()
+IMPLEMENT_REFLECT_TABLE( CEnvDetailController, DT_DetailController );
 
 static CEnvDetailController *s_detailController = NULL;
 CEnvDetailController * GetDetailController()

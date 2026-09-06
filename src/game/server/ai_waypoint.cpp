@@ -6,6 +6,8 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_annotations.h"
+#include "reflect_datamap.h"
 #include "mempool.h"
 #include "ai_navtype.h"
 #include "ai_node.h"
@@ -24,20 +26,7 @@ DEFINE_FIXEDSIZE_ALLOCATOR( AI_Waypoint_t, WAYPOINT_POOL_SIZE, CUtlMemoryPool::G
 
 //-------------------------------------
 
-BEGIN_SIMPLE_DATADESC( AI_Waypoint_t )
-
-	DEFINE_FIELD(	vecLocation, FIELD_POSITION_VECTOR),
-	DEFINE_FIELD(	flYaw, FIELD_FLOAT ),
-	//				iNodeID			(not saved, cannot rely on consistent mapping)
-	//				flPathDistGoal	(not saved )
-	DEFINE_FIELD(	hPathCorner, FIELD_EHANDLE ),
-	DEFINE_FIELD(	m_hData, FIELD_EHANDLE ),
-	DEFINE_FIELD(	m_fWaypointFlags, FIELD_INTEGER ),
-	DEFINE_FIELD(	m_iWPType, FIELD_INTEGER ),
-	//				pNext
-	//				pPrev
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP_SIMPLE( AI_Waypoint_t )
 
 //-------------------------------------
 

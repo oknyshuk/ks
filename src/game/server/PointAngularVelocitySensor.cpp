@@ -8,6 +8,8 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_annotations.h"
 #include "entityinput.h"
 #include "entityoutput.h"
 #include "eventqueue.h"
@@ -42,33 +44,33 @@ private:
 	void DrawDebugLines( void );
 
 	// Input handlers
-	void InputTest( inputdata_t &inputdata );
-	void InputTestWithInterval( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Test", .type = FIELD_VOID } ]] void InputTest( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "TestWithInterval", .type = FIELD_VOID } ]] void InputTestWithInterval( inputdata_t &inputdata );
 
 	EHANDLE m_hTargetEntity;				// Entity whose angles are being monitored.
-	float m_flThreshold;					// The threshold angular velocity that we are looking for.
+	[[= ks::reflect::Key{ .name = "threshold" } ]] float m_flThreshold;					// The threshold angular velocity that we are looking for.
 	int m_nLastCompareResult;				// The comparison result from our last measurement, expressed as -1, 0, or 1
 	int m_nLastFireResult;					// The last result for which we fire the output.
 	
 	float m_flFireTime;
-	float m_flFireInterval;
+	[[= ks::reflect::Key{ .name = "fireinterval" } ]] float m_flFireInterval;
 	float m_flLastAngVelocity;
 	
 	QAngle m_lastOrientation;
 
-	Vector m_vecAxis;
-	bool m_bUseHelper;
+	[[= ks::reflect::Key{ .name = "axis" } ]] Vector m_vecAxis;
+	[[= ks::reflect::Key{ .name = "usehelper" } ]] bool m_bUseHelper;
 
 	// Outputs
-	COutputFloat m_AngularVelocity;
+	[[= ks::reflect::Key{ .name = "AngularVelocity" } ]] COutputFloat m_AngularVelocity;
 
 	// Compare the target's angular velocity to the threshold velocity and fire the appropriate output.
 	// These outputs are filtered by m_flFireInterval to ignore excessive oscillations.
-	COutputEvent m_OnLessThan;
-	COutputEvent m_OnLessThanOrEqualTo;		
-	COutputEvent m_OnGreaterThan;			
-	COutputEvent m_OnGreaterThanOrEqualTo;
-	COutputEvent m_OnEqualTo;
+	[[= ks::reflect::Key{ .name = "OnLessThan" } ]] COutputEvent m_OnLessThan;
+	[[= ks::reflect::Key{ .name = "OnLessThanOrEqualTo" } ]] COutputEvent m_OnLessThanOrEqualTo;		
+	[[= ks::reflect::Key{ .name = "OnGreaterThan" } ]] COutputEvent m_OnGreaterThan;			
+	[[= ks::reflect::Key{ .name = "OnGreaterThanOrEqualTo" } ]] COutputEvent m_OnGreaterThanOrEqualTo;
+	[[= ks::reflect::Key{ .name = "OnEqualTo" } ]] COutputEvent m_OnEqualTo;
 
 	DECLARE_DATADESC();
 };
@@ -76,34 +78,7 @@ private:
 LINK_ENTITY_TO_CLASS(point_angularvelocitysensor, CPointAngularVelocitySensor);
 
 
-BEGIN_DATADESC( CPointAngularVelocitySensor )
-
-	// Fields
-	DEFINE_FIELD( m_hTargetEntity, FIELD_EHANDLE ),
-	DEFINE_KEYFIELD(m_flThreshold, FIELD_FLOAT, "threshold"),
-	DEFINE_FIELD(m_nLastCompareResult, FIELD_INTEGER),
-	DEFINE_FIELD( m_nLastFireResult, FIELD_INTEGER ),
-	DEFINE_FIELD( m_flFireTime, FIELD_TIME ),
-	DEFINE_KEYFIELD( m_flFireInterval, FIELD_FLOAT, "fireinterval" ),
-	DEFINE_FIELD( m_flLastAngVelocity, FIELD_FLOAT ),
-	DEFINE_FIELD( m_lastOrientation, FIELD_VECTOR ),
-	
-	// Inputs
-	DEFINE_INPUTFUNC(FIELD_VOID, "Test", InputTest),
-	DEFINE_INPUTFUNC(FIELD_VOID, "TestWithInterval", InputTestWithInterval),
-
-	// Outputs
-	DEFINE_OUTPUT(m_OnLessThan, "OnLessThan"),
-	DEFINE_OUTPUT(m_OnLessThanOrEqualTo, "OnLessThanOrEqualTo"),
-	DEFINE_OUTPUT(m_OnGreaterThan, "OnGreaterThan"),
-	DEFINE_OUTPUT(m_OnGreaterThanOrEqualTo, "OnGreaterThanOrEqualTo"),
-	DEFINE_OUTPUT(m_OnEqualTo, "OnEqualTo"),
-	DEFINE_OUTPUT(m_AngularVelocity, "AngularVelocity"),
-
-	DEFINE_KEYFIELD( m_vecAxis, FIELD_VECTOR, "axis" ),
-	DEFINE_KEYFIELD( m_bUseHelper, FIELD_BOOLEAN, "usehelper" ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CPointAngularVelocitySensor )
 
 
 
@@ -396,36 +371,22 @@ private:
 	void SampleVelocity( void );
 
 	EHANDLE m_hTargetEntity;				// Entity whose angles are being monitored.
-	Vector	m_vecAxis;						// Axis along which to measure the speed.
-	bool	m_bEnabled;						// Whether we're measuring or not
+	[[= ks::reflect::Key{ .name = "axis" } ]] Vector	m_vecAxis;						// Axis along which to measure the speed.
+	[[= ks::reflect::Key{ .name = "enabled" } ]] bool	m_bEnabled;						// Whether we're measuring or not
 
 	// Outputs
 	float m_fPrevVelocity; // stores velocity from last frame, so we only write the output if it has changed
-	COutputFloat m_Velocity;
+	[[= ks::reflect::Key{ .name = "Velocity" } ]] COutputFloat m_Velocity;
 
-	void	InputEnable( inputdata_t &inputdata );
-	void	InputDisable( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Enable", .type = FIELD_VOID } ]] void	InputEnable( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Disable", .type = FIELD_VOID } ]] void	InputDisable( inputdata_t &inputdata );
 
 	DECLARE_DATADESC();
 };
 
 LINK_ENTITY_TO_CLASS( point_velocitysensor, CPointVelocitySensor );
 
-BEGIN_DATADESC( CPointVelocitySensor )
-
-	// Fields
-	DEFINE_FIELD( m_hTargetEntity,	FIELD_EHANDLE ),
-	DEFINE_KEYFIELD( m_vecAxis,		FIELD_VECTOR, "axis" ),
-	DEFINE_KEYFIELD( m_bEnabled,	FIELD_BOOLEAN, "enabled" ),
-	DEFINE_FIELD( m_fPrevVelocity,	FIELD_FLOAT ),
-
-	// Outputs
-	DEFINE_OUTPUT( m_Velocity, "Velocity" ),
-
-	DEFINE_INPUTFUNC( FIELD_VOID, "Enable",		InputEnable ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "Disable",	InputDisable ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CPointVelocitySensor )
 
 
 //-----------------------------------------------------------------------------

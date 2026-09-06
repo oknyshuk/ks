@@ -90,7 +90,6 @@ private:
 	CHandle<CAI_Hint>	m_hSafePlaceHint;
 	CHandle<CAI_Hint>	m_hMovingToHint;
 
-	DECLARE_DATADESC();
 };
 
 #endif // AI_BEHAVIOR_FEAR_H

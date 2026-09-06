@@ -6,6 +6,9 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_sendtable.h"
+#include "reflect_annotations.h"
 #include "lights.h"
 #include "env_cascade_light.h"
 
@@ -21,32 +24,9 @@ CCascadeLight *g_pCascadeLight;
 
 LINK_ENTITY_TO_CLASS(env_cascade_light, CCascadeLight);
 
-BEGIN_DATADESC( CCascadeLight )
+IMPLEMENT_REFLECT_DATAMAP( CCascadeLight )
 
-	DEFINE_KEYFIELD( m_bEnabled,		FIELD_BOOLEAN, "enabled" ),
-	DEFINE_KEYFIELD( m_bStartDisabled,	FIELD_BOOLEAN, "StartDisabled" ),
-	DEFINE_FIELD( m_LightColor, FIELD_COLOR32 ), 
-	DEFINE_FIELD( m_LightColorScale, FIELD_INTEGER ),
-
-// Inputs
-
-	DEFINE_INPUTFUNC( FIELD_COLOR32, "LightColor", InputSetLightColor ),
-	DEFINE_INPUTFUNC( FIELD_INTEGER, "LightColorScale", InputSetLightColorScale ),
-	DEFINE_INPUTFUNC( FIELD_STRING, "SetAngles", InputSetAngles ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "Enable", InputEnable ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "Disable", InputDisable ),
-
-END_DATADESC()
-
-IMPLEMENT_SERVERCLASS_ST_NOBASE(CCascadeLight, DT_CascadeLight)
-	SendPropVector(SENDINFO(m_shadowDirection), -1,  SPROP_NOSCALE ),
-	SendPropVector(SENDINFO(m_envLightShadowDirection), -1,  SPROP_NOSCALE ),
-	SendPropBool(SENDINFO(m_bEnabled) ),
-	SendPropBool(SENDINFO(m_bUseLightEnvAngles) ),
-	SendPropInt(SENDINFO(m_LightColor), 32, SPROP_UNSIGNED, SendProxy_Color32ToInt32 ),
-	SendPropInt(SENDINFO(m_LightColorScale), 32, 0, SendProxy_Int32ToInt32 ),
-	SendPropFloat(SENDINFO(m_flMaxShadowDist), 0, SPROP_NOSCALE ),
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CCascadeLight, DT_CascadeLight )
 
 float CCascadeLight::m_flEnvLightShadowPitch;
 QAngle CCascadeLight::m_EnvLightShadowAngles;

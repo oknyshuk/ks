@@ -5,6 +5,9 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_annotations.h"
+#include "reflect_sendtable.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -27,7 +30,7 @@ enum MaterialModifyMode_t
 
 ConVar debug_materialmodifycontrol( "debug_materialmodifycontrol", "0" );
 
-class CMaterialModifyControl : public CBaseEntity
+class [[= ks::reflect::NetTable{ .name = "DT_MaterialModifyControl" } ]] CMaterialModifyControl : public CBaseEntity
 {
 public:
 
@@ -40,10 +43,10 @@ public:
 	int UpdateTransmitState();
 	int ShouldTransmit( const CCheckTransmitInfo *pInfo );
 
-	void SetMaterialVar( inputdata_t &inputdata );
-	void SetMaterialVarToCurrentTime( inputdata_t &inputdata );
-	void InputStartAnimSequence( inputdata_t &inputdata );
-	void InputStartFloatLerp( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetMaterialVar", .type = FIELD_STRING } ]] void SetMaterialVar( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetMaterialVarToCurrentTime", .type = FIELD_VOID } ]] void SetMaterialVarToCurrentTime( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "StartAnimSequence", .type = FIELD_STRING } ]] void InputStartAnimSequence( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "StartFloatLerp", .type = FIELD_STRING } ]] void InputStartFloatLerp( inputdata_t &inputdata );
 
 	virtual int	ObjectCaps( void ) { return BaseClass::ObjectCaps() & ~FCAP_ACROSS_TRANSITION; }
 
@@ -51,57 +54,25 @@ public:
 	DECLARE_DATADESC();
 
 private:
-	CNetworkString( m_szMaterialName, MATERIAL_MODIFY_STRING_SIZE );
-	CNetworkString( m_szMaterialVar, MATERIAL_MODIFY_STRING_SIZE );
-	CNetworkString( m_szMaterialVarValue, MATERIAL_MODIFY_STRING_SIZE );
-	CNetworkVar( int, m_iFrameStart );
-	CNetworkVar( int, m_iFrameEnd );
-	CNetworkVar( bool, m_bWrap );
-	CNetworkVar( float, m_flFramerate );
-	CNetworkVar( bool, m_bNewAnimCommandsSemaphore );
-	CNetworkVar( float, m_flFloatLerpStartValue );
-	CNetworkVar( float, m_flFloatLerpEndValue );
-	CNetworkVar( float, m_flFloatLerpTransitionTime );
-	CNetworkVar( int, m_nModifyMode );
+	CNetworkString( m_szMaterialName, MATERIAL_MODIFY_STRING_SIZE, [[= ks::reflect::Net{} ]] );
+	CNetworkString( m_szMaterialVar, MATERIAL_MODIFY_STRING_SIZE, [[= ks::reflect::Net{} ]] );
+	CNetworkString( m_szMaterialVarValue, MATERIAL_MODIFY_STRING_SIZE, [[= ks::reflect::Net{} ]] );
+	CNetworkVar( int, m_iFrameStart, [[= ks::reflect::Net{ .bits = 8 } ]] );
+	CNetworkVar( int, m_iFrameEnd, [[= ks::reflect::Net{ .bits = 8 } ]] );
+	CNetworkVar( bool, m_bWrap, [[= ks::reflect::Net{} ]] );
+	CNetworkVar( float, m_flFramerate, [[= ks::reflect::Net{ .flags = SPROP_NOSCALE } ]] );
+	CNetworkVar( bool, m_bNewAnimCommandsSemaphore, [[= ks::reflect::Net{} ]] );
+	CNetworkVar( float, m_flFloatLerpStartValue, [[= ks::reflect::Net{ .flags = SPROP_NOSCALE } ]] );
+	CNetworkVar( float, m_flFloatLerpEndValue, [[= ks::reflect::Net{ .flags = SPROP_NOSCALE } ]] );
+	CNetworkVar( float, m_flFloatLerpTransitionTime, [[= ks::reflect::Net{ .flags = SPROP_NOSCALE } ]] );
+	CNetworkVar( int, m_nModifyMode, [[= ks::reflect::Net{ .bits = 2, .flags = SPROP_UNSIGNED } ]] );
 };
 
 LINK_ENTITY_TO_CLASS(material_modify_control, CMaterialModifyControl);
 
-BEGIN_DATADESC( CMaterialModifyControl )
-	// Variables.
-	DEFINE_AUTO_ARRAY( m_szMaterialName, FIELD_CHARACTER ),
-	DEFINE_AUTO_ARRAY( m_szMaterialVar, FIELD_CHARACTER ),
-	DEFINE_AUTO_ARRAY( m_szMaterialVarValue, FIELD_CHARACTER ),
-	DEFINE_FIELD( m_iFrameStart, FIELD_INTEGER ),
-	DEFINE_FIELD( m_iFrameEnd, FIELD_INTEGER ),
-	DEFINE_FIELD( m_bWrap, FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_flFramerate, FIELD_FLOAT ),
-	DEFINE_FIELD( m_bNewAnimCommandsSemaphore, FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_flFloatLerpStartValue, FIELD_FLOAT ),
-	DEFINE_FIELD( m_flFloatLerpEndValue, FIELD_FLOAT ),
-	DEFINE_FIELD( m_flFloatLerpTransitionTime, FIELD_FLOAT ),
-	DEFINE_FIELD( m_nModifyMode, FIELD_INTEGER ),
-	// Inputs.
-	DEFINE_INPUTFUNC( FIELD_STRING, "SetMaterialVar", SetMaterialVar ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "SetMaterialVarToCurrentTime", SetMaterialVarToCurrentTime ),
-	DEFINE_INPUTFUNC( FIELD_STRING, "StartAnimSequence", InputStartAnimSequence ),
-	DEFINE_INPUTFUNC( FIELD_STRING, "StartFloatLerp", InputStartFloatLerp ),
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CMaterialModifyControl )
 
-IMPLEMENT_SERVERCLASS_ST(CMaterialModifyControl, DT_MaterialModifyControl)
-	SendPropString( SENDINFO( m_szMaterialName ) ),
-	SendPropString( SENDINFO( m_szMaterialVar ) ),
-	SendPropString( SENDINFO( m_szMaterialVarValue ) ),
-	SendPropInt( SENDINFO(m_iFrameStart), 8 ),
-	SendPropInt( SENDINFO(m_iFrameEnd), 8 ),
-	SendPropInt( SENDINFO(m_bWrap), 1, SPROP_UNSIGNED ),
-	SendPropFloat( SENDINFO(m_flFramerate), 0, SPROP_NOSCALE ),
-	SendPropInt( SENDINFO(m_bNewAnimCommandsSemaphore), 1, SPROP_UNSIGNED ),
-	SendPropFloat( SENDINFO(m_flFloatLerpStartValue), 0, SPROP_NOSCALE ),
-	SendPropFloat( SENDINFO(m_flFloatLerpEndValue), 0, SPROP_NOSCALE ),
-	SendPropFloat( SENDINFO(m_flFloatLerpTransitionTime), 0, SPROP_NOSCALE ),
-	SendPropInt( SENDINFO(m_nModifyMode), 2, SPROP_UNSIGNED ),
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CMaterialModifyControl, DT_MaterialModifyControl )
 
 //-----------------------------------------------------------------------------
 // Purpose:

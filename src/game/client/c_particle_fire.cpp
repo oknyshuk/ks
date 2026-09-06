@@ -6,6 +6,8 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_recvtable.h"
+#include "reflect_annotations.h"
 #include "particle_prototype.h"
 #include "particle_util.h"
 #include "baseparticleentity.h"
@@ -70,7 +72,10 @@ inline int GetOppositeOffset(int offset)
 // Classes.
 // ------------------------------------------------------------------------- //
 
-class C_ParticleFire : public C_BaseParticleEntity, public IPrototypeAppEffect
+class [[= ks::reflect::NetTable{ .name = "DT_ParticleFire", .base = false } ]]
+      [[= ks::reflect::From<"m_vOrigin", ks::reflect::Net{}>{} ]]
+      [[= ks::reflect::From<"m_vDirection", ks::reflect::Net{}>{} ]]
+      C_ParticleFire : public C_BaseParticleEntity, public IPrototypeAppEffect
 {
 public:
 	DECLARE_CLASS( C_ParticleFire, C_BaseParticleEntity );
@@ -144,10 +149,7 @@ EXPOSE_PROTOTYPE_EFFECT(ParticleFire, C_ParticleFire);
 
 
 // Datatable..
-IMPLEMENT_CLIENTCLASS_DT_NOBASE(C_ParticleFire, DT_ParticleFire, CParticleFire)
-	RecvPropVector(RECVINFO(m_vOrigin)),
-	RecvPropVector(RECVINFO(m_vDirection)),
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS( C_ParticleFire, DT_ParticleFire, CParticleFire )
 
 
 

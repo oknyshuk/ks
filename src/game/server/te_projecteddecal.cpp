@@ -11,6 +11,8 @@
 // $NoKeywords: $
 //=============================================================================//
 #include "cbase.h"
+#include "reflect_sendtable.h"
+#include "reflect_annotations.h"
 #include "basetempentity.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
@@ -19,7 +21,8 @@
 //-----------------------------------------------------------------------------
 // Purpose: Dispatches BSP decal tempentity
 //-----------------------------------------------------------------------------
-class CTEProjectedDecal : public CBaseTempEntity
+class [[= ks::reflect::NetTable{ .name = "DT_TEProjectedDecal" } ]]
+      CTEProjectedDecal : public CBaseTempEntity
 {
 public:
 	DECLARE_CLASS( CTEProjectedDecal, CBaseTempEntity );
@@ -32,10 +35,10 @@ public:
 	DECLARE_SERVERCLASS();
 
 public:
-	CNetworkVector( m_vecOrigin );
-	CNetworkVar( int, m_nIndex );
-	CNetworkVar( float, m_flDistance );
-	CNetworkQAngle( m_angRotation );
+	CNetworkVector( m_vecOrigin, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD, .enc = ks::reflect::ENC_VECTOR } ]] );
+	CNetworkVar( int, m_nIndex, [[= ks::reflect::Net{ .bits = 9, .flags = SPROP_UNSIGNED } ]] );
+	CNetworkVar( float, m_flDistance, [[= ks::reflect::Net{ .bits = 10, .low = 0, .high = 1024, .flags = SPROP_ROUNDUP } ]] );
+	CNetworkQAngle( m_angRotation, [[= ks::reflect::Net{ .bits = 10, .enc = ks::reflect::ENC_QANGLES } ]] );
 };
 
 //-----------------------------------------------------------------------------
@@ -87,12 +90,7 @@ void CTEProjectedDecal::Test( const Vector& current_origin, const QAngle& curren
 	Create( filter, 0.0 );
 }
 
-IMPLEMENT_SERVERCLASS_ST(CTEProjectedDecal, DT_TEProjectedDecal)
-	SendPropVector( SENDINFO(m_vecOrigin), -1, SPROP_COORD),
-	SendPropQAngles( SENDINFO(m_angRotation), 10 ),
-	SendPropFloat( SENDINFO(m_flDistance), 10, SPROP_ROUNDUP, 0, 1024 ),
-	SendPropInt( SENDINFO(m_nIndex), 9, SPROP_UNSIGNED ),
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CTEProjectedDecal, DT_TEProjectedDecal )
 
 
 // Singleton to fire TEBSPDecal objects

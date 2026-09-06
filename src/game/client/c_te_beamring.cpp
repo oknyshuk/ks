@@ -11,6 +11,8 @@
 // $NoKeywords: $
 //=============================================================================//
 #include "cbase.h"
+#include "reflect_recvtable.h"
+#include "reflect_annotations.h"
 #include "c_te_basebeam.h"
 #include "iviewrender_beams.h"
 
@@ -20,7 +22,8 @@
 //-----------------------------------------------------------------------------
 // Purpose: BeamRing TE
 //-----------------------------------------------------------------------------
-class C_TEBeamRing : public C_TEBaseBeam
+class [[= ks::reflect::NetTable{ .name = "DT_TEBeamRing" } ]]
+      C_TEBeamRing : public C_TEBaseBeam
 {
 public:
 	DECLARE_CLASS( C_TEBeamRing, C_TEBaseBeam );
@@ -32,8 +35,8 @@ public:
 	virtual void	PostDataUpdate( DataUpdateType_t updateType );
 
 public:
-	int				m_nStartEntity;
-	int				m_nEndEntity;
+	[[= ks::reflect::Net{} ]] int				m_nStartEntity;
+	[[= ks::reflect::Net{} ]] int				m_nEndEntity;
 };
 
 //-----------------------------------------------------------------------------
@@ -72,7 +75,4 @@ void C_TEBeamRing::PostDataUpdate( DataUpdateType_t updateType )
 		m_nStartFrame, 0.1 * m_nFrameRate, r, g, b, m_nFlags );
 }
 
-IMPLEMENT_CLIENTCLASS_EVENT_DT(C_TEBeamRing, DT_TEBeamRing, CTEBeamRing)
-	RecvPropInt( RECVINFO(m_nStartEntity)),
-	RecvPropInt( RECVINFO(m_nEndEntity)),
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS_EVENT( C_TEBeamRing, DT_TEBeamRing, CTEBeamRing )

@@ -6,6 +6,15 @@
 //=====================================================================================//
 
 #include "cbase.h"
+#include "reflect_predmap.h"
+#include "reflect_annotations.h"
+#ifdef CLIENT_DLL
+#include "reflect_recvtable.h"
+#endif
+#include "reflect_annotations.h"
+#ifdef GAME_DLL
+#include "reflect_sendtable.h"
+#endif
 #include "item_healthshot.h"
 #include "cs_gamerules.h"
 
@@ -22,11 +31,11 @@
 
 IMPLEMENT_NETWORKCLASS_ALIASED( Item_Healthshot, DT_Item_Healthshot )
 
-BEGIN_NETWORK_TABLE( CItem_Healthshot, DT_Item_Healthshot )
-END_NETWORK_TABLE()
+IMPLEMENT_REFLECT_TABLE( CItem_Healthshot, DT_Item_Healthshot );
 
-BEGIN_PREDICTION_DATA( CItem_Healthshot )
-END_PREDICTION_DATA()
+#ifdef CLIENT_DLL
+IMPLEMENT_REFLECT_PREDMAP( CItem_Healthshot );
+#endif
 
 LINK_ENTITY_TO_CLASS_ALIASED( weapon_healthshot, Item_Healthshot );
 PRECACHE_WEAPON_REGISTER( weapon_healthshot );

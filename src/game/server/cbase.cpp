@@ -40,12 +40,8 @@ There are several types of data:
 
 some of these can overlap.  all the data descriptions usable are:
 
-	DEFINE_FIELD(		name,	fieldtype )
 	DEFINE_KEYFIELD(	name,	fieldtype,	mapname )
 	DEFINE_KEYFIELD_NOTSAVED(	name,	fieldtype,	mapname )
-	DEFINE_ARRAY(		name,	fieldtype,	count )
-	DEFINE_GLOBAL_FIELD(name,	fieldtype )
-	DEFINE_CUSTOM_FIELD(name,	datafuncs,	mapname )
 	DEFINE_GLOBAL_KEYFIELD(name,	fieldtype,	mapname )
 
 where:
@@ -69,6 +65,8 @@ OUTPUTS:
 
 
 #include "cbase.h"
+#include "reflect_annotations.h"
+#include "reflect_datamap.h"
 #include "entitylist.h"
 #include "mapentities_shared.h"
 #include "isaverestore.h"
@@ -88,17 +86,7 @@ OUTPUTS:
 
 extern ISaveRestoreOps *variantFuncs;	// function pointer set for save/restoring variants
 
-BEGIN_SIMPLE_DATADESC( CEventAction )
-	DEFINE_FIELD( m_iTarget, FIELD_STRING ),
-	DEFINE_FIELD( m_iTargetInput, FIELD_STRING ),
-	DEFINE_FIELD( m_iParameter, FIELD_STRING ),
-	DEFINE_FIELD( m_flDelay, FIELD_FLOAT ),
-	DEFINE_FIELD( m_nTimesToFire, FIELD_INTEGER ),
-	DEFINE_FIELD( m_iIDStamp, FIELD_INTEGER ),
-
-	// This is dealt with by the Restore method
-	// DEFINE_FIELD( m_pNext, CEventAction ),
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP_SIMPLE( CEventAction )
 
 
 // ID Stamp used to uniquely identify every output
@@ -402,62 +390,7 @@ void CBaseEntityOutput::RemoveEventAction( CEventAction *pEventAction )
 
 
 // save data description for the event queue
-BEGIN_SIMPLE_DATADESC( CBaseEntityOutput )
-
-	DEFINE_CUSTOM_FIELD( m_Value, variantFuncs ),
-
-	// This is saved manually by CBaseEntityOutput::Save
-	// DEFINE_FIELD( m_ActionList, CEventAction ),
-END_DATADESC()
-
-
-int CBaseEntityOutput::Save( ISave &save )
-{
-	// save that value out to disk, so we know how many to restore
-	if ( !save.WriteFields( "Value", this, NULL, m_DataMap.dataDesc, m_DataMap.dataNumFields ) )
-		return 0;
-
-	for ( CEventAction *ev = m_ActionList; ev != NULL; ev = ev->m_pNext )
-	{
-		if ( !save.WriteFields( "EntityOutput", ev, NULL, ev->m_DataMap.dataDesc, ev->m_DataMap.dataNumFields ) )
-			return 0;
-	}
-
-	return 1;
-}
-
-int CBaseEntityOutput::Restore( IRestore &restore, int elementCount )
-{
-	// load the number of items saved
-	if ( !restore.ReadFields( "Value", this, NULL, m_DataMap.dataDesc, m_DataMap.dataNumFields ) )
-		return 0;
-
-	m_ActionList = NULL;
-
-	// read in all the fields
-	CEventAction *lastEv = NULL;
-	for ( int i = 0; i < elementCount; i++ )
-	{
-		CEventAction *ev = new CEventAction(NULL);
-
-		if ( !restore.ReadFields( "EntityOutput", ev, NULL, ev->m_DataMap.dataDesc, ev->m_DataMap.dataNumFields ) )
-			return 0;
-
-		// add it to the list in the same order it was saved in
-		if ( lastEv )
-		{
-			lastEv->m_pNext = ev;
-		}
-		else
-		{
-			m_ActionList = ev;
-		}
-		ev->m_pNext = NULL;
-		lastEv = ev;
-	}
-
-	return 1;
-}
+IMPLEMENT_REFLECT_DATAMAP_SIMPLE( CBaseEntityOutput )
 
 const CEventAction *CBaseEntityOutput::GetActionForTarget( string_t iSearchTarget ) const
 {
@@ -504,59 +437,19 @@ class CEventsSaveDataOps : public ISaveRestoreOps
 {
 	virtual void Save( const SaveRestoreFieldInfo_t &fieldInfo, ISave *pSave )
 	{
-		AssertMsg( fieldInfo.pTypeDesc->fieldSize == 1, "CEventsSaveDataOps does not support arrays");
-
-		CBaseEntityOutput *ev = (CBaseEntityOutput*)fieldInfo.pField;
-		const int fieldSize = fieldInfo.pTypeDesc->fieldSize;
- 		for ( int i = 0; i < fieldSize; i++, ev++ )
-		{
-			// save out the number of fields
-			int numElements = ev->NumberOfElements();
-			pSave->WriteInt( &numElements, 1 );
-
-			// save the event data
-			ev->Save( *pSave );
-		}
 	}
 
 	virtual void Restore( const SaveRestoreFieldInfo_t &fieldInfo, IRestore *pRestore )
 	{
-		AssertMsg( fieldInfo.pTypeDesc->fieldSize == 1, "CEventsSaveDataOps does not support arrays");
-
-		CBaseEntityOutput *ev = (CBaseEntityOutput*)fieldInfo.pField;
-		const int fieldSize = fieldInfo.pTypeDesc->fieldSize;
-		for ( int i = 0; i < fieldSize; i++, ev++ )
-		{
-			int nElements = pRestore->ReadInt();
-			
-			Assert( nElements < 100 );
-
-			ev->Restore( *pRestore, nElements );
-		}
 	}
 
 	virtual bool IsEmpty( const SaveRestoreFieldInfo_t &fieldInfo )
 	{
-		AssertMsg( fieldInfo.pTypeDesc->fieldSize == 1, "CEventsSaveDataOps does not support arrays");
-		
-		// check all the elements of the array (usually only 1)
-		CBaseEntityOutput *ev = (CBaseEntityOutput*)fieldInfo.pField;
-		const int fieldSize = fieldInfo.pTypeDesc->fieldSize;
-		for ( int i = 0; i < fieldSize; i++, ev++ )
-		{
-			// It's not empty if it has events or if it has a non-void variant value
-			if (( ev->NumberOfElements() != 0 ) || ( ev->ValueFieldType() != FIELD_VOID ))
-				return 0;
-		}
-
-		// variant has no data
-		return 1;
+		return true;
 	}
 
 	virtual void MakeEmpty( const SaveRestoreFieldInfo_t &fieldInfo )
 	{
-		// Don't no how to. This is okay, since objects of this type
-		// are always born clean before restore, and not reused
 	}
 
 	virtual bool Parse( const SaveRestoreFieldInfo_t &fieldInfo, char const* szValue )
@@ -684,30 +577,8 @@ class CEventQueueSaveLoadProxy : public CLogicalEntity
 {
 	DECLARE_CLASS( CEventQueueSaveLoadProxy, CLogicalEntity );
 
-	int Save( ISave &save )
-	{
-		if ( !BaseClass::Save(save) )
-			return 0;
-
-		// save out the message queue
-		return g_EventQueue.Save( save );
-	}
 
 
-	int Restore( IRestore &restore )
-	{
-		if ( !BaseClass::Restore(restore) )
-			return 0;
-
-		// restore the event queue
-		int iReturn = g_EventQueue.Restore( restore );
-
-		// Now remove myself, because the CEventQueue_SaveRestoreBlockHandler
-		// will handle future saves.
-		UTIL_Remove( this );
-
-		return iReturn;
-	}
 };
 
 LINK_ENTITY_TO_CLASS(event_queue_saveload_proxy, CEventQueueSaveLoadProxy);
@@ -717,62 +588,12 @@ LINK_ENTITY_TO_CLASS(event_queue_saveload_proxy, CEventQueueSaveLoadProxy);
 //-----------------------------------------------------------------------------
 static short EVENTQUEUE_SAVE_RESTORE_VERSION = 1;
 
-class CEventQueue_SaveRestoreBlockHandler : public CDefSaveRestoreBlockHandler
-{
-public:
-	const char *GetBlockName()
-	{
-		return "EventQueue";
-	}
-
-	//---------------------------------
-
-	void Save( ISave *pSave )
-	{
-		g_EventQueue.Save( *pSave );
-	}
-
-	//---------------------------------
-
-	void WriteSaveHeaders( ISave *pSave )
-	{
-		pSave->WriteShort( &EVENTQUEUE_SAVE_RESTORE_VERSION );
-	}
-
-	//---------------------------------
-
-	void ReadRestoreHeaders( IRestore *pRestore )
-	{
-		// No reason why any future version shouldn't try to retain backward compatability. The default here is to not do so.
-		short version;
-		pRestore->ReadShort( &version );
-		m_fDoLoad = ( version == EVENTQUEUE_SAVE_RESTORE_VERSION );
-	}
-
-	//---------------------------------
-
-	void Restore( IRestore *pRestore, bool createPlayers )
-	{
-		if ( m_fDoLoad )
-		{
-			g_EventQueue.Restore( *pRestore );
-		}
-	}
-
-private:
-	bool m_fDoLoad;
-};
 
 //-----------------------------------------------------------------------------
 
-CEventQueue_SaveRestoreBlockHandler g_EventQueue_SaveRestoreBlockHandler;
 
 //-------------------------------------
 
-ISaveRestoreBlockHandler *GetEventQueueSaveRestoreBlockHandler()
-{
-	return &g_EventQueue_SaveRestoreBlockHandler;
-}
 
 
 void CEventQueue::Init( void )
@@ -1130,86 +951,11 @@ void ServiceEventQueue( void )
 
 
 // save data description for the event queue
-BEGIN_SIMPLE_DATADESC( CEventQueue )
-	// These are saved explicitly in CEventQueue::Save below
-	// DEFINE_FIELD( m_Events, EventQueuePrioritizedEvent_t ),
-
-	DEFINE_FIELD( m_iListCount, FIELD_INTEGER ),	// this value is only used during save/restore
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP_SIMPLE( CEventQueue )
 
 
 // save data for a single event in the queue
-BEGIN_SIMPLE_DATADESC( EventQueuePrioritizedEvent_t )
-	DEFINE_FIELD( m_flFireTime, FIELD_TIME ),
-	DEFINE_FIELD( m_iTarget, FIELD_STRING ),
-	DEFINE_FIELD( m_iTargetInput, FIELD_STRING ),
-	DEFINE_FIELD( m_pActivator, FIELD_EHANDLE ),
-	DEFINE_FIELD( m_pCaller, FIELD_EHANDLE ),
-	DEFINE_FIELD( m_pEntTarget, FIELD_EHANDLE ),
-	DEFINE_FIELD( m_iOutputID, FIELD_INTEGER ),
-	DEFINE_CUSTOM_FIELD( m_VariantValue, variantFuncs ),
-
-//	DEFINE_FIELD( m_pNext, FIELD_??? ),
-//	DEFINE_FIELD( m_pPrev, FIELD_??? ),
-END_DATADESC()
-
-
-int CEventQueue::Save( ISave &save )
-{
-	// count the number of items in the queue
-	EventQueuePrioritizedEvent_t *pe;
-
-	m_iListCount = 0;
-	for ( pe = m_Events.m_pNext; pe != NULL; pe = pe->m_pNext )
-	{
-		m_iListCount++;
-	}
-
-	// save that value out to disk, so we know how many to restore
-	if ( !save.WriteFields( "EventQueue", this, NULL, m_DataMap.dataDesc, m_DataMap.dataNumFields ) )
-		return 0;
-	
-	// cycle through all the events, saving them all
-	for ( pe = m_Events.m_pNext; pe != NULL; pe = pe->m_pNext )
-	{
-		if ( !save.WriteFields( "PEvent", pe, NULL, pe->m_DataMap.dataDesc, pe->m_DataMap.dataNumFields ) )
-			return 0;
-	}
-
-	return 1;
-}
-
-
-int CEventQueue::Restore( IRestore &restore )
-{
-	// clear the event queue
-	Clear();
-
-	// rebuild the event queue by restoring all the queue items
-	EventQueuePrioritizedEvent_t tmpEvent;
-
-	// load the number of items saved
-	if ( !restore.ReadFields( "EventQueue", this, NULL, m_DataMap.dataDesc, m_DataMap.dataNumFields ) )
-		return 0;
-	
-	for ( int i = 0; i < m_iListCount; i++ )
-	{
-		if ( !restore.ReadFields( "PEvent", &tmpEvent, NULL, tmpEvent.m_DataMap.dataDesc, tmpEvent.m_DataMap.dataNumFields ) )
-			return 0;
-
-		// add the restored event into the list
-		if ( tmpEvent.m_pEntTarget )
-		{
-			AddEvent( tmpEvent.m_pEntTarget, STRING(tmpEvent.m_iTargetInput), tmpEvent.m_VariantValue, tmpEvent.m_flFireTime - gpGlobals->curtime, tmpEvent.m_pActivator, tmpEvent.m_pCaller, tmpEvent.m_iOutputID );
-		}
-		else
-		{
-			AddEvent( STRING(tmpEvent.m_iTarget), STRING(tmpEvent.m_iTargetInput), tmpEvent.m_VariantValue, tmpEvent.m_flFireTime - gpGlobals->curtime, tmpEvent.m_pActivator, tmpEvent.m_pCaller, tmpEvent.m_iOutputID );
-		}
-	}
-
-	return 1;
-}
+IMPLEMENT_REFLECT_DATAMAP_SIMPLE( EventQueuePrioritizedEvent_t )
 
 ////////////////////////// variant_t implementation //////////////////////////
 
@@ -1539,27 +1285,21 @@ const char *variant_t::ToString( void ) const
 
 typedescription_t variant_t::m_SaveBool[] =
 {
-	DEFINE_FIELD( bVal, FIELD_BOOLEAN ),
 };
 typedescription_t variant_t::m_SaveInt[] =
 {
-	DEFINE_FIELD( iVal, FIELD_INTEGER ),
 };
 typedescription_t variant_t::m_SaveFloat[] =
 {
-	DEFINE_FIELD( flVal, FIELD_FLOAT ),
 };
 typedescription_t variant_t::m_SaveEHandle[] =
 {
-	DEFINE_FIELD( eVal, FIELD_EHANDLE ),
 };
 typedescription_t variant_t::m_SaveString[] =
 {
-	DEFINE_FIELD( iszVal, FIELD_STRING ),
 };
 typedescription_t variant_t::m_SaveColor[] =
 {
-	DEFINE_FIELD( rgbaVal, FIELD_COLOR32 ),
 };
 
 #undef classNameTypedef
@@ -1581,11 +1321,9 @@ typedescription_t variant_t::m_SaveVector[] =
 //	DEFINE_ARRAY( vecVal, FIELD_FLOAT, 3 ),
 //  DEFINE_FIELD( vecSave, FIELD_CLASSCHECK_IGNORE ) // do this or else we get a warning about multiply-defined fields
 
-	DEFINE_FIELD( vecSave, FIELD_VECTOR ),
 };
 typedescription_t variant_t::m_SavePositionVector[] =
 {
-	DEFINE_FIELD( vecSave, FIELD_POSITION_VECTOR ),
 };
 #undef classNameTypedef
 
@@ -1597,11 +1335,9 @@ struct variant_savevmatrix_t
 typedescription_t variant_t::m_SaveVMatrix[] =
 {
 //  DEFINE_FIELD( matSave, FIELD_CLASSCHECK_IGNORE ) // do this or else we get a warning about multiply-defined fields
-	DEFINE_FIELD( matSave, FIELD_VMATRIX ),
 };
 typedescription_t variant_t::m_SaveVMatrixWorldspace[] =
 {
-	DEFINE_FIELD( matSave, FIELD_VMATRIX_WORLDSPACE ),
 };
 #undef classNameTypedef
 
@@ -1612,7 +1348,6 @@ struct variant_savevmatrix3x4_t
 };
 typedescription_t variant_t::m_SaveMatrix3x4Worldspace[] =
 {
-	DEFINE_FIELD( matSave, FIELD_MATRIX3X4_WORLDSPACE ),
 };
 #undef classNameTypedef
 
@@ -1621,126 +1356,21 @@ class CVariantSaveDataOps : public CDefSaveRestoreOps
 	// saves the entire array of variables
 	virtual void Save( const SaveRestoreFieldInfo_t &fieldInfo, ISave *pSave )
 	{
-		variant_t *var = (variant_t*)fieldInfo.pField;
-
-		int type = var->FieldType();
-		pSave->WriteInt( &type, 1 );
-
-		switch ( var->FieldType() )
-		{
-		case FIELD_VOID:
-			break;
-		case FIELD_BOOLEAN:	
-			pSave->WriteFields( fieldInfo.pTypeDesc->fieldName, var, NULL, variant_t::m_SaveBool, 1 );
-			break;
-		case FIELD_INTEGER:	
-			pSave->WriteFields( fieldInfo.pTypeDesc->fieldName, var, NULL, variant_t::m_SaveInt, 1 );
-			break;
-		case FIELD_FLOAT:
-			pSave->WriteFields( fieldInfo.pTypeDesc->fieldName, var, NULL, variant_t::m_SaveFloat, 1 );
-			break;
-		case FIELD_EHANDLE:
-			pSave->WriteFields( fieldInfo.pTypeDesc->fieldName, var, NULL, variant_t::m_SaveEHandle, 1 );
-			break;
-		case FIELD_STRING:
-			pSave->WriteFields( fieldInfo.pTypeDesc->fieldName, var, NULL, variant_t::m_SaveString, 1 );
-			break;
-		case FIELD_COLOR32:
-			pSave->WriteFields( fieldInfo.pTypeDesc->fieldName, var, NULL, variant_t::m_SaveColor, 1 );
-			break;
-		case FIELD_VECTOR:
-		{
-			variant_savevector_t Temp;
-			var->Vector3D(Temp.vecSave);
-			pSave->WriteFields( fieldInfo.pTypeDesc->fieldName, &Temp, NULL, variant_t::m_SaveVector, 1 );
-			break;
-		}
-
-		case FIELD_POSITION_VECTOR:
-		{
-			variant_savevector_t Temp;
-			var->Vector3D(Temp.vecSave);
-			pSave->WriteFields( fieldInfo.pTypeDesc->fieldName, &Temp, NULL, variant_t::m_SavePositionVector, 1 );
-			break;
-		}
-
-		default:
-			Warning( "Bad type %d in saved variant_t\n", var->FieldType() );
-			Assert(0);
-		}
 	}
 
 	// restores a single instance of the variable
 	virtual void Restore( const SaveRestoreFieldInfo_t &fieldInfo, IRestore *pRestore )
 	{
-		variant_t *var = (variant_t*)fieldInfo.pField;
-
-		*var = variant_t();
-
-		var->fieldType = (_fieldtypes)pRestore->ReadInt();
-
-		switch ( var->fieldType )
-		{
-		case FIELD_VOID:
-			break;
-		case FIELD_BOOLEAN:	
-			pRestore->ReadFields( fieldInfo.pTypeDesc->fieldName, var, NULL, variant_t::m_SaveBool, 1 );
-			break;
-		case FIELD_INTEGER:	
-			pRestore->ReadFields( fieldInfo.pTypeDesc->fieldName, var, NULL, variant_t::m_SaveInt, 1 );
-			break;
-		case FIELD_FLOAT:
-			pRestore->ReadFields( fieldInfo.pTypeDesc->fieldName, var, NULL, variant_t::m_SaveFloat, 1 );
-			break;
-		case FIELD_EHANDLE:
-			pRestore->ReadFields( fieldInfo.pTypeDesc->fieldName, var, NULL, variant_t::m_SaveEHandle, 1 );
-			break;
-		case FIELD_STRING:
-			pRestore->ReadFields( fieldInfo.pTypeDesc->fieldName, var, NULL, variant_t::m_SaveString, 1 );
-			break;
-		case FIELD_COLOR32:
-			pRestore->ReadFields( fieldInfo.pTypeDesc->fieldName, var, NULL, variant_t::m_SaveColor, 1 );
-			break;
-		case FIELD_VECTOR:
-		{
-			variant_savevector_t Temp;
-			pRestore->ReadFields( fieldInfo.pTypeDesc->fieldName, &Temp, NULL, variant_t::m_SaveVector, 1 );
-			var->SetVector3D(Temp.vecSave);
-			break;
-		}
-		case FIELD_POSITION_VECTOR:
-		{
-			variant_savevector_t Temp;
-			pRestore->ReadFields( fieldInfo.pTypeDesc->fieldName, &Temp, NULL, variant_t::m_SavePositionVector, 1 );
-			var->SetPositionVector3D(Temp.vecSave);
-			break;
-		}
-		default:
-			Warning( "Bad type %d in saved variant_t\n", var->FieldType() );
-			Assert(0);
-			break;
-		}
 	}
 
 
 	virtual bool IsEmpty( const SaveRestoreFieldInfo_t &fieldInfo )
 	{
-		// check all the elements of the array (usually only 1)
-		variant_t *var = (variant_t*)fieldInfo.pField;
-		for ( int i = 0; i < fieldInfo.pTypeDesc->fieldSize; i++, var++ )
-		{
-			if ( var->FieldType() != FIELD_VOID )
-				return 0;
-		}
-
-		// variant has no data
-		return 1;
+		return true;
 	}
 
 	virtual void MakeEmpty( const SaveRestoreFieldInfo_t &fieldInfo )
 	{
-		// Don't no how to. This is okay, since objects of this type
-		// are always born clean before restore, and not reused
 	}
 };
 

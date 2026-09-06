@@ -5,6 +5,16 @@
 // $NoKeywords: $
 //===========================================================================//
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_annotations.h"
+#ifdef CLIENT_DLL
+#include "reflect_recvtable.h"
+#endif
+#include "reflect_predmap.h"
+#include "reflect_annotations.h"
+#ifdef GAME_DLL
+#include "reflect_sendtable.h"
+#endif
 #include "decals.h"
 #include "basegrenade_shared.h"
 #include "shake.h"
@@ -30,30 +40,7 @@ extern ConVar    sk_plr_dmg_grenade;
 #if !defined( CLIENT_DLL )
 
 // Global Savedata for friction modifier
-BEGIN_DATADESC( CBaseGrenade )
-	//					nextGrenade
-	DEFINE_FIELD( m_hThrower, FIELD_EHANDLE ),
-	//					m_fRegisteredSound ???
-	DEFINE_FIELD( m_bIsLive, FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_DmgRadius, FIELD_FLOAT ),
-	DEFINE_FIELD( m_flDetonateTime, FIELD_TIME ),
-	DEFINE_FIELD( m_flWarnAITime, FIELD_TIME ),
-	DEFINE_FIELD( m_flDamage, FIELD_FLOAT ),
-	DEFINE_FIELD( m_iszBounceSound, FIELD_STRING ),
-	DEFINE_FIELD( m_bHasWarnedAI,	FIELD_BOOLEAN ),
-
-	// Function Pointers
-	DEFINE_THINKFUNC( Smoke ),
-	DEFINE_ENTITYFUNC( BounceTouch ),
-	DEFINE_ENTITYFUNC( SlideTouch ),
-	DEFINE_ENTITYFUNC( ExplodeTouch ),
-	DEFINE_USEFUNC( DetonateUse ),
-	DEFINE_THINKFUNC( DangerSoundThink ),
-	DEFINE_THINKFUNC( PreDetonate ),
-	DEFINE_THINKFUNC( Detonate ),
-	DEFINE_THINKFUNC( TumbleThink ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CBaseGrenade )
 
 void SendProxy_CropFlagsToPlayerFlagBitsLength( const SendProp *pProp, const void *pStruct, const void *pVarData, DVariant *pOut, int iElement, int objectID);
 
@@ -61,52 +48,13 @@ void SendProxy_CropFlagsToPlayerFlagBitsLength( const SendProp *pProp, const voi
 
 IMPLEMENT_NETWORKCLASS_ALIASED( BaseGrenade, DT_BaseGrenade )
 
-BEGIN_NETWORK_TABLE( CBaseGrenade, DT_BaseGrenade )
-#if !defined( CLIENT_DLL )
-	SendPropFloat( SENDINFO( m_flDamage ), 10, SPROP_ROUNDDOWN, 0.0, 256.0f ),
-	SendPropFloat( SENDINFO( m_DmgRadius ), 10, SPROP_ROUNDDOWN, 0.0, 1024.0f ),
-	SendPropInt( SENDINFO( m_bIsLive ), 1, SPROP_UNSIGNED ),
-//	SendPropTime( SENDINFO( m_flDetonateTime ) ),
-	SendPropEHandle( SENDINFO( m_hThrower ) ),
-
-	SendPropExclude( "DT_AnimTimeMustBeFirst" , "m_flAnimTime" ),
-	
-	SendPropVector( SENDINFO( m_vecVelocity ), 0, SPROP_NOSCALE ), 
-	// HACK: Use same flag bits as player for now
-	SendPropInt			( SENDINFO(m_fFlags), PLAYER_FLAG_BITS, SPROP_UNSIGNED, SendProxy_CropFlagsToPlayerFlagBitsLength ),
-#else
-	RecvPropFloat( RECVINFO( m_flDamage ) ),
-	RecvPropFloat( RECVINFO( m_DmgRadius ) ),
-	RecvPropInt( RECVINFO( m_bIsLive ) ),
-//	RecvPropTime( RECVINFO( m_flDetonateTime ) ),
-	RecvPropEHandle( RECVINFO( m_hThrower ) ),
-
-	// Need velocity from grenades to make animation system work correctly when running
-	RecvPropVector( RECVINFO(m_vecVelocity), 0, RecvProxy_LocalVelocity ),
-
-	RecvPropInt( RECVINFO( m_fFlags ) ),
-#endif
-END_NETWORK_TABLE()
+IMPLEMENT_REFLECT_TABLE( CBaseGrenade, DT_BaseGrenade );
 
 LINK_ENTITY_TO_CLASS_ALIASED( grenade, BaseGrenade );
 
 #if defined( CLIENT_DLL )
 
-BEGIN_PREDICTION_DATA( CBaseGrenade  )
-
-	DEFINE_PRED_FIELD( m_hThrower, FIELD_EHANDLE, FTYPEDESC_INSENDTABLE ),
-	DEFINE_PRED_FIELD( m_bIsLive, FIELD_BOOLEAN, FTYPEDESC_INSENDTABLE ),
-	DEFINE_PRED_FIELD( m_DmgRadius, FIELD_BOOLEAN, FTYPEDESC_INSENDTABLE ),
-//	DEFINE_PRED_FIELD_TOL( m_flDetonateTime, FIELD_FLOAT, FTYPEDESC_INSENDTABLE, TD_MSECTOLERANCE ),
-	DEFINE_PRED_FIELD( m_flDamage, FIELD_FLOAT, FTYPEDESC_INSENDTABLE ),
-
-	DEFINE_PRED_FIELD_TOL( m_vecVelocity, FIELD_VECTOR, FTYPEDESC_INSENDTABLE, 0.5f ),
-	DEFINE_PRED_FIELD_TOL( m_flNextAttack, FIELD_FLOAT, FTYPEDESC_INSENDTABLE, TD_MSECTOLERANCE ),
-
-//	DEFINE_FIELD( m_fRegisteredSound, FIELD_BOOLEAN ),
-//	DEFINE_FIELD( m_iszBounceSound, FIELD_STRING ),
-
-END_PREDICTION_DATA()
+IMPLEMENT_REFLECT_PREDMAP( CBaseGrenade );
 
 #endif
 

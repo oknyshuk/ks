@@ -6,12 +6,13 @@
 //===========================================================================//
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_annotations.h"
 #include "physics.h"
 #include "entityoutput.h"
 #include "engine/IEngineSound.h"
 #include "vphysics/constraints.h"
 #include "igamesystem.h"
-#include "physics_saverestore.h"
 #include "vcollide_parse.h"
 #include "positionwatcher.h"
 #include "fmtstr.h"
@@ -123,12 +124,10 @@ public:
 	}
 	DECLARE_DATADESC();
 
-	float m_massScale;
+	[[= ks::reflect::Key{ .name = "massScale" } ]] float m_massScale;
 };
 
-BEGIN_DATADESC( CConstraintAnchor )
-	DEFINE_KEYFIELD( m_massScale, FIELD_FLOAT, "massScale" ),
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CConstraintAnchor )
 
 LINK_ENTITY_TO_CLASS( info_constraint_anchor, CConstraintAnchor );
 
@@ -144,14 +143,10 @@ public:
 	DECLARE_DATADESC();
 private:
 	IPhysicsConstraintGroup *m_pMachine;
-	int						m_additionalIterations;
+	[[= ks::reflect::Key{ .name = "additionaliterations" } ]] int						m_additionalIterations;
 };
 
-BEGIN_DATADESC( CPhysConstraintSystem )
-	DEFINE_PHYSPTR( m_pMachine ),
-	DEFINE_KEYFIELD( m_additionalIterations, FIELD_INTEGER, "additionaliterations" ),
-	
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CPhysConstraintSystem )
 
 
 void CPhysConstraintSystem::Spawn()
@@ -349,6 +344,7 @@ public:
 		PhysCallbackRemove( this->NetworkProp() );
 	}
 
+	[[= ks::reflect::Input{ .name = "Break", .type = FIELD_VOID } ]]
 	void InputBreak( inputdata_t &inputdata )
 	{
 		if ( m_pConstraint ) 
@@ -357,11 +353,13 @@ public:
 		OnBreak();
 	}
 
+	[[= ks::reflect::Input{ .name = "ConstraintBroken", .type = FIELD_VOID } ]]
 	void InputOnBreak( inputdata_t &inputdata )
 	{
 		OnBreak();
 	}
 
+	[[= ks::reflect::Input{ .name = "TurnOn", .type = FIELD_VOID } ]]
 	void InputTurnOn( inputdata_t &inputdata )
 	{
 		if ( HasSpawnFlags( SF_CONSTRAINT_NO_CONNECT_UNTIL_ACTIVATED ) )
@@ -377,6 +375,7 @@ public:
 		m_pConstraint->GetAttachedObject()->Wake();
 	}
 
+	[[= ks::reflect::Input{ .name = "TurnOff", .type = FIELD_VOID } ]]
 	void InputTurnOff( inputdata_t &inputdata )
 	{
 		Deactivate();
@@ -438,40 +437,19 @@ protected:
 	IPhysicsConstraint	*m_pConstraint;
 
 	// These are "template" values used to construct the hinge
-	string_t		m_nameAttach1;
-	string_t		m_nameAttach2;
-	string_t		m_breakSound;
-	string_t		m_nameSystem;
-	float			m_forceLimit;
-	float			m_torqueLimit;
+	[[= ks::reflect::Key{ .name = "attach1" } ]] string_t		m_nameAttach1;
+	[[= ks::reflect::Key{ .name = "attach2" } ]] string_t		m_nameAttach2;
+	[[= ks::reflect::As{ FIELD_SOUNDNAME } ]] [[= ks::reflect::Key{ .name = "breaksound" } ]] string_t		m_breakSound;
+	[[= ks::reflect::Key{ .name = "constraintsystem" } ]] string_t		m_nameSystem;
+	[[= ks::reflect::Key{ .name = "forcelimit" } ]] float			m_forceLimit;
+	[[= ks::reflect::Key{ .name = "torquelimit" } ]] float			m_torqueLimit;
 	unsigned int	m_teleportTick;
-	float			m_minTeleportDistance;
+	[[= ks::reflect::Key{ .name = "teleportfollowdistance" } ]] float			m_minTeleportDistance;
 
-	COutputEvent	m_OnBreak;
+	[[= ks::reflect::Key{ .name = "OnBreak" } ]] COutputEvent	m_OnBreak;
 };
 
-BEGIN_DATADESC( CPhysConstraint )
-
-	DEFINE_PHYSPTR( m_pConstraint ),
-
-	DEFINE_KEYFIELD( m_nameSystem, FIELD_STRING, "constraintsystem" ),
-	DEFINE_KEYFIELD( m_nameAttach1, FIELD_STRING, "attach1" ),
-	DEFINE_KEYFIELD( m_nameAttach2, FIELD_STRING, "attach2" ),
-	DEFINE_KEYFIELD( m_breakSound, FIELD_SOUNDNAME, "breaksound" ),
-	DEFINE_KEYFIELD( m_forceLimit, FIELD_FLOAT, "forcelimit" ),
-	DEFINE_KEYFIELD( m_torqueLimit, FIELD_FLOAT, "torquelimit" ),
-	DEFINE_KEYFIELD( m_minTeleportDistance, FIELD_FLOAT, "teleportfollowdistance" ),
-//	DEFINE_FIELD( m_teleportTick, FIELD_INTEGER ),
-
-	DEFINE_OUTPUT( m_OnBreak, "OnBreak" ),
-
-	DEFINE_INPUTFUNC( FIELD_VOID, "Break", InputBreak ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "ConstraintBroken", InputOnBreak ),
-
-	DEFINE_INPUTFUNC( FIELD_VOID, "TurnOn", InputTurnOn ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "TurnOff", InputTurnOff ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CPhysConstraint )
 
 
 CPhysConstraint::CPhysConstraint( void )
@@ -766,7 +744,9 @@ void CPhysConstraint::NotifySystemEvent( CBaseEntity *pNotify, notify_system_eve
 	PhysTeleportConstrainedEntity( pNotify, m_pConstraint->GetReferenceObject(), m_pConstraint->GetAttachedObject(), params.pTeleport->prevOrigin, params.pTeleport->prevAngles, params.pTeleport->physicsRotate );
 }
 
-class CPhysHinge : public CPhysConstraint, public IVPhysicsWatcher
+class
+      [[= ks::reflect::KeyFrom<"m_hinge.worldAxisDirection", ks::reflect::Key{ .name = "hingeaxis" } >{} ]]
+      CPhysHinge : public CPhysConstraint, public IVPhysicsWatcher
 {
 	DECLARE_CLASS( CPhysHinge, CPhysConstraint );
 
@@ -809,6 +789,7 @@ public:
 		BaseClass::DrawDebugGeometryOverlays();
 	}
 
+	[[= ks::reflect::Input{ .name = "SetAngularVelocity", .type = FIELD_FLOAT } ]]
 	void InputSetVelocity( inputdata_t &inputdata )
 	{
 		if ( !m_pConstraint || !m_pConstraint->GetReferenceObject() || !m_pConstraint->GetAttachedObject() )
@@ -838,6 +819,7 @@ public:
 		m_pConstraint->SetAngularMotor( speed, speed * loadscale * massLoad * loadscale * (1.0/TICK_INTERVAL) );
 	}
 
+	[[= ks::reflect::Input{ .name = "SetHingeFriction", .type = FIELD_FLOAT } ]]
 	void InputSetHingeFriction( inputdata_t &inputdata )
 	{
 		m_hingeFriction = inputdata.value.Float();
@@ -928,41 +910,12 @@ protected:
 
 private:
 	constraint_hingeparams_t m_hinge;
-	float m_hingeFriction;
-	float	m_systemLoadScale;
+	[[= ks::reflect::Key{ .name = "hingefriction" } ]] float m_hingeFriction;
+	[[= ks::reflect::Key{ .name = "systemloadscale" } ]] float	m_systemLoadScale;
 	bool IsWorldHinge( const hl_constraint_info_t &info, int *pAxisOut );
 };
 
-BEGIN_DATADESC( CPhysHinge )
-
-// Quiet down classcheck
-//	DEFINE_FIELD( m_hinge, FIELD_??? ),
-
-	DEFINE_KEYFIELD( m_hingeFriction, FIELD_FLOAT, "hingefriction" ),
-	DEFINE_FIELD( m_hinge.worldPosition, FIELD_POSITION_VECTOR ),
-	DEFINE_KEYFIELD( m_hinge.worldAxisDirection, FIELD_VECTOR, "hingeaxis" ),
-	DEFINE_KEYFIELD( m_systemLoadScale, FIELD_FLOAT, "systemloadscale" ),
-	DEFINE_INPUTFUNC( FIELD_FLOAT, "SetAngularVelocity", InputSetVelocity ),
-	DEFINE_INPUTFUNC( FIELD_FLOAT, "SetHingeFriction", InputSetHingeFriction ),
-
-#if HINGE_NOTIFY
-	DEFINE_KEYFIELD( m_soundInfo.m_soundProfile.m_keyPoints[SimpleConstraintSoundProfile::kMIN_THRESHOLD] , FIELD_FLOAT, "minSoundThreshold" ),
-	DEFINE_KEYFIELD( m_soundInfo.m_soundProfile.m_keyPoints[SimpleConstraintSoundProfile::kMIN_FULL] , FIELD_FLOAT, "maxSoundThreshold" ),
-	DEFINE_KEYFIELD( m_soundInfo.m_iszTravelSoundFwd, FIELD_SOUNDNAME, "slidesoundfwd" ),
-	DEFINE_KEYFIELD( m_soundInfo.m_iszTravelSoundBack, FIELD_SOUNDNAME, "slidesoundback" ),
-
-	DEFINE_KEYFIELD( m_soundInfo.m_iszReversalSounds[0], FIELD_SOUNDNAME, "reversalsoundSmall" ),
-	DEFINE_KEYFIELD( m_soundInfo.m_iszReversalSounds[1], FIELD_SOUNDNAME, "reversalsoundMedium" ),
-	DEFINE_KEYFIELD( m_soundInfo.m_iszReversalSounds[2], FIELD_SOUNDNAME, "reversalsoundLarge" ),
-
-	DEFINE_KEYFIELD( m_soundInfo.m_soundProfile.m_reversalSoundThresholds[0] , FIELD_FLOAT, "reversalsoundthresholdSmall" ),
-	DEFINE_KEYFIELD( m_soundInfo.m_soundProfile.m_reversalSoundThresholds[1], FIELD_FLOAT, "reversalsoundthresholdMedium" ),
-	DEFINE_KEYFIELD( m_soundInfo.m_soundProfile.m_reversalSoundThresholds[2] , FIELD_FLOAT, "reversalsoundthresholdLarge" ),
-
-	DEFINE_THINKFUNC( SoundThink ),
-#endif
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CPhysHinge )
 
 
 LINK_ENTITY_TO_CLASS( phys_hinge, CPhysHinge );
@@ -1122,6 +1075,7 @@ public:
 
 	DECLARE_DATADESC();
 	IPhysicsConstraint *CreateConstraint( IPhysicsConstraintGroup *pGroup, const hl_constraint_info_t &info );
+	[[= ks::reflect::Input{ .name = "SetVelocity", .type = FIELD_FLOAT } ]]
 	void InputSetVelocity( inputdata_t &inputdata )
 	{
 		if ( !m_pConstraint || !m_pConstraint->GetReferenceObject() || !m_pConstraint->GetAttachedObject() )
@@ -1224,9 +1178,9 @@ public:
 	void Precache( void );
 #endif
 
-	Vector	m_axisEnd;
-	float	m_slideFriction;
-	float	m_systemLoadScale;
+	[[= ks::reflect::As{ FIELD_POSITION_VECTOR } ]] [[= ks::reflect::Key{ .name = "slideaxis" } ]] Vector	m_axisEnd;
+	[[= ks::reflect::Key{ .name = "slidefriction" } ]] float	m_slideFriction;
+	[[= ks::reflect::Key{ .name = "systemloadscale" } ]] float	m_systemLoadScale;
 
 #if HINGE_NOTIFY
 protected:
@@ -1236,31 +1190,7 @@ protected:
 
 LINK_ENTITY_TO_CLASS( phys_slideconstraint, CPhysSlideConstraint );
 
-BEGIN_DATADESC( CPhysSlideConstraint )
-
-	DEFINE_KEYFIELD( m_axisEnd, FIELD_POSITION_VECTOR, "slideaxis" ),
-	DEFINE_KEYFIELD( m_slideFriction, FIELD_FLOAT, "slidefriction" ),
-	DEFINE_KEYFIELD( m_systemLoadScale, FIELD_FLOAT, "systemloadscale" ),
-	DEFINE_INPUTFUNC( FIELD_FLOAT, "SetVelocity", InputSetVelocity ),
-#if HINGE_NOTIFY
-	DEFINE_KEYFIELD( m_soundInfo.m_soundProfile.m_keyPoints[SimpleConstraintSoundProfile::kMIN_THRESHOLD] , FIELD_FLOAT, "minSoundThreshold" ),
-	DEFINE_KEYFIELD( m_soundInfo.m_soundProfile.m_keyPoints[SimpleConstraintSoundProfile::kMIN_FULL] , FIELD_FLOAT, "maxSoundThreshold" ),
-	DEFINE_KEYFIELD( m_soundInfo.m_iszTravelSoundFwd, FIELD_SOUNDNAME, "slidesoundfwd" ),
-	DEFINE_KEYFIELD( m_soundInfo.m_iszTravelSoundBack, FIELD_SOUNDNAME, "slidesoundback" ),
-
-	DEFINE_KEYFIELD( m_soundInfo.m_iszReversalSounds[0], FIELD_SOUNDNAME, "reversalsoundSmall" ),
-	DEFINE_KEYFIELD( m_soundInfo.m_iszReversalSounds[1], FIELD_SOUNDNAME, "reversalsoundMedium" ),
-	DEFINE_KEYFIELD( m_soundInfo.m_iszReversalSounds[2], FIELD_SOUNDNAME, "reversalsoundLarge" ),
-
-	DEFINE_KEYFIELD( m_soundInfo.m_soundProfile.m_reversalSoundThresholds[0] , FIELD_FLOAT, "reversalsoundthresholdSmall" ),
-	DEFINE_KEYFIELD( m_soundInfo.m_soundProfile.m_reversalSoundThresholds[1], FIELD_FLOAT, "reversalsoundthresholdMedium" ),
-	DEFINE_KEYFIELD( m_soundInfo.m_soundProfile.m_reversalSoundThresholds[2] , FIELD_FLOAT, "reversalsoundthresholdLarge" ),
-
-
-	DEFINE_THINKFUNC( SoundThink ),
-#endif
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CPhysSlideConstraint )
 
 
 
@@ -1469,20 +1399,13 @@ public:
 	IPhysicsConstraint *CreateConstraint( IPhysicsConstraintGroup *pGroup, const hl_constraint_info_t &info );
 
 private:
-	Vector		m_position2;
+	[[= ks::reflect::As{ FIELD_POSITION_VECTOR } ]] [[= ks::reflect::Key{ .name = "position2" } ]] Vector		m_position2;
 	Vector		m_offset[2];
-	float		m_addLength;
-	float		m_gearRatio;
+	[[= ks::reflect::Key{ .name = "addlength" } ]] float		m_addLength;
+	[[= ks::reflect::Key{ .name = "gearratio" } ]] float		m_gearRatio;
 };
 
-BEGIN_DATADESC( CPhysPulley )
-
-	DEFINE_KEYFIELD( m_position2, FIELD_POSITION_VECTOR, "position2" ),
-	DEFINE_AUTO_ARRAY( m_offset, FIELD_VECTOR ),
-	DEFINE_KEYFIELD( m_addLength, FIELD_FLOAT, "addlength" ),
-	DEFINE_KEYFIELD( m_gearRatio, FIELD_FLOAT, "gearratio" ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CPhysPulley )
 
 
 LINK_ENTITY_TO_CLASS( phys_pulleyconstraint, CPhysPulley );
@@ -1579,20 +1502,13 @@ public:
 
 private:
 	Vector		m_offset[2];
-	Vector		m_vecAttach;
-	float		m_addLength;
-	float		m_minLength;
+	[[= ks::reflect::As{ FIELD_POSITION_VECTOR } ]] [[= ks::reflect::Key{ .name = "attachpoint" } ]] Vector		m_vecAttach;
+	[[= ks::reflect::Key{ .name = "addlength" } ]] float		m_addLength;
+	[[= ks::reflect::Key{ .name = "minlength" } ]] float		m_minLength;
 	float		m_totalLength;
 };
 
-BEGIN_DATADESC( CPhysLength )
-
-	DEFINE_AUTO_ARRAY( m_offset, FIELD_VECTOR ),
-	DEFINE_KEYFIELD( m_addLength, FIELD_FLOAT, "addlength" ),
-	DEFINE_KEYFIELD( m_minLength, FIELD_FLOAT, "minlength" ),
-	DEFINE_KEYFIELD( m_vecAttach, FIELD_POSITION_VECTOR, "attachpoint" ),
-	DEFINE_FIELD( m_totalLength, FIELD_FLOAT ),
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CPhysLength )
 
 
 LINK_ENTITY_TO_CLASS( phys_lengthconstraint, CPhysLength );
@@ -1639,31 +1555,19 @@ public:
 	IPhysicsConstraint *CreateConstraint( IPhysicsConstraintGroup *pGroup, const hl_constraint_info_t &info );
 
 private:
-	float		m_xmin;	// constraint limits in degrees
-	float		m_xmax;
-	float		m_ymin;
-	float		m_ymax;
-	float		m_zmin;
-	float		m_zmax;
+	[[= ks::reflect::Key{ .name = "xmin" } ]] float		m_xmin;	// constraint limits in degrees
+	[[= ks::reflect::Key{ .name = "xmax" } ]] float		m_xmax;
+	[[= ks::reflect::Key{ .name = "ymin" } ]] float		m_ymin;
+	[[= ks::reflect::Key{ .name = "ymax" } ]] float		m_ymax;
+	[[= ks::reflect::Key{ .name = "zmin" } ]] float		m_zmin;
+	[[= ks::reflect::Key{ .name = "zmax" } ]] float		m_zmax;
 
-	float		m_xfriction;
-	float		m_yfriction;
-	float		m_zfriction;
+	[[= ks::reflect::Key{ .name = "xfriction" } ]] float		m_xfriction;
+	[[= ks::reflect::Key{ .name = "yfriction" } ]] float		m_yfriction;
+	[[= ks::reflect::Key{ .name = "zfriction" } ]] float		m_zfriction;
 };
 
-BEGIN_DATADESC( CRagdollConstraint )
-
-	DEFINE_KEYFIELD( m_xmin, FIELD_FLOAT, "xmin" ),
-	DEFINE_KEYFIELD( m_xmax, FIELD_FLOAT, "xmax" ),
-	DEFINE_KEYFIELD( m_ymin, FIELD_FLOAT, "ymin" ),
-	DEFINE_KEYFIELD( m_ymax, FIELD_FLOAT, "ymax" ),
-	DEFINE_KEYFIELD( m_zmin, FIELD_FLOAT, "zmin" ),
-	DEFINE_KEYFIELD( m_zmax, FIELD_FLOAT, "zmax" ),
-	DEFINE_KEYFIELD( m_xfriction, FIELD_FLOAT, "xfriction" ),
-	DEFINE_KEYFIELD( m_yfriction, FIELD_FLOAT, "yfriction" ),
-	DEFINE_KEYFIELD( m_zfriction, FIELD_FLOAT, "zfriction" ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CRagdollConstraint )
 
 
 LINK_ENTITY_TO_CLASS( phys_ragdollconstraint, CRagdollConstraint );

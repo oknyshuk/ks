@@ -6,6 +6,8 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_annotations.h"
 #include "entitylist.h"
 #include "gamerules.h"
 #include "basecombatcharacter.h"
@@ -26,41 +28,22 @@ public:
 	void	HurtThink( void );
 
 	// Input handlers
-	void InputTurnOn(inputdata_t &inputdata);
-	void InputTurnOff(inputdata_t &inputdata);
-	void InputToggle(inputdata_t &inputdata);
-	void InputHurt(inputdata_t &inputdata);
+	[[= ks::reflect::Input{ .name = "TurnOn", .type = FIELD_VOID } ]] void InputTurnOn(inputdata_t &inputdata);
+	[[= ks::reflect::Input{ .name = "TurnOff", .type = FIELD_VOID } ]] void InputTurnOff(inputdata_t &inputdata);
+	[[= ks::reflect::Input{ .name = "Toggle", .type = FIELD_VOID } ]] void InputToggle(inputdata_t &inputdata);
+	[[= ks::reflect::Input{ .name = "Hurt", .type = FIELD_VOID } ]] void InputHurt(inputdata_t &inputdata);
 	
 	DECLARE_DATADESC();
 
-	int			m_nDamage;
-	int			m_bitsDamageType;
-	float		m_flRadius;
-	float		m_flDelay;
-	string_t	m_strTarget;
+	[[= ks::reflect::Key{ .name = "Damage" } ]] int			m_nDamage;
+	[[= ks::reflect::Key{ .name = "DamageType" } ]] int			m_bitsDamageType;
+	[[= ks::reflect::Key{ .name = "DamageRadius" } ]] float		m_flRadius;
+	[[= ks::reflect::Key{ .name = "DamageDelay" } ]] float		m_flDelay;
+	[[= ks::reflect::Key{ .name = "DamageTarget" } ]] string_t	m_strTarget;
 	EHANDLE		m_pActivator;
 };
 
-BEGIN_DATADESC( CPointHurt )
-
-	DEFINE_KEYFIELD( m_flRadius, FIELD_FLOAT, "DamageRadius" ),
-	DEFINE_KEYFIELD( m_nDamage, FIELD_INTEGER, "Damage" ),
-	DEFINE_KEYFIELD( m_flDelay, FIELD_FLOAT, "DamageDelay" ),
-	DEFINE_KEYFIELD( m_bitsDamageType, FIELD_INTEGER, "DamageType" ),
-	DEFINE_KEYFIELD( m_strTarget, FIELD_STRING, "DamageTarget" ),
-	
-	// Function Pointers
-	DEFINE_FUNCTION( HurtThink ),
-
-	// Inputs
-	DEFINE_INPUTFUNC( FIELD_VOID, "TurnOn", InputTurnOn ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "TurnOff", InputTurnOff ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "Toggle", InputToggle ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "Hurt", InputHurt ),
-
-	DEFINE_FIELD( m_pActivator, FIELD_EHANDLE ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CPointHurt )
 
 LINK_ENTITY_TO_CLASS( point_hurt, CPointHurt );
 

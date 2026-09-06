@@ -12,6 +12,8 @@
 #ifndef SOUNDENT_H
 #define SOUNDENT_H
 
+#include "reflect_annotations.h"
+
 #ifdef _WIN32
 #pragma once
 #endif
@@ -214,7 +216,6 @@ inline bool CSound::ValidateOwner( void ) const
 //=========================================================
 class CSoundEnt : public CPointEntity
 {
-	DECLARE_DATADESC();
 
 public:
 	DECLARE_CLASS( CSoundEnt, CPointEntity );

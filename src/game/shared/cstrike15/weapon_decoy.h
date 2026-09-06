@@ -7,6 +7,8 @@
 #ifndef WEAPON_DECOY_H
 #define WEAPON_DECOY_H
 
+#include "reflect_annotations.h"
+
 #ifdef _WIN32
 #pragma once
 #endif
@@ -20,7 +22,8 @@
 //-----------------------------------------------------------------------------
 // Decoy grenades
 //-----------------------------------------------------------------------------
-class CDecoyGrenade : public CBaseCSGrenade
+class [[= ks::reflect::NetTable{ .name = "DT_DecoyGrenade" } ]]
+      CDecoyGrenade : public CBaseCSGrenade
 {
 public:
 	DECLARE_CLASS( CDecoyGrenade, CBaseCSGrenade );
@@ -32,7 +35,6 @@ public:
 	virtual CSWeaponID GetCSWeaponID( void ) const { return WEAPON_DECOY; }
 
 #if !defined( CLIENT_DLL )
-	DECLARE_DATADESC();
 
 	virtual void EmitGrenade( Vector vecSrc, QAngle vecAngles, Vector vecVel, AngularImpulse angImpulse, CBasePlayer *pPlayer, const CCSWeaponInfo& weaponInfo );
 #endif

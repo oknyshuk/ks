@@ -7,6 +7,8 @@
 
 #ifndef C_COLORCORRECTION_H
 #define C_COLORCORRECTION_H
+
+#include "reflect_annotations.h"
 #ifdef _WIN32
 #pragma once
 #endif
@@ -16,7 +18,8 @@
 //------------------------------------------------------------------------------
 // Purpose : Color correction entity with radial falloff
 //------------------------------------------------------------------------------
-class C_ColorCorrection : public C_BaseEntity
+class [[= ks::reflect::NetTable{ .name = "DT_ColorCorrection" } ]]
+      C_ColorCorrection : public C_BaseEntity
 {
 public:
 	DECLARE_CLASS( C_ColorCorrection, C_BaseEntity );
@@ -48,20 +51,20 @@ protected:
 	float GetFadeRatio( int nSplitScreenSlot ) const;
 	bool IsFadeTimeElapsed( int nSplitScreenSlot ) const;
 
-	Vector	m_vecOrigin;
+	[[= ks::reflect::Net{} ]] Vector	m_vecOrigin;
 
-	float	m_minFalloff;
-	float	m_maxFalloff;
-	float	m_flFadeInDuration;
-	float	m_flFadeOutDuration;
-	float	m_flMaxWeight;
-	float	m_flCurWeight;		// networked from server
-	char	m_netLookupFilename[MAX_PATH];
+	[[= ks::reflect::Net{} ]] float	m_minFalloff;
+	[[= ks::reflect::Net{} ]] float	m_maxFalloff;
+	[[= ks::reflect::Net{} ]] float	m_flFadeInDuration;
+	[[= ks::reflect::Net{} ]] float	m_flFadeOutDuration;
+	[[= ks::reflect::Net{} ]] float	m_flMaxWeight;
+	[[= ks::reflect::Net{} ]] float	m_flCurWeight;		// networked from server
+	[[= ks::reflect::Net{} ]] char	m_netLookupFilename[MAX_PATH];
 
-	bool	m_bEnabled;			// networked from server
-	bool	m_bMaster;
-	bool	m_bClientSide;
-	bool	m_bExclusive;
+	[[= ks::reflect::Net{} ]] bool	m_bEnabled;			// networked from server
+	[[= ks::reflect::Net{} ]] bool	m_bMaster;
+	[[= ks::reflect::Net{} ]] bool	m_bClientSide;
+	[[= ks::reflect::Net{} ]] bool	m_bExclusive;
 
 	bool	m_bEnabledOnClient[MAX_SPLITSCREEN_PLAYERS];
 	float	m_flCurWeightOnClient[MAX_SPLITSCREEN_PLAYERS];

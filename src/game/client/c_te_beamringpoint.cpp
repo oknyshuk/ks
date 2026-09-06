@@ -11,6 +11,8 @@
 // $NoKeywords: $
 //=============================================================================//
 #include "cbase.h"
+#include "reflect_recvtable.h"
+#include "reflect_annotations.h"
 #include "c_te_basebeam.h"
 #include "iviewrender_beams.h"
 
@@ -20,7 +22,8 @@
 //-----------------------------------------------------------------------------
 // Purpose: BeamRingPoint TE
 //-----------------------------------------------------------------------------
-class C_TEBeamRingPoint : public C_TEBaseBeam
+class [[= ks::reflect::NetTable{ .name = "DT_TEBeamRingPoint" } ]]
+      C_TEBeamRingPoint : public C_TEBaseBeam
 {
 public:
 	DECLARE_CLASS( C_TEBeamRingPoint, C_TEBaseBeam );
@@ -32,9 +35,9 @@ public:
 	virtual void	PostDataUpdate( DataUpdateType_t updateType );
 
 public:
-	Vector			m_vecCenter;
-	float			m_flStartRadius;
-	float			m_flEndRadius;
+	[[= ks::reflect::Net{} ]] Vector			m_vecCenter;
+	[[= ks::reflect::Net{} ]] float			m_flStartRadius;
+	[[= ks::reflect::Net{} ]] float			m_flEndRadius;
 };
 
 //-----------------------------------------------------------------------------
@@ -74,8 +77,4 @@ void C_TEBeamRingPoint::PostDataUpdate( DataUpdateType_t updateType )
 		m_nStartFrame, 0.1 * m_nFrameRate, r, g, b, m_nFlags );
 }
 
-IMPLEMENT_CLIENTCLASS_EVENT_DT(C_TEBeamRingPoint, DT_TEBeamRingPoint, CTEBeamRingPoint)
-	RecvPropVector( RECVINFO(m_vecCenter)),
-	RecvPropFloat( RECVINFO(m_flStartRadius)),
-	RecvPropFloat( RECVINFO(m_flEndRadius)),
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS_EVENT( C_TEBeamRingPoint, DT_TEBeamRingPoint, CTEBeamRingPoint )

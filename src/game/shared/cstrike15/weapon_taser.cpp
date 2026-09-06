@@ -5,6 +5,15 @@
 //=============================================================================
 
 #include "cbase.h"
+#include "reflect_predmap.h"
+#include "reflect_annotations.h"
+#ifdef CLIENT_DLL
+#include "reflect_recvtable.h"
+#endif
+#include "reflect_annotations.h"
+#ifdef GAME_DLL
+#include "reflect_sendtable.h"
+#endif
 #include "weapon_csbasegun.h"
 #include "cs_gamerules.h"
 
@@ -22,7 +31,8 @@
 #define TASER_BIRTHDAY_PARTICLES	"weapon_confetti"
 #define TASER_BIRTHDAY_SOUND		"Weapon_PartyHorn.Single"
 
-class CWeaponTaser : public CWeaponCSBaseGun
+class [[= ks::reflect::NetTable{ .name = "DT_WeaponTaser" } ]]
+      CWeaponTaser : public CWeaponCSBaseGun
 {
 public:
 	DECLARE_CLASS( CWeaponTaser, CWeaponCSBaseGun );
@@ -50,11 +60,11 @@ private:
 
 IMPLEMENT_NETWORKCLASS_ALIASED( WeaponTaser, DT_WeaponTaser )
 
-BEGIN_NETWORK_TABLE( CWeaponTaser, DT_WeaponTaser )
-END_NETWORK_TABLE()
+IMPLEMENT_REFLECT_TABLE( CWeaponTaser, DT_WeaponTaser );
 
-BEGIN_PREDICTION_DATA( CWeaponTaser )
-END_PREDICTION_DATA()
+#ifdef CLIENT_DLL
+IMPLEMENT_REFLECT_PREDMAP( CWeaponTaser );
+#endif
 
 LINK_ENTITY_TO_CLASS_ALIASED( weapon_taser, WeaponTaser );
 // PRECACHE_REGISTER( weapon_taser );
@@ -145,7 +155,8 @@ void CWeaponTaser::ItemPostFrame()
 #endif
 
 /*
-class CWeaponPartyPopper : public CWeaponTaser
+class [[= ks::reflect::NetTable{ .name = "DT_WeaponPartyPopper" } ]]
+      CWeaponPartyPopper : public CWeaponTaser
 {
 	public:
 	DECLARE_CLASS( CWeaponPartyPopper, CWeaponTaser );
@@ -164,11 +175,11 @@ class CWeaponPartyPopper : public CWeaponTaser
 
 IMPLEMENT_NETWORKCLASS_ALIASED( WeaponPartyPopper, DT_WeaponPartyPopper )
 
-BEGIN_NETWORK_TABLE( CWeaponPartyPopper, DT_WeaponPartyPopper )
-END_NETWORK_TABLE()
+IMPLEMENT_REFLECT_TABLE( CWeaponPartyPopper, DT_WeaponPartyPopper );
 
-BEGIN_PREDICTION_DATA( CWeaponPartyPopper )
-END_PREDICTION_DATA()
+#ifdef CLIENT_DLL
+IMPLEMENT_REFLECT_PREDMAP( CWeaponPartyPopper );
+#endif
 
 LINK_ENTITY_TO_CLASS_ALIASED( weapon_partypopper, WeaponPartyPopper );
 

@@ -6,6 +6,8 @@
 
 #ifndef WEAPON_C4_H
 #define WEAPON_C4_H
+
+#include "reflect_annotations.h"
 #ifdef _WIN32
 #pragma once
 #endif
@@ -26,7 +28,8 @@
 	// CPlantedC4 class.
 	// ------------------------------------------------------------------------------------------ //
 
-	class CPlantedC4 : public CBaseAnimating
+	class [[= ks::reflect::NetTable{ .name = "DT_PlantedC4" } ]]
+      CPlantedC4 : public CBaseAnimating
 	{
 	public:
 		DECLARE_CLASS( CPlantedC4, CBaseAnimating );
@@ -63,12 +66,12 @@
 
 	public:
 
-		CNetworkVar( bool, m_bBombTicking );
-		CNetworkVar( float, m_flC4Blow );
+		CNetworkVar( bool, m_bBombTicking, [[= ks::reflect::Net{} ]] );
+		CNetworkVar( float, m_flC4Blow, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE } ]] );
 
-		COutputEvent m_OnBombDefused; 
-		COutputEvent m_OnBombBeginDefuse; 
-		COutputEvent m_OnBombDefuseAborted;
+		[[= ks::reflect::Key{ .name = "OnBombDefused" } ]] COutputEvent m_OnBombDefused; 
+		[[= ks::reflect::Key{ .name = "OnBombBeginDefuse" } ]] COutputEvent m_OnBombBeginDefuse; 
+		[[= ks::reflect::Key{ .name = "OnBombDefuseAborted" } ]] COutputEvent m_OnBombDefuseAborted;
 
 	protected:
 		virtual void Init( CCSPlayer *pevOwner, Vector vecStart, QAngle vecAngles, bool	bTrainingPlacedByPlayer );
@@ -89,7 +92,7 @@
 		void Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
 
 		// Replicate timer length to the client for effects
-		CNetworkVar( float, m_flTimerLength );
+		CNetworkVar( float, m_flTimerLength, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE } ]] );
 
 		// Info for defusing.
 		bool			m_bBeingDefused;
@@ -97,10 +100,10 @@
 		float			m_fLastDefuseTime;
 		int				m_iBombSiteIndex;
 
-		CNetworkVar( float, m_flDefuseLength );		//How long does the defuse take? Depends on if a defuser was used
-		CNetworkVar( float, m_flDefuseCountDown );	//What time does the defuse complete?
-		CNetworkVar( bool, m_bBombDefused ); 
-		CNetworkVar( CHandle<CCSPlayer>, m_hBombDefuser );
+		CNetworkVar( float, m_flDefuseLength, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE } ]] );		//How long does the defuse take? Depends on if a defuser was used
+		CNetworkVar( float, m_flDefuseCountDown, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE } ]] );	//What time does the defuse complete?
+		CNetworkVar( bool, m_bBombDefused, [[= ks::reflect::Net{} ]] ); 
+		CNetworkVar( CHandle<CCSPlayer>, m_hBombDefuser, [[= ks::reflect::Net{} ]] );
 
 		// Control panel
 		void GetControlPanelInfo( int nPanelIndex, const char *&pPanelName );
@@ -134,9 +137,9 @@
 
 		//CPlantedC4Training();
 		//virtual ~CPlantedC4Training();
-		void	InputActivateSetTimerLength( inputdata_t &inputdata );
+		[[= ks::reflect::Input{ .name = "ActivateSetTimerLength", .type = FIELD_FLOAT } ]] void	InputActivateSetTimerLength( inputdata_t &inputdata );
 
-		COutputEvent m_OnBombExploded;	//Fired when the bomb explodes
+		[[= ks::reflect::Key{ .name = "OnBombExploded" } ]] COutputEvent m_OnBombExploded;	//Fired when the bomb explodes
 
 	protected:
 		//virtual void Init( CCSPlayer *pevOwner, Vector vecStart, QAngle vecAngles );
@@ -153,7 +156,8 @@
 #define PLANTED_C4_CLASSNAME "planted_c4"
 #define PLANTED_C4TRAINING_CLASSNAME "planted_c4_training"
 
-class CC4 : public CWeaponCSBase
+class [[= ks::reflect::NetTable{ .name = "DT_WeaponC4" } ]]
+      CC4 : public CWeaponCSBase
 {
 public:
 	DECLARE_CLASS( CC4, CWeaponCSBase );
@@ -220,11 +224,11 @@ public:
 	virtual void	OnPickedUp( CBaseCombatCharacter *pNewOwner );
 	virtual void	Drop( const Vector &vecVelocity );
 
-	CNetworkVar( bool, m_bStartedArming );
-	CNetworkVar( float, m_fArmedTime );
-	CNetworkVar( bool, m_bBombPlacedAnimation );
-	CNetworkVar( bool, m_bShowC4LED );
-	CNetworkVar( bool, m_bIsPlantingViaUse );
+	CNetworkVar( bool, m_bStartedArming, [[= ks::reflect::Net{} ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] );
+	CNetworkVar( float, m_fArmedTime, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE } ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] );
+	CNetworkVar( bool, m_bBombPlacedAnimation, [[= ks::reflect::Net{} ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] );
+	CNetworkVar( bool, m_bShowC4LED, [[= ks::reflect::Net{} ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] );
+	CNetworkVar( bool, m_bIsPlantingViaUse, [[= ks::reflect::Net{} ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] );
 
 	virtual bool IsRemoveable( void ) { return false; }
 

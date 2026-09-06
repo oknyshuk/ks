@@ -11,6 +11,8 @@
 // $NoKeywords: $
 //=============================================================================//
 #include "cbase.h"
+#include "reflect_sendtable.h"
+#include "reflect_annotations.h"
 #include "te_particlesystem.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
@@ -21,7 +23,8 @@ extern int	g_sModelIndexSmoke;			// (in combatweapon.cpp) holds the index for th
 //-----------------------------------------------------------------------------
 // Purpose: Dispatches smoke tempentity
 //-----------------------------------------------------------------------------
-class CTELargeFunnel : public CTEParticleSystem
+class [[= ks::reflect::NetTable{ .name = "DT_TELargeFunnel" } ]]
+      CTELargeFunnel : public CTEParticleSystem
 {
 public:
 	DECLARE_CLASS( CTELargeFunnel, CTEParticleSystem );
@@ -33,8 +36,8 @@ public:
 	virtual void	Test( const Vector& current_origin, const QAngle& current_angles );
 	
 public:
-	CNetworkVar( int, m_nModelIndex );
-	CNetworkVar( int, m_nReversed );
+	CNetworkVar( int, m_nModelIndex, [[= ks::reflect::Net{ .enc = ks::reflect::ENC_MODELINDEX } ]] );
+	CNetworkVar( int, m_nReversed, [[= ks::reflect::Net{ .bits = 2, .flags = SPROP_UNSIGNED } ]] );
 };
 
 //-----------------------------------------------------------------------------
@@ -82,10 +85,7 @@ void CTELargeFunnel::Test( const Vector& current_origin, const QAngle& current_a
 	Create( filter, 0.0 );
 }
 
-IMPLEMENT_SERVERCLASS_ST(CTELargeFunnel, DT_TELargeFunnel)
-	SendPropModelIndex( SENDINFO(m_nModelIndex) ),
-	SendPropInt( SENDINFO(m_nReversed), 2, SPROP_UNSIGNED ),
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CTELargeFunnel, DT_TELargeFunnel )
 
 
 // Singleton to fire TELargeFunnel objects

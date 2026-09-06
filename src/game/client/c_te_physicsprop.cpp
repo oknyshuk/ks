@@ -7,6 +7,8 @@
 // $NoKeywords: $
 //===========================================================================//
 #include "cbase.h"
+#include "reflect_recvtable.h"
+#include "reflect_annotations.h"
 #include "c_basetempentity.h"
 #include "c_te_legacytempents.h"
 #include "tier1/keyvalues.h"
@@ -20,7 +22,8 @@
 //-----------------------------------------------------------------------------
 // Purpose: Breakable Model TE
 //-----------------------------------------------------------------------------
-class C_TEPhysicsProp : public C_BaseTempEntity
+class [[= ks::reflect::NetTable{ .name = "DT_TEPhysicsProp" } ]]
+      C_TEPhysicsProp : public C_BaseTempEntity
 {
 public:
 	DECLARE_CLASS( C_TEPhysicsProp, C_BaseTempEntity );
@@ -32,32 +35,21 @@ public:
 	virtual void	PostDataUpdate( DataUpdateType_t updateType );
 
 public:
-	Vector			m_vecOrigin;
-	QAngle			m_angRotation;
-	Vector			m_vecVelocity;
-	int				m_nModelIndex;
-	int				m_nSkin;
-	int				m_nFlags;
-	int				m_nEffects;
-	color32			m_clrRender;
+	[[= ks::reflect::Net{} ]] Vector			m_vecOrigin;
+	[[= ks::reflect::Net{ .index = 2 } ]] [[= ks::reflect::Net{ .index = 1 } ]] [[= ks::reflect::Net{ .index = 0 } ]] QAngle			m_angRotation;
+	[[= ks::reflect::Net{} ]] Vector			m_vecVelocity;
+	[[= ks::reflect::Net{} ]] int				m_nModelIndex;
+	[[= ks::reflect::Net{} ]] int				m_nSkin;
+	[[= ks::reflect::Net{} ]] int				m_nFlags;
+	[[= ks::reflect::Net{} ]] int				m_nEffects;
+	[[= ks::reflect::Net{} ]] [[= ks::reflect::Proxy<RecvProxy_Int32ToColor32>{} ]] color32			m_clrRender;
 };
 
 
 //-----------------------------------------------------------------------------
 // Networking
 //-----------------------------------------------------------------------------
-IMPLEMENT_CLIENTCLASS_EVENT_DT(C_TEPhysicsProp, DT_TEPhysicsProp, CTEPhysicsProp)
-	RecvPropVector( RECVINFO(m_vecOrigin)),
-	RecvPropFloat( RECVINFO( m_angRotation[0] ) ),
-	RecvPropFloat( RECVINFO( m_angRotation[1] ) ),
-	RecvPropFloat( RECVINFO( m_angRotation[2] ) ),
-	RecvPropVector( RECVINFO(m_vecVelocity)),
-	RecvPropInt( RECVINFO(m_nModelIndex)),
-	RecvPropInt( RECVINFO(m_nFlags)),
-	RecvPropInt( RECVINFO(m_nSkin)),
-	RecvPropInt( RECVINFO(m_nEffects)),
-	RecvPropInt( RECVINFO(m_clrRender), 0, RecvProxy_Int32ToColor32 ),
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS_EVENT( C_TEPhysicsProp, DT_TEPhysicsProp, CTEPhysicsProp )
 
 
 //-----------------------------------------------------------------------------

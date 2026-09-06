@@ -5,6 +5,9 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_sendtable.h"
+#include "reflect_annotations.h"
 #include <stdarg.h>
 #include "baseflex.h"
 #include "entitylist.h"
@@ -17,7 +20,6 @@
 #include "ai_basenpc.h"
 #include "engine/IEngineSound.h"
 #include "ai_navigator.h"
-#include "saverestore_utlvector.h"
 #include "ai_baseactor.h"
 #include "ai_criteria.h"
 #include "tier1/strtools.h"
@@ -111,11 +113,11 @@ public:
 	void		 RemoveScene( int iIndex );
 
 	// Inputs
-	void	InputShutdown( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Shutdown", .type = FIELD_VOID } ]] void	InputShutdown( inputdata_t &inputdata );
 
 private:
 	CUtlVector< CHandle< CSceneListManager > >	m_hListManagers;
-	string_t				m_iszScenes[SCENE_LIST_MANAGER_MAX_SCENES];
+	[[= ks::reflect::Key{ .name = "scene15", .index = 15 } ]] [[= ks::reflect::Key{ .name = "scene14", .index = 14 } ]] [[= ks::reflect::Key{ .name = "scene13", .index = 13 } ]] [[= ks::reflect::Key{ .name = "scene12", .index = 12 } ]] [[= ks::reflect::Key{ .name = "scene11", .index = 11 } ]] [[= ks::reflect::Key{ .name = "scene10", .index = 10 } ]] [[= ks::reflect::Key{ .name = "scene9", .index = 9 } ]] [[= ks::reflect::Key{ .name = "scene8", .index = 8 } ]] [[= ks::reflect::Key{ .name = "scene7", .index = 7 } ]] [[= ks::reflect::Key{ .name = "scene6", .index = 6 } ]] [[= ks::reflect::Key{ .name = "scene5", .index = 5 } ]] [[= ks::reflect::Key{ .name = "scene4", .index = 4 } ]] [[= ks::reflect::Key{ .name = "scene3", .index = 3 } ]] [[= ks::reflect::Key{ .name = "scene2", .index = 2 } ]] [[= ks::reflect::Key{ .name = "scene1", .index = 1 } ]] [[= ks::reflect::Key{ .name = "scene0", .index = 0 } ]] string_t				m_iszScenes[SCENE_LIST_MANAGER_MAX_SCENES];
 	EHANDLE					m_hScenes[SCENE_LIST_MANAGER_MAX_SCENES];
 };
 
@@ -125,7 +127,6 @@ private:
 class CSceneManager : public CBaseEntity
 {
 	DECLARE_CLASS( CSceneManager, CBaseEntity );
-	DECLARE_DATADESC();
 
 public:
 	virtual void			Spawn()
@@ -189,13 +190,6 @@ private:
 //---------------------------------------------------------
 // Save/Restore
 //---------------------------------------------------------
-BEGIN_DATADESC( CSceneManager )
-
-	DEFINE_UTLVECTOR( m_ActiveScenes,	FIELD_EHANDLE ),
-	DEFINE_UTLVECTOR( m_Scenes,	FIELD_EHANDLE ),
-	// DEFINE_FIELD( m_QueuedSceneSounds, CUtlVector < CRestoreSceneSound > ),  // Don't save/restore this, it's created and used by OnRestore only
-
-END_DATADESC()
 
 #ifdef DISABLE_DEBUG_HISTORY
 #define LocalScene_Printf Scene_Printf
@@ -316,7 +310,9 @@ void SceneManager_ClientActive( CBasePlayer *player )
 //-----------------------------------------------------------------------------
 // Purpose: FIXME, need to deal with save/restore
 //-----------------------------------------------------------------------------
-class CSceneEntity : public CPointEntity, public IChoreoEventCallback
+class [[= ks::reflect::NetTable{ .name = "DT_SceneEntity", .base = false } ]]
+      [[= ks::reflect::UtlVec<"m_hActorList", MAX_ACTORS_IN_SCENE, nullptr>{} ]]
+      CSceneEntity : public CPointEntity, public IChoreoEventCallback
 {
 	friend class CInstancedSceneEntity;
 	friend class CSceneManager;
@@ -399,19 +395,19 @@ public:
 	bool					ShouldBreakOnNonIdle( void ) { return m_bBreakOnNonIdle; }
 
 	// Inputs
-	void InputStartPlayback( inputdata_t &inputdata );
-	void InputPausePlayback( inputdata_t &inputdata );
-	void InputResumePlayback( inputdata_t &inputdata );
-	void InputCancelPlayback( inputdata_t &inputdata );
-	void InputCancelAtNextInterrupt( inputdata_t &inputdata );
-	void InputPitchShiftPlayback( inputdata_t &inputdata );
-	void InputTriggerEvent( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Start", .type = FIELD_VOID } ]] void InputStartPlayback( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Pause", .type = FIELD_VOID } ]] void InputPausePlayback( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Resume", .type = FIELD_VOID } ]] void InputResumePlayback( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Cancel", .type = FIELD_VOID } ]] void InputCancelPlayback( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "CancelAtNextInterrupt", .type = FIELD_VOID } ]] void InputCancelAtNextInterrupt( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "PitchShift", .type = FIELD_FLOAT } ]] void InputPitchShiftPlayback( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Trigger", .type = FIELD_INTEGER } ]] void InputTriggerEvent( inputdata_t &inputdata );
 
 	// If the scene is playing, finds an actor in the scene who can respond to the specified concept token
-	void InputInterjectResponse( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "InterjectResponse", .type = FIELD_STRING } ]] void InputInterjectResponse( inputdata_t &inputdata );
 
 	// If this scene is waiting on an actor, give up and quit trying.
-	void InputStopWaitingForActor( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "StopWaitingForActor", .type = FIELD_VOID } ]] void InputStopWaitingForActor( inputdata_t &inputdata );
 
 	virtual void StartPlayback( void );
 	virtual void PausePlayback( void );
@@ -491,32 +487,33 @@ public:
 
 	void					SetCurrentTime( float t, bool forceClientSync );
 
+	[[= ks::reflect::Input{ .name = "ScriptPlayerDeath", .type = FIELD_VOID } ]]
 	void					InputScriptPlayerDeath( inputdata_t &inputdata );
 
-	void					InputSetTarget1( inputdata_t &inputdata );
-	void					InputSetTarget2( inputdata_t &inputdata );
-	void					InputSetTarget3( inputdata_t &inputdata );
-	void					InputSetTarget4( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetTarget1", .type = FIELD_STRING } ]] void	InputSetTarget1( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetTarget2", .type = FIELD_STRING } ]] void	InputSetTarget2( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetTarget3", .type = FIELD_STRING } ]] void	InputSetTarget3( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetTarget4", .type = FIELD_STRING } ]] void	InputSetTarget4( inputdata_t &inputdata );
 
 	void					AddBroadcastTeamTarget( int nTeamIndex );
 	void					RemoveBroadcastTeamTarget( int nTeamIndex );
 
 // Data
 public:
-	string_t				m_iszSceneFile;
+	[[= ks::reflect::Key{ .name = "SceneFile" } ]] string_t				m_iszSceneFile;
 
-	string_t				m_iszResumeSceneFile;
+	[[= ks::reflect::Key{ .name = "ResumeSceneFile" } ]] string_t		m_iszResumeSceneFile;
 	EHANDLE					m_hWaitingForThisResumeScene;
 	bool					m_bWaitingForResumeScene;
 
-	string_t				m_iszTarget1;
-	string_t				m_iszTarget2;
-	string_t				m_iszTarget3;
-	string_t				m_iszTarget4;
-	string_t				m_iszTarget5;
-	string_t				m_iszTarget6;
-	string_t				m_iszTarget7;
-	string_t				m_iszTarget8;
+	[[= ks::reflect::Key{ .name = "target1" } ]] string_t				m_iszTarget1;
+	[[= ks::reflect::Key{ .name = "target2" } ]] string_t				m_iszTarget2;
+	[[= ks::reflect::Key{ .name = "target3" } ]] string_t				m_iszTarget3;
+	[[= ks::reflect::Key{ .name = "target4" } ]] string_t				m_iszTarget4;
+	[[= ks::reflect::Key{ .name = "target5" } ]] string_t				m_iszTarget5;
+	[[= ks::reflect::Key{ .name = "target6" } ]] string_t				m_iszTarget6;
+	[[= ks::reflect::Key{ .name = "target7" } ]] string_t				m_iszTarget7;
+	[[= ks::reflect::Key{ .name = "target8" } ]] string_t				m_iszTarget8;
 
 	EHANDLE					m_hTarget1;
 	EHANDLE					m_hTarget2;
@@ -527,10 +524,10 @@ public:
 	EHANDLE					m_hTarget7;
 	EHANDLE					m_hTarget8;
 
-	CNetworkVar( bool, m_bIsPlayingBack );
-	CNetworkVar( bool, m_bPaused );
-	CNetworkVar( bool, m_bMultiplayer );
-	CNetworkVar( float, m_flForceClientTime );
+	CNetworkVar( bool, m_bIsPlayingBack, [[= ks::reflect::Net{} ]] );
+	CNetworkVar( bool, m_bPaused, [[= ks::reflect::Net{} ]] );
+	CNetworkVar( bool, m_bMultiplayer, [[= ks::reflect::Net{} ]] );
+	CNetworkVar( float, m_flForceClientTime, [[= ks::reflect::Net{ .bits = 32 } ]] );
 
 	float					m_flCurrentTime;
 	float					m_flFrameTime;
@@ -597,27 +594,28 @@ private:
 
 	// Moved for cache [9/22/2010 tom]
 	// 	CChoreoScene			*m_pScene;
-	CNetworkVar( int, m_nSceneStringIndex );
+	CNetworkVar( int, m_nSceneStringIndex,
+	             [[= ks::reflect::Net{ .bits = MAX_CHOREO_SCENES_STRING_BITS, .flags = SPROP_UNSIGNED } ]] );
 
-	COutputEvent			m_OnStart;
-	COutputEvent			m_OnCompletion;
-	COutputEvent			m_OnCanceled;
-	COutputEvent			m_OnTrigger1;
-	COutputEvent			m_OnTrigger2;
-	COutputEvent			m_OnTrigger3;
-	COutputEvent			m_OnTrigger4;
-	COutputEvent			m_OnTrigger5;
-	COutputEvent			m_OnTrigger6;
-	COutputEvent			m_OnTrigger7;
-	COutputEvent			m_OnTrigger8;
-	COutputEvent			m_OnTrigger9;
-	COutputEvent			m_OnTrigger10;
-	COutputEvent			m_OnTrigger11;
-	COutputEvent			m_OnTrigger12;
-	COutputEvent			m_OnTrigger13;
-	COutputEvent			m_OnTrigger14;
-	COutputEvent			m_OnTrigger15;
-	COutputEvent			m_OnTrigger16;
+	[[= ks::reflect::Key{ .name = "OnStart" } ]] COutputEvent			m_OnStart;
+	[[= ks::reflect::Key{ .name = "OnCompletion" } ]] COutputEvent		m_OnCompletion;
+	[[= ks::reflect::Key{ .name = "OnCanceled" } ]] COutputEvent		m_OnCanceled;
+	[[= ks::reflect::Key{ .name = "OnTrigger1" } ]] COutputEvent		m_OnTrigger1;
+	[[= ks::reflect::Key{ .name = "OnTrigger2" } ]] COutputEvent		m_OnTrigger2;
+	[[= ks::reflect::Key{ .name = "OnTrigger3" } ]] COutputEvent		m_OnTrigger3;
+	[[= ks::reflect::Key{ .name = "OnTrigger4" } ]] COutputEvent		m_OnTrigger4;
+	[[= ks::reflect::Key{ .name = "OnTrigger5" } ]] COutputEvent		m_OnTrigger5;
+	[[= ks::reflect::Key{ .name = "OnTrigger6" } ]] COutputEvent		m_OnTrigger6;
+	[[= ks::reflect::Key{ .name = "OnTrigger7" } ]] COutputEvent		m_OnTrigger7;
+	[[= ks::reflect::Key{ .name = "OnTrigger8" } ]] COutputEvent		m_OnTrigger8;
+	[[= ks::reflect::Key{ .name = "OnTrigger9" } ]] COutputEvent		m_OnTrigger9;
+	[[= ks::reflect::Key{ .name = "OnTrigger10" } ]] COutputEvent		m_OnTrigger10;
+	[[= ks::reflect::Key{ .name = "OnTrigger11" } ]] COutputEvent		m_OnTrigger11;
+	[[= ks::reflect::Key{ .name = "OnTrigger12" } ]] COutputEvent		m_OnTrigger12;
+	[[= ks::reflect::Key{ .name = "OnTrigger13" } ]] COutputEvent		m_OnTrigger13;
+	[[= ks::reflect::Key{ .name = "OnTrigger14" } ]] COutputEvent		m_OnTrigger14;
+	[[= ks::reflect::Key{ .name = "OnTrigger15" } ]] COutputEvent		m_OnTrigger15;
+	[[= ks::reflect::Key{ .name = "OnTrigger16" } ]] COutputEvent		m_OnTrigger16;
 
 	CChoreoScene			*m_pScene;
 
@@ -645,9 +643,9 @@ private:
 
 	EHANDLE					m_hActivator;
 
-	int						m_BusyActor;
+	[[= ks::reflect::Key{ .name = "busyactor" } ]] int				m_BusyActor;
 
-	int						m_iPlayerDeathBehavior;
+	[[= ks::reflect::Key{ .name = "onplayerdeath" } ]] int			m_iPlayerDeathBehavior;
 
 	CRecipientFilter		*m_pRecipientFilter;
 
@@ -659,132 +657,9 @@ public:
 LINK_ENTITY_TO_CLASS( logic_choreographed_scene, CSceneEntity );
 LINK_ENTITY_TO_CLASS( scripted_scene, CSceneEntity );
 
-IMPLEMENT_SERVERCLASS_ST_NOBASE( CSceneEntity, DT_SceneEntity )
-	SendPropInt(SENDINFO(m_nSceneStringIndex),MAX_CHOREO_SCENES_STRING_BITS,SPROP_UNSIGNED),
-	SendPropBool(SENDINFO(m_bIsPlayingBack)),
-	SendPropBool(SENDINFO(m_bPaused)),
-	SendPropBool(SENDINFO(m_bMultiplayer)),
-	SendPropFloat(SENDINFO(m_flForceClientTime)),
-	SendPropUtlVector(
-		SENDINFO_UTLVECTOR( m_hActorList ),
-		MAX_ACTORS_IN_SCENE, // max elements
-		SendPropEHandle( NULL, 0 ) ),
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CSceneEntity, DT_SceneEntity )
 
-BEGIN_DATADESC( CSceneEntity )
-
-	// Keys
-	DEFINE_KEYFIELD( m_iszSceneFile, FIELD_STRING, "SceneFile" ),
-	DEFINE_KEYFIELD( m_iszResumeSceneFile, FIELD_STRING, "ResumeSceneFile" ),
-	DEFINE_FIELD( m_hWaitingForThisResumeScene, FIELD_EHANDLE ),
-	DEFINE_FIELD( m_bWaitingForResumeScene, FIELD_BOOLEAN ),
-
-	DEFINE_KEYFIELD( m_iszTarget1, FIELD_STRING, "target1" ),
-	DEFINE_KEYFIELD( m_iszTarget2, FIELD_STRING, "target2" ),
-	DEFINE_KEYFIELD( m_iszTarget3, FIELD_STRING, "target3" ),
-	DEFINE_KEYFIELD( m_iszTarget4, FIELD_STRING, "target4" ),
-	DEFINE_KEYFIELD( m_iszTarget5, FIELD_STRING, "target5" ),
-	DEFINE_KEYFIELD( m_iszTarget6, FIELD_STRING, "target6" ),
-	DEFINE_KEYFIELD( m_iszTarget7, FIELD_STRING, "target7" ),
-	DEFINE_KEYFIELD( m_iszTarget8, FIELD_STRING, "target8" ),
-
-	DEFINE_KEYFIELD( m_BusyActor, FIELD_INTEGER, "busyactor" ),
-
-	DEFINE_FIELD( m_hTarget1, FIELD_EHANDLE ),
-	DEFINE_FIELD( m_hTarget2, FIELD_EHANDLE ),
-	DEFINE_FIELD( m_hTarget3, FIELD_EHANDLE ),
-	DEFINE_FIELD( m_hTarget4, FIELD_EHANDLE ),
-	DEFINE_FIELD( m_hTarget5, FIELD_EHANDLE ),
-	DEFINE_FIELD( m_hTarget6, FIELD_EHANDLE ),
-	DEFINE_FIELD( m_hTarget7, FIELD_EHANDLE ),
-	DEFINE_FIELD( m_hTarget8, FIELD_EHANDLE ),
-
-	DEFINE_FIELD( m_bIsPlayingBack, FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_bPaused, FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_flCurrentTime, FIELD_FLOAT ),  // relative, not absolute time
-	DEFINE_FIELD( m_flForceClientTime, FIELD_FLOAT ),
-	DEFINE_FIELD( m_flFrameTime, FIELD_FLOAT ),  // last frametime
-	DEFINE_FIELD( m_bCancelAtNextInterrupt, FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_fPitch, FIELD_FLOAT ),
-	DEFINE_FIELD( m_bAutomated, FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_nAutomatedAction, FIELD_INTEGER ),
-	DEFINE_FIELD( m_flAutomationDelay, FIELD_FLOAT ),
-	DEFINE_FIELD( m_flAutomationTime, FIELD_FLOAT ),  // relative, not absolute time
-
-	DEFINE_FIELD( m_bPausedViaInput, FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_bWaitingForActor, FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_bWaitingForInterrupt, FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_bInterruptedActorsScenes, FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_bBreakOnNonIdle, FIELD_BOOLEAN ),
-
-	DEFINE_UTLVECTOR( m_hActorList, FIELD_EHANDLE ),
-	DEFINE_UTLVECTOR( m_hRemoveActorList, FIELD_EHANDLE ),
-
-	// DEFINE_FIELD( m_pScene, FIELD_XXXX ) // Special processing used for this
-
-	// These are set up in the constructor
-	// DEFINE_FIELD( m_bRestoring, FIELD_BOOLEAN ),
-
-	DEFINE_FIELD( m_nInterruptCount, FIELD_INTEGER ),
-	DEFINE_FIELD( m_bInterrupted, FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_hInterruptScene, FIELD_EHANDLE ),
-	DEFINE_FIELD( m_bCompletedEarly, FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_bInterruptSceneFinished, FIELD_BOOLEAN ),
-
-	DEFINE_FIELD( m_bGenerated, FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_iszSoundName, FIELD_STRING ),
-	DEFINE_FIELD( m_hActor, FIELD_EHANDLE ),
-	DEFINE_FIELD( m_hActivator, FIELD_EHANDLE ),
-
-	// DEFINE_FIELD( m_bSceneMissing, FIELD_BOOLEAN ),
-	DEFINE_UTLVECTOR( m_hNotifySceneCompletion, FIELD_EHANDLE ),
-	DEFINE_UTLVECTOR( m_hListManagers, FIELD_EHANDLE ),
-
-	DEFINE_FIELD( m_bMultiplayer, FIELD_BOOLEAN ),
-//	DEFINE_FIELD( m_nSceneStringIndex, FIELD_INTEGER ),
-
-	// DEFINE_FIELD( m_pRecipientFilter, IRecipientFilter* ),	// Multiplayer only
-
-	// Inputs
-	DEFINE_INPUTFUNC( FIELD_VOID, "Start", InputStartPlayback ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "Pause", InputPausePlayback ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "Resume", InputResumePlayback ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "Cancel", InputCancelPlayback ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "CancelAtNextInterrupt", InputCancelAtNextInterrupt ),
-	DEFINE_INPUTFUNC( FIELD_FLOAT, "PitchShift", InputPitchShiftPlayback ),
-	DEFINE_INPUTFUNC( FIELD_STRING, "InterjectResponse", 	InputInterjectResponse ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "StopWaitingForActor", 	InputStopWaitingForActor ),
-	DEFINE_INPUTFUNC( FIELD_INTEGER, "Trigger", InputTriggerEvent ),
-
-	DEFINE_KEYFIELD( m_iPlayerDeathBehavior, FIELD_INTEGER, "onplayerdeath" ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "ScriptPlayerDeath", InputScriptPlayerDeath ),
-
-	DEFINE_INPUTFUNC( FIELD_STRING, "SetTarget1", InputSetTarget1 ),
-	DEFINE_INPUTFUNC( FIELD_STRING, "SetTarget2", InputSetTarget2 ),
-	DEFINE_INPUTFUNC( FIELD_STRING, "SetTarget3", InputSetTarget3 ),
-	DEFINE_INPUTFUNC( FIELD_STRING, "SetTarget4", InputSetTarget4 ),
-
-	// Outputs
-	DEFINE_OUTPUT( m_OnStart, "OnStart"),
-	DEFINE_OUTPUT( m_OnCompletion, "OnCompletion"),
-	DEFINE_OUTPUT( m_OnCanceled, "OnCanceled"),
-	DEFINE_OUTPUT( m_OnTrigger1, "OnTrigger1"),
-	DEFINE_OUTPUT( m_OnTrigger2, "OnTrigger2"),
-	DEFINE_OUTPUT( m_OnTrigger3, "OnTrigger3"),
-	DEFINE_OUTPUT( m_OnTrigger4, "OnTrigger4"),
-	DEFINE_OUTPUT( m_OnTrigger5, "OnTrigger5"),
-	DEFINE_OUTPUT( m_OnTrigger6, "OnTrigger6"),
-	DEFINE_OUTPUT( m_OnTrigger7, "OnTrigger7"),
-	DEFINE_OUTPUT( m_OnTrigger8, "OnTrigger8"),
-	DEFINE_OUTPUT( m_OnTrigger9, "OnTrigger9"),
-	DEFINE_OUTPUT( m_OnTrigger10, "OnTrigger10"),
-	DEFINE_OUTPUT( m_OnTrigger11, "OnTrigger11"),
-	DEFINE_OUTPUT( m_OnTrigger12, "OnTrigger12"),
-	DEFINE_OUTPUT( m_OnTrigger13, "OnTrigger13"),
-	DEFINE_OUTPUT( m_OnTrigger14, "OnTrigger14"),
-	DEFINE_OUTPUT( m_OnTrigger15, "OnTrigger15"),
-	DEFINE_OUTPUT( m_OnTrigger16, "OnTrigger16"),
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CSceneEntity )
 
 
 BEGIN_ENT_SCRIPTDESC( CSceneEntity, CBaseEntity, "Choreographed scene which controls animation and/or dialog on one or more actors." )
@@ -4762,7 +4637,6 @@ void CSceneEntity::RemoveBroadcastTeamTarget( int nTeamIndex )
 //-----------------------------------------------------------------------------
 class CInstancedSceneEntity : public CSceneEntity
 {
-	DECLARE_DATADESC();
 	DECLARE_CLASS( CInstancedSceneEntity, CSceneEntity );
 public:
 	EHANDLE					m_hOwner;
@@ -4822,16 +4696,6 @@ LINK_ENTITY_TO_CLASS( instanced_scripted_scene, CInstancedSceneEntity );
 //---------------------------------------------------------
 // Save/Restore
 //---------------------------------------------------------
-BEGIN_DATADESC( CInstancedSceneEntity )
-
-	DEFINE_FIELD( m_hOwner,				FIELD_EHANDLE ),
-	DEFINE_FIELD( m_bHadOwner,			FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_flPostSpeakDelay,	FIELD_FLOAT ),
-	DEFINE_FIELD( m_flPreDelay,	FIELD_FLOAT ),
-	DEFINE_AUTO_ARRAY( m_szInstanceFilename, FIELD_CHARACTER ),
-	DEFINE_FIELD( m_bIsBackground,		FIELD_BOOLEAN ),
-
-END_DATADESC()
 
 int SceneNameAutocomplete( char const *partial, char commands[ COMMAND_COMPLETION_MAXITEMS ][ COMMAND_COMPLETION_ITEM_LENGTH ] )
 {
@@ -5861,47 +5725,7 @@ bool IsRunningScriptedSceneWithSpeechAndNotPaused( CBaseFlex *pActor, bool bIgno
 //===========================================================================================================
 LINK_ENTITY_TO_CLASS( logic_scene_list_manager, CSceneListManager );
 
-BEGIN_DATADESC( CSceneListManager )
-	DEFINE_UTLVECTOR( m_hListManagers, FIELD_EHANDLE ),
-
-	// Keys
-	DEFINE_KEYFIELD( m_iszScenes[0], FIELD_STRING, "scene0" ),
-	DEFINE_KEYFIELD( m_iszScenes[1], FIELD_STRING, "scene1" ),
-	DEFINE_KEYFIELD( m_iszScenes[2], FIELD_STRING, "scene2" ),
-	DEFINE_KEYFIELD( m_iszScenes[3], FIELD_STRING, "scene3" ),
-	DEFINE_KEYFIELD( m_iszScenes[4], FIELD_STRING, "scene4" ),
-	DEFINE_KEYFIELD( m_iszScenes[5], FIELD_STRING, "scene5" ),
-	DEFINE_KEYFIELD( m_iszScenes[6], FIELD_STRING, "scene6" ),
-	DEFINE_KEYFIELD( m_iszScenes[7], FIELD_STRING, "scene7" ),
-	DEFINE_KEYFIELD( m_iszScenes[8], FIELD_STRING, "scene8" ),
-	DEFINE_KEYFIELD( m_iszScenes[9], FIELD_STRING, "scene9" ),
-	DEFINE_KEYFIELD( m_iszScenes[10], FIELD_STRING, "scene10" ),
-	DEFINE_KEYFIELD( m_iszScenes[11], FIELD_STRING, "scene11" ),
-	DEFINE_KEYFIELD( m_iszScenes[12], FIELD_STRING, "scene12" ),
-	DEFINE_KEYFIELD( m_iszScenes[13], FIELD_STRING, "scene13" ),
-	DEFINE_KEYFIELD( m_iszScenes[14], FIELD_STRING, "scene14" ),
-	DEFINE_KEYFIELD( m_iszScenes[15], FIELD_STRING, "scene15" ),
-
-	DEFINE_FIELD( m_hScenes[0], FIELD_EHANDLE ),
-	DEFINE_FIELD( m_hScenes[1], FIELD_EHANDLE ),
-	DEFINE_FIELD( m_hScenes[2], FIELD_EHANDLE ),
-	DEFINE_FIELD( m_hScenes[3], FIELD_EHANDLE ),
-	DEFINE_FIELD( m_hScenes[4], FIELD_EHANDLE ),
-	DEFINE_FIELD( m_hScenes[5], FIELD_EHANDLE ),
-	DEFINE_FIELD( m_hScenes[6], FIELD_EHANDLE ),
-	DEFINE_FIELD( m_hScenes[7], FIELD_EHANDLE ),
-	DEFINE_FIELD( m_hScenes[8], FIELD_EHANDLE ),
-	DEFINE_FIELD( m_hScenes[9], FIELD_EHANDLE ),
-	DEFINE_FIELD( m_hScenes[10], FIELD_EHANDLE ),
-	DEFINE_FIELD( m_hScenes[11], FIELD_EHANDLE ),
-	DEFINE_FIELD( m_hScenes[12], FIELD_EHANDLE ),
-	DEFINE_FIELD( m_hScenes[13], FIELD_EHANDLE ),
-	DEFINE_FIELD( m_hScenes[14], FIELD_EHANDLE ),
-	DEFINE_FIELD( m_hScenes[15], FIELD_EHANDLE ),
-
-	// Inputs
-	DEFINE_INPUTFUNC( FIELD_VOID, "Shutdown", InputShutdown ),
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CSceneListManager )
 
 
 //-----------------------------------------------------------------------------

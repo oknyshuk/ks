@@ -1,3 +1,5 @@
+
+#include "reflect_annotations.h"
 //========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose:		Dynamic light at the end of a spotlight 
@@ -17,9 +19,9 @@
 
 #include "baseentity.h"
 
-class CSpotlightEnd : public CBaseEntity
+class [[= ks::reflect::NetTable{ .name = "DT_SpotlightEnd" } ]]
+      CSpotlightEnd : public CBaseEntity
 {
-	DECLARE_DATADESC();
 public:
 	DECLARE_CLASS( CSpotlightEnd, CBaseEntity );
 
@@ -34,8 +36,8 @@ public:
 	DECLARE_SERVERCLASS();
 
 public:
-	CNetworkVar( float, m_flLightScale );
-	CNetworkVar( float, m_Radius );
+	CNetworkVar( float, m_flLightScale, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE } ]] );
+	CNetworkVar( float, m_Radius, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE } ]] );
 //	CNetworkVector( m_vSpotlightDir );
 //	CNetworkVector( m_vSpotlightOrg );
 	Vector			m_vSpotlightDir;

@@ -5,6 +5,9 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_sendtable.h"
+#include "reflect_annotations.h"
 #include "EnvMessage.h"
 #include "fmtstr.h"
 #include "filesystem.h"
@@ -22,7 +25,8 @@ struct SlideKeywordList_t
 };
 
 
-class CSlideshowDisplay : public CBaseEntity
+class [[= ks::reflect::NetTable{ .name = "DT_SlideshowDisplay" } ]]
+      CSlideshowDisplay : public CBaseEntity
 {
 public:
 
@@ -46,18 +50,18 @@ public:
 	void	Disable( void );
 	void	Enable( void );
 
-	void	InputDisable( inputdata_t &inputdata );
-	void	InputEnable( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Disable", .type = FIELD_VOID } ]] void	InputDisable( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Enable", .type = FIELD_VOID } ]] void	InputEnable( inputdata_t &inputdata );
 
-	void	InputSetDisplayText( inputdata_t &inputdata );
-	void	InputRemoveAllSlides( inputdata_t &inputdata );
-	void	InputAddSlides( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetDisplayText", .type = FIELD_STRING } ]] void	InputSetDisplayText( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "RemoveAllSlides", .type = FIELD_VOID } ]] void	InputRemoveAllSlides( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "AddSlides", .type = FIELD_STRING } ]] void	InputAddSlides( inputdata_t &inputdata );
 
-	void	InputSetMinSlideTime( inputdata_t &inputdata );
-	void	InputSetMaxSlideTime( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetMinSlideTime", .type = FIELD_FLOAT } ]] void	InputSetMinSlideTime( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetMaxSlideTime", .type = FIELD_FLOAT } ]] void	InputSetMaxSlideTime( inputdata_t &inputdata );
 
-	void	InputSetCycleType( inputdata_t &inputdata );
-	void	InputSetNoListRepeats( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetCycleType", .type = FIELD_INTEGER } ]] void	InputSetCycleType( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetNoListRepeats", .type = FIELD_BOOLEAN } ]] void	InputSetNoListRepeats( inputdata_t &inputdata );
 
 private:
 
@@ -70,24 +74,24 @@ private:
 
 private:
 
-	CNetworkVar( bool, m_bEnabled );
+	CNetworkVar( bool, m_bEnabled, [[= ks::reflect::Net{} ]] );
 
-	CNetworkString( m_szDisplayText, 128 );
+	CNetworkString( m_szDisplayText, 128, [[= ks::reflect::Net{} ]] );
 
-	CNetworkString( m_szSlideshowDirectory, 128 );
-	string_t	m_String_tSlideshowDirectory;
+	CNetworkString( m_szSlideshowDirectory, 128, [[= ks::reflect::Net{} ]] );
+	[[= ks::reflect::Key{ .name = "directory" } ]] string_t	m_String_tSlideshowDirectory;
 
 	CUtlVector<SlideKeywordList_t*>		m_SlideKeywordList;
-	CNetworkArray( unsigned char, m_chCurrentSlideLists, 16 );
+	CNetworkArray( unsigned char, m_chCurrentSlideLists, 16, [[= ks::reflect::Net{ .bits = 8, .flags = SPROP_UNSIGNED } ]] );
 
-	CNetworkVar( float, m_fMinSlideTime );
-	CNetworkVar( float, m_fMaxSlideTime );
+	CNetworkVar( float, m_fMinSlideTime, [[= ks::reflect::Net{ .bits = 11, .low = 0.0f, .high = 20.0f } ]] [[= ks::reflect::Key{ .name = "minslidetime" } ]] );
+	CNetworkVar( float, m_fMaxSlideTime, [[= ks::reflect::Net{ .bits = 11, .low = 0.0f, .high = 20.0f } ]] [[= ks::reflect::Key{ .name = "maxslidetime" } ]] );
 
-	CNetworkVar( int, m_iCycleType );
-	CNetworkVar( bool, m_bNoListRepeats );
+	CNetworkVar( int, m_iCycleType, [[= ks::reflect::Net{ .bits = 2, .flags = SPROP_UNSIGNED } ]] [[= ks::reflect::Key{ .name = "cycletype" } ]] );
+	CNetworkVar( bool, m_bNoListRepeats, [[= ks::reflect::Net{} ]] [[= ks::reflect::Key{ .name = "nolistrepeats" } ]] );
 
-	int		m_iScreenWidth;
-	int		m_iScreenHeight;
+	[[= ks::reflect::Key{ .name = "width" } ]] int		m_iScreenWidth;
+	[[= ks::reflect::Key{ .name = "height" } ]] int		m_iScreenHeight;
 
 	bool	m_bDoFullTransmit;
 };
@@ -98,56 +102,9 @@ LINK_ENTITY_TO_CLASS( vgui_slideshow_display, CSlideshowDisplay );
 //-----------------------------------------------------------------------------
 // Save/load 
 //-----------------------------------------------------------------------------
-BEGIN_DATADESC( CSlideshowDisplay )
-	DEFINE_FIELD( m_bEnabled, FIELD_BOOLEAN ),
+IMPLEMENT_REFLECT_DATAMAP( CSlideshowDisplay )
 
-	DEFINE_AUTO_ARRAY_KEYFIELD( m_szDisplayText, FIELD_CHARACTER, "displaytext" ),
-
-	DEFINE_AUTO_ARRAY( m_szSlideshowDirectory, FIELD_CHARACTER ),
-	DEFINE_KEYFIELD( m_String_tSlideshowDirectory, FIELD_STRING, "directory" ),
-
-	// DEFINE_FIELD( m_SlideKeywordList, CUtlVector < SlideKeywordList_t* > ),
-	DEFINE_AUTO_ARRAY( m_chCurrentSlideLists, FIELD_CHARACTER ),
-
-	DEFINE_KEYFIELD( m_fMinSlideTime, FIELD_FLOAT, "minslidetime" ),
-	DEFINE_KEYFIELD( m_fMaxSlideTime, FIELD_FLOAT, "maxslidetime" ),
-
-	DEFINE_KEYFIELD( m_iCycleType, FIELD_INTEGER, "cycletype" ),
-	DEFINE_KEYFIELD( m_bNoListRepeats, FIELD_BOOLEAN, "nolistrepeats" ),
-
-	DEFINE_KEYFIELD( m_iScreenWidth, FIELD_INTEGER, "width" ),
-	DEFINE_KEYFIELD( m_iScreenHeight, FIELD_INTEGER, "height" ),
-
-	//DEFINE_FIELD( m_bDoFullTransmit, FIELD_BOOLEAN ),
-
-	//DEFINE_UTLVECTOR( m_hScreens, FIELD_EHANDLE ),
-
-	DEFINE_INPUTFUNC( FIELD_VOID, "Disable", InputDisable ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "Enable", InputEnable ),
-
-	DEFINE_INPUTFUNC( FIELD_STRING, "SetDisplayText", InputSetDisplayText ),
-
-	DEFINE_INPUTFUNC( FIELD_VOID, "RemoveAllSlides", InputRemoveAllSlides ),
-	DEFINE_INPUTFUNC( FIELD_STRING, "AddSlides", InputAddSlides ),
-
-	DEFINE_INPUTFUNC( FIELD_FLOAT, "SetMinSlideTime", InputSetMinSlideTime ),
-	DEFINE_INPUTFUNC( FIELD_FLOAT, "SetMaxSlideTime", InputSetMaxSlideTime ),
-
-	DEFINE_INPUTFUNC( FIELD_INTEGER, "SetCycleType", InputSetCycleType ),
-	DEFINE_INPUTFUNC( FIELD_BOOLEAN, "SetNoListRepeats", InputSetNoListRepeats ),
-
-END_DATADESC()
-
-IMPLEMENT_SERVERCLASS_ST( CSlideshowDisplay, DT_SlideshowDisplay )
-	SendPropBool( SENDINFO(m_bEnabled) ),
-	SendPropString( SENDINFO( m_szDisplayText ) ),
-	SendPropString( SENDINFO( m_szSlideshowDirectory ) ),
-	SendPropArray3( SENDINFO_ARRAY3(m_chCurrentSlideLists), SendPropInt( SENDINFO_ARRAY(m_chCurrentSlideLists), 8, SPROP_UNSIGNED ) ),
-	SendPropFloat( SENDINFO(m_fMinSlideTime), 11, 0, 0.0f, 20.0f ),
-	SendPropFloat( SENDINFO(m_fMaxSlideTime), 11, 0, 0.0f, 20.0f ),
-	SendPropInt( SENDINFO(m_iCycleType), 2, SPROP_UNSIGNED ),
-	SendPropBool( SENDINFO(m_bNoListRepeats) ),
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CSlideshowDisplay, DT_SlideshowDisplay )
 
 
 CSlideshowDisplay::~CSlideshowDisplay()

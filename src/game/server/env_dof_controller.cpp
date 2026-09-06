@@ -5,6 +5,9 @@
 //=============================================================================
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_sendtable.h"
+#include "reflect_annotations.h"
 #include "baseentity.h"
 #include "entityoutput.h"
 //#include "convar.h"
@@ -16,43 +19,9 @@
 
 LINK_ENTITY_TO_CLASS( env_dof_controller, CEnvDOFController );
 
-BEGIN_DATADESC( CEnvDOFController )
-	
-	DEFINE_KEYFIELD( m_bDOFEnabled,			FIELD_BOOLEAN,	"enabled" ),
-	DEFINE_KEYFIELD( m_flNearBlurDepth, 	FIELD_FLOAT,	"near_blur" ),
-	DEFINE_KEYFIELD( m_flNearFocusDepth,	FIELD_FLOAT,	"near_focus" ),
-	DEFINE_KEYFIELD( m_flFarFocusDepth, 	FIELD_FLOAT,	"far_focus" ),
-	DEFINE_KEYFIELD( m_flFarBlurDepth,		FIELD_FLOAT,	"far_blur" ),
-	DEFINE_KEYFIELD( m_flNearBlurRadius,	FIELD_FLOAT,	"near_radius" ),
-	DEFINE_KEYFIELD( m_flFarBlurRadius,		FIELD_FLOAT,	"far_radius" ),
-	DEFINE_KEYFIELD( m_strFocusTargetName,	FIELD_STRING,	"focus_target" ),
-	DEFINE_KEYFIELD( m_flFocusTargetRange,	FIELD_FLOAT,	"focus_range" ),
-	
-	DEFINE_FIELD( m_hFocusTarget,		FIELD_EHANDLE ),
+IMPLEMENT_REFLECT_DATAMAP( CEnvDOFController )
 
-	DEFINE_THINKFUNC( UpdateParamBlend ),
-
-	// Inputs
-	DEFINE_INPUTFUNC( FIELD_FLOAT,	"SetNearBlurDepth",		InputSetNearBlurDepth ),
-	DEFINE_INPUTFUNC( FIELD_FLOAT,	"SetNearFocusDepth",	InputSetNearFocusDepth ),
-	DEFINE_INPUTFUNC( FIELD_FLOAT,	"SetFarFocusDepth",		InputSetFarFocusDepth ),
-	DEFINE_INPUTFUNC( FIELD_FLOAT,	"SetFarBlurDepth",		InputSetFarBlurDepth ),
-	DEFINE_INPUTFUNC( FIELD_FLOAT,	"SetNearBlurRadius",	InputSetNearBlurRadius ),
-	DEFINE_INPUTFUNC( FIELD_FLOAT,	"SetFarBlurRadius",		InputSetFarBlurRadius ),
-	DEFINE_INPUTFUNC( FIELD_STRING,	"SetFocusTarget",		InputSetFocusTarget ),
-	DEFINE_INPUTFUNC( FIELD_STRING, "SetFocusTargetRange",	InputSetFocusTargetRange ),
-
-END_DATADESC()
-
-IMPLEMENT_SERVERCLASS_ST( CEnvDOFController, DT_EnvDOFController )
-	SendPropInt( SENDINFO(m_bDOFEnabled), 1, SPROP_UNSIGNED ),
-	SendPropFloat( SENDINFO(m_flNearBlurDepth), 0, SPROP_NOSCALE),
-	SendPropFloat( SENDINFO(m_flNearFocusDepth), 0, SPROP_NOSCALE),
-	SendPropFloat( SENDINFO(m_flFarFocusDepth), 0, SPROP_NOSCALE),
-	SendPropFloat( SENDINFO(m_flFarBlurDepth), 0, SPROP_NOSCALE),
-	SendPropFloat( SENDINFO(m_flNearBlurRadius), 0, SPROP_NOSCALE),
-	SendPropFloat( SENDINFO(m_flFarBlurRadius), 0, SPROP_NOSCALE),
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CEnvDOFController, DT_EnvDOFController )
 
 //-----------------------------------------------------------------------------
 // Purpose: 

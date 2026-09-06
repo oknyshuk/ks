@@ -6,6 +6,8 @@
 
 #ifndef AI_BEHAVIOR_ASSAULT_H
 #define AI_BEHAVIOR_ASSAULT_H
+
+#include "reflect_annotations.h"
 #ifdef _WIN32
 #pragma once
 #endif
@@ -67,12 +69,12 @@ class CAI_AssaultGoal : public CAI_GoalEntity
 	virtual void EnableGoal( CAI_BaseNPC *pAI );
 	virtual void DisableGoal( CAI_BaseNPC *pAI );
 
-	string_t		m_RallyPoint;
-	int				m_AssaultCue;
-	int				m_RallySelectMethod;
-	int				m_BranchMethod;
+	[[= ks::reflect::Key{ .name = "rallypoint" } ]] string_t		m_RallyPoint;
+	[[= ks::reflect::Key{ .name = "AssaultCue" } ]] int				m_AssaultCue;
+	[[= ks::reflect::Key{ .name = "RallySelectMethod" } ]] int				m_RallySelectMethod;
+	[[= ks::reflect::Key{ .name = "BranchMethod" } ]] int				m_BranchMethod;
 
-	void InputBeginAssault( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "BeginAssault", .type = FIELD_VOID } ]] void InputBeginAssault( inputdata_t &inputdata );
 
 	DECLARE_DATADESC();
 
@@ -133,17 +135,17 @@ public:
 		RALLY_EXCLUSIVE_YES,
 	};
 
-	string_t	m_AssaultPointName;
-	string_t	m_RallySequenceName;
-	float		m_flAssaultDelay;
-	int			m_iPriority;
-	int			m_iStrictness;
-	bool		m_bForceCrouch;
-	bool		m_bIsUrgent;
+	[[= ks::reflect::Key{ .name = "assaultpoint" } ]] string_t	m_AssaultPointName;
+	[[= ks::reflect::Key{ .name = "rallysequence" } ]] string_t	m_RallySequenceName;
+	[[= ks::reflect::Key{ .name = "assaultdelay" } ]] float		m_flAssaultDelay;
+	[[= ks::reflect::Key{ .name = "priority" } ]] int			m_iPriority;
+	[[= ks::reflect::Key{ .name = "strict" } ]] int			m_iStrictness;
+	[[= ks::reflect::Key{ .name = "forcecrouch" } ]] bool		m_bForceCrouch;
+	[[= ks::reflect::Key{ .name = "urgent" } ]] bool		m_bIsUrgent;
 	short		m_sExclusivity;
-	bool		m_bShouldLock;
+	[[= ks::reflect::Key{ .name = "lockpoint" } ]] bool		m_bShouldLock;
 
-	COutputEvent	m_OnArrival;
+	[[= ks::reflect::Key{ .name = "OnArrival" } ]] COutputEvent	m_OnArrival;
 
 	DECLARE_DATADESC();
 
@@ -166,38 +168,38 @@ public:
 		m_flAssaultPointTolerance = CUE_POINT_TOLERANCE;
 	}
 
-	void 			InputSetClearOnContact( inputdata_t &inputdata )
+	[[= ks::reflect::Input{ .name = "SetClearOnContact", .type = FIELD_BOOLEAN } ]] void 			InputSetClearOnContact( inputdata_t &inputdata )
 	{
 		m_bClearOnContact = inputdata.value.Bool();
 	}
 
-	void 			InputSetAllowDiversion( inputdata_t &inputdata )
+	[[= ks::reflect::Input{ .name = "SetAllowDiversion", .type = FIELD_BOOLEAN } ]] void 			InputSetAllowDiversion( inputdata_t &inputdata )
 	{
 		m_bAllowDiversion = inputdata.value.Bool();
 	}
 
-	void 			InputSetForceClear( inputdata_t &inputdata )
+	[[= ks::reflect::Input{ .name = "SetForceClear", .type = FIELD_BOOLEAN } ]] void 			InputSetForceClear( inputdata_t &inputdata )
 	{
 		m_bInputForcedClear = inputdata.value.Bool();
 	}
 
 public:
-	string_t		m_AssaultHintGroup;
-	string_t		m_NextAssaultPointName;
-	COutputEvent	m_OnAssaultClear;
-	float			m_flAssaultTimeout;
-	bool			m_bClearOnContact;
-	bool			m_bAllowDiversion;
-	float			m_flAllowDiversionRadius;
-	bool			m_bNeverTimeout;
-	int				m_iStrictness;
-	bool			m_bForceCrouch;
-	bool			m_bIsUrgent;
+	[[= ks::reflect::Key{ .name = "assaultgroup" } ]] string_t		m_AssaultHintGroup;
+	[[= ks::reflect::Key{ .name = "nextassaultpoint" } ]] string_t		m_NextAssaultPointName;
+	[[= ks::reflect::Key{ .name = "OnAssaultClear" } ]] COutputEvent	m_OnAssaultClear;
+	[[= ks::reflect::Key{ .name = "assaulttimeout" } ]] float			m_flAssaultTimeout;
+	[[= ks::reflect::Key{ .name = "clearoncontact" } ]] bool			m_bClearOnContact;
+	[[= ks::reflect::Key{ .name = "allowdiversion" } ]] bool			m_bAllowDiversion;
+	[[= ks::reflect::Key{ .name = "allowdiversionradius" } ]] float			m_flAllowDiversionRadius;
+	[[= ks::reflect::Key{ .name = "nevertimeout" } ]] bool			m_bNeverTimeout;
+	[[= ks::reflect::Key{ .name = "strict" } ]] int				m_iStrictness;
+	[[= ks::reflect::Key{ .name = "forcecrouch" } ]] bool			m_bForceCrouch;
+	[[= ks::reflect::Key{ .name = "urgent" } ]] bool			m_bIsUrgent;
 	bool			m_bInputForcedClear;
-	float			m_flAssaultPointTolerance;
+	[[= ks::reflect::Key{ .name = "assaulttolerance" } ]] float			m_flAssaultPointTolerance;
 	float			m_flTimeLastUsed;
 
-	COutputEvent	m_OnArrival;
+	[[= ks::reflect::Key{ .name = "OnArrival" } ]] COutputEvent	m_OnArrival;
 
 	DECLARE_DATADESC();
 };
@@ -329,7 +331,6 @@ private:
 
 	//---------------------------------
 	
-	DECLARE_DATADESC();
 };
 
 #endif // AI_BEHAVIOR_ASSAULT_H

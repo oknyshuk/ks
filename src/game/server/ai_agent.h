@@ -89,10 +89,6 @@ public:
 	
 	DECLARE_SIMPLE_DATADESC();
 
-	virtual int			Save( ISave &save ); 
-	virtual int			Restore( IRestore &restore );
-	void				SaveConditions( ISave &save, const CAI_ScheduleBits &conditions );
-	void				RestoreConditions( IRestore &restore, CAI_ScheduleBits *pConditions );
 
 	//---------------------------------
 	

@@ -6,6 +6,8 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_annotations.h"
 #include "IEffects.h"
 #include "engine/IEngineSound.h"
 #include "particle_parse.h"
@@ -44,40 +46,23 @@ public:
 	void	SparkThink(void);
 
 	// Input handlers
-	void InputStartSpark( inputdata_t &inputdata );
-	void InputStopSpark( inputdata_t &inputdata );
-	void InputToggleSpark( inputdata_t &inputdata );
-	void InputSparkOnce( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "StartSpark", .type = FIELD_VOID } ]] void InputStartSpark( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "StopSpark", .type = FIELD_VOID } ]] void InputStopSpark( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "ToggleSpark", .type = FIELD_VOID } ]] void InputToggleSpark( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SparkOnce", .type = FIELD_VOID } ]] void InputSparkOnce( inputdata_t &inputdata );
 	
 	DECLARE_DATADESC();
 
-	float			m_flDelay;
+	[[= ks::reflect::Key{ .name = "MaxDelay" } ]] float			m_flDelay;
 	int				m_nGlowSpriteIndex;
-	int				m_nMagnitude;
-	int				m_nTrailLength;
+	[[= ks::reflect::Key{ .name = "Magnitude" } ]] int				m_nMagnitude;
+	[[= ks::reflect::Key{ .name = "TrailLength" } ]] int				m_nTrailLength;
 
-	COutputEvent	m_OnSpark;
+	[[= ks::reflect::Key{ .name = "OnSpark" } ]] COutputEvent	m_OnSpark;
 };
 
 
-BEGIN_DATADESC( CEnvSpark )
-
-	DEFINE_KEYFIELD( m_flDelay, FIELD_FLOAT, "MaxDelay" ),
-	DEFINE_FIELD( m_nGlowSpriteIndex, FIELD_INTEGER ),
-	DEFINE_KEYFIELD( m_nMagnitude, FIELD_INTEGER, "Magnitude" ),
-	DEFINE_KEYFIELD( m_nTrailLength, FIELD_INTEGER, "TrailLength" ),
-
-	// Function Pointers
-	DEFINE_FUNCTION( SparkThink ),
-
-	DEFINE_INPUTFUNC( FIELD_VOID, "StartSpark", InputStartSpark ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "StopSpark", InputStopSpark ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "ToggleSpark", InputToggleSpark ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "SparkOnce", InputSparkOnce ),
-
-	DEFINE_OUTPUT( m_OnSpark, "OnSpark" ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CEnvSpark )
 
 
 LINK_ENTITY_TO_CLASS(env_spark, CEnvSpark);

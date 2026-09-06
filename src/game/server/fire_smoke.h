@@ -7,6 +7,8 @@
 //=============================================================================//
 #ifndef FIRE_SMOKE_H
 #define FIRE_SMOKE_H
+
+#include "reflect_annotations.h"
 #pragma once
 
 #include "baseparticleentity.h"
@@ -22,7 +24,6 @@
 class CBaseFire : public CBaseEntity
 {
 public:
-	DECLARE_DATADESC();
 	DECLARE_CLASS( CBaseFire, CBaseEntity );
 
 	CBaseFire( void );
@@ -49,7 +50,12 @@ public:
 #define	bitsFIRESMOKE_GLOW					0x00000008
 #define	bitsFIRESMOKE_VISIBLE_FROM_ABOVE	0x00000010
 
-class CFireSmoke : public CBaseFire
+class [[= ks::reflect::NetTable{ .name = "DT_FireSmoke" } ]]
+      [[= ks::reflect::From<"m_flStartScale", ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE }>{} ]]
+      [[= ks::reflect::From<"m_flScale", ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE }>{} ]]
+      [[= ks::reflect::From<"m_flScaleTime", ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE }>{} ]]
+      [[= ks::reflect::From<"m_nFlags", ks::reflect::Net{ .bits = 8, .flags = SPROP_UNSIGNED }>{} ]]
+      CFireSmoke : public CBaseFire
 {
 public:
 	DECLARE_CLASS( CFireSmoke, CBaseFire );
@@ -64,13 +70,12 @@ public:
 	void	EnableVisibleFromAbove( int state = true );
 	
 	DECLARE_SERVERCLASS();
-	DECLARE_DATADESC();
 
 public:
 
 	//Client-side
-	CNetworkVar( int, m_nFlameModelIndex );
-	CNetworkVar( int, m_nFlameFromAboveModelIndex );
+	CNetworkVar( int, m_nFlameModelIndex, [[= ks::reflect::Net{ .enc = ks::reflect::ENC_MODELINDEX } ]] );
+	CNetworkVar( int, m_nFlameFromAboveModelIndex, [[= ks::reflect::Net{ .enc = ks::reflect::ENC_MODELINDEX } ]] );
 
 	//Server-side
 };

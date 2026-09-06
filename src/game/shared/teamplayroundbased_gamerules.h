@@ -6,6 +6,9 @@
 
 #ifndef TEAMPLAYROUNDBASED_GAMERULES_H
 #define TEAMPLAYROUNDBASED_GAMERULES_H
+
+#include "reflect_annotations.h"
+#include "dt_recv.h"
 #ifdef _WIN32
 #pragma once
 #endif
@@ -28,6 +31,8 @@ extern ConVar mp_respawnwavetime;
 	#define CTeamplayRoundBasedRules C_TeamplayRoundBasedRules
 	#define CTeamplayRoundBasedRulesProxy C_TeamplayRoundBasedRulesProxy
 #endif
+
+void RecvProxy_TeamplayRoundState( const CRecvProxyData *pData, void *pStruct, void *pOut );
 
 class CTeamplayRoundBasedRules;
 
@@ -106,7 +111,24 @@ public:
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-class CTeamplayRoundBasedRulesProxy : public CGameRulesProxy
+#ifdef GAME_DLL
+namespace DT_TeamplayRoundBasedRules { extern SendTable g_SendTable; }
+void *SendProxy_TeamplayRoundBasedRules( const SendProp *pProp, const void *pStruct,
+    const void *pVarData, CSendProxyRecipients *pRecipients,
+    int objectID );
+#else
+namespace DT_TeamplayRoundBasedRules { extern RecvTable g_RecvTable; }
+void RecvProxy_TeamplayRoundBasedRules( const RecvProp *pProp, void **pOut, void *pData,
+    int objectID );
+#endif
+
+class [[= ks::reflect::NetTable{ .name = "DT_TeamplayRoundBasedRulesProxy" } ]]
+#ifdef GAME_DLL
+      [[= ks::reflect::SubTable<"teamplayroundbased_gamerules_data", &DT_TeamplayRoundBasedRules::g_SendTable, SendProxy_TeamplayRoundBasedRules, true>{} ]]
+#else
+      [[= ks::reflect::SubTable<"teamplayroundbased_gamerules_data", &DT_TeamplayRoundBasedRules::g_RecvTable, RecvProxy_TeamplayRoundBasedRules, true>{} ]]
+#endif
+      CTeamplayRoundBasedRulesProxy : public CGameRulesProxy
 {
 public:
 	DECLARE_CLASS( CTeamplayRoundBasedRulesProxy, CGameRulesProxy );
@@ -114,7 +136,7 @@ public:
 
 #ifdef GAME_DLL
 	DECLARE_DATADESC();
-	void	InputSetStalemateOnTimelimit( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetStalemateOnTimelimit", .type = FIELD_BOOLEAN } ]] void	InputSetStalemateOnTimelimit( inputdata_t &inputdata );
 #endif
 
 	//----------------------------------------------------------------------------------
@@ -128,7 +150,8 @@ public:
 //-----------------------------------------------------------------------------
 // Purpose: Teamplay game rules that manage a round based structure for you
 //-----------------------------------------------------------------------------
-class CTeamplayRoundBasedRules : public CTeamplayRules
+class [[= ks::reflect::NetTable{ .name = "DT_TeamplayRoundBasedRules", .base = false } ]]
+      CTeamplayRoundBasedRules : public CTeamplayRules
 {
 	DECLARE_CLASS( CTeamplayRoundBasedRules, CTeamplayRules );
 public:
@@ -423,24 +446,24 @@ public:
 	bool AreTeamsUnbalanced( int &iHeaviestTeam, int &iLightestTeam );
 
 protected:
-	CNetworkVar( gamerules_roundstate_t, m_iRoundState );
-	CNetworkVar( bool, m_bInOvertime ); // Are we currently in overtime?
-	CNetworkVar( bool, m_bInSetup ); // Are we currently in setup?
-	CNetworkVar( bool, m_bSwitchedTeamsThisRound );
+	CNetworkVar( gamerules_roundstate_t, m_iRoundState, [[= ks::reflect::Net{ .bits = 5 } ]] [[= ks::reflect::Proxy<RecvProxy_TeamplayRoundState, ks::reflect::WIRE_RECV>{} ]]);
+	CNetworkVar( bool, m_bInOvertime, [[= ks::reflect::Net{} ]] ); // Are we currently in overtime?
+	CNetworkVar( bool, m_bInSetup, [[= ks::reflect::Net{} ]] ); // Are we currently in setup?
+	CNetworkVar( bool, m_bSwitchedTeamsThisRound, [[= ks::reflect::Net{} ]] );
 
 protected:
-	CNetworkVar( int,			m_iWinningTeam );				// Set before entering GR_STATE_TEAM_WIN
+	CNetworkVar( int,			m_iWinningTeam, [[= ks::reflect::Net{ .bits = 3, .flags = SPROP_UNSIGNED } ]] );				// Set before entering GR_STATE_TEAM_WIN
 	CNetworkVar( int,			m_iWinReason );
-	CNetworkVar( bool,			m_bInWaitingForPlayers );
-	CNetworkVar( bool,			m_bAwaitingReadyRestart );
-	CNetworkVar( float,			m_flRestartRoundTime );
-	CNetworkVar( float,			m_flMapResetTime );						// Time that the map was reset
-	CNetworkArray( float,		m_flNextRespawnWave, MAX_TEAMS );		// Minor waste, but cleaner code
-	CNetworkArray( bool,		m_bTeamReady, MAX_TEAMS );
-	CNetworkVar( bool, m_bStopWatch );
+	CNetworkVar( bool,			m_bInWaitingForPlayers, [[= ks::reflect::Net{} ]] );
+	CNetworkVar( bool,			m_bAwaitingReadyRestart, [[= ks::reflect::Net{} ]] );
+	CNetworkVar( float,			m_flRestartRoundTime, [[= ks::reflect::Net{} ]] );
+	CNetworkVar( float,			m_flMapResetTime, [[= ks::reflect::Net{} ]] );						// Time that the map was reset
+	CNetworkArray( float,		m_flNextRespawnWave, MAX_TEAMS, [[= ks::reflect::Net{} ]] );		// Minor waste, but cleaner code
+	CNetworkArray( bool,		m_bTeamReady, MAX_TEAMS, [[= ks::reflect::Net{} ]] );
+	CNetworkVar( bool, m_bStopWatch, [[= ks::reflect::Net{} ]] );
 	
 public:
-	CNetworkArray( float,		m_TeamRespawnWaveTimes, MAX_TEAMS );	// Time between each team's respawn wave
+	CNetworkArray( float,		m_TeamRespawnWaveTimes, MAX_TEAMS, [[= ks::reflect::Net{ .bits = 32 } ]] );	// Time between each team's respawn wave
 
 private:
 	float m_flStartBalancingTeamsAt;

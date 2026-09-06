@@ -5,6 +5,8 @@
 // $NoKeywords: $
 //=============================================================================//
 #include "cbase.h"
+#include "reflect_recvtable.h"
+#include "reflect_annotations.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -17,7 +19,8 @@
 //------------------------------------------------------------------------------
 // Purpose : Shadow control entity
 //------------------------------------------------------------------------------
-class C_ShadowControl : public C_BaseEntity
+class [[= ks::reflect::NetTable{ .name = "DT_ShadowControl" } ]]
+      C_ShadowControl : public C_BaseEntity
 {
 public:
 	DECLARE_CLASS( C_ShadowControl, C_BaseEntity );
@@ -28,20 +31,14 @@ public:
 	bool ShouldDraw();
 
 private:
-	Vector m_shadowDirection;
-	color32 m_shadowColor;
-	float m_flShadowMaxDist;
-	bool m_bDisableShadows;
-	bool m_bEnableLocalLightShadows;
+	[[= ks::reflect::Net{} ]] Vector m_shadowDirection;
+	[[= ks::reflect::Net{} ]] [[= ks::reflect::Proxy<RecvProxy_Int32ToColor32, ks::reflect::WIRE_RECV>{} ]] color32 m_shadowColor;
+	[[= ks::reflect::Net{} ]] float m_flShadowMaxDist;
+	[[= ks::reflect::Net{} ]] bool m_bDisableShadows;
+	[[= ks::reflect::Net{} ]] bool m_bEnableLocalLightShadows;
 };
 
-IMPLEMENT_CLIENTCLASS_DT(C_ShadowControl, DT_ShadowControl, CShadowControl)
-	RecvPropVector(RECVINFO(m_shadowDirection)),
-	RecvPropInt(RECVINFO(m_shadowColor), 0, RecvProxy_Int32ToColor32),
-	RecvPropFloat(RECVINFO(m_flShadowMaxDist)),
-	RecvPropBool(RECVINFO(m_bDisableShadows)),
-	RecvPropBool(RECVINFO(m_bEnableLocalLightShadows)),
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS( C_ShadowControl, DT_ShadowControl, CShadowControl )
 
 
 //------------------------------------------------------------------------------

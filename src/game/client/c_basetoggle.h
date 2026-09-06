@@ -4,6 +4,8 @@
 #if !defined( C_BASETOGGLE_H )
 #define C_BASETOGGLE_H
 
+#include "reflect_annotations.h"
+
 #ifdef _WIN32
 #pragma once
 #endif
@@ -20,7 +22,8 @@ enum togglemovetypes_t
 };
 
 //--------------------------------------------------------------------------------------------------------
-class C_BaseToggle: public C_BaseEntity
+class [[= ks::reflect::NetTable{ .name = "DT_BaseToggle" } ]]
+      C_BaseToggle: public C_BaseEntity
 {
 public:
 	DECLARE_CLASS( C_BaseToggle, C_BaseEntity );
@@ -41,15 +44,16 @@ public:
 	Vector m_vLastNetworked;
 	float m_fLastNetworkedTime;
 	
-	Vector m_vecFinalDest;
-	int m_movementType;
-	float m_flMoveTargetTime;
+	[[= ks::reflect::Net{} ]] Vector m_vecFinalDest;
+	[[= ks::reflect::Net{} ]] int m_movementType;
+	[[= ks::reflect::Net{} ]] float m_flMoveTargetTime;
 	bool m_bWasPredictingMotion;
 };
 
 
 //--------------------------------------------------------------------------------------------------------
-class C_BaseButton: public C_BaseToggle
+class [[= ks::reflect::NetTable{ .name = "DT_BaseButton" } ]]
+      C_BaseButton: public C_BaseToggle
 {
 public:
 	DECLARE_CLASS( C_BaseButton, C_BaseToggle );
@@ -62,7 +66,7 @@ public:
 	virtual bool IsPotentiallyUsable( void );
 
 private:
-	bool m_usable;
+	[[= ks::reflect::Net{} ]] bool m_usable;
 };
 
 

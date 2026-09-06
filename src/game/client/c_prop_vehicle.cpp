@@ -7,6 +7,9 @@
 
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_recvtable.h"
+#include "reflect_annotations.h"
 #include "c_prop_vehicle.h"
 #include "hud.h"		
 #include <color.h>
@@ -24,27 +27,10 @@ extern ConVar default_fov;
 extern ConVar joy_response_move_vehicle;
 
 
-IMPLEMENT_CLIENTCLASS_DT(C_PropVehicleDriveable, DT_PropVehicleDriveable, CPropVehicleDriveable)
-	RecvPropEHandle( RECVINFO(m_hPlayer) ),
-	RecvPropInt( RECVINFO( m_nSpeed ) ),
-	RecvPropInt( RECVINFO( m_nRPM ) ),
-	RecvPropFloat( RECVINFO( m_flThrottle ) ),
-	RecvPropInt( RECVINFO( m_nBoostTimeLeft ) ),
-	RecvPropInt( RECVINFO( m_nHasBoost ) ),
-	RecvPropInt( RECVINFO( m_nScannerDisabledWeapons ) ),
-	RecvPropInt( RECVINFO( m_nScannerDisabledVehicle ) ),
-	RecvPropInt( RECVINFO( m_bEnterAnimOn ) ),
-	RecvPropInt( RECVINFO( m_bExitAnimOn ) ),
-	RecvPropInt( RECVINFO( m_bUnableToFire ) ),
-	RecvPropVector( RECVINFO( m_vecEyeExitEndpoint ) ),
-	RecvPropBool( RECVINFO( m_bHasGun ) ),
-	RecvPropVector( RECVINFO( m_vecGunCrosshair ) ),
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS( C_PropVehicleDriveable, DT_PropVehicleDriveable, CPropVehicleDriveable )
 
 
-BEGIN_DATADESC( C_PropVehicleDriveable )
-	DEFINE_EMBEDDED( m_ViewSmoothingData ),
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( C_PropVehicleDriveable )
 
 ConVar r_VehicleViewClamp( "r_VehicleViewClamp", "1", FCVAR_CHEAT );
 

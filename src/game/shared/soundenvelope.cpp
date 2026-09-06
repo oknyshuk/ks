@@ -7,12 +7,13 @@
 // $NoKeywords: $
 //=============================================================================//
 #include "cbase.h"
+#include "reflect_annotations.h"
+#include "reflect_datamap.h"
 #include "sharedInterface.h"
 #include "soundenvelope.h"
 #include "engine/IEngineSound.h"
 #include "IEffects.h"
 #include "isaverestore.h"
-#include "saverestore_utlvector.h"
 #include "gamestringpool.h"
 #include "igamesystem.h"
 #include "utlpriorityqueue.h"
@@ -54,12 +55,7 @@ private:
 };
 
 
-BEGIN_SIMPLE_DATADESC( CSoundEnvelope )
-	DEFINE_FIELD( m_current, FIELD_FLOAT ),
-	DEFINE_FIELD( m_target, FIELD_FLOAT ),	
-	DEFINE_FIELD( m_rate, FIELD_FLOAT ),	
-	DEFINE_FIELD( m_forceupdate, FIELD_BOOLEAN ),	
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP_SIMPLE( CSoundEnvelope )
 
 
 //-----------------------------------------------------------------------------
@@ -218,12 +214,7 @@ private:
 	CUtlVector< int > m_Recipients;
 };
 
-BEGIN_SIMPLE_DATADESC( CCopyRecipientFilter )
-
-	DEFINE_FIELD( m_Flags, FIELD_INTEGER ),	
-	DEFINE_UTLVECTOR( m_Recipients, FIELD_INTEGER ),
-		
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP_SIMPLE( CCopyRecipientFilter )
 
 
 #include "tier0/memdbgoff.h"
@@ -338,29 +329,7 @@ CON_COMMAND( report_soundpatch, "reports sound patch count" )
 }
 DEFINE_FIXEDSIZE_ALLOCATOR( CSoundPatch, 64, CUtlMemoryPool::GROW_FAST );
 
-BEGIN_SIMPLE_DATADESC( CSoundPatch )
-
-	DEFINE_EMBEDDED( m_pitch ),
-	DEFINE_EMBEDDED( m_volume ),
-	DEFINE_FIELD( m_soundlevel, FIELD_INTEGER ),	
-	DEFINE_FIELD( m_shutdownTime, FIELD_TIME ),	
-	DEFINE_FIELD( m_iszSoundName, FIELD_STRING ),
-	DEFINE_FIELD( m_iszSoundScriptName, FIELD_STRING ),
-	DEFINE_FIELD( m_hSoundScriptHash, FIELD_INTEGER ),
-	DEFINE_FIELD( m_nSoundEntryVersion, FIELD_INTEGER ),
-	DEFINE_FIELD( m_hEnt, FIELD_EHANDLE ),	
-	DEFINE_FIELD( m_entityChannel, FIELD_INTEGER ),	
-	DEFINE_FIELD( m_flags, FIELD_INTEGER ),	
-	DEFINE_FIELD( m_baseFlags, FIELD_INTEGER ),
-	DEFINE_FIELD( m_isPlaying, FIELD_INTEGER ),
-	DEFINE_FIELD( m_flScriptVolume, FIELD_FLOAT ),
-	DEFINE_EMBEDDED( m_Filter ),
-	DEFINE_FIELD( m_flCloseCaptionDuration, FIELD_FLOAT ),
-
-	// Not saved, it's debug only
-//  DEFINE_FIELD( m_iszClassName, FIELD_STRING ),
-	
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP_SIMPLE( CSoundPatch )
 
 
 
@@ -797,18 +766,7 @@ struct SoundCommand_t
 DEFINE_FIXEDSIZE_ALLOCATOR( SoundCommand_t, 32, CUtlMemoryPool::GROW_FAST );
 
 
-BEGIN_SIMPLE_DATADESC( SoundCommand_t )
-
-// NOTE: This doesn't need to be saved, sound commands are saved right after the patch
-// they are associated with
-//	DEFINE_FIELD( m_pPatch, FIELD_????? )
-	DEFINE_FIELD( m_time, FIELD_TIME ),
-	DEFINE_FIELD( m_deltaTime, FIELD_FLOAT ),	
-	DEFINE_FIELD( m_command, FIELD_INTEGER ),	
-	DEFINE_FIELD( m_value, FIELD_FLOAT ),	
-//	DEFINE_FIELD( m_pNext, FIELD_????? )
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP_SIMPLE( SoundCommand_t )
 
 typedef SoundCommand_t *SOUNDCOMMANDPTR;
 
@@ -833,8 +791,6 @@ public:
 
 	void ProcessCommand( SoundCommand_t *pCmd );
 	void RemoveFromList( CSoundPatch *pSound );
-	void SaveSoundPatch( CSoundPatch *pSound, ISave *pSave );
-	void RestoreSoundPatch( CSoundPatch **ppSound, IRestore *pRestore );
 
 	virtual void	OnRestore();
 
@@ -1084,90 +1040,7 @@ void CSoundControllerImp::CommandClear( CSoundPatch *pSound )
 }
 
 
-//-----------------------------------------------------------------------------
-// Saves the sound patch + associated commands
-//-----------------------------------------------------------------------------
-void CSoundControllerImp::SaveSoundPatch( CSoundPatch *pSoundPatch, ISave *pSave )
-{
-	int i;
 
-	// Write out the sound patch
-	pSave->StartBlock();
-	pSave->WriteAll( pSoundPatch );
-	pSave->EndBlock();
-
-	// Count the number of commands that refer to the sound patch
-	int nCount = 0;
-	for ( i = m_commandList.Count()-1; i >= 0; i-- )
-	{
-		SoundCommand_t *pCmd = m_commandList.Element( i );
-		if ( pCmd->m_pPatch == pSoundPatch )
-		{
-			nCount++;
-		}
-	}
-
-	// Write out the number of commands, followed by each command itself
-	pSave->StartBlock();
-	pSave->WriteInt( &nCount );
-
-	for ( i = m_commandList.Count()-1; i >= 0; i-- )
-	{
-		SoundCommand_t *pCmd = m_commandList.Element( i );
-		if ( pCmd->m_pPatch == pSoundPatch )
-		{
-			pSave->StartBlock();
-			pSave->WriteAll( pCmd );
-			pSave->EndBlock();
-		}
-	}
-
-	pSave->EndBlock();
-}
-
-//-----------------------------------------------------------------------------
-// Restores the sound patch	+ associated commands
-//-----------------------------------------------------------------------------
-void CSoundControllerImp::RestoreSoundPatch( CSoundPatch **ppSoundPatch, IRestore *pRestore )
-{
-	CSoundPatch *pPatch = new CSoundPatch;
-
-	// read the sound patch data from the memory block
-	pRestore->StartBlock();
-	bool bOk = ( pRestore->ReadAll( pPatch ) != 0 );
-	pRestore->EndBlock();
-	bOk = (bOk && pPatch->IsPlaying()) ? true : false;
-
-	if (bOk)
-	{
-		m_soundList.AddToTail( pPatch );
-	}
-
-	// Count the number of commands that refer to the sound patch
-	pRestore->StartBlock();
-
-	if ( bOk )
-	{
-		int nCount;
-		pRestore->ReadInt( &nCount );
-		while ( --nCount >= 0 )
-		{
-			SoundCommand_t *pCommand = new SoundCommand_t;
-
-			pRestore->StartBlock();
-			if ( pRestore->ReadAll( pCommand ) )
-			{
-				pCommand->m_pPatch = pPatch;
-				CommandInsert( pCommand );
-			}
-
-			pRestore->EndBlock();
-		}
-	}
-
-	pRestore->EndBlock();
-	*ppSoundPatch = pPatch;
-}
 
 
 //-----------------------------------------------------------------------------
@@ -1410,47 +1283,3 @@ CSoundEnvelopeController &CSoundEnvelopeController::GetController( void )
 }
 
 
-//-----------------------------------------------------------------------------
-// Queues up sound patches to save/load
-//-----------------------------------------------------------------------------
-class CSoundPatchSaveRestoreOps : public CClassPtrSaveRestoreOps
-{
-public:
-	virtual void Save( const SaveRestoreFieldInfo_t &fieldInfo, ISave *pSave )
-	{
-		pSave->StartBlock();
-
-		int nSoundPatchCount = fieldInfo.pTypeDesc->fieldSize;
-		CSoundPatch **ppSoundPatch = (CSoundPatch**)fieldInfo.pField;
-		while ( --nSoundPatchCount >= 0 )
-		{
-			// Write out commands associated with this sound patch
-			g_Controller.SaveSoundPatch( *ppSoundPatch, pSave );
-			++ppSoundPatch;
-		}
-
-		pSave->EndBlock();
-	}
-	
-	virtual void Restore( const SaveRestoreFieldInfo_t &fieldInfo, IRestore *pRestore )
-	{
-		pRestore->StartBlock();
-
-		int nSoundPatchCount = fieldInfo.pTypeDesc->fieldSize;
-		CSoundPatch **ppSoundPatch = (CSoundPatch**)fieldInfo.pField;
-		while ( --nSoundPatchCount >= 0 )
-		{
-			// Write out commands associated with this sound patch
-			g_Controller.RestoreSoundPatch( ppSoundPatch, pRestore );
-			++ppSoundPatch;
-		}
-
-		pRestore->EndBlock();
-	}
-};
-
-static CSoundPatchSaveRestoreOps s_SoundPatchSaveRestoreOps;
-ISaveRestoreOps *GetSoundSaveRestoreOps( )
-{
-	return &s_SoundPatchSaveRestoreOps;
-}

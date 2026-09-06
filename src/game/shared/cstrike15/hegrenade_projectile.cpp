@@ -5,6 +5,9 @@
 //=============================================================================//
 
 #include "cbase.h"
+#ifdef GAME_DLL
+#include "reflect_datamap.h"
+#endif
 #include "hegrenade_projectile.h"
 #include "soundent.h"
 #include "cs_player.h"
@@ -20,12 +23,7 @@ LINK_ENTITY_TO_CLASS( hegrenade_projectile, CHEGrenadeProjectile );
 PRECACHE_REGISTER( hegrenade_projectile );
 
 #if !defined( CLIENT_DLL )
-BEGIN_DATADESC( CHEGrenadeProjectile )
-
-// Inputs
-DEFINE_INPUTFUNC( FIELD_VOID, "InitializeSpawnFromWorld", InitializeSpawnFromWorld ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CHEGrenadeProjectile )
 #endif
 
 CHEGrenadeProjectile* CHEGrenadeProjectile::Create( 

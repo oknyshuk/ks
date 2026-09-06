@@ -7,6 +7,8 @@
 
 #ifndef WORLD_H
 #define WORLD_H
+
+#include "reflect_annotations.h"
 #ifdef _WIN32
 #pragma once
 #endif
@@ -21,7 +23,8 @@ enum
 	TIME_EVENING,
 };
 
-class CWorld : public CBaseEntity
+class [[= ks::reflect::NetTable{ .name = "DT_WORLD" } ]]
+      CWorld : public CBaseEntity
 {
 public:
 	DECLARE_CLASS( CWorld, CBaseEntity );
@@ -68,29 +71,28 @@ public:
 	int GetTimeOfDay()	{ return m_iTimeOfDay; }
 
 #ifdef PORTAL2
-	virtual int Restore( IRestore &restore );
 	int GetMaxBlobCount() const { return m_nMaxBlobCount; }
 #endif
 
 private:
 	DECLARE_DATADESC();
 
-	string_t m_iszChapterTitle;
+	[[= ks::reflect::Key{ .name = "chaptertitle" } ]] string_t m_iszChapterTitle;
 
-	CNetworkVar( float, m_flWaveHeight );
-	CNetworkVector( m_WorldMins );
-	CNetworkVector( m_WorldMaxs );
-	CNetworkVar( float, m_flMaxOccludeeArea );
-	CNetworkVar( float, m_flMinOccluderArea );
-	CNetworkVar( float, m_flMinPropScreenSpaceWidth );
-	CNetworkVar( float, m_flMaxPropScreenSpaceWidth );
-	CNetworkVar( string_t, m_iszDetailSpriteMaterial );
+	CNetworkVar( float, m_flWaveHeight, [[= ks::reflect::Net{ .bits = 8, .low = 0.0f, .high = 8.0f, .flags = SPROP_ROUNDUP } ]] );
+	CNetworkVector( m_WorldMins, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD, .enc = ks::reflect::ENC_VECTOR } ]] );
+	CNetworkVector( m_WorldMaxs, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD, .enc = ks::reflect::ENC_VECTOR } ]] );
+	CNetworkVar( float, m_flMaxOccludeeArea, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE } ]] [[= ks::reflect::Key{ .name = "maxoccludeearea" } ]] );
+	CNetworkVar( float, m_flMinOccluderArea, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE } ]] [[= ks::reflect::Key{ .name = "minoccluderarea" } ]] );
+	CNetworkVar( float, m_flMinPropScreenSpaceWidth, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE } ]] [[= ks::reflect::Key{ .name = "minpropscreenwidth" } ]] );
+	CNetworkVar( float, m_flMaxPropScreenSpaceWidth, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE } ]] [[= ks::reflect::Key{ .name = "maxpropscreenwidth" } ]] );
+	CNetworkVar( string_t, m_iszDetailSpriteMaterial, [[= ks::reflect::Net{} ]] [[= ks::reflect::Key{ .name = "detailmaterial" } ]] );
 
 	// start flags
-	CNetworkVar( bool, m_bStartDark );
-	CNetworkVar( bool, m_bColdWorld );
+	CNetworkVar( bool, m_bStartDark, [[= ks::reflect::Net{ .bits = 1, .flags = SPROP_UNSIGNED } ]] [[= ks::reflect::Key{ .name = "startdark" } ]] );
+	CNetworkVar( bool, m_bColdWorld, [[= ks::reflect::Net{ .bits = 1, .flags = SPROP_UNSIGNED } ]] [[= ks::reflect::Key{ .name = "coldworld" } ]] );
 	CNetworkVar( int, m_iTimeOfDay );
-	bool m_bDisplayTitle;
+	[[= ks::reflect::Key{ .name = "gametitle" } ]] bool m_bDisplayTitle;
 
 #ifdef PORTAL2
 	CNetworkVar( int, m_nMaxBlobCount );

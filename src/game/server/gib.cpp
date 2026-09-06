@@ -23,29 +23,6 @@ extern Vector			g_vecAttackDir;		// In globals.cpp
 
 CUtlVector<EHANDLE> CGib::s_ExtantGibs;
 
-BEGIN_DATADESC( CGib )
-
-	// gibs are not saved/restored
-//	DEFINE_FIELD( m_bloodColor, FIELD_INTEGER ),
-//	DEFINE_FIELD( m_hSprite, FIELD_EHANDLE ),
-//	DEFINE_FIELD( m_cBloodDecals, FIELD_INTEGER ),
-//	DEFINE_FIELD( m_material, FIELD_INTEGER ),
-//	DEFINE_FIELD( m_lifeTime, FIELD_TIME ),
-//	DEFINE_FIELD( m_pSprite, CSprite ),
-//	DEFINE_FIELD( m_hFlame, FIELD_EHANDLE ),
-
-//	DEFINE_FIELD( m_hPhysicsAttacker, FIELD_EHANDLE ),
-//	DEFINE_FIELD( m_flLastPhysicsInfluenceTime, FIELD_TIME ),
-
-//  DEFINE_FIELD( m_bForceRemove, FIELD_BOOLEAN ),
-
-	// Function pointers
-	DEFINE_ENTITYFUNC( BounceGibTouch ),
-	DEFINE_ENTITYFUNC( StickyGibTouch ),
-	DEFINE_THINKFUNC( WaitTillLand ),
-	DEFINE_THINKFUNC( DieThink ),
-
-END_DATADESC()
 
 
 // HACKHACK -- The gib velocity equations don't work

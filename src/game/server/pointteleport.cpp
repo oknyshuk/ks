@@ -7,6 +7,8 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_annotations.h"
 
 
 #include "in_buttons.h"
@@ -28,9 +30,9 @@ class CPointTeleport : public CBaseEntity
 public:
 	void	Activate( void );
 
-	void InputTeleport( inputdata_t &inputdata );
-	void InputTeleportEntity( inputdata_t &inputdata );
-	void InputTeleportToCurrentPos( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Teleport", .type = FIELD_VOID } ]] void InputTeleport( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "TeleportEntity", .type = FIELD_STRING } ]] void InputTeleportEntity( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "TeleportToCurrentPos", .type = FIELD_VOID } ]] void InputTeleportToCurrentPos( inputdata_t &inputdata );
 
 	int	ObjectCaps( void )
 	{ 
@@ -52,16 +54,7 @@ private:
 LINK_ENTITY_TO_CLASS( point_teleport, CPointTeleport );
 
 
-BEGIN_DATADESC( CPointTeleport )
-
-	DEFINE_FIELD( m_vSaveOrigin, FIELD_VECTOR ),
-	DEFINE_FIELD( m_vSaveAngles, FIELD_VECTOR ),
-
-	DEFINE_INPUTFUNC( FIELD_VOID, "Teleport", InputTeleport ),
-	DEFINE_INPUTFUNC( FIELD_STRING, "TeleportEntity", InputTeleportEntity ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "TeleportToCurrentPos", InputTeleportToCurrentPos ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CPointTeleport )
 
 
 //-----------------------------------------------------------------------------

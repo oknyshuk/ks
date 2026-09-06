@@ -6,6 +6,14 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_annotations.h"
+#ifdef CLIENT_DLL
+#include "reflect_predmap.h"
+#include "reflect_recvtable.h"
+#else
+#include "reflect_sendtable.h"
+#endif
 #include "beam_shared.h"
 #include "decals.h"
 #include "model_types.h"
@@ -147,172 +155,25 @@ REGISTER_SEND_PROXY_NON_MODIFIED_POINTER( SendProxy_SendPredictableId );
 IMPLEMENT_NETWORKCLASS_ALIASED( Beam, DT_Beam )
 LINK_ENTITY_TO_CLASS_ALIASED( beam, Beam );
 
-#if !defined( NO_ENTITY_PREDICTION ) && defined( USE_PREDICTABLEID )
-BEGIN_NETWORK_TABLE_NOBASE( CBeam, DT_BeamPredictableId )
+
+IMPLEMENT_REFLECT_TABLE( CBeam, DT_Beam );
 #if !defined( CLIENT_DLL )
-	SendPropPredictableId( SENDINFO( m_PredictableID ) ),
-	SendPropInt( SENDINFO( m_bIsPlayerSimulated ), 1, SPROP_UNSIGNED ),
+#if !defined( NO_ENTITY_PREDICTION ) && defined( USE_PREDICTABLEID )
+#endif
 #else
-	RecvPropPredictableId( RECVINFO( m_PredictableID ) ),
-	RecvPropInt( RECVINFO( m_bIsPlayerSimulated ) ),
-#endif
-END_NETWORK_TABLE()
-#endif
-
-BEGIN_NETWORK_TABLE_NOBASE( CBeam, DT_Beam )
-#if !defined( CLIENT_DLL )
-	SendPropInt		(SENDINFO(m_nBeamType),		Q_log2(NUM_BEAM_TYPES)+1,	SPROP_UNSIGNED ),
-	SendPropInt		(SENDINFO(m_nBeamFlags),	NUM_BEAM_FLAGS,	SPROP_UNSIGNED ),
-	SendPropInt		(SENDINFO(m_nNumBeamEnts ),			5,	SPROP_UNSIGNED ),
-	SendPropArray3
-	(
-		SENDINFO_ARRAY3(m_hAttachEntity), 
-		SendPropEHandle( SENDINFO_ARRAY(m_hAttachEntity) )
-	),
-	SendPropArray3
-	(
-		SENDINFO_ARRAY3(m_nAttachIndex), 
-		SendPropInt( SENDINFO_ARRAY(m_nAttachIndex), ATTACHMENT_INDEX_BITS, SPROP_UNSIGNED)
-	),
-	SendPropInt		(SENDINFO(m_nHaloIndex),	16, SPROP_UNSIGNED ),
-	SendPropFloat	(SENDINFO(m_fHaloScale),	0,	SPROP_NOSCALE ),
-	SendPropFloat	(SENDINFO(m_fWidth),		10,	SPROP_ROUNDUP,	0.0f, MAX_BEAM_WIDTH ),
-	SendPropFloat	(SENDINFO(m_fEndWidth),		10,	SPROP_ROUNDUP,	0.0f, MAX_BEAM_WIDTH ),
-	SendPropFloat	(SENDINFO(m_fFadeLength),	0,	SPROP_NOSCALE ),
-	SendPropFloat	(SENDINFO(m_fAmplitude),	8,	SPROP_ROUNDDOWN,	0.0f, MAX_BEAM_NOISEAMPLITUDE ),
-	SendPropFloat	(SENDINFO(m_fStartFrame),	8,	SPROP_ROUNDDOWN,	0.0f,   256.0f),
-	SendPropFloat	(SENDINFO(m_fSpeed),		8,	SPROP_NOSCALE,	0.0f,	MAX_BEAM_SCROLLSPEED),
-	SendPropInt		(SENDINFO(m_nRenderFX),		8,	SPROP_UNSIGNED ),
-	SendPropInt		(SENDINFO(m_nRenderMode),	8,	SPROP_UNSIGNED ),
-	SendPropFloat	(SENDINFO(m_flFrameRate),	10, SPROP_ROUNDUP, -25.0f, 25.0f ),
-	SendPropFloat	(SENDINFO(m_flHDRColorScale),	0, SPROP_NOSCALE, 0.0f, 100.0f ),
-	SendPropFloat	(SENDINFO(m_flFrame),		20, SPROP_ROUNDDOWN | SPROP_CHANGES_OFTEN,	0.0f,   256.0f),
-	SendPropInt		(SENDINFO(m_clrRender),		32,	SPROP_UNSIGNED | SPROP_CHANGES_OFTEN, SendProxy_Color32ToInt32 ),
-	SendPropInt		(SENDINFO(m_nClipStyle), CBeam::kBEAMCLIPSTYLE_NUMBITS+1, SPROP_UNSIGNED ),
-	SendPropVector	(SENDINFO(m_vecEndPos),		-1,	SPROP_COORD ),
-
-	SendPropModelIndex(SENDINFO(m_nModelIndex) ),
-	SendPropVector (SENDINFO(m_vecOrigin), 19, SPROP_CHANGES_OFTEN,	MIN_COORD_INTEGER, MAX_COORD_INTEGER),
-	SendPropEHandle(SENDINFO_NAME(m_hMoveParent, moveparent) ),
 #if !defined( NO_ENTITY_PREDICTION ) && defined( USE_PREDICTABLEID )
-	SendPropDataTable( "beampredictable_id", 0, &REFERENCE_SEND_TABLE( DT_BeamPredictableId ), SendProxy_SendPredictableId ),
 #endif
-
+#endif
+#if defined( CLIENT_DLL )
 #else
-	RecvPropInt		(RECVINFO(m_nBeamType)),
-	RecvPropInt		(RECVINFO(m_nBeamFlags)),
-	RecvPropInt		(RECVINFO(m_nNumBeamEnts)),
-	RecvPropArray3
-	(
-		RECVINFO_ARRAY( m_hAttachEntity ),
-		RecvPropEHandle (RECVINFO(m_hAttachEntity[0]))
-	),
-	RecvPropArray3	
-	(
-		RECVINFO_ARRAY( m_nAttachIndex ),
-		RecvPropInt (RECVINFO(m_nAttachIndex[0]))
-	),
-	RecvPropInt		(RECVINFO(m_nHaloIndex)),
-	RecvPropFloat	(RECVINFO(m_fHaloScale)),
-	RecvPropFloat	(RECVINFO(m_fWidth)),
-	RecvPropFloat	(RECVINFO(m_fEndWidth)),
-	RecvPropFloat	(RECVINFO(m_fFadeLength)),
-	RecvPropFloat	(RECVINFO(m_fAmplitude)),
-	RecvPropFloat	(RECVINFO(m_fStartFrame)),
-	RecvPropFloat	(RECVINFO(m_fSpeed), 0, RecvProxy_Beam_ScrollSpeed ),
-	RecvPropFloat(RECVINFO(m_flFrameRate)),
-	RecvPropFloat(RECVINFO(m_flHDRColorScale)),
-	RecvPropInt(RECVINFO(m_clrRender), 0, RecvProxy_ClrRender ),
-	RecvPropInt(RECVINFO(m_nRenderFX)),
-	RecvPropInt(RECVINFO(m_nRenderMode)),
-	RecvPropFloat(RECVINFO(m_flFrame)),
-	RecvPropInt(RECVINFO(m_nClipStyle)),
-	RecvPropVector(RECVINFO(m_vecEndPos)),
-
-	RecvPropInt(RECVINFO(m_nModelIndex)),
-
-	RecvPropVector(RECVINFO_NAME(m_vecNetworkOrigin, m_vecOrigin)),
-	RecvPropInt( RECVINFO_NAME(m_hNetworkMoveParent, moveparent), 0, RecvProxy_IntToMoveParent ),
-#if !defined( NO_ENTITY_PREDICTION ) && defined( USE_PREDICTABLEID )
-	RecvPropDataTable( "beampredictable_id", 0, 0, &REFERENCE_RECV_TABLE( DT_BeamPredictableId ) ),
 #endif
-
-#endif
-END_NETWORK_TABLE()
 
 #if !defined( CLIENT_DLL )
-BEGIN_DATADESC( CBeam )
-	DEFINE_FIELD( m_nHaloIndex, FIELD_MODELINDEX ),
-	DEFINE_FIELD( m_nBeamType, FIELD_INTEGER ),
-	DEFINE_FIELD( m_nBeamFlags, FIELD_INTEGER ),
-	DEFINE_FIELD( m_nNumBeamEnts, FIELD_INTEGER ),
-	DEFINE_ARRAY( m_hAttachEntity, FIELD_EHANDLE, MAX_BEAM_ENTS ),
-	DEFINE_ARRAY( m_nAttachIndex, FIELD_INTEGER, MAX_BEAM_ENTS ),
-
-	DEFINE_FIELD( m_fWidth, FIELD_FLOAT ),
-	DEFINE_FIELD( m_fEndWidth, FIELD_FLOAT ),
-	DEFINE_FIELD( m_fFadeLength, FIELD_FLOAT ),
-	DEFINE_FIELD( m_fHaloScale, FIELD_FLOAT ),
-	DEFINE_FIELD( m_fAmplitude, FIELD_FLOAT ),
-	DEFINE_FIELD( m_fStartFrame, FIELD_FLOAT ),
-	DEFINE_FIELD( m_fSpeed, FIELD_FLOAT ),
-
-	DEFINE_FIELD( m_flFrameRate, FIELD_FLOAT ),
-	DEFINE_FIELD( m_flFrame, FIELD_FLOAT ),
-
-	DEFINE_KEYFIELD( m_flHDRColorScale, FIELD_FLOAT, "HDRColorScale" ),
-
-	DEFINE_KEYFIELD( m_flDamage, FIELD_FLOAT, "damage" ),
-	DEFINE_FIELD( m_flFireTime, FIELD_TIME ),
-
-	DEFINE_FIELD( m_vecEndPos, FIELD_POSITION_VECTOR ),
-	DEFINE_FIELD( m_hEndEntity, FIELD_EHANDLE ),
-
-	DEFINE_KEYFIELD( m_nDissolveType, FIELD_INTEGER, "dissolvetype" ),
-
-	// Inputs
-	DEFINE_INPUTFUNC( FIELD_FLOAT, "Width", InputWidth ),
-	DEFINE_INPUTFUNC( FIELD_FLOAT, "Noise", InputNoise ),
-	DEFINE_INPUTFUNC( FIELD_FLOAT, "ColorRedValue", InputColorRedValue ),
-	DEFINE_INPUTFUNC( FIELD_FLOAT, "ColorGreenValue", InputColorGreenValue ),
-	DEFINE_INPUTFUNC( FIELD_FLOAT, "ColorBlueValue", InputColorBlueValue ),
-	DEFINE_INPUT( m_fSpeed, FIELD_FLOAT, "ScrollSpeed" ),
-
-	// don't save this
-	//DEFINE_FIELD( m_queryHandleHalo, FIELD_ ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CBeam )
 
 #else
 
-BEGIN_PREDICTION_DATA( CBeam )
-
-	DEFINE_PRED_FIELD( m_nBeamType, FIELD_INTEGER, FTYPEDESC_INSENDTABLE ),
-	
-	DEFINE_PRED_FIELD( m_nNumBeamEnts, FIELD_INTEGER, FTYPEDESC_INSENDTABLE ),
-	DEFINE_PRED_ARRAY( m_hAttachEntity, FIELD_EHANDLE, MAX_BEAM_ENTS, FTYPEDESC_INSENDTABLE ),
-	DEFINE_PRED_ARRAY( m_nAttachIndex, FIELD_INTEGER, MAX_BEAM_ENTS, FTYPEDESC_INSENDTABLE ),
-	DEFINE_PRED_FIELD( m_nHaloIndex, FIELD_INTEGER, FTYPEDESC_INSENDTABLE ),
-	DEFINE_PRED_FIELD( m_fHaloScale, FIELD_FLOAT, FTYPEDESC_INSENDTABLE ),
-	DEFINE_PRED_FIELD( m_fWidth, FIELD_FLOAT, FTYPEDESC_INSENDTABLE ),
-	DEFINE_PRED_FIELD( m_fEndWidth, FIELD_FLOAT, FTYPEDESC_INSENDTABLE ),
-	DEFINE_PRED_FIELD( m_fFadeLength, FIELD_FLOAT, FTYPEDESC_INSENDTABLE ),
-	DEFINE_PRED_FIELD( m_fAmplitude, FIELD_FLOAT, FTYPEDESC_INSENDTABLE ),
-	DEFINE_PRED_FIELD( m_fStartFrame, FIELD_FLOAT, FTYPEDESC_INSENDTABLE ),
-	DEFINE_PRED_FIELD( m_fSpeed, FIELD_FLOAT, FTYPEDESC_INSENDTABLE ),
-	DEFINE_PRED_FIELD( m_nRenderFX, FIELD_INTEGER, FTYPEDESC_INSENDTABLE ),
-	DEFINE_PRED_FIELD( m_nRenderMode, FIELD_INTEGER, FTYPEDESC_INSENDTABLE ),
-	DEFINE_PRED_FIELD( m_flFrameRate, FIELD_FLOAT, FTYPEDESC_INSENDTABLE ),
-	DEFINE_PRED_FIELD( m_flFrame, FIELD_FLOAT, FTYPEDESC_INSENDTABLE ),
-	DEFINE_PRED_FIELD( m_clrRender, FIELD_INTEGER, FTYPEDESC_INSENDTABLE ),
-	DEFINE_PRED_FIELD_TOL( m_vecEndPos, FIELD_VECTOR, FTYPEDESC_INSENDTABLE, 0.125f ),
-	DEFINE_PRED_FIELD( m_nModelIndex, FIELD_INTEGER, FTYPEDESC_INSENDTABLE | FTYPEDESC_MODELINDEX ),
-	DEFINE_PRED_FIELD_TOL( m_vecOrigin, FIELD_VECTOR, FTYPEDESC_INSENDTABLE, 0.125f ),
-	
-	//DEFINE_PRED_FIELD( m_pMoveParent, SendProxy_MoveParent ),
-	//DEFINE_PRED_FIELD( m_flHDRColorScale, SendProxy_HDRColorScale ),
-
-END_PREDICTION_DATA()
+IMPLEMENT_REFLECT_PREDMAP( CBeam );
 
 #endif
 

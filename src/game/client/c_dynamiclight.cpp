@@ -7,6 +7,8 @@
 // $NoKeywords: $
 //=============================================================================//
 #include "cbase.h"
+#include "reflect_recvtable.h"
+#include "reflect_annotations.h"
 #include "dlight.h"
 #include "iefx.h"
 #include "iviewrender.h"
@@ -30,7 +32,8 @@
 //-----------------------------------------------------------------------------
 // A dynamic light, with the goofy hack needed for spotlights
 //-----------------------------------------------------------------------------
-class C_DynamicLight : public C_BaseEntity
+class [[= ks::reflect::NetTable{ .name = "DT_DynamicLight" } ]]
+      C_DynamicLight : public C_BaseEntity
 {
 public:
 	DECLARE_CLASS( C_DynamicLight, C_BaseEntity );
@@ -44,14 +47,14 @@ public:
 	void	ClientThink( void );
 	void	Release( void );
 
-	unsigned char	m_Flags;
-	unsigned char	m_LightStyle;
+	[[= ks::reflect::Net{} ]] unsigned char	m_Flags;
+	[[= ks::reflect::Net{} ]] unsigned char	m_LightStyle;
 
-	float	m_Radius;
-	int		m_Exponent;
-	float	m_InnerAngle;
-	float	m_OuterAngle;
-	float	m_SpotRadius;
+	[[= ks::reflect::Net{} ]] float	m_Radius;
+	[[= ks::reflect::Net{} ]] int		m_Exponent;
+	[[= ks::reflect::Net{} ]] float	m_InnerAngle;
+	[[= ks::reflect::Net{} ]] float	m_OuterAngle;
+	[[= ks::reflect::Net{} ]] float	m_SpotRadius;
 
 private:
 	dlight_t*	m_pDynamicLight;
@@ -61,15 +64,7 @@ private:
 	inline bool ShouldBeElight() { return (m_Flags & DLIGHT_NO_WORLD_ILLUMINATION); }
 };
 
-IMPLEMENT_CLIENTCLASS_DT(C_DynamicLight, DT_DynamicLight, CDynamicLight)
-	RecvPropInt		(RECVINFO(m_Flags)),
-	RecvPropInt		(RECVINFO(m_LightStyle)),
-	RecvPropFloat	(RECVINFO(m_Radius)),
-	RecvPropInt		(RECVINFO(m_Exponent)),
-	RecvPropFloat	(RECVINFO(m_InnerAngle)),
-	RecvPropFloat	(RECVINFO(m_OuterAngle)),
-	RecvPropFloat	(RECVINFO(m_SpotRadius)),
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS( C_DynamicLight, DT_DynamicLight, CDynamicLight )
 
 
 //------------------------------------------------------------------------------

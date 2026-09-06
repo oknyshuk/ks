@@ -6,6 +6,9 @@
 
 #ifndef C_BREAKABLEPROP_H
 #define C_BREAKABLEPROP_H
+
+#include "reflect_annotations.h"
+#include "dt_recv.h"
 #ifdef _WIN32
 #pragma once
 #endif
@@ -15,7 +18,10 @@
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-class C_BreakableProp : public C_BaseAnimating, public CDefaultPlayerPickupVPhysics
+void RecvProxy_UnmodifiedQAngles( const CRecvProxyData *pData, void *pStruct, void *pOut );
+
+class [[= ks::reflect::NetTable{ .name = "DT_BreakableProp" } ]]
+      C_BreakableProp : public C_BaseAnimating, public CDefaultPlayerPickupVPhysics
 {
 public:
 	DECLARE_CLASS( C_BreakableProp, C_BaseAnimating );
@@ -43,10 +49,10 @@ public:
 	const QAngle &GetNetworkedPreferredPlayerCarryAngles( void ) { return m_qPreferredPlayerCarryAngles; }
 
 protected:
-	QAngle m_qPreferredPlayerCarryAngles;
+	[[= ks::reflect::Net{ .enc = ks::reflect::ENC_QANGLES } ]] [[= ks::reflect::Proxy<RecvProxy_UnmodifiedQAngles, ks::reflect::WIRE_RECV>{} ]] QAngle m_qPreferredPlayerCarryAngles;
 
 private:
-	bool m_bClientPhysics;
+	[[= ks::reflect::Net{} ]] bool m_bClientPhysics;
 };
 
 #endif // C_BREAKABLEPROP_H

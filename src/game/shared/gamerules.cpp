@@ -5,6 +5,14 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_annotations.h"
+#ifdef CLIENT_DLL
+#include "reflect_recvtable.h"
+#endif
+#include "reflect_annotations.h"
+#ifdef GAME_DLL
+#include "reflect_sendtable.h"
+#endif
 #include "gamerules.h"
 #include "ammodef.h"
 #include "tier0/vprof.h"
@@ -69,8 +77,7 @@ CGameRulesProxy *CGameRulesProxy::s_pGameRulesProxy = NULL;
 IMPLEMENT_NETWORKCLASS_ALIASED( GameRulesProxy, DT_GameRulesProxy )
 
 // Don't send any of the CBaseEntity stuff..
-BEGIN_NETWORK_TABLE_NOBASE( CGameRulesProxy, DT_GameRulesProxy )
-END_NETWORK_TABLE()
+IMPLEMENT_REFLECT_TABLE( CGameRulesProxy, DT_GameRulesProxy );
 
 
 CGameRulesProxy::CGameRulesProxy()

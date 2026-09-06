@@ -5,13 +5,18 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_recvtable.h"
+#include "reflect_annotations.h"
 #include "c_basedoor.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
 // ------------------------------------------------------------------------
-class C_FuncMoveLinear: public C_BaseToggle
+class [[= ks::reflect::NetTable{ .name = "DT_FuncMoveLinear" } ]]
+      [[= ks::reflect::From<"m_vecVelocity", ks::reflect::Net{}, RecvProxy_LocalVelocity>{} ]]
+      [[= ks::reflect::From<"m_fFlags", ks::reflect::Net{}>{} ]]
+      C_FuncMoveLinear: public C_BaseToggle
 {
 public:
 	DECLARE_CLASS( C_FuncMoveLinear, C_BaseToggle );
@@ -25,10 +30,7 @@ public:
 };
 
 
-IMPLEMENT_CLIENTCLASS_DT( C_FuncMoveLinear, DT_FuncMoveLinear, CFuncMoveLinear )
-	RecvPropVector( RECVINFO(m_vecVelocity), 0, RecvProxy_LocalVelocity ),
-	RecvPropInt( RECVINFO( m_fFlags ) ),
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS( C_FuncMoveLinear, DT_FuncMoveLinear, CFuncMoveLinear )
 
 
 C_FuncMoveLinear::C_FuncMoveLinear()

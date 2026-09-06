@@ -11,6 +11,8 @@
 // $NoKeywords: $
 //=============================================================================//
 #include "cbase.h"
+#include "reflect_sendtable.h"
+#include "reflect_annotations.h"
 #include "basetempentity.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
@@ -19,7 +21,8 @@
 //-----------------------------------------------------------------------------
 // Purpose: Dispatches sparks
 //-----------------------------------------------------------------------------
-class CTEMetalSparks : public CBaseTempEntity
+class [[= ks::reflect::NetTable{ .name = "DT_TEMetalSparks", .base = false } ]]
+      CTEMetalSparks : public CBaseTempEntity
 {
 DECLARE_CLASS( CTEMetalSparks, CBaseTempEntity );
 
@@ -32,8 +35,8 @@ public:
 	DECLARE_SERVERCLASS();
 
 public:
-	CNetworkVector( m_vecPos );
-	CNetworkVector( m_vecDir );
+	CNetworkVector( m_vecPos, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD, .enc = ks::reflect::ENC_VECTOR } ]] );
+	CNetworkVector( m_vecDir, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD, .enc = ks::reflect::ENC_VECTOR } ]] );
 };
 
 //-----------------------------------------------------------------------------
@@ -80,10 +83,7 @@ void CTEMetalSparks::Test( const Vector& current_origin, const QAngle& current_a
 	Create( filter, 0.0 );
 }
 
-IMPLEMENT_SERVERCLASS_ST_NOBASE( CTEMetalSparks, DT_TEMetalSparks)
-	SendPropVector( SENDINFO(m_vecPos), -1, SPROP_COORD),
-	SendPropVector( SENDINFO(m_vecDir), -1, SPROP_COORD),
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CTEMetalSparks, DT_TEMetalSparks )
 
 // Singleton to fire TEMetalSparks objects
 static CTEMetalSparks g_TEMetalSparks( "Metal Sparks" );
@@ -109,7 +109,8 @@ void TE_MetalSparks( IRecipientFilter& filter, float delay,
 	g_TEMetalSparks.Create( filter, delay );
 }
 
-class CTEArmorRicochet : public CTEMetalSparks
+class [[= ks::reflect::NetTable{ .name = "DT_TEArmorRicochet" } ]]
+      CTEArmorRicochet : public CTEMetalSparks
 {
 DECLARE_CLASS( CTEArmorRicochet, CTEMetalSparks );
 
@@ -118,8 +119,7 @@ public:
 	DECLARE_SERVERCLASS();
 };
 
-IMPLEMENT_SERVERCLASS_ST( CTEArmorRicochet, DT_TEArmorRicochet)
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CTEArmorRicochet, DT_TEArmorRicochet )
 
 static CTEArmorRicochet g_TEArmorRicochet( "Armor Ricochet" );
 //-----------------------------------------------------------------------------

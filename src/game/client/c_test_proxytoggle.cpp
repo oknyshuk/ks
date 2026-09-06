@@ -5,6 +5,8 @@
 // $NoKeywords: $
 //=============================================================================//
 #include "cbase.h"
+#include "reflect_recvtable.h"
+#include "reflect_annotations.h"
 #include "c_baseentity.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
@@ -18,7 +20,12 @@ static C_Test_ProxyToggle_Networkable *g_pTestObj = 0;
 // C_Test_ProxyToggle_Networkable
 // ---------------------------------------------------------------------------------------- //
 
-class C_Test_ProxyToggle_Networkable : public C_BaseEntity
+namespace DT_ProxyToggle_ProxiedData { extern RecvTable g_RecvTable; }
+
+class [[= ks::reflect::NetTable{ .name = "DT_ProxyToggle_ProxiedData", .base = false } ]]
+      [[= ks::reflect::NetTable{ .name = "DT_ProxyToggle" } ]]
+      [[= ks::reflect::SubTable<"blah", &DT_ProxyToggle_ProxiedData::g_RecvTable>{} ]]
+      C_Test_ProxyToggle_Networkable : public C_BaseEntity
 {
 public:
 	DECLARE_CLASS( C_Test_ProxyToggle_Networkable, C_BaseEntity );
@@ -34,7 +41,7 @@ public:
 				g_pTestObj = 0;
 			}
 
-	int		m_WithProxy;
+	[[= ks::reflect::Net{ .table = "DT_ProxyToggle_ProxiedData" } ]] int		m_WithProxy;
 };
 
 
@@ -42,13 +49,9 @@ public:
 // Datatables.
 // ---------------------------------------------------------------------------------------- //
 
-BEGIN_RECV_TABLE_NOBASE( C_Test_ProxyToggle_Networkable, DT_ProxyToggle_ProxiedData )
-	RecvPropInt( RECVINFO( m_WithProxy ) )
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_TABLE_IN( C_Test_ProxyToggle_Networkable, DT_ProxyToggle_ProxiedData );
 
-IMPLEMENT_CLIENTCLASS_DT( C_Test_ProxyToggle_Networkable, DT_ProxyToggle, CTest_ProxyToggle_Networkable )
-	RecvPropDataTable( "blah", 0, 0, &REFERENCE_RECV_TABLE( DT_ProxyToggle_ProxiedData ) )
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS( C_Test_ProxyToggle_Networkable, DT_ProxyToggle, CTest_ProxyToggle_Networkable )
 
 
 

@@ -5,12 +5,15 @@
 // $NoKeywords: $
 //=============================================================================//
 #include "cbase.h"
+#include "reflect_recvtable.h"
+#include "reflect_annotations.h"
 #include "c_func_brush.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
-class C_FuncMonitor : public C_FuncBrush
+class [[= ks::reflect::NetTable{ .name = "DT_FuncMonitor" } ]]
+      C_FuncMonitor : public C_FuncBrush
 {
 public:
 	DECLARE_CLASS( C_FuncMonitor, C_FuncBrush );
@@ -21,8 +24,7 @@ public:
 	virtual bool	ShouldDraw();
 };
 
-IMPLEMENT_CLIENTCLASS_DT( C_FuncMonitor, DT_FuncMonitor, CFuncMonitor )
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS( C_FuncMonitor, DT_FuncMonitor, CFuncMonitor )
 
 bool C_FuncMonitor::ShouldDraw()
 {

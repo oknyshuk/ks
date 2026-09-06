@@ -7,6 +7,8 @@
 #ifndef AI_BEHAVIOR_FIGHTFROMCOVER_H
 #define AI_BEHAVIOR_FIGHTFROMCOVER_H
 
+#include "reflect_annotations.h"
+
 #if defined( _WIN32 )
 #pragma once
 #endif
@@ -38,21 +40,21 @@ public:
 
 	virtual void ResolveNames();
 
-	void InputSetDirectionalMarker( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetDirectionalMarker", .type = FIELD_EHANDLE } ]] void InputSetDirectionalMarker( inputdata_t &inputdata );
 
 	void BeginMovingFront();
 	void EndMovingFront();
 
 	int DrawDebugTextOverlays();
 
-	string_t m_DirectionalMarker;
-	string_t m_GenericHintType;
+	[[= ks::reflect::Key{ .name = "DirectionalMarker" } ]] string_t m_DirectionalMarker;
+	[[= ks::reflect::Key{ .name = "GenericHintType" } ]] string_t m_GenericHintType;
 
 	EHANDLE m_hDirectionalMarker;
-	float m_WidthZone;
-	float m_LengthZone;
-	float m_HeightZone;
-	float m_BiasZone;
+	[[= ks::reflect::Key{ .name = "width" } ]] float m_WidthZone;
+	[[= ks::reflect::Key{ .name = "length" } ]] float m_LengthZone;
+	[[= ks::reflect::Key{ .name = "height" } ]] float m_HeightZone;
+	[[= ks::reflect::Key{ .name = "bias" } ]] float m_BiasZone;
 
 	Vector m_vFront;
 	Vector m_vDir;
@@ -67,7 +69,6 @@ public:
 class CAI_FightFromCoverBehavior : public CAI_SimpleBehavior
 {
 	DECLARE_CLASS( CAI_FightFromCoverBehavior, CAI_SimpleBehavior );
-	DECLARE_DATADESC();
 	DEFINE_CUSTOM_SCHEDULE_PROVIDER;
 public:
 

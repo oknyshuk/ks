@@ -11,6 +11,8 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_annotations.h"
 #include "entityinput.h"
 #include "entityoutput.h"
 #include "eventqueue.h"
@@ -39,30 +41,30 @@ protected:
 	void Disable();
 
 	// Input handlers
-	void InputEnable(inputdata_t &inputdata);
-	void InputDisable(inputdata_t &inputdata);
-	void InputToggle(inputdata_t &inputdata);
-	void InputTest(inputdata_t &inputdata);
-	void InputSetTargetEntity(inputdata_t &inputdata);
+	[[= ks::reflect::Input{ .name = "Enable", .type = FIELD_VOID } ]] void InputEnable(inputdata_t &inputdata);
+	[[= ks::reflect::Input{ .name = "Disable", .type = FIELD_VOID } ]] void InputDisable(inputdata_t &inputdata);
+	[[= ks::reflect::Input{ .name = "Toggle", .type = FIELD_VOID } ]] void InputToggle(inputdata_t &inputdata);
+	[[= ks::reflect::Input{ .name = "Test", .type = FIELD_VOID } ]] void InputTest(inputdata_t &inputdata);
+	[[= ks::reflect::Input{ .name = "SetTargetEntity", .type = FIELD_STRING } ]] void InputSetTargetEntity(inputdata_t &inputdata);
 
 	bool IsFacingWithinTolerance(CBaseEntity *pEntity, CBaseEntity *pTarget, float flTolerance, float *pflDot = NULL);
 
-	bool m_bDisabled;				// When disabled, we do not think or fire outputs.
-	string_t m_nLookAtName;			// Name of the entity that the target must point at to fire the OnTrue output.
+	[[= ks::reflect::Key{ .name = "StartDisabled" } ]] bool m_bDisabled;				// When disabled, we do not think or fire outputs.
+	[[= ks::reflect::Key{ .name = "lookatname" } ]] string_t m_nLookAtName;			// Name of the entity that the target must point at to fire the OnTrue output.
 
 	EHANDLE m_hTargetEntity;		// Entity whose angles are being monitored.
 	EHANDLE m_hLookAtEntity;		// Entity that the target must look at to fire the OnTrue output.
 
-	float m_flDuration;				// Time in seconds for which the entity must point at the target.
+	[[= ks::reflect::Key{ .name = "duration" } ]] float m_flDuration;				// Time in seconds for which the entity must point at the target.
 	float m_flDotTolerance;			// Degrees of error allowed to satisfy the condition, expressed as a dot product.
 	float m_flFacingTime;			// The time at which the target entity pointed at the lookat entity.
 	bool m_bFired;					// Latches the output so it only fires once per true.
 
 	// Outputs
-	COutputEvent	m_OnFacingLookat;		// Fired when the target points at the lookat entity.
-	COutputEvent	m_OnNotFacingLookat;	// Fired in response to a Test input if the target is not looking at the lookat entity.
-	COutputVector	m_TargetDir;
-	COutputFloat	m_FacingPercentage;	// Normalize value representing how close the entity is to facing directly at the target
+	[[= ks::reflect::Key{ .name = "OnFacingLookat" } ]] COutputEvent	m_OnFacingLookat;		// Fired when the target points at the lookat entity.
+	[[= ks::reflect::Key{ .name = "OnNotFacingLookat" } ]] COutputEvent	m_OnNotFacingLookat;	// Fired in response to a Test input if the target is not looking at the lookat entity.
+	[[= ks::reflect::Key{ .name = "TargetDir" } ]] COutputVector	m_TargetDir;
+	[[= ks::reflect::Key{ .name = "FacingPercentage" } ]] COutputFloat	m_FacingPercentage;	// Normalize value representing how close the entity is to facing directly at the target
 
 	DECLARE_DATADESC();
 };
@@ -70,32 +72,7 @@ protected:
 LINK_ENTITY_TO_CLASS(point_anglesensor, CPointAngleSensor);
 
 
-BEGIN_DATADESC(CPointAngleSensor)
-
-	// Keys
-	DEFINE_KEYFIELD(m_bDisabled, FIELD_BOOLEAN, "StartDisabled"),
-	DEFINE_KEYFIELD(m_nLookAtName, FIELD_STRING, "lookatname"),
-	DEFINE_FIELD(m_hTargetEntity, FIELD_EHANDLE),
-	DEFINE_FIELD(m_hLookAtEntity, FIELD_EHANDLE),
-	DEFINE_KEYFIELD(m_flDuration, FIELD_FLOAT, "duration"),
-	DEFINE_FIELD(m_flDotTolerance, FIELD_FLOAT),
-	DEFINE_FIELD(m_flFacingTime, FIELD_TIME),
-	DEFINE_FIELD(m_bFired, FIELD_BOOLEAN),
-
-	// Outputs
-	DEFINE_OUTPUT(m_OnFacingLookat, "OnFacingLookat"),
-	DEFINE_OUTPUT(m_OnNotFacingLookat, "OnNotFacingLookat"),
-	DEFINE_OUTPUT(m_TargetDir, "TargetDir"),
-	DEFINE_OUTPUT(m_FacingPercentage, "FacingPercentage"),
-
-	// Inputs
-	DEFINE_INPUTFUNC(FIELD_VOID, "Enable", InputEnable),
-	DEFINE_INPUTFUNC(FIELD_VOID, "Disable", InputDisable),
-	DEFINE_INPUTFUNC(FIELD_VOID, "Toggle", InputToggle),
-	DEFINE_INPUTFUNC(FIELD_VOID, "Test", InputTest),
-	DEFINE_INPUTFUNC(FIELD_STRING, "SetTargetEntity", InputSetTargetEntity),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CPointAngleSensor )
 
 
 //-----------------------------------------------------------------------------
@@ -410,39 +387,24 @@ protected:
 	void Disable( void );
 
 	// Input handlers
-	void InputEnable(inputdata_t &inputdata);
-	void InputDisable(inputdata_t &inputdata);
-	void InputToggle(inputdata_t &inputdata);
-	void InputSetTargetEntity(inputdata_t &inputdata);
+	[[= ks::reflect::Input{ .name = "Enable", .type = FIELD_VOID } ]] void InputEnable(inputdata_t &inputdata);
+	[[= ks::reflect::Input{ .name = "Disable", .type = FIELD_VOID } ]] void InputDisable(inputdata_t &inputdata);
+	[[= ks::reflect::Input{ .name = "Toggle", .type = FIELD_VOID } ]] void InputToggle(inputdata_t &inputdata);
+	[[= ks::reflect::Input{ .name = "SetTargetEntity", .type = FIELD_STRING } ]] void InputSetTargetEntity(inputdata_t &inputdata);
 
 private:
 
-	bool	m_bDisabled;			// When disabled, we do not think or fire outputs.
+	[[= ks::reflect::Key{ .name = "StartDisabled" } ]] bool	m_bDisabled;			// When disabled, we do not think or fire outputs.
 	EHANDLE m_hTargetEntity;		// Entity whose angles are being monitored.
 
-	COutputFloat	m_Distance;
+	[[= ks::reflect::Key{ .name = "Distance" } ]] COutputFloat	m_Distance;
 
 	DECLARE_DATADESC();
 };
 
 LINK_ENTITY_TO_CLASS( point_proximity_sensor, CPointProximitySensor );
 
-BEGIN_DATADESC( CPointProximitySensor )
-
-	// Keys
-	DEFINE_KEYFIELD( m_bDisabled, FIELD_BOOLEAN, "StartDisabled" ),
-	DEFINE_FIELD( m_hTargetEntity, FIELD_EHANDLE ),
-
-	// Outputs
-	DEFINE_OUTPUT( m_Distance, "Distance"),
-
-	// Inputs
-	DEFINE_INPUTFUNC(FIELD_VOID, "Enable", InputEnable),
-	DEFINE_INPUTFUNC(FIELD_VOID, "Disable", InputDisable),
-	DEFINE_INPUTFUNC(FIELD_VOID, "Toggle", InputToggle),
-	DEFINE_INPUTFUNC(FIELD_STRING, "SetTargetEntity", InputSetTargetEntity),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CPointProximitySensor )
 
 //-----------------------------------------------------------------------------
 // Purpose: Called after all entities have spawned on new map or savegame load.

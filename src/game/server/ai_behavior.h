@@ -142,8 +142,6 @@ public:
 	virtual int  DrawDebugTextOverlays( int text_offset );
 
 	virtual bool ShouldNPCSave() { return true; }
-	virtual int	Save( ISave &save );
-	virtual int	Restore( IRestore &restore );
 	virtual void OnRestore() {}
 
 	static void SaveBehaviors(ISave &save, CAI_BehaviorBase *pCurrentBehavior, CAI_BehaviorBase **ppBehavior, int nBehaviors, bool bTestIfNPCSave = true );
@@ -197,8 +195,6 @@ private:
 	CAI_Schedule *GetFailSchedule( AIChannelScheduleState_t *pScheduleState );
 	const Task_t *GetTask( AIChannelScheduleState_t *pScheduleState );
 
-	void SaveChannels( ISave &save );
-	void RestoreChannels( IRestore &restore );
 
 	CUtlVector<AIChannelScheduleState_t> m_ScheduleChannels;
 
@@ -419,8 +415,6 @@ public:
 
 	void CleanupOnDeath( CBaseEntity *pCulprit = NULL, bool bFireDeathOutput = true );
 
-	virtual int		Save( ISave &save );
-	virtual int		Restore( IRestore &restore );
 
 	// Bridges
 	void			Precache();
@@ -940,34 +934,6 @@ inline bool CAI_BehaviorHost<BASE_NPC>::MovementCost( int moveType, const Vector
 	}
 
 	return base;
-}
-
-//-------------------------------------
-
-template <class BASE_NPC>
-inline int CAI_BehaviorHost<BASE_NPC>::Save( ISave &save )
-{
-	int result = BaseClass::Save( save );
-	if ( result )
-		CAI_BehaviorBase::SaveBehaviors( save, this->m_pPrimaryBehavior, this->AccessBehaviors(), this->NumBehaviors() );
-	return result;
-}
-
-//-------------------------------------
-
-template <class BASE_NPC>
-inline int CAI_BehaviorHost<BASE_NPC>::Restore( IRestore &restore )
-{
-	int result = BaseClass::Restore( restore );
-	if ( result )
-	{
-		int iCurrent = CAI_BehaviorBase::RestoreBehaviors( restore, this->AccessBehaviors(), this->NumBehaviors() );
-		if ( iCurrent != -1 )
-			this->m_pPrimaryBehavior = this->AccessBehaviors()[iCurrent];
-		else
-			this->m_pPrimaryBehavior = NULL;
-	}
-	return result;
 }
 
 //-----------------------------------------------------------------------------

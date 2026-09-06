@@ -55,8 +55,6 @@ public:
 	void ValidateQueue( void );
 
 	// serialization
-	int Save( ISave &save );
-	int Restore( IRestore &restore );
 
 	CEventQueue();
 	~CEventQueue();

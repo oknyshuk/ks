@@ -7,6 +7,8 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_annotations.h"
 #include "entitylist.h"
 #include "util.h"
 #include "physics.h"
@@ -36,36 +38,36 @@ public:
 	DECLARE_DATADESC();
 
 	// Input handlers
-	void InputDeactivate( inputdata_t &inputdata );
-	void InputActivate( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Deactivate", .type = FIELD_VOID } ]] void InputDeactivate( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Activate", .type = FIELD_STRING } ]] void InputActivate( inputdata_t &inputdata );
 
 	void Think( void );
 	void Deactivate( CBaseEntity *pActivator );
 
-	float				m_flFieldOfView;
+	[[= ks::reflect::Key{ .name = "FieldOfView" } ]] float				m_flFieldOfView;
 	CHandle<CBaseCombatWeapon>	m_hSaveWeapon;
 
-	COutputEvent		m_playerOn;
-	COutputEvent		m_playerOff;
+	[[= ks::reflect::Key{ .name = "PlayerOn" } ]] COutputEvent		m_playerOn;
+	[[= ks::reflect::Key{ .name = "PlayerOff" } ]] COutputEvent		m_playerOff;
 
-	COutputEvent		m_pressedMoveLeft;
-	COutputEvent		m_pressedMoveRight;
-	COutputEvent		m_pressedForward;
-	COutputEvent		m_pressedBack;
-	COutputEvent		m_pressedAttack;
-	COutputEvent		m_pressedAttack2;
+	[[= ks::reflect::Key{ .name = "PressedMoveLeft" } ]] COutputEvent		m_pressedMoveLeft;
+	[[= ks::reflect::Key{ .name = "PressedMoveRight" } ]] COutputEvent		m_pressedMoveRight;
+	[[= ks::reflect::Key{ .name = "PressedForward" } ]] COutputEvent		m_pressedForward;
+	[[= ks::reflect::Key{ .name = "PressedBack" } ]] COutputEvent		m_pressedBack;
+	[[= ks::reflect::Key{ .name = "PressedAttack" } ]] COutputEvent		m_pressedAttack;
+	[[= ks::reflect::Key{ .name = "PressedAttack2" } ]] COutputEvent		m_pressedAttack2;
 	
-	COutputEvent		m_unpressedMoveLeft;
-	COutputEvent		m_unpressedMoveRight;
-	COutputEvent		m_unpressedForward;
-	COutputEvent		m_unpressedBack;
-	COutputEvent		m_unpressedAttack;
-	COutputEvent		m_unpressedAttack2;
+	[[= ks::reflect::Key{ .name = "UnpressedMoveLeft" } ]] COutputEvent		m_unpressedMoveLeft;
+	[[= ks::reflect::Key{ .name = "UnpressedMoveRight" } ]] COutputEvent		m_unpressedMoveRight;
+	[[= ks::reflect::Key{ .name = "UnpressedForward" } ]] COutputEvent		m_unpressedForward;
+	[[= ks::reflect::Key{ .name = "UnpressedBack" } ]] COutputEvent		m_unpressedBack;
+	[[= ks::reflect::Key{ .name = "UnpressedAttack" } ]] COutputEvent		m_unpressedAttack;
+	[[= ks::reflect::Key{ .name = "UnpressedAttack2" } ]] COutputEvent		m_unpressedAttack2;
 
-	COutputFloat		m_xaxis;
-	COutputFloat		m_yaxis;
-	COutputFloat		m_attackaxis;
-	COutputFloat		m_attack2axis;
+	[[= ks::reflect::Key{ .name = "XAxis" } ]] COutputFloat		m_xaxis;
+	[[= ks::reflect::Key{ .name = "YAxis" } ]] COutputFloat		m_yaxis;
+	[[= ks::reflect::Key{ .name = "AttackAxis" } ]] COutputFloat		m_attackaxis;
+	[[= ks::reflect::Key{ .name = "Attack2Axis" } ]] COutputFloat		m_attack2axis;
 
 	bool				m_bForceUpdate;
 	int					m_nLastButtonState;
@@ -74,40 +76,7 @@ public:
 };
 
 
-BEGIN_DATADESC( CGameUI )
-
-	DEFINE_KEYFIELD( m_flFieldOfView, FIELD_FLOAT, "FieldOfView" ),
-	DEFINE_FIELD( m_hSaveWeapon, FIELD_EHANDLE ),
-	DEFINE_FIELD( m_bForceUpdate, FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_player, FIELD_EHANDLE ),
-	DEFINE_FIELD( m_nLastButtonState, FIELD_INTEGER ),
-
-	DEFINE_INPUTFUNC( FIELD_VOID, "Deactivate", InputDeactivate ),
-	DEFINE_INPUTFUNC( FIELD_STRING, "Activate", InputActivate ),
-
-	DEFINE_OUTPUT( m_playerOn, "PlayerOn" ),
-	DEFINE_OUTPUT( m_playerOff, "PlayerOff" ),
-
-	DEFINE_OUTPUT( m_pressedMoveLeft, "PressedMoveLeft" ),
-	DEFINE_OUTPUT( m_pressedMoveRight, "PressedMoveRight" ),
-	DEFINE_OUTPUT( m_pressedForward, "PressedForward" ),
-	DEFINE_OUTPUT( m_pressedBack, "PressedBack" ),
-	DEFINE_OUTPUT( m_pressedAttack, "PressedAttack" ),
-	DEFINE_OUTPUT( m_pressedAttack2, "PressedAttack2" ),
-
-	DEFINE_OUTPUT( m_unpressedMoveLeft, "UnpressedMoveLeft" ),
-	DEFINE_OUTPUT( m_unpressedMoveRight, "UnpressedMoveRight" ),
-	DEFINE_OUTPUT( m_unpressedForward, "UnpressedForward" ),
-	DEFINE_OUTPUT( m_unpressedBack, "UnpressedBack" ),
-	DEFINE_OUTPUT( m_unpressedAttack, "UnpressedAttack" ),
-	DEFINE_OUTPUT( m_unpressedAttack2, "UnpressedAttack2" ),
-
-	DEFINE_OUTPUT( m_xaxis, "XAxis" ),
-	DEFINE_OUTPUT( m_yaxis, "YAxis" ),
-	DEFINE_OUTPUT( m_attackaxis, "AttackAxis" ),
-	DEFINE_OUTPUT( m_attack2axis, "Attack2Axis" ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CGameUI )
 
 
 LINK_ENTITY_TO_CLASS( game_ui, CGameUI );

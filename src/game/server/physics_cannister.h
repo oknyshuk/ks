@@ -6,6 +6,8 @@
 
 #ifndef PHYSICS_CANNISTER_H
 #define PHYSICS_CANNISTER_H
+
+#include "reflect_annotations.h"
 #ifdef _WIN32
 #pragma once
 #endif
@@ -37,7 +39,7 @@ public:
 
 	Vector			m_thrustVector;
 	AngularImpulse	m_torqueVector;
-	float			m_thrust;
+	[[= ks::reflect::Key{ .name = "thrust" } ]] float			m_thrust;
 };
 
 class CPhysicsCannister : public CBaseCombatCharacter, public CDefaultPlayerPickupVPhysics
@@ -60,10 +62,10 @@ public:
 	//
 	// Input handlers.
 	//
-	void InputActivate(inputdata_t &data);
-	void InputDeactivate(inputdata_t &data);
-	void InputExplode(inputdata_t &data);
-	void InputWake( inputdata_t &data );
+	[[= ks::reflect::Input{ .name = "Activate", .type = FIELD_VOID } ]] void InputActivate(inputdata_t &data);
+	[[= ks::reflect::Input{ .name = "Deactivate", .type = FIELD_VOID } ]] void InputDeactivate(inputdata_t &data);
+	[[= ks::reflect::Input{ .name = "Explode", .type = FIELD_VOID } ]] void InputExplode(inputdata_t &data);
+	[[= ks::reflect::Input{ .name = "Wake", .type = FIELD_VOID } ]] void InputWake( inputdata_t &data );
 
 	bool TestCollision( const Ray_t &ray, unsigned int mask, trace_t& trace );
 
@@ -122,17 +124,17 @@ public:
 	IPhysicsMotionController *m_pController;
 	CSteamJet			*m_pJet;
 	bool				m_active;
-	float				m_thrustTime;
-	float				m_damage;
-	float				m_damageRadius;
+	[[= ks::reflect::Key{ .name = "fuel" } ]] float				m_thrustTime;
+	[[= ks::reflect::Key{ .name = "expdamage" } ]] float				m_damage;
+	[[= ks::reflect::Key{ .name = "expradius" } ]] float				m_damageRadius;
 
 	float				m_activateTime;
-	string_t			m_gasSound;
+	[[= ks::reflect::As{ FIELD_SOUNDNAME } ]] [[= ks::reflect::Key{ .name = "gassound" } ]] string_t			m_gasSound;
 
 	bool				m_bFired;		// True if this cannister was fire by a weapon
 
-	COutputEvent		m_onActivate;
-	COutputEvent		m_OnAwakened;
+	[[= ks::reflect::Key{ .name = "OnActivate" } ]] COutputEvent		m_onActivate;
+	[[= ks::reflect::Key{ .name = "OnAwakened" } ]] COutputEvent		m_OnAwakened;
 
 	CHandle<CBasePlayer>	m_hPhysicsAttacker;
 	float					m_flLastPhysicsInfluenceTime;

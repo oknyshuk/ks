@@ -4,6 +4,8 @@
 #ifndef FOG_VOLUME_H
 #define FOG_VOLUME_H
 
+#include "reflect_annotations.h"
+
 #ifdef _WIN32
 #pragma once
 #endif
@@ -49,19 +51,19 @@ public:
 		return m_hColorCorrectionController.Get();
 	}
 
-	void InputEnable( inputdata_t &data );
-	void InputDisable( inputdata_t &data );
+	[[= ks::reflect::Input{ .name = "Enable", .type = FIELD_VOID } ]] void InputEnable( inputdata_t &data );
+	[[= ks::reflect::Input{ .name = "Disable", .type = FIELD_VOID } ]] void InputDisable( inputdata_t &data );
 
 private:
-	string_t m_fogName;
-	string_t m_postProcessName;
-	string_t m_colorCorrectionName;
+	[[= ks::reflect::Key{ .name = "FogName" } ]] string_t m_fogName;
+	[[= ks::reflect::Key{ .name = "PostProcessName" } ]] string_t m_postProcessName;
+	[[= ks::reflect::Key{ .name = "ColorCorrectionName" } ]] string_t m_colorCorrectionName;
 
 	CHandle< CFogController > m_hFogController;
 	CHandle< CPostProcessController > m_hPostProcessController;
 	CHandle< CColorCorrection > m_hColorCorrectionController;
 
-	bool m_bDisabled;
+	[[= ks::reflect::Key{ .name = "StartDisabled" } ]] bool m_bDisabled;
 	bool m_bInFogVolumesList;
 
 	void AddToGlobalList();

@@ -5,6 +5,8 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_annotations.h"
 #include "filters.h"
 #include "entitylist.h"
 #include "ai_squad.h"
@@ -18,18 +20,7 @@
 // ###################################################################
 LINK_ENTITY_TO_CLASS(filter_base, CBaseFilter);
 
-BEGIN_DATADESC( CBaseFilter )
-
-	DEFINE_KEYFIELD(m_bNegated, FIELD_BOOLEAN, "Negated"),
-
-	// Inputs
-	DEFINE_INPUTFUNC( FIELD_INPUT, "TestActivator", InputTestActivator ),
-
-	// Outputs
-	DEFINE_OUTPUT( m_OnPass, "OnPass"),
-	DEFINE_OUTPUT( m_OnFail, "OnFail"),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CBaseFilter )
 
 //-----------------------------------------------------------------------------
 
@@ -92,8 +83,8 @@ class CFilterMultiple : public CBaseFilter
 	DECLARE_CLASS( CFilterMultiple, CBaseFilter );
 	DECLARE_DATADESC();
 
-	filter_t	m_nFilterType;
-	string_t	m_iFilterName[MAX_FILTERS];
+	[[= ks::reflect::Key{ .name = "FilterType" } ]] filter_t	m_nFilterType;
+	[[= ks::reflect::Key{ .name = "Filter10", .index = 9 } ]] [[= ks::reflect::Key{ .name = "Filter09", .index = 8 } ]] [[= ks::reflect::Key{ .name = "Filter08", .index = 7 } ]] [[= ks::reflect::Key{ .name = "Filter07", .index = 6 } ]] [[= ks::reflect::Key{ .name = "Filter06", .index = 5 } ]] [[= ks::reflect::Key{ .name = "Filter05", .index = 4 } ]] [[= ks::reflect::Key{ .name = "Filter04", .index = 3 } ]] [[= ks::reflect::Key{ .name = "Filter03", .index = 2 } ]] [[= ks::reflect::Key{ .name = "Filter02", .index = 1 } ]] [[= ks::reflect::Key{ .name = "Filter01", .index = 0 } ]] string_t	m_iFilterName[MAX_FILTERS];
 	EHANDLE		m_hFilter[MAX_FILTERS];
 
 	bool PassesFilterImpl( CBaseEntity *pCaller, CBaseEntity *pEntity );
@@ -103,28 +94,7 @@ class CFilterMultiple : public CBaseFilter
 
 LINK_ENTITY_TO_CLASS(filter_multi, CFilterMultiple);
 
-BEGIN_DATADESC( CFilterMultiple )
-
-
-	// Keys
-	DEFINE_KEYFIELD(m_nFilterType, FIELD_INTEGER, "FilterType"),
-
-	// Silence, Classcheck!
-//	DEFINE_ARRAY( m_iFilterName, FIELD_STRING, MAX_FILTERS ),
-
-	DEFINE_KEYFIELD(m_iFilterName[0], FIELD_STRING, "Filter01"),
-	DEFINE_KEYFIELD(m_iFilterName[1], FIELD_STRING, "Filter02"),
-	DEFINE_KEYFIELD(m_iFilterName[2], FIELD_STRING, "Filter03"),
-	DEFINE_KEYFIELD(m_iFilterName[3], FIELD_STRING, "Filter04"),
-	DEFINE_KEYFIELD(m_iFilterName[4], FIELD_STRING, "Filter05"),
-	DEFINE_KEYFIELD(m_iFilterName[5], FIELD_STRING, "Filter06"),
-	DEFINE_KEYFIELD(m_iFilterName[6], FIELD_STRING, "Filter07"),
-	DEFINE_KEYFIELD(m_iFilterName[7], FIELD_STRING, "Filter08"),
-	DEFINE_KEYFIELD(m_iFilterName[8], FIELD_STRING, "Filter09"),
-	DEFINE_KEYFIELD(m_iFilterName[9], FIELD_STRING, "Filter10"),
-	DEFINE_ARRAY( m_hFilter, FIELD_EHANDLE, MAX_FILTERS ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CFilterMultiple )
 
 
 
@@ -248,7 +218,7 @@ class CFilterName : public CBaseFilter
 	DECLARE_DATADESC();
 
 public:
-	string_t m_iFilterName;
+	[[= ks::reflect::Key{ .name = "filtername" } ]] string_t m_iFilterName;
 
 	bool PassesFilterImpl( CBaseEntity *pCaller, CBaseEntity *pEntity )
 	{
@@ -266,12 +236,7 @@ public:
 
 LINK_ENTITY_TO_CLASS( filter_activator_name, CFilterName );
 
-BEGIN_DATADESC( CFilterName )
-
-	// Keyfields
-	DEFINE_KEYFIELD( m_iFilterName,	FIELD_STRING,	"filtername" ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CFilterName )
 
 // ###################################################################
 //	> FilterModel
@@ -282,7 +247,7 @@ class CFilterModel : public CBaseFilter
 	DECLARE_DATADESC();
 
 public:
-	string_t m_iFilterModel;
+	[[= ks::reflect::Key{ .name = "model" } ]] string_t m_iFilterModel;
 
 	bool PassesFilterImpl( CBaseEntity *pCaller, CBaseEntity *pEntity )
 	{
@@ -293,12 +258,7 @@ public:
 
 LINK_ENTITY_TO_CLASS( filter_activator_model, CFilterModel );
 
-BEGIN_DATADESC( CFilterModel )
-
-	// Keyfields
-	DEFINE_KEYFIELD( m_iFilterModel,	FIELD_STRING,	"model" ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CFilterModel )
 
 // ###################################################################
 //	> FilterContext
@@ -309,7 +269,7 @@ class CFilterContext : public CBaseFilter
 	DECLARE_DATADESC();
 
 public:
-	string_t m_iFilterContext;
+	[[= ks::reflect::Key{ .name = "ResponseContext" } ]] string_t m_iFilterContext;
 
 	bool PassesFilterImpl( CBaseEntity *pCaller, CBaseEntity *pEntity )
 	{
@@ -320,12 +280,7 @@ public:
 
 LINK_ENTITY_TO_CLASS( filter_activator_context, CFilterContext );
 
-BEGIN_DATADESC( CFilterContext )
-
-	// Keyfields
-	DEFINE_KEYFIELD( m_iFilterContext,	FIELD_STRING,	"ResponseContext" ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CFilterContext )
 
 // ###################################################################
 //	> FilterClass
@@ -336,7 +291,7 @@ class CFilterClass : public CBaseFilter
 	DECLARE_DATADESC();
 
 public:
-	string_t m_iFilterClass;
+	[[= ks::reflect::Key{ .name = "filterclass" } ]] string_t m_iFilterClass;
 
 	bool PassesFilterImpl( CBaseEntity *pCaller, CBaseEntity *pEntity )
 	{
@@ -346,12 +301,7 @@ public:
 
 LINK_ENTITY_TO_CLASS( filter_activator_class, CFilterClass );
 
-BEGIN_DATADESC( CFilterClass )
-
-	// Keyfields
-	DEFINE_KEYFIELD( m_iFilterClass,	FIELD_STRING,	"filterclass" ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CFilterClass )
 
 
 // ###################################################################
@@ -363,7 +313,7 @@ class FilterTeam : public CBaseFilter
 	DECLARE_DATADESC();
 
 public:
-	int		m_iFilterTeam;
+	[[= ks::reflect::Key{ .name = "filterteam" } ]] int		m_iFilterTeam;
 
 	bool PassesFilterImpl( CBaseEntity *pCaller, CBaseEntity *pEntity )
 	{
@@ -373,12 +323,7 @@ public:
 
 LINK_ENTITY_TO_CLASS( filter_activator_team, FilterTeam );
 
-BEGIN_DATADESC( FilterTeam )
-
-	// Keyfields
-	DEFINE_KEYFIELD( m_iFilterTeam,	FIELD_INTEGER,	"filterteam" ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( FilterTeam )
 
 
 // ###################################################################
@@ -390,7 +335,7 @@ class CFilterMassGreater : public CBaseFilter
 	DECLARE_DATADESC();
 
 public:
-	float m_fFilterMass;
+	[[= ks::reflect::Key{ .name = "filtermass" } ]] float m_fFilterMass;
 
 	bool PassesFilterImpl( CBaseEntity *pCaller, CBaseEntity *pEntity )
 	{
@@ -403,12 +348,7 @@ public:
 
 LINK_ENTITY_TO_CLASS( filter_activator_mass_greater, CFilterMassGreater );
 
-BEGIN_DATADESC( CFilterMassGreater )
-
-// Keyfields
-DEFINE_KEYFIELD( m_fFilterMass,	FIELD_FLOAT,	"filtermass" ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CFilterMassGreater )
 
 
 // ###################################################################
@@ -432,17 +372,12 @@ protected:
 	 	return (info.GetDamageType() & ~DMG_DIRECT) == m_iDamageType;
 	}
 
-	int m_iDamageType;
+	[[= ks::reflect::Key{ .name = "damagetype" } ]] int m_iDamageType;
 };
 
 LINK_ENTITY_TO_CLASS( filter_damage_type, FilterDamageType );
 
-BEGIN_DATADESC( FilterDamageType )
-
-	// Keyfields
-	DEFINE_KEYFIELD( m_iDamageType,	FIELD_INTEGER,	"damagetype" ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( FilterDamageType )
 
 // ###################################################################
 //	> CFilterEnemy
@@ -471,10 +406,10 @@ private:
 	bool	PassesSizeFilter( CBaseEntity *pEnemy );
 #endif // PORTAL2
 
-	string_t	m_iszEnemyName;				// Name or classname
-	float		m_flRadius;					// Radius (enemies are acquired at this range)
-	float		m_flOuterRadius;			// Outer radius (enemies are LOST at this range)
-	int			m_nMaxSquadmatesPerEnemy;	// Maximum number of squadmates who may share the same enemy
+	[[= ks::reflect::Key{ .name = "filtername" } ]] string_t	m_iszEnemyName;				// Name or classname
+	[[= ks::reflect::Key{ .name = "filter_radius" } ]] float		m_flRadius;					// Radius (enemies are acquired at this range)
+	[[= ks::reflect::Key{ .name = "filter_outer_radius" } ]] float		m_flOuterRadius;			// Outer radius (enemies are LOST at this range)
+	[[= ks::reflect::Key{ .name = "filter_max_per_enemy" } ]] int			m_nMaxSquadmatesPerEnemy;	// Maximum number of squadmates who may share the same enemy
 	string_t	m_iszPlayerName;			// "!player"
 
 #ifdef PORTAL2
@@ -705,17 +640,7 @@ bool CFilterEnemy::PassesMobbedFilter( CBaseEntity *pCaller, CBaseEntity *pEnemy
 
 LINK_ENTITY_TO_CLASS( filter_enemy, CFilterEnemy );
 
-BEGIN_DATADESC( CFilterEnemy )
-	
-	DEFINE_KEYFIELD( m_iszEnemyName, FIELD_STRING, "filtername" ),
-	DEFINE_KEYFIELD( m_flRadius, FIELD_FLOAT, "filter_radius" ),
-	DEFINE_KEYFIELD( m_flOuterRadius, FIELD_FLOAT, "filter_outer_radius" ),
-	DEFINE_KEYFIELD( m_nMaxSquadmatesPerEnemy, FIELD_INTEGER, "filter_max_per_enemy" ),
-	DEFINE_FIELD( m_iszPlayerName, FIELD_STRING ),
-#ifdef PORTAL2
-	DEFINE_KEYFIELD( m_nObjectSize, FIELD_INTEGER, "filter_object_size" ),
-#endif // PORTAL2
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CFilterEnemy )
 
 #ifdef PORTAL2
 
@@ -729,7 +654,7 @@ class CFilterSize : public CBaseFilter
 	DECLARE_DATADESC();
 
 public:
-	int	m_nFilterSize;
+	[[= ks::reflect::Key{ .name = "filtersize" } ]] int	m_nFilterSize;
 
 	bool PassesFilterImpl( CBaseEntity *pCaller, CBaseEntity *pEntity )
 	{
@@ -743,12 +668,7 @@ public:
 
 LINK_ENTITY_TO_CLASS( filter_size, CFilterSize );
 
-BEGIN_DATADESC( CFilterSize )
-
-	// Keyfields
-	DEFINE_KEYFIELD( m_nFilterSize,	FIELD_INTEGER,	"filtersize" ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CFilterSize )
 
 
 // ###################################################################
@@ -758,7 +678,6 @@ END_DATADESC()
 class CFilterPlayerHeld : public CBaseFilter
 {
 	DECLARE_CLASS( CFilterPlayerHeld, CBaseFilter );
-	DECLARE_DATADESC();
 
 public:
 	bool PassesFilterImpl( CBaseEntity *pCaller, CBaseEntity *pEntity )
@@ -774,7 +693,5 @@ public:
 
 LINK_ENTITY_TO_CLASS( filter_player_held, CFilterPlayerHeld );
 
-BEGIN_DATADESC( CFilterPlayerHeld )
-END_DATADESC()
 
 #endif // PORTAL2

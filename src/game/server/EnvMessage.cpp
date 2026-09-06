@@ -6,6 +6,8 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_annotations.h"
 #include "EnvMessage.h"
 #include "engine/IEngineSound.h"
 #include "keyvalues.h"
@@ -18,20 +20,7 @@
 
 LINK_ENTITY_TO_CLASS( env_message, CMessage );
 
-BEGIN_DATADESC( CMessage )
-
-	DEFINE_KEYFIELD( m_iszMessage, FIELD_STRING, "message" ),
-	DEFINE_KEYFIELD( m_sNoise, FIELD_SOUNDNAME, "messagesound" ),
-	DEFINE_KEYFIELD( m_MessageAttenuation, FIELD_INTEGER, "messageattenuation" ),
-	DEFINE_KEYFIELD( m_MessageVolume, FIELD_FLOAT, "messagevolume" ),
-
-	DEFINE_FIELD( m_Radius, FIELD_FLOAT ),
-
-	DEFINE_INPUTFUNC( FIELD_VOID, "ShowMessage", InputShowMessage ),
-
-	DEFINE_OUTPUT(m_OnShowMessage, "OnShowMessage"),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CMessage )
 
 
 
@@ -166,12 +155,12 @@ public:
 	DECLARE_DATADESC();
 
 	void	Spawn( void );
-	void	InputRollCredits( inputdata_t &inputdata );
-	void	InputRollOutroCredits( inputdata_t &inputdata );
-	void	InputShowLogo( inputdata_t &inputdata );
-	void	InputSetLogoLength( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "RollCredits", .type = FIELD_VOID } ]] void	InputRollCredits( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "RollOutroCredits", .type = FIELD_VOID } ]] void	InputRollOutroCredits( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "ShowLogo", .type = FIELD_VOID } ]] void	InputShowLogo( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetLogoLength", .type = FIELD_FLOAT } ]] void	InputSetLogoLength( inputdata_t &inputdata );
 
-	COutputEvent m_OnCreditsDone;
+	[[= ks::reflect::Key{ .name = "OnCreditsDone" } ]] COutputEvent m_OnCreditsDone;
 
 	virtual void OnRestore();
 private:
@@ -184,16 +173,7 @@ private:
 
 LINK_ENTITY_TO_CLASS( env_credits, CCredits );
 
-BEGIN_DATADESC( CCredits )
-	DEFINE_INPUTFUNC( FIELD_VOID, "RollCredits", InputRollCredits ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "RollOutroCredits", InputRollOutroCredits ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "ShowLogo", InputShowLogo ),
-	DEFINE_INPUTFUNC( FIELD_FLOAT, "SetLogoLength", InputSetLogoLength ),
-	DEFINE_OUTPUT( m_OnCreditsDone, "OnCreditsDone"),
-
-	DEFINE_FIELD( m_bRolledOutroCredits, FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_flLogoLength, FIELD_FLOAT )
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CCredits )
 
 void CCredits::Spawn( void )
 {
@@ -308,25 +288,20 @@ public:
 	DECLARE_DATADESC();
 
 	void Spawn( void );
-	void InputRollCredits( inputdata_t &inputdata );
-	void InputRollStatsCrawl( inputdata_t &inputdata );
-	void InputSkipStateChanged( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "RollCredits", .type = FIELD_VOID } ]] void InputRollCredits( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "RollStatsCrawl", .type = FIELD_VOID } ]] void InputRollStatsCrawl( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SkipStateChanged", .type = FIELD_VOID } ]] void InputSkipStateChanged( inputdata_t &inputdata );
 
 	void SkipThink( void );
 	void CalcSkipState( int &skippingPlayers, int &totalPlayers );
 
-	COutputEvent m_OnOuttroStatsDone;
+	[[= ks::reflect::Key{ .name = "OnOuttroStatsDone" } ]] COutputEvent m_OnOuttroStatsDone;
 };
 
 //-----------------------------------------------------------------------------
 LINK_ENTITY_TO_CLASS( env_outtro_stats, COuttroStats );
 
-BEGIN_DATADESC( COuttroStats )
-	DEFINE_INPUTFUNC( FIELD_VOID, "RollStatsCrawl", InputRollStatsCrawl ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "RollCredits", InputRollCredits ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "SkipStateChanged", InputSkipStateChanged ),
-	DEFINE_OUTPUT( m_OnOuttroStatsDone, "OnOuttroStatsDone"),
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( COuttroStats )
 
 //-----------------------------------------------------------------------------
 void COuttroStats::Spawn( void )

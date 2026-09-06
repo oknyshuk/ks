@@ -7,6 +7,8 @@
 //
 //=============================================================================//
 #include "cbase.h"
+#include "reflect_sendtable.h"
+#include "reflect_annotations.h"
 #include "waterbullet.h"
 #include "ndebugoverlay.h"
 
@@ -18,18 +20,10 @@
 
 #define WATERBULLET_DECAY	( WATERBULLET_INITIAL_SPEED / WATERBULLET_STOP_TIME )
 
-BEGIN_DATADESC( CWaterBullet )
-
-	// Function Pointers
-	DEFINE_FUNCTION( Touch ),
-	DEFINE_FUNCTION( BulletThink ),
-
-END_DATADESC()
 
 LINK_ENTITY_TO_CLASS( waterbullet, CWaterBullet );
 
-IMPLEMENT_SERVERCLASS_ST( CWaterBullet, DT_WaterBullet )
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CWaterBullet, DT_WaterBullet )
 
 //-----------------------------------------------------------------------------
 // Purpose: 

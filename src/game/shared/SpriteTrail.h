@@ -6,6 +6,8 @@
 
 #ifndef SPRITETRAIL_H
 #define SPRITETRAIL_H
+
+#include "reflect_annotations.h"
 #ifdef _WIN32
 #pragma once
 #endif
@@ -30,7 +32,8 @@ struct TrailPoint_t
 	float	m_flWidthVariance;
 };
 
-class CSpriteTrail : public CSprite
+class [[= ks::reflect::NetTable{ .name = "DT_SpriteTrail" } ]]
+      CSpriteTrail : public CSprite
 {
 	DECLARE_CLASS( CSpriteTrail, CSprite );
 	DECLARE_DATADESC();
@@ -95,17 +98,17 @@ private:
 	Vector m_vecRenderMaxs;
 #endif
 
-	CNetworkVar( float, m_flLifeTime );	// Amount of time before a new trail segment fades away
-	CNetworkVar( float, m_flStartWidth );	// The starting scale
-	CNetworkVar( float, m_flEndWidth );	// The ending scale
-	CNetworkVar( float, m_flStartWidthVariance );	// The starting scale
-	CNetworkVar( float, m_flTextureRes );	// Texture resolution along the trail
-	CNetworkVar( float, m_flMinFadeLength );	// The end of the trail must fade out for this many units
-	CNetworkVector( m_vecSkyboxOrigin );	// What's our skybox origin?
-	CNetworkVar( float, m_flSkyboxScale );	// What's our skybox scale?
+	CNetworkVar( float, m_flLifeTime, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE } ]] [[= ks::reflect::Key{ .name = "lifetime" } ]] );	// Amount of time before a new trail segment fades away
+	CNetworkVar( float, m_flStartWidth, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE } ]] [[= ks::reflect::Key{ .name = "startwidth" } ]] );	// The starting scale
+	CNetworkVar( float, m_flEndWidth, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE } ]] [[= ks::reflect::Key{ .name = "endwidth" } ]] );	// The ending scale
+	CNetworkVar( float, m_flStartWidthVariance, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE } ]] );	// The starting scale
+	CNetworkVar( float, m_flTextureRes, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE } ]] );	// Texture resolution along the trail
+	CNetworkVar( float, m_flMinFadeLength, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE } ]] );	// The end of the trail must fade out for this many units
+	CNetworkVector( m_vecSkyboxOrigin, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE, .enc = ks::reflect::ENC_VECTOR } ]] );	// What's our skybox origin?
+	CNetworkVar( float, m_flSkyboxScale, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE } ]] );	// What's our skybox scale?
 
-	string_t m_iszSpriteName;
-	bool	m_bAnimate;
+	[[= ks::reflect::Key{ .name = "spritename" } ]] string_t m_iszSpriteName;
+	[[= ks::reflect::Key{ .name = "animate" } ]] bool	m_bAnimate;
 };
 
 #endif // SPRITETRAIL_H

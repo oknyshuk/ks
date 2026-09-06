@@ -6,13 +6,14 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_annotations.h"
 
 #include "IEffects.h"
 #include "collisionutils.h"
 
 #include "ai_basenpc.h"
 #include "ai_scriptconditions.h"
-#include "saverestore_utlvector.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -40,86 +41,11 @@ ConVar debugscriptconditions( "ai_debugscriptconditions", "0" );
 
 LINK_ENTITY_TO_CLASS(ai_script_conditions, CAI_ScriptConditions);
 
-BEGIN_DATADESC( CAI_ScriptConditions )
+IMPLEMENT_REFLECT_DATAMAP( CAI_ScriptConditions )
 
-	DEFINE_THINKFUNC( EvaluationThink ),
+IMPLEMENT_REFLECT_DATAMAP_SIMPLE( CAI_ProxTester )
 
-	DEFINE_OUTPUT( m_OnConditionsSatisfied, "OnConditionsSatisfied" ),
-	DEFINE_OUTPUT( m_OnConditionsTimeout, "OnConditionsTimeout" ),
-	DEFINE_OUTPUT( m_NoValidActors, "NoValidActors" ),
-
-	//---------------------------------
-
-	DEFINE_INPUTFUNC( FIELD_VOID, "Enable", InputEnable ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "Disable", InputDisable ),
-
-	//---------------------------------
-
-	// Inputs
-	DEFINE_KEYFIELD(m_fDisabled, 					FIELD_BOOLEAN, 	"StartDisabled" 			),
-
-	DEFINE_FIELD( m_hTarget, FIELD_EHANDLE ),
-	DEFINE_KEYFIELD(m_Actor,						FIELD_STRING,	"Actor"						),
-
-	DEFINE_KEYFIELD(m_flRequiredTime, 				FIELD_FLOAT, 	"RequiredTime" 				),
-
-#ifndef HL2_EPISODIC
-	DEFINE_FIELD( m_hActor, FIELD_EHANDLE ),
-	DEFINE_EMBEDDED(m_Timer ),
-	DEFINE_EMBEDDED(m_Timeout ),
-#endif
-
-	DEFINE_KEYFIELD(m_fMinState, 					FIELD_INTEGER,	"MinimumState" 				),
-	DEFINE_KEYFIELD(m_fMaxState, 					FIELD_INTEGER,	"MaximumState" 				),
-
-	DEFINE_KEYFIELD(m_fScriptStatus, 				FIELD_INTEGER,	"ScriptStatus" 				),
-	DEFINE_KEYFIELD(m_fActorSeePlayer,				FIELD_INTEGER,	"ActorSeePlayer"			),
-
-
-	DEFINE_KEYFIELD(m_flPlayerActorProximity,		FIELD_FLOAT, 	"PlayerActorProximity" 		),
-	DEFINE_EMBEDDED(m_PlayerActorProxTester),
-
-	DEFINE_KEYFIELD(m_flPlayerActorFOV, 			FIELD_FLOAT, 	"PlayerActorFOV" 			),
-	DEFINE_KEYFIELD(m_bPlayerActorFOVTrueCone,		FIELD_BOOLEAN,	"PlayerActorFOVTrueCone"	),
-
-	DEFINE_KEYFIELD(m_fPlayerActorLOS, 				FIELD_INTEGER, 	"PlayerActorLOS" 			),
-	DEFINE_KEYFIELD(m_fActorSeeTarget,				FIELD_INTEGER,	"ActorSeeTarget" 			),
-
-	DEFINE_KEYFIELD(m_flActorTargetProximity,		FIELD_FLOAT, 	"ActorTargetProximity" 		),
-	DEFINE_EMBEDDED(m_ActorTargetProxTester),
-
-	DEFINE_KEYFIELD(m_flPlayerTargetProximity, 		FIELD_FLOAT, 	"PlayerTargetProximity"		),
-	DEFINE_EMBEDDED(m_PlayerTargetProxTester),
-
-	DEFINE_KEYFIELD(m_flPlayerTargetFOV, 			FIELD_FLOAT,	"PlayerTargetFOV"			),
-	DEFINE_KEYFIELD(m_bPlayerTargetFOVTrueCone,		FIELD_BOOLEAN,	"PlayerTargetFOVTrueCone"	),
-
-	DEFINE_KEYFIELD(m_fPlayerTargetLOS, 			FIELD_INTEGER,	"PlayerTargetLOS"			),
-	DEFINE_KEYFIELD(m_fPlayerBlockingActor,			FIELD_INTEGER,  "PlayerBlockingActor"		),
-
-	DEFINE_KEYFIELD(m_flMinTimeout, 				FIELD_FLOAT,	"MinTimeout"				),
-	DEFINE_KEYFIELD(m_flMaxTimeout, 				FIELD_FLOAT,	"MaxTimeout"				),
-
-	DEFINE_KEYFIELD(m_fActorInPVS,					FIELD_INTEGER,  "ActorInPVS"		),
-
-	DEFINE_KEYFIELD(m_fActorInVehicle,				FIELD_INTEGER,	 "ActorInVehicle" ),
-	DEFINE_KEYFIELD(m_fPlayerInVehicle,				FIELD_INTEGER,	 "PlayerInVehicle" ),
-
-	DEFINE_UTLVECTOR( m_ElementList,				FIELD_EMBEDDED ),
-	DEFINE_FIELD( m_bLeaveAsleep,					FIELD_BOOLEAN ),
-
-END_DATADESC()
-
-BEGIN_SIMPLE_DATADESC( CAI_ProxTester )
-	DEFINE_FIELD( m_distSq, FIELD_FLOAT ),
-	DEFINE_FIELD( m_fInside, FIELD_BOOLEAN ),
-END_DATADESC()
-
-BEGIN_SIMPLE_DATADESC( CAI_ScriptConditionsElement )
-	DEFINE_FIELD( m_hActor, FIELD_EHANDLE ),
-	DEFINE_EMBEDDED(m_Timer ),
-	DEFINE_EMBEDDED(m_Timeout ),
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP_SIMPLE( CAI_ScriptConditionsElement )
 
 
 //-----------------------------------------------------------------------------

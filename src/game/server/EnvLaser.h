@@ -7,6 +7,8 @@
 
 #ifndef ENVLASER_H
 #define ENVLASER_H
+
+#include "reflect_annotations.h"
 #ifdef _WIN32
 #pragma once
 #endif
@@ -34,18 +36,18 @@ public:
 	void	FireAtPoint( trace_t &point );
 	void	StrikeThink( void );
 
-	void InputTurnOn( inputdata_t &inputdata );
-	void InputTurnOff( inputdata_t &inputdata );
-	void InputToggle( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "TurnOn", .type = FIELD_VOID } ]] void InputTurnOn( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "TurnOff", .type = FIELD_VOID } ]] void InputTurnOff( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Toggle", .type = FIELD_VOID } ]] void InputToggle( inputdata_t &inputdata );
 
 	DECLARE_DATADESC();
 
-	string_t m_iszLaserTarget;	// Name of entity or entities to strike at, randomly picked if more than one match.
+	[[= ks::reflect::Key{ .name = "LaserTarget" } ]] string_t m_iszLaserTarget;	// Name of entity or entities to strike at, randomly picked if more than one match.
 	CSprite	*m_pSprite;
-	string_t m_iszSpriteName;
+	[[= ks::reflect::Key{ .name = "EndSprite" } ]] string_t m_iszSpriteName;
 	Vector  m_firePosition;
 
-	float	m_flStartFrame;
+	[[= ks::reflect::Key{ .name = "framestart" } ]] float	m_flStartFrame;
 };
 
 #endif // ENVLASER_H

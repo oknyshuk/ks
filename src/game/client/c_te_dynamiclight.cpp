@@ -7,6 +7,8 @@
 // $NoKeywords: $
 //===========================================================================//
 #include "cbase.h"
+#include "reflect_recvtable.h"
+#include "reflect_annotations.h"
 #include "c_basetempentity.h"
 #include "dlight.h"
 #include "iefx.h"
@@ -20,7 +22,8 @@
 //-----------------------------------------------------------------------------
 // Purpose: Dynamic Light
 //-----------------------------------------------------------------------------
-class C_TEDynamicLight : public C_BaseTempEntity
+class [[= ks::reflect::NetTable{ .name = "DT_TEDynamicLight" } ]]
+      C_TEDynamicLight : public C_BaseTempEntity
 {
 public:
 	DECLARE_CLASS( C_TEDynamicLight, C_BaseTempEntity );
@@ -32,30 +35,21 @@ public:
 	virtual void	PostDataUpdate( DataUpdateType_t updateType );
 
 public:
-	Vector			m_vecOrigin;
-	float			m_fRadius;
-	int				r;
-	int				g;
-	int				b;
-	int				exponent;
-	float			m_fTime;
-	float			m_fDecay;
+	[[= ks::reflect::Net{} ]] Vector			m_vecOrigin;
+	[[= ks::reflect::Net{} ]] float			m_fRadius;
+	[[= ks::reflect::Net{} ]] int				r;
+	[[= ks::reflect::Net{} ]] int				g;
+	[[= ks::reflect::Net{} ]] int				b;
+	[[= ks::reflect::Net{} ]] int				exponent;
+	[[= ks::reflect::Net{} ]] float			m_fTime;
+	[[= ks::reflect::Net{} ]] float			m_fDecay;
 };
 
 
 //-----------------------------------------------------------------------------
 // Networking 
 //-----------------------------------------------------------------------------
-IMPLEMENT_CLIENTCLASS_EVENT_DT(C_TEDynamicLight, DT_TEDynamicLight, CTEDynamicLight)
-	RecvPropVector( RECVINFO(m_vecOrigin)),
-	RecvPropInt( RECVINFO(r)),
-	RecvPropInt( RECVINFO(g)),
-	RecvPropInt( RECVINFO(b)),
-	RecvPropInt( RECVINFO(exponent)),
-	RecvPropFloat( RECVINFO(m_fRadius)),
-	RecvPropFloat( RECVINFO(m_fTime)),
-	RecvPropFloat( RECVINFO(m_fDecay)),
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS_EVENT( C_TEDynamicLight, DT_TEDynamicLight, CTEDynamicLight )
 
 
 //-----------------------------------------------------------------------------

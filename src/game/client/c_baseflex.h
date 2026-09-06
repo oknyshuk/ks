@@ -9,6 +9,8 @@
 
 #ifndef C_STUDIOFLEX_H
 #define C_STUDIOFLEX_H
+
+#include "reflect_annotations.h"
 #pragma once
 
 
@@ -39,7 +41,13 @@ class CSentence;
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-class C_BaseFlex : public C_BaseAnimatingOverlay
+class [[= ks::reflect::NetTable{ .name = "DT_BaseFlex" } ]]
+#ifdef HL2_CLIENT_DLL
+      [[= ks::reflect::From<"m_vecViewOffset", ks::reflect::Net{ .index = 0 }>{} ]]
+      [[= ks::reflect::From<"m_vecViewOffset", ks::reflect::Net{ .index = 1 }>{} ]]
+      [[= ks::reflect::From<"m_vecViewOffset", ks::reflect::Net{ .index = 2 }>{} ]]
+#endif
+      C_BaseFlex : public C_BaseAnimatingOverlay
 {
 	DECLARE_CLASS( C_BaseFlex, C_BaseAnimatingOverlay );
 public:
@@ -83,13 +91,13 @@ public:
 	LocalFlexController_t				FindFlexController( const char *szName );
 
 public:
-	Vector			m_viewtarget;
+	[[= ks::reflect::Net{} ]] Vector			m_viewtarget;
 	CInterpolatedVar< Vector >	m_iv_viewtarget;
 	// indexed by model local flexcontroller
-	float			m_flexWeight[MAXSTUDIOFLEXCTRL];
+	[[= ks::reflect::Net{} ]] float			m_flexWeight[MAXSTUDIOFLEXCTRL];
 	CInterpolatedVarArray< float, MAXSTUDIOFLEXCTRL >	m_iv_flexWeight;
 
-	int				m_blinktoggle;
+	[[= ks::reflect::Net{} ]] int				m_blinktoggle;
 
 	static int		AddGlobalFlexController( const char *szName );
 	static char const *GetGlobalFlexControllerName( int idx );
@@ -280,9 +288,9 @@ private:
 #ifdef HL2_CLIENT_DLL
 public:
 
-	Vector			m_vecLean;
+	[[= ks::reflect::Net{} ]] Vector			m_vecLean;
 	CInterpolatedVar< Vector >	m_iv_vecLean;
-	Vector			m_vecShift;
+	[[= ks::reflect::Net{} ]] Vector			m_vecShift;
 	CInterpolatedVar< Vector >	m_iv_vecShift;
 #endif
 };

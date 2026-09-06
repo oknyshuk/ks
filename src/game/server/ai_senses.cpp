@@ -6,13 +6,14 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_annotations.h"
+#include "reflect_datamap.h"
 
 #include "ai_senses.h"
 
 #include "soundent.h"
 #include "team.h"
 #include "ai_basenpc.h"
-#include "saverestore_utlvector.h"
 
 #ifdef PORTAL
 	#include "portal_util_shared.h"
@@ -61,24 +62,7 @@ struct AISightIterVal_t
 //
 //=============================================================================
 
-BEGIN_SIMPLE_DATADESC( CAI_Senses )
-
-	DEFINE_FIELD( m_LookDist,			FIELD_FLOAT	),
-	DEFINE_FIELD( m_LastLookDist, 	FIELD_FLOAT	),
-	DEFINE_FIELD( m_TimeLastLook, 	FIELD_TIME	),
-	DEFINE_FIELD( m_iSensingFlags, FIELD_INTEGER ),
-	//								m_iAudibleList		(no way to save?)
-	DEFINE_UTLVECTOR(m_SeenHighPriority, FIELD_EHANDLE ),
-	DEFINE_UTLVECTOR(m_SeenNPCs, 		FIELD_EHANDLE ),
-	DEFINE_UTLVECTOR(m_SeenMisc, 		FIELD_EHANDLE ),
-	//								m_SeenArrays		(not saved, rebuilt)
-
-	// Could fold these three and above timer into one concept, but would invalidate savegames
-	DEFINE_FIELD( m_TimeLastLookHighPriority, 	FIELD_TIME	),
-	DEFINE_FIELD( m_TimeLastLookNPCs, 	FIELD_TIME	),
-	DEFINE_FIELD( m_TimeLastLookMisc, 	FIELD_TIME	),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP_SIMPLE( CAI_Senses )
 
 //-----------------------------------------------------------------------------
 

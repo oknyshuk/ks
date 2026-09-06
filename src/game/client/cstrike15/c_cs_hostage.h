@@ -7,6 +7,8 @@
 
 #ifndef C_CHOSTAGE_H
 #define C_CHOSTAGE_H
+
+#include "reflect_annotations.h"
 #ifdef _WIN32
 #pragma once
 #endif
@@ -23,7 +25,8 @@
 
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
-class C_HostageCarriableProp : public C_BaseAnimating
+class [[= ks::reflect::NetTable{ .name = "DT_HostageCarriableProp" } ]]
+      C_HostageCarriableProp : public C_BaseAnimating
 {
 public:
 	DECLARE_CLASS( C_HostageCarriableProp, C_BaseAnimating );
@@ -44,7 +47,11 @@ public:
 /**
  * The client-side implementation of the Hostage
  */
-class C_CHostage : public C_BaseCombatCharacter, public ICSPlayerAnimStateHelpers
+class [[= ks::reflect::NetTable{ .name = "DT_CHostage" } ]]
+      [[= ks::reflect::From<"m_iHealth", ks::reflect::Net{}>{} ]]
+      [[= ks::reflect::From<"m_lifeState", ks::reflect::Net{}>{} ]]
+      [[= ks::reflect::From<"m_fFlags", ks::reflect::Net{}>{} ]]
+      C_CHostage : public C_BaseCombatCharacter, public ICSPlayerAnimStateHelpers
 {
 public:
 	DECLARE_CLASS( C_CHostage, C_BaseCombatCharacter );
@@ -90,27 +97,32 @@ public:
 
 private:
 	int  m_OldLifestate;
-	int  m_iMaxHealth;
+	[[= ks::reflect::Net{} ]] int  m_iMaxHealth;
 
 	IPlayerAnimState *m_PlayerAnimState;
 
-	CNetworkVar( EHANDLE, m_leader );				// who we are following, or NULL
-	
-	CNetworkVar( Vector, m_vel );
-
-	CNetworkVar( bool, m_isRescued );
-	CNetworkVar( bool, m_jumpedThisFrame );
-
-	CNetworkVar( int, m_nHostageState );
-
-	
-	CNetworkVar( float, m_flRescueStartTime );
-	CNetworkVar( float, m_flGrabSuccessTime );		//What time did the grabbing succeed?
-	CNetworkVar( float, m_flDropStartTime );		//What time did the grabbing succeed?
-
-	float m_flDeadOrRescuedTime;
+	// Declared ahead of the members that name them: an attribute-specifier is not a
+	// complete-class context, so a Proxy<> annotation can only name a prior declaration.
 	static void RecvProxy_Rescued( const CRecvProxyData *pData, void *pStruct, void *pOut );
 	static void RecvProxy_Jumped( const CRecvProxyData *pData, void *pStruct, void *pOut );
+
+	CNetworkVar( EHANDLE, m_leader, [[= ks::reflect::Net{} ]] );				// who we are following, or NULL
+	
+	CNetworkVar( Vector, m_vel, [[= ks::reflect::Net{} ]] );
+
+	CNetworkVar( bool, m_isRescued, [[= ks::reflect::Net{ .enc = ks::reflect::ENC_INT } ]]
+	                    [[= ks::reflect::Proxy<RecvProxy_Rescued, ks::reflect::WIRE_RECV>{} ]] );
+	CNetworkVar( bool, m_jumpedThisFrame, [[= ks::reflect::Net{ .enc = ks::reflect::ENC_INT } ]]
+	                    [[= ks::reflect::Proxy<RecvProxy_Jumped, ks::reflect::WIRE_RECV>{} ]] );
+
+	CNetworkVar( int, m_nHostageState, [[= ks::reflect::Net{} ]] );
+
+	
+	CNetworkVar( float, m_flRescueStartTime, [[= ks::reflect::Net{} ]] );
+	CNetworkVar( float, m_flGrabSuccessTime, [[= ks::reflect::Net{} ]] );		//What time did the grabbing succeed?
+	CNetworkVar( float, m_flDropStartTime, [[= ks::reflect::Net{} ]] );		//What time did the grabbing succeed?
+
+	float m_flDeadOrRescuedTime;
 
 	CountdownTimer m_blinkTimer;
 

@@ -5,6 +5,8 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_recvtable.h"
+#include "reflect_annotations.h"
 #include "hud.h"		
 #include "c_props.h"
 #include "iclientvehicle.h"
@@ -28,14 +30,24 @@ extern float RemapAngleRange( float startInterval, float endInterval, float valu
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-class C_PropVehicleChoreoGeneric : public C_DynamicProp, public IClientVehicle
+class [[= ks::reflect::NetTable{ .name = "DT_PropVehicleChoreoGeneric" } ]]
+      [[= ks::reflect::From<"m_vehicleView.bClampEyeAngles", ks::reflect::Net{}>{} ]]
+      [[= ks::reflect::From<"m_vehicleView.flPitchCurveZero", ks::reflect::Net{}>{} ]]
+      [[= ks::reflect::From<"m_vehicleView.flPitchCurveLinear", ks::reflect::Net{}>{} ]]
+      [[= ks::reflect::From<"m_vehicleView.flRollCurveZero", ks::reflect::Net{}>{} ]]
+      [[= ks::reflect::From<"m_vehicleView.flRollCurveLinear", ks::reflect::Net{}>{} ]]
+      [[= ks::reflect::From<"m_vehicleView.flFOV", ks::reflect::Net{}>{} ]]
+      [[= ks::reflect::From<"m_vehicleView.flYawMin", ks::reflect::Net{}>{} ]]
+      [[= ks::reflect::From<"m_vehicleView.flYawMax", ks::reflect::Net{}>{} ]]
+      [[= ks::reflect::From<"m_vehicleView.flPitchMin", ks::reflect::Net{}>{} ]]
+      [[= ks::reflect::From<"m_vehicleView.flPitchMax", ks::reflect::Net{}>{} ]]
+      C_PropVehicleChoreoGeneric : public C_DynamicProp, public IClientVehicle
 {
 	DECLARE_CLASS( C_PropVehicleChoreoGeneric, C_DynamicProp );
 
 public:
 
 	DECLARE_CLIENTCLASS();
-	DECLARE_DATADESC();
 
 	C_PropVehicleChoreoGeneric();
 	
@@ -81,13 +93,13 @@ private:
 	float				m_flYawMaxCurrent;
 	float				m_flYawMinCurrent;
 
-	CHandle<C_BasePlayer>	m_hPlayer;
+	[[= ks::reflect::Net{} ]] CHandle<C_BasePlayer>	m_hPlayer;
 	CHandle<C_BasePlayer>	m_hPrevPlayer;
 
-	bool					m_bEnterAnimOn;
-	bool					m_bExitAnimOn;
-	Vector					m_vecEyeExitEndpoint;
-	bool					m_bForceEyesToAttachment;
+	[[= ks::reflect::Net{} ]] bool					m_bEnterAnimOn;
+	[[= ks::reflect::Net{} ]] bool					m_bExitAnimOn;
+	[[= ks::reflect::Net{} ]] Vector					m_vecEyeExitEndpoint;
+	[[= ks::reflect::Net{} ]] bool					m_bForceEyesToAttachment;
 	float					m_flFOV;				// The current FOV (changes during entry/exit anims).
 
 	ViewSmoothingData_t		m_ViewSmoothingData;
@@ -95,28 +107,9 @@ private:
 	vehicleview_t m_vehicleView;
 };
 
-IMPLEMENT_CLIENTCLASS_DT(C_PropVehicleChoreoGeneric, DT_PropVehicleChoreoGeneric, CPropVehicleChoreoGeneric)
-	RecvPropEHandle( RECVINFO(m_hPlayer) ),
-	RecvPropBool( RECVINFO( m_bEnterAnimOn ) ),
-	RecvPropBool( RECVINFO( m_bExitAnimOn ) ),
-	RecvPropBool( RECVINFO( m_bForceEyesToAttachment ) ),
-	RecvPropVector( RECVINFO( m_vecEyeExitEndpoint ) ),
-	RecvPropBool( RECVINFO( m_vehicleView.bClampEyeAngles ) ),
-	RecvPropFloat( RECVINFO( m_vehicleView.flPitchCurveZero ) ),
-	RecvPropFloat( RECVINFO( m_vehicleView.flPitchCurveLinear ) ),
-	RecvPropFloat( RECVINFO( m_vehicleView.flRollCurveZero ) ),
-	RecvPropFloat( RECVINFO( m_vehicleView.flRollCurveLinear ) ),
-	RecvPropFloat( RECVINFO( m_vehicleView.flFOV ) ),
-	RecvPropFloat( RECVINFO( m_vehicleView.flYawMin ) ),
-	RecvPropFloat( RECVINFO( m_vehicleView.flYawMax ) ),
-	RecvPropFloat( RECVINFO( m_vehicleView.flPitchMin ) ),
-	RecvPropFloat( RECVINFO( m_vehicleView.flPitchMax ) ),
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS( C_PropVehicleChoreoGeneric, DT_PropVehicleChoreoGeneric, CPropVehicleChoreoGeneric )
 
 
-BEGIN_DATADESC( C_PropVehicleChoreoGeneric )
-	DEFINE_EMBEDDED( m_ViewSmoothingData ),
-END_DATADESC()
 
 //-----------------------------------------------------------------------------
 // Purpose: 

@@ -7,6 +7,8 @@
 
 #ifndef C_BASETEMPENTITY_H
 #define C_BASETEMPENTITY_H
+
+#include "reflect_annotations.h"
 #ifdef _WIN32
 #pragma once
 #endif
@@ -22,7 +24,8 @@
 //  least implement OnDataChanged to be notified when the TE has been received
 //  from the server
 //-----------------------------------------------------------------------------
-class C_BaseTempEntity : public IClientUnknown, public IClientNetworkable
+class [[= ks::reflect::NetTable{ .name = "DT_BaseTempEntity", .base = false } ]]
+      C_BaseTempEntity : public IClientUnknown, public IClientNetworkable
 
 {
 public:

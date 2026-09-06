@@ -5,6 +5,8 @@
 // $NoKeywords: $
 //=============================================================================//
 #include "cbase.h"
+#include "reflect_recvtable.h"
+#include "reflect_annotations.h"
 #include "c_ai_basenpc.h"
 #include "engine/ivdebugoverlay.h"
 
@@ -35,19 +37,7 @@ C_BaseAnimating *GetGLaDOSActor( void )
 	return g_GLaDOSActor;
 }
 
-IMPLEMENT_CLIENTCLASS_DT( C_AI_BaseNPC, DT_AI_BaseNPC, CAI_BaseNPC )
-	RecvPropInt( RECVINFO( m_lifeState ) ),
-	RecvPropBool( RECVINFO( m_bPerformAvoidance ) ),
-	RecvPropBool( RECVINFO( m_bIsMoving ) ),
-	RecvPropBool( RECVINFO( m_bFadeCorpse ) ),
-	RecvPropInt( RECVINFO ( m_iDeathPose) ),
-	RecvPropInt( RECVINFO( m_iDeathFrame) ),
-	RecvPropInt( RECVINFO( m_iSpeedModRadius ) ),
-	RecvPropInt( RECVINFO( m_iSpeedModSpeed ) ),
-	RecvPropInt( RECVINFO( m_bSpeedModActive ) ),
-	RecvPropBool( RECVINFO( m_bImportanRagdoll ) ),
-	RecvPropFloat( RECVINFO( m_flTimePingEffect ) ),
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS( C_AI_BaseNPC, DT_AI_BaseNPC, CAI_BaseNPC )
 
 extern ConVar cl_npc_speedmod_intime;
 

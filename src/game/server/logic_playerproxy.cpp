@@ -5,6 +5,8 @@
 //=============================================================================
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_annotations.h"
 #include "logic_playerproxy.h"
 #include "filters.h"
 
@@ -19,58 +21,7 @@
 
 LINK_ENTITY_TO_CLASS( logic_playerproxy, CLogicPlayerProxy);
 
-BEGIN_DATADESC( CLogicPlayerProxy )
-
-// Base
-DEFINE_OUTPUT( m_RequestedPlayerHealth,		"PlayerHealth" ),
-DEFINE_OUTPUT( m_PlayerDied,				"PlayerDied" ),
-DEFINE_FIELD( m_hPlayer, FIELD_EHANDLE ),
-
-DEFINE_OUTPUT( m_OnJump,					"OnJump" ),
-DEFINE_OUTPUT( m_OnDuck,					"OnDuck" ),
-DEFINE_OUTPUT( m_OnUnDuck,					"OnUnDuck" ),
-
-// Portal 2
-#ifdef PORTAL2
-DEFINE_OUTPUT( m_OnStartSlowingTime,		"OnStartSlowingTime" ),
-DEFINE_OUTPUT( m_OnStopSlowingTime,			"OnStopSlowingTime" ),
-
-DEFINE_OUTPUT( m_OnPrimaryPortalPlaced,		"OnPrimaryPortalPlaced" ),
-DEFINE_OUTPUT( m_OnSecondaryPortalPlaced,	"OnSecondaryPortalPlaced" ),
-
-DEFINE_OUTPUT( m_OnCoopPing,				"OnCoopPing" ),
-
-DEFINE_INPUTFUNC( FIELD_VOID,				"AddPotatosToPortalgun", InputAddPotatosToPortalgun ),
-DEFINE_INPUTFUNC( FIELD_VOID,				"RemovePotatosFromPortalgun", InputRemovePotatosFromPortalgun ),
-
-DEFINE_INPUTFUNC( FIELD_BOOLEAN,			"SetDropEnabled", InputSetDropEnabled ),
-DEFINE_INPUTFUNC( FIELD_VOID,				"ForceVMGrabController", InputForceVMGrabController ),
-DEFINE_INPUTFUNC( FIELD_VOID,				"ForcePhysicsGrabController", InputForcePhysicsGrabController ),
-DEFINE_INPUTFUNC( FIELD_VOID,				"ResetGrabControllerBehavior", InputResetGrabControllerBehavior ),
-DEFINE_INPUTFUNC( FIELD_VOID,				"PaintPlayerWithPortalPaint", InputPaintPlayerWithPortalPaint ),
-DEFINE_INPUTFUNC( FIELD_FLOAT,				"SetMotionBlurAmount", InputSetMotionBlurAmount ),
-#endif // PORTAL2
-
-// HL2 / Episodic
-#if defined HL2_EPISODIC && !defined( PORTAL2 )
-DEFINE_OUTPUT( m_OnFlashlightOn,			"OnFlashlightOn" ),
-DEFINE_OUTPUT( m_OnFlashlightOff,			"OnFlashlightOff" ),
-DEFINE_OUTPUT( m_PlayerMissedAR2AltFire,	"PlayerMissedAR2AltFire" ),
-DEFINE_OUTPUT( m_PlayerHasAmmo,				"PlayerHasAmmo" ),
-DEFINE_OUTPUT( m_PlayerHasNoAmmo,			"PlayerHasNoAmmo" ),
-
-DEFINE_INPUTFUNC( FIELD_VOID,				"SetFlashlightSlowDrain",	InputSetFlashlightSlowDrain ),
-DEFINE_INPUTFUNC( FIELD_VOID,				"SetFlashlightNormalDrain",	InputSetFlashlightNormalDrain ),
-DEFINE_INPUTFUNC( FIELD_VOID,				"LowerWeapon", InputLowerWeapon ),
-DEFINE_INPUTFUNC( FIELD_STRING,				"SetLocatorTargetEntity", InputSetLocatorTargetEntity ),
-DEFINE_INPUTFUNC( FIELD_VOID,				"RequestPlayerHealth",	InputRequestPlayerHealth ),
-DEFINE_INPUTFUNC( FIELD_INTEGER,			"SetPlayerHealth",	InputSetPlayerHealth ),
-DEFINE_INPUTFUNC( FIELD_VOID,				"RequestAmmoState", InputRequestAmmoState ),
-DEFINE_INPUTFUNC( FIELD_VOID,				"EnableCappedPhysicsDamage", InputEnableCappedPhysicsDamage ),
-DEFINE_INPUTFUNC( FIELD_VOID,				"DisableCappedPhysicsDamage", InputDisableCappedPhysicsDamage ),
-#endif // HL2_EPISODIC
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CLogicPlayerProxy )
 
 void CLogicPlayerProxy::Activate( void )
 {

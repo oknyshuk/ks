@@ -5,6 +5,8 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_annotations.h"
 #include "ai_behavior_lead.h"
 #include "ai_goalentity.h"
 #include "ai_navigator.h"
@@ -30,54 +32,10 @@
 //
 //-----------------------------------------------------------------------------
 
-BEGIN_SIMPLE_DATADESC( AI_LeadArgs_t )
-	// Only the flags needs saving
-	DEFINE_FIELD(		flags,			FIELD_INTEGER ),
-
-	//DEFINE_FIELD(		pszGoal,		FIELD_STRING ),
-	//DEFINE_FIELD(		pszWaitPoint,	FIELD_STRING ),
-	//DEFINE_FIELD(		flWaitDistance,	FIELD_FLOAT ),
-	//DEFINE_FIELD(		flLeadDistance,	FIELD_FLOAT ),
-	//DEFINE_FIELD(		flRetrieveDistance,	FIELD_FLOAT ),
-	//DEFINE_FIELD(		flSuccessDistance,	FIELD_FLOAT ),
-	//DEFINE_FIELD(		bRun,			FIELD_BOOLEAN ),
-	//DEFINE_FIELD(		bDontSpeakStart,			FIELD_BOOLEAN ),
-	//DEFINE_FIELD(		bGagLeader,			FIELD_BOOLEAN ),
-
-	DEFINE_FIELD(		iRetrievePlayer,			FIELD_INTEGER ),
-	DEFINE_FIELD(		iRetrieveWaitForSpeak,		FIELD_INTEGER ),
-	DEFINE_FIELD(		iComingBackWaitForSpeak,	FIELD_INTEGER ),
-	DEFINE_FIELD(		bStopScenesWhenPlayerLost,	FIELD_BOOLEAN ),
-	DEFINE_FIELD(		bLeadDuringCombat,			FIELD_BOOLEAN ),
-
-END_DATADESC();
+IMPLEMENT_REFLECT_DATAMAP_SIMPLE( AI_LeadArgs_t )
 
 
-BEGIN_DATADESC( CAI_LeadBehavior )
-	DEFINE_EMBEDDED(	m_args ),
-	//					m_pSink		(reconnected on load)
-	DEFINE_FIELD(		m_hSinkImplementor, FIELD_EHANDLE ),
-	DEFINE_FIELD(		m_goal,			FIELD_POSITION_VECTOR ),
-	DEFINE_FIELD(		m_goalyaw, 		FIELD_FLOAT ),
-	DEFINE_FIELD(		m_waitpoint, 	FIELD_POSITION_VECTOR ),
-	DEFINE_FIELD(		m_waitdistance, FIELD_FLOAT ),
-	DEFINE_FIELD(		m_leaddistance, FIELD_FLOAT ),
-	DEFINE_FIELD(		m_retrievedistance, FIELD_FLOAT ),
-	DEFINE_FIELD(		m_successdistance, FIELD_FLOAT ),
-	DEFINE_FIELD(		m_weaponname,	FIELD_STRING ),
-	DEFINE_FIELD(		m_run,			FIELD_BOOLEAN ),
-	DEFINE_FIELD(		m_gagleader, FIELD_BOOLEAN ),
-	DEFINE_FIELD(		m_hasspokenstart, FIELD_BOOLEAN ),
-	DEFINE_FIELD(		m_hasspokenarrival, FIELD_BOOLEAN ),
-	DEFINE_FIELD(		m_hasPausedScenes, FIELD_BOOLEAN ),
-	DEFINE_FIELD(		m_flSpeakNextNagTime, FIELD_TIME ),
-	DEFINE_FIELD(		m_flWeaponSafetyTimeOut, FIELD_TIME ),
-	DEFINE_FIELD(		m_flNextLeadIdle, FIELD_TIME ),
-	DEFINE_FIELD(		m_bInitialAheadTest, FIELD_BOOLEAN ),
-	DEFINE_EMBEDDED(	m_MoveMonitor ),
-	DEFINE_EMBEDDED(	m_LostTimer ),
-	DEFINE_EMBEDDED(	m_LostLOSTimer ),
-END_DATADESC();
+IMPLEMENT_REFLECT_DATAMAP( CAI_LeadBehavior )
 
 //-----------------------------------------------------------------------------
 
@@ -1387,41 +1345,41 @@ public:
 private:
 
 	virtual void OnEvent( int event );
-	void InputSetSuccess( inputdata_t &inputdata );
-	void InputSetFailure( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetSuccess", .type = FIELD_VOID } ]] void InputSetSuccess( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetFailure", .type = FIELD_VOID } ]] void InputSetFailure( inputdata_t &inputdata );
 	
 	bool	 m_fArrived; // @TODO (toml 08-16-02): move arrived tracking onto behavior
-	float	 m_flWaitDistance;
-	float	 m_flLeadDistance;
-	float	 m_flRetrieveDistance;
-	float	 m_flSuccessDistance;
-	bool	 m_bRun;
-	int		 m_iRetrievePlayer;
-	int		 m_iRetrieveWaitForSpeak;
-	int		 m_iComingBackWaitForSpeak;
-	bool	 m_bStopScenesWhenPlayerLost;
-	bool	 m_bDontSpeakStart;
-	bool	 m_bLeadDuringCombat;
-	bool	 m_bGagLeader;
+	[[= ks::reflect::Key{ .name = "WaitDistance" } ]] float	 m_flWaitDistance;
+	[[= ks::reflect::Key{ .name = "LeadDistance" } ]] float	 m_flLeadDistance;
+	[[= ks::reflect::Key{ .name = "RetrieveDistance" } ]] float	 m_flRetrieveDistance;
+	[[= ks::reflect::Key{ .name = "SuccessDistance" } ]] float	 m_flSuccessDistance;
+	[[= ks::reflect::Key{ .name = "Run" } ]] bool	 m_bRun;
+	[[= ks::reflect::Key{ .name = "Retrieve" } ]] int		 m_iRetrievePlayer;
+	[[= ks::reflect::Key{ .name = "RetrieveWaitForSpeak" } ]] int		 m_iRetrieveWaitForSpeak;
+	[[= ks::reflect::Key{ .name = "ComingBackWaitForSpeak" } ]] int		 m_iComingBackWaitForSpeak;
+	[[= ks::reflect::Key{ .name = "StopScenes" } ]] bool	 m_bStopScenesWhenPlayerLost;
+	[[= ks::reflect::Key{ .name = "DontSpeakStart" } ]] bool	 m_bDontSpeakStart;
+	[[= ks::reflect::Key{ .name = "LeadDuringCombat" } ]] bool	 m_bLeadDuringCombat;
+	[[= ks::reflect::Key{ .name = "GagLeader" } ]] bool	 m_bGagLeader;
 
-	string_t m_iszWaitPointName;
+	[[= ks::reflect::Key{ .name = "WaitPointName" } ]] string_t m_iszWaitPointName;
 
-	string_t m_iszStartConceptModifier;
-	string_t m_iszAttractPlayerConceptModifier;
-	string_t m_iszWaitOverConceptModifier;
-	string_t m_iszArrivalConceptModifier;
-	string_t m_iszPostArrivalConceptModifier;
-	string_t m_iszSuccessConceptModifier;
-	string_t m_iszFailureConceptModifier;
-	string_t m_iszRetrieveConceptModifier;
-	string_t m_iszComingBackConceptModifier;
+	[[= ks::reflect::Key{ .name = "StartConceptModifier" } ]] string_t m_iszStartConceptModifier;
+	[[= ks::reflect::Key{ .name = "AttractPlayerConceptModifier" } ]] string_t m_iszAttractPlayerConceptModifier;
+	[[= ks::reflect::Key{ .name = "WaitOverConceptModifier" } ]] string_t m_iszWaitOverConceptModifier;
+	[[= ks::reflect::Key{ .name = "ArrivalConceptModifier" } ]] string_t m_iszArrivalConceptModifier;
+	[[= ks::reflect::Key{ .name = "PostArrivalConceptModifier" } ]] string_t m_iszPostArrivalConceptModifier;
+	[[= ks::reflect::Key{ .name = "SuccessConceptModifier" } ]] string_t m_iszSuccessConceptModifier;
+	[[= ks::reflect::Key{ .name = "FailureConceptModifier" } ]] string_t m_iszFailureConceptModifier;
+	[[= ks::reflect::Key{ .name = "RetrieveConceptModifier" } ]] string_t m_iszRetrieveConceptModifier;
+	[[= ks::reflect::Key{ .name = "ComingBackConceptModifier" } ]] string_t m_iszComingBackConceptModifier;
 
 	// Output handlers
-	COutputEvent	m_OnArrival;
-	COutputEvent	m_OnArrivalDone;
-	COutputEvent	m_OnSuccess;
-	COutputEvent	m_OnFailure;
-	COutputEvent	m_OnDone;
+	[[= ks::reflect::Key{ .name = "OnArrival" } ]] COutputEvent	m_OnArrival;
+	[[= ks::reflect::Key{ .name = "OnArrivalDone" } ]] COutputEvent	m_OnArrivalDone;
+	[[= ks::reflect::Key{ .name = "OnSuccess" } ]] COutputEvent	m_OnSuccess;
+	[[= ks::reflect::Key{ .name = "OnFailure" } ]] COutputEvent	m_OnFailure;
+	[[= ks::reflect::Key{ .name = "OnDone" } ]] COutputEvent	m_OnDone;
 };
 
 //-----------------------------------------------------------------------------
@@ -1431,45 +1389,7 @@ private:
 
 LINK_ENTITY_TO_CLASS( ai_goal_lead, CAI_LeadGoal );
 
-BEGIN_DATADESC( CAI_LeadGoal )
-
-	DEFINE_FIELD( m_fArrived, FIELD_BOOLEAN ),
-
-	DEFINE_KEYFIELD(m_flWaitDistance, 		FIELD_FLOAT, 	"WaitDistance"),
-	DEFINE_KEYFIELD(m_iszWaitPointName, 	FIELD_STRING, 	"WaitPointName"),
-	DEFINE_KEYFIELD(m_flLeadDistance, 		FIELD_FLOAT, 	"LeadDistance"),
-	DEFINE_KEYFIELD(m_flRetrieveDistance, 	FIELD_FLOAT, 	"RetrieveDistance"),
-	DEFINE_KEYFIELD(m_flSuccessDistance, 	FIELD_FLOAT, 	"SuccessDistance"),
-	DEFINE_KEYFIELD(m_bRun, 				FIELD_BOOLEAN, 	"Run"),
-	DEFINE_KEYFIELD(m_iRetrievePlayer,		FIELD_INTEGER,	"Retrieve"),
-	DEFINE_KEYFIELD(m_iRetrieveWaitForSpeak,		FIELD_INTEGER,	"RetrieveWaitForSpeak"),
-	DEFINE_KEYFIELD(m_iComingBackWaitForSpeak,		FIELD_INTEGER,	"ComingBackWaitForSpeak"),
-	DEFINE_KEYFIELD(m_bStopScenesWhenPlayerLost,	FIELD_BOOLEAN,	"StopScenes"),
-	DEFINE_KEYFIELD(m_bDontSpeakStart,	FIELD_BOOLEAN,	"DontSpeakStart"),
-	DEFINE_KEYFIELD(m_bLeadDuringCombat, FIELD_BOOLEAN, "LeadDuringCombat"),
-	DEFINE_KEYFIELD(m_bGagLeader, FIELD_BOOLEAN, "GagLeader"),
-
-	DEFINE_KEYFIELD(m_iszStartConceptModifier,			FIELD_STRING, 	"StartConceptModifier"),
-	DEFINE_KEYFIELD(m_iszAttractPlayerConceptModifier,	FIELD_STRING, 	"AttractPlayerConceptModifier"),
-	DEFINE_KEYFIELD(m_iszWaitOverConceptModifier, 		FIELD_STRING, 	"WaitOverConceptModifier"),
-	DEFINE_KEYFIELD(m_iszArrivalConceptModifier, 		FIELD_STRING, 	"ArrivalConceptModifier"),
-	DEFINE_KEYFIELD(m_iszPostArrivalConceptModifier,	FIELD_STRING,	"PostArrivalConceptModifier"),
-	DEFINE_KEYFIELD(m_iszSuccessConceptModifier,		FIELD_STRING,	"SuccessConceptModifier"),
-	DEFINE_KEYFIELD(m_iszFailureConceptModifier,		FIELD_STRING,	"FailureConceptModifier"),
-	DEFINE_KEYFIELD(m_iszRetrieveConceptModifier,		FIELD_STRING,	"RetrieveConceptModifier"),
-	DEFINE_KEYFIELD(m_iszComingBackConceptModifier,		FIELD_STRING,	"ComingBackConceptModifier"),
-
-	DEFINE_OUTPUT( m_OnSuccess, 		"OnSuccess" ),
-	DEFINE_OUTPUT( m_OnArrival, 		"OnArrival" ),
-	DEFINE_OUTPUT( m_OnArrivalDone, 	"OnArrivalDone" ),
-	DEFINE_OUTPUT( m_OnFailure, 		"OnFailure" ),
-	DEFINE_OUTPUT( m_OnDone,	  		"OnDone" ),
-
-	// Inputs
-	DEFINE_INPUTFUNC( FIELD_VOID, "SetSuccess", InputSetSuccess ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "SetFailure", InputSetFailure ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CAI_LeadGoal )
 
 
 //-----------------------------------------------------------------------------
@@ -1645,8 +1565,8 @@ public:
 	virtual void InputActivate( inputdata_t &inputdata );
 
 private:
-	string_t	m_iszWeaponName;
-	string_t	m_iszMissingWeaponConceptModifier;
+	[[= ks::reflect::Key{ .name = "WeaponName" } ]] string_t	m_iszWeaponName;
+	[[= ks::reflect::Key{ .name = "MissingWeaponConceptModifier" } ]] string_t	m_iszMissingWeaponConceptModifier;
 
 	DECLARE_DATADESC();
 };
@@ -1658,12 +1578,7 @@ private:
 
 LINK_ENTITY_TO_CLASS( ai_goal_lead_weapon, CAI_LeadGoal_Weapon );
 
-BEGIN_DATADESC( CAI_LeadGoal_Weapon )
-
-	DEFINE_KEYFIELD( m_iszWeaponName, 		FIELD_STRING, 	"WeaponName"),
-	DEFINE_KEYFIELD( m_iszMissingWeaponConceptModifier, FIELD_STRING, 	"MissingWeaponConceptModifier"),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CAI_LeadGoal_Weapon )
 
 //-----------------------------------------------------------------------------
 

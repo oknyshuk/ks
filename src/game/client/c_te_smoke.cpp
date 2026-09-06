@@ -7,6 +7,8 @@
 // $NoKeywords: $
 //===========================================================================//
 #include "cbase.h"
+#include "reflect_recvtable.h"
+#include "reflect_annotations.h"
 #include "c_basetempentity.h"
 #include "IEffects.h"
 #include "tier1/keyvalues.h"
@@ -19,7 +21,8 @@
 //-----------------------------------------------------------------------------
 // Purpose: Smoke TE
 //-----------------------------------------------------------------------------
-class C_TESmoke : public C_BaseTempEntity
+class [[= ks::reflect::NetTable{ .name = "DT_TESmoke" } ]]
+      C_TESmoke : public C_BaseTempEntity
 {
 public:
 	DECLARE_CLASS( C_TESmoke, C_BaseTempEntity );
@@ -31,10 +34,10 @@ public:
 	virtual void	PostDataUpdate( DataUpdateType_t updateType );
 
 public:
-	Vector			m_vecOrigin;
-	int				m_nModelIndex;
-	float			m_fScale;
-	int				m_nFrameRate;
+	[[= ks::reflect::Net{} ]] Vector			m_vecOrigin;
+	[[= ks::reflect::Net{} ]] int				m_nModelIndex;
+	[[= ks::reflect::Net{} ]] float			m_fScale;
+	[[= ks::reflect::Net{} ]] int				m_nFrameRate;
 };
 
 //-----------------------------------------------------------------------------
@@ -103,9 +106,4 @@ void TE_Smoke( IRecipientFilter& filter, float delay,
 	RecordSmoke( *pos, scale * 10.0f, framerate );
 }
 
-IMPLEMENT_CLIENTCLASS_EVENT_DT(C_TESmoke, DT_TESmoke, CTESmoke)
-	RecvPropVector( RECVINFO(m_vecOrigin)),
-	RecvPropInt( RECVINFO(m_nModelIndex)),
-	RecvPropFloat( RECVINFO(m_fScale )),
-	RecvPropInt( RECVINFO(m_nFrameRate)),
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS_EVENT( C_TESmoke, DT_TESmoke, CTESmoke )

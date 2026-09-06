@@ -49,8 +49,6 @@ public:
 	// Apply those values to the passed in vector(s).
 	virtual void	ApplyTilt( QAngle& angles, float factor ) = 0;
 	// Save / Restore
-	virtual void	Save( ISave *pSave ) = 0;
-	virtual void	Restore( IRestore *pRestore, bool ) = 0;
 	virtual void	ClearAllShakes( void ) = 0;
 };
 

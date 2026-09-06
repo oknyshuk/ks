@@ -5,6 +5,8 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_annotations.h"
+#include "reflect_datamap.h"
 
 #include "movevars_shared.h"
 
@@ -22,40 +24,7 @@
 // class CAI_BlendedMotor
 //
 
-BEGIN_SIMPLE_DATADESC( CAI_BlendedMotor )
-	// DEFINE_FIELD( m_bDeceleratingToGoal, FIELD_BOOLEAN ),
-
-	// DEFINE_FIELD( m_iPrimaryLayer, FIELD_INTEGER ),
-	// DEFINE_FIELD( m_iSecondaryLayer, FIELD_INTEGER ),
-
-	// DEFINE_FIELD( m_nPrimarySequence, FIELD_INTEGER ),
-	// DEFINE_FIELD( m_nSecondarySequence, FIELD_INTEGER ),
-	// DEFINE_FIELD( m_flSecondaryWeight, FIELD_FLOAT ),
-
-	// DEFINE_CUSTOM_FIELD( m_nSavedGoalActivity, ActivityDataOps() ),
-	// DEFINE_CUSTOM_FIELD( m_nSavedTranslatedGoalActivity, ActivityDataOps() ),
-	// DEFINE_FIELD( m_nGoalSequence, FIELD_INTEGER ),
-
-	// DEFINE_FIELD( m_nPrevMovementSequence, FIELD_INTEGER ),
-	// DEFINE_FIELD( m_nInteriorSequence, FIELD_INTEGER ),
-	// DEFINE_FIELD( m_flCurrRate, FIELD_FLOAT ),
-	// DEFINE_FIELD( m_flStartCycle, FIELD_FLOAT ),
-
-	//			m_scriptMove
-	//			m_scriptTurn
-
-	//	DEFINE_FIELD( m_flNextTurnGesture, FIELD_TIME ),
-	//	DEFINE_FIELD( m_prevYaw, FIELD_FLOAT ),
-	//	DEFINE_FIELD( m_doTurn, FIELD_FLOAT ),
-	//	DEFINE_FIELD( m_doLeft, FIELD_FLOAT ),
-	//	DEFINE_FIELD( m_doRight, FIELD_FLOAT ),
-	//	DEFINE_FIELD( m_flNextTurnAct, FIELD_TIME ),
-	//	DEFINE_FIELD( m_flPredictiveSpeedAdjust, FIELD_FLOAT ),
-	//	DEFINE_FIELD( m_flReactiveSpeedAdjust, FIELD_FLOAT ),
-	//	DEFINE_FIELD( m_vecPrevOrigin1, FIELD_POSITION ),
-	//	DEFINE_FIELD( m_vecPrevOrigin2, FIELD_POSITION ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP_SIMPLE( CAI_BlendedMotor )
 
 //-------------------------------------
 

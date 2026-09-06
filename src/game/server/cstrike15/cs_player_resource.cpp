@@ -5,6 +5,8 @@
 // $NoKeywords: $
 //=============================================================================//
 #include "cbase.h"
+#include "reflect_sendtable.h"
+#include "reflect_annotations.h"
 
 #include "cs_player.h"
 #include "cs_simple_hostage.h"
@@ -19,53 +21,10 @@
 extern bool	g_fGameOver;
 
 // Datatable
-IMPLEMENT_SERVERCLASS_ST(CCSPlayerResource, DT_CSPlayerResource)
-	SendPropInt( SENDINFO( m_iPlayerC4 ), 8, SPROP_UNSIGNED ),
-	SendPropInt( SENDINFO( m_iPlayerVIP ), 8, SPROP_UNSIGNED ),
-	SendPropArray3( SENDINFO_ARRAY3(m_bHostageAlive), SendPropInt( SENDINFO_ARRAY(m_bHostageAlive), 1, SPROP_UNSIGNED ) ),
-	SendPropArray3( SENDINFO_ARRAY3(m_isHostageFollowingSomeone), SendPropInt( SENDINFO_ARRAY(m_isHostageFollowingSomeone), 1, SPROP_UNSIGNED ) ),
-	SendPropArray3( SENDINFO_ARRAY3(m_iHostageEntityIDs), SendPropInt( SENDINFO_ARRAY(m_iHostageEntityIDs), -1, SPROP_UNSIGNED ) ),
-	SendPropVector( SENDINFO(m_bombsiteCenterA), -1, SPROP_COORD),
-	SendPropVector( SENDINFO(m_bombsiteCenterB), -1, SPROP_COORD),
-	SendPropArray3( SENDINFO_ARRAY3(m_hostageRescueX), SendPropInt( SENDINFO_ARRAY(m_hostageRescueX), COORD_INTEGER_BITS+1, 0 ) ),
-	SendPropArray3( SENDINFO_ARRAY3(m_hostageRescueY), SendPropInt( SENDINFO_ARRAY(m_hostageRescueY), COORD_INTEGER_BITS+1, 0 ) ),
-	SendPropArray3( SENDINFO_ARRAY3(m_hostageRescueZ), SendPropInt( SENDINFO_ARRAY(m_hostageRescueZ), COORD_INTEGER_BITS+1, 0 ) ),
-	SendPropArray3( SENDINFO_ARRAY3(m_iMVPs), SendPropInt( SENDINFO_ARRAY(m_iMVPs), COORD_INTEGER_BITS+1, SPROP_UNSIGNED ) ),
-	SendPropArray3( SENDINFO_ARRAY3(m_iArmor), SendPropInt( SENDINFO_ARRAY(m_iArmor), COORD_INTEGER_BITS+1, SPROP_UNSIGNED ) ),	
-	SendPropArray3( SENDINFO_ARRAY3(m_bHasDefuser), SendPropInt( SENDINFO_ARRAY(m_bHasDefuser), 1, SPROP_UNSIGNED ) ),
-	SendPropArray3( SENDINFO_ARRAY3(m_bHasHelmet), SendPropInt( SENDINFO_ARRAY(m_bHasHelmet), 1, SPROP_UNSIGNED ) ),
-	SendPropArray3( SENDINFO_ARRAY3(m_iScore), SendPropInt( SENDINFO_ARRAY(m_iScore), 32) ),	
-	SendPropArray3( SENDINFO_ARRAY3(m_iCompetitiveRanking), SendPropInt( SENDINFO_ARRAY(m_iCompetitiveRanking), 32) ),	
-	SendPropArray3( SENDINFO_ARRAY3(m_iCompetitiveWins), SendPropInt( SENDINFO_ARRAY(m_iCompetitiveWins), 32) ),	
-	SendPropArray3( SENDINFO_ARRAY3( m_iCompTeammateColor ), SendPropInt( SENDINFO_ARRAY( m_iCompTeammateColor ), 32 ) ),
-	
+IMPLEMENT_REFLECT_SERVERCLASS( CCSPlayerResource, DT_CSPlayerResource )
 #if CS_CONTROLLABLE_BOTS_ENABLED
-	SendPropArray3( SENDINFO_ARRAY3(m_bControllingBot), SendPropInt( SENDINFO_ARRAY(m_bControllingBot), 1, SPROP_UNSIGNED ) ),
-	SendPropArray3( SENDINFO_ARRAY3(m_iControlledPlayer), SendPropInt( SENDINFO_ARRAY(m_iControlledPlayer), 8, SPROP_UNSIGNED ) ),
-	SendPropArray3( SENDINFO_ARRAY3(m_iControlledByPlayer), SendPropInt( SENDINFO_ARRAY(m_iControlledByPlayer), 8, SPROP_UNSIGNED ) ),
 #endif
-	SendPropArray3( SENDINFO_ARRAY3(m_iBotDifficulty), SendPropInt( SENDINFO_ARRAY(m_iBotDifficulty), 32) ),
-	SendPropArray3( SENDINFO_ARRAY3(m_szClan), SendPropStringT( SENDINFO_ARRAY(m_szClan) ) ),
-	SendPropArray3( SENDINFO_ARRAY3(m_iTotalCashSpent), SendPropInt( SENDINFO_ARRAY(m_iTotalCashSpent), 32) ),
-	SendPropArray3( SENDINFO_ARRAY3(m_iCashSpentThisRound), SendPropInt( SENDINFO_ARRAY(m_iCashSpentThisRound), 32) ),
-	SendPropArray3( SENDINFO_ARRAY3(m_nEndMatchNextMapVotes), SendPropInt( SENDINFO_ARRAY(m_nEndMatchNextMapVotes), 32) ),
-	SendPropBool( SENDINFO( m_bEndMatchNextMapAllVoted ) ),
-	SendPropArray3( SENDINFO_ARRAY3(m_nActiveCoinRank), SendPropInt( SENDINFO_ARRAY(m_nActiveCoinRank), 32) ),
-	SendPropArray3( SENDINFO_ARRAY3(m_nMusicID), SendPropInt( SENDINFO_ARRAY(m_nMusicID), 32) ),
-	// SendPropArray3( SENDINFO_ARRAY3(m_bIsAssassinationTarget), SendPropBool( SENDINFO_ARRAY(m_bIsAssassinationTarget), 32) ),
 
-	SendPropArray3( SENDINFO_ARRAY3(m_nPersonaDataPublicLevel), SendPropInt( SENDINFO_ARRAY(m_nPersonaDataPublicLevel), 32) ),
-	SendPropArray3( SENDINFO_ARRAY3(m_nPersonaDataPublicCommendsLeader), SendPropInt( SENDINFO_ARRAY(m_nPersonaDataPublicCommendsLeader), 32) ),
-	SendPropArray3( SENDINFO_ARRAY3(m_nPersonaDataPublicCommendsTeacher), SendPropInt( SENDINFO_ARRAY(m_nPersonaDataPublicCommendsTeacher), 32) ),
-	SendPropArray3( SENDINFO_ARRAY3(m_nPersonaDataPublicCommendsFriendly), SendPropInt( SENDINFO_ARRAY(m_nPersonaDataPublicCommendsFriendly), 32) ),
-	
-	
-END_SEND_TABLE()
-
-BEGIN_DATADESC( CCSPlayerResource )
-	// DEFINE_ARRAY( m_iPing, FIELD_INTEGER, MAX_PLAYERS+1 ),
-	// DEFINE_ARRAY( m_iPacketloss, FIELD_INTEGER, MAX_PLAYERS+1 ),
-END_DATADESC()
 
 LINK_ENTITY_TO_CLASS( cs_player_manager, CCSPlayerResource );
 

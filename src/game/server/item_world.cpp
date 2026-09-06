@@ -6,12 +6,13 @@
 //===========================================================================//
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_annotations.h"
 #include "player.h"
 #include "items.h"
 #include "gamerules.h"
 #include "engine/IEngineSound.h"
 #include "iservervehicle.h"
-#include "physics_saverestore.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -20,7 +21,6 @@
 
 class CWorldItem : public CBaseAnimating
 {
-	DECLARE_DATADESC();
 public:
 	DECLARE_CLASS( CWorldItem, CBaseAnimating );
 
@@ -32,11 +32,6 @@ public:
 
 LINK_ENTITY_TO_CLASS(world_items, CWorldItem);
 
-BEGIN_DATADESC( CWorldItem )
-
-DEFINE_FIELD( m_iType, FIELD_INTEGER ),
-
-END_DATADESC()
 
 
 bool CWorldItem::KeyValue( const char *szKeyName, const char *szValue )
@@ -81,23 +76,7 @@ void CWorldItem::Spawn( void )
 }
 
 
-BEGIN_DATADESC( CItem )
-
-	DEFINE_FIELD( m_bActivateWhenAtRest,	 FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_vOriginalSpawnOrigin, FIELD_POSITION_VECTOR ),
-	DEFINE_FIELD( m_vOriginalSpawnAngles, FIELD_VECTOR ),
-	DEFINE_PHYSPTR( m_pConstraint ),
-
-	// Function Pointers
-	DEFINE_ENTITYFUNC( ItemTouch ),
-	DEFINE_THINKFUNC( Materialize ),
-	DEFINE_THINKFUNC( ComeToRest ),
-
-	// Outputs
-	DEFINE_OUTPUT( m_OnPlayerTouch, "OnPlayerTouch" ),
-	DEFINE_OUTPUT( m_OnCacheInteraction, "OnCacheInteraction" ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CItem )
 
 
 //-----------------------------------------------------------------------------

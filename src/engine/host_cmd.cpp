@@ -15,7 +15,6 @@
 #include "keys.h"
 #include "screen.h"
 #include "vengineserver_impl.h"
-#include "host_saverestore.h"
 #include "sv_filter.h"
 #include "gl_matsysiface.h"
 #include "pr_edict.h"
@@ -897,83 +896,6 @@ CON_COMMAND( restart, "Restart the game on the same level (add setpos to jump to
 }
 
 
-//-----------------------------------------------------------------------------
-// Restarts the current server for a dead player
-//-----------------------------------------------------------------------------
-CON_COMMAND( reload, "Reload the most recent saved game (add setpos to jump to current view position on reload).")
-{
-#ifndef DEDICATED
-	const char *pSaveName;
-	char name[MAX_OSPATH];
-#endif
-
-	if ( 
-#if !defined(DEDICATED)
-		demoplayer->IsPlayingBack() || 
-#endif
-		!sv.IsActive() )
-		return;
-
-	if ( sv.IsMultiplayer() )
-		return;
-
-	if ( !serverGameDLL->SupportsSaveRestore() )
-		return;
-
-	bool remember_location = false;
-	if ( args.ArgC() == 2 && 
-		!Q_stricmp( args[1], "setpos" ) )
-	{
-		remember_location = true;
-	}
-
-	// See if there is a most recently saved game
-	// Restart that game if there is
-	// Otherwise, restart the starting game map
-#ifndef DEDICATED
-	pSaveName = saverestore->FindRecentSave( name, sizeof( name ) );
-
-	// Put up loading plaque
-  	SCR_BeginLoadingPlaque();
-
-	{
-		// Prepare the offline session for server reload
-		KeyValues *pEvent = new KeyValues( "OnEngineClientSignonStatePrepareChange" );
-		pEvent->SetString( "reason", "reload" );
-		g_pMatchFramework->GetEventsSubscription()->BroadcastEvent( pEvent );
-	}
-
-	Host_Disconnect( false );	// stop old game
-
-	if ( pSaveName && saverestore->SaveFileExists( pSaveName ) )
-	{
-		HostState_LoadGame( pSaveName, remember_location, false );
-	}
-	else
-#endif
-	{
-		if ( !CL_HL2Demo_MapCheck( host_map.GetString() ) )
-		{
-			Warning( "map load failed: %s not found or invalid\n", host_map.GetString() );
-			return;	
-		}
-
-		if ( !CL_PortalDemo_MapCheck( host_map.GetString() ) )
-		{
-			Warning( "map load failed: %s not found or invalid\n", host_map.GetString() );
-			return;	
-		} 
-
-#if !defined( DEDICATED )
-		if ( pSaveName && pSaveName[0] )
-		{
-			Warning( "SAVERESTORE PROBLEM: %s not found!  Starting new game in %s\n", pSaveName, host_map.GetString() );
-		}
-#endif
-
-		HostState_NewGame( host_map.GetString(), remember_location, false, false );
-	}
-}
 
 
 //-----------------------------------------------------------------------------

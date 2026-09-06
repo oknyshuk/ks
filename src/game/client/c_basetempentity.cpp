@@ -5,6 +5,8 @@
 // $NoKeywords: $
 //=============================================================================//
 #include "cbase.h"
+#include "reflect_recvtable.h"
+#include "reflect_annotations.h"
 #include "c_basetempentity.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
@@ -12,8 +14,7 @@
 
 IMPLEMENT_CLIENTCLASS(C_BaseTempEntity, DT_BaseTempEntity, CBaseTempEntity);
 
-BEGIN_RECV_TABLE_NOBASE(C_BaseTempEntity, DT_BaseTempEntity)
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_TABLE( C_BaseTempEntity, DT_BaseTempEntity );
 
 
 // Global list of temp entity classes

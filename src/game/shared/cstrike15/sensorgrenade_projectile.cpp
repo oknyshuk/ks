@@ -5,6 +5,14 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_annotations.h"
+#ifdef CLIENT_DLL
+#include "reflect_recvtable.h"
+#endif
+#include "reflect_annotations.h"
+#ifdef GAME_DLL
+#include "reflect_sendtable.h"
+#endif
 #include "sensorgrenade_projectile.h"
 #include "engine/IEngineSound.h"
 #include "keyvalues.h"
@@ -26,8 +34,7 @@
 
 #if defined( CLIENT_DLL )
 
-IMPLEMENT_CLIENTCLASS_DT( C_SensorGrenadeProjectile, DT_SensorGrenadeProjectile, CSensorGrenadeProjectile )
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS( C_SensorGrenadeProjectile, DT_SensorGrenadeProjectile, CSensorGrenadeProjectile )
 
 
 //--------------------------------------------------------------------------------------------------------
@@ -80,14 +87,8 @@ bool C_SensorGrenadeProjectile::Simulate( void )
 LINK_ENTITY_TO_CLASS( tagrenade_projectile, CSensorGrenadeProjectile );
 PRECACHE_REGISTER( tagrenade_projectile );
 
-IMPLEMENT_SERVERCLASS_ST( CSensorGrenadeProjectile, DT_SensorGrenadeProjectile )
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CSensorGrenadeProjectile, DT_SensorGrenadeProjectile )
 
-BEGIN_DATADESC( CSensorGrenadeProjectile )
-	DEFINE_THINKFUNC( Think_Arm ),
-	DEFINE_THINKFUNC( Think_Remove ),
-	DEFINE_THINKFUNC( SensorThink )
-END_DATADESC()
 
 
 // --------------------------------------------------------------------------------------------------- //

@@ -13,6 +13,8 @@
 
 #ifndef WCEDIT_H
 #define WCEDIT_H
+
+#include "reflect_annotations.h"
 #pragma once
 
 class CBaseEntity;

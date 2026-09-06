@@ -5,6 +5,15 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_predmap.h"
+#include "reflect_annotations.h"
+#ifdef CLIENT_DLL
+#include "reflect_recvtable.h"
+#endif
+#include "reflect_annotations.h"
+#ifdef GAME_DLL
+#include "reflect_sendtable.h"
+#endif
 #include "weapon_csbase.h"
 #include "gamerules.h"
 #include "npcevent.h"
@@ -32,11 +41,11 @@
 
 IMPLEMENT_NETWORKCLASS_ALIASED( Flashbang, DT_Flashbang )
 
-BEGIN_NETWORK_TABLE(CFlashbang, DT_Flashbang)
-END_NETWORK_TABLE()
+IMPLEMENT_REFLECT_TABLE( CFlashbang, DT_Flashbang );
 
-BEGIN_PREDICTION_DATA( CFlashbang )
-END_PREDICTION_DATA()
+#ifdef CLIENT_DLL
+IMPLEMENT_REFLECT_PREDMAP( CFlashbang );
+#endif
 
 LINK_ENTITY_TO_CLASS_ALIASED( weapon_flashbang, Flashbang );
 PRECACHE_REGISTER( weapon_flashbang );
@@ -44,8 +53,6 @@ PRECACHE_REGISTER( weapon_flashbang );
 
 #ifndef CLIENT_DLL
 
-	BEGIN_DATADESC( CFlashbang )
-	END_DATADESC()
 
 	void CFlashbang::EmitGrenade( Vector vecSrc, QAngle vecAngles, Vector vecVel, AngularImpulse angImpulse, CBasePlayer *pPlayer, const CCSWeaponInfo& weaponInfo )
 	{

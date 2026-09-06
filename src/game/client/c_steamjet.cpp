@@ -5,6 +5,8 @@
 // $NoKeywords: $
 //=============================================================================//
 #include "cbase.h"
+#include "reflect_recvtable.h"
+#include "reflect_annotations.h"
 #include "particle_prototype.h"
 #include "particle_util.h"
 #include "baseparticleentity.h"
@@ -25,7 +27,19 @@
 // C_SteamJet
 //==================================================
 
-class C_SteamJet : public C_BaseParticleEntity, public IPrototypeAppEffect
+class [[= ks::reflect::NetTable{ .name = "DT_SteamJet" } ]]
+      [[= ks::reflect::From<"m_SpreadSpeed", ks::reflect::Net{}>{} ]]
+      [[= ks::reflect::From<"m_Speed", ks::reflect::Net{}>{} ]]
+      [[= ks::reflect::From<"m_StartSize", ks::reflect::Net{}>{} ]]
+      [[= ks::reflect::From<"m_EndSize", ks::reflect::Net{}>{} ]]
+      [[= ks::reflect::From<"m_Rate", ks::reflect::Net{}>{} ]]
+      [[= ks::reflect::From<"m_JetLength", ks::reflect::Net{}>{} ]]
+      [[= ks::reflect::From<"m_bEmit", ks::reflect::Net{}>{} ]]
+      [[= ks::reflect::From<"m_bFaceLeft", ks::reflect::Net{}>{} ]]
+      [[= ks::reflect::From<"m_nType", ks::reflect::Net{}>{} ]]
+      [[= ks::reflect::From<"m_spawnflags", ks::reflect::Net{}>{} ]]
+      [[= ks::reflect::From<"m_flRollSpeed", ks::reflect::Net{}>{} ]]
+      C_SteamJet : public C_BaseParticleEntity, public IPrototypeAppEffect
 {
 public:
 	DECLARE_CLIENTCLASS();
@@ -117,19 +131,7 @@ EXPOSE_PROTOTYPE_EFFECT(SteamJet, C_SteamJet);
 
 
 // Datatable..
-IMPLEMENT_CLIENTCLASS_DT(C_SteamJet, DT_SteamJet, CSteamJet)
-	RecvPropFloat(RECVINFO(m_SpreadSpeed), 0),
-	RecvPropFloat(RECVINFO(m_Speed), 0),
-	RecvPropFloat(RECVINFO(m_StartSize), 0),
-	RecvPropFloat(RECVINFO(m_EndSize), 0),
-	RecvPropFloat(RECVINFO(m_Rate), 0),
-	RecvPropFloat(RECVINFO(m_JetLength), 0),
-	RecvPropInt(RECVINFO(m_bEmit), 0),
-	RecvPropInt(RECVINFO(m_bFaceLeft), 0),
-	RecvPropInt(RECVINFO(m_nType), 0),
-	RecvPropInt( RECVINFO( m_spawnflags ) ),
-	RecvPropFloat(RECVINFO(m_flRollSpeed), 0 ),
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS( C_SteamJet, DT_SteamJet, CSteamJet )
 
 // ------------------------------------------------------------------------- //
 // C_SteamJet implementation.

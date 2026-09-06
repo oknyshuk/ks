@@ -5,6 +5,8 @@
 // $NoKeywords: $
 //=============================================================================//
 #include "cbase.h"
+#include "reflect_recvtable.h"
+#include "reflect_annotations.h"
 #include "c_cs_playerresource.h"
 #include <shareddefs.h>
 #include <cs_shareddefs.h>
@@ -20,47 +22,9 @@
 #include "tier0/memdbgon.h"
 
 
-IMPLEMENT_CLIENTCLASS_DT(C_CS_PlayerResource, DT_CSPlayerResource, CCSPlayerResource)
-	RecvPropInt( RECVINFO( m_iPlayerC4 ) ),
-	RecvPropInt( RECVINFO( m_iPlayerVIP ) ),
-	RecvPropArray3( RECVINFO_ARRAY(m_bHostageAlive), RecvPropInt( RECVINFO(m_bHostageAlive[0]))),
-	RecvPropArray3( RECVINFO_ARRAY(m_isHostageFollowingSomeone), RecvPropInt( RECVINFO(m_isHostageFollowingSomeone[0]))),
-	RecvPropArray3( RECVINFO_ARRAY(m_iHostageEntityIDs), RecvPropInt( RECVINFO(m_iHostageEntityIDs[0]))),
-	RecvPropVector( RECVINFO(m_bombsiteCenterA) ),
-	RecvPropVector( RECVINFO(m_bombsiteCenterB) ),
-	RecvPropArray3( RECVINFO_ARRAY(m_hostageRescueX), RecvPropInt( RECVINFO(m_hostageRescueX[0]))),
-	RecvPropArray3( RECVINFO_ARRAY(m_hostageRescueY), RecvPropInt( RECVINFO(m_hostageRescueY[0]))),
-	RecvPropArray3( RECVINFO_ARRAY(m_hostageRescueZ), RecvPropInt( RECVINFO(m_hostageRescueZ[0]))),
-	RecvPropArray3( RECVINFO_ARRAY(m_iMVPs), RecvPropInt( RECVINFO(m_iMVPs[0]))),
-	RecvPropArray3( RECVINFO_ARRAY(m_iArmor), RecvPropInt( RECVINFO(m_iArmor[0]))),
-	RecvPropArray3( RECVINFO_ARRAY(m_bHasHelmet), RecvPropInt( RECVINFO(m_bHasHelmet[0]))),
-	RecvPropArray3( RECVINFO_ARRAY(m_bHasDefuser), RecvPropInt( RECVINFO(m_bHasDefuser[0]))),
-	RecvPropArray3( RECVINFO_ARRAY(m_iScore), RecvPropInt( RECVINFO(m_iScore[0]))),	
-	RecvPropArray3( RECVINFO_ARRAY(m_iCompetitiveRanking), RecvPropInt( RECVINFO(m_iCompetitiveRanking[0]))),	
-	RecvPropArray3( RECVINFO_ARRAY(m_iCompetitiveWins), RecvPropInt( RECVINFO(m_iCompetitiveWins[0]))),	
-	RecvPropArray3( RECVINFO_ARRAY( m_iCompTeammateColor ), RecvPropInt( RECVINFO( m_iCompTeammateColor[0] ) ) ),
+IMPLEMENT_REFLECT_CLIENTCLASS( C_CS_PlayerResource, DT_CSPlayerResource, CCSPlayerResource )
 #if CS_CONTROLLABLE_BOTS_ENABLED 
-	RecvPropArray3( RECVINFO_ARRAY(m_bControllingBot), RecvPropInt( RECVINFO(m_bControllingBot[0]))),
-	RecvPropArray3( RECVINFO_ARRAY(m_iControlledPlayer), RecvPropInt( RECVINFO(m_iControlledPlayer[0]))),
-	RecvPropArray3( RECVINFO_ARRAY(m_iControlledByPlayer), RecvPropInt( RECVINFO(m_iControlledByPlayer[0]))),
 #endif
-	RecvPropArray3( RECVINFO_ARRAY(m_iBotDifficulty), RecvPropInt( RECVINFO( m_iBotDifficulty[0] ) ) ),
-	RecvPropArray3( RECVINFO_ARRAY(m_szClan), RecvPropString( RECVINFO(m_szClan[0]))),
-	RecvPropArray3( RECVINFO_ARRAY(m_iTotalCashSpent), RecvPropInt( RECVINFO(m_iTotalCashSpent[0]))),
-	RecvPropArray3( RECVINFO_ARRAY(m_iCashSpentThisRound), RecvPropInt( RECVINFO(m_iCashSpentThisRound[0]))),
-	RecvPropArray3( RECVINFO_ARRAY(m_nEndMatchNextMapVotes), RecvPropInt( RECVINFO(m_nEndMatchNextMapVotes[0]))),
-	RecvPropBool( RECVINFO( m_bEndMatchNextMapAllVoted ) ),
-	RecvPropArray3( RECVINFO_ARRAY(m_nActiveCoinRank), RecvPropInt( RECVINFO(m_nActiveCoinRank[0]))),
-	RecvPropArray3( RECVINFO_ARRAY(m_nMusicID), RecvPropInt( RECVINFO(m_nMusicID[0]))),
-	// RecvPropArray3( RECVINFO_ARRAY(m_bIsAssassinationTarget), RecvPropBool( RECVINFO(m_bIsAssassinationTarget[0]))),
-
-	RecvPropArray3( RECVINFO_ARRAY(m_nPersonaDataPublicLevel), RecvPropInt( RECVINFO(m_nPersonaDataPublicLevel[0]))),
-	RecvPropArray3( RECVINFO_ARRAY(m_nPersonaDataPublicCommendsLeader), RecvPropInt( RECVINFO(m_nPersonaDataPublicCommendsLeader[0]))),
-	RecvPropArray3( RECVINFO_ARRAY(m_nPersonaDataPublicCommendsTeacher), RecvPropInt( RECVINFO(m_nPersonaDataPublicCommendsTeacher[0]))),
-	RecvPropArray3( RECVINFO_ARRAY(m_nPersonaDataPublicCommendsFriendly), RecvPropInt( RECVINFO(m_nPersonaDataPublicCommendsFriendly[0]))),
-	
-
-END_RECV_TABLE()
 
 ConVar cl_show_playernames_max_chars_console( "cl_show_playernames_max_chars_console", "0", FCVAR_CLIENTDLL | FCVAR_DEVELOPMENTONLY, "Shows all player names (including bots) as 16 W's." );
 

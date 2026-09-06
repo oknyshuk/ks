@@ -9,6 +9,8 @@
 #include "baseparticleentity.h"
 #include "particles_simple.h"
 #include "filesystem.h"
+#include "reflect_recvtable.h"
+#include "reflect_annotations.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -23,7 +25,14 @@
 // C_SmokeStack
 //==================================================
 
-class C_SmokeStack : public C_BaseParticleEntity, public IPrototypeAppEffect
+class [[= ks::reflect::NetTable{ .name = "DT_SmokeStack" } ]]
+      [[= ks::reflect::From<"m_AmbientLight.m_vPos", ks::reflect::Net{}>{} ]]
+      [[= ks::reflect::From<"m_AmbientLight.m_vColor", ks::reflect::Net{}>{} ]]
+      [[= ks::reflect::From<"m_AmbientLight.m_flIntensity", ks::reflect::Net{}>{} ]]
+      [[= ks::reflect::From<"m_DirLight.m_vPos", ks::reflect::Net{}>{} ]]
+      [[= ks::reflect::From<"m_DirLight.m_vColor", ks::reflect::Net{}>{} ]]
+      [[= ks::reflect::From<"m_DirLight.m_flIntensity", ks::reflect::Net{}>{} ]]
+      C_SmokeStack : public C_BaseParticleEntity, public IPrototypeAppEffect
 {
 public:
 	DECLARE_CLIENTCLASS();
@@ -72,15 +81,15 @@ public:
 
 	CParticleSphereRenderer	m_Renderer;
 
-	float			m_SpreadSpeed;
-	float			m_Speed;
-	float			m_StartSize;
-	float			m_EndSize;
-	float			m_Rate;
-	float			m_JetLength;	// Length of the jet. Lifetime is derived from this.
+	[[= ks::reflect::Net{} ]] float			m_SpreadSpeed;
+	[[= ks::reflect::Net{} ]] float			m_Speed;
+	[[= ks::reflect::Net{} ]] float			m_StartSize;
+	[[= ks::reflect::Net{} ]] float			m_EndSize;
+	[[= ks::reflect::Net{} ]] float			m_Rate;
+	[[= ks::reflect::Net{} ]] float			m_JetLength;	// Length of the jet. Lifetime is derived from this.
 
-	int				m_bEmit;		// Emit particles?
-	float			m_flBaseSpread;
+	[[= ks::reflect::Net{} ]] int				m_bEmit;		// Emit particles?
+	[[= ks::reflect::Net{} ]] float			m_flBaseSpread;
 
 	class CLightInfo
 	{
@@ -101,9 +110,10 @@ public:
 
 	Vector			m_vBaseColor;
 	
-	Vector			m_vWind;
-	float			m_flTwist;
-	int				m_iMaterialModel;
+	[[= ks::reflect::Net{} ]] Vector			m_vWind;
+	[[= ks::reflect::Net{} ]] float			m_flTwist;
+	[[= ks::reflect::Net{} ]]
+	[[= ks::reflect::Proxy<RecvProxy_IntSubOne, ks::reflect::WIRE_RECV>{} ]] int				m_iMaterialModel;
 
 private:
 	C_SmokeStack( const C_SmokeStack & );
@@ -119,7 +129,7 @@ private:
 	TimedEvent		m_ParticleSpawn;
 	int				m_iMaxFrames;
 	bool			m_bInView;
-	float			m_flRollSpeed;
+	[[= ks::reflect::Net{} ]] float			m_flRollSpeed;
 };
 
 
@@ -131,29 +141,7 @@ private:
 EXPOSE_PROTOTYPE_EFFECT(SmokeStack, C_SmokeStack);
 
 
-IMPLEMENT_CLIENTCLASS_DT(C_SmokeStack, DT_SmokeStack, CSmokeStack)
-	RecvPropFloat(RECVINFO(m_SpreadSpeed), 0),
-	RecvPropFloat(RECVINFO(m_Speed), 0),
-	RecvPropFloat(RECVINFO(m_StartSize), 0),
-	RecvPropFloat(RECVINFO(m_EndSize), 0),
-	RecvPropFloat(RECVINFO(m_Rate), 0),
-	RecvPropFloat(RECVINFO(m_JetLength), 0),
-	RecvPropInt(RECVINFO(m_bEmit), 0),
-	RecvPropFloat(RECVINFO(m_flBaseSpread)),
-	RecvPropFloat(RECVINFO(m_flTwist)),
-	RecvPropFloat(RECVINFO(m_flRollSpeed )),
-	RecvPropIntWithMinusOneFlag( RECVINFO( m_iMaterialModel ) ),
-
-	RecvPropVector( RECVINFO(m_AmbientLight.m_vPos) ),
-	RecvPropVector( RECVINFO(m_AmbientLight.m_vColor) ),
-	RecvPropFloat( RECVINFO(m_AmbientLight.m_flIntensity) ),
-
-	RecvPropVector( RECVINFO(m_DirLight.m_vPos) ),
-	RecvPropVector( RECVINFO(m_DirLight.m_vColor) ),
-	RecvPropFloat( RECVINFO(m_DirLight.m_flIntensity) ),
-
-	RecvPropVector(RECVINFO(m_vWind))
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS( C_SmokeStack, DT_SmokeStack, CSmokeStack )
 
 
 

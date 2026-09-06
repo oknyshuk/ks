@@ -5,6 +5,15 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_predmap.h"
+#include "reflect_annotations.h"
+#ifdef CLIENT_DLL
+#include "reflect_recvtable.h"
+#endif
+#include "reflect_annotations.h"
+#ifdef GAME_DLL
+#include "reflect_sendtable.h"
+#endif
 #include "weapon_csbasegun.h"
 
 
@@ -23,7 +32,8 @@
 // NOTE: This has to be the last file included!
 #include "tier0/memdbgon.h"
 
-class CWeaponElite : public CWeaponCSBaseGun
+class [[= ks::reflect::NetTable{ .name = "DT_WeaponElite" } ]]
+      CWeaponElite : public CWeaponCSBaseGun
 {
 public:
 	DECLARE_CLASS( CWeaponElite, CWeaponCSBaseGun );
@@ -63,12 +73,12 @@ private:
 
 IMPLEMENT_NETWORKCLASS_ALIASED( WeaponElite, DT_WeaponElite )
 
-BEGIN_NETWORK_TABLE( CWeaponElite, DT_WeaponElite )
-END_NETWORK_TABLE()
+IMPLEMENT_REFLECT_TABLE( CWeaponElite, DT_WeaponElite );
 
 #if defined CLIENT_DLL
-BEGIN_PREDICTION_DATA( CWeaponElite )
-END_PREDICTION_DATA()
+#ifdef CLIENT_DLL
+IMPLEMENT_REFLECT_PREDMAP( CWeaponElite );
+#endif
 #endif
 
 LINK_ENTITY_TO_CLASS_ALIASED( weapon_elite, WeaponElite );

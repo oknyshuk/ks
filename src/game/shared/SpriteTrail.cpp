@@ -5,6 +5,16 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_predmap.h"
+#include "reflect_annotations.h"
+#ifdef CLIENT_DLL
+#include "reflect_recvtable.h"
+#endif
+#include "reflect_annotations.h"
+#ifdef GAME_DLL
+#include "reflect_sendtable.h"
+#endif
+#include "reflect_datamap.h"
 #include "SpriteTrail.h"
 
 #ifdef CLIENT_DLL
@@ -36,82 +46,27 @@ extern CEngineSprite *Draw_SetSpriteTexture( const model_t *pSpriteModel, int fr
 //-----------------------------------------------------------------------------
 #if defined( CLIENT_DLL )
 
-BEGIN_SIMPLE_DATADESC( TrailPoint_t )
-	// DEFINE_FIELD( m_vecScreenPos,	FIELD_CLASSCHECK_IGNORE ) // do this or else we get a warning about multiply-defined fields
-#if SCREEN_SPACE_TRAILS
-	DEFINE_FIELD( m_vecScreenPos,	FIELD_VECTOR ),
-#else
-	DEFINE_FIELD( m_vecScreenPos,	FIELD_POSITION_VECTOR ),
-#endif
-
-	DEFINE_FIELD( m_flDieTime,		FIELD_TIME ),
-	DEFINE_FIELD( m_flTexCoord,		FIELD_FLOAT ),
-	DEFINE_FIELD( m_flWidthVariance,FIELD_FLOAT ),
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP_SIMPLE( TrailPoint_t )
 
 #endif
 
-BEGIN_DATADESC( CSpriteTrail )
-
-	DEFINE_KEYFIELD( m_flLifeTime,			FIELD_FLOAT, "lifetime" ),
-	DEFINE_KEYFIELD( m_flStartWidth,		FIELD_FLOAT, "startwidth" ),
-	DEFINE_KEYFIELD( m_flEndWidth,			FIELD_FLOAT, "endwidth" ),
-	DEFINE_KEYFIELD( m_iszSpriteName,		FIELD_STRING, "spritename" ),
-	DEFINE_KEYFIELD( m_bAnimate,			FIELD_BOOLEAN, "animate" ),
-	DEFINE_FIELD( m_flStartWidthVariance,	FIELD_FLOAT ),
-	DEFINE_FIELD( m_flTextureRes,		FIELD_FLOAT ),
-	DEFINE_FIELD( m_flMinFadeLength,	FIELD_FLOAT ),
-	DEFINE_FIELD( m_vecSkyboxOrigin,	FIELD_POSITION_VECTOR ),
-	DEFINE_FIELD( m_flSkyboxScale,		FIELD_FLOAT ),
-
-	// These are client-only
-#if defined( CLIENT_DLL )
-	DEFINE_EMBEDDED_AUTO_ARRAY( m_vecSteps ),
-	DEFINE_FIELD( m_nFirstStep, FIELD_INTEGER ),
-	DEFINE_FIELD( m_nStepCount, FIELD_INTEGER ),
-	DEFINE_FIELD( m_flUpdateTime, FIELD_TIME ),
-	DEFINE_FIELD( m_vecPrevSkyboxOrigin, FIELD_POSITION_VECTOR ),
-	DEFINE_FIELD( m_flPrevSkyboxScale, FIELD_FLOAT ),
-	DEFINE_FIELD( m_vecRenderMins, FIELD_VECTOR ),
-	DEFINE_FIELD( m_vecRenderMaxs, FIELD_VECTOR ),
-#endif
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CSpriteTrail )
 
 //-----------------------------------------------------------------------------
 // Networking
 //-----------------------------------------------------------------------------
 IMPLEMENT_NETWORKCLASS_ALIASED( SpriteTrail, DT_SpriteTrail );
 
-BEGIN_NETWORK_TABLE( CSpriteTrail, DT_SpriteTrail )
-#if !defined( CLIENT_DLL )
-	SendPropFloat( SENDINFO(m_flLifeTime),		0,	SPROP_NOSCALE ),
-	SendPropFloat( SENDINFO(m_flStartWidth),	0,	SPROP_NOSCALE ),
-	SendPropFloat( SENDINFO(m_flEndWidth),		0,	SPROP_NOSCALE ),
-	SendPropFloat( SENDINFO(m_flStartWidthVariance),		0,	SPROP_NOSCALE ),
-	SendPropFloat( SENDINFO(m_flTextureRes),	0,	SPROP_NOSCALE ),
-	SendPropFloat( SENDINFO(m_flMinFadeLength),	0,	SPROP_NOSCALE ),
-	SendPropVector( SENDINFO(m_vecSkyboxOrigin),0,	SPROP_NOSCALE ),
-	SendPropFloat( SENDINFO(m_flSkyboxScale),	0,	SPROP_NOSCALE ),
-#else
-	RecvPropFloat( RECVINFO(m_flLifeTime)),
-	RecvPropFloat( RECVINFO(m_flStartWidth)),
-	RecvPropFloat( RECVINFO(m_flEndWidth)),
-	RecvPropFloat( RECVINFO(m_flStartWidthVariance)),
-	RecvPropFloat( RECVINFO(m_flTextureRes)),
-	RecvPropFloat( RECVINFO(m_flMinFadeLength)),
-	RecvPropVector( RECVINFO(m_vecSkyboxOrigin)),
-	RecvPropFloat( RECVINFO(m_flSkyboxScale)),
-#endif
-END_NETWORK_TABLE()
+IMPLEMENT_REFLECT_TABLE( CSpriteTrail, DT_SpriteTrail );
 
 LINK_ENTITY_TO_CLASS_ALIASED( env_spritetrail, SpriteTrail );
 
 //-----------------------------------------------------------------------------
 // Prediction
 //-----------------------------------------------------------------------------
-BEGIN_PREDICTION_DATA( CSpriteTrail )
-END_PREDICTION_DATA()
+#ifdef CLIENT_DLL
+IMPLEMENT_REFLECT_PREDMAP( CSpriteTrail );
+#endif
 
 //-----------------------------------------------------------------------------
 // Constructor

@@ -7,6 +7,8 @@
 // $NoKeywords: $
 //===========================================================================//
 #include "cbase.h"
+#include "reflect_recvtable.h"
+#include "reflect_annotations.h"
 #include "c_basetempentity.h"
 #include "IEffects.h"
 #include "tier1/keyvalues.h"
@@ -19,7 +21,8 @@
 //-----------------------------------------------------------------------------
 // Purpose: Armor Ricochet TE
 //-----------------------------------------------------------------------------
-class C_TEMetalSparks : public C_BaseTempEntity
+class [[= ks::reflect::NetTable{ .name = "DT_TEMetalSparks", .base = false } ]]
+      C_TEMetalSparks : public C_BaseTempEntity
 {
 public:
 	DECLARE_CLIENTCLASS();
@@ -32,8 +35,8 @@ public:
 	virtual void	Precache( void );
 
 public:
-	Vector			m_vecPos;
-	Vector			m_vecDir;
+	[[= ks::reflect::Net{} ]] Vector			m_vecPos;
+	[[= ks::reflect::Net{} ]] Vector			m_vecDir;
 
 	const struct model_t *m_pModel;
 };
@@ -111,7 +114,8 @@ void TE_MetalSparks( IRecipientFilter& filter, float delay,
 //-----------------------------------------------------------------------------
 // Purpose: Armor Ricochet TE
 //-----------------------------------------------------------------------------
-class C_TEArmorRicochet : public C_TEMetalSparks
+class [[= ks::reflect::NetTable{ .name = "DT_TEArmorRicochet" } ]]
+      C_TEArmorRicochet : public C_TEMetalSparks
 {
 	DECLARE_CLASS( C_TEArmorRicochet, C_TEMetalSparks );
 public:
@@ -172,11 +176,7 @@ void C_TEArmorRicochet::PostDataUpdate( DataUpdateType_t updateType )
 // Expose the TE to the engine.
 IMPLEMENT_CLIENTCLASS_EVENT( C_TEMetalSparks, DT_TEMetalSparks, CTEMetalSparks );
 
-BEGIN_RECV_TABLE_NOBASE(C_TEMetalSparks, DT_TEMetalSparks)
-	RecvPropVector(RECVINFO(m_vecPos)),
-	RecvPropVector(RECVINFO(m_vecDir)),
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_TABLE( C_TEMetalSparks, DT_TEMetalSparks );
 
 IMPLEMENT_CLIENTCLASS_EVENT( C_TEArmorRicochet, DT_TEArmorRicochet, CTEArmorRicochet );
-BEGIN_RECV_TABLE(C_TEArmorRicochet, DT_TEArmorRicochet)
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_TABLE( C_TEArmorRicochet, DT_TEArmorRicochet );

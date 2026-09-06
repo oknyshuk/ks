@@ -5,6 +5,14 @@
 // $NoKeywords: $
 //=============================================================================//
 #include "cbase.h"
+#include "reflect_annotations.h"
+#ifdef CLIENT_DLL
+#include "reflect_recvtable.h"
+#include "reflect_predmap.h"
+#endif
+#ifdef GAME_DLL
+#include "reflect_sendtable.h"
+#endif
 #include "baseviewmodel_shared.h"
 #include "datacache/imdlcache.h"
 
@@ -577,7 +585,7 @@ void CBaseViewModel::CalcViewModelLag( Vector& origin, QAngle& angles, QAngle& o
 // Purpose: Resets anim cycle when the server changes the weapon on us
 //-----------------------------------------------------------------------------
 #if defined( CLIENT_DLL )
-static void RecvProxy_Weapon( const CRecvProxyData *pData, void *pStruct, void *pOut )
+ void RecvProxy_Weapon( const CRecvProxyData *pData, void *pStruct, void *pOut )
 {
 	CBaseViewModel *pViewModel = ((CBaseViewModel*)pStruct);
 	CBaseCombatWeapon *pOldWeapon = pViewModel->GetOwningWeapon();
@@ -596,7 +604,7 @@ static void RecvProxy_Weapon( const CRecvProxyData *pData, void *pStruct, void *
 	}
 }
 
-static void RecvProxy_Owner( const CRecvProxyData *pData, void *pStruct, void *pOut )
+ void RecvProxy_Owner( const CRecvProxyData *pData, void *pStruct, void *pOut )
 {
 	CBaseViewModel *pViewModel = ( ( CBaseViewModel* )pStruct );
 	//Msg( "BaseViewModel changed from (%d)%x", ( pViewModel->m_hOwner.GetForModify().GetSerialNumber(), pViewModel->m_hOwner.GetForModify().GetEntryIndex() ) );
@@ -613,67 +621,11 @@ static void RecvProxy_Owner( const CRecvProxyData *pData, void *pStruct, void *p
 IMPLEMENT_NETWORKCLASS_ALIASED( BaseViewModel, DT_BaseViewModel )
 LINK_ENTITY_TO_CLASS_ALIASED( viewmodel, BaseViewModel );
 
-BEGIN_NETWORK_TABLE_NOBASE(CBaseViewModel, DT_BaseViewModel)
-#if !defined( CLIENT_DLL )
-	SendPropModelIndex(SENDINFO(m_nModelIndex)),
-	SendPropEHandle (SENDINFO(m_hWeapon)),
-	SendPropInt		(SENDINFO(m_nBody), ANIMATION_BODY_BITS ), // increased to 32 bits to support number of bits equal to number of bodygroups
-	SendPropInt		(SENDINFO(m_nSkin), 10),
-	SendPropInt		(SENDINFO(m_nSequence),	8, SPROP_UNSIGNED),
-	SendPropInt		(SENDINFO(m_nViewModelIndex), VIEWMODEL_INDEX_BITS, SPROP_UNSIGNED),
-	SendPropFloat	(SENDINFO(m_flPlaybackRate),	8,	SPROP_ROUNDUP,	-4.0,	12.0f),
-	SendPropInt		(SENDINFO(m_fEffects),		EF_MAX_BITS, SPROP_UNSIGNED),
-	SendPropInt		(SENDINFO(m_nAnimationParity), 3, SPROP_UNSIGNED ),
-	SendPropEHandle (SENDINFO(m_hOwner)),
-
-	SendPropInt( SENDINFO( m_nNewSequenceParity ), EF_PARITY_BITS, SPROP_UNSIGNED ),
-	SendPropInt( SENDINFO( m_nResetEventsParity ), EF_PARITY_BITS, SPROP_UNSIGNED ),
-	SendPropInt( SENDINFO( m_nMuzzleFlashParity ), EF_MUZZLEFLASH_BITS, SPROP_UNSIGNED ),
-
-	SendPropBool( SENDINFO( m_bShouldIgnoreOffsetAndAccuracy ) ),
-#else
-	RecvPropInt		(RECVINFO(m_nModelIndex), 0, RecvProxy_Viewmodel ),
-	RecvPropEHandle (RECVINFO(m_hWeapon), RecvProxy_Weapon ),
-	RecvPropInt		(RECVINFO(m_nSkin)),
-	RecvPropInt		(RECVINFO(m_nBody)),
-	RecvPropInt		(RECVINFO(m_nSequence), 0, RecvProxy_ViewmodelSequenceNum ),
-	RecvPropInt		(RECVINFO(m_nViewModelIndex)),
-	RecvPropFloat	(RECVINFO(m_flPlaybackRate)),
-	RecvPropInt		(RECVINFO(m_fEffects), 0, RecvProxy_EffectFlags ),
-	RecvPropInt		(RECVINFO(m_nAnimationParity)),
-	RecvPropEHandle (RECVINFO(m_hOwner), RecvProxy_Owner ),
-
-	RecvPropInt( RECVINFO( m_nNewSequenceParity )),
-	RecvPropInt( RECVINFO( m_nResetEventsParity )),
-	RecvPropInt( RECVINFO( m_nMuzzleFlashParity )),
-
-	RecvPropBool( RECVINFO( m_bShouldIgnoreOffsetAndAccuracy ) ),
-
-#endif
-END_NETWORK_TABLE()
+IMPLEMENT_REFLECT_TABLE( CBaseViewModel, DT_BaseViewModel );
 
 #ifdef CLIENT_DLL
 
-BEGIN_PREDICTION_DATA( CBaseViewModel )
-
-	// Networked
-	DEFINE_PRED_FIELD( m_nModelIndex, FIELD_SHORT, FTYPEDESC_INSENDTABLE | FTYPEDESC_MODELINDEX ),
-	DEFINE_PRED_FIELD( m_nSkin, FIELD_INTEGER, FTYPEDESC_INSENDTABLE ),
-	DEFINE_PRED_FIELD( m_nBody, FIELD_INTEGER, FTYPEDESC_INSENDTABLE ),
-	DEFINE_PRED_FIELD( m_nSequence, FIELD_INTEGER, FTYPEDESC_INSENDTABLE ),
-	DEFINE_PRED_FIELD( m_nViewModelIndex, FIELD_INTEGER, FTYPEDESC_INSENDTABLE ),
-	DEFINE_PRED_FIELD_TOL( m_flPlaybackRate, FIELD_FLOAT, FTYPEDESC_INSENDTABLE, 0.125f ),
-	DEFINE_PRED_FIELD( m_fEffects, FIELD_INTEGER, FTYPEDESC_INSENDTABLE | FTYPEDESC_OVERRIDE ),
-	DEFINE_PRED_FIELD( m_nAnimationParity, FIELD_INTEGER, FTYPEDESC_INSENDTABLE ),
-	DEFINE_PRED_FIELD( m_hWeapon, FIELD_EHANDLE, FTYPEDESC_INSENDTABLE ),
-	DEFINE_PRED_FIELD( m_flAnimTime, FIELD_FLOAT, 0 ),
-
-	DEFINE_FIELD( m_hOwner, FIELD_EHANDLE ),
-	DEFINE_FIELD( m_flTimeWeaponIdle, FIELD_FLOAT ),
-	DEFINE_FIELD( m_Activity, FIELD_INTEGER ),
-	DEFINE_PRED_FIELD( m_flCycle, FIELD_FLOAT, FTYPEDESC_PRIVATE | FTYPEDESC_OVERRIDE | FTYPEDESC_NOERRORCHECK ),
-
-END_PREDICTION_DATA()
+IMPLEMENT_REFLECT_PREDMAP( CBaseViewModel );
 
 // This needed to be done as a proxy for the surrounding box auto update when animations change.
 // This doesn't have to be done for view models as they don't affect the bounding box and it was

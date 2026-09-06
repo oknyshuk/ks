@@ -5,6 +5,8 @@
 // $NoKeywords: $
 //===========================================================================//
 #include "cbase.h"
+#include "reflect_recvtable.h"
+#include "reflect_annotations.h"
 #include "iviewrender.h"
 #include "precache_register.h"
 #include "studio.h"
@@ -80,14 +82,7 @@ void RecvProxy_ScaleTime( const CRecvProxyData *pData, void *pStruct, void *pOut
 }
 
 //Receive datatable
-IMPLEMENT_CLIENTCLASS_DT( C_FireSmoke, DT_FireSmoke, CFireSmoke )
-	RecvPropFloat( RECVINFO( m_flStartScale )),
-	RecvPropFloat( RECVINFO( m_flScale ), 0, RecvProxy_Scale ),
-	RecvPropFloat( RECVINFO( m_flScaleTime ), 0, RecvProxy_ScaleTime ),
-	RecvPropInt( RECVINFO( m_nFlags ) ),
-	RecvPropInt( RECVINFO( m_nFlameModelIndex ) ),
-	RecvPropInt( RECVINFO( m_nFlameFromAboveModelIndex ) ),
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS( C_FireSmoke, DT_FireSmoke, CFireSmoke )
 
 //==================================================
 // C_FireSmoke

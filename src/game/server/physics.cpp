@@ -27,7 +27,6 @@
 #include "vphysics/vehicles.h"
 #include "vehicle_sounds.h"
 #include "movevars_shared.h"
-#include "physics_saverestore.h"
 #include "solidsetdefaults.h"
 #include "tier0/vprof.h"
 #include "engine/IStaticPropMgr.h"
@@ -266,7 +265,6 @@ void CPhysicsHook::LevelShutdownPostEntity()
 	if ( !physenv )
 		return;
 
-	g_pPhysSaveRestoreManager->ForgetAllModels();
 
 	g_Collisions.LevelShutdown();
 

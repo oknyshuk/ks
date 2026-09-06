@@ -26,6 +26,8 @@
 #include <time.h>
 #ifdef GAME_DLL
 #include "vehicle_base.h"
+#include "reflect_annotations.h"
+#include "reflect_datamap.h"
 #endif 
 
 #ifdef CLIENT_DLL
@@ -1814,30 +1816,18 @@ public:
 
 protected:
 
-	void InputSetName( inputdata_t &inputdata );
-	void InputIncrement( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetName", .type = FIELD_STRING } ]] void InputSetName( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Increment", .type = FIELD_FLOAT } ]] void InputIncrement( inputdata_t &inputdata );
 
-	void InputEnable( inputdata_t &inputdata );
-	void InputDisable( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Enable", .type = FIELD_VOID } ]] void InputEnable( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Disable", .type = FIELD_VOID } ]] void InputDisable( inputdata_t &inputdata );
 private:
 
-	string_t		m_strStatisticName;
+	[[= ks::reflect::Key{ .name = "Name" } ]] string_t		m_strStatisticName;
 	bool			m_bDisabled;
 };
 
-BEGIN_DATADESC( CPointGamestatsCounter )
-
-	DEFINE_KEYFIELD( m_strStatisticName, FIELD_STRING, "Name" ),
-	DEFINE_FIELD( m_bDisabled, FIELD_BOOLEAN ),
-
-	// Inputs
-	DEFINE_INPUTFUNC( FIELD_STRING, "SetName", InputSetName ),
-	DEFINE_INPUTFUNC( FIELD_FLOAT, "Increment", InputIncrement ),
-
-	DEFINE_INPUTFUNC( FIELD_VOID, "Enable", InputEnable ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "Disable", InputDisable ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CPointGamestatsCounter )
 
 LINK_ENTITY_TO_CLASS( point_gamestats_counter, CPointGamestatsCounter )
 

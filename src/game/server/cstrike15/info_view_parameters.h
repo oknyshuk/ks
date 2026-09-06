@@ -6,6 +6,8 @@
 
 #ifndef INFO_VIEW_PARAMETERS_H
 #define INFO_VIEW_PARAMETERS_H
+
+#include "reflect_annotations.h"
 #ifdef _WIN32
 #pragma once
 #endif
@@ -17,7 +19,7 @@ public:
 	DECLARE_CLASS( CInfoViewParameters, CBaseEntity );
 	DECLARE_DATADESC();
 
-	int m_nViewMode;
+	[[= ks::reflect::Key{ .name = "ViewMode" } ]] int m_nViewMode;
 };
 
 

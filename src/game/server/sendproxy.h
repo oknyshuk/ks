@@ -18,6 +18,10 @@ void SendProxy_Color32ToInt( const SendProp *pProp, const void *pStruct, const v
 void SendProxy_EHandleToInt( const SendProp *pProp, const void *pStruct, const void *pVarData, DVariant *pOut, int iElement, int objectID );
 void SendProxy_IntAddOne( const SendProp *pProp, const void *pStruct, const void *pVarData, DVariant *pOut, int iElement, int objectID );
 void SendProxy_ShortAddOne( const SendProp *pProp, const void *pStruct, const void *pVarData, DVariant *pOut, int iElement, int objectID );
+// Defined in player.cpp and used by several tables, which previously forward-declared it in
+// each .cpp. A Proxy<> annotation needs it visible where the class is declared, so it belongs
+// here with the other shared proxies.
+void SendProxy_CropFlagsToPlayerFlagBitsLength( const SendProp *pProp, const void *pStruct, const void *pVarData, DVariant *pOut, int iElement, int objectID );
 
 SendProp SendPropBool(
 	const char *pVarName,

@@ -5,6 +5,8 @@
 //=============================================================================
 
 #include "cbase.h"
+#include "reflect_recvtable.h"
+#include "reflect_annotations.h"
 
 #include "c_env_projectedtexture.h"
 #include "shareddefs.h"
@@ -24,29 +26,7 @@
 float C_EnvProjectedTexture::m_flVisibleBBoxMinHeight = -FLT_MAX;
 
 
-IMPLEMENT_CLIENTCLASS_DT( C_EnvProjectedTexture, DT_EnvProjectedTexture, CEnvProjectedTexture )
-	RecvPropEHandle( RECVINFO( m_hTargetEntity )	),
-	RecvPropBool(	 RECVINFO( m_bState )			),
-	RecvPropBool(	 RECVINFO( m_bAlwaysUpdate )	),
-	RecvPropFloat(	 RECVINFO( m_flLightFOV )		),
-	RecvPropBool(	 RECVINFO( m_bEnableShadows )	),
-	RecvPropBool(	 RECVINFO( m_bSimpleProjection )	),
-	RecvPropBool(	 RECVINFO( m_bLightOnlyTarget ) ),
-	RecvPropBool(	 RECVINFO( m_bLightWorld )		),
-	RecvPropBool(	 RECVINFO( m_bCameraSpace )		),
-	RecvPropFloat(	 RECVINFO( m_flBrightnessScale )	),
-	RecvPropInt(	 RECVINFO( m_LightColor ), 0, RecvProxy_Int32ToColor32 ),
-	RecvPropFloat(	 RECVINFO( m_flColorTransitionTime )		),
-	RecvPropFloat(	 RECVINFO( m_flAmbient )		),
-	RecvPropString(  RECVINFO( m_SpotlightTextureName ) ),
-	RecvPropInt(	 RECVINFO( m_nSpotlightTextureFrame ) ),
-	RecvPropFloat(	 RECVINFO( m_flNearZ )	),
-	RecvPropFloat(	 RECVINFO( m_flFarZ )	),
-	RecvPropInt(	 RECVINFO( m_nShadowQuality )	),
-	RecvPropFloat(	 RECVINFO( m_flProjectionSize )	),
-	RecvPropFloat(	 RECVINFO( m_flRotation )	),
-	RecvPropInt(	 RECVINFO( m_iStyle ) ),
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS( C_EnvProjectedTexture, DT_EnvProjectedTexture, CEnvProjectedTexture )
 
 C_EnvProjectedTexture *C_EnvProjectedTexture::Create( )
 {

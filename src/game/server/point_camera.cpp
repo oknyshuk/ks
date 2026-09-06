@@ -6,6 +6,9 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_annotations.h"
+#include "reflect_sendtable.h"
 #include "igamesystem.h"
 #include "point_camera.h"
 
@@ -243,45 +246,6 @@ void CPointCamera::InputForceInactive( inputdata_t &inputdata )
 	UpdateTransmitState();
 }
 
-BEGIN_DATADESC( CPointCamera )
+IMPLEMENT_REFLECT_DATAMAP( CPointCamera )
 
-	// Save/restore Keyvalue fields
-	DEFINE_KEYFIELD( m_FOV,			FIELD_FLOAT, "FOV" ),
-	DEFINE_KEYFIELD( m_Resolution,	FIELD_FLOAT, "resolution" ),
-	DEFINE_KEYFIELD( m_bFogEnable,	FIELD_BOOLEAN, "fogEnable" ),
-	DEFINE_KEYFIELD( m_FogColor,	FIELD_COLOR32,	"fogColor" ),
-	DEFINE_KEYFIELD( m_flFogStart,	FIELD_FLOAT, "fogStart" ),
-	DEFINE_KEYFIELD( m_flFogEnd,	FIELD_FLOAT, "fogEnd" ),
-	DEFINE_KEYFIELD( m_flFogMaxDensity,	FIELD_FLOAT, "fogMaxDensity" ),
-	DEFINE_KEYFIELD( m_bUseScreenAspectRatio, FIELD_BOOLEAN, "UseScreenAspectRatio" ),
-	DEFINE_FIELD( m_bActive,		FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_bIsOn,			FIELD_BOOLEAN ),
-
-	DEFINE_FIELD( m_TargetFOV,		FIELD_FLOAT ),
-	DEFINE_FIELD( m_DegreesPerSecond, FIELD_FLOAT ),
-	// This is re-set up in the constructor
-	//DEFINE_FIELD( m_pNext, FIELD_CLASSPTR ),
-
-	DEFINE_FUNCTION( ChangeFOVThink ),
-
-	// Input
-	DEFINE_INPUTFUNC( FIELD_STRING, "ChangeFOV", InputChangeFOV ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "SetOnAndTurnOthersOff", InputSetOnAndTurnOthersOff ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "SetOn", InputSetOn ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "SetOff", InputSetOff ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "Activate", InputForceActive ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "Deactivate", InputForceInactive ),
-
-END_DATADESC()
-
-IMPLEMENT_SERVERCLASS_ST( CPointCamera, DT_PointCamera )
-	SendPropFloat( SENDINFO( m_FOV ), 0, SPROP_NOSCALE ),
-	SendPropFloat( SENDINFO( m_Resolution ), 0, SPROP_NOSCALE ),
-	SendPropInt( SENDINFO( m_bFogEnable ), 1, SPROP_UNSIGNED ),	
-	SendPropInt( SENDINFO( m_FogColor ), 32, SPROP_UNSIGNED, SendProxy_Color32ToInt32 ),
-	SendPropFloat( SENDINFO( m_flFogStart ), 0, SPROP_NOSCALE ),	
-	SendPropFloat( SENDINFO( m_flFogEnd ), 0, SPROP_NOSCALE ),	
-	SendPropFloat( SENDINFO( m_flFogMaxDensity ), 0, SPROP_NOSCALE ),	
-	SendPropInt( SENDINFO( m_bActive ), 1, SPROP_UNSIGNED ),
-	SendPropInt( SENDINFO( m_bUseScreenAspectRatio ), 1, SPROP_UNSIGNED ),
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CPointCamera, DT_PointCamera )

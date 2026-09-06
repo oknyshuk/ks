@@ -6,6 +6,8 @@
 
 #ifndef PHYSICS_PROP_RAGDOLL_H
 #define PHYSICS_PROP_RAGDOLL_H
+
+#include "reflect_annotations.h"
 #ifdef _WIN32
 #pragma once
 #endif
@@ -20,7 +22,8 @@ namespace ResponseRules { class IResponseSystem; };
 //-----------------------------------------------------------------------------
 
 // UNDONE: Move this to a private header
-class CRagdollProp : public CBaseAnimating, public CDefaultPlayerPickupVPhysics
+class [[= ks::reflect::NetTable{ .name = "DT_Ragdoll" } ]]
+      CRagdollProp : public CBaseAnimating, public CDefaultPlayerPickupVPhysics
 {
 	DECLARE_CLASS( CRagdollProp, CBaseAnimating );
 
@@ -99,12 +102,12 @@ public:
 	void			DisableMotion( void );
 
 	// Input/Output
-	void			InputStartRadgollBoogie( inputdata_t &inputdata );
-	void			InputEnableMotion( inputdata_t &inputdata );
-	void			InputDisableMotion( inputdata_t &inputdata );
-	void			InputTurnOn( inputdata_t &inputdata );
-	void			InputTurnOff( inputdata_t &inputdata );
-	void			InputFadeAndRemove( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "StartRagdollBoogie", .type = FIELD_VOID } ]] void			InputStartRadgollBoogie( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "EnableMotion", .type = FIELD_VOID } ]] void			InputEnableMotion( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "DisableMotion", .type = FIELD_VOID } ]] void			InputDisableMotion( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Enable", .type = FIELD_VOID } ]] void			InputTurnOn( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Disable", .type = FIELD_VOID } ]] void			InputTurnOff( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "FadeAndRemove", .type = FIELD_FLOAT } ]] void			InputFadeAndRemove( inputdata_t &inputdata );
 
 	DECLARE_DATADESC();
 
@@ -116,15 +119,17 @@ private:
 	void UpdateNetworkDataFromVPhysics( IPhysicsObject *pPhysics, int index );
 	void FadeOutThink();
 
-	bool				m_bStartDisabled;
+	[[= ks::reflect::Key{ .name = "StartDisabled" } ]] bool				m_bStartDisabled;
 
-	CNetworkArray( Vector, m_ragPos, RAGDOLL_MAX_ELEMENTS );
-	CNetworkArray( QAngle, m_ragAngles, RAGDOLL_MAX_ELEMENTS );
+	CNetworkArray( Vector, m_ragPos, RAGDOLL_MAX_ELEMENTS,
+	               [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD, .varlen = true } ]] );
+	CNetworkArray( QAngle, m_ragAngles, RAGDOLL_MAX_ELEMENTS,
+	               [[= ks::reflect::Net{ .bits = 13, .varlen = true } ]] );
 
-	string_t			m_anglesOverrideString;
+	[[= ks::reflect::Key{ .name = "angleOverride" } ]] string_t			m_anglesOverrideString;
 
 	typedef CHandle<CBaseAnimating> CBaseAnimatingHandle;
-	CNetworkVar( CBaseAnimatingHandle, m_hUnragdoll );
+	CNetworkVar( CBaseAnimatingHandle, m_hUnragdoll, [[= ks::reflect::Net{} ]] );
 
 
 	unsigned int		m_lastUpdateTickCount;
@@ -142,8 +147,8 @@ private:
 	bool				m_bHasBeenPhysgunned;
 
 	// If not 1, then allow underlying sequence to blend in with simulated bone positions
-	CNetworkVar( float, m_flBlendWeight );
-	CNetworkVar( int, m_nOverlaySequence );
+	CNetworkVar( float, m_flBlendWeight, [[= ks::reflect::Net{ .bits = 8, .low = 0.0f, .high = 1.0f, .flags = SPROP_ROUNDDOWN } ]] );
+	CNetworkVar( int, m_nOverlaySequence, [[= ks::reflect::Net{ .bits = 11 } ]] );
 	float	m_flDefaultFadeScale;
 	
 	Vector				m_ragdollMins[RAGDOLL_MAX_ELEMENTS];

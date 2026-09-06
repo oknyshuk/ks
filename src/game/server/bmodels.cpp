@@ -5,6 +5,9 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_sendtable.h"
+#include "reflect_annotations.h"
 #include "doors.h"
 #include "mathlib/mathlib.h"
 #include "physics.h"
@@ -38,11 +41,7 @@ LINK_ENTITY_TO_CLASS( func_wall, CFuncWall );
 //---------------------------------------------------------
 // Save/Restore
 //---------------------------------------------------------
-BEGIN_DATADESC( CFuncWall )
-
-	DEFINE_FIELD( m_nState,	FIELD_INTEGER ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CFuncWall )
 
 void CFuncWall::Spawn( void )
 {
@@ -98,18 +97,14 @@ public:
 	void	Spawn( void );
 	void	Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
 
-	void	InputToggle( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Toggle", .type = FIELD_VOID } ]] void	InputToggle( inputdata_t &inputdata );
 
 	void	TurnOff( void );
 	void	TurnOn( void );
 	bool	IsOn( void );
 };
 
-BEGIN_DATADESC( CFuncWallToggle )
-
-	DEFINE_INPUTFUNC( FIELD_VOID, "Toggle", InputToggle ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CFuncWallToggle )
 
 
 LINK_ENTITY_TO_CLASS( func_wall_toggle, CFuncWallToggle );
@@ -192,18 +187,13 @@ public:
 	void Spawn();
 	bool CreateVPhysics( void );
 
-	void InputEnable( inputdata_t &data );
-	void InputDisable( inputdata_t &data );
+	[[= ks::reflect::Input{ .name = "Enable", .type = FIELD_VOID } ]] void InputEnable( inputdata_t &data );
+	[[= ks::reflect::Input{ .name = "Disable", .type = FIELD_VOID } ]] void InputDisable( inputdata_t &data );
 
 private:
 };
 
-BEGIN_DATADESC( CFuncVehicleClip )
-
-	DEFINE_INPUTFUNC( FIELD_VOID, "Enable", InputEnable ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "Disable", InputDisable ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CFuncVehicleClip )
 
 LINK_ENTITY_TO_CLASS( func_vehicleclip, CFuncVehicleClip );
 
@@ -257,7 +247,8 @@ void CFuncVehicleClip::InputDisable( inputdata_t &data )
 #define SF_CONVEYOR_VISUAL		0x0001
 #define SF_CONVEYOR_NOTSOLID	0x0002
 
-class CFuncConveyor : public CFuncWall
+class [[= ks::reflect::NetTable{ .name = "DT_FuncConveyor" } ]]
+      CFuncConveyor : public CFuncWall
 {
 public:
 	DECLARE_CLASS( CFuncConveyor, CFuncWall );
@@ -273,31 +264,21 @@ public:
 	void	GetGroundVelocityToApply( Vector &vecGroundVel );
 
 	// Input handlers.
-	void	InputToggleDirection( inputdata_t &inputdata );
-	void	InputSetSpeed( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "ToggleDirection", .type = FIELD_VOID } ]] void	InputToggleDirection( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetSpeed", .type = FIELD_VOID } ]] void	InputSetSpeed( inputdata_t &inputdata );
 
 private:
 
-	Vector m_vecMoveDir;
-	CNetworkVar( float, m_flConveyorSpeed );
+	[[= ks::reflect::Key{ .name = "movedir" } ]] Vector m_vecMoveDir;
+	CNetworkVar( float, m_flConveyorSpeed, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE } ]] );
 };
 
 LINK_ENTITY_TO_CLASS( func_conveyor, CFuncConveyor );
 
-BEGIN_DATADESC( CFuncConveyor )
-
-	DEFINE_INPUTFUNC( FIELD_VOID, "ToggleDirection", InputToggleDirection ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "SetSpeed", InputSetSpeed ),
-
-	DEFINE_KEYFIELD( m_vecMoveDir, FIELD_VECTOR, "movedir" ),
-	DEFINE_FIELD( m_flConveyorSpeed, FIELD_FLOAT ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CFuncConveyor )
 
 
-IMPLEMENT_SERVERCLASS_ST(CFuncConveyor, DT_FuncConveyor)
-	SendPropFloat( SENDINFO(m_flConveyorSpeed), 0, SPROP_NOSCALE ),
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CFuncConveyor, DT_FuncConveyor )
 
 
 CFuncConveyor::CFuncConveyor()
@@ -395,7 +376,25 @@ void CFuncIllusionary::Spawn( void )
 //
 //			The direction of rotation is also controlled by a spawnflag.
 //-----------------------------------------------------------------------------
-class CFuncRotating : public CBaseEntity
+void SendProxy_FuncRotatingAngle( const SendProp *pProp, const void *pStruct,
+    const void *pData, DVariant *pOut, int iElement, int objectID );
+
+void SendProxy_FuncRotatingOrigin( const SendProp *pProp, const void *pStruct,
+    const void *pData, DVariant *pOut, int iElement, int objectID );
+
+void SendProxy_FuncRotatingSimulationTime( const SendProp *pProp, const void *pStruct,
+    const void *pData, DVariant *pOut, int iElement, int objectID );
+
+class [[= ks::reflect::NetTable{ .name = "DT_FuncRotating" } ]]
+      [[= ks::reflect::From<"m_vecOrigin", ks::reflect::Net{ .bits = -1, .low = 0.0f, .high = HIGH_DEFAULT, .flags = SPROP_COORD|SPROP_CHANGES_OFTEN, .enc = ks::reflect::ENC_VECTOR }, SendProxy_FuncRotatingOrigin>{} ]]
+      [[= ks::reflect::From<"m_angRotation", ks::reflect::Net{ .bits = 13, .flags = SPROP_CHANGES_OFTEN, .index = 0 }, SendProxy_FuncRotatingAngle>{} ]]
+      [[= ks::reflect::From<"m_angRotation", ks::reflect::Net{ .bits = 13, .flags = SPROP_CHANGES_OFTEN, .index = 1 }, SendProxy_FuncRotatingAngle>{} ]]
+      [[= ks::reflect::From<"m_angRotation", ks::reflect::Net{ .bits = 13, .flags = SPROP_CHANGES_OFTEN, .index = 2 }, SendProxy_FuncRotatingAngle>{} ]]
+      [[= ks::reflect::From<"m_flSimulationTime", ks::reflect::Net{ .bits = SIMULATION_TIME_WINDOW_BITS, .flags = SPROP_UNSIGNED|SPROP_CHANGES_OFTEN|SPROP_ENCODED_AGAINST_TICKCOUNT, .enc = ks::reflect::ENC_INT }, SendProxy_FuncRotatingSimulationTime>{} ]]
+      [[= ks::reflect::Exclude{ .table = "DT_BaseEntity", .prop = "m_angRotation" } ]]
+      [[= ks::reflect::Exclude{ .table = "DT_BaseEntity", .prop = "m_vecOrigin" } ]]
+      [[= ks::reflect::Exclude{ .table = "DT_BaseEntity", .prop = "m_flSimulationTime" } ]]
+      CFuncRotating : public CBaseEntity
 {
 	DECLARE_CLASS( CFuncRotating, CBaseEntity );
 public:
@@ -430,15 +429,15 @@ protected:
 	void NormalizeAngleIfNeeded();
 
 	// Input handlers
-	void InputSetSpeed( inputdata_t &inputdata );
-	void InputGetSpeed( inputdata_t &inputdata );
-	void InputStart( inputdata_t &inputdata );
-	void InputStop( inputdata_t &inputdata );
-	void InputStartForward( inputdata_t &inputdata );
-	void InputStartBackward( inputdata_t &inputdata );
-	void InputToggle( inputdata_t &inputdata );
-	void InputReverse( inputdata_t &inputdata );
-	void InputStopAtStartPos( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetSpeed", .type = FIELD_FLOAT } ]] void InputSetSpeed( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "GetSpeed", .type = FIELD_VOID } ]] void InputGetSpeed( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Start", .type = FIELD_VOID } ]] void InputStart( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Stop", .type = FIELD_VOID } ]] void InputStop( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "StartForward", .type = FIELD_VOID } ]] void InputStartForward( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "StartBackward", .type = FIELD_VOID } ]] void InputStartBackward( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Toggle", .type = FIELD_VOID } ]] void InputToggle( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Reverse", .type = FIELD_VOID } ]] void InputReverse( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "StopAtStartPos", .type = FIELD_VOID } ]] void InputStopAtStartPos( inputdata_t &inputdata );
 
 	QAngle	m_vecMoveAng;
 
@@ -446,18 +445,18 @@ protected:
 	float m_flAttenuation;
 	float m_flVolume;
 	float m_flTargetSpeed;			// Target value for m_flSpeed, used for spinning up and down.
-	float m_flMaxSpeed;				// Maximum value for m_flSpeed, used for ramping sound effects.
-	float m_flBlockDamage;			// Damage inflicted when blocked.
-	string_t m_NoiseRunning;
+	[[= ks::reflect::Key{ .name = "maxspeed" } ]] float m_flMaxSpeed;				// Maximum value for m_flSpeed, used for ramping sound effects.
+	[[= ks::reflect::Key{ .name = "dmg" } ]] float m_flBlockDamage;			// Damage inflicted when blocked.
+	[[= ks::reflect::As{ FIELD_SOUNDNAME } ]] [[= ks::reflect::Key{ .name = "message" } ]] string_t m_NoiseRunning;
 	bool m_bReversed;
 
 	QAngle	m_angStart;
 	bool m_bStopAtStartPos;
 
-	bool m_bSolidBsp;				// Brush is SOLID_BSP
+	[[= ks::reflect::Key{ .name = "solidbsp" } ]] bool m_bSolidBsp;				// Brush is SOLID_BSP
 
 	//outputs
-	COutputFloat m_OnGetSpeed;	// Used for polling the speed value.
+	[[= ks::reflect::Key{ .name = "OnGetSpeed" } ]] COutputFloat m_OnGetSpeed;	// Used for polling the speed value.
 
 public:
 	Vector m_vecClientOrigin;
@@ -467,44 +466,7 @@ public:
 LINK_ENTITY_TO_CLASS( func_rotating, CFuncRotating );
 
 
-BEGIN_DATADESC( CFuncRotating )
-
-	DEFINE_FIELD( m_vecMoveAng, FIELD_VECTOR ),
-	DEFINE_FIELD( m_flFanFriction, FIELD_FLOAT ),
-	DEFINE_FIELD( m_flAttenuation, FIELD_FLOAT ),
-	DEFINE_FIELD( m_flVolume, FIELD_FLOAT ),
-	DEFINE_FIELD( m_flTargetSpeed, FIELD_FLOAT ),
-	DEFINE_KEYFIELD( m_flMaxSpeed, FIELD_FLOAT, "maxspeed" ),
-	DEFINE_KEYFIELD( m_flBlockDamage, FIELD_FLOAT, "dmg" ),
-	DEFINE_KEYFIELD( m_NoiseRunning, FIELD_SOUNDNAME, "message" ),
-	DEFINE_FIELD( m_bReversed, FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_angStart, FIELD_VECTOR ),
-	DEFINE_FIELD( m_bStopAtStartPos, FIELD_BOOLEAN ),
-	DEFINE_KEYFIELD( m_bSolidBsp, FIELD_BOOLEAN, "solidbsp" ),
-
-	// Function Pointers
-	DEFINE_FUNCTION( SpinUpMove ),
-	DEFINE_FUNCTION( SpinDownMove ),
-	DEFINE_FUNCTION( HurtTouch ),
-	DEFINE_FUNCTION( RotatingUse ),
-	DEFINE_FUNCTION( RotateMove ),
-	DEFINE_FUNCTION( ReverseMove ),
-
-	// Inputs
-	DEFINE_INPUTFUNC( FIELD_FLOAT, "SetSpeed", InputSetSpeed ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "GetSpeed", InputGetSpeed ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "Start", InputStart ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "Stop", InputStop ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "Toggle", InputToggle ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "Reverse", InputReverse ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "StartForward", InputStartForward ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "StartBackward", InputStartBackward ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "StopAtStartPos", InputStopAtStartPos ),
-
-	// Outputs
-	DEFINE_OUTPUT(m_OnGetSpeed, "OnGetSpeed"),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CFuncRotating )
 
 extern void SendProxy_Origin( const SendProp *pProp, const void *pStruct, const void *pData, DVariant *pOut, int iElement, int objectID );
 void SendProxy_FuncRotatingOrigin( const SendProp *pProp, const void *pStruct, const void *pData, DVariant *pOut, int iElement, int objectID )
@@ -567,18 +529,7 @@ void SendProxy_FuncRotatingSimulationTime( const SendProp *pProp, const void *pS
 	SendProxy_SimulationTime( pProp, pStruct, pVarData, pOut, iElement, objectID );
 }
 
-IMPLEMENT_SERVERCLASS_ST(CFuncRotating, DT_FuncRotating)
-	SendPropExclude( "DT_BaseEntity", "m_angRotation" ),
-	SendPropExclude( "DT_BaseEntity", "m_vecOrigin" ),
-	SendPropExclude( "DT_BaseEntity", "m_flSimulationTime" ),
-
-	SendPropVector(SENDINFO(m_vecOrigin), -1,  SPROP_COORD|SPROP_CHANGES_OFTEN, 0.0f, HIGH_DEFAULT, SendProxy_FuncRotatingOrigin ),
-	SendPropAngle( SENDINFO_VECTORELEM(m_angRotation, 0), 13, SPROP_CHANGES_OFTEN, SendProxy_FuncRotatingAngle ),
-	SendPropAngle( SENDINFO_VECTORELEM(m_angRotation, 1), 13, SPROP_CHANGES_OFTEN, SendProxy_FuncRotatingAngle ),
-	SendPropAngle( SENDINFO_VECTORELEM(m_angRotation, 2), 13, SPROP_CHANGES_OFTEN, SendProxy_FuncRotatingAngle ),
-
-	SendPropInt(SENDINFO(m_flSimulationTime), SIMULATION_TIME_WINDOW_BITS, SPROP_UNSIGNED|SPROP_CHANGES_OFTEN|SPROP_ENCODED_AGAINST_TICKCOUNT, SendProxy_FuncRotatingSimulationTime),
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CFuncRotating, DT_FuncRotating )
 
 
 
@@ -1412,28 +1363,18 @@ public:
 	bool EntityPassesFilter( CBaseEntity *pOther );
 	bool ForceVPhysicsCollide( CBaseEntity *pEntity );
 
-	void InputEnable( inputdata_t &inputdata );
-	void InputDisable( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Enable", .type = FIELD_VOID } ]] void InputEnable( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Disable", .type = FIELD_VOID } ]] void InputDisable( inputdata_t &inputdata );
 
 private:
 
-	string_t						m_iFilterName;
+	[[= ks::reflect::Key{ .name = "filtername" } ]] string_t						m_iFilterName;
 	CHandle<CBaseFilter>			m_hFilter;
 	bool							m_bDisabled;
 };
 
 // Global Savedata for base trigger
-BEGIN_DATADESC( CFuncVPhysicsClip )
-
-	// Keyfields
-	DEFINE_KEYFIELD( m_iFilterName,	FIELD_STRING,	"filtername" ),
-	DEFINE_FIELD( m_hFilter,	FIELD_EHANDLE ),
-	DEFINE_FIELD( m_bDisabled,	FIELD_BOOLEAN ),
-
-	DEFINE_INPUTFUNC( FIELD_VOID, "Enable", InputEnable ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "Disable", InputDisable ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CFuncVPhysicsClip )
 
 
 LINK_ENTITY_TO_CLASS( func_clip_vphysics, CFuncVPhysicsClip );

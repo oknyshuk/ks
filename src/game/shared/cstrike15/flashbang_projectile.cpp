@@ -5,6 +5,9 @@
 //=============================================================================//
 
 #include "cbase.h"
+#ifdef GAME_DLL
+#include "reflect_datamap.h"
+#endif
 #include "flashbang_projectile.h"
 #include "shake.h"
 #include "engine/IEngineSound.h"
@@ -22,15 +25,7 @@ LINK_ENTITY_TO_CLASS( flashbang_projectile, CFlashbangProjectile );
 PRECACHE_REGISTER( flashbang_projectile );
 
 #if !defined( CLIENT_DLL )
-BEGIN_DATADESC( CFlashbangProjectile )
-
-	// Fields
-	//DEFINE_KEYFIELD( m_flTimeToDetonate, FIELD_FLOAT, "TimeToDetonate" ),
-
-	// Inputs
-	DEFINE_INPUTFUNC( FIELD_FLOAT, "SetTimer", InputSetTimer ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CFlashbangProjectile )
 #endif
 
 // hack to allow de_nuke vents to occlude flashbangs when closed

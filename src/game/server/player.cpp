@@ -5,6 +5,9 @@
 //===========================================================================//
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_sendtable.h"
+#include "reflect_annotations.h"
 #include "const.h"
 #include "baseplayer_shared.h"
 #include "trains.h"
@@ -54,7 +57,6 @@
 #include "keyvalues.h"
 #include "coordsize.h"
 #include "vphysics/player_controller.h"
-#include "saverestore_utlvector.h"
 #include "hltvdirector.h"
 #if defined( REPLAY_ENABLED )
 #include "replaydirector.h"
@@ -240,241 +242,10 @@ static ConCommand givecurrentammo("givecurrentammo", CC_GiveCurrentAmmo, "Give a
 
 
 // pl
-BEGIN_SIMPLE_DATADESC( CPlayerState )
-	// DEFINE_FIELD( netname, FIELD_STRING ),  // Don't stomp player name with what's in save/restore
-	DEFINE_FIELD( v_angle, FIELD_VECTOR ),
-	DEFINE_FIELD( deadflag, FIELD_BOOLEAN ),
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP_SIMPLE( CPlayerState )
 
 // Global Savedata for player
-BEGIN_DATADESC( CBasePlayer )
-
-	DEFINE_EMBEDDED( m_Local ),
-	DEFINE_UTLVECTOR( m_hTriggerSoundscapeList, FIELD_EHANDLE ),
-	DEFINE_EMBEDDED( pl ),
-
-	DEFINE_FIELD( m_StuckLast, FIELD_INTEGER ),
-
-	DEFINE_FIELD( m_nButtons, FIELD_INTEGER ),
-	DEFINE_FIELD( m_afButtonLast, FIELD_INTEGER ),
-	DEFINE_FIELD( m_afButtonPressed, FIELD_INTEGER ),
-	DEFINE_FIELD( m_afButtonReleased, FIELD_INTEGER ),
-	DEFINE_FIELD( m_afButtonDisabled, FIELD_INTEGER ),
-	DEFINE_FIELD( m_afButtonForced,	FIELD_INTEGER ),
-
-	DEFINE_FIELD( m_iFOV,		FIELD_INTEGER ),
-	DEFINE_FIELD( m_iFOVStart,	FIELD_INTEGER ),
-	DEFINE_FIELD( m_flFOVTime,	FIELD_TIME ),
-	DEFINE_FIELD( m_iDefaultFOV,FIELD_INTEGER ),
-	DEFINE_FIELD( m_flVehicleViewFOV, FIELD_FLOAT ),
-
-	//DEFINE_FIELD( m_fOnTarget, FIELD_BOOLEAN ), // Don't need to restore
-	DEFINE_FIELD( m_iObserverMode, FIELD_INTEGER ),
-	DEFINE_FIELD( m_iObserverLastMode, FIELD_INTEGER ),
-	DEFINE_FIELD( m_hObserverTarget, FIELD_EHANDLE ),
-	DEFINE_FIELD( m_bForcedObserverMode, FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_bActiveCameraMan, FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_bCameraManXRay, FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_bCameraManOverview, FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_bCameraManScoreBoard, FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_uCameraManGraphs, FIELD_INTEGER ),
-
-	DEFINE_FIELD( m_iDeathPostEffect, FIELD_INTEGER ),
-
-	DEFINE_AUTO_ARRAY( m_szAnimExtension, FIELD_CHARACTER ),
-//	DEFINE_CUSTOM_FIELD( m_Activity, ActivityDataOps() ),
-
-	DEFINE_FIELD( m_nUpdateRate, FIELD_INTEGER ),
-	DEFINE_FIELD( m_fLerpTime, FIELD_FLOAT ),
-	DEFINE_FIELD( m_bLagCompensation, FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_bPredictWeapons, FIELD_BOOLEAN ),
-
-	DEFINE_FIELD( m_vecAdditionalPVSOrigin, FIELD_POSITION_VECTOR ),
-	DEFINE_FIELD( m_vecCameraPVSOrigin, FIELD_POSITION_VECTOR ),
-
-	DEFINE_FIELD( m_bDropEnabled, FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_bDuckEnabled, FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_hUseEntity, FIELD_EHANDLE ),
-	DEFINE_FIELD( m_iTrain, FIELD_INTEGER ),
-	DEFINE_FIELD( m_iRespawnFrames, FIELD_FLOAT ),
-	DEFINE_FIELD( m_afPhysicsFlags, FIELD_INTEGER ),
-	DEFINE_FIELD( m_hVehicle, FIELD_EHANDLE ),
-
-	// recreate, don't restore
-	// DEFINE_FIELD( m_CommandContext, CUtlVector < CCommandContext > ),
-	//DEFINE_FIELD( m_pPhysicsController, FIELD_POINTER ),
-	//DEFINE_FIELD( m_pShadowStand, FIELD_POINTER ),
-	//DEFINE_FIELD( m_pShadowCrouch, FIELD_POINTER ),
-	//DEFINE_FIELD( m_vphysicsCollisionState, FIELD_INTEGER ),
-	// DEFINE_FIELD( m_lastNavArea, CNavArea ),
-	DEFINE_ARRAY( m_szNetworkIDString, FIELD_CHARACTER, MAX_NETWORKID_LENGTH ),	
-	DEFINE_FIELD( m_oldOrigin, FIELD_POSITION_VECTOR ),
-	DEFINE_FIELD( m_vecSmoothedVelocity, FIELD_VECTOR ),
-	//DEFINE_FIELD( m_touchedPhysObject, FIELD_BOOLEAN ),
-	//DEFINE_FIELD( m_bPhysicsWasFrozen, FIELD_BOOLEAN ),
-	//DEFINE_FIELD( m_iPlayerSound, FIELD_INTEGER ),	// Don't restore, set in Precache()
-	DEFINE_FIELD( m_iTargetVolume, FIELD_INTEGER ),
-	DEFINE_AUTO_ARRAY( m_rgItems, FIELD_INTEGER ),
-	//DEFINE_FIELD( m_fNextSuicideTime, FIELD_TIME ),
-	// DEFINE_FIELD( m_PlayerInfo, CPlayerInfo ),
-
-	DEFINE_FIELD( m_flSuitUpdate, FIELD_TIME ),
-	DEFINE_AUTO_ARRAY( m_rgSuitPlayList, FIELD_INTEGER ),
-	DEFINE_FIELD( m_iSuitPlayNext, FIELD_INTEGER ),
-	DEFINE_AUTO_ARRAY( m_rgiSuitNoRepeat, FIELD_INTEGER ),
-	DEFINE_AUTO_ARRAY( m_rgflSuitNoRepeatTime, FIELD_TIME ),
-	DEFINE_FIELD( m_bPauseBonusProgress, FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_iBonusProgress, FIELD_INTEGER ),
-	DEFINE_FIELD( m_iBonusChallenge, FIELD_INTEGER ),
-	DEFINE_FIELD( m_lastDamageAmount, FIELD_INTEGER ),
-	DEFINE_FIELD( m_fTimeLastHurt, FIELD_TIME ),
-	DEFINE_FIELD( m_tbdPrev, FIELD_TIME ),
-	DEFINE_FIELD( m_flStepSoundTime, FIELD_FLOAT ),
-	DEFINE_ARRAY( m_szNetname, FIELD_CHARACTER, MAX_PLAYER_NAME_LENGTH ),
-
-	//DEFINE_FIELD( m_flgeigerRange, FIELD_FLOAT ),	// Don't restore, reset in Precache()
-	//DEFINE_FIELD( m_flgeigerDelay, FIELD_FLOAT ),	// Don't restore, reset in Precache()
-	//DEFINE_FIELD( m_igeigerRangePrev, FIELD_FLOAT ),	// Don't restore, reset in Precache()
-	//DEFINE_FIELD( m_iStepLeft, FIELD_INTEGER ), // Don't need to restore
-	//DEFINE_FIELD( m_chTextureType, FIELD_CHARACTER ), // Don't need to restore
-	//DEFINE_FIELD( m_surfaceProps, FIELD_INTEGER ),	// don't need to restore, reset by gamemovement
-	// DEFINE_FIELD( m_pSurfaceData, surfacedata_t* ),
-	//DEFINE_FIELD( m_surfaceFriction, FIELD_FLOAT ),
-	//DEFINE_FIELD( m_chPreviousTextureType, FIELD_CHARACTER ),
-
-	DEFINE_FIELD( m_idrowndmg, FIELD_INTEGER ),
-	DEFINE_FIELD( m_idrownrestored, FIELD_INTEGER ),
-
-	DEFINE_FIELD( m_nPoisonDmg, FIELD_INTEGER ),
-	DEFINE_FIELD( m_nPoisonRestored, FIELD_INTEGER ),
-
-	DEFINE_FIELD( m_bitsHUDDamage, FIELD_INTEGER ),
-	DEFINE_FIELD( m_fInitHUD, FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_flDeathTime, FIELD_TIME ),
-	DEFINE_FIELD( m_flDeathAnimTime, FIELD_TIME ),
-
-	DEFINE_FIELD( m_fForceTeam, FIELD_TIME ),
-
-	//DEFINE_FIELD( m_fGameHUDInitialized, FIELD_BOOLEAN ), // only used in multiplayer games
-	//DEFINE_FIELD( m_fWeapon, FIELD_BOOLEAN ),  // Don't restore, client needs reset
-	//DEFINE_FIELD( m_iUpdateTime, FIELD_INTEGER ), // Don't need to restore
-	//DEFINE_FIELD( m_iClientBattery, FIELD_INTEGER ), // Don't restore, client needs reset
-	//DEFINE_FIELD( m_iClientHideHUD, FIELD_INTEGER ), // Don't restore, client needs reset
-	//DEFINE_FIELD( m_vecAutoAim, FIELD_VECTOR ), // Don't save/restore - this is recomputed
-	//DEFINE_FIELD( m_lastx, FIELD_INTEGER ),
-	//DEFINE_FIELD( m_lasty, FIELD_INTEGER ),
-
-	DEFINE_FIELD( m_iFrags, FIELD_INTEGER ),
-	DEFINE_FIELD( m_iDeaths, FIELD_INTEGER ),
-	DEFINE_FIELD( m_bAllowInstantSpawn, FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_flNextDecalTime, FIELD_TIME ),
-	//DEFINE_AUTO_ARRAY( m_szTeamName, FIELD_STRING ), // mp
-
-	//DEFINE_FIELD( m_iConnected, FIELD_INTEGER ),
-	// from edict_t
-	DEFINE_FIELD( m_ArmorValue, FIELD_INTEGER ),
-	DEFINE_FIELD( m_DmgOrigin, FIELD_VECTOR ),
-	DEFINE_FIELD( m_DmgTake, FIELD_FLOAT ),
-	DEFINE_FIELD( m_DmgSave, FIELD_FLOAT ),
-	DEFINE_FIELD( m_AirFinished, FIELD_TIME ),
-	DEFINE_FIELD( m_PainFinished, FIELD_TIME ),
-	
-	DEFINE_FIELD( m_iPlayerLocked, FIELD_INTEGER ),
-
-	DEFINE_AUTO_ARRAY( m_hViewModel, FIELD_EHANDLE ),
-	
-	DEFINE_FIELD( m_flMaxspeed, FIELD_FLOAT ),
-	DEFINE_FIELD( m_flWaterJumpTime, FIELD_TIME ),
-	DEFINE_FIELD( m_vecWaterJumpVel, FIELD_VECTOR ),
-	DEFINE_FIELD( m_nImpulse, FIELD_INTEGER ),
-	DEFINE_FIELD( m_flSwimSoundTime, FIELD_TIME ),
-	DEFINE_FIELD( m_ignoreLadderJumpTime, FIELD_TIME ),
-	DEFINE_FIELD( m_bHasWalkMovedSinceLastJump, FIELD_BOOLEAN ),
-	
-	DEFINE_FIELD( m_vecLadderNormal, FIELD_VECTOR ),
-
-	DEFINE_FIELD( m_flFlashTime, FIELD_TIME ),
-	DEFINE_FIELD( m_nDrownDmgRate, FIELD_INTEGER ),
-	DEFINE_FIELD( m_iSuicideCustomKillFlags, FIELD_INTEGER ),
-
-	// NOT SAVED
-	//DEFINE_FIELD( m_vForcedOrigin, FIELD_VECTOR ),
-	//DEFINE_FIELD( m_bForceOrigin, FIELD_BOOLEAN ),
-	//DEFINE_FIELD( m_nTickBase, FIELD_INTEGER ),
-	//DEFINE_FIELD( m_LastCmd, FIELD_ ),
-	// DEFINE_FIELD( m_pCurrentCommand, CUserCmd ),
-	//DEFINE_FIELD( m_bGamePaused, FIELD_BOOLEAN ),
-	//	DEFINE_FIELD( m_iVehicleAnalogBias, FIELD_INTEGER ),
-
-	// m_flVehicleViewFOV
-	// m_vecVehicleViewOrigin
-	// m_vecVehicleViewAngles
-	// m_nVehicleViewSavedFrame
-
-	DEFINE_FIELD( m_bitsDamageType, FIELD_INTEGER ),
-	DEFINE_AUTO_ARRAY( m_rgbTimeBasedDamage, FIELD_CHARACTER ),
-	DEFINE_FIELD( m_fLastPlayerTalkTime, FIELD_FLOAT ),
-	DEFINE_FIELD( m_hLastWeapon, FIELD_EHANDLE ),
-
-#if !defined( NO_ENTITY_PREDICTION )
-	// DEFINE_FIELD( m_SimulatedByThisPlayer, CUtlVector < CHandle < CBaseEntity > > ),
-#endif
-
-	DEFINE_FIELD( m_flOldPlayerZ, FIELD_FLOAT ),
-	DEFINE_FIELD( m_flOldPlayerViewOffsetZ, FIELD_FLOAT ),
-	DEFINE_FIELD( m_bPlayerUnderwater, FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_hViewEntity, FIELD_EHANDLE ),
-	DEFINE_FIELD( m_bShouldDrawPlayerWhileUsingViewEntity, FIELD_BOOLEAN ),
-
-	DEFINE_FIELD( m_hConstraintEntity, FIELD_EHANDLE ),
-	DEFINE_FIELD( m_vecConstraintCenter, FIELD_POSITION_VECTOR ),
-	DEFINE_FIELD( m_flConstraintRadius, FIELD_FLOAT ),
-	DEFINE_FIELD( m_flConstraintWidth, FIELD_FLOAT ),
-	DEFINE_FIELD( m_flConstraintSpeedFactor, FIELD_FLOAT ),
-	DEFINE_FIELD( m_bConstraintPastRadius, FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_hZoomOwner, FIELD_EHANDLE ),
-	
-	DEFINE_FIELD( m_flLaggedMovementValue, FIELD_FLOAT ),
-
-	DEFINE_FIELD( m_vNewVPhysicsPosition, FIELD_VECTOR ),
-	DEFINE_FIELD( m_vNewVPhysicsVelocity, FIELD_VECTOR ),
-
-	DEFINE_FIELD( m_bSinglePlayerGameEnding, FIELD_BOOLEAN ),
-	DEFINE_ARRAY( m_szLastPlaceName, FIELD_CHARACTER, MAX_PLACE_NAME_LENGTH ),
-
-	DEFINE_FIELD( m_autoKickDisabled, FIELD_BOOLEAN ),
-
-	// Function Pointers
-	DEFINE_FUNCTION( PlayerDeathThink ),
-	DEFINE_FUNCTION( PlayerForceTeamThink ),
-
-	// Inputs
-	DEFINE_INPUTFUNC( FIELD_INTEGER, "SetHealth", InputSetHealth ),
-	DEFINE_INPUTFUNC( FIELD_BOOLEAN, "SetHUDVisibility", InputSetHUDVisibility ),
-	DEFINE_INPUTFUNC( FIELD_STRING, "SetFogController", InputSetFogController ),
-
-	DEFINE_FIELD( m_nNumCrouches, FIELD_INTEGER ),
-	DEFINE_FIELD( m_bDuckToggled, FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_flForwardMove, FIELD_FLOAT ),
-	DEFINE_FIELD( m_flSideMove, FIELD_FLOAT ),
-	DEFINE_FIELD( m_vecPreviouslyPredictedOrigin, FIELD_POSITION_VECTOR ), 
-
-	DEFINE_FIELD( m_nNumCrateHudHints, FIELD_INTEGER ),
-
-	DEFINE_FIELD( m_hPostProcessCtrl, FIELD_EHANDLE ),
-	DEFINE_FIELD( m_hColorCorrectionCtrl, FIELD_EHANDLE ),
-	DEFINE_EMBEDDED( m_PlayerFog ),
-
-
-	DEFINE_FIELD( m_flDuckAmount, FIELD_FLOAT ),
-	DEFINE_FIELD( m_flDuckSpeed, FIELD_FLOAT ),
-
-	// DEFINE_FIELD( m_nBodyPitchPoseParam, FIELD_INTEGER ),
-	// DEFINE_ARRAY( m_StepSoundCache, StepSoundCache_t,  2  ),
-
-	// DEFINE_UTLVECTOR( m_vecPlayerCmdInfo ),
-	// DEFINE_UTLVECTOR( m_vecPlayerSimInfo ),
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CBasePlayer )
 
 
 BEGIN_ENT_SCRIPTDESC( CBasePlayer, CBaseAnimating, "The player entity." )
@@ -5339,14 +5110,6 @@ void CBasePlayer::ForceRespawn( void )
 	Spawn();
 }
 
-int CBasePlayer::Save( ISave &save )
-{
-	if ( !BaseClass::Save(save) )
-		return 0;
-
-	return 1;
-}
-
 
 // Friend class of CBaseEntity to access private member data.
 class CPlayerRestoreHelper
@@ -5363,59 +5126,6 @@ public:
 		return pent->m_vecAbsVelocity;
 	}
 };
-
-
-int CBasePlayer::Restore( IRestore &restore )
-{
-	int status = BaseClass::Restore(restore);
-	if ( !status )
-		return 0;
-
-	CSaveRestoreData *pSaveData = gpGlobals->pSaveData;
-	// landmark isn't present.
-	if ( !pSaveData->levelInfo.fUseLandmark )
-	{
-		Msg( "No Landmark:%s\n", pSaveData->levelInfo.szLandmarkName );
-
-		// default to normal spawn
-		CBaseEntity *pSpawnSpot = EntSelectSpawnPoint();
-		SetLocalOrigin( pSpawnSpot->GetLocalOrigin() + Vector(0,0,1) );
-		SetLocalAngles( pSpawnSpot->GetLocalAngles() );
-	}
-
-	QAngle newViewAngles = pl.v_angle;
-	newViewAngles.z = 0;	// Clear out roll
-	SetLocalAngles( newViewAngles );
-	SnapEyeAngles( newViewAngles );
-
-	// Copied from spawn() for now
-	SetBloodColor( BLOOD_COLOR_RED );
-	
-	// clear this - it will get reset by touching the trigger again
-	m_afPhysicsFlags &= ~PFLAG_VPHYSICS_MOTIONCONTROLLER;
-
-	if ( GetFlags() & FL_DUCKING ) 
-	{
-		// Use the crouch HACK
-		FixPlayerCrouchStuck( this );
-		UTIL_SetSize(this, VEC_DUCK_HULL_MIN, VEC_DUCK_HULL_MAX);
-		m_Local.m_bDucked = true;
-	}
-	else
-	{
-		m_Local.m_bDucked = false;
-		UTIL_SetSize(this, VEC_HULL_MIN, VEC_HULL_MAX);
-	}
-
-	// We need to get at m_vecAbsOrigin as it was restored but can't let it be
-	// recalculated by a call to GetAbsOrigin because hierarchy isn't fully restored yet,
-	// so we use this backdoor to get at the private data in CBaseEntity.
-	CPlayerRestoreHelper helper;
-	InitVCollision( helper.GetAbsOrigin( this ), helper.GetAbsVelocity( this ) );
-
-	// success
-	return 1;
-}
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -7812,8 +7522,8 @@ class CStripWeapons : public CPointEntity
 {
 	DECLARE_CLASS( CStripWeapons, CPointEntity );
 public:
-	void InputStripWeapons(inputdata_t &data);
-	void InputStripWeaponsAndSuit(inputdata_t &data);
+	[[= ks::reflect::Input{ .name = "Strip", .type = FIELD_VOID } ]] void InputStripWeapons(inputdata_t &data);
+	[[= ks::reflect::Input{ .name = "StripWeaponsAndSuit", .type = FIELD_VOID } ]] void InputStripWeaponsAndSuit(inputdata_t &data);
 
 	void StripWeapons(inputdata_t &data, bool stripSuit);
 	DECLARE_DATADESC();
@@ -7821,10 +7531,7 @@ public:
 
 LINK_ENTITY_TO_CLASS( player_weaponstrip, CStripWeapons );
 
-BEGIN_DATADESC( CStripWeapons )
-	DEFINE_INPUTFUNC( FIELD_VOID, "Strip", InputStripWeapons ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "StripWeaponsAndSuit", InputStripWeaponsAndSuit ),
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CStripWeapons )
 	
 
 void CStripWeapons::InputStripWeapons(inputdata_t &data)
@@ -7875,31 +7582,19 @@ public:
 	inline	void	SetLoadTime( float time ) { m_loadTime = time; }
 
 	//Inputs
-	void InputReload(inputdata_t &data);
+	[[= ks::reflect::Input{ .name = "Reload", .type = FIELD_VOID } ]] void InputReload(inputdata_t &data);
 
 private:
 
-	float	m_loadTime;
-	float	m_Duration;
-	float	m_HoldTime;
+	[[= ks::reflect::Key{ .name = "loadtime" } ]] float	m_loadTime;
+	[[= ks::reflect::Key{ .name = "duration" } ]] float	m_Duration;
+	[[= ks::reflect::Key{ .name = "holdtime" } ]] float	m_HoldTime;
 
 };
 
 LINK_ENTITY_TO_CLASS( player_loadsaved, CRevertSaved );
 
-BEGIN_DATADESC( CRevertSaved )
-
-	DEFINE_KEYFIELD( m_loadTime, FIELD_FLOAT, "loadtime" ),
-	DEFINE_KEYFIELD( m_Duration, FIELD_FLOAT, "duration" ),
-	DEFINE_KEYFIELD( m_HoldTime, FIELD_FLOAT, "holdtime" ),
-
-	DEFINE_INPUTFUNC( FIELD_VOID, "Reload", InputReload ),
-
-
-	// Function Pointers
-	DEFINE_FUNCTION( LoadThink ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CRevertSaved )
 
 CBaseEntity *CreatePlayerLoadSave( Vector vOrigin, float flDuration, float flHoldTime, float flLoadTime )
 {
@@ -7980,7 +7675,7 @@ class CMovementSpeedMod : public CPointEntity
 {
 	DECLARE_CLASS( CMovementSpeedMod, CPointEntity );
 public:
-	void InputSpeedMod(inputdata_t &data);
+	[[= ks::reflect::Input{ .name = "ModifySpeed", .type = FIELD_FLOAT } ]] void InputSpeedMod(inputdata_t &data);
 
 private:
 	int GetDisabledButtonMask( void );
@@ -7990,9 +7685,7 @@ private:
 
 LINK_ENTITY_TO_CLASS( player_speedmod, CMovementSpeedMod );
 
-BEGIN_DATADESC( CMovementSpeedMod )
-	DEFINE_INPUTFUNC( FIELD_FLOAT, "ModifySpeed", InputSpeedMod ),
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CMovementSpeedMod )
 	
 int CMovementSpeedMod::GetDisabledButtonMask( void )
 {
@@ -8143,130 +7836,27 @@ REGISTER_SEND_PROXY_NON_MODIFIED_POINTER( SendProxy_SendNonLocalDataTable );
 // SendTable for CPlayerState.
 // -------------------------------------------------------------------------------- //
 
-	BEGIN_SEND_TABLE_NOBASE(CPlayerState, DT_PlayerState)
-		SendPropInt		(SENDINFO(deadflag),	1, SPROP_UNSIGNED ),
-	END_SEND_TABLE()
+IMPLEMENT_REFLECT_TABLE( CPlayerState, DT_PlayerState );
 
 // -------------------------------------------------------------------------------- //
 // This data only gets sent to clients that ARE this player entity.
 // -------------------------------------------------------------------------------- //
 
-	BEGIN_SEND_TABLE_NOBASE( CBasePlayer, DT_LocalPlayerExclusive )
-
-		SendPropDataTable	( SENDINFO_DT(m_Local), &REFERENCE_SEND_TABLE(DT_Local) ),
-		
-// If HL2_DLL is defined, then baseflex.cpp already sends these.
+	IMPLEMENT_REFLECT_TABLE_IN( CBasePlayer, DT_LocalPlayerExclusive );
 #ifndef HL2_DLL
-		SendPropFloat		( SENDINFO_VECTORELEM(m_vecViewOffset, 0), 8, SPROP_ROUNDDOWN, -32.0, 32.0f),
-		SendPropFloat		( SENDINFO_VECTORELEM(m_vecViewOffset, 1), 8, SPROP_ROUNDDOWN, -32.0, 32.0f),
-		SendPropFloat		( SENDINFO_VECTORELEM(m_vecViewOffset, 2), 10, SPROP_CHANGES_OFTEN,	0.0f, 128.0f),
 #endif
-
-		SendPropFloat		( SENDINFO(m_flFriction),		8,	SPROP_ROUNDDOWN,	0.0f,	4.0f),
-
-		SendPropInt			( SENDINFO( m_fOnTarget ), 2, SPROP_UNSIGNED ),
-
-		SendPropInt			( SENDINFO( m_nTickBase ), -1, 0, 0, SENDPROP_TICKBASE_PRIORITY ),
-		SendPropInt			( SENDINFO( m_nNextThinkTick ) ),
-
-		SendPropEHandle		( SENDINFO( m_hLastWeapon ) ),
-
-		SendPropFloat		( SENDINFO_VECTORELEM(m_vecVelocity, 0), 32, SPROP_NOSCALE, 0, HIGH_DEFAULT, SendProxy_FloatToFloat, SENDPROP_PLAYER_VELOCITY_XY_PRIORITY ),
-		SendPropFloat		( SENDINFO_VECTORELEM(m_vecVelocity, 1), 32, SPROP_NOSCALE, 0, HIGH_DEFAULT, SendProxy_FloatToFloat, SENDPROP_PLAYER_VELOCITY_XY_PRIORITY ),
-		SendPropFloat		( SENDINFO_VECTORELEM(m_vecVelocity, 2), 32, SPROP_NOSCALE, 0, HIGH_DEFAULT, SendProxy_FloatToFloat, SENDPROP_PLAYER_VELOCITY_Z_PRIORITY  ),
-
 #if PREDICTION_ERROR_CHECK_LEVEL > 1 
-		SendPropVector		( SENDINFO( m_vecBaseVelocity ), -1, SPROP_COORD ),
 #else
-		SendPropVector		( SENDINFO( m_vecBaseVelocity ), 20, 0, -1000, 1000 ),
 #endif
-		SendPropEHandle		( SENDINFO( m_hConstraintEntity)),
-		SendPropVector		( SENDINFO( m_vecConstraintCenter), 0, SPROP_NOSCALE ),
-		SendPropFloat		( SENDINFO( m_flConstraintRadius ), 0, SPROP_NOSCALE ),
-		SendPropFloat		( SENDINFO( m_flConstraintWidth ), 0, SPROP_NOSCALE ),
-		SendPropFloat		( SENDINFO( m_flConstraintSpeedFactor ), 0, SPROP_NOSCALE ),
-		SendPropBool		( SENDINFO( m_bConstraintPastRadius ) ),
-
-		SendPropFloat		( SENDINFO( m_flDeathTime ), 0, SPROP_NOSCALE ),
-		SendPropFloat		( SENDINFO( m_flNextDecalTime ), 0, SPROP_NOSCALE ),
-
-		SendPropFloat		( SENDINFO( m_fForceTeam ), 0, SPROP_NOSCALE ),
-
-		SendPropInt			( SENDINFO( m_nWaterLevel ), 2, SPROP_UNSIGNED ),
-		SendPropFloat		( SENDINFO( m_flLaggedMovementValue ), 0, SPROP_NOSCALE ),
-
-		SendPropEHandle		( SENDINFO( m_hTonemapController ) ),
-
-	END_SEND_TABLE()
 
 
 // -------------------------------------------------------------------------------- //
 // DT_BasePlayer sendtable.
 // -------------------------------------------------------------------------------- //
 
-	IMPLEMENT_SERVERCLASS_ST( CBasePlayer, DT_BasePlayer )
-
-		SendPropDataTable(SENDINFO_DT(pl), &REFERENCE_SEND_TABLE(DT_PlayerState), SendProxy_DataTableToDataTable),
-
-		SendPropInt		(SENDINFO(m_afPhysicsFlags), 6, SPROP_UNSIGNED ),
-		SendPropEHandle(SENDINFO(m_hVehicle)),
-		SendPropEHandle(SENDINFO(m_hUseEntity)),
-		SendPropEHandle( SENDINFO( m_hGroundEntity ), SPROP_CHANGES_OFTEN ),
-
-		SendPropInt		(SENDINFO(m_iHealth), 16 ),	
-		SendPropInt		(SENDINFO(m_lifeState), 3, SPROP_UNSIGNED ),
-		SendPropArray3	( SENDINFO_ARRAY3(m_iAmmo), SendPropInt( SENDINFO_ARRAY(m_iAmmo), 10, SPROP_UNSIGNED ) ),
-		SendPropInt		(SENDINFO(m_iBonusProgress), 15 ),
-		SendPropInt		(SENDINFO(m_iBonusChallenge), 4 ),
-		SendPropFloat	(SENDINFO(m_flMaxspeed), 12, SPROP_ROUNDDOWN, 0.0f, 2048.0f ),  // CL
-		SendPropInt		(SENDINFO(m_fFlags), PLAYER_FLAG_BITS, SPROP_UNSIGNED|SPROP_CHANGES_OFTEN, SendProxy_CropFlagsToPlayerFlagBitsLength ),
-		SendPropInt		(SENDINFO(m_iObserverMode), 3, SPROP_UNSIGNED ),
-		SendPropBool	(SENDINFO(m_bActiveCameraMan)),
-		SendPropBool	(SENDINFO(m_bCameraManXRay)),
-		SendPropBool	(SENDINFO(m_bCameraManOverview)),
-		SendPropBool	(SENDINFO(m_bCameraManScoreBoard)),
-		SendPropInt		(SENDINFO(m_uCameraManGraphs), 4, SPROP_UNSIGNED ),
-		SendPropInt		(SENDINFO(m_iCoachingTeam), 3, SPROP_UNSIGNED ),
-		SendPropEHandle	(SENDINFO(m_hObserverTarget) ),
-		SendPropInt		(SENDINFO(m_iFOV), 8, SPROP_UNSIGNED|SPROP_CHANGES_OFTEN ),
-		SendPropInt		(SENDINFO(m_iFOVStart), 8, SPROP_UNSIGNED ),
-		SendPropFloat	(SENDINFO(m_flFOVTime), 0, SPROP_CHANGES_OFTEN ),
-		SendPropInt		(SENDINFO(m_iDefaultFOV), 8, SPROP_UNSIGNED ),
-		SendPropEHandle	(SENDINFO(m_hZoomOwner) ),
-		SendPropArray	(SendPropEHandle( SENDINFO_ARRAY( m_hViewModel ) ), m_hViewModel ),
-		SendPropString	(SENDINFO(m_szLastPlaceName) ),
-		SendPropVector	(SENDINFO(m_vecLadderNormal), 0, SPROP_NORMAL ),
-		SendPropInt		(SENDINFO(m_ladderSurfaceProps), 0, SPROP_UNSIGNED ),
-		SendPropInt		(SENDINFO( m_ubEFNoInterpParity ), NOINTERP_PARITY_MAX_BITS, SPROP_UNSIGNED ),
-
-		SendPropInt		(SENDINFO( m_iDeathPostEffect ) ),
-
-		// Postprocess data
-		SendPropEHandle		( SENDINFO(m_hPostProcessCtrl) ),
-		SendPropEHandle		( SENDINFO(m_hColorCorrectionCtrl) ),
-
-		SendPropEHandle( SENDINFO_STRUCTELEM( fogplayerparams_t, m_PlayerFog, m_hCtrl ) ),
-
-		SendPropInt( SENDINFO( m_vphysicsCollisionState ) ),
+	IMPLEMENT_REFLECT_SERVERCLASS( CBasePlayer, DT_BasePlayer )
 #if defined( DEBUG_MOTION_CONTROLLERS )
-		SendPropVector( SENDINFO( m_Debug_vPhysPosition ), 0, SPROP_NOSCALE ),
-		SendPropVector( SENDINFO( m_Debug_vPhysVelocity ), 0, SPROP_NOSCALE ),
-		SendPropVector( SENDINFO( m_Debug_LinearAccel ), 0, SPROP_NOSCALE ),
-
-		SendPropVector( SENDINFO( m_vNewVPhysicsPosition ), 0, SPROP_NOSCALE ),
-		SendPropVector( SENDINFO( m_vNewVPhysicsVelocity ), 0, SPROP_NOSCALE ),
 #endif
-
-		SendPropEHandle	(SENDINFO( m_hViewEntity)),
-		SendPropBool	(SENDINFO( m_bShouldDrawPlayerWhileUsingViewEntity )),
-
-		SendPropFloat	(SENDINFO(m_flDuckAmount), 0, SPROP_CHANGES_OFTEN ),
-		SendPropFloat	(SENDINFO(m_flDuckSpeed), 0, SPROP_CHANGES_OFTEN ),
-
-		// Data that only gets sent to the local player.
-		SendPropDataTable( "localdata", 0, &REFERENCE_SEND_TABLE(DT_LocalPlayerExclusive), SendProxy_SendLocalDataTable ),
-
-	END_SEND_TABLE()
 
 //=============================================================================
 //

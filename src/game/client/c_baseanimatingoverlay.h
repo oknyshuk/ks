@@ -8,6 +8,8 @@
 
 #ifndef C_BASEANIMATINGOVERLAY_H
 #define C_BASEANIMATINGOVERLAY_H
+
+#include "reflect_annotations.h"
 #pragma once
 
 #include "c_baseanimating.h"
@@ -17,7 +19,19 @@
 #define CBaseAnimatingOverlay C_BaseAnimatingOverlay
 
 
-class C_BaseAnimatingOverlay : public C_BaseAnimating
+namespace DT_OverlayVars { extern RecvTable g_RecvTable; }
+
+namespace DT_Animationlayer { extern RecvTable g_RecvTable; }
+void ResizeAnimationLayerCallback( void *pStruct, int offsetToUtlVector, int len );
+
+class [[= ks::reflect::NetTable{ .name = "DT_BaseAnimatingOverlay" } ]]
+      [[= ks::reflect::SubTable<"overlay_vars", &DT_OverlayVars::g_RecvTable, nullptr, true>{} ]]
+      [[= ks::reflect::NetTable{ .name = "DT_OverlayVars", .base = false } ]]
+      // 15, i.e. C_BaseAnimatingOverlay::MAX_OVERLAYS -- the class is incomplete here
+      [[= ks::reflect::UtlVec<"m_AnimOverlay", 15,
+                             &DT_Animationlayer::g_RecvTable,
+                             ResizeAnimationLayerCallback, "DT_OverlayVars">{} ]]
+      C_BaseAnimatingOverlay : public C_BaseAnimating
 {
 	DECLARE_CLASS( C_BaseAnimatingOverlay, C_BaseAnimating );
 	DECLARE_CLIENTCLASS();

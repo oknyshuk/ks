@@ -7,6 +7,8 @@
 
 #ifndef BASEFLEX_H
 #define BASEFLEX_H
+
+#include "reflect_annotations.h"
 #ifdef _WIN32
 #pragma once
 #endif
@@ -40,7 +42,8 @@ public:
 //-----------------------------------------------------------------------------
 // Purpose: Animated characters who have vertex flex capability (e.g., facial expressions)
 //-----------------------------------------------------------------------------
-class CBaseFlex : public CBaseAnimatingOverlay
+class [[= ks::reflect::NetTable{ .name = "DT_BaseFlex" } ]]
+      CBaseFlex : public CBaseAnimatingOverlay
 {
 	DECLARE_CLASS( CBaseFlex, CBaseAnimatingOverlay );
 public:
@@ -172,13 +175,13 @@ private:
 	bool ExitSceneSequence( void );
 
 private:
-	CNetworkArray( float, m_flexWeight, MAXSTUDIOFLEXCTRL );	// indexed by model local flexcontroller
+	CNetworkArray( float, m_flexWeight, MAXSTUDIOFLEXCTRL, [[= ks::reflect::Net{ .bits = 12, .low = 0.0f, .high = 1.0f, .flags = SPROP_ROUNDDOWN } ]] );	// indexed by model local flexcontroller
 
 	// Vector from actor to eye target
-	CNetworkVector( m_viewtarget );
+	CNetworkVector( m_viewtarget, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD, .enc = ks::reflect::ENC_VECTOR } ]] );
 
 	// Blink state
-	CNetworkVar( int, m_blinktoggle );
+	CNetworkVar( int, m_blinktoggle, [[= ks::reflect::Net{ .bits = 1, .flags = SPROP_UNSIGNED } ]] );
 
 	// Array of active SceneEvents, in order oldest to newest
 	CUtlVector < CSceneEventInfo >		m_SceneEvents;

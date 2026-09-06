@@ -8,6 +8,8 @@
 #ifndef VOTE_CONTROLLER_H
 #define VOTE_CONTROLLER_H
 
+#include "reflect_annotations.h"
+
 #ifdef _WIN32
 #pragma once
 #endif
@@ -102,13 +104,13 @@ protected:
 
 
 
-class CVoteController : public CBaseEntity
+class [[= ks::reflect::NetTable{ .name = "DT_VoteController" } ]]
+      CVoteController : public CBaseEntity
 {
 	DECLARE_CLASS( CVoteController, CBaseEntity );
 	
 public:
 	DECLARE_SERVERCLASS();
-	DECLARE_DATADESC();
 
 	virtual ~CVoteController();
 
@@ -150,11 +152,11 @@ protected:
 	void			VoteControllerThink( void );
 	void			CheckForEarlyVoteClose( void ); // If everyone has voted (and changing votes is not allowed) then end early
 
-	CNetworkVar( int, m_iActiveIssueIndex );					// Type of thing being voted on
-	CNetworkVar( int, m_iOnlyTeamToVote );						// If an Ally restricted vote, the team number that is allowed to vote
-	CNetworkArray( int, m_nVoteOptionCount, MAX_VOTE_OPTIONS );	// Vote options counter
-	CNetworkVar( int, m_nPotentialVotes );						// How many votes could come in, so we can close ballot early
-	CNetworkVar( bool, m_bIsYesNoVote );						// Is the current issue Yes/No?
+	CNetworkVar( int, m_iActiveIssueIndex, [[= ks::reflect::Net{ .bits = -1 } ]] );					// Type of thing being voted on
+	CNetworkVar( int, m_iOnlyTeamToVote, [[= ks::reflect::Net{ .bits = -1 } ]] );						// If an Ally restricted vote, the team number that is allowed to vote
+	CNetworkArray( int, m_nVoteOptionCount, MAX_VOTE_OPTIONS, [[= ks::reflect::Net{ .bits = 8, .flags = SPROP_UNSIGNED } ]] );	// Vote options counter
+	CNetworkVar( int, m_nPotentialVotes, [[= ks::reflect::Net{ .bits = -1 } ]] );						// How many votes could come in, so we can close ballot early
+	CNetworkVar( bool, m_bIsYesNoVote, [[= ks::reflect::Net{} ]] );						// Is the current issue Yes/No?
 	CountdownTimer	m_acceptingVotesTimer;						// How long from vote start until we count the ballots
 	CountdownTimer	m_executeCommandTimer;						// How long after end of vote time until we execute a passed vote
 	CountdownTimer	m_resetVoteTimer;							// when the current vote will end 

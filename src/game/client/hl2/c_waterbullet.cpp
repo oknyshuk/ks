@@ -5,12 +5,15 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_recvtable.h"
+#include "reflect_annotations.h"
 #include "particles_simple.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
-class C_WaterBullet : public C_BaseAnimating
+class [[= ks::reflect::NetTable{ .name = "DT_WaterBullet" } ]]
+      C_WaterBullet : public C_BaseAnimating
 {
 public:
 
@@ -121,5 +124,4 @@ private:
 	Vector		m_vecLastOrigin;
 };
 
-IMPLEMENT_CLIENTCLASS_DT( C_WaterBullet, DT_WaterBullet, CWaterBullet )
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS( C_WaterBullet, DT_WaterBullet, CWaterBullet )

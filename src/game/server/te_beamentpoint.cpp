@@ -11,6 +11,8 @@
 // $NoKeywords: $
 //===========================================================================//
 #include "cbase.h"
+#include "reflect_sendtable.h"
+#include "reflect_annotations.h"
 #include "basetempentity.h"
 #include "te_basebeam.h"
 
@@ -22,7 +24,8 @@ extern int	g_sModelIndexSmoke;			// (in combatweapon.cpp) holds the index for th
 //-----------------------------------------------------------------------------
 // Purpose: Dispatches a beam ring between two entities
 //-----------------------------------------------------------------------------
-class CTEBeamEntPoint : public CTEBaseBeam
+class [[= ks::reflect::NetTable{ .name = "DT_TEBeamEntPoint" } ]]
+      CTEBeamEntPoint : public CTEBaseBeam
 {
 public:
 	DECLARE_CLASS( CTEBeamEntPoint, CTEBaseBeam );
@@ -35,10 +38,10 @@ public:
 	
 
 public:
-	CNetworkVar( int, m_nStartEntity );
-	CNetworkVector( m_vecStartPoint );
-	CNetworkVar( int, m_nEndEntity );
-	CNetworkVector( m_vecEndPoint );
+	CNetworkVar( int, m_nStartEntity, [[= ks::reflect::Net{ .bits = 24, .flags = SPROP_UNSIGNED } ]] );
+	CNetworkVector( m_vecStartPoint, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD, .enc = ks::reflect::ENC_VECTOR } ]] );
+	CNetworkVar( int, m_nEndEntity, [[= ks::reflect::Net{ .bits = 24, .flags = SPROP_UNSIGNED } ]] );
+	CNetworkVector( m_vecEndPoint, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD, .enc = ks::reflect::ENC_VECTOR } ]] );
 };
 
 //-----------------------------------------------------------------------------
@@ -98,12 +101,7 @@ void CTEBeamEntPoint::Test( const Vector& current_origin, const QAngle& current_
 	Create( filter, 0.0 );
 }
 
-IMPLEMENT_SERVERCLASS_ST(CTEBeamEntPoint, DT_TEBeamEntPoint)
-	SendPropInt( SENDINFO(m_nStartEntity), 24, SPROP_UNSIGNED ),
-	SendPropInt( SENDINFO(m_nEndEntity), 24, SPROP_UNSIGNED ),
-	SendPropVector( SENDINFO(m_vecStartPoint), -1, SPROP_COORD ),
-	SendPropVector( SENDINFO(m_vecEndPoint), -1, SPROP_COORD ),
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CTEBeamEntPoint, DT_TEBeamEntPoint )
 
 
 // Singleton to fire TEBeamEntPoint objects

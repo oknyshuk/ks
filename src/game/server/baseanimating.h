@@ -1,4 +1,4 @@
-//===== Copyright © 1996-2005, Valve Corporation, All rights reserved. ======//
+//===== Copyright ï¿½ 1996-2005, Valve Corporation, All rights reserved. ======//
 //
 // Purpose: 
 //
@@ -6,6 +6,10 @@
 
 #ifndef BASEANIMATING_H
 #define BASEANIMATING_H
+
+#include "reflect_annotations.h"
+#include "const.h"
+#include "shareddefs.h"
 #ifdef _WIN32
 #pragma once
 #endif
@@ -28,7 +32,16 @@ FORWARD_DECLARE_HANDLE( memhandle_t );
 
 extern IDataCache *datacache;
 
-class CBaseAnimating : public CBaseEntity
+namespace DT_ServerAnimationData { extern SendTable g_SendTable; }
+void *SendProxy_ClientSideAnimation( const SendProp *pProp, const void *pStruct,
+    const void *pVarData, CSendProxyRecipients *pRecipients,
+    int objectID );
+
+class [[= ks::reflect::NetTable{ .name = "DT_ServerAnimationData", .base = false } ]]
+      [[= ks::reflect::NetTable{ .name = "DT_BaseAnimating" } ]]
+      [[= ks::reflect::From<"m_bClientSideRagdoll", ks::reflect::Net{}>{} ]]
+      [[= ks::reflect::SubTable<"serveranimdata", &DT_ServerAnimationData::g_SendTable, SendProxy_ClientSideAnimation, false>{} ]]
+      CBaseAnimating : public CBaseEntity
 {
 public:
 	DECLARE_CLASS( CBaseAnimating, CBaseEntity );
@@ -54,7 +67,6 @@ public:
 	virtual void Precache();
 	virtual void SetTransmit( CCheckTransmitInfo *pInfo, bool bAlways );
 
-	virtual int	 Restore( IRestore &restore );
 	virtual void OnRestore();
 
 	CStudioHdr *GetModelPtr( void );
@@ -324,11 +336,13 @@ public:
 	virtual void Extinguish() { RemoveFlag( FL_ONFIRE ); }
 	bool IsOnFire() { return ( (GetFlags() & FL_ONFIRE) != 0 ); }
 	void Scorch( int rate, int floor );
-	void InputIgnite( inputdata_t &inputdata );
-	void InputIgniteLifetime( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Ignite", .type = FIELD_VOID } ]]
+	[[= ks::reflect::Input{ .name = "IgniteNumHitboxFires", .type = FIELD_INTEGER } ]]
+	[[= ks::reflect::Input{ .name = "IgniteHitboxFireScale", .type = FIELD_FLOAT } ]] void InputIgnite( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "IgniteLifetime", .type = FIELD_FLOAT } ]] void InputIgniteLifetime( inputdata_t &inputdata );
 	void InputIgniteNumHitboxFires( inputdata_t &inputdata );
 	void InputIgniteHitboxFireScale( inputdata_t &inputdata );
-	void InputBecomeRagdoll( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "BecomeRagdoll", .type = FIELD_VOID } ]] void InputBecomeRagdoll( inputdata_t &inputdata );
 
 	// Ice
 	virtual bool	IsFrozen( void ) { return m_flFrozen >= 1.0f; }
@@ -378,8 +392,8 @@ private:
 	void UnlockStudioHdr();
 
 	void StudioFrameAdvanceInternal( CStudioHdr *pStudioHdr, float flInterval );
-	void InputSetLightingOriginRelative( inputdata_t &inputdata );
-	void InputSetLightingOrigin( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetLightingOriginHack", .type = FIELD_STRING } ]] void InputSetLightingOriginRelative( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetLightingOrigin", .type = FIELD_STRING } ]] void InputSetLightingOrigin( inputdata_t &inputdata );
 
 public:
 	bool CanSkipAnimation( void );
@@ -395,21 +409,21 @@ protected:
 
 public:
 
-	CNetworkVar( int, m_nForceBone );
-	CNetworkVector( m_vecForce );
+	CNetworkVar( int, m_nForceBone, [[= ks::reflect::Net{ .bits = 8 } ]] );
+	CNetworkVector( m_vecForce, [[= ks::reflect::Net{ .bits = 32, .flags = SPROP_NOSCALE, .enc = ks::reflect::ENC_VECTOR } ]] );
 
-	CNetworkVar( int, m_nSkin );
-	CNetworkVar( int, m_nBody );
-	CNetworkVar( int, m_nHitboxSet );
+	CNetworkVar( int, m_nSkin, [[= ks::reflect::Net{ .bits = ANIMATION_SKIN_BITS } ]] [[= ks::reflect::Key{ .name = "ModelSkin" } ]] [[= ks::reflect::Key{ .name = "skin", .input = true } ]] );
+	CNetworkVar( int, m_nBody, [[= ks::reflect::Net{ .bits = ANIMATION_BODY_BITS } ]] [[= ks::reflect::Key{ .name = "body" } ]] [[= ks::reflect::Key{ .name = "SetBodyGroup", .input = true } ]] );
+	CNetworkVar( int, m_nHitboxSet, [[= ks::reflect::Net{ .bits = ANIMATION_HITBOXSET_BITS, .flags = SPROP_UNSIGNED } ]] [[= ks::reflect::Key{ .name = "hitboxset" } ]] );
 
 	// For making things thin during barnacle swallowing, e.g.
-	CNetworkVar( float, m_flModelScale );
+	CNetworkVar( float, m_flModelScale, [[= ks::reflect::Net{ .bits = 32 } ]] [[= ks::reflect::Key{ .name = "ModelScale" } ]] );
 
 	// was pev->framerate
-	CNetworkVar( float, m_flPlaybackRate );
+	CNetworkVar( float, m_flPlaybackRate, [[= ks::reflect::Net{ .bits = ANIMATION_PLAYBACKRATE_BITS, .low = -4.0, .high = 12.0f, .flags = SPROP_ROUNDUP } ]] [[= ks::reflect::Key{ .name = "playbackrate" } ]] );
 
 private:
-	CNetworkVar( ModelScaleType_t, m_ScaleType );
+	CNetworkVar( ModelScaleType_t, m_ScaleType, [[= ks::reflect::Net{ .bits = -1 } ]] );
 
 public:
 	void InitStepHeightAdjust( void );
@@ -439,41 +453,41 @@ protected:
 	IMPLEMENT_NETWORK_VAR_FOR_DERIVED( m_bClientSideRagdoll );
 
 	// was pev->frame
-	CNetworkVar( float, m_flCycle );
-	CNetworkVar( int, m_nSequence );	
-	CNetworkArray( float, m_flPoseParameter, NUM_POSEPAREMETERS );	// must be private so manual mode works!
-	CNetworkArray( float, m_flEncodedController, NUM_BONECTRLS );		// bone controller setting (0..1)
+	CNetworkVar( float, m_flCycle, [[= ks::reflect::Net{ .bits = ANIMATION_CYCLE_BITS, .low = 0.0f, .high = 1.0f, .flags = SPROP_CHANGES_OFTEN|SPROP_ROUNDDOWN, .table = "DT_ServerAnimationData" } ]] [[= ks::reflect::Key{ .name = "cycle" } ]] );
+	CNetworkVar( int, m_nSequence, [[= ks::reflect::Net{ .bits = ANIMATION_SEQUENCE_BITS, .flags = SPROP_UNSIGNED } ]] [[= ks::reflect::Key{ .name = "sequence" } ]] );	
+	CNetworkArray( float, m_flPoseParameter, NUM_POSEPAREMETERS, [[= ks::reflect::Net{ .bits = ANIMATION_POSEPARAMETER_BITS, .low = 0.0f, .high = 1.0f } ]] );	// must be private so manual mode works!
+	CNetworkArray( float, m_flEncodedController, NUM_BONECTRLS, [[= ks::reflect::Net{ .bits = 11, .low = 0.0f, .high = 1.0f, .flags = SPROP_ROUNDDOWN } ]] );		// bone controller setting (0..1)
 
 	// Client-side animation (useful for looping animation objects)
-	CNetworkVar( bool, m_bClientSideAnimation );
-	CNetworkVar( bool, m_bClientSideFrameReset );
+	CNetworkVar( bool, m_bClientSideAnimation, [[= ks::reflect::Net{ .bits = 1, .flags = SPROP_UNSIGNED } ]] );
+	CNetworkVar( bool, m_bClientSideFrameReset, [[= ks::reflect::Net{ .bits = 1, .flags = SPROP_UNSIGNED } ]] );
 
-	CNetworkVar( int, m_nNewSequenceParity );
-	CNetworkVar( int, m_nResetEventsParity );
+	CNetworkVar( int, m_nNewSequenceParity, [[= ks::reflect::Net{ .bits = EF_PARITY_BITS, .flags = SPROP_UNSIGNED } ]] );
+	CNetworkVar( int, m_nResetEventsParity, [[= ks::reflect::Net{ .bits = EF_PARITY_BITS, .flags = SPROP_UNSIGNED } ]] );
 
-	CNetworkVar( bool, m_bSuppressAnimSounds );
+	CNetworkVar( bool, m_bSuppressAnimSounds, [[= ks::reflect::Net{} ]] [[= ks::reflect::Key{ .name = "SuppressAnimSounds" } ]] );
 
 	// Incremented each time the entity is told to do a muzzle flash.
 	// The client picks up the change and draws the flash.
-	CNetworkVar( unsigned char, m_nMuzzleFlashParity );
+	CNetworkVar( unsigned char, m_nMuzzleFlashParity, [[= ks::reflect::Net{ .bits = EF_MUZZLEFLASH_BITS, .flags = SPROP_UNSIGNED } ]] );
 
-	CNetworkHandle( CBaseEntity, m_hLightingOrigin );
+	CNetworkHandle( CBaseEntity, m_hLightingOrigin, [[= ks::reflect::Net{} ]] );
 	CNetworkHandle( CBaseEntity, m_hLightingOriginRelative );
 
-	string_t m_iszLightingOriginRelative;	// for reading from the file only
-	string_t m_iszLightingOrigin;			// for reading from the file only
+	[[= ks::reflect::Key{ .name = "LightingOriginHack" } ]] string_t m_iszLightingOriginRelative;	// for reading from the file only
+	[[= ks::reflect::Key{ .name = "LightingOrigin" } ]] string_t m_iszLightingOrigin;			// for reading from the file only
 
 	memhandle_t		m_boneCacheHandle;
 	unsigned short	m_fBoneCacheFlags;		// Used for bone cache state on model
 
-	CNetworkVar( float, m_flFrozen );		// 0 - 1 amount that the model is frozen
+	CNetworkVar( float, m_flFrozen, [[= ks::reflect::Net{ .bits = 32 } ]] );		// 0 - 1 amount that the model is frozen
 	float				m_flMovementFrozen;	// How frozen are the movement parts
 	float				m_flAttackFrozen;	// How frozen are the attacking parts
 	float				m_flFrozenThawRate;	// amount it unfreezes per second
 	float				m_flFrozenMax;		// maximum amount this entitiy is allowed to freeze
 
 public:
-	COutputEvent m_OnIgnite;
+	[[= ks::reflect::Key{ .name = "OnIgnite" } ]] COutputEvent m_OnIgnite;
 
 #if defined ( PORTAL2 )
 	COutputEvent m_OnFizzled;		// Fizzled by a fizzler
@@ -584,16 +598,5 @@ inline void CBaseAnimating::ForceCycle( float flCycle )
 EXTERN_SEND_TABLE(DT_BaseAnimating);
 
 
-
-#define ANIMATION_SEQUENCE_BITS			12	// 4096 sequences
-#define ANIMATION_SKIN_BITS				10	// 1024 body skin selections FIXME: this seems way high
-#define ANIMATION_BODY_BITS				32	// body combinations
-#define ANIMATION_HITBOXSET_BITS		2	// hit box sets 
-#if defined( TF_DLL )
-#define ANIMATION_POSEPARAMETER_BITS	8	// pose parameter resolution
-#else
-#define ANIMATION_POSEPARAMETER_BITS	11	// pose parameter resolution
-#endif
-#define ANIMATION_PLAYBACKRATE_BITS		8	// default playback rate, only used on leading edge detect sequence changes
 
 #endif // BASEANIMATING_H

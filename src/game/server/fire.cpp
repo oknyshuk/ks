@@ -8,6 +8,8 @@
 //---------------------------------------------------------
 //---------------------------------------------------------
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_annotations.h"
 #include "decals.h"
 #include "fire.h"
 #include "entitylist.h"
@@ -157,11 +159,11 @@ public:
 	void Disable();
 
 	//Inputs
-	void	InputStartFire( inputdata_t &inputdata );
-	void	InputExtinguish( inputdata_t &inputdata );
-	void	InputExtinguishTemporary( inputdata_t &inputdata );
-	void	InputEnable( inputdata_t &inputdata );
-	void	InputDisable( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "StartFire", .type = FIELD_VOID } ]] void	InputStartFire( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Extinguish", .type = FIELD_FLOAT } ]] void	InputExtinguish( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "ExtinguishTemporary", .type = FIELD_FLOAT } ]] void	InputExtinguishTemporary( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Enable", .type = FIELD_VOID } ]] void	InputEnable( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Disable", .type = FIELD_VOID } ]] void	InputDisable( inputdata_t &inputdata );
 
 protected:
 	
@@ -171,31 +173,31 @@ protected:
 	CHandle<CBaseFire>	m_hEffect;
 	EHANDLE		m_hOwner;
 	
-	int		m_nFireType;
+	[[= ks::reflect::Key{ .name = "firetype" } ]] int		m_nFireType;
 
 	float	m_flFuel;
 	float	m_flDamageTime;
 	float	m_lastDamage;
-	float	m_flFireSize;	// size of the fire in world units
+	[[= ks::reflect::Key{ .name = "firesize" } ]] float	m_flFireSize;	// size of the fire in world units
 	float	m_flLastNavUpdateTime;	// last time we told the nav mesh about ourselves
 
-	float	m_flHeatLevel;	// Used as a "health" for the fire.  > 0 means the fire is burning
+	[[= ks::reflect::Key{ .name = "ignitionpoint" } ]] float	m_flHeatLevel;	// Used as a "health" for the fire.  > 0 means the fire is burning
 	float	m_flHeatAbsorb;	// This much heat must be "absorbed" before it gets transferred to the flame size
-	float	m_flDamageScale;
+	[[= ks::reflect::Key{ .name = "damagescale" } ]] float	m_flDamageScale;
 
 	float	m_flMaxHeat;
 	float	m_flLastHeatLevel;
 
 	//NOTENOTE: Lifetime is an expression of the sum total of these amounts plus the global time when started
-	float	m_flAttackTime;	//Amount of time to scale up
+	[[= ks::reflect::Key{ .name = "fireattack" } ]] float	m_flAttackTime;	//Amount of time to scale up
 
 	bool	m_bEnabled;
-	bool	m_bStartDisabled;
+	[[= ks::reflect::Key{ .name = "StartDisabled" } ]] bool	m_bStartDisabled;
 	bool	m_bDidActivate;
 
 
-	COutputEvent	m_OnIgnited;
-	COutputEvent	m_OnExtinguished;
+	[[= ks::reflect::Key{ .name = "OnIgnited" } ]] COutputEvent	m_OnIgnited;
+	[[= ks::reflect::Key{ .name = "OnExtinguished" } ]] COutputEvent	m_OnExtinguished;
 
 	DECLARE_DATADESC();
 };
@@ -531,45 +533,7 @@ bool FireSystem_GetFireDamageDimensions( CBaseEntity *pEntity, Vector *pFireMins
 //==================================================
 // CFire
 //==================================================
-BEGIN_DATADESC( CFire )
-
-	DEFINE_FIELD( m_hEffect, FIELD_EHANDLE ),
-	DEFINE_FIELD( m_hOwner, FIELD_EHANDLE ),
-	DEFINE_KEYFIELD( m_nFireType,	FIELD_INTEGER, "firetype" ),
-
-	DEFINE_FIELD( m_flFuel, FIELD_FLOAT ),
-	DEFINE_FIELD( m_flDamageTime, FIELD_TIME ),
-	DEFINE_FIELD( m_lastDamage, FIELD_TIME ),
-	DEFINE_KEYFIELD( m_flFireSize,	FIELD_FLOAT, "firesize" ),
-
-	DEFINE_KEYFIELD( m_flHeatLevel,	FIELD_FLOAT,	"ignitionpoint" ),
- 	DEFINE_FIELD( m_flHeatAbsorb, FIELD_FLOAT ),
- 	DEFINE_KEYFIELD( m_flDamageScale,FIELD_FLOAT,	"damagescale" ),
-
-	DEFINE_FIELD( m_flMaxHeat, FIELD_FLOAT ),
-	//DEFINE_FIELD( m_flLastHeatLevel,	FIELD_FLOAT  ),
-
-	DEFINE_KEYFIELD( m_flAttackTime, FIELD_FLOAT, "fireattack" ),
-	DEFINE_FIELD( m_bEnabled, FIELD_BOOLEAN ),
-	DEFINE_KEYFIELD( m_bStartDisabled, FIELD_BOOLEAN, "StartDisabled" ),
-	DEFINE_FIELD( m_bDidActivate, FIELD_BOOLEAN ),
-
-	DEFINE_FUNCTION( BurnThink ),
-	DEFINE_FUNCTION( GoOutThink ),
-
-
-
-	DEFINE_INPUTFUNC( FIELD_VOID, "StartFire", InputStartFire ),
-	DEFINE_INPUTFUNC( FIELD_FLOAT, "Extinguish", InputExtinguish ),
-	DEFINE_INPUTFUNC( FIELD_FLOAT, "ExtinguishTemporary", InputExtinguishTemporary ),
-
-	DEFINE_INPUTFUNC( FIELD_VOID, "Enable", InputEnable ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "Disable", InputDisable ),
-	
-	DEFINE_OUTPUT( m_OnIgnited, "OnIgnited" ),
-	DEFINE_OUTPUT( m_OnExtinguished, "OnExtinguished" ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CFire )
 
 LINK_ENTITY_TO_CLASS( env_fire, CFire );
 
@@ -1223,28 +1187,18 @@ public:
 	void Think();
 	void TurnOn();
 	void TurnOff();
-	void InputEnable( inputdata_t &inputdata );
-	void InputDisable( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Enable", .type = FIELD_VOID } ]] void InputEnable( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Disable", .type = FIELD_VOID } ]] void InputDisable( inputdata_t &inputdata );
 
 	DECLARE_DATADESC();
 
 private:
 	bool		m_bEnabled;
-	float		m_radius;
-	float		m_damage;
+	[[= ks::reflect::Key{ .name = "fireradius" } ]] float		m_radius;
+	[[= ks::reflect::Key{ .name = "firedamage" } ]] float		m_damage;
 };
 
-BEGIN_DATADESC( CEnvFireSource )
-
-	DEFINE_FIELD( m_bEnabled, FIELD_BOOLEAN ),
-	DEFINE_KEYFIELD( m_radius,	FIELD_FLOAT, "fireradius" ),
-	DEFINE_KEYFIELD( m_damage,FIELD_FLOAT, "firedamage" ),
-
-	DEFINE_INPUTFUNC( FIELD_VOID, "Enable", InputEnable ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "Disable", InputDisable ),
-
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CEnvFireSource )
 
 LINK_ENTITY_TO_CLASS( env_firesource, CEnvFireSource );
 
@@ -1314,40 +1268,24 @@ public:
 	void Think();
 	void TurnOn();
 	void TurnOff();
-	void InputEnable( inputdata_t &inputdata );
-	void InputDisable( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Enable", .type = FIELD_VOID } ]] void InputEnable( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Disable", .type = FIELD_VOID } ]] void InputDisable( inputdata_t &inputdata );
 
 	DECLARE_DATADESC();
 
 private:
 	bool			m_bEnabled;
 	bool			m_bHeatAtLevel;
-	float			m_radius;
-	float			m_targetLevel;
-	float			m_targetTime;
+	[[= ks::reflect::Key{ .name = "fireradius" } ]] float			m_radius;
+	[[= ks::reflect::Key{ .name = "heatlevel" } ]] float			m_targetLevel;
+	[[= ks::reflect::Key{ .name = "heattime" } ]] float			m_targetTime;
 	float			m_levelTime;
 
-	COutputEvent	m_OnHeatLevelStart;
-	COutputEvent	m_OnHeatLevelEnd;
+	[[= ks::reflect::Key{ .name = "OnHeatLevelStart" } ]] COutputEvent	m_OnHeatLevelStart;
+	[[= ks::reflect::Key{ .name = "OnHeatLevelEnd" } ]] COutputEvent	m_OnHeatLevelEnd;
 };
 
-BEGIN_DATADESC( CEnvFireSensor )
-
-	DEFINE_KEYFIELD( m_radius,	FIELD_FLOAT, "fireradius" ),
-	DEFINE_KEYFIELD( m_targetLevel, FIELD_FLOAT, "heatlevel" ),
-	DEFINE_KEYFIELD( m_targetTime, FIELD_FLOAT, "heattime" ),
-
-	DEFINE_FIELD( m_bEnabled, FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_bHeatAtLevel, FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_levelTime, FIELD_FLOAT ),
-	
-	DEFINE_INPUTFUNC( FIELD_VOID, "Enable", InputEnable ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "Disable", InputDisable ),
-
-	DEFINE_OUTPUT( m_OnHeatLevelStart, "OnHeatLevelStart"),
-	DEFINE_OUTPUT( m_OnHeatLevelEnd, "OnHeatLevelEnd"),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CEnvFireSensor )
 
 LINK_ENTITY_TO_CLASS( env_firesensor, CEnvFireSensor );
 

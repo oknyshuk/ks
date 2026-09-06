@@ -6,6 +6,8 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_annotations.h"
 #include "shake.h"
 #ifdef INFESTED_DLL
 #include "asw_marine.h"
@@ -19,16 +21,16 @@ class CEnvFade : public CLogicalEntity
 {
 private:
 
-	float m_Duration;
-	float m_HoldTime;
+	[[= ks::reflect::Key{ .name = "duration" } ]] float m_Duration;
+	[[= ks::reflect::Key{ .name = "holdtime" } ]] float m_HoldTime;
 
-	COutputEvent m_OnBeginFade;
+	[[= ks::reflect::Key{ .name = "OnBeginFade" } ]] COutputEvent m_OnBeginFade;
 
 	DECLARE_DATADESC();
 
 	float m_flFadeStartTime;
 	float m_flReverseFadeStartTime;
-	float m_flReverseFadeDuration;
+	[[= ks::reflect::Key{ .name = "ReverseFadeDuration" } ]] float m_flReverseFadeDuration;
 
 public:
 	DECLARE_CLASS( CEnvFade, CLogicalEntity );
@@ -46,24 +48,13 @@ public:
 	int DrawDebugTextOverlays(void);
 
 	// Inputs
-	void InputFade( inputdata_t &inputdata );
-	void InputReverseFade( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Fade", .type = FIELD_VOID } ]] void InputFade( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "FadeReverse", .type = FIELD_VOID } ]] void InputReverseFade( inputdata_t &inputdata );
 };
 
 LINK_ENTITY_TO_CLASS( env_fade, CEnvFade );
 
-BEGIN_DATADESC( CEnvFade )
-
-	DEFINE_KEYFIELD( m_Duration, FIELD_FLOAT, "duration" ),
-	DEFINE_KEYFIELD( m_HoldTime, FIELD_FLOAT, "holdtime" ),
-	DEFINE_KEYFIELD( m_flReverseFadeDuration, FIELD_FLOAT, "ReverseFadeDuration" ),
-
-	DEFINE_INPUTFUNC( FIELD_VOID, "Fade", InputFade ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "FadeReverse", InputReverseFade ),
-
-	DEFINE_OUTPUT( m_OnBeginFade, "OnBeginFade"),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CEnvFade )
 
 
 

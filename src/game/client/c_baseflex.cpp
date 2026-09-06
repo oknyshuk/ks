@@ -5,6 +5,9 @@
 // $NoKeywords: $
 //===========================================================================//
 #include "cbase.h"
+#include "reflect_recvtable.h"
+#include "reflect_predmap.h"
+#include "reflect_annotations.h"
 #include "filesystem.h"
 #include "sentence.h"
 #include "engine/ivmodelinfo.h"
@@ -37,39 +40,11 @@ ConVar g_CV_FlexSmooth("flex_smooth", "1", 0, "Applies smoothing/decay curve to 
 
 static int g_iFlexCounter = 0;
 
-IMPLEMENT_CLIENTCLASS_DT(C_BaseFlex, DT_BaseFlex, CBaseFlex)
-	RecvPropArray3( RECVINFO_ARRAY(m_flexWeight), RecvPropFloat(RECVINFO(m_flexWeight[0]))),
-	RecvPropInt(RECVINFO(m_blinktoggle)),
-	RecvPropVector(RECVINFO(m_viewtarget)),
-
+IMPLEMENT_REFLECT_CLIENTCLASS( C_BaseFlex, DT_BaseFlex, CBaseFlex )
 #ifdef HL2_CLIENT_DLL
-	RecvPropFloat( RECVINFO(m_vecViewOffset[0]) ),
-	RecvPropFloat( RECVINFO(m_vecViewOffset[1]) ),
-	RecvPropFloat( RECVINFO(m_vecViewOffset[2]) ),
-
-	RecvPropVector(RECVINFO(m_vecLean)),
-	RecvPropVector(RECVINFO(m_vecShift)),
 #endif
 
-END_RECV_TABLE()
-
-BEGIN_PREDICTION_DATA( C_BaseFlex )
-
-/*
-	// DEFINE_FIELD( C_BaseFlex, m_viewtarget, FIELD_VECTOR ),
-	// DEFINE_ARRAY( C_BaseFlex, m_flexWeight, FIELD_FLOAT, 64 ),
-	// DEFINE_FIELD( C_BaseFlex, m_blinktoggle, FIELD_INTEGER ),
-	// DEFINE_FIELD( C_BaseFlex, m_blinktime, FIELD_FLOAT ),
-	// DEFINE_FIELD( C_BaseFlex, m_prevviewtarget, FIELD_VECTOR ),
-	// DEFINE_ARRAY( C_BaseFlex, m_prevflexWeight, FIELD_FLOAT, 64 ),
-	// DEFINE_FIELD( C_BaseFlex, m_prevblinktoggle, FIELD_INTEGER ),
-	// DEFINE_FIELD( C_BaseFlex, m_iBlink, FIELD_INTEGER ),
-	// DEFINE_FIELD( C_BaseFlex, m_iEyeUpdown, FIELD_INTEGER ),
-	// DEFINE_FIELD( C_BaseFlex, m_iEyeRightleft, FIELD_INTEGER ),
-	// DEFINE_FIELD( C_BaseFlex, m_FileList, CUtlVector < CFlexSceneFile * > ),
-*/
-
-END_PREDICTION_DATA()
+IMPLEMENT_REFLECT_PREDMAP( C_BaseFlex );
 
 //-----------------------------------------------------------------------------
 // Purpose:
@@ -2125,32 +2100,11 @@ float CSceneEventInfo::UpdateWeight( C_BaseFlex *pActor )
 }
 
 BEGIN_BYTESWAP_DATADESC( flexsettinghdr_t )
-	DEFINE_FIELD( id, FIELD_INTEGER ),
-	DEFINE_FIELD( version, FIELD_INTEGER ),
-	DEFINE_ARRAY( name, FIELD_CHARACTER, 64 ),
-	DEFINE_FIELD( length, FIELD_INTEGER ),
-	DEFINE_FIELD( numflexsettings, FIELD_INTEGER ),
-	DEFINE_FIELD( flexsettingindex, FIELD_INTEGER ),
-	DEFINE_FIELD( nameindex, FIELD_INTEGER ),
-	DEFINE_FIELD( numindexes, FIELD_INTEGER ),
-	DEFINE_FIELD( indexindex, FIELD_INTEGER ),
-	DEFINE_FIELD( numkeys, FIELD_INTEGER ),
-	DEFINE_FIELD( keynameindex, FIELD_INTEGER ),
-	DEFINE_FIELD( keymappingindex, FIELD_INTEGER ),
 END_BYTESWAP_DATADESC()
 
 BEGIN_BYTESWAP_DATADESC( flexsetting_t )
-	DEFINE_FIELD( nameindex, FIELD_INTEGER ),
-	DEFINE_FIELD( obsolete1, FIELD_INTEGER ),
-	DEFINE_FIELD( numsettings, FIELD_INTEGER ),
-	DEFINE_FIELD( index, FIELD_INTEGER ),
-	DEFINE_FIELD( obsolete2, FIELD_INTEGER ),
-	DEFINE_FIELD( settingindex, FIELD_INTEGER ),
 END_BYTESWAP_DATADESC()
 
 BEGIN_BYTESWAP_DATADESC( flexweight_t )
-	DEFINE_FIELD( key, FIELD_INTEGER ),
-	DEFINE_FIELD( weight, FIELD_FLOAT ),
-	DEFINE_FIELD( influence, FIELD_FLOAT ),
 END_BYTESWAP_DATADESC()
 

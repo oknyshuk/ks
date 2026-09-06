@@ -13,12 +13,14 @@
 
 #include "edict.h"
 #include "networkvar.h"
+#include "reflect_annotations.h"
 // Only care about this stuff in game/client .dlls
 #if defined( CLIENT_DLL )
 #include "predictable_entity.h"
 #endif
 
-class CPlayerState
+class [[= ks::reflect::NetTable{ .name = "DT_PlayerState", .base = false } ]]
+      CPlayerState
 {
 public:
 	DECLARE_CLASS_NOBASE( CPlayerState );
@@ -29,7 +31,8 @@ public:
 	virtual ~CPlayerState() {}
 
 	// true if the player is dead
-	CNetworkVar( bool, deadflag );	
+	CNetworkVar( bool, deadflag, [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]]
+	                             [[= ks::reflect::Net{ .bits = 1, .flags = SPROP_UNSIGNED } ]] );	
 	// Viewing angle (player only)
 	QAngle		v_angle;		
 	

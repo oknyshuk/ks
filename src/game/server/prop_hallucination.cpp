@@ -5,6 +5,9 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_sendtable.h"
+#include "reflect_annotations.h"
 #include "baseanimating.h"
 
 
@@ -12,7 +15,8 @@
 #include "tier0/memdbgon.h"
 
 
-class CProp_Hallucination : public CBaseAnimating
+class [[= ks::reflect::NetTable{ .name = "DT_Prop_Hallucination" } ]]
+      CProp_Hallucination : public CBaseAnimating
 {
 public:
 	DECLARE_CLASS( CProp_Hallucination, CBaseAnimating );
@@ -23,33 +27,20 @@ public:
 	virtual void Precache( void );
 	virtual void Spawn( void );
 	virtual int DrawDebugTextOverlays( void );
-	void InputEnable( inputdata_t &inputdata );
-	void InputDisable( inputdata_t &inputdata );
-	void InputSetVisibleTime( inputdata_t &inputdata );
-	void InputSetRechargeTime( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Enable", .type = FIELD_VOID } ]] void InputEnable( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Disable", .type = FIELD_VOID } ]] void InputDisable( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetVisibleTime", .type = FIELD_FLOAT } ]] void InputSetVisibleTime( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetRechargeTime", .type = FIELD_FLOAT } ]] void InputSetRechargeTime( inputdata_t &inputdata );
 
-	CNetworkVar( bool, m_bEnabled );
-	float m_fStartEnabledChance; //0.0 - 100.0% chance that this hallucination will start enabled
-	CNetworkVar( float, m_fVisibleTime ); //how long in seconds this hallucination can remain on screen from first sighting
-	CNetworkVar( float, m_fRechargeTime ); //how long in seconds it takes the hallucination to recharge before becoming visible again. 0 to disable
+	CNetworkVar( bool, m_bEnabled, [[= ks::reflect::Net{} ]] );
+	[[= ks::reflect::Key{ .name = "EnabledChance" } ]] float m_fStartEnabledChance; //0.0 - 100.0% chance that this hallucination will start enabled
+	CNetworkVar( float, m_fVisibleTime, [[= ks::reflect::Net{ .bits = 32 } ]] [[= ks::reflect::Key{ .name = "VisibleTime" } ]] ); //how long in seconds this hallucination can remain on screen from first sighting
+	CNetworkVar( float, m_fRechargeTime, [[= ks::reflect::Net{ .bits = 32 } ]] [[= ks::reflect::Key{ .name = "RechargeTime" } ]] ); //how long in seconds it takes the hallucination to recharge before becoming visible again. 0 to disable
 };
 
-BEGIN_DATADESC( CProp_Hallucination )
-	DEFINE_FIELD( m_bEnabled, FIELD_BOOLEAN ),
-	DEFINE_KEYFIELD( m_fStartEnabledChance, FIELD_FLOAT, "EnabledChance" ),
-	DEFINE_KEYFIELD( m_fVisibleTime, FIELD_FLOAT, "VisibleTime" ),
-	DEFINE_KEYFIELD( m_fRechargeTime, FIELD_FLOAT, "RechargeTime" ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "Enable", InputEnable ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "Disable", InputDisable ),
-	DEFINE_INPUTFUNC( FIELD_FLOAT, "SetVisibleTime", InputSetVisibleTime ),
-	DEFINE_INPUTFUNC( FIELD_FLOAT, "SetRechargeTime", InputSetRechargeTime ),
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CProp_Hallucination )
 
-IMPLEMENT_SERVERCLASS_ST( CProp_Hallucination, DT_Prop_Hallucination )
-	SendPropBool( SENDINFO(m_bEnabled) ),
-	SendPropFloat( SENDINFO(m_fVisibleTime) ),
-	SendPropFloat( SENDINFO(m_fRechargeTime) ),
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CProp_Hallucination, DT_Prop_Hallucination )
 
 LINK_ENTITY_TO_CLASS( prop_hallucination, CProp_Hallucination );
 

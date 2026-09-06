@@ -11,6 +11,8 @@
 // $NoKeywords: $
 //=============================================================================//
 #include "cbase.h"
+#include "reflect_sendtable.h"
+#include "reflect_annotations.h"
 #include "basetempentity.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
@@ -20,7 +22,8 @@
 //-----------------------------------------------------------------------------
 // Purpose: Dispatches beam spline tempentity
 //-----------------------------------------------------------------------------
-class CTEBeamSpline : public CBaseTempEntity
+class [[= ks::reflect::NetTable{ .name = "DT_TEBeamSpline", .base = false } ]]
+      CTEBeamSpline : public CBaseTempEntity
 {
 public:
 	DECLARE_CLASS( CTEBeamSpline, CBaseTempEntity );
@@ -33,8 +36,9 @@ public:
 	DECLARE_SERVERCLASS();
 
 public:
-	CNetworkArray( Vector, m_vecPoints, MAX_SPLINE_POINTS );
-	CNetworkVar( int, m_nPoints );
+	CNetworkArray( Vector, m_vecPoints, MAX_SPLINE_POINTS,
+	               [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD, .varlen = true } ]] );
+	CNetworkVar( int, m_nPoints, [[= ks::reflect::Net{ .bits = 5, .flags = SPROP_UNSIGNED } ]] );
 };
 
 //-----------------------------------------------------------------------------
@@ -93,13 +97,7 @@ void CTEBeamSpline::Test( const Vector& current_origin, const QAngle& current_an
 	Create( filter, 0.0 );
 }
 
-IMPLEMENT_SERVERCLASS_ST_NOBASE(CTEBeamSpline, DT_TEBeamSpline)
-	SendPropInt( SENDINFO( m_nPoints ), 5, SPROP_UNSIGNED ),
-	
-	SendPropArray(
-		SendPropVector( SENDINFO_ARRAY(m_vecPoints), -1, SPROP_COORD),
-		m_vecPoints)
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CTEBeamSpline, DT_TEBeamSpline )
 
 
 // Singleton to fire TEBeamSpline objects

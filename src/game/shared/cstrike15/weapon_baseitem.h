@@ -8,6 +8,8 @@
 #ifndef _WEAPON_BASE_ITEM_H_
 #define _WEAPON_BASE_ITEM_H_
 
+#include "reflect_annotations.h"
+
 #ifdef _WIN32
 #pragma once
 #endif
@@ -19,7 +21,8 @@
 #define CWeaponBaseItem C_WeaponBaseItem
 #endif
 
-class CWeaponBaseItem : public CWeaponCSBase
+class [[= ks::reflect::NetTable{ .name = "DT_WeaponBaseItem" } ]]
+      CWeaponBaseItem : public CWeaponCSBase
 {
 public:
 	DECLARE_CLASS( CWeaponBaseItem, CWeaponCSBase );
@@ -27,7 +30,6 @@ public:
 	DECLARE_PREDICTABLE();
 
 #ifndef CLIENT_DLL
-	DECLARE_DATADESC();
 #endif
 
 	CWeaponBaseItem();
@@ -68,7 +70,7 @@ private:
 	CWeaponBaseItem( const CWeaponBaseItem & ) {}
 
 	CNetworkVarEmbedded( CountdownTimer, m_UseTimer );
-	CNetworkVar( bool, m_bRedraw );	// Draw the weapon again after throwing a grenade
+	CNetworkVar( bool, m_bRedraw, [[= ks::reflect::Net{} ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] );	// Draw the weapon again after throwing a grenade
 
 };
 

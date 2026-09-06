@@ -7,6 +7,8 @@
 // $NoKeywords: $
 //=============================================================================//
 #include "cbase.h"
+#include "reflect_sendtable.h"
+#include "reflect_annotations.h"
 #include "basetempentity.h"
 #include "vstdlib/random.h"
 
@@ -16,7 +18,8 @@
 //-----------------------------------------------------------------------------
 // Purpose: Dispatches model smash pieces
 //-----------------------------------------------------------------------------
-class CTEBreakModel : public CBaseTempEntity
+class [[= ks::reflect::NetTable{ .name = "DT_TEBreakModel" } ]]
+      CTEBreakModel : public CBaseTempEntity
 {
 public:
 	DECLARE_CLASS( CTEBreakModel, CBaseTempEntity );
@@ -27,15 +30,15 @@ public:
 	DECLARE_SERVERCLASS();
 
 public:
-	CNetworkVector( m_vecOrigin );
-	CNetworkVector( m_vecSize );
-	CNetworkVector( m_vecVelocity );
-	CNetworkQAngle( m_angRotation );
-	CNetworkVar( int, m_nRandomization );
-	CNetworkVar( int, m_nModelIndex );
-	CNetworkVar( int, m_nCount );
-	CNetworkVar( float, m_fTime );
-	CNetworkVar( int, m_nFlags );
+	CNetworkVector( m_vecOrigin, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD, .enc = ks::reflect::ENC_VECTOR } ]] );
+	CNetworkVector( m_vecSize, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD, .enc = ks::reflect::ENC_VECTOR } ]] );
+	CNetworkVector( m_vecVelocity, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD, .enc = ks::reflect::ENC_VECTOR } ]] );
+	CNetworkQAngle( m_angRotation, [[= ks::reflect::Net{ .bits = 13, .index = 2 } ]]  [[= ks::reflect::Net{ .bits = 13, .index = 1 } ]]  [[= ks::reflect::Net{ .bits = 13, .index = 0 } ]] );
+	CNetworkVar( int, m_nRandomization, [[= ks::reflect::Net{ .bits = 9, .flags = SPROP_UNSIGNED } ]] );
+	CNetworkVar( int, m_nModelIndex, [[= ks::reflect::Net{ .enc = ks::reflect::ENC_MODELINDEX } ]] );
+	CNetworkVar( int, m_nCount, [[= ks::reflect::Net{ .bits = 8, .flags = SPROP_UNSIGNED } ]] );
+	CNetworkVar( float, m_fTime, [[= ks::reflect::Net{ .bits = 10, .low = 0, .high = 102.4 } ]] );
+	CNetworkVar( int, m_nFlags, [[= ks::reflect::Net{ .bits = 8, .flags = SPROP_UNSIGNED } ]] );
 };
 
 //-----------------------------------------------------------------------------
@@ -64,19 +67,7 @@ CTEBreakModel::~CTEBreakModel( void )
 }
 
 
-IMPLEMENT_SERVERCLASS_ST(CTEBreakModel, DT_TEBreakModel)
-	SendPropVector( SENDINFO(m_vecOrigin), -1, SPROP_COORD),
-	SendPropAngle( SENDINFO_VECTORELEM(m_angRotation, 0), 13 ),
-	SendPropAngle( SENDINFO_VECTORELEM(m_angRotation, 1), 13 ),
-	SendPropAngle( SENDINFO_VECTORELEM(m_angRotation, 2), 13 ),
-	SendPropVector( SENDINFO(m_vecSize), -1, SPROP_COORD),
-	SendPropVector( SENDINFO(m_vecVelocity), -1, SPROP_COORD),
-	SendPropModelIndex( SENDINFO(m_nModelIndex) ),
-	SendPropInt( SENDINFO(m_nRandomization), 9, SPROP_UNSIGNED ),
-	SendPropInt( SENDINFO(m_nCount), 8, SPROP_UNSIGNED ),
-	SendPropFloat( SENDINFO(m_fTime), 10, 0, 0, 102.4 ),
-	SendPropInt( SENDINFO(m_nFlags), 8, SPROP_UNSIGNED ),
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CTEBreakModel, DT_TEBreakModel )
 
 // Singleton to fire TEBreakModel objects
 static CTEBreakModel g_TEBreakModel( "breakmodel" );

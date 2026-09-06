@@ -5,6 +5,8 @@
 // $NoKeywords: $
 //=============================================================================//
 #include "cbase.h"
+#include "reflect_recvtable.h"
+#include "reflect_annotations.h"
 #include "c_smoke_trail.h"
 #include "smoke_fog_overlay.h"
 #include "engine/IEngineTrace.h"
@@ -33,7 +35,20 @@ static Vector s_FadePlaneDirections[] =
 // ------------------------------------------------------------------------- //
 // Classes
 // ------------------------------------------------------------------------- //
-class C_FuncSmokeVolume : public C_BaseParticleEntity, public IPrototypeAppEffect
+class [[= ks::reflect::NetTable{ .name = "DT_FuncSmokeVolume" } ]]
+      [[= ks::reflect::From<"m_Color1", ks::reflect::Net{}, RecvProxy_Int32ToColor32>{} ]]
+      [[= ks::reflect::From<"m_Color2", ks::reflect::Net{}, RecvProxy_Int32ToColor32>{} ]]
+      [[= ks::reflect::From<"m_MaterialName", ks::reflect::Net{}>{} ]]
+      [[= ks::reflect::From<"m_ParticleDrawWidth", ks::reflect::Net{}>{} ]]
+      [[= ks::reflect::From<"m_ParticleSpacingDistance", ks::reflect::Net{}>{} ]]
+      [[= ks::reflect::From<"m_DensityRampSpeed", ks::reflect::Net{}>{} ]]
+      [[= ks::reflect::From<"m_RotationSpeed", ks::reflect::Net{}>{} ]]
+      [[= ks::reflect::From<"m_MovementSpeed", ks::reflect::Net{}>{} ]]
+      [[= ks::reflect::From<"m_Density", ks::reflect::Net{}>{} ]]
+      [[= ks::reflect::From<"m_maxDrawDistance", ks::reflect::Net{}>{} ]]
+      [[= ks::reflect::From<"m_spawnflags", ks::reflect::Net{}>{} ]]
+      [[= ks::reflect::From<"m_Collision", ks::reflect::Net{}>{} ]]
+      C_FuncSmokeVolume : public C_BaseParticleEntity, public IPrototypeAppEffect
 {
 public:
 	DECLARE_CLASS( C_FuncSmokeVolume, C_BaseParticleEntity );
@@ -164,20 +179,7 @@ private:
 	bool m_bFirstUpdate;
 };
 
-IMPLEMENT_CLIENTCLASS_DT( C_FuncSmokeVolume, DT_FuncSmokeVolume, CFuncSmokeVolume )
-	RecvPropInt( RECVINFO( m_Color1 ), 0, RecvProxy_Int32ToColor32 ),
-	RecvPropInt( RECVINFO( m_Color2 ), 0, RecvProxy_Int32ToColor32 ),
-	RecvPropString( RECVINFO( m_MaterialName ) ),
-	RecvPropFloat( RECVINFO( m_ParticleDrawWidth ) ),
-	RecvPropFloat( RECVINFO( m_ParticleSpacingDistance ) ),
-	RecvPropFloat( RECVINFO( m_DensityRampSpeed ) ),
-	RecvPropFloat( RECVINFO( m_RotationSpeed ) ),
-	RecvPropFloat( RECVINFO( m_MovementSpeed ) ),
-	RecvPropFloat( RECVINFO( m_Density ) ),
-	RecvPropFloat( RECVINFO( m_maxDrawDistance ) ),
-	RecvPropInt( RECVINFO( m_spawnflags ) ),
-	RecvPropDataTable( RECVINFO_DT( m_Collision ), 0, &REFERENCE_RECV_TABLE(DT_CollisionProperty) ),
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS( C_FuncSmokeVolume, DT_FuncSmokeVolume, CFuncSmokeVolume )
 
 // Helpers.
 // ------------------------------------------------------------------------- //

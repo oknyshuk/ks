@@ -12,6 +12,11 @@
 #include "fmtstr.h"
 #include "igameevents.h"
 
+#ifndef CLIENT_DLL
+#include "reflect_annotations.h"
+#include "reflect_datamap.h"
+#endif
+
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
@@ -32,24 +37,17 @@ public:
 
 	virtual void	Activate( void );
 
-	void InputUnlock( inputdata_t& inputdata );
-	void InputComplete( inputdata_t& inputdata );
-	void InputSave( inputdata_t& inputdata );
+	[[= ks::reflect::Input{ .name = "Unlock", .type = FIELD_VOID } ]] void InputUnlock( inputdata_t& inputdata );
+	[[= ks::reflect::Input{ .name = "Complete", .type = FIELD_VOID } ]] void InputComplete( inputdata_t& inputdata );
+	[[= ks::reflect::Input{ .name = "Save", .type = FIELD_VOID } ]] void InputSave( inputdata_t& inputdata );
 
 private:
-	string_t	m_String_tFileName;
-	string_t	m_String_tMapName;
+	[[= ks::reflect::Key{ .name = "filename" } ]] string_t	m_String_tFileName;
+	[[= ks::reflect::Key{ .name = "mapname" } ]] string_t	m_String_tMapName;
 	IGameUI		*m_pGameUI;
 };
 
-BEGIN_DATADESC( CPointBonusMapsAccessor )
-	DEFINE_KEYFIELD( m_String_tFileName, FIELD_STRING, "filename" ),
-	DEFINE_KEYFIELD( m_String_tMapName, FIELD_STRING, "mapname" ),
-
-	DEFINE_INPUTFUNC( FIELD_VOID, "Unlock", InputUnlock ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "Complete", InputComplete ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "Save", InputSave ),
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CPointBonusMapsAccessor )
 
 LINK_ENTITY_TO_CLASS( point_bonusmaps_accessor, CPointBonusMapsAccessor );
 

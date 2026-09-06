@@ -11,9 +11,15 @@
 #undef WAIT_TIMEOUT
 #undef WAIT_FAILED
 
+#include "tier0/commonmacros.h"
+#pragma push_macro("ARRAYSIZE")
+#undef ARRAYSIZE
+
 #include <d3d9.h>
 #include "togl/dxabstract.h"
 #include "togl/dxabstract_types.h"
+
+#pragma pop_macro("ARRAYSIZE")
 
 typedef void* VD3DHWND;
 typedef void* VD3DHANDLE;
@@ -30,6 +36,6 @@ typedef HWND VD3DHWND;
 
 #endif // defined(DX_TO_GL_ABSTRACTION)
 
-#define	GLMPRINTF(args)	
+#define	GLMPRINTF(args)
 #define	GLMPRINTSTR(args)
 #define	GLMPRINTTEXT(args)

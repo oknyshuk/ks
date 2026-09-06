@@ -7,6 +7,8 @@
 
 #ifndef BASEENTITY_H
 #define BASEENTITY_H
+
+#include "reflect_annotations.h"
 #ifdef _WIN32
 #pragma once
 #endif
@@ -24,6 +26,43 @@
 #include "vscript_server.h"
 #include "branchingsingleton.h"
 #include "bittools.h"
+#include "sendprop_priorities.h"
+// CPU_LEVEL_BIT_COUNT / GPU_LEVEL_BIT_COUNT, named by the Net annotations on the four
+// m_n{Min,Max}{CPU,GPU}Level members.
+#include "videocfg/videocfg.h"
+
+// Named by the Net annotation on m_iParentAttachment. The definition lives in
+// game/shared/baseentity_shared.h, which includes *this* header, so it is not visible from
+// there; an identical redefinition is well-formed.
+#define NUM_PARENTATTACHMENT_BITS	6
+
+// Named by the Net annotations on m_vecOrigin and m_angRotation, so they have to be constant
+// expressions here rather than const ints in baseentity.cpp beside the table.
+#if PREDICTION_ERROR_CHECK_LEVEL > 1 
+constexpr int SENDPROP_ANGROTATION_DEFAULT_BITS = -1;
+constexpr int SENDPROP_VECORIGIN_FLAGS = SPROP_NOSCALE|SPROP_CHANGES_OFTEN;
+#else
+constexpr int SENDPROP_ANGROTATION_DEFAULT_BITS = 13;
+constexpr int SENDPROP_VECORIGIN_FLAGS = SPROP_CELL_COORD|SPROP_CHANGES_OFTEN;
+#endif
+
+// DT_BaseEntity names DT_AnimTimeMustBeFirst as a sub-table prop; the global is defined by
+// IMPLEMENT_REFLECT_TABLE_IN in baseentity.cpp.
+namespace DT_AnimTimeMustBeFirst { extern SendTable g_SendTable; }
+
+void SendProxy_AnimTime( const SendProp *pProp, const void *pStruct,
+    const void *pData, DVariant *pOut, int iElement, int objectID );
+// Defined in baseentity.cpp; named by the Net annotation on m_flSimulationTime.
+void SendProxy_SimulationTime( const SendProp *pProp, const void *pStruct,
+    const void *pVarData, DVariant *pOut, int iElement, int objectID );
+// Defined in baseentity.cpp; named by the Net annotation on m_angRotation.
+void SendProxy_Angles( const SendProp *pProp, const void *pStruct,
+    const void *pData, DVariant *pOut, int iElement, int objectID );
+// Defined in baseentity.cpp; named by the SubTable annotation on CBaseEntity, and declared again
+// beside CBaseAnimating, which sends the same proxy for its own serveranimdata sub-table.
+void *SendProxy_ClientSideAnimation( const SendProp *pProp, const void *pStruct,
+    const void *pVarData, CSendProxyRecipients *pRecipients,
+    int objectID );
 
 class CDamageModifier;
 
@@ -272,7 +311,11 @@ struct rotatingpushmove_t;
 //
 // Base Entity.  All entity types derive from this
 //
-class CBaseEntity : public IServerEntity
+class [[= ks::reflect::NetTable{ .name = "DT_AnimTimeMustBeFirst", .base = false } ]]
+      [[= ks::reflect::NetTable{ .name = "DT_BaseEntity", .base = false } ]]
+      [[= ks::reflect::SubTable<"AnimTimeMustBeFirst", &DT_AnimTimeMustBeFirst::g_SendTable,
+            SendProxy_ClientSideAnimation, true>{} ]]
+      CBaseEntity : public IServerEntity
 {
 public:
 	DECLARE_CLASS_NOBASE( CBaseEntity );	
@@ -567,7 +610,7 @@ public:
 
 private:
 
-	CNetworkVar( float, m_flUseLookAtAngle ); // dot product angle used for +USE events
+	CNetworkVar( float, m_flUseLookAtAngle, [[= ks::reflect::Net{ .bits = 32 } ]] ); // dot product angle used for +USE events
 
 	bool		NameMatchesComplex( const char *pszNameOrWildcard );
 	bool		ClassMatchesComplex( const char *pszClassOrWildcard );
@@ -625,44 +668,44 @@ public:
 	//
 	// Input handlers.
 	//
-	void InputAlternativeSorting( inputdata_t &inputdata );
-	void InputAlpha( inputdata_t &inputdata );
-	void InputColor( inputdata_t &inputdata );
-	void InputSetParent( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "AlternativeSorting", .type = FIELD_BOOLEAN } ]] void InputAlternativeSorting( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Alpha", .type = FIELD_INTEGER } ]] void InputAlpha( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Color", .type = FIELD_COLOR32 } ]] void InputColor( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetParent", .type = FIELD_STRING } ]] void InputSetParent( inputdata_t &inputdata );
 	void SetParentAttachment( const char *szInputName, const char *szAttachment, bool bMaintainOffset );
-	void InputSetParentAttachment( inputdata_t &inputdata );
-	void InputSetParentAttachmentMaintainOffset( inputdata_t &inputdata );
-	void InputClearParent( inputdata_t &inputdata );
-	void InputSetLocalOrigin( inputdata_t &inputdata );
-	void InputSetLocalAngles( inputdata_t &inputdata );
-	void InputSetTeam( inputdata_t &inputdata );
-	void InputUse( inputdata_t &inputdata );
-	void InputKill( inputdata_t &inputdata );
-	void InputKillHierarchy( inputdata_t &inputdata );
-	void InputSetDamageFilter( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetParentAttachment", .type = FIELD_STRING } ]] void InputSetParentAttachment( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetParentAttachmentMaintainOffset", .type = FIELD_STRING } ]] void InputSetParentAttachmentMaintainOffset( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "ClearParent", .type = FIELD_VOID } ]] void InputClearParent( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetLocalOrigin", .type = FIELD_STRING } ]] void InputSetLocalOrigin( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetLocalAngles", .type = FIELD_STRING } ]] void InputSetLocalAngles( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetTeam", .type = FIELD_INTEGER } ]] void InputSetTeam( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Use", .type = FIELD_VOID } ]] void InputUse( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Kill", .type = FIELD_VOID } ]] void InputKill( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "KillHierarchy", .type = FIELD_VOID } ]] void InputKillHierarchy( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetDamageFilter", .type = FIELD_STRING } ]] void InputSetDamageFilter( inputdata_t &inputdata );
 	void InputDispatchEffect( inputdata_t &inputdata );
-	void InputEnableDamageForces( inputdata_t &inputdata );
-	void InputDisableDamageForces( inputdata_t &inputdata );
-	void InputAddContext( inputdata_t &inputdata );
-	void InputRemoveContext( inputdata_t &inputdata );
-	void InputClearContext( inputdata_t &inputdata );
-	void InputDispatchResponse( inputdata_t& inputdata );
-	void InputDisableShadow( inputdata_t &inputdata );
-	void InputEnableShadow( inputdata_t &inputdata );
-	void InputDisableReceivingFlashlight( inputdata_t &inputdata );
-	void InputEnableReceivingFlashlight( inputdata_t &inputdata );
-	void InputDisableDrawInFastReflection( inputdata_t &inputdata );
-	void InputEnableDrawInFastReflection( inputdata_t &inputdata );
-	void InputDisableDraw( inputdata_t &inputdata );
-	void InputEnableDraw( inputdata_t &inputdata );
-	void InputAddOutput( inputdata_t &inputdata );
-	void InputFireUser1( inputdata_t &inputdata );
-	void InputFireUser2( inputdata_t &inputdata );
-	void InputFireUser3( inputdata_t &inputdata );
-	void InputFireUser4( inputdata_t &inputdata );
-	void InputRunScript( inputdata_t &inputdata );
-	void InputRunScriptFile( inputdata_t &inputdata );
-	void InputCallScriptFunction( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "EnableDamageForces", .type = FIELD_VOID } ]] void InputEnableDamageForces( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "DisableDamageForces", .type = FIELD_VOID } ]] void InputDisableDamageForces( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "AddContext", .type = FIELD_STRING } ]] void InputAddContext( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "RemoveContext", .type = FIELD_STRING } ]] void InputRemoveContext( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "ClearContext", .type = FIELD_STRING } ]] void InputClearContext( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "DispatchResponse", .type = FIELD_STRING } ]] void InputDispatchResponse( inputdata_t& inputdata );
+	[[= ks::reflect::Input{ .name = "DisableShadow", .type = FIELD_VOID } ]] void InputDisableShadow( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "EnableShadow", .type = FIELD_VOID } ]] void InputEnableShadow( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "DisableReceivingFlashlight", .type = FIELD_VOID } ]] void InputDisableReceivingFlashlight( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "EnableReceivingFlashlight", .type = FIELD_VOID } ]] void InputEnableReceivingFlashlight( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "DisableDrawInFastReflection", .type = FIELD_VOID } ]] void InputDisableDrawInFastReflection( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "EnableDrawInFastReflection", .type = FIELD_VOID } ]] void InputEnableDrawInFastReflection( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "DisableDraw", .type = FIELD_VOID } ]] void InputDisableDraw( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "EnableDraw", .type = FIELD_VOID } ]] void InputEnableDraw( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "AddOutput", .type = FIELD_STRING } ]] void InputAddOutput( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "FireUser1", .type = FIELD_STRING } ]] void InputFireUser1( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "FireUser2", .type = FIELD_STRING } ]] void InputFireUser2( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "FireUser3", .type = FIELD_STRING } ]] void InputFireUser3( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "FireUser4", .type = FIELD_STRING } ]] void InputFireUser4( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "RunScriptCode", .type = FIELD_STRING } ]] void InputRunScript( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "RunScriptFile", .type = FIELD_STRING } ]] void InputRunScriptFile( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "CallScriptFunction", .type = FIELD_STRING } ]] void InputCallScriptFunction( inputdata_t &inputdata );
 #ifdef PORTAL2
 	void InputRemovePaint( inputdata_t &inputdata );
 #endif
@@ -699,8 +742,6 @@ public:
 
 	// save/restore
 	// only overload these if you have special data to serialize
-	virtual int	Save( ISave &save );
-	virtual int	Restore( IRestore &restore );
 	virtual bool ShouldSavePhysics();
 
 	// handler to reset stuff before you are restored
@@ -729,8 +770,6 @@ public:
 	// It is used by Foundry to match up live (engine) entities with Hammer entities.
 	inline int		GetHammerID() const { return m_iHammerID; }
 private:
-	int SaveDataDescBlock( ISave &save, datamap_t *dmap );
-	int RestoreDataDescBlock( IRestore &restore, datamap_t *dmap );
 
 public:
 	// Networking related methods
@@ -789,7 +828,7 @@ private:
 
 public:
 	// members
-	string_t m_iClassname;  // identifier for entity creation and save/restore
+	[[= ks::reflect::Key{ .name = "classname" } ]] string_t m_iClassname;  // identifier for entity creation and save/restore
 
 public:
 	const color24 GetRenderColor() const;
@@ -802,8 +841,8 @@ public:
 
 	// was pev->animtime:  consider moving to CBaseAnimating
 	float		m_flPrevAnimTime;
-	CNetworkVar( float, m_flAnimTime );  // this is the point in time that the client will interpolate to position,angle,frame,etc.
-	CNetworkVar( float, m_flSimulationTime );
+	CNetworkVar( float, m_flAnimTime, [[= ks::reflect::Net{ .bits = 8, .flags = SPROP_UNSIGNED|SPROP_CHANGES_OFTEN|SPROP_ENCODED_AGAINST_TICKCOUNT, .enc = ks::reflect::ENC_INT, .table = "DT_AnimTimeMustBeFirst" } ]] [[= ks::reflect::Proxy<SendProxy_AnimTime, ks::reflect::WIRE_SEND>{} ]] );  // this is the point in time that the client will interpolate to position,angle,frame,etc.
+	CNetworkVar( float, m_flSimulationTime, [[= ks::reflect::Net{ .bits = SIMULATION_TIME_WINDOW_BITS, .flags = SPROP_UNSIGNED|SPROP_CHANGES_OFTEN|SPROP_ENCODED_AGAINST_TICKCOUNT, .enc = ks::reflect::ENC_INT, .priority = SENDPROP_SIMULATION_TIME_PRIORITY } ]] [[= ks::reflect::Proxy<SendProxy_SimulationTime, ks::reflect::WIRE_SEND>{} ]] );
 #if defined(ENABLE_CREATE_TIME)
 	CNetworkVar( float, m_flCreateTime );
 #endif
@@ -850,7 +889,7 @@ protected:
 	CUtlVector< ResponseContext_t > m_ResponseContexts;
 
 	// Map defined context sets
-	string_t	m_iszResponseContext;
+	[[= ks::reflect::Key{ .name = "ResponseContext" } ]] string_t	m_iszResponseContext;
 
 private:
 	// list handling
@@ -858,9 +897,9 @@ private:
 	friend class CThinkSyncTester;
 
 	// was pev->nextthink
-	CNetworkVarForDerived( int, m_nNextThinkTick );
+	CNetworkVarForDerived( int, m_nNextThinkTick, [[= ks::reflect::As{ FIELD_TICK } ]] [[= ks::reflect::Key{ .name = "nextthink" } ]] );
 	// was pev->effects
-	CNetworkVar( int, m_fEffects );
+	CNetworkVar( int, m_fEffects, [[= ks::reflect::Key{ .name = "effects" } ]] [[= ks::reflect::Net{ .bits = EF_MAX_BITS, .flags = SPROP_UNSIGNED } ]] );
 
 ////////////////////////////////////////////////////////////////////////////
 
@@ -1138,16 +1177,16 @@ public:
 	void			AppendContextToCriteria( AI_CriteriaSet& set, const char *prefix = "" );
 	void			DumpResponseCriteria( void );
 protected:
-	string_t		m_ModelName;
+	[[= ks::reflect::Key{ .name = "model", .global = true } ]] [[= ks::reflect::As{ FIELD_MODELNAME } ]] string_t		m_ModelName;
 
-	CNetworkVar( bool, m_bIsAutoaimTarget );
+	CNetworkVar( bool, m_bIsAutoaimTarget, [[= ks::reflect::Key{ .name = "is_autoaim_target" } ]] [[= ks::reflect::Net{} ]] );
 private:
 	friend class CAI_Senses;
 	CBaseEntity	*m_pLink;// used for temporary link-list operations. 
 
 public:
 	// variables promoted from edict_t
-	string_t	m_target;
+	[[= ks::reflect::Key{ .name = "target" } ]] string_t	m_target;
 
 	// virtual functions used by a few classes
 	
@@ -1380,7 +1419,7 @@ public:
 	static void EmitAmbientSound( int entindex, const Vector& origin, const char *soundname, int flags = 0, float soundtime = 0.0f, float *duration = NULL );
 
 	// keep track of other-player audible sounds.
-	CNetworkVar( float, m_flLastMadeNoiseTime );
+	CNetworkVar( float, m_flLastMadeNoiseTime, [[= ks::reflect::Net{ .bits = 32 } ]] );
 
 	// These files need to be listed in scripts/game_sounds_manifest.txt
 	static HSOUNDSCRIPTHASH PrecacheScriptSound( const char *soundname );
@@ -1620,12 +1659,12 @@ private:
 
 public:
 	// was pev->renderfx
-	CNetworkVar( unsigned char, m_nRenderFX );
+	CNetworkVar( unsigned char, m_nRenderFX, [[= ks::reflect::Key{ .name = "renderfx" } ]] [[= ks::reflect::Net{ .bits = 8, .flags = SPROP_UNSIGNED } ]] );
 	// was pev->rendermode
-	CNetworkVar( unsigned char, m_nRenderMode );
-	CNetworkVar( short, m_nModelIndex );
+	CNetworkVar( unsigned char, m_nRenderMode, [[= ks::reflect::Key{ .name = "rendermode" } ]] [[= ks::reflect::Net{ .bits = 8, .flags = SPROP_UNSIGNED } ]] );
+	CNetworkVar( short, m_nModelIndex, [[= ks::reflect::Key{ .name = "modelindex", .global = true } ]] [[= ks::reflect::Net{ .enc = ks::reflect::ENC_MODELINDEX } ]] );
 	// was pev->rendercolor
-	CNetworkColor32( m_clrRender );
+	CNetworkColor32( m_clrRender, [[= ks::reflect::Key{ .name = "rendercolor" } ]] [[= ks::reflect::Net{ .bits = 32, .flags = SPROP_UNSIGNED } ]] [[= ks::reflect::Proxy<SendProxy_Color32ToInt32, ks::reflect::WIRE_SEND>{} ]] );
 
 protected:
 	// Which frame did I simulate?
@@ -1637,7 +1676,7 @@ protected:
 	// was pev->flags
 	CNetworkVarForDerived( int, m_fFlags );
 
-	CNetworkVar( string_t, m_iName ); // name used to identify this entity
+	CNetworkVar( string_t, m_iName, [[= ks::reflect::Net{} ]] ); // name used to identify this entity
 
 	// Damage modifiers
 #if defined(ENABLE_DAMAGE_MODIFIERS)
@@ -1647,13 +1686,13 @@ protected:
 
 	EHANDLE m_pParent;  // for movement hierarchy
 	byte	m_nTransmitStateOwnedCounter;
-	CNetworkVar( unsigned char,  m_iParentAttachment ); // 0 if we're relative to the parent's absorigin and absangles.
-	CNetworkVar( unsigned char, m_MoveType );		// One of the MOVETYPE_ defines.
-	CNetworkVar( unsigned char, m_MoveCollide );
+	CNetworkVar( unsigned char,  m_iParentAttachment, [[= ks::reflect::Net{ .bits = NUM_PARENTATTACHMENT_BITS, .flags = SPROP_UNSIGNED } ]] ); // 0 if we're relative to the parent's absorigin and absangles.
+	CNetworkVar( unsigned char, m_MoveType, [[= ks::reflect::Key{ .name = "MoveType" } ]] [[= ks::reflect::Net{ .bits = MOVETYPE_MAX_BITS, .flags = SPROP_UNSIGNED, .wire = "movetype" } ]] );		// One of the MOVETYPE_ defines.
+	CNetworkVar( unsigned char, m_MoveCollide, [[= ks::reflect::Net{ .bits = MOVECOLLIDE_MAX_BITS, .flags = SPROP_UNSIGNED, .wire = "movecollide" } ]] );
 
 	// Our immediate parent in the movement hierarchy.
 	// FIXME: clarify m_pParent vs. m_pMoveParent
-	CNetworkHandle( CBaseEntity, m_hMoveParent );
+	CNetworkHandle( CBaseEntity, m_hMoveParent, [[= ks::reflect::Net{ .wire = "moveparent" } ]] );
 	// cached child list
 	EHANDLE m_hMoveChild;
 	// generated from m_pMoveParent
@@ -1661,11 +1700,11 @@ protected:
 
 	friend class CCollisionProperty;
 	friend class CServerNetworkProperty;
-	CNetworkVarEmbedded( CCollisionProperty, m_Collision );
+	CNetworkVarEmbedded( CCollisionProperty, m_Collision, [[= ks::reflect::Net{} ]] );
 
-	CNetworkHandle( CBaseEntity, m_hOwnerEntity );	// only used to point to an edict it won't collide with
+	CNetworkHandle( CBaseEntity, m_hOwnerEntity, [[= ks::reflect::Net{} ]] );	// only used to point to an edict it won't collide with
 
-	CNetworkVar( int, m_CollisionGroup );		// used to cull collision tests
+	CNetworkVar( int, m_CollisionGroup, [[= ks::reflect::Key{ .name = "CollisionGroup" } ]] [[= ks::reflect::Net{ .bits = 5, .flags = SPROP_UNSIGNED } ]] );		// used to cull collision tests
 	IPhysicsObject	*m_pPhysicsObject;	// pointer to the entity's physics object (vphysics.dll)
 	float m_flNonShadowMass;	// cached mass (shadow controllers set mass to VPHYSICS_MAX_MASS, or 50000)
 
@@ -1673,20 +1712,20 @@ protected:
 	unsigned char	m_nWaterTouch;
 	unsigned char	m_nSlimeTouch;
 	unsigned char	m_nWaterType;
-	CNetworkVarForDerived( unsigned char, m_nWaterLevel );
+	CNetworkVarForDerived( unsigned char, m_nWaterLevel, [[= ks::reflect::Key{ .name = "waterlevel" } ]] );
 	float			m_flNavIgnoreUntilTime;
 
 	CNetworkHandleForDerived( CBaseEntity, m_hGroundEntity );
 	float			m_flGroundChangeTime; // Time that the ground entity changed  --- only used by NPCs, move?
 	
 	// Velocity of the thing we're standing on (world space)
-	CNetworkVectorForDerived( m_vecBaseVelocity );
+	CNetworkVectorForDerived( m_vecBaseVelocity, [[= ks::reflect::Key{ .name = "basevelocity" } ]] );
 
 	// Global velocity
 	Vector			m_vecAbsVelocity;
 
 	// Local angular velocity
-	QAngle			m_vecAngVelocity;
+	[[= ks::reflect::Key{ .name = "avelocity" } ]] QAngle			m_vecAngVelocity;
 
 	// Global angular velocity
 //	QAngle			m_vecAbsAngVelocity;
@@ -1695,14 +1734,14 @@ protected:
 	matrix3x4_t		m_rgflCoordinateFrame;
 
 	// was pev->friction
-	CNetworkVarForDerived( float, m_flFriction );
-	CNetworkVar( float, m_flElasticity );
+	CNetworkVarForDerived( float, m_flFriction, [[= ks::reflect::Key{ .name = "friction" } ]] );
+	CNetworkVar( float, m_flElasticity, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_COORD } ]] );
 #if defined(ENABLE_FRICTION_OVERRIDE)
 	float m_flOverriddenFriction;
 	void FrictionRevertThink( void );
 #endif
 	// was pev->ltime
-	float			m_flLocalTime;
+	[[= ks::reflect::Key{ .name = "ltime" } ]] float			m_flLocalTime;
 	// local time at the beginning of this frame
 	float			m_flVPhysicsUpdateLocalTime;
 	// local time the movement has ended
@@ -1713,36 +1752,36 @@ protected:
 
 	Vector			m_vecAbsOrigin;
 	QAngle			m_angAbsRotation;
-	CNetworkVectorXYZForDerived( m_vecVelocity );
+	CNetworkVectorXYZForDerived( m_vecVelocity, [[= ks::reflect::Key{ .name = "velocity" } ]] );
 	
 	// Physics state
 	EHANDLE			m_pBlocker;
 
 	//Adrian
-	CNetworkVar( unsigned char, m_iTextureFrameIndex );
+	CNetworkVar( unsigned char, m_iTextureFrameIndex, [[= ks::reflect::Key{ .name = "texframeindex" } ]] [[= ks::reflect::Net{ .bits = 8, .flags = SPROP_UNSIGNED } ]] );
 	
-	CNetworkVar( bool, m_bSimulatedEveryTick );
-	CNetworkVar( bool, m_bAnimatedEveryTick );
-	CNetworkVar( bool, m_bAlternateSorting );
+	CNetworkVar( bool, m_bSimulatedEveryTick, [[= ks::reflect::Net{} ]] );
+	CNetworkVar( bool, m_bAnimatedEveryTick, [[= ks::reflect::Net{} ]] );
+	CNetworkVar( bool, m_bAlternateSorting, [[= ks::reflect::Net{} ]] );
 
-	CNetworkVar( unsigned char, m_nMinCPULevel );
-	CNetworkVar( unsigned char, m_nMaxCPULevel );
-	CNetworkVar( unsigned char, m_nMinGPULevel );
-	CNetworkVar( unsigned char, m_nMaxGPULevel );
+	CNetworkVar( unsigned char, m_nMinCPULevel, [[= ks::reflect::Key{ .name = "mincpulevel" } ]] [[= ks::reflect::Net{ .bits = CPU_LEVEL_BIT_COUNT, .flags = SPROP_UNSIGNED } ]] );
+	CNetworkVar( unsigned char, m_nMaxCPULevel, [[= ks::reflect::Key{ .name = "maxcpulevel" } ]] [[= ks::reflect::Net{ .bits = CPU_LEVEL_BIT_COUNT, .flags = SPROP_UNSIGNED } ]] );
+	CNetworkVar( unsigned char, m_nMinGPULevel, [[= ks::reflect::Key{ .name = "mingpulevel" } ]] [[= ks::reflect::Net{ .bits = GPU_LEVEL_BIT_COUNT, .flags = SPROP_UNSIGNED } ]] );
+	CNetworkVar( unsigned char, m_nMaxGPULevel, [[= ks::reflect::Key{ .name = "maxgpulevel" } ]] [[= ks::reflect::Net{ .bits = GPU_LEVEL_BIT_COUNT, .flags = SPROP_UNSIGNED } ]] );
 
 public:
 	// was pev->speed
-	string_t m_iGlobalname; // identifier for carrying entity across level transitions
-	string_t m_iParent;	// the name of the entities parent; linked into m_pParent during Activate()
+	[[= ks::reflect::Key{ .name = "globalname", .global = true } ]] string_t m_iGlobalname; // identifier for carrying entity across level transitions
+	[[= ks::reflect::Key{ .name = "parentname" } ]] string_t m_iParent;	// the name of the entities parent; linked into m_pParent during Activate()
 
 	// This comes from the "id" key/value that Hammer adds to entities.
 	// It is used by Foundry to match up live (engine) entities with Hammer entities.
-	int		m_iHammerID; // Hammer unique edit id number
-	float		m_flSpeed;
-	CNetworkVarForDerived( int, m_iMaxHealth ); // CBaseEntity doesn't care about changes to this variable, but there are derived classes that do.
-	CNetworkVarForDerived( int, m_iHealth );
+	[[= ks::reflect::Key{ .name = "hammerid" } ]] int		m_iHammerID; // Hammer unique edit id number
+	[[= ks::reflect::Key{ .name = "speed" } ]] float		m_flSpeed;
+	CNetworkVarForDerived( int, m_iMaxHealth, [[= ks::reflect::Key{ .name = "max_health" } ]] ); // CBaseEntity doesn't care about changes to this variable, but there are derived classes that do.
+	CNetworkVarForDerived( int, m_iHealth, [[= ks::reflect::Key{ .name = "health" } ]] );
 	// Damage filtering
-	string_t	m_iszDamageFilterName;	// The name of the entity to use as our damage filter.
+	[[= ks::reflect::Key{ .name = "damagefilter" } ]] string_t	m_iszDamageFilterName;	// The name of the entity to use as our damage filter.
 	EHANDLE		m_hDamageFilter;		// The entity that controls who can damage us.
 
 	void (CBaseEntity ::*m_pfnTouch)( CBaseEntity *pOther );
@@ -1764,30 +1803,30 @@ private:
 	CNetworkHandle( CBasePlayer, m_hPlayerSimulationOwner );
 #endif
 	// User outputs. Fired when the "FireInputX" input is triggered.
-	COutputEvent m_OnUser1;
-	COutputEvent m_OnUser2;
-	COutputEvent m_OnUser3;
-	COutputEvent m_OnUser4;
+	[[= ks::reflect::Key{ .name = "OnUser1" } ]] COutputEvent m_OnUser1;
+	[[= ks::reflect::Key{ .name = "OnUser2" } ]] COutputEvent m_OnUser2;
+	[[= ks::reflect::Key{ .name = "OnUser3" } ]] COutputEvent m_OnUser3;
+	[[= ks::reflect::Key{ .name = "OnUser4" } ]] COutputEvent m_OnUser4;
 
 	COutputEvent m_OnKilled;
 
 	// We cache the cell width for convenience
 	int m_cellwidth;
 
-	CNetworkVar( int, m_cellbits );
+	CNetworkVar( int, m_cellbits, [[= ks::reflect::Net{ .bits = MINIMUM_BITS_NEEDED( 32 ), .flags = SPROP_UNSIGNED, .priority = SENDPROP_CELL_INFO_PRIORITY } ]] );
 
 	// Cell of the current origin
 //	CNetworkArray( int, m_cellXY, 2 );
-	CNetworkVar( int, m_cellX );
-	CNetworkVar( int, m_cellY );
-	CNetworkVar( int, m_cellZ );
+	CNetworkVar( int, m_cellX, [[= ks::reflect::Net{ .bits = CELL_COUNT_BITS( CELL_BASEENTITY_ORIGIN_CELL_BITS ), .flags = SPROP_UNSIGNED, .priority = SENDPROP_CELL_INFO_PRIORITY } ]] [[= ks::reflect::Proxy<CBaseEntity::SendProxy_CellX, ks::reflect::WIRE_SEND>{} ]] );
+	CNetworkVar( int, m_cellY, [[= ks::reflect::Net{ .bits = CELL_COUNT_BITS( CELL_BASEENTITY_ORIGIN_CELL_BITS ), .flags = SPROP_UNSIGNED, .priority = SENDPROP_CELL_INFO_PRIORITY } ]] [[= ks::reflect::Proxy<CBaseEntity::SendProxy_CellY, ks::reflect::WIRE_SEND>{} ]] );
+	CNetworkVar( int, m_cellZ, [[= ks::reflect::Net{ .bits = CELL_COUNT_BITS( CELL_BASEENTITY_ORIGIN_CELL_BITS ), .flags = SPROP_UNSIGNED, .priority = SENDPROP_CELL_INFO_PRIORITY } ]] [[= ks::reflect::Proxy<CBaseEntity::SendProxy_CellZ, ks::reflect::WIRE_SEND>{} ]] );
 
-	CNetworkVectorXY_SeparateZ( m_vecOrigin );
-	CNetworkQAngleXYZ( m_angRotation );
+	CNetworkVectorXY_SeparateZ( m_vecOrigin, [[= ks::reflect::Net{ .bits = CELL_BASEENTITY_ORIGIN_CELL_BITS, .flags = SENDPROP_VECORIGIN_FLAGS, .enc = ks::reflect::ENC_VECTOR } ]] [[= ks::reflect::Proxy<CBaseEntity::SendProxy_CellOrigin, ks::reflect::WIRE_SEND>{} ]] );
+	CNetworkQAngleXYZ( m_angRotation, [[= ks::reflect::Net{ .bits = SENDPROP_ANGROTATION_DEFAULT_BITS, .flags = SPROP_CHANGES_OFTEN, .enc = ks::reflect::ENC_QANGLES } ]] [[= ks::reflect::Proxy<SendProxy_Angles, ks::reflect::WIRE_SEND>{} ]] );
 	CBaseHandle m_RefEHandle;
 
 	// was pev->view_ofs ( FIXME:  Move somewhere up the hierarch, CBaseAnimating, etc. )
-	CNetworkVectorXYZForDerived( m_vecViewOffset );
+	CNetworkVectorXYZForDerived( m_vecViewOffset, [[= ks::reflect::Key{ .name = "view_ofs" } ]] );
 
 	UtlHashHandle_t		m_ListByClass;
 	CBaseEntity	*		m_pPrevByClass;
@@ -1796,21 +1835,21 @@ private:
 	friend class CCollisionEvent;
 
 	// Team handling
-	int			m_iInitialTeamNum;		// Team number of this entity's team read from file
-	CNetworkVar( int, m_iTeamNum );				// Team number of this entity's team. 
-	CNetworkVar( int, m_iPendingTeamNum );				// Team number of this entity's pending team. 
+	[[= ks::reflect::Key{ .name = "TeamNum", .input = true } ]] int			m_iInitialTeamNum;		// Team number of this entity's team read from file
+	CNetworkVar( int, m_iTeamNum, [[= ks::reflect::Key{ .name = "teamnumber" } ]] [[= ks::reflect::Net{ .bits = TEAMNUM_NUM_BITS } ]] );				// Team number of this entity's team. 
+	CNetworkVar( int, m_iPendingTeamNum, [[= ks::reflect::Key{ .name = "pendingteamnumber" } ]] [[= ks::reflect::Net{ .bits = TEAMNUM_NUM_BITS } ]] );				// Team number of this entity's pending team. 
 
 protected:
 	// FIXME: Make this private! Still too many references to do so...
-	CNetworkVar( int, m_spawnflags );
-	string_t		m_AIAddOn;
+	CNetworkVar( int, m_spawnflags, [[= ks::reflect::Key{ .name = "spawnflags" } ]] );
+	[[= ks::reflect::Key{ .name = "addon" } ]] string_t		m_AIAddOn;
 	// was pev->gravity;
-	float			m_flGravity;  // rename to m_flGravityScale;
-	CNetworkHandle( CBaseEntity, m_hEffectEntity );	// Fire/Dissolve entity.
-	CNetworkVar( float, m_fadeMinDist );	// Point at which fading is absolute
-	CNetworkVar( float, m_fadeMaxDist );	// Point at which fading is inactive
-	CNetworkVar( float, m_flFadeScale );	// Scale applied to min / max
-	CNetworkVar( float, m_flShadowCastDistance );
+	[[= ks::reflect::Key{ .name = "gravity" } ]] float			m_flGravity;  // rename to m_flGravityScale;
+	CNetworkHandle( CBaseEntity, m_hEffectEntity, [[= ks::reflect::Net{} ]] );	// Fire/Dissolve entity.
+	CNetworkVar( float, m_fadeMinDist, [[= ks::reflect::Key{ .name = "fademindist", .input = true } ]] [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE } ]] );	// Point at which fading is absolute
+	CNetworkVar( float, m_fadeMaxDist, [[= ks::reflect::Key{ .name = "fademaxdist", .input = true } ]] [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE } ]] );	// Point at which fading is inactive
+	CNetworkVar( float, m_flFadeScale, [[= ks::reflect::Key{ .name = "fadescale" } ]] [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE } ]] );	// Scale applied to min / max
+	CNetworkVar( float, m_flShadowCastDistance, [[= ks::reflect::Key{ .name = "shadowcastdist" } ]] [[= ks::reflect::Net{ .bits = 12, .flags = SPROP_UNSIGNED } ]] );
 	float		m_flDesiredShadowCastDistance;
 
 #ifdef PORTAL2
@@ -1852,7 +1891,7 @@ private:
 	friend void TransferChildren( CBaseEntity *pOldParent, CBaseEntity *pNewParent );
 
 	bool m_bNetworkQuantizeOriginAndAngles;
-	bool m_bLagCompensate; // Special flag for certain l4d2 props to use
+	[[= ks::reflect::Key{ .name = "LagCompensate" } ]] bool m_bLagCompensate; // Special flag for certain l4d2 props to use
 
 	bool m_bForcePurgeFixedupStrings; // For template entites so we don't leak strings.
 	
@@ -1927,8 +1966,8 @@ public:
 	void ScriptPrecacheModel( const char *name );
 	void ScriptPrecacheScriptSound( const char *name );
 
-	string_t		m_iszVScripts;
-	string_t		m_iszScriptThinkFunction;
+	[[= ks::reflect::Key{ .name = "vscripts" } ]] string_t		m_iszVScripts;
+	[[= ks::reflect::Key{ .name = "thinkfunction" } ]] string_t		m_iszScriptThinkFunction;
 	CScriptScope	m_ScriptScope;
 	HSCRIPT			m_hScriptInstance;
 	string_t		m_iszScriptId;
@@ -1966,9 +2005,9 @@ protected:
 	// SpottingRules_T flags for limiting conditions under
 	// which an entity is spotted
 	int		m_nSpotRules;
-	CNetworkVar( bool, m_bSpotted );
+	CNetworkVar( bool, m_bSpotted, [[= ks::reflect::Net{} ]] );
 
-	CNetworkArray( uint32, m_bSpottedByMask, kNumSpottedByMask );
+	CNetworkArray( uint32, m_bSpottedByMask, kNumSpottedByMask, [[= ks::reflect::Net{ .flags = SPROP_UNSIGNED } ]] );
 	float	m_fLastSpotCheck;
 };
 

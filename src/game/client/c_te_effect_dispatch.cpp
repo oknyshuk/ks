@@ -7,6 +7,8 @@
 // $NoKeywords: $
 //===========================================================================//
 #include "cbase.h"
+#include "reflect_recvtable.h"
+#include "reflect_annotations.h"
 #include "c_basetempentity.h"
 #include "networkstringtable_clientdll.h"
 #include "effect_dispatch_data.h"
@@ -40,7 +42,10 @@ CClientEffectRegistration::CClientEffectRegistration( const char *pEffectName, C
 //-----------------------------------------------------------------------------
 // Purpose: EffectDispatch TE
 //-----------------------------------------------------------------------------
-class C_TEEffectDispatch : public C_BaseTempEntity
+class [[= ks::reflect::NetTable{ .name = "DT_TEEffectDispatch" } ]]
+      [[= ks::reflect::From<"m_EffectData", ks::reflect::Net{}, nullptr,
+                            &REFERENCE_RECV_TABLE( DT_EffectData )>{} ]]
+      C_TEEffectDispatch : public C_BaseTempEntity
 {
 public:
 	DECLARE_CLASS( C_TEEffectDispatch, C_BaseTempEntity );
@@ -52,7 +57,7 @@ public:
 	virtual void	PostDataUpdate( DataUpdateType_t updateType );
 
 public:
-	CEffectData m_EffectData;
+CEffectData m_EffectData;
 };
 
 //-----------------------------------------------------------------------------
@@ -182,11 +187,7 @@ void C_TEEffectDispatch::PostDataUpdate( DataUpdateType_t updateType )
 }
 
 
-IMPLEMENT_CLIENTCLASS_EVENT_DT( C_TEEffectDispatch, DT_TEEffectDispatch, CTEEffectDispatch )
-	
-	RecvPropDataTable( RECVINFO_DT( m_EffectData ), 0, &REFERENCE_RECV_TABLE( DT_EffectData ) )
-			
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS_EVENT( C_TEEffectDispatch, DT_TEEffectDispatch, CTEEffectDispatch )
 
 //-----------------------------------------------------------------------------
 // Client version of dispatch effect, for predicted weapons

@@ -7,6 +7,10 @@
 
 #ifndef C_ROPE_H
 #define C_ROPE_H
+
+#include "reflect_annotations.h"
+#include "dt_recv.h"
+#include "recvproxy.h"
 #ifdef _WIN32
 #pragma once
 #endif
@@ -17,6 +21,8 @@
 #include "rope_shared.h"
 #include "bitvec.h"
 
+
+void RecvProxy_RecomputeSprings( const CRecvProxyData *pData, void *pStruct, void *pOut );
 
 class KeyValues;
 class C_BaseAnimating;
@@ -34,7 +40,32 @@ enum rope_type
 
 
 //=============================================================================
-class C_RopeKeyframe : public C_BaseEntity
+class [[= ks::reflect::NetTable{ .name = "DT_RopeKeyframe", .base = false } ]]
+      [[= ks::reflect::From<"m_nChangeCount", ks::reflect::Net{}>{} ]]
+      [[= ks::reflect::From<"m_iRopeMaterialModelIndex", ks::reflect::Net{}>{} ]]
+      [[= ks::reflect::From<"m_hStartPoint", ks::reflect::Net{}>{} ]]
+      [[= ks::reflect::From<"m_hEndPoint", ks::reflect::Net{}>{} ]]
+      [[= ks::reflect::From<"m_iStartAttachment", ks::reflect::Net{}>{} ]]
+      [[= ks::reflect::From<"m_iEndAttachment", ks::reflect::Net{}>{} ]]
+      [[= ks::reflect::From<"m_fLockedPoints", ks::reflect::Net{}>{} ]]
+      [[= ks::reflect::From<"m_Slack", ks::reflect::Net{}, RecvProxy_RecomputeSprings>{} ]]
+      [[= ks::reflect::From<"m_RopeLength", ks::reflect::Net{}, RecvProxy_RecomputeSprings>{} ]]
+      [[= ks::reflect::From<"m_RopeFlags", ks::reflect::Net{}>{} ]]
+      [[= ks::reflect::From<"m_TextureScale", ks::reflect::Net{}>{} ]]
+      [[= ks::reflect::From<"m_nSegments", ks::reflect::Net{}>{} ]]
+      [[= ks::reflect::From<"m_bConstrainBetweenEndpoints", ks::reflect::Net{}>{} ]]
+      [[= ks::reflect::From<"m_Subdiv", ks::reflect::Net{}>{} ]]
+      [[= ks::reflect::From<"m_Width", ks::reflect::Net{}>{} ]]
+      [[= ks::reflect::From<"m_flScrollSpeed", ks::reflect::Net{}>{} ]]
+      [[= ks::reflect::From<"m_vecNetworkOrigin", ks::reflect::Net{ .wire = "m_vecOrigin" }>{} ]]
+      [[= ks::reflect::From<"m_hNetworkMoveParent", ks::reflect::Net{ .wire = "moveparent" }, RecvProxy_IntToMoveParent>{} ]]
+      [[= ks::reflect::From<"m_iParentAttachment", ks::reflect::Net{}>{} ]]
+      [[= ks::reflect::From<"m_iDefaultRopeMaterialModelIndex", ks::reflect::Net{}>{} ]]
+      [[= ks::reflect::From<"m_nMinCPULevel", ks::reflect::Net{}>{} ]]
+      [[= ks::reflect::From<"m_nMaxCPULevel", ks::reflect::Net{}>{} ]]
+      [[= ks::reflect::From<"m_nMinGPULevel", ks::reflect::Net{}>{} ]]
+      [[= ks::reflect::From<"m_nMaxGPULevel", ks::reflect::Net{}>{} ]]
+      C_RopeKeyframe : public C_BaseEntity
 {
 public:
 

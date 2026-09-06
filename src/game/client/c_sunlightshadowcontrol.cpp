@@ -5,6 +5,8 @@
 // $NoKeywords: $
 //=============================================================================//
 #include "cbase.h"
+#include "reflect_recvtable.h"
+#include "reflect_annotations.h"
 
 #include "c_baseplayer.h"
 #ifdef INFESTED_DLL
@@ -21,7 +23,8 @@ ConVar cl_sunlight_depthbias( "cl_sunlight_depthbias", "0.02" );
 //------------------------------------------------------------------------------
 // Purpose : Sunlights shadow control entity
 //------------------------------------------------------------------------------
-class C_SunlightShadowControl : public C_BaseEntity
+class [[= ks::reflect::NetTable{ .name = "DT_SunlightShadowControl" } ]]
+      C_SunlightShadowControl : public C_BaseEntity
 {
 public:
 	DECLARE_CLASS( C_SunlightShadowControl, C_BaseEntity );
@@ -37,19 +40,19 @@ public:
 	void ClientThink();
 
 private:
-	Vector m_shadowDirection;
-	bool m_bEnabled;
-	char m_TextureName[ MAX_PATH ];
+	[[= ks::reflect::Net{} ]] Vector m_shadowDirection;
+	[[= ks::reflect::Net{} ]] bool m_bEnabled;
+	[[= ks::reflect::Net{} ]] char m_TextureName[ MAX_PATH ];
 	CTextureReference m_SpotlightTexture;
-	color32	m_LightColor;
+	[[= ks::reflect::Net{} ]] [[= ks::reflect::Proxy<RecvProxy_Int32ToColor32, ks::reflect::WIRE_RECV>{} ]] color32	m_LightColor;
 	Vector m_CurrentLinearFloatLightColor;
 	float m_flCurrentLinearFloatLightAlpha;
-	float m_flColorTransitionTime;
-	float m_flSunDistance;
-	float m_flFOV;
-	float m_flNearZ;
-	float m_flNorthOffset;
-	bool m_bEnableShadows;
+	[[= ks::reflect::Net{} ]] float m_flColorTransitionTime;
+	[[= ks::reflect::Net{} ]] float m_flSunDistance;
+	[[= ks::reflect::Net{} ]] float m_flFOV;
+	[[= ks::reflect::Net{} ]] float m_flNearZ;
+	[[= ks::reflect::Net{} ]] float m_flNorthOffset;
+	[[= ks::reflect::Net{} ]] bool m_bEnableShadows;
 	bool m_bOldEnableShadows;
 
 	static ClientShadowHandle_t m_LocalFlashlightHandle;
@@ -59,18 +62,7 @@ private:
 ClientShadowHandle_t C_SunlightShadowControl::m_LocalFlashlightHandle = CLIENTSHADOW_INVALID_HANDLE;
 
 
-IMPLEMENT_CLIENTCLASS_DT(C_SunlightShadowControl, DT_SunlightShadowControl, CSunlightShadowControl)
-	RecvPropVector(RECVINFO(m_shadowDirection)),
-	RecvPropBool(RECVINFO(m_bEnabled)),
-	RecvPropString(RECVINFO(m_TextureName)),
-	RecvPropInt(RECVINFO(m_LightColor), 0, RecvProxy_Int32ToColor32),
-	RecvPropFloat(RECVINFO(m_flColorTransitionTime)),
-	RecvPropFloat(RECVINFO(m_flSunDistance)),
-	RecvPropFloat(RECVINFO(m_flFOV)),
-	RecvPropFloat(RECVINFO(m_flNearZ)),
-	RecvPropFloat(RECVINFO(m_flNorthOffset)),
-	RecvPropBool(RECVINFO(m_bEnableShadows)),
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS( C_SunlightShadowControl, DT_SunlightShadowControl, CSunlightShadowControl )
 
 
 C_SunlightShadowControl::~C_SunlightShadowControl()

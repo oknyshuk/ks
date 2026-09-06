@@ -7,6 +7,8 @@
 #ifndef AI_PLAYERALLY_H
 #define AI_PLAYERALLY_H
 
+#include "reflect_annotations.h"
+
 #include "utlmap.h"
 #include "simtimer.h"
 #include "ai_criteria.h"
@@ -215,7 +217,6 @@ private:
 	friend CAI_AllySpeechManager *GetAllySpeechManager();
 	static CAI_AllySpeechManager *gm_pSpeechManager;
 
-	DECLARE_DATADESC();
 };
 
 //-------------------------------------
@@ -391,18 +392,18 @@ public:
 	void		OnStartSpeaking();
 
 	// Inputs
-	virtual void InputIdleRespond( inputdata_t &inputdata ) {};
-	void InputSpeakResponseConcept( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "IdleRespond", .type = FIELD_VOID } ]] virtual void InputIdleRespond( inputdata_t &inputdata ) {};
+	[[= ks::reflect::Input{ .name = "SpeakResponseConcept", .type = FIELD_STRING } ]] void InputSpeakResponseConcept( inputdata_t &inputdata );
 	virtual bool SpeakMapmakerInterruptConcept( string_t iszConcept );
 
 	void			DisplayDeathMessage( void );
 	virtual const char		*GetDeathMessageText( void ) { return "GAMEOVER_ALLY"; }
-	void			InputMakeGameEndAlly( inputdata_t &inputdata );
-	void			InputMakeRegularAlly( inputdata_t &inputdata );
-	void			InputAnswerQuestion( inputdata_t &inputdata );
-	void			InputAnswerQuestionHello( inputdata_t &inputdata );
-	void			InputEnableSpeakWhileScripting( inputdata_t &inputdata );
-	void			InputDisableSpeakWhileScripting( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "MakeGameEndAlly", .type = FIELD_VOID } ]] void			InputMakeGameEndAlly( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "MakeRegularAlly", .type = FIELD_VOID } ]] void			InputMakeRegularAlly( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "AnswerQuestion", .type = FIELD_INTEGER } ]] void			InputAnswerQuestion( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "AnswerQuestionHello", .type = FIELD_INTEGER } ]] void			InputAnswerQuestionHello( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "EnableSpeakWhileScripting", .type = FIELD_VOID } ]] void			InputEnableSpeakWhileScripting( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "DisableSpeakWhileScripting", .type = FIELD_VOID } ]] void			InputDisableSpeakWhileScripting( inputdata_t &inputdata );
 
 	void			AnswerQuestion( CAI_PlayerAlly *pQuestioner, int iQARandomNum, bool bAnsweringHello );
 
@@ -469,7 +470,7 @@ private:
 
 	CHandle<CAI_SpeechFilter>	m_hSpeechFilter;
 
-	bool m_bGameEndAlly;
+	[[= ks::reflect::Key{ .name = "GameEndAlly" } ]] bool m_bGameEndAlly;
 	bool m_bCanSpeakWhileScripting;	// Allows mapmakers to override NPC_STATE_SCRIPT or IsScripting() for responses.
 
 	float	m_flTimeLastRegen;		// Last time I regenerated a bit of health.

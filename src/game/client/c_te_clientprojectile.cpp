@@ -4,6 +4,8 @@
 //
 //=============================================================================
 #include "cbase.h"
+#include "reflect_recvtable.h"
+#include "reflect_annotations.h"
 #include "c_basetempentity.h"
 #include "c_te_legacytempents.h"
 #include "tier0/vprof.h"
@@ -14,7 +16,8 @@
 //-----------------------------------------------------------------------------
 // Purpose: Client Projectile TE
 //-----------------------------------------------------------------------------
-class C_TEClientProjectile : public C_BaseTempEntity
+class [[= ks::reflect::NetTable{ .name = "DT_TEClientProjectile" } ]]
+      C_TEClientProjectile : public C_BaseTempEntity
 {
 public:
 	DECLARE_CLASS( C_TEClientProjectile, C_BaseTempEntity );
@@ -26,11 +29,11 @@ public:
 	virtual void	PostDataUpdate( DataUpdateType_t updateType );
 
 public:
-	Vector m_vecOrigin;
-	Vector m_vecVelocity;
-	int m_nModelIndex;
-	int m_nLifeTime;
-	EHANDLE m_hOwner;
+	[[= ks::reflect::Net{} ]] Vector m_vecOrigin;
+	[[= ks::reflect::Net{} ]] Vector m_vecVelocity;
+	[[= ks::reflect::Net{} ]] int m_nModelIndex;
+	[[= ks::reflect::Net{} ]] int m_nLifeTime;
+	[[= ks::reflect::Net{} ]] EHANDLE m_hOwner;
 };
 
 //-----------------------------------------------------------------------------
@@ -69,10 +72,4 @@ void C_TEClientProjectile::PostDataUpdate( DataUpdateType_t updateType )
 	tempents->ClientProjectile( m_vecOrigin, m_vecVelocity, vec3_origin, m_nModelIndex, m_nLifeTime, m_hOwner );
 }
 
-IMPLEMENT_CLIENTCLASS_EVENT_DT(C_TEClientProjectile, DT_TEClientProjectile, CTEClientProjectile)
-	RecvPropVector( RECVINFO(m_vecOrigin)),
-	RecvPropVector( RECVINFO(m_vecVelocity)),
-	RecvPropInt( RECVINFO(m_nModelIndex)),
-	RecvPropInt( RECVINFO(m_nLifeTime)),
-	RecvPropEHandle( RECVINFO(m_hOwner)),
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS_EVENT( C_TEClientProjectile, DT_TEClientProjectile, CTEClientProjectile )

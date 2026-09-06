@@ -5,15 +5,22 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_sendtable.h"
+#include "reflect_annotations.h"
 #include "shareddefs.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
+// named by the Proxy<> annotation below, so it must be declared before the class.
+void SendProxy_String_tToString( const SendProp *pProp, const void *pStruct, const void *pData, DVariant *pOut, int iElement, int objectID );
+
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-class CEnvScreenOverlay : public CPointEntity
+class [[= ks::reflect::NetTable{ .name = "DT_EnvScreenOverlay" } ]]
+      CEnvScreenOverlay : public CPointEntity
 {
 	DECLARE_CLASS( CEnvScreenOverlay, CPointEntity );
 public:
@@ -27,59 +34,26 @@ public:
 	virtual void Spawn( void );
 	virtual void Precache( void );
 
-	void	InputStartOverlay( inputdata_t &inputdata );
-	void	InputStopOverlay( inputdata_t &inputdata );
-	void	InputSwitchOverlay( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "StartOverlays", .type = FIELD_VOID } ]] void	InputStartOverlay( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "StopOverlays", .type = FIELD_VOID } ]] void	InputStopOverlay( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SwitchOverlay", .type = FIELD_INTEGER } ]] void	InputSwitchOverlay( inputdata_t &inputdata );
 
 	void	SetActive( bool bActive ) { m_bIsActive = bActive; }
 	
 protected:
-	CNetworkArray( string_t, m_iszOverlayNames, MAX_SCREEN_OVERLAYS );
-	CNetworkArray( float, m_flOverlayTimes, MAX_SCREEN_OVERLAYS );
-	CNetworkVar( float, m_flStartTime );
-	CNetworkVar( int, m_iDesiredOverlay );
-	CNetworkVar( bool, m_bIsActive );
+	CNetworkArray( string_t, m_iszOverlayNames, MAX_SCREEN_OVERLAYS, [[= ks::reflect::Key{ .name = "OverlayName10", .index = 9 } ]]  [[= ks::reflect::Key{ .name = "OverlayName9", .index = 8 } ]]  [[= ks::reflect::Key{ .name = "OverlayName8", .index = 7 } ]]  [[= ks::reflect::Key{ .name = "OverlayName7", .index = 6 } ]]  [[= ks::reflect::Key{ .name = "OverlayName6", .index = 5 } ]]  [[= ks::reflect::Key{ .name = "OverlayName5", .index = 4 } ]]  [[= ks::reflect::Key{ .name = "OverlayName4", .index = 3 } ]]  [[= ks::reflect::Key{ .name = "OverlayName3", .index = 2 } ]]  [[= ks::reflect::Key{ .name = "OverlayName2", .index = 1 } ]]  [[= ks::reflect::Key{ .name = "OverlayName1", .index = 0 } ]]
+	               [[= ks::reflect::Net{ .enc = ks::reflect::ENC_STRING, .varlen = true } ]]
+	               [[= ks::reflect::Proxy<SendProxy_String_tToString, ks::reflect::WIRE_SEND>{} ]] );
+	CNetworkArray( float, m_flOverlayTimes, MAX_SCREEN_OVERLAYS, [[= ks::reflect::Key{ .name = "OverlayTime10", .index = 9 } ]]  [[= ks::reflect::Key{ .name = "OverlayTime9", .index = 8 } ]]  [[= ks::reflect::Key{ .name = "OverlayTime8", .index = 7 } ]]  [[= ks::reflect::Key{ .name = "OverlayTime7", .index = 6 } ]]  [[= ks::reflect::Key{ .name = "OverlayTime6", .index = 5 } ]]  [[= ks::reflect::Key{ .name = "OverlayTime5", .index = 4 } ]]  [[= ks::reflect::Key{ .name = "OverlayTime4", .index = 3 } ]]  [[= ks::reflect::Key{ .name = "OverlayTime3", .index = 2 } ]]  [[= ks::reflect::Key{ .name = "OverlayTime2", .index = 1 } ]]  [[= ks::reflect::Key{ .name = "OverlayTime1", .index = 0 } ]]
+	               [[= ks::reflect::Net{ .bits = 11, .low = -1.0f, .high = 63.0f, .flags = SPROP_ROUNDDOWN, .varlen = true } ]] );
+	CNetworkVar( float, m_flStartTime, [[= ks::reflect::Net{ .bits = 32, .flags = SPROP_NOSCALE } ]] );
+	CNetworkVar( int, m_iDesiredOverlay, [[= ks::reflect::Net{ .bits = 5 } ]] );
+	CNetworkVar( bool, m_bIsActive, [[= ks::reflect::Net{} ]] );
 };
 
 LINK_ENTITY_TO_CLASS( env_screenoverlay, CEnvScreenOverlay );
 
-BEGIN_DATADESC( CEnvScreenOverlay )
-
-// Silence, Classcheck!
-//	DEFINE_ARRAY( m_iszOverlayNames, FIELD_STRING, MAX_SCREEN_OVERLAYS ),
-//	DEFINE_ARRAY( m_flOverlayTimes, FIELD_FLOAT, MAX_SCREEN_OVERLAYS ),
-
-	DEFINE_KEYFIELD( m_iszOverlayNames[0], FIELD_STRING, "OverlayName1" ),
-	DEFINE_KEYFIELD( m_iszOverlayNames[1], FIELD_STRING, "OverlayName2" ),
-	DEFINE_KEYFIELD( m_iszOverlayNames[2], FIELD_STRING, "OverlayName3" ),
-	DEFINE_KEYFIELD( m_iszOverlayNames[3], FIELD_STRING, "OverlayName4" ),
-	DEFINE_KEYFIELD( m_iszOverlayNames[4], FIELD_STRING, "OverlayName5" ),
-	DEFINE_KEYFIELD( m_iszOverlayNames[5], FIELD_STRING, "OverlayName6" ),
-	DEFINE_KEYFIELD( m_iszOverlayNames[6], FIELD_STRING, "OverlayName7" ),
-	DEFINE_KEYFIELD( m_iszOverlayNames[7], FIELD_STRING, "OverlayName8" ),
-	DEFINE_KEYFIELD( m_iszOverlayNames[8], FIELD_STRING, "OverlayName9" ),
-	DEFINE_KEYFIELD( m_iszOverlayNames[9], FIELD_STRING, "OverlayName10" ),
-	DEFINE_KEYFIELD( m_flOverlayTimes[0], FIELD_FLOAT, "OverlayTime1" ),
-	DEFINE_KEYFIELD( m_flOverlayTimes[1], FIELD_FLOAT, "OverlayTime2" ),
-	DEFINE_KEYFIELD( m_flOverlayTimes[2], FIELD_FLOAT, "OverlayTime3" ),
-	DEFINE_KEYFIELD( m_flOverlayTimes[3], FIELD_FLOAT, "OverlayTime4" ),
-	DEFINE_KEYFIELD( m_flOverlayTimes[4], FIELD_FLOAT, "OverlayTime5" ),
-	DEFINE_KEYFIELD( m_flOverlayTimes[5], FIELD_FLOAT, "OverlayTime6" ),
-	DEFINE_KEYFIELD( m_flOverlayTimes[6], FIELD_FLOAT, "OverlayTime7" ),
-	DEFINE_KEYFIELD( m_flOverlayTimes[7], FIELD_FLOAT, "OverlayTime8" ),
-	DEFINE_KEYFIELD( m_flOverlayTimes[8], FIELD_FLOAT, "OverlayTime9" ),
-	DEFINE_KEYFIELD( m_flOverlayTimes[9], FIELD_FLOAT, "OverlayTime10" ),
-	
-	// Class CEnvScreenOverlay:
-	DEFINE_FIELD( m_iDesiredOverlay, FIELD_INTEGER ),
-	DEFINE_FIELD( m_flStartTime, FIELD_TIME ),
-	DEFINE_FIELD( m_bIsActive, FIELD_BOOLEAN ),
-
-	DEFINE_INPUTFUNC( FIELD_VOID, "StartOverlays", InputStartOverlay ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "StopOverlays", InputStopOverlay ),
-	DEFINE_INPUTFUNC( FIELD_INTEGER, "SwitchOverlay", InputSwitchOverlay ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CEnvScreenOverlay )
 
 void SendProxy_String_tToString( const SendProp *pProp, const void *pStruct, const void *pData, DVariant *pOut, int iElement, int objectID )
 {
@@ -87,13 +61,7 @@ void SendProxy_String_tToString( const SendProp *pProp, const void *pStruct, con
 	pOut->m_pString = (char*)STRING( *pString );
 }
 
-IMPLEMENT_SERVERCLASS_ST( CEnvScreenOverlay, DT_EnvScreenOverlay )
-	SendPropArray( SendPropString( SENDINFO_ARRAY( m_iszOverlayNames ), 0, SendProxy_String_tToString ), m_iszOverlayNames ),
-	SendPropArray( SendPropFloat( SENDINFO_ARRAY( m_flOverlayTimes ), 11, SPROP_ROUNDDOWN, -1.0f, 63.0f ), m_flOverlayTimes ),
-	SendPropFloat( SENDINFO( m_flStartTime ), 32, SPROP_NOSCALE ),
-	SendPropInt( SENDINFO( m_iDesiredOverlay ), 5 ),
-	SendPropBool( SENDINFO( m_bIsActive ) ),
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CEnvScreenOverlay, DT_EnvScreenOverlay )
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -193,7 +161,8 @@ void CEnvScreenOverlay::InputStopOverlay( inputdata_t &inputdata )
 //
 // ====================================================================================
 
-class CEnvScreenEffect : public CPointEntity
+class [[= ks::reflect::NetTable{ .name = "DT_EnvScreenEffect" } ]]
+      CEnvScreenEffect : public CPointEntity
 {
 	DECLARE_CLASS( CEnvScreenEffect, CPointEntity );
 public:
@@ -208,27 +177,19 @@ public:
 
 private:
 
-	void InputStartEffect( inputdata_t &inputdata );
-	void InputStopEffect( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "StartEffect", .type = FIELD_FLOAT } ]] void InputStartEffect( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "StopEffect", .type = FIELD_FLOAT } ]] void InputStopEffect( inputdata_t &inputdata );
 
-	CNetworkVar( float, m_flDuration );
-	CNetworkVar( int, m_nType );
+	CNetworkVar( float, m_flDuration, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE } ]] );
+	CNetworkVar( int, m_nType, [[= ks::reflect::Net{ .bits = 32, .flags = SPROP_UNSIGNED } ]] [[= ks::reflect::Key{ .name = "type" } ]] );
 };
 
 LINK_ENTITY_TO_CLASS( env_screeneffect, CEnvScreenEffect );
 
 // CEnvScreenEffect
-BEGIN_DATADESC( CEnvScreenEffect )
-	DEFINE_FIELD( m_flDuration, FIELD_FLOAT ),
-	DEFINE_KEYFIELD( m_nType, FIELD_INTEGER, "type" ),
-	DEFINE_INPUTFUNC( FIELD_FLOAT, "StartEffect", InputStartEffect ),
-	DEFINE_INPUTFUNC( FIELD_FLOAT, "StopEffect", InputStopEffect ),
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CEnvScreenEffect )
 
-IMPLEMENT_SERVERCLASS_ST( CEnvScreenEffect, DT_EnvScreenEffect )
-	SendPropFloat( SENDINFO( m_flDuration ), 0, SPROP_NOSCALE ),
-	SendPropInt( SENDINFO( m_nType ), 32, SPROP_UNSIGNED ),
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CEnvScreenEffect, DT_EnvScreenEffect )
 
 void CEnvScreenEffect::Spawn( void )
 {

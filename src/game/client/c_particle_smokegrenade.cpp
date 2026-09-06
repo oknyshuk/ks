@@ -14,6 +14,8 @@
 #include "iefx.h"
 #include "tier1/keyvalues.h"
 #include "toolframework_client.h"
+#include "reflect_recvtable.h"
+#include "reflect_annotations.h"
 
 #if CSTRIKE_DLL
 #include "c_cs_player.h"
@@ -44,7 +46,8 @@ int g_OffsetLookup[3] = {-1,0,1};
 // ------------------------------------------------------------------------- //
 // Classes
 // ------------------------------------------------------------------------- //
-class C_ParticleSmokeGrenade : public C_BaseParticleEntity, public IPrototypeAppEffect
+class [[= ks::reflect::NetTable{ .name = "DT_ParticleSmokeGrenade" } ]]
+      C_ParticleSmokeGrenade : public C_BaseParticleEntity, public IPrototypeAppEffect
 {
 public:
 	DECLARE_CLASS( C_ParticleSmokeGrenade, C_BaseParticleEntity );
@@ -165,20 +168,21 @@ private:
 // State variables from server.
 public:
 	
-	unsigned char		m_CurrentStage;
+	[[= ks::reflect::Net{} ]]
+	[[= ks::reflect::Proxy<RecvProxy_CurrentStage, ks::reflect::WIRE_RECV>{} ]] unsigned char		m_CurrentStage;
 	Vector				m_SmokeBasePos;
 
 	// What time the effect was initially created
-	float				m_flSpawnTime;
+	[[= ks::reflect::As{ FIELD_TIME } ]] [[= ks::reflect::Net{} ]] float				m_flSpawnTime;
 
 	// It will fade out during this time.
-	float				m_FadeStartTime;
-	float				m_FadeEndTime;
+	[[= ks::reflect::Net{} ]] float				m_FadeStartTime;
+	[[= ks::reflect::Net{} ]] float				m_FadeEndTime;
 	float				m_FadeAlpha;	// Calculated from the fade start/end times each frame.
 
 	// Color driven by grenade weapon description.
-	Vector				m_MinColor;
-	Vector				m_MaxColor;
+	[[= ks::reflect::Net{} ]] Vector				m_MinColor;
+	[[= ks::reflect::Net{} ]] Vector				m_MaxColor;
 
 	// Used during rendering.. active dlights.
 	class CActiveLight
@@ -216,14 +220,7 @@ EXPOSE_PROTOTYPE_EFFECT(SmokeGrenade, C_ParticleSmokeGrenade);
 
 
 // Datatable..
-IMPLEMENT_CLIENTCLASS_DT(C_ParticleSmokeGrenade, DT_ParticleSmokeGrenade, ParticleSmokeGrenade)
-	RecvPropTime(RECVINFO(m_flSpawnTime)),
-	RecvPropFloat(RECVINFO(m_FadeStartTime)),
-	RecvPropFloat(RECVINFO(m_FadeEndTime)),
-	RecvPropVector(RECVINFO(m_MinColor)),
-	RecvPropVector(RECVINFO(m_MaxColor)),
-	RecvPropInt(RECVINFO(m_CurrentStage), 0, &C_ParticleSmokeGrenade::RecvProxy_CurrentStage),
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS( C_ParticleSmokeGrenade, DT_ParticleSmokeGrenade, ParticleSmokeGrenade )
 
 
 // ------------------------------------------------------------------------- //

@@ -5,6 +5,15 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_annotations.h"
+#ifdef CLIENT_DLL
+#include "reflect_recvtable.h"
+#endif
+#include "reflect_annotations.h"
+#ifdef GAME_DLL
+#include "reflect_sendtable.h"
+#include "reflect_datamap.h"
+#endif
 #include "basecsgrenade_projectile.h"
 
 extern ConVar sv_gravity;
@@ -26,9 +35,7 @@ extern ConVar sv_gravity;
 	#include "cs_simple_hostage.h"
 	#include "Effects/chicken.h"
 
-	BEGIN_DATADESC( CBaseCSGrenadeProjectile )
-	DEFINE_THINKFUNC( DangerSoundThink ),
-	END_DATADESC()
+	IMPLEMENT_REFLECT_DATAMAP( CBaseCSGrenadeProjectile )
 
 	#define GRENADE_FAILSAFE_MAX_BOUNCES 20
 
@@ -49,20 +56,7 @@ extern ConVar sv_gravity;
 
 IMPLEMENT_NETWORKCLASS_ALIASED( BaseCSGrenadeProjectile, DT_BaseCSGrenadeProjectile )
 
-BEGIN_NETWORK_TABLE( CBaseCSGrenadeProjectile, DT_BaseCSGrenadeProjectile )
-	#ifdef CLIENT_DLL
-		RecvPropVector( RECVINFO( m_vInitialVelocity ) ),
-		RecvPropInt( RECVINFO( m_nBounces ) )
-	#else
-		SendPropVector( SENDINFO( m_vInitialVelocity ), 
-			20,		// nbits
-			0,		// flags
-			-3000,	// low value
-			3000	// high value
-			),
-		SendPropInt( SENDINFO( m_nBounces ) )
-	#endif
-END_NETWORK_TABLE()
+IMPLEMENT_REFLECT_TABLE( CBaseCSGrenadeProjectile, DT_BaseCSGrenadeProjectile );
 
 
 #ifdef CLIENT_DLL

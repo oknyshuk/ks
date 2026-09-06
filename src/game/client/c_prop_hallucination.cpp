@@ -7,6 +7,8 @@
 
 
 #include "cbase.h"
+#include "reflect_recvtable.h"
+#include "reflect_annotations.h"
 #include "c_baseanimating.h"
 #include "materialsystem/imaterialsystem.h"
 #include "model_types.h"
@@ -21,7 +23,8 @@ extern bool IsMainView( view_id_t id );
 #include "tier0/memdbgon.h"
 
 
-class C_Prop_Hallucination : public C_BaseAnimating
+class [[= ks::reflect::NetTable{ .name = "DT_Prop_Hallucination" } ]]
+      C_Prop_Hallucination : public C_BaseAnimating
 {
 public:
 	DECLARE_CLASS( C_Prop_Hallucination, C_BaseAnimating );
@@ -42,20 +45,16 @@ public:
 	double m_fLastStateChangeTime;
 	bool m_bVisibleEligible;
 
-	bool m_bEnabled;
-	float m_fVisibleTime;
-	float m_fRechargeTime;
+	[[= ks::reflect::Net{} ]] bool m_bEnabled;
+	[[= ks::reflect::Net{} ]] float m_fVisibleTime;
+	[[= ks::reflect::Net{} ]] float m_fRechargeTime;
 
 	static CMaterialReference sm_OcclusionProxyMaterial;
 };
 
 CMaterialReference C_Prop_Hallucination::sm_OcclusionProxyMaterial;
 
-IMPLEMENT_CLIENTCLASS_DT( C_Prop_Hallucination, DT_Prop_Hallucination, CProp_Hallucination )
-	RecvPropBool( RECVINFO(m_bEnabled) ),
-	RecvPropFloat( RECVINFO(m_fVisibleTime) ),
-	RecvPropFloat( RECVINFO(m_fRechargeTime) ),
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS( C_Prop_Hallucination, DT_Prop_Hallucination, CProp_Hallucination )
 
 //ConVar cl_hallucination_dischargescale( "cl_hallucination_dischargescale", "3000.0", FCVAR_CHEAT, "(delta time) * (percentage of screen drawn to) * (this scale) is how much visibility charge (0.0-1.0) we use up per frame. When it's 0.0 the hallucination is invisible" );
 //ConVar cl_hallucination_visibletime( "cl_hallucination_visibletime", "0.215", FCVAR_CHEAT, "the maximum time (in seconds) from first visible frame to when we stop drawing the hallucination" );

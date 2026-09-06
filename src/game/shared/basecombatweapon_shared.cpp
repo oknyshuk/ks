@@ -5,11 +5,20 @@
 // $NoKeywords: $
 //=============================================================================//
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_annotations.h"
+#ifdef CLIENT_DLL
+#include "reflect_recvtable.h"
+#include "reflect_predmap.h"
+#endif
+#include "reflect_annotations.h"
+#ifdef GAME_DLL
+#include "reflect_sendtable.h"
+#endif
 #include "in_buttons.h"
 #include "engine/IEngineSound.h"
 #include "ammodef.h"
 #include "SoundEmitterSystem/isoundemittersystembase.h"
-#include "physics_saverestore.h"
 #include "datacache/imdlcache.h"
 #include "tier0/vprof.h"
 #include "collisionutils.h"
@@ -53,30 +62,11 @@ extern bool UTIL_ItemCanBeTouchedByPlayer( CBaseEntity *pItem, CBasePlayer *pPla
 IMPLEMENT_NETWORKCLASS_ALIASED( BaseWeaponWorldModel, DT_BaseWeaponWorldModel )
 LINK_ENTITY_TO_CLASS_ALIASED( weaponworldmodel, BaseWeaponWorldModel );
 
-BEGIN_NETWORK_TABLE_NOBASE(CBaseWeaponWorldModel, DT_BaseWeaponWorldModel)
-#if !defined( CLIENT_DLL )
-	SendPropModelIndex(SENDINFO(m_nModelIndex)),
-	SendPropInt		(SENDINFO(m_nBody), ANIMATION_BODY_BITS ), // increased to 32 bits to support number of bits equal to number of bodygroups
-	SendPropInt		(SENDINFO(m_fEffects),		EF_MAX_BITS, SPROP_UNSIGNED),
-	SendPropEHandle (SENDINFO_NAME(m_hMoveParent, moveparent)),
-	SendPropEHandle (SENDINFO(m_hCombatWeaponParent)),
-#else
-	RecvPropInt		(RECVINFO(m_nModelIndex), 0, RecvProxy_WeaponWorldmodel),
-	RecvPropInt		(RECVINFO(m_nBody)),
-	RecvPropInt		(RECVINFO(m_fEffects), 0, RecvProxy_EffectFlagsWeaponWorldmodel),
-	RecvPropInt		(RECVINFO_NAME(m_hNetworkMoveParent, moveparent), 0, RecvProxy_IntToMoveParent),	
-	RecvPropEHandle (RECVINFO(m_hCombatWeaponParent), RecvProxy_WeaponWorldmodelCosmetics),
-#endif
-END_NETWORK_TABLE()
+IMPLEMENT_REFLECT_TABLE( CBaseWeaponWorldModel, DT_BaseWeaponWorldModel );
 
 #ifdef CLIENT_DLL
 
-BEGIN_PREDICTION_DATA( CBaseWeaponWorldModel )
-	DEFINE_PRED_FIELD( m_nModelIndex, FIELD_SHORT, FTYPEDESC_INSENDTABLE | FTYPEDESC_MODELINDEX ),
-	DEFINE_PRED_FIELD( m_nBody, FIELD_INTEGER, FTYPEDESC_INSENDTABLE ),
-	DEFINE_PRED_FIELD( m_fEffects, FIELD_INTEGER, FTYPEDESC_INSENDTABLE | FTYPEDESC_OVERRIDE ),
-	DEFINE_FIELD( m_hCombatWeaponParent, FIELD_EHANDLE ),
-END_PREDICTION_DATA()
+IMPLEMENT_REFLECT_PREDMAP( CBaseWeaponWorldModel );
 
 void RecvProxy_EffectFlagsWeaponWorldmodel( const CRecvProxyData *pData, void *pStruct, void *pOut )
 {
@@ -209,8 +199,6 @@ bool CBaseWeaponWorldModel::SetupBones( matrix3x4a_t *pBoneToWorldOut, int nMaxB
 
 #else
 
-BEGIN_DATADESC( CBaseWeaponWorldModel )
-END_DATADESC()
 
 #endif
 
@@ -3002,61 +2990,7 @@ int CBaseCombatWeapon::GetAvailableWeaponsInBox( CBaseCombatWeapon **pList, int 
 
 #if defined( CLIENT_DLL )
 
-BEGIN_PREDICTION_DATA( CBaseCombatWeapon )
-
-	DEFINE_PRED_FIELD( m_nNextThinkTick, FIELD_INTEGER, FTYPEDESC_INSENDTABLE | FTYPEDESC_NOERRORCHECK ),
-	// Networked
-	DEFINE_PRED_FIELD( m_hOwner, FIELD_EHANDLE, FTYPEDESC_INSENDTABLE ),
-	// DEFINE_FIELD( m_hWeaponFileInfo, FIELD_SHORT ),
-	DEFINE_PRED_FIELD( m_iState, FIELD_INTEGER, FTYPEDESC_INSENDTABLE ),	
-	DEFINE_PRED_FIELD( m_iViewModelIndex, FIELD_INTEGER, FTYPEDESC_INSENDTABLE | FTYPEDESC_MODELINDEX ),
-	DEFINE_PRED_FIELD( m_iWorldModelIndex, FIELD_INTEGER, FTYPEDESC_INSENDTABLE | FTYPEDESC_MODELINDEX ),
-	DEFINE_PRED_FIELD( m_iWorldDroppedModelIndex, FIELD_INTEGER, FTYPEDESC_INSENDTABLE | FTYPEDESC_MODELINDEX ),
-	DEFINE_PRED_FIELD_TOL( m_flNextPrimaryAttack, FIELD_FLOAT, FTYPEDESC_INSENDTABLE, TD_MSECTOLERANCE ),	
-	DEFINE_PRED_FIELD_TOL( m_flNextSecondaryAttack, FIELD_FLOAT, FTYPEDESC_INSENDTABLE, TD_MSECTOLERANCE ),
-	DEFINE_PRED_FIELD_TOL( m_flTimeWeaponIdle, FIELD_FLOAT, FTYPEDESC_INSENDTABLE, TD_MSECTOLERANCE ),
-
-	DEFINE_PRED_FIELD( m_iPrimaryAmmoType, FIELD_INTEGER, FTYPEDESC_INSENDTABLE ),
-	DEFINE_PRED_FIELD( m_iSecondaryAmmoType, FIELD_INTEGER, FTYPEDESC_INSENDTABLE ),
-	DEFINE_PRED_FIELD( m_iClip1, FIELD_INTEGER, FTYPEDESC_INSENDTABLE ),			
-	DEFINE_PRED_FIELD( m_iClip2, FIELD_INTEGER, FTYPEDESC_INSENDTABLE ),			
-
-	DEFINE_PRED_FIELD( m_nViewModelIndex, FIELD_INTEGER, FTYPEDESC_INSENDTABLE ),
-
-	DEFINE_PRED_FIELD( m_iWeaponModule, FIELD_INTEGER, FTYPEDESC_INSENDTABLE ),
-	DEFINE_PRED_FIELD( m_iPrimaryReserveAmmoCount, FIELD_INTEGER, FTYPEDESC_INSENDTABLE ),
-	DEFINE_PRED_FIELD( m_iSecondaryReserveAmmoCount, FIELD_INTEGER, FTYPEDESC_INSENDTABLE ),
-
-	DEFINE_PRED_FIELD( m_iNumEmptyAttacks, FIELD_INTEGER, FTYPEDESC_INSENDTABLE ),
-
-	// Not networked
-
-	DEFINE_FIELD( m_bInReload, FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_bFireOnEmpty, FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_flNextEmptySoundTime, FIELD_FLOAT ),
-	DEFINE_FIELD( m_Activity, FIELD_INTEGER ),
-	DEFINE_FIELD( m_fFireDuration, FIELD_FLOAT ),
-	DEFINE_FIELD( m_iszName, FIELD_INTEGER ),		
-	DEFINE_FIELD( m_bFiresUnderwater, FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_bAltFiresUnderwater, FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_fMinRange1, FIELD_FLOAT ),		
-	DEFINE_FIELD( m_fMinRange2, FIELD_FLOAT ),		
-	DEFINE_FIELD( m_fMaxRange1, FIELD_FLOAT ),		
-	DEFINE_FIELD( m_fMaxRange2, FIELD_FLOAT ),		
-	DEFINE_FIELD( m_bReloadsSingly, FIELD_BOOLEAN ),	
-	DEFINE_FIELD( m_bRemoveable, FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_iPrimaryAmmoCount, FIELD_INTEGER ),
-	DEFINE_FIELD( m_iSecondaryAmmoCount, FIELD_INTEGER ),
-
-	//DEFINE_PHYSPTR( m_pConstraint ),
-
-	// DEFINE_FIELD( m_iOldState, FIELD_INTEGER ),
-	// DEFINE_FIELD( m_bJustRestored, FIELD_BOOLEAN ),
-
-	// DEFINE_FIELD( m_OnPlayerPickup, COutputEvent ),
-	// DEFINE_FIELD( m_pConstraint, FIELD_INTEGER ),
-
-END_PREDICTION_DATA()
+IMPLEMENT_REFLECT_PREDMAP( CBaseCombatWeapon );
 
 #endif	// ! CLIENT_DLL
 
@@ -3067,87 +3001,7 @@ IMPLEMENT_NETWORKCLASS_ALIASED( BaseCombatWeapon, DT_BaseCombatWeapon )
 //-----------------------------------------------------------------------------
 // Purpose: Save Data for Base Weapon object
 //-----------------------------------------------------------------------------// 
-BEGIN_DATADESC( CBaseCombatWeapon )
-
-
-	DEFINE_FIELD( m_flNextPrimaryAttack, FIELD_TIME ),
-	DEFINE_FIELD( m_flNextSecondaryAttack, FIELD_TIME ),
-	DEFINE_FIELD( m_flTimeWeaponIdle, FIELD_TIME ),
-
-	DEFINE_FIELD( m_bInReload, FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_bFireOnEmpty, FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_hOwner, FIELD_EHANDLE ),
-
-	DEFINE_FIELD( m_iState, FIELD_INTEGER ),
-	DEFINE_FIELD( m_iszName, FIELD_STRING ),
-	DEFINE_FIELD( m_iPrimaryAmmoType, FIELD_INTEGER ),
-	DEFINE_FIELD( m_iSecondaryAmmoType, FIELD_INTEGER ),
-	DEFINE_FIELD( m_iClip1, FIELD_INTEGER ),
-	DEFINE_FIELD( m_iClip2, FIELD_INTEGER ),
-	DEFINE_FIELD( m_bFiresUnderwater, FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_bAltFiresUnderwater, FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_fMinRange1, FIELD_FLOAT ),
-	DEFINE_FIELD( m_fMinRange2, FIELD_FLOAT ),
-	DEFINE_FIELD( m_fMaxRange1, FIELD_FLOAT ),
-	DEFINE_FIELD( m_fMaxRange2, FIELD_FLOAT ),
-
-	DEFINE_FIELD( m_iPrimaryAmmoCount, FIELD_INTEGER ),
-	DEFINE_FIELD( m_iSecondaryAmmoCount, FIELD_INTEGER ),
-
-	DEFINE_FIELD( m_nViewModelIndex, FIELD_INTEGER ),
-
-	DEFINE_FIELD( m_iWeaponModule, FIELD_INTEGER ),
-
-// don't save these, init to 0 and regenerate
-//	DEFINE_FIELD( m_flNextEmptySoundTime, FIELD_TIME ),
-//	DEFINE_FIELD( m_Activity, FIELD_INTEGER ),
- 	DEFINE_FIELD( m_nIdealSequence, FIELD_INTEGER ),
-	DEFINE_FIELD( m_IdealActivity, FIELD_INTEGER ),
-
-	DEFINE_FIELD( m_fFireDuration, FIELD_FLOAT ),
-
-	DEFINE_FIELD( m_bReloadsSingly, FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_iSubType, FIELD_INTEGER ),
- 	DEFINE_FIELD( m_bRemoveable, FIELD_BOOLEAN ),
-
-	DEFINE_FIELD( m_flUnlockTime,		FIELD_TIME ),
-	DEFINE_FIELD( m_hLocker,			FIELD_EHANDLE ),
-
-	//	DEFINE_FIELD( m_iViewModelIndex, FIELD_INTEGER ),
-	//	DEFINE_FIELD( m_iWorldModelIndex, FIELD_INTEGER ),
-	//  DEFINE_FIELD( m_hWeaponFileInfo, ???? ),
-
-	DEFINE_PHYSPTR( m_pConstraint ),
-
-	DEFINE_FIELD( m_iReloadHudHintCount,	FIELD_INTEGER ),
-	DEFINE_FIELD( m_iAltFireHudHintCount,	FIELD_INTEGER ),
-	DEFINE_FIELD( m_bReloadHudHintDisplayed, FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_bAltFireHudHintDisplayed, FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_flHudHintPollTime, FIELD_TIME ),
-	DEFINE_FIELD( m_flHudHintMinDisplayTime, FIELD_TIME ),
-
-	// Just to quiet classcheck.. this field exists only on the client
-//	DEFINE_FIELD( m_iOldState, FIELD_INTEGER ),
-//	DEFINE_FIELD( m_bJustRestored, FIELD_BOOLEAN ),
-
-	// Function pointers
-	DEFINE_ENTITYFUNC( DefaultTouch ),
-	DEFINE_THINKFUNC( FallThink ),
-	DEFINE_THINKFUNC( Materialize ),
-	DEFINE_THINKFUNC( AttemptToMaterialize ),
-	DEFINE_THINKFUNC( DestroyItem ),
-	DEFINE_THINKFUNC( SetPickupTouch ),
-
-	DEFINE_THINKFUNC( HideThink ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "HideWeapon", InputHideWeapon ),
-
-	// Outputs
-	DEFINE_OUTPUT( m_OnPlayerUse, "OnPlayerUse"),
-	DEFINE_OUTPUT( m_OnPlayerPickup, "OnPlayerPickup"),
-	DEFINE_OUTPUT( m_OnNPCPickup, "OnNPCPickup"),
-	DEFINE_OUTPUT( m_OnCacheInteraction, "OnCacheInteraction" ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CBaseCombatWeapon )
 
 //-----------------------------------------------------------------------------
 // Purpose: Only send to local player if this weapon is the active weapon
@@ -3230,59 +3084,21 @@ REGISTER_SEND_PROXY_NON_MODIFIED_POINTER( SendProxy_SendNonLocalWeaponDataTable 
 //-----------------------------------------------------------------------------
 // Purpose: Propagation data for weapons. Only sent when a player's holding it.
 //-----------------------------------------------------------------------------
-BEGIN_NETWORK_TABLE_NOBASE( CBaseCombatWeapon, DT_LocalActiveWeaponData )
+IMPLEMENT_REFLECT_TABLE_IN( CBaseCombatWeapon, DT_LocalActiveWeaponData );
 #if !defined( CLIENT_DLL )
-	SendPropTime( SENDINFO( m_flNextPrimaryAttack ) ),
-	SendPropTime( SENDINFO( m_flNextSecondaryAttack ) ),
-	SendPropInt( SENDINFO( m_nNextThinkTick ) ),
-	SendPropTime( SENDINFO( m_flTimeWeaponIdle ) ),
-
 #if defined( TF_DLL )
-	SendPropExclude( "DT_AnimTimeMustBeFirst" , "m_flAnimTime" ),
 #endif
-
 #else
-	RecvPropTime( RECVINFO( m_flNextPrimaryAttack ) ),
-	RecvPropTime( RECVINFO( m_flNextSecondaryAttack ) ),
-	RecvPropInt( RECVINFO( m_nNextThinkTick ) ),
-	RecvPropTime( RECVINFO( m_flTimeWeaponIdle ) ),
 #endif
-END_NETWORK_TABLE()
-
 //-----------------------------------------------------------------------------
 // Purpose: Propagation data for weapons. Only sent when a player's holding it.
 //-----------------------------------------------------------------------------
-BEGIN_NETWORK_TABLE_NOBASE( CBaseCombatWeapon, DT_LocalWeaponData )
+IMPLEMENT_REFLECT_TABLE_IN( CBaseCombatWeapon, DT_LocalWeaponData );
 #if !defined( CLIENT_DLL )
-	SendPropInt( SENDINFO(m_iPrimaryAmmoType ), 8 ),
-	SendPropInt( SENDINFO(m_iSecondaryAmmoType ), 8 ),
-
-	SendPropInt( SENDINFO( m_nViewModelIndex ), VIEWMODEL_INDEX_BITS, SPROP_UNSIGNED ),
-
-	SendPropInt( SENDINFO( m_bFlipViewModel ) ),
-
-	SendPropInt( SENDINFO( m_iWeaponOrigin ) ),
-	SendPropInt( SENDINFO(m_iWeaponModule), 8),
-
 #if defined( TF_DLL )
-	SendPropExclude( "DT_AnimTimeMustBeFirst" , "m_flAnimTime" ),
 #endif
-
 #else
-	RecvPropInt( RECVINFO(m_iPrimaryAmmoType )),
-	RecvPropInt( RECVINFO(m_iSecondaryAmmoType )),
-
-	RecvPropInt( RECVINFO( m_nViewModelIndex ) ),
-
-	RecvPropBool( RECVINFO( m_bFlipViewModel ) ),
-
-	RecvPropInt( RECVINFO( m_iWeaponOrigin ) ),
-	RecvPropInt( RECVINFO(m_iWeaponModule)),
-
 #endif
-END_NETWORK_TABLE()
-
-
 #if defined( CLIENT_DLL )
 
 void RecvProxy_State( const CRecvProxyData *pData, void *pStruct, void *pOut )
@@ -3293,38 +3109,13 @@ void RecvProxy_State( const CRecvProxyData *pData, void *pStruct, void *pOut )
 
 #endif
 
-BEGIN_NETWORK_TABLE(CBaseCombatWeapon, DT_BaseCombatWeapon)
+IMPLEMENT_REFLECT_TABLE( CBaseCombatWeapon, DT_BaseCombatWeapon );
 #if !defined( CLIENT_DLL )
-	SendPropDataTable("LocalWeaponData", 0, &REFERENCE_SEND_TABLE(DT_LocalWeaponData), SendProxy_SendLocalWeaponDataTable ),
-	SendPropDataTable("LocalActiveWeaponData", 0, &REFERENCE_SEND_TABLE(DT_LocalActiveWeaponData), SendProxy_SendActiveLocalWeaponDataTable ),
-	SendPropModelIndex( SENDINFO(m_iViewModelIndex) ),
-	SendPropModelIndex( SENDINFO(m_iWorldModelIndex) ),
-	SendPropModelIndex( SENDINFO(m_iWorldDroppedModelIndex) ),
-	SendPropInt( SENDINFO( m_iState ), 2, SPROP_UNSIGNED ),
-	SendPropEHandle( SENDINFO(m_hOwner) ),
-	SendPropIntWithMinusOneFlag( SENDINFO(m_iClip1 ), 8 ),
-	SendPropIntWithMinusOneFlag( SENDINFO(m_iClip2 ), 8 ),
-
-	SendPropInt( SENDINFO( m_iPrimaryReserveAmmoCount ), 10),	
-	SendPropInt( SENDINFO( m_iSecondaryReserveAmmoCount), 10),	
-	SendPropEHandle( SENDINFO(m_hWeaponWorldModel) ),
-	SendPropInt( SENDINFO( m_iNumEmptyAttacks ), 8 ),
 #else
-	RecvPropDataTable("LocalWeaponData", 0, 0, &REFERENCE_RECV_TABLE(DT_LocalWeaponData)),
-	RecvPropDataTable("LocalActiveWeaponData", 0, 0, &REFERENCE_RECV_TABLE(DT_LocalActiveWeaponData)),
-	RecvPropInt( RECVINFO(m_iViewModelIndex)),
-	RecvPropInt( RECVINFO(m_iWorldModelIndex)),
-	RecvPropInt( RECVINFO(m_iWorldDroppedModelIndex)),
-	RecvPropInt( RECVINFO( m_iState ), 0, RecvProxy_State ),
-	RecvPropEHandle( RECVINFO(m_hOwner ) ),
-	RecvPropIntWithMinusOneFlag( RECVINFO(m_iClip1 )),
-	RecvPropIntWithMinusOneFlag( RECVINFO(m_iClip2 )),
-	RecvPropInt( RECVINFO( m_iPrimaryReserveAmmoCount)),	
-	RecvPropInt( RECVINFO( m_iSecondaryReserveAmmoCount)),	
-	RecvPropEHandle( RECVINFO(m_hWeaponWorldModel) ),
-	RecvPropInt( RECVINFO( m_iNumEmptyAttacks )),
 #endif
-END_NETWORK_TABLE()
+#if defined( CLIENT_DLL )
+#else
+#endif
 
 
 // float CBaseCombatWeapon::GetAttributeFloat( const char* szAttribClassName ) const

@@ -6,6 +6,8 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_sendtable.h"
+#include "reflect_annotations.h"
 #include "te_particlesystem.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
@@ -14,7 +16,8 @@
 //-----------------------------------------------------------------------------
 // Purpose: Dispatches sparks
 //-----------------------------------------------------------------------------
-class CTESparks : public CTEParticleSystem
+class [[= ks::reflect::NetTable{ .name = "DT_TESparks" } ]]
+      CTESparks : public CTEParticleSystem
 {
 public:
 	DECLARE_CLASS( CTESparks, CTEParticleSystem );
@@ -25,9 +28,9 @@ public:
 
 	virtual void	Test( const Vector& current_origin, const QAngle& current_angles );
 	
-	CNetworkVar( int, m_nMagnitude );
-	CNetworkVar( int, m_nTrailLength );
-	CNetworkVector( m_vecDir );
+	CNetworkVar( int, m_nMagnitude, [[= ks::reflect::Net{ .bits = 4, .flags = SPROP_UNSIGNED } ]] );
+	CNetworkVar( int, m_nTrailLength, [[= ks::reflect::Net{ .bits = 4, .flags = SPROP_UNSIGNED } ]] );
+	CNetworkVector( m_vecDir, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD, .enc = ks::reflect::ENC_VECTOR } ]] );
 };
 
 //-----------------------------------------------------------------------------
@@ -70,11 +73,7 @@ void CTESparks::Test( const Vector& current_origin, const QAngle& current_angles
 	Create( filter, 0.0 );
 }
 
-IMPLEMENT_SERVERCLASS_ST(CTESparks, DT_TESparks)
-	SendPropInt(	SENDINFO( m_nMagnitude ),	4,	SPROP_UNSIGNED ),
-	SendPropInt(	SENDINFO( m_nTrailLength ),	4,	SPROP_UNSIGNED ),
-	SendPropVector(	SENDINFO( m_vecDir ),		-1,	SPROP_COORD ),
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CTESparks, DT_TESparks )
 
 
 // Singleton to fire TESparks objects

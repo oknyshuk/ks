@@ -5,6 +5,14 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_annotations.h"
+#ifdef CLIENT_DLL
+#include "reflect_recvtable.h"
+#endif
+#include "reflect_annotations.h"
+#ifdef GAME_DLL
+#include "reflect_sendtable.h"
+#endif
 #include "smokegrenade_projectile.h"
 #include "weapon_csbase.h"
 #include "particle_parse.h"
@@ -24,10 +32,7 @@
 
 #if defined( CLIENT_DLL )
 
-IMPLEMENT_CLIENTCLASS_DT( C_SmokeGrenadeProjectile, DT_SmokeGrenadeProjectile, CSmokeGrenadeProjectile )
-RecvPropBool( RECVINFO( m_bDidSmokeEffect ) ),
-RecvPropInt( RECVINFO( m_nSmokeEffectTickBegin ) )
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS( C_SmokeGrenadeProjectile, DT_SmokeGrenadeProjectile, CSmokeGrenadeProjectile )
 
 C_SmokeGrenadeProjectile::~C_SmokeGrenadeProjectile()
 {
@@ -104,16 +109,8 @@ void C_SmokeGrenadeProjectile::SpawnSmokeEffect( )
 LINK_ENTITY_TO_CLASS( smokegrenade_projectile, CSmokeGrenadeProjectile );
 PRECACHE_REGISTER( smokegrenade_projectile );
 
-IMPLEMENT_SERVERCLASS_ST( CSmokeGrenadeProjectile, DT_SmokeGrenadeProjectile )
-SendPropBool( SENDINFO( m_bDidSmokeEffect ) ),
-SendPropInt( SENDINFO( m_nSmokeEffectTickBegin ) )
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CSmokeGrenadeProjectile, DT_SmokeGrenadeProjectile )
 
-BEGIN_DATADESC( CSmokeGrenadeProjectile )
-	DEFINE_THINKFUNC( Think_Detonate ),
-	DEFINE_THINKFUNC( Think_Fade ),
-	DEFINE_THINKFUNC( Think_Remove )
-END_DATADESC()
 
 CSmokeGrenadeProjectile* CSmokeGrenadeProjectile::Create( 
 	const Vector &position, 

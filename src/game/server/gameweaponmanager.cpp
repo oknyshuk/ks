@@ -5,9 +5,10 @@
 // $NoKeywords: $
 //=============================================================================//
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_annotations.h"
 
 #include "gameweaponmanager.h"
-#include "saverestore_utlvector.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -40,34 +41,19 @@ public:
 	}
 
 	void Think();
-	void InputSetMaxPieces( inputdata_t &inputdata );
-	void InputSetAmmoModifier( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetMaxPieces", .type = FIELD_INTEGER } ]] void InputSetMaxPieces( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetAmmoModifier", .type = FIELD_FLOAT } ]] void InputSetAmmoModifier( inputdata_t &inputdata );
 
-	string_t	m_iszWeaponName;
-	int			m_iMaxPieces;
-	float		m_flAmmoMod;
+	[[= ks::reflect::Key{ .name = "weaponname" } ]] string_t	m_iszWeaponName;
+	[[= ks::reflect::Key{ .name = "maxpieces" } ]] int			m_iMaxPieces;
+	[[= ks::reflect::Key{ .name = "ammomod" } ]] float		m_flAmmoMod;
 	bool		m_bExpectingWeapon;
 
 	CUtlVector<EHANDLE> m_ManagedNonWeapons;
 
 };
 
-BEGIN_DATADESC( CGameWeaponManager )
-
-//fields	
-	DEFINE_KEYFIELD( m_iszWeaponName, FIELD_STRING, "weaponname" ),
-	DEFINE_KEYFIELD( m_iMaxPieces, FIELD_INTEGER, "maxpieces" ),
-	DEFINE_KEYFIELD( m_flAmmoMod, FIELD_FLOAT, "ammomod" ),
-	DEFINE_FIELD( m_bExpectingWeapon, FIELD_BOOLEAN ),
-// funcs
-	DEFINE_FUNCTION( Think ),
-// inputs
-	DEFINE_INPUTFUNC( FIELD_INTEGER, "SetMaxPieces", InputSetMaxPieces ),
-	DEFINE_INPUTFUNC( FIELD_FLOAT, "SetAmmoModifier", InputSetAmmoModifier ),
-
-	DEFINE_UTLVECTOR( m_ManagedNonWeapons, FIELD_EHANDLE ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CGameWeaponManager )
 
 LINK_ENTITY_TO_CLASS( game_weapon_manager, CGameWeaponManager );
 

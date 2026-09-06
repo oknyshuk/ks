@@ -9,6 +9,8 @@
 #define	AI_HINT_H
 #pragma once
 
+#include "reflect_annotations.h"
+
 #include "ai_initutils.h"
 #include "tier1/utlmap.h"
 
@@ -348,8 +350,8 @@ private:
 	bool				IsViewable( void );
 
 	// Input handlers
-	void				InputEnableHint( inputdata_t &inputdata );
-	void				InputDisableHint( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "EnableHint", .type = FIELD_VOID } ]] void				InputEnableHint( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "DisableHint", .type = FIELD_VOID } ]] void				InputDisableHint( inputdata_t &inputdata );
 
 private:
 
@@ -357,9 +359,9 @@ private:
 	int					m_nTargetNodeID;
 	EHANDLE				m_hHintOwner;			// Is hint locked (being used by NPC / NPC en-route to use it)
 	float				m_flNextUseTime;		// When can I be used again?
-	COutputEHANDLE		m_OnNPCStartedUsing;	// Triggered when an NPC has actively begun to use the node.
-	COutputEHANDLE		m_OnNPCStoppedUsing;	// Triggered when an NPC has finished using this node.
-	float				m_nodeFOV;
+	[[= ks::reflect::Key{ .name = "OnNPCStartedUsing" } ]] COutputEHANDLE		m_OnNPCStartedUsing;	// Triggered when an NPC has actively begun to use the node.
+	[[= ks::reflect::Key{ .name = "OnNPCStoppedUsing" } ]] COutputEHANDLE		m_OnNPCStoppedUsing;	// Triggered when an NPC has finished using this node.
+	[[= ks::reflect::Key{ .name = "nodeFOV" } ]] float				m_nodeFOV;
 	Vector				m_vecForward;
 
 	// The next hint in list of all hints

@@ -451,7 +451,47 @@ class SmokeContext(Build.BuildContext):
     fun = "smoke"
 
 
+# A truncated diff list is worse than none: reading the first few lines and inferring that the
+# rest matched is how 30 datamaps got converted on a false premise. So print every gate diff, and
+# always print the gate's own summary count -- and dump the whole log where it can be read.
+# The engine loads a map and then tears it down on a datatable mismatch. Host_NewGame alone
+# therefore proves nothing; these are the aborts worth naming.
+def _aborted(log):
+    for probe in ("CreateDecoders failed", "Missing RecvProp", "RecvProp type doesn't match",
+                  "Host_EndGame"):
+        if probe in log:
+            for line in log.splitlines():
+                if probe in line:
+                    return line.strip()[:160]
+    return None
+
+def _report(bld, log, tag, con=None):
+    from waflib import Logs
+    import os, time
+    diffs = [l for l in log.splitlines() if "reflect table:" in l]
+    path = os.path.join(bld.bldnode.abspath(), "smoke-%s.log" % tag)
+    # this file is written only on failure, so a stale copy from an earlier run reads as a
+    # current one. Stamp it, and clear any previous copy at the start of every smoke.
+    with open(path, "w") as f:
+        f.write("=== %s smoke failure, %s ===\n" % (tag, time.strftime("%Y-%m-%d %H:%M:%S")))
+        f.write(log)
+    shown = diffs if len(diffs) <= 40 else diffs[:40]
+    for line in shown:
+        Logs.error("       | " + line)
+    if len(diffs) > len(shown):
+        Logs.error("       | ... %d more gate diffs" % (len(diffs) - len(shown)))
+    if diffs:
+        Logs.error("       | %d gate diff line(s) total; full log: %s" % (len(diffs), path))
+    else:
+        for line in ((con or log).splitlines()[-3:]):
+            Logs.error("       | " + line)
+        Logs.error("       | full log: %s" % path)
+
+
 def smoke(bld):
+    import glob, time
+    for stale in glob.glob(os.path.join(bld.bldnode.abspath(), "smoke-*.log")):
+        os.remove( stale )
     prefix = bld.env.PREFIX
     srcds = os.path.join(prefix, "srcds")
     if not os.path.isfile(srcds):
@@ -490,21 +530,29 @@ def smoke(bld):
                 srcds, "-game", "csgo", "-console", "-insecure",
                 "+sv_lan", "1", "+servercfgfile", "ks_smoke.cfg", "+map", m,
             ]
+            def _dec(b):
+                if not b: return ""
+                return b.decode("utf-8", "replace") if isinstance(b, bytes) else b
             try:
-                r = subprocess.run(argv, cwd=prefix, capture_output=True, text=True, timeout=secs)
-                rc, log = r.returncode, r.stdout
+                r = subprocess.run(argv, cwd=prefix, capture_output=True, text=True, errors="replace", timeout=secs)
+                # A gate reports on stderr and exits 70. Taking only stdout left a server-side
+                # failure as a bare "exit 70" with no diff lines at all.
+                rc, log = r.returncode, (r.stdout or "") + (r.stderr or "")
             except subprocess.TimeoutExpired as e:
-                out = e.stdout or b""
-                rc, log = 124, out.decode("utf-8", "replace") if isinstance(out, bytes) else out
+                rc, log = 124, _dec(e.stdout) + _dec(e.stderr)
 
             if rc != 124:
                 bad += 1
                 Logs.error("FAIL %s (exit %s)" % (m, rc))
-                for line in log.splitlines()[-3:]:
-                    Logs.error("       | " + line)
+                _report(bld, log, m)
             elif ("Host_NewGame on map %s" % m) not in log:
                 bad += 1
                 Logs.error("FAIL %s (never loaded)" % m)
+                _report(bld, log, m)
+            elif _aborted(log):
+                bad += 1
+                Logs.error("FAIL %s (loaded then aborted: %s)" % (m, _aborted(log)))
+                _report(bld, log, m)
             else:
                 Logs.info("ok   %-16s %5d lines" % (m, log.count("\n")))
     finally:
@@ -515,14 +563,21 @@ def smoke(bld):
         at = os.path.getsize(conlog) if os.path.isfile(conlog) else 0
         argv = [
             os.path.join(prefix, "srceng"), "-game", "csgo", "-novid",
-            "-windowed", "-w", "640", "-h", "480", "+sv_lan", "1", "+map", maps[0],
+            "-windowed", "-w", "640", "-h", "480", "+sv_lan", "1",
+            # DevWarning names the offending prop on a decoder mismatch; without this the
+            # engine aborts with no clue which table is wrong.
+            "-dev", "+developer", "1", "+map", maps[0],
         ]
         try:
-            r = subprocess.run(argv, cwd=prefix, capture_output=True, text=True, timeout=secs * 3)
-            rc, log = r.returncode, r.stdout
+            r = subprocess.run(argv, cwd=prefix, capture_output=True, text=True, errors="replace", timeout=secs * 3)
+            # A gate aborts through stderr, so dropping it made a gate failure indistinguishable
+            # from a silent early exit.
+            rc, log = r.returncode, (r.stdout or "") + (r.stderr or "")
         except subprocess.TimeoutExpired as e:
-            out = e.stdout or b""
-            rc, log = 124, out.decode("utf-8", "replace") if isinstance(out, bytes) else out
+            def dec(b):
+                if not b: return ""
+                return b.decode("utf-8", "replace") if isinstance(b, bytes) else b
+            rc, log = 124, dec(e.stdout) + dec(e.stderr)
 
         con = ""
         if os.path.isfile(conlog):
@@ -534,8 +589,11 @@ def smoke(bld):
         if not rendered:
             bad += 1
             Logs.error("FAIL client (never rendered %s, exit %s)" % (maps[0], rc))
-            for line in (con or log).splitlines()[-3:]:
-                Logs.error("       | " + line)
+            _report(bld, log, "client", con)
+        elif _aborted(con):
+            bad += 1
+            Logs.error("FAIL client (loaded then aborted: %s)" % _aborted(con))
+            _report(bld, log + "\n" + con, "client", con)
         elif rc < 0:
             Logs.warn("ok   %-16s %5d lines (crashed on shutdown, signal %d)"
                       % ("client", con.count("\n"), -rc))

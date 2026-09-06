@@ -5,6 +5,8 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_annotations.h"
 #include "env_zoom.h"
 
 #ifdef HL2_DLL
@@ -21,30 +23,22 @@ class CEnvZoom : public CPointEntity
 public:
 	DECLARE_CLASS( CEnvZoom, CPointEntity );
 
-	void	InputZoom( inputdata_t &inputdata );
-	void	InputUnZoom( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Zoom", .type = FIELD_VOID } ]] void	InputZoom( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "UnZoom", .type = FIELD_VOID } ]] void	InputUnZoom( inputdata_t &inputdata );
 
 	int	GetFOV( void ) { return m_nFOV;	}
 	float GetSpeed( void ) { return m_flSpeed;	}
 private:
 
-	float	m_flSpeed;
-	int		m_nFOV;
+	[[= ks::reflect::Key{ .name = "Rate" } ]] float	m_flSpeed;
+	[[= ks::reflect::Key{ .name = "FOV" } ]] int		m_nFOV;
 
 	DECLARE_DATADESC();
 };
 
 LINK_ENTITY_TO_CLASS( env_zoom, CEnvZoom );
 
-BEGIN_DATADESC( CEnvZoom )
-
-	DEFINE_KEYFIELD( m_flSpeed, FIELD_FLOAT, "Rate" ),
-	DEFINE_KEYFIELD( m_nFOV, FIELD_INTEGER, "FOV" ),
-
-	DEFINE_INPUTFUNC( FIELD_VOID, "Zoom", InputZoom ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "UnZoom", InputUnZoom ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CEnvZoom )
 
 bool CanOverrideEnvZoomOwner( CBaseEntity *pZoomOwner )
 {

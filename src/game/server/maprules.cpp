@@ -5,6 +5,8 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_annotations.h"
 #include "datamap.h"
 #include "gamerules.h"
 #include "maprules.h"
@@ -23,11 +25,7 @@
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
-BEGIN_DATADESC( CRuleEntity )
-
-	DEFINE_KEYFIELD( m_iszMaster, FIELD_STRING, "master" ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CRuleEntity )
 
 
 void CRuleEntity::Spawn( void )
@@ -56,11 +54,7 @@ bool CRuleEntity::CanFireForActivator( CBaseEntity *pActivator )
 //---------------------------------------------------------
 // Save/Restore
 //---------------------------------------------------------
-BEGIN_DATADESC( CRulePointEntity )
-
-	DEFINE_FIELD( m_Score,	FIELD_INTEGER ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CRulePointEntity )
 
 
 void CRulePointEntity::Spawn( void )
@@ -115,10 +109,10 @@ public:
 
 	inline	void	SetPoints( int points ) { m_Score = points; }
 
-	void InputApplyScore( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "ApplyScore", .type = FIELD_VOID } ]] void InputApplyScore( inputdata_t &inputdata );
 #if defined( CSTRIKE15 )
-	void InputAddScoreTerrorist( inputdata_t &inputdata );
-	void InputAddScoreCT( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "AddScoreTerrorist", .type = FIELD_VOID } ]] void InputAddScoreTerrorist( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "AddScoreCT", .type = FIELD_VOID } ]] void InputAddScoreCT( inputdata_t &inputdata );
 #endif
 
 private:
@@ -126,12 +120,7 @@ private:
 
 LINK_ENTITY_TO_CLASS( game_score, CGameScore );
 
-BEGIN_DATADESC( CGameScore )
-	// Inputs
-	DEFINE_INPUTFUNC( FIELD_VOID, "ApplyScore", InputApplyScore ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "AddScoreTerrorist", InputAddScoreTerrorist ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "AddScoreCT", InputAddScoreCT ),
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CGameScore )
 
 void CGameScore::Spawn( void )
 {
@@ -224,16 +213,7 @@ END_SCRIPTDESC()
 LINK_ENTITY_TO_CLASS( game_coopmission_manager, CGameCoopMissionManager );
 
 
-BEGIN_DATADESC( CGameCoopMissionManager )
-// inputs
-//DEFINE_INPUTFUNC( FIELD_FLOAT, "EndRound_Draw", InputEndRound_Draw ),
-DEFINE_OUTPUT( m_OnWaveCompleted, "OnWaveCompleted" ),
-DEFINE_OUTPUT( m_OnRoundReset, "OnRoundReset" ),
-DEFINE_OUTPUT( m_OnSpawnsReset, "OnSpawnsReset" ),
-DEFINE_OUTPUT( m_OnRoundLostKilled, "OnRoundLostKilled" ),
-DEFINE_OUTPUT( m_OnRoundLostTime, "OnRoundLostTime" ),
-DEFINE_OUTPUT( m_OnMissionCompleted, "OnMissionCompleted" ),
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CGameCoopMissionManager )
 
 void CGameCoopMissionManager::Spawn( void )
 {
@@ -327,32 +307,24 @@ public:
 	void	Spawn( void );
 	inline	int		Money( void ) { return m_nMoney; }
 
-	void InputSetMoneyAmount( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetMoneyAmount", .type = FIELD_INTEGER } ]] void InputSetMoneyAmount( inputdata_t &inputdata );
 
 	void InputSetTeamMoneyTerrorist( inputdata_t &inputdata );
 	void InputSetTeamMoneyCT( inputdata_t &inputdata );
 
-	void InputAddTeamMoneyTerrorist( inputdata_t &inputdata );
-	void InputAddTeamMoneyCT( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "AddTeamMoneyTerrorist", .type = FIELD_VOID } ]] void InputAddTeamMoneyTerrorist( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "AddTeamMoneyCT", .type = FIELD_VOID } ]] void InputAddTeamMoneyCT( inputdata_t &inputdata );
 
-	void InputAddMoneyPlayer( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "AddMoneyPlayer", .type = FIELD_VOID } ]] void InputAddMoneyPlayer( inputdata_t &inputdata );
 
 private:
-	int m_nMoney;
-	string_t		m_strAwardText;
+	[[= ks::reflect::Key{ .name = "Money" } ]] int m_nMoney;
+	[[= ks::reflect::Key{ .name = "AwardText" } ]] string_t		m_strAwardText;
 };
 
 LINK_ENTITY_TO_CLASS( game_money, CGameMoney );
 
-BEGIN_DATADESC( CGameMoney )
-	DEFINE_KEYFIELD( m_nMoney, FIELD_INTEGER, "Money" ),
-	DEFINE_KEYFIELD( m_strAwardText, FIELD_STRING, "AwardText" ),
-	// Inputs
-	DEFINE_INPUTFUNC( FIELD_INTEGER, "SetMoneyAmount", InputSetMoneyAmount ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "AddTeamMoneyTerrorist", InputAddTeamMoneyTerrorist ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "AddTeamMoneyCT", InputAddTeamMoneyCT ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "AddMoneyPlayer", InputAddMoneyPlayer ),
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CGameMoney )
 
 void CGameMoney::Spawn( void )
 {
@@ -410,17 +382,12 @@ class CGameEnd : public CRulePointEntity
 public:
 	DECLARE_DATADESC();
 
-	void	InputGameEnd( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "EndGame", .type = FIELD_VOID } ]] void	InputGameEnd( inputdata_t &inputdata );
 	void	Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
 private:
 };
 
-BEGIN_DATADESC( CGameEnd )
-
-	// inputs
-	DEFINE_INPUTFUNC( FIELD_VOID, "EndGame", InputGameEnd ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CGameEnd )
 
 LINK_ENTITY_TO_CLASS( game_end, CGameEnd );
 
@@ -451,24 +418,15 @@ public:
 	CGameRoundEnd();
 	virtual void FireGameEvent( IGameEvent *event );
 
-	void	InputEndRound_Draw( inputdata_t &inputdata );
-	void	InputEndRound_TerroristsWin( inputdata_t &inputdata );
-	void	InputEndRound_CounterTerroristsWin( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "EndRound_Draw", .type = FIELD_FLOAT } ]] void	InputEndRound_Draw( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "EndRound_TerroristsWin", .type = FIELD_FLOAT } ]] void	InputEndRound_TerroristsWin( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "EndRound_CounterTerroristsWin", .type = FIELD_FLOAT } ]] void	InputEndRound_CounterTerroristsWin( inputdata_t &inputdata );
 private:
-	COutputEvent	m_OnRoundEnded;
+	[[= ks::reflect::Key{ .name = "OnRoundEnded" } ]] COutputEvent	m_OnRoundEnded;
 	//m_OnForcedInteractionFinished.FireOutput( this, this );
 };
 
-BEGIN_DATADESC( CGameRoundEnd )
-
-	// inputs
-	DEFINE_INPUTFUNC( FIELD_FLOAT, "EndRound_Draw", InputEndRound_Draw ),
-	DEFINE_INPUTFUNC( FIELD_FLOAT, "EndRound_TerroristsWin", InputEndRound_TerroristsWin ),
-	DEFINE_INPUTFUNC( FIELD_FLOAT, "EndRound_CounterTerroristsWin", InputEndRound_CounterTerroristsWin ),
-
-	DEFINE_OUTPUT( m_OnRoundEnded,	"OnRoundEnded" ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CGameRoundEnd )
 
 LINK_ENTITY_TO_CLASS( game_round_end, CGameRoundEnd );
 
@@ -513,7 +471,16 @@ void CGameRoundEnd::InputEndRound_CounterTerroristsWin( inputdata_t &inputdata )
 #define SF_ENVTEXT_ALLPLAYERS			0x0001
 
 
-class CGameText : public CRulePointEntity
+class
+      [[= ks::reflect::KeyFrom<"m_textParms.channel", ks::reflect::Key{ .name = "channel" } >{} ]]
+      [[= ks::reflect::KeyFrom<"m_textParms.x", ks::reflect::Key{ .name = "x" } >{} ]]
+      [[= ks::reflect::KeyFrom<"m_textParms.y", ks::reflect::Key{ .name = "y" } >{} ]]
+      [[= ks::reflect::KeyFrom<"m_textParms.effect", ks::reflect::Key{ .name = "effect" } >{} ]]
+      [[= ks::reflect::KeyFrom<"m_textParms.fadeinTime", ks::reflect::Key{ .name = "fadein" } >{} ]]
+      [[= ks::reflect::KeyFrom<"m_textParms.fadeoutTime", ks::reflect::Key{ .name = "fadeout" } >{} ]]
+      [[= ks::reflect::KeyFrom<"m_textParms.holdTime", ks::reflect::Key{ .name = "holdtime" } >{} ]]
+      [[= ks::reflect::KeyFrom<"m_textParms.fxTime", ks::reflect::Key{ .name = "fxtime" } >{} ]]
+      CGameText : public CRulePointEntity
 {
 public:
 	DECLARE_CLASS( CGameText, CRulePointEntity );
@@ -526,17 +493,17 @@ public:
 	inline	void	MessageSet( const char *pMessage ) { m_iszMessage = AllocPooledString(pMessage); }
 	inline	const char *MessageGet( void )	{ return STRING( m_iszMessage ); }
 
-	void InputDisplay( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Display", .type = FIELD_VOID } ]] void InputDisplay( inputdata_t &inputdata );
 	void Display( CBaseEntity *pActivator );
-	void InputSetText ( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetText", .type = FIELD_STRING } ]] void InputSetText ( inputdata_t &inputdata );
 	void SetText( const char* pszStr );
-	void InputSetPosX( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetPosX", .type = FIELD_FLOAT } ]] void InputSetPosX( inputdata_t &inputdata );
 	void SetPosX( float flPosX );
-	void InputSetPosY( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetPosY", .type = FIELD_FLOAT } ]] void InputSetPosY( inputdata_t &inputdata );
 	void SetPosY( float flPosY );
-	void InputSetTextColor( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetTextColor", .type = FIELD_COLOR32 } ]] void InputSetTextColor( inputdata_t &inputdata );
 	void SetTextColor( color32 color );
-	void InputSetTextColor2( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetTextColor2", .type = FIELD_COLOR32 } ]] void InputSetTextColor2( inputdata_t &inputdata );
 	void SetTextColor2( color32 color );
 
 	void Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
@@ -546,7 +513,7 @@ public:
 
 private:
 
-	string_t m_iszMessage;
+	[[= ks::reflect::Key{ .name = "message" } ]] string_t m_iszMessage;
 	hudtextparms_t	m_textParms;
 };
 
@@ -554,30 +521,7 @@ LINK_ENTITY_TO_CLASS( game_text, CGameText );
 
 // Save parms as a block.  Will break save/restore if the structure changes, but this entity didn't ship with Half-Life, so
 // it can't impact saved Half-Life games.
-BEGIN_DATADESC( CGameText )
-
-	DEFINE_KEYFIELD( m_iszMessage, FIELD_STRING, "message" ),
-
-	DEFINE_KEYFIELD( m_textParms.channel, FIELD_INTEGER, "channel" ),
-	DEFINE_KEYFIELD( m_textParms.x, FIELD_FLOAT, "x" ),
-	DEFINE_KEYFIELD( m_textParms.y, FIELD_FLOAT, "y" ),
-	DEFINE_KEYFIELD( m_textParms.effect, FIELD_INTEGER, "effect" ),
-	DEFINE_KEYFIELD( m_textParms.fadeinTime, FIELD_FLOAT, "fadein" ),
-	DEFINE_KEYFIELD( m_textParms.fadeoutTime, FIELD_FLOAT, "fadeout" ),
-	DEFINE_KEYFIELD( m_textParms.holdTime, FIELD_FLOAT, "holdtime" ),
-	DEFINE_KEYFIELD( m_textParms.fxTime, FIELD_FLOAT, "fxtime" ),
-
-	DEFINE_ARRAY( m_textParms, FIELD_CHARACTER, sizeof(hudtextparms_t) ),
-
-	// Inputs
-	DEFINE_INPUTFUNC( FIELD_VOID, "Display", InputDisplay ),
-	DEFINE_INPUTFUNC( FIELD_STRING, "SetText", InputSetText ),
-	DEFINE_INPUTFUNC( FIELD_FLOAT, "SetPosX", InputSetPosX ),
-	DEFINE_INPUTFUNC( FIELD_FLOAT, "SetPosY", InputSetPosY ),
-	DEFINE_INPUTFUNC( FIELD_COLOR32, "SetTextColor", InputSetTextColor ),
-	DEFINE_INPUTFUNC( FIELD_COLOR32, "SetTextColor2", InputSetTextColor2 ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CGameText )
 
 
 
@@ -751,32 +695,21 @@ class CGamePlayerZone : public CRuleBrushEntity
 {
 public:
 	DECLARE_CLASS( CGamePlayerZone, CRuleBrushEntity );
-	void InputCountPlayersInZone( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "CountPlayersInZone", .type = FIELD_VOID } ]] void InputCountPlayersInZone( inputdata_t &inputdata );
 
 	DECLARE_DATADESC();
 
 private:
 
-	COutputEvent m_OnPlayerInZone;
-	COutputEvent m_OnPlayerOutZone;
+	[[= ks::reflect::Key{ .name = "OnPlayerInZone" } ]] COutputEvent m_OnPlayerInZone;
+	[[= ks::reflect::Key{ .name = "OnPlayerOutZone" } ]] COutputEvent m_OnPlayerOutZone;
 
-	COutputInt m_PlayersInCount;
-	COutputInt m_PlayersOutCount;
+	[[= ks::reflect::Key{ .name = "PlayersInCount" } ]] COutputInt m_PlayersInCount;
+	[[= ks::reflect::Key{ .name = "PlayersOutCount" } ]] COutputInt m_PlayersOutCount;
 };
 
 LINK_ENTITY_TO_CLASS( game_zone_player, CGamePlayerZone );
-BEGIN_DATADESC( CGamePlayerZone )
-
-	// Inputs
-	DEFINE_INPUTFUNC(FIELD_VOID, "CountPlayersInZone", InputCountPlayersInZone),
-
-	// Outputs
-	DEFINE_OUTPUT(m_OnPlayerInZone, "OnPlayerInZone"),
-	DEFINE_OUTPUT(m_OnPlayerOutZone, "OnPlayerOutZone"),
-	DEFINE_OUTPUT(m_PlayersInCount, "PlayersInCount"),
-	DEFINE_OUTPUT(m_PlayersOutCount, "PlayersOutCount"),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CGamePlayerZone )
 
 
 //-----------------------------------------------------------------------------
@@ -848,7 +781,7 @@ public:
 
 private:
 	
-	float m_flDamage;		// Damage to inflict, negative values give health.
+	[[= ks::reflect::Key{ .name = "dmg" } ]] float m_flDamage;		// Damage to inflict, negative values give health.
 
 	COutputEvent m_OnUse;
 };
@@ -856,11 +789,7 @@ private:
 LINK_ENTITY_TO_CLASS( game_player_hurt, CGamePlayerHurt );
 
 
-BEGIN_DATADESC( CGamePlayerHurt )
-
-	DEFINE_KEYFIELD( m_flDamage, FIELD_FLOAT, "dmg" ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CGamePlayerHurt )
 
 
 
@@ -900,16 +829,7 @@ LINK_ENTITY_TO_CLASS( game_player_equip, CGamePlayerEquip );
 //---------------------------------------------------------
 // Save/Restore
 //---------------------------------------------------------
-BEGIN_DATADESC( CGamePlayerEquip )
-
-	DEFINE_AUTO_ARRAY( m_weaponNames,		FIELD_STRING ),
-	DEFINE_AUTO_ARRAY( m_weaponCount,		FIELD_INTEGER ),
-
-	// Inputs
-	DEFINE_INPUTFUNC(FIELD_VOID, "TriggerForAllPlayers", InputTriggerForAllPlayers),
-	DEFINE_INPUTFUNC(FIELD_STRING, "TriggerForActivatedPlayer", InputTriggerForActivatedPlayer),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CGamePlayerEquip )
 
 
 void CGamePlayerEquip::InputTriggerForAllPlayers( inputdata_t &inputdata )

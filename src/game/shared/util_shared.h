@@ -6,6 +6,8 @@
 
 #ifndef UTIL_SHARED_H
 #define UTIL_SHARED_H
+
+#include "reflect_annotations.h"
 #ifdef _WIN32
 #pragma once
 #endif
@@ -637,13 +639,13 @@ inline float DistanceToRay( const Vector &pos, const Vector &rayStart, const Vec
  * Simple class for tracking intervals of game time.
  * Upon creation, the timer is invalidated.  To measure time intervals, start the timer via Start().
  */
-class IntervalTimer
+class [[= ks::reflect::NetTable{ .name = "DT_IntervalTimer", .base = false } ]]
+      IntervalTimer
 {
 public:
 #ifdef CLIENT_DLL
 	DECLARE_PREDICTABLE();
 #endif
-	DECLARE_DATADESC();
 	DECLARE_CLASS_NOBASE( IntervalTimer );
 	DECLARE_EMBEDDED_NETWORKVAR();
 
@@ -698,7 +700,7 @@ public:
 	}
 
 protected:
-	CNetworkVar( float, m_timestamp );
+	CNetworkVar( float, m_timestamp, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE } ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] );
 	float Now( void ) const;		// work-around since client header doesn't like inlined gpGlobals->curtime
 };
 
@@ -713,7 +715,8 @@ EXTERN_SEND_TABLE(DT_IntervalTimer);
  * Simple class for counting down a short interval of time.
  * Upon creation, the timer is invalidated.  Invalidated countdown timers are considered to have elapsed.
  */
-class CountdownTimer
+class [[= ks::reflect::NetTable{ .name = "DT_CountdownTimer", .base = false } ]]
+      CountdownTimer
 {
 public:
 #ifdef CLIENT_DLL
@@ -891,8 +894,8 @@ public:
 	}
 
 private:
-	CNetworkVar( float, m_duration );
-	CNetworkVar( float, m_timestamp );
+	CNetworkVar( float, m_duration, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE } ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] );
+	CNetworkVar( float, m_timestamp, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE } ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] );
 	float Now( void ) const;		// work-around since client header doesn't like inlined gpGlobals->curtime
 };
 
@@ -920,10 +923,10 @@ enum TimelineCompression_t
 	TIMELINE_COMPRESSION_TOTAL
 };
 
-class CTimeline : public IntervalTimer
+class [[= ks::reflect::NetTable{ .name = "DT_Timeline", .base = false } ]]
+      CTimeline : public IntervalTimer
 {
 public:
-	DECLARE_DATADESC();
 	DECLARE_CLASS( CTimeline, IntervalTimer );
 	DECLARE_EMBEDDED_NETWORKVAR();
 
@@ -976,13 +979,13 @@ private:
 
 	void Compress( void );
 
-	CNetworkArray( float, m_flValues, TIMELINE_ARRAY_SIZE );
-	CNetworkArray( int, m_nValueCounts, TIMELINE_ARRAY_SIZE );
-	CNetworkVar( int, m_nBucketCount );
-	CNetworkVar( float, m_flInterval );
-	CNetworkVar( float, m_flFinalValue );
-	CNetworkVar( TimelineCompression_t, m_nCompressionType );
-	CNetworkVar( bool, m_bStopped );
+	CNetworkArray( float, m_flValues, TIMELINE_ARRAY_SIZE, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE } ]] );
+	CNetworkArray( int, m_nValueCounts, TIMELINE_ARRAY_SIZE, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE, .enc = ks::reflect::ENC_FLOAT } ]] );
+	CNetworkVar( int, m_nBucketCount, [[= ks::reflect::Net{ .bits = NumBitsForCount( TIMELINE_ARRAY_SIZE ), .flags = SPROP_UNSIGNED } ]] );
+	CNetworkVar( float, m_flInterval, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE } ]] );
+	CNetworkVar( float, m_flFinalValue, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE } ]] );
+	CNetworkVar( TimelineCompression_t, m_nCompressionType, [[= ks::reflect::Net{ .flags = SPROP_UNSIGNED } ]] );
+	CNetworkVar( bool, m_bStopped, [[= ks::reflect::Net{} ]] );
 };
 
 #ifdef CLIENT_DLL

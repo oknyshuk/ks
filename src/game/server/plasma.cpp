@@ -6,6 +6,8 @@
 //
 //=============================================================================//
 #include "cbase.h"
+#include "reflect_sendtable.h"
+#include "reflect_annotations.h"
 #include "plasma.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
@@ -19,30 +21,9 @@
 LINK_ENTITY_TO_CLASS( _plasma, CPlasma );
 
 //Send datatable
-IMPLEMENT_SERVERCLASS_ST( CPlasma, DT_Plasma )
-	SendPropFloat(	SENDINFO( m_flScale ),		0,	SPROP_NOSCALE),
-	SendPropFloat(	SENDINFO( m_flScaleTime ),	0,	SPROP_NOSCALE),
-	SendPropInt(	SENDINFO( m_nFlags ),		8,  SPROP_UNSIGNED ),
-	SendPropModelIndex( SENDINFO( m_nPlasmaModelIndex )),
-	SendPropModelIndex( SENDINFO( m_nPlasmaModelIndex2 )),
-	SendPropModelIndex( SENDINFO( m_nGlowModelIndex )),
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CPlasma, DT_Plasma )
 
 //Data description 
-BEGIN_DATADESC( CPlasma )
-
-	//Client-side
-	DEFINE_FIELD( m_flScale,			FIELD_FLOAT ),
-	DEFINE_FIELD( m_flScaleTime,		FIELD_FLOAT ),
-	DEFINE_FIELD( m_nFlags,			FIELD_INTEGER ),
-
-//	DEFINE_FIELD( m_nPlasmaModelIndex, FIELD_INTEGER ),
-//	DEFINE_FIELD( m_nPlasmaModelIndex2, FIELD_INTEGER ),
-//	DEFINE_FIELD( m_nGlowModelIndex,	FIELD_INTEGER ),
-
-	//Server-side
-
-END_DATADESC()
 
 //-----------------------------------------------------------------------------
 // Purpose: 

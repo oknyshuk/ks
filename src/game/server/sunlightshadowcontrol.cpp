@@ -6,6 +6,9 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_sendtable.h"
+#include "reflect_annotations.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -18,7 +21,8 @@
 //------------------------------------------------------------------------------
 // Purpose : Sunlight shadow control entity
 //------------------------------------------------------------------------------
-class CSunlightShadowControl : public CBaseEntity
+class [[= ks::reflect::NetTable{ .name = "DT_SunlightShadowControl", .base = false } ]]
+      CSunlightShadowControl : public CBaseEntity
 {
 public:
 	DECLARE_CLASS( CSunlightShadowControl, CBaseEntity );
@@ -31,12 +35,12 @@ public:
 	int  UpdateTransmitState();
 
 	// Inputs
-	void	InputSetAngles( inputdata_t &inputdata );
-	void	InputEnable( inputdata_t &inputdata );
-	void	InputDisable( inputdata_t &inputdata );
-	void	InputSetTexture( inputdata_t &inputdata );
-	void	InputSetEnableShadows( inputdata_t &inputdata );
-	void	InputSetLightColor( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetAngles", .type = FIELD_STRING } ]] void	InputSetAngles( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Enable", .type = FIELD_VOID } ]] void	InputEnable( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Disable", .type = FIELD_VOID } ]] void	InputDisable( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetTexture", .type = FIELD_STRING } ]] void	InputSetTexture( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "EnableShadows", .type = FIELD_BOOLEAN } ]] void	InputSetEnableShadows( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "LightColor", .type = FIELD_COLOR32 } ]] void	InputSetLightColor( inputdata_t &inputdata );
 
 	virtual int	ObjectCaps( void ) { return BaseClass::ObjectCaps() & ~FCAP_ACROSS_TRANSITION; }
 
@@ -44,64 +48,27 @@ public:
 	DECLARE_DATADESC();
 
 private:
-	CNetworkVector( m_shadowDirection );
+	CNetworkVector( m_shadowDirection, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_NOSCALE, .enc = ks::reflect::ENC_VECTOR } ]] );
 
-	CNetworkVar( bool, m_bEnabled );
-	bool m_bStartDisabled;
+	CNetworkVar( bool, m_bEnabled, [[= ks::reflect::Net{} ]] [[= ks::reflect::Key{ .name = "enabled" } ]] );
+	[[= ks::reflect::Key{ .name = "StartDisabled" } ]] bool m_bStartDisabled;
 
-	CNetworkString( m_TextureName, MAX_PATH );
-	CNetworkColor32( m_LightColor );
-	CNetworkVar( float, m_flColorTransitionTime );
-	CNetworkVar( float, m_flSunDistance );
-	CNetworkVar( float, m_flFOV );
-	CNetworkVar( float, m_flNearZ );
-	CNetworkVar( float, m_flNorthOffset );
-	CNetworkVar( bool, m_bEnableShadows );
+	CNetworkString( m_TextureName, MAX_PATH, [[= ks::reflect::Net{} ]] );
+	CNetworkColor32( m_LightColor, [[= ks::reflect::Net{ .bits = 32, .flags = SPROP_UNSIGNED } ]] [[= ks::reflect::Proxy<SendProxy_Color32ToInt32, ks::reflect::WIRE_SEND>{} ]] );
+	CNetworkVar( float, m_flColorTransitionTime, [[= ks::reflect::Net{ .bits = 32 } ]] [[= ks::reflect::Key{ .name = "colortransitiontime" } ]] );
+	CNetworkVar( float, m_flSunDistance, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE } ]] [[= ks::reflect::Key{ .name = "distance" } ]] [[= ks::reflect::Key{ .name = "SetDistance", .input = true } ]] );
+	CNetworkVar( float, m_flFOV, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE } ]] [[= ks::reflect::Key{ .name = "fov" } ]] [[= ks::reflect::Key{ .name = "SetFOV", .input = true } ]] );
+	CNetworkVar( float, m_flNearZ, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE } ]] [[= ks::reflect::Key{ .name = "nearz" } ]] [[= ks::reflect::Key{ .name = "SetNearZDistance", .input = true } ]] );
+	CNetworkVar( float, m_flNorthOffset, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE } ]] [[= ks::reflect::Key{ .name = "northoffset" } ]] [[= ks::reflect::Key{ .name = "SetNorthOffset", .input = true } ]] );
+	CNetworkVar( bool, m_bEnableShadows, [[= ks::reflect::Net{} ]] [[= ks::reflect::Key{ .name = "enableshadows" } ]] );
 };
 
 LINK_ENTITY_TO_CLASS(sunlight_shadow_control, CSunlightShadowControl);
 
-BEGIN_DATADESC( CSunlightShadowControl )
-
-	DEFINE_KEYFIELD( m_bEnabled,		FIELD_BOOLEAN, "enabled" ),
-	DEFINE_KEYFIELD( m_bStartDisabled,	FIELD_BOOLEAN, "StartDisabled" ),
-	DEFINE_AUTO_ARRAY_KEYFIELD( m_TextureName, FIELD_CHARACTER, "texturename" ),
-	DEFINE_KEYFIELD( m_flSunDistance,	FIELD_FLOAT, "distance" ),
-	DEFINE_KEYFIELD( m_flFOV,	FIELD_FLOAT, "fov" ),
-	DEFINE_KEYFIELD( m_flNearZ,	FIELD_FLOAT, "nearz" ),
-	DEFINE_KEYFIELD( m_flNorthOffset,	FIELD_FLOAT, "northoffset" ),
-	DEFINE_KEYFIELD( m_bEnableShadows, FIELD_BOOLEAN, "enableshadows" ),
-	DEFINE_FIELD( m_LightColor, FIELD_COLOR32 ), 
-	DEFINE_KEYFIELD( m_flColorTransitionTime, FIELD_FLOAT, "colortransitiontime" ),
-
-	// Inputs
-	DEFINE_INPUT( m_flSunDistance,		FIELD_FLOAT, "SetDistance" ),
-	DEFINE_INPUT( m_flFOV,				FIELD_FLOAT, "SetFOV" ),
-	DEFINE_INPUT( m_flNearZ,			FIELD_FLOAT, "SetNearZDistance" ),
-	DEFINE_INPUT( m_flNorthOffset,			FIELD_FLOAT, "SetNorthOffset" ),
-
-	DEFINE_INPUTFUNC( FIELD_COLOR32, "LightColor", InputSetLightColor ),
-	DEFINE_INPUTFUNC( FIELD_STRING, "SetAngles", InputSetAngles ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "Enable", InputEnable ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "Disable", InputDisable ),
-	DEFINE_INPUTFUNC( FIELD_STRING, "SetTexture", InputSetTexture ),
-	DEFINE_INPUTFUNC( FIELD_BOOLEAN, "EnableShadows", InputSetEnableShadows ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CSunlightShadowControl )
 
 
-IMPLEMENT_SERVERCLASS_ST_NOBASE(CSunlightShadowControl, DT_SunlightShadowControl)
-	SendPropVector(SENDINFO(m_shadowDirection), -1,  SPROP_NOSCALE ),
-	SendPropBool(SENDINFO(m_bEnabled) ),
-	SendPropString(SENDINFO(m_TextureName)),
-	SendPropInt(SENDINFO (m_LightColor ),	32, SPROP_UNSIGNED, SendProxy_Color32ToInt32 ),
-	SendPropFloat( SENDINFO( m_flColorTransitionTime ) ),
-	SendPropFloat(SENDINFO(m_flSunDistance), 0, SPROP_NOSCALE ),
-	SendPropFloat(SENDINFO(m_flFOV), 0, SPROP_NOSCALE ),
-	SendPropFloat(SENDINFO(m_flNearZ), 0, SPROP_NOSCALE ),
-	SendPropFloat(SENDINFO(m_flNorthOffset), 0, SPROP_NOSCALE ),
-	SendPropBool( SENDINFO( m_bEnableShadows ) ),
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CSunlightShadowControl, DT_SunlightShadowControl )
 
 
 CSunlightShadowControl::CSunlightShadowControl()

@@ -7,6 +7,8 @@
 
 #ifndef STEAMJET_H
 #define STEAMJET_H
+
+#include "reflect_annotations.h"
 #pragma	once
 
 #include "baseparticleentity.h"
@@ -19,7 +21,9 @@
 // CSteamJet
 //==================================================
 
-class CSteamJet : public CBaseParticleEntity
+class [[= ks::reflect::NetTable{ .name = "DT_SteamJet" } ]]
+      [[= ks::reflect::From<"m_spawnflags", ks::reflect::Net{ .bits = 8, .flags = SPROP_UNSIGNED }>{} ]]
+      CSteamJet : public CBaseParticleEntity
 {
 public:
 	CSteamJet();
@@ -33,25 +37,25 @@ public:
 protected:
 
 	// Input handlers.
-	void InputTurnOn(inputdata_t &data);
-	void InputTurnOff(inputdata_t &data);
-	void InputToggle(inputdata_t &data);
+	[[= ks::reflect::Input{ .name = "TurnOn", .type = FIELD_VOID } ]] void InputTurnOn(inputdata_t &data);
+	[[= ks::reflect::Input{ .name = "TurnOff", .type = FIELD_VOID } ]] void InputTurnOff(inputdata_t &data);
+	[[= ks::reflect::Input{ .name = "Toggle", .type = FIELD_VOID } ]] void InputToggle(inputdata_t &data);
 
 // Stuff from the datatable.
 public:
-	CNetworkVar( float, m_SpreadSpeed );
-	CNetworkVar( float, m_Speed );
-	CNetworkVar( float, m_StartSize );
-	CNetworkVar( float, m_EndSize );
-	CNetworkVar( float, m_Rate );
-	CNetworkVar( float, m_JetLength );	// Length of the jet. Lifetime is derived from this.
+	CNetworkVar( float, m_SpreadSpeed, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE } ]] [[= ks::reflect::Key{ .name = "SpreadSpeed", .input = true } ]] );
+	CNetworkVar( float, m_Speed, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE } ]] [[= ks::reflect::Key{ .name = "Speed", .input = true } ]] );
+	CNetworkVar( float, m_StartSize, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE } ]] [[= ks::reflect::Key{ .name = "StartSize" } ]] );
+	CNetworkVar( float, m_EndSize, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE } ]] [[= ks::reflect::Key{ .name = "EndSize" } ]] );
+	CNetworkVar( float, m_Rate, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE } ]] [[= ks::reflect::Key{ .name = "Rate", .input = true } ]] );
+	CNetworkVar( float, m_JetLength, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE } ]] [[= ks::reflect::Key{ .name = "JetLength", .input = true } ]] );	// Length of the jet. Lifetime is derived from this.
 
-	CNetworkVar( int, m_bEmit );		// Emit particles?
-	CNetworkVar( bool, m_bFaceLeft );	// For support of legacy env_steamjet, which faced left instead of forward.
-	bool			m_InitialState;
+	CNetworkVar( int, m_bEmit, [[= ks::reflect::Net{ .bits = 1, .flags = SPROP_UNSIGNED } ]] );		// Emit particles?
+	CNetworkVar( bool, m_bFaceLeft, [[= ks::reflect::Net{ .bits = 1, .flags = SPROP_UNSIGNED } ]] );	// For support of legacy env_steamjet, which faced left instead of forward.
+	[[= ks::reflect::Key{ .name = "InitialState" } ]] bool			m_InitialState;
 
-	CNetworkVar( int, m_nType );		// Type of steam (normal, heatwave)
-	CNetworkVar( float, m_flRollSpeed );
+	CNetworkVar( int, m_nType, [[= ks::reflect::Net{ .bits = 32, .flags = SPROP_UNSIGNED } ]] [[= ks::reflect::Key{ .name = "Type" } ]] );		// Type of steam (normal, heatwave)
+	CNetworkVar( float, m_flRollSpeed, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE } ]] [[= ks::reflect::Key{ .name = "RollSpeed" } ]] );
 
 	virtual void Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
 };

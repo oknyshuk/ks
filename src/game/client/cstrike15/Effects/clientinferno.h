@@ -1,3 +1,5 @@
+
+#include "reflect_annotations.h"
 // ClientInferno.cpp
 // Render client-side Inferno effects
 // Author: Michael Booth, February 2005
@@ -11,7 +13,8 @@
 /**
  * The client-side Inferno effect
  */
-class C_Inferno : public C_BaseEntity
+class [[= ks::reflect::NetTable{ .name = "DT_Inferno" } ]]
+      C_Inferno : public C_BaseEntity
 {
 public:
 	DECLARE_CLASS( C_Inferno, C_BaseEntity );
@@ -42,13 +45,13 @@ private:
 	CUtlReference<CNewParticleEffect> m_burnParticleEffect;
 
 	enum { MAX_INFERNO_FIRES = 100 };
-	int m_fireXDelta[ MAX_INFERNO_FIRES ];
-	int m_fireYDelta[ MAX_INFERNO_FIRES ];
-	int m_fireZDelta[ MAX_INFERNO_FIRES ];
-	bool m_bFireIsBurning[ MAX_INFERNO_FIRES ];
+	[[= ks::reflect::Net{} ]] int m_fireXDelta[ MAX_INFERNO_FIRES ];
+	[[= ks::reflect::Net{} ]] int m_fireYDelta[ MAX_INFERNO_FIRES ];
+	[[= ks::reflect::Net{} ]] int m_fireZDelta[ MAX_INFERNO_FIRES ];
+	[[= ks::reflect::Net{} ]] bool m_bFireIsBurning[ MAX_INFERNO_FIRES ];
 	Vector m_BurnNormal[ MAX_INFERNO_FIRES ];
 	int m_fireUniqueID[ MAX_INFERNO_FIRES ];
-	int m_fireCount;
+	[[= ks::reflect::Net{} ]] int m_fireCount;
 	int m_nInfernoType;
 	int m_lastFireCount;						///< used to detect changes
 	
@@ -93,7 +96,8 @@ private:
 
 //---------------------------------------------------------
 //---------------------------------------------------------
-class C_FireCrackerBlast: public C_Inferno
+class [[= ks::reflect::NetTable{ .name = "DT_FireCrackerBlast" } ]]
+      C_FireCrackerBlast: public C_Inferno
 {
 public:
 	DECLARE_CLASS( C_FireCrackerBlast, C_Inferno );

@@ -7,12 +7,18 @@
 
 #ifndef BASETOGGLE_H
 #define BASETOGGLE_H
+
+#include "reflect_annotations.h"
 #pragma once
 
 class CBaseEntity;
 
 
-class CBaseToggle : public CBaseEntity
+class [[= ks::reflect::NetTable{ .name = "DT_BaseToggle" } ]]
+      [[= ks::reflect::From<"m_vecFinalDest", ks::reflect::Net{ .bits = 32, .flags = SPROP_NOSCALE, .enc = ks::reflect::ENC_VECTOR }>{} ]]
+      [[= ks::reflect::From<"m_movementType", ks::reflect::Net{ .bits = -1 }>{} ]]
+      [[= ks::reflect::From<"m_flMoveTargetTime", ks::reflect::Net{ .bits = 32 }>{} ]]
+      CBaseToggle : public CBaseEntity
 {
 	DECLARE_CLASS( CBaseToggle, CBaseEntity );
 	DECLARE_SERVERCLASS();

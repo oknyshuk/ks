@@ -1,3 +1,5 @@
+
+#include "reflect_annotations.h"
 //===== Copyright © 1996-2005, Valve Corporation, All rights reserved. ======//
 //
 // Purpose: Controls the pose parameters of a model
@@ -30,7 +32,16 @@ enum PoseController_FModType_t
 #include "baseentity.h"
 
 
-class CPoseController : public CBaseEntity
+#define MAX_POSE_CYCLE_FREQUENCY 10.0f
+
+#define MAX_POSE_FMOD_AMPLITUDE 10.0f
+
+#define MAX_POSE_FMOD_RATE 10.0f
+
+#define MAX_POSE_INTERPOLATION_TIME 10.0f
+
+class [[= ks::reflect::NetTable{ .name = "DT_PoseController" } ]]
+      CPoseController : public CBaseEntity
 {
 public:
 	DECLARE_CLASS( CPoseController, CBaseEntity );
@@ -62,40 +73,40 @@ public:
 	void RandomizeFMod( float fExtremeness );
 
 	// Input handlers
-	void InputSetPoseParameterName( inputdata_t &inputdata );
-	void InputSetPoseValue( inputdata_t &inputdata );
-	void InputSetInterpolationTime( inputdata_t &inputdata );
-	void InputSetCycleFrequency( inputdata_t &inputdata );
-	void InputSetFModType( inputdata_t &inputdata );
-	void InputSetFModTimeOffset( inputdata_t &inputdata );
-	void InputSetFModRate( inputdata_t &inputdata );
-	void InputSetFModAmplitude( inputdata_t &inputdata );
-	void InputRandomizeFMod( inputdata_t &inputdata );
-	void InputGetFMod( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetPoseParameterName", .type = FIELD_STRING } ]] void InputSetPoseParameterName( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetPoseValue", .type = FIELD_FLOAT } ]] void InputSetPoseValue( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetInterpolationTime", .type = FIELD_FLOAT } ]] void InputSetInterpolationTime( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetCycleFrequency", .type = FIELD_FLOAT } ]] void InputSetCycleFrequency( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetFModType", .type = FIELD_INTEGER } ]] void InputSetFModType( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetFModTimeOffset", .type = FIELD_FLOAT } ]] void InputSetFModTimeOffset( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetFModRate", .type = FIELD_FLOAT } ]] void InputSetFModRate( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetFModAmplitude", .type = FIELD_FLOAT } ]] void InputSetFModAmplitude( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "RandomizeFMod", .type = FIELD_FLOAT } ]] void InputRandomizeFMod( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "GetFMod", .type = FIELD_VOID } ]] void InputGetFMod( inputdata_t &inputdata );
 
 private:
 
-	CNetworkArray( EHANDLE, m_hProps, MAX_POSE_CONTROLLED_PROPS );				// Handles to controlled models
-	CNetworkArray( unsigned char, m_chPoseIndex, MAX_POSE_CONTROLLED_PROPS );	// Pose parameter indices for each model
+	CNetworkArray( EHANDLE, m_hProps, MAX_POSE_CONTROLLED_PROPS, [[= ks::reflect::Net{} ]] );				// Handles to controlled models
+	CNetworkArray( unsigned char, m_chPoseIndex, MAX_POSE_CONTROLLED_PROPS, [[= ks::reflect::Net{ .bits = 5, .flags = SPROP_UNSIGNED } ]] );	// Pose parameter indices for each model
 
 	bool		m_bDisablePropLookup;
 
-	CNetworkVar( bool, m_bPoseValueParity );
+	CNetworkVar( bool, m_bPoseValueParity, [[= ks::reflect::Net{} ]] );
 
-	string_t	m_iszPropName;				// Targetname of the models to control
-	string_t	m_iszPoseParameterName;		// Pose parameter name to control
+	[[= ks::reflect::Key{ .name = "PropName" } ]] string_t	m_iszPropName;				// Targetname of the models to control
+	[[= ks::reflect::Key{ .name = "PoseParameterName" } ]] string_t	m_iszPoseParameterName;		// Pose parameter name to control
 
-	CNetworkVar( float, m_fPoseValue );			// Normalized pose parameter value (maps to each pose parameter's min and max range)
-	CNetworkVar( float, m_fInterpolationTime );	// Interpolation speed for client matching absolute pose values
-	CNetworkVar( bool, m_bInterpolationWrap );	// Interpolation for the client wraps 0 to 1.
+	CNetworkVar( float, m_fPoseValue, [[= ks::reflect::Net{ .bits = 11, .low = 0.0f, .high = 1.0f } ]] [[= ks::reflect::Key{ .name = "PoseValue" } ]] );			// Normalized pose parameter value (maps to each pose parameter's min and max range)
+	CNetworkVar( float, m_fInterpolationTime, [[= ks::reflect::Net{ .bits = 11, .low = 0.0f, .high = MAX_POSE_INTERPOLATION_TIME } ]] [[= ks::reflect::Key{ .name = "InterpolationTime" } ]] );	// Interpolation speed for client matching absolute pose values
+	CNetworkVar( bool, m_bInterpolationWrap, [[= ks::reflect::Net{} ]] [[= ks::reflect::Key{ .name = "InterpolationWrap" } ]] );	// Interpolation for the client wraps 0 to 1.
 
-	CNetworkVar( float, m_fCycleFrequency );	// Cycles per second
+	CNetworkVar( float, m_fCycleFrequency, [[= ks::reflect::Net{ .bits = 11, .low = -MAX_POSE_CYCLE_FREQUENCY, .high = MAX_POSE_CYCLE_FREQUENCY } ]] [[= ks::reflect::Key{ .name = "CycleFrequency" } ]] );	// Cycles per second
 
 	// Frequency modulation variables
-	CNetworkVar( PoseController_FModType_t, m_nFModType );
-	CNetworkVar( float, m_fFModTimeOffset );
-	CNetworkVar( float, m_fFModRate );
-	CNetworkVar( float, m_fFModAmplitude );
+	CNetworkVar( PoseController_FModType_t, m_nFModType, [[= ks::reflect::Net{ .bits = 3, .flags = SPROP_UNSIGNED } ]] [[= ks::reflect::Key{ .name = "FModType" } ]] );
+	CNetworkVar( float, m_fFModTimeOffset, [[= ks::reflect::Net{ .bits = 11, .low = -1.0f, .high = 1.0f } ]] [[= ks::reflect::Key{ .name = "FModTimeOffset" } ]] );
+	CNetworkVar( float, m_fFModRate, [[= ks::reflect::Net{ .bits = 11, .low = -MAX_POSE_FMOD_RATE, .high = MAX_POSE_FMOD_RATE } ]] [[= ks::reflect::Key{ .name = "FModRate" } ]] );
+	CNetworkVar( float, m_fFModAmplitude, [[= ks::reflect::Net{ .bits = 11, .low = 0.0f, .high = MAX_POSE_FMOD_AMPLITUDE } ]] [[= ks::reflect::Key{ .name = "FModAmplitude" } ]] );
 };
 
 
@@ -108,7 +119,8 @@ private:
 #include "fx_interpvalue.h"
 
 
-class C_PoseController : public C_BaseEntity
+class [[= ks::reflect::NetTable{ .name = "DT_PoseController" } ]]
+      C_PoseController : public C_BaseEntity
 {
 public:
 	DECLARE_CLASS( C_PoseController, C_BaseEntity );
@@ -127,17 +139,17 @@ private:
 
 
 	// Networked variables
-	EHANDLE						m_hProps[MAX_POSE_CONTROLLED_PROPS];
-	unsigned char				m_chPoseIndex[MAX_POSE_CONTROLLED_PROPS];
-	bool						m_bPoseValueParity;
-	float						m_fPoseValue;
-	float						m_fInterpolationTime;
-	bool						m_bInterpolationWrap;
-	float						m_fCycleFrequency;
-	PoseController_FModType_t	m_nFModType;
-	float						m_fFModTimeOffset;
-	float						m_fFModRate;
-	float						m_fFModAmplitude;
+	[[= ks::reflect::Net{} ]] EHANDLE						m_hProps[MAX_POSE_CONTROLLED_PROPS];
+	[[= ks::reflect::Net{} ]] unsigned char				m_chPoseIndex[MAX_POSE_CONTROLLED_PROPS];
+	[[= ks::reflect::Net{} ]] bool						m_bPoseValueParity;
+	[[= ks::reflect::Net{} ]] float						m_fPoseValue;
+	[[= ks::reflect::Net{} ]] float						m_fInterpolationTime;
+	[[= ks::reflect::Net{} ]] bool						m_bInterpolationWrap;
+	[[= ks::reflect::Net{} ]] float						m_fCycleFrequency;
+	[[= ks::reflect::Net{} ]] PoseController_FModType_t	m_nFModType;
+	[[= ks::reflect::Net{} ]] float						m_fFModTimeOffset;
+	[[= ks::reflect::Net{} ]] float						m_fFModRate;
+	[[= ks::reflect::Net{} ]] float						m_fFModAmplitude;
 	bool	m_bOldPoseValueParity;
 
 	float	m_fCurrentPoseValue;	// Actual pose value cycled by the frequency and modulation

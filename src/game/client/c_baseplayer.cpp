@@ -6,6 +6,9 @@
 //
 //===========================================================================//
 #include "cbase.h"
+#include "reflect_recvtable.h"
+#include "reflect_annotations.h"
+#include "reflect_predmap.h"
 #include "c_baseplayer.h"
 #include "c_cs_player.h"
 #include "c_user_message_register.h"
@@ -130,334 +133,30 @@ bool IsDemoPolishRecording();
 // RecvTable for CPlayerState.
 // -------------------------------------------------------------------------------- //
 
-	BEGIN_RECV_TABLE_NOBASE(CPlayerState, DT_PlayerState)
-		RecvPropInt		(RECVINFO(deadflag)),
-	END_RECV_TABLE()
+IMPLEMENT_REFLECT_TABLE( CPlayerState, DT_PlayerState );
 
 
-BEGIN_RECV_TABLE_NOBASE( CPlayerLocalData, DT_Local )
-	RecvPropArray3( RECVINFO_ARRAY(m_chAreaBits), RecvPropInt(RECVINFO(m_chAreaBits[0]))),
-	RecvPropArray3( RECVINFO_ARRAY(m_chAreaPortalBits), RecvPropInt(RECVINFO(m_chAreaPortalBits[0]))),
-	RecvPropInt(RECVINFO(m_iHideHUD)),
-
-	// View
-	
-	RecvPropFloat(RECVINFO(m_flFOVRate)),
-	
-	RecvPropInt		(RECVINFO(m_bDucked)),
-	RecvPropInt		(RECVINFO(m_bDucking)),
-	RecvPropFloat   (RECVINFO(m_flLastDuckTime)),
-	RecvPropInt		(RECVINFO(m_bInDuckJump)),
-	RecvPropInt		(RECVINFO(m_nDuckTimeMsecs)),
-	RecvPropInt		(RECVINFO(m_nDuckJumpTimeMsecs)),
-	RecvPropInt		(RECVINFO(m_nJumpTimeMsecs)),
-	RecvPropFloat	(RECVINFO(m_flFallVelocity)),
-
-#if PREDICTION_ERROR_CHECK_LEVEL > 1 
-	RecvPropFloat	(RECVINFO_NAME( m_viewPunchAngle.m_Value[0], m_viewPunchAngle[0])),
-	RecvPropFloat	(RECVINFO_NAME( m_viewPunchAngle.m_Value[1], m_viewPunchAngle[1])),
-	RecvPropFloat	(RECVINFO_NAME( m_viewPunchAngle.m_Value[2], m_viewPunchAngle[2] )),
-	RecvPropFloat	(RECVINFO_NAME( m_aimPunchAngle.m_Value[0], m_aimPunchAngle[0])),
-	RecvPropFloat	(RECVINFO_NAME( m_aimPunchAngle.m_Value[1], m_aimPunchAngle[1])),
-	RecvPropFloat	(RECVINFO_NAME( m_aimPunchAngle.m_Value[2], m_aimPunchAngle[2] )),
-	RecvPropFloat	(RECVINFO_NAME( m_aimPunchAngleVel.m_Value[0], m_aimPunchAngleVel[0] )),
-	RecvPropFloat	(RECVINFO_NAME( m_aimPunchAngleVel.m_Value[1], m_aimPunchAngleVel[1] )),
-	RecvPropFloat	(RECVINFO_NAME( m_aimPunchAngleVel.m_Value[2], m_aimPunchAngleVel[2] )),
-#else
-	RecvPropVector	(RECVINFO(m_viewPunchAngle)),
-	RecvPropVector	(RECVINFO(m_aimPunchAngle)),
-	RecvPropVector	(RECVINFO(m_aimPunchAngleVel)),
-#endif
-
-	RecvPropInt		(RECVINFO(m_bDrawViewmodel)),
-	RecvPropInt		(RECVINFO(m_bWearingSuit)),
-	RecvPropBool	(RECVINFO(m_bPoisoned)),
-	RecvPropFloat	(RECVINFO(m_flStepSize)),
-	RecvPropInt		(RECVINFO(m_bAllowAutoMovement)),
-
-	// 3d skybox data
-	RecvPropInt(RECVINFO(m_skybox3d.scale)),
-	RecvPropVector(RECVINFO(m_skybox3d.origin)),
-	RecvPropInt(RECVINFO(m_skybox3d.area)),
-
-	// 3d skybox fog data
-	RecvPropInt( RECVINFO( m_skybox3d.fog.enable ) ),
-	RecvPropInt( RECVINFO( m_skybox3d.fog.blend ) ),
-	RecvPropVector( RECVINFO( m_skybox3d.fog.dirPrimary ) ),
-	RecvPropInt( RECVINFO( m_skybox3d.fog.colorPrimary ), 0, RecvProxy_Int32ToColor32 ),
-	RecvPropInt( RECVINFO( m_skybox3d.fog.colorSecondary ), 0, RecvProxy_Int32ToColor32 ),
-	RecvPropFloat( RECVINFO( m_skybox3d.fog.start ) ),
-	RecvPropFloat( RECVINFO( m_skybox3d.fog.end ) ),
-	RecvPropFloat( RECVINFO( m_skybox3d.fog.maxdensity ) ),
-	RecvPropFloat( RECVINFO( m_skybox3d.fog.HDRColorScale ) ),
-
-	// audio data
-	RecvPropVector( RECVINFO( m_audio.localSound[0] ) ),
-	RecvPropVector( RECVINFO( m_audio.localSound[1] ) ),
-	RecvPropVector( RECVINFO( m_audio.localSound[2] ) ),
-	RecvPropVector( RECVINFO( m_audio.localSound[3] ) ),
-	RecvPropVector( RECVINFO( m_audio.localSound[4] ) ),
-	RecvPropVector( RECVINFO( m_audio.localSound[5] ) ),
-	RecvPropVector( RECVINFO( m_audio.localSound[6] ) ),
-	RecvPropVector( RECVINFO( m_audio.localSound[7] ) ),
-	RecvPropInt( RECVINFO( m_audio.soundscapeIndex ) ),
-	RecvPropInt( RECVINFO( m_audio.localBits ) ),
-	RecvPropInt( RECVINFO( m_audio.entIndex ) ),
-
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_TABLE( CPlayerLocalData, DT_Local );
 
 // -------------------------------------------------------------------------------- //
 // This data only gets sent to clients that ARE this player entity.
 // -------------------------------------------------------------------------------- //
 
-	BEGIN_RECV_TABLE_NOBASE( C_BasePlayer, DT_LocalPlayerExclusive )
-
-		RecvPropDataTable	( RECVINFO_DT(m_Local),0, &REFERENCE_RECV_TABLE(DT_Local) ),
-
-		RecvPropFloat		( RECVINFO(m_vecViewOffset[0]) ),
-		RecvPropFloat		( RECVINFO(m_vecViewOffset[1]) ),
-		RecvPropFloat		( RECVINFO(m_vecViewOffset[2]) ),
-		RecvPropFloat		( RECVINFO(m_flFriction) ),
-
-		RecvPropInt			( RECVINFO(m_fOnTarget) ),
-
-		RecvPropInt			( RECVINFO( m_nTickBase ) ),
-		RecvPropInt			( RECVINFO( m_nNextThinkTick ) ),
-
-		RecvPropEHandle		( RECVINFO( m_hLastWeapon ) ),
-
- 		RecvPropFloat		( RECVINFO(m_vecVelocity[0]), 0, C_BasePlayer::RecvProxy_LocalVelocityX ),
- 		RecvPropFloat		( RECVINFO(m_vecVelocity[1]), 0, C_BasePlayer::RecvProxy_LocalVelocityY ),
- 		RecvPropFloat		( RECVINFO(m_vecVelocity[2]), 0, C_BasePlayer::RecvProxy_LocalVelocityZ ),
-
-		RecvPropVector		( RECVINFO( m_vecBaseVelocity ) ),
-
-		RecvPropEHandle		( RECVINFO( m_hConstraintEntity)),
-		RecvPropVector		( RECVINFO( m_vecConstraintCenter) ),
-		RecvPropFloat		( RECVINFO( m_flConstraintRadius )),
-		RecvPropFloat		( RECVINFO( m_flConstraintWidth )),
-		RecvPropFloat		( RECVINFO( m_flConstraintSpeedFactor )),
-		RecvPropBool		( RECVINFO( m_bConstraintPastRadius )),
-
-		RecvPropFloat		( RECVINFO( m_flDeathTime )),
-		RecvPropFloat		( RECVINFO( m_flNextDecalTime )),
-
-		RecvPropFloat		( RECVINFO( m_fForceTeam )),
-
-		RecvPropInt			( RECVINFO( m_nWaterLevel ) ),
-		RecvPropFloat		( RECVINFO( m_flLaggedMovementValue )),
-
-		RecvPropEHandle		( RECVINFO( m_hTonemapController ) ),
-
-	END_RECV_TABLE()
+IMPLEMENT_REFLECT_TABLE_IN( C_BasePlayer, DT_LocalPlayerExclusive );
 
 	
 // -------------------------------------------------------------------------------- //
 // DT_BasePlayer datatable.
 // -------------------------------------------------------------------------------- //
-	IMPLEMENT_CLIENTCLASS_DT(C_BasePlayer, DT_BasePlayer, CBasePlayer)
-		// We have both the local and nonlocal data in here, but the server proxies
-		// only send one.
-		RecvPropDataTable( "localdata", 0, 0, &REFERENCE_RECV_TABLE(DT_LocalPlayerExclusive) ),
-
-		RecvPropDataTable(RECVINFO_DT(pl), 0, &REFERENCE_RECV_TABLE(DT_PlayerState), DataTableRecvProxy_StaticDataTable),
-
-		RecvPropInt		(RECVINFO(m_iFOV)),
-		RecvPropInt		(RECVINFO(m_iFOVStart)),
-		RecvPropFloat	(RECVINFO(m_flFOVTime)),
-		RecvPropInt		(RECVINFO(m_iDefaultFOV)),
-		RecvPropEHandle (RECVINFO(m_hZoomOwner)),
-
-		RecvPropInt( RECVINFO(m_afPhysicsFlags) ),
-
-		RecvPropEHandle( RECVINFO(m_hVehicle) ),
-		RecvPropEHandle( RECVINFO(m_hUseEntity) ),
-
-		RecvPropEHandle		( RECVINFO( m_hGroundEntity ) ),
-
-		RecvPropInt		(RECVINFO(m_iHealth)),
-		RecvPropInt		(RECVINFO(m_lifeState)),
-
-		RecvPropArray3	( RECVINFO_ARRAY(m_iAmmo), RecvPropInt( RECVINFO(m_iAmmo[0])) ),
-
-		RecvPropInt		(RECVINFO(m_iBonusProgress)),
-		RecvPropInt		(RECVINFO(m_iBonusChallenge)),
-
-		RecvPropFloat	(RECVINFO(m_flMaxspeed)),
-		RecvPropInt		(RECVINFO(m_fFlags)),
-
-		RecvPropInt		(RECVINFO(m_iObserverMode), 0, C_BasePlayer::RecvProxy_ObserverMode ),
-		RecvPropBool	(RECVINFO(m_bActiveCameraMan)),
-		RecvPropBool	(RECVINFO(m_bCameraManXRay)),
-		RecvPropBool	(RECVINFO(m_bCameraManOverview)),
-		RecvPropBool	(RECVINFO(m_bCameraManScoreBoard)),
-		RecvPropInt		(RECVINFO(m_uCameraManGraphs)),
-
-		RecvPropInt	(RECVINFO( m_iDeathPostEffect ) ),
-
-		RecvPropEHandle	(RECVINFO(m_hObserverTarget), C_BasePlayer::RecvProxy_ObserverTarget ),
-		RecvPropArray	( RecvPropEHandle( RECVINFO( m_hViewModel[0] ) ), m_hViewModel ),
-
-		RecvPropInt		(RECVINFO(m_iCoachingTeam)),
-
-		RecvPropString( RECVINFO(m_szLastPlaceName) ),
-		RecvPropVector( RECVINFO(m_vecLadderNormal) ),
-		RecvPropInt		(RECVINFO(m_ladderSurfaceProps) ),
-
-		RecvPropInt( RECVINFO( m_ubEFNoInterpParity ) ),
-
-		RecvPropEHandle( RECVINFO( m_hPostProcessCtrl ) ),		// Send to everybody - for spectating
-		RecvPropEHandle( RECVINFO( m_hColorCorrectionCtrl ) ),	// Send to everybody - for spectating
-
-		// fog data
-		RecvPropEHandle( RECVINFO( m_PlayerFog.m_hCtrl ) ),
-
-		RecvPropInt( RECVINFO( m_vphysicsCollisionState ) ),
+	IMPLEMENT_REFLECT_CLIENTCLASS( C_BasePlayer, DT_BasePlayer, CBasePlayer )
 #if defined( DEBUG_MOTION_CONTROLLERS )
-		RecvPropVector( RECVINFO( m_Debug_vPhysPosition ) ),
-		RecvPropVector( RECVINFO( m_Debug_vPhysVelocity ) ),
-		RecvPropVector( RECVINFO( m_Debug_LinearAccel ) ),
-
-		RecvPropVector( RECVINFO( m_vNewVPhysicsPosition ) ),
-		RecvPropVector( RECVINFO( m_vNewVPhysicsVelocity ) ),
 #endif
 
-		RecvPropEHandle		( RECVINFO( m_hViewEntity ) ),		// L4D: send view entity to everyone for first-person spectating
-		RecvPropBool		( RECVINFO( m_bShouldDrawPlayerWhileUsingViewEntity ) ),
+IMPLEMENT_REFLECT_PREDMAP_NO_BASE( CPlayerState );
 
-		RecvPropFloat	(RECVINFO(m_flDuckAmount)),
-		RecvPropFloat	(RECVINFO(m_flDuckSpeed)),
+IMPLEMENT_REFLECT_PREDMAP_NO_BASE( CPlayerLocalData );
 
-	END_RECV_TABLE()
-
-BEGIN_PREDICTION_DATA_NO_BASE( CPlayerState )
-
-	DEFINE_PRED_FIELD(  deadflag, FIELD_BOOLEAN, FTYPEDESC_INSENDTABLE ),
-	// DEFINE_FIELD( netname, string_t ),
-	// DEFINE_FIELD( fixangle, FIELD_INTEGER ),
-	// DEFINE_FIELD( anglechange, FIELD_FLOAT ),
-	// DEFINE_FIELD( v_angle, FIELD_VECTOR ),
-
-END_PREDICTION_DATA()	
-
-BEGIN_PREDICTION_DATA_NO_BASE( CPlayerLocalData )
-
-	// DEFINE_PRED_TYPEDESCRIPTION( m_skybox3d, sky3dparams_t ),
-	// DEFINE_PRED_TYPEDESCRIPTION( m_fog, fogparams_t ),
-	// DEFINE_PRED_TYPEDESCRIPTION( m_audio, audioparams_t ),
-	DEFINE_FIELD( m_nStepside, FIELD_INTEGER ),
-
-	DEFINE_PRED_FIELD( m_iHideHUD, FIELD_INTEGER, FTYPEDESC_INSENDTABLE ),
-#if PREDICTION_ERROR_CHECK_LEVEL > 1
-	DEFINE_PRED_FIELD( m_viewPunchAngle, FIELD_VECTOR, FTYPEDESC_INSENDTABLE ),
-	DEFINE_PRED_FIELD( m_aimPunchAngle, FIELD_VECTOR, FTYPEDESC_INSENDTABLE ),
-	DEFINE_PRED_FIELD( m_aimPunchAngleVel, FIELD_VECTOR, FTYPEDESC_INSENDTABLE ),
-#else
-	DEFINE_PRED_FIELD_TOL( m_viewPunchAngle, FIELD_VECTOR, FTYPEDESC_INSENDTABLE, 0.125f ),
-	DEFINE_PRED_FIELD_TOL( m_aimPunchAngle, FIELD_VECTOR, FTYPEDESC_INSENDTABLE, 0.125f ),
-	DEFINE_PRED_FIELD_TOL( m_aimPunchAngleVel, FIELD_VECTOR, FTYPEDESC_INSENDTABLE, 0.125f ),
-#endif
-	DEFINE_PRED_FIELD( m_bDrawViewmodel, FIELD_BOOLEAN, FTYPEDESC_INSENDTABLE ),
-	DEFINE_PRED_FIELD( m_bWearingSuit, FIELD_BOOLEAN, FTYPEDESC_INSENDTABLE ),
-	DEFINE_PRED_FIELD( m_bPoisoned, FIELD_BOOLEAN, FTYPEDESC_INSENDTABLE ),
-	DEFINE_PRED_FIELD( m_bAllowAutoMovement, FIELD_BOOLEAN, FTYPEDESC_INSENDTABLE ),
-
-	DEFINE_PRED_FIELD( m_bDucked, FIELD_BOOLEAN, FTYPEDESC_INSENDTABLE ),
-	DEFINE_PRED_FIELD( m_bDucking, FIELD_BOOLEAN, FTYPEDESC_INSENDTABLE ),
-	DEFINE_PRED_FIELD( m_flLastDuckTime, FIELD_FLOAT, FTYPEDESC_INSENDTABLE ),
-	DEFINE_PRED_FIELD( m_bInDuckJump, FIELD_BOOLEAN, FTYPEDESC_INSENDTABLE ),
-	DEFINE_PRED_FIELD( m_nDuckTimeMsecs, FIELD_INTEGER, FTYPEDESC_INSENDTABLE ),
-	DEFINE_PRED_FIELD( m_nDuckJumpTimeMsecs, FIELD_INTEGER, FTYPEDESC_INSENDTABLE ),
-	DEFINE_PRED_FIELD( m_nJumpTimeMsecs, FIELD_INTEGER, FTYPEDESC_INSENDTABLE ),
-	DEFINE_PRED_FIELD_TOL( m_flFallVelocity, FIELD_FLOAT, FTYPEDESC_INSENDTABLE, 0.5f ),
-//	DEFINE_PRED_FIELD( m_nOldButtons, FIELD_INTEGER, FTYPEDESC_INSENDTABLE ),
-	DEFINE_FIELD( m_nOldButtons, FIELD_INTEGER ),
-	DEFINE_PRED_FIELD( m_flStepSize, FIELD_FLOAT, FTYPEDESC_INSENDTABLE ),
-	DEFINE_FIELD( m_flFOVRate, FIELD_FLOAT ),
-
-END_PREDICTION_DATA()	
-
-BEGIN_PREDICTION_DATA( C_BasePlayer )
-
-	DEFINE_PRED_TYPEDESCRIPTION( m_Local, CPlayerLocalData ),
-	DEFINE_PRED_TYPEDESCRIPTION( pl, CPlayerState ),
-
-	DEFINE_PRED_FIELD( m_iFOV, FIELD_INTEGER, FTYPEDESC_INSENDTABLE ),
-	DEFINE_PRED_FIELD( m_hZoomOwner, FIELD_EHANDLE, FTYPEDESC_INSENDTABLE ),
-	DEFINE_PRED_FIELD( m_flFOVTime, FIELD_FLOAT, 0 ),
-	DEFINE_PRED_FIELD( m_iFOVStart, FIELD_INTEGER, 0 ),
-
-	
-	DEFINE_FIELD( m_oldOrigin, FIELD_VECTOR ),
-	DEFINE_FIELD( m_bTouchedPhysObject, FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_bPhysicsWasFrozen, FIELD_BOOLEAN ),
-#if defined( DEBUG_MOTION_CONTROLLERS )
-	DEFINE_PRED_FIELD( m_vNewVPhysicsPosition, FIELD_VECTOR, FTYPEDESC_INSENDTABLE ),
-	DEFINE_PRED_FIELD( m_vNewVPhysicsVelocity, FIELD_VECTOR, FTYPEDESC_INSENDTABLE ),
-#else
-	DEFINE_FIELD( m_vNewVPhysicsPosition, FIELD_VECTOR ),
-	DEFINE_FIELD( m_vNewVPhysicsVelocity, FIELD_VECTOR ),
-#endif
-	DEFINE_PRED_FIELD( m_afPhysicsFlags, FIELD_INTEGER, FTYPEDESC_INSENDTABLE | FTYPEDESC_NOERRORCHECK ),
-
-	DEFINE_PRED_FIELD( m_hVehicle, FIELD_EHANDLE, FTYPEDESC_INSENDTABLE ),
-	DEFINE_PRED_FIELD_TOL( m_flMaxspeed, FIELD_FLOAT, FTYPEDESC_INSENDTABLE, 0.5f ),
-	DEFINE_PRED_FIELD( m_iHealth, FIELD_INTEGER, FTYPEDESC_INSENDTABLE ),
-	DEFINE_PRED_FIELD( m_iBonusProgress, FIELD_INTEGER, FTYPEDESC_INSENDTABLE ),
-	DEFINE_PRED_FIELD( m_iBonusChallenge, FIELD_INTEGER, FTYPEDESC_INSENDTABLE ),
-	DEFINE_PRED_FIELD( m_fOnTarget, FIELD_BOOLEAN, FTYPEDESC_INSENDTABLE ),
-	DEFINE_PRED_FIELD( m_nNextThinkTick, FIELD_INTEGER, FTYPEDESC_INSENDTABLE ),
-	DEFINE_PRED_FIELD( m_lifeState, FIELD_CHARACTER, FTYPEDESC_INSENDTABLE ),
-	DEFINE_PRED_FIELD( m_nWaterLevel, FIELD_CHARACTER, FTYPEDESC_INSENDTABLE ),
-	
-	DEFINE_PRED_FIELD_TOL( m_vecBaseVelocity, FIELD_VECTOR, FTYPEDESC_INSENDTABLE, 0.05 ),
-
-	DEFINE_FIELD( m_nButtons, FIELD_INTEGER ),
-	DEFINE_FIELD( m_flWaterJumpTime, FIELD_FLOAT ),
-	DEFINE_FIELD( m_nImpulse, FIELD_INTEGER ),
-	DEFINE_FIELD( m_flStepSoundTime, FIELD_FLOAT ),
-	DEFINE_FIELD( m_flSwimSoundTime, FIELD_FLOAT ),
-	DEFINE_FIELD( m_ignoreLadderJumpTime, FIELD_FLOAT ),
-	DEFINE_FIELD( m_bHasWalkMovedSinceLastJump, FIELD_BOOLEAN ),
-
-	DEFINE_FIELD( m_vecLadderNormal, FIELD_VECTOR ),
-	DEFINE_FIELD( m_ladderSurfaceProps, FIELD_INTEGER ),
-	DEFINE_FIELD( m_flPhysics, FIELD_INTEGER ),
-	DEFINE_AUTO_ARRAY( m_szAnimExtension, FIELD_CHARACTER ),
-	DEFINE_FIELD( m_afButtonLast, FIELD_INTEGER ),
-	DEFINE_FIELD( m_afButtonPressed, FIELD_INTEGER ),
-	DEFINE_FIELD( m_afButtonReleased, FIELD_INTEGER ),
-	// DEFINE_FIELD( m_vecOldViewAngles, FIELD_VECTOR ),
-
-	// DEFINE_ARRAY( m_iOldAmmo, FIELD_INTEGER,  MAX_AMMO_TYPES ),
-
-	//DEFINE_FIELD( m_hOldVehicle, FIELD_EHANDLE ),
-	// DEFINE_FIELD( m_pModelLight, dlight_t* ),
-	// DEFINE_FIELD( m_pEnvironmentLight, dlight_t* ),
-	// DEFINE_FIELD( m_pBrightLight, dlight_t* ),
-	DEFINE_PRED_FIELD( m_hLastWeapon, FIELD_EHANDLE, FTYPEDESC_INSENDTABLE ),
-
-	DEFINE_PRED_FIELD( m_nTickBase, FIELD_INTEGER, FTYPEDESC_INSENDTABLE ),
-
-	DEFINE_PRED_FIELD( m_hGroundEntity, FIELD_EHANDLE, FTYPEDESC_INSENDTABLE ),
-
-	DEFINE_PRED_ARRAY( m_hViewModel, FIELD_EHANDLE, MAX_VIEWMODELS, FTYPEDESC_INSENDTABLE ),
-
-	DEFINE_FIELD( m_surfaceFriction, FIELD_FLOAT ),
-
-	DEFINE_FIELD( m_vecPreviouslyPredictedOrigin, FIELD_VECTOR ),
-
-	DEFINE_PRED_FIELD( m_vphysicsCollisionState, FIELD_INTEGER, FTYPEDESC_INSENDTABLE ),
-#if defined( DEBUG_MOTION_CONTROLLERS )
-	DEFINE_PRED_FIELD( m_Debug_vPhysPosition, FIELD_VECTOR, FTYPEDESC_INSENDTABLE ),
-	DEFINE_PRED_FIELD( m_Debug_vPhysVelocity, FIELD_VECTOR, FTYPEDESC_INSENDTABLE ),
-	DEFINE_PRED_FIELD( m_Debug_LinearAccel, FIELD_VECTOR, FTYPEDESC_INSENDTABLE ),
-#endif
-
-	DEFINE_PRED_FIELD( m_flDuckAmount, FIELD_FLOAT, FTYPEDESC_INSENDTABLE ),
-	DEFINE_PRED_FIELD( m_flDuckSpeed, FIELD_FLOAT, FTYPEDESC_INSENDTABLE ),
-
-END_PREDICTION_DATA()
+IMPLEMENT_REFLECT_PREDMAP( C_BasePlayer );
 
 #if !defined( PORTAL2 )
 LINK_ENTITY_TO_CLASS( player, C_BasePlayer );
@@ -2968,7 +2667,7 @@ float C_BasePlayer::GetFOV( void ) const
 	return fFOV;
 }
 
-void C_BasePlayer::RecvProxy_LocalVelocityX( const CRecvProxyData *pData, void *pStruct, void *pOut )
+void RecvProxy_LocalVelocityX( const CRecvProxyData *pData, void *pStruct, void *pOut )
 {
 	C_BasePlayer *pPlayer = (C_BasePlayer *) pStruct;
 
@@ -2985,7 +2684,7 @@ void C_BasePlayer::RecvProxy_LocalVelocityX( const CRecvProxyData *pData, void *
 	}
 }
 
-void C_BasePlayer::RecvProxy_LocalVelocityY( const CRecvProxyData *pData, void *pStruct, void *pOut )
+void RecvProxy_LocalVelocityY( const CRecvProxyData *pData, void *pStruct, void *pOut )
 {
 	C_BasePlayer *pPlayer = (C_BasePlayer *) pStruct;
 
@@ -3002,7 +2701,7 @@ void C_BasePlayer::RecvProxy_LocalVelocityY( const CRecvProxyData *pData, void *
 	}
 }
 
-void C_BasePlayer::RecvProxy_LocalVelocityZ( const CRecvProxyData *pData, void *pStruct, void *pOut )
+void RecvProxy_LocalVelocityZ( const CRecvProxyData *pData, void *pStruct, void *pOut )
 {
 	C_BasePlayer *pPlayer = (C_BasePlayer *) pStruct;
 	

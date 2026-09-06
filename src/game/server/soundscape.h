@@ -6,6 +6,8 @@
 
 #ifndef SOUNDSCAPE_H
 #define SOUNDSCAPE_H
+
+#include "reflect_annotations.h"
 #ifdef _WIN32
 #pragma once
 #endif
@@ -39,9 +41,9 @@ public:
 	bool InRangeOfPlayer( CBasePlayer *pPlayer );
 	void DrawDebugGeometryOverlays( void );
 
-	void InputEnable( inputdata_t &inputdata );
-	void InputDisable( inputdata_t &inputdata );
-	void InputToggleEnabled( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Enable", .type = FIELD_VOID } ]] void InputEnable( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Disable", .type = FIELD_VOID } ]] void InputDisable( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "ToggleEnabled", .type = FIELD_VOID } ]] void InputToggleEnabled( inputdata_t &inputdata );
 
 	string_t GetSoundscapeName() const {return m_soundscapeName;}
 
@@ -54,12 +56,12 @@ private:
 
 
 public:
-	COutputEvent	m_OnPlay;
-	float	m_flRadius;
+	[[= ks::reflect::Key{ .name = "OnPlay" } ]] COutputEvent	m_OnPlay;
+	[[= ks::reflect::Key{ .name = "radius" } ]] float	m_flRadius;
 	string_t m_soundscapeName;
 	int		m_soundscapeIndex;
 	int		m_soundscapeEntityId;
-	string_t m_positionNames[NUM_AUDIO_LOCAL_SOUNDS];
+	[[= ks::reflect::Key{ .name = "position7", .index = 7 } ]] [[= ks::reflect::Key{ .name = "position6", .index = 6 } ]] [[= ks::reflect::Key{ .name = "position5", .index = 5 } ]] [[= ks::reflect::Key{ .name = "position4", .index = 4 } ]] [[= ks::reflect::Key{ .name = "position3", .index = 3 } ]] [[= ks::reflect::Key{ .name = "position2", .index = 2 } ]] [[= ks::reflect::Key{ .name = "position1", .index = 1 } ]] [[= ks::reflect::Key{ .name = "position0", .index = 0 } ]] string_t m_positionNames[NUM_AUDIO_LOCAL_SOUNDS];
 	
 	// If this is set, then this soundscape ignores all its parameters and uses
 	// those of this soundscape.
@@ -68,7 +70,7 @@ public:
 
 private:
 
-	bool	m_bDisabled;
+	[[= ks::reflect::Key{ .name = "StartDisabled" } ]] bool	m_bDisabled;
 };
 
 
@@ -86,7 +88,7 @@ public:
 	virtual void Precache() { return; }
 
 private:
-	string_t m_MainSoundscapeName;
+	[[= ks::reflect::Key{ .name = "MainSoundscapeName" } ]] string_t m_MainSoundscapeName;
 };
 
 
@@ -96,7 +98,6 @@ friend class CTriggerSoundscape;
 
 public:
 	DECLARE_CLASS( CEnvSoundscapeTriggerable, CEnvSoundscape );
-	DECLARE_DATADESC();
 
 	CEnvSoundscapeTriggerable();
 	

@@ -5,6 +5,8 @@
 // $NoKeywords: $
 //===========================================================================//
 #include "cbase.h"
+#include "reflect_recvtable.h"
+#include "reflect_annotations.h"
 
 #include "c_spatialentity.h"
 
@@ -12,13 +14,7 @@
 #include "tier0/memdbgon.h"
 
 
-IMPLEMENT_CLIENTCLASS_DT(C_SpatialEntity, DT_SpatialEntity, CSpatialEntity)
-	RecvPropVector( RECVINFO(m_vecOrigin) ),
-	RecvPropFloat(  RECVINFO(m_minFalloff) ),
-	RecvPropFloat(  RECVINFO(m_maxFalloff) ),
-	RecvPropFloat(  RECVINFO(m_flCurWeight) ),
-	RecvPropBool(   RECVINFO(m_bEnabled) ),
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS( C_SpatialEntity, DT_SpatialEntity, CSpatialEntity )
 
 
 void C_SpatialEntity::OnDataChanged(DataUpdateType_t updateType)

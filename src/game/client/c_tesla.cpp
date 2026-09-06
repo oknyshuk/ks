@@ -5,6 +5,8 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_recvtable.h"
+#include "reflect_annotations.h"
 #include "c_tesla.h"
 #include "fx.h"
 #include <bitbuf.h>
@@ -12,10 +14,7 @@
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
-IMPLEMENT_CLIENTCLASS_DT( C_Tesla, DT_Tesla, CTesla )
-	RecvPropString( RECVINFO( m_SoundName ) ),
-	RecvPropString( RECVINFO( m_iszSpriteName ) )
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS( C_Tesla, DT_Tesla, CTesla )
 
 
 C_Tesla::C_Tesla()

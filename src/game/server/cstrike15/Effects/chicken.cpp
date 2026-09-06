@@ -2,6 +2,8 @@
 // An interactive, shootable chicken
 
 #include "cbase.h"
+#include "reflect_sendtable.h"
+#include "reflect_annotations.h"
 #include "tier1/fmtstr.h"
 #include "chicken.h"
 #include "cs_player.h"
@@ -14,16 +16,8 @@
 // NOTE: This has to be the last file included!
 #include "tier0/memdbgon.h"
 
-BEGIN_DATADESC( CChicken )
-	DEFINE_ENTITYFUNC( ChickenTouch ),
-	DEFINE_THINKFUNC( ChickenThink ),
-	DEFINE_USEFUNC( ChickenUse ),
-END_DATADESC()
 
-IMPLEMENT_SERVERCLASS_ST( CChicken, DT_CChicken )
-SendPropBool( SENDINFO( m_jumpedThisFrame ) ),
-SendPropEHandle( SENDINFO( m_leader ) ),
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CChicken, DT_CChicken )
 
 LINK_ENTITY_TO_CLASS( chicken, CChicken );
 PRECACHE_REGISTER( chicken );

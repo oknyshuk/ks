@@ -6,6 +6,8 @@
 
 #ifndef C_PHYSICSPROP_H
 #define C_PHYSICSPROP_H
+
+#include "reflect_annotations.h"
 #ifdef _WIN32
 #pragma once
 #endif
@@ -15,7 +17,9 @@
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-class C_PhysicsProp : public C_BreakableProp
+class [[= ks::reflect::NetTable{ .name = "DT_PhysicsProp" } ]]
+      [[= ks::reflect::From<"m_spawnflags", ks::reflect::Net{}>{} ]]
+      C_PhysicsProp : public C_BreakableProp
 {
 	typedef C_BreakableProp BaseClass;
 public:
@@ -41,7 +45,7 @@ public:
 	void OnPreDataChanged( DataUpdateType_t updateType );
 protected:
 	// Networked vars.
-	bool m_bAwake;
+	[[= ks::reflect::Net{} ]] bool m_bAwake;
 	bool m_bAwakeLastTime;
 	bool m_bCanUseStaticLighting;
 

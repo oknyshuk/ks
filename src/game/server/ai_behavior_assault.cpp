@@ -4,6 +4,8 @@
 //
 //=============================================================================//
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_annotations.h"
 #include "ai_behavior_assault.h"
 #include "ai_navigator.h"
 #include "ai_memory.h"
@@ -17,20 +19,7 @@ ConVar ai_debug_assault("ai_debug_assault", "0");
 CGameString g_AssaultPointString( "assault_assaultpoint" );
 CGameString g_RallyPointString( "assault_rallypoint" );
 
-BEGIN_DATADESC( CRallyPoint )
-	DEFINE_KEYFIELD( m_AssaultPointName, FIELD_STRING, "assaultpoint" ),
-	DEFINE_KEYFIELD( m_RallySequenceName, FIELD_STRING, "rallysequence" ),
-	DEFINE_KEYFIELD( m_flAssaultDelay, FIELD_FLOAT, "assaultdelay" ),
-	DEFINE_KEYFIELD( m_iPriority, FIELD_INTEGER, "priority" ),
-	DEFINE_KEYFIELD( m_iStrictness, FIELD_INTEGER, "strict" ),
-	DEFINE_KEYFIELD( m_bForceCrouch, FIELD_BOOLEAN, "forcecrouch" ),
-	DEFINE_KEYFIELD( m_bIsUrgent, FIELD_BOOLEAN, "urgent" ),
-	DEFINE_KEYFIELD( m_bShouldLock, FIELD_BOOLEAN, "lockpoint" ),
-	DEFINE_FIELD( m_hLockedBy, FIELD_EHANDLE ),
-	DEFINE_FIELD( m_sExclusivity, FIELD_SHORT ),
-
-	DEFINE_OUTPUT( m_OnArrival, "OnArrival" ),
-END_DATADESC();
+IMPLEMENT_REFLECT_DATAMAP( CRallyPoint );
 
 //---------------------------------------------------------
 // Purpose: Communicate exclusivity
@@ -139,47 +128,11 @@ bool CRallyPoint::IsExclusive()
 }
 
 
-BEGIN_DATADESC( CAssaultPoint )
-	DEFINE_KEYFIELD( m_AssaultHintGroup, FIELD_STRING, "assaultgroup" ),
-	DEFINE_KEYFIELD( m_NextAssaultPointName, FIELD_STRING, "nextassaultpoint" ),
-	DEFINE_KEYFIELD( m_flAssaultTimeout, FIELD_FLOAT, "assaulttimeout" ),
-	DEFINE_KEYFIELD( m_bClearOnContact, FIELD_BOOLEAN, "clearoncontact" ),
-	DEFINE_KEYFIELD( m_bAllowDiversion, FIELD_BOOLEAN, "allowdiversion" ),
-	DEFINE_KEYFIELD( m_flAllowDiversionRadius, FIELD_FLOAT, "allowdiversionradius" ),
-	DEFINE_KEYFIELD( m_bNeverTimeout, FIELD_BOOLEAN, "nevertimeout" ),
-	DEFINE_KEYFIELD( m_iStrictness, FIELD_INTEGER, "strict" ),
-	DEFINE_KEYFIELD( m_bForceCrouch, FIELD_BOOLEAN, "forcecrouch" ),
-	DEFINE_KEYFIELD( m_bIsUrgent, FIELD_BOOLEAN, "urgent" ),
-	DEFINE_FIELD( m_bInputForcedClear, FIELD_BOOLEAN ),
-	DEFINE_KEYFIELD( m_flAssaultPointTolerance, FIELD_FLOAT, "assaulttolerance" ),
-	DEFINE_FIELD( m_flTimeLastUsed, FIELD_TIME ),
-
-	// Inputs
-	DEFINE_INPUTFUNC( FIELD_BOOLEAN, "SetClearOnContact", InputSetClearOnContact ),
-	DEFINE_INPUTFUNC( FIELD_BOOLEAN, "SetAllowDiversion", InputSetAllowDiversion ),
-	DEFINE_INPUTFUNC( FIELD_BOOLEAN, "SetForceClear", InputSetForceClear ),
-
-	// Outputs
-	DEFINE_OUTPUT( m_OnArrival, "OnArrival" ),
-	DEFINE_OUTPUT( m_OnAssaultClear, "OnAssaultClear" ),
-END_DATADESC();
+IMPLEMENT_REFLECT_DATAMAP( CAssaultPoint )
 
 LINK_ENTITY_TO_CLASS( assault_rallypoint, CRallyPoint );	// just a copy of info_target for now
 LINK_ENTITY_TO_CLASS( assault_assaultpoint, CAssaultPoint ); // has its own class because it needs the entity I/O
 
-BEGIN_DATADESC( CAI_AssaultBehavior )
-	DEFINE_FIELD( m_hAssaultPoint, FIELD_EHANDLE ),
-	DEFINE_FIELD( m_hRallyPoint, FIELD_EHANDLE ),
-	DEFINE_FIELD( m_AssaultCue, FIELD_INTEGER ),
-	DEFINE_FIELD( m_ReceivedAssaultCue, FIELD_INTEGER ),
-	DEFINE_FIELD( m_bHitRallyPoint, FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_bHitAssaultPoint, FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_bDiverting, FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_flLastSawAnEnemyAt, FIELD_FLOAT ),
-	DEFINE_FIELD( m_flTimeDeferScheduleSelection, FIELD_TIME ),
-	DEFINE_FIELD( m_AssaultPointName, FIELD_STRING ),
-	DEFINE_FIELD( m_hGoal, FIELD_EHANDLE )
-END_DATADESC();
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -1623,14 +1576,7 @@ int CAI_AssaultBehavior::SelectSchedule()
 //
 //-----------------------------------------------------------------------------
 
-BEGIN_DATADESC( CAI_AssaultGoal )
-	DEFINE_KEYFIELD( m_RallyPoint, FIELD_STRING, "rallypoint" ),
-	DEFINE_KEYFIELD( m_AssaultCue, FIELD_INTEGER, "AssaultCue" ),
-	DEFINE_KEYFIELD( m_RallySelectMethod, FIELD_INTEGER, "RallySelectMethod" ),
-	DEFINE_KEYFIELD( m_BranchMethod, FIELD_INTEGER, "BranchMethod" ),
-
-	DEFINE_INPUTFUNC( FIELD_VOID, "BeginAssault", InputBeginAssault ),
-END_DATADESC();
+IMPLEMENT_REFLECT_DATAMAP( CAI_AssaultGoal );
 
 
 //-------------------------------------

@@ -6,6 +6,8 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_annotations.h"
 #include "decals.h"
 #include "explode.h"
 #include "ai_basenpc.h"
@@ -110,48 +112,28 @@ public:
 	int DrawDebugTextOverlays(void);
 
 	// Input handlers
-	void InputExplode( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Explode", .type = FIELD_VOID } ]] void InputExplode( inputdata_t &inputdata );
 
 	DECLARE_DATADESC();
 
-	int m_iMagnitude;// how large is the fireball? how much damage?
-	int m_iRadiusOverride;// For use when m_iMagnitude results in larger radius than designer desires.
+	[[= ks::reflect::Key{ .name = "iMagnitude" } ]] int m_iMagnitude;// how large is the fireball? how much damage?
+	[[= ks::reflect::Key{ .name = "iRadiusOverride" } ]] int m_iRadiusOverride;// For use when m_iMagnitude results in larger radius than designer desires.
 	int m_spriteScale; // what's the exact fireball sprite scale? 
-	float m_flDamageForce;	// How much damage force should we use?
+	[[= ks::reflect::Key{ .name = "DamageForce" } ]] float m_flDamageForce;	// How much damage force should we use?
 	string_t m_iszFireballSprite;
 	short m_sFireballSprite;
 	EHANDLE m_hInflictor;
 	int m_iCustomDamageType;
 
 	// passed along to the RadiusDamage call
-	int m_iClassIgnore;
-	EHANDLE m_hEntityIgnore;
+	[[= ks::reflect::Key{ .name = "ignoredClass" } ]] int m_iClassIgnore;
+	[[= ks::reflect::Key{ .name = "ignoredEntity" } ]] EHANDLE m_hEntityIgnore;
 
 };
 
 LINK_ENTITY_TO_CLASS( env_explosion, CEnvExplosion );
 
-BEGIN_DATADESC( CEnvExplosion )
-
-	DEFINE_KEYFIELD( m_iMagnitude, FIELD_INTEGER, "iMagnitude" ),
-	DEFINE_KEYFIELD( m_iRadiusOverride, FIELD_INTEGER, "iRadiusOverride" ),
-	DEFINE_FIELD( m_spriteScale, FIELD_INTEGER ),
-	DEFINE_KEYFIELD( m_flDamageForce, FIELD_FLOAT, "DamageForce" ),
-	DEFINE_FIELD( m_iszFireballSprite, FIELD_STRING ),
-	DEFINE_FIELD( m_sFireballSprite, FIELD_SHORT ),
-	DEFINE_FIELD( m_hInflictor, FIELD_EHANDLE ),
-	DEFINE_FIELD( m_iCustomDamageType, FIELD_INTEGER ),
-
-	DEFINE_KEYFIELD( m_iClassIgnore, FIELD_INTEGER, "ignoredClass" ),
-	DEFINE_KEYFIELD( m_hEntityIgnore, FIELD_EHANDLE, "ignoredEntity" ),
-
-	// Function Pointers
-	DEFINE_THINKFUNC( Smoke ),
-
-	// Inputs
-	DEFINE_INPUTFUNC(FIELD_VOID, "Explode", InputExplode),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CEnvExplosion )
 
 
 bool CEnvExplosion::KeyValue( const char *szKeyName, const char *szValue )

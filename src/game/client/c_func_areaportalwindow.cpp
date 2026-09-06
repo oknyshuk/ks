@@ -6,6 +6,8 @@
 //
 //===========================================================================//
 #include "cbase.h"
+#include "reflect_recvtable.h"
+#include "reflect_annotations.h"
 #include "view.h"
 #include "model_types.h"
 #include "ivrenderview.h"
@@ -16,7 +18,8 @@
 
 #define VIEWER_PADDING	80.0f
 
-class C_FuncAreaPortalWindow : public C_BaseEntity
+class [[= ks::reflect::NetTable{ .name = "DT_FuncAreaPortalWindow" } ]]
+      C_FuncAreaPortalWindow : public C_BaseEntity
 {
 public:
 	DECLARE_CLIENTCLASS();
@@ -34,23 +37,18 @@ private:
 	float			GetDistanceBlend();
 
 public:
-	float			m_flFadeStartDist;	// Distance at which it starts fading (when <= this, alpha=m_flTranslucencyLimit).
-	float			m_flFadeDist;		// Distance at which it becomes solid.
+	[[= ks::reflect::Net{} ]] float			m_flFadeStartDist;	// Distance at which it starts fading (when <= this, alpha=m_flTranslucencyLimit).
+	[[= ks::reflect::Net{} ]] float			m_flFadeDist;		// Distance at which it becomes solid.
 
 	// 0-1 value - minimum translucency it's allowed to get to.
-	float			m_flTranslucencyLimit;
+	[[= ks::reflect::Net{} ]] float			m_flTranslucencyLimit;
 
-	int				m_iBackgroundModelIndex;
+	[[= ks::reflect::Net{} ]] int				m_iBackgroundModelIndex;
 };
 
 
 
-IMPLEMENT_CLIENTCLASS_DT( C_FuncAreaPortalWindow, DT_FuncAreaPortalWindow, CFuncAreaPortalWindow )
-	RecvPropFloat( RECVINFO( m_flFadeStartDist ) ),
-	RecvPropFloat( RECVINFO( m_flFadeDist ) ),
-	RecvPropFloat( RECVINFO( m_flTranslucencyLimit ) ),
-	RecvPropInt( RECVINFO( m_iBackgroundModelIndex ) )
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS( C_FuncAreaPortalWindow, DT_FuncAreaPortalWindow, CFuncAreaPortalWindow )
 
 
 RenderableTranslucencyType_t C_FuncAreaPortalWindow::ComputeTranslucencyType( void )

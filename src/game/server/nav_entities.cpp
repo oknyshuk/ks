@@ -10,6 +10,8 @@
 // Author: Michael S. Booth (mike@turtlerockstudios.com), January 2003
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_annotations.h"
 
 #include "nav_mesh.h"
 #include "nav_node.h"
@@ -35,15 +37,7 @@
 
 
 //--------------------------------------------------------------------------------------------------------
-BEGIN_DATADESC( CFuncNavBlocker )
-
-	// Inputs
-	DEFINE_INPUTFUNC( FIELD_VOID, "BlockNav", InputBlockNav ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "UnblockNav", InputUnblockNav ),
-	DEFINE_KEYFIELD( m_blockedTeamNumber, FIELD_INTEGER, "teamToBlock" ),
-	DEFINE_KEYFIELD( m_bDisabled,	FIELD_BOOLEAN,	"StartDisabled" ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CFuncNavBlocker )
 
 
 LINK_ENTITY_TO_CLASS( func_nav_blocker, CFuncNavBlocker );
@@ -300,15 +294,13 @@ public:
 private:
 
 	void ObstructNavAreas( void );
-	bool m_bDisabled;
+	[[= ks::reflect::Key{ .name = "StartDisabled" } ]] bool m_bDisabled;
 };
 
 
 
 //--------------------------------------------------------------------------------------------------------
-BEGIN_DATADESC( CFuncNavObstruction )
-	DEFINE_KEYFIELD( m_bDisabled,	FIELD_BOOLEAN,	"StartDisabled" ),
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CFuncNavObstruction )
 
 
 LINK_ENTITY_TO_CLASS( func_nav_avoidance_obstacle, CFuncNavObstruction );

@@ -6,6 +6,8 @@
 //===========================================================================//
 
 #include "cbase.h"
+#include "reflect_recvtable.h"
+#include "reflect_annotations.h"
 #include "c_baseanimating.h"
 #include "particlemgr.h"
 #include "materialsystem/imaterialvar.h"
@@ -18,7 +20,9 @@
 //-----------------------------------------------------------------------------
 // An entity which emits other entities at points 
 //-----------------------------------------------------------------------------
-class C_EnvParticleScript : public C_BaseAnimating, public IParticleEffect
+class [[= ks::reflect::NetTable{ .name = "DT_EnvParticleScript" } ]]
+      [[= ks::reflect::From<"m_flSequenceScale", ks::reflect::Net{}>{} ]]
+      C_EnvParticleScript : public C_BaseAnimating, public IParticleEffect
 {
 public:
 	DECLARE_CLASS( C_EnvParticleScript, C_BaseAnimating );
@@ -73,9 +77,7 @@ REGISTER_EFFECT( C_EnvParticleScript );
 //-----------------------------------------------------------------------------
 // Datatable
 //-----------------------------------------------------------------------------
-IMPLEMENT_CLIENTCLASS_DT( C_EnvParticleScript, DT_EnvParticleScript, CEnvParticleScript )
-	RecvPropFloat( RECVINFO(m_flSequenceScale) ),
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS( C_EnvParticleScript, DT_EnvParticleScript, CEnvParticleScript )
 
 
 //-----------------------------------------------------------------------------

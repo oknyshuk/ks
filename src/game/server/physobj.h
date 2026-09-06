@@ -7,6 +7,8 @@
 
 #ifndef PHYSOBJ_H
 #define PHYSOBJ_H
+
+#include "reflect_annotations.h"
 #ifdef _WIN32
 #pragma once
 #endif
@@ -40,7 +42,8 @@
 
 // UNDONE: Hook collisions into the physics system to generate touch functions and take damage on falls
 // UNDONE: Base class PhysBrush
-class CPhysBox : public CBreakable
+class [[= ks::reflect::NetTable{ .name = "DT_PhysBox" } ]]
+      CPhysBox : public CBreakable
 {
 DECLARE_CLASS( CPhysBox, CBreakable );
 
@@ -72,37 +75,37 @@ public:
 	int			ExploitableByPlayer() const { return m_iExploitableByPlayer; }
 
 	// inputs
-	void InputWake( inputdata_t &inputdata );
-	void InputSleep( inputdata_t &inputdata );
-	void InputEnableMotion( inputdata_t &inputdata );
-	void InputDisableMotion( inputdata_t &inputdata );
-	void InputEnable( inputdata_t &inputdata );
-	void InputDisable( inputdata_t &inputdata );
-	void InputForceDrop( inputdata_t &inputdata );
-	void InputDisableFloating( inputdata_t &inputdata );
-	void InputBecomeDebris( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Wake", .type = FIELD_VOID } ]] void InputWake( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Sleep", .type = FIELD_VOID } ]] void InputSleep( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "EnableMotion", .type = FIELD_VOID } ]] void InputEnableMotion( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "DisableMotion", .type = FIELD_VOID } ]] void InputDisableMotion( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Enable", .type = FIELD_VOID } ]] void InputEnable( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Disable", .type = FIELD_VOID } ]] void InputDisable( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "ForceDrop", .type = FIELD_VOID } ]] void InputForceDrop( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "DisableFloating", .type = FIELD_VOID } ]] void InputDisableFloating( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "BecomeDebris", .type = FIELD_VOID } ]] void InputBecomeDebris( inputdata_t &inputdata );
 
 	DECLARE_DATADESC();
 	
 protected:
-	int				m_damageType;
-	float			m_massScale;
-	string_t		m_iszOverrideScript;
-	int				m_damageToEnableMotion;
-	float			m_flForceToEnableMotion;
-	QAngle			m_angPreferredCarryAngles;
-	bool			m_bNotSolidToWorld;
-	int				m_iExploitableByPlayer;
+	[[= ks::reflect::Key{ .name = "Damagetype" } ]] int				m_damageType;
+	[[= ks::reflect::Key{ .name = "massScale" } ]] float			m_massScale;
+	[[= ks::reflect::Key{ .name = "overridescript" } ]] string_t		m_iszOverrideScript;
+	[[= ks::reflect::Key{ .name = "damagetoenablemotion" } ]] int				m_damageToEnableMotion;
+	[[= ks::reflect::Key{ .name = "forcetoenablemotion" } ]] float			m_flForceToEnableMotion;
+	[[= ks::reflect::Key{ .name = "preferredcarryangles" } ]] QAngle			m_angPreferredCarryAngles;
+	[[= ks::reflect::Key{ .name = "notsolid" } ]] bool			m_bNotSolidToWorld;
+	[[= ks::reflect::Key{ .name = "ExploitableByPlayer" } ]] int				m_iExploitableByPlayer;
 
 	// Outputs
-	COutputEvent	m_OnDamaged;
-	COutputEvent	m_OnAwakened;
-	COutputEvent	m_OnMotionEnabled;
-	COutputEvent	m_OnPhysGunPickup;
-	COutputEvent	m_OnPhysGunPunt;
-	COutputEvent	m_OnPhysGunOnlyPickup;
-	COutputEvent	m_OnPhysGunDrop;
-	COutputEvent	m_OnPlayerUse;
+	[[= ks::reflect::Key{ .name = "OnDamaged" } ]] COutputEvent	m_OnDamaged;
+	[[= ks::reflect::Key{ .name = "OnAwakened" } ]] COutputEvent	m_OnAwakened;
+	[[= ks::reflect::Key{ .name = "OnMotionEnabled" } ]] COutputEvent	m_OnMotionEnabled;
+	[[= ks::reflect::Key{ .name = "OnPhysGunPickup" } ]] COutputEvent	m_OnPhysGunPickup;
+	[[= ks::reflect::Key{ .name = "OnPhysGunPunt" } ]] COutputEvent	m_OnPhysGunPunt;
+	[[= ks::reflect::Key{ .name = "OnPhysGunOnlyPickup" } ]] COutputEvent	m_OnPhysGunOnlyPickup;
+	[[= ks::reflect::Key{ .name = "OnPhysGunDrop" } ]] COutputEvent	m_OnPhysGunDrop;
+	[[= ks::reflect::Key{ .name = "OnPlayerUse" } ]] COutputEvent	m_OnPlayerUse;
 
 	CHandle<CBasePlayer>	m_hCarryingPlayer;	// Player who's carrying us
 };
@@ -132,18 +135,18 @@ public:
 	int DrawDebugTextOverlays(void);
 
 	// Input handlers
-	void InputExplode( inputdata_t &inputdata );
-	void InputExplodeAndRemove( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Explode", .type = FIELD_VOID } ]] void InputExplode( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "ExplodeAndRemove", .type = FIELD_VOID } ]] void InputExplodeAndRemove( inputdata_t &inputdata );
 
 	DECLARE_DATADESC();
 	
 	float		GetRadius( void );
-	float		m_damage;
-	float		m_radius;
-	string_t	m_targetEntityName;
-	float		m_flInnerRadius;
+	[[= ks::reflect::Key{ .name = "magnitude" } ]] float		m_damage;
+	[[= ks::reflect::Key{ .name = "radius" } ]] float		m_radius;
+	[[= ks::reflect::Key{ .name = "targetentityname" } ]] string_t	m_targetEntityName;
+	[[= ks::reflect::Key{ .name = "inner_radius" } ]] float		m_flInnerRadius;
 	
-	COutputEvent	m_OnPushedPlayer;	
+	[[= ks::reflect::Key{ .name = "OnPushedPlayer" } ]] COutputEvent	m_OnPushedPlayer;	
 };
 
 void CreatePhysExplosion( Vector origin, float magnitude, float radius, string_t target, float innerRadius, int flags );
@@ -161,7 +164,7 @@ public:
 	//void		Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
 	void		Activate( void );
 
-	void		InputImpact( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Impact", .type = FIELD_VOID } ]] void		InputImpact( inputdata_t &inputdata );
 
 	DECLARE_DATADESC();
 
@@ -169,9 +172,9 @@ private:
 
 	void		PointAtEntity( void );
 
-	float		m_damage;
-	float		m_distance;
-	string_t	m_directionEntityName;
+	[[= ks::reflect::Key{ .name = "magnitude" } ]] float		m_damage;
+	[[= ks::reflect::Key{ .name = "distance" } ]] float		m_distance;
+	[[= ks::reflect::Key{ .name = "directionentityname" } ]] string_t	m_directionEntityName;
 };
 
 //-----------------------------------------------------------------------------
@@ -186,7 +189,8 @@ struct magnetted_objects_t
 	DECLARE_SIMPLE_DATADESC();
 };
 
-class CPhysMagnet : public CBaseAnimating, public IPhysicsConstraintEvent
+class [[= ks::reflect::NetTable{ .name = "DT_PhysMagnet" } ]]
+      CPhysMagnet : public CBaseAnimating, public IPhysicsConstraintEvent
 {
 	DECLARE_CLASS( CPhysMagnet, CBaseAnimating );
 public:
@@ -213,9 +217,9 @@ public:
 	bool	HasHitSomething( void ) { return m_bHasHitSomething; }
 
 	// Inputs
-	void	InputToggle( inputdata_t &inputdata );
-	void	InputTurnOn( inputdata_t &inputdata );
-	void	InputTurnOff( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Toggle", .type = FIELD_VOID } ]] void	InputToggle( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "TurnOn", .type = FIELD_VOID } ]] void	InputTurnOn( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "TurnOff", .type = FIELD_VOID } ]] void	InputTurnOff( inputdata_t &inputdata );
 
 	void	InputConstraintBroken( inputdata_t &inputdata );
 
@@ -227,14 +231,14 @@ public:
 	
 protected:
 	// Outputs
-	COutputEvent	m_OnMagnetAttach;
-	COutputEvent	m_OnMagnetDetach;
+	[[= ks::reflect::Key{ .name = "OnAttach" } ]] COutputEvent	m_OnMagnetAttach;
+	[[= ks::reflect::Key{ .name = "OnDetach" } ]] COutputEvent	m_OnMagnetDetach;
 
 	// Keys
-	float			m_massScale;
-	string_t		m_iszOverrideScript;
-	float			m_forceLimit;
-	float			m_torqueLimit;
+	[[= ks::reflect::Key{ .name = "massScale" } ]] float			m_massScale;
+	[[= ks::reflect::Key{ .name = "overridescript" } ]] string_t		m_iszOverrideScript;
+	[[= ks::reflect::Key{ .name = "forcelimit" } ]] float			m_forceLimit;
+	[[= ks::reflect::Key{ .name = "torquelimit" } ]] float			m_torqueLimit;
 
 	CUtlVector< magnetted_objects_t >	m_MagnettedEntities;
 	IPhysicsConstraintGroup				*m_pConstraintGroup;
@@ -244,7 +248,7 @@ protected:
 	float			m_flTotalMass;
 	float			m_flRadius;
 	float			m_flNextSuckTime;
-	int				m_iMaxObjectsAttached;
+	[[= ks::reflect::Key{ .name = "maxobjects" } ]] int				m_iMaxObjectsAttached;
 };
 
 #endif // PHYSOBJ_H

@@ -13,14 +13,6 @@
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
-BEGIN_DATADESC( CAI_FearBehavior )
-	DEFINE_FIELD( m_flTimeToSafety, FIELD_TIME ),
-	DEFINE_FIELD( m_flTimePlayerLastVisible, FIELD_TIME ),
-	DEFINE_FIELD( m_hSafePlaceHint, FIELD_EHANDLE ),
-	DEFINE_FIELD( m_hMovingToHint, FIELD_EHANDLE ),
-	DEFINE_EMBEDDED( m_SafePlaceMoveMonitor ),
-	DEFINE_FIELD( m_flDeferUntil, FIELD_TIME ),
-END_DATADESC();
 
 #define BEHAVIOR_FEAR_SAFETY_TIME		5
 #define FEAR_SAFE_PLACE_TOLERANCE		36.0f

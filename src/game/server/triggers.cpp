@@ -5,6 +5,9 @@
 //===========================================================================//
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_sendtable.h"
+#include "reflect_annotations.h"
 #include "ai_basenpc.h"
 #include "player.h"
 #include "saverestore.h"
@@ -19,8 +22,6 @@
 #include "saverestoretypes.h"
 #include "hierarchy.h"
 #include "bspfile.h"
-#include "saverestore_utlvector.h"
-#include "physics_saverestore.h"
 #include "te_effect_dispatch.h"
 #include "ammodef.h"
 #include "iservervehicle.h"
@@ -106,40 +107,12 @@ void Cmd_ShowtriggersToggle_f( const CCommand &args )
 static ConCommand showtriggers_toggle( "showtriggers_toggle", Cmd_ShowtriggersToggle_f, "Toggle show triggers", FCVAR_CHEAT );
 
 // Global Savedata for base trigger
-BEGIN_DATADESC( CBaseTrigger )
-
-	// Keyfields
-	DEFINE_KEYFIELD( m_iFilterName,	FIELD_STRING,	"filtername" ),
-	DEFINE_FIELD( m_hFilter,	FIELD_EHANDLE ),
-	DEFINE_KEYFIELD( m_bDisabled,		FIELD_BOOLEAN,	"StartDisabled" ),
-	DEFINE_UTLVECTOR( m_hTouchingEntities, FIELD_EHANDLE ),
-
-	// Inputs	
-	DEFINE_INPUTFUNC( FIELD_VOID, "Enable", InputEnable ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "Disable", InputDisable ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "Toggle", InputToggle ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "TouchTest", InputTouchTest ),
-
-	DEFINE_INPUTFUNC( FIELD_VOID, "StartTouch", InputStartTouch ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "EndTouch", InputEndTouch ),
-
-	// Outputs
-	DEFINE_OUTPUT( m_OnStartTouch, "OnStartTouch"),
-	DEFINE_OUTPUT( m_OnStartTouchAll, "OnStartTouchAll"),
-	DEFINE_OUTPUT( m_OnEndTouch, "OnEndTouch"),
-	DEFINE_OUTPUT( m_OnEndTouchAll, "OnEndTouchAll"),
-	DEFINE_OUTPUT( m_OnTouching, "OnTouching" ),
-	DEFINE_OUTPUT( m_OnNotTouching, "OnNotTouching" ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CBaseTrigger )
 
 
 LINK_ENTITY_TO_CLASS( trigger, CBaseTrigger );
 
-IMPLEMENT_SERVERCLASS_ST( CBaseTrigger, DT_BaseTrigger )
-	SendPropBool( SENDINFO( m_bClientSidePredicted ) ),
-	SendPropInt( SENDINFO(m_spawnflags), -1, SPROP_NOSCALE )
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CBaseTrigger, DT_BaseTrigger )
 
 CBaseTrigger::CBaseTrigger()
 {
@@ -593,15 +566,10 @@ public:
 	DECLARE_DATADESC();
 	
 	// Outputs
-	COutputEvent m_OnRemove;
+	[[= ks::reflect::Key{ .name = "OnRemove" } ]] COutputEvent m_OnRemove;
 };
 
-BEGIN_DATADESC( CTriggerRemove )
-
-	// Outputs
-	DEFINE_OUTPUT( m_OnRemove, "OnRemove" ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CTriggerRemove )
 
 
 LINK_ENTITY_TO_CLASS( trigger_remove, CTriggerRemove );
@@ -631,33 +599,7 @@ void CTriggerRemove::Touch( CBaseEntity *pOther )
 }
 
 
-BEGIN_DATADESC( CTriggerHurt )
-
-	// Function Pointers
-	DEFINE_FUNCTION( RadiationThink ),
-	DEFINE_FUNCTION( HurtThink ),
-	DEFINE_FUNCTION( NavThink ),
-
-	// Fields
-	DEFINE_FIELD( m_flOriginalDamage, FIELD_FLOAT ),
-	DEFINE_KEYFIELD( m_flDamage, FIELD_FLOAT, "damage" ),
-	DEFINE_KEYFIELD( m_flDamageCap, FIELD_FLOAT, "damagecap" ),
-	DEFINE_KEYFIELD( m_bitsDamageInflict, FIELD_INTEGER, "damagetype" ),
-	DEFINE_KEYFIELD( m_damageModel, FIELD_INTEGER, "damagemodel" ),
-	DEFINE_KEYFIELD( m_bNoDmgForce, FIELD_BOOLEAN, "nodmgforce" ),
-
-	DEFINE_FIELD( m_flLastDmgTime, FIELD_TIME ),
-	DEFINE_FIELD( m_flDmgResetTime, FIELD_TIME ),
-	DEFINE_UTLVECTOR( m_hurtEntities, FIELD_EHANDLE ),
-
-	// Inputs
-	DEFINE_INPUT( m_flDamage, FIELD_FLOAT, "SetDamage" ),
-
-	// Outputs
-	DEFINE_OUTPUT( m_OnHurt, "OnHurt" ),
-	DEFINE_OUTPUT( m_OnHurtPlayer, "OnHurtPlayer" ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CTriggerHurt )
 
 
 LINK_ENTITY_TO_CLASS( trigger_hurt, CTriggerHurt );
@@ -917,16 +859,7 @@ void CTriggerHurt::Touch( CBaseEntity *pOther )
 LINK_ENTITY_TO_CLASS( trigger_multiple, CTriggerMultiple );
 
 
-BEGIN_DATADESC( CTriggerMultiple )
-
-	// Function Pointers
-	DEFINE_FUNCTION(MultiTouch),
-	DEFINE_FUNCTION(MultiWaitOver ),
-
-	// Outputs
-	DEFINE_OUTPUT(m_OnTrigger, "OnTrigger")
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CTriggerMultiple )
 
 
 
@@ -1034,11 +967,11 @@ class CTriggerLook : public CTriggerOnce
 public:
 
 	EHANDLE m_hLookTarget;
-	float m_flFieldOfView;
-	float m_flLookTime;			// How long must I look for
+	[[= ks::reflect::Key{ .name = "FieldOfView", .input = true } ]] float m_flFieldOfView;
+	[[= ks::reflect::Key{ .name = "LookTime", .input = true } ]] float m_flLookTime;			// How long must I look for
 	float m_flLookTimeTotal;	// How long have I looked
 	float m_flLookTimeLast;		// When did I last look
-	float m_flTimeoutDuration;	// Number of seconds after start touch to fire anyway
+	[[= ks::reflect::Key{ .name = "timeout" } ]] float m_flTimeoutDuration;	// Number of seconds after start touch to fire anyway
 	bool m_bTimeoutFired;		// True if the OnTimeout output fired since the last StartTouch.
 	EHANDLE m_hActivator;		// The entity that triggered us.
 
@@ -1057,28 +990,11 @@ private:
 	void Trigger(CBaseEntity *pActivator, bool bTimeout);
 	void TimeoutThink();
 
-	COutputEvent m_OnTimeout;
+	[[= ks::reflect::Key{ .name = "OnTimeout" } ]] COutputEvent m_OnTimeout;
 };
 
 LINK_ENTITY_TO_CLASS( trigger_look, CTriggerLook );
-BEGIN_DATADESC( CTriggerLook )
-
-	DEFINE_FIELD( m_hLookTarget, FIELD_EHANDLE ),
-	DEFINE_FIELD( m_flLookTimeTotal, FIELD_FLOAT ),
-	DEFINE_FIELD( m_flLookTimeLast, FIELD_TIME ),
-	DEFINE_KEYFIELD( m_flTimeoutDuration, FIELD_FLOAT, "timeout" ),
-	DEFINE_FIELD( m_bTimeoutFired, FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_hActivator, FIELD_EHANDLE ),
-
-	DEFINE_OUTPUT( m_OnTimeout, "OnTimeout" ),
-
-	DEFINE_FUNCTION( TimeoutThink ),
-
-	// Inputs
-	DEFINE_INPUT( m_flFieldOfView,		FIELD_FLOAT,	"FieldOfView" ),
-	DEFINE_INPUT( m_flLookTime,			FIELD_FLOAT,	"LookTime" ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CTriggerLook )
 
 
 //------------------------------------------------------------------------------
@@ -1355,7 +1271,7 @@ private:
 	void TouchChangeLevel( CBaseEntity *pOther );
 	void ChangeLevelNow( CBaseEntity *pActivator );
 
-	void InputChangeLevel( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "ChangeLevel", .type = FIELD_VOID } ]] void InputChangeLevel( inputdata_t &inputdata );
 
 	bool IsEntityInTransition( CBaseEntity *pEntity );
 	void NotifyEntitiesOutOfTransition();
@@ -1376,7 +1292,6 @@ private:
 	static int AddEntityToTransitionList( CBaseEntity *pEntity, int flags, int nCount, CBaseEntity **ppEntList, int *pEntityFlags );
 
 	// Adds in all entities depended on by entities near the transition
-	static int AddDependentEntities( int nCount, CBaseEntity **ppEntList, int *pEntityFlags, int nMaxList );
 
 	// Figures out save flags for the entity
 	static int ComputeEntitySaveFlags( CBaseEntity *pEntity );
@@ -1387,29 +1302,14 @@ private:
 	bool m_bTouched;
 
 	// Outputs
-	COutputEvent m_OnChangeLevel;
+	[[= ks::reflect::Key{ .name = "OnChangeLevel" } ]] COutputEvent m_OnChangeLevel;
 };
 
 
 LINK_ENTITY_TO_CLASS( trigger_changelevel, CChangeLevel );
 
 // Global Savedata for changelevel trigger
-BEGIN_DATADESC( CChangeLevel )
-
-	DEFINE_AUTO_ARRAY( m_szMapName, FIELD_CHARACTER ),
-	DEFINE_AUTO_ARRAY( m_szLandmarkName, FIELD_CHARACTER ),
-//	DEFINE_FIELD( m_touchTime, FIELD_TIME ),	// don't save
-//	DEFINE_FIELD( m_bTouched, FIELD_BOOLEAN ),
-
-	// Function Pointers
-	DEFINE_FUNCTION( TouchChangeLevel ),
-
-	DEFINE_INPUTFUNC( FIELD_VOID, "ChangeLevel", InputChangeLevel ),
-
-	// Outputs
-	DEFINE_OUTPUT( m_OnChangeLevel, "OnChangeLevel"),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CChangeLevel )
 
 
 //
@@ -1704,15 +1604,6 @@ void CChangeLevel::ChangeLevelNow( CBaseEntity *pActivator )
 	}
 	else
 	{
-		// Build a change list so we can see what would be transitioning
-		CSaveRestoreData *pSaveData = SaveInit( 0 );
-		if ( pSaveData )
-		{
-			g_pGameSaveRestoreBlockSet->PreSave( pSaveData );
-			pSaveData->levelInfo.connectionCount = BuildChangeList( pSaveData->levelInfo.levelList, MAX_LEVEL_CONNECTIONS );
-			g_pGameSaveRestoreBlockSet->PostSave();
-		}
-
 		SetTouch( NULL );
 	}
 }
@@ -2092,82 +1983,6 @@ static inline void Set( char *pBuf, int nBit )
 // Adds in all entities depended on by entities near the transition
 //------------------------------------------------------------------------------
 #define MAX_ENTITY_BYTE_COUNT	(NUM_ENT_ENTRIES >> 3)
-int CChangeLevel::AddDependentEntities( int nCount, CBaseEntity **ppEntList, int *pEntityFlags, int nMaxList )
-{
-	char pEntitiesSaved[MAX_ENTITY_BYTE_COUNT];
-	memset( pEntitiesSaved, 0, MAX_ENTITY_BYTE_COUNT * sizeof(char) );
-			  
-	// Populate the initial bitfield
-	int i;
-	for ( i = 0; i < nCount; ++i )
-	{
-		// NOTE: Must use GetEntryIndex because we're saving non-networked entities
-		int nEntIndex = ppEntList[i]->GetRefEHandle().GetEntryIndex();
-
-		// We shouldn't already have this entity in the list!
-		Assert( !IsBitSet( pEntitiesSaved, nEntIndex ) );
-
-		// Mark the entity as being in the list
-		Set( pEntitiesSaved, nEntIndex );
-	}
-
-	IEntitySaveUtils *pSaveUtils = GetEntitySaveUtils();
-
-	// Iterate over entities whose dependencies we've not yet processed
-	// NOTE: nCount will change value during this loop in AddEntityToTransitionList
-	for ( i = 0; i < nCount; ++i )
-	{
-		CBaseEntity *pEntity = ppEntList[i];
-
-		// Find dependencies in the hash.
-		int nDepCount = pSaveUtils->GetEntityDependencyCount( pEntity );
-		if ( !nDepCount )
-			continue;
-
-		CBaseEntity **ppDependentEntities = (CBaseEntity**)stackalloc( nDepCount * sizeof(CBaseEntity*) );
-		pSaveUtils->GetEntityDependencies( pEntity, nDepCount, ppDependentEntities );
-		for ( int j = 0; j < nDepCount; ++j )
-		{
-			CBaseEntity *pDependent = ppDependentEntities[j];
-			if ( !pDependent )
-				continue;
-
-			// NOTE: Must use GetEntryIndex because we're saving non-networked entities
-			int nEntIndex = pDependent->GetRefEHandle().GetEntryIndex();
-
-			// Don't re-add it if it's already in the list
-			if ( IsBitSet( pEntitiesSaved, nEntIndex ) )
-				continue;
-
-			// Mark the entity as being in the list
-			Set( pEntitiesSaved, nEntIndex );
-
-			int flags = ComputeEntitySaveFlags( pEntity );
-			if ( flags )
-			{
-				if ( nCount >= nMaxList )
-				{
-					Warning( "Too many entities across a transition!\n" );
-					Assert( 0 );
-					return false;
-				}
-
-				if ( g_debug_transitions.GetInt() )
-				{
-					Msg( "ADDED DEPENDANCY: %s (%s)\n", pEntity->GetClassname(), pEntity->GetDebugName() );
-				}
-
-				nCount = AddEntityToTransitionList( pEntity, flags, nCount, ppEntList, pEntityFlags );
-			}
-			else
-			{
-				Warning("Warning!! Save dependency is linked to an entity that doesn't want to be saved!\n");
-			}
-		}
-	}
-
-	return nCount;
-}
 
 
 //------------------------------------------------------------------------------
@@ -2181,40 +1996,7 @@ int CChangeLevel::AddDependentEntities( int nCount, CBaseEntity **ppEntList, int
 // FIXME: This has grown into a complicated beast. Can we make this more elegant?
 int CChangeLevel::ChangeList( levellist_t *pLevelList, int maxList )
 {
-	// Find all of the possible level changes on this BSP
-	int count = BuildChangeLevelList( pLevelList, maxList );
-
-	if ( !gpGlobals->pSaveData || ( static_cast<CSaveRestoreData *>(gpGlobals->pSaveData)->NumEntities() == 0 ) )
-		return count;
-
-	CSave saveHelper( static_cast<CSaveRestoreData *>(gpGlobals->pSaveData) );
-
-	// For each level change, find nearby entities and save them
-	int	i;
-	for ( i = 0; i < count; i++ )
-	{
-		CBaseEntity *pEntList[ MAX_ENTITY ];
-		int			 entityFlags[ MAX_ENTITY ];
-
-		// First, figure out which entities are near the transition
-		CBaseEntity *pLandmarkEntity = CBaseEntity::Instance( pLevelList[i].pentLandmark );
-		int iEntity = BuildEntityTransitionList( pLandmarkEntity, pLevelList[i].landmarkName, pEntList, entityFlags, MAX_ENTITY );
-
-		// FIXME: Activate if we have a dependency problem on level transition
-		// Next, add in all entities depended on by entities near the transition
-//		iEntity = AddDependentEntities( iEntity, pEntList, entityFlags, MAX_ENTITY );
-
-		int j;
-		for ( j = 0; j < iEntity; j++ )
-		{
-			// Mark entity table with 1<<i
-			int index = saveHelper.EntityIndex( pEntList[j] );
-			// Flag it with the level number
-			saveHelper.EntityFlagsSet( index, entityFlags[j] | (1<<i) );
-		}
-	}
-
-	return count;
+	return BuildChangeLevelList( pLevelList, maxList );
 }
 
 
@@ -2238,9 +2020,9 @@ public:
 	void Activate( void );
 	void Touch( CBaseEntity *pOther );
 	void Untouch( CBaseEntity *pOther );
-	void InputSetPushDirection( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetPushDirection", .type = FIELD_VECTOR } ]] void InputSetPushDirection( inputdata_t &inputdata );
 
-	Vector m_vecPushDir;
+	[[= ks::reflect::Key{ .name = "pushdir" } ]] Vector m_vecPushDir;
 
 	DECLARE_DATADESC();
 
@@ -2251,10 +2033,7 @@ public:
 	bool m_bInitialized;
 };
 
-BEGIN_DATADESC( CTriggerSoftBarrier )
-	DEFINE_KEYFIELD( m_vecPushDir, FIELD_VECTOR, "pushdir" ),
-	DEFINE_INPUTFUNC( FIELD_VECTOR, "SetPushDirection", InputSetPushDirection ),
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CTriggerSoftBarrier )
 
 LINK_ENTITY_TO_CLASS( trigger_softbarrier, CTriggerSoftBarrier );
 
@@ -2458,26 +2237,17 @@ public:
 	void Untouch( CBaseEntity *pOther );
 	void DrawDebugGeometryOverlays();
 
-	void InputSetPushDirection( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetPushDirection", .type = FIELD_VECTOR } ]] void InputSetPushDirection( inputdata_t &inputdata );
 
-	Vector m_vecPushDir;
+	[[= ks::reflect::Key{ .name = "pushdir" } ]] Vector m_vecPushDir;
 
 	DECLARE_DATADESC();
 	
-	float m_flAlternateTicksFix; // Scale factor to apply to the push speed when running with alternate ticks
+	[[= ks::reflect::Key{ .name = "alternateticksfix" } ]] float m_flAlternateTicksFix; // Scale factor to apply to the push speed when running with alternate ticks
 	float m_flPushSpeed;
 };
 
-BEGIN_DATADESC( CTriggerPush )
-	DEFINE_KEYFIELD( m_vecPushDir, FIELD_VECTOR, "pushdir" ),
-	DEFINE_KEYFIELD( m_flAlternateTicksFix, FIELD_FLOAT, "alternateticksfix" ),
-#ifdef PORTAL2
-	DEFINE_KEYFIELD( m_flSpeed, FIELD_FLOAT, "pushspeed" ),
-#endif //PORTAL2
-	//DEFINE_FIELD( m_flPushSpeed, FIELD_FLOAT ),
-
-	DEFINE_INPUTFUNC( FIELD_VECTOR, "SetPushDirection", InputSetPushDirection ),
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CTriggerPush )
 
 LINK_ENTITY_TO_CLASS( trigger_push, CTriggerPush );
 
@@ -2680,13 +2450,10 @@ public:
 	void Spawn(void);
 	void Touch(CBaseEntity *pOther);
 
-	DECLARE_DATADESC();
 };
 
 LINK_ENTITY_TO_CLASS(trigger_bomb_reset, CTriggerBombReset);
 
-BEGIN_DATADESC(CTriggerBombReset)
-END_DATADESC()
 
 void CTriggerBombReset::Spawn(void)
 {
@@ -2719,13 +2486,13 @@ public:
 	void Spawn( void );
 	void Touch( CBaseEntity *pOther );
 
-	void InputSetTarget( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetRemoteDestination", .type = FIELD_STRING } ]] void InputSetTarget( inputdata_t &inputdata );
 
-	string_t m_iLandmark;
+	[[= ks::reflect::Key{ .name = "landmark" } ]] string_t m_iLandmark;
 
 private:
-	bool							m_bUseLandmarkAngles;
-	bool							m_bCheckDestIfClearForPlayer;
+	[[= ks::reflect::Key{ .name = "UseLandmarkAngles" } ]] bool							m_bUseLandmarkAngles;
+	[[= ks::reflect::Key{ .name = "CheckDestIfClearForPlayer" } ]] bool							m_bCheckDestIfClearForPlayer;
 
 	CBaseEntity						*m_pentTarget;
 
@@ -2734,16 +2501,7 @@ private:
 
 LINK_ENTITY_TO_CLASS( trigger_teleport, CTriggerTeleport );
 
-BEGIN_DATADESC( CTriggerTeleport )
-
-	DEFINE_KEYFIELD( m_iLandmark, FIELD_STRING, "landmark" ),
-	DEFINE_KEYFIELD( m_bUseLandmarkAngles, FIELD_BOOLEAN, "UseLandmarkAngles" ),
-	DEFINE_KEYFIELD( m_bCheckDestIfClearForPlayer, FIELD_BOOLEAN, "CheckDestIfClearForPlayer" ),
-
-
-	DEFINE_INPUTFUNC( FIELD_STRING, "SetRemoteDestination", InputSetTarget ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CTriggerTeleport )
 
 
 
@@ -2900,27 +2658,22 @@ public:
 	void Spawn( void );
 	void Touch( CBaseEntity *pOther );
 
-	void InputEnable( inputdata_t &inputdata )
+	[[= ks::reflect::Input{ .name = "Enable", .type = FIELD_VOID } ]] void InputEnable( inputdata_t &inputdata )
 	{
 		m_bDisabled = false;
 	}
 
-	void InputDisable( inputdata_t &inputdata )
+	[[= ks::reflect::Input{ .name = "Disable", .type = FIELD_VOID } ]] void InputDisable( inputdata_t &inputdata )
 	{
 		m_bDisabled = true;
 	}
 
-	bool	m_bDisabled;		// Initial state
+	[[= ks::reflect::Key{ .name = "StartDisabled" } ]] bool	m_bDisabled;		// Initial state
 	
 	DECLARE_DATADESC();
 };
 
-BEGIN_DATADESC( CTriggerToggleSave )
-	DEFINE_KEYFIELD( m_bDisabled, FIELD_BOOLEAN, "StartDisabled" ),
-
-	DEFINE_INPUTFUNC( FIELD_VOID, "Enable", InputEnable ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "Disable", InputDisable ),
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CTriggerToggleSave )
 
 LINK_ENTITY_TO_CLASS( trigger_togglesave, CTriggerToggleSave );
 
@@ -2971,19 +2724,13 @@ public:
 	void Touch( CBaseEntity *pOther );
 	DECLARE_DATADESC();
 
-	bool m_bForceNewLevelUnit;
-	float m_fDangerousTimer;
-	int m_minHitPoints;
+	[[= ks::reflect::Key{ .name = "NewLevelUnit" } ]] bool m_bForceNewLevelUnit;
+	[[= ks::reflect::Key{ .name = "DangerousTimer" } ]] float m_fDangerousTimer;
+	[[= ks::reflect::Key{ .name = "MinimumHitPoints" } ]] int m_minHitPoints;
 };
 
 
-BEGIN_DATADESC( CTriggerSave )
-
-	DEFINE_KEYFIELD( m_bForceNewLevelUnit, FIELD_BOOLEAN, "NewLevelUnit" ),
-	DEFINE_KEYFIELD( m_minHitPoints, FIELD_INTEGER, "MinimumHitPoints" ),
-	DEFINE_KEYFIELD( m_fDangerousTimer, FIELD_FLOAT, "DangerousTimer" ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CTriggerSave )
 LINK_ENTITY_TO_CLASS( trigger_autosave, CTriggerSave );
 
 
@@ -3056,7 +2803,6 @@ class CTriggerGravity : public CBaseTrigger
 {
 public:
 	DECLARE_CLASS( CTriggerGravity, CBaseTrigger );
-	DECLARE_DATADESC();
 
 	void Spawn( void );
 	void GravityTouch( CBaseEntity *pOther );
@@ -3064,12 +2810,6 @@ public:
 };
 LINK_ENTITY_TO_CLASS( trigger_gravity, CTriggerGravity );
 
-BEGIN_DATADESC( CTriggerGravity )
-
-	// Function Pointers
-	DEFINE_FUNCTION(GravityTouch),
-
-END_DATADESC()
 
 void CTriggerGravity::Spawn( void )
 {
@@ -3109,25 +2849,18 @@ public:
 	DECLARE_CLASS( CAI_ChangeTarget, CBaseEntity );
 
 	// Input handlers.
-	void InputActivate( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Activate", .type = FIELD_VOID } ]] void InputActivate( inputdata_t &inputdata );
 
 	int ObjectCaps( void ) { return BaseClass::ObjectCaps() & ~FCAP_ACROSS_TRANSITION; }
 
 	DECLARE_DATADESC();
 
 private:
-	string_t	m_iszNewTarget;
+	[[= ks::reflect::Key{ .name = "m_iszNewTarget" } ]] string_t	m_iszNewTarget;
 };
 LINK_ENTITY_TO_CLASS( ai_changetarget, CAI_ChangeTarget );
 
-BEGIN_DATADESC( CAI_ChangeTarget )
-
-	DEFINE_KEYFIELD( m_iszNewTarget, FIELD_STRING, "m_iszNewTarget" ),
-
-	// Inputs
-	DEFINE_INPUTFUNC( FIELD_VOID, "Activate", InputActivate ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CAI_ChangeTarget )
 
 
 void CAI_ChangeTarget::InputActivate( inputdata_t &inputdata )
@@ -3163,32 +2896,22 @@ public:
 	int ObjectCaps( void ) { return BaseClass::ObjectCaps() & ~FCAP_ACROSS_TRANSITION; }
 
 	// Input handlers.
-	void InputActivate( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Activate", .type = FIELD_VOID } ]] void InputActivate( inputdata_t &inputdata );
 
 	DECLARE_DATADESC();
 
 private:
 	CAI_BaseNPC *FindQualifiedNPC( CAI_BaseNPC *pPrev, CBaseEntity *pActivator, CBaseEntity *pCaller );
 
-	int			m_iSearchType;
-	string_t	m_strSearchName;
-	string_t	m_strNewHintGroup;
-	float		m_flRadius;
-	bool		m_bHintGroupNavLimiting;
+	[[= ks::reflect::Key{ .name = "SearchType" } ]] int			m_iSearchType;
+	[[= ks::reflect::Key{ .name = "SearchName" } ]] string_t	m_strSearchName;
+	[[= ks::reflect::Key{ .name = "NewHintGroup" } ]] string_t	m_strNewHintGroup;
+	[[= ks::reflect::Key{ .name = "Radius" } ]] float		m_flRadius;
+	[[= ks::reflect::Key{ .name = "hintlimiting" } ]] bool		m_bHintGroupNavLimiting;
 };
 LINK_ENTITY_TO_CLASS( ai_changehintgroup, CAI_ChangeHintGroup );
 
-BEGIN_DATADESC( CAI_ChangeHintGroup )
-
-	DEFINE_KEYFIELD( m_iSearchType, FIELD_INTEGER, "SearchType" ),
-	DEFINE_KEYFIELD( m_strSearchName, FIELD_STRING, "SearchName" ),
-	DEFINE_KEYFIELD( m_strNewHintGroup, FIELD_STRING, "NewHintGroup" ),
-	DEFINE_KEYFIELD( m_flRadius, FIELD_FLOAT, "Radius" ),
-	DEFINE_KEYFIELD( m_bHintGroupNavLimiting,	FIELD_BOOLEAN, "hintlimiting" ),
-
-	DEFINE_INPUTFUNC( FIELD_VOID, "Activate", InputActivate ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CAI_ChangeHintGroup )
 
 CAI_BaseNPC *CAI_ChangeHintGroup::FindQualifiedNPC( CAI_BaseNPC *pPrev, CBaseEntity *pActivator, CBaseEntity *pCaller )
 {
@@ -3258,58 +2981,7 @@ const float CTriggerCamera::kflPosInterpTime = 2.0f;
 
 LINK_ENTITY_TO_CLASS( point_viewcontrol, CTriggerCamera );
 
-BEGIN_DATADESC( CTriggerCamera )
-
-	DEFINE_FIELD( m_hPlayer, FIELD_EHANDLE ),
-	DEFINE_FIELD( m_hTarget, FIELD_EHANDLE ),
-	DEFINE_FIELD( m_pPath, FIELD_CLASSPTR ),
-	DEFINE_FIELD( m_sPath, FIELD_STRING ),
-	DEFINE_FIELD( m_flWait, FIELD_FLOAT ),
-	DEFINE_FIELD( m_flReturnTime, FIELD_TIME ),
-	DEFINE_FIELD( m_flStopTime, FIELD_TIME ),
-	DEFINE_FIELD( m_moveDistance, FIELD_FLOAT ),
-	DEFINE_FIELD( m_targetSpeed, FIELD_FLOAT ),
-	DEFINE_FIELD( m_initialSpeed, FIELD_FLOAT ),
-	DEFINE_FIELD( m_acceleration, FIELD_FLOAT ),
-	DEFINE_FIELD( m_deceleration, FIELD_FLOAT ),
-	DEFINE_FIELD( m_state, FIELD_INTEGER ),
-	DEFINE_FIELD( m_vecMoveDir, FIELD_VECTOR ),
-	DEFINE_KEYFIELD( m_iszTargetAttachment, FIELD_STRING, "targetattachment" ),
-	DEFINE_FIELD( m_iAttachmentIndex, FIELD_INTEGER ),
-	DEFINE_FIELD( m_bSnapToGoal, FIELD_BOOLEAN ),
-#if HL2_EPISODIC
-	DEFINE_KEYFIELD( m_bInterpolatePosition, FIELD_BOOLEAN, "interpolatepositiontoplayer" ),
-	DEFINE_FIELD( m_vStartPos, FIELD_VECTOR ),
-	DEFINE_FIELD( m_vEndPos, FIELD_VECTOR ),
-	DEFINE_FIELD( m_flInterpStartTime, FIELD_TIME ),
-#endif
-	DEFINE_FIELD( m_nPlayerButtons, FIELD_INTEGER ),
-	DEFINE_FIELD( m_nOldTakeDamage, FIELD_INTEGER ),
-
-	DEFINE_KEYFIELD( m_trackSpeed, FIELD_FLOAT, "trackspeed" ),
-
-	DEFINE_KEYFIELD( m_fov, FIELD_FLOAT, "fov" ),
-	DEFINE_KEYFIELD( m_fovSpeed, FIELD_FLOAT, "fov_rate" ),
-
-	// Inputs
-	DEFINE_INPUTFUNC( FIELD_VOID, "Enable", InputEnable ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "Disable", InputDisable ),
-	DEFINE_INPUTFUNC( FIELD_STRING, "SetTarget", InputSetTarget ),
-	DEFINE_INPUTFUNC( FIELD_STRING, "SetTargetAttachment", InputSetTargetAttachment ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "ReturnToEyes", InputReturnToEyes ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "TeleportToView", InputTeleportToView ),
-
-	DEFINE_INPUTFUNC( FIELD_STRING, "SetPath", InputSetPath ),
-
-	DEFINE_INPUTFUNC( FIELD_FLOAT, "SetTrackSpeed", InputSetTrackSpeed ),
-	
-	// Function Pointers
-	DEFINE_FUNCTION( FollowTarget ),
-	DEFINE_FUNCTION( ReturnToEyes ),
-	
-	DEFINE_OUTPUT( m_OnEndFollow, "OnEndFollow" ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CTriggerCamera )
 
 // VScript: publish class and select members to script language
 BEGIN_ENT_SCRIPTDESC( CTriggerCamera, CBaseEntity, "Server-side camera entity" )
@@ -4257,7 +3929,8 @@ void CMoveableCamera::Move( void )
 
 
 //--------------------------------------------------------------------------------------------------------
-class CTriggerCameraMultiplayer : public CMoveableCamera
+class [[= ks::reflect::KeyFrom<"m_flInterpTime", ks::reflect::Key{ .name = "interp_time" } >{} ]]
+      CTriggerCameraMultiplayer : public CMoveableCamera
 {
 public:
 	DECLARE_CLASS( CTriggerCameraMultiplayer, CMoveableCamera );
@@ -4282,19 +3955,19 @@ public:
 	DECLARE_DATADESC();
 
 	// Input handlers
-	void InputEnable( inputdata_t &inputdata );
-	void InputDisable( inputdata_t &inputdata );
-	void InputAddPlayer( inputdata_t &inputdata );
-	void InputRemovePlayer( inputdata_t &inputdata );
-	void InputStartMovement( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Enable", .type = FIELD_VOID } ]] void InputEnable( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Disable", .type = FIELD_VOID } ]] void InputDisable( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "AddPlayer", .type = FIELD_VOID } ]] void InputAddPlayer( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "RemovePlayer", .type = FIELD_VOID } ]] void InputRemovePlayer( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "StartMovement", .type = FIELD_VOID } ]] void InputStartMovement( inputdata_t &inputdata );
 
 private:
 	CUtlVector< EHANDLE > m_players;
-	float m_fov;
-	float m_fovSpeed;
+	[[= ks::reflect::Key{ .name = "fov" } ]] float m_fov;
+	[[= ks::reflect::Key{ .name = "fov_rate" } ]] float m_fovSpeed;
 	float m_fMoveTime;
-	string_t m_targetEntName;
-	int m_nTeamNum;
+	[[= ks::reflect::Key{ .name = "target_entity" } ]] string_t m_targetEntName;
+	[[= ks::reflect::Key{ .name = "target_team" } ]] int m_nTeamNum;
 };
 
 
@@ -4303,21 +3976,7 @@ LINK_ENTITY_TO_CLASS( point_viewcontrol_multiplayer, CTriggerCameraMultiplayer )
 
 
 //--------------------------------------------------------------------------------------------------------
-BEGIN_DATADESC( CTriggerCameraMultiplayer )
-
-// Inputs
-DEFINE_INPUTFUNC( FIELD_VOID, "Enable", InputEnable ),
-DEFINE_INPUTFUNC( FIELD_VOID, "Disable", InputDisable ),
-DEFINE_INPUTFUNC( FIELD_VOID, "AddPlayer", InputAddPlayer ),
-DEFINE_INPUTFUNC( FIELD_VOID, "RemovePlayer", InputRemovePlayer ),
-DEFINE_INPUTFUNC( FIELD_VOID, "StartMovement", InputStartMovement ),
-
-DEFINE_KEYFIELD( m_fov, FIELD_FLOAT, "fov" ),
-DEFINE_KEYFIELD( m_fovSpeed, FIELD_FLOAT, "fov_rate" ),
-DEFINE_KEYFIELD( m_targetEntName, FIELD_STRING, "target_entity"),
-DEFINE_KEYFIELD( m_flInterpTime, FIELD_FLOAT, "interp_time"),
-DEFINE_KEYFIELD( m_nTeamNum, FIELD_INTEGER, "target_team"),
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CTriggerCameraMultiplayer )
 
 
 //--------------------------------------------------------------------------------------------------------
@@ -4489,41 +4148,7 @@ enum ViewProxyOffsetType_e
 
 LINK_ENTITY_TO_CLASS( point_viewproxy, CTriggerViewProxy );
 
-BEGIN_DATADESC( CTriggerViewProxy )
-
-	DEFINE_FIELD( m_hPlayer, FIELD_EHANDLE ),
-	DEFINE_FIELD( m_pProxy, FIELD_CLASSPTR ),
-	
-	DEFINE_KEYFIELD(m_nOffsetType, FIELD_INTEGER, "offsettype"),	
-	DEFINE_FIELD( m_vecInitialOffset, FIELD_VECTOR ),
-	DEFINE_FIELD( m_flStartTime, FIELD_FLOAT ),
-
-	DEFINE_KEYFIELD( m_sProxy, FIELD_STRING, "proxy" ),
-	DEFINE_KEYFIELD( m_sProxyAttachment, FIELD_STRING, "proxyattachment" ),
-	DEFINE_KEYFIELD( m_flTiltFraction, FIELD_FLOAT, "tiltfraction" ),	
-
-	DEFINE_KEYFIELD( m_bUseFakeAcceleration, FIELD_BOOLEAN, "usefakeacceleration" ),	
-	DEFINE_KEYFIELD( m_bSkewAccelerationForward, FIELD_BOOLEAN, "skewaccelerationforward" ),	
-	DEFINE_KEYFIELD( m_flAccelerationScalar, FIELD_FLOAT, "accelerationscalar" ),	
-
-	DEFINE_KEYFIELD( m_bEaseAnglesToCamera, FIELD_BOOLEAN, "easeanglestocamera" ),	
-
-	DEFINE_FIELD( m_nParentAttachment, FIELD_INTEGER ),
-
-	DEFINE_FIELD( m_state, FIELD_INTEGER ),
-	DEFINE_FIELD( m_vecInitialPosition, FIELD_VECTOR ),
-
-	DEFINE_FIELD( m_nPlayerButtons, FIELD_INTEGER ),
-	DEFINE_FIELD( m_nOldTakeDamage, FIELD_INTEGER ),
-
-	// Inputs
-	DEFINE_INPUTFUNC( FIELD_VOID, "Enable", InputEnable ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "Disable", InputDisable ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "TeleportPlayerToProxy", InputTeleportPlayerToProxy ),
-
-	DEFINE_FUNCTION( TranslateViewToProxy ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CTriggerViewProxy )
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -5051,32 +4676,18 @@ public:
 protected:
 
 	EHANDLE m_hMeasureTarget;
-	string_t m_iszMeasureTarget;		// The entity from which we measure proximities.
-	float m_fRadius;			// The radius around the measure target that we measure within.
+	[[= ks::reflect::Key{ .name = "measuretarget" } ]] string_t m_iszMeasureTarget;		// The entity from which we measure proximities.
+	[[= ks::reflect::Key{ .name = "radius" } ]] float m_fRadius;			// The radius around the measure target that we measure within.
 	int m_nTouchers;			// Number of entities touching us.
 
 	// Outputs
-	COutputFloat m_NearestEntityDistance;
+	[[= ks::reflect::Key{ .name = "NearestEntityDistance" } ]] COutputFloat m_NearestEntityDistance;
 
 	DECLARE_DATADESC();
 };
 
 
-BEGIN_DATADESC( CTriggerProximity )
-
-	// Functions
-	DEFINE_FUNCTION(MeasureThink),
-
-	// Keys
-	DEFINE_KEYFIELD(m_iszMeasureTarget, FIELD_STRING, "measuretarget"),
-	DEFINE_FIELD( m_hMeasureTarget, FIELD_EHANDLE ),
-	DEFINE_KEYFIELD(m_fRadius, FIELD_FLOAT, "radius"),
-	DEFINE_FIELD( m_nTouchers, FIELD_INTEGER ),
-
-	// Outputs
-	DEFINE_OUTPUT(m_NearestEntityDistance, "NearestEntityDistance"),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CTriggerProximity )
 
 
 
@@ -5263,12 +4874,7 @@ public:
 	float	m_flWindSpeed;
 };
 
-BEGIN_SIMPLE_DATADESC( CPhysicsWind )
-
-	DEFINE_FIELD( m_nWindYaw,		FIELD_INTEGER ),
-	DEFINE_FIELD( m_flWindSpeed,	FIELD_FLOAT ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP_SIMPLE( CPhysicsWind )
 
 
 extern int g_sModelIndexSmoke;
@@ -5296,21 +4902,21 @@ public:
 
 	// Input handlers
 	void	InputEnable( inputdata_t &inputdata );
-	void	InputSetSpeed( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetSpeed", .type = FIELD_INTEGER } ]] void	InputSetSpeed( inputdata_t &inputdata );
 
 private:
 	int 	m_nSpeedBase;	// base line for how hard the wind blows
-	int		m_nSpeedNoise;	// noise added to wind speed +/-
+	[[= ks::reflect::Key{ .name = "SpeedNoise" } ]] int		m_nSpeedNoise;	// noise added to wind speed +/-
 	int		m_nSpeedCurrent;// current wind speed
 	int		m_nSpeedTarget;	// wind speed I'm approaching
 
 	int		m_nDirBase;		// base line for direction the wind blows (yaw)
-	int		m_nDirNoise;	// noise added to wind direction
+	[[= ks::reflect::Key{ .name = "DirectionNoise" } ]] int		m_nDirNoise;	// noise added to wind direction
 	int		m_nDirCurrent;	// the current wind direction
 	int		m_nDirTarget;	// wind direction I'm approaching
 
-	int		m_nHoldBase;	// base line for how long to wait before changing wind
-	int		m_nHoldNoise;	// noise added to how long to wait before changing wind
+	[[= ks::reflect::Key{ .name = "HoldTime" } ]] int		m_nHoldBase;	// base line for how long to wait before changing wind
+	[[= ks::reflect::Key{ .name = "HoldNoise" } ]] int		m_nHoldNoise;	// noise added to how long to wait before changing wind
 
 	bool	m_bSwitch;		// when does wind change
 
@@ -5321,29 +4927,7 @@ private:
 
 LINK_ENTITY_TO_CLASS( trigger_wind, CTriggerWind );
 
-BEGIN_DATADESC( CTriggerWind )
-
-	DEFINE_FIELD( m_nSpeedCurrent, FIELD_INTEGER),
-	DEFINE_FIELD( m_nSpeedTarget,	FIELD_INTEGER),
-	DEFINE_FIELD( m_nDirBase,		FIELD_INTEGER),
-	DEFINE_FIELD( m_nDirCurrent,	FIELD_INTEGER),
-	DEFINE_FIELD( m_nDirTarget,	FIELD_INTEGER),
-	DEFINE_FIELD( m_bSwitch,		FIELD_BOOLEAN),
-
-	DEFINE_FIELD( m_nSpeedBase,		FIELD_INTEGER ),
-	DEFINE_KEYFIELD( m_nSpeedNoise,	FIELD_INTEGER, "SpeedNoise"),
-	DEFINE_KEYFIELD( m_nDirNoise,	FIELD_INTEGER, "DirectionNoise"),
-	DEFINE_KEYFIELD( m_nHoldBase,	FIELD_INTEGER, "HoldTime"),
-	DEFINE_KEYFIELD( m_nHoldNoise,	FIELD_INTEGER, "HoldNoise"),
-
-	DEFINE_PHYSPTR( m_pWindController ),
-	DEFINE_EMBEDDED( m_WindCallback ),
-
-	DEFINE_FUNCTION( WindThink ),
-
-	DEFINE_INPUTFUNC( FIELD_INTEGER, "SetSpeed", InputSetSpeed ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CTriggerWind )
 
 
 //------------------------------------------------------------------------------
@@ -5570,7 +5154,7 @@ class CTriggerHierarchy : public CTriggerMultiple
 public:
 	DECLARE_DATADESC();
 
-	string_t					m_iChildFilterName;
+	[[= ks::reflect::Key{ .name = "childfiltername" } ]] string_t					m_iChildFilterName;
 	CHandle<class CBaseFilter>	m_hChildFilter;
 
 	virtual void Activate( void );
@@ -5582,9 +5166,7 @@ public:
 
 LINK_ENTITY_TO_CLASS( trigger_hierarchy, CTriggerHierarchy );
 
-BEGIN_DATADESC( CTriggerHierarchy )
-	DEFINE_KEYFIELD( m_iChildFilterName,	FIELD_STRING,	"childfiltername" ),
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CTriggerHierarchy )
 
 
 void CTriggerHierarchy::Activate( void )
@@ -5647,19 +5229,19 @@ class CTriggerImpact : public CTriggerMultiple
 public:
 	DECLARE_DATADESC();
 
-	float	m_flMagnitude;
-	float	m_flNoise;
-	float	m_flViewkick;
+	[[= ks::reflect::Key{ .name = "Magnitude" } ]] float	m_flMagnitude;
+	[[= ks::reflect::Key{ .name = "Noise" } ]] float	m_flNoise;
+	[[= ks::reflect::Key{ .name = "Viewkick" } ]] float	m_flViewkick;
 
 	void	Spawn( void );
 	void	StartTouch( CBaseEntity *pOther );
 
 	// Inputs
-	void InputSetMagnitude( inputdata_t &inputdata );
-	void InputImpact( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetMagnitude", .type = FIELD_FLOAT } ]] void InputSetMagnitude( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Impact", .type = FIELD_VOID } ]] void InputImpact( inputdata_t &inputdata );
 
 	// Outputs
-	COutputVector	m_pOutputForce;		// Output force in case anyone else wants to use it
+	[[= ks::reflect::Key{ .name = "ImpactForce" } ]] COutputVector	m_pOutputForce;		// Output force in case anyone else wants to use it
 
 	// Debug
 	int		DrawDebugTextOverlays(void);
@@ -5667,24 +5249,7 @@ public:
 
 LINK_ENTITY_TO_CLASS( trigger_impact, CTriggerImpact );
 
-BEGIN_DATADESC( CTriggerImpact )
-
-	DEFINE_KEYFIELD( m_flMagnitude,	FIELD_FLOAT, "Magnitude"),
-	DEFINE_KEYFIELD( m_flNoise,		FIELD_FLOAT, "Noise"),
-	DEFINE_KEYFIELD( m_flViewkick,	FIELD_FLOAT, "Viewkick"),
-
-	// Inputs
-	DEFINE_INPUTFUNC( FIELD_VOID,  "Impact", InputImpact ),
-	DEFINE_INPUTFUNC( FIELD_FLOAT, "SetMagnitude", InputSetMagnitude ),
-
-	// Outputs
-	DEFINE_OUTPUT(m_pOutputForce, "ImpactForce"),
-
-	// Function Pointers
-	DEFINE_FUNCTION( Disable ),
-
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CTriggerImpact )
 
 
 //------------------------------------------------------------------------------
@@ -5775,7 +5340,8 @@ int CTriggerImpact::DrawDebugTextOverlays(void)
 //-----------------------------------------------------------------------------
 // Purpose: Disables auto movement on players that touch it
 //-----------------------------------------------------------------------------
-class CTriggerPlayerMovement : public CBaseTrigger
+class [[= ks::reflect::NetTable{ .name = "DT_TriggerPlayerMovement" } ]]
+      CTriggerPlayerMovement : public CBaseTrigger
 {
 	DECLARE_CLASS( CTriggerPlayerMovement, CBaseTrigger );
 	DECLARE_SERVERCLASS();
@@ -5785,14 +5351,10 @@ public:
 	void StartTouch( CBaseEntity *pOther );
 	void EndTouch( CBaseEntity *pOther );
 	
-	DECLARE_DATADESC();
 };
 
-IMPLEMENT_SERVERCLASS_ST( CTriggerPlayerMovement, DT_TriggerPlayerMovement )
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CTriggerPlayerMovement, DT_TriggerPlayerMovement )
 
-BEGIN_DATADESC( CTriggerPlayerMovement )
-END_DATADESC()
 
 LINK_ENTITY_TO_CLASS( trigger_playermovement, CTriggerPlayerMovement );
 
@@ -5882,7 +5444,8 @@ void CTriggerPlayerMovement::EndTouch( CBaseEntity *pOther )
 //-----------------------------------------------------------------------------
 // Purpose: Disables auto movement on players that touch it
 //-----------------------------------------------------------------------------
-class CTriggerSoundOperator : public CBaseTrigger
+class [[= ks::reflect::NetTable{ .name = "DT_TriggerSoundOperator" } ]]
+      CTriggerSoundOperator : public CBaseTrigger
 {
 	DECLARE_CLASS( CTriggerSoundOperator, CBaseTrigger );
 	DECLARE_SERVERCLASS();
@@ -5895,16 +5458,12 @@ public:
 	DECLARE_DATADESC();
 
 protected:
-	CNetworkVar( int, m_nSoundOperator );
+	CNetworkVar( int, m_nSoundOperator, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_NOSCALE } ]] [[= ks::reflect::Key{ .name = "sosvar" } ]] );
 };
 
-IMPLEMENT_SERVERCLASS_ST( CTriggerSoundOperator, DT_TriggerSoundOperator )
-	SendPropInt( SENDINFO( m_nSoundOperator ), -1, SPROP_NOSCALE )
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CTriggerSoundOperator, DT_TriggerSoundOperator )
 
-BEGIN_DATADESC( CTriggerSoundOperator )
-	DEFINE_KEYFIELD( m_nSoundOperator, FIELD_INTEGER, "sosvar" )
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CTriggerSoundOperator )
 
 LINK_ENTITY_TO_CLASS( trigger_soundoperator, CTriggerSoundOperator );
 
@@ -5951,20 +5510,10 @@ void CTriggerSoundOperator::EndTouch( CBaseEntity *pOther )
 //------------------------------------------------------------------------------
 // Save/load
 //------------------------------------------------------------------------------
-BEGIN_DATADESC( CBaseVPhysicsTrigger )
-	DEFINE_KEYFIELD( m_bDisabled,		FIELD_BOOLEAN,	"StartDisabled" ),
-	DEFINE_KEYFIELD( m_iFilterName,	FIELD_STRING,	"filtername" ),
-	DEFINE_FIELD( m_hFilter,	FIELD_EHANDLE ),
-
-	DEFINE_INPUTFUNC( FIELD_VOID, "Enable", InputEnable ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "Disable", InputDisable ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "Toggle", InputToggle ),
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CBaseVPhysicsTrigger )
 
 
-IMPLEMENT_SERVERCLASS_ST( CBaseVPhysicsTrigger, DT_BaseVPhysicsTrigger )
-	//SendPropBool	( SENDINFO( m_bDisabled ) ),
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CBaseVPhysicsTrigger, DT_BaseVPhysicsTrigger )
 
 //------------------------------------------------------------------------------
 // Spawn
@@ -6160,7 +5709,7 @@ public:
 	void StartTouch( CBaseEntity *pOther );
 	void EndTouch( CBaseEntity *pOther );
 
-	void InputSetVelocityLimitTime( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetVelocityLimitTime", .type = FIELD_STRING } ]] void InputSetVelocityLimitTime( inputdata_t &inputdata );
 
 	float LinearLimit();
 
@@ -6181,42 +5730,25 @@ private:
 
 	EntityParticleTrailInfo_t	m_ParticleTrail;
 
-	float						m_gravityScale;
-	float						m_addAirDensity;
-	float						m_linearLimit;
-	float						m_linearLimitDelta;
+	[[= ks::reflect::Key{ .name = "SetGravityScale", .input = true } ]] float						m_gravityScale;
+	[[= ks::reflect::Key{ .name = "SetAdditionalAirDensity", .input = true } ]] float						m_addAirDensity;
+	[[= ks::reflect::Key{ .name = "SetVelocityLimit", .input = true } ]] float						m_linearLimit;
+	[[= ks::reflect::Key{ .name = "SetVelocityLimitDelta", .input = true } ]] float						m_linearLimitDelta;
 	float						m_linearLimitTime;
 	float						m_linearLimitStart;
 	float						m_linearLimitStartTime;
-	float						m_linearScale;
-	float						m_angularLimit;
-	float						m_angularScale;
-	float						m_linearForce;
-	QAngle						m_linearForceAngles;
+	[[= ks::reflect::Key{ .name = "SetVelocityScale", .input = true } ]] float						m_linearScale;
+	[[= ks::reflect::Key{ .name = "SetAngVelocityLimit", .input = true } ]] float						m_angularLimit;
+	[[= ks::reflect::Key{ .name = "SetAngVelocityScale", .input = true } ]] float						m_angularScale;
+	[[= ks::reflect::Key{ .name = "SetLinearForce", .input = true } ]] float						m_linearForce;
+	[[= ks::reflect::Key{ .name = "SetLinearForceAngles", .input = true } ]] QAngle						m_linearForceAngles;
 };
 
 
 //------------------------------------------------------------------------------
 // Save/load
 //------------------------------------------------------------------------------
-BEGIN_DATADESC( CTriggerVPhysicsMotion )
-	DEFINE_PHYSPTR( m_pController ),
-	DEFINE_EMBEDDED( m_ParticleTrail ),
-	DEFINE_INPUT( m_gravityScale, FIELD_FLOAT, "SetGravityScale" ),
-	DEFINE_INPUT( m_addAirDensity, FIELD_FLOAT, "SetAdditionalAirDensity" ),
-	DEFINE_INPUT( m_linearLimit, FIELD_FLOAT, "SetVelocityLimit" ),
-	DEFINE_INPUT( m_linearLimitDelta, FIELD_FLOAT, "SetVelocityLimitDelta" ),
-	DEFINE_FIELD( m_linearLimitTime, FIELD_FLOAT ),
-	DEFINE_FIELD( m_linearLimitStart, FIELD_TIME ),
-	DEFINE_FIELD( m_linearLimitStartTime, FIELD_TIME ),
-	DEFINE_INPUT( m_linearScale, FIELD_FLOAT, "SetVelocityScale" ),
-	DEFINE_INPUT( m_angularLimit, FIELD_FLOAT, "SetAngVelocityLimit" ),
-	DEFINE_INPUT( m_angularScale, FIELD_FLOAT, "SetAngVelocityScale" ),
-	DEFINE_INPUT( m_linearForce, FIELD_FLOAT, "SetLinearForce" ),
-	DEFINE_INPUT( m_linearForceAngles, FIELD_VECTOR, "SetLinearForceAngles" ),
-
-	DEFINE_INPUTFUNC( FIELD_STRING, "SetVelocityLimitTime", InputSetVelocityLimitTime ),
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CTriggerVPhysicsMotion )
 
 LINK_ENTITY_TO_CLASS( trigger_vphysics_motion, CTriggerVPhysicsMotion );
 
@@ -6547,11 +6079,8 @@ public:
 	virtual void StartTouch( CBaseEntity *pOther );
 	virtual void EndTouch( CBaseEntity *pOther );
 
-	DECLARE_DATADESC();
 };
 
-BEGIN_DATADESC( CTriggerAutoCrouch )
-END_DATADESC()
 
 
 LINK_ENTITY_TO_CLASS( trigger_auto_crouch, CTriggerAutoCrouch );

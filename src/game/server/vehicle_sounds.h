@@ -41,7 +41,6 @@ extern vehiclesound g_iSoundsToStopOnExit[NUM_SOUNDS_TO_STOP_ON_EXIT];
 //-----------------------------------------------------------------------------
 struct vehicle_gear_t
 {
-	DECLARE_DATADESC();
 
 	float		flMinSpeed;
 	float		flMaxSpeed;
@@ -50,7 +49,6 @@ struct vehicle_gear_t
 
 struct vehicle_crashsound_t
 {
-	DECLARE_DATADESC();
 
 	float		flMinSpeed;
 	float		flMinDeltaSpeed;
@@ -107,7 +105,6 @@ struct vehiclesounds_t
 		}
 	}
 
-	DECLARE_DATADESC();
 
 	CUtlVector<vehicle_gear_t>	pGears;
 	CUtlVector<vehicle_crashsound_t> crashSounds;

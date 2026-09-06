@@ -10,17 +10,13 @@
 #include "hud.h"
 #include "cdll_client_int.h"
 #include "igameevents.h"
+#include "reflect_recvtable.h"
+#include "reflect_annotations.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
-IMPLEMENT_CLIENTCLASS_DT( C_VoteController, DT_VoteController, CVoteController )
-	RecvPropInt( RECVINFO( m_iActiveIssueIndex ), 0, C_VoteController::RecvProxy_VoteType ),
-	RecvPropInt( RECVINFO( m_iOnlyTeamToVote ) ),
-	RecvPropArray3( RECVINFO_ARRAY( m_nVoteOptionCount ), RecvPropInt( RECVINFO( m_nVoteOptionCount[0] ), 0, C_VoteController::RecvProxy_VoteOption ) ),
-	RecvPropInt( RECVINFO( m_nPotentialVotes ) ),
-	RecvPropBool( RECVINFO( m_bIsYesNoVote ) )
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS( C_VoteController, DT_VoteController, CVoteController )
 
 
 //-----------------------------------------------------------------------------

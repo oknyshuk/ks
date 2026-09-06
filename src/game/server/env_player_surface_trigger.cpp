@@ -5,6 +5,8 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_annotations.h"
 #include "decals.h"
 #include "env_player_surface_trigger.h"
 
@@ -13,21 +15,7 @@
 
 LINK_ENTITY_TO_CLASS( env_player_surface_trigger, CEnvPlayerSurfaceTrigger );
 
-BEGIN_DATADESC( CEnvPlayerSurfaceTrigger )
-	DEFINE_KEYFIELD( m_iTargetGameMaterial, FIELD_INTEGER, "gamematerial" ),
-	DEFINE_FIELD( m_iCurrentGameMaterial, FIELD_INTEGER ),
-	DEFINE_FIELD( m_bDisabled, FIELD_BOOLEAN ),
-
-	DEFINE_THINKFUNC( UpdateMaterialThink ),
-
-	// Inputs
-	DEFINE_INPUTFUNC( FIELD_VOID, "Disable", InputDisable ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "Enable", InputEnable ),
-
-	// Outputs
-	DEFINE_OUTPUT(m_OnSurfaceChangedToTarget, "OnSurfaceChangedToTarget"),
-	DEFINE_OUTPUT(m_OnSurfaceChangedFromTarget, "OnSurfaceChangedFromTarget"),
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CEnvPlayerSurfaceTrigger )
 
 // Global list of surface triggers
 CUtlVector< CHandle<CEnvPlayerSurfaceTrigger> >	g_PlayerSurfaceTriggers;

@@ -10,7 +10,10 @@
 //===========================================================================//
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_annotations.h"
 #include "EntityFlame.h"
+#include "reflect_sendtable.h"
 #include "ai_basenpc.h"
 #ifdef INFESTED_DLL
 #include "asw_fire.h"
@@ -27,25 +30,9 @@
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
-BEGIN_DATADESC( CEntityFlame )
-
-	DEFINE_FIELD( m_flLifetime, FIELD_TIME ),
-	DEFINE_FIELD( m_flSize, FIELD_FLOAT ),
-	DEFINE_FIELD( m_hEntAttached, FIELD_EHANDLE ),
-	DEFINE_FIELD( m_iDangerSound, FIELD_INTEGER ),
-	DEFINE_FIELD( m_bCheapEffect, FIELD_BOOLEAN ),
-	// DEFINE_FIELD( m_bPlayingSound, FIELD_BOOLEAN ),
-	// DEFINE_FIELD( m_DangerLinks, CUtlVector< CAI_Link* > ),
-	
-	DEFINE_FUNCTION( FlameThink ),
-
-END_DATADESC()
 
 
-IMPLEMENT_SERVERCLASS_ST( CEntityFlame, DT_EntityFlame )
-	SendPropEHandle( SENDINFO( m_hEntAttached ) ),
-	SendPropBool( SENDINFO( m_bCheapEffect ) ),
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CEntityFlame, DT_EntityFlame )
 
 #ifndef INFESTED_DLL
 LINK_ENTITY_TO_CLASS( entityflame, CEntityFlame );
@@ -337,17 +324,12 @@ public:
 	virtual void Precache();
 
 protected:
-	void InputIgnite( inputdata_t &inputdata );
-	float m_flLifetime;
+	[[= ks::reflect::Input{ .name = "Ignite", .type = FIELD_VOID } ]] void InputIgnite( inputdata_t &inputdata );
+	[[= ks::reflect::Key{ .name = "lifetime" } ]] float m_flLifetime;
 };
 
 
-BEGIN_DATADESC( CEnvEntityIgniter )
-
-	DEFINE_KEYFIELD( m_flLifetime, FIELD_FLOAT, "lifetime" ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "Ignite", InputIgnite ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CEnvEntityIgniter )
 
 
 LINK_ENTITY_TO_CLASS( env_entity_igniter, CEnvEntityIgniter );

@@ -6,6 +6,8 @@
 
 #ifndef WEAPON_KNIFE_H
 #define WEAPON_KNIFE_H
+
+#include "reflect_annotations.h"
 #ifdef _WIN32
 #pragma once
 #endif
@@ -26,7 +28,8 @@
 // CKnife class definition.
 // ----------------------------------------------------------------------------- //
 
-class CKnife : public CWeaponCSBase
+class [[= ks::reflect::NetTable{ .name = "DT_WeaponKnife" } ]]
+      CKnife : public CWeaponCSBase
 {
 public:
 	DECLARE_CLASS( CKnife, CWeaponCSBase );
@@ -67,7 +70,8 @@ private:
 
 };
 
-class CKnifeGG : public CKnife
+class [[= ks::reflect::NetTable{ .name = "DT_WeaponKnifeGG" } ]]
+      CKnifeGG : public CKnife
 {
 public:
 	DECLARE_CLASS( CKnifeGG, CKnife );

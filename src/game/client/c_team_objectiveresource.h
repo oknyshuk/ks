@@ -17,12 +17,20 @@
 
 #define TEAM_ARRAY( index, team )		(index + (team * MAX_CONTROL_POINTS))
 
+// Defined in c_team_objectiveresource.cpp and named by the Proxy annotations below, which have
+// to be constant expressions where the class is declared. RecvProxy_ObjectiveResourceOwner was
+// a .cpp static and now has external linkage for that reason.
+void RecvProxy_ObjectiveResourceOwner( const CRecvProxyData *pData, void *pStruct, void *pOut );
+void RecvProxy_CappingTeam( const CRecvProxyData *pData, void *pStruct, void *pOut );
+void RecvProxy_CapLayout( const CRecvProxyData *pData, void *pStruct, void *pOut );
+
 //-----------------------------------------------------------------------------
 // Purpose: An entity that networks the state of the game's objectives.
 //			May contain data for objectives that aren't used by your mod, but
 //			the extra data will never be networked as long as it's zeroed out.
 //-----------------------------------------------------------------------------
-class C_BaseTeamObjectiveResource : public C_BaseEntity
+class [[= ks::reflect::NetTable{ .name = "DT_BaseTeamObjectiveResource", .base = false } ]]
+      C_BaseTeamObjectiveResource : public C_BaseEntity
 {
 	DECLARE_CLASS( C_BaseTeamObjectiveResource, C_BaseEntity );
 public:
@@ -210,41 +218,41 @@ public:
 	}
 
 protected:
-	int		m_iTimerToShowInHUD;
-	int		m_iStopWatchTimer;
+	[[= ks::reflect::Net{} ]] int		m_iTimerToShowInHUD;
+	[[= ks::reflect::Net{} ]] int		m_iStopWatchTimer;
 
-	int		m_iNumControlPoints;
+	[[= ks::reflect::Net{} ]] int		m_iNumControlPoints;
 	int		m_iPrevNumControlPoints;
-	bool	m_bPlayingMiniRounds;
-	bool	m_bControlPointsReset;
+	[[= ks::reflect::Net{} ]] bool	m_bPlayingMiniRounds;
+	[[= ks::reflect::Net{} ]] bool	m_bControlPointsReset;
 	bool	m_bOldControlPointsReset;
-	int		m_iUpdateCapHudParity;
+	[[= ks::reflect::Net{} ]] int		m_iUpdateCapHudParity;
 	int		m_iOldUpdateCapHudParity;
 
 	// data variables
-	Vector		m_vCPPositions[MAX_CONTROL_POINTS];
-	bool		m_bCPIsVisible[MAX_CONTROL_POINTS];
-	float		m_flLazyCapPerc[MAX_CONTROL_POINTS];
+	[[= ks::reflect::Net{ .varlen = true } ]] Vector		m_vCPPositions[MAX_CONTROL_POINTS];
+	[[= ks::reflect::Net{ .enc = ks::reflect::ENC_INT } ]] bool		m_bCPIsVisible[MAX_CONTROL_POINTS];
+	[[= ks::reflect::Net{} ]] float		m_flLazyCapPerc[MAX_CONTROL_POINTS];
 	float		m_flOldLazyCapPerc[MAX_CONTROL_POINTS];
-	int			m_iTeamIcons[MAX_CONTROL_POINTS * MAX_CONTROL_POINT_TEAMS];
-	int			m_iTeamOverlays[MAX_CONTROL_POINTS * MAX_CONTROL_POINT_TEAMS];
-	int			m_iTeamReqCappers[MAX_CONTROL_POINTS * MAX_CONTROL_POINT_TEAMS];
-	float		m_flTeamCapTime[MAX_CONTROL_POINTS * MAX_CONTROL_POINT_TEAMS];
-	int			m_iPreviousPoints[ MAX_CONTROL_POINTS * MAX_CONTROL_POINT_TEAMS * MAX_PREVIOUS_POINTS ];
-	bool		m_bTeamCanCap[ MAX_CONTROL_POINTS * MAX_CONTROL_POINT_TEAMS ];
-	int			m_iTeamBaseIcons[MAX_TEAMS];
-	int			m_iBaseControlPoints[MAX_TEAMS];
-	bool		m_bInMiniRound[MAX_CONTROL_POINTS];
-	int			m_iWarnOnCap[MAX_CONTROL_POINTS];
-	char		m_iszWarnSound[MAX_CONTROL_POINTS][255];
-	float		m_flPathDistance[MAX_CONTROL_POINTS];
+	[[= ks::reflect::Net{} ]] int			m_iTeamIcons[MAX_CONTROL_POINTS * MAX_CONTROL_POINT_TEAMS];
+	[[= ks::reflect::Net{} ]] int			m_iTeamOverlays[MAX_CONTROL_POINTS * MAX_CONTROL_POINT_TEAMS];
+	[[= ks::reflect::Net{} ]] int			m_iTeamReqCappers[MAX_CONTROL_POINTS * MAX_CONTROL_POINT_TEAMS];
+	[[= ks::reflect::Net{} ]] float		m_flTeamCapTime[MAX_CONTROL_POINTS * MAX_CONTROL_POINT_TEAMS];
+	[[= ks::reflect::Net{} ]] int			m_iPreviousPoints[ MAX_CONTROL_POINTS * MAX_CONTROL_POINT_TEAMS * MAX_PREVIOUS_POINTS ];
+	[[= ks::reflect::Net{} ]] bool		m_bTeamCanCap[ MAX_CONTROL_POINTS * MAX_CONTROL_POINT_TEAMS ];
+	[[= ks::reflect::Net{} ]] int			m_iTeamBaseIcons[MAX_TEAMS];
+	[[= ks::reflect::Net{} ]] int			m_iBaseControlPoints[MAX_TEAMS];
+	[[= ks::reflect::Net{} ]] bool		m_bInMiniRound[MAX_CONTROL_POINTS];
+	[[= ks::reflect::Net{} ]] int			m_iWarnOnCap[MAX_CONTROL_POINTS];
+	[[= ks::reflect::Net{ .enc = ks::reflect::ENC_STRING, .varlen = true } ]] char		m_iszWarnSound[MAX_CONTROL_POINTS][255];
+	[[= ks::reflect::Net{} ]] float		m_flPathDistance[MAX_CONTROL_POINTS];
 
 	// state variables
-	int		m_iNumTeamMembers[MAX_CONTROL_POINTS * MAX_CONTROL_POINT_TEAMS];
-	int		m_iCappingTeam[MAX_CONTROL_POINTS];
-	int		m_iTeamInZone[MAX_CONTROL_POINTS];
-	bool	m_bBlocked[MAX_CONTROL_POINTS];
-	int		m_iOwner[MAX_CONTROL_POINTS];
+	[[= ks::reflect::Net{} ]] int		m_iNumTeamMembers[MAX_CONTROL_POINTS * MAX_CONTROL_POINT_TEAMS];
+	[[= ks::reflect::Net{} ]] [[= ks::reflect::Proxy<RecvProxy_CappingTeam, ks::reflect::WIRE_RECV>{} ]] int		m_iCappingTeam[MAX_CONTROL_POINTS];
+	[[= ks::reflect::Net{} ]] int		m_iTeamInZone[MAX_CONTROL_POINTS];
+	[[= ks::reflect::Net{ .enc = ks::reflect::ENC_INT } ]] bool	m_bBlocked[MAX_CONTROL_POINTS];
+	[[= ks::reflect::Net{} ]] [[= ks::reflect::Proxy<RecvProxy_ObjectiveResourceOwner, ks::reflect::WIRE_RECV>{} ]] int		m_iOwner[MAX_CONTROL_POINTS];
 
 	// client calculated state
 	float	m_flCapTimeLeft[MAX_CONTROL_POINTS];
@@ -252,7 +260,7 @@ protected:
 
 	bool	m_bWarnedOnFinalCap[MAX_CONTROL_POINTS];
 	float	m_flLastCapWarningTime[MAX_CONTROL_POINTS];
-	char	m_pszCapLayoutInHUD[MAX_CAPLAYOUT_LENGTH];
+	[[= ks::reflect::Net{} ]] [[= ks::reflect::Proxy<RecvProxy_CapLayout, ks::reflect::WIRE_RECV>{} ]] char	m_pszCapLayoutInHUD[MAX_CAPLAYOUT_LENGTH];
 };
 
 extern C_BaseTeamObjectiveResource *g_pObjectiveResource;

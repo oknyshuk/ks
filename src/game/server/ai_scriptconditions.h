@@ -12,6 +12,7 @@
 #include "entityoutput.h"
 #include "simtimer.h"
 #include "ai_npcstate.h"
+#include "reflect_annotations.h"
 
 #if defined( _WIN32 )
 #pragma once
@@ -157,13 +158,13 @@ private:
 	void UpdateOnRemove( void );
 
 	// Input handlers
-	void InputEnable( inputdata_t &inputdata );
-	void InputDisable( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Enable", .type = FIELD_VOID } ]] void InputEnable( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Disable", .type = FIELD_VOID } ]] void InputDisable( inputdata_t &inputdata );
 
 	// Output handlers
-	COutputEvent	m_OnConditionsSatisfied;
-	COutputEvent	m_OnConditionsTimeout;
-	COutputEvent	m_NoValidActors;
+	[[= ks::reflect::Key{ .name = "OnConditionsSatisfied" } ]] COutputEvent	m_OnConditionsSatisfied;
+	[[= ks::reflect::Key{ .name = "OnConditionsTimeout" } ]] COutputEvent	m_OnConditionsTimeout;
+	[[= ks::reflect::Key{ .name = "NoValidActors" } ]] COutputEvent	m_NoValidActors;
 
 	//---------------------------------
 
@@ -198,11 +199,11 @@ private:
 	//---------------------------------
 	// General conditions info
 
-	bool			m_fDisabled;
+	[[= ks::reflect::Key{ .name = "StartDisabled" } ]] bool			m_fDisabled;
 	bool			m_bLeaveAsleep;
 	EHANDLE			m_hTarget;
 
-	float			m_flRequiredTime;	// How long should the conditions me true
+	[[= ks::reflect::Key{ .name = "RequiredTime" } ]] float			m_flRequiredTime;	// How long should the conditions me true
 
 #ifndef HL2_EPISODIC
 	EHANDLE 		m_hActor;
@@ -212,37 +213,37 @@ private:
 
 	//---------------------------------
 	// Specific conditions data
-	NPC_STATE		m_fMinState;
-	NPC_STATE		m_fMaxState;
-	ThreeState_t 	m_fScriptStatus;
-	ThreeState_t 	m_fActorSeePlayer;
-	string_t		m_Actor;
+	[[= ks::reflect::Key{ .name = "MinimumState" } ]] NPC_STATE		m_fMinState;
+	[[= ks::reflect::Key{ .name = "MaximumState" } ]] NPC_STATE		m_fMaxState;
+	[[= ks::reflect::Key{ .name = "ScriptStatus" } ]] ThreeState_t 	m_fScriptStatus;
+	[[= ks::reflect::Key{ .name = "ActorSeePlayer" } ]] ThreeState_t 	m_fActorSeePlayer;
+	[[= ks::reflect::Key{ .name = "Actor" } ]] string_t		m_Actor;
 
-	float 			m_flPlayerActorProximity;
+	[[= ks::reflect::Key{ .name = "PlayerActorProximity" } ]] float 			m_flPlayerActorProximity;
 	CAI_ProxTester	m_PlayerActorProxTester;
 
-	float			m_flPlayerActorFOV;
-	bool			m_bPlayerActorFOVTrueCone;
-	ThreeState_t	m_fPlayerActorLOS;
-	ThreeState_t 	m_fActorSeeTarget;
+	[[= ks::reflect::Key{ .name = "PlayerActorFOV" } ]] float			m_flPlayerActorFOV;
+	[[= ks::reflect::Key{ .name = "PlayerActorFOVTrueCone" } ]] bool			m_bPlayerActorFOVTrueCone;
+	[[= ks::reflect::Key{ .name = "PlayerActorLOS" } ]] ThreeState_t	m_fPlayerActorLOS;
+	[[= ks::reflect::Key{ .name = "ActorSeeTarget" } ]] ThreeState_t 	m_fActorSeeTarget;
 
-	float 			m_flActorTargetProximity;
+	[[= ks::reflect::Key{ .name = "ActorTargetProximity" } ]] float 			m_flActorTargetProximity;
 	CAI_ProxTester	m_ActorTargetProxTester;
 
-	float 			m_flPlayerTargetProximity;
+	[[= ks::reflect::Key{ .name = "PlayerTargetProximity" } ]] float 			m_flPlayerTargetProximity;
 	CAI_ProxTester	m_PlayerTargetProxTester;
 
-	float 			m_flPlayerTargetFOV;
-	bool			m_bPlayerTargetFOVTrueCone;
-	ThreeState_t	m_fPlayerTargetLOS;
-	ThreeState_t	m_fPlayerBlockingActor;
-	ThreeState_t	m_fActorInPVS;
+	[[= ks::reflect::Key{ .name = "PlayerTargetFOV" } ]] float 			m_flPlayerTargetFOV;
+	[[= ks::reflect::Key{ .name = "PlayerTargetFOVTrueCone" } ]] bool			m_bPlayerTargetFOVTrueCone;
+	[[= ks::reflect::Key{ .name = "PlayerTargetLOS" } ]] ThreeState_t	m_fPlayerTargetLOS;
+	[[= ks::reflect::Key{ .name = "PlayerBlockingActor" } ]] ThreeState_t	m_fPlayerBlockingActor;
+	[[= ks::reflect::Key{ .name = "ActorInPVS" } ]] ThreeState_t	m_fActorInPVS;
 
-	float			m_flMinTimeout;
-	float			m_flMaxTimeout;
+	[[= ks::reflect::Key{ .name = "MinTimeout" } ]] float			m_flMinTimeout;
+	[[= ks::reflect::Key{ .name = "MaxTimeout" } ]] float			m_flMaxTimeout;
 
-	ThreeState_t	m_fActorInVehicle;
-	ThreeState_t	m_fPlayerInVehicle;
+	[[= ks::reflect::Key{ .name = "ActorInVehicle" } ]] ThreeState_t	m_fActorInVehicle;
+	[[= ks::reflect::Key{ .name = "PlayerInVehicle" } ]] ThreeState_t	m_fPlayerInVehicle;
 
 	CUtlVector< CAI_ScriptConditionsElement > m_ElementList;
 

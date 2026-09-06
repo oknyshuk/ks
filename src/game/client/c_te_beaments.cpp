@@ -7,6 +7,8 @@
 // $NoKeywords: $
 //=============================================================================//
 #include "cbase.h"
+#include "reflect_recvtable.h"
+#include "reflect_annotations.h"
 #include "c_te_basebeam.h"
 #include "iviewrender_beams.h"
 
@@ -16,7 +18,8 @@
 //-----------------------------------------------------------------------------
 // Purpose: BeamEnts TE
 //-----------------------------------------------------------------------------
-class C_TEBeamEnts : public C_TEBaseBeam
+class [[= ks::reflect::NetTable{ .name = "DT_TEBeamEnts" } ]]
+      C_TEBeamEnts : public C_TEBaseBeam
 {
 public:
 	DECLARE_CLASS( C_TEBeamEnts, C_TEBaseBeam );
@@ -28,8 +31,8 @@ public:
 	virtual void	PostDataUpdate( DataUpdateType_t updateType );
 
 public:
-	int				m_nStartEntity;
-	int				m_nEndEntity;
+	[[= ks::reflect::Net{} ]] int				m_nStartEntity;
+	[[= ks::reflect::Net{} ]] int				m_nEndEntity;
 };
 
 //-----------------------------------------------------------------------------
@@ -72,8 +75,5 @@ void C_TEBeamEnts::PostDataUpdate( DataUpdateType_t updateType )
 // Expose the TE to the engine.
 IMPLEMENT_CLIENTCLASS_EVENT( C_TEBeamEnts, DT_TEBeamEnts, CTEBeamEnts );
 
-BEGIN_RECV_TABLE(C_TEBeamEnts, DT_TEBeamEnts)
-	RecvPropInt( RECVINFO(m_nStartEntity)),
-	RecvPropInt( RECVINFO(m_nEndEntity)),
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_TABLE( C_TEBeamEnts, DT_TEBeamEnts );
 

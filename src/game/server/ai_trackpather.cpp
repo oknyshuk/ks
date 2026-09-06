@@ -5,6 +5,8 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_annotations.h"
 
 #include "trains.h"
 #include "ai_trackpather.h"
@@ -19,61 +21,7 @@ ConVar g_debug_trackpather( "g_debug_trackpather", "0", FCVAR_CHEAT );
 
 //------------------------------------------------------------------------------
 
-BEGIN_DATADESC( CAI_TrackPather )
-	DEFINE_FIELD( m_vecDesiredPosition,		FIELD_POSITION_VECTOR ),
-	DEFINE_FIELD( m_vecGoalOrientation,		FIELD_VECTOR ),
-
-	DEFINE_FIELD( m_pCurrentPathTarget,		FIELD_CLASSPTR ),
-	DEFINE_FIELD( m_pDestPathTarget,		FIELD_CLASSPTR ),
-	DEFINE_FIELD( m_pLastPathTarget,		FIELD_CLASSPTR ),
-	DEFINE_FIELD( m_pTargetNearestPath,		FIELD_CLASSPTR ),
-	
-	DEFINE_FIELD( m_strCurrentPathName,		FIELD_STRING ),
-	DEFINE_FIELD( m_strDestPathName,		FIELD_STRING ),
-	DEFINE_FIELD( m_strLastPathName,		FIELD_STRING ),
-	DEFINE_FIELD( m_strTargetNearestPathName,	FIELD_STRING ),
-	
-	DEFINE_FIELD( m_vecLastGoalCheckPosition,	FIELD_POSITION_VECTOR ),
-	DEFINE_FIELD( m_flEnemyPathUpdateTime,	FIELD_TIME ),
-	DEFINE_FIELD( m_bForcedMove,			FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_bPatrolling,			FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_bPatrolBreakable,		FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_bLeading,				FIELD_BOOLEAN ),
-
-	// Derived class pathing data
-	DEFINE_FIELD( m_flTargetDistanceThreshold,	FIELD_FLOAT ),
-	DEFINE_FIELD( m_flAvoidDistance,		FIELD_FLOAT ),
-
-	DEFINE_FIELD( m_flTargetTolerance,		FIELD_FLOAT ),
-	DEFINE_FIELD( m_vecSegmentStartPoint,	FIELD_POSITION_VECTOR ),
-	DEFINE_FIELD( m_vecSegmentStartSplinePoint,	FIELD_POSITION_VECTOR ),
-	DEFINE_FIELD( m_bMovingForward,			FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_bChooseFarthestPoint,	FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_flFarthestPathDist,		FIELD_FLOAT ),
-	DEFINE_FIELD( m_flPathMaxSpeed,			FIELD_FLOAT ),
-	DEFINE_FIELD( m_flTargetDistFromPath,	FIELD_FLOAT ),
-	DEFINE_FIELD( m_flLeadDistance,			FIELD_FLOAT ),
-	DEFINE_FIELD( m_vecTargetPathDir,		FIELD_VECTOR ),
-	DEFINE_FIELD( m_vecTargetPathPoint,		FIELD_POSITION_VECTOR ),
-
-	DEFINE_FIELD( m_nPauseState,			FIELD_INTEGER ),
-
-	// Inputs
-	DEFINE_INPUTFUNC( FIELD_STRING, "SetTrack", InputSetTrack ),
-	DEFINE_INPUTFUNC( FIELD_STRING, "FlyToSpecificTrackViaPath", InputFlyToPathTrack ),
-	DEFINE_INPUTFUNC( FIELD_VOID,	 "StartPatrol", InputStartPatrol ),
-	DEFINE_INPUTFUNC( FIELD_VOID,	 "StopPatrol", InputStopPatrol ),
-	DEFINE_INPUTFUNC( FIELD_VOID,	 "StartBreakableMovement", InputStartBreakableMovement ),
-	DEFINE_INPUTFUNC( FIELD_VOID,	 "StopBreakableMovement", InputStopBreakableMovement ),
-	DEFINE_INPUTFUNC( FIELD_VOID,	 "ChooseFarthestPathPoint", InputChooseFarthestPathPoint ),
-	DEFINE_INPUTFUNC( FIELD_VOID,	 "ChooseNearestPathPoint", InputChooseNearestPathPoint ),
-	DEFINE_INPUTFUNC( FIELD_INTEGER,"InputStartLeading", InputStartLeading ),
-	DEFINE_INPUTFUNC( FIELD_VOID,	 "InputStopLeading", InputStopLeading ),
-
-	// Obsolete, for backwards compatibility	
-	DEFINE_INPUTFUNC( FIELD_VOID,	 "StartPatrolBreakable", InputStartPatrolBreakable ),
-	DEFINE_INPUTFUNC( FIELD_STRING, "FlyToPathTrack", InputFlyToPathTrack ),
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CAI_TrackPather )
 
 
 //-----------------------------------------------------------------------------

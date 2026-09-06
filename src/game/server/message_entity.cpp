@@ -6,6 +6,8 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_annotations.h"
 #include "basecombatweapon.h"
 #include "explode.h"
 #include "eventqueue.h"
@@ -42,34 +44,22 @@ public:
 
 	virtual void UpdateOnRemove();
 
-	void	InputEnable( inputdata_t &inputdata );
-	void	InputDisable( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Enable", .type = FIELD_VOID } ]] void	InputEnable( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Disable", .type = FIELD_VOID } ]] void	InputDisable( inputdata_t &inputdata );
 
 	DECLARE_DATADESC();
 
 protected:
-	int				m_radius;
-	string_t		m_messageText;
+	[[= ks::reflect::Key{ .name = "radius" } ]] int				m_radius;
+	[[= ks::reflect::Key{ .name = "message" } ]] string_t		m_messageText;
 	bool			m_drawText;
-	bool			m_bDeveloperOnly;
+	[[= ks::reflect::Key{ .name = "developeronly" } ]] bool			m_bDeveloperOnly;
 	bool			m_bEnabled;
 };
 
 LINK_ENTITY_TO_CLASS( point_message, CMessageEntity );
 
-BEGIN_DATADESC( CMessageEntity )
-
-	DEFINE_KEYFIELD( m_radius, FIELD_INTEGER, "radius" ),
-	DEFINE_KEYFIELD( m_messageText, FIELD_STRING, "message" ),
-	DEFINE_KEYFIELD( m_bDeveloperOnly, FIELD_BOOLEAN, "developeronly" ),
-	DEFINE_FIELD( m_drawText, FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_bEnabled, FIELD_BOOLEAN ),
-
-	// Inputs
-	DEFINE_INPUTFUNC( FIELD_VOID,	 "Enable", InputEnable ),
-	DEFINE_INPUTFUNC( FIELD_VOID,	 "Disable", InputDisable ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CMessageEntity )
 
 static CUtlVector< CHandle< CMessageEntity > >	g_MessageEntities;
 

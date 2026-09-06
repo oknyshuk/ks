@@ -6,12 +6,13 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_annotations.h"
+#include "reflect_datamap.h"
 
 #include "isaverestore.h"
 #include "ai_behavior.h"
 #include "scripted.h"
 #include "env_debughistory.h"
-#include "saverestore_utlvector.h"
 #include "checksum_crc.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
@@ -21,26 +22,13 @@ bool g_bBehaviorHost_PreventBaseClassGatherConditions;
 
 //-----------------------------------------------------------------------------
 
-BEGIN_SIMPLE_DATADESC( AIChannelScheduleState_t )
-	DEFINE_FIELD( bActive,				FIELD_BOOLEAN ),
-	// pSchedule
-	// idealSchedule
-	// failSchedule
-	DEFINE_FIELD( iCurTask,				FIELD_INTEGER ),
-	DEFINE_FIELD( fTaskStatus,			FIELD_INTEGER ),
-	DEFINE_FIELD( timeStarted,			FIELD_TIME ),
-	DEFINE_FIELD( timeCurTaskStarted,	FIELD_TIME ),
-	DEFINE_FIELD( taskFailureCode,		FIELD_INTEGER ),
-	DEFINE_FIELD( bScheduleWasInterrupted, FIELD_BOOLEAN ),
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP_SIMPLE( AIChannelScheduleState_t )
 
 //-----------------------------------------------------------------------------
 // CAI_BehaviorBase
 //-----------------------------------------------------------------------------
 
-BEGIN_DATADESC_NO_BASE( CAI_BehaviorBase )
-	DEFINE_UTLVECTOR( m_ScheduleChannels, FIELD_EMBEDDED ),
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP_NO_BASE( CAI_BehaviorBase )
 
 //-------------------------------------
 
@@ -803,30 +791,6 @@ bool CAI_BehaviorBase::NotifyChangeBehaviorStatus( bool fCanFinishSchedule )
 
 //-------------------------------------
 
-int	CAI_BehaviorBase::Save( ISave &save )				
-{
-	if ( save.WriteAll( this, GetDataDescMap() ) )
-	{
-		SaveChannels( save );
-		return 1;
-	}
-	return 0;
-}
-
-//-------------------------------------
-
-int	CAI_BehaviorBase::Restore( IRestore &restore )
-{ 
-	if ( restore.ReadAll( this, GetDataDescMap() ) )
-	{
-		RestoreChannels( restore );
-		return 1;
-	}
-	return 0;
-}
-
-//-------------------------------------
-
 //-----------------------------------------------------------------------------
 
 const short AI_BEHAVIOR_CHANNEL_SAVE_HEADER_VERSION = 1;
@@ -853,219 +817,12 @@ struct AIBehaviorChannelSaveHeader_t
 
 //-------------------------------------
 
-BEGIN_SIMPLE_DATADESC( AIBehaviorChannelSaveHeader_t )
-	DEFINE_FIELD( 		flags,			FIELD_INTEGER ),
-	DEFINE_AUTO_ARRAY(	szSchedule,		FIELD_CHARACTER ),
-	DEFINE_FIELD( 		scheduleCrc,	FIELD_INTEGER ),
-	DEFINE_AUTO_ARRAY(	szIdealSchedule,	FIELD_CHARACTER ),
-	DEFINE_AUTO_ARRAY(	szFailSchedule,		FIELD_CHARACTER ),
-END_DATADESC()
-
-void CAI_BehaviorBase::SaveChannels( ISave &save )
-{
-	AIBehaviorChannelSaveHeader_t saveHeader;
-
-	if ( m_ScheduleChannels.Count() )
-	{
-		save.StartBlock();
-		int version = AI_BEHAVIOR_CHANNEL_SAVE_HEADER_VERSION;
-		save.WriteInt( &version );
-		for ( int i = 0; i < m_ScheduleChannels.Count(); i++ )
-		{
-			AIChannelScheduleState_t *pScheduleState = &m_ScheduleChannels[i];
-			if ( pScheduleState->pSchedule )
-			{
-				const char *pszSchedule = pScheduleState->pSchedule->GetName();
-
-				Assert( Q_strlen( pszSchedule ) < sizeof( saveHeader.szSchedule ) - 1 );
-				Q_strncpy( saveHeader.szSchedule, pszSchedule, sizeof( saveHeader.szSchedule ) );
-
-				CRC32_Init( &saveHeader.scheduleCrc );
-				CRC32_ProcessBuffer( &saveHeader.scheduleCrc, (void *)pScheduleState->pSchedule->GetTaskList(), pScheduleState->pSchedule->NumTasks() * sizeof(Task_t) );
-				CRC32_Final( &saveHeader.scheduleCrc );
-			}
-			else
-			{
-				saveHeader.szSchedule[0] = 0;
-				saveHeader.scheduleCrc = 0;
-			}
-
-			const int SCHED_NONE_GLOBAL = AI_RemapToGlobal( SCHED_NONE );
-			int idealSchedule = ( pScheduleState->idealSchedule == SCHED_NONE ) ? SCHED_NONE_GLOBAL : pScheduleState->idealSchedule;
-			Assert( !AI_IdIsLocal( idealSchedule ) );
-
-			if ( idealSchedule != -1 && idealSchedule != SCHED_NONE_GLOBAL )
-			{
-				CAI_Schedule *pIdealSchedule = GetSchedule( pScheduleState->idealSchedule );
-				if ( pIdealSchedule )
-				{
-					const char *pszIdealSchedule = pIdealSchedule->GetName();
-					Assert( Q_strlen( pszIdealSchedule ) < sizeof( saveHeader.szIdealSchedule ) - 1 );
-					Q_strncpy( saveHeader.szIdealSchedule, pszIdealSchedule, sizeof( saveHeader.szIdealSchedule ) );
-				}
-			}
-
-			int failSchedule = ( pScheduleState->failSchedule == SCHED_NONE ) ? SCHED_NONE_GLOBAL : pScheduleState->failSchedule;
-			Assert( !AI_IdIsLocal( failSchedule ) );
-			if ( failSchedule != -1 && failSchedule != SCHED_NONE_GLOBAL )
-			{
-				CAI_Schedule *pFailSchedule = GetSchedule( pScheduleState->failSchedule );
-				if ( pFailSchedule )
-				{
-					const char *pszFailSchedule = pFailSchedule->GetName();
-					Assert( Q_strlen( pszFailSchedule ) < sizeof( saveHeader.szFailSchedule ) - 1 );
-					Q_strncpy( saveHeader.szFailSchedule, pszFailSchedule, sizeof( saveHeader.szFailSchedule ) );
-				}
-			}
-
-			save.WriteAll( &saveHeader );
-		}
-		save.EndBlock();
-	}
-}
-
-//-------------------------------------
-
-void CAI_BehaviorBase::RestoreChannels( IRestore &restore )
-{
-	if ( m_ScheduleChannels.Count() )
-	{
-		restore.StartBlock();
-		int version;
-		restore.ReadInt( &version );
-		AIBehaviorChannelSaveHeader_t saveHeader;
-		for ( int i = 0; i < m_ScheduleChannels.Count(); i++ )
-		{
-			restore.ReadAll( &saveHeader );
-
-			AIChannelScheduleState_t *pScheduleState = &m_ScheduleChannels[i];
-
-			// Do schedule fix-up
-			if ( saveHeader.szIdealSchedule[0] )
-			{
-				CAI_Schedule *pIdealSchedule = g_AI_SchedulesManager.GetScheduleByName( saveHeader.szIdealSchedule );
-				pScheduleState->idealSchedule = ( pIdealSchedule ) ? pIdealSchedule->GetId() : SCHED_NONE;
-			}
-
-			if ( saveHeader.szFailSchedule[0] )
-			{
-				CAI_Schedule *pFailSchedule = g_AI_SchedulesManager.GetScheduleByName( saveHeader.szFailSchedule );
-				pScheduleState->failSchedule = ( pFailSchedule ) ? pFailSchedule->GetId() : SCHED_NONE;
-			}
-
-			bool bDiscardScheduleState = ( saveHeader.szSchedule[0] == 0 );
-
-			if ( pScheduleState->taskFailureCode >= NUM_FAIL_CODES )
-				pScheduleState->taskFailureCode = FAIL_NO_TARGET; // must have been a string, gotta punt
-
-			if ( !bDiscardScheduleState )
-			{
-				pScheduleState->pSchedule = g_AI_SchedulesManager.GetScheduleByName( saveHeader.szSchedule );
-				if ( pScheduleState->pSchedule )
-				{
-					CRC32_t scheduleCrc;
-					CRC32_Init( &scheduleCrc );
-					CRC32_ProcessBuffer( &scheduleCrc, (void *)pScheduleState->pSchedule->GetTaskList(), pScheduleState->pSchedule->NumTasks() * sizeof(Task_t) );
-					CRC32_Final( &scheduleCrc );
-
-					if ( scheduleCrc != saveHeader.scheduleCrc )
-					{
-						pScheduleState->pSchedule = NULL;
-					}
-				}
-			}
-
-			if ( !pScheduleState->pSchedule )
-				bDiscardScheduleState = true;
-
-			if ( bDiscardScheduleState )
-			{
-				ClearSchedule( i, "Restoring NPC" );
-			}
-
-		}
-		restore.EndBlock();
-	}
-}
+IMPLEMENT_REFLECT_DATAMAP_SIMPLE( AIBehaviorChannelSaveHeader_t )
 
 //-------------------------------------
 
 #define BEHAVIOR_SAVE_BLOCKNAME "AI_Behaviors"
 #define BEHAVIOR_SAVE_VERSION	2
-
-void CAI_BehaviorBase::SaveBehaviors(ISave &save, CAI_BehaviorBase *pCurrentBehavior, CAI_BehaviorBase **ppBehavior, int nBehaviors, bool bTestIfNPCSave )		
-{ 
-	save.StartBlock( BEHAVIOR_SAVE_BLOCKNAME );
-	short temp = BEHAVIOR_SAVE_VERSION;
-	save.WriteShort( &temp );
-	temp = (short)nBehaviors;
-	save.WriteShort( &temp );
-
-	for ( int i = 0; i < nBehaviors; i++ )
-	{
-		if ( ( !bTestIfNPCSave || ppBehavior[i]->ShouldNPCSave() ) )
-		{
-			bool bHasDatadesc = ( strcmp( ppBehavior[i]->GetDataDescMap()->dataClassName, CAI_BehaviorBase::m_DataMap.dataClassName ) != 0 );
-			if ( bHasDatadesc )
-			{
-				save.StartBlock();
-				save.WriteString( ppBehavior[i]->GetDataDescMap()->dataClassName );
-				bool bIsCurrent = ( pCurrentBehavior == ppBehavior[i] );
-				save.WriteBool( &bIsCurrent );
-				ppBehavior[i]->Save( save );
-				save.EndBlock();
-			}
-			else
-			{
-				DevMsg( "Note: behavior \"%s\" lacks a datadesc and probably won't save/restore correctly\n", ppBehavior[i]->GetName() ); // You need at least an empty datadesc to allow for correct binding on load
-			}
-		}
-	}
-
-	save.EndBlock();
-}
-
-//-------------------------------------
-
-int CAI_BehaviorBase::RestoreBehaviors(IRestore &restore, CAI_BehaviorBase **ppBehavior, int nBehaviors, bool bTestIfNPCSave )	
-{ 
-	int iCurrent = -1;
-	char szBlockName[SIZE_BLOCK_NAME_BUF];
-	restore.StartBlock( szBlockName );
-	if ( strcmp( szBlockName, BEHAVIOR_SAVE_BLOCKNAME ) == 0 )
-	{
-		short version;
-		restore.ReadShort( &version );
-		if ( version == BEHAVIOR_SAVE_VERSION )
-		{
-			short nToRestore;
-			char szClassNameCurrent[256];
-			restore.ReadShort( &nToRestore );
-			for ( int i = 0; i < nToRestore; i++ )
-			{
-				restore.StartBlock();
-				restore.ReadString( szClassNameCurrent, sizeof( szClassNameCurrent ), 0 );
-				bool bIsCurrent;
-				restore.ReadBool( &bIsCurrent );
-
-				for ( int j = 0; j < nBehaviors; j++ )
-				{
-					if ( ( !bTestIfNPCSave || ppBehavior[j]->ShouldNPCSave() ) && strcmp( ppBehavior[j]->GetDataDescMap()->dataClassName, szClassNameCurrent ) == 0 )
-					{
-						if ( bIsCurrent )
-							iCurrent = j;
-						ppBehavior[j]->Restore( restore );
-					}
-				}
-
-				restore.EndBlock();
-
-			}
-		}
-	}
-	restore.EndBlock();
-	return iCurrent; 
-}
 
 
 //-----------------------------------------------------------------------------

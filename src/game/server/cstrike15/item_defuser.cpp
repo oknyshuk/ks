@@ -23,7 +23,6 @@ public:
 	void	DefuserTouch( CBaseEntity *pOther );
 	void	ActivateThink( void );
 	
-	DECLARE_DATADESC();
 };
 
 LINK_ENTITY_TO_CLASS( item_defuser, CItemDefuser );
@@ -31,13 +30,6 @@ LINK_ENTITY_TO_CLASS( item_cutters, CItemDefuser );
 PRECACHE_REGISTER(item_defuser);
 
 
-BEGIN_DATADESC( CItemDefuser )
-
-	//Functions
-	DEFINE_THINKFUNC( ActivateThink ),
-	DEFINE_ENTITYFUNC( DefuserTouch ),
-
-END_DATADESC()
 
 Vector g_vecDefuserPosition = vec3_origin;
 CBaseEntity* g_pDefuserEntity = NULL;

@@ -14,6 +14,8 @@
 #ifndef C_TE_PARTICLESYSTEM_H
 #define C_TE_PARTICLESYSTEM_H
 
+#include "reflect_annotations.h"
+
 
 #include "particlemgr.h"
 #include "c_basetempentity.h"
@@ -41,7 +43,8 @@ typedef enum {
 
 
 
-class C_TEParticleSystem : public C_BaseTempEntity
+class [[= ks::reflect::NetTable{ .name = "DT_TEParticleSystem" } ]]
+      C_TEParticleSystem : public C_BaseTempEntity
 {
 public:
 
@@ -54,7 +57,7 @@ public:
 public:
 
 	// particle effect sort origin
-	Vector			m_vecOrigin;
+	[[= ks::reflect::Net{ .index = 2 } ]] [[= ks::reflect::Net{ .index = 1 } ]] [[= ks::reflect::Net{ .index = 0 } ]] Vector			m_vecOrigin;
 };
 
 

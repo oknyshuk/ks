@@ -13,12 +13,22 @@
 
 #include "rangecheckedvar.h"
 #include "tier1/lerp_functions.h"
+#include "reflect_annotations.h"
+#include "dt_recv.h"
 
 #ifdef CLIENT_DLL
 class C_BaseAnimatingOverlay;
 #endif
 
-class C_AnimationLayer
+void RecvProxy_SequenceChanged( const CRecvProxyData *pData, void *pStruct, void *pOut );
+void RecvProxy_WeightChanged( const CRecvProxyData *pData, void *pStruct, void *pOut );
+void RecvProxy_WeightDeltaRateChanged( const CRecvProxyData *pData, void *pStruct, void *pOut );
+void RecvProxy_CycleChanged( const CRecvProxyData *pData, void *pStruct, void *pOut );
+void RecvProxy_PlaybackRateChanged( const CRecvProxyData *pData, void *pStruct, void *pOut );
+void RecvProxy_OrderChanged( const CRecvProxyData *pData, void *pStruct, void *pOut );
+
+class [[= ks::reflect::NetTable{ .name = "DT_Animationlayer", .base = false } ]]
+      C_AnimationLayer
 {
 public:
 
@@ -69,15 +79,15 @@ public:
 	int		m_nDispatchedDst;
 
 private:
-	int		m_nOrder;
-	CRangeCheckedVar<int, -1, 65535, 0>		m_nSequence;
-	CRangeCheckedVar<float, -2, 2, 0>		m_flPrevCycle;
-	CRangeCheckedVar<float, -5, 5, 0>		m_flWeight;
-	CRangeCheckedVar<float, -5, 5, 0>		m_flWeightDeltaRate;
+	[[= ks::reflect::Net{} ]] [[= ks::reflect::Proxy<RecvProxy_OrderChanged, ks::reflect::WIRE_RECV>{} ]] int		m_nOrder;
+	[[= ks::reflect::Net{} ]] [[= ks::reflect::Proxy<RecvProxy_SequenceChanged, ks::reflect::WIRE_RECV>{} ]] CRangeCheckedVar<int, -1, 65535, 0>		m_nSequence;
+	[[= ks::reflect::Net{} ]] CRangeCheckedVar<float, -2, 2, 0>		m_flPrevCycle;
+	[[= ks::reflect::Net{} ]] [[= ks::reflect::Proxy<RecvProxy_WeightChanged, ks::reflect::WIRE_RECV>{} ]] CRangeCheckedVar<float, -5, 5, 0>		m_flWeight;
+	[[= ks::reflect::Net{} ]] [[= ks::reflect::Proxy<RecvProxy_WeightDeltaRateChanged, ks::reflect::WIRE_RECV>{} ]] CRangeCheckedVar<float, -5, 5, 0>		m_flWeightDeltaRate;
 
 	// used for automatic crossfades between sequence changes
-	CRangeCheckedVar<float, -50, 50, 1>		m_flPlaybackRate;
-	CRangeCheckedVar<float, -2, 2, 0>		m_flCycle;
+	[[= ks::reflect::Net{} ]] [[= ks::reflect::Proxy<RecvProxy_PlaybackRateChanged, ks::reflect::WIRE_RECV>{} ]] CRangeCheckedVar<float, -50, 50, 1>		m_flPlaybackRate;
+	[[= ks::reflect::Net{} ]] [[= ks::reflect::Proxy<RecvProxy_CycleChanged, ks::reflect::WIRE_RECV>{} ]] CRangeCheckedVar<float, -2, 2, 0>		m_flCycle;
 
 #ifdef CLIENT_DLL
 	C_BaseAnimatingOverlay	*m_pOwner;

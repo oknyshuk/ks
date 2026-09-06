@@ -5,6 +5,9 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_sendtable.h"
+#include "reflect_annotations.h"
 #include "basecombatcharacter.h"
 #include "basecombatweapon.h"
 #include "animation.h"
@@ -28,7 +31,6 @@
 #include "globals.h"
 #include "physics_prop_ragdoll.h"
 #include "physics_impact_damage.h"
-#include "saverestore_utlvector.h"
 #include "eventqueue.h"
 #include "world.h"
 #include "globalstate.h"
@@ -70,50 +72,10 @@ ConVar ai_use_visibility_cache( "ai_use_visibility_cache", "1" );
 #define ShouldUseVisibilityCache() true
 #endif
 
-BEGIN_DATADESC( CBaseCombatCharacter )
-	DEFINE_UTLVECTOR( m_hTriggerFogList, FIELD_EHANDLE ),
-	DEFINE_FIELD( m_hLastFogTrigger, FIELD_EHANDLE ),
-
-	DEFINE_FIELD( m_flNextAttack, FIELD_TIME ),
-	DEFINE_KEYFIELD( m_eHull, FIELD_INTEGER, "HullType" ),
-	DEFINE_KEYFIELD( m_bloodColor, FIELD_INTEGER, "BloodColor" ),
-	DEFINE_FIELD( m_iDamageCount, FIELD_INTEGER ),
-	
-	DEFINE_FIELD( m_flFieldOfView, FIELD_FLOAT ),
-	DEFINE_FIELD( m_HackedGunPos, FIELD_VECTOR ),
-	DEFINE_KEYFIELD( m_RelationshipString, FIELD_STRING, "Relationship" ),
-
-	DEFINE_FIELD( m_LastHitGroup, FIELD_INTEGER ),
-	DEFINE_FIELD( m_flDamageAccumulator, FIELD_FLOAT ),
-	DEFINE_INPUT( m_impactEnergyScale, FIELD_FLOAT, "physdamagescale" ),
-	DEFINE_FIELD( m_CurrentWeaponProficiency, FIELD_INTEGER),
-
-	DEFINE_UTLVECTOR( m_Relationship,	FIELD_EMBEDDED),
-	DEFINE_FIELD( m_nFaction, FIELD_INTEGER ),	
-
-	DEFINE_AUTO_ARRAY( m_iAmmo, FIELD_INTEGER ),
-	DEFINE_AUTO_ARRAY( m_hMyWeapons, FIELD_EHANDLE ),
-	DEFINE_FIELD( m_hActiveWeapon, FIELD_EHANDLE ),
-
-	DEFINE_FIELD( m_flTimeOfLastInjury, FIELD_FLOAT ),
-	DEFINE_FIELD( m_nRelativeDirectionOfLastInjury, FIELD_INTEGER ),
-	// DEFINE_FIELD( m_uiLastDamageTypeFlags, FIELD_INTEGER ),
-
-	DEFINE_FIELD( m_bForceServerRagdoll, FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_bPreventWeaponPickup, FIELD_BOOLEAN ),
-
-	DEFINE_INPUTFUNC( FIELD_VOID, "KilledNPC", InputKilledNPC ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CBaseCombatCharacter )
 
 
-BEGIN_SIMPLE_DATADESC( Relationship_t )
-	DEFINE_FIELD( entity,			FIELD_EHANDLE ),
-	DEFINE_FIELD( classType,		FIELD_INTEGER ),
-	DEFINE_FIELD( faction,			FIELD_INTEGER ),
-	DEFINE_FIELD( disposition,		FIELD_INTEGER ),
-	DEFINE_FIELD( priority,			FIELD_INTEGER ),
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP_SIMPLE( Relationship_t )
 
 //-----------------------------------------------------------------------------
 // Init static variables
@@ -210,28 +172,14 @@ REGISTER_SEND_PROXY_NON_MODIFIED_POINTER( SendProxy_SendBaseCombatCharacterNonLo
 
 
 // Only send active weapon index to local player
-BEGIN_SEND_TABLE_NOBASE( CBaseCombatCharacter, DT_BCCLocalPlayerExclusive )
-	SendPropTime( SENDINFO( m_flNextAttack ) ),
-END_SEND_TABLE();
+IMPLEMENT_REFLECT_TABLE_IN( CBaseCombatCharacter, DT_BCCLocalPlayerExclusive );
 
-BEGIN_SEND_TABLE_NOBASE( CBaseCombatCharacter, DT_BCCNonLocalPlayerExclusive )
-END_SEND_TABLE();
+IMPLEMENT_REFLECT_TABLE_IN( CBaseCombatCharacter, DT_BCCNonLocalPlayerExclusive );
 
 //-----------------------------------------------------------------------------
 // This table encodes the CBaseCombatCharacter
 //-----------------------------------------------------------------------------
-IMPLEMENT_SERVERCLASS_ST(CBaseCombatCharacter, DT_BaseCombatCharacter)
-	// Data that only gets sent to the local player.
-	SendPropDataTable( "bcc_localdata", 0, &REFERENCE_SEND_TABLE(DT_BCCLocalPlayerExclusive), SendProxy_SendBaseCombatCharacterLocalDataTable ),
-	SendPropDataTable( "bcc_nonlocaldata", 0, &REFERENCE_SEND_TABLE(DT_BCCNonLocalPlayerExclusive), SendProxy_SendBaseCombatCharacterNonLocalDataTable ),
-
-	SendPropInt( SENDINFO( m_LastHitGroup ), 4, SPROP_UNSIGNED ),
-	SendPropEHandle( SENDINFO( m_hActiveWeapon ) ),
-	SendPropTime( SENDINFO( m_flTimeOfLastInjury ) ),
-	SendPropInt( SENDINFO( m_nRelativeDirectionOfLastInjury ), 3, SPROP_UNSIGNED ),
-	// SendPropInt( SENDINFO( m_uiLastDamageTypeFlags ), 0, SPROP_UNSIGNED ),
-	SendPropArray3( SENDINFO_ARRAY3(m_hMyWeapons), SendPropEHandle( SENDINFO_ARRAY(m_hMyWeapons) ) ),
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CBaseCombatCharacter, DT_BaseCombatCharacter )
 
 
 //-----------------------------------------------------------------------------
@@ -809,33 +757,6 @@ void CBaseCombatCharacter::Precache()
 			m_Relationship.FastRemove( i );
 		}
 	}
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: 
-//-----------------------------------------------------------------------------
-int CBaseCombatCharacter::Restore( IRestore &restore )
-{
-	int status = BaseClass::Restore(restore);
-	if ( !status )
-		return 0;
-
-	// restore faction information
-	ChangeFaction( m_nFaction );
-
-	if ( gpGlobals->eLoadType == MapLoad_Transition )
-	{
-		DevMsg( 2, "%s (%s) removing class relationships due to level transition\n", STRING( GetEntityName() ), GetClassname() );
-
-		for ( int i = m_Relationship.Count() - 1; i >= 0; --i )
-		{
-			if ( !m_Relationship[i].entity && m_Relationship[i].classType != CLASS_NONE ) 
-			{
-				m_Relationship.FastRemove( i );
-			}
-		}
-	}
-	return status;
 }
 
 

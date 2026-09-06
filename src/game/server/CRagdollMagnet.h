@@ -10,6 +10,8 @@
 #ifndef CRAGDOLLMAGNET_H
 #define CRAGDOLLMAGNET_H
 
+#include "reflect_annotations.h"
+
 #define SF_RAGDOLLMAGNET_BAR	0x00000002	// this is a bar magnet.
 
 class CRagdollMagnet : public CPointEntity
@@ -32,14 +34,14 @@ public:
 	void Enable( bool bEnable ) { m_bDisabled = !bEnable; }
 
 	// Inputs
-	void InputEnable( inputdata_t &inputdata );
-	void InputDisable( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Enable", .type = FIELD_VOID } ]] void InputEnable( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Disable", .type = FIELD_VOID } ]] void InputDisable( inputdata_t &inputdata );
 
 private:
-	bool	m_bDisabled;
-	float	m_radius;
-	float	m_force;
-	Vector	m_axis;
+	[[= ks::reflect::Key{ .name = "StartDisabled" } ]] bool	m_bDisabled;
+	[[= ks::reflect::Key{ .name = "radius" } ]] float	m_radius;
+	[[= ks::reflect::Key{ .name = "force" } ]] float	m_force;
+	[[= ks::reflect::Key{ .name = "axis" } ]] Vector	m_axis;
 };
 
 #endif //CRAGDOLLMAGNET_H

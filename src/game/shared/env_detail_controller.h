@@ -1,3 +1,5 @@
+
+#include "reflect_annotations.h"
 //========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
@@ -12,7 +14,8 @@
 //-----------------------------------------------------------------------------
 // Implementation of the class that controls detail prop fade distances
 //-----------------------------------------------------------------------------
-class CEnvDetailController : public CBaseEntity
+class [[= ks::reflect::NetTable{ .name = "DT_DetailController", .base = false } ]]
+      CEnvDetailController : public CBaseEntity
 {
 public:
 	DECLARE_CLASS( CEnvDetailController, CBaseEntity );
@@ -25,8 +28,8 @@ public:
 	virtual bool KeyValue( const char *szKeyName, const char *szValue );
 #endif // !CLIENT_DLL
 
-	CNetworkVar( float, m_flFadeStartDist );
-	CNetworkVar( float, m_flFadeEndDist );
+	CNetworkVar( float, m_flFadeStartDist, [[= ks::reflect::Net{ .bits = 32 } ]] );
+	CNetworkVar( float, m_flFadeEndDist, [[= ks::reflect::Net{ .bits = 32 } ]] );
 
 	// ALWAYS transmit to all clients.
 	virtual int UpdateTransmitState( void );

@@ -6,6 +6,9 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_sendtable.h"
+#include "reflect_annotations.h"
 #include "vcollide_parse.h"
 #include "vehicle_base.h"
 #include "ndebugoverlay.h"
@@ -13,8 +16,6 @@
 #include "soundenvelope.h"
 #include "in_buttons.h"
 #include "npc_vehicledriver.h"
-#include "physics_saverestore.h"
-#include "saverestore_utlvector.h"
 #include "func_break.h"
 #include "physics_impact_damage.h"
 #include "entityblocker.h"
@@ -28,43 +29,10 @@ ConVar g_debug_vehiclebase( "g_debug_vehiclebase", "0", FCVAR_CHEAT );
 extern ConVar g_debug_vehicledriver;
 
 // CFourWheelServerVehicle
-BEGIN_SIMPLE_DATADESC_( CFourWheelServerVehicle, CBaseServerVehicle )
-
-	DEFINE_EMBEDDED( m_ViewSmoothing ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP_SIMPLE_( CFourWheelServerVehicle, CBaseServerVehicle )
 
 // CPropVehicle
-BEGIN_DATADESC( CPropVehicle )
-
-	DEFINE_EMBEDDED( m_VehiclePhysics ),
-
-	// These are necessary to save here because the 'owner' of these fields must be the prop_vehicle
-	DEFINE_PHYSPTR( m_VehiclePhysics.m_pVehicle ),
-	DEFINE_PHYSPTR_ARRAY( m_VehiclePhysics.m_pWheels ),
-
-	DEFINE_FIELD( m_nVehicleType, FIELD_INTEGER ),
-
-	// Physics Influence
-	DEFINE_FIELD( m_hPhysicsAttacker, FIELD_EHANDLE ),
-	DEFINE_FIELD( m_flLastPhysicsInfluenceTime, FIELD_TIME ),
-
-#ifdef HL2_EPISODIC
-	DEFINE_UTLVECTOR( m_hPhysicsChildren, FIELD_EHANDLE ),
-#endif // HL2_EPISODIC
-
-	// Keys
-	DEFINE_KEYFIELD( m_vehicleScript, FIELD_STRING, "VehicleScript" ),
-	DEFINE_FIELD( m_vecSmoothedVelocity, FIELD_VECTOR ),
-
-	// Inputs
-	DEFINE_INPUTFUNC( FIELD_FLOAT, "Throttle", InputThrottle ),
-	DEFINE_INPUTFUNC( FIELD_FLOAT, "Steer", InputSteering ),
-	DEFINE_INPUTFUNC( FIELD_FLOAT, "Action", InputAction ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "HandBrakeOn", InputHandBrakeOn ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "HandBrakeOff", InputHandBrakeOff ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CPropVehicle )
 
 LINK_ENTITY_TO_CLASS( prop_vehicle, CPropVehicle );
 
@@ -129,15 +97,6 @@ CON_COMMAND(vehicle_flushscript, "Flush and reload all vehicle scripts")
 			pServerVehicle->ReloadScript();
 		}
 	}
-}
-//-----------------------------------------------------------------------------
-// Purpose: Restore
-//-----------------------------------------------------------------------------
-int CPropVehicle::Restore( IRestore &restore )
-{
-	CFourWheelServerVehicle *pServerVehicle = dynamic_cast<CFourWheelServerVehicle*>(GetServerVehicle());
-	m_VehiclePhysics.SetOuter( this, pServerVehicle );
-	return BaseClass::Restore( restore );
 }
 
 
@@ -320,66 +279,9 @@ void CPropVehicle::RemovePhysicsChild( CBaseEntity *pChild )
 // Purpose: Player driveable vehicle class
 //-----------------------------------------------------------------------------
 
-IMPLEMENT_SERVERCLASS_ST(CPropVehicleDriveable, DT_PropVehicleDriveable)
+IMPLEMENT_REFLECT_SERVERCLASS( CPropVehicleDriveable, DT_PropVehicleDriveable );
 
-	SendPropEHandle(SENDINFO(m_hPlayer)),
-//	SendPropFloat(SENDINFO_DT_NAME(m_controls.throttle, m_throttle), 8,	SPROP_ROUNDUP,	0.0f,	1.0f),
-	SendPropInt(SENDINFO(m_nSpeed),	8),
-	SendPropInt(SENDINFO(m_nRPM), 13),
-	SendPropFloat(SENDINFO(m_flThrottle), 0, SPROP_NOSCALE ),
-	SendPropInt(SENDINFO(m_nBoostTimeLeft), 8),
-	SendPropInt(SENDINFO(m_nHasBoost), 1, SPROP_UNSIGNED),
-	SendPropInt(SENDINFO(m_nScannerDisabledWeapons), 1, SPROP_UNSIGNED),
-	SendPropInt(SENDINFO(m_nScannerDisabledVehicle), 1, SPROP_UNSIGNED),
-	SendPropInt(SENDINFO(m_bEnterAnimOn), 1, SPROP_UNSIGNED ),
-	SendPropInt(SENDINFO(m_bExitAnimOn), 1, SPROP_UNSIGNED ),
-	SendPropInt(SENDINFO(m_bUnableToFire), 1, SPROP_UNSIGNED ),
-	SendPropVector(SENDINFO(m_vecEyeExitEndpoint), -1, SPROP_COORD),
-	SendPropBool(SENDINFO(m_bHasGun)),
-	SendPropVector(SENDINFO(m_vecGunCrosshair), -1, SPROP_COORD),
-END_SEND_TABLE();
-
-BEGIN_DATADESC( CPropVehicleDriveable )
-	// Inputs
-	DEFINE_INPUTFUNC( FIELD_VOID, "Lock",	InputLock ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "Unlock",	InputUnlock ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "TurnOn",	InputTurnOn ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "TurnOff", InputTurnOff ),
-	DEFINE_INPUT( m_bHasGun, FIELD_BOOLEAN, "EnableGun" ),
-
-	// Outputs
-	DEFINE_OUTPUT( m_playerOn, "PlayerOn" ),
-	DEFINE_OUTPUT( m_playerOff, "PlayerOff" ),
-	DEFINE_OUTPUT( m_pressedAttack, "PressedAttack" ),
-	DEFINE_OUTPUT( m_pressedAttack2, "PressedAttack2" ),
-	DEFINE_OUTPUT( m_attackaxis, "AttackAxis" ),
-	DEFINE_OUTPUT( m_attack2axis, "Attack2Axis" ),
-	DEFINE_FIELD( m_hPlayer, FIELD_EHANDLE ),
-
-	DEFINE_EMBEDDEDBYREF( m_pServerVehicle ),
-	DEFINE_FIELD( m_nSpeed, FIELD_INTEGER ),
-	DEFINE_FIELD( m_nRPM, FIELD_INTEGER ),
-	DEFINE_FIELD( m_flThrottle, FIELD_FLOAT ),
-	DEFINE_FIELD( m_nBoostTimeLeft, FIELD_INTEGER ),
-	DEFINE_FIELD( m_nHasBoost, FIELD_INTEGER ),
-	DEFINE_FIELD( m_nScannerDisabledWeapons, FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_nScannerDisabledVehicle, FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_bUnableToFire, FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_vecEyeExitEndpoint, FIELD_POSITION_VECTOR ),
-	DEFINE_FIELD( m_vecGunCrosshair, FIELD_VECTOR ),
-
-	DEFINE_FIELD( m_bEngineLocked, FIELD_BOOLEAN ),
-	DEFINE_KEYFIELD( m_bLocked, FIELD_BOOLEAN, "VehicleLocked" ),
-	DEFINE_FIELD( m_flMinimumSpeedToEnterExit, FIELD_FLOAT ),
-	DEFINE_FIELD( m_bEnterAnimOn, FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_bExitAnimOn, FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_flTurnOffKeepUpright, FIELD_TIME ),
-	//DEFINE_FIELD( m_flNoImpactDamageTime, FIELD_TIME ),
-
-	DEFINE_FIELD( m_hNPCDriver, FIELD_EHANDLE ),
-	DEFINE_FIELD( m_hKeepUpright, FIELD_EHANDLE ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CPropVehicleDriveable )
 
 
 LINK_ENTITY_TO_CLASS( prop_vehicle_driveable, CPropVehicleDriveable );
@@ -472,23 +374,6 @@ void CPropVehicleDriveable::Spawn( void )
 	m_flMinimumSpeedToEnterExit = 0;
 	m_takedamage = DAMAGE_EVENTS_ONLY;
 	m_bEngineLocked = false;
-}
-
-
-//-----------------------------------------------------------------------------
-// Purpose: 
-//-----------------------------------------------------------------------------
-int CPropVehicleDriveable::Restore( IRestore &restore )
-{
-	// Has to be created before	we can restore
-	// and we can't create it in the constructor because it could be
-	// overridden by a derived class.
-	DestroyServerVehicle();
-	CreateServerVehicle();
-
-	int nRetVal = BaseClass::Restore( restore );
-	 
-	return nRetVal;
 }
 
 //-----------------------------------------------------------------------------

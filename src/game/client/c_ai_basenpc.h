@@ -7,6 +7,8 @@
 
 #ifndef C_AI_BASENPC_H
 #define C_AI_BASENPC_H
+
+#include "reflect_annotations.h"
 #ifdef _WIN32
 #pragma once
 #endif
@@ -15,7 +17,9 @@
 #include "c_basecombatcharacter.h"
 
 // NOTE: MOved all controller code into c_basestudiomodel
-class C_AI_BaseNPC : public C_BaseCombatCharacter
+class [[= ks::reflect::NetTable{ .name = "DT_AI_BaseNPC" } ]]
+      [[= ks::reflect::From<"m_lifeState", ks::reflect::Net{}>{} ]]
+      C_AI_BaseNPC : public C_BaseCombatCharacter
 {
 	DECLARE_CLASS( C_AI_BaseNPC, C_BaseCombatCharacter );
 
@@ -43,18 +47,18 @@ public:
 
 private:
 	C_AI_BaseNPC( const C_AI_BaseNPC & ); // not defined, not accessible
-	float m_flTimePingEffect;
-	int  m_iDeathPose;
-	int	 m_iDeathFrame;
+	[[= ks::reflect::Net{} ]] float m_flTimePingEffect;
+	[[= ks::reflect::Net{} ]] int  m_iDeathPose;
+	[[= ks::reflect::Net{} ]] int	 m_iDeathFrame;
 
-	int m_iSpeedModRadius;
-	int m_iSpeedModSpeed;
+	[[= ks::reflect::Net{} ]] int m_iSpeedModRadius;
+	[[= ks::reflect::Net{} ]] int m_iSpeedModSpeed;
 
-	bool m_bPerformAvoidance;
-	bool m_bIsMoving;
-	bool m_bFadeCorpse;
-	bool m_bSpeedModActive;
-	bool m_bImportanRagdoll;
+	[[= ks::reflect::Net{} ]] bool m_bPerformAvoidance;
+	[[= ks::reflect::Net{} ]] bool m_bIsMoving;
+	[[= ks::reflect::Net{} ]] bool m_bFadeCorpse;
+	[[= ks::reflect::Net{} ]] bool m_bSpeedModActive;
+	[[= ks::reflect::Net{} ]] bool m_bImportanRagdoll;
 };
 
 

@@ -12,8 +12,14 @@
 #ifndef _FISH_H_
 #define _FISH_H_
 
+#include "reflect_annotations.h"
+#include "dt_common.h"
+
 #include "baseanimating.h"
 #include "GameEventListener.h"
+
+void SendProxy_FishAngle( const SendProp *pProp, const void *pStruct,
+    const void *pData, DVariant *pOut, int iElement, int objectID );
 
 class CFishPool;
 
@@ -21,12 +27,14 @@ class CFishPool;
 /**
  * Simple ambient fish
  */
-class CFish : public CBaseAnimating
+class [[= ks::reflect::NetTable{ .name = "DT_CFish", .base = false } ]]
+      [[= ks::reflect::From<"m_nModelIndex", ks::reflect::Net{ .enc = ks::reflect::ENC_MODELINDEX }>{} ]]
+      [[= ks::reflect::From<"m_lifeState", ks::reflect::Net{ .bits = -1 }>{} ]]
+      CFish : public CBaseAnimating
 {
 public:
 	DECLARE_CLASS( CFish, CBaseAnimating );
 	DECLARE_SERVERCLASS();
-	DECLARE_DATADESC();
 
 	CFish( void );
 	virtual ~CFish();
@@ -54,17 +62,17 @@ private:
 	CHandle<CFishPool> m_pool;							///< the pool we are in
 	unsigned int m_id;									///< our unique ID
 
-	CNetworkVar( float, m_x );							///< have to send position coordinates separately since Z is unused
-	CNetworkVar( float, m_y );							///< have to send position coordinates separately since Z is unused
-	CNetworkVar( float, m_z );							///< only sent once since fish always swim at the same depth
+	CNetworkVar( float, m_x, [[= ks::reflect::Net{ .bits = 7, .low = -255.0f, .high = 255.0f } ]] );							///< have to send position coordinates separately since Z is unused
+	CNetworkVar( float, m_y, [[= ks::reflect::Net{ .bits = 7, .low = -255.0f, .high = 255.0f } ]] );							///< have to send position coordinates separately since Z is unused
+	CNetworkVar( float, m_z, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD } ]] );							///< only sent once since fish always swim at the same depth
 
-	CNetworkVar( float, m_angle );						///< only yaw changes
+	CNetworkVar( float, m_angle, [[= ks::reflect::Net{ .bits = 7, .low = 0.0f, .high = 360.0f } ]] [[= ks::reflect::Proxy<SendProxy_FishAngle, ks::reflect::WIRE_SEND>{} ]] );						///< only yaw changes
 	float m_angleChange;
 	Vector m_forward;
 	Vector m_perp;
 
-	CNetworkVector( m_poolOrigin );				///< used to efficiently network our relative position
-	CNetworkVar( float, m_waterLevel );
+	CNetworkVector( m_poolOrigin, [[= ks::reflect::Net{ .bits = -1, .low = 0.0f, .high = HIGH_DEFAULT, .flags = SPROP_COORD, .enc = ks::reflect::ENC_VECTOR } ]] );				///< used to efficiently network our relative position
+	CNetworkVar( float, m_waterLevel, [[= ks::reflect::Net{ .bits = 32 } ]] );
 
 	float m_speed;
 	float m_desiredSpeed;
@@ -94,7 +102,6 @@ class CFishPool : public CBaseEntity, public CGameEventListener
 {
 public:
 	DECLARE_CLASS( CFishPool, CBaseEntity );
-	DECLARE_DATADESC();
 
 	CFishPool( void );
 

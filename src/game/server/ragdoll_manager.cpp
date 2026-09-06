@@ -6,6 +6,9 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_sendtable.h"
+#include "reflect_annotations.h"
 #include "baseentity.h"
 #include "sendproxy.h"
 #include "ragdoll_shared.h"
@@ -14,7 +17,8 @@
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
-class CRagdollManager : public CBaseEntity
+class [[= ks::reflect::NetTable{ .name = "DT_RagdollManager", .base = false } ]]
+      CRagdollManager : public CBaseEntity
 {
 public:
 	DECLARE_CLASS( CRagdollManager, CBaseEntity );
@@ -26,7 +30,7 @@ public:
 	virtual void	Activate();
 	virtual int		UpdateTransmitState();
 
-	void InputSetMaxRagdollCount(inputdata_t &data);
+	[[= ks::reflect::Input{ .name = "SetMaxRagdollCount", .type = FIELD_INTEGER } ]] void InputSetMaxRagdollCount(inputdata_t &data);
 
 	int DrawDebugTextOverlays(void);
 
@@ -34,30 +38,19 @@ public:
 
 	void UpdateCurrentMaxRagDollCount();
 
-	CNetworkVar( int,  m_iCurrentMaxRagdollCount );
+	CNetworkVar( int,  m_iCurrentMaxRagdollCount, [[= ks::reflect::Net{ .bits = 6 } ]] );
 
-	int m_iMaxRagdollCount;
+	[[= ks::reflect::Key{ .name = "MaxRagdollCount" } ]] int m_iMaxRagdollCount;
 
-	bool m_bSaveImportant;
+	[[= ks::reflect::Key{ .name = "SaveImportant" } ]] bool m_bSaveImportant;
 };
 
 
-IMPLEMENT_SERVERCLASS_ST_NOBASE( CRagdollManager, DT_RagdollManager )
-	SendPropInt( SENDINFO( m_iCurrentMaxRagdollCount ), 6 ),
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CRagdollManager, DT_RagdollManager )
 
 LINK_ENTITY_TO_CLASS( game_ragdoll_manager, CRagdollManager );
 
-BEGIN_DATADESC( CRagdollManager )
-
-	DEFINE_FIELD( m_iCurrentMaxRagdollCount, FIELD_INTEGER ),
-	DEFINE_KEYFIELD( m_iMaxRagdollCount, FIELD_INTEGER,	"MaxRagdollCount" ),
-
-	DEFINE_KEYFIELD( m_bSaveImportant, FIELD_BOOLEAN, "SaveImportant" ),
-
-	DEFINE_INPUTFUNC( FIELD_INTEGER, "SetMaxRagdollCount",  InputSetMaxRagdollCount ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CRagdollManager )
 
 //-----------------------------------------------------------------------------
 // Constructor 

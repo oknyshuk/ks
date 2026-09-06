@@ -7,13 +7,17 @@
 #ifndef C_ENV_CASCADE_LIGHT_H
 #define C_ENV_CASCADE_LIGHT_H
 
+#include "reflect_annotations.h"
+#include "dt_recv.h"
+
 #include "c_baseplayer.h"
 #include "csm_parallel_split.h"
 
 //------------------------------------------------------------------------------
 // Purpose: Directional lighting with cascaded shadow mapping entity.
 //------------------------------------------------------------------------------
-class C_CascadeLight : public C_BaseEntity
+class [[= ks::reflect::NetTable{ .name = "DT_CascadeLight" } ]]
+      C_CascadeLight : public C_BaseEntity
 {
 public:
 	DECLARE_CLASS( C_CascadeLight, C_BaseEntity );
@@ -42,13 +46,13 @@ public:
 private:
 	static C_CascadeLight *m_pCascadeLight;
 
-	Vector m_shadowDirection;
-	Vector m_envLightShadowDirection;
-	bool m_bEnabled;
-	bool m_bUseLightEnvAngles;
-	color32	m_LightColor;
-	int	m_LightColorScale;
-	float m_flMaxShadowDist;
+	[[= ks::reflect::Net{} ]] Vector m_shadowDirection;
+	[[= ks::reflect::Net{} ]] Vector m_envLightShadowDirection;
+	[[= ks::reflect::Net{} ]] bool m_bEnabled;
+	[[= ks::reflect::Net{} ]] bool m_bUseLightEnvAngles;
+	[[= ks::reflect::Net{} ]] [[= ks::reflect::Proxy<RecvProxy_Int32ToColor32, ks::reflect::WIRE_RECV>{} ]] color32	m_LightColor;
+	[[= ks::reflect::Net{} ]] [[= ks::reflect::Proxy<RecvProxy_Int32ToInt32, ks::reflect::WIRE_RECV>{} ]] int	m_LightColorScale;
+	[[= ks::reflect::Net{} ]] float m_flMaxShadowDist;
 };
 
 class CDebugPrimRenderer2D

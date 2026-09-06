@@ -18,6 +18,10 @@
 #endif
 
 #include "beam_flags.h"
+// dt_recv.h for CRecvProxyData, which the recv proxies below are declared with; worldsize.h for the
+// MIN/MAX_COORD_INTEGER range DT_Beam sends m_vecOrigin in.
+#include "dt_recv.h"
+#include "worldsize.h"
 
 #define MAX_BEAM_WIDTH			102.3f
 #define MAX_BEAM_SCROLLSPEED	100.0f
@@ -43,8 +47,38 @@
 #include "c_pixel_visibility.h"
 #endif
 
+// A member annotation lives inside a CNetworkVar() argument list, where a preprocessor directive is
+// not allowed, so m_fSpeed's recv proxy has to be declared on both sides. It is defined in the
+// client half of beam_shared.cpp.
+void RecvProxy_Beam_ScrollSpeed( const CRecvProxyData *pData, void *pStruct, void *pOut );
+#if defined( CLIENT_DLL )
+void RecvProxy_ClrRender( const CRecvProxyData *pData, void *pStruct, void *pOut );
+void RecvProxy_IntToMoveParent( const CRecvProxyData *pData, void *pStruct, void *pOut );
+#endif
+
 // I've seen CBeams glitter in the dark near Tannhauser gate...
-class CBeam : public CBaseEntity
+class
+      [[= ks::reflect::NetTable{ .name = "DT_Beam", .base = false } ]]
+      [[= ks::reflect::From<"m_nRenderFX", ks::reflect::Net{ .bits = 8, .flags = SPROP_UNSIGNED }>{} ]]
+      [[= ks::reflect::From<"m_nRenderMode", ks::reflect::Net{ .bits = 8, .flags = SPROP_UNSIGNED }>{} ]]
+      [[= ks::reflect::From<"m_nModelIndex", ks::reflect::Net{ .enc = ks::reflect::ENC_MODELINDEX }>{} ]]
+// The remaining inherited props differ by side in the member they read and in their proxy, and a
+// class-level annotation may be guarded where a member-level one may not.
+#if !defined( CLIENT_DLL )
+      [[= ks::reflect::From<"m_clrRender", ks::reflect::Net{ .bits = 32, .flags = SPROP_UNSIGNED | SPROP_CHANGES_OFTEN }, SendProxy_Color32ToInt32>{} ]]
+      [[= ks::reflect::From<"m_vecOrigin", ks::reflect::Net{ .bits = 19, .low = MIN_COORD_INTEGER, .high = MAX_COORD_INTEGER, .flags = SPROP_CHANGES_OFTEN, .enc = ks::reflect::ENC_VECTOR }>{} ]]
+      [[= ks::reflect::From<"m_hMoveParent", ks::reflect::Net{ .wire = "moveparent" }>{} ]]
+#else
+      [[= ks::reflect::From<"m_clrRender", ks::reflect::Net{}, RecvProxy_ClrRender>{} ]]
+      [[= ks::reflect::From<"m_vecNetworkOrigin", ks::reflect::Net{ .wire = "m_vecOrigin" }>{} ]]
+      [[= ks::reflect::From<"m_hNetworkMoveParent", ks::reflect::Net{ .wire = "moveparent" }, RecvProxy_IntToMoveParent>{} ]]
+#endif
+      [[= ks::reflect::PredFrom<"m_nRenderFX", ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } >{} ]]
+      [[= ks::reflect::PredFrom<"m_nRenderMode", ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } >{} ]]
+      [[= ks::reflect::PredFrom<"m_clrRender", ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } >{} ]]
+      [[= ks::reflect::PredFrom<"m_nModelIndex", ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE | FTYPEDESC_MODELINDEX } >{} ]]
+      [[= ks::reflect::PredFrom<"m_vecOrigin", ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE, .tolerance = 0.125f } >{} ]]
+      CBeam : public CBaseEntity
 {
 	DECLARE_CLASS( CBeam, CBaseEntity );
 public:
@@ -204,46 +238,47 @@ private:
 #endif
 
 protected:
-	CNetworkVar( float, m_flFrameRate );
-	CNetworkVar( float, m_flHDRColorScale );
+	CNetworkVar( float, m_flFrameRate, [[= ks::reflect::Net{ .bits = 10, .low = -25.0f, .high = 25.0f, .flags = SPROP_ROUNDUP } ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] );
+	CNetworkVar( float, m_flHDRColorScale, [[= ks::reflect::Net{ .bits = 0, .low = 0.0f, .high = 100.0f, .flags = SPROP_NOSCALE } ]] [[= ks::reflect::Key{ .name = "HDRColorScale" } ]] );
 	float		m_flFireTime;
-	float		m_flDamage;			// Damage per second to touchers.
-	CNetworkVar( int, m_nNumBeamEnts );
+	[[= ks::reflect::Key{ .name = "damage" } ]] float		m_flDamage;			// Damage per second to touchers.
+	CNetworkVar( int, m_nNumBeamEnts, [[= ks::reflect::Net{ .bits = 5, .flags = SPROP_UNSIGNED } ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] );
 #if defined( CLIENT_DLL )
 	pixelvis_handle_t	m_queryHandleHalo;
 #endif
 
 private:
 #if !defined( CLIENT_DLL )
-	void InputNoise( inputdata_t &inputdata );
- 	void InputWidth( inputdata_t &inputdata );
-	void InputColorRedValue( inputdata_t &inputdata );
-	void InputColorBlueValue( inputdata_t &inputdata );
-	void InputColorGreenValue( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Noise", .type = FIELD_FLOAT } ]] void InputNoise( inputdata_t &inputdata );
+ 	[[= ks::reflect::Input{ .name = "Width", .type = FIELD_FLOAT } ]] void InputWidth( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "ColorRedValue", .type = FIELD_FLOAT } ]] void InputColorRedValue( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "ColorBlueValue", .type = FIELD_FLOAT } ]] void InputColorBlueValue( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "ColorGreenValue", .type = FIELD_FLOAT } ]] void InputColorGreenValue( inputdata_t &inputdata );
 #endif
 
 	// Beam Data Elements
-	CNetworkVar( int, m_nHaloIndex );
-	CNetworkVar( int, m_nBeamType );
-	CNetworkVar( int, m_nBeamFlags );
-	CNetworkArray( EHANDLE, m_hAttachEntity, MAX_BEAM_ENTS );
-	CNetworkArray( int, m_nAttachIndex, MAX_BEAM_ENTS );
-	CNetworkVar( float, m_fWidth );
-	CNetworkVar( float, m_fEndWidth );
-	CNetworkVar( float, m_fFadeLength );
-	CNetworkVar( float, m_fHaloScale );
-	CNetworkVar( float, m_fAmplitude );
-	CNetworkVar( float, m_fStartFrame );
-	CNetworkVar( float, m_fSpeed );
-	CNetworkVar( float, m_flFrame );
-	CNetworkVar( BeamClipStyle_t, m_nClipStyle );
+	CNetworkVar( int, m_nHaloIndex, [[= ks::reflect::Net{ .bits = 16, .flags = SPROP_UNSIGNED } ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] );
+	// 3 == Q_log2( NUM_BEAM_TYPES ) + 1, which is not a constant expression: Q_log2 is a function.
+	CNetworkVar( int, m_nBeamType, [[= ks::reflect::Net{ .bits = 3, .flags = SPROP_UNSIGNED } ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] );
+	CNetworkVar( int, m_nBeamFlags, [[= ks::reflect::Net{ .bits = NUM_BEAM_FLAGS, .flags = SPROP_UNSIGNED } ]] );
+	CNetworkArray( EHANDLE, m_hAttachEntity, MAX_BEAM_ENTS, [[= ks::reflect::Net{} ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] );
+	CNetworkArray( int, m_nAttachIndex, MAX_BEAM_ENTS, [[= ks::reflect::Net{ .bits = ATTACHMENT_INDEX_BITS, .flags = SPROP_UNSIGNED } ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] );
+	CNetworkVar( float, m_fWidth, [[= ks::reflect::Net{ .bits = 10, .low = 0.0f, .high = MAX_BEAM_WIDTH, .flags = SPROP_ROUNDUP } ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] );
+	CNetworkVar( float, m_fEndWidth, [[= ks::reflect::Net{ .bits = 10, .low = 0.0f, .high = MAX_BEAM_WIDTH, .flags = SPROP_ROUNDUP } ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] );
+	CNetworkVar( float, m_fFadeLength, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE } ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] );
+	CNetworkVar( float, m_fHaloScale, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE } ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] );
+	CNetworkVar( float, m_fAmplitude, [[= ks::reflect::Net{ .bits = 8, .low = 0.0f, .high = MAX_BEAM_NOISEAMPLITUDE, .flags = SPROP_ROUNDDOWN } ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] );
+	CNetworkVar( float, m_fStartFrame, [[= ks::reflect::Net{ .bits = 8, .low = 0.0f, .high = 256.0f, .flags = SPROP_ROUNDDOWN } ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] );
+	CNetworkVar( float, m_fSpeed, [[= ks::reflect::Net{ .bits = 8, .low = 0.0f, .high = MAX_BEAM_SCROLLSPEED, .flags = SPROP_NOSCALE } ]] [[= ks::reflect::Proxy<RecvProxy_Beam_ScrollSpeed, ks::reflect::WIRE_RECV>{} ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] [[= ks::reflect::Key{ .name = "ScrollSpeed", .input = true } ]] );
+	CNetworkVar( float, m_flFrame, [[= ks::reflect::Net{ .bits = 20, .low = 0.0f, .high = 256.0f, .flags = SPROP_ROUNDDOWN | SPROP_CHANGES_OFTEN } ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] );
+	CNetworkVar( BeamClipStyle_t, m_nClipStyle, [[= ks::reflect::Net{ .bits = kBEAMCLIPSTYLE_NUMBITS + 1, .flags = SPROP_UNSIGNED } ]] );
 
-	CNetworkVector( m_vecEndPos );
+	CNetworkVector( m_vecEndPos, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD } ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE, .tolerance = 0.125f } ]] );
 
 	EHANDLE		m_hEndEntity;
 
 #if !defined( CLIENT_DLL )
-	int			m_nDissolveType;
+	[[= ks::reflect::Key{ .name = "dissolvetype" } ]] int			m_nDissolveType;
 #endif
 };
 

@@ -6,6 +6,7 @@
 //===========================================================================//
 
 #include "cbase.h"
+#include "reflect_recvtable.h"
 #include "c_entityflame.h"
 #include "particle_property.h"
 #include "iefx.h"
@@ -18,10 +19,7 @@
 //-----------------------------------------------------------------------------
 // Datadesc
 //-----------------------------------------------------------------------------
-IMPLEMENT_CLIENTCLASS_DT( C_EntityFlame, DT_EntityFlame, CEntityFlame )
-	RecvPropEHandle(RECVINFO(m_hEntAttached)),
-	RecvPropBool(RECVINFO(m_bCheapEffect)),
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS( C_EntityFlame, DT_EntityFlame, CEntityFlame )
 
 
 //-----------------------------------------------------------------------------

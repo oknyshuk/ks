@@ -5,6 +5,9 @@
  // $NoKeywords: $
 //===========================================================================//
 #include "cbase.h"
+#include "reflect_recvtable.h"
+#include "reflect_predmap.h"
+#include "reflect_annotations.h"
 
 #include "filesystem.h"
 #include "cdll_client_int.h"
@@ -25,7 +28,8 @@
 //------------------------------------------------------------------------------
 // Purpose : Shadow control entity
 //------------------------------------------------------------------------------
-class C_ColorCorrectionVolume : public C_BaseTrigger
+class [[= ks::reflect::NetTable{ .name = "DT_ColorCorrectionVolume" } ]]
+      C_ColorCorrectionVolume : public C_BaseTrigger
 {
 public:
 	DECLARE_CLASS( C_ColorCorrectionVolume, C_BaseTrigger );
@@ -49,26 +53,18 @@ private:
 
 	float	m_LastExitWeight;
 	float	m_LastExitTime;
-	bool	m_bEnabled;
-	float	m_MaxWeight;
-	float	m_FadeDuration;
-	float	m_Weight;
-	char	m_lookupFilename[MAX_PATH];
+	[[= ks::reflect::Net{} ]] bool	m_bEnabled;
+	[[= ks::reflect::Net{} ]] float	m_MaxWeight;
+	[[= ks::reflect::Net{} ]] float	m_FadeDuration;
+	[[= ks::reflect::Net{} ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] float	m_Weight;
+	[[= ks::reflect::Net{} ]] char	m_lookupFilename[MAX_PATH];
 
 	ClientCCHandle_t m_CCHandle;
 };
 
-IMPLEMENT_CLIENTCLASS_DT(C_ColorCorrectionVolume, DT_ColorCorrectionVolume, CColorCorrectionVolume)
-	RecvPropBool( RECVINFO(m_bEnabled) ),
-	RecvPropFloat( RECVINFO(m_MaxWeight) ),
-	RecvPropFloat( RECVINFO(m_FadeDuration) ),
-	RecvPropFloat( RECVINFO(m_Weight) ),
-	RecvPropString( RECVINFO(m_lookupFilename) ),
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS( C_ColorCorrectionVolume, DT_ColorCorrectionVolume, CColorCorrectionVolume )
 
-BEGIN_PREDICTION_DATA( C_ColorCorrectionVolume )
-	DEFINE_PRED_FIELD( m_Weight, FIELD_FLOAT, FTYPEDESC_INSENDTABLE ),
-END_PREDICTION_DATA()
+IMPLEMENT_REFLECT_PREDMAP( C_ColorCorrectionVolume );
 
 
 //------------------------------------------------------------------------------

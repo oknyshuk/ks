@@ -7,6 +7,8 @@
 
 
 #include "cbase.h"
+#include "reflect_recvtable.h"
+#include "reflect_annotations.h"
 #include "c_physicsprop.h"
 #include "c_physbox.h"
 #include "c_props.h"
@@ -22,14 +24,7 @@
 
 IMPLEMENT_NETWORKCLASS_ALIASED( DynamicProp, DT_DynamicProp )
 
-BEGIN_NETWORK_TABLE( CDynamicProp, DT_DynamicProp )
-	RecvPropBool(RECVINFO(m_bUseHitboxesForRenderBox)),
-
-	RecvPropFloat( RECVINFO(m_flGlowMaxDist) ),
-	RecvPropBool(RECVINFO(m_bShouldGlow)),
-	RecvPropInt( RECVINFO(m_clrGlow), 0, RecvProxy_Int32ToColor32 ),
-	RecvPropInt( RECVINFO(m_nGlowStyle) ),
-END_NETWORK_TABLE()
+IMPLEMENT_REFLECT_TABLE( C_DynamicProp, DT_DynamicProp );
 
 C_DynamicProp::C_DynamicProp( void ) : 
 m_GlowObject( this, Vector( 1.0f, 1.0f, 1.0f ), 0.0f, false, false )
@@ -195,8 +190,7 @@ void C_DynamicProp::OnDataChanged( DataUpdateType_t type )
 
 // ------------------------------------------------------------------------------------------ //
 // ------------------------------------------------------------------------------------------ //
-IMPLEMENT_CLIENTCLASS_DT(C_BasePropDoor, DT_BasePropDoor, CBasePropDoor)
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS( C_BasePropDoor, DT_BasePropDoor, CBasePropDoor )
 
 C_BasePropDoor::C_BasePropDoor( void )
 {
@@ -267,20 +261,21 @@ bool C_BasePropDoor::TestCollision( const Ray_t &ray, unsigned int mask, trace_t
 }
 
 //just need to reference by classname in portal
-class C_PropDoorRotating : public C_BasePropDoor
+class [[= ks::reflect::NetTable{ .name = "DT_PropDoorRotating" } ]]
+      C_PropDoorRotating : public C_BasePropDoor
 {
 public:
 	DECLARE_CLASS( C_PropDoorRotating, C_BasePropDoor );
 	DECLARE_CLIENTCLASS();
 };
 
-IMPLEMENT_CLIENTCLASS_DT(C_PropDoorRotating, DT_PropDoorRotating, CPropDoorRotating)
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS( C_PropDoorRotating, DT_PropDoorRotating, CPropDoorRotating )
 
 // ------------------------------------------------------------------------------------------ //
 // Special version of func_physbox.
 // ------------------------------------------------------------------------------------------ //
-class CPhysBoxMultiplayer : public CPhysBox, public IMultiplayerPhysics
+class [[= ks::reflect::NetTable{ .name = "DT_PhysBoxMultiplayer" } ]]
+      CPhysBoxMultiplayer : public CPhysBox, public IMultiplayerPhysics
 {
 public:
 	DECLARE_CLASS( CPhysBoxMultiplayer, CPhysBox );
@@ -301,19 +296,17 @@ public:
 		return true;
 	}
 
-	CNetworkVar( int, m_iPhysicsMode );	// One of the PHYSICS_MULTIPLAYER_ defines.	
-	CNetworkVar( float, m_fMass );
+	CNetworkVar( int, m_iPhysicsMode, [[= ks::reflect::Net{} ]] );	// One of the PHYSICS_MULTIPLAYER_ defines.	
+	CNetworkVar( float, m_fMass, [[= ks::reflect::Net{} ]] );
 
 	DECLARE_CLIENTCLASS();
 };
 
-IMPLEMENT_CLIENTCLASS_DT( CPhysBoxMultiplayer, DT_PhysBoxMultiplayer, CPhysBoxMultiplayer )
-	RecvPropInt( RECVINFO( m_iPhysicsMode ) ),
-	RecvPropFloat( RECVINFO( m_fMass ) ),
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS( CPhysBoxMultiplayer, DT_PhysBoxMultiplayer, CPhysBoxMultiplayer )
 
 
-class CPhysicsPropMultiplayer : public CPhysicsProp, public IMultiplayerPhysics
+class [[= ks::reflect::NetTable{ .name = "DT_PhysicsPropMultiplayer" } ]]
+      CPhysicsPropMultiplayer : public CPhysicsProp, public IMultiplayerPhysics
 {
 	DECLARE_CLASS( CPhysicsPropMultiplayer, CPhysicsProp );
 
@@ -344,17 +337,12 @@ class CPhysicsPropMultiplayer : public CPhysicsProp, public IMultiplayerPhysics
 		TransformAABB( EntityToWorldTransform(), m_collisionMins, m_collisionMaxs, *mins, *maxs );
 	}
 
-	CNetworkVar( int, m_iPhysicsMode );	// One of the PHYSICS_MULTIPLAYER_ defines.	
-	CNetworkVar( float, m_fMass );
-	CNetworkVector( m_collisionMins );
-	CNetworkVector( m_collisionMaxs );
+	CNetworkVar( int, m_iPhysicsMode, [[= ks::reflect::Net{} ]] );	// One of the PHYSICS_MULTIPLAYER_ defines.	
+	CNetworkVar( float, m_fMass, [[= ks::reflect::Net{} ]] );
+	CNetworkVector( m_collisionMins, [[= ks::reflect::Net{} ]] );
+	CNetworkVector( m_collisionMaxs, [[= ks::reflect::Net{} ]] );
 
 	DECLARE_CLIENTCLASS();
 };
 
-IMPLEMENT_CLIENTCLASS_DT( CPhysicsPropMultiplayer, DT_PhysicsPropMultiplayer, CPhysicsPropMultiplayer )
-	RecvPropInt( RECVINFO( m_iPhysicsMode ) ),
-	RecvPropFloat( RECVINFO( m_fMass ) ),
-	RecvPropVector( RECVINFO( m_collisionMins ) ),
-	RecvPropVector( RECVINFO( m_collisionMaxs ) ),
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS( CPhysicsPropMultiplayer, DT_PhysicsPropMultiplayer, CPhysicsPropMultiplayer )

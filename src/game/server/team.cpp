@@ -5,6 +5,8 @@
 // $NoKeywords: $
 //=============================================================================//
 #include "cbase.h"
+#include "reflect_sendtable.h"
+#include "reflect_annotations.h"
 #include "team.h"
 #include "player.h"
 #include "team_spawnpoint.h"
@@ -45,34 +47,7 @@ int SendProxyArrayLength_PlayerArray( const void *pStruct, int objectID )
 
 
 // Datatable
-IMPLEMENT_SERVERCLASS_ST_NOBASE(CTeam, DT_Team)
-	SendPropInt( SENDINFO(m_iTeamNum), 5 ),
-	SendPropInt( SENDINFO(m_bSurrendered), 0 ),
-	SendPropInt( SENDINFO(m_scoreTotal), 0 ),
-	SendPropInt( SENDINFO(m_scoreFirstHalf), 0 ),
-	SendPropInt( SENDINFO(m_scoreSecondHalf), 0 ),	
-	SendPropInt( SENDINFO(m_scoreOvertime), 0 ),	
-	SendPropInt( SENDINFO(m_iClanID), 32, SPROP_UNSIGNED ),	
-
-	SendPropString( SENDINFO( m_szTeamname ) ),
-	SendPropString( SENDINFO( m_szClanTeamname ) ),
-	SendPropString( SENDINFO( m_szTeamFlagImage ) ),
-	SendPropString( SENDINFO( m_szTeamLogoImage ) ),
-	SendPropString( SENDINFO( m_szTeamMatchStat ) ),
-
-	SendPropInt( SENDINFO( m_nGGLeaderEntIndex_CT ), 0 ),
-	SendPropInt( SENDINFO( m_nGGLeaderEntIndex_T ), 0 ),
-
-	SendPropInt( SENDINFO(m_numMapVictories), 4, SPROP_UNSIGNED ),	
-	
-	SendPropArray2( 
-		SendProxyArrayLength_PlayerArray,
-		SendPropInt("player_array_element", 0, 4, 10, SPROP_UNSIGNED, SendProxy_PlayerList), 
-		MAX_PLAYERS, 
-		0, 
-		"player_array"
-		)
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CTeam, DT_Team )
 
 LINK_ENTITY_TO_CLASS( team_manager, CTeam );
 

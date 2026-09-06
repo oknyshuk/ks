@@ -11,6 +11,8 @@
 // $NoKeywords: $
 //=============================================================================//
 #include "cbase.h"
+#include "reflect_recvtable.h"
+#include "reflect_annotations.h"
 #include "c_te_particlesystem.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
@@ -19,7 +21,8 @@
 //-----------------------------------------------------------------------------
 // Purpose: Show Line TE
 //-----------------------------------------------------------------------------
-class C_TEShowLine : public C_TEParticleSystem
+class [[= ks::reflect::NetTable{ .name = "DT_TEShowLine" } ]]
+      C_TEShowLine : public C_TEParticleSystem
 {
 public:
 	DECLARE_CLASS( C_TEShowLine, C_TEParticleSystem );
@@ -31,7 +34,7 @@ public:
 	virtual void	PostDataUpdate( DataUpdateType_t updateType );
 
 public:
-	Vector			m_vecEnd;
+	[[= ks::reflect::Net{} ]] Vector			m_vecEnd;
 };
 
 //-----------------------------------------------------------------------------
@@ -95,9 +98,7 @@ void C_TEShowLine::PostDataUpdate( DataUpdateType_t updateType )
 	}
 }
 
-IMPLEMENT_CLIENTCLASS_EVENT_DT(C_TEShowLine, DT_TEShowLine, CTEShowLine)
-	RecvPropVector( RECVINFO(m_vecEnd)),
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS_EVENT( C_TEShowLine, DT_TEShowLine, CTEShowLine )
 
 void TE_ShowLine( IRecipientFilter& filter, float delay,
 	const Vector* start, const Vector* end )

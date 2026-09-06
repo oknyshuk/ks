@@ -27,7 +27,6 @@ extern void ClearEntities( void );
 extern void FreeContainingEntity( edict_t *ed );
 
 class ISaveRestoreBlockHandler;
-ISaveRestoreBlockHandler *GetEntitySaveRestoreBlockHandler();
 
 
 #endif			// ENTITYAPI_H

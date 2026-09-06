@@ -4,6 +4,8 @@
 #ifndef CHICKEN_H
 #define CHICKEN_H
 
+#include "reflect_annotations.h"
+
 #include "props.h"
 #include "GameEventListener.h"
 #include "nav_mesh.h"
@@ -13,12 +15,12 @@
 
 class CCSPlayer;
 
-class CChicken : public CDynamicProp, public CGameEventListener, public CImprovLocomotor
+class [[= ks::reflect::NetTable{ .name = "DT_CChicken" } ]]
+      CChicken : public CDynamicProp, public CGameEventListener, public CImprovLocomotor
 {
 public:
 	DECLARE_CLASS( CChicken, CDynamicProp );
 	DECLARE_SERVERCLASS();
-	DECLARE_DATADESC();
 
 	CChicken();
 	virtual ~CChicken();
@@ -116,8 +118,8 @@ private:
 
 	float m_flWhenZombified;
 
-	CNetworkVar( bool, m_jumpedThisFrame );
-	CNetworkVar( EHANDLE, m_leader );						// the player we are following
+	CNetworkVar( bool, m_jumpedThisFrame, [[= ks::reflect::Net{} ]] );
+	CNetworkVar( EHANDLE, m_leader, [[= ks::reflect::Net{} ]] );						// the player we are following
 
 
 	void UpdateFollowing( float deltaT );					// do following behavior

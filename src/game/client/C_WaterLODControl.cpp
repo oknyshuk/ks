@@ -5,6 +5,8 @@
 // $NoKeywords: $
 //=============================================================================//
 #include "cbase.h"
+#include "reflect_recvtable.h"
+#include "reflect_annotations.h"
 #include "iviewrender.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
@@ -18,7 +20,8 @@
 //------------------------------------------------------------------------------
 // Purpose : Water LOD control entity
 //------------------------------------------------------------------------------
-class C_WaterLODControl : public C_BaseEntity
+class [[= ks::reflect::NetTable{ .name = "DT_WaterLODControl" } ]]
+      C_WaterLODControl : public C_BaseEntity
 {
 public:
 	DECLARE_CLASS( C_WaterLODControl, C_BaseEntity );
@@ -29,14 +32,11 @@ public:
 	bool ShouldDraw();
 
 private:
-	float m_flCheapWaterStartDistance;
-	float m_flCheapWaterEndDistance;
+	[[= ks::reflect::Net{} ]] float m_flCheapWaterStartDistance;
+	[[= ks::reflect::Net{} ]] float m_flCheapWaterEndDistance;
 };
 
-IMPLEMENT_CLIENTCLASS_DT(C_WaterLODControl, DT_WaterLODControl, CWaterLODControl)
-	RecvPropFloat(RECVINFO(m_flCheapWaterStartDistance)),
-	RecvPropFloat(RECVINFO(m_flCheapWaterEndDistance)),
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS( C_WaterLODControl, DT_WaterLODControl, CWaterLODControl )
 
 
 //------------------------------------------------------------------------------

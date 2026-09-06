@@ -8,6 +8,8 @@
 #ifndef EFFECTS_H
 #define EFFECTS_H
 
+#include "reflect_annotations.h"
+
 #ifdef _WIN32
 #pragma once
 #endif
@@ -32,7 +34,8 @@ public:
 //-----------------------------------------------------------------------------
 IRotorWashShooter *GetRotorWashShooter( CBaseEntity *pEntity );
 
-class CEnvQuadraticBeam : public CPointEntity
+class [[= ks::reflect::NetTable{ .name = "DT_QuadraticBeam" } ]]
+      CEnvQuadraticBeam : public CPointEntity
 {
 	DECLARE_CLASS( CEnvQuadraticBeam, CPointEntity );
 
@@ -54,12 +57,11 @@ public:
 	}
 
 private:
-	CNetworkVector( m_targetPosition );
-	CNetworkVector( m_controlPosition );
-	CNetworkVar( float, m_scrollRate );
-	CNetworkVar( float, m_flWidth );
+	CNetworkVector( m_targetPosition, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD, .enc = ks::reflect::ENC_VECTOR } ]] );
+	CNetworkVector( m_controlPosition, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD, .enc = ks::reflect::ENC_VECTOR } ]] );
+	CNetworkVar( float, m_scrollRate, [[= ks::reflect::Net{ .bits = 8, .low = -4, .high = 4 } ]] );
+	CNetworkVar( float, m_flWidth, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_NOSCALE } ]] );
 
-	DECLARE_DATADESC();
 	DECLARE_SERVERCLASS();
 };
 CEnvQuadraticBeam *CreateQuadraticBeam( const char *pSpriteName, const Vector &start, const Vector &control, const Vector &end, float width, CBaseEntity *pOwner );

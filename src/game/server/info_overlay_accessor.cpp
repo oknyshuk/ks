@@ -6,6 +6,9 @@
 //
 //=============================================================================//
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_sendtable.h"
+#include "reflect_annotations.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -14,7 +17,9 @@
 // An entity used to access overlays (and change their texture)
 // -------------------------------------------------------------------------------- //
 
-class CInfoOverlayAccessor : public CPointEntity
+class [[= ks::reflect::NetTable{ .name = "DT_InfoOverlayAccessor", .base = false } ]]
+      [[= ks::reflect::From<"m_iTextureFrameIndex", ks::reflect::Net{ .bits = 8, .flags = SPROP_UNSIGNED }>{} ]]
+      CInfoOverlayAccessor : public CPointEntity
 {
 public:
 
@@ -27,21 +32,16 @@ public:
 
 private:
 
-	CNetworkVar( int, m_iOverlayID );
+	CNetworkVar( int, m_iOverlayID, [[= ks::reflect::Net{ .bits = 32, .flags = SPROP_UNSIGNED } ]] [[= ks::reflect::Key{ .name = "OverlayID" } ]] );
 };
 							  
 
 // This table encodes the CBaseEntity data.
-IMPLEMENT_SERVERCLASS_ST_NOBASE(CInfoOverlayAccessor, DT_InfoOverlayAccessor)
-	SendPropInt	(	SENDINFO(m_iTextureFrameIndex),		8,	SPROP_UNSIGNED ),
-	SendPropInt	(	SENDINFO(m_iOverlayID),				32,	SPROP_UNSIGNED ),
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CInfoOverlayAccessor, DT_InfoOverlayAccessor )
 
 LINK_ENTITY_TO_CLASS( info_overlay_accessor, CInfoOverlayAccessor );
 
-BEGIN_DATADESC( CInfoOverlayAccessor )
-	DEFINE_KEYFIELD( m_iOverlayID,	FIELD_INTEGER, "OverlayID" ),
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CInfoOverlayAccessor )
 
 
 int CInfoOverlayAccessor::UpdateTransmitState()

@@ -6,6 +6,8 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_annotations.h"
 #include "baseentity.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
@@ -29,13 +31,13 @@ private:
 	void SetTarget( const char *pName );
 	void SetTargetReference( const char *pName );
 
-	void InputSetMeasureTarget( inputdata_t &inputdata );
-	void InputSetMeasureReference( inputdata_t &inputdata );
-	void InputSetTarget( inputdata_t &inputdata );
-	void InputSetTargetReference( inputdata_t &inputdata );
-	void InputSetTargetScale( inputdata_t &inputdata );
-	void InputEnable( inputdata_t &inputdata );
-	void InputDisable( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetMeasureTarget", .type = FIELD_STRING } ]] void InputSetMeasureTarget( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetMeasureReference", .type = FIELD_STRING } ]] void InputSetMeasureReference( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetTarget", .type = FIELD_STRING } ]] void InputSetTarget( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetTargetReference", .type = FIELD_STRING } ]] void InputSetTargetReference( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetTargetScale", .type = FIELD_FLOAT } ]] void InputSetTargetScale( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Enable", .type = FIELD_VOID } ]] void InputEnable( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Disable", .type = FIELD_VOID } ]] void InputDisable( inputdata_t &inputdata );
 
 	void MeasureThink();
 
@@ -46,48 +48,24 @@ private:
 		MEASURE_EYE_POSITION,
 	};
 
-	string_t m_strMeasureTarget;
-	string_t m_strMeasureReference;
-	string_t m_strTargetReference;
+	[[= ks::reflect::Key{ .name = "MeasureTarget" } ]] string_t m_strMeasureTarget;
+	[[= ks::reflect::Key{ .name = "MeasureReference" } ]] string_t m_strMeasureReference;
+	[[= ks::reflect::Key{ .name = "TargetReference" } ]] string_t m_strTargetReference;
 
 	EHANDLE m_hMeasureTarget;
 	EHANDLE m_hMeasureReference;
 	EHANDLE m_hTarget;
 	EHANDLE m_hTargetReference;
 
-	float m_flScale;
-	int m_nMeasureType;
+	[[= ks::reflect::Key{ .name = "TargetScale" } ]] float m_flScale;
+	[[= ks::reflect::Key{ .name = "MeasureType" } ]] int m_nMeasureType;
 };
 
 
 LINK_ENTITY_TO_CLASS( logic_measure_movement, CLogicMeasureMovement );
 
 
-BEGIN_DATADESC( CLogicMeasureMovement )
-
-	DEFINE_KEYFIELD( m_strMeasureTarget, FIELD_STRING, "MeasureTarget" ),
-	DEFINE_KEYFIELD( m_strMeasureReference, FIELD_STRING, "MeasureReference" ),
-	DEFINE_KEYFIELD( m_strTargetReference, FIELD_STRING, "TargetReference" ),
-	DEFINE_KEYFIELD( m_flScale, FIELD_FLOAT, "TargetScale" ),
-	DEFINE_KEYFIELD( m_nMeasureType, FIELD_INTEGER, "MeasureType" ),
-
-	DEFINE_FIELD( m_hMeasureTarget, FIELD_EHANDLE ),
-	DEFINE_FIELD( m_hMeasureReference, FIELD_EHANDLE ),
-	DEFINE_FIELD( m_hTarget, FIELD_EHANDLE ),
-	DEFINE_FIELD( m_hTargetReference, FIELD_EHANDLE ),
-
-	DEFINE_INPUTFUNC( FIELD_STRING, "SetMeasureTarget", InputSetMeasureTarget ),
-	DEFINE_INPUTFUNC( FIELD_STRING, "SetMeasureReference", InputSetMeasureReference ),
-	DEFINE_INPUTFUNC( FIELD_STRING, "SetTarget", InputSetTarget ),
-	DEFINE_INPUTFUNC( FIELD_STRING, "SetTargetReference", InputSetTargetReference ),
-	DEFINE_INPUTFUNC( FIELD_FLOAT, "SetTargetScale", InputSetTargetScale ),
-
-	DEFINE_INPUTFUNC( FIELD_VOID, "Enable", InputEnable ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "Disable", InputDisable ),
-
-	DEFINE_THINKFUNC( MeasureThink ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CLogicMeasureMovement )
 
 
 //-----------------------------------------------------------------------------

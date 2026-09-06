@@ -5,10 +5,11 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_annotations.h"
 
 #include "sceneentity.h"
 #include "ai_playerally.h"
-#include "saverestore_utlmap.h"
 #include "eventqueue.h"
 #include "ai_behavior_lead.h"
 #include "gameinterface.h"
@@ -304,12 +305,6 @@ bool CAI_AllySpeechManager::ConceptDelayExpired( AIConcept_t conc )
 
 LINK_ENTITY_TO_CLASS( ai_ally_speech_manager, CAI_AllySpeechManager );
 
-BEGIN_DATADESC( CAI_AllySpeechManager )
-
-	DEFINE_EMBEDDED_AUTO_ARRAY(m_ConceptCategoryTimers),
-	DEFINE_UTLMAP( m_ConceptTimers, FIELD_STRING, FIELD_EMBEDDED ),
-
-END_DATADESC()
 
 //-----------------------------------------------------------------------------
 
@@ -336,37 +331,7 @@ CAI_AllySpeechManager *GetAllySpeechManager()
 //
 //-----------------------------------------------------------------------------
 
-BEGIN_DATADESC( CAI_PlayerAlly )
-
-	DEFINE_EMBEDDED( m_PendingResponse ),
-	DEFINE_STDSTRING( m_PendingConcept ),
-	DEFINE_FIELD( m_TimePendingSet, FIELD_TIME ),
-	DEFINE_FIELD( m_hTalkTarget, FIELD_EHANDLE ),
-	DEFINE_FIELD( m_flNextRegenTime, FIELD_TIME ),
-	DEFINE_FIELD( m_flTimePlayerStartStare, FIELD_TIME ),
-	DEFINE_FIELD( m_hPotentialSpeechTarget, FIELD_EHANDLE ),
-	DEFINE_FIELD( m_flNextIdleSpeechTime, FIELD_TIME ),
-	DEFINE_FIELD( m_iQARandomNumber, FIELD_INTEGER ),
-	DEFINE_FIELD( m_hSpeechFilter, FIELD_EHANDLE ),
-	DEFINE_EMBEDDED_AUTO_ARRAY(m_ConceptCategoryTimers),
-
-	DEFINE_KEYFIELD( m_bGameEndAlly, FIELD_BOOLEAN, "GameEndAlly" ),
-	DEFINE_FIELD( m_bCanSpeakWhileScripting, FIELD_BOOLEAN ),
-
-	DEFINE_FIELD( m_flHealthAccumulator, FIELD_FLOAT ),
-	DEFINE_FIELD( m_flTimeLastRegen, FIELD_TIME ),
-
-	// Inputs
-	DEFINE_INPUTFUNC( FIELD_VOID, "IdleRespond", InputIdleRespond ),
-	DEFINE_INPUTFUNC( FIELD_STRING,	"SpeakResponseConcept",	InputSpeakResponseConcept ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "MakeGameEndAlly", InputMakeGameEndAlly ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "MakeRegularAlly", InputMakeRegularAlly ),
-	DEFINE_INPUTFUNC( FIELD_INTEGER, "AnswerQuestion", InputAnswerQuestion ),
-	DEFINE_INPUTFUNC( FIELD_INTEGER, "AnswerQuestionHello", InputAnswerQuestionHello ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "EnableSpeakWhileScripting", InputEnableSpeakWhileScripting ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "DisableSpeakWhileScripting", InputDisableSpeakWhileScripting ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CAI_PlayerAlly )
 
 CBaseEntity *CreatePlayerLoadSave( Vector vOrigin, float flDuration, float flHoldTime, float flLoadTime );
 ConVar npc_ally_deathmessage( "npc_ally_deathmessage", "1", FCVAR_CHEAT );

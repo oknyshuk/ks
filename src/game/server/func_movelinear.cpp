@@ -6,12 +6,14 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_sendtable.h"
+#include "reflect_annotations.h"
 #include "func_movelinear.h"
 #include "entitylist.h"
 #include "locksounds.h"
 #include "ndebugoverlay.h"
 #include "engine/IEngineSound.h"
-#include "physics_saverestore.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -30,31 +32,7 @@ LINK_ENTITY_TO_CLASS( momentary_door, CFuncMoveLinear );	// For backward compati
 LINK_ENTITY_TO_CLASS( func_water_analog, CFuncMoveLinear );
 
 
-BEGIN_DATADESC( CFuncMoveLinear )
-
-	DEFINE_KEYFIELD( m_vecMoveDir,		 FIELD_VECTOR, "movedir" ),
-	DEFINE_KEYFIELD( m_soundStart,		 FIELD_SOUNDNAME, "StartSound" ),
-	DEFINE_KEYFIELD( m_soundStop,		 FIELD_SOUNDNAME, "StopSound" ),
-	DEFINE_FIELD( m_currentSound, FIELD_SOUNDNAME ),
-	DEFINE_KEYFIELD( m_flBlockDamage,	 FIELD_FLOAT,	"BlockDamage"),
-	DEFINE_KEYFIELD( m_flStartPosition, FIELD_FLOAT,	"StartPosition"),
-	DEFINE_KEYFIELD( m_flMoveDistance,  FIELD_FLOAT,	"MoveDistance"),
-//	DEFINE_PHYSPTR( m_pFluidController ),
-
-	// Inputs
-	DEFINE_INPUTFUNC( FIELD_VOID,  "Open", InputOpen ),
-	DEFINE_INPUTFUNC( FIELD_VOID,  "Close", InputClose ),
-	DEFINE_INPUTFUNC( FIELD_FLOAT, "SetPosition", InputSetPosition ),
-	DEFINE_INPUTFUNC( FIELD_FLOAT, "SetSpeed", InputSetSpeed ),
-
-	// Outputs
-	DEFINE_OUTPUT( m_OnFullyOpen, "OnFullyOpen" ),
-	DEFINE_OUTPUT( m_OnFullyClosed, "OnFullyClosed" ),
-
-	// Functions
-	DEFINE_FUNCTION( StopMoveSound ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CFuncMoveLinear )
 
 void SendProxy_CropFlagsToConveyorFlagBitsLength( const SendProp *pProp, const void *pStruct, const void *pVarData, DVariant *pOut, int iElement, int objectID)
 {
@@ -64,10 +42,7 @@ void SendProxy_CropFlagsToConveyorFlagBitsLength( const SendProp *pProp, const v
 	pOut->m_Int = ( data & mask );
 }
 
-IMPLEMENT_SERVERCLASS_ST(CFuncMoveLinear, DT_FuncMoveLinear)
-	SendPropVector( SENDINFO( m_vecVelocity ), 0, SPROP_NOSCALE ),
-	SendPropInt			( SENDINFO(m_fFlags), 0, SPROP_UNSIGNED ),
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CFuncMoveLinear, DT_FuncMoveLinear )
 
 //------------------------------------------------------------------------------
 // Purpose: Called before spawning, after keyvalues have been parsed.

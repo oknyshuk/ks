@@ -19,7 +19,6 @@ class CHostageRescueZone : public CBaseTrigger
 {
 public:
 	DECLARE_CLASS( CHostageRescueZone, CBaseTrigger );
-	DECLARE_DATADESC();
 
 	void CHostageRescue();
 	void Spawn();
@@ -44,7 +43,6 @@ public:
 		return SetTransmitState( FL_EDICT_ALWAYS );
 	}
 
-	DECLARE_DATADESC();
 };
 
 #endif // HOSTAGERESCUEZONE_H

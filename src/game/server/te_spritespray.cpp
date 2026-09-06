@@ -11,6 +11,8 @@
 // $NoKeywords: $
 //=============================================================================//
 #include "cbase.h"
+#include "reflect_sendtable.h"
+#include "reflect_annotations.h"
 #include "basetempentity.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
@@ -21,7 +23,8 @@ extern int	g_sModelIndexSmoke;			// (in combatweapon.cpp) holds the index for th
 //-----------------------------------------------------------------------------
 // Purpose: Dispatches Sprite Spray tempentity
 //-----------------------------------------------------------------------------
-class CTESpriteSpray : public CBaseTempEntity
+class [[= ks::reflect::NetTable{ .name = "DT_TESpriteSpray" } ]]
+      CTESpriteSpray : public CBaseTempEntity
 {
 public:
 	DECLARE_CLASS( CTESpriteSpray, CBaseTempEntity );
@@ -34,12 +37,12 @@ public:
 	DECLARE_SERVERCLASS();
 
 public:
-	CNetworkVector( m_vecOrigin );
-	CNetworkVector( m_vecDirection );
-	CNetworkVar( int, m_nModelIndex );
-	CNetworkVar( int, m_nSpeed );
-	CNetworkVar( float, m_fNoise );
-	CNetworkVar( int, m_nCount );
+	CNetworkVector( m_vecOrigin, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD, .enc = ks::reflect::ENC_VECTOR } ]] );
+	CNetworkVector( m_vecDirection, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD, .enc = ks::reflect::ENC_VECTOR } ]] );
+	CNetworkVar( int, m_nModelIndex, [[= ks::reflect::Net{ .enc = ks::reflect::ENC_MODELINDEX } ]] );
+	CNetworkVar( int, m_nSpeed, [[= ks::reflect::Net{ .bits = 8, .flags = SPROP_UNSIGNED } ]] );
+	CNetworkVar( float, m_fNoise, [[= ks::reflect::Net{ .bits = 8, .low = 0.0, .high = 2.56, .flags = SPROP_ROUNDDOWN } ]] );
+	CNetworkVar( int, m_nCount, [[= ks::reflect::Net{ .bits = 8, .flags = SPROP_UNSIGNED } ]] );
 };
 
 //-----------------------------------------------------------------------------
@@ -95,14 +98,7 @@ void CTESpriteSpray::Test( const Vector& current_origin, const QAngle& current_a
 	Create( filter, 0.0 );
 }
 
-IMPLEMENT_SERVERCLASS_ST(CTESpriteSpray, DT_TESpriteSpray)
-	SendPropVector( SENDINFO(m_vecOrigin), -1, SPROP_COORD),
-	SendPropVector( SENDINFO(m_vecDirection), -1, SPROP_COORD),
-	SendPropModelIndex(SENDINFO(m_nModelIndex)),
-	SendPropFloat( SENDINFO(m_fNoise ), 8, SPROP_ROUNDDOWN, 0.0, 2.56 ),
-	SendPropInt( SENDINFO(m_nSpeed ), 8, SPROP_UNSIGNED ),
-	SendPropInt( SENDINFO(m_nCount), 8, SPROP_UNSIGNED ),
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CTESpriteSpray, DT_TESpriteSpray )
 
 
 // Singleton to fire TESpriteSpray objects

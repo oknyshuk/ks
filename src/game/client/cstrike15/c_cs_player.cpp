@@ -5,6 +5,9 @@
 //===========================================================================//
 
 #include "cbase.h"
+#include "reflect_recvtable.h"
+#include "reflect_annotations.h"
+#include "reflect_predmap.h"
 #include "c_cs_player.h"
 #include "c_user_message_register.h"
 #include "localize/ilocalize.h"
@@ -478,7 +481,8 @@ static int FilterModelUsingCL_MinModels( int iClass )
 // Player animation event. Sent to the client when a player fires, jumps, reloads, etc..
 // -------------------------------------------------------------------------------- //
 
-class C_TEPlayerAnimEvent : public C_BaseTempEntity
+class [[= ks::reflect::NetTable{ .name = "DT_TEPlayerAnimEvent", .base = false } ]]
+      C_TEPlayerAnimEvent : public C_BaseTempEntity
 {
 public:
 	DECLARE_CLASS( C_TEPlayerAnimEvent, C_BaseTempEntity );
@@ -495,34 +499,16 @@ public:
 	}
 
 public:
-	CNetworkHandle( CBasePlayer, m_hPlayer );
-	CNetworkVar( int, m_iEvent );
-	CNetworkVar( int, m_nData );
+	CNetworkHandle( CBasePlayer, m_hPlayer, [[= ks::reflect::Net{} ]] );
+	CNetworkVar( int, m_iEvent, [[= ks::reflect::Net{} ]] );
+	CNetworkVar( int, m_nData, [[= ks::reflect::Net{} ]] );
 };
 
 IMPLEMENT_CLIENTCLASS_EVENT( C_TEPlayerAnimEvent, DT_TEPlayerAnimEvent, CTEPlayerAnimEvent );
 
-BEGIN_RECV_TABLE_NOBASE( C_TEPlayerAnimEvent, DT_TEPlayerAnimEvent )
-	RecvPropEHandle( RECVINFO( m_hPlayer ) ),
-	RecvPropInt( RECVINFO( m_iEvent ) ),
-	RecvPropInt( RECVINFO( m_nData ) )
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_TABLE( C_TEPlayerAnimEvent, DT_TEPlayerAnimEvent );
 
-BEGIN_PREDICTION_DATA( C_CSPlayer )
-#ifdef CS_SHIELD_ENABLED
-	DEFINE_PRED_FIELD( m_bShieldDrawn, FIELD_BOOLEAN, FTYPEDESC_INSENDTABLE ),
-#endif
-	DEFINE_PRED_FIELD_TOL( m_flStamina, FIELD_FLOAT, FTYPEDESC_INSENDTABLE, 0.1f ),
-	DEFINE_PRED_FIELD( m_flCycle, FIELD_FLOAT, FTYPEDESC_OVERRIDE | FTYPEDESC_PRIVATE | FTYPEDESC_NOERRORCHECK ),
-	DEFINE_PRED_FIELD( m_iShotsFired, FIELD_INTEGER, FTYPEDESC_INSENDTABLE ),   
-	DEFINE_PRED_FIELD( m_iDirection, FIELD_INTEGER, FTYPEDESC_INSENDTABLE ),   
-	DEFINE_PRED_FIELD( m_bIsScoped, FIELD_BOOLEAN, FTYPEDESC_INSENDTABLE ),
-	DEFINE_PRED_FIELD( m_bIsWalking, FIELD_BOOLEAN, FTYPEDESC_INSENDTABLE ),
-	DEFINE_PRED_FIELD( m_bResumeZoom, FIELD_BOOLEAN, FTYPEDESC_INSENDTABLE ),
-	DEFINE_PRED_FIELD( m_nNumFastDucks, FIELD_INTEGER, FTYPEDESC_INSENDTABLE ),   
-	DEFINE_PRED_FIELD( m_bDuckOverride, FIELD_BOOLEAN, FTYPEDESC_INSENDTABLE ),   
-
-END_PREDICTION_DATA()
+IMPLEMENT_REFLECT_PREDMAP( C_CSPlayer );
 
 // ----------------------------------------------------------------------------- //
 // Client ragdoll entity.
@@ -533,21 +519,7 @@ float g_flDieTranslucentTime = 0.6;
 
 
 
-IMPLEMENT_CLIENTCLASS_DT_NOBASE( C_CSRagdoll, DT_CSRagdoll, CCSRagdoll )
-	RecvPropVector( RECVINFO_NAME( m_vecNetworkOrigin, m_vecOrigin ) ),
-	RecvPropVector( RECVINFO(m_vecRagdollOrigin ) ),
-	RecvPropEHandle( RECVINFO( m_hPlayer ) ),
-	RecvPropInt( RECVINFO( m_nModelIndex ) ),
-	RecvPropInt( RECVINFO(m_nForceBone ) ),
-	RecvPropVector( RECVINFO(m_vecForce ) ),
-	RecvPropVector( RECVINFO( m_vecRagdollVelocity ) ),
-	RecvPropInt( RECVINFO(m_iDeathPose ) ),
-	RecvPropInt( RECVINFO(m_iDeathFrame ) ),
-	RecvPropInt(RECVINFO(m_iTeamNum )),
-	RecvPropInt( RECVINFO(m_bClientSideAnimation )),
-	RecvPropFloat( RECVINFO(m_flDeathYaw) ),
-	RecvPropFloat( RECVINFO(m_flAbsYaw) ),
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS( C_CSRagdoll, DT_CSRagdoll, CCSRagdoll )
 
 
 C_CSRagdoll::C_CSRagdoll():
@@ -1403,166 +1375,21 @@ bool __MsgFunc_ReloadEffect( const ks::net::CCSUsrMsg_ReloadEffect &msg )
 }
 USER_MESSAGE_REGISTER( ReloadEffect );
 
-BEGIN_RECV_TABLE_NOBASE( C_CSPlayer, DT_CSLocalPlayerExclusive )
-
-	// DEPRECATED; redundant origin positions. Kept for backwards demo compatible.
-	RecvPropVectorXY( RECVINFO_NAME( m_vecNetworkOrigin, m_vecOrigin ) ),
-	RecvPropFloat( RECVINFO_NAME( m_vecNetworkOrigin[2], m_vecOrigin[2] ) ),
-	/////	
-	
-	RecvPropFloat( RECVINFO(m_flStamina ) ),
-	RecvPropInt( RECVINFO( m_iDirection ) ),
-	RecvPropInt( RECVINFO( m_iShotsFired ) ),
-	RecvPropInt( RECVINFO( m_nNumFastDucks ) ),
-	RecvPropBool( RECVINFO( m_bDuckOverride ) ),
-	RecvPropFloat( RECVINFO( m_flVelocityModifier ) ),
-
-	RecvPropArray3( RECVINFO_ARRAY( m_bPlayerDominated ), RecvPropBool( RECVINFO( m_bPlayerDominated[0] ) ) ),
-	RecvPropArray3( RECVINFO_ARRAY( m_bPlayerDominatingMe ), RecvPropBool( RECVINFO( m_bPlayerDominatingMe[0] ) ) ),
-
-	RecvPropArray3( RECVINFO_ARRAY( m_iWeaponPurchasesThisRound ), RecvPropInt( RECVINFO( m_iWeaponPurchasesThisRound[0] ) ) ),
-
-	RecvPropInt( RECVINFO( m_nQuestProgressReason ) ),
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_TABLE_IN( C_CSPlayer, DT_CSLocalPlayerExclusive );
 
 
-BEGIN_RECV_TABLE_NOBASE( C_CSPlayer, DT_CSNonLocalPlayerExclusive )
-	// DEPRECATED; redundant origin positions. Kept for backwards demo compatible.
-	RecvPropVectorXY( RECVINFO_NAME( m_vecNetworkOrigin, m_vecOrigin ) ),
-	RecvPropFloat( RECVINFO_NAME( m_vecNetworkOrigin[2], m_vecOrigin[2] ) ),
-	//////
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_TABLE_IN( C_CSPlayer, DT_CSNonLocalPlayerExclusive );
 
 
-IMPLEMENT_CLIENTCLASS_DT( C_CSPlayer, DT_CSPlayer, CCSPlayer )
-	// Data that only gets sent to the local player.
-	RecvPropDataTable( "cslocaldata", 0, 0, &REFERENCE_RECV_TABLE(DT_CSLocalPlayerExclusive ) ),
-	RecvPropDataTable( "csnonlocaldata", 0, 0, &REFERENCE_RECV_TABLE(DT_CSNonLocalPlayerExclusive ) ),
-	
-	RecvPropFloat( RECVINFO( m_angEyeAngles[0] ) ),
-	RecvPropFloat( RECVINFO( m_angEyeAngles[1] ) ),
-
-	RecvPropInt( RECVINFO( m_iAddonBits ) ),
-	RecvPropInt( RECVINFO( m_iPrimaryAddon ) ),
-	RecvPropInt( RECVINFO( m_iSecondaryAddon ) ),
-	RecvPropInt( RECVINFO( m_iThrowGrenadeCounter ) ),
-	RecvPropBool( RECVINFO( m_bWaitForNoAttack ) ),
-	RecvPropBool( RECVINFO( m_bIsRespawningForDMBonus ) ),
-	RecvPropInt( RECVINFO( m_iPlayerState ) ),
-	RecvPropInt( RECVINFO( m_iAccount ) ),
-	RecvPropInt( RECVINFO( m_iStartAccount ) ),
-	RecvPropInt( RECVINFO( m_totalHitsOnServer ) ),
-	RecvPropInt( RECVINFO( m_bInBombZone ) ),
-	RecvPropInt( RECVINFO( m_bInBuyZone ) ),
-	RecvPropInt( RECVINFO( m_bInNoDefuseArea ) ),
-	RecvPropBool( RECVINFO( m_bKilledByTaser ) ),
-	RecvPropInt( RECVINFO( m_iMoveState ) ),
-	RecvPropInt( RECVINFO( m_iClass ) ),
-	RecvPropInt( RECVINFO( m_ArmorValue ) ),
-	RecvPropQAngles( RECVINFO( m_angEyeAngles ) ),
-	RecvPropInt( RECVINFO( m_bHasDefuser ), 0, RecvProxy_HasDefuser ),
-	RecvPropInt( RECVINFO( m_bNightVisionOn ), 0, RecvProxy_NightVision ),
-	RecvPropBool( RECVINFO( m_bHasNightVision ) ),
-	RecvPropBool( RECVINFO( m_bInHostageRescueZone ) ),
-	RecvPropBool( RECVINFO( m_bIsDefusing ) ),
-	RecvPropBool( RECVINFO( m_bIsGrabbingHostage ) ),
-	RecvPropBool( RECVINFO( m_bIsScoped ) ),
-	RecvPropBool( RECVINFO( m_bIsWalking ) ),
-	RecvPropBool( RECVINFO( m_bResumeZoom ) ),
-	RecvPropFloat( RECVINFO( m_fImmuneToGunGameDamageTime ) ),
-	RecvPropBool( RECVINFO( m_bGunGameImmunity ) ),
-	RecvPropBool( RECVINFO( m_bHasMovedSinceSpawn ) ),
-	RecvPropBool( RECVINFO( m_bMadeFinalGunGameProgressiveKill ) ),
-	RecvPropInt( RECVINFO( m_iGunGameProgressiveWeaponIndex ) ),
-	RecvPropInt( RECVINFO( m_iNumGunGameTRKillPoints ) ),
-	RecvPropInt( RECVINFO( m_iNumGunGameKillsWithCurrentWeapon ) ),
-	RecvPropInt( RECVINFO( m_iNumRoundKills ) ),
-	RecvPropFloat( RECVINFO( m_fMolotovUseTime ) ),
-	RecvPropFloat( RECVINFO( m_fMolotovDamageTime ) ),
-	RecvPropString( RECVINFO( m_szArmsModel ) ),
-	RecvPropEHandle( RECVINFO(m_hCarriedHostage) ),
-	RecvPropEHandle( RECVINFO(m_hCarriedHostageProp) ),
-	RecvPropBool( RECVINFO( m_bIsRescuing ) ),
-	RecvPropFloat( RECVINFO( m_flGroundAccelLinearFracLastTime ) ),
-	RecvPropBool( RECVINFO( m_bCanMoveDuringFreezePeriod ) ),
-	RecvPropBool( RECVINFO( m_isCurrentGunGameLeader ) ),
-	RecvPropBool( RECVINFO( m_isCurrentGunGameTeamLeader ) ),	
-	RecvPropFloat( RECVINFO( m_flGuardianTooFarDistFrac ) ),	
-	RecvPropFloat( RECVINFO( m_flDetectedByEnemySensorTime ) ),
-	
-	RecvPropArray3( RECVINFO_ARRAY( m_iMatchStats_Kills ),			RecvPropInt( RECVINFO( m_iMatchStats_Kills[0] ))),
-	RecvPropArray3( RECVINFO_ARRAY( m_iMatchStats_Damage ),			RecvPropInt( RECVINFO( m_iMatchStats_Damage[0] ))),
-	RecvPropArray3( RECVINFO_ARRAY( m_iMatchStats_EquipmentValue ), RecvPropInt( RECVINFO( m_iMatchStats_EquipmentValue[0] ))),
-	RecvPropArray3( RECVINFO_ARRAY( m_iMatchStats_MoneySaved ),		RecvPropInt( RECVINFO( m_iMatchStats_MoneySaved[0] ))),
-	RecvPropArray3( RECVINFO_ARRAY( m_iMatchStats_KillReward ),		RecvPropInt( RECVINFO( m_iMatchStats_KillReward[0] ))),
-	RecvPropArray3( RECVINFO_ARRAY( m_iMatchStats_LiveTime ),		RecvPropInt( RECVINFO( m_iMatchStats_LiveTime[0] ))),
-	RecvPropArray3( RECVINFO_ARRAY( m_iMatchStats_Deaths ),		RecvPropInt( RECVINFO( m_iMatchStats_Deaths[0] ))),
-	RecvPropArray3( RECVINFO_ARRAY( m_iMatchStats_Assists ),		RecvPropInt( RECVINFO( m_iMatchStats_Assists[0] ))),
-	RecvPropArray3( RECVINFO_ARRAY( m_iMatchStats_HeadShotKills ),		RecvPropInt( RECVINFO( m_iMatchStats_HeadShotKills[0] ))),
-	RecvPropArray3( RECVINFO_ARRAY( m_iMatchStats_Objective ),		RecvPropInt( RECVINFO( m_iMatchStats_Objective[0] ))),
-	RecvPropArray3( RECVINFO_ARRAY( m_iMatchStats_CashEarned ),		RecvPropInt( RECVINFO( m_iMatchStats_CashEarned[0] ))),
-	RecvPropArray3( RECVINFO_ARRAY( m_iMatchStats_UtilityDamage ), RecvPropInt( RECVINFO( m_iMatchStats_UtilityDamage[0] ))),
-	RecvPropArray3( RECVINFO_ARRAY( m_iMatchStats_EnemiesFlashed ), RecvPropInt( RECVINFO( m_iMatchStats_EnemiesFlashed[0] ))),
-
-	RecvPropArray3( RECVINFO_ARRAY(m_rank), RecvPropInt( RECVINFO(m_rank[0]))),
-
-	RecvPropInt( RECVINFO( m_unMusicID ), 0 ),
-
+IMPLEMENT_REFLECT_CLIENTCLASS( C_CSPlayer, DT_CSPlayer, CCSPlayer )
 #ifdef CS_SHIELD_ENABLED
-	RecvPropBool( RECVINFO( m_bHasShield ) ),
-	RecvPropBool( RECVINFO( m_bShieldDrawn ) ),
 #endif
-
-	RecvPropBool( RECVINFO( m_bHasHelmet ) ),
-	RecvPropBool( RECVINFO( m_bHasHeavyArmor ) ),
-	RecvPropFloat( RECVINFO( m_flFlashDuration ), 0, RecvProxy_FlashTime ),
-	RecvPropFloat( RECVINFO( m_flFlashMaxAlpha )),
-	RecvPropInt( RECVINFO( m_iProgressBarDuration ) ),
-	RecvPropFloat( RECVINFO( m_flProgressBarStartTime ) ),
-	RecvPropEHandle( RECVINFO( m_hRagdoll ) ),
-	RecvPropInt( RECVINFO( m_cycleLatch ), 0, &C_CSPlayer::RecvProxy_CycleLatch ),
-	RecvPropInt( RECVINFO( m_unCurrentEquipmentValue ) ),
-	RecvPropInt( RECVINFO( m_unRoundStartEquipmentValue ) ),
-	RecvPropInt( RECVINFO( m_unFreezetimeEndEquipmentValue ) ),
-
 #if CS_CONTROLLABLE_BOTS_ENABLED
-	RecvPropBool( RECVINFO( m_bIsControllingBot ) ),
-	RecvPropBool( RECVINFO( m_bHasControlledBotThisRound ) ),
-	RecvPropBool( RECVINFO( m_bCanControlObservedBot ) ),
-	RecvPropInt( RECVINFO( m_iControlledBotEntIndex ) ),
 #endif
-
-	RecvPropBool( RECVINFO( m_bIsAssassinationTarget ) ),
-
-	// data used to show and hide hud via scripts in the training map
-	RecvPropBool( RECVINFO( m_bHud_MiniScoreHidden ) ),
-	RecvPropBool( RECVINFO( m_bHud_RadarHidden ) ),
-
-	RecvPropInt( RECVINFO( m_nLastKillerIndex ) ),
-	// when a player dies, we send to the client the number of unbroken  times in a row the player has been killed by their last killer
-	RecvPropInt( RECVINFO( m_nLastConcurrentKilled ) ),
-	RecvPropInt( RECVINFO( m_nDeathCamMusic ) ),
-
-	RecvPropBool( RECVINFO( m_bIsHoldingLookAtWeapon ) ),
-	RecvPropBool( RECVINFO( m_bIsLookingAtWeapon ) ),
-	RecvPropInt( RECVINFO( m_iNumRoundKillsHeadshots ) ),
 #if defined( PLAYER_TAUNT_SHIPPING_FEATURE )
-	RecvPropBool( RECVINFO( m_bIsTaunting ) ),
-	RecvPropBool( RECVINFO( m_bIsThirdPersonTaunt ) ),
-	RecvPropBool( RECVINFO( m_bIsHoldingTaunt ) ),
-	RecvPropFloat( RECVINFO( m_flTauntYaw ) ),
 #endif
-
 #if defined( USE_PLAYER_ATTRIBUTE_MANAGER )
-	RecvPropDataTable( RECVINFO_DT( m_AttributeManager ), 0, &REFERENCE_RECV_TABLE(DT_AttributeManager) ),
 #endif
-
-	RecvPropFloat( RECVINFO( m_flLowerBodyYawTarget ) ),
-	RecvPropBool( RECVINFO( m_bStrafing ) ),
-
-	RecvPropFloat( RECVINFO( m_flThirdpersonRecoil ) ),	
-
-END_RECV_TABLE()
 
 bool C_CSPlayer::s_bPlayingFreezeCamSound = false;
 

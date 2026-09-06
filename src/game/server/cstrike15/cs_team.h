@@ -8,6 +8,8 @@
 #ifndef CS_TEAM_H
 #define CS_TEAM_H
 
+#include "reflect_annotations.h"
+
 #ifdef _WIN32
 #pragma once
 #endif
@@ -20,7 +22,8 @@
 //-----------------------------------------------------------------------------
 // Purpose: Team Manager
 //-----------------------------------------------------------------------------
-class CCSTeam : public CTeam
+class [[= ks::reflect::NetTable{ .name = "DT_CSTeam" } ]]
+      CCSTeam : public CTeam
 {
 	DECLARE_CLASS( CCSTeam, CTeam );
 public:

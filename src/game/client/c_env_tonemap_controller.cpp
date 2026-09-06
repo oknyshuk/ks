@@ -5,6 +5,8 @@
 //=============================================================================
 
 #include "cbase.h"
+#include "reflect_recvtable.h"
+#include "reflect_annotations.h"
 
 // NOTE: This has to be the last file included!
 #include "tier0/memdbgon.h"
@@ -29,7 +31,8 @@ EHANDLE g_hTonemapControllerInUse = INVALID_EHANDLE;
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-class C_EnvTonemapController : public C_BaseEntity
+class [[= ks::reflect::NetTable{ .name = "DT_EnvTonemapController" } ]]
+      C_EnvTonemapController : public C_BaseEntity
 {
 	DECLARE_CLASS( C_EnvTonemapController, C_BaseEntity );
 public:
@@ -38,39 +41,25 @@ public:
 	C_EnvTonemapController();
 
 //private:
-	bool m_bUseCustomAutoExposureMin;
-	bool m_bUseCustomAutoExposureMax;
-	bool m_bUseCustomBloomScale;
-	float m_flCustomAutoExposureMin;
-	float m_flCustomAutoExposureMax;
-	float m_flCustomBloomScale;
-	float m_flCustomBloomScaleMinimum;
-	float m_flBloomExponent;
-	float m_flBloomSaturation;
-	float m_flTonemapPercentTarget;
-	float m_flTonemapPercentBrightPixels;
-	float m_flTonemapMinAvgLum;
-	float m_flTonemapRate;
+	[[= ks::reflect::Net{} ]] bool m_bUseCustomAutoExposureMin;
+	[[= ks::reflect::Net{} ]] bool m_bUseCustomAutoExposureMax;
+	[[= ks::reflect::Net{} ]] bool m_bUseCustomBloomScale;
+	[[= ks::reflect::Net{} ]] float m_flCustomAutoExposureMin;
+	[[= ks::reflect::Net{} ]] float m_flCustomAutoExposureMax;
+	[[= ks::reflect::Net{} ]] float m_flCustomBloomScale;
+	[[= ks::reflect::Net{} ]] float m_flCustomBloomScaleMinimum;
+	[[= ks::reflect::Net{} ]] float m_flBloomExponent;
+	[[= ks::reflect::Net{} ]] float m_flBloomSaturation;
+	[[= ks::reflect::Net{} ]] float m_flTonemapPercentTarget;
+	[[= ks::reflect::Net{} ]] float m_flTonemapPercentBrightPixels;
+	[[= ks::reflect::Net{} ]] float m_flTonemapMinAvgLum;
+	[[= ks::reflect::Net{} ]] float m_flTonemapRate;
 
 private:
 	C_EnvTonemapController( const C_EnvTonemapController & );
 };
 
-IMPLEMENT_CLIENTCLASS_DT( C_EnvTonemapController, DT_EnvTonemapController, CEnvTonemapController )
-	RecvPropInt( RECVINFO(m_bUseCustomAutoExposureMin) ),
-	RecvPropInt( RECVINFO(m_bUseCustomAutoExposureMax) ),
-	RecvPropInt( RECVINFO(m_bUseCustomBloomScale) ),
-	RecvPropFloat( RECVINFO(m_flCustomAutoExposureMin) ),
-	RecvPropFloat( RECVINFO(m_flCustomAutoExposureMax) ),
-	RecvPropFloat( RECVINFO(m_flCustomBloomScale) ),
-	RecvPropFloat( RECVINFO(m_flCustomBloomScaleMinimum) ),
-	RecvPropFloat( RECVINFO(m_flBloomExponent) ),
-	RecvPropFloat( RECVINFO(m_flBloomSaturation) ),
-	RecvPropFloat( RECVINFO(m_flTonemapPercentTarget) ),
-	RecvPropFloat( RECVINFO(m_flTonemapPercentBrightPixels) ),
-	RecvPropFloat( RECVINFO(m_flTonemapMinAvgLum) ),
-	RecvPropFloat( RECVINFO(m_flTonemapRate) ),
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS( C_EnvTonemapController, DT_EnvTonemapController, CEnvTonemapController )
 
 //-----------------------------------------------------------------------------
 // Purpose: 

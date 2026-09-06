@@ -7,6 +7,7 @@
 //===========================================================================//
 
 #include "cbase.h"
+#include "reflect_table_check.h"
 
 #include "gamestringpool.h"
 #include "mapentities_shared.h"
@@ -21,7 +22,6 @@
 #include "server_class.h"
 #include "ai_node.h"
 #include "ai_link.h"
-#include "ai_saverestore.h"
 #include "ai_networkmanager.h"
 #include "ndebugoverlay.h"
 #include "ivoiceserver.h"
@@ -39,7 +39,6 @@
 #include "textstatsmgr.h"
 #include "bitbuf.h"
 #include "saverestoretypes.h"
-#include "physics_saverestore.h"
 #include "tier0/vprof.h"
 #include "effect_dispatch_data.h"
 #include "engine/IStaticPropMgr.h"
@@ -64,7 +63,6 @@
 #include "SoundEmitterSystem/isoundemittersystembase.h"
 #include "nav_mesh.h"
 #include "ai_responsesystem.h"
-#include "saverestore_stringtable.h"
 #include "util.h"
 #include "tier0/icommandline.h"
 #include "datacache/imdlcache.h"
@@ -175,7 +173,6 @@ DEFINE_LOGGING_CHANNEL_NO_TAGS( LOG_CONSOLE, "Console" );
 
 CTimedEventMgr g_NetworkPropertyEventMgr;
 
-ISaveRestoreBlockHandler *GetEventQueueSaveRestoreBlockHandler();
 
 CUtlLinkedList<CMapEntityRef, unsigned short> g_MapEntityRefs;
 
@@ -271,7 +268,6 @@ INetworkStringTable *g_pStringTableClientSideChoreoScenes = NULL;
 INetworkStringTable *g_pStringTableExtraParticleFiles = NULL;
 INetworkStringTable *g_pStringTableMovies = NULL;
 
-CStringTableSaveRestoreOps g_VguiScreenStringOps;
 
 // Holds global variables shared between engine and game.
 CGlobalVars *gpGlobals;
@@ -608,6 +604,8 @@ bool CServerGameDLL::DLLInit( CreateInterfaceFn appSystemFactory,
 
 	COM_TimestampedLog( "ConnectTier1/2/3Libraries - Finish" );
 
+	ks::reflect::RunAllVerifications();
+
 	// Connected in ConnectTier1Libraries
 	if ( cvar == NULL )
 		return false;
@@ -742,16 +740,8 @@ bool CServerGameDLL::DLLInit( CreateInterfaceFn appSystemFactory,
 
 	COM_TimestampedLog( "g_pGameSaveRestoreBlockSet" );
 
-	g_pGameSaveRestoreBlockSet->AddBlockHandler( GetEntitySaveRestoreBlockHandler() );
-	g_pGameSaveRestoreBlockSet->AddBlockHandler( GetPhysSaveRestoreBlockHandler() );
-	g_pGameSaveRestoreBlockSet->AddBlockHandler( GetAISaveRestoreBlockHandler() );
-	g_pGameSaveRestoreBlockSet->AddBlockHandler( GetTemplateSaveRestoreBlockHandler() );
-	g_pGameSaveRestoreBlockSet->AddBlockHandler( GetDefaultResponseSystemSaveRestoreBlockHandler() );
-	g_pGameSaveRestoreBlockSet->AddBlockHandler( GetEventQueueSaveRestoreBlockHandler() );
-	g_pGameSaveRestoreBlockSet->AddBlockHandler( GetVScriptSaveRestoreBlockHandler() );
 
 #if defined( PORTAL2 )
-	g_pGameSaveRestoreBlockSet->AddBlockHandler( GetPaintSaveRestoreBlockHandler() );
 #endif
 
 	bool bInitSuccess = false;
@@ -822,16 +812,8 @@ void CServerGameDLL::DLLShutdown( void )
 	ModelSoundsCacheShutdown();
 
 #ifdef PORTAL2
-	g_pGameSaveRestoreBlockSet->RemoveBlockHandler( GetPaintSaveRestoreBlockHandler() );
 #endif
 
-	g_pGameSaveRestoreBlockSet->RemoveBlockHandler( GetVScriptSaveRestoreBlockHandler() );
-	g_pGameSaveRestoreBlockSet->RemoveBlockHandler( GetEventQueueSaveRestoreBlockHandler() );
-	g_pGameSaveRestoreBlockSet->RemoveBlockHandler( GetDefaultResponseSystemSaveRestoreBlockHandler() );
-	g_pGameSaveRestoreBlockSet->RemoveBlockHandler( GetTemplateSaveRestoreBlockHandler() );
-	g_pGameSaveRestoreBlockSet->RemoveBlockHandler( GetAISaveRestoreBlockHandler() );
-	g_pGameSaveRestoreBlockSet->RemoveBlockHandler( GetPhysSaveRestoreBlockHandler() );
-	g_pGameSaveRestoreBlockSet->RemoveBlockHandler( GetEntitySaveRestoreBlockHandler() );
 
 	g_pParticleSystemMgr->Shutdown();
 
@@ -1008,11 +990,7 @@ bool CServerGameDLL::IsRestoring()
 
 bool CServerGameDLL::SupportsSaveRestore()
 {
-#ifdef INFESTED_DLL
 	return false;
-#endif
-
-	return true;
 }
 
 // Called any time a new level is started (after GameInit() also on level transitions within a game)
@@ -1500,12 +1478,11 @@ void CServerGameDLL::CreateNetworkStringTables( void )
 	CreateNetworkStringTables_GameRules();
 
 	// Set up save/load utilities for string tables
-	g_VguiScreenStringOps.Init( g_pStringTableVguiScreen );
 }
 
 CSaveRestoreData *CServerGameDLL::SaveInit( int size )
 {
-	return ::SaveInit(size);
+	return NULL;
 }
 
 //-----------------------------------------------------------------------------
@@ -1518,8 +1495,6 @@ CSaveRestoreData *CServerGameDLL::SaveInit( int size )
 //-----------------------------------------------------------------------------
 void CServerGameDLL::SaveWriteFields( CSaveRestoreData *pSaveData, const char *pname, void *pBaseData, datamap_t *pMap, typedescription_t *pFields, int fieldCount )
 {
-	CSave saveHelper( pSaveData );
-	saveHelper.WriteFields( pname, pBaseData, pMap, pFields, fieldCount );
 }
 
 
@@ -1536,39 +1511,24 @@ void CServerGameDLL::SaveWriteFields( CSaveRestoreData *pSaveData, const char *p
 
 void CServerGameDLL::SaveReadFields( CSaveRestoreData *pSaveData, const char *pname, void *pBaseData, datamap_t *pMap, typedescription_t *pFields, int fieldCount )
 {
-	CRestore restoreHelper( pSaveData );
-	restoreHelper.ReadFields( pname, pBaseData, pMap, pFields, fieldCount );
 }
 
 //-----------------------------------------------------------------------------
 
 void CServerGameDLL::SaveGlobalState( CSaveRestoreData *s )
 {
-	::SaveGlobalState(s);
 }
 
 void CServerGameDLL::RestoreGlobalState(CSaveRestoreData *s)
 {
-	::RestoreGlobalState(s);
 }
 
 void CServerGameDLL::Save( CSaveRestoreData *s )
 {
-	CSave saveHelper( s );
-	g_pGameSaveRestoreBlockSet->Save( &saveHelper );
 }
 
 void CServerGameDLL::Restore( CSaveRestoreData *s, bool b)
 {
-	if ( engine->IsOverrideLoadGameEntsOn() )
-		FoundryHelpers_ClearEntityHighlightEffects();
-
-	CRestore restore(s);
-	g_pGameSaveRestoreBlockSet->Restore( &restore, b );
-	g_pGameSaveRestoreBlockSet->PostRestore();
-
-	if ( serverfoundry && engine->IsOverrideLoadGameEntsOn() )
-		serverfoundry->OnFinishedRestoreSavegame();
 }
 
 //-----------------------------------------------------------------------------
@@ -1587,26 +1547,11 @@ CStandardSendProxies* CServerGameDLL::GetStandardSendProxies()
 
 int	CServerGameDLL::CreateEntityTransitionList( CSaveRestoreData *s, int a)
 {
-	CRestore restoreHelper( s );
-	// save off file base
-	int base = restoreHelper.GetReadPos();
-
-	int movedCount = ::CreateEntityTransitionList(s, a);
-	if ( movedCount )
-	{
-		g_pGameSaveRestoreBlockSet->CallBlockHandlerRestore( GetPhysSaveRestoreBlockHandler(), base, &restoreHelper, false );
-		g_pGameSaveRestoreBlockSet->CallBlockHandlerRestore( GetAISaveRestoreBlockHandler(), base, &restoreHelper, false );
-	}
-
-	GetPhysSaveRestoreBlockHandler()->PostRestore();
-	GetAISaveRestoreBlockHandler()->PostRestore();
-
-	return movedCount;
+	return 0;
 }
 
 void CServerGameDLL::PreSave( CSaveRestoreData *s )
 {
-	g_pGameSaveRestoreBlockSet->PreSave( s );
 }
 
 #include "client_textmessage.h"
@@ -1729,81 +1674,14 @@ static TITLECOMMENT gTitleComments[] =
 
 void CServerGameDLL::GetSaveComment( char *text, int maxlength, float flMinutes, float flSeconds, bool bNoTime )
 {
-	char comment[64];
-	const char	*pName;
-	int		i;
-
-	char const *mapname = STRING( gpGlobals->mapname );
-
-	pName = NULL;
-
-	// Try to find a matching title comment for this mapname
-	for ( i = 0; i < ARRAYSIZE(gTitleComments) && !pName; i++ )
-	{
-		if ( !Q_strnicmp( mapname, gTitleComments[i].pBSPName, strlen(gTitleComments[i].pBSPName) ) )
-		{
-			// found one
-			int j;
-
-			// Got a message, post-process it to be save name friendly
-			Q_strncpy( comment, gTitleComments[i].pTitleName, sizeof( comment ) );
-			pName = comment;
-			j = 0;
-			// Strip out CRs
-			while ( j < 64 && comment[j] )
-			{
-				if ( comment[j] == '\n' || comment[j] == '\r' )
-					comment[j] = 0;
-				else
-					j++;
-			}
-			break;
-		}
-	}
-	
-	// If we didn't get one, use the designer's map name, or the BSP name itself
-	if ( !pName )
-	{
-		pName = mapname;
-	}
-
-	if ( bNoTime )
-	{
-		Q_snprintf( text, maxlength, "%-64.64s", pName );
-	}
-	else
-	{
-		int minutes = flMinutes;
-		int seconds = flSeconds;
-
-		// Wow, this guy/gal must suck...!
-		if ( minutes >= 1000 )
-		{
-			minutes = 999;
-			seconds = 59;
-		}
-
-		int minutesAdd = ( seconds / 60 );
-		seconds %= 60;
-
-		// add the elapsed time at the end of the comment, for the ui to parse out
-		Q_snprintf( text, maxlength, "%-64.64s %03d:%02d", pName, (minutes + minutesAdd), seconds );
-	}
 }
 
 void CServerGameDLL::WriteSaveHeaders( CSaveRestoreData *s )
 {
-	CSave saveHelper( s );
-	g_pGameSaveRestoreBlockSet->WriteSaveHeaders( &saveHelper );
-	g_pGameSaveRestoreBlockSet->PostSave();
 }
 
 void CServerGameDLL::ReadRestoreHeaders( CSaveRestoreData *s )
 {
-	CRestore restoreHelper( s );
-	g_pGameSaveRestoreBlockSet->PreRestore();
-
-	g_pGameSaveRestoreBlockSet->ReadRestoreHeaders( &restoreHelper );
 }
 
 void CServerGameDLL::PreSaveGameLoaded( char const *pSaveName, bool bInGame )

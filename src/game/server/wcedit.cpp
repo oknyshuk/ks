@@ -12,6 +12,8 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_annotations.h"
 #include "mathlib/mathlib.h"
 #include "player.h"
 #include "wcedit.h"
@@ -703,7 +705,7 @@ public:
 
 protected:
 	// the list of names to ignore
-	string_t m_nIgnoredEntityNames[MAX_IGNORELIST_NAMES]; 
+	[[= ks::reflect::Key{ .name = "IgnoredName16", .index = 15 } ]] [[= ks::reflect::Key{ .name = "IgnoredName15", .index = 14 } ]] [[= ks::reflect::Key{ .name = "IgnoredName14", .index = 13 } ]] [[= ks::reflect::Key{ .name = "IgnoredName13", .index = 12 } ]] [[= ks::reflect::Key{ .name = "IgnoredName12", .index = 11 } ]] [[= ks::reflect::Key{ .name = "IgnoredName11", .index = 10 } ]] [[= ks::reflect::Key{ .name = "IgnoredName10", .index = 9 } ]] [[= ks::reflect::Key{ .name = "IgnoredName09", .index = 8 } ]] [[= ks::reflect::Key{ .name = "IgnoredName08", .index = 7 } ]] [[= ks::reflect::Key{ .name = "IgnoredName07", .index = 6 } ]] [[= ks::reflect::Key{ .name = "IgnoredName06", .index = 5 } ]] [[= ks::reflect::Key{ .name = "IgnoredName05", .index = 4 } ]] [[= ks::reflect::Key{ .name = "IgnoredName04", .index = 3 } ]] [[= ks::reflect::Key{ .name = "IgnoredName03", .index = 2 } ]] [[= ks::reflect::Key{ .name = "IgnoredName02", .index = 1 } ]] [[= ks::reflect::Key{ .name = "IgnoredName01", .index = 0 } ]] string_t m_nIgnoredEntityNames[MAX_IGNORELIST_NAMES]; 
 
 public:
 	DECLARE_DATADESC();
@@ -712,29 +714,7 @@ public:
 
 LINK_ENTITY_TO_CLASS( hammer_updateignorelist, CWC_UpdateIgnoreList );
 
-BEGIN_DATADESC( CWC_UpdateIgnoreList )
-
-	// Be still, classcheck!
-	//DEFINE_FIELD( m_nIgnoredEntityNames, FIELD_STRING, MAX_IGNORELIST_NAMES ),
-
-	DEFINE_KEYFIELD( m_nIgnoredEntityNames[0], FIELD_STRING, "IgnoredName01" ),
-	DEFINE_KEYFIELD( m_nIgnoredEntityNames[1], FIELD_STRING, "IgnoredName02" ),
-	DEFINE_KEYFIELD( m_nIgnoredEntityNames[2], FIELD_STRING, "IgnoredName03" ),
-	DEFINE_KEYFIELD( m_nIgnoredEntityNames[3], FIELD_STRING, "IgnoredName04" ),
-	DEFINE_KEYFIELD( m_nIgnoredEntityNames[4], FIELD_STRING, "IgnoredName05" ),
-	DEFINE_KEYFIELD( m_nIgnoredEntityNames[5], FIELD_STRING, "IgnoredName06" ),
-	DEFINE_KEYFIELD( m_nIgnoredEntityNames[6], FIELD_STRING, "IgnoredName07" ),
-	DEFINE_KEYFIELD( m_nIgnoredEntityNames[7], FIELD_STRING, "IgnoredName08" ),
-	DEFINE_KEYFIELD( m_nIgnoredEntityNames[8], FIELD_STRING, "IgnoredName09" ),
-	DEFINE_KEYFIELD( m_nIgnoredEntityNames[9], FIELD_STRING, "IgnoredName10" ),
-	DEFINE_KEYFIELD( m_nIgnoredEntityNames[10], FIELD_STRING, "IgnoredName11" ),
-	DEFINE_KEYFIELD( m_nIgnoredEntityNames[11], FIELD_STRING, "IgnoredName12" ),
-	DEFINE_KEYFIELD( m_nIgnoredEntityNames[12], FIELD_STRING, "IgnoredName13" ),
-	DEFINE_KEYFIELD( m_nIgnoredEntityNames[13], FIELD_STRING, "IgnoredName14" ),
-	DEFINE_KEYFIELD( m_nIgnoredEntityNames[14], FIELD_STRING, "IgnoredName15" ),
-	DEFINE_KEYFIELD( m_nIgnoredEntityNames[15], FIELD_STRING, "IgnoredName16" ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CWC_UpdateIgnoreList )
 
 
 

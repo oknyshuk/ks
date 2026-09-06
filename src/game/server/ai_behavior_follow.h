@@ -7,6 +7,7 @@
 #ifndef AI_BEHAVIOR_FOLLOW_H
 #define AI_BEHAVIOR_FOLLOW_H
 
+#include "reflect_annotations.h"
 #include "simtimer.h"
 #include "ai_behavior.h"
 #include "ai_goalentity.h"
@@ -68,7 +69,7 @@ public:
 	virtual void InputOutsideTransition( inputdata_t &inputdata );
 #endif
 
-	int m_iFormation;
+	[[= ks::reflect::Key{ .name = "Formation" } ]] int m_iFormation;
 
 	DECLARE_DATADESC();
 };
@@ -335,7 +336,6 @@ protected:
 	
 	//---------------------------------
 	
-	DECLARE_DATADESC();
 };
 
 //-------------------------------------

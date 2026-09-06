@@ -5,6 +5,8 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_annotations.h"
 #include "tier1/fmtstr.h"
 #include "triggers.h"
 #include "cs_player.h"
@@ -28,32 +30,22 @@ public:
 	void Spawn();
 	void EXPORT BuyZoneTouch( CBaseEntity* pOther );
 
-	void InputSetTeam_TerroristOnly( inputdata_t& inputdata );
-	void InputSetTeam_CTOnly( inputdata_t& inputdata );
-	void InputSetTeam_AllTeams( inputdata_t& inputdata );
-	void InputSetTeam_None( inputdata_t& inputdata );
+	[[= ks::reflect::Input{ .name = "SetTeam_TerroristOnly", .type = FIELD_VOID } ]] void InputSetTeam_TerroristOnly( inputdata_t& inputdata );
+	[[= ks::reflect::Input{ .name = "SetTeam_CTOnly", .type = FIELD_VOID } ]] void InputSetTeam_CTOnly( inputdata_t& inputdata );
+	[[= ks::reflect::Input{ .name = "SetTeam_AllTeams", .type = FIELD_VOID } ]] void InputSetTeam_AllTeams( inputdata_t& inputdata );
+	[[= ks::reflect::Input{ .name = "SetTeam_None", .type = FIELD_VOID } ]] void InputSetTeam_None( inputdata_t& inputdata );
 
 	// CBaseTrigger override
 	virtual void EndTouch( CBaseEntity *pOther ) OVERRIDE;
 
 public:
-	int m_LegacyTeamNum;
+	[[= ks::reflect::Key{ .name = "team", .input = true } ]] int m_LegacyTeamNum;
 };
 
 
 LINK_ENTITY_TO_CLASS( func_buyzone, CBuyZone );
 
-BEGIN_DATADESC( CBuyZone )
-	DEFINE_FUNCTION( BuyZoneTouch ),
-	
-	// This is here to support maps that haven't updated to using "teamnum" yet.
-	DEFINE_INPUT( m_LegacyTeamNum, FIELD_INTEGER, "team" ),
-
-	DEFINE_INPUTFUNC( FIELD_VOID,				"SetTeam_TerroristOnly",	InputSetTeam_TerroristOnly ),
-	DEFINE_INPUTFUNC( FIELD_VOID,				"SetTeam_CTOnly",	InputSetTeam_CTOnly ),
-	DEFINE_INPUTFUNC( FIELD_VOID,				"SetTeam_AllTeams",	InputSetTeam_AllTeams ),
-	DEFINE_INPUTFUNC( FIELD_VOID,				"SetTeam_None",	InputSetTeam_None )
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CBuyZone )
 
 
 CBuyZone::CBuyZone()

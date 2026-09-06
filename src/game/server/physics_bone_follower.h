@@ -6,6 +6,8 @@
 
 #ifndef PHYSICS_BONE_FOLLOWER_H
 #define PHYSICS_BONE_FOLLOWER_H
+
+#include "reflect_annotations.h"
 #ifdef _WIN32
 #pragma once
 #endif
@@ -63,10 +65,10 @@ private:
 };
 
 
-class CBoneFollower : public CBaseEntity
+class [[= ks::reflect::NetTable{ .name = "DT_BoneFollower" } ]]
+      CBoneFollower : public CBaseEntity
 {
 	DECLARE_CLASS( CBoneFollower, CBaseEntity );
-	DECLARE_DATADESC();
 	DECLARE_SERVERCLASS();
 public:
 	// CBaseEntity
@@ -95,8 +97,8 @@ public:
 	static CBoneFollower *Create( CBaseEntity *pOwner, const char *pModelName, solid_t &solid, const Vector &position, const QAngle &orientation );
 
 private:
-	CNetworkVar( int, m_modelIndex );
-	CNetworkVar( int, m_solidIndex );
+	CNetworkVar( int, m_modelIndex, [[= ks::reflect::Net{ .enc = ks::reflect::ENC_MODELINDEX } ]] );
+	CNetworkVar( int, m_solidIndex, [[= ks::reflect::Net{ .bits = 6, .flags = SPROP_UNSIGNED } ]] );
 	int		m_physicsBone;
 	int		m_hitGroup;
 };

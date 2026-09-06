@@ -6,6 +6,8 @@
 
 #ifndef TRAINS_H
 #define TRAINS_H
+
+#include "reflect_annotations.h"
 #ifdef _WIN32
 #pragma once
 #endif
@@ -56,7 +58,8 @@ enum TrainOrientationType_t
         TrainOrientation_EaseInEaseOut,
 };
 
-class CFuncTrackTrain : public CBaseEntity
+class [[= ks::reflect::NetTable{ .name = "DT_FuncTrackTrain" } ]]
+      CFuncTrackTrain : public CBaseEntity
 {
 	DECLARE_CLASS( CFuncTrackTrain, CBaseEntity );
 	DECLARE_ENT_SCRIPTDESC();
@@ -98,22 +101,22 @@ public:
 	void Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
 	
 	// Input handlers
-	void InputSetSpeed( inputdata_t &inputdata );
-	void InputSetMaxSpeed( inputdata_t &inputdata );
-	void InputSetSpeedDir( inputdata_t &inputdata );
-	void InputSetSpeedReal( inputdata_t &inputdata );
-	void InputStop( inputdata_t &inputdata );
-	void InputResume( inputdata_t &inputdata );
-	void InputReverse( inputdata_t &inputdata );
-	void InputStartForward( inputdata_t &inputdata );
-	void InputStartBackward( inputdata_t &inputdata );
-	void InputToggle( inputdata_t &inputdata );
-	void InputSetSpeedDirAccel( inputdata_t &inputdata );
-	void InputMoveToPathNode( inputdata_t &inputdata );
-	void InputTeleportToPathNode( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetSpeed", .type = FIELD_FLOAT } ]] void InputSetSpeed( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetMaxSpeed", .type = FIELD_FLOAT } ]] void InputSetMaxSpeed( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetSpeedDir", .type = FIELD_FLOAT } ]] void InputSetSpeedDir( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetSpeedReal", .type = FIELD_FLOAT } ]] void InputSetSpeedReal( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Stop", .type = FIELD_VOID } ]] void InputStop( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Resume", .type = FIELD_VOID } ]] void InputResume( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Reverse", .type = FIELD_VOID } ]] void InputReverse( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "StartForward", .type = FIELD_VOID } ]] void InputStartForward( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "StartBackward", .type = FIELD_VOID } ]] void InputStartBackward( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Toggle", .type = FIELD_VOID } ]] void InputToggle( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetSpeedDirAccel", .type = FIELD_FLOAT } ]] void InputSetSpeedDirAccel( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "MoveToPathNode", .type = FIELD_STRING } ]] void InputMoveToPathNode( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "TeleportToPathNode", .type = FIELD_STRING } ]] void InputTeleportToPathNode( inputdata_t &inputdata );
 
-	void InputLockOrientation( inputdata_t &inputdata );
-	void InputUnlockOrientation( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "LockOrientation", .type = FIELD_VOID } ]] void InputLockOrientation( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "UnlockOrientation", .type = FIELD_VOID } ]] void InputUnlockOrientation( inputdata_t &inputdata );
 	
 	static CFuncTrackTrain *Instance( edict_t *pent );
 
@@ -139,7 +142,7 @@ public:
 
 	// UNDONE: Add accessors?
 	CPathTrack	*m_ppath;
-	float		m_length;
+	[[= ks::reflect::Key{ .name = "wheels" } ]] float		m_length;
 	
 private:
 
@@ -160,40 +163,41 @@ private:
 	Vector		m_lastBlockPos;				// These are used to build a heuristic decision about being temporarily blocked by physics objects
 	int			m_lastBlockTick;			// ^^^^^^^
 	float		m_flVolume;
-	float		m_flBank;
+	[[= ks::reflect::Key{ .name = "bank" } ]] float		m_flBank;
 	float		m_oldSpeed;
-	float		m_flBlockDamage;			// Damage to inflict when blocked.
-	float		m_height;
-	float		m_maxSpeed;
+	[[= ks::reflect::Key{ .name = "dmg" } ]] float		m_flBlockDamage;			// Damage to inflict when blocked.
+	[[= ks::reflect::Key{ .name = "height" } ]] float		m_height;
+	[[= ks::reflect::Key{ .name = "startspeed" } ]] float		m_maxSpeed;
 	float		m_dir;
 
 
-	string_t	m_iszSoundMove;				// Looping sound to play while moving. Pitch shifted based on speed.
-	string_t	m_iszSoundMovePing;			// Ping sound to play while moving. Interval decreased based on speed.
-	string_t	m_iszSoundStart;			// Sound to play when starting to move.
-	string_t	m_iszSoundStop;				// Sound to play when stopping.
+	[[= ks::reflect::As{ FIELD_SOUNDNAME } ]] [[= ks::reflect::Key{ .name = "MoveSound" } ]] string_t	m_iszSoundMove;				// Looping sound to play while moving. Pitch shifted based on speed.
+	[[= ks::reflect::As{ FIELD_SOUNDNAME } ]] [[= ks::reflect::Key{ .name = "MovePingSound" } ]] string_t	m_iszSoundMovePing;			// Ping sound to play while moving. Interval decreased based on speed.
+	[[= ks::reflect::As{ FIELD_SOUNDNAME } ]] [[= ks::reflect::Key{ .name = "StartSound" } ]] string_t	m_iszSoundStart;			// Sound to play when starting to move.
+	[[= ks::reflect::As{ FIELD_SOUNDNAME } ]] [[= ks::reflect::Key{ .name = "StopSound" } ]] string_t	m_iszSoundStop;				// Sound to play when stopping.
 
 	string_t	m_strPathTarget;			// Destination node 
 
-	float		m_flMoveSoundMinTime;		// The most often to play the move 'ping' sound (used at max speed)
-	float		m_flMoveSoundMaxTime;		// The least often to play the move 'ping' sound (used approaching zero speed)
+	[[= ks::reflect::Key{ .name = "MoveSoundMinTime" } ]] float		m_flMoveSoundMinTime;		// The most often to play the move 'ping' sound (used at max speed)
+	[[= ks::reflect::Key{ .name = "MoveSoundMaxTime" } ]] float		m_flMoveSoundMaxTime;		// The least often to play the move 'ping' sound (used approaching zero speed)
 	float		m_flNextMoveSoundTime;
 
-	int			m_nMoveSoundMinPitch;		// The sound pitch to approach as we come to a stop
-	int			m_nMoveSoundMaxPitch;		// The sound pitch to approach as we approach our max speed (actually, it's hardcoded to 1000 in/sec)
+	[[= ks::reflect::Key{ .name = "MoveSoundMinPitch" } ]] int			m_nMoveSoundMinPitch;		// The sound pitch to approach as we come to a stop
+	[[= ks::reflect::Key{ .name = "MoveSoundMaxPitch" } ]] int			m_nMoveSoundMaxPitch;		// The sound pitch to approach as we approach our max speed (actually, it's hardcoded to 1000 in/sec)
 
-	TrainOrientationType_t m_eOrientationType;
-	TrainVelocityType_t m_eVelocityType;
+	[[= ks::reflect::Key{ .name = "orientationtype" } ]] TrainOrientationType_t m_eOrientationType;
+	[[= ks::reflect::Key{ .name = "velocitytype" } ]] TrainVelocityType_t m_eVelocityType;
 	bool		m_bSoundPlaying;
 
-	COutputEvent m_OnStart,m_OnNext; 
-	COutputEvent m_OnArrivedAtDestinationNode;
+	[[= ks::reflect::Key{ .name = "OnStart" } ]] COutputEvent m_OnStart;
+	[[= ks::reflect::Key{ .name = "OnNextPoint" } ]] COutputEvent m_OnNext;
+	[[= ks::reflect::Key{ .name = "OnArrivedAtDestinationNode" } ]] COutputEvent m_OnArrivedAtDestinationNode;
 
-	bool		m_bManualSpeedChanges;		// set when we want to send entity IO to govern speed and obey our TrainVelocityType_t
+	[[= ks::reflect::Key{ .name = "ManualSpeedChanges" } ]] bool		m_bManualSpeedChanges;		// set when we want to send entity IO to govern speed and obey our TrainVelocityType_t
 	float		m_flDesiredSpeed;			// target speed, when m_bManualSpeedChanges is set
 	float		m_flSpeedChangeTime;
-	float		m_flAccelSpeed;
-	float		m_flDecelSpeed;
+	[[= ks::reflect::Key{ .name = "ManualAccelSpeed" } ]] float		m_flAccelSpeed;
+	[[= ks::reflect::Key{ .name = "ManualDecelSpeed" } ]] float		m_flDecelSpeed;
 	bool		m_bAccelToSpeed;
 
 	float		m_flNextMPSoundTime;

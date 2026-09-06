@@ -6,6 +6,8 @@
 //=============================================================================//
 #ifndef PROPS_H
 #define PROPS_H
+
+#include "reflect_annotations.h"
 #ifdef _WIN32
 #pragma once
 #endif
@@ -23,6 +25,9 @@
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
+void SendProxy_UnmodifiedQAngles( const SendProp *pProp, const void *pStruct,
+    const void *pData, DVariant *pOut, int iElement, int objectID );
+
 class CBaseProp : public CBaseAnimating
 {
 	DECLARE_CLASS( CBaseProp, CBaseAnimating );
@@ -46,7 +51,8 @@ public:
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-class CBreakableProp : public CBaseProp, public IBreakableWithPropData, public CDefaultPlayerPickupVPhysics
+class [[= ks::reflect::NetTable{ .name = "DT_BreakableProp" } ]]
+      CBreakableProp : public CBaseProp, public IBreakableWithPropData, public CDefaultPlayerPickupVPhysics
 {
 public:
 	CBreakableProp();
@@ -70,10 +76,10 @@ public:
 
 	virtual void PlayPuntSound();
 
-	void InputBreak( inputdata_t &inputdata );
-	void InputAddHealth( inputdata_t &inputdata );
-	void InputRemoveHealth( inputdata_t &inputdata );
-	void InputSetHealth( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Break", .type = FIELD_VOID } ]] void InputBreak( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "AddHealth", .type = FIELD_INTEGER } ]] void InputAddHealth( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "RemoveHealth", .type = FIELD_INTEGER } ]] void InputRemoveHealth( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetHealth", .type = FIELD_INTEGER } ]] void InputSetHealth( inputdata_t &inputdata );
 
 	int	 GetNumBreakableChunks( void ) { return m_iNumBreakableChunks; }
 
@@ -104,13 +110,13 @@ public:
 	void	DisableAutoFade();
 
 public:
-	COutputEvent	m_OnBreak;
-	COutputFloat	m_OnHealthChanged;
-	COutputEvent	m_OnTakeDamage;
+	[[= ks::reflect::Key{ .name = "OnBreak" } ]] COutputEvent	m_OnBreak;
+	[[= ks::reflect::Key{ .name = "OnHealthChanged" } ]] COutputFloat	m_OnHealthChanged;
+	[[= ks::reflect::Key{ .name = "OnTakeDamage" } ]] COutputEvent	m_OnTakeDamage;
 
-	float			m_impactEnergyScale;
+	[[= ks::reflect::Key{ .name = "physdamagescale", .input = true } ]] float			m_impactEnergyScale;
 
-	int				m_iMinHealthDmg;
+	[[= ks::reflect::Key{ .name = "minhealthdmg" } ]] int				m_iMinHealthDmg;
 
 	QAngle			m_preferredCarryAngles;
 
@@ -167,10 +173,10 @@ protected:
 	int				m_iPhysicsMode;
 
 	unsigned int	m_createTick;
-	float			m_flPressureDelay;
+	[[= ks::reflect::Key{ .name = "PressureDelay" } ]] float			m_flPressureDelay;
 	EHANDLE			m_hBreaker;
 
-	PerformanceMode_t m_PerformanceMode;
+	[[= ks::reflect::Key{ .name = "PerformanceMode" } ]] PerformanceMode_t m_PerformanceMode;
 
 	// Prop data storage
 	float			m_flDmgModBullet;
@@ -184,8 +190,8 @@ protected:
 	int				m_iMaxBreakableSize;
 	string_t		m_iszBasePropData;	
 	int				m_iInteractions;
-	float			m_explodeDamage;
-	float			m_explodeRadius;
+	[[= ks::reflect::Key{ .name = "ExplodeDamage" } ]] float			m_explodeDamage;
+	[[= ks::reflect::Key{ .name = "ExplodeRadius" } ]] float			m_explodeRadius;
 
 	// Count of how many pieces we'll break into, custom or generic
 	int				m_iNumBreakableChunks;
@@ -213,11 +219,11 @@ protected:
 	void CheckRemoveRagdolls();
 	
 private:
-	void InputEnablePhyscannonPickup( inputdata_t &inputdata );
-	void InputDisablePhyscannonPickup( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "EnablePhyscannonPickup", .type = FIELD_VOID } ]] void InputEnablePhyscannonPickup( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "DisablePhyscannonPickup", .type = FIELD_VOID } ]] void InputDisablePhyscannonPickup( inputdata_t &inputdata );
 
-	void InputEnablePuntSound( inputdata_t &inputdata ) { m_bUsePuntSound = true; }
-	void InputDisablePuntSound( inputdata_t &inputdata ) { m_bUsePuntSound = false; }
+	[[= ks::reflect::Input{ .name = "EnablePuntSound", .type = FIELD_VOID } ]] void InputEnablePuntSound( inputdata_t &inputdata ) { m_bUsePuntSound = true; }
+	[[= ks::reflect::Input{ .name = "DisablePuntSound", .type = FIELD_VOID } ]] void InputDisablePuntSound( inputdata_t &inputdata ) { m_bUsePuntSound = false; }
 
 	// Prevents fade scale from happening
 	void ForceFadeScaleToAlwaysVisible();
@@ -242,23 +248,23 @@ private:
 	bool					m_bIsWalkableSetByPropData;
 	bool					m_bOriginalBlockLOS;	// BlockLOS state before physgun pickup
 	char					m_nPhysgunState;		// Ripped-off state
-	COutputEvent			m_OnPhysCannonDetach;	// We've ripped it off!
-	COutputEvent			m_OnPhysCannonAnimatePreStarted;	// Started playing the pre-pull animation
-	COutputEvent			m_OnPhysCannonAnimatePullStarted;	// Player started the pull anim
-	COutputEvent			m_OnPhysCannonAnimatePostStarted;	// Started playing the post-pull animation
-	COutputEvent			m_OnPhysCannonPullAnimFinished; // We've had our pull anim finished, or the post-pull has finished if there is one
+	[[= ks::reflect::Key{ .name = "OnPhysCannonDetach" } ]] COutputEvent			m_OnPhysCannonDetach;	// We've ripped it off!
+	[[= ks::reflect::Key{ .name = "OnPhysCannonAnimatePreStarted" } ]] COutputEvent			m_OnPhysCannonAnimatePreStarted;	// Started playing the pre-pull animation
+	[[= ks::reflect::Key{ .name = "OnPhysCannonAnimatePullStarted" } ]] COutputEvent			m_OnPhysCannonAnimatePullStarted;	// Player started the pull anim
+	[[= ks::reflect::Key{ .name = "OnPhysCannonAnimatePostStarted" } ]] COutputEvent			m_OnPhysCannonAnimatePostStarted;	// Started playing the post-pull animation
+	[[= ks::reflect::Key{ .name = "OnPhysCannonPullAnimFinished" } ]] COutputEvent			m_OnPhysCannonPullAnimFinished; // We've had our pull anim finished, or the post-pull has finished if there is one
 	float					m_flDefaultFadeScale;	// Things may temporarily change the fade scale, but this is its steady-state condition
 
 	mp_break_t m_mpBreakMode;
 
 	EHANDLE					m_hLastAttacker;		// Last attacker that harmed me.
 	EHANDLE					m_hFlareEnt;
-	string_t				m_iszPuntSound;
+	[[= ks::reflect::Key{ .name = "puntsound" } ]] string_t				m_iszPuntSound;
 	CNetworkVar( bool, m_noGhostCollision );
 	bool					m_bUsePuntSound;
 protected:
-	CNetworkQAngle( m_qPreferredPlayerCarryAngles );
-	CNetworkVar( bool, m_bClientPhysics );
+	CNetworkQAngle( m_qPreferredPlayerCarryAngles, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE, .enc = ks::reflect::ENC_QANGLES } ]] [[= ks::reflect::Proxy<SendProxy_UnmodifiedQAngles, ks::reflect::WIRE_SEND>{} ]] );
+	CNetworkVar( bool, m_bClientPhysics, [[= ks::reflect::Net{} ]] );
 };
 
 // Spawnflags
@@ -269,7 +275,8 @@ protected:
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-class CDynamicProp : public CBreakableProp, public IPositionWatcher
+class [[= ks::reflect::NetTable{ .name = "DT_DynamicProp" } ]]
+      CDynamicProp : public CBreakableProp, public IPositionWatcher
 {
 	DECLARE_CLASS( CDynamicProp, CBreakableProp );
 
@@ -304,52 +311,54 @@ public:
 	inline const color24 GetGlowColor() const;
 
 	// Input handlers
-	void InputSetAnimation( inputdata_t &inputdata );
-	void InputSetAnimationNoReset( inputdata_t &inputdata );
-	void InputSetDefaultAnimation( inputdata_t &inputdata );
-	void InputTurnOn( inputdata_t &inputdata );
-	void InputTurnOff( inputdata_t &inputdata );
-	void InputDisableCollision( inputdata_t &inputdata );
-	void InputEnableCollision( inputdata_t &inputdata );
-	void InputSetPlaybackRate( inputdata_t &inputdata );
-	void InputBecomeRagdoll( inputdata_t &inputdata );
-	void InputFadeAndKill( inputdata_t &inputdata );
-	void InputSetGlowEnabled( inputdata_t &inputdata );
-	void InputSetGlowDisabled( inputdata_t &inputdata );
-	void InputSetGlowColor( inputdata_t &inputdata );
-	void InputGlowColorRedValue( inputdata_t &inputdata );
-	void InputGlowColorGreenValue( inputdata_t &inputdata );
-	void InputGlowColorBlueValue( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetAnimation", .type = FIELD_STRING } ]] void InputSetAnimation( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetAnimationNoReset", .type = FIELD_STRING } ]] void InputSetAnimationNoReset( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetDefaultAnimation", .type = FIELD_STRING } ]] void InputSetDefaultAnimation( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "TurnOn", .type = FIELD_VOID } ]]
+	[[= ks::reflect::Input{ .name = "Enable", .type = FIELD_VOID } ]] void InputTurnOn( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "TurnOff", .type = FIELD_VOID } ]]
+	[[= ks::reflect::Input{ .name = "Disable", .type = FIELD_VOID } ]] void InputTurnOff( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "DisableCollision", .type = FIELD_VOID } ]] void InputDisableCollision( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "EnableCollision", .type = FIELD_VOID } ]] void InputEnableCollision( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetPlaybackRate", .type = FIELD_FLOAT } ]] void InputSetPlaybackRate( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "BecomeRagdoll", .type = FIELD_VOID } ]] void InputBecomeRagdoll( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "FadeAndKill", .type = FIELD_VOID } ]] void InputFadeAndKill( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetGlowEnabled", .type = FIELD_VOID } ]] void InputSetGlowEnabled( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetGlowDisabled", .type = FIELD_VOID } ]] void InputSetGlowDisabled( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetGlowColor", .type = FIELD_COLOR32 } ]] void InputSetGlowColor( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "GlowColorRedValue", .type = FIELD_FLOAT } ]] void InputGlowColorRedValue( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "GlowColorGreenValue", .type = FIELD_FLOAT } ]] void InputGlowColorGreenValue( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "GlowColorBlueValue", .type = FIELD_FLOAT } ]] void InputGlowColorBlueValue( inputdata_t &inputdata );
 
 	void UpdateBoneFollowers( void );
 
-	COutputEvent		m_pOutputAnimBegun;
-	COutputEvent		m_pOutputAnimOver;
+	[[= ks::reflect::Key{ .name = "OnAnimationBegun" } ]] COutputEvent		m_pOutputAnimBegun;
+	[[= ks::reflect::Key{ .name = "OnAnimationDone" } ]] COutputEvent		m_pOutputAnimOver;
 
-	string_t			m_iszDefaultAnim;
+	[[= ks::reflect::Key{ .name = "DefaultAnim" } ]] string_t			m_iszDefaultAnim;
 
 	int					m_iGoalSequence;
 	int					m_iTransitionDirection;
 
 	// Random animations
 	bool				m_bAnimationDone;
-	bool				m_bHoldAnimation;
-	bool				m_bRandomAnimator;
-	bool				m_bDisableBoneFollowers;
+	[[= ks::reflect::Key{ .name = "HoldAnimation" } ]] bool				m_bHoldAnimation;
+	[[= ks::reflect::Key{ .name = "RandomAnimation" } ]] bool				m_bRandomAnimator;
+	[[= ks::reflect::Key{ .name = "DisableBoneFollowers" } ]] bool				m_bDisableBoneFollowers;
 	float				m_flNextRandAnim;
-	float				m_flMinRandAnimTime;
-	float				m_flMaxRandAnimTime;
+	[[= ks::reflect::Key{ .name = "MinAnimTime" } ]] float				m_flMinRandAnimTime;
+	[[= ks::reflect::Key{ .name = "MaxAnimTime" } ]] float				m_flMaxRandAnimTime;
 	short				m_nPendingSequence;
 
-	bool				m_bStartDisabled;
-	bool				m_bAnimateEveryFrame;
+	[[= ks::reflect::Key{ .name = "StartDisabled" } ]] bool				m_bStartDisabled;
+	[[= ks::reflect::Key{ .name = "AnimateEveryFrame" } ]] bool				m_bAnimateEveryFrame;
 
-	CNetworkVar( bool, m_bUseHitboxesForRenderBox );
+	CNetworkVar( bool, m_bUseHitboxesForRenderBox, [[= ks::reflect::Net{} ]] );
 
-	CNetworkVar( float, m_flGlowMaxDist );
-	CNetworkVar( bool, m_bShouldGlow );
-	CNetworkColor32( m_clrGlow );
-	CNetworkVar( int, m_nGlowStyle );
+	CNetworkVar( float, m_flGlowMaxDist, [[= ks::reflect::Net{ .bits = 32 } ]] [[= ks::reflect::Key{ .name = "glowdist" } ]] );
+	CNetworkVar( bool, m_bShouldGlow, [[= ks::reflect::Net{} ]] [[= ks::reflect::Key{ .name = "glowenabled" } ]] );
+	CNetworkColor32( m_clrGlow, [[= ks::reflect::Net{ .bits = 32, .flags = SPROP_UNSIGNED } ]] [[= ks::reflect::Proxy<SendProxy_Color32ToInt32, ks::reflect::WIRE_SEND>{} ]] [[= ks::reflect::Key{ .name = "glowcolor" } ]] );
+	CNetworkVar( int, m_nGlowStyle, [[= ks::reflect::Net{ .bits = -1 } ]] [[= ks::reflect::Key{ .name = "glowstyle" } ]] );
 
 protected:
 	void FinishSetSequence( int nSequence );
@@ -364,7 +373,14 @@ protected:
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-class CPhysicsProp : public CBreakableProp, public INavAvoidanceObstacle
+class [[= ks::reflect::NetTable{ .name = "DT_PhysicsProp" } ]]
+      [[= ks::reflect::Exclude{ .table = "DT_BaseAnimating", .prop = "m_flPoseParameter" } ]]
+      [[= ks::reflect::Exclude{ .table = "DT_BaseAnimating", .prop = "m_flPlaybackRate" } ]]
+      [[= ks::reflect::Exclude{ .table = "DT_BaseAnimating", .prop = "m_nMuzzleFlashParity" } ]]
+      [[= ks::reflect::Exclude{ .table = "DT_BaseAnimatingOverlay", .prop = "overlay_vars" } ]]
+      [[= ks::reflect::Exclude{ .table = "DT_BaseFlex", .prop = "m_flexWeight" } ]]
+      [[= ks::reflect::Exclude{ .table = "DT_BaseFlex", .prop = "m_blinktoggle" } ]]
+      CPhysicsProp : public CBreakableProp, public INavAvoidanceObstacle
 {
 	DECLARE_CLASS( CPhysicsProp, CBreakableProp );
 	DECLARE_SERVERCLASS();
@@ -381,11 +397,11 @@ public:
 	virtual void VPhysicsUpdate( IPhysicsObject *pPhysics );
 	virtual void VPhysicsCollision( int index, gamevcollisionevent_t *pEvent );
 
-	void InputWake( inputdata_t &inputdata );
-	void InputSleep( inputdata_t &inputdata );
-	void InputEnableMotion( inputdata_t &inputdata );
-	void InputDisableMotion( inputdata_t &inputdata );
-	void InputDisableFloating( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Wake", .type = FIELD_VOID } ]] void InputWake( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Sleep", .type = FIELD_VOID } ]] void InputSleep( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "EnableMotion", .type = FIELD_VOID } ]] void InputEnableMotion( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "DisableMotion", .type = FIELD_VOID } ]] void InputDisableMotion( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "DisableFloating", .type = FIELD_VOID } ]] void InputDisableFloating( inputdata_t &inputdata );
 
 	void EnableMotion( void );
 	bool CanBePickedUpByPhyscannon( void );
@@ -425,31 +441,31 @@ private:
 	// Compute impulse to apply to the enabled entity.
 	void ComputeEnablingImpulse( int index, gamevcollisionevent_t *pEvent );
 
-	COutputEvent m_MotionEnabled;
-	COutputEvent m_OnAwakened;
-	COutputEvent m_OnPhysGunPickup;
-	COutputEvent m_OnPhysGunPunt;
-	COutputEvent m_OnPhysGunOnlyPickup;
-	COutputEvent m_OnPhysGunDrop;
-	COutputEvent m_OnPlayerUse;
-	COutputEvent m_OnPlayerPickup;
-	COutputEvent m_OnOutOfWorld;
+	[[= ks::reflect::Key{ .name = "OnMotionEnabled" } ]] COutputEvent m_MotionEnabled;
+	[[= ks::reflect::Key{ .name = "OnAwakened" } ]] COutputEvent m_OnAwakened;
+	[[= ks::reflect::Key{ .name = "OnPhysGunPickup" } ]] COutputEvent m_OnPhysGunPickup;
+	[[= ks::reflect::Key{ .name = "OnPhysGunPunt" } ]] COutputEvent m_OnPhysGunPunt;
+	[[= ks::reflect::Key{ .name = "OnPhysGunOnlyPickup" } ]] COutputEvent m_OnPhysGunOnlyPickup;
+	[[= ks::reflect::Key{ .name = "OnPhysGunDrop" } ]] COutputEvent m_OnPhysGunDrop;
+	[[= ks::reflect::Key{ .name = "OnPlayerUse" } ]] COutputEvent m_OnPlayerUse;
+	[[= ks::reflect::Key{ .name = "OnPlayerPickup" } ]] COutputEvent m_OnPlayerPickup;
+	[[= ks::reflect::Key{ .name = "OnOutOfWorld" } ]] COutputEvent m_OnOutOfWorld;
 
-	float		m_massScale;
-	float		m_inertiaScale;
-	int			m_damageType;
-	string_t	m_iszOverrideScript;
-	int			m_damageToEnableMotion;
-	float		m_flForceToEnableMotion;
+	[[= ks::reflect::Key{ .name = "massscale" } ]] float		m_massScale;
+	[[= ks::reflect::Key{ .name = "inertiascale" } ]] float		m_inertiaScale;
+	[[= ks::reflect::Key{ .name = "Damagetype" } ]] int			m_damageType;
+	[[= ks::reflect::Key{ .name = "overridescript" } ]] string_t	m_iszOverrideScript;
+	[[= ks::reflect::Key{ .name = "damagetoenablemotion" } ]] int			m_damageToEnableMotion;
+	[[= ks::reflect::Key{ .name = "forcetoenablemotion" } ]] float		m_flForceToEnableMotion;
 
 	bool		m_bThrownByPlayer;
 	bool		m_bFirstCollisionAfterLaunch;
-	int			m_iExploitableByPlayer;
+	[[= ks::reflect::Key{ .name = "ExploitableByPlayer" } ]] int			m_iExploitableByPlayer;
 	bool		m_bHasBeenAwakened;
 	float		m_fNextCheckDisableMotionContactsTime;
 
 protected:
-	CNetworkVar( bool, m_bAwake );
+	CNetworkVar( bool, m_bAwake, [[= ks::reflect::Net{} ]] );
 
 #ifdef PORTAL2
 	bool		m_bAllowPortalFunnel;
@@ -463,7 +479,6 @@ class CCSPropExplodingBarrel : public CPhysicsProp
 
 public:
 
-	DECLARE_DATADESC();
 
 	virtual void Spawn( void );
 	virtual void Precache( void );

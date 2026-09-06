@@ -5,7 +5,9 @@
 // $NoKeywords: $
 //
 //=============================================================================//
-#include "cbase.h"	   
+#include "cbase.h"
+#include "reflect_recvtable.h"
+#include "reflect_annotations.h"	   
 #include "c_te_particlesystem.h"
 #include "movevars_shared.h"
 
@@ -67,11 +69,7 @@ int		gSparkRamp[ SPARK_COLORCOUNT ][3] =
 // C_TEParticleSystem.
 // ------------------------------------------------------------------------ //
 
-IMPLEMENT_CLIENTCLASS_DT(C_TEParticleSystem, DT_TEParticleSystem, CTEParticleSystem)
-	RecvPropFloat( RECVINFO(m_vecOrigin[0]) ),
-	RecvPropFloat( RECVINFO(m_vecOrigin[1]) ),
-	RecvPropFloat( RECVINFO(m_vecOrigin[2]) ),
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS( C_TEParticleSystem, DT_TEParticleSystem, CTEParticleSystem )
 
 
 C_TEParticleSystem::C_TEParticleSystem()

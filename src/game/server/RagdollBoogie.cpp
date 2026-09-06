@@ -28,19 +28,6 @@ static const char *s_pZapContext = "ZapContext";
 //-----------------------------------------------------------------------------
 // Save/load 
 //-----------------------------------------------------------------------------
-BEGIN_DATADESC( CRagdollBoogie )
-
-	DEFINE_FIELD( m_flStartTime, FIELD_TIME ),
-	DEFINE_FIELD( m_flBoogieLength, FIELD_FLOAT ),
-	DEFINE_FIELD( m_flMagnitude, FIELD_FLOAT ),
-
-	// Think this should be handled by StartTouch/etc.
-//	DEFINE_FIELD( m_nSuppressionCount, FIELD_INTEGER ),
-
-	DEFINE_FUNCTION( BoogieThink ),
-	DEFINE_FUNCTION( ZapThink ),
-
-END_DATADESC()
 
 LINK_ENTITY_TO_CLASS( env_ragdoll_boogie, CRagdollBoogie );
 

@@ -6,6 +6,8 @@
 
 #ifndef PARTICLEPROPERTY_H
 #define PARTICLEPROPERTY_H
+
+#include "reflect_annotations.h"
 #ifdef _WIN32
 #pragma once
 #endif
@@ -63,12 +65,12 @@ extern int GetAttachTypeFromString( const char *pszString );
 //-----------------------------------------------------------------------------
 // Encapsulates particle handling for an entity
 //-----------------------------------------------------------------------------
-class CParticleProperty 
+class [[= ks::reflect::NetTable{ .name = "DT_ParticleProperty", .base = false } ]]
+      CParticleProperty 
 {
 	DECLARE_CLASS_NOBASE( CParticleProperty );
 	DECLARE_EMBEDDED_NETWORKVAR();
 	DECLARE_PREDICTABLE();
-	DECLARE_DATADESC();
 
 public:
 	CParticleProperty();

@@ -5,6 +5,8 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_annotations.h"
+#include "reflect_datamap.h"
 #include "simtimer.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
@@ -12,30 +14,16 @@
 
 //-----------------------------------------------------------------------------
 
-BEGIN_SIMPLE_DATADESC( CSimpleSimTimer )
-	DEFINE_FIELD( m_next,			FIELD_TIME	),
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP_SIMPLE( CSimpleSimTimer )
 
-BEGIN_SIMPLE_DATADESC_( CSimTimer, CSimpleSimTimer )
-	DEFINE_FIELD( m_interval,		FIELD_FLOAT	),
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP_SIMPLE_( CSimTimer, CSimpleSimTimer )
 
-BEGIN_SIMPLE_DATADESC_( CRandSimTimer, CSimpleSimTimer )
-	DEFINE_FIELD( m_minInterval,		FIELD_FLOAT	),
-	DEFINE_FIELD( m_maxInterval,		FIELD_FLOAT	),
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP_SIMPLE_( CRandSimTimer, CSimpleSimTimer )
 
-BEGIN_SIMPLE_DATADESC_( CStopwatchBase, CSimpleSimTimer )
-	DEFINE_FIELD( m_fIsRunning,	FIELD_BOOLEAN	),
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP_SIMPLE_( CStopwatchBase, CSimpleSimTimer )
 
-BEGIN_SIMPLE_DATADESC_( CStopwatch, CStopwatchBase )
-	DEFINE_FIELD( m_interval,		FIELD_FLOAT	),
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP_SIMPLE_( CStopwatch, CStopwatchBase )
 
-BEGIN_SIMPLE_DATADESC_( CRandStopwatch, CStopwatchBase )
-	DEFINE_FIELD( m_minInterval,		FIELD_FLOAT	),
-	DEFINE_FIELD( m_maxInterval,		FIELD_FLOAT	),
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP_SIMPLE_( CRandStopwatch, CStopwatchBase )
 
 //-----------------------------------------------------------------------------

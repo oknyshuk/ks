@@ -6,6 +6,9 @@
 //===========================================================================//
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_sendtable.h"
+#include "reflect_annotations.h"
 #include "colorcorrection.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
@@ -18,51 +21,10 @@ static const char *s_pFadeOutContextThink = "ColorCorrectionFadeOutThink";
 
 LINK_ENTITY_TO_CLASS(color_correction, CColorCorrection);
 
-BEGIN_DATADESC( CColorCorrection )
-
-	DEFINE_THINKFUNC( FadeInThink ),
-	DEFINE_THINKFUNC( FadeOutThink ),
-
-	DEFINE_FIELD( m_flCurWeight,	      FIELD_FLOAT ),
-	DEFINE_FIELD( m_flTimeStartFadeIn,	  FIELD_FLOAT ),
-	DEFINE_FIELD( m_flTimeStartFadeOut,	  FIELD_FLOAT ),
-	DEFINE_FIELD( m_flStartFadeInWeight,  FIELD_FLOAT ),
-	DEFINE_FIELD( m_flStartFadeOutWeight, FIELD_FLOAT ),
-
-	DEFINE_KEYFIELD( m_MinFalloff,		  FIELD_FLOAT,   "minfalloff" ),
-	DEFINE_KEYFIELD( m_MaxFalloff,		  FIELD_FLOAT,   "maxfalloff" ),
-	DEFINE_KEYFIELD( m_flMaxWeight,		  FIELD_FLOAT,	 "maxweight" ),
-	DEFINE_KEYFIELD( m_flFadeInDuration,  FIELD_FLOAT,	 "fadeInDuration" ),
-	DEFINE_KEYFIELD( m_flFadeOutDuration,  FIELD_FLOAT,	 "fadeOutDuration" ),
-	DEFINE_KEYFIELD( m_lookupFilename,	  FIELD_STRING,  "filename" ),
-
-	DEFINE_KEYFIELD( m_bEnabled,		  FIELD_BOOLEAN, "enabled" ),
-	DEFINE_KEYFIELD( m_bStartDisabled,    FIELD_BOOLEAN, "StartDisabled" ),
-	DEFINE_KEYFIELD( m_bExclusive,		  FIELD_BOOLEAN, "exclusive" ),
-//	DEFINE_ARRAY( m_netlookupFilename, FIELD_CHARACTER, MAX_PATH ), 
-
-	DEFINE_INPUTFUNC( FIELD_VOID, "Enable", InputEnable ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "Disable", InputDisable ),
-	DEFINE_INPUTFUNC( FIELD_FLOAT, "SetFadeInDuration", InputSetFadeInDuration ),
-	DEFINE_INPUTFUNC( FIELD_FLOAT, "SetFadeOutDuration", InputSetFadeOutDuration ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CColorCorrection )
 
 extern void SendProxy_Origin( const SendProp *pProp, const void *pStruct, const void *pData, DVariant *pOut, int iElement, int objectID );
-IMPLEMENT_SERVERCLASS_ST_NOBASE(CColorCorrection, DT_ColorCorrection)
-	SendPropVector( SENDINFO(m_vecOrigin), -1,  SPROP_NOSCALE, 0.0f, HIGH_DEFAULT, SendProxy_Origin ),
-	SendPropFloat(  SENDINFO(m_MinFalloff) ),
-	SendPropFloat(  SENDINFO(m_MaxFalloff) ),
-	SendPropFloat(  SENDINFO(m_flCurWeight) ),
-	SendPropFloat(  SENDINFO(m_flMaxWeight) ),
-	SendPropFloat(  SENDINFO(m_flFadeInDuration) ),
-	SendPropFloat(  SENDINFO(m_flFadeOutDuration) ),
-	SendPropString( SENDINFO(m_netlookupFilename) ),
-	SendPropBool( SENDINFO(m_bEnabled) ),
-	SendPropBool( SENDINFO(m_bMaster) ),
-	SendPropBool( SENDINFO(m_bClientSide) ),
-	SendPropBool( SENDINFO(m_bExclusive) ),
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CColorCorrection, DT_ColorCorrection )
 
 
 CColorCorrection::CColorCorrection() : BaseClass()

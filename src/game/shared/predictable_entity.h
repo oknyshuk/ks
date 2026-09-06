@@ -68,73 +68,15 @@ class SendTable;
 #define DECLARE_PREDICTABLE()	template <typename T> friend datamap_t *PredMapInit(T *)
 #endif
 
-#ifndef NO_ENTITY_PREDICTION
-#define BEGIN_PREDICTION_DATA( className ) \
-	datamap_t className::m_PredMap = { 0, 0, #className, &BaseClass::m_PredMap }; \
-	datamap_t *className::GetPredDescMap( void ) { return &m_PredMap; } \
-	BEGIN_PREDICTION_DATA_GUTS( className )
-
-#define BEGIN_PREDICTION_DATA_NO_BASE( className ) \
-	datamap_t className::m_PredMap = { 0, 0, #className, NULL }; \
-	datamap_t *className::GetPredDescMap( void ) { return &m_PredMap; } \
-	BEGIN_PREDICTION_DATA_GUTS( className )
-
-#define BEGIN_PREDICTION_DATA_GUTS( className ) \
-	template <typename T> datamap_t *PredMapInit(T *); \
-	template <> datamap_t *PredMapInit<className>( className * ); \
-	namespace className##_PredDataDescInit \
-	{ \
-		datamap_t *g_PredMapHolder = PredMapInit( (className *)NULL ); /* This can/will be used for some clean up duties later */ \
-	} \
-	\
-	template <> datamap_t *PredMapInit<className>( className * ) \
-	{ \
-		typedef className classNameTypedef; \
-		static typedescription_t predDesc[] = \
-		{ \
-		{ FIELD_VOID,0,0,0,0,0,0,0,0}, /* so you can define "empty" tables */
-
-#define END_PREDICTION_DATA() \
-		}; \
-		\
-		if ( sizeof( predDesc ) > sizeof( predDesc[0] ) ) \
-		{ \
-			classNameTypedef::m_PredMap.dataNumFields = ARRAYSIZE( predDesc ) - 1; \
-			classNameTypedef::m_PredMap.dataDesc 	  = &predDesc[1]; \
-		} \
-		else \
-		{ \
-			classNameTypedef::m_PredMap.dataNumFields = 1; \
-			classNameTypedef::m_PredMap.dataDesc 	  = predDesc; \
-		} \
-		return &classNameTypedef::m_PredMap; \
-	}
-#else
-#define BEGIN_PREDICTION_DATA( className ) \
-	template <> inline datamap_t *PredMapInit<className>( className * ) \
-	{ \
-		if ( 0 ) \
-		{ \
-			typedef className classNameTypedef; \
-			typedescription_t predDesc[] = \
-			{ \
-				{ FIELD_VOID,0,0,0,0,0,0,0,0},
-
-#define BEGIN_PREDICTION_DATA_NO_BASE( className ) BEGIN_PREDICTION_DATA( className )
-
-#define END_PREDICTION_DATA() \
-			}; \
-			predDesc[0].flags = 0; /* avoid compiler warning of unused data */ \
-		} \
-	}
-#endif
+// The prediction descriptor DSL is gone: prediction maps are generated from Pred and PredFrom
+// annotations by game/shared/reflect_predmap.h, and every one of the 53 in the tree was proven
+// byte-equal to its macro-built predecessor before the block was removed. DECLARE_PREDICTABLE
+// above stays -- it declares m_PredMap, which the emitter fills.
 
 #else
 
 	// nothing, only client has a prediction system
 	#define DECLARE_PREDICTABLE()	
-	#define BEGIN_PREDICTION_DATA( className ) 
-	#define END_PREDICTION_DATA() 
 
 #endif
 
@@ -176,10 +118,7 @@ class SendTable;
 	};																		\
 	static C##localName##Foo g_C##localName##Foo;
 
-#define BEGIN_NETWORK_TABLE( className, tableName ) BEGIN_RECV_TABLE( className, tableName )
-#define BEGIN_NETWORK_TABLE_NOBASE( className, tableName ) BEGIN_RECV_TABLE_NOBASE( className, tableName )
 
-#define END_NETWORK_TABLE	END_RECV_TABLE
 
 #define LINK_ENTITY_TO_CLASS_ALIASED( localName, className ) LINK_ENTITY_TO_CLASS(localName, C_##className )
 
@@ -190,24 +129,25 @@ class SendTable;
 #define IMPLEMENT_NETWORKCLASS_DT(className, dataTable)					\
 	IMPLEMENT_CLIENTCLASS_DT(className, dataTable, className)
 
+// LINK_ENTITY_TO_CLASS_SIMPLE_DERIVED builds its table by reflection
+#include "reflect_recvtable.h"
+#include "reflect_annotations.h"
+
 #define LINK_ENTITY_TO_CLASS_SIMPLE_DERIVED( classNameDerived, classNameBase, dataTableName, entity_name )		\
-	class C_##classNameDerived : public C_##classNameBase								\
+	class [[= ks::reflect::NetTable{ .name = #dataTableName } ]]									\
+	      C_##classNameDerived : public C_##classNameBase								\
 	{																						\
 	public:																					\
 		DECLARE_CLASS( C_##classNameDerived, C_##classNameBase );						\
 		DECLARE_NETWORKCLASS();																\
 	};																						\
+	IMPLEMENT_REFLECT_TABLE( C_##classNameDerived, dataTableName );	\
 	IMPLEMENT_NETWORKCLASS_ALIASED( classNameDerived, dataTableName )	\
-	BEGIN_NETWORK_TABLE( C_##classNameDerived, dataTableName )		\
-	END_NETWORK_TABLE()																		\
 	LINK_ENTITY_TO_CLASS_ALIASED( entity_name, classNameDerived )
 
 #else
 
-#define BEGIN_NETWORK_TABLE( className, tableName ) BEGIN_SEND_TABLE( className, tableName )
-#define BEGIN_NETWORK_TABLE_NOBASE( className, tableName ) BEGIN_SEND_TABLE_NOBASE( className, tableName )
 
-#define END_NETWORK_TABLE	END_SEND_TABLE
 
 #define LINK_ENTITY_TO_CLASS_ALIASED( localName, className ) LINK_ENTITY_TO_CLASS(localName, C##className )
 
@@ -218,16 +158,19 @@ class SendTable;
 #define IMPLEMENT_NETWORKCLASS_DT(className, dataTable)			\
 	IMPLEMENT_SERVERCLASS_ST(className, dataTable)
 
+#include "reflect_sendtable.h"
+#include "reflect_annotations.h"
+
 #define LINK_ENTITY_TO_CLASS_SIMPLE_DERIVED( classNameDerived, classNameBase, dataTableName, entity_name )		\
-	class C##classNameDerived : public C##classNameBase								\
+	class [[= ks::reflect::NetTable{ .name = #dataTableName } ]]									\
+	      C##classNameDerived : public C##classNameBase								\
 	{																						\
 	public:																					\
 		DECLARE_CLASS( C##classNameDerived, C##classNameBase );							\
 		DECLARE_NETWORKCLASS();																\
 	};																						\
+	IMPLEMENT_REFLECT_TABLE( C##classNameDerived, dataTableName );	\
 	IMPLEMENT_NETWORKCLASS_ALIASED( classNameDerived, dataTableName )	\
-	BEGIN_NETWORK_TABLE( C##classNameDerived, dataTableName )			\
-	END_NETWORK_TABLE()																		\
 	LINK_ENTITY_TO_CLASS_ALIASED( entity_name, classNameDerived )
 
 #endif																	

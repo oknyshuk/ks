@@ -7,6 +7,8 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_annotations.h"
 #include "entityoutput.h"
 #include "TemplateEntities.h"
 #include "point_template.h"
@@ -39,8 +41,8 @@ public:
 
 	void		 SpawnEntity( Vector vecAlternateOrigin = vec3_invalid, QAngle vecAlternateAngles = vec3_angle );
 	void		 CheckSpawnThink( void );
-	void		 InputForceSpawn( inputdata_t &inputdata );
-	void		 InputForceSpawnAtEntityOrigin( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "ForceSpawn", .type = FIELD_VOID } ]] void		 InputForceSpawn( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "ForceSpawnAtEntityOrigin", .type = FIELD_STRING } ]] void		 InputForceSpawnAtEntityOrigin( inputdata_t &inputdata );
 
 	void		 SpawnEntityFromScript();
 	void		 SpawnEntityAtEntityOriginFromScript( HSCRIPT hEntity );
@@ -61,40 +63,18 @@ private:
 	Vector			m_vecBlockerOrigin;
 
 	// Movement after spawn
-	QAngle			m_angPostSpawnDirection;
-	float			m_flPostSpawnDirectionVariance;
-	float			m_flPostSpawnSpeed;
-	bool			m_bPostSpawnUseAngles;
+	[[= ks::reflect::Key{ .name = "PostSpawnDirection" } ]] QAngle			m_angPostSpawnDirection;
+	[[= ks::reflect::Key{ .name = "PostSpawnDirectionVariance" } ]] float			m_flPostSpawnDirectionVariance;
+	[[= ks::reflect::Key{ .name = "PostSpawnSpeed" } ]] float			m_flPostSpawnSpeed;
+	[[= ks::reflect::Key{ .name = "PostSpawnInheritAngles" } ]] bool			m_bPostSpawnUseAngles;
 
-	string_t		m_iszTemplate;
+	[[= ks::reflect::Key{ .name = "EntityTemplate" } ]] string_t		m_iszTemplate;
 
-	COutputEvent	m_pOutputOnSpawned;
-	COutputEvent	m_pOutputOnFailedSpawn;
+	[[= ks::reflect::Key{ .name = "OnEntitySpawned" } ]] COutputEvent	m_pOutputOnSpawned;
+	[[= ks::reflect::Key{ .name = "OnEntityFailedSpawn" } ]] COutputEvent	m_pOutputOnFailedSpawn;
 };
 
-BEGIN_DATADESC( CEnvEntityMaker )
-	// DEFINE_FIELD( m_vecEntityMins, FIELD_VECTOR ),
-	// DEFINE_FIELD( m_vecEntityMaxs, FIELD_VECTOR ),
-	DEFINE_FIELD( m_hCurrentInstance, FIELD_EHANDLE ),
-	DEFINE_FIELD( m_hCurrentBlocker, FIELD_EHANDLE ),
-	DEFINE_FIELD( m_vecBlockerOrigin, FIELD_VECTOR ),
-	DEFINE_KEYFIELD( m_iszTemplate, FIELD_STRING, "EntityTemplate" ),
-	DEFINE_KEYFIELD( m_angPostSpawnDirection, FIELD_VECTOR, "PostSpawnDirection" ),
-	DEFINE_KEYFIELD( m_flPostSpawnDirectionVariance, FIELD_FLOAT, "PostSpawnDirectionVariance" ),
-	DEFINE_KEYFIELD( m_flPostSpawnSpeed, FIELD_FLOAT, "PostSpawnSpeed" ),
-	DEFINE_KEYFIELD( m_bPostSpawnUseAngles, FIELD_BOOLEAN, "PostSpawnInheritAngles" ),
-
-	// Outputs
-	DEFINE_OUTPUT( m_pOutputOnSpawned, "OnEntitySpawned" ),
-	DEFINE_OUTPUT( m_pOutputOnFailedSpawn, "OnEntityFailedSpawn" ),
-
-	// Inputs
-	DEFINE_INPUTFUNC( FIELD_VOID, "ForceSpawn", InputForceSpawn ),
-	DEFINE_INPUTFUNC( FIELD_STRING, "ForceSpawnAtEntityOrigin", InputForceSpawnAtEntityOrigin ),
-
-	// Functions
-	DEFINE_THINKFUNC( CheckSpawnThink ),
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CEnvEntityMaker )
 
 BEGIN_ENT_SCRIPTDESC( CEnvEntityMaker, CBaseEntity, "env_entity_maker" )
 	DEFINE_SCRIPTFUNC_NAMED( SpawnEntityFromScript, "SpawnEntity", "Create an entity at the location of the maker" )

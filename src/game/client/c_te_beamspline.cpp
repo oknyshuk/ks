@@ -13,6 +13,8 @@
 #include "cbase.h"
 #include "c_basetempentity.h"
 #include "tier0/vprof.h"
+#include "reflect_recvtable.h"
+#include "reflect_annotations.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -21,7 +23,8 @@
 //-----------------------------------------------------------------------------
 // Purpose: BeamSpline TE
 //-----------------------------------------------------------------------------
-class C_TEBeamSpline : public C_BaseTempEntity
+class [[= ks::reflect::NetTable{ .name = "DT_TEBeamSpline", .base = false } ]]
+      C_TEBeamSpline : public C_BaseTempEntity
 {
 public:
 	DECLARE_CLASS( C_TEBeamSpline, C_BaseTempEntity );
@@ -33,8 +36,8 @@ public:
 	virtual void	PostDataUpdate( DataUpdateType_t updateType );
 
 public:
-	Vector			m_vecPoints[ MAX_SPLINE_POINTS ];
-	int				m_nPoints;
+	[[= ks::reflect::Net{ .varlen = true } ]] Vector			m_vecPoints[ MAX_SPLINE_POINTS ];
+	[[= ks::reflect::Net{} ]] int				m_nPoints;
 };
 
 //-----------------------------------------------------------------------------
@@ -77,10 +80,5 @@ void C_TEBeamSpline::PostDataUpdate( DataUpdateType_t updateType )
 // Expose the TE to the engine.
 IMPLEMENT_CLIENTCLASS_EVENT( C_TEBeamSpline, DT_TEBeamSpline, CTEBeamSpline );
 
-BEGIN_RECV_TABLE_NOBASE(C_TEBeamSpline, DT_TEBeamSpline)
-	RecvPropInt( RECVINFO( m_nPoints )),
-	RecvPropArray(
-		RecvPropVector( RECVINFO(m_vecPoints[0])),
-		m_vecPoints)
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_TABLE( C_TEBeamSpline, DT_TEBeamSpline );
 

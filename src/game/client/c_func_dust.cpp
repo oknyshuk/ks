@@ -5,6 +5,8 @@
 // $NoKeywords: $
 //=============================================================================//
 #include "cbase.h"
+#include "reflect_recvtable.h"
+#include "reflect_annotations.h"
 #include "fx.h"
 #include "c_func_dust.h"
 #include "func_dust_shared.h"
@@ -17,21 +19,7 @@
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
-IMPLEMENT_CLIENTCLASS_DT_NOBASE( C_Func_Dust, DT_Func_Dust, CFunc_Dust )
-	RecvPropInt( RECVINFO(m_Color), 0, RecvProxy_Int32ToColor32 ),
-	RecvPropInt( RECVINFO(m_SpawnRate) ),
-	RecvPropFloat( RECVINFO(m_flSizeMin) ),
-	RecvPropFloat( RECVINFO(m_flSizeMax) ),
-	RecvPropInt( RECVINFO(m_LifetimeMin) ),
-	RecvPropInt( RECVINFO(m_LifetimeMax) ),
-	RecvPropInt( RECVINFO(m_DustFlags) ),
-	RecvPropInt( RECVINFO(m_SpeedMax) ),
-	RecvPropInt( RECVINFO(m_DistMax) ),
-	RecvPropInt( RECVINFO( m_nModelIndex ) ),
-	RecvPropFloat( RECVINFO( m_FallSpeed ) ),
-	RecvPropBool( RECVINFO( m_bAffectedByWind ) ),
-	RecvPropDataTable( RECVINFO_DT( m_Collision ), 0, &REFERENCE_RECV_TABLE(DT_CollisionProperty) ),
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS( C_Func_Dust, DT_Func_Dust, CFunc_Dust )
 
 
 
@@ -308,7 +296,8 @@ void FX_Dust( const Vector &vecOrigin, const Vector &vecDirection, float flSize,
 }
 
 
-class C_TEDust: public C_TEParticleSystem
+class [[= ks::reflect::NetTable{ .name = "DT_TEDust" } ]]
+      C_TEDust: public C_TEParticleSystem
 {
 public:
 	DECLARE_CLASS( C_TEDust, C_TEParticleSystem );
@@ -323,19 +312,15 @@ public:
 
 public:
 
-	float		m_flSize;
-	float		m_flSpeed;
-	Vector		m_vecDirection;
+	[[= ks::reflect::Net{} ]] float		m_flSize;
+	[[= ks::reflect::Net{} ]] float		m_flSpeed;
+	[[= ks::reflect::Net{} ]] Vector		m_vecDirection;
 
 protected:
 	void		GetDustColor( Vector &color );
 };
 
-IMPLEMENT_CLIENTCLASS_EVENT_DT( C_TEDust, DT_TEDust, CTEDust )
-	RecvPropFloat(RECVINFO(m_flSize)),
-	RecvPropFloat(RECVINFO(m_flSpeed)),
-	RecvPropVector(RECVINFO(m_vecDirection)),
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS_EVENT( C_TEDust, DT_TEDust, CTEDust )
 
 //==================================================
 // C_TEDust

@@ -12,12 +12,21 @@
 #ifndef _CS_SIMPLE_HOSTAGE_H_
 #define _CS_SIMPLE_HOSTAGE_H_
 
+#include "reflect_annotations.h"
+#include "const.h"
+
+// The send table quantises m_vel against this, and the annotation lives in this header.
+#define MAX_HOSTAGE_MOVE_FORCE 1024
+
 #include "nav_mesh.h"
 #include "cs_nav_path.h"
 #include "cs_nav_pathfind.h"
 #include "improv_locomotor.h"
 #include "cs_playeranimstate.h"
 #include "ai_speech.h"
+
+void SendProxy_CropFlagsToPlayerFlagBitsLength( const SendProp *pProp, const void *pStruct,
+    const void *pData, DVariant *pOut, int iElement, int objectID );
 
 class CCSPlayer;
 
@@ -31,11 +40,11 @@ protected:
 	CAI_Expresser *m_pExpresser;
 };
 
-class CHostageCarriableProp : public CBaseAnimating
+class [[= ks::reflect::NetTable{ .name = "DT_HostageCarriableProp" } ]]
+      CHostageCarriableProp : public CBaseAnimating
 {
 public:
 	DECLARE_CLASS( CHostageCarriableProp, CBaseAnimating );
-	DECLARE_DATADESC();
 	DECLARE_SERVERCLASS();
 	DECLARE_PREDICTABLE();
 };
@@ -44,7 +53,20 @@ public:
 /**
  * A Counter-Strike Hostage
  */
-class CHostage : public CAI_ExpresserHost< CHostageExpresserShim >, public CImprovLocomotor, public ICSPlayerAnimStateHelpers
+class [[= ks::reflect::NetTable{ .name = "DT_CHostage" } ]]
+      [[= ks::reflect::From<"m_iHealth", ks::reflect::Net{ .bits = 10 }>{} ]]
+      [[= ks::reflect::From<"m_iMaxHealth", ks::reflect::Net{ .bits = 10 }>{} ]]
+      [[= ks::reflect::From<"m_lifeState", ks::reflect::Net{ .bits = 3, .flags = SPROP_UNSIGNED }>{} ]]
+      [[= ks::reflect::From<"m_fFlags", ks::reflect::Net{ .bits = PLAYER_FLAG_BITS, .flags = SPROP_UNSIGNED }, SendProxy_CropFlagsToPlayerFlagBitsLength>{} ]]
+      [[= ks::reflect::Exclude{ .table = "DT_BaseAnimating", .prop = "m_flPoseParameter" } ]]
+      [[= ks::reflect::Exclude{ .table = "DT_BaseAnimating", .prop = "m_flPlaybackRate" } ]]
+      [[= ks::reflect::Exclude{ .table = "DT_BaseAnimating", .prop = "m_nSequence" } ]]
+      [[= ks::reflect::Exclude{ .table = "DT_BaseAnimating", .prop = "m_nNewSequenceParity" } ]]
+      [[= ks::reflect::Exclude{ .table = "DT_BaseAnimating", .prop = "m_nResetEventsParity" } ]]
+      [[= ks::reflect::Exclude{ .table = "DT_BaseAnimatingOverlay", .prop = "overlay_vars" } ]]
+      [[= ks::reflect::Exclude{ .table = "DT_ServerAnimationData", .prop = "m_flCycle" } ]]
+      [[= ks::reflect::Exclude{ .table = "DT_AnimTimeMustBeFirst", .prop = "m_flAnimTime" } ]]
+      CHostage : public CAI_ExpresserHost< CHostageExpresserShim >, public CImprovLocomotor, public ICSPlayerAnimStateHelpers
 {
 public:
 	DECLARE_CLASS( CHostage, CHostageExpresserShim );
@@ -70,7 +92,7 @@ public:
 	virtual void Event_Killed( const CTakeDamageInfo &info );
 	virtual void Touch( CBaseEntity *other );				// in contact with "other"
 	
-	void HostageRescueZoneTouch( inputdata_t &inputdata );	// invoked when hostage touches a rescue zone
+	[[= ks::reflect::Input{ .name = "OnRescueZoneTouch", .type = FIELD_VOID } ]] void HostageRescueZoneTouch( inputdata_t &inputdata );	// invoked when hostage touches a rescue zone
 
 	void HostageThink( void );								// periodic update to initiate behaviors
 
@@ -142,10 +164,10 @@ public:
 	uint32 GetHostageSpawnExclusionGroup() const { return m_uiHostageSpawnExclusionGroupMask; }
 	uint32 GetHostageSpawnRandomFactor() const { return m_nHostageSpawnRandomFactor; }
 
-	COutputEvent m_OnHostageBeginGrab;
-	COutputEvent m_OnFirstPickedUp; 
-	COutputEvent m_OnDroppedNotRescued; 
-	COutputEvent m_OnRescued; 
+	[[= ks::reflect::Key{ .name = "OnHostageBeginGrab" } ]] COutputEvent m_OnHostageBeginGrab;
+	[[= ks::reflect::Key{ .name = "OnFirstPickedUp" } ]] COutputEvent m_OnFirstPickedUp; 
+	[[= ks::reflect::Key{ .name = "OnDroppedNotRescued" } ]] COutputEvent m_OnDroppedNotRescued; 
+	[[= ks::reflect::Key{ .name = "OnRescued" } ]] COutputEvent m_OnRescued; 
 
 protected:
 	virtual CAI_Expresser *CreateExpresser( void );
@@ -167,14 +189,14 @@ private:
 	IMPLEMENT_NETWORK_VAR_FOR_DERIVED( m_lifeState );
 	IMPLEMENT_NETWORK_VAR_FOR_DERIVED( m_fFlags );
 	
-	CNetworkVar( Vector, m_vel );
+	CNetworkVar( Vector, m_vel, [[= ks::reflect::Net{ .bits = 12, .low = -MAX_HOSTAGE_MOVE_FORCE, .high = MAX_HOSTAGE_MOVE_FORCE, .flags = 0x0, .enc = ks::reflect::ENC_VECTOR } ]] );
 
-	CNetworkVar( bool, m_isRescued );						// true if the hostage has been rescued
-	CNetworkVar( bool, m_jumpedThisFrame );
+	CNetworkVar( bool, m_isRescued, [[= ks::reflect::Net{} ]] );						// true if the hostage has been rescued
+	CNetworkVar( bool, m_jumpedThisFrame, [[= ks::reflect::Net{} ]] );
 
-	CNetworkVar( int, m_nHostageState );
+	CNetworkVar( int, m_nHostageState, [[= ks::reflect::Net{ .bits = -1 } ]] );
 
-	CNetworkVar( EHANDLE, m_leader );						// the player we are following
+	CNetworkVar( EHANDLE, m_leader, [[= ks::reflect::Net{} ]] );						// the player we are following
 	void UpdateFollowing( float deltaT );					// do following behavior
 
 	int m_lastLeaderID;
@@ -215,9 +237,9 @@ private:
 	Vector			m_vecPositionWhenStartedDroppingToGround; // Where was the hostage when he started dropping to ground
 	
 	Vector			m_vecGrabbedPos;
-	CNetworkVar( float, m_flRescueStartTime );
-	CNetworkVar( float, m_flGrabSuccessTime );		//What time did the grabbing succeed?
-	CNetworkVar( float, m_flDropStartTime );		//What time did the grabbing succeed?
+	CNetworkVar( float, m_flRescueStartTime, [[= ks::reflect::Net{ .bits = 32 } ]] );
+	CNetworkVar( float, m_flGrabSuccessTime, [[= ks::reflect::Net{ .bits = 32 } ]] );		//What time did the grabbing succeed?
+	CNetworkVar( float, m_flDropStartTime, [[= ks::reflect::Net{ .bits = 32 } ]] );		//What time did the grabbing succeed?
 
 	void PushawayThink( void );								// pushes physics objects away from the hostage
 	void AvoidPhysicsProps( void );							// guides the hostage away from physics props

@@ -4,6 +4,8 @@
 #ifndef ENV_TONEMAP_CONTROLLER_H
 #define ENV_TONEMAP_CONTROLLER_H
 
+#include "reflect_annotations.h"
+
 #include "triggers.h"
 
 //--------------------------------------------------------------------------------------------------------
@@ -20,7 +22,7 @@ public:
 	CBaseEntity *GetTonemapController( void ) const;
 
 private:
-	string_t m_tonemapControllerName;
+	[[= ks::reflect::Key{ .name = "TonemapName" } ]] string_t m_tonemapControllerName;
 	EHANDLE m_hTonemapController;
 };
 

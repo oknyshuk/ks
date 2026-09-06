@@ -5,6 +5,8 @@
 //=============================================================================
 
 #include "cbase.h"
+#include "reflect_recvtable.h"
+#include "reflect_annotations.h"
 #include "foundryhelpers_client.h"
 #include "c_basetempentity.h"
 #include "tier2/beamsegdraw.h"
@@ -170,7 +172,8 @@ void FoundryHelpers_AddEntityHighlightEffect( int iEntity )
 //-----------------------------------------------------------------------------
 // Purpose: This marshalls calls from the server to the client.
 //-----------------------------------------------------------------------------
-class C_TEFoundryHelpers : public C_BaseTempEntity
+class [[= ks::reflect::NetTable{ .name = "DT_TEFoundryHelpers" } ]]
+      C_TEFoundryHelpers : public C_BaseTempEntity
 {
 public:
 	DECLARE_CLASS( C_TEFoundryHelpers, C_BaseTempEntity );
@@ -178,7 +181,7 @@ public:
 
 	virtual void PostDataUpdate( DataUpdateType_t updateType );
 
-	int m_iEntity;
+	[[= ks::reflect::Net{} ]] int m_iEntity;
 };
 
 void C_TEFoundryHelpers::PostDataUpdate( DataUpdateType_t updateType )
@@ -189,7 +192,5 @@ void C_TEFoundryHelpers::PostDataUpdate( DataUpdateType_t updateType )
 		FoundryHelpers_AddEntityHighlightEffect( m_iEntity );
 }
 
-IMPLEMENT_CLIENTCLASS_EVENT_DT( C_TEFoundryHelpers, DT_TEFoundryHelpers, CTEFoundryHelpers )
-	RecvPropInt( RECVINFO(m_iEntity) )
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS_EVENT( C_TEFoundryHelpers, DT_TEFoundryHelpers, CTEFoundryHelpers )
 

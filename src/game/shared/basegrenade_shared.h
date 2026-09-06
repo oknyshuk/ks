@@ -7,6 +7,12 @@
 
 #ifndef BASEGRENADE_SHARED_H
 #define BASEGRENADE_SHARED_H
+
+#include "reflect_annotations.h"
+#ifdef CLIENT_DLL
+#include "dt_recv.h"
+#endif
+#include "const.h"
 #ifdef _WIN32
 #pragma once
 #endif
@@ -29,13 +35,34 @@
 
 #define BASEGRENADE_EXPLOSION_VOLUME	1024
 
+void SendProxy_CropFlagsToPlayerFlagBitsLength( const SendProp *pProp, const void *pStruct,
+    const void *pData, DVariant *pOut, int iElement, int objectID );
+
+void RecvProxy_LocalVelocity( const CRecvProxyData *pData, void *pStruct, void *pOut );
+
 class CTakeDamageInfo;
 
 
 #if !defined( CLIENT_DLL )
-class CBaseGrenade : public CBaseAnimating, public CDefaultPlayerPickupVPhysics
+class [[= ks::reflect::NetTable{ .name = "DT_BaseGrenade" } ]]
+      [[= ks::reflect::From<"m_flDamage", ks::reflect::Net{ .bits = 10, .low = 0.0, .high = 256.0f, .flags = SPROP_ROUNDDOWN }>{} ]]
+      [[= ks::reflect::From<"m_DmgRadius", ks::reflect::Net{ .bits = 10, .low = 0.0, .high = 1024.0f, .flags = SPROP_ROUNDDOWN }>{} ]]
+      [[= ks::reflect::From<"m_bIsLive", ks::reflect::Net{ .bits = 1, .flags = SPROP_UNSIGNED }>{} ]]
+      [[= ks::reflect::From<"m_hThrower", ks::reflect::Net{}>{} ]]
+      [[= ks::reflect::From<"m_vecVelocity", ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE, .enc = ks::reflect::ENC_VECTOR }>{} ]]
+      [[= ks::reflect::From<"m_fFlags", ks::reflect::Net{ .bits = PLAYER_FLAG_BITS, .flags = SPROP_UNSIGNED }, SendProxy_CropFlagsToPlayerFlagBitsLength>{} ]]
+      [[= ks::reflect::Exclude{ .table = "DT_AnimTimeMustBeFirst", .prop = "m_flAnimTime" } ]]
+      CBaseGrenade : public CBaseAnimating, public CDefaultPlayerPickupVPhysics
 #else
-class CBaseGrenade : public CBaseAnimating
+class [[= ks::reflect::NetTable{ .name = "DT_BaseGrenade" } ]]
+      [[= ks::reflect::From<"m_flDamage", ks::reflect::Net{}>{} ]]
+      [[= ks::reflect::From<"m_DmgRadius", ks::reflect::Net{}>{} ]]
+      [[= ks::reflect::From<"m_bIsLive", ks::reflect::Net{}>{} ]]
+      [[= ks::reflect::From<"m_hThrower", ks::reflect::Net{}>{} ]]
+      [[= ks::reflect::From<"m_vecVelocity", ks::reflect::Net{}, RecvProxy_LocalVelocity>{} ]]
+      [[= ks::reflect::From<"m_fFlags", ks::reflect::Net{}>{} ]]
+      [[= ks::reflect::PredFrom<"m_vecVelocity", ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE, .tolerance = 0.5f }>{} ]]
+      CBaseGrenade : public CBaseAnimating
 #endif
 {
 	DECLARE_CLASS( CBaseGrenade, CBaseAnimating );
@@ -124,9 +151,9 @@ public:
 	IMPLEMENT_NETWORK_VAR_FOR_DERIVED( m_fFlags );
 	
 	bool				m_bHasWarnedAI;				// whether or not this grenade has issued its DANGER sound to the world sound list yet.
-	CNetworkVar( bool, m_bIsLive );					// Is this grenade live, or can it be picked up?
-	CNetworkVar( float, m_DmgRadius );				// How far do I do damage?
-	CNetworkVar( float, m_flNextAttack );
+	CNetworkVar( bool, m_bIsLive, [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] );					// Is this grenade live, or can it be picked up?
+	CNetworkVar( float, m_DmgRadius, [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] );				// How far do I do damage?
+	CNetworkVar( float, m_flNextAttack, [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE, .tolerance = TD_MSECTOLERANCE } ]] );
 	float				m_flDetonateTime;			// Time at which to detonate.
 	float				m_flWarnAITime;				// Time at which to warn the AI
 
@@ -136,11 +163,11 @@ public:
 
 protected:
 
-	CNetworkVar( float, m_flDamage );		// Damage to inflict.
+	CNetworkVar( float, m_flDamage, [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] );		// Damage to inflict.
 	string_t m_iszBounceSound;	// The sound to make on bouncing.  If not NULL, overrides the BounceSound() function.
 
 private:
-	CNetworkHandle( CBaseEntity, m_hThrower );					// Who threw this grenade
+	CNetworkHandle( CBaseEntity, m_hThrower, [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] );					// Who threw this grenade
 	EHANDLE			m_hOriginalThrower;							// Who was the original thrower of this grenade
 
 	CBaseGrenade( const CBaseGrenade & ); // not defined, not accessible

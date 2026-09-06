@@ -5,6 +5,8 @@
 // $NoKeywords: $
 //===========================================================================//
 #include "cbase.h"
+#include "reflect_recvtable.h"
+#include "reflect_annotations.h"
 #include "c_world.h"
 #include "ivmodemanager.h"
 #include "decals.h"
@@ -50,22 +52,7 @@ static IClientNetworkable* ClientWorldFactory( int entnum, int serialNum )
 
 IMPLEMENT_CLIENTCLASS_FACTORY( C_World, DT_World, CWorld, ClientWorldFactory );
 
-BEGIN_RECV_TABLE( C_World, DT_World )
-	RecvPropFloat(RECVINFO(m_flWaveHeight)),
-	RecvPropVector(RECVINFO(m_WorldMins)),
-	RecvPropVector(RECVINFO(m_WorldMaxs)),
-	RecvPropInt(RECVINFO(m_bStartDark)),
-	RecvPropFloat(RECVINFO(m_flMaxOccludeeArea)),
-	RecvPropFloat(RECVINFO(m_flMinOccluderArea)),
-	RecvPropFloat(RECVINFO(m_flMaxPropScreenSpaceWidth)),
-	RecvPropFloat(RECVINFO(m_flMinPropScreenSpaceWidth)),
-	RecvPropString(RECVINFO(m_iszDetailSpriteMaterial)),
-	RecvPropInt(RECVINFO(m_bColdWorld)),
-	RecvPropInt(RECVINFO(m_iTimeOfDay)),
-#ifdef PORTAL2
-	RecvPropInt(RECVINFO(m_nMaxBlobCount)),
-#endif
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_TABLE( C_World, DT_World );
 
 
 C_World::C_World( void )

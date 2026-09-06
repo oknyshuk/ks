@@ -5,6 +5,8 @@
 //===========================================================================//
 
 #include "cbase.h"
+#include "reflect_annotations.h"
+#include "reflect_datamap.h"
 #include "cs_nav_mesh.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
@@ -28,8 +30,7 @@ protected:
 	HidingSpot *m_pSpot;
 };
 
-BEGIN_DATADESC( CPointHidingSpot )
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CPointHidingSpot )
 
 LINK_ENTITY_TO_CLASS( point_hiding_spot, CPointHidingSpot );
 

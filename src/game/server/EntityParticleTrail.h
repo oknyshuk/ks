@@ -7,6 +7,9 @@
 #ifndef ENTITYPARTICLETRAIL_H
 #define ENTITYPARTICLETRAIL_H
 
+#include "reflect_annotations.h"
+#include "networkstringtable_gamedll.h"
+
 #ifdef _WIN32
 #pragma once
 #endif
@@ -18,9 +21,10 @@
 //-----------------------------------------------------------------------------
 // Spawns particles after  the entity
 //-----------------------------------------------------------------------------
-class CEntityParticleTrail : public CBaseParticleEntity 
+class [[= ks::reflect::NetTable{ .name = "DT_EntityParticleTrail" } ]]
+      [[= ks::reflect::From<"m_Info", ks::reflect::Net{}>{} ]]
+      CEntityParticleTrail : public CBaseParticleEntity 
 {
-	DECLARE_DATADESC();
 	DECLARE_CLASS( CEntityParticleTrail, CBaseParticleEntity );
 	DECLARE_SERVERCLASS();
 
@@ -42,9 +46,9 @@ private:
 	void	IncrementRefCount();
 	void	DecrementRefCount();
 	
-	CNetworkVar( int, m_iMaterialName );
+	CNetworkVar( int, m_iMaterialName, [[= ks::reflect::Net{ .bits = MAX_MATERIAL_STRING_BITS, .flags = SPROP_UNSIGNED } ]] );
 	CNetworkVarEmbedded( EntityParticleTrailInfo_t, m_Info );
-	CNetworkHandle( CBaseEntity, m_hConstraintEntity );
+	CNetworkHandle( CBaseEntity, m_hConstraintEntity, [[= ks::reflect::Net{} ]] );
 
 	int	m_nRefCount;
 };

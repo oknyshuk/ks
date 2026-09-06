@@ -3,6 +3,8 @@
 //=============================================================================
 
 #include "cbase.h"
+#include "reflect_annotations.h"
+#include "reflect_datamap.h"
 
 #include "bitstring.h"
 
@@ -53,12 +55,7 @@ int g_AIDebugFindLosNode = -1;
 
 //-----------------------------------------------------------------------------
 
-BEGIN_SIMPLE_DATADESC(CAI_TacticalServices)
-	//						m_pNetwork	(not saved)
-	//						m_pPathfinder	(not saved)
-	DEFINE_FIELD( m_bAllowFindLateralLos, FIELD_BOOLEAN ),
-
-END_DATADESC();
+IMPLEMENT_REFLECT_DATAMAP_SIMPLE( CAI_TacticalServices )
 
 //-------------------------------------
 

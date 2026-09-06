@@ -13,6 +13,13 @@
 #include <deque>
 
 #include "cbase.h"
+#include "reflect_annotations.h"
+#ifdef GAME_DLL
+#include "reflect_sendtable.h"
+#include "reflect_datamap.h"
+#else
+#include "reflect_recvtable.h"
+#endif
 #include "cs_gamerules.h"
 #include "cs_ammodef.h"
 #include "weapon_csbase.h"
@@ -228,15 +235,7 @@ static CViewVectors g_CSViewVectors(
 
 extern ConVar spec_replay_bot;
 
-BEGIN_DATADESC( SpawnPoint )
-    // Keyfields
-    DEFINE_KEYFIELD( m_iPriority,	FIELD_INTEGER,	"priority" ),
-	DEFINE_KEYFIELD( m_bEnabled,	FIELD_BOOLEAN,	"enabled" ),
-
-	DEFINE_INPUTFUNC( FIELD_VOID,				"SetEnabled",	InputSetEnabled ),
-	DEFINE_INPUTFUNC( FIELD_VOID,				"SetDisabled",	InputSetDisabled ),
-	DEFINE_INPUTFUNC( FIELD_VOID,				"ToggleEnabled",	InputToggleEnabled ),
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( SpawnPoint )
 
 LINK_ENTITY_TO_CLASS( info_player_terrorist, SpawnPoint );
 LINK_ENTITY_TO_CLASS( info_player_counterterrorist, SpawnPoint );
@@ -310,16 +309,7 @@ void SpawnPoint::SetSpawnEnabled( bool bEnabled )
 
 LINK_ENTITY_TO_CLASS( info_enemy_terrorist_spawn, SpawnPointCoopEnemy );
 
-BEGIN_DATADESC( SpawnPointCoopEnemy )
-DEFINE_KEYFIELD( m_szWeaponsToGive, FIELD_STRING, "weapons_to_give" ),
-DEFINE_KEYFIELD( m_szPlayerModelToUse, FIELD_STRING, "model_to_use" ),
-DEFINE_KEYFIELD( m_nArmorToSpawnWith, FIELD_INTEGER, "armor_to_give" ),
-DEFINE_KEYFIELD( m_nDefaultBehavior, FIELD_INTEGER, "default_behavior" ),
-DEFINE_KEYFIELD( m_nBotDifficulty, FIELD_INTEGER, "bot_difficulty" ),
-DEFINE_KEYFIELD( m_bIsAgressive, FIELD_BOOLEAN, "is_agressive" ),
-DEFINE_KEYFIELD( m_bStartAsleep, FIELD_BOOLEAN, "start_asleep" ),
-DEFINE_KEYFIELD( m_flHideRadius, FIELD_FLOAT, "hide_radius" ),
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( SpawnPointCoopEnemy )
 
 SpawnPointCoopEnemy::SpawnPointCoopEnemy( void )
 {
@@ -368,7 +358,7 @@ class CPointGiveAmmo : public CPointEntity
 	void	Precache( void );
 
 	// Input handlers
-	void InputGiveAmmo( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "GiveAmmo", .type = FIELD_VOID } ]] void InputGiveAmmo( inputdata_t &inputdata );
 
 	DECLARE_DATADESC();
 
@@ -380,22 +370,7 @@ class CPointGiveAmmo : public CPointEntity
 	EHANDLE		m_pActivator;
 };
 
-BEGIN_DATADESC( CPointGiveAmmo )
-
-// 		DEFINE_KEYFIELD( m_flRadius, FIELD_FLOAT, "DamageRadius" ),
-// 		DEFINE_KEYFIELD( m_nDamage, FIELD_INTEGER, "Damage" ),
-// 		DEFINE_KEYFIELD( m_flDelay, FIELD_FLOAT, "DamageDelay" ),
-// 		DEFINE_KEYFIELD( m_bitsDamageType, FIELD_INTEGER, "DamageType" ),
-// 		DEFINE_KEYFIELD( m_strTarget, FIELD_STRING, "DamageTarget" ),
-
-// Function Pointers
-
-// Inputs
-DEFINE_INPUTFUNC( FIELD_VOID, "GiveAmmo", InputGiveAmmo ),
-
-DEFINE_FIELD( m_pActivator, FIELD_EHANDLE ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CPointGiveAmmo )
 
 LINK_ENTITY_TO_CLASS( point_give_ammo, CPointGiveAmmo );
 
@@ -475,7 +450,6 @@ class CCoopBonusCoin : public CDynamicProp
 {
 	public:
 	DECLARE_CLASS( CCoopBonusCoin, CDynamicProp );
-	DECLARE_DATADESC();
 
 	void CoinTouch( CBaseEntity *pOther );
 	void CoinFadeOut( void );
@@ -488,11 +462,6 @@ class CCoopBonusCoin : public CDynamicProp
 LINK_ENTITY_TO_CLASS( item_coop_coin, CCoopBonusCoin );
 PRECACHE_REGISTER( item_coop_coin );
 
-BEGIN_DATADESC( CCoopBonusCoin )
-// Function Pointers
-DEFINE_ENTITYFUNC( CoinTouch ),
-DEFINE_THINKFUNC( CoinFadeOut ),
-END_DATADESC()
 
 void CCoopBonusCoin::CoinTouch( CBaseEntity *pOther )
 {
@@ -590,190 +559,12 @@ void CCoopBonusCoin::CoinFadeOut( void )
 
 REGISTER_GAMERULES_CLASS( CCSGameRules );
 
-BEGIN_NETWORK_TABLE_NOBASE( CCSGameRules, DT_CSGameRules )
+IMPLEMENT_REFLECT_TABLE( CCSGameRules, DT_CSGameRules );
     #ifdef CLIENT_DLL
-        RecvPropBool( RECVINFO( m_bFreezePeriod ) ),
-		RecvPropBool( RECVINFO( m_bMatchWaitingForResume ) ),
-        RecvPropBool( RECVINFO( m_bWarmupPeriod ) ),
-        RecvPropFloat( RECVINFO( m_fWarmupPeriodEnd ) ), // DUMMY VAR FOR DEMOS		
-        RecvPropFloat( RECVINFO( m_fWarmupPeriodStart ) ),	
-
-		RecvPropBool( RECVINFO( m_bTerroristTimeOutActive ) ),
-		RecvPropBool( RECVINFO( m_bCTTimeOutActive ) ),
-		RecvPropFloat( RECVINFO( m_flTerroristTimeOutRemaining ) ),
-		RecvPropFloat( RECVINFO( m_flCTTimeOutRemaining ) ),
-		RecvPropInt( RECVINFO( m_nTerroristTimeOuts ) ),
-		RecvPropInt( RECVINFO( m_nCTTimeOuts ) ),
-
-        RecvPropInt( RECVINFO( m_iRoundTime ) ),
-        RecvPropInt( RECVINFO( m_gamePhase ) ),
-        RecvPropInt( RECVINFO( m_totalRoundsPlayed ) ),
-		RecvPropInt( RECVINFO( m_nOvertimePlaying ) ),
-        RecvPropFloat( RECVINFO( m_timeUntilNextPhaseStarts ) ),
-		RecvPropFloat( RECVINFO( m_flCMMItemDropRevealStartTime ) ),
-		RecvPropFloat( RECVINFO( m_flCMMItemDropRevealEndTime ) ),
-        RecvPropFloat( RECVINFO( m_fRoundStartTime ) ),
-        RecvPropBool( RECVINFO( m_bGameRestart ) ),	
-        RecvPropFloat( RECVINFO( m_flRestartRoundTime ) ),	
-        RecvPropFloat( RECVINFO( m_flGameStartTime ) ),
-        RecvPropInt( RECVINFO( m_iHostagesRemaining ) ),
-		RecvPropBool( RECVINFO( m_bAnyHostageReached ) ),
-        RecvPropBool( RECVINFO( m_bMapHasBombTarget ) ),
-        RecvPropBool( RECVINFO( m_bMapHasRescueZone ) ),
-        RecvPropBool( RECVINFO( m_bMapHasBuyZone ) ),
-		RecvPropBool( RECVINFO( m_bIsQueuedMatchmaking ) ),
-		RecvPropBool( RECVINFO( m_bIsValveDS ) ),
-		RecvPropBool( RECVINFO( m_bIsQuestEligible ) ),
-        RecvPropBool( RECVINFO( m_bLogoMap ) ),
-        RecvPropInt( RECVINFO( m_iNumGunGameProgressiveWeaponsCT ) ),
-        RecvPropInt( RECVINFO( m_iNumGunGameProgressiveWeaponsT ) ),
-        RecvPropInt( RECVINFO( m_iSpectatorSlotCount ) ),
-        RecvPropBool( RECVINFO( m_bBombDropped ) ),
-        RecvPropBool( RECVINFO( m_bBombPlanted ) ),
-        RecvPropInt( RECVINFO( m_iRoundWinStatus ) ),
-		RecvPropInt( RECVINFO( m_eRoundWinReason ) ),
-		RecvPropFloat( RECVINFO( m_flDMBonusStartTime ) ),
-		RecvPropFloat( RECVINFO( m_flDMBonusTimeLength ) ),
-		RecvPropInt( RECVINFO( m_unDMBonusWeaponLoadoutSlot ) ),
-		RecvPropBool( RECVINFO( m_bDMBonusActive ) ),
-		RecvPropBool( RECVINFO( m_bTCantBuy ) ),
-		RecvPropBool( RECVINFO( m_bCTCantBuy ) ),
-		RecvPropFloat( RECVINFO( m_flGuardianBuyUntilTime ) ),	
-		RecvPropArray3( RECVINFO_ARRAY( m_iMatchStats_RoundResults ), RecvPropInt( RECVINFO( m_iMatchStats_RoundResults[0] ) ) ),
-		RecvPropArray3( RECVINFO_ARRAY( m_iMatchStats_PlayersAlive_T ), RecvPropInt( RECVINFO( m_iMatchStats_PlayersAlive_T[0] ) ) ),
-		RecvPropArray3( RECVINFO_ARRAY( m_iMatchStats_PlayersAlive_CT ), RecvPropInt( RECVINFO( m_iMatchStats_PlayersAlive_CT[0] ) ) ),
-		RecvPropArray3( RECVINFO_ARRAY( m_GGProgressiveWeaponOrderCT ), RecvPropInt( RECVINFO( m_GGProgressiveWeaponOrderCT[0] ) ) ),
-        RecvPropArray3( RECVINFO_ARRAY( m_GGProgressiveWeaponOrderT ), RecvPropInt( RECVINFO( m_GGProgressiveWeaponOrderT[0] ) ) ),
-        RecvPropArray3( RECVINFO_ARRAY( m_GGProgressiveWeaponKillUpgradeOrderCT ), RecvPropInt( RECVINFO( m_GGProgressiveWeaponKillUpgradeOrderCT[0] ) ) ),
-        RecvPropArray3( RECVINFO_ARRAY( m_GGProgressiveWeaponKillUpgradeOrderT ), RecvPropInt( RECVINFO( m_GGProgressiveWeaponKillUpgradeOrderT[0] ) ) ),
-		RecvPropInt( RECVINFO( m_MatchDevice ) ),
-        RecvPropBool( RECVINFO( m_bHasMatchStarted ) ),
-		RecvPropArray3( RECVINFO_ARRAY(m_TeamRespawnWaveTimes), RecvPropFloat( RECVINFO(m_TeamRespawnWaveTimes[0]) ) ),
-		RecvPropArray3( RECVINFO_ARRAY(m_flNextRespawnWave), RecvPropTime( RECVINFO(m_flNextRespawnWave[0]) ) ),
-		RecvPropInt( RECVINFO( m_nNextMapInMapgroup ) ),
-		RecvPropArray3( RECVINFO_ARRAY( m_nEndMatchMapGroupVoteOptions ), RecvPropInt( RECVINFO( m_nEndMatchMapGroupVoteOptions[0] ) ) ),
-		RecvPropBool( RECVINFO( m_bIsDroppingItems ) ),
-		RecvPropInt( RECVINFO( m_iActiveAssassinationTargetMissionID ) ),
-		RecvPropFloat( RECVINFO( m_fMatchStartTime ) ),
-		RecvPropString( RECVINFO( m_szTournamentEventName ) ),
-		RecvPropString( RECVINFO( m_szTournamentEventStage ) ),
-		RecvPropString( RECVINFO( m_szTournamentPredictionsTxt ) ),
-		RecvPropInt( RECVINFO( m_nTournamentPredictionsPct ) ),
-		RecvPropString( RECVINFO( m_szMatchStatTxt ) ),
-
-		// guardian mode	
-		RecvPropInt( RECVINFO( m_nGuardianModeWaveNumber ) ),
-		RecvPropInt( RECVINFO( m_nGuardianModeSpecialKillsRemaining ) ),
-		RecvPropInt( RECVINFO( m_nGuardianModeSpecialWeaponNeeded ) ),
-
-		// halloween	
-		RecvPropInt( RECVINFO( m_nHalloweenMaskListSeed ) ),
-
-		// Gifts global info
-		RecvPropInt( RECVINFO( m_numGlobalGiftsGiven ) ),
-		RecvPropInt( RECVINFO( m_numGlobalGifters ) ),
-		RecvPropInt( RECVINFO( m_numGlobalGiftsPeriodSeconds ) ),
-		RecvPropArray3( RECVINFO_ARRAY( m_arrFeaturedGiftersAccounts ), RecvPropInt (RECVINFO( m_arrFeaturedGiftersAccounts[0] ) ) ),
-		RecvPropArray3( RECVINFO_ARRAY( m_arrFeaturedGiftersGifts ), RecvPropInt (RECVINFO( m_arrFeaturedGiftersGifts[0] ) ) ),
-
-		RecvPropArray3( RECVINFO_ARRAY( m_arrProhibitedItemIndices ), RecvPropInt( RECVINFO( m_arrProhibitedItemIndices[ 0 ] ) ) ),
-
-		// Tournament Casters
-		RecvPropInt( RECVINFO( m_numBestOfMaps ) ),
-		RecvPropArray3( RECVINFO_ARRAY( m_arrTournamentActiveCasterAccounts ), RecvPropInt ( RECVINFO( m_arrTournamentActiveCasterAccounts[0] ), 0, CCSGameRules::RecvProxy_TournamentActiveCasterAccounts ) )
     #else
-        SendPropBool( SENDINFO( m_bFreezePeriod ) ),
-		SendPropBool( SENDINFO( m_bMatchWaitingForResume ) ),
-        SendPropBool( SENDINFO( m_bWarmupPeriod ) ),
-        SendPropFloat( SENDINFO( m_fWarmupPeriodEnd ) ), // DUMMY VAR FOR DEMOS	
-        SendPropFloat( SENDINFO( m_fWarmupPeriodStart ) ),	
-
-		SendPropBool( SENDINFO( m_bTerroristTimeOutActive ) ),
-		SendPropBool( SENDINFO( m_bCTTimeOutActive ) ),
-		SendPropFloat( SENDINFO( m_flTerroristTimeOutRemaining ) ),
-		SendPropFloat( SENDINFO( m_flCTTimeOutRemaining ) ),
-		SendPropInt( SENDINFO( m_nTerroristTimeOuts ) ),
-		SendPropInt( SENDINFO( m_nCTTimeOuts ) ),
-
-        SendPropInt( SENDINFO( m_iRoundTime ), 16 ),
-        SendPropInt( SENDINFO( m_gamePhase ), 4, SPROP_UNSIGNED ),
-        SendPropInt( SENDINFO( m_totalRoundsPlayed ), 16 ),
-		SendPropInt( SENDINFO( m_nOvertimePlaying ), 16 ),
-        SendPropFloat( SENDINFO( m_timeUntilNextPhaseStarts ), 32, SPROP_NOSCALE ),
-		SendPropFloat( SENDINFO( m_flCMMItemDropRevealStartTime ), 32, SPROP_NOSCALE ),
-		SendPropFloat( SENDINFO( m_flCMMItemDropRevealEndTime ), 32, SPROP_NOSCALE ),
-        SendPropFloat( SENDINFO( m_fRoundStartTime ), 32, SPROP_NOSCALE ),
-        SendPropFloat( SENDINFO( m_flRestartRoundTime ) ),	
-        SendPropBool( SENDINFO( m_bGameRestart ) ),
-        SendPropFloat( SENDINFO( m_flGameStartTime ), 32, SPROP_NOSCALE ),
-        SendPropInt( SENDINFO( m_iHostagesRemaining ), 4 ),
-		SendPropBool( SENDINFO( m_bAnyHostageReached ) ),
-        SendPropBool( SENDINFO( m_bMapHasBombTarget ) ),
-        SendPropBool( SENDINFO( m_bMapHasRescueZone ) ),
-        SendPropBool( SENDINFO( m_bMapHasBuyZone ) ),
-		SendPropBool( SENDINFO( m_bIsQueuedMatchmaking ) ),
-		SendPropBool( SENDINFO( m_bIsValveDS ) ),
-		SendPropBool( SENDINFO( m_bIsQuestEligible ) ),
-        SendPropBool( SENDINFO( m_bLogoMap ) ),
-        SendPropInt( SENDINFO( m_iNumGunGameProgressiveWeaponsCT ) ),
-        SendPropInt( SENDINFO( m_iNumGunGameProgressiveWeaponsT ) ),
-        SendPropInt( SENDINFO( m_iSpectatorSlotCount ) ),
-        SendPropBool( SENDINFO( m_bBombDropped ) ),
-        SendPropBool( SENDINFO( m_bBombPlanted ) ),
-        SendPropInt( SENDINFO( m_iRoundWinStatus ) ),
-		SendPropInt( SENDINFO( m_eRoundWinReason ) ),
-		SendPropFloat( SENDINFO( m_flDMBonusStartTime ) ),
-		SendPropFloat( SENDINFO( m_flDMBonusTimeLength ) ),
-		SendPropInt( SENDINFO( m_unDMBonusWeaponLoadoutSlot ) ),
-		SendPropBool( SENDINFO( m_bDMBonusActive ) ),
-		SendPropBool( SENDINFO( m_bTCantBuy ) ),
-		SendPropBool( SENDINFO( m_bCTCantBuy ) ),
-		SendPropFloat( SENDINFO( m_flGuardianBuyUntilTime ) ),	
-		SendPropArray3( SENDINFO_ARRAY3( m_iMatchStats_RoundResults ), SendPropInt (SENDINFO_ARRAY( m_iMatchStats_RoundResults ), 8, SPROP_UNSIGNED ) ),
-		SendPropArray3( SENDINFO_ARRAY3( m_iMatchStats_PlayersAlive_T ), SendPropInt (SENDINFO_ARRAY( m_iMatchStats_PlayersAlive_T ), 6, SPROP_UNSIGNED ) ),
-		SendPropArray3( SENDINFO_ARRAY3( m_iMatchStats_PlayersAlive_CT ), SendPropInt (SENDINFO_ARRAY( m_iMatchStats_PlayersAlive_CT ), 6, SPROP_UNSIGNED ) ),
-		
-        SendPropArray3( SENDINFO_ARRAY3( m_GGProgressiveWeaponOrderCT ), SendPropInt (SENDINFO_ARRAY( m_GGProgressiveWeaponOrderCT ), 0, SPROP_UNSIGNED ) ),
-        SendPropArray3( SENDINFO_ARRAY3( m_GGProgressiveWeaponOrderT ), SendPropInt( SENDINFO_ARRAY( m_GGProgressiveWeaponOrderT ), 0, SPROP_UNSIGNED ) ),
-        SendPropArray3( SENDINFO_ARRAY3( m_GGProgressiveWeaponKillUpgradeOrderCT ), SendPropInt( SENDINFO_ARRAY( m_GGProgressiveWeaponKillUpgradeOrderCT ), 0, SPROP_UNSIGNED ) ),
-        SendPropArray3( SENDINFO_ARRAY3( m_GGProgressiveWeaponKillUpgradeOrderT ), SendPropInt( SENDINFO_ARRAY( m_GGProgressiveWeaponKillUpgradeOrderT ), 0, SPROP_UNSIGNED ) ),
-		SendPropInt( SENDINFO( m_MatchDevice ) ),
-        SendPropBool( SENDINFO( m_bHasMatchStarted ) ),
-		SendPropArray3( SENDINFO_ARRAY3(m_TeamRespawnWaveTimes), SendPropFloat( SENDINFO_ARRAY(m_TeamRespawnWaveTimes) ) ),
-		SendPropArray3( SENDINFO_ARRAY3(m_flNextRespawnWave), SendPropTime( SENDINFO_ARRAY(m_flNextRespawnWave) ) ),
-		SendPropInt( SENDINFO( m_nNextMapInMapgroup ) ),
-		SendPropArray3( SENDINFO_ARRAY3( m_nEndMatchMapGroupVoteOptions ), SendPropInt (SENDINFO_ARRAY( m_nEndMatchMapGroupVoteOptions ) ) ),
-		SendPropBool( SENDINFO( m_bIsDroppingItems ) ),
-		SendPropInt( SENDINFO( m_iActiveAssassinationTargetMissionID ) ),
-		SendPropFloat( SENDINFO( m_fMatchStartTime ), 32, SPROP_NOSCALE ),
-		SendPropString( SENDINFO( m_szTournamentEventName ) ),
-		SendPropString( SENDINFO( m_szTournamentEventStage ) ),
-		SendPropString( SENDINFO( m_szTournamentPredictionsTxt ) ),
-		SendPropInt( SENDINFO( m_nTournamentPredictionsPct ) ),
-		SendPropString( SENDINFO( m_szMatchStatTxt ) ),
-
-		// guardian mode	
-		SendPropInt( SENDINFO( m_nGuardianModeWaveNumber ) ),
-		SendPropInt( SENDINFO( m_nGuardianModeSpecialKillsRemaining ) ),
-		SendPropInt( SENDINFO( m_nGuardianModeSpecialWeaponNeeded ) ),
-
-		// Halloween	
-		SendPropInt( SENDINFO( m_nHalloweenMaskListSeed ) ),
-
-		// Gifts global info
-		SendPropInt( SENDINFO( m_numGlobalGiftsGiven ), 0, SPROP_UNSIGNED ),
-		SendPropInt( SENDINFO( m_numGlobalGifters ), 0, SPROP_UNSIGNED ),
-		SendPropInt( SENDINFO( m_numGlobalGiftsPeriodSeconds ), 0, SPROP_UNSIGNED ),
-		SendPropArray3( SENDINFO_ARRAY3( m_arrFeaturedGiftersAccounts ), SendPropInt (SENDINFO_ARRAY( m_arrFeaturedGiftersAccounts ), 0, SPROP_UNSIGNED ) ),
-		SendPropArray3( SENDINFO_ARRAY3( m_arrFeaturedGiftersGifts ), SendPropInt (SENDINFO_ARRAY( m_arrFeaturedGiftersGifts ), 0, SPROP_UNSIGNED ) ),
-
-		SendPropArray3( SENDINFO_ARRAY3( m_arrProhibitedItemIndices ), SendPropInt( SENDINFO_ARRAY( m_arrProhibitedItemIndices ), 0, SPROP_UNSIGNED ) ),
-
-		// Tournament Casters
-		SendPropInt( SENDINFO( m_numBestOfMaps ), 4, SPROP_UNSIGNED ), // supporting no more than best-of-7 (1+2+4)
-		SendPropArray3( SENDINFO_ARRAY3( m_arrTournamentActiveCasterAccounts ), SendPropInt (SENDINFO_ARRAY( m_arrTournamentActiveCasterAccounts ), 0, SPROP_UNSIGNED ) )	
     #endif
-END_NETWORK_TABLE()
+#ifdef GAME_DLL
+#endif
 
 
 IMPLEMENT_NETWORKCLASS_ALIASED( CSGameRulesProxy, DT_CSGameRulesProxy )
@@ -1546,9 +1337,7 @@ ks::net::CMsgGCCStrike15_v2_MatchmakingGC2ServerReserve CCSGameRules::sm_QueuedS
         *pOut = pRules;
     }
 
-    BEGIN_RECV_TABLE( CCSGameRulesProxy, DT_CSGameRulesProxy )
-        RecvPropDataTable( "cs_gamerules_data", 0, 0, &REFERENCE_RECV_TABLE( DT_CSGameRules ), RecvProxy_CSGameRules )
-    END_RECV_TABLE()
+    IMPLEMENT_REFLECT_TABLE( CCSGameRulesProxy, DT_CSGameRulesProxy );
 #else
     void* SendProxy_CSGameRules( const SendProp *pProp, const void *pStructBase, const void *pData, CSendProxyRecipients *pRecipients, int objectID )
     {
@@ -1557,9 +1346,7 @@ ks::net::CMsgGCCStrike15_v2_MatchmakingGC2ServerReserve CCSGameRules::sm_QueuedS
         return pRules;
     }
 
-    BEGIN_SEND_TABLE( CCSGameRulesProxy, DT_CSGameRulesProxy )
-        SendPropDataTable( "cs_gamerules_data", 0, &REFERENCE_SEND_TABLE( DT_CSGameRules ), SendProxy_CSGameRules )
-    END_SEND_TABLE()
+    IMPLEMENT_REFLECT_TABLE( CCSGameRulesProxy, DT_CSGameRulesProxy );
 #endif
 
 

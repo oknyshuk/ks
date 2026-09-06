@@ -9,11 +9,14 @@
 #ifndef MOVIE_EXPLOSION_H
 #define MOVIE_EXPLOSION_H
 
+#include "reflect_annotations.h"
+
 
 #include "baseparticleentity.h"
 
 
-class MovieExplosion : public CBaseParticleEntity
+class [[= ks::reflect::NetTable{ .name = "DT_MovieExplosion" } ]]
+      MovieExplosion : public CBaseParticleEntity
 {
 public:
 	DECLARE_CLASS( MovieExplosion, CBaseParticleEntity );

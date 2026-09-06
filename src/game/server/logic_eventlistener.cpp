@@ -5,6 +5,8 @@
 //=============================================================================
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_annotations.h"
 #include "logic_eventlistener.h"
 #include "GameEventListener.h"
 #include "igameevents.h"
@@ -14,22 +16,7 @@
 
 LINK_ENTITY_TO_CLASS( logic_eventlistener, CLogicEventListener);
 
-BEGIN_DATADESC( CLogicEventListener )
-
-// Base
-DEFINE_KEYFIELD( m_iszEventName, FIELD_STRING, "EventName" ),
-DEFINE_KEYFIELD( m_bFetchEventData, FIELD_BOOLEAN, "FetchEventData" ),
-DEFINE_KEYFIELD( m_bIsEnabled, FIELD_BOOLEAN, "IsEnabled" ),
-DEFINE_KEYFIELD( m_nTeam, FIELD_INTEGER, "TeamNum" ),
-
-// Inputs
-DEFINE_INPUTFUNC( FIELD_VOID, "Enable", InputEnable ),
-DEFINE_INPUTFUNC( FIELD_VOID, "Disable", InputDisable ),
-
-// Outputs
-DEFINE_OUTPUT( m_OnEventFired, "OnEventFired" ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CLogicEventListener )
 
 
 class CScriptEventTableWriter : public IGameEventVisitor2
@@ -152,22 +139,7 @@ void CLogicEventListener::InputDisable( inputdata_t &inputdata )
 //-----------------------------------------------------------------------------
 LINK_ENTITY_TO_CLASS( logic_eventlistener_itemequip, CLogicEventListenerItemEquip);
 
-BEGIN_DATADESC( CLogicEventListenerItemEquip )
-
-	// Base
-	DEFINE_KEYFIELD( m_bIsEnabled, FIELD_BOOLEAN, "IsEnabled" ),
-	DEFINE_KEYFIELD( m_nTeam, FIELD_INTEGER, "TeamNum" ),
-	DEFINE_KEYFIELD( m_szWeaponClassname, FIELD_STRING, "WeaponClassname" ),
-	DEFINE_KEYFIELD( m_nWeaponType, FIELD_INTEGER, "WeaponType" ),
-
-	// Inputs
-	DEFINE_INPUTFUNC( FIELD_VOID, "Enable", InputEnable ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "Disable", InputDisable ),
-
-	// Outputs
-	DEFINE_OUTPUT( m_OnEventFired,		"OnEventFired" ),
-
-	END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CLogicEventListenerItemEquip )
 
 
 	//-----------------------------------------------------------------------------

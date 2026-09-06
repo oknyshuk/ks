@@ -21,6 +21,8 @@
 
 #ifndef FILTERS_H
 #define FILTERS_H
+
+#include "reflect_annotations.h"
 #ifdef _WIN32
 #pragma once
 #endif
@@ -42,14 +44,14 @@ public:
 	bool PassesFilter( CBaseEntity *pCaller, CBaseEntity *pEntity );
 	bool PassesDamageFilter( const CTakeDamageInfo &info );
 
-	bool m_bNegated;
+	[[= ks::reflect::Key{ .name = "Negated" } ]] bool m_bNegated;
 
 	// Inputs
-	void InputTestActivator( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "TestActivator", .type = FIELD_INPUT } ]] void InputTestActivator( inputdata_t &inputdata );
 
 	// Outputs
-	COutputEvent	m_OnPass;		// Fired when filter is passed
-	COutputEvent	m_OnFail;		// Fired when filter is failed
+	[[= ks::reflect::Key{ .name = "OnPass" } ]] COutputEvent	m_OnPass;		// Fired when filter is passed
+	[[= ks::reflect::Key{ .name = "OnFail" } ]] COutputEvent	m_OnFail;		// Fired when filter is failed
 
 protected:
 

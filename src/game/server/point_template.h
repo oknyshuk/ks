@@ -6,6 +6,8 @@
 
 #ifndef POINT_TEMPLATE_H
 #define POINT_TEMPLATE_H
+
+#include "reflect_annotations.h"
 #ifdef _WIN32
 #pragma once
 #endif
@@ -60,12 +62,12 @@ public:
 	void			CreationComplete( const CUtlVector<CBaseEntity*> &entities );
 
 	// Inputs
-	void			InputForceSpawn( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "ForceSpawn", .type = FIELD_VOID } ]] void			InputForceSpawn( inputdata_t &inputdata );
 
 	virtual void	PerformPrecache();
 
 private:
-	string_t						m_iszTemplateEntityNames[MAX_NUM_TEMPLATES];
+	[[= ks::reflect::Key{ .name = "Template16", .index = 15 } ]] [[= ks::reflect::Key{ .name = "Template15", .index = 14 } ]] [[= ks::reflect::Key{ .name = "Template14", .index = 13 } ]] [[= ks::reflect::Key{ .name = "Template13", .index = 12 } ]] [[= ks::reflect::Key{ .name = "Template12", .index = 11 } ]] [[= ks::reflect::Key{ .name = "Template11", .index = 10 } ]] [[= ks::reflect::Key{ .name = "Template10", .index = 9 } ]] [[= ks::reflect::Key{ .name = "Template09", .index = 8 } ]] [[= ks::reflect::Key{ .name = "Template08", .index = 7 } ]] [[= ks::reflect::Key{ .name = "Template07", .index = 6 } ]] [[= ks::reflect::Key{ .name = "Template06", .index = 5 } ]] [[= ks::reflect::Key{ .name = "Template05", .index = 4 } ]] [[= ks::reflect::Key{ .name = "Template04", .index = 3 } ]] [[= ks::reflect::Key{ .name = "Template03", .index = 2 } ]] [[= ks::reflect::Key{ .name = "Template02", .index = 1 } ]] [[= ks::reflect::Key{ .name = "Template01", .index = 0 } ]] string_t						m_iszTemplateEntityNames[MAX_NUM_TEMPLATES];
 
 	// List of map entities this template targets. Built inside our Spawn().
 	// It's only valid between Spawn() & Activate(), because the map entity parsing
@@ -75,7 +77,7 @@ private:
 	// List of templates, generated from our template entities.
 	CUtlVector< template_t >		m_hTemplates;
 
-	COutputEvent					m_pOutputOnSpawned;
+	[[= ks::reflect::Key{ .name = "OnEntitySpawned" } ]] COutputEvent					m_pOutputOnSpawned;
 };
 
 #endif // POINT_TEMPLATE_H

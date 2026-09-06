@@ -77,20 +77,6 @@ bool CAI_NetworkManager::gm_fNetworksLoaded;
 
 LINK_ENTITY_TO_CLASS(ai_network,CAI_NetworkManager);
 
-BEGIN_DATADESC( CAI_NetworkManager )
-
-	DEFINE_FIELD( m_bNeedGraphRebuild, FIELD_BOOLEAN ),
-	//									m_pEditOps
-	//									m_pNetwork
-	// DEFINE_FIELD( m_bDontSaveGraph, FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_fInitalized, FIELD_BOOLEAN ),
-
-	// Function pointers
-	DEFINE_FUNCTION( DelayedInit ),
-	DEFINE_FUNCTION( ThreadedInit ),
-	DEFINE_FUNCTION( RebuildThink ),
-
-END_DATADESC()
 
 
 //-----------------------------------------------------------------------------

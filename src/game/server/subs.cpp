@@ -7,6 +7,9 @@
 
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_sendtable.h"
+#include "reflect_annotations.h"
 #include "doors.h"
 #include "entitylist.h"
 #include "globals.h"
@@ -47,16 +50,12 @@ public:
 
 	DECLARE_DATADESC();
 
-	string_t m_Master;
+	[[= ks::reflect::Key{ .name = "master" } ]] string_t m_Master;
 
 private:
 };
 
-BEGIN_DATADESC( CBaseDMStart )
-
-	DEFINE_KEYFIELD( m_Master, FIELD_STRING, "master" ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CBaseDMStart )
 
 
 // These are the new entry points to entities. 
@@ -131,32 +130,10 @@ enum togglemovetypes_t
 };
 
 // Global Savedata for Toggle
-BEGIN_DATADESC( CBaseToggle )
-
-	DEFINE_FIELD( m_toggle_state, FIELD_INTEGER ),
-	DEFINE_FIELD( m_flMoveDistance, FIELD_FLOAT ),
-	DEFINE_FIELD( m_flWait, FIELD_FLOAT ),
-	DEFINE_FIELD( m_flLip, FIELD_FLOAT ),
-	DEFINE_FIELD( m_vecPosition1, FIELD_POSITION_VECTOR ),
-	DEFINE_FIELD( m_vecPosition2, FIELD_POSITION_VECTOR ),
-	DEFINE_FIELD( m_vecMoveAng, FIELD_VECTOR ),		// UNDONE: Position could go through transition, but also angle?
-	DEFINE_FIELD( m_vecAngle1, FIELD_VECTOR ),		// UNDONE: Position could go through transition, but also angle?
-	DEFINE_FIELD( m_vecAngle2, FIELD_VECTOR ),		// UNDONE: Position could go through transition, but also angle?
-	DEFINE_FIELD( m_flHeight, FIELD_FLOAT ),
-	DEFINE_FIELD( m_hActivator, FIELD_EHANDLE ),
-	DEFINE_FIELD( m_vecFinalDest, FIELD_POSITION_VECTOR ),
-	DEFINE_FIELD( m_vecFinalAngle, FIELD_VECTOR ),
-	DEFINE_FIELD( m_sMaster, FIELD_STRING),
-	DEFINE_FIELD( m_movementType, FIELD_INTEGER ),	// Linear or angular movement? (togglemovetypes_t)
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CBaseToggle )
 
 
-IMPLEMENT_SERVERCLASS_ST(CBaseToggle, DT_BaseToggle)
-	SendPropVector( SENDINFO( m_vecFinalDest ) ),
-	SendPropInt( SENDINFO( m_movementType ) ),
-	SendPropFloat( SENDINFO( m_flMoveTargetTime ) ),
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CBaseToggle, DT_BaseToggle )
 
 
 CBaseToggle::CBaseToggle()

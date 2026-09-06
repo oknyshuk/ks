@@ -11,6 +11,8 @@
 // $NoKeywords: $
 //=============================================================================//
 #include "cbase.h"
+#include "reflect_recvtable.h"
+#include "reflect_annotations.h"
 #include "c_te_basebeam.h"
 #include "iviewrender_beams.h"
 
@@ -20,7 +22,8 @@
 //-----------------------------------------------------------------------------
 // Purpose:
 //-----------------------------------------------------------------------------
-class C_TEBeamFollow : public C_TEBaseBeam
+class [[= ks::reflect::NetTable{ .name = "DT_TEBeamFollow" } ]]
+      C_TEBeamFollow : public C_TEBaseBeam
 {
 public:
 	DECLARE_CLASS( C_TEBeamFollow, C_TEBaseBeam );
@@ -33,7 +36,7 @@ public:
 	
 public:
 
-	int m_iEntIndex;
+	[[= ks::reflect::Net{} ]] int m_iEntIndex;
 };
 
 //-----------------------------------------------------------------------------
@@ -65,9 +68,7 @@ void C_TEBeamFollow::PostDataUpdate( DataUpdateType_t updateType )
 // Expose the TE to the engine.
 IMPLEMENT_CLIENTCLASS_EVENT( C_TEBeamFollow, DT_TEBeamFollow, CTEBeamFollow );
 
-BEGIN_RECV_TABLE(C_TEBeamFollow, DT_TEBeamFollow)
-	RecvPropInt( RECVINFO(m_iEntIndex)),
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_TABLE( C_TEBeamFollow, DT_TEBeamFollow );
 
 
 void TE_BeamFollow( IRecipientFilter& filter, float delay,

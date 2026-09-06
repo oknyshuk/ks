@@ -5,24 +5,14 @@
 //
 //=====================================================================================//
 #include "cbase.h"
+#include "reflect_recvtable.h"
+#include "reflect_annotations.h"
 #include "c_movie_display.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
-IMPLEMENT_CLIENTCLASS_DT( C_MovieDisplay, DT_MovieDisplay, CMovieDisplay )
-	RecvPropBool( RECVINFO( m_bEnabled ) ),
-	RecvPropBool( RECVINFO( m_bLooping ) ),
-	RecvPropString( RECVINFO( m_szMovieFilename ) ),
-	RecvPropString( RECVINFO( m_szGroupName ) ),
-	RecvPropBool( RECVINFO( m_bStretchToFill ) ),
-	RecvPropBool( RECVINFO( m_bForcedSlave ) ),
-	RecvPropBool( RECVINFO( m_bUseCustomUVs ) ),
-	RecvPropFloat( RECVINFO( m_flUMin ) ),
-	RecvPropFloat( RECVINFO( m_flUMax ) ),
-	RecvPropFloat( RECVINFO( m_flVMin ) ),
-	RecvPropFloat( RECVINFO( m_flVMax ) ),
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS( C_MovieDisplay, DT_MovieDisplay, CMovieDisplay )
 
 C_MovieDisplay::C_MovieDisplay()
 {

@@ -5,6 +5,8 @@
 //
 //===========================================================================//
 #include "cbase.h"
+#include "reflect_recvtable.h"
+#include "reflect_annotations.h"
 #include "c_basetempentity.h"
 #include "c_te_legacytempents.h"
 #include "tier1/keyvalues.h"
@@ -18,7 +20,8 @@
 //-----------------------------------------------------------------------------
 // Purpose: Sprite Spray TE
 //-----------------------------------------------------------------------------
-class C_TESpriteSpray : public C_BaseTempEntity
+class [[= ks::reflect::NetTable{ .name = "DT_TESpriteSpray" } ]]
+      C_TESpriteSpray : public C_BaseTempEntity
 {
 public:
 	DECLARE_CLASS( C_TESpriteSpray, C_BaseTempEntity );
@@ -30,26 +33,19 @@ public:
 	virtual void	PostDataUpdate( DataUpdateType_t updateType );
 
 public:
-	Vector			m_vecOrigin;
-	Vector			m_vecDirection;
-	int				m_nModelIndex;
-	int				m_nSpeed;
-	float			m_fNoise;
-	int				m_nCount;
+	[[= ks::reflect::Net{} ]] Vector			m_vecOrigin;
+	[[= ks::reflect::Net{} ]] Vector			m_vecDirection;
+	[[= ks::reflect::Net{} ]] int				m_nModelIndex;
+	[[= ks::reflect::Net{} ]] int				m_nSpeed;
+	[[= ks::reflect::Net{} ]] float			m_fNoise;
+	[[= ks::reflect::Net{} ]] int				m_nCount;
 };
 
 
 //-----------------------------------------------------------------------------
 // Networking 
 //-----------------------------------------------------------------------------
-IMPLEMENT_CLIENTCLASS_EVENT_DT(C_TESpriteSpray, DT_TESpriteSpray, CTESpriteSpray)
-	RecvPropVector( RECVINFO(m_vecOrigin)),
-	RecvPropVector( RECVINFO(m_vecDirection)),
-	RecvPropInt( RECVINFO(m_nModelIndex)),
-	RecvPropFloat( RECVINFO(m_fNoise )),
-	RecvPropInt( RECVINFO(m_nCount)),
-	RecvPropInt( RECVINFO(m_nSpeed)),
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS_EVENT( C_TESpriteSpray, DT_TESpriteSpray, CTESpriteSpray )
 
 
 //-----------------------------------------------------------------------------

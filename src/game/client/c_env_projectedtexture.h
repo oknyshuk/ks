@@ -7,6 +7,9 @@
 
 #ifndef C_ENVPROJECTED_TEXTURE_H
 #define C_ENVPROJECTED_TEXTURE_H
+
+#include "reflect_annotations.h"
+#include "dt_recv.h"
 #ifdef _WIN32
 #pragma once
 #endif
@@ -18,7 +21,8 @@
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-class C_EnvProjectedTexture : public C_BaseEntity
+class [[= ks::reflect::NetTable{ .name = "DT_EnvProjectedTexture" } ]]
+      C_EnvProjectedTexture : public C_BaseEntity
 {
 	DECLARE_CLASS( C_EnvProjectedTexture, C_BaseEntity );
 public:
@@ -53,36 +57,36 @@ private:
 	ClientShadowHandle_t m_LightHandle;
 	bool m_bForceUpdate;
 
-	EHANDLE	m_hTargetEntity;
+	[[= ks::reflect::Net{} ]] EHANDLE	m_hTargetEntity;
 
-	bool		m_bState;
-	bool		m_bAlwaysUpdate;
-	float		m_flLightFOV;
-	bool		m_bEnableShadows;
-	bool		m_bSimpleProjection;
-	bool		m_bLightOnlyTarget;
-	bool		m_bLightWorld;
-	bool		m_bCameraSpace;
-	float		m_flBrightnessScale;
-	color32		m_LightColor;
+	[[= ks::reflect::Net{} ]] bool		m_bState;
+	[[= ks::reflect::Net{} ]] bool		m_bAlwaysUpdate;
+	[[= ks::reflect::Net{} ]] float		m_flLightFOV;
+	[[= ks::reflect::Net{} ]] bool		m_bEnableShadows;
+	[[= ks::reflect::Net{} ]] bool		m_bSimpleProjection;
+	[[= ks::reflect::Net{} ]] bool		m_bLightOnlyTarget;
+	[[= ks::reflect::Net{} ]] bool		m_bLightWorld;
+	[[= ks::reflect::Net{} ]] bool		m_bCameraSpace;
+	[[= ks::reflect::Net{} ]] float		m_flBrightnessScale;
+	[[= ks::reflect::Net{} ]] [[= ks::reflect::Proxy<RecvProxy_Int32ToColor32, ks::reflect::WIRE_RECV>{} ]] color32		m_LightColor;
 	Vector		m_CurrentLinearFloatLightColor;
 	float		m_flCurrentLinearFloatLightAlpha;
-	float		m_flColorTransitionTime;
-	float		m_flAmbient;
-	float		m_flNearZ;
-	float		m_flFarZ;
-	char		m_SpotlightTextureName[ MAX_PATH ];
+	[[= ks::reflect::Net{} ]] float		m_flColorTransitionTime;
+	[[= ks::reflect::Net{} ]] float		m_flAmbient;
+	[[= ks::reflect::Net{} ]] float		m_flNearZ;
+	[[= ks::reflect::Net{} ]] float		m_flFarZ;
+	[[= ks::reflect::Net{} ]] char		m_SpotlightTextureName[ MAX_PATH ];
 	CTextureReference m_SpotlightTexture;
 	CMaterialReference m_ProjectedMaterial;
-	int			m_nSpotlightTextureFrame;
-	int			m_nShadowQuality;
-	int			m_iStyle;
+	[[= ks::reflect::Net{} ]] int			m_nSpotlightTextureFrame;
+	[[= ks::reflect::Net{} ]] int			m_nShadowQuality;
+	[[= ks::reflect::Net{} ]] int			m_iStyle;
 	bool		m_bIsCurrentlyProjected;
 
 	// simple projection
 	IMaterial	*m_pMaterial;
-	float		m_flProjectionSize;
-	float		m_flRotation;
+	[[= ks::reflect::Net{} ]] float		m_flProjectionSize;
+	[[= ks::reflect::Net{} ]] float		m_flRotation;
 
 	Vector	m_vecExtentsMin;
 	Vector	m_vecExtentsMax;

@@ -8,6 +8,8 @@
 #define LOGIC_PLAYERPROXY_H
 #pragma once
 
+#include "reflect_annotations.h"
+
 //-----------------------------------------------------------------------------
 // Purpose: Used to relay outputs/inputs from the player to the world and vice versa
 //-----------------------------------------------------------------------------
@@ -35,13 +37,13 @@ public:
 
 	COutputEvent m_PlayerHasAmmo;
 	COutputEvent m_PlayerHasNoAmmo;
-	COutputEvent m_PlayerDied;
+	[[= ks::reflect::Key{ .name = "PlayerDied" } ]] COutputEvent m_PlayerDied;
 
-	COutputEvent m_OnDuck;
-	COutputEvent m_OnUnDuck;
-	COutputEvent m_OnJump;
+	[[= ks::reflect::Key{ .name = "OnDuck" } ]] COutputEvent m_OnDuck;
+	[[= ks::reflect::Key{ .name = "OnUnDuck" } ]] COutputEvent m_OnUnDuck;
+	[[= ks::reflect::Key{ .name = "OnJump" } ]] COutputEvent m_OnJump;
 
-	COutputInt m_RequestedPlayerHealth;
+	[[= ks::reflect::Key{ .name = "PlayerHealth" } ]] COutputInt m_RequestedPlayerHealth;
 
 #if defined HL2_EPISODIC
 	void InputSetFlashlightSlowDrain( inputdata_t &inputdata );

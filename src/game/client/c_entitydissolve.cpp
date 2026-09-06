@@ -6,6 +6,7 @@
 //===========================================================================//
 
 #include "cbase.h"
+#include "reflect_recvtable.h"
 
 #include "iviewrender.h"
 #include "view.h"
@@ -36,18 +37,7 @@ PRECACHE_REGISTER_END()
 //-----------------------------------------------------------------------------
 // Networking
 //-----------------------------------------------------------------------------
-IMPLEMENT_CLIENTCLASS_DT( C_EntityDissolve, DT_EntityDissolve, CEntityDissolve )
-	RecvPropTime(RECVINFO(m_flStartTime)),
-	RecvPropFloat(RECVINFO(m_flFadeOutStart)),
-	RecvPropFloat(RECVINFO(m_flFadeOutLength)),
-	RecvPropFloat(RECVINFO(m_flFadeOutModelStart)),
-	RecvPropFloat(RECVINFO(m_flFadeOutModelLength)),
-	RecvPropFloat(RECVINFO(m_flFadeInStart)),
-	RecvPropFloat(RECVINFO(m_flFadeInLength)),
-	RecvPropInt(RECVINFO(m_nDissolveType)),
-	RecvPropVector( RECVINFO( m_vDissolverOrigin) ),
-	RecvPropInt( RECVINFO( m_nMagnitude ) ),
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS( C_EntityDissolve, DT_EntityDissolve, CEntityDissolve )
 
 extern PMaterialHandle g_Material_Spark;
 PMaterialHandle g_Material_AR2Glow = NULL;

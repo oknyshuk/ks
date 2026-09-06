@@ -9,6 +9,8 @@
 #ifndef MAPRULES_H
 #define MAPRULES_H
 
+#include "reflect_annotations.h"
+
 class CRuleEntity : public CBaseEntity
 {
 	public:
@@ -24,7 +26,7 @@ class CRuleEntity : public CBaseEntity
 	bool	CanFireForActivator( CBaseEntity *pActivator );
 
 	private:
-	string_t	m_iszMaster;
+	[[= ks::reflect::Key{ .name = "master" } ]] string_t	m_iszMaster;
 };
 
 // 
@@ -61,12 +63,12 @@ class CGameCoopMissionManager : public CRulePointEntity
 	//void InputGetWaveNumber( inputdata_t &inputdata );
 
 	private:
-	COutputEvent	m_OnWaveCompleted;
-	COutputEvent	m_OnRoundReset;
-	COutputEvent	m_OnSpawnsReset;
-	COutputEvent	m_OnRoundLostKilled;
-	COutputEvent	m_OnRoundLostTime;
-	COutputEvent	m_OnMissionCompleted;
+	[[= ks::reflect::Key{ .name = "OnWaveCompleted" } ]] COutputEvent	m_OnWaveCompleted;
+	[[= ks::reflect::Key{ .name = "OnRoundReset" } ]] COutputEvent	m_OnRoundReset;
+	[[= ks::reflect::Key{ .name = "OnSpawnsReset" } ]] COutputEvent	m_OnSpawnsReset;
+	[[= ks::reflect::Key{ .name = "OnRoundLostKilled" } ]] COutputEvent	m_OnRoundLostKilled;
+	[[= ks::reflect::Key{ .name = "OnRoundLostTime" } ]] COutputEvent	m_OnRoundLostTime;
+	[[= ks::reflect::Key{ .name = "OnMissionCompleted" } ]] COutputEvent	m_OnMissionCompleted;
 };
 
 #define SF_PLAYEREQUIP_USEONLY				0x0001
@@ -82,8 +84,8 @@ class CGamePlayerEquip : public CRulePointEntity
 	DECLARE_CLASS( CGamePlayerEquip, CRulePointEntity );
 
 	//inputs
-	void		InputTriggerForAllPlayers( inputdata_t &inputdata );
-	void		InputTriggerForActivatedPlayer( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "TriggerForAllPlayers", .type = FIELD_VOID } ]] void		InputTriggerForAllPlayers( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "TriggerForActivatedPlayer", .type = FIELD_STRING } ]] void		InputTriggerForActivatedPlayer( inputdata_t &inputdata );
 
 	bool		KeyValue( const char *szKeyName, const char *szValue );
 	void		TriggerForAllPlayers( void );

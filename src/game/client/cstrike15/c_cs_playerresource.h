@@ -27,7 +27,8 @@ enum EDecoratedPlayerNameFlag_t
 	k_EDecoratedPlayerNameFlag_DontUseAssassinationTargetName = ( 1 << 4 ),
 };
 
-class C_CS_PlayerResource : public C_PlayerResource
+class [[= ks::reflect::NetTable{ .name = "DT_CSPlayerResource" } ]]
+      C_CS_PlayerResource : public C_PlayerResource
 {
 	DECLARE_CLASS( C_CS_PlayerResource, C_PlayerResource );
 public:
@@ -91,51 +92,51 @@ protected:
 
 	bool	m_bDisableAssassinationTargetNameOverride;
 
-	int		m_iPlayerC4;	// entity index of C4 carrier or 0
-	int		m_iPlayerVIP;	// entity index of VIP player or 0
-	Vector	m_bombsiteCenterA;	
-	Vector	m_bombsiteCenterB;	
+	[[= ks::reflect::Net{} ]] int		m_iPlayerC4;	// entity index of C4 carrier or 0
+	[[= ks::reflect::Net{} ]] int		m_iPlayerVIP;	// entity index of VIP player or 0
+	[[= ks::reflect::Net{} ]] Vector	m_bombsiteCenterA;	
+	[[= ks::reflect::Net{} ]] Vector	m_bombsiteCenterB;	
 
-	bool	m_bHostageAlive[MAX_HOSTAGES];
-	bool	m_isHostageFollowingSomeone[MAX_HOSTAGES];
-	int		m_iHostageEntityIDs[MAX_HOSTAGES];
+	[[= ks::reflect::Net{ .enc = ks::reflect::ENC_INT } ]] bool	m_bHostageAlive[MAX_HOSTAGES];
+	[[= ks::reflect::Net{ .enc = ks::reflect::ENC_INT } ]] bool	m_isHostageFollowingSomeone[MAX_HOSTAGES];
+	[[= ks::reflect::Net{} ]] int		m_iHostageEntityIDs[MAX_HOSTAGES];
 
-	int		m_hostageRescueX[MAX_HOSTAGE_RESCUES];
-	int		m_hostageRescueY[MAX_HOSTAGE_RESCUES];
-	int		m_hostageRescueZ[MAX_HOSTAGE_RESCUES];
+	[[= ks::reflect::Net{} ]] int		m_hostageRescueX[MAX_HOSTAGE_RESCUES];
+	[[= ks::reflect::Net{} ]] int		m_hostageRescueY[MAX_HOSTAGE_RESCUES];
+	[[= ks::reflect::Net{} ]] int		m_hostageRescueZ[MAX_HOSTAGE_RESCUES];
 
-	int		m_iMVPs[ MAX_PLAYERS + 1 ];
-	bool	m_bHasDefuser[ MAX_PLAYERS + 1 ];
-	bool	m_bHasHelmet[ MAX_PLAYERS + 1 ];
-	int		m_iArmor[ MAX_PLAYERS + 1 ];
-	int		m_iScore[ MAX_PLAYERS + 1 ];
-	int		m_iCompetitiveRanking[ MAX_PLAYERS + 1 ];
-	int		m_iCompetitiveWins[ MAX_PLAYERS + 1 ];
-	int		m_iCompTeammateColor[MAX_PLAYERS + 1];
+	[[= ks::reflect::Net{} ]] int		m_iMVPs[ MAX_PLAYERS + 1 ];
+	[[= ks::reflect::Net{ .enc = ks::reflect::ENC_INT } ]] bool	m_bHasDefuser[ MAX_PLAYERS + 1 ];
+	[[= ks::reflect::Net{ .enc = ks::reflect::ENC_INT } ]] bool	m_bHasHelmet[ MAX_PLAYERS + 1 ];
+	[[= ks::reflect::Net{} ]] int		m_iArmor[ MAX_PLAYERS + 1 ];
+	[[= ks::reflect::Net{} ]] int		m_iScore[ MAX_PLAYERS + 1 ];
+	[[= ks::reflect::Net{} ]] int		m_iCompetitiveRanking[ MAX_PLAYERS + 1 ];
+	[[= ks::reflect::Net{} ]] int		m_iCompetitiveWins[ MAX_PLAYERS + 1 ];
+	[[= ks::reflect::Net{} ]] int		m_iCompTeammateColor[MAX_PLAYERS + 1];
 
 
 #if CS_CONTROLLABLE_BOTS_ENABLED
-	bool	m_bControllingBot[ MAX_PLAYERS + 1 ];
-	int		m_iControlledPlayer[ MAX_PLAYERS + 1 ];
-	int		m_iControlledByPlayer[ MAX_PLAYERS + 1 ];
+	[[= ks::reflect::Net{ .enc = ks::reflect::ENC_INT } ]] bool	m_bControllingBot[ MAX_PLAYERS + 1 ];
+	[[= ks::reflect::Net{} ]] int		m_iControlledPlayer[ MAX_PLAYERS + 1 ];
+	[[= ks::reflect::Net{} ]] int		m_iControlledByPlayer[ MAX_PLAYERS + 1 ];
 	char	m_szPlayerNames[ MAX_PLAYERS + 1 ][ MAX_PLAYER_NAME_LENGTH ];
 #endif
 
-	int		m_iBotDifficulty[ MAX_PLAYERS + 1 ];	// Difficulty level of a bot ( -1 if not applicable )
-	char	m_szClan[MAX_PLAYERS+1][MAX_CLAN_TAG_LENGTH];
-	int		m_iTotalCashSpent[ MAX_PLAYERS + 1 ];
-	int		m_iCashSpentThisRound[ MAX_PLAYERS + 1 ];
-	int		m_nEndMatchNextMapVotes[ MAX_PLAYERS + 1 ];
-	bool	m_bEndMatchNextMapAllVoted;
+	[[= ks::reflect::Net{} ]] int		m_iBotDifficulty[ MAX_PLAYERS + 1 ];	// Difficulty level of a bot ( -1 if not applicable )
+	[[= ks::reflect::Net{ .enc = ks::reflect::ENC_STRING } ]] char	m_szClan[MAX_PLAYERS+1][MAX_CLAN_TAG_LENGTH];
+	[[= ks::reflect::Net{} ]] int		m_iTotalCashSpent[ MAX_PLAYERS + 1 ];
+	[[= ks::reflect::Net{} ]] int		m_iCashSpentThisRound[ MAX_PLAYERS + 1 ];
+	[[= ks::reflect::Net{} ]] int		m_nEndMatchNextMapVotes[ MAX_PLAYERS + 1 ];
+	[[= ks::reflect::Net{} ]] bool	m_bEndMatchNextMapAllVoted;
 
-	int		m_nActiveCoinRank[ MAX_PLAYERS + 1 ];
-	int		m_nMusicID[ MAX_PLAYERS + 1 ];
+	[[= ks::reflect::Net{} ]] int		m_nActiveCoinRank[ MAX_PLAYERS + 1 ];
+	[[= ks::reflect::Net{} ]] int		m_nMusicID[ MAX_PLAYERS + 1 ];
 	bool	m_bIsAssassinationTarget[ MAX_PLAYERS + 1 ];
 
-	int m_nPersonaDataPublicLevel[ MAX_PLAYERS + 1 ];
-	int m_nPersonaDataPublicCommendsLeader[ MAX_PLAYERS + 1 ];
-	int m_nPersonaDataPublicCommendsTeacher[ MAX_PLAYERS + 1 ];
-	int m_nPersonaDataPublicCommendsFriendly[ MAX_PLAYERS + 1 ];
+	[[= ks::reflect::Net{} ]] int m_nPersonaDataPublicLevel[ MAX_PLAYERS + 1 ];
+	[[= ks::reflect::Net{} ]] int m_nPersonaDataPublicCommendsLeader[ MAX_PLAYERS + 1 ];
+	[[= ks::reflect::Net{} ]] int m_nPersonaDataPublicCommendsTeacher[ MAX_PLAYERS + 1 ];
+	[[= ks::reflect::Net{} ]] int m_nPersonaDataPublicCommendsFriendly[ MAX_PLAYERS + 1 ];
 
 #if defined ENABLE_CLIENT_INVENTORIES_FOR_OTHER_PLAYERS
 	CCSPlayerInventory m_Inventory[ MAX_PLAYERS + 1 ];

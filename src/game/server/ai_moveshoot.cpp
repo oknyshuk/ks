@@ -16,6 +16,8 @@
 //=============================================================================
 
 #include "cbase.h"
+#include "reflect_annotations.h"
+#include "reflect_datamap.h"
 
 #include "ai_moveshoot.h"
 #include "ai_basenpc.h"
@@ -27,12 +29,7 @@
 
 //-----------------------------------------------------------------------------
 
-BEGIN_SIMPLE_DATADESC( CAI_MoveAndShootOverlay )
-	DEFINE_FIELD( m_bMovingAndShooting, FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_bNoShootWhileMove, FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_initialDelay, FIELD_FLOAT ),
-	DEFINE_FIELD( m_flSuspendUntilTime, FIELD_TIME ),
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP_SIMPLE( CAI_MoveAndShootOverlay )
 
 #define MOVESHOOT_DO_NOT_SUSPEND	-1.0f
 

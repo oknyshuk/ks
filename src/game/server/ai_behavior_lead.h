@@ -7,6 +7,8 @@
 #ifndef AI_BEHAVIOR_LEAD_H
 #define AI_BEHAVIOR_LEAD_H
 
+#include "reflect_annotations.h"
+
 #include "simtimer.h"
 #include "ai_behavior.h"
 #include "ai_speech.h"

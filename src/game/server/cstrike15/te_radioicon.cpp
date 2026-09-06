@@ -11,12 +11,15 @@
 // $NoKeywords: $
 //=============================================================================//
 #include "cbase.h"
+#include "reflect_sendtable.h"
+#include "reflect_annotations.h"
 #include "basetempentity.h"
 
 //-----------------------------------------------------------------------------
 // Purpose: Dispatches blood stream tempentity
 //-----------------------------------------------------------------------------
-class CTERadioIcon : public CBaseTempEntity
+class [[= ks::reflect::NetTable{ .name = "DT_TERadioIcon" } ]]
+      CTERadioIcon : public CBaseTempEntity
 {
 public:
 	DECLARE_CLASS( CTERadioIcon, CBaseTempEntity );
@@ -30,7 +33,7 @@ public:
 
 public:
 
-	CNetworkVar( int, m_iAttachToClient );
+	CNetworkVar( int, m_iAttachToClient, [[= ks::reflect::Net{ .bits = 8, .flags = SPROP_UNSIGNED } ]] );
 };
 
 //-----------------------------------------------------------------------------
@@ -54,9 +57,7 @@ void CTERadioIcon::Precache( void )
 	CBaseEntity::PrecacheModel("sprites/radio.vmt");
 }
 
-IMPLEMENT_SERVERCLASS_ST(CTERadioIcon, DT_TERadioIcon)
-	SendPropInt( SENDINFO(m_iAttachToClient), 8, SPROP_UNSIGNED ),
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CTERadioIcon, DT_TERadioIcon )
 
 
 // Singleton to fire StickyBolt objects

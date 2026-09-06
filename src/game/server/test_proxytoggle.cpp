@@ -6,6 +6,8 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_sendtable.h"
+#include "reflect_annotations.h"
 #include "baseentity.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
@@ -20,7 +22,15 @@ static bool g_bEnableProxy = true;
 // CTest_ProxyToggle_Networkable
 // ---------------------------------------------------------------------------------------- //
 
-class CTest_ProxyToggle_Networkable : public CBaseEntity
+namespace DT_ProxyToggle_ProxiedData { extern SendTable g_SendTable; }
+void *SendProxy_TestProxyToggle( const SendProp *pProp, const void *pStruct,
+    const void *pVarData, CSendProxyRecipients *pRecipients,
+    int objectID );
+
+class [[= ks::reflect::NetTable{ .name = "DT_ProxyToggle_ProxiedData", .base = false } ]]
+      [[= ks::reflect::NetTable{ .name = "DT_ProxyToggle" } ]]
+      [[= ks::reflect::SubTable<"blah", &DT_ProxyToggle_ProxiedData::g_SendTable, SendProxy_TestProxyToggle, true>{} ]]
+      CTest_ProxyToggle_Networkable : public CBaseEntity
 {
 public:
 	DECLARE_CLASS( CTest_ProxyToggle_Networkable, CBaseEntity );
@@ -42,7 +52,7 @@ public:
 		return SetTransmitState( FL_EDICT_ALWAYS );
 	}
 
-	CNetworkVar( int, m_WithProxy );
+	CNetworkVar( int, m_WithProxy, [[= ks::reflect::Net{ .bits = -1, .table = "DT_ProxyToggle_ProxiedData" } ]] );
 };
 
 void* SendProxy_TestProxyToggle( const SendProp *pProp, const void *pStructBase, const void *pData, CSendProxyRecipients *pRecipients, int objectID )
@@ -66,13 +76,9 @@ REGISTER_SEND_PROXY_NON_MODIFIED_POINTER( SendProxy_TestProxyToggle );
 
 LINK_ENTITY_TO_CLASS( test_proxytoggle, CTest_ProxyToggle_Networkable );
 
-BEGIN_SEND_TABLE_NOBASE( CTest_ProxyToggle_Networkable, DT_ProxyToggle_ProxiedData )
-	SendPropInt( SENDINFO( m_WithProxy ) )
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_TABLE_IN( CTest_ProxyToggle_Networkable, DT_ProxyToggle_ProxiedData );
 
-IMPLEMENT_SERVERCLASS_ST( CTest_ProxyToggle_Networkable, DT_ProxyToggle )
-	SendPropDataTable( "blah", 0, &REFERENCE_SEND_TABLE( DT_ProxyToggle_ProxiedData ), SendProxy_TestProxyToggle )
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CTest_ProxyToggle_Networkable, DT_ProxyToggle )
 
 
 

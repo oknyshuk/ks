@@ -9,11 +9,12 @@
 #define C_ENTITY_DISSOLVE_H
 
 #include "cbase.h"
+#include "reflect_annotations.h"
 
 //-----------------------------------------------------------------------------
 // Entity Dissolve, client-side implementation
 //-----------------------------------------------------------------------------
-class C_EntityDissolve : public C_BaseEntity, public IMotionEvent
+class [[= ks::reflect::NetTable{ .name = "DT_EntityDissolve" } ]] C_EntityDissolve : public C_BaseEntity, public IMotionEvent
 {
 public:
 	DECLARE_CLIENTCLASS();
@@ -37,18 +38,18 @@ public:
 
 	void			SetServerLinkState( bool state ) { m_bLinkedToServerEnt = state; }
 
-	float	m_flStartTime;
-	float	m_flFadeOutStart;
-	float	m_flFadeOutLength;
-	float	m_flFadeOutModelStart;
-	float	m_flFadeOutModelLength;
-	float	m_flFadeInStart;
-	float	m_flFadeInLength;
-	int		m_nDissolveType;
+	[[= ks::reflect::As{ FIELD_TIME } ]] [[= ks::reflect::Net{} ]] float m_flStartTime;
+	[[= ks::reflect::Net{} ]] float	m_flFadeOutStart;
+	[[= ks::reflect::Net{} ]] float	m_flFadeOutLength;
+	[[= ks::reflect::Net{} ]] float	m_flFadeOutModelStart;
+	[[= ks::reflect::Net{} ]] float	m_flFadeOutModelLength;
+	[[= ks::reflect::Net{} ]] float	m_flFadeInStart;
+	[[= ks::reflect::Net{} ]] float	m_flFadeInLength;
+	[[= ks::reflect::Net{} ]] int	m_nDissolveType;
 	float   m_flNextSparkTime;
 
-	Vector	m_vDissolverOrigin;
-	int		m_nMagnitude;
+	[[= ks::reflect::Net{} ]] Vector	m_vDissolverOrigin;
+	[[= ks::reflect::Net{} ]] int	m_nMagnitude;
 
 	bool	m_bCoreExplode;
 

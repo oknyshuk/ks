@@ -6,6 +6,8 @@
 
 #ifndef BASECSGRENADE_PROJECTILE_H
 #define BASECSGRENADE_PROJECTILE_H
+
+#include "reflect_annotations.h"
 #ifdef _WIN32
 #pragma once
 #endif
@@ -21,7 +23,8 @@
 #endif
 
 
-class CBaseCSGrenadeProjectile : public CBaseGrenade
+class [[= ks::reflect::NetTable{ .name = "DT_BaseCSGrenadeProjectile" } ]]
+      CBaseCSGrenadeProjectile : public CBaseGrenade
 {
 public:
 	DECLARE_CLASS( CBaseCSGrenadeProjectile, CBaseGrenade );
@@ -34,8 +37,8 @@ public:
 
 	// This gets sent to the client and placed in the client's interpolation history
 	// so the projectile starts out moving right off the bat.
-	CNetworkVector( m_vInitialVelocity );
-	CNetworkVar( int, m_nBounces );
+	CNetworkVector( m_vInitialVelocity, [[= ks::reflect::Net{ .bits = 20, .low = -3000, .high = 3000, .enc = ks::reflect::ENC_VECTOR } ]] );
+	CNetworkVar( int, m_nBounces, [[= ks::reflect::Net{ .bits = -1 } ]] );
 
 #ifdef CLIENT_DLL
 	CBaseCSGrenadeProjectile() {}

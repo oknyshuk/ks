@@ -7,6 +7,8 @@
 // $NoKeywords: $
 //===========================================================================//
 #include "cbase.h"
+#include "reflect_recvtable.h"
+#include "reflect_annotations.h"
 #include "c_basetempentity.h"
 #include "c_te_legacytempents.h"
 #include "fx.h"
@@ -23,7 +25,12 @@ extern int		g_sModelIndexBloodSpray;
 //-----------------------------------------------------------------------------
 // Purpose: Blood sprite
 //-----------------------------------------------------------------------------
-class C_TEBloodSprite : public C_BaseTempEntity
+class [[= ks::reflect::NetTable{ .name = "DT_TEBloodSprite", .base = false } ]]
+      [[= ks::reflect::From<"r", ks::reflect::Net{}>{} ]]
+      [[= ks::reflect::From<"g", ks::reflect::Net{}>{} ]]
+      [[= ks::reflect::From<"b", ks::reflect::Net{}>{} ]]
+      [[= ks::reflect::From<"a", ks::reflect::Net{}>{} ]]
+      C_TEBloodSprite : public C_BaseTempEntity
 {
 public:
 	DECLARE_CLASS( C_TEBloodSprite, C_BaseTempEntity );
@@ -35,12 +42,12 @@ public:
 	virtual void	PostDataUpdate( DataUpdateType_t updateType );
 
 public:
-	Vector			m_vecOrigin;
-	Vector			m_vecDirection;
+	[[= ks::reflect::Net{} ]] Vector			m_vecOrigin;
+	[[= ks::reflect::Net{} ]] Vector			m_vecDirection;
 	int				r, g, b, a;
-	int				m_nDropModel;
-	int				m_nSprayModel;
-	int				m_nSize;
+	[[= ks::reflect::Net{} ]] int				m_nDropModel;
+	[[= ks::reflect::Net{} ]] int				m_nSprayModel;
+	[[= ks::reflect::Net{} ]] int				m_nSize;
 };
 
 
@@ -51,17 +58,7 @@ IMPLEMENT_CLIENTCLASS_EVENT( C_TEBloodSprite, DT_TEBloodSprite, CTEBloodSprite )
 //-----------------------------------------------------------------------------
 // Networking
 //-----------------------------------------------------------------------------
-BEGIN_RECV_TABLE_NOBASE(C_TEBloodSprite, DT_TEBloodSprite)
-	RecvPropVector( RECVINFO(m_vecOrigin)),
-	RecvPropVector( RECVINFO(m_vecDirection)),
-	RecvPropInt( RECVINFO(r)),
-	RecvPropInt( RECVINFO(g)),
-	RecvPropInt( RECVINFO(b)),
-	RecvPropInt( RECVINFO(a)),
-	RecvPropInt( RECVINFO(m_nSprayModel)),
-	RecvPropInt( RECVINFO(m_nDropModel)),
-	RecvPropInt( RECVINFO(m_nSize)),
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_TABLE( C_TEBloodSprite, DT_TEBloodSprite );
 
 
 //-----------------------------------------------------------------------------

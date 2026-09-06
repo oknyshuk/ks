@@ -5,6 +5,15 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_annotations.h"
+#ifdef CLIENT_DLL
+#include "reflect_recvtable.h"
+#endif
+#include "reflect_annotations.h"
+#ifdef GAME_DLL
+#include "reflect_sendtable.h"
+#include "reflect_datamap.h"
+#endif
 #include "weapon_csbase.h"
 #include "decals.h"
 #include "cs_gamerules.h"
@@ -3107,7 +3116,8 @@ float CCSPlayer::GetLayerSequenceCycleRate( CAnimationLayer *pLayer, int iSequen
 
 #ifdef GAME_DLL
 
-class CFootstepControl : public CBaseTrigger
+class [[= ks::reflect::NetTable{ .name = "DT_FootstepControl" } ]]
+      CFootstepControl : public CBaseTrigger
 {
 public:
 	DECLARE_CLASS( CFootstepControl, CBaseTrigger );
@@ -3117,22 +3127,16 @@ public:
 	virtual int UpdateTransmitState( void );
 	virtual void Spawn( void );
 
-	CNetworkVar( string_t, m_source );
-	CNetworkVar( string_t, m_destination );
+	CNetworkVar( string_t, m_source, [[= ks::reflect::Net{} ]] [[= ks::reflect::Key{ .name = "Source" } ]] );
+	CNetworkVar( string_t, m_destination, [[= ks::reflect::Net{} ]] [[= ks::reflect::Key{ .name = "Destination" } ]] );
 };
 
 LINK_ENTITY_TO_CLASS( func_footstep_control, CFootstepControl );
 
 
-BEGIN_DATADESC( CFootstepControl )
-	DEFINE_KEYFIELD( m_source, FIELD_STRING, "Source" ),
-	DEFINE_KEYFIELD( m_destination, FIELD_STRING, "Destination" ),
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CFootstepControl )
 
-IMPLEMENT_SERVERCLASS_ST( CFootstepControl, DT_FootstepControl )
-	SendPropStringT( SENDINFO(m_source) ),
-	SendPropStringT( SENDINFO(m_destination) ),
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CFootstepControl, DT_FootstepControl )
 
 int CFootstepControl::UpdateTransmitState( void )
 {
@@ -3148,7 +3152,8 @@ void CFootstepControl::Spawn( void )
 
 //--------------------------------------------------------------------------------------------------------------
 
-class C_FootstepControl : public C_BaseTrigger
+class [[= ks::reflect::NetTable{ .name = "DT_FootstepControl" } ]]
+      C_FootstepControl : public C_BaseTrigger
 {
 public:
 	DECLARE_CLASS( C_FootstepControl, C_BaseTrigger );
@@ -3157,14 +3162,11 @@ public:
 	C_FootstepControl( void );
 	~C_FootstepControl();
 
-	char m_source[MATERIAL_NAME_LENGTH];
-	char m_destination[MATERIAL_NAME_LENGTH];
+	[[= ks::reflect::Net{} ]] char m_source[MATERIAL_NAME_LENGTH];
+	[[= ks::reflect::Net{} ]] char m_destination[MATERIAL_NAME_LENGTH];
 };
 
-IMPLEMENT_CLIENTCLASS_DT(C_FootstepControl, DT_FootstepControl, CFootstepControl)
-	RecvPropString( RECVINFO(m_source) ),
-	RecvPropString( RECVINFO(m_destination) ),
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS( C_FootstepControl, DT_FootstepControl, CFootstepControl )
 
 CUtlVector< C_FootstepControl * > s_footstepControllers;
 

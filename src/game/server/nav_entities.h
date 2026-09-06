@@ -12,6 +12,8 @@
 #ifndef NAV_ENTITIES_H
 #define NAV_ENTITIES_H
 
+#include "reflect_annotations.h"
+
 //-----------------------------------------------------------------------------------------------------
 /**
   * An entity that can block/unblock nav areas.  This is meant for semi-transient areas that block
@@ -27,8 +29,8 @@ public:
 	void Spawn();
 	virtual void UpdateOnRemove( void );
 
-	void InputBlockNav( inputdata_t &inputdata );
-	void InputUnblockNav( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "BlockNav", .type = FIELD_VOID } ]] void InputBlockNav( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "UnblockNav", .type = FIELD_VOID } ]] void InputUnblockNav( inputdata_t &inputdata );
 
 	inline bool IsBlockingNav( int teamNumber ) const
 	{
@@ -62,8 +64,8 @@ private:
 	void BlockNav( void );
 	void UnblockNav( void );
 	bool m_isBlockingNav[MAX_NAV_TEAMS];
-	int m_blockedTeamNumber;
-	bool m_bDisabled;
+	[[= ks::reflect::Key{ .name = "teamToBlock" } ]] int m_blockedTeamNumber;
+	[[= ks::reflect::Key{ .name = "StartDisabled" } ]] bool m_bDisabled;
 	Vector m_CachedMins, m_CachedMaxs;
 
 };

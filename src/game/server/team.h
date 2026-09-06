@@ -18,7 +18,16 @@
 class CBasePlayer;
 class CTeamSpawnPoint;
 
-class CTeam : public CBaseEntity
+// named by the BareArray<> annotation below; both live in team.cpp
+void SendProxy_PlayerList( const SendProp *pProp, const void *pStruct, const void *pData,
+                           DVariant *pOut, int iElement, int objectID );
+int  SendProxyArrayLength_PlayerArray( const void *pStruct, int objectID );
+
+class [[= ks::reflect::NetTable{ .name = "DT_Team", .base = false } ]]
+      [[= ks::reflect::BareArray<"player_array_element", "\"player_array\"", MAX_PLAYERS, 0, 4,
+            ks::reflect::Net{ .bits = 10, .flags = SPROP_UNSIGNED },
+            SendProxy_PlayerList, SendProxyArrayLength_PlayerArray>{} ]]
+      CTeam : public CBaseEntity
 {
 	DECLARE_CLASS( CTeam, CBaseEntity );
 public:
@@ -119,29 +128,29 @@ public:
 	CUtlVector< CBasePlayer * >		m_aPlayers;
 
 	// Data
-	CNetworkString( m_szTeamname, MAX_TEAM_NAME_LENGTH );
-	CNetworkString( m_szClanTeamname, MAX_TEAM_NAME_LENGTH );
-	CNetworkString( m_szTeamFlagImage, MAX_TEAM_FLAG_ICON_LENGTH );
-	CNetworkString( m_szTeamLogoImage, MAX_TEAM_LOGO_ICON_LENGTH );
-	CNetworkString( m_szTeamMatchStat, MAX_PATH );
-	CNetworkVar( int, m_numMapVictories );
-	CNetworkVar( uint32, m_iClanID );
-	CNetworkVar( int, m_bSurrendered );
-	CNetworkVar( int, m_scoreTotal );
-	CNetworkVar( int, m_scoreFirstHalf );
-	CNetworkVar( int, m_scoreSecondHalf );	
-	CNetworkVar( int, m_scoreOvertime );
+	CNetworkString( m_szTeamname, MAX_TEAM_NAME_LENGTH, [[= ks::reflect::Net{} ]] );
+	CNetworkString( m_szClanTeamname, MAX_TEAM_NAME_LENGTH, [[= ks::reflect::Net{} ]] );
+	CNetworkString( m_szTeamFlagImage, MAX_TEAM_FLAG_ICON_LENGTH, [[= ks::reflect::Net{} ]] );
+	CNetworkString( m_szTeamLogoImage, MAX_TEAM_LOGO_ICON_LENGTH, [[= ks::reflect::Net{} ]] );
+	CNetworkString( m_szTeamMatchStat, MAX_PATH, [[= ks::reflect::Net{} ]] );
+	CNetworkVar( int, m_numMapVictories, [[= ks::reflect::Net{ .bits = 4, .flags = SPROP_UNSIGNED } ]] );
+	CNetworkVar( uint32, m_iClanID, [[= ks::reflect::Net{ .bits = 32, .flags = SPROP_UNSIGNED } ]] );
+	CNetworkVar( int, m_bSurrendered, [[= ks::reflect::Net{ .bits = 0 } ]] );
+	CNetworkVar( int, m_scoreTotal, [[= ks::reflect::Net{ .bits = 0 } ]] );
+	CNetworkVar( int, m_scoreFirstHalf, [[= ks::reflect::Net{ .bits = 0 } ]] );
+	CNetworkVar( int, m_scoreSecondHalf, [[= ks::reflect::Net{ .bits = 0 } ]] );	
+	CNetworkVar( int, m_scoreOvertime, [[= ks::reflect::Net{ .bits = 0 } ]] );
 	int		m_iDeaths;
 
-	CNetworkVar( int, m_nGGLeaderEntIndex_CT );
-	CNetworkVar( int, m_nGGLeaderEntIndex_T );
+	CNetworkVar( int, m_nGGLeaderEntIndex_CT, [[= ks::reflect::Net{ .bits = 0 } ]] );
+	CNetworkVar( int, m_nGGLeaderEntIndex_T, [[= ks::reflect::Net{ .bits = 0 } ]] );
 	bool	m_bGGHasLeader_CT;
 	bool	m_bGGHasLeader_T;
 
 	// Spawnpoints
 	int		m_iLastSpawn;		// Index of the last spawnpoint used
 
-	CNetworkVar( int, m_iTeamNum );			// Which team is this?
+	CNetworkVar( int, m_iTeamNum, [[= ks::reflect::Net{ .bits = 5 } ]] );			// Which team is this?
 };
 
 extern CUtlVector< CTeam * > g_Teams;

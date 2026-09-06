@@ -8,6 +8,8 @@
 #ifndef LOGICRELAY_H
 #define LOGICRELAY_H
 
+#include "reflect_annotations.h"
+
 #include "cbase.h"
 #include "entityinput.h"
 #include "entityoutput.h"
@@ -24,22 +26,22 @@ public:
 	void Think();
 
 	// Input handlers
-	void InputEnable( inputdata_t &inputdata );
-	void InputEnableRefire( inputdata_t &inputdata );  // Private input handler, not in FGD
-	void InputDisable( inputdata_t &inputdata );
-	void InputToggle( inputdata_t &inputdata );
-	void InputTrigger( inputdata_t &inputdata );
-	void InputCancelPending( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Enable", .type = FIELD_VOID } ]] void InputEnable( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "EnableRefire", .type = FIELD_VOID } ]] void InputEnableRefire( inputdata_t &inputdata );  // Private input handler, not in FGD
+	[[= ks::reflect::Input{ .name = "Disable", .type = FIELD_VOID } ]] void InputDisable( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Toggle", .type = FIELD_VOID } ]] void InputToggle( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Trigger", .type = FIELD_VOID } ]] void InputTrigger( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "CancelPending", .type = FIELD_VOID } ]] void InputCancelPending( inputdata_t &inputdata );
 
 	DECLARE_DATADESC();
 
 	// Outputs
-	COutputEvent m_OnTrigger;
-	COutputEvent m_OnSpawn;
+	[[= ks::reflect::Key{ .name = "OnTrigger" } ]] COutputEvent m_OnTrigger;
+	[[= ks::reflect::Key{ .name = "OnSpawn" } ]] COutputEvent m_OnSpawn;
 	
 private:
 
-	bool m_bDisabled;
+	[[= ks::reflect::Key{ .name = "StartDisabled" } ]] bool m_bDisabled;
 	bool m_bWaitForRefire;			// Set to disallow a refire while we are waiting for our outputs to finish firing.
 };
 

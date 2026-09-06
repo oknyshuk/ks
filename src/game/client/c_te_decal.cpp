@@ -7,6 +7,8 @@
 // $NoKeywords: $
 //===========================================================================//
 #include "cbase.h"
+#include "reflect_recvtable.h"
+#include "reflect_annotations.h"
 #include "c_basetempentity.h"
 #include "iefx.h"
 #include "engine/IStaticPropMgr.h"
@@ -20,7 +22,8 @@
 //-----------------------------------------------------------------------------
 // Purpose: Decal TE
 //-----------------------------------------------------------------------------
-class C_TEDecal : public C_BaseTempEntity
+class [[= ks::reflect::NetTable{ .name = "DT_TEDecal" } ]]
+      C_TEDecal : public C_BaseTempEntity
 {
 public:
 	DECLARE_CLASS( C_TEDecal, C_BaseTempEntity );
@@ -34,24 +37,18 @@ public:
 	virtual void	Precache( void );
 
 public:
-	Vector			m_vecOrigin;
-	Vector			m_vecStart;
-	int				m_nEntity;
-	int				m_nHitbox;
-	int				m_nIndex;
+	[[= ks::reflect::Net{} ]] Vector			m_vecOrigin;
+	[[= ks::reflect::Net{} ]] Vector			m_vecStart;
+	[[= ks::reflect::Net{} ]] int				m_nEntity;
+	[[= ks::reflect::Net{} ]] int				m_nHitbox;
+	[[= ks::reflect::Net{} ]] int				m_nIndex;
 };
 
 
 //-----------------------------------------------------------------------------
 // Networking
 //-----------------------------------------------------------------------------
-IMPLEMENT_CLIENTCLASS_EVENT_DT(C_TEDecal, DT_TEDecal, CTEDecal)
-	RecvPropVector( RECVINFO(m_vecOrigin)),
-	RecvPropVector( RECVINFO(m_vecStart)),
-	RecvPropInt( RECVINFO(m_nEntity)),
-	RecvPropInt( RECVINFO(m_nHitbox)),
-	RecvPropInt( RECVINFO(m_nIndex)),
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS_EVENT( C_TEDecal, DT_TEDecal, CTEDecal )
 
 
 //-----------------------------------------------------------------------------

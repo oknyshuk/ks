@@ -12,7 +12,6 @@ class CNoDefuseArea : public CBaseTrigger
 {
 public:
 	DECLARE_CLASS( CNoDefuseArea, CBaseTrigger );
-	DECLARE_DATADESC();
 
 	void Spawn();
 	void EXPORT NoDefuseAreaTouch( CBaseEntity* pOther );

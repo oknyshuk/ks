@@ -7,6 +7,8 @@
 // $NoKeywords: $
 //===========================================================================//
 #include "cbase.h"
+#include "reflect_recvtable.h"
+#include "reflect_annotations.h"
 #include "c_basetempentity.h"
 #include "c_te_legacytempents.h"
 #include "tempent.h"
@@ -20,7 +22,8 @@
 //-----------------------------------------------------------------------------
 // Purpose: Sprite TE
 //-----------------------------------------------------------------------------
-class C_TESprite : public C_BaseTempEntity
+class [[= ks::reflect::NetTable{ .name = "DT_TESprite" } ]]
+      C_TESprite : public C_BaseTempEntity
 {
 public:
 	DECLARE_CLASS( C_TESprite, C_BaseTempEntity );
@@ -32,22 +35,17 @@ public:
 	virtual void	PostDataUpdate( DataUpdateType_t updateType );
 
 public:
-	Vector			m_vecOrigin;
-	int				m_nModelIndex;
-	float			m_fScale;
-	int				m_nBrightness;
+	[[= ks::reflect::Net{} ]] Vector			m_vecOrigin;
+	[[= ks::reflect::Net{} ]] int				m_nModelIndex;
+	[[= ks::reflect::Net{} ]] float			m_fScale;
+	[[= ks::reflect::Net{} ]] int				m_nBrightness;
 };
 
 
 //-----------------------------------------------------------------------------
 // Networking
 //-----------------------------------------------------------------------------
-IMPLEMENT_CLIENTCLASS_EVENT_DT(C_TESprite, DT_TESprite, CTESprite)
-	RecvPropVector( RECVINFO(m_vecOrigin)),
-	RecvPropInt( RECVINFO(m_nModelIndex)),
-	RecvPropFloat( RECVINFO(m_fScale )),
-	RecvPropInt( RECVINFO(m_nBrightness)),
-END_RECV_TABLE()
+IMPLEMENT_REFLECT_CLIENTCLASS_EVENT( C_TESprite, DT_TESprite, CTESprite )
 
 
 //-----------------------------------------------------------------------------

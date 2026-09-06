@@ -7,6 +7,8 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_annotations.h"
 #include "entityinput.h"
 #include "entityoutput.h"
 #include "eventqueue.h"
@@ -38,36 +40,23 @@ public:
 private:
 
 	// fired no matter why the map loaded
-	COutputEvent m_OnMapSpawn;
+	[[= ks::reflect::Key{ .name = "OnMapSpawn" } ]] COutputEvent m_OnMapSpawn;
 
 	// fired for specified types of map loads
-	COutputEvent m_OnNewGame;
-	COutputEvent m_OnLoadGame;
-	COutputEvent m_OnMapTransition;
-	COutputEvent m_OnBackgroundMap;
-	COutputEvent m_OnMultiNewMap;
-	COutputEvent m_OnMultiNewRound;
+	[[= ks::reflect::Key{ .name = "OnNewGame" } ]] COutputEvent m_OnNewGame;
+	[[= ks::reflect::Key{ .name = "OnLoadGame" } ]] COutputEvent m_OnLoadGame;
+	[[= ks::reflect::Key{ .name = "OnMapTransition" } ]] COutputEvent m_OnMapTransition;
+	[[= ks::reflect::Key{ .name = "OnBackgroundMap" } ]] COutputEvent m_OnBackgroundMap;
+	[[= ks::reflect::Key{ .name = "OnMultiNewMap" } ]] COutputEvent m_OnMultiNewMap;
+	[[= ks::reflect::Key{ .name = "OnMultiNewRound" } ]] COutputEvent m_OnMultiNewRound;
 
-	string_t m_globalstate;
+	[[= ks::reflect::Key{ .name = "globalstate" } ]] string_t m_globalstate;
 };
 
 LINK_ENTITY_TO_CLASS(logic_auto, CLogicAuto);
 
 
-BEGIN_DATADESC( CLogicAuto )
-
-	DEFINE_KEYFIELD(m_globalstate, FIELD_STRING, "globalstate"),
-
-	// Outputs
-	DEFINE_OUTPUT(m_OnMapSpawn, "OnMapSpawn"),
-	DEFINE_OUTPUT(m_OnNewGame, "OnNewGame"),
-	DEFINE_OUTPUT(m_OnLoadGame, "OnLoadGame"),
-	DEFINE_OUTPUT(m_OnMapTransition, "OnMapTransition"),
-	DEFINE_OUTPUT(m_OnBackgroundMap, "OnBackgroundMap"),
-	DEFINE_OUTPUT(m_OnMultiNewMap, "OnMultiNewMap" ),
-	DEFINE_OUTPUT(m_OnMultiNewRound, "OnMultiNewRound" ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CLogicAuto )
 
 
 //------------------------------------------------------------------------------

@@ -5,6 +5,9 @@
 //===========================================================================
 
 #include "cbase.h"
+#include "reflect_sendtable.h"
+#include "reflect_datamap.h"
+#include "reflect_annotations.h"
 #include "soundent.h"
 #include "client.h"
 #include "decals.h"
@@ -69,19 +72,19 @@ extern CUtlMemoryPool g_EntityListPool;
 class CInfoGameEventProxy : public CPointEntity
 {
 private:
-	string_t	m_iszEventName;
-	float		m_flRange;
-	bool		m_bDisabled;
+	[[= ks::reflect::Key{ .name = "event_name" } ]] string_t	m_iszEventName;
+	[[= ks::reflect::Key{ .name = "range" } ]] float		m_flRange;
+	[[= ks::reflect::Key{ .name = "StartDisabled" } ]] bool		m_bDisabled;
 
 public:
 	DECLARE_CLASS( CInfoGameEventProxy, CPointEntity );
 
 	void Spawn();
 	int UpdateTransmitState();
-	void InputGenerateGameEvent( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "GenerateGameEvent", .type = FIELD_VOID } ]] void InputGenerateGameEvent( inputdata_t &inputdata );
 
-	void InputEnable( inputdata_t &inputdata ) { m_bDisabled = false; }
-	void InputDisable( inputdata_t &inputdata ) { m_bDisabled = true; }
+	[[= ks::reflect::Input{ .name = "Enable", .type = FIELD_VOID } ]] void InputEnable( inputdata_t &inputdata ) { m_bDisabled = false; }
+	[[= ks::reflect::Input{ .name = "Disable", .type = FIELD_VOID } ]] void InputDisable( inputdata_t &inputdata ) { m_bDisabled = true; }
 
 	static bool GameEventProxyCallback( CBaseEntity *pProxy, CBasePlayer *pViewingPlayer );
 	static bool GameEventProxyEvaluator( CBaseEntity *pProxy, CBasePlayer *pViewingPlayer );
@@ -162,14 +165,7 @@ bool CInfoGameEventProxy::GameEventProxyEvaluator( CBaseEntity *pProxy, CBasePla
 
 LINK_ENTITY_TO_CLASS( info_game_event_proxy, CInfoGameEventProxy );
 
-BEGIN_DATADESC( CInfoGameEventProxy )
-	DEFINE_KEYFIELD( m_iszEventName, FIELD_STRING, "event_name" ),
-	DEFINE_KEYFIELD( m_flRange, FIELD_FLOAT, "range" ),
-	DEFINE_KEYFIELD( m_bDisabled, FIELD_BOOLEAN, "StartDisabled" ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "GenerateGameEvent", InputGenerateGameEvent ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "Enable", InputEnable ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "Disable", InputDisable ),
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CInfoGameEventProxy )
 #endif
 
 class CDecal : public CPointEntity
@@ -186,7 +182,7 @@ public:
 	void	TriggerDecal( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
 
 	// Input handlers.
-	void	InputActivate( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Activate", .type = FIELD_VOID } ]] void	InputActivate( inputdata_t &inputdata );
 
 	CBaseEntity *GetDecalEntityAndPosition( Vector *pPosition, bool bStatic );
 
@@ -194,27 +190,15 @@ public:
 
 public:
 	int		m_nTexture;
-	bool	m_bLowPriority;
-	string_t m_entityName;
+	[[= ks::reflect::Key{ .name = "LowPriority" } ]] bool	m_bLowPriority;
+	[[= ks::reflect::Key{ .name = "ApplyEntity" } ]] string_t m_entityName;
 
 private:
 
 	void	StaticDecal( void );
 };
 
-BEGIN_DATADESC( CDecal )
-
-	DEFINE_FIELD( m_nTexture, FIELD_INTEGER ),
-	DEFINE_KEYFIELD( m_bLowPriority, FIELD_BOOLEAN, "LowPriority" ), // Don't mark as FDECAL_PERMANENT so not save/restored and will be reused on the client preferentially
-	DEFINE_KEYFIELD( m_entityName, FIELD_STRING, "ApplyEntity" ), // Force apply to this entity instead of tracing
-
-	// Function pointers
-	DEFINE_FUNCTION( StaticDecal ),
-	DEFINE_FUNCTION( TriggerDecal ),
-
-	DEFINE_INPUTFUNC( FIELD_VOID, "Activate", InputActivate ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CDecal )
 
 LINK_ENTITY_TO_CLASS( infodecal, CDecal );
 
@@ -415,13 +399,13 @@ public:
 	void	TriggerDecal( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
 
 	// Input handlers.
-	void	InputActivate( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Activate", .type = FIELD_VOID } ]] void	InputActivate( inputdata_t &inputdata );
 
 	DECLARE_DATADESC();
 
 public:
 	int		m_nTexture;
-	float	m_flDistance;
+	[[= ks::reflect::Key{ .name = "Distance" } ]] float	m_flDistance;
 
 private:
 	void	ProjectDecal( CRecipientFilter& filter );
@@ -429,19 +413,7 @@ private:
 	void	StaticDecal( void );
 };
 
-BEGIN_DATADESC( CProjectedDecal )
-
-	DEFINE_FIELD( m_nTexture, FIELD_INTEGER ),
-
-	DEFINE_KEYFIELD( m_flDistance, FIELD_FLOAT, "Distance" ),
-
-	// Function pointers
-	DEFINE_FUNCTION( StaticDecal ),
-	DEFINE_FUNCTION( TriggerDecal ),
-
-	DEFINE_INPUTFUNC( FIELD_VOID, "Activate", InputActivate ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CProjectedDecal )
 
 LINK_ENTITY_TO_CLASS( info_projecteddecal, CProjectedDecal );
 
@@ -531,51 +503,11 @@ bool CProjectedDecal::KeyValue( const char *szKeyName, const char *szValue )
 //=======================
 LINK_ENTITY_TO_CLASS( worldspawn, CWorld );
 
-BEGIN_DATADESC( CWorld )
-
-	DEFINE_FIELD( m_flWaveHeight, FIELD_FLOAT ),
-
-	// keyvalues are parsed from map, but not saved/loaded
-	DEFINE_KEYFIELD( m_iszChapterTitle, FIELD_STRING, "chaptertitle" ),
-	DEFINE_KEYFIELD( m_bStartDark,		FIELD_BOOLEAN, "startdark" ),
-	DEFINE_KEYFIELD( m_bDisplayTitle,	FIELD_BOOLEAN, "gametitle" ),
-	DEFINE_FIELD( m_WorldMins, FIELD_VECTOR ),
-	DEFINE_FIELD( m_WorldMaxs, FIELD_VECTOR ),
-
-	// DEFINE_FIELD( m_flMaxOccludeeArea,	FIELD_CLASSCHECK_IGNORE ) // do this or else we get a warning about multiply-defined fields	
-	// DEFINE_FIELD( m_flMinOccluderArea,	FIELD_CLASSCHECK_IGNORE ) // do this or else we get a warning about multiply-defined fields	
-	DEFINE_KEYFIELD( m_flMaxOccludeeArea, FIELD_FLOAT, "maxoccludeearea" ),
-	DEFINE_KEYFIELD( m_flMinOccluderArea, FIELD_FLOAT, "minoccluderarea" ),
-	DEFINE_KEYFIELD( m_flMaxPropScreenSpaceWidth, FIELD_FLOAT, "maxpropscreenwidth" ),
-	DEFINE_KEYFIELD( m_flMinPropScreenSpaceWidth, FIELD_FLOAT, "minpropscreenwidth" ),
-	DEFINE_KEYFIELD( m_iszDetailSpriteMaterial, FIELD_STRING, "detailmaterial" ),
-	DEFINE_KEYFIELD( m_bColdWorld,		FIELD_BOOLEAN, "coldworld" ),
-
-#ifdef PORTAL2
-	DEFINE_KEYFIELD( m_nMaxBlobCount,	FIELD_INTEGER, "maxblobcount" ),
-#endif
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CWorld )
 
 
 // SendTable stuff.
-IMPLEMENT_SERVERCLASS_ST(CWorld, DT_WORLD)
-	SendPropFloat	(SENDINFO(m_flWaveHeight), 8, SPROP_ROUNDUP,	0.0f,	8.0f),
-	SendPropVector	(SENDINFO(m_WorldMins),	-1,	SPROP_COORD),
-	SendPropVector	(SENDINFO(m_WorldMaxs),	-1,	SPROP_COORD),
-	SendPropInt		(SENDINFO(m_bStartDark), 1, SPROP_UNSIGNED ),
-	SendPropFloat	(SENDINFO(m_flMaxOccludeeArea), 0, SPROP_NOSCALE ),
-	SendPropFloat	(SENDINFO(m_flMinOccluderArea), 0, SPROP_NOSCALE ),
-	SendPropFloat	(SENDINFO(m_flMaxPropScreenSpaceWidth), 0, SPROP_NOSCALE ),
-	SendPropFloat	(SENDINFO(m_flMinPropScreenSpaceWidth), 0, SPROP_NOSCALE ),
-	SendPropStringT (SENDINFO(m_iszDetailSpriteMaterial) ),
-	SendPropInt		(SENDINFO(m_bColdWorld), 1, SPROP_UNSIGNED ),
-
-#ifdef PORTAL2
-	SendPropInt		(SENDINFO(m_nMaxBlobCount), 0, SPROP_UNSIGNED),
-#endif
-
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CWorld, DT_WORLD )
 
 //
 // Just to ignore the "wad" field.
@@ -628,15 +560,6 @@ bool CWorld::KeyValue( const char *szKeyName, const char *szValue )
 
 
 #ifdef PORTAL2
-int CWorld::Restore( IRestore &restore )
-{
-	if ( !BaseClass::Restore( restore ) )
-		return 0;
-
-	// world is the first thing that gets loaded, so we want to do our pool allocation here
-	PaintStreamManager.AllocatePaintBlobPool( m_nMaxBlobCount );
-	return 1;
-}
 #endif
 
 

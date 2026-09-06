@@ -9,6 +9,8 @@
 // Generic NPC - purely for scripted sequence work.
 //=========================================================
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_annotations.h"
 #include "npcevent.h"
 #include "ai_basenpc.h"
 #include "ai_hull.h"
@@ -226,8 +228,8 @@ public:
 	void DrawDebugGeometryOverlays(void);
 
 	void SetPlayerAvoidState( void );
-	void InputDisablePlayerCollision( inputdata_t &inputdata );
-	void InputEnablePlayerCollision( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "DisablePlayerCollision", .type = FIELD_VOID } ]] void InputDisablePlayerCollision( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "EnablePlayerCollision", .type = FIELD_VOID } ]] void InputEnablePlayerCollision( inputdata_t &inputdata );
 	void UpdateBoneFollowerState( void );
 	int		GetSoundInterests ( void );
 
@@ -243,12 +245,7 @@ LINK_ENTITY_TO_CLASS( npc_furniture, CNPC_Furniture );
 // Save/load
 //-----------------------------------------------------------------------------
 
-BEGIN_DATADESC( CNPC_Furniture )
-	DEFINE_EMBEDDED( m_BoneFollowerManager ),
-	DEFINE_INPUTFUNC( FIELD_VOID,	"DisablePlayerCollision", InputDisablePlayerCollision ),
-	DEFINE_INPUTFUNC( FIELD_VOID,	"EnablePlayerCollision", InputEnablePlayerCollision ),
-	
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CNPC_Furniture )
 
 //-----------------------------------------------------------------------------
 // Purpose: This used to have something to do with bees flying, but 
@@ -488,7 +485,6 @@ void CNPC_Furniture::DrawDebugGeometryOverlays( void )
 class CNPC_HearDanger : public CAI_BaseActor
 {
 	DECLARE_CLASS( CNPC_HearDanger, CAI_BaseActor );
-	DECLARE_DATADESC();
 	public:
 	void	Spawn( void );
 	void	Precache( void );
@@ -518,8 +514,6 @@ LINK_ENTITY_TO_CLASS( npc_heardanger, CNPC_HearDanger );
 // Save/load
 //-----------------------------------------------------------------------------
 
-BEGIN_DATADESC( CNPC_HearDanger )
-END_DATADESC()
 
 //-----------------------------------------------------------------------------
 // Purpose: This used to have something to do with bees flying, but 

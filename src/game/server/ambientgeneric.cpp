@@ -6,6 +6,8 @@
 //===========================================================================//
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_annotations.h"
 #include "ambientgeneric.h"
 #include "engine/IEngineSound.h"
 
@@ -88,40 +90,7 @@ dynpitchvol_t rgdpvpreset[CDPVPRESETMAX] =
 LINK_ENTITY_TO_CLASS( ambient_generic, CAmbientGeneric );
 #endif
 
-BEGIN_DATADESC( CAmbientGeneric )
-
-DEFINE_KEYFIELD( m_iszSound, FIELD_SOUNDNAME, "message" ),
-DEFINE_KEYFIELD( m_radius,			FIELD_FLOAT, "radius" ),
-DEFINE_KEYFIELD( m_sSourceEntName,	FIELD_STRING, "SourceEntityName" ),
-// recomputed in Activate()
-// DEFINE_FIELD( m_hSoundSource, EHANDLE ),
-// DEFINE_FIELD( m_nSoundSourceEntIndex, FIELD_INTERGER ),
-
-DEFINE_FIELD( m_flMaxRadius, FIELD_FLOAT ),
-DEFINE_FIELD( m_fActive, FIELD_BOOLEAN ),
-DEFINE_FIELD( m_fLooping, FIELD_BOOLEAN ),
-DEFINE_FIELD( m_iSoundLevel, FIELD_INTEGER ),
-
-// HACKHACK - This is not really in the spirit of the save/restore design, but save this
-// out as a binary data block.  If the dynpitchvol_t is changed, old saved games will NOT
-// load these correctly, so bump the save/restore version if you change the size of the struct
-// The right way to do this is to split the input parms (read in keyvalue) into members and re-init this
-// struct in Precache(), but it's unlikely that the struct will change, so it's not worth the time right now.
-DEFINE_ARRAY( m_dpv, FIELD_CHARACTER, sizeof(dynpitchvol_t) ),
-
-// Function Pointers
-DEFINE_FUNCTION( RampThink ),
-
-// Inputs
-DEFINE_INPUTFUNC(FIELD_VOID, "PlaySound", InputPlaySound ),
-DEFINE_INPUTFUNC(FIELD_VOID, "StopSound", InputStopSound ),
-DEFINE_INPUTFUNC(FIELD_VOID, "ToggleSound", InputToggleSound ),
-DEFINE_INPUTFUNC(FIELD_FLOAT, "Pitch", InputPitch ),
-DEFINE_INPUTFUNC(FIELD_FLOAT, "Volume", InputVolume ),
-DEFINE_INPUTFUNC(FIELD_FLOAT, "FadeIn", InputFadeIn ),
-DEFINE_INPUTFUNC(FIELD_FLOAT, "FadeOut", InputFadeOut ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CAmbientGeneric )
 
 //-----------------------------------------------------------------------------
 // Spawn

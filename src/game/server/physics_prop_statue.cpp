@@ -5,6 +5,8 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_sendtable.h"
+#include "reflect_annotations.h"
 #include "physics_prop_statue.h"
 #include "baseanimating.h"
 #include "studio.h"
@@ -21,23 +23,8 @@
 //-----------------------------------------------------------------------------
 LINK_ENTITY_TO_CLASS( physics_prop_statue, CStatueProp );
 
-IMPLEMENT_SERVERCLASS_ST( CStatueProp, DT_StatueProp )
-	SendPropEHandle( SENDINFO( m_hInitBaseAnimating ) ),
-	SendPropBool( SENDINFO( m_bShatter ) ),
-	SendPropInt( SENDINFO( m_nShatterFlags ), 3 ),
-	SendPropVector( SENDINFO( m_vShatterPosition ) ),
-	SendPropVector( SENDINFO( m_vShatterForce ) ),
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CStatueProp, DT_StatueProp )
 
-BEGIN_DATADESC( CStatueProp )
-	DEFINE_FIELD( m_hInitBaseAnimating,	FIELD_EHANDLE ),
-	DEFINE_FIELD( m_bShatter,			FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_nShatterFlags,		FIELD_INTEGER ),
-	DEFINE_FIELD( m_vShatterPosition,	FIELD_VECTOR ),
-	DEFINE_FIELD( m_vShatterForce,		FIELD_VECTOR ),
-
-	DEFINE_THINKFUNC( CollisionPartnerThink ),
-END_DATADESC()
 
 ConVarRef *s_vcollide_wireframe = NULL;
 

@@ -36,7 +36,6 @@ class CAI_NetworkManager : public CPointEntity
 public:
 	static void		InitializeAINetworks();
 
-	DECLARE_DATADESC();
 
 	DECLARE_CLASS( CAI_NetworkManager, CPointEntity );
 

@@ -5,13 +5,14 @@
 //=============================================================================
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_annotations.h"
 #include "entityinput.h"
 #include "entityoutput.h"
 #include "eventqueue.h"
 #include "mathlib/mathlib.h"
 #include "globalstate.h"
 #include "ndebugoverlay.h"
-#include "saverestore_utlvector.h"
 #include "vstdlib/random.h"
 #include "gameinterface.h"
 
@@ -111,34 +112,13 @@ public:
 		BaseClass::RunVScripts();
 	}
 
-	string_t m_iszGroupMembers[MAX_SCRIPT_GROUP];
+	[[= ks::reflect::Key{ .name = "Group16", .index = 15 } ]] [[= ks::reflect::Key{ .name = "Group14", .index = 14 } ]] [[= ks::reflect::Key{ .name = "Group13", .index = 13 } ]] [[= ks::reflect::Key{ .name = "Group12", .index = 12 } ]] [[= ks::reflect::Key{ .name = "Group11", .index = 11 } ]] [[= ks::reflect::Key{ .name = "Group10", .index = 10 } ]] [[= ks::reflect::Key{ .name = "Group09", .index = 9 } ]] [[= ks::reflect::Key{ .name = "Group08", .index = 8 } ]] [[= ks::reflect::Key{ .name = "Group07", .index = 7 } ]] [[= ks::reflect::Key{ .name = "Group06", .index = 6 } ]] [[= ks::reflect::Key{ .name = "Group05", .index = 5 } ]] [[= ks::reflect::Key{ .name = "Group04", .index = 4 } ]] [[= ks::reflect::Key{ .name = "Group03", .index = 3 } ]] [[= ks::reflect::Key{ .name = "Group02", .index = 2 } ]] [[= ks::reflect::Key{ .name = "Group01", .index = 1 } ]] [[= ks::reflect::Key{ .name = "Group00", .index = 0 } ]] string_t m_iszGroupMembers[MAX_SCRIPT_GROUP];
 
 };
 
 LINK_ENTITY_TO_CLASS( logic_script, CLogicScript );
 
-BEGIN_DATADESC( CLogicScript )
-	// Silence, Classcheck!
-	// DEFINE_ARRAY( m_iszGroupMembers, FIELD_STRING, MAX_NUM_TEMPLATES ),
-
-	DEFINE_KEYFIELD( m_iszGroupMembers[0], FIELD_STRING, "Group00"),
-	DEFINE_KEYFIELD( m_iszGroupMembers[1], FIELD_STRING, "Group01"),
-	DEFINE_KEYFIELD( m_iszGroupMembers[2], FIELD_STRING, "Group02"),
-	DEFINE_KEYFIELD( m_iszGroupMembers[3], FIELD_STRING, "Group03"),
-	DEFINE_KEYFIELD( m_iszGroupMembers[4], FIELD_STRING, "Group04"),
-	DEFINE_KEYFIELD( m_iszGroupMembers[5], FIELD_STRING, "Group05"),
-	DEFINE_KEYFIELD( m_iszGroupMembers[6], FIELD_STRING, "Group06"),
-	DEFINE_KEYFIELD( m_iszGroupMembers[7], FIELD_STRING, "Group07"),
-	DEFINE_KEYFIELD( m_iszGroupMembers[8], FIELD_STRING, "Group08"),
-	DEFINE_KEYFIELD( m_iszGroupMembers[9], FIELD_STRING, "Group09"),
-	DEFINE_KEYFIELD( m_iszGroupMembers[10], FIELD_STRING, "Group10"),
-	DEFINE_KEYFIELD( m_iszGroupMembers[11], FIELD_STRING, "Group11"),
-	DEFINE_KEYFIELD( m_iszGroupMembers[12], FIELD_STRING, "Group12"),
-	DEFINE_KEYFIELD( m_iszGroupMembers[13], FIELD_STRING, "Group13"),
-	DEFINE_KEYFIELD( m_iszGroupMembers[14], FIELD_STRING, "Group14"),
-	DEFINE_KEYFIELD( m_iszGroupMembers[15], FIELD_STRING, "Group16"),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CLogicScript )
 
 
 //-----------------------------------------------------------------------------
@@ -151,40 +131,27 @@ public:
 	DECLARE_CLASS( CLogicCompareInteger, CLogicalEntity );
 
 	// outputs
-	COutputEvent m_OnEqual;
-	COutputEvent m_OnNotEqual;
+	[[= ks::reflect::Key{ .name = "OnEqual" } ]] COutputEvent m_OnEqual;
+	[[= ks::reflect::Key{ .name = "OnNotEqual" } ]] COutputEvent m_OnNotEqual;
 
 	// data
-	int m_iIntegerValue;
-	int m_iShouldCompareToValue;
+	[[= ks::reflect::Key{ .name = "IntegerValue" } ]] int m_iIntegerValue;
+	[[= ks::reflect::Key{ .name = "ShouldComparetoValue" } ]] int m_iShouldCompareToValue;
 
 	DECLARE_DATADESC();
 
 	CMultiInputVar m_AllIntCompares;
 
 	// Input handlers
-	void InputValue( inputdata_t &inputdata );
-	void InputCompareValues( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "InputValue", .type = FIELD_INPUT } ]] void InputValue( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "CompareValues", .type = FIELD_INPUT } ]] void InputCompareValues( inputdata_t &inputdata );
 };
 
 
 LINK_ENTITY_TO_CLASS( logic_multicompare, CLogicCompareInteger );
 
 
-BEGIN_DATADESC( CLogicCompareInteger )
-
-	DEFINE_OUTPUT( m_OnEqual, "OnEqual" ),
-	DEFINE_OUTPUT( m_OnNotEqual, "OnNotEqual" ),
-
-	DEFINE_KEYFIELD( m_iIntegerValue, FIELD_INTEGER, "IntegerValue" ),
-	DEFINE_KEYFIELD( m_iShouldCompareToValue, FIELD_INTEGER, "ShouldComparetoValue" ),
-
-	DEFINE_FIELD( m_AllIntCompares, FIELD_INPUT ),
-
-	DEFINE_INPUTFUNC( FIELD_INPUT, "InputValue", InputValue ),
-	DEFINE_INPUTFUNC( FIELD_INPUT, "CompareValues", InputCompareValues ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CLogicCompareInteger )
 
 
 
@@ -254,10 +221,10 @@ public:
 	DECLARE_CLASS( CLogicCoopManager, CLogicalEntity );
 
 	// outputs
-	COutputEvent m_OnChangeToAllTrue;
-	COutputEvent m_OnChangeToAnyTrue;
-	COutputEvent m_OnChangeToAllFalse;
-	COutputEvent m_OnChangeToAnyFalse;
+	[[= ks::reflect::Key{ .name = "OnChangeToAllTrue" } ]] COutputEvent m_OnChangeToAllTrue;
+	[[= ks::reflect::Key{ .name = "OnChangeToAnyTrue" } ]] COutputEvent m_OnChangeToAnyTrue;
+	[[= ks::reflect::Key{ .name = "OnChangeToAllFalse" } ]] COutputEvent m_OnChangeToAllFalse;
+	[[= ks::reflect::Key{ .name = "OnChangeToAnyFalse" } ]] COutputEvent m_OnChangeToAnyFalse;
 
 	// data
 	bool m_bDefaultPlayerStateA;
@@ -265,20 +232,20 @@ public:
 
 	bool m_bPrevPlayerStateA;
 	bool m_bPrevPlayerStateB;
-	bool m_bPlayerStateA;
-	bool m_bPlayerStateB;
+	[[= ks::reflect::Key{ .name = "DefaultPlayerStateA" } ]] bool m_bPlayerStateA;
+	[[= ks::reflect::Key{ .name = "DefaultPlayerStateB" } ]] bool m_bPlayerStateB;
 
 	DECLARE_DATADESC();
 
 	void CompareValues( void );
 
 	// Input handlers
-	void InputSetStateATrue( inputdata_t &inputdata );
-	void InputSetStateAFalse( inputdata_t &inputdata );
-	void InputToggleStateA( inputdata_t &inputdata );
-	void InputSetStateBTrue( inputdata_t &inputdata );
-	void InputSetStateBFalse( inputdata_t &inputdata );
-	void InputToggleStateB( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetStateATrue", .type = FIELD_INPUT } ]] void InputSetStateATrue( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetStateAFalse", .type = FIELD_INPUT } ]] void InputSetStateAFalse( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "ToggleStateA", .type = FIELD_INPUT } ]] void InputToggleStateA( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetStateBTrue", .type = FIELD_INPUT } ]] void InputSetStateBTrue( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetStateBFalse", .type = FIELD_INPUT } ]] void InputSetStateBFalse( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "ToggleStateB", .type = FIELD_INPUT } ]] void InputToggleStateB( inputdata_t &inputdata );
 
 };
 
@@ -286,25 +253,7 @@ public:
 LINK_ENTITY_TO_CLASS( logic_coop_manager, CLogicCoopManager );
 
 
-BEGIN_DATADESC( CLogicCoopManager )
-
-DEFINE_OUTPUT( m_OnChangeToAllTrue, "OnChangeToAllTrue" ),
-DEFINE_OUTPUT( m_OnChangeToAnyTrue, "OnChangeToAnyTrue" ),
-DEFINE_OUTPUT( m_OnChangeToAllFalse, "OnChangeToAllFalse" ),
-DEFINE_OUTPUT( m_OnChangeToAnyFalse, "OnChangeToAnyFalse" ),
-
-DEFINE_KEYFIELD( m_bPlayerStateA, FIELD_BOOLEAN, "DefaultPlayerStateA" ),
-DEFINE_KEYFIELD( m_bPlayerStateB, FIELD_BOOLEAN, "DefaultPlayerStateB" ),
-
-DEFINE_INPUTFUNC( FIELD_INPUT, "SetStateATrue", InputSetStateATrue ),
-DEFINE_INPUTFUNC( FIELD_INPUT, "SetStateAFalse", InputSetStateAFalse ),
-DEFINE_INPUTFUNC( FIELD_INPUT, "ToggleStateA", InputToggleStateA ),
-DEFINE_INPUTFUNC( FIELD_INPUT, "SetStateBTrue", InputSetStateBTrue ),
-DEFINE_INPUTFUNC( FIELD_INPUT, "SetStateBFalse", InputSetStateBFalse ),
-DEFINE_INPUTFUNC( FIELD_INPUT, "ToggleStateB", InputToggleStateB ),
-
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CLogicCoopManager )
 
 
 //-----------------------------------------------------------------------------
@@ -398,28 +347,28 @@ public:
 	CLogicRegisterActivator();
 
 	// Input handlers
-	void InputEnable( inputdata_t &inputdata );
-	void InputDisable( inputdata_t &inputdata );
-	void InputToggle( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Enable", .type = FIELD_VOID } ]] void InputEnable( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Disable", .type = FIELD_VOID } ]] void InputDisable( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Toggle", .type = FIELD_VOID } ]] void InputToggle( inputdata_t &inputdata );
 
-	void InputRegisterEntity( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "RegisterEntity", .type = FIELD_STRING } ]] void InputRegisterEntity( inputdata_t &inputdata );
 
-	void InputFireRegisteredAsActivator1( inputdata_t &inputdata );
-	void InputFireRegisteredAsActivator2( inputdata_t &inputdata );
-	void InputFireRegisteredAsActivator3( inputdata_t &inputdata );
-	void InputFireRegisteredAsActivator4( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "FireRegisteredAsActivator1", .type = FIELD_VOID } ]] void InputFireRegisteredAsActivator1( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "FireRegisteredAsActivator2", .type = FIELD_VOID } ]] void InputFireRegisteredAsActivator2( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "FireRegisteredAsActivator3", .type = FIELD_VOID } ]] void InputFireRegisteredAsActivator3( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "FireRegisteredAsActivator4", .type = FIELD_VOID } ]] void InputFireRegisteredAsActivator4( inputdata_t &inputdata );
 
 	DECLARE_DATADESC();
 
 	// Outputs
-	COutputEvent m_OnRegisteredActivate1;
-	COutputEvent m_OnRegisteredActivate2;
-	COutputEvent m_OnRegisteredActivate3;
-	COutputEvent m_OnRegisteredActivate4;
+	[[= ks::reflect::Key{ .name = "OnRegisteredActivate1" } ]] COutputEvent m_OnRegisteredActivate1;
+	[[= ks::reflect::Key{ .name = "OnRegisteredActivate2" } ]] COutputEvent m_OnRegisteredActivate2;
+	[[= ks::reflect::Key{ .name = "OnRegisteredActivate3" } ]] COutputEvent m_OnRegisteredActivate3;
+	[[= ks::reflect::Key{ .name = "OnRegisteredActivate4" } ]] COutputEvent m_OnRegisteredActivate4;
 	
 private:
 
-	bool m_bDisabled;
+	[[= ks::reflect::Key{ .name = "StartDisabled" } ]] bool m_bDisabled;
 	EHANDLE	m_hRegisteredEntity;
 };
 
@@ -429,30 +378,7 @@ private:
 
 LINK_ENTITY_TO_CLASS(logic_register_activator, CLogicRegisterActivator);
 
-BEGIN_DATADESC( CLogicRegisterActivator )
-
-	DEFINE_KEYFIELD(m_bDisabled, FIELD_BOOLEAN, "StartDisabled"),
-
-	DEFINE_FIELD( m_hRegisteredEntity, FIELD_EHANDLE ),
-
-	// Inputs
-	DEFINE_INPUTFUNC(FIELD_VOID, "Enable", InputEnable),
-	DEFINE_INPUTFUNC(FIELD_VOID, "Disable", InputDisable),
-	DEFINE_INPUTFUNC(FIELD_VOID, "Toggle", InputToggle),
-
-	DEFINE_INPUTFUNC(FIELD_VOID, "FireRegisteredAsActivator1", InputFireRegisteredAsActivator1),
-	DEFINE_INPUTFUNC(FIELD_VOID, "FireRegisteredAsActivator2", InputFireRegisteredAsActivator2),
-	DEFINE_INPUTFUNC(FIELD_VOID, "FireRegisteredAsActivator3", InputFireRegisteredAsActivator3),
-	DEFINE_INPUTFUNC(FIELD_VOID, "FireRegisteredAsActivator4", InputFireRegisteredAsActivator4),
-
-	DEFINE_INPUTFUNC(FIELD_STRING, "RegisterEntity", InputRegisterEntity),
-
-	// Outputs
-	DEFINE_OUTPUT(m_OnRegisteredActivate1, "OnRegisteredActivate1"),
-	DEFINE_OUTPUT(m_OnRegisteredActivate2, "OnRegisteredActivate2"),
-	DEFINE_OUTPUT(m_OnRegisteredActivate3, "OnRegisteredActivate3"),
-	DEFINE_OUTPUT(m_OnRegisteredActivate4, "OnRegisteredActivate4"),
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CLogicRegisterActivator )
 
 
 
@@ -569,26 +495,26 @@ public:
 	int DrawDebugTextOverlays(void);
 
 	// outputs
-	COutputEvent m_OnTimer;
-	COutputEvent m_OnTimerHigh;
-	COutputEvent m_OnTimerLow;
+	[[= ks::reflect::Key{ .name = "OnTimer" } ]] COutputEvent m_OnTimer;
+	[[= ks::reflect::Key{ .name = "OnTimerHigh" } ]] COutputEvent m_OnTimerHigh;
+	[[= ks::reflect::Key{ .name = "OnTimerLow" } ]] COutputEvent m_OnTimerLow;
 
 	// inputs
-	void InputToggle( inputdata_t &inputdata );
-	void InputEnable( inputdata_t &inputdata );
-	void InputDisable( inputdata_t &inputdata );
-	void InputFireTimer( inputdata_t &inputdata );
-	void InputRefireTime( inputdata_t &inputdata );
-	void InputResetTimer( inputdata_t &inputdata );
-	void InputAddToTimer( inputdata_t &inputdata );
-	void InputSubtractFromTimer( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Toggle", .type = FIELD_VOID } ]] void InputToggle( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Enable", .type = FIELD_VOID } ]] void InputEnable( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Disable", .type = FIELD_VOID } ]] void InputDisable( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "FireTimer", .type = FIELD_VOID } ]] void InputFireTimer( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "RefireTime", .type = FIELD_FLOAT } ]] void InputRefireTime( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "ResetTimer", .type = FIELD_VOID } ]] void InputResetTimer( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "AddToTimer", .type = FIELD_FLOAT } ]] void InputAddToTimer( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SubtractFromTimer", .type = FIELD_FLOAT } ]] void InputSubtractFromTimer( inputdata_t &inputdata );
 
-	int m_iDisabled;
-	float m_flRefireTime;
+	[[= ks::reflect::Key{ .name = "StartDisabled" } ]] int m_iDisabled;
+	[[= ks::reflect::Key{ .name = "RefireTime" } ]] float m_flRefireTime;
 	bool m_bUpDownState;
-	int m_iUseRandomTime;
-	float m_flLowerRandomBound;
-	float m_flUpperRandomBound;
+	[[= ks::reflect::Key{ .name = "UseRandomTime", .input = true } ]] int m_iUseRandomTime;
+	[[= ks::reflect::Key{ .name = "LowerRandomBound", .input = true } ]] float m_flLowerRandomBound;
+	[[= ks::reflect::Key{ .name = "UpperRandomBound", .input = true } ]] float m_flUpperRandomBound;
 
 	// methods
 	void ResetTimer( void );
@@ -599,35 +525,7 @@ public:
 LINK_ENTITY_TO_CLASS( logic_timer, CTimerEntity );
 
 
-BEGIN_DATADESC( CTimerEntity )
-
-	// Keys
-	DEFINE_KEYFIELD( m_iDisabled, FIELD_INTEGER, "StartDisabled" ),
-	DEFINE_KEYFIELD( m_flRefireTime, FIELD_FLOAT, "RefireTime" ),
-
-	DEFINE_FIELD( m_bUpDownState, FIELD_BOOLEAN ),
-
-	// Inputs
-	DEFINE_INPUTFUNC( FIELD_FLOAT, "RefireTime", InputRefireTime ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "FireTimer", InputFireTimer ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "Enable", InputEnable ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "Disable", InputDisable ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "Toggle", InputToggle ),
-	DEFINE_INPUTFUNC( FIELD_FLOAT, "AddToTimer", InputAddToTimer ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "ResetTimer", InputResetTimer ),
-	DEFINE_INPUTFUNC( FIELD_FLOAT, "SubtractFromTimer", InputSubtractFromTimer ),
-
-	DEFINE_INPUT( m_iUseRandomTime, FIELD_INTEGER, "UseRandomTime" ),
-	DEFINE_INPUT( m_flLowerRandomBound, FIELD_FLOAT, "LowerRandomBound" ),
-	DEFINE_INPUT( m_flUpperRandomBound, FIELD_FLOAT, "UpperRandomBound" ),
-
-
-	// Outputs
-	DEFINE_OUTPUT( m_OnTimer, "OnTimer" ),
-	DEFINE_OUTPUT( m_OnTimerHigh, "OnTimerHigh" ),
-	DEFINE_OUTPUT( m_OnTimerLow, "OnTimerLow" ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CTimerEntity )
 
 
 
@@ -895,12 +793,12 @@ public:
 	void Think( void );
 
 	// outputs
-	COutputVector m_Line;
+	[[= ks::reflect::Key{ .name = "Line" } ]] COutputVector m_Line;
 
 	DECLARE_DATADESC();
 
 private:
-	string_t m_SourceName;
+	[[= ks::reflect::Key{ .name = "source" } ]] string_t m_SourceName;
 	EHANDLE	m_StartEntity;
 	EHANDLE m_EndEntity;
 };
@@ -908,18 +806,7 @@ private:
 LINK_ENTITY_TO_CLASS( logic_lineto, CLogicLineToEntity );
 
 
-BEGIN_DATADESC( CLogicLineToEntity )
-
-	// Keys
-	// target is handled in the base class, stored in field m_target
-	DEFINE_KEYFIELD( m_SourceName, FIELD_STRING, "source" ),
- 	DEFINE_FIELD( m_StartEntity, FIELD_EHANDLE ),
-	DEFINE_FIELD( m_EndEntity, FIELD_EHANDLE ),
-
-	// Outputs
-	DEFINE_OUTPUT( m_Line, "Line" ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CLogicLineToEntity )
 
 
 
@@ -1015,20 +902,20 @@ public:
 	void Spawn(void);
 
 	// Keys
-	float m_flInMin;
-	float m_flInMax;
-	float m_flOut1;		// Output value when input is m_fInMin
-	float m_flOut2;		// Output value when input is m_fInMax
+	[[= ks::reflect::Key{ .name = "in1" } ]] float m_flInMin;
+	[[= ks::reflect::Key{ .name = "in2" } ]] float m_flInMax;
+	[[= ks::reflect::Key{ .name = "out1" } ]] float m_flOut1;		// Output value when input is m_fInMin
+	[[= ks::reflect::Key{ .name = "out2" } ]] float m_flOut2;		// Output value when input is m_fInMax
 
 	bool  m_bEnabled;
 
 	// Inputs
-	void InputValue( inputdata_t &inputdata );
-	void InputEnable( inputdata_t &inputdata );
-	void InputDisable( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "InValue", .type = FIELD_FLOAT } ]] void InputValue( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Enable", .type = FIELD_VOID } ]] void InputEnable( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Disable", .type = FIELD_VOID } ]] void InputDisable( inputdata_t &inputdata );
 
 	// Outputs
-	COutputFloat m_OutValue;
+	[[= ks::reflect::Key{ .name = "OutValue" } ]] COutputFloat m_OutValue;
 
 	DECLARE_DATADESC();
 };
@@ -1036,23 +923,7 @@ public:
 LINK_ENTITY_TO_CLASS(math_remap, CMathRemap);
 
 
-BEGIN_DATADESC( CMathRemap )
-
-	DEFINE_INPUTFUNC(FIELD_FLOAT, "InValue", InputValue ),
-
-	DEFINE_OUTPUT(m_OutValue, "OutValue"),
-
-	DEFINE_KEYFIELD(m_flInMin, FIELD_FLOAT, "in1"),
-	DEFINE_KEYFIELD(m_flInMax, FIELD_FLOAT, "in2"),
-	DEFINE_KEYFIELD(m_flOut1, FIELD_FLOAT, "out1"),
-	DEFINE_KEYFIELD(m_flOut2, FIELD_FLOAT, "out2"),
-
-	DEFINE_FIELD( m_bEnabled, FIELD_BOOLEAN ),
-
-	DEFINE_INPUTFUNC( FIELD_VOID, "Enable", InputEnable ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "Disable", InputDisable ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CMathRemap )
 
 
 
@@ -1146,16 +1017,16 @@ public:
 	void Spawn(void);
 
 	// Keys
-	float m_flInMin;
-	float m_flInMax;
-	color32 m_OutColor1;		// Output color when input is m_fInMin
-	color32 m_OutColor2;		// Output color when input is m_fInMax
+	[[= ks::reflect::Key{ .name = "inmin" } ]] float m_flInMin;
+	[[= ks::reflect::Key{ .name = "inmax" } ]] float m_flInMax;
+	[[= ks::reflect::Key{ .name = "colormin" } ]] color32 m_OutColor1;		// Output color when input is m_fInMin
+	[[= ks::reflect::Key{ .name = "colormax" } ]] color32 m_OutColor2;		// Output color when input is m_fInMax
 
 	// Inputs
-	void InputValue( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "InValue", .type = FIELD_FLOAT } ]] void InputValue( inputdata_t &inputdata );
 
 	// Outputs
-	COutputColor32 m_OutValue;
+	[[= ks::reflect::Key{ .name = "OutColor" } ]] COutputColor32 m_OutValue;
 
 	DECLARE_DATADESC();
 };
@@ -1163,18 +1034,7 @@ public:
 LINK_ENTITY_TO_CLASS(math_colorblend, CMathColorBlend);
 
 
-BEGIN_DATADESC( CMathColorBlend )
-
-	DEFINE_INPUTFUNC(FIELD_FLOAT, "InValue", InputValue ),
-
-	DEFINE_OUTPUT(m_OutValue, "OutColor"),
-
-	DEFINE_KEYFIELD(m_flInMin, FIELD_FLOAT, "inmin"),
-	DEFINE_KEYFIELD(m_flInMax, FIELD_FLOAT, "inmax"),
-	DEFINE_KEYFIELD(m_OutColor1, FIELD_COLOR32, "colormin"),
-	DEFINE_KEYFIELD(m_OutColor2, FIELD_COLOR32, "colormax"),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CMathColorBlend )
 
 
 
@@ -1277,47 +1137,28 @@ public:
 	void Spawn( void );
 
 	// Input handlers
-	void InputTurnOn( inputdata_t &inputdata );
-	void InputTurnOff( inputdata_t &inputdata );
-	void InputRemove( inputdata_t &inputdata );
-	void InputToggle( inputdata_t &inputdata );
-	void InputSetCounter( inputdata_t &inputdata );
-	void InputAddToCounter( inputdata_t &inputdata );
-	void InputGetCounter( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "TurnOn", .type = FIELD_VOID } ]] void InputTurnOn( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "TurnOff", .type = FIELD_VOID } ]] void InputTurnOff( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Remove", .type = FIELD_VOID } ]] void InputRemove( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Toggle", .type = FIELD_VOID } ]] void InputToggle( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetCounter", .type = FIELD_INTEGER } ]] void InputSetCounter( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "AddToCounter", .type = FIELD_INTEGER } ]] void InputAddToCounter( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "GetCounter", .type = FIELD_VOID } ]] void InputGetCounter( inputdata_t &inputdata );
 
 	int DrawDebugTextOverlays(void);
 
 	DECLARE_DATADESC();
 
-	COutputInt m_outCounter;
+	[[= ks::reflect::Key{ .name = "Counter" } ]] COutputInt m_outCounter;
 		
-	string_t	m_globalstate;
+	[[= ks::reflect::Key{ .name = "globalstate" } ]] string_t	m_globalstate;
 	int			m_triggermode;
-	int			m_initialstate;
-	int			m_counter;			// A counter value associated with this global.
+	[[= ks::reflect::Key{ .name = "initialstate" } ]] int			m_initialstate;
+	[[= ks::reflect::Key{ .name = "counter" } ]] int			m_counter;			// A counter value associated with this global.
 };
 
 
-BEGIN_DATADESC( CEnvGlobal )
-
-	DEFINE_KEYFIELD( m_globalstate, FIELD_STRING, "globalstate" ),
-	DEFINE_FIELD( m_triggermode, FIELD_INTEGER ),
-	DEFINE_KEYFIELD( m_initialstate, FIELD_INTEGER, "initialstate" ),
-	DEFINE_KEYFIELD( m_counter, FIELD_INTEGER, "counter" ),
-
-	// Inputs
-	DEFINE_INPUTFUNC( FIELD_VOID, "TurnOn",	InputTurnOn ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "TurnOff", InputTurnOff ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "Remove",	InputRemove ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "Toggle",	InputToggle ),
-
-	DEFINE_INPUTFUNC( FIELD_INTEGER, "SetCounter",	InputSetCounter ),
-	DEFINE_INPUTFUNC( FIELD_INTEGER, "AddToCounter",	InputAddToCounter ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "GetCounter",	InputGetCounter ),
-	
-	DEFINE_OUTPUT( m_outCounter, "Counter" ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CEnvGlobal )
 
 
 LINK_ENTITY_TO_CLASS( env_global, CEnvGlobal );
@@ -1539,28 +1380,13 @@ public:
 	EHANDLE		m_rgEntities[MS_MAX_TARGETS];
 	int			m_rgTriggered[MS_MAX_TARGETS];
 
-	COutputEvent m_OnTrigger;		// Fired when all connections are triggered.
+	[[= ks::reflect::Key{ .name = "OnTrigger" } ]] COutputEvent m_OnTrigger;		// Fired when all connections are triggered.
 
 	int			m_iTotal;
-	string_t	m_globalstate;
+	[[= ks::reflect::Key{ .name = "globalstate" } ]] string_t	m_globalstate;
 };
 
-BEGIN_DATADESC( CMultiSource )
-
-	//!!!BUGBUG FIX
-	DEFINE_ARRAY( m_rgEntities, FIELD_EHANDLE, MS_MAX_TARGETS ),
-	DEFINE_ARRAY( m_rgTriggered, FIELD_INTEGER, MS_MAX_TARGETS ),
-	DEFINE_FIELD( m_iTotal, FIELD_INTEGER ),
-
-	DEFINE_KEYFIELD( m_globalstate, FIELD_STRING, "globalstate" ),
-
-	// Function pointers
-	DEFINE_FUNCTION( Register ),
-
-	// Outputs
-	DEFINE_OUTPUT(m_OnTrigger, "OnTrigger"),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CMultiSource )
 
 
 LINK_ENTITY_TO_CLASS( multisource, CMultiSource );
@@ -1717,12 +1543,12 @@ class CMathCounter : public CLogicalEntity
 {
 	DECLARE_CLASS( CMathCounter, CLogicalEntity );
 private:
-	float m_flMin;		// Minimum clamp value. If min and max are BOTH zero, no clamping is done.
-	float m_flMax;		// Maximum clamp value.
+	[[= ks::reflect::Key{ .name = "min" } ]] float m_flMin;		// Minimum clamp value. If min and max are BOTH zero, no clamping is done.
+	[[= ks::reflect::Key{ .name = "max" } ]] float m_flMax;		// Maximum clamp value.
 	bool m_bHitMin;		// Set when we reach or go below our minimum value, cleared if we go above it again.
 	bool m_bHitMax;		// Set when we reach or exceed our maximum value, cleared if we fall below it again.
 
-	bool m_bDisabled;
+	[[= ks::reflect::Key{ .name = "StartDisabled" } ]] bool m_bDisabled;
 
 	bool KeyValue(const char *szKeyName, const char *szValue);
 	void Spawn(void);
@@ -1732,27 +1558,27 @@ private:
 	void UpdateOutValue(CBaseEntity *pActivator, float fNewValue);
 
 	// Inputs
-	void InputAdd( inputdata_t &inputdata );
-	void InputDivide( inputdata_t &inputdata );
-	void InputMultiply( inputdata_t &inputdata );
-	void InputSetValue( inputdata_t &inputdata );
-	void InputSetValueNoFire( inputdata_t &inputdata );
-	void InputSetMaxValueNoFire( inputdata_t &inputdata );
-	void InputSetMinValueNoFire( inputdata_t &inputdata );
-	void InputSubtract( inputdata_t &inputdata );
-	void InputSetHitMax( inputdata_t &inputdata );
-	void InputSetHitMin( inputdata_t &inputdata );
-	void InputGetValue( inputdata_t &inputdata );
-	void InputEnable( inputdata_t &inputdata );
-	void InputDisable( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Add", .type = FIELD_FLOAT } ]] void InputAdd( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Divide", .type = FIELD_FLOAT } ]] void InputDivide( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Multiply", .type = FIELD_FLOAT } ]] void InputMultiply( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetValue", .type = FIELD_FLOAT } ]] void InputSetValue( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetValueNoFire", .type = FIELD_FLOAT } ]] void InputSetValueNoFire( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetMaxValueNoFire", .type = FIELD_FLOAT } ]] void InputSetMaxValueNoFire( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetMinValueNoFire", .type = FIELD_FLOAT } ]] void InputSetMinValueNoFire( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Subtract", .type = FIELD_FLOAT } ]] void InputSubtract( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetHitMax", .type = FIELD_FLOAT } ]] void InputSetHitMax( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetHitMin", .type = FIELD_FLOAT } ]] void InputSetHitMin( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "GetValue", .type = FIELD_VOID } ]] void InputGetValue( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Enable", .type = FIELD_VOID } ]] void InputEnable( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Disable", .type = FIELD_VOID } ]] void InputDisable( inputdata_t &inputdata );
 
 	// Outputs
-	COutputFloat m_OutValue;
-	COutputFloat m_OnGetValue;	// Used for polling the counter value.
-	COutputEvent m_OnHitMin;
-	COutputEvent m_OnHitMax;
-	COutputEvent m_OnChangedFromMin;
-	COutputEvent m_OnChangedFromMax;
+	[[= ks::reflect::Key{ .name = "OutValue" } ]] COutputFloat m_OutValue;
+	[[= ks::reflect::Key{ .name = "OnGetValue" } ]] COutputFloat m_OnGetValue;	// Used for polling the counter value.
+	[[= ks::reflect::Key{ .name = "OnHitMin" } ]] COutputEvent m_OnHitMin;
+	[[= ks::reflect::Key{ .name = "OnHitMax" } ]] COutputEvent m_OnHitMax;
+	[[= ks::reflect::Key{ .name = "OnChangedFromMin" } ]] COutputEvent m_OnChangedFromMin;
+	[[= ks::reflect::Key{ .name = "OnChangedFromMax" } ]] COutputEvent m_OnChangedFromMax;
 
 	DECLARE_DATADESC();
 };
@@ -1760,43 +1586,7 @@ private:
 LINK_ENTITY_TO_CLASS(math_counter, CMathCounter);
 
 
-BEGIN_DATADESC( CMathCounter )
-
-	DEFINE_FIELD(m_bHitMax, FIELD_BOOLEAN),
-	DEFINE_FIELD(m_bHitMin, FIELD_BOOLEAN),
-
-	// Keys
-	DEFINE_KEYFIELD(m_flMin, FIELD_FLOAT, "min"),
-	DEFINE_KEYFIELD(m_flMax, FIELD_FLOAT, "max"),
-
-	DEFINE_KEYFIELD(m_bDisabled, FIELD_BOOLEAN, "StartDisabled" ),
-
-	// Inputs
-	DEFINE_INPUTFUNC(FIELD_FLOAT, "Add", InputAdd),
-	DEFINE_INPUTFUNC(FIELD_FLOAT, "Divide", InputDivide),
-	DEFINE_INPUTFUNC(FIELD_FLOAT, "Multiply", InputMultiply),
-	DEFINE_INPUTFUNC(FIELD_FLOAT, "SetValue", InputSetValue),
-	DEFINE_INPUTFUNC(FIELD_FLOAT, "SetValueNoFire", InputSetValueNoFire),
-	DEFINE_INPUTFUNC(FIELD_FLOAT, "SetMaxValueNoFire", InputSetMaxValueNoFire),
-	DEFINE_INPUTFUNC(FIELD_FLOAT, "SetMinValueNoFire", InputSetMinValueNoFire),
-	DEFINE_INPUTFUNC(FIELD_FLOAT, "Subtract", InputSubtract),
-	DEFINE_INPUTFUNC(FIELD_FLOAT, "SetHitMax", InputSetHitMax),
-	DEFINE_INPUTFUNC(FIELD_FLOAT, "SetHitMin", InputSetHitMin),
-	DEFINE_INPUTFUNC(FIELD_VOID, "GetValue", InputGetValue),
-	DEFINE_INPUTFUNC( FIELD_VOID, "Enable", InputEnable ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "Disable", InputDisable ),
-
-	// Outputs
-	DEFINE_OUTPUT(m_OutValue, "OutValue"),
-	DEFINE_OUTPUT(m_OnHitMin, "OnHitMin"),
-	DEFINE_OUTPUT(m_OnHitMax, "OnHitMax"),
-	DEFINE_OUTPUT(m_OnChangedFromMin, "OnChangedFromMin"),
-	DEFINE_OUTPUT(m_OnChangedFromMax, "OnChangedFromMax"),
-
-
-	DEFINE_OUTPUT(m_OnGetValue, "OnGetValue"),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CMathCounter )
 
 
 
@@ -2176,7 +1966,7 @@ class CLogicCase : public CLogicalEntity
 {
 	DECLARE_CLASS( CLogicCase, CLogicalEntity );
 private:
-	string_t m_nCase[MAX_LOGIC_CASES];
+	[[= ks::reflect::Key{ .name = "Case16", .index = 15 } ]] [[= ks::reflect::Key{ .name = "Case15", .index = 14 } ]] [[= ks::reflect::Key{ .name = "Case14", .index = 13 } ]] [[= ks::reflect::Key{ .name = "Case13", .index = 12 } ]] [[= ks::reflect::Key{ .name = "Case12", .index = 11 } ]] [[= ks::reflect::Key{ .name = "Case11", .index = 10 } ]] [[= ks::reflect::Key{ .name = "Case10", .index = 9 } ]] [[= ks::reflect::Key{ .name = "Case09", .index = 8 } ]] [[= ks::reflect::Key{ .name = "Case08", .index = 7 } ]] [[= ks::reflect::Key{ .name = "Case07", .index = 6 } ]] [[= ks::reflect::Key{ .name = "Case06", .index = 5 } ]] [[= ks::reflect::Key{ .name = "Case05", .index = 4 } ]] [[= ks::reflect::Key{ .name = "Case04", .index = 3 } ]] [[= ks::reflect::Key{ .name = "Case03", .index = 2 } ]] [[= ks::reflect::Key{ .name = "Case02", .index = 1 } ]] [[= ks::reflect::Key{ .name = "Case01", .index = 0 } ]] string_t m_nCase[MAX_LOGIC_CASES];
 
 	int m_nShuffleCases;
 	int m_nLastShuffleCase;
@@ -2187,13 +1977,13 @@ private:
 	int BuildCaseMap(unsigned char *puchMap);
 
 	// Inputs
-	void InputValue( inputdata_t &inputdata );
-	void InputPickRandom( inputdata_t &inputdata );
-	void InputPickRandomShuffle( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "InValue", .type = FIELD_INPUT } ]] void InputValue( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "PickRandom", .type = FIELD_VOID } ]] void InputPickRandom( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "PickRandomShuffle", .type = FIELD_VOID } ]] void InputPickRandomShuffle( inputdata_t &inputdata );
 
 	// Outputs
-	COutputEvent m_OnCase[MAX_LOGIC_CASES];		// Fired when the input value matches one of the case values.
-	COutputVariant m_OnDefault;					// Fired when no match was found.
+	[[= ks::reflect::Key{ .name = "OnCase01", .index = 0 } ]] [[= ks::reflect::Key{ .name = "OnCase02", .index = 1 } ]] [[= ks::reflect::Key{ .name = "OnCase03", .index = 2 } ]] [[= ks::reflect::Key{ .name = "OnCase04", .index = 3 } ]] [[= ks::reflect::Key{ .name = "OnCase05", .index = 4 } ]] [[= ks::reflect::Key{ .name = "OnCase06", .index = 5 } ]] [[= ks::reflect::Key{ .name = "OnCase07", .index = 6 } ]] [[= ks::reflect::Key{ .name = "OnCase08", .index = 7 } ]] [[= ks::reflect::Key{ .name = "OnCase09", .index = 8 } ]] [[= ks::reflect::Key{ .name = "OnCase10", .index = 9 } ]] [[= ks::reflect::Key{ .name = "OnCase11", .index = 10 } ]] [[= ks::reflect::Key{ .name = "OnCase12", .index = 11 } ]] [[= ks::reflect::Key{ .name = "OnCase13", .index = 12 } ]] [[= ks::reflect::Key{ .name = "OnCase14", .index = 13 } ]] [[= ks::reflect::Key{ .name = "OnCase15", .index = 14 } ]] [[= ks::reflect::Key{ .name = "OnCase16", .index = 15 } ]] COutputEvent m_OnCase[MAX_LOGIC_CASES];		// Fired when the input value matches one of the case values.
+	[[= ks::reflect::Key{ .name = "OnDefault" } ]] COutputVariant m_OnDefault;					// Fired when no match was found.
 
 	DECLARE_DATADESC();
 };
@@ -2201,59 +1991,7 @@ private:
 LINK_ENTITY_TO_CLASS(logic_case, CLogicCase);
 
 
-BEGIN_DATADESC( CLogicCase )
-
-// Silence, Classcheck!
-//	DEFINE_ARRAY( m_nCase, FIELD_STRING, MAX_LOGIC_CASES ),
-
-	// Keys
-	DEFINE_KEYFIELD(m_nCase[0], FIELD_STRING, "Case01"),
-	DEFINE_KEYFIELD(m_nCase[1], FIELD_STRING, "Case02"),
-	DEFINE_KEYFIELD(m_nCase[2], FIELD_STRING, "Case03"),
-	DEFINE_KEYFIELD(m_nCase[3], FIELD_STRING, "Case04"),
-	DEFINE_KEYFIELD(m_nCase[4], FIELD_STRING, "Case05"),
-	DEFINE_KEYFIELD(m_nCase[5], FIELD_STRING, "Case06"),
-	DEFINE_KEYFIELD(m_nCase[6], FIELD_STRING, "Case07"),
-	DEFINE_KEYFIELD(m_nCase[7], FIELD_STRING, "Case08"),
-	DEFINE_KEYFIELD(m_nCase[8], FIELD_STRING, "Case09"),
-	DEFINE_KEYFIELD(m_nCase[9], FIELD_STRING, "Case10"),
-	DEFINE_KEYFIELD(m_nCase[10], FIELD_STRING, "Case11"),
-	DEFINE_KEYFIELD(m_nCase[11], FIELD_STRING, "Case12"),
-	DEFINE_KEYFIELD(m_nCase[12], FIELD_STRING, "Case13"),
-	DEFINE_KEYFIELD(m_nCase[13], FIELD_STRING, "Case14"),
-	DEFINE_KEYFIELD(m_nCase[14], FIELD_STRING, "Case15"),
-	DEFINE_KEYFIELD(m_nCase[15], FIELD_STRING, "Case16"),
-	
-	DEFINE_FIELD( m_nShuffleCases, FIELD_INTEGER ),
-	DEFINE_FIELD( m_nLastShuffleCase, FIELD_INTEGER ),
-	DEFINE_ARRAY( m_uchShuffleCaseMap, FIELD_CHARACTER, MAX_LOGIC_CASES ),
-
-	// Inputs
-	DEFINE_INPUTFUNC(FIELD_INPUT, "InValue", InputValue),
-	DEFINE_INPUTFUNC(FIELD_VOID, "PickRandom", InputPickRandom),
-	DEFINE_INPUTFUNC(FIELD_VOID, "PickRandomShuffle", InputPickRandomShuffle),
-
-	// Outputs
-	DEFINE_OUTPUT(m_OnCase[0], "OnCase01"),
-	DEFINE_OUTPUT(m_OnCase[1], "OnCase02"),
-	DEFINE_OUTPUT(m_OnCase[2], "OnCase03"),
-	DEFINE_OUTPUT(m_OnCase[3], "OnCase04"),
-	DEFINE_OUTPUT(m_OnCase[4], "OnCase05"),
-	DEFINE_OUTPUT(m_OnCase[5], "OnCase06"),
-	DEFINE_OUTPUT(m_OnCase[6], "OnCase07"),
-	DEFINE_OUTPUT(m_OnCase[7], "OnCase08"),
-	DEFINE_OUTPUT(m_OnCase[8], "OnCase09"),
-	DEFINE_OUTPUT(m_OnCase[9], "OnCase10"),
-	DEFINE_OUTPUT(m_OnCase[10], "OnCase11"),
-	DEFINE_OUTPUT(m_OnCase[11], "OnCase12"),
-	DEFINE_OUTPUT(m_OnCase[12], "OnCase13"),
-	DEFINE_OUTPUT(m_OnCase[13], "OnCase14"),
-	DEFINE_OUTPUT(m_OnCase[14], "OnCase15"),
-	DEFINE_OUTPUT(m_OnCase[15], "OnCase16"),
-
-	DEFINE_OUTPUT(m_OnDefault, "OnDefault"),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CLogicCase )
 
 
 
@@ -2418,21 +2156,21 @@ public:
 
 private:
 	// Inputs
-	void InputSetValue( inputdata_t &inputdata );
-	void InputSetValueCompare( inputdata_t &inputdata );
-	void InputSetCompareValue( inputdata_t &inputdata );
-	void InputCompare( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetValue", .type = FIELD_FLOAT } ]] void InputSetValue( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetValueCompare", .type = FIELD_FLOAT } ]] void InputSetValueCompare( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetCompareValue", .type = FIELD_FLOAT } ]] void InputSetCompareValue( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Compare", .type = FIELD_VOID } ]] void InputCompare( inputdata_t &inputdata );
 
 	void DoCompare(CBaseEntity *pActivator, float flInValue);
 
-	float m_flInValue;					// Place to hold the last input value for a recomparison.
-	float m_flCompareValue;				// The value to compare the input value against.
+	[[= ks::reflect::Key{ .name = "InitialValue" } ]] float m_flInValue;					// Place to hold the last input value for a recomparison.
+	[[= ks::reflect::Key{ .name = "CompareValue" } ]] float m_flCompareValue;				// The value to compare the input value against.
 
 	// Outputs
-	COutputFloat m_OnLessThan;			// Fired when the input value is less than the compare value.
-	COutputFloat m_OnEqualTo;			// Fired when the input value is equal to the compare value.
-	COutputFloat m_OnNotEqualTo;		// Fired when the input value is not equal to the compare value.
-	COutputFloat m_OnGreaterThan;		// Fired when the input value is greater than the compare value.
+	[[= ks::reflect::Key{ .name = "OnLessThan" } ]] COutputFloat m_OnLessThan;			// Fired when the input value is less than the compare value.
+	[[= ks::reflect::Key{ .name = "OnEqualTo" } ]] COutputFloat m_OnEqualTo;			// Fired when the input value is equal to the compare value.
+	[[= ks::reflect::Key{ .name = "OnNotEqualTo" } ]] COutputFloat m_OnNotEqualTo;		// Fired when the input value is not equal to the compare value.
+	[[= ks::reflect::Key{ .name = "OnGreaterThan" } ]] COutputFloat m_OnGreaterThan;		// Fired when the input value is greater than the compare value.
 
 	DECLARE_DATADESC();
 };
@@ -2440,25 +2178,7 @@ private:
 LINK_ENTITY_TO_CLASS(logic_compare, CLogicCompare);
 
 
-BEGIN_DATADESC( CLogicCompare )
-
-	// Keys
-	DEFINE_KEYFIELD(m_flCompareValue, FIELD_FLOAT, "CompareValue"),
-	DEFINE_KEYFIELD(m_flInValue, FIELD_FLOAT, "InitialValue"),
-
-	// Inputs
-	DEFINE_INPUTFUNC(FIELD_FLOAT, "SetValue", InputSetValue),
-	DEFINE_INPUTFUNC(FIELD_FLOAT, "SetValueCompare", InputSetValueCompare),
-	DEFINE_INPUTFUNC(FIELD_FLOAT, "SetCompareValue", InputSetCompareValue),
-	DEFINE_INPUTFUNC(FIELD_VOID, "Compare", InputCompare),
-
-	// Outputs
-	DEFINE_OUTPUT(m_OnEqualTo, "OnEqualTo"),
-	DEFINE_OUTPUT(m_OnNotEqualTo, "OnNotEqualTo"),
-	DEFINE_OUTPUT(m_OnGreaterThan, "OnGreaterThan"),
-	DEFINE_OUTPUT(m_OnLessThan, "OnLessThan"),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CLogicCompare )
 
 
 
@@ -2574,21 +2294,21 @@ private:
 	};
 
 	// Inputs
-	void InputSetValue( inputdata_t &inputdata );
-	void InputSetValueTest( inputdata_t &inputdata );
-	void InputToggle( inputdata_t &inputdata );
-	void InputToggleTest( inputdata_t &inputdata );
-	void InputTest( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetValue", .type = FIELD_BOOLEAN } ]] void InputSetValue( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetValueTest", .type = FIELD_BOOLEAN } ]] void InputSetValueTest( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Toggle", .type = FIELD_VOID } ]] void InputToggle( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "ToggleTest", .type = FIELD_VOID } ]] void InputToggleTest( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Test", .type = FIELD_VOID } ]] void InputTest( inputdata_t &inputdata );
 
 	void UpdateValue(bool bNewValue, CBaseEntity *pActivator, LogicBranchFire_t eFire);
 
-	bool m_bInValue;					// Place to hold the last input value for a future test.
+	[[= ks::reflect::Key{ .name = "InitialValue" } ]] bool m_bInValue;					// Place to hold the last input value for a future test.
 	
 	CUtlVector<EHANDLE> m_Listeners;	// A list of logic_branch_listeners that are monitoring us.
 
 	// Outputs
-	COutputEvent m_OnTrue;				// Fired when the value is true.
-	COutputEvent m_OnFalse;				// Fired when the value is false.
+	[[= ks::reflect::Key{ .name = "OnTrue" } ]] COutputEvent m_OnTrue;				// Fired when the value is true.
+	[[= ks::reflect::Key{ .name = "OnFalse" } ]] COutputEvent m_OnFalse;				// Fired when the value is false.
 
 	DECLARE_DATADESC();
 };
@@ -2596,25 +2316,7 @@ private:
 LINK_ENTITY_TO_CLASS(logic_branch, CLogicBranch);
 
 
-BEGIN_DATADESC( CLogicBranch )
-
-	// Keys
-	DEFINE_KEYFIELD(m_bInValue, FIELD_BOOLEAN, "InitialValue"),
-
-	DEFINE_UTLVECTOR( m_Listeners, FIELD_EHANDLE ),
-
-	// Inputs
-	DEFINE_INPUTFUNC(FIELD_BOOLEAN, "SetValue", InputSetValue),
-	DEFINE_INPUTFUNC(FIELD_BOOLEAN, "SetValueTest", InputSetValueTest),
-	DEFINE_INPUTFUNC(FIELD_VOID, "Toggle", InputToggle),
-	DEFINE_INPUTFUNC(FIELD_VOID, "ToggleTest", InputToggleTest),
-	DEFINE_INPUTFUNC(FIELD_VOID, "Test", InputTest),
-
-	// Outputs
-	DEFINE_OUTPUT(m_OnTrue, "OnTrue"),
-	DEFINE_OUTPUT(m_OnFalse, "OnFalse"),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CLogicBranch )
 
 
 //-----------------------------------------------------------------------------
@@ -2765,27 +2467,19 @@ class CLogicAutosave : public CLogicalEntity
 
 protected:
 	// Inputs
-	void InputSave( inputdata_t &inputdata );
-	void InputSaveDangerous( inputdata_t &inputdata );
-	void InputSetMinHitpointsThreshold( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Save", .type = FIELD_VOID } ]] void InputSave( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SaveDangerous", .type = FIELD_FLOAT } ]] void InputSaveDangerous( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SetMinHitpointsThreshold", .type = FIELD_INTEGER } ]] void InputSetMinHitpointsThreshold( inputdata_t &inputdata );
 
 	DECLARE_DATADESC();
-	bool m_bForceNewLevelUnit;
-	int m_minHitPoints;
-	int m_minHitPointsToCommit;
+	[[= ks::reflect::Key{ .name = "NewLevelUnit" } ]] bool m_bForceNewLevelUnit;
+	[[= ks::reflect::Key{ .name = "MinimumHitPoints" } ]] int m_minHitPoints;
+	[[= ks::reflect::Key{ .name = "MinHitPointsToCommit" } ]] int m_minHitPointsToCommit;
 };
 
 LINK_ENTITY_TO_CLASS(logic_autosave, CLogicAutosave);
 
-BEGIN_DATADESC( CLogicAutosave )
-	DEFINE_KEYFIELD( m_bForceNewLevelUnit, FIELD_BOOLEAN, "NewLevelUnit" ),
-	DEFINE_KEYFIELD( m_minHitPoints, FIELD_INTEGER, "MinimumHitPoints" ),
-	DEFINE_KEYFIELD( m_minHitPointsToCommit, FIELD_INTEGER, "MinHitPointsToCommit" ),
-	// Inputs
-	DEFINE_INPUTFUNC( FIELD_VOID, "Save", InputSave ),
-	DEFINE_INPUTFUNC( FIELD_FLOAT, "SaveDangerous", InputSaveDangerous ),
-	DEFINE_INPUTFUNC( FIELD_INTEGER, "SetMinHitpointsThreshold", InputSetMinHitpointsThreshold ),
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CLogicAutosave )
 
 //-----------------------------------------------------------------------------
 // Purpose: Save!
@@ -2843,6 +2537,7 @@ class CLogicActiveAutosave : public CLogicAutosave
 {
 	DECLARE_CLASS( CLogicActiveAutosave, CLogicAutosave );
 
+	[[= ks::reflect::Input{ .name = "Enable", .type = FIELD_VOID } ]]
 	void InputEnable( inputdata_t &inputdata )
 	{
 		m_flStartTime = -1;
@@ -2850,6 +2545,7 @@ class CLogicActiveAutosave : public CLogicAutosave
 		SetNextThink( gpGlobals->curtime );
 	}
 
+	[[= ks::reflect::Input{ .name = "Disable", .type = FIELD_VOID } ]]
 	void InputDisable( inputdata_t &inputdata )
 	{
 		SetThink( NULL );
@@ -2897,23 +2593,15 @@ class CLogicActiveAutosave : public CLogicAutosave
 
 	DECLARE_DATADESC();
 
-	int m_TriggerHitPoints;
-	float m_flTimeToTrigger;
+	[[= ks::reflect::Key{ .name = "TriggerHitPoints" } ]] int m_TriggerHitPoints;
+	[[= ks::reflect::Key{ .name = "TimeToTrigger" } ]] float m_flTimeToTrigger;
 	float m_flStartTime;
-	float m_flDangerousTime;
+	[[= ks::reflect::Key{ .name = "DangerousTime" } ]] float m_flDangerousTime;
 };
 
 LINK_ENTITY_TO_CLASS(logic_active_autosave, CLogicActiveAutosave);
 
-BEGIN_DATADESC( CLogicActiveAutosave )
-	DEFINE_KEYFIELD( m_TriggerHitPoints, FIELD_INTEGER, "TriggerHitPoints" ),
-	DEFINE_KEYFIELD( m_flTimeToTrigger, FIELD_FLOAT, "TimeToTrigger" ),
-	DEFINE_KEYFIELD( m_flDangerousTime, FIELD_FLOAT, "DangerousTime" ),
-	DEFINE_FIELD( m_flStartTime, FIELD_TIME ),
-	DEFINE_THINKFUNC( SaveThink ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "Enable", InputEnable ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "Disable", InputDisable ),
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CLogicActiveAutosave )
 
 
 //-----------------------------------------------------------------------------
@@ -2980,6 +2668,7 @@ public:
 		BaseClass::Activate();
 	}
 
+	[[= ks::reflect::Input{ .name = "DisableCollisions", .type = FIELD_VOID } ]]
 	void InputDisableCollisions( inputdata_t &inputdata )
 	{
 		if ( m_succeeded && m_disabled )
@@ -2987,6 +2676,7 @@ public:
 		EnableCollisions( false );
 	}
 
+	[[= ks::reflect::Input{ .name = "EnableCollisions", .type = FIELD_VOID } ]]
 	void InputEnableCollisions( inputdata_t &inputdata )
 	{
 		if ( m_succeeded && !m_disabled )
@@ -2999,22 +2689,13 @@ public:
 	DECLARE_DATADESC();
 
 private:
-	string_t		m_nameAttach1;
-	string_t		m_nameAttach2;
-	bool			m_disabled;
+	[[= ks::reflect::Key{ .name = "attach1" } ]] string_t		m_nameAttach1;
+	[[= ks::reflect::Key{ .name = "attach2" } ]] string_t		m_nameAttach2;
+	[[= ks::reflect::Key{ .name = "startdisabled" } ]] bool			m_disabled;
 	bool			m_succeeded;
 };
 
-BEGIN_DATADESC( CLogicCollisionPair )
-	DEFINE_KEYFIELD( m_nameAttach1, FIELD_STRING, "attach1" ),
-	DEFINE_KEYFIELD( m_nameAttach2, FIELD_STRING, "attach2" ),
-	DEFINE_KEYFIELD( m_disabled, FIELD_BOOLEAN, "startdisabled" ),
-	DEFINE_FIELD( m_succeeded, FIELD_BOOLEAN ),
-
-	// Inputs
-	DEFINE_INPUTFUNC( FIELD_VOID, "DisableCollisions", InputDisableCollisions ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "EnableCollisions", InputEnableCollisions ),
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CLogicCollisionPair )
 
 LINK_ENTITY_TO_CLASS( logic_collision_pair, CLogicCollisionPair );
 
@@ -3043,19 +2724,19 @@ private:
 
 	void DoTest( CBaseEntity *pActivator );
 
-	string_t m_nLogicBranchNames[MAX_LOGIC_BRANCH_NAMES];
+	[[= ks::reflect::Key{ .name = "Branch16", .index = 15 } ]] [[= ks::reflect::Key{ .name = "Branch15", .index = 14 } ]] [[= ks::reflect::Key{ .name = "Branch14", .index = 13 } ]] [[= ks::reflect::Key{ .name = "Branch13", .index = 12 } ]] [[= ks::reflect::Key{ .name = "Branch12", .index = 11 } ]] [[= ks::reflect::Key{ .name = "Branch11", .index = 10 } ]] [[= ks::reflect::Key{ .name = "Branch10", .index = 9 } ]] [[= ks::reflect::Key{ .name = "Branch09", .index = 8 } ]] [[= ks::reflect::Key{ .name = "Branch08", .index = 7 } ]] [[= ks::reflect::Key{ .name = "Branch07", .index = 6 } ]] [[= ks::reflect::Key{ .name = "Branch06", .index = 5 } ]] [[= ks::reflect::Key{ .name = "Branch05", .index = 4 } ]] [[= ks::reflect::Key{ .name = "Branch04", .index = 3 } ]] [[= ks::reflect::Key{ .name = "Branch03", .index = 2 } ]] [[= ks::reflect::Key{ .name = "Branch02", .index = 1 } ]] [[= ks::reflect::Key{ .name = "Branch01", .index = 0 } ]] string_t m_nLogicBranchNames[MAX_LOGIC_BRANCH_NAMES];
 	CUtlVector<EHANDLE> m_LogicBranchList;
 	LogicBranchListenerLastState_t m_eLastState;
 
 	// Inputs
-	void Input_OnLogicBranchRemoved( inputdata_t &inputdata );
-	void Input_OnLogicBranchChanged( inputdata_t &inputdata );
-	void InputTest( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "_OnLogicBranchRemoved", .type = FIELD_INPUT } ]] void Input_OnLogicBranchRemoved( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "_OnLogicBranchChanged", .type = FIELD_INPUT } ]] void Input_OnLogicBranchChanged( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "Test", .type = FIELD_INPUT } ]] void InputTest( inputdata_t &inputdata );
 
 	// Outputs
-	COutputEvent m_OnAllTrue;			// Fired when all the registered logic_branches become true.
-	COutputEvent m_OnAllFalse;			// Fired when all the registered logic_branches become false.
-	COutputEvent m_OnMixed;				// Fired when one of the registered logic branches changes, but not all are true or false.
+	[[= ks::reflect::Key{ .name = "OnAllTrue" } ]] COutputEvent m_OnAllTrue;			// Fired when all the registered logic_branches become true.
+	[[= ks::reflect::Key{ .name = "OnAllFalse" } ]] COutputEvent m_OnAllFalse;			// Fired when all the registered logic_branches become false.
+	[[= ks::reflect::Key{ .name = "OnMixed" } ]] COutputEvent m_OnMixed;				// Fired when one of the registered logic branches changes, but not all are true or false.
 
 	DECLARE_DATADESC();
 };
@@ -3063,44 +2744,7 @@ private:
 LINK_ENTITY_TO_CLASS(logic_branch_listener, CLogicBranchList);
 
 
-BEGIN_DATADESC( CLogicBranchList )
-
-	// Silence, classcheck!
-	//DEFINE_ARRAY( m_nLogicBranchNames, FIELD_STRING, MAX_LOGIC_BRANCH_NAMES ),
-
-	// Keys
-	DEFINE_KEYFIELD( m_nLogicBranchNames[0], FIELD_STRING, "Branch01" ),
-	DEFINE_KEYFIELD( m_nLogicBranchNames[1], FIELD_STRING, "Branch02" ),
-	DEFINE_KEYFIELD( m_nLogicBranchNames[2], FIELD_STRING, "Branch03" ),
-	DEFINE_KEYFIELD( m_nLogicBranchNames[3], FIELD_STRING, "Branch04" ),
-	DEFINE_KEYFIELD( m_nLogicBranchNames[4], FIELD_STRING, "Branch05" ),
-	DEFINE_KEYFIELD( m_nLogicBranchNames[5], FIELD_STRING, "Branch06" ),
-	DEFINE_KEYFIELD( m_nLogicBranchNames[6], FIELD_STRING, "Branch07" ),
-	DEFINE_KEYFIELD( m_nLogicBranchNames[7], FIELD_STRING, "Branch08" ),
-	DEFINE_KEYFIELD( m_nLogicBranchNames[8], FIELD_STRING, "Branch09" ),
-	DEFINE_KEYFIELD( m_nLogicBranchNames[9], FIELD_STRING, "Branch10" ),
-	DEFINE_KEYFIELD( m_nLogicBranchNames[10], FIELD_STRING, "Branch11" ),
-	DEFINE_KEYFIELD( m_nLogicBranchNames[11], FIELD_STRING, "Branch12" ),
-	DEFINE_KEYFIELD( m_nLogicBranchNames[12], FIELD_STRING, "Branch13" ),
-	DEFINE_KEYFIELD( m_nLogicBranchNames[13], FIELD_STRING, "Branch14" ),
-	DEFINE_KEYFIELD( m_nLogicBranchNames[14], FIELD_STRING, "Branch15" ),
-	DEFINE_KEYFIELD( m_nLogicBranchNames[15], FIELD_STRING, "Branch16" ),
-	
-	DEFINE_UTLVECTOR( m_LogicBranchList, FIELD_EHANDLE ),
-	
-	DEFINE_FIELD( m_eLastState, FIELD_INTEGER ),
-
-	// Inputs
-	DEFINE_INPUTFUNC( FIELD_INPUT, "Test", InputTest ),
-	DEFINE_INPUTFUNC( FIELD_INPUT, "_OnLogicBranchChanged", Input_OnLogicBranchChanged ),
-	DEFINE_INPUTFUNC( FIELD_INPUT, "_OnLogicBranchRemoved", Input_OnLogicBranchRemoved ),
-
-	// Outputs
-	DEFINE_OUTPUT( m_OnAllTrue, "OnAllTrue" ),
-	DEFINE_OUTPUT( m_OnAllFalse, "OnAllFalse" ),
-	DEFINE_OUTPUT( m_OnMixed, "OnMixed" ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CLogicBranchList )
 
 
 //-----------------------------------------------------------------------------

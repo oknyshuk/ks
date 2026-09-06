@@ -7,6 +7,8 @@
 
 #ifndef FUNC_AREAPORTALBASE_H
 #define FUNC_AREAPORTALBASE_H
+
+#include "reflect_annotations.h"
 #ifdef _WIN32
 #pragma once
 #endif
@@ -101,7 +103,7 @@ public:
 	// This matches two dareaportal_t::m_PortalKeys.	
 	int				m_portalNumber;
 	
-	int				m_iPortalVersion;
+	[[= ks::reflect::Key{ .name = "PortalVersion" } ]] int				m_iPortalVersion;
 
 private:
 	

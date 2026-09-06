@@ -5,6 +5,9 @@
 //===============================================================================
 
 #include "cbase.h"
+#include "reflect_datamap.h"
+#include "reflect_sendtable.h"
+#include "reflect_annotations.h"
 #include "globalstate.h"
 #include "isaverestore.h"
 #include "client.h"
@@ -30,8 +33,6 @@
 #include "animation.h"
 #include "tier1/strtools.h"
 #include "engine/IEngineSound.h"
-#include "physics_saverestore.h"
-#include "saverestore_utlvector.h"
 #include "bone_setup.h"
 #include "vcollide_parse.h"
 #include "filters.h"
@@ -166,20 +167,8 @@ void* SendProxy_ClientSideAnimation( const SendProp *pProp, const void *pStruct,
 REGISTER_SEND_PROXY_NON_MODIFIED_POINTER( SendProxy_ClientSideAnimation );
 
 
-BEGIN_SEND_TABLE_NOBASE( CBaseEntity, DT_AnimTimeMustBeFirst )
-	// NOTE:  Animtime must be sent before origin and angles ( from pev ) because it has a 
-	//  proxy on the client that stores off the old values before writing in the new values and
-	//  if it is sent after the new values, then it will only have the new origin and studio model, etc.
-	//  interpolation will be busted
-	SendPropInt	(SENDINFO(m_flAnimTime), 8, SPROP_UNSIGNED|SPROP_CHANGES_OFTEN|SPROP_ENCODED_AGAINST_TICKCOUNT, SendProxy_AnimTime),
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_TABLE_IN( CBaseEntity, DT_AnimTimeMustBeFirst );
 
-#if !defined( NO_ENTITY_PREDICTION ) && defined( USE_PREDICTABLEID )
-BEGIN_SEND_TABLE_NOBASE( CBaseEntity, DT_PredictableId )
-	SendPropPredictableId( SENDINFO( m_PredictableID ) ),
-	SendPropInt( SENDINFO( m_bIsPlayerSimulated ), 1, SPROP_UNSIGNED ),
-END_SEND_TABLE()
-#endif
 
 void BuildMergedPlayerIndexListForSplitUser( int nPlayerIndex, CUtlVector< int > &list )
 {
@@ -543,99 +532,26 @@ void SendProxy_Angles( const SendProp *pProp, const void *pStruct, const void *p
 	pOut->m_Vector[ 2 ] = anglemod( a->z );
 }
 
-#if PREDICTION_ERROR_CHECK_LEVEL > 1 
-const int SENDPROP_ANGROTATION_DEFAULT_BITS = -1;
-const int SENDPROP_VECORIGIN_FLAGS = SPROP_NOSCALE|SPROP_CHANGES_OFTEN;
-#else
-const int SENDPROP_ANGROTATION_DEFAULT_BITS = 13;
-const int SENDPROP_VECORIGIN_FLAGS = SPROP_CELL_COORD|SPROP_CHANGES_OFTEN;
-#endif
+// SENDPROP_ANGROTATION_DEFAULT_BITS and SENDPROP_VECORIGIN_FLAGS moved to baseentity.h:
+// the Net annotations on m_angRotation and m_vecOrigin need them as constant expressions
+// where the class is declared.
 
 // This table encodes the CBaseEntity data.
-IMPLEMENT_SERVERCLASS_ST_NOBASE( CBaseEntity, DT_BaseEntity )
-	SendPropDataTable( "AnimTimeMustBeFirst", 0, &REFERENCE_SEND_TABLE(DT_AnimTimeMustBeFirst), SendProxy_ClientSideAnimation ),
-	SendPropInt			(SENDINFO(m_flSimulationTime),	SIMULATION_TIME_WINDOW_BITS, SPROP_UNSIGNED|SPROP_CHANGES_OFTEN|SPROP_ENCODED_AGAINST_TICKCOUNT, SendProxy_SimulationTime, SENDPROP_SIMULATION_TIME_PRIORITY ),
+IMPLEMENT_REFLECT_SERVERCLASS( CBaseEntity, DT_BaseEntity )
 #if defined(ENABLE_CREATE_TIME)
-	SendPropFloat		(SENDINFO( m_flCreateTime ) ),
 #endif
-
-	SendPropInt			(SENDINFO(m_cellbits), MINIMUM_BITS_NEEDED( 32 ), SPROP_UNSIGNED, 0, SENDPROP_CELL_INFO_PRIORITY ),
-//	SendPropArray       (SendPropInt(SENDINFO_ARRAY(m_cellXY), CELL_COUNT_BITS( CELL_BASEENTITY_ORIGIN_CELL_BITS ), SPROP_UNSIGNED|SPROP_CHANGES_OFTEN ), m_cellXY),
-	SendPropInt			(SENDINFO(m_cellX), CELL_COUNT_BITS( CELL_BASEENTITY_ORIGIN_CELL_BITS ), SPROP_UNSIGNED, CBaseEntity::SendProxy_CellX, SENDPROP_CELL_INFO_PRIORITY ), // 32 priority in the send table
-	SendPropInt			(SENDINFO(m_cellY), CELL_COUNT_BITS( CELL_BASEENTITY_ORIGIN_CELL_BITS ), SPROP_UNSIGNED, CBaseEntity::SendProxy_CellY, SENDPROP_CELL_INFO_PRIORITY ),
-	SendPropInt			(SENDINFO(m_cellZ), CELL_COUNT_BITS( CELL_BASEENTITY_ORIGIN_CELL_BITS ), SPROP_UNSIGNED, CBaseEntity::SendProxy_CellZ, SENDPROP_CELL_INFO_PRIORITY ),
-	SendPropVector		(SENDINFO(m_vecOrigin), CELL_BASEENTITY_ORIGIN_CELL_BITS, SENDPROP_VECORIGIN_FLAGS, 0.0f, HIGH_DEFAULT, CBaseEntity::SendProxy_CellOrigin ),
-
-	SendPropModelIndex(SENDINFO(m_nModelIndex)),
-	SendPropDataTable( SENDINFO_DT( m_Collision ), &REFERENCE_SEND_TABLE(DT_CollisionProperty) ),
-	SendPropInt		(SENDINFO(m_nRenderFX),		8, SPROP_UNSIGNED ),
-	SendPropInt		(SENDINFO(m_nRenderMode),	8, SPROP_UNSIGNED ),
-	SendPropInt		(SENDINFO(m_fEffects),		EF_MAX_BITS, SPROP_UNSIGNED),
-	SendPropInt		(SENDINFO(m_clrRender),	32, SPROP_UNSIGNED, SendProxy_Color32ToInt32 ),
-	SendPropInt		(SENDINFO(m_iTeamNum),		TEAMNUM_NUM_BITS, 0),
-	SendPropInt		(SENDINFO(m_iPendingTeamNum),		TEAMNUM_NUM_BITS, 0),
 #ifdef INFESTED_DLL
-	SendPropInt		(SENDINFO(m_CollisionGroup), 6, SPROP_UNSIGNED),
 #else
-	SendPropInt		(SENDINFO(m_CollisionGroup), 5, SPROP_UNSIGNED),
 #endif
-	SendPropFloat	(SENDINFO(m_flElasticity), 0, SPROP_COORD),
-	SendPropFloat	(SENDINFO(m_flShadowCastDistance), 12, SPROP_UNSIGNED ),
-	SendPropEHandle (SENDINFO(m_hOwnerEntity)),
-	SendPropEHandle (SENDINFO(m_hEffectEntity)),
-	SendPropEHandle (SENDINFO_NAME(m_hMoveParent, moveparent)),
-	SendPropInt		(SENDINFO(m_iParentAttachment), NUM_PARENTATTACHMENT_BITS, SPROP_UNSIGNED),
-
-	SendPropStringT( SENDINFO( m_iName ) ),
-
 #ifdef PORTAL2
-	SendPropStringT( SENDINFO( m_iSignifierName ) ),
 #endif // PORTAL2
-
-	SendPropInt		(SENDINFO_NAME( m_MoveType, movetype ), MOVETYPE_MAX_BITS, SPROP_UNSIGNED ),
-	SendPropInt		(SENDINFO_NAME( m_MoveCollide, movecollide ), MOVECOLLIDE_MAX_BITS, SPROP_UNSIGNED ),
 #if PREDICTION_ERROR_CHECK_LEVEL > 1 
-	SendPropVector	(SENDINFO(m_angRotation), SENDPROP_ANGROTATION_DEFAULT_BITS, SPROP_NOSCALE|SPROP_CHANGES_OFTEN, 0, HIGH_DEFAULT, SendProxy_Angles ),
 #else
-	SendPropQAngles	(SENDINFO(m_angRotation), SENDPROP_ANGROTATION_DEFAULT_BITS, SPROP_CHANGES_OFTEN, SendProxy_Angles ),
 #endif
-
-	SendPropInt		( SENDINFO( m_iTextureFrameIndex ),		8, SPROP_UNSIGNED ),
-
 #if defined ( PORTAL2 )
-	SendPropInt		( SENDINFO( m_iObjectCapsCache ),		6, SPROP_UNSIGNED ),
 #endif
-
 #if !defined( NO_ENTITY_PREDICTION ) && defined( USE_PREDICTABLEID )
-	SendPropEHandle (SENDINFO(m_hPlayerSimulationOwner)),
-	SendPropDataTable( "predictable_id", 0, &REFERENCE_SEND_TABLE( DT_PredictableId ), SendProxy_SendPredictableId ),
 #endif
-
-	// FIXME: Collapse into another flag field?
-	SendPropInt( SENDINFO(m_bSimulatedEveryTick),		1, SPROP_UNSIGNED ),
-	SendPropInt( SENDINFO(m_bAnimatedEveryTick),		1, SPROP_UNSIGNED ),
-	SendPropBool( SENDINFO( m_bAlternateSorting )),
-	SendPropBool( SENDINFO( m_bSpotted )),
-	SendPropArray3( SENDINFO_ARRAY3(m_bSpottedByMask), SendPropInt( SENDINFO_ARRAY( m_bSpottedByMask ), -1, SPROP_UNSIGNED ) ),
-
-	SendPropBool( SENDINFO( m_bIsAutoaimTarget )),
-
-	// Fading
-	SendPropFloat( SENDINFO( m_fadeMinDist ),			0, SPROP_NOSCALE ),
-	SendPropFloat( SENDINFO( m_fadeMaxDist ),			0, SPROP_NOSCALE ),
-	SendPropFloat( SENDINFO( m_flFadeScale ),			0, SPROP_NOSCALE ),
-
-// #ifndef _GAMECONSOLE -- X360 client and Win32 XLSP dedicated server need equivalent SendTables
-	SendPropInt( SENDINFO(m_nMinCPULevel),				CPU_LEVEL_BIT_COUNT, SPROP_UNSIGNED ),
-	SendPropInt( SENDINFO(m_nMaxCPULevel),				CPU_LEVEL_BIT_COUNT, SPROP_UNSIGNED ),
-	SendPropInt( SENDINFO(m_nMinGPULevel),				GPU_LEVEL_BIT_COUNT, SPROP_UNSIGNED ),
-	SendPropInt( SENDINFO(m_nMaxGPULevel),				GPU_LEVEL_BIT_COUNT, SPROP_UNSIGNED ),
-
-	SendPropFloat(SENDINFO( m_flUseLookAtAngle ) ),
-
-	SendPropFloat( SENDINFO( m_flLastMadeNoiseTime ) ),
-
-END_SEND_TABLE()
 
 //-----------------------------------------------------------------------------
 
@@ -2109,348 +2025,12 @@ CBaseEntity *CBaseEntity::GetNextTarget( void )
 	return gEntList.FindEntityByName( NULL, m_target );
 }
 
-class CThinkContextsSaveDataOps : public CDefSaveRestoreOps
-{
-	virtual void Save( const SaveRestoreFieldInfo_t &fieldInfo, ISave *pSave )
-	{
-		AssertMsg( fieldInfo.pTypeDesc->fieldSize == 1, "CThinkContextsSaveDataOps does not support arrays");
 
-		// Write out the vector
-		CUtlVector< thinkfunc_t > *pUtlVector = (CUtlVector< thinkfunc_t > *)fieldInfo.pField;
-		SaveUtlVector( pSave, pUtlVector, FIELD_EMBEDDED );
+IMPLEMENT_REFLECT_DATAMAP_SIMPLE( thinkfunc_t )
 
-		// Get our owner
-		CBaseEntity *pOwner = (CBaseEntity*)fieldInfo.pOwner;
+IMPLEMENT_REFLECT_DATAMAP_SIMPLE( ResponseContext_t )
 
-		pSave->StartBlock();
-		// Now write out all the functions
-		for ( int i = 0; i < pUtlVector->Count(); i++ )
-		{
-			inputfunc_t *ppV = (inputfunc_t *)&((*pUtlVector)[i].m_pfnThink);
-			bool bHasFunc = (*ppV != NULL);
-			pSave->WriteBool( &bHasFunc, 1 );
-			if ( bHasFunc )
-			{
-				pSave->WriteFunction( pOwner->GetDataDescMap(), "m_pfnThink", ppV, 1 );
-			}
-		}
-		pSave->EndBlock();
-	}
-
-	virtual void Restore( const SaveRestoreFieldInfo_t &fieldInfo, IRestore *pRestore )
-	{
-		AssertMsg( fieldInfo.pTypeDesc->fieldSize == 1, "CThinkContextsSaveDataOps does not support arrays");
-
-		// Read in the vector
-		CUtlVector< thinkfunc_t > *pUtlVector = (CUtlVector< thinkfunc_t > *)fieldInfo.pField;
-		RestoreUtlVector( pRestore, pUtlVector, FIELD_EMBEDDED );
-
-		// Get our owner
-		CBaseEntity *pOwner = (CBaseEntity*)fieldInfo.pOwner;
-
-		pRestore->StartBlock();
-		// Now read in all the functions
-		for ( int i = 0; i < pUtlVector->Count(); i++ )
-		{
-			bool bHasFunc;
-			pRestore->ReadBool( &bHasFunc, 1 );
-			inputfunc_t *ppV = (inputfunc_t *)&((*pUtlVector)[i].m_pfnThink);
-			if ( bHasFunc )
-			{
-				SaveRestoreRecordHeader_t header;
-				pRestore->ReadHeader( &header );
-				pRestore->ReadFunction( pOwner->GetDataDescMap(), ppV, 1, header.size );
-			}
-			else
-			{
-				*ppV = NULL;
-			}
-		}
-		pRestore->EndBlock();
-	}
-
-	virtual bool IsEmpty( const SaveRestoreFieldInfo_t &fieldInfo )
-	{
-		CUtlVector< thinkfunc_t > *pUtlVector = (CUtlVector< thinkfunc_t > *)fieldInfo.pField;
-		return ( pUtlVector->Count() == 0 );
-	}
-
-	virtual void MakeEmpty( const SaveRestoreFieldInfo_t &fieldInfo )
-	{
-		BASEPTR pFunc = *((BASEPTR*)fieldInfo.pField);
-		pFunc = NULL;
-	}
-};
-CThinkContextsSaveDataOps g_ThinkContextsSaveDataOps;
-ISaveRestoreOps *thinkcontextFuncs = &g_ThinkContextsSaveDataOps;
-
-BEGIN_SIMPLE_DATADESC( thinkfunc_t )
-
-	DEFINE_FIELD( m_iszContext,	FIELD_STRING ),
-	// DEFINE_FIELD( m_pfnThink,		FIELD_FUNCTION ),		// Manually written
-	DEFINE_FIELD( m_nNextThinkTick,	FIELD_TICK	),
-	DEFINE_FIELD( m_nLastThinkTick,	FIELD_TICK	),
-
-END_DATADESC()
-
-BEGIN_SIMPLE_DATADESC( ResponseContext_t )
-
-	DEFINE_FIELD( m_iszName,			FIELD_STRING ),
-	DEFINE_FIELD( m_iszValue,			FIELD_STRING ),
-	DEFINE_FIELD( m_fExpirationTime,	FIELD_TIME ),
-
-END_DATADESC()
-
-BEGIN_DATADESC_NO_BASE( CBaseEntity )
-
-	DEFINE_KEYFIELD( m_iClassname, FIELD_STRING, "classname" ),
-	DEFINE_GLOBAL_KEYFIELD( m_iGlobalname, FIELD_STRING, "globalname" ),
-	DEFINE_KEYFIELD( m_iParent, FIELD_STRING, "parentname" ),
-
-	DEFINE_KEYFIELD( m_nMinCPULevel, FIELD_CHARACTER, "mincpulevel" ),
-	DEFINE_KEYFIELD( m_nMaxCPULevel, FIELD_CHARACTER, "maxcpulevel" ),
-	DEFINE_KEYFIELD( m_nMinGPULevel, FIELD_CHARACTER, "mingpulevel" ),
-	DEFINE_KEYFIELD( m_nMaxGPULevel, FIELD_CHARACTER, "maxgpulevel" ),
-
-	DEFINE_KEYFIELD( m_iHammerID, FIELD_INTEGER, "hammerid" ), // save ID numbers so that entities can be tracked between save/restore and vmf
-
-	DEFINE_KEYFIELD( m_flSpeed, FIELD_FLOAT, "speed" ),
-	DEFINE_KEYFIELD( m_nRenderFX, FIELD_CHARACTER, "renderfx" ),
-	DEFINE_KEYFIELD( m_nRenderMode, FIELD_CHARACTER, "rendermode" ),
-
-	// Consider moving to CBaseAnimating?
-	DEFINE_FIELD( m_flPrevAnimTime, FIELD_TIME ),
-	DEFINE_FIELD( m_flAnimTime, FIELD_TIME ),
-	DEFINE_FIELD( m_flSimulationTime, FIELD_TIME ),
-#if defined(ENABLE_CREATE_TIME)
-	DEFINE_FIELD( m_flCreateTime, FIELD_TIME ),
-#endif
-	DEFINE_FIELD( m_nLastThinkTick, FIELD_TICK ),
-
-	DEFINE_FIELD( m_iszScriptId, FIELD_STRING ),
-	// m_ScriptScope;
-	// m_hScriptInstance;
-
-	DEFINE_KEYFIELD( m_iszVScripts, FIELD_STRING, "vscripts" ),
-	DEFINE_KEYFIELD( m_iszScriptThinkFunction, FIELD_STRING, "thinkfunction" ),
-	DEFINE_KEYFIELD( m_nNextThinkTick, FIELD_TICK, "nextthink" ),
-	DEFINE_KEYFIELD( m_fEffects, FIELD_INTEGER, "effects" ),
-	DEFINE_KEYFIELD( m_clrRender, FIELD_COLOR32, "rendercolor" ),
-	DEFINE_GLOBAL_KEYFIELD( m_nModelIndex, FIELD_SHORT, "modelindex" ),
-#if !defined( NO_ENTITY_PREDICTION ) && defined( USE_PREDICTABLEID )
-	// DEFINE_FIELD( m_PredictableID, CPredictableId ),
-#endif
-	DEFINE_FIELD( touchStamp, FIELD_INTEGER ),
-	DEFINE_CUSTOM_FIELD( m_aThinkFunctions, thinkcontextFuncs ),
-	//								m_iCurrentThinkContext (not saved, debug field only, and think transient to boot)
-
-	DEFINE_UTLVECTOR(m_ResponseContexts,		FIELD_EMBEDDED),
-	DEFINE_KEYFIELD( m_iszResponseContext, FIELD_STRING, "ResponseContext" ),
-
-	DEFINE_FIELD( m_pfnThink, FIELD_FUNCTION ),
-	DEFINE_FIELD( m_pfnTouch, FIELD_FUNCTION ),
-	DEFINE_FIELD( m_pfnUse, FIELD_FUNCTION ),
-	DEFINE_FIELD( m_pfnBlocked, FIELD_FUNCTION ),
-	DEFINE_FIELD( m_pfnMoveDone, FIELD_FUNCTION ),
-
-	DEFINE_FIELD( m_lifeState, FIELD_CHARACTER ),
-	DEFINE_FIELD( m_takedamage, FIELD_CHARACTER ),
-	DEFINE_KEYFIELD( m_iMaxHealth, FIELD_INTEGER, "max_health" ),
-	DEFINE_KEYFIELD( m_iHealth, FIELD_INTEGER, "health" ),
-	// DEFINE_FIELD( m_pLink, FIELD_CLASSPTR ),
-	DEFINE_KEYFIELD( m_bIsAutoaimTarget, FIELD_BOOLEAN, "is_autoaim_target" ),
-	DEFINE_KEYFIELD( m_target, FIELD_STRING, "target" ),
-
-	DEFINE_KEYFIELD( m_iszDamageFilterName, FIELD_STRING, "damagefilter" ),
-	DEFINE_FIELD( m_hDamageFilter, FIELD_EHANDLE ),
-	
-	DEFINE_FIELD( m_debugOverlays, FIELD_INTEGER ),
-
-	DEFINE_GLOBAL_FIELD( m_pParent, FIELD_EHANDLE ),
-	DEFINE_FIELD( m_iParentAttachment, FIELD_CHARACTER ),
-	DEFINE_GLOBAL_FIELD( m_hMoveParent, FIELD_EHANDLE ),
-	DEFINE_GLOBAL_FIELD( m_hMoveChild, FIELD_EHANDLE ),
-	DEFINE_GLOBAL_FIELD( m_hMovePeer, FIELD_EHANDLE ),
-	
-	DEFINE_FIELD( m_iEFlags, FIELD_INTEGER ),
-
-	DEFINE_FIELD( m_iName, FIELD_STRING ),
-
-#ifdef PORTAL2
-	DEFINE_FIELD( m_iSignifierName, FIELD_STRING ),
-#endif // PORTAL2
-
-	DEFINE_EMBEDDED( m_Collision ),
-	DEFINE_EMBEDDED( m_Network ),
-
-	DEFINE_KEYFIELD( m_MoveType, FIELD_CHARACTER, "MoveType" ),
-	DEFINE_FIELD( m_MoveCollide, FIELD_CHARACTER ),
-	DEFINE_FIELD( m_hOwnerEntity, FIELD_EHANDLE ),
-	DEFINE_KEYFIELD( m_CollisionGroup, FIELD_INTEGER, "CollisionGroup" ),
-	DEFINE_PHYSPTR( m_pPhysicsObject),
-	DEFINE_FIELD( m_flElasticity, FIELD_FLOAT ),
-	DEFINE_KEYFIELD( m_flShadowCastDistance, FIELD_FLOAT, "shadowcastdist" ),
-	DEFINE_FIELD( m_flDesiredShadowCastDistance, FIELD_FLOAT ),
-
-	DEFINE_INPUT( m_iInitialTeamNum, FIELD_INTEGER, "TeamNum" ),
-	DEFINE_KEYFIELD( m_iTeamNum, FIELD_INTEGER, "teamnumber" ),
-	DEFINE_KEYFIELD( m_iPendingTeamNum, FIELD_INTEGER, "pendingteamnumber" ),
-
-//	DEFINE_FIELD( m_bSentLastFrame, FIELD_INTEGER ),
-
-#if defined ( PORTAL2 )
-	DEFINE_FIELD( m_iObjectCapsCache, FIELD_INTEGER ),
-#endif 
-
-	DEFINE_FIELD( m_hGroundEntity, FIELD_EHANDLE ),
-	DEFINE_FIELD( m_flGroundChangeTime, FIELD_TIME ),
-	DEFINE_GLOBAL_KEYFIELD( m_ModelName, FIELD_MODELNAME, "model" ),
-
-	DEFINE_KEYFIELD( m_AIAddOn, FIELD_STRING, "addon" ),
-	
-	DEFINE_KEYFIELD( m_vecBaseVelocity, FIELD_VECTOR, "basevelocity" ),
-	DEFINE_FIELD( m_vecAbsVelocity, FIELD_VECTOR ),
-	DEFINE_KEYFIELD( m_vecAngVelocity, FIELD_VECTOR, "avelocity" ),
-//	DEFINE_FIELD( m_vecAbsAngVelocity, FIELD_VECTOR ),
-	DEFINE_ARRAY( m_rgflCoordinateFrame, FIELD_FLOAT, 12 ), // NOTE: MUST BE IN LOCAL SPACE, NOT POSITION_VECTOR!!! (see CBaseEntity::Restore)
-
-	DEFINE_KEYFIELD( m_nWaterLevel, FIELD_CHARACTER, "waterlevel" ),
-	DEFINE_FIELD( m_nWaterType, FIELD_CHARACTER ),
-	DEFINE_FIELD( m_pBlocker, FIELD_EHANDLE ),
-
-	DEFINE_KEYFIELD( m_flGravity, FIELD_FLOAT, "gravity" ),
-	DEFINE_KEYFIELD( m_flFriction, FIELD_FLOAT, "friction" ),
-
-	// Local time is local to each object.  It doesn't need to be re-based if the clock
-	// changes.  Therefore it is saved as a FIELD_FLOAT, not a FIELD_TIME
-	DEFINE_KEYFIELD( m_flLocalTime, FIELD_FLOAT, "ltime" ),
-	DEFINE_FIELD( m_flVPhysicsUpdateLocalTime, FIELD_FLOAT ),
-	DEFINE_FIELD( m_flMoveDoneTime, FIELD_FLOAT ),
-
-//	DEFINE_FIELD( m_nPushEnumCount, FIELD_INTEGER ),
-
-	DEFINE_FIELD( m_vecAbsOrigin, FIELD_POSITION_VECTOR ),
-	DEFINE_KEYFIELD( m_vecVelocity, FIELD_VECTOR, "velocity" ),
-	DEFINE_KEYFIELD( m_iTextureFrameIndex, FIELD_CHARACTER, "texframeindex" ),
-	DEFINE_FIELD( m_bSimulatedEveryTick, FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_bAnimatedEveryTick, FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_bAlternateSorting, FIELD_BOOLEAN ),
-	//DEFINE_FIELD( m_bSpotted, FIELD_BOOLEAN ),
-	DEFINE_KEYFIELD( m_spawnflags, FIELD_INTEGER, "spawnflags" ),
-	DEFINE_FIELD( m_nTransmitStateOwnedCounter, FIELD_CHARACTER ),
-	DEFINE_FIELD( m_angAbsRotation, FIELD_VECTOR ),
-	DEFINE_FIELD( m_vecOrigin, FIELD_VECTOR ),			// NOTE: MUST BE IN LOCAL SPACE, NOT POSITION_VECTOR!!! (see CBaseEntity::Restore)
-	DEFINE_FIELD( m_angRotation, FIELD_VECTOR ),
-	DEFINE_FIELD( m_bClientSideRagdoll, FIELD_BOOLEAN ),
-
-	DEFINE_KEYFIELD( m_vecViewOffset, FIELD_VECTOR, "view_ofs" ),
-
-	DEFINE_FIELD( m_fFlags, FIELD_INTEGER ),
-#if !defined( NO_ENTITY_PREDICTION )
-//	DEFINE_FIELD( m_bIsPlayerSimulated, FIELD_INTEGER ),
-//	DEFINE_FIELD( m_hPlayerSimulationOwner, FIELD_EHANDLE ),
-#endif
-	// DEFINE_FIELD( m_pTimedOverlay, TimedOverlay_t* ),
-	DEFINE_FIELD( m_nSimulationTick, FIELD_TICK ),
-	// DEFINE_FIELD( m_RefEHandle, CBaseHandle ),
-
-//	DEFINE_FIELD( m_nWaterTouch,		FIELD_INTEGER ),
-//	DEFINE_FIELD( m_nSlimeTouch,		FIELD_INTEGER ),
-	DEFINE_FIELD( m_flNavIgnoreUntilTime,	FIELD_TIME ),
-
-//	DEFINE_FIELD( m_bToolRecording,		FIELD_BOOLEAN ),
-//	DEFINE_FIELD( m_ToolHandle,		FIELD_INTEGER ),
-
-	// NOTE: This is tricky. TeamNum must be saved, but we can't directly
-	// read it in, because we can only set it after the team entity has been read in,
-	// which may or may not actually occur before the entity is parsed.
-	// Therefore, we set the TeamNum from the InitialTeamNum in Activate
-	DEFINE_INPUTFUNC( FIELD_INTEGER, "SetTeam", InputSetTeam ),
-
-	DEFINE_INPUT( m_fadeMinDist, FIELD_FLOAT, "fademindist" ),
-	DEFINE_INPUT( m_fadeMaxDist, FIELD_FLOAT, "fademaxdist" ),
-	DEFINE_KEYFIELD( m_flFadeScale, FIELD_FLOAT, "fadescale" ),
-
-	DEFINE_INPUTFUNC( FIELD_VOID, "Kill", InputKill ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "KillHierarchy", InputKillHierarchy ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "Use", InputUse ),
-	DEFINE_INPUTFUNC( FIELD_INTEGER, "Alpha", InputAlpha ),
-	DEFINE_INPUTFUNC( FIELD_BOOLEAN, "AlternativeSorting", InputAlternativeSorting ),
-	DEFINE_INPUTFUNC( FIELD_COLOR32, "Color", InputColor ),
-	DEFINE_INPUTFUNC( FIELD_STRING, "SetParent", InputSetParent ),
-	DEFINE_INPUTFUNC( FIELD_STRING, "SetParentAttachment", InputSetParentAttachment ),
-	DEFINE_INPUTFUNC( FIELD_STRING, "SetParentAttachmentMaintainOffset", InputSetParentAttachmentMaintainOffset ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "ClearParent", InputClearParent ),
-	DEFINE_INPUTFUNC( FIELD_STRING, "SetLocalOrigin", InputSetLocalOrigin ),
-	DEFINE_INPUTFUNC( FIELD_STRING, "SetLocalAngles", InputSetLocalAngles ),
-	DEFINE_INPUTFUNC( FIELD_STRING, "SetDamageFilter", InputSetDamageFilter ),
-
-	DEFINE_INPUTFUNC( FIELD_VOID, "EnableDamageForces", InputEnableDamageForces ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "DisableDamageForces", InputDisableDamageForces ),
-
-	DEFINE_INPUTFUNC( FIELD_STRING, "DispatchResponse", InputDispatchResponse ),
-
-	// Entity I/O methods to alter context
-	DEFINE_INPUTFUNC( FIELD_STRING, "AddContext", InputAddContext ),
-	DEFINE_INPUTFUNC( FIELD_STRING, "RemoveContext", InputRemoveContext ),
-	DEFINE_INPUTFUNC( FIELD_STRING, "ClearContext", InputClearContext ),
-
-	DEFINE_INPUTFUNC( FIELD_VOID, "DisableShadow", InputDisableShadow ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "EnableShadow", InputEnableShadow ),
-
-	DEFINE_INPUTFUNC( FIELD_VOID, "DisableDraw", InputDisableDraw ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "EnableDraw", InputEnableDraw ),
-
-	DEFINE_INPUTFUNC( FIELD_VOID, "DisableReceivingFlashlight", InputDisableReceivingFlashlight ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "EnableReceivingFlashlight", InputEnableReceivingFlashlight ),
-
-	DEFINE_INPUTFUNC( FIELD_VOID, "DisableDrawInFastReflection", InputDisableDrawInFastReflection ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "EnableDrawInFastReflection", InputEnableDrawInFastReflection ),
-
-	DEFINE_INPUTFUNC( FIELD_STRING, "AddOutput", InputAddOutput ),
-
-	DEFINE_INPUTFUNC( FIELD_STRING, "FireUser1", InputFireUser1 ),
-	DEFINE_INPUTFUNC( FIELD_STRING, "FireUser2", InputFireUser2 ),
-	DEFINE_INPUTFUNC( FIELD_STRING, "FireUser3", InputFireUser3 ),
-	DEFINE_INPUTFUNC( FIELD_STRING, "FireUser4", InputFireUser4 ),
-
-	DEFINE_INPUTFUNC( FIELD_STRING, "RunScriptFile", InputRunScriptFile ),
-	DEFINE_INPUTFUNC( FIELD_STRING, "RunScriptCode", InputRunScript ),
-	DEFINE_INPUTFUNC( FIELD_STRING, "CallScriptFunction", InputCallScriptFunction ),
-
-#ifdef PORTAL2
-	DEFINE_INPUTFUNC( FIELD_VOID, "RemovePaint", InputRemovePaint ),
-#endif
-
-	DEFINE_OUTPUT( m_OnUser1, "OnUser1" ),
-	DEFINE_OUTPUT( m_OnUser2, "OnUser2" ),
-	DEFINE_OUTPUT( m_OnUser3, "OnUser3" ),
-	DEFINE_OUTPUT( m_OnUser4, "OnUser4" ),
-
-	// Function Pointers
-	DEFINE_FUNCTION( SUB_Remove ),
-	DEFINE_FUNCTION( SUB_DoNothing ),
-	DEFINE_FUNCTION( SUB_StartFadeOut ),
-	DEFINE_FUNCTION( SUB_StartFadeOutInstant ),
-	DEFINE_FUNCTION( SUB_FadeOut ),
-	DEFINE_FUNCTION( SUB_Vanish ),
-	DEFINE_FUNCTION( SUB_CallUseToggle ),
-	DEFINE_THINKFUNC( ShadowCastDistThink ),
-#if defined(ENABLE_FRICTION_OVERRIDE)
-	DEFINE_THINKFUNC( FrictionRevertThink ),
-#endif
-	DEFINE_THINKFUNC( ScriptThink ),
-
-	DEFINE_FIELD( m_hEffectEntity, FIELD_EHANDLE ),
-
-	//DEFINE_FIELD( m_DamageModifiers, FIELD_?? ), // can't save?
-	// DEFINE_FIELD( m_fDataObjectTypes, FIELD_INTEGER ),
-
-	DEFINE_KEYFIELD( m_bLagCompensate, FIELD_BOOLEAN, "LagCompensate" ),
-	DEFINE_FIELD( m_bForcePurgeFixedupStrings, FIELD_BOOLEAN ),
-
-	DEFINE_FIELD( m_flUseLookAtAngle, FIELD_FLOAT ),
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP_NO_BASE( CBaseEntity )
 
 DEFINE_SCRIPT_INSTANCE_HELPER( CBaseEntity, &g_BaseEntityScriptInstanceHelper )
 
@@ -3692,102 +3272,6 @@ Vector CBaseEntity::GetSoundEmissionOrigin() const
 
 
 //-----------------------------------------------------------------------------
-// Purpose: Saves the current object out to disk, by iterating through the objects
-//			data description hierarchy
-// Input  : &save - save buffer which the class data is written to
-// Output : int	- 0 if the save failed, 1 on success
-//-----------------------------------------------------------------------------
-int CBaseEntity::Save( ISave &save )
-{
-	// loop through the data description list, saving each data desc block
-	int status = SaveDataDescBlock( save, GetDataDescMap() );
-
-	return status;
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: Recursively saves all the classes in an object, in reverse order (top down)
-// Output : int 0 on failure, 1 on success
-//-----------------------------------------------------------------------------
-int CBaseEntity::SaveDataDescBlock( ISave &save, datamap_t *dmap )
-{
-	return save.WriteAll( this, dmap );
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: Restores the current object from disk, by iterating through the objects
-//			data description hierarchy
-// Input  : &restore - restore buffer which the class data is read from
-// Output : int	- 0 if the restore failed, 1 on success
-//-----------------------------------------------------------------------------
-int CBaseEntity::Restore( IRestore &restore )
-{
-	// This is essential to getting the spatial partition info correct
-	CollisionProp()->DestroyPartitionHandle();
-
-	// loops through the data description list, restoring each data desc block in order
-	int status = RestoreDataDescBlock( restore, GetDataDescMap() );
-
-	// ---------------------------------------------------------------
-	// HACKHACK: We don't know the space of these vectors until now
-	// if they are worldspace, fix them up.
-	// ---------------------------------------------------------------
-	{
-		CGameSaveRestoreInfo *pGameInfo = restore.GetGameSaveRestoreInfo();
-		Vector parentSpaceOffset = pGameInfo->modelSpaceOffset;
-		if ( !GetParent() )
-		{
-			// parent is the world, so parent space is worldspace
-			// so update with the worldspace leveltransition transform
-			parentSpaceOffset += pGameInfo->GetLandmark();
-		}
-		
-		// NOTE: Do *not* use GetAbsOrigin() here because it will
-		// try to recompute m_rgflCoordinateFrame!
-		MatrixSetColumn( m_vecAbsOrigin, 3, m_rgflCoordinateFrame );
-
-		m_vecOrigin += parentSpaceOffset;
-	}
-
-	// Gotta do this after the coordframe is set up as it depends on it.
-
-	// By definition, the surrounding bounds are dirty
-	// Also, twiddling with the flags here ensures it gets added to the KD tree dirty list
-	// (We don't want to use the saved version of this flag)
-	RemoveEFlags( EFL_DIRTY_SPATIAL_PARTITION );
-	CollisionProp()->MarkSurroundingBoundsDirty();
-
-	if ( edict() && GetModelIndex() != 0 && GetModelName() != NULL_STRING && restore.GetPrecacheMode() )
-	{
-		PrecacheModel( STRING( GetModelName() ) );
-
-		//Adrian: We should only need to do this after we precache. No point in setting the model again.
-		SetModelIndex( modelinfo->GetModelIndex( STRING(GetModelName() ) ) );
-	}
-
-	// Restablish ground entity
-	if ( m_hGroundEntity != NULL )
-	{
-		m_hGroundEntity->AddEntityToGroundList( this );
-	}
-
-	// Tracker 22129
-	// This is a hack to make sure that the entity is added to the AddPostClientMessageEntity
-	//  list so that EF_NOINTERP can be cleared at the end of the frame.  Otherwise, a restored entity
-	//  with this flag will not interpolate until the next time the flag is set.  ywb
-	if ( IsEffectActive( EF_NOINTERP ) )
-	{
-		AddEffects( EF_NOINTERP );
-	}
-
-	// Ensure our cell is current
-	UpdateCell();
-
-	return status;
-}
-
-
-//-----------------------------------------------------------------------------
 // handler to do stuff before you are saved
 //-----------------------------------------------------------------------------
 void CBaseEntity::OnSave( IEntitySaveUtils *pUtils )
@@ -3855,16 +3339,6 @@ void CBaseEntity::OnRestore()
 
 	// We're not save/loading the PVS dirty state. Assume everything is dirty after a restore
 	NetworkProp()->MarkPVSInformationDirty();
-}
-
-
-//-----------------------------------------------------------------------------
-// Purpose: Recursively restores all the classes in an object, in reverse order (top down)
-// Output : int 0 on failure, 1 on success
-//-----------------------------------------------------------------------------
-int CBaseEntity::RestoreDataDescBlock( IRestore &restore, datamap_t *dmap )
-{
-	return restore.ReadAll( this, dmap );
 }
 
 //-----------------------------------------------------------------------------

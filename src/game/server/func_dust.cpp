@@ -6,14 +6,24 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "reflect_datamap.h"
 #include "func_dust_shared.h"
 #include "te_particlesystem.h"
 #include "IEffects.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
+#include "reflect_annotations.h"
+#include "reflect_sendtable.h"
+
+#define DUST_LIFETIME_NETWORK_BITS 4
+
+// memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
-class CFunc_Dust : public CBaseEntity
+class [[= ks::reflect::NetTable{ .name = "DT_Func_Dust", .base = false } ]]
+      [[= ks::reflect::From<"m_nModelIndex", ks::reflect::Net{ .enc = ks::reflect::ENC_MODELINDEX } >{} ]]
+      [[= ks::reflect::From<"m_Collision", ks::reflect::Net{}, nullptr, &REFERENCE_SEND_TABLE( DT_CollisionProperty )>{} ]]
+      CFunc_Dust : public CBaseEntity
 {
 public:
 	DECLARE_CLASS( CFunc_Dust, CBaseEntity );
@@ -36,33 +46,34 @@ public:
 // Input handles.
 public:
 	
-	void InputTurnOn( inputdata_t &inputdata );
-	void InputTurnOff( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "TurnOn", .type = FIELD_VOID } ]] void InputTurnOn( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "TurnOff", .type = FIELD_VOID } ]] void InputTurnOff( inputdata_t &inputdata );
 
 
 // FGD properties.
 public:
 
-	CNetworkVar( color32, m_Color );
-	CNetworkVar( int, m_SpawnRate );
+	CNetworkVar( color32, m_Color, [[= ks::reflect::Net{ .bits = 32, .flags = SPROP_UNSIGNED } ]]
+	                              [[= ks::reflect::Proxy<SendProxy_Color32ToInt32, ks::reflect::WIRE_SEND>{} ]] [[= ks::reflect::Key{ .name = "Color" } ]] );
+	CNetworkVar( int, m_SpawnRate, [[= ks::reflect::Net{ .bits = 12, .flags = SPROP_UNSIGNED } ]] [[= ks::reflect::Key{ .name = "SpawnRate" } ]] );
 	
-	CNetworkVar( float, m_flSizeMin );
-	CNetworkVar( float, m_flSizeMax );
+	CNetworkVar( float, m_flSizeMin, [[= ks::reflect::Net{ .flags = SPROP_NOSCALE } ]] [[= ks::reflect::Key{ .name = "SizeMin" } ]] );
+	CNetworkVar( float, m_flSizeMax, [[= ks::reflect::Net{ .flags = SPROP_NOSCALE } ]] [[= ks::reflect::Key{ .name = "SizeMax" } ]] );
 
-	CNetworkVar( int, m_SpeedMax );
+	CNetworkVar( int, m_SpeedMax, [[= ks::reflect::Net{ .bits = 12, .flags = SPROP_UNSIGNED } ]] [[= ks::reflect::Key{ .name = "SpeedMax" } ]] );
 
-	CNetworkVar( int, m_LifetimeMin );
-	CNetworkVar( int, m_LifetimeMax );
+	CNetworkVar( int, m_LifetimeMin, [[= ks::reflect::Net{ .bits = DUST_LIFETIME_NETWORK_BITS, .flags = SPROP_UNSIGNED } ]] [[= ks::reflect::Key{ .name = "LifetimeMin" } ]] );
+	CNetworkVar( int, m_LifetimeMax, [[= ks::reflect::Net{ .bits = DUST_LIFETIME_NETWORK_BITS, .flags = SPROP_UNSIGNED } ]] [[= ks::reflect::Key{ .name = "LifetimeMax" } ]] );
 
-	CNetworkVar( int, m_DistMax );
+	CNetworkVar( int, m_DistMax, [[= ks::reflect::Net{ .bits = 16, .flags = SPROP_UNSIGNED } ]] [[= ks::reflect::Key{ .name = "DistMax" } ]] );
 
-	CNetworkVar( float, m_FallSpeed );
+	CNetworkVar( float, m_FallSpeed, [[= ks::reflect::Net{ .flags = SPROP_NOSCALE } ]] [[= ks::reflect::Key{ .name = "FallSpeed" } ]] );
 
-	CNetworkVar( bool, m_bAffectedByWind );
+	CNetworkVar( bool, m_bAffectedByWind, [[= ks::reflect::Net{} ]] [[= ks::reflect::Key{ .name = "AffectedByWind" } ]] );
 
 public:
 
-	CNetworkVar( int, m_DustFlags );	// Combination of DUSTFLAGS_
+	CNetworkVar( int, m_DustFlags, [[= ks::reflect::Net{ .bits = DUST_NUMFLAGS, .flags = SPROP_UNSIGNED } ]] );	// Combination of DUSTFLAGS_
 
 private:	
 	int			m_iAlpha;
@@ -85,47 +96,10 @@ public:
 };
 
 // Changing this will break demos. Peeling it out to clamp post creation to fix some shipped maps that specify out of range lifetimes. 
-#define DUST_LIFETIME_NETWORK_BITS 4
-
-IMPLEMENT_SERVERCLASS_ST_NOBASE( CFunc_Dust, DT_Func_Dust )
-	SendPropInt( SENDINFO(m_Color),	32, SPROP_UNSIGNED, SendProxy_Color32ToInt32 ),
-	SendPropInt( SENDINFO(m_SpawnRate),	12, SPROP_UNSIGNED ),
-	SendPropInt( SENDINFO(m_SpeedMax),	12, SPROP_UNSIGNED ),
-	SendPropFloat( SENDINFO(m_flSizeMin), 0, SPROP_NOSCALE ),
-	SendPropFloat( SENDINFO(m_flSizeMax), 0, SPROP_NOSCALE ),
-	SendPropInt( SENDINFO(m_DistMax), 16, SPROP_UNSIGNED ),
-	SendPropInt( SENDINFO( m_LifetimeMin ), DUST_LIFETIME_NETWORK_BITS, SPROP_UNSIGNED ),
-	SendPropInt( SENDINFO( m_LifetimeMax ), DUST_LIFETIME_NETWORK_BITS, SPROP_UNSIGNED ),
-	SendPropInt( SENDINFO(m_DustFlags), DUST_NUMFLAGS, SPROP_UNSIGNED ),
-
-	SendPropModelIndex( SENDINFO(m_nModelIndex) ),
-	SendPropFloat( SENDINFO(m_FallSpeed), 0, SPROP_NOSCALE ),
-	SendPropBool( SENDINFO(m_bAffectedByWind) ),
-	SendPropDataTable( SENDINFO_DT( m_Collision ), &REFERENCE_SEND_TABLE(DT_CollisionProperty) ),
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CFunc_Dust, DT_Func_Dust )
 
 
-BEGIN_DATADESC( CFunc_Dust )
-
-	DEFINE_FIELD( m_DustFlags,FIELD_INTEGER ),
-
-	DEFINE_KEYFIELD( m_Color,		FIELD_COLOR32,	"Color" ),
-	DEFINE_KEYFIELD( m_SpawnRate,	FIELD_INTEGER,	"SpawnRate" ),
-	DEFINE_KEYFIELD( m_flSizeMin,	FIELD_FLOAT,	"SizeMin" ),
-	DEFINE_KEYFIELD( m_flSizeMax,	FIELD_FLOAT,	"SizeMax" ),
-	DEFINE_KEYFIELD( m_SpeedMax,		FIELD_INTEGER,	"SpeedMax" ),
-	DEFINE_KEYFIELD( m_LifetimeMin,	FIELD_INTEGER,	"LifetimeMin" ),
-	DEFINE_KEYFIELD( m_LifetimeMax,	FIELD_INTEGER,	"LifetimeMax" ),
-	DEFINE_KEYFIELD( m_DistMax,		FIELD_INTEGER,	"DistMax" ),
-	DEFINE_FIELD( m_iAlpha,			FIELD_INTEGER ),
-	DEFINE_KEYFIELD( m_FallSpeed,	FIELD_FLOAT,	"FallSpeed" ),
-	DEFINE_KEYFIELD( m_bAffectedByWind,	FIELD_BOOLEAN,	"AffectedByWind" ),
-
-	DEFINE_INPUTFUNC( FIELD_VOID, "TurnOn",  InputTurnOn ),
-	DEFINE_INPUTFUNC( FIELD_VOID, "TurnOff", InputTurnOff )
-
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CFunc_Dust )
 
 LINK_ENTITY_TO_CLASS( func_dustmotes, CFunc_DustMotes );
 LINK_ENTITY_TO_CLASS( func_dustcloud, CFunc_DustCloud );
@@ -245,7 +219,8 @@ void CFunc_Dust::InputTurnOff( inputdata_t &inputdata )
 // Dust
 //
 
-class CTEDust : public CTEParticleSystem
+class [[= ks::reflect::NetTable{ .name = "DT_TEDust" } ]]
+      CTEDust : public CTEParticleSystem
 {
 public:
 	DECLARE_CLASS( CTEDust, CTEParticleSystem );
@@ -256,9 +231,9 @@ public:
 
 	virtual void	Test( const Vector& current_origin, const QAngle& current_angles ) { };
 	
-	CNetworkVar( float, m_flSize );
-	CNetworkVar( float, m_flSpeed );
-	CNetworkVector( m_vecDirection );
+	CNetworkVar( float, m_flSize, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD } ]] );
+	CNetworkVar( float, m_flSpeed, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD } ]] );
+	CNetworkVector( m_vecDirection, [[= ks::reflect::Net{ .bits = 4, .low = -1.0f, .high = 1.0f, .enc = ks::reflect::ENC_VECTOR } ]] );
 };
 
 CTEDust::CTEDust( const char *name ) : BaseClass( name )
@@ -272,11 +247,7 @@ CTEDust::~CTEDust( void )
 {
 }
 
-IMPLEMENT_SERVERCLASS_ST( CTEDust, DT_TEDust )
-	SendPropFloat( SENDINFO(m_flSize), -1, SPROP_COORD ),
-	SendPropFloat( SENDINFO(m_flSpeed), -1, SPROP_COORD ),
-	SendPropVector( SENDINFO(m_vecDirection), 4, 0, -1.0f, 1.0f ), // cheap normal
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CTEDust, DT_TEDust )
 
 static CTEDust g_TEDust( "Dust" );
 
@@ -310,23 +281,15 @@ public:
 protected:
 
 	// Input handlers
-	void InputSpawnDust( inputdata_t &inputdata );
+	[[= ks::reflect::Input{ .name = "SpawnDust", .type = FIELD_VOID } ]] void InputSpawnDust( inputdata_t &inputdata );
 
-	float		m_flScale;
-	color32		m_rgbaColor;
+	[[= ks::reflect::Key{ .name = "scale" } ]] float		m_flScale;
+	[[= ks::reflect::Key{ .name = "color" } ]] color32		m_rgbaColor;
 };
 
 LINK_ENTITY_TO_CLASS( env_dustpuff, CEnvDustPuff );
 
-BEGIN_DATADESC( CEnvDustPuff )
-
-	DEFINE_KEYFIELD( m_flScale, FIELD_FLOAT, "scale" ),
-	DEFINE_KEYFIELD( m_rgbaColor, FIELD_COLOR32, "color" ),
-
-	// Function Pointers
-	DEFINE_INPUTFUNC( FIELD_VOID, "SpawnDust", InputSpawnDust ),
-
-END_DATADESC()
+IMPLEMENT_REFLECT_DATAMAP( CEnvDustPuff )
 
 
 //-----------------------------------------------------------------------------

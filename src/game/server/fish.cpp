@@ -10,8 +10,9 @@
 // Author: Michael S. Booth, April 2005
 
 #include "cbase.h"
+#include "reflect_sendtable.h"
+#include "reflect_annotations.h"
 #include "fish.h"
-#include "saverestore_utlvector.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -24,22 +25,6 @@ LINK_ENTITY_TO_CLASS( fish, CFish );
 
 
 //-----------------------------------------------------------------------------------------------------
-BEGIN_DATADESC( CFish )
-	DEFINE_FIELD( m_pool, FIELD_EHANDLE ),
-	DEFINE_FIELD( m_id, FIELD_INTEGER ),
-	DEFINE_FIELD( m_angle, FIELD_FLOAT ),
-	DEFINE_FIELD( m_angleChange, FIELD_FLOAT ),
-	DEFINE_FIELD( m_forward, FIELD_VECTOR ),
-	DEFINE_FIELD( m_perp, FIELD_VECTOR ),
-	DEFINE_FIELD( m_poolOrigin, FIELD_POSITION_VECTOR ),
-	DEFINE_FIELD( m_waterLevel, FIELD_FLOAT ),
-	DEFINE_FIELD( m_speed, FIELD_FLOAT ),
-	DEFINE_FIELD( m_desiredSpeed, FIELD_FLOAT ),
-	DEFINE_FIELD( m_calmSpeed, FIELD_FLOAT ),
-	DEFINE_FIELD( m_panicSpeed, FIELD_FLOAT ),
-	DEFINE_FIELD( m_avoidRange, FIELD_FLOAT ),
-	DEFINE_FIELD( m_turnClockwise, FIELD_BOOLEAN ),
-END_DATADESC()
 
 
 //-----------------------------------------------------------------------------------------------------
@@ -88,22 +73,7 @@ void SendProxy_FishAngle( const SendProp *pProp, const void *pStruct, const void
  * The pool origin must arrive befoore m_x and m_y or the fish will
  * respawn at the origin and zip back to their proper places.
  */
-IMPLEMENT_SERVERCLASS_ST_NOBASE( CFish, DT_CFish )
-
-	SendPropVector( SENDINFO(m_poolOrigin), -1, SPROP_COORD, 0.0f, HIGH_DEFAULT ),	// only sent once
-
-	SendPropFloat( SENDINFO(m_angle), 7, 0 /*SPROP_CHANGES_OFTEN*/, 0.0f, 360.0f, SendProxy_FishAngle ),
-
-	SendPropFloat( SENDINFO(m_x), 7, 0 /*SPROP_CHANGES_OFTEN*/, -255.0f, 255.0f ),
-	SendPropFloat( SENDINFO(m_y), 7, 0 /*SPROP_CHANGES_OFTEN*/, -255.0f, 255.0f ),
-	SendPropFloat( SENDINFO(m_z), -1, SPROP_COORD ),								// only sent once
-
-	SendPropModelIndex( SENDINFO(m_nModelIndex) ),
-	SendPropInt( SENDINFO(m_lifeState) ),
-
-	SendPropFloat( SENDINFO(m_waterLevel) ),										// only sent once
-
-END_SEND_TABLE()
+IMPLEMENT_REFLECT_SERVERCLASS( CFish, DT_CFish )
 
 
 
@@ -531,18 +501,6 @@ void CFish::AddVisible( CFish *fish )
 
 LINK_ENTITY_TO_CLASS( func_fish_pool, CFishPool );
 
-BEGIN_DATADESC( CFishPool )
-
-	DEFINE_FIELD( m_fishCount, FIELD_INTEGER ),
-	DEFINE_FIELD( m_maxRange, FIELD_FLOAT ),
-	DEFINE_FIELD( m_swimDepth, FIELD_FLOAT ),
-	DEFINE_FIELD( m_waterLevel, FIELD_FLOAT ),
-	DEFINE_FIELD( m_isDormant, FIELD_BOOLEAN ),
-	DEFINE_UTLVECTOR( m_fishes, FIELD_EHANDLE ),
-
-	DEFINE_THINKFUNC( Update ),
-
-END_DATADESC()
 
 
 //-------------------------------------------------------------------------------------------------------------
