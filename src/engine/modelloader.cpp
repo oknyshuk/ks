@@ -62,6 +62,7 @@
 #include "networkstringtable.h"
 #include "fmtstr.h"
 #include "engine_model_client.h"
+#include "filemapping.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -497,7 +498,88 @@ static char				s_szMapPathName[MAX_PATH];
 static char				s_szMapPathNameOnDisk[MAX_PATH];
 static worldbrushdata_t	*s_pMap = NULL;
 static int				s_nMapLoadRecursion = 0;
-CMemoryStack			s_MapBuffer;
+
+// The whole BSP, when we have all of it addressable at once: either our own
+// mapping of the file (the common case) or a buffer handed to us by
+// InitFromMemory. Empty when neither applies, in which case lumps are read
+// individually through the filesystem. Lump offsets in the BSP header index
+// into this directly, so it is only ever a view of the *main* bsp file --
+// never of a lump file patching one of its lumps.
+static CFileMapping					s_MapMapping;
+static std::span<const std::byte>	s_BSPView;
+
+static ConVar mod_mmap_bsp( "mod_mmap_bsp", "1", 0, "Memory map the bsp during level load instead of reading each lump separately." );
+
+//-----------------------------------------------------------------------------
+// Returns the whole bsp if it is addressable in memory, otherwise an empty span.
+//-----------------------------------------------------------------------------
+static std::span<const std::byte> GetBSPView()
+{
+	return s_BSPView;
+}
+
+//-----------------------------------------------------------------------------
+// Returns the [nOffset, nOffset + nSize) slice of the in-memory bsp, or an
+// empty span if we have no in-memory bsp or the range escapes it. Callers must
+// treat empty as "go read it from disk", not as "the lump is empty".
+//-----------------------------------------------------------------------------
+static std::span<const std::byte> GetBSPSlice( int nOffset, int nSize )
+{
+	const std::span<const std::byte> view = GetBSPView();
+	if ( view.empty() || nOffset < 0 || nSize < 0 )
+		return {};
+
+	const size_t nStart = static_cast<size_t>( nOffset );
+	const size_t nCount = static_cast<size_t>( nSize );
+	if ( nStart > view.size() || nCount > view.size() - nStart )
+	{
+		// Truncated or corrupt bsp: the header describes bytes the file does not
+		// have. Reading through the mapping would fault, so refuse the slice.
+		Warning( "Bsp lump range %d+%d exceeds file size %zu in %s\n", nOffset, nSize, view.size(), s_szMapPathName );
+		return {};
+	}
+
+	return view.subspan( nStart, nCount );
+}
+
+//-----------------------------------------------------------------------------
+// Try to map the bsp so that every lump is a pointer into the file instead of
+// a seek, an allocation and a read. Purely an optimization: failure is normal
+// for maps served out of a pack file, and leaves the read path in charge.
+//-----------------------------------------------------------------------------
+static void TryMapBSPFile( const char *pszMapPathName )
+{
+	Assert( !s_MapMapping.IsMapped() && s_BSPView.empty() );
+
+	if ( !mod_mmap_bsp.GetBool() )
+		return;
+
+	char szNameOnDisk[MAX_PATH];
+	GetMapPathNameOnDisk( szNameOnDisk, pszMapPathName, sizeof( szNameOnDisk ) );
+
+	// Only a file that exists in its own right can be mapped, so cull pack
+	// based search paths rather than resolving to the enclosing pack.
+	char szFullPath[MAX_PATH];
+	PathTypeQuery_t pathType = PATH_IS_NORMAL;
+	if ( !g_pFileSystem->RelativePathToFullPath( szNameOnDisk, NULL, szFullPath, sizeof( szFullPath ), FILTER_CULLPACK, &pathType ) )
+		return;
+
+	if ( IS_PACKFILE( pathType ) )
+		return;
+
+	if ( !s_MapMapping.Map( szFullPath ) )
+	{
+		DevMsg( "Bsp mapping unavailable for %s, falling back to per-lump reads\n", szFullPath );
+		return;
+	}
+
+	// We are about to walk essentially all of it, so let the kernel fault it in
+	// with full readahead rather than one page per lump touched.
+	s_MapMapping.PrefetchAll();
+	s_BSPView = s_MapMapping.Bytes();
+
+	DevMsg( "Bsp mapped: %s (%zu bytes)\n", szFullPath, s_BSPView.size() );
+}
 
 // Lump files are patches for a shipped map
 // List of lump files found when map was loaded. Each entry is the lump file index for that lump id.
@@ -560,6 +642,8 @@ void CMapLoadHelper::Init( model_t *pMapModel, const char *pPathName )
 
 	s_pMap = NULL;
 	s_MapFileHandle = FILESYSTEM_INVALID_HANDLE;
+	s_BSPView = {};
+	s_MapMapping.Unmap();
 	V_memset( &s_MapHeader, 0, sizeof( s_MapHeader ) );
 	V_memset( &s_MapLumpFiles, 0, sizeof( s_MapLumpFiles ) );
 
@@ -613,6 +697,9 @@ void CMapLoadHelper::Init( model_t *pMapModel, const char *pPathName )
 	InitDLightGlobals( s_MapHeader.m_nVersion );
 #endif
 
+	// Prefer to serve lumps straight out of a mapping of the file.
+	TryMapBSPFile( s_szMapPathName );
+
 	s_pMap = &g_ModelLoader.m_worldBrushData;
 
 	// Now find and open our lump files, and create the master list of them.
@@ -664,9 +751,6 @@ void CMapLoadHelper::InitFromMemory( model_t *pMapModel, const void *pData, int 
 {
 	Assert( pData && nDataSize );
 
-	// the memory should be contained in s_MapBuffer
-	Assert( ( pData == s_MapBuffer.GetBase() ) && ( nDataSize == s_MapBuffer.GetUsed() ) );
-
 	if ( ++s_nMapLoadRecursion > 1 )
 	{
 		return;
@@ -676,6 +760,10 @@ void CMapLoadHelper::InitFromMemory( model_t *pMapModel, const void *pData, int 
 	s_MapFileHandle = FILESYSTEM_INVALID_HANDLE;
 	V_memset( &s_MapHeader, 0, sizeof( s_MapHeader ) );
 	V_memset( &s_MapLumpFiles, 0, sizeof( s_MapLumpFiles ) );
+
+	// Caller owns the memory and must outlive the load; we only view it.
+	s_MapMapping.Unmap();
+	s_BSPView = { static_cast<const std::byte *>( pData ), static_cast<size_t>( nDataSize ) };
 
 	// mimic the expected globals, as if loading from disk
 	V_strncpy( s_szMapPathName, pMapModel->szPathName, sizeof( s_szMapPathName ) );
@@ -740,10 +828,8 @@ void CMapLoadHelper::Shutdown( void )
 	s_pMap = NULL;
 
 	// discard from memory
-	if ( s_MapBuffer.GetUsed() )
-	{
-		s_MapBuffer.FreeAll();
-	}
+	s_BSPView = {};
+	s_MapMapping.Unmap();
 }
 
 //-----------------------------------------------------------------------------
@@ -883,10 +969,20 @@ CMapLoadHelper::CMapLoadHelper( int lumpToLoad, bool bUncompress )
 		return;
 	}
 
-	if ( s_MapBuffer.GetUsed() )
+	// If a lump file patches this lump, its offset indexes that file rather than
+	// the bsp, so the in-memory bsp cannot serve it.
+	const bool bFromLumpFile = ( fileToUse != s_MapFileHandle );
+	const std::span<const std::byte> lumpBytes = bFromLumpFile
+		? std::span<const std::byte>{}
+		: GetBSPSlice( m_nLumpOffset, m_nLumpSize );
+
+	if ( !lumpBytes.empty() )
 	{
-		// bsp is in memory
-		m_pData = (unsigned char*)s_MapBuffer.GetBase() + m_nLumpOffset;
+		// bsp is in memory, so the lump is already addressable -- no read needed.
+		// NOTE: when this came from a mapping the pages are read-only, so lump
+		// consumers must treat LumpBase() as read-only and copy out anything they
+		// intend to modify (they all do; UncompressLump() copies as well).
+		m_pData = const_cast<byte *>( reinterpret_cast<const byte *>( lumpBytes.data() ) );
 	}
 	else
 	{
@@ -2972,19 +3068,15 @@ bool Mod_LoadGameLump( int lumpId, void *pOutBuffer, int size )
 		return false;
 	}
 
-	if ( s_MapBuffer.GetUsed() )
+	const std::span<const std::byte> gameLumpBytes = GetBSPSlice( g_GameLumpDict[i].offset, dataLength );
+	const bool bFromMemory = !gameLumpBytes.empty();
+
+	if ( bFromMemory )
 	{
 		// data is in memory
 		Assert( CMapLoadHelper::GetRefCount() );
 
-		if ( g_GameLumpDict[i].offset + dataLength > (unsigned int)s_MapBuffer.GetUsed() )
-		{
-			// out of range
-			Assert( 0 );
-			return false;
-		}
-
-		pData = (unsigned char *)s_MapBuffer.GetBase() + g_GameLumpDict[i].offset;
+		pData = const_cast<byte *>( reinterpret_cast<const byte *>( gameLumpBytes.data() ) );
 		if ( !bIsCompressed )
 		{
 			V_memcpy( pOutBuffer, pData, outSize );
@@ -3040,7 +3132,7 @@ bool Mod_LoadGameLump( int lumpId, void *pOutBuffer, int size )
 		bResult = ( outputLength > 0 && ( unsigned int ) outputLength == g_GameLumpDict[ i ].uncompressedSize );
 	}
 
-	if ( !s_MapBuffer.Base() )
+	if ( !bFromMemory )
 	{
 		// done with temporary buffer
 		free( pData );

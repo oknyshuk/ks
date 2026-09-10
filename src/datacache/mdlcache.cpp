@@ -366,7 +366,7 @@ static ConVar mod_forcedata( "mod_forcedata", ( AsyncMdlCache() ) ? "0" : "1",	0
 static ConVar mod_test_not_available( "mod_test_not_available", "0" );
 static ConVar mod_test_mesh_not_available( "mod_test_mesh_not_available", "0" );
 static ConVar mod_test_verts_not_available( "mod_test_verts_not_available", "0" );
-static ConVar mod_load_mesh_async( "mod_load_mesh_async", ( AsyncMdlCache() ) ? "1" : "0" );
+static ConVar mod_load_mesh_async( "mod_load_mesh_async", "1" );
 static ConVar mod_load_anims_async( "mod_load_anims_async", ( AsyncMdlCache() ) ? "1" : "0" );
 static ConVar mod_load_vcollide_async( "mod_load_vcollide_async",  ( AsyncMdlCache() ) ? "1" : "0" );
 static ConVar mod_trace_load( "mod_trace_load", "0" );

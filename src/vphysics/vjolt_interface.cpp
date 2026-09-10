@@ -13,6 +13,8 @@
 
 #include "vjolt_interface.h"
 
+#include "vstdlib/jobthread.h"
+
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
@@ -98,8 +100,18 @@ InitReturnVal_t JoltPhysicsInterface::Init()
 	// We may want to replace this with a better heuristic, or add a launch arg for this in future.
 	// Right now, this does what -1 does in Jolt, but limits it to 64 threads, as we cannot support
 	// more than this (see above).
-	const uint32 threadCount = Min( std::thread::hardware_concurrency() - 1, kMaxPhysicsThreads );
+	//
+	// oknyshuk: hardware_concurrency() - 1 assumed physics was the only thing on the machine. The
+	// engine's global pool is already running its own workers, so both pools sized themselves to
+	// the whole box and together oversubscribed it (measured: 16 compute workers on 14 cores).
+	// Leave room for the main thread and for the engine pool's workers instead.
+	const uint32 nEngineWorkers = static_cast<uint32>( Max( 0, GetGlobalThreadPoolWidth() ) );
+	const uint32 nAvailable = Max( 1u, std::thread::hardware_concurrency() ) - 1;
+	const uint32 threadCount = Min( Max( 1u, nAvailable - Min( nAvailable - 1, nEngineWorkers ) ), kMaxPhysicsThreads );
 	m_pJobSystem = new JPH::JobSystemThreadPool( JPH::cMaxPhysicsJobs, JPH::cMaxPhysicsBarriers, threadCount );
+
+	Log_Msg( LOG_VJolt, "Physics job system: %u threads (%u logical processors, %u engine pool workers)\n",
+		threadCount, std::thread::hardware_concurrency(), nEngineWorkers );
 
 	return INIT_OK;
 }

@@ -305,6 +305,27 @@ JOB_INTERFACE void DestroyThreadPool( IThreadPool *pPool )
 
 //-----------------------------------------------------------------------------
 
+// Ceiling on the global pool's worker count when -threads is not given.
+// Other subsystems size themselves against this via GetGlobalThreadPoolWidth().
+static constexpr int kGlobalThreadPoolMaxThreads = 4;
+
+//-----------------------------------------------------------------------------
+// Default worker count for a compute pool. Single source of truth so that
+// subsystems sizing themselves against the global pool cannot drift from what
+// the pool actually starts.
+//-----------------------------------------------------------------------------
+static int DefaultComputeWorkerCount()
+{
+	// One worker thread per logical processor minus main thread and graphic driver
+	int nThreads = GetCPUInformation().m_nLogicalProcessors - 2;
+	if ( nThreads > 3 )
+	{
+		// Current >4 processor configs don't really work so well, probably due to cache issues? (toml 7/12/2007)
+		nThreads = 3;
+	}
+	return nThreads;
+}
+
 class CGlobalThreadPool : public CThreadPool
 {
 public:
@@ -319,12 +340,11 @@ public:
 		}
 		else
 		{
-			// Cap the GlobPool threads at 4.
-			startParams.nThreadsMax = 4;
+			// Cap the GlobPool threads.
+			startParams.nThreadsMax = kGlobalThreadPoolMaxThreads;
 		}
 		return CThreadPool::Start( startParams, "GlobPool" );
 	}
-
 	virtual bool OnFinalRelease()
 	{
 		AssertMsg( 0, "Releasing global thread pool object!" );
@@ -481,6 +501,23 @@ private:
 
 CGlobalThreadPool g_ThreadPool;
 IThreadPool *g_pThreadPool = &g_ThreadPool;
+
+int GetGlobalThreadPoolWidth()
+{
+	// Once started, the pool itself is authoritative.
+	const int nRunning = g_ThreadPool.NumThreads();
+	if ( nRunning > 0 )
+		return nRunning;
+
+	// Otherwise mirror what Start() is going to decide, so callers that
+	// initialize before Host_Init still get the right answer.
+	const int nCmdLine = CommandLine()->ParmValue( "-threads", -1 ) - 1;
+	if ( nCmdLine >= 0 )
+		return nCmdLine;
+
+	const int nDefault = DefaultComputeWorkerCount();
+	return clamp( nDefault, 0, kGlobalThreadPoolMaxThreads );
+}
 IThreadPool *g_pAlternateThreadPool;
 
 //-----------------------------------------------------------------------------
@@ -992,13 +1029,7 @@ bool CThreadPool::Start( const ThreadPoolStartParams_t &startParams, const char 
 		}
 		else
 		{
-			// One worker thread per logical processor minus main thread and graphic driver
-			nThreads = ci.m_nLogicalProcessors  - 2;
-			if ( nThreads > 3 )
-			{
-				DevMsg( "Defaulting to limit of 3 worker threads, use -threads on command line if want more\n" ); // Current >4 processor configs don't really work so well, probably due to cache issues? (toml 7/12/2007)
-				nThreads = 3;
-			}
+			nThreads = DefaultComputeWorkerCount();
 		}
 
 		if ( ( startParams.nThreadsMax >= 0 ) && ( nThreads > startParams.nThreadsMax ) )

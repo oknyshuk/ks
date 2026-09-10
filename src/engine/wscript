@@ -89,6 +89,7 @@ def build(bld):
         "gl_shader.cpp",
         "l_studio.cpp",
         "matsys_interface.cpp",
+        "filemapping.cpp",
         "modelloader.cpp",
         "r_decal.cpp",
         "server_pch.cpp",

@@ -386,13 +386,63 @@ public:
 
 private:
 
+	// Number of distinct threads that can accumulate physics events at once.
+	// Bounded by m_Mask being a single uint64 in JoltPhysicsEventTracker, and by
+	// kMaxPhysicsThreads in vjolt_interface.cpp.
+	static constexpr uint32 kMaxEventThreads = 64;
+
 	static uint32 GetThreadId()
 	{
-		static thread_local uint32 s_ThreadId = ~0u;
-		static std::atomic< uint32 > s_ThreadCtr = { 0u };
-		if ( s_ThreadId == ~0u )
-			s_ThreadId = s_ThreadCtr++;
-		return s_ThreadId;
+		// Hands the calling thread a stable slot in [0, kMaxEventThreads), released
+		// when the thread exits so slots are reused.
+		//
+		// This used to be a bare monotonic counter, which was safe only because
+		// physics owned a private pool whose threads were created once. Physics now
+		// runs on the engine's shared pool, which can be stopped and restarted; a
+		// non-recycling counter would consume a slot per pool generation and walk
+		// off the end of m_Events / past bit 63 of m_Mask.
+		struct Slot
+		{
+			Slot()  { m_nIndex = AllocThreadSlot(); }
+			~Slot() { FreeThreadSlot( m_nIndex ); }
+			uint32 m_nIndex;
+		};
+
+		static thread_local Slot s_Slot;
+		return s_Slot.m_nIndex;
+	}
+
+	// Bitmask of currently unused event slots; bit N set means slot N is free.
+	static std::atomic< uint64_t > &FreeThreadSlots()
+	{
+		static std::atomic< uint64_t > s_FreeSlots{ ~0ull };
+		return s_FreeSlots;
+	}
+
+	static uint32 AllocThreadSlot()
+	{
+		uint64_t nFree = FreeThreadSlots().load( std::memory_order_relaxed );
+		while ( nFree != 0ull )
+		{
+			const uint32 nIndex = JPH::CountTrailingZeros( nFree );
+			const uint64_t nClaimed = nFree & ~( 1ull << nIndex );
+			if ( FreeThreadSlots().compare_exchange_weak( nFree, nClaimed, std::memory_order_acquire, std::memory_order_relaxed ) )
+				return nIndex;
+		}
+
+		// More than 64 threads are alive and touching physics events at once, which
+		// kMaxPhysicsThreads already declares unsupported. Sharing the last slot
+		// races, but it stays in bounds; the old code corrupted memory instead.
+		Assert( !"Ran out of physics event thread slots" );
+		return kMaxEventThreads - 1;
+	}
+
+	static void FreeThreadSlot( uint32 nIndex )
+	{
+		if ( nIndex < kMaxEventThreads )
+		{
+			FreeThreadSlots().fetch_or( 1ull << nIndex, std::memory_order_release );
+		}
 	}
 
 	const JPH::PhysicsSystem &m_PhysicsSystem;
@@ -565,7 +615,7 @@ private:
 		}
 
 	private:
-		static constexpr uint32 kMaxThreads = 64;
+		static constexpr uint32 kMaxThreads = kMaxEventThreads;
 		std::atomic< uint64_t >	m_Mask = { 0ull };
 		std::vector< Data >		m_Events[ kMaxThreads ];
 	};
