@@ -84,12 +84,12 @@ void CAI_ScriptConditions::OnRestore( void )
  
 		m_ElementList.AddToTail( conditionactor );
 
-		m_hActor = NULL;
+		m_hActor = nullptr;
 	}
 
 	if ( m_ElementList.Count() == 0 && m_Actor == NULL_STRING && m_fDisabled == false )
 	{
-		AddNewElement( NULL );
+		AddNewElement( nullptr );
 	}
 }
 
@@ -298,7 +298,7 @@ bool CAI_ScriptConditions::EvalPlayerInVehicle( const EvalArgs_t &args )
 		return true;
 
 	// Need a player to test
-	if ( args.pPlayer == NULL )
+	if ( args.pPlayer == nullptr )
 		return false;
 
 	// Desired states must match
@@ -318,7 +318,7 @@ bool CAI_ScriptConditions::EvalActorInVehicle( const EvalArgs_t &args )
 
 	// Must be able to be in a vehicle at all
 	CBaseCombatCharacter *pBCC = args.pActor->MyCombatCharacterPointer();
-	if ( pBCC == NULL )
+	if ( pBCC == nullptr )
 		return false;
 
 	// Desired states must match
@@ -377,7 +377,7 @@ void CAI_ScriptConditions::EvaluationThink()
 	{
 		CAI_ScriptConditionsElement *pConditionElement = &m_ElementList[i];
 
-		if ( pConditionElement == NULL )
+		if ( pConditionElement == nullptr )
 		{
 			i++;
 			continue;
@@ -491,12 +491,12 @@ int CAI_ScriptConditions::AddNewElement( CBaseEntity *pActor )
 
 void CAI_ScriptConditions::Enable( void )
 {
-	m_hTarget = gEntList.FindEntityByName( NULL, m_target );
+	m_hTarget = gEntList.FindEntityByName( nullptr, m_target );
 
-	CBaseEntity *pActor = gEntList.FindEntityByName( NULL, m_Actor );
+	CBaseEntity *pActor = gEntList.FindEntityByName( nullptr, m_Actor );
 	if ( m_ElementList.Count() == 0 )
 	{
-		if ( m_Actor != NULL_STRING && pActor == NULL )
+		if ( m_Actor != NULL_STRING && pActor == nullptr )
 		{
 			DevMsg( "Warning: Spawning AI script conditions (%s) associated with an non-existant NPC\n", GetDebugName() );
 			m_NoValidActors.FireOutput( this, this, 0 );
@@ -504,7 +504,7 @@ void CAI_ScriptConditions::Enable( void )
 			return;
 		}
 
-		if ( pActor && pActor->MyNPCPointer() == NULL )
+		if ( pActor && pActor->MyNPCPointer() == nullptr )
 		{
 			Warning( "Script condition warning: warning actor is not an NPC\n" );
 			Disable();
@@ -512,7 +512,7 @@ void CAI_ScriptConditions::Enable( void )
 		}
 	}
 
-	while( pActor != NULL )
+	while( pActor != nullptr )
 	{
 		if( !ActorInList(pActor) )
 		{
@@ -527,7 +527,7 @@ void CAI_ScriptConditions::Enable( void )
 	{
 		if( !ActorInList(pActor) )
 		{
-			AddNewElement( NULL );
+			AddNewElement( nullptr );
 		}
 	}
 
@@ -541,7 +541,7 @@ void CAI_ScriptConditions::Enable( void )
 
 void CAI_ScriptConditions::Disable( void )
 {
-	SetThink( NULL );
+	SetThink( nullptr );
 
 	m_fDisabled = true;
 }
@@ -566,7 +566,7 @@ void CAI_ScriptConditions::InputDisable( inputdata_t &inputdata )
 
 bool CAI_ScriptConditions::IsInFOV( CBaseEntity *pViewer, CBaseEntity *pViewed, float fov, bool bTrueCone )
 {
-	CBaseCombatCharacter *pCombatantViewer = (pViewer) ? pViewer->MyCombatCharacterPointer() : NULL;
+	CBaseCombatCharacter *pCombatantViewer = (pViewer) ? pViewer->MyCombatCharacterPointer() : nullptr;
 
 	if ( fov < 360 && pCombatantViewer /*&& pViewed*/ )
 	{
@@ -659,7 +659,7 @@ bool CAI_ScriptConditions::PlayerHasLineOfSight( CBaseEntity *pViewer, CBaseEnti
 
 bool CAI_ScriptConditions::ActorInPlayersPVS( CBaseEntity *pActor, bool bNot )
 {
-	if ( pActor == NULL )
+	if ( pActor == nullptr )
 		return true;
 
 	bool bInPVS = !!UTIL_FindClientInPVS( pActor->edict());
@@ -712,7 +712,7 @@ void CAI_ScriptConditions::OnEntitySpawned( CBaseEntity *pEntity )
 		return;
 	}
 
-	if ( pEntity->MyNPCPointer() == NULL )
+	if ( pEntity->MyNPCPointer() == nullptr )
 		 return;
 
 	if ( pEntity->NameMatches( m_Actor ) )

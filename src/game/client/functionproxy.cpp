@@ -19,7 +19,7 @@
 //-----------------------------------------------------------------------------
 bool CFloatInput::Init( IMaterial *pMaterial, KeyValues *pKeyValues, const char *pKeyName, float flDefault )
 {
-	m_pFloatVar = NULL;
+	m_pFloatVar = nullptr;
 	KeyValues *pSection = pKeyValues->FindKey( pKeyName );
 	if (pSection)
 	{

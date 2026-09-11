@@ -166,8 +166,8 @@ public:
 
 	// Hud Render group
 	int							LookupRenderGroupIndexByName( const char *pszGroupName );
-	bool						LockRenderGroup( int iGroupIndex, CHudElement *pLocker = NULL );
-	bool						UnlockRenderGroup( int iGroupIndex, CHudElement *pLocker = NULL );
+	bool						LockRenderGroup( int iGroupIndex, CHudElement *pLocker = nullptr );
+	bool						UnlockRenderGroup( int iGroupIndex, CHudElement *pLocker = nullptr );
 	bool						IsRenderGroupLockedFor( CHudElement *pHudElement, int iGroupIndex );
 	int							RegisterForRenderGroup( const char *pszGroupName );
 	int							AddHudRenderGroup( const char *pszGroupName );

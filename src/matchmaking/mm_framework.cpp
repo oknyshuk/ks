@@ -47,9 +47,9 @@ void CMatchSteamInviteListener::Register()
 //
 
 CMatchFramework::CMatchFramework() :
-	m_pMatchSession( NULL ),
+	m_pMatchSession( nullptr ),
 	m_bJoinTeamSession( false ),
-	m_pTeamSessionSettings( NULL )
+	m_pTeamSessionSettings( nullptr )
 {
 }
 
@@ -111,7 +111,7 @@ void CMatchFramework::RunFrame()
 		m_bJoinTeamSession = false;
 		MatchSession( m_pTeamSessionSettings );
 		m_pTeamSessionSettings->deleteThis();
-		m_pTeamSessionSettings = NULL;
+		m_pTeamSessionSettings = nullptr;
 	}
 }
 
@@ -380,7 +380,7 @@ void CMatchFramework::CreateSession( KeyValues *pSettings )
 	if ( !pSettings )
 		return;
 
-	IMatchSessionInternal *pMatchSessionNew = NULL;
+	IMatchSessionInternal *pMatchSessionNew = nullptr;
 
 	//
 	// Analyze the type of session requested to create
@@ -420,7 +420,7 @@ void CMatchFramework::MatchSession( KeyValues *pSettings )
 	DevMsg( "MatchSession: \n");
 	KeyValuesDumpAsDevMsg( pSettings );
 
-	IMatchSessionInternal *pMatchSessionNew = NULL;
+	IMatchSessionInternal *pMatchSessionNew = nullptr;
 
 	//
 	// Analyze what kind of client-side matchmaking
@@ -462,7 +462,7 @@ void CMatchFramework::CloseSession()
 	if ( m_pMatchSession )
 	{
 		IMatchSessionInternal *pMatchSession = m_pMatchSession;
-		m_pMatchSession = NULL;
+		m_pMatchSession = nullptr;
 		pMatchSession->Destroy();
 
 		g_pMatchEventsSubscription->BroadcastEvent( new KeyValues( "OnMatchSessionUpdate", "state", "closed" ) );
@@ -478,7 +478,7 @@ bool CMatchFramework::IsOnlineGame( void )
 		KeyValues* kv = pMatchSession->GetSessionSettings();
 		if ( kv )
 		{
-			char const *szMode = kv->GetString( "system/network", NULL );
+			char const *szMode = kv->GetString( "system/network", nullptr );
 			if ( szMode && !V_stricmp( "LIVE", szMode ) )
 			{
 				return true;

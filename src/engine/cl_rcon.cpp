@@ -662,7 +662,7 @@ void CRConClient::Authenticate()
 			Assert( GetBaseLocalClient().m_pUserInfoTable );
 			if ( GetBaseLocalClient().m_pUserInfoTable )
 			{
-				player_info_t *pi = (player_info_t*) GetBaseLocalClient().m_pUserInfoTable->GetStringUserData( GetBaseLocalClient().m_nPlayerSlot, NULL );
+				player_info_t *pi = (player_info_t*) GetBaseLocalClient().m_pUserInfoTable->GetStringUserData( GetBaseLocalClient().m_nPlayerSlot, nullptr );
 				if ( pi )
 				{
 					addedUserID = true;

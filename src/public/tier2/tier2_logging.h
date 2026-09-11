@@ -24,7 +24,7 @@ abstract_class IFileLoggingListener : public ILoggingListener
 public:
 	virtual void Log( const LoggingContext_t *pContext, const char *pMessage ) = 0;
 
-	virtual LoggingFileHandle_t BeginLoggingToFile( const char *pFilename, const char *pOptions, const char *pPathID = NULL ) = 0;
+	virtual LoggingFileHandle_t BeginLoggingToFile( const char *pFilename, const char *pOptions, const char *pPathID = nullptr ) = 0;
 	virtual void EndLoggingToFile( LoggingFileHandle_t fileHandle ) = 0;
 
 	virtual void AssignLogChannel( LoggingChannelID_t channelID, LoggingFileHandle_t loggingFileHandle ) = 0;
@@ -41,7 +41,7 @@ public:
 
 	virtual void Log( const LoggingContext_t *pContext, const char *pMessage );
 
-	virtual LoggingFileHandle_t BeginLoggingToFile( const char *pFilename, const char *pOptions, const char *pPathID = NULL );
+	virtual LoggingFileHandle_t BeginLoggingToFile( const char *pFilename, const char *pOptions, const char *pPathID = nullptr );
 	virtual void EndLoggingToFile( LoggingFileHandle_t fileHandle );
 
 	virtual void AssignLogChannel( LoggingChannelID_t channelID, LoggingFileHandle_t loggingFileHandle );

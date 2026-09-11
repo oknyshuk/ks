@@ -440,7 +440,7 @@ void Con_LogDumpChannels_f()
 			
 		buf[0] = '\0';
 		CLoggingSystem::LoggingTag_t *pTag = pChannel->m_pFirstTag;
-		while ( pTag != NULL )
+		while ( pTag != nullptr )
 		{
 			Q_strncat( buf, "[", nMaxLen );
 			Q_strncat( buf, pTag->m_pTagName, nMaxLen );
@@ -675,17 +675,17 @@ void Con_ColorPrint( const Color& clr, char const *msg )
 		{
 		case 1:
 			// if line does not contain keyword do not print the line
-			if ( pszText && ( *pszText != '\0' ) && ( Q_stristr( msg, pszText ) == NULL ))
+			if ( pszText && ( *pszText != '\0' ) && ( Q_stristr( msg, pszText ) == nullptr ))
 				return;
-			if ( pszIgnoreText && *pszIgnoreText && ( Q_stristr( msg, pszIgnoreText ) != NULL ) )
+			if ( pszIgnoreText && *pszIgnoreText && ( Q_stristr( msg, pszIgnoreText ) != nullptr ) )
 				return;
 			break;
 
 		case 2:
-			if ( pszIgnoreText && *pszIgnoreText && ( Q_stristr( msg, pszIgnoreText ) != NULL ) )
+			if ( pszIgnoreText && *pszIgnoreText && ( Q_stristr( msg, pszIgnoreText ) != nullptr ) )
 				return;
 			// if line does not contain keyword print it in a darker color
-			if ( pszText && ( *pszText != '\0' ) && ( Q_stristr( msg, pszText ) == NULL ))
+			if ( pszText && ( *pszText != '\0' ) && ( Q_stristr( msg, pszText ) == nullptr ))
 			{
 				Color mycolor(200, 200, 200, 150 );
 				g_pCVar->ConsoleColorPrintf( mycolor, "%s", msg );

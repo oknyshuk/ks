@@ -35,7 +35,7 @@ struct net_threaded_buffer_t
 	inline byte *MoveAppend( net_threaded_buffer_t *pOther )
 	{
 		if ( pOther->len > Capacity() )
-			return NULL;
+			return nullptr;
 
 		byte *pBase = Base();
 		Q_memcpy( pBase, pOther->buf, pOther->len );
@@ -90,7 +90,7 @@ private:
 	class CSocketThread
 	{
 	public:
-		explicit CSocketThread( int s, int nsSock ) : m_s( s ), m_nsSock( nsSock ), m_hThread( NULL ), m_pDataQueueBufferCollect( NULL )
+		explicit CSocketThread( int s, int nsSock ) : m_s( s ), m_nsSock( nsSock ), m_hThread( nullptr ), m_pDataQueueBufferCollect( nullptr )
 		{
 			Q_memset( m_sockSignalPipe, -1, sizeof( m_sockSignalPipe ) );
 			int ret = socketpair( PF_LOCAL, SOCK_STREAM, 0, m_sockSignalPipe ); // 0=main; 1=pump
@@ -109,7 +109,7 @@ private:
 			// wait for it to die
 			ThreadJoin( m_hThread );
 			ReleaseThreadHandle( m_hThread );
-			m_hThread = NULL;
+			m_hThread = nullptr;
 
 			// Shutdown resources
 			close( m_sockSignalPipe[0] );
@@ -124,7 +124,7 @@ private:
 				if ( m_pDataQueueBufferCollect )
 				{
 					g_NetThreadedBuffers.PutObject( m_pDataQueueBufferCollect );
-					m_pDataQueueBufferCollect = NULL;
+					m_pDataQueueBufferCollect = nullptr;
 				}
 			} while ( m_tslstBuffers.PopItem( &m_pDataQueueBufferCollect ) );
 		}
@@ -154,7 +154,7 @@ private:
 			else
 			{	// The returned data is ahead in the list, previous buffer can go back in the pool
 				g_NetThreadedBuffers.PutObject( m_pDataQueueBufferCollect );
-				m_pDataQueueBufferCollect = NULL;
+				m_pDataQueueBufferCollect = nullptr;
 			}
 
 			return data.len;
@@ -171,8 +171,8 @@ private:
 		void ThreadProc()
 		{
 			// Where are we getting new data?
-			net_threaded_buffer_t *pThreadBufferSyscall = NULL;
-			net_threaded_buffer_t *pThreadBufferCollect = NULL;
+			net_threaded_buffer_t *pThreadBufferSyscall = nullptr;
+			net_threaded_buffer_t *pThreadBufferCollect = nullptr;
 			
 			struct sockaddr	from;
 			int	fromlen = sizeof( from );
@@ -313,20 +313,20 @@ private:
 				if ( ret > 0 )
 				{
 					ReceivedData_t recvData;
-					recvData.buf = NULL;
+					recvData.buf = nullptr;
 					recvData.len = ret;
 					Q_memcpy( &recvData.from, &from, sizeof( recvData.from ) );
 
 					// Check if we still have more room in pending recv buffer
 					pThreadBufferSyscall->len = ret;
-					if ( byte *pbMoveAppend = pThreadBufferCollect ? pThreadBufferCollect->MoveAppend( pThreadBufferSyscall ) : NULL )
+					if ( byte *pbMoveAppend = pThreadBufferCollect ? pThreadBufferCollect->MoveAppend( pThreadBufferSyscall ) : nullptr )
 					{
 						recvData.buf = pbMoveAppend;
 					}
 					else
 					{
 						pThreadBufferCollect = pThreadBufferSyscall;
-						pThreadBufferSyscall = NULL;
+						pThreadBufferSyscall = nullptr;
 
 						recvData.buf = pThreadBufferCollect->buf;
 					}
@@ -367,7 +367,7 @@ private:
 			m_mapSocketThreads.Insert( s, pNew );
 			return pNew;
 		}
-		return NULL;
+		return nullptr;
 	}
 	CUtlMap< int, CSocketThread * > m_mapSocketThreads;
 };
@@ -421,7 +421,7 @@ static const tokenset_t< ESocketIndex_t > s_SocketIndexMap[] =
 	{ "NS_SERVER",		NS_SERVER		},                          
 	{ "NS_HLTV",		NS_HLTV			},
 	{ "NS_HLTV1",		NS_HLTV1		},
-	{ NULL, ( ESocketIndex_t )-1 }
+	{ nullptr, ( ESocketIndex_t )-1 }
 };
 
 static const tokenset_t< EP2PSessionError > s_EP2PSessionErrorIndexMap[] =
@@ -659,13 +659,13 @@ CSteamSocket *CSteamSocketMgr::InitiateConnection( ESocketIndex_t eSocketTypeFro
 {
 	CSteamSocket *pSocket = CreateConnection( eSocketTypeFrom, steamID );
 	if ( !pSocket )
-		return NULL;
+		return nullptr;
 
 	// don't have to wait for a connection to be established.. just send the packet
 	if ( !Steam3Client().SteamNetworking()->SendP2PPacket( pSocket->GetSteamID(), data, len, k_EP2PSendReliable, pSocket->GetRemoteChannel() ) )
 	{
 		DestroyConnection( eSocketTypeFrom, steamID );
-		return NULL;
+		return nullptr;
 	}
 
 	return pSocket;
@@ -674,7 +674,7 @@ CSteamSocket *CSteamSocketMgr::InitiateConnection( ESocketIndex_t eSocketTypeFro
 CSteamSocket *CSteamSocketMgr::CreateConnection( ESocketIndex_t eSocketType, const CSteamID &steamID )
 {
 	if ( !IsValid() )
-		return NULL;
+		return nullptr;
 
 	// if we already have a socket for this user, return that
 	CSteamSocket *pSocket = FindSocketForUser( eSocketType, steamID );
@@ -744,7 +744,7 @@ CSteamSocket *CSteamSocketMgr::FindSocketForAddress( const ns_address &adr )
 
 	int idx = m_mapAdrToSteamSocket.Find( adr.AsType<netadr_t>() );
 	if ( idx == m_mapAdrToSteamSocket.InvalidIndex() )
-		return NULL;
+		return nullptr;
 	return m_mapAdrToSteamSocket[ idx ];
 }
 
@@ -757,7 +757,7 @@ CSteamSocket *CSteamSocketMgr::FindSocketForUser( ESocketIndex_t eSocketType, co
 			return pSocket;
 	}
 
-	return NULL;
+	return nullptr;
 }
 
 void CSteamSocketMgr::OnP2PSessionRequest( P2PSessionRequest_t *pParam )

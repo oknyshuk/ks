@@ -81,7 +81,7 @@ void CreateDumpDirectory( const char *szDirectoryName )
 
 #define DEBUG_POLYHEDRON_CONVERSION 1
 typedef bool (*PFN_PolyhedronCarvingDebugStepCallback)( CPolyhedron *pPolyhedron ); //function that receives a polyhedron conversion after each cut. For the slowest, surest debugging possible. Returns true if the polyhedron passes mustard, false to dump the current work state
-PFN_PolyhedronCarvingDebugStepCallback g_pPolyhedronCarvingDebugStepCallback = NULL;
+PFN_PolyhedronCarvingDebugStepCallback g_pPolyhedronCarvingDebugStepCallback = nullptr;
 
 #endif
 
@@ -358,8 +358,8 @@ void Debug_ResetWorkingStateColorOverrides( GeneratePolyhedronFromPlanes_Unorder
 
 CPolyhedron *ClipPolyhedron( const CPolyhedron *pExistingPolyhedron, const float *pOutwardFacingPlanes, int iPlaneCount, float fOnPlaneEpsilon, bool bUseTemporaryMemory )
 {
-	if( pExistingPolyhedron == NULL )
-		return NULL;
+	if( pExistingPolyhedron == nullptr )
+		return nullptr;
 
 	AssertMsg( (pExistingPolyhedron->iVertexCount >= 3) && (pExistingPolyhedron->iPolygonCount >= 2), "Polyhedron doesn't meet absolute minimum spec" );
 
@@ -394,7 +394,7 @@ CPolyhedron *ClipPolyhedron( const CPolyhedron *pExistingPolyhedron, const float
 			if( iLiveCount == 0 )
 			{
 				//all points are dead or on the plane, so the polyhedron is dead
-				return NULL;
+				return nullptr;
 			}
 
 			if( iDeadCount != 0 )
@@ -436,7 +436,7 @@ CPolyhedron *ClipPolyhedron( const CPolyhedron *pExistingPolyhedron, const float
 
 #if defined( DEBUG_POLYHEDRON_CONVERSION )
 		//last bit of debugging from whatever outside source wants this stupid thing
-		if( g_pPolyhedronCarvingDebugStepCallback != NULL )
+		if( g_pPolyhedronCarvingDebugStepCallback != nullptr )
 		{
 			AssertMsg( g_pPolyhedronCarvingDebugStepCallback( pReturn ), "Outside conversion failed" );
 		}
@@ -466,7 +466,7 @@ CPolyhedron *ClipPolyhedron( const CPolyhedron *pExistingPolyhedron, const float
 #if defined( USE_WORLD_CENTERED_POSITIONS )
 		vPointOffset = AddSIMD( vPointOffset, pPoints[i].point.ptPosition );
 #endif
-		pPoints[i].point.pConnectedLines = NULL; //we won't be circular linking until later
+		pPoints[i].point.pConnectedLines = nullptr; //we won't be circular linking until later
 	}
 
 #if defined( USE_WORLD_CENTERED_POSITIONS )
@@ -584,7 +584,7 @@ CPolyhedron *ClipPolyhedron( const CPolyhedron *pExistingPolyhedron, const float
 
 	//setup point collection
 	{
-		pPoints[0].pPrev = NULL;
+		pPoints[0].pPrev = nullptr;
 		pPoints[0].pNext = &pPoints[1];
 		int iLastPoint = pExistingPolyhedron->iVertexCount - 1;
 		for( int i = 1; i != iLastPoint; ++i )
@@ -593,12 +593,12 @@ CPolyhedron *ClipPolyhedron( const CPolyhedron *pExistingPolyhedron, const float
 			pPoints[i].pNext = &pPoints[i + 1];
 		}
 		pPoints[iLastPoint].pPrev = &pPoints[iLastPoint - 1];
-		pPoints[iLastPoint].pNext = NULL;
+		pPoints[iLastPoint].pNext = nullptr;
 	}
 
 	//setup line collection
 	{
-		pLines[0].pPrev = NULL;
+		pLines[0].pPrev = nullptr;
 		pLines[0].pNext = &pLines[1];
 		int iLastLine = pExistingPolyhedron->iLineCount - 1;
 		for( int i = 1; i != iLastLine; ++i )
@@ -607,12 +607,12 @@ CPolyhedron *ClipPolyhedron( const CPolyhedron *pExistingPolyhedron, const float
 			pLines[i].pNext = &pLines[i + 1];
 		}
 		pLines[iLastLine].pPrev = &pLines[iLastLine - 1];
-		pLines[iLastLine].pNext = NULL;
+		pLines[iLastLine].pNext = nullptr;
 	}
 
 	//setup polygon collection
 	{
-		pPolygons[0].pPrev = NULL;
+		pPolygons[0].pPrev = nullptr;
 		pPolygons[0].pNext = &pPolygons[1];
 		int iLastPolygon = pExistingPolyhedron->iPolygonCount - 1;
 		for( int i = 1; i != iLastPolygon; ++i )
@@ -621,13 +621,13 @@ CPolyhedron *ClipPolyhedron( const CPolyhedron *pExistingPolyhedron, const float
 			pPolygons[i].pNext = &pPolygons[i + 1];
 		}
 		pPolygons[iLastPolygon].pPrev = &pPolygons[iLastPolygon - 1];
-		pPolygons[iLastPolygon].pNext = NULL;
+		pPolygons[iLastPolygon].pNext = nullptr;
 	}
 
 	CPolyhedron *pRetVal = ClipLinkedGeometry( pPolygons, pLines, pPoints, pExistingPolyhedron->iVertexCount, pUsefulPlanes, iUsefulPlaneCount, fOnPlaneEpsilon, bUseTemporaryMemory, vResultOffset );
 #if defined( USE_WORLD_CENTERED_POSITIONS ) && defined( DEBUG_POLYHEDRON_CONVERSION )
 	//last bit of debugging from whatever outside source wants this stupid thing
-	if( pRetVal && (g_pPolyhedronCarvingDebugStepCallback != NULL) )
+	if( pRetVal && (g_pPolyhedronCarvingDebugStepCallback != nullptr) )
 	{
 		VMatrix matScaleCentered;
 		matScaleCentered.Identity();
@@ -664,7 +664,7 @@ Vector FindPointInPlanes( const float *pPlanes, int planeCount )
 bool FindConvexShapeLooseAABB( const fltx4 *pInwardFacingPlanes, int iPlaneCount, Vector *pAABBMins, Vector *pAABBMaxs ) //bounding box of the convex shape (subject to floating point error)
 {
 	//returns false if the AABB hasn't been set
-	if( pAABBMins == NULL && pAABBMaxs == NULL ) //no use in actually finding out what it is
+	if( pAABBMins == nullptr && pAABBMaxs == nullptr ) //no use in actually finding out what it is
 		return false;
 
 	struct FindConvexShapeAABB_Polygon_t
@@ -683,7 +683,7 @@ bool FindConvexShapeLooseAABB( const fltx4 *pInwardFacingPlanes, int iPlaneCount
 	}
 
 	//vAABBMins = vAABBMaxs = FindPointInPlanes( pPlanes, iPlaneCount );
-	float *vertsIn = NULL; //we'll be allocating a new buffer for this with each new polygon, and moving it off to the polygon array
+	float *vertsIn = nullptr; //we'll be allocating a new buffer for this with each new polygon, and moving it off to the polygon array
 	float *vertsOut = (float *)stackalloc( (iPlaneCount + 4) * (sizeof( float ) * 3) ); //each plane will initially have 4 points in its polygon representation, and each plane clip has the possibility to add 1 point to the polygon
 	float *vertsSwap;
 
@@ -695,7 +695,7 @@ bool FindConvexShapeLooseAABB( const fltx4 *pInwardFacingPlanes, int iPlaneCount
 		Vector vPlaneNormal = pMovedPlanes[i].AsVector3D();
 		float fPlaneDist = pMovedPlanes[i].w;// + 50.0f;
 
-		if( vertsIn == NULL )
+		if( vertsIn == nullptr )
 			vertsIn = (float *)stackalloc( (iPlaneCount + 4) * (sizeof( float ) * 3) );
 
 		// Build a big-ass poly in this plane
@@ -724,7 +724,7 @@ bool FindConvexShapeLooseAABB( const fltx4 *pInwardFacingPlanes, int iPlaneCount
 
 		pPolygons[iPolyCount].iVertCount = vertCount;
 		pPolygons[iPolyCount].verts = vertsIn;
-		vertsIn = NULL;
+		vertsIn = nullptr;
 		++iPolyCount;
 	}
 
@@ -806,7 +806,7 @@ bool FindConvexShapeLooseAABB( const fltx4 *pInwardFacingPlanes, int iPlaneCount
 
 CPolyhedron *ConvertLinkedGeometryToPolyhedron( GeneratePolyhedronFromPlanes_UnorderedPolygonLL *pPolygons, GeneratePolyhedronFromPlanes_UnorderedLineLL *pLines, GeneratePolyhedronFromPlanes_UnorderedPointLL *pPoints, bool bUseTemporaryMemory, fltx4 vShiftResultPositions )
 {
-	Assert( (pPolygons != NULL) && (pLines != NULL) && (pPoints != NULL) );
+	Assert( (pPolygons != nullptr) && (pLines != nullptr) && (pPoints != nullptr) );
 	unsigned int iPolyCount = 0, iLineCount = 0, iPointCount = 0, iIndexCount = 0;
 
 	GeneratePolyhedronFromPlanes_UnorderedPolygonLL *pActivePolygonWalk = pPolygons;	
@@ -815,7 +815,7 @@ CPolyhedron *ConvertLinkedGeometryToPolyhedron( GeneratePolyhedronFromPlanes_Uno
 		++iPolyCount;
 		GeneratePolyhedronFromPlanes_LineLL *pLineWalk = pActivePolygonWalk->polygon.pLines;
 		GeneratePolyhedronFromPlanes_LineLL *pFirstLine = pLineWalk;
-		Assert( pLineWalk != NULL );
+		Assert( pLineWalk != nullptr );
 		
 		do
 		{
@@ -927,7 +927,7 @@ CPolyhedron *ConvertLinkedGeometryToPolyhedron( GeneratePolyhedronFromPlanes_Uno
 void DumpPointListToGLView( GeneratePolyhedronFromPlanes_UnorderedPointLL *pHead, PolyhedronPointPlanarity planarity, const Vector &vColor, const char *szDumpFile, const VMatrix *pTransform )
 {
 #ifdef ENABLE_DEBUG_POLYHEDRON_DUMPS
-	if( pTransform == NULL )
+	if( pTransform == nullptr )
 		pTransform = &s_matIdentity;
 	
 	FILE *pFile = fopen( szDumpFile, "ab" );
@@ -951,14 +951,14 @@ void DumpPointListToGLView( GeneratePolyhedronFromPlanes_UnorderedPointLL *pHead
 const char * DumpPolyhedronCutHistory( const CUtlVector<CPolyhedron *> &DumpedHistory, const CUtlVector<const float *> &CutHistory, const VMatrix *pTransform )
 {
 #ifdef ENABLE_DEBUG_POLYHEDRON_DUMPS
-	if( pTransform == NULL )
+	if( pTransform == nullptr )
 		pTransform = &s_matIdentity;
 
 	static char szDumpFile[100] = "FailedPolyhedronCut_Error.txt"; //most recent filename returned for further dumping
 
 	for( int i = 0; i != DumpedHistory.Count(); ++i )
 	{
-		if( DumpedHistory[i] != NULL )
+		if( DumpedHistory[i] != nullptr )
 		{
 			Q_snprintf( szDumpFile, 100, "FailedPolyhedronCut_%d.txt", i );
 			
@@ -972,7 +972,7 @@ const char * DumpPolyhedronCutHistory( const CUtlVector<CPolyhedron *> &DumpedHi
 
 	return szDumpFile;
 #else
-	return NULL;
+	return nullptr;
 #endif
 }
 
@@ -1003,7 +1003,7 @@ bool g_bDumpNullPolyhedrons = false;
 
 #else
 
-#define AssertMsg_DumpPolyhedron_Destructors(condition, destructors, message) NULL;
+#define AssertMsg_DumpPolyhedron_Destructors(condition, destructors, message) nullptr;
 
 #endif
 
@@ -1021,7 +1021,7 @@ public:
 	{
 		m_pDispenserBuffer = (unsigned char *)pStackAllocation;
 		m_iDispenserSizeLeft = iStackAllocationSize;
-		m_pDeleteList = NULL;
+		m_pDeleteList = nullptr;
 	}
 
 	~CStackMemoryDispenser( void )
@@ -1041,11 +1041,11 @@ public:
 			//allocate a new buffer
 			size_t iNewBufferSize = MAX( 128 * 1024, (iSize + iAlignTo) * 2 ); //either allocate 128k or enough to hold 2x the allocation.
 			unsigned char *pNewBuffer = new unsigned char [iNewBufferSize]; //allocate 128k at a time
-			*(void **)pNewBuffer = NULL;
+			*(void **)pNewBuffer = nullptr;
 
 			//insert this allocation into the linked list of allocations to delete on destruct
 			void **pWriteDeleteAddress = &m_pDeleteList;
-			while( *pWriteDeleteAddress != NULL )
+			while( *pWriteDeleteAddress != nullptr )
 			{
 				pWriteDeleteAddress = (void **)*pWriteDeleteAddress;
 			}
@@ -1070,7 +1070,7 @@ public:
 private:
 	static void RecurseDelete( void *pDelete )
 	{
-		if( pDelete != NULL )
+		if( pDelete != nullptr )
 		{
 			RecurseDelete( *(void **)pDelete );
 			delete [](void**)pDelete;
@@ -1089,12 +1089,12 @@ public:
 	CStackItemDispenser( CStackMemoryDispenser &MemoryDispenser ) : m_FallbackDispenser( MemoryDispenser )
 	{
 		COMPILE_TIME_ASSERT( sizeof( T ) > sizeof( void * ) );
-		m_pHead = NULL;
+		m_pHead = nullptr;
 	}
 
 	T *Allocate( void )
 	{
-		if( m_pHead != NULL )
+		if( m_pHead != nullptr )
 		{
 			T *pRetVal = m_pHead;
 			m_pHead = *(T **)m_pHead;
@@ -1136,7 +1136,7 @@ inline void ComputePlanarDistances( GeneratePolyhedronFromPlanes_UnorderedPointL
 		pIntermediateResults[i] = MulSIMD( fPlane, pPointWalk->point.ptPosition );
 		++i;
 		pPointWalk = pPointWalk->pNext;
-	} while( pPointWalk != NULL );
+	} while( pPointWalk != nullptr );
 
 	i = 0;
 	pPointWalk = pAllPoints;
@@ -1146,7 +1146,7 @@ inline void ComputePlanarDistances( GeneratePolyhedronFromPlanes_UnorderedPointL
 		DBG_ONLY( pPointWalk->point.debugdata.fInitialPlaneDistance = pPointWalk->point.fPlaneDist; );
 		++i;
 		pPointWalk = pPointWalk->pNext;
-	} while( pPointWalk != NULL );
+	} while( pPointWalk != nullptr );
 }
 
 class CClipLinkedGeometryDestructors
@@ -1196,7 +1196,7 @@ public:
 	{
 		for( int i = 0; i != DebugCutHistory.Count(); ++i )
 		{
-			if( DebugCutHistory[i] != NULL )
+			if( DebugCutHistory[i] != nullptr )
 			{
 				DebugCutHistory[i]->Release();
 			}
@@ -1385,7 +1385,7 @@ GeneratePolyhedronFromPlanes_Line *RemoveDegeneratePolygon( GeneratePolyhedronFr
 //search/kill redundant points on the specified polygon
 void RemoveDegeneratePoints( GeneratePolyhedronFromPlanes_Polygon *pSearchPolygon, CClipLinkedGeometryDestructors &destructors )
 {
-	AssertMsg( destructors.pAllPolygons->pNext != NULL && destructors.pAllPolygons->pNext->pNext != NULL, "RemoveDegeneratePoints() is not safe to run on 2D polyhedrons, early out before you get here" );
+	AssertMsg( destructors.pAllPolygons->pNext != nullptr && destructors.pAllPolygons->pNext->pNext != nullptr, "RemoveDegeneratePoints() is not safe to run on 2D polyhedrons, early out before you get here" );
 	GeneratePolyhedronFromPlanes_LineLL *pHeadLine = pSearchPolygon->pLines;
 	GeneratePolyhedronFromPlanes_LineLL *pWalkLine = pHeadLine;
 	do 
@@ -1475,7 +1475,7 @@ static bool MergeTwoLines( GeneratePolyhedronFromPlanes_Line *pMergeLines[2], in
 	//merge the polygon pointer from good side of 1 to the dead side of 0
 	pMergeLines[0]->pPolygons[iDyingPolygonReferenceIndices[0]] = pMergeLines[1]->pPolygons[1 - iDyingPolygonReferenceIndices[1]];
 
-	bool bDeletedALineBorderingNewPolygon = (pMergeLines[1]->pPolygons[0] == NULL) || (pMergeLines[1]->pPolygons[1] == NULL);
+	bool bDeletedALineBorderingNewPolygon = (pMergeLines[1]->pPolygons[0] == nullptr) || (pMergeLines[1]->pPolygons[1] == nullptr);
 
 	//swap the link from the polygon attached to 1 so it points at 0 instead of 1
 	{
@@ -1550,7 +1550,7 @@ static bool MergeTwoLines( GeneratePolyhedronFromPlanes_Line *pMergeLines[2], in
 				//link past the redundant line in both polygons
 				for( int j = 0; j != 2; ++j )
 				{
-					if( pRedundantLine->pLine->pPolygons[i] == NULL )
+					if( pRedundantLine->pLine->pPolygons[i] == nullptr )
 					{
 						bDeletedALineBorderingNewPolygon = true;
 					}
@@ -1586,7 +1586,7 @@ static inline GeneratePolyhedronFromPlanes_Point *AllocatePoint( GeneratePolyhed
 	DBG_ONLY( pAllPoints->pPrev->point.debugdata.Reset() );
 	pAllPoints->pPrev->pNext = pAllPoints;
 	pAllPoints = pAllPoints->pPrev;
-	pAllPoints->pPrev = NULL;
+	pAllPoints->pPrev = nullptr;
 	DBG_ONLY( pAllPoints->point.debugdata.bIsNew = true; );
 
 	Assert( (((size_t)&pAllPoints->point.ptPosition) & 15) == 0 );
@@ -1603,7 +1603,7 @@ static inline GeneratePolyhedronFromPlanes_Line *AllocateLine( GeneratePolyhedro
 	DBG_ONLY( pAllLines->pPrev->line.debugdata.Reset(); );
 	pAllLines->pPrev->pNext = pAllLines;
 	pAllLines = pAllLines->pPrev;
-	pAllLines->pPrev = NULL;
+	pAllLines->pPrev = nullptr;
 
 	pAllLines->line.InitLineLinks();
 	pAllLines->line.planarity = LINE_ONPLANE;
@@ -1619,7 +1619,7 @@ static inline GeneratePolyhedronFromPlanes_Polygon *AllocatePolygon( GeneratePol
 	DBG_ONLY( pAllPolygons->pPrev->polygon.debugdata.Reset() );
 	pAllPolygons->pPrev->pNext = pAllPolygons;
 	pAllPolygons = pAllPolygons->pPrev;
-	pAllPolygons->pPrev = NULL;
+	pAllPolygons->pPrev = nullptr;
 	
 	pAllPolygons->polygon.bDead = false; //technically missing all it's sides, but we're fixing it now
 	pAllPolygons->polygon.bHasNewPoints = true;
@@ -1650,7 +1650,7 @@ struct MarkPlanarityControlStruct_t
 		GeneratePolyhedronFromPlanes_Line *pStartLine = AllocateLine( pAllLines, lineAllocator );
 		{
 			//A bit of setup on the dummy line, links to nothing
-			pStartLine->pPolygons[0] = NULL;						
+			pStartLine->pPolygons[0] = nullptr;						
 			pStartLine->PolygonLineLinks[0].pNext = &pStartLine->PolygonLineLinks[0];
 			pStartLine->PolygonLineLinks[0].pPrev = &pStartLine->PolygonLineLinks[0];
 
@@ -1658,11 +1658,11 @@ struct MarkPlanarityControlStruct_t
 			pStartLine->PolygonLineLinks[1].pNext = &pStartLine->PolygonLineLinks[1];
 			pStartLine->PolygonLineLinks[1].pPrev = &pStartLine->PolygonLineLinks[1];
 
-			pStartLine->pPoints[0] = NULL;						
+			pStartLine->pPoints[0] = nullptr;						
 			pStartLine->PointLineLinks[0].pNext = &pStartLine->PointLineLinks[0];
 			pStartLine->PointLineLinks[0].pPrev = &pStartLine->PointLineLinks[0];
 
-			pStartLine->pPoints[1] = NULL;						
+			pStartLine->pPoints[1] = nullptr;						
 			pStartLine->PointLineLinks[1].pNext = &pStartLine->PointLineLinks[1];
 			pStartLine->PointLineLinks[1].pPrev = &pStartLine->PointLineLinks[1];
 
@@ -1698,17 +1698,17 @@ GeneratePolyhedronFromPlanes_Line *MarkPlanarity_CreateNewPolyLine( MarkPlanarit
 	GeneratePolyhedronFromPlanes_Line *pNewLine = AllocateLine( control.pAllLines, control.lineAllocator );
 	//make sure we can link into it
 	{
-		pNewLine->pPoints[0] = NULL;
-		pNewLine->PointLineLinks[0].pPrev = NULL;
-		pNewLine->PointLineLinks[0].pNext = NULL;
+		pNewLine->pPoints[0] = nullptr;
+		pNewLine->PointLineLinks[0].pPrev = nullptr;
+		pNewLine->PointLineLinks[0].pNext = nullptr;
 
-		pNewLine->pPoints[1] = NULL;
-		pNewLine->PointLineLinks[1].pPrev = NULL;
-		pNewLine->PointLineLinks[1].pNext = NULL;
+		pNewLine->pPoints[1] = nullptr;
+		pNewLine->PointLineLinks[1].pPrev = nullptr;
+		pNewLine->PointLineLinks[1].pNext = nullptr;
 
-		pNewLine->pPolygons[0] = NULL;
-		pNewLine->PolygonLineLinks[0].pNext = NULL;
-		pNewLine->PolygonLineLinks[0].pPrev = NULL;
+		pNewLine->pPolygons[0] = nullptr;
+		pNewLine->PolygonLineLinks[0].pNext = nullptr;
+		pNewLine->PolygonLineLinks[0].pPrev = nullptr;
 
 		pNewLine->pPolygons[1] = control.pNewPolygon;
 		pNewLine->PolygonLineLinks[1].pNext = control.pActivePolyLine->pNext;
@@ -2094,7 +2094,7 @@ CPolyhedron *ClipLinkedGeometry( GeneratePolyhedronFromPlanes_UnorderedPolygonLL
 	const float fOnPlaneEpsilonSquared = fOnPlaneEpsilon * fOnPlaneEpsilon;
 
 #ifdef DBGFLAG_ASSERT
-	GeneratePolyhedronFromPlanes_Point *pStartPoint = NULL;
+	GeneratePolyhedronFromPlanes_Point *pStartPoint = nullptr;
 
 	static int iPolyhedronClipCount = 0;
 	++iPolyhedronClipCount;
@@ -2102,7 +2102,7 @@ CPolyhedron *ClipLinkedGeometry( GeneratePolyhedronFromPlanes_UnorderedPolygonLL
 	
 	size_t iStackMemorySize = (64 * 1024); //start off trying to allocate 128k
 	void *pStackMemory = stackalloc( iStackMemorySize );
-	while( pStackMemory == NULL )
+	while( pStackMemory == nullptr )
 	{
 		iStackMemorySize = iStackMemorySize >> 1;
 		pStackMemory = stackalloc( iStackMemorySize );
@@ -2110,11 +2110,11 @@ CPolyhedron *ClipLinkedGeometry( GeneratePolyhedronFromPlanes_UnorderedPolygonLL
 	CStackMemoryDispenser memoryDispenser( pStackMemory, iStackMemorySize );
 
 	//Collections of dead pointers for reallocation, data in them shouldn't be touched until the current loop iteration is done.
-	GeneratePolyhedronFromPlanes_UnorderedPointLL	*pDeadPointCollection = NULL;
+	GeneratePolyhedronFromPlanes_UnorderedPointLL	*pDeadPointCollection = nullptr;
 
 #ifdef ENABLE_DEBUG_POLYHEDRON_DUMPS
-	GeneratePolyhedronFromPlanes_UnorderedLineLL	*pDeadLineCollection = NULL;
-	GeneratePolyhedronFromPlanes_UnorderedPolygonLL *pDeadPolygonCollection = NULL;
+	GeneratePolyhedronFromPlanes_UnorderedLineLL	*pDeadLineCollection = nullptr;
+	GeneratePolyhedronFromPlanes_UnorderedPolygonLL *pDeadPolygonCollection = nullptr;
 #endif
 
 	CStackItemDispenser<GeneratePolyhedronFromPlanes_UnorderedPointLL> pointAllocator( memoryDispenser );
@@ -2172,7 +2172,7 @@ CPolyhedron *ClipLinkedGeometry( GeneratePolyhedronFromPlanes_UnorderedPolygonLL
 			} while( pActivePointWalk );
 		}
 		
-		while( pDeadPointCollection != NULL )
+		while( pDeadPointCollection != nullptr )
 		{
 			GeneratePolyhedronFromPlanes_UnorderedPointLL *pFree = pDeadPointCollection;
 			pDeadPointCollection = pDeadPointCollection->pNext;
@@ -2180,14 +2180,14 @@ CPolyhedron *ClipLinkedGeometry( GeneratePolyhedronFromPlanes_UnorderedPolygonLL
 		}
 
 #ifdef ENABLE_DEBUG_POLYHEDRON_DUMPS
-		while( pDeadLineCollection != NULL )
+		while( pDeadLineCollection != nullptr )
 		{
 			GeneratePolyhedronFromPlanes_UnorderedLineLL *pFree = pDeadLineCollection;
 			pDeadLineCollection = pDeadLineCollection->pNext;
 			lineAllocator.Free( pFree );
 		}
 
-		while( pDeadPolygonCollection != NULL )
+		while( pDeadPolygonCollection != nullptr )
 		{
 			GeneratePolyhedronFromPlanes_UnorderedPolygonLL *pFree = pDeadPolygonCollection;
 			pDeadPolygonCollection = pDeadPolygonCollection->pNext;
@@ -2269,11 +2269,11 @@ CPolyhedron *ClipLinkedGeometry( GeneratePolyhedronFromPlanes_UnorderedPolygonLL
 #if defined( ENABLE_DEBUG_POLYHEDRON_DUMPS )
 				Assert_DumpPolyhedron( g_bDumpNullPolyhedrons == false ); //if someone set it to true, we'll dump the polyhedron then halt
 #endif
-				return NULL; 
+				return nullptr; 
 			}
 
-			Assert( (control.pActivePolyLine->pNext == pStartLine) || (pStartLine->pLine->pPoints[0] != NULL) );
-			Assert( (pStartLine->pLine->pPoints[1] != NULL) || (pStartLine == control.pActivePolyLine) );
+			Assert( (control.pActivePolyLine->pNext == pStartLine) || (pStartLine->pLine->pPoints[0] != nullptr) );
+			Assert( (pStartLine->pLine->pPoints[1] != nullptr) || (pStartLine == control.pActivePolyLine) );
 
 			//search/mark dead polygons, there should be a way to do this in the crawl algorithm
 			{
@@ -2308,13 +2308,13 @@ CPolyhedron *ClipLinkedGeometry( GeneratePolyhedronFromPlanes_UnorderedPolygonLL
 
 			GeneratePolyhedronFromPlanes_LineLL *pFinal = control.pActivePolyLine;
 			
-			if( pFinal->pNext->pLine->pPoints[1 - pFinal->pNext->iReferenceIndex] == NULL )
+			if( pFinal->pNext->pLine->pPoints[1 - pFinal->pNext->iReferenceIndex] == nullptr )
 			{
 				//last line redundant, copy partial data into first line
 				GeneratePolyhedronFromPlanes_LineLL *pFirst = pFinal->pNext;
 				Assert_DumpPolyhedron( pFinal != pFirst );
-				Assert_DumpPolyhedron( pFirst->pLine->pPoints[pFirst->iReferenceIndex] != NULL );
-				Assert_DumpPolyhedron( pFinal->pLine->pPoints[1 - pFinal->iReferenceIndex] != NULL );
+				Assert_DumpPolyhedron( pFirst->pLine->pPoints[pFirst->iReferenceIndex] != nullptr );
+				Assert_DumpPolyhedron( pFinal->pLine->pPoints[1 - pFinal->iReferenceIndex] != nullptr );
 				
 				//link over redundant last line
 				pFirst->pPrev = pFinal->pPrev;
@@ -2400,7 +2400,7 @@ CPolyhedron *ClipLinkedGeometry( GeneratePolyhedronFromPlanes_UnorderedPolygonLL
 				GeneratePolyhedronFromPlanes_UnorderedLineLL *pLineWalk = pAllLines;
 				do 
 				{
-					Assert( pLineWalk->line.pPoints[0] != NULL && pLineWalk->line.pPoints[1] != NULL );
+					Assert( pLineWalk->line.pPoints[0] != nullptr && pLineWalk->line.pPoints[1] != nullptr );
 					pLineWalk = pLineWalk->pNext;
 				} while (pLineWalk);
 			}
@@ -2464,7 +2464,7 @@ CPolyhedron *ClipLinkedGeometry( GeneratePolyhedronFromPlanes_UnorderedPolygonLL
 		}
 
 #if defined( DEBUG_POLYHEDRON_CONVERSION )
-		if( g_pPolyhedronCarvingDebugStepCallback != NULL )
+		if( g_pPolyhedronCarvingDebugStepCallback != nullptr )
 		{
 			CPolyhedron *pTestPolyhedron = ConvertLinkedGeometryToPolyhedron( pAllPolygons, pAllLines, pAllPoints, false, vShiftResultPositions );
 			Assert_DumpPolyhedron( pTestPolyhedron );
@@ -2487,13 +2487,13 @@ CPolyhedron *ClipLinkedGeometry( GeneratePolyhedronFromPlanes_UnorderedPolygonLL
 		//When clipping a 2D polyhedron, the result of any clipping is a faux 3rd polygon which is degenerate (2 lines, both connected to the same set of points). Remove it now
 		if( pNewPolygon->pLines->pNext == pNewPolygon->pLines->pPrev )
 		{
-			AssertMsg_DumpPolyhedron( (pAllPolygons->pNext != NULL) && //more than 1
-				(pAllPolygons->pNext->pNext != NULL) && //more than 2
-				(pAllPolygons->pNext->pNext->pNext == NULL), //exactly 3 polygons, and no more 
+			AssertMsg_DumpPolyhedron( (pAllPolygons->pNext != nullptr) && //more than 1
+				(pAllPolygons->pNext->pNext != nullptr) && //more than 2
+				(pAllPolygons->pNext->pNext->pNext == nullptr), //exactly 3 polygons, and no more 
 				"This case should only pop up if the input to the last cutting pass was a 2 sided polyhedron" );
 
 			RemoveDegeneratePolygon( pNewPolygon, destructors );
-			pNewPolygon = NULL;
+			pNewPolygon = nullptr;
 		}
 
 		//remove super-short lines
@@ -2561,7 +2561,7 @@ CPolyhedron *ClipLinkedGeometry( GeneratePolyhedronFromPlanes_UnorderedPolygonLL
 							if( pPolygons[i]->pLines->pNext == pPolygons[i]->pLines->pPrev )
 							{
 								//this polygon is dead
-								if( pAllPolygons->pNext->pNext == NULL )
+								if( pAllPolygons->pNext->pNext == nullptr )
 								{
 									//It's conceivably possible to either start or collapse down to a 2D polyhedron with every line cut save one.
 									//We can't have 1 polygon, and I don't want to mentally run down what would happen below if we tried to collapse down to 1.
@@ -2569,12 +2569,12 @@ CPolyhedron *ClipLinkedGeometry( GeneratePolyhedronFromPlanes_UnorderedPolygonLL
 #if defined( ENABLE_DEBUG_POLYHEDRON_DUMPS )
 									Assert_DumpPolyhedron( g_bDumpNullPolyhedrons == false ); //if someone set it to true, we'll dump the polyhedron then halt
 #endif
-									return NULL;
+									return nullptr;
 								}
 
 								if( pPolygons[i] == pNewPolygon )
 								{
-									pNewPolygon = NULL;
+									pNewPolygon = nullptr;
 								}
 
 								if( pActiveLineWalk )
@@ -2603,7 +2603,7 @@ CPolyhedron *ClipLinkedGeometry( GeneratePolyhedronFromPlanes_UnorderedPolygonLL
 		}
 
 #if defined( DEBUG_POLYHEDRON_CONVERSION )
-		if( g_pPolyhedronCarvingDebugStepCallback != NULL )
+		if( g_pPolyhedronCarvingDebugStepCallback != nullptr )
 		{
 			CPolyhedron *pTestPolyhedron = ConvertLinkedGeometryToPolyhedron( pAllPolygons, pAllLines, pAllPoints, false, vShiftResultPositions );
 			Assert_DumpPolyhedron( pTestPolyhedron );
@@ -2623,12 +2623,12 @@ CPolyhedron *ClipLinkedGeometry( GeneratePolyhedronFromPlanes_UnorderedPolygonLL
 		}
 #endif
 
-		AssertMsg( pAllPolygons->pNext != NULL, "A polyhedron must have at least 2 sides to be a 2D Polyhedron, and at least 4 to be a 3D polyhedron" );
+		AssertMsg( pAllPolygons->pNext != nullptr, "A polyhedron must have at least 2 sides to be a 2D Polyhedron, and at least 4 to be a 3D polyhedron" );
 
 		//if any polygons had their geometry adjusted (or new poly uses existing on-plane points), we need to recompute the surface normal and check for degenerate points
 		{
 			GeneratePolyhedronFromPlanes_UnorderedPolygonLL *pActivePolygonWalk = pAllPolygons;
-			if( pAllPolygons->pNext->pNext != NULL )
+			if( pAllPolygons->pNext->pNext != nullptr )
 			{
 				//for 3D polyhedrons, remove degenerate points and recompute normals
 				do
@@ -2656,7 +2656,7 @@ CPolyhedron *ClipLinkedGeometry( GeneratePolyhedronFromPlanes_UnorderedPolygonLL
 		}
 
 #if defined( DEBUG_POLYHEDRON_CONVERSION )
-		if( g_pPolyhedronCarvingDebugStepCallback != NULL )
+		if( g_pPolyhedronCarvingDebugStepCallback != nullptr )
 		{
 			CPolyhedron *pTestPolyhedron = ConvertLinkedGeometryToPolyhedron( pAllPolygons, pAllLines, pAllPoints, false, vShiftResultPositions );
 			Assert_DumpPolyhedron( pTestPolyhedron );
@@ -2810,8 +2810,8 @@ CPolyhedron *ClipLinkedGeometry( GeneratePolyhedronFromPlanes_UnorderedPolygonLL
 
 							DestructPoint( pProblemPoint, destructors );
 
-							Assert( pAllPolygons->pNext != NULL );
-							if( pAllPolygons->pNext->pNext != NULL )
+							Assert( pAllPolygons->pNext != nullptr );
+							if( pAllPolygons->pNext->pNext != nullptr )
 							{
 								RemoveDegeneratePoints( pPatchPolygon, destructors );
 							}
@@ -2885,7 +2885,7 @@ CPolyhedron *ClipLinkedGeometry( GeneratePolyhedronFromPlanes_UnorderedPolygonLL
 				pDebugPolygonWalk = pDebugPolygonWalk->pNext;
 			} while( pDebugPolygonWalk );
 
-			bool bTwoPolygons = (pAllPolygons->pNext->pNext == NULL);
+			bool bTwoPolygons = (pAllPolygons->pNext->pNext == nullptr);
 
 
 			GeneratePolyhedronFromPlanes_UnorderedPointLL *pDebugPointWalk = pAllPoints;
@@ -2926,21 +2926,21 @@ CPolyhedron *ClipLinkedGeometry( GeneratePolyhedronFromPlanes_UnorderedPolygonLL
 			GeneratePolyhedronFromPlanes_UnorderedLineLL *pDebugLineWalk = pAllLines;
 			do
 			{
-				AssertMsg_DumpPolyhedron( (pDebugLineWalk->line.pPolygons[0] != NULL) && (pDebugLineWalk->line.pPolygons[1] != NULL), "There's a polygon missing" );
+				AssertMsg_DumpPolyhedron( (pDebugLineWalk->line.pPolygons[0] != nullptr) && (pDebugLineWalk->line.pPolygons[1] != nullptr), "There's a polygon missing" );
 				AssertMsg_DumpPolyhedron( pDebugLineWalk->line.pPoints[0] && pDebugLineWalk->line.pPoints[1], "Line missing a point" );
 
 
 				pDebugLineWalk = pDebugLineWalk->pNext;
 			} while( pDebugLineWalk );
 
-			pStartPoint = NULL;
+			pStartPoint = nullptr;
 		}
 
 		CPolyhedron *pHistoryPolyhedron = ConvertLinkedGeometryToPolyhedron( pAllPolygons, pAllLines, pAllPoints, false, vShiftResultPositions );
 		
 #if defined( DEBUG_POLYHEDRON_CONVERSION )
 		//last bit of debugging from whatever outside source wants this stupid thing
-		if( g_pPolyhedronCarvingDebugStepCallback != NULL )
+		if( g_pPolyhedronCarvingDebugStepCallback != nullptr )
 		{
 			if( !g_pPolyhedronCarvingDebugStepCallback( pHistoryPolyhedron ) )
 			{
@@ -3013,7 +3013,7 @@ CPolyhedron *GeneratePolyhedronFromPlanes( const float *pOutwardFacingPlanes, in
 	//our first goal is to find the size of a cube big enough to encapsulate all points that will be in the final polyhedron
 	Vector vAABBMinsVec, vAABBMaxsVec;
 	if( FindConvexShapeLooseAABB( pAlteredPlanes, iPlaneCount, &vAABBMinsVec, &vAABBMaxsVec ) == false )
-		return NULL; //no shape to work with apparently
+		return nullptr; //no shape to work with apparently
 
 	fltx4 vAABBMins;
 	SubFloat( vAABBMins, 0 ) = vAABBMinsVec.x;
@@ -3188,7 +3188,7 @@ CPolyhedron *GeneratePolyhedronFromPlanes( const float *pOutwardFacingPlanes, in
 
 		{
 			StartingPolygonList[0].pNext = &StartingPolygonList[1];
-			StartingPolygonList[0].pPrev = NULL;
+			StartingPolygonList[0].pPrev = nullptr;
 
 			StartingPolygonList[1].pNext = &StartingPolygonList[2];
 			StartingPolygonList[1].pPrev = &StartingPolygonList[0];
@@ -3202,7 +3202,7 @@ CPolyhedron *GeneratePolyhedronFromPlanes( const float *pOutwardFacingPlanes, in
 			StartingPolygonList[4].pNext = &StartingPolygonList[5];
 			StartingPolygonList[4].pPrev = &StartingPolygonList[3];
 
-			StartingPolygonList[5].pNext = NULL;
+			StartingPolygonList[5].pNext = nullptr;
 			StartingPolygonList[5].pPrev = &StartingPolygonList[4];
 		}
 
@@ -3210,7 +3210,7 @@ CPolyhedron *GeneratePolyhedronFromPlanes( const float *pOutwardFacingPlanes, in
 
 		{
 			StartingLineList[0].pNext = &StartingLineList[1];
-			StartingLineList[0].pPrev = NULL;
+			StartingLineList[0].pPrev = nullptr;
 
 			StartingLineList[1].pNext = &StartingLineList[2];
 			StartingLineList[1].pPrev = &StartingLineList[0];
@@ -3242,13 +3242,13 @@ CPolyhedron *GeneratePolyhedronFromPlanes( const float *pOutwardFacingPlanes, in
 			StartingLineList[10].pNext = &StartingLineList[11];
 			StartingLineList[10].pPrev = &StartingLineList[9];
 
-			StartingLineList[11].pNext = NULL;
+			StartingLineList[11].pNext = nullptr;
 			StartingLineList[11].pPrev = &StartingLineList[10];
 		}
 
 		{
 			StartingPointList[0].pNext = &StartingPointList[1];
-			StartingPointList[0].pPrev = NULL;
+			StartingPointList[0].pPrev = nullptr;
 
 			StartingPointList[1].pNext = &StartingPointList[2];
 			StartingPointList[1].pPrev = &StartingPointList[0];
@@ -3268,7 +3268,7 @@ CPolyhedron *GeneratePolyhedronFromPlanes( const float *pOutwardFacingPlanes, in
 			StartingPointList[6].pNext = &StartingPointList[7];
 			StartingPointList[6].pPrev = &StartingPointList[5];
 
-			StartingPointList[7].pNext = NULL;
+			StartingPointList[7].pNext = nullptr;
 			StartingPointList[7].pPrev = &StartingPointList[6];
 		}
 	}
@@ -3277,7 +3277,7 @@ CPolyhedron *GeneratePolyhedronFromPlanes( const float *pOutwardFacingPlanes, in
 
 #if defined( DEBUG_POLYHEDRON_CONVERSION )
 	//last bit of debugging from whatever outside source wants this stupid thing
-	if( (g_pPolyhedronCarvingDebugStepCallback != NULL) && (pRetVal != NULL) )
+	if( (g_pPolyhedronCarvingDebugStepCallback != nullptr) && (pRetVal != nullptr) )
 	{
 		AssertMsg( g_pPolyhedronCarvingDebugStepCallback( pRetVal ), "Outside conversion failed" );
 	}
@@ -3497,7 +3497,7 @@ void DumpWorkingStatePolygons( GeneratePolyhedronFromPlanes_UnorderedPolygonLL *
 			continue;
 		}
 #endif
-		if( (pPoly->pLines == NULL) || (pPoly->pLines == pPoly->pLines->pNext) )
+		if( (pPoly->pLines == nullptr) || (pPoly->pLines == pPoly->pLines->pNext) )
 		{
 			pPolygons = pPolygons->pNext;
 			continue; //less than 3 points in the polygon so far, undrawable
@@ -3575,7 +3575,7 @@ void DumpWorkingStateLines( GeneratePolyhedronFromPlanes_UnorderedLineLL *pLines
 	{
 		GeneratePolyhedronFromPlanes_Line *pLine = &pLines->line;
 
-		if( (pLine->pPoints[0] == NULL) || (pLine->pPoints[1] == NULL) )
+		if( (pLine->pPoints[0] == nullptr) || (pLine->pPoints[1] == nullptr) )
 		{
 			pLines = pLines->pNext;
 			continue;
@@ -3703,13 +3703,13 @@ void DumpWorkingStatePolyhedron( GeneratePolyhedronFromPlanes_UnorderedPolygonLL
 								GeneratePolyhedronFromPlanes_UnorderedPointLL *pAllPoints, GeneratePolyhedronFromPlanes_UnorderedPointLL *pDeadPoints,
 								const char *pFilename, const VMatrix *pTransform )
 {
-	if( pTransform == NULL )
+	if( pTransform == nullptr )
 		pTransform = &s_matIdentity;
 
 	printf("Writing %s...\n", pFilename );
 
 	FILE *pFile = fopen( pFilename, "wb" );
-	if( pFile == NULL )
+	if( pFile == nullptr )
 		return;
 
 	DumpWorkingStatePolygons( pAllPolygons, false, pTransform, pFile );
@@ -3730,7 +3730,7 @@ void DumpPolyhedronToGLView( const CPolyhedron *pPolyhedron, const char *pFilena
 #ifdef ENABLE_DEBUG_POLYHEDRON_DUMPS
 	Assert( pPolyhedron && (pPolyhedron->iVertexCount > 2) );
 
-	if( pTransform == NULL )
+	if( pTransform == nullptr )
 		pTransform = &s_matIdentity;
 
 	printf("Writing %s...\n", pFilename );
@@ -3798,7 +3798,7 @@ void DumpPolyhedronToGLView( const CPolyhedron *pPolyhedron, const char *pFilena
 void DumpPlaneToGlView( const float *pPlane, float fGrayScale, const char *pszFileName, const VMatrix *pTransform )
 {
 #ifdef ENABLE_DEBUG_POLYHEDRON_DUMPS
-	if( pTransform == NULL )
+	if( pTransform == nullptr )
 		pTransform = &s_matIdentity;
 
 	FILE *pFile = fopen( pszFileName, "ab" );

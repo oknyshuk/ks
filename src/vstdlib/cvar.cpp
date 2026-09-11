@@ -40,7 +40,7 @@ public:
 	{
 		if ( !Q_stricmp( pInterfaceName, CVAR_QUERY_INTERFACE_VERSION ) )
 			return (ICvarQuery*)this;
-		return NULL;
+		return nullptr;
 	
 	}
 
@@ -51,7 +51,7 @@ public:
 };
 
 static CDefaultCvarQuery s_DefaultCvarQuery;
-static ICvarQuery *s_pCVarQuery = NULL;
+static ICvarQuery *s_pCVarQuery = nullptr;
 
 #include "concommandhash.h"
 
@@ -182,7 +182,7 @@ protected:
 		void Reset()
 		{
 			m_VarName = "";
-			m_pVar = NULL;
+			m_pVar = nullptr;
 		}
 
 		CUtlString					m_VarName;
@@ -263,7 +263,7 @@ CreateInterfaceFn VStdLib_GetICVarFactory()
 CCvar::CCvar() : m_TempConsoleBuffer( 0, 1024 ), m_SplitScreenAddedConVarsMap( 0, 0, DefLessFunc( ConVar * ) )
 {
 	m_nNextDLLIdentifier = 0;
-	m_pConCommandList = NULL;
+	m_pConCommandList = nullptr;
 	m_nMaxSplitScreenSlots = 1;
 	m_bMaterialSystemThreadSetAllowed = false;
 	m_CommandHash.Init();
@@ -276,7 +276,7 @@ bool CCvar::Connect( CreateInterfaceFn factory )
 {
 	ConnectTier1Libraries( &factory, 1 );
 
-	s_pCVarQuery = (ICvarQuery*)factory( CVAR_QUERY_INTERFACE_VERSION, NULL );
+	s_pCVarQuery = (ICvarQuery*)factory( CVAR_QUERY_INTERFACE_VERSION, nullptr );
 	if ( !s_pCVarQuery )
 	{
 		s_pCVarQuery = &s_DefaultCvarQuery;
@@ -289,7 +289,7 @@ bool CCvar::Connect( CreateInterfaceFn factory )
 void CCvar::Disconnect()
 {
 	ConVar_Unregister();
-	s_pCVarQuery = NULL;
+	s_pCVarQuery = nullptr;
 	DisconnectTier1Libraries();
 
 	Assert( m_SplitScreenAddedConVarsMap.Count() == 0 );
@@ -310,7 +310,7 @@ void *CCvar::QueryInterface( const char *pInterfaceName )
 	if ( !V_strcmp( pInterfaceName, CVAR_INTERFACE_VERSION ) )
 		return (ICvar*)this;
 
-	return NULL;
+	return nullptr;
 }
 
 
@@ -348,7 +348,7 @@ void CCvar::RegisterConCommand( ConCommandBase *variable )
 	const char *pName = variable->GetName();
 	if ( !pName || !pName[0] )
 	{
-		variable->m_pNext = NULL;
+		variable->m_pNext = nullptr;
 		return;
 	}
 
@@ -440,7 +440,7 @@ void CCvar::RegisterConCommand( ConCommandBase *variable )
 			}
 		}
 
-		variable->m_pNext = NULL;
+		variable->m_pNext = nullptr;
 		return;
 	}
 
@@ -448,7 +448,7 @@ void CCvar::RegisterConCommand( ConCommandBase *variable )
 	variable->m_pNext = m_pConCommandList;
 	m_pConCommandList = variable;
 
-	AssertMsg1(FindCommandBase(variable->GetName()) == NULL, "Console command %s added twice!",
+	AssertMsg1(FindCommandBase(variable->GetName()) == nullptr, "Console command %s added twice!",
 		variable->GetName());
 	m_CommandHash.Insert(variable);
 
@@ -501,7 +501,7 @@ void CCvar::AddSplitScreenConVars()
 		}
 	}
 
-	ConCommandBase::s_pConCommandBases = NULL;
+	ConCommandBase::s_pConCommandBases = nullptr;
 }
 
 void CCvar::RemoveSplitScreenConVars( CVarDLLIdentifier_t id )
@@ -535,7 +535,7 @@ void CCvar::RemoveSplitScreenConVars( CVarDLLIdentifier_t id )
 			{
 				UnregisterConCommand( info.m_Vars[ i - 1 ].m_pVar );
 				delete info.m_Vars[ i - 1 ].m_pVar;
-				info.m_Vars[ i - 1 ].m_pVar = NULL;
+				info.m_Vars[ i - 1 ].m_pVar = nullptr;
 			}
 		}
 		deleted.AddToTail( key );
@@ -556,7 +556,7 @@ void CCvar::UnregisterConCommand( ConCommandBase *pCommandToRemove )
 	pCommandToRemove->m_bRegistered = false;
 
 	// FIXME: Should we make this a doubly-linked list? Would remove faster
-	ConCommandBase *pPrev = NULL;
+	ConCommandBase *pPrev = nullptr;
 	for( ConCommandBase *pCommand = m_pConCommandList; pCommand; pCommand = pCommand->m_pNext )
 	{
 		if ( pCommand != pCommandToRemove )
@@ -565,7 +565,7 @@ void CCvar::UnregisterConCommand( ConCommandBase *pCommandToRemove )
 			continue;
 		}
 
-		if ( pPrev == NULL )
+		if ( pPrev == nullptr )
 		{
 			m_pConCommandList = pCommand->m_pNext;
 		}
@@ -573,7 +573,7 @@ void CCvar::UnregisterConCommand( ConCommandBase *pCommandToRemove )
 		{
 			pPrev->m_pNext = pCommand->m_pNext;
 		}
-		pCommand->m_pNext = NULL;
+		pCommand->m_pNext = nullptr;
 		m_CommandHash.Remove(m_CommandHash.Find(pCommand));
 		break;
 	}
@@ -584,7 +584,7 @@ void CCvar::UnregisterConCommands( CVarDLLIdentifier_t id )
 	ConCommandBase	*pNewList;
 	ConCommandBase  *pCommand, *pNext;
 
-	pNewList = NULL;
+	pNewList = nullptr;
 
 	m_CommandHash.Purge( true );
 	pCommand = m_pConCommandList;
@@ -602,7 +602,7 @@ void CCvar::UnregisterConCommands( CVarDLLIdentifier_t id )
 		{
 			// Unlink
 			pCommand->m_bRegistered = false;
-			pCommand->m_pNext = NULL;
+			pCommand->m_pNext = nullptr;
 
 		}
 
@@ -641,14 +641,14 @@ const ConVar *CCvar::FindVar( const char *var_name ) const
 	const ConCommandBase *var = FindCommandBase( var_name );
 	if ( !var )
 	{
-		return NULL;
+		return nullptr;
 	}
 	else
 	{
 		if (var->IsCommand())
 		{
 			Warning("Tried to look up command %s as if it were a variable.\n", var_name );
-			return NULL;
+			return nullptr;
 		}
 	}
 	
@@ -660,14 +660,14 @@ ConVar *CCvar::FindVar( const char *var_name )
 	ConCommandBase *var = FindCommandBase( var_name );
 	if ( !var )
 	{
-		return NULL;
+		return nullptr;
 	}
 	else
 	{
 		if (var->IsCommand())
 		{
 			Warning("Tried to look up command %s as if it were a variable.\n", var_name );
-			return NULL;
+			return nullptr;
 		}
 	}
 	
@@ -682,7 +682,7 @@ const ConCommand *CCvar::FindCommand( const char *pCommandName ) const
 {
 	const ConCommandBase *var = FindCommandBase( pCommandName );
 	if ( !var || !var->IsCommand() )
-		return NULL;
+		return nullptr;
 
 	return static_cast<const ConCommand*>(var);
 }
@@ -691,7 +691,7 @@ ConCommand *CCvar::FindCommand( const char *pCommandName )
 {
 	ConCommandBase *var = FindCommandBase( pCommandName );
 	if ( !var || !var->IsCommand() )
-		return NULL;
+		return nullptr;
 
 	return static_cast<ConCommand*>( var );
 }
@@ -1022,8 +1022,8 @@ static bool ConVarSortFunc( ConCommandBase * const &lhs, ConCommandBase * const 
 //-----------------------------------------------------------------------------
 void CCvar::Find( const CCommand &args )
 {
-	const char *search = NULL;
-	const char *subSearch = NULL;
+	const char *search = nullptr;
+	const char *subSearch = nullptr;
 
 	//lwss: Add support for a 2nd string in the search. I'm used to this feature in source 2, it's useful.
 	if ( args.ArgC() != 2 && args.ArgC() != 3 )

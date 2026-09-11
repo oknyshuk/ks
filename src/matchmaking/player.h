@@ -72,7 +72,7 @@ public:
 		KeyValues *m_pGameDetails;
 	};
 public:
-	explicit PlayerFriend( XUID xuid, FriendInfo_t const *pFriendInfo = NULL );
+	explicit PlayerFriend( XUID xuid, FriendInfo_t const *pFriendInfo = nullptr );
 
 	//
 	// IPlayerFriend implementation

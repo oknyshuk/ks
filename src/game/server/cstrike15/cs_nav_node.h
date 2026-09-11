@@ -31,7 +31,7 @@
 class CSNavNode
 {
 public:
-	CSNavNode( const Vector &pos, const Vector &normal, CSNavNode *parent = NULL );
+	CSNavNode( const Vector &pos, const Vector &normal, CSNavNode *parent = nullptr );
 
 	static CSNavNode *GetNode( const Vector &pos );					///< return navigation node at the position, or NULL if none exists
 

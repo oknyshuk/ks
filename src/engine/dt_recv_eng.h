@@ -39,7 +39,7 @@ bool RecvTable_RecvClassInfos( const ks::net::CSVCMsg_SendTable& msg, int nDemoP
 //
 // bAllowMismatches is true when playing demos back so we can change datatables without breaking demos.
 // If pAnyMisMatches is non-null, it will be set to true if the client's recv tables mismatched the server's ones.
-bool		RecvTable_CreateDecoders( const CStandardSendProxies *pSendProxies, bool bAllowMismatches, bool *pAnyMismatches=NULL );
+bool		RecvTable_CreateDecoders( const CStandardSendProxies *pSendProxies, bool bAllowMismatches, bool *pAnyMismatches=nullptr );
 
 // objectID gets passed into proxies and can be used to track data on particular objects.
 // NOTE: this function can ONLY decode a buffer outputted from RecvTable_MergeDeltas
@@ -67,7 +67,7 @@ bool RecvTable_MergeDeltas(
 
 	int objectID = - 1,
 	
-	CUtlVector< int >	*pChangedProps = NULL
+	CUtlVector< int >	*pChangedProps = nullptr
 	);
 
 

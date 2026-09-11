@@ -278,7 +278,7 @@ class CUtlMemoryConservative
 
 public:
 	// constructor, destructor
-	CUtlMemoryConservative( int nGrowSize = 0, int nInitSize = 0 ) : m_pMemory( NULL )
+	CUtlMemoryConservative( int nGrowSize = 0, int nInitSize = 0 ) : m_pMemory( nullptr )
 	{
 #ifdef REMEMBER_ALLOC_SIZE_FOR_VALGRIND
 		m_nCurAllocSize = 0;
@@ -355,7 +355,7 @@ public:
 	{
 		free( m_pMemory ); 
 		RememberAllocSize( 0 );
-		m_pMemory = NULL; 
+		m_pMemory = nullptr; 
 	}
 
 	// Purge all but the given number of elements
@@ -521,7 +521,7 @@ void CUtlMemory<T,I>::ConvertToGrowableMemory( int nGrowSize )
 	}
 	else
 	{
-		m_pMemory = NULL;
+		m_pMemory = nullptr;
 	}
 }
 
@@ -570,7 +570,7 @@ template< class T, class I >
 void *CUtlMemory<T,I>::DetachMemory()
 {
 	if ( IsExternallyAllocated() )
-		return NULL;
+		return nullptr;
 
 	void *pMemory = m_pMemory;
 	m_pMemory = 0;

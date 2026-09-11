@@ -48,7 +48,7 @@ public:
 	( 
 		char const *repositoryFileName, 
 		int version, 
-		PFNCOMPUTECACHEMETACHECKSUM checksumfunc = NULL, 
+		PFNCOMPUTECACHEMETACHECKSUM checksumfunc = nullptr, 
 		UtlCachedFileDataType_t fileCheckType = UTL_CACHED_FILE_USE_TIMESTAMP,
 		bool nevercheckdisk = false,
 		bool readonly = false,

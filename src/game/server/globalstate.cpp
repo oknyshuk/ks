@@ -98,14 +98,14 @@ public:
 	const char *GetMap( int globalIndex )
 	{
 		if ( !m_list.IsValidIndex(globalIndex) )
-			return NULL;
+			return nullptr;
 		return m_nameList.String( m_list[globalIndex].levelName );
 	}
 
 	const char *GetName( int globalIndex )
 	{
 		if ( !m_list.IsValidIndex(globalIndex) )
-			return NULL;
+			return nullptr;
 		return m_nameList.String( m_list[globalIndex].name );
 	}
 

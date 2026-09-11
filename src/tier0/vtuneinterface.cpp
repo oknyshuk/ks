@@ -24,7 +24,7 @@ public:
 
 	VTuneInterfaceImpl()
 	{
-		m_pFrameDomain = NULL;
+		m_pFrameDomain = nullptr;
 	}
 
 	virtual void Init();
@@ -58,17 +58,17 @@ void VTuneInterfaceImpl::Init()
 
 void VTuneInterfaceImpl::StartFrame()
 {
-	if ( m_pFrameDomain == NULL )
+	if ( m_pFrameDomain == nullptr )
 	{
 		Init();
 	}
 
-	__itt_frame_begin_v3( m_pFrameDomain, NULL);
+	__itt_frame_begin_v3( m_pFrameDomain, nullptr);
 }
 
 void VTuneInterfaceImpl::EndFrame()
 {
-	__itt_frame_end_v3( m_pFrameDomain, NULL);
+	__itt_frame_end_v3( m_pFrameDomain, nullptr);
 }
 
 __itt_event VTuneInterfaceImpl::CreateEvent( const char *name )

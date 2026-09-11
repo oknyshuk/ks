@@ -322,7 +322,7 @@ inline const ShadowShaderState_t &CTransitionTable::GetSnapshotShader( StateSnap
 inline const ShadowState_t *CTransitionTable::CurrentShadowState() const
 {
 	if ( m_CurrentShadowId == -1 )
-		return NULL;
+		return nullptr;
 
 	Assert( (m_CurrentShadowId >= 0) && (m_CurrentShadowId < m_ShadowStateList.Count()) );
 	return &m_ShadowStateList[m_CurrentShadowId];
@@ -331,7 +331,7 @@ inline const ShadowState_t *CTransitionTable::CurrentShadowState() const
 inline const ShadowShaderState_t *CTransitionTable::CurrentShadowShaderState() const
 {
 	if ( m_CurrentShadowId == -1 )
-		return NULL;
+		return nullptr;
 
 	Assert( (m_CurrentShadowId >= 0) && (m_CurrentShadowId < m_ShadowStateList.Count()) );
 	return &m_SnapshotList[m_CurrentShadowId].m_ShaderState;

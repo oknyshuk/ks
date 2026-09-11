@@ -106,7 +106,7 @@ static const char * s_clcommands[] =
 #if defined( REPLAY_ENABLED )
 	"request_replay_demo",
 #endif
-	NULL,
+	nullptr,
 };
 
 
@@ -207,7 +207,7 @@ CGameClient::CGameClient(int slot, CBaseServer *pServer )
 	m_nClientSlot = slot;
 	m_nEntityIndex = slot+1;
 	m_Server = pServer;
-	m_pCurrentFrame = NULL;
+	m_pCurrentFrame = nullptr;
 	m_bIsInReplayMode = false;
 
 	// NULL out data we'll never use.
@@ -542,7 +542,7 @@ void CGameClient::SetupPackInfo( CFrameSnapshot *pSnapshot )
 	}
 	else
 	{
-		m_PackInfo.m_pTransmitAlways = NULL;
+		m_PackInfo.m_pTransmitAlways = nullptr;
 	}
 
 	// Add frame to ClientFrame list 
@@ -767,7 +767,7 @@ void CGameClient::Inactivate( void )
 	}
 
 	m_nHltvReplayDelay = 0;
-	m_pHltvReplayServer = NULL;
+	m_pHltvReplayServer = nullptr;
 	m_nHltvReplayStopAt = 0;
 	m_nHltvReplayStartAt = 0;
 	m_nHltvLastSendTick = 0;	// last send tick, don't send ticks twice
@@ -848,8 +848,8 @@ void CGameClient::Clear()
 	}
 	m_VoiceStreams.ClearAll();
 	m_VoiceProximity.ClearAll();
-	edict = NULL;
-	m_pViewEntity = NULL;
+	edict = nullptr;
+	m_pViewEntity = nullptr;
 	m_bVoiceLoopback = false;
 	m_LastMovementTick = 0;
 	m_nSoundSequence = 0;
@@ -857,7 +857,7 @@ void CGameClient::Clear()
 	m_flLastClientCommandQuotaStart = -1.0f;
 	m_numClientCommandsInQuota = 0;
 	m_nHltvReplayDelay = 0;
-	m_pHltvReplayServer = NULL;
+	m_pHltvReplayServer = nullptr;
 	m_nHltvReplayStopAt = 0;
 	m_nHltvReplayStartAt = 0;
 	m_nHltvLastSendTick = 0;
@@ -898,7 +898,7 @@ void CGameClient::PerformDisconnection( const char *pReason )
 	}
 
 	m_nHltvReplayDelay = 0;
-	m_pHltvReplayServer = NULL;
+	m_pHltvReplayServer = nullptr;
 	m_nHltvReplayStopAt = 0;
 	m_nHltvReplayStartAt = 0;
 	m_nHltvLastSendTick = 0;	
@@ -989,7 +989,7 @@ void CGameClient::SendSound( SoundInfo_t &sound, bool isReliable )
 
 		sndmsg->reliable_sound = true;
 
-		sound.WriteDelta( NULL, *sndmsg, sv.GetFinalTickTime() );
+		sound.WriteDelta( nullptr, *sndmsg, sv.GetFinalTickTime() );
 
 		if ( net_showreliablesounds.GetBool() )
 		{
@@ -1331,7 +1331,7 @@ bool CGameClient::IsEngineClientCommand( const CCommand &args ) const
 	if ( args.ArgC() == 0 )
 		return false;
 
-	for ( int i = 0; s_clcommands[i] != NULL; ++i )
+	for ( int i = 0; s_clcommands[i] != nullptr; ++i )
 	{
 		if ( !Q_strcasecmp( args[0], s_clcommands[i] ) )
 			return true;
@@ -1764,7 +1764,7 @@ bool CGameClient::SendHltvReplaySnapshot( CClientFrame * pFrame )
 	tickmsg.WriteToBuffer( msg );
 
 	// Update shared client/server string tables. Must be done before sending entities
-	m_Server->m_StringTables->WriteUpdateMessage( NULL, GetMaxAckTickCount(), msg );
+	m_Server->m_StringTables->WriteUpdateMessage( nullptr, GetMaxAckTickCount(), msg );
 
 	// TODO delta cache whole snapshots, not just packet entities. then use net_Align
 	// send entity update, delta compressed if deltaFrame != NULL
@@ -1898,7 +1898,7 @@ bool CGameClient::StartHltvReplay( const HltvReplayParams_t &params )
 			{
 				m_HltvReplayStats.nFailedReplays[ HltvReplayStats_t::FAILURE_NO_FRAME ]++;
 				nNewReplayDelay = nNewReplayStopAt = 0;
-				m_pCurrentFrame = NULL;
+				m_pCurrentFrame = nullptr;
 			}
 			else
 			{
@@ -1958,13 +1958,13 @@ bool CGameClient::StartHltvReplay( const HltvReplayParams_t &params )
 				m_nDeltaTick = -1;
 				if ( m_nStringTableAckTick > nServerTick - nNewReplayDelay )
 					m_nStringTableAckTick = 0; // need to reset the stringtables, as they were updated in the future relative to the delayed stream
-				m_pLastSnapshot = NULL;
+				m_pLastSnapshot = nullptr;
 				m_nHltvLastSendTick = 0;
 				FreeBaselines();
 				// all these data become invalid once we start sending HLTV packets from the past
 				m_PackInfo.Reset();
 				m_PrevPackInfo.Reset();
-				m_pCurrentFrame = NULL;
+				m_pCurrentFrame = nullptr;
 				DeleteClientFrames( -1 ); // Should we clean up all the frames? Seems logical, as we'll never need them
 				m_flHltvLastReplayRequestTime = flRealTime;
 				m_HltvReplayStats.nSuccessfulStarts++;
@@ -2064,10 +2064,10 @@ void CGameClient::StopHltvReplay()
 		m_nHltvReplayDelay = 0;
 		m_nDeltaTick = -1;
 		m_nForceWaitForTick = -1;
-		m_pLastSnapshot = NULL; // it doesn't matter what last snapshot we sent; we need to send a full frame update
+		m_pLastSnapshot = nullptr; // it doesn't matter what last snapshot we sent; we need to send a full frame update
 		m_nHltvLastSendTick = 0;
 		FreeBaselines();
-		m_pCurrentFrame = NULL;
+		m_pCurrentFrame = nullptr;
 		DeleteClientFrames( -1 ); // Should we clean up all the frames? Seems logical, as we'll never need them
 		Assert( CountClientFrames() == 0 ); // we shouldn't have used the client frame manager to send HLTV stream to client
 	}
@@ -2195,7 +2195,7 @@ void CGameClient::ConnectionClosing(const char *reason)
 {
 	SV_RedirectEnd();
 
-	Disconnect( (reason!=NULL)?reason:"Connection closing" );	
+	Disconnect( (reason!=nullptr)?reason:"Connection closing" );	
 }
 
 void CGameClient::ConnectionCrashed(const char *reason)
@@ -2204,7 +2204,7 @@ void CGameClient::ConnectionCrashed(const char *reason)
 	{
 		SV_RedirectEnd();
 
-		Disconnect( (reason!=NULL)?reason:"Connection lost" );	
+		Disconnect( (reason!=nullptr)?reason:"Connection lost" );	
 	}
 }
 
@@ -2246,15 +2246,15 @@ CClientFrame *CGameClient::GetSendFrame()
 		CGameClient *pFollowPlayer = sv.Client( followEntity-1 );
 
 		if ( !pFollowPlayer )
-			return NULL;
+			return nullptr;
 
 		pFrame = pFollowPlayer->GetClientFrame( sv.GetTick() - delayTicks, false );
 
 		if ( !pFrame )
-			return NULL;
+			return nullptr;
 
 		if ( m_pLastSnapshot == pFrame->GetSnapshot() )
-			return NULL;
+			return nullptr;
 	}
 
 	return pFrame;

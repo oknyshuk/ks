@@ -343,7 +343,7 @@ public:
 	bool IsDamaging( void ) const;								// Return true if continuous damage (ie: fire) is in this area
 	void MarkAsDamaging( float duration );						// Mark this area is damaging for the next 'duration' seconds
 
-	bool IsVisible( const Vector &eye, Vector *visSpot = NULL ) const;	// return true if area is visible from the given eyepoint, return visible spot
+	bool IsVisible( const Vector &eye, Vector *visSpot = nullptr ) const;	// return true if area is visible from the given eyepoint, return visible spot
 
 	int GetAdjacentCount( NavDirType dir ) const	{ return m_connect[ dir ].Count(); }	// return number of connected areas in given direction
 	CNavArea *GetAdjacentArea( NavDirType dir, int i ) const;	// return the i'th adjacent area in the given direction
@@ -456,7 +456,7 @@ public:
 	void DrawDragSelectionSet( Color &dragSelectionSetColor ) const;
 	void DrawConnectedAreas( void ) const;
 	void DrawHidingSpots( void ) const;
-	bool SplitEdit( bool splitAlongX, float splitEdge, CNavArea **outAlpha = NULL, CNavArea **outBeta = NULL );	// split this area into two areas at the given edge
+	bool SplitEdit( bool splitAlongX, float splitEdge, CNavArea **outAlpha = nullptr, CNavArea **outBeta = nullptr );	// split this area into two areas at the given edge
 	bool MergeEdit( CNavArea *adj );							// merge this area and given adjacent area 
 	bool SpliceEdit( CNavArea *other );							// create a new area between this area and given area 
 	void RaiseCorner( NavCornerType corner, int amount, bool raiseAdjacentCorners = true );	// raise/lower a corner (or all corners if corner == NUM_CORNERS)
@@ -479,7 +479,7 @@ public:
 	bool TestStairs( void );									// Test an area for being on stairs
 	virtual bool IsAbleToMergeWith( CNavArea *other ) const;
 
-	virtual void InheritAttributes( CNavArea *first, CNavArea *second = NULL );
+	virtual void InheritAttributes( CNavArea *first, CNavArea *second = nullptr );
 
 
 	//- visibility -------------------------------------------------------------------------------------
@@ -490,7 +490,7 @@ public:
 		COMPLETELY_VISIBLE		= 0x02,
 	};
 
-	VisibilityType ComputeVisibility( const CNavArea *area, bool isPVSValid, bool bCheckPVS = true, bool *pOutsidePVS = NULL ) const;	// do actual line-of-sight traces to determine if any part of given area is visible from this area
+	VisibilityType ComputeVisibility( const CNavArea *area, bool isPVSValid, bool bCheckPVS = true, bool *pOutsidePVS = nullptr ) const;	// do actual line-of-sight traces to determine if any part of given area is visible from this area
 	void SetupPVS( void ) const;
 	bool IsInPVS( void ) const;					// return true if this area is within the current PVS
 
@@ -510,8 +510,8 @@ public:
 		}
 	};
 
-	virtual bool IsEntirelyVisible( const Vector &eye, CBaseEntity *ignore = NULL ) const;				// return true if entire area is visible from given eyepoint (CPU intensive)
-	virtual bool IsPartiallyVisible( const Vector &eye, CBaseEntity *ignore = NULL ) const;				// return true if any portion of the area is visible from given eyepoint (CPU intensive)
+	virtual bool IsEntirelyVisible( const Vector &eye, CBaseEntity *ignore = nullptr ) const;				// return true if entire area is visible from given eyepoint (CPU intensive)
+	virtual bool IsPartiallyVisible( const Vector &eye, CBaseEntity *ignore = nullptr ) const;				// return true if any portion of the area is visible from given eyepoint (CPU intensive)
 
 	virtual bool IsPotentiallyVisible( const CNavArea *area ) const;		// return true if given area is potentially visible from somewhere in this area (very fast)
 	virtual bool IsPotentiallyVisibleToTeam( int team ) const;				// return true if any portion of this area is visible to anyone on the given team (very fast)
@@ -770,7 +770,7 @@ inline CNavArea *CNavArea::GetAdjacentArea( NavDirType dir, int i ) const
 		--i;
 	}
 
-	return NULL;
+	return nullptr;
 }
 
 //--------------------------------------------------------------------------------------------------------------
@@ -782,14 +782,14 @@ inline bool CNavArea::IsOpen( void ) const
 //--------------------------------------------------------------------------------------------------------------
 inline bool CNavArea::IsOpenListEmpty( void )
 {
-	Assert( (m_openList && m_openList->m_prevOpen == NULL) || m_openList == NULL );
+	Assert( (m_openList && m_openList->m_prevOpen == nullptr) || m_openList == nullptr );
 	return (m_openList) ? false : true;
 }
 
 //--------------------------------------------------------------------------------------------------------------
 inline CNavArea *CNavArea::PopOpenList( void )
 {
-	Assert( (m_openList && m_openList->m_prevOpen == NULL) || m_openList == NULL );
+	Assert( (m_openList && m_openList->m_prevOpen == nullptr) || m_openList == nullptr );
 
 	if ( m_openList )
 	{
@@ -797,17 +797,17 @@ inline CNavArea *CNavArea::PopOpenList( void )
 	
 		// disconnect from list
 		area->RemoveFromOpenList();
-		area->m_prevOpen = NULL;
-		area->m_nextOpen = NULL;
+		area->m_prevOpen = nullptr;
+		area->m_nextOpen = nullptr;
 
-		Assert( (m_openList && m_openList->m_prevOpen == NULL) || m_openList == NULL );
+		Assert( (m_openList && m_openList->m_prevOpen == nullptr) || m_openList == nullptr );
 
 		return area;
 	}
 
-	Assert( (m_openList && m_openList->m_prevOpen == NULL) || m_openList == NULL );
+	Assert( (m_openList && m_openList->m_prevOpen == nullptr) || m_openList == nullptr );
 
-	return NULL;
+	return nullptr;
 }
 
 //--------------------------------------------------------------------------------------------------------------
@@ -883,7 +883,7 @@ inline bool CNavArea::IsVisible( const Vector &eye, Vector *visSpot ) const
 {
 	Vector corner;
 	trace_t result;
-	CTraceFilterNoNPCsOrPlayer traceFilter( NULL, COLLISION_GROUP_NONE );
+	CTraceFilterNoNPCsOrPlayer traceFilter( nullptr, COLLISION_GROUP_NONE );
 	const float offset = 0.75f * HumanHeight;
 
 	// check center first

@@ -165,7 +165,7 @@ inline void *CValidateAlloc::AllocationStart( HeapPrefix_t *pBase )
 inline CValidateAlloc::HeapPrefix_t *CValidateAlloc::PrefixFromAllocation( void *pAlloc )
 {
 	if ( !pAlloc )
-		return NULL;
+		return nullptr;
 
 	return ((HeapPrefix_t*)pAlloc) - 1;
 }
@@ -181,7 +181,7 @@ inline const CValidateAlloc::HeapPrefix_t *CValidateAlloc::PrefixFromAllocation(
 //-----------------------------------------------------------------------------
 void CValidateAlloc::AddToList( HeapPrefix_t *pHeap, int nSize )
 {
-	pHeap->m_pPrev = NULL;
+	pHeap->m_pPrev = nullptr;
 	pHeap->m_pNext = m_pFirstAllocation;
 	if ( m_pFirstAllocation )
 	{

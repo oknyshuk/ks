@@ -272,7 +272,7 @@ public:
 
 	// Sets the filtering modes on the texture we're modifying
 	void SetFilteringAndClampingMode();
-	void Download( Rect_t *pRect = NULL, int nAdditionalCreationFlags = 0 );
+	void Download( Rect_t *pRect = nullptr, int nAdditionalCreationFlags = 0 );
 
 	// Loads up information about the texture 
 	virtual void Precache();
@@ -292,8 +292,8 @@ public:
 	virtual int GetApproximateVidMemBytes( void ) const;
 
 	// Stretch blit the framebuffer into this texture.
-	virtual void CopyFrameBufferToMe( int nRenderTargetID = 0, Rect_t *pSrcRect = NULL, Rect_t *pDstRect = NULL );
-	virtual void CopyMeToFrameBuffer( int nRenderTargetID = 0, Rect_t *pSrcRect = NULL, Rect_t *pDstRect = NULL );
+	virtual void CopyFrameBufferToMe( int nRenderTargetID = 0, Rect_t *pSrcRect = nullptr, Rect_t *pDstRect = nullptr );
+	virtual void CopyMeToFrameBuffer( int nRenderTargetID = 0, Rect_t *pSrcRect = nullptr, Rect_t *pDstRect = nullptr );
 
 	virtual ITexture *GetEmbeddedTexture( int nIndex );
 
@@ -344,7 +344,7 @@ public:
 
 protected:
 	bool IsDepthTextureFormat( ImageFormat fmt );
-	void ReconstructTexture( void *pSourceData = NULL, int nSourceDataSize = 0 );
+	void ReconstructTexture( void *pSourceData = nullptr, int nSourceDataSize = 0 );
 	void ReconstructPartialTexture( const Rect_t *pRect );
 	bool HasBeenAllocated() const;
 	void WriteDataToShaderAPITexture( int nFrameCount, int nFaceCount, int nFirstFace, int nMipCount, IVTFTexture *pVTFTexture, ImageFormat fmt );
@@ -362,7 +362,7 @@ protected:
 
 	// Calculates info about whether we can make the texture smaller and by how much
 	// Returns the number of skipped mip levels
-	int ComputeActualSize( bool bIgnorePicmip = false, IVTFTexture *pVTFTexture = NULL );
+	int ComputeActualSize( bool bIgnorePicmip = false, IVTFTexture *pVTFTexture = nullptr );
 
 	// Computes the actual format of the texture given a desired src format
 	ImageFormat ComputeActualFormat( ImageFormat srcFormat );
@@ -375,7 +375,7 @@ protected:
 	virtual void FreeShaderAPITextures();
 
 	// Download bits
-	void DownloadTexture( Rect_t *pRect, void *pSourceData = NULL, int nSourceDataSize = 0 );
+	void DownloadTexture( Rect_t *pRect, void *pSourceData = nullptr, int nSourceDataSize = 0 );
 	bool DownloadAsyncTexture( AsyncTextureContext_t *pContext, void *pSourceData, int nSourceDataSize, float flMaxTimeMs );
 	void ReconstructTextureBits( Rect_t *pRect );
 
@@ -551,7 +551,7 @@ public:
 
 	virtual void Bind( Sampler_t sampler, TextureBindFlags_t nBindFlags )
 	{
-		Assert( materials->GetRenderContext()->GetCallQueue() == NULL );
+		Assert( materials->GetRenderContext()->GetCallQueue() == nullptr );
 		Assert( m_nActiveTarget < m_Targets.Count() );
 
 		if( m_nActiveTarget < 0 )
@@ -569,7 +569,7 @@ public:
 
 	virtual void Bind( Sampler_t sampler1, TextureBindFlags_t nBindFlags, int nFrame, Sampler_t sampler2 = SHADER_SAMPLER_INVALID )
 	{
-		Assert( materials->GetRenderContext()->GetCallQueue() == NULL );
+		Assert( materials->GetRenderContext()->GetCallQueue() == nullptr );
 		Assert( m_nActiveTarget < m_Targets.Count() );
 		if( m_nActiveTarget < 0 )
 			return BaseClass::Bind( sampler1, nBindFlags, nFrame, sampler2 );
@@ -589,7 +589,7 @@ public:
 
 	virtual ShaderAPITextureHandle_t GetTextureHandle( int nFrame, int nTextureChannel =0 )
 	{
-		Assert( materials->GetRenderContext()->GetCallQueue() == NULL );
+		Assert( materials->GetRenderContext()->GetCallQueue() == nullptr );
 		Assert( m_nActiveTarget < m_Targets.Count() );
 
 		if( m_nActiveTarget < 0 )
@@ -629,7 +629,7 @@ public:
 		if ( pCallQueue )
 		{
 			m_nQueuedActiveTarget = -1;
-			if( szName == NULL )
+			if( szName == nullptr )
 			{
 				return;
 			}
@@ -652,7 +652,7 @@ public:
 		else
 		{
 			m_nActiveTarget = -1;
-			if( szName == NULL )
+			if( szName == nullptr )
 			{
 				return;
 			}
@@ -724,7 +724,7 @@ public:
 
 	virtual bool AllocateShaderAPITextures()
 	{
-		Assert( materials->GetRenderContext()->GetCallQueue() == NULL );
+		Assert( materials->GetRenderContext()->GetCallQueue() == nullptr );
 		Assert( !HasBeenAllocated() );
 
 		if ( !BaseClass::AllocateShaderAPITextures() )
@@ -771,7 +771,7 @@ public:
 
 	virtual void FreeShaderAPITextures()
 	{
-		Assert( materials->GetRenderContext()->GetCallQueue() == NULL );
+		Assert( materials->GetRenderContext()->GetCallQueue() == nullptr );
 		for( int i = 0; i != m_Targets.Count(); ++i )
 		{
 			if ( g_pShaderAPI->IsTexture( m_Targets[i].handle ) )
@@ -795,8 +795,8 @@ public:
 	//-----------------------------------------------------------------------------
 	virtual bool SetRenderTarget( int nRenderTargetID )
 	{
-		Assert( materials->GetRenderContext()->GetCallQueue() == NULL );
-		return SetRenderTarget( nRenderTargetID, NULL );
+		Assert( materials->GetRenderContext()->GetCallQueue() == nullptr );
+		return SetRenderTarget( nRenderTargetID, nullptr );
 	}
 
 	//-----------------------------------------------------------------------------
@@ -805,7 +805,7 @@ public:
 	//-----------------------------------------------------------------------------
 	bool SetRenderTarget( int nRenderTargetID, ITexture *pDepthTexture )
 	{
-		Assert( materials->GetRenderContext()->GetCallQueue() == NULL );
+		Assert( materials->GetRenderContext()->GetCallQueue() == nullptr );
 		Assert( m_nActiveTarget < m_Targets.Count() );
 		if( (m_nActiveTarget < 0) || (m_nActiveTarget >= m_Targets.Count()) )
 			return BaseClass::SetRenderTarget( nRenderTargetID, pDepthTexture );
@@ -839,9 +839,9 @@ public:
 	}
 
 	// Stretch blit the framebuffer into this texture.
-	virtual void CopyFrameBufferToMe( int nRenderTargetID = 0, Rect_t *pSrcRect = NULL, Rect_t *pDstRect = NULL )
+	virtual void CopyFrameBufferToMe( int nRenderTargetID = 0, Rect_t *pSrcRect = nullptr, Rect_t *pDstRect = nullptr )
 	{
-		Assert( materials->GetRenderContext()->GetCallQueue() == NULL );
+		Assert( materials->GetRenderContext()->GetCallQueue() == nullptr );
 		Assert( m_nActiveTarget < m_Targets.Count() );
 		if( (m_nActiveTarget < 0) || (m_nActiveTarget >= m_Targets.Count()) )
 			return BaseClass::CopyFrameBufferToMe( nRenderTargetID, pSrcRect, pDstRect );
@@ -903,7 +903,7 @@ public:
 	virtual int GetReferenceCount( ) const { return m_nRefCount; }
 
 	// Used to modify the texture bits (procedural textures only)
-	virtual void SetTextureRegenerator( ITextureRegenerator *pTextureRegen, bool releaseExisting = true ) { NULL; }
+	virtual void SetTextureRegenerator( ITextureRegenerator *pTextureRegen, bool releaseExisting = true ) { nullptr; }
 
 	// Little helper polling methods
 	virtual bool IsNormalMap( ) const { return false; }
@@ -921,19 +921,19 @@ public:
 	virtual int GetActualDepth() const { return 1; }
 
 	// Releases the texture's hw memory
-	void Release() { NULL; }
+	void Release() { nullptr; }
 
-	virtual void OnRestore() { NULL; }
+	virtual void OnRestore() { nullptr; }
 
 	// Sets the filtering modes on the texture we're modifying
-	void SetFilteringAndClampingMode() { NULL; }
-	void Download( Rect_t *pRect = NULL, int nAdditionalCreationFlags = 0 ) { NULL; }
+	void SetFilteringAndClampingMode() { nullptr; }
+	void Download( Rect_t *pRect = nullptr, int nAdditionalCreationFlags = 0 ) { nullptr; }
 
 	// Loads up information about the texture 
-	virtual void Precache() { NULL; }
+	virtual void Precache() { nullptr; }
 
 	// FIXME: Bogus methods... can we please delete these?
-	virtual void GetLowResColorSample( float s, float t, float *color ) const { NULL; }
+	virtual void GetLowResColorSample( float s, float t, float *color ) const { nullptr; }
 
 	// Gets texture resource data of the specified type.
 	// Params:
@@ -942,15 +942,15 @@ public:
 	// Returns:
 	//		pointer to the resource data, or NULL. Note that the data from this pointer can disappear when
 	// the texture goes away - you want to copy this data!
-	virtual void *GetResourceData( uint32 eDataType, size_t *pNumBytes ) const { return NULL; }
+	virtual void *GetResourceData( uint32 eDataType, size_t *pNumBytes ) const { return nullptr; }
 
 	virtual int GetApproximateVidMemBytes( void ) const { return 32; }
 
 	// Stretch blit the framebuffer into this texture.
-	virtual void CopyFrameBufferToMe( int nRenderTargetID = 0, Rect_t *pSrcRect = NULL, Rect_t *pDstRect = NULL ) { NULL; }
-	virtual void CopyMeToFrameBuffer( int nRenderTargetID = 0, Rect_t *pSrcRect = NULL, Rect_t *pDstRect = NULL ) { NULL; }
+	virtual void CopyFrameBufferToMe( int nRenderTargetID = 0, Rect_t *pSrcRect = nullptr, Rect_t *pDstRect = nullptr ) { nullptr; }
+	virtual void CopyMeToFrameBuffer( int nRenderTargetID = 0, Rect_t *pSrcRect = nullptr, Rect_t *pDstRect = nullptr ) { nullptr; }
 
-	virtual ITexture *GetEmbeddedTexture( int nIndex ) { return ( nIndex == 0 ) ? this : NULL; }
+	virtual ITexture *GetEmbeddedTexture( int nIndex ) { return ( nIndex == 0 ) ? this : nullptr; }
 
 	// Get the shaderapi texture handle associated w/ a particular frame
 	virtual ShaderAPITextureHandle_t GetTextureHandle( int nFrame, int nTextureChannel = 0 ) { return m_hTexture; }
@@ -961,27 +961,27 @@ public:
 	virtual void BindVertexTexture( VertexTextureSampler_t stage, int nFrame );
 
 	// Set this texture as a render target	
-	bool SetRenderTarget( int nRenderTargetID ) { return SetRenderTarget( nRenderTargetID, NULL ); }
+	bool SetRenderTarget( int nRenderTargetID ) { return SetRenderTarget( nRenderTargetID, nullptr ); }
 
 	// Set this texture as a render target (optionally set depth texture as depth buffer as well)
 	bool SetRenderTarget( int nRenderTargetID, ITexture *pDepthTexture) { return false; }
 
-	virtual void MarkAsPreloaded( bool bSet ) { NULL; }
+	virtual void MarkAsPreloaded( bool bSet ) { nullptr; }
 	virtual bool IsPreloaded() const { return true; }
 
-	virtual void MarkAsExcluded( bool bSet, int nDimensionsLimit, bool bMarkAsTrumpedExclude ) { NULL; }
+	virtual void MarkAsExcluded( bool bSet, int nDimensionsLimit, bool bMarkAsTrumpedExclude ) { nullptr; }
 	virtual bool UpdateExcludedState() { return true; }
 
 	// Retrieve the vtf flags mask
 	virtual unsigned int GetFlags( void ) const { return 0; }
 
-	virtual void ForceLODOverride( int iNumLodsOverrideUpOrDown ) { NULL; }
-	virtual void ForceExcludeOverride( int iExcludeOverride ) { NULL; };
+	virtual void ForceLODOverride( int iNumLodsOverrideUpOrDown ) { nullptr; }
+	virtual void ForceExcludeOverride( int iExcludeOverride ) { nullptr; };
 
 	virtual void ReloadFilesInList( IFileList *pFilesToReload ) {}
 
-	virtual void AddDownsizedSubTarget( const char *szName, int iDownsizePow2, MaterialRenderTargetDepth_t depth ) { NULL; }
-	virtual void SetActiveSubTarget( const char *szName ) { NULL; }
+	virtual void AddDownsizedSubTarget( const char *szName, int iDownsizePow2, MaterialRenderTargetDepth_t depth ) { nullptr; }
+	virtual void SetActiveSubTarget( const char *szName ) { nullptr; }
 	virtual bool IsMultiRenderTarget( void ) { return false; }
 
 	virtual bool MarkAsTempExcluded( bool bSet, int nExcludedDimensionLimit ) { return false; }
@@ -1021,7 +1021,7 @@ public:
 	virtual void DeleteIfUnreferenced();
 
 
-	void SwapContents( ITexture *pOther ) { NULL; }
+	void SwapContents( ITexture *pOther ) { nullptr; }
 
 public:
 	void SetName( char const *szName );
@@ -1034,14 +1034,14 @@ public:
 CReferenceToHandleTexture::CReferenceToHandleTexture() :
 	m_hTexture( INVALID_SHADERAPI_TEXTURE_HANDLE ),
 #ifdef _DEBUG
-	m_pDebugName( NULL ),
+	m_pDebugName( nullptr ),
 #endif
 	m_nRefCount( 0 ),
 	m_nActualWidth( 0 ),
 	m_nActualHeight( 0 ),
 	m_nActualDepth( 1 )
 {
-	NULL;
+	nullptr;
 }
 
 CReferenceToHandleTexture::~CReferenceToHandleTexture()
@@ -1126,10 +1126,10 @@ void CReferenceToHandleTexture::DeleteIfUnreferenced()
 //-----------------------------------------------------------------------------
 // Static instance of VTF texture
 //-----------------------------------------------------------------------------
-static IVTFTexture *s_pVTFTexture = NULL;
-static IVTFTexture *s_pVTFAsyncTexture = NULL;
+static IVTFTexture *s_pVTFTexture = nullptr;
+static IVTFTexture *s_pVTFAsyncTexture = nullptr;
 
-static void *s_pOptimalReadBuffer = NULL;
+static void *s_pOptimalReadBuffer = nullptr;
 static int s_nOptimalReadBufferSize = 0;
 
 //-----------------------------------------------------------------------------
@@ -1222,28 +1222,28 @@ CTexture::CTexture() : m_ImageFormat( IMAGE_FORMAT_UNKNOWN )
 	m_nRefCount = 0;
 	m_nFlags = 0;
 	m_nInternalFlags = 0;
-	m_pTextureHandles = NULL;
-	m_pTempTextureHandles = NULL;
+	m_pTextureHandles = nullptr;
+	m_pTempTextureHandles = nullptr;
 	m_nFrameCount = 0;
 	VectorClear( m_vecReflectivity );
-	m_pTextureRegenerator = NULL;
+	m_pTextureRegenerator = nullptr;
 	m_nOriginalRenderTargetType = NO_RENDER_TARGET;
 	m_RenderTargetSizeMode = RT_SIZE_NO_CHANGE;
 	m_nOriginalRTWidth = m_nOriginalRTHeight = 1;
 
 	m_LowResImageWidth = 0;
 	m_LowResImageHeight = 0;
-	m_pLowResImage = NULL;
+	m_pLowResImage = nullptr;
 
 	m_nDesiredDimensionLimit = 0;
 	m_nDesiredTempDimensionLimit = 0;
 	m_nActualDimensionLimit = 0;	
-	m_hAsyncControl = NULL;
+	m_hAsyncControl = nullptr;
 
 	m_nMipSkipCount = 0;
 
 #ifdef _DEBUG
-	m_pDebugName = NULL;
+	m_pDebugName = nullptr;
 #endif
 }
 
@@ -1317,7 +1317,7 @@ void CTexture::Shutdown()
 	if ( m_pTextureRegenerator )
 	{
 		m_pTextureRegenerator->Release();
-		m_pTextureRegenerator = NULL;
+		m_pTextureRegenerator = nullptr;
 	}
 
 	// This deletes the textures
@@ -1388,7 +1388,7 @@ void CTexture::FreeOptimalReadBuffer( int nMaxSize )
 			Msg( "Freeing optimal read buffer of %d bytes @ 0x%p\n", s_nOptimalReadBufferSize, s_pOptimalReadBuffer );
 		}
 		g_pFullFileSystem->FreeOptimalReadBuffer( s_pOptimalReadBuffer );
-		s_pOptimalReadBuffer = NULL;
+		s_pOptimalReadBuffer = nullptr;
 		s_nOptimalReadBufferSize = 0;
 	}
 }
@@ -1689,7 +1689,7 @@ void CTexture::AllocateTextureHandles()
 
 	m_pTextureHandles = new ShaderAPITextureHandle_t[m_nFrameCount];
 
-	if ( m_pTextureHandles == NULL )
+	if ( m_pTextureHandles == nullptr )
 	{
 		MemOutOfMemory( sizeof(ShaderAPITextureHandle_t) * m_nFrameCount );
 	}
@@ -1707,7 +1707,7 @@ void CTexture::ReleaseTextureHandles()
 	if ( m_pTextureHandles )
 	{
 		delete[] m_pTextureHandles;
-		m_pTextureHandles = NULL;
+		m_pTextureHandles = nullptr;
 	}
 }
 
@@ -2019,11 +2019,11 @@ int CTexture::ComputeActualSize( bool bIgnorePicmip, IVTFTexture *pVTFTexture )
 	// Fetch LOD settings from the VTF if available
 	TextureLODControlSettings_t lcs;
 	memset( &lcs, 0, sizeof( lcs ) );
-	TextureLODControlSettings_t const *pLODInfo = NULL;
+	TextureLODControlSettings_t const *pLODInfo = nullptr;
 	if ( pVTFTexture )
 	{
 		pLODInfo = reinterpret_cast<TextureLODControlSettings_t const *> (
-				pVTFTexture->GetResourceData( VTF_RSRC_TEXTURE_LOD_SETTINGS, NULL ) );
+				pVTFTexture->GetResourceData( VTF_RSRC_TEXTURE_LOD_SETTINGS, nullptr ) );
 		if ( pLODInfo )
 			lcs = *pLODInfo;
 	}
@@ -2420,7 +2420,7 @@ void CTexture::DownloadTexture( Rect_t *pRect, void *pSourceData, int nSourceDat
 		}
 
 		delete[] m_pTempTextureHandles;
-		m_pTempTextureHandles = NULL;
+		m_pTempTextureHandles = nullptr;
 	}
 }
 
@@ -2458,7 +2458,7 @@ bool CTexture::DownloadAsyncTexture( AsyncTextureContext_t *pContext, void *pSou
 		int oldMipCount = m_nActualMipCount;
 		int oldFrameCount = m_nFrameCount;
 
-		pContext->m_pVTFTexture = LoadTexttureBitsFromFileOrData( pSourceData, nSourceDataSize, NULL );
+		pContext->m_pVTFTexture = LoadTexttureBitsFromFileOrData( pSourceData, nSourceDataSize, nullptr );
 
 		if (!HasBeenAllocated() ||
 			m_nActualWidth != oldWidth ||
@@ -2498,7 +2498,7 @@ bool CTexture::DownloadAsyncTexture( AsyncTextureContext_t *pContext, void *pSou
 	// Iterate over all the frames and set the appropriate wrapping + filtering state
 	SetFilteringAndClampingMode();
 
-	pContext->m_pVTFTexture = NULL;
+	pContext->m_pVTFTexture = nullptr;
 
 	return true;
 }
@@ -2588,7 +2588,7 @@ void CTexture::BindVertexTexture( VertexTextureSampler_t sampler, int nFrame )
 //-----------------------------------------------------------------------------
 bool CTexture::SetRenderTarget( int nRenderTargetID )
 {
-	return SetRenderTarget( nRenderTargetID, NULL );
+	return SetRenderTarget( nRenderTargetID, nullptr );
 }
 
 //-----------------------------------------------------------------------------
@@ -2777,14 +2777,14 @@ void CTexture::ForceLODOverride( int iNumLodsOverrideUpOrDown )
 
 	TextureLodOverride::OverrideInfo oi( iNumLodsOverrideUpOrDown, iNumLodsOverrideUpOrDown );
 	TextureLodOverride::Add( GetName(), oi );
-	Download( NULL );
+	Download( nullptr );
 }
 
 void CTexture::ForceExcludeOverride( int iExcludeOverride )
 {
 
 	TextureLodExclude::Add( GetName(), iExcludeOverride );
-	Download( NULL );
+	Download( nullptr );
 }
 
 
@@ -2859,7 +2859,7 @@ void CTexture::Precache()
 	int nHeaderSize = VTFFileHeaderSize( nVersion );
 	unsigned char *pMem = (unsigned char *)stackalloc( nHeaderSize );
 	CUtlBuffer buf( pMem, nHeaderSize );
-	if ( !g_pFullFileSystem->ReadFile( pCacheFileName, NULL, buf, nHeaderSize ) )	
+	if ( !g_pFullFileSystem->ReadFile( pCacheFileName, nullptr, buf, nHeaderSize ) )	
 	{
 		goto precacheFailed;
 	}
@@ -2905,7 +2905,7 @@ precacheFailed:
 void CTexture::LoadLowResTexture( IVTFTexture *pTexture )
 {
 	delete [] m_pLowResImage;
-	m_pLowResImage = NULL;
+	m_pLowResImage = nullptr;
 
 	if ( pTexture->LowResWidth() == 0 || pTexture->LowResHeight() == 0 )
 	{
@@ -2952,7 +2952,7 @@ void *CTexture::GetResourceData( uint32 eDataType, size_t *pnumBytes ) const
 	}
 	if ( pnumBytes )
 		pnumBytes = 0;
-	return NULL;
+	return nullptr;
 }
 
 void CTexture::FreeResourceData()
@@ -2973,7 +2973,7 @@ void CTexture::LoadResourceData( IVTFTexture *pVTFTexture )
 	FreeResourceData();
 
 	// Load the resources
-	if ( unsigned int uiRsrcCount = pVTFTexture->GetResourceTypes( NULL, 0 ) )
+	if ( unsigned int uiRsrcCount = pVTFTexture->GetResourceTypes( nullptr, 0 ) )
 	{
 		uint32 *arrRsrcTypes = ( uint32 * )stackalloc( uiRsrcCount * sizeof( unsigned int ) );
 		pVTFTexture->GetResourceTypes( arrRsrcTypes, uiRsrcCount );
@@ -3002,7 +3002,7 @@ void CTexture::LoadResourceData( IVTFTexture *pVTFTexture )
 						if ( numBytes == sizeof( dc.m_numBytes ) )
 						{
 							dc.m_eType |= RSRCF_HAS_NO_DATA_CHUNK;
-							dc.m_pvData = NULL;
+							dc.m_pvData = nullptr;
 							memcpy( &dc.m_numBytes, pvData, numBytes );
 						}
 						else
@@ -3427,7 +3427,7 @@ IVTFTexture *CTexture::LoadTextureBitsFromFile( char *pCacheFileName, char **ppR
 
 	IVTFTexture *pVTFTexture = ( m_nFlags & TEXTUREFLAGS_ASYNC_DOWNLOAD ) ? GetScratchVTFAsyncTexture() : GetScratchVTFTexture();
 
-	bool bIsCombinedImage = ( pCacheFileName[ 0 ] == '!' ) && g_pMDLCache != NULL;
+	bool bIsCombinedImage = ( pCacheFileName[ 0 ] == '!' ) && g_pMDLCache != nullptr;
 
 	CUtlBuffer buf;
 	FileHandle_t fileHandle = FILESYSTEM_INVALID_HANDLE;
@@ -3911,8 +3911,8 @@ void CTexture::ReconstructTexture( void *pSourceData, int nSourceDataSize )
 	int oldFrameCount = m_nFrameCount;
 
 	// FIXME: Should RenderTargets be a special case of Procedural?
-	char *pResolvedFilename = NULL;
-	IVTFTexture *pVTFTexture = NULL;
+	char *pResolvedFilename = nullptr;
+	IVTFTexture *pVTFTexture = nullptr;
 
 	if ( IsProcedural() )
 	{
@@ -4001,7 +4001,7 @@ ShaderAPITextureHandle_t CTexture::GetTextureHandle( int nFrame, int nTextureCha
 
 	// Make sure we've actually allocated the texture handles
 	Assert( HasBeenAllocated() );
-	if ( m_pTextureHandles == NULL || !HasBeenAllocated() )
+	if ( m_pTextureHandles == nullptr || !HasBeenAllocated() )
 	{
 		return INVALID_SHADERAPI_TEXTURE_HANDLE;
 	}
@@ -4096,7 +4096,7 @@ void CTexture::CopyMeToFrameBuffer( int nRenderTargetID, Rect_t *pSrcRect, Rect_
 
 ITexture *CTexture::GetEmbeddedTexture( int nIndex )
 {
-	return ( nIndex == 0 ) ? this : NULL;
+	return ( nIndex == 0 ) ? this : nullptr;
 }
 
 void CTexture::DeleteIfUnreferenced()
@@ -4110,7 +4110,7 @@ void CTexture::DeleteIfUnreferenced()
 //Swap everything about a texture except the name. Created to support Portal mod's need for swapping out water render targets in recursive stencil views
 void CTexture::SwapContents( ITexture *pOther )
 {
-	if( (pOther == NULL) || (pOther == this) )
+	if( (pOther == nullptr) || (pOther == this) )
 		return;
 
 	ICallQueue *pCallQueue = materials->GetRenderContext()->GetCallQueue();
@@ -4120,7 +4120,7 @@ void CTexture::SwapContents( ITexture *pOther )
 		return;
 	}
 
-	AssertMsg( dynamic_cast<CTexture *>(pOther) != NULL, "Texture swapping broken" );
+	AssertMsg( dynamic_cast<CTexture *>(pOther) != nullptr, "Texture swapping broken" );
 
 	CTexture *pOtherAsCTexture = (CTexture *)pOther;
 
@@ -4369,7 +4369,7 @@ bool CTexture::ScheduleAsyncDownload()
 	pContext->m_nInternalFlags = m_nInternalFlags;
 	pContext->m_nDesiredTempDimensionLimit = m_nActualDimensionLimit;
 	pContext->m_nActualDimensionLimit = m_nActualDimensionLimit;
-	pContext->m_pVTFTexture = NULL;
+	pContext->m_pVTFTexture = nullptr;
 
 	// schedule the async using what should be the absolute path to the file
 	FileAsyncRequest_t asyncRequest;
@@ -4482,7 +4482,7 @@ bool CTexture::ScheduleExcludeAsyncDownload()
 	pContext->m_nInternalFlags = m_nInternalFlags;
 	pContext->m_nDesiredTempDimensionLimit = m_nDesiredTempDimensionLimit;
 	pContext->m_nActualDimensionLimit = m_nActualDimensionLimit;
-	pContext->m_pVTFTexture = NULL;
+	pContext->m_pVTFTexture = nullptr;
 
 	// schedule the async using what should be the absolute path to the file
 	FileAsyncRequest_t asyncRequest;
@@ -4540,7 +4540,7 @@ bool CTexture::FinishAsyncDownload( AsyncTextureContext_t *pContext, void *pData
 			}
 			else
 			{
-				DownloadTexture( NULL, pData, nNumReadBytes );
+				DownloadTexture( nullptr, pData, nNumReadBytes );
 			}
 			MaterialSystem()->Unlock( hLock );
 		}
@@ -4564,7 +4564,7 @@ bool CTexture::FinishAsyncDownload( AsyncTextureContext_t *pContext, void *pData
 		g_pFullFileSystem->FreeOptimalReadBuffer( pData );
 		g_pFullFileSystem->AsyncRelease( m_hAsyncControl );
 		// texture can be rescheduled
-		m_hAsyncControl = NULL;
+		m_hAsyncControl = nullptr;
 
 		delete pContext;
 

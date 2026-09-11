@@ -241,7 +241,7 @@ inline CVertexBuffer::CVertexBuffer(D3DDeviceWrapper * pD3D, VertexFormat_t fmt,
 	}
 	else
 	{
-		m_pSysmemBuffer = NULL;
+		m_pSysmemBuffer = nullptr;
 		Create( pD3D );
 	}
 
@@ -287,7 +287,7 @@ void CVertexBuffer::Create( D3DDeviceWrapper *pD3D )
 	RECORD_INT( desc.Pool );
 	RECORD_INT( m_bDynamic );
 
-	HRESULT hr = pD3D->CreateVertexBuffer( m_nBufferSize, desc.Usage, desc.FVF, desc.Pool, &m_pVB, NULL );
+	HRESULT hr = pD3D->CreateVertexBuffer( m_nBufferSize, desc.Usage, desc.FVF, desc.Pool, &m_pVB, nullptr );
 
 	if ( hr == D3DERR_OUTOFVIDEOMEMORY || hr == E_OUTOFMEMORY )
 	{
@@ -295,7 +295,7 @@ void CVertexBuffer::Create( D3DDeviceWrapper *pD3D )
 		// out of vid mem and try again.
 		// FIXME: need to record this
 		pD3D->EvictManagedResources();
-		pD3D->CreateVertexBuffer( m_nBufferSize, desc.Usage, desc.FVF, desc.Pool, &m_pVB, NULL );
+		pD3D->CreateVertexBuffer( m_nBufferSize, desc.Usage, desc.FVF, desc.Pool, &m_pVB, nullptr );
 	}
 
 #ifdef _DEBUG
@@ -337,7 +337,7 @@ void CVertexBuffer::Create( D3DDeviceWrapper *pD3D )
 inline CVertexBuffer::~CVertexBuffer()
 {
 	// Track VB allocations
-	if ( m_pVB != NULL )
+	if ( m_pVB != nullptr )
 	{
 		g_VBAllocTracker->UnCountVB( m_pVB );
 	}
@@ -369,7 +369,7 @@ inline CVertexBuffer::~CVertexBuffer()
 	if ( m_pSysmemBuffer )
 	{
 		free( m_pSysmemBuffer );
-		m_pSysmemBuffer = NULL;
+		m_pSysmemBuffer = nullptr;
 	}
 
 	if ( m_pVB && !m_bExternalMemory )
@@ -479,7 +479,7 @@ inline unsigned char* CVertexBuffer::Lock( int numVerts, int& baseVertexIndex )
 		Assert( ( m_nSysmemBufferStartBytes % m_VertexSize ) == 0 );
 	}
 
-	if ( m_pSysmemBuffer != NULL )
+	if ( m_pSysmemBuffer != nullptr )
 	{
 		// Ensure that we're never moving backwards in a buffer--this code would need to be rewritten if so. 
 		// We theorize this can happen if you hit the end of a buffer and then wrap before drawing--but
@@ -515,7 +515,7 @@ inline unsigned char* CVertexBuffer::Modify( bool bReadOnly, int firstVertex, in
 	// D3D still returns a pointer when you call lock with 0 verts, so just in
 	// case it's actually doing something, don't even try to lock the buffer with 0 verts.
 	if ( numVerts == 0 )
-		return NULL;
+		return nullptr;
 
 	m_nLockCount = numVerts;
 
@@ -528,7 +528,7 @@ inline unsigned char* CVertexBuffer::Modify( bool bReadOnly, int firstVertex, in
 	if ( firstVertex + numVerts > m_VertexCount ) 
 	{ 
 		Assert( 0 ); 
-		return NULL; 
+		return nullptr; 
 	}
 
 	DWORD dwFlags = D3DLOCK_NOSYSLOCK;
@@ -580,7 +580,7 @@ inline void CVertexBuffer::Unlock( int numVerts )
 	RECORD_COMMAND( DX8_UNLOCK_VERTEX_BUFFER, 1 );
 	RECORD_INT( m_UID );
 
-	if ( m_pSysmemBuffer != NULL )
+	if ( m_pSysmemBuffer != nullptr )
 	{
 	}
 	else
@@ -608,11 +608,11 @@ inline void CVertexBuffer::HandleLateCreation( )
 		Create( Dx9Device() );
 		if ( !bPrior )
 		{
-			g_VBAllocTracker->TrackMeshAllocations( NULL );
+			g_VBAllocTracker->TrackMeshAllocations( nullptr );
 		}
 	}
 
-	void* pWritePtr = NULL;
+	void* pWritePtr = nullptr;
 	int dataToWriteBytes = m_bDynamic ? ( m_Position - m_nSysmemBufferStartBytes ) : ( m_nLockCount * m_VertexSize );
 	DWORD dwFlags = D3DLOCK_NOSYSLOCK;
 	if ( m_bDynamic )
@@ -651,7 +651,7 @@ inline void CVertexBuffer::HandleLateCreation( )
 	ReallyUnlock( dataToWriteBytes );
 
 	free( m_pSysmemBuffer );
-	m_pSysmemBuffer = NULL;
+	m_pSysmemBuffer = nullptr;
 }
 
 

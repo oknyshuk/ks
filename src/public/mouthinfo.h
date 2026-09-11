@@ -22,7 +22,7 @@ public:
 	CVoiceData( void )
 	{
 		m_flElapsed = 0.0f;
-		m_pAudioSource = NULL;
+		m_pAudioSource = nullptr;
 		m_bIgnorePhonemes = false;
 	}
 
@@ -119,7 +119,7 @@ inline int CMouthInfo::GetNumVoiceSources( void )
 inline CVoiceData *CMouthInfo::GetVoiceSource( int number )
 {
 	if ( number < 0 || number >= m_nVoiceSources )
-		return NULL;
+		return nullptr;
 
 	return &m_VoiceSources[ number ];
 }
@@ -185,7 +185,7 @@ inline CVoiceData *CMouthInfo::AddSource( CAudioSource *source, bool bIgnorePhon
 		else
 		{
 			// No room!
-			return NULL;
+			return nullptr;
 		}
 	}
 

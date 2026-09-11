@@ -30,7 +30,7 @@ bool ParseKeyvalue( void *pObject, typedescription_t *pFields, int iNumFields, c
 		// Check the nested classes, but only if they aren't in array form.
 		if ((pField->fieldType == FIELD_EMBEDDED) && (pField->fieldSize == 1))
 		{
-			for ( datamap_t *dmap = pField->td; dmap != NULL; dmap = dmap->baseMap )
+			for ( datamap_t *dmap = pField->td; dmap != nullptr; dmap = dmap->baseMap )
 			{
 				void *pEmbeddedObject = (void*)((char*)pObject + fieldOffset);
 				if ( ParseKeyvalue( pEmbeddedObject, dmap->dataDesc, dmap->dataNumFields, szKeyName, szValue) )
@@ -142,7 +142,7 @@ bool ExtractKeyvalue( void *pObject, typedescription_t *pFields, int iNumFields,
 		// Check the nested classes, but only if they aren't in array form.
 		if ((pField->fieldType == FIELD_EMBEDDED) && (pField->fieldSize == 1))
 		{
-			for ( datamap_t *dmap = pField->td; dmap != NULL; dmap = dmap->baseMap )
+			for ( datamap_t *dmap = pField->td; dmap != nullptr; dmap = dmap->baseMap )
 			{
 				void *pEmbeddedObject = (void*)((char*)pObject + fieldOffset);
 				if ( ExtractKeyvalue( pEmbeddedObject, dmap->dataDesc, dmap->dataNumFields, szKeyName, szValue, iMaxLen ) )

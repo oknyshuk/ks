@@ -62,7 +62,7 @@ int main(int argc, char *argv[])
 		if(SQ_SUCCEEDED(sq_rdbg_waitforconnections(rdbg))) {
 			scprintf(_SC("connected\n"));
 
-			const SQChar *fname=NULL;
+			const SQChar *fname=nullptr;
 			fname=argv[1];
 			//!!REGISTERS STANDARDS LIBS
 			sq_pushroottable(v);

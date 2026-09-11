@@ -40,7 +40,7 @@ CParticleSystem::CParticleSystem( void ) : m_bNoSave( false )
 void CParticleSystem::Precache( void )
 {
 	const char *pParticleSystemName = STRING( m_iszEffectName );
-	if ( pParticleSystemName == NULL || pParticleSystemName[0] == 0 )
+	if ( pParticleSystemName == nullptr || pParticleSystemName[0] == 0 )
 	{
 		Warning( "info_particle_system (%s) has no particle system name specified!\n", GetEntityName().ToCStr() );
 	}
@@ -180,9 +180,9 @@ void CParticleSystem::ReadControlPointEnts( void )
 		if ( m_iszControlPointNames[i] == NULL_STRING )
 			continue;
 
-		CBaseEntity *pPointEnt = gEntList.FindEntityGeneric( NULL, STRING( m_iszControlPointNames[i] ), this );
-		Assert( pPointEnt != NULL );
-		if ( pPointEnt == NULL )
+		CBaseEntity *pPointEnt = gEntList.FindEntityGeneric( nullptr, STRING( m_iszControlPointNames[i] ), this );
+		Assert( pPointEnt != nullptr );
+		if ( pPointEnt == nullptr )
 		{
 			Warning("Particle system %s could not find control point entity (%s)\n", GetEntityName().ToCStr(), m_iszControlPointNames[i].ToCStr() );
 			continue;

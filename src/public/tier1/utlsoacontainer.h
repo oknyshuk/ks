@@ -382,7 +382,7 @@ public:
 	// entire rectangle modified by the operation.
 	void GenerateDistanceField( int nSrcField, int nDestField,
 								int nMaxDistance,
-								Rect3D_t *pRect = NULL );
+								Rect3D_t *pRect = nullptr );
 
 	void SetThreadMode( SOAThreadMode_t eThreadMode );
 
@@ -415,7 +415,7 @@ protected:
 		memset( m_nSliceStrideInBytes, 0xFF, sizeof( m_nSliceStrideInBytes ) );
 #endif
 
-		m_pConstantDataMemory = NULL;
+		m_pConstantDataMemory = nullptr;
 		m_pDataMemory = 0;
 		m_nNumQuadsPerRow = 0;
 		m_nColumns = m_nPaddedColumns = m_nRows = m_nSlices = 0;

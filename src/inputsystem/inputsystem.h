@@ -106,7 +106,7 @@ public:
 	virtual void RemoveUIEventListener();
 	virtual PlatWindow_t GetAttachedWindow() const;
 	virtual InputCursorHandle_t GetStandardCursor( InputStandardCursor_t id );
-	virtual InputCursorHandle_t LoadCursorFromFile( const char *pFileName, const char *pPathID = NULL );
+	virtual InputCursorHandle_t LoadCursorFromFile( const char *pFileName, const char *pPathID = nullptr );
 	virtual void SetCursorIcon( InputCursorHandle_t hCursor );
 	virtual void EnableMouseCapture( PlatWindow_t hWnd );
 	virtual void DisableMouseCapture();

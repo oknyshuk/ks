@@ -43,7 +43,7 @@ CAI_ClassScheduleIdSpace *CAI_BehaviorBase::GetClassScheduleIdSpace()
 //			g_pBehaviorClasses, which allows us to inspect the classmap
 //			in a debug session
 //-----------------------------------------------------------------------------
-static CGenericClassmap< CAI_BehaviorBase > *g_pBehaviorClasses = NULL;
+static CGenericClassmap< CAI_BehaviorBase > *g_pBehaviorClasses = nullptr;
 CGenericClassmap< CAI_BehaviorBase > *CAI_BehaviorBase::GetBehaviorClasses()
 {
 	if( !g_pBehaviorClasses )
@@ -81,7 +81,7 @@ int CAI_BehaviorBase::DrawDebugTextOverlays( int text_offset )
 
 			if ( pScheduleState->bActive && pScheduleState->pSchedule )
 			{
-				const char *pName = NULL;
+				const char *pName = nullptr;
 				pName = pScheduleState->pSchedule->GetName();
 				if ( !pName )
 				{
@@ -115,7 +115,7 @@ int CAI_BehaviorBase::DrawDebugTextOverlays( int text_offset )
 
 void CAI_BehaviorBase::GatherConditions()
 {
-	Assert( m_pBackBridge != NULL );
+	Assert( m_pBackBridge != nullptr );
 	
 	m_pBackBridge->BehaviorBridge_GatherConditions();
 }
@@ -130,7 +130,7 @@ void CAI_BehaviorBase::OnStartSchedule( int scheduleType )
 
 int CAI_BehaviorBase::SelectSchedule()
 {
-	Assert( m_pBackBridge != NULL );
+	Assert( m_pBackBridge != nullptr );
 	
 	return m_pBackBridge->BehaviorBridge_SelectSchedule();
 }
@@ -161,7 +161,7 @@ void CAI_BehaviorBase::RunTask( const Task_t *pTask )
 
 int CAI_BehaviorBase::TranslateSchedule( int scheduleType )
 {
-	Assert( m_pBackBridge != NULL );
+	Assert( m_pBackBridge != nullptr );
 	
 	return m_pBackBridge->BehaviorBridge_TranslateSchedule( scheduleType );
 }
@@ -173,7 +173,7 @@ CAI_Schedule *CAI_BehaviorBase::GetNewSchedule( int channel )
 	if ( !m_ScheduleChannels.IsValidIndex( channel ) )
 	{
 		AssertMsg( 0, "Bad schedule channel" );
-		return NULL;
+		return nullptr;
 	}
 
 	int scheduleType;
@@ -184,7 +184,7 @@ CAI_Schedule *CAI_BehaviorBase::GetNewSchedule( int channel )
 	scheduleType = SelectSchedule( channel );
 	CAI_Schedule *pSchedule = GetSchedule( scheduleType );
 
-	if( pSchedule != NULL )
+	if( pSchedule != nullptr )
 		m_ScheduleChannels[channel].idealSchedule = pSchedule->GetId();
 
 	return pSchedule;
@@ -227,7 +227,7 @@ CAI_Schedule *CAI_BehaviorBase::GetSchedule(int schedule)
 	}
 	
 	if( schedule == SCHED_NONE )
-		return NULL;
+		return nullptr;
 
 	if ( AI_IdIsLocal( schedule ) )
 	{
@@ -235,7 +235,7 @@ CAI_Schedule *CAI_BehaviorBase::GetSchedule(int schedule)
 	}
 
 	if ( schedule == -1 )
-		return NULL;
+		return nullptr;
 
 	return g_AI_SchedulesManager.GetScheduleFromID( schedule );
 }
@@ -247,7 +247,7 @@ const Task_t *CAI_BehaviorBase::GetTask( AIChannelScheduleState_t *pScheduleStat
 	int iScheduleIndex = pScheduleState->iCurTask;
 	if ( !pScheduleState->pSchedule || iScheduleIndex < 0 || iScheduleIndex >= pScheduleState->pSchedule->NumTasks() )
 		// iScheduleIndex is not within valid range for the NPC's current schedule.
-		return NULL;
+		return nullptr;
 
 	return &pScheduleState->pSchedule->GetTaskList()[ iScheduleIndex ];
 }
@@ -330,7 +330,7 @@ void CAI_BehaviorBase::MaintainSchedule( int channel )
 	bool bStopProcessing = false;
 	for ( i = 0; i < MAX_TASKS_RUN && !bStopProcessing; i++ )
 	{
-		if ( pScheduleState->pSchedule != NULL && pScheduleState->fTaskStatus == TASKSTATUS_COMPLETE )
+		if ( pScheduleState->pSchedule != nullptr && pScheduleState->fTaskStatus == TASKSTATUS_COMPLETE )
 		{
 			// Schedule is valid, so advance to the next task if the current is complete.
 			pScheduleState->fTaskStatus = TASKSTATUS_NEW;
@@ -401,7 +401,7 @@ void CAI_BehaviorBase::MaintainSchedule( int channel )
 			}
 
 			const Task_t *pTask = GetCurTask( channel );
-			Assert( pTask != NULL );
+			Assert( pTask != nullptr );
 
 			if ( GetOuter()->m_debugOverlays & OVERLAY_TASK_TEXT_BIT )
 			{
@@ -422,7 +422,7 @@ void CAI_BehaviorBase::MaintainSchedule( int channel )
 			if ( pScheduleState->fTaskStatus != TASKSTATUS_COMPLETE && pScheduleState->fTaskStatus != TASKSTATUS_RUN_MOVE && pScheduleState->taskFailureCode == NO_TASK_FAILURE && runTask )
 			{
 				const Task_t *pTask = GetCurTask( channel );
-				Assert( pTask != NULL );
+				Assert( pTask != nullptr );
 
 				RunTask( channel, pTask );
 
@@ -590,7 +590,7 @@ void CAI_BehaviorBase::ClearSchedule( int channel, const char *szReason )
 	pScheduleState->bScheduleWasInterrupted = true;
 	pScheduleState->fTaskStatus = TASKSTATUS_NEW;
 	pScheduleState->idealSchedule = AI_RemapToGlobal( SCHED_NONE );
-	pScheduleState->pSchedule = NULL;
+	pScheduleState->pSchedule = nullptr;
 	pScheduleState->iCurTask = 0;
 }
 
@@ -601,7 +601,7 @@ CAI_Schedule *CAI_BehaviorBase::GetCurSchedule( int channel )
 	if ( !m_ScheduleChannels.IsValidIndex( channel ) )
 	{
 		AssertMsg( 0, "Bad schedule channel" );
-		return NULL;
+		return nullptr;
 	}
 
 	return m_ScheduleChannels[channel].pSchedule;
@@ -702,7 +702,7 @@ const Task_t *CAI_BehaviorBase::GetCurTask( int channel )
 	if ( !m_ScheduleChannels.IsValidIndex( channel ) )
 	{
 		AssertMsg( 0, "Bad schedule channel" );
-		return NULL;
+		return nullptr;
 	}
 
 	AIChannelScheduleState_t *pScheduleState = &m_ScheduleChannels[channel];
@@ -710,7 +710,7 @@ const Task_t *CAI_BehaviorBase::GetCurTask( int channel )
 	int iScheduleIndex = pScheduleState->iCurTask;
 	if ( !pScheduleState->pSchedule || iScheduleIndex < 0 || iScheduleIndex >= pScheduleState->pSchedule->NumTasks() )
 		// iScheduleIndex is not within valid range for the NPC's current schedule.
-		return NULL;
+		return nullptr;
 
 	return &pScheduleState->pSchedule->GetTaskList()[ iScheduleIndex ];
 }
@@ -733,7 +733,7 @@ void CAI_BehaviorBase::RunTask( int channel, const Task_t *pTask )
 
 float CAI_BehaviorBase::GetJumpGravity() const
 {
-	Assert( m_pBackBridge != NULL );
+	Assert( m_pBackBridge != nullptr );
 
 	return m_pBackBridge->BehaviorBridge_GetJumpGravity();
 }
@@ -742,7 +742,7 @@ float CAI_BehaviorBase::GetJumpGravity() const
 
 bool CAI_BehaviorBase::IsJumpLegal( const Vector &startPos, const Vector &apex, const Vector &endPos, float maxUp, float maxDown, float maxDist ) const
 {
-	Assert( m_pBackBridge != NULL );
+	Assert( m_pBackBridge != nullptr );
 
 	return m_pBackBridge->BehaviorBridge_IsJumpLegal( startPos, apex, endPos, maxUp, maxDown, maxDist );
 }
@@ -751,7 +751,7 @@ bool CAI_BehaviorBase::IsJumpLegal( const Vector &startPos, const Vector &apex, 
 
 bool CAI_BehaviorBase::MovementCost( int moveType, const Vector &vecStart, const Vector &vecEnd, float *pCost )
 {
-	Assert( m_pBackBridge != NULL );
+	Assert( m_pBackBridge != nullptr );
 
 	return m_pBackBridge->BehaviorBridge_MovementCost( moveType, vecStart, vecEnd, pCost );
 }

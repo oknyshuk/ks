@@ -86,12 +86,12 @@ public:
 			  const AI_CriteriaSet * RESTRICT contexts, ///< the contexts that come with it (may be NULL)
 			  float time,					 ///< when to dispatch it. You can specify a time of zero to mean "immediately."
 			  const CFollowupTargetSpec_t &targetspec, /// All information necessary to target this response
-			  CBaseEntity *pIssuer = NULL ///< the entity who should not respond if this is a ANY or ALL rule. (eg, don't let people talk to themselves.)
+			  CBaseEntity *pIssuer = nullptr ///< the entity who should not respond if this is a ANY or ALL rule. (eg, don't let people talk to themselves.)
 			  );
 
 	/// Remove all deferred responses matching the concept and issuer.
 	void Remove( const AIConcept_t &conc,  ///< concept to dispatch
-		CBaseEntity * const pIssuer = NULL ///< the entity issuing the response, if one exists.
+		CBaseEntity * const pIssuer = nullptr ///< the entity issuing the response, if one exists.
 		) RESTRICT;
 
 	/// Remove all deferred responses queued to be spoken by given character
@@ -168,7 +168,7 @@ class CResponseQueueManager : public CAutoGameSystemPerFrame
 public:
 	CResponseQueueManager(char const *name) : CAutoGameSystemPerFrame( name )
 	{
-		m_pQueue = NULL;
+		m_pQueue = nullptr;
 	}
 	virtual ~CResponseQueueManager(void);
 	virtual void Shutdown();
@@ -204,17 +204,17 @@ extern CResponseQueueManager g_ResponseQueueManager;
 /// Automatically queue up speech to happen immediately -- calls straight through to response rules add
 inline void QueueSpeak( const AIConcept_t &conc,					///< concept name to say
 					    const CResponseQueue::CFollowupTargetSpec_t& targetspec,	///< kDRT_ANY, kDRT_ALL, etc
-						CBaseEntity *pIssuer = NULL					///< if specifying ANY or ALL, use this to specify the one you *don't* want to speak
+						CBaseEntity *pIssuer = nullptr					///< if specifying ANY or ALL, use this to specify the one you *don't* want to speak
 						)
 {
-	return g_ResponseQueueManager.GetQueue()->Add( conc, NULL, 0.0f, targetspec, pIssuer );
+	return g_ResponseQueueManager.GetQueue()->Add( conc, nullptr, 0.0f, targetspec, pIssuer );
 }
 
 /// Automatically queue up speech to happen immediately -- calls straight through to response rules add
 inline void QueueSpeak( const AIConcept_t &conc,					///< concept name to say
 					    const CResponseQueue::CFollowupTargetSpec_t& targetspec,	///< kDRT_ANY, kDRT_ALL, etc
 						const AI_CriteriaSet &criteria,				///< criteria to pass in
-					    CBaseEntity *pIssuer = NULL					///< if specifying ANY or ALL, use this to specify the one you *don't* want to speak
+					    CBaseEntity *pIssuer = nullptr					///< if specifying ANY or ALL, use this to specify the one you *don't* want to speak
 					   )
 {
 	return g_ResponseQueueManager.GetQueue()->Add( conc, &criteria, 0.0f, targetspec, pIssuer );
@@ -225,7 +225,7 @@ inline void QueueSpeak( const AIConcept_t &conc,					///< concept name to say
 					   const EHANDLE &target,						///< which entity shall speak
 					   float delay,									///< how far in the future to speak
 					   const AI_CriteriaSet &criteria,				///< criteria to pass in
-					   CBaseEntity *pIssuer = NULL )
+					   CBaseEntity *pIssuer = nullptr )
 {
 	return g_ResponseQueueManager.GetQueue()->Add( conc, &criteria, gpGlobals->curtime + delay,
 		CResponseQueue::CFollowupTargetSpec_t(target), pIssuer );

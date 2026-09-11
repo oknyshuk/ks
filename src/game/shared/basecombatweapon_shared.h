@@ -354,7 +354,7 @@ public:
 	virtual bool			DefaultDeploy( char *szViewModel, char *szWeaponModel, int iActivity, char *szAnimExt );
 	virtual bool			CanDeploy( void ) { return true; }			// return true if the weapon's allowed to deploy
 	virtual bool			Deploy( void );								// returns true is deploy was successful
-	virtual bool			Holster( CBaseCombatWeapon *pSwitchingTo = NULL );
+	virtual bool			Holster( CBaseCombatWeapon *pSwitchingTo = nullptr );
 	virtual CBaseCombatWeapon *GetLastWeapon( void ) { return this; }
 	virtual void			SetWeaponVisible( bool visible );
 	virtual bool			IsWeaponVisible( void );
@@ -392,7 +392,7 @@ public:
 	// Weapon firing
 	virtual void			PrimaryAttack( void );						// do "+ATTACK"
 	virtual void			SecondaryAttack( void ) { return; }			// do "+ATTACK2"
-	virtual void			BaseForceFire( CBaseCombatCharacter *pOperator, CBaseEntity *pTarget = NULL );
+	virtual void			BaseForceFire( CBaseCombatCharacter *pOperator, CBaseEntity *pTarget = nullptr );
 
 	// Firing animations
 	virtual Activity		GetPrimaryAttackActivity( void );
@@ -500,9 +500,9 @@ public:
 	int GetSecondaryAmmoCount() { return m_iSecondaryAmmoCount; }
 	void SetSecondaryAmmoCount( int count ) { m_iSecondaryAmmoCount = count; }
 
-	int GetReserveAmmoCount( AmmoPosition_t nAmmoPosition, CBaseCombatCharacter * pForcedOwner = NULL  );
-	int SetReserveAmmoCount( AmmoPosition_t nAmmoPosition, int nCount, bool bSuppressSound = false, CBaseCombatCharacter * pOwner = NULL );
-	int GiveReserveAmmo( AmmoPosition_t nAmmoPosition, int nCount, bool bSuppressSound = false, CBaseCombatCharacter * pOwner = NULL );
+	int GetReserveAmmoCount( AmmoPosition_t nAmmoPosition, CBaseCombatCharacter * pForcedOwner = nullptr  );
+	int SetReserveAmmoCount( AmmoPosition_t nAmmoPosition, int nCount, bool bSuppressSound = false, CBaseCombatCharacter * pOwner = nullptr );
+	int GiveReserveAmmo( AmmoPosition_t nAmmoPosition, int nCount, bool bSuppressSound = false, CBaseCombatCharacter * pOwner = nullptr );
 
 	virtual CHudTexture const	*GetSpriteActive( void ) const;
 	virtual CHudTexture const	*GetSpriteInactive( void ) const;
@@ -514,7 +514,7 @@ public:
 	virtual CHudTexture const	*GetSpriteZoomedAutoaim( void ) const;
 
 	virtual Activity		ActivityOverride( Activity baseAct, bool *pRequired );
-	virtual	acttable_t*		ActivityList( void ) { return NULL; }
+	virtual	acttable_t*		ActivityList( void ) { return nullptr; }
 	virtual	int				ActivityListCount( void ) { return 0; }
 
 	virtual void			Activate( void );
@@ -532,7 +532,7 @@ public:
 	virtual void			FallThink( void );						// make the weapon fall to the ground after spawning
 
 	// Weapon spawning
-	bool					IsConstrained() { return m_pConstraint != NULL; }
+	bool					IsConstrained() { return m_pConstraint != nullptr; }
 	bool					IsInBadPosition ( void );				// Is weapon in bad position to pickup?
 	bool					RepositionWeapon ( void );				// Attempts to reposition the weapon in a location where it can be
 	virtual void			Materialize( void );					// make a weapon visible and tangible
@@ -562,7 +562,7 @@ public:
 
 	virtual void			Operator_FrameUpdate( CBaseCombatCharacter  *pOperator );
 	virtual void			Operator_HandleAnimEvent( animevent_t *pEvent, CBaseCombatCharacter *pOperator );
-	virtual void			Operator_ForceNPCFire( CBaseCombatCharacter  *pOperator, bool bSecondary, CBaseEntity *pTarget = NULL ) { return; }
+	virtual void			Operator_ForceNPCFire( CBaseCombatCharacter  *pOperator, bool bSecondary, CBaseEntity *pTarget = nullptr ) { return; }
 	// NOTE: This should never be called when a character is operating the weapon.  Animation events should be
 	// routed through the character, and then back into CharacterAnimEvent() 
 	void					HandleAnimEvent( animevent_t *pEvent );
@@ -642,7 +642,7 @@ public:
 	static CUtlLinkedList< CBaseCombatWeapon * >& GetWeaponList( void );
 
 
-	void					ApplyThirdPersonStickers( C_BaseAnimating *pWeaponModelTargetOverride = NULL );
+	void					ApplyThirdPersonStickers( C_BaseAnimating *pWeaponModelTargetOverride = nullptr );
 
 #endif // End client-only methods
 
@@ -820,7 +820,7 @@ protected:
 inline CBaseCombatWeapon *ToBaseCombatWeapon( CBaseEntity *pEntity )
 {
 	if ( !pEntity )
-		return NULL;
+		return nullptr;
 	return pEntity->MyCombatWeaponPointer();
 }
 

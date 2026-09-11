@@ -33,7 +33,7 @@ public:
 	virtual void DiscardVertexBuffers() = 0;
 
 	// Creates, destroys static meshes
-	virtual IMesh*	CreateStaticMesh( VertexFormat_t vertexFormat, const char *pTextureBudgetGroup, IMaterial *pMaterial = NULL, VertexStreamSpec_t *pStreamSpec = NULL ) = 0;
+	virtual IMesh*	CreateStaticMesh( VertexFormat_t vertexFormat, const char *pTextureBudgetGroup, IMaterial *pMaterial = nullptr, VertexStreamSpec_t *pStreamSpec = nullptr ) = 0;
 	virtual void	DestroyStaticMesh( IMesh* pMesh ) = 0;
 
 	// Gets at the dynamic mesh

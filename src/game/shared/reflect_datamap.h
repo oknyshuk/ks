@@ -192,12 +192,12 @@ std::vector<typedescription_t> &fields()
 // timing is unchanged. m_DataMap is reached through unchecked reflection because DECLARE_DATADESC
 // leaves it in whatever access section the class happens to be in -- usually private.
 #define IMPLEMENT_REFLECT_DATAMAP( className )                                                  \
-	datamap_t className::m_DataMap = { 0, 0, #className, NULL };                                  \
+	datamap_t className::m_DataMap = { 0, 0, #className, nullptr };                                  \
 	datamap_t *className::GetDataDescMap( void ) { return &m_DataMap; }                            \
 	datamap_t *className::GetBaseMap()                                                            \
 	{                                                                                             \
 		datamap_t *pResult;                                                                       \
-		DataMapAccess( (BaseClass *)NULL, &pResult );                                             \
+		DataMapAccess( (BaseClass *)nullptr, &pResult );                                             \
 		return pResult;                                                                           \
 	}                                                                                             \
 	namespace className##_ReflectDataDescInit                                                     \
@@ -226,8 +226,8 @@ std::vector<typedescription_t> &fields()
 // The base-less mirror: BEGIN_SIMPLE_DATADESC / BEGIN_DATADESC_NO_BASE both set GetBaseMap() to
 // return NULL rather than walk BaseClass, since a class using either has none to walk.
 #define IMPLEMENT_REFLECT_DATAMAP_SIMPLE( className )                                             \
-	datamap_t className::m_DataMap = { 0, 0, #className, NULL };                                  \
-	datamap_t *className::GetBaseMap() { return NULL; }                                           \
+	datamap_t className::m_DataMap = { 0, 0, #className, nullptr };                                  \
+	datamap_t *className::GetBaseMap() { return nullptr; }                                           \
 	namespace className##_ReflectDataDescInit                                                     \
 	{                                                                                             \
 		static datamap_t &Map() { return [: ks::reflect::static_member_of(                         \
@@ -255,11 +255,11 @@ std::vector<typedescription_t> &fields()
 // through DataMapAccess rather than className::GetBaseMap(): that member is protected, and unlike
 // the legacy DataMapInit this lambda is not a friend.
 #define IMPLEMENT_REFLECT_DATAMAP_SIMPLE_( className, baseClass )                                  \
-	datamap_t className::m_DataMap = { 0, 0, #className, NULL };                                  \
+	datamap_t className::m_DataMap = { 0, 0, #className, nullptr };                                  \
 	datamap_t *className::GetBaseMap()                                                            \
 	{                                                                                             \
 		datamap_t *pResult;                                                                       \
-		DataMapAccess( (baseClass *)NULL, &pResult );                                             \
+		DataMapAccess( (baseClass *)nullptr, &pResult );                                             \
 		return pResult;                                                                           \
 	}                                                                                             \
 	namespace className##_ReflectDataDescInit                                                     \
@@ -271,8 +271,8 @@ std::vector<typedescription_t> &fields()
 			auto &f = ks::reflect::dmap::fields<className>();                                     \
 			Map().dataDesc      = f.data();                                                       \
 			Map().dataNumFields = (int)f.size();                                                   \
-			datamap_t *pBase = NULL;                                                              \
-			DataMapAccess( (baseClass *)NULL, &pBase );                                           \
+			datamap_t *pBase = nullptr;                                                              \
+			DataMapAccess( (baseClass *)nullptr, &pBase );                                           \
 			Map().baseMap       = pBase;                                                          \
 			return true;                                                                           \
 		}();                                                                                     \
@@ -292,9 +292,9 @@ std::vector<typedescription_t> &fields()
 // virtual's key-function homing without a definition, and the linker reported the whole vtable
 // missing rather than one function: undefined symbol: _ZTV24CFourWheelVehiclePhysics.
 #define IMPLEMENT_REFLECT_DATAMAP_NO_BASE( className )                                             \
-	datamap_t className::m_DataMap = { 0, 0, #className, NULL };                                  \
+	datamap_t className::m_DataMap = { 0, 0, #className, nullptr };                                  \
 	datamap_t *className::GetDataDescMap( void ) { return &m_DataMap; }                            \
-	datamap_t *className::GetBaseMap() { return NULL; }                                           \
+	datamap_t *className::GetBaseMap() { return nullptr; }                                           \
 	namespace className##_ReflectDataDescInit                                                     \
 	{                                                                                             \
 		static datamap_t &Map() { return [: ks::reflect::static_member_of(                         \

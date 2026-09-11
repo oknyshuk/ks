@@ -232,7 +232,7 @@ void CTonemapTrigger::Spawn( void )
 	BaseClass::Spawn();
 	InitTrigger();
 
-	m_hTonemapController = gEntList.FindEntityByName( NULL, m_tonemapControllerName );
+	m_hTonemapController = gEntList.FindEntityByName( nullptr, m_tonemapControllerName );
 }
 
 
@@ -273,7 +273,7 @@ void CTonemapTrigger::EndTouch( CBaseEntity *other )
 //-----------------------------------------------------------------------------
 void CTonemapSystem::LevelInitPreEntity( void )
 {
-	m_hMasterController = NULL;
+	m_hMasterController = nullptr;
 }
 
 //-----------------------------------------------------------------------------
@@ -283,13 +283,13 @@ void CTonemapSystem::LevelInitPreEntity( void )
 void CTonemapSystem::LevelInitPostEntity( void )
 {
 	// Overall master controller
-	CEnvTonemapController *pTonemapController = NULL;
+	CEnvTonemapController *pTonemapController = nullptr;
 	do
 	{
 		pTonemapController = static_cast<CEnvTonemapController*>( gEntList.FindEntityByClassname( pTonemapController, "env_tonemap_controller" ) );
 		if ( pTonemapController )
 		{
-			if ( m_hMasterController == NULL )
+			if ( m_hMasterController == nullptr )
 			{
 				m_hMasterController = pTonemapController;
 			}

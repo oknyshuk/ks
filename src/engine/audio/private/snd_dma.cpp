@@ -253,7 +253,7 @@ channel_t * CActiveChannels::FindActiveChannelByGuid( int guid ) const
 			return pChannel;
 		}
 	}
-	return NULL;
+	return nullptr;
 }
 
 void CActiveChannels::DumpChannelInfo( CUtlBuffer &buf )
@@ -262,7 +262,7 @@ void CActiveChannels::DumpChannelInfo( CUtlBuffer &buf )
 	for ( int i = 0; i < m_count; i++ )
 	{
 		channel_t *pChannel = &channels[ m_list[ i ] ];
-		if ( pChannel->sfx != NULL )
+		if ( pChannel->sfx != nullptr )
 		{
 			buf.Printf( "%d. ch=%d %s p=%.2f,%.2f,%.2f v=%d s=%d l=%d  \n", i, m_list[ i ], pChannel->sfx->getname( nameBuf, sizeof(nameBuf) ), 
 						pChannel->origin[0], pChannel->origin[1], pChannel->origin[2], pChannel->master_vol, pChannel->soundsource, pChannel->sfx->pSource->IsLooped() );
@@ -399,13 +399,13 @@ bool SND_IsInGame( void )
 CSfxTable::CSfxTable()
 {
 	m_namePoolIndex = s_Sounds.InvalidIndex();
-	pSource = NULL;
+	pSource = nullptr;
 	m_bUseErrorFilename = false;
 	m_bIsUISound = false;
 	m_bIsMusic = false;
 	m_bIsLateLoad = false;
 	m_bMixGroupsCached = false;
-	m_pDebugName = NULL;
+	m_pDebugName = nullptr;
 }
 
 
@@ -464,7 +464,7 @@ const char *CSfxTable::getname( char *pBuf, size_t bufLen )
 		g_pFileSystem->String( s_Sounds.Key( m_namePoolIndex ), pBuf, bufLen );
 		return pBuf;
 	}
-	return NULL;
+	return nullptr;
 }
 
 FileNameHandle_t CSfxTable::GetFileNameHandle()
@@ -473,7 +473,7 @@ FileNameHandle_t CSfxTable::GetFileNameHandle()
 	{
 		return s_Sounds.Key( m_namePoolIndex );
 	}
-	return NULL;
+	return nullptr;
 }
 
 //-----------------------------------------------------------------------------
@@ -483,7 +483,7 @@ const char *CSfxTable::GetFileName( char *pOutBuf, size_t bufLen )
 {
 
 	const char *pName = getname(pOutBuf, bufLen);
-	return pName ? PSkipSoundChars( pName ) : NULL;	
+	return pName ? PSkipSoundChars( pName ) : nullptr;	
 }
 
 bool CSfxTable::IsPrecachedSound()
@@ -582,8 +582,8 @@ static ConCommand snd_mixvol("snd_mixvol", MXR_DebugSetMixGroupVolume, "Set name
 extern ConVar host_threaded_sound;
 
 // vaudio DLL
-IVAudio *vaudio = NULL;
-CSysModule *g_pVAudioModule = NULL;
+IVAudio *vaudio = nullptr;
+CSysModule *g_pVAudioModule = nullptr;
 
 
 //-----------------------------------------------------------------------------
@@ -620,7 +620,7 @@ void S_SoundInfo_f(void)
 		for (int i = MAX_DYNAMIC_CHANNELS; i<total_channels; i++)
 		{
 			channel_t *ch = &channels[i];
-			if (ch->sfx != NULL)
+			if (ch->sfx != nullptr)
 			{
 				Msg( "  %d: %s\n", i, ch->sfx->getname(nameBuf, sizeof(nameBuf)) );
 			}
@@ -824,7 +824,7 @@ void VAudioInit()
 		if ( g_pVAudioModule )
 		{
 			CreateInterfaceFn vaudioFactory = Sys_GetFactory( g_pVAudioModule );
-			vaudio = (IVAudio *)vaudioFactory( VAUDIO_INTERFACE_VERSION, NULL );
+			vaudio = (IVAudio *)vaudioFactory( VAUDIO_INTERFACE_VERSION, nullptr );
 		}
 	}
 }
@@ -906,7 +906,7 @@ void S_Shutdown(void)
 			time(&ltime);
 			localtime(&ltime);*/
 
-			time_t timet = time( NULL );
+			time_t timet = time( nullptr );
 			struct tm *tm  = localtime( &timet );
 			char filename[32];
 			Q_snprintf( filename, 32, "soundlog_%i_%02i_%02i_%02i_%02i.txt", tm->tm_year, tm->tm_mon, tm->tm_mday, tm->tm_hour, tm->tm_min );
@@ -925,7 +925,7 @@ void S_Shutdown(void)
 			if ( s_Sounds[i].pSfx )
 			{
 				delete s_Sounds[i].pSfx->pSource;
-				s_Sounds[i].pSfx->pSource = NULL;
+				s_Sounds[i].pSfx->pSource = nullptr;
 			}
 		}
 		s_Sounds.RemoveAll();
@@ -946,8 +946,8 @@ void S_Shutdown(void)
 			delete vaudio;
 
 		FileSystem_UnloadModule( g_pVAudioModule );
-		g_pVAudioModule = NULL;
-		vaudio = NULL;
+		g_pVAudioModule = nullptr;
+		vaudio = nullptr;
 
 		MIX_FreeAllPaintbuffers();
 		snd_initialized = false;
@@ -982,7 +982,7 @@ bool S_IsInitted()
 CSfxTable *S_FindName( const char *szName, int *pInCache )
 {
 	int			i;
-	CSfxTable	*sfx = NULL;
+	CSfxTable	*sfx = nullptr;
 	char		szBuff[MAX_PATH];
 	const char	*pName;
 
@@ -1020,7 +1020,7 @@ CSfxTable *S_FindName( const char *szName, int *pInCache )
 		sfx = s_Sounds[i].pSfx;
 
 		sfx->SetNamePoolIndex( i );
-		sfx->pSource = NULL;
+		sfx->pSource = nullptr;
 
 		if ( pInCache )
 		{
@@ -1048,7 +1048,7 @@ CAudioSource *S_LoadSound( CSfxTable *pSfx, channel_t *ch, SoundError &soundErro
 	if ( !pSndName )
 	{
 		soundError = SE_CANT_GET_NAME;
-		return NULL;
+		return nullptr;
 	}
 
 	const char *pSndFilename = PSkipSoundChars( pSndName );
@@ -1071,7 +1071,7 @@ CAudioSource *S_LoadSound( CSfxTable *pSfx, channel_t *ch, SoundError &soundErro
 		// stream music
 		if ( !bStream && !bUserVox )
 		{
-			bStream = V_stristr( pSndName, "music" ) != NULL;
+			bStream = V_stristr( pSndName, "music" ) != nullptr;
 		}
 
 		// override streaming
@@ -1106,7 +1106,7 @@ CAudioSource *S_LoadSound( CSfxTable *pSfx, channel_t *ch, SoundError &soundErro
 	if ( !pSfx->pSource )
 	{
 		soundError = SE_NO_SOURCE_SETUP;
-		return NULL;
+		return nullptr;
 	}
 
 	// first time to load?  Create the mixer
@@ -1115,7 +1115,7 @@ CAudioSource *S_LoadSound( CSfxTable *pSfx, channel_t *ch, SoundError &soundErro
 		ch->pMixer = pSfx->pSource->CreateMixer(ch->initialStreamPosition, ch->skipInitialSamples, ch->flags.m_bUpdateDelayForChoreo, soundError);
 		if ( !ch->pMixer )
 		{
-			return NULL;
+			return nullptr;
 		}
 	}
 
@@ -1132,17 +1132,17 @@ CAudioSource *S_LoadSound( CSfxTable *pSfx, channel_t *ch, SoundError &soundErro
 CSfxTable *S_PrecacheSound( const char *name )
 {
 	if ( !g_AudioDevice )
-		return NULL;
+		return nullptr;
 
 	if ( !g_AudioDevice->IsActive() )
-		return NULL;
+		return nullptr;
 
-	CSfxTable *sfx = S_FindName( name, NULL );
+	CSfxTable *sfx = S_FindName( name, nullptr );
 	if ( sfx )
 	{
 		// cache sound
 		SoundError soundError;
-		S_LoadSound( sfx, NULL, soundError );
+		S_LoadSound( sfx, nullptr, soundError );
 	}
 	else
 	{
@@ -1161,7 +1161,7 @@ void S_InternalReloadSound( CSfxTable *sfx )
 	sfx->pSource->CacheUnload();
 
 	delete sfx->pSource;
-	sfx->pSource = NULL;
+	sfx->pSource = nullptr;
 
 	char pExt[10];
 	char nameBuf[MAX_PATH];
@@ -1184,7 +1184,7 @@ void S_ReloadSound( const char *name )
 	if ( !g_AudioDevice->IsActive() )
 		return;
 
-	CSfxTable *sfx = S_FindName( name, NULL );
+	CSfxTable *sfx = S_FindName( name, nullptr );
 #ifdef _DEBUG
 	if ( sfx )
 	{
@@ -1248,12 +1248,12 @@ void S_PrefetchSound( char const *name, bool bPlayOnce )
 	if ( !g_AudioDevice->IsActive() )
 		return;
 
-	sfx = S_FindName( name, NULL );
+	sfx = S_FindName( name, nullptr );
 	if ( sfx )
 	{
 		// cache sound
 		SoundError soundError;
-		S_LoadSound( sfx, NULL, soundError );
+		S_LoadSound( sfx, nullptr, soundError );
 	}
 
 	if ( !sfx || !sfx->pSource )
@@ -1442,7 +1442,7 @@ channel_t *SND_StealDynamicChannel(SoundSource soundsource, int entchannel, cons
 			if ( distSqr > 0.0f && 
 				ClosestListenerDistSqr( ch->origin ) < distSqr && 
 				entchannel != CHAN_WEAPON )
-				return NULL;
+				return nullptr;
 
 			// Msg("Sound playing %d copies, stole %s (%d) %i, %i, %u\n", sameSoundCount, ch->sfx->getname(), sameVol, ch->soundsource, soundsource, RemainingSamples(ch) );
 	
@@ -1515,14 +1515,14 @@ channel_t *SND_StealDynamicChannel(SoundSource soundsource, int entchannel, cons
 		return &channels[first_to_die];
 	}
 
-	return NULL;
+	return nullptr;
 }
 
 channel_t *SND_PickDynamicChannel(SoundSource soundsource, int entchannel, const Vector &origin, CSfxTable *sfx)
 {
 	channel_t *pChannel = SND_StealDynamicChannel( soundsource, entchannel, origin, sfx );
 	if ( !pChannel )
-		return NULL;
+		return nullptr;
 
 	if ( pChannel->sfx )
 	{
@@ -1535,7 +1535,7 @@ channel_t *SND_PickDynamicChannel(SoundSource soundsource, int entchannel, const
 				if ( pChannel->soundsource == soundsource && pChannel->entchannel == entchannel && pChannel->sfx == sfx )
 				{
 					// same looping sound, same ent, same channel, don't restart the sound
-					return NULL;
+					return nullptr;
 				}
 			}
 		}
@@ -1567,11 +1567,11 @@ already playing.
 channel_t *SND_PickStaticChannel(int soundsource, CSfxTable *pSfx)
 {
 	int i;
-	channel_t *ch = NULL;
+	channel_t *ch = nullptr;
 
 	// Check for replacement sound, or find the best one to replace
  	for (i = MAX_DYNAMIC_CHANNELS; i<total_channels; i++)
-		if (channels[i].sfx == NULL)
+		if (channels[i].sfx == nullptr)
 			break;
 
 	if (i < total_channels) 
@@ -1606,7 +1606,7 @@ channel_t *SND_PickStaticChannel(int soundsource, CSfxTable *pSfx)
 					bFirst = false;
 					S_SoundInfo_f();
 				}
-				return NULL;
+				return nullptr;
 			}
 //		}
 
@@ -1828,7 +1828,7 @@ void S_GetActiveSaveRestoreChannels( ChannelSaveVector& channelSaves )
 				// Note: According to Mike Morasky, elapsed time should only matter for the update stack, so if
 				//		 the stack list doesn't contain one, its value won't matter on restore.
 				const CSosOperatorStack* pUpdateStack = channel.m_pStackList->GetStack( CSosOperatorStack::SOS_UPDATE );
-				channelSave.opStackElapsedTime = pUpdateStack != NULL ? pUpdateStack->GetElapsedTime() : 0.0f;
+				channelSave.opStackElapsedTime = pUpdateStack != nullptr ? pUpdateStack->GetElapsedTime() : 0.0f;
 				channelSave.opStackElapsedStopTime = channel.m_pStackList->GetElapsedStopTime();
 			}
 			else
@@ -1848,7 +1848,7 @@ channel_t* S_FindDuplicateChannel( StartSoundParams_t const& params )
 
 	CChannelList list;
 	g_ActiveChannels.GetActiveChannels( list );
-	channel_t* pDuplicateChannel = NULL;
+	channel_t* pDuplicateChannel = nullptr;
 
 	bool const shouldIgnoreName = (params.flags & SND_IGNORE_NAME) != 0;
 	bool const isScriptSound = params.m_bIsScriptHandle && !shouldIgnoreName;
@@ -1906,7 +1906,7 @@ void S_RestartChannel( channelsave const& channelSave )
 		params.staticsound = params.entchannel == CHAN_STATIC ? true : false;
 
 		channel_t* pDuplicateChannel = S_FindDuplicateChannel( params );
-		if( pDuplicateChannel != NULL )
+		if( pDuplicateChannel != nullptr )
 			S_StopChannel( pDuplicateChannel );
 
 		S_StartSoundEntry( params, -1, false );
@@ -2067,7 +2067,7 @@ float SND_GetFacingDirection( channel_t *pChannel, const Vector &vecListenerOrig
 
 	// compute forward vector for sound entity
 
-	AngleVectors( source_angles, &SF, NULL, NULL );
+	AngleVectors( source_angles, &SF, nullptr, nullptr );
 
 	// dot source forward unit vector with source to listener unit vector to get -1.0 - 1.0 facing.
 	// ie: projection of SF onto SL
@@ -2361,7 +2361,7 @@ float SND_GetGain( int nSlot, gain_t *gs, const channel_t *ch, const Vector &vec
 		// modify gain if sound source not visible to player
 		if(ch->wavtype != CHAR_DIRSTEREO)
 		{
-			gain = gain * SND_GetGainObscured( nSlot, gs, ch, vecListenerOrigin, fplayersound, flooping, bAttenuated, bOkayToTrace, NULL );
+			gain = gain * SND_GetGainObscured( nSlot, gs, ch, vecListenerOrigin, fplayersound, flooping, bAttenuated, bOkayToTrace, nullptr );
 		}
 		if (snd_showstart.GetInt() == 6)
 		{
@@ -2485,7 +2485,7 @@ bool SND_IsLongWave( const channel_t *pChannel )
 	// this gets used in 2 places, if the volume is 0.0 for some reason
 	// and to test if getgainobscured should function
 
-	CAudioSource *pSource = pChannel->sfx ? pChannel->sfx->pSource : NULL;
+	CAudioSource *pSource = pChannel->sfx ? pChannel->sfx->pSource : nullptr;
 	if ( pSource )
 	{
 		if ( pSource->IsStreaming() )
@@ -3071,7 +3071,7 @@ struct das_node_t
 #define DAS_CNODES	40					// keep around last n nodes - must be same as DSP_CAUTO_PRESETS!!!
 
 das_node_t g_das_nodes[DAS_CNODES];		// all dsp detection nodes
-das_node_t *g_pdas_last_node = NULL;	// last node that saw player
+das_node_t *g_pdas_last_node = nullptr;	// last node that saw player
 
 int g_das_check_next;					// next node to check
 int g_das_store_next;					// next place to store node
@@ -4276,7 +4276,7 @@ void DAS_DisplayRoomDEBUG( das_room_t *proom, bool fnew, float preset )
 
 	if (preset >= 0.0)
 	{
-		if (proom == NULL)
+		if (proom == nullptr)
 			return;
 
 		DevMsg( "DSP PRESET: %.0f size:(%.0f,%.0f) height:(%.0f) dif %.4f : refl %.4f : cobj: %.0f : sky %.0f \n", preset, dx, dy, dz, proom->diffusion, refl, count, fsky);
@@ -4312,7 +4312,7 @@ bool DAS_CheckNewRoom( das_room_t *proom )
 	bool bnewroom;
 	float dw,dw2,dr,ds,dh;
 	int cchanged = 0;
-	das_room_t *proom_prev = NULL;
+	das_room_t *proom_prev = nullptr;
 	Vector2D v2d;
 	Vector v3d;
 	float dist;
@@ -4868,7 +4868,7 @@ void SND_ExecuteUpdateOperators( channel_t *ch )
 	// set all scratch pad settings
 	//////////////////////////////////////////////////////////////////////////
 	// setup scratchpad
-	g_scratchpad.SetPerExecution( ch, NULL );
+	g_scratchpad.SetPerExecution( ch, nullptr );
 
 	// Currently we don't process voice channels via operators
 	if ( ch->sfx && 
@@ -4993,7 +4993,7 @@ void SND_Spatialize(channel_t *ch)
 	
 	bool looping = false;
 
-	CAudioSource *pSource = ch->sfx ? ch->sfx->pSource : NULL;
+	CAudioSource *pSource = ch->sfx ? ch->sfx->pSource : nullptr;
 	if ( pSource )
 	{
 		looping = pSource->IsLooped();
@@ -5027,7 +5027,7 @@ void SND_Spatialize(channel_t *ch)
 	si.type = SpatializationInfo_t::SI_INSPATIALIZATION;
 	si.pOrigin = &vEntOrigin;
 	si.pAngles = &source_angles;
-	si.pflRadius = NULL;
+	si.pflRadius = nullptr;
 	if ( ch->soundsource != 0 && ch->radius == 0 )
 	{
 		si.pflRadius = &ch->radius;
@@ -5035,7 +5035,7 @@ void SND_Spatialize(channel_t *ch)
 
 	CUtlVector< Vector > utlVecMultiOrigins;
 	si.m_pUtlVecMultiOrigins = &utlVecMultiOrigins;
-	si.m_pUtlVecMultiAngles = NULL;
+	si.m_pUtlVecMultiAngles = nullptr;
 
 	{
 		VPROF_("SoundServices->GetSoundSpatializtion", 2, VPROF_BUDGETGROUP_OTHER_SOUND, false, BUDGETFLAG_OTHER );
@@ -5376,36 +5376,36 @@ void SND_SpatializeFirstFrameNoTrace( channel_t *pChannel)
 	}
 }
 
-void PrintSoundFileName( const char *pText1, CSfxTable *pSfx, const char * pText2 = NULL )
+void PrintSoundFileName( const char *pText1, CSfxTable *pSfx, const char * pText2 = nullptr )
 {
 	char nameBuf[MAX_PATH];
 	char const *pfn = "(Unknown)";
-	if ( pSfx != NULL )
+	if ( pSfx != nullptr )
 	{
 		pfn = pSfx->GetFileName( nameBuf, sizeof(nameBuf) );
-		if ( pfn == NULL )
+		if ( pfn == nullptr )
 		{
 			pfn = "(null)";
 		}
 	}
 
-	if ( pText2 == NULL )
+	if ( pText2 == nullptr )
 	{
 		pText2 = "";
 	}
 	Warning( "[Sound] %s(\"%s\") called. %s\n", pText1, pfn, pText2 );
 }
 
-void PrintSoundFileName( const char *pText1, const char *pFileName, CSfxTable *pSfx, const char * pText2 = NULL )
+void PrintSoundFileName( const char *pText1, const char *pFileName, CSfxTable *pSfx, const char * pText2 = nullptr )
 {
-	if ( pText2 == NULL )
+	if ( pText2 == nullptr )
 	{
 		pText2 = "";
 	}
 	Warning( "[Sound] %s(\"%s\") called. %s\n", pText1, pFileName, pText2 );
 }
 
-void PrintChannel( const char *pText1, const char *pFileName, channel_t * pChannel, const char *pText2 = NULL )
+void PrintChannel( const char *pText1, const char *pFileName, channel_t * pChannel, const char *pText2 = nullptr )
 {
 	int nIndex = pChannel - &channels[ 0 ];
 	Assert( ( nIndex >= 0 ) && ( nIndex < MAX_CHANNELS ) );
@@ -5414,7 +5414,7 @@ void PrintChannel( const char *pText1, const char *pFileName, channel_t * pChann
 	PrintSoundFileName( pText1, pFileName, pChannel->sfx, pText2 );
 }
 
-void PrintChannel( const char *pText1, channel_t * pChannel, const char *pText2 = NULL )
+void PrintChannel( const char *pText1, channel_t * pChannel, const char *pText2 = nullptr )
 {
 	int nIndex = pChannel - &channels[ 0 ];
 	Assert( ( nIndex >= 0 ) && ( nIndex < MAX_CHANNELS ) );
@@ -5522,7 +5522,7 @@ int S_AlterChannel( StartSoundParams_t &pParams )
 			ch_idx = list.GetChannelIndex(i);
 			if (channels[ch_idx].soundsource == soundsource
 				&& channels[ch_idx].entchannel == entchannel
-				&& channels[ch_idx].sfx != NULL )
+				&& channels[ch_idx].sfx != nullptr )
 			{
 				if (flags & SND_CHANGE_PITCH)
 				{
@@ -6022,8 +6022,8 @@ void DumpFilePaths(const char *filename)
 //	Q_snprintf( szFileName, sizeof(szFileName), "\\\\fileserver\\User\\portal2\\soundlogs\\%s_%s", computername, filename );
 	Q_snprintf( szFileName, sizeof(szFileName), "%s\\%s_%s", snd_store_filepaths.GetString(), computername, filename );
 //	g_pFileSystem->CreateDirHierarchy( "\\fileserver\\User\\portal2\\soundlogs\\", NULL );
-	g_pFileSystem->CreateDirHierarchy( snd_store_filepaths.GetString(), NULL );
-	if ( g_pFileSystem->FileExists( szFileName, NULL ) && !g_pFileSystem->IsFileWritable( szFileName, NULL ) )
+	g_pFileSystem->CreateDirHierarchy( snd_store_filepaths.GetString(), nullptr );
+	if ( g_pFileSystem->FileExists( szFileName, nullptr ) && !g_pFileSystem->IsFileWritable( szFileName, nullptr ) )
 	{
 		ConMsg( "Soundlog file %s is read-only!!\n", szFileName );
 		return;
@@ -6190,17 +6190,17 @@ static int S_StartSound_Immediate( StartSoundParams_t& params )
 	Vector vEntOrigin = params.origin;
 
 	si.pOrigin = &vEntOrigin;
-	si.pAngles = NULL;
+	si.pAngles = nullptr;
 	si.pflRadius = &flSoundRadius;
 
 	CUtlVector< Vector > utlVecMultiOrigins;
 	si.m_pUtlVecMultiOrigins = &utlVecMultiOrigins;
-	si.m_pUtlVecMultiAngles = NULL;
+	si.m_pUtlVecMultiAngles = nullptr;
 
 
 	// Morasky: why it doesn't spatialize for dynamic? (because is could be thrown out immediatelly?)
 	//          why it doesn't use an updated position for starting?
-	channel_t *ch = NULL;
+	channel_t *ch = nullptr;
 	if ( params.staticsound || ( params.m_bIsScriptHandle && !snd_sos_allow_dynamic_chantype.GetInt() ) )
 	{
 		g_pSoundServices->GetSoundSpatialization( params.soundsource, si );
@@ -6250,7 +6250,7 @@ static int S_StartSound_Immediate( StartSoundParams_t& params )
 	// initialize operators for this channel and execute start stack if possible
 	//-----------------------------------------------------------------------------
 	
-	CSosOperatorStackList *pStackList = NULL;
+	CSosOperatorStackList *pStackList = nullptr;
 	if( params.m_bIsScriptHandle )
 	{
 		stack_data_t stackData;
@@ -6290,7 +6290,7 @@ static int S_StartSound_Immediate( StartSoundParams_t& params )
 	}
 #endif
 
-	CAudioSource *pSource = NULL;
+	CAudioSource *pSource = nullptr;
 
 	ch->flags.isSentence = false;
 	ch->sfx = params.pSfx;
@@ -6387,7 +6387,7 @@ static int S_StartSound_Immediate( StartSoundParams_t& params )
 					}
 					else
 					{
-						pText = NULL;	// Do not display anything if already reported as missing...
+						pText = nullptr;	// Do not display anything if already reported as missing...
 					}
 				}
 				break;
@@ -6401,7 +6401,7 @@ static int S_StartSound_Immediate( StartSoundParams_t& params )
 				pText = "Can't create mixer.";
 				break;
 			}
-			if ( pText != NULL )
+			if ( pText != nullptr )
 			{
 				Warning( "[Sound] S_StartSound(): Failed to load sound '%s'. %s\n", sndname, pText );
 			}
@@ -6652,10 +6652,10 @@ int S_StartSound( StartSoundParams_t& params )
 	// In all cases, we are getting the filename so we can test null.wav
 	char nameBuf[MAX_PATH];
 	char const *pfn = "(Unknown)";
-	if ( params.pSfx != NULL )
+	if ( params.pSfx != nullptr )
 	{
 		pfn = params.pSfx->GetFileName( nameBuf, sizeof(nameBuf) );
-		if ( pfn == NULL )
+		if ( pfn == nullptr )
 		{
 			pfn = "(null)";
 		}
@@ -6674,7 +6674,7 @@ int S_StartSound( StartSoundParams_t& params )
 		const char * pLooping = "";
 		if ( snd_report_loop_sound.GetBool() )
 		{
-			if ( params.pSfx->pSource != NULL )
+			if ( params.pSfx->pSource != nullptr )
 			{
 				bool bIsLooped = params.pSfx->pSource->IsLooped();
 				pLooping = bIsLooped ? "Looping." : "Not looping.";
@@ -6688,7 +6688,7 @@ int S_StartSound( StartSoundParams_t& params )
 		const char * pFormat = "";
 		if ( snd_report_format_sound.GetBool() )
 		{
-			if ( params.pSfx->pSource != NULL )
+			if ( params.pSfx->pSource != nullptr )
 			{
 				switch ( params.pSfx->pSource->Format() )
 				{
@@ -6851,7 +6851,7 @@ int S_StartSoundEntry( StartSoundParams_t &pStartParams, int nSeed, bool bFromPr
 		stack_data_t stackData;
 		stackData.m_nSoundScriptHash = pScriptParams.m_hSoundScriptHash;
 		stackData.m_pOperatorsKV = pScriptParams.m_pOperatorsKV;	
-		g_scratchpad.SetPerExecution( NULL, &pStartParams );
+		g_scratchpad.SetPerExecution( nullptr, &pStartParams );
 
 		if( !bFromPrestart )
 		{
@@ -6861,7 +6861,7 @@ int S_StartSoundEntry( StartSoundParams_t &pStartParams, int nSeed, bool bFromPr
 			if( pCueStack )
 			{
 
-				pCueStack->Execute(  NULL, &g_scratchpad );
+				pCueStack->Execute(  nullptr, &g_scratchpad );
 	 			if( snd_sos_show_operator_prestart.GetInt() )
 	 			{
 	 				pCueStack->Print( 0 );
@@ -6888,7 +6888,7 @@ int S_StartSoundEntry( StartSoundParams_t &pStartParams, int nSeed, bool bFromPr
 		{
 			pStartStack->SetScriptHash( pScriptParams.m_hSoundScriptHash );
 
-			pStartStack->Execute(  NULL, &g_scratchpad );
+			pStartStack->Execute(  nullptr, &g_scratchpad );
 			if( snd_sos_show_operator_start.GetInt() )
 			{
 				const char *pFilterString = snd_sos_show_operator_entry_filter.GetString();
@@ -6995,7 +6995,7 @@ channel_t *S_FindChannelByScriptHash( HSOUNDSCRIPTHASH nHandle )
 			return pChannel;
 		}
 	}
-	return NULL;
+	return nullptr;
 }
 
 
@@ -7110,7 +7110,7 @@ bool S_IsSoundStillPlaying( int guid )
 		return false;
 	}
 	channel_t *pChannel = S_FindChannelByGuid( guid );
-	return pChannel != NULL ? true : false;
+	return pChannel != nullptr ? true : false;
 }
 
 //-----------------------------------------------------------------------------
@@ -7210,7 +7210,7 @@ void S_GetActiveSounds( CUtlVector< SndInfo_t >& sndlist )
 		SndInfo_t info;
 
 		info.m_nGuid			= ch->guid;
-		info.m_filenameHandle	= ch->sfx ? ch->sfx->GetFileNameHandle() : NULL;
+		info.m_filenameHandle	= ch->sfx ? ch->sfx->GetFileNameHandle() : nullptr;
 		info.m_nSoundSource		= ch->soundsource;
 		info.m_nChannel			= ch->entchannel;
 		// If a sound is being played through a speaker entity (e.g., on a monitor,), this is the
@@ -7668,7 +7668,7 @@ void S_Update( const CAudioState *pAudioState )
 	}
 
 
-	combine = NULL;
+	combine = nullptr;
 
 	int voiceChannelCount = 0;
 	int voiceChannelMaxVolume = 0;
@@ -8395,7 +8395,7 @@ void S_ShutdownMixThread()
 		g_bMixThreadExit = true;
 		ThreadJoin( g_hMixThread );
 		ReleaseThreadHandle( g_hMixThread );
-		g_hMixThread = NULL;
+		g_hMixThread = nullptr;
 	}
 }
 
@@ -8579,7 +8579,7 @@ static void S_PlayDelay( const CCommand &args )
 		Q_strncat( szName, ".wav", sizeof( szName ), COPY_ALL_CHARACTERS );
 	}
 
-	pSfx = S_FindName( szName, NULL );
+	pSfx = S_FindName( szName, nullptr );
 	
 	int nSlot = GET_ACTIVE_SPLITSCREEN_SLOT();
 
@@ -8629,7 +8629,7 @@ void S_PurgeSoundsDueToLanguageChange()
 
 			pSfx->pSource->CacheUnload();
 			delete pSfx->pSource;
-			pSfx->pSource = NULL;
+			pSfx->pSource = nullptr;
 		}
 	}
 }
@@ -8794,7 +8794,7 @@ float S_GetMono16Samples( const char *pszName, CUtlVector< short >& sampleList )
 	int mix_sample_size = pMixer->GetMixSampleSize();
 	int nNumChannels = bStereo ? 2 : 1;
 
-	char *pData = NULL;
+	char *pData = nullptr;
 
 	int pos = 0;
 	int remaining = totalsamples;
@@ -8969,7 +8969,7 @@ CON_COMMAND( snd_print_channel_by_guid, "Prints the content of a channel from it
 	int nGuid = atoi( args.Arg( 1 ) );
 
 	AUTO_LOCK( g_SndMutex );
-	channel_t *pChannel = NULL;
+	channel_t *pChannel = nullptr;
 	for ( int i = 0 ; i < MAX_CHANNELS ; ++i )
 	{
 		if ( channels[i].guid == nGuid )
@@ -8979,7 +8979,7 @@ CON_COMMAND( snd_print_channel_by_guid, "Prints the content of a channel from it
 		}
 	}
 
-	if ( pChannel == NULL )
+	if ( pChannel == nullptr )
 	{
 		Warning( "Could not find the channel with the guid: %d\n", nGuid );
 		return;
@@ -8999,7 +8999,7 @@ CON_COMMAND( snd_print_channels, "Prints all the active channel.")
 	for ( int i = 0; i < list.Count(); i++ )
 	{
 		channel_t *pChannel = list.GetChannel(i);
-		if ( pChannel->sfx == NULL )
+		if ( pChannel->sfx == nullptr )
 		{
 			continue;
 		}
@@ -9021,7 +9021,7 @@ CON_COMMAND( snd_set_master_volume, "Sets the master volume for a channel. snd_s
 
 	AUTO_LOCK( g_SndMutex );
 
-	channel_t *pChannel = NULL;
+	channel_t *pChannel = nullptr;
 	for ( int i = 0 ; i < MAX_CHANNELS ; ++i )
 	{
 		if ( channels[i].guid == nGuid )
@@ -9031,7 +9031,7 @@ CON_COMMAND( snd_set_master_volume, "Sets the master volume for a channel. snd_s
 		}
 	}
 
-	if ( pChannel == NULL )
+	if ( pChannel == nullptr )
 	{
 		Warning( "Could not find the channel with the guid: %d\n", nGuid );
 		return;

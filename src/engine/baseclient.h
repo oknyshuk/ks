@@ -87,7 +87,7 @@ public:
 	const char		*GetFriendsName() const { return m_FriendsName; }
 	void			UpdateName( const char *pszDefault );
 
-	virtual	void	Connect(const char * szName, int nUserID, INetChannel *pNetChannel, bool bFakePlayer, CrossPlayPlatform_t clientPlatform, const ks::net::CMsg_CVars *pVecCvars = NULL );
+	virtual	void	Connect(const char * szName, int nUserID, INetChannel *pNetChannel, bool bFakePlayer, CrossPlayPlatform_t clientPlatform, const ks::net::CMsg_CVars *pVecCvars = nullptr );
 	virtual	void	Inactivate( void )OVERRIDE;
 	virtual	void	Reconnect( void )OVERRIDE;
 	virtual	void	Disconnect( const char *reason ) OVERRIDE;

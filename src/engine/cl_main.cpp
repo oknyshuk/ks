@@ -162,8 +162,8 @@ void CL_HandlePureServerWhitelist( CPureServerWhitelist *pWhitelist )
 		
 	GetBaseLocalClient().m_pPureServerWhitelist = pWhitelist;
 	
-	IFileList *pForceMatchList = NULL;
-	IFileList *pAllowFromDiskList = NULL;
+	IFileList *pForceMatchList = nullptr;
+	IFileList *pAllowFromDiskList = nullptr;
 
 	if ( pWhitelist )
 	{
@@ -215,7 +215,7 @@ void whitelist_f( const CCommand &args )
 	if ( pureLevel == 0 )
 	{
 		Warning( "whitelist 0: CL_HandlePureServerWhitelist( NULL )\n" );
-		CL_HandlePureServerWhitelist( NULL );
+		CL_HandlePureServerWhitelist( nullptr );
 	}
 	else
 	{
@@ -516,7 +516,7 @@ void CL_ReadPackets ( bool bFinalTick )
 void CL_ClearState ( void )
 {
 	// clear out the current whitelist
-	CL_HandlePureServerWhitelist( NULL );
+	CL_HandlePureServerWhitelist( nullptr );
 
 	CL_ResetEntityBits();
 
@@ -692,7 +692,7 @@ void CL_DispatchSound( const SoundInfo_t &sound )
 	else
 	{
 		pSfx = GetBaseLocalClient().GetSound( sound.nSoundNum );
-		if ( ( pSfx != NULL ) && pSfx->m_bIsLateLoad )
+		if ( ( pSfx != nullptr ) && pSfx->m_bIsLateLoad )
 		{
 			DevMsg("    Entity '%d' created the late load.\n", sound.nEntityIndex );
 		}
@@ -883,7 +883,7 @@ CON_COMMAND_F( connect, "Connect to specified server.", FCVAR_DONTRECORD )
 			char* qmindex = strAddress[ i ];
 
 			addressCount++;
-			while ( ( qmindex = strchr( qmindex ,'?') ) != NULL )
+			while ( ( qmindex = strchr( qmindex ,'?') ) != nullptr )
 			{
 				*qmindex = ':';
 			}
@@ -1014,7 +1014,7 @@ CPureServerWhitelist* CL_LoadWhitelist( INetworkStringTable *pTable, const char 
 	// If there is no entry for the pure server whitelist, then sv_pure is off and the client can do whatever it wants.
 	int iString = pTable->FindStringIndex( pName );
 	if ( iString == INVALID_STRING_INDEX )
-		return NULL;
+		return nullptr;
 
 	int dataLen; 
 	const void *pData = pTable->GetStringUserData( iString, &dataLen );
@@ -1028,7 +1028,7 @@ CPureServerWhitelist* CL_LoadWhitelist( INetworkStringTable *pTable, const char 
 	}
 	else
 	{
-		return NULL;
+		return nullptr;
 	}
 }
 
@@ -1047,7 +1047,7 @@ void CL_CheckForPureServerWhitelist()
 		)
 		return;
 	
-	CPureServerWhitelist *pWhitelist = NULL;
+	CPureServerWhitelist *pWhitelist = nullptr;
 	if ( GetBaseLocalClient().m_pServerStartupTable )
 		pWhitelist = CL_LoadWhitelist( GetBaseLocalClient().m_pServerStartupTable, "PureServerWhitelist" );
 		
@@ -1063,7 +1063,7 @@ void CL_CheckForPureServerWhitelist()
 	else
 	{		
 		Msg( "No pure server whitelist. sv_pure = 0\n" );
-		CL_HandlePureServerWhitelist( NULL );
+		CL_HandlePureServerWhitelist( nullptr );
 	}
 }
 
@@ -1374,7 +1374,7 @@ void CL_TakeScreenshot(const char *name)
 	cl_snapshot_fullpathname[0] = 0;
 	cl_takejpeg = false;
 
-	if ( name != NULL )
+	if ( name != nullptr )
 	{
 		Q_strncpy( cl_snapshotname, name, sizeof( cl_snapshotname ) );		
 	}
@@ -1405,13 +1405,13 @@ CON_COMMAND_F( screenshot, "Take a screenshot.", FCVAR_CLIENTCMD_CAN_EXECUTE )
 	}
 	else
 	{
-		CL_TakeScreenshot( NULL );
+		CL_TakeScreenshot( nullptr );
 	}
 }
 
 CON_COMMAND_F( devshots_screenshot, "Used by the -makedevshots system to take a screenshot. For taking your own screenshots, use the 'screenshot' command instead.", FCVAR_DONTRECORD )
 {
-	CL_TakeScreenshot( NULL );
+	CL_TakeScreenshot( nullptr );
 
 	// See if we got a subdirectory to store the devshots in
 	if ( args.ArgC() == 2 )
@@ -1435,7 +1435,7 @@ void CL_TakeJpeg(const char *name, int quality)
 	cl_takejpeg = true;
 	cl_jpegquality = clamp( quality, 1, 100 );
 
-	if ( name != NULL )
+	if ( name != nullptr )
 	{
 		Q_strncpy( cl_snapshotname, name, sizeof( cl_snapshotname ) );		
 	}
@@ -1460,7 +1460,7 @@ CON_COMMAND( jpeg, "Take a jpeg screenshot:  jpeg <filename> <quality 1-100>." )
 	}
 	else
 	{
-		CL_TakeJpeg( NULL, jpeg_quality.GetInt() );
+		CL_TakeJpeg( nullptr, jpeg_quality.GetInt() );
 	}
 }
 
@@ -2369,7 +2369,7 @@ void CL_Move(float accumulated_extra_samples, bool bFinalTick )
 	//COM_Log( "cl.log", "Sending command number %i(%i) to server\n", cl.m_NetChan->m_nOutSequenceNr, GetLocalClient().m_NetChan->m_nOutSequenceNr & CL_UPDATE_MASK );
 
 	// Remember outgoing command that we are sending
-	cl.lastoutgoingcommand = cl.m_NetChannel->SendDatagram( NULL );
+	cl.lastoutgoingcommand = cl.m_NetChannel->SendDatagram( nullptr );
 
 	cl.chokedcommands = 0;
 
@@ -2431,7 +2431,7 @@ CON_COMMAND_F( cl_showents, "Dump entity list to console.", FCVAR_CHEAT )
 		char entStr[256], classStr[256];
 		IClientNetworkable *pEnt;
 
-		if((pEnt = entitylist->GetClientNetworkable(i)) != NULL)
+		if((pEnt = entitylist->GetClientNetworkable(i)) != nullptr)
 		{
 			entStr[0] = 0;
 			Q_snprintf(classStr, sizeof( classStr ), "'%s'", pEnt->GetClientClass()->m_pNetworkName);
@@ -2479,7 +2479,7 @@ bool CL_ShouldLoadBackgroundLevel( const CCommand &args )
 		if ( !Q_stricmp( args[1], "playendgamevid" ) )
 		{
 			// Bail back to the menu and play the end game video.
-			CommandLine()->AppendParm( "-endgamevid", NULL ); 
+			CommandLine()->AppendParm( "-endgamevid", nullptr ); 
 			CommandLine()->RemoveParm( "-recapvid" );
 			HostState_Restart();
 			return false;
@@ -2488,7 +2488,7 @@ bool CL_ShouldLoadBackgroundLevel( const CCommand &args )
 		if ( !Q_stricmp( args[1], "playrecapvid" ) )
 		{
 			// Bail back to the menu and play the recap video
-			CommandLine()->AppendParm( "-recapvid", NULL ); 
+			CommandLine()->AppendParm( "-recapvid", nullptr ); 
 			CommandLine()->RemoveParm( "-endgamevid" );
 			HostState_Restart();
 			return false;
@@ -2549,12 +2549,12 @@ void CL_GetBackgroundLevelName( char *pszBackgroundName, int bufSize, bool bMapN
 			}
 			else
 			{
-				pChapters = NULL;
+				pChapters = nullptr;
 			}
 		}
 		else
 		{
-			pChapters = NULL;
+			pChapters = nullptr;
 		}
 
 		if ( !pChapters )
@@ -3005,7 +3005,7 @@ CON_COMMAND_F( setinfo, "Adds a new user info value", FCVAR_CLIENTCMD_CAN_EXECUT
 			if ( GetBaseLocalClient().IsConnected() )
 			{
 				extern IBaseClientDLL *g_ClientDLL;
-				if ( pCommand->IsFlagSet( FCVAR_USERINFO ) && g_ClientDLL && g_ClientDLL->IsConnectedUserInfoChangeAllowed( NULL ) )
+				if ( pCommand->IsFlagSet( FCVAR_USERINFO ) && g_ClientDLL && g_ClientDLL->IsConnectedUserInfoChangeAllowed( nullptr ) )
 				{
 					// Client.dll is allowing the convar change
 				}
@@ -3265,7 +3265,7 @@ void CL_InstallAndInvokeClientStringTableCallbacks()
 
 			int userDataSize;
 			const void *pUserData = pTable->GetStringUserData( j, &userDataSize );
-			(*pNewFunction)( NULL, pTable, j, pTable->GetString( j ), pUserData );
+			(*pNewFunction)( nullptr, pTable, j, pTable->GetString( j ), pUserData );
 		}
 
 		COM_TimestampedLog( "String Table Callbacks %s - Finish", pTable->GetTableName() );

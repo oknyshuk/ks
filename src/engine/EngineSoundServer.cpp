@@ -263,7 +263,7 @@ void CEngineSoundServer::EmitSoundInternal( IRecipientFilter& filter, int iEntIn
 	float flVolume, soundlevel_t iSoundLevel, int nSeed, int iFlags, int iPitch, 
 	const Vector *pOrigin, const Vector *pDirection, CUtlVector< Vector >* pUtlVecOrigins, bool bUpdatePositions, float soundtime /*= 0.0f*/, int speakerentity /*=-1*/ )
 {
-	AssertMsg( pDirection == NULL, "Direction specification not currently supported on server sounds" );
+	AssertMsg( pDirection == nullptr, "Direction specification not currently supported on server sounds" );
 	AssertMsg( bUpdatePositions, "Non-updated positions not currently supported on server sounds" );
 
 	if (flVolume < 0 || flVolume > 1)
@@ -284,7 +284,7 @@ void CEngineSoundServer::EmitSoundInternal( IRecipientFilter& filter, int iEntIn
 		return;
 	}
 
-	edict_t *pEdict = (iEntIndex >= 0) ? &sv.edicts[iEntIndex] : NULL; 
+	edict_t *pEdict = (iEntIndex >= 0) ? &sv.edicts[iEntIndex] : nullptr; 
 	SV_StartSound( filter, pEdict, iChannel, pSoundEntry, iSoundEntryHash, pSample, flVolume, iSoundLevel,
 		iFlags, iPitch, pOrigin, soundtime, speakerentity, pUtlVecOrigins, nSeed );
 }
@@ -301,7 +301,7 @@ void CEngineSoundServer::EmitSentenceByIndex( IRecipientFilter& filter, int iEnt
 	{
 		char pName[8];
 		Q_snprintf( pName, sizeof(pName), "!%d", iSentenceIndex );
-		EmitSoundInternal( filter, iEntIndex, iChannel, NULL, SOUNDEMITTER_INVALID_HASH, pName, flVolume, iSoundLevel, nSeed,
+		EmitSoundInternal( filter, iEntIndex, iChannel, nullptr, SOUNDEMITTER_INVALID_HASH, pName, flVolume, iSoundLevel, nSeed,
 			iFlags, iPitch, pOrigin, pDirection, pUtlVecOrigins, bUpdatePositions, soundtime, speakerentity );
 	}
 }
@@ -406,7 +406,7 @@ void CEngineSoundServer::SetPlayerDSP( IRecipientFilter& filter, int dspType, bo
 		g_pVEngineServer->ClientCommand( players[ i ], "dsp_player %i\n", dspType );
 
 		KeyValues *kvClientCmd = new KeyValues( "dsp_player" );
-		kvClientCmd->SetInt( NULL, dspType );
+		kvClientCmd->SetInt( nullptr, dspType );
 		g_pVEngineServer->ClientCommandKeyValues( players[ i ], kvClientCmd );
 	}
 }
@@ -438,7 +438,7 @@ void CEngineSoundServer::StopSound( int iEntIndex, int iChannel, const char *pSa
 	int nFlags = SND_STOP | ( nSoundEntryHash != SOUNDEMITTER_INVALID_HASH ? SND_IS_SCRIPTHANDLE : 0 );
 
 	EmitSound( filter, iEntIndex, iChannel, pSample, nSoundEntryHash, pSample, 0, SNDLVL_NONE, 0, nFlags, PITCH_NORM,
-				NULL, NULL, NULL, true );
+				nullptr, nullptr, nullptr, true );
 }
 
 

@@ -354,7 +354,7 @@ BEGIN_VS_SHADER_FLAGS( Engine_Post_dx9, "Engine post-processing effects (softwar
 
 			int		format				= VERTEX_POSITION;
 			int		numTexCoords		= 1;
-			int *	pTexCoordDimensions	= NULL;
+			int *	pTexCoordDimensions	= nullptr;
 			int		userDataSize		= 0;
 			pShaderShadow->VertexShaderVertexFormat( format, numTexCoords, pTexCoordDimensions, userDataSize );
 

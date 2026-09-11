@@ -132,7 +132,7 @@ public:
 	
 	void Init( void )
 	{
-		m_pEnt = NULL;
+		m_pEnt = nullptr;
 		m_flWeight = 0;
 		memset( m_Weightlist, 0, ARRAYSIZE(m_Weightlist) );
 		m_bWeightlistInitialized = false;
@@ -204,7 +204,7 @@ public:
 class RoundStartSoundPlaybackData
 {
 public:
-	RoundStartSoundPlaybackData() { m_pEntityPlayingSound = NULL; m_SoundName[0] = 0; m_fPlaybackTime = 0.0f; m_bHasBeenPlayed = false; }
+	RoundStartSoundPlaybackData() { m_pEntityPlayingSound = nullptr; m_SoundName[0] = 0; m_fPlaybackTime = 0.0f; m_bHasBeenPlayed = false; }
 
 	CBaseEntity*	m_pEntityPlayingSound;	// Entity playing the sound event
 	char			m_SoundName[64];		// Name of sound event to play
@@ -418,7 +418,7 @@ public:
 	void ImpactTrace( trace_t *pTrace, int iDamageType, const char *pCustomImpactName );
 
 	// Have this player play the sounds from his view model's reload animation.
-	void PlayReloadEffect( int iActAnimID, const Vector *pOrigin = NULL );
+	void PlayReloadEffect( int iActAnimID, const Vector *pOrigin = nullptr );
 
 	virtual void FireEvent( const Vector& origin, const QAngle& angles, int event, const char *options );
 
@@ -508,9 +508,9 @@ public:
 	// check autoaim
 	bool IsCursorOnAutoAimTarget();
 
-	AcquireResult::Type CanAcquire( CSWeaponID weaponId, AcquireMethod::Type acquireMethod, CEconItemView *pItem = NULL );
+	AcquireResult::Type CanAcquire( CSWeaponID weaponId, AcquireMethod::Type acquireMethod, CEconItemView *pItem = nullptr );
 	int					GetCarryLimit( CSWeaponID weaponId );
-	int					GetWeaponPrice( CSWeaponID weaponId, const CEconItemView *pWepView = NULL ) const;
+	int					GetWeaponPrice( CSWeaponID weaponId, const CEconItemView *pWepView = nullptr ) const;
 	CWeaponCSBase*		CSWeapon_OwnsThisType( CEconItemView *pItem ) const;
 
 	virtual bool ShouldRegenerateOriginFromCellBits() const;
@@ -1100,16 +1100,16 @@ public:
 #if defined( USE_PLAYER_ATTRIBUTE_MANAGER )
 		return &m_AttributeManager;
 #else
-		return NULL;
+		return nullptr;
 #endif
 	}
-	CAttributeContainer		*GetAttributeContainer( void ) { return NULL; }
-	CBaseEntity				*GetAttributeOwner( void ) { return NULL; }
+	CAttributeContainer		*GetAttributeContainer( void ) { return nullptr; }
+	CBaseEntity				*GetAttributeOwner( void ) { return nullptr; }
 	CAttributeList			*GetAttributeList( void ) {
 #if defined( USE_PLAYER_ATTRIBUTE_MANAGER )
 		return &m_AttributeList;
 #else
-		return NULL;
+		return nullptr;
 #endif
 	}
 	virtual void			ReapplyProvision( void ) { return; }
@@ -1197,7 +1197,7 @@ C_CSPlayer* GetHudPlayer( void );	// get the player we should show the HUD for (
 inline C_CSPlayer *ToCSPlayer( CBaseEntity *pEntity )
 {
 	if ( !pEntity || !pEntity->IsPlayer() )
-		return NULL;
+		return nullptr;
 
 	return assert_cast<C_CSPlayer*>( pEntity );
 }

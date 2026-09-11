@@ -126,7 +126,7 @@ IMPLEMENT_REFLECT_CLIENTCLASS( C_MaterialModifyControl, DT_MaterialModifyControl
 //------------------------------------------------------------------------------
 C_MaterialModifyControl::C_MaterialModifyControl()
 {
-	m_pMaterial = NULL;
+	m_pMaterial = nullptr;
 	m_bOldAnimCommandsSemaphore = false;
 }
 

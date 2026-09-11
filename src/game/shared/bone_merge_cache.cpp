@@ -19,17 +19,17 @@
 
 CBoneMergeCache::CBoneMergeCache()
 {
-	Init( NULL );
+	Init( nullptr );
 }
 
 void CBoneMergeCache::Init( CBaseAnimating *pOwner )
 {
 	m_pOwner = pOwner;
-	m_pFollow = NULL;
-	m_pFollowHdr = NULL;
-	m_pFollowRenderHdr = NULL;
-	m_pOwnerHdr = NULL;
-	m_pFollowRenderHdr = NULL;
+	m_pFollow = nullptr;
+	m_pFollowHdr = nullptr;
+	m_pFollowRenderHdr = nullptr;
+	m_pOwnerHdr = nullptr;
+	m_pFollowRenderHdr = nullptr;
 	m_nFollowBoneSetupMask = 0;
 	m_bForceCacheClear = false;
 	m_MergedBones.Purge();
@@ -47,8 +47,8 @@ void CBoneMergeCache::UpdateCache()
 	const studiohdr_t *pOwnerRenderHdr = pOwnerHdr->GetRenderHdr();
 
 	CBaseAnimating *pFollow = m_pOwner->FindFollowedEntity();
-	CStudioHdr *pFollowHdr = (pFollow ? pFollow->GetModelPtr() : NULL);
-	const studiohdr_t *pFollowRenderHdr = (pFollowHdr ? pFollowHdr->GetRenderHdr() : NULL );
+	CStudioHdr *pFollowHdr = (pFollow ? pFollow->GetModelPtr() : nullptr);
+	const studiohdr_t *pFollowRenderHdr = (pFollowHdr ? pFollowHdr->GetRenderHdr() : nullptr );
 
 	// if the follow parent has changed, or any of the underlying models has changed, reset the MergedBones list
 	if ( pFollow != m_pFollow || pFollowRenderHdr != m_pFollowRenderHdr || pOwnerRenderHdr != m_pOwnerRenderHdr || m_bForceCacheClear )
@@ -191,7 +191,7 @@ void CBoneMergeCache::MergeMatchingBones( int boneMask )
 			nTempMask &= m_pFollow->m_nCustomBlendingRuleMask;
 	}
 	
-	m_pFollow->SetupBones( NULL, -1, nTempMask, gpGlobals->curtime );
+	m_pFollow->SetupBones( nullptr, -1, nTempMask, gpGlobals->curtime );
 
 	// Now copy the bone matrices.
 	for ( int i=0; i < m_MergedBones.Count(); i++ )
@@ -396,10 +396,10 @@ bool CBoneMergeCache::GetAimEntOrigin( Vector *pAbsOrigin, QAngle *pAbsAngles )
 	// Get mFollowBone.
 #ifdef CLIENT_DLL
 	ACTIVE_SPLITSCREEN_PLAYER_GUARD( 0 );
-	m_pFollow->SetupBones( NULL, -1, m_nFollowBoneSetupMask, gpGlobals->curtime );
+	m_pFollow->SetupBones( nullptr, -1, m_nFollowBoneSetupMask, gpGlobals->curtime );
 	const matrix3x4_t &mFollowBone = m_pFollow->GetBone( m_MergedBones[0].m_iParentBone );
 #else
-	m_pFollow->SetupBones( NULL, m_nFollowBoneSetupMask );
+	m_pFollow->SetupBones( nullptr, m_nFollowBoneSetupMask );
 
 	matrix3x4_t mFollowBone;
 	m_pFollow->GetBoneTransform( m_MergedBones[0].m_iParentBone, mFollowBone );
@@ -428,10 +428,10 @@ bool CBoneMergeCache::GetRootBone( matrix3x4_t &rootBone )
 
 	// Get mFollowBone.
 #ifdef CLIENT_DLL
-	m_pFollow->SetupBones( NULL, -1, m_nFollowBoneSetupMask, gpGlobals->curtime );
+	m_pFollow->SetupBones( nullptr, -1, m_nFollowBoneSetupMask, gpGlobals->curtime );
 	rootBone = m_pFollow->GetBone( m_MergedBones[0].m_iParentBone );
 #else
-	m_pFollow->SetupBones( NULL, m_nFollowBoneSetupMask );
+	m_pFollow->SetupBones( nullptr, m_nFollowBoneSetupMask );
 	m_pFollow->GetBoneTransform( m_MergedBones[0].m_iParentBone, rootBone );
 #endif
 

@@ -51,7 +51,7 @@ static void * InternalFactory( const char *pName, int *pReturnCode )
 	}
 
 	// Try to get interface via delegate
-	if ( void *pInterface = s_pfnDelegateFactory ? s_pfnDelegateFactory( pName, pReturnCode ) : NULL )
+	if ( void *pInterface = s_pfnDelegateFactory ? s_pfnDelegateFactory( pName, pReturnCode ) : nullptr )
 	{
 		return pInterface;
 	}
@@ -67,7 +67,7 @@ static void * InternalFactory( const char *pName, int *pReturnCode )
 	{
 		*pReturnCode = IFACE_FAILED;
 	}
-	return NULL;	
+	return nullptr;	
 }
 
 bool CNetSupportImpl::Connect( CreateInterfaceFn factory )
@@ -80,7 +80,7 @@ bool CNetSupportImpl::Connect( CreateInterfaceFn factory )
 	ConnectTier1Libraries( &ourFactory, 1 );
 	ConnectTier2Libraries( &ourFactory, 1 );
 
-	s_pfnDelegateFactory = NULL;
+	s_pfnDelegateFactory = nullptr;
 
 	return true;
 }
@@ -96,7 +96,7 @@ void * CNetSupportImpl::QueryInterface( const char *pInterfaceName )
 	if ( !Q_stricmp( pInterfaceName, INETSUPPORT_VERSION_STRING ) )
 		return static_cast< INetSupport * >( this );
 
-	return NULL;
+	return nullptr;
 }
 
 InitReturnVal_t CNetSupportImpl::Init()

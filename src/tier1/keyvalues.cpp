@@ -8,8 +8,8 @@
 
 #include <wchar.h> // wcslen()
 #define _alloca alloca
-#define _wtoi(arg) wcstol(arg, NULL, 10)
-#define _wtoi64(arg) wcstoll(arg, NULL, 10)
+#define _wtoi(arg) wcstol(arg, nullptr, 10)
+#define _wtoi64(arg) wcstoll(arg, nullptr, 10)
 
 #include <keyvalues.h>
 #include "filesystem.h"
@@ -42,7 +42,7 @@ static char * s_LastFileLoadingFrom = "unknown"; // just needed for error messag
 // Statics for the growable string table
 int (*KeyValues::s_pfGetSymbolForString)( const char *name, bool bCreate ) = &KeyValues::GetSymbolForStringClassic;
 const char *(*KeyValues::s_pfGetStringForSymbol)( int symbol ) = &KeyValues::GetStringForSymbolClassic;
-CKeyValuesGrowableStringTable *KeyValues::s_pGrowableStringTable = NULL;
+CKeyValuesGrowableStringTable *KeyValues::s_pGrowableStringTable = nullptr;
 
 #define KEYVALUES_TOKEN_SIZE	(1024 * 32)
 
@@ -184,7 +184,7 @@ const char* CKeyValuesTokenReader::ReadToken( bool &wasQuoted, bool &wasConditio
 	m_bPriorTokenWasConditional = wasConditional = false;
 
 	if ( !m_Buffer.IsValid() )
-		return NULL; 
+		return nullptr; 
 
 	// eating white spaces and remarks loop
 	while ( true )
@@ -192,7 +192,7 @@ const char* CKeyValuesTokenReader::ReadToken( bool &wasQuoted, bool &wasConditio
 		m_Buffer.EatWhiteSpace();
 		if ( !m_Buffer.IsValid() )
 		{
-			return NULL;	// file ends after reading whitespaces
+			return nullptr;	// file ends after reading whitespaces
 		}
 
 		// stop if it's not a comment; a new token starts here
@@ -203,7 +203,7 @@ const char* CKeyValuesTokenReader::ReadToken( bool &wasQuoted, bool &wasConditio
 	const char *c = (const char*)m_Buffer.PeekGet( sizeof(char), 0 );
 	if ( !c )
 	{
-		return NULL;
+		return nullptr;
 	}
 
 	// read quoted strings specially
@@ -438,7 +438,7 @@ private:
 	class CLookupFunctor
 	{
 	public:
-		CLookupFunctor() : m_pchCurString( NULL ), m_pchCurBase( NULL ) {}
+		CLookupFunctor() : m_pchCurString( nullptr ), m_pchCurBase( nullptr ) {}
 
 		// Sets what we are currently inserting or looking for.
 		void SetCurString( const char *pchCurString ) { m_pchCurString = pchCurString; }
@@ -482,7 +482,7 @@ void KeyValues::SetUseGrowableStringTable( bool bUseGrowableTable )
 		s_pfGetStringForSymbol = &(KeyValues::GetStringForSymbolGrowable);
 		s_pfGetSymbolForString = &(KeyValues::GetSymbolForStringGrowable);
 
-		if ( NULL == s_pGrowableStringTable )
+		if ( nullptr == s_pGrowableStringTable )
 		{
 			s_pGrowableStringTable = new CKeyValuesGrowableStringTable;
 		}
@@ -604,13 +604,13 @@ void KeyValues::Init()
 	m_iKeyNameCaseSensitive2 = 0;
 	m_iDataType = TYPE_NONE;
 
-	m_pSub = NULL;
-	m_pPeer = NULL;
-	m_pChain = NULL;
+	m_pSub = nullptr;
+	m_pPeer = nullptr;
+	m_pChain = nullptr;
 
-	m_sValue = NULL;
-	m_wsValue = NULL;
-	m_pValue = NULL;
+	m_sValue = nullptr;
+	m_wsValue = nullptr;
+	m_pValue = nullptr;
 
 	m_bHasEscapeSequences = 0;
 }
@@ -639,25 +639,25 @@ void KeyValues::deleteThis()
 void KeyValues::RemoveEverything()
 {
 	KeyValues *dat;
-	KeyValues *datNext = NULL;
-	for ( dat = m_pSub; dat != NULL; dat = datNext )
+	KeyValues *datNext = nullptr;
+	for ( dat = m_pSub; dat != nullptr; dat = datNext )
 	{
 		datNext = dat->m_pPeer;
-		dat->m_pPeer = NULL;
+		dat->m_pPeer = nullptr;
 		delete dat;
 	}
 
 	for ( dat = m_pPeer; dat && dat != this; dat = datNext )
 	{
 		datNext = dat->m_pPeer;
-		dat->m_pPeer = NULL;
+		dat->m_pPeer = nullptr;
 		delete dat;
 	}
 
 	delete [] m_sValue;
-	m_sValue = NULL;
+	m_sValue = nullptr;
 	delete [] m_wsValue;
-	m_wsValue = NULL;
+	m_wsValue = nullptr;
 }
 
 //-----------------------------------------------------------------------------
@@ -667,7 +667,7 @@ void KeyValues::RemoveEverything()
 
 void KeyValues::RecursiveSaveToFile( CUtlBuffer& buf, int indentLevel )
 {
-	RecursiveSaveToFile( NULL, FILESYSTEM_INVALID_HANDLE, &buf, indentLevel );
+	RecursiveSaveToFile( nullptr, FILESYSTEM_INVALID_HANDLE, &buf, indentLevel );
 }
 
 //-----------------------------------------------------------------------------
@@ -767,7 +767,7 @@ bool KeyValues::SaveToFile( IBaseFileSystem *filesystem, const char *resourceNam
 		return false;
 	}
 
-	RecursiveSaveToFile(filesystem, f, NULL, 0, bWriteEmptySubkeys);
+	RecursiveSaveToFile(filesystem, f, nullptr, 0, bWriteEmptySubkeys);
 	filesystem->Close(f);
 
 	return true;
@@ -843,7 +843,7 @@ void KeyValues::RecursiveSaveToFile( IBaseFileSystem *filesystem, FileHandle_t f
 	INTERNALWRITE("{\n", 2);
 
 	// loop through all our keys writing them to disk
-	for ( KeyValues *dat = m_pSub; dat != NULL; dat = dat->m_pPeer )
+	for ( KeyValues *dat = m_pSub; dat != nullptr; dat = dat->m_pPeer )
 	{
 		if ( dat->m_pSub )
 		{
@@ -966,13 +966,13 @@ void KeyValues::RecursiveSaveToFile( IBaseFileSystem *filesystem, FileHandle_t f
 KeyValues *KeyValues::FindKey(int keySymbol) const
 {
 	AssertMsg( this, "Member function called on NULL KeyValues" );
-	for (KeyValues *dat = this ? m_pSub : NULL; dat != NULL; dat = dat->m_pPeer)
+	for (KeyValues *dat = this ? m_pSub : nullptr; dat != nullptr; dat = dat->m_pPeer)
 	{
 		if ( dat->m_iKeyName == (uint32) keySymbol )
 			return dat;
 	}
 
-	return NULL;
+	return nullptr;
 }
 
 //-----------------------------------------------------------------------------
@@ -987,7 +987,7 @@ KeyValues *KeyValues::FindKey(const char *keyName, bool bCreate)
 	{
 		AssertMsg( false, "KeyValues::FindKey called on NULL pointer!" );  // Undefined behavior. Could blow up on a new platform. Don't do it.
 		Assert( !bCreate );
-		return NULL;
+		return nullptr;
 	}
 
 	// return the current key if a NULL subkey is asked for
@@ -1025,13 +1025,13 @@ KeyValues *KeyValues::FindKey(const char *keyName, bool bCreate)
 	if ( iSearchStr == INVALID_KEY_SYMBOL )
 	{
 		// not found, couldn't possibly be in key value list
-		return NULL;
+		return nullptr;
 	}
 
-	KeyValues *lastItem = NULL;
+	KeyValues *lastItem = nullptr;
 	KeyValues *dat;
 	// find the searchStr in the current peer list
-	for (dat = m_pSub; dat != NULL; dat = dat->m_pPeer)
+	for (dat = m_pSub; dat != nullptr; dat = dat->m_pPeer)
 	{
 		lastItem = dat;	// record the last item looked at (for if we need to append to the end of the list)
 
@@ -1065,7 +1065,7 @@ KeyValues *KeyValues::FindKey(const char *keyName, bool bCreate)
 			{
 				m_pSub = dat;
 			}
-			dat->m_pPeer = NULL;
+			dat->m_pPeer = nullptr;
 
 			// a key graduates to be a submsg as soon as it's m_pSub is set
 			// this should be the only place m_pSub is set
@@ -1073,7 +1073,7 @@ KeyValues *KeyValues::FindKey(const char *keyName, bool bCreate)
 		}
 		else
 		{
-			return NULL;
+			return nullptr;
 		}
 	}
 
@@ -1097,9 +1097,9 @@ KeyValues *KeyValues::CreateNewKey()
 	int newID = 1;
 
 	// search for any key with higher values
-	KeyValues *pLastChild = NULL;
+	KeyValues *pLastChild = nullptr;
 
-	for (KeyValues *dat = m_pSub; dat != NULL; dat = dat->m_pPeer)
+	for (KeyValues *dat = m_pSub; dat != nullptr; dat = dat->m_pPeer)
 	{
 		// case-insensitive string compare
 		int val = atoi(dat->GetName());
@@ -1163,19 +1163,19 @@ KeyValues* KeyValues::CreateKeyUsingKnownLastChild( const char *keyName, KeyValu
 void KeyValues::AddSubkeyUsingKnownLastChild( KeyValues *pSubkey, KeyValues *pLastChild )
 {
 	// Make sure the subkey isn't a child of some other keyvalues
-	Assert( pSubkey != NULL );
-	Assert( pSubkey->m_pPeer == NULL );
+	Assert( pSubkey != nullptr );
+	Assert( pSubkey->m_pPeer == nullptr );
 
 	// Empty child list?
-	if ( pLastChild == NULL )
+	if ( pLastChild == nullptr )
 	{
-		Assert( m_pSub == NULL );
+		Assert( m_pSub == nullptr );
 		m_pSub = pSubkey;
 	}
 	else
 	{
-		Assert( m_pSub != NULL );
-		Assert( pLastChild->m_pPeer == NULL );
+		Assert( m_pSub != nullptr );
+		Assert( pLastChild->m_pPeer == nullptr );
 
 		pLastChild->SetNextKey( pSubkey );
 	}
@@ -1188,18 +1188,18 @@ void KeyValues::AddSubkeyUsingKnownLastChild( KeyValues *pSubkey, KeyValues *pLa
 void KeyValues::AddSubKey( KeyValues *pSubkey )
 {
 	// Make sure the subkey isn't a child of some other keyvalues
-	Assert( pSubkey != NULL );
-	Assert( pSubkey->m_pPeer == NULL );
+	Assert( pSubkey != nullptr );
+	Assert( pSubkey->m_pPeer == nullptr );
 
 	// add into subkey list
-	if ( m_pSub == NULL )
+	if ( m_pSub == nullptr )
 	{
 		m_pSub = pSubkey;
 	}
 	else
 	{
 		KeyValues *pTempDat = m_pSub;
-		while ( pTempDat->GetNextKey() != NULL )
+		while ( pTempDat->GetNextKey() != nullptr )
 		{
 			pTempDat = pTempDat->GetNextKey();
 		}
@@ -1239,13 +1239,13 @@ void KeyValues::RemoveSubKey(KeyValues *subKey)
 		}
 	}
 
-	subKey->m_pPeer = NULL;
+	subKey->m_pPeer = nullptr;
 }
 
 void KeyValues::InsertSubKey( int nIndex, KeyValues *pSubKey )
 {
 	// Sub key must be valid and not part of another chain
-	Assert( pSubKey && pSubKey->m_pPeer == NULL );
+	Assert( pSubKey && pSubKey->m_pPeer == nullptr );
 
 	if ( nIndex == 0 )
 	{
@@ -1256,7 +1256,7 @@ void KeyValues::InsertSubKey( int nIndex, KeyValues *pSubKey )
 	else
 	{
 		int nCurrentIndex = 0;
-		for ( KeyValues *pIter = GetFirstSubKey(); pIter != NULL; pIter = pIter->GetNextKey() )
+		for ( KeyValues *pIter = GetFirstSubKey(); pIter != nullptr; pIter = pIter->GetNextKey() )
 		{
 			++ nCurrentIndex;
 			if ( nCurrentIndex == nIndex)
@@ -1274,7 +1274,7 @@ void KeyValues::InsertSubKey( int nIndex, KeyValues *pSubKey )
 
 bool KeyValues::ContainsSubKey( KeyValues *pSubKey )
 {
-	for ( KeyValues *pIter = GetFirstSubKey(); pIter != NULL; pIter = pIter->GetNextKey() )
+	for ( KeyValues *pIter = GetFirstSubKey(); pIter != nullptr; pIter = pIter->GetNextKey() )
 	{
 		if ( pSubKey == pIter )
 		{
@@ -1286,16 +1286,16 @@ bool KeyValues::ContainsSubKey( KeyValues *pSubKey )
 
 void KeyValues::SwapSubKey( KeyValues *pExistingSubkey, KeyValues *pNewSubKey )
 {
-	Assert( pExistingSubkey != NULL && pNewSubKey != NULL );
+	Assert( pExistingSubkey != nullptr && pNewSubKey != nullptr );
 
 	// Make sure the new sub key isn't a child of some other keyvalues
-	Assert( pNewSubKey->m_pPeer == NULL );
+	Assert( pNewSubKey->m_pPeer == nullptr );
 
 	// Check the list pointer
 	if ( m_pSub == pExistingSubkey )
 	{
 		pNewSubKey->m_pPeer = pExistingSubkey->m_pPeer;
-		pExistingSubkey->m_pPeer = NULL;
+		pExistingSubkey->m_pPeer = nullptr;
 		m_pSub = pNewSubKey;
 	}
 	else
@@ -1307,7 +1307,7 @@ void KeyValues::SwapSubKey( KeyValues *pExistingSubkey, KeyValues *pNewSubKey )
 			if ( kv->m_pPeer == pExistingSubkey )
 			{
 				pNewSubKey->m_pPeer = pExistingSubkey->m_pPeer;
-				pExistingSubkey->m_pPeer = NULL;
+				pExistingSubkey->m_pPeer = nullptr;
 				kv->m_pPeer = pNewSubKey;
 				break;
 			}
@@ -1315,7 +1315,7 @@ void KeyValues::SwapSubKey( KeyValues *pExistingSubkey, KeyValues *pNewSubKey )
 			kv = kv->m_pPeer;
 		}
 		// Existing sub key should always be found, otherwise it's a bug in the calling code.
-		Assert( kv->m_pPeer != NULL );
+		Assert( kv->m_pPeer != nullptr );
 	}
 }
 
@@ -1323,11 +1323,11 @@ void KeyValues::ElideSubKey( KeyValues *pSubKey )
 {
 	// This pointer's "next" pointer needs to be fixed up when we elide the key
 	KeyValues **ppPointerToFix = &m_pSub;
-	for ( KeyValues *pKeyIter = m_pSub; pKeyIter != NULL; ppPointerToFix = &pKeyIter->m_pPeer, pKeyIter = pKeyIter->GetNextKey() )
+	for ( KeyValues *pKeyIter = m_pSub; pKeyIter != nullptr; ppPointerToFix = &pKeyIter->m_pPeer, pKeyIter = pKeyIter->GetNextKey() )
 	{
 		if ( pKeyIter == pSubKey )
 		{
-			if ( pSubKey->m_pSub == NULL )
+			if ( pSubKey->m_pSub == nullptr )
 			{
 				// No children, simply remove the key
 				*ppPointerToFix = pSubKey->m_pPeer;
@@ -1338,15 +1338,15 @@ void KeyValues::ElideSubKey( KeyValues *pSubKey )
 				*ppPointerToFix = pSubKey->m_pSub;
 				// Attach the remainder of this chain to the last child of pSubKey
 				KeyValues *pChildIter = pSubKey->m_pSub;
-				while ( pChildIter->m_pPeer != NULL )
+				while ( pChildIter->m_pPeer != nullptr )
 				{
 					pChildIter = pChildIter->m_pPeer;
 				}
 				// Now points to the last child of pSubKey
 				pChildIter->m_pPeer = pSubKey->m_pPeer;
 				// Detach the node to be elided
-				pSubKey->m_pSub = NULL;
-				pSubKey->m_pPeer = NULL;
+				pSubKey->m_pSub = nullptr;
+				pSubKey->m_pPeer = nullptr;
 				delete pSubKey;
 			}
 			return;		
@@ -1363,8 +1363,8 @@ void KeyValues::ElideSubKey( KeyValues *pSubKey )
 KeyValues *KeyValues::FindLastSubKey()
 {
 	// No children?
-	if ( m_pSub == NULL )
-		return NULL;
+	if ( m_pSub == nullptr )
+		return nullptr;
 
 	// Scan for the last one
 	KeyValues *pLastChild = m_pSub;
@@ -1380,7 +1380,7 @@ KeyValues *KeyValues::FindLastSubKey()
 KeyValues *KeyValues::GetFirstSubKey() const
 {
 	AssertMsg( this, "Member function called on NULL KeyValues" );
-	return this ? m_pSub : NULL;
+	return this ? m_pSub : nullptr;
 }
 
 //-----------------------------------------------------------------------------
@@ -1389,7 +1389,7 @@ KeyValues *KeyValues::GetFirstSubKey() const
 KeyValues *KeyValues::GetNextKey() const
 {
 	AssertMsg( this, "Member function called on NULL KeyValues" );
-	return this ? m_pPeer : NULL;
+	return this ? m_pPeer : nullptr;
 }
 
 //-----------------------------------------------------------------------------
@@ -1404,7 +1404,7 @@ void KeyValues::SetNextKey( KeyValues *pDat )
 KeyValues* KeyValues::GetFirstTrueSubKey()
 {
 	AssertMsg( this, "Member function called on NULL KeyValues" );
-	KeyValues *pRet = this ? m_pSub : NULL;
+	KeyValues *pRet = this ? m_pSub : nullptr;
 	while ( pRet && pRet->m_iDataType != TYPE_NONE )
 		pRet = pRet->m_pPeer;
 
@@ -1414,7 +1414,7 @@ KeyValues* KeyValues::GetFirstTrueSubKey()
 KeyValues* KeyValues::GetNextTrueSubKey()
 {
 	AssertMsg( this, "Member function called on NULL KeyValues" );
-	KeyValues *pRet = this ? m_pPeer : NULL;
+	KeyValues *pRet = this ? m_pPeer : nullptr;
 	while ( pRet && pRet->m_iDataType != TYPE_NONE )
 		pRet = pRet->m_pPeer;
 
@@ -1424,7 +1424,7 @@ KeyValues* KeyValues::GetNextTrueSubKey()
 KeyValues* KeyValues::GetFirstValue()
 {
 	AssertMsg( this, "Member function called on NULL KeyValues" );
-	KeyValues *pRet = this ? m_pSub : NULL;
+	KeyValues *pRet = this ? m_pSub : nullptr;
 	while ( pRet && pRet->m_iDataType == TYPE_NONE )
 		pRet = pRet->m_pPeer;
 
@@ -1434,7 +1434,7 @@ KeyValues* KeyValues::GetFirstValue()
 KeyValues* KeyValues::GetNextValue()
 {
 	AssertMsg( this, "Member function called on NULL KeyValues" );
-	KeyValues *pRet = this ? m_pPeer : NULL;
+	KeyValues *pRet = this ? m_pPeer : nullptr;
 	while ( pRet && pRet->m_iDataType == TYPE_NONE )
 		pRet = pRet->m_pPeer;
 
@@ -1529,7 +1529,7 @@ void *KeyValues::GetPtr( const char *keyName, void *defaultValue )
 		case TYPE_INT:
 		case TYPE_UINT64:
 		default:
-			return NULL;
+			return nullptr;
 		};
 	}
 	return defaultValue;
@@ -1549,7 +1549,7 @@ float KeyValues::GetFloat( const char *keyName, float defaultValue )
 		case TYPE_STRING:
 			return (float)atof(dat->m_sValue);
 		case TYPE_WSTRING:
-			return (float) wcstof( dat->m_wsValue, (wchar_t **)NULL ); 
+			return (float) wcstof( dat->m_wsValue, (wchar_t **)nullptr ); 
 		case TYPE_FLOAT:
 			return dat->m_flValue;
 		case TYPE_INT:
@@ -1746,7 +1746,7 @@ void KeyValues::SetStringValue( char const *strValue )
 	delete [] m_sValue;
 	// make sure we're not storing the WSTRING  - as we're converting over to STRING
 	delete [] m_wsValue;
-	m_wsValue = NULL;
+	m_wsValue = nullptr;
 
 	if (!strValue)
 	{
@@ -1785,7 +1785,7 @@ void KeyValues::SetWString( const char *keyName, const wchar_t *value )
 		delete [] dat->m_wsValue;
 		// make sure we're not storing the STRING  - as we're converting over to WSTRING
 		delete [] dat->m_sValue;
-		dat->m_sValue = NULL;
+		dat->m_sValue = nullptr;
 
 		if (!value)
 		{
@@ -1829,7 +1829,7 @@ void KeyValues::SetUint64( const char *keyName, uint64 value )
 		delete [] dat->m_sValue;
 		// make sure we're not storing the WSTRING  - as we're converting over to STRING
 		delete [] dat->m_wsValue;
-		dat->m_wsValue = NULL;
+		dat->m_wsValue = nullptr;
 
 		dat->m_sValue = new char[sizeof(uint64)];
 		*((uint64 *)dat->m_sValue) = value;
@@ -1949,14 +1949,14 @@ void KeyValues::RecursiveCopyKeyValues( KeyValues& src )
 	// Handle the immediate child
 	if( src.m_pSub )
 	{
-		m_pSub = new KeyValues( NULL );
+		m_pSub = new KeyValues( nullptr );
 		m_pSub->RecursiveCopyKeyValues( *src.m_pSub );
 	}
 
 	// Handle the immediate peer
 	if( src.m_pPeer )
 	{
-		m_pPeer = new KeyValues( NULL );
+		m_pPeer = new KeyValues( nullptr );
 		m_pPeer->RecursiveCopyKeyValues( *src.m_pPeer );
 	}
 }
@@ -1977,8 +1977,8 @@ void KeyValues::CopySubkeys( KeyValues *pParent ) const
 {
 	// recursively copy subkeys
 	// Also maintain ordering....
-	KeyValues *pPrev = NULL;
-	for ( KeyValues *sub = m_pSub; sub != NULL; sub = sub->m_pPeer )
+	KeyValues *pPrev = nullptr;
+	for ( KeyValues *sub = m_pSub; sub != nullptr; sub = sub->m_pPeer )
 	{
 		// take a copy of the subkey
 		KeyValues *dat = sub->MakeCopy();
@@ -1992,7 +1992,7 @@ void KeyValues::CopySubkeys( KeyValues *pParent ) const
 		{
 			pParent->m_pSub = dat;
 		}
-		dat->m_pPeer = NULL;
+		dat->m_pPeer = nullptr;
 		pPrev = dat;
 	}
 }
@@ -2071,7 +2071,7 @@ bool KeyValues::IsEmpty(const char *keyName)
 	if (!dat)
 		return true;
 
-	if (dat->m_iDataType == TYPE_NONE && dat->m_pSub == NULL)
+	if (dat->m_iDataType == TYPE_NONE && dat->m_pSub == nullptr)
 		return true;
 
 	return false;
@@ -2083,7 +2083,7 @@ bool KeyValues::IsEmpty(const char *keyName)
 void KeyValues::Clear( void )
 {
 	delete m_pSub;
-	m_pSub = NULL;
+	m_pSub = nullptr;
 	m_iDataType = TYPE_NONE;
 }
 
@@ -2216,14 +2216,14 @@ void KeyValues::RecursiveMergeKeyValues( KeyValues *baseKV )
 	// we always want to keep our value, so nothing to do here
 
 	// Now merge our children
-	for ( KeyValues *baseChild = baseKV->m_pSub; baseChild != NULL; baseChild = baseChild->m_pPeer )
+	for ( KeyValues *baseChild = baseKV->m_pSub; baseChild != nullptr; baseChild = baseChild->m_pPeer )
 	{
 		// for each child in base, see if we have a matching kv
 
 		bool bFoundMatch = false;
 
 		// If we have a child by the same name, merge those keys
-		for ( KeyValues *newChild = m_pSub; newChild != NULL; newChild = newChild->m_pPeer )
+		for ( KeyValues *newChild = m_pSub; newChild != nullptr; newChild = newChild->m_pPeer )
 		{
 			if ( !V_strcmp( baseChild->GetName(), newChild->GetName() ) )
 			{
@@ -2269,7 +2269,7 @@ bool KeyValues::LoadFromBuffer( char const *resourceName, CUtlBuffer &buf, IBase
 	AUTO_LOCK_FM( g_KVMutex );
 
 
-	KeyValues *pPreviousKey = NULL;
+	KeyValues *pPreviousKey = nullptr;
 	KeyValues *pCurrentKey = this;
 	CUtlVector< KeyValues * > includedKeys;
 	CUtlVector< KeyValues * > baseKeys;
@@ -2369,14 +2369,14 @@ bool KeyValues::LoadFromBuffer( char const *resourceName, CUtlBuffer &buf, IBase
 		{
 			if ( pPreviousKey )
 			{
-				pPreviousKey->SetNextKey( NULL );
+				pPreviousKey->SetNextKey( nullptr );
 			}
 			pCurrentKey->Clear();
 		}
 		else
 		{
 			pPreviousKey = pCurrentKey;
-			pCurrentKey = NULL;
+			pCurrentKey = nullptr;
 		}
 	} while ( buf.IsValid() );
 
@@ -2423,7 +2423,7 @@ bool KeyValues::LoadFromBuffer( char const *resourceName, const char *pBuffer, I
 	// Translate Unicode files into UTF-8 before proceeding
 	if ( nLen > 2 && (uint8)pBuffer[0] == 0xFF && (uint8)pBuffer[1] == 0xFE )
 	{
-		int nUTF8Len = V_UnicodeToUTF8( (wchar_t*)(pBuffer+2), NULL, 0 );
+		int nUTF8Len = V_UnicodeToUTF8( (wchar_t*)(pBuffer+2), nullptr, 0 );
 		char *pUTF8Buf = new char[nUTF8Len];
 		V_UnicodeToUTF8( (wchar_t*)(pBuffer+2), pUTF8Buf, nUTF8Len );
 		buf.AssumeMemory( pUTF8Buf, nUTF8Len, nUTF8Len, CUtlBuffer::READ_ONLY | CUtlBuffer::TEXT_BUFFER );
@@ -2556,7 +2556,7 @@ void KeyValues::RecursiveLoadFromBuffer( char const *resourceName, CKeyValuesTok
 			if (dat->m_sValue)
 			{
 				delete[] dat->m_sValue;
-				dat->m_sValue = NULL;
+				dat->m_sValue = nullptr;
 			}
 
 			int len = V_strlen( value );
@@ -2633,28 +2633,28 @@ void KeyValues::RecursiveLoadFromBuffer( char const *resourceName, CKeyValuesTok
 			}
 		}
 
-		Assert( dat->m_pPeer == NULL );
+		Assert( dat->m_pPeer == nullptr );
 		if ( bAccepted )
 		{
-			Assert( pLastChild == NULL || pLastChild->m_pPeer == dat );
+			Assert( pLastChild == nullptr || pLastChild->m_pPeer == dat );
 			pLastChild = dat;
 		}
 		else
 		{
 			//this->RemoveSubKey( dat );
-			if ( pLastChild == NULL )
+			if ( pLastChild == nullptr )
 			{
 				Assert( this->m_pSub == dat );
-				this->m_pSub = NULL;
+				this->m_pSub = nullptr;
 			}
 			else
 			{
 				Assert( pLastChild->m_pPeer == dat );
-				pLastChild->m_pPeer = NULL;
+				pLastChild->m_pPeer = nullptr;
 			}
 
 			delete dat;
-			dat = NULL;
+			dat = nullptr;
 		}
 	}
 }
@@ -2671,7 +2671,7 @@ bool KeyValues::WriteAsBinary( CUtlBuffer &buffer ) const
 	// Write subkeys:
 
 	// loop through all our peers
-	for ( const KeyValues *dat = this; dat != NULL; dat = dat->m_pPeer )
+	for ( const KeyValues *dat = this; dat != nullptr; dat = dat->m_pPeer )
 	{
 		// write type
 		buffer.PutUnsignedChar( dat->m_iDataType );
@@ -2897,7 +2897,7 @@ bool KeyValues::WriteAsBinaryFiltered( CUtlBuffer &buffer )
 	buffer.PutString( GetName() );
 
 	// loop through all our keys writing them to buffer
-	for ( KeyValues *dat = m_pSub; dat != NULL; dat = dat->m_pPeer )
+	for ( KeyValues *dat = m_pSub; dat != nullptr; dat = dat->m_pPeer )
 	{
 		if ( dat->m_pSub )
 		{
@@ -3411,13 +3411,13 @@ bool KeyValues::ProcessResolutionKeys( const char *pResString )
 		return false;
 	}
 
-	for ( ; pSubKey != NULL; pSubKey = pSubKey->GetNextKey() )
+	for ( ; pSubKey != nullptr; pSubKey = pSubKey->GetNextKey() )
 	{
 		// recursively descend each sub block
 		pSubKey->ProcessResolutionKeys( pResString );
 
 		// check to see if our substring is present
-		if ( V_stristr( pSubKey->GetName(), pResString ) != NULL )
+		if ( V_stristr( pSubKey->GetName(), pResString ) != nullptr )
 		{
 			char normalKeyName[128];
 			V_strncpy( normalKeyName, pSubKey->GetName(), sizeof( normalKeyName ) );
@@ -3581,7 +3581,7 @@ KeyValues * KeyValues::FromString( char const *szName, char const *szStringVal, 
 
 	KeyValues *kv = new KeyValues( szName );
 	if ( !kv )
-		return NULL;
+		return nullptr;
 
 	char chName[256] = {0};
 	char chValue[1024] = {0};
@@ -3590,7 +3590,7 @@ KeyValues * KeyValues::FromString( char const *szName, char const *szStringVal, 
 	{
 		char const *szEnd;
 
-		char const *szVarValue = NULL;
+		char const *szVarValue = nullptr;
 		char const *szVarName = ParseStringToken( szStringVal, &szEnd );
 		if ( !*szVarName )
 			break;
@@ -3730,14 +3730,14 @@ bool KeyValues::Dump( IKeyValuesDumpContext *pDump, int nIndentLevel /* = 0 */ )
 		return false;
 
 	// Dump values
-	for ( KeyValues *val = this ? GetFirstValue() : NULL; val; val = val->GetNextValue() )
+	for ( KeyValues *val = this ? GetFirstValue() : nullptr; val; val = val->GetNextValue() )
 	{
 		if ( !pDump->KvWriteValue( val, nIndentLevel + 1 ) )
 			return false;
 	}
 
 	// Dump subkeys
-	for ( KeyValues *sub = this ? GetFirstTrueSubKey() : NULL; sub; sub = sub->GetNextTrueSubKey() )
+	for ( KeyValues *sub = this ? GetFirstTrueSubKey() : nullptr; sub; sub = sub->GetNextTrueSubKey() )
 	{
 		if ( !sub->Dump( pDump, nIndentLevel + 1 ) )
 			return false;

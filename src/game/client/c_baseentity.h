@@ -137,9 +137,9 @@ struct PredictionContext
 	{
 		m_bActive					= false;
 		m_nCreationCommandNumber	= -1;
-		m_pszCreationModule			= NULL;
+		m_pszCreationModule			= nullptr;
 		m_nCreationLineNumber		= 0;
-		m_hServerEntity				= NULL;
+		m_hServerEntity				= nullptr;
 	}
 
 	// The command_number of the usercmd which created this entity
@@ -188,7 +188,7 @@ template< typename Type >
 class CDiscontinuousInterpolatedVar : public CInterpolatedVar<Type>
 {
 public:
-	explicit CDiscontinuousInterpolatedVar( const char *pDebugName = NULL )
+	explicit CDiscontinuousInterpolatedVar( const char *pDebugName = nullptr )
 		: CInterpolatedVar<Type>(pDebugName)
 	{
 
@@ -254,7 +254,7 @@ public:
 		m_Discontinuities[iInsertAfter].fBeforeTime = fDiscontinuityTime;
 	}
 
-	bool RemoveDiscontinuity( float fDiscontinuityTime, const matrix3x4_t *pFailureTransform = NULL )
+	bool RemoveDiscontinuity( float fDiscontinuityTime, const matrix3x4_t *pFailureTransform = nullptr )
 	{
 		//assume the general case for this is rolling back in time for prediction
 		for( int i = m_Discontinuities.Count(); --i >= 0; )
@@ -364,7 +364,7 @@ protected:
 
 		iCurrent = iHead;
 
-		while( (pCurrent = this->GetHistoryValue( iCurrent, fTime )) != NULL )
+		while( (pCurrent = this->GetHistoryValue( iCurrent, fTime )) != nullptr )
 		{
 			Assert( (fTime <= fHeadTime) || (iCurrent == iHead) ); //asserting that head is always newest
 
@@ -519,8 +519,8 @@ public:
 
 	// This just picks one of the routes to IClientUnknown.
 	IClientUnknown*					GetIClientUnknown()	{ return this; }
-	virtual C_BaseAnimating*		GetBaseAnimating() { return NULL; }
-	virtual C_BaseAnimatingOverlay *GetBaseAnimatingOverlay() { return NULL; }
+	virtual C_BaseAnimating*		GetBaseAnimating() { return nullptr; }
+	virtual C_BaseAnimatingOverlay *GetBaseAnimatingOverlay() { return nullptr; }
 	virtual void					SetClassname( const char *className );
 
 	virtual Class_T					Classify( void ) { return CLASS_NONE; }
@@ -716,11 +716,11 @@ public:
 	IPhysicsObject *VPhysicsInitStatic( void );
 
 	// This creates a normal vphysics simulated object
-	IPhysicsObject *VPhysicsInitNormal( SolidType_t solidType, int nSolidFlags, bool createAsleep, solid_t *pSolid = NULL );
+	IPhysicsObject *VPhysicsInitNormal( SolidType_t solidType, int nSolidFlags, bool createAsleep, solid_t *pSolid = nullptr );
 
 	// This creates a vphysics object with a shadow controller that follows the AI
 	// Move the object to where it should be and call UpdatePhysicsShadowToCurrentPosition()
-	IPhysicsObject *VPhysicsInitShadow( bool allowPhysicsMovement, bool allowPhysicsRotation, solid_t *pSolid = NULL );
+	IPhysicsObject *VPhysicsInitShadow( bool allowPhysicsMovement, bool allowPhysicsRotation, solid_t *pSolid = nullptr );
 
 private:
 	// called by all vphysics inits
@@ -889,21 +889,21 @@ public:
 
 	// See CSoundEmitterSystem
 	// Will return the sound guid. If negative, the guid is unknown (call may be successful or not). 0 if the sound was not emitted. Positive if the guid is valid.
-	int		EmitSound( const char *soundname, float soundtime = 0.0f, float *duration = NULL );  // Override for doing the general case of CPASAttenuationFilter( this ), and EmitSound( filter, entindex(), etc. );
-	int		EmitSound( const char *soundname, HSOUNDSCRIPTHASH& handle, float soundtime = 0.0f, float *duration = NULL );  // Override for doing the general case of CPASAttenuationFilter( this ), and EmitSound( filter, entindex(), etc. );
+	int		EmitSound( const char *soundname, float soundtime = 0.0f, float *duration = nullptr );  // Override for doing the general case of CPASAttenuationFilter( this ), and EmitSound( filter, entindex(), etc. );
+	int		EmitSound( const char *soundname, HSOUNDSCRIPTHASH& handle, float soundtime = 0.0f, float *duration = nullptr );  // Override for doing the general case of CPASAttenuationFilter( this ), and EmitSound( filter, entindex(), etc. );
 	void	StopSound( const char *soundname );
 	void	StopSound( const char *soundname, HSOUNDSCRIPTHASH& handle );
 	void	GenderExpandString( char const *in, char *out, int maxlen );
 
-	void UpdateLastMadeNoiseTime( const char* pszSoundName = NULL );
+	void UpdateLastMadeNoiseTime( const char* pszSoundName = nullptr );
 
 	static float GetSoundDuration( const char *soundname, char const *actormodel );
 
 	static bool	GetParametersForSound( const char *soundname, CSoundParameters &params, const char *actormodel );
 	static bool	GetParametersForSound( const char *soundname, HSOUNDSCRIPTHASH& handle, CSoundParameters &params, const char *actormodel );
 
-	static int EmitSound( IRecipientFilter& filter, int iEntIndex, const char *soundname, const Vector *pOrigin = NULL, float soundtime = 0.0f, float *duration = NULL );
-	static int EmitSound( IRecipientFilter& filter, int iEntIndex, const char *soundname, HSOUNDSCRIPTHASH& handle, const Vector *pOrigin = NULL, float soundtime = 0.0f, float *duration = NULL );
+	static int EmitSound( IRecipientFilter& filter, int iEntIndex, const char *soundname, const Vector *pOrigin = nullptr, float soundtime = 0.0f, float *duration = nullptr );
+	static int EmitSound( IRecipientFilter& filter, int iEntIndex, const char *soundname, HSOUNDSCRIPTHASH& handle, const Vector *pOrigin = nullptr, float soundtime = 0.0f, float *duration = nullptr );
 	static void StopSound( int iEntIndex, const char *soundname );
 	static soundlevel_t LookupSoundLevel( const char *soundname );
 	static soundlevel_t LookupSoundLevel( const char *soundname, HSOUNDSCRIPTHASH& handle );
@@ -913,7 +913,7 @@ public:
 
 	static void StopSound( int iEntIndex, int iChannel, const char *pSample, bool bIsStoppingSpeakerSound = false );
 
-	static void EmitAmbientSound( int entindex, const Vector& origin, const char *soundname, int flags = 0, float soundtime = 0.0f, float *duration = NULL );
+	static void EmitAmbientSound( int entindex, const Vector& origin, const char *soundname, int flags = 0, float soundtime = 0.0f, float *duration = nullptr );
 
 	// These files need to be listed in scripts/game_sounds_manifest.txt
 	static HSOUNDSCRIPTHASH PrecacheScriptSound( const char *soundname );
@@ -970,7 +970,7 @@ public:
 
 	
 	// If this is a vehicle, returns the vehicle interface
-	virtual IClientVehicle*			GetClientVehicle() { return NULL; }
+	virtual IClientVehicle*			GetClientVehicle() { return nullptr; }
 
 	// Returns the aiment render origin + angles
 	virtual void					GetAimEntOrigin( IClientEntity *pAttachedTo, Vector *pAbsOrigin, QAngle *pAbsAngles );
@@ -1107,7 +1107,7 @@ public:
 
 	// A method to apply a decal to an entity
 	virtual void					AddDecal( const Vector& rayStart, const Vector& rayEnd,
-										const Vector& decalCenter, int hitbox, int decalIndex, bool doTrace, trace_t& tr, int maxLODToDecal = ADDDECAL_TO_ALL_LODS, const Vector *saxis = NULL, int nAdditionalDecalFlags = 0 );
+										const Vector& decalCenter, int hitbox, int decalIndex, bool doTrace, trace_t& tr, int maxLODToDecal = ADDDECAL_TO_ALL_LODS, const Vector *saxis = nullptr, int nAdditionalDecalFlags = 0 );
 	// A method to remove all decals from an entity
 	void							RemoveAllDecals( void );
 
@@ -1219,7 +1219,7 @@ public:
 	void							SetSize( const Vector &vecMin, const Vector &vecMax ); // UTIL_SetSize( pev, mins, maxs );
 	virtual char const				*GetClassname( void );
 	char const						*GetDebugName( void );
-	virtual const char				*GetPlayerName() const { return NULL; }
+	virtual const char				*GetPlayerName() const { return nullptr; }
 	static int						PrecacheModel( const char *name ); 
 	static bool						PrecacheSound( const char *name );
 	static void						PrefetchSound( const char *name );
@@ -1255,7 +1255,7 @@ public:
 
 	// Sorry folks, here lies TF2-specific stuff that really has no other place to go
 	virtual bool			CanBePoweredUp( void ) { return false; }
-	virtual bool			AttemptToPowerup( int iPowerup, float flTime, float flAmount = 0, C_BaseEntity *pAttacker = NULL, CDamageModifier *pDamageModifier = NULL ) { return false; }
+	virtual bool			AttemptToPowerup( int iPowerup, float flTime, float flAmount = 0, C_BaseEntity *pAttacker = nullptr, CDamageModifier *pDamageModifier = nullptr ) { return false; }
 
 	void					SetCheckUntouch( bool check );
 	bool					GetCheckUntouch() const;
@@ -1287,7 +1287,7 @@ public:
 	void					PhysicsImpact( C_BaseEntity *other, trace_t &trace );
  	void					PhysicsMarkEntitiesAsTouching( C_BaseEntity *other, trace_t &trace );
 	void					PhysicsMarkEntitiesAsTouchingEventDriven( C_BaseEntity *other, trace_t &trace );
-	void					PhysicsTouchTriggers( const Vector *pPrevAbsOrigin = NULL );
+	void					PhysicsTouchTriggers( const Vector *pPrevAbsOrigin = nullptr );
 
 	// Physics helper
 	static void				PhysicsRemoveTouchedList( C_BaseEntity *ent );
@@ -1372,7 +1372,7 @@ public:
 	virtual bool					IsWeaponWorldModel( void ) const { return false; };
 	virtual bool					IsBaseCombatCharacter( void ) { return false; };
 	//virtual bool					IsGrenadeProjectile( void ) { return false; };
-	virtual C_BaseCombatCharacter	*MyCombatCharacterPointer( void ) { return NULL; }
+	virtual C_BaseCombatCharacter	*MyCombatCharacterPointer( void ) { return nullptr; }
 	virtual bool					IsNPC( void ) { return false; }
 	C_AI_BaseNPC					*MyNPCPointer( void ); 
 
@@ -1382,7 +1382,7 @@ public:
 	// TF2 specific
 	virtual bool					IsBaseObject( void ) const { return false; }
 	virtual bool					IsBaseCombatWeapon( void ) const { return false; }
-	virtual class C_BaseCombatWeapon		*MyCombatWeaponPointer() { return NULL; }
+	virtual class C_BaseCombatWeapon		*MyCombatWeaponPointer() { return nullptr; }
 
 	// Entities like the player, weapon models, and view models have special logic per-view port related to visibility and the model to be used, etc.
 	virtual bool					ShouldDrawForSplitScreenUser( int nSlot );
@@ -1487,9 +1487,9 @@ public:
 	virtual int GetBody() { return 0; }
 	virtual int GetSkin() { return 0; }
 
-	const Vector &ScriptGetForward( void ) { static Vector vecForward; GetVectors( &vecForward, NULL, NULL ); return vecForward; }
-	const Vector &ScriptGetLeft( void ) { static Vector vecLeft; GetVectors( NULL, &vecLeft, NULL ); return vecLeft; }
-	const Vector &ScriptGetUp( void ) { static Vector vecUp; GetVectors( NULL, NULL, &vecUp ); return vecUp; }
+	const Vector &ScriptGetForward( void ) { static Vector vecForward; GetVectors( &vecForward, nullptr, nullptr ); return vecForward; }
+	const Vector &ScriptGetLeft( void ) { static Vector vecLeft; GetVectors( nullptr, &vecLeft, nullptr ); return vecLeft; }
+	const Vector &ScriptGetUp( void ) { static Vector vecUp; GetVectors( nullptr, nullptr, &vecUp ); return vecUp; }
 
 
 	// Stubs on client
@@ -1501,12 +1501,12 @@ public:
 
 	// Think functions with contexts
 	int		RegisterThinkContext( const char *szContext );
-	BASEPTR	ThinkSet( BASEPTR func, float flNextThinkTime = 0, const char *szContext = NULL );
-	void	SetNextThink( float nextThinkTime, const char *szContext = NULL );
-	float	GetNextThink( const char *szContext = NULL );
-	float	GetLastThink( const char *szContext = NULL );
-	int		GetNextThinkTick( const char *szContext = NULL );
-	int		GetLastThinkTick( const char *szContext = NULL );
+	BASEPTR	ThinkSet( BASEPTR func, float flNextThinkTime = 0, const char *szContext = nullptr );
+	void	SetNextThink( float nextThinkTime, const char *szContext = nullptr );
+	float	GetNextThink( const char *szContext = nullptr );
+	float	GetLastThink( const char *szContext = nullptr );
+	int		GetNextThinkTick( const char *szContext = nullptr );
+	int		GetLastThinkTick( const char *szContext = nullptr );
 	
 	// These set entity flags (EFL_*) to help optimize queries
 	void	CheckHasThinkFunction( bool isThinkingHint = false );
@@ -1944,7 +1944,7 @@ private:
 
 	// methods related to decal adding
 	void AddStudioDecal( const Ray_t& ray, int hitbox, int decalIndex, bool doTrace, trace_t& tr, int maxLODToDecal = ADDDECAL_TO_ALL_LODS, int nAdditionalDecalFlags = 0 );
-	void AddBrushModelDecal( const Ray_t& ray, const Vector& decalCenter, int decalIndex, bool doTrace, trace_t& tr, const Vector *saxis = NULL, int nAdditionalDecalFlags = 0 );
+	void AddBrushModelDecal( const Ray_t& ray, const Vector& decalCenter, int decalIndex, bool doTrace, trace_t& tr, const Vector *saxis = nullptr, int nAdditionalDecalFlags = 0 );
 public:
 	void AddStudioMaterialDecal( const Ray_t& ray, IMaterial *pDecalMaterial, float flInputRadius, Vector vec_up );
 
@@ -2160,7 +2160,7 @@ inline bool FClassnameIs( C_BaseEntity *pEntity, const char *szClassname )
 	return pEntity && !strcmp( pEntity->GetClassname(), szClassname ); 
 }
 
-#define SetThink( a ) ThinkSet( static_cast <void (CBaseEntity::*)(void)> (a), 0, NULL )
+#define SetThink( a ) ThinkSet( static_cast <void (CBaseEntity::*)(void)> (a), 0, nullptr )
 #define SetContextThink( a, b, context ) ThinkSet( static_cast <void (CBaseEntity::*)(void)> (a), (b), context )
 
 #ifdef _DEBUG
@@ -2269,7 +2269,7 @@ inline const Vector &C_BaseEntity::GetAbsVelocity( ) const
 
 inline C_BaseEntity	*C_BaseEntity::Instance( IClientEntity *ent )
 {
-	return ent ? ent->GetBaseEntity() : NULL;
+	return ent ? ent->GetBaseEntity() : nullptr;
 }
 
 // For debugging shared code

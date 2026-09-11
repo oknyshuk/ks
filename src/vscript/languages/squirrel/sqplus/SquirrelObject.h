@@ -79,7 +79,7 @@ public:
 	INT GetInt(INT key) const;
 	const SQChar *GetString(INT key) const;
 	bool GetBool(INT key) const;
-	SquirrelObject GetAttributes(const SQChar *key = NULL);
+	SquirrelObject GetAttributes(const SQChar *key = nullptr);
 	SQObjectType GetType();
 	HSQOBJECT & GetObjectHandle(){return _o;}
 	BOOL BeginIteration();
@@ -151,7 +151,7 @@ struct StackHandler {
 	}
 	const SQChar *GetString(int idx)
 	{
-    const SQChar *x = NULL;
+    const SQChar *x = nullptr;
 		if(idx > 0 && idx <= _top) {
 			sq_getstring(v,idx,&x);
 		}
@@ -169,7 +169,7 @@ struct StackHandler {
 	{
 		SQUserPointer self;
 		if(SQ_FAILED(sq_getinstanceup(v,idx,(SQUserPointer*)&self,tag)))
-			return NULL;
+			return nullptr;
 		return self;
 	}
 	SQUserPointer GetUserData(int idx,SQUserPointer tag=0)
@@ -182,7 +182,7 @@ struct StackHandler {
 					return up;
 			}
 		}
-		return NULL;
+		return nullptr;
 	}
 	bool GetBool(int idx)
 	{

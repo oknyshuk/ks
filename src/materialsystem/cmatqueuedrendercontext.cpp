@@ -42,7 +42,7 @@ public:
 	virtual void BeginCastBuffer( VertexFormat_t format )						{ CannotSupport(); }
 	virtual void EndCastBuffer( )												{ CannotSupport(); }
 	virtual int GetRoomRemaining() const										{ CannotSupport(); return 0; }
-	virtual void * AccessRawHardwareDataStream( uint8 nRawStreamIndex, uint32 numBytes, uint32 uiFlags, void *pvContext ) {	CannotSupport(); return NULL; }
+	virtual void * AccessRawHardwareDataStream( uint8 nRawStreamIndex, uint32 numBytes, uint32 uiFlags, void *pvContext ) {	CannotSupport(); return nullptr; }
 	virtual bool Lock( int nVertexCount, bool bAppend, VertexDesc_t &desc )		{ CannotSupport(); return false; }
 	virtual void Unlock( int nVertexCount, VertexDesc_t &desc )					{ CannotSupport(); }
 	virtual void Spew( int nVertexCount, const VertexDesc_t &desc )				{ }
@@ -129,7 +129,7 @@ public:
 		int m_nIndexCount;
 	};
 
-	IMesh *MST_DetachActualMesh()		{ IMesh *p = m_pMSTActualMesh; m_pMSTActualMesh = NULL; return p; }
+	IMesh *MST_DetachActualMesh()		{ IMesh *p = m_pMSTActualMesh; m_pMSTActualMesh = nullptr; return p; }
 	IMesh *MST_GetActualMesh()			{ return m_pMSTActualMesh; }
 	IMesh *MST_SetupExternalMesh( const MST_MeshInfo_t &info );
 	IMesh *MST_SetupDynamicMesh( const MST_MeshInfo_t &info, IMesh *pExternalMesh );
@@ -198,7 +198,7 @@ public:
 
 	CCachedPerFrameMeshData()
 	{
-		m_meshInfo.m_pMaterial = NULL;
+		m_meshInfo.m_pMaterial = nullptr;
 	}
 
 	~CCachedPerFrameMeshData()
@@ -220,15 +220,15 @@ CMatQueuedMesh::CMatQueuedMesh( CMatQueuedRenderContext *pOwner, IMatRenderConte
 	m_pOwner( pOwner ), 
 	m_pCallQueue( pOwner->GetCallQueueInternal() ),
 	m_pHardwareContext( pHardwareContext ),
-	m_pVertexData( NULL ),
-	m_pIndexData( NULL ),
+	m_pVertexData( nullptr ),
+	m_pIndexData( nullptr ),
 	m_nVerts( 0 ),
 	m_nIndices( 0 ),
 	m_VertexSize( 0 ),
 	m_Type( MATERIAL_TRIANGLES ),
-	m_pVertexOverride( NULL ),
-	m_pIndexOverride ( NULL ),
-	m_pMSTActualMesh( NULL ),
+	m_pVertexOverride( nullptr ),
+	m_pIndexOverride ( nullptr ),
+	m_pMSTActualMesh( nullptr ),
 	m_nMSTActualVertexOffsetInBytes( 0 ),
 	m_VertexFormat( 0 ),
 	m_bFlexMesh( bFlexMesh ),
@@ -253,11 +253,11 @@ CMatQueuedMesh::CMatQueuedMesh( CMatQueuedRenderContext *pOwner, IMatRenderConte
 IMesh *CMatQueuedMesh::MST_SetupExternalMesh( const MST_MeshInfo_t &info )
 {
 #ifndef MS_NO_DYNAMIC_BUFFER_COPY
-	return NULL;
+	return nullptr;
 #else
 	// If we don't have real external data on either VB or IB channel, no dynamic mesh
 	if ( !info.m_bExternalVB && !info.m_bExternalIB )
-		return NULL;
+		return nullptr;
 
 	// Ok, at at least one of VB or IB (maybe both) are external data.
 	// In this case, the other buffer may be an override, NULL, or dynamic data
@@ -268,8 +268,8 @@ IMesh *CMatQueuedMesh::MST_SetupExternalMesh( const MST_MeshInfo_t &info )
 	extInfo.m_pMaterial = info.m_pMaterial;
 	extInfo.m_bFlexMesh = m_bFlexMesh;
 	extInfo.m_VertexFormat = info.m_VertexFormat;
-	extInfo.m_pVertexOverride = NULL;
-	extInfo.m_pIndexOverride = NULL;
+	extInfo.m_pVertexOverride = nullptr;
+	extInfo.m_pIndexOverride = nullptr;
 	IMesh *pExternalMesh = g_pShaderAPI->GetExternalMesh( extInfo );
 
 	// Now make the external mesh point at the externally allocated data
@@ -785,7 +785,7 @@ ICachedPerFrameMeshData *CMatQueuedMesh::GetCachedPerFrameMeshData()
 {
 	// Short-circuit if we have no vertices
 	if ( m_nVerts == 0 )
-		return NULL;
+		return nullptr;
 
 	CCachedPerFrameMeshData *pNewPerFrameData = new CCachedPerFrameMeshData();
 
@@ -854,7 +854,7 @@ void CMatQueuedMesh::FreeBuffers()
 		m_pOwner->FreeIndices( (byte*)m_pIndexData, m_nIndices, sizeof(uint16) );
 	}
 	m_nIndices = 0;
-	m_pIndexData = NULL;
+	m_pIndexData = nullptr;
 
 	if ( m_pVertexData )
 	{
@@ -864,7 +864,7 @@ void CMatQueuedMesh::FreeBuffers()
 	m_nVerts = 0;
 	m_VertexFormat = 0;
 	m_VertexSize = 0;
-	m_pVertexData = NULL;
+	m_pVertexData = nullptr;
 	m_bCanSetAuxMeshes = false;
 	m_nFlags = 0;
 	m_bExternalIB = false;
@@ -896,7 +896,7 @@ public:
 	virtual void ModifyEnd( IndexDesc_t& desc );
 	virtual void Spew( int nIndexCount, const IndexDesc_t &desc );
 	virtual void ValidateData( int nIndexCount, const IndexDesc_t &desc );
-	virtual IMesh *GetMesh() { return NULL; }
+	virtual IMesh *GetMesh() { return nullptr; }
 	
 	// Other public methods, accessible from the main thread
 public:
@@ -938,7 +938,7 @@ CMatQueuedIndexBuffer::CMatQueuedIndexBuffer( CMatQueuedRenderContext *pOwner, I
 	m_pOwner( pOwner ), 
 	m_pCallQueue( pOwner->GetCallQueueInternal() ),
 	m_pHardwareContext( pHardwareContext ),
-	m_pIndexData( NULL ),
+	m_pIndexData( nullptr ),
 	m_nIndices( 0 ),
 	m_nIndexFormat( MATERIAL_INDEX_FORMAT_UNKNOWN ),
 	m_nRTStartIndex( -1 ),
@@ -952,7 +952,7 @@ CMatQueuedIndexBuffer::~CMatQueuedIndexBuffer()
 	if ( m_pIndexData )
 	{
 		FreeIndexData( m_nIndices, m_nIndexFormat, m_pIndexData );
-		m_pIndexData = NULL;
+		m_pIndexData = nullptr;
 		m_nIndices = 0;
 	}
 }
@@ -1037,7 +1037,7 @@ void CMatQueuedIndexBuffer::RT_CopyIndexData( int nIndexCount, MaterialIndexForm
 	m_pRTDynamicIndexBuffer = m_pHardwareContext->GetDynamicIndexBuffer();
 	if ( !m_pRTDynamicIndexBuffer->Lock( nIndexCount, false, desc ) )
 	{
-		m_pRTDynamicIndexBuffer = NULL;
+		m_pRTDynamicIndexBuffer = nullptr;
 		m_nRTStartIndex = -1;
 		return;
 	}
@@ -1054,7 +1054,7 @@ void CMatQueuedIndexBuffer::RT_CopyIndexData( int nIndexCount, MaterialIndexForm
 void CMatQueuedIndexBuffer::RT_FreeIndexData( int nIndexCount, MaterialIndexFormat_t fmt, void *pIndexData )
 {
 	FreeIndexData( nIndexCount, fmt, pIndexData );
-	m_pRTDynamicIndexBuffer = NULL;
+	m_pRTDynamicIndexBuffer = nullptr;
 	m_nRTStartIndex = -1;
 }
 
@@ -1209,11 +1209,11 @@ void CMatQueuedRenderContext::Shutdown()
 	delete m_pQueuedMesh;
 	delete m_pQueuedFlexMesh;
 	delete m_pQueuedIndexBuffer;
-	m_pMaterialSystem = NULL;
-	m_pHardwareContext = NULL;
-	m_pQueuedMesh = NULL;
-	m_pQueuedFlexMesh = NULL;
-	m_pQueuedIndexBuffer = NULL;
+	m_pMaterialSystem = nullptr;
+	m_pHardwareContext = nullptr;
+	m_pQueuedMesh = nullptr;
+	m_pQueuedFlexMesh = nullptr;
+	m_pQueuedIndexBuffer = nullptr;
 
 	m_Vertices.Term();
 	m_Indices.Term();
@@ -1285,24 +1285,24 @@ void CMatQueuedRenderContext::EndQueue( bool bCallQueued )
 
 	if ( m_pCurrentMaterial )
 	{
-		m_pCurrentMaterial = NULL;
+		m_pCurrentMaterial = nullptr;
 	}
 
 	if ( m_pUserDefinedLightmap )
 	{
-		m_pUserDefinedLightmap = NULL;
+		m_pUserDefinedLightmap = nullptr;
 	}
 
 	if ( m_pLocalCubemapTexture )
 	{
-		m_pLocalCubemapTexture = NULL;
+		m_pLocalCubemapTexture = nullptr;
 	}
 
 	for ( i = 0; i < MAX_FB_TEXTURES; i++ )
 	{
 		if ( m_pCurrentFrameBufferCopyTexture[i] )
 		{
-			m_pCurrentFrameBufferCopyTexture[i] = NULL;
+			m_pCurrentFrameBufferCopyTexture[i] = nullptr;
 		}
 	}
 
@@ -1312,7 +1312,7 @@ void CMatQueuedRenderContext::EndQueue( bool bCallQueued )
 		{
 			if ( m_RenderTargetStack[i].m_pRenderTargets[j] )
 			{
-				m_RenderTargetStack[i].m_pRenderTargets[j] = NULL;
+				m_RenderTargetStack[i].m_pRenderTargets[j] = nullptr;
 			}
 		}
 	}
@@ -1484,7 +1484,7 @@ void CMatQueuedRenderContext::GetRenderTargetDimensions( int &width, int &height
 	ITexture *pTOS = m_RenderTargetStack.Top().m_pRenderTargets[0];
 
 	// If top of stack isn't the back buffer, get dimensions from the texture
-	if ( pTOS != NULL )
+	if ( pTOS != nullptr )
 	{
 		width = pTOS->GetActualWidth();
 		height = pTOS->GetActualHeight();
@@ -1649,7 +1649,7 @@ void CMatQueuedRenderContext::GetViewport( int& x, int& y, int& width, int& heig
 		x = y = 0;
 
 		// If target is back buffer
-		if ( element.m_pRenderTargets[0] == NULL )
+		if ( element.m_pRenderTargets[0] == nullptr )
 		{
 			width = m_WidthBackBuffer;
 			height = m_HeightBackBuffer;
@@ -1699,14 +1699,14 @@ IMesh* CMatQueuedRenderContext::GetDynamicMeshEx( VertexFormat_t vertexFormat, b
 {
 	if( pAutoBind )
 	{
-		Bind( pAutoBind, NULL );
+		Bind( pAutoBind, nullptr );
 	}
 
 	if ( pVertexOverride && pIndexOverride )
 	{
 		// Use the new batch API
 		DebuggerBreak();
-		return NULL;
+		return nullptr;
 	}
 
 	if ( pVertexOverride )
@@ -1715,7 +1715,7 @@ IMesh* CMatQueuedRenderContext::GetDynamicMeshEx( VertexFormat_t vertexFormat, b
 		{
 			// UNDONE: support compressed dynamic meshes if needed (pro: less VB memory, con: time spent compressing)
 			DebuggerBreak();
-			return NULL;
+			return nullptr;
 		}
 	}
 
@@ -1801,7 +1801,7 @@ void CMatQueuedRenderContext::GetMaxToRender( IMesh *pMesh, bool bMaxUntilFlush,
 //-----------------------------------------------------------------------------
 IMesh *CMatQueuedRenderContext::GetFlexMesh()
 {
-	m_pQueuedFlexMesh->OnGetDynamicMesh( 0, 0, NULL, NULL, NULL, 0 );
+	m_pQueuedFlexMesh->OnGetDynamicMesh( 0, 0, nullptr, nullptr, nullptr, 0 );
 	return m_pQueuedFlexMesh;
 }
 
@@ -1890,7 +1890,7 @@ void CMatQueuedRenderContext::LoadBoneMatrix( int i, const matrix3x4_t &m )
 //-----------------------------------------------------------------------------
 void CMatQueuedRenderContext::CopyRenderTargetToTextureEx( ITexture *pTexture, int i, Rect_t *pSrc, Rect_t *pDst )
 {
-	m_queue.QueueCall( m_pHardwareContext, &IMatRenderContext::CopyRenderTargetToTextureEx, pTexture, i, ( pSrc ) ? &m_queue.Copy(*pSrc) : NULL, ( pDst ) ? &m_queue.Copy(*pDst) : NULL );
+	m_queue.QueueCall( m_pHardwareContext, &IMatRenderContext::CopyRenderTargetToTextureEx, pTexture, i, ( pSrc ) ? &m_queue.Copy(*pSrc) : nullptr, ( pDst ) ? &m_queue.Copy(*pDst) : nullptr );
 }
 
 //-----------------------------------------------------------------------------
@@ -1958,7 +1958,7 @@ bool CMatQueuedRenderContext::OnSetFlexMesh( IMesh *pStaticMesh, IMesh *pMesh, i
 	}
 	else
 	{
-		m_queue.QueueCall( pStaticMesh, &IMesh::SetFlexMesh, (IMesh *)NULL, 0 );
+		m_queue.QueueCall( pStaticMesh, &IMesh::SetFlexMesh, (IMesh *)nullptr, 0 );
 	}
 	return false;
 }

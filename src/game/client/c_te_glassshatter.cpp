@@ -159,7 +159,7 @@ void C_TEShatterSurface::PostDataUpdate( DataUpdateType_t updateType )
 	pGlassEmitter->SetSortOrigin( m_vecOrigin );
 
 	Vector vecColor;
-	engine->ComputeLighting( m_vecOrigin, NULL, true, vecColor );
+	engine->ComputeLighting( m_vecOrigin, nullptr, true, vecColor );
 
 	// HACK: Blend a little toward white to match the materials...
 	VectorLerp( vecColor, Vector( 1, 1, 1 ), 0.3, vecColor );
@@ -181,7 +181,7 @@ void C_TEShatterSurface::PostDataUpdate( DataUpdateType_t updateType )
 	int nNumHigh = m_flHeight / m_flShardSize;
 
 	Vector vWidthStep,vHeightStep;
-	AngleVectors(m_vecAngles,NULL,&vWidthStep,&vHeightStep);
+	AngleVectors(m_vecAngles,nullptr,&vWidthStep,&vHeightStep);
 	vWidthStep	*= m_flShardSize;
 	vHeightStep *= m_flShardSize;
 
@@ -195,7 +195,7 @@ void C_TEShatterSurface::PostDataUpdate( DataUpdateType_t updateType )
 	float flMinSpeed = 9999999999.0f;
 	float flMaxSpeed = 0;
 
-	Particle3D *pParticle = NULL;
+	Particle3D *pParticle = nullptr;
 
 	for (int width=0;width<nNumWide;width++)
 	{

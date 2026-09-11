@@ -41,7 +41,7 @@ const char *g_gameName = "csgo";
 #include "console/TextConsoleUnix.h"
 CTextConsoleUnix console;
 
-IDedicatedServerAPI *engine = NULL;
+IDedicatedServerAPI *engine = nullptr;
 
 int g_nSubProcessId = 0;
 
@@ -226,7 +226,7 @@ bool CDedicatedAppSystemGroup::PreInit( )
 		return false;
 
 	CFSSteamSetupInfo steamInfo;
-	steamInfo.m_pDirectoryName = NULL;
+	steamInfo.m_pDirectoryName = nullptr;
 	steamInfo.m_bOnlyUseDirectoryName = false;
 	steamInfo.m_bToolsMode = false;
 	steamInfo.m_bSetSteamDLLPath = false;
@@ -310,7 +310,7 @@ static bool GetExecutableName( char *out, int nMaxLen )
 void UTIL_ComputeBaseDir( char *pBaseDir, int nMaxLen )
 {
 	int j;
-	char *pBuffer = NULL;
+	char *pBuffer = nullptr;
 
 	pBaseDir[ 0 ] = 0;
 

@@ -30,7 +30,7 @@ extern ConVar mat_ambient_light_b;
 
 static void mat_phong_lightmappedgeneric_changed( IConVar *var, const char *pOldValue, float flOldValue )
 {
-	g_pMaterialSystem->ReloadMaterials( NULL );
+	g_pMaterialSystem->ReloadMaterials( nullptr );
 }
 ConVar mat_phong_lightmappedgeneric( "mat_phong_lightmappedgeneric", "1", FCVAR_MATERIAL_SYSTEM_THREAD | FCVAR_DEVELOPMENTONLY, "0 = disable, 1 = default, 2 = visualize phong component only (no diffuse)", mat_phong_lightmappedgeneric_changed );
 
@@ -1309,7 +1309,7 @@ void DrawLightmappedGeneric_DX9( CBaseVSShader *pShader, IMaterialVar** params, 
 			BOOL bCSMEnabled = pShaderAPI->IsCascadedShadowMapping() && !ToolsEnabled() && !(g_pConfig->nFullbright == 1);
 			if ( bCSMEnabled )
 			{
-				ITexture *pDepthTextureAtlas = NULL;
+				ITexture *pDepthTextureAtlas = nullptr;
 				const CascadedShadowMappingState_t &cascadeState = pShaderAPI->GetCascadedShadowMappingState( &pDepthTextureAtlas, true );
 
 				DynamicCmdsOut.BindTexture( pShader, SHADER_SAMPLER15, TEXTURE_BINDFLAGS_SHADOWDEPTH, pDepthTextureAtlas, 0 );
@@ -1408,7 +1408,7 @@ void DrawLightmappedGeneric_DX9_FastPath( int *dynVSIdx, int *dynPSIdx, CBaseVSS
 	pShaderAPI->SetBooleanPixelShaderConstant( 0, (BOOL*)&bCSMEnabled, 1 );
 	if ( bCSMEnabled )
 	{
-		ITexture *pDepthTextureAtlas = NULL;
+		ITexture *pDepthTextureAtlas = nullptr;
 		const CascadedShadowMappingState_t &cascadeState = pShaderAPI->GetCascadedShadowMappingState( &pDepthTextureAtlas, true );
 		pShader->BindTexture( SHADER_SAMPLER15, TEXTURE_BINDFLAGS_SHADOWDEPTH, pDepthTextureAtlas, 0 );
 		pShaderAPI->SetPixelShaderConstant( 64, &cascadeState.m_vLightColor.x, CASCADED_SHADOW_MAPPING_CONSTANT_BUFFER_SIZE );

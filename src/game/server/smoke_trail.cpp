@@ -116,7 +116,7 @@ SmokeTrail* SmokeTrail::CreateSmokeTrail()
 		}
 	}
 
-	return NULL;
+	return nullptr;
 }
 
 //-----------------------------------------------------------------------------
@@ -190,11 +190,11 @@ RocketTrail* RocketTrail::CreateRocketTrail()
 {
 	CBaseEntity *pEnt = CreateEntityByName( "env_rockettrail" );
 	
-	if( pEnt != NULL )
+	if( pEnt != nullptr )
 	{
 		RocketTrail *pTrail = dynamic_cast<RocketTrail*>(pEnt);
 		
-		if( pTrail != NULL )
+		if( pTrail != nullptr )
 		{
 			pTrail->Activate();
 			return pTrail;
@@ -205,7 +205,7 @@ RocketTrail* RocketTrail::CreateRocketTrail()
 		}
 	}
 
-	return NULL;
+	return nullptr;
 }
 
 //-----------------------------------------------------------------------------
@@ -273,7 +273,7 @@ SporeTrail* SporeTrail::CreateSporeTrail()
 		}
 	}
 
-	return NULL;
+	return nullptr;
 }
 
 //==================================================
@@ -331,7 +331,7 @@ SporeExplosion *SporeExplosion::CreateSporeExplosion()
 		}
 	}
 
-	return NULL;
+	return nullptr;
 }
 
 void SporeExplosion::InputEnable( inputdata_t &inputdata )
@@ -406,7 +406,7 @@ CFireTrail *CFireTrail::CreateFireTrail( void )
 		}
 	}
 
-	return NULL;	
+	return nullptr;	
 }
 
 
@@ -496,5 +496,5 @@ DustTrail* DustTrail::CreateDustTrail()
 		}
 	}
 
-	return NULL;
+	return nullptr;
 }

@@ -118,8 +118,8 @@ CReplayDirector::CReplayDirector()
 	m_iPVSEntity = 0;
 	m_fDelay = 30.0;
 	m_iLastPlayer = 1;
-	m_pReplayServer = NULL;
-	m_pReplayClient = NULL;
+	m_pReplayServer = nullptr;
+	m_pReplayClient = nullptr;
 	m_iCameraMan = 0;
 	m_nNumFixedCameras = 0;
 	m_EventHistory.SetLessFunc( GameEventLessFunc );
@@ -175,7 +175,7 @@ void CReplayDirector::SetReplayServer( IReplayServer *replay )
 		}
 		else
 		{
-			m_pReplayServer  = NULL;
+			m_pReplayServer  = nullptr;
 			Error( "Couldn't find Replay client player." );
 		}
 
@@ -191,13 +191,13 @@ void CReplayDirector::SetReplayServer( IReplayServer *replay )
 	else
 	{
 		// deactivate Replay director
-		m_pReplayServer = NULL;
+		m_pReplayServer = nullptr;
 	}
 }
 
 bool CReplayDirector::IsActive( void )
 {
-	return (m_pReplayServer != NULL );
+	return (m_pReplayServer != nullptr );
 }
 
 float CReplayDirector::GetDelay( void )
@@ -273,7 +273,7 @@ const char** CReplayDirector::GetModEvents()
 		"player_chat",
 		"round_start",
 		"round_end",
-		NULL
+		nullptr
 	};
 
 	return s_modevents;
@@ -285,11 +285,11 @@ void CReplayDirector::BuildCameraList( void )
 	m_nNumFixedCameras = 0;
 	memset( m_pFixedCameras, 0, sizeof ( m_pFixedCameras ) );
 
-	CBaseEntity *pCamera = gEntList.FindEntityByClassname( NULL, GetFixedCameraEntityName() );
+	CBaseEntity *pCamera = gEntList.FindEntityByClassname( nullptr, GetFixedCameraEntityName() );
 
 	while ( pCamera && m_nNumFixedCameras < MAX_NUM_CAMERAS)
 	{
-		CBaseEntity *pTarget = gEntList.FindEntityByName( NULL, STRING(pCamera->m_target) );
+		CBaseEntity *pTarget = gEntList.FindEntityByName( nullptr, STRING(pCamera->m_target) );
 
 		if ( pTarget )
 		{
@@ -572,7 +572,7 @@ void CReplayDirector::CreateShotFromEvent( CReplayGameEvent *event )
 		if ( !victim )
 			return;
 
-		if ( attacker == victim || attacker == NULL )
+		if ( attacker == victim || attacker == nullptr )
 		{
 			// player killed self or by WORLD
 			StartChaseCameraShot( victim->entindex(), 0, 96, 20, 0, false );
@@ -635,7 +635,7 @@ void CReplayDirector::RemoveEventsFromHistory(int tick)
 		if ( (dc.m_Tick < tick) || (tick == -1) )
 		{
 			gameeventmanager->FreeEvent( dc.m_Event );
-			dc.m_Event = NULL;
+			dc.m_Event = nullptr;
 			m_EventHistory.RemoveAt( index );
 			index = m_EventHistory.FirstInorder();	// start again
 		}
@@ -686,7 +686,7 @@ bool CReplayDirector::SetCameraMan( int iPlayerIndex )
 	if ( m_iCameraManIndex != 0 && iPlayerIndex != 0 )
 		return false;
 
-	CBasePlayer *pPlayer = NULL;
+	CBasePlayer *pPlayer = nullptr;
 
 	if ( iPlayerIndex > 0 )
 	{
@@ -990,7 +990,7 @@ CReplayGameEvent *CReplayDirector::FindBestGameEvent()
 	}
 
 	if ( !( bestEventPrio[0] || bestEventPrio[1] || bestEventPrio[2] ) )
-		return NULL; // no event found at all, give generic algorithm a chance
+		return nullptr; // no event found at all, give generic algorithm a chance
 
 	// camera cut rules :
 
@@ -1015,7 +1015,7 @@ CReplayGameEvent *CReplayDirector::FindBestGameEvent()
 		if ( bestEvent[0] )
 			return &m_EventHistory[ bestEvent[0] ];
 		else
-			return NULL;
+			return nullptr;
 	}
 }
 

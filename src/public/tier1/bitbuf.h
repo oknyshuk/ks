@@ -562,8 +562,8 @@ public:
 	// pOutNumChars is set to the number of characters left in pStr when the routine is 
 	// complete (this will never exceed bufLen-1).
 	//
-	bool			ReadString( char *pStr, int bufLen, bool bLine=false, int *pOutNumChars=NULL );
-	bool			ReadWString( wchar_t *pStr, int bufLen, bool bLine=false, int *pOutNumChars=NULL );
+	bool			ReadString( char *pStr, int bufLen, bool bLine=false, int *pOutNumChars=nullptr );
+	bool			ReadWString( wchar_t *pStr, int bufLen, bool bLine=false, int *pOutNumChars=nullptr );
 
 	// Reads a string and allocates memory for it. If the string in the buffer
 	// is > 2048 bytes, then pOverflow is set to true (if it's not NULL).
@@ -771,7 +771,7 @@ public:
 	CBitBuffer( void )
 	{
 		m_bOverflow = false;
-		m_pDebugName = NULL;
+		m_pDebugName = nullptr;
 		m_nDataBits = -1;
 		m_nDataBytes = 0;
 	}
@@ -1161,8 +1161,8 @@ public:
 	// pOutN<umChars is set to the number of characters left in pStr when the routine is 
 	// complete (this will never exceed bufLen-1).
 	//
-	bool ReadString( char *pStr, int bufLen, bool bLine=false, int *pOutNumChars=NULL );
-	bool ReadWString( OUT_Z_CAP(maxLenInChars) wchar_t *pStr, int maxLenInChars, bool bLine=false, int *pOutNumChars=NULL );
+	bool ReadString( char *pStr, int bufLen, bool bLine=false, int *pOutNumChars=nullptr );
+	bool ReadWString( OUT_Z_CAP(maxLenInChars) wchar_t *pStr, int maxLenInChars, bool bLine=false, int *pOutNumChars=nullptr );
 	char* ReadAndAllocateString( bool *pOverflow = 0 );
 
 	int64 ReadLongLong( void );

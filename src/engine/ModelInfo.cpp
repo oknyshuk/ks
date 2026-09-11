@@ -169,7 +169,7 @@ public:
 	virtual void					OnLevelChange();
 	virtual void					OnDynamicModelStringTableChanged( int nStringIndex, const char *pString, const void *pData ) { Assert(false); }
 
-	virtual model_t					*ReferenceModel( const char *name ) { return NULL; }
+	virtual model_t					*ReferenceModel( const char *name ) { return nullptr; }
 	virtual void					UnreferenceModel( model_t *model ) {}
 	virtual void					UnloadUnreferencedModels( void ) {}
 
@@ -192,7 +192,7 @@ protected:
 			m_NetworkedDynamicModels.SetCountNonDestructively( netidx + 1 );
 			for ( int i = origCount; i <= netidx; ++i )
 			{
-				m_NetworkedDynamicModels[i] = NULL;
+				m_NetworkedDynamicModels[i] = nullptr;
 			}
 		}
 	}
@@ -449,7 +449,7 @@ bool CModelInfo::IsUsingFBTexture( const model_t *model, int nSkin, int nBody, v
 				{
 					SurfaceHandle_t surfID = SurfaceHandleFromIndex( model->brush.firstmodelsurface+i, model->brush.pShared );
 					IMaterial* material = MSurf_TexInfo( surfID, model->brush.pShared )->material;
-					if ( material != NULL )
+					if ( material != nullptr )
 					{
 						if ( material->NeedsPowerOfTwoFrameBufferTexture() )
 						{
@@ -466,7 +466,7 @@ bool CModelInfo::IsUsingFBTexture( const model_t *model, int nSkin, int nBody, v
 				int materialCount = g_pStudioRender->GetMaterialListFromBodyAndSkin( model->studio, nSkin, nBody, ARRAYSIZE( pMaterials ), pMaterials );
 				for ( int i = 0; i < materialCount; i++ )
 				{
-					if ( pMaterials[i] != NULL )
+					if ( pMaterials[i] != nullptr )
 					{
 						// Bind material first so all material proxies execute
 						CMatRenderContextPtr pRenderContext( g_pMaterialSystem );
@@ -488,7 +488,7 @@ bool CModelInfo::IsUsingFBTexture( const model_t *model, int nSkin, int nBody, v
 
 RenderableTranslucencyType_t CModelInfo::ComputeTranslucencyType( const model_t *model, int nSkin, int nBody )
 {
-	if ( model != NULL )
+	if ( model != nullptr )
 		return Mod_ComputeTranslucencyType( (model_t *)model, nSkin, nBody );
 	return RENDERABLE_IS_OPAQUE;
 }
@@ -545,7 +545,7 @@ extern double g_flAccumulatedModelLoadTimeVCollideSync;
 vcollide_t *CModelInfo::GetVCollide( const model_t *pModel ) const
 {
 	if ( !pModel )
-		return NULL;
+		return nullptr;
 
 	if ( pModel->type == mod_studio )
 	{
@@ -562,7 +562,7 @@ vcollide_t *CModelInfo::GetVCollide( const model_t *pModel ) const
 		return GetVCollide( i );
 	}
 
-	return NULL;
+	return nullptr;
 }
 
 vcollide_t *CModelInfo::GetVCollide( int modelIndex ) const
@@ -596,18 +596,18 @@ vcollide_t *CModelInfo::GetVCollide( int modelIndex ) const
 			return CM_GetVCollide( modelIndex-1 );
 		}
 	}
-	return NULL;
+	return nullptr;
 }
 
 // Client must instantiate a KeyValues, which will be filled by this method
 const char *CModelInfo::GetModelKeyValueText( const model_t *model )
 {
 	if (!model || model->type != mod_studio)
-		return NULL;
+		return nullptr;
 
 	studiohdr_t* pStudioHdr = g_pMDLCache->GetStudioHdr( model->studio );
 	if (!pStudioHdr)
-		return NULL;
+		return nullptr;
 
 	return pStudioHdr->KeyValueText();
 }
@@ -688,7 +688,7 @@ studiohdr_t *CModelInfo::GetStudiomodel( const model_t *model )
 	if ( model->type == mod_studio )
 		return g_pMDLCache->GetStudioHdr( model->studio );
 
-	return NULL;
+	return nullptr;
 }
 
 CPhysCollide *CModelInfo::GetCollideForVirtualTerrain( int index )
@@ -763,7 +763,7 @@ model_t *CModelInfo::LookupDynamicModel( int i )
 	if ( IsClientOnlyModelIndex( i ) )
 	{
 		UtlHashHandle_t h = (UtlHashHandle_t) MODEL_TO_CLIENTSIDE( i );
-		return m_ClientDynamicModels.IsValidHandle( h ) ? m_ClientDynamicModels[ h ] : NULL;
+		return m_ClientDynamicModels.IsValidHandle( h ) ? m_ClientDynamicModels[ h ] : nullptr;
 	}
 	else
 	{
@@ -781,7 +781,7 @@ model_t *CModelInfo::LookupDynamicModel( int i )
 			return pModel;
 		}
 
-		return NULL;
+		return nullptr;
 	}
 }
 
@@ -806,7 +806,7 @@ void CModelInfo::UnregisterModelLoadCallback( int modelIndex, IModelLoadCallback
 {
 	if ( modelIndex == -1 )
 	{
-		modelloader->UnregisterModelLoadCallback( NULL, pCallback );
+		modelloader->UnregisterModelLoadCallback( nullptr, pCallback );
 	}
 	else if ( IsDynamicModelIndex( modelIndex ) )
 	{
@@ -917,7 +917,7 @@ int CModelInfoServer::RegisterDynamicModel( const char *name, bool bClientSide )
 	V_RemoveDotSlashes( buf, '/' );
 	name = buf;
 
-	Assert( StringHasPrefix( name, "models/" ) && V_strstr( name, ".mdl" ) != NULL );
+	Assert( StringHasPrefix( name, "models/" ) && V_strstr( name, ".mdl" ) != nullptr );
 
 	// Already known? bClientSide should always be false and is asserted above.
 	int index = GetModelIndex( name );
@@ -1217,7 +1217,7 @@ void CModelInfoClient::GetModelMaterialColorAndLighting( const model_t *model, c
 			// Get the lighting at the point
 			LightingState_t lightingState;
 			LightcacheGetDynamic_Stats stats;
-			LightcacheGetDynamic( pTrace->endpos, lightingState, stats, NULL, LIGHTCACHEFLAGS_STATIC|LIGHTCACHEFLAGS_DYNAMIC|LIGHTCACHEFLAGS_LIGHTSTYLE|LIGHTCACHEFLAGS_ALLOWFAST );
+			LightcacheGetDynamic( pTrace->endpos, lightingState, stats, nullptr, LIGHTCACHEFLAGS_STATIC|LIGHTCACHEFLAGS_DYNAMIC|LIGHTCACHEFLAGS_LIGHTSTYLE|LIGHTCACHEFLAGS_ALLOWFAST );
 			// Convert the light parameters into something studiorender can digest
 			LightDesc_t desc[MAXLOCALLIGHTS];
 			int count = 0;
@@ -1249,7 +1249,7 @@ int CModelInfoClient::RegisterDynamicModel( const char *name, bool bClientSide )
 	V_RemoveDotSlashes( buf, '/' );
 	name = buf;
 
-	Assert( V_strstr( name, ".mdl" ) != NULL );
+	Assert( V_strstr( name, ".mdl" ) != nullptr );
 
 	// Already known? bClientSide should always be true and is asserted above.
 	int index = GetModelClientSideIndex( name );

@@ -77,6 +77,6 @@ bool C_BreakableProp::ShouldPredict( void )
 
 C_BasePlayer *C_BreakableProp::GetPredictionOwner( void )
 {
-	return NULL;
+	return nullptr;
 }
 

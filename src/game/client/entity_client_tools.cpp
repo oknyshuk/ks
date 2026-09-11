@@ -147,7 +147,7 @@ private:
 	struct HToolEntry_t
 	{
 		HToolEntry_t() : m_Handle( 0 ) {}
-		explicit HToolEntry_t( int handle, C_BaseEntity *pEntity = NULL )
+		explicit HToolEntry_t( int handle, C_BaseEntity *pEntity = nullptr )
 			: m_Handle( handle ), m_hEntity( pEntity )
 		{
 			if ( pEntity )
@@ -410,7 +410,7 @@ C_BaseEntity *CClientTools::LookupEntity( HTOOLHANDLE handle )
 {
 	int idx = m_Handles.Find( HToolEntry_t( handle ) );
 	if ( idx == m_Handles.InvalidIndex() )
-		return NULL;
+		return nullptr;
 
 	return m_Handles[ idx ].m_hEntity;
 }
@@ -438,7 +438,7 @@ HTOOLHANDLE CClientTools::GetRecordable( int index )
 EntitySearchResult CClientTools::NextEntity( EntitySearchResult currentEnt )
 {
 	C_BaseEntity *ent = reinterpret_cast< C_BaseEntity* >( currentEnt );
-	if ( ent == NULL )
+	if ( ent == nullptr )
 	{
 		ent = cl_entitylist->FirstBaseEntity();
 	}
@@ -461,11 +461,11 @@ void CClientTools::SetEnabled( HTOOLHANDLE handle, bool enabled )
 
 	HToolEntry_t *slot = &m_Handles[ idx ];
 	Assert( slot );
-	if ( slot == NULL )
+	if ( slot == nullptr )
 		return;
 
 	C_BaseEntity *ent = slot->m_hEntity.Get();
-	if ( ent == NULL ||	ent->entindex() == 0 )
+	if ( ent == nullptr ||	ent->entindex() == 0 )
 		return; // Don't disable/enable the "world"
 
 	ent->EnableInToolView( enabled );
@@ -506,7 +506,7 @@ int CClientTools::GetModelIndex( HTOOLHANDLE handle )
 {
 	int idx = m_Handles.Find( HToolEntry_t( handle ) );
 	if ( idx == m_Handles.InvalidIndex() )
-		return NULL;
+		return 0;
 
 	HToolEntry_t &entry = m_Handles[ idx ];
 	if ( entry.m_hEntity )
@@ -525,7 +525,7 @@ const char* CClientTools::GetModelName( HTOOLHANDLE handle )
 {
 	int idx = m_Handles.Find( HToolEntry_t( handle ) );
 	if ( idx == m_Handles.InvalidIndex() )
-		return NULL;
+		return nullptr;
 
 	HToolEntry_t &entry = m_Handles[ idx ];
 	if ( entry.m_hEntity )
@@ -533,7 +533,7 @@ const char* CClientTools::GetModelName( HTOOLHANDLE handle )
 		return STRING( entry.m_hEntity->GetModelName() );
 	}
 	Assert( 0 );
-	return NULL;
+	return nullptr;
 }
 
 
@@ -544,7 +544,7 @@ const char* CClientTools::GetClassname( HTOOLHANDLE handle )
 {
 	int idx = m_Handles.Find( HToolEntry_t( handle ) );
 	if ( idx == m_Handles.InvalidIndex() )
-		return NULL;
+		return nullptr;
 
 	HToolEntry_t &entry = m_Handles[ idx ];
 	if ( entry.m_hEntity )
@@ -552,19 +552,19 @@ const char* CClientTools::GetClassname( HTOOLHANDLE handle )
 		return STRING( entry.m_hEntity->GetClassname() );
 	}
 	Assert( 0 );
-	return NULL;
+	return nullptr;
 }
 
 EntitySearchResult CClientTools::GetEntity( HTOOLHANDLE handle )
 {
 	int idx = m_Handles.Find( HToolEntry_t( handle ) );
 	if ( idx == m_Handles.InvalidIndex() )
-		return reinterpret_cast< EntitySearchResult >( NULL );
+		return reinterpret_cast< EntitySearchResult >( 0 );
 
 	HToolEntry_t *slot = &m_Handles[ idx ];
 	Assert( slot );
-	if ( slot == NULL )
-		return reinterpret_cast< EntitySearchResult >( NULL );
+	if ( slot == nullptr )
+		return reinterpret_cast< EntitySearchResult >( 0 );
 
 	C_BaseEntity *ent = slot->m_hEntity.Get();
 	return reinterpret_cast< EntitySearchResult >( ent );
@@ -630,7 +630,7 @@ bool CClientTools::GetLocalPlayerEyePosition( Vector& org, QAngle& ang, float &f
 {
 	ACTIVE_SPLITSCREEN_PLAYER_GUARD( 0 );
 	C_BasePlayer *pl = C_BasePlayer::GetLocalPlayer();
-	if ( pl == NULL )
+	if ( pl == nullptr )
 		return false;
 
 	org = pl->EyePosition();
@@ -644,8 +644,8 @@ bool CClientTools::GetLocalPlayerEyePosition( Vector& org, QAngle& ang, float &f
 //-----------------------------------------------------------------------------
 ParticleSystemSearchResult CClientTools::NextParticleSystem( ParticleSystemSearchResult sr )
 {
-	CNewParticleEffect *pParticleEffect = NULL;
-	if ( sr == NULL )
+	CNewParticleEffect *pParticleEffect = nullptr;
+	if ( sr == nullptr )
 	{
 		pParticleEffect = ParticleMgr()->FirstNewEffect();
 	}
@@ -659,7 +659,7 @@ ParticleSystemSearchResult CClientTools::NextParticleSystem( ParticleSystemSearc
 void CClientTools::SetRecording( ParticleSystemSearchResult sr, bool bRecord )
 {
 	Assert( sr );
-	if ( sr == NULL )
+	if ( sr == nullptr )
 		return;
 
 	CNewParticleEffect *pParticleEffect = reinterpret_cast< CNewParticleEffect* >( sr );
@@ -671,7 +671,7 @@ void CClientTools::SetRecording( ParticleSystemSearchResult sr, bool bRecord )
 //-----------------------------------------------------------------------------
 ClientShadowHandle_t CClientTools::CreateShadow( CBaseHandle h, int nFlags )
 {
-	return g_pClientShadowMgr->CreateShadow( h, nFlags, NULL );
+	return g_pClientShadowMgr->CreateShadow( h, nFlags, 0 );
 }
 
 void CClientTools::DestroyShadow( ClientShadowHandle_t h )
@@ -725,7 +725,7 @@ char const *CClientTools::GetGlobalFlexControllerName( int idx )
 EntitySearchResult CClientTools::GetOwnerEntity( EntitySearchResult currentEnt )
 {
 	C_BaseEntity *ent = reinterpret_cast< C_BaseEntity* >( currentEnt );
-	return ent ? ent->GetOwnerEntity() : NULL;
+	return ent ? ent->GetOwnerEntity() : nullptr;
 }
 //-----------------------------------------------------------------------------
 // common and useful types to query for hierarchically
@@ -751,21 +751,21 @@ bool CClientTools::IsNPC( EntitySearchResult currentEnt )
 bool CClientTools::IsRagdoll( EntitySearchResult currentEnt )
 {
 	C_BaseEntity *ent = reinterpret_cast< C_BaseEntity* >( currentEnt );
-	C_BaseAnimating *pBaseAnimating = ent ? ent->GetBaseAnimating() : NULL;
+	C_BaseAnimating *pBaseAnimating = ent ? ent->GetBaseAnimating() : nullptr;
 	return pBaseAnimating ? pBaseAnimating->IsClientRagdoll() : false;
 }
 
 bool CClientTools::IsViewModel( EntitySearchResult currentEnt )
 {
 	C_BaseEntity *ent = reinterpret_cast< C_BaseEntity* >( currentEnt );
-	C_BaseAnimating *pBaseAnimating = ent ? ent->GetBaseAnimating() : NULL;
+	C_BaseAnimating *pBaseAnimating = ent ? ent->GetBaseAnimating() : nullptr;
 	return pBaseAnimating ? pBaseAnimating->IsViewModel() : false;
 }
 
 bool CClientTools::IsViewModelOrAttachment( EntitySearchResult currentEnt )
 {
 	C_BaseEntity *ent = reinterpret_cast< C_BaseEntity* >( currentEnt );
-	C_BaseAnimating *pBaseAnimating = ent ? ent->GetBaseAnimating() : NULL;
+	C_BaseAnimating *pBaseAnimating = ent ? ent->GetBaseAnimating() : nullptr;
 	return pBaseAnimating ? pBaseAnimating->IsViewModelOrAttachment() : false;
 }
 

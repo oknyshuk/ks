@@ -101,8 +101,8 @@ int CAppSystemGroup::ReloadModule( const char * pDLLName )
 			Msg("Unloading module %s, dll %s\n", pModuleName, pDLLName );
 			Sys_UnloadModule( m_Modules[i].m_pModule );
 			Msg("Module %s unloaded, reloading\n", pModuleName );
-			CSysModule *pSysModule = NULL;
-			CreateInterfaceFn fnFactory = NULL;
+			CSysModule *pSysModule = nullptr;
+			CreateInterfaceFn fnFactory = nullptr;
 			while( !pSysModule )	   
 			{
 				pSysModule = LoadModuleDLL( pDLLName );
@@ -116,7 +116,7 @@ int CAppSystemGroup::ReloadModule( const char * pDLLName )
 				{
 					Error( "Could not get factory from %s\n", pModuleName );
 				}
-				( *fnFactory )( "Reload Interface", NULL ); // let the CreateInterface function work and do after-reload stuff
+				( *fnFactory )( "Reload Interface", nullptr ); // let the CreateInterface function work and do after-reload stuff
 			}
 			
 			Msg( "Reload complete, module %p->%p, factory %llx->%llx\n", module.m_pModule, pSysModule, (uint64)(uintp)module.m_Factory, (uint64)(uintp)fnFactory );
@@ -160,9 +160,9 @@ AppModule_t CAppSystemGroup::LoadModule( CreateInterfaceFn factory )
 	}
 
 	int nIndex = m_Modules.AddToTail();
-	m_Modules[nIndex].m_pModule = NULL;
+	m_Modules[nIndex].m_pModule = nullptr;
 	m_Modules[nIndex].m_Factory = factory;
-	m_Modules[nIndex].m_pModuleName = NULL; 
+	m_Modules[nIndex].m_pModuleName = nullptr; 
 	return nIndex;
 }
 
@@ -191,7 +191,7 @@ void CAppSystemGroup::UnloadAllModules()
 IAppSystem *CAppSystemGroup::AddSystem( AppModule_t module, const char *pInterfaceName )
 {
 	if (module == APP_MODULE_INVALID)
-		return NULL;
+		return nullptr;
 
 	int nFoundIndex = m_SystemDict.Find( pInterfaceName );
 	if ( nFoundIndex != m_SystemDict.InvalidIndex() )
@@ -208,7 +208,7 @@ IAppSystem *CAppSystemGroup::AddSystem( AppModule_t module, const char *pInterfa
 	if ((retval != IFACE_OK) || (!pSystem))
 	{
 		Warning("AppFramework : Unable to create system %s!\n", pInterfaceName );
-		return NULL;
+		return nullptr;
 	}
 
 	IAppSystem *pAppSystem = static_cast<IAppSystem*>(pSystem);
@@ -330,7 +330,7 @@ void *CAppSystemGroup::FindSystem( const char *pSystemName )
 	int nExternalCount = m_NonAppSystemFactories.Count();
 	for ( i = 0; i < nExternalCount; ++i )
 	{
-		void *pInterface = m_NonAppSystemFactories[i]( pSystemName, NULL );
+		void *pInterface = m_NonAppSystemFactories[i]( pSystemName, nullptr );
 		if (pInterface)
 			return pInterface;
 	}
@@ -343,7 +343,7 @@ void *CAppSystemGroup::FindSystem( const char *pSystemName )
 	}
 
 	// No dice..
-	return NULL;
+	return nullptr;
 }
 
 
@@ -479,7 +479,7 @@ void CAppSystemGroup::SortDependentLibraries( LibraryDependencies_t &depend )
 			}
 		}
 	}
-	sm_pSortDependencies = NULL;
+	sm_pSortDependencies = nullptr;
 
 
 	// This logic will make it so it respects the specified initialization order
@@ -547,7 +547,7 @@ const char *CAppSystemGroup::FindSystemName( int nIndex )
 		if ( m_SystemDict[i] == nIndex )
 			return m_SystemDict.GetElementName( i );
 	}
-	return NULL;
+	return nullptr;
 }
 
 
@@ -574,7 +574,7 @@ bool CAppSystemGroup::LoadDependentSystems()
 			dependencies[ pInterfaceName ].AddString( pDependencies->m_pInterfaceName );
 
 			CreateInterfaceFn factory = GetFactory();
-			if ( factory( pDependencies->m_pInterfaceName, NULL ) ) 
+			if ( factory( pDependencies->m_pInterfaceName, nullptr ) ) 
 				continue;
 
 			AppModule_t module = LoadModule( pDependencies->m_pModuleName );
@@ -666,7 +666,7 @@ void* CAppSystemGroup::CreateAppWindow( void *hInstance, const char *pTitle, boo
 // 	g_pGLXMgr->CreateWindow( pTitle, bWindowed, w, h );
 	return (void*)Sys_GetFactoryThis();	// Other stuff will query for ICocoaBridge out of this.
 #endif
-	return NULL;
+	return nullptr;
 }
 
 void CAppSystemGroup::SetAppWindowTitle( void* hWnd, const char *pTitle )
@@ -848,7 +848,7 @@ destroy:
 	// Have to do this because the logging listeners & response policies may live in modules which are being unloaded
 	// @TODO: this seems like a bad legacy practice... app systems should unload their spew handlers gracefully.
 	LoggingSystem_ResetCurrentLoggingState();
-	Assert( g_pDefaultLoggingListener != NULL );
+	Assert( g_pDefaultLoggingListener != nullptr );
 	LoggingSystem_RegisterLoggingListener( g_pDefaultLoggingListener );
 
 	UnloadAllModules();

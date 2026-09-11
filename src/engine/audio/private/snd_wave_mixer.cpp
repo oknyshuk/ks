@@ -119,7 +119,7 @@ CAudioMixer *CreateWaveMixer( IWaveData *data, int format, int channels, int bit
 	default:
 		// unsupported format or wav file missing!!!
 		Assert( false );
-		return NULL;
+		return nullptr;
 	}
 }
 
@@ -190,7 +190,7 @@ CAudioSource *CAudioMixerWave::GetSource( void )
 	if ( m_pData )
 		return &m_pData->Source();
 
-	return NULL;
+	return nullptr;
 }
 
 
@@ -300,8 +300,8 @@ char *CAudioMixerWave::LoadMixBuffer( channel_t *pChannel, int sample_load_reque
 {
 	VPROF( "CAudioMixerWave::LoadMixBuffer" );
 	int samples_loaded;
-	char *pSample = NULL;
-	char *pData = NULL;
+	char *pSample = nullptr;
+	char *pData = nullptr;
 	int cCopySamps = 0;
 
 	// save index of last sample loaded (updated in GetOutputData)
@@ -326,7 +326,7 @@ char *CAudioMixerWave::LoadMixBuffer( channel_t *pChannel, int sample_load_reque
 				Msg( "%s(%d): Sound '%s' is finished or accumulated too much latency.\n", __FILE__, __LINE__, sndname );
 			}
 		}
-		return NULL;
+		return nullptr;
 	}
 
 	int samplesize = GetMixSampleSize();
@@ -340,7 +340,7 @@ char *CAudioMixerWave::LoadMixBuffer( channel_t *pChannel, int sample_load_reque
 	{
 		Warning( "LoadMixBuffer: no paint buffer\n" );
 		*pSamplesLoaded = 0;
-		return NULL;
+		return nullptr;
 	}
 
 	// TERROR: enabling some checking
@@ -357,7 +357,7 @@ char *CAudioMixerWave::LoadMixBuffer( channel_t *pChannel, int sample_load_reque
 			DevWarning( "LoadMixBuffer: sample load request %d exceeds buffer sizes\n", sample_load_request );
 			Assert( 0 );
 			*pSamplesLoaded = 0;
-			return NULL;
+			return nullptr;
 		}
 	}
 
@@ -440,7 +440,7 @@ char *CAudioMixerWave::LoadMixBuffer( channel_t *pChannel, int sample_load_reque
 		
 		Warning( "CAudioMixerWave::LoadMixBuffer: '%s' samples_loaded * samplesize = %i but pData == NULL\n", pWavName, ( samples_loaded * samplesize ) );
 		*pSamplesLoaded = 0;
-		return NULL;
+		return nullptr;
 	}
 
 	pCopy += AppendToBuffer( pCopy, pData, samples_loaded * samplesize, pCopyBufferEnd );
@@ -468,7 +468,7 @@ char *CAudioMixerWave::LoadMixBuffer( channel_t *pChannel, int sample_load_reque
 				{
 					Warning( "CAudioMixerWave::LoadMixBuffer:  samples_loaded_retry * samplesize = %i but pData == NULL\n", ( samples_loaded_retry * samplesize ) );
 					*pSamplesLoaded = 0;
-					return NULL;
+					return nullptr;
 				}
 
 				pCopy += AppendToBuffer( pCopy, pData, samples_loaded_retry * samplesize, pCopyBufferEnd );
@@ -648,7 +648,7 @@ int CAudioMixerWave::MixDataToDevice_( channel_t *pChannel, int sampleCount, int
 	{	
 		bool advanceSample = true;
 		int samples_loaded, outputSampleCount;
-		char *pData = NULL;
+		char *pData = nullptr;
 		double fsample_index_prev = m_fsample_index;		// save so we can modify in LoadMixBuffer
 		bool bInterpolated_pitch = FUseHighQualityPitch( pChannel );
 		double rate;

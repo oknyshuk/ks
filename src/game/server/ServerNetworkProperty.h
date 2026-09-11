@@ -42,7 +42,7 @@ public:
 	void Init( CBaseEntity *pEntity );
 	void CacheServerClass();
 
-	void AttachEdict( edict_t *pRequiredEdict = NULL );
+	void AttachEdict( edict_t *pRequiredEdict = nullptr );
 	
 	// Methods to get the entindex + edict
 	int	entindex() const;
@@ -130,7 +130,7 @@ private:
 //-----------------------------------------------------------------------------
 inline CBaseNetworkable* CServerNetworkProperty::GetBaseNetworkable()
 {
-	return NULL;
+	return nullptr;
 }
 
 inline CBaseEntity* CServerNetworkProperty::GetBaseEntity()

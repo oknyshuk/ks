@@ -21,7 +21,7 @@
 
 CMiniProfiler *s_pLastMiniProfilerTS;
 
-static CLinkedMiniProfiler *s_pDummyList = NULL;
+static CLinkedMiniProfiler *s_pDummyList = nullptr;
 
 class CRootMiniProfiler : public CLinkedMiniProfiler
 {
@@ -37,8 +37,8 @@ CRootMiniProfiler g_rootMiniProfiler CONSTRUCT_EARLY;
 #undef MINIPROFILER_DLL_LINKAGE
 #define MINIPROFILER_DLL_LINKAGE
 	MINIPROFILER_DLL_LINKAGE CMiniProfiler *g_pRootMiniProfiler = &g_rootMiniProfiler;
-	MINIPROFILER_DLL_LINKAGE CLinkedMiniProfiler *g_pGlobalMiniProfilers = NULL;
-	MINIPROFILER_DLL_LINKAGE CLinkedMiniProfiler *g_pAssertMiniProfilers = NULL;
+	MINIPROFILER_DLL_LINKAGE CLinkedMiniProfiler *g_pGlobalMiniProfilers = nullptr;
+	MINIPROFILER_DLL_LINKAGE CLinkedMiniProfiler *g_pAssertMiniProfilers = nullptr;
 	MINIPROFILER_DLL_LINKAGE CMiniProfiler *g_pLastMiniProfiler = &g_rootMiniProfiler;
 	MINIPROFILER_DLL_LINKAGE uint32 g_nMiniProfilerFrame = 0;
 
@@ -110,8 +110,8 @@ void AppendMiniProfilerToList( CLinkedMiniProfiler *pProfiler, CLinkedMiniProfil
 			{
 				DebuggerBreak();
 			}
-			pProfiler->m_pNext = NULL;
-			pProfiler->m_ppPrev = NULL;
+			pProfiler->m_pNext = nullptr;
+			pProfiler->m_ppPrev = nullptr;
 		}
 	}
 	g_ProfilerListMutex.Unlock();
@@ -134,8 +134,8 @@ void RemoveMiniProfilerFromList( CLinkedMiniProfiler *pProfiler )
 	}
 
 	// unhook the profiler from the list completely, so that we don't try to do it twice
-	pProfiler->m_ppPrev = NULL;
-	pProfiler->m_pNext = NULL;
+	pProfiler->m_ppPrev = nullptr;
+	pProfiler->m_pNext = nullptr;
 	
 	g_ProfilerListMutex.Unlock();
 #endif // ENABLE_MINI_PROFILER
@@ -160,7 +160,7 @@ void CLinkedMiniProfiler::Publish(uint nHistoryMax)
 		if(nHistoryMax)
 			m_pHistory = new CMiniProfiler[nHistoryMax];
 		else
-			m_pHistory = NULL;
+			m_pHistory = nullptr;
 		m_nHistoryLength = 0;
 		m_nFrameHistoryBegins = g_nMiniProfilerFrame;
 	}
@@ -179,7 +179,7 @@ void CLinkedMiniProfiler::Publish(uint nHistoryMax)
 
 #if ENABLE_HARDWARE_PROFILER
 static char g_szFileName[128] = "";
-static FILE *g_pPurgeFile = NULL;
+static FILE *g_pPurgeFile = nullptr;
 #endif
 
 void CLinkedMiniProfiler::PurgeHistory()
@@ -272,7 +272,7 @@ DLL_EXPORT void PublishAllMiniProfilers(int nHistoryMax)
 			{
 				Msg("Closing profile: '%s'\n", g_szFileName);
 				fclose(g_pPurgeFile);
-				g_pPurgeFile = NULL;
+				g_pPurgeFile = nullptr;
 				g_szFileName[0] = '\0';
 			}
 		}

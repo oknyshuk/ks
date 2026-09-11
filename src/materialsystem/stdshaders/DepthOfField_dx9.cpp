@@ -211,7 +211,7 @@ BEGIN_VS_SHADER_FLAGS( DepthOfField_dx9, "Depth of Field", SHADER_NOT_EDITABLE )
 
 			// set up poisson sample location constants pre-divided by screen res
 			int nNumPoissonSamples = 0;
-			const float *pPoissonSrc = NULL;
+			const float *pPoissonSrc = nullptr;
 			switch ( params[QUALITY]->GetIntValue() )
 			{
 			case 0:

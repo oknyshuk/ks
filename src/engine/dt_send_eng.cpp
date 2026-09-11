@@ -134,7 +134,7 @@ public:
 		{
 			CSendNode *pCurChild = pNode->GetChild( iChild );
 			
-			unsigned char *pNewStructBase = NULL;
+			unsigned char *pNewStructBase = nullptr;
 			if ( pStructBase )
 			{
 				pNewStructBase = CallPropProxy( pCurChild, pCurChild->m_iDatatableProp, pStructBase );
@@ -494,9 +494,9 @@ static inline void ShowEncodeDeltaWatchInfo(
 	s_debug_info_shown = true;
 
 	DecodeInfo info;
-	info.m_pStruct = NULL;
-	info.m_pData = NULL;
-	info.m_pRecvProp = NULL;
+	info.m_pStruct = nullptr;
+	info.m_pData = nullptr;
+	info.m_pRecvProp = nullptr;
 	info.m_pProp = pProp;
 	info.m_pIn = &copy;
 	info.m_ObjectID = objectID;
@@ -1274,7 +1274,7 @@ void SendTable_CalcDelta(
 	const CSerializedEntity *pToEntity = (CSerializedEntity *)toEntity;
 
 	//if we don't have a from entity, the problem domain is to just go through the current entity and build a change list of which properties are non-zero
-	if( pFromEntity == NULL )
+	if( pFromEntity == nullptr )
 	{
 		BuildNonZeroDelta( pTable, pToEntity, objectID, deltaProps );
 		return;
@@ -1414,7 +1414,7 @@ class CPropOffsetStack : public CDatatableStack
 {
 public:
 	CPropOffsetStack( CSendTablePrecalc *pPrecalc ) :
-		CDatatableStack( pPrecalc, NULL, -1 )
+		CDatatableStack( pPrecalc, nullptr, -1 )
 	{
 		m_pPropMapStackPrecalc = pPrecalc;
 	}
@@ -1786,7 +1786,7 @@ CRC32_t SendTable_GetCRC()
 bool SendTable_CheckIntegrity( SendTable *pTable, const void *pData, const int nDataBits )
 {
 #ifdef _DEBUG
-	if ( pData == NULL && nDataBits == 0 )
+	if ( pData == nullptr && nDataBits == 0 )
 		return true;
 
 	bf_read bfRead(	"SendTable_CheckIntegrity", pData, Bits2Bytes(nDataBits), nDataBits );

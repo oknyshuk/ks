@@ -51,7 +51,7 @@ void ParticleSmokeGrenade::Spawn()
 	BaseClass::Spawn();
 
 	SetNextThink( gpGlobals->curtime );
-	m_creatorPlayer = NULL;
+	m_creatorPlayer = nullptr;
 }
 
 void ParticleSmokeGrenade::SetCreator(CBasePlayer *creator)

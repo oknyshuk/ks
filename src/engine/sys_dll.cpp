@@ -67,7 +67,7 @@ ConVar mem_max_heapsize_dedicated( "mem_max_heapsize_dedicated", "64", 0, "Maxim
 
 DEFINE_LOGGING_CHANNEL_NO_TAGS( LOG_SERVER_LOG, "ServerLog", LCF_DO_NOT_ECHO );
 
-char *CheckParm(const char *psz, char **ppszValue = NULL);
+char *CheckParm(const char *psz, char **ppszValue = nullptr);
 void SeedRandomNumberGenerator( bool random_invariant );
 void Con_ColorPrintf( const Color& clr, const char *fmt, ... );
 
@@ -82,10 +82,10 @@ char				gszExtendedDisconnectReason[256];
 bool				gfExtendedError = false;
 uint8				g_eSteamLoginFailure = 0;
 bool				g_bV3SteamInterface = false;
-CreateInterfaceFn	g_AppSystemFactory = NULL;
+CreateInterfaceFn	g_AppSystemFactory = nullptr;
 
 static bool			s_bIsDedicated = false;
-ConVar *sv_noclipduringpause = NULL;
+ConVar *sv_noclipduringpause = nullptr;
 
 // Special mode where the client uses a console window and has no graphics. Useful for stress-testing a server
 // without having to round up 32 people.
@@ -97,22 +97,22 @@ bool g_bInErrorExit = false;
 static FileFindHandle_t	g_hfind = FILESYSTEM_INVALID_FIND_HANDLE;
 
 // The extension DLL directory--one entry per loaded DLL
-CSysModule *g_GameDLL = NULL;
+CSysModule *g_GameDLL = nullptr;
 
 // Prototype of an global method function
 typedef void (DLLEXPORT * PFN_GlobalMethod)( edict_t *pEntity );
 
-IServerGameDLL	*serverGameDLL = NULL;
+IServerGameDLL	*serverGameDLL = nullptr;
 bool g_bServerGameDLLGreaterThanV5;
-IServerGameEnts *serverGameEnts = NULL;
+IServerGameEnts *serverGameEnts = nullptr;
 
-IServerGameClients *serverGameClients = NULL;
+IServerGameClients *serverGameClients = nullptr;
 int g_iServerGameClientsVersion = 0;	// This matches the number at the end of the interface name (so for "ServerGameClients004", this would be 4).
 
-IHLTVDirector	*serverGameDirector = NULL;
-IReplayDirector	*serverReplayDirector = NULL;
+IHLTVDirector	*serverGameDirector = nullptr;
+IReplayDirector	*serverReplayDirector = nullptr;
 
-IServerGameTags *serverGameTags = NULL;
+IServerGameTags *serverGameTags = nullptr;
 
 void Sys_InitArgv( char *lpCmdLine );
 void Sys_ShutdownArgv( void );
@@ -174,7 +174,7 @@ void Sys_mkdir( const char *path, const char *pPathID /*= 0*/ )
 
 	if ( IsSlash( testpath[0] ) && IsSlash( testpath[1] ) )
 	{
-		pPathID = NULL;
+		pPathID = nullptr;
 	}
 
 	Q_FixSlashes( testpath );
@@ -749,7 +749,7 @@ void DeveloperChangeCallback( IConVar *pConVar, const char *pOldString, float fl
 //-----------------------------------------------------------------------------
 void *GameFactory( const char *pName, int *pReturnCode )
 {
-	void *pRetVal = NULL;
+	void *pRetVal = nullptr;
 
 	// first ask the app factory
 	pRetVal = g_AppSystemFactory( pName, pReturnCode );
@@ -789,7 +789,7 @@ void *GameFactory( const char *pName, int *pReturnCode )
 		return pRetVal;
 #endif
 
-	return NULL;
+	return nullptr;
 }
 
 
@@ -926,7 +926,7 @@ CreateInterfaceFn g_ServerFactory;
 
 static bool LoadThisDll( char *szDllFilename, bool bServerOnly )
 {
-	CSysModule *pDLL = NULL;
+	CSysModule *pDLL = nullptr;
 
 	// check signature, don't let users with modified binaries connect to secure servers, they will get VAC banned
 	if ( !bServerOnly && !Host_AllowLoadModule( szDllFilename, "GAMEBIN", false ) )
@@ -938,7 +938,7 @@ static bool LoadThisDll( char *szDllFilename, bool bServerOnly )
 	// Load DLL, ignore if cannot
 	// ensures that the game.dll is running under Steam
 	// this will have to be undone when we want mods to be able to run
-	if ((pDLL = g_pFileSystem->LoadModule(szDllFilename, "GAMEBIN", false)) == NULL)
+	if ((pDLL = g_pFileSystem->LoadModule(szDllFilename, "GAMEBIN", false)) == nullptr)
 	{
 		ConMsg("Failed to load %s\n", szDllFilename);
 		goto IgnoreThisDLL;
@@ -949,14 +949,14 @@ static bool LoadThisDll( char *szDllFilename, bool bServerOnly )
 	if ( g_ServerFactory )
 	{
 		g_bServerGameDLLGreaterThanV5 = true;
-		serverGameDLL = (IServerGameDLL*)g_ServerFactory(INTERFACEVERSION_SERVERGAMEDLL, NULL);
+		serverGameDLL = (IServerGameDLL*)g_ServerFactory(INTERFACEVERSION_SERVERGAMEDLL, nullptr);
 		if ( !serverGameDLL )
 		{
 #ifdef REL_TO_STAGING_MERGE_TODO
 			// Need to merge eiface for this.
 			// g_bServerGameDLLGreaterThanV5 is true, so we get better stringtables
 			g_bServerGameDLLGreaterThanV5 = true;
-			serverGameDLL = (IServerGameDLL*)g_ServerFactory(INTERFACEVERSION_SERVERGAMEDLL_VERSION_5, NULL);
+			serverGameDLL = (IServerGameDLL*)g_ServerFactory(INTERFACEVERSION_SERVERGAMEDLL_VERSION_5, nullptr);
 #endif			
 			if ( !serverGameDLL )
 			{
@@ -966,14 +966,14 @@ static bool LoadThisDll( char *szDllFilename, bool bServerOnly )
 		}
 
 
-		serverGameEnts = (IServerGameEnts*)g_ServerFactory(INTERFACEVERSION_SERVERGAMEENTS, NULL);
+		serverGameEnts = (IServerGameEnts*)g_ServerFactory(INTERFACEVERSION_SERVERGAMEENTS, nullptr);
 		if ( !serverGameEnts )
 		{
 			ConMsg( "Could not get IServerGameEnts interface from library %s", szDllFilename );
 			goto IgnoreThisDLL;
 		}
 		
-		serverGameClients = (IServerGameClients*)g_ServerFactory(INTERFACEVERSION_SERVERGAMECLIENTS, NULL);
+		serverGameClients = (IServerGameClients*)g_ServerFactory(INTERFACEVERSION_SERVERGAMECLIENTS, nullptr);
 		if ( serverGameClients )
 		{
 			g_iServerGameClientsVersion = 4;
@@ -982,7 +982,7 @@ static bool LoadThisDll( char *szDllFilename, bool bServerOnly )
 		{
 			// Try the previous version.
 			const char *pINTERFACEVERSION_SERVERGAMECLIENTS_V3 = "ServerGameClients003";
-			serverGameClients = (IServerGameClients*)g_ServerFactory(pINTERFACEVERSION_SERVERGAMECLIENTS_V3, NULL);
+			serverGameClients = (IServerGameClients*)g_ServerFactory(pINTERFACEVERSION_SERVERGAMECLIENTS_V3, nullptr);
 			if ( serverGameClients )
 			{
 				g_iServerGameClientsVersion = 3;
@@ -993,21 +993,21 @@ static bool LoadThisDll( char *szDllFilename, bool bServerOnly )
 				goto IgnoreThisDLL;
 			}
 		}
-		serverGameDirector = (IHLTVDirector*)g_ServerFactory(INTERFACEVERSION_HLTVDIRECTOR, NULL);
+		serverGameDirector = (IHLTVDirector*)g_ServerFactory(INTERFACEVERSION_HLTVDIRECTOR, nullptr);
 		if ( !serverGameDirector )
 		{
 			ConMsg( "Could not get IHLTVDirector interface from library %s", szDllFilename );
 			// this is not a critical 
 		}
 
-		serverReplayDirector = (IReplayDirector*)g_ServerFactory(INTERFACEVERSION_REPLAYDIRECTOR, NULL);
+		serverReplayDirector = (IReplayDirector*)g_ServerFactory(INTERFACEVERSION_REPLAYDIRECTOR, nullptr);
 		if ( !serverReplayDirector )
 		{
 			ConMsg( "Could not get IReplayDirector interface from library %s", szDllFilename );
 			// this is not a critical 
 		}
 
-		serverGameTags = (IServerGameTags*)g_ServerFactory(INTERFACEVERSION_SERVERGAMETAGS, NULL);
+		serverGameTags = (IServerGameTags*)g_ServerFactory(INTERFACEVERSION_SERVERGAMETAGS, nullptr);
 		// Possible that this is NULL - optional interface
 	}
 	else
@@ -1020,12 +1020,12 @@ static bool LoadThisDll( char *szDllFilename, bool bServerOnly )
 	return true;
 
 IgnoreThisDLL:
-	if (pDLL != NULL)
+	if (pDLL != nullptr)
 	{
 		g_pFileSystem->UnloadModule(pDLL);
-		serverGameDLL = NULL;
-		serverGameEnts = NULL;
-		serverGameClients = NULL;
+		serverGameDLL = nullptr;
+		serverGameEnts = nullptr;
+		serverGameClients = nullptr;
 	}
 	return false;
 }
@@ -1040,8 +1040,8 @@ void LoadEntityDLLs( const char *szBaseDir, bool bServerOnly )
 	gmodinfo.svonly  = true;
 
 	// Run through all DLLs found in the extension DLL directory
-	g_GameDLL = NULL;
-	sv_noclipduringpause = NULL;
+	g_GameDLL = nullptr;
+	sv_noclipduringpause = nullptr;
 
 	// Listing file for this game.
 	KeyValues *modinfo = new KeyValues("modinfo");
@@ -1129,11 +1129,11 @@ void UnloadEntityDLLs( void )
 
 	// Unlink the cvars associated with game DLL
 	FileSystem_UnloadModule( g_GameDLL );
-	g_GameDLL = NULL;
-	serverGameDLL = NULL;
-	serverGameEnts = NULL;
-	serverGameClients = NULL;
-	sv_noclipduringpause = NULL;
+	g_GameDLL = nullptr;
+	serverGameDLL = nullptr;
+	serverGameEnts = nullptr;
+	serverGameClients = nullptr;
+	sv_noclipduringpause = nullptr;
 }
 
 CON_COMMAND( star_memory, "Dump memory stats" )

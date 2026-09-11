@@ -141,7 +141,7 @@ SQRESULT sqstd_format(HSQUIRRELVM v,SQInteger nformatstringidx,SQInteger *outlen
 
 static SQInteger _string_format(HSQUIRRELVM v)
 {
-	SQChar *dest = NULL;
+	SQChar *dest = nullptr;
 	SQInteger length = 0;
 	if(SQ_FAILED(sqstd_format(v,2,&length,&dest)))
 		return -1;
@@ -209,16 +209,16 @@ static SQInteger _string_split(HSQUIRRELVM v)
 	memcpy(stemp,str,memsize);
 	tok = scstrtok(stemp,seps);
 	sq_newarray(v,0);
-	while( tok != NULL ) {
+	while( tok != nullptr ) {
 		sq_pushstring(v,tok,-1);
 		sq_arrayappend(v,-2);
-		tok = scstrtok( NULL, seps );
+		tok = scstrtok( nullptr, seps );
 	}
 	return 1;
 }
 
 #define SETUP_REX(v) \
-	SQRex *self = NULL; \
+	SQRex *self = nullptr; \
 	sq_getinstanceup(v,1,(SQUserPointer *)&self,0); 
 
 static SQInteger _rexobj_releasehook(SQUserPointer p, SQInteger size)

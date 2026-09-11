@@ -125,7 +125,7 @@ void CUtlMemoryPool::ReportLeaks()
 	g_ReportFunc("Memory leak: mempool blocks left in memory: %d\n", m_BlocksAllocated);
 
 	// walk and destroy the free list so it doesn't intefere in the scan
-	while (m_pHeadOfFreeList != NULL)
+	while (m_pHeadOfFreeList != nullptr)
 	{
 		void *next = *((void**)m_pHeadOfFreeList);
 		memset(m_pHeadOfFreeList, 0, m_BlockSize);
@@ -217,7 +217,7 @@ void CUtlMemoryPool::AddNewBlob()
 	}
 
 	// null terminate list
-	newBlob[0] = NULL;
+	newBlob[0] = nullptr;
 	m_NumBlobs++;
 }
 
@@ -243,7 +243,7 @@ void *CUtlMemoryPool::Alloc( size_t amount )
 	void *returnBlock;
 
 	if ( amount > (size_t)m_BlockSize )
-		return NULL;
+		return nullptr;
 
 	if ( !m_pHeadOfFreeList )
 	{
@@ -251,7 +251,7 @@ void *CUtlMemoryPool::Alloc( size_t amount )
 		if ( m_GrowMode == GROW_NONE && m_NumBlobs > 0 )
 		{
 			//Assert( !"CUtlMemoryPool::Alloc: tried to make new blob with GROW_NONE" );
-			return NULL;
+			return nullptr;
 		}
 
 		// overflow
@@ -261,7 +261,7 @@ void *CUtlMemoryPool::Alloc( size_t amount )
 		if ( !m_pHeadOfFreeList )
 		{
 			Assert( !"CUtlMemoryPool::Alloc: ran out of memory" );
-			return NULL;
+			return nullptr;
 		}
 	}
 	m_BlocksAllocated++;

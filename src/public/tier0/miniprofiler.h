@@ -141,16 +141,16 @@ public:
 	//uint32 m_nId;
 #endif
 public:
-	CLinkedMiniProfiler( const char *pName, CLinkedMiniProfiler**ppList = &g_pGlobalMiniProfilers, CMiniProfiler *pDeclaredParent = NULL )
+	CLinkedMiniProfiler( const char *pName, CLinkedMiniProfiler**ppList = &g_pGlobalMiniProfilers, CMiniProfiler *pDeclaredParent = nullptr )
 	{
 #if ENABLE_MINI_PROFILER
 		m_pName = pName;
-		m_pLocation = NULL;
+		m_pLocation = nullptr;
 		// NOTE: m_pNext and m_ppPrev have to be NULLs the first time around. This constructor can be called multiple times
 		//       from multiple threads, and there's no way to ensure the constructor isn't called twice. CNetworkGameServerBase::SV_PackEntity() 
 		//       is an example of the function that enters from 2 threads and collides with itself in this constructor
 		AppendMiniProfilerToList( this, ppList );
-		m_pLastParent = NULL;
+		m_pLastParent = nullptr;
 		m_pDeclaredParent = pDeclaredParent;
 #endif
 	}
@@ -164,8 +164,8 @@ public:
 		//       from multiple threads, and there's no way to ensure the constructor isn't called twice. CNetworkGameServerBase::SV_PackEntity() 
 		//       is an example of the function that enters from 2 threads and collides with itself in this constructor
 		AppendMiniProfilerToList( this, &g_pGlobalMiniProfilers );
-		m_pLastParent = NULL;
-		m_pDeclaredParent = NULL;
+		m_pLastParent = nullptr;
+		m_pDeclaredParent = nullptr;
 #endif
 	}
 
@@ -174,9 +174,9 @@ public:
 	const char *GetName() const { return m_pName; }
 	const char *GetLocation( )const { return m_pLocation; }
 #else
-	CLinkedMiniProfiler *GetNext() { return NULL; }
+	CLinkedMiniProfiler *GetNext() { return nullptr; }
 	const char *GetName() const { return "DISABLED"; }
-	const char *GetLocation( )const { return NULL; }
+	const char *GetLocation( )const { return nullptr; }
 #endif
 
 	~CLinkedMiniProfiler()

@@ -130,7 +130,7 @@ inline IMaterial* CMaterialDict::GetMaterial( MaterialHandle_t idx ) const
 
 inline IMaterialInternal* CMaterialDict::GetMaterialInternal( MaterialHandle_t idx ) const
 {
-	Assert( (m_MaterialDict[idx].m_pMaterial == NULL) || m_MaterialDict[idx].m_pMaterial->IsRealTimeVersion() );	
+	Assert( (m_MaterialDict[idx].m_pMaterial == nullptr) || m_MaterialDict[idx].m_pMaterial->IsRealTimeVersion() );	
 	return m_MaterialDict[idx].m_pMaterial;
 }
 
@@ -147,7 +147,7 @@ inline IMaterialInternal* CMaterialDict::FindMaterial( const char *pszName, bool
 		return m_MaterialDict[h].m_pMaterial;
 	}
 
-	return NULL;
+	return nullptr;
 }
 
 

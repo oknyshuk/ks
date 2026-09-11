@@ -62,7 +62,7 @@ enum SQMetaMethod{
 
 struct SQRefCounted
 {
-	SQRefCounted() { _uiRef = 0; _weakref = NULL; }
+	SQRefCounted() { _uiRef = 0; _weakref = nullptr; }
 	virtual ~SQRefCounted();
 	virtual void Iterate( CSQStateIterator *pIterator ) {};
 	SQWeakRef *GetWeakRef(SQObjectType type);
@@ -100,7 +100,7 @@ struct SQObjectPtr;
 			SQ_VALIDATE_REF_COUNT( obj ); \
 			(obj)->Release(); \
 		} \
-		(obj) = NULL;	\
+		(obj) = nullptr;	\
 	} \
 }
 
@@ -148,7 +148,7 @@ struct SQObjectPtr : public SQObject
 	{
 		SQ_OBJECT_RAWINIT()
 		_type=OT_NULL;
-		_unVal.pUserPointer=NULL;
+		_unVal.pUserPointer=nullptr;
 	}
 	SQObjectPtr(const SQObjectPtr &o)
 	{
@@ -295,7 +295,7 @@ struct SQObjectPtr : public SQObject
 		tOldType = _type;
 		unOldVal = _unVal;
 		_type = OT_NULL;
-		_unVal.pUserPointer = NULL;
+		_unVal.pUserPointer = nullptr;
 		__Release(tOldType,unOldVal);
 	}
 	inline SQObjectPtr& operator=(SQInteger i)
@@ -358,7 +358,7 @@ struct SQCollectable : public SQRefCounted {
 #define ADD_TO_CHAIN(chain,obj) AddToChain(chain,obj)
 #define REMOVE_FROM_CHAIN(chain,obj) {if(!(_uiRef&MARK_FLAG))RemoveFromChain(chain,obj);}
 #define CHAINABLE_OBJ SQCollectable
-#define INIT_CHAIN() {_next=NULL;_prev=NULL;_sharedstate=ss;}
+#define INIT_CHAIN() {_next=nullptr;_prev=nullptr;_sharedstate=ss;}
 #else
 
 #define ADD_TO_CHAIN(chain,obj) ((void)0)

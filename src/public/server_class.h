@@ -33,7 +33,7 @@ public:
 					if ( !g_pServerClassHead )
 					{
 						g_pServerClassHead = this;
-						m_pNext = NULL;
+						m_pNext = nullptr;
 					}
 					else
 					{
@@ -47,12 +47,12 @@ public:
 						{
 							m_pNext = g_pServerClassHead;
 							g_pServerClassHead = this;
-							p1 = NULL;
+							p1 = nullptr;
 						}
 
 						while( p1 )
 						{
-							if ( p2 == NULL || V_stricmp( p2->GetName(), pNetworkName ) > 0)
+							if ( p2 == nullptr || V_stricmp( p2->GetName(), pNetworkName ) > 0)
 							{
 								m_pNext = p2;
 								p1->m_pNext = this;

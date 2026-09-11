@@ -137,7 +137,7 @@ CEffectsList::~CEffectsList( void )
 void CEffectsList::AddEffect( CClientSideEffect *effect )
 {
 
-	if ( effect == NULL )
+	if ( effect == nullptr )
 		return;
 
 	if ( m_nEffects >= MAX_EFFECTS )
@@ -215,7 +215,7 @@ void CEffectsList::Flush( void )
 	{
 		effect = m_rgEffects[ i ];
 		
-		if ( effect == NULL )
+		if ( effect == nullptr )
 			continue;
 
 		RemoveEffect( i );

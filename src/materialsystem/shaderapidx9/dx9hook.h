@@ -104,7 +104,7 @@ template < class _D3DINTERFACE > HRESULT AllocOverride( HRESULT *hr, class CDire
         {
             ( *ppHWObj )->Release();
             *hr = E_OUTOFMEMORY;
-            return NULL;
+            return nullptr;
         }
         pClass->m_Data.pDevice = pDevice;
 		pClass->m_Data.pHWObj = *ppHWObj;
@@ -122,7 +122,7 @@ template <class _D3DINTERFACE> _D3DINTERFACE *GetHWPtr( _D3DINTERFACE *pD3DInter
         CDx9HookBase< _D3DINTERFACE >::_HOOKCLASS *pClass = ( CDx9HookBase< _D3DINTERFACE >::_HOOKCLASS * )pD3DInterface;
 		return pClass->m_Data.pHWObj;
 	}
-	return NULL;
+	return nullptr;
 }
 
 template <class _D3DINTERFACE> CDirect3DDevice9Hook *GetHookDevice( _D3DINTERFACE *pD3DInterface )
@@ -132,7 +132,7 @@ template <class _D3DINTERFACE> CDirect3DDevice9Hook *GetHookDevice( _D3DINTERFAC
         CDx9HookBase< _D3DINTERFACE >::_HOOKCLASS *pClass = ( CDx9HookBase< _D3DINTERFACE >::_HOOKCLASS * )pD3DInterface;
 		return pClass->m_Data.pDevice;
 	}
-	return NULL;
+	return nullptr;
 }
 
 //$ TODO: if(riid == IID_IDirect3DDevice9Ex, IID_IDirect3DDevice9, etc.
@@ -549,7 +549,7 @@ public:
 
 	CDirect3DDevice9Hook() : CDx9HookBase<IDirect3DDevice9>(), IDirect3DDevice9()
 	{
-		D3D_BATCH_PERF( g_nTotalD3DCycles = 0; g_nTotalD3DCalls = 0; m_batch_state.Clear(); m_nTotalDraws = 0; m_nTotalPrims = 0; m_nTotalD3DCalls = 0; m_flTotalD3DTime = 0; m_nOverallDraws = 0; m_nOverallPrims = 0; m_nOverallD3DCalls = 0; m_flOverallD3DTime = 0; m_nTotalFrames = 0; m_pPrevRenderTarget0 = NULL; )
+		D3D_BATCH_PERF( g_nTotalD3DCycles = 0; g_nTotalD3DCalls = 0; m_batch_state.Clear(); m_nTotalDraws = 0; m_nTotalPrims = 0; m_nTotalD3DCalls = 0; m_flTotalD3DTime = 0; m_nOverallDraws = 0; m_nOverallPrims = 0; m_nOverallD3DCalls = 0; m_flOverallD3DTime = 0; m_nTotalFrames = 0; m_pPrevRenderTarget0 = nullptr; )
 	}
 
     // IDirect3DDevice9 methods
@@ -677,7 +677,7 @@ public:
 				}
 				m_nBatchVisY = 0;
 				m_nBatchVisFrameIndex = 0;
-				m_nBatchVisFileIdx = (uint)time(NULL); //rand();
+				m_nBatchVisFileIdx = (uint)time(nullptr); //rand();
 
 				m_nOverallDraws = 0;
 				m_nOverallPrims = 0;
@@ -1267,7 +1267,7 @@ public:
 			{
 				( *ppReturnedDeviceInterface )->Release();
 				hr = E_OUTOFMEMORY;
-				return NULL;
+				return nullptr;
 			}
 			pDevice->m_Data.pDevice = pDevice;
 			pDevice->m_Data.pHWObj = *ppReturnedDeviceInterface;
@@ -1281,7 +1281,7 @@ inline IDirect3D9 *Direct3DCreate9Hook( UINT SDKVersion )
 {
 	HRESULT hr = S_OK;
 	IDirect3D9 *pD3D = Direct3DCreate9( D3D_SDK_VERSION );
-	AllocOverride( &hr, NULL, &pD3D );
+	AllocOverride( &hr, nullptr, &pD3D );
 	return pD3D;
 }
 

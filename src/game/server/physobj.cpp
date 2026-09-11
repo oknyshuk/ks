@@ -64,8 +64,8 @@ public:
 
 	void GetSpringObjectConnections( string_t nameStart, string_t nameEnd, IPhysicsObject **pStart, IPhysicsObject **pEnd );
 	void NotifySystemEvent( CBaseEntity *pNotify, notify_system_event_t eventType, const notify_system_event_params_t &params );
-	IPhysicsObject *GetStartObject() { return m_pSpring ? m_pSpring->GetStartObject() : NULL; }
-	IPhysicsObject *GetEndObject() { return m_pSpring ? m_pSpring->GetEndObject() : NULL; }
+	IPhysicsObject *GetStartObject() { return m_pSpring ? m_pSpring->GetStartObject() : nullptr; }
+	IPhysicsObject *GetEndObject() { return m_pSpring ? m_pSpring->GetEndObject() : nullptr; }
 
 	DECLARE_DATADESC();
 
@@ -98,10 +98,10 @@ bool GetSpringAttachments( CBaseEntity *pEntity, CBaseEntity *pAttachOut[2], IPh
 	if ( pSpringEntity )
 	{
 		IPhysicsObject *pRef = pSpringEntity->GetStartObject();
-		pAttachOut[0] = pRef ? static_cast<CBaseEntity *>(pRef->GetGameData()) : NULL;
+		pAttachOut[0] = pRef ? static_cast<CBaseEntity *>(pRef->GetGameData()) : nullptr;
 		pAttachVPhysics[0] = pRef;
 		IPhysicsObject *pAttach = pSpringEntity->GetEndObject();
-		pAttachOut[1] = pAttach ? static_cast<CBaseEntity *>(pAttach->GetGameData()) : NULL;
+		pAttachOut[1] = pAttach ? static_cast<CBaseEntity *>(pAttach->GetGameData()) : nullptr;
 		pAttachVPhysics[1] = pAttach;
 		return true;
 	}
@@ -115,7 +115,7 @@ CPhysicsSpring::CPhysicsSpring( void )
 	m_start.Init();
 	m_end.Init();
 #endif
-	m_pSpring = NULL;
+	m_pSpring = nullptr;
 	m_tempConstant = 150;
 	m_tempLength = 0;
 	m_tempDamping = 2.0;
@@ -407,12 +407,12 @@ void CPhysBox::Spawn( void )
 	}
 	CreateVPhysics();
 
-	m_hCarryingPlayer = NULL;
+	m_hCarryingPlayer = nullptr;
 
 	SetTouch( &CPhysBox::BreakTouch );
 	if ( HasSpawnFlags( SF_BREAK_TRIGGER_ONLY ) )		// Only break on trigger
 	{
-		SetTouch( NULL );
+		SetTouch( nullptr );
 	}
 
 	if ( m_impactEnergyScale == 0 )
@@ -623,7 +623,7 @@ void CPhysBox::InputEnableMotion( inputdata_t &inputdata )
 void CPhysBox::EnableMotion( void )
 {
 	IPhysicsObject *pPhysicsObject = VPhysicsGetObject();
-	if ( pPhysicsObject != NULL )
+	if ( pPhysicsObject != nullptr )
 	{
 		pPhysicsObject->EnableMotion( true );
 		pPhysicsObject->Wake();
@@ -641,7 +641,7 @@ void CPhysBox::EnableMotion( void )
 void CPhysBox::InputDisableMotion( inputdata_t &inputdata )
 {
 	IPhysicsObject *pPhysicsObject = VPhysicsGetObject();
-	if ( pPhysicsObject != NULL )
+	if ( pPhysicsObject != nullptr )
 	{
 		pPhysicsObject->EnableMotion( false );
 	}
@@ -734,7 +734,7 @@ void CPhysBox::OnPhysGunDrop( CBasePlayer *pPhysGunUser, PhysGunDrop_t Reason )
 {
 	BaseClass::OnPhysGunDrop( pPhysGunUser, Reason );
 
-	m_hCarryingPlayer = NULL;
+	m_hCarryingPlayer = nullptr;
 	m_OnPhysGunDrop.FireOutput( pPhysGunUser, this );
 }
 
@@ -855,8 +855,8 @@ CBaseEntity *CPhysExplosion::FindEntity( CBaseEntity *pEntity, CBaseEntity *pAct
 	if ( m_targetEntityName != NULL_STRING )
 	{
 		// Try an explicit name first
-		CBaseEntity *pTarget = gEntList.FindEntityByName( pEntity, m_targetEntityName, NULL, pActivator, pCaller );
-		if ( pTarget != NULL )
+		CBaseEntity *pTarget = gEntList.FindEntityByName( pEntity, m_targetEntityName, nullptr, pActivator, pCaller );
+		if ( pTarget != nullptr )
 			return pTarget;
 
 		// Failing that, try a classname
@@ -887,7 +887,7 @@ void CPhysExplosion::InputExplodeAndRemove( inputdata_t &inputdata )
 //-----------------------------------------------------------------------------
 void CPhysExplosion::Explode( CBaseEntity *pActivator, CBaseEntity *pCaller )
 {
-	CBaseEntity *pEntity = NULL;
+	CBaseEntity *pEntity = nullptr;
 	float		adjustedDamage, falloff, flDist;
 	Vector		vecSpot, vecOrigin;
 
@@ -897,7 +897,7 @@ void CPhysExplosion::Explode( CBaseEntity *pActivator, CBaseEntity *pCaller )
 	// I've removed the traceline heuristic from phys explosions. SO right now they will
 	// affect entities through walls. (sjb)
 	// UNDONE: Try tracing world-only?
-	while ((pEntity = FindEntity( pEntity, pActivator, pCaller )) != NULL)
+	while ((pEntity = FindEntity( pEntity, pActivator, pCaller )) != nullptr)
 	{
 		// UNDONE: Ask the object if it should get force if it's not MOVETYPE_VPHYSICS?
 		if ( pEntity->m_takedamage != DAMAGE_NO && (pEntity->GetMoveType() == MOVETYPE_VPHYSICS || (pEntity->VPhysicsGetObject() /*&& !pEntity->IsPlayer()*/)) )
@@ -983,7 +983,7 @@ void CPhysExplosion::Explode( CBaseEntity *pActivator, CBaseEntity *pCaller )
 						}
 						if ( vecPush.z > 0 && (pEntity->GetFlags() & FL_ONGROUND) )
 						{
-							pEntity->SetGroundEntity( NULL );
+							pEntity->SetGroundEntity( nullptr );
 							Vector origin = pEntity->GetAbsOrigin();
 							origin.z += 1.0f;
 							pEntity->SetAbsOrigin( origin );
@@ -1048,7 +1048,7 @@ int CPhysExplosion::DrawDebugTextOverlays( void )
 //-----------------------------------------------------------------------------
 void CreatePhysExplosion( Vector origin, float magnitude, float radius, string_t target, float innerRadius, int flags )
 {
-	CPhysExplosion *pExplosion = (CPhysExplosion*)CBaseEntity::Create( "env_physexplosion", origin, vec3_angle, NULL );
+	CPhysExplosion *pExplosion = (CPhysExplosion*)CBaseEntity::Create( "env_physexplosion", origin, vec3_angle, nullptr );
 
 	pExplosion->m_damage = magnitude;
 	pExplosion->m_radius = radius;
@@ -1058,7 +1058,7 @@ void CreatePhysExplosion( Vector origin, float magnitude, float radius, string_t
 
 	variant_t emptyVariant;
 	pExplosion->Spawn();
-	pExplosion->AcceptInput( "ExplodeAndRemove", NULL, NULL, emptyVariant, 0 );
+	pExplosion->AcceptInput( "ExplodeAndRemove", nullptr, nullptr, emptyVariant, 0 );
 }
 
 
@@ -1159,7 +1159,7 @@ void CPhysImpact::InputImpact( inputdata_t &inputdata )
 	
 		IPhysicsObject *pPhysics = pEnt->VPhysicsGetObject();
 		//If the entity is valid, hit it
-		if ( ( pEnt != NULL  ) && ( pPhysics != NULL ) )
+		if ( ( pEnt != nullptr  ) && ( pPhysics != nullptr ) )
 		{
 			CTakeDamageInfo info;
 			info.SetAttacker( this);
@@ -1258,7 +1258,7 @@ bool TransferPhysicsObject( CBaseEntity *pFrom, CBaseEntity *pTo, bool wakeUp )
 		return false;
 
 	// clear out the pointer so it won't get deleted
-	pFrom->VPhysicsSwapObject( NULL );
+	pFrom->VPhysicsSwapObject( nullptr );
 	// remove any AI behavior bound to it
 	pVPhysics->RemoveShadowController();
 	// transfer to the new owner
@@ -1283,7 +1283,7 @@ bool TransferPhysicsObject( CBaseEntity *pFrom, CBaseEntity *pTo, bool wakeUp )
 // UNDONE: Move/rename this function
 static CBaseEntity *CreateSimplePhysicsObject( CBaseEntity *pEntity, bool createAsleep, bool createAsDebris )
 {
-	CBaseEntity *pPhysEntity = NULL;
+	CBaseEntity *pPhysEntity = nullptr;
 	int modelindex = pEntity->GetModelIndex();
 	const model_t *model = modelinfo->GetModel( modelindex );
 	if ( model && modelinfo->GetModelType(model) == mod_brush )
@@ -1346,11 +1346,11 @@ void CPhysConvert::InputConvertTarget( inputdata_t &inputdata )
 	m_OnConvert.FireOutput( inputdata.pActivator, this );
 
 	CBaseEntity *entlist[512];
-	CBaseEntity *pSwap = gEntList.FindEntityByName( NULL, m_swapModel, NULL, inputdata.pActivator, inputdata.pCaller );
-	CBaseEntity *pEntity = NULL;
+	CBaseEntity *pSwap = gEntList.FindEntityByName( nullptr, m_swapModel, nullptr, inputdata.pActivator, inputdata.pCaller );
+	CBaseEntity *pEntity = nullptr;
 	
 	int count = 0;
-	while ( (pEntity = gEntList.FindEntityByName( pEntity, m_target, NULL, inputdata.pActivator, inputdata.pCaller )) != NULL )
+	while ( (pEntity = gEntList.FindEntityByName( pEntity, m_target, nullptr, inputdata.pActivator, inputdata.pCaller )) != nullptr )
 	{
 		entlist[count++] = pEntity;
 		if ( count >= ARRAYSIZE(entlist) )
@@ -1498,7 +1498,7 @@ void CPhysMagnet::Spawn( void )
 	}
 
 	m_bActive = true;
-	m_pConstraintGroup = NULL;
+	m_pConstraintGroup = nullptr;
 	m_flTotalMass = 0;
 	m_flNextSuckTime = 0;
 
@@ -1622,7 +1622,7 @@ void CPhysMagnet::VPhysicsCollision( int index, gamevcollisionevent_t *pEvent )
 			pPhysics->WorldToLocal( &ballsocket.constraintPosition[1], vecCollisionPoint );
 
 			//newEntityOnMagnet.pConstraint = physenv->CreateBallsocketConstraint( pMagnetPhysObject, pPhysics, m_pConstraintGroup, ballsocket );
-			newEntityOnMagnet.pConstraint = physenv->CreateBallsocketConstraint( pMagnetPhysObject, pPhysics, NULL, ballsocket );
+			newEntityOnMagnet.pConstraint = physenv->CreateBallsocketConstraint( pMagnetPhysObject, pPhysics, nullptr, ballsocket );
 		}
 		else
 		{
@@ -1635,7 +1635,7 @@ void CPhysMagnet::VPhysicsCollision( int index, gamevcollisionevent_t *pEvent )
 
 			// FIXME: Use the magnet's constraint group.
 			//newEntityOnMagnet.pConstraint = physenv->CreateFixedConstraint( pMagnetPhysObject, pPhysics, m_pConstraintGroup, fixed );
-			newEntityOnMagnet.pConstraint = physenv->CreateFixedConstraint( pMagnetPhysObject, pPhysics, NULL, fixed );
+			newEntityOnMagnet.pConstraint = physenv->CreateFixedConstraint( pMagnetPhysObject, pPhysics, nullptr, fixed );
 		}
 
 		newEntityOnMagnet.pConstraint->SetGameData( (void *) this );
@@ -1691,7 +1691,7 @@ void CPhysMagnet::DoMagnetSuck( CBaseEntity *pOther )
 				Vector vecVelocity = (vecSuckPoint - pEntity->GetAbsOrigin());
 				VectorNormalize(vecVelocity);
 				vecVelocity *= 5 * pPhys->GetMass();
-				pPhys->AddVelocity( &vecVelocity, NULL );
+				pPhys->AddVelocity( &vecVelocity, nullptr );
 			}
 		}
 	}
@@ -1748,11 +1748,11 @@ void CPhysMagnet::ConstraintBroken( IPhysicsConstraint *pConstraint )
 	int iCount = m_MagnettedEntities.Count();
 	for ( int i = 0; i < iCount; i++ )
 	{
-		if ( m_MagnettedEntities[i].hEntity.Get() != NULL && m_MagnettedEntities[i].pConstraint == pConstraint )
+		if ( m_MagnettedEntities[i].hEntity.Get() != nullptr && m_MagnettedEntities[i].pConstraint == pConstraint )
 		{
 			IPhysicsObject *pPhysObject = m_MagnettedEntities[i].hEntity->VPhysicsGetObject();
 
-			if( pPhysObject != NULL )
+			if( pPhysObject != nullptr )
 			{
 				m_flTotalMass -= pPhysObject->GetMass();
 			}

@@ -162,7 +162,7 @@ public:
 		mstudioconstraintslave_t *pSlave,
 		CBoneAccessor &boneToWorld,
 		const CStudioHdr *pStudioHdr,
-		const matrix3x4_t *pmViewTransform = NULL );
+		const matrix3x4_t *pmViewTransform = nullptr );
 
 	// constraints
 	static void ComputePointConstraint(

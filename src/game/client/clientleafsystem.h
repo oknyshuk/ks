@@ -180,11 +180,11 @@ struct SetupRenderInfo_t
 
 	SetupRenderInfo_t()
 	{
-		m_pWorldListInfo = NULL;
-		m_pRenderList = NULL;
-		m_pCSMVolumeCuller = NULL;
-		m_pFrustum = NULL;
-		m_ppFrustumList = NULL;
+		m_pWorldListInfo = nullptr;
+		m_pRenderList = nullptr;
+		m_pCSMVolumeCuller = nullptr;
+		m_pFrustum = nullptr;
+		m_ppFrustumList = nullptr;
 		m_nBuildViewID = -1;
 		m_nOcclustionViewID = -1;
 

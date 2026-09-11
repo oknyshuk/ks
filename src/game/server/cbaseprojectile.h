@@ -32,7 +32,7 @@ public:
 		MoveCollide_t nMoveCollide,
 		int	iDamage,
 		int iDamageType,
-		CBaseEntity *pIntendedTarget = NULL );
+		CBaseEntity *pIntendedTarget = nullptr );
 
 	virtual void Precache( void ) {};
 

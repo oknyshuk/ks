@@ -82,7 +82,7 @@ const char *CClassMap::Lookup( const char *classname )
 
 	index = m_ClassDict.Find( classname );
 	if ( index == m_ClassDict.InvalidIndex() )
-		return NULL;
+		return nullptr;
 
 	lookup = m_ClassDict.Element( index );
 	return lookup.GetMapName();
@@ -113,7 +113,7 @@ C_BaseEntity *CClassMap::CreateEntity( const char *mapname )
 		return ( *lookup->factory )();
 	}
 
-	return NULL;
+	return nullptr;
 }
 
 int CClassMap::GetClassSize( const char *classname )

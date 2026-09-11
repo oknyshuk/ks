@@ -35,7 +35,7 @@ public:
 	virtual void VoiceResetLocalData( int iController ) = 0;
 
 	virtual void SetPlaybackPriority( XUID remoteTalker, int iController, int iAllowPlayback ) = 0;
-	virtual void PlayIncomingVoiceData( XUID xuid, const byte *pbData, unsigned int dwDataSize, const bool *bAudiblePlayers = NULL ) = 0;
+	virtual void PlayIncomingVoiceData( XUID xuid, const byte *pbData, unsigned int dwDataSize, const bool *bAudiblePlayers = nullptr ) = 0;
 
 	virtual void RemoveAllTalkers() = 0;
 };

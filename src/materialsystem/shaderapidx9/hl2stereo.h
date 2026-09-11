@@ -102,7 +102,7 @@ namespace nv
 				unsigned int stagingWidth = StereoTexWidth * 2;
 				unsigned int stagingHeight = StereoTexHeight + 1;
 
-				pDevice->CreateOffscreenPlainSurface( stagingWidth, stagingHeight, StereoTexFormat, D3DPOOL_SYSTEMMEM, &staging, NULL );
+				pDevice->CreateOffscreenPlainSurface( stagingWidth, stagingHeight, StereoTexFormat, D3DPOOL_SYSTEMMEM, &staging, nullptr );
 
 				if ( !staging )
 				{
@@ -110,7 +110,7 @@ namespace nv
 				}
 
 				D3DLOCKED_RECT lr;
-				staging->LockRect( &lr, NULL, 0 );
+				staging->LockRect( &lr, nullptr, 0 );
 				unsigned char *sysData = ( unsigned char * ) lr.pBits;
 				unsigned int sysMemPitch = stagingWidth * StereoBytesPerPixel;
 

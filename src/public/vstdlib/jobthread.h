@@ -101,7 +101,7 @@ enum JobPriority_t
 #define TP_MAX_POOL_THREADS	64
 struct ThreadPoolStartParams_t
 {
-	ThreadPoolStartParams_t( bool bIOThreads = false, unsigned nThreads = (unsigned)-1, int *pAffinities = NULL, ThreeState_t fDistribute = TRS_NONE, unsigned nStackSize = (unsigned)-1, int iThreadPriority = SHRT_MIN )
+	ThreadPoolStartParams_t( bool bIOThreads = false, unsigned nThreads = (unsigned)-1, int *pAffinities = nullptr, ThreeState_t fDistribute = TRS_NONE, unsigned nStackSize = (unsigned)-1, int iThreadPriority = SHRT_MIN )
 		: bIOThreads( bIOThreads ), nThreads( nThreads ), nThreadsMax( -1 ), fDistribute( fDistribute ), nStackSize( nStackSize ), iThreadPriority( iThreadPriority )
 	{
 		bExecOnThreadPoolThreadsOnly = false;
@@ -109,7 +109,7 @@ struct ThreadPoolStartParams_t
 		bEnableOnLinuxDedicatedServer = false; // by default, thread pools don't start up on Linux DS
 #endif
 
-		bUseAffinityTable = ( pAffinities != NULL ) && ( fDistribute == TRS_TRUE ) && ( nThreads != (unsigned)-1 );
+		bUseAffinityTable = ( pAffinities != nullptr ) && ( fDistribute == TRS_TRUE ) && ( nThreads != (unsigned)-1 );
 		if ( bUseAffinityTable )
 		{
 			// user supplied an optional 1:1 affinity mapping to override normal distribute behavior
@@ -203,7 +203,7 @@ public:
 	//-----------------------------------------------------
 	// Add an function object to the queue (master thread)
 	//-----------------------------------------------------
-	virtual void AddFunctor( CFunctor *pFunctor, CJob **ppJob = NULL, const char *pszDescription = NULL, unsigned flags = 0 ) { AddFunctorInternal( RetAddRef( pFunctor ), ppJob, pszDescription, flags ); }
+	virtual void AddFunctor( CFunctor *pFunctor, CJob **ppJob = nullptr, const char *pszDescription = nullptr, unsigned flags = 0 ) { AddFunctorInternal( RetAddRef( pFunctor ), ppJob, pszDescription, flags ); }
 
 	//-----------------------------------------------------
 	// Change the priority of an active job
@@ -213,8 +213,8 @@ public:
 	//-----------------------------------------------------
 	// Bulk job manipulation (blocking)
 	//-----------------------------------------------------
-	int ExecuteAll( JobFilter_t pfnFilter = NULL )	{ return ExecuteToPriority( JP_LOW, pfnFilter ); }
-	virtual int ExecuteToPriority( JobPriority_t toPriority, JobFilter_t pfnFilter = NULL  ) = 0;
+	int ExecuteAll( JobFilter_t pfnFilter = nullptr )	{ return ExecuteToPriority( JP_LOW, pfnFilter ); }
+	virtual int ExecuteToPriority( JobPriority_t toPriority, JobFilter_t pfnFilter = nullptr  ) = 0;
 	virtual int AbortAll() = 0;
 
 	//-----------------------------------------------------
@@ -340,7 +340,7 @@ public:
 		CJob *QueueCall(FUNCTION_RETTYPE (*pfnProxied)( FUNC_BASE_TEMPLATE_FUNC_PARAMS_##N ) FUNC_ARG_FORMAL_PARAMS_##N ) \
 		{ \
 			CJob *pJob; \
-			AddFunctorInternal( CreateFunctor( pfnProxied FUNC_FUNCTOR_CALL_ARGS_##N ), &pJob, NULL, JF_QUEUE ); \
+			AddFunctorInternal( CreateFunctor( pfnProxied FUNC_FUNCTOR_CALL_ARGS_##N ), &pJob, nullptr, JF_QUEUE ); \
 			return pJob; \
 		}
 
@@ -351,7 +351,7 @@ public:
 		CJob *QueueCall(OBJECT_TYPE *pObject, FUNCTION_RETTYPE ( FUNCTION_CLASS::*pfnProxied )( FUNC_BASE_TEMPLATE_FUNC_PARAMS_##N ) FUNC_ARG_FORMAL_PARAMS_##N ) \
 		{ \
 			CJob *pJob; \
-			AddFunctorInternal( CreateFunctor( pObject, pfnProxied FUNC_FUNCTOR_CALL_ARGS_##N ), &pJob, NULL, JF_QUEUE ); \
+			AddFunctorInternal( CreateFunctor( pObject, pfnProxied FUNC_FUNCTOR_CALL_ARGS_##N ), &pJob, nullptr, JF_QUEUE ); \
 			return pJob; \
 		}
 
@@ -362,7 +362,7 @@ public:
 		CJob *QueueCall(OBJECT_TYPE *pObject, FUNCTION_RETTYPE ( FUNCTION_CLASS::*pfnProxied )( FUNC_BASE_TEMPLATE_FUNC_PARAMS_##N ) const FUNC_ARG_FORMAL_PARAMS_##N ) \
 		{ \
 			CJob *pJob; \
-			AddFunctorInternal( CreateFunctor( pObject, pfnProxied FUNC_FUNCTOR_CALL_ARGS_##N ), &pJob, NULL, JF_QUEUE ); \
+			AddFunctorInternal( CreateFunctor( pObject, pfnProxied FUNC_FUNCTOR_CALL_ARGS_##N ), &pJob, nullptr, JF_QUEUE ); \
 			return pJob; \
 		}
 
@@ -373,7 +373,7 @@ public:
 		CJob *QueueRefCall(OBJECT_TYPE *pObject, FUNCTION_RETTYPE ( FUNCTION_CLASS::*pfnProxied )( FUNC_BASE_TEMPLATE_FUNC_PARAMS_##N ) FUNC_ARG_FORMAL_PARAMS_##N ) \
 		{ \
 			CJob *pJob; \
-			AddFunctorInternal( CreateRefCountingFunctor( pObject, pfnProxied FUNC_FUNCTOR_CALL_ARGS_##N ), &pJob, NULL, JF_QUEUE ); \
+			AddFunctorInternal( CreateRefCountingFunctor( pObject, pfnProxied FUNC_FUNCTOR_CALL_ARGS_##N ), &pJob, nullptr, JF_QUEUE ); \
 			return pJob; \
 		}
 
@@ -384,7 +384,7 @@ public:
 		CJob *QueueRefCall(OBJECT_TYPE *pObject, FUNCTION_RETTYPE ( FUNCTION_CLASS::*pfnProxied )( FUNC_BASE_TEMPLATE_FUNC_PARAMS_##N ) const FUNC_ARG_FORMAL_PARAMS_##N ) \
 		{ \
 			CJob *pJob; \
-			AddFunctorInternal( CreateRefCountingFunctor( pObject, pfnProxied FUNC_FUNCTOR_CALL_ARGS_##N ), &pJob, NULL, JF_QUEUE ); \
+			AddFunctorInternal( CreateRefCountingFunctor( pObject, pfnProxied FUNC_FUNCTOR_CALL_ARGS_##N ), &pJob, nullptr, JF_QUEUE ); \
 			\
 			return pJob; \
 		}
@@ -412,7 +412,7 @@ public:
 	#undef DEFINE_REF_COUNTING_CONST_MEMBER_QUEUE_CALL
 
 private:
-	virtual void AddFunctorInternal( CFunctor *, CJob ** = NULL, const char *pszDescription = NULL, unsigned flags = 0 ) = 0;
+	virtual void AddFunctorInternal( CFunctor *, CJob ** = nullptr, const char *pszDescription = nullptr, unsigned flags = 0 ) = 0;
 
 	//-----------------------------------------------------
 	// Services for internal use by job instances
@@ -422,7 +422,7 @@ private:
 	virtual CJob *GetDummyJob() = 0;
 
 public:
-	virtual void Distribute( bool bDistribute = true, int *pAffinityTable = NULL ) = 0;
+	virtual void Distribute( bool bDistribute = true, int *pAffinityTable = nullptr ) = 0;
 
 	virtual bool Start( const ThreadPoolStartParams_t &startParams, const char *pszNameOverride ) = 0;
 
@@ -467,7 +467,7 @@ public:
 		m_ThreadPoolData( JOB_NO_DATA ),
 		m_priority( priority ),
 		m_flags( 0 ),
-		m_pThreadPool( NULL ),
+		m_pThreadPool( nullptr ),
 		m_CompleteEvent( true ),
 		m_iServicingThread( -1 )
 	{
@@ -560,7 +560,7 @@ private:
 class CFunctorJob : public CJob
 {
 public:
-	CFunctorJob( CFunctor *pFunctor, const char *pszDescription = NULL )
+	CFunctorJob( CFunctor *pFunctor, const char *pszDescription = nullptr )
 		: m_pFunctor( pFunctor )
 	{
 		if ( pszDescription )
@@ -596,7 +596,7 @@ private:
 class CJobSet
 {
 public:
-	CJobSet( CJob *pJob = NULL )
+	CJobSet( CJob *pJob = nullptr )
 	{
 		if ( pJob )
 		{
@@ -812,7 +812,7 @@ template <typename T>
 class CFuncJobItemProcessor : public CJobItemProcessor<T>
 {
 public:
-	void Init(void (*pfnProcess)( T & ), void (*pfnBegin)() = NULL, void (*pfnEnd)() = NULL )
+	void Init(void (*pfnProcess)( T & ), void (*pfnBegin)() = nullptr, void (*pfnEnd)() = nullptr )
 	{
 		m_pfnProcess = pfnProcess;
 		m_pfnBegin = pfnBegin;
@@ -834,7 +834,7 @@ template <typename T, class OBJECT_TYPE, class FUNCTION_CLASS = OBJECT_TYPE >
 class CMemberFuncJobItemProcessor : public CJobItemProcessor<T>
 {
 public:
-	void Init( OBJECT_TYPE *pObject, void (FUNCTION_CLASS::*pfnProcess)( T & ), void (FUNCTION_CLASS::*pfnBegin)() = NULL, void (FUNCTION_CLASS::*pfnEnd)() = NULL )
+	void Init( OBJECT_TYPE *pObject, void (FUNCTION_CLASS::*pfnProcess)( T & ), void (FUNCTION_CLASS::*pfnBegin)() = nullptr, void (FUNCTION_CLASS::*pfnEnd)() = nullptr )
 	{
 		m_pObject = pObject;
 		m_pfnProcess = pfnProcess;
@@ -858,7 +858,7 @@ template <typename T>
 class CLoopFuncJobItemProcessor : public CJobItemProcessor<T>
 {
 public:
-	void Init(void (*pfnProcess)( T*, int, int ), void (*pfnBegin)() = NULL, void (*pfnEnd)() = NULL )
+	void Init(void (*pfnProcess)( T*, int, int ), void (*pfnBegin)() = nullptr, void (*pfnEnd)() = nullptr )
 	{
 		m_pfnProcess = pfnProcess;
 		m_pfnBegin = pfnBegin;
@@ -879,7 +879,7 @@ template <typename T, class OBJECT_TYPE, class FUNCTION_CLASS = OBJECT_TYPE >
 class CLoopMemberFuncJobItemProcessor : public CJobItemProcessor<T>
 {
 public:
-	void Init( OBJECT_TYPE *pObject, void (FUNCTION_CLASS::*pfnProcess)( T*, int, int ), void (FUNCTION_CLASS::*pfnBegin)() = NULL, void (FUNCTION_CLASS::*pfnEnd)() = NULL )
+	void Init( OBJECT_TYPE *pObject, void (FUNCTION_CLASS::*pfnProcess)( T*, int, int ), void (FUNCTION_CLASS::*pfnBegin)() = nullptr, void (FUNCTION_CLASS::*pfnEnd)() = nullptr )
 	{
 		m_pObject = pObject;
 		m_pfnProcess = pfnProcess;
@@ -912,7 +912,7 @@ public:
 		m_pItems = m_pLimit= 0;
 	}
 
-	void Run( ITEM_TYPE *pItems, unsigned nItems, int nChunkSize = 1, int nMaxParallel = INT_MAX, IThreadPool *pThreadPool = NULL )
+	void Run( ITEM_TYPE *pItems, unsigned nItems, int nChunkSize = 1, int nMaxParallel = INT_MAX, IThreadPool *pThreadPool = nullptr )
 	{
 		if ( nItems == 0 )
 			return;
@@ -1008,7 +1008,7 @@ private:
 #pragma warning(pop)
 
 template <typename ITEM_TYPE> 
-inline void ParallelProcess( ITEM_TYPE *pItems, unsigned nItems, void (*pfnProcess)( ITEM_TYPE & ), void (*pfnBegin)() = NULL, void (*pfnEnd)() = NULL, int nMaxParallel = INT_MAX )
+inline void ParallelProcess( ITEM_TYPE *pItems, unsigned nItems, void (*pfnProcess)( ITEM_TYPE & ), void (*pfnBegin)() = nullptr, void (*pfnEnd)() = nullptr, int nMaxParallel = INT_MAX )
 {
 	CParallelProcessor<ITEM_TYPE, CFuncJobItemProcessor<ITEM_TYPE> > processor;
 	processor.m_ItemProcessor.Init( pfnProcess, pfnBegin, pfnEnd );
@@ -1016,7 +1016,7 @@ inline void ParallelProcess( ITEM_TYPE *pItems, unsigned nItems, void (*pfnProce
 }
 
 template <typename ITEM_TYPE, typename OBJECT_TYPE, typename FUNCTION_CLASS > 
-inline void ParallelProcess( ITEM_TYPE *pItems, unsigned nItems, OBJECT_TYPE *pObject, void (FUNCTION_CLASS::*pfnProcess)( ITEM_TYPE & ), void (FUNCTION_CLASS::*pfnBegin)() = NULL, void (FUNCTION_CLASS::*pfnEnd)() = NULL, int nMaxParallel = INT_MAX )
+inline void ParallelProcess( ITEM_TYPE *pItems, unsigned nItems, OBJECT_TYPE *pObject, void (FUNCTION_CLASS::*pfnProcess)( ITEM_TYPE & ), void (FUNCTION_CLASS::*pfnBegin)() = nullptr, void (FUNCTION_CLASS::*pfnEnd)() = nullptr, int nMaxParallel = INT_MAX )
 {
 	CParallelProcessor<ITEM_TYPE, CMemberFuncJobItemProcessor<ITEM_TYPE, OBJECT_TYPE, FUNCTION_CLASS> > processor;
 	processor.m_ItemProcessor.Init( pObject, pfnProcess, pfnBegin, pfnEnd );
@@ -1025,7 +1025,7 @@ inline void ParallelProcess( ITEM_TYPE *pItems, unsigned nItems, OBJECT_TYPE *pO
 
 // Parallel Process that lets you specify threadpool
 template <typename ITEM_TYPE> 
-inline void ParallelProcess( IThreadPool *pPool, ITEM_TYPE *pItems, unsigned nItems, void (*pfnProcess)( ITEM_TYPE & ), void (*pfnBegin)() = NULL, void (*pfnEnd)() = NULL, int nMaxParallel = INT_MAX )
+inline void ParallelProcess( IThreadPool *pPool, ITEM_TYPE *pItems, unsigned nItems, void (*pfnProcess)( ITEM_TYPE & ), void (*pfnBegin)() = nullptr, void (*pfnEnd)() = nullptr, int nMaxParallel = INT_MAX )
 {
 	CParallelProcessor<ITEM_TYPE, CFuncJobItemProcessor<ITEM_TYPE> > processor;
 	processor.m_ItemProcessor.Init( pfnProcess, pfnBegin, pfnEnd );
@@ -1033,7 +1033,7 @@ inline void ParallelProcess( IThreadPool *pPool, ITEM_TYPE *pItems, unsigned nIt
 }
 
 template <typename ITEM_TYPE, typename OBJECT_TYPE, typename FUNCTION_CLASS > 
-inline void ParallelProcess( IThreadPool *pPool, ITEM_TYPE *pItems, unsigned nItems, OBJECT_TYPE *pObject, void (FUNCTION_CLASS::*pfnProcess)( ITEM_TYPE & ), void (FUNCTION_CLASS::*pfnBegin)() = NULL, void (FUNCTION_CLASS::*pfnEnd)() = NULL, int nMaxParallel = INT_MAX )
+inline void ParallelProcess( IThreadPool *pPool, ITEM_TYPE *pItems, unsigned nItems, OBJECT_TYPE *pObject, void (FUNCTION_CLASS::*pfnProcess)( ITEM_TYPE & ), void (FUNCTION_CLASS::*pfnBegin)() = nullptr, void (FUNCTION_CLASS::*pfnEnd)() = nullptr, int nMaxParallel = INT_MAX )
 {
 	CParallelProcessor<ITEM_TYPE, CMemberFuncJobItemProcessor<ITEM_TYPE, OBJECT_TYPE, FUNCTION_CLASS> > processor;
 	processor.m_ItemProcessor.Init( pObject, pfnProcess, pfnBegin, pfnEnd );
@@ -1047,7 +1047,7 @@ template <typename ITEM_TYPE>
 inline void ParallelProcessChunks( ITEM_TYPE *pItems, unsigned nItems, void (*pfnProcess)( ITEM_TYPE & ), int nChunkSize, int nMaxParallel = INT_MAX )
 {
 	CParallelProcessor<ITEM_TYPE, CFuncJobItemProcessor<ITEM_TYPE> > processor;
-	processor.m_ItemProcessor.Init( pfnProcess, NULL, NULL );
+	processor.m_ItemProcessor.Init( pfnProcess, nullptr, nullptr );
 	processor.Run( pItems, nItems, nChunkSize, nMaxParallel );
 }
 
@@ -1055,7 +1055,7 @@ template <typename ITEM_TYPE, typename OBJECT_TYPE, typename FUNCTION_CLASS >
 inline void ParallelProcessChunks( ITEM_TYPE *pItems, unsigned nItems, OBJECT_TYPE *pObject, void (FUNCTION_CLASS::*pfnProcess)( ITEM_TYPE & ), int nChunkSize, int nMaxParallel = INT_MAX )
 {
 	CParallelProcessor<ITEM_TYPE, CMemberFuncJobItemProcessor<ITEM_TYPE, OBJECT_TYPE, FUNCTION_CLASS> > processor;
-	processor.m_ItemProcessor.Init( pObject, pfnProcess, NULL, NULL );
+	processor.m_ItemProcessor.Init( pObject, pfnProcess, nullptr, nullptr );
 	processor.Run( pItems, nItems, nChunkSize, nMaxParallel );
 }
 
@@ -1063,7 +1063,7 @@ template <typename ITEM_TYPE, typename OBJECT_TYPE, typename FUNCTION_CLASS >
 inline void ParallelProcessChunks( IThreadPool *pPool, ITEM_TYPE *pItems, unsigned nItems, OBJECT_TYPE *pObject, void (FUNCTION_CLASS::*pfnProcess)( ITEM_TYPE & ), int nChunkSize, int nMaxParallel = INT_MAX )
 {
 	CParallelProcessor<ITEM_TYPE, CMemberFuncJobItemProcessor<ITEM_TYPE, OBJECT_TYPE, FUNCTION_CLASS> > processor;
-	processor.m_ItemProcessor.Init( pObject, pfnProcess, NULL, NULL );
+	processor.m_ItemProcessor.Init( pObject, pfnProcess, nullptr, nullptr );
 	processor.Run( pItems, nItems, nChunkSize, nMaxParallel, pPool );
 }
 
@@ -1079,7 +1079,7 @@ public:
 		m_nActive = 0;
 	}
 
-	void Run( CONTEXT_TYPE *pContext, int nBegin, int nItems, int nChunkCount, int nMaxParallel = INT_MAX, IThreadPool *pThreadPool = NULL )
+	void Run( CONTEXT_TYPE *pContext, int nBegin, int nItems, int nChunkCount, int nMaxParallel = INT_MAX, IThreadPool *pThreadPool = nullptr )
 	{
 		if ( !nItems )
 			return;
@@ -1167,7 +1167,7 @@ private:
 };
 
 template < typename CONTEXT_TYPE > 
-inline void ParallelLoopProcess( IThreadPool *pPool, CONTEXT_TYPE *pContext, int nStart, int nCount, void (*pfnProcess)( CONTEXT_TYPE*, int, int ), void (*pfnBegin)() = NULL, void (*pfnEnd)() = NULL, int nMaxParallel = INT_MAX )
+inline void ParallelLoopProcess( IThreadPool *pPool, CONTEXT_TYPE *pContext, int nStart, int nCount, void (*pfnProcess)( CONTEXT_TYPE*, int, int ), void (*pfnBegin)() = nullptr, void (*pfnEnd)() = nullptr, int nMaxParallel = INT_MAX )
 {
 	CParallelLoopProcessor< CONTEXT_TYPE, CLoopFuncJobItemProcessor< CONTEXT_TYPE > > processor;
 	processor.m_ItemProcessor.Init( pfnProcess, pfnBegin, pfnEnd );
@@ -1175,7 +1175,7 @@ inline void ParallelLoopProcess( IThreadPool *pPool, CONTEXT_TYPE *pContext, int
 }
 
 template < typename CONTEXT_TYPE, typename OBJECT_TYPE, typename FUNCTION_CLASS > 
-inline void ParallelLoopProcess( IThreadPool *pPool, CONTEXT_TYPE *pContext, int nStart, int nCount, OBJECT_TYPE *pObject, void (FUNCTION_CLASS::*pfnProcess)( CONTEXT_TYPE*, int, int ), void (FUNCTION_CLASS::*pfnBegin)() = NULL, void (FUNCTION_CLASS::*pfnEnd)() = NULL, int nMaxParallel = INT_MAX )
+inline void ParallelLoopProcess( IThreadPool *pPool, CONTEXT_TYPE *pContext, int nStart, int nCount, OBJECT_TYPE *pObject, void (FUNCTION_CLASS::*pfnProcess)( CONTEXT_TYPE*, int, int ), void (FUNCTION_CLASS::*pfnBegin)() = nullptr, void (FUNCTION_CLASS::*pfnEnd)() = nullptr, int nMaxParallel = INT_MAX )
 {
 	CParallelLoopProcessor< CONTEXT_TYPE, CLoopMemberFuncJobItemProcessor<CONTEXT_TYPE, OBJECT_TYPE, FUNCTION_CLASS> > processor;
 	processor.m_ItemProcessor.Init( pObject, pfnProcess, pfnBegin, pfnEnd );
@@ -1183,7 +1183,7 @@ inline void ParallelLoopProcess( IThreadPool *pPool, CONTEXT_TYPE *pContext, int
 }
 
 template < typename CONTEXT_TYPE > 
-inline void ParallelLoopProcessChunks( IThreadPool *pPool, CONTEXT_TYPE *pContext, int nStart, int nCount, int nChunkSize, void (*pfnProcess)( CONTEXT_TYPE*, int, int ), void (*pfnBegin)() = NULL, void (*pfnEnd)() = NULL, int nMaxParallel = INT_MAX )
+inline void ParallelLoopProcessChunks( IThreadPool *pPool, CONTEXT_TYPE *pContext, int nStart, int nCount, int nChunkSize, void (*pfnProcess)( CONTEXT_TYPE*, int, int ), void (*pfnBegin)() = nullptr, void (*pfnEnd)() = nullptr, int nMaxParallel = INT_MAX )
 {
 	CParallelLoopProcessor< CONTEXT_TYPE, CLoopFuncJobItemProcessor< CONTEXT_TYPE > > processor;
 	processor.m_ItemProcessor.Init( pfnProcess, pfnBegin, pfnEnd );
@@ -1191,7 +1191,7 @@ inline void ParallelLoopProcessChunks( IThreadPool *pPool, CONTEXT_TYPE *pContex
 }
 
 template < typename CONTEXT_TYPE, typename OBJECT_TYPE, typename FUNCTION_CLASS > 
-inline void ParallelLoopProcessChunks( IThreadPool *pPool, CONTEXT_TYPE *pContext, int nStart, int nCount, int nChunkSize, OBJECT_TYPE *pObject, void (FUNCTION_CLASS::*pfnProcess)( CONTEXT_TYPE*, int, int ), void (FUNCTION_CLASS::*pfnBegin)() = NULL, void (FUNCTION_CLASS::*pfnEnd)() = NULL, int nMaxParallel = INT_MAX )
+inline void ParallelLoopProcessChunks( IThreadPool *pPool, CONTEXT_TYPE *pContext, int nStart, int nCount, int nChunkSize, OBJECT_TYPE *pObject, void (FUNCTION_CLASS::*pfnProcess)( CONTEXT_TYPE*, int, int ), void (FUNCTION_CLASS::*pfnBegin)() = nullptr, void (FUNCTION_CLASS::*pfnEnd)() = nullptr, int nMaxParallel = INT_MAX )
 {
 	CParallelLoopProcessor< CONTEXT_TYPE, CLoopMemberFuncJobItemProcessor<CONTEXT_TYPE, OBJECT_TYPE, FUNCTION_CLASS> > processor;
 	processor.m_ItemProcessor.Init( pObject, pfnProcess, pfnBegin, pfnEnd );
@@ -1278,7 +1278,7 @@ inline uintp FunctorExecuteThread( void *pParam )
 	return 0;
 }
 
-inline ThreadHandle_t ThreadExecuteSoloImpl( CFunctor *pFunctor, const char *pszName = NULL )
+inline ThreadHandle_t ThreadExecuteSoloImpl( CFunctor *pFunctor, const char *pszName = nullptr )
 {
 	ThreadHandle_t hThread;
 	hThread = CreateSimpleThread( FunctorExecuteThread, pFunctor );

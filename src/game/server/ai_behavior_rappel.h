@@ -33,7 +33,7 @@ public:
 
 	virtual bool 	CanSelectSchedule();
 	void GatherConditions();
-	void CleanupOnDeath( CBaseEntity *pCulprit = NULL, bool bFireDeathOutput = true );
+	void CleanupOnDeath( CBaseEntity *pCulprit = nullptr, bool bFireDeathOutput = true );
 	
 	//virtual void	BeginScheduleSelection();
 	//virtual void	EndScheduleSelection();

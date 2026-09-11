@@ -215,7 +215,7 @@ public:
 
 	virtual const void* GetBits() const
 	{
-		return m_pBlob ? m_pBlob->GetBufferPointer() : NULL;
+		return m_pBlob ? m_pBlob->GetBufferPointer() : nullptr;
 	}
 
 	virtual void Release()

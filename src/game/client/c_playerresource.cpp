@@ -81,7 +81,7 @@ C_PlayerResource::C_PlayerResource()
 C_PlayerResource::~C_PlayerResource()
 {
     g_pRocketUI->RemoveDeviceDependentObject( this );
-    g_PR = NULL;
+    g_PR = nullptr;
 }
 
 void C_PlayerResource::OnDataChanged(DataUpdateType_t updateType)

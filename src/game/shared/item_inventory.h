@@ -34,7 +34,7 @@ public:
 	CScriptCreatedItem() {}
 	virtual ~CScriptCreatedItem() {}
 
-	CEconItemDefinition *GetItemDefinition() const { return NULL; }
+	CEconItemDefinition *GetItemDefinition() const { return nullptr; }
 };
 
 //-----------------------------------------------------------------------------

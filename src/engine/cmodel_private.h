@@ -280,7 +280,7 @@ inline void CRangeValidatedArray<T>::Attach( int nCount, T* pData )
 template <class T>
 inline void CRangeValidatedArray<T>::Detach()
 {
-	m_pArray = NULL;
+	m_pArray = nullptr;
 
 #ifdef DBGFLAG_ASSERT
 	m_nCount = 0;
@@ -312,7 +312,7 @@ public:
 	{
 	}
 
-	void Init( char* pFilename, int nOffset, int nCount, void *pData = NULL )
+	void Init( char* pFilename, int nOffset, int nCount, void *pData = nullptr )
 	{
 		if ( m_buf.TellPut() )
 		{
@@ -337,9 +337,9 @@ public:
 		{
 			MEM_ALLOC_CREDIT();
 
-			if ( !g_pFileSystem->ReadFile( m_pFilename, NULL, m_buf, sizeof(T) * m_nCount, m_nOffset ) )
+			if ( !g_pFileSystem->ReadFile( m_pFilename, nullptr, m_buf, sizeof(T) * m_nCount, m_nOffset ) )
 			{
-				return NULL;
+				return nullptr;
 			}
 		}
 
@@ -545,7 +545,7 @@ public:
 
 	CTraceListData() 
 	{
-		m_pEngineTrace = NULL;
+		m_pEngineTrace = nullptr;
 		m_bFoundNonSolidLeaf = false;
 		m_mins.Init();
 		m_maxs.Init();
@@ -560,11 +560,11 @@ public:
 		m_staticPropList.RemoveAll();
 		m_mins.Init();
 		m_maxs.Init();
-		m_pEngineTrace = NULL;
+		m_pEngineTrace = nullptr;
 		m_bFoundNonSolidLeaf = false;
 	}
 
-	bool IsEmpty() { return m_pEngineTrace == NULL ? true : false; }
+	bool IsEmpty() { return m_pEngineTrace == nullptr ? true : false; }
 	// For entities...
 	IterationRetval_t EnumElement( IHandleEntity *pHandleEntity );
 	bool CanTraceRay( const Ray_t &ray );

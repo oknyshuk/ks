@@ -121,7 +121,7 @@ inline CCountedStringPoolBase<T>::CCountedStringPoolBase( StringPoolCase_t caseS
 
 	m_FreeListStart = INVALID_ELEMENT;
 	m_Elements.AddToTail();
-	m_Elements[0].pString = NULL;
+	m_Elements[0].pString = nullptr;
 	m_Elements[0].nReferenceCount = 0;
 	m_Elements[0].nNextElement = INVALID_ELEMENT;
 
@@ -153,7 +153,7 @@ inline void CCountedStringPoolBase<T>::FreeAll()
 		if( m_Elements[i].pString )
 		{
 			delete [] m_Elements[i].pString;
-			m_Elements[i].pString = NULL;
+			m_Elements[i].pString = nullptr;
 			m_Elements[i].nReferenceCount = 0;
 			m_Elements[i].nNextElement = INVALID_ELEMENT;
 		}
@@ -162,7 +162,7 @@ inline void CCountedStringPoolBase<T>::FreeAll()
 	// Remove all but the invalid element:
 	m_Elements.RemoveAll();
 	m_Elements.AddToTail();
-	m_Elements[0].pString = NULL;
+	m_Elements[0].pString = nullptr;
 	m_Elements[0].nReferenceCount = 0;
 	m_Elements[0].nNextElement = INVALID_ELEMENT;
 }
@@ -180,7 +180,7 @@ inline unsigned CCountedStringPoolBase<T>::Hash( const char *pszKey )
 template<class T>
 inline T CCountedStringPoolBase<T>::FindStringHandle( const char* pIntrinsic )
 {
-	if( pIntrinsic == NULL )
+	if( pIntrinsic == nullptr )
 		return INVALID_ELEMENT;
 
 	T nHashBucketIndex = ( Hash( pIntrinsic ) %HASH_TABLE_SIZE);
@@ -205,8 +205,8 @@ inline T CCountedStringPoolBase<T>::FindStringHandle( const char* pIntrinsic )
 template<class T>
 inline char* CCountedStringPoolBase<T>::FindString( const char* pIntrinsic )
 {
-	if( pIntrinsic == NULL )
-		return NULL;
+	if( pIntrinsic == nullptr )
+		return nullptr;
 
 	// Yes, this will be NULL on failure.
 	return m_Elements[FindStringHandle(pIntrinsic)].pString;
@@ -215,7 +215,7 @@ inline char* CCountedStringPoolBase<T>::FindString( const char* pIntrinsic )
 template<class T>
 inline T CCountedStringPoolBase<T>::ReferenceStringHandle( const char* pIntrinsic )
 {
-	if( pIntrinsic == NULL )
+	if( pIntrinsic == nullptr )
 		return INVALID_ELEMENT;
 
 	T nHashBucketIndex = ( Hash( pIntrinsic ) % HASH_TABLE_SIZE);
@@ -272,7 +272,7 @@ template<class T>
 inline char* CCountedStringPoolBase<T>::ReferenceString( const char* pIntrinsic )
 {
 	if(!pIntrinsic)
-		return NULL;
+		return nullptr;
 
 	return m_Elements[ReferenceStringHandle( pIntrinsic)].pString; 
 }
@@ -313,7 +313,7 @@ inline void CCountedStringPoolBase<T>::DereferenceString( const char* pIntrinsic
 				}
 
 				delete [] m_Elements[nCurrentBucket].pString;
-				m_Elements[nCurrentBucket].pString = NULL;
+				m_Elements[nCurrentBucket].pString = nullptr;
 				m_Elements[nCurrentBucket].nReferenceCount = 0;
 
 				m_Elements[nCurrentBucket].nNextElement = m_FreeListStart;
@@ -341,7 +341,7 @@ inline void CCountedStringPoolBase<T>::SpewStrings()
 	{
 		char* string = m_Elements[i].pString;
 
-		Msg("String %d: ref:%d %s\n", i, m_Elements[i].nReferenceCount, string == NULL? "EMPTY - ok for slot zero only!" : string);
+		Msg("String %d: ref:%d %s\n", i, m_Elements[i].nReferenceCount, string == nullptr? "EMPTY - ok for slot zero only!" : string);
 	}
 
 	Msg("\n%d total counted strings.", m_Elements.Count());

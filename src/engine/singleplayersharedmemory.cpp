@@ -15,7 +15,7 @@ CSPSharedMemoryManager *g_pSinglePlayerSharedMemoryManager = &s_SinglePlayerShar
 class CSPSharedMemory : public ISPSharedMemory
 {
 public:
-	CSPSharedMemory( void ) : m_pMemory(NULL), m_Size(0), m_iRefCount(0) { };
+	CSPSharedMemory( void ) : m_pMemory(nullptr), m_Size(0), m_iRefCount(0) { };
 	~CSPSharedMemory( void );
 
 	virtual bool	Init( size_t iSize ); //Initial implementation assumes the size is fixed/hardcoded
@@ -58,7 +58,7 @@ bool CSPSharedMemory::Init( size_t iSize )
 
 uint8 * CSPSharedMemory::Base( void )
 {
-	Assert( m_pMemory != NULL );
+	Assert( m_pMemory != nullptr );
 	return m_pMemory;
 }
 

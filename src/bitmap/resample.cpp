@@ -659,7 +659,7 @@ bool ResampleRGBA8888( const ResampleInfo_t& info )
 		kernel.m_pInvKernel = pInvKernelMem;
 	}
 
-	float *pAlphaResult = NULL;
+	float *pAlphaResult = nullptr;
 	KernelType_t type;
 	if ( info.m_nFlags & RESAMPLE_NORMALMAP )
 	{

@@ -25,7 +25,7 @@ LINK_ENTITY_TO_CLASS_ALIASED(env_detail_controller,	EnvDetailController);
 
 IMPLEMENT_REFLECT_TABLE( CEnvDetailController, DT_DetailController );
 
-static CEnvDetailController *s_detailController = NULL;
+static CEnvDetailController *s_detailController = nullptr;
 CEnvDetailController * GetDetailController()
 {
 	return s_detailController;
@@ -40,7 +40,7 @@ CEnvDetailController::~CEnvDetailController()
 {
 	if ( s_detailController == this )
 	{
-		s_detailController = NULL;
+		s_detailController = nullptr;
 	}
 }
 

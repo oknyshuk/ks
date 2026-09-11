@@ -359,7 +359,7 @@ PLATFORM_INTERFACE TelemetryData g_Telemetry;
 //Parameters
 //	cx [in] handle to a valid Telemetry context
 //	kpString [in] string to copy
-#define TM_DYNAMIC_STRING( context, kpString ) TELEMETRY_REQUIRED_REPLACE( tmDynamicString( context, kpString ), NULL )
+#define TM_DYNAMIC_STRING( context, kpString ) TELEMETRY_REQUIRED_REPLACE( tmDynamicString( context, kpString ), nullptr )
 
 
 //void tmClearStaticString( HTELEMETRY cx,char const * kpString );
@@ -1054,7 +1054,7 @@ public:
 		if( m_plocation )
 		{
 			TM_SET_LOCK_STATE( TELEMETRY_LEVEL1, m_plocation, TMLS_RELEASED, "%s Released", m_description );
-			m_plocation = NULL;
+			m_plocation = nullptr;
 		}
 	}
 
@@ -1103,7 +1103,7 @@ public:
 	CTelemetryZonePlotScope(HTELEMETRY context, const char* pName, TelemetryZonePlotSlot_t slot)
 	:
 		m_Context(context),
-		m_SlotData(NULL),
+		m_SlotData(nullptr),
 		m_StartTime(0)
 	{
 		if ( slot < TELEMETRY_ZONE_PLOT_SLOT_MAX )

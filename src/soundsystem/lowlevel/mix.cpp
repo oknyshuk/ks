@@ -757,7 +757,7 @@ const short *GetContiguousSamples_16Mono( const audio_source_input_t &source, co
 		// optimization: if the entire request can be satisfied by the current packet, just point to that (don't copy)
 		if ( nSamplesAvailable >= nSamplesNeeded )
 		{
-			Assert( source.m_pPackets[nPacketIndex].m_pSamples != NULL );
+			Assert( source.m_pPackets[nPacketIndex].m_pSamples != nullptr );
 			return source.m_pPackets[nPacketIndex].m_pSamples + nSampleIndex;
 		}
 
@@ -783,7 +783,7 @@ const short *GetContiguousSamples_16Mono( const audio_source_input_t &source, co
 		}
 		return pTemp;
 	}
-	return NULL;
+	return nullptr;
 }
 
 const short *GetContiguousSamples_16Stereo( const audio_source_input_t &source, const audio_source_indexstate_t *pState, int nSamplesNeeded, short *pTemp, int nTempSampleCount, int nChannel )
@@ -882,7 +882,7 @@ int ConvertSourceToFloat( const audio_source_input_t &source, float flPitch, flo
 #endif
 	}
 
-	const short *pSourceData = NULL;
+	const short *pSourceData = nullptr;
 	// Grab a pointer to a joined set of sample data at the right length
 	if ( source.m_nSampleFormat == SAMPLE_INT8_MONO )
 	{

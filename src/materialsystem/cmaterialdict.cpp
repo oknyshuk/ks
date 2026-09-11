@@ -102,7 +102,7 @@ IMaterialInternal* CMaterialDict::AddMaterial( char const* pName, const char *pT
 
 void CMaterialDict::RemoveMaterial( IMaterialInternal* pMaterial )
 {
-	Assert( (pMaterial == NULL) || pMaterial->IsRealTimeVersion() );
+	Assert( (pMaterial == nullptr) || pMaterial->IsRealTimeVersion() );
 	RemoveMaterialFromMaterialList( pMaterial );
 	IMaterialInternal::DestroyMaterial( pMaterial );
 }

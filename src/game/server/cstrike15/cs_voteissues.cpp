@@ -128,7 +128,7 @@ ConVar sv_vote_kick_ban_duration( "sv_vote_kick_ban_duration", "15", FCVAR_REPLI
 //-----------------------------------------------------------------------------
 void CKickIssue::ExecuteCommand( void )
 {
-	CCSPlayer *subject = NULL;
+	CCSPlayer *subject = nullptr;
 
 	//[tj] Not applicable without TF-specific GC code
 	//uint32 unReason = kVoteKickBanPlayerReason_Other;	
@@ -186,7 +186,7 @@ bool CKickIssue::CanCallVote( int iEntIndex, const char *pszTypeString, const ch
 		return false;
 	}
 
-	CCSPlayer *pSubject = NULL;
+	CCSPlayer *pSubject = nullptr;
 	ExtractDataFromDetails( pszDetails, &pSubject );
 	if ( !pSubject || pSubject->IsBot() )
 	{
@@ -255,7 +255,7 @@ void CKickIssue::OnVoteFailed( void )
 {
 	CBaseCSIssue::OnVoteFailed();
 
-	CCSPlayer *subject = NULL;
+	CCSPlayer *subject = nullptr;
 	uint32 unReason;// = kVoteKickBanPlayerReason_Other;
 	ExtractDataFromDetails( m_szDetailsString, &subject, &unReason );
 
@@ -268,7 +268,7 @@ void CKickIssue::OnVoteFailed( void )
 //-----------------------------------------------------------------------------
  void CKickIssue::OnVoteStarted( void )
  {
-	 CCSPlayer *pSubject = NULL;
+	 CCSPlayer *pSubject = nullptr;
 	 ExtractDataFromDetails(	m_szDetailsString, &pSubject );
 
 	 // Auto vote 'No' for the person being kicked unless they are idle
@@ -308,7 +308,7 @@ void CKickIssue::OnVoteFailed( void )
 const char *CKickIssue::GetDisplayString( void )
 {
 	uint32 unReason = kVoteKickBanPlayerReason_Other;
-	ExtractDataFromDetails( m_szDetailsString, NULL, &unReason );
+	ExtractDataFromDetails( m_szDetailsString, nullptr, &unReason );
 	switch ( unReason )
 	{
 	case kVoteKickBanPlayerReason_Other:	return "#SFUI_vote_kick_player_other";
@@ -342,7 +342,7 @@ const char *CKickIssue::GetDetailsString( void )
 {
 	int iUserID = 0;
 	const char *pReason = strstr( m_szDetailsString, " " );
-	if ( pReason != NULL )
+	if ( pReason != nullptr )
 	{
 		pReason += 1;
 		CUtlString userID;
@@ -372,7 +372,7 @@ void CKickIssue::ExtractDataFromDetails( const char *pszDetails, CCSPlayer **pSu
 {
 	int iUserID = 0;
 	const char *pReasonString = strstr( pszDetails, " " );
-	if ( pReasonString != NULL )
+	if ( pReasonString != nullptr )
 	{
 		pReasonString += 1;
 		CUtlString userID;
@@ -1835,7 +1835,7 @@ void CMannVsMachineStartRound::ExecuteCommand( void )
 			variant_t sVariant;
 			sVariant.SetInt( 6 );
 
-			pTimer->AcceptInput( "SetTime", NULL, NULL, sVariant, 0 );
+			pTimer->AcceptInput( "SetTime", nullptr, nullptr, sVariant, 0 );
 		}
 	}
 }

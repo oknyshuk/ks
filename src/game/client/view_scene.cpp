@@ -92,7 +92,7 @@ void UpdateFullScreenDepthTexture( void )
 	pRenderContext->GetViewport( viewportRect.x, viewportRect.y, viewportRect.width, viewportRect.height );
 
 	{
-		pRenderContext->CopyRenderTargetToTextureEx( pDepthTex, -1, NULL, NULL );
+		pRenderContext->CopyRenderTargetToTextureEx( pDepthTex, -1, nullptr, nullptr );
 	}
 
 	pRenderContext->SetFullScreenDepthTextureValidityFlag( true );
@@ -100,9 +100,9 @@ void UpdateFullScreenDepthTexture( void )
 	if ( r_depthoverlay.GetBool() )
 	{
 		IMaterial *pMaterial = materials->FindMaterial( "debug/showz", TEXTURE_GROUP_OTHER, true );
-		IMaterialVar *BaseTextureVar = pMaterial->FindVar( "$basetexture", NULL, false );
-		IMaterialVar *pDepthInAlpha = NULL;
-		pDepthInAlpha = pMaterial->FindVar( "$ALPHADEPTH", NULL, false );
+		IMaterialVar *BaseTextureVar = pMaterial->FindVar( "$basetexture", nullptr, false );
+		IMaterialVar *pDepthInAlpha = nullptr;
+		pDepthInAlpha = pMaterial->FindVar( "$ALPHADEPTH", nullptr, false );
 		pDepthInAlpha->SetIntValue( 1 );
 		
 		BaseTextureVar->SetTextureValue( pDepthTex );

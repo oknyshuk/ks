@@ -84,7 +84,7 @@ void CAI_SpeechFilter::InputSetIdleModifier( inputdata_t &inputdata )
 void CAI_SpeechFilter::PopulateSubjectList( bool purge )
 {
 	// Populate the subject list. Try targetname first.
-	CBaseEntity *pSearch = NULL;
+	CBaseEntity *pSearch = nullptr;
 	int iNumSubjects = 0;
 	do
 	{
@@ -97,11 +97,11 @@ void CAI_SpeechFilter::PopulateSubjectList( bool purge )
 			{
 				if( purge )
 				{
-					pAlly->SetSpeechFilter( NULL );
+					pAlly->SetSpeechFilter( nullptr );
 				}
 				else
 				{
-					if( pAlly->GetSpeechFilter() != NULL )
+					if( pAlly->GetSpeechFilter() != nullptr )
 					{
 						DevWarning("ai_speechfilter %s is slamming NPC %s's current speech filter.\n", STRING(GetEntityName()), STRING(pSearch->GetEntityName()) );
 					}
@@ -132,11 +132,11 @@ void CAI_SpeechFilter::PopulateSubjectList( bool purge )
 				{
 					if( purge )
 					{
-						pAlly->SetSpeechFilter( NULL );
+						pAlly->SetSpeechFilter( nullptr );
 					}
 					else
 					{
-						if( pAlly->GetSpeechFilter() != NULL )
+						if( pAlly->GetSpeechFilter() != nullptr )
 						{
 							DevWarning("ai_speechfilter %s is slamming NPC %s's current speech filter.\n", STRING(GetEntityName()), STRING(pSearch->GetEntityName()) );
 						}

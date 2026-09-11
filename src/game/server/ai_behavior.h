@@ -65,9 +65,9 @@ class CAI_BehaviorBase : public CAI_Component, public IAI_BehaviorBridge
 {
 	DECLARE_CLASS( CAI_BehaviorBase, CAI_Component )
 public:
-	CAI_BehaviorBase(CAI_BaseNPC *pOuter = NULL)
+	CAI_BehaviorBase(CAI_BaseNPC *pOuter = nullptr)
 	 : 	CAI_Component(pOuter),
-	 	m_pBackBridge(NULL)
+	 	m_pBackBridge(nullptr)
 	{
 		m_bAllocated = false;
 	}
@@ -98,7 +98,7 @@ public:
 
 	void SetBackBridge( IAI_BehaviorBridge *pBackBridge )
 	{
-		Assert( m_pBackBridge == NULL || pBackBridge == NULL );
+		Assert( m_pBackBridge == nullptr || pBackBridge == nullptr );
 		m_pBackBridge = pBackBridge;
 	}
 
@@ -347,7 +347,7 @@ public:
 	}
 
 protected:
-	CAI_Behavior(NPC_CLASS *pOuter = NULL)
+	CAI_Behavior(NPC_CLASS *pOuter = nullptr)
 	 : CAI_ComponentWithOuter<NPC_CLASS, CAI_BehaviorBase>(pOuter)
 	{
 	}
@@ -410,7 +410,7 @@ public:
 	#define AI_GENERATE_HOST_METHODS
 	#include "ai_behavior_template.h"
 
-	void CleanupOnDeath( CBaseEntity *pCulprit = NULL, bool bFireDeathOutput = true );
+	void CleanupOnDeath( CBaseEntity *pCulprit = nullptr, bool bFireDeathOutput = true );
 
 
 	// Bridges
@@ -561,7 +561,7 @@ inline int CAI_BehaviorBase::BridgeTranslateSchedule( int scheduleType )
 inline bool CAI_BehaviorBase::BridgeGetSchedule( int localScheduleID, CAI_Schedule **ppResult )
 {
 	*ppResult = GetSchedule( localScheduleID );
-	return (*ppResult != NULL );
+	return (*ppResult != nullptr );
 }
 
 //-------------------------------------
@@ -571,7 +571,7 @@ inline bool CAI_BehaviorBase::BridgeTaskName( int taskID, const char **ppResult 
 	if ( AI_IdIsLocal( taskID ) )
 	{
 		*ppResult = GetSchedulingSymbols()->TaskIdToSymbol( GetClassScheduleIdSpace()->TaskLocalToGlobal( taskID ) );
-		return (*ppResult != NULL );
+		return (*ppResult != nullptr );
 	}
 	return false;
 }
@@ -581,7 +581,7 @@ inline bool CAI_BehaviorBase::BridgeTaskName( int taskID, const char **ppResult 
 template <class BASE_NPC>
 inline void CAI_BehaviorHost<BASE_NPC>::CleanupOnDeath( CBaseEntity *pCulprit, bool bFireDeathOutput )
 {
-	this->DeferSchedulingToBehavior( NULL );
+	this->DeferSchedulingToBehavior( nullptr );
 	for( int i = 0; i < this->m_Behaviors.Count(); i++ )
 	{
 		this->m_Behaviors[i]->CleanupOnDeath( pCulprit, bFireDeathOutput );
@@ -647,7 +647,7 @@ inline CAI_Schedule *CAI_BehaviorHost<BASE_NPC>::GetNewSchedule()
 	m_bCalledBehaviorSelectSchedule = false;
 	CAI_Schedule *pResult = BaseClass::GetNewSchedule();
 	if ( !m_bCalledBehaviorSelectSchedule && this->m_pPrimaryBehavior )
-		this->DeferSchedulingToBehavior( NULL );
+		this->DeferSchedulingToBehavior( nullptr );
 	return pResult;
 }
 
@@ -659,7 +659,7 @@ inline CAI_Schedule *CAI_BehaviorHost<BASE_NPC>::GetFailSchedule()
 	m_bCalledBehaviorSelectSchedule = false;
 	CAI_Schedule *pResult = BaseClass::GetFailSchedule();
 	if ( !m_bCalledBehaviorSelectSchedule && this->m_pPrimaryBehavior )
-		this->DeferSchedulingToBehavior( NULL );
+		this->DeferSchedulingToBehavior( nullptr );
 	return pResult;
 }
 
@@ -754,7 +754,7 @@ inline CAI_Schedule *CAI_BehaviorHost<BASE_NPC>::GetSchedule(int localScheduleID
 template <class BASE_NPC>
 inline const char *CAI_BehaviorHost<BASE_NPC>::TaskName(int taskID)
 {
-	const char *pszResult = NULL;
+	const char *pszResult = nullptr;
 	if ( this->m_pPrimaryBehavior && this->m_pPrimaryBehavior->BridgeTaskName( taskID, &pszResult ) )
 		return pszResult;
 	return BaseClass::TaskName( taskID );

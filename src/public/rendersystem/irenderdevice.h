@@ -413,7 +413,7 @@ public:
 	// NOTE: For the utlbuffer version, use a binary buffer for a compiled shader
 	// and a text buffer for a source-code (.fxc) shader
 	RenderShaderHandle_t CreateShader( RenderShaderType_t nType, const char *pProgram, size_t nBufLen, const char *pShaderVersion );
-	RenderShaderHandle_t CreateShader( RenderShaderType_t nType, CUtlBuffer &buf, const char *pShaderVersion = NULL );
+	RenderShaderHandle_t CreateShader( RenderShaderType_t nType, CUtlBuffer &buf, const char *pShaderVersion = nullptr );
 	RenderShaderHandle_t CreateShader( RenderShaderType_t nType, const void *pCompiledProgram, size_t nBufLen );
 
 	// Creates render state objects
@@ -455,10 +455,10 @@ public:
 	
 
 	// there is no release. These are automatically released when satisfied, and as far as the client is concerned, they are all gone after Present().
-	virtual CDependencyDescriptor *GetDependencyDescriptor( int nNumBatchesWhichWillBeSubmitted = 1, char const *pDebugString = NULL ) =0;
+	virtual CDependencyDescriptor *GetDependencyDescriptor( int nNumBatchesWhichWillBeSubmitted = 1, char const *pDebugString = nullptr ) =0;
 
 	// create/destroy constant buffers
-	virtual ConstantBufferHandle_t CreateConstantBuffer( size_t nNumBytes ) { return NULL; };
+	virtual ConstantBufferHandle_t CreateConstantBuffer( size_t nNumBytes ) { return nullptr; };
 	virtual void DestroyConstantBuffer( ConstantBufferHandle_t hConstantBuffer ) {};
 
 	// Forces a device lost
@@ -536,7 +536,7 @@ inline RenderShaderHandle_t IRenderDevice::CreateShader( RenderShaderType_t nTyp
 {
 	Assert( nBufLen == ( int )nBufLen ); // make sure we're not trimming 4Gb+ sizes
 	CUtlBuffer tmpBuf( pCompiledProgram, ( int )nBufLen, CUtlBuffer::READ_ONLY );
-	return CreateShader( nType, tmpBuf, NULL );
+	return CreateShader( nType, tmpBuf, nullptr );
 }
 
 

@@ -190,7 +190,7 @@ inline bool ShouldBeInExpresserQueue( CBaseFlex *pOuter )
 
 CAI_Expresser::CAI_Expresser( CBaseFlex *pOuter )
  :	m_pOuter( pOuter ),
-	m_pSink( NULL ),
+	m_pSink( nullptr ),
 	m_flStopTalkTime( 0 ),
 	m_flBlockedTalkTime( 0 ),
 	m_flStopTalkTimeWithoutDelay( 0 ),
@@ -249,7 +249,7 @@ void CAI_Expresser::TestAllResponses()
 
 			Msg( "Response: %s\n", response );
 			AIConcept_t conc;
-			SpeakDispatchResponse( conc, &responses[i], NULL );
+			SpeakDispatchResponse( conc, &responses[i], nullptr );
 		}
 	}
 }
@@ -324,7 +324,7 @@ bool CAI_Expresser::FindResponse( AI_Response &outResponse, AIConcept_t &conc, A
 	if ( !rs )
 	{
 		Assert( !"No response system installed for CAI_Expresser::GetOuter()!!!" );
-		return NULL;
+		return false;
 	}
 
 	// if I'm dead, I can't possibly match dialog.
@@ -334,9 +334,9 @@ bool CAI_Expresser::FindResponse( AI_Response &outResponse, AIConcept_t &conc, A
 	}
 
 	AI_CriteriaSet localCriteriaSet; // put it on the stack so we don't deal with new/delete
-	if (criteria == NULL)
+	if (criteria == nullptr)
 	{
-		GatherCriteria( &localCriteriaSet, conc, NULL );
+		GatherCriteria( &localCriteriaSet, conc, nullptr );
 		criteria = &localCriteriaSet;
 	}
 
@@ -532,7 +532,7 @@ bool CAI_Expresser::FireEntIOFromResponse( char *response, CBaseEntity *pInitiat
 	char *pszEntname;
 	char *pszInput;
 	char *pszParam;
-	char *strtokContext = NULL;
+	char *strtokContext = nullptr;
 
 	pszEntname = strtok_s( response, " ", &strtokContext );
 	if ( !pszEntname )
@@ -541,17 +541,17 @@ bool CAI_Expresser::FireEntIOFromResponse( char *response, CBaseEntity *pInitiat
 		return false;
 	}
 
-	pszInput = strtok_s( NULL, " ", &strtokContext );
+	pszInput = strtok_s( nullptr, " ", &strtokContext );
 	if ( !pszInput )
 	{
 		Warning( "Response was entityio but had bad value %s\n", response );
 		return false;
 	}
 
-	pszParam =  strtok_s( NULL, " ", &strtokContext );
+	pszParam =  strtok_s( nullptr, " ", &strtokContext );
 
 	// poke entity io
-	CBaseEntity *pTarget = gEntList.FindEntityByName( NULL, pszEntname, pInitiator );
+	CBaseEntity *pTarget = gEntList.FindEntityByName( nullptr, pszEntname, pInitiator );
 	if ( !pTarget )
 	{
 		Msg( "Response rule targeted %s with entityio, but that doesn't exist.\n", pszEntname );
@@ -944,7 +944,7 @@ bool CAI_Expresser::IsValidResponse( ResponseType_t type, const char *pszValue )
 CAI_TimedSemaphore *CAI_Expresser::GetMySpeechSemaphore( CBaseEntity *pNpc )
 {
 	if ( !pNpc->MyNPCPointer() )
-		return NULL;
+		return nullptr;
 
 	return (pNpc->MyNPCPointer()->IsPlayerAlly() ? &g_AIFriendliesTalkSemaphore : &g_AIFoesTalkSemaphore );
 }
@@ -1064,15 +1064,15 @@ CON_COMMAND( npc_speakall, "Force the npc to try and speak all their responses" 
 
 	if ( args[1] && *args[1] )
 	{
-		pEntity = gEntList.FindEntityByName( NULL, args[1], NULL );
+		pEntity = gEntList.FindEntityByName( nullptr, args[1], nullptr );
 		if ( !pEntity )
 		{
-			pEntity = gEntList.FindEntityByClassname( NULL, args[1] );
+			pEntity = gEntList.FindEntityByClassname( nullptr, args[1] );
 		}
 	}
 	else
 	{
-		pEntity = UTIL_GetCommandClient() ? UTIL_GetCommandClient()->FindPickerEntity() : NULL;
+		pEntity = UTIL_GetCommandClient() ? UTIL_GetCommandClient()->FindPickerEntity() : nullptr;
 	}
 
 	if ( pEntity )

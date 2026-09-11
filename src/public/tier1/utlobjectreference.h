@@ -35,13 +35,13 @@ template<class T> class CUtlReference
 public:
 	FORCEINLINE CUtlReference(void)
 	{
-		m_pNext = m_pPrev = NULL;
-		m_pObject = NULL;
+		m_pNext = m_pPrev = nullptr;
+		m_pObject = nullptr;
 	}
   
 	FORCEINLINE CUtlReference(T *pObj)
 	{
-		m_pNext = m_pPrev = NULL;
+		m_pNext = m_pPrev = nullptr;
 		AddRef( pObj );
 	}
 
@@ -76,7 +76,7 @@ public:
 
 	FORCEINLINE bool IsValid( void) const
 	{
-		return ( m_pObject != NULL );
+		return ( m_pObject != nullptr );
 	}
 
 	FORCEINLINE operator T*()
@@ -168,7 +168,7 @@ public:
 		if ( m_pObject )
 		{
 			m_pObject->m_References.RemoveNode( this );
-			m_pObject = NULL;
+			m_pObject = nullptr;
 		}
 	}
 };
@@ -182,12 +182,12 @@ public:
 		while( i )
 		{
 			CUtlReference<T> *n = i->m_pNext;
-			i->m_pNext = NULL;
-			i->m_pPrev = NULL;
-			i->m_pObject = NULL;
+			i->m_pNext = nullptr;
+			i->m_pPrev = nullptr;
+			i->m_pObject = nullptr;
 			i = n;
 		}
-		CUtlIntrusiveDList<CUtlReference<T> >::m_pHead = NULL;
+		CUtlIntrusiveDList<CUtlReference<T> >::m_pHead = nullptr;
 	}
 };
 

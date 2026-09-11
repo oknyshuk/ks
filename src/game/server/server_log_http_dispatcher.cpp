@@ -52,7 +52,7 @@ public:
 
 		if ( m_hHTTPRequestHandle )
 			steamgameserverapicontext->SteamHTTP()->ReleaseHTTPRequest( m_hHTTPRequestHandle );
-		m_hHTTPRequestHandle = NULL;
+		m_hHTTPRequestHandle = 0;
 	}
 
 	size_t MaxUpdateStringSizeBytes() const { return m_unMaxUpdateStringSizeBytes; }
@@ -191,7 +191,7 @@ void CServerLogHTTPDispatcher::PreClientUpdate()
 		return;
 
 	// Can't do any work before we have steamhttp
-	if ( steamgameserverapicontext == NULL || !steamgameserverapicontext->SteamHTTP() || !steamgameserverapicontext->SteamGameServer() )
+	if ( steamgameserverapicontext == nullptr || !steamgameserverapicontext->SteamHTTP() || !steamgameserverapicontext->SteamGameServer() )
 		return;
 
 	AssertOnce( engine->IsLogEnabled() );
@@ -287,7 +287,7 @@ bool CServerLogDestination::SendUpdate( int32 iFromTick, int32 iToTick, CServerL
 	if ( m_lluUniqueToken )
 		steamgameserverapicontext->SteamHTTP()->SetHTTPRequestHeaderValue( m_hHTTPRequestHandle, "X-Server-Unique-Token", CNumStr( m_lluUniqueToken ).String() );
 	steamgameserverapicontext->SteamHTTP()->SetHTTPRequestRawPostBody( m_hHTTPRequestHandle, "text/plain", ( uint8* )pLogLines, unUpdateStrLenBytes );
-	SteamAPICall_t hCall = NULL;
+	SteamAPICall_t hCall = 0;
 	if ( m_hHTTPRequestHandle && steamgameserverapicontext->SteamHTTP()->SendHTTPRequest( m_hHTTPRequestHandle, &hCall ) && hCall )
 	{
 		m_CallbackOnHTTPRequestCompleted.Set( hCall, this, &CServerLogDestination::Steam_OnHTTPRequestCompleted );
@@ -297,9 +297,9 @@ bool CServerLogDestination::SendUpdate( int32 iFromTick, int32 iToTick, CServerL
 	{
 		if ( m_hHTTPRequestHandle )
 			steamgameserverapicontext->SteamHTTP()->ReleaseHTTPRequest( m_hHTTPRequestHandle );
-		m_hHTTPRequestHandle = NULL;
+		m_hHTTPRequestHandle = 0;
 
-		Steam_OnHTTPRequestCompleted( NULL, true );
+		Steam_OnHTTPRequestCompleted( nullptr, true );
 		return false;
 	}
 
@@ -351,5 +351,5 @@ void CServerLogDestination::Steam_OnHTTPRequestCompleted( HTTPRequestCompleted_t
 
 	m_idxPendingUpdate = CServerLogHTTPDispatcher::LogLinesList_t::InvalidIndex();
 	steamgameserverapicontext->SteamHTTP()->ReleaseHTTPRequest( p->m_hRequest );
-	m_hHTTPRequestHandle = NULL;
+	m_hHTTPRequestHandle = 0;
 }

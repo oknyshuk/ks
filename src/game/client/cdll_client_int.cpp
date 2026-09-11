@@ -152,46 +152,46 @@ extern IClientMode *GetClientModeNormal();
 DEFINE_LOGGING_CHANNEL_NO_TAGS( LOG_CONSOLE, "Console" );
 
 // IF YOU ADD AN INTERFACE, EXTERN IT IN THE HEADER FILE.
-IVEngineClient	*engine = NULL;
-IVModelRender *modelrender = NULL;
-IVEfx *effects = NULL;
-IVRenderView *render = NULL;
-IVDebugOverlay *debugoverlay = NULL;
-IMaterialSystemStub *materials_stub = NULL;
-IDataCache *datacache = NULL;
-IVModelInfoClient *modelinfo = NULL;
-IEngineUI *engineui = NULL;
-INetworkStringTableContainer *networkstringtable = NULL;
-ISpatialPartition* partition = NULL;
-IFileSystem *filesystem = NULL;
-IShadowMgr *shadowmgr = NULL;
-IStaticPropMgrClient *staticpropmgr = NULL;
-IEngineSound *enginesound = NULL;
-IUniformRandomStream *random = NULL;
+IVEngineClient	*engine = nullptr;
+IVModelRender *modelrender = nullptr;
+IVEfx *effects = nullptr;
+IVRenderView *render = nullptr;
+IVDebugOverlay *debugoverlay = nullptr;
+IMaterialSystemStub *materials_stub = nullptr;
+IDataCache *datacache = nullptr;
+IVModelInfoClient *modelinfo = nullptr;
+IEngineUI *engineui = nullptr;
+INetworkStringTableContainer *networkstringtable = nullptr;
+ISpatialPartition* partition = nullptr;
+IFileSystem *filesystem = nullptr;
+IShadowMgr *shadowmgr = nullptr;
+IStaticPropMgrClient *staticpropmgr = nullptr;
+IEngineSound *enginesound = nullptr;
+IUniformRandomStream *random = nullptr;
 static CGaussianRandomStream s_GaussianRandomStream;
 CGaussianRandomStream *randomgaussian = &s_GaussianRandomStream;
-ISharedGameRules *sharedgamerules = NULL;
-IEngineTrace *enginetrace = NULL;
-IFileLoggingListener *filelogginglistener = NULL;
-IGameUIFuncs *gameuifuncs = NULL;
-IGameEventManager2 *gameeventmanager = NULL;
-ISoundEmitterSystemBase *soundemitterbase = NULL;
-IInputSystem *inputsystem = NULL;
-ISceneFileCache *scenefilecache = NULL;
-IAvi *avi = NULL;
-IBik *bik = NULL;
-IQuickTime *pQuicktime = NULL;
-IRenderToRTHelper *g_pRenderToRTHelper = NULL;
+ISharedGameRules *sharedgamerules = nullptr;
+IEngineTrace *enginetrace = nullptr;
+IFileLoggingListener *filelogginglistener = nullptr;
+IGameUIFuncs *gameuifuncs = nullptr;
+IGameEventManager2 *gameeventmanager = nullptr;
+ISoundEmitterSystemBase *soundemitterbase = nullptr;
+IInputSystem *inputsystem = nullptr;
+ISceneFileCache *scenefilecache = nullptr;
+IAvi *avi = nullptr;
+IBik *bik = nullptr;
+IQuickTime *pQuicktime = nullptr;
+IRenderToRTHelper *g_pRenderToRTHelper = nullptr;
 
-IUploadGameStats *gamestatsuploader = NULL;
-IBlackBox *blackboxrecorder = NULL;
+IUploadGameStats *gamestatsuploader = nullptr;
+IBlackBox *blackboxrecorder = nullptr;
 #if defined( REPLAY_ENABLED )
-IReplayHistoryManager *g_pReplayHistoryManager = NULL;
+IReplayHistoryManager *g_pReplayHistoryManager = nullptr;
 #endif
 
-AchievementsAndStatsInterface* g_pAchievementsAndStatsInterface = NULL;
+AchievementsAndStatsInterface* g_pAchievementsAndStatsInterface = nullptr;
 
-IScriptManager *scriptmanager = NULL;
+IScriptManager *scriptmanager = nullptr;
 
 IGameSystem *SoundEmitterSystem();
 IGameSystem *ToolFrameworkClientSystem();
@@ -225,13 +225,13 @@ bool IsHeadTrackingEnabled()
 }
 
 // String tables
-INetworkStringTable *g_pStringTableParticleEffectNames = NULL;
-INetworkStringTable *g_pStringTableExtraParticleFiles = NULL;
-INetworkStringTable *g_StringTableEffectDispatch = NULL;
-INetworkStringTable *g_pStringTableMaterials = NULL;
-INetworkStringTable *g_pStringTableInfoPanel = NULL;
-INetworkStringTable *g_pStringTableClientSideChoreoScenes = NULL;
-INetworkStringTable *g_pStringTableMovies = NULL;
+INetworkStringTable *g_pStringTableParticleEffectNames = nullptr;
+INetworkStringTable *g_pStringTableExtraParticleFiles = nullptr;
+INetworkStringTable *g_StringTableEffectDispatch = nullptr;
+INetworkStringTable *g_pStringTableMaterials = nullptr;
+INetworkStringTable *g_pStringTableInfoPanel = nullptr;
+INetworkStringTable *g_pStringTableClientSideChoreoScenes = nullptr;
+INetworkStringTable *g_pStringTableMovies = nullptr;
 
 static CGlobalVarsBase dummyvars( true );
 // So stuff that might reference gpGlobals during DLL initialization won't have a NULL pointer.
@@ -240,7 +240,7 @@ CGlobalVarsBase *gpGlobals = &dummyvars;
 class CHudChat;
 class CViewRender;
 
-static C_BaseEntityClassList *s_pClassLists = NULL;
+static C_BaseEntityClassList *s_pClassLists = nullptr;
 C_BaseEntityClassList::C_BaseEntityClassList()
 {
 	m_pNextClassList = s_pClassLists;
@@ -257,7 +257,7 @@ public:
 	CDataChangedEvent() {}
 	CDataChangedEvent( IClientNetworkable *ent, DataUpdateType_t updateType, int *pStoredEvent )
 	{
-		if ( ent != NULL )
+		if ( ent != nullptr )
 		{
 			m_nEntityIndex = ent->entindex();
 		}
@@ -273,7 +273,7 @@ public:
 	IClientNetworkable *GetEntity()
 	{
 		if ( m_nEntityIndex == -1 )
-			return NULL;
+			return nullptr;
 
 		return ClientEntityList().GetClientNetworkable( m_nEntityIndex );
 	}
@@ -301,7 +301,7 @@ bool g_bLevelInitialized;
 bool g_bTextMode = false;
 ClientFrameStage_t g_CurFrameStage = FRAME_UNDEFINED;
 
-static ConVar *g_pcv_ThreadMode = NULL;
+static ConVar *g_pcv_ThreadMode = nullptr;
 
 // implements ACTIVE_SPLITSCREEN_PLAYER_GUARD (cdll_client_int.h)
 CSetActiveSplitScreenPlayerGuard::CSetActiveSplitScreenPlayerGuard( char const *pchContext, int nLine ) :
@@ -917,7 +917,7 @@ const char *GetMaterialNameFromIndex( int nIndex )
 	}
 	else
 	{
-		return NULL;
+		return nullptr;
 	}
 }
 
@@ -959,7 +959,7 @@ const char *GetMovieNameFromIndex( int nIndex )
 	}
 	else
 	{
-		return NULL;
+		return nullptr;
 	}
 }
 
@@ -1224,78 +1224,78 @@ int CHLClient::Init( CreateInterfaceFn appSystemFactory, CGlobalVarsBase *pGloba
 	COM_TimestampedLog( "ClientDLL factories - Start" );
 	// We aren't happy unless we get all of our interfaces.
 	// please don't collapse this into one monolithic boolean expression (impossible to debug)
-	if ( (engine = (IVEngineClient *)appSystemFactory( VENGINE_CLIENT_INTERFACE_VERSION, NULL )) == NULL )
+	if ( (engine = (IVEngineClient *)appSystemFactory( VENGINE_CLIENT_INTERFACE_VERSION, nullptr )) == nullptr )
 		return false;
-	if ( (modelrender = (IVModelRender *)appSystemFactory( VENGINE_HUDMODEL_INTERFACE_VERSION, NULL )) == NULL )
+	if ( (modelrender = (IVModelRender *)appSystemFactory( VENGINE_HUDMODEL_INTERFACE_VERSION, nullptr )) == nullptr )
 		return false;
-	if ( (effects = (IVEfx *)appSystemFactory( VENGINE_EFFECTS_INTERFACE_VERSION, NULL )) == NULL )
+	if ( (effects = (IVEfx *)appSystemFactory( VENGINE_EFFECTS_INTERFACE_VERSION, nullptr )) == nullptr )
 		return false;
-	if ( (enginetrace = (IEngineTrace *)appSystemFactory( INTERFACEVERSION_ENGINETRACE_CLIENT, NULL )) == NULL )
+	if ( (enginetrace = (IEngineTrace *)appSystemFactory( INTERFACEVERSION_ENGINETRACE_CLIENT, nullptr )) == nullptr )
 		return false;
-	if ( (filelogginglistener = (IFileLoggingListener *)appSystemFactory(FILELOGGINGLISTENER_INTERFACE_VERSION, NULL)) == NULL )
+	if ( (filelogginglistener = (IFileLoggingListener *)appSystemFactory(FILELOGGINGLISTENER_INTERFACE_VERSION, nullptr)) == nullptr )
 		return false;
-	if ( (render = (IVRenderView *)appSystemFactory( VENGINE_RENDERVIEW_INTERFACE_VERSION, NULL )) == NULL )
+	if ( (render = (IVRenderView *)appSystemFactory( VENGINE_RENDERVIEW_INTERFACE_VERSION, nullptr )) == nullptr )
 		return false;
-	if ( (debugoverlay = (IVDebugOverlay *)appSystemFactory( VDEBUG_OVERLAY_INTERFACE_VERSION, NULL )) == NULL )
+	if ( (debugoverlay = (IVDebugOverlay *)appSystemFactory( VDEBUG_OVERLAY_INTERFACE_VERSION, nullptr )) == nullptr )
 		return false;
-	if ( (datacache = (IDataCache*)appSystemFactory(DATACACHE_INTERFACE_VERSION, NULL )) == NULL )
+	if ( (datacache = (IDataCache*)appSystemFactory(DATACACHE_INTERFACE_VERSION, nullptr )) == nullptr )
 		return false;
 	if ( !mdlcache )
 		return false;
-	if ( (modelinfo = (IVModelInfoClient *)appSystemFactory(VMODELINFO_CLIENT_INTERFACE_VERSION, NULL )) == NULL )
+	if ( (modelinfo = (IVModelInfoClient *)appSystemFactory(VMODELINFO_CLIENT_INTERFACE_VERSION, nullptr )) == nullptr )
 		return false;
-	if ( (engineui = (IEngineUI *)appSystemFactory(VENGINE_UI_VERSION, NULL )) == NULL )
+	if ( (engineui = (IEngineUI *)appSystemFactory(VENGINE_UI_VERSION, nullptr )) == nullptr )
 		return false;
-	if ( (networkstringtable = (INetworkStringTableContainer *)appSystemFactory(INTERFACENAME_NETWORKSTRINGTABLECLIENT,NULL)) == NULL )
+	if ( (networkstringtable = (INetworkStringTableContainer *)appSystemFactory(INTERFACENAME_NETWORKSTRINGTABLECLIENT,nullptr)) == nullptr )
 		return false;
-	if ( (::partition = (ISpatialPartition *)appSystemFactory(INTERFACEVERSION_SPATIALPARTITION, NULL)) == NULL )
+	if ( (::partition = (ISpatialPartition *)appSystemFactory(INTERFACEVERSION_SPATIALPARTITION, nullptr)) == nullptr )
 		return false;
-	if ( (shadowmgr = (IShadowMgr *)appSystemFactory(ENGINE_SHADOWMGR_INTERFACE_VERSION, NULL)) == NULL )
+	if ( (shadowmgr = (IShadowMgr *)appSystemFactory(ENGINE_SHADOWMGR_INTERFACE_VERSION, nullptr)) == nullptr )
 		return false;
-	if ( (staticpropmgr = (IStaticPropMgrClient *)appSystemFactory(INTERFACEVERSION_STATICPROPMGR_CLIENT, NULL)) == NULL )
+	if ( (staticpropmgr = (IStaticPropMgrClient *)appSystemFactory(INTERFACEVERSION_STATICPROPMGR_CLIENT, nullptr)) == nullptr )
 		return false;
-	if ( (enginesound = (IEngineSound *)appSystemFactory(IENGINESOUND_CLIENT_INTERFACE_VERSION, NULL)) == NULL )
+	if ( (enginesound = (IEngineSound *)appSystemFactory(IENGINESOUND_CLIENT_INTERFACE_VERSION, nullptr)) == nullptr )
 		return false;
-	if ( (filesystem = (IFileSystem *)appSystemFactory(FILESYSTEM_INTERFACE_VERSION, NULL)) == NULL )
+	if ( (filesystem = (IFileSystem *)appSystemFactory(FILESYSTEM_INTERFACE_VERSION, nullptr)) == nullptr )
 		return false;
-	if ( (random = (IUniformRandomStream *)appSystemFactory(VENGINE_CLIENT_RANDOM_INTERFACE_VERSION, NULL)) == NULL )
+	if ( (random = (IUniformRandomStream *)appSystemFactory(VENGINE_CLIENT_RANDOM_INTERFACE_VERSION, nullptr)) == nullptr )
 		return false;
-	if ( (gameuifuncs = (IGameUIFuncs * )appSystemFactory( VENGINE_GAMEUIFUNCS_VERSION, NULL )) == NULL )
+	if ( (gameuifuncs = (IGameUIFuncs * )appSystemFactory( VENGINE_GAMEUIFUNCS_VERSION, nullptr )) == nullptr )
 		return false;
-	if ( (gameeventmanager = (IGameEventManager2 *)appSystemFactory(INTERFACEVERSION_GAMEEVENTSMANAGER2,NULL)) == NULL )
+	if ( (gameeventmanager = (IGameEventManager2 *)appSystemFactory(INTERFACEVERSION_GAMEEVENTSMANAGER2,nullptr)) == nullptr )
 		return false;
-	if ( (soundemitterbase = (ISoundEmitterSystemBase *)appSystemFactory(SOUNDEMITTERSYSTEM_INTERFACE_VERSION, NULL)) == NULL )
+	if ( (soundemitterbase = (ISoundEmitterSystemBase *)appSystemFactory(SOUNDEMITTERSYSTEM_INTERFACE_VERSION, nullptr)) == nullptr )
 		return false;
-	if ( (inputsystem = (IInputSystem *)appSystemFactory(INPUTSYSTEM_INTERFACE_VERSION, NULL)) == NULL )
+	if ( (inputsystem = (IInputSystem *)appSystemFactory(INPUTSYSTEM_INTERFACE_VERSION, nullptr)) == nullptr )
 		return false;
 #if defined ( AVI_VIDEO )		
 #endif
 #if ( !defined( BINK_ENABLED_FOR_CONSOLE ) ) && defined( BINK_VIDEO )
-	if ( (bik = (IBik *)appSystemFactory(BIK_INTERFACE_VERSION, NULL)) == NULL )
+	if ( (bik = (IBik *)appSystemFactory(BIK_INTERFACE_VERSION, nullptr)) == nullptr )
 		return false;
 #endif
 #if defined( QUICKTIME_VIDEO )
-	if ( (pQuicktime = (IQuickTime*)appSystemFactory( QUICKTIME_INTERFACE_VERSION, NULL)) == NULL )
+	if ( (pQuicktime = (IQuickTime*)appSystemFactory( QUICKTIME_INTERFACE_VERSION, nullptr)) == nullptr )
 		return false;
 #endif
-	if ( (scenefilecache = (ISceneFileCache *)appSystemFactory( SCENE_FILE_CACHE_INTERFACE_VERSION, NULL )) == NULL )
+	if ( (scenefilecache = (ISceneFileCache *)appSystemFactory( SCENE_FILE_CACHE_INTERFACE_VERSION, nullptr )) == nullptr )
 		return false;
-	if ( (blackboxrecorder = (IBlackBox *)appSystemFactory(BLACKBOX_INTERFACE_VERSION, NULL)) == NULL )
+	if ( (blackboxrecorder = (IBlackBox *)appSystemFactory(BLACKBOX_INTERFACE_VERSION, nullptr)) == nullptr )
 		return false;
 
-	if ( (g_pRenderToRTHelper = (IRenderToRTHelper *)appSystemFactory( RENDER_TO_RT_HELPER_INTERFACE_VERSION, NULL )) == NULL )
+	if ( (g_pRenderToRTHelper = (IRenderToRTHelper *)appSystemFactory( RENDER_TO_RT_HELPER_INTERFACE_VERSION, nullptr )) == nullptr )
 		return false;
 	if ( !g_pRenderToRTHelper->Init() )
 		return false;
 
-	if ( ( g_pGameTypes = (IGameTypes *)appSystemFactory( VENGINE_GAMETYPES_VERSION, NULL )) == NULL )
+	if ( ( g_pGameTypes = (IGameTypes *)appSystemFactory( VENGINE_GAMETYPES_VERSION, nullptr )) == nullptr )
 		return false;
 
 #if defined( REPLAY_ENABLED )
-	if ( (g_pReplayHistoryManager = (IReplayHistoryManager *)appSystemFactory( REPLAYHISTORYMANAGER_INTERFACE_VERSION, NULL )) == NULL )
+	if ( (g_pReplayHistoryManager = (IReplayHistoryManager *)appSystemFactory( REPLAYHISTORYMANAGER_INTERFACE_VERSION, nullptr )) == nullptr )
 		return false;
 #endif
-	if ( ( gamestatsuploader = (IUploadGameStats *)appSystemFactory( INTERFACEVERSION_UPLOADGAMESTATS, NULL )) == NULL )
+	if ( ( gamestatsuploader = (IUploadGameStats *)appSystemFactory( INTERFACEVERSION_UPLOADGAMESTATS, nullptr )) == nullptr )
 		return false;
 
 
@@ -1313,7 +1313,7 @@ int CHLClient::Init( CreateInterfaceFn appSystemFactory, CGlobalVarsBase *pGloba
 
 	if ( !CommandLine()->CheckParm( "-noscripting") )
 	{
-		scriptmanager = (IScriptManager *)appSystemFactory( VSCRIPT_INTERFACE_VERSION, NULL );
+		scriptmanager = (IScriptManager *)appSystemFactory( VSCRIPT_INTERFACE_VERSION, nullptr );
 	}
 
 	factorylist_t factories;
@@ -1339,7 +1339,7 @@ int CHLClient::Init( CreateInterfaceFn appSystemFactory, CGlobalVarsBase *pGloba
 		g_bHeadTrackingEnabled = true;
 
 	// Not fatal if the material system stub isn't around.
-	materials_stub = (IMaterialSystemStub*)appSystemFactory( MATERIAL_SYSTEM_STUB_INTERFACE_VERSION, NULL );
+	materials_stub = (IMaterialSystemStub*)appSystemFactory( MATERIAL_SYSTEM_STUB_INTERFACE_VERSION, nullptr );
 
 	if( !g_pMaterialSystemHardwareConfig )
 		return false;
@@ -1510,7 +1510,7 @@ void CHLClient::Shutdown( void )
 	ConVar_Unregister();
 	DisconnectTier1Libraries( );
 
-	gameeventmanager = NULL;
+	gameeventmanager = nullptr;
 }
 
 
@@ -1840,7 +1840,7 @@ void CHLClient::InvalidateMdlCache()
 //-----------------------------------------------------------------------------
 void CHLClient::View_Fade( ScreenFade_t *pSF )
 {
-	if ( pSF != NULL )
+	if ( pSF != nullptr )
 	{
 		FOR_EACH_VALID_SPLITSCREEN_PLAYER( hh )
 		{
@@ -2129,12 +2129,12 @@ void CHLClient::LevelInitPostEntity( )
 //-----------------------------------------------------------------------------
 void CHLClient::ResetStringTablePointers()
 {
-	g_pStringTableParticleEffectNames = NULL;
-	g_StringTableEffectDispatch = NULL;
-	g_pStringTableMaterials = NULL;
-	g_pStringTableInfoPanel = NULL;
-	g_pStringTableClientSideChoreoScenes = NULL;
-	g_pStringTableMovies = NULL;
+	g_pStringTableParticleEffectNames = nullptr;
+	g_StringTableEffectDispatch = nullptr;
+	g_pStringTableMaterials = nullptr;
+	g_pStringTableInfoPanel = nullptr;
+	g_pStringTableClientSideChoreoScenes = nullptr;
+	g_pStringTableMovies = nullptr;
 }
 
 //-----------------------------------------------------------------------------
@@ -2365,14 +2365,14 @@ void CHLClient::InstallStringTableCallback( const char *tableName )
 		g_pStringTableMaterials = networkstringtable->FindTable( tableName );
 
 		// When the material list changes, we need to know immediately
-		g_pStringTableMaterials->SetStringChangedCallback( NULL, OnMaterialStringTableChanged );
+		g_pStringTableMaterials->SetStringChangedCallback( nullptr, OnMaterialStringTableChanged );
 	}
 	else if ( !Q_strcasecmp( tableName, "EffectDispatch" ) )
 	{
 		g_StringTableEffectDispatch = networkstringtable->FindTable( tableName );
 
 		// When the material list changes, we need to know immediately
-		g_StringTableEffectDispatch->SetStringChangedCallback( NULL, OnEffectStringTableChanged );
+		g_StringTableEffectDispatch->SetStringChangedCallback( nullptr, OnEffectStringTableChanged );
 	}
 	else if ( !Q_strcasecmp( tableName, "InfoPanel" ) )
 	{
@@ -2382,21 +2382,21 @@ void CHLClient::InstallStringTableCallback( const char *tableName )
 	{
 		g_pStringTableClientSideChoreoScenes = networkstringtable->FindTable( tableName );
 		networkstringtable->SetAllowClientSideAddString( g_pStringTableClientSideChoreoScenes, true );
-		g_pStringTableClientSideChoreoScenes->SetStringChangedCallback( NULL, OnSceneStringTableChanged );
+		g_pStringTableClientSideChoreoScenes->SetStringChangedCallback( nullptr, OnSceneStringTableChanged );
 	}
 	else if ( !Q_strcasecmp( tableName, "ParticleEffectNames" ) )
 	{
 		g_pStringTableParticleEffectNames = networkstringtable->FindTable( tableName );
 		networkstringtable->SetAllowClientSideAddString( g_pStringTableParticleEffectNames, true );
 		// When the particle system list changes, we need to know immediately
-		g_pStringTableParticleEffectNames->SetStringChangedCallback( NULL, OnParticleSystemStringTableChanged );
+		g_pStringTableParticleEffectNames->SetStringChangedCallback( nullptr, OnParticleSystemStringTableChanged );
 	}
 	else if ( !Q_strcasecmp( tableName, "ExtraParticleFilesTable" ) )
 	{
 		g_pStringTableExtraParticleFiles = networkstringtable->FindTable( tableName );
 		networkstringtable->SetAllowClientSideAddString( g_pStringTableExtraParticleFiles, true );
 		// When the particle system list changes, we need to know immediately
-		g_pStringTableExtraParticleFiles->SetStringChangedCallback( NULL, OnPrecacheParticleFile );
+		g_pStringTableExtraParticleFiles->SetStringChangedCallback( nullptr, OnPrecacheParticleFile );
 	}
 	else if ( !Q_strcasecmp( tableName, "Movies" ) )
 	{
@@ -2404,7 +2404,7 @@ void CHLClient::InstallStringTableCallback( const char *tableName )
 		g_pStringTableMovies = networkstringtable->FindTable( tableName );
 
 		// When the movie list changes, we need to know immediately
-		g_pStringTableMovies->SetStringChangedCallback( NULL, OnMovieStringTableChanged );
+		g_pStringTableMovies->SetStringChangedCallback( nullptr, OnMovieStringTableChanged );
 	}
 	else
 	{
@@ -2977,7 +2977,7 @@ CSaveRestoreData *SaveInit( int size );
 // Save/restore system hooks
 CSaveRestoreData  *CHLClient::SaveInit( int size )
 {
-	return NULL;
+	return nullptr;
 }
 
 void CHLClient::SaveWriteFields( CSaveRestoreData *pSaveData, const char *pname, void *pBaseData, datamap_t *pMap, typedescription_t *pFields, int fieldCount )
@@ -3022,7 +3022,7 @@ void CHLClient::DispatchOnRestore()
 {
 	for ( int i = 0; i < g_RestoredEntities.Count(); i++ )
 	{
-		if ( g_RestoredEntities[i] != NULL )
+		if ( g_RestoredEntities[i] != nullptr )
 		{
 			MDLCACHE_CRITICAL_SECTION();
 			g_RestoredEntities[i]->OnRestore();
@@ -3216,7 +3216,7 @@ void CHLClient::ReplayUI_SendMessage( KeyValues *pMsg )
 // Get the client replay factory
 IReplayFactory *CHLClient::GetReplayFactory()
 {
-	return NULL;
+	return nullptr;
 }
 
 // Clear out the local player's replay pointer so it doesn't get deleted
@@ -3290,7 +3290,7 @@ void CHLClient::OnSplitScreenStateChanged()
 	// Update visibility for all ents so that the second viewport for the split player guy looks right, etc.
 	C_BaseEntityIterator iterator;
 	C_BaseEntity *pEnt;
-	while ( (pEnt = iterator.Next()) != NULL )	
+	while ( (pEnt = iterator.Next()) != nullptr )	
 	{
 		pEnt->UpdateVisibility();
 	}
@@ -3305,7 +3305,7 @@ int CHLClient::GetSpectatorTarget( ClientDLLObserverMode_t* pObserverMode )
 
 	C_CSPlayer *pPlayer = GetLocalOrInEyeCSPlayer();
 
-	if ( pPlayer != NULL )
+	if ( pPlayer != nullptr )
 	{
 		return pPlayer->entindex();
 	}
@@ -3614,8 +3614,8 @@ char const * CHLClient::GetRichPresenceStatusString()
 	sRichPresence.Clear();
 
 	// Map (Dust II, Office, etc.)
-	char const *szMap = NULL;
-	char const *szGameMap = NULL;
+	char const *szMap = nullptr;
+	char const *szGameMap = nullptr;
 	
 	if ( bConnectedToServer )
 	{
@@ -3698,8 +3698,8 @@ char const * CHLClient::GetRichPresenceStatusString()
 	}
 
 	// Map group
-	char const *szMapGroup = NULL;
-	char const *szGameMapGroup = NULL;
+	char const *szMapGroup = nullptr;
+	char const *szGameMapGroup = nullptr;
 	
 	if ( bConnectedToServer )
 	{
@@ -3713,8 +3713,8 @@ char const * CHLClient::GetRichPresenceStatusString()
 	}
 	
 	// Game mode (Arms Race, Demolition, etc.)
-	char const *szMode = NULL;
-	char const *szGameMode = NULL;
+	char const *szMode = nullptr;
+	char const *szGameMode = nullptr;
 	
 	if ( bConnectedToServer )
 	{
@@ -3769,7 +3769,7 @@ char const * CHLClient::GetRichPresenceStatusString()
 	
 	// Score of the match
 	char chScore[64] = {};
-	char const *szScore = NULL;
+	char const *szScore = nullptr;
 	if ( bConnectedToServer && !g_bEngineIsHLTV && CSGameRules() )
 	{
 		// Append the score using local player's team first, or CT first
@@ -3792,12 +3792,12 @@ char const * CHLClient::GetRichPresenceStatusString()
 	}
 
 	// Server type
-	char const *szServerType = NULL; // V for Valve, P for Pinion
-	char const *szConnectAddress = NULL;
+	char const *szServerType = nullptr; // V for Valve, P for Pinion
+	char const *szConnectAddress = nullptr;
 	bool bCanInvite = false;
 	bool bCanWatch = false;
 	bool bPlayingDemo = engine->IsPlayingDemo();
-	CDemoPlaybackParameters_t const *pDemoPlaybackParameters = bPlayingDemo ? engine->GetDemoPlaybackParameters() : NULL;
+	CDemoPlaybackParameters_t const *pDemoPlaybackParameters = bPlayingDemo ? engine->GetDemoPlaybackParameters() : nullptr;
 	bool bWatchingLiveBroadcast = bPlayingDemo && pDemoPlaybackParameters && pDemoPlaybackParameters->m_bPlayingLiveRemoteBroadcast;
 	if ( bConnectedToServer )
 	{
@@ -3873,8 +3873,8 @@ char const * CHLClient::GetRichPresenceStatusString()
 	}
 
 	// Activity
-	char const *szActivity = NULL;
-	char const *szGameActivity = NULL;
+	char const *szActivity = nullptr;
+	char const *szGameActivity = nullptr;
 	if ( bConnectedToServer && bPlayingDemo && !bWatchingLiveBroadcast )
 	{
 		CDemoPlaybackParameters_t const *pParams = engine->GetDemoPlaybackParameters();
@@ -3948,7 +3948,7 @@ char const * CHLClient::GetRichPresenceStatusString()
 	pf->SetRichPresence( "game:map", szMap );
 	pf->SetRichPresence( "game:score", szScore );
 	pf->SetRichPresence( "game:server", szServerType );
-	pf->SetRichPresence( "watch", bCanWatch ? "1" : NULL );
+	pf->SetRichPresence( "watch", bCanWatch ? "1" : nullptr );
 
 	if ( bCanInvite && szConnectAddress )
 	{
@@ -3970,13 +3970,13 @@ char const * CHLClient::GetRichPresenceStatusString()
 		CFmtStr fmtConnectValue( "+gcconnect%08X%08X%08X",
 			uiRandomThing, steamapicontext->SteamUser()->GetSteamID().GetAccountID(), crcConnectHash );
 
-		pf->SetRichPresence( "connect", bPublicConnect ? fmtConnectValue.Access() : NULL );
+		pf->SetRichPresence( "connect", bPublicConnect ? fmtConnectValue.Access() : nullptr );
 		pf->SetRichPresence( "connect_private", fmtConnectValue.Access() );
 	}
 	else
 	{
-		pf->SetRichPresence( "connect", NULL );
-		pf->SetRichPresence( "connect_private", NULL );
+		pf->SetRichPresence( "connect", nullptr );
+		pf->SetRichPresence( "connect_private", nullptr );
 	}
 
 	return sRichPresence.Get();
@@ -4012,7 +4012,7 @@ bool CHLClient::ShouldSkipEvidencePlayback( CDemoPlaybackParameters_t const *pPl
 
 bool CHLClient::IsConnectedUserInfoChangeAllowed( IConVar *pCvar )
 {
-	return CSGameRules() ? CSGameRules()->IsConnectedUserInfoChangeAllowed( NULL ) : true;
+	return CSGameRules() ? CSGameRules()->IsConnectedUserInfoChangeAllowed( nullptr ) : true;
 }
 
 void CHLClient::OnCommandDuringPlayback( char const *cmd )
@@ -4058,7 +4058,7 @@ class CClientMaterialSystem : public IClientMaterialSystem
 		if ( !clienttools->IsInRecordingMode() )
 			return HTOOLHANDLE_INVALID;
 
-		const C_BaseEntity *pEnt = NULL;
+		const C_BaseEntity *pEnt = nullptr;
 		if( m_pProxyData ) //dynamic_cast not possible with void *. Just going to have to search to verify that it actually is an entity
 		{
 			CClientEntityList &entList = ClientEntityList();

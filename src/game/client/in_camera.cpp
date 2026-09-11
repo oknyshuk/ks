@@ -638,7 +638,7 @@ void CInput::CAM_Think( void )
 		origin += localPlayer->GetViewOffset();
 
 		// get the forward vector
-		AngleVectors( QAngle(camOffset[ PITCH ], camOffset[ YAW ], 0), &camForward, NULL, NULL );
+		AngleVectors( QAngle(camOffset[ PITCH ], camOffset[ YAW ], 0), &camForward, nullptr, nullptr );
 
 		// use our previously #defined hull to collision trace
 		trace_t trace;
@@ -755,10 +755,10 @@ void CInput::CAM_CameraThirdThink( void )
 		Vector vecOrigin = pLocalPlayer->GetThirdPersonViewPosition();
 
 		// Get the forward vector
-		AngleVectors( QAngle( vecCamOffset[PITCH], vecCamOffset[YAW], 0 ), &vecForward, NULL, NULL );
+		AngleVectors( QAngle( vecCamOffset[PITCH], vecCamOffset[YAW], 0 ), &vecForward, nullptr, nullptr );
 
 		// Collision trace and move the camera closer if we hit something.
-		CTraceFilterSkipTwoEntities filter( pLocalPlayer, NULL );
+		CTraceFilterSkipTwoEntities filter( pLocalPlayer, nullptr );
 
 
 		trace_t trace;

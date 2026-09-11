@@ -171,7 +171,7 @@ ConVar r_frameratesmoothing( "r_frameratesmoothing", "0", FCVAR_MATERIAL_SYSTEM_
 #ifdef SPEW_REFCOUNTS
 	#define SPEW_REFCOUNT_( f, l, funcname, pObj, op, expected ) \
 		do { \
-			if ( pObj == NULL ) { \
+			if ( pObj == nullptr ) { \
 				Msg( "%s(%d): %s: %s == NULL\n", f, l, funcname, #pObj ); \
 				break; \
 			} \
@@ -186,7 +186,7 @@ ConVar r_frameratesmoothing( "r_frameratesmoothing", "0", FCVAR_MATERIAL_SYSTEM_
 #else
 	#define SPEW_REFCOUNT_( f, l, funcname, pObj, op, expected ) \
 		do { \
-			if ( pObj == NULL ) { \
+			if ( pObj == nullptr ) { \
 				break; \
 			} \
 			pObj->AddRef(); \
@@ -505,11 +505,11 @@ struct Texture_t
 		m_CountIndex = 0;
 		m_nTimesBoundMax = 0;
 		m_nTimesBoundThisFrame = 0;
-		m_pTexture = NULL;
-		m_ppTexture = NULL;
+		m_pTexture = nullptr;
+		m_ppTexture = nullptr;
 		m_ImageFormat = IMAGE_FORMAT_RGBA8888;
-		m_pTextureGroupCounterGlobal = NULL;
-		m_pTextureGroupCounterFrame = NULL;
+		m_pTextureGroupCounterGlobal = nullptr;
+		m_pTextureGroupCounterFrame = nullptr;
 	}
 
 	uint8					m_UTexWrap;
@@ -722,7 +722,7 @@ public:
 	virtual void GetCurrentRenderTargetDimensions( int& nWidth, int& nHeight ) const
 	{
 		ITexture *pTexture = ShaderAPI()->GetRenderTargetEx( 0 );
-		if ( pTexture == NULL )
+		if ( pTexture == nullptr )
 		{
 			ShaderAPI()->GetBackBufferDimensions( nWidth, nHeight );
 		}
@@ -1023,9 +1023,9 @@ public:
 	virtual void ClearBuffersObeyStencil( bool bClearColor, bool bClearDepth );
 	virtual void ClearBuffersObeyStencilEx( bool bClearColor, bool bClearAlpha, bool bClearDepth );
 	virtual void PerformFullScreenStencilOperation( void );
-	void ReadPixels( int x, int y, int width, int height, unsigned char *data, ImageFormat dstFormat, ITexture *pRenderTargetTexture = NULL );
-	void ReadPixelsAsync( int x, int y, int width, int height, unsigned char *data, ImageFormat dstFormat, ITexture *pRenderTargetTexture = NULL, CThreadEvent *pPixelsReadEvent = NULL );
-	void ReadPixelsAsyncGetResult( int x, int y, int width, int height, unsigned char *data, ImageFormat dstFormat, CThreadEvent *pGetResultEvent = NULL );
+	void ReadPixels( int x, int y, int width, int height, unsigned char *data, ImageFormat dstFormat, ITexture *pRenderTargetTexture = nullptr );
+	void ReadPixelsAsync( int x, int y, int width, int height, unsigned char *data, ImageFormat dstFormat, ITexture *pRenderTargetTexture = nullptr, CThreadEvent *pPixelsReadEvent = nullptr );
+	void ReadPixelsAsyncGetResult( int x, int y, int width, int height, unsigned char *data, ImageFormat dstFormat, CThreadEvent *pGetResultEvent = nullptr );
 	virtual void ReadPixels( Rect_t *pSrcRect, Rect_t *pDstRect, unsigned char *data, ImageFormat dstFormat, int nDstStride );
 
 	// Gets the current buffered state... (debug only)
@@ -1140,8 +1140,8 @@ public:
 	void CompilePixelShaderLocalLights( CompiledLightingState_t *pCompiledState, int nLightCount, const MaterialLightingState_t *pLightingState, bool bStaticLight );
 
 	void CopyRenderTargetToTexture( ShaderAPITextureHandle_t textureHandle );
-	void CopyRenderTargetToTextureEx( ShaderAPITextureHandle_t textureHandle, int nRenderTargetID, Rect_t *pSrcRect = NULL, Rect_t *pDstRect = NULL );
-	void CopyTextureToRenderTargetEx( int nRenderTargetID, ShaderAPITextureHandle_t textureHandle, Rect_t *pSrcRect = NULL, Rect_t *pDstRect = NULL );
+	void CopyRenderTargetToTextureEx( ShaderAPITextureHandle_t textureHandle, int nRenderTargetID, Rect_t *pSrcRect = nullptr, Rect_t *pDstRect = nullptr );
+	void CopyTextureToRenderTargetEx( int nRenderTargetID, ShaderAPITextureHandle_t textureHandle, Rect_t *pSrcRect = nullptr, Rect_t *pDstRect = nullptr );
 
 	// Returns the cull mode (for fill rate computation)
 	D3DCULL GetCullMode() const;
@@ -1476,7 +1476,7 @@ private:
 
 		if( fogMode == SHADER_FOGMODE_NUMFOGMODES ) //not passing in an explicit fog mode
 		{
-			if ( m_TransitionTable.CurrentShadowState() == NULL )
+			if ( m_TransitionTable.CurrentShadowState() == nullptr )
 			{
 				fogMode = SHADER_FOGMODE_DISABLED;
 				bVertexFog = false;
@@ -1711,7 +1711,7 @@ private:
 	// debug logging
 	void PrintfVA( char *fmt, va_list vargs );
 	void Printf( char *fmt, ... );	
-	float Knob( char *knobname, float *setvalue = NULL );
+	float Knob( char *knobname, float *setvalue = nullptr );
 
 	void AddShaderComboInformation( const ShaderComboSemantics_t *pSemantics );
 
@@ -2051,7 +2051,7 @@ CShaderAPIDx8::CShaderAPIDx8() :
 	m_CurrStack( -1 ),
 	m_pRenderMesh( 0 ),
 	m_nDynamicVBSize( DYNAMIC_VERTEX_BUFFER_MEMORY ),
-	m_pMaterial( NULL ),
+	m_pMaterial( nullptr ),
 	m_CurrentFrame( 0 ),
 	m_InSelectionMode( false ),
 	m_SelectionMinZ( FLT_MAX ),
@@ -2093,7 +2093,7 @@ CShaderAPIDx8::CShaderAPIDx8() :
 
 	m_bEnableDebugTextureList = 0;
 	m_bDebugTexturesRendering = 0;
-	m_pDebugTextureList = NULL;
+	m_pDebugTextureList = nullptr;
 	m_nTextureMemoryUsedLastFrame = 0;
 	m_nTextureMemoryUsedTotal = 0;
 	m_nTextureMemoryUsedPicMip1 = 0;
@@ -2122,14 +2122,14 @@ CShaderAPIDx8::CShaderAPIDx8() :
 
 	// init to cover "real" backbuffer and HDR backbuffer
 	m_pBackBufferSurfaces.SetCount( 2 );
-	m_pBackBufferSurfaces[0] = NULL;
-	m_pBackBufferSurfaces[1] = NULL;
+	m_pBackBufferSurfaces[0] = nullptr;
+	m_pBackBufferSurfaces[1] = nullptr;
 
 	ClearStdTextureHandles();
 
 	V_memset( &m_CascadedShadowMappingState, 0, sizeof( m_CascadedShadowMappingState ) );
 	V_memset( &m_CascadedShadowMappingState_LightMapScaled, 0, sizeof( m_CascadedShadowMappingState_LightMapScaled ) );
-	m_pCascadedShadowMappingDepthTexture = NULL;
+	m_pCascadedShadowMappingDepthTexture = nullptr;
 
 
 
@@ -2147,44 +2147,44 @@ CShaderAPIDx8::~CShaderAPIDx8()
 	if ( m_DynamicState.m_pVectorVertexShaderConstant )
 	{
 		delete[] m_DynamicState.m_pVectorVertexShaderConstant;
-		m_DynamicState.m_pVectorVertexShaderConstant = NULL;
+		m_DynamicState.m_pVectorVertexShaderConstant = nullptr;
 	}
 
 	if ( m_DynamicState.m_pBooleanVertexShaderConstant )
 	{
 		delete[] m_DynamicState.m_pBooleanVertexShaderConstant;
-		m_DynamicState.m_pBooleanVertexShaderConstant = NULL;
+		m_DynamicState.m_pBooleanVertexShaderConstant = nullptr;
 	}
 
 	if ( m_DynamicState.m_pIntegerVertexShaderConstant )
 	{
 		delete[] m_DynamicState.m_pIntegerVertexShaderConstant;
-		m_DynamicState.m_pIntegerVertexShaderConstant = NULL;
+		m_DynamicState.m_pIntegerVertexShaderConstant = nullptr;
 	}
 
 	if ( m_DynamicState.m_pVectorPixelShaderConstant )
 	{
 		delete[] m_DynamicState.m_pVectorPixelShaderConstant;
-		m_DynamicState.m_pVectorPixelShaderConstant = NULL;
+		m_DynamicState.m_pVectorPixelShaderConstant = nullptr;
 	}
 
 	if ( m_DynamicState.m_pBooleanPixelShaderConstant )
 	{
 		delete[] m_DynamicState.m_pBooleanPixelShaderConstant;
-		m_DynamicState.m_pBooleanPixelShaderConstant = NULL;
+		m_DynamicState.m_pBooleanPixelShaderConstant = nullptr;
 	}
 
 	if ( m_DynamicState.m_pIntegerPixelShaderConstant )
 	{
 		delete[] m_DynamicState.m_pIntegerPixelShaderConstant;
-		m_DynamicState.m_pIntegerPixelShaderConstant = NULL;
+		m_DynamicState.m_pIntegerPixelShaderConstant = nullptr;
 	}
 
 	if ( m_pDebugTextureList )
 	{
 		m_DebugTextureListLock.Lock();
 		m_pDebugTextureList->deleteThis();
-		m_pDebugTextureList = NULL;
+		m_pDebugTextureList = nullptr;
 		m_DebugTextureListLock.Unlock();
 	}
 }
@@ -2236,7 +2236,7 @@ void CShaderAPIDx8::AcquireInternalRenderTargets()
 	}
 
 	Assert( m_pBackBufferSurfaces.Count() > BACK_BUFFER_INDEX_DEFAULT );
-	if ( m_pBackBufferSurfaces[BACK_BUFFER_INDEX_DEFAULT] == NULL )
+	if ( m_pBackBufferSurfaces[BACK_BUFFER_INDEX_DEFAULT] == nullptr )
 	{
 		Dx9Device()->GetRenderTarget( 0, &m_pBackBufferSurfaces[BACK_BUFFER_INDEX_DEFAULT] );
 		Assert( m_pBackBufferSurfaces[BACK_BUFFER_INDEX_DEFAULT] );
@@ -2244,7 +2244,7 @@ void CShaderAPIDx8::AcquireInternalRenderTargets()
 
 	Assert( m_pBackBufferSurfaces.Count() > BACK_BUFFER_INDEX_HDR );
 	if( ( g_pHardwareConfigDx8->GetHDRType() == HDR_TYPE_FLOAT ) &&
-		( m_pBackBufferSurfaces[BACK_BUFFER_INDEX_HDR] == NULL ) )
+		( m_pBackBufferSurfaces[BACK_BUFFER_INDEX_HDR] == nullptr ) )
 	{
 		// create a float16 HDR rendertarget
 		int nWidth, nHeight;
@@ -2258,8 +2258,8 @@ void CShaderAPIDx8::AcquireInternalRenderTargets()
 			m_PresentParameters.MultiSampleQuality, 
 			false,	// Lockable
 			&m_pBackBufferSurfaces[BACK_BUFFER_INDEX_HDR], 
-			NULL );
-		if ( ( hRes != D3D_OK ) || m_pBackBufferSurfaces[BACK_BUFFER_INDEX_HDR]  == NULL )
+			nullptr );
+		if ( ( hRes != D3D_OK ) || m_pBackBufferSurfaces[BACK_BUFFER_INDEX_HDR]  == nullptr )
 			hRes = Dx9Device()->CreateRenderTarget(
 				nWidth, 
 				nHeight,
@@ -2268,7 +2268,7 @@ void CShaderAPIDx8::AcquireInternalRenderTargets()
 				0,
 				false,	// Lockable
 				&m_pBackBufferSurfaces[BACK_BUFFER_INDEX_HDR], 
-				NULL );
+				nullptr );
 		Assert( ( hRes == D3D_OK ) && m_pBackBufferSurfaces[BACK_BUFFER_INDEX_HDR] );
 	}
 
@@ -2296,10 +2296,10 @@ void CShaderAPIDx8::ReleaseInternalRenderTargets( )
 	//       Those should be released separately via the texure manager
 	FOR_EACH_VEC( m_pBackBufferSurfaces, i )
 	{
-		if ( m_pBackBufferSurfaces[i] != NULL )
+		if ( m_pBackBufferSurfaces[i] != nullptr )
 		{
 			IDirect3DSurface9* backBufferSurface = m_pBackBufferSurfaces[i];
-			m_pBackBufferSurfaces[i] = NULL;
+			m_pBackBufferSurfaces[i] = nullptr;
 
 			// Default back buffer may have a reference held by DirectX.
 			int nRemainingReferences = backBufferSurface->Release();
@@ -2311,7 +2311,7 @@ void CShaderAPIDx8::ReleaseInternalRenderTargets( )
 	{
 		SPEW_REFCOUNT_EXPECTED( m_pZBufferSurface, <=, 2 );
 		m_pZBufferSurface->Release();
-		m_pZBufferSurface = NULL;
+		m_pZBufferSurface = nullptr;
 	}
 }
 
@@ -2682,7 +2682,7 @@ inline void CShaderAPIDx8::SetScreenSizeForVPOS( int pshReg /* = 32 */)
 {
 	int nWidth, nHeight;
 	ITexture *pTexture = ShaderAPI()->GetRenderTargetEx( 0 );
-	if ( pTexture == NULL )
+	if ( pTexture == nullptr )
 	{
 		ShaderAPI()->GetBackBufferDimensions( nWidth, nHeight );
 	}
@@ -2758,7 +2758,7 @@ static void CommitSetScissorRect( D3DDeviceWrapper *pDevice, const DynamicState_
 	{
 		int nWidth, nHeight;
 		ITexture *pTexture = ShaderAPI()->GetRenderTargetEx( 0 );
-		if ( pTexture == NULL )
+		if ( pTexture == nullptr )
 		{
 			ShaderAPI()->GetBackBufferDimensions( nWidth, nHeight );
 		}
@@ -2797,7 +2797,7 @@ inline void CShaderAPIDx8::SetScissorRect( const int nLeft, const int nTop, cons
 	{
 		int nWidth, nHeight;
 		ITexture *pTexture = GetRenderTargetEx( 0 );
-		if ( pTexture == NULL )
+		if ( pTexture == nullptr )
 		{
 			GetBackBufferDimensions( nWidth, nHeight );
 		}
@@ -3055,7 +3055,7 @@ static void CommitVertexTextures( D3DDeviceWrapper *pDevice, const DynamicState_
 		VertexTextureState_t &currentVTState = currentState.m_VertexTextureState[i];
 		ShaderAPITextureHandle_t textureHandle = desiredState.m_VertexTextureState[i].m_BoundVertexTexture;
 
-		Texture_t *pTexture = ( textureHandle != INVALID_SHADERAPI_TEXTURE_HANDLE ) ? &g_ShaderAPIDX8.GetTexture( textureHandle ) : NULL;
+		Texture_t *pTexture = ( textureHandle != INVALID_SHADERAPI_TEXTURE_HANDLE ) ? &g_ShaderAPIDX8.GetTexture( textureHandle ) : nullptr;
 //		if ( pTexture && ( pTexture->m_Flags & Texture_t::IS_VERTEX_TEXTURE ) == 0 )
 //		{
 //			Warning( "Attempting to bind a vertex texture (%s) which was not created as a vertex texture!\n", pTexture->m_DebugName.String() );
@@ -3070,7 +3070,7 @@ static void CommitVertexTextures( D3DDeviceWrapper *pDevice, const DynamicState_
 // 			RECORD_INT( pTexture ? pTexture->GetUniqueID() : 0xFFFF );
 // 			RECORD_INT( 0 );
 
-			IDirect3DBaseTexture *pD3DTexture = ( textureHandle >= 0 ) ? g_ShaderAPIDX8.GetD3DTexture( textureHandle ) : NULL;
+			IDirect3DBaseTexture *pD3DTexture = ( textureHandle >= 0 ) ? g_ShaderAPIDX8.GetD3DTexture( textureHandle ) : nullptr;
 
 			pDevice->SetTexture( D3DVERTEXTEXTURESAMPLER0 + i, pD3DTexture );
 		}
@@ -3462,7 +3462,7 @@ void CShaderAPIDx8::ResetRenderState( bool bFullReset )
 	for( int i = 0; i < g_pHardwareConfigDx8->ActualCaps().m_NumVertexSamplers; i++ )
 	{
 		m_DynamicState.m_VertexTextureState[i].m_BoundVertexTexture = INVALID_SHADERAPI_TEXTURE_HANDLE;
-		Dx9Device()->SetTexture( D3DVERTEXTEXTURESAMPLER0 + i, NULL );
+		Dx9Device()->SetTexture( D3DVERTEXTEXTURESAMPLER0 + i, nullptr );
 
 		m_DynamicState.m_VertexTextureState[i].m_UTexWrap = D3DTADDRESS_CLAMP;
 		m_DynamicState.m_VertexTextureState[i].m_VTexWrap = D3DTADDRESS_CLAMP;
@@ -3571,13 +3571,13 @@ void CShaderAPIDx8::ResetRenderState( bool bFullReset )
 	// No render mesh
 	m_pRenderMesh = 0;
 	m_nRenderInstanceCount = 0;
-	m_pRenderInstances = NULL;
-	m_pRenderCompiledState = NULL;
-	m_pRenderInstanceInfo = NULL;
+	m_pRenderInstances = nullptr;
+	m_pRenderCompiledState = nullptr;
+	m_pRenderInstanceInfo = nullptr;
 	m_bRenderHasSetStencil = false;
 
 	// Reset cached vertex decl
-	m_DynamicState.m_pVertexDecl = NULL;
+	m_DynamicState.m_pVertexDecl = nullptr;
 	m_DynamicState.m_DeclVertexFormat = 0;
 	m_DynamicState.m_bDeclHasColorMesh = false;
 	m_DynamicState.m_bDeclUsingFlex = false;
@@ -3672,7 +3672,7 @@ void CShaderAPIDx8::SetDefaultState()
 	CShaderAPIDx8::SetVertexShaderIndex( );
 	CShaderAPIDx8::SetPixelShaderIndex( );
 
-	MeshMgr()->MarkUnusedVertexFields( 0, 0, NULL );
+	MeshMgr()->MarkUnusedVertexFields( 0, 0, nullptr );
 }
 
 
@@ -3738,7 +3738,7 @@ IMesh *CShaderAPIDx8::GetFlexMesh()
 IMesh* CShaderAPIDx8::GetDynamicMesh( IMaterial* pMaterial, int nHWSkinBoneCount, bool buffered,
 								IMesh* pVertexOverride, IMesh* pIndexOverride )
 {
-	Assert( (pMaterial == NULL) || ((IMaterialInternal *)pMaterial)->IsRealTimeVersion() );
+	Assert( (pMaterial == nullptr) || ((IMaterialInternal *)pMaterial)->IsRealTimeVersion() );
 
 	LOCK_SHADERAPI();
 	return MeshMgr()->GetDynamicMesh( pMaterial, 0, nHWSkinBoneCount, buffered, pVertexOverride, pIndexOverride );
@@ -3747,7 +3747,7 @@ IMesh* CShaderAPIDx8::GetDynamicMesh( IMaterial* pMaterial, int nHWSkinBoneCount
 IMesh* CShaderAPIDx8::GetDynamicMeshEx( IMaterial* pMaterial, VertexFormat_t vertexFormat, int nHWSkinBoneCount, 
 	bool bBuffered, IMesh* pVertexOverride, IMesh* pIndexOverride )
 {
-	Assert( (pMaterial == NULL) || ((IMaterialInternal *)pMaterial)->IsRealTimeVersion() );
+	Assert( (pMaterial == nullptr) || ((IMaterialInternal *)pMaterial)->IsRealTimeVersion() );
 
 	LOCK_SHADERAPI();
 	return MeshMgr()->GetDynamicMesh( pMaterial, vertexFormat, nHWSkinBoneCount, bBuffered, pVertexOverride, pIndexOverride );
@@ -3897,11 +3897,11 @@ void CShaderAPIDx8::DrawMeshInternal( CMeshBase *pMesh, int nCount, const MeshIn
 		SetStencilStateInternal( m_RenderInitialStencilState );
 	}
 
-	m_pRenderMesh = NULL;
+	m_pRenderMesh = nullptr;
 	m_nRenderInstanceCount = 0;
-	m_pRenderInstances = NULL;
-	m_pRenderCompiledState = NULL;
-	m_pRenderInstanceInfo = NULL;
+	m_pRenderInstances = nullptr;
+	m_pRenderCompiledState = nullptr;
+	m_pRenderInstanceInfo = nullptr;
 	m_bRenderHasSetStencil = false;
 	m_DynamicState.m_bLightStateComputed = false;
 
@@ -3997,7 +3997,7 @@ void CShaderAPIDx8::DrawMesh2( CMeshBase* pMesh, int nCount, const MeshInstanceD
 
 	if ( dynVSIdx != -1 )
 	{
-		unsigned char* pInstanceCommandBuffer = NULL;
+		unsigned char* pInstanceCommandBuffer = nullptr;
 		StateSnapshot_t snapshotId = m_pMaterial->GetSnapshotId( modulationFlags, 0 );
 
 		CommitSetViewports( Dx9Device(), m_DesiredState, m_DynamicState, false );
@@ -4040,12 +4040,12 @@ void CShaderAPIDx8::DrawMesh2( CMeshBase* pMesh, int nCount, const MeshInstanceD
 			
 			MeshMgr()->DrawInstancedPrims( pInstanceCommandBuffer );
 		}
-		pShader->SetPPParams(NULL);
+		pShader->SetPPParams(nullptr);
 	}
 	else
 	{
 		// Could not take new path
-		pShader->SetPPParams(NULL);
+		pShader->SetPPParams(nullptr);
 		goto useOldPath;
 	}
 
@@ -4057,11 +4057,11 @@ useOldPath:
 
 xit:
 
-	m_pRenderMesh = NULL;
+	m_pRenderMesh = nullptr;
 	m_nRenderInstanceCount = 0;
-	m_pRenderInstances = NULL;
-	m_pRenderCompiledState = NULL;
-	m_pRenderInstanceInfo = NULL;
+	m_pRenderInstances = nullptr;
+	m_pRenderCompiledState = nullptr;
+	m_pRenderInstanceInfo = nullptr;
 	m_bRenderHasSetStencil = false;
 	m_DynamicState.m_bLightStateComputed = false;
 
@@ -4085,7 +4085,7 @@ void CShaderAPIDx8::DrawShadowMesh( CMeshBase *pMesh, int nCount, const MeshInst
 	IShader *pShader = m_pMaterial->GetShader();
 	IMaterialVar** params = m_pMaterial->GetVars();
 	pShader->SetPPParams( params );
-	pShader->ExecuteFastPath( &dynVSIdx, &dynPSIdx, params, this, nCompressionType, NULL, false );
+	pShader->ExecuteFastPath( &dynVSIdx, &dynPSIdx, params, this, nCompressionType, nullptr, false );
 
 	if ( dynVSIdx != -1 )
 	{
@@ -4128,11 +4128,11 @@ void CShaderAPIDx8::DrawShadowMesh( CMeshBase *pMesh, int nCount, const MeshInst
 				false, false, pMesh->GetVertexStreamSpec() );
 
 			// Draw
-			pMesh->DrawPrims( NULL );
+			pMesh->DrawPrims( nullptr );
 		}
 		else
 		{
-			MeshMgr()->DrawInstancedPrims( NULL );
+			MeshMgr()->DrawInstancedPrims( nullptr );
 		}
 	}
 	else
@@ -4150,7 +4150,7 @@ void CShaderAPIDx8::DrawShadowMesh( CMeshBase *pMesh, int nCount, const MeshInst
 		// a bunch of maps seems to indicate this is reasonable expectation. If we find some objects not casting shadows where
 		// they should be I'll revisit this. 
 	}
-	pShader->SetPPParams( NULL );
+	pShader->SetPPParams( nullptr );
 }
 
 
@@ -4170,7 +4170,7 @@ void CShaderAPIDx8::DrawWithVertexAndIndexBuffers( void )
 	SetVertexDecl( vertexFormat, false /*( vertexFormat & VERTEX_COLOR_STEAM_1 ) != 0*/,
 		false /*m_pRenderMesh->HasFlexMesh()*/, false /*m_pRenderMesh->IsUsingMorphData()*/, 
 		false /*using pre tessellated patches*/,
-		NULL /*m_pRenderMesh->GetVertexStreamSpec()*/ );
+		nullptr /*m_pRenderMesh->GetVertexStreamSpec()*/ );
 	CommitStateChanges();
 	if ( m_pMaterial )
 	{		
@@ -4179,7 +4179,7 @@ void CShaderAPIDx8::DrawWithVertexAndIndexBuffers( void )
 	}
 	else
 	{
-		MeshMgr()->RenderPassWithVertexAndIndexBuffers( NULL );
+		MeshMgr()->RenderPassWithVertexAndIndexBuffers( nullptr );
 	}
 //	m_pRenderMesh = NULL;
 
@@ -4205,7 +4205,7 @@ void CShaderAPIDx8::ForceHardwareSync_WithManagedTexture()
 	SetDefaultState();
 
 	D3DLOCKED_RECT rect;
-	HRESULT hr = m_pFrameSyncTexture->LockRect( 0, &rect, NULL, 0 );
+	HRESULT hr = m_pFrameSyncTexture->LockRect( 0, &rect, nullptr, 0 );
 	if ( SUCCEEDED( hr ) )
 	{
 		// modify..
@@ -4610,7 +4610,7 @@ void CShaderAPIDx8::ExportTextureList()
 			4 * desc.Width * desc.Height * MAX( 1, desc.MultiSampleType ) ); // hack
 	}
 
-	if( m_pBackBufferSurfaces[BACK_BUFFER_INDEX_HDR] != NULL )
+	if( m_pBackBufferSurfaces[BACK_BUFFER_INDEX_HDR] != nullptr )
 	{
 		m_pBackBufferSurfaces[BACK_BUFFER_INDEX_HDR]->GetDesc( &desc );
 		AddBufferToTextureList( "HDR_BACKBUFFER", desc );
@@ -4690,7 +4690,7 @@ void CShaderAPIDx8::BeginPIXEvent( unsigned long color, const char* szName )
 	const char *p = pix_break_on_event.GetString();
 	if ( p && V_strlen( p ) )
 	{
-		if ( V_stristr( szName, p ) != NULL )
+		if ( V_stristr( szName, p ) != nullptr )
 		{
 			DebuggerBreak();
 		}
@@ -5663,12 +5663,12 @@ void CShaderAPIDx8::CommitFastClipPlane( )
 
 	D3DXMATRIX worldToViewInvTrans, worldToViewInv, worldToView = GetUserClipTransform();
 
-	D3DXMatrixInverse( &worldToViewInv, NULL, &worldToView );
+	D3DXMatrixInverse( &worldToViewInv, nullptr, &worldToView );
 
 	// PS3's Cg likes things in row-major rather than column-major, so let's just save ourselves the work of fixing every shader and call it even?
 	D3DXMatrixTranspose( &worldToViewInvTrans, &worldToViewInv ); 	
 
-	D3DXMatrixInverse( &viewToProjInv, NULL, &viewToProj );
+	D3DXMatrixInverse( &viewToProjInv, nullptr, &viewToProj );
 	D3DXMatrixTranspose( &viewToProjInvTrans, &viewToProjInv ); 
 
 	if ( !mat_alternatefastclipalgorithm.GetBool() )
@@ -7453,7 +7453,7 @@ inline IDirect3DBaseTexture* CShaderAPIDx8::GetD3DTexture( ShaderAPITextureHandl
 {
 	if ( hTexture == INVALID_SHADERAPI_TEXTURE_HANDLE )
 	{
-		return NULL;
+		return nullptr;
 	}
 
 	AssertValidTextureHandle( hTexture );
@@ -7901,12 +7901,12 @@ ShaderAPITextureHandle_t CShaderAPIDx8::CreateDepthTexture(
 	if ( !bTexture )
 	{
 		hr = Dx9Device()->CreateDepthStencilSurface(
-			width, height, format, multisampleType, 0, TRUE, &pTexture->GetDepthStencilSurface(), NULL );
+			width, height, format, multisampleType, 0, TRUE, &pTexture->GetDepthStencilSurface(), nullptr );
 	}
 	else
 	{
 		IDirect3DTexture9 *pTex;
-		hr = Dx9Device()->CreateTexture( width, height, 1, D3DUSAGE_DEPTHSTENCIL, format, D3DPOOL_DEFAULT, &pTex, NULL );
+		hr = Dx9Device()->CreateTexture( width, height, 1, D3DUSAGE_DEPTHSTENCIL, format, D3DPOOL_DEFAULT, &pTex, nullptr );
 		pTexture->SetTexture( pTex );
 	}
 
@@ -8164,8 +8164,8 @@ void CShaderAPIDx8::SetupTextureGroup( ShaderAPITextureHandle_t hTexture, const 
 	Q_snprintf( counterName, sizeof( counterName ), "TexGroup_frame_%s", pTexture->m_TextureGroupName.String() );
 	pTexture->m_pTextureGroupCounterFrame = g_VProfCurrentProfile.FindOrCreateCounter( counterName, COUNTER_GROUP_TEXTURE_PER_FRAME );
 #else
-	pTexture->m_pTextureGroupCounterGlobal = NULL;
-	pTexture->m_pTextureGroupCounterFrame  = NULL;
+	pTexture->m_pTextureGroupCounterGlobal = nullptr;
+	pTexture->m_pTextureGroupCounterFrame  = nullptr;
 #endif
 
 	if ( pTexture->m_pTextureGroupCounterGlobal )
@@ -8244,7 +8244,7 @@ void CShaderAPIDx8::DeleteD3DTexture( ShaderAPITextureHandle_t hTexture )
 		*texture.m_pTextureGroupCounterGlobal -= texture.GetMemUsage();
 		// <sergiy> this is an old assert that Mike Dussault added in 2002. It affects computation of free memory. Iestyn said it's better to keep the assert in to find out what's wrong with free memory computation.
 		Assert( *texture.m_pTextureGroupCounterGlobal >= 0 ); 
-		texture.m_pTextureGroupCounterGlobal = NULL;
+		texture.m_pTextureGroupCounterGlobal = nullptr;
 	}
 
 	// remove this texture from std textures
@@ -8340,7 +8340,7 @@ void CShaderAPIDx8::WriteTextureToFile( ShaderAPITextureHandle_t hTexture, const
 		IDirect3DSurface *pSystemSurface;
 
 
-		hr = Dx9Device()->CreateOffscreenPlainSurface( surfaceDesc.Width, surfaceDesc.Height, surfaceDesc.Format, D3DPOOL_SYSTEMMEM, &pSystemSurface, NULL );
+		hr = Dx9Device()->CreateOffscreenPlainSurface( surfaceDesc.Width, surfaceDesc.Height, surfaceDesc.Format, D3DPOOL_SYSTEMMEM, &pSystemSurface, nullptr );
 		Assert( SUCCEEDED( hr ) );
 
 		pSystemSurface->GetDesc( &surfaceDesc );
@@ -8354,7 +8354,7 @@ void CShaderAPIDx8::WriteTextureToFile( ShaderAPITextureHandle_t hTexture, const
 	}
 
 	// lock the region
-	if ( FAILED( pTextureLevel->LockRect( &lockedRect, NULL, D3DLOCK_READONLY ) ) )
+	if ( FAILED( pTextureLevel->LockRect( &lockedRect, nullptr, D3DLOCK_READONLY ) ) )
 	{
 		Assert( 0 );
 		pTextureLevel->Release();
@@ -8447,13 +8447,13 @@ IDirect3DSurface* CShaderAPIDx8::GetTextureSurface( ShaderAPITextureHandle_t tex
 	//                     due to this handle being invalid. It may have to do with losing D3D device. Robustifying this code to check if the crashes will end.
 	if ( !m_Textures.IsValidIndex( textureHandle ) )
 	{
-		return NULL;
+		return nullptr;
 	}
 
 	Texture_t &tex = GetTexture( textureHandle );
 	if ( !( tex.m_Flags & Texture_t::IS_ALLOCATED ) )
 	{
-		return NULL;
+		return nullptr;
 	}
 
 
@@ -8462,7 +8462,7 @@ IDirect3DSurface* CShaderAPIDx8::GetTextureSurface( ShaderAPITextureHandle_t tex
 	Assert( pTex );
 	if ( !pTex )
 	{
-		return NULL;
+		return nullptr;
 	}
 	
 	HRESULT hr = pTex->GetSurfaceLevel( 0, &pSurface );
@@ -8479,7 +8479,7 @@ IDirect3DSurface* CShaderAPIDx8::GetDepthTextureSurface( ShaderAPITextureHandle_
 	AssertValidTextureHandle( textureHandle );
 	if ( !TextureIsAllocated( textureHandle ) )
 	{
-		return NULL;
+		return nullptr;
 	}
 	return GetTexture( textureHandle ).GetDepthStencilSurface();
 }
@@ -8535,8 +8535,8 @@ void CShaderAPIDx8::SetRenderTargetEx( int nRenderTargetID, ShaderAPITextureHand
 		return;
 	}
 
-	IDirect3DSurface* pColorSurface = NULL;
-	IDirect3DSurface* pZSurface = NULL;
+	IDirect3DSurface* pColorSurface = nullptr;
+	IDirect3DSurface* pZSurface = nullptr;
 
 	RECORD_COMMAND( DX8_SET_RENDER_TARGET, 3 );
 	RECORD_INT( nRenderTargetID );
@@ -8588,7 +8588,7 @@ void CShaderAPIDx8::SetRenderTargetEx( int nRenderTargetID, ShaderAPITextureHand
 	else if ( depthTextureHandle == SHADER_RENDERTARGET_NONE )
 	{
 		// GR - disable depth buffer
-		pZSurface = NULL;
+		pZSurface = nullptr;
 	}
 	else
 	{
@@ -8620,7 +8620,7 @@ void CShaderAPIDx8::SetRenderTargetEx( int nRenderTargetID, ShaderAPITextureHand
 			}
 			else
 			{
-				pZSurface = NULL;
+				pZSurface = nullptr;
 				Warning("Unexpected NULL texture in CShaderAPIDx8::SetRenderTargetEx()\n");
 			}
 		}
@@ -8657,7 +8657,7 @@ void CShaderAPIDx8::SetRenderTargetEx( int nRenderTargetID, ShaderAPITextureHand
 		// (Passing in NULL for the zeroth render target means that you want to use the backbuffer
 		// as the render target.)
 		// hack hack hack!!!!!  If the render target id > 0 and the user passed in NULL, disable the render target
-		Dx9Device()->SetRenderTarget( nRenderTargetID, NULL );
+		Dx9Device()->SetRenderTarget( nRenderTargetID, nullptr );
 	}
 	else
 	{
@@ -9009,7 +9009,7 @@ void *CShaderAPIDx8::LockTex( ShaderAPITextureHandle_t hTexture )
 	Assert( !FAILED( hr ) );
 
 	D3DLOCKED_RECT lockedRect;
-	hr = pSurf->LockRect( &lockedRect, NULL, D3DLOCK_NO_DIRTY_UPDATE );
+	hr = pSurf->LockRect( &lockedRect, nullptr, D3DLOCK_NO_DIRTY_UPDATE );
 	Assert( !FAILED( hr ) );
 
 	pSurf->Release();	// The GetSurfaceLevel call incremented ref count
@@ -9434,7 +9434,7 @@ float CShaderAPIDx8::GetAmbientLightCubeLuminance( MaterialLightingState_t *pLig
 static inline RECT* RectToRECT( Rect_t *pSrcRect, RECT &dstRect )
 {
 	if ( !pSrcRect )
-		return NULL;
+		return nullptr;
 
 	dstRect.left = pSrcRect->x;
 	dstRect.top = pSrcRect->y;
@@ -10256,7 +10256,7 @@ void CShaderAPIDx8::UpdateStereoTexture( ShaderAPITextureHandle_t texHandle, boo
 	}
 
 	IDirect3DBaseTexture *baseTex = GetTexture( texHandle ).GetTexture();
-	if ( ( baseTex == NULL ) || ( baseTex->GetType() != D3DRTYPE_TEXTURE ) )
+	if ( ( baseTex == nullptr ) || ( baseTex->GetType() != D3DRTYPE_TEXTURE ) )
 	{
 		if ( pStereoActiveThisFrame )
 		{
@@ -11155,7 +11155,7 @@ void CShaderAPIDx8::CommitUserClipPlanes( )
 #endif
 	{
 		worldToProjectionInvTrans = GetUserClipTransform( ) * GetTransform( MATERIAL_PROJECTION );
-		D3DXMatrixInverse(&worldToProjectionInvTrans, NULL, &worldToProjectionInvTrans);
+		D3DXMatrixInverse(&worldToProjectionInvTrans, nullptr, &worldToProjectionInvTrans);
 		// PS3's Cg likes things in row-major rather than column-major, so let's just save ourselves the work of fixing every shader and call it even?
 		D3DXMatrixTranspose(&worldToProjectionInvTrans, &worldToProjectionInvTrans);
 	}
@@ -11592,7 +11592,7 @@ void CShaderAPIDx8::ClearBuffers( bool bClearColor, bool bClearDepth, bool bClea
 			RECORD_FLOAT( depth );
 			RECORD_INT( 0 );
 
-			Dx9Device()->Clear( 0, NULL, mask, clearColor, depth, 0L );	
+			Dx9Device()->Clear( 0, nullptr, mask, clearColor, depth, 0L );	
 		}
 		else
 		{
@@ -11648,7 +11648,7 @@ IDirect3DSurface* CShaderAPIDx8::GetFrontBufferImage( ImageFormat& format )
 	HRESULT hr;
 	IDirect3DSurface *pFullScreenSurfaceBits = 0;
 	hr = Dx9Device()->CreateOffscreenPlainSurface( w, h, 
-		D3DFMT_A8R8G8B8, D3DPOOL_SCRATCH, &pFullScreenSurfaceBits, NULL );
+		D3DFMT_A8R8G8B8, D3DPOOL_SCRATCH, &pFullScreenSurfaceBits, nullptr );
 	if (FAILED(hr))
 		return 0;
 
@@ -11661,7 +11661,7 @@ IDirect3DSurface* CShaderAPIDx8::GetFrontBufferImage( ImageFormat& format )
 	
 	IDirect3DSurface *pSurfaceBits = 0;
 	hr = Dx9Device()->CreateOffscreenPlainSurface( windowWidth, windowHeight,
-		D3DFMT_A8R8G8B8, D3DPOOL_SCRATCH, &pSurfaceBits, NULL );
+		D3DFMT_A8R8G8B8, D3DPOOL_SCRATCH, &pSurfaceBits, nullptr );
 	Assert( hr == D3D_OK );
 	
 	POINT pnt;
@@ -11683,7 +11683,7 @@ IDirect3DSurface* CShaderAPIDx8::GetFrontBufferImage( ImageFormat& format )
 	Assert( hr == D3D_OK );
 	
 	D3DLOCKED_RECT lockedDstRect;
-	hr = pSurfaceBits->LockRect( &lockedDstRect, NULL, 0 );
+	hr = pSurfaceBits->LockRect( &lockedDstRect, nullptr, 0 );
 	Assert( hr == D3D_OK );
 
 	int i;
@@ -11733,7 +11733,7 @@ IDirect3DSurface* CShaderAPIDx8::GetBackBufferImageHDR( Rect_t *pSrcRect, Rect_t
 {
 	HRESULT hr;
 	IDirect3DSurface *pSurfaceBits = 0;
-	IDirect3DSurface *pTmpSurface = NULL;
+	IDirect3DSurface *pTmpSurface = nullptr;
 
 	// Get the back buffer
 	IDirect3DSurface* pBackBuffer;
@@ -11759,7 +11759,7 @@ IDirect3DSurface* CShaderAPIDx8::GetBackBufferImageHDR( Rect_t *pSrcRect, Rect_t
 			hr = Dx9Device()->CreateRenderTarget( 
 				SMALL_BACK_BUFFER_SURFACE_WIDTH, SMALL_BACK_BUFFER_SURFACE_HEIGHT, 
 				desc.Format, D3DMULTISAMPLE_NONE, 0, TRUE, &m_pSmallBackBufferFP16TempSurface,
-				NULL );
+				nullptr );
 		}
 		pTmpSurface = m_pSmallBackBufferFP16TempSurface;
 		pTmpSurface->AddRef();
@@ -11780,18 +11780,18 @@ IDirect3DSurface* CShaderAPIDx8::GetBackBufferImageHDR( Rect_t *pSrcRect, Rect_t
 		// if AA was enabled, but certain machines/drivers get reboots if we do GetRenderTargetData 
 		// straight off the backbuffer.
 		hr = Dx9Device()->CreateRenderTarget( desc.Width, desc.Height, desc.Format,
-			D3DMULTISAMPLE_NONE, 0, TRUE, &pTmpSurface, NULL );
+			D3DMULTISAMPLE_NONE, 0, TRUE, &pTmpSurface, nullptr );
 		if ( FAILED(hr) )
 			goto CleanUp;
 
-		hr = Dx9Device()->StretchRect( pBackBuffer, NULL, pTmpSurface, NULL, filter );
+		hr = Dx9Device()->StretchRect( pBackBuffer, nullptr, pTmpSurface, nullptr, filter );
 		if ( FAILED(hr) )
 			goto CleanUp;
 	}
 
 	// Create a buffer the same size and format
 	hr = Dx9Device()->CreateOffscreenPlainSurface( desc.Width, desc.Height, 
-		desc.Format, D3DPOOL_SYSTEMMEM, &pSurfaceBits, NULL );
+		desc.Format, D3DPOOL_SYSTEMMEM, &pSurfaceBits, nullptr );
 	if (FAILED(hr))
 		goto CleanUp;
 
@@ -11828,7 +11828,7 @@ CleanUp:
 IDirect3DSurface* CShaderAPIDx8::GetBackBufferImage( Rect_t *pSrcRect, Rect_t *pDstRect, ImageFormat& format )
 {
 	if ( !m_pBackBufferSurfaces[BACK_BUFFER_INDEX_DEFAULT] || ( m_hFullScreenTexture == INVALID_SHADERAPI_TEXTURE_HANDLE ) )
-		return NULL;
+		return nullptr;
 
 	HRESULT hr;
 	D3DSURFACE_DESC desc;
@@ -11845,8 +11845,8 @@ IDirect3DSurface* CShaderAPIDx8::GetBackBufferImage( Rect_t *pSrcRect, Rect_t *p
 	if ( desc.Format == D3DFMT_A16B16G16R16F || desc.Format == D3DFMT_A32B32G32R32F )
 		return GetBackBufferImageHDR( pSrcRect, pDstRect, format );
 
-	IDirect3DSurface *pSurfaceBits = NULL;
-	IDirect3DSurface *pTmpSurface = NULL;
+	IDirect3DSurface *pSurfaceBits = nullptr;
+	IDirect3DSurface *pTmpSurface = nullptr;
 	int nRenderTargetRefCount;
 	REFERENCE( nRenderTargetRefCount );
 
@@ -11904,7 +11904,7 @@ IDirect3DSurface* CShaderAPIDx8::GetBackBufferImage( Rect_t *pSrcRect, Rect_t *p
 
 	// Create a buffer the same size and format
 	hr = Dx9Device()->CreateOffscreenPlainSurface( tmpDesc.Width, tmpDesc.Height, 
-		desc.Format, D3DPOOL_SYSTEMMEM, &pSurfaceBits, NULL );
+		desc.Format, D3DPOOL_SYSTEMMEM, &pSurfaceBits, nullptr );
 	if ( FAILED(hr) )
 	{
 		AssertOnce( "Error creating offscreen surface!\n" );
@@ -12013,9 +12013,9 @@ void CShaderAPIDx8::ReadPixels( int x, int y, int width, int height, unsigned ch
 	rect.height = height;
 
 	ImageFormat format;
-	IDirect3DSurface* pSurfaceBits = NULL;
+	IDirect3DSurface* pSurfaceBits = nullptr;
 
-	if ( pRenderTargetTexture != NULL )
+	if ( pRenderTargetTexture != nullptr )
 	{
 		format = pRenderTargetTexture->GetImageFormat();
 		ShaderAPITextureHandle_t hRenderTargetTexture = ShaderUtil()->GetShaderAPITextureBindHandle( pRenderTargetTexture, 0, 0 );
@@ -12028,10 +12028,10 @@ void CShaderAPIDx8::ReadPixels( int x, int y, int width, int height, unsigned ch
 		pRTSurface->GetDesc( &surfaceDesc );
 
 
-		HRESULT hr = Dx9Device()->CreateOffscreenPlainSurface( surfaceDesc.Width, surfaceDesc.Height, surfaceDesc.Format, D3DPOOL_SYSTEMMEM, &pSystemSurface, NULL );
+		HRESULT hr = Dx9Device()->CreateOffscreenPlainSurface( surfaceDesc.Width, surfaceDesc.Height, surfaceDesc.Format, D3DPOOL_SYSTEMMEM, &pSystemSurface, nullptr );
 		Assert( SUCCEEDED( hr ) );
 
-		if ( pSystemSurface != NULL )
+		if ( pSystemSurface != nullptr )
 		{
 			pSystemSurface->GetDesc( &surfaceDesc );
 
@@ -12056,7 +12056,7 @@ void CShaderAPIDx8::ReadPixels( int x, int y, int width, int height, unsigned ch
 	}
 }
 
-static IDirect3DSurface *s_pSystemSurface = NULL;
+static IDirect3DSurface *s_pSystemSurface = nullptr;
 static ImageFormat s_format;
 
 // this is not fully async, it syncronizes the queue
@@ -12071,7 +12071,7 @@ void CShaderAPIDx8::ReadPixelsAsync( int x, int y, int width, int height, unsign
 	rect.width = width;
 	rect.height = height;
 
-	if ( pRenderTargetTexture != NULL )
+	if ( pRenderTargetTexture != nullptr )
 	{
 		s_format = pRenderTargetTexture->GetImageFormat();
 		ShaderAPITextureHandle_t hRenderTargetTexture = ShaderUtil()->GetShaderAPITextureBindHandle( pRenderTargetTexture, 0, 0 );
@@ -12083,10 +12083,10 @@ void CShaderAPIDx8::ReadPixelsAsync( int x, int y, int width, int height, unsign
 			pRTSurface->GetDesc( &surfaceDesc );
 
 
-			HRESULT hr = Dx9Device()->CreateOffscreenPlainSurface( surfaceDesc.Width, surfaceDesc.Height, surfaceDesc.Format, D3DPOOL_SYSTEMMEM, &s_pSystemSurface, NULL );
+			HRESULT hr = Dx9Device()->CreateOffscreenPlainSurface( surfaceDesc.Width, surfaceDesc.Height, surfaceDesc.Format, D3DPOOL_SYSTEMMEM, &s_pSystemSurface, nullptr );
 			Assert( SUCCEEDED( hr ) );
 
-			if ( s_pSystemSurface != NULL )
+			if ( s_pSystemSurface != nullptr )
 			{
 				s_pSystemSurface->GetDesc( &surfaceDesc );
 
@@ -12407,7 +12407,7 @@ void CShaderAPIDx8::RecomputeAggregateLightingState( void )
 
 		if ( !m_DynamicState.m_ShaderLightState.m_bStaticLight )
 		{
-			m_DynamicState.m_ShaderLightState.m_bStaticLight = ( m_pRenderInstances[i].m_pColorBuffer != NULL );
+			m_DynamicState.m_ShaderLightState.m_bStaticLight = ( m_pRenderInstances[i].m_pColorBuffer != nullptr );
 		}
 
 		if ( !m_DynamicState.m_ShaderLightState.m_bStaticLightIndirectOnly )
@@ -12575,7 +12575,7 @@ ShaderAPIOcclusionQuery_t CShaderAPIDx8::CreateOcclusionQueryObject( void )
 	if ( IsDeactivated() )
 		return INVALID_SHADERAPI_OCCLUSION_QUERY_HANDLE;
 
-	IDirect3DQuery9 *pQuery = NULL;
+	IDirect3DQuery9 *pQuery = nullptr;
 	HRESULT hr = Dx9Device()->CreateQuery( D3DQUERYTYPE_OCCLUSION, &pQuery );
 	return ( hr == D3D_OK ) ? (ShaderAPIOcclusionQuery_t)pQuery : INVALID_SHADERAPI_OCCLUSION_QUERY_HANDLE;
 }
@@ -12694,7 +12694,7 @@ void CShaderAPIDx8::SetPixelShaderFogParams( int reg )
 void CShaderAPIDx8::SetFlashlightState( const FlashlightState_t &state, const VMatrix &worldToTexture )
 {
 	LOCK_SHADERAPI();
-	SetFlashlightStateEx( state, worldToTexture, NULL );
+	SetFlashlightStateEx( state, worldToTexture, nullptr );
 }
 
 FORCEINLINE float ShadowAttenFromState( const FlashlightState_t &state )
@@ -12767,7 +12767,7 @@ void CShaderAPIDx8::SetFlashlightStateEx( const FlashlightState_t &state, const 
 	if ( g_pHardwareConfigDx8->GetDXSupportLevel() < 92 )
 	{
 		m_FlashlightState.m_bEnableShadows = false;
-		m_pFlashlightDepthTexture = NULL;
+		m_pFlashlightDepthTexture = nullptr;
 	}
 
 	// FIXME: This is shader specific code, only in here because of the command-buffer
@@ -12829,7 +12829,7 @@ void CShaderAPIDx8::GetFlashlightShaderInfo( bool *pShadowsEnabled, bool *pUberL
 {
 	// Adding NULL ptr check on m_pFlashlightDepthTexture here so we slam the FLASHLIGHTSHADOWS dynamic combo off if a flashlight depth texture isn't actually bound (otherwise we set a TEXTURE_WHITE texture, 
 	// which isn't depth which results in the pixel shader sampling a regular color texture as depth)
-	*pShadowsEnabled = m_FlashlightState.m_bEnableShadows && ( m_pFlashlightDepthTexture != NULL );
+	*pShadowsEnabled = m_FlashlightState.m_bEnableShadows && ( m_pFlashlightDepthTexture != nullptr );
 	*pUberLight = m_FlashlightState.m_bUberlight;
 }
 
@@ -12847,13 +12847,13 @@ bool CShaderAPIDx8::SupportsMSAAMode( int nMSAAMode )
 		return ( D3D_OK == D3D()->CheckDeviceMultiSampleType( m_DisplayAdapter, DX8_DEVTYPE,
 			D3DFMT_A8R8G8B8,
 			false,
-			ComputeMultisampleType( nMSAAMode ), NULL ) );
+			ComputeMultisampleType( nMSAAMode ), nullptr ) );
 	}
 
 	return ( D3D_OK == D3D()->CheckDeviceMultiSampleType( m_DisplayAdapter, m_DeviceType, 
 														   m_PresentParameters.BackBufferFormat,
 														   m_PresentParameters.Windowed,
-														   ComputeMultisampleType( nMSAAMode ), NULL ) );
+														   ComputeMultisampleType( nMSAAMode ), nullptr ) );
 }
 
 bool CShaderAPIDx8::SupportsCSAAMode( int nNumSamples, int nQualityLevel )

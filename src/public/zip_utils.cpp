@@ -88,7 +88,7 @@ public:
 		if ( WritePath.IsEmpty() )
 		{
 			// use a safe name in the cwd
-			char *pBuffer = tmpnam( NULL );
+			char *pBuffer = tmpnam( nullptr );
 			if ( !pBuffer )
 			{
 				return INVALID_HANDLE_VALUE;
@@ -107,7 +107,7 @@ public:
 		{
 			char uniqueFilename[MAX_PATH];
 			static int counter = 0;
-			time_t now = time( NULL );
+			time_t now = time( nullptr );
 			struct tm *tm = localtime( &now );
 			V_sprintf_safe( uniqueFilename, "%d_%d_%d_%d_%d.tmp", tm->tm_wday, tm->tm_hour, tm->tm_min, tm->tm_sec, ++counter );                                                \
 			V_ComposeFileName( WritePath.String(), uniqueFilename, tempFileName, sizeof( tempFileName ) );
@@ -178,7 +178,7 @@ class CFileStream : public IWriteStream
 {
 public:
 	CFileStream( FILE *fout ) : IWriteStream(), m_file( fout ), m_hFile( INVALID_HANDLE_VALUE ) {}
-	CFileStream( HANDLE hOutFile ) : IWriteStream(), m_file( NULL ), m_hFile( hOutFile ) {}
+	CFileStream( HANDLE hOutFile ) : IWriteStream(), m_file( nullptr ), m_hFile( hOutFile ) {}
 
 	// Implementing IWriteStream method
 	virtual void Put( const void* pMem, int size ) 
@@ -341,7 +341,7 @@ CZipFile::CZipEntry::CZipEntry( void )
 {
 	m_Name = "";
 	m_Length = 0;
-	m_pData = NULL;
+	m_pData = nullptr;
 	m_ZipOffset = 0;
 	m_ZipCRC = 0;
 	m_DiskCacheOffset = 0;
@@ -364,7 +364,7 @@ CZipFile::CZipEntry::CZipEntry( const CZipFile::CZipEntry& src )
 	}
 	else
 	{
-		m_pData = NULL;
+		m_pData = nullptr;
 	}
 
 	m_ZipOffset = src.m_ZipOffset;
@@ -395,7 +395,7 @@ CZipFile::CZipFile( const char *pDiskCacheWritePath, bool bSortByName )
 	m_bCompatibleFormat = true;
 	m_bIsUpdateFormat = false;
 
-	m_bUseDiskCacheForWrites = ( pDiskCacheWritePath != NULL );
+	m_bUseDiskCacheForWrites = ( pDiskCacheWritePath != nullptr );
 	m_DiskCacheWritePath = pDiskCacheWritePath;
 	m_hDiskCacheWriteFile = INVALID_HANDLE_VALUE;
 
@@ -622,7 +622,7 @@ void CZipFile::ParseFromBuffer( void *buffer, int bufferlength )
 		}
 		else
 		{
-			e.m_pData = NULL;
+			e.m_pData = nullptr;
 		}
 
 		// Add to tree
@@ -642,7 +642,7 @@ HANDLE CZipFile::ParseFromDisk( const char *pFilename )
 	if ( !hFile )
 	{
 		// not found
-		return NULL;
+		return nullptr;
 	}	
 
 	unsigned int fileLen = CWin32File::FileSeek( hFile, 0, FILE_END );
@@ -651,7 +651,7 @@ HANDLE CZipFile::ParseFromDisk( const char *pFilename )
 	{
 		// bad format
 		fclose( (FILE *)hFile );
-		return NULL;
+		return nullptr;
 	}
 
 	// need to get the central dir
@@ -692,7 +692,7 @@ HANDLE CZipFile::ParseFromDisk( const char *pFilename )
 	{
 		// No files
 		fclose( (FILE *)hFile );
-		return NULL;
+		return nullptr;
 	}
 
 	CWin32File::FileSeek( hFile, rec.startOfCentralDirOffset, FILE_BEGIN );
@@ -713,7 +713,7 @@ HANDLE CZipFile::ParseFromDisk( const char *pFilename )
 		{
 			// bad contents
 			fclose( (FILE *)hFile );
-			return NULL;
+			return nullptr;
 		}
 		
 		char fileName[1024];
@@ -878,7 +878,7 @@ void CZipFile::AddBufferToZip( const char *relativename, void *data, int length,
 			update->m_DiskCacheOffset = CWin32File::FileTell( m_hDiskCacheWriteFile );
 			CWin32File::FileWrite( m_hDiskCacheWriteFile, update->m_pData, update->m_Length );
 			free( update->m_pData );
-			update->m_pData = NULL;
+			update->m_pData = nullptr;
 		}
 	}
 	else
@@ -903,12 +903,12 @@ void CZipFile::AddBufferToZip( const char *relativename, void *data, int length,
 				e.m_DiskCacheOffset = CWin32File::FileTell( m_hDiskCacheWriteFile );
 				CWin32File::FileWrite( m_hDiskCacheWriteFile, e.m_pData, e.m_Length );
 				free( e.m_pData );
-				e.m_pData = NULL;
+				e.m_pData = nullptr;
 			}
 		}
 		else
 		{
-			e.m_pData = NULL;
+			e.m_pData = nullptr;
 		}
 
 		m_Files.Insert( e );
@@ -1183,7 +1183,7 @@ unsigned int CZipFile::CalculateSize( void )
 	size += dirHeaders;
 
 	// All processed zip files will have a comment string
-	size += sizeof( ZIP_EndOfCentralDirRecord ) + MakeXZipCommentString( NULL );
+	size += sizeof( ZIP_EndOfCentralDirRecord ) + MakeXZipCommentString( nullptr );
 
 	return size;
 }
@@ -1257,7 +1257,7 @@ void CZipFile::SaveToBuffer( CUtlBuffer& buf )
 //-----------------------------------------------------------------------------
 void CZipFile::SaveDirectory( IWriteStream& stream )
 {
-	void *pPaddingBuffer = NULL;
+	void *pPaddingBuffer = nullptr;
 	if ( m_AlignmentSize )
 	{
 		// get a temp buffer for all padding work
@@ -1291,7 +1291,7 @@ void CZipFile::SaveDirectory( IWriteStream& stream )
 			}
 		}
 
-		if ( e->m_Length > 0 && e->m_pData != NULL )
+		if ( e->m_Length > 0 && e->m_pData != nullptr )
 		{
 			ZIP_LocalFileHeader hdr = { 0 };
 			hdr.signature = PKID( 3, 4 );
@@ -1363,7 +1363,7 @@ void CZipFile::SaveDirectory( IWriteStream& stream )
 		CZipEntry *e = &m_Files[i];
 		Assert( e );
 		
-		if ( e->m_Length > 0 && e->m_pData != NULL )
+		if ( e->m_Length > 0 && e->m_pData != nullptr )
 		{
 			ZIP_FileHeader hdr = { 0 };
 			hdr.signature = PKID( 1, 2 );
@@ -1400,7 +1400,7 @@ void CZipFile::SaveDirectory( IWriteStream& stream )
 			if ( m_hDiskCacheWriteFile != INVALID_HANDLE_VALUE )
 			{
 				// clear out temp hackery
-				e->m_pData = NULL;
+				e->m_pData = nullptr;
 			}
 		}
 	}

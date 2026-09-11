@@ -141,7 +141,7 @@ struct SoundInfo_t
 		nSequenceNumber = 0;
 		nRandomSeed = 0;
 
-		pszName = NULL;
+		pszName = nullptr;
 	
 		bLooping = false;
 		bIsSentence = false;
@@ -157,7 +157,7 @@ struct SoundInfo_t
 		fVolume = 0;
 		Soundlevel = SNDLVL_NONE;
 		nPitch = PITCH_NORM;
-		pszName = NULL;
+		pszName = nullptr;
 		fDelay = 0.0f;
 		nSequenceNumber = 0;
 

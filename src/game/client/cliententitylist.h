@@ -46,7 +46,7 @@ template< class T >
 class C_EntityClassList : public C_BaseEntityClassList
 {
 public:
-	virtual void LevelShutdown()  { m_pClassList = NULL; }
+	virtual void LevelShutdown()  { m_pClassList = nullptr; }
 
 	void Insert( T *pEntity )
 	{

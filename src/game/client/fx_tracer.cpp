@@ -34,7 +34,7 @@ Vector GetTracerOrigin( const CEffectData &data )
 	// Attachment?
 	if ( data.m_fFlags & TRACER_FLAG_USEATTACHMENT )
 	{
-		C_BaseViewModel *pViewModel = NULL;
+		C_BaseViewModel *pViewModel = nullptr;
 
 		// If the entity specified is a weapon being carried by this player, use the viewmodel instead
 		IClientRenderable *pRenderable = data.GetRenderable();
@@ -54,7 +54,7 @@ Vector GetTracerOrigin( const CEffectData &data )
 			{
 				C_BasePlayer *player = ToBasePlayer( pWpn->GetOwner() );
 
-				pViewModel = player ? player->GetViewModel( 0 ) : NULL;
+				pViewModel = player ? player->GetViewModel( 0 ) : nullptr;
 				if ( pViewModel )
 				{
 					// Get the viewmodel and use it instead
@@ -145,7 +145,7 @@ void ParticleTracerCallback( const CEffectData &data )
 		return;
 
 	C_BaseEntity *pEntity = data.GetEntity();
-	C_BasePlayer *pPlayer = NULL;
+	C_BasePlayer *pPlayer = nullptr;
 	C_BaseViewModel *pViewModel = ToBaseViewModel(pEntity);
 	if ( pEntity )
 	{
@@ -164,7 +164,7 @@ void ParticleTracerCallback( const CEffectData &data )
 	Vector vecEnd;
 	// Grab the data
 	
-	C_BaseCombatWeapon *pWpn = (pEntity) ? pEntity->MyCombatWeaponPointer() : NULL;
+	C_BaseCombatWeapon *pWpn = (pEntity) ? pEntity->MyCombatWeaponPointer() : nullptr;
 	if ( (!pWpn && !pViewModel) || !(data.m_fFlags & TRACER_FLAG_USEATTACHMENT) )
 	{
 		Vector vecStart = GetTracerOrigin( data );

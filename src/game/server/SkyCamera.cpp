@@ -16,7 +16,7 @@
 
 // automatically hooks in the system's callbacks
 CEntityClassList<CSkyCamera> g_SkyList;
-template <> CSkyCamera *CEntityClassList<CSkyCamera>::m_pClassList = NULL;
+template <> CSkyCamera *CEntityClassList<CSkyCamera>::m_pClassList = nullptr;
 
 CHandle<CSkyCamera> g_hActiveSkybox = INVALID_EHANDLE;
 
@@ -26,7 +26,7 @@ CHandle<CSkyCamera> g_hActiveSkybox = INVALID_EHANDLE;
 //-----------------------------------------------------------------------------
 CSkyCamera*	GetCurrentSkyCamera()
 {
-	if (g_hActiveSkybox.Get() == NULL)
+	if (g_hActiveSkybox.Get() == nullptr)
 	{
 		g_hActiveSkybox = GetSkyCameraList();
 	}
@@ -69,7 +69,7 @@ static const char *s_pBogusFogMaps[] =
 	"d3_c17_11",
 	"d3_c17_12",
 	"d3_citadel_01",
-	NULL
+	nullptr
 };
 
 //-----------------------------------------------------------------------------

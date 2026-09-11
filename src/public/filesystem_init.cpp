@@ -47,7 +47,7 @@ public:
 		m_bRestoreOriginalValue = true;
 		m_pVarName = pVarName;
 
-		const char *pValue = NULL;
+		const char *pValue = nullptr;
 
 		// LINUX BUG: see above
 		pValue = getenv( pVarName );
@@ -167,16 +167,16 @@ void Q_getwd( char *out, int outSize )
 
 CFSSearchPathsInit::CFSSearchPathsInit()
 {
-	m_pDirectoryName = NULL;
-	m_pLanguage = NULL;
-	m_pfnAddonSearchPaths = NULL;
+	m_pDirectoryName = nullptr;
+	m_pLanguage = nullptr;
+	m_pfnAddonSearchPaths = nullptr;
 	m_ModPath[0] = 0;
 }
 
 
 CFSSteamSetupInfo::CFSSteamSetupInfo()
 {
-	m_pDirectoryName = NULL;
+	m_pDirectoryName = nullptr;
 	m_bOnlyUseDirectoryName = false;
 	m_bSteam = false;
 	m_bToolsMode = true;
@@ -186,17 +186,17 @@ CFSSteamSetupInfo::CFSSteamSetupInfo()
 
 CFSLoadModuleInfo::CFSLoadModuleInfo()
 {
-	m_pFileSystemDLLName = NULL;
-	m_pFileSystem = NULL;
-	m_pModule = NULL;
+	m_pFileSystemDLLName = nullptr;
+	m_pFileSystem = nullptr;
+	m_pModule = nullptr;
 }
 
 
 CFSMountContentInfo::CFSMountContentInfo()
 {
 	m_bToolsMode = true;
-	m_pDirectoryName = NULL;
-	m_pFileSystem = NULL;
+	m_pDirectoryName = nullptr;
+	m_pFileSystem = nullptr;
 }
 
 
@@ -215,7 +215,7 @@ void AddLanguageGameDir( IFileSystem *pFileSystem, const char *pLocation, const 
 
 	// also look in "..\localization\<folder>" if that directory exists
 	char baseDir[MAX_PATH];
-	char *tempPtr = NULL, *gameDir = NULL;
+	char *tempPtr = nullptr, *gameDir = nullptr;
 
 	Q_strncpy( baseDir, pLocation, sizeof(baseDir) );
 	tempPtr = Q_strstr( baseDir, "/game/" );
@@ -247,7 +247,7 @@ KeyValues* ReadKeyValuesFile( const char *pFilename )
 	// Read in the gameinfo.txt file and null-terminate it.
 	FILE *fp = fopen( pFilename, "rb" );
 	if ( !fp )
-		return NULL;
+		return nullptr;
 	CUtlVector<char> buf;
 	fseek( fp, 0, SEEK_END );
 	buf.SetSize( ftell( fp ) + 1 );
@@ -260,7 +260,7 @@ KeyValues* ReadKeyValuesFile( const char *pFilename )
 	if ( !kv->LoadFromBuffer( pFilename, buf.Base() ) )
 	{
 		kv->deleteThis();
-		return NULL;
+		return nullptr;
 	}
 	
 	return kv;
@@ -595,7 +595,7 @@ FSReturnCode_t FileSystem_LoadSearchPaths( CFSSearchPathsInit &initInfo )
 
 	V_strncat( szContentRoot, "\\content", sizeof( szContentRoot ) );
 
-	int nLen = initInfo.m_pFileSystem->GetSearchPath( "GAME", false, NULL, 0 );
+	int nLen = initInfo.m_pFileSystem->GetSearchPath( "GAME", false, nullptr, 0 );
 	char *pSearchPath = (char*)stackalloc( nLen * sizeof(char) );
 	initInfo.m_pFileSystem->GetSearchPath( "GAME", false, pSearchPath, nLen );
 	char *pPath = pSearchPath;
@@ -611,7 +611,7 @@ FSReturnCode_t FileSystem_LoadSearchPaths( CFSSearchPathsInit &initInfo )
 		Q_FixSlashes( pPath );
 
 		const char *pCurPath = pPath;
-		pPath = pSemiColon ? pSemiColon + 1 : NULL;
+		pPath = pSemiColon ? pSemiColon + 1 : nullptr;
 
 		char pRelativePath[MAX_PATH];
 		char pContentPath[MAX_PATH];
@@ -704,7 +704,7 @@ namespace
 {
 	SuggestGameInfoDirFn_t & GetSuggestGameInfoDirFn( void )
 	{
-		static SuggestGameInfoDirFn_t s_pfnSuggestGameInfoDir = NULL;
+		static SuggestGameInfoDirFn_t s_pfnSuggestGameInfoDir = nullptr;
 		return s_pfnSuggestGameInfoDir;
 	}
 }; // `anonymous` namespace
@@ -832,7 +832,7 @@ FSReturnCode_t LocateGameInfoFile( const CFSSteamSetupInfo &fsInfo, char *pOutDi
 	}
 
 	// Try to use the environment variable / registry
-	if ( ( pProject = getenv( GAMEDIR_TOKEN ) ) != NULL &&
+	if ( ( pProject = getenv( GAMEDIR_TOKEN ) ) != nullptr &&
 		 ( Q_MakeAbsolutePath( pOutDir, outDirLen, pProject ), 1 ) &&
 		 FS_OK == TryLocateGameInfoFile( pOutDir, outDirLen, false ) )
 		return FS_OK;
@@ -986,8 +986,8 @@ void SetSteamAppUser( KeyValues *pSteamInfo, const char *steamInstallPath, CStea
 	if ( steamEnvVars.m_SteamAppUser.GetValue( appUser, sizeof( appUser ) ) )
 		return;
 
-	const char *pTempAppUser = NULL;
-	if ( pSteamInfo && (pTempAppUser = pSteamInfo->GetString( "SteamAppUser", NULL )) != NULL )
+	const char *pTempAppUser = nullptr;
+	if ( pSteamInfo && (pTempAppUser = pSteamInfo->GetString( "SteamAppUser", nullptr )) != nullptr )
 	{
 		Q_strncpy( appUser, pTempAppUser, sizeof( appUser ) );
 	}
@@ -1001,7 +1001,7 @@ void SetSteamAppUser( KeyValues *pSteamInfo, const char *steamInstallPath, CStea
 		Q_strncat( fullFilename, "config\\SteamAppData.vdf", sizeof( fullFilename ), COPY_ALL_CHARACTERS );
 
 		KeyValues *pSteamAppData = ReadKeyValuesFile( fullFilename );
-		if ( !pSteamAppData || (pTempAppUser = pSteamAppData->GetString( "AutoLoginUser", NULL )) == NULL )
+		if ( !pSteamAppData || (pTempAppUser = pSteamAppData->GetString( "AutoLoginUser", nullptr )) == nullptr )
 		{
 			Error( "Can't find steam app user info." );
 		}
@@ -1024,7 +1024,7 @@ void SetSteamUserPassphrase( KeyValues *pSteamInfo, CSteamEnvVars &steamEnvVars 
 
 	// SteamUserPassphrase.
 	const char *pStr;
-	if ( pSteamInfo && (pStr = pSteamInfo->GetString( "SteamUserPassphrase", NULL )) != NULL )
+	if ( pSteamInfo && (pStr = pSteamInfo->GetString( "SteamUserPassphrase", nullptr )) != nullptr )
 	{
 		steamEnvVars.m_SteamUserPassphrase.SetValue( "%s", pStr );
 	}
@@ -1067,7 +1067,7 @@ FSReturnCode_t SetupSteamStartupEnvironment( KeyValues *pFileSystemInfo, const c
 FSReturnCode_t GetSteamExtraAppId( const char *pDirectoryName, int *nExtraAppId )
 {
 	// Now, load gameinfo.txt (to make sure it's there)
-	KeyValues *pMainFile = NULL, *pFileSystemInfo = NULL, *pSearchPaths = NULL;
+	KeyValues *pMainFile = nullptr, *pFileSystemInfo = nullptr, *pSearchPaths = nullptr;
 	FSReturnCode_t ret = LoadGameInfoFile( pDirectoryName, pMainFile, pFileSystemInfo, pSearchPaths );
 	if ( ret != FS_OK )
 		return ret;

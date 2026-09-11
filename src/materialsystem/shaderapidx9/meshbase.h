@@ -56,7 +56,7 @@ abstract_class CIndexBufferBase : public IIndexBuffer
 public:
 	virtual void Spew( int nIndexCount, const IndexDesc_t &desc );
 	virtual void ValidateData( int nIndexCount, const IndexDesc_t& desc );
-	virtual IMesh* GetMesh() { return NULL; }
+	virtual IMesh* GetMesh() { return nullptr; }
 
 	// Other public methods
 public:
@@ -109,9 +109,9 @@ public:
 
 	virtual IMesh *GetMesh() { return this; }
 
-	virtual void * AccessRawHardwareDataStream( uint8 nRawStreamIndex, uint32 numBytes, uint32 uiFlags, void *pvContext ) { return NULL; }
+	virtual void * AccessRawHardwareDataStream( uint8 nRawStreamIndex, uint32 numBytes, uint32 uiFlags, void *pvContext ) { return nullptr; }
 
-	virtual ICachedPerFrameMeshData *GetCachedPerFrameMeshData() { return NULL; }
+	virtual ICachedPerFrameMeshData *GetCachedPerFrameMeshData() { return nullptr; }
 	virtual void ReconstructFromCachedPerFrameMeshData( ICachedPerFrameMeshData *pData ) {}
 public:
 	// constructor, destructor

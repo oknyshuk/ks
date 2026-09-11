@@ -147,7 +147,7 @@ class CBaseLightCache : public LightingStateInfo_t
 public:
 	CBaseLightCache()
 	{
-		m_pEnvCubemapTexture = NULL;
+		m_pEnvCubemapTexture = nullptr;
 		memset( m_pLightstyles, 0, sizeof( m_pLightstyles ) );
 		m_LightingFlags = 0;
 		m_LastFrameUpdated_LightStyles = -1;
@@ -283,7 +283,7 @@ static int cached_r_radiosity = -1;
 static int cached_r_avglight = -1;
 static int cached_mat_fullbright = -1;
 static int cached_r_lightcache_numambientsamples = -1;
-static PropLightcache_t* s_pAllStaticProps = NULL;
+static PropLightcache_t* s_pAllStaticProps = nullptr;
 
 
 // Used to convert RGB colors to greyscale intensity
@@ -975,11 +975,11 @@ static float LightIntensityAndDirectionAtPointNew( dworldlight_t* pLight, lightz
 	float flTraceDistance = dist;
 	// check if we are so close to the light that we shouldn't use our coarse z buf
 	if ( dist - ( 1 << HASH_GRID_SIZEZ ) < 8 * SHADOW_ZBUF_RES )
-		pZBuf = NULL;
+		pZBuf = nullptr;
 
 	Vector epnt = mid;
 
-	LightShadowZBufferSample_t *pSample = NULL;
+	LightShadowZBufferSample_t *pSample = nullptr;
 	if ( pZBuf )
 	{
 		pSample = &( pZBuf->GetSample( *pDirection ) );
@@ -1122,11 +1122,11 @@ static float LightIntensityAndDirectionInBox( dworldlight_t* pLight,
 				vecCorners[7] = maxs;
 				
 				// init intensity with value from center
-				float flMaxIntensity = LightIntensityAndDirectionAtPoint( pLight, pZBuf, mid, fFlags | LIGHT_NO_RADIUS_CHECK, NULL, pDirection );
+				float flMaxIntensity = LightIntensityAndDirectionAtPoint( pLight, pZBuf, mid, fFlags | LIGHT_NO_RADIUS_CHECK, nullptr, pDirection );
 
 				// if any corner intensity is greater, use that value
 				for (int i=0; i<8; i++)
-					flMaxIntensity = MAX( flMaxIntensity, LightIntensityAndDirectionAtPoint( pLight, pZBuf, vecCorners[i], fFlags | LIGHT_NO_RADIUS_CHECK, NULL, pDirection ) );
+					flMaxIntensity = MAX( flMaxIntensity, LightIntensityAndDirectionAtPoint( pLight, pZBuf, vecCorners[i], fFlags | LIGHT_NO_RADIUS_CHECK, nullptr, pDirection ) );
 
 				return flMaxIntensity;
 
@@ -1159,7 +1159,7 @@ static float LightIntensityAndDirectionInBox( dworldlight_t* pLight,
 		}
 	}
 
-	return LightIntensityAndDirectionAtPoint( pLight, pZBuf, mid, fFlags | LIGHT_NO_RADIUS_CHECK, NULL, pDirection );
+	return LightIntensityAndDirectionAtPoint( pLight, pZBuf, mid, fFlags | LIGHT_NO_RADIUS_CHECK, nullptr, pDirection );
 }
 
 	
@@ -1230,7 +1230,7 @@ bool ComputeVertexLightingFromSphericalSamples( const Vector& vecVertex,
 		if ((wl->cluster < 0) || (!BIT_SET( pVis, wl->cluster )) )
 			continue;
 
-		float flRatio = LightIntensityAndDirectionAtPoint( wl, NULL, vecVertex, LIGHT_OCCLUDE_VS_PROPS, pIgnoreEnt, &vecDirection );
+		float flRatio = LightIntensityAndDirectionAtPoint( wl, nullptr, vecVertex, LIGHT_OCCLUDE_VS_PROPS, pIgnoreEnt, &vecDirection );
 
 		// No light contribution? Get outta here!
 		if ( flRatio <= 0.0f )
@@ -1301,7 +1301,7 @@ void AddWorldLightToAmbientCube( dworldlight_t* pWorldLight, const Vector &vecLi
 {
 	int nFlags = bNoLightCull ? ( LIGHT_NO_RADIUS_CHECK | LIGHT_NO_OCCLUSION_CHECK ) : 0;
 	Vector vecDirection;
-	float ratio = LightIntensityAndDirectionAtPoint( pWorldLight, NULL, vecLightingOrigin, nFlags, NULL, &vecDirection );
+	float ratio = LightIntensityAndDirectionAtPoint( pWorldLight, nullptr, vecLightingOrigin, nFlags, nullptr, &vecDirection );
 	float angularRatio = Engine_WorldLightAngle( pWorldLight, pWorldLight->normal, vecDirection, vecDirection );
 	AddWorldLightToLightCube( pWorldLight, ambientCube, vecDirection, ratio * angularRatio );
 }
@@ -1372,7 +1372,7 @@ static const byte *AddWorldLightToLightingState( dworldlight_t* pWorldLight,
 
 	if (!dynamic && r_oldlightselection.GetBool())
 	{
-		ratio = LightIntensityAndDirectionAtPoint( pWorldLight, pZBuf, bucketOrigin, 0, NULL, &direction );
+		ratio = LightIntensityAndDirectionAtPoint( pWorldLight, pZBuf, bucketOrigin, 0, nullptr, &direction );
 	}
 	else
 	{
@@ -1527,7 +1527,7 @@ static const byte *ComputeLightStyles( lightcache_t* pCache, LightingState_t& li
 		}
 
 		// Now add that world light into our list of worldlights
-		AddWorldLightToLightingState( wl, NULL, lightingState, info, origin, pVis );
+		AddWorldLightToLightingState( wl, nullptr, lightingState, info, origin, pVis );
 	}
 	pCache->m_LastFrameUpdated_LightStyles = r_framecount;
 	return pVis;
@@ -1549,7 +1549,7 @@ static void AddLightStylesForStaticProp( PropLightcache_t *pcache, LightingState
 		Assert( wl->style != 0 );
 
 		// Now add that world light into our list of worldlights
-		AddWorldLightToLightingState( wl, NULL, lightingState, *pcache, pcache->m_LightingOrigin, NULL, 
+		AddWorldLightToLightingState( wl, nullptr, lightingState, *pcache, pcache->m_LightingOrigin, nullptr, 
 			false /*dynamic*/, true /*ignorevis*/ );
 	}
 }
@@ -1603,7 +1603,7 @@ static const byte* AddDLights( LightingStateInfo_t& info, LightingState_t& light
 		WorldLightFromDynamicLight( *dl, s_pDynamicLight[i] );
 
 		// Now add that world light into our list of worldlights
-		pVis = AddWorldLightToLightingState( &s_pDynamicLight[i], NULL, lightingState,
+		pVis = AddWorldLightToLightingState( &s_pDynamicLight[i], nullptr, lightingState,
 			info, origin, pVis, true, bIgnoreVis, bIgnoreVisTest );
 	}
 	return pVis;
@@ -1634,7 +1634,7 @@ static const byte* AddELights( LightingStateInfo_t& info, LightingState_t& light
 		if (dl->flags & (DLIGHT_NO_MODEL_ILLUMINATION | DLIGHT_DISPLACEMENT_MASK))
 			continue;
 
-		bool bExclusiveLight = ( dl->m_pExclusiveLightReceiver != NULL );
+		bool bExclusiveLight = ( dl->m_pExclusiveLightReceiver != nullptr );
 		bool bIgnoreVis = false;
 
 		if ( !bExclusiveLight )
@@ -1664,7 +1664,7 @@ static const byte* AddELights( LightingStateInfo_t& info, LightingState_t& light
 		WorldLightFromDynamicLight( *dl, s_pDynamicLight[i+MAX_DLIGHTS] );
 
 		// Now add that world light into our list of worldlights
-		pVis = AddWorldLightToLightingState( &s_pDynamicLight[i+MAX_DLIGHTS], NULL, lightingState,
+		pVis = AddWorldLightToLightingState( &s_pDynamicLight[i+MAX_DLIGHTS], nullptr, lightingState,
 			info, origin, pVis, true, bIgnoreVis, bIgnoreVisTest );
 	}
 	return pVis;
@@ -1687,10 +1687,10 @@ static const byte *ComputeDynamicLighting( lightcache_t* pCache, LightingState_t
 		pCache->m_DynamicLightingState.ZeroLightingState();
 
 		// Next, add each dlight one at a time 
-		pVis = AddDLights( info, pCache->m_DynamicLightingState, origin, leaf, pVis, NULL );
+		pVis = AddDLights( info, pCache->m_DynamicLightingState, origin, leaf, pVis, nullptr );
 
 		// Finally, add in elights
- 		pVis = AddELights( info, pCache->m_DynamicLightingState, origin, leaf, pVis, NULL );
+ 		pVis = AddELights( info, pCache->m_DynamicLightingState, origin, leaf, pVis, nullptr );
 
 		pCache->m_LastFrameUpdated_DynamicLighting = r_framecount;
 	}
@@ -1728,13 +1728,13 @@ static void	AddWorldLightToLightingStateForStaticProps( dworldlight_t* pWorldLig
 
 	if (!dynamic)
 	{
-		ratio = LightIntensityAndDirectionAtPoint( pWorldLight, NULL, pCache->m_LightingOrigin, 0, NULL, &direction );
+		ratio = LightIntensityAndDirectionAtPoint( pWorldLight, nullptr, pCache->m_LightingOrigin, 0, nullptr, &direction );
 	}
 	else
 	{
 		Vector mins, maxs;
 		ComputeLightcacheBounds( pCache->m_LightingOrigin, &mins, &maxs );
-		ratio = LightIntensityAndDirectionInBox( pWorldLight, NULL, pCache->m_LightingOrigin, 
+		ratio = LightIntensityAndDirectionInBox( pWorldLight, nullptr, pCache->m_LightingOrigin, 
 			pCache->mins, pCache->maxs, LIGHT_NO_OCCLUSION_CHECK, &direction );
 	}
 
@@ -1873,7 +1873,7 @@ static void AddStaticLighting(
 		if ( r_lightcache_zbuffercache.GetInt() )
 			pZBuf = &host_state.worldbrush->shadowzbuffers[i];
 		else
-			pZBuf = NULL;
+			pZBuf = nullptr;
 
 		// See the comment titled "EMIT_SURFACE LIGHTS" at the top for info.
 		if ( bAddedLeafAmbientCube && (wl->flags & DWL_FLAGS_INAMBIENTCUBE) )
@@ -1902,7 +1902,7 @@ static void AddStaticLighting(
 					Vector mins, maxs;
 					Vector dummyDirection;
 					ComputeLightcacheBounds( origin, &mins, &maxs );
-					float ratio = LightIntensityAndDirectionInBox( wl, NULL, origin, mins, maxs, 
+					float ratio = LightIntensityAndDirectionInBox( wl, nullptr, origin, mins, maxs, 
 						LIGHT_NO_OCCLUSION_CHECK | LIGHT_IGNORE_LIGHTSTYLE_VALUE, &dummyDirection );
 					// See if this light has any contribution on this cache entry.
 					if( ratio > 0.0f )
@@ -2100,7 +2100,7 @@ static const byte* ComputeStaticLightingForCacheEntry( CBaseLightCache *pcache, 
 
 static void BuildStaticLightingCacheLightStyleInfo( PropLightcache_t* pcache, const Vector& mins, const Vector& maxs )
 {
-	const byte *pVis = NULL;
+	const byte *pVis = nullptr;
 	Assert( pcache->m_LightStyleWorldLights.Count() == 0 );
 	pcache->m_LightingFlags &= ~( HACKLIGHTCACHEFLAGS_HASSWITCHABLELIGHTSTYLE | HACKLIGHTCACHEFLAGS_HASSWITCHABLELIGHTSTYLE );
 	// clear lightstyles
@@ -2125,7 +2125,7 @@ static void BuildStaticLightingCacheLightStyleInfo( PropLightcache_t* pcache, co
 			dworldlight_t tmpLight = *wl;
 			tmpLight.style = 0;
 			Vector dummyDirection;
-			float ratio = LightIntensityAndDirectionInBox( &tmpLight, NULL, pcache->m_LightingOrigin, mins, maxs, 
+			float ratio = LightIntensityAndDirectionInBox( &tmpLight, nullptr, pcache->m_LightingOrigin, mins, maxs, 
 				LIGHT_NO_OCCLUSION_CHECK | LIGHT_IGNORE_LIGHTSTYLE_VALUE, &dummyDirection );
 			// See if this light has any contribution on this cache entry.
 			if( ratio <= 0.0f )
@@ -2177,7 +2177,7 @@ static ITexture *FindEnvCubemapForPoint( const Vector& origin )
 	}
 	else
 	{
-		return NULL;
+		return nullptr;
 	}
 }
 
@@ -2274,7 +2274,7 @@ bool StaticLightCacheNeedsSwitchableLightUpdate( LightCacheHandle_t handle )
 void ClearStaticLightingCache()
 {
 	s_PropCache.Clear();
-	s_pAllStaticProps = NULL;
+	s_pAllStaticProps = nullptr;
 }
 
 
@@ -2289,7 +2289,7 @@ void InvalidateStaticLightingCache(void)
 		pCur->m_Flags = 0;
 		pCur->m_LightingFlags &=~HACKLIGHTCACHEFLAGS_HASDONESTATICLIGHTING;
 		
-		LightcacheGetStatic( ( LightCacheHandle_t )pCur, NULL, LIGHTCACHEFLAGS_STATIC );
+		LightcacheGetStatic( ( LightCacheHandle_t )pCur, nullptr, LIGHTCACHEFLAGS_STATIC );
 	}
 }
 
@@ -2445,7 +2445,7 @@ inline const byte *AddLightingState(
 	int i;
 	for( i = 0; i < src.numlights; i++ )
 	{
-		pVis = AddWorldLightToLightingState( src.locallight[i], NULL, dst, info, bucketOrigin, pVis, 
+		pVis = AddWorldLightToLightingState( src.locallight[i], nullptr, dst, info, bucketOrigin, pVis, 
 			bDynamic, bIgnoreVis );
 	}
 	for( i = 0; i < 6; i++ )
@@ -2472,7 +2472,7 @@ const byte* PrecalcLightingState( lightcache_t *pCache, const byte *pVis )
 	{
 		pVis = AddWorldLightToLightingState( 
 			pCache->m_StaticLightingState.locallight[i], 
-			NULL,
+			nullptr,
 			lightingState, 
 			pCache->m_StaticPrecalc_LightingStateInfo, 
 			pCache->m_LightingOrigin, 
@@ -2609,7 +2609,7 @@ bool AllowFullCacheMiss(int flags)
 lightcache_t *FindNearestCache( int x, int y, int z, int leafIndex )
 {
 	int bestDist = INT_MAX;
-	lightcache_t *pBest = NULL;
+	lightcache_t *pBest = nullptr;
 	short current = GetLightLRUTail().lru_prev;
 	int dx, dy, dz;
 	while ( current != LIGHT_LRU_HEAD_INDEX )
@@ -2664,7 +2664,7 @@ ITexture *LightcacheGetDynamic( const Vector& origin, LightingState_t& lightingS
 	// convert vars to hash key / bucket id
 	int bucket = LightcacheHashKey( x, y, z, originLeaf );
 	
-	const byte* pVis = NULL;
+	const byte* pVis = nullptr;
 	bool bComputeLightStyles = ( flags & LIGHTCACHEFLAGS_LIGHTSTYLE ) != 0;
 
 	// See if we've already computed the light in this location
@@ -2903,7 +2903,7 @@ void ComputeLighting( const Vector& pt, const Vector* pNormal, bool bClamp, bool
 {
 	LightingState_t lightingState;
 	LightcacheGetDynamic_Stats stats;
-	LightcacheGetDynamic( pt, lightingState, stats, NULL, LIGHTCACHEFLAGS_STATIC|LIGHTCACHEFLAGS_DYNAMIC|LIGHTCACHEFLAGS_LIGHTSTYLE|LIGHTCACHEFLAGS_ALLOWFAST );
+	LightcacheGetDynamic( pt, lightingState, stats, nullptr, LIGHTCACHEFLAGS_STATIC|LIGHTCACHEFLAGS_DYNAMIC|LIGHTCACHEFLAGS_LIGHTSTYLE|LIGHTCACHEFLAGS_ALLOWFAST );
 	int i;
 	if ( pNormal )
 	{
@@ -2928,7 +2928,7 @@ void ComputeLighting( const Vector& pt, const Vector* pNormal, bool bClamp, bool
 			if ( !bAddDynamicLightsToBox && IsDynamicLight( lightingState.locallight[i] ) )
 				continue;
 
-			float ratio = LightIntensityAndDirectionAtPoint( lightingState.locallight[i], NULL, pt, LIGHT_NO_OCCLUSION_CHECK, NULL, &direction );
+			float ratio = LightIntensityAndDirectionAtPoint( lightingState.locallight[i], nullptr, pt, LIGHT_NO_OCCLUSION_CHECK, nullptr, &direction );
 			float angularRatio = Engine_WorldLightAngle( lightingState.locallight[i], lightingState.locallight[i]->normal, direction, direction );
 			AddWorldLightToLightCube( lightingState.locallight[i], lightingState.r_boxcolor, direction, ratio * angularRatio );
 		}
@@ -2955,7 +2955,7 @@ void ComputeLighting( const Vector& pt, const Vector* pNormal, bool bClamp, bool
 	}
 }
 
-static const byte *s_pDLightVis = NULL;
+static const byte *s_pDLightVis = nullptr;
 
 // All dlights that affect a static prop must mark that static prop every frame.
 class MarkStaticPropLightsEmumerator : public IPartitionEnumerator
@@ -3039,7 +3039,7 @@ void MarkDLightsOnStaticProps( void )
 			CDebugOverlay::AddBoxOverlay( l->origin, mins, maxs, vec3_angle, 255, 255, 255, 0, 0.001f );
 		}
 #endif
-		s_pDLightVis = NULL;
+		s_pDLightVis = nullptr;
 		s_MarkStaticPropLightsEnumerator.SetLightID( i );
 		SpatialPartition()->EnumerateElementsInSphere( PARTITION_ENGINE_STATIC_PROPS, 
 			l->origin, l->GetRadius(), true, &s_MarkStaticPropLightsEnumerator );

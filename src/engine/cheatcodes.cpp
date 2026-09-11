@@ -46,9 +46,9 @@ void ClearCheatCommands( void )
 void ReadCheatCommandsFromFile( const char *pchFileName )
 {
 	KeyValues *pCheatCodeKeys = new KeyValues( "cheat_codes" );
-	if ( pCheatCodeKeys->LoadFromFile( g_pFullFileSystem, pchFileName, NULL ) )
+	if ( pCheatCodeKeys->LoadFromFile( g_pFullFileSystem, pchFileName, nullptr ) )
 	{
-		KeyValues *pKey = NULL;
+		KeyValues *pKey = nullptr;
 		for ( pKey = pCheatCodeKeys->GetFirstTrueSubKey(); pKey; pKey = pKey->GetNextTrueSubKey() )
 		{
 			int iCheat = s_CheatCodeCommands.AddToTail();
@@ -59,7 +59,7 @@ void ReadCheatCommandsFromFile( const char *pchFileName )
 			pNewCheatCode->iCodeLength = 0;												// Start at zero code elements
 			Q_strncpy( pNewCheatCode->szCommand, pKey->GetString( "command", "echo \"Cheat code has no command!\"" ), CHEAT_COMMAND_MAX_LEN );
 
-			KeyValues *pSubKey = NULL;
+			KeyValues *pSubKey = nullptr;
 			for ( pSubKey = pKey->GetFirstSubKey(); pSubKey; pSubKey = pSubKey->GetNextKey() )
 			{
 				const char *pchType = pSubKey->GetName();

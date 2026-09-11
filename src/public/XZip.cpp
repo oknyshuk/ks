@@ -518,7 +518,7 @@ class TTreeState
 TTreeState::TTreeState()
 { tree_desc a = {dyn_ltree, static_ltree, extra_lbits, LITERALS+1, L_CODES, MAX_BITS, 0};  l_desc = a;
   tree_desc b = {dyn_dtree, static_dtree, extra_dbits, 0,          D_CODES, MAX_BITS, 0};  d_desc = b;
-  tree_desc c = {bl_tree, NULL,       extra_blbits, 0,         BL_CODES, MAX_BL_BITS, 0};  bl_desc = c;
+  tree_desc c = {bl_tree, nullptr,       extra_blbits, 0,         BL_CODES, MAX_BL_BITS, 0};  bl_desc = c;
   last_lit=0;
   last_dist=0;
   last_flags=0;
@@ -1272,7 +1272,7 @@ ulg flush_block(TState &state,char *buf, ulg stored_len, int eof)
     //    //*state.ts.file_method = STORE;
     //}
     //else
-    if (stored_len+4 <= opt_lenb && buf != (char*)NULL) {
+    if (stored_len+4 <= opt_lenb && buf != (char*)nullptr) {
                        /* 4: two words for the lengths */
         /* The test buf != NULL is only necessary if LIT_BUFSIZE > WSIZE.
          * Otherwise we can't have processed more than WSIZE input bytes since
@@ -1825,7 +1825,7 @@ void fill_window(TState &state)
  */
 #define FLUSH_BLOCK(state,eof) \
    flush_block(state,state.ds.block_start >= 0L ? (char*)&state.ds.window[(unsigned)state.ds.block_start] : \
-                (char*)NULL, (long)state.ds.strstart - state.ds.block_start, (eof))
+                (char*)nullptr, (long)state.ds.strstart - state.ds.block_start, (eof))
 
 /* ===========================================================================
  * Processes a new input file and return its compressed length. This
@@ -2167,7 +2167,7 @@ const ulg crc_table[256] = {
 #define DO8(buf)  DO4(buf); DO4(buf)
 
 ulg crc32(ulg crc, const uch *buf, extent len)
-{ if (buf==NULL) return 0L;
+{ if (buf==nullptr) return 0L;
   crc = crc ^ 0xffffffffL;
   while (len >= 8) {DO8(buf); len -= 8;}
   if (len) do {DO1(buf);} while (--len);
@@ -2348,9 +2348,9 @@ ZRESULT TZip::GetMemory(void **pbuf, unsigned long *plen)
   // of all their adding. In any case, we have to add the central
   // directory now, otherwise the memory we tell them won't be complete.
   if (!hasputcen) AddCentral(); hasputcen=true;
-  if (pbuf!=NULL) *pbuf=(void*)obuf;
-  if (plen!=NULL) *plen=writ;
-  if (obuf==NULL) return ZR_NOTMMAP;
+  if (pbuf!=nullptr) *pbuf=(void*)obuf;
+  if (plen!=nullptr) *plen=writ;
+  if (obuf==nullptr) return ZR_NOTMMAP;
   return ZR_OK;
 }
 
@@ -2389,7 +2389,7 @@ ZRESULT TZip::open_mem(void *src,unsigned int len)
 { hfin=0; bufin=(const char*)src; selfclosehf=false; crc=CRCVAL_INITIAL; ired=0; csize=0; ired=0;
   lenin=len; posin=0;
   if (src==0 || len==0) return ZR_ARGS;
-	times.atime = time(NULL);
+	times.atime = time(nullptr);
 	times.mtime = times.atime;
 	times.ctime = times.atime;
 	timestamp = timet_to_timestamp( times.atime );
@@ -2398,7 +2398,7 @@ ZRESULT TZip::open_mem(void *src,unsigned int len)
 
 ZRESULT TZip::open_dir()
 { hfin=0; bufin=0; selfclosehf=false; crc=CRCVAL_INITIAL; isize=0; csize=0; ired=0;
-	times.atime = time(NULL);
+	times.atime = time(nullptr);
 	times.mtime = times.atime;
 	times.ctime = times.atime;
 	timestamp = timet_to_timestamp( times.atime );
@@ -2439,7 +2439,7 @@ ZRESULT TZip::iclose()
 ZRESULT TZip::ideflate(TZipFileInfo *zfi)
 { TState state;
   state.readfunc=sread; state.flush_outbuf=sflush;
-  state.param=this; state.level=8; state.seekable=iseekable; state.err=NULL;
+  state.param=this; state.level=8; state.seekable=iseekable; state.err=nullptr;
   // the following line will make ct_init realise it has to perform the init
   state.ts.static_dtree[0].dl.len = 0;
   // It would be nicer if I could figure out precisely which data had to
@@ -2451,7 +2451,7 @@ ZRESULT TZip::ideflate(TZipFileInfo *zfi)
   lm_init(state,state.level, &zfi->flg);
   ulg sz = deflate(state);
   csize=sz;
-  if (state.err!=NULL) return ZR_FLATE;
+  if (state.err!=nullptr) return ZR_FLATE;
   else return ZR_OK;
 }
 
@@ -2511,7 +2511,7 @@ ZRESULT TZip::Add(const char *odstzn, void *src,unsigned int len, DWORD flags)
 	// then the compressed data, and possibly an extended local header.
 
 	// Initialize the local header
-	TZipFileInfo zfi; zfi.nxt=NULL;
+	TZipFileInfo zfi; zfi.nxt=nullptr;
 	strcpy(zfi.name,"");
 	strcpy(zfi.iname,dstzn); 
 	zfi.nam=strlen(zfi.iname);
@@ -2521,9 +2521,9 @@ ZRESULT TZip::Add(const char *odstzn, void *src,unsigned int len, DWORD flags)
 		zfi.nam++;
 	}
 	strcpy(zfi.zname,"");
-	zfi.extra=NULL; zfi.ext=0;   // extra header to go after this compressed data, and its length
-	zfi.cextra=NULL; zfi.cext=0; // extra header to go in the central end-of-zip directory, and its length
-	zfi.comment=NULL; zfi.com=0; // comment, and its length
+	zfi.extra=nullptr; zfi.ext=0;   // extra header to go after this compressed data, and its length
+	zfi.cextra=nullptr; zfi.cext=0; // extra header to go in the central end-of-zip directory, and its length
+	zfi.comment=nullptr; zfi.com=0; // comment, and its length
 	zfi.mark = 1;
 	zfi.dosflag = 0;
 	zfi.att = (ush)BINARY;
@@ -2636,12 +2636,12 @@ ZRESULT TZip::Add(const char *odstzn, void *src,unsigned int len, DWORD flags)
 	memcpy(cextra,zfi.cextra,zfi.cext); zfi.cextra=cextra;
 	TZipFileInfo *pzfi = new TZipFileInfo; 
 	memcpy(pzfi,&zfi,sizeof(zfi));
-	if (zfis==NULL) 
+	if (zfis==nullptr) 
 		zfis=pzfi;
 	else 
 	{
 		TZipFileInfo *z=zfis; 
-		while (z->nxt!=NULL) 
+		while (z->nxt!=nullptr) 
 			z=z->nxt; 
 		z->nxt=pzfi;
 	}
@@ -2654,7 +2654,7 @@ ZRESULT TZip::AddCentral()
   ulg pos_at_start_of_central = writ;
   //ulg tot_unc_size=0, tot_compressed_size=0;
   bool okay=true;
-  for (TZipFileInfo *zfi=zfis; zfi!=NULL; )
+  for (TZipFileInfo *zfi=zfis; zfi!=nullptr; )
   { if (okay)
     { int res = putcentral(zfi, swrite,this);
       if (res!=ZE_OK) okay=false;
@@ -2671,7 +2671,7 @@ ZRESULT TZip::AddCentral()
   }
   ulg center_size = writ - pos_at_start_of_central;
   if (okay)
-  { int res = putend(numentries, center_size, pos_at_start_of_central+ooffset, 0, NULL, swrite,this);
+  { int res = putend(numentries, center_size, pos_at_start_of_central+ooffset, 0, nullptr, swrite,this);
     if (res!=ZE_OK) okay=false;
     writ += 4 + ENDHEAD + 0;
   }

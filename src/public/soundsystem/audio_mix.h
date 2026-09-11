@@ -151,8 +151,8 @@ public:
 
 	inline void Clear()
 	{
-		m_pChannelsIn = NULL;
-		m_pChannelsOut = NULL;
+		m_pChannelsIn = nullptr;
+		m_pChannelsOut = nullptr;
 		m_nChannelCount = 0;
 	}
 

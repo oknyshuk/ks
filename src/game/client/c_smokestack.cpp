@@ -146,7 +146,7 @@ IMPLEMENT_REFLECT_CLIENTCLASS( C_SmokeStack, DT_SmokeStack, CSmokeStack )
 // ------------------------------------------------------------------------- //
 C_SmokeStack::C_SmokeStack()
 {
-	m_pParticleMgr = NULL;
+	m_pParticleMgr = nullptr;
 	m_MaterialHandle[0] = INVALID_MATERIAL_HANDLE;
 	m_iMaterialModel = -1;
 	
@@ -195,7 +195,7 @@ void C_SmokeStack::OnDataChanged(DataUpdateType_t updateType)
 
 	if(updateType == DATA_UPDATE_CREATED)
 	{
-		Start(ParticleMgr(), NULL);
+		Start(ParticleMgr(), nullptr);
 	}
 
 	// Recalulate lifetime in case length or speed changed.

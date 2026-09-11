@@ -641,7 +641,7 @@ void CLog::FireGameEvent( IGameEvent *event )
 			const char *pszIP = event->GetString( "ip" );	
 			const char *pszDuration = event->GetString( "duration" );
 			const char *pszCmdGiver = event->GetString( "by" );
-			const char *pszResult = NULL;
+			const char *pszResult = nullptr;
 			
 			if ( Q_strlen( pszIP ) > 0 )
 			{

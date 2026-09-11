@@ -93,13 +93,13 @@ void CCamoTextureRegen::RegenerateTextureBits( ITexture *pTexture, IVTFTexture *
 
 CCamoMaterialProxy::CCamoMaterialProxy() : m_TextureRegen(this)
 {
-	m_pointsInNormalizedBox = NULL;
-	m_pCamoPatternImage = NULL;
-	m_pMaterial = NULL;
-	m_pCamoTextureVar = NULL;
-	m_pCamoPatternTextureVar = NULL;
-	m_pointsInNormalizedBox = NULL;
-	m_pEnt = NULL;
+	m_pointsInNormalizedBox = nullptr;
+	m_pCamoPatternImage = nullptr;
+	m_pMaterial = nullptr;
+	m_pCamoTextureVar = nullptr;
+	m_pCamoPatternTextureVar = nullptr;
+	m_pointsInNormalizedBox = nullptr;
+	m_pEnt = nullptr;
 }
 
 #pragma warning (default:4355)
@@ -112,7 +112,7 @@ CCamoMaterialProxy::~CCamoMaterialProxy()
 	{
 		ITexture *pCamoTexture = m_pCamoTextureVar->GetTextureValue();
 		if (pCamoTexture)
-			pCamoTexture->SetTextureRegenerator( NULL );
+			pCamoTexture->SetTextureRegenerator( nullptr );
 	}
 
 	delete m_pCamoPatternImage;
@@ -270,7 +270,7 @@ void CCamoMaterialProxy::OnBind( C_BaseEntity *pEntity )
 	pCamoTexture->Download();
 
 	// Mark it so it doesn't get regenerated on task switch
-	m_pEnt = NULL;
+	m_pEnt = nullptr;
 }
 
 void CCamoMaterialProxy::LoadCamoPattern( void )
@@ -283,14 +283,14 @@ void CCamoMaterialProxy::LoadCamoPattern( void )
 		&m_CamoPatternWidth, &m_CamoPatternHeight, &indexImageFormat, &dummyGamma ) )
 	{
 		//Warning( "Can't get tga info for hl2/materials/models/combine_elite/camo7paletted.tga for camo material\n" );
-		m_pCamoTextureVar = NULL;
+		m_pCamoTextureVar = nullptr;
 		return;
 	}
 	
 	if( indexImageFormat != IMAGE_FORMAT_I8 )
 	{
 		//	Warning( "Camo material texture hl2/materials/models/combine_elite/camo7paletted.tga must be 8-bit greyscale\n" );
-		m_pCamoTextureVar = NULL;
+		m_pCamoTextureVar = nullptr;
 		return;
 	}
 	
@@ -298,7 +298,7 @@ void CCamoMaterialProxy::LoadCamoPattern( void )
 	m_pCamoPatternImage = ( unsigned char * )new unsigned char[indexImageSize];
 	if( !m_pCamoPatternImage )
 	{
-		m_pCamoTextureVar = NULL;
+		m_pCamoTextureVar = nullptr;
 		return;
 	}
 	
@@ -306,7 +306,7 @@ void CCamoMaterialProxy::LoadCamoPattern( void )
 		m_CamoPatternWidth, m_CamoPatternHeight, IMAGE_FORMAT_I8, dummyGamma, false ) )
 	{
 		//			Warning( "camo texture hl2/materials/models/combine_elite/camo7paletted.tga must be grey-scale" );
-		m_pCamoTextureVar = NULL;
+		m_pCamoTextureVar = nullptr;
 		return;
 	}
 	
@@ -345,7 +345,7 @@ void CCamoMaterialProxy::GenerateRandomPointsInNormalizedCube( void )
 	m_pointsInNormalizedBox = new Vector[m_CamoPatternNumColors];
 	if( !m_pointsInNormalizedBox )
 	{
-		m_pCamoTextureVar = NULL;
+		m_pCamoTextureVar = nullptr;
 		return;
 	}
 	

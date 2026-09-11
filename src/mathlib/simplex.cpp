@@ -64,11 +64,11 @@ CSimplex::~CSimplex()
 void CSimplex::Destruct()
 {
 	delete[]m_pInitialTableau;
-	m_pInitialTableau = NULL;
+	m_pInitialTableau = nullptr;
 	delete[]m_pTableau;
-	m_pTableau = NULL;
+	m_pTableau = nullptr;
 	delete[]m_pBasis;
-	m_pBasis = NULL;
+	m_pBasis = nullptr;
 }
 
 

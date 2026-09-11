@@ -168,7 +168,7 @@ public:
 		return false; 
 	}
 
-	virtual CAI_AddOn **GetAddOnsBase() { return NULL; }
+	virtual CAI_AddOn **GetAddOnsBase() { return nullptr; }
 	const CAI_AddOn **GetAddOnsBase() const { return (const CAI_AddOn **)const_cast<CAI_AddOnBehaviorBase *>(this)->GetAddOnsBase(); }
 	virtual int NumAddOns() const { return 0; }
 };
@@ -229,7 +229,7 @@ class CAI_AddOnBehaviorConnector : public ADDON
 	{
 		CBasePlayer *pPlayer = ToBasePlayer( pActivator );
 
-		if ( pPlayer == NULL )
+		if ( pPlayer == nullptr )
 			return;
 
 		if ( this->m_bWasAttached )

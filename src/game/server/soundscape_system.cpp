@@ -126,7 +126,7 @@ bool CSoundscapeSystem::Init()
 	m_soundscapeCount = 0;
 
 	const char *mapname = STRING( gpGlobals->mapname );
-	const char *mapSoundscapeFilename = NULL;
+	const char *mapSoundscapeFilename = nullptr;
 	if ( mapname && *mapname )
 	{
 		mapSoundscapeFilename = UTIL_VarArgs( "scripts/soundscapes_%s.txt", V_GetFileName( mapname ) );
@@ -135,7 +135,7 @@ bool CSoundscapeSystem::Init()
 	KeyValues *manifest = new KeyValues( SOUNDSCAPE_MANIFEST_FILE );
 	if ( filesystem->LoadKeyValues( *manifest, IFileSystem::TYPE_SOUNDSCAPE, SOUNDSCAPE_MANIFEST_FILE, "GAME" ) )
 	{
-		for ( KeyValues *sub = manifest->GetFirstSubKey(); sub != NULL; sub = sub->GetNextKey() )
+		for ( KeyValues *sub = manifest->GetFirstSubKey(); sub != nullptr; sub = sub->GetNextKey() )
 		{
 			if ( !Q_stricmp( sub->GetName(), "file" ) )
 			{
@@ -143,7 +143,7 @@ bool CSoundscapeSystem::Init()
 				AddSoundscapeFile( sub->GetString() );
 				if ( mapSoundscapeFilename && FStrEq( sub->GetString(), mapSoundscapeFilename ) )
 				{
-					mapSoundscapeFilename = NULL; // we've already loaded the map's soundscape
+					mapSoundscapeFilename = nullptr; // we've already loaded the map's soundscape
 				}
 				continue;
 			}
@@ -310,7 +310,7 @@ void CSoundscapeSystem::FrameUpdatePostEntityThink()
 
 				// if we got this far, we're looking at an entity that is contending
 				// for current player sound. the closest entity to player wins.
-				CEnvSoundscape *pCurrent = NULL;
+				CEnvSoundscape *pCurrent = nullptr;
 				if ( audio.entIndex > 0 && audio.entIndex <= m_soundscapeEntities.Count() )
 				{
 					int ssIndex = audio.entIndex - 1;

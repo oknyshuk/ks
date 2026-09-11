@@ -138,7 +138,7 @@ IMPLEMENT_REFLECT_CLIENTCLASS( C_SteamJet, DT_SteamJet, CSteamJet )
 // ------------------------------------------------------------------------- //
 C_SteamJet::C_SteamJet()
 {
-	m_pParticleMgr = NULL;
+	m_pParticleMgr = nullptr;
 	m_MaterialHandle = INVALID_MATERIAL_HANDLE;
 	
 	m_SpreadSpeed = 15;
@@ -173,7 +173,7 @@ void C_SteamJet::OnDataChanged(DataUpdateType_t updateType)
 
 	if(updateType == DATA_UPDATE_CREATED)
 	{
-		Start(ParticleMgr(), NULL);
+		Start(ParticleMgr(), nullptr);
 	}
 
 	// Recalulate lifetime in case length or speed changed.

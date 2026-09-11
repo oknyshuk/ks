@@ -26,11 +26,11 @@ IMPLEMENT_REFLECT_DATAMAP( CAI_BaseFlyingBot )
 //------------------------------------------------------------------------------
 void CAI_BaseFlyingBot::GetVelocity(Vector *vVelocity, AngularImpulse *vAngVelocity)
 {
-	if (vVelocity != NULL)
+	if (vVelocity != nullptr)
 	{
 		VectorCopy(m_vCurrentVelocity,*vVelocity);
 	}
-	if (vAngVelocity != NULL)
+	if (vAngVelocity != nullptr)
 	{
 		QAngle tmp = GetLocalAngularVelocity();
 		QAngleToAngularImpulse( tmp, *vAngVelocity );
@@ -143,7 +143,7 @@ void CAI_BaseFlyingBot::StartTask( const Task_t *pTask )
 		case TASK_SCRIPT_RUN_TO_TARGET:
 		case TASK_SCRIPT_WALK_TO_TARGET:
 		{
-			if (GetTarget() == NULL)
+			if (GetTarget() == nullptr)
 			{
 				TaskFail(FAIL_NO_TARGET);
 			}
@@ -229,9 +229,9 @@ AI_NavPathProgress_t CAI_BaseFlyingBot::ProgressFlyPath(
 //-----------------------------------------------------------------------------
 void CAI_BaseFlyingBot::TranslateNavGoal( CBaseEntity *pTarget, Vector &chasePosition )
 {
-	Assert( pTarget != NULL );
+	Assert( pTarget != nullptr );
 
-	if ( pTarget == NULL )
+	if ( pTarget == nullptr )
 	{
 		chasePosition = vec3_origin;
 		return;

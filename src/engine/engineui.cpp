@@ -72,7 +72,7 @@ void UI_ActivateMouse();
 extern CreateInterfaceFn g_AppSystemFactory;
 
 // functions to reference GameUI and GameConsole functions, from GameUI.dll
-IGameUI *staticGameUIFuncs = NULL;
+IGameUI *staticGameUIFuncs = nullptr;
 IGameUI* GetGameUI( void )
 {
 	return staticGameUIFuncs;
@@ -85,10 +85,10 @@ ConVar r_drawui( "r_drawui", "1", FCVAR_CHEAT, "Enable the rendering of vgui pan
 ConVar gameui_xbox( "gameui_xbox", "0", 0 );
 
 // Tracks whether console window is open or not - true as soon as we receive the request to open it, until after it has shutdown
-ConVar cv_console_window_open( "console_window_open", NULL, FCVAR_HIDDEN, "Is the console window active" );
-ConVar cv_ignore_ui_activate_key( "ignore_ui_activate_key", NULL, FCVAR_HIDDEN, "When set will ignore UI activation key" );
-ConVar cv_uipanel_active( "ui_panel_active", NULL, FCVAR_HIDDEN, "Is a vgui panel currently active" );
-ConVar cv_server_browser_dialog_open( "server_browser_dialog_open", NULL, FCVAR_HIDDEN, "Is the server browser window active" );
+ConVar cv_console_window_open( "console_window_open", nullptr, FCVAR_HIDDEN, "Is the console window active" );
+ConVar cv_ignore_ui_activate_key( "ignore_ui_activate_key", nullptr, FCVAR_HIDDEN, "When set will ignore UI activation key" );
+ConVar cv_uipanel_active( "ui_panel_active", nullptr, FCVAR_HIDDEN, "Is a vgui panel currently active" );
+ConVar cv_server_browser_dialog_open( "server_browser_dialog_open", nullptr, FCVAR_HIDDEN, "Is the server browser window active" );
 
 void ClearIOStates( void );
 
@@ -127,7 +127,7 @@ static tokenset_t< LevelLoadingProgress_e > g_ProgressTokens[]=
 	{ PT( PROGRESS_PRECACHELIGHTING ) },
 	{ PT( PROGRESS_READYTOPLAY ) },
 	{ PT( PROGRESS_HIGHESTITEM ) },
-	{ NULL, PROGRESS_INVALID }
+	{ nullptr, PROGRESS_INVALID }
 };
 //-----------------------------------------------------------------------------
 // Purpose: Console command to hide the gameUI, most commonly called from gameUI.dll
@@ -284,7 +284,7 @@ public:
 	virtual void ShowPasswordUI( char const *pchCurrentPW );
 
 	void SetProgressBias( float bias );
-	void UpdateProgressBar( float progress, const char *pszDesc = NULL, bool showDialog = true );
+	void UpdateProgressBar( float progress, const char *pszDesc = nullptr, bool showDialog = true );
 
 	virtual bool IsPlayingFullScreenVideo();
 
@@ -365,8 +365,8 @@ CEngineUI::CEngineUI()
 	m_bGameUIVisible = false;
 
 	m_hGameUIInputContext = INPUT_CONTEXT_HANDLE_INVALID;
-	m_hStaticGameUIModule = NULL;
-	m_GameUIFactory = NULL;
+	m_hStaticGameUIModule = nullptr;
+	m_GameUIFactory = nullptr;
 	
 	m_bShowProgressDialog = false;
 	m_bSaveProgress = false;
@@ -374,7 +374,7 @@ CEngineUI::CEngineUI()
 	m_bNotAllowedToHideGameUI = false;
 	m_bNotAllowedToShowGameUI = false;
 	m_ProgressBias = 0;
-	m_pConstantColorMaterial = NULL;
+	m_pConstantColorMaterial = nullptr;
 }
 
 
@@ -425,7 +425,7 @@ void CEngineUI::Init()
 	}
 	
 	// get the initialization func
-	staticGameUIFuncs = (IGameUI *)m_GameUIFactory(GAMEUI_INTERFACE_VERSION, NULL);
+	staticGameUIFuncs = (IGameUI *)m_GameUIFactory(GAMEUI_INTERFACE_VERSION, nullptr);
 	if (!staticGameUIFuncs )
 	{
 		Error( "Could not get IGameUI interface %s from %s\n", GAMEUI_INTERFACE_VERSION, szDllName );
@@ -524,7 +524,7 @@ void CEngineUI::Connect()
 //-----------------------------------------------------------------------------
 bool CEngineUI::IsInitialized() const
 {
-	return staticGameUIFuncs != NULL;
+	return staticGameUIFuncs != nullptr;
 }
 
 extern bool g_bUsingLegacyAppSystems;
@@ -536,7 +536,7 @@ void CEngineUI::Shutdown()
 	if ( m_pConstantColorMaterial )
 	{
 		m_pConstantColorMaterial->DecrementReferenceCount();
-		m_pConstantColorMaterial = NULL;
+		m_pConstantColorMaterial = nullptr;
 	}
 
 	bugreporter->Shutdown();
@@ -551,7 +551,7 @@ void CEngineUI::Shutdown()
 
 	// unload the gameUI
 	staticGameUIFuncs->Shutdown();
-	staticGameUIFuncs = NULL;
+	staticGameUIFuncs = nullptr;
 
 	// Disable the input contexts
 	if ( m_hGameUIInputContext != INPUT_CONTEXT_HANDLE_INVALID )
@@ -566,8 +566,8 @@ void CEngineUI::Shutdown()
 		Sys_UnloadModule(m_hStaticGameUIModule);
 	}
 
-	m_hStaticGameUIModule = NULL;
-	m_GameUIFactory = NULL;
+	m_hStaticGameUIModule = nullptr;
+	m_GameUIFactory = nullptr;
 }
 
 
@@ -703,52 +703,52 @@ struct LoadingProgressDescription_t
 
 LoadingProgressDescription_t g_ListenServerLoadingProgressDescriptions[] =
 {	
-	{ PROGRESS_NONE,						0,		0,		NULL },
+	{ PROGRESS_NONE,						0,		0,		nullptr },
 	{ PROGRESS_SPAWNSERVER,					5,		0,		"#LoadingProgress_SpawningServer" },
 	{ PROGRESS_LOADWORLDMODEL,				8,		5,		"#LoadingProgress_LoadMap" },
-	{ PROGRESS_CREATENETWORKSTRINGTABLES,	12,		0,		NULL },
+	{ PROGRESS_CREATENETWORKSTRINGTABLES,	12,		0,		nullptr },
 	{ PROGRESS_PRECACHEWORLD,				15,		0,		"#LoadingProgress_PrecacheWorld" },
-	{ PROGRESS_CLEARWORLD,					16,		20,		NULL },
+	{ PROGRESS_CLEARWORLD,					16,		20,		nullptr },
 	{ PROGRESS_LEVELINIT,					20,		200,	"#LoadingProgress_LoadResources" },
-	{ PROGRESS_ACTIVATESERVER,				50,		0,		NULL },
+	{ PROGRESS_ACTIVATESERVER,				50,		0,		nullptr },
 	{ PROGRESS_SIGNONCHALLENGE,				51,		0,		"#LoadingProgress_Connecting" },
-	{ PROGRESS_SIGNONCONNECT,				55,		0,		NULL },
+	{ PROGRESS_SIGNONCONNECT,				55,		0,		nullptr },
 	{ PROGRESS_SIGNONCONNECTED,				56,		1,		"#LoadingProgress_SignonLocal" },
-	{ PROGRESS_PROCESSSERVERINFO,			58,		0,		NULL },
-	{ PROGRESS_PROCESSSTRINGTABLE,			60,		3,		NULL },	// 16
-	{ PROGRESS_SIGNONNEW,					63,		200,	NULL },
-	{ PROGRESS_SENDCLIENTINFO,				80,		1,		NULL },
+	{ PROGRESS_PROCESSSERVERINFO,			58,		0,		nullptr },
+	{ PROGRESS_PROCESSSTRINGTABLE,			60,		3,		nullptr },	// 16
+	{ PROGRESS_SIGNONNEW,					63,		200,	nullptr },
+	{ PROGRESS_SENDCLIENTINFO,				80,		1,		nullptr },
 	{ PROGRESS_SENDSIGNONDATA,				81,		1,		"#LoadingProgress_SignonDataLocal" },
-	{ PROGRESS_SIGNONSPAWN,					83,		10,		NULL },
-	{ PROGRESS_CREATEENTITIES,				85,		3,		NULL },
-	{ PROGRESS_FULLYCONNECTED,				86,		0,		NULL },
-	{ PROGRESS_PRECACHELIGHTING,			87,		50,		NULL },
-	{ PROGRESS_READYTOPLAY,					95,		100,	NULL },
-	{ PROGRESS_HIGHESTITEM,					100,	0,		NULL },
+	{ PROGRESS_SIGNONSPAWN,					83,		10,		nullptr },
+	{ PROGRESS_CREATEENTITIES,				85,		3,		nullptr },
+	{ PROGRESS_FULLYCONNECTED,				86,		0,		nullptr },
+	{ PROGRESS_PRECACHELIGHTING,			87,		50,		nullptr },
+	{ PROGRESS_READYTOPLAY,					95,		100,	nullptr },
+	{ PROGRESS_HIGHESTITEM,					100,	0,		nullptr },
 };
 
 LoadingProgressDescription_t g_RemoteConnectLoadingProgressDescriptions[] =
 {	
-	{ PROGRESS_NONE,						0,		0,		NULL },
+	{ PROGRESS_NONE,						0,		0,		nullptr },
 	{ PROGRESS_CHANGELEVEL,					1,		0,		"#LoadingProgress_Changelevel" },
 	{ PROGRESS_BEGINCONNECT,				5,		0,		"#LoadingProgress_BeginConnect" },
 	{ PROGRESS_SIGNONCHALLENGE,				10,		0,		"#LoadingProgress_Connecting" },
-	{ PROGRESS_SIGNONCONNECTED,				11,		0,		NULL },
+	{ PROGRESS_SIGNONCONNECTED,				11,		0,		nullptr },
 	{ PROGRESS_PROCESSSERVERINFO,			12,		0,		"#LoadingProgress_ProcessServerInfo" },
-	{ PROGRESS_PROCESSSTRINGTABLE,			15,		3,		NULL },
+	{ PROGRESS_PROCESSSTRINGTABLE,			15,		3,		nullptr },
 	{ PROGRESS_LOADWORLDMODEL,				20,		14,		"#LoadingProgress_LoadMap" },
 	{ PROGRESS_SIGNONNEW,					30,		200,	"#LoadingProgress_PrecacheWorld" },
 	{ PROGRESS_SENDCLIENTINFO,				60,		1,		"#LoadingProgress_SendClientInfo" },
 	{ PROGRESS_SENDSIGNONDATA,				64,		1,		"#LoadingProgress_SignonData" },
-	{ PROGRESS_SIGNONSPAWN,					65,		10,		NULL },
-	{ PROGRESS_CREATEENTITIES,				85,		3,		NULL },
-	{ PROGRESS_FULLYCONNECTED,				86,		0,		NULL },
-	{ PROGRESS_PRECACHELIGHTING,			87,		50,		NULL },
-	{ PROGRESS_READYTOPLAY,					95,		100,	NULL },
-	{ PROGRESS_HIGHESTITEM,					100,	0,		NULL },
+	{ PROGRESS_SIGNONSPAWN,					65,		10,		nullptr },
+	{ PROGRESS_CREATEENTITIES,				85,		3,		nullptr },
+	{ PROGRESS_FULLYCONNECTED,				86,		0,		nullptr },
+	{ PROGRESS_PRECACHELIGHTING,			87,		50,		nullptr },
+	{ PROGRESS_READYTOPLAY,					95,		100,	nullptr },
+	{ PROGRESS_HIGHESTITEM,					100,	0,		nullptr },
 };
 
-static LoadingProgressDescription_t *g_pLoadingProgressDescriptions = NULL;
+static LoadingProgressDescription_t *g_pLoadingProgressDescriptions = nullptr;
 
 //-----------------------------------------------------------------------------
 // Purpose: returns current progress point description
@@ -1050,7 +1050,7 @@ void CEngineUI::StartCustomProgress()
 		return;
 
 	// we've starting loading a level/connecting to a server
-	staticGameUIFuncs->OnLevelLoadingStarted( NULL, true );
+	staticGameUIFuncs->OnLevelLoadingStarted( nullptr, true );
 	m_bSaveProgress = staticGameUIFuncs->SetShowProgressText( true );
 }
 

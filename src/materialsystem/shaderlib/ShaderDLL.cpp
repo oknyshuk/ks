@@ -110,9 +110,9 @@ CShaderDLL::CShaderDLL()
 //-----------------------------------------------------------------------------
 bool CShaderDLL::Connect( CreateInterfaceFn factory, bool bIsMaterialSystem )
 {
-	g_pHardwareConfig =  (IMaterialSystemHardwareConfig*)factory( MATERIALSYSTEM_HARDWARECONFIG_INTERFACE_VERSION, NULL );
-	g_pConfig = (const MaterialSystem_Config_t*)factory( MATERIALSYSTEM_CONFIG_VERSION, NULL );
-	g_pSLShaderSystem =  (IShaderSystem*)factory( SHADERSYSTEM_INTERFACE_VERSION, NULL );
+	g_pHardwareConfig =  (IMaterialSystemHardwareConfig*)factory( MATERIALSYSTEM_HARDWARECONFIG_INTERFACE_VERSION, nullptr );
+	g_pConfig = (const MaterialSystem_Config_t*)factory( MATERIALSYSTEM_CONFIG_VERSION, nullptr );
+	g_pSLShaderSystem =  (IShaderSystem*)factory( SHADERSYSTEM_INTERFACE_VERSION, nullptr );
 
 	if ( !bIsMaterialSystem )
 	{
@@ -120,7 +120,7 @@ bool CShaderDLL::Connect( CreateInterfaceFn factory, bool bIsMaterialSystem )
   		InitShaderLibCVars( factory );
 	}
 
-	return ( g_pConfig != NULL ) && (g_pHardwareConfig != NULL) && ( g_pSLShaderSystem != NULL );
+	return ( g_pConfig != nullptr ) && (g_pHardwareConfig != nullptr) && ( g_pSLShaderSystem != nullptr );
 }
 
 void CShaderDLL::Disconnect( bool bIsMaterialSystem )
@@ -131,9 +131,9 @@ void CShaderDLL::Disconnect( bool bIsMaterialSystem )
 		DisconnectTier1Libraries();
 	}
 
-	g_pHardwareConfig = NULL;
-	g_pConfig = NULL;
-	g_pSLShaderSystem = NULL;
+	g_pHardwareConfig = nullptr;
+	g_pConfig = nullptr;
+	g_pSLShaderSystem = nullptr;
 }
 
 bool CShaderDLL::Connect( CreateInterfaceFn factory )
@@ -158,7 +158,7 @@ int CShaderDLL::ShaderCount() const
 IShader *CShaderDLL::GetShader( int nShader ) 
 {
 	if ( ( nShader < 0 ) || ( nShader >= m_ShaderList.Count() ) )
-		return NULL;
+		return nullptr;
 
 	return m_ShaderList[nShader];
 }
@@ -184,7 +184,7 @@ int CShaderDLL::ShaderComboSemanticsCount() const
 const ShaderComboSemantics_t *CShaderDLL::GetComboSemantics( int n ) 
 {
 	if ( ( n < 0 ) || ( n >= m_ShaderComboSemantics.Count() ) )
-		return NULL;
+		return nullptr;
 
 	return m_ShaderComboSemantics[n];
 }

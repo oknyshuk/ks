@@ -201,7 +201,7 @@ void CBaseButton::Press( CBaseEntity *pActivator, BUTTON_CODE eCode )
 	}
 
 	// Temporarily disable the touch function, until movement is finished.
-	SetTouch( NULL );
+	SetTouch( nullptr );
 
 	if ( ( eCode == BUTTON_PRESS ) && ( m_toggle_state == TS_AT_TOP ) ||
 		 ( ( eCode == BUTTON_RETURN ) && ( m_toggle_state == TS_AT_TOP || m_toggle_state == TS_GOING_UP ) ) )
@@ -284,7 +284,7 @@ int CBaseButton::OnTakeDamage( const CTakeDamageInfo &info )
 	m_hActivator = info.GetAttacker();
 
 	// dvsents2: why would activator be NULL here?
-	if ( m_hActivator == NULL )
+	if ( m_hActivator == nullptr )
 		return 0;
 
 	if (m_bLocked)
@@ -293,7 +293,7 @@ int CBaseButton::OnTakeDamage( const CTakeDamageInfo &info )
 	}
 
 	// Temporarily disable the touch function, until movement is finished.
-	SetTouch( NULL );
+	SetTouch( nullptr );
 
 	if ( code == BUTTON_RETURN )
 	{
@@ -415,7 +415,7 @@ void CBaseButton::Spawn( )
 	}
 	else
 	{
-		SetUse(NULL);
+		SetUse(nullptr);
 	}
 
 	//
@@ -427,7 +427,7 @@ void CBaseButton::Spawn( )
 	}
 	else 
 	{
-		SetTouch ( NULL );
+		SetTouch ( nullptr );
 	}
 
 	CreateVPhysics();
@@ -595,7 +595,7 @@ void CBaseButton::ButtonTouch( CBaseEntity *pOther )
 	}
 
 	// Temporarily disable the touch function, until movement is finished.
-	SetTouch( NULL );
+	SetTouch( nullptr );
 
 	if ( code == BUTTON_RETURN )
 	{
@@ -703,7 +703,7 @@ void CBaseButton::TriggerAndWait( void )
 		else
 		{
 			// BUGBUG: ALL buttons no longer respond to touch
-			SetTouch (NULL);
+			SetTouch (nullptr);
 		}
 	}
 
@@ -761,7 +761,7 @@ void CBaseButton::ButtonBackHome( void )
 	else
 	{
 		// BUGBUG: ALL buttons no longer respond to touch
-		SetTouch ( NULL );
+		SetTouch ( nullptr );
 	}
 
 	// reset think for a sparking button
@@ -878,7 +878,7 @@ void CRotButton::Spawn( void )
 	//
 	if (!HasSpawnFlags(SF_BUTTON_TOUCH_ACTIVATES))
 	{
-		SetTouch ( NULL );
+		SetTouch ( nullptr );
 	}
 	else
 	{
@@ -1155,10 +1155,10 @@ void CMomentaryRotButton::Lock()
 
 	SetLocalAngularVelocity( vec3_angle );
 	SetMoveDoneTime( -1 );
-	SetMoveDone( NULL );
+	SetMoveDone( nullptr );
 
 	SetNextThink( TICK_NEVER_THINK );
-	SetThink( NULL );
+	SetThink( nullptr );
 }
 
 
@@ -1399,8 +1399,8 @@ void CMomentaryRotButton::UseMoveDone( void )
 	}
 	else
 	{
-		SetThink( NULL );
-		SetMoveDone( NULL );
+		SetThink( nullptr );
+		SetMoveDone( nullptr );
 	}
 }
 
@@ -1419,13 +1419,13 @@ void CMomentaryRotButton::ReturnMoveDone( void )
 		SetLocalAngularVelocity( vec3_angle );
 		SetLocalAngles( m_start );
 
-		UpdateTarget( 0, NULL );
+		UpdateTarget( 0, nullptr );
 
 		SetMoveDoneTime( -1 );
-		SetMoveDone( NULL );
+		SetMoveDone( nullptr );
 
 		SetNextThink( TICK_NEVER_THINK );
-		SetThink( NULL );
+		SetThink( nullptr );
 	}
 	else
 	{
@@ -1444,7 +1444,7 @@ void CMomentaryRotButton::ReturnMoveDone( void )
 void CMomentaryRotButton::UpdateThink( void )
 {
 	float value = GetPos( GetLocalAngles() );
-	UpdateTarget( value, NULL );
+	UpdateTarget( value, nullptr );
 	SetNextThink( gpGlobals->curtime );
 }
 

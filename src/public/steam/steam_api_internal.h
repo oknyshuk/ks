@@ -9,33 +9,33 @@
 
 S_API HSteamUser SteamAPI_GetHSteamUser() { return 0; }
 S_API bool S_CALLTYPE SteamInternal_Init() { return false; }
-S_API void * S_CALLTYPE SteamInternal_CreateInterface( const char *ver ) { return NULL; }
-S_API void * S_CALLTYPE SteamGameServerInternal_CreateInterface( const char *ver ) { return NULL; }
+S_API void * S_CALLTYPE SteamInternal_CreateInterface( const char *ver ) { return nullptr; }
+S_API void * S_CALLTYPE SteamGameServerInternal_CreateInterface( const char *ver ) { return nullptr; }
 
 
 inline void CSteamAPIContext::Clear()
 {
-	m_pSteamClient = NULL;
-	m_pSteamUser = NULL;
-	m_pSteamFriends = NULL;
-	m_pSteamUtils = NULL;
-	m_pSteamMatchmaking = NULL;
-	m_pSteamUserStats = NULL;
-	m_pSteamApps = NULL;
-	m_pSteamMatchmakingServers = NULL;
-	m_pSteamNetworking = NULL;
-	m_pSteamRemoteStorage = NULL;
-	m_pSteamHTTP = NULL;
-	m_pSteamScreenshots = NULL;
-	m_pSteamMusic = NULL;
-	m_pSteamUnifiedMessages = NULL;
-	m_pController = NULL;
-	m_pSteamUGC = NULL;
-	m_pSteamAppList = NULL;
-	m_pSteamMusic = NULL;
-	m_pSteamMusicRemote = NULL;
-	m_pSteamHTMLSurface = NULL;
-	m_pSteamInventory = NULL;
+	m_pSteamClient = nullptr;
+	m_pSteamUser = nullptr;
+	m_pSteamFriends = nullptr;
+	m_pSteamUtils = nullptr;
+	m_pSteamMatchmaking = nullptr;
+	m_pSteamUserStats = nullptr;
+	m_pSteamApps = nullptr;
+	m_pSteamMatchmakingServers = nullptr;
+	m_pSteamNetworking = nullptr;
+	m_pSteamRemoteStorage = nullptr;
+	m_pSteamHTTP = nullptr;
+	m_pSteamScreenshots = nullptr;
+	m_pSteamMusic = nullptr;
+	m_pSteamUnifiedMessages = nullptr;
+	m_pController = nullptr;
+	m_pSteamUGC = nullptr;
+	m_pSteamAppList = nullptr;
+	m_pSteamMusic = nullptr;
+	m_pSteamMusicRemote = nullptr;
+	m_pSteamHTMLSurface = nullptr;
+	m_pSteamInventory = nullptr;
 }
 
 
@@ -74,8 +74,8 @@ template< class T, class P >
 inline CCallResult<T, P>::CCallResult()
 {
 	m_hAPICall = k_uAPICallInvalid;
-	m_pObj = NULL;
-	m_Func = NULL;
+	m_pObj = nullptr;
+	m_Func = nullptr;
 	m_iCallback = P::k_iCallback;
 }
 
@@ -141,7 +141,7 @@ inline void CCallResult<T, P>::Run( void *pvParam, bool bIOFailure, SteamAPICall
 //-----------------------------------------------------------------------------
 template< class T, class P, bool bGameserver >
 inline CCallback< T, P, bGameserver >::CCallback( T *pObj, func_t func )
-	: m_pObj( NULL ), m_Func( NULL )
+	: m_pObj( nullptr ), m_Func( nullptr )
 {
 	if ( bGameserver )
 	{

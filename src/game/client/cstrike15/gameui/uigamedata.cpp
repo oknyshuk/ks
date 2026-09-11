@@ -87,7 +87,7 @@ const tokenset_t< const char * > BaseModUI::s_characterPortraits[] =
 
 	{ "infected",	"s_panel_hand" },
 
-	{ NULL, "" }
+	{ nullptr, "" }
 };
 
 //=============================================================================
@@ -130,11 +130,11 @@ bool CUIGameData::m_bModuleShutDown = false;
 //=============================================================================
 CUIGameData::CUIGameData() :
 
-	m_CallbackUserStatsStored( NULL, NULL ),
-	m_CallbackUserStatsReceived( NULL, NULL ),
+	m_CallbackUserStatsStored( nullptr, nullptr ),
+	m_CallbackUserStatsReceived( nullptr, nullptr ),
 
 
-	m_CallbackPersonaStateChanged( NULL, NULL ),
+	m_CallbackPersonaStateChanged( nullptr, nullptr ),
 
 
 	m_CGameUIPostInit( false )
@@ -156,9 +156,9 @@ CUIGameData::CUIGameData() :
 
 	m_bWaitingForStorageDeviceHandle = false;
 	m_iStorageID = XBX_INVALID_STORAGE_ID;
-	m_pAsyncJob = NULL;
+	m_pAsyncJob = nullptr;
 
-	m_pSelectStorageClient = NULL;
+	m_pSelectStorageClient = nullptr;
 
 	SetDefLessFunc( m_mapUserXuidToAvatar );
 	SetDefLessFunc( m_mapUserXuidToName );
@@ -188,7 +188,7 @@ void CUIGameData::Shutdown()
 	{
 		m_bModuleShutDown = true;
 		delete m_Instance;
-		m_Instance = NULL;
+		m_Instance = nullptr;
 	}
 }
 
@@ -298,7 +298,7 @@ void CUIGameData::ExecuteOverlayCommand( char const *szCommand )
 	}
 	else
 	{
-		DisplayOkOnlyMsgBox( NULL, "#SFUI_SteamOverlay_Title", "#SFUI_SteamOverlay_Text" );
+		DisplayOkOnlyMsgBox( nullptr, "#SFUI_SteamOverlay_Title", "#SFUI_SteamOverlay_Text" );
 	}
 }
 
@@ -629,7 +629,7 @@ CBaseModFrame * CUIGameData::GetParentWindowForSystemMessageBox()
 	// DWenger - Pulled out temporarily - }
 
 	// DWenger - Pulled out temporarily - return pCandidate;
-	return NULL;	// DWenger - temporary code
+	return nullptr;	// DWenger - temporary code
 }
 
 bool CUIGameData::IsActiveSplitScreenPlayerSpectating( void )
@@ -716,9 +716,9 @@ void CUIGameData::OnEvent( KeyValues *pEvent )
 				true, 
 				true, 
 				"confirm_join_new_session_exit_current\n", 
-				NULL, 
-				NULL, 
-				NULL );
+				nullptr, 
+				nullptr, 
+				nullptr );
 		}
 		else if ( !Q_stricmp( "storage", pEvent->GetString( "action" ) ) )
 		{
@@ -741,7 +741,7 @@ void CUIGameData::OnEvent( KeyValues *pEvent )
 					{ "NotOnline", "#InviteError_NotOnline1", RemapText_t::MATCH_FULL },
 					{ "NoMultiplayer", "#InviteError_NoMultiplayer1", RemapText_t::MATCH_FULL },
 					{ "SameConsole", "#InviteError_SameConsole1", RemapText_t::MATCH_FULL },
-					{ NULL, NULL, RemapText_t::MATCH_FULL }
+					{ nullptr, nullptr, RemapText_t::MATCH_FULL }
 				};
 
 				szReason = RemapText_t::RemapRawText( arrText, szReason );
@@ -753,7 +753,7 @@ void CUIGameData::OnEvent( KeyValues *pEvent )
 					{ "NotOnline", "#InviteError_NotOnline2", RemapText_t::MATCH_FULL },
 					{ "NoMultiplayer", "#InviteError_NoMultiplayer2", RemapText_t::MATCH_FULL },
 					{ "SameConsole", "#InviteError_SameConsole2", RemapText_t::MATCH_FULL },
-					{ NULL, NULL, RemapText_t::MATCH_FULL }
+					{ nullptr, nullptr, RemapText_t::MATCH_FULL }
 				};
 
 				szReason = RemapText_t::RemapRawText( arrText, szReason );
@@ -895,7 +895,7 @@ void CUIGameData::OnEvent( KeyValues *pEvent )
 	{
 		char const *szReason = pEvent->GetString( "reason", "" );
 
-		if ( char const *szDisconnectHdlr = pEvent->GetString( "disconnecthdlr", NULL ) )
+		if ( char const *szDisconnectHdlr = pEvent->GetString( "disconnecthdlr", nullptr ) )
 		{
 			// If a disconnect handler was set during the event, then we don't interfere with
 			// the dialog explaining disconnection, just let the disconnect handler do everything.
@@ -912,7 +912,7 @@ void CUIGameData::OnEvent( KeyValues *pEvent )
 			{ "Kicked and banned", "#SessionError_Kicked", RemapText_t::MATCH_SUBSTR },
 			{ "You have been voted off", "#SessionError_Kicked", RemapText_t::MATCH_SUBSTR },
 			{ "All players idle", "#L4D_ServerShutdownIdle", RemapText_t::MATCH_SUBSTR },
-			{ NULL, NULL, RemapText_t::MATCH_FULL }
+			{ nullptr, nullptr, RemapText_t::MATCH_FULL }
 		};
 
 		szReason = RemapText_t::RemapRawText( arrText, szReason );
@@ -969,7 +969,7 @@ void CUIGameData::OnEvent( KeyValues *pEvent )
 				{ "migrate", "#SessionError_Migrate", RemapText_t::MATCH_FULL },
 				{ "nomap", "#SessionError_NoMap", RemapText_t::MATCH_FULL },
 				{ "SteamServersDisconnected", "#SessionError_SteamServersDisconnected", RemapText_t::MATCH_FULL },
-				{ NULL, NULL, RemapText_t::MATCH_FULL }
+				{ nullptr, nullptr, RemapText_t::MATCH_FULL }
 			};
 
 			szError = RemapText_t::RemapRawText( arrText, szError );
@@ -1030,7 +1030,7 @@ void CUIGameData::OnEvent( KeyValues *pEvent )
 				KeyValues *kvDlcDetails = new KeyValues( "" );
 				KeyValues::AutoDelete autodelete_kvDlcDetails( kvDlcDetails );
 				if ( !kvDlcDetails->LoadFromFile( g_pFullFileSystem, "resource/UI/BaseModUI/dlcdetailsinfo.res", "MOD" ) )
-					kvDlcDetails = NULL;
+					kvDlcDetails = nullptr;
 
 				// Determine the DLC offer ID
 				uint64 uiDlcOfferID = 0ull;
@@ -1161,7 +1161,7 @@ uint64 GetDlcInstalledMask()
 	for ( int j = 0; j < numDLCs; ++ j )
 	{
 		unsigned int uiDlcHeader = 0;
-		if ( !g_pFullFileSystem->GetAnyDLCInfo( j, &uiDlcHeader, NULL, 0 ) )
+		if ( !g_pFullFileSystem->GetAnyDLCInfo( j, &uiDlcHeader, nullptr, 0 ) )
 			continue;
 
 		int idDLC = DLC_LICENSE_ID( uiDlcHeader );

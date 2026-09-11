@@ -55,7 +55,7 @@ void CFuncAreaPortalWindow::Activate()
 	BaseClass::Activate();
 	
 	// Find our background model.
-	CBaseEntity *pBackground = gEntList.FindEntityByName( NULL, m_iBackgroundBModelName );
+	CBaseEntity *pBackground = gEntList.FindEntityByName( nullptr, m_iBackgroundBModelName );
 	if( pBackground )
 	{
 		m_iBackgroundModelIndex  = modelinfo->GetModelIndex( STRING( pBackground->GetModelName() ) );
@@ -63,7 +63,7 @@ void CFuncAreaPortalWindow::Activate()
 	}
 
 	// Find our target and steal its bmodel.
-	CBaseEntity *pTarget = gEntList.FindEntityByName( NULL, m_target );
+	CBaseEntity *pTarget = gEntList.FindEntityByName( nullptr, m_target );
 	if( pTarget )
 	{
 		SetModel( STRING(pTarget->GetModelName()) );

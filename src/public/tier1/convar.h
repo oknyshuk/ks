@@ -266,7 +266,7 @@ class CCommand
 public:
 	CCommand();
 	CCommand( int nArgC, const char **ppArgV, cmd_source_t source = kCommandSrcCode );
-	bool Tokenize( const char *pCommand, cmd_source_t source = kCommandSrcCode, characterset_t *pBreakSet = NULL );
+	bool Tokenize( const char *pCommand, cmd_source_t source = kCommandSrcCode, characterset_t *pBreakSet = nullptr );
 	void Reset();
 
 	int ArgC() const;
@@ -311,7 +311,7 @@ inline int CCommand::ArgC() const
 
 inline const char **CCommand::ArgV() const
 {
-	return m_nArgc ? (const char**)m_ppArgv : NULL;
+	return m_nArgc ? (const char**)m_ppArgv : nullptr;
 }
 
 inline const char *CCommand::ArgS() const
@@ -1043,7 +1043,7 @@ private:
 //-----------------------------------------------------------------------------
 // Called by the framework to register ConCommands with the ICVar
 //-----------------------------------------------------------------------------
-void ConVar_Register( int nCVarFlag = 0, IConCommandBaseAccessor *pAccessor = NULL );
+void ConVar_Register( int nCVarFlag = 0, IConCommandBaseAccessor *pAccessor = nullptr );
 void ConVar_Unregister( );
 
 
@@ -1068,7 +1068,7 @@ class CConCommandMemberAccessor : public ConCommand, public ICommandCallback, pu
 public:
 	CConCommandMemberAccessor( T* pOwner, const char *pName, FnMemberCommandCallback_t callback, const char *pHelpString = 0,
 		int flags = 0, FnMemberCommandCompletionCallback_t completionFunc = 0 ) :
-		BaseClass( pName, this, pHelpString, flags, ( completionFunc != 0 ) ? this : NULL )
+		BaseClass( pName, this, pHelpString, flags, ( completionFunc != 0 ) ? this : nullptr )
 	{
 		m_pOwner = pOwner;
 		m_Func = callback;
@@ -1140,7 +1140,7 @@ private:
 	class CCommandMemberInitializer_##_funcname					\
 	{															\
 	public:														\
-		CCommandMemberInitializer_##_funcname() : m_ConCommandAccessor( NULL, name, &_thisclass::_funcname, description, flags )	\
+		CCommandMemberInitializer_##_funcname() : m_ConCommandAccessor( nullptr, name, &_thisclass::_funcname, description, flags )	\
 		{														\
 			m_ConCommandAccessor.SetOwner( GET_OUTER( _thisclass, m_##_funcname##_register ) );	\
 		}														\

@@ -128,7 +128,7 @@ bool CAudioSDL::Init( const audio_device_init_params_t &params )
             for( int i = 0; i < nDeviceCount; ++i )
             {
                 const char *devName = SDL_GetAudioDeviceName( pDevices[i] );
-                if ( devName == NULL )
+                if ( devName == nullptr )
                 {
                     continue;
                 }
@@ -162,7 +162,7 @@ bool CAudioSDL::Init( const audio_device_init_params_t &params )
 
 	// Query back the actual format from the stream
 	SDL_AudioSpec obtained;
-	SDL_GetAudioStreamFormat( m_pStream, &obtained, NULL );
+	SDL_GetAudioStreamFormat( m_pStream, &obtained, nullptr );
 
 	// BUGBUG: Assert this for now
 	Assert( obtained.channels == 2 );
@@ -463,7 +463,7 @@ int Audio_EnumerateSDLDevices( audio_device_description_t *pDeviceListOut, int n
 IAudioDevice2 *Audio_CreateSDLDevice( const audio_device_init_params_t &params )
 {
 	if ( !InitSDLAudio() )
-		return NULL;
+		return nullptr;
 
 	CAudioSDL *pDevice = new CAudioSDL;
 
@@ -473,5 +473,5 @@ IAudioDevice2 *Audio_CreateSDLDevice( const audio_device_init_params_t &params )
 	}
 
 	delete pDevice;
-	return NULL;
+	return nullptr;
 }

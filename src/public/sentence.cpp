@@ -93,7 +93,7 @@ unsigned int CWordTag::GetEndByte() const { return 0; }
 //-----------------------------------------------------------------------------
 CWordTag::CWordTag( void )
 {
-	m_pszWord = NULL;
+	m_pszWord = nullptr;
 
 	SetStartAndEndBytes( 0, 0 );
 
@@ -109,7 +109,7 @@ CWordTag::CWordTag( void )
 //-----------------------------------------------------------------------------
 CWordTag::CWordTag( const CWordTag& from )
 {
-	m_pszWord = NULL;
+	m_pszWord = nullptr;
 	SetWord( from.m_pszWord );
 
 	SetStartAndEndBytes( from.GetStartByte(), from.GetEndByte() );
@@ -137,7 +137,7 @@ CWordTag::CWordTag( const char *word )
 	m_flStartTime = 0.0f;
 	m_flEndTime = 0.0f;
 
-	m_pszWord = NULL;
+	m_pszWord = nullptr;
 
 	SetSelected( false );
 
@@ -181,7 +181,7 @@ int CWordTag::IndexOfPhoneme( CPhonemeTag *tag )
 void CWordTag::SetWord( const char *word )
 {
 	delete[] m_pszWord;
-	m_pszWord = NULL;
+	m_pszWord = nullptr;
 	if ( !word || !word[ 0 ] )
 		return;
 
@@ -209,7 +209,7 @@ unsigned int CWordTag::ComputeDataCheckSum()
 	CRC32_Init( &crc );
 
 	// Checksum the text
-	if ( m_pszWord != NULL )
+	if ( m_pszWord != nullptr )
 	{
 		CRC32_ProcessBuffer( &crc, m_pszWord, Q_strlen( m_pszWord ) );
 	}
@@ -249,7 +249,7 @@ CBasePhonemeTag::CBasePhonemeTag( const CBasePhonemeTag& from )
 //-----------------------------------------------------------------------------
 CPhonemeTag::CPhonemeTag( void )
 {
-	m_szPhoneme = NULL;
+	m_szPhoneme = nullptr;
 
 	SetStartAndEndBytes( 0, 0 );
 
@@ -267,7 +267,7 @@ CPhonemeTag::CPhonemeTag( const CPhonemeTag& from ) :
 
 	SetSelected( from.GetSelected() );
 
-	m_szPhoneme = NULL;
+	m_szPhoneme = nullptr;
 	SetTag( from.GetTag() );
 }
 
@@ -286,7 +286,7 @@ CPhonemeTag::CPhonemeTag( const char *phoneme )
 
 	SetPhonemeCode( 0 );
 
-	m_szPhoneme = NULL;
+	m_szPhoneme = nullptr;
 	SetTag( phoneme );
 }
 
@@ -305,7 +305,7 @@ CPhonemeTag::~CPhonemeTag( void )
 void CPhonemeTag::SetTag( const char *phoneme )
 {
 	delete m_szPhoneme;
-	m_szPhoneme = NULL;
+	m_szPhoneme = nullptr;
 	if ( !phoneme || !phoneme [ 0 ] )
 		return;
 
@@ -989,7 +989,7 @@ void CSentence::MakeRuntimeOnly()
 	m_bIsCached = true;
 #if PHONEME_EDITOR
 	delete m_szText;
-	m_szText = NULL;
+	m_szText = nullptr;
 
 	int c = m_Words.Count();
 	for ( int i = 0; i < c; ++i )
@@ -1232,7 +1232,7 @@ int CSentence::CountPhonemes( void )
 CWordTag *CSentence::EstimateBestWord( float time )
 {
 #if PHONEME_EDITOR
-	CWordTag *bestWord = NULL;
+	CWordTag *bestWord = nullptr;
 
 	for( int i = 0; i < m_Words.Count(); i++ )
 	{
@@ -1265,7 +1265,7 @@ CWordTag *CSentence::EstimateBestWord( float time )
 	}
 #endif
 	// Oh well
-	return NULL;
+	return nullptr;
 }
 
 //-----------------------------------------------------------------------------
@@ -1293,7 +1293,7 @@ CWordTag *CSentence::GetWordForPhoneme( CPhonemeTag *phoneme )
 
 	}
 #endif
-	return NULL;
+	return nullptr;
 }
 
 //-----------------------------------------------------------------------------
@@ -1422,7 +1422,7 @@ void CSentence::SetText( const char *text )
 {
 #if PHONEME_EDITOR
 	delete[] m_szText;
-	m_szText = NULL;
+	m_szText = nullptr;
 
 	if ( !text || !text[ 0 ] )
 	{
@@ -1601,7 +1601,7 @@ int CSentence::GetNumSamples( void )
 CEmphasisSample *CSentence::GetSample( int index )
 {
 	if ( index < 0 || index >= GetNumSamples() )
-		return NULL;
+		return nullptr;
 
 	return &m_EmphasisSamples[ index ];
 }

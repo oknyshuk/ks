@@ -260,8 +260,8 @@ public:
 		m_flLastUpdateTime = -1;
 		m_nNumHitBoxes = 0;
 		m_nNumPrevHitBoxes = 0;
-		m_pHitBoxes = NULL;
-		m_pPrevBoxes = NULL;
+		m_pHitBoxes = nullptr;
+		m_pPrevBoxes = nullptr;
 
 	}
 
@@ -350,10 +350,10 @@ public:
 		int nNumTrysToGetAPointInsideTheModel,
 		Vector *pPntsOut,
 		Vector vecDirectionBias,
-		Vector *pHitBoxRelativeCoordOut = NULL,
-		int *pHitBoxIndexOut = NULL, 
+		Vector *pHitBoxRelativeCoordOut = nullptr,
+		int *pHitBoxIndexOut = nullptr, 
 		int nDesiredHitbox = -1, 
-		const char *pszHitboxSetName = NULL ) = 0;
+		const char *pszHitboxSetName = nullptr ) = 0;
 
 	virtual void GetClosestControllingObjectHitBox( 
 		CParticleCollection *pParticles,
@@ -361,10 +361,10 @@ public:
 		int nNumPtsIn,
 		float flBBoxScale,
 		Vector *pPntsIn,
-		Vector *pHitBoxRelativeCoordOut = NULL,
-		int *pHitBoxIndexOut = NULL,
+		Vector *pHitBoxRelativeCoordOut = nullptr,
+		int *pHitBoxIndexOut = nullptr,
 		int nDesiredHitbox = -1, 
-		const char *pszHitboxSetName = NULL ) = 0;
+		const char *pszHitboxSetName = nullptr ) = 0;
 
 	virtual int GetControllingObjectHitBoxInfo(
 		CParticleCollection *pParticles,
@@ -396,7 +396,7 @@ public:
 		return vec3_origin;
 	}
 
-	virtual void GetLocalPlayerEyeVectors( Vector *pForward, Vector *pRight = NULL, Vector *pUp = NULL )
+	virtual void GetLocalPlayerEyeVectors( Vector *pForward, Vector *pRight = nullptr, Vector *pUp = nullptr )
 	{
 		*pForward = vec3_origin;
 		*pRight = vec3_origin;
@@ -426,7 +426,7 @@ public:
 
 	virtual void DebugDrawLine(const Vector& origin, const Vector& dest, int r, int g, int b,bool noDepthTest, float duration) = 0;
 
-	virtual void *GetModel( char const *pMdlName ) { return NULL; }
+	virtual void *GetModel( char const *pMdlName ) { return nullptr; }
 
 	virtual void DrawModel( void *pModel, const matrix3x4_t &DrawMatrix, CParticleCollection *pParticles, int nParticleNumber, int nBodyPart, int nSubModel,
 							int nSkin, int nAnimationSequence = 0, float flAnimationRate = 30.0f, float r = 1.0f, float g = 1.0f, float b = 1.0f, float a = 1.0f ) = 0;
@@ -469,7 +469,7 @@ public:
 
 	// Read a particle config file, add it to the list of particle configs
 	bool ReadParticleConfigFile( const char *pFileName, bool bPrecache, bool bDecommitTempMemory = true );
-	bool ReadParticleConfigFile( CUtlBuffer &buf, bool bPrecache, bool bDecommitTempMemory = true, const char *pFileName = NULL );
+	bool ReadParticleConfigFile( CUtlBuffer &buf, bool bPrecache, bool bDecommitTempMemory = true, const char *pFileName = nullptr );
 	void DecommitTempMemory();
 
 	// For recording, write a specific particle system to a CUtlBuffer in DMX format
@@ -1706,7 +1706,7 @@ public:
 		{
 			if ( m_pCachedBatches[ i ] ) 
 				 m_pCachedBatches[ i ]->Free();
-			m_pCachedBatches[ i ] = NULL;
+			m_pCachedBatches[ i ] = nullptr;
 		}
 	}
 
@@ -1721,7 +1721,7 @@ public:
 	FORCEINLINE ICachedPerFrameMeshData *GetCachedBatch( int nBatch )
 	{
 		if ( nBatch >= MAX_CACHED_PARTICLE_BATCHES )
-			return NULL;
+			return nullptr;
 		
 		return m_pCachedBatches[ nBatch ];
 	}
@@ -1792,9 +1792,9 @@ public:
 	void SkipToTime( float t );
 
 	// the camera objetc may be compared for equality against control point objects
-	void Render( int nViewRecursionLevel, IMatRenderContext *pRenderContext, const Vector4D &vecDiffuseModulation, bool bTranslucentOnly = false, void *pCameraObject = NULL );
+	void Render( int nViewRecursionLevel, IMatRenderContext *pRenderContext, const Vector4D &vecDiffuseModulation, bool bTranslucentOnly = false, void *pCameraObject = nullptr );
 
-	bool IsValid( void ) const { return m_pDef != NULL; }
+	bool IsValid( void ) const { return m_pDef != nullptr; }
 
 	// this system and all children are valid
 	bool IsFullyValid( void ) const;
@@ -1870,7 +1870,7 @@ public:
 	void GetBounds( Vector *pMin, Vector *pMax );
 
 	// Visualize operators (for editing/debugging)
-	void VisualizeOperator( const DmObjectId_t *pOpId = NULL );
+	void VisualizeOperator( const DmObjectId_t *pOpId = nullptr );
 
 	// Does the particle system use the power of two frame buffer texture (refraction?)
 	bool UsesPowerOfTwoFrameBufferTexture( bool bThisFrame ) const;
@@ -2396,7 +2396,7 @@ public:
 
 inline bool CParticleCollection::HasAttachedKillList( void ) const
 {
-	return m_pParticleKillList != NULL;
+	return m_pParticleKillList != nullptr;
 }
 
 inline bool CParticleCollection::ReadsControlPoint( int nPoint ) const
@@ -3212,7 +3212,7 @@ inline CParticleSystemDefinition::CParticleSystemDefinition( void )
 	m_bAlwaysPrecache = false;
 	m_bShouldBatch = false;
 	m_bShouldSort = true;
-	m_pFirstCollection = NULL;
+	m_pFirstCollection = nullptr;
 	m_flCullRadius = 0.0f;
 	m_flCullFillCost = 1.0f;
 	m_nRetireCheckFrame = 0;
@@ -3381,7 +3381,7 @@ FORCEINLINE CParticleSnapshot *CParticleCollection::GetControlPointSnapshot( int
 {
 	Assert( nControlPoint <= GetHighestControlPoint() );
 	if ( nControlPoint == -1 )
-		return NULL;
+		return nullptr;
 	return ControlPoint( nControlPoint ).m_pSnapshot;
 }
 

@@ -25,12 +25,12 @@ HSQREMOTEDBG sq_rdbg_init(HSQUIRRELVM v,unsigned short port,SQBool autoupdate)
 	if(bind(rdbg->_accept,(sockaddr*)&bindaddr,sizeof(bindaddr))==SOCKET_ERROR){
 		delete rdbg;
 		sq_throwerror(v,_SC("failed to bind the socket"));
-		return NULL;
+		return nullptr;
 	}
 	if(!rdbg->Init()) {
 		delete rdbg;
 		sq_throwerror(v,_SC("failed to initialize the debugger"));
-		return NULL;
+		return nullptr;
 	}
 	
     return rdbg;
@@ -70,12 +70,12 @@ SQRESULT sq_rdbg_update(HSQREMOTEDBG rdbg)
 	fd_set read_flags;
     FD_ZERO(&read_flags);
 	FD_SET(rdbg->_endpoint, &read_flags);
-	select(NULL/*ignored*/, &read_flags, NULL, NULL, &time);
+	select(0/*ignored*/, &read_flags, nullptr, nullptr, &time);
 
 	if(FD_ISSET(rdbg->_endpoint,&read_flags)){
 		char temp[1024];
 		int size=0;
-		char c,prev=NULL;
+		char c,prev=0;
 		memset(&temp,0,sizeof(temp));
 		int res;
 		FD_CLR(rdbg->_endpoint, &read_flags);
@@ -95,8 +95,8 @@ SQRESULT sq_rdbg_update(HSQREMOTEDBG rdbg)
 			return sq_throwerror(rdbg->_v,_SC("socket error"));
         }
 		
-		temp[size]=NULL;
-		temp[size+1]=NULL;
+		temp[size]=0;
+		temp[size+1]=0;
 		rdbg->ParseMsg(temp);
 	}
 	return SQ_OK;
@@ -124,7 +124,7 @@ SQInteger debug_hook(HSQUIRRELVM v)
 SQInteger error_handler(HSQUIRRELVM v)
 {
 	SQUserPointer up;
-	const SQChar *sErr=NULL;
+	const SQChar *sErr=nullptr;
 	const SQChar *fn=_SC("unknown");
 	const SQChar *src=_SC("unknown");
 	int line=-1;

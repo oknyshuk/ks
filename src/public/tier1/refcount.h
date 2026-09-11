@@ -37,7 +37,7 @@ inline int SafeRelease( REFCOUNTED_ITEM_PTR &pRef )
 	if ( *ppRef )
 	{
 		int result = (*ppRef)->Release();
-		*ppRef = NULL;
+		*ppRef = nullptr;
 		return result;
 	}
 	return 0;
@@ -100,7 +100,7 @@ public:
 	T *			operator=( T *p )							{ m_pObject = p; return p; }
 
     bool        operator !() const							{ return ( !m_pObject ); }
-    bool        operator!=( int i ) const					{ AssertMsg( i == 0, "Only NULL allowed on integer compare" ); return (m_pObject != NULL); }
+    bool        operator!=( int i ) const					{ AssertMsg( i == 0, "Only NULL allowed on integer compare" ); return (m_pObject != nullptr); }
 	bool		operator==( const void *p ) const			{ return ( m_pObject == p ); }
 	bool		operator!=( const void *p ) const			{ return ( m_pObject != p ); }
 	bool		operator==( T *p ) const					{ return operator==( (void *)p ); }
@@ -345,7 +345,7 @@ public:
 //			referencing problems
 //-----------------------------------------------------------------------------
 
-template <class BASE_REFCOUNTED, int FINAL_REFS = 0, const char *pszName = (const char *)NULL>
+template <class BASE_REFCOUNTED, int FINAL_REFS = 0, const char *pszName = (const char *)nullptr>
 class CRefDebug : public BASE_REFCOUNTED
 {
 public:

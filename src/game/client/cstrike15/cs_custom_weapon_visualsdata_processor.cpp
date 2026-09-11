@@ -17,7 +17,7 @@ void CCSWeaponVisualsDataCompare::SerializeToBuffer( CUtlBuffer &buf )
 }
 
 CCSWeaponVisualsDataProcessor::CCSWeaponVisualsDataProcessor( CCSWeaponVisualsDataCompare &&compareObject, const char *pCompositingShaderName )
-	: m_pCompositingShaderName( NULL )
+	: m_pCompositingShaderName( nullptr )
 	, m_bIgnoreWeaponSizeScale( false )
 	, m_flPhongAlbedoFactor( 1.0f )
 	, m_nPhongIntensity( 0 )
@@ -32,7 +32,7 @@ CCSWeaponVisualsDataProcessor::~CCSWeaponVisualsDataProcessor()
 	if ( m_pCompositingShaderName )
 	{
 		delete [] m_pCompositingShaderName;
-		m_pCompositingShaderName = NULL;
+		m_pCompositingShaderName = nullptr;
 	}
 }
 
@@ -46,12 +46,12 @@ void CCSWeaponVisualsDataProcessor::SetVisualsData( const char *pCompositingShad
 
 KeyValues* CCSWeaponVisualsDataProcessor::GenerateCustomMaterialKeyValues()
 {
-	return NULL;
+	return nullptr;
 }
 
 KeyValues* CCSWeaponVisualsDataProcessor::GenerateCompositeMaterialKeyValues( int nMaterialParamId )
 {
-	return NULL;
+	return nullptr;
 }
 
 bool CCSWeaponVisualsDataProcessor::HasCustomMaterial() const

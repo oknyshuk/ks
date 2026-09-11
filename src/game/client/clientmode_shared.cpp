@@ -85,7 +85,7 @@ static bool __MsgFunc_VGUIMenu( const ks::net::CCSUsrMsg_VGUIMenu &msg )
 
 	ASSERT_LOCAL_PLAYER_RESOLVABLE();
 
-	KeyValues *keys = NULL;
+	KeyValues *keys = nullptr;
 
 	if ( msg.subkeys.size() > 0 )
 	{
@@ -121,9 +121,9 @@ static bool __MsgFunc_VGUIMenu( const ks::net::CCSUsrMsg_VGUIMenu &msg )
 //-----------------------------------------------------------------------------
 ClientModeShared::ClientModeShared()
 {
-	m_pViewport = NULL;
-	m_pChatElement = NULL;
-	m_pWeaponSelection = NULL;
+	m_pViewport = nullptr;
+	m_pChatElement = nullptr;
+	m_pWeaponSelection = nullptr;
 	m_nRootSize[ 0 ] = m_nRootSize[ 1 ] = -1;
 }
 
@@ -196,7 +196,7 @@ void ClientModeShared::InitViewport()
 void ClientModeShared::UI_Shutdown()
 {
 	delete m_pViewport;
-	m_pViewport = NULL;
+	m_pViewport = nullptr;
 }
 
 
@@ -313,7 +313,7 @@ bool ClientModeShared::ShouldDrawParticles( )
 void ClientModeShared::OverrideMouseInput( float *x, float *y )
 {
 	C_BasePlayer *pPlayer = C_BasePlayer::GetLocalPlayer();
-	C_BaseCombatWeapon *pWeapon = pPlayer ? pPlayer->GetActiveWeapon() : NULL;;
+	C_BaseCombatWeapon *pWeapon = pPlayer ? pPlayer->GetActiveWeapon() : nullptr;;
 	if ( pWeapon )
 	{
 		pWeapon->OverrideMouseInput( x, y );
@@ -466,7 +466,7 @@ int	ClientModeShared::KeyInput( int down, ButtonCode_t keynum, const char *pszCu
 		return 0;
 	}
 
-	C_BaseCombatWeapon *pWeapon = pPlayer ? pPlayer->GetActiveWeapon() : NULL;
+	C_BaseCombatWeapon *pWeapon = pPlayer ? pPlayer->GetActiveWeapon() : nullptr;
 	if ( pWeapon )
 	{
 		return pWeapon->KeyInput( down, keynum, pszCurrentBinding );
@@ -1051,7 +1051,7 @@ void ClientModeShared::FireGameEvent( IGameEvent *event )
 			return;
 
 		{
-			char const *szAchievementName = NULL; // should arrive as part of event instead of achievement ID
+			char const *szAchievementName = nullptr; // should arrive as part of event instead of achievement ID
 			if ( szAchievementName )
 			{
 				if ( !pPlayer->IsDormant() )

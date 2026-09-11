@@ -26,7 +26,7 @@ CAI_Schedule *CAI_BaseNPC::ScheduleInList( const char *pName, CAI_Schedule **pLi
 	if ( !pName )
 	{
 		DevMsg( "%s set to unnamed schedule!\n", GetClassname() );
-		return NULL;
+		return nullptr;
 	}
 
 
@@ -40,7 +40,7 @@ CAI_Schedule *CAI_BaseNPC::ScheduleInList( const char *pName, CAI_Schedule **pLi
 		if ( stricmp( pName, pList[i]->GetName() ) == 0 )
 			return pList[i];
 	}
-	return NULL;
+	return nullptr;
 }
 
 //-----------------------------------------------------------------------------
@@ -261,7 +261,7 @@ int CAI_BaseNPC::TranslateSchedule( int scheduleType )
 	// Hande some special cases
 	case SCHED_AISCRIPT:
 		{
-			Assert( m_hCine != NULL );
+			Assert( m_hCine != nullptr );
 			if ( !m_hCine )
 			{
 				DevWarning( 2, "Script failed for %s\n", GetClassname() );

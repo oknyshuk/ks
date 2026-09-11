@@ -325,7 +325,7 @@ class [[= ks::reflect::NetTable{ .name = "DT_PhysicsPropMultiplayer" } ]]
 
 	virtual void ComputeWorldSpaceSurroundingBox( Vector *mins, Vector *maxs )
 	{
-		Assert( mins != NULL && maxs != NULL );
+		Assert( mins != nullptr && maxs != nullptr );
 		if ( !mins || !maxs )
 			return;
 

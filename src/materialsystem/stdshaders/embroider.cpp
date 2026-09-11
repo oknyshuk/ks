@@ -84,7 +84,7 @@ BEGIN_VS_SHADER( Embroider, "Help for Embroider" )
 			int userDataSize = 0;
 			int mode = params[TEXTUREMODE]->GetIntValue();
 			int palettize = params[NCOLORS]->GetIntValue() > 0;
-			pShaderShadow->VertexShaderVertexFormat( flags, nTexCoordCount, NULL, userDataSize );
+			pShaderShadow->VertexShaderVertexFormat( flags, nTexCoordCount, nullptr, userDataSize );
 
 			// Vertex Shader
 			if ( g_pHardwareConfig->SupportsPixelShaders_3_0() )

@@ -126,35 +126,35 @@ DECLARE_FIELD_SIZE( FIELD_MATERIALINDEX,	sizeof(int) )
 #define ARRAYSIZE2D(p)		(sizeof(p)/sizeof(p[0][0]))
 #define SIZE_OF_ARRAY(p)	_ARRAYSIZE(p)
 
-#define _FIELD(name,fieldtype,count,flags,mapname,tolerance)		{ fieldtype, #name, (int)offsetof(classNameTypedef, name), count, flags, mapname, NULL, NULL, NULL, (int)sizeof( ((classNameTypedef *)0)->name ), NULL, 0, tolerance }
+#define _FIELD(name,fieldtype,count,flags,mapname,tolerance)		{ fieldtype, #name, (int)offsetof(classNameTypedef, name), count, flags, mapname, nullptr, nullptr, nullptr, (int)sizeof( ((classNameTypedef *)0)->name ), nullptr, 0, tolerance }
 #define DEFINE_FIELD_NULL	{ FIELD_VOID,0,0,0,0,0,0,0,0}
-#define DEFINE_FIELD(name,fieldtype)			_FIELD(name, fieldtype, 1,  FTYPEDESC_SAVE, NULL, 0 )
-#define DEFINE_FIELD_NOT_SAVED(name,fieldtype)			_FIELD(name, fieldtype, 1, 0, NULL, 0 )
+#define DEFINE_FIELD(name,fieldtype)			_FIELD(name, fieldtype, 1,  FTYPEDESC_SAVE, nullptr, 0 )
+#define DEFINE_FIELD_NOT_SAVED(name,fieldtype)			_FIELD(name, fieldtype, 1, 0, nullptr, 0 )
 
-#define DEFINE_AUTO_ARRAY(name,fieldtype)		_FIELD(name, fieldtype, SIZE_OF_ARRAY(((classNameTypedef *)0)->name), FTYPEDESC_SAVE, NULL, 0 )
-#define DEFINE_ARRAY(name,fieldtype, count)		_FIELD(name, fieldtype, count, FTYPEDESC_SAVE, NULL, 0 )
-#define DEFINE_ARRAY_NOT_SAVED(name,fieldtype, count)		_FIELD(name, fieldtype, count, 0, NULL, 0 )
-#define DEFINE_GLOBAL_FIELD(name,fieldtype)	_FIELD(name, fieldtype, 1,  FTYPEDESC_GLOBAL | FTYPEDESC_SAVE, NULL, 0 )
-#define DEFINE_CUSTOM_FIELD(name,datafuncs)	{ FIELD_CUSTOM, #name, (int)offsetof(classNameTypedef, name), 1, FTYPEDESC_SAVE, NULL, datafuncs, NULL }
-#define DEFINE_AUTO_ARRAY2D(name,fieldtype)		_FIELD(name, fieldtype, ARRAYSIZE2D(((classNameTypedef *)0)->name), FTYPEDESC_SAVE, NULL, 0 )
+#define DEFINE_AUTO_ARRAY(name,fieldtype)		_FIELD(name, fieldtype, SIZE_OF_ARRAY(((classNameTypedef *)0)->name), FTYPEDESC_SAVE, nullptr, 0 )
+#define DEFINE_ARRAY(name,fieldtype, count)		_FIELD(name, fieldtype, count, FTYPEDESC_SAVE, nullptr, 0 )
+#define DEFINE_ARRAY_NOT_SAVED(name,fieldtype, count)		_FIELD(name, fieldtype, count, 0, nullptr, 0 )
+#define DEFINE_GLOBAL_FIELD(name,fieldtype)	_FIELD(name, fieldtype, 1,  FTYPEDESC_GLOBAL | FTYPEDESC_SAVE, nullptr, 0 )
+#define DEFINE_CUSTOM_FIELD(name,datafuncs)	{ FIELD_CUSTOM, #name, (int)offsetof(classNameTypedef, name), 1, FTYPEDESC_SAVE, nullptr, datafuncs, nullptr }
+#define DEFINE_AUTO_ARRAY2D(name,fieldtype)		_FIELD(name, fieldtype, ARRAYSIZE2D(((classNameTypedef *)0)->name), FTYPEDESC_SAVE, nullptr, 0 )
 // Used by byteswap datadescs
 #define DEFINE_BITFIELD(name,fieldtype,bitcount)	DEFINE_ARRAY(name,fieldtype,((bitcount+FIELD_BITS(fieldtype)-1)&~(FIELD_BITS(fieldtype)-1)) / FIELD_BITS(fieldtype) )
-#define DEFINE_INDEX(name,fieldtype)			_FIELD(name, fieldtype, 1,  FTYPEDESC_INDEX, NULL, 0 )
+#define DEFINE_INDEX(name,fieldtype)			_FIELD(name, fieldtype, 1,  FTYPEDESC_INDEX, nullptr, 0 )
 
 #define DEFINE_EMBEDDED( name )						\
-	{ FIELD_EMBEDDED, #name, (int)offsetof(classNameTypedef, name), 1, FTYPEDESC_SAVE, NULL, NULL, NULL, &(((classNameTypedef *)0)->name.m_DataMap), (int)sizeof( ((classNameTypedef *)0)->name ), NULL, 0, 0.0f }
+	{ FIELD_EMBEDDED, #name, (int)offsetof(classNameTypedef, name), 1, FTYPEDESC_SAVE, nullptr, nullptr, nullptr, &(((classNameTypedef *)0)->name.m_DataMap), (int)sizeof( ((classNameTypedef *)0)->name ), nullptr, 0, 0.0f }
 
 #define DEFINE_EMBEDDED_OVERRIDE( name, overridetype )	\
-	{ FIELD_EMBEDDED, #name, (int)offsetof(classNameTypedef, name), 1, FTYPEDESC_SAVE, NULL, NULL, NULL, &((overridetype *)0)->m_DataMap, (int)sizeof( ((classNameTypedef *)0)->name ), NULL, 0, 0.0f }
+	{ FIELD_EMBEDDED, #name, (int)offsetof(classNameTypedef, name), 1, FTYPEDESC_SAVE, nullptr, nullptr, nullptr, &((overridetype *)0)->m_DataMap, (int)sizeof( ((classNameTypedef *)0)->name ), nullptr, 0, 0.0f }
 
 #define DEFINE_EMBEDDEDBYREF( name )					\
-	{ FIELD_EMBEDDED, #name, (int)offsetof(classNameTypedef, name), 1, FTYPEDESC_SAVE | FTYPEDESC_PTR, NULL, NULL, NULL, &(((classNameTypedef *)0)->name->m_DataMap), (int)sizeof( *(((classNameTypedef *)0)->name) ), NULL, 0, 0.0f }
+	{ FIELD_EMBEDDED, #name, (int)offsetof(classNameTypedef, name), 1, FTYPEDESC_SAVE | FTYPEDESC_PTR, nullptr, nullptr, nullptr, &(((classNameTypedef *)0)->name->m_DataMap), (int)sizeof( *(((classNameTypedef *)0)->name) ), nullptr, 0, 0.0f }
 
 #define DEFINE_EMBEDDED_ARRAY( name, count )			\
-	{ FIELD_EMBEDDED, #name, (int)offsetof(classNameTypedef, name), count, FTYPEDESC_SAVE, NULL, NULL, NULL, &(((classNameTypedef *)0)->name->m_DataMap), (int)sizeof( ((classNameTypedef *)0)->name[0] ), NULL, 0, 0.0f  }
+	{ FIELD_EMBEDDED, #name, (int)offsetof(classNameTypedef, name), count, FTYPEDESC_SAVE, nullptr, nullptr, nullptr, &(((classNameTypedef *)0)->name->m_DataMap), (int)sizeof( ((classNameTypedef *)0)->name[0] ), nullptr, 0, 0.0f  }
 
 #define DEFINE_EMBEDDED_AUTO_ARRAY( name )			\
-	{ FIELD_EMBEDDED, #name, (int)offsetof(classNameTypedef, name), SIZE_OF_ARRAY( ((classNameTypedef *)0)->name ), FTYPEDESC_SAVE, NULL, NULL, NULL, &(((classNameTypedef *)0)->name->m_DataMap), (int)sizeof( ((classNameTypedef *)0)->name[0] ), NULL, 0, 0.0f  }
+	{ FIELD_EMBEDDED, #name, (int)offsetof(classNameTypedef, name), SIZE_OF_ARRAY( ((classNameTypedef *)0)->name ), FTYPEDESC_SAVE, nullptr, nullptr, nullptr, &(((classNameTypedef *)0)->name->m_DataMap), (int)sizeof( ((classNameTypedef *)0)->name[0] ), nullptr, 0, 0.0f  }
 
 #ifndef NO_ENTITY_PREDICTION
 
@@ -315,13 +315,13 @@ struct datamap_t
 
 
 #define BEGIN_SIMPLE_DATADESC( className ) \
-	datamap_t className::m_DataMap = { 0, 0, #className, NULL }; \
-	datamap_t *className::GetBaseMap() { return NULL; } \
+	datamap_t className::m_DataMap = { 0, 0, #className, nullptr }; \
+	datamap_t *className::GetBaseMap() { return nullptr; } \
 	BEGIN_DATADESC_GUTS( className )
 
 #define BEGIN_SIMPLE_DATADESC_( className, BaseClass ) \
-	datamap_t className::m_DataMap = { 0, 0, #className, NULL }; \
-	datamap_t *className::GetBaseMap() { datamap_t *pResult; DataMapAccess((BaseClass *)NULL, &pResult); return pResult; } \
+	datamap_t className::m_DataMap = { 0, 0, #className, nullptr }; \
+	datamap_t *className::GetBaseMap() { datamap_t *pResult; DataMapAccess((BaseClass *)nullptr, &pResult); return pResult; } \
 	BEGIN_DATADESC_GUTS( className )
 
 #define BEGIN_DATADESC_GUTS( className ) \
@@ -329,7 +329,7 @@ struct datamap_t
 	template <> datamap_t *DataMapInit<className>( className * ); \
 	namespace className##_DataDescInit \
 	{ \
-		datamap_t *g_DataMapHolder = DataMapInit<className>( (className *)NULL ); /* This can/will be used for some clean up duties later */ \
+		datamap_t *g_DataMapHolder = DataMapInit<className>( (className *)nullptr ); /* This can/will be used for some clean up duties later */ \
 	} \
 	\
 	template <> datamap_t *DataMapInit<className>( className * ) \

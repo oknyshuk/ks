@@ -36,7 +36,7 @@ static TitleDataFieldsDescription_t const * PrepareTitleDataStorageDescription()
 
 
 	// END MARKER
-	TD_ENTRY( (const char*) NULL, DB_TD3, DT_0, 0 )
+	TD_ENTRY( (const char*) nullptr, DB_TD3, DT_0, 0 )
 
 #undef TD_ENTRY
 
@@ -56,7 +56,7 @@ TitleAchievementsDescription_t const * CMatchTitle::DescribeTitleAchievements()
 	{
 //#include "left4dead2.xhelp.achtitledesc.txt"
 		// END MARKER
-		{ NULL, 0 }
+		{ nullptr, 0 }
 	};
 
 	return tad;
@@ -68,7 +68,7 @@ TitleAvatarAwardsDescription_t const * CMatchTitle::DescribeTitleAvatarAwards()
 	{
 //#include "left4dead2.xhelp.avawtitledesc.txt"
 		// END MARKER
-		{ NULL, 0 }
+		{ nullptr, 0 }
 	};
 
 	return taad;
@@ -318,6 +318,6 @@ KeyValues * CMatchTitle::DescribeTitleLeaderboard( char const *szLeaderboardView
 	}
 */
 
-	return NULL;
+	return nullptr;
 }
 

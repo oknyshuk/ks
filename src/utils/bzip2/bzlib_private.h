@@ -498,7 +498,7 @@ BZ2_hbCreateDecodeTables ( Int32*, Int32*, Int32*, UChar*,
 /*-- BZ_NO_STDIO seems to make NULL disappear on some platforms. --*/
 
 #ifdef BZ_NO_STDIO
-#ifndef NULL
+#ifndef nullptr
 #define NULL 0
 #endif
 #endif

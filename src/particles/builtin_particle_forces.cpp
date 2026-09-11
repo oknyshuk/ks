@@ -649,7 +649,7 @@ void C_OP_LennardJonesForce::AddForces( FourVectors *pAccumulatedForces,
 
 		PhysParticleAndDist* node = pCache->get(b1);
 
-		while(node->particle != NULL)
+		while(node->particle != nullptr)
 		{
 			PhysParticle* b2 = node->particle;
 
@@ -672,7 +672,7 @@ void C_OP_LennardJonesForce::AddForces( FourVectors *pAccumulatedForces,
 
 		PhysParticleAndDist* node = pCache->get(b1);
 
-		while(node->particle != NULL)
+		while(node->particle != nullptr)
 		{
 			PhysParticle* b2 = node->particle;
 

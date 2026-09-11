@@ -322,17 +322,17 @@ public:
 	template <RTECullMode_t cullMode>
 	void Trace4Rays(const FourRays &rays, fltx4 TMin, fltx4 TMax,int DirectionSignMask,
 					RayTracingResult *rslt_out,
-					int32 skip_id=-1, ITransparentTriangleCallback *pCallback = NULL );
+					int32 skip_id=-1, ITransparentTriangleCallback *pCallback = nullptr );
 
 	// wrapper for the low level trace4 rays routine
 	void Trace4Rays(const FourRays &rays, fltx4 TMin, fltx4 TMax,int DirectionSignMask,
 					RayTracingResult *rslt_out,
-					int32 skip_id=-1, ITransparentTriangleCallback *pCallback = NULL, RTECullMode_t cullMode = RTE_CULL_NONE );
+					int32 skip_id=-1, ITransparentTriangleCallback *pCallback = nullptr, RTECullMode_t cullMode = RTE_CULL_NONE );
 
 	// higher level intersection routine that handles computing the mask and handling rays which do not match in direciton sign
 	void Trace4Rays(const FourRays &rays, fltx4 TMin, fltx4 TMax,
 					RayTracingResult *rslt_out,
-					int32 skip_id=-1, ITransparentTriangleCallback *pCallback = NULL, RTECullMode_t cullMode = RTE_CULL_NONE );
+					int32 skip_id=-1, ITransparentTriangleCallback *pCallback = nullptr, RTECullMode_t cullMode = RTE_CULL_NONE );
 
 	// compute virtual light sources to model inter-reflection
 	void ComputeVirtualLightSources(void);

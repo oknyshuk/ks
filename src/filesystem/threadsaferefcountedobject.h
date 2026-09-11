@@ -41,7 +41,7 @@ public:
 		{
 			// If the refcount was 0 when we called this, then the whitelist is about to be freed.
 			--m_RefCount;
-			return NULL;
+			return nullptr;
 		}
 	}
 	void ReleaseRef( T pObj )

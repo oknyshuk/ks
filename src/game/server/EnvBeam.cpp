@@ -221,7 +221,7 @@ void CEnvBeam::Activate( void )
 	// Get a handle to my filter entity if there is one
 	if (m_iFilterName != NULL_STRING)
 	{
-		m_hFilter = dynamic_cast<CBaseFilter *>(gEntList.FindEntityByName( NULL, m_iFilterName ));
+		m_hFilter = dynamic_cast<CBaseFilter *>(gEntList.FindEntityByName( nullptr, m_iFilterName ));
 	}
 
 	BaseClass::Activate();
@@ -321,7 +321,7 @@ void CEnvBeam::TurnOff( void )
 	}
 
 	SetNextThink( TICK_NEVER_THINK );
-	SetThink( NULL );
+	SetThink( nullptr );
 }
 
 
@@ -348,7 +348,7 @@ void CEnvBeam::StrikeThink( void )
 		else
 		{
 			CBaseEntity *pStart = RandomTargetname( STRING(m_iszStartEntity) );
-			if (pStart != NULL)
+			if (pStart != nullptr)
 			{
 				RandomPoint( pStart->GetAbsOrigin() );
 			}
@@ -375,9 +375,9 @@ void CEnvBeam::Strike( void )
 	CBaseEntity *pEnd = RandomTargetname( STRING(m_iszEndEntity) );
 
 	// if the end entity is missing, we use the Hammer-specified vector offset instead.
-	bool bEndPointFromEntity = pEnd != NULL;
+	bool bEndPointFromEntity = pEnd != nullptr;
 
-	if ( pStart == NULL || ( !bEndPointFromEntity && !HasEndPointHandle() ) )
+	if ( pStart == nullptr || ( !bEndPointFromEntity && !HasEndPointHandle() ) )
 		return;
 
 	Vector vEndPointLocation;
@@ -405,9 +405,9 @@ void CEnvBeam::Strike( void )
 
 		te->BeamEntPoint( filter, 0.0,
 			pointStart ? 0 : pStart->entindex(),
-			pointStart ? &pStart->GetAbsOrigin() : NULL,
+			pointStart ? &pStart->GetAbsOrigin() : nullptr,
 			pointEnd ? 0 : pEnd->entindex(),
-			pointEnd ? &vEndPointLocation : NULL,
+			pointEnd ? &vEndPointLocation : nullptr,
 			m_spriteTexture,
 			0,	// No halo
 			m_frameStart,
@@ -468,7 +468,7 @@ void CEnvBeam::Strike( void )
 	if ( m_flDamage > 0 )
 	{
 		trace_t tr;
-		UTIL_TraceLine( pStart->GetAbsOrigin(), pEnd->GetAbsOrigin(), MASK_SOLID, NULL, COLLISION_GROUP_NONE, &tr );
+		UTIL_TraceLine( pStart->GetAbsOrigin(), pEnd->GetAbsOrigin(), MASK_SOLID, nullptr, COLLISION_GROUP_NONE, &tr );
 		BeamDamageInstant( &tr, m_flDamage );
 	}
 	
@@ -564,7 +564,7 @@ void CEnvBeam::UpdateThink( void )
 	if ( ( m_flDamage > 0 ) && ( gpGlobals->curtime >= m_flFireTime + 0.1 ) )
 	{
 		trace_t tr;
-		UTIL_TraceLine( GetAbsStartPos(), GetAbsEndPos(), MASK_SOLID, NULL, COLLISION_GROUP_NONE, &tr );
+		UTIL_TraceLine( GetAbsStartPos(), GetAbsEndPos(), MASK_SOLID, nullptr, COLLISION_GROUP_NONE, &tr );
 		BeamDamage( &tr );
 		// BeamDamage calls RelinkBeam, so no need to call it again.
 	}
@@ -709,13 +709,13 @@ void CEnvBeam::RandomPoint( const Vector &vecSrc )
 //-----------------------------------------------------------------------------
 void CEnvBeam::BeamUpdateVars( void )
 {
-	CBaseEntity *pStart = gEntList.FindEntityByName( NULL, m_iszStartEntity );
-	CBaseEntity *pEnd = gEntList.FindEntityByName( NULL, m_iszEndEntity );
+	CBaseEntity *pStart = gEntList.FindEntityByName( nullptr, m_iszStartEntity );
+	CBaseEntity *pEnd = gEntList.FindEntityByName( nullptr, m_iszEndEntity );
 
 	// if the end entity is missing, we use the Hammer-specified vector offset instead.
-	bool bEndPointFromEntity = pEnd != NULL;
+	bool bEndPointFromEntity = pEnd != nullptr;
 
-	if (( pStart == NULL ) || ( !bEndPointFromEntity && !HasEndPointHandle() ))
+	if (( pStart == nullptr ) || ( !bEndPointFromEntity && !HasEndPointHandle() ))
 	{
 		return;
 	}

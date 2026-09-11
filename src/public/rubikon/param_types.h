@@ -307,7 +307,7 @@ struct CShapeCastResult
 		m_vHitPoint = Vector( 0, 0, 0 );
 		m_vHitNormal = Vector( 0, 0, 0 );
 		m_bStartInSolid = false;
-		m_pMaterial = NULL;
+		m_pMaterial = nullptr;
 	}
 
 	bool DidHit( void )
@@ -692,8 +692,8 @@ struct PhysGenericCallback_t
 {
 	void( *m_pCallbackFn )( void * );
 	void *m_pData;
-	PhysGenericCallback_t( ) : m_pCallbackFn( NULL ), m_pData( NULL ) {}
-	PhysGenericCallback_t( void( *pCallbackFn )( void * ), void *pData = NULL ): m_pCallbackFn( pCallbackFn ), m_pData( pData ) { }
+	PhysGenericCallback_t( ) : m_pCallbackFn( nullptr ), m_pData( nullptr ) {}
+	PhysGenericCallback_t( void( *pCallbackFn )( void * ), void *pData = nullptr ): m_pCallbackFn( pCallbackFn ), m_pData( pData ) { }
 
 	void Call()	const
 	{

@@ -74,7 +74,7 @@ void* CreateInterfaceInternal( const char *pName, int *pReturnCode )
 	{
 		*pReturnCode = IFACE_FAILED;
 	}
-	return NULL;	
+	return nullptr;	
 }
 
 void* CreateInterface( const char *pName, int *pReturnCode )
@@ -89,18 +89,18 @@ void *GetModuleHandle(const char *name)
 {
 	void *handle;
 
-	if( name == NULL )
+	if( name == nullptr )
 	{
 		// hmm, how can this be handled under linux....
 		// is it even needed?
-		return NULL;
+		return nullptr;
 	}
 
-    if( (handle=dlopen(name, RTLD_NOW))==NULL)
+    if( (handle=dlopen(name, RTLD_NOW))==nullptr)
     {
             printf("DLOPEN Error:%s\n",dlerror());
             // couldn't open this file
-            return NULL;
+            return nullptr;
     }
 
 	// read "man dlopen" for details
@@ -137,7 +137,7 @@ struct ThreadedLoadLibaryContext_t
 	const char *m_pLibraryName;
 	HMODULE m_hLibrary;
 	DWORD m_nError;
-	ThreadedLoadLibaryContext_t() : m_pLibraryName(NULL), m_hLibrary(0), m_nError(0) {}
+	ThreadedLoadLibaryContext_t() : m_pLibraryName(nullptr), m_hLibrary(0), m_nError(0) {}
 };
 
 
@@ -180,7 +180,7 @@ static HMODULE Sys_LoadLibraryGuts( const char *pLibraryName )
 static HMODULE Sys_LoadLibrary( const char *pLibraryName )
 {
 	// load a library. If a library suffix is set, look for the library first with that name
-	const char *pSuffix = NULL;
+	const char *pSuffix = nullptr;
 	
 if ( CommandLine()->FindParm( "-valveinternal" ) )
 	{
@@ -221,7 +221,7 @@ CSysModule *Sys_LoadModule( const char *pModuleName )
 	// If using the Steam filesystem, either the DLL must be a minimum footprint
 	// file in the depot (MFP) or a filesystem GetLocalCopy() call must be made
 	// prior to the call to this routine.
-	HMODULE hDLL = NULL;
+	HMODULE hDLL = nullptr;
 
 	if ( !Q_IsAbsolutePath( pModuleName ) )
 	{
@@ -301,7 +301,7 @@ void Sys_UnloadModule( CSysModule *pModule )
 CreateInterfaceFn Sys_GetFactory( CSysModule *pModule )
 {
 	if ( !pModule )
-		return NULL;
+		return nullptr;
 
 	HMODULE	hDLL = reinterpret_cast<HMODULE>(pModule);
 	// Linux gives this error:
@@ -356,7 +356,7 @@ bool Sys_LoadInterface(
 		return false;
 	}
 
-	*pOutInterface = fn( pInterfaceVersionName, NULL );
+	*pOutInterface = fn( pInterfaceVersionName, nullptr );
 	if ( !( *pOutInterface ) )
 	{
 		Sys_UnloadModule( pMod );
@@ -398,7 +398,7 @@ CreateInterfaceFn CDllDemandLoader::GetFactory()
 
 	if ( !m_hModule )
 	{
-		return NULL;
+		return nullptr;
 	}
 
 	return Sys_GetFactory( m_hModule );

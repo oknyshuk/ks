@@ -136,7 +136,7 @@ public:
 	// If inputBuffer is omitted or NULL, then it is assumed to be the same as
 	// outputBuffer - effectively swapping the contents of the buffer in place.
 	//-----------------------------------------------------------------------------
-	template<typename T> inline void SwapBuffer( T* outputBuffer, T* inputBuffer = NULL, int count = 1 )
+	template<typename T> inline void SwapBuffer( T* outputBuffer, T* inputBuffer = nullptr, int count = 1 )
 	{
 		Assert( count >= 0 );
 		Assert( outputBuffer );
@@ -146,7 +146,7 @@ public:
 			return;
 
 		// Optimization for the case when we are swapping in place.
-		if( inputBuffer == NULL )
+		if( inputBuffer == nullptr )
 		{
 			inputBuffer = outputBuffer;
 		}
@@ -165,7 +165,7 @@ public:
 	// If inputBuffer is omitted or NULL, then it is assumed to be the same as
 	// outputBuffer - effectively swapping the contents of the buffer in place.
 	//-----------------------------------------------------------------------------
-	template<typename T> inline void SwapBufferToTargetEndian( T* outputBuffer, T* inputBuffer = NULL, int count = 1 )
+	template<typename T> inline void SwapBufferToTargetEndian( T* outputBuffer, T* inputBuffer = nullptr, int count = 1 )
 	{
 		Assert( count >= 0 );
 		Assert( outputBuffer );
@@ -175,7 +175,7 @@ public:
 			return;
 
 		// Optimization for the case when we are swapping in place.
-		if( inputBuffer == NULL )
+		if( inputBuffer == nullptr )
 		{
 			inputBuffer = outputBuffer;
 		}

@@ -78,8 +78,8 @@ struct LockedBufferContext
 
 	LockedBufferContext( void )
 	{
-		m_pPushBuffer = NULL;
-		m_pMallocedMemory = NULL;
+		m_pPushBuffer = nullptr;
+		m_pMallocedMemory = nullptr;
 	}
 
 };
@@ -384,7 +384,7 @@ public:
 
 	bool IsActive( void )const
 	{
-		return m_pD3DDevice != NULL;
+		return m_pD3DDevice != nullptr;
 	}
 
 	void D3DeviceWrapper(void)
@@ -445,7 +445,7 @@ public:
 		D3DPOOL Pool,
 		IDirect3DCubeTexture9 ** ppCubeTexture,
 		HANDLE* pSharedHandle,
-		char *debugLabel = NULL				// <-- OK to not pass this arg, only passed through on opengl
+		char *debugLabel = nullptr				// <-- OK to not pass this arg, only passed through on opengl
 		)
 	{
 		Synchronize();
@@ -467,7 +467,7 @@ public:
 		D3DPOOL Pool,
 		IDirect3DVolumeTexture9** ppVolumeTexture,
 		HANDLE* pSharedHandle,
-		char *debugLabel = NULL				// <-- OK to not pass this arg, only passed through on opengl
+		char *debugLabel = nullptr				// <-- OK to not pass this arg, only passed through on opengl
 		)
 	{
 		Synchronize();
@@ -501,7 +501,7 @@ public:
 		D3DPOOL Pool,
 		IDirect3DTexture9** ppTexture,
 		HANDLE* pSharedHandle,
-		char *debugLabel = NULL				// <-- OK to not pass this arg, only passed through on opengl
+		char *debugLabel = nullptr				// <-- OK to not pass this arg, only passed through on opengl
 		)
 	{
 		Synchronize();
@@ -858,7 +858,7 @@ public:
 			*(m_pOutputPtr++)=PBCMD_STRETCHRECT;
 			*(IDirect3DSurface9**)(m_pOutputPtr) = pSourceSurface;
 			m_pOutputPtr += N_DWORDS_IN_PTR;
-			*(m_pOutputPtr++)=(pSourceRect != NULL);
+			*(m_pOutputPtr++)=(pSourceRect != nullptr);
 			if (pSourceRect)
 			{
 				memcpy(m_pOutputPtr,pSourceRect,sizeof(RECT));
@@ -866,7 +866,7 @@ public:
 			m_pOutputPtr+=N_DWORDS(RECT);
 			*(IDirect3DSurface9**)(m_pOutputPtr) = pDestSurface;
 			m_pOutputPtr += N_DWORDS_IN_PTR;
-			*(m_pOutputPtr++)=(pDestRect != NULL);
+			*(m_pOutputPtr++)=(pDestRect != nullptr);
 			if (pDestRect)
 				memcpy(m_pOutputPtr,pDestRect,sizeof(RECT));
 			m_pOutputPtr+=N_DWORDS(RECT);
@@ -890,14 +890,14 @@ public:
 			AllocatePushBufferSpace( 1 + 1 + 1 + N_DWORDS( RECT ) + 1 + 1 + N_DWORDS( RECT ) + 1 );
 			*(m_pOutputPtr++) = PBCMD_STRETCHRECT_NVAPI;
 			*(m_pOutputPtr++) = (int)pSourceResource;
-			*(m_pOutputPtr++) = (pSourceRect != NULL);
+			*(m_pOutputPtr++) = (pSourceRect != nullptr);
 			if ( pSourceRect )
 			{
 				memcpy( m_pOutputPtr, pSourceRect, sizeof( RECT ) );
 			}
 			m_pOutputPtr += N_DWORDS( RECT );
 			*(m_pOutputPtr++) = (int)pDestResource;
-			*(m_pOutputPtr++) = (pDestRect != NULL);
+			*(m_pOutputPtr++) = (pDestRect != nullptr);
 			if ( pDestRect )
 				memcpy( m_pOutputPtr, pDestRect, sizeof( RECT ) );
 			m_pOutputPtr += N_DWORDS( RECT );
@@ -1270,7 +1270,7 @@ public:
 		CONST DWORD * pFunction,
 		IDirect3DVertexShader9** ppShader,
 		const char *pShaderName,
-		char *debugLabel = NULL
+		char *debugLabel = nullptr
 		)
 	{
 		Synchronize();
@@ -1281,8 +1281,8 @@ public:
 		CONST DWORD * pFunction,
 		IDirect3DPixelShader9** ppShader,
 	    const char *pShaderName,
-		char *debugLabel = NULL,
-		const uint32 *pCentroidMask = NULL
+		char *debugLabel = nullptr,
+		const uint32 *pCentroidMask = nullptr
 		)
 	{
 		Synchronize();
@@ -1504,16 +1504,16 @@ public:
 			AllocatePushBufferSpace(1+1+
 									N_DWORDS( RECT )+1+N_DWORDS( RECT )+1+1+N_DWORDS( RGNDATA ));
 			*(m_pOutputPtr++)=PBCMD_PRESENT;
-			*(m_pOutputPtr++)=( pSourceRect != NULL );
+			*(m_pOutputPtr++)=( pSourceRect != nullptr );
 			if (pSourceRect)
 				memcpy(m_pOutputPtr, pSourceRect, sizeof( RECT ) );
 			m_pOutputPtr+=N_DWORDS( RECT );
-			*(m_pOutputPtr++)=( pDestRect != NULL );
+			*(m_pOutputPtr++)=( pDestRect != nullptr );
 			if (pDestRect)
 				memcpy(m_pOutputPtr, pDestRect, sizeof( RECT ) );
 			m_pOutputPtr+=N_DWORDS( RECT );
 			*(m_pOutputPtr++)=size_cast< uint32 >( (uintp) hDestWindowOverride );
-			*(m_pOutputPtr++)=( pDirtyRegion != NULL );
+			*(m_pOutputPtr++)=( pDirtyRegion != nullptr );
 			if (pDirtyRegion)
 				memcpy(m_pOutputPtr, pDirtyRegion, sizeof( RGNDATA ));
 			m_pOutputPtr+=N_DWORDS( RGNDATA );

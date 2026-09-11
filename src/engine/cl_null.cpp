@@ -13,7 +13,7 @@
 #include "bspfile.h" // dworldlight_t
 #include "audio/public/soundservice.h"
 
-ISoundServices *g_pSoundServices = NULL;
+ISoundServices *g_pSoundServices = nullptr;
 Vector		listener_origin;
 
 // memdbgon must be the last include file in a .cpp file!!!
@@ -23,7 +23,7 @@ Vector		listener_origin;
 
 CEngineStats g_EngineStats;
 
-ClientClass *g_pClientClassHead = NULL;
+ClientClass *g_pClientClassHead = nullptr;
 
 bool g_bReplayLoadedTools = false;
 

@@ -90,7 +90,7 @@ INLINE_ON_PS3 bool CThread::Start( unsigned nBytesStack, ThreadPriorityEnum_t nP
 		int iValidEntries = GetCallStack_Fast( init.ParentStackTrace, ARRAYSIZE( init.ParentStackTrace ), 0 );
 		for( int i = iValidEntries; i < ARRAYSIZE( init.ParentStackTrace ); ++i )
 		{
-			init.ParentStackTrace[i] = NULL;
+			init.ParentStackTrace[i] = nullptr;
 		}
 	}
 #endif
@@ -188,7 +188,7 @@ INLINE_ON_PS3 void CThread::Stop(int exitCode)
 		if ( !( m_flags & SUPPORT_STOP_PROTOCOL ) )
 		{
 			OnExit();
-			g_pCurThread = NULL;
+			g_pCurThread = nullptr;
 
 			m_threadId = 0;
 			m_threadZombieId = 0;
@@ -400,7 +400,7 @@ INLINE_ON_PS3 void* CThread::ThreadProc(LPVOID pv)
 	}
 
 	pInit->pThread->OnExit();
-	g_pCurThread = NULL;
+	g_pCurThread = nullptr;
 	FreeThreadID();
 
 	AUTO_LOCK( pThread->m_Lock );

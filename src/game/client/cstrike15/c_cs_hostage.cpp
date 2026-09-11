@@ -439,7 +439,7 @@ C_BaseAnimating * C_CHostage::BecomeRagdollOnClient()
 		else
 		{
 			// if we don't have a low-violence death anim, don't create a ragdoll.
-			return NULL;
+			return nullptr;
 		}
 	}
 
@@ -506,7 +506,7 @@ void C_CHostage::Initialize( )
 //-----------------------------------------------------------------------------
 CWeaponCSBase* C_CHostage::CSAnim_GetActiveWeapon()
 {
-	return NULL;
+	return nullptr;
 }
 
 //-----------------------------------------------------------------------------
@@ -597,7 +597,7 @@ void C_CHostage::UpdateLookAt( CStudioHdr *pStudioHdr )
  */
 void C_CHostage::LookAround( void )
 {
-	if (GetLeader() == NULL && m_lookAroundTimer.IsElapsed())
+	if (GetLeader() == nullptr && m_lookAroundTimer.IsElapsed())
 	{
 		m_lookAroundTimer.Start( RandomFloat( 3.0f, 15.0f ) );
 

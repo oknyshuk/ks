@@ -82,7 +82,7 @@ BEGIN_VS_SHADER_FLAGS( DepthWrite, "Help for Depth Write", SHADER_NOT_EDITABLE )
 			unsigned int flags = VERTEX_POSITION | VERTEX_FORMAT_COMPRESSED;
 			int nTexCoordCount = 1;
 			int userDataSize = 0;
-			pShaderShadow->VertexShaderVertexFormat( flags, nTexCoordCount, NULL, userDataSize );
+			pShaderShadow->VertexShaderVertexFormat( flags, nTexCoordCount, nullptr, userDataSize );
 
 			// Bias primitives when rendering into shadow map so we get slope-scaled depth bias
 			// rather than having to apply a constant bias in the filtering shader later

@@ -266,7 +266,7 @@ bool CAI_BaseActor::ProcessSceneEvent( CSceneEventInfo *info, CChoreoScene *scen
 	case CChoreoEvent::FACE: 
 		{
 			// make sure target exists
-			if (info->m_hTarget == NULL)
+			if (info->m_hTarget == nullptr)
 				return false;
 
 			bool bInScene = false;
@@ -490,7 +490,7 @@ bool CAI_BaseActor::RandomFaceFlex( CSceneEventInfo *info, CChoreoScene *scene, 
 	if (info->m_flNext < gpGlobals->curtime)
 	{
 		const flexsettinghdr_t *pSettinghdr = ( const flexsettinghdr_t * )FindSceneFile( event->GetParameters2() );
-		if (pSettinghdr == NULL)
+		if (pSettinghdr == nullptr)
 		{
 			pSettinghdr = ( const flexsettinghdr_t * )FindSceneFile( "random" );
 		}
@@ -498,10 +498,10 @@ bool CAI_BaseActor::RandomFaceFlex( CSceneEventInfo *info, CChoreoScene *scene, 
 		{
 			info->m_flNext = gpGlobals->curtime + random->RandomFloat( 0.3, 0.5 ) * (30.0 / pSettinghdr->numflexsettings);
 
-			flexsetting_t const *pSetting = NULL;
+			flexsetting_t const *pSetting = nullptr;
 			pSetting = pSettinghdr->pSetting( random->RandomInt( 0, pSettinghdr->numflexsettings - 1 ) );
 
-			flexweight_t *pWeights = NULL;
+			flexweight_t *pWeights = nullptr;
 			int truecount = pSetting->psetting( (byte *)pSettinghdr, 0, &pWeights );
 			if ( !pWeights )
 				return false;
@@ -773,7 +773,7 @@ float CAI_BaseActor::HeadTargetValidity(const Vector &lookTargetPos)
 	if (iForward)
 	{
 		Vector tmp1;
-		GetAttachment( iForward, tmp1, &vFacing, NULL, NULL );
+		GetAttachment( iForward, tmp1, &vFacing, nullptr, nullptr );
 	}
 
 	Vector lookTargetDir = lookTargetPos - EyePosition();
@@ -1149,7 +1149,7 @@ float CAI_BaseActor::PickLookTarget( CAI_InterestTarget &queue, bool bExcludePla
 	// See if derived NPCs want to do anything with this look target before I use it
 	OnSelectedLookTarget( &args );
 
-	if ( args.hTarget != NULL )
+	if ( args.hTarget != nullptr )
 	{
 		Assert( args.vTarget == vec3_invalid );
 		queue.Add( args.hTarget, args.flInfluence, args.flDuration, args.flRamp );
@@ -1168,7 +1168,7 @@ bool CAI_BaseActor::PickTacticalLookTarget( AILookTargetArgs_t *pArgs )
 {
 	CBaseEntity *pEnemy = GetEnemy();
 
-	if (pEnemy != NULL)
+	if (pEnemy != nullptr)
 	{
 		Vector vLookTargetDir = pEnemy->EyePosition() - EyePosition();
 		float flDist = VectorNormalize( vLookTargetDir );
@@ -1224,11 +1224,11 @@ bool CAI_BaseActor::PickRandomLookTarget( AILookTargetArgs_t *pArgs )
 		return true;
 	}
 
-	CBaseEntity *pBestEntity = NULL;
-	CBaseEntity *pEntity = NULL;
+	CBaseEntity *pBestEntity = nullptr;
+	CBaseEntity *pEntity = nullptr;
 	int iHighestImportance = 0;
 	int iConsidered = 0;
-	for ( CEntitySphereQuery sphere( GetAbsOrigin(), 30 * 12, 0 ); (pEntity = sphere.GetCurrentEntity()) != NULL; sphere.NextEntity() )
+	for ( CEntitySphereQuery sphere( GetAbsOrigin(), 30 * 12, 0 ); (pEntity = sphere.GetCurrentEntity()) != nullptr; sphere.NextEntity() )
 	{
 		if (pEntity == this)
 		{
@@ -1323,7 +1323,7 @@ bool CAI_BaseActor::PickRandomLookTarget( AILookTargetArgs_t *pArgs )
 	// if there were too few things to look at, don't trust the item
 	if (iConsidered < random->RandomInt( 0, 5))
 	{
-		pBestEntity = NULL;
+		pBestEntity = nullptr;
 	}
 
 	if (pBestEntity)
@@ -1473,7 +1473,7 @@ void CAI_BaseActor::MaintainLookTargets( float flInterval )
 {
 	int i;
 
-	if ( m_iszExpressionScene != NULL_STRING && m_hExpressionSceneEnt == NULL )
+	if ( m_iszExpressionScene != NULL_STRING && m_hExpressionSceneEnt == nullptr )
 	{
 		InstancedScriptedScene( this, STRING(m_iszExpressionScene), &m_hExpressionSceneEnt, 0.0, true );
 	}
@@ -1581,7 +1581,7 @@ void CAI_BaseActor::MaintainLookTargets( float flInterval )
 			if (iForward)
 			{
 				Vector tmp1;
-				GetAttachment( iForward, tmp1, &dir, NULL, NULL );
+				GetAttachment( iForward, tmp1, &dir, nullptr, nullptr );
 			}
 			else
 			{
@@ -1709,7 +1709,7 @@ void CAI_BaseActor::MaintainLookTargets( float flInterval )
 		SetViewtarget( EyePosition() + HeadDirection3D() * 128 + right * random->RandomFloat(-32,32) + up * random->RandomFloat(-16,16) );
 	}
 
-	if ( m_hLookTarget != NULL )
+	if ( m_hLookTarget != nullptr )
 	{
 		Vector absVel = m_hLookTarget->GetAbsVelocity();
 		CBaseEntity *ground = m_hLookTarget->GetGroundEntity();
@@ -1813,7 +1813,7 @@ void CAI_BaseActor::PlayExpressionForState( NPC_STATE state )
 //-----------------------------------------------------------------------------
 const char *CAI_BaseActor::SelectRandomExpressionForState( NPC_STATE state )
 {
-	return NULL;
+	return nullptr;
 }
 
 //-----------------------------------------------------------------------------
@@ -1841,7 +1841,7 @@ float CAI_BaseActor::SetExpression( const char *pszExpressionScene )
 		return 0;
 	}
 
-	if ( m_hExpressionSceneEnt != NULL )
+	if ( m_hExpressionSceneEnt != nullptr )
 	{
 		StopScriptedScene( this, m_hExpressionSceneEnt );
 	}
@@ -1856,7 +1856,7 @@ float CAI_BaseActor::SetExpression( const char *pszExpressionScene )
 	{
 		float flDuration = InstancedScriptedScene( this, pszExpressionScene, &m_hExpressionSceneEnt, 0.0, true );
 
-		if ( m_hExpressionSceneEnt != NULL )
+		if ( m_hExpressionSceneEnt != nullptr )
 		{
 			m_iszExpressionScene = AllocPooledString( pszExpressionScene );
 		}
@@ -1871,7 +1871,7 @@ float CAI_BaseActor::SetExpression( const char *pszExpressionScene )
 
 void CAI_BaseActor::ClearExpression()
 {
-	if ( m_hExpressionSceneEnt != NULL )
+	if ( m_hExpressionSceneEnt != nullptr )
 	{
 		StopScriptedScene( this, m_hExpressionSceneEnt );
 	}

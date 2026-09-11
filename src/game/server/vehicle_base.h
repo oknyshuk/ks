@@ -44,7 +44,7 @@ public:
 							CFourWheelServerVehicle( void );
 	virtual bool			IsVehicleUpright( void );
 	virtual bool			IsVehicleBodyInWater( void );
-	virtual void			GetVehicleViewPosition( int nRole, Vector *pOrigin, QAngle *pAngles, float *pFOV = NULL );
+	virtual void			GetVehicleViewPosition( int nRole, Vector *pOrigin, QAngle *pAngles, float *pFOV = nullptr );
 	IPhysicsVehicleController *GetVehicleController();
 	const vehicleparams_t	*GetVehicleParams( void );
 	const vehicle_controlparams_t *GetVehicleControlParams( void );
@@ -226,7 +226,7 @@ public:
 
 protected:
 
-	virtual bool	ShouldThink() { return ( GetDriver() != NULL ); }
+	virtual bool	ShouldThink() { return ( GetDriver() != nullptr ); }
 
 	inline bool HasGun();
 	void DestroyServerVehicle();

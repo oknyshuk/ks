@@ -218,7 +218,7 @@ inline CIndexBuffer::CIndexBuffer( D3DDeviceWrapper *pD3D, int count,
 	MEM_ALLOC_CREDIT_( m_bDynamic ? ( "D3D: " TEXTURE_GROUP_DYNAMIC_INDEX_BUFFER ) : ( "D3D: " TEXTURE_GROUP_STATIC_INDEX_BUFFER ) );
 
 #ifdef CHECK_INDICES
-	m_pShadowIndices = NULL;
+	m_pShadowIndices = nullptr;
 #endif
 
 #ifdef RECORDING
@@ -244,7 +244,7 @@ inline CIndexBuffer::CIndexBuffer( D3DDeviceWrapper *pD3D, int count,
 	}
 	else
 	{
-		m_pSysmemBuffer = NULL;
+		m_pSysmemBuffer = nullptr;
 		Create( pD3D );
 	}
 
@@ -292,7 +292,7 @@ void CIndexBuffer::Create( D3DDeviceWrapper *pD3D )
 		desc.Format,
 		desc.Pool, 
 		&m_pIB, 
-		NULL );
+		nullptr );
 	if ( hr != D3D_OK )
 	{
 		Warning( "CreateIndexBuffer failed!\n" );
@@ -305,7 +305,7 @@ void CIndexBuffer::Create( D3DDeviceWrapper *pD3D )
 		// FIXME: need to record this
 		pD3D->EvictManagedResources();
 		hr = pD3D->CreateIndexBuffer( m_IndexCount * IndexSize(),
-			desc.Usage, desc.Format, desc.Pool, &m_pIB, NULL );
+			desc.Usage, desc.Format, desc.Pool, &m_pIB, nullptr );
 	}
 
 	Assert( m_pIB );
@@ -346,14 +346,14 @@ inline CIndexBuffer::~CIndexBuffer()
 	if ( m_pShadowIndices )
 	{
 		delete [] m_pShadowIndices;
-		m_pShadowIndices = NULL;
+		m_pShadowIndices = nullptr;
 	}
 #endif
 
 	if ( m_pSysmemBuffer )
 	{
 		free( m_pSysmemBuffer );
-		m_pSysmemBuffer = NULL;
+		m_pSysmemBuffer = nullptr;
 	}
 
 #ifdef MEASURE_DRIVER_ALLOCATIONS
@@ -424,7 +424,7 @@ inline unsigned short* CIndexBuffer::Lock( bool bReadOnly, int numIndices, int& 
 	Assert( !m_bLocked );
 
 
-	unsigned short* pLockedData = NULL;
+	unsigned short* pLockedData = nullptr;
 
 	// For write-combining, ensure we always have locked memory aligned to 4-byte boundaries
 	if( m_bDynamic )
@@ -499,7 +499,7 @@ inline unsigned short* CIndexBuffer::Lock( bool bReadOnly, int numIndices, int& 
 		m_nSysmemBufferStartBytes = position * IndexSize();
 	}
 
-	if ( m_pSysmemBuffer != NULL )
+	if ( m_pSysmemBuffer != nullptr )
 	{
 		// Ensure that we're never moving backwards in a buffer--this code would need to be rewritten if so. 
 		// We theorize this can happen if you hit the end of a buffer and then wrap before drawing--but
@@ -535,7 +535,7 @@ inline unsigned short* CIndexBuffer::Lock( bool bReadOnly, int numIndices, int& 
 			break;
 	}
 
-	Assert( pLockedData != NULL );
+	Assert( pLockedData != nullptr );
 	   
 	startIndex = position;
 
@@ -593,11 +593,11 @@ inline void CIndexBuffer::HandleLateCreation( )
 		Create( Dx9Device() );
 		if ( !bPrior )
 		{
-			g_VBAllocTracker->TrackMeshAllocations( NULL );
+			g_VBAllocTracker->TrackMeshAllocations( nullptr );
 		}
 	}
 	
-	void* pWritePtr = NULL;
+	void* pWritePtr = nullptr;
 	int dataToWriteBytes = ( m_Position * IndexSize() ) - m_nSysmemBufferStartBytes;
 	DWORD dwFlags = D3DLOCK_NOSYSLOCK;
 	if ( m_bDynamic )
@@ -637,7 +637,7 @@ inline void CIndexBuffer::HandleLateCreation( )
 	ReallyUnlock( dataToWriteBytes );
 
 	free( m_pSysmemBuffer );
-	m_pSysmemBuffer = NULL;
+	m_pSysmemBuffer = nullptr;
 }
 
 

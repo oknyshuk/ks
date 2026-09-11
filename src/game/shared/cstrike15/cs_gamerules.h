@@ -490,7 +490,7 @@ public:
 	void CalculateMaxGunGameProgressiveWeaponIndex( void );
 	int GetMaxGunGameProgressiveWeaponIndex( void ) { return m_iMaxGunGameProgressiveWeaponIndex; }
 
-	AcquireResult::Type IsWeaponAllowed( const CCSWeaponInfo *pWeaponInfo, int nTeamNumber ,CEconItemView *pItem = NULL  );
+	AcquireResult::Type IsWeaponAllowed( const CCSWeaponInfo *pWeaponInfo, int nTeamNumber ,CEconItemView *pItem = nullptr  );
 
 	bool IsBombDefuseMap() const;
 	bool IsHostageRescueMap() const;
@@ -950,7 +950,7 @@ public:
 
 	void ProcessEndOfRoundAchievements( int iWinnerTeam, int iReason );
 
-	void SaveRoundDataInformation( char const *szFilenameOverride = NULL );
+	void SaveRoundDataInformation( char const *szFilenameOverride = nullptr );
 	void LoadRoundDataInformation( char const *szFilename );
 
 	void ResetMasterSpawnPointsForCoop( void );
@@ -1138,7 +1138,7 @@ protected:
 	float CalculateAverageBotContributionScore( void );
 
 public:
-	void ModifyRealtimeBotDifficulty( CCSPlayer* pOnlyBotToProcess = NULL );
+	void ModifyRealtimeBotDifficulty( CCSPlayer* pOnlyBotToProcess = nullptr );
 
 public:
 
@@ -1220,7 +1220,7 @@ public:
 	uint32 m_numSpectatorsCountMaxLnk;
 	ks::net::CMsgGCCStrike15_v2_MatchmakingServerRoundStats *m_pQueuedMatchmakingReportedRoundStats;
 	static ks::net::CMsgGCCStrike15_v2_MatchmakingGC2ServerReserve sm_QueuedServerReservation;
-	void ReportRoundEndStatsToGC( ks::net::CMsgGCCStrike15_v2_MatchmakingServerRoundStats **ppAllocateStats = NULL );
+	void ReportRoundEndStatsToGC( ks::net::CMsgGCCStrike15_v2_MatchmakingServerRoundStats **ppAllocateStats = nullptr );
 
 	struct CQMMPlayerData_t
 	{
@@ -1306,9 +1306,9 @@ public:
 	QueuedMatchmakingPlayersDataMap_t m_mapQueuedMatchmakingPlayersData;
 	CQMMPlayerData_t * QueuedMatchmakingPlayersDataFind( uint32 uiAccountID ) const
 	{
-		if ( !uiAccountID ) return NULL;
+		if ( !uiAccountID ) return nullptr;
 		QueuedMatchmakingPlayersDataMap_t::IndexType_t idx = m_mapQueuedMatchmakingPlayersData.Find( uiAccountID );
-		return ( idx == m_mapQueuedMatchmakingPlayersData.InvalidIndex() ) ? NULL : m_mapQueuedMatchmakingPlayersData.Element( idx );
+		return ( idx == m_mapQueuedMatchmakingPlayersData.InvalidIndex() ) ? nullptr : m_mapQueuedMatchmakingPlayersData.Element( idx );
 	}
 	CQMMPlayerData_t * QueuedMatchmakingPlayersDataFindOrCreate( CCSPlayer *pPlayer );
 
@@ -1463,7 +1463,7 @@ public:
 	float	m_fGunGameBombRespawnTimer;	// Time until the bomb can be respawned
 
 	void			AddTeamAccount( int team, TeamCashAward::Type reason );
-	void			AddTeamAccount( int team, TeamCashAward::Type reason, int amount, const char* szAwardText = NULL );
+	void			AddTeamAccount( int team, TeamCashAward::Type reason, int amount, const char* szAwardText = nullptr );
 
 public:
 	CBaseEntity* GetNextSpawnpoint( int teamNumber );
@@ -1556,7 +1556,7 @@ private:
 	CUtlVector< CHandle<CWeaponCSBase> > m_weaponsDroppedInWorld;
 };
 
-bool EconEntity_OnOwnerKillEaterEvent( CEconItemView *pEconItemView, CCSPlayer *pOwner, CCSPlayer *pVictim, kill_eater_event_t eEventType, int iAmount = 1, uint32 *pNewValue = NULL );
+bool EconEntity_OnOwnerKillEaterEvent( CEconItemView *pEconItemView, CCSPlayer *pOwner, CCSPlayer *pVictim, kill_eater_event_t eEventType, int iAmount = 1, uint32 *pNewValue = nullptr );
 
 //-----------------------------------------------------------------------------
 // Gets us at the team fortress game rules
@@ -1609,7 +1609,7 @@ void PlayMusicSelection( IRecipientFilter& filter, CsMusicType_t nMusicType , in
 	
 	class CTFTeam;
 	CTFTeam *GetOpposingTeam( CTeam *pTeam );
-	bool EntityPlacementTest( CBaseEntity *pMainEnt, const Vector &vOrigin, Vector &outPos, bool bDropToGround, unsigned int mask = MASK_SOLID, ITraceFilter *pFilter = NULL );
+	bool EntityPlacementTest( CBaseEntity *pMainEnt, const Vector &vOrigin, Vector &outPos, bool bDropToGround, unsigned int mask = MASK_SOLID, ITraceFilter *pFilter = nullptr );
 
 #endif
 

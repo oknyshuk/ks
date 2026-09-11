@@ -34,18 +34,18 @@ class CDynamicFunction
 public:
 	// Construct with a NULL function pointer. You must manually call
 	//  Lookup() before you can call a dynamic function through this interface.
-	CDynamicFunction() : m_pFn(NULL) {}
+	CDynamicFunction() : m_pFn(nullptr) {}
 
 	// Construct and do a lookup right away. You will need to make sure that
 	//  the lookup actually succeeded, as (libname) might have failed to load
 	//  or (fn) might not exist in it.
-	CDynamicFunction(const char *libname, const char *fn, FunctionType fallback=NULL) : m_pFn(NULL)
+	CDynamicFunction(const char *libname, const char *fn, FunctionType fallback=nullptr) : m_pFn(nullptr)
 	{
 		Lookup(libname, fn, fallback);
 	}
 
 	// Construct and do a lookup right away. See comments in Lookup() about what (okay) does.
-	CDynamicFunction(const char *libname, const char *fn, bool &okay, FunctionType fallback=NULL) : m_pFn(NULL)
+	CDynamicFunction(const char *libname, const char *fn, bool &okay, FunctionType fallback=nullptr) : m_pFn(nullptr)
 	{
 		Lookup(libname, fn, okay, fallback);
 	}
@@ -63,13 +63,13 @@ public:
 	//     if (okay) { printf("All functions were loaded successfully!\n"); }
 	// If you supply a fallback, it'll be used if the lookup fails (and if
 	//  non-NULL, means this will always return (okay)).
-	bool Lookup(const char *libname, const char *fn, bool &okay, FunctionType fallback=NULL)
+	bool Lookup(const char *libname, const char *fn, bool &okay, FunctionType fallback=nullptr)
 	{
 		if (!okay)
 			return false;
-		else if (m_pFn == NULL)
+		else if (m_pFn == nullptr)
 			m_pFn = (FunctionType) VoidFnPtrLookup_Tier0(libname, fn, (void *) fallback);
-		okay = m_pFn != NULL;
+		okay = m_pFn != nullptr;
 		return okay;
 	}
 
@@ -80,7 +80,7 @@ public:
 	//  This function will return false immediately unless (okay) is true.
 	// If you supply a fallback, it'll be used if the lookup fails (and if
 	//  non-NULL, means this will always return true).
-	bool Lookup(const char *libname, const char *fn, FunctionType fallback=NULL)
+	bool Lookup(const char *libname, const char *fn, FunctionType fallback=nullptr)
 	{
 		bool okay = true;
 		return Lookup(libname, fn, okay, fallback);
@@ -89,7 +89,7 @@ public:
 	// Invalidates the current lookup. Makes the function pointer NULL. You
 	//  will need to call Lookup() before you can call a dynamic function
 	//  through this interface again.
-	void Reset() { m_pFn = NULL; }
+	void Reset() { m_pFn = nullptr; }
 
 	// Force this to be a specific function pointer.
 	void Force(FunctionType ptr) { m_pFn = ptr; }
@@ -100,8 +100,8 @@ public:
 
 	// Can be used to verify that we have an actual function looked up and
 	//  ready to call: if (!MyDynFunc) { printf("Function not found!\n"); }
-	operator bool () const { return m_pFn != NULL; }
-	bool operator !() const { return m_pFn == NULL; }
+	operator bool () const { return m_pFn != nullptr; }
+	bool operator !() const { return m_pFn == nullptr; }
 
 protected:
 	FunctionType m_pFn;
@@ -121,12 +121,12 @@ private:  // forbid default constructor.
 	CDynamicFunctionMustInit() {}
 
 public:
-	CDynamicFunctionMustInit(const char *libname, const char *fn, FunctionType fallback=NULL)
+	CDynamicFunctionMustInit(const char *libname, const char *fn, FunctionType fallback=nullptr)
 	    : CDynamicFunction< FunctionType >(libname, fn, fallback)
 	{
 	}
 
-	CDynamicFunctionMustInit(const char *libname, const char *fn, bool &okay, FunctionType fallback=NULL)
+	CDynamicFunctionMustInit(const char *libname, const char *fn, bool &okay, FunctionType fallback=nullptr)
 	    : CDynamicFunction< FunctionType >(libname, fn, okay, fallback)
 	{
 	}

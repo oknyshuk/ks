@@ -54,7 +54,7 @@ struct SceneImageHeader_t
 		if ( iString < 0 || iString >= nNumStrings )
 		{
 			Assert( 0 );
-			return NULL;
+			return nullptr;
 		}
 
 		// access string table (after header) to access pool

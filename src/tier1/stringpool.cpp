@@ -60,7 +60,7 @@ const char * CStringPool::Find( const char *pszValue )
 	if ( m_Strings.IsValidIndex(i) )
 		return m_Strings[i];
 
-	return NULL;
+	return nullptr;
 }
 
 const char * CStringPool::Allocate( const char *pszValue )
@@ -113,10 +113,10 @@ CON_COMMAND( test_stringpool, "Tests the class CStringPool" )
 	pool.Allocate("test2");
 	Assert(pool.Count() == 2);
 
-	Assert( pool.Find("test2") != NULL );
-	Assert( pool.Find("TEST") != NULL );
-	Assert( pool.Find("Test2") != NULL );
-	Assert( pool.Find("test") != NULL );
+	Assert( pool.Find("test2") != nullptr );
+	Assert( pool.Find("TEST") != nullptr );
+	Assert( pool.Find("Test2") != nullptr );
+	Assert( pool.Find("test") != nullptr );
 
 	pool.FreeAll();
 	Assert(pool.Count() == 0);

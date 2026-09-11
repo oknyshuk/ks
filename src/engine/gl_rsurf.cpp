@@ -69,9 +69,9 @@
 class IClientEntity;
 
 // interface to shader drawing
-void Shader_BrushBegin( model_t *model, IClientEntity *baseentity = NULL );
-void Shader_BrushSurfaceOverride( IMatRenderContext *pRenderContext, SurfaceHandle_t surfID, model_t *model, IClientEntity *baseentity = NULL );
-void Shader_BrushEnd( IMatRenderContext *pRenderContext, VMatrix const* brushToWorld, model_t *model, bool bShadowDepth, IClientEntity *baseentity = NULL );
+void Shader_BrushBegin( model_t *model, IClientEntity *baseentity = nullptr );
+void Shader_BrushSurfaceOverride( IMatRenderContext *pRenderContext, SurfaceHandle_t surfID, model_t *model, IClientEntity *baseentity = nullptr );
+void Shader_BrushEnd( IMatRenderContext *pRenderContext, VMatrix const* brushToWorld, model_t *model, bool bShadowDepth, IClientEntity *baseentity = nullptr );
 void BuildMSurfaceVertexArrays( worldbrushdata_t *pBrushData, SurfaceHandle_t surfID, CMeshBuilder &builder );
 
 ConVar r_hidepaintedsurfaces( "r_hidepaintedsurfaces", "0", 0, "If enabled, hides all surfaces which have been painted." );
@@ -160,7 +160,7 @@ static bool r_bTopViewNoVisCheck = false;
 // constructor initializes the components to VEC_T_NAN, leading to asserts and errors.
 static Vector2D s_OrthographicCenter(0.0f, 0.0f);
 static Vector2D s_OrthographicHalfDiagonal(0.0f, 0.0f);
-static const CVolumeCuller *s_pTopViewVolumeCuller = NULL;
+static const CVolumeCuller *s_pTopViewVolumeCuller = nullptr;
 
 //-----------------------------------------------------------------------------
 //
@@ -308,7 +308,7 @@ public:
 	static void PurgeAll()
 	{
 		CWorldRenderList *p;
-		while ( ( p = g_Pool.GetObject( false ) ) != NULL )
+		while ( ( p = g_Pool.GetObject( false ) ) != nullptr )
 		{
 			p->Purge();
 			delete p;
@@ -781,7 +781,7 @@ IMaterial *Shader_SetChainTextureState( IMatRenderContext *pRenderContext, Surfa
 	}
 	else
 	{
-		pRenderContext->Bind( pSurfaceMaterial, pBaseEntity ? pBaseEntity->GetClientRenderable() : NULL );
+		pRenderContext->Bind( pSurfaceMaterial, pBaseEntity ? pBaseEntity->GetClientRenderable() : nullptr );
 		Shader_SetChainLightmapState( pRenderContext, surfID );
 	}
 	return pSurfaceMaterial;
@@ -999,7 +999,7 @@ static void Shader_DrawChainsStatic( IMatRenderContext *pRenderContext, const CM
 		int sortID = MSurf_MaterialSortID( surfID );
 		IMesh *pBuildMesh = pRenderContext->GetDynamicMesh( false, g_WorldStaticMeshes[sortID] );
 		meshBuilder.Begin( pBuildMesh, MATERIAL_TRIANGLES, 0, nMaxIndices );
-		IMesh *pLastMesh = NULL;
+		IMesh *pLastMesh = nullptr;
 		int indexCount = 0;
 		int meshIndex  = -1;
 
@@ -1028,7 +1028,7 @@ static void Shader_DrawChainsStatic( IMatRenderContext *pRenderContext, const CM
 					break;
 				}
 
-				pLastMesh = NULL;
+				pLastMesh = nullptr;
 				break;
 			}
 
@@ -1178,7 +1178,7 @@ static void Shader_DrawChainsStatic( IMatRenderContext *pRenderContext, const CM
 				}
 				else
 				{
-					pRenderContext->Bind( pDrawMaterial, NULL );
+					pRenderContext->Bind( pDrawMaterial, nullptr );
 	
 					if ( skipBind )
 					{
@@ -1648,7 +1648,7 @@ static void Shader_DrawChains( IMatRenderContext *pRenderContext, const CWorldRe
 		Shader_DrawChainsDynamic( pRenderContext, pRenderList->m_SortList, nSortGroup, DepthMode );
 	}
 	if ( g_VBAllocTracker )
-		g_VBAllocTracker->TrackMeshAllocations( NULL );
+		g_VBAllocTracker->TrackMeshAllocations( nullptr );
 
 	if ( !r_hidepaintedsurfaces.GetBool() )
 	{
@@ -1665,7 +1665,7 @@ static void Shader_DrawChains( IMatRenderContext *pRenderContext, const CWorldRe
  
  			IMaterial *pMaterial = MSurf_TexInfo( surfID )->material;
  
-			pRenderContext->Bind( pMaterial, NULL );
+			pRenderContext->Bind( pMaterial, nullptr );
 			Shader_SetChainLightmapState( pRenderContext, surfID );
 			Shader_DrawSurfaceDynamic( pRenderContext, surfID );
 		}
@@ -1824,10 +1824,10 @@ static void ComputeFogVolumeInfo( FogVolumeInfo_t *pFogVolume, const Vector& cur
 	IMaterial* pMaterial = pTexInfo->material;
 	if( pMaterial )
 	{
-		IMaterialVar* pFogColorVar	= pMaterial->FindVar( "$fogcolor", NULL );
-		IMaterialVar* pFogEnableVar = pMaterial->FindVar( "$fogenable", NULL );
-		IMaterialVar* pFogStartVar	= pMaterial->FindVar( "$fogstart", NULL );
-		IMaterialVar* pFogEndVar	= pMaterial->FindVar( "$fogend", NULL );
+		IMaterialVar* pFogColorVar	= pMaterial->FindVar( "$fogcolor", nullptr );
+		IMaterialVar* pFogEnableVar = pMaterial->FindVar( "$fogenable", nullptr );
+		IMaterialVar* pFogStartVar	= pMaterial->FindVar( "$fogstart", nullptr );
+		IMaterialVar* pFogEndVar	= pMaterial->FindVar( "$fogend", nullptr );
 
 		pFogVolume->m_FogEnabled = pFogEnableVar->GetIntValue() ? true : false;
 		pFogColorVar->GetVecValue( pFogVolume->m_FogColor, 3 );
@@ -2059,7 +2059,7 @@ static void Shader_DrawDepthFillChainsStatic( IMatRenderContext *pRenderContext,
 
 		IMesh *pBuildMesh = pRenderContext->GetDynamicMesh( false, g_DepthMeshForSortID[sortID] );
 		meshBuilder.Begin( pBuildMesh, MATERIAL_TRIANGLES, 0, nMaxIndices );
-		IMesh *pLastMesh = NULL;
+		IMesh *pLastMesh = nullptr;
 		int indexCount = 0;
 		int meshIndex  = -1;
 
@@ -2080,7 +2080,7 @@ static void Shader_DrawDepthFillChainsStatic( IMatRenderContext *pRenderContext,
 					break;
 				}
 
-				pLastMesh = NULL;
+				pLastMesh = nullptr;
 				break;
 			}
 
@@ -2169,7 +2169,7 @@ static void Shader_DrawDepthFillChainsStatic( IMatRenderContext *pRenderContext,
 			{
 				batchlist_t &batch = batchList[b+mesh.firstbatch];
 
-				pRenderContext->Bind( pDrawMaterial, NULL );
+				pRenderContext->Bind( pDrawMaterial, nullptr );
 				pRenderContext->DrawBatch( MATERIAL_TRIANGLES, batch.firstIndex, batch.numIndex );
 			}
 		}
@@ -2504,7 +2504,7 @@ static void Shader_WorldShadowDepthFillFast( IMatRenderContext *pRenderContext, 
 
 						pRenderContext->BeginBatch( pBuildMesh );
 						pRenderContext->BindBatch( meshinfo.m_pMesh, pDrawMaterial );
-						pRenderContext->Bind( pDrawMaterial, NULL );
+						pRenderContext->Bind( pDrawMaterial, nullptr );
 						pRenderContext->DrawBatch( MATERIAL_TRIANGLES, 0, nIndexCount );
 						pRenderContext->EndBatch();
 
@@ -2536,7 +2536,7 @@ static void Shader_WorldShadowDepthFillFast( IMatRenderContext *pRenderContext, 
 							
 							pRenderContext->BeginBatch( pBuildMesh );
 							pRenderContext->BindBatch( meshinfo.m_pMesh, pDrawMaterial );
-							pRenderContext->Bind( pDrawMaterial, NULL );
+							pRenderContext->Bind( pDrawMaterial, nullptr );
 							pRenderContext->DrawBatch( MATERIAL_TRIANGLES, 0, nIndexCount );
 							pRenderContext->EndBatch();
 
@@ -2559,7 +2559,7 @@ static void Shader_WorldShadowDepthFillFast( IMatRenderContext *pRenderContext, 
 
 			pRenderContext->BeginBatch( pBuildMesh );
 			pRenderContext->BindBatch( meshinfo.m_pMesh, pDrawMaterial );
-			pRenderContext->Bind( pDrawMaterial, NULL );
+			pRenderContext->Bind( pDrawMaterial, nullptr );
 			pRenderContext->DrawBatch( MATERIAL_TRIANGLES, 0, nIndexCount );
 			pRenderContext->EndBatch();
 
@@ -2954,9 +2954,9 @@ void DrawSimpleWorldModel( unsigned long flags )
 	info.m_Skin = 0;
 	info.m_Body = 0;
 	info.m_HitboxSet = 0;
-	info.m_pClientEntity = NULL;
+	info.m_pClientEntity = nullptr;
 	info.m_Lod = 0;
-	info.m_pColorMeshes = NULL;
+	info.m_pColorMeshes = nullptr;
 	info.m_bStaticLighting = false;
 	info.m_LightingState.m_nLocalLightCount = 0;
 	info.m_LightingState.m_vecAmbientCube[0].Init( 1.0f, 1.0f, 1.0f );
@@ -3316,7 +3316,7 @@ void Shader_DrawTranslucentSurfaces( IMatRenderContext *pRenderContext, IWorldRe
 	CUtlVectorFixedGrowable<msurface2_t *, 16> flashlightSurfaceList;
 	CUtlVectorFixedGrowable<msurface2_t *, 16> dispList;
 	CUtlVectorFixedGrowable<transsurfacebatch_t,16> batches;
-	transsurfacebatch_t *pLastBatch = NULL;
+	transsurfacebatch_t *pLastBatch = nullptr;
 	bool bFlashlightMask = !( (flags & DRAWWORLDLISTS_DRAW_REFRACTION ) || (flags & DRAWWORLDLISTS_DRAW_REFLECTION ));
 	bool bHasDisp = false;
 	for ( int i = 0, mask = 1; i < MAX_MAT_SORT_GROUPS; i++, mask<<=1 )
@@ -3572,7 +3572,7 @@ static inline float R_GetWaterHeight( int nFogVolume )
 IMaterial *R_GetFogVolumeMaterial( int nFogVolume, bool bEyeInFogVolume )
 {
 	if( nFogVolume < 0 || nFogVolume > host_state.worldbrush->numleafwaterdata )
-		return NULL;
+		return nullptr;
 
 	mleafwaterdata_t* pLeafWaterData = &host_state.worldbrush->leafwaterdata[nFogVolume];
 	mtexinfo_t* pTexInfo = &host_state.worldbrush->texinfo[pLeafWaterData->surfaceTexInfoID];
@@ -3580,7 +3580,7 @@ IMaterial *R_GetFogVolumeMaterial( int nFogVolume, bool bEyeInFogVolume )
 	IMaterial* pMaterial = pTexInfo->material;
 	if( bEyeInFogVolume )
 	{
-		IMaterialVar *pVar = pMaterial->FindVar( "$bottommaterial", NULL );
+		IMaterialVar *pVar = pMaterial->FindVar( "$bottommaterial", nullptr );
 		if( pVar )
 		{
 			const char *pMaterialName = pVar->GetStringValue();
@@ -3599,10 +3599,10 @@ void R_SetFogVolumeState( int fogVolume, bool useHeightFog )
 	// !useHeightFog == eye in water
 	IMaterial *pMaterial = R_GetFogVolumeMaterial( fogVolume, !useHeightFog );
 	mleafwaterdata_t* pLeafWaterData = &host_state.worldbrush->leafwaterdata[fogVolume];
-	IMaterialVar* pFogColorVar	= pMaterial->FindVar( "$fogcolor", NULL );
-	IMaterialVar* pFogEnableVar = pMaterial->FindVar( "$fogenable", NULL );
-	IMaterialVar* pFogStartVar	= pMaterial->FindVar( "$fogstart", NULL );
-	IMaterialVar* pFogEndVar	= pMaterial->FindVar( "$fogend", NULL );
+	IMaterialVar* pFogColorVar	= pMaterial->FindVar( "$fogcolor", nullptr );
+	IMaterialVar* pFogEnableVar = pMaterial->FindVar( "$fogenable", nullptr );
+	IMaterialVar* pFogStartVar	= pMaterial->FindVar( "$fogstart", nullptr );
+	IMaterialVar* pFogEndVar	= pMaterial->FindVar( "$fogend", nullptr );
 
 	CMatRenderContextPtr pRenderContext( materials );
 
@@ -4546,7 +4546,7 @@ static void ClearFogInfo( VisibleFogVolumeInfo_t *pInfo )
 	pInfo->m_bEyeInFogVolume = false;
 	pInfo->m_nVisibleFogVolume = -1;
 	pInfo->m_nVisibleFogVolumeLeaf = -1;
-	pInfo->m_pFogVolumeMaterial = NULL;
+	pInfo->m_pFogVolumeMaterial = nullptr;
 	pInfo->m_flWaterHeight = INVALID_WATER_HEIGHT;
 }
 
@@ -4734,7 +4734,7 @@ void Shader_DrawLightmapPageSurface( SurfaceHandle_t surfID, float red, float gr
 		count = 1;
 	}
 
-	BuildMSurfaceVerts( host_state.worldbrush, surfID, NULL, NULL, lightCoords );
+	BuildMSurfaceVerts( host_state.worldbrush, surfID, nullptr, nullptr, lightCoords );
 
 	int lightmapPageWidth, lightmapPageHeight;
 
@@ -5117,7 +5117,7 @@ CBrushModelTransform::~CBrushModelTransform()
 
 VMatrix *CBrushModelTransform::GetNonIdentityMatrix()
 {
-	return m_bIdentity ? NULL : &g_BrushToWorldMatrix;
+	return m_bIdentity ? nullptr : &g_BrushToWorldMatrix;
 }
 
 

@@ -253,13 +253,13 @@ public:
 	virtual int						GetSkin() { return 0; }
 	virtual bool					UsesFlexDelayedWeights() { return false; }
 
-	virtual const model_t*			GetModel( ) const		{ return NULL; }
+	virtual const model_t*			GetModel( ) const		{ return nullptr; }
 	virtual int						DrawModel( int flags, const RenderableInstance_t &instance )	{ return 0; }
 	virtual bool					LODTest()				{ return true; }
 	virtual bool					SetupBones( matrix3x4a_t *pBoneToWorldOut, int nMaxBones, int boneMask, float currentTime )	{ return true; }
 	virtual void					SetupWeights( const matrix3x4_t *pBoneToWorld, int nFlexWeightCount, float *pFlexWeights, float *pFlexDelayedWeights ) {}
 	virtual void					DoAnimationEvents( void )						{}
-	virtual IPVSNotify*				GetPVSNotifyInterface() { return NULL; }
+	virtual IPVSNotify*				GetPVSNotifyInterface() { return nullptr; }
 	virtual void					GetRenderBoundsWorldspace( Vector& absMins, Vector& absMaxs ) { DefaultRenderBoundsWorldspace( this, absMins, absMaxs ); }
 
 	// Determine the color modulation amount
@@ -286,9 +286,9 @@ public:
 
 	virtual bool IsShadowDirty( )			     { return false; }
 	virtual void MarkShadowDirty( bool bDirty )  {}
-	virtual IClientRenderable *GetShadowParent() { return NULL; }
-	virtual IClientRenderable *FirstShadowChild(){ return NULL; }
-	virtual IClientRenderable *NextShadowPeer()  { return NULL; }
+	virtual IClientRenderable *GetShadowParent() { return nullptr; }
+	virtual IClientRenderable *FirstShadowChild(){ return nullptr; }
+	virtual IClientRenderable *NextShadowPeer()  { return nullptr; }
 	virtual ShadowType_t ShadowCastType()		 { return SHADOWS_NONE; }
 
 	virtual void CreateModelInstance()			 {}
@@ -301,7 +301,7 @@ public:
 	virtual bool ComputeLightingOrigin( int nAttachmentIndex, Vector modelLightingCenter, const matrix3x4_t &matrix, Vector &transformedLightingCenter ) { return false; }
 
 	// Rendering clip plane, should be 4 floats, return value of NULL indicates a disabled render clip plane
-	virtual float *GetRenderClipPlane() { return NULL; }
+	virtual float *GetRenderClipPlane() { return nullptr; }
 
 	virtual void RecordToolMessage() {}
 

@@ -361,9 +361,9 @@ void CFileSystem_Stdio::FreeOptimalReadBuffer( void *p )
 FILE *CFileSystem_Stdio::FS_fopen( const char *filename, const char *options, unsigned flags, int64 *size, CFileLoadInfo *pInfo )
 {
 	if( ShouldFailIo() )
-		return NULL;
+		return nullptr;
 
-	CStdFilesystemFile *pFile = NULL;
+	CStdFilesystemFile *pFile = nullptr;
 
 	if ( pInfo )
 		pInfo->m_bLoadedFromSteamCache = false;
@@ -671,7 +671,7 @@ CStdioFile *CStdioFile::FS_fopen( const char *filename, const char *options, int
 {
 	MEM_ALLOC_CREDIT();
 
-	FILE *pFile = NULL;
+	FILE *pFile = nullptr;
 
 	// stop newline characters at end of filename
 	Assert(!strchr(filename, '\n') && !strchr(filename, '\r'));
@@ -736,14 +736,14 @@ CStdioFile *CStdioFile::FS_fopen( const char *filename, const char *options, int
 						if ( ret < 0 )
 						{
 							fclose( pFile );
-							return NULL;
+							return nullptr;
 						}
 					}
 				}
 				else 
 				{
 					fclose( pFile );
-					return NULL;
+					return nullptr;
 				}
 			}
 
@@ -757,7 +757,7 @@ CStdioFile *CStdioFile::FS_fopen( const char *filename, const char *options, int
 		return new CStdioFile( pFile, bWriteable );
 	}
 
-	return NULL;
+	return nullptr;
 }
 
 //-----------------------------------------------------------------------------

@@ -128,7 +128,7 @@ inline int CFuncElevator::GetNumFloors( void ) const
 inline const FloorInfo *CFuncElevator::GetFloor( int floorNumber ) const
 {
 	if ( floorNumber < 0 || floorNumber >= m_floors.Count() )
-		return NULL;
+		return nullptr;
 
 	return &m_floors[ floorNumber ];
 }

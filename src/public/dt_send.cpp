@@ -19,7 +19,7 @@
 
 
 
-static CNonModifiedPointerProxy *s_pNonModifiedPointerProxyHead = NULL;
+static CNonModifiedPointerProxy *s_pNonModifiedPointerProxyHead = nullptr;
 
 
 void SendProxy_UInt8ToInt32( const SendProp *pProp, const void *pStruct, const void *pData, DVariant *pOut, int iElement, int objectID);
@@ -798,7 +798,7 @@ SendProp InternalSendPropArray(
 	ret.m_ElementStride = elementStride;
 	ret.m_pVarName = pName;
 	ret.SetProxyFn( SendProxy_Empty );
-	ret.m_pArrayProp = NULL;	// This gets set in SendTable_InitTable. It always points at the property that precedes
+	ret.m_pArrayProp = nullptr;	// This gets set in SendTable_InitTable. It always points at the property that precedes
 								// this one in the datatable's list.
 	ret.SetArrayLengthProxy( arrayLengthFn );
 	ret.SetPriority( priority );
@@ -828,12 +828,12 @@ SendProp SendPropExclude(
 // ---------------------------------------------------------------------- //
 SendProp::SendProp()
 {
-	m_pVarName = NULL;
+	m_pVarName = nullptr;
 	m_Offset = 0;
-	m_pDataTable = NULL;
-	m_ProxyFn = NULL;
-	m_pExcludeDTName = NULL;
-	m_pParentArrayPropName = NULL;
+	m_pDataTable = nullptr;
+	m_ProxyFn = nullptr;
+	m_pExcludeDTName = nullptr;
+	m_pParentArrayPropName = nullptr;
 
 	
 	m_Type = DPT_Int;
@@ -847,8 +847,8 @@ SendProp::SendProp()
 	m_ArrayLengthProxy = 0;
 	m_nElements = 1;
 	m_ElementStride = -1;
-	m_DataTableProxyFn = NULL;
-	m_pMatchingRecvProp	= NULL;
+	m_DataTableProxyFn = nullptr;
+	m_pMatchingRecvProp	= nullptr;
 
 	m_priority = SENDPROP_DEFAULT_PRIORITY;
 }
@@ -871,7 +871,7 @@ int SendProp::GetNumArrayLengthBits() const
 // ---------------------------------------------------------------------- //
 SendTable::SendTable()
 {
-	Construct( NULL, 0, NULL );
+	Construct( nullptr, 0, nullptr );
 }
 
 

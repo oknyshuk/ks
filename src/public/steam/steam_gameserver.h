@@ -115,15 +115,15 @@ S_API bool S_CALLTYPE SteamInternal_GameServer_Init( uint32 unIP, uint16 usPort,
 
 inline void CSteamGameServerAPIContext::Clear()
 {
-	m_pSteamClient = NULL;
-	m_pSteamGameServer = NULL;
-	m_pSteamGameServerUtils = NULL;
-	m_pSteamGameServerNetworking = NULL;
-	m_pSteamGameServerStats = NULL;
-	m_pSteamHTTP = NULL;
-	m_pSteamInventory = NULL;
-	m_pSteamUGC = NULL;
-	m_pSteamApps = NULL;
+	m_pSteamClient = nullptr;
+	m_pSteamGameServer = nullptr;
+	m_pSteamGameServerUtils = nullptr;
+	m_pSteamGameServerNetworking = nullptr;
+	m_pSteamGameServerStats = nullptr;
+	m_pSteamHTTP = nullptr;
+	m_pSteamInventory = nullptr;
+	m_pSteamUGC = nullptr;
+	m_pSteamApps = nullptr;
 }
 
 // This function must be declared inline in the header so the module using steam_api.dll gets the version names they want.

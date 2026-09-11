@@ -102,7 +102,7 @@ static UserFormatToRGBA8888Func_t GetUserFormatToRGBA8888Func_t( ImageFormat src
 	case IMAGE_FORMAT_BGR888:
 		return BGR888ToRGBA8888;
 	case IMAGE_FORMAT_RGB565:
-		return NULL;
+		return nullptr;
 	case IMAGE_FORMAT_I8:
 		return I8ToRGBA8888;
 	case IMAGE_FORMAT_IA88:
@@ -136,17 +136,17 @@ static UserFormatToRGBA8888Func_t GetUserFormatToRGBA8888Func_t( ImageFormat src
 	case IMAGE_FORMAT_RGBA16161616:
 		return RGBA16161616ToRGBA8888;
 	case IMAGE_FORMAT_RGBA16161616F:
-		return NULL;
+		return nullptr;
 	case IMAGE_FORMAT_RGBA1010102:
-		return NULL;
+		return nullptr;
 	case IMAGE_FORMAT_BGRA1010102:
-		return NULL;
+		return nullptr;
 	case IMAGE_FORMAT_R16F:
-		return NULL;
+		return nullptr;
 
 
 	default:
-		return NULL;
+		return nullptr;
 	}
 }
 
@@ -171,7 +171,7 @@ static RGBA8888ToUserFormatFunc_t GetRGBA8888ToUserFormatFunc_t( ImageFormat dst
 	case IMAGE_FORMAT_BGR888:
 		return RGBA8888ToBGR888;
 	case IMAGE_FORMAT_RGB565:
-		return NULL;
+		return nullptr;
 	case IMAGE_FORMAT_I8:
 		return RGBA8888ToI8;
 	case IMAGE_FORMAT_IA88:
@@ -207,7 +207,7 @@ static RGBA8888ToUserFormatFunc_t GetRGBA8888ToUserFormatFunc_t( ImageFormat dst
 
 
 	default:
-		return NULL;
+		return nullptr;
 	}
 }
 
@@ -529,7 +529,7 @@ static void ConvertFromDXT1( const uint8 *src, CDestPixel *dst, int width, int h
 
 	int realWidth = 0;
 	int realHeight = 0;
-	CDestPixel *realDst = NULL;
+	CDestPixel *realDst = nullptr;
 
 	// Deal with the case where we have a dimension smaller than 4.
 	if ( width < 4 || height < 4 )
@@ -591,7 +591,7 @@ static void ConvertFromDXT5( const uint8 *src, CDestPixel *dst, int width, int h
 {
 	int realWidth = 0;
 	int realHeight = 0;
-	CDestPixel *realDst = NULL;
+	CDestPixel *realDst = nullptr;
 
 	// Deal with the case where we have a dimension smaller than 4.
 	if ( width < 4 || height < 4 )
@@ -671,7 +671,7 @@ static void ConvertFromDXT5IgnoreAlpha( const uint8 *src, CDestPixel *dst, int w
 {
 	int realWidth = 0;
 	int realHeight = 0;
-	CDestPixel *realDst = NULL;
+	CDestPixel *realDst = nullptr;
 
 	// Deal with the case where we have a dimension smaller than 4.
 	if ( width < 4 || height < 4 )
@@ -743,7 +743,7 @@ static void ConvertFromATIxN( const uint8 *src, CDestPixel *dst, int width, int 
 {
 	int realWidth = 0;
 	int realHeight = 0;
-	CDestPixel *realDst = NULL;
+	CDestPixel *realDst = nullptr;
 
 	// Deal with the case where we have a dimension smaller than 4.
 	if ( width < 4 || height < 4 )

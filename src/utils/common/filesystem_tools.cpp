@@ -28,10 +28,10 @@
 // Module interface.
 // ---------------------------------------------------------------------------------------------------- //
 
-IBaseFileSystem *g_pFileSystem = NULL;
+IBaseFileSystem *g_pFileSystem = nullptr;
 
 // These are only used for tools that need the search paths that the engine's file system provides.
-CSysModule			*g_pFullFileSystemModule = NULL;
+CSysModule			*g_pFullFileSystemModule = nullptr;
 
 // ---------------------------------------------------------------------------
 //
@@ -54,7 +54,7 @@ void FileSystem_SetupStandardDirectories( const char *pFilename, const char *pGa
 		pFilename = ".";
 	}
 
-	Q_MakeAbsolutePath( qdir, sizeof( qdir ), pFilename, NULL );
+	Q_MakeAbsolutePath( qdir, sizeof( qdir ), pFilename, nullptr );
 	Q_StripFilename( qdir );
 	Q_strlower( qdir );
 	if ( qdir[0] != 0 )
@@ -142,7 +142,7 @@ bool FileSystem_Init_Normal( const char *pFilename, FSInitType_t initType, bool 
 
 bool FileSystem_Init( const char *pBSPFilename, int maxMemoryUsage, FSInitType_t initType, bool bOnlyUseFilename )
 {
-	Assert( CommandLine()->GetCmdLine() != NULL ); // Should have called CreateCmdLine by now.
+	Assert( CommandLine()->GetCmdLine() != nullptr ); // Should have called CreateCmdLine by now.
 
 	// If this app uses VMPI, then let VMPI intercept all filesystem calls.
 #if defined( MPI )
@@ -158,7 +158,7 @@ bool FileSystem_Init( const char *pBSPFilename, int maxMemoryUsage, FSInitType_t
 		}
 		else
 		{
-			g_pFileSystem = g_pFullFileSystem = VMPI_FileSystem_Init( maxMemoryUsage, NULL );
+			g_pFileSystem = g_pFullFileSystem = VMPI_FileSystem_Init( maxMemoryUsage, nullptr );
 			RecvQDirInfo();
 		}
 		return true;
@@ -181,14 +181,14 @@ void FileSystem_Term()
 	if ( g_pFullFileSystem )
 	{
 		g_pFullFileSystem->Shutdown();
-		g_pFullFileSystem = NULL;
-		g_pFileSystem = NULL;
+		g_pFullFileSystem = nullptr;
+		g_pFileSystem = nullptr;
 	}
 
 	if ( g_pFullFileSystemModule )
 	{
 		Sys_UnloadModule( g_pFullFileSystemModule );
-		g_pFullFileSystemModule = NULL;
+		g_pFullFileSystemModule = nullptr;
 	}
 }
 

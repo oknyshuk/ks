@@ -133,8 +133,8 @@ PlayerFriend::PlayerFriend( XUID xuid, FriendInfo_t const *pFriendInfo /* = NULL
 	m_uFriendMark( 0 ),
 	m_bIsStale( false ),
 	m_eSearchState( SEARCH_NONE ),
-	m_pDetails( NULL ),
-	m_pPublishedPresence( NULL )
+	m_pDetails( nullptr ),
+	m_pPublishedPresence( nullptr )
 {
 	memset( m_wszRichPresence, 0, sizeof( m_wszRichPresence ) );
 	memset( &m_xSessionID, 0, sizeof( m_xSessionID ) );
@@ -264,7 +264,7 @@ void PlayerFriend::Steam_OnLobbyDataUpdate( LobbyDataUpdate_t *pParam )
 	// Describe the lobby
 	if ( m_pDetails )
 		m_pDetails->deleteThis();
-	m_pDetails = NULL;
+	m_pDetails = nullptr;
 
 	m_pDetails = g_pMatchFramework->GetMatchNetworkMsgController()->UnpackGameDetailsFromSteamLobby( pParam->m_ulSteamIDLobby );
 
@@ -296,7 +296,7 @@ void PlayerFriend::Destroy()
 
 	if ( m_pPublishedPresence )
 		m_pPublishedPresence->deleteThis();
-	m_pPublishedPresence = NULL;
+	m_pPublishedPresence = nullptr;
 
 	delete this;
 }
@@ -332,7 +332,7 @@ void PlayerFriend::AbortSearch()
 
 	if ( m_pDetails )
 		m_pDetails->deleteThis();
-	m_pDetails = NULL;
+	m_pDetails = nullptr;
 }
 
 void PlayerFriend::SetFriendMark( unsigned maskSetting )
@@ -415,7 +415,7 @@ void PlayerFriend::UpdateFriendInfo( FriendInfo_t const *pFriendInfo )
 	if ( m_pPublishedPresence )
 	{
 		m_pPublishedPresence->deleteThis();
-		m_pPublishedPresence = NULL;
+		m_pPublishedPresence = nullptr;
 	}
 
 	ISteamFriends *pf = steamapicontext->SteamFriends();
@@ -494,7 +494,7 @@ void PlayerFriend::StartSearchForSessionInfoImpl()
 			memset( &m_GameSessionInfo, 0, sizeof( m_GameSessionInfo ) );
 			if ( m_pDetails )
 				m_pDetails->deleteThis();
-			m_pDetails = NULL;
+			m_pDetails = nullptr;
 
 			m_eSearchState = SEARCH_NONE;
 		}
@@ -1011,7 +1011,7 @@ const void * PlayerLocal::GetPlayerTitleData( int iTitleDataIndex )
 	}
 	else
 	{
-		return NULL;
+		return nullptr;
 	}
 }
 
@@ -1359,7 +1359,7 @@ void PlayerLocal::GetAwardsData( KeyValues *pAwardsData )
 			for ( int k = 0; k < m_arrAchievementsEarned.Count(); ++ k )
 			{
 				KeyValues *kvAchValue = new KeyValues( "" );
-				kvAchValue->SetInt( NULL, m_arrAchievementsEarned[k] );
+				kvAchValue->SetInt( nullptr, m_arrAchievementsEarned[k] );
 				kvValue->AddSubKey( kvAchValue );
 			}
 			continue;
@@ -1371,7 +1371,7 @@ void PlayerLocal::GetAwardsData( KeyValues *pAwardsData )
 			for ( int k = 0; k < m_arrAvatarAwardsEarned.Count(); ++ k )
 			{
 				KeyValues *kvAchValue = new KeyValues( "" );
-				kvAchValue->SetInt( NULL, m_arrAvatarAwardsEarned[k] );
+				kvAchValue->SetInt( nullptr, m_arrAvatarAwardsEarned[k] );
 				kvValue->AddSubKey( kvAchValue );
 			}
 			continue;
@@ -1384,7 +1384,7 @@ void PlayerLocal::GetAwardsData( KeyValues *pAwardsData )
 			if ( !Q_stricmp( szName, pAchievement->m_szAchievementName ) )
 			{
 				kvValue->SetInt( "", ( m_arrAchievementsEarned.Find( pAchievement->m_idAchievement ) != m_arrAchievementsEarned.InvalidIndex() ) ? 1 : 0 );
-				szName = NULL;
+				szName = nullptr;
 				break;
 			}
 		}
@@ -1398,7 +1398,7 @@ void PlayerLocal::GetAwardsData( KeyValues *pAwardsData )
 			if ( !Q_stricmp( szName, pAvAward->m_szAvatarAwardName ) )
 			{
 				kvValue->SetInt( "", ( m_arrAvatarAwardsEarned.Find( pAvAward->m_idAvatarAward ) != m_arrAvatarAwardsEarned.InvalidIndex() ) ? 1 : 0 );
-				szName = NULL;
+				szName = nullptr;
 				break;
 			}
 		}
@@ -1460,7 +1460,7 @@ void PlayerLocal::UpdateAwardsData( KeyValues *pAwardsData )
 				{
 					DevMsg( "pPlayerLocal(%s)->UpdateAwardsData(%s) already earned.\n", GetName(), pAchievement->m_szAchievementName );
 				}
-				szName = NULL;
+				szName = nullptr;
 				break;
 			}
 		}
@@ -1482,7 +1482,7 @@ void PlayerLocal::UpdateAwardsData( KeyValues *pAwardsData )
 				{
 					DevMsg( "pPlayerLocal(%s)->UpdateAwardsData(%s) already earned.\n", GetName(), pAvAward->m_szAvatarAwardName );
 				}
-				szName = NULL;
+				szName = nullptr;
 				break;
 			}
 		}
@@ -1498,7 +1498,7 @@ void PlayerLocal::EvaluateAwardsStateBasedOnStats()
 {
 	TitleDataFieldsDescription_t const *pTitleDataStorage = g_pMatchFramework->GetMatchTitle()->DescribeTitleDataStorage();
 	
-	KeyValues *kvAwards = NULL;
+	KeyValues *kvAwards = nullptr;
 	KeyValues::AutoDelete autodelete_kvAwards( kvAwards );
 
 	//

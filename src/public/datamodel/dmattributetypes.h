@@ -326,7 +326,7 @@ DECLARE_ATTRIBUTE_TYPE( QAngle,					AT_QANGLE,				"qangle",		value.Init( 0.0f, 0
 DECLARE_ATTRIBUTE_TYPE( Quaternion,				AT_QUATERNION,			"quaternion",	value.Init( 0.0f, 0.0f, 0.0f, 1.0f ); )
 DECLARE_ATTRIBUTE_TYPE( VMatrix,				AT_VMATRIX,				"matrix",		MatrixSetIdentity( value ); )
 DECLARE_ATTRIBUTE_TYPE( CUtlSymbolLarge,		AT_STRING,				"string",		value = UTL_INVAL_SYMBOL_LARGE; )
-DECLARE_ATTRIBUTE_TYPE( CUtlBinaryBlock,		AT_VOID,				"binary",		value.Set( NULL, 0 ); )
+DECLARE_ATTRIBUTE_TYPE( CUtlBinaryBlock,		AT_VOID,				"binary",		value.Set( nullptr, 0 ); )
 DECLARE_ATTRIBUTE_TYPE( DmeTime_t,				AT_TIME,				"time",			value.SetTenthsOfMS( 0 ); )
 DECLARE_ATTRIBUTE_TYPE_INTERNAL( DmElementHandle_t, DmElementAttribute_t, AT_ELEMENT,	"element", value = DMELEMENT_HANDLE_INVALID; )
 

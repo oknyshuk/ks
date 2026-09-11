@@ -193,8 +193,8 @@ protected:
 Vector VelocitySampler::GetRelativeVelocity( IPhysicsObject *pObj, IPhysicsObject *pReferenceFrame )
 {
 	Vector childVelocity, parentVelocity;
-	pObj->GetImplicitVelocity( &childVelocity, NULL );
-	pReferenceFrame->GetImplicitVelocity(&parentVelocity, NULL);
+	pObj->GetImplicitVelocity( &childVelocity, nullptr );
+	pReferenceFrame->GetImplicitVelocity(&parentVelocity, nullptr);
 
 	return (childVelocity - parentVelocity);
 }
@@ -207,9 +207,9 @@ Vector VelocitySampler::GetRelativeAngularVelocity( IPhysicsObject *pObj, IPhysi
 	if ( pReferenceFrame )
 	{
 		Vector childVelocityLocal, parentVelocityLocal, childVelocityWorld, parentVelocityWorld;
-		pObj->GetImplicitVelocity( NULL, &childVelocityLocal );
+		pObj->GetImplicitVelocity( nullptr, &childVelocityLocal );
 		pObj->LocalToWorldVector( &childVelocityWorld, childVelocityLocal );
-		pReferenceFrame->GetImplicitVelocity( NULL, &parentVelocityLocal );
+		pReferenceFrame->GetImplicitVelocity( nullptr, &parentVelocityLocal );
 		pObj->LocalToWorldVector( &parentVelocityWorld, parentVelocityLocal );
 
 		return (childVelocityWorld - parentVelocityWorld);
@@ -217,7 +217,7 @@ Vector VelocitySampler::GetRelativeAngularVelocity( IPhysicsObject *pObj, IPhysi
 	else
 	{
 		Vector childVelocityLocal, childVelocityWorld;
-		pObj->GetImplicitVelocity( NULL, &childVelocityLocal );
+		pObj->GetImplicitVelocity( nullptr, &childVelocityLocal );
 		pObj->LocalToWorldVector( &childVelocityWorld, childVelocityLocal );
 
 		return (childVelocityWorld);

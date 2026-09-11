@@ -115,7 +115,7 @@ const float DECAL_CLIP_EPSILON = 0.01f;
 
 CDecalVert* R_DoDecalSHClip( CDecalVert *pInVerts, CDecalVert *pOutVerts, decal_t *pDecal, int nStartVerts, const Vector &vecNormal )
 {
-	if ( pOutVerts == NULL )
+	if ( pOutVerts == nullptr )
 		pOutVerts = &g_DecalClipVerts[0];
 
 	CPlane_Top top;
@@ -132,7 +132,7 @@ CDecalVert* R_DoDecalSHClip( CDecalVert *pInVerts, CDecalVert *pOutVerts, decal_
 	pDecal->clippedVertCount = outCount;
 
 	if ( !outCount )
-		return NULL;
+		return nullptr;
 
 	// FIXME: This is a brutally hack workaround for the fact that we get massive decal flicker
 	// when looking at a decal at a glancing angle while standing right next to it.

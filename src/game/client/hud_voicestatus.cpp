@@ -48,7 +48,7 @@ private:
 CHudVoiceSelfStatus::CHudVoiceSelfStatus( const char *pName ) :
 	CHudElement( pName )
 {
-	m_pVoiceIcon = NULL;
+	m_pVoiceIcon = nullptr;
 
 	SetHiddenBits( HIDEHUD_MISCSTATUS );
 
@@ -120,7 +120,7 @@ private:
 CHudVoiceStatus::CHudVoiceStatus( const char *pName ) :
 	CHudElement( pName )
 {
-	m_pVoiceIcon = NULL;
+	m_pVoiceIcon = nullptr;
 
 	SetHiddenBits( HIDEHUD_MISCSTATUS );
 

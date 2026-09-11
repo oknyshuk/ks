@@ -47,7 +47,7 @@ public:
 
 	int MatchInt();
 	char ReadChar( );
-	bool IsValid() { return m_pEnd != NULL; }
+	bool IsValid() { return m_pEnd != nullptr; }
 	const char *GetEnd() const { return m_pEnd; }
 	CUtlString GetRemainder()const;
 

@@ -69,7 +69,7 @@ static ConVar demo_enabledemos( "demo_enabledemos", ENABLE_DEMOS_BY_DEFAULT ? "1
 extern ConVar demo_strict_validation;
 
 // singeltons:
-static char g_pStatsFile[MAX_OSPATH] = { NULL };
+static char g_pStatsFile[MAX_OSPATH] = {};
 static bool s_bBenchframe = false;
 
 static CDemoRecorder s_ClientDemoRecorder;
@@ -598,7 +598,7 @@ void CDemoRecorder::StartupDemoHeader( void )
 
 	m_bIsDemoHeader = true;
 
-	Assert( m_MessageData.GetBasePointer() == NULL );
+	Assert( m_MessageData.GetBasePointer() == nullptr );
 
 	// setup writing data buffer
 	m_MessageData.StartWriting( new unsigned char[NET_MAX_PAYLOAD], NET_MAX_PAYLOAD );
@@ -645,7 +645,7 @@ void CDemoRecorder::StartupDemoFile( void )
 		return;
 	}
 
-	Assert( m_MessageData.GetBasePointer() == NULL );
+	Assert( m_MessageData.GetBasePointer() == nullptr );
 
 	// setup writing data buffer
 	m_MessageData.StartWriting( new unsigned char[NET_MAX_PAYLOAD], NET_MAX_PAYLOAD );
@@ -739,7 +739,7 @@ void CDemoRecorder::StartupDemoFile( void )
 		if ( pMsgMyOwnAvatarData && ( msgPlayerAvatarData.accountid == pMsgMyOwnAvatarData->accountid ) )
 		{
 			delete pMsgMyOwnAvatarData;
-			pMsgMyOwnAvatarData = NULL;
+			pMsgMyOwnAvatarData = nullptr;
 		}
 
 		byte		buffer[ NET_MAX_PAYLOAD ];
@@ -757,7 +757,7 @@ void CDemoRecorder::StartupDemoFile( void )
 		WriteMessages( bfWrite );
 
 		delete pMsgMyOwnAvatarData;
-		pMsgMyOwnAvatarData = NULL;
+		pMsgMyOwnAvatarData = nullptr;
 	}
 
 	g_ClientDLL->HudReset();
@@ -834,7 +834,7 @@ void CDemoRecorder::CloseDemoFile()
 	if ( m_MessageData.GetBasePointer() )
 	{
 		delete [] m_MessageData.GetBasePointer();
-		m_MessageData.StartWriting( NULL, 0 );
+		m_MessageData.StartWriting( nullptr, 0 );
 	}
 }
 
@@ -926,7 +926,7 @@ void CDemoRecorder::StopRecording( const CGameInfo *pGameInfo )
 	if ( m_MessageData.GetBasePointer() )
 	{
 		delete[] m_MessageData.GetBasePointer();
-		m_MessageData.StartWriting( NULL, 0);
+		m_MessageData.StartWriting( nullptr, 0);
 	}
 
 	CloseDemoFile();
@@ -978,7 +978,7 @@ struct DemoUserInfo_t
 {
 	DemoUserInfo_t()
 		: userID( -1 )
-		, name( NULL )
+		, name( nullptr )
 	{
 	}
 	int userID;
@@ -1000,7 +1000,7 @@ void Callback_DemoScanUserInfoChanged( void *object, INetworkStringTable *string
 		{
 			// clear out the entry in our user info array
 			s_demoUserInfo[ stringNumber ].userID = -1;
-			s_demoUserInfo[ stringNumber ].name = NULL;
+			s_demoUserInfo[ stringNumber ].name = nullptr;
 			s_demoUserInfo[ stringNumber ].steamID.SetFromUint64( 0 );
 		}
 		return; // player left the game
@@ -1168,7 +1168,7 @@ void CDemoPlayer::StopPlayback( void )
 	m_flPlaybackRateModifier = 1.0f;
 
 	delete[] m_DemoPacket.data;
-	m_DemoPacket.data = NULL;
+	m_DemoPacket.data = nullptr;
 
 	scr_demo_override_fov = 0.0f;
 
@@ -1372,23 +1372,23 @@ bool CDemoPlayer::ParseAheadForInterval( int curtick, int intervalticks )
 				break;
 			case dem_datatables:
 				{
-					m_DemoFile.ReadNetworkDataTables( NULL );
+					m_DemoFile.ReadNetworkDataTables( nullptr );
 				}
 				break;
 			case dem_usercmd:
 				{
 					ACTIVE_SPLITSCREEN_PLAYER_GUARD( nPlayerSlot );
-					m_DemoFile.ReadUserCmd( NULL, dummy );
+					m_DemoFile.ReadUserCmd( nullptr, dummy );
 				}
 				break;
 			case dem_customdata:
 				{
-					m_DemoFile.ReadCustomData( NULL, NULL );
+					m_DemoFile.ReadCustomData( nullptr, nullptr );
 				}
 				break;			
 			case dem_stringtables:
 				{
-					m_DemoFile.ReadStringTables( NULL );
+					m_DemoFile.ReadStringTables( nullptr );
 				}
 				break;
 			default:
@@ -1405,7 +1405,7 @@ bool CDemoPlayer::ParseAheadForInterval( int curtick, int intervalticks )
 		// we read now a dem_packet
 		m_DemoFile.ReadCmdInfo( nextinfo );
 		m_DemoFile.ReadSequenceInfo( dummy, dummy ); 
-		m_DemoFile.ReadRawData( NULL, 0 );
+		m_DemoFile.ReadRawData( nullptr, 0 );
 
 		DemoCommandQueue entry;
 		entry.info = nextinfo;
@@ -1457,13 +1457,13 @@ netpacket_t *CDemoPlayer::ReadPacket( void )
 	{
 		m_bPlayingBack = false;
 		Host_EndGame( true, "Tried to read a demo message with no demo file\n" );
-		return NULL;
+		return nullptr;
 	}
 
 	// If game is still shutting down, then don't read any demo messages from file quite yet
 	if ( HostState_IsGameShuttingDown() )
 	{
-		return NULL;
+		return nullptr;
 	}
 
 	Assert( IsPlayingBack() );
@@ -1478,7 +1478,7 @@ netpacket_t *CDemoPlayer::ReadPacket( void )
 			if ( m_bScanMode && m_ImportantTicks.Count() > 0 )
 			{
 				CL_ScanDemoDone( m_szScanMode );
-				return NULL;
+				return nullptr;
 			}
 			if ( m_bDoHighlightScan )
 			{
@@ -1489,7 +1489,7 @@ netpacket_t *CDemoPlayer::ReadPacket( void )
 
 	// External editor has paused playback
 	if ( CheckPausedPlayback() )
-		return NULL;
+		return nullptr;
 
 	// handle highlights
 	if ( m_nCurrentHighlight != -1 && !IsSkipping() )
@@ -1504,8 +1504,8 @@ netpacket_t *CDemoPlayer::ReadPacket( void )
 				m_nCurrentHighlight = -1;
 				SetPlaybackTimeScale( 1.0f );
 				g_ClientDLL->ShowHighlightSkippingMessage( false );
-				m_pPlaybackParameters = NULL;
-				return NULL;
+				m_pPlaybackParameters = nullptr;
+				return nullptr;
 			}
 		}
 
@@ -1594,7 +1594,7 @@ netpacket_t *CDemoPlayer::ReadPacket( void )
 			{
 				demoaction->Update( false, playbacktick, TICKS_TO_TIME( playbacktick )  );
 				m_DemoFile.SeekTo( curpos, true ); // go back to start of current demo command
-				return NULL;   // Not time yet, dont return packet data.
+				return nullptr;   // Not time yet, dont return packet data.
 			}
 		}
 
@@ -1637,7 +1637,7 @@ netpacket_t *CDemoPlayer::ReadPacket( void )
 					ACTIVE_SPLITSCREEN_PLAYER_GUARD( hh );
 					GetBaseLocalClient().Disconnect(true);
 				}
-				return NULL;
+				return nullptr;
 			}
 			break;
 		case dem_consolecmd:
@@ -1751,9 +1751,9 @@ netpacket_t *CDemoPlayer::ReadPacket( void )
 				{
 					//send it off
 					Assert( iCallbackIndex < m_CustomDataCallbackMap.Count() );
-					Assert( m_CustomDataCallbackMap[iCallbackIndex].pCallback != NULL );
+					Assert( m_CustomDataCallbackMap[iCallbackIndex].pCallback != nullptr );
 
-					if( m_CustomDataCallbackMap[iCallbackIndex].pCallback != NULL )
+					if( m_CustomDataCallbackMap[iCallbackIndex].pCallback != nullptr )
 						m_CustomDataCallbackMap[iCallbackIndex].pCallback( pData, iSize );
 					else
 						Warning( "Unable to decode custom demo data, callback \"%s\" not found.\n", m_CustomDataCallbackMap[iCallbackIndex].name.Get() );
@@ -2091,10 +2091,10 @@ CDemoPlayer::CDemoPlayer()
 	m_SnapshotFilename[0] = 0;
 	m_bResetInterpolation = false;
 	m_nPreviousTick = 0;
-	m_pPlaybackParameters = NULL;
+	m_pPlaybackParameters = nullptr;
 	m_bPacketReadSuspended = false;
 	m_nRestartFilePos = -1;
-	m_pImportantEventData = NULL;
+	m_pImportantEventData = nullptr;
 	m_nTickToPauseOn = -1;
 	m_bSavedInterpolateState = true;
 	m_highlightSteamID.SetFromUint64( 0 );
@@ -2117,7 +2117,7 @@ CDemoPlayer::~CDemoPlayer()
 
 CDemoPlaybackParameters_t const * CDemoPlayer::GetDemoPlaybackParameters()
 {
-	return m_bPlayingBack ? m_pPlaybackParameters : NULL;
+	return m_bPlayingBack ? m_pPlaybackParameters : nullptr;
 }
 
 //-----------------------------------------------------------------------------
@@ -2187,7 +2187,7 @@ bool CDemoPlayer::StartPlayback( const char *filename, bool bAsTimeDemo, CDemoPl
 	ResyncDemoClock(); 
 
 	// create a fake channel with a NULL address (no encryption keys in demos)
-	GetBaseLocalClient().m_NetChannel = NET_CreateNetChannel( NS_CLIENT, NULL, "DEMO", &GetBaseLocalClient(), NULL, false );
+	GetBaseLocalClient().m_NetChannel = NET_CreateNetChannel( NS_CLIENT, nullptr, "DEMO", &GetBaseLocalClient(), nullptr, false );
 
 	if ( !GetBaseLocalClient().m_NetChannel )
 	{
@@ -2242,7 +2242,7 @@ bool CDemoPlayer::ScanDemo( const char *filename, const char* pszMode )
 	m_bScanMode = true;
 	V_strcpy_safe( m_szScanMode, pszMode );
 
-	return StartPlayback( filename, false, NULL );
+	return StartPlayback( filename, false, nullptr );
 }
 
 void CDemoPlayer::RestartPlayback( void )
@@ -2599,7 +2599,7 @@ void CDemoPlayer::GetImportantGameEventIDs()
 	if ( m_ImportantGameEvents.Count() == 0 )
 	{
 		KeyValues *pCurrentEvent = m_pImportantEventData->GetFirstSubKey();
-		while( pCurrentEvent != NULL )
+		while( pCurrentEvent != nullptr )
 		{
 			const char *pEventName = pCurrentEvent->GetName();
 			CGameEventDescriptor *descriptor = g_GameEventManager.GetEventDescriptor( pEventName );
@@ -2685,7 +2685,7 @@ void ParseEventKeys( CSVCMsg_GameEvent_t *msg, CGameEventDescriptor *pDescriptor
 	}
 	else
 	{
-		(*ppKeys) = NULL;
+		(*ppKeys) = nullptr;
 	}
 }
 
@@ -2728,7 +2728,7 @@ void CDemoPlayer::ScanForImportantTicks()
 
 		if ( V_strcasecmp( demoTable->GetTableName(), USER_INFO_TABLENAME ) == 0 )
 		{
-			demoTable->SetStringChangedCallback( NULL, Callback_DemoScanUserInfoChanged );
+			demoTable->SetStringChangedCallback( nullptr, Callback_DemoScanUserInfoChanged );
 		}
 
 		// make demo scan table an exact copy of server table
@@ -2788,7 +2788,7 @@ void CDemoPlayer::ScanForImportantTicks()
 				break;
 			case dem_datatables:
 				{
-					m_DemoFile.ReadNetworkDataTables( NULL );
+					m_DemoFile.ReadNetworkDataTables( nullptr );
 				}
 				break;
 			case dem_stringtables:
@@ -2808,7 +2808,7 @@ void CDemoPlayer::ScanForImportantTicks()
 			case dem_usercmd:
 				{
 					ACTIVE_SPLITSCREEN_PLAYER_GUARD( nPlayerSlot );
-					m_DemoFile.ReadUserCmd( NULL, dummy );
+					m_DemoFile.ReadUserCmd( nullptr, dummy );
 					
 				}
 				break;
@@ -2875,7 +2875,7 @@ void CDemoPlayer::ScanForImportantTicks()
 								importantTick.nPreviousTick = previousTick;
 								importantTick.nImportanGameEventIndex = nEvent;
 								importantTick.bCanDirectSeek = false;
-								importantTick.pKeys = NULL;
+								importantTick.pKeys = nullptr;
 								bool bIgnore = false;
 
 								ParseEventKeys( msg, pDescriptor, m_ImportantGameEvents[ nEvent ].pszEventName, &importantTick.pKeys );
@@ -3047,7 +3047,7 @@ void CDemoPlayer::BuildHighlightList()
 		else
 		{
 			// didn't find any highlights, so kill the parameters so the demo will play normally
-			m_pPlaybackParameters = NULL;
+			m_pPlaybackParameters = nullptr;
 		}
 		m_bDoHighlightScan = false;
 	}
@@ -3059,7 +3059,7 @@ int CDemoPlayer::FindNextImportantTick( int nCurrentTick, const char *pEventName
 	{
 		if ( m_ImportantTicks[ i ].nTick > nCurrentTick )
 		{
-			if ( pEventName == NULL || V_stricmp( m_ImportantGameEvents[ m_ImportantTicks[ i ].nImportanGameEventIndex ].pszEventName, pEventName ) == 0 )
+			if ( pEventName == nullptr || V_stricmp( m_ImportantGameEvents[ m_ImportantTicks[ i ].nImportanGameEventIndex ].pszEventName, pEventName ) == 0 )
 			{
 				return i;
 			}
@@ -3075,7 +3075,7 @@ int CDemoPlayer::FindPreviousImportantTick( int nCurrentTick, const char *pEvent
 	{
 		if ( m_ImportantTicks[ i ].nTick < nCurrentTick )
 		{
-			if ( pEventName == NULL || V_stricmp( m_ImportantGameEvents[ m_ImportantTicks[ i ].nImportanGameEventIndex ].pszEventName, pEventName ) == 0 )
+			if ( pEventName == nullptr || V_stricmp( m_ImportantGameEvents[ m_ImportantTicks[ i ].nImportanGameEventIndex ].pszEventName, pEventName ) == 0 )
 			{
 				return i;
 			}
@@ -3092,7 +3092,7 @@ int CDemoPlayer::FindNextImportantTickByXuidAndEvent( int nCurrentTick, const CS
 		if ( m_ImportantTicks[ i ].nTick > nCurrentTick )
 		{
 			CSteamID compareSteamID( m_ImportantTicks[ i ].pKeys->GetUint64( pKeyWithXuid ) );
-			if ( ( steamID.GetAccountID() == compareSteamID.GetAccountID() ) && ( pEventName == NULL || V_stricmp( m_ImportantGameEvents[ m_ImportantTicks[ i ].nImportanGameEventIndex ].pszEventName, pEventName ) == 0 ) )
+			if ( ( steamID.GetAccountID() == compareSteamID.GetAccountID() ) && ( pEventName == nullptr || V_stricmp( m_ImportantGameEvents[ m_ImportantTicks[ i ].nImportanGameEventIndex ].pszEventName, pEventName ) == 0 ) )
 			{
 				return i;
 			}
@@ -3136,7 +3136,7 @@ int CDemoPlayer::FindPreviousImportantTickByXuidAndEvent( int nCurrentTick, cons
 		if ( m_ImportantTicks[ i ].nTick < nCurrentTick )
 		{
 			CSteamID compareSteamID( m_ImportantTicks[ i ].pKeys->GetUint64( pKeyWithXuid ) );
-			if ( ( steamID.GetAccountID() == compareSteamID.GetAccountID() ) && ( pEventName == NULL || V_stricmp( m_ImportantGameEvents[ m_ImportantTicks[ i ].nImportanGameEventIndex ].pszEventName, pEventName ) == 0 ) )
+			if ( ( steamID.GetAccountID() == compareSteamID.GetAccountID() ) && ( pEventName == nullptr || V_stricmp( m_ImportantGameEvents[ m_ImportantTicks[ i ].nImportanGameEventIndex ].pszEventName, pEventName ) == 0 ) )
 			{
 				return i;
 			}
@@ -3153,7 +3153,7 @@ const DemoImportantTick_t *CDemoPlayer::GetImportantTick( int nIndex )
 		return &m_ImportantTicks[ nIndex ];
 	}
 
-	return NULL;
+	return nullptr;
 }
 
 const DemoImportantGameEvent_t *CDemoPlayer::GetImportantGameEvent( const char *pszEventName )
@@ -3166,7 +3166,7 @@ const DemoImportantGameEvent_t *CDemoPlayer::GetImportantGameEvent( const char *
 		}
 	}
 
-	return NULL;
+	return nullptr;
 }
 
 void CDemoPlayer::ListImportantTicks()
@@ -3269,7 +3269,7 @@ void CL_ListDemo_f( const CCommand &args )
 		return;
 	}
 
-	demofile.ReadDemoHeader( NULL );
+	demofile.ReadDemoHeader( nullptr );
 
 	demoheader_t *header = &demofile.m_DemoHeader;
 
@@ -3325,7 +3325,7 @@ CON_COMMAND( stop, "Finish recording demo." )
 
 static void DemoRecord( char const *pchDemoFileName, bool incremental )
 {
-	if ( g_ClientDLL == NULL )
+	if ( g_ClientDLL == nullptr )
 	{
 		ConMsg( "Can't record on dedicated server.\n" );
 		return;
@@ -3406,7 +3406,7 @@ CON_COMMAND_F( record, "Record a demo.", FCVAR_DONTRECORD )
 //-----------------------------------------------------------------------------
 CON_COMMAND_F( _record, "Record a demo incrementally.", FCVAR_DONTRECORD )
 {
-	if ( g_ClientDLL == NULL )
+	if ( g_ClientDLL == nullptr )
 	{
 		ConMsg ("Can't record on dedicated server.\n");
 		return;
@@ -3528,7 +3528,7 @@ void CL_PlayDemo_f( const CCommand &passed_args )
 	// see if there is a starting tick attached to the filename (filename@####)
 	int nStartingTick = -1;
 	char *pTemp = V_strstr( name, "@" );
-	if ( pTemp != NULL )
+	if ( pTemp != nullptr )
 	{
 		Assert( nStartRound == 0 ); // Don't specify both of these, start round will stomp
 		nStartingTick = V_atoi(&pTemp[ 1 ]);
@@ -3550,7 +3550,7 @@ void CL_PlayDemo_f( const CCommand &passed_args )
 	// disconnect before loading demo, to avoid sometimes loading into game instead of demo
 	GetBaseLocalClient().Disconnect( false );
 
-	CDemoPlaybackParameters_t *pParams = NULL;
+	CDemoPlaybackParameters_t *pParams = nullptr;
 
 	if ( nSteamIDArg != -1 )
 	{
@@ -3702,7 +3702,7 @@ void CL_PlayOverwatchEvidence_f( const CCommand &args )
 	}
 
 	CUtlBuffer bufHeader;
-	if ( !g_pFullFileSystem->ReadFile( name, NULL, bufHeader, 128 ) )
+	if ( !g_pFullFileSystem->ReadFile( name, nullptr, bufHeader, 128 ) )
 	{
 		DevMsg( "playoverwatchevidence read file error.\n" );
 		return;
@@ -3755,7 +3755,7 @@ void CL_TimeDemo_Helper( const char *pDemoName, const char *pStatsFileName, cons
 		g_EngineStats.EnableVProfStatsRecording( pVProfStatsFileName );
 	}
 
-	if ( !g_pClientDemoPlayer->StartPlayback( name, true, NULL ) )
+	if ( !g_pClientDemoPlayer->StartPlayback( name, true, nullptr ) )
 	{
 		SCR_EndLoadingPlaque();
 	}
@@ -3771,7 +3771,7 @@ void CL_TimeDemo_f( const CCommand &args )
 		ConMsg ("timedemo <demoname> <optional stats.txt> : gets demo speeds, writing perf resutls to the optional stats.txt\n");
 		return;
 	}
-	CL_TimeDemo_Helper( args[1], ( args.ArgC() >= 3 ) ? args[2] : NULL, NULL );
+	CL_TimeDemo_Helper( args[1], ( args.ArgC() >= 3 ) ? args[2] : nullptr, nullptr );
 }
 
 void CL_TimeDemo_VProfRecord_f( const CCommand &args )
@@ -3781,7 +3781,7 @@ void CL_TimeDemo_VProfRecord_f( const CCommand &args )
 		ConMsg ("timedemo_vprofrecord <demoname> <vprof stats filename> : gets demo speeds, recording perf data to a vprof stats file\n");
 		return;
 	}
-	CL_TimeDemo_Helper( args[1], NULL, args[2] );
+	CL_TimeDemo_Helper( args[1], nullptr, args[2] );
 }
 
 void CL_TimeDemoQuit_f( const CCommand &args )
@@ -3812,7 +3812,7 @@ void CL_BenchFrame_f( const CCommand &args )
 	V_strcpy_safe(name, args[1] );
 	V_DefaultExtension( name, ".dem", sizeof( name ) );
 
-	if ( !g_pClientDemoPlayer->StartPlayback( name, true, NULL ) )
+	if ( !g_pClientDemoPlayer->StartPlayback( name, true, nullptr ) )
 	{
 		SCR_EndLoadingPlaque();
 	}
@@ -3859,14 +3859,14 @@ CON_COMMAND( vtune, "Controls VTune's sampling." )
 }
 
 
-CON_COMMAND_AUTOCOMPLETEFILE( playdemo, CL_PlayDemo_f, "Play a recorded demo file (.dem ).", NULL, dem );
-CON_COMMAND_AUTOCOMPLETEFILE( scandemo, CL_ScanDemo_f, "Scan a recorded demo file (.dem ) for specific game events and dump data.", NULL, dem );
+CON_COMMAND_AUTOCOMPLETEFILE( playdemo, CL_PlayDemo_f, "Play a recorded demo file (.dem ).", nullptr, dem );
+CON_COMMAND_AUTOCOMPLETEFILE( scandemo, CL_ScanDemo_f, "Scan a recorded demo file (.dem ) for specific game events and dump data.", nullptr, dem );
 CON_COMMAND_EXTERN_F( playoverwatchevidence, CL_PlayOverwatchEvidence_f, "Play evidence for an overwatch case.", FCVAR_HIDDEN );
-CON_COMMAND_AUTOCOMPLETEFILE( timedemo, CL_TimeDemo_f, "Play a demo and report performance info.", NULL, dem );
-CON_COMMAND_AUTOCOMPLETEFILE( timedemoquit, CL_TimeDemoQuit_f, "Play a demo, report performance info, and then exit", NULL, dem );
-CON_COMMAND_AUTOCOMPLETEFILE( listdemo, CL_ListDemo_f, "List demo file contents.", NULL, dem );
-CON_COMMAND_AUTOCOMPLETEFILE( benchframe, CL_BenchFrame_f, "Takes a snapshot of a particular frame in a time demo.", NULL, dem );
-CON_COMMAND_AUTOCOMPLETEFILE( timedemo_vprofrecord, CL_TimeDemo_VProfRecord_f, "Play a demo and report performance info.  Also record vprof data for the span of the demo", NULL, dem );
+CON_COMMAND_AUTOCOMPLETEFILE( timedemo, CL_TimeDemo_f, "Play a demo and report performance info.", nullptr, dem );
+CON_COMMAND_AUTOCOMPLETEFILE( timedemoquit, CL_TimeDemoQuit_f, "Play a demo, report performance info, and then exit", nullptr, dem );
+CON_COMMAND_AUTOCOMPLETEFILE( listdemo, CL_ListDemo_f, "List demo file contents.", nullptr, dem );
+CON_COMMAND_AUTOCOMPLETEFILE( benchframe, CL_BenchFrame_f, "Takes a snapshot of a particular frame in a time demo.", nullptr, dem );
+CON_COMMAND_AUTOCOMPLETEFILE( timedemo_vprofrecord, CL_TimeDemo_VProfRecord_f, "Play a demo and report performance info.  Also record vprof data for the span of the demo", nullptr, dem );
 
 
 CON_COMMAND( demo_pause, "Pauses demo playback." )

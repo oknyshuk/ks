@@ -19,7 +19,7 @@
 class CMultiInputVar
 {
 public:
-	CMultiInputVar() : m_InputList(NULL) {}
+	CMultiInputVar() : m_InputList(nullptr) {}
 	~CMultiInputVar();
 
 	struct inputitem_t

@@ -178,7 +178,7 @@ void CLoaderMemAlloc::Stop()
 
 	CMatRenderContextPtr pRenderContext( g_pMaterialSystem );
 	pRenderContext->EnableNonInteractiveMode( MATERIAL_NON_INTERACTIVE_MODE_NONE );
-	SetThreadedLoadLibraryFunc( NULL );
+	SetThreadedLoadLibraryFunc( nullptr );
 }
 
 void CLoaderMemAlloc::AbortDueToShutdown()

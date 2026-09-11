@@ -108,8 +108,8 @@ public:
 
 	virtual int GetAliveMembers( void );
 
-	virtual int GetBotMembers( CUtlVector< class CCSBot* > *pOutVecBots = NULL );
-	virtual int GetHumanMembers( CUtlVector< class CCSPlayer* > *pOutVecPlayers = NULL );
+	virtual int GetBotMembers( CUtlVector< class CCSBot* > *pOutVecBots = nullptr );
+	virtual int GetHumanMembers( CUtlVector< class CCSPlayer* > *pOutVecPlayers = nullptr );
 
 	float m_flLastPlayerSortTime;
 	static int m_nStaticGGLeader_CT;

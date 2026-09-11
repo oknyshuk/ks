@@ -168,9 +168,9 @@ C_BaseCombatWeapon *CHudWeaponSelection::FindNextWeaponInWeaponSelection(int iCu
 {
 	C_BasePlayer *pPlayer = C_BasePlayer::GetLocalPlayer();
 	if ( !pPlayer )
-		return NULL;
+		return nullptr;
 
-	C_BaseCombatWeapon *pNextWeapon = NULL;
+	C_BaseCombatWeapon *pNextWeapon = nullptr;
 
 	// search all the weapons looking for the closest next
 	int iLowestNextSlot = MAX_WEAPON_SLOTS;
@@ -228,9 +228,9 @@ C_BaseCombatWeapon *CHudWeaponSelection::FindPrevWeaponInWeaponSelection(int iCu
 {
 	C_BasePlayer *pPlayer = C_BasePlayer::GetLocalPlayer();
 	if ( !pPlayer )
-		return NULL;
+		return nullptr;
 
-	C_BaseCombatWeapon *pPrevWeapon = NULL;
+	C_BaseCombatWeapon *pPrevWeapon = nullptr;
 
 	// search all the weapons looking for the closest next
 	int iLowestPrevSlot = -1;
@@ -319,7 +319,7 @@ void CHudWeaponSelection::SelectSpecificWeapon( CSWeaponID weaponID )
 
 	// get the weapon by ID if the player owns it
 	CWeaponCSBase* pWeapon = pPlayer->GetCSWeapon(weaponID);
-	if ( pWeapon != NULL )
+	if ( pWeapon != nullptr )
 	{
 		// Make sure the player's allowed to switch weapons
 		if ( pPlayer->IsAllowedToSwitchWeapons() == false )
@@ -453,7 +453,7 @@ void CHudWeaponSelection::CycleToNextWeapon(WEAPON_SELECTION_MODE selectionMode)
 	if ( !pPlayer )
 		return;
 
-	C_BaseCombatWeapon *pNextWeapon = NULL;
+	C_BaseCombatWeapon *pNextWeapon = nullptr;
 	if ( IsInSelectionMode() )
 	{
 		// find the next selection spot
@@ -504,7 +504,7 @@ void CHudWeaponSelection::CycleToPrevWeapon( void )
 	if ( pPlayer->IsPlayerDead() )
 		return;
 
-	C_BaseCombatWeapon *pNextWeapon = NULL;
+	C_BaseCombatWeapon *pNextWeapon = nullptr;
 	if ( IsInSelectionMode() )
 	{
 		// find the next selection spot
@@ -559,7 +559,7 @@ void CHudWeaponSelection::SwitchToLastWeapon( void )
 	C_BaseCombatWeapon *activeWeapon = player->GetActiveWeapon();
 
 	if ( lastWeapon == activeWeapon )
-		lastWeapon = NULL;
+		lastWeapon = nullptr;
 
 	// make sure our last weapon is still with us and valid (has ammo etc)
 	if ( lastWeapon )
@@ -577,7 +577,7 @@ void CHudWeaponSelection::SwitchToLastWeapon( void )
 		}
 
 		if ( i == MAX_WEAPONS )
-			lastWeapon = NULL; // weapon not found/valid
+			lastWeapon = nullptr; // weapon not found/valid
 	}
 
 	// if we don't have a 'last weapon' choose best weapon
@@ -597,23 +597,23 @@ C_BaseCombatWeapon *CHudWeaponSelection::GetWeaponInSlot( int iSlot, int iSlotPo
 	C_BasePlayer *player = C_BasePlayer::GetLocalPlayer();
 
 	if ( !player )
-		return NULL;
+		return nullptr;
 
 	if ( player->IsPlayerDead() )
-		return NULL;
+		return nullptr;
 
 	for ( int i = 0; i < player->WeaponCount(); i++ )
 	{
 		C_BaseCombatWeapon *pWeapon = player->GetWeapon(i);
 		
-		if ( pWeapon == NULL )
+		if ( pWeapon == nullptr )
 			continue;
 
 		if ( pWeapon->GetSlot() == iSlot && pWeapon->GetPosition() == iSlotPos )
 			return pWeapon;
 	}
 
-	return NULL;
+	return nullptr;
 }
 
 //-----------------------------------------------------------------------------
@@ -626,23 +626,23 @@ C_BaseCombatWeapon *CHudWeaponSelection::GetWeaponInSlotForTarget( C_BasePlayer 
 		return GetWeaponInSlot( iSlot, iSlotPos );
 
 	if ( !player )
-		return NULL;
+		return nullptr;
 
 	if ( player->IsPlayerDead() )
-		return NULL;
+		return nullptr;
 
 	for ( int i = 0; i < player->WeaponCount(); i++ )
 	{
 		C_BaseCombatWeapon *pWeapon = player->GetWeapon(i);
 
-		if ( pWeapon == NULL )
+		if ( pWeapon == nullptr )
 			continue;
 
 		if ( pWeapon->GetSlot() == iSlot && pWeapon->GetPosition() == iSlotPos )
 			return pWeapon;
 	}
 
-	return NULL;
+	return nullptr;
 }
 
 //-----------------------------------------------------------------------------
@@ -688,7 +688,7 @@ void CHudWeaponSelection::SelectWeapon( void )
 
 		SetWeaponSelected();
 	
-		m_hSelectedWeapon = NULL;
+		m_hSelectedWeapon = nullptr;
 	
 		engine->ClientCmd( "cancelselect\n" );
 
@@ -711,7 +711,7 @@ void CHudWeaponSelection::CancelWeaponSelection()
 	{
 		HideSelection();
 
-		m_hSelectedWeapon = NULL;
+		m_hSelectedWeapon = nullptr;
 	}
 	else
 	{
@@ -759,7 +759,7 @@ void CHudWeaponSelection::SelectWeaponSlot( int iSlot )
 		pActiveWeapon = GetNextActivePos( iSlot, 0 );
 	}
 	
-	if ( pActiveWeapon != NULL )
+	if ( pActiveWeapon != nullptr )
 	{
 		// Mark the change
 		SetSelectedWeapon( pActiveWeapon );
@@ -770,7 +770,7 @@ void CHudWeaponSelection::SelectWeaponSlot( int iSlot )
 		{
 			C_BaseCombatWeapon *pSlotWpn = GetWeaponInSlot( pActiveWeapon->GetSlot(), i );
 
-			if( pSlotWpn != NULL && pSlotWpn != pActiveWeapon )
+			if( pSlotWpn != nullptr && pSlotWpn != pActiveWeapon )
 			{
 				bMultipleWeaponsInSlot = true;
 				break;

@@ -103,7 +103,7 @@ int	CMatRenderContextBase::sm_nInitializeCount = 0;
 // Constructor
 //-----------------------------------------------------------------------------
 CMatRenderContextBase::CMatRenderContextBase() :
-	m_pMaterialSystem( NULL ), m_RenderTargetStack( 16, 32 ), m_ScissorRectStack( 16, 32 ), m_MatrixMode( NUM_MATRIX_MODES )
+	m_pMaterialSystem( nullptr ), m_RenderTargetStack( 16, 32 ), m_ScissorRectStack( 16, 32 ), m_MatrixMode( NUM_MATRIX_MODES )
 {
 	int i;
 
@@ -111,18 +111,18 @@ CMatRenderContextBase::CMatRenderContextBase() :
 
 	// Put a special element at the top of the RT stack (indicating back buffer is current top of stack)
 	// NULL indicates back buffer, -1 indicates full-size viewport
-	RenderTargetStackElement_t initialElement = { {NULL, NULL, NULL, NULL}, NULL, 0, 0, -1, -1 };
+	RenderTargetStackElement_t initialElement = { {nullptr, nullptr, nullptr, nullptr}, nullptr, 0, 0, -1, -1 };
 
 	m_RenderTargetStack.Push( initialElement );
 
 	for ( i = 0; i < MAX_FB_TEXTURES; i++ )
 	{
-		m_pCurrentFrameBufferCopyTexture[i] = NULL;
+		m_pCurrentFrameBufferCopyTexture[i] = nullptr;
 	}
 
-	m_pCurrentMaterial = NULL;
-	m_pCurrentProxyData = NULL;
-	m_pUserDefinedLightmap = NULL;
+	m_pCurrentMaterial = nullptr;
+	m_pCurrentProxyData = nullptr;
+	m_pUserDefinedLightmap = nullptr;
 	m_HeightClipMode = MATERIAL_HEIGHTCLIPMODE_DISABLE;
 	m_HeightClipZ = 0.0f;
 	m_bEnableClipping = true;
@@ -396,7 +396,7 @@ ITexture *CMatRenderContextBase::GetRenderTarget( void )
 	}
 	else
 	{
-		return NULL; // should this be something else, since NULL indicates back buffer?
+		return nullptr; // should this be something else, since NULL indicates back buffer?
 	}
 }
 
@@ -427,7 +427,7 @@ ITexture *CMatRenderContextBase::GetFrameBufferCopyTexture( int textureIndex )
 	if( textureIndex < 0 || textureIndex > MAX_FB_TEXTURES )
 	{
 		Assert( 0 );
-		return NULL; // FIXME!  This should return the error texture.
+		return nullptr; // FIXME!  This should return the error texture.
 	}
 	return m_pCurrentFrameBufferCopyTexture[textureIndex];
 }
@@ -817,7 +817,7 @@ void CMatRenderContextBase::PushRenderTargetAndViewport( )
 void CMatRenderContextBase::PushRenderTargetAndViewport( ITexture *pTexture )
 {
 	// Just blindly push the data on the stack with flags indicating full bounds
-	RenderTargetStackElement_t element = { {pTexture, NULL, NULL, NULL}, NULL, 0, 0, -1, -1 };
+	RenderTargetStackElement_t element = { {pTexture, nullptr, nullptr, nullptr}, nullptr, 0, 0, -1, -1 };
 	m_RenderTargetStack.Push( element );
 	CommitRenderTargetAndViewport();
 }
@@ -832,7 +832,7 @@ void CMatRenderContextBase::PushRenderTargetAndViewport( ITexture *pTexture )
 //-----------------------------------------------------------------------------
 void CMatRenderContextBase::PushRenderTargetAndViewport( ITexture *pTexture, int nViewX, int nViewY, int nViewW, int nViewH )
 {
-	CMatRenderContextBase::PushRenderTargetAndViewport( pTexture, NULL, nViewX, nViewY, nViewW, nViewH );
+	CMatRenderContextBase::PushRenderTargetAndViewport( pTexture, nullptr, nViewX, nViewY, nViewW, nViewH );
 }
 
 
@@ -843,7 +843,7 @@ void CMatRenderContextBase::PushRenderTargetAndViewport( ITexture *pTexture, int
 void CMatRenderContextBase::PushRenderTargetAndViewport( ITexture *pTexture, ITexture *pDepthTexture, int nViewX, int nViewY, int nViewW, int nViewH )
 {
 	// Just blindly push the data on the stack
-	RenderTargetStackElement_t element = { {pTexture, NULL, NULL, NULL}, pDepthTexture, nViewX, nViewY, nViewW, nViewH };
+	RenderTargetStackElement_t element = { {pTexture, nullptr, nullptr, nullptr}, pDepthTexture, nViewX, nViewY, nViewW, nViewH };
 	m_RenderTargetStack.Push( element );
 	CommitRenderTargetAndViewport();
 }
@@ -942,10 +942,10 @@ Vector CMatRenderContextBase::GetToneMappingScaleLinear( void )
 CMatRenderContext::CMatRenderContext()
 {
 	g_FrameNum = 0;
-	m_pBatchIndices = NULL;
-	m_pBatchMesh = NULL;
-	m_pCurrentIndexBuffer = NULL;
-	m_pMorphRenderContext = NULL;
+	m_pBatchIndices = nullptr;
+	m_pBatchMesh = nullptr;
+	m_pCurrentIndexBuffer = nullptr;
+	m_pMorphRenderContext = nullptr;
 	m_NonInteractiveMode = MATERIAL_NON_INTERACTIVE_MODE_NONE;
 }
 
@@ -957,7 +957,7 @@ InitReturnVal_t CMatRenderContext::Init( CMaterialSystem *pMaterialSystem )
 
 	m_pMaterialSystem = pMaterialSystem;
 
-	m_pBoundMorph = NULL;
+	m_pBoundMorph = nullptr;
 
 	// Create some lovely textures
 	m_pLocalCubemapTexture = TextureManager()->ErrorTexture();
@@ -971,13 +971,13 @@ void CMatRenderContext::Shutdown( )
 	if ( m_pUserDefinedLightmap )
 	{
 		m_pUserDefinedLightmap->DecrementReferenceCount();
-		m_pUserDefinedLightmap = NULL;
+		m_pUserDefinedLightmap = nullptr;
 	}
 
 	if ( m_pMorphRenderContext )
 	{
 		g_pMorphMgr->FreeRenderContext( m_pMorphRenderContext );
-		m_pMorphRenderContext = NULL;
+		m_pMorphRenderContext = nullptr;
 	}
 
 	BaseClass::Shutdown();
@@ -986,7 +986,7 @@ void CMatRenderContext::Shutdown( )
 void CMatRenderContext::OnReleaseShaderObjects()
 {
 	// alt-tab unbinds the morph
-	m_pBoundMorph = NULL;
+	m_pBoundMorph = nullptr;
 }
 
 
@@ -1623,7 +1623,7 @@ IMesh* CMatRenderContext::GetDynamicMesh( bool buffered, IMesh* pVertexOverride,
 	VPROF_ASSERT_ACCOUNTED( "CMatRenderContext::GetDynamicMesh" );
 	if( pAutoBind )
 	{
-		Bind( pAutoBind, NULL );
+		Bind( pAutoBind, nullptr );
 	}
 
 	if ( pVertexOverride )
@@ -1632,7 +1632,7 @@ IMesh* CMatRenderContext::GetDynamicMesh( bool buffered, IMesh* pVertexOverride,
 		{
 			// UNDONE: support compressed dynamic meshes if needed (pro: less VB memory, con: time spent compressing)
 			DebuggerBreak();
-			return NULL;
+			return nullptr;
 		}
 	}
 
@@ -1653,7 +1653,7 @@ IMesh* CMatRenderContext::GetDynamicMeshEx( VertexFormat_t vertexFormat, bool bB
 	VPROF_ASSERT_ACCOUNTED( "CMatRenderContext::GetDynamicMesh" );
 	if( pAutoBind )
 	{
-		Bind( pAutoBind, NULL );
+		Bind( pAutoBind, nullptr );
 	}
 
 	if ( pVertexOverride )
@@ -1662,7 +1662,7 @@ IMesh* CMatRenderContext::GetDynamicMeshEx( VertexFormat_t vertexFormat, bool bB
 		{
 			// UNDONE: support compressed dynamic meshes if needed (pro: less VB memory, con: time spent compressing)
 			DebuggerBreak();
-			return NULL;
+			return nullptr;
 		}
 	}
 
@@ -1704,7 +1704,7 @@ void CMatRenderContext::CommitRenderTargetAndViewport( void )
 	for( int rt=0; rt<NELEMS(element.m_pRenderTargets); rt++ )
 	{
 		// If we're dealing with the back buffer
-		if ( element.m_pRenderTargets[rt] == NULL )
+		if ( element.m_pRenderTargets[rt] == nullptr )
 		{
 			g_pShaderAPI->SetRenderTargetEx(rt); // No texture parameter here indicates back buffer
 						
@@ -1885,7 +1885,7 @@ void CMatRenderContext::SetRenderTargetEx( int nRenderTargetID, ITexture *pNewTa
 	if( pNewTarget != pOldTarget )
 	{
 		// If we're going to render to the back buffer
-		if ( pNewTarget == NULL )
+		if ( pNewTarget == nullptr )
 		{
 			if ( nRenderTargetID == 0)						// reset viewport on set of rt 0
 			{
@@ -1943,7 +1943,7 @@ void CMatRenderContext::GetRenderTargetDimensions( int &width, int &height ) con
 	ITexture *pTOS = m_RenderTargetStack.Top().m_pRenderTargets[0];
 
 	// If top of stack isn't the back buffer, get dimensions from the texture
-	if ( pTOS != NULL )
+	if ( pTOS != nullptr )
 	{
 		width = pTOS->GetActualWidth();
 		height = pTOS->GetActualHeight();
@@ -2184,7 +2184,7 @@ void CMatRenderContext::Bind( IMaterial *pMaterial, void *proxyData )
 	SyncMatrices();
 	if ( GetMaterialSystem()->GetThreadMode() == MATERIAL_SINGLE_THREADED || pMatInternal->HasQueueFriendlyProxies() )
 	{
-		pMatInternal->CallBindProxy( proxyData, NULL );
+		pMatInternal->CallBindProxy( proxyData, nullptr );
 	}
 	g_pShaderAPI->Bind( GetCurrentMaterialInternal() );
 }
@@ -2205,7 +2205,7 @@ void CMatRenderContext::CopyRenderTargetToTextureEx( ITexture *pTexture, int nRe
 
 void CMatRenderContext::CopyRenderTargetToTexture( ITexture *pTexture )
 {
-	CopyRenderTargetToTextureEx( pTexture, NULL, NULL );
+	CopyRenderTargetToTextureEx( pTexture, 0, nullptr );
 }
 
 
@@ -2312,7 +2312,7 @@ void CMatRenderContext::Viewport( int x, int y, int width, int height )
 		ITexture *pTarget = m_RenderTargetStack.Top().m_pRenderTargets[0];
 
 		// If target is the back buffer
-		if ( pTarget == NULL )
+		if ( pTarget == nullptr )
 		{
 			m_Viewport.m_nTopLeftX = 0;
 			m_Viewport.m_nTopLeftY = 0;
@@ -2353,7 +2353,7 @@ void CMatRenderContext::GetViewport( int& x, int& y, int& width, int& height ) c
 		x = y = 0;
 
 		// If target is back buffer
-		if ( element.m_pRenderTargets[0] == NULL )
+		if ( element.m_pRenderTargets[0] == nullptr )
 		{
 			g_pShaderAPI->GetBackBufferDimensions( width, height );
 		}
@@ -2833,7 +2833,7 @@ float CMatRenderContext::GetSubDHeight()
 
 void CMatRenderContext::GetStandardTextureDimensions( int *pWidth, int *pHeight, StandardTextureId_t id )
 {
-	ITexture *pTexture = NULL;
+	ITexture *pTexture = nullptr;
 	switch ( id )
 	{
 	case TEXTURE_LIGHTMAP:
@@ -3091,8 +3091,8 @@ void CMatRenderContext::DrawBatch(MaterialPrimitiveType_t primType, int firstInd
 
 void CMatRenderContext::EndBatch()
 {
-	m_pBatchIndices = NULL;
-	m_pBatchMesh = NULL;
+	m_pBatchIndices = nullptr;
+	m_pBatchMesh = nullptr;
 }
 
 bool CMatRenderContext::OnDrawMesh( IMesh *pMesh, int firstIndex, int numIndices )
@@ -3155,7 +3155,7 @@ float *CMatRenderContext::LockSubDBuffer( int nNumRows )
 #else
 	// not supported
 	Assert( 0 );
-	return NULL;
+	return nullptr;
 #endif
 }
 

@@ -44,7 +44,7 @@ public:
 
 			~CTest_ProxyToggle_Networkable()
 			{
-				g_pTestObj = NULL;
+				g_pTestObj = nullptr;
 			}
 
 	int UpdateTransmitState()
@@ -64,7 +64,7 @@ void* SendProxy_TestProxyToggle( const SendProp *pProp, const void *pStructBase,
 	else
 	{
 		pRecipients->ClearAllRecipients();
-		return NULL;
+		return nullptr;
 	}
 }
 REGISTER_SEND_PROXY_NON_MODIFIED_POINTER( SendProxy_TestProxyToggle );

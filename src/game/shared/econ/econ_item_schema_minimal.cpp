@@ -126,7 +126,7 @@ CEconItemDefinition::CEconItemDefinition()
 	m_szModelPlayer[0] = '\0';
 	m_szModelWorld[0] = '\0';
 	m_szWorldDroppedModel[0] = '\0';
-	m_pKVItem = NULL;
+	m_pKVItem = nullptr;
 
 	for ( int i = 0; i < LOADOUT_COUNT; i++ )
 	{
@@ -140,7 +140,7 @@ CEconItemDefinition::~CEconItemDefinition()
 	if ( m_pKVItem )
 	{
 		m_pKVItem->deleteThis();
-		m_pKVItem = NULL;
+		m_pKVItem = nullptr;
 	}
 }
 
@@ -179,8 +179,8 @@ bool CEconItemDefinition::BInitFromKV( KeyValues *pKV, KeyValues *pPrefabs, CEco
 	V_strncpy( m_szItemBaseName, pszItemBaseName, sizeof( m_szItemBaseName ) );
 
 	// Get loadout slot from item_sub_position (preferred) or item_slot
-	const char *pszSubPosition = pKV->GetString( "item_sub_position", NULL );
-	const char *pszItemSlot = pKV->GetString( "item_slot", NULL );
+	const char *pszSubPosition = pKV->GetString( "item_sub_position", nullptr );
+	const char *pszItemSlot = pKV->GetString( "item_slot", nullptr );
 
 	if ( pszSubPosition && *pszSubPosition )
 	{
@@ -245,13 +245,13 @@ bool CEconItemDefinition::BInitFromKV( KeyValues *pKV, KeyValues *pPrefabs, CEco
 	KeyValues *pAttribs = pKV->FindKey( "attributes" );
 	if ( pAttribs )
 	{
-		const char *pszReserveAmmo = pAttribs->GetString( "primary reserve ammo max", NULL );
+		const char *pszReserveAmmo = pAttribs->GetString( "primary reserve ammo max", nullptr );
 		if ( pszReserveAmmo )
 		{
 			m_iPrimaryReserveAmmoMax = V_atoi( pszReserveAmmo );
 		}
 
-		const char *pszClipSize = pAttribs->GetString( "primary clip size", NULL );
+		const char *pszClipSize = pAttribs->GetString( "primary clip size", nullptr );
 		if ( pszClipSize )
 		{
 			m_iPrimaryClipSize = V_atoi( pszClipSize );
@@ -473,7 +473,7 @@ bool CEconItemSchema::BInitPrefabs( KeyValues *pKVPrefabs )
 KeyValues *CEconItemSchema::GetMergedPrefab( const char *pszPrefabName )
 {
 	if ( !pszPrefabName || !*pszPrefabName )
-		return NULL;
+		return nullptr;
 
 	// Check if we've already merged this prefab
 	int iCached = m_dictMergedPrefabs.Find( pszPrefabName );
@@ -486,17 +486,17 @@ KeyValues *CEconItemSchema::GetMergedPrefab( const char *pszPrefabName )
 	int iBase = m_dictPrefabs.Find( pszPrefabName );
 	if ( iBase == m_dictPrefabs.InvalidIndex() )
 	{
-		return NULL;
+		return nullptr;
 	}
 
 	KeyValues *pBasePrefab = m_dictPrefabs[iBase];
 	if ( !pBasePrefab )
-		return NULL;
+		return nullptr;
 
 	// Check if this prefab inherits from another
-	const char *pszParentPrefab = pBasePrefab->GetString( "prefab", NULL );
+	const char *pszParentPrefab = pBasePrefab->GetString( "prefab", nullptr );
 
-	KeyValues *pMerged = NULL;
+	KeyValues *pMerged = nullptr;
 	if ( pszParentPrefab && *pszParentPrefab )
 	{
 		// Recursively get the parent prefab (already merged)
@@ -531,9 +531,9 @@ KeyValues *CEconItemSchema::GetMergedPrefab( const char *pszPrefabName )
 KeyValues *CEconItemSchema::MergeWithPrefab( KeyValues *pKVItem, const char *pszPrefab )
 {
 	if ( !pKVItem )
-		return NULL;
+		return nullptr;
 
-	KeyValues *pMerged = NULL;
+	KeyValues *pMerged = nullptr;
 
 	if ( pszPrefab && *pszPrefab )
 	{
@@ -571,7 +571,7 @@ bool CEconItemSchema::BInitItems( KeyValues *pKVItems )
 	for ( KeyValues *pItem = pKVItems->GetFirstSubKey(); pItem; pItem = pItem->GetNextKey() )
 	{
 		// Get prefab name if any
-		const char *pszPrefab = pItem->GetString( "prefab", NULL );
+		const char *pszPrefab = pItem->GetString( "prefab", nullptr );
 
 		// Merge with prefab
 		KeyValues *pMergedKV = MergeWithPrefab( pItem, pszPrefab );
@@ -580,7 +580,7 @@ bool CEconItemSchema::BInitItems( KeyValues *pKVItems )
 
 		// Create the item definition
 		CEconItemDefinition *pDef = new CEconItemDefinition();
-		if ( !pDef->BInitFromKV( pMergedKV, NULL, this ) )
+		if ( !pDef->BInitFromKV( pMergedKV, nullptr, this ) )
 		{
 			delete pDef;
 			pMergedKV->deleteThis();
@@ -630,7 +630,7 @@ CEconItemDefinition *CEconItemSchema::GetItemDefinition( uint16 nDefIndex ) cons
 {
 	int idx = m_mapItems.Find( nDefIndex );
 	if ( idx == m_mapItems.InvalidIndex() )
-		return NULL;
+		return nullptr;
 
 	return m_mapItems[idx];
 }
@@ -641,11 +641,11 @@ CEconItemDefinition *CEconItemSchema::GetItemDefinition( uint16 nDefIndex ) cons
 CEconItemDefinition *CEconItemSchema::GetItemDefinitionByName( const char *pszName ) const
 {
 	if ( !pszName || !*pszName )
-		return NULL;
+		return nullptr;
 
 	int idx = m_dictItemsByName.Find( pszName );
 	if ( idx == m_dictItemsByName.InvalidIndex() )
-		return NULL;
+		return nullptr;
 
 	return m_dictItemsByName[idx];
 }
@@ -656,7 +656,7 @@ CEconItemDefinition *CEconItemSchema::GetItemDefinitionByName( const char *pszNa
 CEconItemDefinition *CEconItemSchema::GetItemDefinitionByMapIndex( int index ) const
 {
 	if ( index < 0 || index >= m_mapItems.Count() )
-		return NULL;
+		return nullptr;
 
 	return m_mapItems.Element( index );
 }

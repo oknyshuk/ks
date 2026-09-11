@@ -309,13 +309,13 @@ void CMapListManager::RefreshList( void )
 		// Search the directory structure.
 		char mapwild[MAX_QPATH];
 		Q_strncpy(mapwild,"maps/*.bsp", sizeof( mapwild ) );
-		char const *findfn = Sys_FindFirst( mapwild, NULL, 0 );
+		char const *findfn = Sys_FindFirst( mapwild, nullptr, 0 );
 		while ( findfn )
 		{
 			if ( V_stristr( findfn, ".360.bsp" ) )
 			{
 				// ignore 360 bsp
-				findfn = Sys_FindNext( NULL, 0 );
+				findfn = Sys_FindNext( nullptr, 0 );
 				continue;
 			}
 
@@ -349,7 +349,7 @@ void CMapListManager::RefreshList( void )
 				}
 			}
 
-			findfn = Sys_FindNext( NULL, 0 );
+			findfn = Sys_FindNext( nullptr, 0 );
 		}
 		Sys_FindClose();
 	}
@@ -447,13 +447,13 @@ void CMapListManager::BuildList( void )
 		// Search the directory structure.
 		char mapwild[MAX_QPATH];
 		Q_snprintf( mapwild, sizeof( mapwild ), "maps/*.%sbsp", "" );
-		char const *findfn = Sys_FindFirst( mapwild, NULL, 0 );
+		char const *findfn = Sys_FindFirst( mapwild, nullptr, 0 );
 		while ( findfn )
 		{
 			if ( V_stristr( findfn, ".360.bsp" ) )
 			{
 				// ignore 360 bsp
-				findfn = Sys_FindNext( NULL, 0 );
+				findfn = Sys_FindNext( nullptr, 0 );
 				continue;
 			}
 
@@ -471,7 +471,7 @@ void CMapListManager::BuildList( void )
 				m_Items.Insert( sz, item );
 			}
 
-			findfn = Sys_FindNext( NULL, 0 );
+			findfn = Sys_FindNext( nullptr, 0 );
 		}
 		Sys_FindClose();
 	}
@@ -553,7 +553,7 @@ static int MapList_CountMaps( const char *pszSubString, bool listobsolete, int& 
 			char const *mapname = g_MapListMgr.GetMapName( i );
 			int valid = g_MapListMgr.IsMapValid( i );
 
-			if ( !substringlength || ( V_stristr( &mapname[ 5 ], pszSubString ) != NULL ) )
+			if ( !substringlength || ( V_stristr( &mapname[ 5 ], pszSubString ) != nullptr ) )
 			{
 				if ( MapList_CheckPrintMap( "(fs)", &mapname[ 5 ], valid, showOutdated ? true : false, false ) )
 				{
@@ -606,7 +606,7 @@ static int MapList_ListMaps( const char *pszSubString, bool listobsolete, bool v
 			char const *mapname = g_MapListMgr.GetMapName( i );
 			int valid = g_MapListMgr.IsMapValid( i );
 
-			if ( !substringlength || ( V_stristr( &mapname[ 5 ], pszSubString ) != NULL ) )
+			if ( !substringlength || ( V_stristr( &mapname[ 5 ], pszSubString ) != nullptr ) )
 			{
 				if ( MapList_CheckPrintMap( "(fs)", &mapname[ 5 ], valid, showOutdated ? true : false, verbose ) )
 				{
@@ -750,7 +750,7 @@ static int Host_Changelevel2_f_CompletionFunc( char const *partial, char command
 //-----------------------------------------------------------------------------
 static void Host_Maps_f( const CCommand &args )
 {
-	const char *pszSubString = NULL;
+	const char *pszSubString = nullptr;
 
 	if ( args.ArgC() != 2 && args.ArgC() != 3 )
 	{
@@ -766,13 +766,13 @@ static void Host_Maps_f( const CCommand &args )
 	}
 
 	if ( pszSubString && ( pszSubString[0] == '*' ))
-		pszSubString = NULL;
+		pszSubString = nullptr;
 
 	int longest = 0;
 	int count = MapList_CountMaps( pszSubString, true, longest );
 	if ( count > 0 )
 	{
-		MapList_ListMaps( pszSubString, true, true, count, 0, NULL );
+		MapList_ListMaps( pszSubString, true, true, count, 0, nullptr );
 	}
 }
 

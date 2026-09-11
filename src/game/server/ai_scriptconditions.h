@@ -108,7 +108,7 @@ public:
 		m_fActorInVehicle( TRS_NONE ),
 		m_fPlayerInVehicle( TRS_NONE )
 	{
-		m_hActor = NULL;
+		m_hActor = nullptr;
 	}
 
 private:

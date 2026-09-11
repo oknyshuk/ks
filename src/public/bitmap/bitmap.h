@@ -81,7 +81,7 @@ struct Bitmap_t
 	/// Set this bitmap to be a cropped rectangle from the given bitmap.
 	/// The source pointer can be NULL or point to this, which means to do
 	/// the crop in place.
-	void Crop( int x0, int y0, int nWidth, int nHeight, const Bitmap_t *pImgSource = NULL );
+	void Crop( int x0, int y0, int nWidth, int nHeight, const Bitmap_t *pImgSource = nullptr );
 
 	/// Blit a rectangle of pixel data into this image.
 	void SetPixelData( const Bitmap_t &src, int nSrcX1, int nSrcY1, int nCopySizeX, int nCopySizeY, int nDestX1, int nDestY1 );
@@ -119,7 +119,7 @@ inline void Bitmap_t::Reset()
 	m_nWidth = 0;
 	m_nHeight = 0;
 	m_ImageFormat = IMAGE_FORMAT_UNKNOWN;
-	m_pBits = NULL;
+	m_pBits = nullptr;
 	m_nPixelSize = 0;
 	m_bOwnsBuffer = false;
 	m_nStride = 0;
@@ -128,7 +128,7 @@ inline void Bitmap_t::Reset()
 inline unsigned char *Bitmap_t::GetPixel( int x, int y )
 {
 	if ( !m_pBits )
-		return NULL;
+		return nullptr;
 
 	return m_pBits + (y*m_nStride) + x* m_nPixelSize;
 }
@@ -136,7 +136,7 @@ inline unsigned char *Bitmap_t::GetPixel( int x, int y )
 inline const unsigned char *Bitmap_t::GetPixel( int x, int y ) const
 {
 	if ( !m_pBits )
-		return NULL;
+		return nullptr;
 
 	return m_pBits + (y*m_nStride) + x* m_nPixelSize;
 }

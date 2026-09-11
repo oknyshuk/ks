@@ -1091,7 +1091,7 @@ class CUtlPtrLinkedList
 {
 public:
 	CUtlPtrLinkedList()
-		: m_pFirst( NULL ),
+		: m_pFirst( nullptr ),
 		m_nElems( 0 )
 	{
 		COMPILE_TIME_ASSERT( sizeof(IndexType_t) == sizeof(Node_t *) );
@@ -1116,7 +1116,7 @@ public:
 
 	IndexType_t	AddToTail()								
 	{ 
-		return DoInsertBefore( (IndexType_t)m_pFirst, NULL );
+		return DoInsertBefore( (IndexType_t)m_pFirst, nullptr );
 	}
 
 	IndexType_t	AddToTail( T const& src )
@@ -1126,7 +1126,7 @@ public:
 
 	IndexType_t	AddToHead()								
 	{ 
-		IndexType_t result = DoInsertBefore( (IndexType_t)m_pFirst, NULL );
+		IndexType_t result = DoInsertBefore( (IndexType_t)m_pFirst, nullptr );
 		m_pFirst = ((Node_t *)result);
 		return result;
 	}
@@ -1140,13 +1140,13 @@ public:
 
 	IndexType_t InsertBefore( IndexType_t before )
 	{
-		return DoInsertBefore( before, NULL );
+		return DoInsertBefore( before, nullptr );
 	}
 
 	IndexType_t InsertAfter( IndexType_t after )
 	{
 		Node_t *pBefore = ((Node_t *)after)->next;
-		return DoInsertBefore( pBefore, NULL );
+		return DoInsertBefore( pBefore, nullptr );
 	}
 
 	IndexType_t InsertBefore( IndexType_t before, T const& src  )
@@ -1166,7 +1166,7 @@ public:
 
 		if ( p->pNext == p )
 		{
-			m_pFirst = NULL;
+			m_pFirst = nullptr;
 		}
 		else
 		{
@@ -1195,7 +1195,7 @@ public:
 			} while( p != m_pFirst );
 		}
 
-		m_pFirst = NULL;
+		m_pFirst = nullptr;
 		m_nElems = 0;
 	}
 
@@ -1216,7 +1216,7 @@ public:
 		{
 			return (IndexType_t)p;
 		}
-		return NULL; 
+		return nullptr; 
 	}
 
 	bool IsValidIndex( IndexType_t i ) const
@@ -1227,7 +1227,7 @@ public:
 
 	inline static IndexType_t  InvalidIndex()			
 	{ 
-		return NULL; 
+		return nullptr; 
 	}
 private:
 

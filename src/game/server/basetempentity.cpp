@@ -25,7 +25,7 @@ IMPLEMENT_REFLECT_SERVERCLASS( CBaseTempEntity, DT_BaseTempEntity )
 
 
 // Global list of temp entity event classes
-CBaseTempEntity *CBaseTempEntity::s_pTempEntities = NULL;
+CBaseTempEntity *CBaseTempEntity::s_pTempEntities = nullptr;
 
 //-----------------------------------------------------------------------------
 // Purpose: Returns head of list

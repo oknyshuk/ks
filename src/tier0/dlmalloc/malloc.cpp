@@ -5057,7 +5057,7 @@ void *determine_mspace(void *mem)
 		return get_mstate_for(p);
 	}
 #endif
-	return NULL;
+	return nullptr;
 }
 
 #endif /* MSPACES */

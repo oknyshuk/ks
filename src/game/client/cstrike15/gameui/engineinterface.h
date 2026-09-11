@@ -27,9 +27,9 @@
 class IMatchExtPortal2
 {
 public:
-	inline KeyValues * GetAllMissions() { return NULL; }
-	inline KeyValues * GetMapInfoByBspName( KeyValues *, char const *, KeyValues ** = NULL ) { return NULL; }
-	inline KeyValues * GetMapInfo( KeyValues *, KeyValues ** = NULL ) { return NULL; }
+	inline KeyValues * GetAllMissions() { return nullptr; }
+	inline KeyValues * GetMapInfoByBspName( KeyValues *, char const *, KeyValues ** = nullptr ) { return nullptr; }
+	inline KeyValues * GetMapInfo( KeyValues *, KeyValues ** = nullptr ) { return nullptr; }
 };
 extern class IMatchExtPortal2 *g_pMatchExtPortal2;
 #endif

@@ -97,7 +97,7 @@ public:
 			m_fActive = false; 
 			NotifyChangeTacticalConstraints(); 
 
-			SetThink(NULL);
+			SetThink(nullptr);
 		}
 	}
 	
@@ -231,7 +231,7 @@ bool CAI_StandoffBehavior::CanSelectSchedule()
 	if ( !m_fActive )
 		return false;
 		
-	return ( GetNpcState() == NPC_STATE_COMBAT && GetOuter()->GetActiveWeapon() != NULL );
+	return ( GetNpcState() == NPC_STATE_COMBAT && GetOuter()->GetActiveWeapon() != nullptr );
 }
 
 //-------------------------------------
@@ -296,8 +296,8 @@ void CAI_StandoffBehavior::PrescheduleThink()
 	
 	if( DrawBattleLines.GetInt() != 0 )
 	{
-		CBaseEntity *pEntity = NULL;
-		while ((pEntity = gEntList.FindEntityByClassname( pEntity, "ai_battle_line" )) != NULL)
+		CBaseEntity *pEntity = nullptr;
+		while ((pEntity = gEntList.FindEntityByClassname( pEntity, "ai_battle_line" )) != nullptr)
 		{
 			// Visualize the battle line and its normal.
 			CAI_BattleLine *pLine = dynamic_cast<CAI_BattleLine *>(pEntity);
@@ -306,7 +306,7 @@ void CAI_StandoffBehavior::PrescheduleThink()
 			{
 				Vector normal;
 
-				pLine->GetVectors( &normal, NULL, NULL );
+				pLine->GetVectors( &normal, nullptr, nullptr );
 
 				NDebugOverlay::Line( pLine->GetAbsOrigin() - Vector( 0, 0, 64 ), pLine->GetAbsOrigin() + Vector(0,0,64), 0,255,0, false, 0.1 );
 			}
@@ -338,7 +338,7 @@ void CAI_StandoffBehavior::GatherConditions()
 	if ( m_fForceNewEnemy )
 	{
 		m_TimePreventForceNewEnemy.Reset();
-		GetOuter()->SetEnemy( NULL );
+		GetOuter()->SetEnemy( nullptr );
 
 		DevMsg(2, "Forcing lose enemy from standoff\n");
 	}
@@ -439,7 +439,7 @@ int CAI_StandoffBehavior::SelectScheduleUpdateWeapon( void )
 		// if hurt:
 		int iPercent = random->RandomInt(0,99);
 
-		if ( iPercent <= m_params.oddsCover && GetEnemy() != NULL )
+		if ( iPercent <= m_params.oddsCover && GetEnemy() != nullptr )
 		{
 			SetReuseCurrentCover();
 			StandoffMsg( "Hurt, firing one more shot before cover\n" );
@@ -669,7 +669,7 @@ Vector CAI_StandoffBehavior::GetStandoffGoalPosition()
 	}
 	else
 	{
-		CAI_BattleLine *pBattleLine = NULL;
+		CAI_BattleLine *pBattleLine = nullptr;
 		for (;;)
 		{
 			pBattleLine = (CAI_BattleLine *)gEntList.FindEntityByClassname( pBattleLine, "ai_battle_line" );
@@ -729,7 +729,7 @@ void CAI_StandoffBehavior::UpdateBattleLines()
 			}
 		}
 		
-		CAI_BattleLine *pBattleLine = NULL;
+		CAI_BattleLine *pBattleLine = nullptr;
 		for (;;)
 		{
 			pBattleLine = (CAI_BattleLine *)gEntList.FindEntityByClassname( pBattleLine, "ai_battle_line" );
@@ -835,7 +835,7 @@ void CAI_StandoffBehavior::StartTask( const Task_t *pTask )
 				// @TODO (toml 03-24-03):  clean this up be tool-izing base tasks. Right now, this is here to force to not use lateral cover search
 				CBaseEntity *pEntity = GetEnemy();
 
-				if ( pEntity == NULL )
+				if ( pEntity == nullptr )
 				{
 					// Find cover from self if no enemy available
 					pEntity = GetOuter();
@@ -959,7 +959,7 @@ CBaseEntity *CAI_StandoffBehavior::GetPlayerLeader()
 	CBaseEntity *pPlayer = AI_GetSinglePlayer();
 	if ( pPlayer && GetOuter()->IRelationType( pPlayer ) == D_LI )
 		return pPlayer;
-	return NULL;
+	return nullptr;
 }
 
 //-------------------------------------
@@ -1037,22 +1037,22 @@ void CAI_MappedActivityBehavior_Temporary::UpdateTranslateActivityMap()
 {
 	AI_ActivityMapping_t mappings[] =		// This array cannot be static, as some activity values are set on a per-map-load basis
 	{
-		{	AIP_CROUCHING, 	ACT_IDLE, 				NULL, 				ACT_COVER_LOW, 				},
-		{	AIP_CROUCHING, 	ACT_IDLE_ANGRY,			NULL, 				ACT_COVER_LOW, 				},
-		{	AIP_CROUCHING, 	ACT_WALK, 				NULL, 				ACT_WALK_CROUCH, 			},
-		{	AIP_CROUCHING, 	ACT_RUN, 				NULL, 				ACT_RUN_CROUCH, 			},
-		{	AIP_CROUCHING, 	ACT_WALK_AIM, 			NULL, 				ACT_WALK_CROUCH_AIM, 		},
-		{	AIP_CROUCHING, 	ACT_RUN_AIM, 			NULL, 				ACT_RUN_CROUCH_AIM, 		},
-		{	AIP_CROUCHING,	ACT_RELOAD,				NULL, 				ACT_RELOAD_LOW,				},
-		{	AIP_CROUCHING,	ACT_RANGE_ATTACK_SMG1,	NULL,				ACT_RANGE_ATTACK_SMG1_LOW,	},
-		{	AIP_CROUCHING,	ACT_RANGE_ATTACK_AR2,	NULL,				ACT_RANGE_ATTACK_AR2_LOW,	},
+		{	AIP_CROUCHING, 	ACT_IDLE, 				nullptr, 				ACT_COVER_LOW, 				},
+		{	AIP_CROUCHING, 	ACT_IDLE_ANGRY,			nullptr, 				ACT_COVER_LOW, 				},
+		{	AIP_CROUCHING, 	ACT_WALK, 				nullptr, 				ACT_WALK_CROUCH, 			},
+		{	AIP_CROUCHING, 	ACT_RUN, 				nullptr, 				ACT_RUN_CROUCH, 			},
+		{	AIP_CROUCHING, 	ACT_WALK_AIM, 			nullptr, 				ACT_WALK_CROUCH_AIM, 		},
+		{	AIP_CROUCHING, 	ACT_RUN_AIM, 			nullptr, 				ACT_RUN_CROUCH_AIM, 		},
+		{	AIP_CROUCHING,	ACT_RELOAD,				nullptr, 				ACT_RELOAD_LOW,				},
+		{	AIP_CROUCHING,	ACT_RANGE_ATTACK_SMG1,	nullptr,				ACT_RANGE_ATTACK_SMG1_LOW,	},
+		{	AIP_CROUCHING,	ACT_RANGE_ATTACK_AR2,	nullptr,				ACT_RANGE_ATTACK_AR2_LOW,	},
 		
 		//----
-		{	AIP_PEEKING, 	ACT_IDLE,				NULL,				ACT_RANGE_AIM_LOW,			},
-		{	AIP_PEEKING, 	ACT_IDLE_ANGRY,			NULL,				ACT_RANGE_AIM_LOW,			},
-		{	AIP_PEEKING, 	ACT_COVER_LOW,			NULL,				ACT_RANGE_AIM_LOW,			},
-		{	AIP_PEEKING, 	ACT_RANGE_ATTACK1,		NULL, 				ACT_RANGE_ATTACK1_LOW,		},
-		{	AIP_PEEKING,	ACT_RELOAD, 			NULL, 				ACT_RELOAD_LOW,				},
+		{	AIP_PEEKING, 	ACT_IDLE,				nullptr,				ACT_RANGE_AIM_LOW,			},
+		{	AIP_PEEKING, 	ACT_IDLE_ANGRY,			nullptr,				ACT_RANGE_AIM_LOW,			},
+		{	AIP_PEEKING, 	ACT_COVER_LOW,			nullptr,				ACT_RANGE_AIM_LOW,			},
+		{	AIP_PEEKING, 	ACT_RANGE_ATTACK1,		nullptr, 				ACT_RANGE_ATTACK1_LOW,		},
+		{	AIP_PEEKING,	ACT_RELOAD, 			nullptr, 				ACT_RELOAD_LOW,				},
 	};
 
 	m_ActivityMap.RemoveAll();

@@ -126,8 +126,8 @@ private:
 template< class CBucketHandle, class CElementHandle, class S, class I >
 CBidirectionalSet<CBucketHandle,CElementHandle,S,I>::CBidirectionalSet( )
 {
-	m_FirstBucket = NULL;
-	m_FirstElement = NULL;
+	m_FirstBucket = nullptr;
+	m_FirstElement = nullptr;
 }
 
 

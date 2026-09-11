@@ -62,7 +62,7 @@ private:
 
 CConveyorMaterialProxy::CConveyorMaterialProxy()
 {
-	m_pTextureScrollVar = NULL;
+	m_pTextureScrollVar = nullptr;
 }
 
 CConveyorMaterialProxy::~CConveyorMaterialProxy()
@@ -145,7 +145,7 @@ void CConveyorMaterialProxy::OnBind( void *pC_BaseEntity )
 
 IMaterial *CConveyorMaterialProxy::GetMaterial()
 {
-	return m_pTextureScrollVar ? m_pTextureScrollVar->GetOwningMaterial() : NULL;
+	return m_pTextureScrollVar ? m_pTextureScrollVar->GetOwningMaterial() : nullptr;
 }
 
 EXPOSE_MATERIAL_PROXY( CConveyorMaterialProxy, ConveyorScroll );

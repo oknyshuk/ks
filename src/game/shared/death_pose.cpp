@@ -55,7 +55,7 @@ void GetRagdollCurSequenceWithDeathPose( C_BaseAnimating *entity, matrix3x4a_t *
 
 		entity->Interpolate( gpGlobals->curtime );
 
-		entity->SetupBones( NULL, -1, BONE_USED_BY_ANYTHING, gpGlobals->curtime );
+		entity->SetupBones( nullptr, -1, BONE_USED_BY_ANYTHING, gpGlobals->curtime );
 
 		entity->RemoveEffects( EF_NOINTERP );
 	}
@@ -66,7 +66,7 @@ void GetRagdollCurSequenceWithDeathPose( C_BaseAnimating *entity, matrix3x4a_t *
 		// blow the cached prev bones
 		entity->InvalidateBoneCache();
 
-		entity->SetupBones( NULL, -1, BONE_USED_BY_ANYTHING, flTime );
+		entity->SetupBones( nullptr, -1, BONE_USED_BY_ANYTHING, flTime );
 	}
 }
 
@@ -95,7 +95,7 @@ Activity GetDeathPoseActivity( CBaseAnimating *entity, const CTakeDamageInfo &in
 	Activity aActivity;
 
 	Vector vForward, vRight;
-	entity->GetVectors( &vForward, &vRight, NULL );
+	entity->GetVectors( &vForward, &vRight, nullptr );
 
 	Vector vDir = -info.GetDamageForce();
 	VectorNormalize( vDir );

@@ -57,8 +57,8 @@ CEntityParticleTrail *CEntityParticleTrail::Create( CBaseEntity *pTarget, const 
 	}
 
 	pTrail = (CEntityParticleTrail *)CreateEntityByName( "env_particle_trail" );
-	if ( pTrail == NULL )
-		return NULL;
+	if ( pTrail == nullptr )
+		return nullptr;
 
 	pTrail->m_hConstraintEntity = pConstraintEntity;
 	pTrail->m_iMaterialName = iMaterialName;
@@ -126,7 +126,7 @@ void CEntityParticleTrail::IncrementRefCount()
 {
 	if ( m_nRefCount == 0 )
 	{
-		SetContextThink( NULL, gpGlobals->curtime, s_pRetireContext );
+		SetContextThink( nullptr, gpGlobals->curtime, s_pRetireContext );
 	}
 	++m_nRefCount;
 }
@@ -137,7 +137,7 @@ void CEntityParticleTrail::DecrementRefCount()
 	Assert( m_nRefCount >= 0 );
 	if ( m_nRefCount == 0 )
 	{
-		FollowEntity( NULL );
+		FollowEntity( nullptr );
 		g_pNotify->ClearEntity( this );
 		SetContextThink( &CEntityParticleTrail::SUB_Remove, gpGlobals->curtime + m_Info.m_flLifetime, s_pRetireContext );
 	}
@@ -153,7 +153,7 @@ void CEntityParticleTrail::NotifySystemEvent( CBaseEntity *pNotify, notify_syste
 	Assert( pNotify == GetMoveParent() );
 	if ( eventType == NOTIFY_EVENT_DESTROY )
 	{
-		FollowEntity( NULL );
+		FollowEntity( nullptr );
 		g_pNotify->ClearEntity( this );
 		if ( m_nRefCount != 0 )
 		{

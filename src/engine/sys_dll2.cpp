@@ -75,11 +75,11 @@
 //-----------------------------------------------------------------------------
 // Globals
 //-----------------------------------------------------------------------------
-IDedicatedExports *dedicated = NULL;
+IDedicatedExports *dedicated = nullptr;
 extern CreateInterfaceFn g_AppSystemFactory;
-IPhysics *g_pPhysics = NULL;
-IAvi *avi = NULL;
-IBik *bik = NULL;
+IPhysics *g_pPhysics = nullptr;
+IAvi *avi = nullptr;
+IBik *bik = nullptr;
 
 #ifndef DEDICATED
 extern CreateInterfaceFn g_ClientFactory;
@@ -88,9 +88,9 @@ extern CreateInterfaceFn g_ClientFactory;
 bool g_bRunningFromPerforce;
 AppId_t g_unSteamAppID = k_uAppIdInvalid;
 
-CreateInterfaceFn g_pfnMatchmakingFactory = NULL;
+CreateInterfaceFn g_pfnMatchmakingFactory = nullptr;
 
-IMatchFramework *g_pIfaceMatchFramework = NULL;
+IMatchFramework *g_pIfaceMatchFramework = nullptr;
 bool s_bIsDedicatedServer = false;
 
 //-----------------------------------------------------------------------------
@@ -103,7 +103,7 @@ void COM_InitFilesystem( const char *pFullModPath );
 void Host_ReadPreStartupConfiguration();
 void EditorToggle_f();
 
-void *pmainwindow = NULL;
+void *pmainwindow = nullptr;
 
 //-----------------------------------------------------------------------------
 // ConVars and console commands
@@ -122,7 +122,7 @@ static ConCommand editor_toggle( "editor_toggle", EditorToggle_f, "Disables the 
 void EXPORT F( IEngineAPI **api )
 {
 	CreateInterfaceFn factory = Sys_GetFactoryThis();	// This silly construction is necessary to prevent the LTCG compiler from crashing.
-	*api = ( IEngineAPI * )(factory(VENGINE_LAUNCHER_API_VERSION, NULL));
+	*api = ( IEngineAPI * )(factory(VENGINE_LAUNCHER_API_VERSION, nullptr));
 }
 #endif // DEDICATED
 
@@ -290,7 +290,7 @@ const char *GetModDirFromPath( const char *pszPath )
 	{
 		return pszSlash + 1;
 	}
-	else if ( ( pszSlash  = Q_strrchr( pszPath, '/' ) ) != NULL )
+	else if ( ( pszSlash  = Q_strrchr( pszPath, '/' ) ) != nullptr )
 	{
 		return pszSlash + 1;
 	}
@@ -314,7 +314,7 @@ class CModAppSystemGroup : public CAppSystemGroup
 	typedef CAppSystemGroup BaseClass;
 public:
 	// constructor
-	CModAppSystemGroup( bool bServerOnly, CAppSystemGroup *pParentAppSystem = NULL )
+	CModAppSystemGroup( bool bServerOnly, CAppSystemGroup *pParentAppSystem = nullptr )
 		: BaseClass( pParentAppSystem ),
 		m_bServerOnly( bServerOnly )
 	{
@@ -450,14 +450,14 @@ bool CEngineAPI::Connect( CreateInterfaceFn factory )
 	if ( !Shader_Connect( true ) )
 		return false;
 
-	g_pPhysics = (IPhysics*)factory( VPHYSICS_INTERFACE_VERSION, NULL );
+	g_pPhysics = (IPhysics*)factory( VPHYSICS_INTERFACE_VERSION, nullptr );
 
-	g_pSoundEmitterSystem = (ISoundEmitterSystemBase *)factory(SOUNDEMITTERSYSTEM_INTERFACE_VERSION, NULL);
+	g_pSoundEmitterSystem = (ISoundEmitterSystemBase *)factory(SOUNDEMITTERSYSTEM_INTERFACE_VERSION, nullptr);
 	
-	g_pRocketUI = ( IRocketUI* ) factory( ROCKETUI_INTERFACE_VERSION, NULL );
+	g_pRocketUI = ( IRocketUI* ) factory( ROCKETUI_INTERFACE_VERSION, nullptr );
 
 #if ( !defined( BINK_ENABLED_FOR_CONSOLE ) ) && defined( BINK_VIDEO )
-	bik = (IBik*)factory( BIK_INTERFACE_VERSION, NULL );
+	bik = (IBik*)factory( BIK_INTERFACE_VERSION, nullptr );
 	if ( !bik )
 		return false;
 #endif
@@ -475,7 +475,7 @@ bool CEngineAPI::Connect( CreateInterfaceFn factory )
 		return false;
 	}
 
-	g_pLauncherMgr = (ILauncherMgr *)factory( SDLMGR_INTERFACE_VERSION, NULL );
+	g_pLauncherMgr = (ILauncherMgr *)factory( SDLMGR_INTERFACE_VERSION, nullptr );
 	
 	ConnectMDLCacheNotify();
 
@@ -486,16 +486,16 @@ void CEngineAPI::Disconnect()
 {
 	DisconnectMDLCacheNotify();
 
-	g_pPhysics = NULL;
-	g_pSoundEmitterSystem = NULL;
+	g_pPhysics = nullptr;
+	g_pSoundEmitterSystem = nullptr;
 
 	Shader_Disconnect();
 
-	g_pFileSystem = NULL;
+	g_pFileSystem = nullptr;
 
 	BaseClass::Disconnect();
 
-	g_AppSystemFactory = NULL;
+	g_AppSystemFactory = nullptr;
 }
 
 
@@ -506,7 +506,7 @@ void *CEngineAPI::QueryInterface( const char *pInterfaceName )
 {
 	// Loading the engine DLL mounts *all* engine interfaces
 	CreateInterfaceFn factory = Sys_GetFactoryThis();	// This silly construction is necessary
-	return factory( pInterfaceName, NULL );				// to prevent the LTCG compiler from crashing.
+	return factory( pInterfaceName, nullptr );				// to prevent the LTCG compiler from crashing.
 }
 
 
@@ -609,7 +609,7 @@ InitReturnVal_t CEngineAPI::Init()
 	VideoMode_Create();
 
 	// Initialize the editor hwnd to render into
-	m_hEditorHWnd = NULL;
+	m_hEditorHWnd = nullptr;
 
 	// One-time setup
 	// FIXME: OnStartup + OnShutdown should be removed + moved into the launcher
@@ -960,7 +960,7 @@ InitReturnVal_t CEngineAPI::HandleSetModeError()
 	{
 		if ( Sys_MessageBox( "Failed to set video mode - falling back to safe mode settings.\n\nGame will now restart with the new video settings.", "Video - safe mode fallback", true ))
 		{
-			CommandLine()->AppendParm( "-safe", NULL );
+			CommandLine()->AppendParm( "-safe", nullptr );
 			return (InitReturnVal_t)INIT_RESTART;
 		}
 		return INIT_FAILED;
@@ -968,7 +968,7 @@ InitReturnVal_t CEngineAPI::HandleSetModeError()
 
 	if ( Sys_MessageBox( "Failed to set video mode - resetting to defaults.\n\nGame will now restart with the new video settings.", "Video mode warning", true ) )
 	{
-		CommandLine()->AppendParm( "-autoconfig", NULL );
+		CommandLine()->AppendParm( "-autoconfig", nullptr );
 		return (InitReturnVal_t)INIT_RESTART;
 	}
 
@@ -1002,13 +1002,13 @@ int CEngineAPI::RunListenServer()
 
 		nRunResult = modAppSystemGroup.Run();
 
-		g_AppSystemFactory = NULL;
+		g_AppSystemFactory = nullptr;
 
 		// Shuts down the mod
 		ModShutdown();
 
 		// Disconnects from the editor window
-		videomode->SetGameWindow( NULL );
+		videomode->SetGameWindow( nullptr );
 	}
 
 	// Closes down things that were set up in OnStartup
@@ -1347,8 +1347,8 @@ static bool ParseSteamInfFile( const char *szFileName, AppId_t &unSteamAppID )
 {
 	char *buffer;
 	int bufsize = 0;
-	FileHandle_t fp = NULL;
-	const char *pbuf = NULL;
+	FileHandle_t fp = nullptr;
+	const char *pbuf = nullptr;
 	const int numKeysExpected = 5; // number of expected keys
 	int gotKeys = 0;
 
@@ -1448,7 +1448,7 @@ static bool ParsePerforceInfFile( const char *szFileName, uint64 &unFileSystemMa
 {
 	char *buffer;
 	int bufsize = 0;
-	FileHandle_t fp = NULL;
+	FileHandle_t fp = nullptr;
 
 	// Mod's steam.inf is first option, the the steam.inf in the game GCF. 
 	fp = g_pFileSystem->Open( szFileName, "r" );
@@ -1546,7 +1546,7 @@ void LoadVjobsModule()
 	{
 		Sys_Error( "Could not get vjobs factory\n" );
 	}
-	IVJobs * pVJobs = ( IVJobs* )( *g_pfnVjobsFactory )( VJOBS_INTERFACE_VERSION, NULL );
+	IVJobs * pVJobs = ( IVJobs* )( *g_pfnVjobsFactory )( VJOBS_INTERFACE_VERSION, nullptr );
 	Assert( g_pVJobs == pVJobs || !g_pVJobs );
 	g_pVJobs = pVJobs;
 }
@@ -1571,7 +1571,7 @@ void ReloadDlls()
 		if( g_pVjobsDllModule )
 		{
 			g_pFileSystem->UnloadModule( g_pVjobsDllModule );
-			g_pVjobsDllModule = NULL;
+			g_pVjobsDllModule = nullptr;
 		}
 		LoadVjobsModule();
 		if( g_pVJobs )
@@ -1610,7 +1610,7 @@ bool CModAppSystemGroup::Create()
 	//
 
 	g_pfnMatchmakingFactory = Sys_GetFactoryThis();
-	g_pIfaceMatchFramework = ( IMatchFramework * ) g_pfnMatchmakingFactory( IMATCHFRAMEWORK_VERSION_STRING, NULL );
+	g_pIfaceMatchFramework = ( IMatchFramework * ) g_pfnMatchmakingFactory( IMATCHFRAMEWORK_VERSION_STRING, nullptr );
 	if ( !g_pIfaceMatchFramework )
 	{
 		Sys_Error( "Could not create the match framework" );
@@ -1653,13 +1653,13 @@ bool CModAppSystemGroup::Create()
 #ifndef DEDICATED
 	if ( !IsServerOnly() )
 	{
-		clientSharedSystems = ( IClientDLLSharedAppSystems * )g_ClientFactory( CLIENT_DLL_SHARED_APPSYSTEMS, NULL );
+		clientSharedSystems = ( IClientDLLSharedAppSystems * )g_ClientFactory( CLIENT_DLL_SHARED_APPSYSTEMS, nullptr );
 		if ( !clientSharedSystems )
 			return AddLegacySystems();
 	}
 #endif
 
-	IServerDLLSharedAppSystems *serverSharedSystems = ( IServerDLLSharedAppSystems * )g_ServerFactory( SERVER_DLL_SHARED_APPSYSTEMS, NULL );
+	IServerDLLSharedAppSystems *serverSharedSystems = ( IServerDLLSharedAppSystems * )g_ServerFactory( SERVER_DLL_SHARED_APPSYSTEMS, nullptr );
 	if ( !serverSharedSystems )
 	{
 		Assert( !"Expected both game and client .dlls to have or not have shared app systems interfaces!!!" );
@@ -1822,11 +1822,11 @@ void CModAppSystemGroup::Destroy()
 	if ( g_pMatchFramework )
 	{
 		g_pMatchFramework->Shutdown();
-		g_pMatchFramework = NULL;
+		g_pMatchFramework = nullptr;
 	}
 
-	g_pIfaceMatchFramework = NULL;
-	g_pfnMatchmakingFactory = NULL;
+	g_pIfaceMatchFramework = nullptr;
+	g_pfnMatchmakingFactory = nullptr;
 
 	/// vjobs
 
@@ -1834,9 +1834,9 @@ void CModAppSystemGroup::Destroy()
 	if( g_pVjobsDllModule )
 	{
 		g_pFileSystem->UnloadModule( g_pVjobsDllModule );
-		g_pVjobsDllModule = NULL;
-		g_pfnVjobsFactory = NULL;
-		g_pVJobs = NULL;
+		g_pVjobsDllModule = nullptr;
+		g_pfnVjobsFactory = nullptr;
+		g_pVJobs = nullptr;
 	}
 #endif
 }
@@ -1918,7 +1918,7 @@ void CDedicatedServerAPI::PreMinidumpCallbackImpl()
 
 	// Win32 dedicated servers build a minidump comment in the exception handler itself
 	fprintf( stderr, "PreMinidumpCallback: updating dump comment\n" );
-	BuildMinidumpComment( NULL );
+	BuildMinidumpComment( nullptr );
 }
 
 
@@ -1944,7 +1944,7 @@ bool CDedicatedServerAPI::Connect( CreateInterfaceFn factory )
 	if ( !BaseClass::Connect( factory ) )
 		return false;
 
-	dedicated = ( IDedicatedExports * )factory( VENGINE_DEDICATEDEXPORTS_API_VERSION, NULL );
+	dedicated = ( IDedicatedExports * )factory( VENGINE_DEDICATEDEXPORTS_API_VERSION, nullptr );
 	if ( !dedicated )
 		return false;
 
@@ -1963,9 +1963,9 @@ bool CDedicatedServerAPI::Connect( CreateInterfaceFn factory )
 		return false;
 	}
 
-	g_pPhysics = (IPhysics*)factory( VPHYSICS_INTERFACE_VERSION, NULL );
+	g_pPhysics = (IPhysics*)factory( VPHYSICS_INTERFACE_VERSION, nullptr );
 
-	g_pSoundEmitterSystem = (ISoundEmitterSystemBase*)factory( SOUNDEMITTERSYSTEM_INTERFACE_VERSION, NULL);
+	g_pSoundEmitterSystem = (ISoundEmitterSystemBase*)factory( SOUNDEMITTERSYSTEM_INTERFACE_VERSION, nullptr);
 
 #if defined( DEDICATED )
 	if ( !g_pDataCache || !g_pPhysics || !g_pMDLCache ) 
@@ -1994,20 +1994,20 @@ void CDedicatedServerAPI::Disconnect()
 
 	DisconnectMDLCacheNotify();
 
-	g_pPhysics = NULL;
-	g_pSoundEmitterSystem = NULL;
+	g_pPhysics = nullptr;
+	g_pSoundEmitterSystem = nullptr;
 
 	Shader_Disconnect();
 
-	g_pFileSystem = NULL;
+	g_pFileSystem = nullptr;
 
 	ConVar_Unregister();
 
-	dedicated = NULL;
+	dedicated = nullptr;
 
 	BaseClass::Disconnect();
 
-	g_AppSystemFactory = NULL;
+	g_AppSystemFactory = nullptr;
 }
 
 //-----------------------------------------------------------------------------
@@ -2017,7 +2017,7 @@ void *CDedicatedServerAPI::QueryInterface( const char *pInterfaceName )
 {
 	// Loading the engine DLL mounts *all* engine interfaces
 	CreateInterfaceFn factory = Sys_GetFactoryThis();	// This silly construction is necessary
-	return factory( pInterfaceName, NULL );				// to prevent the LTCG compiler from crashing.
+	return factory( pInterfaceName, nullptr );				// to prevent the LTCG compiler from crashing.
 }
 
 //-----------------------------------------------------------------------------
@@ -2053,7 +2053,7 @@ int CDedicatedServerAPI::BuildMapCycleListHints(char **hints)
 	Q_snprintf(szMap, sizeof( szMap ), "%s\\%s\\%s%s\r\n", szReslistsBaseDir, szMod, szCommonPreloads, szReslistsExt);
 	int hintsSize = strlen(szMap) + 1;
 	*hints = (char*)malloc( hintsSize );
-	if ( *hints == NULL )
+	if ( *hints == nullptr )
 	{
 		ConMsg("Unable to allocate memory for map cycle hints list");
 		g_pFileSystem->Close( pFile );
@@ -2088,7 +2088,7 @@ int CDedicatedServerAPI::BuildMapCycleListHints(char **hints)
 				char mapLine[sizeof(szMap)];
 				Q_snprintf(mapLine, sizeof(mapLine), "%s\\%s\\%s%s\r\n", szReslistsBaseDir, szMod, szMap, szReslistsExt);
 				*hints = (char*)realloc(*hints, strlen(*hints) + 1 + strlen(mapLine) + 1); // count NULL string terminators
-				if ( *hints == NULL )
+				if ( *hints == nullptr )
 				{
 					ConMsg("Unable to reallocate memory for map cycle hints list");
 					g_pFileSystem->Close( pFile );
@@ -2180,7 +2180,7 @@ bool CDedicatedServerAPI::ModInit( ModInfo_t &info )
 #endif
 
 	// Initialize general game stuff and create the main window
-	if ( game->Init( NULL ) )
+	if ( game->Init( nullptr ) )
 	{
 		m_pDedicatedServer = new CModAppSystemGroup( true, info.m_pParentAppSystemGroup );
 
@@ -2199,10 +2199,10 @@ void CDedicatedServerAPI::ModShutdown( void )
 	if ( m_pDedicatedServer )
 	{
 		delete m_pDedicatedServer;
-		m_pDedicatedServer = NULL;
+		m_pDedicatedServer = nullptr;
 	}
 
-	g_AppSystemFactory = NULL;
+	g_AppSystemFactory = nullptr;
 
 	// Unload GL, Sound, etc.
 	eng->Unload();
@@ -2282,7 +2282,7 @@ public:
 		else
 		{
 			*pCount = 0;
-			*ppListStart = NULL;
+			*ppListStart = nullptr;
 		}
 	}
 

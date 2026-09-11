@@ -25,7 +25,7 @@
 	SendPropUtlVector( \
 		SENDINFO_UTLVECTOR( varName ), \
 		nMaxElements, \
-		SendPropDataTable( NULL, 0, &REFERENCE_SEND_TABLE( dataTableName ) ) \
+		SendPropDataTable( nullptr, 0, &REFERENCE_SEND_TABLE( dataTableName ) ) \
 		)
 
 //

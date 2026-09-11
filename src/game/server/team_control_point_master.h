@@ -78,14 +78,14 @@ public:
 				return pPoint;
 		}
 
-		return NULL;
+		return nullptr;
 	}
 	
 	CTeamControlPointRound *GetCurrentRound( void )
 	{
 		if ( !PlayingMiniRounds() || m_iCurrentRoundIndex == -1 )
 		{
-			return NULL;
+			return nullptr;
 		}
 
 		return m_ControlPointRounds[m_iCurrentRoundIndex];
@@ -128,7 +128,7 @@ private:
 	void EXPORT CPMThink( void );
 
     void SetBaseControlPoints( void );
-	int TeamOwnsAllPoints( CTeamControlPoint *pOverridePoint = NULL, int iOverrideNewTeam = TEAM_UNASSIGNED );
+	int TeamOwnsAllPoints( CTeamControlPoint *pOverridePoint = nullptr, int iOverrideNewTeam = TEAM_UNASSIGNED );
 
 	bool FindControlPoints( void );	// look in the map to find active control points
 	bool FindControlPointRounds( void );	// look in the map to find active control point rounds

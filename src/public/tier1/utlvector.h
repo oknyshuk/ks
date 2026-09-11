@@ -1046,7 +1046,7 @@ template< typename T, class A >
 inline int CUtlVector<T, A>::AddToHead( const T& src )
 {
 	// Can't insert something that's in the list... reallocation may hose us
-	Assert( (Base() == NULL) || (&src < Base()) || (&src >= (Base() + Count()) ) ); 
+	Assert( (Base() == nullptr) || (&src < Base()) || (&src >= (Base() + Count()) ) ); 
 	return InsertBefore( 0, src );
 }
 
@@ -1054,7 +1054,7 @@ template< typename T, class A >
 inline int CUtlVector<T, A>::AddToTail( const T& src )
 {
 	// Can't insert something that's in the list... reallocation may hose us
-	Assert( (Base() == NULL) || (&src < Base()) || (&src >= (Base() + Count()) ) ); 
+	Assert( (Base() == nullptr) || (&src < Base()) || (&src >= (Base() + Count()) ) ); 
 	return InsertBefore( m_Size, src );
 }
 
@@ -1062,7 +1062,7 @@ template< typename T, class A >
 inline int CUtlVector<T, A>::InsertAfter( int elem, const T& src )
 {
 	// Can't insert something that's in the list... reallocation may hose us
-	Assert( (Base() == NULL) || (&src < Base()) || (&src >= (Base() + Count()) ) ); 
+	Assert( (Base() == nullptr) || (&src < Base()) || (&src >= (Base() + Count()) ) ); 
 	return InsertBefore( elem + 1, src );
 }
 
@@ -1070,7 +1070,7 @@ template< typename T, class A >
 int CUtlVector<T, A>::InsertBefore( int elem, const T& src )
 {
 	// Can't insert something that's in the list... reallocation may hose us
-	Assert( (Base() == NULL) || (&src < Base()) || (&src >= (Base() + Count()) ) ); 
+	Assert( (Base() == nullptr) || (&src < Base()) || (&src >= (Base() + Count()) ) ); 
 
 	// Can insert at the end
 	Assert( (elem == Count()) || IsValidIndex(elem) );
@@ -1101,7 +1101,7 @@ template< typename T, class A >
 inline int CUtlVector<T, A>::AddMultipleToTail( int num, const T *pToCopy )
 {
 	// Can't insert something that's in the list... reallocation may hose us
-	Assert( (Base() == NULL) || !pToCopy || (pToCopy + num <= Base()) || (pToCopy >= (Base() + Count()) ) ); 
+	Assert( (Base() == nullptr) || !pToCopy || (pToCopy + num <= Base()) || (pToCopy >= (Base() + Count()) ) ); 
 
 	return InsertMultipleBefore( m_Size, num, pToCopy );
 }
@@ -1138,7 +1138,7 @@ template< typename T, class A >
 void CUtlVector<T, A>::CopyArray( const T *pArray, int size )
 {
 	// Can't insert something that's in the list... reallocation may hose us
-	Assert( (Base() == NULL) || !pArray || (Base() >= (pArray + size)) || (pArray >= (Base() + Count()) ) ); 
+	Assert( (Base() == nullptr) || !pArray || (Base() >= (pArray + size)) || (pArray >= (Base() + Count()) ) ); 
 
 	SetSize( size );
 	for( int i=0; i < size; i++ )

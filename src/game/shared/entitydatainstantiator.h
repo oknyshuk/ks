@@ -51,7 +51,7 @@ public:
 			return (void *)m_HashTable[ handle ].data;
 		}
 
-		return NULL;
+		return nullptr;
 	}
 
 	virtual void *CreateDataObject( const CBaseEntity *instance )
@@ -95,8 +95,8 @@ private:
 	{
 		HashEntry()
 		{
-			key = NULL;
-			data = NULL;
+			key = nullptr;
+			data = nullptr;
 		}
 
 		const CBaseEntity *key;

@@ -86,14 +86,14 @@ public:
 	float				FindInventoryItemWithMaxAttributeValue( const char *szItemType, const char *szAttrClass ) { return -1.0f; }
 
 	// Stub for inventory item lookup
-	CEconItemView		*GetInventoryItemByItemID( uint64 itemID ) { return NULL; }
+	CEconItemView		*GetInventoryItemByItemID( uint64 itemID ) { return nullptr; }
 
 	// Stub for active quest
 	uint32				GetActiveQuestID() const { return 0; }
 
 	// Stub for loadout item lookup
-	CEconItemView		*GetItemInLoadout( int iTeam, int iSlot ) { return NULL; }
-	CEconItemView		*GetItemInLoadoutFilteredByProhibition( int iTeam, int iSlot ) { return NULL; }
+	CEconItemView		*GetItemInLoadout( int iTeam, int iSlot ) { return nullptr; }
+	CEconItemView		*GetItemInLoadoutFilteredByProhibition( int iTeam, int iSlot ) { return nullptr; }
 	bool				InventoryRetrievedFromSteamAtLeastOnce() const { return false; }
 
 protected:
@@ -221,24 +221,24 @@ public:
 
 	// Returns the item data for the base item in the loadout slot for a given class
 	CScriptCreatedItem	*GetBaseItemForClass( int iSlot );
-	CEconItemView	*GetBaseItemForTeam( int iTeam, int iSlot ) { return NULL; }
+	CEconItemView	*GetBaseItemForTeam( int iTeam, int iSlot ) { return nullptr; }
 	void				GenerateBaseItems( void );
 
 	// Gets the specified inventory for the steam ID
 	CCSPlayerInventory	*GetBagForPlayer( CSteamID &playerID, inventory_bags_t iBag );
 
 	// Returns the item in the specified loadout slot for a given class
-	CScriptCreatedItem	*GetItemInLoadoutForClass( int iClass, int iSlot, CSteamID *pID = NULL );
-	CEconItemView		*GetItemInLoadoutForTeam( int iTeam, int iSlot, CSteamID *pID = NULL ) { return NULL; }
+	CScriptCreatedItem	*GetItemInLoadoutForClass( int iClass, int iSlot, CSteamID *pID = nullptr );
+	CEconItemView		*GetItemInLoadoutForTeam( int iTeam, int iSlot, CSteamID *pID = nullptr ) { return nullptr; }
 
 	// Request inventory from Steam (stub - econ removed)
 	void				SteamRequestInventory( CCSPlayerInventory *pInventory, CSteamID steamID ) {}
 
 	// Stub for finding or creating reference items
-	CEconItemView		*FindOrCreateReferenceEconItem( uint64 itemID ) { return NULL; }
+	CEconItemView		*FindOrCreateReferenceEconItem( uint64 itemID ) { return nullptr; }
 
 	// Stub for inventory lookup by player
-	CCSPlayerInventory	*GetInventoryForPlayer( const CSteamID& steamID ) { return NULL; }
+	CCSPlayerInventory	*GetInventoryForPlayer( const CSteamID& steamID ) { return nullptr; }
 
 private:
 	// Base items, returned for slots that the player doesn't have anything in

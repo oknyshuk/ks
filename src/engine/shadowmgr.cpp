@@ -582,7 +582,7 @@ CShadowMgr::CShadowMgr()
 
 	m_ShadowsOnModels.Init( ::FirstShadowOnModel, ::FirstModelInShadow );
 	m_NumWorldMaterialBuckets = 0;
-	m_pSurfaceBounds = NULL;
+	m_pSurfaceBounds = nullptr;
 	m_bInitialized = false;
 	m_hSinglePassFlashlightState = SHADOW_HANDLE_INVALID;
 	m_bSinglePassFlashlightStateEnabled = false;
@@ -635,7 +635,7 @@ void CShadowMgr::LevelShutdown()
 	if ( m_pSurfaceBounds )
 	{
 		delete[] m_pSurfaceBounds;
-		m_pSurfaceBounds = NULL;
+		m_pSurfaceBounds = nullptr;
 	}
 
 	m_SurfaceBoundsCache.RemoveAll();
@@ -784,7 +784,7 @@ ShadowHandle_t CShadowMgr::CreateShadowEx( IMaterial* pMaterial, IMaterial* pMod
 	shadow.m_TexSize.Init( 1, 1 );
 	shadow.m_ClipPlaneCount = 0;
 	shadow.m_FalloffBias = 0;
-	shadow.m_pFlashlightDepthTexture = NULL;
+	shadow.m_pFlashlightDepthTexture = nullptr;
 	shadow.m_FlashlightHandle = m_FlashlightStates.InvalidIndex();
 	shadow.m_nEntIndex = nEntIndex;
 
@@ -1455,7 +1455,7 @@ void CShadowMgr::SetModelShadowState( ModelInstanceHandle_t instance )
 				// This is what we want in the case of the flashlight
 				// since we need to render the models material again with different lighting.
 				// Need to add something here to specify which flashlight.
-				g_pStudioRender->AddShadow( NULL, NULL, &m_FlashlightStates[shadow.m_FlashlightHandle].m_FlashlightState, &shadow.m_WorldToShadow, shadow.m_pFlashlightDepthTexture );
+				g_pStudioRender->AddShadow( nullptr, nullptr, &m_FlashlightStates[shadow.m_FlashlightHandle].m_FlashlightState, &shadow.m_WorldToShadow, shadow.m_pFlashlightDepthTexture );
 			}
 			else if ( r_shadows_gamecontrol.GetInt() != 0 )
 			{
@@ -1464,7 +1464,7 @@ void CShadowMgr::SetModelShadowState( ModelInstanceHandle_t instance )
 		}
 		else if ( ( shadow.m_Flags & ( SHADOW_FLASHLIGHT | SHADOW_SIMPLE_PROJECTION ) ) || r_shadows_gamecontrol.GetInt() != 0 )
 		{
-			g_pStudioRender->AddShadow( g_pMaterialMRMWireframe, NULL );
+			g_pStudioRender->AddShadow( g_pMaterialMRMWireframe, nullptr );
 		}
 	}
 #endif
@@ -1547,7 +1547,7 @@ void CShadowMgr::GetFlashlightRenderInfo( FlashlightInstance_t *pFlashlightState
 		FlashlightInstance_t &flashlight = pFlashlightState[i];
 		flashlight.m_FlashlightState = m_FlashlightStates[ shadow.m_FlashlightHandle ].m_FlashlightState;
 		flashlight.m_WorldToTexture = shadow.m_WorldToShadow; 
-		flashlight.m_pDebugMaterial = bWireframe ? g_pMaterialMRMWireframe : NULL;
+		flashlight.m_pDebugMaterial = bWireframe ? g_pMaterialMRMWireframe : nullptr;
 		flashlight.m_pFlashlightDepthTexture = shadow.m_pFlashlightDepthTexture;
 	}
 }
@@ -1722,7 +1722,7 @@ void CShadowMgr::ProjectShadow( ShadowHandle_t handle, const Vector &origin,
 	ShadowBuildInfo_t build;
 	build.m_Shadow = handle;
 	build.m_RayStart = origin;
-	build.m_pVis = NULL;
+	build.m_pVis = nullptr;
 	build.m_vecSphereCenter = shadow.m_vecSphereCenter;
 	build.m_flSphereRadius = shadow.m_flSphereRadius;
 	VectorCopy( projectionDir, build.m_ProjectionDirection );
@@ -1839,7 +1839,7 @@ void CShadowMgr::ProjectFlashlight( ShadowHandle_t handle, const VMatrix& worldT
 	ShadowBuildInfo_t build;
 	build.m_Shadow = handle;
 	build.m_RayStart = m_FlashlightStates[shadow.m_FlashlightHandle].m_FlashlightState.m_vecLightOrigin;
-	build.m_pVis = NULL;
+	build.m_pVis = nullptr;
 	build.m_vecSphereCenter = shadow.m_vecSphereCenter;
 	build.m_flSphereRadius = shadow.m_flSphereRadius;
 	
@@ -2518,7 +2518,7 @@ int CShadowMgr::ProjectAndClipVertices( ShadowHandle_t handle, int count,
 {
 	static ShadowClipState_t clip;
 	return ProjectAndClipVertices( m_Shadows[handle], 
-		m_Shadows[handle].m_WorldToShadow, NULL, count, ppPosition, ppOutVertex, clip );
+		m_Shadows[handle].m_WorldToShadow, nullptr, count, ppPosition, ppOutVertex, clip );
 }
 
 //-----------------------------------------------------------------------------
@@ -2528,7 +2528,7 @@ int CShadowMgr::ProjectAndClipVerticesEx( ShadowHandle_t handle, int count,
 									 Vector** ppPosition, ShadowVertex_t*** ppOutVertex, ShadowClipState_t& clip )
 {
 	return ProjectAndClipVertices( m_Shadows[handle], 
-		m_Shadows[handle].m_WorldToShadow, NULL, count, ppPosition, ppOutVertex, clip );
+		m_Shadows[handle].m_WorldToShadow, nullptr, count, ppPosition, ppOutVertex, clip );
 }
 
 //-----------------------------------------------------------------------------
@@ -2578,7 +2578,7 @@ bool CShadowMgr::ComputeShadowVertices( ShadowDecal_t& decal,
 	}
 	else
 	{
-		pWorldToModel = NULL;
+		pWorldToModel = nullptr;
 	}
 
 	// Create vertices to clip to...
@@ -3473,7 +3473,7 @@ void CShadowMgr::SetStencilAndScissor( IMatRenderContext *pRenderContext, Flashl
 
 	const CViewSetup &view = g_EngineRenderer->ViewGetCurrent();
 	Vector vForward;
-	AngleVectors( view.angles, &vForward, NULL, NULL );
+	AngleVectors( view.angles, &vForward, nullptr, nullptr );
 	float flIntercept = DotProduct( view.origin, vForward );
 	vFarNormal = -vForward;
 	vNearNormal = vForward;
@@ -3663,7 +3663,7 @@ void CShadowMgr::SetFlashlightStencilMasks( bool bDoMasking )
 				continue;
 		}
 
-		SetStencilAndScissor( pRenderContext, flashlightInfo, m_Shadows[flashlightInfo.m_Shadow].m_pFlashlightDepthTexture != NULL );
+		SetStencilAndScissor( pRenderContext, flashlightInfo, m_Shadows[flashlightInfo.m_Shadow].m_pFlashlightDepthTexture != nullptr );
 	}
 }
 
@@ -3787,7 +3787,7 @@ void CShadowMgr::DisableStencilAndScissorMasking( IMatRenderContext *pRenderCont
 		return;
 
 	// We only scissor when rendering to the back buffer
-	if ( pRenderContext->GetRenderTarget() == NULL )
+	if ( pRenderContext->GetRenderTarget() == nullptr )
 	{
 		if ( r_flashlightscissor.GetBool() && flashlightInfo.m_FlashlightState.m_bScissor )
 		{
@@ -3807,10 +3807,10 @@ void CShadowMgr::EnableStencilAndScissorMasking( IMatRenderContext *pRenderConte
 		return;
 
 	// Only turn on scissor when rendering to the back buffer
-	if ( pRenderContext->GetRenderTarget() == NULL )
+	if ( pRenderContext->GetRenderTarget() == nullptr )
 	{
 		// Only do the stencil optimization when shadow depth mapping
-		if ( r_flashlightclip.GetBool() && m_Shadows[flashlightInfo.m_Shadow].m_pFlashlightDepthTexture != NULL )
+		if ( r_flashlightclip.GetBool() && m_Shadows[flashlightInfo.m_Shadow].m_pFlashlightDepthTexture != nullptr )
 		{
 			unsigned char ucShadowStencilBit = m_Shadows[flashlightInfo.m_Shadow].m_ucShadowStencilBit;
 

@@ -72,7 +72,7 @@ public:
 	// Attach to a texture
 	void Init( char const* pTexture, const char *pTextureGroupName, bool bComplain = true, int nAdditionalCreationFlags = 0 );
 	void InitProceduralTexture( const char *pTextureName, const char *pTextureGroupName, int w, int h, ImageFormat fmt, int nFlags );
-	void InitRenderTarget( int w, int h, RenderTargetSizeMode_t sizeMode, ImageFormat fmt, MaterialRenderTargetDepth_t depth, bool bHDR, char *pStrOptionalName = NULL );
+	void InitRenderTarget( int w, int h, RenderTargetSizeMode_t sizeMode, ImageFormat fmt, MaterialRenderTargetDepth_t depth, bool bHDR, char *pStrOptionalName = nullptr );
 	void Init( ITexture* pTexture );
 
 	// Detach from a texture

@@ -130,7 +130,7 @@ public:
 	CCallStackStatsGatherer( void )
 	{
 		for( size_t i = 0; i != CAPTUREDCALLSTACKLENGTH; ++i )
-			m_SingleCallStack[i] = NULL;
+			m_SingleCallStack[i] = nullptr;
 	}
 #endif
 
@@ -375,13 +375,13 @@ PLATFORM_INTERFACE size_t _CCallStackStatsGatherer_Write_FieldDescriptions( Call
 
 #define BEGIN_STATSTRUCTFIELDDESCRIPTION( className ) CallStackStatStructDescFuncs * className::GetStatStructFieldDescriptions( void ) {\
 	typedef className ThisStruct;\
-	CallStackStatStructDescFuncs *_pHeadLinkage = NULL;\
+	CallStackStatStructDescFuncs *_pHeadLinkage = nullptr;\
 	CallStackStatStructDescFuncs **_pLinkageHelperVar = &_pHeadLinkage;
 
 #define _DEFINE_STATSTRUCTFIELD_VARNAME( varName, fieldName, fieldStruct, fieldParmsInParentheses ) static fieldStruct varName##_desc##fieldParmsInParentheses;\
 	varName##_desc.m_szFieldName = #fieldName;\
-	varName##_desc.m_iFieldOffset = (size_t)(&((ThisStruct *)NULL)->fieldName);\
-	varName##_desc.m_pNext = NULL;\
+	varName##_desc.m_iFieldOffset = (size_t)(&((ThisStruct *)nullptr)->fieldName);\
+	varName##_desc.m_pNext = nullptr;\
 	*_pLinkageHelperVar = &varName##_desc;\
 	_pLinkageHelperVar = &varName##_desc.m_pNext;
 
@@ -437,7 +437,7 @@ CCallStackStatsGatherer_StructAccessor_Base<STATSTRUCT> CCallStackStatsGatherer<
 
 	for( ; i < CAPTUREDCALLSTACKLENGTH; ++i )
 	{
-		CleanedCallStack[i] = NULL;
+		CleanedCallStack[i] = nullptr;
 	}
 	return GetEntry( GetEntryIndex( CleanedCallStack ) );
 #else
@@ -495,7 +495,7 @@ uint32 CCallStackStatsGatherer<STATSTRUCT, CAPTUREDCALLSTACKLENGTH, STACKACQUISI
 
 	for( int i = iValidEntries; i < CAPTUREDCALLSTACKLENGTH; ++i )
 	{
-		PatchedStack[i] = NULL;
+		PatchedStack[i] = nullptr;
 	}
 
 	indexMapIter = m_IndexMap.insert( IndexMapEntry_t( IndexMapKey_t( PatchedStack ), StatIndex_t() ) );
@@ -529,7 +529,7 @@ void CCallStackStatsGatherer<STATSTRUCT, CAPTUREDCALLSTACKLENGTH, STACKACQUISITI
 	m_StatEntryLock.UnlockRead();
 #else
 	for( size_t i = 0; i != CAPTUREDCALLSTACKLENGTH; ++i )
-		CallStackOut[i] = NULL;
+		CallStackOut[i] = nullptr;
 #endif
 }
 
@@ -587,15 +587,15 @@ void CCallStackStatsGatherer<STATSTRUCT, CAPTUREDCALLSTACKLENGTH, STACKACQUISITI
 #if defined( ENABLE_STACK_STATS_GATHERING )
 	szStructName = STATSTRUCT::STATSTRUCTSTRINGNAME;
 	iEntryCount = pThisCast->m_StatEntries.size();
-	pEntries = iEntryCount > 0 ? &pThisCast->m_StatEntries[0] : NULL;
+	pEntries = iEntryCount > 0 ? &pThisCast->m_StatEntries[0] : nullptr;
 	iSubTreeCount = pThisCast->m_StoredSubTrees.size();
-	pSubTrees = iSubTreeCount > 0 ? &pThisCast->m_StoredSubTrees[0] : NULL;
+	pSubTrees = iSubTreeCount > 0 ? &pThisCast->m_StoredSubTrees[0] : nullptr;
 #else
 	szStructName = "";
 	iEntryCount = 0;
-	pEntries = NULL;
+	pEntries = nullptr;
 	iSubTreeCount = 0;
-	pSubTrees = NULL;
+	pSubTrees = nullptr;
 #endif
 }
 
@@ -613,7 +613,7 @@ void CCallStackStatsGatherer<STATSTRUCT, CAPTUREDCALLSTACKLENGTH, STACKACQUISITI
 
 	for( int i = PushStack.iValidEntries; i < CAPTUREDCALLSTACKLENGTH; ++i )
 	{
-		pushVal.Stack[i] = NULL;
+		pushVal.Stack[i] = nullptr;
 	}
 
 	pParentCast->m_SubTreeMutex.Lock();
@@ -899,7 +899,7 @@ class CCallStackStatsGatherer_StructAccessor_Manual : CCallStackStatsGatherer_St
 {
 public:
 	CCallStackStatsGatherer_StructAccessor_Manual( CCallStackStatsGatherer_StructAccessor_Base<STATSTRUCT> &copyFrom )
-		: CCallStackStatsGatherer_StructAccessor_Base<STATSTRUCT>( copyFrom ), m_pStruct( NULL )
+		: CCallStackStatsGatherer_StructAccessor_Base<STATSTRUCT>( copyFrom ), m_pStruct( nullptr )
 	{ }
 
 	STATSTRUCT *operator->()
@@ -921,7 +921,7 @@ public:
 
 	void Unlock( void )
 	{
-		this->m_pStruct = NULL;
+		this->m_pStruct = nullptr;
 		this->m_Gatherer.pFunctionTable->pfn_LockEntry( this->m_Gatherer.pGatherer, this->m_iEntryIndex, false );
 		this->m_Gatherer.pFunctionTable->pfn_ApplyTreeAccessLock( this->m_Gatherer.pGatherer, false );
 	}

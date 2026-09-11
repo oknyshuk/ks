@@ -27,7 +27,7 @@ public:
 	SmokeTrail();
 	virtual bool KeyValue( const char *szKeyName, const char *szValue ); 
 	void					SetEmit(bool bVal);
-	void					FollowEntity( CBaseEntity *pEntity, const char *pAttachmentName = NULL);
+	void					FollowEntity( CBaseEntity *pEntity, const char *pAttachmentName = nullptr);
 	static	SmokeTrail*		CreateSmokeTrail();
 
 public:
@@ -64,7 +64,7 @@ public:
 
 	RocketTrail();
 	void					SetEmit(bool bVal);
-	void					FollowEntity( CBaseEntity *pEntity, const char *pAttachmentName = NULL);
+	void					FollowEntity( CBaseEntity *pEntity, const char *pAttachmentName = nullptr);
 	static RocketTrail		*CreateRocketTrail();
 
 public:

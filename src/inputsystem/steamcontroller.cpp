@@ -189,7 +189,7 @@ void CInputSystem::SetSteamControllerMode( const char *pSteamControllerMode, con
 		return;
 	}
 
-	if ( obj == NULL )
+	if ( obj == nullptr )
 	{
 		g_pBaseControllerMode = pSteamControllerMode;
 	}
@@ -207,7 +207,7 @@ void CInputSystem::SetSteamControllerMode( const char *pSteamControllerMode, con
 			return;
 		}
 
-		if ( pSteamControllerMode != NULL )
+		if ( pSteamControllerMode != nullptr )
 		{
 			g_pControllerModeObjectStack[ nIndex ] = obj;
 			g_pControllerModeStack[ nIndex ] = pSteamControllerMode;

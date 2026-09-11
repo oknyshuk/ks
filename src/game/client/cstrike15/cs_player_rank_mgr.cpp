@@ -317,7 +317,7 @@ bool CPlayerRankManager::CheckCategoryRankLevelUp( int iCategory, int iRank )
 	{
 		if ( engine->IsConnected() && oldRank > MEDAL_RANK_NONE )
 		{
-			RankIncreasedEvent_t event( NULL, category );	
+			RankIncreasedEvent_t event( nullptr, category );	
 			m_RankIncreases.AddToTail( event );
 		}
 
@@ -827,7 +827,7 @@ const char* GetLocTokenForStatId( const CSStatType_t id )
 		break;
 	}
 
-	return NULL;
+	return nullptr;
 }
 
 bool CPlayerRankManager::HasBuiltMedalCategories( void ) const

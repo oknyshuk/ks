@@ -175,7 +175,7 @@ void JoinTestThreads( ThreadHandle_t *pHandles )
 ThreadHandle_t CreateSimpleThread( ThreadFunc_t pfnThread, void *pParam, unsigned stackSize )
 {
 	pthread_t tid;
-	pthread_create( &tid, NULL, ThreadProcConvert, new ThreadProcInfo_t( pfnThread, pParam ) );
+	pthread_create( &tid, nullptr, ThreadProcConvert, new ThreadProcInfo_t( pfnThread, pParam ) );
 	return ( ThreadHandle_t ) tid;
 }
 
@@ -202,7 +202,7 @@ void ThreadNanoSleep(unsigned ns)
 	struct timespec tm;
 	tm.tv_sec = 0;
 	tm.tv_nsec = ns;
-	nanosleep( &tm, NULL ); 
+	nanosleep( &tm, nullptr ); 
 }
 
 
@@ -349,7 +349,7 @@ bool ThreadJoin( ThreadHandle_t hThread, unsigned timeout )
 		return false;
 	}
 
-	if ( pthread_join( (pthread_t)hThread, NULL ) != 0 )
+	if ( pthread_join( (pthread_t)hThread, nullptr ) != 0 )
 		return false;
 	return true;
 }
@@ -439,7 +439,7 @@ bool CThreadSyncObject::Wait( uint32 dwTimeout )
 		while ( !m_bWakeForEvent && ret != ETIMEDOUT )
 		{
 			struct timeval tv;
-			gettimeofday( &tv, NULL );
+			gettimeofday( &tv, nullptr );
 			volatile struct timespec tm;
 			
 			uint64 actualTimeout = dwTimeout;
@@ -487,7 +487,7 @@ uint32 CThreadSyncObject::WaitForMultiple( int nObjects, CThreadSyncObject **ppO
 		dwStartTime = Plat_MSTime();
 	
 	// If bWaitAll = true, then we need to track which ones were triggered.
-	char *pWasTriggered = NULL;
+	char *pWasTriggered = nullptr;
 	int nTriggered = 0;
 	if ( bWaitAll )
 	{
@@ -572,7 +572,7 @@ CThreadEvent::CThreadEvent( bool bManualReset )
     pthread_mutexattr_init( &Attr );
     pthread_mutex_init( &m_Mutex, &Attr );
     pthread_mutexattr_destroy( &Attr );
-    pthread_cond_init( &m_Condition, NULL );
+    pthread_cond_init( &m_Condition, nullptr );
     m_bInitalized = true;
     m_cSet = 0;
 	m_bWakeForEvent = false;
@@ -704,7 +704,7 @@ namespace GenericThreadLocals
 {
 CThreadLocalBase::CThreadLocalBase()
 {
-	if ( pthread_key_create(  (pthread_key_t *)&m_index, NULL ) != 0 )
+	if ( pthread_key_create(  (pthread_key_t *)&m_index, nullptr ) != 0 )
 		Error( "Out of thread local storage!\n" );
 }
 
@@ -1430,7 +1430,7 @@ int CWorkerThread::Call(unsigned dwParam, unsigned timeout, bool fBoostPriority,
 //---------------------------------------------------------
 int CWorkerThread::WaitForReply( unsigned timeout )
 {
-	return WaitForReply( timeout, NULL );
+	return WaitForReply( timeout, nullptr );
 }
 
 int CWorkerThread::WaitForReply( unsigned timeout, WaitFunc_t pfnWait )

@@ -101,7 +101,7 @@ void _Error_AlwaysSpewCallStack_Length( int iMaxCallStackLength )
 // Skip forward past the directory
 static const char *SkipToFname( const tchar* pFile )
 {
-	if ( pFile == NULL )
+	if ( pFile == nullptr )
 		return "unknown";
 	const tchar* pSlash = _tcsrchr( pFile, '\\' );
 	const tchar* pSlash2 = _tcsrchr( pFile, '/' );
@@ -323,7 +323,7 @@ void* Plat_SimpleLog( const tchar* file, int line )
 	_ftprintf( f, _T("%s:%i\n"), file, line );
 	fclose( f );
 
-	return NULL;
+	return nullptr;
 }
 
 #if !defined( DBGFLAG_STRINGS_STRIP )
@@ -392,7 +392,7 @@ void COM_TimestampedLog( char const *fmt, ... )
 
 #endif // !DBGFLAG_STRINGS_STRIP
 
-static AssertFailedNotifyFunc_t	s_AssertFailedNotifyFunc = NULL;
+static AssertFailedNotifyFunc_t	s_AssertFailedNotifyFunc = nullptr;
 
 //-----------------------------------------------------------------------------
 // Sets an assert failed notify handler

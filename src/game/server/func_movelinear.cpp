@@ -75,7 +75,7 @@ void CFuncMoveLinear::Spawn( void )
 	m_vecPosition2 = m_vecPosition1 + (m_vecMoveDir * m_flMoveDistance);
 	m_vecFinalDest = GetLocalOrigin();
 
-	SetTouch( NULL );
+	SetTouch( nullptr );
 
 	Precache();
 
@@ -202,7 +202,7 @@ void CFuncMoveLinear::MoveTo(Vector vPosition, float flSpeed)
 		}
 
 		// Clear think (that stops sounds)
-		SetThink(NULL);
+		SetThink(nullptr);
 	}
 }
 
@@ -231,7 +231,7 @@ void CFuncMoveLinear::StopMoveSound( void )
 		EmitSound( filter, entindex(), ep );
 	}
 
-	SetThink(NULL);
+	SetThink(nullptr);
 }
 
 

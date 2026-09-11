@@ -117,7 +117,7 @@ typedef intp PixelShader_t;
 // Bitpattern for an invalid shader
 //-----------------------------------------------------------------------------
 #define INVALID_SHADER	( 0xFFFFFFFF )
-#define INVALID_HARDWARE_SHADER ( NULL )
+#define INVALID_HARDWARE_SHADER ( nullptr )
 
 #define D3DSAMP_NOTSUPPORTED					D3DSAMP_FORCE_DWORD
 #define D3DRS_NOTSUPPORTED						D3DRS_FORCE_DWORD

@@ -109,7 +109,7 @@ CON_COMMAND_F( rpt_password, "", FCVAR_DONTRECORD | FCVAR_HIDDEN )
 		if ( !bWasEnabled )
 			return;
 
-		RPTServer().SetPassword( NULL );
+		RPTServer().SetPassword( nullptr );
 		ConMsg( "Disabling...\n" );
 		Q_snprintf( buf, sizeof( buf ), "rpt_client_enable 0" );
 	}
@@ -163,9 +163,9 @@ void SV_NotifyRPTOfDisconnect( int nClientSlot )
 		g_nRptServerSlot = -1;
 	}
 
-	RPTServer().SetPassword( NULL );
+	RPTServer().SetPassword( nullptr );
 #ifndef DEDICATED
-	RPTClient().SetPassword( NULL );
+	RPTClient().SetPassword( nullptr );
 	RPTClient().CloseListenSocket( );
 #endif
 }
@@ -174,8 +174,8 @@ void SV_NotifyRPTOfDisconnect( int nClientSlot )
 
 void CL_NotifyRPTOfDisconnect( )
 {
-	RPTServer().SetPassword( NULL );
-	RPTClient().SetPassword( NULL );
+	RPTServer().SetPassword( nullptr );
+	RPTClient().SetPassword( nullptr );
 	RPTClient().CloseListenSocket( );
 }
 
@@ -207,7 +207,7 @@ CON_COMMAND_F( rpt_start, "", FCVAR_DONTRECORD | FCVAR_HIDDEN )
 	RPTClient().CreateListenSocket( rptAddr );
 
 	char pDir[MAX_PATH];
-	time_t now = time(NULL);
+	time_t now = time(nullptr);
 	struct tm *tm = localtime( &now );
 	Q_snprintf( pDir, sizeof(pDir), "rpt/%d_%d_%d", tm->tm_mon, tm->tm_wday, tm->tm_year + 1900 );
 	RPTClient().SetRemoteFileDirectory( pDir );
@@ -228,7 +228,7 @@ CON_COMMAND_F( rpt_end, "", FCVAR_DONTRECORD | FCVAR_HIDDEN )
 		return;
 	}
 
-	RPTClient().SetPassword( NULL );
+	RPTClient().SetPassword( nullptr );
 	RPTClient().CloseListenSocket( );
 
 	// Send a command to the server indicating we want to disconnect from a remote client

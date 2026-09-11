@@ -154,7 +154,7 @@ int C_Prop_Hallucination::DrawModel( int flags, const RenderableInstance_t &inst
 
 		if( !m_bVisibleEligible )
 		{
-			modelrender->ForcedMaterialOverride( NULL );
+			modelrender->ForcedMaterialOverride( nullptr );
 		}
 
 		return iRetVal;

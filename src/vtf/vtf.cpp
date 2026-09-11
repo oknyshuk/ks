@@ -92,7 +92,7 @@ const char* S3TC_GetBlock(
         int xBlock,
         int yBlock )
 {
-	return NULL;
+	return nullptr;
 }
 
 char* S3TC_GetBlock(
@@ -102,7 +102,7 @@ char* S3TC_GetBlock(
         int xBlock,
         int yBlock )
 {
-	return NULL;
+	return nullptr;
 }
 
 S3PaletteIndex S3TC_GetPaletteIndex(
@@ -285,14 +285,14 @@ CVTFTexture::CVTFTexture()
 	m_vecReflectivity.Init( 1.0, 1.0, 1.0f );
 
 	m_nFlags = 0;
-	m_pImageData = NULL;
+	m_pImageData = nullptr;
 	m_nImageAllocSize = 0;
 
 	// LowRes data
 	m_LowResImageFormat = IMAGE_FORMAT_UNKNOWN;
 	m_nLowResImageWidth = 0;
 	m_nLowResImageHeight = 0;
-	m_pLowResImageData = NULL;
+	m_pLowResImageData = nullptr;
 	m_nLowResImageAllocSize = 0;
 
 	Assert( m_arrResourcesInfo.Count() == 0 );
@@ -532,11 +532,11 @@ void CVTFTexture::ReleaseResources()
 void CVTFTexture::Shutdown()
 {
 	delete[] m_pImageData;
-	m_pImageData = NULL;
+	m_pImageData = nullptr;
 	m_nImageAllocSize = 0;
 
 	delete[] m_pLowResImageData;
-	m_pLowResImageData = NULL;
+	m_pLowResImageData = nullptr;
 	m_nLowResImageAllocSize = 0;
 
 	ReleaseResources();
@@ -572,7 +572,7 @@ void CVTFTexture::ImageFileInfo( int nFrame, int nFace, int nMipLevel, int *pSta
 
 	ResourceEntryInfo const *pImageDataInfo = FindResourceEntryInfo( VTF_LEGACY_RSRC_IMAGE );
 
-	if ( pImageDataInfo == NULL )
+	if ( pImageDataInfo == nullptr )
 	{
 		// This should never happen for real, but can happen if someone intentionally fed us a bad VTF.
 		Assert( pImageDataInfo );
@@ -626,10 +626,10 @@ int CVTFTexture::FileSize( int nMipSkipCount ) const
 	ResourceEntryInfo const *pImageDataInfo = FindResourceEntryInfo( VTF_LEGACY_RSRC_IMAGE );
 
 	// Can be null when someone gives us an intentionally malformed VTF.
-	if ( pImageDataInfo == NULL )
+	if ( pImageDataInfo == nullptr )
 	{
 		// Still do the assert so we can catch this in debug--we don't expect this for well formed files.
-		Assert( pImageDataInfo != NULL );
+		Assert( pImageDataInfo != nullptr );
 		return 0;
 	}
 
@@ -770,7 +770,7 @@ void *CVTFTexture::SetResourceData( uint32 eType, void const *pData, size_t nNum
 			if ( !rms.AllocateData( nNumBytes ) )
 			{
 				RemoveResourceEntryInfo( eType );
-				return NULL;
+				return nullptr;
 			}
 
 			if ( pData )
@@ -781,7 +781,7 @@ void *CVTFTexture::SetResourceData( uint32 eType, void const *pData, size_t nNum
 	else
 	{
 		RemoveResourceEntryInfo( eType );
-		return NULL;
+		return nullptr;
 	}
 }
 
@@ -818,12 +818,12 @@ void *CVTFTexture::GetResourceData( uint32 eType, size_t *pDataSize ) const
 			*pDataSize = 0;
 	}
 
-	return NULL;
+	return nullptr;
 }
 
 bool CVTFTexture::HasResourceEntry( uint32 eType ) const
 {
-	return ( FindResourceEntryInfo( eType ) != NULL );
+	return ( FindResourceEntryInfo( eType ) != nullptr );
 }
 
 unsigned int CVTFTexture::GetResourceTypes( unsigned int *arrTypesBuffer, int numTypesBufferElems ) const
@@ -1177,9 +1177,9 @@ find_routine:
 			return pMid;
 	}
 	else
-		return NULL;
+		return nullptr;
 
-	return NULL;
+	return nullptr;
 }
 
 ResourceEntryInfo * CVTFTexture::FindResourceEntryInfo( uint32 eType )
@@ -2450,7 +2450,7 @@ static void ConvertPcTo360SrgbRGBA8888( unsigned char *pImageData, int iWidth, i
 	{
 		for ( int32 w = 0; w < iWidth; w++ ) // For each texel in this row
 		{
-			unsigned char *pRGB[3] = { NULL, NULL, NULL };
+			unsigned char *pRGB[3] = { nullptr, nullptr, nullptr };
 
 			pRGB[0] = &( pImageData[ ( h * iWidth * nBytesPerPixel ) + ( w * nBytesPerPixel ) + 0 ] ); // Red
 			pRGB[1] = &( pImageData[ ( h * iWidth * nBytesPerPixel ) + ( w * nBytesPerPixel ) + 1 ] ); // Green
@@ -2528,7 +2528,7 @@ void CVTFTexture::GenerateMipmaps()
 
 	// Compute how many mips are above "visible mip0"
 	int numMipsClampedLod = 0;
-	if ( TextureLODControlSettings_t const *pLodSettings = ( TextureLODControlSettings_t const * ) GetResourceData( VTF_RSRC_TEXTURE_LOD_SETTINGS, NULL ) )
+	if ( TextureLODControlSettings_t const *pLodSettings = ( TextureLODControlSettings_t const * ) GetResourceData( VTF_RSRC_TEXTURE_LOD_SETTINGS, nullptr ) )
 	{
 		int iClampX = 1 << MIN( pLodSettings->m_ResolutionClampX, pLodSettings->m_ResolutionClampX_360 );
 		int iClampY = 1 << MIN( pLodSettings->m_ResolutionClampX, pLodSettings->m_ResolutionClampX_360 );

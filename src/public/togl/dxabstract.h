@@ -29,8 +29,8 @@ struct TOGL_CLASS ID3DXMatrixStack
 	int						m_stackTop;	// top of stack is at the highest index, this is that index.  push increases, pop decreases.
 
 	ID3DXMatrixStack();
-	void  AddRef( int which=0, char *comment = NULL );
-	ULONG Release( int which=0, char *comment = NULL );
+	void  AddRef( int which=0, char *comment = nullptr );
+	ULONG Release( int which=0, char *comment = nullptr );
 	
 	HRESULT	Create( void );
 	

@@ -46,13 +46,13 @@ static CUtlVector<IGameSystemPerFrame*> s_GameSystemsPerFrame( 0, 4 );
 // The map name
 static char* s_pMapName = 0;
 
-static CBasePlayer *s_pRunCommandPlayer = NULL;
-static CUserCmd *s_pRunCommandUserCmd = NULL;
+static CBasePlayer *s_pRunCommandPlayer = nullptr;
+static CUserCmd *s_pRunCommandUserCmd = nullptr;
 
 //-----------------------------------------------------------------------------
 // Auto-registration of game systems
 //-----------------------------------------------------------------------------
-static	CAutoGameSystem *s_pSystemList = NULL;
+static	CAutoGameSystem *s_pSystemList = nullptr;
 
 CAutoGameSystem::CAutoGameSystem( char const *name ) :
 	m_pszName( name )
@@ -71,7 +71,7 @@ CAutoGameSystem::CAutoGameSystem( char const *name ) :
 	}
 }
 
-static	CAutoGameSystemPerFrame *s_pPerFrameSystemList = NULL;
+static	CAutoGameSystemPerFrame *s_pPerFrameSystemList = nullptr;
 
 //-----------------------------------------------------------------------------
 // Purpose: This is a CAutoGameSystem which also cares about the "per frame" hooks
@@ -116,7 +116,7 @@ IGameSystemPerFrame::~IGameSystemPerFrame()
 void IGameSystem::Add( IGameSystem* pSys )
 {
 	s_GameSystems.AddToTail( pSys );
-	if ( dynamic_cast< IGameSystemPerFrame * >( pSys ) != NULL )
+	if ( dynamic_cast< IGameSystemPerFrame * >( pSys ) != nullptr )
 	{
 		s_GameSystemsPerFrame.AddToTail( static_cast< IGameSystemPerFrame * >( pSys ) );
 	}
@@ -129,7 +129,7 @@ void IGameSystem::Add( IGameSystem* pSys )
 void IGameSystem::Remove( IGameSystem* pSys )
 {
 	s_GameSystems.FindAndRemove( pSys );
-	if ( dynamic_cast< IGameSystemPerFrame * >( pSys ) != NULL )
+	if ( dynamic_cast< IGameSystemPerFrame * >( pSys ) != nullptr )
 	{
 		s_GameSystemsPerFrame.FindAndRemove( static_cast< IGameSystemPerFrame * >( pSys ) );
 	}
@@ -187,7 +187,7 @@ bool IGameSystem::InitAllSystems()
 			}
 			pSystem = pSystem->m_pNext;
 		}
-		s_pSystemList = NULL;
+		s_pSystemList = nullptr;
 	}
 
 	{
@@ -205,7 +205,7 @@ bool IGameSystem::InitAllSystems()
 
 			pSystem = pSystem->m_pNext;
 		}
-		s_pSystemList = NULL;
+		s_pSystemList = nullptr;
 	}
 	// Now remember that we are initted so new CAutoGameSystems will add themselves automatically.
 	s_bSystemsInitted = true;

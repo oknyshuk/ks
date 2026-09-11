@@ -284,7 +284,7 @@ void CSprite::OnRestore()
 	else
 	{
 		// Clear attachment
-		m_hAttachedToEntity = NULL;
+		m_hAttachedToEntity = nullptr;
 		m_nAttachment = 0;
 	}
 }

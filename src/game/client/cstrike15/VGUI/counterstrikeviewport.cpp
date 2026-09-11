@@ -231,7 +231,7 @@ void CounterStrikeViewport::Start( IGameUIFuncs *pGameUIFuncs, IGameEventManager
 
 IViewPortPanel* CounterStrikeViewport::CreatePanelByName( const char *szPanelName )
 {
-	IViewPortPanel* newpanel = NULL;
+	IViewPortPanel* newpanel = nullptr;
 
 	// overwrite MOD specific panel creation
 
@@ -283,7 +283,7 @@ void CounterStrikeViewport::UpdateAllPanels( void )
 		{
 			bSomethingIsVisible = true;
 			p->Update();
-			if ( m_pActivePanel == NULL )
+			if ( m_pActivePanel == nullptr )
 			{
 				// if a visible panel exists, then there should be an activePanel.
 				m_pActivePanel = p;
@@ -296,7 +296,7 @@ void CounterStrikeViewport::UpdateAllPanels( void )
 	{
 		C_CSPlayer *pCSPlayer = C_CSPlayer::GetLocalCSPlayer();
 
-		const char* UIToShow = NULL;
+		const char* UIToShow = nullptr;
 
 		if ( !pCSPlayer )
 		{

@@ -116,7 +116,7 @@ private:
 //-----------------------------------------------------------------------------
 inline CMorphBuilder::CMorphBuilder()
 {
-	m_pMorph = NULL;
+	m_pMorph = nullptr;
 }
 
 inline CMorphBuilder::~CMorphBuilder()
@@ -149,7 +149,7 @@ inline void CMorphBuilder::End()
 {
 	Assert( m_pMorph );
 	m_pMorph->Unlock();
-	m_pMorph = NULL;
+	m_pMorph = nullptr;
 }
 
 

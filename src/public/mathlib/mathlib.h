@@ -595,7 +595,7 @@ inline void MatrixMultiply ( const matrix3x4_t &in1, const matrix3x4_t &in2, mat
 
 void QuaternionExp( const Quaternion &p, Quaternion &q );
 void QuaternionLn( const Quaternion &p, Quaternion &q );
-void QuaternionAverageExponential( Quaternion &q, int nCount, const Quaternion *pQuaternions, const float *pflWeights = NULL );
+void QuaternionAverageExponential( Quaternion &q, int nCount, const Quaternion *pQuaternions, const float *pflWeights = nullptr );
 void QuaternionLookAt( const Vector &vecForward, const Vector &referenceUp, Quaternion &q );
 void QuaternionSlerp( const Quaternion &p, const Quaternion &q, float t, Quaternion &qt );
 void QuaternionSlerpNoAlign( const Quaternion &p, const Quaternion &q, float t, Quaternion &qt );

@@ -44,7 +44,7 @@ public:
 IMPLEMENT_REFLECT_CLIENTCLASS( C_TriggerPlayerMovement, DT_TriggerPlayerMovement, CTriggerPlayerMovement )
 
 C_EntityClassList< C_TriggerPlayerMovement > g_TriggerPlayerMovementList;
-template<> C_TriggerPlayerMovement *C_EntityClassList<C_TriggerPlayerMovement>::m_pClassList = NULL;
+template<> C_TriggerPlayerMovement *C_EntityClassList<C_TriggerPlayerMovement>::m_pClassList = nullptr;
 
 C_TriggerPlayerMovement::C_TriggerPlayerMovement()
 {
@@ -244,7 +244,7 @@ public:
 IMPLEMENT_REFLECT_CLIENTCLASS( C_TriggerSoundOperator, DT_TriggerSoundOperator, CTriggerSoundOperator )
 
 C_EntityClassList< C_TriggerSoundOperator > g_TriggerSoundOperators;
-template<> C_TriggerSoundOperator *C_EntityClassList<C_TriggerSoundOperator>::m_pClassList = NULL;
+template<> C_TriggerSoundOperator *C_EntityClassList<C_TriggerSoundOperator>::m_pClassList = nullptr;
 
 C_TriggerSoundOperator::C_TriggerSoundOperator()
 {

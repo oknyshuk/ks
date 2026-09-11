@@ -69,7 +69,7 @@ void CPoseController::Think( void )
 void CPoseController::BuildPropList( void )
 {
 	int iPropNum = 0;
-	CBaseEntity *pEnt = gEntList.FindEntityByName( NULL, m_iszPropName );
+	CBaseEntity *pEnt = gEntList.FindEntityByName( nullptr, m_iszPropName );
 
 	while ( pEnt && iPropNum < MAX_POSE_CONTROLLED_PROPS )
 	{
@@ -99,7 +99,7 @@ void CPoseController::BuildPropList( void )
 	// Nullify the remaining handles
 	while ( iPropNum < MAX_POSE_CONTROLLED_PROPS )
 	{
-		if ( m_hProps[ iPropNum ] != NULL )
+		if ( m_hProps[ iPropNum ] != nullptr )
 			m_hProps.Set( iPropNum, INVALID_EHANDLE );
 
 		++iPropNum;
@@ -157,7 +157,7 @@ void CPoseController::SetProp( CBaseAnimating *pProp )
 	// Nullify the remaining handles
 	for ( int iPropNum = 1; iPropNum < MAX_POSE_CONTROLLED_PROPS; ++iPropNum )
 	{
-		if ( m_hProps[ iPropNum ] != NULL )
+		if ( m_hProps[ iPropNum ] != nullptr )
 			m_hProps.Set( iPropNum, INVALID_EHANDLE );
 	}
 

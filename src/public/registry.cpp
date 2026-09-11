@@ -30,7 +30,7 @@ public:
 	virtual int				ReadInt( const char *key, int defaultValue = 0);
 	virtual void			WriteInt( const char *key, int value );
 
-	virtual const char		*ReadString( const char *key, const char *defaultValue = NULL );
+	virtual const char		*ReadString( const char *key, const char *defaultValue = nullptr );
 	virtual void			WriteString( const char *key, const char *value );
 
 	// Read/write helper methods

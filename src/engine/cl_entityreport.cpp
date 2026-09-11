@@ -42,7 +42,7 @@ public:
 		peaktime( 0.0f ),
 		flags( 0 ),
 		effectfinishtime( 0.0f ),
-		deletedclientclass( NULL )
+		deletedclientclass( nullptr )
 	{
 	}
 

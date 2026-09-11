@@ -108,8 +108,8 @@ int C_EntityFreezing::DrawModel( int flags, const RenderableInstance_t &instance
 		return 0;
 
 	// The parent needs to be a base animating
-	C_BaseAnimating *pAnimating = GetMoveParent() ? GetMoveParent()->GetBaseAnimating() : NULL;
-	if ( pAnimating == NULL )
+	C_BaseAnimating *pAnimating = GetMoveParent() ? GetMoveParent()->GetBaseAnimating() : nullptr;
+	if ( pAnimating == nullptr )
 		return 0;
 
 	// Make sure we have hitboxes
@@ -118,7 +118,7 @@ int C_EntityFreezing::DrawModel( int flags, const RenderableInstance_t &instance
 		return 0;
 
 	studiohdr_t *pStudioHdr = modelinfo->GetStudiomodel( pAnimating->GetModel() );
-	if ( pStudioHdr == NULL )
+	if ( pStudioHdr == nullptr )
 		return 0;
 
 	int nEffectsHitboxSet = FindHitboxSetByName( pAnimating->GetModelPtr(), "effects" );
@@ -146,7 +146,7 @@ int C_EntityFreezing::DrawModel( int flags, const RenderableInstance_t &instance
 		float flRadiusIsoSurface = flRadius / 12.0f;
 
 		// Get the hitbox data
-		EntityFreezingHitboxBlobData_t *pHitboxBlobData = NULL;
+		EntityFreezingHitboxBlobData_t *pHitboxBlobData = nullptr;
 
 		if ( m_HitboxBlobData.Count() <= i )
 		{

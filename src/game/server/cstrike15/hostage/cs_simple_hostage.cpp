@@ -140,7 +140,7 @@ CHostage::CHostage()
 	m_PlayerAnimState = CreateHostageAnimState( this, this, LEGANIM_9WAY, false );
 	UseClientSideAnimation();
 	SetBloodColor( BLOOD_COLOR_RED );
-	m_pExpresser = NULL;
+	m_pExpresser = nullptr;
 
 	SetSpotRules(  CCSEntitySpotting::SPOT_RULE_ALWAYS_SEEN_BY_CT | CCSEntitySpotting::SPOT_RULE_ALWAYS_SEEN_BY_T );
 }
@@ -160,7 +160,7 @@ CAI_Expresser *CHostage::CreateExpresser( void )
 {
 	m_pExpresser = new CMultiplayer_Expresser( this );
 	if ( !m_pExpresser)
-		return NULL;
+		return nullptr;
 
 	m_pExpresser->Connect( this );
 	return m_pExpresser;
@@ -168,7 +168,7 @@ CAI_Expresser *CHostage::CreateExpresser( void )
 
 CWeaponCSBase* CHostage::CSAnim_GetActiveWeapon()
 {
-	return NULL;
+	return nullptr;
 }
 
 bool CHostage::CSAnim_CanMove()
@@ -228,11 +228,11 @@ void CHostage::Spawn( void )
 
 	bool hostageSet = false;
 	//const CUtlStringList *pTModelNames = g_pGameTypes->GetTModelsForMap( m_mapName );
-	const char *mapName = ( gpGlobals ? STRING( gpGlobals->mapname ) : NULL );
+	const char *mapName = ( gpGlobals ? STRING( gpGlobals->mapname ) : nullptr );
 	if ( mapName )
 	{
 		const CUtlStringList *pHostageModelNames = g_pGameTypes->GetHostageModelsForMap( mapName );
-		if ( NULL != pHostageModelNames )
+		if ( nullptr != pHostageModelNames )
 		{
 			int count = pHostageModelNames->Count();
 			if ( count > 0 )
@@ -302,7 +302,7 @@ void CHostage::Spawn( void )
 	m_pathFollower.SetPath( &m_path );
 	m_pathFollower.SetImprov( this );
 
-	m_lastKnownArea = NULL;
+	m_lastKnownArea = nullptr;
 
 	// Need to make sure the hostages are on the ground when they spawn
 	Vector GroundPos = DropToGround( this, GetAbsOrigin(), HOSTAGE_BBOX_VEC_MIN, HOSTAGE_BBOX_VEC_MAX );
@@ -334,20 +334,20 @@ void CHostage::Spawn( void )
 
 	CreateExpresser();
 
-	VisibilityMonitor_AddEntity( this, 1600.0f, NULL, NULL );
+	VisibilityMonitor_AddEntity( this, 1600.0f, nullptr, nullptr );
 }
 
 //-----------------------------------------------------------------------------------------------------
 void CHostage::Precache()
 {
-	const char *mapName = ( gpGlobals ? STRING( gpGlobals->mapname ) : NULL );
+	const char *mapName = ( gpGlobals ? STRING( gpGlobals->mapname ) : nullptr );
 
 	int numHostageModelsForMap = 0;
 
 	if ( mapName )
 	{
 		const CUtlStringList *pHostageModelNames = g_pGameTypes->GetHostageModelsForMap( mapName );
-		if ( NULL != pHostageModelNames )
+		if ( nullptr != pHostageModelNames )
 		{
 			numHostageModelsForMap = pHostageModelNames->Count();
 			FOR_EACH_VEC( *pHostageModelNames, iModel )
@@ -570,7 +570,7 @@ void CHostage::Event_Killed( const CTakeDamageInfo &info )
 
 	m_lastLeaderID = 0;
 
-	SetUse( NULL );
+	SetUse( nullptr );
 	BaseClass::Event_Killed( info );
 
 	IGameEvent *event = gameeventmanager->CreateEvent("hostage_killed");
@@ -597,7 +597,7 @@ void CHostage::HostageRescueZoneTouch( inputdata_t &inputdata )
 		m_isRescued = true;
 		m_lastLeaderID = 0;
 
-		SetUse( NULL );
+		SetUse( nullptr );
 		m_takedamage = DAMAGE_NO;
 
 		// give rescuer a cash bonus
@@ -708,7 +708,7 @@ void CHostage::HostageRescueZoneTouch( inputdata_t &inputdata )
 			{
 				//check for unrescued hostages
 				bool allHostagesRescued = true;
-				CHostage* hostage = NULL;
+				CHostage* hostage = nullptr;
 				int iNumHostages = g_Hostages.Count();
 
 				for ( int i = 0 ; i < iNumHostages; i++ )
@@ -744,7 +744,7 @@ void CHostage::HostageRescueZoneTouch( inputdata_t &inputdata )
 		}
 
 		if ( !roundWasAlreadyOver && player )
-			CSGameRules()->m_pfnCalculateEndOfRoundMVPHook = NULL;
+			CSGameRules()->m_pfnCalculateEndOfRoundMVPHook = nullptr;
 
 		bool bWinningRescueEvent = !roundWasAlreadyOver && ( CSGameRules()->m_iRoundWinStatus != WINNER_NONE );
 		if ( player )
@@ -839,7 +839,7 @@ void CHostage::Wiggle( void )
 	}
 
 	Vector dir, lat;
-	AngleVectors( GetAbsAngles(), &dir, &lat, NULL );
+	AngleVectors( GetAbsAngles(), &dir, &lat, nullptr );
 
 	const float speed = 500.0f;
 
@@ -1122,7 +1122,7 @@ void CHostage::HostageThink( void )
 	SetNextThink( gpGlobals->curtime + deltaT );
 
 	//if the defusing process has started
-	if ( !mp_hostages_moveable.GetBool() && m_nHostageState == k_EHostageStates_BeingUntied  && (m_pHostageGrabber != NULL))
+	if ( !mp_hostages_moveable.GetBool() && m_nHostageState == k_EHostageStates_BeingUntied  && (m_pHostageGrabber != nullptr))
 	{
 		//if the defusing process has not ended yet
 		if ( gpGlobals->curtime < m_flGrabSuccessTime )
@@ -1181,7 +1181,7 @@ void CHostage::HostageThink( void )
 
 			// Clear their progress bar.
 			m_pHostageGrabber->SetProgressBarTime( 0 );
-			m_pHostageGrabber = NULL;
+			m_pHostageGrabber = nullptr;
 			m_flGrabbingLength = 10;
 
 			m_vecGrabbedPos = GetAbsOrigin();
@@ -1194,7 +1194,7 @@ void CHostage::HostageThink( void )
 
 	// keep track of which Navigation Area we are in (or were in, if we're "off the mesh" right now)
 	CNavArea *area = TheNavMesh->GetNavArea( GetAbsOrigin() );
-	if (area != NULL && area != m_lastKnownArea)
+	if (area != nullptr && area != m_lastKnownArea)
 	{
 		// entered a new nav area
 		m_lastKnownArea = area;
@@ -1250,7 +1250,7 @@ void CHostage::HostageThink( void )
 	{
 		SetSolid( SOLID_NONE );
 		SetSolidFlags( 0 );
-		SetUse( NULL );
+		SetUse( nullptr );
 		RemoveFlag( FL_OBJECT );
 
 		if ( m_flGrabSuccessTime + CS_HOSTAGE_TRANSTIME_PICKUP < gpGlobals->curtime )
@@ -1305,7 +1305,7 @@ bool CHostage::IsBeingCarried( void )
 //-----------------------------------------------------------------------------------------------------
 bool CHostage::IsFollowingSomeone( void )
 {
-	return (m_leader.m_Value != NULL);
+	return (m_leader.m_Value != nullptr);
 }
 
 //-----------------------------------------------------------------------------------------------------
@@ -1452,7 +1452,7 @@ void CHostage::HostageUse( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TY
 
 	if ( !mp_hostages_moveable.GetBool() )
 	{
-		if ( pPlayer->m_hCarriedHostage != NULL )
+		if ( pPlayer->m_hCarriedHostage != nullptr )
 		{
 			ClientPrint( pPlayer, HUD_PRINTCENTER, "#Cstrike_TitlesTXT_CanOnlyCarryOneHostage" );
 			return;
@@ -1550,7 +1550,7 @@ void CHostage::SetHostageStartFollowingPlayer( CCSPlayer *pPlayer )
 	if( leader && !leader->IsAlive() )
 	{
 		Idle();
-		leader = NULL;
+		leader = nullptr;
 	}
 
 	// throttle how often leader can change

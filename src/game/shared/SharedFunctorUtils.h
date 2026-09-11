@@ -32,7 +32,7 @@ public:
 		m_closeDot = 1.0f - aimTolerance;
 		m_bestDot = m_closeDot;
 		m_maxRange = maxRange;
-		m_target = NULL;
+		m_target = nullptr;
 		m_closestPointTestDistance = closestPointTestDistance;
 		m_debug = debug;
 	}

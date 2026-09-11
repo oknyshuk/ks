@@ -112,8 +112,8 @@ BEGIN_VS_SHADER( Refract_DX90, "Help for Refract" )
 		
 		// If ( snapshotting ) or ( we need to draw this frame )
 		bool bHasFlashlight = this->UsingFlashlight( params );
-		bool bSinglePassFlashlight = ( pShaderAPI != NULL ) ? pShaderAPI->SinglePassFlashlightModeEnabled() : false;
-		if ( ( pShaderShadow != NULL ) || ( !bHasFlashlight ) || ( bSinglePassFlashlight ) )
+		bool bSinglePassFlashlight = ( pShaderAPI != nullptr ) ? pShaderAPI->SinglePassFlashlightModeEnabled() : false;
+		if ( ( pShaderShadow != nullptr ) || ( !bHasFlashlight ) || ( bSinglePassFlashlight ) )
 		{
 			DrawRefract_DX9( this, params, pShaderAPI, pShaderShadow, info, vertexCompression );
 		}

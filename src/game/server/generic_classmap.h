@@ -81,7 +81,7 @@ const char *CGenericClassmap< T >::Lookup( const char *classname )
 
 	index = m_ClassDict.Find( classname );
 	if ( index == m_ClassDict.InvalidIndex() )
-		return NULL;
+		return nullptr;
 
 	lookup = m_ClassDict.Element( index );
 	return lookup.GetMapName();
@@ -113,7 +113,7 @@ T *CGenericClassmap< T >::CreateInstance( const char *mapname )
 		return ( *lookup->factory )();
 	}
 
-	return NULL;
+	return nullptr;
 }
 
 template <class T>

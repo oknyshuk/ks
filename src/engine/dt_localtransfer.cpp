@@ -177,7 +177,7 @@ public:
 		{
 			CSendNode *pCurChild = pNode->GetChild( iChild );
 			
-			unsigned char *pNewStructBase = NULL;
+			unsigned char *pNewStructBase = nullptr;
 			if ( pStructBase )
 			{
 				pNewStructBase = CallPropProxy( pCurChild, pCurChild->m_iDatatableProp, pStructBase );

@@ -14,7 +14,7 @@ LINK_ENTITY_TO_CLASS( info_map_parameters, CMapInfo );
 
 IMPLEMENT_REFLECT_DATAMAP( CMapInfo )
 
-CMapInfo *g_pMapInfo = NULL;
+CMapInfo *g_pMapInfo = nullptr;
 
 
 CMapInfo::CMapInfo()
@@ -38,7 +38,7 @@ CMapInfo::CMapInfo()
 CMapInfo::~CMapInfo()
 {
 	if ( g_pMapInfo == this )
-		g_pMapInfo = NULL;
+		g_pMapInfo = nullptr;
 }
  
 

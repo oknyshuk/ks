@@ -83,8 +83,8 @@ CEnvSpark::CEnvSpark( void )
 //-----------------------------------------------------------------------------
 void CEnvSpark::Spawn(void)
 {
-	SetThink( NULL );
-	SetUse( NULL );
+	SetThink( nullptr );
+	SetUse( nullptr );
 
 	if (FBitSet(m_spawnflags, SF_SPARK_START_ON))
 	{
@@ -186,7 +186,7 @@ void CEnvSpark::InputSparkOnce( inputdata_t &inputdata )
 //-----------------------------------------------------------------------------
 void CEnvSpark::InputStopSpark( inputdata_t &inputdata )
 {
-	SetThink(NULL);
+	SetThink(nullptr);
 }
 
 

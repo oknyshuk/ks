@@ -154,7 +154,7 @@ public:
 			return StoragePointer(pLock)->GetData();
 		}
 
-		return NULL;
+		return 0;
 	}
 
 	LOCK_TYPE LockResourceReturnCount( int *pCount, memhandle_t hMem )
@@ -165,7 +165,7 @@ public:
 			return StoragePointer(pLock)->GetData();
 		}
 
-		return NULL;
+		return nullptr;
 	}
 
 	// Use GetData() to translate pointer to LOCK_TYPE
@@ -176,7 +176,7 @@ public:
 		{
 			return StoragePointer(pLock)->GetData();
 		}
-		return NULL;
+		return nullptr;
 	}
 
 	// Use GetData() to translate pointer to LOCK_TYPE
@@ -188,7 +188,7 @@ public:
 		{
 			return StoragePointer(pLock)->GetData();
 		}
-		return NULL;
+		return nullptr;
 	}
 
 	// Wrapper to match implementation of allocation with typed storage & alloc params.

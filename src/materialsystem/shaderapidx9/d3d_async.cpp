@@ -139,7 +139,7 @@ void D3DDeviceWrapper::ExecuteAllWork( void )
 	VPROF_BUDGET( "ExecuteAllWork", "ExecuteAllWork" );
 	SubmitPushBufferAndGetANewOne();
 	PushBuffer *Pbuf;
-	while( ( Pbuf = PBQueue.GetWorkUnit() ) != NULL )
+	while( ( Pbuf = PBQueue.GetWorkUnit() ) != nullptr )
 	{
 		ExecutePushBuffer( Pbuf );
 		PBQueue.MarkUnitDone();
@@ -168,7 +168,7 @@ void D3DDeviceWrapper::SetASyncMode( bool onoff )
 	{
 		m_bBufferingD3DCalls = true;
 		// allocate push buffers if we need to
-		if ( PushBuffers[0] == NULL )
+		if ( PushBuffers[0] == nullptr )
 		{
 			for(int i=0; i<N_PUSH_BUFFERS; i++)
 				PushBuffers[i]=new PushBuffer;
@@ -182,7 +182,7 @@ void D3DDeviceWrapper::SetASyncMode( bool onoff )
 		if (! m_pASyncThreadHandle )
 		{
 			// allocate push buffers if we need to
-			if ( PushBuffers[0] == NULL )
+			if ( PushBuffers[0] == nullptr )
 			{
 				for(int i=0; i<N_PUSH_BUFFERS; i++)
 					PushBuffers[i]=new PushBuffer;
@@ -255,7 +255,7 @@ void D3DDeviceWrapper::SubmitIfNotBusy( void )
 
 void D3DDeviceWrapper::UpdateStereoTexture( IDirect3DTexture9 *pTex, bool devLost, bool *pStereoActiveThisFrame )
 {
-	if ( pStereoActiveThisFrame != NULL )
+	if ( pStereoActiveThisFrame != nullptr )
 	{
 		*pStereoActiveThisFrame = false;
 	}
@@ -295,11 +295,11 @@ void D3DDeviceWrapper::AsynchronousLock( IDirect3DIndexBuffer9* ib,
 		lb->m_pPushBuffer = FindFreePushBuffer( PUSHBUFFER_BEING_USED_FOR_LOCKEDDATA );
 		*(ptr) = lb->m_pPushBuffer->m_BufferData;
 		Assert( *ptr );
-		lb->m_pMallocedMemory = NULL;
+		lb->m_pMallocedMemory = nullptr;
 	}
 	else												// out of buffer space or size too big
 	{
-		lb->m_pPushBuffer = NULL;
+		lb->m_pPushBuffer = nullptr;
 		lb->m_pMallocedMemory = new uint8 [ size ];
 		*(ptr) = lb->m_pMallocedMemory;
 	}
@@ -328,11 +328,11 @@ void D3DDeviceWrapper::AsynchronousLock( IDirect3DVertexBuffer9* vb,
 		lb->m_pPushBuffer = FindFreePushBuffer( PUSHBUFFER_BEING_USED_FOR_LOCKEDDATA );
 		*(ptr) = lb->m_pPushBuffer->m_BufferData;
 		Assert( *ptr );
-		lb->m_pMallocedMemory = NULL;
+		lb->m_pMallocedMemory = nullptr;
 	}
 	else												// out of buffer space or size too big
 	{
-		lb->m_pPushBuffer = NULL;
+		lb->m_pPushBuffer = nullptr;
 		lb->m_pMallocedMemory = new uint8 [ size ];
 		*(ptr) = lb->m_pMallocedMemory;
 	}
@@ -363,8 +363,8 @@ inline void RememberLockedPointer( void *key, void *value )
 	if (i != MAXIMUM_NUMBER_OF_BUFFERS_LOCKED_AT_ONCE )
 	{
 		RememberedPointerHistory[i].m_pRememberedPtr = value;
-		if ( value==NULL )
-			RememberedPointerHistory[i].m_pKey = NULL;
+		if ( value==nullptr )
+			RememberedPointerHistory[i].m_pKey = nullptr;
 	}
 	else
 	{
@@ -387,7 +387,7 @@ inline void *RecallLockedPointer( void *key )
 	for(int i=0;i<MAXIMUM_NUMBER_OF_BUFFERS_LOCKED_AT_ONCE;i++)
 		if ( RememberedPointerHistory[i].m_pKey == key )
 			return RememberedPointerHistory[i].m_pRememberedPtr;
-	return NULL;
+	return nullptr;
 
 }
 
@@ -429,7 +429,7 @@ void D3DDeviceWrapper::HandleAsynchronousUnLockVBCommand( uint32 const *dptr )
 		delete[] lb.m_pMallocedMemory;
 	}
 	// now, actually unlock
-	RememberLockedPointer( vb, NULL );
+	RememberLockedPointer( vb, nullptr );
 	vb->Unlock();
 }
 
@@ -472,7 +472,7 @@ void D3DDeviceWrapper::HandleAsynchronousUnLockIBCommand( uint32 const *dptr )
 		delete[] lb.m_pMallocedMemory;
 	}
 	// now, actually unlock
-	RememberLockedPointer( ib, NULL );
+	RememberLockedPointer( ib, nullptr );
 	ib->Unlock();
 
 }

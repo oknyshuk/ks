@@ -227,8 +227,8 @@ int	DecodeBits( DecodeInfo *pInfo, unsigned char *pOut )
 	// Read the property in (note: we don't return the bits from here because Decode returns
 	// the decoded bits.. we're interested in getting the encoded bits).
 	temp = *pInfo->m_pIn;
-	pInfo->m_pRecvProp = NULL;
-	pInfo->m_pData = NULL;
+	pInfo->m_pRecvProp = nullptr;
+	pInfo->m_pData = nullptr;
 	g_PropTypeFns[pInfo->m_pProp->m_Type].Decode( pInfo );
 
 	// Return the encoded bits.
@@ -1347,15 +1347,15 @@ PropTypeFns g_PropTypeFns[DPT_NUMSendPropTypes] =
 	 
 	// DPT_DataTable
 	{
-		NULL,
-		NULL,
-		NULL,
-		NULL,
+		nullptr,
+		nullptr,
+		nullptr,
+		nullptr,
 		DataTable_GetTypeNameString,
-		NULL,
-		NULL,
-		NULL,
-		NULL,
+		nullptr,
+		nullptr,
+		nullptr,
+		nullptr,
 	},
 
 	// DPT_Int64

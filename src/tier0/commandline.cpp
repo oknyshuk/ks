@@ -51,7 +51,7 @@ public:
 	virtual int			FindParm( const char *psz ) const;
 	virtual const char* GetParm( int nIndex ) const;
 
-	virtual const char	*ParmValue( const char *psz, const char *pDefaultVal = NULL ) const;
+	virtual const char	*ParmValue( const char *psz, const char *pDefaultVal = nullptr ) const;
 	virtual int			ParmValue( const char *psz, int nDefaultVal ) const;
 	virtual float		ParmValue( const char *psz, float flDefaultVal ) const;
 	virtual void        SetParm( int nIndex, char const *pParm );
@@ -101,7 +101,7 @@ ICommandLine *CommandLine()
 //-----------------------------------------------------------------------------
 CCommandLine::CCommandLine( void )
 {
-	m_pszCmdLine = NULL;
+	m_pszCmdLine = nullptr;
 	m_nParmCount = 0;
 }
 
@@ -463,17 +463,17 @@ const char *CCommandLine::GetCmdLine( void ) const
 const char *CCommandLine::CheckParm( const char *psz, const char **ppszValue ) const
 {
 	if ( ppszValue )
-		*ppszValue = NULL;
+		*ppszValue = nullptr;
 	
 	int i = FindParm( psz );
 	if ( i == 0 )
-		return NULL;
+		return nullptr;
 	
 	if ( ppszValue )
 	{
 		if ( (i+1) >= m_nParmCount )
 		{
-			*ppszValue = NULL;
+			*ppszValue = nullptr;
 		}
 		else
 		{
@@ -521,7 +521,7 @@ void CCommandLine::ParseCommandLine()
 	}
 
 	bool bInQuotes = false;
-	const char *pFirstLetter = NULL;
+	const char *pFirstLetter = nullptr;
 	for ( ; *pChar; ++pChar )
 	{
 		if ( bInQuotes )
@@ -530,7 +530,7 @@ void CCommandLine::ParseCommandLine()
 				continue;
 
 			AddArgument( pFirstLetter, pChar );
-			pFirstLetter = NULL;
+			pFirstLetter = nullptr;
 			bInQuotes = false;
 			continue;
 		}
@@ -556,7 +556,7 @@ void CCommandLine::ParseCommandLine()
 		if ( V_isspace( *pChar ) )
 		{
 			AddArgument( pFirstLetter, pChar );
-			pFirstLetter = NULL;
+			pFirstLetter = nullptr;
 		}
 	}
 
@@ -575,7 +575,7 @@ void CCommandLine::CleanUpParms()
 	for ( int i = 0; i < m_nParmCount; ++i )
 	{
 		delete [] m_ppParms[i];
-		m_ppParms[i] = NULL;
+		m_ppParms[i] = nullptr;
 	}
 	m_nParmCount = 0;
 }

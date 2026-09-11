@@ -123,7 +123,7 @@ WEAPON_FILE_INFO_HANDLE GetInvalidWeaponInfoHandle( void )
 
 KeyValues* ReadEncryptedKVFile( IFileSystem *filesystem, const char *szFilenameWithoutExtension, const unsigned char *pICEKey, bool bForceReadEncryptedFile )
 {
-	Assert( strchr( szFilenameWithoutExtension, '.' ) == NULL );
+	Assert( strchr( szFilenameWithoutExtension, '.' ) == nullptr );
 	char szFullName[512];
 
 	const char *pSearchPath = "GAME";
@@ -145,7 +145,7 @@ KeyValues* ReadEncryptedKVFile( IFileSystem *filesystem, const char *szFilenameW
 			if (!f)
 			{
 				pKV->deleteThis();
-				return NULL;
+				return nullptr;
 			}
 			// load file into a null-terminated buffer
 			int fileSize = filesystem->Size(f);
@@ -166,13 +166,13 @@ KeyValues* ReadEncryptedKVFile( IFileSystem *filesystem, const char *szFilenameW
 			if ( !retOK )
 			{
 				pKV->deleteThis();
-				return NULL;
+				return nullptr;
 			}
 		}
 		else
 		{
 			pKV->deleteThis();
-			return NULL;
+			return nullptr;
 		}
 	}
 
@@ -522,7 +522,7 @@ bool CWeaponDatabase::LoadManifest()
 	manifest->UsesEscapeSequences( true );
 	if ( manifest->LoadFromFile( filesystem, "scripts/weapon_manifest.txt", "GAME" ) )
 	{
-		for ( KeyValues *sub = manifest->GetFirstSubKey(); sub != NULL ; sub = sub->GetNextKey() )
+		for ( KeyValues *sub = manifest->GetFirstSubKey(); sub != nullptr ; sub = sub->GetNextKey() )
 		{
 			if ( !Q_stricmp( sub->GetName(), "file" ) )
 			{

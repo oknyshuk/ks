@@ -593,7 +593,7 @@ void CBaseVSShader::SetEnvMapTintPixelShaderDynamicState( int pixelReg, int tint
 	float color[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
 	if( g_pConfig->bShowSpecular && g_pConfig->nFullbright != 2 )
 	{
-		IMaterialVar* pAlphaVar = NULL;
+		IMaterialVar* pAlphaVar = nullptr;
 		if( alphaVar >= 0 )
 		{
 			pAlphaVar = s_ppParams[alphaVar];
@@ -1072,7 +1072,7 @@ void CBaseVSShader::DrawFlashlight_dx90( IMaterialVar** params, IShaderDynamicAP
 		if ( g_pHardwareConfig->SupportsPixelShaders_3_0() )
 		{
 			DECLARE_DYNAMIC_PIXEL_SHADER( flashlight_ps30 );
-			SET_DYNAMIC_PIXEL_SHADER_COMBO( FLASHLIGHTSHADOWS, flashlightState.m_bEnableShadows && ( pFlashlightDepthTexture != NULL ) );
+			SET_DYNAMIC_PIXEL_SHADER_COMBO( FLASHLIGHTSHADOWS, flashlightState.m_bEnableShadows && ( pFlashlightDepthTexture != nullptr ) );
 			SET_DYNAMIC_PIXEL_SHADER_COMBO( UBERLIGHT, flashlightState.m_bUberlight && bSFM );
 			SET_DYNAMIC_PIXEL_SHADER( flashlight_ps30 );
 
@@ -1082,7 +1082,7 @@ void CBaseVSShader::DrawFlashlight_dx90( IMaterialVar** params, IShaderDynamicAP
 		if ( g_pHardwareConfig->SupportsPixelShaders_2_b() )
 		{
 			DECLARE_DYNAMIC_PIXEL_SHADER( flashlight_ps20b );
-			SET_DYNAMIC_PIXEL_SHADER_COMBO( FLASHLIGHTSHADOWS, flashlightState.m_bEnableShadows && ( pFlashlightDepthTexture != NULL ) );
+			SET_DYNAMIC_PIXEL_SHADER_COMBO( FLASHLIGHTSHADOWS, flashlightState.m_bEnableShadows && ( pFlashlightDepthTexture != nullptr ) );
 			SET_DYNAMIC_PIXEL_SHADER( flashlight_ps20b );
 		}
 		else
@@ -1166,6 +1166,6 @@ void CBaseVSShader::DrawEqualDepthToDestAlpha( void )
 //-----------------------------------------------------------------------------
 bool ToolsEnabled()
 {
-	static bool bToolsMode = ( CommandLine()->CheckParm( "-tools" ) != NULL );
+	static bool bToolsMode = ( CommandLine()->CheckParm( "-tools" ) != nullptr );
 	return bToolsMode;
 }

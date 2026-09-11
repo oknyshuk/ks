@@ -258,7 +258,7 @@ CTeamplayRoundBasedRules::CTeamplayRoundBasedRules( void )
 	m_flStopWatchTotalTime = -1.0f;
 
 #ifdef GAME_DLL
-	m_pCurStateInfo = NULL;
+	m_pCurStateInfo = nullptr;
 	State_Transition( GR_STATE_PREGAME );
 
 	InitTeams();
@@ -361,7 +361,7 @@ float CTeamplayRoundBasedRules::GetNextRespawnWave( int iTeam, CBasePlayer *pPla
 		return 0;
 
 	// If we are purely checking when the next respawn wave is for this team
-	if ( pPlayer == NULL )
+	if ( pPlayer == nullptr )
 	{
 		return m_flNextRespawnWave[iTeam];
 	}
@@ -496,7 +496,7 @@ bool CTeamplayRoundBasedRules::TimerMayExpire( void )
 {
 #ifndef CSTRIKE_DLL
 	// team_train_watchers can also prevent timer expiring ( overtime )
-	CTeamTrainWatcher *pWatcher = dynamic_cast<CTeamTrainWatcher*>( gEntList.FindEntityByClassname( NULL, "team_train_watcher" ) );
+	CTeamTrainWatcher *pWatcher = dynamic_cast<CTeamTrainWatcher*>( gEntList.FindEntityByClassname( nullptr, "team_train_watcher" ) );
 	while ( pWatcher )
 	{
 		if ( !pWatcher->TimerMayExpire() )
@@ -632,11 +632,11 @@ void CTeamplayRoundBasedRules::SetOvertime( bool bOvertime )
 		// tell train watchers that we've transitioned to overtime
 
 #ifndef CSTRIKE_DLL
-		CTeamTrainWatcher *pWatcher = dynamic_cast<CTeamTrainWatcher*>( gEntList.FindEntityByClassname( NULL, "team_train_watcher" ) );
+		CTeamTrainWatcher *pWatcher = dynamic_cast<CTeamTrainWatcher*>( gEntList.FindEntityByClassname( nullptr, "team_train_watcher" ) );
 		while ( pWatcher )
 		{
 			variant_t emptyVariant;
-			pWatcher->AcceptInput( "OnStartOvertime", NULL, NULL, emptyVariant, 0 );
+			pWatcher->AcceptInput( "OnStartOvertime", nullptr, nullptr, emptyVariant, 0 );
 
 			pWatcher = dynamic_cast<CTeamTrainWatcher*>( gEntList.FindEntityByClassname( pWatcher, "team_train_watcher" ) );
 		}
@@ -674,7 +674,7 @@ void CTeamplayRoundBasedRules::CheckWaitingForPlayers( void )
 			{
 				variant_t sVariant;
 				sVariant.SetInt( m_flWaitingForPlayersTimeEnds - gpGlobals->curtime );
-				m_hWaitingForPlayersTimer->AcceptInput( "SetTime", NULL, NULL, sVariant, 0 );
+				m_hWaitingForPlayersTimer->AcceptInput( "SetTime", nullptr, nullptr, sVariant, 0 );
 			}
 		}
 		else
@@ -748,9 +748,9 @@ void CTeamplayRoundBasedRules::CheckWaitingForPlayers( void )
 				m_hWaitingForPlayersTimer->SetName( MAKE_STRING("zz_teamplay_waiting_timer") );
 				m_hWaitingForPlayersTimer->KeyValue( "show_in_hud", "1" );
 				sVariant.SetInt( m_flWaitingForPlayersTimeEnds - gpGlobals->curtime );
-				m_hWaitingForPlayersTimer->AcceptInput( "SetTime", NULL, NULL, sVariant, 0 );
-				m_hWaitingForPlayersTimer->AcceptInput( "Resume", NULL, NULL, sVariant, 0 );
-				m_hWaitingForPlayersTimer->AcceptInput( "Enable", NULL, NULL, sVariant, 0 );
+				m_hWaitingForPlayersTimer->AcceptInput( "SetTime", nullptr, nullptr, sVariant, 0 );
+				m_hWaitingForPlayersTimer->AcceptInput( "Resume", nullptr, nullptr, sVariant, 0 );
+				m_hWaitingForPlayersTimer->AcceptInput( "Enable", nullptr, nullptr, sVariant, 0 );
 #endif // CSTRIKE_DLL
 			}
 		}
@@ -778,7 +778,7 @@ void CTeamplayRoundBasedRules::CheckRestartRound( void )
 		UTIL_ClientPrintAll( HUD_PRINTTALK, "#clan_ready_rules", pszReadyString );
 
 		// Don't let them put anything malicious in there
-		if( pszReadyString == NULL || Q_strlen(pszReadyString) > 16 )
+		if( pszReadyString == nullptr || Q_strlen(pszReadyString) > 16 )
 		{
 			pszReadyString = "ready";
 		}
@@ -830,7 +830,7 @@ void CTeamplayRoundBasedRules::CheckRestartRound( void )
 		if ( IsInTournamentMode() == false )
 		{
 			// let the players know
-			const char *pFormat = NULL;
+			const char *pFormat = nullptr;
 
 			if ( mp_restartgame.GetInt() > 0 )
 			{
@@ -1079,15 +1079,15 @@ CGameRulesRoundStateInfo* CTeamplayRoundBasedRules::State_LookupInfo( gamerules_
 {
 	static CGameRulesRoundStateInfo playerStateInfos[] =
 	{
-		{ GR_STATE_INIT,		"GR_STATE_INIT",		&CTeamplayRoundBasedRules::State_Enter_INIT, NULL, &CTeamplayRoundBasedRules::State_Think_INIT },
-		{ GR_STATE_PREGAME,		"GR_STATE_PREGAME",		&CTeamplayRoundBasedRules::State_Enter_PREGAME, NULL, &CTeamplayRoundBasedRules::State_Think_PREGAME },
-		{ GR_STATE_STARTGAME,	"GR_STATE_STARTGAME",	&CTeamplayRoundBasedRules::State_Enter_STARTGAME, NULL, &CTeamplayRoundBasedRules::State_Think_STARTGAME },
-		{ GR_STATE_PREROUND,	"GR_STATE_PREROUND",	&CTeamplayRoundBasedRules::State_Enter_PREROUND, NULL, &CTeamplayRoundBasedRules::State_Think_PREROUND },
-		{ GR_STATE_RND_RUNNING,	"GR_STATE_RND_RUNNING",	&CTeamplayRoundBasedRules::State_Enter_RND_RUNNING, NULL,	&CTeamplayRoundBasedRules::State_Think_RND_RUNNING },
-		{ GR_STATE_TEAM_WIN,	"GR_STATE_TEAM_WIN",	&CTeamplayRoundBasedRules::State_Enter_TEAM_WIN, NULL,	&CTeamplayRoundBasedRules::State_Think_TEAM_WIN },
-		{ GR_STATE_RESTART,		"GR_STATE_RESTART",		&CTeamplayRoundBasedRules::State_Enter_RESTART,	NULL, &CTeamplayRoundBasedRules::State_Think_RESTART },
+		{ GR_STATE_INIT,		"GR_STATE_INIT",		&CTeamplayRoundBasedRules::State_Enter_INIT, nullptr, &CTeamplayRoundBasedRules::State_Think_INIT },
+		{ GR_STATE_PREGAME,		"GR_STATE_PREGAME",		&CTeamplayRoundBasedRules::State_Enter_PREGAME, nullptr, &CTeamplayRoundBasedRules::State_Think_PREGAME },
+		{ GR_STATE_STARTGAME,	"GR_STATE_STARTGAME",	&CTeamplayRoundBasedRules::State_Enter_STARTGAME, nullptr, &CTeamplayRoundBasedRules::State_Think_STARTGAME },
+		{ GR_STATE_PREROUND,	"GR_STATE_PREROUND",	&CTeamplayRoundBasedRules::State_Enter_PREROUND, nullptr, &CTeamplayRoundBasedRules::State_Think_PREROUND },
+		{ GR_STATE_RND_RUNNING,	"GR_STATE_RND_RUNNING",	&CTeamplayRoundBasedRules::State_Enter_RND_RUNNING, nullptr,	&CTeamplayRoundBasedRules::State_Think_RND_RUNNING },
+		{ GR_STATE_TEAM_WIN,	"GR_STATE_TEAM_WIN",	&CTeamplayRoundBasedRules::State_Enter_TEAM_WIN, nullptr,	&CTeamplayRoundBasedRules::State_Think_TEAM_WIN },
+		{ GR_STATE_RESTART,		"GR_STATE_RESTART",		&CTeamplayRoundBasedRules::State_Enter_RESTART,	nullptr, &CTeamplayRoundBasedRules::State_Think_RESTART },
 		{ GR_STATE_STALEMATE,	"GR_STATE_STALEMATE",	&CTeamplayRoundBasedRules::State_Enter_STALEMATE,	&CTeamplayRoundBasedRules::State_Leave_STALEMATE, &CTeamplayRoundBasedRules::State_Think_STALEMATE },
-		{ GR_STATE_GAME_OVER,	"GR_STATE_GAME_OVER",	NULL, NULL, NULL },
+		{ GR_STATE_GAME_OVER,	"GR_STATE_GAME_OVER",	nullptr, nullptr, nullptr },
 	};
 
 	for ( int i=0; i < ARRAYSIZE( playerStateInfos ); i++ )
@@ -1096,7 +1096,7 @@ CGameRulesRoundStateInfo* CTeamplayRoundBasedRules::State_LookupInfo( gamerules_
 			return &playerStateInfos[i];
 	}
 
-	return NULL;
+	return nullptr;
 }
 
 //-----------------------------------------------------------------------------
@@ -1202,9 +1202,9 @@ void CTeamplayRoundBasedRules::State_Enter_PREROUND( void )
 
 			sVariant.SetInt( tf_arena_preround_time.GetInt() );
 
-			m_hStalemateTimer->AcceptInput( "SetTime", NULL, NULL, sVariant, 0 );
-			m_hStalemateTimer->AcceptInput( "Resume", NULL, NULL, sVariant, 0 );
-			m_hStalemateTimer->AcceptInput( "Enable", NULL, NULL, sVariant, 0 );
+			m_hStalemateTimer->AcceptInput( "SetTime", nullptr, nullptr, sVariant, 0 );
+			m_hStalemateTimer->AcceptInput( "Resume", nullptr, nullptr, sVariant, 0 );
+			m_hStalemateTimer->AcceptInput( "Enable", nullptr, nullptr, sVariant, 0 );
 
 			IGameEvent *event = gameeventmanager->CreateEvent( "teamplay_update_timer" );
 			if ( event )
@@ -1466,7 +1466,7 @@ void CTeamplayRoundBasedRules::State_Enter_STALEMATE( void )
 	if ( m_hStalemateTimer )
 	{
 		UTIL_Remove( m_hStalemateTimer );
-		m_hStalemateTimer = NULL;
+		m_hStalemateTimer = nullptr;
 	}
 
 	int iTimeLimit = mp_stalemate_timelimit.GetInt();
@@ -1489,9 +1489,9 @@ void CTeamplayRoundBasedRules::State_Enter_STALEMATE( void )
 		m_hStalemateTimer->KeyValue( "show_in_hud", "1" );
 		sVariant.SetInt( iTimeLimit );
 	
-		m_hStalemateTimer->AcceptInput( "SetTime", NULL, NULL, sVariant, 0 );
-		m_hStalemateTimer->AcceptInput( "Resume", NULL, NULL, sVariant, 0 );
-		m_hStalemateTimer->AcceptInput( "Enable", NULL, NULL, sVariant, 0 );
+		m_hStalemateTimer->AcceptInput( "SetTime", nullptr, nullptr, sVariant, 0 );
+		m_hStalemateTimer->AcceptInput( "Resume", nullptr, nullptr, sVariant, 0 );
+		m_hStalemateTimer->AcceptInput( "Enable", nullptr, nullptr, sVariant, 0 );
 #endif // CSTRIKE_DLL
 
 		IGameEvent *event = gameeventmanager->CreateEvent( "teamplay_update_timer" );
@@ -1533,20 +1533,20 @@ void CTeamplayRoundBasedRules::HideActiveTimer( void )
 {
 #ifndef CSTRIKE_DLL
 	// We can't handle this, because we won't be able to restore multiple timers
-	Assert( m_hPreviousActiveTimer.Get() == NULL );
+	Assert( m_hPreviousActiveTimer.Get() == nullptr );
 
-	m_hPreviousActiveTimer = NULL;
-	CBaseEntity *pEntity = NULL;
+	m_hPreviousActiveTimer = nullptr;
+	CBaseEntity *pEntity = nullptr;
 	variant_t sVariant;
 	sVariant.SetInt( false );
-	while ((pEntity = gEntList.FindEntityByClassname( pEntity, "team_round_timer" )) != NULL)
+	while ((pEntity = gEntList.FindEntityByClassname( pEntity, "team_round_timer" )) != nullptr)
 	{
 		CTeamRoundTimer *pTimer = assert_cast<CTeamRoundTimer*>(pEntity);
 		if ( pTimer && pTimer->ShowInHud() )
 		{
 			Assert( !m_hPreviousActiveTimer );
 			m_hPreviousActiveTimer = pTimer;
-			pEntity->AcceptInput( "ShowInHUD", NULL, NULL, sVariant, 0 );
+			pEntity->AcceptInput( "ShowInHUD", nullptr, nullptr, sVariant, 0 );
 		}
 	}
 #endif // CSTRIKE_DLL
@@ -1561,8 +1561,8 @@ void CTeamplayRoundBasedRules::RestoreActiveTimer( void )
 	{
 		variant_t sVariant;
 		sVariant.SetInt( true );
-		m_hPreviousActiveTimer->AcceptInput( "ShowInHUD", NULL, NULL, sVariant, 0 );
-		m_hPreviousActiveTimer = NULL;
+		m_hPreviousActiveTimer->AcceptInput( "ShowInHUD", nullptr, nullptr, sVariant, 0 );
+		m_hPreviousActiveTimer = nullptr;
 	}
 }
 
@@ -1629,7 +1629,7 @@ void CTeamplayRoundBasedRules::State_Think_STALEMATE( void )
 			{
 				variant_t sVariant;
 				sVariant.SetInt( iAliveTeam );
-				pMaster->AcceptInput( "SetWinnerAndForceCaps", NULL, NULL, sVariant, 0 );
+				pMaster->AcceptInput( "SetWinnerAndForceCaps", nullptr, nullptr, sVariant, 0 );
 				bMasterHandled = true;
 			}
 		}
@@ -1961,7 +1961,7 @@ void CTeamplayRoundBasedRules::HandleTimeLimitChange( void )
 		if ( m_hTimeLimitTimer )
 		{
 			UTIL_Remove( m_hTimeLimitTimer );
-			m_hTimeLimitTimer = NULL;
+			m_hTimeLimitTimer = nullptr;
 		}
 	}
 }
@@ -1972,9 +1972,9 @@ void CTeamplayRoundBasedRules::HandleTimeLimitChange( void )
 bool CTeamplayRoundBasedRules::MapHasActiveTimer( void )
 {
 #ifndef CSTRIKE_DLL
-	CBaseEntity *pEntity = NULL;
+	CBaseEntity *pEntity = nullptr;
 
-	while ( ( pEntity = gEntList.FindEntityByClassname( pEntity, "team_round_timer" ) ) != NULL )
+	while ( ( pEntity = gEntList.FindEntityByClassname( pEntity, "team_round_timer" ) ) != nullptr )
 	{
 		CTeamRoundTimer *pTimer = assert_cast<CTeamRoundTimer*>( pEntity );
 		if ( pTimer && pTimer->ShowInHud() && ( Q_stricmp( STRING( pTimer->GetEntityName() ), "zz_teamplay_timelimit_timer" ) != 0 ) )
@@ -2002,9 +2002,9 @@ void CTeamplayRoundBasedRules::CreateTimeLimitTimer( void )
 	variant_t sVariant;
 	m_hTimeLimitTimer->KeyValue( "show_in_hud", "1" );
 	sVariant.SetInt( GetTimeLeft() );
-	m_hTimeLimitTimer->AcceptInput( "SetTime", NULL, NULL, sVariant, 0 );
-	m_hTimeLimitTimer->AcceptInput( "Resume", NULL, NULL, sVariant, 0 );
-	m_hTimeLimitTimer->AcceptInput( "Enable", NULL, NULL, sVariant, 0 );
+	m_hTimeLimitTimer->AcceptInput( "SetTime", nullptr, nullptr, sVariant, 0 );
+	m_hTimeLimitTimer->AcceptInput( "Resume", nullptr, nullptr, sVariant, 0 );
+	m_hTimeLimitTimer->AcceptInput( "Enable", nullptr, nullptr, sVariant, 0 );
 #endif // CSTRIKE_DLL
 }
 
@@ -2164,7 +2164,7 @@ void CTeamplayRoundBasedRules::CleanUpMap()
 				// CTeamplayMapEntityFilter, which should have built the g_MapEntityRefs list
 				// with the same list of entities we're referring to here.
 				Assert( false );
-				return NULL;
+				return nullptr;
 			}
 			else
 			{
@@ -2487,7 +2487,7 @@ void CTeamplayRoundBasedRules::ResetScores( void )
 		{
 			pPlayer = ToBasePlayer( UTIL_PlayerByIndex( i ) );
 
-			if (pPlayer == NULL)
+			if (pPlayer == nullptr)
 				continue;
 
 			if (FNullEnt( pPlayer->edict() ))
@@ -2647,7 +2647,7 @@ string_t CTeamplayRoundBasedRules::GetLastPlayedRound( void )
 //-----------------------------------------------------------------------------
 CTeamRoundTimer *CTeamplayRoundBasedRules::GetActiveRoundTimer( void )
 {
-	return NULL;
+	return nullptr;
 }
 
 #endif // GAME_DLL
@@ -2733,7 +2733,7 @@ bool CTeamplayRoundBasedRules::WouldChangeUnbalanceTeams( int iNumPlayersToMove,
 
 	CTeam *pTeam;
 
-	for ( pTeam = GetGlobalTeam(i); pTeam != NULL; pTeam = GetGlobalTeam(++i) )
+	for ( pTeam = GetGlobalTeam(i); pTeam != nullptr; pTeam = GetGlobalTeam(++i) )
 	{
 		if ( pTeam == pNewTeam )
 			continue;
@@ -2773,7 +2773,7 @@ bool CTeamplayRoundBasedRules::AreTeamsUnbalanced( int &iHeaviestTeam, int &iLig
 
 	int i = FIRST_GAME_TEAM;
 
-	for ( CTeam *pTeam = GetGlobalTeam(i); pTeam != NULL; pTeam = GetGlobalTeam(++i) )
+	for ( CTeam *pTeam = GetGlobalTeam(i); pTeam != nullptr; pTeam = GetGlobalTeam(++i) )
 	{
 		int iNumPlayers = pTeam->GetNumPlayers();
 

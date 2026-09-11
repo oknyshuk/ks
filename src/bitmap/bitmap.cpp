@@ -15,11 +15,11 @@
 
 bool Bitmap_t::IsValid() const
 {
-	if ( m_nWidth <= 0 || m_nHeight <= 0 || m_pBits == NULL )
+	if ( m_nWidth <= 0 || m_nHeight <= 0 || m_pBits == nullptr )
 	{
 		Assert( m_nWidth == 0 );
 		Assert( m_nHeight == 0 );
-		Assert( m_pBits == NULL );
+		Assert( m_pBits == nullptr );
 		return false;
 	}
 	return true;

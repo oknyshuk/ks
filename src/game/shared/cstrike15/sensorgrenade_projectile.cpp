@@ -52,7 +52,7 @@ void C_SensorGrenadeProjectile::OnParticleEffectDeleted( CNewParticleEffect *pPa
 {
 	if ( m_sensorgrenadeParticleEffect == pParticleEffect )
 	{
-		m_sensorgrenadeParticleEffect = NULL;
+		m_sensorgrenadeParticleEffect = nullptr;
 	}
 }
 
@@ -126,7 +126,7 @@ CSensorGrenadeProjectile* CSensorGrenadeProjectile::Create(
 
 	pGrenade->m_pWeaponInfo = &weaponInfo;
 
-	ASSERT(pOwner != NULL);
+	ASSERT(pOwner != nullptr);
 
 	//pGrenade->SetCollisionGroup( COLLISION_GROUP_PROJECTILE );
 	return pGrenade;

@@ -88,7 +88,7 @@ public:
 	virtual void OnExit( CCSBot *bot );
 	virtual const char *GetName( void ) const		{ return "Hunt"; }
 
-	void ClearHuntArea( void )						{ m_huntArea = NULL; }
+	void ClearHuntArea( void )						{ m_huntArea = nullptr; }
 
 private:
 	CNavArea *m_huntArea;										///< "far away" area we are moving to
@@ -502,9 +502,9 @@ public:
 	void Idle( void );
 	bool IsIdling( void ) const;
 
-	void Hide( CNavArea *searchFromArea = NULL, float duration = -1.0f, float hideRange = 750.0f, bool holdPosition = false );	///< DEPRECATED: Use TryToHide() instead
+	void Hide( CNavArea *searchFromArea = nullptr, float duration = -1.0f, float hideRange = 750.0f, bool holdPosition = false );	///< DEPRECATED: Use TryToHide() instead
 	#define USE_NEAREST true
-	bool TryToHide( CNavArea *searchFromArea = NULL, float duration = -1.0f, float hideRange = 750.0f, bool holdPosition = false, bool useNearest = false, const Vector *pStartPosOverride = NULL );	///< try to hide nearby, return false if cannot
+	bool TryToHide( CNavArea *searchFromArea = nullptr, float duration = -1.0f, float hideRange = 750.0f, bool holdPosition = false, bool useNearest = false, const Vector *pStartPosOverride = nullptr );	///< try to hide nearby, return false if cannot
 	void Hide( const Vector &hidingSpot, float duration = -1.0f, bool holdPosition = false );	///< move to the given hiding place
 	bool IsHiding( void ) const;								///< returns true if bot is currently hiding
 	bool IsAtHidingSpot( void ) const;							///< return true if we are hiding and at our hiding spot
@@ -617,14 +617,14 @@ public:
 
 		NUM_TASKS
 	};
-	void SetTask( TaskType task, CBaseEntity *entity = NULL );	///< set our current "task"
+	void SetTask( TaskType task, CBaseEntity *entity = nullptr );	///< set our current "task"
 	TaskType GetTask( void ) const;
 	CBaseEntity *GetTaskEntity( void );
 	const char *GetTaskName( void ) const;						///< return string describing current task
 
 	// You probably never want to call these on CS bots. 
-	virtual CBaseEntity		*GetEnemy( void ) OVERRIDE { Assert( 0 ); return NULL; }
-	virtual CBaseEntity		*GetEnemy( void ) const OVERRIDE { Assert( 0 ); return NULL; }
+	virtual CBaseEntity		*GetEnemy( void ) OVERRIDE { Assert( 0 ); return nullptr; }
+	virtual CBaseEntity		*GetEnemy( void ) const OVERRIDE { Assert( 0 ); return nullptr; }
 
 	//- behavior modifiers ------------------------------------------------------------------------------------------
 	enum DispositionType
@@ -756,7 +756,7 @@ public:
 	void ResetStuckMonitor( void );
 	bool IsAreaVisible( const CNavArea *area ) const;				///< is any portion of the area visible to this bot
 	const Vector &GetPathPosition( int index ) const;
-	bool GetSimpleGroundHeightWithFloor( const Vector &pos, float *height, Vector *normal = NULL );	///< find "simple" ground height, treating current nav area as part of the floor
+	bool GetSimpleGroundHeightWithFloor( const Vector &pos, float *height, Vector *normal = nullptr );	///< find "simple" ground height, treating current nav area as part of the floor
 	void BreakablesCheck( void );
 	void DoorCheck( void );											///< Check for any doors along our path that need opening
 
@@ -822,8 +822,8 @@ public:
 	};
 
 	#define CHECK_FOV true
-	bool IsVisible( const Vector &pos, bool testFOV = false, const CBaseEntity *ignore = NULL ) const;	///< return true if we can see the point
-	bool IsVisible( CCSPlayer *player, bool testFOV = false, unsigned char *visParts = NULL ) const;	///< return true if we can see any part of the player
+	bool IsVisible( const Vector &pos, bool testFOV = false, const CBaseEntity *ignore = nullptr ) const;	///< return true if we can see the point
+	bool IsVisible( CCSPlayer *player, bool testFOV = false, unsigned char *visParts = nullptr ) const;	///< return true if we can see any part of the player
 
 	bool IsBeyondBotMaxVisionDistance( const Vector &vecTargetPosition ) const;
 
@@ -952,7 +952,7 @@ public:
 	void OnEnteredNavArea( CNavArea *newArea );						///< invoked when bot enters a nav area
 
 	#define IS_FOOTSTEP true
-	void OnAudibleEvent( IGameEvent *event, CBasePlayer *player, float range, PriorityType priority, bool isHostile, bool isFootstep = false, const Vector *actualOrigin = NULL );	///< Checks if the bot can hear the event
+	void OnAudibleEvent( IGameEvent *event, CBasePlayer *player, float range, PriorityType priority, bool isHostile, bool isFootstep = false, const Vector *actualOrigin = nullptr );	///< Checks if the bot can hear the event
 
 	void SetLastCoopSpawnPoint( SpawnPointCoopEnemy *spawn );
 	SpawnPointCoopEnemy *GetLastCoopSpawnPoint( void ) const;
@@ -1071,7 +1071,7 @@ private:
 	void SetPathIndex( int index );									///< set the current index along the path
 	void DrawPath( void );
 	int FindOurPositionOnPath( Vector *close, bool local = false ) const;	///< compute the closest point to our current position on our path
-	int FindPathPoint( float aheadRange, Vector *point, int *prevIndex = NULL );	///< compute a point a fixed distance ahead along our path.
+	int FindPathPoint( float aheadRange, Vector *point, int *prevIndex = nullptr );	///< compute a point a fixed distance ahead along our path.
 	bool FindClosestPointOnPath( const Vector &pos, int startIndex, int endIndex, Vector *close ) const;	///< compute closest point on path to given point
 	bool IsStraightLinePathWalkable( const Vector &goal ) const;	///< test for un-jumpable height change, or unrecoverable fall
 	void ComputeLadderAngles( float *yaw, float *pitch );			///< computes ideal yaw/pitch for traversing the current ladder on our path
@@ -1370,7 +1370,7 @@ inline const Vector *CCSBot::GetNoisePosition( void ) const
 	if (m_noiseTimestamp > 0.0f)
 		return &m_noisePosition;
 
-	return NULL;
+	return nullptr;
 }
 
 inline bool CCSBot::IsAwareOfEnemyDeath( void ) const
@@ -1378,7 +1378,7 @@ inline bool CCSBot::IsAwareOfEnemyDeath( void ) const
 	if (GetEnemyDeathTimestamp() == 0.0f)
 		return false;
 
-	if (m_enemy == NULL)
+	if (m_enemy == nullptr)
 		return true;
 
 	if (!m_enemy->IsAlive() && gpGlobals->curtime - GetEnemyDeathTimestamp() > (1.0f - 0.8f * GetProfile()->GetSkill()))
@@ -1614,7 +1614,7 @@ inline unsigned int CCSBot::GetEnemyPlace( void ) const
 
 inline bool CCSBot::CanSeeBomber( void ) const
 {
-	return (m_bomber == NULL) ? false : true;
+	return (m_bomber == nullptr) ? false : true;
 }
 
 inline CCSPlayer *CCSBot::GetBomber( void ) const
@@ -1699,7 +1699,7 @@ inline bool CCSBot::HasSeenSniperRecently( void ) const
 
 inline float CCSBot::GetTravelDistanceToPlayer( CCSPlayer *player ) const
 {
-	if (player == NULL)
+	if (player == nullptr)
 		return -1.0f;
 
 	if (!player->IsAlive())
@@ -1717,7 +1717,7 @@ inline void CCSBot::DestroyPath( void )
 {
 	m_isStopping = false;
 	m_pathLength = 0;
-	m_pathLadder = NULL;
+	m_pathLadder = nullptr;
 }
 
 inline const Vector &CCSBot::GetPathEndpoint( void ) const		
@@ -1796,7 +1796,7 @@ inline void CCSBot::ClearLookAt( void )
 { 
 	//PrintIfWatched( "ClearLookAt()\n" );
 	m_lookAtSpotState = NOT_LOOKING_AT_SPOT; 
-	m_lookAtDesc = NULL; 
+	m_lookAtDesc = nullptr; 
 }
 
 inline bool CCSBot::IsLookingAtSpot( PriorityType pri ) const
@@ -1946,7 +1946,7 @@ inline bool CCSBot::IsOpeningDoor( void ) const
  */
 inline bool IsSniperRifle( CWeaponCSBase *weapon )
 {
-	if (weapon == NULL)
+	if (weapon == nullptr)
 		return false;
 
 	return weapon->IsKindOf(WEAPONTYPE_SNIPER_RIFLE);
@@ -1974,7 +1974,7 @@ public:
 	{
         float dangerFactor = m_dangerFactor;
 
-		if (fromArea == NULL)
+		if (fromArea == nullptr)
 		{
 			if (m_route == FASTEST_ROUTE)
 				return 0.0f;
@@ -2129,7 +2129,7 @@ inline CCSBot *ToCSBot( CBaseEntity *pEntity )
 {
 	CCSPlayer* pPlayer = ToCSPlayer( pEntity );
 	if ( !pPlayer || !pPlayer->IsBot() )
-		return NULL;
+		return nullptr;
 
 	return dynamic_cast<CCSBot*>( pPlayer );
 }

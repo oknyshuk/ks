@@ -32,7 +32,7 @@
 
 
 #define RecvPropUtlVectorDataTable( varName, nMaxElements, dataTableName ) \
-	RecvPropUtlVector( RECVINFO_UTLVECTOR( varName ), nMaxElements, RecvPropDataTable(NULL,0,0, &REFERENCE_RECV_TABLE( dataTableName  ) ) )
+	RecvPropUtlVector( RECVINFO_UTLVECTOR( varName ), nMaxElements, RecvPropDataTable(nullptr,0,0, &REFERENCE_RECV_TABLE( dataTableName  ) ) )
 
 
 //

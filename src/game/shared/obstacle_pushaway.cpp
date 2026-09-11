@@ -37,7 +37,7 @@ extern ConVar sv_turbophysics;
 //-----------------------------------------------------------------------------------------------------
 bool IsPushAwayEntity( CBaseEntity *pEnt )
 {
-	if ( pEnt == NULL )
+	if ( pEnt == nullptr )
 		return false;
 
 	if ( pEnt->GetCollisionGroup() != COLLISION_GROUP_PUSHAWAY )
@@ -84,7 +84,7 @@ bool IsPushAwayEntity( CBaseEntity *pEnt )
 //-----------------------------------------------------------------------------------------------------
 bool IsPushableEntity( CBaseEntity *pEnt )
 {
-	if ( pEnt == NULL )
+	if ( pEnt == nullptr )
 		return false;
 
 	if ( sv_turbophysics.GetBool() )
@@ -108,7 +108,7 @@ bool IsPushableEntity( CBaseEntity *pEnt )
 //-----------------------------------------------------------------------------------------------------
 bool IsBreakableEntity( CBaseEntity *pEnt )
 {
-	if ( pEnt == NULL )
+	if ( pEnt == nullptr )
 		return false;
 
 	// first check to see if it's already broken
@@ -186,7 +186,7 @@ int GetPushawayEnts( CBaseCombatCharacter *pPushingEntity, CBaseEntity **ents, i
 	Ray_t ray;
 	ray.Init( pPushingEntity->GetAbsOrigin(), pPushingEntity->GetAbsOrigin(), pPushingEntity->GetCollideable()->OBBMins() - vExpand, pPushingEntity->GetCollideable()->OBBMaxs() + vExpand );
 
-	CPushAwayEnumerator *physPropEnum = NULL;
+	CPushAwayEnumerator *physPropEnum = nullptr;
 	if  ( !enumerator )
 	{
 		physPropEnum = new CPushAwayEnumerator( ents, nMaxEnts );
@@ -211,18 +211,18 @@ void AvoidPushawayProps( CBaseCombatCharacter *pPlayer, CUserCmd *pCmd )
 	Vector rightdir;
 	if (g_pGameRules->IsTopDown())
 	{
-		AngleVectors( g_pGameRules->GetTopDownMovementAxis(), &currentdir, &rightdir, NULL );
+		AngleVectors( g_pGameRules->GetTopDownMovementAxis(), &currentdir, &rightdir, nullptr );
 	}
 	else
 	{
-		AngleVectors( pCmd->viewangles, &currentdir, &rightdir, NULL );
+		AngleVectors( pCmd->viewangles, &currentdir, &rightdir, nullptr );
 	}
 
 	CBaseEntity *props[512];
 #ifdef CLIENT_DLL
-	int nEnts = GetPushawayEnts( pPlayer, props, ARRAYSIZE( props ), 0.0f, PARTITION_CLIENT_SOLID_EDICTS, NULL );
+	int nEnts = GetPushawayEnts( pPlayer, props, ARRAYSIZE( props ), 0.0f, PARTITION_CLIENT_SOLID_EDICTS, nullptr );
 #else
-	int nEnts = GetPushawayEnts( pPlayer, props, ARRAYSIZE( props ), 0.0f, PARTITION_ENGINE_SOLID_EDICTS, NULL );
+	int nEnts = GetPushawayEnts( pPlayer, props, ARRAYSIZE( props ), 0.0f, PARTITION_ENGINE_SOLID_EDICTS, nullptr );
 #endif
 
 	const Vector & ourCenter = pPlayer->WorldSpaceCenter();
@@ -313,13 +313,13 @@ void PerformObstaclePushaway( CBaseCombatCharacter *pPushingEntity )
 		return;
 
 	// if sv_pushaway_clientside is 1, only local player can push them
-	CBasePlayer *pPlayer = pPushingEntity->IsPlayer() ? (dynamic_cast< CBasePlayer * >(pPushingEntity)) : NULL;
+	CBasePlayer *pPlayer = pPushingEntity->IsPlayer() ? (dynamic_cast< CBasePlayer * >(pPushingEntity)) : nullptr;
 	if ( (sv_pushaway_clientside.GetInt() == 1) && (!pPlayer || !C_BasePlayer::IsLocalPlayer( pPlayer )) )
 		return;
 
-	int nEnts = GetPushawayEnts( pPushingEntity, props, ARRAYSIZE( props ), 3.0f, PARTITION_CLIENT_RESPONSIVE_EDICTS, NULL );
+	int nEnts = GetPushawayEnts( pPushingEntity, props, ARRAYSIZE( props ), 3.0f, PARTITION_CLIENT_RESPONSIVE_EDICTS, nullptr );
 #else
-	int nEnts = GetPushawayEnts( pPushingEntity, props, ARRAYSIZE( props ), 3.0f, PARTITION_ENGINE_SOLID_EDICTS, NULL );
+	int nEnts = GetPushawayEnts( pPushingEntity, props, ARRAYSIZE( props ), 3.0f, PARTITION_ENGINE_SOLID_EDICTS, nullptr );
 #endif
 	
 	for ( int i=0; i < nEnts; i++ )

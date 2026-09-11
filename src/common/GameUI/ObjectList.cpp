@@ -23,7 +23,7 @@
 
 ObjectList::ObjectList()
 {
-	head = tail = current = NULL;
+	head = tail = current = nullptr;
 	number = 0;
 }
 
@@ -37,7 +37,7 @@ bool ObjectList::AddHead(void * newObject)
 	// create new element
 	element_t * newElement = (element_t *) calloc(1, sizeof(element_t));
 
-	if (newElement == NULL )
+	if (newElement == nullptr )
 		return false; // out of memory
 
 	// insert element
@@ -52,7 +52,7 @@ bool ObjectList::AddHead(void * newObject)
 	head = newElement;
 	
 	// if list was empty set new tail
-	if (tail==NULL) tail = head;	
+	if (tail==nullptr) tail = head;	
 
 	number++;
 
@@ -69,11 +69,11 @@ void * ObjectList::RemoveHead()
 	{
 		retObj = head->object;
 		element_t * newHead  = head->next;
-		if (newHead) newHead->prev = NULL;
+		if (newHead) newHead->prev = nullptr;
 
 		// if only one element is in list also update tail
 		// if we remove this prev element
-		if (tail==head) tail = NULL;
+		if (tail==head) tail = nullptr;
 
 		free(head);
 		head = newHead;
@@ -81,7 +81,7 @@ void * ObjectList::RemoveHead()
 		number--;
 
 	} else
-	  retObj = NULL;
+	  retObj = nullptr;
 
 	return retObj;
 }
@@ -90,7 +90,7 @@ bool ObjectList::AddTail(void * newObject)
 {
 	element_t * newElement = (element_t *) calloc(1, sizeof(element_t));
 
-	if (newElement == NULL) 
+	if (newElement == nullptr) 
 		return false; // out of memory;
 
 	newElement->object = newObject;
@@ -104,7 +104,7 @@ bool ObjectList::AddTail(void * newObject)
 	tail = newElement;
 
 	// if list was empty set new head
-	if (head==NULL) head = tail;
+	if (head==nullptr) head = tail;
 
 	number++;
 
@@ -121,11 +121,11 @@ void * ObjectList::RemoveTail()
 	{
 		retObj = tail->object;
 		element_t * newTail  = tail->prev;
-		if (newTail) newTail->next = NULL;
+		if (newTail) newTail->next = nullptr;
 
 		// if only one element is in list also update tail
 		// if we remove this prev element
-		if (head==tail) head = NULL;
+		if (head==tail) head = nullptr;
 
 		free(tail);
 		tail = newTail;
@@ -133,14 +133,14 @@ void * ObjectList::RemoveTail()
 		number--;
 
 	} else
-		retObj = NULL;
+		retObj = nullptr;
 
 	return retObj;
 }
 
 bool ObjectList::IsEmpty()
 {
-	return ( head == NULL );
+	return ( head == nullptr );
 }
 
 int ObjectList::CountElements()
@@ -181,7 +181,7 @@ void ObjectList::Clear( bool freeElementsMemory )
 		e = ne; 
 	}
 
-	head = tail = current = NULL;
+	head = tail = current = nullptr;
 	number = 0;
 
 }
@@ -192,7 +192,7 @@ bool ObjectList::Remove( void * object )
 
 	while(e && e->object!=object) { e = e->next;}
 
-	if (e!=NULL)
+	if (e!=nullptr)
 	{
 		if (e->prev) e->prev->next = e->next;
 		if (e->next) e->next->prev = e->prev;
@@ -203,12 +203,12 @@ bool ObjectList::Remove( void * object )
 		number--;
 	}
 
-	return (e!=NULL);
+	return (e!=nullptr);
 }
 
 void ObjectList::Init()
 {
-	head = tail = current = NULL;
+	head = tail = current = nullptr;
 	number = 0;
 }
 
@@ -221,15 +221,15 @@ void * ObjectList::GetFirst()
 	} 
 	else
 	{
-		current = NULL;
-		return NULL;
+		current = nullptr;
+		return nullptr;
 	};
 	
 }
 
 void * ObjectList::GetNext()
 {
-	void * retObj = NULL;
+	void * retObj = nullptr;
 	if (current)
 	{	
 		retObj = current->object;

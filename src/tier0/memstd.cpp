@@ -145,14 +145,14 @@ void *g_AllocRegions[] =
 {
 #ifndef MEMALLOC_REGIONS
 #ifdef MEMALLOC_SEGMENT_MIXED
-	s_bUsingProcessHeap ? NULL : create_mspace( 0, 1 ), // unified
-	s_bUsingProcessHeap ? NULL : create_mspace( MBH_SIZE_MB * 1024 * 1024, 1 ), 
+	s_bUsingProcessHeap ? nullptr : create_mspace( 0, 1 ), // unified
+	s_bUsingProcessHeap ? nullptr : create_mspace( MBH_SIZE_MB * 1024 * 1024, 1 ), 
 #else
-	s_bUsingProcessHeap ? NULL : create_mspace( 100*1024*1024, 1 ),
+	s_bUsingProcessHeap ? nullptr : create_mspace( 100*1024*1024, 1 ),
 #endif
 #else  // MEMALLOC_REGIONS
 	// @TODO: per DLL regions didn't work out very well. flux of usage left too much overhead. need to try lifetime-based management [6/9/2009 tom]
-	s_bUsingProcessHeap ? NULL : create_mspace( s_nMemSpaceSize, 1 ), // unified
+	s_bUsingProcessHeap ? nullptr : create_mspace( s_nMemSpaceSize, 1 ), // unified
 #endif // MEMALLOC_REGIONS
 };
 
@@ -181,7 +181,7 @@ FORCEINLINE void *realloc_aligned_internal( void *mem, size_t bytes, size_t alig
 	// realloc broke alignment...
 	byte *fallback = (byte *)malloc_aligned_internal( DEF_REGION, bytes, align );
 	if ( !fallback )
-		return NULL;
+		return nullptr;
 	memcpy( fallback, newMem, bytes );
 	dlfree( newMem );
 	return fallback;
@@ -412,7 +412,7 @@ void CSmallBlockPool<CAllocator>::Init( unsigned nBlockSize )
 			//
 			// SBH size in megabytes
 			//
-			char const *szSBH = pszPlatCommandLine ? strstr( pszPlatCommandLine, "-forcesbhsizemb " ) : NULL;
+			char const *szSBH = pszPlatCommandLine ? strstr( pszPlatCommandLine, "-forcesbhsizemb " ) : nullptr;
 			if ( szSBH )
 			{
 				g_nSBHOverride = size_t( atoi( szSBH + strlen( "-forcesbhsizemb " ) ) ) * size_t( 1024 * 1024 );
@@ -428,7 +428,7 @@ void CSmallBlockPool<CAllocator>::Init( unsigned nBlockSize )
 			//
 			// SBH compact control
 			//
-			char const *szSBHcompact = pszPlatCommandLine ? strstr( pszPlatCommandLine, "-sbhcompactdisabled " ) : NULL;
+			char const *szSBHcompact = pszPlatCommandLine ? strstr( pszPlatCommandLine, "-sbhcompactdisabled " ) : nullptr;
 			if ( szSBHcompact )
 			{
 				g_bSBHCompactDisabled = true;
@@ -448,7 +448,7 @@ void CSmallBlockPool<CAllocator>::Init( unsigned nBlockSize )
 		DebuggerBreak();
 
 	m_nBlockSize = nBlockSize;
-	m_pNextAlloc = NULL;
+	m_pNextAlloc = nullptr;
 	m_nCommittedPages = 0;
 	m_nIsCompact = 1;
 }
@@ -573,10 +573,10 @@ void *CSmallBlockPool<CAllocator>::Alloc()
 						}
 						else
 						{
-							m_pNextAlloc = NULL;
+							m_pNextAlloc = nullptr;
 							m_CommitMutex.Unlock();
 							sharedLock.UnlockRead();
-							return NULL;
+							return nullptr;
 						}
 					}
 					m_CommitMutex.Unlock();
@@ -707,7 +707,7 @@ bool CSmallBlockPool<CAllocator>::RemovePagesFromFreeList( byte **pPages, int nP
 		if ( m_pNextAlloc >= pPages[i] && m_pNextAlloc < pLimits[i] )
 		{
 			nBlocksNotInFreeList = ( pLimits[i] - m_pNextAlloc ) / m_nBlockSize;
-			m_pNextAlloc = NULL;
+			m_pNextAlloc = nullptr;
 		}
 	}
 
@@ -792,7 +792,7 @@ bool CSmallBlockPool<CAllocator>::RemovePagesFromFreeList( byte **pPages, int nP
 		}
 		for ( i = 0; i < nSortPages; i++ )
 		{
-			while ( ( pNode = pSharedData->m_PageStatus[sortPages[i]].m_SortList.Pop() ) != NULL )
+			while ( ( pNode = pSharedData->m_PageStatus[sortPages[i]].m_SortList.Pop() ) != nullptr )
 			{
 				m_FreeList.Push( pNode );
 			}
@@ -831,7 +831,7 @@ size_t CSmallBlockPool<CAllocator>::Compact( bool bIncremental )
 		
 		// Gather the pages to return to the backing pool
 		PageStatus_t *pPage = m_pFirstPage;
-		PageStatus_t *pPagePrev = NULL;
+		PageStatus_t *pPagePrev = nullptr;
 		while ( pPage )
 		{
 			if ( pPage->m_nAllocated == 0 )
@@ -880,8 +880,8 @@ size_t CSmallBlockPool<CAllocator>::Compact( bool bIncremental )
 				{
 					m_pFirstPage = pReleasedPages[i]->m_pNextPageInPool;
 				}
-				pReleasedPages[i]->m_pNextPageInPool = NULL;
-				pReleasedPages[i]->m_pPool = NULL;
+				pReleasedPages[i]->m_pNextPageInPool = nullptr;
+				pReleasedPages[i]->m_pPool = nullptr;
 			}
 
 			// Push them onto the backing free lists
@@ -918,7 +918,7 @@ size_t CSmallBlockPool<CAllocator>::Compact( bool bIncremental )
 						pSharedData->m_FreePages.Push( pReleasedPages[i] );
 					}
 
-					TSLNodeBase_t *pCur, *pTemp = NULL;
+					TSLNodeBase_t *pCur, *pTemp = nullptr;
 					pCur = pNodes;
 					while ( pCur )
 					{
@@ -926,11 +926,11 @@ size_t CSmallBlockPool<CAllocator>::Compact( bool bIncremental )
 						{
 							if ( pTemp )
 							{
-								pTemp->Next = NULL;
+								pTemp->Next = nullptr;
 							}
 							else
 							{
-								pNodes = NULL; // The list only has decommitted pages, don't go circular
+								pNodes = nullptr; // The list only has decommitted pages, don't go circular
 							}
 
 							while ( pCur )
@@ -1114,7 +1114,7 @@ CSmallBlockHeap<CAllocator>::CSmallBlockHeap()
 	const int MAX_TABLE = MAX_SBH_BLOCK >> SBH_BLOCK_LOOKUP_GRANULARITY;
 	int i = 0;
 	int nBytesElement = 0;
-	CPool *pCurPool = NULL;
+	CPool *pCurPool = nullptr;
 	int iCurPool = 0;
 
 	// Blocks sized 0 - 128 are in pools in increments of 8
@@ -1264,14 +1264,14 @@ void *CSmallBlockHeap<CAllocator>::Realloc( void *p, size_t nBytes )
 	}
 
 	CPool *pOldPool = FindPool( p );
-	CPool *pNewPool = ( ShouldUse( nBytes ) ) ? FindPool( nBytes ) : NULL;
+	CPool *pNewPool = ( ShouldUse( nBytes ) ) ? FindPool( nBytes ) : nullptr;
 
 	if ( pOldPool == pNewPool )
 	{
 		return p;
 	}
 
-	void *pNewBlock = NULL;
+	void *pNewBlock = nullptr;
 
 	if ( !pNewBlock )
 	{
@@ -1499,7 +1499,7 @@ CSmallBlockPool<CAllocator> *CSmallBlockHeap<CAllocator>::FindPool( void *p )
 	size_t index = (size_t)((byte *)p - m_pSharedData->m_pBase) / BYTES_PAGE;
 	if ( index < m_pSharedData->m_numPages )
 		return m_pSharedData->m_PageStatus[index].m_pPool;
-	return NULL;
+	return nullptr;
 }
 
 template <typename CAllocator>
@@ -1559,7 +1559,7 @@ bool CSmallBlockHeap<CAllocator>::Validate()
 #ifndef LIGHT_MEM_DEBUG_REQUIRES_CMD_LINE_SWITCH
 #define UsingLMD() true
 #else // LIGHT_MEM_DEBUG_REQUIRES_CMD_LINE_SWITCH
-bool g_bUsingLMD = ( Plat_GetCommandLineA() ) ? ( strstr( Plat_GetCommandLineA(), "-uselmd" ) != NULL ) : false;
+bool g_bUsingLMD = ( Plat_GetCommandLineA() ) ? ( strstr( Plat_GetCommandLineA(), "-uselmd" ) != nullptr ) : false;
 #define UsingLMD() g_bUsingLMD
 #endif // LIGHT_MEM_DEBUG_REQUIRES_CMD_LINE_SWITCH
 
@@ -1616,7 +1616,7 @@ int g_iNextFreeSlot;
 
 CThreadFastMutex g_LMDMutex CONSTRUCT_EARLY;
 
-const char *g_pLMDFileName = NULL;
+const char *g_pLMDFileName = nullptr;
 int g_nLMDLine;
 int g_iLMDDepth;
 
@@ -1640,7 +1640,7 @@ void LMDPopAllocDbgInfo()
 		g_iLMDDepth--;
 		if ( g_iLMDDepth == 0 )
 		{
-			g_pLMDFileName = NULL;
+			g_pLMDFileName = nullptr;
 			g_nLMDLine = 0;
 		}
 	}
@@ -1745,7 +1745,7 @@ void *LMDNoteAlloc( void *p, size_t nBytes, size_t align = 0, const char *pszMod
 		LMDValidateBlock( pHeader, false );
 		return pUserPtr;
 	}
-	return NULL;
+	return nullptr;
 
 	// Some SBH clients rely on allocations > 16 bytes being 16-byte aligned, so we mustn't break that assumption:
 	MEMSTD_COMPILE_TIME_ASSERT( sizeof( AllocHeader_t ) % 16 == 0 );
@@ -1761,7 +1761,7 @@ void *LMDNoteFree( void *p )
 	AUTO_LOCK( g_LMDMutex );
 	if ( !p )
 	{
-		return NULL;
+		return nullptr;
 	}
 
 	AllocHeader_t *pHeader = LMDToHeader( p );
@@ -1830,7 +1830,7 @@ void *LMDRealloc( void *pMem, size_t nSize, size_t align = 0, const char *pszMod
 	if ( nSize == 0 )
 	{
 		s_StdMemAlloc.Free( pMem );
-		return NULL;
+		return nullptr;
 	}
 	void *pNew;
 #ifdef MEMALLOC_SUPPORTS_ALIGNED_ALLOCATIONS
@@ -1867,7 +1867,7 @@ FORCEINLINE size_t LMDAdjustSize( size_t &nBytes, size_t align = 0 ) { return nB
 #define LMDValidateHeap() (true)
 #define LMDPushAllocDbgInfo( pFileName, nLine ) ((void)0)
 #define LMDPopAllocDbgInfo() ((void)0)
-FORCEINLINE void *LMDRealloc( void *pMem, size_t nSize, size_t align = 0, const char *pszModule = NULL, int line = 0 ) { return NULL; }
+FORCEINLINE void *LMDRealloc( void *pMem, size_t nSize, size_t align = 0, const char *pszModule = nullptr, int line = 0 ) { return nullptr; }
 
 #endif // USE_LIGHT_MEM_DEBUG
 
@@ -1904,7 +1904,7 @@ INTERNAL_INLINE void *CStdMemAlloc::InternalAllocFromPools( size_t nSize )
 
 	CallAllocFailHandler( nSize );
 #endif // MEM_SBH_ENABLED
-	return NULL;
+	return nullptr;
 }
 
 INTERNAL_INLINE void *CStdMemAlloc::InternalAlloc( int region, size_t nSize )
@@ -1944,7 +1944,7 @@ INTERNAL_INLINE void *CStdMemAlloc::InternalAlloc( int region, size_t nSize )
 		if ( !pMem )
 		{
 			SetCRTAllocFailed( nSize );
-			return NULL;
+			return nullptr;
 		}
 	}
 
@@ -1987,7 +1987,7 @@ INTERNAL_INLINE void *CStdMemAlloc::InternalAllocAligned( int region, size_t nSi
 		if ( !pMem )
 		{
 			SetCRTAllocFailed( nSize );
-			return NULL;
+			return nullptr;
 		}
 	}
 
@@ -2172,7 +2172,7 @@ void  CStdMemAlloc::Free( void *pMem )
 
 void *CStdMemAlloc::Expand_NoLongerSupported( void *pMem, size_t nSize )
 {
-	return NULL;
+	return nullptr;
 }
 
 //-----------------------------------------------------------------------------
@@ -2216,7 +2216,7 @@ void  CStdMemAlloc::Free( void *pMem, const char *pFileName, int nLine )
 
 void *CStdMemAlloc::Expand_NoLongerSupported( void *pMem, size_t nSize, const char *pFileName, int nLine )
 {
-	return NULL;
+	return nullptr;
 }
 
 //-----------------------------------------------------------------------------
@@ -2377,7 +2377,7 @@ void CStdMemAlloc::DumpStatsFileBase( char const *pchFileBase, DumpStatsFormat_t
 
 IVirtualMemorySection * CStdMemAlloc::AllocateVirtualMemorySection( size_t numMaxBytes )
 {
-	return NULL;
+	return nullptr;
 }
 
 size_t CStdMemAlloc::ComputeMemoryUsedBy( char const *pchSubStr )

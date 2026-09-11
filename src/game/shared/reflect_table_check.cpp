@@ -13,7 +13,7 @@ namespace ks::reflect
 {
 
 static int g_nDiffs = 0;
-static CUtlVector< void ( * )() > *g_pVerifiers = NULL;
+static CUtlVector< void ( * )() > *g_pVerifiers = nullptr;
 
 const char *SafeName( const char *s ) { return s ? s : "(null)"; }
 

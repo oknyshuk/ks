@@ -49,7 +49,7 @@ void CRopeAnchor::Spawn()
 
 	m_hRope = CRopeKeyframe::CreateWithSecondPointDetached( this, -1, flDist, RAPPEL_ROPE_WIDTH, "cable/cable.vmt", 5, true );
 
-	ASSERT( m_hRope != NULL );
+	ASSERT( m_hRope != nullptr );
 
 	SetThink( &CRopeAnchor::FallThink );
 	SetNextThink( gpGlobals->curtime + 0.2 );
@@ -91,7 +91,7 @@ void CRopeAnchor::RemoveThink()
 //-----------------------------------------------------------------------------
 CAI_RappelBehavior::CAI_RappelBehavior()
 {
-	m_hLine = NULL;
+	m_hLine = nullptr;
 	m_bWaitingToRappel = false;
 	m_bOnGround = true;
 }
@@ -187,7 +187,7 @@ void CAI_RappelBehavior::StartTask( const Task_t *pTask )
 	case TASK_HIT_GROUND:
 		m_bOnGround = true;
 
-		if( GetOuter()->GetGroundEntity() != NULL && GetOuter()->GetGroundEntity()->IsNPC() && GetOuter()->GetGroundEntity()->m_iClassname == GetOuter()->m_iClassname )
+		if( GetOuter()->GetGroundEntity() != nullptr && GetOuter()->GetGroundEntity()->IsNPC() && GetOuter()->GetGroundEntity()->m_iClassname == GetOuter()->m_iClassname )
 		{
 			// Although I tried to get NPC's out from under me, I landed on one. Kill it, so long as it's the same type of character as me.
 			variant_t val;
@@ -238,7 +238,7 @@ void CAI_RappelBehavior::RunTask( const Task_t *pTask )
 				{
 					// try to shove the player in the opposite direction as they are facing (so they'll see me)
 					Vector vecForward;
-					pGroundEnt->GetVectors( &vecForward, NULL, NULL );
+					pGroundEnt->GetVectors( &vecForward, nullptr, nullptr );
 					pGroundEnt->SetAbsVelocity( vecForward * -500 );
 					break;
 				}
@@ -337,10 +337,10 @@ void CAI_RappelBehavior::BeginRappel()
 
 	UTIL_TraceEntity( GetOuter(), GetAbsOrigin(), GetAbsOrigin()-Vector(0,0,4096), MASK_SHOT, GetOuter(), COLLISION_GROUP_NONE, &tr );
 
-	if( tr.Ent<CBaseEntity>() != NULL && tr.Ent<CBaseEntity>()->IsNPC() )
+	if( tr.Ent<CBaseEntity>() != nullptr && tr.Ent<CBaseEntity>()->IsNPC() )
 	{
 		Vector forward;
-		GetOuter()->GetVectors( &forward, NULL, NULL );
+		GetOuter()->GetVectors( &forward, nullptr, nullptr );
 
 		CSoundEnt::InsertSound( SOUND_DANGER, tr.Ent<CBaseEntity>()->EarPosition() - forward * 12.0f, 32.0f, 0.2f, GetOuter() );
 	}

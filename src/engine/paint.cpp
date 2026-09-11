@@ -79,7 +79,7 @@ CPaintmapDataManager g_PaintManager;
 
 
 CPaintmapDataManager::CPaintmapDataManager( void )
-	: m_pPaintTextureDataArray( NULL ), m_iPaintmaps( 0 ), m_bShouldRegister( false )
+	: m_pPaintTextureDataArray( nullptr ), m_iPaintmaps( 0 ), m_bShouldRegister( false )
 {
 }
 
@@ -96,7 +96,7 @@ void CPaintmapDataManager::DestroyPaintmapsData( void )
 			m_pPaintTextureDataArray[i].Destroy();
 		}
 		delete []m_pPaintTextureDataArray;
-		m_pPaintTextureDataArray = NULL;
+		m_pPaintTextureDataArray = nullptr;
 		m_iPaintmaps = 0;
 	}
 }
@@ -156,7 +156,7 @@ void CPaintmapDataManager::UpdatePaintmapTextures()
 
 		if ( nDirtyFlag == PAINTMAP_DIRTY_FULLRECT )
 		{
-			R_UpdatePaintmap( pCallQueue, paintmap, m_pPaintTextureDataArray[paintmap].GetPaintmapData(), 0, NULL );
+			R_UpdatePaintmap( pCallQueue, paintmap, m_pPaintTextureDataArray[paintmap].GetPaintmapData(), 0, nullptr );
 		}
 		else
 		{
@@ -183,7 +183,7 @@ BYTE* CPaintmapDataManager::GetPaintmapData( int paintmap )
 		return m_pPaintTextureDataArray[paintmap].GetPaintmapData();
 	}
 
-	return NULL;
+	return nullptr;
 }
 
 
@@ -310,7 +310,7 @@ void CPaintmapDataManager::AllocatePaintmapData( int iPaintmapID, int iCorrespon
 CPaintTextureData::CPaintTextureData()
 {
 	m_nPaintWidth = m_nPaintHeight = 0;
-	m_backbuffer = NULL;
+	m_backbuffer = nullptr;
 	m_nDirtyFlag = PAINTMAP_CLEAN;
 }
 
@@ -335,7 +335,7 @@ void CPaintTextureData::Destroy()
 	if ( m_backbuffer )
 	{
 		delete[] m_backbuffer;
-		m_backbuffer = NULL;
+		m_backbuffer = nullptr;
 	}
 }
 
@@ -1259,7 +1259,7 @@ void R_AddPaintToSurface( SurfaceHandle_t surfID, paintinfo_t *paintinfo )
 		return;
 
 	// in multiplayer, materialSortInfoArray is initialized after paint power user objects are active
-	if ( materialSortInfoArray == NULL )
+	if ( materialSortInfoArray == nullptr )
 		return;
 
 	// don't do it if it's full bright
@@ -1415,7 +1415,7 @@ bool IsSurfaceInFrontOfPlane( SurfaceHandle_t surfID, const VPlane& plane )
 
 bool ShootPaintSphere( const model_t *pModel, const Vector& vPosition, BYTE colorIndex, float flSphereRadius, float flPaintCoatPercent )
 {
-	if ( !g_PaintManager.m_bShouldRegister || g_PaintManager.m_pPaintTextureDataArray == NULL )
+	if ( !g_PaintManager.m_bShouldRegister || g_PaintManager.m_pPaintTextureDataArray == nullptr )
 	{
 		return false;
 	}
@@ -1478,7 +1478,7 @@ void GetPaintColorFromSurface( SurfaceHandle_t surfID, const Vector& vPosition, 
 
 void TracePaintSphere( const model_t *pModel, const Vector& vPosition, const Vector& vContactNormal, float flSphereRadius, CUtlVector<BYTE>& surfColors )
 {
-	if ( !g_PaintManager.m_bShouldRegister || g_PaintManager.m_pPaintTextureDataArray == NULL )
+	if ( !g_PaintManager.m_bShouldRegister || g_PaintManager.m_pPaintTextureDataArray == nullptr )
 	{
 		return;
 	}

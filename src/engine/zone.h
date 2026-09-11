@@ -48,7 +48,7 @@ public:
 	{
 		Assert( s_DbgInfoStackDepth >= 0 );
 		if ( s_DbgInfoStackDepth >= 0 )
-			s_DbgInfoStack[ s_DbgInfoStackDepth-- ] = NULL;
+			s_DbgInfoStack[ s_DbgInfoStackDepth-- ] = nullptr;
 	}
 	static const char *GetAllocDbgInfo( void )
 	{
@@ -66,7 +66,7 @@ class CHunkMemory
 {
 public:
 	// constructor, destructor
-	CHunkMemory( int nGrowSize = 0, int nInitSize = 0 )		{ m_pMemory = NULL; m_nAllocated = 0; if ( nInitSize ) Grow( nInitSize ); }
+	CHunkMemory( int nGrowSize = 0, int nInitSize = 0 )		{ m_pMemory = nullptr; m_nAllocated = 0; if ( nInitSize ) Grow( nInitSize ); }
 	CHunkMemory( T* pMemory, int numElements )				{ Assert( 0 ); }
 
 	// Can we use this index?

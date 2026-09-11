@@ -86,7 +86,7 @@ public:
 	virtual void SetShowOnHUD( bool bShow );
 	virtual void SetUserSlot( int nUserSlot ) { m_nUserSlot = nUserSlot; }
 	virtual void ClearAchievementData();
-	virtual const char *GetIconPath() { return NULL; }
+	virtual const char *GetIconPath() { return nullptr; }
 	void SetDisplayOrder( int iDisplayOrder ) { m_iDisplayOrder = iDisplayOrder; }
 	int GetDisplayOrder( ) { return m_iDisplayOrder; }
 
@@ -255,16 +255,16 @@ static CBaseAchievement *Create_##className( void )					\
 static CBaseAchievementHelper g_##className##_Helper( Create_##className );
 
 #define DECLARE_ACHIEVEMENT( className, achievementID, achievementName, iPointValue ) \
-	DECLARE_ACHIEVEMENT_( className, achievementID, achievementName, NULL, iPointValue, false )
+	DECLARE_ACHIEVEMENT_( className, achievementID, achievementName, nullptr, iPointValue, false )
 
 #define DECLARE_MAP_EVENT_ACHIEVEMENT_( achievementID, achievementName, gameDirFilter, iPointValue, bHidden ) \
 class CAchievement##achievementID : public CMapAchievement {};		\
 DECLARE_ACHIEVEMENT_( CAchievement##achievementID, achievementID, achievementName, gameDirFilter, iPointValue, bHidden )	\
 
 #define DECLARE_MAP_EVENT_ACHIEVEMENT( achievementID, achievementName, iPointValue )	\
-	DECLARE_MAP_EVENT_ACHIEVEMENT_( achievementID, achievementName, NULL, iPointValue, false )
+	DECLARE_MAP_EVENT_ACHIEVEMENT_( achievementID, achievementName, nullptr, iPointValue, false )
 
 #define DECLARE_MAP_EVENT_ACHIEVEMENT_HIDDEN( achievementID, achievementName, iPointValue )	\
-	DECLARE_MAP_EVENT_ACHIEVEMENT_( achievementID, achievementName, NULL, iPointValue, true )
+	DECLARE_MAP_EVENT_ACHIEVEMENT_( achievementID, achievementName, nullptr, iPointValue, true )
 
 #endif // BASEACHIEVEMENT_H

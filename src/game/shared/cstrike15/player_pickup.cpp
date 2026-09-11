@@ -69,7 +69,7 @@ CBaseEntity	*Pickup_OnFailedPhysGunPickup( CBaseEntity *pPickedUpObject, Vector 
 		return pPickup->OnFailedPhysGunPickup( vPhysgunPos );
 	}
 
-	return NULL;
+	return nullptr;
 }
 
 bool Pickup_GetPreferredCarryAngles( CBaseEntity *pObject, CBasePlayer *pPlayer, matrix3x4_t &localToWorld, QAngle &outputAnglesWorldSpace )
@@ -99,7 +99,7 @@ bool Pickup_ForcePhysGunOpen( CBaseEntity *pObject, CBasePlayer *pPlayer )
 AngularImpulse Pickup_PhysGunLaunchAngularImpulse( CBaseEntity *pObject, PhysGunForce_t reason )
 {
 	IPlayerPickupVPhysics *pPickup = dynamic_cast<IPlayerPickupVPhysics *>(pObject);
-	if ( pPickup != NULL && pPickup->ShouldPuntUseLaunchForces( reason ) )
+	if ( pPickup != nullptr && pPickup->ShouldPuntUseLaunchForces( reason ) )
 	{
 		return pPickup->PhysGunLaunchAngularImpulse();
 	}
@@ -116,7 +116,7 @@ Vector Pickup_DefaultPhysGunLaunchVelocity( const Vector &vecForward, float flMa
 Vector Pickup_PhysGunLaunchVelocity( CBaseEntity *pObject, const Vector &vecForward, PhysGunForce_t reason )
 {
 	// The object must be valid
-	if ( pObject == NULL )
+	if ( pObject == nullptr )
 	{
 		Assert( 0 );
 		return vec3_origin;
@@ -124,7 +124,7 @@ Vector Pickup_PhysGunLaunchVelocity( CBaseEntity *pObject, const Vector &vecForw
 
 	// Shouldn't ever get here with a non-vphysics object.
 	IPhysicsObject *pPhysicsObject = pObject->VPhysicsGetObject();
-	if ( pPhysicsObject == NULL )
+	if ( pPhysicsObject == nullptr )
 	{
 		Assert( 0 );
 		return vec3_origin;
@@ -132,7 +132,7 @@ Vector Pickup_PhysGunLaunchVelocity( CBaseEntity *pObject, const Vector &vecForw
 
 	// Call the pickup entity's callback
 	IPlayerPickupVPhysics *pPickup = dynamic_cast<IPlayerPickupVPhysics *>(pObject);
-	if ( pPickup != NULL && pPickup->ShouldPuntUseLaunchForces( reason ) )
+	if ( pPickup != nullptr && pPickup->ShouldPuntUseLaunchForces( reason ) )
 		return pPickup->PhysGunLaunchVelocity( vecForward, pPhysicsObject->GetMass() );
 
 	// Do our default behavior

@@ -132,15 +132,15 @@ public:
 	{
 		if ( pContext->m_Severity == LS_WARNING && pContext->m_ChannelID == LOG_EngineInitialization )
 		{
-			::MessageBox( NULL, pMessage, "Warning!", MB_OK | MB_SYSTEMMODAL | MB_ICONERROR );
+			::MessageBox( nullptr, pMessage, "Warning!", MB_OK | MB_SYSTEMMODAL | MB_ICONERROR );
 		}
 		else if ( pContext->m_Severity == LS_ASSERT && !ShouldUseNewAssertDialog() )
 		{
-			::MessageBox( NULL, pMessage, "Assert!", MB_OK | MB_SYSTEMMODAL | MB_ICONERROR );
+			::MessageBox( nullptr, pMessage, "Assert!", MB_OK | MB_SYSTEMMODAL | MB_ICONERROR );
 		}
 		else if ( pContext->m_Severity == LS_ERROR )
 		{
-			::MessageBox( NULL, pMessage, "Error!", MB_OK | MB_SYSTEMMODAL | MB_ICONERROR );
+			::MessageBox( nullptr, pMessage, "Error!", MB_OK | MB_SYSTEMMODAL | MB_ICONERROR );
 		}
 	}
 };
@@ -290,7 +290,7 @@ void CLogAllFiles::Init()
 
 	m_bActive = true;
 
-	char const *pszDir = NULL;
+	char const *pszDir = nullptr;
 	if ( CommandLine()->CheckParm( "-reslistdir", &pszDir ) && pszDir )
 	{
 		char szDir[ MAX_PATH ];
@@ -506,7 +506,7 @@ bool CSourceAppSystemGroup::Create()
 	// Load up the appropriate shader DLL
 	// This has to be done before connection.
 	char const *pDLLName = "shaderapidx9" DLL_EXT_STRING;
-	const char* pArg = NULL;
+	const char* pArg = nullptr;
 	if ( CommandLine()->FindParm( "-noshaderapi" ) )
 	{
 		pDLLName = "shaderapiempty" DLL_EXT_STRING;
@@ -610,8 +610,8 @@ void CSourceAppSystemGroup::PostShutdown()
 
 void CSourceAppSystemGroup::Destroy()
 {
-	g_pEngineAPI = NULL;
-	g_pMaterialSystem = NULL;
+	g_pEngineAPI = nullptr;
+	g_pMaterialSystem = nullptr;
 
 }
 
@@ -749,7 +749,7 @@ void RemoveSpuriousGameParameters()
 static char const *Cmd_TranslateFileAssociation(char const *param )
 {
 	static char sz[ 512 ];
-	char *retval = NULL;
+	char *retval = nullptr;
 
 	char temp[ 512 ];
 	Q_strncpy( temp, param, sizeof( temp ) );
@@ -977,7 +977,7 @@ extern "C" DLL_EXPORT int LauncherMain( int argc, char **argv )
         setenv( "LC_ALL", en_US, 1 );
         setlocale( LC_ALL, en_US );
 
-        const char *CurrentLocale = setlocale( LC_ALL, NULL );
+        const char *CurrentLocale = setlocale( LC_ALL, nullptr );
         if ( Q_stricmp( CurrentLocale, en_US ) )
         {
                 Warning( "WARNING: setlocale('%s') failed, using locale:'%s'. International characters may not work.\n", en_US, CurrentLocale );
@@ -995,7 +995,7 @@ extern "C" DLL_EXPORT int LauncherMain( int argc, char **argv )
 
 	// GS - If we didn't specify a game name then default to CSGO
 	// This is required for running from a HDD Boot Game package
-	if ( CommandLine()->CheckParm( "-game") == NULL )
+	if ( CommandLine()->CheckParm( "-game") == nullptr )
 	{
 		CommandLine()->AppendParm( "-game", "csgo" );
 	}
@@ -1003,9 +1003,9 @@ extern "C" DLL_EXPORT int LauncherMain( int argc, char **argv )
 
 
 	bool bDvdDev, bSpewDllInfo, bWaitForConsole;
-	bDvdDev         = CommandLine()->CheckParm( "-dvddev"    ) != NULL;
-	bSpewDllInfo    = CommandLine()->CheckParm( "-dllinfo"   ) != NULL;
-	bWaitForConsole = CommandLine()->CheckParm( "-vxconsole" ) != NULL;
+	bDvdDev         = CommandLine()->CheckParm( "-dvddev"    ) != nullptr;
+	bSpewDllInfo    = CommandLine()->CheckParm( "-dllinfo"   ) != nullptr;
+	bWaitForConsole = CommandLine()->CheckParm( "-vxconsole" ) != nullptr;
 
 
 #if LOADING_MEMORY_WATCHDOG
@@ -1025,7 +1025,7 @@ extern "C" DLL_EXPORT int LauncherMain( int argc, char **argv )
 
 #ifdef SIXENSE
 	// If the game arg is currently portal2
-	char const *game_param_val = NULL;
+	char const *game_param_val = nullptr;
 	CommandLine()->CheckParm( "-game", &game_param_val );
 
 	if( game_param_val && !Q_strcmp( game_param_val, "portal2" ) )
@@ -1073,16 +1073,16 @@ extern "C" DLL_EXPORT int LauncherMain( int argc, char **argv )
 	{
 		if ( !GrabSourceMutex() )
 		{
-			::MessageBox(NULL, "Only one instance of the game can be running at one time.", "Source - Warning", 0 );
+			::MessageBox(nullptr, "Only one instance of the game can be running at one time.", "Source - Warning", 0 );
 			return -1;
 		}
 	}
 
 
 	// If game is not run from Steam then add -insecure in order to avoid client timeout message
-	if ( NULL == CommandLine()->CheckParm( "-steam" ) )
+	if ( nullptr == CommandLine()->CheckParm( "-steam" ) )
 	{
-		CommandLine()->AppendParm( "-insecure", NULL );
+		CommandLine()->AppendParm( "-insecure", nullptr );
 	}
 
 	// Figure out the directory the executable is running from
@@ -1093,8 +1093,8 @@ extern "C" DLL_EXPORT int LauncherMain( int argc, char **argv )
 	// When building cubemaps, we don't need sound and can't afford to have async I/O - cubemap writes to the BSP can collide with async bsp reads
 	if ( CommandLine()->CheckParm( "-buildcubemaps") )
 	{
-		CommandLine()->AppendParm( "-nosound", NULL );
-		CommandLine()->AppendParm( "-noasync", NULL );
+		CommandLine()->AppendParm( "-nosound", nullptr );
+		CommandLine()->AppendParm( "-noasync", nullptr );
 	}
 
 	g_LeakDump.m_bCheckLeaks = CommandLine()->CheckParm( "-leakcheck" ) ? true : false;
@@ -1110,8 +1110,8 @@ extern "C" DLL_EXPORT int LauncherMain( int argc, char **argv )
 #if ENABLE_HARDWARE_PROFILER
 		// Hack fix, causes memory leak, but prevents crash due to bad coding not doing proper teardown
 		// need to ensure these list anchors don't anchor stale pointers
-		g_pPhysicsMiniProfilers = NULL;
-		g_pOtherMiniProfilers = NULL;
+		g_pPhysicsMiniProfilers = nullptr;
+		g_pOtherMiniProfilers = nullptr;
 #endif
 
 		if ( steamApplication.GetCurrentStage() == CSourceAppSystemGroup::INITIALIZATION )

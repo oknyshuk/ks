@@ -718,9 +718,9 @@ struct FireBulletsInfo_t
 		m_iTracerFreq = 4;
 		m_flDamage = 0.0f;
 		m_flPlayerDamage = 0.0f;
-		m_pAttacker = NULL;
+		m_pAttacker = nullptr;
 		m_nFlags = 0;
-		m_pAdditionalIgnoreEnt = NULL;
+		m_pAdditionalIgnoreEnt = nullptr;
 		m_flDamageForceScale = 1.0f;
 
 #ifdef _DEBUG
@@ -742,9 +742,9 @@ struct FireBulletsInfo_t
 		m_iTracerFreq = 4;
 		m_flDamage = 0;
 		m_flPlayerDamage = 0;
-		m_pAttacker = NULL;
+		m_pAttacker = nullptr;
 		m_nFlags = 0;
-		m_pAdditionalIgnoreEnt = NULL;
+		m_pAdditionalIgnoreEnt = nullptr;
 		m_flDamageForceScale = 1.0f;
 		m_bPrimaryAttack = bPrimaryAttack;
 	}

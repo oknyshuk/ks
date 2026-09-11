@@ -743,7 +743,7 @@ int CHardwareConfig::GetActualVertexSamplerCount() const
 
 const char *CHardwareConfig::GetHWSpecificShaderDLLName()	const
 {
-	return m_Caps.m_pShaderDLL && m_Caps.m_pShaderDLL[0] ? m_Caps.m_pShaderDLL : NULL;
+	return m_Caps.m_pShaderDLL && m_Caps.m_pShaderDLL[0] ? m_Caps.m_pShaderDLL : nullptr;
 }
 
 bool CHardwareConfig::SupportsShadowDepthTextures( void ) const

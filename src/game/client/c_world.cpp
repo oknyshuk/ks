@@ -23,7 +23,7 @@
 #undef CWorld
 #endif
 
-C_GameRules *g_pGameRules = NULL;
+C_GameRules *g_pGameRules = nullptr;
 static C_World *g_pClientWorld;
 
 
@@ -35,12 +35,12 @@ void ClientWorldFactoryInit()
 void ClientWorldFactoryShutdown()
 {
 	delete g_pClientWorld;
-	g_pClientWorld = NULL;
+	g_pClientWorld = nullptr;
 }
 
 static IClientNetworkable* ClientWorldFactory( int entnum, int serialNum )
 {
-	Assert( g_pClientWorld != NULL );
+	Assert( g_pClientWorld != nullptr );
 
 	g_pClientWorld->Init( entnum, serialNum );
 	return g_pClientWorld;
@@ -161,7 +161,7 @@ void C_World::Spawn( void )
 
 C_World *GetClientWorldEntity()
 {
-	Assert( g_pClientWorld != NULL );
+	Assert( g_pClientWorld != nullptr );
 	return g_pClientWorld;
 }
 

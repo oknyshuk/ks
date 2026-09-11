@@ -64,7 +64,7 @@ public:
 	virtual	~IClient() {}
 
 	// connect client
-	virtual void	Connect( const char * szName, int nUserID, INetChannel *pNetChannel, bool bFakePlayer, CrossPlayPlatform_t clientPlatform, const ks::net::CMsg_CVars *pVecCvars = NULL ) = 0;
+	virtual void	Connect( const char * szName, int nUserID, INetChannel *pNetChannel, bool bFakePlayer, CrossPlayPlatform_t clientPlatform, const ks::net::CMsg_CVars *pVecCvars = nullptr ) = 0;
 
 	// set the client in a pending state waiting for a new game
 	virtual void	Inactivate( void ) = 0;

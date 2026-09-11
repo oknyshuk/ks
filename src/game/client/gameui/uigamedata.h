@@ -176,7 +176,7 @@ public:
 	class CAsyncJobContext
 	{
 	public:
-		CAsyncJobContext( float flLeastExecuteTime = 0.0f ) : m_flLeastExecuteTime( flLeastExecuteTime ), m_hThreadHandle( NULL )  {}
+		CAsyncJobContext( float flLeastExecuteTime = 0.0f ) : m_flLeastExecuteTime( flLeastExecuteTime ), m_hThreadHandle( nullptr )  {}
 		virtual ~CAsyncJobContext() {}
 
 		virtual void ExecuteAsync() = 0;		// Executed on the secondary thread
@@ -260,7 +260,7 @@ struct RemapText_t
 		case MATCH_FULL:
 			return !Q_stricmp( szRawText, m_szRawText );
 		case MATCH_SUBSTR:
-			return Q_stristr( szRawText, m_szRawText ) != NULL;
+			return Q_stristr( szRawText, m_szRawText ) != nullptr;
 		case MATCH_START:
 			return StringHasPrefix( szRawText, m_szRawText );
 		default:

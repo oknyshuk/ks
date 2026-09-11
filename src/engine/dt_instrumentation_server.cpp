@@ -276,7 +276,7 @@ void ServerDTI_Flush()
 CDTISendTable* ServerDTI_HookTable( SendTable *pTable )
 {
 	if ( !g_bServerDTIEnabled )
-		return NULL;
+		return nullptr;
 
 	CDTISendTable *pRet = new CDTISendTable;
 	memset( pRet, 0, sizeof( *pRet ) );

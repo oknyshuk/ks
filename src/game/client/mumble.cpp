@@ -36,7 +36,7 @@ struct MumbleSharedMemory_t
 	wchar_t description[2048];
 };
 
-MumbleSharedMemory_t *g_pMumbleMemory = NULL;
+MumbleSharedMemory_t *g_pMumbleMemory = nullptr;
 
 ConVar sv_mumble_positionalaudio( "sv_mumble_positionalaudio", "1", FCVAR_REPLICATED, "Allows players using Mumble to have support for positional audio." );
 
@@ -77,11 +77,11 @@ void CMumbleSystem::LevelInitPostEntity()
 		return;
 	}
 
-	g_pMumbleMemory = (MumbleSharedMemory_t *)( mmap( NULL, sizeof(struct MumbleSharedMemory_t), PROT_READ | PROT_WRITE, MAP_SHARED, shmfd,0 ) );
+	g_pMumbleMemory = (MumbleSharedMemory_t *)( mmap( nullptr, sizeof(struct MumbleSharedMemory_t), PROT_READ | PROT_WRITE, MAP_SHARED, shmfd,0 ) );
 
 	if ( g_pMumbleMemory == (void *)(-1) )
 	{
-		g_pMumbleMemory = NULL;
+		g_pMumbleMemory = nullptr;
 		return;
 	}
 }
@@ -91,7 +91,7 @@ void CMumbleSystem::LevelShutdownPreEntity()
 	if ( g_pMumbleMemory )
 	{
 		munmap( g_pMumbleMemory, sizeof(struct MumbleSharedMemory_t) );
-		g_pMumbleMemory = NULL;
+		g_pMumbleMemory = nullptr;
 	}
 }
 
@@ -148,8 +148,8 @@ void CMumbleSystem::PostRender()
 	anglesPlayer.x = 0;
 
 	Vector vecPlayerForward, vecPlayerUp, vecCameraForward, vecCameraUp;
-	AngleVectors( anglesPlayer, &vecPlayerForward, NULL, &vecPlayerUp );
-	AngleVectors( anglesCamera, &vecCameraForward, NULL, &vecCameraUp );
+	AngleVectors( anglesPlayer, &vecPlayerForward, nullptr, &vecPlayerUp );
+	AngleVectors( anglesCamera, &vecCameraForward, nullptr, &vecCameraUp );
 
 	// 1 Source unit is about one inch
 	// 1 mumble unit = 1 meter

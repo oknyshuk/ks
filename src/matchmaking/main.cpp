@@ -41,7 +41,7 @@ static void * InternalFactory( const char *pName, int *pReturnCode )
 	}
 
 	// Try to get interface via delegate
-	if ( void *pInterface = s_pfnDelegateFactory ? s_pfnDelegateFactory( pName, pReturnCode ) : NULL )
+	if ( void *pInterface = s_pfnDelegateFactory ? s_pfnDelegateFactory( pName, pReturnCode ) : nullptr )
 	{
 		return pInterface;
 	}
@@ -57,7 +57,7 @@ static void * InternalFactory( const char *pName, int *pReturnCode )
 	{
 		*pReturnCode = IFACE_FAILED;
 	}
-	return NULL;	
+	return nullptr;	
 }
 
 namespace
@@ -80,7 +80,7 @@ static MatchExtInterface_t s_table[] =
 	{ VENGINE_CLIENT_INTERFACE_VERSION,	(ExtFn_t) &CMatchExtensions::GetIVEngineClient,		false },
 	{ INTERFACEVERSION_VENGINESERVER,	(ExtFn_t) &CMatchExtensions::GetIVEngineServer,		false },
 	{ INTERFACEVERSION_GAMEEVENTSMANAGER2, (ExtFn_t) &CMatchExtensions::GetIGameEventManager2, false },
-	{ NULL, NULL, NULL }
+	{ nullptr, nullptr, false }
 };
 
 };
@@ -103,7 +103,7 @@ bool CMatchFramework::Connect( CreateInterfaceFn factory )
 			 // && !(g_pMatchExtensions->*(ptr->m_pfnGetInterface))()
 			 )
 		{
-			void *pvInterface = ourFactory( ptr->m_szName, NULL );
+			void *pvInterface = ourFactory( ptr->m_szName, nullptr );
 			if ( pvInterface )
 			{
 				g_pMatchExtensions->RegisterExtensionInterface( ptr->m_szName, pvInterface );
@@ -112,7 +112,7 @@ bool CMatchFramework::Connect( CreateInterfaceFn factory )
 		}
 	}
 
-	s_pfnDelegateFactory = NULL;
+	s_pfnDelegateFactory = nullptr;
 
 	MathLib_Init( 2.2f, 2.2f, 0.0f, 2.0f );
 	
@@ -150,7 +150,7 @@ void * CMatchFramework::QueryInterface( const char *pInterfaceName )
 	if ( !Q_stricmp( pInterfaceName, IMATCHFRAMEWORK_VERSION_STRING ) )
 		return static_cast< IMatchFramework* >( this );
 
-	return NULL;
+	return nullptr;
 }
 
 bool IsLocalClientConnectedToServer()

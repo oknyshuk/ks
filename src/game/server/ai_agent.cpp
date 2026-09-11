@@ -487,7 +487,7 @@ void CAI_Agent::TaskFail( AI_TaskFailureCode_t code )
 	{
 		m_failText = TaskFailureToString( code );
 
-		m_interuptSchedule	= NULL;
+		m_interuptSchedule	= nullptr;
 		m_failedSchedule    = GetCurSchedule();
 
 		if (GetDebugOverlayFlags() & OVERLAY_TASK_TEXT_BIT)
@@ -522,7 +522,7 @@ int CAI_Agent::DrawDebugTextOverlays( int text_offset )
 		// --------------
 		if ( GetCurSchedule() )
 		{
-			const char *pName = NULL;
+			const char *pName = nullptr;
 			pName = GetCurSchedule()->GetName();
 			if ( !pName )
 			{
@@ -591,7 +591,7 @@ int CAI_Agent::DrawDebugTextOverlays( int text_offset )
 		// --------------
 		if (m_interuptSchedule)
 		{
-			const char *pName = NULL;
+			const char *pName = nullptr;
 			pName = m_interuptSchedule->GetName();
 			if ( !pName )
 			{
@@ -608,7 +608,7 @@ int CAI_Agent::DrawDebugTextOverlays( int text_offset )
 		// --------------
 		if (m_failedSchedule)
 		{
-			const char *pName = NULL;
+			const char *pName = nullptr;
 			pName = m_failedSchedule->GetName();
 			if ( !pName )
 			{
@@ -728,16 +728,16 @@ bool CAI_Agent::LoadedSchedules(void)
 //-----------------------------------------------------------------------------
 CAI_Agent::CAI_Agent(void)
 {
-	m_pSchedule = NULL;
+	m_pSchedule = nullptr;
 	m_IdealSchedule = SCHED_NONE;
 
 	// ----------------------------
 	//  Debugging fields
 	// ----------------------------
-	m_interruptText				= NULL;
-	m_failText					= NULL;
-	m_failedSchedule			= NULL;
-	m_interuptSchedule			= NULL;
+	m_interruptText				= nullptr;
+	m_failText					= nullptr;
+	m_failedSchedule			= nullptr;
+	m_interuptSchedule			= nullptr;
 }
 
 //-----------------------------------------------------------------------------
@@ -820,7 +820,7 @@ CAI_Schedule *CAI_Agent::GetSchedule(int schedule)
 {
 	if ( schedule < NEXT_SCHEDULE )
 	{
-		return NULL;
+		return nullptr;
 	}
 
 	if (!GetClassScheduleIdSpace()->IsGlobalBaseSet())
@@ -905,7 +905,7 @@ void CAI_Agent::DumpTaskTimings()
 //=========================================================
 bool CAI_Agent::FHaveSchedule( void )
 {
-	if ( GetCurSchedule() == NULL )
+	if ( GetCurSchedule() == nullptr )
 	{
 		return false;
 	}
@@ -933,7 +933,7 @@ void CAI_Agent::ClearSchedule( const char *szReason )
 	m_ScheduleState.bScheduleWasInterrupted = true;
 	SetTaskStatus( TASKSTATUS_NEW );
 	m_IdealSchedule = SCHED_NONE;
-	m_pSchedule =  NULL;
+	m_pSchedule =  nullptr;
 	ResetScheduleCurTaskIndex();
 	m_InverseIgnoreConditions.SetAll();
 }
@@ -944,7 +944,7 @@ void CAI_Agent::ClearSchedule( const char *szReason )
 //=========================================================
 bool CAI_Agent::FScheduleDone ( void )
 {
-	Assert( GetCurSchedule() != NULL );
+	Assert( GetCurSchedule() != nullptr );
 
 	if ( GetScheduleCurTaskIndex() == GetCurSchedule()->NumTasks() )
 	{
@@ -993,7 +993,7 @@ void CAI_Agent::SetSchedule( CAI_Schedule *pNewSchedule )
 	// this is very useful code if you can isolate a test case in a level with a single NPC. It will notify
 	// you of every schedule selection the NPC makes.
 
-	if( pNewSchedule != NULL )
+	if( pNewSchedule != nullptr )
 	{
 		if (GetDebugOverlayFlags() & OVERLAY_TASK_TEXT_BIT)
 		{
@@ -1009,7 +1009,7 @@ void CAI_Agent::SetSchedule( CAI_Schedule *pNewSchedule )
 //=========================================================
 void CAI_Agent::NextScheduledTask ( void )
 {
-	Assert( GetCurSchedule() != NULL );
+	Assert( GetCurSchedule() != nullptr );
 
 	SetTaskStatus( TASKSTATUS_NEW );
 	IncScheduleCurTaskIndex();
@@ -1017,8 +1017,8 @@ void CAI_Agent::NextScheduledTask ( void )
 	if ( FScheduleDone() )
 	{
 		// Reset memory of failed schedule 
-		m_failedSchedule   = NULL;
-		m_interuptSchedule = NULL;
+		m_failedSchedule   = nullptr;
+		m_interuptSchedule = nullptr;
 
 		// just completed last task in schedule, so make it invalid by clearing it.
 		SetCondition( COND_SCHEDULE_DONE );
@@ -1051,7 +1051,7 @@ void CAI_Agent::BuildScheduleTestBits( void )
 //=========================================================
 bool CAI_Agent::IsScheduleValid()
 {
-	if ( GetCurSchedule() == NULL || GetCurSchedule()->NumTasks() == 0 )
+	if ( GetCurSchedule() == nullptr || GetCurSchedule()->NumTasks() == 0 )
 	{
 		return false;
 	}
@@ -1074,7 +1074,7 @@ bool CAI_Agent::IsScheduleValid()
 		if (g_pDeveloper->GetInt()) 
 		{
 			// Reset memory of failed schedule 
-			m_failedSchedule   = NULL;
+			m_failedSchedule   = nullptr;
 			m_interuptSchedule = GetCurSchedule();
 
 			// Find the first non-zero bit
@@ -1223,7 +1223,7 @@ void CAI_Agent::MaintainSchedule ( void )
 	bool bStopProcessing = false;
 	for ( i = 0; i < MAX_TASKS_RUN && !bStopProcessing; i++ )
 	{
-		if ( GetCurSchedule() != NULL && TaskIsComplete() )
+		if ( GetCurSchedule() != nullptr && TaskIsComplete() )
 		{
 			// Schedule is valid, so advance to the next task if the current is complete.
 			NextScheduledTask();
@@ -1329,7 +1329,7 @@ void CAI_Agent::MaintainSchedule ( void )
 			g_AIAgentTaskTimings[curTiming].startTimer.Start();
 			const Task_t *pTask = GetTask();
 			const char *pszTaskName = ( bDebugTaskNames ) ? TaskName( pTask->iTask ) : "ai_task";
-			Assert( pTask != NULL );
+			Assert( pTask != nullptr );
 			g_AIAgentTaskTimings[i].pszTask = pszTaskName;
 
 			if (GetDebugOverlayFlags() & OVERLAY_TASK_TEXT_BIT)
@@ -1372,7 +1372,7 @@ void CAI_Agent::MaintainSchedule ( void )
 			{
 				const Task_t *pTask = GetTask();
 				const char *pszTaskName = ( bDebugTaskNames ) ? TaskName( pTask->iTask ) : "ai_task";
-				Assert( pTask != NULL );
+				Assert( pTask != nullptr );
 				g_AIAgentTaskTimings[i].pszTask = pszTaskName;
 				// DevMsg( "%.2f RunTask( %s )\n", gpGlobals->curtime, m_pTaskSR->GetStringText( pTask->iTask ) );
 				g_AIAgentTaskTimings[curTiming].runTimer.Start();
@@ -1468,7 +1468,7 @@ const Task_t *CAI_Agent::GetTask( void )
 	int iScheduleIndex = GetScheduleCurTaskIndex();
 	if ( !GetCurSchedule() ||  iScheduleIndex < 0 || iScheduleIndex >= GetCurSchedule()->NumTasks() )
 		// iScheduleIndex is not within valid range for the NPC's current schedule.
-		return NULL;
+		return nullptr;
 
 	return &GetCurSchedule()->GetTaskList()[ iScheduleIndex ];
 }

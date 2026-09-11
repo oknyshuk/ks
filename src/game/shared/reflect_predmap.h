@@ -136,6 +136,6 @@ std::vector<typedescription_t> &fields()
 	IMPLEMENT_REFLECT_PREDMAP_BASE( className, &BaseClass::m_PredMap )
 
 #define IMPLEMENT_REFLECT_PREDMAP_NO_BASE( className )                                            \
-	IMPLEMENT_REFLECT_PREDMAP_BASE( className, NULL )
+	IMPLEMENT_REFLECT_PREDMAP_BASE( className, nullptr )
 
 #endif // KS_REFLECT_PREDMAP_H

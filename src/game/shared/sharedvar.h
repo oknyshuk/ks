@@ -164,8 +164,8 @@ class CSharedVarBase : public ISharedVarBase
 public:
 	CSharedVarBase( void )
 	{
-		m_pSharedMemory = NULL;
-		m_pValue = NULL;
+		m_pSharedMemory = nullptr;
+		m_pValue = nullptr;
 	}
 
 	~CSharedVarBase( void )
@@ -173,9 +173,9 @@ public:
 		if ( m_pSharedMemory )
 		{
 			m_pSharedMemory->Release();
-			m_pSharedMemory = NULL;
+			m_pSharedMemory = nullptr;
 		}
-		m_pValue = NULL;
+		m_pValue = nullptr;
 	}
 
 	void Initialize( char *pchName, int iEntNum )
@@ -556,8 +556,8 @@ class CSharedVarBase< CHandle<Type>, Changer > : public ISharedVarBase
 public:
 	CSharedVarBase( void )
 	{
-		m_pSharedMemory = NULL;
-		m_pValue = NULL;
+		m_pSharedMemory = nullptr;
+		m_pValue = nullptr;
 	}
 
 	~CSharedVarBase( void )
@@ -565,9 +565,9 @@ public:
 		if ( m_pSharedMemory )
 		{
 			m_pSharedMemory->Release();
-			m_pSharedMemory = NULL;
+			m_pSharedMemory = nullptr;
 		}
-		m_pValue = NULL;
+		m_pValue = nullptr;
 	}
 
 protected:
@@ -585,8 +585,8 @@ class CSharedVarBase< CBaseHandle, Changer > : public ISharedVarBase
 public:
 	CSharedVarBase( void )
 	{
-		m_pSharedMemory = NULL;
-		m_pValue = NULL;
+		m_pSharedMemory = nullptr;
+		m_pValue = nullptr;
 	}
 
 	~CSharedVarBase( void )
@@ -594,9 +594,9 @@ public:
 		if ( m_pSharedMemory )
 		{
 			m_pSharedMemory->Release();
-			m_pSharedMemory = NULL;
+			m_pSharedMemory = nullptr;
 		}
-		m_pValue = NULL;
+		m_pValue = nullptr;
 	}
 
 protected:
@@ -906,8 +906,8 @@ class CSharedVarBase< CUtlVector<Type>, Changer > : public ISharedVarBase
 public:
 	CSharedVarBase( void )
 	{
-		m_pSharedMemory = NULL;
-		m_pValue = NULL;
+		m_pSharedMemory = nullptr;
+		m_pValue = nullptr;
 	}
 
 	~CSharedVarBase( void )
@@ -915,9 +915,9 @@ public:
 		if ( m_pSharedMemory )
 		{
 			m_pSharedMemory->Release();
-			m_pSharedMemory = NULL;
+			m_pSharedMemory = nullptr;
 		}
-		m_pValue = NULL;
+		m_pValue = nullptr;
 	}
 
 protected:
@@ -1148,7 +1148,7 @@ static CSharedVarSaveDataOps g_SharedVarSaveDataOps;
 
 
 #define DEFINE_SHARED_FIELD(name)	\
-	{ FIELD_CUSTOM, #name, (int)offsetof(classNameTypedef, name), 1, FTYPEDESC_SAVE, NULL, &g_SharedVarSaveDataOps, NULL }
+	{ FIELD_CUSTOM, #name, (int)offsetof(classNameTypedef, name), 1, FTYPEDESC_SAVE, nullptr, &g_SharedVarSaveDataOps, nullptr }
 
 
 #endif // SHAREDVAR_H

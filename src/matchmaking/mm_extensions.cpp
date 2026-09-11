@@ -72,8 +72,8 @@ void CMatchExtensions::UnregisterExtensionInterface( char const *szInterfaceStri
 	-- rInfo.m_nRefCount;
 	if ( 0 == rInfo.m_nRefCount )
 	{
-		rInfo.m_pvInterface = NULL;
-		OnExtensionInterfaceUpdated( szInterfaceString, NULL );
+		rInfo.m_pvInterface = nullptr;
+		OnExtensionInterfaceUpdated( szInterfaceString, nullptr );
 	}
 }
 
@@ -84,7 +84,7 @@ void * CMatchExtensions::GetRegisteredExtensionInterface( char const *szInterfac
 	if ( rInfo.m_nRefCount > 0 && rInfo.m_pvInterface )
 		return rInfo.m_pvInterface;
 	else
-		return NULL;
+		return nullptr;
 }
 
 //
@@ -111,7 +111,7 @@ void CMatchExtensions::OnExtensionInterfaceUpdated( char const *szInterfaceStrin
 		{ INTERFACEVERSION_SERVERGAMEDLL,	(Ext_t) &Exts_t::m_pIServerGameDLL },
 		{ INTERFACEVERSION_GAMEEVENTSMANAGER2, (Ext_t) &Exts_t::m_pIGameEventManager2 },
 		{ CLIENT_DLL_INTERFACE_VERSION,		( Ext_t ) &Exts_t::m_pIBaseClientDLL },
-		{ NULL, NULL }
+		{ nullptr, nullptr }
 	};
 
 	for ( CachedInterfacePtr_t *ptr = s_table; ptr->m_szName; ++ ptr )

@@ -189,7 +189,7 @@ public:
 	void	SetCachedData( const byte *data )
 	{
 		m_pCachedData = ( byte * )data;
-		flags.m_bCachedData = ( data != NULL ) ? true : false;
+		flags.m_bCachedData = ( data != nullptr ) ? true : false;
 	}
 
 	inline int		HeaderSize() const
@@ -210,7 +210,7 @@ public:
 	void	SetHeaderData( const byte *data )
 	{
 		m_pHeader = ( byte * )data;
-		flags.m_bHeader = ( data != NULL ) ? true : false;
+		flags.m_bHeader = ( data != nullptr ) ? true : false;
 	}
 
 	inline int		LoopStart() const
@@ -254,7 +254,7 @@ public:
 	void	SetSentence( CSentence *sentence )
 	{
 		m_pSentence = sentence;
-		flags.m_bSentence = ( sentence != NULL ) ? true : false;
+		flags.m_bSentence = ( sentence != nullptr ) ? true : false;
 	}
 
 private:
@@ -365,7 +365,7 @@ public:
 	virtual void			PrefetchCache( char const *filename, int datasize, int startpos ) = 0;
 	virtual bool			CopyDataIntoMemory( char const *filename, int datasize, int startpos, void *buffer, int bufsize, int copystartpos, int bytestocopy, bool *pbPostProcessed ) = 0;
 	virtual bool			CopyDataIntoMemory( WaveCacheHandle_t& handle, char const *filename, int datasize, int startpos, void *buffer, int bufsize, int copystartpos, int bytestocopy, bool *pbPostProcessed ) = 0;
-	virtual bool			IsDataLoadCompleted( WaveCacheHandle_t handle, bool *pIsValid, bool *pIsMissing = NULL ) = 0;
+	virtual bool			IsDataLoadCompleted( WaveCacheHandle_t handle, bool *pIsValid, bool *pIsMissing = nullptr ) = 0;
 	virtual void			RestartDataLoad( WaveCacheHandle_t *pHandle, const char *pFilename, int dataSize, int startpos ) = 0;
 	virtual bool			GetDataPointer( WaveCacheHandle_t& handle, char const *filename, int datasize, int startpos, void **pData, int copystartpos, bool *pbPostProcessed ) = 0;
 	virtual void			SetPostProcessed( WaveCacheHandle_t handle, bool proc ) = 0;
@@ -393,7 +393,7 @@ extern IAsyncWavDataCache *wavedatacache;
 struct CAudioSourceCachedInfoHandle_t
 {
 	CAudioSourceCachedInfoHandle_t() :
-		info( NULL ),
+		info( nullptr ),
 		m_FlushCount( 0 )
 	{
 	}
@@ -432,7 +432,7 @@ struct CAudioSourceCachedInfoHandle_t
 
 		if ( m_FlushCount != s_nCurrentFlushCount )
 		{
-			return NULL;
+			return nullptr;
 		}
 		return info;
 	}

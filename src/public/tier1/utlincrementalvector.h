@@ -65,7 +65,7 @@ public:
 
 	void SetElementToNull( int i )
 	{
-		m_data[ i ] = NULL;
+		m_data[ i ] = nullptr;
 	}
 
 	T* AddToTail( T* p )

@@ -164,7 +164,7 @@ void *CGame::GetMainWindow( void )
 
 void **CGame::GetMainWindowAddress( void )
 {
-	return NULL;
+	return nullptr;
 }
 
 void CGame::SetWindowXY( int x, int y )

@@ -121,9 +121,9 @@ EXPOSE_INTERFACE_FN(CreateCeltVoiceCodec, IVoiceCodec, "vaudio_celt")
 
 VoiceEncoder_Celt::VoiceEncoder_Celt()
 {
-	m_EncoderState = NULL;
-	m_DecoderState = NULL;
-	m_Mode = NULL;
+	m_EncoderState = nullptr;
+	m_DecoderState = nullptr;
+	m_Mode = nullptr;
 	m_iVersion = 0;
 }
 
@@ -144,8 +144,8 @@ bool VoiceEncoder_Celt::Init( int quality, int &rawFrameSize, int &encodedFrameS
 	int iError = 0;
 
 	m_Mode = celt_mode_create( g_CeltVersion[m_iVersion].iSampleRate, g_CeltVersion[m_iVersion].iRawFrameSize, &iError );
-	m_EncoderState = celt_encoder_create_custom( m_Mode, CHANNELS, NULL);
-	m_DecoderState = celt_decoder_create_custom( m_Mode, CHANNELS, NULL);
+	m_EncoderState = celt_encoder_create_custom( m_Mode, CHANNELS, nullptr);
+	m_DecoderState = celt_decoder_create_custom( m_Mode, CHANNELS, nullptr);
 
 	if ( !InitStates() )
 		return false;
@@ -180,7 +180,7 @@ void VoiceEncoder_Celt::DecodeFrame(const char *pCompressed, char *pDecompressed
 
 	if ( !pCompressed )
 	{
-		celt_decode( m_DecoderState, NULL, g_CeltVersion[m_iVersion].iPacketSize, (celt_int16 *)pDecompressedBytes, g_CeltVersion[m_iVersion].iRawFrameSize );
+		celt_decode( m_DecoderState, nullptr, g_CeltVersion[m_iVersion].iPacketSize, (celt_int16 *)pDecompressedBytes, g_CeltVersion[m_iVersion].iRawFrameSize );
 		return;
 	}
 
@@ -197,8 +197,8 @@ void VoiceEncoder_Celt::DecodeFrame(const char *pCompressed, char *pDecompressed
 
 bool VoiceEncoder_Celt::ResetState()
 {
-	celt_encoder_ctl(m_EncoderState, CELT_RESET_STATE_REQUEST , NULL );
-	celt_decoder_ctl(m_DecoderState, CELT_RESET_STATE_REQUEST , NULL );
+	celt_encoder_ctl(m_EncoderState, CELT_RESET_STATE_REQUEST , nullptr );
+	celt_decoder_ctl(m_DecoderState, CELT_RESET_STATE_REQUEST , nullptr );
 
 	return true;
 }
@@ -208,8 +208,8 @@ bool VoiceEncoder_Celt::InitStates()
 	if ( !m_EncoderState || !m_DecoderState )
 		return false;
 
-	celt_encoder_ctl( m_EncoderState, CELT_RESET_STATE_REQUEST , NULL );
-	celt_decoder_ctl( m_DecoderState, CELT_RESET_STATE_REQUEST , NULL );
+	celt_encoder_ctl( m_EncoderState, CELT_RESET_STATE_REQUEST , nullptr );
+	celt_decoder_ctl( m_DecoderState, CELT_RESET_STATE_REQUEST , nullptr );
 	
 	return true;
 }
@@ -219,13 +219,13 @@ void VoiceEncoder_Celt::TermStates()
 	if( m_EncoderState )
 	{
 		celt_encoder_destroy( m_EncoderState );
-		m_EncoderState = NULL;
+		m_EncoderState = nullptr;
 	}
 
 	if( m_DecoderState )
 	{
 		celt_decoder_destroy( m_DecoderState );
-		m_DecoderState = NULL;
+		m_DecoderState = nullptr;
 	}
 
 	celt_mode_destroy( m_Mode );

@@ -57,7 +57,7 @@ public:
 static bool g_bAssertsEnabled = true;
 static bool g_bAssertDialogEnabled = true;
 
-static CAssertDisable *g_pAssertDisables = NULL;
+static CAssertDisable *g_pAssertDisables = nullptr;
 
 
 // Set to true if they want to break in the debugger.
@@ -75,25 +75,25 @@ static bool g_bDisableAsserts = false;
 
 static bool IsDebugBreakEnabled()
 {
-	static bool bResult = ( _tcsstr( Plat_GetCommandLine(), _T("-debugbreak") ) != NULL );
+	static bool bResult = ( _tcsstr( Plat_GetCommandLine(), _T("-debugbreak") ) != nullptr );
 	return bResult;
 }
 
 static bool AssertStack()
 {
-	static bool bResult = ( _tcsstr( Plat_GetCommandLine(), _T("-assertstack") ) != NULL );
+	static bool bResult = ( _tcsstr( Plat_GetCommandLine(), _T("-assertstack") ) != nullptr );
 	return bResult;
 }
 
 static bool AreAssertsDisabled()
 {
-	static bool bResult = ( _tcsstr( Plat_GetCommandLine(), _T("-noassert") ) != NULL );
+	static bool bResult = ( _tcsstr( Plat_GetCommandLine(), _T("-noassert") ) != nullptr );
 	return bResult || g_bDisableAsserts;
 }
 
 static bool AllAssertOnce()
 {
-	static bool bResult = ( _tcsstr( Plat_GetCommandLine(), _T("-assertonce") ) != NULL );
+	static bool bResult = ( _tcsstr( Plat_GetCommandLine(), _T("-assertonce") ) != nullptr );
 	return bResult;
 }
 
@@ -201,7 +201,7 @@ PLATFORM_INTERFACE void SetAssertDialogDisabled( bool bAssertDialogDisabled )
 	g_bAssertDialogEnabled = !bAssertDialogDisabled;
 }
 
-SDL_Window *g_SDLWindow = NULL;
+SDL_Window *g_SDLWindow = nullptr;
 
 PLATFORM_INTERFACE void SetAssertDialogParent( struct SDL_Window *window )
 {
@@ -215,7 +215,7 @@ PLATFORM_INTERFACE struct SDL_Window * GetAssertDialogParent()
 
 PLATFORM_INTERFACE bool ShouldUseNewAssertDialog()
 {
-	static bool bMPIWorker = ( _tcsstr( Plat_GetCommandLine(), _T("-mpi_worker") ) != NULL );
+	static bool bMPIWorker = ( _tcsstr( Plat_GetCommandLine(), _T("-mpi_worker") ) != nullptr );
 	if ( bMPIWorker )
 	{
 		return false;
@@ -278,8 +278,8 @@ PLATFORM_INTERFACE bool DoNewAssertDialog( const tchar *pFilename, int line, con
 	fprintf(stderr, COLOR_YELLOW "ASSERT: " COLOR_RED "%s" COLOR_GREEN ":%i:" COLOR_RED "%s" COLOR_END "\n", pFilename, line, pExpression);
 	
 
-	static FUNC_SDL_ShowMessageBox *pfnSDLShowMessageBox = NULL;
-    static FUNC_SDL_GetKeyboardFocus *pfnSDLGetKeyboardFocus = NULL;
+	static FUNC_SDL_ShowMessageBox *pfnSDLShowMessageBox = nullptr;
+    static FUNC_SDL_GetKeyboardFocus *pfnSDLGetKeyboardFocus = nullptr;
 	if( getenv( "GAME_ASSERT_DIALOG" ) && !pfnSDLShowMessageBox )
 	{
 

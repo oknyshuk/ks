@@ -35,7 +35,7 @@ unsigned int CModelCombine::m_nNextAssetID = 0;
 
 CCombinerMemoryWriter::CCombinerMemoryWriter( )
 {
-	m_pWorkBuffer = NULL;
+	m_pWorkBuffer = nullptr;
 }
 
 
@@ -47,7 +47,7 @@ CCombinerMemoryWriter::~CCombinerMemoryWriter( )
 
 void CCombinerMemoryWriter::Init( )
 {
-	if ( m_pWorkBuffer == NULL )
+	if ( m_pWorkBuffer == nullptr )
 	{
 		CharacterSetBuild( &s_BreakSet, "{}()':" );
 
@@ -57,9 +57,9 @@ void CCombinerMemoryWriter::Init( )
 
 	memset( m_pWorkBuffer, 0, COMBINER_WORK_BUFFER_SIZE );
 
-	m_pWriteArea = m_pWritePos = NULL;
+	m_pWriteArea = m_pWritePos = nullptr;
 #ifdef DEBUG_COMBINE
-	m_pErrorPos = NULL;
+	m_pErrorPos = nullptr;
 #endif // DEBUG_COMBINE
 	m_nWriteArea = -1;
 
@@ -215,7 +215,7 @@ void CModelCombine::Init( TCombinedStudioData *pCombinedStudioData )
 	{
 		memset( &m_pCombinedStudioData->m_AtlasGroups[ nGroup ].m_pCombinedTextures, 0, sizeof( m_pCombinedStudioData->m_AtlasGroups[ nGroup ].m_pCombinedTextures ) );
 		memset( &m_pCombinedStudioData->m_AtlasGroups[ nGroup ].m_nCombinedTextureSizes, 0, sizeof( m_pCombinedStudioData->m_AtlasGroups[ nGroup ].m_nCombinedTextureSizes ) );
-		m_pCombinedStudioData->m_AtlasGroups[ nGroup ].m_pCombinedMaterial = NULL;
+		m_pCombinedStudioData->m_AtlasGroups[ nGroup ].m_pCombinedMaterial = nullptr;
 		memset( &m_pCombinedStudioData->m_AtlasGroups[ nGroup ].m_szCombinedMaterialName, 0, sizeof( m_pCombinedStudioData->m_AtlasGroups[ nGroup ].m_szCombinedMaterialName ) );
 	}
 
@@ -234,8 +234,8 @@ void CModelCombine::Init( TCombinedStudioData *pCombinedStudioData )
 
 void CModelCombine::BeginStringTable( )
 {
-	strings[ 0 ].base = NULL;
-	strings[ 0 ].ptr = NULL;
+	strings[ 0 ].base = nullptr;
+	strings[ 0 ].ptr = nullptr;
 	strings[ 0 ].string = "";
 	strings[ 0 ].dupindex = -1;
 	numStrings = 1;
@@ -543,8 +543,8 @@ void CModelCombine::CombineMDL_PreintStrings( )
 			throw( COMBINE_RESULT_FLAG_TOO_MANY_STRINGS );
 		}
 
-		strings[ numStrings ].base = NULL;
-		strings[ numStrings ].ptr = NULL;
+		strings[ numStrings ].base = nullptr;
+		strings[ numStrings ].ptr = nullptr;
 		strings[ numStrings ].string = pStringData;
 		strings[ numStrings ].dupindex = -2;
 		numStrings++;
@@ -956,7 +956,7 @@ void CModelCombine::WriteAnimation( mstudioanimdesc_t *pOrigAnim, void *pAnimDat
 				for (int k = 0; k < 3; k++)
 				{
 					mstudioanimvalue_t	*pAnimValue = rotvptr->pAnimvalue( k );
-					if ( pAnimValue != NULL )
+					if ( pAnimValue != nullptr )
 					{
 						int nCount = nFrameSize;
 						while( nCount > 0 )
@@ -975,7 +975,7 @@ void CModelCombine::WriteAnimation( mstudioanimdesc_t *pOrigAnim, void *pAnimDat
 				for (int k = 0; k < 3; k++)
 				{
 					mstudioanimvalue_t	*pAnimValue = posvptr->pAnimvalue( k );
-					if ( pAnimValue != NULL )
+					if ( pAnimValue != nullptr )
 					{
 						int nCount = nFrameSize;
 						while( nCount > 0 )
@@ -1108,7 +1108,7 @@ void CModelCombine::CombineMDL_Anims( )
 
 					int nSize = 0;
 					mstudioanimvalue_t	*pAnimValue = pOrigCompressedIKError->pAnimvalue( nAnim );
-					if ( pAnimValue != NULL )
+					if ( pAnimValue != nullptr )
 					{
 						int nCount = pOrigAnim->numframes;
 						while( nCount > 0 )
@@ -1428,7 +1428,7 @@ void CModelCombine::CombineMDL_Model( )
 {
 	studiohdr_t *pPrimaryStudioHdr = m_pStudioHdr[ 0 ];
 
-	studiohdr_t *pFlexStudioHdr = NULL;
+	studiohdr_t *pFlexStudioHdr = nullptr;
 
 	for( int nModel = 0; nModel < m_pCombinedStudioData->m_nNumModels; nModel++ )
 	{
@@ -1470,7 +1470,7 @@ void CModelCombine::CombineMDL_Model( )
 
 			for( int nSubModels = 1; nSubModels < m_pCombinedStudioData->m_nNumModels; nSubModels++ )
 			{
-				m_pMasterModels[ nSubModels ][ nTotalModels ] = NULL;
+				m_pMasterModels[ nSubModels ][ nTotalModels ] = nullptr;
 
 				studiohdr_t *pSubStudioHdr = m_pStudioHdr[ nSubModels ];
 				if ( nBodyPart < pSubStudioHdr->numbodyparts )
@@ -1744,7 +1744,7 @@ void CModelCombine::CombineMDL_BoneTransforms( )
 	}
 	g_CombinerWriter.AlignWrite( 4 );
 
-	if ( m_pStudioHdr2[ 0 ]->pLinearBones() != NULL )
+	if ( m_pStudioHdr2[ 0 ]->pLinearBones() != nullptr )
 	{
 		g_CombinerWriter.WriteOffset( m_pCombinedStudioHdr2->linearboneindex, m_pCombinedStudioHdr2 );
 		VerifyField2( offsetof( studiohdr2_t, linearboneindex ), "Linear Bone Index" );
@@ -1909,7 +1909,7 @@ void CModelCombine::TestCombineMDL( )
 	pOrig += nOffset;
 	pNew += nOffset;
 
-	char *pErrorPos = NULL;
+	char *pErrorPos = nullptr;
 
 	for( ; nLength; pOrig++, pNew++, nLength-- )
 	{
@@ -1920,7 +1920,7 @@ void CModelCombine::TestCombineMDL( )
 		}
 	}
 
-	if ( pErrorPos != NULL )
+	if ( pErrorPos != nullptr )
 	{
 		Msg( "Test Failure: Offset %d\n", pNew - pStart );
 		Init( m_pCombinedStudioData );
@@ -2510,7 +2510,7 @@ void CModelCombine::CombineVVD_OffsetVerts( )
 			int				nRealVert = m_nVertexRemap[ nModel ][ nVert ];
 			mstudiovertex_t	*pVert = ( mstudiovertex_t * )m_pCombinedVertex->GetVertexData() + nRealVert;
 			Vector			vPosition, vPos, vFinalVert, vFinalNormal, vFinalTangent;
-			bool			bHasTangent = m_pVertexFileHeader[ nModel ]->tangentDataStart != NULL;
+			bool			bHasTangent = m_pVertexFileHeader[ nModel ]->tangentDataStart != 0;
 
 			vFinalVert.Init();
 			vFinalNormal.Init();

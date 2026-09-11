@@ -49,7 +49,7 @@ void CAI_LeadBehavior::OnRestore()
 		if ( !m_pSink )
 		{
 			DevMsg( "Failed to reconnect to CAI_LeadBehaviorHandler\n" );
-			m_hSinkImplementor = NULL;
+			m_hSinkImplementor = nullptr;
 		}
 	}
 }
@@ -120,7 +120,7 @@ void CAI_LeadBehavior::LeadPlayer( const AI_LeadArgs_t &leadArgs, CAI_LeadBehavi
 void CAI_LeadBehavior::StopLeading( void )
 {
 	ClearGoal();
-	m_pSink = NULL;
+	m_pSink = nullptr;
 	NotifyChangeBehaviorStatus();
 }
 
@@ -152,7 +152,7 @@ void CAI_LeadBehavior::BeginScheduleSelection()
 bool CAI_LeadBehavior::SetGoal( const AI_LeadArgs_t &args )
 {
 	CBaseEntity *pGoalEnt;
-	pGoalEnt = gEntList.FindEntityByName( NULL, args.pszGoal );
+	pGoalEnt = gEntList.FindEntityByName( nullptr, args.pszGoal );
 	
 	if ( !pGoalEnt )
 		return false;
@@ -177,7 +177,7 @@ bool CAI_LeadBehavior::SetGoal( const AI_LeadArgs_t &args )
 
 	if ( args.pszWaitPoint && args.pszWaitPoint[0] )
 	{
-		CBaseEntity *pWaitPoint = gEntList.FindEntityByName( NULL, args.pszWaitPoint );
+		CBaseEntity *pWaitPoint = gEntList.FindEntityByName( nullptr, args.pszWaitPoint );
 		if ( pWaitPoint )
 		{
 			m_waitpoint = pWaitPoint->GetLocalOrigin();
@@ -193,7 +193,7 @@ bool CAI_LeadBehavior::SetGoal( const AI_LeadArgs_t &args )
 bool CAI_LeadBehavior::GetClosestPointOnRoute( const Vector &targetPos, Vector *pVecClosestPoint )
 {
 	AI_Waypoint_t *waypoint = GetOuter()->GetNavigator()->GetPath()->GetCurWaypoint();
-	AI_Waypoint_t *builtwaypoints = NULL;
+	AI_Waypoint_t *builtwaypoints = nullptr;
 	if ( !waypoint )
 	{
 		// We arrive here twice when lead behaviour starts:
@@ -205,7 +205,7 @@ bool CAI_LeadBehavior::GetClosestPointOnRoute( const Vector &targetPos, Vector *
 			return true;
 
 		// Build a temp route to the gold and use that
-		builtwaypoints = GetOuter()->GetPathfinder()->BuildRoute( GetOuter()->GetAbsOrigin(), m_goal, NULL, GetOuter()->GetDefaultNavGoalTolerance(), GetOuter()->GetNavType(), bits_BUILD_GET_CLOSE );
+		builtwaypoints = GetOuter()->GetPathfinder()->BuildRoute( GetOuter()->GetAbsOrigin(), m_goal, nullptr, GetOuter()->GetDefaultNavGoalTolerance(), GetOuter()->GetNavType(), bits_BUILD_GET_CLOSE );
 		if ( !builtwaypoints )
 			return false;
 
@@ -220,7 +220,7 @@ bool CAI_LeadBehavior::GetClosestPointOnRoute( const Vector &targetPos, Vector *
 
 	Vector vecNearestPoint;
 	Vector vecPrevPos = GetOuter()->GetAbsOrigin();
-	for ( ; (waypoint != NULL) ; waypoint = waypoint->GetNext() )
+	for ( ; (waypoint != nullptr) ; waypoint = waypoint->GetNext() )
 	{
 		// Find the closest point on the line segment on the path
 		Vector vecClosest;
@@ -1007,7 +1007,7 @@ bool CAI_LeadBehavior::Connect( CAI_LeadBehaviorHandler *pSink )
 	m_pSink = pSink;
 	m_hSinkImplementor = dynamic_cast<CBaseEntity *>(pSink);
 
-	if ( m_hSinkImplementor == NULL )
+	if ( m_hSinkImplementor == nullptr )
 		DevMsg( 2, "Note: CAI_LeadBehaviorHandler connected to a sink that isn't an entity. Manual fixup on load will be necessary\n" );
 
 	return true;
@@ -1018,8 +1018,8 @@ bool CAI_LeadBehavior::Connect( CAI_LeadBehaviorHandler *pSink )
 bool CAI_LeadBehavior::Disconnect( CAI_LeadBehaviorHandler *pSink )
 {
 	Assert( pSink == m_pSink );
-	m_pSink = NULL;
-	m_hSinkImplementor = NULL;
+	m_pSink = nullptr;
+	m_hSinkImplementor = nullptr;
 	return true;
 }
 
@@ -1392,12 +1392,12 @@ CAI_LeadBehavior *CAI_LeadGoal::GetLeadBehavior()
 {
 	CAI_BaseNPC *pActor = GetActor();
 	if ( !pActor )
-		return NULL;
+		return nullptr;
 
 	CAI_LeadBehavior *pBehavior;
 	if ( !pActor->GetBehavior( &pBehavior ) )
 	{
-		return NULL;
+		return nullptr;
 	}
 	
 	return pBehavior;
@@ -1480,7 +1480,7 @@ void CAI_LeadGoal::InputDeactivate( inputdata_t &inputdata )
 
 void CAI_LeadGoal::OnEvent( int event )
 {
-	COutputEvent *pOutputEvent = NULL;
+	COutputEvent *pOutputEvent = nullptr;
 
 	switch ( event )
 	{
@@ -1530,7 +1530,7 @@ const char *CAI_LeadGoal::GetConceptModifiers( const char *pszConcept )
 	if ( m_fArrived && m_iszPostArrivalConceptModifier != NULL_STRING && *STRING(m_iszPostArrivalConceptModifier) )
 		return STRING( m_iszPostArrivalConceptModifier );
 	
-	return NULL; 
+	return nullptr; 
 }
 
 

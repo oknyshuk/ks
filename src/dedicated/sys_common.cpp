@@ -153,7 +153,7 @@ const char *UTIL_GetExecutableDir( )
 
 	exedir[ 0 ] = 0;
 	if ( !Sys_GetExecutableName(exedir) )
-		return NULL;
+		return nullptr;
 
 	char *pSlash;
 	char *pSlash2;

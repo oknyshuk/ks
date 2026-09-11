@@ -88,7 +88,7 @@ BEGIN_VS_SHADER( Teeth_DX9, "Help for Teeth_DX9" )
 
 			// This shader supports compressed vertices, so OR in that flag:
 			flags |= VERTEX_FORMAT_COMPRESSED;
-			pShaderShadow->VertexShaderVertexFormat( flags, nTexCoordCount, NULL, userDataSize );
+			pShaderShadow->VertexShaderVertexFormat( flags, nTexCoordCount, nullptr, userDataSize );
 
 			if ( hasBump )
 			{
@@ -326,7 +326,7 @@ BEGIN_VS_SHADER( Teeth_DX9, "Help for Teeth_DX9" )
 			int flags = VERTEX_POSITION | VERTEX_NORMAL | VERTEX_FORMAT_COMPRESSED;
 			int nTexCoordCount = 1;
 			int userDataSize = 0;
-			pShaderShadow->VertexShaderVertexFormat( flags, nTexCoordCount, NULL, userDataSize );
+			pShaderShadow->VertexShaderVertexFormat( flags, nTexCoordCount, nullptr, userDataSize );
 
 			ShadowFilterMode_t nShadowFilterMode = SHADOWFILTERMODE_DEFAULT;
 			if( g_pHardwareConfig->SupportsPixelShaders_2_b() )
@@ -385,7 +385,7 @@ BEGIN_VS_SHADER( Teeth_DX9, "Help for Teeth_DX9" )
 			FlashlightState_t flashlightState = pShaderAPI->GetFlashlightStateEx( worldToTexture, &pFlashlightDepthTexture );
 			SetFlashLightColorFromState( flashlightState, pShaderAPI, false, PSREG_FLASHLIGHT_COLOR );
 
-			bool bFlashlightShadows = g_pHardwareConfig->SupportsPixelShaders_2_b() ? ( flashlightState.m_bEnableShadows && ( pFlashlightDepthTexture != NULL ) ) : false;
+			bool bFlashlightShadows = g_pHardwareConfig->SupportsPixelShaders_2_b() ? ( flashlightState.m_bEnableShadows && ( pFlashlightDepthTexture != nullptr ) ) : false;
 			if( pFlashlightDepthTexture && g_pConfig->ShadowDepthTexture() && flashlightState.m_bEnableShadows )
 			{
 				BindTexture( SHADER_SAMPLER2, TEXTURE_BINDFLAGS_SHADOWDEPTH, pFlashlightDepthTexture, 0 );

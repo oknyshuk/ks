@@ -21,7 +21,7 @@ static void SetAllUsersProperty( DWORD dwPropertyId, DWORD cbValue, void const *
 KeyValues * MM_Title_RichPresence_PrepareForSessionCreate( KeyValues *pSettings )
 {
 
-	return NULL;
+	return nullptr;
 }
 
 void MM_Title_RichPresence_Update( KeyValues *pFullSettings, KeyValues *pUpdatedSettings )

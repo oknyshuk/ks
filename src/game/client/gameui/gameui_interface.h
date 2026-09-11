@@ -87,7 +87,7 @@ private:
 
 	virtual void StartProgressBar();
 	virtual bool ContinueProgressBar(float progressFraction);
-	virtual void StopProgressBar(bool bError, const char *failureReason, const char *extendedReason = NULL);
+	virtual void StopProgressBar(bool bError, const char *failureReason, const char *extendedReason = nullptr);
 	virtual bool SetProgressBarStatusText(const char *statusText);
 
 	//!! these functions currently not implemented

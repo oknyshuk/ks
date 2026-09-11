@@ -37,11 +37,11 @@ inline int _V_wcscmp_inline( const wchar_t *s1, const wchar_t *s2 )
 #define STRTOOLS_TOLOWERC( x )  (( ( x >= 'A' ) && ( x <= 'Z' ) )?( x + 32 ) : x )
 inline int	_V_stricmp_inline( const char *s1, const char *s2 )
 {
-	if ( s1 == NULL && s2 == NULL )
+	if ( s1 == nullptr && s2 == nullptr )
 		return 0;
-	if ( s1 == NULL )
+	if ( s1 == nullptr )
 		return -1;
-	if ( s2 == NULL )
+	if ( s2 == nullptr )
 		return 1;
 
 	return stricmp( s1, s2 );

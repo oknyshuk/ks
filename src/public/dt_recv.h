@@ -260,7 +260,7 @@ inline bool RecvTable::IsInMainList() const
 	template <> int ClientClassInit<tableName::ignored>(tableName::ignored *); \
 	namespace tableName {	\
 		RecvTable g_RecvTable; \
-		int g_RecvTableInit = ClientClassInit((tableName::ignored *)NULL); \
+		int g_RecvTableInit = ClientClassInit((tableName::ignored *)nullptr); \
 	} \
 	template <> int ClientClassInit<tableName::ignored>(tableName::ignored *) \
 	{ \

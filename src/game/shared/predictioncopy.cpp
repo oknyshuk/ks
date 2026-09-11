@@ -192,7 +192,7 @@ CPredictionCopy::CPredictionCopy( int type, byte *dest, bool dest_packed, const 
 	m_nErrorCount		= 0;
 	m_nEntIndex			= -1;
 
-	m_pWatchField		= NULL;
+	m_pWatchField		= nullptr;
 	m_FieldCompareFunc	= func;
 }
 
@@ -885,7 +885,7 @@ const typedescription_t *CPredictionCopy::FindFlatFieldByName( const char *field
 			}
 		}
 	}
-	return NULL;
+	return nullptr;
 }
 
 static ConVar pwatchent( "pwatchent", "-1", FCVAR_CHEAT, "Entity to watch for prediction system changes." );
@@ -919,7 +919,7 @@ void CPredictionCopy::WatchMsg( const typedescription_t *pField, const char *fmt
 //-----------------------------------------------------------------------------
 void CPredictionCopy::DetermineWatchField( const char *operation, int entindex, const datamap_t *dmap )
 {
-	m_pWatchField = NULL;
+	m_pWatchField = nullptr;
 	m_pOperation = operation;
 	if ( !m_pOperation || !m_pOperation[0] )
 		return;
@@ -1262,14 +1262,14 @@ const tokenset_t< int > s_PredCopyType[] =
 	{ "Non-Sendtable"	, PC_NON_NETWORKED_ONLY },	
 	{ "SendTable"		, PC_NETWORKED_ONLY },											
 	{ "Everything"		, PC_EVERYTHING },													
-	{ NULL, -1 }
+	{ nullptr, -1 }
 };
 
 const tokenset_t< int > s_PredPackType[] =
 {
 	{ "Normal"	, TD_OFFSET_NORMAL },	
 	{ "Packed"	, TD_OFFSET_PACKED },											
-	{ NULL, -1 }
+	{ nullptr, -1 }
 };
 
 static void DescribeRuns( const datamap_t *dmap, int nPredictionCopyType, int packType )

@@ -158,7 +158,7 @@ void *__cdecl _expand_dbg( void *pMem, size_t nNewSize, int nBlockUse,
 							const char *pFileName, int nLine )
 {
 	Assert( 0 );
-	return NULL;
+	return nullptr;
 }
 
 void __cdecl _free_dbg( void *pMem, int nBlockUse )

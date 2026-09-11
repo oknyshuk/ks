@@ -363,7 +363,7 @@ D3DXMATRIX* D3DXMatrixInverse( D3DXMATRIX *pOut, FLOAT *pDeterminant, CONST D3DX
 {
 	Assert( sizeof( D3DXMATRIX ) == (16 * sizeof(float) ) );
 	Assert( sizeof( VMatrix ) == (16 * sizeof(float) ) );
-	Assert( pDeterminant == NULL );	// homey don't play that
+	Assert( pDeterminant == nullptr );	// homey don't play that
 	
 	VMatrix *origM = (VMatrix*)pM;
 	VMatrix *destM = (VMatrix*)pOut;
@@ -393,7 +393,7 @@ D3DXMATRIX* D3DXMatrixTranspose( D3DXMATRIX *pOut, CONST D3DXMATRIX *pM )
 		D3DXMatrixTranspose( pOut, &temp );
 	}
 
-	return NULL;
+	return nullptr;
 }
 
 
@@ -446,21 +446,21 @@ D3DXVECTOR4* D3DXVec4Normalize( D3DXVECTOR4 *pOut, CONST D3DXVECTOR4 *pV )
 D3DXMATRIX* D3DXMatrixOrthoOffCenterRH( D3DXMATRIX *pOut, FLOAT l, FLOAT r, FLOAT b, FLOAT t, FLOAT zn,FLOAT zf )
 {
 	DXABSTRACT_BREAK_ON_ERROR();
-	return NULL;
+	return nullptr;
 }
 
 
 D3DXMATRIX* D3DXMatrixPerspectiveRH( D3DXMATRIX *pOut, FLOAT w, FLOAT h, FLOAT zn, FLOAT zf )
 {
 	DXABSTRACT_BREAK_ON_ERROR();
-	return NULL;
+	return nullptr;
 }
 
 
 D3DXMATRIX* D3DXMatrixPerspectiveOffCenterRH( D3DXMATRIX *pOut, FLOAT l, FLOAT r, FLOAT b, FLOAT t, FLOAT zn, FLOAT zf )
 {
 	DXABSTRACT_BREAK_ON_ERROR();
-	return NULL;
+	return nullptr;
 }
 
 

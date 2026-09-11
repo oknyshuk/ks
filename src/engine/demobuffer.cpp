@@ -50,7 +50,7 @@ class CDiskDemoBuffer : public IDemoBuffer
 {
 public:
 	CDiskDemoBuffer()
-	:	m_pBuffer( NULL )
+	:	m_pBuffer( nullptr )
 	{
 		m_nDecodedOffset = -1;
 	}
@@ -85,7 +85,7 @@ public:
 		m_pBuffer->Open( pParams->pFilename, pParams->pszPath, pParams->nFlags );
 		m_nDecodedOffset = -1;
 
-		m_pPlaybackParams = NULL;
+		m_pPlaybackParams = nullptr;
 #ifndef DEDICATED
 		extern IDemoPlayer *demoplayer;
 		extern IBaseClientDLL *g_ClientDLL;
@@ -235,7 +235,7 @@ private:
 			// Read raw state
 			//
 			m_pReadFromBuffer = pRawData;
-			m_pSeekSyncBuffer = NULL;
+			m_pSeekSyncBuffer = nullptr;
 		}
 		~COnTheFlyDemoBufferReadInfo()
 		{
@@ -346,8 +346,8 @@ public:
 		m_nBufferSize( 0 ),
 		m_nMaxPut( 0 ),
 		m_nCurrentTickOffset( -1 ),
-		m_pWrite( NULL ),
-		m_pSignonData( NULL ),
+		m_pWrite( nullptr ),
+		m_pSignonData( nullptr ),
 		m_bSignonComplete( false )
 	{
 	}
@@ -368,7 +368,7 @@ public:
 		return true;
 	}
 
-	virtual bool IsInitialized() const	{ return m_pDataCache != NULL; }
+	virtual bool IsInitialized() const	{ return m_pDataCache != nullptr; }
 
 	virtual bool IsValid() const		{ return IsInitialized(); }
 
@@ -407,7 +407,7 @@ public:
 		// We're done with signon data, copy it over from the cache
 		V_memcpy( m_pSignonData->pData, m_pDataCache, nSize );
 
-		m_pWrite = NULL;
+		m_pWrite = nullptr;
 		m_bSignonComplete = true;
 	}
 
@@ -441,7 +441,7 @@ public:
 		m_lstFrames.AddToTail( pNewFrame );
 
 #ifdef _DEBUG
-		m_pWrite = NULL;
+		m_pWrite = nullptr;
 #endif
 	}
 
@@ -521,7 +521,7 @@ public:
 			if ( m_pFilename && m_pFilename[0] != '\0' )
 			{
 				// Open the file
-				CUtlStreamBuffer buf( m_pFilename, NULL );
+				CUtlStreamBuffer buf( m_pFilename, nullptr );
 				if ( !buf.IsOpen() )
 				{
 					Warning( "demobuffer: Failed to open file for writing, %s\n", m_pFilename );
@@ -667,7 +667,7 @@ IDemoBuffer *CreateDemoBuffer( bool bMemoryBuffer, const DemoBufferInitParams_t&
 	if ( !pRet->Init( params ) )
 	{
 		delete pRet;
-		return NULL;
+		return nullptr;
 	}
 
 	return pRet;

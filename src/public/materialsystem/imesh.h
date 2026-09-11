@@ -687,7 +687,7 @@ private:
 //-----------------------------------------------------------------------------
 inline CVertexBuilder::CVertexBuilder()
 {
-	m_pVertexBuffer = NULL;
+	m_pVertexBuffer = nullptr;
 	m_nBufferOffset = INVALID_BUFFER_OFFSET;
 	m_nBufferFirstVertex = 0;
 	m_nVertexCount = 0;
@@ -697,9 +697,9 @@ inline CVertexBuilder::CVertexBuilder()
 	m_CompressionType = VERTEX_COMPRESSION_INVALID;
 
 #ifdef _DEBUG
-	m_pCurrPosition = NULL;
-	m_pCurrNormal = NULL;
-	m_pCurrColor = NULL;
+	m_pCurrPosition = nullptr;
+	m_pCurrNormal = nullptr;
+	m_pCurrColor = nullptr;
 	memset( m_pCurrTexCoord, 0, sizeof( m_pCurrTexCoord ) );
 	m_bModify = false;
 #endif
@@ -726,9 +726,9 @@ inline CVertexBuilder::CVertexBuilder( IVertexBuffer *pVertexBuffer, VertexForma
 	}
 
 #ifdef _DEBUG
-	m_pCurrPosition = NULL;
-	m_pCurrNormal = NULL;
-	m_pCurrColor = NULL;
+	m_pCurrPosition = nullptr;
+	m_pCurrNormal = nullptr;
+	m_pCurrColor = nullptr;
 	memset( m_pCurrTexCoord, 0, sizeof( m_pCurrTexCoord ) );
 	m_bModify = false;
 #endif
@@ -793,9 +793,9 @@ inline void CVertexBuilder::Unlock()
 
 #ifdef _DEBUG
 	// Null out our data...
-	m_pCurrPosition = NULL;
-	m_pCurrNormal = NULL;
-	m_pCurrColor = NULL;
+	m_pCurrPosition = nullptr;
+	m_pCurrNormal = nullptr;
+	m_pCurrColor = nullptr;
 	memset( m_pCurrTexCoord, 0, sizeof( m_pCurrTexCoord ) );
 	memset( static_cast<VertexDesc_t*>( this ), 0, sizeof(VertexDesc_t) );
 #endif
@@ -819,7 +819,7 @@ inline void CVertexBuilder::Bind( IMatRenderContext *pContext, int nStreamID, Ve
 	}
 	else
 	{
-		pContext->BindVertexBuffer( nStreamID, NULL, 0, 0, 0, 0 );
+		pContext->BindVertexBuffer( nStreamID, nullptr, 0, 0, 0, 0 );
 	}
 }
 
@@ -913,9 +913,9 @@ inline void CVertexBuilder::End( bool bSpewData )
 
 #ifdef _DEBUG
 	// Null out our pointers...
-	m_pCurrPosition = NULL;
-	m_pCurrNormal = NULL;
-	m_pCurrColor = NULL;
+	m_pCurrPosition = nullptr;
+	m_pCurrNormal = nullptr;
+	m_pCurrColor = nullptr;
 	memset( m_pCurrTexCoord, 0, sizeof( m_pCurrTexCoord ) );
 	memset( static_cast< VertexDesc_t* >( this ), 0, sizeof(VertexDesc_t) );
 #endif
@@ -951,15 +951,15 @@ inline void CVertexBuilder::AttachEnd()
 	Assert( !m_bModify );
 
 	m_nMaxVertexCount = 0;
-	m_pVertexBuffer = NULL;
+	m_pVertexBuffer = nullptr;
 
 	m_CompressionType = VERTEX_COMPRESSION_INVALID;
 
 #ifdef _DEBUG
 	// Null out our pointers...
-	m_pCurrPosition = NULL;
-	m_pCurrNormal = NULL;
-	m_pCurrColor = NULL;
+	m_pCurrPosition = nullptr;
+	m_pCurrNormal = nullptr;
+	m_pCurrColor = nullptr;
 	memset( m_pCurrTexCoord, 0, sizeof( m_pCurrTexCoord ) );
 	memset( static_cast<VertexDesc_t*>( this ), 0, sizeof(VertexDesc_t) );
 #endif
@@ -991,9 +991,9 @@ inline void CVertexBuilder::AttachEndModify()
 
 #ifdef _DEBUG
 	// Null out our pointers...
-	m_pCurrPosition = NULL;
-	m_pCurrNormal = NULL;
-	m_pCurrColor = NULL;
+	m_pCurrPosition = nullptr;
+	m_pCurrNormal = nullptr;
+	m_pCurrColor = nullptr;
 	memset( m_pCurrTexCoord, 0, sizeof( m_pCurrTexCoord ) );
 	memset( static_cast<VertexDesc_t*>( this ), 0, sizeof(VertexDesc_t) );
 #endif
@@ -1036,7 +1036,7 @@ inline void CVertexBuilder::Reset()
 	// Logic for m_pLastWrittenAddress is tricky. It really wants the min of the
 	// non-null address pointers.
 	m_nLastWrittenField = MB_FIELD_NONE;
-	m_pLastWrittenAddress = NULL;
+	m_pLastWrittenAddress = nullptr;
 	m_pLastWrittenAddress =	FindMinAddress( m_pLastWrittenAddress, m_pPosition, m_VertexSize_Position );
 	m_pLastWrittenAddress =	FindMinAddress( m_pLastWrittenAddress, m_pBoneWeight, m_VertexSize_BoneWeight );
 	m_pLastWrittenAddress =	FindMinAddress( m_pLastWrittenAddress, m_pBoneMatrixIndex, m_VertexSize_BoneMatrixIndex );
@@ -2471,7 +2471,7 @@ inline void CIndexBuilder::Bind( IMatRenderContext *pContext )
 	}
 	else
 	{
-		pContext->BindIndexBuffer( NULL, 0 );
+		pContext->BindIndexBuffer( nullptr, 0 );
 	}
 }
 
@@ -3177,7 +3177,7 @@ public:
 	FORCEINLINE void *GetVertexDataPtr( int nWhatSizeIThinkItIs )
 	{
 		if ( m_VertexBuilder.m_VertexSize_Position != nWhatSizeIThinkItIs )
-			return NULL;
+			return nullptr;
 		return m_VertexBuilder.m_pCurrPosition;
 	}
 

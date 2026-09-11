@@ -49,7 +49,7 @@ public:
 
 	// Owner handling
 	void		ForceOwner( int iTeam ); // used when selecting a specific round to play
-	void		SetOwner( int iCapTeam, bool bMakeSound = true, int iNumCappers = 0, int *iCappingPlayers = NULL );
+	void		SetOwner( int iCapTeam, bool bMakeSound = true, int iNumCappers = 0, int *iCappingPlayers = nullptr );
 	int			GetOwner( void ) const;
 	int			GetDefaultOwner( void ) const;
 	bool		RandomOwnerOnRestart( void ){ return m_bRandomOwnerOnRestart; }
@@ -100,7 +100,7 @@ public:
 
 private:
 	void		SendCapString( int iCapTeam, int iNumCappingPlayers, int *pCappingPlayers );
-	void		InternalSetOwner( int iCapTeam, bool bMakeSound = true, int iNumCappers = 0, int *iCappingPlayers = NULL );
+	void		InternalSetOwner( int iCapTeam, bool bMakeSound = true, int iNumCappers = 0, int *iCappingPlayers = nullptr );
 	float		GetTeamCapPercentage( int iTeam );
 	void		HandleScoring( int iTeam );
 

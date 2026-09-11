@@ -121,8 +121,8 @@ float IntersectRayWithAAPlane( const Vector& vecStart, const Vector& vecEnd, int
 // Purpose: Computes the intersection of a ray with a box (AABB)
 // Output : Returns true if there is an intersection + trace information
 //-----------------------------------------------------------------------------
-bool IntersectRayWithBox( const Vector &rayStart, const Vector &rayDelta, const Vector &boxMins, const Vector &boxMaxs, float epsilon, CBaseTrace *pTrace, float *pFractionLeftSolid = NULL );
-bool IntersectRayWithBox( const Ray_t &ray, const Vector &boxMins, const Vector &boxMaxs, float epsilon, CBaseTrace *pTrace, float *pFractionLeftSolid = NULL );
+bool IntersectRayWithBox( const Vector &rayStart, const Vector &rayDelta, const Vector &boxMins, const Vector &boxMaxs, float epsilon, CBaseTrace *pTrace, float *pFractionLeftSolid = nullptr );
+bool IntersectRayWithBox( const Ray_t &ray, const Vector &boxMins, const Vector &boxMaxs, float epsilon, CBaseTrace *pTrace, float *pFractionLeftSolid = nullptr );
 
 //-----------------------------------------------------------------------------
 // Intersects a ray against a box

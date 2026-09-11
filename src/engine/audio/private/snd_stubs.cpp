@@ -60,7 +60,7 @@ CON_COMMAND( snd_voice_log_commit, "Commit voice log to file" )
 		return;
 	}
 	
-	if ( g_pFullFileSystem->WriteFile( args.Arg( 1 ), NULL, g_bufSndVoiceLog ) )
+	if ( g_pFullFileSystem->WriteFile( args.Arg( 1 ), nullptr, g_bufSndVoiceLog ) )
 	{
 		Msg( "Voice log committed to file '%s', %u bytes\n", args.Arg(1), g_bufSndVoiceLog.TellMaxPut() );
 		g_bufSndVoiceLog.Purge();
@@ -70,7 +70,7 @@ CON_COMMAND( snd_voice_log_commit, "Commit voice log to file" )
 		Warning( "Failed to commit voice log to file '%s', keeping %u bytes\n", args.Arg(1), g_bufSndVoiceLog.TellMaxPut() );
 	}
 	
-	if ( g_pFullFileSystem->WriteFile( CFmtStr( "%s.11025", args.Arg( 1 ) ), NULL, g_bufSndVoiceLog11025 ) )
+	if ( g_pFullFileSystem->WriteFile( CFmtStr( "%s.11025", args.Arg( 1 ) ), nullptr, g_bufSndVoiceLog11025 ) )
 	{
 		Msg( "Voice log committed to file '%s.11025', %u bytes\n", args.Arg(1), g_bufSndVoiceLog11025.TellMaxPut() );
 		g_bufSndVoiceLog11025.Purge();
@@ -84,7 +84,7 @@ CON_COMMAND( snd_voice_log_commit, "Commit voice log to file" )
 CON_COMMAND( snd_voice_log_load, "Load voice log file" )
 {
 	g_bufSndVoiceLog.Purge();
-	if ( !g_pFullFileSystem->ReadFile( args.Arg( 1 ), NULL, g_bufSndVoiceLog ) )
+	if ( !g_pFullFileSystem->ReadFile( args.Arg( 1 ), nullptr, g_bufSndVoiceLog ) )
 	{
 		Warning( "Failed to read voice log from file '%s'\n", args.Arg( 1 ) );
 	}
@@ -176,7 +176,7 @@ CON_COMMAND( snd_voice_log_resample, "Resample voice log file" )
 {
 	g_bufSndVoiceLog.Purge();
 	CUtlBuffer bufRaw;
-	if ( !g_pFullFileSystem->ReadFile( args.Arg( 1 ), NULL, bufRaw ) )
+	if ( !g_pFullFileSystem->ReadFile( args.Arg( 1 ), nullptr, bufRaw ) )
 	{
 		Warning( "Failed to read voice log from file '%s'\n", args.Arg( 1 ) );
 		return;
@@ -197,7 +197,7 @@ CON_COMMAND( snd_voice_log_resample44, "Resample voice log file all the way up t
 {
 	g_bufSndVoiceLog.Purge();
 	CUtlBuffer bufRaw;
-	if ( !g_pFullFileSystem->ReadFile( args.Arg( 1 ), NULL, bufRaw ) )
+	if ( !g_pFullFileSystem->ReadFile( args.Arg( 1 ), nullptr, bufRaw ) )
 	{
 		Warning( "Failed to read voice log from file '%s'\n", args.Arg( 1 ) );
 		return;
@@ -253,7 +253,7 @@ public:
 	virtual void VoiceResetLocalData( int iController );
 
 	virtual void SetPlaybackPriority( XUID remoteTalker, int iController, int iAllowPlayback );
-	virtual void PlayIncomingVoiceData( XUID xuid, const byte *pbData, unsigned int dwDataSize, const bool *bAudiblePlayers = NULL );
+	virtual void PlayIncomingVoiceData( XUID xuid, const byte *pbData, unsigned int dwDataSize, const bool *bAudiblePlayers = nullptr );
 
 	virtual void RemoveAllTalkers();
 
@@ -306,7 +306,7 @@ bool CEngineVoiceSteam::IsHeadsetPresent( int iController )
 
 bool CEngineVoiceSteam::IsLocalPlayerTalking( int iController )
 {
-	EVoiceResult res = Steam3Client().SteamUser()->GetAvailableVoice( NULL, NULL, 0 );
+	EVoiceResult res = Steam3Client().SteamUser()->GetAvailableVoice( nullptr, nullptr, 0 );
 	switch ( res )
 	{
 	case k_EVoiceResultOK:
@@ -396,12 +396,12 @@ bool CEngineVoiceSteam::VoiceUpdateData( int iController )
 #ifdef SND_VOICE_LOG_DEBUG
 	if ( snd_voice_log.GetInt() == SND_VOICE_LOG_TEST_PLAYBACK_LOG )
 	{
-		PlayIncomingVoiceData( 2, NULL, 0, NULL );
+		PlayIncomingVoiceData( 2, nullptr, 0, nullptr );
 		return false;
 	}
 #endif // SND_VOICE_LOG_DEBUG
 
-	EVoiceResult res = Steam3Client().SteamUser()->GetAvailableVoice( NULL, NULL, 0 );
+	EVoiceResult res = Steam3Client().SteamUser()->GetAvailableVoice( nullptr, nullptr, 0 );
 	bool bResult = ( res == k_EVoiceResultOK );
 	if ( bResult )
 		m_flLastTalkingTimestamp = Plat_FloatTime();
@@ -432,7 +432,7 @@ void CEngineVoiceSteam::UpdateHUDVoiceStatus( void )
 
 		// Convert into index and XUID
 		int iIndex = iClient + 1;
-		XUID xid =  NULL;
+		XUID xid =  nullptr;
 		player_info_t infoClient;
 		if ( engineClient->GetPlayerInfo( iIndex, &infoClient ) )
 		{
@@ -476,7 +476,7 @@ void CEngineVoiceSteam::GetVoiceData( int iController, const byte **ppvVoiceData
 	EVoiceResult res = k_EVoiceResultOK;
 	if ( !m_bVoiceForPs3 )
 	{
-		res = Steam3Client().SteamUser()->GetVoice( true, pbVoiceData, size, pnumVoiceDataBytes, false, NULL, 0, NULL, 0 );
+		res = Steam3Client().SteamUser()->GetVoice( true, pbVoiceData, size, pnumVoiceDataBytes, false, nullptr, 0, nullptr, 0 );
 	}
 
 	// On PC respect user push-to-talk setting and don't transmit voice
@@ -506,7 +506,7 @@ void CEngineVoiceSteam::GetVoiceData( int iController, const byte **ppvVoiceData
 	default:
 prevent_voice_comm:
 		*pnumVoiceDataBytes = 0;
-		*ppvVoiceDataBuffer = NULL;
+		*ppvVoiceDataBuffer = nullptr;
 		return;
 	}
 }

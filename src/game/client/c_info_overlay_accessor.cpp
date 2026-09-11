@@ -93,7 +93,7 @@ void C_InfoOverlayAccessor::RestoreToToolRecordedState( KeyValues *pKV )
 
 void C_InfoOverlayAccessor::DestroyToolRecording( void )
 {
-	engine->SetOverlayBindProxy( m_iOverlayID, NULL );
+	engine->SetOverlayBindProxy( m_iOverlayID, nullptr );
 }
 
 

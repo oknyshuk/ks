@@ -82,7 +82,7 @@ public:
 
 	// Iterates through ALL entities (separate list for client vs. server)
 	virtual EntitySearchResult	NextEntity( EntitySearchResult currentEnt ) = 0;
-	EntitySearchResult			FirstEntity() { return NextEntity( NULL ); }
+	EntitySearchResult			FirstEntity() { return NextEntity( nullptr ); }
 
 	// Use this to turn on/off the presence of an underlying game entity
 	virtual void			SetEnabled( HTOOLHANDLE handle, bool enabled ) = 0;
@@ -158,7 +158,7 @@ public:
 	virtual void			ReloadParticleDefintions( const char *pFileName, const void *pBufData, int nLen ) = 0;
 
 	// ParticleSystem iteration, query, modification
-	virtual ParticleSystemSearchResult	FirstParticleSystem() { return NextParticleSystem( NULL ); }
+	virtual ParticleSystemSearchResult	FirstParticleSystem() { return NextParticleSystem( nullptr ); }
 	virtual ParticleSystemSearchResult	NextParticleSystem( ParticleSystemSearchResult sr ) = 0;
 	virtual void						SetRecording( ParticleSystemSearchResult sr, bool bRecord ) = 0;
 
@@ -190,11 +190,11 @@ class IServerTools : public IBaseInterface
 {
 public:
 	virtual IServerEntity *GetIServerEntity( IClientEntity *pClientEntity ) = 0;
-	virtual bool SnapPlayerToPosition( const Vector &org, const QAngle &ang, IClientEntity *pClientPlayer = NULL ) = 0;
-	virtual bool GetPlayerPosition( Vector &org, QAngle &ang, IClientEntity *pClientPlayer = NULL ) = 0;
-	virtual bool SetPlayerFOV( int fov, IClientEntity *pClientPlayer = NULL ) = 0;
-	virtual int GetPlayerFOV( IClientEntity *pClientPlayer = NULL ) = 0;
-	virtual bool IsInNoClipMode( IClientEntity *pClientPlayer = NULL ) = 0;
+	virtual bool SnapPlayerToPosition( const Vector &org, const QAngle &ang, IClientEntity *pClientPlayer = nullptr ) = 0;
+	virtual bool GetPlayerPosition( Vector &org, QAngle &ang, IClientEntity *pClientPlayer = nullptr ) = 0;
+	virtual bool SetPlayerFOV( int fov, IClientEntity *pClientPlayer = nullptr ) = 0;
+	virtual int GetPlayerFOV( IClientEntity *pClientPlayer = nullptr ) = 0;
+	virtual bool IsInNoClipMode( IClientEntity *pClientPlayer = nullptr ) = 0;
 
 	// entity searching
 	virtual void *FirstEntity( void ) = 0;

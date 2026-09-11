@@ -354,7 +354,7 @@ typedef void * HINSTANCE;
 //-----------------------------------------------------------------------------
 // Convert int<-->pointer, avoiding 32/64-bit compiler warnings:
 //-----------------------------------------------------------------------------
-#define INT_TO_POINTER( i ) (void *)( ( i ) + (char *)NULL )
+#define INT_TO_POINTER( i ) (void *)( ( i ) + (char *)nullptr )
 #define POINTER_TO_INT( p ) ( (int)(uint64)( p ) )
 
 
@@ -463,8 +463,8 @@ PLATFORM_INTERFACE bool Plat_IsInDebugSession();
 #define _tempnam tempnam
 #define strtok_s strtok_r
 #define _mkdir(dir) mkdir( dir, S_IRWXU | S_IRWXG | S_IRWXO )
-#define _wtoi(arg) wcstol(arg, NULL, 10)
-#define _wtoi64(arg) wcstoll(arg, NULL, 10)
+#define _wtoi(arg) wcstol(arg, nullptr, 10)
+#define _wtoi64(arg) wcstoll(arg, nullptr, 10)
 
 #ifndef HMODULE
 typedef void *HMODULE;

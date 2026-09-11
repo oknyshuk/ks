@@ -144,12 +144,12 @@ class ClosestPlayerScan
 {
 public:
 	static const bool EXCLUDE_BOTS = false;
-	ClosestPlayerScan( const Vector &spot, int team, float maxRange = 0.0f, CBasePlayer *ignore = NULL, bool includeBots = true )
+	ClosestPlayerScan( const Vector &spot, int team, float maxRange = 0.0f, CBasePlayer *ignore = nullptr, bool includeBots = true )
 	{
 		m_spot = spot;
 		m_team = team;
 		m_includeBots = includeBots;
-		m_close = NULL;
+		m_close = nullptr;
 		
 		if ( maxRange > 0.0f )
 		{
@@ -215,11 +215,11 @@ public:
 class ClosestActorScan
 {
 public:
-	ClosestActorScan( const Vector &spot, int team, float maxRange = 0.0f, CBaseCombatCharacter *ignore = NULL )
+	ClosestActorScan( const Vector &spot, int team, float maxRange = 0.0f, CBaseCombatCharacter *ignore = nullptr )
 	{
 		m_spot = spot;
 		m_team = team;
-		m_close = NULL;
+		m_close = nullptr;
 
 		if ( maxRange > 0.0f )
 		{
@@ -283,7 +283,7 @@ class CShowViewportPanel
 	KeyValues *m_data;
 
 public:
-	CShowViewportPanel( int team, const char *panelName, bool show, KeyValues *data = NULL )
+	CShowViewportPanel( int team, const char *panelName, bool show, KeyValues *data = nullptr )
 	{
 		m_team = team;
 		m_panelName = panelName;
@@ -313,7 +313,7 @@ inline bool ForEachActor( Functor &func )
 	{
 		CBasePlayer *player = UTIL_PlayerByIndex( i );
 
-		if ( player == NULL )
+		if ( player == nullptr )
 			continue;
 
 		if ( FNullEnt( player->edict() ) )
@@ -383,7 +383,7 @@ inline bool ForEachActor( IActorFunctor &func )
 	{
 		CBasePlayer *player = UTIL_PlayerByIndex( i );
 
-		if ( player == NULL )
+		if ( player == nullptr )
 			continue;
 
 		if ( FNullEnt( player->edict() ) )

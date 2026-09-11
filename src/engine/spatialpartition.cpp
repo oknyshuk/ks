@@ -1779,7 +1779,7 @@ void CVoxelHash::RenderObjectsInPlayerLeafs( const Vector &vecPlayerMin, const V
 // Purpose: Constructor
 //-----------------------------------------------------------------------------
 
-CVoxelTree::CVoxelTree() : m_pVoxelHash( NULL ), m_pOwner( NULL ), m_nNextVisitBit( 0 )
+CVoxelTree::CVoxelTree() : m_pVoxelHash( nullptr ), m_pOwner( nullptr ), m_nNextVisitBit( 0 )
 {
 	// Compute max number of levels
 	m_nLevelCount = 0;
@@ -1902,7 +1902,7 @@ void CVoxelTree::InsertIntoTree( SpatialPartitionHandle_t hPartition, const Vect
 
 	if ( bDoInsert )
 	{
-		bool bWasReading = ( m_pVisits[g_nThreadID] != NULL );
+		bool bWasReading = ( m_pVisits[g_nThreadID] != nullptr );
 		if ( bWasReading )
 		{
 			// If we're recursing in this thread, need to release our read lock to allow ourselves to write
@@ -1942,7 +1942,7 @@ void CVoxelTree::RemoveFromTree( SpatialPartitionHandle_t hPartition )
 	int nLevel = info.m_nLevel[GetTreeId()];
 	if ( nLevel >= 0 )
 	{
-		bool bWasReading = ( m_pVisits[g_nThreadID] != NULL );
+		bool bWasReading = ( m_pVisits[g_nThreadID] != nullptr );
 		if ( bWasReading )
 		{
 			// If we're recursing in this thread, need to release our read lock to allow ourselves to write

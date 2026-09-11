@@ -144,7 +144,7 @@ float PixelVisibility_DrawProxy( IMatRenderContext *pRenderContext, OcclusionQue
 
 	pRenderContext->BeginOcclusionQueryDrawing( queryHandle );
 	CMeshBuilder meshBuilder;
-	IMesh* pMesh = pRenderContext->GetDynamicMesh( false, NULL, NULL, pMaterial );
+	IMesh* pMesh = pRenderContext->GetDynamicMesh( false, nullptr, nullptr, pMaterial );
 	meshBuilder.Begin( pMesh, MATERIAL_TRIANGLES, 4 );
 	// draw a pyramid
 	for ( int i = 0; i < 4; i++ )
@@ -542,9 +542,9 @@ void CPixelVisibilitySystem::LevelInitPreEntity()
 void CPixelVisibilitySystem::LevelShutdownPostEntity()
 {
 	m_pProxyMaterial->DecrementReferenceCount();
-	m_pProxyMaterial = NULL;
+	m_pProxyMaterial = nullptr;
 	m_pDrawMaterial->DecrementReferenceCount();
-	m_pDrawMaterial = NULL;
+	m_pDrawMaterial = nullptr;
 	DeleteUnusedSets(true);
 	m_setList.Purge();
 	m_queryList.Purge();
@@ -798,7 +798,7 @@ float GlowSightDistance( const Vector &glowOrigin, bool bShouldTrace )
 		}
 		int traceFlags = MASK_OPAQUE|CONTENTS_MONSTER|CONTENTS_DEBRIS;
 		
-		CTraceFilterGlow filter(NULL, COLLISION_GROUP_NONE);
+		CTraceFilterGlow filter(nullptr, COLLISION_GROUP_NONE);
 		trace_t tr;
 		UTIL_TraceLine( CurrentViewOrigin(), end, traceFlags, &filter, &tr );
 		if ( tr.fraction != 1.0f )

@@ -151,7 +151,7 @@ BEGIN_VS_SHADER( Grass, "Help for Grass" )
 
 		if ( bCSMEnabled )
 		{
-			ITexture *pDepthTextureAtlas = NULL;
+			ITexture *pDepthTextureAtlas = nullptr;
 			const CascadedShadowMappingState_t &cascadeState = pShaderAPI->GetCascadedShadowMappingState( &pDepthTextureAtlas );
 
 			if ( pDepthTextureAtlas )

@@ -44,7 +44,7 @@ C_Inferno::C_Inferno()
 {
 	m_maxFireHalfWidth = 30.0f;
 	m_maxFireHeight = 80.0f;
-	m_burnParticleEffect = NULL;
+	m_burnParticleEffect = nullptr;
 }
 
 
@@ -68,7 +68,7 @@ void C_Inferno::Spawn( void )
 	m_lastFireCount = 0;
 
 	m_drawableCount = 0;
-	m_burnParticleEffect = NULL;
+	m_burnParticleEffect = nullptr;
 
 	m_minBounds = Vector( 0, 0, 0 );
 	m_maxBounds = Vector( 0, 0, 0 );
@@ -85,7 +85,7 @@ void C_Inferno::ClientThink()
 {
 	VPROF_BUDGET( "C_Inferno::ClientThink", "Magic" );
 
-	bool bIsAttachedToMovingObject = (GetMoveParent() != NULL) ? true : false;
+	bool bIsAttachedToMovingObject = (GetMoveParent() != nullptr) ? true : false;
 
 	SynchronizeDrawables();
 	m_lastFireCount = m_fireCount;
@@ -156,7 +156,7 @@ void C_Inferno::OnParticleEffectDeleted( CNewParticleEffect *pParticleEffect )
 {
 	if ( m_burnParticleEffect == pParticleEffect )
 	{
-		m_burnParticleEffect = NULL;
+		m_burnParticleEffect = nullptr;
 	}
 }
 
@@ -202,7 +202,7 @@ void C_Inferno::UpdateParticles( void )
 				{
 					//NDebugOverlay::Cross3D( draw->m_pos, 5, 0, 0, 255, false, 0.1f );
 					//NDebugOverlay::Line( GetAbsOrigin(), draw->m_pos, 0, 255, 0, true, 0.1f );
-					m_burnParticleEffect->SetControlPointEntity( i, NULL );
+					m_burnParticleEffect->SetControlPointEntity( i, nullptr );
 					m_burnParticleEffect->SetControlPoint( i, draw->m_pos );
 
 					// FIXME - Set orientation to burn normal once we have per particle normals.
@@ -331,7 +331,7 @@ C_Inferno::Drawable *C_Inferno::GetDrawable( const Vector &pos )
 		}
 	}
 
-	return NULL;
+	return nullptr;
 }
 
 
@@ -467,15 +467,15 @@ int C_Inferno::DrawModel( int flags, const RenderableInstance_t &instance )
 		return 0;
 
 	model = modelinfo->GetModel( modelinfo->GetModelIndex( "sprites/fire1.vmt" ) );
-	if (model == NULL)
+	if (model == nullptr)
 		return 0;
 
 	sprite = (CEngineSprite *)modelinfo->GetModelExtraData( model );
-	if (sprite == NULL)
+	if (sprite == nullptr)
 		return 0;
 
 	material = sprite->GetMaterial( kRenderTransAdd );
-	if (material == NULL)
+	if (material == nullptr)
 		return 0;
 
 	CMatRenderContextPtr pRenderContext( materials );

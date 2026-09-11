@@ -28,7 +28,7 @@ inline void SetGameSDLWindow( SDL_Window *pWindow )
 // The game's main window, NULL before it is created and after it is destroyed.
 inline SDL_Window *GetGameSDLWindow()
 {
-	return (SDL_Window *)SDL_GetPointerProperty( SDL_GetGlobalProperties(), KS_PROP_GAME_WINDOW, NULL );
+	return (SDL_Window *)SDL_GetPointerProperty( SDL_GetGlobalProperties(), KS_PROP_GAME_WINDOW, nullptr );
 }
 
 #endif // APPFRAMEWORK_SDLWINDOW_H

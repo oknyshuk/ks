@@ -202,7 +202,7 @@ public:
 		int pitchInBytes, 
 		bool bOutlinePixels=true, 
 		bool bOutlineImage=false,
-		Vector *vCorners=NULL ) = 0;
+		Vector *vCorners=nullptr ) = 0;
 	
 	// Draw an RGBA image.
 	// Corners are in this order: bottom-left, top-left, top-right, bottom-right.
@@ -213,7 +213,7 @@ public:
 		int pitchInBytes, 
 		bool bOutlinePixels=true,
 		bool bOutlineImage=false,
-		Vector *vCorners=NULL ) = 0;
+		Vector *vCorners=nullptr ) = 0;
 };
 
 

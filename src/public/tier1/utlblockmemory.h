@@ -48,8 +48,8 @@ public:
 	void Init( int nGrowSize = 0, int nInitSize = 0 );
 
 	// here to match CUtlMemory, but only used by ResetDbgInfo, so it can just return NULL
-	T* Base() { return NULL; }
-	const T* Base() const { return NULL; }
+	T* Base() { return nullptr; }
+	const T* Base() const { return nullptr; }
 
 	class Iterator_t
 	{

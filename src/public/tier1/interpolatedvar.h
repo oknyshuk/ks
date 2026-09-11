@@ -87,7 +87,7 @@ public:
 
 	static bool IsThereAContext()
 	{
-		return s_pHead != NULL;
+		return s_pHead != nullptr;
 	}
 
 	static bool IsExtrapolationAllowed()
@@ -176,14 +176,14 @@ struct CInterpolatedVarEntryBase
 {
 	CInterpolatedVarEntryBase()
 	{
-		value = NULL;
+		value = nullptr;
 		count = 0;
 		flChangeTime = 0;
 	}
 	~CInterpolatedVarEntryBase()
 	{
 		delete[] value;
-		value = NULL;
+		value = nullptr;
 	}
 
 	// This will transfer the data from another varentry.  This is used to avoid allocation
@@ -201,7 +201,7 @@ struct CInterpolatedVarEntryBase
 	CInterpolatedVarEntryBase& operator=( const CInterpolatedVarEntryBase& src )
 	{
 		delete[] value;
-		value = NULL;
+		value = nullptr;
 		count = 0;
 		if ( src.value )
 		{
@@ -254,7 +254,7 @@ struct CInterpolatedVarEntryBase
 	void DeleteEntry()
 	{
 		delete[] value;
-		value = NULL;
+		value = nullptr;
 		count = 0;
 	}
 
@@ -313,7 +313,7 @@ public:
 	~CSimpleRingBuffer()
 	{
 		delete[] m_pElements;
-		m_pElements = NULL;
+		m_pElements = nullptr;
 	}
 
 	inline int Count() const { return m_count; }
@@ -576,13 +576,13 @@ template< typename Type, bool IS_ARRAY >
 inline CInterpolatedVarArrayBase<Type, IS_ARRAY>::CInterpolatedVarArrayBase( const char *pDebugName )
 {
 	m_pDebugName = pDebugName;
-	m_pValue = NULL;
+	m_pValue = nullptr;
 	m_fType = LATCH_ANIMATION_VAR;
 	m_InterpolationAmount = 0.0f;
 	m_nMaxCount = 0;
 	m_LastNetworkedTime = 0;
-	m_LastNetworkedValue = NULL;
-	m_bLooping = NULL;
+	m_LastNetworkedValue = nullptr;
+	m_bLooping = nullptr;
 }
 
 template< typename Type, bool IS_ARRAY >
@@ -883,7 +883,7 @@ template< typename Type, bool IS_ARRAY >
 inline bool CInterpolatedVarArrayBase<Type, IS_ARRAY>::GetInterpolationInfo( float currentTime, int *pNewer, int *pOlder, int *pOldest )
 {
 	CInterpolationInfo info;
-	bool result = GetInterpolationInfo( &info, currentTime, m_InterpolationAmount, NULL );
+	bool result = GetInterpolationInfo( &info, currentTime, m_InterpolationAmount, nullptr );
 
 	if (pNewer)
 		*pNewer = (int)info.newer;
@@ -1046,7 +1046,7 @@ template< typename Type, bool IS_ARRAY >
 void CInterpolatedVarArrayBase<Type, IS_ARRAY>::GetDerivative( Type *pOut, float currentTime )
 {
 	CInterpolationInfo info;
-	if (!GetInterpolationInfo( &info, currentTime, m_InterpolationAmount, NULL ))
+	if (!GetInterpolationInfo( &info, currentTime, m_InterpolationAmount, nullptr ))
 		return;
 
 	if ( info.m_bHermite )
@@ -1064,7 +1064,7 @@ template< typename Type, bool IS_ARRAY >
 void CInterpolatedVarArrayBase<Type, IS_ARRAY>::GetDerivative_SmoothVelocity( Type *pOut, float currentTime, bool bAllowHermiteFix )
 {
 	CInterpolationInfo info;
-	if (!GetInterpolationInfo( &info, currentTime, m_InterpolationAmount, NULL ))
+	if (!GetInterpolationInfo( &info, currentTime, m_InterpolationAmount, nullptr ))
 		return;
 
 	CVarHistory &history = m_VarHistory;
@@ -1227,7 +1227,7 @@ inline Type	*CInterpolatedVarArrayBase<Type, IS_ARRAY>::GetHistoryValue( int ind
 	else
 	{
 		flChangeTime = 0.0f;
-		return NULL;
+		return nullptr;
 	}
 }
 
@@ -1557,7 +1557,7 @@ template< typename Type >
 class CInterpolatedVar : public CInterpolatedVarArrayBase< Type, false >
 {
 public:
-	CInterpolatedVar( const char *pDebugName = NULL )
+	CInterpolatedVar( const char *pDebugName = nullptr )
 		: CInterpolatedVarArrayBase< Type, false >(pDebugName) 
 	{
 		CInterpolatedVarArrayBase< Type, false >::SetMaxCount( 0.0f, 1 );

@@ -42,7 +42,7 @@ CLinkedMiniProfiler g_mp_morph_V7("morph_V7", &g_pOtherMiniProfilers);
 
 CLinkedMiniProfiler* g_mp_ComputeFlexedVertex_StreamOffset[8] = 
 {
-	NULL,
+	nullptr,
 	&g_mp_morph_V1,
 	&g_mp_morph_V2,
 	&g_mp_morph_V3,

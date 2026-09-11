@@ -106,8 +106,8 @@ public:
 	UtlTSHashHandle_t Find( KEYTYPE uiKey );
 
 	// Insertion ( find or add ).
-	UtlTSHashHandle_t Insert( KEYTYPE uiKey, const T &data, bool *pDidInsert = NULL );
-	UtlTSHashHandle_t Insert( KEYTYPE uiKey, ITSHashConstructor<T> *pConstructor, bool *pDidInsert = NULL );
+	UtlTSHashHandle_t Insert( KEYTYPE uiKey, const T &data, bool *pDidInsert = nullptr );
+	UtlTSHashHandle_t Insert( KEYTYPE uiKey, ITSHashConstructor<T> *pConstructor, bool *pDidInsert = nullptr );
 
 	// This insertion method assumes the element is not in the hash table, skips 
 	UtlTSHashHandle_t FastInsert( KEYTYPE uiKey, const T &data );
@@ -189,8 +189,8 @@ CUtlTSHash<T,BUCKET_COUNT,KEYTYPE,HashFuncs,nAlignment>::CUtlTSHash( int nAlloca
 	for ( int i = 0; i < BUCKET_COUNT; i++ )
 	{
 		HashBucket_t &bucket = m_aBuckets[ i ];
-		bucket.m_pFirst = NULL;
-		bucket.m_pFirstUncommitted = NULL;
+		bucket.m_pFirst = nullptr;
+		bucket.m_pFirstUncommitted = nullptr;
 	}
 }
 
@@ -453,7 +453,7 @@ inline void CUtlTSHash<T,BUCKET_COUNT,KEYTYPE,HashFuncs,nAlignment>::FindAndRemo
 	HashBucket_t &bucket = m_aBuckets[ iBucket ];
 	bucket.m_AddLock.LockForWrite( );
 
-	HashFixedData_t *pPrev = NULL;
+	HashFixedData_t *pPrev = nullptr;
 	for ( HashFixedData_t *pElement = bucket.m_pFirstUncommitted; pElement; pPrev = pElement, pElement = pElement->m_pNext )
 	{
 		if ( !HashFuncs::Compare( pElement->m_uiKey, uiKey ) )
@@ -518,8 +518,8 @@ inline void CUtlTSHash<T,BUCKET_COUNT,KEYTYPE,HashFuncs,nAlignment>::RemoveAll( 
 			Destruct( &pElement->m_Data );
 		}
 
-		bucket.m_pFirst = NULL;
-		bucket.m_pFirstUncommitted = NULL;
+		bucket.m_pFirst = nullptr;
+		bucket.m_pFirstUncommitted = nullptr;
 		bucket.m_AddLock.UnlockWrite( );
 	}
 
@@ -560,7 +560,7 @@ inline UtlTSHashHandle_t CUtlTSHash<T,BUCKET_COUNT,KEYTYPE,HashFuncs,nAlignment>
 {
 	int iBucket = HashFuncs::Hash( uiKey, BUCKET_MASK );
 	const HashBucket_t &bucket = m_aBuckets[iBucket];
-	UtlTSHashHandle_t h = Find( uiKey, bucket.m_pFirst, NULL );
+	UtlTSHashHandle_t h = Find( uiKey, bucket.m_pFirst, nullptr );
 	if ( h != InvalidHandle() )
 		return h;
 

@@ -205,8 +205,8 @@ void		V_qsort_s( void *base, size_t num, size_t width, int ( __cdecl *compare )(
 // returns string immediately following prefix, (ie str+strlen(prefix)) or NULL if prefix not found
 const char *StringAfterPrefix             ( const char *str, const char *prefix );
 const char *StringAfterPrefixCaseSensitive( const char *str, const char *prefix );
-inline bool	StringHasPrefix             ( const char *str, const char *prefix ) { return StringAfterPrefix             ( str, prefix ) != NULL; }
-inline bool	StringHasPrefixCaseSensitive( const char *str, const char *prefix ) { return StringAfterPrefixCaseSensitive( str, prefix ) != NULL; }
+inline bool	StringHasPrefix             ( const char *str, const char *prefix ) { return StringAfterPrefix             ( str, prefix ) != nullptr; }
+inline bool	StringHasPrefixCaseSensitive( const char *str, const char *prefix ) { return StringAfterPrefixCaseSensitive( str, prefix ) != nullptr; }
 
 
 template< bool CASE_SENSITIVE > inline bool _V_strEndsWithInner( const char *pStr, const char *pSuffix )
@@ -688,7 +688,7 @@ bool V_RemoveDotSlashes( char *pFilename, char separator = CORRECT_PATH_SEPARATO
 // using the current working directory as the base, or pStartingDir if it's non-NULL.
 // Returns false if it runs out of room in the string, or if pPath tries to ".." past the root directory.
 void
-V_MakeAbsolutePath( char *pOut, int outLen, const char *pPath, const char *pStartingDir = NULL );
+V_MakeAbsolutePath( char *pOut, int outLen, const char *pPath, const char *pStartingDir = nullptr );
 inline void V_MakeAbsolutePath( char *pOut, int outLen, const char *pPath, const char *pStartingDir, bool bLowercaseName )
 {
 	V_MakeAbsolutePath( pOut, outLen, pPath, pStartingDir );
@@ -849,10 +849,10 @@ inline void V_RemoveFormatSpecifications( const char *pszFrom, char *pszTo, size
 // If pBreakCharacters == NULL, then the tokenizer will split tokens at the following characters:
 //    { } ( ) ' : 
 // White-space, '//' comments, and quoted strings are always handled.
-char const *V_ParseToken( char const *pStrIn, OUT_Z_CAP(bufsize) char *pToken, int bufsize, bool *pbOverflowed = NULL, struct characterset_t *pTokenBreakCharacters = NULL ); 
+char const *V_ParseToken( char const *pStrIn, OUT_Z_CAP(bufsize) char *pToken, int bufsize, bool *pbOverflowed = nullptr, struct characterset_t *pTokenBreakCharacters = nullptr ); 
 
 // Parses a single line, does not trim any whitespace from start or end.  Does not include the final '\n'.
-char const *V_ParseLine( char const *pStrIn, OUT_Z_CAP(bufsize) char *pToken, int bufsize, bool *pbOverflowed = NULL );
+char const *V_ParseLine( char const *pStrIn, OUT_Z_CAP(bufsize) char *pToken, int bufsize, bool *pbOverflowed = nullptr );
 
 // Returns true if additional data is waiting to be processed on this line
 bool V_TokenWaiting( const char *buffer );
@@ -953,10 +953,10 @@ int V_GenerateUniqueNameIndex( const char *prefix, const NameArray &nameArray, i
 template < class NameArray >
 bool V_GenerateUniqueName( char *name, int memsize, const char *prefix, const NameArray &nameArray )
 {
-	if ( name == NULL || memsize == 0 )
+	if ( name == nullptr || memsize == 0 )
 		return false;
 
-	if ( prefix == NULL )
+	if ( prefix == nullptr )
 	{
 		name[ 0 ] = '\0';
 		return false;

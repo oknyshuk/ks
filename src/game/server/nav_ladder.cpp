@@ -66,7 +66,7 @@ CNavArea ** CNavLadder::GetConnection( LadderConnectionType dir )
 		return &m_bottomArea;
 	}
 
-	return NULL;
+	return nullptr;
 }
 
 
@@ -191,23 +191,23 @@ void CNavLadder::Disconnect( CNavArea *area )
 {
 	if ( m_topForwardArea == area )
 	{
-		m_topForwardArea = NULL;
+		m_topForwardArea = nullptr;
 	}
 	else if ( m_topLeftArea == area )
 	{
-		m_topLeftArea = NULL;
+		m_topLeftArea = nullptr;
 	}
 	else if ( m_topRightArea == area )
 	{
-		m_topRightArea = NULL;
+		m_topRightArea = nullptr;
 	}
 	else if ( m_topBehindArea == area )
 	{
-		m_topBehindArea = NULL;
+		m_topBehindArea = nullptr;
 	}
 	else if ( m_bottomArea == area )
 	{
-		m_bottomArea = NULL;
+		m_bottomArea = nullptr;
 	}
 }
 
@@ -252,7 +252,7 @@ void CNavLadder::SetDir( NavDirType dir )
 	Vector to = from - m_normal * 32.0f;
 
 	trace_t result;
-	UTIL_TraceLine( from, to, MASK_NPCSOLID_BRUSHONLY, NULL, COLLISION_GROUP_NONE, &result );
+	UTIL_TraceLine( from, to, MASK_NPCSOLID_BRUSHONLY, nullptr, COLLISION_GROUP_NONE, &result );
 
 	if (result.fraction != 1.0f)
 	{
@@ -273,7 +273,7 @@ void CNavLadder::SetDir( NavDirType dir )
 void CNavLadder::DrawLadder( void ) const
 {
 	CBasePlayer *player = UTIL_GetListenServerHost();
-	if (player == NULL)
+	if (player == nullptr)
 		return;
 
 	Vector dir;

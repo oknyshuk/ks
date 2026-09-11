@@ -13,7 +13,7 @@
 #endif
 
 #define SETUP_STREAM(v) \
-	SQStream *self = NULL; \
+	SQStream *self = nullptr; \
 	if(SQ_FAILED(sq_getinstanceup(v,1,(SQUserPointer*)&self,(SQUserPointer)SQSTD_STREAM_TYPE_TAG))) \
 		return sq_throwerror(v,_SC("invalid type tag")); \
 	if(!self->IsValid())  \

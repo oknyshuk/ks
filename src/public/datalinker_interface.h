@@ -51,7 +51,7 @@ namespace DataLinker
 inline byte *ResolveOffset(int32 *pOffset)
 {
 	int offset = *pOffset;
-	return offset ? ((byte*)pOffset) + offset : NULL;
+	return offset ? ((byte*)pOffset) + offset : nullptr;
 }
 
 inline byte *ResolveOffsetFast(const int32 *pOffset)
@@ -386,7 +386,7 @@ inline T* IStream::WriteAndLinkArray(OffsetAndSize_t<T,nCookie>*pOffsetAndSize, 
 	else
 	{
 		pOffsetAndSize->offset = 0;
-		return NULL;
+		return nullptr;
 	}
 }
 
@@ -404,7 +404,7 @@ inline T* IStream::WriteAndLinkStrided(OffsetSizeAndStride_t<T,nCookie>*pOffset,
 	else
 	{
 		pOffset->offset = 0;
-		return NULL;
+		return nullptr;
 	}
 }
 

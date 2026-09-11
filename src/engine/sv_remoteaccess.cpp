@@ -67,7 +67,7 @@ ra_listener_id CServerRemoteAccess::GetNextListenerID( bool authConnection, cons
 	int i = m_ListenerIDs.AddToTail();
 	m_ListenerIDs[i].listenerID = i;
 	m_ListenerIDs[i].authenticated = !authConnection;
-	m_ListenerIDs[i].m_bHasAddress = ( adr != NULL );
+	m_ListenerIDs[i].m_bHasAddress = ( adr != nullptr );
 	if ( adr )
 	{
 		m_ListenerIDs[i].adr = *adr;
@@ -267,7 +267,7 @@ void CServerRemoteAccess::WriteDataRequest( CRConServer *pNetworkListener, ra_li
 					if ( GetConsoleLogFileData( buf ) )
 					{
 						HZIP hZip = CreateZipZ( 0, 1024 * 1024, ZIP_MEMORY );
-						void *pMem = NULL;
+						void *pMem = nullptr;
 						unsigned long nLen;
 						ZipAdd( hZip, "console.log", buf.Base(), buf.TellMaxPut(), ZIP_MEMORY );
 						ZipGetMemory( hZip, &pMem, &nLen );
@@ -330,7 +330,7 @@ void CServerRemoteAccess::WriteDataRequest( CRConServer *pNetworkListener, ra_li
 #endif
 			case SERVERDATA_SEND_REMOTEBUG:
 				{
-					if ( CommandLine()->CheckParm( "-remotebug" ) == NULL )
+					if ( CommandLine()->CheckParm( "-remotebug" ) == nullptr )
 					{
 						Warning( "Received a remote bug request from rcon client, but not running with '-remotebug'. Ignoring.\n" );
 						RespondString( listener, 0, "Remote machine using wrong bugreporter dll. Try running with '-remotebug'\n" );
@@ -392,7 +392,7 @@ void CServerRemoteAccess::UploadScreenshot( const char *pFileName )
 	if ( g_pFullFileSystem->ReadFile( pFileName, "MOD", buf ) )
 	{
 		HZIP hZip = CreateZipZ( 0, 1024 * 1024, ZIP_MEMORY );
-		void *pMem = NULL;
+		void *pMem = nullptr;
 		unsigned long nLen;
 		ZipAdd( hZip, "screenshot.jpg", buf.Base(), buf.TellMaxPut(), ZIP_MEMORY );
 		ZipGetMemory( hZip, &pMem, &nLen );
@@ -772,7 +772,7 @@ const char *CServerRemoteAccess::LookupStringValue(const char *variable)
 	if ( !Q_stricmp( variable, "gamedescription" ) && serverGameDLL )
 		return serverGameDLL->GetGameDescription();
 
-	return NULL;
+	return nullptr;
 }
 
 //-----------------------------------------------------------------------------
@@ -875,7 +875,7 @@ void CServerRemoteAccess::GetMapList(CUtlBuffer &value)
 	Q_strncpy( friendly_com_gamedir, com_gamedir, sizeof(friendly_com_gamedir) );
 	Q_strlower( friendly_com_gamedir );
 	
-	char const *findfn = Sys_FindFirst( mapwild, NULL, 0 );
+	char const *findfn = Sys_FindFirst( mapwild, nullptr, 0 );
 	while ( findfn )
 	{
 		char curDir[MAX_PATH];
@@ -898,7 +898,7 @@ void CServerRemoteAccess::GetMapList(CUtlBuffer &value)
 			value.PutString(mapName);
 			value.PutString("\n");
 		}
-		findfn = Sys_FindNext( NULL, 0 );
+		findfn = Sys_FindNext( nullptr, 0 );
 	}
 
 	Sys_FindClose();

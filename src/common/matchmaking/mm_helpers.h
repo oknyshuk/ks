@@ -16,17 +16,17 @@
 // Contains inline functions to deal with common tasks involving matchmaking and sessions
 //
 
-inline KeyValues * SessionMembersFindPlayer( KeyValues *pSessionSettings, XUID xuidPlayer, KeyValues **ppMachine = NULL )
+inline KeyValues * SessionMembersFindPlayer( KeyValues *pSessionSettings, XUID xuidPlayer, KeyValues **ppMachine = nullptr )
 {
 	if ( ppMachine )
-		*ppMachine = NULL;
+		*ppMachine = nullptr;
 
 	if ( !pSessionSettings )
-		return NULL;
+		return nullptr;
 
 	KeyValues *pMembers = pSessionSettings->FindKey( "Members" );
 	if ( !pMembers )
-		return NULL;
+		return nullptr;
 
 	int numMachines = pMembers->GetInt( "numMachines" );
 	for ( int k = 0; k < numMachines; ++ k )
@@ -52,7 +52,7 @@ inline KeyValues * SessionMembersFindPlayer( KeyValues *pSessionSettings, XUID x
 		}
 	}
 
-	return NULL;
+	return nullptr;
 }
 
 inline XUID SessionMembersFindNonGuestXuid( XUID xuid )
@@ -64,13 +64,13 @@ inline XUID SessionMembersFindNonGuestXuid( XUID xuid )
 inline TitleDataFieldsDescription_t const * TitleDataFieldsDescriptionFindByString( TitleDataFieldsDescription_t const *fields, char const *szString )
 {
 	if ( !szString )
-		return NULL;
+		return nullptr;
 	for ( ; fields && fields->m_szFieldName; ++ fields )
 	{
 		if ( !Q_stricmp( fields->m_szFieldName, szString ) )
 			return fields;
 	}
-	return NULL;
+	return nullptr;
 }
 
 inline bool TitleDataFieldsDescriptionGetBit( TitleDataFieldsDescription_t const *fdKey, IPlayerLocal *pPlayer )

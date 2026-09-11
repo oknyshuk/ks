@@ -16,9 +16,9 @@
 
 #define STRLEN(n) strlen(n)
 
-HSQUIRRELVM SquirrelVM::_VM = NULL;
+HSQUIRRELVM SquirrelVM::_VM = nullptr;
 int SquirrelVM::_CallState = -1;
-SquirrelObject * SquirrelVM::_root = NULL;
+SquirrelObject * SquirrelVM::_root = nullptr;
 
 SquirrelError::SquirrelError() 
 {
@@ -67,9 +67,9 @@ void SquirrelVM::Shutdown()
   if (_VM) {
     Cleanup();
     delete _root;
-    _root = NULL;
+    _root = nullptr;
     HSQUIRRELVM v = _VM;
-    _VM = NULL;
+    _VM = nullptr;
     sq_close(v);
   } // if
 }

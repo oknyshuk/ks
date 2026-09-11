@@ -117,7 +117,7 @@ void CGameUI::Deactivate( CBaseEntity *pActivator )
 			if ( m_hSaveWeapon.Get() )
 			{
 				m_player->Weapon_Switch( m_hSaveWeapon.Get() );
-				m_hSaveWeapon = NULL;
+				m_hSaveWeapon = nullptr;
 			}
 
 			if ( pPlayer->GetActiveWeapon() )
@@ -135,7 +135,7 @@ void CGameUI::Deactivate( CBaseEntity *pActivator )
 		m_attackaxis.Set( 0, pPlayer, this );
 		m_attack2axis.Set( 0, pPlayer, this );
 		m_nLastButtonState = 0;
-		m_player = NULL;
+		m_player = nullptr;
 	}
 	else
 	{
@@ -157,8 +157,8 @@ void CGameUI::InputActivate( inputdata_t &inputdata )
 	// Determine if we're specifying this as an override parameter
 	if ( inputdata.value.StringID() != NULL_STRING )
 	{
-		CBaseEntity *pEntity = gEntList.FindEntityByName( NULL, inputdata.value.String(), this, inputdata.pActivator, inputdata.pCaller );
-		if ( pEntity == NULL || pEntity->IsPlayer() == false )
+		CBaseEntity *pEntity = gEntList.FindEntityByName( nullptr, inputdata.value.String(), this, inputdata.pActivator, inputdata.pCaller );
+		if ( pEntity == nullptr || pEntity->IsPlayer() == false )
 		{
 			Warning( "%s InputActivate: entity %s not found or is not a player!\n", GetEntityName().ToCStr(), inputdata.value.String() );
 			return;
@@ -169,7 +169,7 @@ void CGameUI::InputActivate( inputdata_t &inputdata )
 	else
 	{
 		// Otherwise try to use the activator
-		if ( inputdata.pActivator == NULL || inputdata.pActivator->IsPlayer() == false )
+		if ( inputdata.pActivator == nullptr || inputdata.pActivator->IsPlayer() == false )
 		{
 			Warning( "%s InputActivate (%s): invalid or missing !activator!\n", GetEntityName().ToCStr(), inputdata.value.String() );
 			return;
@@ -179,7 +179,7 @@ void CGameUI::InputActivate( inputdata_t &inputdata )
 	}
 
 	// If another player is already using these controls3, ignore this activation
-	if ( m_player.Get() != NULL && pPlayer != m_player.Get() )
+	if ( m_player.Get() != nullptr && pPlayer != m_player.Get() )
 	{
 		// TODO: We could allow this by calling Deactivate() at this point and continuing on -- jdw
 		return;
@@ -227,7 +227,7 @@ void CGameUI::Think( void )
 	CBasePlayer *pPlayer = m_player;
 
 	// If player is gone, stop thinking
-	if (pPlayer == NULL)
+	if (pPlayer == nullptr)
 	{
 		SetNextThink( TICK_NEVER_THINK );
 		return;

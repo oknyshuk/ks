@@ -18,7 +18,7 @@ void CCSClothingVisualsDataCompare::SerializeToBuffer( CUtlBuffer &buf )
 }
 
 CCSClothingVisualsDataProcessor::CCSClothingVisualsDataProcessor( CCSClothingVisualsDataCompare &&compareObject, const char *szCompositingShaderName )
-	: m_szCompositingShaderName( NULL )
+	: m_szCompositingShaderName( nullptr )
 {
 	m_compareObject = Move( compareObject );
 	m_compareObject.FillCompareBlob();
@@ -30,7 +30,7 @@ CCSClothingVisualsDataProcessor::~CCSClothingVisualsDataProcessor()
 	if ( m_szCompositingShaderName )
 	{
 		delete [] m_szCompositingShaderName;
-		m_szCompositingShaderName = NULL;
+		m_szCompositingShaderName = nullptr;
 	}
 }
 
@@ -44,12 +44,12 @@ void CCSClothingVisualsDataProcessor::SetVisualsData( const char *pCompositingSh
 
 KeyValues *CCSClothingVisualsDataProcessor::GenerateCustomMaterialKeyValues()
 {
-	return NULL;
+	return nullptr;
 }
 
 KeyValues *CCSClothingVisualsDataProcessor::GenerateCompositeMaterialKeyValues( int nMaterialParamId )
 {
-	return NULL;
+	return nullptr;
 }
 
 bool CCSClothingVisualsDataProcessor::HasCustomMaterial() const

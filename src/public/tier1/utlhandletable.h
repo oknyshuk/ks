@@ -103,7 +103,7 @@ UtlHandle_t CUtlHandleTable<T, HandleBits>::AddHandle()
 
 	EntryType_t &entry = m_list[ nIndex ];
 	entry.nInvalid = 0;
-	entry.m_pData = NULL;
+	entry.m_pData = nullptr;
 
 	++m_nValidHandles;
 
@@ -125,7 +125,7 @@ void CUtlHandleTable<T, HandleBits>::RemoveHandle( UtlHandle_t handle )
 		entry.nInvalid = 1;
 		--m_nValidHandles;
 	}
-	entry.m_pData = NULL;
+	entry.m_pData = nullptr;
 
 
 	// If a handle has been used this many times, then we need to take it out of service, otherwise if the 
@@ -146,7 +146,7 @@ void CUtlHandleTable<T, HandleBits>::SetHandle( UtlHandle_t handle, T *pData )
 {
 	EntryType_t *entry = const_cast< EntryType_t* >( GetEntry( handle, false ) );
 	Assert( entry );
-	if ( entry == NULL )
+	if ( entry == nullptr )
 		return;
 
 	// Validate the handle
@@ -162,14 +162,14 @@ template< class T, int HandleBits >
 T *CUtlHandleTable<T, HandleBits>::GetHandle( UtlHandle_t handle ) const
 {
 	const EntryType_t *entry = GetEntry( handle, true );
-	return entry ? entry->m_pData : NULL;
+	return entry ? entry->m_pData : nullptr;
 }
 
 template< class T, int HandleBits >
 T *CUtlHandleTable<T, HandleBits>::GetHandle( UtlHandle_t handle, bool checkValidity ) const
 {
 	const EntryType_t *entry = GetEntry( handle, checkValidity );
-	return entry ? entry->m_pData : NULL;
+	return entry ? entry->m_pData : nullptr;
 }
 
 
@@ -262,20 +262,20 @@ template< class T, int HandleBits >
 const typename CUtlHandleTable<T, HandleBits>::EntryType_t *CUtlHandleTable<T, HandleBits>::GetEntry( UtlHandle_t handle, bool checkValidity ) const
 {
 	if ( handle == UTLHANDLE_INVALID )
-		return NULL;
+		return nullptr;
 
 	unsigned int nIndex = GetListIndex( handle );
 	Assert( nIndex < ( unsigned int )m_list.Count() );
 	if ( nIndex >= ( unsigned int )m_list.Count() )
-		return NULL;
+		return nullptr;
 
 	const EntryType_t &entry = m_list[ nIndex ];
 	if ( entry.m_nSerial != GetSerialNumber( handle ) )
-		return NULL;
+		return nullptr;
 
 	if ( checkValidity &&
 		( 1 == entry.nInvalid ) )
-		return NULL;
+		return nullptr;
 
 	return &entry;
 }

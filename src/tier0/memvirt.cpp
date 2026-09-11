@@ -27,7 +27,7 @@
 // Virtual memory manager is not supported on PC/Linux
 IVirtualMemorySection * VirtualMemoryManager_AllocateVirtualMemorySection( size_t numMaxBytes )
 {
-	return NULL;
+	return nullptr;
 }
 
 void VirtualMemoryManager_Shutdown()
@@ -36,7 +36,7 @@ void VirtualMemoryManager_Shutdown()
 
 IVirtualMemorySection *GetMemorySectionForAddress( void *pAddress )
 {
-	return NULL;
+	return nullptr;
 }
 
 #endif // !STEAM && !NO_MALLOC_OVERRIDE

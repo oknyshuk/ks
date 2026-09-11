@@ -390,7 +390,7 @@ IMaterial* GetDrawMaterial( void )
 			case 11:
 				return materials->FindMaterial( "models/shadertest/predator", TEXTURE_GROUP_OTHER, true );
 			default:
-				return NULL;
+				return nullptr;
 		}
 	}
 }
@@ -621,7 +621,7 @@ void Surface_DrawIsoSurface( IClientRenderable *pClientRenderable, const Vector 
 		// This is the no tiler version. We just draw the center tile.
 		sweepRenderer->beginFrame(!(r_surface_debug_draw_margin.GetBool()), (void*)&pRenderContext);
 		sweepRenderer->setOffset(Point3D(0.0f, 0.0f, 0.0f));
-		sweepRenderer->beginTile(NULL);
+		sweepRenderer->beginTile(nullptr);
 
 		for (int i = 0; i < g_SurfaceRenderParticles.Count(); i++)
 		{

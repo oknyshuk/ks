@@ -984,7 +984,7 @@ void DrawLightmapped_4WayBlend_DX9( CBaseVSShader *pShader, IMaterialVar** param
 			BOOL bCSMEnabled = pShaderAPI->IsCascadedShadowMapping() && !ToolsEnabled();
 			if ( bCSMEnabled )
 			{
-				ITexture *pDepthTextureAtlas = NULL;
+				ITexture *pDepthTextureAtlas = nullptr;
 				const CascadedShadowMappingState_t &cascadeState = pShaderAPI->GetCascadedShadowMappingState( &pDepthTextureAtlas, true );
 
 				DynamicCmdsOut.BindTexture( pShader, SHADER_SAMPLER15, TEXTURE_BINDFLAGS_SHADOWDEPTH, pDepthTextureAtlas, 0 );
@@ -1068,7 +1068,7 @@ void DrawLightmapped_4WayBlend_DX9_FastPath( int *dynVSIdx, int *dynPSIdx, CBase
 	pShaderAPI->SetBooleanPixelShaderConstant( 0, (BOOL*)&bCSMEnabled, 1 );
 	if ( bCSMEnabled )
 	{
-		ITexture *pDepthTextureAtlas = NULL;
+		ITexture *pDepthTextureAtlas = nullptr;
 		const CascadedShadowMappingState_t &cascadeState = pShaderAPI->GetCascadedShadowMappingState( &pDepthTextureAtlas, true );
 		pShader->BindTexture( SHADER_SAMPLER15, TEXTURE_BINDFLAGS_SHADOWDEPTH, pDepthTextureAtlas, 0 );
 		pShaderAPI->SetPixelShaderConstant( 64, &cascadeState.m_vLightColor.x, CASCADED_SHADOW_MAPPING_CONSTANT_BUFFER_SIZE );

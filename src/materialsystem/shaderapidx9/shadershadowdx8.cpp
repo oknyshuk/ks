@@ -233,8 +233,8 @@ void CShaderShadowDX8::SetDefaultState()
 	EnableAlphaToCoverage( false );
 	EnablePolyOffset( SHADER_POLYOFFSET_DISABLE );
 	EnableSRGBWrite( false );
-	SetVertexShader( NULL, 0 );
-	SetPixelShader( NULL, 0 );
+	SetVertexShader( nullptr, 0 );
+	SetPixelShader( nullptr, 0 );
 	FogMode( SHADER_FOGMODE_DISABLED, false );
 	DisableFogGammaCorrection( false );
 	m_ShadowShaderState.m_VertexUsage = 0;
@@ -635,7 +635,7 @@ void CShaderShadowDX8::VertexShaderVertexFormat( unsigned int nFlags,
 		Assert( ( nTexCoordCount == 0 ) ||
 			    ( ( nTexCoordCount == 1 ) && pTexCoordDimensions && ( pTexCoordDimensions[0] == 1 ) ) );
 		nTexCoordCount = 1;
-		m_ShadowShaderState.m_VertexUsage = MeshMgr()->ComputeVertexFormat( nFlags, nTexCoordCount, NULL, 0, nUserDataSize );
+		m_ShadowShaderState.m_VertexUsage = MeshMgr()->ComputeVertexFormat( nFlags, nTexCoordCount, nullptr, 0, nUserDataSize );
 	}
 }
 

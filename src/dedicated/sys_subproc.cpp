@@ -92,7 +92,7 @@ static bool NET_StringToSockaddr( const char *s, struct sockaddr *sadr )
 	else
 	{
 		struct hostent	*h;
-		if ( (h = gethostbyname(copy)) == NULL )
+		if ( (h = gethostbyname(copy)) == nullptr )
 			return false;
 		*(int *)&((struct sockaddr_in *)sadr)->sin_addr = *(int *)h->h_addr_list[0];
 	}
@@ -595,7 +595,7 @@ static void HandleDeadChildProcesses( void )
 		if ( nWait > 0 )
 		{
 			// find the process that exited
-			CServerInstance *pFound = NULL;
+			CServerInstance *pFound = nullptr;
 			int nFound = -1;
 			for( int i = 0; i < g_nNumChildInstances; i++ )
 			{
@@ -771,7 +771,7 @@ static bool DecodeParam( char const *pParamName, char const *pInput, char const 
 	}
 	else
 	{
-		*pOutPtr = NULL;
+		*pOutPtr = nullptr;
 	}
 	return ( *pOutPtr );
 }

@@ -224,7 +224,7 @@ protected:
 	// If iForceViewLeaf is not -1, then it uses the specified leaf as your starting area for setting up area portal culling.
 	// This is used by water since your reflected view origin is often in solid space, but we still want to treat it as though
 	// the first portal we're looking out of is a water portal, so our view effectively originates under the water.
-	void			BuildWorldRenderLists( bool bDrawEntities, int iForceViewLeaf = -1, bool bUseCacheIfEnabled = true, bool bShadowDepth = false, float *pReflectionWaterHeight = NULL );
+	void			BuildWorldRenderLists( bool bDrawEntities, int iForceViewLeaf = -1, bool bUseCacheIfEnabled = true, bool bShadowDepth = false, float *pReflectionWaterHeight = nullptr );
 
 	void			BuildWorldRenderLists_Epilogue( bool bShadowDepth );
 	void			BuildRenderableRenderLists_Epilogue( int viewID );
@@ -434,7 +434,7 @@ private:
 	{
 	public:
 
-		explicit SequentialJobs( CJob* pJob = NULL );
+		explicit SequentialJobs( CJob* pJob = nullptr );
 		~SequentialJobs();
 
 		void AddJob( CJob* pJob );
@@ -547,7 +547,7 @@ public:
 // Implementation of IViewRender interface
 public:
 
-	void			SetupVis( const CViewSetup& view, unsigned int &visFlags, ViewCustomVisibility_t *pCustomVisibility = NULL );
+	void			SetupVis( const CViewSetup& view, unsigned int &visFlags, ViewCustomVisibility_t *pCustomVisibility = nullptr );
 
 
 	// Render functions
@@ -626,7 +626,7 @@ protected:
 
 	// General draw methods
 	// baseDrawFlags is a combination of DF_ defines. DF_MONITOR is passed into here while drawing a monitor.
-	void			ViewDrawScene( bool bDrew3dSkybox, SkyboxVisibility_t nSkyboxVisible, const CViewSetup &view, int nClearFlags, view_id_t viewID, bool bDrawViewModel = false, int baseDrawFlags = 0, ViewCustomVisibility_t *pCustomVisibility = NULL );
+	void			ViewDrawScene( bool bDrew3dSkybox, SkyboxVisibility_t nSkyboxVisible, const CViewSetup &view, int nClearFlags, view_id_t viewID, bool bDrawViewModel = false, int baseDrawFlags = 0, ViewCustomVisibility_t *pCustomVisibility = nullptr );
 
 	void			DrawMonitors( const CViewSetup &cameraView );
 
@@ -651,7 +651,7 @@ protected:
 	void DrawUnderwaterOverlay( void );
 
 	// Water-related methods
-	void			DrawWorldAndEntities( bool drawSkybox, const CViewSetup &view, int nClearFlags, ViewCustomVisibility_t *pCustomVisibility = NULL );
+	void			DrawWorldAndEntities( bool drawSkybox, const CViewSetup &view, int nClearFlags, ViewCustomVisibility_t *pCustomVisibility = nullptr );
 
 	virtual void			ViewDrawScene_Intro( const CViewSetup &view, int nClearFlags, const IntroData_t &introData );
 

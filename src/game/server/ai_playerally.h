@@ -244,7 +244,7 @@ struct AISpeechSelection_t
 	{
 	}
 
-	void Set( AIConcept_t newConcept, AI_Response &nuResponse, CBaseEntity *pTarget = NULL )
+	void Set( AIConcept_t newConcept, AI_Response &nuResponse, CBaseEntity *pTarget = nullptr )
 	{
 		response = nuResponse;
 		conc = newConcept;
@@ -317,7 +317,7 @@ public:
 	// Speech & Acting
 	//---------------------------------
 	CBaseEntity	*EyeLookTarget( void );		// Override to look at talk target
-	CBaseEntity	*FindNamedEntity( const char *pszName, IEntityFindFilter *pFilter = NULL );
+	CBaseEntity	*FindNamedEntity( const char *pszName, IEntityFindFilter *pFilter = nullptr );
 
 	CBaseEntity *FindSpeechTarget( int flags );
 	virtual bool IsValidSpeechTarget( int flags, CBaseEntity *pEntity );
@@ -357,7 +357,7 @@ public:
 
 	//---------------------------------
 
-	void		DeferAllIdleSpeech( float flDelay = -1, CAI_BaseNPC *pIgnore = NULL );
+	void		DeferAllIdleSpeech( float flDelay = -1, CAI_BaseNPC *pIgnore = nullptr );
 
 	//---------------------------------
 
@@ -371,7 +371,7 @@ public:
 
 	bool		ShouldSpeakRandom( AIConcept_t conc, int iChance );
 	bool		IsAllowedToSpeak( AIConcept_t conc, bool bRespondingToPlayer = false );
-	virtual bool SpeakIfAllowed( AIConcept_t conc, const char *modifiers = NULL, bool bRespondingToPlayer = false, char *pszOutResponseChosen = NULL, size_t bufsize = 0 );
+	virtual bool SpeakIfAllowed( AIConcept_t conc, const char *modifiers = nullptr, bool bRespondingToPlayer = false, char *pszOutResponseChosen = nullptr, size_t bufsize = 0 );
 	void		ModifyOrAppendCriteria( AI_CriteriaSet& set );
 
 	//---------------------------------

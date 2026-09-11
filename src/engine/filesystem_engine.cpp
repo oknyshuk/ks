@@ -21,7 +21,7 @@
 #define ADDONLIST_FILENAME			"addonlist.txt"
 #define ADDONS_DIRNAME				"addons"
 
-IFileSystem *g_pFileSystem = NULL;
+IFileSystem *g_pFileSystem = nullptr;
 
 // This comes is in filesystem_init.cpp
 extern KeyValues* ReadKeyValuesFile( const char *pFilename );
@@ -162,7 +162,7 @@ bool LoadAddonListFile( const char *pDirectoryName, KeyValues *&pAddons )
 	V_snprintf( addoninfoFilename, sizeof( addoninfoFilename), "%s%s", pDirectoryName, ADDONLIST_FILENAME );
 	pAddons = ReadKeyValuesFile( addoninfoFilename );
 
-	return ( pAddons != NULL );
+	return ( pAddons != nullptr );
 }
 
 //---------------------------------------------------------------------------------------------------------------------

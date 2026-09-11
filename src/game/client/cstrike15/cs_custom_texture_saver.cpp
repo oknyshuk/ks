@@ -67,7 +67,7 @@ void CCSCustomTextureSaver::Update( float frameTime )
 			CUtlBuffer buf;
 			pVTFTexture->Serialize(buf);
 					
-			FileHandle_t f = g_pFullFileSystem->Open( completedMaterials[i].fileNames[j], "wb", NULL );
+			FileHandle_t f = g_pFullFileSystem->Open( completedMaterials[i].fileNames[j], "wb", nullptr );
 
 			if ( f != FILESYSTEM_INVALID_HANDLE )
 			{

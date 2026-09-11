@@ -167,8 +167,8 @@ CAssaultPoint *CAI_AssaultBehavior::FindAssaultPoint( string_t iszAssaultPointNa
 	CUtlVector<CAssaultPoint*>pAssaultPoints;
 	CUtlVector<CAssaultPoint*>pClearAssaultPoints;
 
-	CBaseEntity *pEnt = gEntList.FindEntityByName( NULL, iszAssaultPointName );
-	while( pEnt != NULL )
+	CBaseEntity *pEnt = gEntList.FindEntityByName( nullptr, iszAssaultPointName );
+	while( pEnt != nullptr )
 	{
 		CAssaultPoint *pAssaultEnt;
 		
@@ -189,7 +189,7 @@ CAssaultPoint *CAI_AssaultBehavior::FindAssaultPoint( string_t iszAssaultPointNa
 
 	// Didn't find any?!
 	if( pAssaultPoints.Count() < 1 )
-		return NULL;
+		return nullptr;
 
 	// Only found one, just return it.
 	if( pAssaultPoints.Count() == 1 )
@@ -242,7 +242,7 @@ CAssaultPoint *CAI_AssaultBehavior::FindAssaultPoint( string_t iszAssaultPointNa
 		return pClearAssaultPoints[ random->RandomInt(0, (pClearAssaultPoints.Count() - 1)) ];
 	}
 
-	CAssaultPoint *pBest = NULL;
+	CAssaultPoint *pBest = nullptr;
 	Vector vStart = GetOuter()->GetAbsOrigin();
 	float distBest, distCur;
 
@@ -280,7 +280,7 @@ CAssaultPoint *CAI_AssaultBehavior::FindAssaultPoint( string_t iszAssaultPointNa
 //-----------------------------------------------------------------------------
 void CAI_AssaultBehavior::SetAssaultPoint( CAssaultPoint *pAssaultPoint )
 {
-	Assert( pAssaultPoint != NULL );
+	Assert( pAssaultPoint != nullptr );
 	m_hAssaultPoint = pAssaultPoint;
 	pAssaultPoint->m_flTimeLastUsed = gpGlobals->curtime;
 }
@@ -296,8 +296,8 @@ void CAI_AssaultBehavior::ClearAssaultPoint( void )
 	// the assault behavior.
 	// This can also be happen if an assault point has ClearOnContact set, and
 	// an NPC assaulting to this point has seen an enemy.
-	Assert( m_hAssaultPoint != NULL );
-	if ( m_hAssaultPoint == NULL )
+	Assert( m_hAssaultPoint != nullptr );
+	if ( m_hAssaultPoint == nullptr )
 	{
 		DevMsg("**ERROR: ClearAssaultPoint called with no assault point\n" );
 
@@ -326,7 +326,7 @@ void CAI_AssaultBehavior::ClearAssaultPoint( void )
 		}
 		else
 		{
-			CBaseEntity *pNextRally = gEntList.FindEntityByName( NULL, m_hAssaultPoint->m_NextAssaultPointName );
+			CBaseEntity *pNextRally = gEntList.FindEntityByName( nullptr, m_hAssaultPoint->m_NextAssaultPointName );
 			if ( pNextRally->ClassMatchesExact( g_RallyPointString ) && m_hGoal && m_hGoal->IsActive() )
 			{
 				SetParameters( m_hAssaultPoint->m_NextAssaultPointName, (AssaultCue_t)m_hGoal->m_AssaultCue, m_hGoal->m_RallySelectMethod );
@@ -372,7 +372,7 @@ void CAI_AssaultBehavior::OnHitAssaultPoint( void )
 	m_bHitAssaultPoint = true;
 
 	// dvs: This was unprotected. Is a NULL assault point valid here?
-	Assert( m_hAssaultPoint != NULL );
+	Assert( m_hAssaultPoint != nullptr );
 	if ( m_hAssaultPoint )
 	{
 		m_hAssaultPoint->m_OnArrival.FireOutput( GetOuter(), m_hAssaultPoint, 0 );
@@ -711,7 +711,7 @@ void CAI_AssaultBehavior::RunTask( const Task_t *pTask )
 		{
 			CBaseEntity *pNewEnemy = GetOuter()->BestEnemy();
 
-			if( pNewEnemy != NULL && pNewEnemy != GetOuter()->GetEnemy() )
+			if( pNewEnemy != nullptr && pNewEnemy != GetOuter()->GetEnemy() )
 			{
 				GetOuter()->SetEnemy( pNewEnemy );
 				GetOuter()->SetState( NPC_STATE_COMBAT );
@@ -737,7 +737,7 @@ CRallyPoint *CAI_AssaultBehavior::FindBestRallyPointInRadius( const Vector &vecC
 	CBaseEntity *pEntities[RALLY_SEARCH_ENTS];
 	int iNumEntities = UTIL_EntitiesInSphere( pEntities, RALLY_SEARCH_ENTS, vecCenter, flRadius, 0 );
 
-	CRallyPoint *pBest = NULL;
+	CRallyPoint *pBest = nullptr;
 	int iBestPriority = -1;
 
 	for ( int i = 0; i < iNumEntities; i++ )
@@ -766,12 +766,12 @@ CRallyPoint *CAI_AssaultBehavior::FindBestRallyPointInRadius( const Vector &vecC
 //-----------------------------------------------------------------------------
 bool CAI_AssaultBehavior::IsValidShootPosition( const Vector &vLocation, CAI_Node *pNode, CAI_Hint const *pHint )
 {
-	CBaseEntity *pCuePoint = NULL;
+	CBaseEntity *pCuePoint = nullptr;
 	float flTolerance = 0.0f;
 
 	if( m_bHitRallyPoint && !m_bHitAssaultPoint && !AssaultHasBegun() )
 	{
-		if( m_hRallyPoint != NULL )
+		if( m_hRallyPoint != nullptr )
 		{
 			pCuePoint = m_hRallyPoint;
 			flTolerance = CUE_POINT_TOLERANCE;
@@ -779,7 +779,7 @@ bool CAI_AssaultBehavior::IsValidShootPosition( const Vector &vLocation, CAI_Nod
 	}
 	else if( m_bHitAssaultPoint )
 	{
-		if( m_hAssaultPoint != NULL )
+		if( m_hAssaultPoint != nullptr )
 		{
 			pCuePoint = m_hAssaultPoint;
 			flTolerance = m_hAssaultPoint->m_flAssaultPointTolerance;
@@ -935,9 +935,9 @@ void CAI_AssaultBehavior::SetParameters( string_t rallypointname, AssaultCue_t a
 	UnlockRallyPoint();
 
 	// Firstly, find a rally point. 
-	CRallyPoint *pRallyEnt = dynamic_cast<CRallyPoint *>(gEntList.FindEntityByName( NULL, rallypointname ) );
+	CRallyPoint *pRallyEnt = dynamic_cast<CRallyPoint *>(gEntList.FindEntityByName( nullptr, rallypointname ) );
 
-	CRallyPoint *pBest = NULL;
+	CRallyPoint *pBest = nullptr;
 	int iBestPriority = -1;
 
 	switch( rallySelectMethod )
@@ -976,7 +976,7 @@ void CAI_AssaultBehavior::SetParameters( string_t rallypointname, AssaultCue_t a
 					}
 				}
 
-				pRallyEnt = dynamic_cast<CRallyPoint *>(gEntList.FindEntityByName( pRallyEnt, rallypointname, NULL ) );
+				pRallyEnt = dynamic_cast<CRallyPoint *>(gEntList.FindEntityByName( pRallyEnt, rallypointname, nullptr ) );
 			}
 		}
 		break;
@@ -1049,7 +1049,7 @@ void CAI_AssaultBehavior::InitializeBehavior()
 	m_bHitRallyPoint = false;
 	m_bHitAssaultPoint = false;
 
-	m_hAssaultPoint = NULL;
+	m_hAssaultPoint = nullptr;
 
 	m_bDiverting = false;
 	m_flLastSawAnEnemyAt = 0;
@@ -1206,7 +1206,7 @@ void CAI_AssaultBehavior::EndScheduleSelection()
 {
 	m_bHitAssaultPoint = false;
 
-	if( m_hRallyPoint != NULL )
+	if( m_hRallyPoint != nullptr )
 	{
 		if( !m_hRallyPoint->IsExclusive() )
 			m_bHitRallyPoint = false;
@@ -1319,7 +1319,7 @@ bool CAI_AssaultBehavior::IsAllowedToDivert( void )
 {
 	if ( m_hAssaultPoint && m_hAssaultPoint->m_bAllowDiversion )
 	{
-		if ( m_hAssaultPoint->m_flAllowDiversionRadius == 0.0f || (m_bHitAssaultPoint && GetEnemy() != NULL && GetEnemy()->GetAbsOrigin().DistToSqr(m_hAssaultPoint->GetAbsOrigin()) <= Square(m_hAssaultPoint->m_flAllowDiversionRadius)) ) 
+		if ( m_hAssaultPoint->m_flAllowDiversionRadius == 0.0f || (m_bHitAssaultPoint && GetEnemy() != nullptr && GetEnemy()->GetAbsOrigin().DistToSqr(m_hAssaultPoint->GetAbsOrigin()) <= Square(m_hAssaultPoint->m_flAllowDiversionRadius)) ) 
 		{
 			if ( m_flLastSawAnEnemyAt && ((gpGlobals->curtime - m_flLastSawAnEnemyAt) < ASSAULT_DIVERSION_TIME) )
 				return true;
@@ -1552,7 +1552,7 @@ void CAI_AssaultGoal::DisableGoal( CAI_BaseNPC *pAI )
 		pBehavior->UnlockRallyPoint();
 
 		pBehavior->ClearSchedule( "Assault goal disabled" );
-		pBehavior->SetGoal( NULL );
+		pBehavior->SetGoal( nullptr );
 	}
 }
 

@@ -106,7 +106,7 @@ IMPLEMENT_REFLECT_CLIENTCLASS( C_BreakableSurface, DT_BreakableSurface, CBreakab
 //-----------------------------------------------------------------------------
 void C_BreakableSurface::FindCrackedMaterial()
 {
-	m_pCrackedMaterial.Init( NULL );
+	m_pCrackedMaterial.Init( nullptr );
 
 	// First time we've seen it, get the material on the brush model
 	int materialCount = modelinfo->GetModelMaterialCount( const_cast<model_t*>(GetModel()) );
@@ -172,7 +172,7 @@ C_BreakableSurface::C_BreakableSurface()
 	m_vCorner.Init();
 	m_bIsBroken = false;
 
-	m_pCurrentDetailTexture = NULL;
+	m_pCurrentDetailTexture = nullptr;
 
 	Q_memset( m_PrevRawPanelBitVec, 0xff, sizeof( m_PrevRawPanelBitVec ) );
 }
@@ -376,7 +376,7 @@ void C_BreakableSurface::DrawRenderList(IBrushSurface* pBrushSurface)
 	QAngle vAngles;
 	VectorAngles(-1*m_vNormal,vAngles);
 	Vector vWidthStep,vHeightStep;
-	AngleVectors(vAngles,NULL,&vWidthStep,&vHeightStep);
+	AngleVectors(vAngles,nullptr,&vWidthStep,&vHeightStep);
 	vWidthStep	*= m_flPanelWidth;
 	vHeightStep *= m_flPanelHeight;
 
@@ -419,7 +419,7 @@ void C_BreakableSurface::DrawRenderListHighlights(IBrushSurface* pBrushSurface)
 	QAngle vAngles;
 	VectorAngles(-1*m_vNormal,vAngles);
 	Vector vWidthStep,vHeightStep;
-	AngleVectors(vAngles,NULL,&vWidthStep,&vHeightStep);
+	AngleVectors(vAngles,nullptr,&vWidthStep,&vHeightStep);
 	vWidthStep	*= m_flPanelWidth;
 	vHeightStep *= m_flPanelHeight;
 
@@ -433,7 +433,7 @@ void C_BreakableSurface::DrawRenderListHighlights(IBrushSurface* pBrushSurface)
 		nCurStyle	 = m_RenderList[i].m_nStyle;
 		nCurEdgeType = m_RenderList[i].m_nEdgeType;
 		IMaterial *pMat = m_pEdge[nCurEdgeType][nCurStyle].m_pMaterialEdge;
-		IMesh *pMesh = pRenderContext->GetDynamicMesh( true, NULL, NULL, pMat );
+		IMesh *pMesh = pRenderContext->GetDynamicMesh( true, nullptr, nullptr, pMat );
 
 		Vector vRenderPos = m_vCorner + 
 							(m_RenderList[i].m_nWidth*vWidthStep)	+ 
@@ -742,7 +742,7 @@ void C_BreakableSurface::DrawSolidBlocks(IBrushSurface* pBrushSurface)
 	QAngle vAngles;
 	VectorAngles(-1*m_vNormal,vAngles);
 	Vector vWidthStep,vHeightStep;
-	AngleVectors(vAngles,NULL,&vWidthStep,&vHeightStep);
+	AngleVectors(vAngles,nullptr,&vWidthStep,&vHeightStep);
 	vWidthStep	*= m_flPanelWidth;
 	vHeightStep *= m_flPanelHeight;
 
@@ -1100,7 +1100,7 @@ bool C_BreakableSurface::ShouldReceiveProjectedTextures( int flags )
 
 CBreakableSurfaceProxy::CBreakableSurfaceProxy()
 {
-	m_BaseTextureVar = NULL;
+	m_BaseTextureVar = nullptr;
 }
 
 CBreakableSurfaceProxy::~CBreakableSurfaceProxy()
@@ -1130,7 +1130,7 @@ void CBreakableSurfaceProxy::OnBind( C_BaseEntity *pC_BaseEntity )
 IMaterial *CBreakableSurfaceProxy::GetMaterial()
 {
 	if ( !m_BaseTextureVar )
-		return NULL;
+		return nullptr;
 
 	return m_BaseTextureVar->GetOwningMaterial();
 }

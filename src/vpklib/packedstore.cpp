@@ -151,9 +151,9 @@ static inline int SkipAllFilesInDir( char const * & pData )
 CFileHeaderFixedData *CPackedStore::FindFileEntry( char const *pDirname, char const *pBaseName, char const *pExtension, uint8 **pExtBaseOut , uint8 **pNameBaseOut )
 {
 	if ( pExtBaseOut )
-		*pExtBaseOut = NULL;
+		*pExtBaseOut = nullptr;
 	if ( pNameBaseOut )
-		*pNameBaseOut = NULL;
+		*pNameBaseOut = nullptr;
 
 	int nExtensionHash = HashString( pExtension ) % PACKEDFILE_EXT_HASH_SIZE;
 	CFileExtensionData const *pExt = m_pExtensionData[nExtensionHash].FindNamedNodeCaseSensitive( pExtension );
@@ -184,14 +184,14 @@ CFileHeaderFixedData *CPackedStore::FindFileEntry( char const *pDirname, char co
 			}
 		}
 	}
-	return NULL;
+	return nullptr;
 }
 
 
 const void *CFileHeaderFixedData::MetaData( void ) const
 {
 	if ( ! m_nMetaDataSize )
-		return NULL;
+		return nullptr;
 	const CFilePartDescr *ret = &( m_PartDescriptors[0] );
 	while( ret->m_nFileNumber != PACKFILEINDEX_END )
 		ret++;
@@ -572,7 +572,7 @@ CPackedStoreFileHandle CPackedStore::OpenFile( char const *pFileName )
 
 	CPackedStoreFileHandle ret;
 
-	CFileHeaderFixedData *pHeader = FindFileEntry( dirName, baseName, extName, NULL, &( ret.m_pDirFileNamePtr ) );
+	CFileHeaderFixedData *pHeader = FindFileEntry( dirName, baseName, extName, nullptr, &( ret.m_pDirFileNamePtr ) );
 	
 	if ( pHeader )
 	{
@@ -588,7 +588,7 @@ CPackedStoreFileHandle CPackedStore::OpenFile( char const *pFileName )
 	else
 	{
 		ret.m_nFileNumber = -1;
-		ret.m_pOwner = NULL;
+		ret.m_pOwner = nullptr;
 	}
 	return ret;
 
@@ -602,9 +602,9 @@ CPackedStoreFileHandle CPackedStore::GetHandleForHashingFiles()
 	ret.m_nFileSize = 0;
 	ret.m_nMetaDataSize = 0;
 	ret.m_nCurrentFileOffset = 0;
-	ret.m_pDirFileNamePtr = NULL;
-	ret.m_pHeaderData = NULL;
-	ret.m_pMetaData = NULL;
+	ret.m_pDirFileNamePtr = nullptr;
+	ret.m_pHeaderData = nullptr;
+	ret.m_pMetaData = nullptr;
 	ret.m_pOwner = this;
 	return ret;
 }
@@ -777,7 +777,7 @@ CPackedStore::ESignatureCheckResult CPackedStore::CheckSignature( int nSignature
 	Assert( m_nSizeOfSignedData > 0 );
 
 	// Confirm correct public key, if they specified one.
-	if ( nSignatureSize > 0 && pSignature != NULL )
+	if ( nSignatureSize > 0 && pSignature != nullptr )
 	{
 		if ( m_SignaturePublicKey.Count() != nSignatureSize || V_memcmp( pSignature, m_SignaturePublicKey.Base(), nSignatureSize ) != 0 )
 		{
@@ -790,7 +790,7 @@ CPackedStore::ESignatureCheckResult CPackedStore::CheckSignature( int nSignature
 
 	// Read the data
 	CUtlBuffer bufSignedData;
-	if ( !g_pFullFileSystem->ReadFile( szFilename, NULL, bufSignedData, m_nSizeOfSignedData ) )
+	if ( !g_pFullFileSystem->ReadFile( szFilename, nullptr, bufSignedData, m_nSizeOfSignedData ) )
 		return eSignatureCheckResult_Failed;
 	if ( bufSignedData.TellPut() < (int)m_nSizeOfSignedData )
 	{
@@ -813,7 +813,7 @@ CPackedStore::ESignatureCheckResult CPackedStore::CheckSignature( int nSignature
 
 CPackedStoreReadCache::CPackedStoreReadCache( IBaseFileSystem *pFS ):m_treeCachedVPKRead( CachedVPKRead_t::Less )
 {
-	m_pPackedStore = NULL;
+	m_pPackedStore = nullptr;
 	m_cItemsInCache = 0;
 	m_pFileSystem = pFS;
 	m_cubReadFromCache = 0;
@@ -979,7 +979,7 @@ bool CPackedStoreReadCache::BCanSatisfyFromReadCacheInternal( uint8 *pOutData, C
 	if ( idxTrackedVPKFile == m_treeCachedVPKRead.InvalidIndex() )
 	{
 		// if we are over our limit, remove one and reuse the buffer
-		cachedVPKRead.m_pubBuffer = NULL;
+		cachedVPKRead.m_pubBuffer = nullptr;
 		int idxLRU = -1;
 
 		if ( m_cItemsInCache >= k_nCacheBuffersToKeep )
@@ -988,7 +988,7 @@ bool CPackedStoreReadCache::BCanSatisfyFromReadCacheInternal( uint8 *pOutData, C
 			int idxToRemove = m_rgCurrentCacheIndex[idxLRU];
 
 			cachedVPKRead.m_pubBuffer = m_treeCachedVPKRead[idxToRemove].m_pubBuffer;
-			m_treeCachedVPKRead[idxToRemove].m_pubBuffer = NULL;
+			m_treeCachedVPKRead[idxToRemove].m_pubBuffer = nullptr;
 			m_cDiscardsFromCache++;
 		}
 		else
@@ -996,7 +996,7 @@ bool CPackedStoreReadCache::BCanSatisfyFromReadCacheInternal( uint8 *pOutData, C
 			idxLRU = m_cItemsInCache;
 			m_cItemsInCache++;
 		}
-		if ( cachedVPKRead.m_pubBuffer == NULL )
+		if ( cachedVPKRead.m_pubBuffer == nullptr )
 		{
 			cachedVPKRead.m_pubBuffer = (uint8 *)malloc( k_cubCacheBufferSize );
 		}
@@ -1012,7 +1012,7 @@ bool CPackedStoreReadCache::BCanSatisfyFromReadCacheInternal( uint8 *pOutData, C
 	else
 	{
 		cachedVPKRead = m_treeCachedVPKRead[idxTrackedVPKFile];
-		if ( cachedVPKRead.m_pubBuffer == NULL )
+		if ( cachedVPKRead.m_pubBuffer == nullptr )
 		{
 			// this chunk has been read, MD5ed, and then LRUd away
 			// we will not read it again, we fall back to normal file I/O
@@ -1027,7 +1027,7 @@ bool CPackedStoreReadCache::BCanSatisfyFromReadCacheInternal( uint8 *pOutData, C
 			m_rgLastUsedTime[m_treeCachedVPKRead[idxTrackedVPKFile].m_idxLRU] = Plat_MSTime();
 		}
 	}
-	if ( cachedVPKRead.m_pubBuffer != NULL && cachedVPKRead.m_cubBuffer + cachedVPKRead.m_nFileFraction >= nDesiredPos+nNumBytes )
+	if ( cachedVPKRead.m_pubBuffer != nullptr && cachedVPKRead.m_cubBuffer + cachedVPKRead.m_nFileFraction >= nDesiredPos+nNumBytes )
 	{
 		int nOffset = nDesiredPos - cachedVPKRead.m_nFileFraction;
 		memcpy( pOutData, (uint8 *)&cachedVPKRead.m_pubBuffer[nOffset], nNumBytes );
@@ -1064,7 +1064,7 @@ void CPackedStoreReadCache::RecheckBadCacheLine( CachedVPKRead_t &cachedVPKRead 
 	m_pFileTracker->BlockUntilMD5RequestComplete( cachedVPKRead.m_hMD5RequestHandle, &md5ValueSecondTry );
 	cachedVPKRead.m_hMD5RequestHandle = 0;
 	CheckMd5Result( cachedVPKRead, md5ValueSecondTry );
-	cachedVPKRead.m_pubBuffer = NULL;
+	cachedVPKRead.m_pubBuffer = nullptr;
 	// m_listCachedVPKReadsFailed contains all the data about failed reads - for error or OGS reporting
 	m_listCachedVPKReadsFailed.AddToTail( cachedVPKRead );
 	m_rwlock.UnlockWrite();
@@ -1590,7 +1590,7 @@ ePackedStoreAddResultCode CPackedStore::AddFile( char const *pFile, uint16 nMeta
 	dirEntry.m_sName = pFile;
 	dirEntry.m_iTotalSize = nFileTotalSize;
 	dirEntry.m_iPreloadSize = Min( (uint32)nMetaDataSize, (uint32)nFileTotalSize ) ;
-	dirEntry.m_pPreloadData = ( dirEntry.m_iPreloadSize > 0 ) ? pFileData : NULL;
+	dirEntry.m_pPreloadData = ( dirEntry.m_iPreloadSize > 0 ) ? pFileData : nullptr;
 	dirEntry.m_crc = nCRC;
 	uint32 nBytesInChunk = dirEntry.GetSizeInChunkFile();
 	const unsigned char *pDataStart = (const unsigned char *)pFileData + dirEntry.m_iPreloadSize;
@@ -1663,7 +1663,7 @@ ePackedStoreAddResultCode CPackedStore::AddFile( char const *pFile, uint16 nMeta
 
 int CPackedStore::GetFileList( CUtlStringList &outFilenames, bool bFormattedOutput, bool bSortedOutput )
 {
-	return GetFileList( NULL, outFilenames, bFormattedOutput, bSortedOutput );
+	return GetFileList( nullptr, outFilenames, bFormattedOutput, bSortedOutput );
 }
 
 int CPackedStore::GetFileList( const char *pWildCard, CUtlStringList &outFilenames, bool bFormattedOutput, bool bSortedOutput )
@@ -1675,7 +1675,7 @@ int CPackedStore::GetFileList( const char *pWildCard, CUtlStringList &outFilenam
 	bool bNoBaseWildcard = false;
 	bool bNoExtWildcard = false;
 
-	szWildCardPath[0] = szWildCardExt[0] = szWildCardBase[0] = NULL;
+	szWildCardPath[0] = szWildCardExt[0] = szWildCardBase[0] = 0;
 
 	// Parse the wildcard string into a base and extension used for string comparisons
 	if ( pWildCard )
@@ -1688,9 +1688,9 @@ int CPackedStore::GetFileList( const char *pWildCard, CUtlStringList &outFilenam
 
 		// Remove '*' from the base and extension strings so that the string comparison calls will match
 		char *pcStar = strchr( szWildCardBase, '*' );
-		pcStar ? *pcStar = NULL : bNoBaseWildcard = true;
+		pcStar ? *pcStar = 0 : bNoBaseWildcard = true;
 		pcStar = strchr( szWildCardExt, '*' );
-		pcStar ? *pcStar = NULL : bNoExtWildcard = true;
+		pcStar ? *pcStar = 0 : bNoExtWildcard = true;
 	}
 
 	char const *pData = reinterpret_cast< char const *>( DirectoryData() );
@@ -1803,7 +1803,7 @@ void CPackedStore::GetFileList( const char *pWildcard, CUtlVector<VPKContentFile
 
 int CPackedStore::GetFileAndDirLists( CUtlStringList &outDirnames, CUtlStringList &outFilenames, bool bSortedOutput )
 {
-	return GetFileAndDirLists( NULL, outDirnames, outFilenames, bSortedOutput );
+	return GetFileAndDirLists( nullptr, outDirnames, outFilenames, bSortedOutput );
 }
 
 void CPackedStore::BuildFindFirstCache()
@@ -1893,10 +1893,10 @@ int CPackedStore::GetFileAndDirLists( const char *pWildCard, CUtlStringList &out
 
 		// Remove '*' from the base and extension strings so that the string comparison calls will match
 		char *pcStar = strchr( szWildCardBase, '*' );
-		pcStar ? *pcStar = NULL : bBaseWildcard = false;
+		pcStar ? *pcStar = 0 : bBaseWildcard = false;
 
 		pcStar = strchr( szWildCardExt, '*' );
-		pcStar ? *pcStar = NULL : bExtWildcard = false;
+		pcStar ? *pcStar = 0 : bExtWildcard = false;
 
 		nLenWildcardPath = V_strlen( szWildCardPath );
 		nLenWildcardBase = V_strlen( szWildCardBase );
@@ -1916,7 +1916,7 @@ int CPackedStore::GetFileAndDirLists( const char *pWildCard, CUtlStringList &out
 			{
 				// Extract the sub-directory name if there is one
 				char szSubDir[64];
-				char *szSubDirExtension = NULL; // this is anything after a '.' in szSubDir
+				char *szSubDirExtension = nullptr; // this is anything after a '.' in szSubDir
 				bool bBaseMatch = false;
 				bool bExtMatch = false;
 
@@ -1925,7 +1925,7 @@ int CPackedStore::GetFileAndDirLists( const char *pWildCard, CUtlStringList &out
 
 				// Set the next / to NULL and we have our subdirectory
 				char *pSlash = strchr( szSubDir, '/' );
-				pSlash ? *pSlash = NULL : NULL;
+				pSlash ? *pSlash = 0 : 0;
 
 				szSubDirExtension = strchr( szSubDir, '.' );
 				if ( szSubDirExtension )
@@ -1945,7 +1945,7 @@ int CPackedStore::GetFileAndDirLists( const char *pWildCard, CUtlStringList &out
 				if ( bExtWildcard )
 					bExtMatch = true; // The extension is the wildcard ("*"), so whatever we have as the extension matches
 				else 
-					bExtMatch = ( NULL == szSubDirExtension && '\0' == *szWildCardExt ) || (( NULL != szSubDirExtension ) && ( 0 == V_strnicmp( szSubDirExtension, szWildCardExt, nLenWildcardExt ) ));
+					bExtMatch = ( nullptr == szSubDirExtension && '\0' == *szWildCardExt ) || (( nullptr != szSubDirExtension ) && ( 0 == V_strnicmp( szSubDirExtension, szWildCardExt, nLenWildcardExt ) ));
 
 				// If both parts match, then add it to the list of directories that match
 				if ( bBaseMatch && bExtMatch )
@@ -2000,7 +2000,7 @@ int CPackedStore::GetFileAndDirLists( const char *pWildCard, CUtlStringList &out
 						break;
 					if ( c > 0 )
 						continue;
-					matches = ( (nLenWildcardExt <= 0) || bBaseWildcard ? 0 == V_strnicmp( szFNameOutExt, szWildCardExt, nLenWildcardExt ) : V_stristr( szFNameOutExt, szWildCardExt ) != NULL );
+					matches = ( (nLenWildcardExt <= 0) || bBaseWildcard ? 0 == V_strnicmp( szFNameOutExt, szWildCardExt, nLenWildcardExt ) : V_stristr( szFNameOutExt, szWildCardExt ) != nullptr );
 
 					// Add the file to the output list
 					if ( matches )

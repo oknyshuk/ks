@@ -202,7 +202,7 @@ inline int CBaseShader::CurrentMaterialVarFlags2() const
 //-----------------------------------------------------------------------------
 inline bool CBaseShader::IsSnapshotting() const
 {
-	return (s_pShaderShadow != NULL);
+	return (s_pShaderShadow != nullptr);
 }
 
 //-----------------------------------------------------------------------------

@@ -109,7 +109,7 @@ void CLogicEventListener::FireGameEvent( IGameEvent *event )
 			vm->ReleaseValue( table );
 		}
 
-		m_OnEventFired.FireOutput( NULL, NULL );
+		m_OnEventFired.FireOutput( nullptr, nullptr );
 	}
 }
 
@@ -191,7 +191,7 @@ void CLogicEventListenerItemEquip::FireGameEvent( IGameEvent *event )
 				return;
 		}
 
-		m_OnEventFired.FireOutput( NULL, NULL );
+		m_OnEventFired.FireOutput( nullptr, nullptr );
 	}
 }
 

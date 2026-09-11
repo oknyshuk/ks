@@ -48,10 +48,10 @@
 CSingleAppInstance::CSingleAppInstance( tchar* InstanceName, bool exitOnNotUnique, bool displayMsgIfNotUnique )
 {
 	// defaults for non-Windows builds
-	m_hMutex = NULL;
+	m_hMutex = nullptr;
 	m_isUniqueInstance = true;
 	
-	if ( InstanceName == NULL || V_strlen( InstanceName ) == 0 || V_strlen( InstanceName ) >= MAX_PATH )
+	if ( InstanceName == nullptr || V_strlen( InstanceName ) == 0 || V_strlen( InstanceName ) >= MAX_PATH )
 	{
 		Assert( false );
 		return;
@@ -87,7 +87,7 @@ bool CSingleAppInstance::CheckForOtherRunningInstances( bool exitOnNotUnique, bo
 bool CSingleAppInstance::CheckForRunningInstance( tchar* InstanceName )
 {
 	// validate input		
-	Assert( InstanceName != NULL && V_strlen( InstanceName ) > 0 && V_strlen( InstanceName ) < MAX_PATH );
+	Assert( InstanceName != nullptr && V_strlen( InstanceName ) > 0 && V_strlen( InstanceName ) < MAX_PATH );
 
 	
 

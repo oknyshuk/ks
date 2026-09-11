@@ -54,7 +54,7 @@ class CAI_LeadBehaviorHandler
 {
 public:
 	virtual void OnEvent( int event ) {}
-	virtual const char *GetConceptModifiers( const char *pszConcept )	{ return NULL; }
+	virtual const char *GetConceptModifiers( const char *pszConcept )	{ return nullptr; }
 };
 
 //-------------------------------------
@@ -93,7 +93,7 @@ class CAI_LeadBehavior : public CAI_SimpleBehavior
 	DECLARE_CLASS( CAI_LeadBehavior, CAI_SimpleBehavior );
 public:
 	CAI_LeadBehavior()
-	 :	m_pSink(NULL),
+	 :	m_pSink(nullptr),
 		m_LostTimer( 3.0, 4.0 ),
 		m_LostLOSTimer( 2.0, 3.0 )
 	{
@@ -108,7 +108,7 @@ public:
 	virtual int	DrawDebugTextOverlays( int text_offset );
 	virtual bool IsNavigationUrgent();
 
-	void LeadPlayer( const AI_LeadArgs_t &leadArgs, CAI_LeadBehaviorHandler *pSink = NULL );
+	void LeadPlayer( const AI_LeadArgs_t &leadArgs, CAI_LeadBehaviorHandler *pSink = nullptr );
 	void StopLeading( void );
 
 	virtual bool CanSelectSchedule();
@@ -117,7 +117,7 @@ public:
 	virtual bool IsCurTaskContinuousMove();
 
 	bool SetGoal( const AI_LeadArgs_t &args );
-	void ClearGoal()										{ m_goal = vec3_origin; m_waitpoint = vec3_origin; m_pSink = NULL; m_weaponname = NULL_STRING; }
+	void ClearGoal()										{ m_goal = vec3_origin; m_waitpoint = vec3_origin; m_pSink = nullptr; m_weaponname = NULL_STRING; }
 	bool HasGoal() const 									{ return (m_goal != vec3_origin); }
 	bool HasWaitPoint() const 								{ return (m_waitpoint != vec3_origin); }
 
@@ -193,7 +193,7 @@ private:
 	// in addition to sink logic
 	//
 	void NotifyEvent( int event )								{ if ( m_pSink ) m_pSink->OnEvent( event ) ; }
-	const char * GetConceptModifiers( const char *pszConcept )	{ return ( m_pSink ) ? m_pSink->GetConceptModifiers( pszConcept ) : NULL; }
+	const char * GetConceptModifiers( const char *pszConcept )	{ return ( m_pSink ) ? m_pSink->GetConceptModifiers( pszConcept ) : nullptr; }
 	
 	// --------------------------------
 

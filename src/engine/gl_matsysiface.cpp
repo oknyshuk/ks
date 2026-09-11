@@ -88,7 +88,7 @@ CON_COMMAND_F( mat_edit, "Bring up the material under the crosshair in the edito
 	if ( !toolframework->InToolMode() )
 		return;
 
-	IMaterial* pMaterial = NULL;
+	IMaterial* pMaterial = nullptr;
 	if ( args.ArgC() < 2 )
 	{
 		pMaterial = GetMaterialAtCrossHair();
@@ -303,7 +303,7 @@ static void TestBumpSanity( SurfaceHandle_t surfID )
 void MaterialSytsem_DoBumpWarnings( void )
 {
 	int sortID;
-	IMaterial *pPrevMaterial = NULL;
+	IMaterial *pPrevMaterial = nullptr;
 
 	for( sortID = 0; sortID < g_WorldStaticMeshes.Count(); sortID++ )
 	{
@@ -541,7 +541,7 @@ bool SurfNeedsLightmap( SurfaceHandle_t surfID )
 //-----------------------------------------------------------------------------
 void MaterialSystem_RegisterPaintSurfaces( void )
 {
-	IPaintmapDataManager *pPaintmapDataManager = NULL;
+	IPaintmapDataManager *pPaintmapDataManager = nullptr;
 	if ( g_PaintManager.m_bShouldRegister )
 	{
 		pPaintmapDataManager = &g_PaintManager;
@@ -808,7 +808,7 @@ void CMSurfaceSortList::AddSurfaceToTail( msurface2_t *pSurface, int sortGroup, 
 		InitGroup(pGroup);
 	}
 
-	materiallist_t *pList = NULL;
+	materiallist_t *pList = nullptr;
 	short prevIndex = -1;
 	int vertCount = MSurf_VertCount(pSurface);
 	int triangleCount = vertCount - 2;
@@ -829,7 +829,7 @@ void CMSurfaceSortList::AddSurfaceToTail( msurface2_t *pSurface, int sortGroup, 
 		{
 			prevIndex = pGroup->listTail;
 			// no space in existing block
-			pList = NULL;
+			pList = nullptr;
 		}
 	}
 	// use existing block?
@@ -866,7 +866,7 @@ void CMSurfaceSortList::AddSurfaceToTail( msurface2_t *pSurface, int sortGroup, 
 msurface2_t *CMSurfaceSortList::GetSurfaceAtHead( const surfacesortgroup_t &group ) const
 {
 	if ( group.listHead == m_list.InvalidIndex() )
-		return NULL;
+		return nullptr;
 	Assert(m_list[group.listHead].count>0);
 	return m_list[group.listHead].pSurfaces[0];
 }
@@ -884,7 +884,7 @@ void CMSurfaceSortList::GetSurfaceListForGroup( CUtlVector<msurface2_t *> &list,
 IMaterial *GetMaterialAtCrossHair( void )
 {
 	Assert( false );	// return value was not defined for this platform - returning NULL
-	return NULL;
+	return nullptr;
 }
 
 // hack

@@ -52,7 +52,7 @@ ConVar sv_soundemitter_trace( "sv_soundemitter_trace", "-1", FCVAR_REPLICATED, "
 ConVar cc_showmissing( "cc_showmissing", "0", FCVAR_REPLICATED, "Show missing closecaption entries." );
 
 extern ISoundEmitterSystemBase *soundemitterbase;
-static ConVar *g_pClosecaption = NULL;
+static ConVar *g_pClosecaption = nullptr;
 
 static bool g_bPermitDirectSoundPrecache = false;
 
@@ -338,11 +338,11 @@ public:
 #if !defined( CLIENT_DLL )
 	void AddCaptionFile( const char *filename )
 	{
-		int searchPathLen = filesystem->GetSearchPath( "GAME", true, NULL, 0 );
+		int searchPathLen = filesystem->GetSearchPath( "GAME", true, nullptr, 0 );
 		char *searchPaths = (char *)stackalloc( searchPathLen + 1 );
 		filesystem->GetSearchPath( "GAME", true, searchPaths, searchPathLen );
 
-		for ( char *path = strtok( searchPaths, ";" ); path; path = strtok( NULL, ";" ) )
+		for ( char *path = strtok( searchPaths, ";" ); path; path = strtok( nullptr, ";" ) )
 		{
 
 			char fullpath[MAX_PATH];
@@ -759,7 +759,7 @@ public:
 			nFlags,
 			params.pitch,
 			ep.m_pOrigin,
-			NULL,
+			nullptr,
 			&ep.m_UtlVecSoundOrigin,
 			true,
 			st,
@@ -900,7 +900,7 @@ public:
 			nFlags, 
 			ep.m_nPitch, 
 			ep.m_pOrigin,
-			NULL, 
+			nullptr, 
 			&ep.m_UtlVecSoundOrigin,
 			true, 
 			ep.m_flSoundTime,
@@ -1278,7 +1278,7 @@ public:
 			return;
 		}
 
-		const char *pSoundEntryName = NULL;
+		const char *pSoundEntryName = nullptr;
 		if( params->GetSoundEntryVersion() > 1 &&
 			sv_soundemitter_version.GetInt() > 1 )
 		{
@@ -1596,7 +1596,7 @@ void Playgamesound_f( const CCommand &args )
 
 			Vector position = pPlayer->EyePosition();
 			Vector forward;
-			pPlayer->GetVectors( &forward, NULL, NULL );
+			pPlayer->GetVectors( &forward, nullptr, nullptr );
 			position += atof( args[2] ) * forward;
 			params.m_pOrigin = &position;
 			params.m_pSoundName = args[1];
@@ -1625,7 +1625,7 @@ static int GamesoundCompletion( const char *partial, char commands[ COMMAND_COMP
 	int current = 0;
 
 	const char *cmdname = "playgamesound";
-	char *substring = NULL;
+	char *substring = nullptr;
 	int substringLen = 0;
 	if ( Q_strstr( partial, cmdname ) && strlen(partial) > strlen(cmdname) + 1 )
 	{
@@ -1665,7 +1665,7 @@ static int GamesoundCompletion2( const char *partial, char commands[ COMMAND_COM
 	int current = 0;
 
 	const char *cmdname = "snd_playsounds";
-	char *substring = NULL;
+	char *substring = nullptr;
 	int substringLen = 0;
 	if ( Q_strstr( partial, cmdname ) && strlen(partial) > strlen(cmdname) + 1 )
 	{
@@ -1736,7 +1736,7 @@ static int GamesoundCompletion3( const char *partial, char commands[ COMMAND_COM
 	int current = 0;
 
 	const char *cmdname = "snd_setsoundparam";
-	char *substring = NULL;
+	char *substring = nullptr;
 	int substringLen = 0;
 	if ( Q_strstr( partial, cmdname ) && strlen(partial) > strlen(cmdname) + 1 )
 	{
@@ -1923,7 +1923,7 @@ int CBaseEntity::EmitSound( IRecipientFilter& filter, int iEntIndex, const char 
 
 static void Helper_UpdateLastMadeNoiseTime( const IRecipientFilter &filter, int iEntIndex, const EmitSound_t &params )
 {
-	CBaseEntity * pEnt = NULL;
+	CBaseEntity * pEnt = nullptr;
 
 #ifdef GAME_DLL
 	if ( ( filter.GetRecipientCount() > 1 ) ||

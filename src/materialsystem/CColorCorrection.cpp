@@ -114,13 +114,13 @@ ColorCorrectionLookup_t::~ColorCorrectionLookup_t()
 		{
 			if ( m_pColorCorrectionTexture == TextureManager()->ColorCorrectionTexture( i ) )
 			{
-				TextureManager()->SetColorCorrectionTexture( i, NULL );
+				TextureManager()->SetColorCorrectionTexture( i, nullptr );
 			}
 		}
 
 		m_pColorCorrectionTexture->DecrementReferenceCount();
 		ITextureInternal::Destroy( m_pColorCorrectionTexture );
-		m_pColorCorrectionTexture = NULL;
+		m_pColorCorrectionTexture = nullptr;
 	}
 
 	delete [] m_pColorCorrection;
@@ -409,7 +409,7 @@ void CColorCorrectionSystem::SortLookups()
 
 	for ( int i=m_ColorCorrectionList.Count();i<COLOR_CORRECTION_MAX_TEXTURES;i++ )
 	{
-		TextureManager()->SetColorCorrectionTexture( i, NULL );
+		TextureManager()->SetColorCorrectionTexture( i, nullptr );
 	}
 }
 
@@ -426,7 +426,7 @@ ColorCorrectionLookup_t *CColorCorrectionSystem::FindLookup( ColorCorrectionHand
 		}
 	}
 
-	return NULL;
+	return nullptr;
 }
 
 //-----------------------------------------------------------------------------

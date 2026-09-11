@@ -72,7 +72,7 @@ void CShower::Think( void )
 		SetNextThink( gpGlobals->curtime + 0.1f );
 	else
 		UTIL_Remove( this );
-	SetGroundEntity( NULL );
+	SetGroundEntity( nullptr );
 }
 
 
@@ -357,7 +357,7 @@ void CEnvExplosion::InputExplode( inputdata_t &inputdata )
 			{
 				QAngle angles;
 				VectorAngles( tr.plane.normal, angles );
-				Create( "spark_shower", vecExplodeOrigin, angles, NULL );
+				Create( "spark_shower", vecExplodeOrigin, angles, nullptr );
 			}
 		}
 	}
@@ -412,7 +412,7 @@ void ExplosionCreate( const Vector &center, const QAngle &angles,
 	}
 	pExplosion->m_iClassIgnore = ignoredClass;
 
-	pExplosion->AcceptInput( "Explode", NULL, NULL, emptyVariant, 0 );
+	pExplosion->AcceptInput( "Explode", nullptr, nullptr, emptyVariant, 0 );
 }
 
 
@@ -436,7 +436,7 @@ void ExplosionCreate( const Vector &center, const QAngle &angles,
 		nFlags |= SF_ENVEXPLOSION_NOSOUND;
 	}
 
-	ExplosionCreate( center, angles, pOwner, magnitude, radius, nFlags, flExplosionForce, NULL, iCustomDamageType );
+	ExplosionCreate( center, angles, pOwner, magnitude, radius, nFlags, flExplosionForce, nullptr, iCustomDamageType );
 }
 
 // this version lets you specify classes or entities to be ignored
@@ -462,7 +462,7 @@ void ExplosionCreate( const Vector &center, const QAngle &angles,
 		nFlags |= SF_ENVEXPLOSION_NOSOUND;
 	}
 
-	ExplosionCreate( center, angles, pOwner, magnitude, radius, nFlags, flExplosionForce, NULL, iCustomDamageType, ignoredEntity, ignoredClass );
+	ExplosionCreate( center, angles, pOwner, magnitude, radius, nFlags, flExplosionForce, nullptr, iCustomDamageType, ignoredEntity, ignoredClass );
 }
 
 //-----------------------------------------------------------------------------

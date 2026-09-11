@@ -40,7 +40,7 @@ namespace ResponseRules
 
 #pragma region IResponseSystem
 		// IResponseSystem
-		virtual bool FindBestResponse( const CriteriaSet& set, CRR_Response& response, IResponseFilter *pFilter = NULL );
+		virtual bool FindBestResponse( const CriteriaSet& set, CRR_Response& response, IResponseFilter *pFilter = nullptr );
 		virtual void GetAllResponses( CUtlVector<CRR_Response> *pResponses );
 #pragma endregion Implement interface from IResponseSystem
 
@@ -88,8 +88,8 @@ namespace ResponseRules
 		{
 			ResponseSearchResult()
 			{
-				group = NULL;
-				action = NULL;
+				group = nullptr;
+				action = nullptr;
 			}
 
 			ResponseGroup	*group;
@@ -111,7 +111,7 @@ namespace ResponseRules
 
 			m_ScriptStack[ 0 ].currenttoken = IEngineEmulator::Get()->ParseFile( m_ScriptStack[ 0 ].currenttoken, token, sizeof( token ) );
 			m_ScriptStack[ 0 ].tokencount++;
-			return m_ScriptStack[ 0 ].currenttoken != NULL ? true : false;
+			return m_ScriptStack[ 0 ].currenttoken != nullptr ? true : false;
 		}
 
 		inline void Unget()
@@ -151,7 +151,7 @@ namespace ResponseRules
 			return false;
 		}
 
-		void		ParseOneResponse( const char *responseGroupName, ResponseGroup& group, ResponseParams *defaultParams = NULL );
+		void		ParseOneResponse( const char *responseGroupName, ResponseGroup& group, ResponseParams *defaultParams = nullptr );
 
 		void		ParseInclude( void );
 		void		ParseResponse( void );
@@ -215,8 +215,8 @@ public:
 		float		ScoreCriteriaAgainstRuleCriteria( const CriteriaSet& set, int icriterion, bool& exclude, bool verbose = false );
 		void		FakeDepletes( ResponseGroup *g, IResponseFilter *pFilter );
 		void		RevertFakedDepletes( ResponseGroup *g );
-		bool		GetBestResponse( ResponseSearchResult& result, Rule *rule, bool verbose = false, IResponseFilter *pFilter = NULL );
-		bool		ResolveResponse( ResponseSearchResult& result, int depth, const char *name, bool verbose = false, IResponseFilter *pFilter = NULL );
+		bool		GetBestResponse( ResponseSearchResult& result, Rule *rule, bool verbose = false, IResponseFilter *pFilter = nullptr );
+		bool		ResolveResponse( ResponseSearchResult& result, int depth, const char *name, bool verbose = false, IResponseFilter *pFilter = nullptr );
 		int			SelectWeightedResponseFromResponseGroup( ResponseGroup *g, IResponseFilter *pFilter );
 		void		DescribeResponseGroup( ResponseGroup *group, int selected, int depth );
 		void		DebugPrint( int depth, PRINTF_FORMAT_STRING const char *fmt, ... ) FMTFUNCTION( 3, 4 );

@@ -135,8 +135,8 @@ public:
 		return false;
 	}
 
-	template <typename T> T *Get ( void ) { return NULL; }
-	template <typename T> const T *Get ( void ) const { return NULL; }
+	template <typename T> T *Get ( void ) { return nullptr; }
+	template <typename T> const T *Get ( void ) const { return nullptr; }
 
 	template <typename T> T &AsType ( void ) { static T dummy; return dummy; }
 	template <typename T> const T &AsType ( void ) const { static T dummy; return dummy; }
@@ -157,13 +157,13 @@ inline bool CPeerToPeerAddress::IsType<CSteamID> ( void ) const
 template <>
 inline CSteamID * CPeerToPeerAddress::Get<CSteamID> ( void )
 {
-	return IsType<CSteamID> ( ) ? &m_steamID : NULL;
+	return IsType<CSteamID> ( ) ? &m_steamID : nullptr;
 }
 
 template <>
 inline const CSteamID * CPeerToPeerAddress::Get<CSteamID> ( void ) const
 {
-	return IsType<CSteamID> ( ) ? &m_steamID : NULL;
+	return IsType<CSteamID> ( ) ? &m_steamID : nullptr;
 }
 
 template <>
@@ -376,7 +376,7 @@ struct ns_address
 		case NSAT_P2P:
 			return m_steamID.Get<T> ( );
 		};
-		return NULL;
+		return nullptr;
 	}
 
 	template <typename T> const T *Get ( void ) const
@@ -387,7 +387,7 @@ struct ns_address
 		case NSAT_P2P:
 			return m_steamID.Get<T> ( );
 		};
-		return NULL;
+		return nullptr;
 	}
 
 	template <typename T> T &AsType ( void )
@@ -479,25 +479,25 @@ inline bool ns_address::IsType<CPeerToPeerAddress> ( void ) const
 template <>
 inline netadr_t *ns_address::Get<netadr_t> ( void )
 {
-	return IsType<netadr_t> ( ) ? &m_adr : NULL;
+	return IsType<netadr_t> ( ) ? &m_adr : nullptr;
 }
 
 template <>
 inline const netadr_t *ns_address::Get<netadr_t> ( void ) const
 {
-	return IsType<netadr_t> ( ) ? &m_adr : NULL;
+	return IsType<netadr_t> ( ) ? &m_adr : nullptr;
 }
 
 template <>
 inline CPeerToPeerAddress *ns_address::Get<CPeerToPeerAddress> ( void )
 {
-	return IsType<CPeerToPeerAddress> ( ) ? &m_steamID : NULL;
+	return IsType<CPeerToPeerAddress> ( ) ? &m_steamID : nullptr;
 }
 
 template <>
 inline const CPeerToPeerAddress *ns_address::Get<CPeerToPeerAddress> ( void ) const
 {
-	return IsType<CPeerToPeerAddress> ( ) ? &m_steamID : NULL;
+	return IsType<CPeerToPeerAddress> ( ) ? &m_steamID : nullptr;
 }
 
 template <>

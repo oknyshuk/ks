@@ -14,12 +14,12 @@ LINK_ENTITY_TO_CLASS( func_hostage_rescue, CHostageRescueZone );
 
 void CHostageRescueZone::Spawn()
 {
-	m_hInstructorHint = NULL;
+	m_hInstructorHint = nullptr;
 
 	InitTrigger();
 	SetTouch( &CHostageRescueZone::HostageRescueTouch );
 
-	VisibilityMonitor_AddEntity( this, 1600.0f, NULL, NULL );
+	VisibilityMonitor_AddEntity( this, 1600.0f, nullptr, nullptr );
 }
 
 void CHostageRescueZone::ReInitOnRoundStart( void )
@@ -28,7 +28,7 @@ void CHostageRescueZone::ReInitOnRoundStart( void )
 	{
 		CPointEntity *pEnt = static_cast< CPointEntity* >( m_hInstructorHint.Get() );
 		UTIL_Remove( pEnt );
-		m_hInstructorHint = NULL;
+		m_hInstructorHint = nullptr;
 	}
 
 	//CCSPlayerResource *pCSPR = CSPlayerResource();
@@ -51,7 +51,7 @@ void CHostageRescueZone::ReInitOnRoundStart( void )
 			}
 		}
 
-		CPointEntity *pEnt = NULL;
+		CPointEntity *pEnt = nullptr;
 		if ( vecPosCur != vec3_origin )
 		{
 			pEnt = static_cast< CPointEntity* >( CreateEntityByName( "info_hostage_rescue_zone_hint" ) );
@@ -79,7 +79,7 @@ void CHostageRescueZone::HostageRescueTouch( CBaseEntity *pOther )
 	if ( m_bDisabled == false )
 	{
 		variant_t emptyVariant;
-		pOther->AcceptInput( "OnRescueZoneTouch", NULL, NULL, emptyVariant, 0 );
+		pOther->AcceptInput( "OnRescueZoneTouch", nullptr, nullptr, emptyVariant, 0 );
 	}
 }
 
@@ -91,7 +91,7 @@ LINK_ENTITY_TO_CLASS( info_hostage_rescue_zone_hint, CInfoInstructorHintHostageR
 
 void CInfoInstructorHintHostageRescueZone::Spawn( void )
 {
-	VisibilityMonitor_AddEntity( this, 5000.0f, NULL, NULL );
+	VisibilityMonitor_AddEntity( this, 5000.0f, nullptr, nullptr );
 }
 
 

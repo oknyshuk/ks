@@ -52,7 +52,7 @@ public:
 		m_pCreateFn		= createFn;
 		m_pCreateEventFn= createEventFn;
 		m_pRecvTable	= pRecvTable;
-		m_pMapClassname = NULL;
+		m_pMapClassname = nullptr;
 
 		// Link it in
 		m_pNext				= g_pClientClassHead;
@@ -104,7 +104,7 @@ public:
 	} \
 	ClientClass __g_##clientClassName##ClientClass(#serverClassName, \
 													_##clientClassName##_CreateObject, \
-													NULL,\
+													nullptr,\
 													&dataTable::g_RecvTable);
 
 // Implement a client class and provide a factory so you can allocate and delete it yourself
@@ -113,7 +113,7 @@ public:
 	INTERNAL_IMPLEMENT_CLIENTCLASS_PROLOGUE(clientClassName, dataTable, serverClassName) \
 	ClientClass __g_##clientClassName##ClientClass(#serverClassName, \
 													factory, \
-													NULL,\
+													nullptr,\
 													&dataTable::g_RecvTable);
 
 // The IMPLEMENT_CLIENTCLASS_DT macros do IMPLEMENT_CLIENT_CLASS and also do BEGIN_RECV_TABLE.
@@ -127,7 +127,7 @@ public:
 	static clientClassName __g_##clientClassName; \
 	static IClientNetworkable* _##clientClassName##_CreateObject() {return &__g_##clientClassName;}\
 	ClientClass __g_##clientClassName##ClientClass(#serverClassName, \
-													NULL,\
+													nullptr,\
 													_##clientClassName##_CreateObject, \
 													&dataTable::g_RecvTable);
 
@@ -140,7 +140,7 @@ public:
 	INTERNAL_IMPLEMENT_CLIENTCLASS_PROLOGUE(clientClassName, dataTable, serverClassName)\
 	static IClientNetworkable* _##clientClassName##_CreateObject() {return ptr;}\
 	ClientClass __g_##clientClassName##ClientClass(#serverClassName, \
-													NULL,\
+													nullptr,\
 													_##clientClassName##_CreateObject, \
 													&dataTable::g_RecvTable);
 
@@ -153,7 +153,7 @@ public:
 		return p; \
 	} \
 	ClientClass __g_##clientClassName##ClientClass(#serverClassName, \
-													NULL,\
+													nullptr,\
 													_##clientClassName##_CreateObject, \
 													&dataTable::g_RecvTable);
 

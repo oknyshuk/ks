@@ -27,7 +27,7 @@ public:
 inline void CRnDebugName::Init()
 {
 #if RUBIKON_DEBUG_NAMES
-	m_pName = NULL;
+	m_pName = nullptr;
 #endif
 }
 
@@ -48,13 +48,13 @@ inline void CRnDebugName::SetV( const char *pNameFormat, va_list args )
 	if( m_pName )
 	{
 		delete[]m_pName;
-		m_pName = NULL;
+		m_pName = nullptr;
 	}
 
 	if( pNameFormat )
 	{
         CReuseVaList dup_args( args );
-		int nLen = vsnprintf( NULL, 0, pNameFormat, dup_args.m_ReuseList );
+		int nLen = vsnprintf( nullptr, 0, pNameFormat, dup_args.m_ReuseList );
 		if( nLen > 0 )
 		{
 			m_pName =  new char[nLen + 2];
@@ -73,7 +73,7 @@ inline const char *CRnDebugName::Get() const
 #if RUBIKON_DEBUG_NAMES
 	return m_pName;
 #else
-	return NULL;
+	return nullptr;
 #endif
 }
 

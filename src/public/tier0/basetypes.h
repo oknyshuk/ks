@@ -46,7 +46,7 @@
 // tickrate changes.
 
 // stdio.h
-#ifndef NULL
+#ifndef nullptr
 #define NULL 0
 #endif
 

@@ -58,7 +58,7 @@ void CPointBonusMapsAccessor::Activate( void )
 	CreateInterfaceFn gameUIFactory = g_GameUI.GetFactory();
 	if ( gameUIFactory )
 	{
-		m_pGameUI = (IGameUI *) gameUIFactory(GAMEUI_INTERFACE_VERSION, NULL );
+		m_pGameUI = (IGameUI *) gameUIFactory(GAMEUI_INTERFACE_VERSION, nullptr );
 	}
 }
 
@@ -93,7 +93,7 @@ void BonusMapChallengeUpdate( const char *pchFileName, const char *pchMapName, c
 	CreateInterfaceFn gameUIFactory = g_GameUI.GetFactory();
 	if ( gameUIFactory )
 	{
-		IGameUI *pGameUI = (IGameUI *) gameUIFactory(GAMEUI_INTERFACE_VERSION, NULL );
+		IGameUI *pGameUI = (IGameUI *) gameUIFactory(GAMEUI_INTERFACE_VERSION, nullptr );
 		if ( pGameUI )
 		{
 			int piNumMedals[ 3 ] = {0};

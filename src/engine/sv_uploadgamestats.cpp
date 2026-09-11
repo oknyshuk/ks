@@ -271,7 +271,7 @@ public:
 			return;
 
 		// try getting client SteamUtils interface
-		ISteamUtils *pSteamUtils = NULL;
+		ISteamUtils *pSteamUtils = nullptr;
 #if !defined( DEDICATED )
 		pSteamUtils = Steam3Client().SteamUtils();
 #endif

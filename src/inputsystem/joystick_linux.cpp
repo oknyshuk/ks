@@ -81,7 +81,7 @@ void joy_gamecontroller_config_changed_f( IConVar *var, const char *pOldValue, f
 		// We need to reinitialize the whole thing (i.e. undo CInputSystem::InitializeJoysticks and then call it again)
 		// due to SDL_Gamepad only reading the SDL_HINT_GAMECONTROLLERCONFIG on init.
 		SDL_RemoveEventWatch(JoystickSDLWatcher, pInputSystem);
-		if ( pInputSystem->m_pJoystickInfo[ 0 ].m_pDevice != NULL )
+		if ( pInputSystem->m_pJoystickInfo[ 0 ].m_pDevice != nullptr )
 		{
 			pInputSystem->JoystickHotplugRemoved(pInputSystem->m_pJoystickInfo[ 0 ].m_nDeviceId);
 		}
@@ -103,10 +103,10 @@ bool JoystickSDLWatcher( void *userInfo, SDL_Event *event )
 	Assert(ThreadInMainThread());
 
 	CInputSystem *pInputSystem = (CInputSystem *)userInfo;
-	Assert(pInputSystem != NULL);
-	Assert(event != NULL);
+	Assert(pInputSystem != nullptr);
+	Assert(event != nullptr);
 
-	if ( event == NULL || pInputSystem == NULL )
+	if ( event == nullptr || pInputSystem == nullptr )
 	{
 		Warning("No input system\n");
 		return true;
@@ -272,7 +272,7 @@ void CInputSystem::JoystickHotplugAdded( int instanceId )
 	Msg("Initializing joystick #%i and making it active.\n", joystickId);
 
 	SDL_Gamepad *controller = SDL_OpenGamepad(instanceId);
-	if ( controller == NULL )
+	if ( controller == nullptr )
 	{
 		Warning("Failed to open joystick %i: %s\n", joystickId, SDL_GetError());
 		return;
@@ -281,10 +281,10 @@ void CInputSystem::JoystickHotplugAdded( int instanceId )
 	// XXX: This will fail if this is a *real* hotplug event (and not coming from the initial InitializeJoysticks call).
 	// That's because the SDL haptic subsystem currently doesn't do hotplugging. Everything but haptics will work fine.
 	SDL_Haptic *haptic = SDL_OpenHapticFromJoystick(SDL_GetGamepadJoystick(controller));
-	if ( haptic == NULL || !SDL_InitHapticRumble(haptic) )
+	if ( haptic == nullptr || !SDL_InitHapticRumble(haptic) )
 	{
 		Warning("Unable to initialize rumble for joystick #%i: %s\n", joystickId, SDL_GetError());
-		haptic = NULL;
+		haptic = nullptr;
 	}
 
 	info.m_pDevice = controller;
@@ -312,7 +312,7 @@ void CInputSystem::JoystickHotplugRemoved( int joystickId )
 		return;
 	}
 
-	if ( info.m_pDevice == NULL )
+	if ( info.m_pDevice == nullptr )
 	{
 		info.m_nDeviceId = -1;
 		DevMsg("Got hotplug remove event for removed joystick %i, ignoring.\n");
@@ -327,8 +327,8 @@ void CInputSystem::JoystickHotplugRemoved( int joystickId )
 	SDL_CloseHaptic((SDL_Haptic *)info.m_pHaptic);
 	SDL_CloseGamepad((SDL_Gamepad *)info.m_pDevice);
 
-	info.m_pHaptic = NULL;
-	info.m_pDevice = NULL;
+	info.m_pHaptic = nullptr;
+	info.m_pDevice = nullptr;
 	info.m_nButtonCount = 0;
 	info.m_nDeviceId = -1;
 	info.m_bRumbleEnabled = false;
@@ -470,7 +470,7 @@ void CInputSystem::PollJoystick( void )
 void CInputSystem::SetXDeviceRumble( float fLeftMotor, float fRightMotor, int userId )
 {
 	JoystickInfo_t& info = m_pJoystickInfo[ 0 ];
-	if ( info.m_nDeviceId < 0  || info.m_pHaptic == NULL )
+	if ( info.m_nDeviceId < 0  || info.m_pHaptic == nullptr )
 	{
 		return;
 	}

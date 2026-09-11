@@ -149,7 +149,7 @@ public: // IConnectionlessPacketHandler implementation
 	void	SendQueryPortToClient( netadr_t &adr );
 
 	void	RecalculateTags( void );
-	void	AddTag( const char *pszTag, const char *pszSubTagValue = NULL );
+	void	AddTag( const char *pszTag, const char *pszSubTagValue = nullptr );
 	void	RemoveTag( const char *pszTag, bool bSubTag = false );
 
 	CBaseClient *CreateSplitClient( const ks::net::CMsg_CVars& vecUserInfo, CBaseClient *pAttachedTo );
@@ -188,7 +188,7 @@ protected:
 	
 	CBaseClient *GetFreeClient( const ns_address &adr );
 
-	virtual CBaseClient *CreateNewClient( int slot ) { return NULL; }; // must be derived
+	virtual CBaseClient *CreateNewClient( int slot ) { return nullptr; }; // must be derived
 
 	
 	virtual bool	FinishCertificateCheck( const ns_address &adr, int nAuthProtocol, const char *szRawCertificate ) { return true; };

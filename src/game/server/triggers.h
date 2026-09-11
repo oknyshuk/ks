@@ -48,7 +48,7 @@ public:
 	[[= ks::reflect::Input{ .name = "StartTouch", .type = FIELD_VOID } ]] virtual void InputStartTouch( inputdata_t &inputdata );
 	[[= ks::reflect::Input{ .name = "EndTouch", .type = FIELD_VOID } ]] virtual void InputEndTouch( inputdata_t &inputdata );
 
-	virtual bool UsesFilter( void ){ return ( m_hFilter.Get() != NULL ); }
+	virtual bool UsesFilter( void ){ return ( m_hFilter.Get() != nullptr ); }
 	virtual bool PassesTriggerFilters(CBaseEntity *pOther);
 	virtual void StartTouch(CBaseEntity *pOther);
 	virtual void EndTouch(CBaseEntity *pOther);
@@ -220,8 +220,8 @@ public:
 	static CTriggerCallback *Create( const Vector &vecOrigin, const QAngle &vecAngles, const Vector &vecMins, const Vector &vecMaxs, CBaseEntity *pOwner, void (CBaseEntity::*pfnCallback)(CBaseEntity *) )
 	{
 		CTriggerCallback *pTrigger = (CTriggerCallback *) CreateEntityByName( "trigger_callback" );
-		if ( pTrigger == NULL )
-			return NULL;
+		if ( pTrigger == nullptr )
+			return nullptr;
 
 		UTIL_SetOrigin( pTrigger, vecOrigin );
 		pTrigger->SetAbsAngles( vecAngles );

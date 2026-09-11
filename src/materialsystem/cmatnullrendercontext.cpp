@@ -107,7 +107,7 @@ public:
 	ITexture *GetFrameBufferCopyTexture(int)
 	{
 		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
-		return NULL;
+		return nullptr;
 	}
 
 	void GetViewport( int& x, int& y, int& width, int& height ) const
@@ -125,7 +125,7 @@ public:
 			x = y = 0;
 
 			// If target is back buffer
-			if ( element.m_pRenderTargets[0] == NULL )
+			if ( element.m_pRenderTargets[0] == nullptr )
 			{
 				width = m_WidthBackBuffer;
 				height = m_HeightBackBuffer;
@@ -235,7 +235,7 @@ public:
 	IMesh *CreateStaticMesh(VertexFormat_t,const char *,IMaterial *,VertexStreamSpec_t *)
 	{
 		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
-		return NULL;
+		return nullptr;
 	}
 
 	void DestroyStaticMesh(IMesh *)
@@ -246,13 +246,13 @@ public:
 	IMesh *GetDynamicMesh(bool,IMesh *,IMesh *,IMaterial *)
 	{
 		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
-		return NULL;
+		return nullptr;
 	}
 
 	virtual IMesh* GetDynamicMeshEx( VertexFormat_t, bool, IMesh*, IMesh*, IMaterial * )
 	{
 		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
-		return NULL;
+		return nullptr;
 	}
 
 	int SelectionMode(bool)
@@ -324,7 +324,7 @@ public:
 	OcclusionQueryObjectHandle_t CreateOcclusionQueryObject()
 	{
 		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
-		return NULL;
+		return nullptr;
 	}
 
 	void DestroyOcclusionQueryObject(OcclusionQueryObjectHandle_t)
@@ -438,7 +438,7 @@ public:
 	IMorph *CreateMorph(MorphFormat_t, const char *pDebugName)
 	{
 		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
-		return NULL;
+		return nullptr;
 	}
 
 	void DestroyMorph(IMorph *)
@@ -562,7 +562,7 @@ public:
 	IMesh *GetFlexMesh()
 	{
 		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
-		return NULL;
+		return nullptr;
 	}
 
 	void SetFlashlightStateEx(const FlashlightState_t &,const VMatrix &,ITexture *)
@@ -573,7 +573,7 @@ public:
 	ITexture *GetLocalCubemap()
 	{
 		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
-		return NULL;
+		return nullptr;
 	}
 
 	void ClearBuffersObeyStencil(bool,bool)
@@ -777,12 +777,12 @@ public:
 	IVertexBuffer *CreateStaticVertexBuffer( VertexFormat_t fmt, int nVertexCount, const char *pBudgetGroup )
 	{
 		Assert( 0 );
-		return NULL;
+		return nullptr;
 	}
 	IIndexBuffer *CreateStaticIndexBuffer( MaterialIndexFormat_t fmt, int nIndexCount, const char *pBudgetGroup )
 	{
 		Assert( 0 );
-		return NULL;
+		return nullptr;
 	}
 	void DestroyVertexBuffer( IVertexBuffer * )
 	{
@@ -796,12 +796,12 @@ public:
 	IVertexBuffer *GetDynamicVertexBuffer( int streamID, VertexFormat_t vertexFormat, bool bBufferedtrue )
 	{
 		Assert( 0 );
-		return NULL;
+		return nullptr;
 	}
 	IIndexBuffer *GetDynamicIndexBuffer( )
 	{
 		Assert( 0 );
-		return NULL;
+		return nullptr;
 	}
 	void BindVertexBuffer( int streamID, IVertexBuffer *pVertexBuffer, int nOffsetInBytes, int nFirstVertex, int nVertexCount, VertexFormat_t fmt, int nRepetitions1 )
 	{
@@ -842,7 +842,7 @@ public:
 	virtual float* LockSubDBuffer( int nNumRows )
 	{
 		Assert(0);
-		return NULL;
+		return nullptr;
 	}
 	virtual void UnlockSubDBuffer()
 	{
@@ -913,7 +913,7 @@ public:
 	//--------------------------------------------------------
 	virtual void							Printf( char *fmt, ... ) {};
 	virtual void							PrintfVA( char *fmt, va_list vargs ){};
-	virtual float							Knob( char *knobname, float *setvalue=NULL ) { return 0.0f; };	
+	virtual float							Knob( char *knobname, float *setvalue=nullptr ) { return 0.0f; };	
 
 
 	virtual ColorCorrectionHandle_t FindLookup( const char *pName ) { return 0; }

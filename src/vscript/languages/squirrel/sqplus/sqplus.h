@@ -525,12 +525,12 @@ T * GetInstance(HSQUIRRELVM v,SQInteger idx) {
     else if (!CreateNativeClassInstance(v,GetTypeName(*value),value,0)) \
       throw SquirrelError(_T("Push(): could not create INSTANCE (check registration name)")); } \
   inline void Push(HSQUIRRELVM v,TYPE & value) { if (!CreateCopyInstance(GetTypeName(value),value)) throw SquirrelError(_T("Push(): could not create INSTANCE copy (check registration name)")); } \
-  inline bool Match(TypeWrapper<TYPE &>,HSQUIRRELVM v,int idx) { return  GetInstance<TYPE,false>(v,idx) != NULL; } \
+  inline bool Match(TypeWrapper<TYPE &>,HSQUIRRELVM v,int idx) { return  GetInstance<TYPE,false>(v,idx) != nullptr; } \
   inline bool Match(TypeWrapper<TYPE *>,HSQUIRRELVM v,int idx) { \
-    return (sq_gettype(v,idx)==OT_NULL) || (GetInstance<TYPE,false>(v,idx) != NULL); } \
+    return (sq_gettype(v,idx)==OT_NULL) || (GetInstance<TYPE,false>(v,idx) != nullptr); } \
   inline TYPE & Get(TypeWrapper<TYPE &>,HSQUIRRELVM v,int idx) { return *GetInstance<TYPE,true>(v,idx); } \
   inline TYPE * Get(TypeWrapper<TYPE *>,HSQUIRRELVM v,int idx) { \
-    if (sq_gettype(v,idx)==OT_NULL) return NULL; \
+    if (sq_gettype(v,idx)==OT_NULL) return nullptr; \
     return GetInstance<TYPE,true>(v,idx); } \
   template<> \
   struct TypeInfo<TYPE> { \
@@ -547,8 +547,8 @@ T * GetInstance(HSQUIRRELVM v,SQInteger idx) {
   inline const SQChar * GetTypeName(const TYPE & n)            { return _T(#NAME); } \
   inline void Push(HSQUIRRELVM v,TYPE * value)                 { if (!CreateNativeClassInstance(v,GetTypeName(*value),value,0)) throw SquirrelError(_T("Push(): could not create INSTANCE (check registration name)")); } \
   inline void Push(HSQUIRRELVM v,TYPE & value)                 { if (!CreateCopyInstance(GetTypeName(value),value)) throw SquirrelError(_T("Push(): could not create INSTANCE copy (check registration name)")); } \
-  inline bool	Match(TypeWrapper<TYPE &>,HSQUIRRELVM v,int idx) { return  GetInstance<TYPE,false>(v,idx) != NULL; } \
-  inline bool	Match(TypeWrapper<TYPE *>,HSQUIRRELVM v,int idx) { return  GetInstance<TYPE,false>(v,idx) != NULL; } \
+  inline bool	Match(TypeWrapper<TYPE &>,HSQUIRRELVM v,int idx) { return  GetInstance<TYPE,false>(v,idx) != nullptr; } \
+  inline bool	Match(TypeWrapper<TYPE *>,HSQUIRRELVM v,int idx) { return  GetInstance<TYPE,false>(v,idx) != nullptr; } \
   inline TYPE & Get(TypeWrapper<TYPE &>,HSQUIRRELVM v,int idx) { return *GetInstance<TYPE,true>(v,idx); } \
   inline TYPE * Get(TypeWrapper<TYPE *>,HSQUIRRELVM v,int idx) { return  GetInstance<TYPE,true>(v,idx); } \
   template<> \

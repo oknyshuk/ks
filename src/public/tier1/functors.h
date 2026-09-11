@@ -488,7 +488,7 @@ protected:
 
 	void OnCall()
 	{
-		Assert( (void *)m_pObject != NULL );
+		Assert( (void *)m_pObject != nullptr );
 	}
 
 	FUNCTION_TYPE m_pfnProxied;
@@ -501,7 +501,7 @@ protected:
 	class CMemberFuncProxy##N : public CMemberFuncProxyBase<OBJECT_TYPE_PTR, FUNCTION_TYPE, MEM_POLICY> \
 	{ \
 	public: \
-		CMemberFuncProxy##N( OBJECT_TYPE_PTR pObject = NULL, FUNCTION_TYPE pfnProxied = NULL ) \
+		CMemberFuncProxy##N( OBJECT_TYPE_PTR pObject = nullptr, FUNCTION_TYPE pfnProxied = nullptr ) \
 		: CMemberFuncProxyBase<OBJECT_TYPE_PTR, FUNCTION_TYPE, MEM_POLICY >( pObject, pfnProxied ) \
 		{ \
 		} \

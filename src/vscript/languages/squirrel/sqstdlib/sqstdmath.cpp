@@ -75,7 +75,7 @@ static SQRegFunction mathlib_funcs[] = {
 	_DECL_FUNC(ceil,2,_SC(".n")),
 	_DECL_FUNC(exp,2,_SC(".n")),
 	_DECL_FUNC(srand,2,_SC(".n")),
-	_DECL_FUNC(rand,1,NULL),
+	_DECL_FUNC(rand,1,nullptr),
 	_DECL_FUNC(fabs,2,_SC(".n")),
 	_DECL_FUNC(abs,2,_SC(".n")),
 	{0,0},

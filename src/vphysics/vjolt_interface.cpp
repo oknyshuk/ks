@@ -128,7 +128,7 @@ void JoltPhysicsInterface::Shutdown()
 void *JoltPhysicsInterface::QueryInterface( const char *pInterfaceName )
 {
 	CreateInterfaceFn factory = Sys_GetFactoryThis();
-	return factory( pInterfaceName, NULL );	
+	return factory( pInterfaceName, nullptr );	
 }
 
 //-------------------------------------------------------------------------------------------------

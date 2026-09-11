@@ -68,9 +68,9 @@ struct DmxElementUnpackStructure_t
 
 #define NO_BIT_OFFSET	-1
 #define UTL_STRING_SIZE	-1
-#define NO_USER_DATA	NULL
-#define NO_EMBEDDED_TYPENAME	NULL
-#define NO_EMBEDDED_STRUCT_PTR	NULL
+#define NO_USER_DATA	nullptr
+#define NO_EMBEDDED_TYPENAME	nullptr
+#define NO_EMBEDDED_STRUCT_PTR	nullptr
 #define NOT_A_BITFIELD	BITFIELD_TYPE_NONE
 #define NOT_AN_ARRAY 0
 
@@ -82,7 +82,7 @@ struct DmxElementUnpackStructure_t
 	template <> DmxElementUnpackStructure_t *DmxElementUnpackInit<_structName>( _structName * ); \
 	namespace _structName##_UnpackInit \
 	{ \
-		static DmxElementUnpackStructure_t *s_pUnpack = DmxElementUnpackInit( (_structName *)NULL ); \
+		static DmxElementUnpackStructure_t *s_pUnpack = DmxElementUnpackInit( (_structName *)nullptr ); \
 	} \
 	\
 	template <> DmxElementUnpackStructure_t *DmxElementUnpackInit<_structName>( _structName * ) \
@@ -131,14 +131,14 @@ struct DmxElementUnpackStructure_t
 	{ _attributeName, _defaultString, AT_STRING, offsetof( DestStructType_t, _varName ), UTL_STRING_SIZE, NO_BIT_OFFSET, NOT_A_BITFIELD, _userData, NO_EMBEDDED_TYPENAME, NO_EMBEDDED_STRUCT_PTR, NOT_AN_ARRAY },
 
 #define END_DMXELEMENT_UNPACK( _structName, _varName )			\
-			{ NULL, NULL, AT_UNKNOWN, 0, 0, NO_BIT_OFFSET, NOT_A_BITFIELD, NO_USER_DATA, NO_EMBEDDED_TYPENAME, NO_EMBEDDED_STRUCT_PTR }				\
+			{ nullptr, nullptr, AT_UNKNOWN, 0, 0, NO_BIT_OFFSET, NOT_A_BITFIELD, NO_USER_DATA, NO_EMBEDDED_TYPENAME, NO_EMBEDDED_STRUCT_PTR }				\
 		};														\
 		return unpack;											\
 	}															\
 	DmxElementUnpackStructure_t *_varName = _structName##_UnpackInit::s_pUnpack;
 
 #define END_DMXELEMENT_UNPACK_TEMPLATE( _structName, _varName )			\
-			{ NULL, NULL, AT_UNKNOWN, 0, 0, NO_BIT_OFFSET, NOT_A_BITFIELD, NO_USER_DATA, NO_EMBEDDED_TYPENAME, NO_EMBEDDED_STRUCT_PTR }				\
+			{ nullptr, nullptr, AT_UNKNOWN, 0, 0, NO_BIT_OFFSET, NOT_A_BITFIELD, NO_USER_DATA, NO_EMBEDDED_TYPENAME, NO_EMBEDDED_STRUCT_PTR }				\
 		};														\
 		return unpack;											\
 	}															\
@@ -150,7 +150,7 @@ struct DmxElementUnpackStructure_t
 	template <> DmxElementUnpackStructure_t *_nameSpace::DmxElementUnpackInit<_nameSpace::_structName>( _nameSpace::_structName * ); \
 	namespace _structName##_UnpackInit \
 	{ \
-		static DmxElementUnpackStructure_t *s_pUnpack = _nameSpace::DmxElementUnpackInit( (_nameSpace::_structName *)NULL ); \
+		static DmxElementUnpackStructure_t *s_pUnpack = _nameSpace::DmxElementUnpackInit( (_nameSpace::_structName *)nullptr ); \
 	} \
 	\
 	template <> DmxElementUnpackStructure_t *_nameSpace::DmxElementUnpackInit<_nameSpace::_structName>( _nameSpace::_structName * ) \
@@ -180,7 +180,7 @@ struct DmxElementUnpackStructure_t
 	template <> DmxElementUnpackStructure_t *DmxElementUnpackInit##_namespace<_structName>( _namespace::_structName * ); \
 	namespace _namespace##_structName##_UnpackInit \
 	{ \
-		static DmxElementUnpackStructure_t *s_pUnpack = _namespace::DmxElementUnpackInit##_namespace( (_namespace::_structName *)NULL ); \
+		static DmxElementUnpackStructure_t *s_pUnpack = _namespace::DmxElementUnpackInit##_namespace( (_namespace::_structName *)nullptr ); \
 	} \
 	\
 	template <> DmxElementUnpackStructure_t *DmxElementUnpackInit##_namespace<_structName>( _namespace::_structName * ) \
@@ -191,7 +191,7 @@ struct DmxElementUnpackStructure_t
 
 // Use to end BEGIN_DMXELEMENT_UNPACK_NAMESPACE* macros
 #define END_DMXELEMENT_UNPACK_NAMESPACE( _namespace, _structName, _varName )			\
-			{ NULL, NULL, AT_UNKNOWN, 0, 0, NO_BIT_OFFSET, NOT_A_BITFIELD, NO_USER_DATA, NO_EMBEDDED_TYPENAME, NO_EMBEDDED_STRUCT_PTR }				\
+			{ nullptr, nullptr, AT_UNKNOWN, 0, 0, NO_BIT_OFFSET, NOT_A_BITFIELD, NO_USER_DATA, NO_EMBEDDED_TYPENAME, NO_EMBEDDED_STRUCT_PTR }				\
 		};													\
 		return unpack;										\
 	}														\
@@ -472,7 +472,7 @@ public:
 		if ( m_pElement )
 		{
 			m_pElement->LockForChanges( false );
-			m_pElement = NULL;
+			m_pElement = nullptr;
 		}
 	}
 private:

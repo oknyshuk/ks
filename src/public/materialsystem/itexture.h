@@ -56,7 +56,7 @@ public:
 	virtual void Release() = 0;
 
 	virtual bool HasPreallocatedScratchTexture() const { return false; }
-	virtual IVTFTexture *GetPreallocatedScratchTexture() { return NULL; }
+	virtual IVTFTexture *GetPreallocatedScratchTexture() { return nullptr; }
 };
 
 abstract_class ITexture

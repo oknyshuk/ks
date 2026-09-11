@@ -150,20 +150,20 @@ private:
 };
 
 
-IMaterialVar *CLumCompareMaterialProxy::s_pMaterialParam_C0_X = NULL;
-IMaterialVar *CLumCompareMaterialProxy::s_pMaterialParam_C0_Y = NULL;
+IMaterialVar *CLumCompareMaterialProxy::s_pMaterialParam_C0_X = nullptr;
+IMaterialVar *CLumCompareMaterialProxy::s_pMaterialParam_C0_Y = nullptr;
  
 float CLumCompareMaterialProxy::s_C0_X = -1e20f;
 float CLumCompareMaterialProxy::s_C0_Y = 1e20f;
  
-IMaterial	*CLumCompareMaterialProxy::s_pLumCompareMaterial = NULL;
+IMaterial	*CLumCompareMaterialProxy::s_pLumCompareMaterial = nullptr;
 
 CLumCompareMaterialProxy::CLumCompareMaterialProxy()
 {
-	s_pMaterialParam_C0_X = NULL;
-	s_pMaterialParam_C0_Y = NULL;
+	s_pMaterialParam_C0_X = nullptr;
+	s_pMaterialParam_C0_Y = nullptr;
 
-	s_pLumCompareMaterial = NULL;
+	s_pLumCompareMaterial = nullptr;
 }
 
 bool CLumCompareMaterialProxy::Init( IMaterial *pMaterial, KeyValues *pKeyValues )
@@ -184,15 +184,15 @@ void CLumCompareMaterialProxy::OnBind( C_BaseEntity *pEnt )
 
 IMaterial *CLumCompareMaterialProxy::GetMaterial()
 {
-	if ( s_pMaterialParam_C0_X == NULL)
-		return NULL;
+	if ( s_pMaterialParam_C0_X == nullptr)
+		return nullptr;
 
 	return s_pMaterialParam_C0_X->GetOwningMaterial();
 }
 
 IMaterial *CLumCompareMaterialProxy::GetLumCompareMaterial( IMaterialSystem * materials )
 {
-	if( s_pLumCompareMaterial == NULL)
+	if( s_pLumCompareMaterial == nullptr)
 	{
 		s_pLumCompareMaterial = materials->FindMaterial( "dev/lumcompare", TEXTURE_GROUP_OTHER, true );
 	}
@@ -236,11 +236,11 @@ private:
 };
 
 
-IMaterial	*CLumCompareStencilMaterialProxy::s_pLumCompareStencilMaterial = NULL;
+IMaterial	*CLumCompareStencilMaterialProxy::s_pLumCompareStencilMaterial = nullptr;
 
 CLumCompareStencilMaterialProxy::CLumCompareStencilMaterialProxy()
 {
-	s_pLumCompareStencilMaterial = NULL;
+	s_pLumCompareStencilMaterial = nullptr;
 }
 
 bool CLumCompareStencilMaterialProxy::Init( IMaterial *pMaterial, KeyValues *pKeyValues )
@@ -254,7 +254,7 @@ void CLumCompareStencilMaterialProxy::OnBind( C_BaseEntity *pEnt )
 
 IMaterial *CLumCompareStencilMaterialProxy::GetMaterial()
 {
-	if( s_pLumCompareStencilMaterial == NULL)
+	if( s_pLumCompareStencilMaterial == nullptr)
 	{
 		s_pLumCompareStencilMaterial = materials->FindMaterial( "dev/no_pixel_write", TEXTURE_GROUP_OTHER, true );
 	}
@@ -264,7 +264,7 @@ IMaterial *CLumCompareStencilMaterialProxy::GetMaterial()
 
 IMaterial *CLumCompareStencilMaterialProxy::GetLumCompareStencilMaterial( IMaterialSystem * materials )
 {
-	if( s_pLumCompareStencilMaterial == NULL)
+	if( s_pLumCompareStencilMaterial == nullptr)
 	{
 		s_pLumCompareStencilMaterial = materials->FindMaterial( "dev/no_pixel_write", TEXTURE_GROUP_OTHER, true );
 	}
@@ -302,21 +302,21 @@ private:
 	static IMaterial	*s_pDownsampleMaterial;
 };
 
-IMaterialVar *CDownsampleMaterialProxy::s_pMaterialParam_bloomexp = NULL;
-IMaterialVar *CDownsampleMaterialProxy::s_pMaterialParam_bloomsaturation = NULL;
+IMaterialVar *CDownsampleMaterialProxy::s_pMaterialParam_bloomexp = nullptr;
+IMaterialVar *CDownsampleMaterialProxy::s_pMaterialParam_bloomsaturation = nullptr;
  
 float CDownsampleMaterialProxy::s_bloomexp			= 2.5f;
 float CDownsampleMaterialProxy::s_bloomsaturation	= 1.0f;
  
-IMaterial	*CDownsampleMaterialProxy::s_pDownsampleMaterial = NULL;
+IMaterial	*CDownsampleMaterialProxy::s_pDownsampleMaterial = nullptr;
 
 
 CDownsampleMaterialProxy::CDownsampleMaterialProxy()
 {
-	s_pMaterialParam_bloomexp		 = NULL;
-	s_pMaterialParam_bloomsaturation = NULL;
+	s_pMaterialParam_bloomexp		 = nullptr;
+	s_pMaterialParam_bloomsaturation = nullptr;
 
-	s_pDownsampleMaterial			 = NULL;
+	s_pDownsampleMaterial			 = nullptr;
 }
 
 bool CDownsampleMaterialProxy::Init( IMaterial *pMaterial, KeyValues *pKeyValues )
@@ -338,15 +338,15 @@ void CDownsampleMaterialProxy::OnBind( C_BaseEntity *pEnt )
 
 IMaterial *CDownsampleMaterialProxy::GetMaterial()
 {
-	if ( s_pMaterialParam_bloomexp == NULL)
-		return NULL;
+	if ( s_pMaterialParam_bloomexp == nullptr)
+		return nullptr;
 
 	return s_pMaterialParam_bloomexp->GetOwningMaterial();
 }
 
 IMaterial *CDownsampleMaterialProxy::GetDownsampleMaterial( IMaterialSystem * materials )
 {
-	if( s_pDownsampleMaterial == NULL)
+	if( s_pDownsampleMaterial == nullptr)
 	{
 		// FIXME: doesn't support dev/downsample (bFloathdr == true) path on PS3 here yet...
 		s_pDownsampleMaterial = materials->FindMaterial( "dev/downsample_non_hdr", TEXTURE_GROUP_OTHER, true );
@@ -392,11 +392,11 @@ private:
 };
 
 
-IMaterial	*CXBlurMaterialProxy::s_pXBlurMaterial = NULL;
+IMaterial	*CXBlurMaterialProxy::s_pXBlurMaterial = nullptr;
 
 CXBlurMaterialProxy::CXBlurMaterialProxy()
 {
-	s_pXBlurMaterial = NULL;
+	s_pXBlurMaterial = nullptr;
 }
 
 bool CXBlurMaterialProxy::Init( IMaterial *pMaterial, KeyValues *pKeyValues )
@@ -410,7 +410,7 @@ void CXBlurMaterialProxy::OnBind( C_BaseEntity *pEnt )
 
 IMaterial *CXBlurMaterialProxy::GetMaterial()
 {
-	if( s_pXBlurMaterial == NULL)
+	if( s_pXBlurMaterial == nullptr)
 	{
 		s_pXBlurMaterial = materials->FindMaterial( "dev/blurfilterx_nohdr", TEXTURE_GROUP_OTHER, true );
 	}
@@ -420,7 +420,7 @@ IMaterial *CXBlurMaterialProxy::GetMaterial()
 
 IMaterial *CXBlurMaterialProxy::GetXBlurMaterial( IMaterialSystem * materials )
 {
-	if( s_pXBlurMaterial == NULL)
+	if( s_pXBlurMaterial == nullptr)
 	{
 		s_pXBlurMaterial = materials->FindMaterial( "dev/blurfilterx_nohdr", TEXTURE_GROUP_OTHER, true );
 	}
@@ -455,11 +455,11 @@ private:
 };
 
 
-IMaterial	*CYBlurMaterialProxy::s_pYBlurMaterial = NULL;
+IMaterial	*CYBlurMaterialProxy::s_pYBlurMaterial = nullptr;
 
 CYBlurMaterialProxy::CYBlurMaterialProxy()
 {
-	s_pYBlurMaterial = NULL;
+	s_pYBlurMaterial = nullptr;
 }
 
 bool CYBlurMaterialProxy::Init( IMaterial *pMaterial, KeyValues *pKeyValues )
@@ -473,7 +473,7 @@ void CYBlurMaterialProxy::OnBind( C_BaseEntity *pEnt )
 
 IMaterial *CYBlurMaterialProxy::GetMaterial()
 {
-	if( s_pYBlurMaterial == NULL)
+	if( s_pYBlurMaterial == nullptr)
 	{
 		s_pYBlurMaterial = materials->FindMaterial( "dev/blurfiltery_nohdr", TEXTURE_GROUP_OTHER, true );
 	}
@@ -483,7 +483,7 @@ IMaterial *CYBlurMaterialProxy::GetMaterial()
 
 IMaterial *CYBlurMaterialProxy::GetYBlurMaterial( IMaterialSystem * materials )
 {
-	if( s_pYBlurMaterial == NULL)
+	if( s_pYBlurMaterial == nullptr)
 	{
 		s_pYBlurMaterial = materials->FindMaterial( "dev/blurfiltery_nohdr", TEXTURE_GROUP_OTHER, true );
 	}
@@ -558,10 +558,10 @@ void CHistogramBucket::IssueQuery( int nFrameNum )
 	{
 		pLumCompareMaterial = materials->FindMaterial( "dev/lumcompare", TEXTURE_GROUP_OTHER, true );
 
-		IMaterialVar *pMinVar = pLumCompareMaterial->FindVar( "$C0_X", NULL );
+		IMaterialVar *pMinVar = pLumCompareMaterial->FindVar( "$C0_X", nullptr );
 		pMinVar->SetFloatValue( flTestRangeMin );
 
-		IMaterialVar *pMaxVar = pLumCompareMaterial->FindVar( "$C0_Y", NULL );
+		IMaterialVar *pMaxVar = pLumCompareMaterial->FindVar( "$C0_Y", nullptr );
 		pMaxVar->SetFloatValue( flTestRangeMax );
 	}
 
@@ -993,7 +993,7 @@ void CTonemapSystem::UpdateBucketRanges()
 	// Force fallback to original tone mapping algorithm for these mods //
 	//==================================================================//
 	static bool s_bFirstTime = true;
-	if ( engine == NULL )
+	if ( engine == nullptr )
 	{
 		// Force this code to get hit again so we can change algorithm based on the client
 		m_nCurrentAlgorithm = -1;
@@ -1539,7 +1539,7 @@ private:
 float CBloomAddMaterialProxy::s_flBloomAmount = 1.0f;
 
 CBloomAddMaterialProxy::CBloomAddMaterialProxy()
-: m_pMaterialParam_BloomAmount( NULL )
+: m_pMaterialParam_BloomAmount( nullptr )
 {
 }
 
@@ -1560,8 +1560,8 @@ void CBloomAddMaterialProxy::OnBind( C_BaseEntity *pEnt )
 
 IMaterial *CBloomAddMaterialProxy::GetMaterial()
 {
-	if ( m_pMaterialParam_BloomAmount == NULL)
-		return NULL;
+	if ( m_pMaterialParam_BloomAmount == nullptr)
+		return nullptr;
 
 	return m_pMaterialParam_BloomAmount->GetOwningMaterial();
 }
@@ -1655,28 +1655,28 @@ float CEnginePostMaterialProxy::s_PostBloomAmount					= 1.0f;
 
 CEnginePostMaterialProxy::CEnginePostMaterialProxy()
 {
-	m_pMaterialParam_FXAAValuesC				= NULL;
-	m_pMaterialParam_FXAAValuesQ				= NULL;
-	m_pMaterialParam_AAValues					= NULL;
-	m_pMaterialParam_AAValues2					= NULL;
-	m_pMaterialParam_BloomUVTransform			= NULL;
-	m_pMaterialParam_BloomEnable				= NULL;
-	m_pMaterialParam_BloomAmount				= NULL;
-	m_pMaterialParam_ColCorrectEnable			= NULL;
-	m_pMaterialParam_ColCorrectNumLookups		= NULL;
-	m_pMaterialParam_ColCorrectDefaultWeight	= NULL;
-	m_pMaterialParam_ColCorrectLookupWeights	= NULL;
-	m_pMaterialParam_LocalContrastStrength		= NULL;
-	m_pMaterialParam_LocalContrastEdgeStrength	= NULL;
-	m_pMaterialParam_VignetteStart				= NULL;
-	m_pMaterialParam_VignetteEnd				= NULL;
-	m_pMaterialParam_VignetteBlurEnable			= NULL;
-	m_pMaterialParam_VignetteBlurStrength		= NULL;
-	m_pMaterialParam_FadeToBlackStrength		= NULL;
-	m_pMaterialParam_DepthBlurFocalDistance		= NULL;
-	m_pMaterialParam_DepthBlurStrength			= NULL;
-	m_pMaterialParam_ScreenBlurStrength			= NULL;
-	m_pMaterialParam_FilmGrainStrength			= NULL;
+	m_pMaterialParam_FXAAValuesC				= nullptr;
+	m_pMaterialParam_FXAAValuesQ				= nullptr;
+	m_pMaterialParam_AAValues					= nullptr;
+	m_pMaterialParam_AAValues2					= nullptr;
+	m_pMaterialParam_BloomUVTransform			= nullptr;
+	m_pMaterialParam_BloomEnable				= nullptr;
+	m_pMaterialParam_BloomAmount				= nullptr;
+	m_pMaterialParam_ColCorrectEnable			= nullptr;
+	m_pMaterialParam_ColCorrectNumLookups		= nullptr;
+	m_pMaterialParam_ColCorrectDefaultWeight	= nullptr;
+	m_pMaterialParam_ColCorrectLookupWeights	= nullptr;
+	m_pMaterialParam_LocalContrastStrength		= nullptr;
+	m_pMaterialParam_LocalContrastEdgeStrength	= nullptr;
+	m_pMaterialParam_VignetteStart				= nullptr;
+	m_pMaterialParam_VignetteEnd				= nullptr;
+	m_pMaterialParam_VignetteBlurEnable			= nullptr;
+	m_pMaterialParam_VignetteBlurStrength		= nullptr;
+	m_pMaterialParam_FadeToBlackStrength		= nullptr;
+	m_pMaterialParam_DepthBlurFocalDistance		= nullptr;
+	m_pMaterialParam_DepthBlurStrength			= nullptr;
+	m_pMaterialParam_ScreenBlurStrength			= nullptr;
+	m_pMaterialParam_FilmGrainStrength			= nullptr;
 
 }
 
@@ -1795,8 +1795,8 @@ void CEnginePostMaterialProxy::OnBind( C_BaseEntity *pEnt )
 
 IMaterial *CEnginePostMaterialProxy::GetMaterial()
 {
-	if ( m_pMaterialParam_AAValues == NULL)
-		return NULL;
+	if ( m_pMaterialParam_AAValues == nullptr)
+		return nullptr;
 
 	return m_pMaterialParam_AAValues->GetOwningMaterial();
 }
@@ -1901,7 +1901,7 @@ static void DrawBloomDebugBoxes( IMatRenderContext *pRenderContext, int nX, int 
 {
 	// draw inset rects which should have a centered bloom 
 	pRenderContext->PushRenderTargetAndViewport();
-	pRenderContext->SetRenderTarget( NULL );
+	pRenderContext->SetRenderTarget( nullptr );
 
 	// full screen clear
 	pRenderContext->Viewport( nX, nY, nWidth, nHeight );
@@ -2093,7 +2093,7 @@ static void Generate8BitBloomTexture( IMatRenderContext *pRenderContext,
 		pSrc = materials->FindTexture( "_rt_FullFrameFB", TEXTURE_GROUP_RENDER_TARGET );
 
 		xblur_mat = materials->FindMaterial( "dev/blurfilterx_nohdr", TEXTURE_GROUP_OTHER, true );
-		yblur_mat = NULL;
+		yblur_mat = nullptr;
 		if ( bClearRGB )
 		{
 			yblur_mat = materials->FindMaterial( "dev/blurfiltery_nohdr_clear", TEXTURE_GROUP_OTHER, true );
@@ -2141,7 +2141,7 @@ static void Generate8BitBloomTexture( IMatRenderContext *pRenderContext,
 
 	// Gaussian blur y rt1 to rt0
 	SetRenderTargetAndViewPort( dest_rt0 );
-	IMaterialVar *pBloomAmountVar = yblur_mat->FindVar( "$bloomamount", NULL );
+	IMaterialVar *pBloomAmountVar = yblur_mat->FindVar( "$bloomamount", nullptr );
 	pBloomAmountVar->SetFloatValue( 1.0f );	// the bloom amount is now applied in engine_post or bloomadd materials
 	pRenderContext->DrawScreenSpaceRectangle(	yblur_mat, 0, 0, nSrcWidth / 4, nSrcHeight / 4,
 												0, 0, nSrcWidth / 4 - 1, nSrcHeight / 4 - 1,
@@ -2353,7 +2353,7 @@ bool DoEnginePostProcessing( int x, int y, int w, int h, bool bFlashlightIsOn, b
 	if ( pPostMat )
 	{
 
-		IMaterialVar* pMatVar = pPostMat->FindVar( "$localcontrastenable", NULL, false );
+		IMaterialVar* pMatVar = pPostMat->FindVar( "$localcontrastenable", nullptr, false );
 
 		if ( pMatVar )
 		{
@@ -2443,7 +2443,7 @@ bool DoEnginePostProcessing( int x, int y, int w, int h, bool bFlashlightIsOn, b
 			{
 				// reset to render the final combine passes to the "real" display backbuffer
 				pRenderContext->SetIntRenderingParameter( INT_RENDERPARM_BACK_BUFFER_INDEX, BACK_BUFFER_INDEX_DEFAULT );
-				pRenderContext->SetRenderTarget( NULL );
+				pRenderContext->SetRenderTarget( nullptr );
 			}
 
 			Vector4D v4dFullViewportPostDestRect( fullViewportPostDestRect.x, fullViewportPostDestRect.y,
@@ -2564,7 +2564,7 @@ private:
 
 CMotionBlurMaterialProxy::CMotionBlurMaterialProxy()
 {
-	m_pMaterialParam		= NULL;
+	m_pMaterialParam		= nullptr;
 
 }
 
@@ -2590,12 +2590,12 @@ bool CMotionBlurMaterialProxy::Init( IMaterial *pMaterial, KeyValues *pKeyValues
 
 void CMotionBlurMaterialProxy::OnBind( C_BaseEntity *pEnt )
 {
-	if ( m_pMaterialParam != NULL )
+	if ( m_pMaterialParam != nullptr )
 	{
 		m_pMaterialParam->SetVecValue( g_vMotionBlurValues, 4 );
 	}
 
-	if ( m_pMaterialParamViewport != NULL )
+	if ( m_pMaterialParamViewport != nullptr )
 	{
 		m_pMaterialParamViewport->SetVecValue( g_vMotionBlurViewportValues, 4 );
 	}
@@ -2603,8 +2603,8 @@ void CMotionBlurMaterialProxy::OnBind( C_BaseEntity *pEnt )
 
 IMaterial *CMotionBlurMaterialProxy::GetMaterial()
 {
-	if ( m_pMaterialParam == NULL)
-		return NULL;
+	if ( m_pMaterialParam == nullptr)
+		return nullptr;
 
 	return m_pMaterialParam->GetOwningMaterial();
 }
@@ -3039,7 +3039,7 @@ bool DoImageSpaceMotionBlur( const CViewSetup &view )
 		//SetRenderTargetAndViewPort( dest_rt0 );
 		//pRenderContext->PopRenderTargetAndViewport();
 
-		if ( pMatMotionBlur != NULL && nSrcWidth > 0 && nSrcHeight > 0 )
+		if ( pMatMotionBlur != nullptr && nSrcWidth > 0 && nSrcHeight > 0 )
 		{
 			pRenderContext->DrawScreenSpaceRectangle(
 				pMatMotionBlur,
@@ -3134,9 +3134,9 @@ bool IsDepthOfFieldEnabled()
 
 static inline bool SetMaterialVarFloat( IMaterial* pMat, const char* pVarName, float flValue )
 {
-	Assert( pMat != NULL );
-	Assert( pVarName != NULL );
-	if ( pMat == NULL || pVarName == NULL )
+	Assert( pMat != nullptr );
+	Assert( pVarName != nullptr );
+	if ( pMat == nullptr || pVarName == nullptr )
 	{
 		return false;
 	}
@@ -3153,9 +3153,9 @@ static inline bool SetMaterialVarFloat( IMaterial* pMat, const char* pVarName, f
 
 static inline bool SetMaterialVarInt( IMaterial* pMat, const char* pVarName, int nValue )
 {
-	Assert( pMat != NULL );
-	Assert( pVarName != NULL );
-	if ( pMat == NULL || pVarName == NULL )
+	Assert( pMat != nullptr );
+	Assert( pVarName != nullptr );
+	if ( pMat == nullptr || pVarName == nullptr )
 	{
 		return false;
 	}
@@ -3209,7 +3209,7 @@ void DoDepthOfField( const CViewSetup &view )
 
 		IMaterial *pMat = materials->FindMaterial( "dev/blurgaussian_3x3", TEXTURE_GROUP_OTHER, true );
 
-		if ( pMat == NULL )
+		if ( pMat == nullptr )
 			return;
 
 		SetMaterialVarFloat( pMat, "$c0_x", 0.5f / (float)dest_rt0->GetActualWidth() );
@@ -3238,7 +3238,7 @@ void DoDepthOfField( const CViewSetup &view )
 
 	IMaterial *pMatDOF = materials->FindMaterial( "dev/depth_of_field", TEXTURE_GROUP_OTHER, true );
 
-	if ( pMatDOF == NULL )
+	if ( pMatDOF == nullptr )
 		return;
 
 	SetMaterialVarFloat( pMatDOF, "$nearPlane", view.zNear );
@@ -3421,12 +3421,12 @@ void BlurEntity( IClientRenderable *pRenderable, bool bPreDraw, int drawFlags, c
 		modelrender->ForcedMaterialOverride( pEntBlurAlphaSilhoutte );
 		
 		pRenderable->DrawModel( drawFlags, instance );
-		modelrender->ForcedMaterialOverride( NULL );
+		modelrender->ForcedMaterialOverride( nullptr );
 		if( !cl_blurDebug.GetBool() )
 			pRenderContext->OverrideColorWriteEnable( false, false );
 	}
 
-	IMaterial *pEntBlurCopyBackFinal = NULL; //the material to use when copying the blur back to the backbuffer
+	IMaterial *pEntBlurCopyBackFinal = nullptr; //the material to use when copying the blur back to the backbuffer
 	//generate blur texture
 	{
 		/////////////////////////////////////
@@ -3508,9 +3508,9 @@ void BlurEntity( IClientRenderable *pRenderable, bool bPreDraw, int drawFlags, c
 
 	if( bPreDraw && ( instance.m_nAlpha == 255 ) && ( ( drawFlags & STUDIO_TRANSPARENCY ) == 0 ) ) //write depth out to the depth buffer
 	{
-		modelrender->ForcedMaterialOverride( NULL, OVERRIDE_DEPTH_WRITE );
+		modelrender->ForcedMaterialOverride( nullptr, OVERRIDE_DEPTH_WRITE );
 		pRenderable->DrawModel( drawFlags, instance );
-		modelrender->ForcedMaterialOverride( NULL );
+		modelrender->ForcedMaterialOverride( nullptr );
 	}
 }
 
@@ -3522,8 +3522,8 @@ class CTeamIdMaterialProxy : public CEntityMaterialProxy
 public:
 	CTeamIdMaterialProxy()
 	{
-		m_pMaterial = NULL;
-		m_pVar = NULL;
+		m_pMaterial = nullptr;
+		m_pVar = nullptr;
 	}
 
 	virtual ~CTeamIdMaterialProxy()
@@ -3537,7 +3537,7 @@ public:
 		m_pVar = m_pMaterial->FindVar( "$SelfIllumFresnelEnabledThisFrame", &found );
 		if ( !found )
 		{
-			m_pVar = NULL;
+			m_pVar = nullptr;
 			return false;
 		}
 		return true;

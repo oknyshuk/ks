@@ -411,7 +411,7 @@ bool CGame::CreateGameWindow( void )
 	}
 		
 	modinfo->deleteThis();
-	modinfo = NULL;
+	modinfo = nullptr;
 
 	// Create the window config-correct from the chosen material system mode so
 	// it lands at the right resolution / windowed state (matches Win32 structure)

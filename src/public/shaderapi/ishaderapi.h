@@ -437,9 +437,9 @@ public:
 	
 	// stuff that isn't to be used from within a shader
 	virtual void ClearBuffersObeyStencil( bool bClearColor, bool bClearDepth ) = 0;
-	virtual void ReadPixels( int x, int y, int width, int height, unsigned char *data, ImageFormat dstFormat, ITexture *pRenderTargetTexture = NULL ) = 0;
-	virtual void ReadPixelsAsync( int x, int y, int width, int height, unsigned char *data, ImageFormat dstFormat, ITexture *pRenderTargetTexture = NULL, CThreadEvent *pPixelsReadEvent = NULL ) = 0;
-	virtual void ReadPixelsAsyncGetResult( int x, int y, int width, int height, unsigned char *data, ImageFormat dstFormat, CThreadEvent *pGetResultEvent = NULL ) = 0;
+	virtual void ReadPixels( int x, int y, int width, int height, unsigned char *data, ImageFormat dstFormat, ITexture *pRenderTargetTexture = nullptr ) = 0;
+	virtual void ReadPixelsAsync( int x, int y, int width, int height, unsigned char *data, ImageFormat dstFormat, ITexture *pRenderTargetTexture = nullptr, CThreadEvent *pPixelsReadEvent = nullptr ) = 0;
+	virtual void ReadPixelsAsyncGetResult( int x, int y, int width, int height, unsigned char *data, ImageFormat dstFormat, CThreadEvent *pGetResultEvent = nullptr ) = 0;
 	virtual void ReadPixels( Rect_t *pSrcRect, Rect_t *pDstRect, unsigned char *data, ImageFormat dstFormat, int nDstStride ) = 0;
 
 	virtual void FlushHardware() = 0;
@@ -548,8 +548,8 @@ public:
 		ShaderAPITextureHandle_t colorTextureHandle = SHADER_RENDERTARGET_BACKBUFFER, 
 		ShaderAPITextureHandle_t depthTextureHandle = SHADER_RENDERTARGET_DEPTHBUFFER ) = 0;
 
-	virtual void CopyRenderTargetToTextureEx( ShaderAPITextureHandle_t textureHandle, int nRenderTargetID, Rect_t *pSrcRect = NULL, Rect_t *pDstRect = NULL ) = 0;
-	virtual void CopyTextureToRenderTargetEx( int nRenderTargetID, ShaderAPITextureHandle_t textureHandle, Rect_t *pSrcRect = NULL, Rect_t *pDstRect = NULL ) = 0;
+	virtual void CopyRenderTargetToTextureEx( ShaderAPITextureHandle_t textureHandle, int nRenderTargetID, Rect_t *pSrcRect = nullptr, Rect_t *pDstRect = nullptr ) = 0;
+	virtual void CopyTextureToRenderTargetEx( int nRenderTargetID, ShaderAPITextureHandle_t textureHandle, Rect_t *pSrcRect = nullptr, Rect_t *pDstRect = nullptr ) = 0;
 
 	// For dealing with device lost in cases where SwapBuffers isn't called all the time (Hammer)
 	virtual void HandleDeviceLost() = 0;
@@ -738,7 +738,7 @@ public:
 	// only implemented in some subclasses
 	virtual void PrintfVA( char *fmt, va_list vargs ) = 0;
 	virtual void Printf( char *fmt, ... ) = 0;
-	virtual float Knob( char *knobname, float *setvalue = NULL ) = 0;
+	virtual float Knob( char *knobname, float *setvalue = nullptr ) = 0;
 
 	virtual void AddShaderComboInformation( const ShaderComboSemantics_t *pSemantics ) = 0;
 

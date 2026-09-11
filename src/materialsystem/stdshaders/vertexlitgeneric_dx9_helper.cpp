@@ -56,7 +56,7 @@ ConVar r_staticlight_streams_indirect_only( "r_staticlight_streams_indirect_only
 
 static void r_staticlight_mode_changed( IConVar *var, const char *pOldValue, float flOldValue )
 {
-	g_pMaterialSystem->ReloadMaterials( NULL );
+	g_pMaterialSystem->ReloadMaterials( nullptr );
 }
 ConVar r_staticlight_mode( "r_staticlight_mode", "0", FCVAR_MATERIAL_SYSTEM_THREAD | FCVAR_DEVELOPMENTONLY, "0 - support three color streams, 1 - use avg of three streams, 2 - single color stream", r_staticlight_mode_changed );
 
@@ -1715,7 +1715,7 @@ bool bDistanceAlphaFromDetail = false;
 		}
 		else if ( !bHasBump )
 		{
-			ITexture *pDepthTextureAtlas = NULL;
+			ITexture *pDepthTextureAtlas = nullptr;
 			const CascadedShadowMappingState_t &cascadeState = pShaderAPI->GetCascadedShadowMappingState( &pDepthTextureAtlas );
 
 			float vConst[ 4 ] = { lightState.m_bStaticLight ? 1.0f : 0.0f, cascadeState.m_vLightColor.x, cascadeState.m_vLightColor.y, cascadeState.m_vLightColor.z };
@@ -1780,7 +1780,7 @@ bool bDistanceAlphaFromDetail = false;
 				{
 					if ( bCSMEnabled )
 					{
- 						ITexture *pDepthTextureAtlas = NULL;
+ 						ITexture *pDepthTextureAtlas = nullptr;
  						const CascadedShadowMappingState_t &cascadeState = pShaderAPI->GetCascadedShadowMappingState( &pDepthTextureAtlas );
  
 						if ( pDepthTextureAtlas )
@@ -1823,7 +1823,7 @@ bool bDistanceAlphaFromDetail = false;
 
 				if ( bCSMEnabled )
 				{
-					ITexture *pDepthTextureAtlas = NULL;
+					ITexture *pDepthTextureAtlas = nullptr;
 					const CascadedShadowMappingState_t &cascadeState = pShaderAPI->GetCascadedShadowMappingState( &pDepthTextureAtlas );
 
 					DynamicCmdsOut.BindTexture( pShader, SHADER_SAMPLER15, TEXTURE_BINDFLAGS_SHADOWDEPTH, pDepthTextureAtlas, 0 );
@@ -1890,7 +1890,7 @@ bool bDistanceAlphaFromDetail = false;
 				{
 					if ( bCSMEnabled )
 					{
- 						ITexture *pDepthTextureAtlas = NULL;
+ 						ITexture *pDepthTextureAtlas = nullptr;
  						const CascadedShadowMappingState_t &cascadeState = pShaderAPI->GetCascadedShadowMappingState( &pDepthTextureAtlas );
  
 						if (pDepthTextureAtlas)
@@ -1941,7 +1941,7 @@ bool bDistanceAlphaFromDetail = false;
 
 				if ( bCSMEnabled )
 				{
-					ITexture *pDepthTextureAtlas = NULL;
+					ITexture *pDepthTextureAtlas = nullptr;
 					const CascadedShadowMappingState_t &cascadeState = pShaderAPI->GetCascadedShadowMappingState( &pDepthTextureAtlas );
 
 					DynamicCmdsOut.BindTexture( pShader, SHADER_SAMPLER15, TEXTURE_BINDFLAGS_SHADOWDEPTH, pDepthTextureAtlas, 0 );
@@ -1978,7 +1978,7 @@ bool bDistanceAlphaFromDetail = false;
 
 		if ( bHasBump || bHasDiffuseWarp )
 		{
-			ITexture *pDepthTextureAtlas = NULL;
+			ITexture *pDepthTextureAtlas = nullptr;
 			const CascadedShadowMappingState_t &cascadeState = pShaderAPI->GetCascadedShadowMappingState( &pDepthTextureAtlas );
 
 			DynamicCmdsOut.SetVertexShaderConstant( VERTEX_SHADER_SHADER_SPECIFIC_CONST_12, &cascadeState.m_vLightColor.x );
@@ -2059,7 +2059,7 @@ void DrawVertexLitGeneric_DX9_Internal_ExecuteFastPath( int *vsDynIndex, int *ps
 
 	if ( !bHasBump )
 	{
-		ITexture *pDepthTextureAtlas = NULL;
+		ITexture *pDepthTextureAtlas = nullptr;
 		const CascadedShadowMappingState_t &cascadeState = pShaderAPI->GetCascadedShadowMappingState( &pDepthTextureAtlas );
 
 		float vConst[ 4 ] = { lightState.m_bStaticLight ? 1.0f : 0.0f, cascadeState.m_vLightColor.x, cascadeState.m_vLightColor.y, cascadeState.m_vLightColor.z };
@@ -2118,7 +2118,7 @@ void DrawVertexLitGeneric_DX9_Internal_ExecuteFastPath( int *vsDynIndex, int *ps
 	pShaderAPI->SetBooleanPixelShaderConstant( 0, &bCSMEnabled, 1 );
 	if ( bCSMEnabled )
 	{
-		ITexture *pDepthTextureAtlas = NULL;
+		ITexture *pDepthTextureAtlas = nullptr;
 		const CascadedShadowMappingState_t &cascadeState = pShaderAPI->GetCascadedShadowMappingState( &pDepthTextureAtlas );
 		pShader->BindTexture( SHADER_SAMPLER15, TEXTURE_BINDFLAGS_SHADOWDEPTH, pDepthTextureAtlas, 0 );
 		pShaderAPI->SetPixelShaderConstant( 64, &cascadeState.m_vLightColor.x, CASCADED_SHADOW_MAPPING_CONSTANT_BUFFER_SIZE );
@@ -2204,7 +2204,7 @@ void DrawVertexLitGeneric_DX9_Internal_ExecuteFastPath( int *vsDynIndex, int *ps
 	
 	if ( bHasBump || bHasDiffuseWarp )
 	{
-		ITexture *pDepthTextureAtlas = NULL;
+		ITexture *pDepthTextureAtlas = nullptr;
 		const CascadedShadowMappingState_t &cascadeState = pShaderAPI->GetCascadedShadowMappingState( &pDepthTextureAtlas );
 
 		ShaderApiFast( pShaderAPI )->SetVertexShaderConstant( VERTEX_SHADER_SHADER_SPECIFIC_CONST_12, &cascadeState.m_vLightColor.x );

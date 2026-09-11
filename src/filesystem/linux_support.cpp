@@ -104,7 +104,7 @@ int FillDataStruct(FIND_DATA *dat)
 HANDLE FindFirstFile( const char *fileName, FIND_DATA *dat)
 {
 	char nameStore[PATH_MAX];
-	char *dir=NULL;
+	char *dir=nullptr;
 	int n,iret=-1;
 	
 	Q_strncpy(nameStore,fileName, sizeof( nameStore ) );
@@ -139,12 +139,12 @@ HANDLE FindFirstFile( const char *fileName, FIND_DATA *dat)
 	{
 		Q_strncpy(selectBuf,fileName+strlen(dir)+1, sizeof( selectBuf ) );
 		Q_strncpy(dat->cBaseDir,dir, sizeof( dat->cBaseDir ) );
-		dat->namelist = NULL;
+		dat->namelist = nullptr;
 		n = scandir(dir, &dat->namelist, FileSelect, alphasort);
 		if (n < 0)
 		{
 			// silently return, nothing interesting
-			dat->namelist = NULL;
+			dat->namelist = nullptr;
 		}
 		else 
 		{
@@ -153,7 +153,7 @@ HANDLE FindFirstFile( const char *fileName, FIND_DATA *dat)
 			if ( ( iret<0 ) && dat->namelist )
 			{
 				free(dat->namelist);
-				dat->namelist = NULL;
+				dat->namelist = nullptr;
 			}
 			
 		}
@@ -167,10 +167,10 @@ bool FindNextFile(HANDLE handle, FIND_DATA *dat)
 {
 	if(dat->numMatches<0)
 	{	
-		if ( dat->namelist != NULL )
+		if ( dat->namelist != nullptr )
 		{
 			free( dat->namelist );
-			dat->namelist = NULL;
+			dat->namelist = nullptr;
 		}
 		return false; // no matches left
 	}	
@@ -203,18 +203,18 @@ const char *findFileInDirCaseInsensitive(const char *file, char *pFileNameOut)
 		dirSep=strrchr(file,'\\');
 		if( !dirSep ) 
 		{
-			return NULL;
+			return nullptr;
 		}
 	}
 
 	char *dirName = static_cast<char *>( alloca( ( dirSep - file ) +1 ) ); 
 	if( !dirName )
-		return NULL;
+		return nullptr;
 
 	strncpy( dirName , file, dirSep - file );
 	dirName[ dirSep - file ] = '\0';
 
-	struct dirent **namelist = NULL;
+	struct dirent **namelist = nullptr;
 
 	strncpy( fileName, dirSep + 1, MAX_PATH );
 

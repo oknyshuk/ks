@@ -234,9 +234,9 @@ CVideoMode_Common::CVideoMode_Common( void )
     RequestedWindowVideoMode().refreshRate = 0;
     
     m_bClientViewRectDirty = false;
-    m_pBackgroundTexture   = NULL;
-    m_pLoadingTexture      = NULL;
-	m_pTitleTexture        = NULL;
+    m_pBackgroundTexture   = nullptr;
+    m_pLoadingTexture      = nullptr;
+	m_pTitleTexture        = nullptr;
     m_bWindowed            = false;
     m_nModeWidth           = desktopWidth;
     m_nModeHeight          = desktopHeight;
@@ -580,14 +580,14 @@ bool CVideoMode_Common::CreateGameWindow( int nWidth, int nHeight, bool bWindowe
 //-----------------------------------------------------------------------------
 IVTFTexture *CVideoMode_Common::LoadVTF( CUtlBuffer &temp, const char *szFileName )
 {
-    if ( !g_pFileSystem->ReadFile( szFileName, NULL, temp ) )
-        return NULL;
+    if ( !g_pFileSystem->ReadFile( szFileName, nullptr, temp ) )
+        return nullptr;
 
     IVTFTexture *texture = CreateVTFTexture();
     if ( !texture->Unserialize( temp ) )
     {
         Error( "Invalid or corrupt background texture %s\n", szFileName );
-        return NULL;
+        return nullptr;
     }
     texture->ConvertImageFormat( IMAGE_FORMAT_RGBA8888, false );
     return texture;
@@ -746,8 +746,8 @@ void CVideoMode_Common::DrawStartupGraphic()
 					slide = 200-slide;		// aka 100-(slide-100).
 				}
 				
-				DrawScreenSpaceRectangle( pMaterial, 0, 0+slide, w, h-50, 0, 0, tw-1, th-1, tw, th, NULL,1,1,depth );
-				DrawScreenSpaceRectangle( pLoadingMaterial, w-lw, h-lh+slide/2, lw, lh, 0, 0, lw-1, lh-1, lw, lh, NULL,1,1,depth-0.1 );
+				DrawScreenSpaceRectangle( pMaterial, 0, 0+slide, w, h-50, 0, 0, tw-1, th-1, tw, th, nullptr,1,1,depth );
+				DrawScreenSpaceRectangle( pLoadingMaterial, w-lw, h-lh+slide/2, lw, lh, 0, 0, lw-1, lh-1, lw, lh, nullptr,1,1,depth-0.1 );
 			}
 
 			if(0)
@@ -767,7 +767,7 @@ void CVideoMode_Common::DrawStartupGraphic()
 
 						//if (! ((x^y) & 1) )
 						{
-							DrawScreenSpaceRectangle( pMaterial, 10.0f+cornerx,10.0f+ cornery, 15, 15, 0, 0, tw-1, th-1, tw, th, NULL,1,1, depthacc );
+							DrawScreenSpaceRectangle( pMaterial, 10.0f+cornerx,10.0f+ cornery, 15, 15, 0, 0, tw-1, th-1, tw, th, nullptr,1,1, depthacc );
 						}
 						
 						depthacc += depthinc;
@@ -807,7 +807,7 @@ void CVideoMode_Common::DrawStartupGraphic()
 		int halfTH = scaledTH / 2;
 		int halfTW = scaledTW / 2;
 
-		DrawScreenSpaceRectangle( pMaterial, halfW - halfTW, halfH - halfTH, scaledTW, scaledTH, 0, 0, tw-1, th-1, tw, th, NULL,1,1,depth );
+		DrawScreenSpaceRectangle( pMaterial, halfW - halfTW, halfH - halfTH, scaledTW, scaledTH, 0, 0, tw-1, th-1, tw, th, nullptr,1,1,depth );
 
 		g_pMaterialSystem->SwapBuffers();
 	}
@@ -818,11 +818,11 @@ void CVideoMode_Common::DrawStartupGraphic()
 
     // release graphics
     DestroyVTFTexture( m_pBackgroundTexture );
-    m_pBackgroundTexture = NULL;
+    m_pBackgroundTexture = nullptr;
     DestroyVTFTexture( m_pLoadingTexture );
-    m_pLoadingTexture = NULL;
+    m_pLoadingTexture = nullptr;
 	DestroyVTFTexture( m_pTitleTexture );
-	m_pTitleTexture = NULL;
+	m_pTitleTexture = nullptr;
 }
 
 //-----------------------------------------------------------------------------
@@ -1174,7 +1174,7 @@ void CVideoMode_Common::TakeSnapshotTGA( const char *pFilename )
     if ( TGAWriter::WriteToBuffer( pImage, outBuf, GetModeWidth(), GetModeHeight(), IMAGE_FORMAT_RGB888,
         IMAGE_FORMAT_RGB888 ) )
     {
-        if ( !g_pFileSystem->WriteFile( pFilename, NULL, outBuf ) )
+        if ( !g_pFileSystem->WriteFile( pFilename, nullptr, outBuf ) )
         {
             Warning( "Couldn't write bitmap data snapshot to file %s.\n", pFilename );
 		}
@@ -1310,7 +1310,7 @@ void CVideoMode_Common::TakeSnapshotPFMRect( const char *pFilename, int x, int y
     ReadScreenPixels( x, y, w, h, pImage, IMAGE_FORMAT_RGBA16161616F );
 
     // Draw what we just grabbed to the screen
-    pRenderContext->SetRenderTarget( NULL);
+    pRenderContext->SetRenderTarget( nullptr);
 
     int scrw, scrh;
     pRenderContext->GetRenderTargetDimensions( scrw, scrh );
@@ -1395,7 +1395,7 @@ void CVideoMode_Common::TakeSnapshotTGARect( const char *pFilename, int x, int y
     CUtlBuffer outBuf;
     if ( TGAWriter::WriteToBuffer( pImage1, outBuf, resampleWidth, resampleHeight, IMAGE_FORMAT_RGBA8888, IMAGE_FORMAT_RGBA8888 ) )
     {
-        if ( !g_pFileSystem->WriteFile( pFilename, NULL, outBuf ) )
+        if ( !g_pFileSystem->WriteFile( pFilename, nullptr, outBuf ) )
         {
             Error( "Couldn't write bitmap data snapshot to file %s.\n", pFilename );
         }
@@ -1435,7 +1435,7 @@ static void VID_ProcessMovieFrame( const MovieInfo_t& info, bool jpeg, const cha
 
     if ( bSuccess )
     {
-        if ( !g_pFileSystem->WriteFile( filename, NULL, outBuf ) )
+        if ( !g_pFileSystem->WriteFile( filename, nullptr, outBuf ) )
         {
             Warning( "Couldn't write movie snapshot to file %s.\n", filename );
 			Cbuf_AddText( Cbuf_GetCurrentPlayer(), "endmovie\n" );
@@ -1464,7 +1464,7 @@ void CVideoMode_Common::WriteMovieFrame( const MovieInfo_t& info )
 
     int imagesize = GetModeWidth() * GetModeHeight();
     BGR888_t *hp = new BGR888_t[ imagesize ];
-    if ( hp == NULL )
+    if ( hp == nullptr )
     {
         Sys_Error( "Couldn't allocate bitmap header to snapshot.\n" );
     }
@@ -1578,7 +1578,7 @@ GLOBAL(void) jpeg_UtlBuffer_dest (j_compress_ptr cinfo, CUtlBuffer *pBuffer )
     * manager serially with the same JPEG object, because their private object
     * sizes may be different.  Caveat programmer.
     */
-    if (cinfo->dest == NULL) {  /* first time for this JPEG object? */
+    if (cinfo->dest == nullptr) {  /* first time for this JPEG object? */
         cinfo->dest = (struct jpeg_destination_mgr *)
             (*cinfo->mem->alloc_small) ((j_common_ptr) cinfo, JPOOL_PERMANENT,
             sizeof(JPEGDestinationManager_t));
@@ -1945,10 +1945,10 @@ void CVideoMode_MaterialSystem::AdjustForModeChange( void )
 //-----------------------------------------------------------------------------
 void CVideoMode_MaterialSystem::SetGameWindow( void *hWnd )
 {
-    if ( hWnd == NULL )
+    if ( hWnd == nullptr )
     {
         // No longer confine rendering into this view
-        materials->SetView( NULL );
+        materials->SetView( nullptr );
         return;
     }
 
@@ -2061,7 +2061,7 @@ void CVideoMode_MaterialSystem::ReadScreenPixels( int x, int y, int w, int h, vo
 // Class factory
 //-----------------------------------------------------------------------------
 
-IVideoMode *videomode = ( IVideoMode * )NULL;
+IVideoMode *videomode = ( IVideoMode * )nullptr;
 
 void VideoMode_Create( )
 {
@@ -2075,6 +2075,6 @@ void VideoMode_Destroy()
     {
         CVideoMode_MaterialSystem *pVideoMode_MS = static_cast<CVideoMode_MaterialSystem*>(videomode);
         delete pVideoMode_MS;
-        videomode = NULL;
+        videomode = nullptr;
     }
 }

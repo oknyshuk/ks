@@ -33,7 +33,7 @@ extern IVEngineClient *engineClient;
 #include "tier0/memdbgon.h"
 
 static CSteamAPIContext g_SteamAPIContext;
-static CSteamAPIContext *steamapicontext = NULL;
+static CSteamAPIContext *steamapicontext = nullptr;
 
 void Voice_EndChannel( int iChannel );
 void VoiceTweak_EndVoiceTweakMode();
@@ -185,8 +185,8 @@ static float	g_LocalPlayerTalkingTimeout[ MAX_SPLITSCREEN_CLIENTS ];
 
 
 // Voice recorder. Can be waveIn, DSound, or whatever.
-static IVoiceRecord *g_pVoiceRecord = NULL;
-static IVoiceCodec  *g_pEncodeCodec = NULL;
+static IVoiceRecord *g_pVoiceRecord = nullptr;
+static IVoiceCodec  *g_pEncodeCodec = nullptr;
 
 static bool			g_bVoiceRecording = false;	// Are we recording at the moment?
 
@@ -407,7 +407,7 @@ public:
 CVoiceChannel::CVoiceChannel()
 {
 	m_iEntity = -1;
-	m_pVoiceCodec = NULL;
+	m_pVoiceCodec = nullptr;
 	m_nViewEntityIndex = -1;
 	m_nSoundGuid = -1;
 	m_bCaster = false;
@@ -467,15 +467,15 @@ CVoiceChannel g_VoiceChannels[VOICE_NUM_CHANNELS];
 
 // These are used for recording the wave data into files for debugging.
 #define MAX_WAVEFILEDATA_LEN	1024*1024
-char *g_pUncompressedFileData = NULL;
+char *g_pUncompressedFileData = nullptr;
 int g_nUncompressedDataBytes = 0;
-const char *g_pUncompressedDataFilename = NULL;
+const char *g_pUncompressedDataFilename = nullptr;
 
-char *g_pDecompressedFileData = NULL;
+char *g_pDecompressedFileData = nullptr;
 int g_nDecompressedDataBytes = 0;
-const char *g_pDecompressedDataFilename = NULL;
+const char *g_pDecompressedDataFilename = nullptr;
 
-char *g_pMicInputFileData = NULL;
+char *g_pMicInputFileData = nullptr;
 int g_nMicInputFileBytes = 0;
 int g_CurMicInputFileByte = 0;
 double g_MicStartTime;
@@ -485,7 +485,7 @@ class CVoiceWriterData
 {
 public:
 	CVoiceWriterData() :
-		m_pChannel( NULL ),
+		m_pChannel( nullptr ),
 		m_nCount( 0 ),
 		m_Buffer()
 	{
@@ -753,7 +753,7 @@ CVoiceChannel* GetVoiceChannel(int iChannel, bool bAssert=true)
 		{
 			Assert(false);
 		}
-		return NULL;
+		return nullptr;
 	}
 	else
 	{
@@ -805,7 +805,7 @@ bool Voice_Init(const char *pCodecName, int iVersion )
 		Msg( "Unable to initialize DirectSoundCapture. You won't be able to speak to other players." );
 	}
 
-	if ( steamapicontext == NULL )
+	if ( steamapicontext == nullptr )
 	{
 		steamapicontext = &g_SteamAPIContext;
 		steamapicontext->Init();
@@ -814,7 +814,7 @@ bool Voice_Init(const char *pCodecName, int iVersion )
 	EngineUI()->UpdateProgressBar( PROGRESS_DEFAULT );
 
 	// Get the codec.
-	CreateInterfaceFn createCodecFn = NULL;
+	CreateInterfaceFn createCodecFn = nullptr;
 	//
 	// The codec name arrives in a server string, so only our own built-in codec
 	// is ever accepted. See security issue disclosed 12-Jan-2016
@@ -827,7 +827,7 @@ bool Voice_Init(const char *pCodecName, int iVersion )
 	EngineUI()->UpdateProgressBar( PROGRESS_DEFAULT );
 
 	if ( !createCodecFn ||
-		 (g_pEncodeCodec = (IVoiceCodec*)createCodecFn(pCodecName, NULL)) == NULL || !g_pEncodeCodec->Init( iVersion ) )
+		 (g_pEncodeCodec = (IVoiceCodec*)createCodecFn(pCodecName, nullptr)) == nullptr || !g_pEncodeCodec->Init( iVersion ) )
 	{
 		Msg("Unable to load voice codec '%s'. Voice disabled.\n", pCodecName);
 		Voice_Deinit();
@@ -840,7 +840,7 @@ bool Voice_Init(const char *pCodecName, int iVersion )
 
 		EngineUI()->UpdateProgressBar( PROGRESS_DEFAULT );
 
-		if((pChannel->m_pVoiceCodec = (IVoiceCodec*)createCodecFn(pCodecName, NULL)) == NULL || !pChannel->m_pVoiceCodec->Init( iVersion ))
+		if((pChannel->m_pVoiceCodec = (IVoiceCodec*)createCodecFn(pCodecName, nullptr)) == nullptr || !pChannel->m_pVoiceCodec->Init( iVersion ))
 		{
 			Voice_Deinit();
 			return false;
@@ -929,20 +929,20 @@ void Voice_Deinit()
 		if(pChannel->m_pVoiceCodec)
 		{
 			pChannel->m_pVoiceCodec->Release();
-			pChannel->m_pVoiceCodec = NULL;
+			pChannel->m_pVoiceCodec = nullptr;
 		}
 	}
 
 	if(g_pEncodeCodec)
 	{
 		g_pEncodeCodec->Release();
-		g_pEncodeCodec = NULL;
+		g_pEncodeCodec = nullptr;
 	}
 
 	if(g_pVoiceRecord)
 	{
 		g_pVoiceRecord->Release();
-		g_pVoiceRecord = NULL;
+		g_pVoiceRecord = nullptr;
 	}
 
 	VoiceSE_Term();
@@ -1189,21 +1189,21 @@ bool Voice_RecordStop()
 	if(g_pMicInputFileData)
 	{
 		delete [] g_pMicInputFileData;
-		g_pMicInputFileData = NULL;
+		g_pMicInputFileData = nullptr;
 	}
 
 	if(g_pUncompressedFileData)
 	{
 		WriteWaveFile(g_pUncompressedDataFilename, g_pUncompressedFileData, g_nUncompressedDataBytes, g_VoiceSampleFormat.wBitsPerSample, g_VoiceSampleFormat.nChannels, Voice_SamplesPerSec() );
 		delete [] g_pUncompressedFileData;
-		g_pUncompressedFileData = NULL;
+		g_pUncompressedFileData = nullptr;
 	}
 
 	if(g_pDecompressedFileData)
 	{
 		WriteWaveFile(g_pDecompressedDataFilename, g_pDecompressedFileData, g_nDecompressedDataBytes, g_VoiceSampleFormat.wBitsPerSample, g_VoiceSampleFormat.nChannels, Voice_SamplesPerSec() );
 		delete [] g_pDecompressedFileData;
-		g_pDecompressedFileData = NULL;
+		g_pDecompressedFileData = nullptr;
 	}
 	
 	g_VoiceWriter.Finish();
@@ -1253,10 +1253,10 @@ int Voice_GetCompressedData(char *pchDest, int nCount, bool bFinal, VoiceFormat_
 		uint32 cbCompressedWritten = 0;
 		uint32 cbCompressed = 0;
 //		uint32 cbUncompressed = 0;
-		EVoiceResult result = steamapicontext->SteamUser()->GetAvailableVoice( &cbCompressed, NULL, 0 );
+		EVoiceResult result = steamapicontext->SteamUser()->GetAvailableVoice( &cbCompressed, nullptr, 0 );
 		if ( result == k_EVoiceResultOK )
 		{
-			result = steamapicontext->SteamUser()->GetVoice( true, pchDest, nCount, &cbCompressedWritten, false, NULL, 0, NULL, 0 );
+			result = steamapicontext->SteamUser()->GetVoice( true, pchDest, nCount, &cbCompressedWritten, false, nullptr, 0, nullptr, 0 );
 
 			g_pSoundServices->OnChangeVoiceStatus( -3, GET_ACTIVE_SPLITSCREEN_SLOT(), true );
 		}
@@ -1536,7 +1536,7 @@ void Voice_AddIncomingData(
 ) {
 	CVoiceChannel *pChannel;
 
-	if((pChannel = GetVoiceChannel(nChannel)) == NULL || !pChannel->m_pVoiceCodec)
+	if((pChannel = GetVoiceChannel(nChannel)) == nullptr || !pChannel->m_pVoiceCodec)
 	{
 		return;
 	}
@@ -1668,7 +1668,7 @@ void Voice_AddIncomingData(
 		// First, if we lost some data, let the codec know.
 		if ( nLostBytes > 0 )
 		{
-			nDecompressedSamplesForDroppedPacket = pChannel->m_pVoiceCodec->Decompress( NULL, nLostBytes, decompressedDest, nDecompressBytesRemaining );
+			nDecompressedSamplesForDroppedPacket = pChannel->m_pVoiceCodec->Decompress( nullptr, nLostBytes, decompressedDest, nDecompressBytesRemaining );
 			int nDecompressedBytesForDroppedPacket = nDecompressedSamplesForDroppedPacket * BYTES_PER_SAMPLE;
 			decompressedDest += nDecompressedBytesForDroppedPacket;
 			nDecompressBytesRemaining -= nDecompressedBytesForDroppedPacket;
@@ -1921,13 +1921,13 @@ int VoiceTweak_StartVoiceTweakMode()
 		return 0;
 	}
 
-	if ( g_pEncodeCodec == NULL )
+	if ( g_pEncodeCodec == nullptr )
 	{
 		Voice_Init( sv_voicecodec.GetString(), VOICE_CURRENT_VERSION );
 	}
 
 	g_bInTweakMode = true;
-	Voice_RecordStart(NULL, NULL, NULL);
+	Voice_RecordStart(nullptr, nullptr, nullptr);
 
 	return 1;
 }

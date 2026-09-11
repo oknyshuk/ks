@@ -16,7 +16,7 @@
 
 
 #define SETUP_BLOB(v) \
-	SQBlob *self = NULL; \
+	SQBlob *self = nullptr; \
 	{ if(SQ_FAILED(sq_getinstanceup(v,1,(SQUserPointer*)&self,(SQUserPointer)SQSTD_BLOB_TYPE_TAG))) \
 		return SQ_ERROR; }
 
@@ -236,7 +236,7 @@ SQUserPointer sqstd_createblob(HSQUIRRELVM v, SQInteger size)
 		sq_remove(v,-2); //removes the registry
 		sq_push(v,1); // push the this
 		sq_pushinteger(v,size); //size
-		SQBlob *blob = NULL;
+		SQBlob *blob = nullptr;
 		if(SQ_SUCCEEDED(sq_call(v,2,SQTrue,SQFalse))
 			&& SQ_SUCCEEDED(sq_getinstanceup(v,-1,(SQUserPointer *)&blob,(SQUserPointer)SQSTD_BLOB_TYPE_TAG))) {
 			sq_remove(v,-2);
@@ -244,7 +244,7 @@ SQUserPointer sqstd_createblob(HSQUIRRELVM v, SQInteger size)
 		}
 	}
 	sq_settop(v,top);
-	return NULL;
+	return nullptr;
 }
 
 SQRESULT sqstd_register_bloblib(HSQUIRRELVM v)

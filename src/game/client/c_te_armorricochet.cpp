@@ -48,7 +48,7 @@ C_TEMetalSparks::C_TEMetalSparks( void )
 {
 	m_vecPos.Init();
 	m_vecDir.Init();
-	m_pModel = NULL;
+	m_pModel = nullptr;
 }
 
 //-----------------------------------------------------------------------------

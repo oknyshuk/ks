@@ -26,14 +26,14 @@ LINK_ENTITY_TO_CLASS( physics_prop_statue, CStatueProp );
 IMPLEMENT_REFLECT_SERVERCLASS( CStatueProp, DT_StatueProp )
 
 
-ConVarRef *s_vcollide_wireframe = NULL;
+ConVarRef *s_vcollide_wireframe = nullptr;
 
 
 CStatueProp::CStatueProp( void )
 {
 	static ConVarRef vcollide_wireframe( "vcollide_wireframe" );
 	s_vcollide_wireframe = &vcollide_wireframe;
-	m_pInitOBBs = NULL;
+	m_pInitOBBs = nullptr;
 }
 
 void CStatueProp::Spawn( void )
@@ -302,16 +302,16 @@ bool CStatueProp::CreateVPhysicsFromHitBoxes( CBaseAnimating *pInitBaseAnimating
 	int nMaterialIndex = physprops->GetSurfaceIndex( "ice" );	// use ice material
 
 	IPhysicsObject* p = physenv->CreatePolyObject( pPhysCollide, nMaterialIndex, GetAbsOrigin(), GetAbsAngles(), &params );
-	Assert( p != NULL );
+	Assert( p != nullptr );
 
 	// Set velocity
 	Vector vecInitialVelocity = pInitBaseAnimating->GetAbsVelocity();
-	p->SetVelocity( &vecInitialVelocity, NULL );
+	p->SetVelocity( &vecInitialVelocity, nullptr );
 
 	// Compute mass
 	float flMass;
 	float flDensity, flThickness;
-	physprops->GetPhysicsProperties( nMaterialIndex, &flDensity, &flThickness, NULL, NULL );
+	physprops->GetPhysicsProperties( nMaterialIndex, &flDensity, &flThickness, nullptr, nullptr );
 
 	// Make it more hollow
 	flThickness = MIN ( 1.0f, flThickness + 0.5f );
@@ -440,16 +440,16 @@ bool CStatueProp::CreateVPhysicsFromOBBs( CBaseAnimating *pInitBaseAnimating )
 	int nMaterialIndex = physprops->GetSurfaceIndex( "ice" );	// use ice material
 
 	IPhysicsObject* p = physenv->CreatePolyObject( pPhysCollide, nMaterialIndex, GetAbsOrigin(), GetAbsAngles(), &params );
-	Assert( p != NULL );
+	Assert( p != nullptr );
 
 	// Set velocity
 	Vector vecInitialVelocity = pInitBaseAnimating->GetAbsVelocity();
-	p->SetVelocity( &vecInitialVelocity, NULL );
+	p->SetVelocity( &vecInitialVelocity, nullptr );
 
 	// Compute mass
 	float flMass;
 	float flDensity, flThickness;
-	physprops->GetPhysicsProperties( nMaterialIndex, &flDensity, &flThickness, NULL, NULL );
+	physprops->GetPhysicsProperties( nMaterialIndex, &flDensity, &flThickness, nullptr, nullptr );
 
 	// Make it more hollow
 	flThickness = MIN ( 1.0f, flThickness + 0.5f );
@@ -478,7 +478,7 @@ bool CStatueProp::CreateVPhysicsFromOBBs( CBaseAnimating *pInitBaseAnimating )
 
 	SetMoveType( MOVETYPE_VPHYSICS );
 
-	m_pInitOBBs = NULL;
+	m_pInitOBBs = nullptr;
 
 	return true;
 }
@@ -506,7 +506,7 @@ CBaseEntity *CreateServerStatueFromOBBs( const CUtlVector<outer_collision_obb_t>
 	Assert( vecSphereOrigins.Count() > 0 );
 
 	if ( vecSphereOrigins.Count() <= 0 )
-		return NULL;
+		return nullptr;
 
 	CStatueProp *pStatue = static_cast<CStatueProp *>( CreateEntityByName( "physics_prop_statue" ) );
 

@@ -60,7 +60,7 @@ private:
 
 
 VoiceRecord_OpenAL::VoiceRecord_OpenAL() :
-m_nSampleRate( 0 ), m_Device( NULL )
+m_nSampleRate( 0 ), m_Device( nullptr )
 {
 	ClearInterfaces();
 }
@@ -112,10 +112,10 @@ void VoiceRecord_OpenAL::RecordStop()
 
 bool VoiceRecord_OpenAL::InitalizeInterfaces()
 {	
-	m_Device = alcCaptureOpenDevice( NULL, m_nSampleRate, AL_FORMAT_MONO16, m_nSampleRate * 10 * 2);
+	m_Device = alcCaptureOpenDevice( nullptr, m_nSampleRate, AL_FORMAT_MONO16, m_nSampleRate * 10 * 2);
 	const ALenum error = alcGetError(m_Device);
 	const bool result = error == AL_NO_ERROR;
-	return m_Device != NULL && result;
+	return m_Device != nullptr && result;
 }
 
 bool VoiceRecord_OpenAL::Init(int sampleRate)
@@ -137,7 +137,7 @@ void VoiceRecord_OpenAL::ReleaseInterfaces()
 
 void VoiceRecord_OpenAL::ClearInterfaces()
 {
-	m_Device = NULL;
+	m_Device = nullptr;
 }
 
 
@@ -177,6 +177,6 @@ IVoiceRecord* CreateVoiceRecord_DSound(int sampleRate)
 		if(pRecord)
 			pRecord->Release();
 		
-		return NULL;
+		return nullptr;
 	}
 }

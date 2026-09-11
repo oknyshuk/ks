@@ -47,7 +47,7 @@ extern CNetworkStringTableContainer *networkStringTableContainerClient;
 // Construction/Destruction
 //////////////////////////////////////////////////////////////////////
 
-CReplayServer *replay = NULL;
+CReplayServer *replay = nullptr;
 
 static void replay_title_changed_f( IConVar *var, const char *pOldString, float flOldValue )
 {
@@ -101,10 +101,10 @@ void CReplayDeltaEntityCache::Flush()
 		// at least one entity was set
 		for ( int i=0; i<m_nMaxEntities; i++ )
 		{
-			if ( m_Cache[i] != NULL )
+			if ( m_Cache[i] != nullptr )
 			{
 				free( m_Cache[i] );
-				m_Cache[i] = NULL;
+				m_Cache[i] = nullptr;
 			}
 		}
 
@@ -135,7 +135,7 @@ unsigned char* CReplayDeltaEntityCache::FindDeltaBits( int nEntityIndex, int nDe
 	nBits = -1;
 	
 	if ( nEntityIndex < 0 || nEntityIndex >= m_nMaxEntities )
-		return NULL;
+		return nullptr;
 
 	DeltaEntityEntry_s *pEntry = m_Cache[nEntityIndex];
 
@@ -153,7 +153,7 @@ unsigned char* CReplayDeltaEntityCache::FindDeltaBits( int nEntityIndex, int nDe
 		}
 	}
 	
-	return NULL;
+	return nullptr;
 }
 
 void CReplayDeltaEntityCache::AddDeltaBits( int nEntityIndex, int nDeltaTick, int nBits, bf_write *pBuffer )
@@ -165,7 +165,7 @@ void CReplayDeltaEntityCache::AddDeltaBits( int nEntityIndex, int nDeltaTick, in
 
 	DeltaEntityEntry_s *pEntry = m_Cache[nEntityIndex];
 
-	if ( pEntry == NULL )
+	if ( pEntry == nullptr )
 	{
 		if ( (int)(nBufferSize+sizeof(DeltaEntityEntry_s)) > m_nCacheSize )
 			return;  // way too big, don't even create an entry
@@ -191,7 +191,7 @@ void CReplayDeltaEntityCache::AddDeltaBits( int nEntityIndex, int nDeltaTick, in
 		pEntry->pNext = pEntry = pNew;
 	}
 
-	pEntry->pNext = NULL; // link to next
+	pEntry->pNext = nullptr; // link to next
 	pEntry->nDeltaTick = nDeltaTick;
 	pEntry->nBits = nBits;
 	
@@ -213,7 +213,7 @@ static RecvTable* FindRecvTable( const char *pName, RecvTable **pRecvTables, int
 			return pRecvTables[i];
 	}
 
-	return NULL;
+	return nullptr;
 }
 
 static RecvTable* AddRecvTableR( SendTable *sendt, RecvTable **pRecvTables, int &nRecvTables )
@@ -272,7 +272,7 @@ static RecvTable* AddRecvTableR( SendTable *sendt, RecvTable **pRecvTables, int 
 	else
 	{
 		// table with no properties
-		recvt = new RecvTable( NULL, 0, sendt->m_pNetTableName );
+		recvt = new RecvTable( nullptr, 0, sendt->m_pNetTableName );
 	}
 
 	pRecvTables[nRecvTables] = recvt;
@@ -306,9 +306,9 @@ void CReplayServer::FreeClientRecvTables()
 // creates client receive tables from server send tables
 void CReplayServer::InitClientRecvTables()
 {
-	ServerClass* pCur = NULL;
+	ServerClass* pCur = nullptr;
 	
-	if ( ClientDLL_GetAllClasses() != NULL )
+	if ( ClientDLL_GetAllClasses() != nullptr )
 		return; //already initialized
 
 	// first create all SendTables
@@ -337,7 +337,7 @@ void CReplayServer::InitClientRecvTables()
 		Assert ( recvt );
 		
 		// register class, constructor addes clientClass to g_pClientClassHead list
-		ClientClass * clientclass = new ClientClass( pCur->m_pNetworkName, NULL, NULL, recvt );
+		ClientClass * clientclass = new ClientClass( pCur->m_pNetworkName, nullptr, nullptr, recvt );
 
 		if ( !clientclass	)
 		{
@@ -419,7 +419,7 @@ void CReplayFrame::AllocBuffers( void )
 	// allocate buffers for input frame
 	for ( int i=0; i < REPLAY_BUFFER_MAX; i++ )
 	{
-		Assert( m_Messages[i].GetBasePointer() == NULL );
+		Assert( m_Messages[i].GetBasePointer() == nullptr );
 		m_Messages[i].StartWriting( new char[NET_MAX_PAYLOAD], NET_MAX_PAYLOAD);
 	}
 }
@@ -433,7 +433,7 @@ void CReplayFrame::FreeBuffers( void )
 		if ( msg.GetBasePointer() )
 		{
 			delete[] msg.GetBasePointer();
-			msg.StartWriting( NULL, 0 );
+			msg.StartWriting( nullptr, 0 );
 		}
 	}
 }
@@ -442,12 +442,12 @@ CReplayServer::CReplayServer()
 :	m_DemoRecorder( this )	
 {
 	m_flTickInterval = 0.03;
-	m_MasterClient = NULL;
-	m_Server = NULL;
-	m_Director = NULL;
+	m_MasterClient = nullptr;
+	m_Server = nullptr;
+	m_Director = nullptr;
 	m_nFirstTick = -1;
 	m_nLastTick = 0;
-	m_CurrentFrame = NULL;
+	m_CurrentFrame = nullptr;
 	m_nViewEntity = 0;
 	m_nPlayerSlot = 0;
 	m_bSignonState = false;
@@ -479,7 +479,7 @@ CReplayServer::~CReplayServer()
 	}
 
 	// make sure everything was destroyed
-	Assert( m_CurrentFrame == NULL );
+	Assert( m_CurrentFrame == nullptr );
 	Assert( CountClientFrames() == 0 );
 }
 
@@ -551,7 +551,7 @@ void CReplayServer::StartMaster(CGameClient *client)
 	const char **modevents = m_Director->GetModEvents();
 
 	int j = 0;
-	while ( modevents[j] != NULL )
+	while ( modevents[j] != nullptr )
 	{
 		const char *eventname = modevents[j];
 
@@ -623,7 +623,7 @@ bool CReplayServer::DispatchToRelay( CReplayClient *pClient )
 	if ( replay_dispatchmode.GetInt() <= DISPATCH_MODE_OFF )
 		return false; // don't redirect
 	
-	CBaseClient	*pBestProxy = NULL;
+	CBaseClient	*pBestProxy = nullptr;
 	float fBestRatio = 1.0f;
 
 	// find best relay proxy
@@ -652,7 +652,7 @@ bool CReplayServer::DispatchToRelay( CReplayClient *pClient )
 		}
 	}
 
-	if ( pBestProxy == NULL )
+	if ( pBestProxy == nullptr )
 	{
 		if ( replay_dispatchmode.GetInt() == DISPATCH_MODE_ALWAYS )
 		{
@@ -1033,7 +1033,7 @@ CReplayEntityData *FindReplayDataInSnapshot( CFrameSnapshot * pSnapshot, int iEn
 
 	if ( iEntIndex < pSnapshot->m_pValidEntities[a] ||
 		 iEntIndex > pSnapshot->m_pValidEntities[z] )
-		 return NULL;
+		 return nullptr;
 	
 	while ( a < z )
 	{
@@ -1050,7 +1050,7 @@ CReplayEntityData *FindReplayDataInSnapshot( CFrameSnapshot * pSnapshot, int iEn
 				return &pSnapshot->m_pReplayEntityData[z];
 
 			if ( a == m )
-				return NULL;
+				return nullptr;
 
 			a = m;
 		}
@@ -1060,13 +1060,13 @@ CReplayEntityData *FindReplayDataInSnapshot( CFrameSnapshot * pSnapshot, int iEn
 				return &pSnapshot->m_pReplayEntityData[a];
 
 			if ( z == m )
-				return NULL;
+				return nullptr;
 
 			z = m;
 		}
 	}
 
-	return NULL;
+	return nullptr;
 }
 
 void CReplayServer::EntityPVSCheck( CClientFrame *pFrame )
@@ -1079,7 +1079,7 @@ void CReplayServer::EntityPVSCheck( CClientFrame *pFrame )
 
 	CFrameSnapshot * pSnapshot = pFrame->GetSnapshot();	
 
-	Assert ( pSnapshot->m_pReplayEntityData != NULL );
+	Assert ( pSnapshot->m_pReplayEntityData != nullptr );
 
 	int nDirectorEntity = m_Director->GetPVSEntity();
     	
@@ -1192,7 +1192,7 @@ CClientFrame *CReplayServer::AddNewFrame( CClientFrame *clientFrame )
 
 	// reset Replay frame for recording next messages etc.
 	m_ReplayFrame.Reset();
-	m_ReplayFrame.SetSnapshot( NULL );
+	m_ReplayFrame.SetSnapshot( nullptr );
 
 	return replayFrame;
 }
@@ -1260,7 +1260,7 @@ bool CReplayServer::SendNetMsg( INetMessage &msg, bool bForceReliable )
 bf_write *CReplayServer::GetBuffer( int nBuffer )
 {
 	if ( nBuffer < 0 || nBuffer >= REPLAY_BUFFER_MAX )
-		return NULL;
+		return nullptr;
 
 	return &m_ReplayFrame.m_Messages[nBuffer];
 }
@@ -1339,7 +1339,7 @@ void CReplayServer::UpdateTick( void )
 	if ( m_nFirstTick < 0 )
 	{
 		m_nTickCount = 0;
-		m_CurrentFrame = NULL;
+		m_CurrentFrame = nullptr;
 		return;
 	}
 
@@ -1357,7 +1357,7 @@ void CReplayServer::UpdateTick( void )
 	// the the closest available frame
 	CReplayFrame *newFrame = (CReplayFrame*) GetClientFrame( nNewTick, false );
 
-	if ( newFrame == NULL )
+	if ( newFrame == nullptr )
 		return; // we dont have a new frame
 	
 	if ( m_CurrentFrame == newFrame )
@@ -1402,13 +1402,13 @@ void CReplayServer::Clear( void )
 {
 	CBaseServer::Clear();
 
-	m_Director = NULL;
-	m_MasterClient = NULL;
-	m_Server = NULL;
+	m_Director = nullptr;
+	m_MasterClient = nullptr;
+	m_Server = nullptr;
 	m_nFirstTick = -1;
 	m_nLastTick = 0;
 	m_nTickCount = 0;
-	m_CurrentFrame = NULL;
+	m_CurrentFrame = nullptr;
 	m_nPlayerSlot = 0;
 	m_flStartTime = 0.0f;
 	m_nViewEntity = 1;
@@ -1445,7 +1445,7 @@ void CReplayServer::Changelevel()
 
 	DeleteClientFrames(-1);
 
-	m_CurrentFrame = NULL;
+	m_CurrentFrame = nullptr;
 }
 
 void CReplayServer::GetNetStats( float &avgIn, float &avgOut )
@@ -1461,7 +1461,7 @@ void CReplayServer::Shutdown( void )
 		m_MasterClient->Disconnect( "Replay stop." );
 
 	if ( m_Director )
-		m_Director->SetReplayServer( NULL );
+		m_Director->SetReplayServer( nullptr );
 
 	g_GameEventManager.RemoveListener( this );
 
@@ -1480,7 +1480,7 @@ const char *CReplayServer::GetPassword() const
 	// if password is empty or "none", return NULL
 	if ( !password[0] || !Q_stricmp(password, "none" ) )
 	{
-		return NULL;
+		return nullptr;
 	}
 
 	return password;

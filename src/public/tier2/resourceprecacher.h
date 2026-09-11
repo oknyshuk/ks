@@ -81,7 +81,7 @@ abstract_class IPrecacheHandler
 {
 public:
 	virtual void CacheResource( PrecacheResourceType_t nType, const char *pName, 
-		bool bPrecache, ResourceList_t hResourceList, int *pIndex = NULL ) = 0;
+		bool bPrecache, ResourceList_t hResourceList, int *pIndex = nullptr ) = 0;
 };
 
 //-----------------------------------------------------------------------------
@@ -153,7 +153,7 @@ public:													\
 	PRECACHE_REGISTER_BEGIN_CONDITIONAL( _system, _className, true )
 
 // Resource precache definitions
-#define	PRECACHE( _type, _name )				pPrecacheHandler->CacheResource( _type, _name, bPrecache, hResourceList, NULL ); 
+#define	PRECACHE( _type, _name )				pPrecacheHandler->CacheResource( _type, _name, bPrecache, hResourceList, nullptr ); 
 
 // NOTE: PRECACHE_INDEX_CONDITIONAL doesn't initialize the index to 0
 // on the assumption that some other conditional will
@@ -163,7 +163,7 @@ public:													\
 #define	PRECACHE_INDEX( _type, _name, _index )	pPrecacheHandler->CacheResource( _type, _name, bPrecache, hResourceList, (int*)( &(_index) ) ); 
 #define	PRECACHE_CONDITIONAL( _type, _name, _condition )			\
 	if ( !bIgnoreConditionals && ( _condition ) )					\
-	pPrecacheHandler->CacheResource( _type, _name, bPrecache, hResourceList, NULL ); 
+	pPrecacheHandler->CacheResource( _type, _name, bPrecache, hResourceList, nullptr ); 
 #define	PRECACHE_INDEX_CONDITIONAL( _type, _name, _index, _func )	\
 	if ( bIgnoreConditionals || ( _condition ) )				\
 {															\

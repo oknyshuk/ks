@@ -66,7 +66,7 @@ CBaseAnimating::CBaseAnimating()
 	m_nForceBone = 0;
 
 	m_bClientSideAnimation = false;
-	m_pIk = NULL;
+	m_pIk = nullptr;
 	m_iIKCounter = 0;
 
 	InitStepHeightAdjust();
@@ -78,14 +78,14 @@ CBaseAnimating::CBaseAnimating()
 	m_nNewSequenceParity = 0;
 	m_nResetEventsParity = 0;
 	m_boneCacheHandle = 0;
-	m_pStudioHdr = NULL;
+	m_pStudioHdr = nullptr;
 	SetGlobalFadeScale( 1.0f );
 	m_fBoneCacheFlags = 0;
 	
 	if ( m_pBoneMergeCache )
 	{
 		delete m_pBoneMergeCache;
-		m_pBoneMergeCache = NULL;
+		m_pBoneMergeCache = nullptr;
 	}
 
 
@@ -320,11 +320,11 @@ void CBaseAnimating::SetLightingOriginRelative( string_t strLightingOriginRelati
 {
 	if ( strLightingOriginRelative == NULL_STRING )
 	{
-		SetLightingOriginRelative( NULL );
+		SetLightingOriginRelative( nullptr );
 	}
 	else
 	{
-		CBaseEntity *pLightingOrigin = gEntList.FindEntityByName( NULL, strLightingOriginRelative );
+		CBaseEntity *pLightingOrigin = gEntList.FindEntityByName( nullptr, strLightingOriginRelative );
 		if ( !pLightingOrigin )
 		{
 			DevWarning( "%s: Could not find info_lighting_relative '%s'!\n", GetClassname(), STRING( strLightingOriginRelative ) );
@@ -345,11 +345,11 @@ void CBaseAnimating::SetLightingOrigin( string_t strLightingOrigin )
 {
 	if ( strLightingOrigin == NULL_STRING )
 	{
-		SetLightingOrigin( NULL );
+		SetLightingOrigin( nullptr );
 	}
 	else
 	{
-		CBaseEntity *pLightingOrigin = gEntList.FindEntityByName( NULL, strLightingOrigin );
+		CBaseEntity *pLightingOrigin = gEntList.FindEntityByName( nullptr, strLightingOrigin );
 		if ( !pLightingOrigin )
 		{
 			DevWarning( "%s: Could not find lighting origin entity named '%s'!\n", GetClassname(), STRING( strLightingOrigin ) );
@@ -502,7 +502,7 @@ KeyValues *CBaseAnimating::GetSequenceKeyValues( int iSequence )
 		}
 		seqKeyValues->deleteThis();
 	}
-	return NULL;
+	return nullptr;
 }
 
 
@@ -618,13 +618,13 @@ bool CBaseAnimating::BecomeRagdollOnClient( const Vector &force )
 		ClampRagdollForce( force, &vecClampedForce );
 		m_vecForce = vecClampedForce;
 
-		SetParent( NULL );
+		SetParent( nullptr );
 
 		AddFlag( FL_TRANSRAGDOLL );
 
 		SetMoveType( MOVETYPE_NONE );
 		//UTIL_SetSize( this, vec3_origin, vec3_origin );
-		SetThink( NULL );
+		SetThink( nullptr );
 	
 		SetNextThink( gpGlobals->curtime + 2.0f );
 		//If we're here, then we can vanish safely
@@ -1395,7 +1395,7 @@ void CBaseAnimating::UpdateStepOrigin()
 
 	if (m_flIKGroundContactTime > 0.2 && m_flIKGroundContactTime > gpGlobals->curtime - 0.2)
 	{
-		if ((GetFlags() & (FL_FLY | FL_SWIM)) == 0 && GetMoveParent() == NULL && GetGroundEntity() != NULL && !GetGroundEntity()->IsMoving())
+		if ((GetFlags() & (FL_FLY | FL_SWIM)) == 0 && GetMoveParent() == nullptr && GetGroundEntity() != nullptr && !GetGroundEntity()->IsMoving())
 		{
 			Vector toAbs = GetAbsOrigin() - GetLocalOrigin();
 			if (toAbs.z == 0.0)
@@ -1462,7 +1462,7 @@ void CBaseAnimating::CalculateIKLocks( float currentTime )
 		Ray_t ray;
 		CTraceFilterSkipNPCs traceFilter( this, GetCollisionGroup() );
 		Vector up;
-		GetVectors( NULL, NULL, &up );
+		GetVectors( nullptr, nullptr, &up );
 		// FIXME: check number of slots?
 		for (int i = 0; i < m_pIk->m_target.Count(); i++)
 		{
@@ -1672,7 +1672,7 @@ void CBaseAnimating::SetupBones( matrix3x4a_t *pBoneToWorld, int boneMask )
 	if ( !IsEffectActive(EF_BONEMERGE) )
 	{
 		delete m_pBoneMergeCache;
-		m_pBoneMergeCache = NULL;
+		m_pBoneMergeCache = nullptr;
 	}
 
 	Studio_BuildMatrices( 
@@ -1947,7 +1947,7 @@ int CBaseAnimating::FindTransitionSequence( int iCurrentSequence, int iGoalSeque
 {
 	Assert( GetModelPtr() );
 
-	if (piDir == NULL)
+	if (piDir == nullptr)
 	{
 		int iDir = 1;
 		int sequence = ::FindTransitionSequence( GetModelPtr(), iCurrentSequence, iGoalSequence, &iDir );
@@ -2562,7 +2562,7 @@ void CBaseAnimating::LockStudioHdr()
 		if ( hStudioHdr != MDLHANDLE_INVALID )
 		{
 			const studiohdr_t *pStudioHdr = mdlcache->LockStudioHdr( hStudioHdr );
-			CStudioHdr *pStudioHdrContainer = NULL;
+			CStudioHdr *pStudioHdrContainer = nullptr;
 			if ( !m_pStudioHdr )
 			{
 				if ( pStudioHdr )
@@ -2576,7 +2576,7 @@ void CBaseAnimating::LockStudioHdr()
 				pStudioHdrContainer = m_pStudioHdr;
 			}
 
-			Assert( ( pStudioHdr == NULL && pStudioHdrContainer == NULL ) || pStudioHdrContainer->GetRenderHdr() == pStudioHdr );
+			Assert( ( pStudioHdr == nullptr && pStudioHdrContainer == nullptr ) || pStudioHdrContainer->GetRenderHdr() == pStudioHdr );
 
 			if ( pStudioHdrContainer && pStudioHdrContainer->GetVirtualModel() )
 			{
@@ -2631,7 +2631,7 @@ CBoneCache *CBaseAnimating::GetBoneCache( void )
 		{
 			Studio_DestroyBoneCache( m_boneCacheHandle );
 			m_boneCacheHandle = 0;
-			pcache = NULL;
+			pcache = nullptr;
 		}
 	}
 
@@ -2802,7 +2802,7 @@ void CBaseAnimating::GetVelocity(Vector *vVelocity, AngularImpulse *vAngVelocity
 	}
 	else
 	{
-		if (vVelocity != NULL)
+		if (vVelocity != nullptr)
 		{
 			Vector	vRawVel;
 
@@ -2813,7 +2813,7 @@ void CBaseAnimating::GetVelocity(Vector *vVelocity, AngularImpulse *vAngVelocity
 			AngleMatrix(GetLocalAngles(), fRotateMatrix);
 			VectorRotate( vRawVel, fRotateMatrix, *vVelocity);
 		}
-		if (vAngVelocity != NULL)
+		if (vAngVelocity != nullptr)
 		{
 			QAngle tmp = GetLocalAngularVelocity();
 			QAngleToAngularImpulse( tmp, *vAngVelocity );
@@ -2826,15 +2826,15 @@ CBaseAnimating* CBaseAnimating::FindFollowedEntity()
 	CBaseEntity *follow = GetFollowedEntity();
 
 	if ( !follow )
-		return NULL;
+		return nullptr;
 
 	if ( follow->IsDormant() )
-		return NULL;
+		return nullptr;
 
 	if ( !follow->GetModel() )
 	{
 		Warning( "mod_studio: MOVETYPE_FOLLOW with no model.\n" );
-		return NULL;
+		return nullptr;
 	}
 
 	if ( modelinfo->GetModelType( follow->GetModel() ) != mod_studio )
@@ -2843,7 +2843,7 @@ CBaseAnimating* CBaseAnimating::FindFollowedEntity()
 			modelinfo->GetModelName( GetModel() ), 
 			modelinfo->GetModelName( follow->GetModel() ), 
 			modelinfo->GetModelType( follow->GetModel() ) );
-		return NULL;
+		return nullptr;
 	}
 
 	return assert_cast< CBaseAnimating* >( follow );
@@ -2873,7 +2873,7 @@ void CBaseAnimating::GetSkeleton( CStudioHdr *pStudioHdr, BoneVector pos[], Bone
 	}
 	else
 	{
-		boneSetup.CalcAutoplaySequences( pos, q, gpGlobals->curtime, NULL );
+		boneSetup.CalcAutoplaySequences( pos, q, gpGlobals->curtime, nullptr );
 	}
 	boneSetup.CalcBoneAdj( pos, q, GetEncodedControllerArray() );
 }
@@ -3342,7 +3342,7 @@ void CBaseAnimating::EnableServerIK()
 void CBaseAnimating::DisableServerIK()
 {
 	delete m_pIk;
-	m_pIk = NULL;
+	m_pIk = nullptr;
 }
 
 Activity CBaseAnimating::GetSequenceActivity( int iSequence )

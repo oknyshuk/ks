@@ -77,12 +77,12 @@ extern int g_nClientPutInServerOverrides;
 template < class T > T * CreateBot( const BotProfile *profile, int team )
 {
 	if ( !AreBotsAllowed() )
-		return NULL;
+		return nullptr;
 
 	if ( UTIL_ClientsInGame() >= gpGlobals->maxClients )
 	{
         Msg( "Unable to create bot: Server is full (%d/%d clients).\n", UTIL_ClientsInGame(), gpGlobals->maxClients );
-		return NULL;
+		return nullptr;
 	}
 
 	// set the bot's name
@@ -101,25 +101,25 @@ template < class T > T * CreateBot( const BotProfile *profile, int team )
 	g_botInitTeam = team;
 	edict_t *botEdict = engine->CreateFakeClient( botName );
 
-	ClientPutInServerOverride( NULL );
+	ClientPutInServerOverride( nullptr );
 	Assert( g_nClientPutInServerOverrides == 1 );
 
 
-	if ( botEdict == NULL )
+	if ( botEdict == nullptr )
 	{
         Msg( "Unable to create bot: CreateFakeClient() returned null.\n" );
-		return NULL;
+		return nullptr;
 	}
 
 
 	// create an instance of the bot's class and bind it to the edict
 	T *bot = dynamic_cast< T * >( CBaseEntity::Instance( botEdict ) );
 
-	if ( bot == NULL )
+	if ( bot == nullptr )
 	{
 		Assert( false );
 		Error( "Could not allocate and bind entity to bot edict.\n" );
-		return NULL;
+		return nullptr;
 	}
 
 	bot->ClearFlags();
@@ -438,7 +438,7 @@ template < class PlayerType >
 inline CBot< PlayerType >::CBot( void )
 {
 	// the profile will be attached after this instance is constructed
-	m_profile = NULL;
+	m_profile = nullptr;
 
 	// assign this bot a unique ID
 	static unsigned int nextID = 1;
@@ -475,7 +475,7 @@ template < class PlayerType >
 inline void CBot< PlayerType >::Spawn( void )
 {
 	// initialize the bot (thus setting its profile)
-	if (m_profile == NULL)
+	if (m_profile == nullptr)
 		Initialize( g_botInitProfile, g_botInitTeam );
 
 	// let the base class set some things up
@@ -490,7 +490,7 @@ inline void CBot< PlayerType >::Spawn( void )
 	this->AddFlag( FL_CLIENT | FL_FAKECLIENT );
 
 	// Bots use their own thinking mechanism
-	SetThink( NULL );
+	SetThink( nullptr );
 
 	m_isRunning = true;
 	m_isCrouching = false;
@@ -712,7 +712,7 @@ inline float CBot< PlayerType >::GetActiveWeaponAmmoRatio( void ) const
 	// For reasons unknown, GCC requires an explicit this-> to be able to find this function, while MSVC doesn't.
 	CWeaponCSBase *weapon = this->GetActiveCSWeapon();
 
-	if (weapon == NULL)
+	if (weapon == nullptr)
 		return 0.0f;
 
 	// weapons with no ammo are always full
@@ -751,7 +751,7 @@ inline bool CBot< PlayerType >::IsActiveWeaponOutOfAmmo( void ) const
 	// PS3_BUILDFIX
 	// For reasons unknown, GCC requires an explicit this-> to be able to find this function, while MSVC doesn't.
 	CWeaponCSBase *weapon = this->GetActiveCSWeapon();
-	if (weapon == NULL)
+	if (weapon == nullptr)
 		return true;
 
 	return !weapon->HasAnyAmmo();
@@ -928,7 +928,7 @@ template < class PlayerType >
 inline char * CBot< PlayerType >::Cmd_Argv( int argc )
 {
 	if ( argc < 0 || argc >= m_args.Count() )
-		return NULL;
+		return nullptr;
 	return m_args[argc];
 }
 
@@ -974,7 +974,7 @@ inline int CBot< PlayerType >::GetEnemiesRemaining( void ) const
 	{
 		CBaseEntity *player = UTIL_PlayerByIndex( i );
 
-		if (player == NULL)
+		if (player == nullptr)
 			continue;
 
 		if (!IsEnemy( player ))
@@ -1002,7 +1002,7 @@ inline int CBot< PlayerType >::GetFriendsRemaining( void ) const
 	{
 		CBaseEntity *player = UTIL_PlayerByIndex( i );
 
-		if (player == NULL)
+		if (player == nullptr)
 			continue;
 
 		if (IsEnemy( player ))
@@ -1031,7 +1031,7 @@ inline bool CBot< PlayerType >::IsLocalPlayerWatchingMe( void ) const
 		return false;
 
 	CBasePlayer *player = UTIL_GetListenServerHost();
-	if ( player == NULL )
+	if ( player == nullptr )
 		return false;
 
 	if ( cv_bot_debug_target.GetInt() > 0 )

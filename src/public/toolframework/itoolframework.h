@@ -46,7 +46,7 @@ struct BaseEntityRecordingState_t
 		m_bVisible( false ),
 		m_bRecordFinalVisibleSample( false ),
 		m_numEffects( 0 ),
-		m_pEffects( NULL ),
+		m_pEffects( nullptr ),
 		m_nFollowEntity( -1 )
 	{
 		m_vecRenderOrigin.Init();

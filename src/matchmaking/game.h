@@ -31,7 +31,7 @@ public:
 
 	virtual IPlayer * GetPlayer(int index);
 
-	virtual void AddPlayer( XUID xuid, int pExperience[ MATCH_MAX_DIFFICULTIES ] = NULL, int pSkills[ MATCH_MAX_DIFFICULTIES ][ MATCH_MAX_SKILL_FIELDS ] = NULL );
+	virtual void AddPlayer( XUID xuid, int pExperience[ MATCH_MAX_DIFFICULTIES ] = nullptr, int pSkills[ MATCH_MAX_DIFFICULTIES ][ MATCH_MAX_SKILL_FIELDS ] = nullptr );
 
 	virtual void RemovePlayer( XUID xuid );
 

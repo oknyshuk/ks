@@ -34,7 +34,7 @@ extern ConVar spec_autodirector;
 
 static Vector WALL_MIN(-WALL_OFFSET,-WALL_OFFSET,-WALL_OFFSET);
 static Vector WALL_MAX(WALL_OFFSET,WALL_OFFSET,WALL_OFFSET);
-static const ConVar	*replay_transmitall = NULL;
+static const ConVar	*replay_transmitall = nullptr;
 
 //////////////////////////////////////////////////////////////////////
 // Construction/Destruction
@@ -140,7 +140,7 @@ void C_ReplayCamera::CalcChaseCamView( Vector& eyeOrigin, QAngle& eyeAngles, flo
 	}
 
 	// get secondary target if set
-	C_BaseEntity *target2 = NULL;
+	C_BaseEntity *target2 = nullptr;
 
 	if ( m_iTraget2 > 0 && (m_iTraget2 != m_iTraget1) && !bManual )
 	{
@@ -148,7 +148,7 @@ void C_ReplayCamera::CalcChaseCamView( Vector& eyeOrigin, QAngle& eyeAngles, flo
 
 		// if target is out PVS and not dead, it's not valid
 		if ( target2 && target2->IsDormant() && target2->IsAlive() )
-			target2 = NULL;
+			target2 = nullptr;
 
 		if ( target2 )
 		{
@@ -287,7 +287,7 @@ C_BaseEntity* C_ReplayCamera::GetPrimaryTarget()
 	}
 
 	if ( m_iTraget1 <= 0 )
-		return NULL;
+		return nullptr;
 
 	C_BaseEntity* target = ClientEntityList().GetEnt( m_iTraget1 );
 
@@ -837,7 +837,7 @@ void C_ReplayCamera::ToggleChaseAsFirstPerson()
 
 bool C_ReplayCamera::IsPVSLocked()
 {
-	if ( replay_transmitall != NULL )
+	if ( replay_transmitall != nullptr )
 	{
 		return !replay_transmitall->GetBool();
 	}

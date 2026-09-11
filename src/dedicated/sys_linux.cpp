@@ -86,7 +86,7 @@ ISys *sys = &g_Sys;
 //-----------------------------------------------------------------------------
 CSys::~CSys()
 {
-	sys = NULL;
+	sys = nullptr;
 }
 
 //-----------------------------------------------------------------------------
@@ -116,7 +116,7 @@ void *CSys::GetProcAddress( long library, const char *name )
 //-----------------------------------------------------------------------------
 long CSys::LoadLibrary( const char *lib )
 {
-	void *hDll = NULL;
+	void *hDll = nullptr;
 
     char    cwd[1024];
     char    absolute_lib[1024];

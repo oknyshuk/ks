@@ -25,7 +25,7 @@ IEventSystem *g_pEventSystem = 0;
 ILocalize *g_pLocalize = 0;
 
 // for utlsortvector.h
-void *g_pUtlSortVectorQSortContext = NULL;
+void *g_pUtlSortVectorQSortContext = nullptr;
 
 
 
@@ -173,7 +173,7 @@ void RegisterInterface( CreateInterfaceFn factory, const char *pInterfaceName, v
 {
 	if ( !(*ppGlobal) )
 	{
-		*ppGlobal = factory( pInterfaceName, NULL );
+		*ppGlobal = factory( pInterfaceName, nullptr );
 		if ( *ppGlobal )
 		{
 			Assert( s_nRegistrationCount < ARRAYSIZE(s_pConnectionRegistration) );
@@ -186,7 +186,7 @@ void RegisterInterface( CreateInterfaceFn factory, const char *pInterfaceName, v
 
 void ReconnectInterface( CreateInterfaceFn factory, const char *pInterfaceName, void **ppGlobal )
 {
-	*ppGlobal = factory( pInterfaceName, NULL );
+	*ppGlobal = factory( pInterfaceName, nullptr );
 
 	bool bFound = false;
 	Assert( s_nRegistrationCount < ARRAYSIZE(s_pConnectionRegistration) );

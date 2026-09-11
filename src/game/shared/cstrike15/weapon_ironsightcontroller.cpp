@@ -59,7 +59,7 @@ CIronSightController::CIronSightController( void )
 	m_flIronSightFOV				= 80.0f;
 	m_flIronSightPivotForward		= 10.0f;
 	m_flIronSightLooseness			= 0.5f;
-	m_pAttachedWeapon				= NULL;	
+	m_pAttachedWeapon				= nullptr;	
 
 #ifdef CLIENT_DLL
 	m_angViewLast.Init();
@@ -486,7 +486,7 @@ void CIronSightController::RenderScopeEffect( int x, int y, int w, int h, CViewS
 
 	//set alpha to the amount of ironsightedness
 	IMaterialVar *pAlphaVar = pBlurOverlayMaterial->FindVar("$alpha", 0);
-	if (pAlphaVar != NULL)
+	if (pAlphaVar != nullptr)
 	{
 		pAlphaVar->SetFloatValue(Bias( GetIronSightAmount(), 0.2f));
 	}
@@ -515,7 +515,7 @@ void CIronSightController::RenderScopeEffect( int x, int y, int w, int h, CViewS
 	int iWidth = GetDotWidth();
 
 	IMaterialVar *pAlphaVar2 = pMatDot->FindVar("$alpha", 0);
-	if (pAlphaVar2 != NULL)
+	if (pAlphaVar2 != nullptr)
 	{
 		pAlphaVar2->SetFloatValue(GetDotBlur());
 	}

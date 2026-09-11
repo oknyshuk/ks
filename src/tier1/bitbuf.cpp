@@ -88,13 +88,13 @@ CBitWriteMasksInit g_BitWriteMasksInit;
 bf_write::bf_write()
 {
 	DEBUG_LINK_CHECK;
-	m_pData = NULL;
+	m_pData = nullptr;
 	m_nDataBytes = 0;
 	m_nDataBits = -1; // set to -1 so we generate overflow on any operation
 	m_iCurBit = 0;
 	m_bOverflow = false;
 	m_bAssertOnOverflow = true;
-	m_pDebugName = NULL;
+	m_pDebugName = nullptr;
 }
 
 bf_write::bf_write( const char *pDebugName, void *pData, int nBytes, int nBits )
@@ -108,7 +108,7 @@ bf_write::bf_write( const char *pDebugName, void *pData, int nBytes, int nBits )
 bf_write::bf_write( void *pData, int nBytes, int nBits )
 {
 	m_bAssertOnOverflow = true;
-	m_pDebugName = NULL;
+	m_pDebugName = nullptr;
 	StartWriting( pData, nBytes, 0, nBits );
 }
 
@@ -867,13 +867,13 @@ bool bf_write::WriteString(const wchar_t *pStr)
 old_bf_read::old_bf_read()
 {
 	DEBUG_LINK_CHECK;
-	m_pData = NULL;
+	m_pData = nullptr;
 	m_nDataBytes = 0;
 	m_nDataBits = -1; // set to -1 so we overflow on any operation
 	m_iCurBit = 0;
 	m_bOverflow = false;
 	m_bAssertOnOverflow = true;
-	m_pDebugName = NULL;
+	m_pDebugName = nullptr;
 }
 
 old_bf_read::old_bf_read( const void *pData, int nBytes, int nBits )

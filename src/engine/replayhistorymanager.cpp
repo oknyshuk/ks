@@ -93,7 +93,7 @@ public:
 			}
 		}
 
-		return NULL;
+		return nullptr;
 	}
 
 	virtual void FlushEntriesToDisk()
@@ -150,7 +150,7 @@ public:
 		DECLARE_DMX_CONTEXT();
 
 		// Attempt to read from disk
-		CDmxElement* pDemos = NULL;
+		CDmxElement* pDemos = nullptr;
 		if ( !UnserializeDMX( pFilename, "GAME", false, &pDemos ) )
 			return false;
 
@@ -320,7 +320,7 @@ public:
 		bool bRemovedAny = false;
 		bool bFlushToDisk = false;
 
-		time_t now = time( NULL );
+		time_t now = time( nullptr );
 
 		if ( nFlags & UPDATE_PRINTSTATS )
 		{
@@ -517,7 +517,7 @@ IReplayHistoryManager *CreateServerReplayHistoryManager()
 
 static CClientReplayHistoryManager s_ClientReplayHistoryManager;
 IReplayHistoryManager *g_pClientReplayHistoryManager = &s_ClientReplayHistoryManager;
-IReplayHistoryManager *g_pServerReplayHistoryManager = NULL;
+IReplayHistoryManager *g_pServerReplayHistoryManager = nullptr;
 
 // Expose interface to the client (needed by demo browser) - no need to do this for the server.
 EXPOSE_SINGLE_INTERFACE_GLOBALVAR(

@@ -173,7 +173,7 @@ public:
 	char		*Get();
 	char*		GetForModify();
 
-	void Clear() { Set( NULL ); }
+	void Clear() { Set( nullptr ); }
 
 	// CUtlString can be used anywhere a c-style string would be required
 	// via this implicit conversion
@@ -281,7 +281,7 @@ public:
 	void		Trim( const char *szTargets = "\t\r\n " );
 
 	// Calls right through to V_MakeAbsolutePath.
-	CUtlString AbsPath( const char *pStartingDir=NULL ) const;	
+	CUtlString AbsPath( const char *pStartingDir=nullptr ) const;	
 
 	CUtlString AbsPath(const char *pStartingDir, bool bLowercaseName) const
 	{
@@ -453,18 +453,18 @@ template < typename T = char >
 class CUtlConstStringBase
 {
 public:
-	CUtlConstStringBase() : m_pString( NULL ) {}
-	CUtlConstStringBase( const T *pString ) : m_pString( NULL ) { Set( pString ); }
-	CUtlConstStringBase( const CUtlConstStringBase& src ) : m_pString( NULL ) { Set( src.m_pString ); }
-	~CUtlConstStringBase() { Set( NULL ); }
+	CUtlConstStringBase() : m_pString( nullptr ) {}
+	CUtlConstStringBase( const T *pString ) : m_pString( nullptr ) { Set( pString ); }
+	CUtlConstStringBase( const CUtlConstStringBase& src ) : m_pString( nullptr ) { Set( src.m_pString ); }
+	~CUtlConstStringBase() { Set( nullptr ); }
 
 	void Set( const T *pValue );
-	void Clear() { Set( NULL ); }
+	void Clear() { Set( nullptr ); }
 
 	const T *Get() const { return m_pString ? m_pString : StringFuncs<T>::EmptyString(); }
 	operator const T*() const { return m_pString ? m_pString : StringFuncs<T>::EmptyString(); }
 
-	bool IsEmpty() const { return m_pString == NULL; } // Note: empty strings are never stored by Set
+	bool IsEmpty() const { return m_pString == nullptr; } // Note: empty strings are never stored by Set
 
 	int Compare( const T *rhs ) const;
 
@@ -499,7 +499,7 @@ void CUtlConstStringBase<T>::Set( const T *pValue )
 	if ( pValue != m_pString )
 	{
 		free( ( void* ) m_pString );
-		m_pString = pValue && pValue[0] ? StringFuncs<T>::Duplicate( pValue ) : NULL;
+		m_pString = pValue && pValue[0] ? StringFuncs<T>::Duplicate( pValue ) : nullptr;
 	}
 }
 
@@ -590,7 +590,7 @@ public:
 		Assert(!m_data.HasError());
 
 		if (!IsValid() || (Capacity() == 0))
-			return NULL;
+			return nullptr;
 
 		return m_data.Access();
 	}
@@ -697,7 +697,7 @@ public:
 	char *AccessNoAssert()
 	{
 		if (!IsValid())
-			return NULL;
+			return nullptr;
 		return m_data.Access();
 	}
 
@@ -715,7 +715,7 @@ private:
 	// nChars is the number of characters you want, NOT including the null
 	char *PrepareBuffer(size_t nChars, bool bCopyOld = false, size_t nMinCapacity = 0)
 	{
-		char *pszString = NULL;
+		char *pszString = nullptr;
 		size_t nCapacity = m_data.Capacity();
 		if ((nChars <= nCapacity) && (nMinCapacity <= nCapacity))
 		{
@@ -732,7 +732,7 @@ private:
 		}
 
 		if (HasError())
-			return NULL;
+			return nullptr;
 
 		// Need to actually adjust the capacity
 		return InternalPrepareBuffer(nChars, bCopyOld, Max(nChars, nMinCapacity));
@@ -807,7 +807,7 @@ private:
 				return;
 
 			FreeHeap();
-			Heap.m_pchString = NULL;
+			Heap.m_pchString = nullptr;
 
 			Construct();
 		}
@@ -841,7 +841,7 @@ private:
 			{
 				nLen = 0;
 				nCapacity = 0;
-				return NULL;
+				return nullptr;
 			}
 
 			nLen = Heap.m_nLength;
@@ -959,7 +959,7 @@ inline CUtlStringBuilder::~CUtlStringBuilder()
 //-----------------------------------------------------------------------------
 inline bool CUtlStringBuilder::EnsureCapacity(size_t nLength)
 {
-	return PrepareBuffer(Length(), true, nLength) != NULL;
+	return PrepareBuffer(Length(), true, nLength) != nullptr;
 }
 
 
@@ -1225,7 +1225,7 @@ inline size_t CUtlStringBuilder::VFormat(const char *pFormat, va_list args)
 	// Scope ReuseArgs.
 	{
 		CReuseVaList ReuseArgs(args);
-		len = V_vsnprintf(NULL, 0, pFormat, ReuseArgs.m_ReuseList);
+		len = V_vsnprintf(nullptr, 0, pFormat, ReuseArgs.m_ReuseList);
 	}
 	if (len > 0)
 	{
@@ -1276,7 +1276,7 @@ inline size_t CUtlStringBuilder::VAppendFormat(const char *pFormat, va_list args
 	// Scope ReuseArgs.
 	{
 		CReuseVaList ReuseArgs(args);
-		len = vsnprintf(NULL, 0, pFormat, ReuseArgs.m_ReuseList);
+		len = vsnprintf(nullptr, 0, pFormat, ReuseArgs.m_ReuseList);
 	}
 	size_t nOldLen = Length();
 

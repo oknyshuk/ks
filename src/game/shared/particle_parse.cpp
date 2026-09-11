@@ -229,7 +229,7 @@ void DispatchParticleEffect( int nEffectIndex, const Vector &vecOrigin, const QA
 	else
 	{
 #ifdef CLIENT_DLL
-		data.m_hEntity = NULL;
+		data.m_hEntity = nullptr;
 #else
 		data.m_nEntIndex = 0;
 #endif
@@ -275,7 +275,7 @@ void DispatchParticleEffect( int iEffectIndex, Vector vecOrigin, Vector vecStart
 	else
 	{
 #ifdef CLIENT_DLL
-		data.m_hEntity = NULL;
+		data.m_hEntity = nullptr;
 #else
 		data.m_nEntIndex = 0;
 #endif
@@ -381,8 +381,8 @@ void StopParticleEffect( CBaseEntity *pEntity, const char *pszParticleName )
 
 		const char *pszParticleFile = particle_test_file.GetString();
 
-		CBaseEntity *pEntity = NULL;
-		while ( (pEntity = GetNextCommandEntity( pPlayer, name, pEntity )) != NULL )
+		CBaseEntity *pEntity = nullptr;
+		while ( (pEntity = GetNextCommandEntity( pPlayer, name, pEntity )) != nullptr )
 		{
 			/* 
 			Fire the test particle system on this entity
@@ -409,8 +409,8 @@ void StopParticleEffect( CBaseEntity *pEntity, const char *pszParticleName )
 		if ( !pPlayer )
 			return;
 
-		CBaseEntity *pEntity = NULL;
-		while ( (pEntity = GetNextCommandEntity( pPlayer, name, pEntity )) != NULL )
+		CBaseEntity *pEntity = nullptr;
+		while ( (pEntity = GetNextCommandEntity( pPlayer, name, pEntity )) != nullptr )
 		{
 			//Stop all particle systems on the selected entity
 			DispatchParticleEffect( "", PATTACH_ABSORIGIN, pEntity, 0, true );

@@ -110,7 +110,7 @@ void CPointAngularVelocitySensor::Activate(void)
 {
 	BaseClass::Activate();
 
-	m_hTargetEntity = gEntList.FindEntityByName( NULL, m_target );
+	m_hTargetEntity = gEntList.FindEntityByName( nullptr, m_target );
 
 	if (m_hTargetEntity)
 	{
@@ -159,14 +159,14 @@ float CPointAngularVelocitySensor::SampleAngularVelocity(CBaseEntity *pEntity)
 	if (pEntity->GetMoveType() == MOVETYPE_VPHYSICS)
 	{
 		IPhysicsObject *pPhys = pEntity->VPhysicsGetObject();
-		if (pPhys != NULL)
+		if (pPhys != nullptr)
 		{
 			Vector vecVelocity;
 			AngularImpulse vecAngVelocity;
 			pPhys->GetVelocity(&vecVelocity, &vecAngVelocity);
 
 			QAngle angles;
-			pPhys->GetPosition( NULL, &angles );
+			pPhys->GetPosition( nullptr, &angles );
 
 			float dt = gpGlobals->curtime - GetLastThink();
 			if ( dt == 0 )
@@ -219,7 +219,7 @@ float CPointAngularVelocitySensor::SampleAngularVelocity(CBaseEntity *pEntity)
 //-----------------------------------------------------------------------------
 int CPointAngularVelocitySensor::CompareToThreshold(CBaseEntity *pEntity, float flThreshold, bool bFireVelocityOutput)
 {
-	if (pEntity == NULL)
+	if (pEntity == nullptr)
 	{
 		return 0;
 	}
@@ -257,7 +257,7 @@ int CPointAngularVelocitySensor::CompareToThreshold(CBaseEntity *pEntity, float 
 //-----------------------------------------------------------------------------
 void CPointAngularVelocitySensor::Think(void)
 {
-	if (m_hTargetEntity != NULL)
+	if (m_hTargetEntity != nullptr)
 	{
 		//
 		// Check to see if the measure entity's angular velocity has been within
@@ -304,7 +304,7 @@ void CPointAngularVelocitySensor::Think(void)
 //-----------------------------------------------------------------------------
 void CPointAngularVelocitySensor::InputTestWithInterval( inputdata_t &inputdata )
 {
-	if (m_hTargetEntity != NULL)
+	if (m_hTargetEntity != nullptr)
 	{
 		m_flFireTime = gpGlobals->curtime + m_flFireInterval;
 		m_nLastFireResult = AVELOCITY_SENSOR_NO_LAST_RESULT;
@@ -406,7 +406,7 @@ void CPointVelocitySensor::Activate( void )
 {
 	BaseClass::Activate();
 
-	m_hTargetEntity = gEntList.FindEntityByName( NULL, m_target );
+	m_hTargetEntity = gEntList.FindEntityByName( nullptr, m_target );
 	
 	if ( m_bEnabled && m_hTargetEntity )
 	{
@@ -444,7 +444,7 @@ void CPointVelocitySensor::InputDisable( inputdata_t &inputdata )
 //-----------------------------------------------------------------------------
 void CPointVelocitySensor::Think( void )
 {
-	if ( m_hTargetEntity != NULL && m_bEnabled )
+	if ( m_hTargetEntity != nullptr && m_bEnabled )
 	{
 		SampleVelocity();
 		SetNextThink( gpGlobals->curtime );
@@ -456,7 +456,7 @@ void CPointVelocitySensor::Think( void )
 //-----------------------------------------------------------------------------
 void CPointVelocitySensor::SampleVelocity( void )
 {
-	if ( m_hTargetEntity == NULL )
+	if ( m_hTargetEntity == nullptr )
 		return;
 
 	Vector vecVelocity;
@@ -464,9 +464,9 @@ void CPointVelocitySensor::SampleVelocity( void )
 	if ( m_hTargetEntity->GetMoveType() == MOVETYPE_VPHYSICS )
 	{
 		IPhysicsObject *pPhys = m_hTargetEntity->VPhysicsGetObject();
-		if ( pPhys != NULL )
+		if ( pPhys != nullptr )
 		{
-			pPhys->GetVelocity( &vecVelocity, NULL );
+			pPhys->GetVelocity( &vecVelocity, nullptr );
 		}
 	}
 	else
@@ -485,6 +485,6 @@ void CPointVelocitySensor::SampleVelocity( void )
 	// if it's changed since the last frame, poke the output 
 	if ( m_fPrevVelocity != m_Velocity.Get() )
 	{
-		m_Velocity.Set( m_fPrevVelocity, NULL, NULL );
+		m_Velocity.Set( m_fPrevVelocity, nullptr, nullptr );
 	}
 }

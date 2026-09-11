@@ -74,7 +74,7 @@ AI_Waypoint_t *	AI_Waypoint_t::GetLast()
 void CAI_WaypointList::RemoveAll()
 {
 	DeleteAll( &m_pFirstWaypoint );
-	Assert( m_pFirstWaypoint == NULL );
+	Assert( m_pFirstWaypoint == nullptr );
 }
 
 //-------------------------------------
@@ -105,7 +105,7 @@ AI_Waypoint_t *CAI_WaypointList::GetLast()
 {
 	AI_Waypoint_t *p = GetFirst();
 	if (!p)
-		return NULL;
+		return nullptr;
 	while ( p->GetNext() )
 		p = p->GetNext();
 

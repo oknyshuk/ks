@@ -80,11 +80,11 @@ CBaseViewport::CBaseViewport()
 	m_bInitialized = false;
 	m_bFullscreenViewport = false;
 
-	m_GameuiFuncs = NULL;
-	m_GameEventManager = NULL;
+	m_GameuiFuncs = nullptr;
+	m_GameEventManager = nullptr;
 
 	m_bHasParent = false;
-	m_pActivePanel = NULL;
+	m_pActivePanel = nullptr;
 
 
 	m_OldSize[ 0 ] = m_OldSize[ 1 ] = -1;
@@ -109,7 +109,7 @@ void CBaseViewport::UpdateAllPanels( void )
 
 IViewPortPanel* CBaseViewport::CreatePanelByName(const char *szPanelName)
 {
-	return NULL;
+	return nullptr;
 }
 
 
@@ -120,7 +120,7 @@ bool CBaseViewport::AddNewPanel( IViewPortPanel* pPanel, char const *pchDebugNam
 		return false;
 	}
 
-	if ( FindPanelByName( pPanel->GetName() ) != NULL )
+	if ( FindPanelByName( pPanel->GetName() ) != nullptr )
 	{
 		DevMsg("CBaseViewport::AddNewPanel: panel with name '%s' already exists.\n", pPanel->GetName() );
 		return false;
@@ -136,7 +136,7 @@ IViewPortPanel* CBaseViewport::FindPanelByName(const char *szPanelName)
 {
 	int idx = m_Panels.Find( szPanelName );
 	if ( idx == m_Panels.InvalidIndex() )
-		return NULL;
+		return nullptr;
 
 	return m_Panels[ idx ];
 }
@@ -195,7 +195,7 @@ void CBaseViewport::ShowPanel( const char *pName, bool state )
 		return;
 	}
 
-	IViewPortPanel * panel = NULL;
+	IViewPortPanel * panel = nullptr;
 
 	if ( Q_strcmp( pName, PANEL_ACTIVE ) == 0 )
 	{
@@ -229,7 +229,7 @@ void CBaseViewport::ShowPanel( IViewPortPanel* pPanel, bool state )
 				)
 				return;
 
-			if ( (m_pActivePanel != NULL) && (m_pActivePanel != pPanel) && (m_pActivePanel->IsVisible()) )
+			if ( (m_pActivePanel != nullptr) && (m_pActivePanel != pPanel) && (m_pActivePanel->IsVisible()) )
 			{
 				// store a pointer to the currently active panel
 				// so we can restore it later
@@ -259,7 +259,7 @@ void CBaseViewport::ShowPanel( IViewPortPanel* pPanel, bool state )
 		// update m_pActivePanel pointer
 		if ( m_pActivePanel == pPanel )
 		{
-			m_pActivePanel = NULL;
+			m_pActivePanel = nullptr;
 		}
 
 	}
@@ -295,7 +295,7 @@ void CBaseViewport::RecreatePanel( const char *szPanelName )
 
 		if ( m_pActivePanel == panel )
 		{
-			m_pActivePanel = NULL;
+			m_pActivePanel = nullptr;
 		}
 
 
@@ -314,7 +314,7 @@ void CBaseViewport::RemoveAllPanels( void)
 
 	m_Panels.RemoveAll();
 	m_UnorderedPanels.RemoveAll();
-	m_pActivePanel = NULL;
+	m_pActivePanel = nullptr;
 }
 
 CBaseViewport::~CBaseViewport()
@@ -353,7 +353,7 @@ void CBaseViewport::Start( IGameUIFuncs *pGameUIFuncs, IGameEventManager2 * pGam
 // Return TRUE if the HUD's allowed to print text messages
 bool CBaseViewport::AllowedToPrintText( void )
 {
-	return ( m_pActivePanel == NULL);
+	return ( m_pActivePanel == nullptr);
 } 
 
 //-----------------------------------------------------------------------------

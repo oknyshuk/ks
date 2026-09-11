@@ -37,8 +37,8 @@ LINK_ENTITY_TO_CLASS( point_hiding_spot, CPointHidingSpot );
 
 
 CPointHidingSpot::CPointHidingSpot() : 
-m_pNavArea( NULL ),
-m_pSpot( NULL )
+m_pNavArea( nullptr ),
+m_pSpot( nullptr )
 {
 }
 
@@ -53,7 +53,7 @@ void CPointHidingSpot::Activate()
 
 void CPointHidingSpot::DetachFromHidingSpot()
 {
-	m_pSpot = NULL;
+	m_pSpot = nullptr;
 }
 
 void CPointHidingSpot::UpdateOnRemove()
@@ -89,6 +89,6 @@ void CPointHidingSpot::PostActivateSetupThink()
 		m_pSpot->SetArea( m_pNavArea );
 		m_pNavArea->AddHidingSpot( m_pSpot );
 
-		SetContextThink( NULL, TICK_NEVER_THINK, g_pszPostActivateSetupThink );
+		SetContextThink( nullptr, TICK_NEVER_THINK, g_pszPostActivateSetupThink );
 	}
 }

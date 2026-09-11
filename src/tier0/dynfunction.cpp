@@ -38,7 +38,7 @@ public:
 		{
 			m_handle = handle;
 			m_name = new char[strlen(name) + 1];
-			m_next = NULL;
+			m_next = nullptr;
 			strcpy(m_name, name);
 		}
 
@@ -55,18 +55,18 @@ public:
 		LibraryHandle m_handle;
 	};
 
-	CSharedLibraryCache() : m_pList(NULL) {}
+	CSharedLibraryCache() : m_pList(nullptr) {}
 	~CSharedLibraryCache() { CloseAllLibraries(); }
 
 	LibraryHandle GetHandle(const char *name)
 	{
 		CSharedLibraryItem *item = GetCacheItem(name);
-		if (item == NULL)
+		if (item == nullptr)
 		{
 			LibraryHandle lib = LoadLibraryHandle(name);
 			dbgdynfn("CDynamicFunction: Loading library '%s' (%p)\n", name, (void *) lib);
-			if (lib == NULL)
-				return NULL;
+			if (lib == nullptr)
+				return nullptr;
 
 			item = new CSharedLibraryItem(lib, name);
 			item->m_next = m_pList;
@@ -82,7 +82,7 @@ public:
 		{
 			assert(item == m_pList);
 			m_pList = item->m_next;
-			item->m_next = NULL;
+			item->m_next = nullptr;
 			delete item;
 		}
 	}
@@ -95,7 +95,7 @@ public:
 private:
 	CSharedLibraryItem *GetCacheItem(const char *name)
 	{
-		CSharedLibraryItem *prev = NULL;
+		CSharedLibraryItem *prev = nullptr;
 		CSharedLibraryItem *item = m_pList;
 		while (item)
 		{
@@ -104,7 +104,7 @@ private:
 				// move this item to the front of the list, since there will
 				//  probably be a big pile of these lookups in a row
 				//  and then none ever again.
-				if (prev != NULL)
+				if (prev != nullptr)
 				{
 					prev->m_next = item->m_next;
 					item->m_next = m_pList;
@@ -116,7 +116,7 @@ private:
 			prev = item;
 			item = item->m_next;
 		}
-		return NULL;  // not found.
+		return nullptr;  // not found.
 	}
 
 	CSharedLibraryItem *m_pList;
@@ -125,14 +125,14 @@ private:
 void *VoidFnPtrLookup_Tier0(const char *libname, const char *fn, void *fallback)
 {
 	LibraryHandle lib = CSharedLibraryCache::GetCache().GetHandle(libname);
-	void *retval = NULL;
-	if (lib != NULL)
+	void *retval = nullptr;
+	if (lib != nullptr)
 	{
 		retval = LookupInLibraryHandle(lib, fn);
 		dbgdynfn("CDynamicFunction: Lookup of '%s' in '%s': %p\n", fn, libname, retval);
 	}
 
-	if (retval == NULL)
+	if (retval == nullptr)
 		retval = fallback;
 	return retval;
 }

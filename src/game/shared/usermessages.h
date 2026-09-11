@@ -74,7 +74,7 @@ class CUserMessageBinder
 {
 public:
 	CUserMessageBinder()
-		: m_pBind( NULL )
+		: m_pBind( nullptr )
 	{
 	}
 
@@ -102,12 +102,12 @@ public:
 		if ( m_pBind )
 		{
 			delete m_pBind;
-			m_pBind = NULL;
+			m_pBind = nullptr;
 		}
 	}
 	bool IsBound() const
 	{
-		return m_pBind != NULL;
+		return m_pBind != nullptr;
 	}
 
 private:
@@ -134,7 +134,7 @@ private:
 		{
 			if ( size < 0 || size > NET_MAX_PAYLOAD )
 			{
-				return NULL;
+				return nullptr;
 			}
 
 			extern int CL_GetHltvReplayDelay();
@@ -144,7 +144,7 @@ private:
 				{
 					// this is a wrong timeline message. Ignore it.
 					bSilentIgnore = true;
-					return NULL;
+					return nullptr;
 				}
 			}
 
@@ -153,7 +153,7 @@ private:
 			if ( !ks::proto::read_bytes( *pMsg, msg, size ) )
 			{
 				delete pMsg;
-				return NULL;
+				return nullptr;
 			}
 
 			return pMsg;

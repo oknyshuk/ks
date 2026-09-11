@@ -136,8 +136,8 @@ inline unsigned char* UpdateRoutesExplicit_Template( DTStack *pStack, ProxyCalle
 			pStack->m_pProxies[iProxy] = ProxyCaller::CallProxy( pStack, pStructBase, pEntry->m_iDatatableProp );
 			if ( !pStack->m_pProxies[iProxy] )
 			{
-				*pTest = NULL;
-				pStructBase = NULL;
+				*pTest = nullptr;
+				pStructBase = nullptr;
 				break;
 			}			
 		}
@@ -165,10 +165,10 @@ public:
 	{
 		const RecvProp *pProp = m_pDecoder->GetDatatableProp( iProp );
 
-		void *pVal = NULL;
+		void *pVal = nullptr;
 
 		if ( !pProp )
-			return NULL;
+			return nullptr;
 
 		pProp->GetDataTableProxyFn()( 
 			pProp,
@@ -189,7 +189,7 @@ public:
 		{
 			CSendNode *pCurChild = pNode->GetChild( iChild );
 			
-			unsigned char *pNewStructBase = NULL;
+			unsigned char *pNewStructBase = nullptr;
 			if ( pStructBase )
 			{
 				pNewStructBase = CallPropProxy( pCurChild, pCurChild->m_iDatatableProp, pStructBase );
@@ -206,7 +206,7 @@ public:
 		{
 			const RecvProp *pProp = pStack->m_pDecoder->GetDatatableProp( iDatatableProp );
 
-			void *pVal = NULL;
+			void *pVal = nullptr;
 			pProp->GetDataTableProxyFn()( 
 				pProp,
 				&pVal, 
@@ -220,7 +220,7 @@ public:
 	
 	inline unsigned char* UpdateRoutesExplicit()
 	{
-		return UpdateRoutesExplicit_Template( this, (CRecvProxyCaller*)NULL );
+		return UpdateRoutesExplicit_Template( this, (CRecvProxyCaller*)nullptr );
 	}
 			
 
@@ -233,7 +233,7 @@ public:
 class CServerDatatableStack : public CDatatableStack
 {
 public:
-						CServerDatatableStack( CSendTablePrecalc *pPrecalc, unsigned char *pStructBase, int objectID, CUtlMemory< CSendProxyRecipients > *pRecipients = NULL ) :
+						CServerDatatableStack( CSendTablePrecalc *pPrecalc, unsigned char *pStructBase, int objectID, CUtlMemory< CSendProxyRecipients > *pRecipients = nullptr ) :
 							CDatatableStack( pPrecalc, pStructBase, objectID )
 						{
 							m_pPrecalc = pPrecalc;
@@ -267,7 +267,7 @@ public:
 			);
 
 		if ( m_bLocalNetworkBackDoor && (pRecipients != &s_Recipients) && !pRecipients->m_Bits.IsBitSet( 0 ) )
-			return NULL;
+			return nullptr;
 	
 		return pRet;
 	}
@@ -281,7 +281,7 @@ public:
 		{
 			CSendNode *pCurChild = pNode->GetChild( iChild );
 			
-			unsigned char *pNewStructBase = NULL;
+			unsigned char *pNewStructBase = nullptr;
 			if ( pStructBase )
 			{
 				pNewStructBase = CallPropProxy( pCurChild, pCurChild->m_iDatatableProp, pStructBase );
@@ -324,7 +324,7 @@ public:
 				);
 
 			if ( pStack->m_bLocalNetworkBackDoor && (pRecipients != &s_Recipients) && !pRecipients->m_Bits.IsBitSet( 0 ) )
-				return NULL;
+				return nullptr;
 
 			return pRet;
 		}
@@ -332,7 +332,7 @@ public:
 	
 	inline unsigned char* UpdateRoutesExplicit()
 	{
-		return UpdateRoutesExplicit_Template( this, (CSendProxyCaller*)NULL );
+		return UpdateRoutesExplicit_Template( this, (CSendProxyCaller*)nullptr );
 	}
 
 	

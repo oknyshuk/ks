@@ -47,22 +47,22 @@ IMatchVoice * CMatchSystem::GetMatchVoice()
 
 IServerManager * CMatchSystem::GetUserGroupsServerManager()
 {
-	return NULL;
+	return nullptr;
 }
 
 ISearchManager * CMatchSystem::CreateGameSearchManager( KeyValues *pParams )
 {
-	return NULL;
+	return nullptr;
 }
 
 IDatacenter * CMatchSystem::GetDatacenter()
 {
-	return NULL;
+	return nullptr;
 }
 
 IDlcManager * CMatchSystem::GetDlcManager()
 {
-	return NULL;
+	return nullptr;
 }
 
 void CMatchSystem::Update()

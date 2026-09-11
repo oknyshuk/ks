@@ -88,7 +88,7 @@ void CGib::SpawnStickyGibs( CBaseEntity *pVictim, Vector vecOrigin, int cGibs )
 			pGib->RemoveSolidFlags( FSOLID_NOT_SOLID );
 			pGib->SetCollisionBounds( vec3_origin, vec3_origin );
 			pGib->SetTouch ( &CGib::StickyGibTouch );
-			pGib->SetThink (NULL);
+			pGib->SetThink (nullptr);
 		}
 		pGib->LimitVelocity();
 	}
@@ -220,7 +220,7 @@ void CGib::InitGib( CBaseEntity *pVictim, float fMinVelocity, float fMaxVelocity
 		{
 			IPhysicsObject *pObj = VPhysicsGetObject();
 
-			if ( pObj != NULL )
+			if ( pObj != nullptr )
 			{
 				AngularImpulse angImpulse = RandomAngularImpulse( -500, 500 );
 				pObj->AddVelocity( &vecNewVelocity, &angImpulse );
@@ -260,7 +260,7 @@ void CGib::SpawnSpecificGibs(	CBaseEntity*	pVictim,
 		pGib->InitGib( pVictim, vMinVelocity, vMaxVelocity );
 		pGib->m_lifeTime = flLifetime;
 		
-		if ( pVictim != NULL )
+		if ( pVictim != nullptr )
 		{
 			pGib->SetOwnerEntity( pVictim );
 		}
@@ -379,7 +379,7 @@ bool CGib::SUB_AllowedToFade( void )
 			return false;
 	}
 
-	CBasePlayer *pPlayer = ( AI_IsSinglePlayer() ) ? UTIL_GetLocalPlayer() : NULL;
+	CBasePlayer *pPlayer = ( AI_IsSinglePlayer() ) ? UTIL_GetLocalPlayer() : nullptr;
 
 	if ( pPlayer && pPlayer->FInViewCone( this ) && m_bForceRemove == false )
 	{
@@ -478,7 +478,7 @@ CBasePlayer *CGib::HasPhysicsAttacker( float dt )
 	{
 		return m_hPhysicsAttacker;
 	}
-	return NULL;
+	return nullptr;
 }
 
 
@@ -628,13 +628,13 @@ CBaseEntity *CreateRagGib( const char *szModel, const Vector &vecOrigin, const Q
 	if ( !pGib )
 	{
 		Msg( "**Can't create ragdoll gib!\n" );
-		return NULL;
+		return nullptr;
 	}
 
 	if ( bShouldIgnite )
 	{
 		CBaseAnimating *pAnimating = pGib->GetBaseAnimating();
-		if (pAnimating != NULL )
+		if (pAnimating != nullptr )
 		{
 			pAnimating->Ignite( random->RandomFloat( 8.0, 12.0 ), false );
 		}

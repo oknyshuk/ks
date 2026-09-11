@@ -92,7 +92,7 @@ static CClientSendTable* FindClientSendTable( const char *pName )
 			return pTable;
 	}
 
-	return NULL;
+	return nullptr;
 }
 
 
@@ -249,7 +249,7 @@ static RecvProp* FindRecvProp( RecvTable *pTable, const char *pName )
 			return FindRecvProp( pSubProp->GetDataTable(), pName );
 	}
 	
-	return NULL;
+	return nullptr;
 }
 
 
@@ -378,9 +378,9 @@ static inline void ShowDecodeDeltaWatchInfo(
 	s_debug_info_shown = true;
 
 	DecodeInfo info;
-	info.m_pStruct = NULL;
-	info.m_pData = NULL;
-	info.m_pRecvProp = NULL;
+	info.m_pStruct = nullptr;
+	info.m_pData = nullptr;
+	info.m_pRecvProp = nullptr;
 	info.m_pProp = pProp;
 	info.m_pIn = &copy;
 	info.m_ObjectID = objectID;
@@ -496,7 +496,7 @@ SendTable *RecvTable_ReadInfos( const ks::net::CSVCMsg_SendTable& msg, int nDemo
 
 	// Read the property list.
 	pTable->m_nProps = msg.props.size();
-	pTable->m_pProps = pTable->m_nProps ? new SendProp[ pTable->m_nProps ] : NULL;
+	pTable->m_pProps = pTable->m_nProps ? new SendProp[ pTable->m_nProps ] : nullptr;
 
 	for ( int iProp=0; iProp < pTable->m_nProps; iProp++ )
 	{
@@ -669,10 +669,10 @@ bool RecvTable_Decode(
 		{
 			// They're allowed to be missing props here if they're playing back a demo.
 			// This allows us to change the datatables and still preserve old demos.
-			decodeInfo.m_pData = NULL;
+			decodeInfo.m_pData = nullptr;
 		}
 
-		decodeInfo.m_pRecvProp = theStack.IsCurProxyValid() ? pProp : NULL; // Just skip the data if the proxies are screwed.
+		decodeInfo.m_pRecvProp = theStack.IsCurProxyValid() ? pProp : nullptr; // Just skip the data if the proxies are screwed.
 		decodeInfo.m_pProp = pDecoder->GetSendProp( path );
 		decodeInfo.m_pIn = &buf;
 		decodeInfo.m_ObjectID = objectID;
@@ -704,9 +704,9 @@ void RecvTable_DecodeZeros( RecvTable *pTable, void *pStruct, int objectID )
 		DecodeInfo decodeInfo;
 		decodeInfo.m_pStruct = theStack.GetCurStructBase();
 		decodeInfo.m_pData = theStack.GetCurStructBase() + pProp->GetOffset();
-		decodeInfo.m_pRecvProp = theStack.IsCurProxyValid() ? pProp : NULL; // Just skip the data if the proxies are screwed.
+		decodeInfo.m_pRecvProp = theStack.IsCurProxyValid() ? pProp : nullptr; // Just skip the data if the proxies are screwed.
 		decodeInfo.m_pProp = pDecoder->GetSendProp( iProp );
-		decodeInfo.m_pIn = NULL;
+		decodeInfo.m_pIn = nullptr;
 		decodeInfo.m_ObjectID = objectID;
 
 		g_PropTypeFns[pProp->GetType()].DecodeZero( &decodeInfo );
@@ -758,7 +758,7 @@ bool RecvTable_MergeDeltas(
 	Assert( SERIALIZED_ENTITY_HANDLE_INVALID != newState );
 	Assert( SERIALIZED_ENTITY_HANDLE_INVALID != mergedState );
 
-	CSerializedEntity *pOldState = oldState != SERIALIZED_ENTITY_HANDLE_INVALID ? reinterpret_cast< CSerializedEntity * >( oldState ) : NULL;
+	CSerializedEntity *pOldState = oldState != SERIALIZED_ENTITY_HANDLE_INVALID ? reinterpret_cast< CSerializedEntity * >( oldState ) : nullptr;
 
 	CSerializedEntity *pNewState = reinterpret_cast< CSerializedEntity * >( newState );
 	Assert( pNewState );
@@ -851,7 +851,7 @@ bool RecvTable_ReadFieldList_Guts(
 	pEntity->Clear();
 
 	CUtlVector< int > fieldBits;
-	pEntity->ReadFieldPaths( &buf, bDTIEnabled ? &fieldBits : NULL );
+	pEntity->ReadFieldPaths( &buf, bDTIEnabled ? &fieldBits : nullptr );
 
 	ErrorIfNot( pTable, ("RecvTable_ReadFieldListt: Missing RecvTable for class\n" ) );
 	if ( !pTable )

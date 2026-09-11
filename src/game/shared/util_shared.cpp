@@ -374,7 +374,7 @@ bool CTraceFilterNoNPCsOrPlayer::ShouldHitEntity( IHandleEntity *pHandleEntity, 
 	{
 		CBaseEntity *pEntity = EntityFromEntityHandle( pHandleEntity );
 		if ( !pEntity )
-			return NULL;
+			return false;
 #ifndef CLIENT_DLL
 		if ( pEntity->Classify() == CLASS_PLAYER_ALLY )
 			return false; // CS hostages are CLASS_PLAYER_ALLY but not IsNPC()
@@ -393,7 +393,7 @@ bool CTraceFilterNoPlayers::ShouldHitEntity( IHandleEntity *pHandleEntity, int c
 	{
 		CBaseEntity *pEntity = EntityFromEntityHandle( pHandleEntity );
 		if ( !pEntity )
-			return NULL;
+			return false;
 
 		return !pEntity->IsPlayer();
 	}
@@ -422,7 +422,7 @@ bool CTraceFilterSkipTwoEntities::ShouldHitEntity( IHandleEntity *pHandleEntity,
 // Trace filter that can take a list of entities to ignore
 //-----------------------------------------------------------------------------
 CTraceFilterSimpleList::CTraceFilterSimpleList( int collisionGroup ) :
-	CTraceFilterSimple( NULL, collisionGroup )
+	CTraceFilterSimple( nullptr, collisionGroup )
 {
 }
 
@@ -1395,7 +1395,7 @@ void CTimeline::Compress( void )
 	{	
 		// Sanity check the index being passed in
 		if ( entindex < 1 || entindex > gpGlobals->maxClients )
-			return NULL;
+			return nullptr;
 
 		return ToBasePlayer( ClientEntityList().GetEnt( entindex ) );
 	}
@@ -1422,7 +1422,7 @@ unsigned short UTIL_GetAchievementEventMask( void )
 
 const char* ReadAndAllocStringValue( KeyValues *pSub, const char *pName, const char *pFilename )
 {
-	const char *pValue = pSub->GetString( pName, NULL );
+	const char *pValue = pSub->GetString( pName, nullptr );
 	if ( !pValue )
 	{
 		if ( pFilename )
@@ -1754,7 +1754,7 @@ bool UTIL_FindClosestPassableSpace( CBaseEntity *pEntity, const Vector &vIndecis
 	vEntityMaxs -= ptEntityCenter;
 	
 	Vector vCenterToOrigin = pEntity->GetAbsOrigin() - ptEntityCenter;
-	if( pStartingPosition != NULL )
+	if( pStartingPosition != nullptr )
 	{
 		Vector vOriginOffset = (*pStartingPosition) - pEntity->GetAbsOrigin();
 		ptEntityCenter += vOriginOffset;
@@ -1780,7 +1780,7 @@ bool UTIL_FindClosestPassableSpace( CBaseEntity *pEntity, const Vector &vIndecis
 #ifdef CLIENT_DLL
 		pEntity->SetAbsOrigin( vNewPos );
 #else
-		pEntity->Teleport( &vNewPos, NULL, NULL );
+		pEntity->Teleport( &vNewPos, nullptr, nullptr );
 #endif
 	}
 	return bWorked;
@@ -2047,7 +2047,7 @@ IterationRetval_t CFlaggedEntitiesEnum::EnumElement( IHandleEntity *pHandleEntit
 {
 #if defined( CLIENT_DLL )
 	IClientEntity *pClientEntity = cl_entitylist->GetClientEntityFromHandle( pHandleEntity->GetRefEHandle() );
-	C_BaseEntity *pEntity = pClientEntity ? pClientEntity->GetBaseEntity() : NULL;
+	C_BaseEntity *pEntity = pClientEntity ? pClientEntity->GetBaseEntity() : nullptr;
 #else
 	CBaseEntity *pEntity = gEntList.GetBaseEntity( pHandleEntity->GetRefEHandle() );
 #endif
@@ -2091,7 +2091,7 @@ IterationRetval_t CHurtableEntitiesEnum::EnumElement( IHandleEntity *pHandleEnti
 {
 #if defined( CLIENT_DLL )
 	IClientEntity *pClientEntity = cl_entitylist->GetClientEntityFromHandle( pHandleEntity->GetRefEHandle() );
-	C_BaseEntity *pEntity = pClientEntity ? pClientEntity->GetBaseEntity() : NULL;
+	C_BaseEntity *pEntity = pClientEntity ? pClientEntity->GetBaseEntity() : nullptr;
 #else
 	CBaseEntity *pEntity = gEntList.GetBaseEntity( pHandleEntity->GetRefEHandle() );
 #endif

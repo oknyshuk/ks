@@ -163,7 +163,7 @@ CachedPosNormTan_t* CCachedRenderData::CreateFlexVertex( int vertex )
 
 	Assert ( m_FlexVertexCount < MAXSTUDIOFLEXVERTS );
 	if ( m_FlexVertexCount >= MAXSTUDIOFLEXVERTS )
-		return NULL;
+		return nullptr;
 
 	// Point the flex list to the new flexed vertex
 	m_pFirstFlexIndex[vertex].m_Tag = m_CurrentTag;
@@ -186,7 +186,7 @@ CachedPosNorm_t* CCachedRenderData::CreateThinFlexVertex( int vertex )
 
 	Assert ( m_ThinFlexVertexCount < MAXSTUDIOFLEXVERTS );
 	if ( m_ThinFlexVertexCount >= MAXSTUDIOFLEXVERTS )
-		return NULL;
+		return nullptr;
 
 	// Point the flex list to the new flexed vertex
 	m_pFirstThinFlexIndex[vertex].m_Tag = m_CurrentTag;

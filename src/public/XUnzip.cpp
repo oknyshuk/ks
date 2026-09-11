@@ -2733,7 +2733,7 @@ LUFILE *lufopen(void *z,unsigned int len,DWORD flags,ZRESULT *err)
 	if (flags!=ZIP_HANDLE && flags!=ZIP_FILENAME && flags!=ZIP_MEMORY) 
 	{
 		*err=ZR_ARGS; 
-		return NULL;
+		return nullptr;
 	}
 	//
 	HANDLE h=0; bool canseek=false; *err=ZR_OK;
@@ -2748,7 +2748,7 @@ LUFILE *lufopen(void *z,unsigned int len,DWORD flags,ZRESULT *err)
 			if (!res) 
 			{
 				*err=ZR_NODUPH; 
-				return NULL;
+				return nullptr;
 			}
 		}
 		else
@@ -2757,7 +2757,7 @@ LUFILE *lufopen(void *z,unsigned int len,DWORD flags,ZRESULT *err)
 			if (h == INVALID_HANDLE_VALUE) 
 			{
 				*err = ZR_NOFILE; 
-				return NULL;
+				return nullptr;
 			}
 		}
 		struct stat buf;
@@ -2773,7 +2773,7 @@ LUFILE *lufopen(void *z,unsigned int len,DWORD flags,ZRESULT *err)
 		lf->initial_offset=0;
 		if (canseek) 
 		{
-			lf->initial_offset = SetFilePointer(h,0,NULL,FILE_CURRENT);
+			lf->initial_offset = SetFilePointer(h,0,nullptr,FILE_CURRENT);
 		}
 	}
 	else
@@ -2791,7 +2791,7 @@ LUFILE *lufopen(void *z,unsigned int len,DWORD flags,ZRESULT *err)
 
 
 int lufclose(LUFILE *stream)
-{ if (stream==NULL) return EOF;
+{ if (stream==nullptr) return EOF;
   if (stream->is_handle) CloseHandle(stream->h);
   delete stream;
   return 0;
@@ -2803,7 +2803,7 @@ int luferror(LUFILE *stream)
 }
 
 long int luftell(LUFILE *stream)
-{ if (stream->is_handle && stream->canseek) return SetFilePointer(stream->h,0,NULL,FILE_CURRENT)-stream->initial_offset;
+{ if (stream->is_handle && stream->canseek) return SetFilePointer(stream->h,0,nullptr,FILE_CURRENT)-stream->initial_offset;
   else if (stream->is_handle) return 0;
   else return stream->pos;
 }
@@ -2811,8 +2811,8 @@ long int luftell(LUFILE *stream)
 int lufseek(LUFILE *stream, long offset, int whence)
 { if (stream->is_handle && stream->canseek)
   { if (whence==SEEK_SET) SetFilePointer(stream->h,stream->initial_offset+offset,0,FILE_BEGIN);
-    else if (whence==SEEK_CUR) SetFilePointer(stream->h,offset,NULL,FILE_CURRENT);
-    else if (whence==SEEK_END) SetFilePointer(stream->h,offset,NULL,FILE_END);
+    else if (whence==SEEK_CUR) SetFilePointer(stream->h,offset,nullptr,FILE_CURRENT);
+    else if (whence==SEEK_END) SetFilePointer(stream->h,offset,nullptr,FILE_END);
     else return 19; // EINVAL
     return 0;
   }
@@ -2829,7 +2829,7 @@ int lufseek(LUFILE *stream, long offset, int whence)
 size_t lufread(void *ptr,size_t size,size_t n,LUFILE *stream)
 { unsigned int toread = (unsigned int)(size*n);
   if (stream->is_handle)
-  { DWORD red; BOOL res = ReadFile(stream->h,ptr,toread,&red,NULL);
+  { DWORD red; BOOL res = ReadFile(stream->h,ptr,toread,&red,nullptr);
     if (!res) stream->herr=true;
     return red/size;
   }
@@ -3027,7 +3027,7 @@ uLong unzlocal_SearchCentralDir(LUFILE *fin)
   if (uMaxBack>uSizeFile) uMaxBack = uSizeFile;
 
   unsigned char *buf = (unsigned char*)zmalloc(BUFREADCOMMENT+4);
-  if (buf==NULL) return 0;
+  if (buf==nullptr) return 0;
   uLong uPosFound=0;
 
   uLong uBackRead = 4;
@@ -3059,8 +3059,8 @@ int unzCloseCurrentFile (unzFile file);
 // If the zipfile cannot be opened (file don't exist or in not valid), return NULL.
 // Otherwise, the return value is a unzFile Handle, usable with other unzip functions
 unzFile unzOpenInternal(LUFILE *fin)
-{ if (fin==NULL) return NULL;
-  if (unz_copyright[0]!=' ') {lufclose(fin); return NULL;}
+{ if (fin==nullptr) return nullptr;
+  if (unz_copyright[0]!=' ') {lufclose(fin); return nullptr;}
 
   int err=UNZ_OK;
   unz_s us;
@@ -3089,12 +3089,12 @@ unzFile unzOpenInternal(LUFILE *fin)
   // zipfile comment length
   if (unzlocal_getShort(fin,&us.gi.size_comment)!=UNZ_OK) err=UNZ_ERRNO;
   if ((central_pos+fin->initial_offset<us.offset_central_dir+us.size_central_dir) && (err==UNZ_OK)) err=UNZ_BADZIPFILE;
-  if (err!=UNZ_OK) {lufclose(fin);return NULL;}
+  if (err!=UNZ_OK) {lufclose(fin);return nullptr;}
 
   us.file=fin;
   us.byte_before_the_zipfile = central_pos+fin->initial_offset - (us.offset_central_dir+us.size_central_dir);
   us.central_pos = central_pos;
-  us.pfile_in_zip_read = NULL;
+  us.pfile_in_zip_read = nullptr;
   fin->initial_offset = 0; // since the zipfile itself is expected to handle this
 
   unz_s *s = (unz_s*)zmalloc(sizeof(unz_s));
@@ -3112,11 +3112,11 @@ unzFile unzOpenInternal(LUFILE *fin)
 int unzClose (unzFile file)
 {
 	unz_s* s;
-	if (file==NULL)
+	if (file==nullptr)
 		return UNZ_PARAMERROR;
 	s=(unz_s*)file;
 
-    if (s->pfile_in_zip_read!=NULL)
+    if (s->pfile_in_zip_read!=nullptr)
         unzCloseCurrentFile(file);
 
 	lufclose(s->file);
@@ -3131,7 +3131,7 @@ int unzClose (unzFile file)
 int unzGetGlobalInfo (unzFile file,unz_global_info *pglobal_info)
 {
 	unz_s* s;
-	if (file==NULL)
+	if (file==nullptr)
 		return UNZ_PARAMERROR;
 	s=(unz_s*)file;
 	*pglobal_info=s->gi;
@@ -3177,7 +3177,7 @@ int unzlocal_GetCurrentFileInfoInternal (unzFile file, unz_file_info *pfile_info
 	uLong uMagic;
 	long lSeek=0;
 
-	if (file==NULL)
+	if (file==nullptr)
 		return UNZ_PARAMERROR;
 	s=(unz_s*)file;
 	if (lufseek(s->file,s->pos_in_central_dir+s->byte_before_the_zipfile,SEEK_SET)!=0)
@@ -3239,7 +3239,7 @@ int unzlocal_GetCurrentFileInfoInternal (unzFile file, unz_file_info *pfile_info
 		err=UNZ_ERRNO;
 
 	lSeek+=file_info.size_filename;
-	if ((err==UNZ_OK) && (szFileName!=NULL))
+	if ((err==UNZ_OK) && (szFileName!=nullptr))
 	{
 		uLong uSizeRead ;
 		if (file_info.size_filename<fileNameBufferSize)
@@ -3257,7 +3257,7 @@ int unzlocal_GetCurrentFileInfoInternal (unzFile file, unz_file_info *pfile_info
 	}
 
 
-	if ((err==UNZ_OK) && (extraField!=NULL))
+	if ((err==UNZ_OK) && (extraField!=nullptr))
 	{
 		uLong uSizeRead ;
 		if (file_info.size_file_extra<extraFieldBufferSize)
@@ -3279,7 +3279,7 @@ int unzlocal_GetCurrentFileInfoInternal (unzFile file, unz_file_info *pfile_info
 		lSeek+=file_info.size_file_extra;
 
 
-	if ((err==UNZ_OK) && (szComment!=NULL))
+	if ((err==UNZ_OK) && (szComment!=nullptr))
 	{
 		uLong uSizeRead ;
 		if (file_info.size_file_comment<commentBufferSize)
@@ -3302,10 +3302,10 @@ int unzlocal_GetCurrentFileInfoInternal (unzFile file, unz_file_info *pfile_info
 	}
 	else {} //unused lSeek+=file_info.size_file_comment;
 
-	if ((err==UNZ_OK) && (pfile_info!=NULL))
+	if ((err==UNZ_OK) && (pfile_info!=nullptr))
 		*pfile_info=file_info;
 
-	if ((err==UNZ_OK) && (pfile_info_internal!=NULL))
+	if ((err==UNZ_OK) && (pfile_info_internal!=nullptr))
 		*pfile_info_internal=file_info_internal;
 
 	return err;
@@ -3319,7 +3319,7 @@ int unzlocal_GetCurrentFileInfoInternal (unzFile file, unz_file_info *pfile_info
 int unzGetCurrentFileInfo (unzFile file, unz_file_info *pfile_info,
   char *szFileName, uLong fileNameBufferSize, void *extraField, uLong extraFieldBufferSize,
   char *szComment, uLong commentBufferSize)
-{ return unzlocal_GetCurrentFileInfoInternal(file,pfile_info,NULL,szFileName,fileNameBufferSize,
+{ return unzlocal_GetCurrentFileInfoInternal(file,pfile_info,nullptr,szFileName,fileNameBufferSize,
       extraField,extraFieldBufferSize, szComment,commentBufferSize);
 }
 
@@ -3330,13 +3330,13 @@ int unzGoToFirstFile (unzFile file)
 {
 	int err;
 	unz_s* s;
-	if (file==NULL) return UNZ_PARAMERROR;
+	if (file==nullptr) return UNZ_PARAMERROR;
 	s=(unz_s*)file;
 	s->pos_in_central_dir=s->offset_central_dir;
 	s->num_file=0;
 	err=unzlocal_GetCurrentFileInfoInternal(file,&s->cur_file_info,
 											 &s->cur_file_info_internal,
-											 NULL,0,NULL,0,NULL,0);
+											 nullptr,0,nullptr,0,nullptr,0);
 	s->current_file_ok = (err == UNZ_OK);
 	return err;
 }
@@ -3350,7 +3350,7 @@ int unzGoToNextFile (unzFile file)
 	unz_s* s;
 	int err;
 
-	if (file==NULL)
+	if (file==nullptr)
 		return UNZ_PARAMERROR;
 	s=(unz_s*)file;
 	if (!s->current_file_ok)
@@ -3363,7 +3363,7 @@ int unzGoToNextFile (unzFile file)
 	s->num_file++;
 	err = unzlocal_GetCurrentFileInfoInternal(file,&s->cur_file_info,
 											   &s->cur_file_info_internal,
-											   NULL,0,NULL,0,NULL,0);
+											   nullptr,0,nullptr,0,nullptr,0);
 	s->current_file_ok = (err == UNZ_OK);
 	return err;
 }
@@ -3382,7 +3382,7 @@ int unzLocateFile (unzFile file, const TCHAR *szFileName, int iCaseSensitivity)
 	uLong num_fileSaved;
 	uLong pos_in_central_dirSaved;
 
-	if (file==NULL)
+	if (file==nullptr)
 		return UNZ_PARAMERROR;
 
     if (_tcslen(szFileName)>=UNZ_MAXFILENAMEINZIP)
@@ -3404,9 +3404,9 @@ int unzLocateFile (unzFile file, const TCHAR *szFileName, int iCaseSensitivity)
 	while (err == UNZ_OK)
 	{
 		char szCurrentFileName[UNZ_MAXFILENAMEINZIP+1];
-		unzGetCurrentFileInfo(file,NULL,
+		unzGetCurrentFileInfo(file,nullptr,
 								szCurrentFileName,sizeof(szCurrentFileName)-1,
-								NULL,0,NULL,0);
+								nullptr,0,nullptr,0);
 		if (unzStringFileNameCompare(szCurrentFileName,szFileNameA,iCaseSensitivity)==0)
 			return UNZ_OK;
 		err = unzGoToNextFile(file);
@@ -3517,13 +3517,13 @@ int unzOpenCurrentFile (unzFile file)
 	uLong offset_local_extrafield = 0;  // offset of the local extra field
 	uInt  size_local_extrafield = 0;    // size of the local extra field
 
-	if (file==NULL)
+	if (file==nullptr)
 		return UNZ_PARAMERROR;
 	s=(unz_s*)file;
 	if (!s->current_file_ok)
 		return UNZ_PARAMERROR;
 
-    if (s->pfile_in_zip_read != NULL)
+    if (s->pfile_in_zip_read != nullptr)
         unzCloseCurrentFile(file);
 
 	if (unzlocal_CheckCurrentFileCoherencyHeader(s,&iSizeVar,
@@ -3531,7 +3531,7 @@ int unzOpenCurrentFile (unzFile file)
 		return UNZ_BADZIPFILE;
 
 	pfile_in_zip_read_info = (file_in_zip_read_info_s*)zmalloc(sizeof(file_in_zip_read_info_s));
-	if (pfile_in_zip_read_info==NULL)
+	if (pfile_in_zip_read_info==nullptr)
 		return UNZ_INTERNALERROR;
 
 	pfile_in_zip_read_info->read_buffer=(char*)zmalloc(UNZ_BUFSIZE);
@@ -3539,7 +3539,7 @@ int unzOpenCurrentFile (unzFile file)
 	pfile_in_zip_read_info->size_local_extrafield = size_local_extrafield;
 	pfile_in_zip_read_info->pos_local_extrafield=0;
 
-	if (pfile_in_zip_read_info->read_buffer==NULL)
+	if (pfile_in_zip_read_info->read_buffer==nullptr)
 	{
 		if (pfile_in_zip_read_info!=0) zfree(pfile_in_zip_read_info); //unused pfile_in_zip_read_info=0;
 		return UNZ_INTERNALERROR;
@@ -3607,11 +3607,11 @@ int unzReadCurrentFile  (unzFile file, voidp buf, unsigned len)
   uInt iRead = 0;
 
   unz_s *s = (unz_s*)file;
-  if (s==NULL) return UNZ_PARAMERROR;
+  if (s==nullptr) return UNZ_PARAMERROR;
 
   file_in_zip_read_info_s* pfile_in_zip_read_info = s->pfile_in_zip_read;
-  if (pfile_in_zip_read_info==NULL) return UNZ_PARAMERROR;
-  if ((pfile_in_zip_read_info->read_buffer == NULL)) return UNZ_END_OF_LIST_OF_FILE;
+  if (pfile_in_zip_read_info==nullptr) return UNZ_PARAMERROR;
+  if ((pfile_in_zip_read_info->read_buffer == nullptr)) return UNZ_END_OF_LIST_OF_FILE;
   if (len==0) return 0;
 
   pfile_in_zip_read_info->stream.next_out = (Byte*)buf;
@@ -3682,12 +3682,12 @@ z_off_t unztell (unzFile file)
 {
 	unz_s* s;
 	file_in_zip_read_info_s* pfile_in_zip_read_info;
-	if (file==NULL)
+	if (file==nullptr)
 		return UNZ_PARAMERROR;
 	s=(unz_s*)file;
     pfile_in_zip_read_info=s->pfile_in_zip_read;
 
-	if (pfile_in_zip_read_info==NULL)
+	if (pfile_in_zip_read_info==nullptr)
 		return UNZ_PARAMERROR;
 
 	return (z_off_t)pfile_in_zip_read_info->stream.total_out;
@@ -3699,12 +3699,12 @@ int unzeof (unzFile file)
 {
 	unz_s* s;
 	file_in_zip_read_info_s* pfile_in_zip_read_info;
-	if (file==NULL)
+	if (file==nullptr)
 		return UNZ_PARAMERROR;
 	s=(unz_s*)file;
     pfile_in_zip_read_info=s->pfile_in_zip_read;
 
-	if (pfile_in_zip_read_info==NULL)
+	if (pfile_in_zip_read_info==nullptr)
 		return UNZ_PARAMERROR;
 
 	if (pfile_in_zip_read_info->rest_read_uncompressed == 0)
@@ -3728,18 +3728,18 @@ int unzGetLocalExtrafield (unzFile file,voidp buf,unsigned len)
 	uInt read_now;
 	uLong size_to_read;
 
-	if (file==NULL)
+	if (file==nullptr)
 		return UNZ_PARAMERROR;
 	s=(unz_s*)file;
     pfile_in_zip_read_info=s->pfile_in_zip_read;
 
-	if (pfile_in_zip_read_info==NULL)
+	if (pfile_in_zip_read_info==nullptr)
 		return UNZ_PARAMERROR;
 
 	size_to_read = (pfile_in_zip_read_info->size_local_extrafield -
 				pfile_in_zip_read_info->pos_local_extrafield);
 
-	if (buf==NULL)
+	if (buf==nullptr)
 		return (int)size_to_read;
 
 	if (len>size_to_read)
@@ -3767,12 +3767,12 @@ int unzCloseCurrentFile (unzFile file)
 
 	unz_s* s;
 	file_in_zip_read_info_s* pfile_in_zip_read_info;
-	if (file==NULL)
+	if (file==nullptr)
 		return UNZ_PARAMERROR;
 	s=(unz_s*)file;
     pfile_in_zip_read_info=s->pfile_in_zip_read;
 
-	if (pfile_in_zip_read_info==NULL)
+	if (pfile_in_zip_read_info==nullptr)
 		return UNZ_PARAMERROR;
 
 
@@ -3788,14 +3788,14 @@ int unzCloseCurrentFile (unzFile file)
           zfree(buf);
           pfile_in_zip_read_info->read_buffer=0;
         }
-	pfile_in_zip_read_info->read_buffer = NULL;
+	pfile_in_zip_read_info->read_buffer = nullptr;
 	if (pfile_in_zip_read_info->stream_initialised)
 		inflateEnd(&pfile_in_zip_read_info->stream);
 
 	pfile_in_zip_read_info->stream_initialised = 0;
         if (pfile_in_zip_read_info!=0) zfree(pfile_in_zip_read_info); // unused pfile_in_zip_read_info=0;
 
-    s->pfile_in_zip_read=NULL;
+    s->pfile_in_zip_read=nullptr;
 
 	return err;
 }
@@ -3808,7 +3808,7 @@ int unzGetGlobalComment (unzFile file, char *szComment, uLong uSizeBuf)
 { //int err=UNZ_OK;
   unz_s* s;
   uLong uReadThis ;
-  if (file==NULL) return UNZ_PARAMERROR;
+  if (file==nullptr) return UNZ_PARAMERROR;
   s=(unz_s*)file;
   uReadThis = uSizeBuf;
   if (uReadThis>s->gi.size_comment) uReadThis = s->gi.size_comment;
@@ -3817,7 +3817,7 @@ int unzGetGlobalComment (unzFile file, char *szComment, uLong uSizeBuf)
   { *szComment='\0';
     if (lufread(szComment,(uInt)uReadThis,1,s->file)!=1) return UNZ_ERRNO;
   }
-  if ((szComment != NULL) && (uSizeBuf > s->gi.size_comment)) *(szComment+s->gi.size_comment)='\0';
+  if ((szComment != nullptr) && (uSizeBuf > s->gi.size_comment)) *(szComment+s->gi.size_comment)='\0';
   return (int)uReadThis;
 }
 
@@ -3855,7 +3855,7 @@ ZRESULT TUnzip::Open(void *z,unsigned int len,DWORD flags)
 		return ZR_NOTINITED;
 	ZRESULT e = 0;
 	LUFILE *f = lufopen(z,len,flags,&e);
-	if (f==NULL) 
+	if (f==nullptr) 
 		return e;
 	uf = unzOpenInternal(f);
 	return uf ? ZR_OK : ZR_CORRUPT;
@@ -3883,7 +3883,7 @@ ZRESULT TUnzip::Get(int index,ZIPENTRY *ze)
   while ((int)uf->num_file<index) unzGoToNextFile(uf);
   unz_file_info ufi; 
   char fn[MAX_PATH];
-  unzGetCurrentFileInfo(uf,&ufi,fn,MAX_PATH,NULL,0,NULL,0);
+  unzGetCurrentFileInfo(uf,&ufi,fn,MAX_PATH,nullptr,0,nullptr,0);
 
   // now get the extra header. We do this ourselves, instead of
   // calling unzOpenCurrentFile &c., to avoid allocating more than necessary.
@@ -3958,7 +3958,7 @@ ZRESULT TUnzip::Find(const TCHAR *name, bool ic, int *index, ZIPENTRY *ze)
 	{ 
 		if (index!=0) 
 			*index=-1;
-		if (ze!=NULL) 
+		if (ze!=nullptr) 
 		{
 			ZeroMemory(ze,sizeof(ZIPENTRY)); ze->index=-1;
 		}
@@ -3967,9 +3967,9 @@ ZRESULT TUnzip::Find(const TCHAR *name, bool ic, int *index, ZIPENTRY *ze)
 	if (currentfile!=-1) 
 		unzCloseCurrentFile(uf); currentfile=-1;
 	int i = (int)uf->num_file;
-	if (index!=NULL) 
+	if (index!=nullptr) 
 		*index=i;
-	if (ze!=NULL)
+	if (ze!=nullptr)
 	{ 
 		ZRESULT zres = Get(i,ze);
 		if (zres!=ZR_OK) 
@@ -3980,7 +3980,7 @@ ZRESULT TUnzip::Find(const TCHAR *name, bool ic, int *index, ZIPENTRY *ze)
 
 void EnsureDirectory(const TCHAR *rootdir, const TCHAR *dir)
 { 
-	if (dir==NULL || dir[0] == _T('\0')) 
+	if (dir==nullptr || dir[0] == _T('\0')) 
 		return;
 	
 	TCHAR cd[MAX_PATH]; 
@@ -3991,11 +3991,11 @@ void EnsureDirectory(const TCHAR *rootdir, const TCHAR *dir)
 		if ( cd[ iCD ] == _T( '/' ) ||  cd[ iCD ] == _T( '\\' ) )
 		{
 			cd[ iCD ] = 0;
-			CreateDirectory(cd,NULL);
+			CreateDirectory(cd,nullptr);
 			cd[ iCD ] = _T( '\\' );
 		}
 	}
-	CreateDirectory(cd,NULL);
+	CreateDirectory(cd,nullptr);
 }
 
 ZRESULT TUnzip::Unzip(int index,void *dst,unsigned int len,DWORD flags)
@@ -4098,7 +4098,7 @@ ZRESULT TUnzip::Unzip(int index,void *dst,unsigned int len,DWORD flags)
 		if (res==0) 
 			break;
 		DWORD writ; 
-		BOOL bres = WriteFile(h,buf,res,&writ,NULL);
+		BOOL bres = WriteFile(h,buf,res,&writ,nullptr);
 		if (!bres) 
 		{
 			haderr=true; 

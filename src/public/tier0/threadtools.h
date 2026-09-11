@@ -103,9 +103,9 @@ PLATFORM_INTERFACE void ThreadSleep(unsigned duration = 0);
 PLATFORM_INTERFACE void ThreadNanoSleep(unsigned ns);
 PLATFORM_INTERFACE ThreadId_t ThreadGetCurrentId();
 PLATFORM_INTERFACE ThreadHandle_t ThreadGetCurrentHandle();
-PLATFORM_INTERFACE int ThreadGetPriority( ThreadHandle_t hThread = NULL );
+PLATFORM_INTERFACE int ThreadGetPriority( ThreadHandle_t hThread = nullptr );
 PLATFORM_INTERFACE bool ThreadSetPriority( ThreadHandle_t hThread, int priority );
-inline		 bool ThreadSetPriority( int priority ) { return ThreadSetPriority( NULL, priority ); }
+inline		 bool ThreadSetPriority( int priority ) { return ThreadSetPriority( nullptr, priority ); }
 PLATFORM_INTERFACE bool ThreadInMainThread();
 PLATFORM_INTERFACE void DeclareCurrentThreadIsMainThread();
 
@@ -127,7 +127,7 @@ inline void ThreadPause()
 PLATFORM_INTERFACE bool ThreadJoin( ThreadHandle_t, unsigned timeout = TT_INFINITE );
 
 PLATFORM_INTERFACE void ThreadSetDebugName( ThreadHandle_t hThread, const char *pszName );
-inline		 void ThreadSetDebugName( const char *pszName ) { ThreadSetDebugName( NULL, pszName ); }
+inline		 void ThreadSetDebugName( const char *pszName ) { ThreadSetDebugName( nullptr, pszName ); }
 
 PLATFORM_INTERFACE void ThreadSetAffinity( ThreadHandle_t hThread, int nAffinityMask );
 PLATFORM_INTERFACE int ThreadPinToFastestCores();	// returns the number of CPUs pinned to, 0 if it did nothing
@@ -369,8 +369,8 @@ private:
 		T *			operator=( T *p )							{ Set( p ); return p; }
 
 		bool        operator !() const							{ return (!Get()); }
-		bool        operator!=( int i ) const					{ AssertMsg( i == 0, "Only NULL allowed on integer compare" ); return (Get() != NULL); }
-		bool        operator==( int i ) const					{ AssertMsg( i == 0, "Only NULL allowed on integer compare" ); return (Get() == NULL); }
+		bool        operator!=( int i ) const					{ AssertMsg( i == 0, "Only NULL allowed on integer compare" ); return (Get() != nullptr); }
+		bool        operator==( int i ) const					{ AssertMsg( i == 0, "Only NULL allowed on integer compare" ); return (Get() == nullptr); }
 		bool		operator==( const void *p ) const			{ return (Get() == p); }
 		bool		operator!=( const void *p ) const			{ return (Get() != p); }
 		bool		operator==( const T *p ) const				{ return operator==((const void*)p); }
@@ -981,7 +981,7 @@ public:
 	// Increases the count of the semaphore object by a specified
 	// amount.  Wait() decreases the count by one on return.
 	//-----------------------------------------------------
-	bool Release(int32 releaseCount = 1, int32 * pPreviousCount = NULL );
+	bool Release(int32 releaseCount = 1, int32 * pPreviousCount = nullptr );
 	bool Wait( uint32 dwTimeout = TT_INFINITE );
 
 private:
@@ -1400,11 +1400,11 @@ public:
 	int CallMaster( unsigned, unsigned timeout = TT_INFINITE );
 
 	// Wait for the next request
-	bool WaitForCall( unsigned dwTimeout, unsigned *pResult = NULL );
-	bool WaitForCall( unsigned *pResult = NULL );
+	bool WaitForCall( unsigned dwTimeout, unsigned *pResult = nullptr );
+	bool WaitForCall( unsigned *pResult = nullptr );
 
 	// Is there a request?
-	bool PeekCall( unsigned *pParam = NULL );
+	bool PeekCall( unsigned *pParam = nullptr );
 
 	// Reply to the request
 	void Reply( unsigned );
@@ -1424,7 +1424,7 @@ public:
 
 protected:
 	typedef uint32 (        *WaitFunc_t)( uint32 nHandles, CThreadEvent** ppHandles, int bWaitAll, uint32 timeout );
-	int Call( unsigned, unsigned timeout, bool fBoost, WaitFunc_t = NULL );
+	int Call( unsigned, unsigned timeout, bool fBoost, WaitFunc_t = nullptr );
 	int WaitForReply( unsigned timeout, WaitFunc_t );
 
 private:
@@ -1460,13 +1460,13 @@ template<class T> class CMessageQueue
 public:
 	CMessageQueue( void )
 	{
-		Head = Tail = NULL;
+		Head = Tail = nullptr;
 	}
 
 	// check for a message. not 100% reliable - someone could grab the message first
 	bool MessageWaiting( void ) 
 	{
-		return ( Head != NULL );
+		return ( Head != nullptr );
 	}
 
 	void WaitMessage( T *pMsg )
@@ -1486,7 +1486,7 @@ public:
 			MsgNode *remove_this = Head;
 			Head = Head->Next;
 			if (! Head)										// if empty, fix tail ptr
-				Tail = NULL;
+				Tail = nullptr;
 			QueueAccessMutex.Unlock();
 			delete remove_this;
 			break;
@@ -1497,7 +1497,7 @@ public:
 	{
 		MsgNode *new1=new MsgNode;
 		new1->Data=Msg;
-		new1->Next=NULL;
+		new1->Next=nullptr;
 		QueueAccessMutex.Lock();
 		if ( Tail )
 		{

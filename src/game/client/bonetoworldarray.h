@@ -48,7 +48,7 @@ public:
 	matrix3x4_t *Alloc( bool bBlock = true )
 	{
 		TSLNodeBase_t *p;
-		while ( ( p = m_Free.Pop() ) == NULL && bBlock )
+		while ( ( p = m_Free.Pop() ) == nullptr && bBlock )
 		{
 			ThreadPause();
 		}

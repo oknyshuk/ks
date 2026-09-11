@@ -143,7 +143,7 @@ char const* CMoveHelperServer::GetName( EntityHandle_t handle ) const
 	if ( ent && ent->GetModelName() != NULL_STRING )
 		return STRING( ent->GetModelName() );
 
-	if ( ent->GetClassname() != NULL )
+	if ( ent->GetClassname() != nullptr )
 	{
 		return ent->GetClassname();
 	}

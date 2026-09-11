@@ -96,9 +96,9 @@ public:
 inline int AppendParentStackTrace( void **pReturnAddressesOut, int iArrayCount, int iAlreadyFilled )
 {
 	CStackTop_FriendFuncs *pTop = (CStackTop_FriendFuncs *)(CStackTop_Base *)g_StackTop;
-	if( pTop != NULL )
+	if( pTop != nullptr )
 	{
-		if( pTop->m_pReplaceAddress != NULL )
+		if( pTop->m_pReplaceAddress != nullptr )
 		{
 			for( int i = iAlreadyFilled; --i >= 0; )
 			{
@@ -156,7 +156,7 @@ int GetCallStack_Fast( void **pReturnAddressesOut, int iArrayCount, int iSkipCou
 	int i;
 
 	CStackTop_FriendFuncs *pTop = (CStackTop_FriendFuncs *)(CStackTop_Base *)g_StackTop;
-	if( pTop != NULL ) //we can do fewer error checks if we have a valid reference point for the top of the stack
+	if( pTop != nullptr ) //we can do fewer error checks if we have a valid reference point for the top of the stack
 	{		
 		void *pNoGreaterThan = pTop->m_pStackBase;
 
@@ -286,7 +286,7 @@ public:
 	inline StackAddressInfo_t *CreateEntry( const FullStackInfo_t &info )
 	{
 		std::pair<AddressInfoMapIter_t, bool> retval = m_AddressInfoMap.insert( AddressInfoMapEntry_t( info.pAddress, StackAddressInfo_t() ) );
-		if( retval.first->second.szModule != NULL )
+		if( retval.first->second.szModule != nullptr )
 			return &retval.first->second; //already initialized
 
 		retval.first->second.iLine = info.iLine;
@@ -360,7 +360,7 @@ public:
 		if( Iter != m_AddressInfoMap.end() )
 			return &Iter->second;
 
-		return NULL;
+		return nullptr;
 	}
 
 	inline int RetrieveStackInfo(  const void * const *pAddresses, FullStackInfo_t *pReturnedStructs, int iAddressCount )
@@ -417,7 +417,7 @@ public:
 	inline StackAddressInfo_t *FindOrCreateEntry( const void *pAddress )
 	{
 		StackAddressInfo_t *pReturn = FindInfoEntry( pAddress );
-		if( pReturn == NULL )
+		if( pReturn == nullptr )
 		{
 			pReturn = CreateEntry( pAddress );
 		}
@@ -427,14 +427,14 @@ public:
 
 	inline void LoadStackInformation( void * const *pAddresses, int iAddressCount )
 	{
-		Assert( (iAddressCount > 0) && (pAddresses != NULL) );
+		Assert( (iAddressCount > 0) && (pAddresses != nullptr) );
 		
 		int iNeedLoading = 0;
 		void **pNeedLoading = (void **)stackalloc( sizeof( const void * ) * iAddressCount ); //addresses we need to ask VXConsole about		
 		
 		for( int i = 0; i != iAddressCount; ++i )
 		{
-			if( FindInfoEntry( pAddresses[i] ) == NULL )
+			if( FindInfoEntry( pAddresses[i] ) == nullptr )
 			{
 				//need to load this address
 				pNeedLoading[iNeedLoading] = pAddresses[i];
@@ -524,7 +524,7 @@ private:
 #pragma pack(1)
 	struct StackAddressInfo_t
 	{
-		StackAddressInfo_t( void ) : szModule(NULL), szFileName(NULL), szSymbol(NULL), iLine(0), iSymbolOffset(0) {}
+		StackAddressInfo_t( void ) : szModule(nullptr), szFileName(nullptr), szSymbol(nullptr), iLine(0), iSymbolOffset(0) {}
 		const char *szModule;
 		const char *szFileName;
 		const char *szSymbol;
@@ -568,7 +568,7 @@ int GetCallStack( void **pReturnAddressesOut, int iArrayCount, int iSkipCount )
 	{
 		for( int i = 0; i != iSkipCount; ++i )
 		{
-			if( *pAllResults == NULL ) //DmCaptureStackBackTrace() NULL terminates the list instead of telling us how many were returned
+			if( *pAllResults == nullptr ) //DmCaptureStackBackTrace() NULL terminates the list instead of telling us how many were returned
 				return AppendParentStackTrace( pReturnAddressesOut, iArrayCount, 0 );
 
 			++pAllResults; //move the pointer forward so the second loop indices match up
@@ -576,7 +576,7 @@ int GetCallStack( void **pReturnAddressesOut, int iArrayCount, int iSkipCount )
 
 		for( int i = 0; i != iArrayCount; ++i )
 		{
-			if( pAllResults[i] == NULL ) //DmCaptureStackBackTrace() NULL terminates the list instead of telling us how many were returned
+			if( pAllResults[i] == nullptr ) //DmCaptureStackBackTrace() NULL terminates the list instead of telling us how many were returned
 				return AppendParentStackTrace( pReturnAddressesOut, iArrayCount, i );
 
 			pReturnAddressesOut[i] = pAllResults[i];
@@ -615,7 +615,7 @@ int TranslateStackInfo( const void * const *pCallStack, int iCallStackCount, tch
 		return 0;
 	}
 
-	if( szEntrySeparator == NULL )
+	if( szEntrySeparator == nullptr )
 		szEntrySeparator = "";
 
 	int iSeparatorLength = strlen( szEntrySeparator ) + 1;
@@ -623,7 +623,7 @@ int TranslateStackInfo( const void * const *pCallStack, int iCallStackCount, tch
 
 	//360 is incapable of translation on it's own. Encode the stack for translation in VXConsole
 	//Encoded section is as such ":CSDECODE[encoded binary]"
-	int iEncodedSize = -EncodeBinaryToString( NULL, iDataSize, NULL, 0 ); //get needed buffer size
+	int iEncodedSize = -EncodeBinaryToString( nullptr, iDataSize, nullptr, 0 ); //get needed buffer size
 	static const tchar cControlPrefix[] = XBX_CALLSTACKDECODEPREFIX;
 	const size_t cControlLength = (sizeof( cControlPrefix )/sizeof(tchar)) - 1; //-1 to remove null terminator
 
@@ -698,15 +698,15 @@ CStackTop_CopyParentStack::CStackTop_CopyParentStack( void * const *pParentStack
 	m_pReplaceAddress = *((void **)pStackCrawlEBP + 1);
 	m_pStackBase = (void *)((void **)pStackCrawlEBP + 1);
 #else
-	m_pReplaceAddress = NULL;
+	m_pReplaceAddress = nullptr;
 	m_pStackBase = this;
 #endif
 
-	m_pParentStackTrace = NULL;
+	m_pParentStackTrace = nullptr;
 
-	if( (pParentStackTrace != NULL) && (iParentStackTraceLength > 0) )
+	if( (pParentStackTrace != nullptr) && (iParentStackTraceLength > 0) )
 	{
-		while( (iParentStackTraceLength > 0) && (pParentStackTrace[iParentStackTraceLength - 1] == NULL) )
+		while( (iParentStackTraceLength > 0) && (pParentStackTrace[iParentStackTraceLength - 1] == nullptr) )
 		{
 			--iParentStackTraceLength;
 		}
@@ -732,7 +732,7 @@ CStackTop_CopyParentStack::~CStackTop_CopyParentStack( void )
 	Assert( (CStackTop_Base *)g_StackTop == this );
 	g_StackTop = m_pPrevTop;
 
-	if( m_pParentStackTrace != NULL )
+	if( m_pParentStackTrace != nullptr )
 	{
 		delete []m_pParentStackTrace;
 	}
@@ -756,15 +756,15 @@ CStackTop_ReferenceParentStack::CStackTop_ReferenceParentStack( void * const *pP
 	m_pReplaceAddress = *((void **)pStackCrawlEBP + 1);
 	m_pStackBase = (void *)((void **)pStackCrawlEBP + 1);
 #else
-	m_pReplaceAddress = NULL;
+	m_pReplaceAddress = nullptr;
 	m_pStackBase = this;
 #endif
 
 	m_pParentStackTrace = pParentStackTrace;
 
-	if( (pParentStackTrace != NULL) && (iParentStackTraceLength > 0) )
+	if( (pParentStackTrace != nullptr) && (iParentStackTraceLength > 0) )
 	{
-		while( (iParentStackTraceLength > 0) && (pParentStackTrace[iParentStackTraceLength - 1] == NULL) )
+		while( (iParentStackTraceLength > 0) && (pParentStackTrace[iParentStackTraceLength - 1] == nullptr) )
 		{
 			--iParentStackTraceLength;
 		}
@@ -791,7 +791,7 @@ CStackTop_ReferenceParentStack::~CStackTop_ReferenceParentStack( void )
 void CStackTop_ReferenceParentStack::ReleaseParentStackReferences( void )
 {
 #if defined( ENABLE_RUNTIME_STACK_TRANSLATION )
-	m_pParentStackTrace = NULL;
+	m_pParentStackTrace = nullptr;
 	m_iParentStackTraceLength = 0;
 #endif
 }
@@ -809,7 +809,7 @@ int EncodeBinaryToString( const void *pToEncode, int iDataLength, char *pEncodeO
 	iEncodedSize += (iEncodedSize + 6) / 7; //Have 1 control byte for every 7 actual bytes
 	iEncodedSize += sizeof( uint32 ) + 1; //data size at the beginning of the blob and null terminator at the end
 
-	if( (iEncodedSize > iEncodeBufferSize) || (pEncodeOut == NULL) || (pToEncode == NULL) )
+	if( (iEncodedSize > iEncodeBufferSize) || (pEncodeOut == nullptr) || (pToEncode == nullptr) )
 		return -iEncodedSize; //not enough room
 
 	uint8 *pEncodeWrite = (uint8 *)pEncodeOut;	
@@ -861,7 +861,7 @@ int DecodeBinaryFromString( const char *pString, void *pDestBuffer, int iDestBuf
 
 	if( (pDecodeRead[0] < 0x80) || (pDecodeRead[1] < 0x80) || (pDecodeRead[2] < 0x80) || (pDecodeRead[3] < 0x80) )
 	{
-		if( ppParseFinishOut != NULL )
+		if( ppParseFinishOut != nullptr )
 			*ppParseFinishOut = (char *)pString;
 
 		return INT_MIN; //Don't know what the string is, but it's not our format
@@ -882,7 +882,7 @@ int DecodeBinaryFromString( const char *pString, void *pDestBuffer, int iDestBuf
 	{
 		if( pDecodeRead[i] < 0x80 ) //encoded data always has MSB set
 		{
-			if( ppParseFinishOut != NULL )
+			if( ppParseFinishOut != nullptr )
 				*ppParseFinishOut = (char *)pString;
 
 			return INT_MIN; //either not our data, or part of the string is missing
@@ -891,7 +891,7 @@ int DecodeBinaryFromString( const char *pString, void *pDestBuffer, int iDestBuf
 
 	if( iDestBufferSize < iDecodedSize )
 	{
-		if( ppParseFinishOut != NULL )
+		if( ppParseFinishOut != nullptr )
 			*ppParseFinishOut = (char *)pDecodeRead;
 
 		return -iDecodedSize; //dest buffer not big enough to hold the data
@@ -919,7 +919,7 @@ int DecodeBinaryFromString( const char *pString, void *pDestBuffer, int iDestBuf
 		iControl &= 7; //8->0
 	}
 
-	if( ppParseFinishOut != NULL )
+	if( ppParseFinishOut != nullptr )
 		*ppParseFinishOut = (char *)pDecodeRead;
 
 	return iDecodedSize;	

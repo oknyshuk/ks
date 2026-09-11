@@ -161,7 +161,7 @@ float *CBaseWeaponWorldModel::GetRenderClipPlane( void )
 	}
 	else
 	{
-		return NULL;
+		return nullptr;
 	}
 }
 
@@ -552,7 +552,7 @@ CBaseCombatWeapon::CBaseCombatWeapon()
 	m_iWeaponModule = MODULAR_BODYGROUPS_DEFAULT_NONE_SET;
 
 #if !defined( CLIENT_DLL )
-	m_pConstraint = NULL;
+	m_pConstraint = nullptr;
 	OnBaseCombatWeaponCreated( this );
 #endif
 
@@ -569,10 +569,10 @@ CBaseCombatWeapon::~CBaseCombatWeapon( void )
 {
 #if !defined( CLIENT_DLL )
 	//Remove our constraint, if we have one
-	if ( m_pConstraint != NULL )
+	if ( m_pConstraint != nullptr )
 	{
 		physenv->DestroyConstraint( m_pConstraint );
-		m_pConstraint = NULL;
+		m_pConstraint = nullptr;
 	}
 	OnBaseCombatWeaponDestroyed( this );
 #endif
@@ -709,7 +709,7 @@ void CBaseCombatWeapon::PhysicsSimulate( void )
 	BaseClass::PhysicsSimulate();
 	
 	// remember the last time we were flying through the air
-	if ( GetOwner() == NULL && !(GetFlags() & FL_ONGROUND) )
+	if ( GetOwner() == nullptr && !(GetFlags() & FL_ONGROUND) )
 	{
 		m_flLastTimeInAir = gpGlobals->curtime;
 	}
@@ -825,7 +825,7 @@ const FileWeaponInfo_t &CBaseCombatWeapon::GetWpnData( void ) const
 const char *CBaseCombatWeapon::GetViewModel( int /*viewmodelindex = 0 -- this is ignored in the base class here*/ ) const
 {
 	return GetWpnData().GetViewModel( GetEconItemView(), (
-		( GetOwner() != NULL && GetOwner()->IsPlayer() ) ? GetOwner()->GetTeamNumber() : 0
+		( GetOwner() != nullptr && GetOwner()->IsPlayer() ) ? GetOwner()->GetTeamNumber() : 0
 		) );
 }
 
@@ -835,7 +835,7 @@ const char *CBaseCombatWeapon::GetViewModel( int /*viewmodelindex = 0 -- this is
 const char *CBaseCombatWeapon::GetWorldModel( void ) const
 {
 	return GetWpnData().GetWorldModel( GetEconItemView(), (
-		( GetOwner() != NULL && GetOwner()->IsPlayer() ) ? GetOwner()->GetTeamNumber() : 0 
+		( GetOwner() != nullptr && GetOwner()->IsPlayer() ) ? GetOwner()->GetTeamNumber() : 0 
 		) );
 }
 
@@ -843,7 +843,7 @@ const char *CBaseCombatWeapon::GetWorldModel( void ) const
 const char *CBaseCombatWeapon::GetWorldDroppedModel( void ) const
 {
 	const char *szWorldDroppedModel = GetWpnData().GetWorldDroppedModel( GetEconItemView(), (
-		( GetOwner() != NULL && GetOwner()->IsPlayer() ) ? GetOwner()->GetTeamNumber() : 0 
+		( GetOwner() != nullptr && GetOwner()->IsPlayer() ) ? GetOwner()->GetTeamNumber() : 0 
 		) );
 
 	// world dropped model path is optional, but always built. Make sure the model exists before returning it.
@@ -1062,7 +1062,7 @@ void CBaseCombatWeapon::SetOwner( CBaseCombatCharacter *owner )
 #endif
 
 		// make sure we clear out our HideThink if we have one pending
-		SetContextThink( NULL, 0, HIDEWEAPON_THINK_CONTEXT );
+		SetContextThink( nullptr, 0, HIDEWEAPON_THINK_CONTEXT );
 	}
 
 	m_hOwner = owner;
@@ -1172,9 +1172,9 @@ void CBaseCombatWeapon::Drop( const Vector &vecVelocity )
 	m_iState = WEAPON_NOT_CARRIED;
 	RemoveEffects( EF_NODRAW );
 	FallInit();
-	SetGroundEntity( NULL );
+	SetGroundEntity( nullptr );
 	SetThink( &CBaseCombatWeapon::SetPickupTouch );
-	SetTouch(NULL);
+	SetTouch(nullptr);
 
 	if( hl2_episodic.GetBool() )
 	{
@@ -1182,7 +1182,7 @@ void CBaseCombatWeapon::Drop( const Vector &vecVelocity )
 	}
 
 	IPhysicsObject *pObj = VPhysicsGetObject();
-	if ( pObj != NULL )
+	if ( pObj != nullptr )
 	{
 		AngularImpulse	angImp( 200, 200, 200 );
 		pObj->AddVelocity( &vecVelocity, &angImp );
@@ -1195,8 +1195,8 @@ void CBaseCombatWeapon::Drop( const Vector &vecVelocity )
 	CBaseEntity *pOwner = GetOwnerEntity();
 
 	SetNextThink( gpGlobals->curtime + 1.0f );
-	SetOwnerEntity( NULL );
-	SetOwner( NULL );
+	SetOwnerEntity( nullptr );
+	SetOwner( nullptr );
 
 	// If we're not allowing to spawn due to the gamerules,
 	// remove myself when I'm dropped by an NPC.
@@ -1250,7 +1250,7 @@ void CBaseCombatWeapon::MakeTracer( const Vector &vecTracerSrc, const trace_t &t
 {
 	CBaseEntity *pOwner = GetOwner();
 
-	if ( pOwner == NULL )
+	if ( pOwner == nullptr )
 	{
 		BaseClass::MakeTracer( vecTracerSrc, tr, iTracerType );
 		return;
@@ -1386,7 +1386,7 @@ bool CBaseCombatWeapon::ShouldDisplayReloadHUDHint()
 
 	CBaseCombatCharacter *pOwner = GetOwner();
 
-	if( pOwner != NULL && pOwner->IsPlayer() && UsesClipsForAmmo1() && m_iClip1 < (GetMaxClip1() / 2) )
+	if( pOwner != nullptr && pOwner->IsPlayer() && UsesClipsForAmmo1() && m_iClip1 < (GetMaxClip1() / 2) )
 	{
 		// I'm owned by a player, I use clips, I have less then half a clip loaded. Now, does the player have more ammo?
 		if ( GetReserveAmmoCount( AMMO_POSITION_PRIMARY ) > 0 ) 
@@ -1456,19 +1456,19 @@ void CBaseCombatWeapon::Equip( CBaseCombatCharacter *pOwner )
 	RemoveEffects( EF_ITEM_BLINK );
 
 #if !defined( CLIENT_DLL )
-	if ( m_pConstraint != NULL )
+	if ( m_pConstraint != nullptr )
 	{
 		RemoveSpawnFlags( SF_WEAPON_START_CONSTRAINED );
 		physenv->DestroyConstraint( m_pConstraint );
-		m_pConstraint = NULL;
+		m_pConstraint = nullptr;
 	}
 #endif
 
 
 	m_flNextPrimaryAttack		= gpGlobals->curtime;
 	m_flNextSecondaryAttack		= gpGlobals->curtime;
-	SetTouch( NULL );
-	SetThink( NULL );
+	SetTouch( nullptr );
+	SetThink( nullptr );
 #if !defined( CLIENT_DLL )
 	VPhysicsDestroyObject();
 #endif
@@ -1494,7 +1494,7 @@ void CBaseCombatWeapon::ClassifyWeaponModel( void )
 	// appropriate kind without doing an expensive string comparison or
 	// model loop up by string each time.
 
-	const char *pszModelName = NULL;
+	const char *pszModelName = nullptr;
 	if ( GetModel() )
 		pszModelName = modelinfo->GetModelName(GetModel());
 
@@ -1656,12 +1656,12 @@ void CBaseCombatWeapon::SendViewModelAnim( int nSequence )
 
 	CBasePlayer *pOwner = ToBasePlayer( GetOwner() );
 	
-	if ( pOwner == NULL )
+	if ( pOwner == nullptr )
 		return;
 	
 	CBaseViewModel *vm = pOwner->GetViewModel( m_nViewModelIndex );
 	
-	if ( vm == NULL )
+	if ( vm == nullptr )
 		return;
 
 	SetViewModel();
@@ -1672,14 +1672,14 @@ void CBaseCombatWeapon::SendViewModelAnim( int nSequence )
 float CBaseCombatWeapon::GetViewModelSequenceDuration()
 {
 	CBasePlayer *pOwner = ToBasePlayer( GetOwner() );
-	if ( pOwner == NULL )
+	if ( pOwner == nullptr )
 	{
 		Assert( false );
 		return 0;
 	}
 	
 	CBaseViewModel *vm = pOwner->GetViewModel( m_nViewModelIndex );
-	if ( vm == NULL )
+	if ( vm == nullptr )
 	{
 		Assert( false );
 		return 0;
@@ -1697,14 +1697,14 @@ bool CBaseCombatWeapon::IsViewModelSequenceFinished( void )
 		return true;
 
 	CBasePlayer *pOwner = ToBasePlayer( GetOwner() );
-	if ( pOwner == NULL )
+	if ( pOwner == nullptr )
 	{
 		Assert( false );
 		return false;
 	}
 	
 	CBaseViewModel *vm = pOwner->GetViewModel( m_nViewModelIndex );
-	if ( vm == NULL )
+	if ( vm == nullptr )
 	{
 		Assert( false );
 		return false;
@@ -1719,10 +1719,10 @@ bool CBaseCombatWeapon::IsViewModelSequenceFinished( void )
 void CBaseCombatWeapon::SetViewModel()
 {
 	CBasePlayer *pOwner = ToBasePlayer( GetOwner() );
-	if ( pOwner == NULL )
+	if ( pOwner == nullptr )
 		return;
 	CBaseViewModel *vm = pOwner->GetViewModel( m_nViewModelIndex );
-	if ( vm == NULL )
+	if ( vm == nullptr )
 		return;
 	Assert( vm->ViewModelIndex() == m_nViewModelIndex );
 	vm->SetWeaponModel( GetViewModel( m_nViewModelIndex ), this );
@@ -1828,7 +1828,7 @@ bool CBaseCombatWeapon::UsesSecondaryAmmo( void )
 //-----------------------------------------------------------------------------
 void CBaseCombatWeapon::SetWeaponVisible( bool visible )
 {
-	CBaseViewModel *vm = NULL;
+	CBaseViewModel *vm = nullptr;
 
 	CBasePlayer *pOwner = ToBasePlayer( GetOwner() );
 	if ( pOwner )
@@ -1871,7 +1871,7 @@ void CBaseCombatWeapon::SetWeaponVisible( bool visible )
 //-----------------------------------------------------------------------------
 bool CBaseCombatWeapon::IsWeaponVisible( void )
 {
-	CBaseViewModel *vm = NULL;
+	CBaseViewModel *vm = nullptr;
 	CBasePlayer *pOwner = ToBasePlayer( GetOwner() );
 	if ( pOwner )
 	{
@@ -1980,7 +1980,7 @@ selects and deploys each weapon as you pass it. (sjb)
 
 */
 
-	SetContextThink( NULL, 0, HIDEWEAPON_THINK_CONTEXT );
+	SetContextThink( nullptr, 0, HIDEWEAPON_THINK_CONTEXT );
 
 	return true;
 }
@@ -2030,7 +2030,7 @@ bool CBaseCombatWeapon::Holster( CBaseCombatWeapon *pSwitchingTo )
 	m_bInReload = false; 
 
 	// kill any think functions
-	SetThink(NULL);
+	SetThink(nullptr);
 
 	// Send holster animation
 	SendWeaponAnim( ACT_VM_HOLSTER );
@@ -2329,7 +2329,7 @@ void CBaseCombatWeapon::WeaponSound( WeaponSound_t sound_type, float soundtime /
 
 	CSoundParameters params;
 	
-	if ( !GetParametersForSound( shootsound, params, NULL ) )
+	if ( !GetParametersForSound( shootsound, params, nullptr ) )
 		return;
 
 	if ( params.play_to_owner_only )
@@ -2342,7 +2342,7 @@ void CBaseCombatWeapon::WeaponSound( WeaponSound_t sound_type, float soundtime /
 			{
 				filter.UsePredictionRules();
 			}
-			EmitSound( filter, GetOwner()->entindex(), shootsound, NULL, soundtime );
+			EmitSound( filter, GetOwner()->entindex(), shootsound, nullptr, soundtime );
 		}
 	}
 	else
@@ -2351,7 +2351,7 @@ void CBaseCombatWeapon::WeaponSound( WeaponSound_t sound_type, float soundtime /
 		if ( GetOwner() )
 		{
 			CBroadcastRecipientFilter filter;
-			EmitSound( filter, GetOwner()->entindex(), shootsound, NULL, soundtime ); 
+			EmitSound( filter, GetOwner()->entindex(), shootsound, nullptr, soundtime ); 
 
 #if !defined( CLIENT_DLL )
 			if( sound_type == EMPTY )
@@ -2364,7 +2364,7 @@ void CBaseCombatWeapon::WeaponSound( WeaponSound_t sound_type, float soundtime /
 		else
 		{
 			CBroadcastRecipientFilter filter;
-			EmitSound( filter, entindex(), shootsound, NULL, soundtime ); 
+			EmitSound( filter, entindex(), shootsound, nullptr, soundtime ); 
 		}
 	}
 }
@@ -2383,7 +2383,7 @@ void CBaseCombatWeapon::StopWeaponSound( WeaponSound_t sound_type )
 		return;
 	
 	CSoundParameters params;
-	if ( !GetParametersForSound( shootsound, params, NULL ) )
+	if ( !GetParametersForSound( shootsound, params, nullptr ) )
 		return;
 
 	// Am I only to play to my owner?
@@ -2828,7 +2828,7 @@ bool CBaseCombatWeapon::SetIdealActivity( Activity ideal )
 	m_nIdealSequence = idealSequence;
 
 	//Find the next sequence in the potential chain of sequences leading to our ideal one
-	int nextSequence = FindTransitionSequence( GetSequence(), m_nIdealSequence, NULL );
+	int nextSequence = FindTransitionSequence( GetSequence(), m_nIdealSequence, nullptr );
 
 	// Don't use transitions when we're deploying
 	if ( ideal != ACT_VM_DRAW && ideal != ACT_VM_EMPTY_DRAW && IsWeaponVisible() && nextSequence != m_nIdealSequence )
@@ -2856,7 +2856,7 @@ bool CBaseCombatWeapon::SetIdealActivity( Activity ideal )
 //-----------------------------------------------------------------------------
 void CBaseCombatWeapon::GetControlPanelInfo( int nPanelIndex, const char *&pPanelName )
 {
-	pPanelName = NULL;
+	pPanelName = nullptr;
 }
 
 //-----------------------------------------------------------------------------
@@ -3023,7 +3023,7 @@ void* SendProxy_SendActiveLocalWeaponDataTable( const SendProp *pProp, const voi
 		}
 	}
 	
-	return NULL;
+	return nullptr;
 }
 REGISTER_SEND_PROXY_NON_MODIFIED_POINTER( SendProxy_SendActiveLocalWeaponDataTable );
 
@@ -3045,7 +3045,7 @@ void* SendProxy_SendLocalWeaponDataTable( const SendProp *pProp, const void *pSt
 		}
 	}
 	
-	return NULL;
+	return nullptr;
 }
 REGISTER_SEND_PROXY_NON_MODIFIED_POINTER( SendProxy_SendLocalWeaponDataTable );
 
@@ -3067,7 +3067,7 @@ void* SendProxy_SendNonLocalWeaponDataTable( const SendProp *pProp, const void *
 		}
 	}
 
-	return NULL;
+	return nullptr;
 }
 REGISTER_SEND_PROXY_NON_MODIFIED_POINTER( SendProxy_SendNonLocalWeaponDataTable );
 

@@ -283,7 +283,7 @@ void CCachedRenderData::ComputeFlexedVertex_StreamOffset( studiohdr_t *pStudioHd
 	float w34 = w3 - w4;
 	float flVertAnimFixedPointScale = pStudioHdr->VertAnimFixedPointScale();
 
-	CachedPosNorm_t *pFlexedVertex = NULL;
+	CachedPosNorm_t *pFlexedVertex = nullptr;
 	for (int j = 0; j < pflex->numverts; j++)
 	{
 		int n = pvanim[j].index;
@@ -304,7 +304,7 @@ void CCachedRenderData::ComputeFlexedVertex_StreamOffset( studiohdr_t *pStudioHd
 			// Add a new flexed vert to the flexed vertex list
 			pFlexedVertex = CreateThinFlexVertex(n);
 
-			Assert( pFlexedVertex != NULL);
+			Assert( pFlexedVertex != nullptr);
 
 			pFlexedVertex->m_Position.InitZero();
 			pFlexedVertex->m_Normal.InitZero();

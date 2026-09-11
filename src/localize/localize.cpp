@@ -184,7 +184,7 @@ CLocalize::CLocalize() :
 	m_bUseOnlyLongestLanguageString = false;
 	m_bSuppressChangeCallbacks = false;
 	m_bQueuedChangeCallback = false;
-	m_pQuery = NULL;
+	m_pQuery = nullptr;
 	m_bAsianFrequencySequenceLoaded = false;
 }
 
@@ -457,7 +457,7 @@ bool CLocalize::ReadLocalizationFile( const char *pRelativePath, const char *pPa
 					if ( bAccepted && bEnoughCapacity )
 					{
 						// add the string to the table
-						AddString(key, valuetoken, NULL);
+						AddString(key, valuetoken, nullptr);
 					}
 				}
 			}
@@ -618,7 +618,7 @@ bool CLocalize::AddAllLanguageFiles( const char *baseFileName )
 		char szSearchPath[MAX_PATH];
 		Q_snprintf( szSearchPath, sizeof(szSearchPath), "%s*.txt", baseFileName );
 
-		FileFindHandle_t hFind = NULL;
+		FileFindHandle_t hFind = 0;
 		const char *file = g_pFullFileSystem->FindFirst( szSearchPath, &hFind );
 		while ( file )
 		{
@@ -627,7 +627,7 @@ bool CLocalize::AddAllLanguageFiles( const char *baseFileName )
 			V_snprintf( szFile, sizeof(szFile), "%s%s", szFilePath, file );
 
 			// add the file
-			bSuccess &= AddFile( szFile, NULL, true );
+			bSuccess &= AddFile( szFile, nullptr, true );
 
 			// next file
 			file = g_pFullFileSystem->FindNext( hFind );
@@ -734,7 +734,7 @@ void CLocalize::ReloadLocalizationFiles( )
 		AddFile
 		(
 			entry.symName.String(), 
-			entry.symPathID.String()[0] ? entry.symPathID.String() : NULL,
+			entry.symPathID.String()[0] ? entry.symPathID.String() : nullptr,
 			entry.bIncludeFallbacks 
 		);
 	}
@@ -761,7 +761,7 @@ wchar_t *CLocalize::Find(const char *pName)
 {	
 	LocalizeStringIndex_t idx = FindIndex(pName);
 	if (idx == LOCALIZE_INVALID_STRING_INDEX)
-		return NULL;
+		return nullptr;
 
 	return &m_Values[m_Lookup[idx].valueIndex];
 }
@@ -930,14 +930,14 @@ const char *CLocalize::GetNameByIndex(LocalizeStringIndex_t index)
 wchar_t *CLocalize::GetValueByIndex(LocalizeStringIndex_t index)
 {
 	if (index == LOCALIZE_INVALID_STRING_INDEX)
-		return NULL;
+		return nullptr;
 
 	localizedstring_t &lstr = m_Lookup[index];
 	return &m_Values[lstr.valueIndex];
 }
 
 
-CLocalize *CLocalize::s_pTable = NULL;
+CLocalize *CLocalize::s_pTable = nullptr;
 
 bool CLocalize::FastValueLessFunc( const fastvalue_t& lhs, const fastvalue_t& rhs )
 {
@@ -960,7 +960,7 @@ void CLocalize::BuildFastValueLookup()
 	{
 		fastvalue_t val;
 		val.valueindex = m_Lookup[ i ].valueIndex;
-		val.search = NULL;
+		val.search = nullptr;
 
 		m_FastValueLookup.Insert( val );
 	}
@@ -969,7 +969,7 @@ void CLocalize::BuildFastValueLookup()
 void CLocalize::DiscardFastValueLookup()
 {
 	m_FastValueLookup.RemoveAll();
-	s_pTable = NULL;
+	s_pTable = nullptr;
 }
 
 //-----------------------------------------------------------------------------
@@ -1264,7 +1264,7 @@ wchar_t* CLocalize::GetAsianFrequencySequence( const char * pLanguage )
 		}
 		return pAsianFrequencySequence;
 	}
-	return NULL;
+	return nullptr;
 }
 
 
@@ -1279,7 +1279,7 @@ template < typename T >
 void ConstructStringVArgsInternal_Impl(T *unicodeOutput, int unicodeBufferSizeInBytes, const T *formatString, int numFormatParameters, va_list argList)
 {
 	// Safety check
-	if ( unicodeOutput == NULL || unicodeBufferSizeInBytes < 1 )
+	if ( unicodeOutput == nullptr || unicodeBufferSizeInBytes < 1 )
 	{
 		return;
 	}
@@ -1326,7 +1326,7 @@ void ConstructStringVArgsInternal_Impl(T *unicodeOutput, int unicodeBufferSizeIn
 
 			if ( argindex < numFormatParameters )
 			{
-				T *param = NULL;
+				T *param = nullptr;
 				param = arguments[ argindex ];
 
 				if (!param)

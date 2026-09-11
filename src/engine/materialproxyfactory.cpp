@@ -36,11 +36,11 @@ IMaterialProxy *CMaterialProxyFactory::CreateProxy( const char *proxyName )
 	if( !materialProxy && !sv.IsDedicated() )
 	{
 		ConDMsg( "Can't find material proxy \"%s\"\n", proxyName );
-		return NULL;
+		return nullptr;
 	}
 	return materialProxy;
 #else
-	return NULL;
+	return nullptr;
 #endif
 }
 
@@ -58,6 +58,6 @@ CreateInterfaceFn CMaterialProxyFactory::GetFactory()
 #ifndef DEDICATED
 	return Sys_GetFactory( g_ClientDLLModule );
 #else
-	return NULL;
+	return nullptr;
 #endif
 }

@@ -14,6 +14,6 @@
 void *GetGameModuleHandle()
 {
 	Assert(0);
-	return NULL; // NOT implemented
+	return nullptr; // NOT implemented
 }
 

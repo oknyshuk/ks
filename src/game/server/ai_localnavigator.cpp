@@ -30,7 +30,7 @@ IMPLEMENT_REFLECT_DATAMAP_SIMPLE( CAI_LocalNavigator )
 
 CAI_LocalNavigator::CAI_LocalNavigator(CAI_BaseNPC *pOuter) : CAI_Component( pOuter ) 
 {
-	m_pMoveProbe = NULL;
+	m_pMoveProbe = nullptr;
 	m_pPlaneSolver = new CAI_PlaneSolver( pOuter );
 
 	m_fLastWasClear = false;
@@ -64,7 +64,7 @@ void CAI_LocalNavigator::ResetMoveCalculations()
 
 void CAI_LocalNavigator::AddObstacle( const Vector &pos, float radius, AI_MoveSuggType_t type )
 {
-	m_pPlaneSolver->AddObstacle( pos, radius, NULL, type );
+	m_pPlaneSolver->AddObstacle( pos, radius, nullptr, type );
 }
 
 //-------------------------------------
@@ -76,7 +76,7 @@ bool CAI_LocalNavigator::HaveObstacles()
 
 Obstacle_t CAI_LocalNavigator::AddGlobalObstacle( const Vector &pos, float radius, AI_MoveSuggType_t type )
 {
-	return CAI_PlaneSolver::AddGlobalObstacle( pos, radius, NULL, type );
+	return CAI_PlaneSolver::AddGlobalObstacle( pos, radius, nullptr, type );
 }
 
 void CAI_LocalNavigator::RemoveGlobalObstacle( Obstacle_t hObstacle )

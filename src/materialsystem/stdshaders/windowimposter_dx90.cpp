@@ -32,7 +32,7 @@ BEGIN_VS_SHADER( WindowImposter_DX90,
 
 	SHADER_FALLBACK
 	{
-		return NULL;
+		return nullptr;
 	}
 
 	SHADER_INIT

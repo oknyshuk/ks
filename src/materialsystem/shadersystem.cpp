@@ -156,7 +156,7 @@ private:
 	void DrawUsingMaterial( IMaterialInternal *pMaterial, VertexCompressionType_t vertexCompression );
 
 	// Copies material vars
-	void CopyMaterialVarToDebugShader( IMaterialInternal *pDebugMaterial, IShader *pShader, IMaterialVar **ppParams, const char *pSrcVarName, const char *pDstVarName = NULL );
+	void CopyMaterialVarToDebugShader( IMaterialInternal *pDebugMaterial, IShader *pShader, IMaterialVar **ppParams, const char *pSrcVarName, const char *pDstVarName = nullptr );
 
 	// Debugging draw methods...
 	void DrawMeasureFillRate( ShaderRenderState_t* pRenderState, int mod, VertexCompressionType_t vertexCompression );
@@ -245,7 +245,7 @@ void CShaderSystem::Init()
 
 	for ( int i = 0; i < MATERIAL_DEBUG_COUNT; ++i )
 	{
-		m_pDebugMaterials[i] = NULL;
+		m_pDebugMaterials[i] = nullptr;
 	}
 
 	LoadAllShaderDLLs();
@@ -300,14 +300,14 @@ void CShaderSystem::LoadAllShaderDLLs( )
 
 	m_ShaderDLLs[i].m_pFileName     = new char[1];
 	m_ShaderDLLs[i].m_pFileName[0]  = 0;
-	m_ShaderDLLs[i].m_hInstance     = NULL;
+	m_ShaderDLLs[i].m_hInstance     = nullptr;
 	m_ShaderDLLs[i].m_pShaderDLL    = GetShaderDLLInternal();
 	m_ShaderDLLs[i].m_bModShaderDLL = false;
 
 	// Add the shaders to the dictionary of shaders...
 	SetupShaderDictionary( i );
 
-	const char *pShaderName = NULL;
+	const char *pShaderName = nullptr;
 #ifdef _DEBUG
 	pShaderName = CommandLine()->ParmValue( "-shader" );
 #endif
@@ -355,7 +355,7 @@ void CShaderSystem::UnloadAllShaderDLLs()
 
 bool CShaderSystem::LoadShaderDLL( const char *pFullPath )
 {
-	return LoadShaderDLL( pFullPath, NULL, false );
+	return LoadShaderDLL( pFullPath, nullptr, false );
 }
 
 //-----------------------------------------------------------------------------
@@ -383,7 +383,7 @@ bool CShaderSystem::LoadShaderDLL( const char *pFullPath, const char *pPathID, b
 		return false;
 	}
 
-	IShaderDLLInternal *pShaderDLL = (IShaderDLLInternal*)factory( SHADER_DLL_INTERFACE_VERSION, NULL );
+	IShaderDLLInternal *pShaderDLL = (IShaderDLLInternal*)factory( SHADER_DLL_INTERFACE_VERSION, nullptr );
 	if ( !pShaderDLL )
 	{
 		g_pFullFileSystem->UnloadModule( hInstance );
@@ -608,7 +608,7 @@ IShader* CShaderSystem::FindShader( char const* pShaderName )
 		}
 	}
 
-	return NULL;
+	return nullptr;
 }
 
 
@@ -617,7 +617,7 @@ IShader* CShaderSystem::FindShader( char const* pShaderName )
 //-----------------------------------------------------------------------------
 int CShaderSystem::ShaderCount() const
 {
-	return GetShaders( 0, 65536, NULL );
+	return GetShaders( 0, 65536, nullptr );
 }
 
 int CShaderSystem::GetShaders( int nFirstShader, int nMaxCount, IShader **ppShaderList ) const
@@ -725,7 +725,7 @@ void CShaderSystem::CleanUpDebugMaterials()
 			{
 				MaterialSystem()->RemoveMaterial( m_pDebugMaterials[i] );
 			}
-			m_pDebugMaterials[i] = NULL;
+			m_pDebugMaterials[i] = nullptr;
 		}
 	}
 }
@@ -754,7 +754,7 @@ void CShaderSystem::DoneWithShaderDraw()
 	LoggingSystem_PopLoggingState( true );
 	m_BufferedLoggingListener.EmitBufferedSpew();
 
-	m_pRenderState = NULL;
+	m_pRenderState = nullptr;
 }
 
 
@@ -810,7 +810,7 @@ void CShaderSystem::InitShaderParameters( IShader *pShader, IMaterialVar **param
 			// Do nothing; we'll be loading in a string later
 			break;
 		case SHADER_PARAM_TYPE_MATERIAL:
-			params[i]->SetMaterialValue( NULL );
+			params[i]->SetMaterialValue( nullptr );
 			break;
 		case SHADER_PARAM_TYPE_BOOL:
 		case SHADER_PARAM_TYPE_INTEGER:
@@ -1281,12 +1281,12 @@ void CShaderSystem::CleanupRenderState( ShaderRenderState_t* pRenderState )
 				if ( pTemp[i].m_pContextData[j] )
 				{
 					delete pTemp[i].m_pContextData[j];
-					pTemp[i].m_pContextData[j] = NULL;
+					pTemp[i].m_pContextData[j] = nullptr;
 				}
 				if ( pTemp[i].m_pInstanceData[j] )
 				{
 					delete pTemp[i].m_pInstanceData[j];
-					pTemp[i].m_pInstanceData[j] = NULL;
+					pTemp[i].m_pInstanceData[j] = nullptr;
 				}
 			}
 			pRenderState->m_pSnapshots[i].m_nPassCount = 0;
@@ -1584,7 +1584,7 @@ bool CShaderSystem::DrawEnvmapMask( IShader *pShader, IMaterialVar **ppParams,
 		pMaterialVar->SetIntValue( 0 );
 	}
 
-	if( pDebugMaterial->FindVar( "$basetexture", NULL )->IsTexture() )
+	if( pDebugMaterial->FindVar( "$basetexture", nullptr )->IsTexture() )
 	{
 		DrawUsingMaterial( pDebugMaterial, vertexCompression );
 		return true;

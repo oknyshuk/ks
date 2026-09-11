@@ -139,20 +139,20 @@ CStandardRecvProxies g_StandardRecvProxies;
 // ---------------------------------------------------------------------- //
 RecvProp::RecvProp()
 {
-	m_pExtraData = NULL;
-	m_pVarName = NULL;
+	m_pExtraData = nullptr;
+	m_pVarName = nullptr;
 	m_Offset = 0;
 	m_RecvType = DPT_Int;
 	m_Flags = 0;
 	m_StringBufferSize = 0;
-	m_ProxyFn = NULL;
-	m_DataTableProxyFn = NULL;
-	m_pDataTable = NULL;
+	m_ProxyFn = nullptr;
+	m_DataTableProxyFn = nullptr;
+	m_pDataTable = nullptr;
 	m_nElements = 1;
 	m_ElementStride = -1;
-	m_pArrayProp = NULL;
-	m_ArrayLengthProxy = NULL;
-	m_pParentArrayPropName = NULL;
+	m_pArrayProp = nullptr;
+	m_ArrayLengthProxy = nullptr;
+	m_pParentArrayPropName = nullptr;
 	m_bInsideArray = false;
 }
 
@@ -161,7 +161,7 @@ RecvProp::RecvProp()
 // ---------------------------------------------------------------------- //
 RecvTable::RecvTable()
 {
-	Construct( NULL, 0, NULL );
+	Construct( nullptr, 0, nullptr );
 }
 
 RecvTable::RecvTable(RecvProp *pProps, int nProps, const char *pNetTableName)
@@ -177,7 +177,7 @@ void RecvTable::Construct( RecvProp *pProps, int nProps, const char *pNetTableNa
 {
 	m_pProps = pProps;
 	m_nProps = nProps;
-	m_pDecoder = NULL;
+	m_pDecoder = nullptr;
 	m_pNetTableName = pNetTableName;
 	m_bInitialized = false;
 	m_bInMainList = false;
@@ -306,7 +306,7 @@ RecvProp RecvPropInt(
 	RecvProp ret;
 
 	// If they didn't specify a proxy, then figure out what type we're writing to.
-	if (varProxy == NULL)
+	if (varProxy == nullptr)
 	{
 		if (sizeofVar == 1)
 		{

@@ -23,7 +23,7 @@ void CSequenceTransitioner::CheckForSequenceChange(
 	bool bInterpolate )
 {
 	// sequence may be set before model is initialized
-	if ( hdr == NULL)
+	if ( hdr == nullptr)
 		return;
 
 	// FIXME?: this should detect that what's been asked to be drawn isn't what was expected
@@ -34,7 +34,7 @@ void CSequenceTransitioner::CheckForSequenceChange(
 	{
 		m_animationQueue.AddToTail();
 #ifdef CLIENT_DLL
-		m_animationQueue[0].SetOwner( NULL );
+		m_animationQueue[0].SetOwner( nullptr );
 #endif
 	}
 
@@ -79,7 +79,7 @@ void CSequenceTransitioner::CheckForSequenceChange(
 		m_animationQueue.AddToTail();
 		currentblend = &m_animationQueue[m_animationQueue.Count()-1];
 #ifdef CLIENT_DLL
-		currentblend->SetOwner( NULL );
+		currentblend->SetOwner( nullptr );
 #endif
 	}
 
@@ -97,14 +97,14 @@ void CSequenceTransitioner::UpdateCurrent(
 	float flCurTime )
 {
 	// sequence may be set before model is initialized
-	if ( hdr == NULL)
+	if ( hdr == nullptr)
 		return;
 
 	if (m_animationQueue.Count() == 0)
 	{
 		m_animationQueue.AddToTail();
 #ifdef CLIENT_DLL
-		m_animationQueue[0].SetOwner( NULL );
+		m_animationQueue[0].SetOwner( nullptr );
 #endif
 	}
 

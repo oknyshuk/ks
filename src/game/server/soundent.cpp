@@ -27,7 +27,7 @@
 
 LINK_ENTITY_TO_CLASS( soundent, CSoundEnt );
 
-static CSoundEnt *g_pSoundEnt = NULL;
+static CSoundEnt *g_pSoundEnt = nullptr;
 
 IMPLEMENT_REFLECT_DATAMAP_SIMPLE( CSound )
 
@@ -111,7 +111,7 @@ const Vector& CSound::GetSoundOrigin( void )
 {
 	if ( ( m_iType & SOUND_CONTEXT_FOLLOW_OWNER ) != 0 )
 	{
-		if( m_hOwner.Get() != NULL )
+		if( m_hOwner.Get() != nullptr )
 			return m_hOwner->GetAbsOrigin();
 	}
 	return m_vecOrigin;
@@ -134,7 +134,7 @@ const Vector &CSound::GetSoundReactOrigin( void )
 	{
 	case SOUND_BULLET_IMPACT:
 	case SOUND_PHYSICS_DANGER:
-		if( m_hOwner.Get() != NULL )
+		if( m_hOwner.Get() != nullptr )
 		{
 			// We really want the origin of this sound's 
 			// owner.
@@ -151,7 +151,7 @@ const Vector &CSound::GetSoundReactOrigin( void )
 
 	if( m_iType & SOUND_CONTEXT_REACT_TO_SOURCE )
 	{
-		if( m_hOwner.Get() != NULL )
+		if( m_hOwner.Get() != nullptr )
 		{
 			return m_hOwner->GetAbsOrigin();
 		}
@@ -162,7 +162,7 @@ const Vector &CSound::GetSoundReactOrigin( void )
 	{
 		if( (m_iType & SOUND_CONTEXT_FROM_SNIPER) )
 		{
-			if( m_hOwner.Get() != NULL )
+			if( m_hOwner.Get() != nullptr )
 			{
 				// Be afraid of the sniper's location, not where the bullet will hit.
 				return m_hOwner->GetAbsOrigin();
@@ -206,7 +206,7 @@ void CSoundEnt::ShutdownSoundEnt()
 	if ( g_pSoundEnt )
 	{
 		g_pSoundEnt->FreeList();
-		g_pSoundEnt = NULL;
+		g_pSoundEnt = nullptr;
 	}
 }
 
@@ -653,19 +653,19 @@ CSound*	CSoundEnt::SoundPointerForIndex( int iIndex )
 {
 	if ( !g_pSoundEnt )
 	{
-		return NULL;
+		return nullptr;
 	}
 
 	if ( iIndex > ( MAX_WORLD_SOUNDS_MP - 1 ) )
 	{
 		Msg( "SoundPointerForIndex() - Index too large!\n" );
-		return NULL;
+		return nullptr;
 	}
 
 	if ( iIndex < 0 )
 	{
 		Msg( "SoundPointerForIndex() - Index < 0!\n" );
-		return NULL;
+		return nullptr;
 	}
 
 	return &g_pSoundEnt->m_SoundPool[ iIndex ];
@@ -696,7 +696,7 @@ int CSoundEnt::ClientSoundIndex ( edict_t *pClient )
 //-----------------------------------------------------------------------------
 CSound*	CSoundEnt::GetLoudestSoundOfType( int iType, const Vector &vecEarPosition )
 {
-	CSound *pLoudestSound = NULL;
+	CSound *pLoudestSound = nullptr;
 
 	int iThisSound; 
 	int	iBestSound = SOUNDLIST_EMPTY;
@@ -781,7 +781,7 @@ void CAISound::InputInsertSound( inputdata_t &inputdata )
 
 	if( m_iszProxyEntityName != NULL_STRING )
 	{
-		CBaseEntity *pProxy = gEntList.FindEntityByName( NULL, m_iszProxyEntityName );
+		CBaseEntity *pProxy = gEntList.FindEntityByName( nullptr, m_iszProxyEntityName );
 
 		if( pProxy )
 		{
@@ -802,7 +802,7 @@ void CAISound::InputEmitAISound( inputdata_t &inputdata )
 
 	if( m_iszProxyEntityName != NULL_STRING )
 	{
-		CBaseEntity *pProxy = gEntList.FindEntityByName( NULL, m_iszProxyEntityName );
+		CBaseEntity *pProxy = gEntList.FindEntityByName( nullptr, m_iszProxyEntityName );
 
 		if( pProxy )
 		{

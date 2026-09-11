@@ -61,7 +61,7 @@ struct _finddata_t
 		dirBase[0] = '\0';
 		curName = 0;
 		numNames = 0;
-		namelist = NULL;
+		namelist = nullptr;
 	}
 	// public data
 	char name[PATH_MAX]; // the file name returned from the call
@@ -107,7 +107,7 @@ static int FileSelect( const char *name, const char *mask );
 #include <aio.h>
 #endif
 
-#define INVALID_HANDLE_VALUE NULL
+#define INVALID_HANDLE_VALUE nullptr
 
 #define _rmdir rmdir
 
@@ -126,7 +126,7 @@ CPathString::CPathString( const char *pchUTF8Path )
 {
 	// Need to first turn into an absolute path, so \\?\ pre-pended paths will be ok
 	m_pchUTF8Path = new char[ MAX_UNICODE_PATH_IN_UTF8 ];
-	m_pwchWideCharPathPrepended = NULL;
+	m_pwchWideCharPathPrepended = nullptr;
 
 	// First, convert to absolute path, which also does Q_FixSlashes for us.
 	Q_MakeAbsolutePath( m_pchUTF8Path, MAX_UNICODE_PATH * 4, pchUTF8Path );
@@ -144,13 +144,13 @@ CPathString::~CPathString()
 	if ( m_pwchWideCharPathPrepended )
 	{
 		delete[] m_pwchWideCharPathPrepended;
-		m_pwchWideCharPathPrepended = NULL;
+		m_pwchWideCharPathPrepended = nullptr;
 	}
 
 	if ( m_pchUTF8Path )
 	{
 		delete[] m_pchUTF8Path;
-		m_pchUTF8Path = NULL;
+		m_pchUTF8Path = nullptr;
 	}
 }
 
@@ -224,7 +224,7 @@ void CPathString::PopulateWCharPath()
 CDirIterator::CDirIterator( const char *pchPath, const char *pchPattern )
 {
 	CPathString strPath( pchPath );
-	m_pFindData = NULL;
+	m_pFindData = nullptr;
 
 	// +2 so we can potentially add path separator as well as null termination
 	char *pchPathAndPattern = new char[Q_strlen( strPath.GetUTF8Path() ) + Q_strlen( pchPattern ) + 2];
@@ -626,7 +626,7 @@ bool CFileWriter::Write( const void *pvData, uint32 cubData )
         /* Link the AIO request with a thread callback */
         pFileWriterOverlapped->aio_sigevent.sigev_notify = SIGEV_THREAD;
         pFileWriterOverlapped->aio_sigevent.sigev_notify_function = &CFileWriter::ThreadedWriteFileCompletionFunc;
-        pFileWriterOverlapped->aio_sigevent.sigev_notify_attributes = NULL;
+        pFileWriterOverlapped->aio_sigevent.sigev_notify_attributes = nullptr;
         pFileWriterOverlapped->aio_sigevent.sigev_value.sival_ptr = pFileWriterOverlapped;
                  
 
@@ -773,9 +773,9 @@ static const int k_cubDirWatchBufferSize = 8 * 1024;
 //-----------------------------------------------------------------------------
 CDirWatcher::CDirWatcher()
 {
-	m_hFile = NULL;
-	m_pOverlapped = NULL;
-	m_pFileInfo = NULL;
+	m_hFile = nullptr;
+	m_pOverlapped = nullptr;
+	m_pFileInfo = nullptr;
 }
 
 
@@ -1153,7 +1153,7 @@ int FillDataStruct( _finddata_t *dat )
 		dat->time_create = 0;
 	}
 	free( dat->namelist[dat->curName] );
-	dat->namelist[dat->curName] = NULL;
+	dat->namelist[dat->curName] = nullptr;
 	dat->curName++;
 	return 1;
 }
@@ -1161,7 +1161,7 @@ int FillDataStruct( _finddata_t *dat )
 int _findfirst( const char *fileName, _finddata_t *dat )
 {
 	char nameStore[PATH_MAX];
-	char *dir = NULL;
+	char *dir = nullptr;
 	int n, iret = -1;
 
 	Q_strncpy( nameStore, fileName, sizeof(nameStore) );
@@ -1218,7 +1218,7 @@ int _findfirst( const char *fileName, _finddata_t *dat )
 			if (iret < 0)
 			{
 				free( dat->namelist );
-				dat->namelist = NULL;
+				dat->namelist = nullptr;
 				dat->curName = 0;
 				dat->numNames = 0;
 			}
@@ -1234,7 +1234,7 @@ int _findnext( int64 handle, _finddata_t *dat )
 	if (dat->curName >= dat->numNames)
 	{
 		free( dat->namelist );
-		dat->namelist = NULL;
+		dat->namelist = nullptr;
 		dat->curName = 0;
 		dat->numNames = 0;
 		return -1; // no matches left

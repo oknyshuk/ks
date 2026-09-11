@@ -248,7 +248,7 @@ inline bool CClient_Precipitation::SimulateRain( CPrecipitationParticle* pPartic
 				if ( RandomInt( 0, 100 ) < r_RainSplashPercentage.GetInt() )
 				{
 					trace_t trace;
-					UTIL_TraceLine(vOldPos, pParticle->m_Pos, MASK_WATER, NULL, COLLISION_GROUP_NONE, &trace);
+					UTIL_TraceLine(vOldPos, pParticle->m_Pos, MASK_WATER, nullptr, COLLISION_GROUP_NONE, &trace);
 					if( trace.fraction < 1 )
 					{
 						m_Splashes.AddToTail( trace.endpos );
@@ -572,9 +572,9 @@ CClient_Precipitation::CClient_Precipitation() : m_Remainder(0.0f)
 	
 	for ( int i = 0; i < MAX_SPLITSCREEN_PLAYERS; ++i )
 	{
-		m_pParticlePrecipInnerNear[ i ] = NULL;
-		m_pParticlePrecipInnerFar[ i ] = NULL;
-		m_pParticlePrecipOuter[ i ] = NULL;
+		m_pParticlePrecipInnerNear[ i ] = nullptr;
+		m_pParticlePrecipInnerFar[ i ] = nullptr;
+		m_pParticlePrecipOuter[ i ] = nullptr;
 		m_bActiveParticlePrecipEmitter[ i ] = false;
 	}
 
@@ -791,9 +791,9 @@ void CClient_Precipitation::CreateAshParticle( void )
 	{
 		ACTIVE_SPLITSCREEN_PLAYER_GUARD( hh );
 		// Make sure the emitter is setup
-		if ( m_Ash[ hh ].m_pAshEmitter == NULL )
+		if ( m_Ash[ hh ].m_pAshEmitter == nullptr )
 		{
-			if ( ( m_Ash[ hh ].m_pAshEmitter = AshDebrisEffect::Create( "ashtray" ) ) == NULL )
+			if ( ( m_Ash[ hh ].m_pAshEmitter = AshDebrisEffect::Create( "ashtray" ) ) == nullptr )
 				continue;
 
 			m_Ash[ hh ].m_tAshParticleTimer.Init( 192 );
@@ -804,11 +804,11 @@ void CClient_Precipitation::CreateAshParticle( void )
 		}
 
 		C_BasePlayer *pPlayer = C_BasePlayer::GetLocalPlayer();
-		if ( pPlayer == NULL )
+		if ( pPlayer == nullptr )
 			continue;
 
 		Vector vForward;
-		pPlayer->GetVectors( &vForward, NULL, NULL );
+		pPlayer->GetVectors( &vForward, nullptr, nullptr );
 		vForward.z = 0.0f;
 
 		float curTime = gpGlobals->frametime;
@@ -920,7 +920,7 @@ void CClient_Precipitation::CreateAshParticle( void )
 
 			pParticle = (SimpleParticle *)m_Ash[ hh ].m_pAshEmitter->AddParticle( sizeof(SimpleParticle), hMaterial[iRandom], offset );
 
-			if (pParticle == NULL)
+			if (pParticle == nullptr)
 				continue; 
 
 			pParticle->m_flLifetime	= 0.0f;
@@ -970,7 +970,7 @@ void CClient_Precipitation::CreateParticlePrecip( void )
 	{	
 		FOR_EACH_VALID_SPLITSCREEN_PLAYER( hh )
 		{
-			if ( m_pParticlePrecipOuter[hh] != NULL )
+			if ( m_pParticlePrecipOuter[hh] != nullptr )
 			{
 				DestroyInnerParticlePrecip( hh );
 				DestroyOuterParticlePrecip( hh );
@@ -991,7 +991,7 @@ void CClient_Precipitation::CreateParticlePrecip( void )
 
 		C_CSPlayer *pPlayer = GetLocalOrInEyeCSPlayer();
 
-		if ( pPlayer == NULL )
+		if ( pPlayer == nullptr )
 			continue;
 
 		// Make sure the emitter is setup
@@ -1016,7 +1016,7 @@ void CClient_Precipitation::UpdateParticlePrecip( C_BasePlayer *pPlayer, int nSl
 	Vector vForward;
 	Vector vRight;
 
-	pPlayer->GetVectors( &vForward, &vRight, NULL );
+	pPlayer->GetVectors( &vForward, &vRight, nullptr );
 	vForward.z = 0.0f;
 	vForward.NormalizeInPlace();
 	Vector vForward45Right = vForward + vRight;
@@ -1068,12 +1068,12 @@ void CClient_Precipitation::UpdateParticlePrecip( C_BasePlayer *pPlayer, int nSl
 			if ( !bInside && SubFloat( FindLowestSIMD3( Result.HitDistance ), 0 ) >= m_flParticleInnerDist )
 			{
 				// Kill the inner rain if it's previously been in use
-				if ( m_pParticlePrecipInnerNear[nSlot] != NULL )
+				if ( m_pParticlePrecipInnerNear[nSlot] != nullptr )
 				{
 					DestroyInnerParticlePrecip( nSlot );
 				}
 				// Update if we've already got systems, otherwise, create them.
-				if ( m_pParticlePrecipOuter[nSlot] != NULL )
+				if ( m_pParticlePrecipOuter[nSlot] != nullptr )
 				{
 					m_pParticlePrecipOuter[nSlot]->SetControlPoint( 1,  vOffsetPos );
 					m_pParticlePrecipOuter[nSlot]->SetControlPoint( 3, vDensity );
@@ -1086,7 +1086,7 @@ void CClient_Precipitation::UpdateParticlePrecip( C_BasePlayer *pPlayer, int nSl
 			else   //We're close enough to use the near effect.
 			{
 				// Update if we've already got systems, otherwise, create them.
-				if ( m_pParticlePrecipInnerNear[nSlot] != NULL  && m_pParticlePrecipInnerFar[nSlot] != NULL  &&  m_pParticlePrecipOuter[nSlot] != NULL )
+				if ( m_pParticlePrecipInnerNear[nSlot] != nullptr  && m_pParticlePrecipInnerFar[nSlot] != nullptr  &&  m_pParticlePrecipOuter[nSlot] != nullptr )
 				{
 					m_pParticlePrecipOuter[nSlot]->SetControlPoint( 1, vOffsetPos );
 					m_pParticlePrecipInnerNear[nSlot]->SetControlPoint( 1, vOffsetPosNear );
@@ -1141,7 +1141,7 @@ void CClient_Precipitation::InitializeParticlePrecip( void )
 		m_flParticleInnerDist = 180.0;
 	}
 
-	Assert( m_pParticleInnerFarDef != NULL );
+	Assert( m_pParticleInnerFarDef != nullptr );
 
 	//We'll want to change this if/when we add more raytrace environments.
 	g_RayTraceEnvironments.PurgeAndDeleteElements();
@@ -1210,24 +1210,24 @@ void CClient_Precipitation::InitializeParticlePrecip( void )
 
 void CClient_Precipitation::DestroyInnerParticlePrecip( int nSlot )
 {
-	if ( m_pParticlePrecipInnerFar[nSlot] != NULL )
+	if ( m_pParticlePrecipInnerFar[nSlot] != nullptr )
 	{
 		m_pParticlePrecipInnerFar[nSlot]->StopEmission();
-		m_pParticlePrecipInnerFar[nSlot] = NULL;
+		m_pParticlePrecipInnerFar[nSlot] = nullptr;
 	}
-	if ( m_pParticlePrecipInnerNear[nSlot] != NULL )
+	if ( m_pParticlePrecipInnerNear[nSlot] != nullptr )
 	{
 		m_pParticlePrecipInnerNear[nSlot]->StopEmission();
-		m_pParticlePrecipInnerNear[nSlot] = NULL;
+		m_pParticlePrecipInnerNear[nSlot] = nullptr;
 	}
 }
 
 void CClient_Precipitation::DestroyOuterParticlePrecip( int nSlot )
 {
-	if ( m_pParticlePrecipOuter[nSlot] != NULL )
+	if ( m_pParticlePrecipOuter[nSlot] != nullptr )
 	{
 		m_pParticlePrecipOuter[nSlot]->StopEmission();
-		m_pParticlePrecipOuter[nSlot] = NULL;
+		m_pParticlePrecipOuter[nSlot] = nullptr;
 	}
 }
 
@@ -1370,7 +1370,7 @@ void CClient_Precipitation::EmitParticles( float fTimeDelta )
 			vPlayerHeight.y += vUnitParticleVel.y * fallHeight;
 
 			trace_t trace;
-			UTIL_TraceLine( vPlayerHeight, vParticlePos, MASK_SOLID_BRUSHONLY, NULL, COLLISION_GROUP_NONE, &trace );
+			UTIL_TraceLine( vPlayerHeight, vParticlePos, MASK_SOLID_BRUSHONLY, nullptr, COLLISION_GROUP_NONE, &trace );
 			if ( trace.fraction < 1 )
 			{
 				// If we hit a brush, then don't spawn the particle.
@@ -1441,7 +1441,7 @@ public:
 		if ( r_RainHack.GetInt() )
 		{
 			CClient_Precipitation *pPrecipHackEnt = new CClient_Precipitation;
-			pPrecipHackEnt->InitializeAsClientEntity( NULL, false );
+			pPrecipHackEnt->InitializeAsClientEntity( nullptr, false );
 			g_pPrecipHackEnt = pPrecipHackEnt;
 		}
 		m_bLevelInitted = true;
@@ -1720,7 +1720,7 @@ void C_Embers::SpawnEmber( void )
 	//Spawn the particle
 	SimpleParticle	*sParticle = (SimpleParticle *) m_pEmitter->AddParticle( sizeof( SimpleParticle ), m_hMaterial, offset );
 
-	if (sParticle == NULL)
+	if (sParticle == nullptr)
 		return;
 
 	float	cScale = random->RandomFloat( 0.75f, 1.0f );
@@ -1963,7 +1963,7 @@ private:
 CSnowFallManager::CSnowFallManager( void )
 {
 	m_iSnowFallArea = SNOWFALL_NONE;
-	m_pSnowFallEmitter = NULL;
+	m_pSnowFallEmitter = nullptr;
 	m_vecSnowFallEmitOrigin.Init();
 	m_flSnowRadius = 0.0f;
 	m_vecMin.Init( FLT_MAX, FLT_MAX, FLT_MAX );
@@ -2009,7 +2009,7 @@ void CSnowFallManager::SpawnClientEntity( void )
 //-----------------------------------------------------------------------------
 bool CSnowFallManager::CreateSnowFallEmitter( void )
 {
-	if ( ( m_pSnowFallEmitter = SnowFallEffect::Create( "snowfall" ) ) == NULL )
+	if ( ( m_pSnowFallEmitter = SnowFallEffect::Create( "snowfall" ) ) == nullptr )
 		return false;
 
 	m_pSnowFallEmitter->SetShouldDrawForSplitScreenUser( m_nSplitScreenPlayerSlot );
@@ -2199,7 +2199,7 @@ void CSnowFallManager::CreateSnowFall( void )
 	ASSERT_LOCAL_PLAYER_RESOLVABLE();
 	// Check to see if we have a local player before starting the snow around a local player.
 	C_BasePlayer *pPlayer = C_BasePlayer::GetLocalPlayer();
-	if ( pPlayer == NULL )
+	if ( pPlayer == nullptr )
 		return;
 
 	// Get the current frame time.
@@ -2208,7 +2208,7 @@ void CSnowFallManager::CreateSnowFall( void )
 	// Get the players data to determine where the snow emitter should reside.
 	VectorCopy( pPlayer->EyePosition(), m_vecSnowFallEmitOrigin );
 	Vector vecForward;
-	pPlayer->GetVectors( &vecForward, NULL, NULL );
+	pPlayer->GetVectors( &vecForward, nullptr, nullptr );
 	vecForward.z = 0.0f;
 	Vector vecVelocity = pPlayer->GetAbsVelocity();
 	float flSpeed = VectorNormalize( vecVelocity );
@@ -2484,7 +2484,7 @@ void CSnowFallManager::CreateSnowParticlesRay( float flRadius, const Vector &vec
 void CSnowFallManager::CreateSnowFallParticle( const Vector &vecParticleSpawn, int iSnow, C_BasePlayer *pLocalPlayer )
 {	
 	SimpleParticle *pParticle = ( SimpleParticle* )m_pSnowFallEmitter->AddParticle( sizeof( SimpleParticle ), m_aSnow[iSnow].m_hMaterial, vecParticleSpawn );
-	if ( pParticle == NULL )
+	if ( pParticle == nullptr )
 		return; 
 
 	pParticle->m_flLifetime	= 0.0f;
@@ -2533,7 +2533,7 @@ bool SnowFallManagerCreate( CClient_Precipitation *pSnowEntity )
 			}
 			s_pSnowFallMgr[ i ]->SetSplitScreenPlayerSlot( i );
 			s_pSnowFallMgr[ i ]->CreateEmitter();
-			s_pSnowFallMgr[ i ]->InitializeAsClientEntity( NULL, false );
+			s_pSnowFallMgr[ i ]->InitializeAsClientEntity( nullptr, false );
 			g_pClientLeafSystem->EnableRendering( s_pSnowFallMgr[ i ]->RenderHandle(), false );
 		}
 
@@ -2552,7 +2552,7 @@ void SnowFallManagerDestroy( void )
 		if ( s_pSnowFallMgr[ i ] )
 		{
 			delete s_pSnowFallMgr[ i ];
-			s_pSnowFallMgr[ i ] = NULL;
+			s_pSnowFallMgr[ i ] = nullptr;
 		}
 	}
 }

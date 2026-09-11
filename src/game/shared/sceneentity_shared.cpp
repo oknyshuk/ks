@@ -35,7 +35,7 @@ m_flFacingYaw( 0.0f ),
 m_nType( 0 ),
 m_flNext( 0.0f ),
 m_bClientSide( false ),
-m_pExpHdr( NULL )
+m_pExpHdr( nullptr )
 {
 }
 

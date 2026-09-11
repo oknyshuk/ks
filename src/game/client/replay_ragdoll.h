@@ -15,7 +15,7 @@ class C_BaseAnimating;
 
 struct RagdollSimulationFrame_t
 {
-	RagdollSimulationFrame_t() : pPositions(NULL), pAngles(NULL), nTick(-1) {}
+	RagdollSimulationFrame_t() : pPositions(nullptr), pAngles(nullptr), nTick(-1) {}
 
 	static RagdollSimulationFrame_t* Alloc( int nNumBones );
 
@@ -30,7 +30,7 @@ struct RagdollSimulationFrame_t
 
 struct RagdollSimulationData_t
 {
-	RagdollSimulationData_t( C_BaseAnimating* pEntity = NULL, int nStartTick = 0, int nNumBones = 0 );
+	RagdollSimulationData_t( C_BaseAnimating* pEntity = nullptr, int nStartTick = 0, int nNumBones = 0 );
 
 	void Record();
 

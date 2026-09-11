@@ -143,8 +143,8 @@ void CLogicNavigation::TurnOn()
 
 void CLogicNavigation::UpdateProperty()
 {
-	CBaseEntity *pEntity = NULL;
-	while ( ( pEntity = gEntList.FindEntityByName( pEntity, STRING(m_target) ) ) != NULL )
+	CBaseEntity *pEntity = nullptr;
+	while ( ( pEntity = gEntList.FindEntityByName( pEntity, STRING(m_target) ) ) != nullptr )
 	{
 		if ( m_isOn )
 		{

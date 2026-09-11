@@ -67,9 +67,9 @@ static bool g_bDrawSelection = true;	// only used in DRAW_SELECTION
 static unsigned int g_pScratchIndexBuffer[6]; // shove indices into this if you don't actually want indices
 
 // used to hold instance data when drawing multiple instances
-static const MeshInstanceData_t *g_pInstanceData = NULL;
-static CompiledLightingState_t *g_pInstanceCompiledState = NULL;
-static InstanceInfo_t *g_pInstanceInfo = NULL;
+static const MeshInstanceData_t *g_pInstanceData = nullptr;
+static CompiledLightingState_t *g_pInstanceCompiledState = nullptr;
+static InstanceInfo_t *g_pInstanceInfo = nullptr;
 static int g_nInstanceCount = 0;
 #ifdef _DEBUG
 int CVertexBuffer::s_BufferCount = 0;
@@ -298,7 +298,7 @@ public:
 
 	void SetFlexMesh( IMesh *pMesh, int nVertexOffsetInBytes )
 	{
-		Assert( pMesh == NULL && nVertexOffsetInBytes == 0 );
+		Assert( pMesh == nullptr && nVertexOffsetInBytes == 0 );
 	}
 
 	void DisableFlexMesh( )
@@ -310,7 +310,7 @@ public:
 
 	bool HasColorMesh( ) const { return false; }
 	bool HasFlexMesh( ) const { return false; }
-	VertexStreamSpec_t *GetVertexStreamSpec() const { return NULL; }
+	VertexStreamSpec_t *GetVertexStreamSpec() const { return nullptr; }
 	
 	// Draws the mesh
 	void DrawMesh( const Vector4D *pVecDiffuseModulation );
@@ -739,7 +739,7 @@ public:
 	void DiscardVertexBuffers();
 
 	// Creates, destroys static meshes
-	IMesh *CreateStaticMesh( VertexFormat_t vertexFormat, const char *pTextureBudgetGroup, IMaterial *pMaterial = NULL, VertexStreamSpec_t *pStreamSpec = NULL );
+	IMesh *CreateStaticMesh( VertexFormat_t vertexFormat, const char *pTextureBudgetGroup, IMaterial *pMaterial = nullptr, VertexStreamSpec_t *pStreamSpec = nullptr );
 	void DestroyStaticMesh( IMesh *pMesh );
 
 	// Gets at the dynamic mesh	(spoofs it though)
@@ -957,16 +957,16 @@ IMeshMgr* MeshMgr()
 //-----------------------------------------------------------------------------
 // Tracks stream state and queued data
 //-----------------------------------------------------------------------------
-static CIndexBuffer *g_pLastIndex = NULL;
-static IDirect3DIndexBuffer9 *g_pLastIndexBuffer = NULL;
-static CVertexBuffer *g_pLastVertex = NULL;
-static IDirect3DVertexBuffer9 *g_pLastVertexBuffer = NULL;
+static CIndexBuffer *g_pLastIndex = nullptr;
+static IDirect3DIndexBuffer9 *g_pLastIndexBuffer = nullptr;
+static CVertexBuffer *g_pLastVertex = nullptr;
+static IDirect3DVertexBuffer9 *g_pLastVertexBuffer = nullptr;
 static int g_nLastVertOffsetInBytes = 0;
 static int g_nLastVertStride = 0;
 static int g_LastVertexIdx = -1;
-static CVertexBuffer *g_pLastColorBuffer = NULL;
-static VertexStreamSpec_t *g_pLastStreamSpec = NULL;
-static void *g_pLastRawHardwareDataStream = NULL;
+static CVertexBuffer *g_pLastColorBuffer = nullptr;
+static VertexStreamSpec_t *g_pLastStreamSpec = nullptr;
+static void *g_pLastRawHardwareDataStream = nullptr;
 static bool g_bCustomStreamsSet[ 16 ];
 static int g_nLastColorMeshVertOffsetInBytes = 0;
 static bool g_bUsingVertexID = false;
@@ -1081,7 +1081,7 @@ CIndexBufferDx8::CIndexBufferDx8( ShaderBufferType_t bufferType, MaterialIndexFo
 		nIndexCount /= 2;
 	}
 
-	m_pIndexBuffer = NULL;
+	m_pIndexBuffer = nullptr;
 	m_IndexFormat = fmt;
 	m_nBufferSize = nIndexCount * IndexSize();
 	m_nIndexCount = nIndexCount;
@@ -1091,7 +1091,7 @@ CIndexBufferDx8::CIndexBufferDx8( ShaderBufferType_t bufferType, MaterialIndexFo
 	m_bFlush = false;
 
 #ifdef CHECK_INDICES
-	m_pShadowIndices = NULL;
+	m_pShadowIndices = nullptr;
 #endif
 
 #ifdef VPROF_ENABLED
@@ -1136,7 +1136,7 @@ bool CIndexBufferDx8::Allocate()
 
 	D3DPOOL d3dPool = m_bIsDynamic ? D3DPOOL_DEFAULT : D3DPOOL_MANAGED;
 	HRESULT hr = Dx9Device()->CreateIndexBuffer( 
-		m_nBufferSize, usage, format, d3dPool, &m_pIndexBuffer, NULL );
+		m_nBufferSize, usage, format, d3dPool, &m_pIndexBuffer, nullptr );
 
 	if ( ( hr == D3DERR_OUTOFVIDEOMEMORY ) || ( hr == E_OUTOFMEMORY ) )
 	{
@@ -1145,10 +1145,10 @@ bool CIndexBufferDx8::Allocate()
 		// FIXME: need to record this
 		Dx9Device()->EvictManagedResources();
 		hr = Dx9Device()->CreateIndexBuffer( 
-			m_nBufferSize, usage, format, d3dPool, &m_pIndexBuffer, NULL );
+			m_nBufferSize, usage, format, d3dPool, &m_pIndexBuffer, nullptr );
 	}
 
-	if ( FAILED(hr) || ( m_pIndexBuffer == NULL ) )
+	if ( FAILED(hr) || ( m_pIndexBuffer == nullptr ) )
 	{
 		Warning( "CIndexBufferDx8::Allocate: CreateIndexBuffer failed!\n" );
 		return false;
@@ -1192,7 +1192,7 @@ void CIndexBufferDx8::Free()
 #else
 		Dx9Device()->Release( m_pIndexBuffer );
 #endif
-		m_pIndexBuffer = NULL;
+		m_pIndexBuffer = nullptr;
 
 		if ( !m_bIsDynamic )
 		{
@@ -1210,7 +1210,7 @@ void CIndexBufferDx8::Free()
 	if ( m_pShadowIndices )
 	{
 		delete[] m_pShadowIndices;
-		m_pShadowIndices = NULL;
+		m_pShadowIndices = nullptr;
 	}
 #endif // CHECK_INDICES
 }
@@ -1324,7 +1324,7 @@ bool CIndexBufferDx8::Lock( int nMaxIndexCount, bool bAppend, IndexDesc_t &desc 
 
 	VPROF( "CIndexBufferX8::Lock" );		
 
-	void *pLockedData = NULL;
+	void *pLockedData = nullptr;
 	HRESULT hr;
 	int nMemoryRequired;
 	bool bHasEnoughMemory;
@@ -1355,9 +1355,9 @@ bool CIndexBufferDx8::Lock( int nMaxIndexCount, bool bAppend, IndexDesc_t &desc 
 	// Unbind this bad boy if we've currently got it bound
 	if ( g_pLastIndexBuffer == m_pIndexBuffer )
 	{
-		Dx9Device()->SetIndices( NULL );
-		g_pLastIndex = NULL;
-		g_pLastIndexBuffer = NULL;
+		Dx9Device()->SetIndices( nullptr );
+		g_pLastIndex = nullptr;
+		g_pLastIndexBuffer = nullptr;
 	}
 
 	// Check to see if we have enough memory 
@@ -1475,7 +1475,7 @@ void CIndexBufferDx8::SetIndexStreamState( int firstVertexIdx )
 		D3DSetIndices( m_pIndexBuffer );
 		HandlePerFrameTextureStats( ShaderAPI()->GetCurrentFrameCounter() );
 
-		g_pLastIndex = NULL;
+		g_pLastIndex = nullptr;
 		g_LastVertexIdx = -1;
 	}
 }
@@ -1505,7 +1505,7 @@ CVertexBufferDx8::CVertexBufferDx8( ShaderBufferType_t type, VertexFormat_t fmt,
 //	Debugger();
 	Assert( nVertexCount != 0 );
 
-	m_pVertexBuffer = NULL;
+	m_pVertexBuffer = nullptr;
 	m_VertexFormat = fmt;
 	m_nVertexCount = ( fmt == VERTEX_FORMAT_UNKNOWN ) ? 0 : nVertexCount;
 	m_nBufferSize = ( fmt == VERTEX_FORMAT_UNKNOWN ) ? nVertexCount : nVertexCount * VertexSize();
@@ -1529,7 +1529,7 @@ CVertexBufferDx8::CVertexBufferDx8( ShaderBufferType_t type, VertexFormat_t fmt,
 	else
 	{
 		m_pGlobalCounter = g_VProfCurrentProfile.FindOrCreateCounter( "TexGroup_global_" TEXTURE_GROUP_DYNAMIC_VERTEX_BUFFER, COUNTER_GROUP_TEXTURE_GLOBAL );
-		m_pFrameCounter = NULL;
+		m_pFrameCounter = nullptr;
 	}
 	m_nVProfFrame = -1;
 #endif
@@ -1574,7 +1574,7 @@ bool CVertexBufferDx8::Allocate()
 	}
 
 	HRESULT hr = Dx9Device()->CreateVertexBuffer( 
-		m_nBufferSize, usage, 0, pool, &m_pVertexBuffer, NULL );
+		m_nBufferSize, usage, 0, pool, &m_pVertexBuffer, nullptr );
 
 	if ( ( hr == D3DERR_OUTOFVIDEOMEMORY ) || ( hr == E_OUTOFMEMORY ) )
 	{
@@ -1583,10 +1583,10 @@ bool CVertexBufferDx8::Allocate()
 		// FIXME: need to record this
 		Dx9Device()->EvictManagedResources();
 		hr = Dx9Device()->CreateVertexBuffer( 
-			m_nBufferSize, usage, 0, pool, &m_pVertexBuffer, NULL );
+			m_nBufferSize, usage, 0, pool, &m_pVertexBuffer, nullptr );
 	}
 
-	if ( FAILED(hr) || ( m_pVertexBuffer == NULL ) )
+	if ( FAILED(hr) || ( m_pVertexBuffer == nullptr ) )
 	{
 		Warning( "CVertexBufferDx8::Allocate: CreateVertexBuffer failed!\n" );
 		return false;
@@ -1635,7 +1635,7 @@ void CVertexBufferDx8::Free()
 #else
 		Dx9Device()->Release( m_pVertexBuffer );
 #endif
-		m_pVertexBuffer = NULL;
+		m_pVertexBuffer = nullptr;
 	}
 }
 
@@ -1744,7 +1744,7 @@ bool CVertexBufferDx8::Lock( int nMaxVertexCount, bool bAppend, VertexDesc_t &de
 
 	VPROF( "CVertexBufferDx8::Lock" );		
 
-	void *pLockedData = NULL;
+	void *pLockedData = nullptr;
 	HRESULT hr;
 	int nMemoryRequired;
 	bool bHasEnoughMemory;
@@ -2423,7 +2423,7 @@ CMeshDX8::CMeshDX8( const char *pTextureGroupName ) : m_NumVertices(0), m_NumInd
 
 	m_flexVertCount = 0;
 	m_bHasFlexVerts = false;
-	m_pFlexVertexBuffer = NULL;
+	m_pFlexVertexBuffer = nullptr;
 	m_nFlexVertOffsetInBytes = 0;
 }
 
@@ -2441,7 +2441,7 @@ CMeshDX8::~CMeshDX8()
 			if ( m_arrRawHardwareDataStreams[k] )
 			{
 				m_arrRawHardwareDataStreams[k]->Release();
-				m_arrRawHardwareDataStreams[k] = NULL;
+				m_arrRawHardwareDataStreams[k] = nullptr;
 			}
 		}
 		m_bHasRawHardwareDataStreams = false;
@@ -2469,14 +2469,14 @@ void CMeshDX8::SetFlexMesh( IMesh *pMesh, int nVertexOffsetInBytes )
 	else
 	{
 		m_flexVertCount = 0;
-		m_pFlexVertexBuffer = NULL;
+		m_pFlexVertexBuffer = nullptr;
 		m_bHasFlexVerts = false;
 	}
 }
 
 void CMeshDX8::DisableFlexMesh( )
 {
-	CMeshDX8::SetFlexMesh( NULL, 0 );
+	CMeshDX8::SetFlexMesh( nullptr, 0 );
 }
 
 bool CMeshDX8::HasFlexMesh( ) const
@@ -2531,7 +2531,7 @@ void CMeshDX8::HandleLateCreation( )
 bool CMeshDX8::HasColorMesh( ) const
 {
 	LOCK_SHADERAPI();
-	return (m_pColorMesh != NULL);
+	return (m_pColorMesh != nullptr);
 }
 
 void CMeshDX8::GetColorMesh( const IVertexBuffer** pMesh, int *pMeshVertexOffsetInBytes ) const
@@ -3226,7 +3226,7 @@ void CMeshDX8::SetTessellationStreamState( int nVertOffsetInBytes, int iSubdivLe
 			pPatchIB->HandlePerFrameTextureStats( ShaderAPI()->GetCurrentFrameCounter() );
 
 			g_pLastIndex = pPatchIB;
-			g_pLastIndexBuffer = NULL;
+			g_pLastIndexBuffer = nullptr;
 			g_LastVertexIdx = -1;
 		}
 		else
@@ -3253,7 +3253,7 @@ void CMeshDX8::SetCustomStreamsState()
 	}
 	else
 	{
-		LPDIRECT3DVERTEXBUFFER *arrRawStreams = m_bHasRawHardwareDataStreams ? m_arrRawHardwareDataStreams : NULL;
+		LPDIRECT3DVERTEXBUFFER *arrRawStreams = m_bHasRawHardwareDataStreams ? m_arrRawHardwareDataStreams : nullptr;
 		g_pLastRawHardwareDataStream = arrRawStreams;
 	}
 
@@ -3295,7 +3295,7 @@ void CMeshDX8::SetCustomStreamsState()
 
 void *CMeshDX8::AccessRawHardwareDataStream( uint8 nRawStreamIndex, uint32 numBytes, uint32 uiFlags, void *pvContext )
 {
-	return NULL;
+	return nullptr;
 }
 
 inline void CMeshDX8::SetColorStreamState( )
@@ -3349,7 +3349,7 @@ void CMeshDX8::SetVertexStreamState( int nVertOffsetInBytes, bool bIsRenderingIn
 		D3DSetStreamSource( VertexStreamSpec_t::STREAM_SUBDQUADS, m_pVertexBuffer->GetInterface(), nVertOffsetInBytes, m_pVertexBuffer->VertexSize() * 4 );
 		m_pVertexBuffer->HandlePerFrameTextureStats( ShaderAPI()->GetCurrentFrameCounter() );
 
-		g_pLastVertex = NULL;
+		g_pLastVertex = nullptr;
 		g_nLastVertOffsetInBytes = -1;
 	}
 	else if( GetTessellationType() == 0 )
@@ -3417,7 +3417,7 @@ void CMeshDX8::SetVertexStreamState( int nVertOffsetInBytes, bool bIsRenderingIn
 	}
 	else
 	{
-		LPDIRECT3DVERTEXBUFFER *arrRawStreams = m_bHasRawHardwareDataStreams ? m_arrRawHardwareDataStreams : NULL;
+		LPDIRECT3DVERTEXBUFFER *arrRawStreams = m_bHasRawHardwareDataStreams ? m_arrRawHardwareDataStreams : nullptr;
 		g_pLastRawHardwareDataStream = arrRawStreams;
 	}
 }
@@ -3426,7 +3426,7 @@ void CMeshDX8::SetIndexStreamState( int firstVertexIdx )
 {
 	if( !( GetTessellationType() > 0 ) )
 	{
-		if ( ( g_pLastIndexBuffer != NULL ) || (g_pLastIndex != m_pIndexBuffer) || ( firstVertexIdx != g_LastVertexIdx ) )
+		if ( ( g_pLastIndexBuffer != nullptr ) || (g_pLastIndex != m_pIndexBuffer) || ( firstVertexIdx != g_LastVertexIdx ) )
 		{
 			Assert( m_pIndexBuffer );
 
@@ -3525,7 +3525,7 @@ void CMeshDX8::Draw( int nFirstIndex, int nIndexCount )
 		primList.m_FirstIndex = nFirstIndex;
 		primList.m_NumIndices = nIndexCount;
 	}
-	DrawInternal( NULL, &primList, 1 );
+	DrawInternal( nullptr, &primList, 1 );
 }
 
 void CMeshDX8::Draw( CPrimList *pLists, int nLists )
@@ -3536,7 +3536,7 @@ void CMeshDX8::Draw( CPrimList *pLists, int nLists )
 		return;
 	}
 
-	DrawInternal( NULL, pLists, nLists );
+	DrawInternal( nullptr, pLists, nLists );
 }
 
 void CMeshDX8::DrawInternal( const Vector4D *pDiffuseModulation, CPrimList *pLists, int nLists )
@@ -3876,7 +3876,7 @@ bool CDynamicMeshDX8::NeedsVertexFormatReset( VertexFormat_t fmt ) const
 //-----------------------------------------------------------------------------
 bool CDynamicMeshDX8::HasEnoughRoom( int nVertexCount, int nIndexCount ) const
 {
-	Assert( m_pVertexBuffer != NULL );
+	Assert( m_pVertexBuffer != nullptr );
 
 	if ( g_pShaderDeviceDx8->IsDeactivated() )
 		return false;
@@ -4081,7 +4081,7 @@ void CDynamicMeshDX8::DrawInternal( const Vector4D *pVecDiffuseModulation, int n
 
 		DrawMesh( pVecDiffuseModulation );
 
-		s_pPrims = NULL;
+		s_pPrims = nullptr;
 	}
 }
 
@@ -4092,7 +4092,7 @@ void CDynamicMeshDX8::DrawModulated( const Vector4D &vecDiffuseModulation, int n
 
 void CDynamicMeshDX8::Draw( int nFirstIndex, int nIndexCount )
 {
-	DrawInternal( NULL, nFirstIndex, nIndexCount );
+	DrawInternal( nullptr, nFirstIndex, nIndexCount );
 }
 
 
@@ -4119,7 +4119,7 @@ void CDynamicMeshDX8::DrawSinglePassImmediately()
 			s_nPrims = 1;
 
 			// Render it
-			RenderPass( NULL );
+			RenderPass( nullptr );
 		}
 
 		// We're done with our data
@@ -4390,7 +4390,7 @@ void CTempMeshDX8::DrawInternal( const Vector4D *pVecDiffuseModulation, int nFir
 
 void CTempMeshDX8::Draw( int nFirstIndex, int nIndexCount )
 {
-	DrawInternal( NULL, nFirstIndex, nIndexCount );
+	DrawInternal( nullptr, nFirstIndex, nIndexCount );
 }
 
 void CTempMeshDX8::DrawModulated( const Vector4D &vecDiffuseModulation, int nFirstIndex, int nIndexCount )
@@ -4812,9 +4812,9 @@ CMeshMgr::CMeshMgr() :
 	m_DynamicTempMesh(true), 
 	m_pVertexIDBuffer(0),
 	m_pEmptyColorBuffer(0),
-	m_pCurrentVertexBuffer( NULL ),
+	m_pCurrentVertexBuffer( nullptr ),
 	m_CurrentVertexFormat( 0 ),
-	m_pCurrentIndexBuffer( NULL ),
+	m_pCurrentIndexBuffer( nullptr ),
 	m_DynamicIndexBuffer( SHADER_BUFFER_TYPE_DYNAMIC, MATERIAL_INDEX_FORMAT_16BIT, INDEX_BUFFER_SIZE, "dynamic" ),
 	m_DynamicVertexBuffer( SHADER_BUFFER_TYPE_DYNAMIC, VERTEX_FORMAT_UNKNOWN, DYNAMIC_VERTEX_BUFFER_MEMORY, "dynamic" )
 {
@@ -4828,7 +4828,7 @@ CMeshMgr::CMeshMgr() :
 	m_nUnusedTextureCoords = 0;
 	memset( m_pPreTessPatchIndexBuffer, 0, sizeof(m_pPreTessPatchIndexBuffer) ); 
 	memset( m_pPreTessPatchVertexBuffer, 0, sizeof(m_pPreTessPatchVertexBuffer) );
-	m_pZeroVertexBuffer = NULL;
+	m_pZeroVertexBuffer = nullptr;
 }
 
 CMeshMgr::~CMeshMgr()
@@ -4860,11 +4860,11 @@ void CMeshMgr::Init()
 	// Track these 2 allocations as well.
 	g_VBAllocTracker->TrackMeshAllocations( "CreateDynamicIndexBuffers" );
 	m_DynamicIndexBuffer.Allocate();
-	g_VBAllocTracker->TrackMeshAllocations( NULL );
+	g_VBAllocTracker->TrackMeshAllocations( nullptr );
 
 	g_VBAllocTracker->TrackMeshAllocations( "CreateDynamicVertexBuffers" );
 	m_DynamicVertexBuffer.Allocate();
-	g_VBAllocTracker->TrackMeshAllocations( NULL );
+	g_VBAllocTracker->TrackMeshAllocations( nullptr );
 }
 
 void CMeshMgr::Shutdown()
@@ -4946,10 +4946,10 @@ void CMeshMgr::CreateZeroVertexBuffer()
 		// In GL glVertexAttribPointer() doesn't support strides of 0, so we need to allocate a dummy vertex buffer large enough to handle 16-bit indices with a stride of 4 byte per vertex, plus a bit more for safety (in case basevertexindex is > 0).
 		// We could also try just disabling any vertex attribs that fetch from stream 2 and need 0's, but AMD reports this could hit a slow path in the driver. Argh.
 		uint nBufSize = IsOpenGL() ? ( 65536 * 2 * 4 ) : 4096;
-		HRESULT hr = Dx9Device()->CreateVertexBuffer( nBufSize, D3DUSAGE_WRITEONLY, 0, D3DPOOL_DEFAULT, &m_pZeroVertexBuffer, NULL );
+		HRESULT hr = Dx9Device()->CreateVertexBuffer( nBufSize, D3DUSAGE_WRITEONLY, 0, D3DPOOL_DEFAULT, &m_pZeroVertexBuffer, nullptr );
 		if ( !FAILED( hr ) )
 		{
-			void *pData = NULL;
+			void *pData = nullptr;
 			m_pZeroVertexBuffer->Lock( 0, nBufSize, &pData, D3DLOCK_NOSYSLOCK );
 			if ( pData )
 			{
@@ -4965,7 +4965,7 @@ void CMeshMgr::DestroyZeroVertexBuffer()
 	if ( m_pZeroVertexBuffer )
 	{
 		m_pZeroVertexBuffer->Release();
-		m_pZeroVertexBuffer = NULL;
+		m_pZeroVertexBuffer = nullptr;
 	}
 }
 
@@ -4985,7 +4985,7 @@ void CMeshMgr::CreateVertexIDBuffer()
 			VERTEX_BUFFER_SIZE, TEXTURE_GROUP_STATIC_VERTEX_BUFFER_OTHER, ShaderAPI()->UsingSoftwareVertexProcessing() );
 		FillVertexIDBuffer( m_pVertexIDBuffer, VERTEX_BUFFER_SIZE );
 	}
-	g_VBAllocTracker->TrackMeshAllocations( NULL );
+	g_VBAllocTracker->TrackMeshAllocations( nullptr );
 }
 
 void CMeshMgr::DestroyVertexIDBuffer()
@@ -4993,7 +4993,7 @@ void CMeshMgr::DestroyVertexIDBuffer()
 	if ( m_pVertexIDBuffer )
 	{
 		delete m_pVertexIDBuffer;
-		m_pVertexIDBuffer = NULL;
+		m_pVertexIDBuffer = nullptr;
 	}
 }
 
@@ -5124,7 +5124,7 @@ void CMeshMgr::CreateEmptyColorBuffer()
 		VERTEX_BUFFER_SIZE, TEXTURE_GROUP_STATIC_VERTEX_BUFFER_OTHER, ShaderAPI()->UsingSoftwareVertexProcessing() );
 	FillEmptyColorBuffer( m_pEmptyColorBuffer, VERTEX_BUFFER_SIZE );
 
-	g_VBAllocTracker->TrackMeshAllocations( NULL );
+	g_VBAllocTracker->TrackMeshAllocations( nullptr );
 }
 
 void CMeshMgr::DestroyEmptyColorBuffer()
@@ -5132,7 +5132,7 @@ void CMeshMgr::DestroyEmptyColorBuffer()
 	if ( m_pEmptyColorBuffer )
 	{
 		delete m_pEmptyColorBuffer;
-		m_pEmptyColorBuffer = NULL;
+		m_pEmptyColorBuffer = nullptr;
 	}
 }
 
@@ -5188,7 +5188,7 @@ void CMeshMgr::CreatePreTessPatchVertexBuffers()
 			FillPreTessPatchVB( m_pPreTessPatchVertexBuffer[i], iSubdivLevel, nVertexCount );
 		}
 	}
-	g_VBAllocTracker->TrackMeshAllocations( NULL );
+	g_VBAllocTracker->TrackMeshAllocations( nullptr );
 }
 
 //-----------------------------------------------------------------------------
@@ -5201,7 +5201,7 @@ void CMeshMgr::DestroyPreTessPatchIndexBuffers()
 		if( m_pPreTessPatchIndexBuffer[i] )
 		{
 			delete m_pPreTessPatchIndexBuffer[i];
-			m_pPreTessPatchIndexBuffer[i] = NULL;
+			m_pPreTessPatchIndexBuffer[i] = nullptr;
 		}
 	}
 }
@@ -5212,7 +5212,7 @@ void CMeshMgr::DestroyPreTessPatchVertexBuffers()
 		if( m_pPreTessPatchVertexBuffer[i] )
 		{
 			delete m_pPreTessPatchVertexBuffer[i];
-			m_pPreTessPatchVertexBuffer[i] = NULL;
+			m_pPreTessPatchVertexBuffer[i] = nullptr;
 		}
 	}
 }
@@ -5251,7 +5251,7 @@ void CMeshMgr::MarkUnusedVertexFields( unsigned int nFlags, int nTexCoordCount, 
 // Allocate temporary arrays either on the stack, or from the heap. 
 // Prevents using all the stack when *lots* of objects are rendered to CSM's.
 //-----------------------------------------------------------------------------
-#define STUDIORENDER_TEMP_DATA_MALLOC( typeName, p, n ) const int nTempDataSize##p = (n); void *pvFree##p = NULL; typeName *p = (typeName *) ( ( nTempDataSize##p < 64*1024 ) ? stackalloc( nTempDataSize##p ) : ( pvFree##p = malloc( nTempDataSize##p ) ) );
+#define STUDIORENDER_TEMP_DATA_MALLOC( typeName, p, n ) const int nTempDataSize##p = (n); void *pvFree##p = nullptr; typeName *p = (typeName *) ( ( nTempDataSize##p < 64*1024 ) ? stackalloc( nTempDataSize##p ) : ( pvFree##p = malloc( nTempDataSize##p ) ) );
 #define STUDIORENDER_TEMP_DATA_FREE( p ) free( pvFree##p )
 
 
@@ -5308,17 +5308,17 @@ void CMeshMgr::DrawInstances( int nInstanceCount, const MeshInstanceData_t *pIns
 		g_pInstanceData = pInstanceData;
 
 		// This is going to cause RenderPass to get called a bunch
-		ShaderAPI()->DrawMesh( NULL, nBatchSize, pInstanceData, nCompression, pCompiledState, pCompiledInfo );
+		ShaderAPI()->DrawMesh( nullptr, nBatchSize, pInstanceData, nCompression, pCompiledState, pCompiledInfo );
 
 		nInstanceCount -= nBatchSize;
 		pInstanceData += nBatchSize;
 		nBatchSize = MIN( nInstanceCount, CONSOLE_MAX_MODEL_FAST_PATH_BATCH_SIZE ); 
 	}
 
-	g_pInstanceCompiledState = NULL;
-	g_pInstanceInfo = NULL;
+	g_pInstanceCompiledState = nullptr;
+	g_pInstanceInfo = nullptr;
 	g_nInstanceCount = 0;
-	g_pInstanceData = NULL;
+	g_pInstanceData = nullptr;
 
 	STUDIORENDER_TEMP_DATA_FREE( pCompiledInfo );
 	STUDIORENDER_TEMP_DATA_FREE( pCompiledState );
@@ -5373,11 +5373,11 @@ void CMeshMgr::DestroyVertexBuffers()
 	g_bUsingVertexID = false;
 	g_nLastVertexIDOffset = -1;
 	g_bUsingPreTessPatches = false;
-	g_pLastStreamSpec = NULL;
-	g_pLastVertex = NULL;
-	g_pLastVertexBuffer = NULL;
+	g_pLastStreamSpec = nullptr;
+	g_pLastVertex = nullptr;
+	g_pLastVertexBuffer = nullptr;
 	g_nLastVertOffsetInBytes = -1;
-	g_pLastColorBuffer = NULL;
+	g_pLastColorBuffer = nullptr;
 	g_nLastColorMeshVertOffsetInBytes = 0;
 
 	if( !Dx9Device() )
@@ -5436,7 +5436,7 @@ IMesh* CMeshMgr::CreateStaticMesh( VertexFormat_t format, const char *pTextureBu
 	CMeshDX8* pNewMesh = new CMeshDX8( pTextureBudgetGroup );
 	pNewMesh->SetVertexStreamSpec( pStreamSpec );
 	pNewMesh->SetVertexFormat( format, false, false );
-	if ( pMaterial != NULL )
+	if ( pMaterial != nullptr )
 	{
 		pNewMesh->SetMaterial( pMaterial );
 	}
@@ -5509,7 +5509,7 @@ IMesh *CMeshMgr::GetFlexMesh()
 IMesh* CMeshMgr::GetDynamicMesh( IMaterial* pMaterial, VertexFormat_t vertexFormat, int nHWSkinBoneCount,
 	bool buffered, IMesh* pVertexOverride, IMesh* pIndexOverride )
 {
-	Assert( (pMaterial == NULL) || ((IMaterialInternal *)pMaterial)->IsRealTimeVersion() );
+	Assert( (pMaterial == nullptr) || ((IMaterialInternal *)pMaterial)->IsRealTimeVersion() );
 
 	IMaterialInternal* pMatInternal = static_cast<IMaterialInternal*>(pMaterial);
 
@@ -5550,8 +5550,8 @@ IMesh* CMeshMgr::GetDynamicMesh( IMaterial* pMaterial, VertexFormat_t vertexForm
 	// Cache off the override buffers before this happens (in SetVertexFormat of all things)
 	CBaseMeshDX8* pBaseVertexOverride = static_cast<CBaseMeshDX8*>( pVertexOverride );
 	CBaseMeshDX8* pBaseIndexOverride = static_cast<CBaseMeshDX8*>( pIndexOverride );
-	CVertexBuffer *pVertexOverrideBuffer = ( pBaseVertexOverride ) ? pBaseVertexOverride->GetVertexBuffer() : NULL;
-	CIndexBuffer *pIndexOverrideBuffer = ( pBaseIndexOverride ) ? pBaseIndexOverride->GetIndexBuffer() : NULL;
+	CVertexBuffer *pVertexOverrideBuffer = ( pBaseVertexOverride ) ? pBaseVertexOverride->GetVertexBuffer() : nullptr;
+	CIndexBuffer *pIndexOverrideBuffer = ( pBaseIndexOverride ) ? pBaseIndexOverride->GetIndexBuffer() : nullptr;
 
 	if( !pBaseVertexOverride )
 	{
@@ -5576,11 +5576,11 @@ IMesh* CMeshMgr::GetDynamicMesh( IMaterial* pMaterial, VertexFormat_t vertexForm
 			fmt |= VERTEX_BONE_INDEX;
 		}
 
-		pMesh->SetVertexFormat( fmt, false, ( pIndexOverrideBuffer != NULL ) );
+		pMesh->SetVertexFormat( fmt, false, ( pIndexOverrideBuffer != nullptr ) );
 	}
 	else
 	{
-		pMesh->SetVertexFormat( pBaseVertexOverride->GetVertexFormat(), true, ( pIndexOverrideBuffer != NULL )  );
+		pMesh->SetVertexFormat( pBaseVertexOverride->GetVertexFormat(), true, ( pIndexOverrideBuffer != nullptr )  );
 	}
 	pMesh->SetMaterial( pMatInternal );
 
@@ -5731,7 +5731,7 @@ void CMeshMgr::GetMaxToRender( IMesh *pMesh, bool bMaxUntilFlush, int *pMaxVerts
 
 int CMeshMgr::GetMaxVerticesToRender( IMaterial *pMaterial )
 {
-	Assert( (pMaterial == NULL) || ((IMaterialInternal *)pMaterial)->IsRealTimeVersion() );
+	Assert( (pMaterial == nullptr) || ((IMaterialInternal *)pMaterial)->IsRealTimeVersion() );
 	// Be conservative, assume no compression (in here, we don't know if the caller will used a compressed VB or not)
 	// FIXME: allow the caller to specify which compression type should be used to compute size from the vertex format
 	//        (this can vary between multiple VBs/Meshes using the same material)
@@ -5765,7 +5765,7 @@ CVertexBuffer *CMeshMgr::FindOrCreateVertexBuffer( int nDynamicBufferId, VertexF
 	while ( m_DynamicVertexBuffers.Count() <= nDynamicBufferId )
 	{
 		// Track VB allocations (override any prior allocator string set higher up on the callstack)
-		g_VBAllocTracker->TrackMeshAllocations( NULL );
+		g_VBAllocTracker->TrackMeshAllocations( nullptr );
 		g_VBAllocTracker->TrackMeshAllocations( "CMeshMgr::FindOrCreateVertexBuffer (dynamic VB)" );
 
 		// create the single 1MB dynamic vb that will be shared amongst all consumers
@@ -5781,7 +5781,7 @@ CVertexBuffer *CMeshMgr::FindOrCreateVertexBuffer( int nDynamicBufferId, VertexF
 		{
 			MemOutOfMemory( sizeof(CVertexBuffer) );
 		}
-		g_VBAllocTracker->TrackMeshAllocations( NULL );
+		g_VBAllocTracker->TrackMeshAllocations( nullptr );
 	}
 	
 	if ( m_DynamicVertexBuffers[nDynamicBufferId].m_VertexSize != vertexSize )
@@ -5796,7 +5796,7 @@ CVertexBuffer *CMeshMgr::FindOrCreateVertexBuffer( int nDynamicBufferId, VertexF
 		// mark cached stream state as invalid to reset stream
 		if ( nDynamicBufferId == 0 )
 		{
-			g_pLastVertex = NULL;
+			g_pLastVertex = nullptr;
 		}
 	}
 
@@ -5812,7 +5812,7 @@ CIndexBuffer *CMeshMgr::GetDynamicIndexBufferInternal()
 IVertexBuffer *CMeshMgr::GetDynamicVertexBuffer( IMaterial *pMaterial, bool buffered )
 {
 	Assert( 0 );
-	return NULL;
+	return nullptr;
 //	return ( IMeshDX8 * )GetDynamicMesh( pMaterial, buffered, NULL, NULL );
 }
 
@@ -5842,10 +5842,10 @@ IIndexBuffer *CMeshMgr::CreateIndexBuffer( ShaderBufferType_t bufferType, Materi
 	case SHADER_BUFFER_TYPE_STATIC_TEMP:
 	case SHADER_BUFFER_TYPE_DYNAMIC_TEMP:
 		Assert( 0 );
-		return NULL;
+		return nullptr;
 	default:
 		Assert( 0 );
-		return NULL;
+		return nullptr;
 	}
 }
 
@@ -5872,7 +5872,7 @@ IVertexBuffer *CMeshMgr::GetDynamicVertexBuffer( int streamID, VertexFormat_t ve
 	{
 		// UNDONE: support compressed dynamic meshes if needed (pro: less VB memory, con: time spent compressing)
 		DebuggerBreak();
-		return NULL;
+		return nullptr;
 	}
 
 	bool needTempMesh = ShaderAPI()->IsInSelectionMode();
@@ -5892,7 +5892,7 @@ IVertexBuffer *CMeshMgr::GetDynamicVertexBuffer( int streamID, VertexFormat_t ve
 	{
 		Assert( 0 ); // MESHFIXME: don't do this yet.
 //		pVertexBuffer = &m_DynamicTempVertexBuffer;
-		pVertexBuffer = NULL;
+		pVertexBuffer = nullptr;
 	}
 	else
 	{
@@ -5986,7 +5986,7 @@ void CMeshMgr::SetCustomStreamsState()
 			}
 		}
 	}
-	g_pLastStreamSpec = NULL;
+	g_pLastStreamSpec = nullptr;
 }
 
 void CMeshMgr::SetColorStreamState()
@@ -6001,7 +6001,7 @@ void CMeshMgr::SetColorStreamState()
 									  
 		D3DSetStreamSource( 1, 0, 0, 0 );
 	}
-	g_pLastColorBuffer = NULL;
+	g_pLastColorBuffer = nullptr;
 	g_nLastColorMeshVertOffsetInBytes = 0;
 }
 
@@ -6029,7 +6029,7 @@ void CMeshMgr::SetVertexStreamState( int nVertOffsetInBytes, int nVertexStride )
 		D3DSetStreamSource( 0, m_pCurrentVertexBuffer->GetDx9Buffer(), nVertOffsetInBytes, nVertexStride );
 		m_pCurrentVertexBuffer->HandlePerFrameTextureStats( ShaderAPI()->GetCurrentFrameCounter() );
 
-		g_pLastVertex = NULL;
+		g_pLastVertex = nullptr;
 		g_nLastVertStride = nVertexStride;
 		g_pLastVertexBuffer = m_pCurrentVertexBuffer->GetDx9Buffer();
 		g_nLastVertOffsetInBytes = nVertOffsetInBytes;
@@ -6070,7 +6070,7 @@ void CMeshMgr::BindVertexBuffer( int nStreamID, IVertexBuffer *pVertexBuffer, in
 	m_pCurrentVertexStride[nStreamID] = m_pCurrentVertexBuffer->VertexSize();
 	m_pFirstVertex[nStreamID] = nFirstVertex;
 	m_pVertexCount[nStreamID] = nVertexCount, 
-	m_pVertexIDBuffer = NULL;
+	m_pVertexIDBuffer = nullptr;
 }
 
 void CMeshMgr::BindIndexBuffer( IIndexBuffer *pIndexBuffer, int nOffsetInBytes )
@@ -6159,7 +6159,7 @@ void CMeshMgr::DrawInstancedPrims( const unsigned char *pInstanceCommandBuffer )
 
 		IMaterialInternal *pMaterial = ShaderAPI()->GetBoundMaterial();
 		bool bUseColorMesh = ( pMaterial->GetVertexFormat() & VERTEX_COLOR_STREAM_1 ) != 0;
-		ShaderAPI()->SetVertexDecl( nMeshFormat, bUseColorMesh, false, false, false, NULL );
+		ShaderAPI()->SetVertexDecl( nMeshFormat, bUseColorMesh, false, false, false, nullptr );
 
 		D3DSetStreamSource( VertexStreamSpec_t::STREAM_SPECULAR1, pVertexBuffer->GetInterface(), 
 			nVertexOffset, pVertexBuffer->VertexSize() );
@@ -6250,7 +6250,7 @@ void CMeshMgr::RenderPassForInstances( const unsigned char *pInstanceCommandBuff
 		g_nLastColorMeshVertOffsetInBytes = nVertexOffset;
 
 		bool bUsingPreTessPatches = ( pVertexMesh->GetTessellationType() > 0 ) && ( ShaderAPI()->GetTessellationMode() == TESSELLATION_MODE_ACC_PATCHES_EXTRA || ShaderAPI()->GetTessellationMode() == TESSELLATION_MODE_ACC_PATCHES_REG );		
-		ShaderAPI()->SetVertexDecl( nMeshFormat, bUseColorMesh, NULL, bUsingVertexID, bUsingPreTessPatches, NULL );
+		ShaderAPI()->SetVertexDecl( nMeshFormat, bUseColorMesh, false, bUsingVertexID, bUsingPreTessPatches, nullptr );
 
 		D3DPRIMITIVETYPE nMode = ComputeMode( instance.m_nPrimType );
 
@@ -6381,13 +6381,13 @@ void CMeshMgr::RenderPassWithVertexAndIndexBuffers( const unsigned char *pInstan
 void CMeshMgr::SetIndexStreamState( int firstVertexIdx )
 {
 	CIndexBufferDx8 *pIndexBuffer = assert_cast< CIndexBufferDx8* >( m_pCurrentIndexBuffer );
-	IDirect3DIndexBuffer9 *pDx9Buffer = pIndexBuffer ? pIndexBuffer->GetDx9Buffer() : NULL;
+	IDirect3DIndexBuffer9 *pDx9Buffer = pIndexBuffer ? pIndexBuffer->GetDx9Buffer() : nullptr;
 	if ( g_pLastIndex || g_pLastIndexBuffer != pDx9Buffer )
 	{
 		D3DSetIndices( pDx9Buffer );
 		pIndexBuffer->HandlePerFrameTextureStats( ShaderAPI()->GetCurrentFrameCounter() );
 
-		g_pLastIndex = NULL;
+		g_pLastIndex = nullptr;
 		g_LastVertexIdx = -1;
 	}
 }

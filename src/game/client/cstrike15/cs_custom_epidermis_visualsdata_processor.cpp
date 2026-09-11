@@ -17,7 +17,7 @@ void CCSEpidermisVisualsDataCompare::SerializeToBuffer( CUtlBuffer &buf )
 }
 
 CCSEpidermisVisualsDataProcessor::CCSEpidermisVisualsDataProcessor( CCSEpidermisVisualsDataCompare &&compareObject, const char *pCompositingShaderName )
-	: m_pCompositingShaderName( NULL )
+	: m_pCompositingShaderName( nullptr )
 {
 	m_compareObject = Move( compareObject );
 	m_compareObject.FillCompareBlob();
@@ -29,7 +29,7 @@ CCSEpidermisVisualsDataProcessor::~CCSEpidermisVisualsDataProcessor()
 	if ( m_pCompositingShaderName )
 	{
 		delete [] m_pCompositingShaderName;
-		m_pCompositingShaderName = NULL;
+		m_pCompositingShaderName = nullptr;
 	}
 }
 
@@ -43,12 +43,12 @@ void CCSEpidermisVisualsDataProcessor::SetSkinRootIdent()
 
 KeyValues *CCSEpidermisVisualsDataProcessor::GenerateCustomMaterialKeyValues()
 {
-	return NULL;
+	return nullptr;
 }
 
 KeyValues *CCSEpidermisVisualsDataProcessor::GenerateCompositeMaterialKeyValues( int nMaterialParamId )
 {
-	return NULL;
+	return nullptr;
 }
 
 const char* CCSEpidermisVisualsDataProcessor::GetOriginalMaterialName() const

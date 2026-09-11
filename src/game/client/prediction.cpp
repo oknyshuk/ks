@@ -24,7 +24,7 @@
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
-IPredictionSystem *IPredictionSystem::g_pPredictionSystems = NULL;
+IPredictionSystem *IPredictionSystem::g_pPredictionSystems = nullptr;
 
 #if !defined( NO_ENTITY_PREDICTION )
 
@@ -869,9 +869,9 @@ void CPrediction::FinishCommand( C_BasePlayer *player )
 #if !defined( NO_ENTITY_PREDICTION )
 	VPROF( "CPrediction::FinishCommand" );
 
-	player->m_pCurrentCommand = NULL;
-	C_BaseEntity::SetPredictionRandomSeed( NULL );
-	C_BaseEntity::SetPredictionPlayer( NULL );
+	player->m_pCurrentCommand = nullptr;
+	C_BaseEntity::SetPredictionRandomSeed( nullptr );
+	C_BaseEntity::SetPredictionPlayer( nullptr );
 #endif
 }
 
@@ -1111,7 +1111,7 @@ void CPrediction::SetIdealPitch ( int nSlot, C_BasePlayer *player, const Vector&
 	int		step, dir, steps;
 	trace_t tr;
 
-	if ( player->GetGroundEntity() == NULL )
+	if ( player->GetGroundEntity() == nullptr )
 		return;
 	
 	// Don't do this on the 360..
@@ -1133,7 +1133,7 @@ void CPrediction::SetIdealPitch ( int nSlot, C_BasePlayer *player, const Vector&
 
 		bottom[2] -= 160;
 
-		UTIL_TraceLine( top, bottom, MASK_SOLID, NULL, COLLISION_GROUP_PLAYER_MOVEMENT, &tr );
+		UTIL_TraceLine( top, bottom, MASK_SOLID, nullptr, COLLISION_GROUP_PLAYER_MOVEMENT, &tr );
 
 		// looking at a wall, leave ideal the way it was
 		if ( tr.allsolid )
@@ -1457,7 +1457,7 @@ void CPrediction::StorePredictionResults( int nSlot, int predicted_frame )
 		entity->SaveData( "StorePredictionResults", predicted_frame, PC_EVERYTHING );
 		
 		//if we're keeping first frame results, copy them now
-		if( m_Split[ nSlot ].m_bFirstTimePredicted && (entity->m_pIntermediateData_FirstPredicted[0] != NULL) )
+		if( m_Split[ nSlot ].m_bFirstTimePredicted && (entity->m_pIntermediateData_FirstPredicted[0] != nullptr) )
 		{
 			entity->m_nIntermediateData_FirstPredictedShiftMarker = predicted_frame + 1;
 			memcpy( entity->m_pIntermediateData_FirstPredicted[predicted_frame + 1], entity->m_pIntermediateData[predicted_frame], entity->GetPredDescMap()->m_nPackedSize );

@@ -436,7 +436,7 @@ bool CCSBot::IsVisible( CCSPlayer *player, bool testFOV, unsigned char *visParts
 	// finish gut check
 	if (IsVisible( partPos, testFOV ))
 	{
-		if (visParts == NULL)
+		if (visParts == nullptr)
 			return true;
 
 		testVisParts |= GUT;
@@ -447,7 +447,7 @@ bool CCSBot::IsVisible( CCSPlayer *player, bool testFOV, unsigned char *visParts
 	partPos = GetPartPosition( player, HEAD );
 	if (IsVisible( partPos, testFOV ))
 	{
-		if (visParts == NULL)
+		if (visParts == nullptr)
 			return true;
 
 		testVisParts |= HEAD;
@@ -457,7 +457,7 @@ bool CCSBot::IsVisible( CCSPlayer *player, bool testFOV, unsigned char *visParts
 	partPos = GetPartPosition( player, FEET );
 	if (IsVisible( partPos, testFOV ))
 	{
-		if (visParts == NULL)
+		if (visParts == nullptr)
 			return true;
 
 		testVisParts |= FEET;
@@ -467,7 +467,7 @@ bool CCSBot::IsVisible( CCSPlayer *player, bool testFOV, unsigned char *visParts
 	partPos = GetPartPosition( player, LEFT_SIDE );
 	if (IsVisible( partPos, testFOV ))
 	{
-		if (visParts == NULL)
+		if (visParts == nullptr)
 			return true;
 
 		testVisParts |= LEFT_SIDE;
@@ -476,7 +476,7 @@ bool CCSBot::IsVisible( CCSPlayer *player, bool testFOV, unsigned char *visParts
 	partPos = GetPartPosition( player, RIGHT_SIDE );
 	if (IsVisible( partPos, testFOV ))
 	{
-		if (visParts == NULL)
+		if (visParts == nullptr)
 			return true;
 
 		testVisParts |= RIGHT_SIDE;
@@ -542,7 +542,7 @@ void CCSBot::ComputePartPositions( CCSPlayer *player )
 			player->GetBonePosition( box->bone, info->m_headPos, angles );
 
 			Vector forward, right;
-			AngleVectors( angles, &forward, &right, NULL );
+			AngleVectors( angles, &forward, &right, nullptr );
 
 			// in local bone space
 			const float headForwardOffset = 4.0f;
@@ -805,7 +805,7 @@ void CCSBot::UpdateLookAround( bool updateNow )
 			}
 		}
 
-		if (m_lastKnownArea == NULL)
+		if (m_lastKnownArea == nullptr)
 			return;
 
 		if (gpGlobals->curtime < m_lookAroundStateTimestamp)
@@ -822,7 +822,7 @@ void CCSBot::UpdateLookAround( bool updateNow )
 		Vector validSpot[ MAX_APPROACHES ];
 		int validSpotCount = 0;
 
-		Vector *earlySpot = NULL;
+		Vector *earlySpot = nullptr;
 		float earliest = 999999.9f;
 
 		for ( int i = 0; i < m_approachPointCount; ++i )
@@ -1269,7 +1269,7 @@ CCSPlayer *CCSBot::FindMostDangerousThreat( void )
 
 	if (IsBlind())
 	{
-		return NULL;
+		return nullptr;
 	}
 
 	enum { MAX_THREATS = 16 };		// maximum number of simulataneously attendable threats	
@@ -1286,16 +1286,16 @@ CCSPlayer *CCSBot::FindMostDangerousThreat( void )
 		prevIndex = MAX_ENEMY_QUEUE - 1;
 	CCSPlayer *currentThreat = m_enemyQueue[ prevIndex ].player;
 
-	m_bomber = NULL;
+	m_bomber = nullptr;
 	m_isEnemySniperVisible = false;
 
-	m_closestVisibleFriend = NULL;
+	m_closestVisibleFriend = nullptr;
 	float closeFriendRange = 99999999999.9f;
 
-	m_closestVisibleHumanFriend = NULL;
+	m_closestVisibleHumanFriend = nullptr;
 	float closeHumanFriendRange = 99999999999.9f;
 
-	CCSPlayer *sniperThreat = NULL;
+	CCSPlayer *sniperThreat = nullptr;
 	float sniperThreatRange = 99999999999.9f;
 	bool sniperThreatIsFacingMe = false;
 
@@ -1310,7 +1310,7 @@ CCSPlayer *CCSBot::FindMostDangerousThreat( void )
 		{
 			CBaseEntity *entity = UTIL_PlayerByIndex( i );
 
-			if (entity == NULL)
+			if (entity == nullptr)
 				continue;
 
 			// is it a player?
@@ -1569,7 +1569,7 @@ CCSPlayer *CCSBot::FindMostDangerousThreat( void )
 				area = TheNavMesh->GetNearestNavArea( enemyOrigin );
 			}
 
-			if (area == NULL)
+			if (area == nullptr)
 				continue;
 
 			unsigned int threatLoc = area->GetPlace();
@@ -1616,7 +1616,7 @@ CCSPlayer *CCSBot::FindMostDangerousThreat( void )
 		VPROF_BUDGET( "CCSBot::Select Threat", VPROF_BUDGETGROUP_NPCS );
 
 		if (threatCount == 0)
-			return NULL;
+			return nullptr;
 
 		// if we can still see our current threat, keep it
 		// unless a new one is much closer
@@ -1704,7 +1704,7 @@ void CCSBot::UpdateReactionQueue( void )
 	}
 	else
 	{
-		m_enemyQueue[ now ].player = NULL;
+		m_enemyQueue[ now ].player = nullptr;
 		m_enemyQueue[ now ].isReloading = false;
 		m_enemyQueue[ now ].isProtectedByShield = false;
 	}
@@ -1741,7 +1741,7 @@ CCSPlayer *CCSBot::GetRecognizedEnemy( void )
 {
 	if (m_enemyQueueAttendIndex >= m_enemyQueueCount || IsBlind())
 	{
-		return NULL;
+		return nullptr;
 	}
 
 	return m_enemyQueue[ m_enemyQueueAttendIndex ].player;

@@ -101,7 +101,7 @@ void CDmxElement::Resort( )	const
 		int nCount = m_Attributes.Count();
 		for ( int i = nCount; --i >= 1; )
 		{
-			if ( m_Attributes[i] == NULL || m_Attributes[i-1] == NULL )
+			if ( m_Attributes[i] == nullptr || m_Attributes[i-1] == nullptr )
 			{
 				continue;
 			}
@@ -258,7 +258,7 @@ CDmxAttribute *CDmxElement::GetAttribute( const char *pAttributeName )
 	int idx = FindAttribute( pAttributeName );
 	if ( idx >= 0 )
 		return m_Attributes[ idx ];
-	return NULL;
+	return nullptr;
 }
 
 const CDmxAttribute *CDmxElement::GetAttribute( const char *pAttributeName ) const
@@ -266,7 +266,7 @@ const CDmxAttribute *CDmxElement::GetAttribute( const char *pAttributeName ) con
 	int idx = FindAttribute( pAttributeName );
 	if ( idx >= 0 )
 		return m_Attributes[ idx ];
-	return NULL;
+	return nullptr;
 }
 
 
@@ -445,7 +445,7 @@ void CDmxElement::UnpackIntoStructure( void *pData, const DmxElementUnpackStruct
 			continue;
 		}
 
-		CDmxAttribute temp( NULL );
+		CDmxAttribute temp( nullptr );
 		const CDmxAttribute *pAttribute = GetAttribute( pUnpack->m_pAttributeName );
 		if ( !pAttribute )
 		{

@@ -85,7 +85,7 @@ bool CBaseEntity::m_bInDebugSelect = false;	// Used for selection in debug overl
 int CBaseEntity::m_nDebugPlayer = -1;		// Player doing the selection
 
 // This can be set before creating an entity to force it to use a particular edict.
-edict_t *g_pForceAttachEdict = NULL;
+edict_t *g_pForceAttachEdict = nullptr;
 
 bool CBaseEntity::m_bDebugPause = false;		// Whether entity i/o is paused.
 int CBaseEntity::m_nDebugSteps = 1;				// Number of entity outputs to fire before pausing again.
@@ -93,7 +93,7 @@ bool CBaseEntity::sm_bDisableTouchFuncs = false;	// Disables PhysicsTouch and Ph
 
 int CBaseEntity::m_nPredictionRandomSeed = -1;
 int CBaseEntity::m_nPredictionRandomSeedServer = -1;
-CBasePlayer *CBaseEntity::m_pPredictionPlayer = NULL;
+CBasePlayer *CBaseEntity::m_pPredictionPlayer = nullptr;
 
 // Used to make sure nobody calls UpdateTransmitState directly.
 int g_nInsideDispatchUpdateTransmitState = 0;
@@ -159,7 +159,7 @@ void* SendProxy_ClientSideAnimation( const SendProp *pProp, const void *pStruct,
 	if ( pAnimating && !pAnimating->IsUsingClientSideAnimation() )
 		return (void*)pVarData;
 	else
-		return NULL;	// Don't send animtime unless the client needs it.
+		return nullptr;	// Don't send animtime unless the client needs it.
 }	
 REGISTER_SEND_PROXY_NON_MODIFIED_POINTER( SendProxy_ClientSideAnimation );
 
@@ -204,7 +204,7 @@ static void* SendProxy_SendPredictableId( const SendProp *pProp, const void *pSt
 {
 	CBaseEntity *pEntity = (CBaseEntity *)pStruct;
 	if ( !pEntity || !pEntity->m_PredictableID->IsActive() )
-		return NULL;
+		return nullptr;
 
 	int id_player_index = pEntity->m_PredictableID->GetPlayer();
 
@@ -609,8 +609,8 @@ CBaseEntity::CBaseEntity( bool bServerOnly )
 
 	// clear debug overlays
 	m_debugOverlays  = 0;
-	m_pTimedOverlay  = NULL;
-	m_pPhysicsObject = NULL;
+	m_pTimedOverlay  = nullptr;
+	m_pPhysicsObject = nullptr;
 	m_flElasticity   = 1.0f;
 	m_flShadowCastDistance = m_flDesiredShadowCastDistance = 0;
 	SetRenderColor( 255, 255, 255 );
@@ -619,7 +619,7 @@ CBaseEntity::CBaseEntity( bool bServerOnly )
 	m_nLastThinkTick = gpGlobals->tickcount;
 	m_nSimulationTick = -1;
 	SetIdentityMatrix( m_rgflCoordinateFrame );
-	m_pBlocker = NULL;
+	m_pBlocker = nullptr;
 #if _DEBUG
 	m_iCurrentThinkContext = NO_THINK_CONTEXT;
 #endif
@@ -629,7 +629,7 @@ CBaseEntity::CBaseEntity( bool bServerOnly )
 	ClearSolidFlags();
 
 	SetMoveType( MOVETYPE_NONE );
-	SetOwnerEntity( NULL );
+	SetOwnerEntity( nullptr );
 	SetCheckUntouch( false );
 	SetModelIndex( 0 );
 	SetModelName( NULL_STRING );
@@ -648,14 +648,14 @@ CBaseEntity::CBaseEntity( bool bServerOnly )
 
 	AddEFlags( EFL_USE_PARTITION_WHEN_NOT_SOLID );
 
-	m_pPrevByClass = m_pNextByClass = NULL;
+	m_pPrevByClass = m_pNextByClass = nullptr;
 	m_ListByClass = (UtlHashHandle_t)~0;
 	SetNetworkQuantizeOriginAngAngles( false );
 
 #if defined(ENABLE_CREATE_TIME)
 	m_flCreateTime = 0.0f;
 #endif
-	m_pEvent = NULL;
+	m_pEvent = nullptr;
 
 
 	m_bSpotted = false;
@@ -730,7 +730,7 @@ void CBaseEntity::PostConstructor( const char *szClassname )
 		SetClassname(szClassname);
 	}
 
-	Assert( m_iClassname != NULL_STRING && STRING(m_iClassname) != NULL );
+	Assert( m_iClassname != NULL_STRING && STRING(m_iClassname) != nullptr );
 
 	// Possibly get an edict, and add self to global list of entites.
 	if ( IsEFlagSet( EFL_SERVER_ONLY ) )
@@ -743,7 +743,7 @@ void CBaseEntity::PostConstructor( const char *szClassname )
 		if ( !IsEFlagSet( EFL_NO_AUTO_EDICT_ATTACH ) )
 		{
 			NetworkProp()->AttachEdict( g_pForceAttachEdict );
-			g_pForceAttachEdict = NULL;
+			g_pForceAttachEdict = nullptr;
 		}
 		
 		// Some ents like the player override the AttachEdict function and do it at a different time.
@@ -780,7 +780,7 @@ typedef CUtlVector< const char * >	KeyValueNameList_t;
 
 static void AddDataMapFieldNamesToList( KeyValueNameList_t &list, datamap_t *pDataMap )
 {
-	while (pDataMap != NULL)
+	while (pDataMap != nullptr)
 	{
 		for (int i = 0; i < pDataMap->dataNumFields; i++)
 		{
@@ -807,7 +807,7 @@ void CBaseEntity::ValidateDataDescription(void)
 	// Multiple key fields that have the same name are not allowed - it creates an
 	// ambiguity when trying to parse keyvalues and outputs.
 	datamap_t *pDataMap = GetDataDescMap();
-	if ((pDataMap == NULL) || pDataMap->bValidityChecked)
+	if ((pDataMap == nullptr) || pDataMap->bValidityChecked)
 		return;
 
 	pDataMap->bValidityChecked = true;
@@ -864,7 +864,7 @@ void CBaseEntity::StopFollowingEntity( )
 		return;
 	}
 
-	SetParent( NULL );
+	SetParent( nullptr );
 	RemoveEffects( EF_BONEMERGE );
 	RemoveSolidFlags( FSOLID_NOT_SOLID );
 	SetMoveType( MOVETYPE_NONE );
@@ -879,7 +879,7 @@ bool CBaseEntity::IsFollowingEntity()
 CBaseEntity *CBaseEntity::GetFollowedEntity()
 {
 	if (!IsFollowingEntity())
-		return NULL;
+		return nullptr;
 	return GetMoveParent();
 }
 
@@ -1051,8 +1051,8 @@ void CBaseEntity::DrawTimedOverlays(void)
 	
 	// Now draw overlays
 	TimedOverlay_t* pTO		= m_pTimedOverlay;
-	TimedOverlay_t* pNextTO = NULL;
-	TimedOverlay_t* pLastTO = NULL;
+	TimedOverlay_t* pNextTO = nullptr;
+	TimedOverlay_t* pLastTO = nullptr;
 	int				nCount	= 1;	// Offset by one
 	while (pTO)
 	{
@@ -1106,7 +1106,7 @@ void CBaseEntity::DrawTimedOverlays(void)
 
 void CBaseEntity::DrawVPhysicsObjectCenterAndContactPoints(IPhysicsObject *obj)
 {
-	if ( obj == NULL ) return;
+	if ( obj == nullptr ) return;
 
 	Vector massCenter = obj->GetMassCenterLocalSpace();
 	Vector worldPos;
@@ -1192,7 +1192,7 @@ void CBaseEntity::DrawDebugGeometryOverlays(void)
 			NDebugOverlay::EntityBounds(this, 255, 255, 255, 0, 0 );
 		}
 	}
-	if ( ( m_debugOverlays & OVERLAY_AUTOAIM_BIT ) && (GetFlags()&FL_AIMTARGET) && AI_GetSinglePlayer() != NULL )
+	if ( ( m_debugOverlays & OVERLAY_AUTOAIM_BIT ) && (GetFlags()&FL_AIMTARGET) && AI_GetSinglePlayer() != nullptr )
 	{
 		// Crude, but it gets the point across.
 		Vector vecCenter = GetAutoAimCenter();
@@ -1203,7 +1203,7 @@ void CBaseEntity::DrawDebugGeometryOverlays(void)
 		float radius = GetAutoAimRadius();
 
 		QAngle angles = pPlayer->EyeAngles();
-		AngleVectors( angles, NULL, &vecRight, &vecUp );
+		AngleVectors( angles, nullptr, &vecRight, &vecUp );
 
 		int r,g,b;
 
@@ -1213,7 +1213,7 @@ void CBaseEntity::DrawDebugGeometryOverlays(void)
 			g = 255;
 			b = 255;
 
-			if( pPlayer->GetActiveWeapon() != NULL )
+			if( pPlayer->GetActiveWeapon() != nullptr )
 				radius *= pPlayer->GetActiveWeapon()->WeaponAutoAimScale();
 
 		}
@@ -1327,7 +1327,7 @@ int CBaseEntity::DrawDebugTextOverlays(void)
 			offset++;
 		}
 
-		if( m_hDamageFilter.Get() != NULL )
+		if( m_hDamageFilter.Get() != nullptr )
 		{
 			Q_snprintf( tempstr, sizeof(tempstr), "DAMAGE FILTER:%s", m_hDamageFilter->GetDebugName() );
 			EntityText( offset,tempstr,0,r,g,b);
@@ -1371,17 +1371,17 @@ int CBaseEntity::DrawDebugTextOverlays(void)
 void CBaseEntity::SetParent( string_t newParent, CBaseEntity *pActivator, int iAttachment )
 {
 	// find and notify the new parent
-	CBaseEntity *pParent = gEntList.FindEntityByName( NULL, newParent, NULL, pActivator );
+	CBaseEntity *pParent = gEntList.FindEntityByName( nullptr, newParent, nullptr, pActivator );
 
 	// debug check
-	if ( newParent != NULL_STRING && pParent == NULL )
+	if ( newParent != NULL_STRING && pParent == nullptr )
 	{
 		Msg( "Entity %s(%s) has bad parent %s\n", STRING(m_iClassname), GetDebugName(), STRING(newParent) );
 	}
 	else
 	{
 		// make sure there isn't any ambiguity
-		if ( gEntList.FindEntityByName( pParent, newParent, NULL, pActivator ) )
+		if ( gEntList.FindEntityByName( pParent, newParent, nullptr, pActivator ) )
 		{
 			Msg( "Entity %s(%s) is ambiguously parented to %s, because there is more than one entity by that name.\n", STRING(m_iClassname), GetDebugName(), STRING(newParent) );
 		}
@@ -1397,7 +1397,7 @@ void CBaseEntity::TransformStepData_ParentToWorld( CBaseEntity *pParent )
 {
 	// Fix up our step simulation points to be in the proper local space
 	StepSimulationData *step = (StepSimulationData *) GetDataObject( STEPSIMULATION );
-	if ( step != NULL )
+	if ( step != nullptr )
 	{
 		// Convert our positions
 		UTIL_ParentToWorldSpace( pParent, step->m_Previous2.vecOrigin, step->m_Previous2.qRotation );
@@ -1414,7 +1414,7 @@ void CBaseEntity::TransformStepData_ParentToParent( CBaseEntity *pOldParent, CBa
 {
 	// Fix up our step simulation points to be in the proper local space
 	StepSimulationData *step = (StepSimulationData *) GetDataObject( STEPSIMULATION );
-	if ( step != NULL )
+	if ( step != nullptr )
 	{
 		// Convert our positions
 		UTIL_ParentToWorldSpace( pOldParent, step->m_Previous2.vecOrigin, step->m_Previous2.qRotation );
@@ -1434,7 +1434,7 @@ void CBaseEntity::TransformStepData_WorldToParent( CBaseEntity *pParent )
 {
 	// Fix up our step simulation points to be in the proper local space
 	StepSimulationData *step = (StepSimulationData *) GetDataObject( STEPSIMULATION );
-	if ( step != NULL )
+	if ( step != nullptr )
 	{
 		// Convert our positions
 		UTIL_WorldToParentSpace( pParent, step->m_Previous2.vecOrigin, step->m_Previous2.qRotation );
@@ -1456,7 +1456,7 @@ void CBaseEntity::SetParent( CBaseEntity *pParentEntity, int iAttachment )
 		iAttachment = m_iParentAttachment;
 	}
 
-	bool bWasNotParented = ( GetParent() == NULL );
+	bool bWasNotParented = ( GetParent() == nullptr );
 	CBaseEntity *pOldParent = m_pParent;
 
 	// notify the old parent of the loss
@@ -1469,10 +1469,10 @@ void CBaseEntity::SetParent( CBaseEntity *pParentEntity, int iAttachment )
 	{
 		// should never set parent to 'this' - makes no sense
 		Assert(0);
-		m_pParent = NULL;
+		m_pParent = nullptr;
 	}
 	
-	if ( m_pParent == NULL )
+	if ( m_pParent == nullptr )
 	{
 		m_iParent = NULL_STRING;
 
@@ -1613,7 +1613,7 @@ void CBaseEntity::ValidateEntityConnections()
 //-----------------------------------------------------------------------------
 void CBaseEntity::FireNamedOutput( const char *pszOutput, variant_t variant, CBaseEntity *pActivator, CBaseEntity *pCaller, float flDelay )
 {
-	if ( pszOutput == NULL )
+	if ( pszOutput == nullptr )
 		return;
 
 	CBaseEntityOutput *pOutput = FindNamedOutput( pszOutput );
@@ -1626,8 +1626,8 @@ void CBaseEntity::FireNamedOutput( const char *pszOutput, variant_t variant, CBa
 
 CBaseEntityOutput *CBaseEntity::FindNamedOutput( const char *pszOutput )
 {
-	if ( pszOutput == NULL )
-		return NULL;
+	if ( pszOutput == nullptr )
+		return nullptr;
 
 	datamap_t *dmap = GetDataDescMap();
 	while ( dmap )
@@ -1647,7 +1647,7 @@ CBaseEntityOutput *CBaseEntity::FindNamedOutput( const char *pszOutput )
 		}
 		dmap = dmap->baseMap;
 	}
-	return NULL;
+	return nullptr;
 }
 
 
@@ -1674,7 +1674,7 @@ void CBaseEntity::Activate( void )
 	// Get a handle to my damage filter entity if there is one.
 	if ( m_iszDamageFilterName != NULL_STRING )
 	{
-		m_hDamageFilter = gEntList.FindEntityByName( NULL, m_iszDamageFilterName );
+		m_hDamageFilter = gEntList.FindEntityByName( nullptr, m_iszDamageFilterName );
 	}
 
 	// Add any non-null context strings to our context vector
@@ -1898,7 +1898,7 @@ int CBaseEntity::VPhysicsTakeDamage( const CTakeDamageInfo &info )
 	if ( (info.GetDamageType() & (DMG_BULLET | DMG_CLUB)) && info.GetDamageForce().IsZero() )
 		return 1;
 
-	Assert(VPhysicsGetObject() != NULL);
+	Assert(VPhysicsGetObject() != nullptr);
 	if ( VPhysicsGetObject() )
 	{
 		Vector force = info.GetDamageForce();
@@ -1997,8 +1997,8 @@ bool CBaseEntity::HasTarget( string_t targetname )
 CBaseEntity *CBaseEntity::GetNextTarget( void )
 {
 	if ( !m_target )
-		return NULL;
-	return gEntList.FindEntityByName( NULL, m_target );
+		return nullptr;
+	return gEntList.FindEntityByName( nullptr, m_target );
 }
 
 
@@ -2194,12 +2194,12 @@ void CBaseEntity::UpdateOnRemove( void )
 		}
 	}
 
-	SetGroundEntity( NULL );
+	SetGroundEntity( nullptr );
 
 	if ( m_hScriptInstance )
 	{
 		g_pScriptVM->RemoveInstance( m_hScriptInstance );
-		m_hScriptInstance = NULL;
+		m_hScriptInstance = nullptr;
 	}
 }
 
@@ -2240,7 +2240,7 @@ int CBaseEntity::ObjectCaps( void )
 void CBaseEntity::StartTouch( CBaseEntity *pOther )
 {
 	// notify parent
-	if ( m_pParent != NULL )
+	if ( m_pParent != nullptr )
 		m_pParent->StartTouch( pOther );
 }
 
@@ -2250,14 +2250,14 @@ void CBaseEntity::Touch( CBaseEntity *pOther )
 		(this->*m_pfnTouch)( pOther );
 
 	// notify parent of touch
-	if ( m_pParent != NULL )
+	if ( m_pParent != nullptr )
 		m_pParent->Touch( pOther );
 }
 
 void CBaseEntity::EndTouch( CBaseEntity *pOther )
 {
 	// notify parent
-	if ( m_pParent != NULL )
+	if ( m_pParent != nullptr )
 	{
 		m_pParent->EndTouch( pOther );
 	}
@@ -2278,7 +2278,7 @@ void CBaseEntity::Blocked( CBaseEntity *pOther )
 	//
 	// Forward the blocked event to our parent, if any.
 	//
-	if ( m_pParent != NULL )
+	if ( m_pParent != nullptr )
 	{
 		m_pParent->Blocked( pOther );
 	}
@@ -2294,7 +2294,7 @@ void CBaseEntity::Blocked( CBaseEntity *pOther )
 //-----------------------------------------------------------------------------
 void CBaseEntity::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value ) 
 {
-	if ( m_pfnUse != NULL ) 
+	if ( m_pfnUse != nullptr ) 
 	{
 		(this->*m_pfnUse)( pActivator, pCaller, useType, value );
 	}
@@ -2303,7 +2303,7 @@ void CBaseEntity::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE u
 		//
 		// We don't handle use events. Forward to our parent, if any.
 		//
-		if ( m_pParent != NULL )
+		if ( m_pParent != nullptr )
 		{
 			m_pParent->Use( pActivator, pCaller, useType, value );
 		}
@@ -2313,7 +2313,7 @@ void CBaseEntity::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE u
 static CBaseEntity *FindPhysicsBlocker( IPhysicsObject *pPhysics, physicspushlist_t &list, const Vector &pushVel )
 {
 	IPhysicsFrictionSnapshot *pSnapshot = pPhysics->CreateFrictionSnapshot();
-	CBaseEntity *pBlocker = NULL;
+	CBaseEntity *pBlocker = nullptr;
 	float maxForce = 0;
 	while ( pSnapshot->IsValid() )
 	{
@@ -2430,7 +2430,7 @@ static void CheckPushedEntity( CBaseEntity *pEntity, pushblock_t &params )
 		Vector dir = pEntity->GetAbsVelocity();
 		float speed = VectorNormalize(dir);
 		Vector targetPos;
-		pPhysics->GetShadowController()->GetTargetPosition( &targetPos, NULL );
+		pPhysics->GetShadowController()->GetTargetPosition( &targetPos, nullptr );
 		float targetAmount = DotProduct(targetPos, dir);
 		float currentAmount = DotProduct(origin, dir);
 		float entityAmount = DotProduct(pEntity->GetAbsOrigin(), dir);
@@ -2497,7 +2497,7 @@ static void CheckPushedEntity( CBaseEntity *pEntity, pushblock_t &params )
 			Vector targetAxis;
 			QAngle targetRot;
 			float deltaTargetAngle;
-			pPhysics->GetShadowController()->GetTargetPosition( NULL, &targetRot );
+			pPhysics->GetShadowController()->GetTargetPosition( nullptr, &targetRot );
 			RotationDeltaAxisAngle( angles, targetRot, targetAxis, deltaTargetAngle );
 			if ( fabsf(deltaTargetAngle) > 0.01f )
 			{
@@ -2573,7 +2573,7 @@ void CBaseEntity::VPhysicsUpdatePusher( IPhysicsObject *pPhysics )
 		GetAllInHierarchy( this, list );
 		//NDebugOverlay::BoxAngles( origin, CollisionProp()->OBBMins(), CollisionProp()->OBBMaxs(), angles, 255,0,0,0, gpGlobals->frametime);
 
-		physicspushlist_t *pList = NULL;
+		physicspushlist_t *pList = nullptr;
 		if ( HasDataObjectType(PHYSICSPUSHLIST) )
 		{
 			pList = (physicspushlist_t *)GetDataObject( PHYSICSPUSHLIST );
@@ -2585,7 +2585,7 @@ void CBaseEntity::VPhysicsUpdatePusher( IPhysicsObject *pPhysics )
 		pushblock_t params;
 		params.pRootParent = this;
 		params.pList = pList;
-		params.pBlockedEntity = NULL;
+		params.pBlockedEntity = nullptr;
 		params.moveBackFraction = 0.0f;
 		params.movetime = movetime;
 		for ( int i = 0; i < list.Count(); i++ )
@@ -2606,9 +2606,9 @@ void CBaseEntity::VPhysicsUpdatePusher( IPhysicsObject *pPhysics )
 				// add 1% noise for bouncing in collision.
 				if ( physLocalTime <= (m_flVPhysicsUpdateLocalTime + movetime * 0.99f) )
 				{
-					CBaseEntity *pBlocked = NULL;
+					CBaseEntity *pBlocked = nullptr;
 					IPhysicsObject *pOther;
-					if ( params.pBlockedEntity->VPhysicsGetObject()->GetContactPoint( NULL, &pOther ) )
+					if ( params.pBlockedEntity->VPhysicsGetObject()->GetContactPoint( nullptr, &pOther ) )
 					{
 						pBlocked = static_cast<CBaseEntity *>(pOther->GetGameData());
 					}
@@ -2697,7 +2697,7 @@ void CBaseEntity::PhysicsRelinkChildren( float dt )
 	CBaseEntity *child;
 
 	// iterate through all children
-	for ( child = FirstMoveChild(); child != NULL; child = child->NextMovePeer() )
+	for ( child = FirstMoveChild(); child != nullptr; child = child->NextMovePeer() )
 	{
 		if ( child->IsSolid() || child->IsSolidFlagSet(FSOLID_TRIGGER) )
 		{
@@ -3020,7 +3020,7 @@ extern ConVar ai_debug_los;
 void CC_AI_LOS_Debug( IConVar *var, const char *pOldString, float flOldValue )
 {
 	int iLOSMode = ai_debug_los.GetInt();
-	for ( CBaseEntity *pEntity = gEntList.FirstEnt(); pEntity != NULL; pEntity = gEntList.NextEnt(pEntity) )
+	for ( CBaseEntity *pEntity = gEntList.FirstEnt(); pEntity != nullptr; pEntity = gEntList.NextEnt(pEntity) )
 	{
 		if ( iLOSMode == 1 && pEntity->IsSolid() )
 		{
@@ -3058,7 +3058,7 @@ float CBaseEntity::GetAutoAimRadius()
 void CBaseEntity::ShadowCastDistThink( )
 {
 	SetShadowCastDistance( m_flDesiredShadowCastDistance );
-	SetContextThink( NULL, gpGlobals->curtime, "ShadowCastDistThink" );
+	SetContextThink( nullptr, gpGlobals->curtime, "ShadowCastDistThink" );
 }
 
 void CBaseEntity::SetShadowCastDistance( float flDesiredDistance, float flDelay )
@@ -3109,7 +3109,7 @@ void CBaseEntity::MakeDormant( void )
 	AddEFlags( EFL_DORMANT );
 
 	// disable thinking for dormant entities
-	SetThink( NULL );
+	SetThink( nullptr );
 
 	if ( !edict() )
 		return;
@@ -3209,7 +3209,7 @@ CBaseEntity * CBaseEntity::CreateNoSpawn( const char *szName, const Vector &vecO
 	if ( !pEntity )
 	{
 		Assert( !"CreateNoSpawn: only works for CBaseEntities" );
-		return NULL;
+		return nullptr;
 	}
 
 	pEntity->SetLocalOrigin( vecOrigin );
@@ -3665,12 +3665,12 @@ CSkyCamera *CBaseEntity::GetEntitySkybox()
 		pCur = pCur->m_pNext;
 	}
 
-	return NULL;
+	return nullptr;
 }
 
 bool CBaseEntity::DetectInSkybox()
 {
-	if ( GetEntitySkybox() != NULL )
+	if ( GetEntitySkybox() != nullptr )
 	{
 		AddEFlags( EFL_IN_SKYBOX );
 		return true;
@@ -3699,7 +3699,7 @@ void CBaseEntity::ComputeWorldSpaceSurroundingBox( Vector *pMins, Vector *pMaxs 
 //------------------------------------------------------------------------------
 const char *CBaseEntity::GetDebugName(void)
 {
-	if ( this == NULL )
+	if ( this == nullptr )
 		return "<<null>>";
 
 	if ( m_iName.Get() != NULL_STRING ) 
@@ -3727,28 +3727,28 @@ void CBaseEntity::DrawInputOverlay(const char *szInputName, CBaseEntity *pCaller
 	char bigstring[1024];
 	if ( Value.FieldType() == FIELD_INTEGER )
 	{
-		Q_snprintf( bigstring,sizeof(bigstring), "%3.1f  (%s,%d) <-- (%s)\n", gpGlobals->curtime, szInputName, Value.Int(), pCaller ? pCaller->GetDebugName() : NULL);
+		Q_snprintf( bigstring,sizeof(bigstring), "%3.1f  (%s,%d) <-- (%s)\n", gpGlobals->curtime, szInputName, Value.Int(), pCaller ? pCaller->GetDebugName() : nullptr);
 	}
 	else if ( Value.FieldType() == FIELD_STRING )
 	{
-		Q_snprintf( bigstring,sizeof(bigstring), "%3.1f  (%s,%s) <-- (%s)\n", gpGlobals->curtime, szInputName, Value.String(), pCaller ? pCaller->GetDebugName() : NULL);
+		Q_snprintf( bigstring,sizeof(bigstring), "%3.1f  (%s,%s) <-- (%s)\n", gpGlobals->curtime, szInputName, Value.String(), pCaller ? pCaller->GetDebugName() : nullptr);
 	}
 	else
 	{
-		Q_snprintf( bigstring,sizeof(bigstring), "%3.1f  (%s) <-- (%s)\n", gpGlobals->curtime, szInputName, pCaller ? pCaller->GetDebugName() : NULL);
+		Q_snprintf( bigstring,sizeof(bigstring), "%3.1f  (%s) <-- (%s)\n", gpGlobals->curtime, szInputName, pCaller ? pCaller->GetDebugName() : nullptr);
 	}
 	AddTimedOverlay(bigstring, 10.0);
 
 	if ( Value.FieldType() == FIELD_INTEGER )
 	{
-		DevMsg( 2, "input: (%s,%d) -> (%s,%s), from (%s)\n", szInputName, Value.Int(), STRING(m_iClassname), GetDebugName(), pCaller ? pCaller->GetDebugName() : NULL);
+		DevMsg( 2, "input: (%s,%d) -> (%s,%s), from (%s)\n", szInputName, Value.Int(), STRING(m_iClassname), GetDebugName(), pCaller ? pCaller->GetDebugName() : nullptr);
 	}
 	else if ( Value.FieldType() == FIELD_STRING )
 	{
-		DevMsg( 2, "input: (%s,%s) -> (%s,%s), from (%s)\n", szInputName, Value.String(), STRING(m_iClassname), GetDebugName(), pCaller ? pCaller->GetDebugName() : NULL);
+		DevMsg( 2, "input: (%s,%s) -> (%s,%s), from (%s)\n", szInputName, Value.String(), STRING(m_iClassname), GetDebugName(), pCaller ? pCaller->GetDebugName() : nullptr);
 	}
 	else
-		DevMsg( 2, "input: (%s) -> (%s,%s), from (%s)\n", szInputName, STRING(m_iClassname), GetDebugName(), pCaller ? pCaller->GetDebugName() : NULL);
+		DevMsg( 2, "input: (%s) -> (%s,%s), from (%s)\n", szInputName, STRING(m_iClassname), GetDebugName(), pCaller ? pCaller->GetDebugName() : nullptr);
 }
 
 //------------------------------------------------------------------------------
@@ -3864,7 +3864,7 @@ bool CBaseEntity::AcceptInput( const char *szInputName, CBaseEntity *pActivator,
 {
 	if ( ent_messages_draw.GetBool() )
 	{
-		if ( pCaller != NULL )
+		if ( pCaller != nullptr )
 		{
 			NDebugOverlay::Line( pCaller->GetAbsOrigin(), GetAbsOrigin(), 255, 255, 255, false, 3 );
 			NDebugOverlay::Box( pCaller->GetAbsOrigin(), Vector(-4, -4, -4), Vector(4, 4, 4), 255, 0, 0, 0, 3 );
@@ -3875,7 +3875,7 @@ bool CBaseEntity::AcceptInput( const char *szInputName, CBaseEntity *pActivator,
 	}
 
 	// loop through the data description list, restoring each data desc block
-	for ( datamap_t *dmap = GetDataDescMap(); dmap != NULL; dmap = dmap->baseMap )
+	for ( datamap_t *dmap = GetDataDescMap(); dmap != nullptr; dmap = dmap->baseMap )
 	{
 		// search through all the actions in the data description, looking for a match
 		for ( int i = 0; i < dmap->dataNumFields; i++ )
@@ -3890,7 +3890,7 @@ bool CBaseEntity::AcceptInput( const char *szInputName, CBaseEntity *pActivator,
 					{
 						char szBuffer[256];
 						// mapper debug message
-						if (pCaller != NULL)
+						if (pCaller != nullptr)
 						{
 							Q_snprintf( szBuffer, sizeof(szBuffer), "(%0.2f) input %s: %s.%s(%s)\n", gpGlobals->curtime, STRING(pCaller->m_iName.Get()), GetDebugName(), szInputName, Value.String() );
 						}
@@ -3917,8 +3917,8 @@ bool CBaseEntity::AcceptInput( const char *szInputName, CBaseEntity *pActivator,
 								// bad conversion
 								Warning( "!! ERROR: bad input/output link:\n!! %s(%s,%s) doesn't match type from %s(%s)\n", 
 									STRING(m_iClassname), GetDebugName(), szInputName, 
-									( pCaller != NULL ) ? STRING(pCaller->m_iClassname) : "<null>",
-									( pCaller != NULL ) ? STRING(pCaller->m_iName.Get()) : "<null>" );
+									( pCaller != nullptr ) ? STRING(pCaller->m_iClassname) : "<null>",
+									( pCaller != nullptr ) ? STRING(pCaller->m_iName.Get()) : "<null>" );
 								return false;
 							}
 						}
@@ -4055,7 +4055,7 @@ bool CBaseEntity::ReadKeyField( const char *varName, variant_t *var )
 		return false;
 
 	// loop through the data description list, restoring each data desc block
-	for ( datamap_t *dmap = GetDataDescMap(); dmap != NULL; dmap = dmap->baseMap )
+	for ( datamap_t *dmap = GetDataDescMap(); dmap != nullptr; dmap = dmap->baseMap )
 	{
 		// search through all the readable fields in the data description, looking for a match
 		for ( int i = 0; i < dmap->dataNumFields; i++ )
@@ -4098,11 +4098,11 @@ void CBaseEntity::InputSetDamageFilter( inputdata_t &inputdata )
 	m_iszDamageFilterName = inputdata.value.StringID();
 	if ( m_iszDamageFilterName != NULL_STRING )
 	{
-		m_hDamageFilter = gEntList.FindEntityByName( NULL, m_iszDamageFilterName );
+		m_hDamageFilter = gEntList.FindEntityByName( nullptr, m_iszDamageFilterName );
 	}
 	else
 	{
-		m_hDamageFilter = NULL;
+		m_hDamageFilter = nullptr;
 	}
 }
 
@@ -4117,7 +4117,7 @@ void CBaseEntity::InputKill( inputdata_t &inputdata )
 	if ( pOwner )
 	{
 		pOwner->DeathNotice( this );
-		SetOwnerEntity( NULL );
+		SetOwnerEntity( nullptr );
 	}
 
 	if( IsPlayer() )
@@ -4145,7 +4145,7 @@ void CBaseEntity::InputKillHierarchy( inputdata_t &inputdata )
 	if ( pOwner )
 	{
 		pOwner->DeathNotice( this );
-		SetOwnerEntity( NULL );
+		SetOwnerEntity( nullptr );
 	}
 
 	UTIL_Remove( this );
@@ -4227,7 +4227,7 @@ void CBaseEntity::InputSetParentAttachmentMaintainOffset( inputdata_t &inputdata
 //------------------------------------------------------------------------------
 void CBaseEntity::InputClearParent( inputdata_t &inputdata )
 {
-	SetParent( NULL );
+	SetParent( nullptr );
 }
 
 //------------------------------------------------------------------------------
@@ -4280,11 +4280,11 @@ void CBaseEntity::GetVelocity(Vector *vVelocity, AngularImpulse *vAngVelocity)
 	}
 	else
 	{
-		if (vVelocity != NULL)
+		if (vVelocity != nullptr)
 		{
 			*vVelocity = GetAbsVelocity();
 		}
-		if (vAngVelocity != NULL)
+		if (vAngVelocity != nullptr)
 		{
 			QAngle tmp = GetLocalAngularVelocity();
 			QAngleToAngularImpulse( tmp, *vAngVelocity );
@@ -4295,7 +4295,7 @@ void CBaseEntity::GetVelocity(Vector *vVelocity, AngularImpulse *vAngVelocity)
 bool CBaseEntity::IsMoving()
 { 
 	Vector velocity;
-	GetVelocity( &velocity, NULL );
+	GetVelocity( &velocity, nullptr );
 	return velocity != vec3_origin; 
 }
 
@@ -4310,18 +4310,18 @@ void CBaseEntity::GetVectors(Vector* pForward, Vector* pRight, Vector* pUp) cons
 	// This call is necessary to cause m_rgflCoordinateFrame to be recomputed
 	const matrix3x4_t &entityToWorld = EntityToWorldTransform();
 
-	if (pForward != NULL)
+	if (pForward != nullptr)
 	{
 		MatrixGetColumn( entityToWorld, 0, *pForward ); 
 	}
 
-	if (pRight != NULL)
+	if (pRight != nullptr)
 	{
 		MatrixGetColumn( entityToWorld, 1, *pRight ); 
 		*pRight *= -1.0f;
 	}
 
-	if (pUp != NULL)
+	if (pUp != nullptr)
 	{
 		MatrixGetColumn( entityToWorld, 2, *pUp ); 
 	}
@@ -4347,7 +4347,7 @@ void CBaseEntity::SetModel( const char *szModelName )
 CStudioHdr *CBaseEntity::OnNewModel()
 {
 	// Do nothing.
-	return NULL;
+	return nullptr;
 }
 
 
@@ -4408,7 +4408,7 @@ bool CBaseEntity::InSameTeam( CBaseEntity *pEntity ) const
 //-----------------------------------------------------------------------------
 const char *CBaseEntity::TeamID( void ) const
 {
-	if ( GetTeam() == NULL )
+	if ( GetTeam() == nullptr )
 		return "";
 
 	return GetTeam()->GetName();
@@ -4443,7 +4443,7 @@ int CBaseEntity::GetPendingTeamNumber( void ) const
 //-----------------------------------------------------------------------------
 bool CBaseEntity::IsInAnyTeam( void ) const
 {
-	return ( GetTeam() != NULL );
+	return ( GetTeam() != nullptr );
 }
 
 //-----------------------------------------------------------------------------
@@ -4536,7 +4536,7 @@ static void TeleportEntity( CBaseEntity *pSourceEntity, TeleportListEntry_t &ent
 	{
 		if ( newVelocity )
 		{
-			pPhys->SetVelocity( newVelocity, NULL );
+			pPhys->SetVelocity( newVelocity, nullptr );
 		}
 		const QAngle *rotAngles = &pTeleport->GetAbsAngles();
 		// don't rotate physics on players or bbox entities
@@ -4643,7 +4643,7 @@ CStudioHdr *ModelSoundsCache_LoadModel( const char *filename )
 			}
 		}
 	}
-	return NULL;
+	return nullptr;
 }
 
 void ModelSoundsCache_FinishModel( CStudioHdr *hdr )
@@ -4971,7 +4971,7 @@ void CBaseEntity::Remove( )
 HSCRIPT CBaseEntity::ScriptGetModelKeyValues( void )
 {
 	KeyValues *pModelKeyValues = new KeyValues("");
-	HSCRIPT hScript = NULL;
+	HSCRIPT hScript = nullptr;
 	const char *pszModelName = modelinfo->GetModelName( GetModel() );
 	const char *pBuffer = modelinfo->GetModelKeyValueText( GetModel() ) ;
 
@@ -5037,7 +5037,7 @@ void ConsoleFireTargets( CBasePlayer *pPlayer, const char *name)
 	// If no name was given use the picker
 	if (FStrEq(name,"")) 
 	{
-		CBaseEntity *pEntity = pPlayer ? pPlayer->FindPickerEntity() : NULL;
+		CBaseEntity *pEntity = pPlayer ? pPlayer->FindPickerEntity() : nullptr;
 		if ( pEntity && !pEntity->IsMarkedForDeletion())
 		{
 			Msg( "[%03d] Found: %s, firing\n", gpGlobals->tickcount%1000, pEntity->GetDebugName());
@@ -5053,14 +5053,14 @@ void ConsoleFireTargets( CBasePlayer *pPlayer, const char *name)
 //------------------------------------------------------------------------------
 void DumpScriptScope( CBasePlayer* pPlayer, const char *name)
 {
-	CBaseEntity *pEntity = NULL;
-	while ( (pEntity = GetNextCommandEntity( pPlayer, name, pEntity )) != NULL )
+	CBaseEntity *pEntity = nullptr;
+	while ( (pEntity = GetNextCommandEntity( pPlayer, name, pEntity )) != nullptr )
 	{
 		if( pEntity->m_ScriptScope.IsInitialized() )
 		{
 			Msg("----Script Dump for entity %s\n", pEntity->GetDebugName() );
 			HSCRIPT hDumpScopeFunc = g_pScriptVM->LookupFunction( "__DumpScope" );
-			g_pScriptVM->Call( hDumpScopeFunc, NULL, true, NULL, 1,(HSCRIPT)pEntity->m_ScriptScope );
+			g_pScriptVM->Call( hDumpScopeFunc, nullptr, true, nullptr, 1,(HSCRIPT)pEntity->m_ScriptScope );
 			Msg("----End Script Dump\n" );
 		}
 		else
@@ -5135,12 +5135,12 @@ static ConCommand ent_viewoffset("ent_viewoffset", CC_Ent_ViewOffset, "Displays 
 //------------------------------------------------------------------------------
 void CC_Ent_Remove( const CCommand& args )
 {
-	CBaseEntity *pEntity = NULL;
+	CBaseEntity *pEntity = nullptr;
 
 	// If no name was given set bits based on the picked
 	if ( FStrEq( args[1],"") ) 
 	{
-		pEntity = UTIL_GetCommandClient() ? UTIL_GetCommandClient()->FindPickerEntity() : NULL;
+		pEntity = UTIL_GetCommandClient() ? UTIL_GetCommandClient()->FindPickerEntity() : nullptr;
 	}
 	else 
 	{
@@ -5152,12 +5152,12 @@ void CC_Ent_Remove( const CCommand& args )
 		else
 		{
 			// Otherwise set bits based on name or classname
-			CBaseEntity *ent = NULL;
-			while ( (ent = gEntList.NextEnt(ent)) != NULL )
+			CBaseEntity *ent = nullptr;
+			while ( (ent = gEntList.NextEnt(ent)) != nullptr )
 			{
 				if (  (ent->GetEntityName() != NULL_STRING	&& FStrEq(args[1], STRING(ent->GetEntityName())))	|| 
 					(ent->m_iClassname != NULL_STRING	&& FStrEq(args[1], STRING(ent->m_iClassname))) ||
-					(ent->GetClassname()!=NULL && FStrEq(args[1], ent->GetClassname())))
+					(ent->GetClassname()!=nullptr && FStrEq(args[1], ent->GetClassname())))
 				{
 					pEntity = ent;
 					break;
@@ -5187,12 +5187,12 @@ void CC_Ent_RemoveAll( const CCommand& args )
 	{
 		// Otherwise remove based on name or classname
 		int iCount = 0;
-		CBaseEntity *ent = NULL;
-		while ( (ent = gEntList.NextEnt(ent)) != NULL )
+		CBaseEntity *ent = nullptr;
+		while ( (ent = gEntList.NextEnt(ent)) != nullptr )
 		{
 			if (  (ent->GetEntityName() != NULL_STRING	&& FStrEq(args[1], STRING(ent->GetEntityName())))	|| 
 				  (ent->m_iClassname != NULL_STRING	&& FStrEq(args[1], STRING(ent->m_iClassname))) ||
-				  (ent->GetClassname()!=NULL && FStrEq(args[1], ent->GetClassname())))
+				  (ent->GetClassname()!=nullptr && FStrEq(args[1], ent->GetClassname())))
 			{
 				UTIL_Remove( ent );
 				iCount++;
@@ -5214,7 +5214,7 @@ static ConCommand ent_remove_all("ent_remove_all", CC_Ent_RemoveAll, "Removes al
 //------------------------------------------------------------------------------
 void CC_Ent_SetName( const CCommand& args )
 {
-	CBaseEntity *pEntity = NULL;
+	CBaseEntity *pEntity = nullptr;
 
 	if ( args.ArgC() < 1 )
 	{
@@ -5229,17 +5229,17 @@ void CC_Ent_SetName( const CCommand& args )
 		// If no name was given set bits based on the picked
 		if ( FStrEq( args[2],"") ) 
 		{
-			pEntity = UTIL_GetCommandClient() ? UTIL_GetCommandClient()->FindPickerEntity() : NULL;
+			pEntity = UTIL_GetCommandClient() ? UTIL_GetCommandClient()->FindPickerEntity() : nullptr;
 		}
 		else 
 		{
 			// Otherwise set bits based on name or classname
-			CBaseEntity *ent = NULL;
-			while ( (ent = gEntList.NextEnt(ent)) != NULL )
+			CBaseEntity *ent = nullptr;
+			while ( (ent = gEntList.NextEnt(ent)) != nullptr )
 			{
 				if (  (ent->GetEntityName() != NULL_STRING	&& FStrEq(args[1], STRING(ent->GetEntityName())))	|| 
 					  (ent->m_iClassname != NULL_STRING	&& FStrEq(args[1], STRING(ent->m_iClassname))) ||
-					  (ent->GetClassname()!=NULL && FStrEq(args[1], ent->GetClassname())))
+					  (ent->GetClassname()!=nullptr && FStrEq(args[1], ent->GetClassname())))
 				{
 					pEntity = ent;
 					break;
@@ -5270,8 +5270,8 @@ void CC_Find_Ent( const CCommand& args )
  	const char *pszSubString = args[1];
 	Msg("Searching for entities with class/target name containing substring: '%s'\n", pszSubString );
 
-	CBaseEntity *ent = NULL;
-	while ( (ent = gEntList.NextEnt(ent)) != NULL )
+	CBaseEntity *ent = nullptr;
+	while ( (ent = gEntList.NextEnt(ent)) != nullptr )
 	{
 		const char *pszClassname = ent->GetClassname();
 		const char *pszTargetname = STRING(ent->GetEntityName());
@@ -5328,7 +5328,7 @@ static ConCommand find_ent_index("find_ent_index", CC_Find_Ent_Index, "Display d
 
 void DumpEntity( CBaseEntity *ent )
 	{
-			for ( datamap_t *dmap = ent->GetDataDescMap(); dmap != NULL; dmap = dmap->baseMap )
+			for ( datamap_t *dmap = ent->GetDataDescMap(); dmap != nullptr; dmap = dmap->baseMap )
 			{
 				// search through all the actions in the data description, printing out details
 				for ( int i = 0; i < dmap->dataNumFields; i++ )
@@ -5393,8 +5393,8 @@ void CC_Ent_Dump( const CCommand& args )
 	else
 	{
 		bool bFound = false;
-		CBaseEntity *pEntity = NULL;
-		while ( (pEntity = GetNextCommandEntity( pPlayer, args[1], pEntity )) != NULL )
+		CBaseEntity *pEntity = nullptr;
+		while ( (pEntity = GetNextCommandEntity( pPlayer, args[1], pEntity )) != nullptr )
 		{
 			bFound = true;
 
@@ -5509,8 +5509,8 @@ public:
 
 		CUtlRBTree< CUtlString > symbols( 0, 0, UtlStringLessFunc );
 
-		CBaseEntity *pos = NULL;
-		while ( ( pos = gEntList.NextEnt( pos ) ) != NULL )
+		CBaseEntity *pos = nullptr;
+		while ( ( pos = gEntList.NextEnt( pos ) ) != nullptr )
 		{
 			// Check target name against partial string
 			if ( pos->GetEntityName() == NULL_STRING )
@@ -5574,8 +5574,8 @@ private:
 		Q_strncat( targetEntity, substring, sizeof( targetEntity ), nEntityNameLength );
 
 		// Find the target entity by name
-		CBaseEntity *target = gEntList.FindEntityByName( NULL, targetEntity );
-		if ( target == NULL )
+		CBaseEntity *target = gEntList.FindEntityByName( nullptr, targetEntity );
+		if ( target == nullptr )
 			return 0;
 
 		CUtlRBTree< CUtlString > symbols( 0, 0, UtlStringLessFunc );
@@ -5584,9 +5584,9 @@ private:
 		int nInputNameLength = (checklen-nEntityNameLength-1);
 
 		// Starting past the last space, this is the remainder of the string
-		char *inputPartial = ( checklen > nEntityNameLength ) ? (space+1) : NULL;
+		char *inputPartial = ( checklen > nEntityNameLength ) ? (space+1) : nullptr;
 
-		for ( datamap_t *dmap = target->GetDataDescMap(); dmap != NULL; dmap = dmap->baseMap )
+		for ( datamap_t *dmap = target->GetDataDescMap(); dmap != nullptr; dmap = dmap->baseMap )
 		{
 			// Make sure we don't keep adding things in if the satisfied the limit
 			if ( symbols.Count() >= COMMAND_COMPLETION_MAXITEMS )
@@ -5606,7 +5606,7 @@ private:
 					continue;
 
 				// See if we've got a partial string for the input name already
-				if ( inputPartial != NULL )
+				if ( inputPartial != nullptr )
 				{
 					if ( Q_strnicmp( inputPartial, field->externalName, nInputNameLength ) )
 						continue;
@@ -5685,7 +5685,7 @@ void CC_Ent_Info( const CCommand& args )
 		if ( ent )
 		{
 			datamap_t *dmap;
-			for ( dmap = ent->GetDataDescMap(); dmap != NULL; dmap = dmap->baseMap )
+			for ( dmap = ent->GetDataDescMap(); dmap != nullptr; dmap = dmap->baseMap )
 			{
 				// search through all the actions in the data description, printing out details
 				for ( int i = 0; i < dmap->dataNumFields; i++ )
@@ -5697,7 +5697,7 @@ void CC_Ent_Info( const CCommand& args )
 				}
 			}
 
-			for ( dmap = ent->GetDataDescMap(); dmap != NULL; dmap = dmap->baseMap )
+			for ( dmap = ent->GetDataDescMap(); dmap != nullptr; dmap = dmap->baseMap )
 			{
 				// search through all the actions in the data description, printing out details
 				for ( int i = 0; i < dmap->dataNumFields; i++ )
@@ -6361,7 +6361,7 @@ CBaseEntity *CBaseEntity::CreatePredictedEntityByName( const char *classname, co
 	CBasePlayer *player = CBaseEntity::GetPredictionPlayer();
 	Assert( player );
 
-	CBaseEntity *ent = NULL;
+	CBaseEntity *ent = nullptr;
 
 	int command_number = player->CurrentCommandNumber();
 	int player_index = player->entindex() - 1;
@@ -6372,7 +6372,7 @@ CBaseEntity *CBaseEntity::CreatePredictedEntityByName( const char *classname, co
 	ent = CreateEntityByName( classname );
 	// No factory???
 	if ( !ent )
-		return NULL;
+		return nullptr;
 
 	ent->SetPredictionEligible( true );
 
@@ -6381,7 +6381,7 @@ CBaseEntity *CBaseEntity::CreatePredictedEntityByName( const char *classname, co
 
 	return ent;
 #else
-	return NULL;
+	return nullptr;
 #endif
 
 }
@@ -6694,7 +6694,7 @@ void CBaseEntity::InputRunScript( inputdata_t& inputdata )
 //---------------------------------------------------------
 void CBaseEntity::InputCallScriptFunction( inputdata_t& inputdata )
 {
-	CallScriptFunction( inputdata.value.String(), NULL );
+	CallScriptFunction( inputdata.value.String(), nullptr );
 }
 
 
@@ -6787,7 +6787,7 @@ void CBaseEntity::ConnectOutputToScript( const char *pszOutput, const char *pszS
 		pAction = pAction->m_pNext;
 	}
 
-	pAction = new CEventAction( NULL );
+	pAction = new CEventAction( nullptr );
 	pAction->m_iTarget = iszSelf;
 	pAction->m_iTargetInput = AllocPooledString( "CallScriptFunction" );
 	pAction->m_iParameter = AllocPooledString( pszScriptFunc );
@@ -6990,7 +6990,7 @@ void CBaseEntity::AddContext( const char *pKey, const char *pValue, float durati
 		// Create a new context with the appropriate value ( some operators assume 0 on nonexistent prior )
 		char buf[64];
 		if ( RR::CApplyContextOperator::FindOperator( pValue )->Apply( 
-			NULL, pValue, buf, sizeof(buf) ) )
+			nullptr, pValue, buf, sizeof(buf) ) )
 		{
 			newContext.m_iszValue = AllocPooledString( buf );
 		}
@@ -7033,7 +7033,7 @@ void CBaseEntity::InputClearContext( inputdata_t& inputdata )
 //-----------------------------------------------------------------------------
 IResponseSystem *CBaseEntity::GetResponseSystem()
 {
-	return NULL;
+	return nullptr;
 }
 
 //-----------------------------------------------------------------------------
@@ -7187,7 +7187,7 @@ void CBaseEntity::DispatchResponse( const char *conceptName )
 	case ResponseRules::RESPONSE_SCENE:
 		{
 			// Try to fire scene w/o an actor
-			InstancedScriptedScene( NULL, response );
+			InstancedScriptedScene( nullptr, response );
 		}
 		break;
 	case ResponseRules::RESPONSE_PRINT:
@@ -7232,8 +7232,8 @@ void CBaseEntity::DumpResponseCriteria( void )
 //------------------------------------------------------------------------------
 void CC_Ent_Show_Response_Criteria( const CCommand& args )
 {
-	CBaseEntity *pEntity = NULL;
-	while ( (pEntity = GetNextCommandEntity( UTIL_GetCommandClient(), args[1], pEntity )) != NULL )
+	CBaseEntity *pEntity = nullptr;
+	while ( (pEntity = GetNextCommandEntity( UTIL_GetCommandClient(), args[1], pEntity )) != nullptr )
 	{
 		pEntity->DumpResponseCriteria();
 	}
@@ -7257,7 +7257,7 @@ CAI_BaseNPC	*CBaseEntity::MyNPCPointer( void )
 	if ( IsNPC() ) 
 		return assert_cast<CAI_BaseNPC *>(this);
 
-	return NULL;
+	return nullptr;
 }
 
 ConVar step_spline( "step_spline", "0" );
@@ -7657,7 +7657,7 @@ void CBaseEntity::SUB_Vanish( void )
 	for ( int i = 1; i <= gpGlobals->maxClients; i++ )
 	{
 		//Get the next client
-		if ( ( pPlayer = UTIL_PlayerByIndex( i ) ) != NULL )
+		if ( ( pPlayer = UTIL_PlayerByIndex( i ) ) != nullptr )
 		{
 			Vector corpseDir = (GetAbsOrigin() - pPlayer->WorldSpaceCenter() );
 
@@ -7709,7 +7709,7 @@ bool CBaseEntity::SUB_AllowedToFade( void )
 
 	// only keep fading things active on the high end
 	{
-		CBasePlayer *pPlayer = ( AI_IsSinglePlayer() ) ? UTIL_GetLocalPlayer() : NULL;
+		CBasePlayer *pPlayer = ( AI_IsSinglePlayer() ) ? UTIL_GetLocalPlayer() : nullptr;
 
 		if ( pPlayer && pPlayer->FInViewCone( this ) )
 			return false;
@@ -7771,13 +7771,13 @@ bool CBaseEntity::ValidateScriptScope()
 {
 	if ( !m_ScriptScope.IsInitialized() )
 	{
-		if( scriptmanager == NULL )
+		if( scriptmanager == nullptr )
 		{
 			ExecuteOnce( DevMsg( "Cannot execute script because scripting is disabled (-scripting)\n" ) );
 			return false;
 		}
 
-		if( g_pScriptVM == NULL )
+		if( g_pScriptVM == nullptr )
 		{
 			ExecuteOnce( DevMsg(" Cannot execute script because there is no available VM\n" ) );
 			return false;
@@ -7907,7 +7907,7 @@ void CBaseEntity::RunOnPostSpawnScripts( void )
 	HSCRIPT hFuncConnect = g_pScriptVM->LookupFunction("ConnectOutputs");
 	if ( hFuncConnect )
 	{
-		g_pScriptVM->Call( hFuncConnect, NULL, true, NULL, (HSCRIPT)m_ScriptScope );
+		g_pScriptVM->Call( hFuncConnect, nullptr, true, nullptr, (HSCRIPT)m_ScriptScope );
 		g_pScriptVM->ReleaseFunction( hFuncConnect );
 	}
 
@@ -7967,7 +7967,7 @@ void CBaseEntity::SetFriction( float flFriction )
 #if defined(ENABLE_FRICTION_OVERRIDE)
 	if ( GetIndexForThinkContext( "FrictionRevertThink" ) != NO_THINK_CONTEXT )
 	{
-		SetContextThink( NULL, TICK_NEVER_THINK, "FrictionRevertThink" );
+		SetContextThink( nullptr, TICK_NEVER_THINK, "FrictionRevertThink" );
 	}
 #endif
 }
@@ -8139,7 +8139,7 @@ void CC_Ent_Create( const CCommand& args )
 				QAngle vecOppositePlayerAngles = pPlayer->GetAbsAngles();
 				vecOppositePlayerAngles[YAW] += 180;
 
-				entity->Teleport( &tr.endpos, &vecOppositePlayerAngles, NULL );
+				entity->Teleport( &tr.endpos, &vecOppositePlayerAngles, nullptr );
 				UTIL_DropToFloor( entity, MASK_SOLID );
 			}
 		}
@@ -8154,7 +8154,7 @@ static ConCommand ent_create("ent_create", CC_Ent_Create, "Creates an entity of 
 bool CC_GetCommandEnt( const CCommand& args, CBaseEntity **ent, Vector *vecTargetPoint, QAngle *vecPlayerAngle )
 {
 	// Find the entity
-	*ent = NULL;
+	*ent = nullptr;
 	// First try using it as an entindex
 	int iEntIndex = atoi( args[1] );
 	if ( iEntIndex )
@@ -8164,12 +8164,12 @@ bool CC_GetCommandEnt( const CCommand& args, CBaseEntity **ent, Vector *vecTarge
 	else
 	{
 		// Try finding it by name
-		*ent = gEntList.FindEntityByName( NULL, args[1] );
+		*ent = gEntList.FindEntityByName( nullptr, args[1] );
 
 		if ( !*ent )
 		{
 			// Finally, try finding it by classname
-			*ent = gEntList.FindEntityByClassname( NULL, args[1] );
+			*ent = gEntList.FindEntityByClassname( nullptr, args[1] );
 		}
 	}
 
@@ -8216,9 +8216,9 @@ void CC_Ent_Teleport( const CCommand& args )
 
 	CBaseEntity *pEnt;
 	Vector vecTargetPoint;
-	if ( CC_GetCommandEnt( args, &pEnt, &vecTargetPoint, NULL ) )
+	if ( CC_GetCommandEnt( args, &pEnt, &vecTargetPoint, nullptr ) )
 	{
-		pEnt->Teleport( &vecTargetPoint, NULL, NULL );
+		pEnt->Teleport( &vecTargetPoint, nullptr, nullptr );
 	}
 }
 
@@ -8237,7 +8237,7 @@ void CC_Ent_Orient( const CCommand& args )
 
 	CBaseEntity *pEnt;
 	QAngle vecPlayerAngles;
-	if ( CC_GetCommandEnt( args, &pEnt, NULL, &vecPlayerAngles ) )
+	if ( CC_GetCommandEnt( args, &pEnt, nullptr, &vecPlayerAngles ) )
 	{
 		QAngle vecEntAngles = pEnt->GetAbsAngles();
 		if ( args.ArgC() == 3 && StringHasPrefixCaseSensitive( args[2], "allangles" ) )

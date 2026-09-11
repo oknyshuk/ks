@@ -216,8 +216,8 @@ Navigation_t CAI_Pathfinder::ComputeWaypointType( bool *pWantsPreciseMovement, C
 //-----------------------------------------------------------------------------
 AI_Waypoint_t* CAI_Pathfinder::MakeRouteFromParents( int *parentArray, int endID ) 
 {
-	AI_Waypoint_t *pOldWaypoint = NULL;
-	AI_Waypoint_t *pNewWaypoint = NULL;
+	AI_Waypoint_t *pOldWaypoint = nullptr;
+	AI_Waypoint_t *pNewWaypoint = nullptr;
 	int	currentID = endID;
 
 	CAI_Node **pAInode = GetNetwork()->AccessNodes();
@@ -237,7 +237,7 @@ AI_Waypoint_t* CAI_Pathfinder::MakeRouteFromParents( int *parentArray, int endID
 		{		   
 			// If we have no previous node, then use the next node
 			if ( !pOldWaypoint )
-				return NULL;
+				return nullptr;
 			destID = pOldWaypoint->iNodeID;
 		}
 
@@ -339,7 +339,7 @@ AI_Waypoint_t *CAI_Pathfinder::FindBestPath(int startID, int endID)
 	AI_PROFILE_SCOPE( CAI_Pathfinder_FindBestPath );
 	
 	if ( !GetNetwork()->NumNodes() )
-		return NULL;
+		return nullptr;
 
 #ifdef AI_PERF_MON
 	m_nPerfStatPB++;
@@ -437,7 +437,7 @@ AI_Waypoint_t *CAI_Pathfinder::FindBestPath(int startID, int endID)
 		}
 	}
 
-	return NULL;   
+	return nullptr;   
 }
 
 //-----------------------------------------------------------------------------
@@ -458,7 +458,7 @@ AI_Waypoint_t* CAI_Pathfinder::FindShortRandomPath(int startID, float minPathLen
 	CAI_Node **pAInode = GetNetwork()->AccessNodes();
 
 	if ( !nNodes )
-		return NULL;
+		return nullptr;
 	
 	MARK_TASK_EXPENSIVE();
 
@@ -471,7 +471,7 @@ AI_Waypoint_t* CAI_Pathfinder::FindShortRandomPath(int startID, float minPathLen
 	// ------------------------------------------
 	if (pAInode[startID]->NumLinks() == 0)
 	{
-		return NULL;
+		return nullptr;
 	}
 
 	// ------------- INITIALIZE ------------------------
@@ -499,7 +499,7 @@ AI_Waypoint_t* CAI_Pathfinder::FindShortRandomPath(int startID, float minPathLen
 			if (pAInode[neighborID]->GetType() == NODE_CLIMB)
 			{
 				// If no neighbors exist we've failed.
-				return NULL;
+				return nullptr;
 			}
 			// Otherwise accept this path to a dead end
 			else
@@ -569,7 +569,7 @@ AI_Waypoint_t* CAI_Pathfinder::FindShortRandomPath(int startID, float minPathLen
 
 		// BUGBUG: This routine is totally hosed!
 		if ( neighborID < 0 )
-			return NULL;
+			return nullptr;
 
 		// Set previous nodes parent
 		nodeParent[neighborID] = lastID;
@@ -600,12 +600,12 @@ AI_Waypoint_t* CAI_Pathfinder::FindShortRandomPath(int startID, float minPathLen
 			if ( numStaleNeighbors == ARRAYSIZE(pStaleNeighbor) )
 			{
 				AssertMsg( 0, "Array overflow" );
-				return NULL;
+				return nullptr;
 			}
 			if ( numNeighbors == ARRAYSIZE(pStaleNeighbor) )
 			{
 				AssertMsg( 0, "Array overflow" );
-				return NULL;
+				return nullptr;
 			}
 
 			CAI_Link*	nodeLink = pAInode[neighborID]->GetShuffeledLink(link);
@@ -845,7 +845,7 @@ AI_Waypoint_t* CAI_Pathfinder::RouteToNode(const Vector &vecOrigin, int buildFla
 
 	// Otherwise try to build a local route to the node
 	AI_Waypoint_t *pResult = BuildLocalRoute(vecOrigin, 
-		vecNodePosition, NULL, bits_WP_TO_NODE, nodeID, buildFlags, goalTolerance);
+		vecNodePosition, nullptr, bits_WP_TO_NODE, nodeID, buildFlags, goalTolerance);
 	if ( pResult )
 		pResult->iNodeID = nodeID;
 	return pResult;
@@ -876,7 +876,7 @@ AI_Waypoint_t* CAI_Pathfinder::RouteFromNode(const Vector &vecOrigin, int buildF
 
 	// Otherwise try to build a local route from the node
 	AI_Waypoint_t* pResult = BuildLocalRoute( vecNodePosition, 
-											  vecOrigin, NULL, bits_WP_TO_GOAL, NO_NODE, buildFlags, goalTolerance);
+											  vecOrigin, nullptr, bits_WP_TO_GOAL, NO_NODE, buildFlags, goalTolerance);
 
 	// Handle case of target hanging over edge near climb dismount
 	if ( !pResult &&
@@ -912,7 +912,7 @@ AI_Waypoint_t *CAI_Pathfinder::BuildSimpleRoute( Navigation_t navType, const Vec
 			return new AI_Waypoint_t( vEnd, flYaw, navType, endFlags, nodeID );
 		}
 	}
-	return NULL;
+	return nullptr;
 }
 
 
@@ -1003,7 +1003,7 @@ AI_Waypoint_t *CAI_Pathfinder::BuildComplexRoute( Navigation_t navType, const Ve
 			}
 		}
 	}
-	return NULL;
+	return nullptr;
 }
 
 //-----------------------------------------------------------------------------
@@ -1034,7 +1034,7 @@ AI_Waypoint_t *CAI_Pathfinder::BuildJumpRoute(const Vector &vStart, const Vector
 	Vector vecDiff = vStart - vEnd;
 
 	if( fabs(vecDiff.z) <= 24.0f && vecDiff.Length2D() <= Square(600.0f) )
-		return NULL;
+		return nullptr;
 
 	// Only allowed to jump to ground nodes
 	return BuildSimpleRoute( NAV_JUMP, vStart, vEnd, pTarget, 
@@ -1147,7 +1147,7 @@ AI_Waypoint_t *CAI_Pathfinder::BuildTriangulationRoute(
 	
 	Vector vApex;
 	if (!Triangulate(navType, vStart, vEnd, flDistToBlocker, pTarget, &vApex ))
-		return NULL;
+		return nullptr;
 
 	//-----------------------------------------------------------------------------
 	// it worked, create a route
@@ -1193,8 +1193,8 @@ AI_Waypoint_t *CAI_Pathfinder::BuildRouteThroughPoints( Vector *vecPoints, int n
 
 	CAI_MoveProbe *pMoveProbe = GetOuter()->GetMoveProbe();
 
-	AI_Waypoint_t *pFirstRoute = NULL;
-	AI_Waypoint_t *pHeadRoute = NULL;
+	AI_Waypoint_t *pFirstRoute = nullptr;
+	AI_Waypoint_t *pHeadRoute = nullptr;
 
 	int nCurIndex = nStartIndex;
 	int nNextIndex;
@@ -1204,7 +1204,7 @@ AI_Waypoint_t *CAI_Pathfinder::BuildRouteThroughPoints( Vector *vecPoints, int n
 	if ( IsMoveBlocked( endTrace ) )
 	{
 		// NDebugOverlay::HorzArrow( GetOuter()->GetAbsOrigin(), vecPoints[nStartIndex], 8.0f, 255, 0, 0, 0, true, 4.0f );
-		return NULL;
+		return nullptr;
 	}
 
 	// NDebugOverlay::HorzArrow( GetOuter()->GetAbsOrigin(), vecPoints[nStartIndex], 8.0f, 0, 255, 0, 0, true, 4.0f );
@@ -1228,12 +1228,12 @@ AI_Waypoint_t *CAI_Pathfinder::BuildRouteThroughPoints( Vector *vecPoints, int n
 			}
 
 			// NDebugOverlay::HorzArrow( vecPoints[nCurIndex], vecPoints[nNextIndex], 8.0f, 255, 0, 0, 0, true, 4.0f );
-			return NULL;
+			return nullptr;
 		}
 
 		// NDebugOverlay::HorzArrow( vecPoints[nCurIndex], vecPoints[nNextIndex], 8.0f, 0, 255, 0, 0, true, 4.0f );
 
-		if ( pHeadRoute == NULL )
+		if ( pHeadRoute == nullptr )
 		{
 			// Start a new route head
 			pFirstRoute = pHeadRoute = new AI_Waypoint_t( vecPoints[nCurIndex], 0.0f, navType, bits_WP_TO_DETOUR, NO_NODE );
@@ -1363,7 +1363,7 @@ AI_Waypoint_t *CAI_Pathfinder::BuildOBBAvoidanceRoute(	const Vector &vStart, con
 	// If the point we're navigating to is within our OBB, then fail
 	// TODO: We could potentially also just try to get as near as possible
 	if ( pObstruction->CollisionProp()->IsPointInBounds( vEnd ) )
-		return NULL;
+		return nullptr;
 
 	// Find out how much we'll need to inflate the collision bounds to let us move past
 	Vector vecSize = pObstruction->CollisionProp()->OBBSize();
@@ -1386,19 +1386,19 @@ AI_Waypoint_t *CAI_Pathfinder::BuildOBBAvoidanceRoute(	const Vector &vStart, con
 
 	// We won't be able to build a route if we're moving no distance between points
 	if ( nStartPoint == nEndPoint )
-		return NULL;
+		return nullptr;
 
 	// Find the shortest path around this wound polygon (direction is how to step through array)
 	int nDirection = ShortestDirectionThroughPoints( vStart, nStartPoint, nEndPoint, vecPoints, ARRAYSIZE( vecPoints ) );
 
 	// Attempt to build a route in our direction
 	AI_Waypoint_t *pRoute = BuildRouteThroughPoints( vecPoints, ARRAYSIZE(vecPoints), nDirection, nStartPoint, nEndPoint, navType, (CBaseEntity *) pTarget );
-	if ( pRoute == NULL )
+	if ( pRoute == nullptr )
 	{
 		// Failed that way, so try the opposite
 		pRoute = BuildRouteThroughPoints( vecPoints, ARRAYSIZE(vecPoints), (-nDirection), nStartPoint, nEndPoint, navType, (CBaseEntity *) pTarget );
-		if ( pRoute == NULL )
-			return NULL;
+		if ( pRoute == nullptr )
+			return nullptr;
 	}
 
 	return pRoute;
@@ -1481,7 +1481,7 @@ AI_Waypoint_t *CAI_Pathfinder::BuildLocalRoute(const Vector &vStart, const Vecto
 	}
 
 	// Everything failed so return a NULL route
-	return NULL;
+	return nullptr;
 }
 
 //-----------------------------------------------------------------------------
@@ -1525,7 +1525,7 @@ AI_Waypoint_t *CAI_Pathfinder::BuildRoute( const Vector &vStart, const Vector &v
 		}
 	}
 
-	AI_Waypoint_t *pResult = NULL;
+	AI_Waypoint_t *pResult = nullptr;
 
 	//  First try a local route 
 	if ( bTryLocal && CanUseLocalNavigation() )
@@ -1556,7 +1556,7 @@ void CAI_Pathfinder::UnlockRouteNodes( AI_Waypoint_t *pPath )
 	CAI_Node *pNode;
 	while ( pPath )
 	{
-		if ( pPath->iNodeID != NO_NODE && ( pNode = GetNetwork()->GetNode(pPath->iNodeID) ) != NULL && pNode->IsLocked() )
+		if ( pPath->iNodeID != NO_NODE && ( pNode = GetNetwork()->GetNode(pPath->iNodeID) ) != nullptr && pNode->IsLocked() )
 			pNode->Unlock();
 		pPath = pPath->GetNext();
 	}
@@ -1604,9 +1604,9 @@ AI_Waypoint_t *CAI_Pathfinder::BuildRadialRoute( const Vector &vStartPos, const 
 	//  Offset set our first node by one arc step so NPC doesn't run perpendicular to the arc when starting a different radius
 	flStartAngle += flAngleStep;
 
-	AI_Waypoint_t*	pHeadRoute	= NULL;	// Pointer to the beginning of the route chains
-	AI_Waypoint_t*	pNextRoute	= NULL; // Next leg of the route
-	AI_Waypoint_t*  pLastRoute	= NULL; // The last route chain added to the head
+	AI_Waypoint_t*	pHeadRoute	= nullptr;	// Pointer to the beginning of the route chains
+	AI_Waypoint_t*	pNextRoute	= nullptr; // Next leg of the route
+	AI_Waypoint_t*  pLastRoute	= nullptr; // The last route chain added to the head
 	Vector			vLastPos	= vStartPos; // Last position along the arc in worldspace
 	int				fRouteBits = ( bAirRoute ) ? bits_BUILD_FLY : bits_BUILD_GROUND; // Whether this is an air route or not
 	float			flCurAngle = flStartAngle; // Starting angle
@@ -1628,11 +1628,11 @@ AI_Waypoint_t *CAI_Pathfinder::BuildRadialRoute( const Vector &vStartPos, const 
 		vNextPos.y	+= flRadius * sin( flCurAngle );
 
 		// Build a route from the last position to the current one
-		pNextRoute = BuildLocalRoute( vLastPos, vNextPos, NULL, NULL, NO_NODE, fRouteBits, goalTolerance);
+		pNextRoute = BuildLocalRoute( vLastPos, vNextPos, nullptr, 0, NO_NODE, fRouteBits, goalTolerance);
 		
 		// If we can't find a route, we failed
-		if ( pNextRoute == NULL )
-			return NULL;
+		if ( pNextRoute == nullptr )
+			return nullptr;
 
 		// Don't simplify the route (otherwise we'll cut corners where we don't want to!
 		pNextRoute->ModifyFlags( bits_WP_DONT_SIMPLIFY, true );
@@ -1657,13 +1657,13 @@ AI_Waypoint_t *CAI_Pathfinder::BuildRadialRoute( const Vector &vStartPos, const 
 	}
 
 	// NOTE: We could also simply build a local route with no curve, but it's unlikely that's what was intended by the caller
-	if ( pHeadRoute == NULL )
-		return NULL;
+	if ( pHeadRoute == nullptr )
+		return nullptr;
 
 	// Append a path to the final position
-	pLastRoute = BuildLocalRoute( vLastPos, vGoalPos, NULL, NULL, NO_NODE, bAirRoute ? bits_BUILD_FLY : bits_BUILD_GROUND, goalTolerance );	
-	if ( pLastRoute == NULL )
-		return NULL;
+	pLastRoute = BuildLocalRoute( vLastPos, vGoalPos, nullptr, 0, NO_NODE, bAirRoute ? bits_BUILD_FLY : bits_BUILD_GROUND, goalTolerance );	
+	if ( pLastRoute == nullptr )
+		return nullptr;
 
 	// Allow us to simplify the last leg of the route
 	pLastRoute->ModifyFlags( bits_WP_DONT_SIMPLIFY, false );
@@ -1683,7 +1683,7 @@ AI_Waypoint_t *CAI_Pathfinder::BuildRadialRoute( const Vector &vStartPos, const 
 bool CAI_Pathfinder::CheckStaleNavTypeRoute( Navigation_t navType, const Vector &vStart, const Vector &vEnd )
 {
 	AIMoveTrace_t moveTrace;
-	GetOuter()->GetMoveProbe()->MoveLimit( navType, vStart, vEnd, GetOuter()->GetAITraceMask(), NULL, 100, AIMLF_IGNORE_TRANSIENTS, &moveTrace);
+	GetOuter()->GetMoveProbe()->MoveLimit( navType, vStart, vEnd, GetOuter()->GetAITraceMask(), nullptr, 100, AIMLF_IGNORE_TRANSIENTS, &moveTrace);
 
 	// Is the direct route clear?
 	if (!IsMoveBlocked(moveTrace))
@@ -1698,7 +1698,7 @@ bool CAI_Pathfinder::CheckStaleNavTypeRoute( Navigation_t navType, const Vector 
 	float flTotalDist = vecDelta.Length();
 
 	Vector vApex;
-	if (Triangulate( navType, vStart, vEnd, flTotalDist - moveTrace.flDistObstructed, NULL, &vApex ))
+	if (Triangulate( navType, vStart, vEnd, flTotalDist - moveTrace.flDistObstructed, nullptr, &vApex ))
 	{
 		return true;
 	}
@@ -1706,7 +1706,7 @@ bool CAI_Pathfinder::CheckStaleNavTypeRoute( Navigation_t navType, const Vector 
 	// Try a giveway request, if I can get there ignoring NPCs
 	if ( moveTrace.pObstruction && moveTrace.pObstruction->MyNPCPointer() )
 	{
-		GetOuter()->GetMoveProbe()->MoveLimit( navType, vStart, vEnd, GetOuter()->GetAITraceMask_BrushOnly(), NULL, &moveTrace);
+		GetOuter()->GetMoveProbe()->MoveLimit( navType, vStart, vEnd, GetOuter()->GetAITraceMask_BrushOnly(), nullptr, &moveTrace);
 
 		if (!IsMoveBlocked(moveTrace))
 		{
@@ -1753,7 +1753,7 @@ bool CAI_Pathfinder::CheckStaleRoute(const Vector &vStart, const Vector &vEnd, i
 	if (moveTypes & bits_CAP_MOVE_JUMP)
 	{
 		AIMoveTrace_t moveTrace;
-		GetOuter()->GetMoveProbe()->MoveLimit( NAV_JUMP, vStart, vEnd, GetOuter()->GetAITraceMask(), NULL, &moveTrace);
+		GetOuter()->GetMoveProbe()->MoveLimit( NAV_JUMP, vStart, vEnd, GetOuter()->GetAITraceMask(), nullptr, &moveTrace);
 		if (!IsMoveBlocked(moveTrace))
 		{
 			return true;
@@ -1761,7 +1761,7 @@ bool CAI_Pathfinder::CheckStaleRoute(const Vector &vStart, const Vector &vEnd, i
 		else
 		{
 			// Can't tell jump up from jump down at this point
-			GetOuter()->GetMoveProbe()->MoveLimit( NAV_JUMP, vEnd, vStart, GetOuter()->GetAITraceMask(), NULL, &moveTrace);
+			GetOuter()->GetMoveProbe()->MoveLimit( NAV_JUMP, vEnd, vStart, GetOuter()->GetAITraceMask(), nullptr, &moveTrace);
 			if (!IsMoveBlocked(moveTrace))
 				return true;
 		}
@@ -1773,7 +1773,7 @@ bool CAI_Pathfinder::CheckStaleRoute(const Vector &vStart, const Vector &vEnd, i
 	if (moveTypes & bits_CAP_MOVE_CLIMB)
 	{
 		AIMoveTrace_t moveTrace;
-		GetOuter()->GetMoveProbe()->MoveLimit( NAV_CLIMB, vStart, vEnd, GetOuter()->GetAITraceMask(), NULL, &moveTrace);
+		GetOuter()->GetMoveProbe()->MoveLimit( NAV_CLIMB, vStart, vEnd, GetOuter()->GetAITraceMask(), nullptr, &moveTrace);
 		if (!IsMoveBlocked(moveTrace))
 		{	
 			return true;
@@ -1800,7 +1800,7 @@ public:
 		m_goalTolerance( goalTolerance ),
 		m_moveTypes( buildFlags & ( bits_BUILD_GROUND | bits_BUILD_FLY | bits_BUILD_JUMP | bits_BUILD_CLIMB | bits_BUILD_CRAWL ) ),
 		m_bAvoidObstacles( bAvoidObstacles ),
-		m_pRoute( NULL )
+		m_pRoute( nullptr )
 	{
 		COMPILE_TIME_ASSERT( bits_BUILD_GROUND == bits_CAP_MOVE_GROUND && bits_BUILD_FLY == bits_CAP_MOVE_FLY && bits_BUILD_JUMP == bits_CAP_MOVE_JUMP && bits_BUILD_CLIMB == bits_CAP_MOVE_CLIMB && bits_BUILD_CRAWL == bits_CAP_MOVE_CRAWL );
 	}
@@ -1843,7 +1843,7 @@ public:
 
 		m_nTries++;
 
-		return ( m_pRoute != NULL );
+		return ( m_pRoute != nullptr );
 	}
 
 	bool ShouldContinue()
@@ -1886,7 +1886,7 @@ AI_Waypoint_t *CAI_Pathfinder::BuildNodeRoute(const Vector &vStart, const Vector
 	//  Make sure network has nodes
 	// ----------------------------------------------------------------------
 	if (GetNetwork()->NumNodes() == 0)
-		return NULL;
+		return nullptr;
 
 	// ----------------------------------------------------------------------
 	//	Find the nearest source node
@@ -1896,7 +1896,7 @@ AI_Waypoint_t *CAI_Pathfinder::BuildNodeRoute(const Vector &vStart, const Vector
 	if ( !srcRoute )
 	{
 		DbgNavMsg1( GetOuter(), "Node pathfind failed, no route to source %d\n", srcID );
-		return NULL;
+		return nullptr;
 	}
 
 	// ----------------------------------------------------------------------
@@ -1908,7 +1908,7 @@ AI_Waypoint_t *CAI_Pathfinder::BuildNodeRoute(const Vector &vStart, const Vector
 	{
 		DeleteAll( srcRoute );
 		DbgNavMsg1( GetOuter(), "Node pathfind failed, no route to dest %d\n", destID );
-		return NULL;
+		return nullptr;
 	}
 
 	// ----------------------------------------------------------------------
@@ -1923,7 +1923,7 @@ AI_Waypoint_t *CAI_Pathfinder::BuildNodeRoute(const Vector &vStart, const Vector
 
 	// If nodes are not connected by network graph, no route is possible
 	if (!GetNetwork()->IsConnected(srcID, destID))
-		return NULL;
+		return nullptr;
 
 	AI_Waypoint_t *path = FindBestPath(srcID, destID);
 
@@ -1932,7 +1932,7 @@ AI_Waypoint_t *CAI_Pathfinder::BuildNodeRoute(const Vector &vStart, const Vector
 		DeleteAll(srcRoute);
 		DeleteAll(destRoute);
 		DbgNavMsg2( GetOuter(), "Node pathfind failed, no route between %d and %d\n", srcID, destID );
-		return NULL;
+		return nullptr;
 	}
 
 	// Now put all the pieces together to form our route

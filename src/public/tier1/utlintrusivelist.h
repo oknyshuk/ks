@@ -146,8 +146,8 @@ namespace IntrusiveList
 		if (! head)
 		{
 			head=node;
-			node->m_pPrev = NULL;
-			node->m_pNext = NULL;
+			node->m_pPrev = nullptr;
+			node->m_pNext = nullptr;
 		}
 		else
 		{
@@ -158,7 +158,7 @@ namespace IntrusiveList
 			}
 			ptr->m_pNext = node;
 			node->m_pPrev = ptr;   //
-			node->m_pNext = NULL;
+			node->m_pNext = nullptr;
 		}
 	}
 
@@ -476,7 +476,7 @@ namespace IntrusiveList
 			T *pCurHead = ReadVolatileMemory<T *>( &pHead );
 			if ( ! pCurHead )
 			{
-				return NULL;
+				return nullptr;
 			}
 			ThreadMemoryBarrier();
 			if ( ThreadInterlockedAssignPointerIf( ( void * volatile * ) ( &pHead ) , pCurHead->m_pNext, pCurHead ) )
@@ -492,7 +492,7 @@ namespace IntrusiveList
 	// Note that the head var passed to this will be modified.
 	template<class T,class V> FORCEINLINE void AddToTail(T * & head, V * node)
 	{
-		node->m_pNext = NULL;
+		node->m_pNext = nullptr;
 		if ( ! head )
 			head = node;
 		else
@@ -727,7 +727,7 @@ namespace IntrusiveList
 	// interview :-)
 	template <class T> T *ReversedList( T * head )
 	{
-		T * pNewHead=NULL;
+		T * pNewHead=nullptr;
 		while( head )
 		{
 			T *pNext=head->m_pNext;
@@ -756,14 +756,14 @@ public:
 	
 	FORCEINLINE CUtlIntrusiveList(void)
 	{
-		m_pHead = NULL;
+		m_pHead = nullptr;
 	}
 
 
 	FORCEINLINE void RemoveAll( void )
 	{
 		// empty list. doesn't touch nodes at all
-		m_pHead = NULL;
+		m_pHead = nullptr;
 	}
 	FORCEINLINE void AddToHead( T * node )
 	{
@@ -847,7 +847,7 @@ public:
 			return pRet;
 		}
 		else
-			return NULL;
+			return nullptr;
 	}
 
 
@@ -879,16 +879,16 @@ public:
 			T *pRet = CUtlIntrusiveList<T>::m_pHead;
 			CUtlIntrusiveList<T>::m_pHead = CUtlIntrusiveList<T>::m_pHead->m_pNext;
 			if ( CUtlIntrusiveList<T>::m_pHead )
-				CUtlIntrusiveList<T>::m_pHead->m_pPrev = NULL;
+				CUtlIntrusiveList<T>::m_pHead->m_pPrev = nullptr;
 			return pRet;
 		}
 		else
-			return NULL;
+			return nullptr;
 	}
 	
 	T * PrevNode(T *node)
 	{
-		return ( node )?node->m_Prev:NULL;
+		return ( node )?node->m_Prev:nullptr;
 	}
 
 };
@@ -902,7 +902,7 @@ public:
 
 	FORCEINLINE CUtlIntrusiveDListWithTailPtr( void ) : CUtlIntrusiveDList<T>()
 	{
-		m_pTailPtr = NULL;
+		m_pTailPtr = nullptr;
 	}
 	
 	FORCEINLINE void AddToHead( T * node )
@@ -922,13 +922,13 @@ public:
 	void Purge( void )
 	{
 		CUtlIntrusiveList<T>::Purge();
-		m_pTailPtr = NULL;
+		m_pTailPtr = nullptr;
 	}
 
 	void Kill( void )
 	{
 		CUtlIntrusiveList<T>::Purge();
-		m_pTailPtr = NULL;
+		m_pTailPtr = nullptr;
 	}
 
 	T *RemoveHead( void )
@@ -938,19 +938,19 @@ public:
 			T *pRet = CUtlIntrusiveDList<T>::m_pHead;
 			CUtlIntrusiveDList<T>::m_pHead = CUtlIntrusiveDList<T>::m_pHead->m_pNext;
 			if ( CUtlIntrusiveDList<T>::m_pHead )
-				CUtlIntrusiveDList<T>::m_pHead->m_pPrev = NULL;
+				CUtlIntrusiveDList<T>::m_pHead->m_pPrev = nullptr;
 			if (! CUtlIntrusiveDList<T>::m_pHead )
-				m_pTailPtr = NULL;
+				m_pTailPtr = nullptr;
 			IntrusiveList::ValidateDList( CUtlIntrusiveDList<T>::m_pHead );
 			return pRet;
 		}
 		else
-			return NULL;
+			return nullptr;
 	}
 	
 	T * PrevNode(T *node)
 	{
-		return ( node )?node->m_Prev:NULL;
+		return ( node )?node->m_Prev:nullptr;
 	}
 
 };
@@ -976,7 +976,7 @@ public:
 
 	FORCEINLINE CUtlIntrusiveListWithTailPtr( void ) : CUtlIntrusiveList<T>()
 	{
-		m_pTailPtr = NULL;
+		m_pTailPtr = nullptr;
 	}
 	
 	FORCEINLINE void AddToHead( T * pNode )
@@ -995,13 +995,13 @@ public:
 	void Purge( void )
 	{
 		CUtlIntrusiveList<T>::Purge();
-		m_pTailPtr = NULL;
+		m_pTailPtr = nullptr;
 	}
 
 	void Kill( void )
 	{
 		CUtlIntrusiveList<T>::Purge();
-		m_pTailPtr = NULL;
+		m_pTailPtr = nullptr;
 	}
 
 	T *RemoveHead( void )
@@ -1009,14 +1009,14 @@ public:
 		if ( CUtlIntrusiveList<T>::m_pHead )
 		{
 			T *pRet = CUtlIntrusiveList<T>::RemoveHead();
-			if ( CUtlIntrusiveList<T>::m_pHead == NULL )
+			if ( CUtlIntrusiveList<T>::m_pHead == nullptr )
 			{
-				m_pTailPtr = NULL;
+				m_pTailPtr = nullptr;
 			}
 			return pRet;
 		}
 		else
-			return NULL;
+			return nullptr;
 	}
 	
 	int Count( void ) const

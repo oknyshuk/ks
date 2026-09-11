@@ -552,7 +552,7 @@ public:
 		bool HasTag( const char *pTag ) const
 		{
 			LoggingTag_t *pCurrentTag = m_pFirstTag;
-			while( pCurrentTag != NULL )
+			while( pCurrentTag != nullptr )
 			{
 				if ( stricmp( pCurrentTag->m_pTagName, pTag ) == 0 )
 				{
@@ -664,7 +664,7 @@ private:
 #define DECLARE_LOGGING_CHANNEL( Channel ) extern LoggingChannelID_t Channel
 
 #define DEFINE_LOGGING_CHANNEL_NO_TAGS( Channel, ChannelName, /* [Flags], [Severity], [Color] */ ... ) \
-	LoggingChannelID_t Channel = LoggingSystem_RegisterLoggingChannel( ChannelName, NULL, ##__VA_ARGS__ )
+	LoggingChannelID_t Channel = LoggingSystem_RegisterLoggingChannel( ChannelName, nullptr, ##__VA_ARGS__ )
 
 #define BEGIN_DEFINE_LOGGING_CHANNEL( Channel, ChannelName, /* [Flags], [Severity], [Color] */ ... ) \
 	static void Register_##Channel##_Tags(); \

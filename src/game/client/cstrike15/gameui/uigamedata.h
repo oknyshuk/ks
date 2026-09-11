@@ -166,7 +166,7 @@ namespace BaseModUI {
 
 		bool IsXUIOpen();
 
-		void OpenWaitScreen( const char * messageText, float minDisplayTime = 3.0f, KeyValues *pSettings = NULL );
+		void OpenWaitScreen( const char * messageText, float minDisplayTime = 3.0f, KeyValues *pSettings = nullptr );
 		void UpdateWaitPanel( const char * messageText, float minDisplayTime = 3.0f );
 		void UpdateWaitPanel( const wchar_t * messageText, float minDisplayTime = 3.0f );
 
@@ -197,7 +197,7 @@ namespace BaseModUI {
 		class CAsyncJobContext
 		{
 		public:
-			explicit CAsyncJobContext( float flLeastExecuteTime = 0.0f ) : m_flLeastExecuteTime( flLeastExecuteTime ), m_hThreadHandle( NULL )  {}
+			explicit CAsyncJobContext( float flLeastExecuteTime = 0.0f ) : m_flLeastExecuteTime( flLeastExecuteTime ), m_hThreadHandle( nullptr )  {}
 			virtual ~CAsyncJobContext() {}
 
 			virtual void ExecuteAsync() = 0;		// Executed on the secondary thread
@@ -316,7 +316,7 @@ struct RemapText_t
 		case MATCH_FULL:
 			return !Q_stricmp( szRawText, m_szRawText );
 		case MATCH_SUBSTR:
-			return Q_stristr( szRawText, m_szRawText ) != NULL;
+			return Q_stristr( szRawText, m_szRawText ) != nullptr;
 		case MATCH_START:
 			return StringHasPrefix( szRawText, m_szRawText );
 		default:

@@ -22,8 +22,8 @@
 
 #define DISP_CHANGE_SUCCESSFUL	0
 
-#define HKEY_CURRENT_USER		NULL
-#define HKEY_LOCAL_MACHINE		NULL
+#define HKEY_CURRENT_USER		nullptr
+#define HKEY_LOCAL_MACHINE		nullptr
 #define KEY_QUERY_VALUE			0
 
 #define KEY_READ		0

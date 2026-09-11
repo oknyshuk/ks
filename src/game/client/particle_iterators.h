@@ -114,7 +114,7 @@ private:
 
 inline CParticleRenderIterator::CParticleRenderIterator()
 {
-	m_pCur = NULL;
+	m_pCur = nullptr;
 	m_bGotFirst = false;
 	m_flPrevZ = 0;
 	m_nParticlesInCurrentBatch = 0;
@@ -130,7 +130,7 @@ inline const Particle* CParticleRenderIterator::GetFirst()
 
 	m_pCur = m_pMaterial->m_Particles.m_pNext;
 	if ( m_pCur == &m_pMaterial->m_Particles )
-		return NULL;
+		return nullptr;
 
 	m_pParticleDraw->m_pSubTexture = m_pCur->m_pSubTexture;
 	return m_pCur;
@@ -188,7 +188,7 @@ inline const Particle* CParticleRenderIterator::GetNext( float sortKey )
 
 	m_pCur = pNext;
 	if ( m_pCur == &m_pMaterial->m_Particles )
-		return NULL;
+		return nullptr;
 
 	m_pParticleDraw->m_pSubTexture = m_pCur->m_pSubTexture;
 	return m_pCur;
@@ -206,7 +206,7 @@ inline ParticleDraw* CParticleRenderIterator::GetParticleDraw() const
 
 inline CParticleSimulateIterator::CParticleSimulateIterator()
 {
-	m_pNextParticle = NULL;
+	m_pNextParticle = nullptr;
 #ifdef _DEBUG
 	m_bGotFirst = false;
 #endif
@@ -224,7 +224,7 @@ inline Particle* CParticleSimulateIterator::GetFirst()
 
 	Particle *pRet = m_pMaterial->m_Particles.m_pNext;
 	if ( pRet == &m_pMaterial->m_Particles )
-		return NULL;
+		return nullptr;
 
 #ifdef _DEBUG
 	m_bGotFirst = true;
@@ -239,7 +239,7 @@ inline Particle* CParticleSimulateIterator::GetNext()
 	Particle *pRet = m_pNextParticle;
 
 	if ( pRet == &m_pMaterial->m_Particles )
-		return NULL;
+		return nullptr;
 	
 	m_pNextParticle = pRet->m_pNext;
 	return pRet;

@@ -21,7 +21,7 @@
 
 CScratchPadGraph::CScratchPadGraph()
 {
-	m_pPad = NULL;
+	m_pPad = nullptr;
 }
 
 
@@ -63,7 +63,7 @@ void CScratchPadGraph::Init(
 
 bool CScratchPadGraph::IsInitted() const
 {
-	return m_pPad != NULL;
+	return m_pPad != nullptr;
 }
 
 

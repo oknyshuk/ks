@@ -63,7 +63,7 @@ inline char* CBufferStrider::StrideString( const void *pEnd )
 	{
 		if ( pNextItem >= ( uint8* ) pEnd )
 		{
-			return NULL; // we steppend past end of buffer
+			return nullptr; // we steppend past end of buffer
 		}
 	}
 	while ( *( pNextItem++ ) );
@@ -117,13 +117,13 @@ public:
 		m_nMaxAlignment |= nAlignMask;
 #endif
 		m_nByteCount += sizeof( T ) * nCount;
-		return NULL; // we didn't allocate anything yet!
+		return nullptr; // we didn't allocate anything yet!
 	}
 	template< typename T, typename A >
 	T* operator()( T*& pDummy, const CUtlVector< T, A > &arr )
 	{
 		( *this )( pDummy, arr.Count( ) );
-		return NULL; // we didn't allocate anything yet
+		return nullptr; // we didn't allocate anything yet
 	}
 	char *String( const char *& pDummy, const char *pSourceString )
 	{
@@ -131,7 +131,7 @@ public:
 		{
 			( *this )( pDummy, uint( V_strlen( pSourceString ) + 1 ) );
 		}
-		return NULL; // we didn't allocate anything yet
+		return nullptr; // we didn't allocate anything yet
 	}
 	uint GetByteCount( )const { return m_nByteCount; }
 protected:
@@ -150,7 +150,7 @@ public:
 	template <typename T>
 	T* operator() ( T*& refPtr, uint nCount )
 	{
-		refPtr = nCount ? Stride< T >( nCount ) : NULL;
+		refPtr = nCount ? Stride< T >( nCount ) : nullptr;
 		return refPtr;
 	}
 	template < typename T, typename A >
@@ -158,7 +158,7 @@ public:
 	{
 		if ( arr.IsEmpty( ) )
 		{
-			refPtr = NULL;
+			refPtr = nullptr;
 		}
 		else
 		{
@@ -180,7 +180,7 @@ public:
 		}
 		else
 		{
-			return NULL; // we didn't allocate anything
+			return nullptr; // we didn't allocate anything
 		}
 	}
 };
@@ -195,7 +195,7 @@ class CMultiBufferHelper
 public:
 	CMultiBufferHelper( )
 	{
-		m_pMultiBuffer = NULL;
+		m_pMultiBuffer = nullptr;
 		m_nMultiBufferSize = 0;
 	}
 	~CMultiBufferHelper( )
@@ -203,7 +203,7 @@ public:
 		if ( m_pMultiBuffer )
 		{
 			MemAlloc_FreeAligned( m_pMultiBuffer );
-			m_pMultiBuffer = NULL;
+			m_pMultiBuffer = nullptr;
 			m_nMultiBufferSize = 0;
 		}
 	}
@@ -213,7 +213,7 @@ public:
 	{
 		// forget the buffer
 		uint8 *pBuffer = m_pMultiBuffer;
-		m_pMultiBuffer = NULL;
+		m_pMultiBuffer = nullptr;
 		m_nMultiBufferSize = 0;
 		return pBuffer;
 	}

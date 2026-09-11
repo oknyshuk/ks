@@ -249,7 +249,7 @@ inline void *MemAlloc_AllocAlignedUnattributed( size_t size, size_t align )
 #endif
 
 	if (!ValueIsPowerOfTwo(align))
-		return NULL;
+		return nullptr;
 
 #ifdef MEMALLOC_SUPPORTS_ALIGNED_ALLOCATIONS
 
@@ -259,8 +259,8 @@ inline void *MemAlloc_AllocAlignedUnattributed( size_t size, size_t align )
 
 	align = (align > sizeof(void *) ? align : sizeof(void *)) - 1;
 
-	if ( (pAlloc = (unsigned char*)MemAlloc_Alloc( sizeof(void *) + align + size ) ) == (unsigned char*)NULL)
-		return NULL;
+	if ( (pAlloc = (unsigned char*)MemAlloc_Alloc( sizeof(void *) + align + size ) ) == (unsigned char*)nullptr)
+		return nullptr;
 
 	pResult = (unsigned char*)( (size_t)(pAlloc + sizeof(void *) + align ) & ~align );
 	((unsigned char**)(pResult))[-1] = pAlloc;
@@ -279,7 +279,7 @@ inline void *MemAlloc_AllocAlignedFileLine( size_t size, size_t align, const cha
 #endif
 
 	if (!ValueIsPowerOfTwo(align))
-		return NULL;
+		return nullptr;
 
 #ifdef MEMALLOC_SUPPORTS_ALIGNED_ALLOCATIONS
 
@@ -289,8 +289,8 @@ inline void *MemAlloc_AllocAlignedFileLine( size_t size, size_t align, const cha
 
 	align = (align > sizeof(void *) ? align : sizeof(void *)) - 1;
 
-	if ( (pAlloc = (unsigned char*)MemAlloc_Alloc( sizeof(void *) + align + size, pszFile, nLine ) ) == (unsigned char*)NULL)
-		return NULL;
+	if ( (pAlloc = (unsigned char*)MemAlloc_Alloc( sizeof(void *) + align + size, pszFile, nLine ) ) == (unsigned char*)nullptr)
+		return nullptr;
 
 	pResult = (unsigned char*)( (size_t)(pAlloc + sizeof(void *) + align ) & ~align );
 	((unsigned char**)(pResult))[-1] = pAlloc;
@@ -313,11 +313,11 @@ extern const char *g_pszModule;
 inline void *MemAlloc_ReallocAligned( void *ptr, size_t size, size_t align )
 {
 	if ( !ValueIsPowerOfTwo( align ) )
-		return NULL;
+		return nullptr;
 
 	// Don't change alignment between allocation + reallocation.
 	if ( ( (size_t)ptr & ( align - 1 ) ) != 0 )
-		return NULL;
+		return nullptr;
 
 #ifdef MEMALLOC_SUPPORTS_ALIGNED_ALLOCATIONS
 
@@ -359,7 +359,7 @@ inline void MemAlloc_FreeAligned( void *pMemBlock )
 
 	void *pAlloc;
 
-	if ( pMemBlock == NULL )
+	if ( pMemBlock == nullptr )
 		return;
 
 	pAlloc = pMemBlock;
@@ -385,7 +385,7 @@ inline void MemAlloc_FreeAligned( void *pMemBlock, const char *pszFile, int nLin
 
 	void *pAlloc;
 
-	if ( pMemBlock == NULL )
+	if ( pMemBlock == nullptr )
 		return;
 
 	pAlloc = pMemBlock;
@@ -415,7 +415,7 @@ inline size_t MemAlloc_GetSizeAligned( void *pMemBlock )
 
 	void *pAlloc;
 
-	if ( pMemBlock == NULL )
+	if ( pMemBlock == nullptr )
 		return 0;
 
 	pAlloc = pMemBlock;
@@ -505,7 +505,7 @@ public:
 //-----------------------------------------------------------------------------
 
 	#define MEM_ALLOC_CREDIT_CLASS()
-	#define MEM_ALLOC_CLASSNAME(type) NULL
+	#define MEM_ALLOC_CLASSNAME(type) nullptr
 	#define MEM_ALLOC_CREDIT_FUNCTION() 
 
 //-----------------------------------------------------------------------------
@@ -580,12 +580,12 @@ struct MemAllocFileLine_t
 inline void *_aligned_malloc( size_t nSize, size_t align )															{ return memalign( align, nSize ); }
 inline void _aligned_free( void *ptr )																				{ free( ptr ); }
 
-inline void *MemAlloc_Alloc( size_t nSize, const char *pFileName = NULL, int nLine = 0 )							{ return malloc( nSize ); }
-inline void MemAlloc_Free( void *ptr, const char *pFileName = NULL, int nLine = 0 )									{ free( ptr ); }
+inline void *MemAlloc_Alloc( size_t nSize, const char *pFileName = nullptr, int nLine = 0 )							{ return malloc( nSize ); }
+inline void MemAlloc_Free( void *ptr, const char *pFileName = nullptr, int nLine = 0 )									{ free( ptr ); }
 
 inline void *MemAlloc_AllocAligned( size_t size, size_t align )														{ return memalign( align, size ); }
-inline void *MemAlloc_AllocAlignedFileLine( size_t size, size_t align, const char *pszFile = NULL, int nLine = 0 )	{ return memalign( align, size ); }
-inline void MemAlloc_FreeAligned( void *pMemBlock, const char *pszFile = NULL, int nLine = 0 ) 						{ free( pMemBlock ); }
+inline void *MemAlloc_AllocAlignedFileLine( size_t size, size_t align, const char *pszFile = nullptr, int nLine = 0 )	{ return memalign( align, size ); }
+inline void MemAlloc_FreeAligned( void *pMemBlock, const char *pszFile = nullptr, int nLine = 0 ) 						{ free( pMemBlock ); }
 
 inline size_t _msize( void *ptr )																					{ return malloc_usable_size( ptr ); }
 
@@ -616,7 +616,7 @@ inline void *MemAlloc_ReallocAligned( void *ptr, size_t size, size_t align )
 #define MEM_ALLOC_CREDIT()	MEM_ALLOC_CREDIT_(__FILE__)
 #define MEM_ALLOC_CREDIT_FUNCTION()
 #define MEM_ALLOC_CREDIT_CLASS()
-#define MEM_ALLOC_CLASSNAME(type) NULL
+#define MEM_ALLOC_CLASSNAME(type) nullptr
 
 #define MemAlloc_PushAllocDbgInfo( pszFile, line )
 #define MemAlloc_PopAllocDbgInfo()

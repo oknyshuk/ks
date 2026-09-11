@@ -139,7 +139,7 @@ void CBubbling::TurnOn()
 void CBubbling::TurnOff()
 {
 	m_state = 0;
-	SetThink( NULL );
+	SetThink( nullptr );
 	SetNextThink( TICK_NEVER_THINK );
 }
 
@@ -267,8 +267,8 @@ void CEnvTracer::Activate( void )
 {
 	BaseClass::Activate();
 
-	CBaseEntity *pEnd = gEntList.FindEntityByName( NULL, m_target );
-	if (pEnd != NULL)
+	CBaseEntity *pEnd = gEntList.FindEntityByName( nullptr, m_target );
+	if (pEnd != nullptr)
 	{
 		m_vecEnd = pEnd->GetLocalOrigin();
 		SetThink( &CEnvTracer::TracerThink );
@@ -405,7 +405,7 @@ CGib *CGibShooter::CreateGib ( void )
 {
 	ConVarRef violence_hgibs( "violence_hgibs" );
 	if ( violence_hgibs.IsValid() && !violence_hgibs.GetInt() )
-		return NULL;
+		return nullptr;
 
 	CGib *pGib = CREATE_ENTITY( CGib, "gib" );
 	pGib->Spawn( "models/gibs/hgibs.mdl" );
@@ -508,7 +508,7 @@ CBaseEntity *CGibShooter::SpawnGib( const Vector &vecShootDir, float flSpeed )
 				{
 					// Set gib velocity
 					Vector vVel		= vecShootDir * flSpeed;
-					pPhysicsObject->AddVelocity(&vVel, NULL);
+					pPhysicsObject->AddVelocity(&vVel, nullptr);
 
 					AngularImpulse torque;
 					torque.x = m_flGibAngVelocity * random->RandomFloat( 0.1f, 1.0f );
@@ -548,7 +548,7 @@ CBaseEntity *CGibShooter::SpawnGib( const Vector &vecShootDir, float flSpeed )
 		}
 	}
 
-	return NULL;
+	return nullptr;
 }
 
 
@@ -575,7 +575,7 @@ void CGibShooter::ShootThink ( void )
 		if ( HasSpawnFlags(SF_GIBSHOOTER_REPEATABLE) )
 		{
 			m_iGibs = m_iGibCapacity;
-			SetThink ( NULL );
+			SetThink ( nullptr );
 			SetNextThink( gpGlobals->curtime );
 		}
 		else
@@ -704,7 +704,7 @@ CGib *CEnvShooter::CreateGib ( void )
 	{
 		// Tag an entity flame along with us
 		CEntityFlame *pFlame = CEntityFlame::Create( pGib, pGib->m_lifeTime );
-		if ( pFlame != NULL )
+		if ( pFlame != nullptr )
 		{
 			pGib->SetFlame( pFlame );
 		}
@@ -791,7 +791,7 @@ CBaseEntity *CRotorWashShooter::DoWashPush( float flWashStartTime, const Vector 
 	if ( flWashStartTime == m_flLastWashStartTime )
 	{
 		if ( m_flNextGibTime > gpGlobals->curtime )
-			return NULL;
+			return nullptr;
 	}
 
 	m_flLastWashStartTime = flWashStartTime;
@@ -1102,7 +1102,7 @@ void CBlood::InputEmitBlood( inputdata_t &inputdata )
 		Vector start = BloodPosition( inputdata.pActivator );
 		trace_t tr;
 
-		UTIL_TraceLine( start, start + forward * BloodAmount() * 2, MASK_SOLID_BRUSHONLY, NULL, COLLISION_GROUP_NONE, &tr );
+		UTIL_TraceLine( start, start + forward * BloodAmount() * 2, MASK_SOLID_BRUSHONLY, nullptr, COLLISION_GROUP_NONE, &tr );
 		if ( tr.fraction != 1.0 )
 		{
 			UTIL_BloodDecalTrace( &tr, Color() );
@@ -1320,7 +1320,7 @@ void CItemSoda::CanThink ( void )
 	AddSolidFlags( FSOLID_TRIGGER );
 	UTIL_SetSize ( this, Vector ( -8, -8, 0 ), Vector ( 8, 8, 8 ) );
 
-	SetThink ( NULL );
+	SetThink ( nullptr );
 	SetTouch ( &CItemSoda::CanTouch );
 }
 
@@ -1345,7 +1345,7 @@ void CItemSoda::CanTouch ( CBaseEntity *pOther )
 	AddSolidFlags( FSOLID_NOT_SOLID );
 	SetMoveType( MOVETYPE_NONE );
 	AddEffects( EF_NODRAW );
-	SetTouch ( NULL );
+	SetTouch ( nullptr );
 	SetThink ( &CItemSoda::SUB_Remove );
 	SetNextThink( gpGlobals->curtime );
 }
@@ -1628,7 +1628,7 @@ void CEmbers::EmberUse( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE 
 	//If we're not toggable, only allow one use
 	if ( !HasSpawnFlags( bitsSF_EMBERS_TOGGLE ) )
 	{
-		SetUse( NULL );
+		SetUse( nullptr );
 	}
 
 	//Handle it
@@ -2035,7 +2035,7 @@ void CEnvGunfire::Activate( void )
 	// Find my target
 	if (m_target != NULL_STRING)
 	{
-		m_hTarget = gEntList.FindEntityByName( NULL, m_target );
+		m_hTarget = gEntList.FindEntityByName( nullptr, m_target );
 	}
 
 	BaseClass::Activate();
@@ -2071,7 +2071,7 @@ void CEnvGunfire::UpdateTarget()
 //-----------------------------------------------------------------------------
 void CEnvGunfire::StopShooting()
 {
-	SetThink( NULL );
+	SetThink( nullptr );
 }
 
 //-----------------------------------------------------------------------------
@@ -2123,11 +2123,11 @@ void CEnvGunfire::ShootThink()
 
 		int nPenetrationCount = 4;
 
-		int		iDamage = pWeaponInfo->GetDamage( NULL );
-		float	flRange = pWeaponInfo->GetRange( NULL );
-		float	flPenetration = pWeaponInfo->GetPenetration( NULL );
-		float	flRangeModifier = pWeaponInfo->GetRangeModifier( NULL );
-		int		iAmmoType = pWeaponInfo->GetPrimaryAmmoType( NULL );
+		int		iDamage = pWeaponInfo->GetDamage( nullptr );
+		float	flRange = pWeaponInfo->GetRange( nullptr );
+		float	flPenetration = pWeaponInfo->GetPenetration( nullptr );
+		float	flRangeModifier = pWeaponInfo->GetRangeModifier( nullptr );
+		int		iAmmoType = pWeaponInfo->GetPrimaryAmmoType( nullptr );
 
 		FireBullet(
 			GetAbsOrigin(),
@@ -2197,7 +2197,7 @@ void CEnvGunfire::FireBullet(
 	const char *pszTracerName
 	)
 {
-	CCSPlayer *pPlayer = NULL;
+	CCSPlayer *pPlayer = nullptr;
 	for ( int i = 1; i <= MAX_PLAYERS; i++ )
 	{
 		pPlayer = ToCSPlayer( UTIL_PlayerByIndex( i ) );
@@ -2231,7 +2231,7 @@ void CEnvGunfire::FireBullet(
 
 	bool bFirstHit = true;
 
-	const CBaseCombatCharacter *lastPlayerHit = NULL;	// this includes players, bots, and hostages
+	const CBaseCombatCharacter *lastPlayerHit = nullptr;	// this includes players, bots, and hostages
 
 //#ifdef CLIENT_DLL
 	Vector vecWallBangHitStart, vecWallBangHitEnd;
@@ -2439,7 +2439,7 @@ void CEnvGunfire::FireBullet(
 
 		int nObjectsPenetrated = kMaxNumPenetrationsSupported - ( nPenetrationCount + nPenetrationAtMaxDistance );
 		CTakeDamageInfo &info = delayedDamage.m_info;
-		info.Set( pevAttacker, pevAttacker, NULL/*GetActiveWeapon()*/, fCurrentDamage, iDamageType, 0, nObjectsPenetrated );
+		info.Set( pevAttacker, pevAttacker, nullptr/*GetActiveWeapon()*/, fCurrentDamage, iDamageType, 0, nObjectsPenetrated );
 
 		// Set the bullet ID so that we can later track all the enemies that are damage by the same bullet
 		info.SetAmmoType( iBulletType );
@@ -2534,7 +2534,7 @@ void CEnvGunfire::InputEnable( inputdata_t &inputdata )
 void CEnvGunfire::InputDisable( inputdata_t &inputdata )
 {
 	m_bDisabled = true;
-	SetThink( NULL );
+	SetThink( nullptr );
 }
 
 //-----------------------------------------------------------------------------

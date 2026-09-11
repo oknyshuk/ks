@@ -131,7 +131,7 @@ public:
 	virtual float GetMoveAngle( void ) const;				// return direction of movement
 
 	virtual CNavArea *GetLastKnownArea( void ) const;
-	virtual bool GetSimpleGroundHeightWithFloor( const Vector &pos, float *height, Vector *normal = NULL );	// find "simple" ground height, treating current nav area as part of the floor
+	virtual bool GetSimpleGroundHeightWithFloor( const Vector &pos, float *height, Vector *normal = nullptr );	// find "simple" ground height, treating current nav area as part of the floor
 
 	virtual void Crouch( void );
 	virtual void StandUp( void );							// "un-crouch"
@@ -256,7 +256,7 @@ class HostagePathCost
 public:
 	float operator() ( CNavArea *area, CNavArea *fromArea, const CNavLadder *ladder, const CFuncElevator *elevator, float length )
 	{
-		if (fromArea == NULL)
+		if (fromArea == nullptr)
 		{
 			// first area in path, no cost
 			return 0.0f;
@@ -320,7 +320,7 @@ bool ForEachHostage( Functor &func )
 	{
 		CHostage *hostage = g_Hostages[i];
 
-		if ( hostage == NULL || !hostage->IsValid() )
+		if ( hostage == nullptr || !hostage->IsValid() )
 			continue;
 
 		if ( func( hostage ) == false )

@@ -46,7 +46,7 @@ CInputSystem::CInputSystem()
 	m_nLastPollTick = m_nLastSampleTick = m_StartupTimeTick = 0;
 	m_ChainedWndProc = 0;
 	m_hAttachedHWnd = 0;
-	m_hEvent = NULL;
+	m_hEvent = nullptr;
 	m_bEnabled = true;
 	m_bPumpEnabled = true;
 	m_bIsPolling = false;
@@ -61,7 +61,7 @@ CInputSystem::CInputSystem()
 	m_bRawInputSupported = false;
 	m_bIMEComposing = false;
 	m_nUIEventClientCount = 0;
-	m_hLastIMEHWnd = NULL;
+	m_hLastIMEHWnd = nullptr;
 	m_hCurrentCaptureWnd = PLAT_WINDOW_INVALID;
 	m_bCursorVisible = true;
 	m_hCursor = INPUT_CURSOR_HANDLE_INVALID;
@@ -76,8 +76,8 @@ CInputSystem::CInputSystem()
 	// Assert( (MAX_JOYSTICKS + 7) >> 3 << sizeof(unsigned short) ); 
 
 
-	m_pXInputDLL = NULL;
-	m_pRawInputDLL = NULL;
+	m_pXInputDLL = nullptr;
+	m_pRawInputDLL = nullptr;
 
 	for ( int i = 0; i < Q_ARRAYSIZE(m_nControllerType); i++)
 	{
@@ -104,13 +104,13 @@ CInputSystem::~CInputSystem()
 	if ( m_pXInputDLL )
 	{
 		Sys_UnloadModule( m_pXInputDLL );
-		m_pXInputDLL = NULL;
+		m_pXInputDLL = nullptr;
 	}
 
 	if ( m_pRawInputDLL )
 	{
 		Sys_UnloadModule( m_pRawInputDLL );
-		m_pRawInputDLL = NULL;
+		m_pRawInputDLL = nullptr;
 	}
 
 }
@@ -168,7 +168,7 @@ bool CInputSystem::Connect( CreateInterfaceFn factory )
 	if ( !BaseClass::Connect( factory ) )
 		return false;
 
-	m_pLauncherMgr = (ILauncherMgr *)factory(  SDLMGR_INTERFACE_VERSION, NULL );
+	m_pLauncherMgr = (ILauncherMgr *)factory(  SDLMGR_INTERFACE_VERSION, nullptr );
 
 return true;
 }
@@ -191,7 +191,7 @@ void CInputSystem::Shutdown()
 //-----------------------------------------------------------------------------
 void CInputSystem::SleepUntilInput( int nMaxSleepTimeMS )
 {
-	SDL_WaitEventTimeout( NULL, nMaxSleepTimeMS );
+	SDL_WaitEventTimeout( nullptr, nMaxSleepTimeMS );
 }
 
 

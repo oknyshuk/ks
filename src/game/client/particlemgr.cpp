@@ -72,7 +72,7 @@ CParticleMgr *ParticleMgr()
 
 CParticleSubTextureGroup::CParticleSubTextureGroup()
 {
-	m_pPageMaterial = NULL;
+	m_pPageMaterial = nullptr;
 }
 
 
@@ -90,10 +90,10 @@ CParticleSubTexture::CParticleSubTexture()
 	m_tCoordMins[0] = m_tCoordMins[0] = 0;
 	m_tCoordMaxs[0] = m_tCoordMaxs[0] = 1;
 	m_pGroup = &m_DefaultGroup;
-	m_pMaterial = NULL;
+	m_pMaterial = nullptr;
 
 #ifdef _DEBUG
-	m_szDebugName = NULL;
+	m_szDebugName = nullptr;
 #endif
 }
 
@@ -105,7 +105,7 @@ CParticleSubTexture::CParticleSubTexture()
 CEffectMaterial::CEffectMaterial()
 {
 	m_Particles.m_pNext = m_Particles.m_pPrev = &m_Particles;
-	m_pGroup = NULL;
+	m_pGroup = nullptr;
 }
 
 					
@@ -114,8 +114,8 @@ CEffectMaterial::CEffectMaterial()
 //-----------------------------------------------------------------------------
 CParticleEffectBinding::CParticleEffectBinding()
 {
-	m_pParticleMgr = NULL;
-	m_pSim = NULL;
+	m_pParticleMgr = nullptr;
+	m_pSim = nullptr;
 
 	m_LocalSpaceTransform.Identity();
 	m_bLocalSpaceTransformIdentity = true;
@@ -220,7 +220,7 @@ inline void CParticleEffectBinding::StartDrawMaterialParticles(
 	if( bWireframe )
 	{
 		IMaterial *pMaterial = m_pParticleMgr->m_pMaterialSystem->FindMaterial( "debug/debugparticlewireframe", TEXTURE_GROUP_OTHER );
-		pRenderContext->Bind( pMaterial, NULL );
+		pRenderContext->Bind( pMaterial, nullptr );
 	}
 	else
 	{
@@ -395,7 +395,7 @@ PMaterialHandle CParticleEffectBinding::FindOrAddMaterial( const char *pMaterial
 {
 	if ( !m_pParticleMgr )
 	{
-		return NULL;
+		return nullptr;
 	}
 
 	return m_pParticleMgr->GetPMaterial( pMaterialName );
@@ -412,21 +412,21 @@ Particle* CParticleEffectBinding::AddParticle( int sizeInBytes, PMaterialHandle 
 	if ( sizeInBytes > PARTICLE_SIZE )
 	{
 		Assert( sizeInBytes <= PARTICLE_SIZE );
-		return NULL;
+		return nullptr;
 	}
 
 	// This is for testing - simulate it running out of memory.
 	if ( particle_simulateoverflow.GetInt() )
 	{
 		if ( rand() % 10 <= 6 )
-			return NULL;
+			return nullptr;
 	}
 	
 	// Allocate the puppy. We are actually allocating space for the
 	// internals + the actual data
 	Particle* pParticle = m_pParticleMgr->AllocParticle( PARTICLE_SIZE );
 	if( !pParticle )
-		return NULL;
+		return nullptr;
 
 	// Link it in
 	CEffectMaterial *pEffectMat = GetEffectMaterial( hMaterial );
@@ -550,7 +550,7 @@ void CParticleEffectBinding::SimulateParticles( float flTimeDelta )
 	{
 		CParticleSimulateIterator simulateIterator;
 		simulateIterator.m_pEffectBinding = this;
-		simulateIterator.m_pMaterial = NULL; //pMaterial;
+		simulateIterator.m_pMaterial = nullptr; //pMaterial;
 		simulateIterator.m_flTimeDelta = flTimeDelta;
 		m_pSim->SimulateParticles( &simulateIterator );
 	}
@@ -661,7 +661,7 @@ int CParticleEffectBinding::DrawMaterialParticles(
 	// Setup everything.
 	CMeshBuilder builder;
 	ParticleDraw particleDraw;
-	IMesh *pMesh = NULL;
+	IMesh *pMesh = nullptr;
 
 	StartDrawMaterialParticles( pMaterial, flTimeDelta, pMesh, builder, particleDraw, bWireframe );
 
@@ -831,7 +831,7 @@ void CParticleEffectBinding::Term()
 		CEffectMaterial *pMaterial = m_Materials[iMaterial];
 
 		// Remove all particles tied to this effect.
-		Particle *pNext = NULL;
+		Particle *pNext = nullptr;
 		for(Particle *pCur = pMaterial->m_Particles.m_pNext; pCur != &pMaterial->m_Particles; pCur=pNext )
 		{
 			pNext = pCur->m_pNext;
@@ -928,7 +928,7 @@ CParticleMgr::CParticleMgr()
 	m_nToolParticleEffectId = 0;
 	m_bUpdatingEffects = false;
 	m_bRenderParticleEffects = true;
-	m_pMaterialSystem = NULL;
+	m_pMaterialSystem = nullptr;
 	m_pThreadPool[0] = 0;
 	m_pThreadPool[1] = 0;
 	memset( &m_DirectionalLight, 0, sizeof( m_DirectionalLight ) );
@@ -936,7 +936,7 @@ CParticleMgr::CParticleMgr()
 	m_FrameCode = 1;
 
 	m_DefaultInvalidSubTexture.m_pGroup = &m_DefaultInvalidSubTexture.m_DefaultGroup;
-	m_DefaultInvalidSubTexture.m_pMaterial = NULL;
+	m_DefaultInvalidSubTexture.m_pMaterial = nullptr;
 	m_DefaultInvalidSubTexture.m_tCoordMins[0] = m_DefaultInvalidSubTexture.m_tCoordMins[1] = 0;
 	m_DefaultInvalidSubTexture.m_tCoordMaxs[0] = m_DefaultInvalidSubTexture.m_tCoordMaxs[1] = 1;
 	
@@ -1009,19 +1009,19 @@ void CParticleMgr::Term(bool bCanReferenceOtherStaticObjects)
 	{
 		m_pMaterialSystem->UncacheUnusedMaterials();
 	}
-	m_pMaterialSystem = NULL;
+	m_pMaterialSystem = nullptr;
 	
 	if ( m_pThreadPool[0] )
 	{
 		m_pThreadPool[0]->Stop();
 		DestroyThreadPool( m_pThreadPool[0] );
-		m_pThreadPool[0] = NULL;
+		m_pThreadPool[0] = nullptr;
 	}
 	if ( m_pThreadPool[1] )
 	{
 		m_pThreadPool[1]->Stop();
 		DestroyThreadPool( m_pThreadPool[1] );
-		m_pThreadPool[1] = NULL;
+		m_pThreadPool[1] = nullptr;
 	}
 
 	Assert( m_nCurrentParticlesAllocated == 0 );
@@ -1038,7 +1038,7 @@ Particle *CParticleMgr::AllocParticle( int size )
 {
 	// Enforce max particle limit.
 	if ( m_nCurrentParticlesAllocated >= MAX_TOTAL_PARTICLES )
-		return NULL;
+		return nullptr;
 		
 	Particle *pRet = (Particle *)malloc( size );
 	if ( pRet )
@@ -1114,14 +1114,14 @@ IParticleEffect *CParticleMgr::CreateEffect( const char *pEffectType )
 	if ( !m_effectFactories.IsValidIndex( i ) )
 	{
 		Msg( "CParticleMgr::CreateEffect: factory not found for effect '%s'\n", pEffectType );
-		return NULL;
+		return nullptr;
 	}
 
 	CreateParticleEffectFN func = m_effectFactories[ i ];
-	if ( func == NULL )
+	if ( func == nullptr )
 	{
 		Msg( "CParticleMgr::CreateEffect: NULL factory for effect '%s'\n", pEffectType );
-		return NULL;
+		return nullptr;
 	}
 
 	return func();
@@ -1259,7 +1259,7 @@ void CParticleMgr::RemoveAllNewEffects()
 		// entities shouldn't be important perf-wise because it only happens on reload
 		C_BaseEntityIterator iterator;
 		C_BaseEntity *pEnt;
-		while ( (pEnt = iterator.Next()) != NULL )
+		while ( (pEnt = iterator.Next()) != nullptr )
 		{
 			if ( pEnt->ParticleProp() )
 			{
@@ -1288,13 +1288,13 @@ void CParticleMgr::RemoveAllEffects()
 	// Just clear the pointers so RepairPMaterial() knows to re-acquire.
 	for( int i = m_SubTextures.First(); i != m_SubTextures.InvalidIndex(); i = m_SubTextures.Next( i ) )
 	{
-		m_SubTextures[i]->m_pMaterial = NULL;
-		m_SubTextures[i]->m_DefaultGroup.m_pPageMaterial = NULL;
+		m_SubTextures[i]->m_pMaterial = nullptr;
+		m_SubTextures[i]->m_DefaultGroup.m_pPageMaterial = nullptr;
 	}
 
 	for( int i = m_SubTextureGroups.Count(); --i >= 0; )
 	{
-		m_SubTextureGroups[i]->m_pPageMaterial = NULL;
+		m_SubTextureGroups[i]->m_pPageMaterial = nullptr;
 	}
 }
 
@@ -1305,7 +1305,7 @@ CNewParticleEffect *CParticleMgr::FirstNewEffect()
 
 CNewParticleEffect *CParticleMgr::NextNewEffect( CNewParticleEffect *pEffect )
 {
-	return pEffect ? pEffect->m_pNext : NULL;
+	return pEffect ? pEffect->m_pNext : nullptr;
 }
 
 
@@ -1985,7 +1985,7 @@ PMaterialHandle CParticleMgr::GetPMaterial( const char *pMaterialName )
 	if( !m_pMaterialSystem )
 	{
 		Assert(false);
-		return NULL;
+		return nullptr;
 	}
 
 	int hMat = m_SubTextures.Find( pMaterialName );
@@ -2045,7 +2045,7 @@ PMaterialHandle CParticleMgr::GetPMaterial( const char *pMaterialName )
 		}
 		else
 		{
-			return NULL;
+			return nullptr;
 		} 
 	}
 	else
@@ -2061,10 +2061,10 @@ PMaterialHandle CParticleMgr::GetPMaterial( const char *pMaterialName )
 // Materials keep their ref count across levels - we just need to re-acquire the pointer.
 void CParticleMgr::RepairPMaterial( PMaterialHandle hMaterial )
 {
-	if( hMaterial->m_pMaterial != NULL )
+	if( hMaterial->m_pMaterial != nullptr )
 		return;
 
-	const char *pMaterialName = NULL;
+	const char *pMaterialName = nullptr;
 	for( int i = m_SubTextures.First(); i != m_SubTextures.InvalidIndex(); i = m_SubTextures.Next( i ) )
 	{
 		if( m_SubTextures[i] == hMaterial )
@@ -2073,11 +2073,11 @@ void CParticleMgr::RepairPMaterial( PMaterialHandle hMaterial )
 			break;
 		}
 	}
-	Assert( pMaterialName != NULL );
+	Assert( pMaterialName != nullptr );
 
 	IMaterial *pIMaterial = m_pMaterialSystem->FindMaterial( pMaterialName, TEXTURE_GROUP_PARTICLE );
 	hMaterial->m_pMaterial = pIMaterial;
-	if ( pIMaterial != NULL )
+	if ( pIMaterial != nullptr )
 	{
 		// No AddRef needed - material keeps its ref from initial GetPMaterial() call.
 		// Refs are only released once in Term() at shutdown.
@@ -2087,7 +2087,7 @@ void CParticleMgr::RepairPMaterial( PMaterialHandle hMaterial )
 		IMaterial *pPageMaterial = pIMaterial->GetMaterialPage();
 		if ( pIMaterial->InMaterialPage() && pPageMaterial )
 		{
-			if ( hMaterial->m_pGroup->m_pPageMaterial == NULL )
+			if ( hMaterial->m_pGroup->m_pPageMaterial == nullptr )
 			{
 				hMaterial->m_pGroup->m_pPageMaterial = pPageMaterial;
 				// No AddRef for page material either
@@ -2109,7 +2109,7 @@ IMaterial* CParticleMgr::PMaterialToIMaterial( PMaterialHandle hMaterial )
 		return hMaterial->m_pMaterial;
 	}
 	else
-		return NULL;
+		return nullptr;
 }
 
 

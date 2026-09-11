@@ -59,7 +59,7 @@ void C_SmokeGrenadeProjectile::SpawnSmokeEffect( )
 	if ( !m_bSmokeEffectSpawned )
 	{
 		m_bSmokeEffectSpawned = true;
-		CNewParticleEffect *pSmokeEffect = NULL;
+		CNewParticleEffect *pSmokeEffect = nullptr;
 
 		// Used to be: 
 		int nUseMethod = 2;
@@ -79,7 +79,7 @@ void C_SmokeGrenadeProjectile::SpawnSmokeEffect( )
 			else
 			{
 				// The old method used CNewParticleEffect::CreateOrAggregate() API in its guts, so this is the closest method to create smoke to the old method, but it's not been tested in trunk
-				pSmokeEffect = CNewParticleEffect::CreateOrAggregate( NULL, "explosion_smokegrenade", vOrigin );
+				pSmokeEffect = CNewParticleEffect::CreateOrAggregate( nullptr, "explosion_smokegrenade", vOrigin );
 			}
 
 			if ( pSmokeEffect )
@@ -181,10 +181,10 @@ void CSmokeGrenadeProjectile::SmokeDetonate( void )
 	m_nSmokeEffectTickBegin = gpGlobals->tickcount; // client will star the explosion_smokegrenade particle effect at AbsOrigin
 
 	//tell the hostages about the smoke!
-	CBaseEntity *pEntity = NULL;
+	CBaseEntity *pEntity = nullptr;
 	variant_t var;	//send the location of the smoke?
 	var.SetVector3D( GetAbsOrigin() );
-	while ( ( pEntity = gEntList.FindEntityByClassname( pEntity, "hostage_entity" ) ) != NULL)
+	while ( ( pEntity = gEntList.FindEntityByClassname( pEntity, "hostage_entity" ) ) != nullptr)
 	{
 		//send to hostages that have a resonable chance of being in it while its still smoking
 		if( (GetAbsOrigin() - pEntity->GetAbsOrigin()).Length() < 1000 )
@@ -331,7 +331,7 @@ void CSmokeGrenadeProjectile::OnBounced( void )
 	int count = UTIL_EntitiesInSphere( list, maxEnts, GetAbsOrigin(), 512, FL_ONFIRE );
 	for( int i=0; i<count; ++i )
 	{
-		if (list[i] == NULL || list[i] == this)
+		if (list[i] == nullptr || list[i] == this)
 			continue;
 
 		CInferno* pInferno = dynamic_cast<CInferno*>( list[i] );

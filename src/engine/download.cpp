@@ -93,12 +93,12 @@ private:
 	char m_cachefileKey[BufferSize + 64];
 	char m_timestampKey[BufferSize + 64];
 };
-static DownloadCache *TheDownloadCache = NULL;
+static DownloadCache *TheDownloadCache = nullptr;
 
 //--------------------------------------------------------------------------------------------------------------
 DownloadCache::DownloadCache()
 {
-	m_cache = NULL;
+	m_cache = nullptr;
 }
 
 //--------------------------------------------------------------------------------------------------------------
@@ -141,7 +141,7 @@ void DownloadCache::Init()
 	}
 
 	m_cache = new KeyValues( "DownloadCache" );
-	m_cache->LoadFromFile( g_pFileSystem, CacheFilename, NULL );
+	m_cache->LoadFromFile( g_pFileSystem, CacheFilename, nullptr );
 	g_pFileSystem->CreateDirHierarchy( CacheDirectory, "DEFAULT_WRITE_PATH" );
 }
 
@@ -169,7 +169,7 @@ void DownloadCache::GetCachedData( RequestContext *rc )
 	if ( !status )
 	{
 		delete[] rc->cacheData;
-		rc->cacheData = NULL;
+		rc->cacheData = nullptr;
 	}
 	else
 	{
@@ -324,7 +324,7 @@ void DownloadCache::PersistToDisk( const RequestContext *rc )
 				GetCacheFilename( rc, cachePath );
 				if ( cachePath[0] )
 				{
-					g_pFileSystem->RemoveFile( cachePath, NULL );
+					g_pFileSystem->RemoveFile( cachePath, nullptr );
 				}
 
 				BuildKeyNames( rc->gamePath );
@@ -342,7 +342,7 @@ void DownloadCache::PersistToDisk( const RequestContext *rc )
 		}
 	}
 
-	m_cache->SaveToFile( g_pFileSystem, CacheFilename, NULL );
+	m_cache->SaveToFile( g_pFileSystem, CacheFilename, nullptr );
 }
 
 //--------------------------------------------------------------------------------------------------------------
@@ -360,7 +360,7 @@ void DownloadCache::PersistToCache( const RequestContext *rc )
 		g_pFileSystem->Write( rc->data, rc->nBytesCurrent, fp );
 		g_pFileSystem->Close( fp );
 
-		m_cache->SaveToFile( g_pFileSystem, CacheFilename, NULL );
+		m_cache->SaveToFile( g_pFileSystem, CacheFilename, nullptr );
 	}
 }
 
@@ -368,7 +368,7 @@ void DownloadCache::PersistToCache( const RequestContext *rc )
 void DownloadCache::GetCacheFilename( const RequestContext *rc, char cachePath[_MAX_PATH] )
 {
 	BuildKeyNames( rc->gamePath );
-	const char *path = m_cache->GetString( m_cachefileKey, NULL );
+	const char *path = m_cache->GetString( m_cachefileKey, nullptr );
 	if ( !path || !StringHasPrefixCaseSensitive( path, CacheDirectory ) )
 	{
 		cachePath[0] = 0;
@@ -460,7 +460,7 @@ static DownloadManager TheDownloadManager;
 //--------------------------------------------------------------------------------------------------------------
 DownloadManager::DownloadManager()
 {
-	m_activeRequest = NULL;
+	m_activeRequest = nullptr;
 	m_lastPercent = 0;
 	m_totalRequests = 0;
 }
@@ -510,7 +510,7 @@ bool DownloadManager::FileDenied( const char *filename, unsigned int requestID, 
 
 	// try to download the next file
 	m_completedRequests.AddToTail( m_activeRequest );
-	m_activeRequest = NULL;
+	m_activeRequest = nullptr;
 
 	return true;
 }
@@ -535,7 +535,7 @@ bool DownloadManager::FileReceived( const char *filename, unsigned int requestID
 	UpdateProgressBar();
 
 	m_completedRequests.AddToTail( m_activeRequest );
-	m_activeRequest = NULL;
+	m_activeRequest = nullptr;
 
 	// INFESTED_DLL
 	static char gamedir[MAX_OSPATH];
@@ -687,7 +687,7 @@ void DownloadManager::Reset()
 		}
 		m_activeRequest->shouldStop = true;
 		m_completedRequests.AddToTail( m_activeRequest );
-		m_activeRequest = NULL;
+		m_activeRequest = nullptr;
 		//TODO: StopLoadingProgressBar();
 	}
 
@@ -702,7 +702,7 @@ void DownloadManager::Reset()
 	if ( TheDownloadCache )
 	{
 		delete TheDownloadCache;
-		TheDownloadCache = NULL;
+		TheDownloadCache = nullptr;
 	}
 
 	m_lastPercent = 0;
@@ -758,7 +758,7 @@ void DownloadManager::CheckActiveDownload()
 			TheDownloadCache->PersistToDisk( m_activeRequest );
 			m_activeRequest->shouldStop = true;
 			m_completedRequests.AddToTail( m_activeRequest );
-			m_activeRequest = NULL;
+			m_activeRequest = nullptr;
 			if ( !m_queuedRequests.Count() )
 			{
 				//TODO: StopLoadingProgressBar();
@@ -773,7 +773,7 @@ void DownloadManager::CheckActiveDownload()
 		// try to download the next file
 		m_activeRequest->shouldStop = true;
 		m_completedRequests.AddToTail( m_activeRequest );
-		m_activeRequest = NULL;
+		m_activeRequest = nullptr;
 		if ( !m_queuedRequests.Count() )
 		{
 			//TODO: StopLoadingProgressBar();
@@ -817,7 +817,7 @@ void DownloadManager::StartNewDownload()
 			m_activeRequest->shouldStop = true;
 			m_activeRequest->threadDone = true;
 			m_completedRequests.AddToTail( m_activeRequest );
-			m_activeRequest = NULL;
+			m_activeRequest = nullptr;
 		}
 	}
 
@@ -829,7 +829,7 @@ void DownloadManager::StartNewDownload()
 		m_activeRequest->shouldStop = true;
 		m_activeRequest->threadDone = true;
 		m_completedRequests.AddToTail( m_activeRequest );
-		m_activeRequest = NULL;
+		m_activeRequest = nullptr;
 		return; // don't download existing files
 	}
 
@@ -910,7 +910,7 @@ bool DownloadManager::Update()
 	CheckActiveDownload();
 	StartNewDownload();
 
-	return m_activeRequest != NULL;
+	return m_activeRequest != nullptr;
 }
 
 //--------------------------------------------------------------------------------------------------------------

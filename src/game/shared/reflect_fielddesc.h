@@ -44,7 +44,7 @@ inline typedescription_t MakeField( const FieldDesc &d )
 	t.inputFunc        = d.input;
 	t.td               = d.td;
 	t.fieldSizeInBytes = d.bytes;
-	t.override_field   = NULL;
+	t.override_field   = nullptr;
 	t.override_count   = 0;
 	t.fieldTolerance   = d.tolerance;
 	return t;

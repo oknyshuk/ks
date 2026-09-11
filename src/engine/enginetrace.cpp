@@ -54,9 +54,9 @@ enum
 //-----------------------------------------------------------------------------
 #ifdef _DEBUG
 
-ConVar debugrayenable( "debugrayenable", "0", NULL, "Use this to enable ray testing.  To reset: bind \"F1\" \"clearalloverlays; debugrayreset  0; host_framerate 66.66666667\"" );
+ConVar debugrayenable( "debugrayenable", "0", 0, "Use this to enable ray testing.  To reset: bind \"F1\" \"clearalloverlays; debugrayreset  0; host_framerate 66.66666667\"" );
 ConVar debugrayreset( "debugrayreset", "0" );
-ConVar debugraylimit( "debugraylimit", "500", NULL, "number of rays per frame that you have to hit before displaying them all" );
+ConVar debugraylimit( "debugraylimit", "500", 0, "number of rays per frame that you have to hit before displaying them all" );
 static CUtlVector<Ray_t> s_FrameRays;
 #endif
 
@@ -317,7 +317,7 @@ public:
 	{
 		m_pEngineTrace = pEngineTrace;
 		m_Pos = pos; 
-		m_pCollide = NULL;
+		m_pCollide = nullptr;
 	}
 
 	static inline bool TestEntity( 
@@ -466,7 +466,7 @@ int	CEngineTrace::GetPointContents( const Vector &vecAbsPosition, int contentsMa
 int CEngineTrace::GetPointContents_Collideable( ICollideable *pCollide, const Vector &vecAbsPosition )
 {
 	int contents = CONTENTS_EMPTY;
-	ICollideable *pDummy = NULL;
+	ICollideable *pDummy = nullptr;
 	CPointContentsEnum::TestEntity( this, pCollide, vecAbsPosition, MASK_ALL, &contents, &pDummy );
 	return contents;
 }
@@ -623,7 +623,7 @@ void CEngineTrace::GetBrushesInAABB( const Vector &vMins, const Vector &vMaxs, C
 	pTraceInfo->m_isswept = false;
 
 	int *pLeafList = (int *)stackalloc( pTraceInfo->m_pBSPData->numleafs * sizeof( int ) );
-	int iNumLeafs = CM_BoxLeafnums( vMins, vMaxs, pLeafList, pTraceInfo->m_pBSPData->numleafs, NULL, nCModelIndex );
+	int iNumLeafs = CM_BoxLeafnums( vMins, vMaxs, pLeafList, pTraceInfo->m_pBSPData->numleafs, nullptr, nCModelIndex );
 
 	TraceCounter_t *pVisitedBrushes = pTraceInfo->m_BrushCounters[0].Base();
 	Plat_FastMemset( pVisitedBrushes, 0, pTraceInfo->m_BrushCounters[0].Count() * sizeof(TraceCounter_t) );
@@ -716,7 +716,7 @@ void CEngineTrace::GetBrushesInCollideable( ICollideable *pCollideable, CBrushQu
 
 	int nModelIndex = pCollideable->GetCollisionModelIndex();
 	cmodel_t *pCModel = CM_InlineModelNumber( nModelIndex - 1 );
-	if( pCModel == NULL )
+	if( pCModel == nullptr )
 		return;
 
 	int nHeadNode = pCModel->headnode;
@@ -780,7 +780,7 @@ CPhysCollide* CEngineTrace::GetCollidableFromDisplacementsInAABB( const Vector& 
 	CCollisionBSPData *pBSPData = GetCollisionBSPData();
 
 	int *pLeafList = (int *)stackalloc( pBSPData->numleafs * sizeof( int ) ); 
-	int iLeafCount = CM_BoxLeafnums( vMins, vMaxs, pLeafList, pBSPData->numleafs, NULL );
+	int iLeafCount = CM_BoxLeafnums( vMins, vMaxs, pLeafList, pBSPData->numleafs, nullptr );
 
 	// Get all the triangles for displacement surfaces in this box, add them to a polysoup
 	CPhysPolysoup *pDispCollideSoup = physcollision->PolysoupCreate();
@@ -828,7 +828,7 @@ CPhysCollide* CEngineTrace::GetCollidableFromDisplacementsInAABB( const Vector& 
 			{
 				AssertMsg ( 0, "Displacement surfaces have too many triangles to duplicate in GetCollidableFromDisplacementsInBox." );
 				EndTrace( pTraceInfo );
-				return NULL;
+				return nullptr;
 			}
 
 			for ( int j = 0; j < meshTriList.indexCount; j+=3 )
@@ -840,7 +840,7 @@ CPhysCollide* CEngineTrace::GetCollidableFromDisplacementsInAABB( const Vector& 
 				{
 					EndTrace( pTraceInfo );
 					physcollision->PolysoupDestroy( pDispCollideSoup );
-					return NULL;
+					return nullptr;
 				}
 
 				unsigned short i0 = meshTriList.indices[j+0];
@@ -854,7 +854,7 @@ CPhysCollide* CEngineTrace::GetCollidableFromDisplacementsInAABB( const Vector& 
 				{
 					EndTrace( pTraceInfo );
 					physcollision->PolysoupDestroy( pDispCollideSoup );
-					return NULL;
+					return nullptr;
 				}
 
 				Vector &v0 = meshTriList.pVerts[ i0 ];
@@ -900,7 +900,7 @@ int CEngineTrace::GetMeshesFromDisplacementsInAABB( const Vector& vMins, const V
 	CCollisionBSPData *pBSPData = GetCollisionBSPData();
 
 	int *pLeafList = (int *)stackalloc( pBSPData->numleafs * sizeof( int ) ); 
-	int iLeafCount = CM_BoxLeafnums( vMins, vMaxs, pLeafList, pBSPData->numleafs, NULL );
+	int iLeafCount = CM_BoxLeafnums( vMins, vMaxs, pLeafList, pBSPData->numleafs, nullptr );
 
 	TraceInfo_t *pTraceInfo = BeginTrace();
 
@@ -1129,7 +1129,7 @@ bool CEngineTrace::ClipRayToVPhysics( const Ray_t &ray, unsigned int fMask, ICol
 				physcollision->TraceBox( 
 					ray,
 					fMask,
-					NULL,
+					nullptr,
 					pSolid,
 					pEntity->GetCollisionOrigin(), 
 					pEntity->GetCollisionAngles(), 
@@ -1176,7 +1176,7 @@ bool CEngineTrace::ClipRayToVPhysics( const Ray_t &ray, unsigned int fMask, ICol
 			{
 				CBrushConvexInfo brushConvex;
 
-				IConvexInfo *pConvexInfo = (pModel->type) == mod_brush ? &brushConvex : NULL;
+				IConvexInfo *pConvexInfo = (pModel->type) == mod_brush ? &brushConvex : nullptr;
 				physcollision->TraceBox( 
 					ray,
 					fMask,
@@ -1304,7 +1304,7 @@ void CEngineTraceClient::SetTraceEntity( ICollideable *pCollideable, trace_t *pT
 	// LevelInit (a suspect time to be tracing)
 	if (!pCollideable)
 	{
-		pTrace->m_pEnt = NULL;
+		pTrace->m_pEnt = nullptr;
 		return;
 	}
 
@@ -1352,7 +1352,7 @@ void CEngineTrace::ClipRayToCollideable( const Ray_t &ray, unsigned int fMask, I
 
 	const model_t *pModel = pEntity->GetCollisionModel();
 	bool bIsStudioModel = false;
-	studiohdr_t *pStudioHdr = NULL;
+	studiohdr_t *pStudioHdr = nullptr;
 	if ( pModel && pModel->type == mod_studio )
 	{
 		bIsStudioModel = true;
@@ -1566,7 +1566,7 @@ inline bool ShouldTestStaticProp( IHandleEntity *pHandleEntity )
 //-----------------------------------------------------------------------------
 ICollideable *CEngineTraceServer::HandleEntityToCollideable( IHandleEntity *pHandleEntity )
 {
-	ICollideable *pCollideable = NULL;
+	ICollideable *pCollideable = nullptr;
 	if ( ShouldTestStaticProp( pHandleEntity ) )
 	{
 		pCollideable = StaticPropMgr()->GetStaticProp( pHandleEntity );
@@ -1597,7 +1597,7 @@ const char *CEngineTraceServer::GetDebugName( IHandleEntity *pHandleEntity )
 #ifndef DEDICATED
 ICollideable *CEngineTraceClient::HandleEntityToCollideable( IHandleEntity *pHandleEntity )
 {
-	ICollideable *pCollideable = NULL;
+	ICollideable *pCollideable = nullptr;
 	if ( ShouldTestStaticProp( pHandleEntity ) )
 	{
 		pCollideable = StaticPropMgr()->GetStaticProp( pHandleEntity );
@@ -1637,14 +1637,14 @@ ICollideable *CEngineTraceClient::GetWorldCollideable()
 {
 	IClientEntity *pUnk = entitylist->GetClientEntity( 0 );
 	AssertOnce( pUnk );
-	return pUnk ? pUnk->GetCollideable() : NULL;
+	return pUnk ? pUnk->GetCollideable() : nullptr;
 }
 #endif
 
 ICollideable *CEngineTraceServer::GetWorldCollideable()
 {
 	if (!sv.edicts)
-		return NULL;
+		return nullptr;
 	return sv.edicts->GetCollideable();
 }
 
@@ -2096,7 +2096,7 @@ CON_COMMAND_EXTERN( ray_batch_bench, RayBatchBench, "Time batches of rays" )
 			normalTime = ms;
 		g_VProfCurrentProfile.MarkFrame();
 		g_VProfCurrentProfile.Stop();
-		g_VProfCurrentProfile.OutputReport( VPRT_FULL & ~VPRT_HIERARCHY, NULL );
+		g_VProfCurrentProfile.OutputReport( VPRT_FULL & ~VPRT_HIERARCHY, nullptr );
 		Msg("NORMAL RAY TEST: %.2fms\n", ms );
 	}
 
@@ -2134,7 +2134,7 @@ CON_COMMAND_EXTERN( ray_batch_bench, RayBatchBench, "Time batches of rays" )
 
 		g_VProfCurrentProfile.MarkFrame();
 		g_VProfCurrentProfile.Stop();
-		g_VProfCurrentProfile.OutputReport( VPRT_FULL & ~VPRT_HIERARCHY, NULL );
+		g_VProfCurrentProfile.OutputReport( VPRT_FULL & ~VPRT_HIERARCHY, nullptr );
 		Msg("LEAFLIST RAY TEST: %.2fms\n", ms );
 	}
 	float improvement = (normalTime - batchedTime) / normalTime;
@@ -2211,7 +2211,7 @@ CON_COMMAND_EXTERN( ray_bench, RayBench, "Time the rays" )
 	}
 	g_VProfCurrentProfile.MarkFrame();
 	g_VProfCurrentProfile.Stop();
-	g_VProfCurrentProfile.OutputReport( VPRT_FULL & ~VPRT_HIERARCHY, NULL );
+	g_VProfCurrentProfile.OutputReport( VPRT_FULL & ~VPRT_HIERARCHY, nullptr );
 }
 #endif
 
@@ -2387,7 +2387,7 @@ public:
 	virtual JobStatus_t	DoExecute() OVERRIDE;
 };
 
-static COcclusionQueryJob *s_pOcclusionQueryJob = NULL;  // this is the job that was last queued to consume the s_occlusionQueries queue
+static COcclusionQueryJob *s_pOcclusionQueryJob = nullptr;  // this is the job that was last queued to consume the s_occlusionQueries queue
 
 void SpinUpOcclusionJob()
 {
@@ -2442,7 +2442,7 @@ ConVar occlusion_test_async_jitter( "occlusion_test_async_jitter", "2", FCVAR_CH
 bool IsCastingShadow( const AABB_t &aabb )
 {
 	int nLeafArray[ 1024 ];
-	int nLeafCount = CM_BoxLeafnums( aabb.m_vMinBounds, aabb.m_vMaxBounds, nLeafArray, ARRAYSIZE( nLeafArray ), NULL );
+	int nLeafCount = CM_BoxLeafnums( aabb.m_vMinBounds, aabb.m_vMaxBounds, nLeafArray, ARRAYSIZE( nLeafArray ), nullptr );
 	s_occlusionStats.nVisLeavesCollected+=nLeafCount;
 	s_occlusionStats.nVisShadowCullCalls++;
 
@@ -2644,7 +2644,7 @@ void CEngineTrace::FlushOcclusionQueries()
 	if ( s_pOcclusionQueryJob )
 	{
 		s_pOcclusionQueryJob->Release();
-		s_pOcclusionQueryJob = NULL;
+		s_pOcclusionQueryJob = nullptr;
 	}
 }
 
@@ -3098,7 +3098,7 @@ int CEngineTrace::GetSetDebugTraceCounter( int value, DebugTraceCounterBehavior_
 	//	g_pEngineTraceServer->TraceRay( ray, MASK_ALL, &traceFilter, &tr );
 
 		CEntList list;
-		list.m_pClosest = NULL;
+		list.m_pClosest = nullptr;
 		list.m_flClosestDist = FLT_MAX;
 		g_pEngineTraceServer->EnumerateEntities( MainViewOrigin() - Vector( 200, 200, 200 ), MainViewOrigin() + Vector( 200, 200, 200 ), &list );
 

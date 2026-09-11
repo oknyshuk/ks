@@ -32,7 +32,7 @@ PRECACHE_REGISTER(item_defuser);
 
 
 Vector g_vecDefuserPosition = vec3_origin;
-CBaseEntity* g_pDefuserEntity = NULL;
+CBaseEntity* g_pDefuserEntity = nullptr;
 
 
 CItemDefuser::CItemDefuser()
@@ -45,7 +45,7 @@ CItemDefuser::~CItemDefuser()
 {
 	if ( g_pDefuserEntity == this )
 	{
-		g_pDefuserEntity = NULL;
+		g_pDefuserEntity = nullptr;
 		g_vecDefuserPosition = vec3_origin;
 	}
 }
@@ -77,7 +77,7 @@ void CItemDefuser::Spawn( void )
 	SetNextThink( gpGlobals->curtime + 0.5f );
 	SetThink( &CItemDefuser::ActivateThink );
 
-	SetTouch( NULL );
+	SetTouch( nullptr );
 }
 	
 void CItemDefuser::Precache( void )
@@ -93,7 +93,7 @@ void CItemDefuser::ActivateThink( void )
 	//activate 1 second after being dropped
 
 	SetTouch( &CItemDefuser::DefuserTouch );
-	SetThink( NULL );
+	SetThink( nullptr );
 }
 	
 void CItemDefuser::DefuserTouch( CBaseEntity *pOther )

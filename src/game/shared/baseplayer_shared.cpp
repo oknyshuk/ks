@@ -168,7 +168,7 @@ ConVar sv_footstep_sound_frequency( "sv_footstep_sound_frequency", "0.97", FCVAR
 #endif
 
 #ifdef CLIENT_DLL
-ConVar mp_usehwmmodels( "mp_usehwmmodels", "0", NULL, "Enable the use of the hw morph models. (-1 = never, 1 = always, 0 = based upon GPU)" ); // -1 = never, 0 = if hasfastvertextextures, 1 = always
+ConVar mp_usehwmmodels( "mp_usehwmmodels", "0", 0, "Enable the use of the hw morph models. (-1 = never, 1 = always, 0 = based upon GPU)" ); // -1 = never, 0 = if hasfastvertextextures, 1 = always
 #endif
 
 extern ConVar sv_turbophysics;
@@ -222,7 +222,7 @@ void CBasePlayer::ItemPreFrame()
 	{
 		CBaseCombatWeapon *pWeapon = GetWeapon( i );
 
-		if ( pWeapon == NULL )
+		if ( pWeapon == nullptr )
 			continue;
 
 		if ( pActive == pWeapon )
@@ -308,7 +308,7 @@ void CBasePlayer::ItemPostFrame()
 
 
 	// check if the player is using something
-	if ( m_hUseEntity != NULL )
+	if ( m_hUseEntity != nullptr )
 	{
 #if !defined( CLIENT_DLL )
 		Assert( !IsInAVehicle() );
@@ -348,7 +348,7 @@ void CBasePlayer::ItemPostFrame()
 #endif
 
 	extern ConVar sv_infinite_ammo;
-	if( ( sv_infinite_ammo.GetInt() == 1 ) && (GetActiveWeapon() != NULL) )
+	if( ( sv_infinite_ammo.GetInt() == 1 ) && (GetActiveWeapon() != nullptr) )
 	{
 		CBaseCombatWeapon *pWeapon = GetActiveWeapon();
 
@@ -393,7 +393,7 @@ const QAngle &CBasePlayer::EyeAngles( )
 	if ( !pMoveParent )
 	{
 		// if in camera mode, use that
-		if ( GetViewEntity() != NULL )
+		if ( GetViewEntity() != nullptr )
 		{
 			return GetViewEntity()->EyeAngles();
 		}
@@ -421,7 +421,7 @@ const QAngle &CBasePlayer::LocalEyeAngles()
 //-----------------------------------------------------------------------------
 Vector CBasePlayer::EyePosition( )
 {
-	if ( GetVehicle() != NULL )
+	if ( GetVehicle() != nullptr )
 	{
 		// Return the cached result
 		CacheVehicleView();
@@ -442,7 +442,7 @@ Vector CBasePlayer::EyePosition( )
 		}
 #endif
 		// if in camera mode, use that
-		if ( GetViewEntity() != NULL )
+		if ( GetViewEntity() != nullptr )
 		{
 			return GetViewEntity()->EyePosition();
 		}
@@ -550,7 +550,7 @@ void CBasePlayer::CacheVehicleView( void )
 	IServerVehicle *pVehicle = GetVehicle();
 #endif
 
-	if ( pVehicle != NULL )
+	if ( pVehicle != nullptr )
 	{		
 		int nRole = pVehicle->GetPassengerRole( this );
 
@@ -565,7 +565,7 @@ void CBasePlayer::CacheVehicleView( void )
 //-----------------------------------------------------------------------------
 void CBasePlayer::EyeVectors( Vector *pForward, Vector *pRight, Vector *pUp )
 {
-	if ( GetVehicle() != NULL )
+	if ( GetVehicle() != nullptr )
 	{
 		// Cache or retrieve our calculated position in the vehicle
 		CacheVehicleView();
@@ -584,12 +584,12 @@ void CBasePlayer::EyePositionAndVectors( Vector *pPosition, Vector *pForward,
 										 Vector *pRight, Vector *pUp )
 {
 	// Handle the view in the vehicle
-	if ( GetVehicle() != NULL )
+	if ( GetVehicle() != nullptr )
 	{
 		CacheVehicleView();
 		AngleVectors( m_vecVehicleViewAngles, pForward, pRight, pUp );
 		
-		if ( pPosition != NULL )
+		if ( pPosition != nullptr )
 		{
 			*pPosition = m_vecVehicleViewOrigin;
 		}
@@ -811,7 +811,7 @@ void CBasePlayer::PlayStepSound( Vector &vecOrigin, surfacedata_t *psurface, flo
 		
 // footstep sounds
 		const char *pRawSoundName = physprops->GetString( stepSoundName );
-		const char *pSoundName = NULL;
+		const char *pSoundName = nullptr;
 		int const nStepCopyLen = V_strlen(pRawSoundName) + 4;
 		char *szStep = ( char * ) stackalloc( nStepCopyLen );
 		if ( GetTeamNumber() == TEAM_CT )
@@ -824,12 +824,12 @@ void CBasePlayer::PlayStepSound( Vector &vecOrigin, surfacedata_t *psurface, flo
 		}
 
 		pSoundName = szStep;
-		if ( !CBaseEntity::GetParametersForSound( pSoundName, params, NULL ) )
+		if ( !CBaseEntity::GetParametersForSound( pSoundName, params, nullptr ) )
 		{
 			DevMsg( "Can't find specific footstep sound! (%s) - Using the default instead. (%s)\n", pSoundName, pRawSoundName );
 			pSoundName = pRawSoundName;
 		}
-		if ( !CBaseEntity::GetParametersForSound( pSoundName, params, NULL ) )
+		if ( !CBaseEntity::GetParametersForSound( pSoundName, params, nullptr ) )
 			return;
 
 		// Only cache if there's one option.  Otherwise we'd never here any other sounds
@@ -879,7 +879,7 @@ void CBasePlayer::PlayStepSound( Vector &vecOrigin, surfacedata_t *psurface, flo
 		if ( entity )
 		{
 			CBasePlayer* player = dynamic_cast<CBasePlayer*>( gEntList.GetBaseEntity( entity->GetRefEHandle() ) );
-			if ( player != NULL )
+			if ( player != nullptr )
 			{
 				float dist = vecOrigin.DistTo( player->EyePosition() );
 				if ( dist > sv_max_distance_transmit_footsteps.GetFloat() )
@@ -924,7 +924,7 @@ void CBasePlayer::PlayStepSound( Vector &vecOrigin, surfacedata_t *psurface, flo
 		}
 	}
 	CSoundParameters paramsSuitSound;
-	if (!CBaseEntity::GetParametersForSound((GetTeamNumber() == TEAM_CT) ? "CT_Default.Suit" : "T_Default.Suit", paramsSuitSound, NULL))
+	if (!CBaseEntity::GetParametersForSound((GetTeamNumber() == TEAM_CT) ? "CT_Default.Suit" : "T_Default.Suit", paramsSuitSound, nullptr))
 		return;
 
 	EmitSound_t epSuitSound;
@@ -1059,7 +1059,7 @@ void CBasePlayer::Weapon_Drop( CBaseCombatWeapon *pWeapon, const Vector *pvecTar
 
 	if ( bWasActiveWeapon )
 	{
-		if (!SwitchToNextBestWeapon( NULL ))
+		if (!SwitchToNextBestWeapon( nullptr ))
 		{
 			CBaseViewModel *vm = GetViewModel();
 			if ( vm )
@@ -1106,7 +1106,7 @@ bool CBasePlayer::Weapon_Switch( CBaseCombatWeapon *pWeapon, int viewmodelindex 
 
 void CBasePlayer::SelectLastItem(void)
 {
-	if ( m_hLastWeapon.Get() == NULL )
+	if ( m_hLastWeapon.Get() == nullptr )
 		return;
 
 	if ( GetActiveWeapon() && !GetActiveWeapon()->CanHolster() )
@@ -1301,7 +1301,7 @@ CBaseEntity *CBasePlayer::FindUseEntity()
 {
 	Vector forward, up;
 	// NOTE: This doesn't handle the case when the player is in a vehicle.
-	AngleVectors( GetFinalAimAngle(), &forward, NULL, &up );
+	AngleVectors( GetFinalAimAngle(), &forward, nullptr, &up );
 
 	trace_t tr;
 	// Search for objects in a sphere (tests for entities that are not solid, yet still useable)
@@ -1316,15 +1316,15 @@ CBaseEntity *CBasePlayer::FindUseEntity()
 #endif
 
 #ifndef CLIENT_DLL
-	CBaseEntity *pFoundByTrace = NULL;
+	CBaseEntity *pFoundByTrace = nullptr;
 #endif
 
 	// UNDONE: Might be faster to just fold this range into the sphere query
-	CBaseEntity *pObject = NULL;
+	CBaseEntity *pObject = nullptr;
 
 	float nearestDist = FLT_MAX;
 	// try the hit entity if there is one, or the ground entity if there isn't.
-	CBaseEntity *pNearest = NULL;
+	CBaseEntity *pNearest = nullptr;
 
 	const int NUM_TANGENTS = 8;
 
@@ -1422,7 +1422,7 @@ CBaseEntity *CBasePlayer::FindUseEntity()
 	const float MIN_DOT_FOR_WEAPONS = 0.99f;
 #endif
 
-	for ( CEntitySphereQuery sphere( searchCenter, PLAYER_USE_RADIUS ); ( pObject = sphere.GetCurrentEntity() ) != NULL; sphere.NextEntity() )
+	for ( CEntitySphereQuery sphere( searchCenter, PLAYER_USE_RADIUS ); ( pObject = sphere.GetCurrentEntity() ) != nullptr; sphere.NextEntity() )
 	{
 		if ( !pObject )
 			continue;
@@ -1551,7 +1551,7 @@ void CBasePlayer::PlayerUse ( void )
 	if ( (m_nButtons & IN_USE) && sv_turbophysics.GetBool() )
 	{
 		Vector forward, up;
-		EyeVectors( &forward, NULL, &up );
+		EyeVectors( &forward, nullptr, &up );
 
 		trace_t tr;
 		// Search for objects in a sphere (tests for entities that are not solid, yet still useable)
@@ -1641,7 +1641,7 @@ void CBasePlayer::PlayerUse ( void )
 		if ( pWeapon && pWeapon->CanBePickedUp() && pPlayer->IsPrimaryOrSecondaryWeapon( nWepType ) )
 		{
 			bool bPickupIsPrimary = IsPrimaryWeapon( pWeapon->GetCSWeaponID() );
-			CBaseCombatWeapon *pPlayerWeapon = NULL;
+			CBaseCombatWeapon *pPlayerWeapon = nullptr;
 
 			if ( bPickupIsPrimary )
 			{
@@ -1680,7 +1680,7 @@ void CBasePlayer::PlayerUse ( void )
 			if( pPlayer->m_bInBombZone && !( pPlayer->GetActiveCSWeapon()->IsA( WEAPON_C4 ) ) )
 			{
 				// we're in a bomb zone with C4, but it's not equipped.  Equip it.
-				CWeaponCSBase	*pC4Weapon = NULL;
+				CWeaponCSBase	*pC4Weapon = nullptr;
 
 				//Search for the c4 weapon to use
 				for ( int i = 0; i < pPlayer->WeaponCount(); i++ )
@@ -1688,7 +1688,7 @@ void CBasePlayer::PlayerUse ( void )
 					CBaseCombatWeapon* pWeaponBase = pPlayer->GetWeapon(i);
 					CWeaponCSBase* pWeapon = dynamic_cast< CWeaponCSBase* > ( pWeaponBase );
 
-					if ( pWeapon == NULL )
+					if ( pWeapon == nullptr )
 					{
 						continue;
 					}
@@ -1708,7 +1708,7 @@ void CBasePlayer::PlayerUse ( void )
 					pC4Weapon = pWeapon;
 				}
 
-				if ( pC4Weapon != NULL )
+				if ( pC4Weapon != nullptr )
 				{
 					//pPlayer->SetLastWeaponBeforeAutoSwitchToC4( pPlayer->GetActiveCSWeapon() );
 					pPlayer->Weapon_Switch(pC4Weapon);
@@ -1846,7 +1846,7 @@ void CBasePlayer::SmoothViewOnStairs( Vector& eyeOrigin )
 
 	// Smooth out stair step ups
 	// NOTE: Don't want to do this when the ground entity is moving the player
-	if ( ( pGroundEntity != NULL && pGroundEntity->GetMoveType() == MOVETYPE_NONE ) && ( flCurrentPlayerZ != m_flOldPlayerZ ) && smoothstairs.GetBool() &&
+	if ( ( pGroundEntity != nullptr && pGroundEntity->GetMoveType() == MOVETYPE_NONE ) && ( flCurrentPlayerZ != m_flOldPlayerZ ) && smoothstairs.GetBool() &&
 		 m_flOldPlayerViewOffsetZ == flCurrentPlayerViewOffsetZ )
 	{
 		int dir = ( flCurrentPlayerZ > m_flOldPlayerZ ) ? 1 : -1;
@@ -2405,7 +2405,7 @@ void CBasePlayer::SharedSpawn()
 
 	SetBloodColor( BLOOD_COLOR_RED );
 
-	m_hUseEntity = NULL;
+	m_hUseEntity = nullptr;
 
 	m_flDuckAmount = 0;
 	m_flDuckSpeed = CS_PLAYER_DUCK_SPEED_IDEAL;
@@ -2473,7 +2473,7 @@ const char *CBasePlayer::GetTracerType( void )
 //-----------------------------------------------------------------------------
 void CBasePlayer::ClearZoomOwner( void )
 {
-	m_hZoomOwner = NULL;
+	m_hZoomOwner = nullptr;
 }
 
 //-----------------------------------------------------------------------------
@@ -2484,12 +2484,12 @@ void CBasePlayer::ClearZoomOwner( void )
 bool CBasePlayer::SetFOV( CBaseEntity *pRequester, int FOV, float zoomRate, int iZoomStart /* = 0 */ )
 {
 	//NOTENOTE: You MUST specify who is requesting the zoom change
-	assert( pRequester != NULL );
-	if ( pRequester == NULL )
+	assert( pRequester != nullptr );
+	if ( pRequester == nullptr )
 		return false;
 
 	// If we already have an owner, we only allow requests from that owner
-	if ( ( m_hZoomOwner.Get() != NULL ) && ( m_hZoomOwner.Get() != pRequester ) )
+	if ( ( m_hZoomOwner.Get() != nullptr ) && ( m_hZoomOwner.Get() != pRequester ) )
 	{
 #ifdef GAME_DLL
 		if ( CanOverrideEnvZoomOwner( m_hZoomOwner.Get() ) == false )
@@ -2501,7 +2501,7 @@ bool CBasePlayer::SetFOV( CBaseEntity *pRequester, int FOV, float zoomRate, int 
 		//FIXME: Maybe do this is as an accessor instead
 		if ( FOV == 0 )
 		{
-			m_hZoomOwner = NULL;
+			m_hZoomOwner = nullptr;
 		}
 		else
 		{
@@ -2756,7 +2756,7 @@ void CBasePlayer::SetUseEntity( CBaseEntity *pUseEntity )
 
 bool CBasePlayer::ClearUseEntity()
 {
-	if ( m_hUseEntity != NULL )
+	if ( m_hUseEntity != nullptr )
 	{
 
 #if !defined( CLIENT_DLL )
@@ -2800,13 +2800,13 @@ void CBasePlayer::VPhysicsShadowUpdate( IPhysicsObject *pPhysics )
 		return;
 
 #if defined( DEBUG_MOTION_CONTROLLERS ) && defined( CLIENT_DLL ) 
-	GetVectors( NULL, &g_vShift, NULL );
+	GetVectors( nullptr, &g_vShift, nullptr );
 	g_vShift *= cl_shadowupdatespacing.GetFloat();
 #endif
 
 	Vector newPosition;
 
-	bool physicsUpdated = m_pPhysicsController->GetShadowPosition( &newPosition, NULL ) > 0 ? true : false;
+	bool physicsUpdated = m_pPhysicsController->GetShadowPosition( &newPosition, nullptr ) > 0 ? true : false;
 
 #if defined( GAME_DLL )
 	// UNDONE: If the player is penetrating, but the player's game collisions are not stuck, teleport the physics shadow to the game position
@@ -3145,7 +3145,7 @@ void CBasePlayer::PostThinkVPhysics( void )
 		{
 			// don't ever teleport into solid
 			Vector position, end;
-			VPhysicsGetObject()->GetPosition( &position, NULL );
+			VPhysicsGetObject()->GetPosition( &position, nullptr );
 			end = position;
 			end.z += g_pMoveData->m_outStepHeight;
 			trace_t trace;
@@ -3178,7 +3178,7 @@ IPhysicsObject *CBasePlayer::GetGroundVPhysics()
 		if ( pPhysGround && pPhysGround->IsMoveable() )
 			return pPhysGround;
 	}
-	return NULL;
+	return nullptr;
 }
 
 // UNDONE: Look and see if the ground entity is in hierarchy with a MOVETYPE_VPHYSICS?
@@ -3206,13 +3206,13 @@ void CBasePlayer::UpdateVPhysicsPosition( const Vector &position, const Vector &
 	// the player controller will solve movement differently in this case.
 	if ( !IsRideablePhysics(pPhysGround) )
 	{
-		pPhysGround = NULL;
+		pPhysGround = nullptr;
 	}
 #if defined( DEBUG_MOTION_CONTROLLERS )
 	if( (GetFlags() & FL_ONGROUND) == 0 )
 	{
 		Vector vCurPos;
-		m_pPhysicsController->GetShadowPosition( &vCurPos, NULL );
+		m_pPhysicsController->GetShadowPosition( &vCurPos, nullptr );
 
 #	if defined( CLIENT_DLL )
 		DebugVelocity( "CBasePlayer::UpdateVPhysicsPosition", vCurPos, position, 255, prediction->IsFirstTimePredicted() ? 0 : 128, 0 );
@@ -3245,14 +3245,14 @@ void CBasePlayer::SetPhysicsFlag( int nFlag, bool bSet )
 void CBasePlayer::SetVCollisionState( const Vector &vecAbsOrigin, const Vector &vecAbsVelocity, int collisionState )
 {
 	m_vphysicsCollisionState = collisionState;
-	if( m_pShadowStand == NULL )
+	if( m_pShadowStand == nullptr )
 		return;
 
 	switch( collisionState )
 	{
 	case VPHYS_WALK:
 		m_pShadowStand->SetPosition( vecAbsOrigin, vec3_angle, true );
-		m_pShadowStand->SetVelocity( &vecAbsVelocity, NULL );
+		m_pShadowStand->SetVelocity( &vecAbsVelocity, nullptr );
 		m_pShadowCrouch->EnableCollisions( false );
 		m_pPhysicsController->SetObject( m_pShadowStand );
 		VPhysicsSwapObject( m_pShadowStand );
@@ -3261,7 +3261,7 @@ void CBasePlayer::SetVCollisionState( const Vector &vecAbsOrigin, const Vector &
 
 	case VPHYS_CROUCH:
 		m_pShadowCrouch->SetPosition( vecAbsOrigin, vec3_angle, true );
-		m_pShadowCrouch->SetVelocity( &vecAbsVelocity, NULL );
+		m_pShadowCrouch->SetVelocity( &vecAbsVelocity, nullptr );
 		m_pShadowStand->EnableCollisions( false );
 		m_pPhysicsController->SetObject( m_pShadowCrouch );
 		VPhysicsSwapObject( m_pShadowCrouch );

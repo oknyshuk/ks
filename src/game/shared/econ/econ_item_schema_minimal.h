@@ -61,13 +61,13 @@ public:
 	// the NULL-check callers (FileWeaponInfo_t::GetWorldDroppedModel /
 	// CBaseCombatWeapon::GetWorldDroppedModel) depend on it so they can fall back to
 	// the world model instead of setting an empty (invisible) model on dropped weapons.
-	const char *GetWorldDroppedModel() const { return m_szWorldDroppedModel[0] ? m_szWorldDroppedModel : NULL; }
+	const char *GetWorldDroppedModel() const { return m_szWorldDroppedModel[0] ? m_szWorldDroppedModel : nullptr; }
 
 	// Stub accessors for compatibility (return NULL/defaults)
-	const char *GetPrimaryAmmo() const { return NULL; }
-	const char *GetEntityOverrideModel() const { return NULL; }
-	const char *GetViewOverrideModel() const { return NULL; }
-	const char *GetWeaponReplacementSound( int iIndex ) const { return NULL; }
+	const char *GetPrimaryAmmo() const { return nullptr; }
+	const char *GetEntityOverrideModel() const { return nullptr; }
+	const char *GetViewOverrideModel() const { return nullptr; }
+	const char *GetWeaponReplacementSound( int iIndex ) const { return nullptr; }
 	bool AreSlotsConsideredIdentical( int slot1, int slot2 ) const { return slot1 == slot2; }
 
 private:
@@ -131,14 +131,14 @@ public:
 	const ItemDefinitionMap_t& GetItemDefinitionMap() const { return m_mapItems; }
 
 	// Stub accessors for compatibility (return NULL)
-	class CEconItemAttributeDefinition *GetAttributeDefinitionByName( const char * ) const { return NULL; }
-	class CEconMusicDefinition *GetMusicDefinition( uint32 ) const { return NULL; }
-	class CEconQuestDefinition *GetQuestDefinition( uint32 ) const { return NULL; }
-	class CEconTauntDefinition *GetTauntDefinition( uint32 ) const { return NULL; }
-	class CPaintKit *GetPaintKitDefinition( uint32 ) const { return NULL; }
-	class CProPlayerData *GetProPlayerDataByAccountID( uint64 ) const { return NULL; }
-	class CStickerKit *GetStickerKitDefinition( uint32 ) const { return NULL; }
-	class CEconGraffitiTintDefinition *GetGraffitiTintDefinitionByID( uint8 ) const { return NULL; }
+	class CEconItemAttributeDefinition *GetAttributeDefinitionByName( const char * ) const { return nullptr; }
+	class CEconMusicDefinition *GetMusicDefinition( uint32 ) const { return nullptr; }
+	class CEconQuestDefinition *GetQuestDefinition( uint32 ) const { return nullptr; }
+	class CEconTauntDefinition *GetTauntDefinition( uint32 ) const { return nullptr; }
+	class CPaintKit *GetPaintKitDefinition( uint32 ) const { return nullptr; }
+	class CProPlayerData *GetProPlayerDataByAccountID( uint64 ) const { return nullptr; }
+	class CStickerKit *GetStickerKitDefinition( uint32 ) const { return nullptr; }
+	class CEconGraffitiTintDefinition *GetGraffitiTintDefinitionByID( uint8 ) const { return nullptr; }
 
 private:
 	// Parse prefabs section

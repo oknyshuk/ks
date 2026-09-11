@@ -70,7 +70,7 @@ public:
 	~CCleanupUtlSymbolTable()
 	{
 		delete CUtlSymbol::s_pSymbolTable;
-		CUtlSymbol::s_pSymbolTable = NULL;
+		CUtlSymbol::s_pSymbolTable = nullptr;
 	}
 };
 
@@ -237,7 +237,7 @@ CUtlSymbol CUtlSymbolTable::Find( const char* pString ) const
 	UtlSymId_t idx = m_Lookup.Find( INVALID_STRING_INDEX );
 
 #ifdef _DEBUG
-	m_pUserSearchString = NULL;
+	m_pUserSearchString = nullptr;
 	m_nUserSearchStringHash = 0;
 #endif
 
@@ -360,7 +360,7 @@ FileNameHandle_t CUtlFilenameSymbolTable::FindOrAddFileName( const char *pFileNa
 {
 	if ( !pFileName )
 	{
-		return NULL;
+		return nullptr;
 	}
 
 	// find first
@@ -405,7 +405,7 @@ FileNameHandle_t CUtlFilenameSymbolTable::FindFileName( const char *pFileName )
 {
 	if ( !pFileName )
 	{
-		return NULL;
+		return nullptr;
 	}
 
 	// Fix slashes+dotslashes and make lower case first..
@@ -428,7 +428,7 @@ FileNameHandle_t CUtlFilenameSymbolTable::FindFileName( const char *pFileName )
 
 
 	if ( ( handle.GetPath() == 0 )  || ( handle.GetFile() == 0 ) )
-		return NULL;
+		return nullptr;
 
 	return *( FileNameHandle_t * )( &handle );
 }

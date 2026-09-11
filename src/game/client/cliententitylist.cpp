@@ -171,7 +171,7 @@ void CClientEntityList::RecomputeHighestEntityUsed( void )
 	int i;
 	for ( i = MAX_EDICTS - 1; i >= 0; i-- )
 	{
-		if ( GetListedEntity( i ) != NULL )
+		if ( GetListedEntity( i ) != nullptr )
 		{
 			m_iMaxUsedServerIndex = i;
 			break;
@@ -378,7 +378,7 @@ void CClientEntityList::OnRemoveEntity( IHandleEntity *pEnt, CBaseHandle handle 
 	if ( entnum >= 0 && entnum < MAX_EDICTS )
 	{
 		// This is a networkable ent. Clear out our cache info for it.
-		pCache->m_pNetworkable = NULL;
+		pCache->m_pNetworkable = nullptr;
 		m_iNumServerEnts--;
 
 		if ( entnum >= m_iMaxUsedServerIndex )
@@ -432,13 +432,13 @@ C_BaseEntity* CClientEntityList::FirstBaseEntity() const
 		pList = pList->m_pNext;
 	}
 
-	return NULL;
+	return nullptr;
 
 }
 
 C_BaseEntity* CClientEntityList::NextBaseEntity( C_BaseEntity *pEnt ) const
 {
-	if ( pEnt == NULL )
+	if ( pEnt == nullptr )
 		return FirstBaseEntity();
 
 	// Run through the list until we get a C_BaseEntity.
@@ -460,7 +460,7 @@ C_BaseEntity* CClientEntityList::NextBaseEntity( C_BaseEntity *pEnt ) const
 		pList = pList->m_pNext;
 	}
 	
-	return NULL; 
+	return nullptr; 
 }
 
 
@@ -483,7 +483,7 @@ void C_AllBaseEntityIterator::Restart()
 C_BaseEntity* C_AllBaseEntityIterator::Next()
 {
 	if ( m_CurBaseEntity == ClientEntityList().m_BaseEntities.InvalidIndex() )
-		return NULL;
+		return nullptr;
 
 	C_BaseEntity *pRet = ClientEntityList().m_BaseEntities[m_CurBaseEntity];
 	m_CurBaseEntity = ClientEntityList().m_BaseEntities.Next( m_CurBaseEntity );
@@ -516,5 +516,5 @@ C_BaseEntity* C_BaseEntityIterator::Next()
 			return pRet;
 	}
 
-	return NULL;
+	return nullptr;
 }

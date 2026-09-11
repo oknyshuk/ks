@@ -49,7 +49,7 @@ void LoadHudTextures( CUtlDict< CHudTexture *, int >& list, const char *szFilena
 				// Key Name is the sprite name
 				Q_strncpy( tex->szShortName, pTemp->GetName(), sizeof( tex->szShortName ) );
 
-				if ( pTemp->GetString( "font", NULL ) )
+				if ( pTemp->GetString( "font", nullptr ) )
 				{
 					// it's a font-based icon
 					tex->bRenderUsingFont = true;
@@ -121,7 +121,7 @@ CHudElement::CHudElement( const char *pElementName )
 
 void CHudElement::InitCHudElementAfterConstruction( const char* pElementName )
 {
-	m_pHud = NULL;
+	m_pHud = nullptr;
 	m_bActive = false;
 	m_iHiddenBits = 0;
 	m_pElementName = pElementName;
@@ -534,7 +534,7 @@ CHudElement *CHud::FindElement( const char *pName )
 
 	DevWarning( 1, "[%d] Could not find Hud Element: %s\n", m_nSplitScreenSlot, pName );
 	Assert( 0 );
-	return NULL;
+	return nullptr;
 }
 
 //-----------------------------------------------------------------------------
@@ -709,7 +709,7 @@ bool CHud::LockRenderGroup( int iGroupIndex, CHudElement *pLocker /* = NULL */ )
 	if ( group )
 	{
 		// NULL pLocker means some higher power is globally hiding this group
-		if ( pLocker == NULL )
+		if ( pLocker == nullptr )
 		{
 			group->bHidden = true;
 		}
@@ -756,7 +756,7 @@ bool CHud::UnlockRenderGroup( int iGroupIndex, CHudElement *pLocker /* = NULL */
 	if ( group )
 	{
 		// NULL pLocker means some higher power is globally hiding this group
-		if ( group->bHidden && pLocker == NULL )
+		if ( group->bHidden && pLocker == nullptr )
 		{
 			group->bHidden = false;
 			return true;
@@ -910,10 +910,10 @@ void CHudIcons::Init()
 	CUtlDict< CHudTexture *, int >	textureList;
 
 	// check to see if we have sprites for this res; if not, step down
-	LoadHudTextures( textureList, "scripts/hud_textures", NULL );
-	LoadHudTextures( textureList, "scripts/mod_textures", NULL );
-	LoadHudTextures( textureList, "scripts/instructor_textures", NULL );
-	LoadHudTextures( textureList, "scripts/instructor_modtextures", NULL );
+	LoadHudTextures( textureList, "scripts/hud_textures", nullptr );
+	LoadHudTextures( textureList, "scripts/mod_textures", nullptr );
+	LoadHudTextures( textureList, "scripts/instructor_textures", nullptr );
+	LoadHudTextures( textureList, "scripts/instructor_modtextures", nullptr );
 	// PORTAL2
 
 	int c = textureList.Count();
@@ -992,7 +992,7 @@ CHudTexture *CHudIcons::GetIcon( const char *szIcon )
 {
 	int i = m_Icons.Find( szIcon );
 	if ( i == m_Icons.InvalidIndex() )
-		return NULL;
+		return nullptr;
 
 	return m_Icons[ i ];
 }
@@ -1027,9 +1027,9 @@ void CHudIcons::RefreshHudTextures()
 	CUtlDict< CHudTexture *, int >	textureList;
 
 	// check to see if we have sprites for this res; if not, step down
-	LoadHudTextures( textureList, "scripts/hud_textures", NULL );
-	LoadHudTextures( textureList, "scripts/mod_textures", NULL );
-	LoadHudTextures( textureList, "scripts/instructor_textures", NULL );
+	LoadHudTextures( textureList, "scripts/hud_textures", nullptr );
+	LoadHudTextures( textureList, "scripts/mod_textures", nullptr );
+	LoadHudTextures( textureList, "scripts/instructor_textures", nullptr );
 
 	// fix up all the texture icons first
 	int c = textureList.Count();

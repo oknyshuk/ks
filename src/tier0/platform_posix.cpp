@@ -48,7 +48,7 @@ uint64 Plat_GetClockStart()
 	{
 		struct timeval  tp;
 		
-		gettimeofday( &tp, NULL );
+		gettimeofday( &tp, nullptr );
 		InitTime( tp );
 	}
 	
@@ -66,7 +66,7 @@ double Plat_FloatTime()
 	
 	struct timeval  tp;
 	
-	gettimeofday( &tp, NULL );
+	gettimeofday( &tp, nullptr );
 	
 	if ( !secbase )
 	{
@@ -86,7 +86,7 @@ uint32 Plat_MSTime()
 	
 	struct timeval  tp;
 	
-	gettimeofday( &tp, NULL );
+	gettimeofday( &tp, nullptr );
 	
 	if ( !secbase )
 	{
@@ -106,7 +106,7 @@ uint64 Plat_USTime()
 	
 	struct timeval  tp;
 	
-	gettimeofday( &tp, NULL );
+	gettimeofday( &tp, nullptr );
 	
 	if ( !secbase )
 	{
@@ -244,7 +244,7 @@ PLATFORM_INTERFACE const tchar *Plat_GetCommandLine()
 PLATFORM_INTERFACE bool Is64BitOS()
 {
 	FILE *pp = popen( "uname -m", "r" );
-	if ( pp != NULL )
+	if ( pp != nullptr )
 	{
 		char rgchArchString[256];
 		fgets( rgchArchString, sizeof( rgchArchString ), pp );
@@ -261,7 +261,7 @@ bool Plat_IsInDebugSession()
 	char s[256];
 	snprintf(s, 256, "/proc/%d/cmdline", getppid());
 	FILE * fp = fopen(s, "r");
-	if (fp != NULL) 
+	if (fp != nullptr) 
 	{
 		fread(s, 256, 1, fp);
 		fclose(fp);
@@ -279,7 +279,7 @@ void Plat_ExitProcess( int nCode )
 	{
 		// Right now we want a non-zero exit code to cause a hard crash so
 		// that we trigger minidump.
-		int* x = NULL;
+		int* x = nullptr;
 		*x = 1;
 	}
 	_exit( nCode );

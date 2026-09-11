@@ -54,7 +54,7 @@ IPlayerLocal * PlayerManager::GetLocalPlayer(int playerIndex)
 		return mLocalPlayer[ playerIndex ];
 	}
 	
-	return NULL;
+	return nullptr;
 }
 
 int PlayerManager::GetNumFriends()
@@ -64,7 +64,7 @@ int PlayerManager::GetNumFriends()
 
 IPlayerFriend * PlayerManager::GetFriendByIndex( int index )
 {
-	return mFriendsList.IsValidIndex( index ) ? mFriendsList[ index ] : NULL;
+	return mFriendsList.IsValidIndex( index ) ? mFriendsList[ index ] : nullptr;
 }
 
 IPlayerFriend * PlayerManager::GetFriendByXUID( XUID xuid )
@@ -80,7 +80,7 @@ IPlayer * PlayerManager::FindPlayer( XUID xuid )
 	if ( IPlayer *player = FindPlayerFriend( xuid ) )
 		return player;
 
-	return NULL;
+	return nullptr;
 }
 
 PlayerFriend * PlayerManager::FindPlayerFriend( XUID xuid )
@@ -92,7 +92,7 @@ PlayerFriend * PlayerManager::FindPlayerFriend( XUID xuid )
 			return player;
 	}
 
-	return NULL;
+	return nullptr;
 }
 
 PlayerLocal * PlayerManager::FindPlayerLocal( XUID xuid )
@@ -104,7 +104,7 @@ PlayerLocal * PlayerManager::FindPlayerLocal( XUID xuid )
 			return player;
 	}
 
-	return NULL;
+	return nullptr;
 }
 
 void PlayerManager::MarkOldFriends()
@@ -607,7 +607,7 @@ void PlayerManager::OnEvent( KeyValues *pEvent )
 						// Found the stat to write
 						DevMsg( "pPlayerLocal(%s)->write_stat(%s)\n", pPlayerLocal->GetName(), pField->m_szFieldName );
 						SyncKeyValueWithStatField( kvValue, pPlayerLocal, pField, KVSTAT_WRITE_STAT );
-						szStatName = NULL;
+						szStatName = nullptr;
 					}
 					if ( szStatName )
 					{
@@ -634,7 +634,7 @@ void PlayerManager::OnEvent( KeyValues *pEvent )
 					{
 						// Found the stat to read
 						SyncKeyValueWithStatField( kvValue, pPlayerLocal, pField, KVSTAT_READ_STAT );
-						szStatName = NULL;
+						szStatName = nullptr;
 					}
 					if ( szStatName )
 					{
@@ -738,7 +738,7 @@ void PlayerManager::OnGameUsersChanged()
 		PlayerFriend *&player = mFriendsList[ k ];
 		if ( player )
 			player->Destroy();
-		player = NULL;
+		player = nullptr;
 	}
 	mFriendsList.RemoveAll();
 	for ( int k = 0; k < ARRAYSIZE( mLocalPlayer ); ++ k )
@@ -746,7 +746,7 @@ void PlayerManager::OnGameUsersChanged()
 		PlayerLocal *&player = mLocalPlayer[k];
 		if ( player )
 			player->Destroy();
-		player = NULL;
+		player = nullptr;
 	}
 
 	if ( !steamapicontext->SteamUser() )

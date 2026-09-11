@@ -26,7 +26,7 @@ public:
 	virtual float GetMoveAngle( void ) const = 0;						///< return direction of movement
 
 	virtual CNavArea *GetLastKnownArea( void ) const = 0;
-	virtual bool GetSimpleGroundHeightWithFloor( const Vector &pos, float *height, Vector *normal = NULL ) = 0;	///< find "simple" ground height, treating current nav area as part of the floor
+	virtual bool GetSimpleGroundHeightWithFloor( const Vector &pos, float *height, Vector *normal = nullptr ) = 0;	///< find "simple" ground height, treating current nav area as part of the floor
 
 	virtual void Crouch( void ) = 0;
 	virtual void StandUp( void ) = 0;									///< "un-crouch"

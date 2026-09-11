@@ -56,7 +56,7 @@ ConVar snd_max_pitch_shift_inaccuracy("snd_max_pitch_shift_inaccuracy", "0.08", 
 		const char *shootsound = pWeaponInfo->aShootSounds[ sound_type ];
 
 		// Get the item definition
-		const CEconItemDefinition *pDef = ( nItemDefIndex > 0 ) ? GetItemSchema()->GetItemDefinition( nItemDefIndex ) : NULL;
+		const CEconItemDefinition *pDef = ( nItemDefIndex > 0 ) ? GetItemSchema()->GetItemDefinition( nItemDefIndex ) : nullptr;
 		if ( pDef )
 		{
 			const char *pszTempSound = pDef->GetWeaponReplacementSound( sound_type );
@@ -117,7 +117,7 @@ ConVar snd_max_pitch_shift_inaccuracy("snd_max_pitch_shift_inaccuracy", "0.08", 
 
 		// Ok, play the sound and add it to the list.
 		CLocalPlayerFilter filter;
-		C_BaseEntity::EmitSound( filter, NULL, pSoundName, &vEndPos );
+		C_BaseEntity::EmitSound( filter, 0, pSoundName, &vEndPos );
 
 		i = g_GroupedSounds.AddToTail();
 		g_GroupedSounds[i].m_SoundName = pSoundName;
@@ -135,7 +135,7 @@ ConVar snd_max_pitch_shift_inaccuracy("snd_max_pitch_shift_inaccuracy", "0.08", 
 	void EndGroupingSounds()
 	{
 		g_GroupedSounds.Purge();
-		SetImpactSoundRoute( NULL );
+		SetImpactSoundRoute( nullptr );
 	}
 
 #else
@@ -212,7 +212,7 @@ void FX_FireBullets(
 	}
 
 #ifdef CLIENT_DLL
-	CWeaponCSBase* pClientWeapon = pPlayer ? pPlayer->GetActiveCSWeapon() : NULL;
+	CWeaponCSBase* pClientWeapon = pPlayer ? pPlayer->GetActiveCSWeapon() : nullptr;
 	if ( pClientWeapon )
 	{
 		if ( gpGlobals->curtime - pClientWeapon->m_flLastClientFireBulletTime > 0.02f ) // this should be enough even for the negev, at ~1000 rof
@@ -346,8 +346,8 @@ void FX_FireBullets(
 
 	iSeed++;
 
-	CWeaponCSBase* pWeapon = pPlayer ? pPlayer->GetActiveCSWeapon() : NULL;
-	CEconItemView* pItem = pWeapon ? pWeapon->GetEconItemView() : NULL;
+	CWeaponCSBase* pWeapon = pPlayer ? pPlayer->GetActiveCSWeapon() : nullptr;
+	CEconItemView* pItem = pWeapon ? pWeapon->GetEconItemView() : nullptr;
 
 	int		iDamage = pWeaponInfo->GetDamage( pItem );
 	float	flRange = pWeaponInfo->GetRange( pItem );

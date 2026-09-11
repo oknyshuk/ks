@@ -173,7 +173,7 @@ wchar_t* ReadChatTextString( const char *szString, wchar_t *pOut, int outSize, b
 	return pOut;
 }
 
-CBaseHudChat *g_pHudChat = NULL;
+CBaseHudChat *g_pHudChat = nullptr;
 
 CBaseHudChat *CBaseHudChat::GetHudChat( void )
 {
@@ -188,7 +188,7 @@ int CBaseHudChat::m_nLineCounter = 1;
 CBaseHudChat::CBaseHudChat( const char *pElementName )
 : CHudElement( pElementName )
 {
-	Assert( g_pHudChat == NULL );
+	Assert( g_pHudChat == nullptr );
 	g_pHudChat = this;
 
 	m_nMessageMode = MM_NONE;
@@ -201,7 +201,7 @@ CBaseHudChat::CBaseHudChat( const char *pElementName )
 
 CBaseHudChat::~CBaseHudChat()
 {
-	g_pHudChat = NULL;
+	g_pHudChat = nullptr;
 }
 
 void CBaseHudChat::CreateChatInputLine( void )

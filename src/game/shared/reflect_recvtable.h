@@ -583,7 +583,7 @@ RecvTable &table()
 	}                                                                                            \
 	ClientClass __g_##clientClassName##ClientClass( #serverClassName,                             \
 	                                                _##clientClassName##_CreateObject,            \
-	                                                NULL, &dataTable::g_RecvTable );               \
+	                                                nullptr, &dataTable::g_RecvTable );               \
 	RecvTable *clientClassName::m_pClassRecvTable = &dataTable::g_RecvTable;                       \
 	int clientClassName::YouForgotToImplementOrDeclareClientClass() { return 0; }                  \
 	ClientClass *clientClassName::GetClientClass() { return &__g_##clientClassName##ClientClass; } \
@@ -613,7 +613,7 @@ RecvTable &table()
 	{                                                                                            \
 		return &__g_##clientClassName;                                                           \
 	}                                                                                            \
-	ClientClass __g_##clientClassName##ClientClass( #serverClassName, NULL,                       \
+	ClientClass __g_##clientClassName##ClientClass( #serverClassName, nullptr,                       \
 	                                                _##clientClassName##_CreateObject,            \
 	                                                &dataTable::g_RecvTable );                     \
 	RecvTable *clientClassName::m_pClassRecvTable = &dataTable::g_RecvTable;                       \

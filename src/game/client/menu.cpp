@@ -284,7 +284,7 @@ void CHudMenu::ShowMenu_KeyValueItems( KeyValues *pKV )
 	wchar_t wItem[128];
 
 	int i = 0;
-	for ( KeyValues *item = pKV->GetFirstSubKey(); item != NULL; item = item->GetNextKey() )
+	for ( KeyValues *item = pKV->GetFirstSubKey(); item != nullptr; item = item->GetNextKey() )
 	{
 		// Set this slot valid
 		m_bitsValidSlots |= (1<<i);

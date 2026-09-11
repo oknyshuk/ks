@@ -178,10 +178,10 @@ IDirect3DBaseTexture* CreateD3DTexture( int width, int height, int nDepth,
 		return 0;
 	}
 
-	IDirect3DBaseTexture* pBaseTexture = NULL;
-	IDirect3DTexture* pD3DTexture = NULL;
-	IDirect3DCubeTexture* pD3DCubeTexture = NULL;
-	IDirect3DVolumeTexture* pD3DVolumeTexture = NULL;
+	IDirect3DBaseTexture* pBaseTexture = nullptr;
+	IDirect3DTexture* pD3DTexture = nullptr;
+	IDirect3DCubeTexture* pD3DCubeTexture = nullptr;
+	IDirect3DVolumeTexture* pD3DVolumeTexture = nullptr;
 	HRESULT hr = S_OK;
 	DWORD usage = 0;
 
@@ -209,7 +209,7 @@ IDirect3DBaseTexture* CreateD3DTexture( int width, int height, int nDepth,
 				d3dFormat,
 				bManaged ? D3DPOOL_MANAGED : D3DPOOL_DEFAULT, 
 				&pD3DCubeTexture,
-				NULL
+				nullptr
 				   );
 		pBaseTexture = pD3DCubeTexture;
 	}
@@ -225,7 +225,7 @@ IDirect3DBaseTexture* CreateD3DTexture( int width, int height, int nDepth,
 				d3dFormat, 
 				bManaged ? D3DPOOL_MANAGED : D3DPOOL_DEFAULT, 
 				&pD3DVolumeTexture,
-				NULL
+				nullptr
 				  );
 		pBaseTexture = pD3DVolumeTexture;
 	}
@@ -261,7 +261,7 @@ IDirect3DBaseTexture* CreateD3DTexture( int width, int height, int nDepth,
 				d3dFormat,
 				d3dPool,
 				&pD3DTexture,
-				NULL
+				nullptr
 				 );
 
 		pBaseTexture = pD3DTexture;
@@ -348,7 +348,7 @@ void DestroyD3DTexture( IDirect3DBaseTexture* pD3DTex )
 
 		CMatRenderContextPtr pRenderContext( materials );
 		ICallQueue *pCallQueue;
-		if ( ( pCallQueue = pRenderContext->GetCallQueue() ) != NULL )
+		if ( ( pCallQueue = pRenderContext->GetCallQueue() ) != nullptr )
 		{
 			pCallQueue->QueueCall( ReleaseD3DTexture, pD3DTex );
 		}

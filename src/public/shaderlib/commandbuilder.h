@@ -268,7 +268,7 @@ public:
 	void SetPixelShaderTextureTransform( int vertexReg, int transformVar )
 	{
 		Vector4D transformation[2];
-		IMaterialVar* pTransformationVar = ( transformVar >= 0 ) ? this->Param( transformVar ) : NULL;
+		IMaterialVar* pTransformationVar = ( transformVar >= 0 ) ? this->Param( transformVar ) : nullptr;
 		if (pTransformationVar && (pTransformationVar->GetType() == MATERIAL_VAR_TYPE_MATRIX))
 		{
 			const VMatrix &mat = pTransformationVar->GetMatrixValue();
@@ -314,7 +314,7 @@ public:
 	void SetVertexShaderTextureTransform( int vertexReg, int transformVar )
 	{
 		Vector4D transformation[2];
-		IMaterialVar* pTransformationVar = ( transformVar >= 0 ) ? this->Param( transformVar ) : NULL;
+		IMaterialVar* pTransformationVar = ( transformVar >= 0 ) ? this->Param( transformVar ) : nullptr;
 		if (pTransformationVar && (pTransformationVar->GetType() == MATERIAL_VAR_TYPE_MATRIX))
 		{
 			const VMatrix &mat = pTransformationVar->GetMatrixValue();

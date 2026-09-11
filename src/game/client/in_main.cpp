@@ -222,7 +222,7 @@ int KB_ConvertString( char *in, char **ppout )
 	if ( !ppout )
 		return 0;
 
-	*ppout = NULL;
+	*ppout = nullptr;
 	p = in;
 	pOut = sz;
 	while ( *p )
@@ -237,7 +237,7 @@ int KB_ConvertString( char *in, char **ppout )
 
 			*pEnd =  '\0';
 
-			pBinding = NULL;
+			pBinding = nullptr;
 			if ( strlen( binding + 1 ) > 0 )
 			{
 				// See if there is a binding for binding?
@@ -300,7 +300,7 @@ kbutton_t *CInput::FindKey( const char *name )
 
 		p = p->next;
 	}
-	return NULL;
+	return nullptr;
 }
 
 /*
@@ -336,9 +336,9 @@ CInput::CInput( void )
 {
 	for ( int i = 0; i < MAX_SPLITSCREEN_PLAYERS; ++i )
 	{
-		m_PerUser[ i ].m_pCommands = NULL;
-		m_PerUser[ i ].m_pCameraThirdData = NULL;
-		m_PerUser[ i ].m_pVerifiedCommands = NULL;
+		m_PerUser[ i ].m_pCommands = nullptr;
+		m_PerUser[ i ].m_pCameraThirdData = nullptr;
+		m_PerUser[ i ].m_pVerifiedCommands = nullptr;
 	}
 	m_lastAutoAimValue = 1.0f; 
 }
@@ -359,7 +359,7 @@ Add kbutton_t definitions that the engine can query if needed
 */
 void CInput::Init_Keyboard( void )
 {
-	m_pKeys = NULL;
+	m_pKeys = nullptr;
 
 	AddKeyButton( "in_graph", &in_graph );
 	AddKeyButton( "in_jlook", &in_jlook );
@@ -383,7 +383,7 @@ void CInput::Shutdown_Keyboard( void )
 		delete p;
 		p = n;
 	}
-	m_pKeys = NULL;
+	m_pKeys = nullptr;
 }
 
 kbutton_t::Split_t &kbutton_t::GetPerUser( int nSlot /*=-1*/ )
@@ -473,7 +473,7 @@ void IN_ClearDuckToggle()
 {
 	if ( ::input->KeyState( &in_ducktoggle ) )
 	{
-		KeyUp( &in_ducktoggle, NULL ); 
+		KeyUp( &in_ducktoggle, nullptr ); 
 	}
 }
 
@@ -481,7 +481,7 @@ void IN_ClearSpeedToggle()
 {
 	if ( ::input->KeyState( &in_speedtoggle ) )
 	{
-		KeyUp( &in_speedtoggle, NULL ); 
+		KeyUp( &in_speedtoggle, nullptr ); 
 	}
 }
 void IN_ForceSpeedDown( ) {joystick_forced_speed = true;}
@@ -1274,7 +1274,7 @@ void CInput::CreateMove ( int sequence_number, float input_sample_frametime, boo
 	in_impulse[ nSlot ] = 0;
 
 	// Latch and clear weapon selection
-	if ( GetPerUser( nSlot ).m_hSelectedWeapon != NULL )
+	if ( GetPerUser( nSlot ).m_hSelectedWeapon != nullptr )
 	{
 		C_BaseCombatWeapon *weapon = GetPerUser( nSlot ).m_hSelectedWeapon;
 
@@ -1282,7 +1282,7 @@ void CInput::CreateMove ( int sequence_number, float input_sample_frametime, boo
 		cmd->weaponsubtype = weapon->GetSubType();
 
 		// Always clear weapon selection
-		GetPerUser( nSlot ).m_hSelectedWeapon = NULL;
+		GetPerUser( nSlot ).m_hSelectedWeapon = nullptr;
 	}
 
 	// Set button and flag bits
@@ -1375,7 +1375,7 @@ void CInput::CheckSplitScreenMimic( int nSlot, CUserCmd *cmd, CUserCmd *pPlayer0
 
 		Vector lookDir;
 		Vector rightDir;
-		AngleVectors( cmd->viewangles, &lookDir, &rightDir, NULL );
+		AngleVectors( cmd->viewangles, &lookDir, &rightDir, nullptr );
 		lookDir.z = 0.0f;
 		lookDir.NormalizeInPlace();
 		Vector moveDir = delta;
@@ -1544,7 +1544,7 @@ CUserCmd *CInput::GetUserCmd( int nSlot, int sequence_number )
 
 	if ( usercmd->command_number != sequence_number )
 	{
-		return NULL;	// usercmd was overwritten by newer command
+		return nullptr;	// usercmd was overwritten by newer command
 	}
 
 	return usercmd;
@@ -1838,10 +1838,10 @@ void CInput::Shutdown_All(void)
 	for ( int i = 0; i < MAX_SPLITSCREEN_PLAYERS; ++i )
 	{
 		delete[] m_PerUser[ i ].m_pCommands;
-		m_PerUser[ i ].m_pCommands = NULL;
+		m_PerUser[ i ].m_pCommands = nullptr;
 
 		delete[] m_PerUser[ i ].m_pVerifiedCommands;
-		m_PerUser[ i ].m_pVerifiedCommands = NULL;
+		m_PerUser[ i ].m_pVerifiedCommands = nullptr;
 	}
 }
 

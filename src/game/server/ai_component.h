@@ -25,7 +25,7 @@ class CAI_Component
 {
 	DECLARE_CLASS_NOBASE( CAI_Component );
 protected:
-	CAI_Component( CAI_BaseNPC *pOuter = NULL )
+	CAI_Component( CAI_BaseNPC *pOuter = nullptr )
 	 : m_pOuter(pOuter)
 	{
 	}
@@ -112,7 +112,7 @@ protected:
 	
 	int					CapabilitiesGet();
 
-	float				GetLastThink( const char *szContext = NULL );
+	float				GetLastThink( const char *szContext = nullptr );
 
 public:
 #if defined(new)
@@ -145,7 +145,7 @@ template <class NPC_CLASS, class BASE_COMPONENT = CAI_Component>
 class CAI_ComponentWithOuter : public BASE_COMPONENT
 {
 protected:
-	CAI_ComponentWithOuter(NPC_CLASS *pOuter = NULL)
+	CAI_ComponentWithOuter(NPC_CLASS *pOuter = nullptr)
 	 : BASE_COMPONENT(pOuter)
 	{
 	}

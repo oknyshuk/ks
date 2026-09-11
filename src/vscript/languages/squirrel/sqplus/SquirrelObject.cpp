@@ -255,7 +255,7 @@ BOOL SquirrelObject::SetUserPointer(const SQChar * key,SQUserPointer up) {
 } // SquirrelObject::SetUserPointer
 
 SQUserPointer SquirrelObject::GetUserPointer(const SQChar * key) {
-  SQUserPointer ret = NULL;
+  SQUserPointer ret = nullptr;
   if (GetSlot(key)) {
     sq_getuserpointer(SquirrelVM::_VM,-1,&ret);
     sq_pop(SquirrelVM::_VM,1);
@@ -271,7 +271,7 @@ BOOL SquirrelObject::SetUserPointer(INT key,SQUserPointer up) {
 } // SquirrelObject::SetUserPointer
 
 SQUserPointer SquirrelObject::GetUserPointer(INT key) {
-  SQUserPointer ret = NULL;
+  SQUserPointer ret = nullptr;
   if (GetSlot(key)) {
     sq_getuserpointer(SquirrelVM::_VM,-1,&ret);
     sq_pop(SquirrelVM::_VM,1);
@@ -405,7 +405,7 @@ INT SquirrelObject::GetInt(INT key) const
 
 const SQChar *SquirrelObject::GetString(INT key) const
 {
-	const SQChar *ret = NULL;
+	const SQChar *ret = nullptr;
 	if(GetSlot(key)) {
 		sq_getstring(SquirrelVM::_VM,-1,&ret);
 		sq_pop(SquirrelVM::_VM,1);
@@ -492,7 +492,7 @@ INT SquirrelObject::GetInt(const SQChar *key) const
 
 const SQChar *SquirrelObject::GetString(const SQChar *key) const
 {
-	const SQChar *ret = NULL;
+	const SQChar *ret = nullptr;
 	if(GetSlot(key)) {
 		sq_getstring(SquirrelVM::_VM,-1,&ret);
 		sq_pop(SquirrelVM::_VM,1);
@@ -518,7 +518,7 @@ SQUserPointer SquirrelObject::GetInstanceUP(SQUserPointer tag) const
 	sq_pushobject(SquirrelVM::_VM,_o);
   if (SQ_FAILED(sq_getinstanceup(SquirrelVM::_VM,-1,(SQUserPointer*)&up,tag))) {
     sq_reseterror(SquirrelVM::_VM);
-    up = NULL;
+    up = nullptr;
   } // if
 	sq_pop(SquirrelVM::_VM,1);
 	return up;
@@ -582,7 +582,7 @@ const SQChar * SquirrelObject::GetTypeName(const SQChar * key) {
   SqPlus::getVarNameTag(varNameTag,sizeof(varNameTag),key);
   SQUserPointer data=0;
   if (!RawGetUserData(varNameTag,&data)) {
-    return NULL;
+    return nullptr;
   } // if
   SqPlus::VarRefPtr vr = (SqPlus::VarRefPtr)data;
   return vr->typeName;
@@ -590,20 +590,20 @@ const SQChar * SquirrelObject::GetTypeName(const SQChar * key) {
 
 const SQChar * SquirrelObject::GetTypeName(INT key) {
   SquirrelObject so = GetValue(key);
-  if (so.IsNull()) return NULL;
+  if (so.IsNull()) return nullptr;
   return so.GetTypeName();
 } // SquirrelObject::GetTypeName
 
 const SQChar * SquirrelObject::GetTypeName(void) {
-  SQUserPointer typeTag=NULL;
+  SQUserPointer typeTag=nullptr;
   if (SQ_SUCCEEDED(sq_getobjtypetag(&_o,&typeTag))) {
     SquirrelObject typeTable = SquirrelVM::GetRootTable().GetValue(SQ_PLUS_TYPE_TABLE);
     if (typeTable.IsNull()) {
-      return NULL; // Not compiled with SQ_SUPPORT_INSTANCE_TYPE_INFO enabled.
+      return nullptr; // Not compiled with SQ_SUPPORT_INSTANCE_TYPE_INFO enabled.
     } // if
     return typeTable.GetString(INT((size_t)typeTag));
   } // if
-  return NULL;
+  return nullptr;
 } // SquirrelObject::GetTypeName
 
 const SQChar* SquirrelObject::ToString()

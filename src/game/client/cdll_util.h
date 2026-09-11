@@ -57,7 +57,7 @@ inline void ConvertNormalizedScreenSpaceToPixelScreenSpace( Vector &in )
 float	UTIL_AngleDiff( float destAngle, float srcAngle );
 void	UTIL_Bubbles( const Vector& mins, const Vector& maxs, int count );
 void	UTIL_Smoke( const Vector &origin, const float scale, const float framerate );
-void	UTIL_ImpactTrace( trace_t *pTrace, int iDamageType, const char *pCustomImpactName = NULL );
+void	UTIL_ImpactTrace( trace_t *pTrace, int iDamageType, const char *pCustomImpactName = nullptr );
 int		UTIL_PrecacheDecal( const char *name, bool preload = false );
 void	UTIL_EmitAmbientSound( C_BaseEntity *entity, const Vector &vecOrigin, const char *samp, float vol, soundlevel_t soundlevel, int fFlags, int pitch );
 void	UTIL_SetOrigin( C_BaseEntity *entity, const Vector &vecOrigin );
@@ -98,12 +98,12 @@ void UTIL_PrecacheOther( const char *szClassname );
 
 void UTIL_SetTrace(trace_t& tr, const Ray_t& ray, C_BaseEntity *edict, float fraction, int hitgroup, unsigned int contents, const Vector& normal, float intercept );
 
-bool GetVectorInScreenSpace( Vector pos, int& iX, int& iY, Vector *vecOffset = NULL );
-bool GetTargetInScreenSpace( C_BaseEntity *pTargetEntity, int& iX, int& iY, Vector *vecOffset = NULL );
+bool GetVectorInScreenSpace( Vector pos, int& iX, int& iY, Vector *vecOffset = nullptr );
+bool GetTargetInScreenSpace( C_BaseEntity *pTargetEntity, int& iX, int& iY, Vector *vecOffset = nullptr );
 
 // prints messages through the HUD (stub in client .dll right now )
 class C_BasePlayer;
-void ClientPrint( C_BasePlayer *player, int msg_dest, const char *msg_name, const char *param1 = NULL, const char *param2 = NULL, const char *param3 = NULL, const char *param4 = NULL );
+void ClientPrint( C_BasePlayer *player, int msg_dest, const char *msg_name, const char *param1 = nullptr, const char *param2 = nullptr, const char *param3 = nullptr, const char *param4 = nullptr );
 
 C_BasePlayer* UTIL_PlayerByUserId( int userID );
 
@@ -150,8 +150,8 @@ T *_CreateEntity( T *newClass, const char *className )
 	return newEnt;
 }
 
-#define CREATE_ENTITY( newClass, className ) _CreateEntity( (newClass*)NULL, className )
-#define CREATE_UNSAVED_ENTITY( newClass, className ) _CreateEntityTemplate( (newClass*)NULL, className )
+#define CREATE_ENTITY( newClass, className ) _CreateEntity( (newClass*)nullptr, className )
+#define CREATE_UNSAVED_ENTITY( newClass, className ) _CreateEntityTemplate( (newClass*)nullptr, className )
 
 // Misc useful
 inline bool FStrEq(const char *sz1, const char *sz2)
@@ -169,7 +169,7 @@ void UTIL_ApproachTarget( const Vector &target, float increaseSpeed, float decre
 // Returns true if the user has loaded any maps, false otherwise.
 bool UTIL_HasLoadedAnyMap();
 
-wchar_t *UTIL_GetLocalizedKeyString( const char *command, const char *fmt, const wchar_t *arg1 = NULL, const wchar_t *arg2 = NULL, const wchar_t *arg3 = NULL );
+wchar_t *UTIL_GetLocalizedKeyString( const char *command, const char *fmt, const wchar_t *arg1 = nullptr, const wchar_t *arg2 = nullptr, const wchar_t *arg3 = nullptr );
 
 void UTIL_GetClientStatusText( char *buffer, int bufsize );
 

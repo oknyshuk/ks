@@ -88,7 +88,7 @@ public:
 
 inline CBaseMeshReader::CBaseMeshReader()
 {
-	m_pMesh = NULL;
+	m_pMesh = nullptr;
 }
 
 inline CBaseMeshReader::~CBaseMeshReader()
@@ -138,7 +138,7 @@ inline void CBaseMeshReader::EndRead()
 {
 	Assert( m_pMesh );
 	m_pMesh->ModifyEnd( *this );
-	m_pMesh = NULL;
+	m_pMesh = nullptr;
 }
 
 inline void CBaseMeshReader::BeginRead_Direct( const MeshDesc_t &desc, int nVertices, int nIndices )

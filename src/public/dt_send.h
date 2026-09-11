@@ -587,7 +587,7 @@ inline void SendTable::SetHasPropsEncodedAgainstTickcount( bool bState )
 	template <> int ServerClassInit<tableName::ignored>(tableName::ignored *); \
 	namespace tableName { \
 		SendTable g_SendTable;\
-		int g_SendTableInit = ServerClassInit((tableName::ignored *)NULL); \
+		int g_SendTableInit = ServerClassInit((tableName::ignored *)nullptr); \
 	} \
 	template <> int ServerClassInit<tableName::ignored>(tableName::ignored *) \
 	{ \

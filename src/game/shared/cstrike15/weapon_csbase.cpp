@@ -370,7 +370,7 @@ CWeaponCSBase::CWeaponCSBase()
 	SetPredictionEligible( true );
 	m_nextOwnerTouchTime = 0.0f;
 	m_nextPrevOwnerTouchTime = 0.0f;
-	m_hPrevOwner = NULL;
+	m_hPrevOwner = nullptr;
 	AddSolidFlags( FSOLID_TRIGGER ); // Nothing collides with these but it gets touches.
 
 	m_bCanBePickedUp = true;
@@ -421,7 +421,7 @@ CWeaponCSBase::CWeaponCSBase()
 
 #ifdef IRONSIGHT
 	m_iIronSightMode = IronSight_should_approach_unsighted;
-	m_IronSightController = NULL;
+	m_IronSightController = nullptr;
 	UpdateIronSightController();
 #endif //IRONSIGHT
 
@@ -433,7 +433,7 @@ CWeaponCSBase::~CWeaponCSBase()
 
 #ifdef IRONSIGHT
 	delete m_IronSightController;
-	m_IronSightController = NULL;
+	m_IronSightController = nullptr;
 #endif //IRONSIGHT
 
 #ifndef CLIENT_DLL
@@ -563,7 +563,7 @@ C_BaseEntity *CWeaponCSBase::GetWeaponForEffect()
 {
 	C_CSPlayer *pLocalPlayer = C_CSPlayer::GetLocalCSPlayer();
 	if ( !pLocalPlayer )
-		return NULL;
+		return nullptr;
 
 	bool bThird = false;
 	FOR_EACH_VALID_SPLITSCREEN_PLAYER( nSlot )
@@ -693,7 +693,7 @@ bool CWeaponCSBase::SendWeaponAnim( int iActivity )
 	{
 		CBaseViewModel *vm = pPlayer->GetViewModel( 1 );
 
-		if ( vm == NULL )
+		if ( vm == nullptr )
 			return false;
 
 		vm->SetWeaponModel( SHIELD_VIEW_MODEL, this );
@@ -1237,7 +1237,7 @@ const char *CWeaponCSBase::GetViewModel( int /*viewmodelindex = 0 -- this is ign
 {
 	CCSPlayer *pOwner = GetPlayerOwner();
 
-	if ( pOwner == NULL )
+	if ( pOwner == nullptr )
 	{
 		 return BaseClass::GetViewModel();
 	}
@@ -1376,7 +1376,7 @@ void CWeaponCSBase::UpdateShieldState( void )
 	//empty by default.
 	CCSPlayer *pOwner = GetPlayerOwner();
 
-	if ( pOwner == NULL )
+	if ( pOwner == nullptr )
 		 return;
 
 	//ADRIANTODO
@@ -1593,12 +1593,12 @@ void CWeaponCSBase::Drop( const Vector &vecVelocity )
 	SetGravity( 1.0 );
 	m_iState = WEAPON_NOT_CARRIED;
 	RemoveEffects( EF_NODRAW );
-	SetGroundEntity( NULL );
+	SetGroundEntity( nullptr );
 
 	m_bInReload = false; // stop reloading
 	m_bReloadVisuallyComplete = false;
 
-	SetThink( NULL );
+	SetThink( nullptr );
 	m_nextPrevOwnerTouchTime = gpGlobals->curtime + mp_weapon_prev_owner_touch_time.GetFloat();
 	// [msmith] There is an issue where the model index does not get updated on the client if we let a player
 	// pick up a weapon in the same frame that it is thrown down by a different player.
@@ -1606,8 +1606,8 @@ void CWeaponCSBase::Drop( const Vector &vecVelocity )
 	m_nextOwnerTouchTime = gpGlobals->curtime + 0.1f;
 	m_hPrevOwner = GetPlayerOwner();
 
-	SetOwnerEntity( NULL );
-	SetOwner( NULL );
+	SetOwnerEntity( nullptr );
+	SetOwner( nullptr );
 
 	VerifyAndSetContextSensitiveWeaponModel();
 
@@ -1618,7 +1618,7 @@ void CWeaponCSBase::Drop( const Vector &vecVelocity )
 		// Don't allow non-c4 weapon pickups in gun game progressive mode
 		if ( !IsA( WEAPON_C4 ) )
 		{
-			SetTouch( NULL );
+			SetTouch( nullptr );
 		}
 		else
 		{
@@ -1631,7 +1631,7 @@ void CWeaponCSBase::Drop( const Vector &vecVelocity )
 	}
 
 	IPhysicsObject *pObj = VPhysicsGetObject();
-	if ( pObj != NULL )
+	if ( pObj != nullptr )
 	{
 		AngularImpulse	angImp( 100, 100, 100 );
 		pObj->AddVelocity( &vecVelocity, &angImp );
@@ -1675,7 +1675,7 @@ void CWeaponCSBase::DefaultTouch( CBaseEntity *pOther )
 		return;
 	}
 
-	if ( ( m_hPrevOwner != NULL ) && ( pOther == m_hPrevOwner ) && ( gpGlobals->curtime < m_nextPrevOwnerTouchTime ) )
+	if ( ( m_hPrevOwner != nullptr ) && ( pOther == m_hPrevOwner ) && ( gpGlobals->curtime < m_nextPrevOwnerTouchTime ) )
 	{
 		return;
 	}
@@ -1778,7 +1778,7 @@ void CWeaponCSBase::DrawCrosshair()
 
 	CCSPlayer* pPlayer = ( CCSPlayer* )C_BasePlayer::GetLocalPlayer();
 
-	if ( !pPlayer || GetPlayerOwner() == NULL )
+	if ( !pPlayer || GetPlayerOwner() == nullptr )
 		return;
 
 	Assert( (pPlayer == GetPlayerOwner()) || ( pPlayer->GetObserverMode()==OBS_MODE_IN_EYE) );
@@ -2502,7 +2502,7 @@ void CWeaponCSBase::Materialize()
 
 	//SetTouch( &CWeaponCSBase::DefaultTouch );
 
-	SetThink( NULL );
+	SetThink( nullptr );
 
 }
 
@@ -2547,7 +2547,7 @@ CBaseEntity* CWeaponCSBase::Respawn()
 	if ( pNewWeapon )
 	{
 		pNewWeapon->AddEffects( EF_NODRAW );// invisible for now
-		pNewWeapon->SetTouch( NULL );// no touch
+		pNewWeapon->SetTouch( nullptr );// no touch
 		pNewWeapon->SetThink( &CWeaponCSBase::AttemptToMaterialize );
 
 		UTIL_DropToFloor( this, MASK_SOLID );
@@ -2970,16 +2970,16 @@ void CWeaponCSBase::Spawn()
 	m_nextOwnerTouchTime = 0.0f;
 	m_nextPrevOwnerTouchTime = 0.0f;
 
-	m_hPrevOwner = NULL;
+	m_hPrevOwner = nullptr;
 
 	// [tj] initialize donor of this weapon
-	m_donor = NULL;
+	m_donor = nullptr;
 	m_donated = false;
 
 	m_bSilencerOn = HasSilencer();
 	m_weaponMode = HasSilencer() ? Secondary_Mode : Primary_Mode;
 
-	VisibilityMonitor_AddEntity( this, 400.0f, NULL, NULL );
+	VisibilityMonitor_AddEntity( this, 400.0f, nullptr, nullptr );
 
 #ifdef IRONSIGHT
 	UpdateIronSightController();
@@ -3108,7 +3108,7 @@ float CalcViewModelBobHelper( CBasePlayer *player, BobState_t *pBobState, int nV
 
 	//NOTENOTE: For now, let this cycle continue when in the air, because it snaps badly without it
 
-	if ( ( !gpGlobals->frametime ) || ( player == NULL ) )
+	if ( ( !gpGlobals->frametime ) || ( player == nullptr ) )
 	{
 		//NOTENOTE: We don't use this return value in our case (need to restructure the calculation function setup!)
 		return 0.0f;// just use old value
@@ -3133,7 +3133,7 @@ float CalcViewModelBobHelper( CBasePlayer *player, BobState_t *pBobState, int nV
 	pBobState->m_flLastSpeed = speed;
 
 
-	C_BaseViewModel *pViewModel = player ? player->GetViewModel(nVMIndex) : NULL;
+	C_BaseViewModel *pViewModel = player ? player->GetViewModel(nVMIndex) : nullptr;
 	bool bShouldIgnoreOffsetAndAccuracy = (pViewModel && pViewModel->m_bShouldIgnoreOffsetAndAccuracy);
 
 	// when the player is moving forward, the gun lowers a bit -mtw
@@ -3169,7 +3169,7 @@ float CalcViewModelBobHelper( CBasePlayer *player, BobState_t *pBobState, int nV
 	float flGunAccPos = 0;
 
 
-	CWeaponCSBase *pWeapon = ( ( bShouldIgnoreOffsetAndAccuracy || !pPlayer ) ? NULL : pPlayer->GetActiveCSWeapon() );
+	CWeaponCSBase *pWeapon = ( ( bShouldIgnoreOffsetAndAccuracy || !pPlayer ) ? nullptr : pPlayer->GetActiveCSWeapon() );
 	if ( pPlayer && pWeapon )
 	{
 		float flMaxSpeed = pWeapon->GetMaxSpeed();
@@ -3244,7 +3244,7 @@ float CalcViewModelBobHelper( CBasePlayer *player, BobState_t *pBobState, int nV
 	}
 	float flBobMultiplier = 0.00625f;
 	// if we're in the air, slow our bob down a bit
-	if ( player->GetGroundEntity() == NULL )
+	if ( player->GetGroundEntity() == nullptr )
 		flBobMultiplier = 0.00125f;
 
 	float flBobVert = bShouldIgnoreOffsetAndAccuracy ? 0.3 : cl_bobamt_vert.GetFloat();
@@ -3297,7 +3297,7 @@ void AddViewModelBobHelper( Vector &origin, QAngle &angles, BobState_t *pBobStat
 		return;
 
 	Vector	forward, right;
-	AngleVectors( angles, &forward, &right, NULL );
+	AngleVectors( angles, &forward, &right, nullptr );
 
 	// Apply bob, but scaled down to 40%
 	VectorMA( origin, pBobState->m_flVerticalBob * 0.4f, forward, origin );
@@ -3343,7 +3343,7 @@ float CWeaponCSBase::CalcViewmodelBob( void )
 	//NOTENOTE: For now, let this cycle continue when in the air, because it snaps badly without it
 
 	if ( ( !gpGlobals->frametime ) ||
-		( player == NULL ) ||
+		( player == nullptr ) ||
 		( cl_bobcycle.GetFloat() <= 0.0f ) ||
 		( cl_bobup.GetFloat() <= 0.0f ) ||
 		( cl_bobup.GetFloat() >= 1.0f ) )
@@ -3431,7 +3431,7 @@ void CWeaponCSBase::AddViewmodelBob( CBaseViewModel *viewmodel, Vector &origin, 
 	}
 
 	Vector	forward, right;
-	AngleVectors( angles, &forward, &right, NULL );
+	AngleVectors( angles, &forward, &right, nullptr );
 
 	CalcViewmodelBob();
 
@@ -3459,14 +3459,14 @@ BobState_t *CWeaponCSBase::GetBobState()
 {
 	// get the view model for this weapon
 	CBasePlayer *pOwner = ToBasePlayer( GetOwner() );
-	if ( pOwner == NULL )
-		return NULL;
+	if ( pOwner == nullptr )
+		return nullptr;
 	CBaseViewModel *baseViewModel = pOwner->GetViewModel( m_nViewModelIndex );
-	if ( baseViewModel == NULL )
-		return NULL;
+	if ( baseViewModel == nullptr )
+		return nullptr;
 	CPredictedViewModel *viewModel = dynamic_cast<CPredictedViewModel *>(baseViewModel);
-	if ( viewModel == NULL )
-		return NULL;
+	if ( viewModel == nullptr )
+		return nullptr;
 
 	//Assert( viewModel );
 
@@ -3540,7 +3540,7 @@ void CWeaponCSBase::OnPickedUp( CBaseCombatCharacter *pNewOwner )
 		// to find NPCs finding weapons dropped by the NPCs as well.
 		SetName( NULL_STRING );
 
-		if ( m_hPrevOwner == NULL )
+		if ( m_hPrevOwner == nullptr )
 		{
 			CCSPlayer *pPlayer = ToCSPlayer( pNewOwner );
 			m_iOriginalTeamNumber = pPlayer ? pPlayer->GetTeamNumber() : 0;
@@ -3784,7 +3784,7 @@ CIronSightController *CWeaponCSBase::GetIronSightController( void )
 	{
 		return m_IronSightController;
 	}
-	return NULL;
+	return nullptr;
 }
 
 void CWeaponCSBase::UpdateIronSightController()
@@ -3824,5 +3824,5 @@ CCSPlayer * CWeaponCSBase::GetOriginalOwner()
 	if ( m_PriorOwners.Count() )
 		return m_PriorOwners.Element( 0 );
 
-	return NULL;
+	return nullptr;
 }

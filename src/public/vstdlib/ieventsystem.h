@@ -88,13 +88,13 @@ public:
 	inline void PostEvent( EventId_t nEventId )
 	{
 		CFunctorData *pData = CreateFunctorData( );
-		PostEventInternal( nEventId, EVENT_QUEUE_HANDLE_INVALID, NULL, pData );
+		PostEventInternal( nEventId, EVENT_QUEUE_HANDLE_INVALID, nullptr, pData );
 	}
 
 	inline void PostEvent( EventId_t nEventId, EventQueue_t hQueue )
 	{
 		CFunctorData *pData = CreateFunctorData( );
-		PostEventInternal( nEventId, hQueue, NULL, pData );
+		PostEventInternal( nEventId, hQueue, nullptr, pData );
 	}
 
 	inline void PostEventToListener( EventId_t nEventId, const void *pListener )
@@ -114,13 +114,13 @@ public:
 		inline void PostEvent( EventId_t nEventId FUNC_ARG_FORMAL_PARAMS_##N ) \
 		{ \
 			CFunctorData *pData = CreateFunctorData( FUNC_CALL_ARGS_##N ); \
-			PostEventInternal( nEventId, EVENT_QUEUE_HANDLE_INVALID, NULL, pData ); \
+			PostEventInternal( nEventId, EVENT_QUEUE_HANDLE_INVALID, nullptr, pData ); \
 		} \
 		template < FUNC_SOLO_TEMPLATE_ARG_PARAMS_##N > \
 		inline void PostEvent( EventId_t nEventId, EventQueue_t hQueue FUNC_ARG_FORMAL_PARAMS_##N ) \
 		{ \
 			CFunctorData *pData = CreateFunctorData( FUNC_CALL_ARGS_##N ); \
-			PostEventInternal( nEventId, hQueue, NULL, pData ); \
+			PostEventInternal( nEventId, hQueue, nullptr, pData ); \
 		} \
 		template < FUNC_SOLO_TEMPLATE_ARG_PARAMS_##N > \
 		inline void PostEventToListener( EventId_t nEventId, const void *pListener FUNC_ARG_FORMAL_PARAMS_##N ) \
@@ -163,12 +163,12 @@ private:
 		static inline void Post( FUNC_PROXY_ARG_FORMAL_PARAMS_##N ) \
 		{ \
 			CFunctorData *pData = CreateFunctorData( FUNC_CALL_ARGS_##N ); \
-			g_pEventSystem->PostEventInternal( Event_t::GetEventId(), EVENT_QUEUE_HANDLE_INVALID, NULL, pData ); \
+			g_pEventSystem->PostEventInternal( Event_t::GetEventId(), EVENT_QUEUE_HANDLE_INVALID, nullptr, pData ); \
 		} \
 		static inline void Post( EventQueue_t hQueue FUNC_ARG_FORMAL_PARAMS_##N ) \
 		{ \
 			CFunctorData *pData = CreateFunctorData( FUNC_CALL_ARGS_##N ); \
-			g_pEventSystem->PostEventInternal( Event_t::GetEventId(), hQueue, NULL, pData ); \
+			g_pEventSystem->PostEventInternal( Event_t::GetEventId(), hQueue, nullptr, pData ); \
 		} \
 		static inline void PostToListener( const void *pListener FUNC_ARG_FORMAL_PARAMS_##N ) \
 		{ \

@@ -18,7 +18,7 @@ public:
 
 	CActivityRemap()
 	{
-		pExtraBlock = NULL;
+		pExtraBlock = nullptr;
 	}
 
 	void SetExtraKeyValueBlock ( KeyValues *pKVBlock )

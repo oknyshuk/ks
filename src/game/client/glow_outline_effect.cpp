@@ -127,7 +127,7 @@ void CGlowObjectManager::RenderGlowModels( const CViewSetup *pSetup, int nSplitS
 	pRenderContext->ClearBuffers( true, false, false );
 
 	// Set override material for glow color
-	IMaterial *pMatGlowColor = NULL;
+	IMaterial *pMatGlowColor = nullptr;
 
 	pMatGlowColor = materials->FindMaterial( "dev/glow_color", TEXTURE_GROUP_OTHER, true );
 
@@ -255,7 +255,7 @@ void CGlowObjectManager::RenderGlowModels( const CViewSetup *pSetup, int nSplitS
 
 	RenderGlowBoxes(GLOWBOX_PASS_COLOR, pRenderContext);
 
-	g_pStudioRender->ForcedMaterialOverride( NULL );
+	g_pStudioRender->ForcedMaterialOverride( nullptr );
 	render->SetColorModulation( vOrigColor.Base() );
 	render->SetBlend( flOrigBlend );
 
@@ -307,13 +307,13 @@ void CGlowObjectManager::DownSampleAndBlurRT( const CViewSetup *pSetup, CMatRend
 	SetRenderTargetAndViewPort( pRtQuarterSize0, pSetup->width / 4, pSetup->height / 4 );
 
 	IMaterialVar *pbloomexpvar = pMatDownsample->FindVar( "$bloomexp", 0 );
-	if ( pbloomexpvar != NULL )
+	if ( pbloomexpvar != nullptr )
 	{
 		pbloomexpvar->SetFloatValue( 2.5f );
 	}
 
 	IMaterialVar *pbloomsaturationvar = pMatDownsample->FindVar( "$bloomsaturation", 0 );
-	if ( pbloomsaturationvar != NULL )
+	if ( pbloomsaturationvar != nullptr )
 	{
 		pbloomsaturationvar->SetFloatValue( 1.0f );
 	}
@@ -353,7 +353,7 @@ void CGlowObjectManager::DownSampleAndBlurRT( const CViewSetup *pSetup, CMatRend
 	// Gaussian blur y rt1 to rt0 //
 	//============================//
 	SetRenderTargetAndViewPort( pRtQuarterSize0, pSetup->width / 4, pSetup->height / 4 );
-	IMaterialVar *pBloomAmountVar = pMatBlurY->FindVar( "$bloomamount", NULL );
+	IMaterialVar *pBloomAmountVar = pMatBlurY->FindVar( "$bloomamount", nullptr );
 	pBloomAmountVar->SetFloatValue( flBloomScale );
 	pRenderContext->DrawScreenSpaceRectangle( pMatBlurY, 0, 0, nSrcWidth / 4, nSrcHeight / 4,
 		0, 0, nSrcWidth / 4 - 1, nSrcHeight / 4 - 1,
@@ -406,7 +406,7 @@ void CGlowObjectManager::ApplyEntityGlowEffects( const CViewSetup *pSetup, int n
 				continue;
 
 			IMaterialVar *pMatVar = pMatRim->FindVar( "$envmaptint", 0 );
-			if ( pMatVar != NULL )
+			if ( pMatVar != nullptr )
 			{
 				pMatVar->SetVecComponentValue( clamp( vecGlowObjectsRimGlow3DStyle[i].m_flGlowAlpha * vecGlowObjectsRimGlow3DStyle[i].m_vGlowColor.x, 0, 1 ), 0 );
 				pMatVar->SetVecComponentValue( clamp( vecGlowObjectsRimGlow3DStyle[i].m_flGlowAlpha * vecGlowObjectsRimGlow3DStyle[i].m_vGlowColor.y, 0, 1 ), 1 );
@@ -414,7 +414,7 @@ void CGlowObjectManager::ApplyEntityGlowEffects( const CViewSetup *pSetup, int n
 			}
 
 			pMatVar = pMatRim->FindVar( "$envmapfresnelminmaxexp", 0 );
-			if ( pMatVar != NULL )
+			if ( pMatVar != nullptr )
 			{
 				pMatVar->SetVecComponentValue( 0, 0 );
 				pMatVar->SetVecComponentValue( 1.5f, 1 );
@@ -424,7 +424,7 @@ void CGlowObjectManager::ApplyEntityGlowEffects( const CViewSetup *pSetup, int n
 			vecGlowObjectsRimGlow3DStyle[i].DrawModel();
 		}
 
-		g_pStudioRender->ForcedMaterialOverride( NULL );
+		g_pStudioRender->ForcedMaterialOverride( nullptr );
 	}
 	
 	
@@ -465,7 +465,7 @@ void CGlowObjectManager::ApplyEntityGlowEffects( const CViewSetup *pSetup, int n
 			vecGlowObjectsEdgeHighlightStyle[i].DrawModel();
 		}
 
-		g_pStudioRender->ForcedMaterialOverride( NULL );
+		g_pStudioRender->ForcedMaterialOverride( nullptr );
 
 		pRenderContext->PopRenderTargetAndViewport();
 
@@ -617,12 +617,12 @@ void CGlowObjectManager::ApplyEntityGlowEffects( const CViewSetup *pSetup, int n
 	RenderGlowBoxes(GLOWBOX_PASS_STENCIL, pRenderContext);
 	iNumGlowObjects += m_GlowBoxDefinitions.Count();
 
-	g_pStudioRender->ForcedMaterialOverride( NULL );
+	g_pStudioRender->ForcedMaterialOverride( nullptr );
 	render->SetBlend( 0.0f );
 
 	pRenderContext->OverrideDepthEnable( true, false, false ); // health bars render over everything
 
-	IMaterial *pMatGlowHealthColor = NULL;
+	IMaterial *pMatGlowHealthColor = nullptr;
 	pMatGlowHealthColor = materials->FindMaterial( "dev/glow_health_color", TEXTURE_GROUP_OTHER, true );
 
 	for ( int i = 0; i < m_GlowObjectDefinitions.Count(); ++ i )
@@ -753,7 +753,7 @@ void CGlowObjectManager::ApplyEntityGlowEffects( const CViewSetup *pSetup, int n
 		IMaterial *pMatHaloAddToScreen = materials->FindMaterial( "dev/halo_add_to_screen", TEXTURE_GROUP_OTHER, true );
 
 		// Do not fade the glows out at all (weight = 1.0)
-		IMaterialVar *pDimVar = pMatHaloAddToScreen->FindVar( "$C0_X", NULL );
+		IMaterialVar *pDimVar = pMatHaloAddToScreen->FindVar( "$C0_X", nullptr );
 		pDimVar->SetFloatValue( 1.0f );
 
 		ShaderStencilState_t stencilState;
@@ -793,7 +793,7 @@ void CGlowObjectManager::GlowObjectDefinition_t::DrawModel()
 	m_pEntity->DrawModel( STUDIO_RENDER | STUDIO_SKIP_FLEXES | STUDIO_DONOTMODIFYSTENCILSTATE | STUDIO_NOLIGHTING_OR_CUBEMAP | STUDIO_SKIP_DECALS, instance );
 	C_BaseEntity *pAttachment = m_pEntity->FirstMoveChild();
 
-	while ( pAttachment != NULL )
+	while ( pAttachment != nullptr )
 	{
 		if ( pAttachment->ShouldDraw() )
 		{

@@ -463,7 +463,7 @@ void AddRemoteSplitScreenViewPlayer( C_BasePlayer *pPlayer )
 
 	for( int i = 0; i != MAX_SPLITSCREEN_PLAYERS; ++i )
 	{
-		if( !g_SplitScreenPlayers.IsBitSet( i ) && (g_RemoteSplitScreenPlayers[i] == NULL) )
+		if( !g_SplitScreenPlayers.IsBitSet( i ) && (g_RemoteSplitScreenPlayers[i] == nullptr) )
 		{
 			g_RemoteSplitScreenPlayers[i] = pPlayer;
 			UI_OnSplitScreenStateChanged();
@@ -478,7 +478,7 @@ void RemoveRemoteSplitScreenViewPlayer( C_BasePlayer *pPlayer )
 	{
 		if( g_RemoteSplitScreenPlayers[i] == pPlayer )
 		{
-			g_RemoteSplitScreenPlayers[i] = NULL;
+			g_RemoteSplitScreenPlayers[i] = nullptr;
 			UI_OnSplitScreenStateChanged();
 			return;
 		}
@@ -533,7 +533,7 @@ int NextValidSplitScreenSlot( int i )
 		if ( g_SplitScreenPlayers.IsBitSet( i ) )
 			return i;
 
-		if( g_bIterateRemoteSplitScreenPlayers && cl_enable_remote_splitscreen.GetBool() && (g_RemoteSplitScreenPlayers[i] != NULL) )
+		if( g_bIterateRemoteSplitScreenPlayers && cl_enable_remote_splitscreen.GetBool() && (g_RemoteSplitScreenPlayers[i] != nullptr) )
 			return i;
 
 		++i;
@@ -543,7 +543,7 @@ int NextValidSplitScreenSlot( int i )
 
 bool IsValidSplitScreenSlot( int i )
 {
-	return g_SplitScreenPlayers.IsBitSet( i ) || (g_bIterateRemoteSplitScreenPlayers && (g_RemoteSplitScreenPlayers[i] != NULL));
+	return g_SplitScreenPlayers.IsBitSet( i ) || (g_bIterateRemoteSplitScreenPlayers && (g_RemoteSplitScreenPlayers[i] != nullptr));
 }
 
 static int g_nCachedScreenSize[ 2 ] = { -1, -1 };
@@ -585,7 +585,7 @@ void UI_OnSplitScreenStateChanged()
 		i = engine->NextValidSplitScreenSlot( i ) )	
 	{
 		g_SplitScreenPlayers.Set( i );
-		g_RemoteSplitScreenPlayers[i] = NULL; //actual splitscreen players nuke networked splitscreen players
+		g_RemoteSplitScreenPlayers[i] = nullptr; //actual splitscreen players nuke networked splitscreen players
 		++g_nNumSplits;
 		++g_nNumLocalSplits;
 	}
@@ -594,7 +594,7 @@ void UI_OnSplitScreenStateChanged()
 	{
 		for( int i = 0; i != MAX_SPLITSCREEN_PLAYERS; ++i )
 		{
-			if( g_RemoteSplitScreenPlayers[i] != NULL )
+			if( g_RemoteSplitScreenPlayers[i] != nullptr )
 			{
 				++g_nNumSplits;
 			}

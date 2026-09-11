@@ -129,7 +129,7 @@ void CGenericNPC::HandleAnimEvent( animevent_t *pEvent )
 //=========================================================
 int CGenericNPC::GetSoundInterests ( void )
 {
-	return	NULL;
+	return	0;
 }
 
 //=========================================================
@@ -302,7 +302,7 @@ void CNPC_Furniture::Precache( void )
 //=========================================================
 int CNPC_Furniture::GetSoundInterests( void )
 {
-	return	NULL;
+	return	0;
 }
 
 //-----------------------------------------------------------------------------

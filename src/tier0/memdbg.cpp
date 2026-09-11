@@ -92,8 +92,8 @@ char * StackDescribe( void * const *ppAddresses, int nMaxAddresses )
 	char *pchBuffer = s_chStackDescription;
 
 #if defined( SORT_STACK_TRACE_DESCRIPTION_DUMPS ) //Assuming StackDescribe is called iteratively on a sorted set of stacks (as in DumpStackStats()). We can save work by skipping unchanged parts at the beginning of the string.
-	static void *LastCallStack[STACK_TRACE_LENGTH] = { NULL };
-	static char *pEndPos[STACK_TRACE_LENGTH] = { NULL };
+	static void *LastCallStack[STACK_TRACE_LENGTH] = { nullptr };
+	static char *pEndPos[STACK_TRACE_LENGTH] = { nullptr };
 	bool bUseExistingString = true;
 #else
 	s_chStackDescription[ 0 ] = 0;
@@ -119,8 +119,8 @@ char * StackDescribe( void * const *ppAddresses, int nMaxAddresses )
 				bUseExistingString = false;
 				for( int clearEntries = k; clearEntries < STACK_TRACE_LENGTH; ++clearEntries ) //wipe out unused entries
 				{
-					LastCallStack[clearEntries] = NULL;
-					pEndPos[clearEntries] = NULL;
+					LastCallStack[clearEntries] = nullptr;
+					pEndPos[clearEntries] = nullptr;
 				}
 				//fall through to existing code
 
@@ -180,8 +180,8 @@ char * StackDescribe( void * const *ppAddresses, int nMaxAddresses )
 #if defined( SORT_STACK_TRACE_DESCRIPTION_DUMPS )
 	for( ; k < STACK_TRACE_LENGTH; ++k ) //wipe out unused entries
 	{
-		LastCallStack[k] = NULL;
-		pEndPos[k] = NULL;
+		LastCallStack[k] = nullptr;
+		pEndPos[k] = nullptr;
 	}
 #endif
 
@@ -321,7 +321,7 @@ void LMDValidateBlock( DbgMemHeader_t *pHeader, bool bFreeList )
 
 inline void *InternalMalloc( size_t nSize, const char *pFileName, int nLine )
 {
-	void *pAllocedMem = NULL;
+	void *pAllocedMem = nullptr;
 	pAllocedMem = malloc( nSize + sizeof(DbgMemHeader_t) + sizeof( Sentinal_t ) );
 	DbgMemHeader_t *pInternalMem = (DbgMemHeader_t *)pAllocedMem;
 	
@@ -341,7 +341,7 @@ inline void *InternalMalloc( size_t nSize, const char *pFileName, int nLine )
 #ifdef MEMALLOC_SUPPORTS_ALIGNED_ALLOCATIONS
 inline void *InternalMallocAligned( size_t nSize, size_t align, const char *pFileName, int nLine )
 {
-	void *pAllocedMem = NULL;
+	void *pAllocedMem = nullptr;
 	pAllocedMem = malloc( nSize + sizeof(DbgMemHeader_t) + sizeof( Sentinal_t ) );
 	DbgMemHeader_t *pInternalMem = (DbgMemHeader_t *)pAllocedMem;
 	
@@ -364,7 +364,7 @@ inline void *InternalRealloc( void *pMem, size_t nNewSize, const char *pFileName
 	if ( !pMem )
 		return InternalMalloc( nNewSize, pFileName, nLine );
 
-	void *pNewAllocedMem = NULL;
+	void *pNewAllocedMem = nullptr;
 	DbgMemHeader_t *pInternalMem = GetCrtDbgMemHeader( pMem );
 	pNewAllocedMem = (DbgMemHeader_t *)realloc( pInternalMem, nNewSize + sizeof(DbgMemHeader_t) + sizeof( Sentinal_t ) );
 	pInternalMem = (DbgMemHeader_t *)pNewAllocedMem;
@@ -388,7 +388,7 @@ inline void *InternalReallocAligned( void *pMem, size_t nNewSize, size_t align, 
 	if ( !pMem )
 		return InternalMallocAligned( nNewSize, align, pFileName, nLine );
 
-	void *pNewAllocedMem = NULL;
+	void *pNewAllocedMem = nullptr;
 	DbgMemHeader_t *pInternalMem = GetCrtDbgMemHeader( pMem );
 	pNewAllocedMem = (DbgMemHeader_t *)realloc( pInternalMem, nNewSize + sizeof(DbgMemHeader_t) + sizeof( Sentinal_t ) );
 	pInternalMem = (DbgMemHeader_t *)pNewAllocedMem;
@@ -610,7 +610,7 @@ public:
 	virtual void CompactIncremental() {}
 	virtual void OutOfMemory( size_t nBytesAttempted = 0 ) {}
 
-	virtual MemAllocFailHandler_t SetAllocFailHandler( MemAllocFailHandler_t pfnMemAllocFailHandler ) { return NULL; } // debug heap doesn't attempt retries
+	virtual MemAllocFailHandler_t SetAllocFailHandler( MemAllocFailHandler_t pfnMemAllocFailHandler ) { return nullptr; } // debug heap doesn't attempt retries
 
 	void SetStatsExtraInfo( const char *pMapName, const char *pComment )
 	{
@@ -749,7 +749,7 @@ private:
 
 	virtual IVirtualMemorySection * AllocateVirtualMemorySection( size_t numMaxBytes )
 	{
-		return NULL;
+		return nullptr;
 	}
 
 	virtual int GetGenericMemoryStats( GenericMemoryStat_t **ppMemoryStats )
@@ -1001,7 +1001,7 @@ void CDbgMemAlloc::Free( void *pMem )
 
 void *CDbgMemAlloc::Expand_NoLongerSupported( void *pMem, size_t nSize )
 {
-	return NULL;
+	return nullptr;
 }
 
 
@@ -1013,7 +1013,7 @@ void CDbgMemAlloc::PushAllocDbgInfo( const char *pFileName, int nLine )
 	IfDbgInfoIsReady()
 	{
 
-		if ( g_DbgInfoStack == NULL )
+		if ( g_DbgInfoStack == nullptr )
 		{
 			g_DbgInfoStack = (DbgInfoStack_t *)DebugAlloc( sizeof(DbgInfoStack_t) * DBG_INFO_STACK_DEPTH );
 			g_nDbgInfoStackDepth = -1;
@@ -1032,7 +1032,7 @@ void CDbgMemAlloc::PopAllocDbgInfo()
 	IfDbgInfoIsReady()
 	{
 
-		if ( g_DbgInfoStack == NULL )
+		if ( g_DbgInfoStack == nullptr )
 		{
 			g_DbgInfoStack = (DbgInfoStack_t *)DebugAlloc( sizeof(DbgInfoStack_t) * DBG_INFO_STACK_DEPTH );
 			g_nDbgInfoStackDepth = -1;
@@ -1057,7 +1057,7 @@ void CDbgMemAlloc::SaveDebugInfo( void *pvDebugInfo )
 {
 	IfDbgInfoIsReady()
 	{
-		if ( g_DbgInfoStack == NULL )
+		if ( g_DbgInfoStack == nullptr )
 		{
 			g_DbgInfoStack = (DbgInfoStack_t *)DebugAlloc( sizeof(DbgInfoStack_t) * DBG_INFO_STACK_DEPTH );
 			g_nDbgInfoStackDepth = -1;
@@ -1073,7 +1073,7 @@ void CDbgMemAlloc::RestoreDebugInfo( const void *pvDebugInfo )
 {
 	IfDbgInfoIsReady()
 	{
-		if ( g_DbgInfoStack == NULL )
+		if ( g_DbgInfoStack == nullptr )
 		{
 			g_DbgInfoStack = (DbgInfoStack_t *)DebugAlloc( sizeof(DbgInfoStack_t) * DBG_INFO_STACK_DEPTH );
 			g_nDbgInfoStackDepth = -1;
@@ -1116,7 +1116,7 @@ void CDbgMemAlloc::GetActualDbgInfo( const char *&pFileName, int &nLine )
 	IfDbgInfoIsReady()
 	{
 
-		if ( g_DbgInfoStack == NULL )
+		if ( g_DbgInfoStack == nullptr )
 		{
 			g_DbgInfoStack = (DbgInfoStack_t *)DebugAlloc( sizeof(DbgInfoStack_t) * DBG_INFO_STACK_DEPTH );
 			g_nDbgInfoStackDepth = -1;
@@ -1203,7 +1203,7 @@ int CDbgMemAlloc::GetCallStackForIndex( unsigned int index, void **pCallStackOut
 	memcpy( pCallStackOut, stackRef, iMaxEntriesOut * sizeof( void * ) );
 	for( int i = 0; i != iMaxEntriesOut; ++i )
 	{
-		if( pCallStackOut[i] == NULL )
+		if( pCallStackOut[i] == nullptr )
 			return i;
 	}
 	return iMaxEntriesOut;
@@ -1658,7 +1658,7 @@ void  CDbgMemAlloc::Free( void *pMem, const char * /*pFileName*/, int nLine )
 
 void *CDbgMemAlloc::Expand_NoLongerSupported( void *pMem, size_t nSize, const char *pFileName, int nLine )
 {
-	return NULL;
+	return nullptr;
 }
 
 
@@ -1971,10 +1971,10 @@ size_t CDbgMemAlloc::MemoryAllocFailed()
 //   Base on code from Ryan, http://hg.icculus.org/icculus/mallocmonitor/file/29c4b0d049f7/monitor_client/malloc_hook_glibc.c
 //
 //
-static void *glibc_malloc_hook = NULL;
-static void *glibc_realloc_hook = NULL;
-static void *glibc_memalign_hook = NULL;
-static void *glibc_free_hook = NULL;
+static void *glibc_malloc_hook = nullptr;
+static void *glibc_realloc_hook = nullptr;
+static void *glibc_memalign_hook = nullptr;
+static void *glibc_free_hook = nullptr;
 
 /* convenience functions for setting the hooks... */
 static inline void save_glibc_hooks(void);
@@ -1992,7 +1992,7 @@ static void *override_malloc_hook(size_t s, const void *caller)
     void *retval;
     AUTO_LOCK( g_HookMutex );
     set_glibc_hooks();  /* put glibc back in control. */
-    retval = InternalMalloc( s, NULL, 0 );
+    retval = InternalMalloc( s, nullptr, 0 );
     save_glibc_hooks();  /* update in case glibc changed them. */
 
     set_override_hooks(); /* only restore hooks if daemon is listening */
@@ -2007,7 +2007,7 @@ static void *override_realloc_hook(void *ptr, size_t s, const void *caller)
     AUTO_LOCK( g_HookMutex );
 
     set_glibc_hooks();  /* put glibc back in control. */
-    retval = InternalRealloc(ptr, s, NULL, 0);  /* call glibc version. */
+    retval = InternalRealloc(ptr, s, nullptr, 0);  /* call glibc version. */
     save_glibc_hooks();  /* update in case glibc changed them. */
 
     set_override_hooks(); /* only restore hooks if daemon is listening */

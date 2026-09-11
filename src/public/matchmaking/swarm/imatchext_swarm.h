@@ -69,8 +69,8 @@ abstract_class IMatchExtSwarm
 public:
 	// Get server map information for the session settings
 	virtual KeyValues * GetAllMissions() = 0;
-	virtual KeyValues * GetMapInfo( KeyValues *pSettings, KeyValues **ppMissionInfo = NULL ) = 0;
-	virtual KeyValues * GetMapInfoByBspName( KeyValues *pSettings, char const *szBspMapName, KeyValues **ppMissionInfo = NULL ) = 0;
+	virtual KeyValues * GetMapInfo( KeyValues *pSettings, KeyValues **ppMissionInfo = nullptr ) = 0;
+	virtual KeyValues * GetMapInfoByBspName( KeyValues *pSettings, char const *szBspMapName, KeyValues **ppMissionInfo = nullptr ) = 0;
 };
 
 #define IMATCHEXT_SWARM_INTERFACE "IMATCHEXT_SWARM_INTERFACE_001"

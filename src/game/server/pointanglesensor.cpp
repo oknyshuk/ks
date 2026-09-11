@@ -47,7 +47,7 @@ protected:
 	[[= ks::reflect::Input{ .name = "Test", .type = FIELD_VOID } ]] void InputTest(inputdata_t &inputdata);
 	[[= ks::reflect::Input{ .name = "SetTargetEntity", .type = FIELD_STRING } ]] void InputSetTargetEntity(inputdata_t &inputdata);
 
-	bool IsFacingWithinTolerance(CBaseEntity *pEntity, CBaseEntity *pTarget, float flTolerance, float *pflDot = NULL);
+	bool IsFacingWithinTolerance(CBaseEntity *pEntity, CBaseEntity *pTarget, float flTolerance, float *pflDot = nullptr);
 
 	[[= ks::reflect::Key{ .name = "StartDisabled" } ]] bool m_bDisabled;				// When disabled, we do not think or fire outputs.
 	[[= ks::reflect::Key{ .name = "lookatname" } ]] string_t m_nLookAtName;			// Name of the entity that the target must point at to fire the OnTrue output.
@@ -113,12 +113,12 @@ void CPointAngleSensor::Activate(void)
 
 	if (!m_hTargetEntity)
 	{
-		m_hTargetEntity = gEntList.FindEntityByName( NULL, m_target );
+		m_hTargetEntity = gEntList.FindEntityByName( nullptr, m_target );
 	}
 
 	if (!m_hLookAtEntity && (m_nLookAtName != NULL_STRING))
 	{
-		m_hLookAtEntity = gEntList.FindEntityByName( NULL, m_nLookAtName );
+		m_hLookAtEntity = gEntList.FindEntityByName( nullptr, m_nLookAtName );
 		if (!m_hLookAtEntity)
 		{
 			DevMsg(1, "Angle sensor '%s' could not find look at entity '%s'.\n", GetDebugName(), STRING(m_nLookAtName));
@@ -147,19 +147,19 @@ bool CPointAngleSensor::IsFacingWithinTolerance(CBaseEntity *pEntity, CBaseEntit
 		*pflDot = 0;
 	}
 	
-	if ((pEntity == NULL) || (pTarget == NULL))
+	if ((pEntity == nullptr) || (pTarget == nullptr))
 	{
 		return(false);
 	}
 
 	Vector forward;
-	pEntity->GetVectors(&forward, NULL, NULL);
+	pEntity->GetVectors(&forward, nullptr, nullptr);
 
 	Vector dir;
 	// Use either our position relative to the target, or the target's raw facing
 	if ( HasSpawnFlags( SF_USE_TARGET_FACING ) )
 	{
-		pTarget->GetVectors(&dir, NULL, NULL);
+		pTarget->GetVectors(&dir, nullptr, nullptr);
 	}
 	else
 	{
@@ -190,13 +190,13 @@ bool CPointAngleSensor::IsFacingWithinTolerance(CBaseEntity *pEntity, CBaseEntit
 //-----------------------------------------------------------------------------
 void CPointAngleSensor::Think(void)
 {
-	if (m_hTargetEntity != NULL)
+	if (m_hTargetEntity != nullptr)
 	{
 		Vector forward;
-		m_hTargetEntity->GetVectors(&forward, NULL, NULL);
+		m_hTargetEntity->GetVectors(&forward, nullptr, nullptr);
 		m_TargetDir.Set(forward, this, this);
 
-		if (m_hLookAtEntity != NULL)
+		if (m_hLookAtEntity != nullptr)
 		{
 			//
 			// Check to see if the measure entity's forward vector has been within
@@ -262,16 +262,16 @@ void CPointAngleSensor::InputTest(inputdata_t &inputdata)
 //-----------------------------------------------------------------------------
 void CPointAngleSensor::InputSetTargetEntity(inputdata_t &inputdata)
 {
-	if ((inputdata.value.String() == NULL) || (inputdata.value.StringID() == NULL_STRING) || (inputdata.value.String()[0] == '\0'))
+	if ((inputdata.value.String() == nullptr) || (inputdata.value.StringID() == NULL_STRING) || (inputdata.value.String()[0] == '\0'))
 	{
 		m_target = NULL_STRING;
-		m_hTargetEntity = NULL;
+		m_hTargetEntity = nullptr;
 		SetNextThink( TICK_NEVER_THINK );
 	}
 	else
 	{
 		m_target = AllocPooledString(inputdata.value.String());
-		m_hTargetEntity = gEntList.FindEntityByName( NULL, m_target, NULL, inputdata.pActivator, inputdata.pCaller );
+		m_hTargetEntity = gEntList.FindEntityByName( nullptr, m_target, nullptr, inputdata.pActivator, inputdata.pCaller );
 		if (!m_bDisabled && m_hTargetEntity)
 		{
 			SetNextThink( gpGlobals->curtime );
@@ -413,12 +413,12 @@ void CPointProximitySensor::Activate( void )
 {
 	BaseClass::Activate();
 
-	if ( m_hTargetEntity == NULL )
+	if ( m_hTargetEntity == nullptr )
 	{
-		m_hTargetEntity = gEntList.FindEntityByName( NULL, m_target );
+		m_hTargetEntity = gEntList.FindEntityByName( nullptr, m_target );
 	}
 
-	if ( m_bDisabled == false && m_hTargetEntity != NULL )
+	if ( m_bDisabled == false && m_hTargetEntity != nullptr )
 	{
 		SetNextThink( gpGlobals->curtime );
 	}
@@ -429,16 +429,16 @@ void CPointProximitySensor::Activate( void )
 //-----------------------------------------------------------------------------
 void CPointProximitySensor::InputSetTargetEntity(inputdata_t &inputdata)
 {
-	if ((inputdata.value.String() == NULL) || (inputdata.value.StringID() == NULL_STRING) || (inputdata.value.String()[0] == '\0'))
+	if ((inputdata.value.String() == nullptr) || (inputdata.value.StringID() == NULL_STRING) || (inputdata.value.String()[0] == '\0'))
 	{
 		m_target = NULL_STRING;
-		m_hTargetEntity = NULL;
+		m_hTargetEntity = nullptr;
 		SetNextThink( TICK_NEVER_THINK );
 	}
 	else
 	{
 		m_target = AllocPooledString(inputdata.value.String());
-		m_hTargetEntity = gEntList.FindEntityByName( NULL, m_target, NULL, inputdata.pActivator, inputdata.pCaller );
+		m_hTargetEntity = gEntList.FindEntityByName( nullptr, m_target, nullptr, inputdata.pActivator, inputdata.pCaller );
 		if (!m_bDisabled && m_hTargetEntity)
 		{
 			SetNextThink( gpGlobals->curtime );
@@ -503,7 +503,7 @@ void CPointProximitySensor::Disable( void )
 //-----------------------------------------------------------------------------
 void CPointProximitySensor::Think( void )
 {
-	if ( m_hTargetEntity != NULL )
+	if ( m_hTargetEntity != nullptr )
 	{
 		Vector vecTestDir = ( m_hTargetEntity->GetAbsOrigin() - GetAbsOrigin() );
 		float flDist = VectorNormalize( vecTestDir );
@@ -512,7 +512,7 @@ void CPointProximitySensor::Think( void )
 		if ( HasSpawnFlags( SF_PROXIMITY_TEST_AGAINST_AXIS ) )
 		{
 			Vector vecDir;
-			GetVectors( &vecDir, NULL, NULL );
+			GetVectors( &vecDir, nullptr, nullptr );
 
 			float flDot = DotProduct( vecTestDir, vecDir );
 			flDist *= fabs( flDot );

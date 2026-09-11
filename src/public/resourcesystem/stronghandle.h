@@ -82,20 +82,20 @@ private:
 template< class T >
 FORCEINLINE CStrongHandle< T >::CStrongHandle()
 {
-	m_pBinding = NULL;
+	m_pBinding = nullptr;
 }
 
 template< class T >
 FORCEINLINE CStrongHandle< T >::CStrongHandle( const char *pFileName, const char *pSubResourceName )
 {
-	m_pBinding = NULL;
+	m_pBinding = nullptr;
 	Init( pFileName, pSubResourceName );
 }
 
 template< class T >
 FORCEINLINE CStrongHandle< T >::CStrongHandle( ResourceId_t nResourceId )
 {
-	m_pBinding = NULL;
+	m_pBinding = nullptr;
 	Init( nResourceId );
 }
 
@@ -103,14 +103,14 @@ FORCEINLINE CStrongHandle< T >::CStrongHandle( ResourceId_t nResourceId )
 template< class T >
 FORCEINLINE CStrongHandle< T >::CStrongHandle( ResourceHandleTyped_t hResource )
 {
-	m_pBinding = NULL;
+	m_pBinding = nullptr;
 	Init( hResource );
 }
 
 template< class T >
 CStrongHandle< T >::CStrongHandle( const CStrongHandle< T > &src )
 {
-	m_pBinding = NULL;
+	m_pBinding = nullptr;
 	Init( src );
 }
 
@@ -194,7 +194,7 @@ void CStrongHandle< T >::Shutdown()
 	if ( m_pBinding )
 	{
 		--m_pBinding->m_nRefCount;
-		m_pBinding = NULL;
+		m_pBinding = nullptr;
 	}
 }
 

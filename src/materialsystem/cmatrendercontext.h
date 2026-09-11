@@ -61,8 +61,8 @@ public:
 
 	void									SetFrameTime( float frameTime ) { m_FrameTime = frameTime; }
 
-	ICallQueue *							GetCallQueue() { return NULL; }
-	CMatCallQueue *							GetCallQueueInternal() { return NULL; }
+	ICallQueue *							GetCallQueue() { return nullptr; }
+	CMatCallQueue *							GetCallQueueInternal() { return nullptr; }
 
 	ITexture *								GetRenderTarget( void );
 	ITexture *								GetRenderTargetEx( int nRenderTargetID );
@@ -70,13 +70,13 @@ public:
 	IMaterialInternal*						GetCurrentMaterialInternal() const								{ return m_pCurrentMaterial;	}	
 	virtual void							SetCurrentMaterialInternal(IMaterialInternal* pCurrentMaterial)	{
 																												m_pCurrentMaterial = pCurrentMaterial;
-																												Assert( (m_pCurrentMaterial == NULL) || ((IMaterialInternal *)m_pCurrentMaterial)->IsRealTimeVersion() );
+																												Assert( (m_pCurrentMaterial == nullptr) || ((IMaterialInternal *)m_pCurrentMaterial)->IsRealTimeVersion() );
 																											}
 	IMaterial *								GetCurrentMaterial()											{ return GetCurrentMaterialInternal(); }
 	virtual void *							GetCurrentProxy()												{ return m_pCurrentProxyData; }
 	virtual void							SetCurrentProxy( void *pProxyData )								{ m_pCurrentProxyData = pProxyData; }
 
-	void									Bind( IMaterial *material, void *proxyData = NULL );
+	void									Bind( IMaterial *material, void *proxyData = nullptr );
 	void									BindLightmapPage( int lightmapPageID );
 	void									BindLocalCubemap( ITexture *pTexture );
 
@@ -153,7 +153,7 @@ public:
 	// debugging
 	virtual void							PrintfVA( char *fmt, va_list vargs );
 	virtual void							Printf( char *fmt, ... );
-	virtual	float							Knob( char *knobname, float *setvalue = NULL );
+	virtual	float							Knob( char *knobname, float *setvalue = nullptr );
 	
 protected:
 	enum MatrixStackFlags_t
@@ -295,7 +295,7 @@ public:
 	// Set the current texture that is a copy of the framebuffer.
 	void									SetFrameBufferCopyTexture( ITexture *pTexture, int textureIndex );
 
-	IMesh *									CreateStaticMesh( VertexFormat_t vertexFormat, const char *pTextureBudgetGroup, IMaterial * pMaterial = NULL, VertexStreamSpec_t *pStreamSpec = NULL );
+	IMesh *									CreateStaticMesh( VertexFormat_t vertexFormat, const char *pTextureBudgetGroup, IMaterial * pMaterial = nullptr, VertexStreamSpec_t *pStreamSpec = nullptr );
 	DELEGATE_TO_OBJECT_1V(					DestroyStaticMesh, IMesh *, g_pShaderDevice );
 	IMesh *									GetDynamicMesh( bool buffered, IMesh* pVertexOverride = 0, IMesh* pIndexOverride = 0, IMaterial *pAutoBind = 0 );
 	virtual IMesh*							GetDynamicMeshEx( VertexFormat_t vertexFormat, bool bBuffered = true, IMesh* pVertexOverride = 0, IMesh* pIndexOverride = 0, IMaterial *pAutoBind = 0 );
@@ -365,7 +365,7 @@ public:
 
 	int										CompareMaterialCombos( IMaterial *pMaterial1, IMaterial *pMaterial2, int lightMapID1, int lightMapID2 );
 
-	void									Bind( IMaterial *material, void *proxyData = NULL );
+	void									Bind( IMaterial *material, void *proxyData = nullptr );
 	void									BindLightmapPage( int lightmapPageID );
 	void									BindPaintTexture( ITexture *pTexture );
 
@@ -500,7 +500,7 @@ public:
 																		float src_texture_x1, float src_texture_y1,			// which texel you want to appear at
 																															// destx+width-1, desty+height-1
 																		int src_texture_width, int src_texture_height,		// needed for fixup
-																		void *pClientRenderable = NULL,
+																		void *pClientRenderable = nullptr,
 																		int nXDice = 1,
 																		int nYDice = 1 );
 
@@ -528,8 +528,8 @@ public:
 	void									SyncToken( const char *pToken );
 
 	void									BindLightmapTexture( ITexture *pLightmapTexture );
-	void									CopyRenderTargetToTextureEx( ITexture *pTexture, int nRenderTargetID, Rect_t *pSrcRect, Rect_t *pDstRect = NULL );
-	void									CopyTextureToRenderTargetEx( int nRenderTargetID, ITexture *pTexture, Rect_t *pSrcRect, Rect_t *pDstRect = NULL );
+	void									CopyRenderTargetToTextureEx( ITexture *pTexture, int nRenderTargetID, Rect_t *pSrcRect, Rect_t *pDstRect = nullptr );
+	void									CopyTextureToRenderTargetEx( int nRenderTargetID, ITexture *pTexture, Rect_t *pSrcRect, Rect_t *pDstRect = nullptr );
 	
 	DELEGATE_TO_OBJECT_2V(					SetFloatRenderingParameter, int, float, g_pShaderAPI );
 	DELEGATE_TO_OBJECT_2V(					SetIntRenderingParameter, int, int, g_pShaderAPI );
@@ -554,7 +554,7 @@ public:
 	DELEGATE_TO_OBJECT_2V(					SetShadowDepthBiasFactors, float, float, g_pShaderAPI );
 
 	void									BeginBatch( IMesh* pIndices );
-	void									BindBatch( IMesh* pVertices, IMaterial *pAutoBind = NULL );
+	void									BindBatch( IMesh* pVertices, IMaterial *pAutoBind = nullptr );
 	void									DrawBatch( MaterialPrimitiveType_t primType, int firstIndex, int numIndices );
 	void									EndBatch();
 
@@ -626,7 +626,7 @@ public:
 	//--------------------------------------------------------
 	virtual void							Printf( char *fmt, ... );
 	virtual void							PrintfVA( char *fmt, va_list vargs );;
-	virtual float							Knob( char *knobname, float *setvalue=NULL );	
+	virtual float							Knob( char *knobname, float *setvalue=nullptr );	
 
 
 
@@ -719,7 +719,7 @@ inline bool CMatRenderContext::IsRenderingPaint() const
 
 inline void CMatRenderContext::SetFlashlightState( const FlashlightState_t &state, const VMatrix &worldToTexture )
 {
-	SetFlashlightStateEx( state, worldToTexture, NULL );
+	SetFlashlightStateEx( state, worldToTexture, nullptr );
 }
 
 inline bool CMatRenderContext::IsCascadedShadowMapping() const

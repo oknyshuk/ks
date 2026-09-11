@@ -88,7 +88,7 @@ IMPLEMENT_REFLECT_CLIENTCLASS( C_MovieExplosion, DT_MovieExplosion, MovieExplosi
 // ------------------------------------------------------------------------- //
 C_MovieExplosion::C_MovieExplosion()
 {
-	m_pParticleMgr = NULL;
+	m_pParticleMgr = nullptr;
 }
 
 
@@ -105,7 +105,7 @@ void C_MovieExplosion::OnDataChanged(DataUpdateType_t updateType)
 
 	if(updateType == DATA_UPDATE_CREATED)
 	{
-		Start( ParticleMgr(), NULL );
+		Start( ParticleMgr(), nullptr );
 	}
 }
 

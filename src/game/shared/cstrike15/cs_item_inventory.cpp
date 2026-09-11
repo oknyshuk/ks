@@ -70,7 +70,7 @@ int	CCSInventoryManager::GetAllUsableItemsForSlot( int iClass, int iSlot, CUtlVe
 //-----------------------------------------------------------------------------
 CCSPlayerInventory *CCSInventoryManager::GetBagForPlayer( CSteamID &playerID, inventory_bags_t iBag )
 {
-	return NULL;
+	return nullptr;
 }
 
 #ifdef CLIENT_DLL
@@ -103,7 +103,7 @@ CCSPlayerInventory *CCSInventoryManager::GetLocalTFInventory( void )
 CScriptCreatedItem *CCSInventoryManager::GetBaseItemForClass( int iSlot )
 {
 	if ( iSlot < 0 || iSlot >= LOADOUT_POSITION_COUNT )
-		return NULL;
+		return nullptr;
 	return &m_pBaseLoadoutItems[iSlot];
 }
 

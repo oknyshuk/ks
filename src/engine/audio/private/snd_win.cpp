@@ -19,9 +19,9 @@ bool snd_firsttime = true;
  *  so it can unlock and free the data block after it has been played. 
  */ 
 #if USE_AUDIO_DEVICE_V1
-IAudioDevice *g_AudioDevice = NULL;
+IAudioDevice *g_AudioDevice = nullptr;
 #else
-IAudioDevice2 *g_AudioDevice = NULL;
+IAudioDevice2 *g_AudioDevice = nullptr;
 #endif
 
 /*
@@ -71,7 +71,7 @@ Returns a CAudioNULLDevice if nothing is found.
 #if USE_AUDIO_DEVICE_V1
 IAudioDevice *IAudioDevice::AutoDetectInit()
 {
-	IAudioDevice *pDevice = NULL;
+	IAudioDevice *pDevice = nullptr;
 
 	DevMsg( "Trying SDL Audio Interface\n" );
 	pDevice = Audio_CreateSDLAudioDevice();
@@ -122,6 +122,6 @@ void SNDDMA_Shutdown( void )
 {
 	g_AudioDevice->Shutdown();
 	delete g_AudioDevice;
-	g_AudioDevice = NULL;
+	g_AudioDevice = nullptr;
 }
 

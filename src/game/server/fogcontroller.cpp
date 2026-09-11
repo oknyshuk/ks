@@ -312,7 +312,7 @@ void CFogController::SetLerpValues( void )
 //-----------------------------------------------------------------------------
 void CFogSystem::LevelInitPreEntity( void )
 {
-	m_hMasterController = NULL;
+	m_hMasterController = nullptr;
 	ListenForGameEvent( "round_start" );
 }
 
@@ -322,13 +322,13 @@ void CFogSystem::LevelInitPreEntity( void )
 //-----------------------------------------------------------------------------
 void CFogSystem::InitMasterController( void )
 {
-	CFogController *pFogController = NULL;
+	CFogController *pFogController = nullptr;
 	do
 	{
 		pFogController = static_cast<CFogController*>( gEntList.FindEntityByClassname( pFogController, "env_fog_controller" ) );
 		if ( pFogController )
 		{
-			if ( m_hMasterController.Get() == NULL )
+			if ( m_hMasterController.Get() == nullptr )
 			{
 				m_hMasterController = pFogController;
 			}
@@ -371,7 +371,7 @@ void CFogSystem::LevelInitPostEntity( void )
 	if ( gpGlobals->maxClients == 1 )
 	{
 		CBasePlayer *pPlayer = UTIL_GetLocalPlayer();
-		if ( pPlayer && ( pPlayer->m_PlayerFog.m_hCtrl.Get() == NULL ) )
+		if ( pPlayer && ( pPlayer->m_PlayerFog.m_hCtrl.Get() == nullptr ) )
 		{
 			pPlayer->InitFogController();
 		}
@@ -457,7 +457,7 @@ void CFogTrigger::EndTouch( CBaseEntity *other )
 bool GetWorldFogParams( CBaseCombatCharacter *character, fogparams_t &fog )
 {
 
-	fogparams_t *targetFog = NULL;
+	fogparams_t *targetFog = nullptr;
 	if ( character && character->GetFogTrigger() )
 	{
 		CFogTrigger *trigger = dynamic_cast< CFogTrigger * >(character->GetFogTrigger());

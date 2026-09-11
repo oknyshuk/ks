@@ -192,7 +192,7 @@ Parse a token out of a string
 */
 char *COM_Parse( char *data )
 {
-	return ( char* )ParseFile( data, com_token, NULL );
+	return ( char* )ParseFile( data, com_token, nullptr );
 }
 
 
@@ -449,7 +449,7 @@ int    LoadFile( const char *filename, void **bufferptr )
 	}
 	else
 	{
-		*bufferptr = NULL;
+		*bufferptr = nullptr;
 	}
 	return length;
 }

@@ -49,7 +49,7 @@ void RocketPlayDocument::PopulateMapList()
 
     // Scan for .bsp files in the maps/ directory, same as VGUI's
     // CCreateMultiplayerGameServerPage::LoadMaps
-    FileFindHandle_t findHandle = NULL;
+    FileFindHandle_t findHandle = 0;
     const char *pszFilename = g_pFullFileSystem->FindFirst( "maps/*.bsp", &findHandle );
 
     Rml::String optionsRml;

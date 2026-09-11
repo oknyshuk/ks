@@ -40,7 +40,7 @@ char * SharedVarArgs(PRINTF_FORMAT_STRING const char *format, ...)
 char * BufPrintf(char *buf, int& len, PRINTF_FORMAT_STRING const char *fmt, ...)
 {
 	if (len <= 0)
-		return NULL;
+		return nullptr;
 
 	va_list argptr;
 
@@ -99,14 +99,14 @@ const char *SharedParse( const char *data )
 	s_shared_token[0] = 0;
 	
 	if (!data)
-		return NULL;
+		return nullptr;
 		
 // skip whitespace
 skipwhite:
 	while ( (c = *data) <= ' ')
 	{
 		if (c == 0)
-			return NULL;                    // end of file;
+			return nullptr;                    // end of file;
 		data++;
 	}
 	

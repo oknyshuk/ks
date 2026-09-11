@@ -88,16 +88,16 @@ void CLocatorTarget::Deactivate( bool bNoFade )
 		m_serialNumber = -1;
 		m_isActive = false;
 		m_frameLastUpdated = 0;
-		m_pIcon_onscreen = NULL;
-		m_pIcon_offscreen = NULL;
+		m_pIcon_onscreen = nullptr;
+		m_pIcon_offscreen = nullptr;
 		m_bDrawControllerButton = false;
 		m_bDrawControllerButtonOffscreen = false;
 		m_iEffectsFlags = LOCATOR_ICON_FX_NONE;
 		m_rgbaIconColor = Color( 255, 255, 255, 255 );
 		m_captionWide = 0;
 
-		m_pchDrawBindingName = NULL;
-		m_pchDrawBindingNameOffscreen = NULL;
+		m_pchDrawBindingName = nullptr;
+		m_pchDrawBindingNameOffscreen = nullptr;
 		m_widthScale_onscreen = 1.0f;
 		m_bOccluded = false;
 		m_alpha = 0;
@@ -216,7 +216,7 @@ void CLocatorTarget::SetCaptionText( const char *pszText, const char *pszParam )
 	if ( pszParam && pszParam[ 0 ] != '\0' )
 	{
 		wchar_t wszParamBuff[ 128 ];
-		wchar_t *pLocalizedParam = NULL;
+		wchar_t *pLocalizedParam = nullptr;
 
 		if ( pszParam[ 0 ] == '#' )
 		{
@@ -230,7 +230,7 @@ void CLocatorTarget::SetCaptionText( const char *pszText, const char *pszParam )
 		}
 
 		wchar_t wszTextBuff[ 128 ];
-		wchar_t *pLocalizedText = NULL;
+		wchar_t *pLocalizedText = nullptr;
 
 		if ( pszText[ 0 ] == '#' )
 		{
@@ -251,7 +251,7 @@ void CLocatorTarget::SetCaptionText( const char *pszText, const char *pszParam )
 	else
 	{
 		wchar_t wszTextBuff[ 128 ];
-		wchar_t *pLocalizedText = NULL;
+		wchar_t *pLocalizedText = nullptr;
 
 		if ( pszText[ 0 ] == '#' )
 		{
@@ -355,7 +355,7 @@ void CLocatorTarget::SetVguiTargetEdge( int nVguiEdge )
 
 void *CLocatorTarget::GetVguiTarget( void )
 {
-	return NULL;
+	return nullptr;
 }
 
 //------------------------------------
@@ -365,7 +365,7 @@ void CLocatorTarget::SetOnscreenIconTextureName( const char *pszTexture )
 		return;
 
 	m_szOnscreenTexture = pszTexture;
-	m_pIcon_onscreen = NULL; // Dirty the onscreen icon so that the Locator will look up the new icon by name.
+	m_pIcon_onscreen = nullptr; // Dirty the onscreen icon so that the Locator will look up the new icon by name.
 
 	m_pulseStart = gpGlobals->curtime;
 }
@@ -377,7 +377,7 @@ void CLocatorTarget::SetOffscreenIconTextureName( const char *pszTexture )
 		return;
 
 	m_szOffscreenTexture = pszTexture;
-	m_pIcon_offscreen = NULL; // Ditto
+	m_pIcon_offscreen = nullptr; // Ditto
 
 	m_pulseStart = gpGlobals->curtime;
 }
@@ -406,8 +406,8 @@ void CLocatorTarget::SetBinding( const char *pszBinding )
 	m_bWasControllerLast = bIsControllerNow;
 
 	m_szBinding = pszBinding;
-	m_pIcon_onscreen = NULL; // Dirty the onscreen icon so that the Locator will look up the new icon by name.
-	m_pIcon_offscreen = NULL; // ditto.
+	m_pIcon_onscreen = nullptr; // Dirty the onscreen icon so that the Locator will look up the new icon by name.
+	m_pIcon_offscreen = nullptr; // ditto.
 	m_flNextBindingTick = gpGlobals->curtime + 0.75f;
 
 	// Get a list of all the keys bound to these actions
@@ -455,7 +455,7 @@ const char *CLocatorTarget::UseBindingImage( char *pchIconTextureName, size_t bu
 			return "#GameUI_Icons_NONE";
 		}
 
-		return NULL;
+		return nullptr;
 	}
 
 	// Cycle through the list of binds at a rate of 2 per second
@@ -494,47 +494,47 @@ const char *CLocatorTarget::UseBindingImage( char *pchIconTextureName, size_t bu
 	if ( Q_strcmp( pchBinding, "MOUSE1" ) == 0 )
 	{
 		Q_strncpy( pchIconTextureName, "icon_mouseLeft", bufSize );
-		return NULL;
+		return nullptr;
 	}
 	else if ( Q_strcmp( pchBinding, "MOUSE2" ) == 0 )
 	{
 		Q_strncpy( pchIconTextureName, "icon_mouseRight", bufSize );
-		return NULL;
+		return nullptr;
 	}
 	else if ( Q_strcmp( pchBinding, "MOUSE3" ) == 0 )
 	{
 		Q_strncpy( pchIconTextureName, "icon_mouseThree", bufSize );
-		return NULL;
+		return nullptr;
 	}
 	else if ( Q_strcmp( pchBinding, "MWHEELUP" ) == 0 )
 	{
 		Q_strncpy( pchIconTextureName, "icon_mouseWheel_up", bufSize );
-		return NULL;
+		return nullptr;
 	}
 	else if ( Q_strcmp( pchBinding, "MWHEELDOWN" ) == 0 )
 	{
 		Q_strncpy( pchIconTextureName, "icon_mouseWheel_down", bufSize );
-		return NULL;
+		return nullptr;
 	}
 	else if ( Q_strcmp( pchBinding, "UPARROW" ) == 0 )
 	{
 		Q_strncpy( pchIconTextureName, "icon_key_up", bufSize );
-		return NULL;
+		return nullptr;
 	}
 	else if ( Q_strcmp( pchBinding, "LEFTARROW" ) == 0 )
 	{
 		Q_strncpy( pchIconTextureName, "icon_key_left", bufSize );
-		return NULL;
+		return nullptr;
 	}
 	else if ( Q_strcmp( pchBinding, "DOWNARROW" ) == 0 )
 	{
 		Q_strncpy( pchIconTextureName, "icon_key_down", bufSize );
-		return NULL;
+		return nullptr;
 	}
 	else if ( Q_strcmp( pchBinding, "RIGHTARROW" ) == 0 )
 	{
 		Q_strncpy( pchIconTextureName, "icon_key_right", bufSize );
-		return NULL;
+		return nullptr;
 	}
 	else if ( Q_strcmp( pchBinding, "SEMICOLON" ) == 0 || 
 		Q_strcmp( pchBinding, "INS" ) == 0 || 
@@ -596,7 +596,7 @@ static CLocatorTarget *Locator_FindTargetByHandle( int hTarget )
 		}
 	}
 
-	return NULL;
+	return nullptr;
 }
 
 int Locator_AddTarget()

@@ -66,8 +66,8 @@ public:
 class CItemGeneration
 {
 public:
-	CBaseEntity* GenerateItemFromScriptData( void*, const Vector&, const QAngle&, const char* ) { return NULL; }
-	CBaseEntity* GenerateRandomItem( void*, const Vector&, const QAngle& ) { return NULL; }
+	CBaseEntity* GenerateItemFromScriptData( void*, const Vector&, const QAngle&, const char* ) { return nullptr; }
+	CBaseEntity* GenerateRandomItem( void*, const Vector&, const QAngle& ) { return nullptr; }
 };
 inline CItemGeneration* ItemGeneration() { static CItemGeneration s; return &s; }
 
@@ -122,8 +122,8 @@ public:
 };
 
 // Kill eater attribute pair stubs
-inline const CEconItemAttributeDefinition* GetKillEaterAttrPair_Score( int ) { return NULL; }
-inline const CEconItemAttributeDefinition* GetKillEaterAttrPair_Type( int ) { return NULL; }
+inline const CEconItemAttributeDefinition* GetKillEaterAttrPair_Score( int ) { return nullptr; }
+inline const CEconItemAttributeDefinition* GetKillEaterAttrPair_Type( int ) { return nullptr; }
 
 // Music definition stub
 class CEconMusicDefinition
@@ -147,7 +147,7 @@ public:
 	const char* GetMapGroup() const { return ""; }
 	const char* GetMap() const { return ""; }
 	int GetTargetTeam() const { return 0; }
-	KeyValues* GetStringTokens() const { return NULL; }
+	KeyValues* GetStringTokens() const { return nullptr; }
 	const char* GetShortNameLocToken() const { return ""; }
 	const CUtlVector<int>& GetQuestPoints() const { static CUtlVector<int> empty; return empty; }
 };
@@ -206,7 +206,7 @@ inline CEconItemSchema& GEconItemSchema() { return *GetItemSchema(); }
 class CEconItemView
 {
 public:
-	CEconItemView() : m_pItemDef( NULL ), m_nItemDefIndex( 0 ) {}
+	CEconItemView() : m_pItemDef( nullptr ), m_nItemDefIndex( 0 ) {}
 
 	// Initialize from a definition name (looks up in schema)
 	void Init( const char *pszDefName )
@@ -236,26 +236,26 @@ public:
 	// Always returns non-NULL (fallback to static default for backwards compatibility with stubs)
 	CEconItemDefinition *GetItemDefinition() const;
 	CEconItemDefinition *GetStaticData() const;
-	const char *GetCustomDesc() const { return NULL; }
-	bool IsValid() const { return m_pItemDef != NULL; }
+	const char *GetCustomDesc() const { return nullptr; }
+	bool IsValid() const { return m_pItemDef != nullptr; }
 	uint32 GetTauntID() const { return 0; }
-	const CPaintKit *GetCustomPaintKit() const { return NULL; }
+	const CPaintKit *GetCustomPaintKit() const { return nullptr; }
 	int GetCustomPaintKitIndex() const { return 0; }
 	int GetRarity() const { return 0; }
 	const wchar_t *GetItemName() const { return L""; }
 	uint32 GetStickerAttributeBySlotIndexInt( int, int, uint32 defVal ) const { return defVal; }
-	const char *GetMagazineModel() const { return NULL; }
-	const char *GetScopeLensMaskModel() const { return NULL; }
-	const char *GetUidModel() const { return NULL; }
-	const char *GetStatTrakModelByType( int ) const { return NULL; }
-	const char *GetCustomName() const { return NULL; }
+	const char *GetMagazineModel() const { return nullptr; }
+	const char *GetScopeLensMaskModel() const { return nullptr; }
+	const char *GetUidModel() const { return nullptr; }
+	const char *GetStatTrakModelByType( int ) const { return nullptr; }
+	const char *GetCustomName() const { return nullptr; }
 	void GetKillEaterTypes( CUtlSortVector<uint32>& ) const {}
 	int GetKillEaterValueByType( int ) const { return -1; }
 	uint32 GetAccountID() const { return 0; }
 	int GetNumSupportedStickerSlots() const { return 0; }
 	bool ItemHasAnyStickersApplied() const { return false; }
-	IMaterial *GetStickerIMaterialBySlotIndex( int, bool ) const { return NULL; }
-	const char *GetStickerWorldModelBoneParentNameBySlotIndex( int ) const { return NULL; }
+	IMaterial *GetStickerIMaterialBySlotIndex( int, bool ) const { return nullptr; }
+	const char *GetStickerWorldModelBoneParentNameBySlotIndex( int ) const { return nullptr; }
 	Vector GetStickerSlotWorldProjectionStartBySlotIndex( int ) const { return vec3_origin; }
 	Vector GetStickerSlotWorldProjectionEndBySlotIndex( int ) const { return vec3_origin; }
 	uint64 GetFauxItemIDFromDefinitionIndex() const { return m_nItemDefIndex; }
@@ -428,19 +428,19 @@ public:
 
 
 
-	virtual int		GetPrimaryClipSize( const CEconItemView* pWepView = NULL, int nAlt = 0, float flScale = 1.0f ) const { return 0; }
-	virtual int		GetSecondaryClipSize( const CEconItemView* pWepView = NULL, int nAlt = 0, float flScale = 1.0f ) const { return 0; }
-	virtual int		GetDefaultPrimaryClipSize( const CEconItemView* pWepView = NULL, int nAlt = 0, float flScale = 1.0f ) const { return 0; }
-	virtual int		GetDefaultSecondaryClipSize( const CEconItemView* pWepView = NULL, int nAlt = 0, float flScale = 1.0f ) const{ return 0; }
-	virtual int		GetPrimaryReserveAmmoMax( const CEconItemView* pWepView = NULL, int nAlt = 0, float flScale = 1.0f ) const{ return 0; }
-	virtual int		GetSecondaryReserveAmmoMax( const CEconItemView* pWepView = NULL, int nAlt = 0, float flScale = 1.0f ) const{ return 0; }
+	virtual int		GetPrimaryClipSize( const CEconItemView* pWepView = nullptr, int nAlt = 0, float flScale = 1.0f ) const { return 0; }
+	virtual int		GetSecondaryClipSize( const CEconItemView* pWepView = nullptr, int nAlt = 0, float flScale = 1.0f ) const { return 0; }
+	virtual int		GetDefaultPrimaryClipSize( const CEconItemView* pWepView = nullptr, int nAlt = 0, float flScale = 1.0f ) const { return 0; }
+	virtual int		GetDefaultSecondaryClipSize( const CEconItemView* pWepView = nullptr, int nAlt = 0, float flScale = 1.0f ) const{ return 0; }
+	virtual int		GetPrimaryReserveAmmoMax( const CEconItemView* pWepView = nullptr, int nAlt = 0, float flScale = 1.0f ) const{ return 0; }
+	virtual int		GetSecondaryReserveAmmoMax( const CEconItemView* pWepView = nullptr, int nAlt = 0, float flScale = 1.0f ) const{ return 0; }
 
-	const char* GetWorldModel( const CEconItemView* pWepView = NULL, int iTeam = 0 ) const;
-	const char* GetViewModel( const CEconItemView* pWepView = NULL, int iTeam = 0 ) const;
-	const char* GetWorldDroppedModel( const CEconItemView* pWepView = NULL, int iTeam = 0 ) const;
-	const char* GetPrimaryAmmo( const CEconItemView* pWepView = NULL ) const;
+	const char* GetWorldModel( const CEconItemView* pWepView = nullptr, int iTeam = 0 ) const;
+	const char* GetViewModel( const CEconItemView* pWepView = nullptr, int iTeam = 0 ) const;
+	const char* GetWorldDroppedModel( const CEconItemView* pWepView = nullptr, int iTeam = 0 ) const;
+	const char* GetPrimaryAmmo( const CEconItemView* pWepView = nullptr ) const;
 	
-	int GetPrimaryAmmoType( const CEconItemView* pWepView = NULL ) const;
+	int GetPrimaryAmmoType( const CEconItemView* pWepView = nullptr ) const;
 
 // CLIENT DLL
 	// Sprite data, read from the data file

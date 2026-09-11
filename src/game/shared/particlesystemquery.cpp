@@ -123,7 +123,7 @@ public:
 		RayTracingResult *rslt_out, int32 skip_id ) const ;
 
 	virtual Vector GetLocalPlayerPos( void );
-	virtual void GetLocalPlayerEyeVectors( Vector *pForward, Vector *pRight = NULL, Vector *pUp = NULL );
+	virtual void GetLocalPlayerEyeVectors( Vector *pForward, Vector *pRight = nullptr, Vector *pUp = nullptr );
 
 	virtual Vector GetCurrentViewOrigin();
 
@@ -307,7 +307,7 @@ void CParticleSystemQuery::GetRandomPointsOnControllingObjectHitBox(
 #ifndef GAME_DLL
 
 	EHANDLE *phMoveParent = reinterpret_cast<EHANDLE *> ( pParticles->ControlPoint( nControlPointNumber ).m_pObject );
-	CBaseEntity *pMoveParent = NULL;
+	CBaseEntity *pMoveParent = nullptr;
 	if ( phMoveParent )
 	{
 		pMoveParent = *( phMoveParent );
@@ -526,7 +526,7 @@ void CParticleSystemQuery::GetClosestControllingObjectHitBox(
 #ifndef GAME_DLL
 
 	EHANDLE *phMoveParent = reinterpret_cast<EHANDLE *> ( pParticles->ControlPoint( nControlPointNumber ).m_pObject );
-	CBaseEntity *pMoveParent = NULL;
+	CBaseEntity *pMoveParent = nullptr;
 	if ( phMoveParent )
 	{
 		pMoveParent = *( phMoveParent );
@@ -650,7 +650,7 @@ int CParticleSystemQuery::GetControllingObjectHitBoxInfo(
 	s_BoneMutex.Lock();
 
 	EHANDLE *phMoveParent = reinterpret_cast<EHANDLE *> ( pParticles->ControlPoint( nControlPointNumber ).m_pObject );
-	CBaseEntity *pMoveParent = NULL;
+	CBaseEntity *pMoveParent = nullptr;
 	if ( phMoveParent )
 	{
 		pMoveParent = *( phMoveParent );
@@ -736,7 +736,7 @@ bool CParticleSystemQuery::IsPointInControllingObjectHitBox(
 #ifndef GAME_DLL
 
 	EHANDLE *phMoveParent = reinterpret_cast<EHANDLE *> ( pParticles->ControlPoint( nControlPointNumber ).m_pObject );
-	CBaseEntity *pMoveParent = NULL;
+	CBaseEntity *pMoveParent = nullptr;
 	if ( phMoveParent )
 	{
 		pMoveParent = *( phMoveParent );
@@ -819,7 +819,7 @@ void CParticleSystemQuery::GetControllingObjectOBBox(
 #ifndef GAME_DLL
 
 	EHANDLE *phMoveParent = reinterpret_cast<EHANDLE *> ( pParticles->ControlPoint( nControlPointNumber ).m_pObject );
-	CBaseEntity *pMoveParent = NULL;
+	CBaseEntity *pMoveParent = nullptr;
 	if ( phMoveParent )
 	{
 		pMoveParent = *( phMoveParent );
@@ -1065,7 +1065,7 @@ void *CParticleSystemQuery::GetModel( char const *pMdlName )
  	//pMdlName = "models/weapons/shells/shell_pistol.mdl";
 	return ( void * )pModel;
 #else
-	return NULL;
+	return nullptr;
 #endif
 }
 
@@ -1084,7 +1084,7 @@ void CParticleSystemQuery::PreSimulate( )
 void CParticleSystemQuery::PostSimulate( ) 
 {
 #if defined( CLIENT_DLL )
-	TProjectedTextureInfo *pInfo = NULL;
+	TProjectedTextureInfo *pInfo = nullptr;
 
 	while( m_ProjectedInfoAdds.PopItem( &pInfo ) == true )
 	{
@@ -1100,7 +1100,7 @@ void CParticleSystemQuery::PostSimulate( )
 			i--;
 			continue;
 		}
-		if ( m_ActiveProjectedInfos[ i ]->m_pEntity == NULL )
+		if ( m_ActiveProjectedInfos[ i ]->m_pEntity == nullptr )
 		{
 			m_ActiveProjectedInfos[ i ]->m_pEntity = C_EnvProjectedTexture::Create();
 		}
@@ -1119,7 +1119,7 @@ void CParticleSystemQuery::UpdateProjectedTexture( const int nParticleID, IMater
 {
 #if defined( CLIENT_DLL )
 	TProjectedTextureInfo *pInfo = reinterpret_cast< TProjectedTextureInfo * >( pUserVar );
-	if ( pInfo == NULL )
+	if ( pInfo == nullptr )
 	{
 		pUserVar = pInfo = new TProjectedTextureInfo;
 		memset( pInfo, 0, sizeof( *pInfo ) );

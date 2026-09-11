@@ -209,26 +209,26 @@ void C_ClientRagdoll::OnRestore( void )
 {
 	CStudioHdr *hdr = GetModelPtr();
 
-	if ( hdr == NULL )
+	if ( hdr == nullptr )
 	{
 		const char *pModelName = STRING( GetModelName() );
 		SetModel( pModelName );
 
 		hdr = GetModelPtr();
 
-		if ( hdr == NULL )
+		if ( hdr == nullptr )
 			return;
 	}
 	
-	if ( m_pRagdoll == NULL )
+	if ( m_pRagdoll == nullptr )
 		 return;
 
 	ragdoll_t *pRagdollT = m_pRagdoll->GetRagdoll();
 
-	if ( pRagdollT == NULL || pRagdollT->list[0].pObject == NULL )
+	if ( pRagdollT == nullptr || pRagdollT->list[0].pObject == nullptr )
 	{
 		m_bReleaseRagdoll = true;
-		m_pRagdoll = NULL;
+		m_pRagdoll = nullptr;
 		Assert( !"Attempted to restore a ragdoll without physobjects!" );
 		return;
 	}
@@ -246,10 +246,10 @@ void C_ClientRagdoll::OnRestore( void )
 		SetEffectEntity( pNewFireChild );
 	}
 
-	VPhysicsSetObject( NULL );
+	VPhysicsSetObject( nullptr );
 	VPhysicsSetObject( pRagdollT->list[0].pObject );
 
-	SetupBones( NULL, -1, BONE_USED_BY_ANYTHING, gpGlobals->curtime );
+	SetupBones( nullptr, -1, BONE_USED_BY_ANYTHING, gpGlobals->curtime );
 
 	pRagdollT->list[0].parentIndex = -1;
 	pRagdollT->list[0].originParentSpace.Init();
@@ -325,7 +325,7 @@ void C_ClientRagdoll::HandleAnimatedFriction( void )
 	if ( m_iFrictionAnimState == RAGDOLL_FRICTION_OFF )
 		 return;
 
-	ragdoll_t *pRagdollT = NULL;
+	ragdoll_t *pRagdollT = nullptr;
 	int iBoneCount = 0;
 
 	if ( m_pRagdoll )
@@ -335,7 +335,7 @@ void C_ClientRagdoll::HandleAnimatedFriction( void )
 
 	}
 
-	if ( pRagdollT == NULL )
+	if ( pRagdollT == nullptr )
 		 return;
 	
 	switch ( m_iFrictionAnimState )
@@ -501,14 +501,14 @@ float C_ClientRagdoll::LastBoneChangedTime()
 IClientModelRenderable*	C_ClientRagdoll::GetClientModelRenderable()
 {
 	if ( !BaseClass::GetClientModelRenderable() )
-		return NULL;
+		return nullptr;
 
 	// NOTE: This is because of code in SetupWeights, which calls SetViewTarget.
 	// The view target is a per-instance piece of state which is not yet
 	// supported by the model fast path. Once it is, we can eliminate this 
 	// code and make it so ragdolls always use the fast path
 	if ( m_iEyeAttachment > 0 )
-		return NULL;
+		return nullptr;
 	return this;
 }
 
@@ -627,8 +627,8 @@ C_BaseAnimating::C_BaseAnimating() :
 	m_bCanUseFastPath = false;
 	m_bIsUsingRelativeLighting = false;
 	m_bIsStaticProp = false;
-	m_pRagdoll = NULL;
-	m_pClientsideRagdoll = NULL;
+	m_pRagdoll = nullptr;
+	m_pClientsideRagdoll = nullptr;
 	m_builtRagdoll = false;
 
 	int i;
@@ -642,19 +642,19 @@ C_BaseAnimating::C_BaseAnimating() :
 	m_iMostRecentModelBoneCounter = 0xFFFFFFFF;
 	m_iMostRecentBoneSetupRequest = g_iPreviousBoneCounter - 1;
 	m_flLastBoneSetupTime = -FLT_MAX;
-	m_pNextForThreadedBoneSetup = NULL;
+	m_pNextForThreadedBoneSetup = nullptr;
 
 	m_vecPreRagdollMins = vec3_origin;
 	m_vecPreRagdollMaxs = vec3_origin;
 
 	m_bStoreRagdollInfo = false;
-	m_pRagdollInfo = NULL;
+	m_pRagdollInfo = nullptr;
 
 	m_flPlaybackRate = 1.0f;
 
 	m_nEventSequence = -1;
 
-	m_pIk = NULL;
+	m_pIk = nullptr;
 
 	// Assume false.  Derived classes might fill in a receive table entry
 	// and in that case this would show up as true
@@ -672,7 +672,7 @@ C_BaseAnimating::C_BaseAnimating() :
 
 	m_iEyeAttachment = 0;
 
-	m_pStudioHdr = NULL;
+	m_pStudioHdr = nullptr;
 	m_hStudioHdr = MDLHANDLE_INVALID;
 
 	m_bReceivedSequence = false;
@@ -682,7 +682,7 @@ C_BaseAnimating::C_BaseAnimating() :
 	m_flOldModelScale = 0.0f;
 	m_vecRenderOriginOverride = vec3_invalid;
 
-	m_pJiggleBones = NULL;
+	m_pJiggleBones = nullptr;
 	m_isJiggleBonesEnabled = true;
 	AddToEntityList(ENTITY_LIST_SIMULATE);
 	m_bForceRTTShadows = false;
@@ -728,7 +728,7 @@ C_BaseAnimating::~C_BaseAnimating()
 	if ( m_pJiggleBones )
 	{
 		delete m_pJiggleBones;
-		m_pJiggleBones = NULL;
+		m_pJiggleBones = nullptr;
 	}
 
 	// Kill off anything bone attached to us.
@@ -887,7 +887,7 @@ void C_BaseAnimating::LockStudioHdr()
 		if ( m_hStudioHdr != MDLHANDLE_INVALID )
 		{
 			const studiohdr_t *pStudioHdr = mdlcache->LockStudioHdr( m_hStudioHdr );
-			CStudioHdr *pStudioHdrContainer = NULL;
+			CStudioHdr *pStudioHdrContainer = nullptr;
 			if ( !m_pStudioHdr )
 			{
 				if ( pStudioHdr )
@@ -906,7 +906,7 @@ void C_BaseAnimating::LockStudioHdr()
 				pStudioHdrContainer = m_pStudioHdr;
 			}
 
-			Assert( ( pStudioHdr == NULL && pStudioHdrContainer == NULL ) || pStudioHdrContainer->GetRenderHdr() == pStudioHdr );
+			Assert( ( pStudioHdr == nullptr && pStudioHdrContainer == nullptr ) || pStudioHdrContainer->GetRenderHdr() == pStudioHdr );
 
 			if ( pStudioHdrContainer && pStudioHdrContainer->GetVirtualModel() )
 			{
@@ -949,19 +949,19 @@ CStudioHdr *C_BaseAnimating::OnNewModel()
 	if (m_pJiggleBones)
 	{
 		delete m_pJiggleBones;
-		m_pJiggleBones = NULL;
+		m_pJiggleBones = nullptr;
 	}
 
 	if ( !GetModel() )
-		return NULL;
+		return nullptr;
 
 	LockStudioHdr();
 
 	UpdateRelevantInterpolatedVars();
 
 	CStudioHdr *hdr = GetModelPtr();
-	if (hdr == NULL)
-		return NULL;
+	if (hdr == nullptr)
+		return nullptr;
 	m_bIsStaticProp = ( hdr->flags() & STUDIOHDR_FLAGS_STATIC_PROP ) ? true : false;
 
 	// Can we use the model fast path?
@@ -983,7 +983,7 @@ CStudioHdr *C_BaseAnimating::OnNewModel()
 	if ( m_pBoneMergeCache )
 	{
 		delete m_pBoneMergeCache;
-		m_pBoneMergeCache = NULL;
+		m_pBoneMergeCache = nullptr;
 		// recreated in BuildTransformations
 	}
 
@@ -1002,7 +1002,7 @@ CStudioHdr *C_BaseAnimating::OnNewModel()
 	if (m_pIk)
 	{
 		delete m_pIk;
-		m_pIk = NULL;
+		m_pIk = nullptr;
 	}
 
 	// Don't reallocate unless a different size. 
@@ -1177,7 +1177,7 @@ void C_BaseAnimating::GetBoneTransform( int iBone, matrix3x4_t &pBoneToWorld )
 	{
 		if ( !IsBoneCacheValid() )
 		{
-			SetupBones( NULL, -1, BONE_USED_BY_ANYTHING, gpGlobals->curtime );
+			SetupBones( nullptr, -1, BONE_USED_BY_ANYTHING, gpGlobals->curtime );
 		}
 		GetCachedBoneMatrix( iBone, pBoneToWorld );
 	}
@@ -1328,7 +1328,7 @@ void C_BaseAnimating::ParseModelEffects( KeyValues *modelKeyValues )
 					if ( hModelEffect )
 					{
 						if ( iAttachType == PATTACH_WORLDORIGIN )
-							ParticleProp()->AddControlPoint( hModelEffect, iControlPoint, NULL, (ParticleAttachment_t)iAttachType, NULL, vecOffset );
+							ParticleProp()->AddControlPoint( hModelEffect, iControlPoint, nullptr, (ParticleAttachment_t)iAttachType, nullptr, vecOffset );
 						else
 							ParticleProp()->AddControlPoint( hModelEffect, iControlPoint, this, (ParticleAttachment_t)iAttachType, pszAttachment, vecOffset );
 					}
@@ -1366,7 +1366,7 @@ float C_BaseAnimating::GetPoseParameterRaw( int iPoseParameter )
 {
 	CStudioHdr *pStudioHdr = GetModelPtr();
 
-	if ( pStudioHdr == NULL )
+	if ( pStudioHdr == nullptr )
 		return 0.0f;
 
 	if ( pStudioHdr->GetNumPoseParameters() < iPoseParameter )
@@ -1428,14 +1428,14 @@ void C_BaseAnimating::DisableJiggleBones( void )
 	if ( m_pJiggleBones )
 	{
 		delete m_pJiggleBones;
-		m_pJiggleBones = NULL;
+		m_pJiggleBones = nullptr;
 	}
 }
 
 void C_BaseAnimating::ScriptSetPoseParameter( const char *szName, float fValue )
 {
 	CStudioHdr *pHdr = GetModelPtr();
-	if ( pHdr == NULL )
+	if ( pHdr == nullptr )
 		return;
 
 	int iPoseParam = LookupPoseParameter( pHdr, szName );
@@ -1482,7 +1482,7 @@ void C_BaseAnimating::CalcBoneMerge( int boneMask )
 		else
 		{
 			delete m_pBoneMergeCache;
-			m_pBoneMergeCache = NULL;
+			m_pBoneMergeCache = nullptr;
 		}
 	}
 }
@@ -1587,7 +1587,7 @@ void C_BaseAnimating::BuildTransformations( CStudioHdr *hdr, BoneVector *pos, Bo
 				if ( m_pJiggleBones )
 				{
 					delete m_pJiggleBones;
-					m_pJiggleBones = NULL;
+					m_pJiggleBones = nullptr;
 				}
 			}
 
@@ -1725,7 +1725,7 @@ void C_BaseAnimating::CreateUnragdollInfo( C_BaseAnimating *pRagdoll )
 	}
 
 	// Now do the current bone setup
-	pRagdoll->SetupBones( NULL, -1, BONE_USED_BY_ANYTHING, gpGlobals->curtime );
+	pRagdoll->SetupBones( nullptr, -1, BONE_USED_BY_ANYTHING, gpGlobals->curtime );
 
 	matrix3x4_t parentTransform;
 	QAngle newAngles( 0, pRagdoll->GetAbsAngles()[YAW], 0 );
@@ -2135,7 +2135,7 @@ bool C_BaseAnimating::CalcAttachments()
 
 
 	// Make sure m_CachedBones is valid.
-	return SetupBones( NULL, -1, BONE_USED_BY_ATTACHMENT, gpGlobals->curtime );
+	return SetupBones( nullptr, -1, BONE_USED_BY_ATTACHMENT, gpGlobals->curtime );
 }
 
 //-----------------------------------------------------------------------------
@@ -2223,10 +2223,10 @@ bool C_BaseAnimating::ComputeLightingOrigin( int nAttachmentIndex, Vector modelL
 {
 	if ( m_bUseParentLightingOrigin )
 	{
- 		if ( GetMoveParent() != NULL )
+ 		if ( GetMoveParent() != nullptr )
 		{
 			C_BaseAnimating *attachmentParent = GetMoveParent()->GetBaseAnimating();
-			if ( NULL != attachmentParent )
+			if ( nullptr != attachmentParent )
 			{
 				if ( attachmentParent->ComputeLightingOrigin(nAttachmentIndex, attachmentParent->GetModelPtr()->illumposition(), attachmentParent->RenderableToWorldTransform(), transformedLightingCenter) )
 					return true;
@@ -2361,7 +2361,7 @@ public:
 				{
 					return false;
 				}
-			} while ( ( pEntity = pEntity->GetMoveParent() ) != NULL );
+			} while ( ( pEntity = pEntity->GetMoveParent() ) != nullptr );
 
 			return true;
 		}
@@ -2400,7 +2400,7 @@ void C_BaseAnimating::UpdateIKLocks( float currentTime )
 		if (pTarget->GetOwner() != -1)
 		{
 			C_BaseEntity *pOwner = cl_entitylist->GetEnt( pTarget->GetOwner() );
-			if (pOwner != NULL)
+			if (pOwner != nullptr)
 			{
 				pTarget->UpdateOwner( pOwner->entindex(), pOwner->GetAbsOrigin(), pOwner->GetAbsAngles() );
 			}				
@@ -2435,7 +2435,7 @@ void C_BaseAnimating::CalculateIKLocks( float currentTime )
 
 	// FIXME: trace based on gravity or trace based on angles?
 	Vector up;
-	AngleVectors( GetRenderAngles(), NULL, NULL, &up );
+	AngleVectors( GetRenderAngles(), nullptr, nullptr, &up );
 
 	for (int i = 0; i < targetCount; i++)
 	{
@@ -2480,12 +2480,12 @@ void C_BaseAnimating::CalculateIKLocks( float currentTime )
 
 		case IK_ATTACHMENT:
 			{
-				C_BaseEntity *pEntity = NULL;
+				C_BaseEntity *pEntity = nullptr;
 				float flDist = pTarget->est.radius;
 
 				// FIXME: make entity finding sticky!
 				// FIXME: what should the radius check be?
-				for ( CEntitySphereQuery sphere( pTarget->est.pos, 64, 0, PARTITION_CLIENT_IK_ATTACHMENT ); ( pEntity = sphere.GetCurrentEntity() ) != NULL; sphere.NextEntity() )
+				for ( CEntitySphereQuery sphere( pTarget->est.pos, 64, 0, PARTITION_CLIENT_IK_ATTACHMENT ); ( pEntity = sphere.GetCurrentEntity() ) != nullptr; sphere.NextEntity() )
 				{
 					C_BaseAnimating *pAnim = pEntity->GetBaseAnimating( );
 					if (!pAnim)
@@ -2609,8 +2609,8 @@ void C_BaseAnimating::SetupBonesOnBaseAnimating( C_BaseAnimating *&pBaseAnimatin
 	while ( pCurrent )
 	{
 		pNext = pCurrent->m_pNextForThreadedBoneSetup;
-		pCurrent->m_pNextForThreadedBoneSetup = NULL;
-		pCurrent->SetupBones( NULL, -1, -1, gpGlobals->curtime );
+		pCurrent->m_pNextForThreadedBoneSetup = nullptr;
+		pCurrent->SetupBones( nullptr, -1, -1, gpGlobals->curtime );
 		pCurrent = pNext;
 	}
 
@@ -2704,11 +2704,11 @@ void C_BaseAnimating::ThreadedBoneSetup()
 			{
 				C_BaseAnimating *pAnimating = g_PreviousBoneSetups[i];
 				C_BaseAnimating *pDependancy;
-				if ( (pDependancy = pAnimating->GetBoneSetupDependancy()) != NULL )
+				if ( (pDependancy = pAnimating->GetBoneSetupDependancy()) != nullptr )
 				{
-					Assert( pAnimating->m_pNextForThreadedBoneSetup == NULL );
+					Assert( pAnimating->m_pNextForThreadedBoneSetup == nullptr );
 					C_BaseAnimating *pNextDependancy;
-					while ( (pNextDependancy = pDependancy->GetBoneSetupDependancy()) != NULL )
+					while ( (pNextDependancy = pDependancy->GetBoneSetupDependancy()) != nullptr )
 					{
 						pDependancy = pNextDependancy;
 					}
@@ -2746,7 +2746,7 @@ void C_BaseAnimating::ThreadedBoneSetup()
 #ifdef _DEBUG
 			for ( int i = test.Count() - 1; i > 0; i-- )
 			{
-				Assert( test[i]->m_pNextForThreadedBoneSetup == NULL );
+				Assert( test[i]->m_pNextForThreadedBoneSetup == nullptr );
 			}
 #endif
 
@@ -2833,7 +2833,7 @@ bool C_BaseAnimating::SetupBones( matrix3x4a_t *pBoneToWorldOut, int nMaxBones, 
 	// I'm not actually sure if this is the right "fix" for this, as the bones are
 	// actually accessed as part of the setup process, but since I'm not clear on the
 	// purpose of this dev warning, I'm including this comment block.
-	if ( pBoneToWorldOut != NULL && !IsBoneAccessAllowed() )
+	if ( pBoneToWorldOut != nullptr && !IsBoneAccessAllowed() )
 	{
 		static float lastWarning = 0.0f;
 
@@ -3274,15 +3274,15 @@ C_BaseAnimating* C_BaseAnimating::FindFollowedEntity()
 	C_BaseEntity *follow = GetFollowedEntity();
 
 	if ( !follow )
-		return NULL;
+		return nullptr;
 
 	if ( follow->IsDormant() )
-		return NULL;
+		return nullptr;
 
 	if ( !follow->GetModel() )
 	{
 		Warning( "mod_studio: MOVETYPE_FOLLOW with no model.\n" );
-		return NULL;
+		return nullptr;
 	}
 
 	if ( modelinfo->GetModelType( follow->GetModel() ) != mod_studio )
@@ -3291,7 +3291,7 @@ C_BaseAnimating* C_BaseAnimating::FindFollowedEntity()
 			modelinfo->GetModelName( GetModel() ), 
 			modelinfo->GetModelName( follow->GetModel() ), 
 			modelinfo->GetModelType( follow->GetModel() ) );
-		return NULL;
+		return nullptr;
 	}
 
 	return assert_cast< C_BaseAnimating* >( follow );
@@ -3325,7 +3325,7 @@ struct BoneAccess
 	{
 		bAllowBoneAccessForNormalModels = false;
 		bAllowBoneAccessForViewModels = false;
-		tag = NULL;
+		tag = nullptr;
 	}
 
 	bool bAllowBoneAccessForNormalModels;
@@ -3594,7 +3594,7 @@ bool C_BaseAnimating::HitboxToWorldTransforms( matrix3x4_t *pHitboxToWorld[MAXST
 		if ( !set->numhitboxes )
 			return false;
 
-		SetupBones( NULL, -1, BONE_USED_BY_HITBOX, gpGlobals->curtime );
+		SetupBones( nullptr, -1, BONE_USED_BY_HITBOX, gpGlobals->curtime );
 	}
 
 	for ( int i = 0; i < m_CachedBoneData.Count(); i++ )
@@ -3624,13 +3624,13 @@ IClientModelRenderable*	C_BaseAnimating::GetClientModelRenderable()
 { 
 	// Cannot participate if it has a render clip plane
 	if ( !m_bCanUseFastPath || m_bIsUsingRelativeLighting )
-		return NULL;
+		return nullptr;
 	
 	if ( r_drawothermodels.GetInt() != 1 || r_drawmodelstatsoverlay.GetInt() != 0 || mat_wireframe.GetInt() != 0 )
-		return NULL;
+		return nullptr;
 
 	if ( IsFollowingEntity() && !FindFollowedEntity() )
-		return NULL;
+		return nullptr;
 
 
 	return this; 
@@ -3697,13 +3697,13 @@ void C_BaseAnimating::DoInternalDrawModel( IMatRenderContext *pRenderContext, Cl
 				static color32 debugColor = {0,255,255,0};
 				matrix3x4_t matrix;
 				AngleMatrix( GetAbsAngles(), GetAbsOrigin(), matrix );
-				engine->DebugDrawPhysCollide( pCollide->solids[0], NULL, matrix, debugColor );
+				engine->DebugDrawPhysCollide( pCollide->solids[0], nullptr, matrix, debugColor );
 				if ( VPhysicsGetObject() )
 				{
 					static color32 debugColorPhys = {255,0,0,0};
 					matrix3x4_t matrix;
 					VPhysicsGetObject()->GetPositionMatrix( &matrix );
-					engine->DebugDrawPhysCollide( pCollide->solids[0], NULL, matrix, debugColorPhys );
+					engine->DebugDrawPhysCollide( pCollide->solids[0], nullptr, matrix, debugColorPhys );
 				}
 			}
 		}
@@ -3817,11 +3817,11 @@ int C_BaseAnimating::InternalDrawModel( int flags, const RenderableInstance_t &i
 			}
 		}
 
-		DoInternalDrawModel( pRenderContext, pInfo, ( bMarkAsDrawn && ( pInfo->flags & STUDIO_RENDER ) ) ? &state : NULL, pBoneToWorld );
+		DoInternalDrawModel( pRenderContext, pInfo, ( bMarkAsDrawn && ( pInfo->flags & STUDIO_RENDER ) ) ? &state : nullptr, pBoneToWorld );
 
 		if ( bOverride )
 		{
-			modelrender->ForcedMaterialOverride( NULL );
+			modelrender->ForcedMaterialOverride( nullptr );
 		}
 	}
 
@@ -4892,7 +4892,7 @@ void C_BaseAnimating::ResetLatched( void )
 	if ( m_pIk )
 	{
 		delete m_pIk;
-		m_pIk = NULL;
+		m_pIk = nullptr;
 	}
 
 	BaseClass::ResetLatched();
@@ -5284,8 +5284,8 @@ C_BaseAnimating *C_BaseAnimating::CreateRagdollCopy()
 	//That way the server side version of this entity can go away. 
 	//Plus we can hook save/restore code to these ragdolls so they don't fall on restore anymore.
 	C_ClientRagdoll *pRagdoll = CreateClientRagdoll( false );
-	if ( pRagdoll == NULL )
-		return NULL;
+	if ( pRagdoll == nullptr )
+		return nullptr;
 
 	TermRopes();
 
@@ -5295,7 +5295,7 @@ C_BaseAnimating *C_BaseAnimating::CreateRagdollCopy()
 	if ( pRagdoll->InitializeAsClientEntity( pModelName, false ) == false )
 	{
 		pRagdoll->Release();
-		return NULL;
+		return nullptr;
 	}
 
 	// move my current model instance to the ragdoll's so decals are preserved.
@@ -5360,7 +5360,7 @@ C_BaseAnimating *C_BaseAnimating::BecomeRagdollOnClient()
 	GetAbsOrigin();
 	m_pClientsideRagdoll = CreateRagdollCopy();
 	if ( !m_pClientsideRagdoll )
-		return NULL;
+		return nullptr;
 
 	matrix3x4a_t boneDelta0[MAXSTUDIOBONES];
 	matrix3x4a_t boneDelta1[MAXSTUDIOBONES];
@@ -5543,7 +5543,7 @@ void C_BaseAnimating::OnDataChanged( DataUpdateType_t updateType )
 	//HACKHACK!!!
 	if ( m_bClientSideRagdoll && m_builtRagdoll == true )
 	{
-		if ( m_pRagdoll == NULL )
+		if ( m_pRagdoll == nullptr )
 			 AddEffects( EF_NODRAW );
 	}
 
@@ -5561,12 +5561,12 @@ void C_BaseAnimating::OnDataChanged( DataUpdateType_t updateType )
 			Msg( "delete ragdoll due to nointerp\n" );
 			// Remove ragdoll info
 			delete m_pRagdollInfo;
-			m_pRagdollInfo = NULL;
+			m_pRagdollInfo = nullptr;
 		}
 		AddToEntityList(ENTITY_LIST_SIMULATE);
 	}
 
-	m_bIsUsingRelativeLighting = ( m_hLightingOrigin.Get() != NULL );
+	m_bIsUsingRelativeLighting = ( m_hLightingOrigin.Get() != nullptr );
 }
 
 
@@ -5760,7 +5760,7 @@ bool C_BaseAnimating::TestHitboxes( const Ray_t &ray, unsigned int fContentsMask
 			IPhysicsObject *pReplace = m_pRagdoll->GetElement( tr.physicsbone );
 			if ( pReplace )
 			{
-				VPhysicsSetObject( NULL );
+				VPhysicsSetObject( nullptr );
 				VPhysicsSetObject( pReplace );
 			}
 		}
@@ -6292,7 +6292,7 @@ int C_BaseAnimating::FindTransitionSequence( int iCurrentSequence, int iGoalSequ
 		return -1;
 	}
 
-	if (piDir == NULL)
+	if (piDir == nullptr)
 	{
 		int iDir = 1;
 		int sequence = ::FindTransitionSequence( hdr, iCurrentSequence, iGoalSequence, &iDir );
@@ -6582,7 +6582,7 @@ float C_BaseAnimating::GetPoseParameter( int iParameter )
 {
 	CStudioHdr *pStudioHdr = GetModelPtr();
 
-	if ( pStudioHdr == NULL )
+	if ( pStudioHdr == nullptr )
 		return 0.0f;
 
 	if ( !pStudioHdr )
@@ -6657,13 +6657,13 @@ void C_BaseAnimating::ClearRagdoll()
 		// That is to say: it is vital that the member be cleared out
 		// BEFORE the delete occurs.
 		CRagdoll * RESTRICT pDoomed = m_pRagdoll;
-		m_pRagdoll = NULL;
+		m_pRagdoll = nullptr;
 
 		delete pDoomed;
 
 		// Set to null so that the destructor's call to DestroyObject won't destroy
 		//  m_pObjects[ 0 ] twice since that's the physics object for the prop
-		VPhysicsSetObject( NULL );
+		VPhysicsSetObject( nullptr );
 
 		// If we have ragdoll mins/maxs, we've just come out of ragdoll, so restore them
 		if ( m_vecPreRagdollMins != vec3_origin || m_vecPreRagdollMaxs != vec3_origin )
@@ -6735,7 +6735,7 @@ float C_BaseAnimating::SetBoneController ( int iController, float flValue )
 void C_BaseAnimating::GetAimEntOrigin( IClientEntity *pAttachedTo, Vector *pAbsOrigin, QAngle *pAbsAngles )
 {
 	CBaseEntity *pMoveParent;
-	if ( IsEffectActive( EF_BONEMERGE ) && IsEffectActive( EF_BONEMERGE_FASTCULL ) && (pMoveParent = GetMoveParent()) != NULL )
+	if ( IsEffectActive( EF_BONEMERGE ) && IsEffectActive( EF_BONEMERGE_FASTCULL ) && (pMoveParent = GetMoveParent()) != nullptr )
 	{
 		// Doing this saves a lot of CPU.
 		*pAbsOrigin = pMoveParent->GetRenderOrigin();
@@ -6969,7 +6969,7 @@ int C_BoneFollower::DrawModel( int flags, const RenderableInstance_t &instance )
 		static color32 debugColor = {0,255,255,0};
 		matrix3x4_t matrix;
 		AngleMatrix( GetAbsAngles(), GetAbsOrigin(), matrix );
-		engine->DebugDrawPhysCollide( pCollide->solids[m_solidIndex], NULL, matrix, debugColor );
+		engine->DebugDrawPhysCollide( pCollide->solids[m_solidIndex], nullptr, matrix, debugColor );
 	}
 	return 1;
 }
@@ -7101,7 +7101,7 @@ void C_BaseAnimating::UpdateClientSideAnimations()
 CBoneList *C_BaseAnimating::RecordBones( CStudioHdr *hdr, matrix3x4_t *pBoneState )
 {
 	if ( !ToolsEnabled() )
-		return NULL;
+		return nullptr;
 
 	VPROF_BUDGET( "C_BaseAnimating::RecordBones", VPROF_BUDGETGROUP_TOOLS );
 
@@ -7169,7 +7169,7 @@ void C_BaseAnimating::GetToolRecordingState( KeyValues *msg )
 	}
 	else
 	{
-		SetupBones( NULL, -1, BONE_USED_BY_ANYTHING, gpGlobals->curtime );
+		SetupBones( nullptr, -1, BONE_USED_BY_ANYTHING, gpGlobals->curtime );
 	}
 
 	BaseClass::GetToolRecordingState( msg );
@@ -7179,7 +7179,7 @@ void C_BaseAnimating::GetToolRecordingState( KeyValues *msg )
 	state.m_nSkin = GetSkin();
 	state.m_nBody = GetBody();
 	state.m_nSequence = m_nSequence;
-	state.m_pBoneList = hdr ? RecordBones( hdr, pBones ) : NULL;
+	state.m_pBoneList = hdr ? RecordBones( hdr, pBones ) : nullptr;
 	msg->SetPtr( "baseanimating", &state );
 	msg->SetBool( "viewmodel", IsViewModelOrAttachment() );
 
@@ -7344,7 +7344,7 @@ void C_BaseAnimating::NotifyBoneAttached( C_BaseAnimating* attachTarget )
 	if ( m_pAttachedTo )
 	{
 		m_pAttachedTo->RemoveBoneAttachment( this );
-		m_pAttachedTo = NULL;
+		m_pAttachedTo = nullptr;
 	}
 
 	// Remember the new attach target.
@@ -7404,7 +7404,7 @@ C_BaseAnimating* C_BaseAnimating::GetBoneAttachment( int i )
 	{
 		return m_BoneAttachments[i];
 	}
-	return NULL;
+	return nullptr;
 }
 
 //-----------------------------------------------------------------------------

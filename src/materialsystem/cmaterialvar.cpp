@@ -46,7 +46,7 @@
 #define MV_NUM_PAGES ( MV_SIZE_BUFFER/MV_PAGE_SIZE )
 #define MV_NOT_COMMITTED ( (MVFreeBlock_t *)~0 )
 
-byte *g_pMVData = (byte *)VirtualAlloc( NULL, MV_NUM_PAGES * MV_PAGE_SIZE, VA_RESERVE_FLAGS, PAGE_NOACCESS );
+byte *g_pMVData = (byte *)VirtualAlloc( nullptr, MV_NUM_PAGES * MV_PAGE_SIZE, VA_RESERVE_FLAGS, PAGE_NOACCESS );
 CThreadFastMutex g_MVDataMutex; // we never normally alloc & free during levels, and there's not much contention, so a mutex is fine
 
 struct MVFreeBlock_t
@@ -108,7 +108,7 @@ MVFreeBlock_t *MVCommitAlloc( int iPage )
 		pCur++;
 	}
 
-	pLimit->pNext = NULL;
+	pLimit->pNext = nullptr;
 	g_MVFreeLists[iPage].nBlocks = ( MV_NUM_PER_PAGE - 1 );
 	g_nMVAllocated++;
 	return pBlock;
@@ -172,7 +172,7 @@ void *MVAlloc()
 
 	if ( iBestPage != -1 )
 	{
-		MVFreeBlock_t *pBlock = NULL;
+		MVFreeBlock_t *pBlock = nullptr;
 		if ( g_MVFreeLists[iBestPage].pHead != MV_NOT_COMMITTED )
 		{
 			pBlock = g_MVFreeLists[iBestPage].pHead;
@@ -361,7 +361,7 @@ public:
 	{
 		m_nNumVectorComps = 4;
 		m_VecVal.Init();
-		m_pStringVal = NULL;
+		m_pStringVal = nullptr;
 		m_intVal = 0;
 		m_nTempIndex = 0xFF;
 		m_bFakeMaterialVar = false;
@@ -622,7 +622,7 @@ inline CMaterialVar::FourCC_t *CMaterialVar::AllocFourCC()
 CMaterialVar::CMaterialVar()
 {
 	Init();
-	m_pMaterial = NULL;
+	m_pMaterial = nullptr;
 	m_bFakeMaterialVar = true;
 }
 
@@ -754,7 +754,7 @@ void CMaterialVar::CleanUpData()
 		break;
 
 	case MATERIAL_VAR_TYPE_MATERIAL:
-		if( m_pMaterialValue != NULL )
+		if( m_pMaterialValue != nullptr )
 		{
 			m_pMaterialValue->DecrementReferenceCount();
 		}
@@ -1220,7 +1220,7 @@ ITexture *CMaterialVar::GetTextureValue( void )
 			return s_pTempMaterialVar[m_nTempIndex].GetTextureValue( );
 	}
 
-	ITexture *retVal = NULL;
+	ITexture *retVal = nullptr;
 	
 	if( m_pMaterial )
 	{
@@ -1327,7 +1327,7 @@ IMaterial *CMaterialVar::GetMaterialValue( void )
 			return s_pTempMaterialVar[m_nTempIndex].GetMaterialValue( );
 	}
 
-	IMaterial *retVal = NULL;
+	IMaterial *retVal = nullptr;
 	
 	if( m_pMaterial )
 	{
@@ -1386,7 +1386,7 @@ void CMaterialVar::SetMaterialValue( IMaterial *pMaterial )
 		return;
 	}
 
-	if( pMaterialImp != NULL )
+	if( pMaterialImp != nullptr )
 	{
 		pMaterialImp->IncrementReferenceCount();
 	}

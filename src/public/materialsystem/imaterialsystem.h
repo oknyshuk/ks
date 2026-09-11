@@ -445,8 +445,8 @@ struct FlashlightState_t
 		m_fOrthoBottom = 1.0f;
 
 		m_fBrightnessScale = 1.0f;
-		m_pSpotlightTexture = NULL;
-		m_pProjectedMaterial = NULL;
+		m_pSpotlightTexture = nullptr;
+		m_pProjectedMaterial = nullptr;
 		m_bShareBetweenSplitscreenPlayers = false;
 	}
 
@@ -730,7 +730,7 @@ public:
 	virtual CreateInterfaceFn	Init( char const* pShaderAPIDLL, 
 		IMaterialProxyFactory *pMaterialProxyFactory,
 		CreateInterfaceFn fileSystemFactory,
-		CreateInterfaceFn cvarFactory=NULL ) = 0;
+		CreateInterfaceFn cvarFactory=nullptr ) = 0;
 
 	// Call this to set an explicit shader version to use 
 	// Must be called before Init().
@@ -974,7 +974,7 @@ public:
 	virtual void				ReloadTextures( ) = 0;
 
 	// Reloads materials
-	virtual void				ReloadMaterials( const char *pSubString = NULL ) = 0;
+	virtual void				ReloadMaterials( const char *pSubString = nullptr ) = 0;
 
 	// Create a procedural material. The keyvalues looks like a VMT file
 	virtual IMaterial *			CreateMaterial( const char *pMaterialName, KeyValues *pVMTKeyValues ) = 0;
@@ -991,7 +991,7 @@ public:
 	// Note: if the material can't be found, this returns a checkerboard material. You can 
 	// find out if you have that material by calling IMaterial::IsErrorMaterial().
 	// (Or use the global IsErrorMaterial function, which checks if it's null too).
-	virtual IMaterial *			FindMaterial( char const* pMaterialName, const char *pTextureGroupName, bool complain = true, const char *pComplainPrefix = NULL ) = 0;
+	virtual IMaterial *			FindMaterial( char const* pMaterialName, const char *pTextureGroupName, bool complain = true, const char *pComplainPrefix = nullptr ) = 0;
 
 	virtual bool				LoadKeyValuesFromVMTFile( KeyValues &vmtKeyValues, const char *pMaterialName, bool bUsesUNCFilename  ) = 0;
 
@@ -1163,7 +1163,7 @@ public:
 	virtual void				RemoveModeChangeCallBack( ModeChangeCallbackFunc_t func ) = 0;
 
 	// Finds or create a procedural material.
-	virtual IMaterial *			FindProceduralMaterial( const char *pMaterialName, const char *pTextureGroupName, KeyValues *pVMTKeyValues = NULL ) = 0;
+	virtual IMaterial *			FindProceduralMaterial( const char *pMaterialName, const char *pTextureGroupName, KeyValues *pVMTKeyValues = nullptr ) = 0;
 
 	virtual void				AddTextureAlias( const char *pAlias, const char *pRealName ) = 0;
 	virtual void				RemoveTextureAlias( const char *pAlias ) = 0;
@@ -1265,9 +1265,9 @@ public:
 	virtual void				ClearBuffers( bool bClearColor, bool bClearDepth, bool bClearStencil = false ) = 0;
 
 	// read to a unsigned char rgb image.
-	virtual void				ReadPixels( int x, int y, int width, int height, unsigned char *data, ImageFormat dstFormat, ITexture *pRenderTargetTexture = NULL ) = 0;
-	virtual void				ReadPixelsAsync( int x, int y, int width, int height, unsigned char *data, ImageFormat dstFormat, ITexture *pRenderTargetTexture = NULL, CThreadEvent *pPixelsReadEvent = NULL ) = 0;
-	virtual void				ReadPixelsAsyncGetResult( int x, int y, int width, int height, unsigned char *data, ImageFormat dstFormat, CThreadEvent *pGetResultEvent = NULL ) = 0;
+	virtual void				ReadPixels( int x, int y, int width, int height, unsigned char *data, ImageFormat dstFormat, ITexture *pRenderTargetTexture = nullptr ) = 0;
+	virtual void				ReadPixelsAsync( int x, int y, int width, int height, unsigned char *data, ImageFormat dstFormat, ITexture *pRenderTargetTexture = nullptr, CThreadEvent *pPixelsReadEvent = nullptr ) = 0;
+	virtual void				ReadPixelsAsyncGetResult( int x, int y, int width, int height, unsigned char *data, ImageFormat dstFormat, CThreadEvent *pGetResultEvent = nullptr ) = 0;
 
 	// Sets lighting
 	virtual void				SetLightingState( const MaterialLightingState_t& state ) = 0;
@@ -1346,7 +1346,7 @@ public:
 	virtual void				SetNumBoneWeights( int numBones ) = 0;
 
 	// Creates/destroys Mesh
-	virtual IMesh* CreateStaticMesh( VertexFormat_t fmt, const char *pTextureBudgetGroup, IMaterial * pMaterial = NULL, VertexStreamSpec_t *pStreamSpec = NULL ) = 0;
+	virtual IMesh* CreateStaticMesh( VertexFormat_t fmt, const char *pTextureBudgetGroup, IMaterial * pMaterial = nullptr, VertexStreamSpec_t *pStreamSpec = nullptr ) = 0;
 	virtual void DestroyStaticMesh( IMesh* mesh ) = 0;
 
 	// Gets the dynamic mesh associated with the currently bound material
@@ -1482,7 +1482,7 @@ public:
 	virtual void			UnlockRenderData( void *pData ) = 0;
 
 	// Typed version. If specified, pSrcData is copied into the locked memory.
-	template< class E > E*  LockRenderDataTyped( int nCount, const E* pSrcData = NULL );
+	template< class E > E*  LockRenderDataTyped( int nCount, const E* pSrcData = nullptr );
 
 	// Temp render data gets immediately freed after it's all unlocked in single core.
 	// This prevents it from being freed
@@ -1511,7 +1511,7 @@ public:
 		float src_texture_x1, float src_texture_y1,			// which texel you want to appear at
 		// destx+width-1, desty+height-1
 		int src_texture_width, int src_texture_height,		// needed for fixup
-		void *pClientRenderable = NULL,
+		void *pClientRenderable = nullptr,
 		int nXDice = 1,
 		int nYDice = 1 )=0;
 
@@ -1536,8 +1536,8 @@ public:
 	virtual void BindLightmapTexture( ITexture *pLightmapTexture ) = 0;
 
 	// Blit a subrect of the current render target to another texture
-	virtual void CopyRenderTargetToTextureEx( ITexture *pTexture, int nRenderTargetID, Rect_t *pSrcRect, Rect_t *pDstRect = NULL ) = 0;
-	virtual void CopyTextureToRenderTargetEx( int nRenderTargetID, ITexture *pTexture, Rect_t *pSrcRect, Rect_t *pDstRect = NULL ) = 0;
+	virtual void CopyRenderTargetToTextureEx( ITexture *pTexture, int nRenderTargetID, Rect_t *pSrcRect, Rect_t *pDstRect = nullptr ) = 0;
+	virtual void CopyTextureToRenderTargetEx( int nRenderTargetID, ITexture *pTexture, Rect_t *pSrcRect, Rect_t *pDstRect = nullptr ) = 0;
 
 	// Special off-center perspective matrix for DoF, MSAA jitter and poster rendering
 	virtual void PerspectiveOffCenterX( double fovx, double aspect, double zNear, double zFar, double bottom, double top, double left, double right ) = 0;
@@ -1598,7 +1598,7 @@ public:
 	// from changelist 166623:
 	// - replaced obtuse material system batch usage with an explicit and easier to thread API
 	virtual void BeginBatch( IMesh* pIndices ) = 0;
-	virtual void BindBatch( IMesh* pVertices, IMaterial *pAutoBind = NULL ) = 0;
+	virtual void BindBatch( IMesh* pVertices, IMaterial *pAutoBind = nullptr ) = 0;
 	virtual void DrawBatch( MaterialPrimitiveType_t primType, int firstIndex, int numIndices ) = 0;
 	virtual void EndBatch() = 0;
 
@@ -1705,7 +1705,7 @@ public:
 
 	virtual void			PrintfVA( char *fmt, va_list vargs ) = 0;
 	virtual void			Printf( char *fmt, ... ) = 0;
-	virtual float			Knob( char *knobname, float *setvalue = NULL ) = 0;
+	virtual float			Knob( char *knobname, float *setvalue = nullptr ) = 0;
 
 	// RocketUI rendering. The argument is an opaque RmlUi command list produced
 	// on the main thread (RocketUI()->RecordHUD/RecordMenu); the callee replays
@@ -1767,12 +1767,12 @@ private:
 
 inline CMatRenderDataReference::CMatRenderDataReference()
 {
-	m_pRenderContext = NULL;
+	m_pRenderContext = nullptr;
 }
 
 inline CMatRenderDataReference::CMatRenderDataReference( IMatRenderContext* pRenderContext )
 {
-	m_pRenderContext = NULL;
+	m_pRenderContext = nullptr;
 	Lock( pRenderContext );
 }
 
@@ -1795,7 +1795,7 @@ inline void CMatRenderDataReference::Release()
 	if ( m_pRenderContext )
 	{
 		m_pRenderContext->ReleaseRenderData( );
-		m_pRenderContext = NULL;
+		m_pRenderContext = nullptr;
 	}
 }
 
@@ -1808,9 +1808,9 @@ class CMatRenderData
 {
 public:
 	CMatRenderData( IMatRenderContext* pRenderContext );
-	CMatRenderData( IMatRenderContext* pRenderContext, int nCount, const E *pSrcData = NULL );
+	CMatRenderData( IMatRenderContext* pRenderContext, int nCount, const E *pSrcData = nullptr );
 	~CMatRenderData();
-	E* Lock( int nCount, const E* pSrcData = NULL ); 
+	E* Lock( int nCount, const E* pSrcData = nullptr ); 
 	void Release();
 	bool IsValid() const;
 	const E* Base() const;
@@ -1853,7 +1853,7 @@ inline CMatRenderData<E>::~CMatRenderData()
 template< typename E >
 inline bool CMatRenderData<E>::IsValid() const
 {
-	return m_pRenderData != NULL;
+	return m_pRenderData != nullptr;
 }
 
 template< typename E >
@@ -1888,7 +1888,7 @@ inline void CMatRenderData<E>::Release()
 			m_pRenderContext->ReleaseRenderData();
 		}
 	}
-	m_pRenderData = NULL;
+	m_pRenderData = nullptr;
 	m_nCount = 0;
 	m_bNeedsUnlock = false;
 }

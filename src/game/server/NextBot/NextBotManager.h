@@ -74,7 +74,7 @@ public:
 	template < typename Filter >
 	INextBot *GetClosestBot( const Vector &pos, Filter &filter )
 	{
-		INextBot *close = NULL;
+		INextBot *close = nullptr;
 		float closeRangeSq = FLT_MAX;
 
 		for( int i=m_botList.Head(); i != m_botList.InvalidIndex(); i = m_botList.Next( i ) )
@@ -180,7 +180,7 @@ inline void NextBotManager::Select( INextBot *bot )
 
 inline void NextBotManager::DeselectAll( void )
 {
-	m_selectedBot = NULL;
+	m_selectedBot = nullptr;
 }
 
 inline INextBot *NextBotManager::GetSelected( void ) const

@@ -44,11 +44,11 @@ class CServerTools : public IServerTools
 public:
 	// Inherited from IServerTools
 	virtual IServerEntity *GetIServerEntity( IClientEntity *pClientEntity );
-	virtual bool GetPlayerPosition( Vector &org, QAngle &ang, IClientEntity *pClientPlayer = NULL );
-	virtual bool SnapPlayerToPosition( const Vector &org, const QAngle &ang, IClientEntity *pClientPlayer = NULL );
-	virtual int GetPlayerFOV( IClientEntity *pClientPlayer = NULL );
-	virtual bool SetPlayerFOV( int fov, IClientEntity *pClientPlayer = NULL );
-	virtual bool IsInNoClipMode( IClientEntity *pClientPlayer = NULL );
+	virtual bool GetPlayerPosition( Vector &org, QAngle &ang, IClientEntity *pClientPlayer = nullptr );
+	virtual bool SnapPlayerToPosition( const Vector &org, const QAngle &ang, IClientEntity *pClientPlayer = nullptr );
+	virtual int GetPlayerFOV( IClientEntity *pClientPlayer = nullptr );
+	virtual bool SetPlayerFOV( int fov, IClientEntity *pClientPlayer = nullptr );
+	virtual bool IsInNoClipMode( IClientEntity *pClientPlayer = nullptr );
 	virtual void *FirstEntity( void );
 	virtual void *NextEntity( void *pEntity );
 	virtual void *FindEntityByHammerID( int iHammerID );
@@ -77,21 +77,21 @@ IServerTools *g_pServerTools = &g_ServerTools;
 
 IServerEntity *CServerTools::GetIServerEntity( IClientEntity *pClientEntity )
 {
-	if ( pClientEntity == NULL )
-		return NULL;
+	if ( pClientEntity == nullptr )
+		return nullptr;
 
 	CBaseHandle ehandle = pClientEntity->GetRefEHandle();
 	if ( ehandle.GetEntryIndex() >= MAX_EDICTS )
-		return NULL; // the first MAX_EDICTS entities are networked, the rest are client or server only
+		return nullptr; // the first MAX_EDICTS entities are networked, the rest are client or server only
 
 	IHandleEntity *pEnt = gEntList.LookupEntityByNetworkIndex( ehandle.GetEntryIndex() );
-	if ( pEnt == NULL )
-		return NULL;
+	if ( pEnt == nullptr )
+		return nullptr;
 
 	CBaseHandle h = gEntList.GetNetworkableHandle( ehandle.GetEntryIndex() );
 	const int mask = ( 1 << NUM_NETWORKED_EHANDLE_SERIAL_NUMBER_BITS ) - 1;
 	if ( !h.IsValid() || ( ( h.GetSerialNumber() & mask ) != ( ehandle.GetSerialNumber() & mask ) ) )
-		return NULL;
+		return nullptr;
 
 	IServerUnknown *pUnk = static_cast< IServerUnknown* >( pEnt );
 	return pUnk->GetBaseEntity();
@@ -101,7 +101,7 @@ bool CServerTools::GetPlayerPosition( Vector &org, QAngle &ang, IClientEntity *p
 {
 	IServerEntity *pServerPlayer = GetIServerEntity( pClientPlayer );
 	CBasePlayer *pPlayer = pServerPlayer ? ( CBasePlayer* )pServerPlayer : UTIL_GetLocalPlayer();
-	if ( pPlayer == NULL )
+	if ( pPlayer == nullptr )
 		return false;
 
 	org = pPlayer->EyePosition();
@@ -113,14 +113,14 @@ bool CServerTools::SnapPlayerToPosition( const Vector &org, const QAngle &ang, I
 {
 	IServerEntity *pServerPlayer = GetIServerEntity( pClientPlayer );
 	CBasePlayer *pPlayer = pServerPlayer ? ( CBasePlayer* )pServerPlayer : UTIL_GetLocalPlayer();
-	if ( pPlayer == NULL )
+	if ( pPlayer == nullptr )
 		return false;
 
 	pPlayer->SetAbsOrigin( org - pPlayer->GetViewOffset() );
 	pPlayer->SnapEyeAngles( ang );
 
 	// Disengage from hierarchy
-	pPlayer->SetParent( NULL );
+	pPlayer->SetParent( nullptr );
 
 	return true;
 }
@@ -129,7 +129,7 @@ int CServerTools::GetPlayerFOV( IClientEntity *pClientPlayer )
 {
 	IServerEntity *pServerPlayer = GetIServerEntity( pClientPlayer );
 	CBasePlayer *pPlayer = pServerPlayer ? ( CBasePlayer* )pServerPlayer : UTIL_GetLocalPlayer();
-	if ( pPlayer == NULL )
+	if ( pPlayer == nullptr )
 		return 0;
 
 	return pPlayer->GetFOV();
@@ -139,7 +139,7 @@ bool CServerTools::SetPlayerFOV( int fov, IClientEntity *pClientPlayer )
 {
 	IServerEntity *pServerPlayer = GetIServerEntity( pClientPlayer );
 	CBasePlayer *pPlayer = pServerPlayer ? ( CBasePlayer* )pServerPlayer : UTIL_GetLocalPlayer();
-	if ( pPlayer == NULL )
+	if ( pPlayer == nullptr )
 		return false;
 
 	pPlayer->SetDefaultFOV( fov );
@@ -151,7 +151,7 @@ bool CServerTools::IsInNoClipMode( IClientEntity *pClientPlayer )
 {
 	IServerEntity *pServerPlayer = GetIServerEntity( pClientPlayer );
 	CBasePlayer *pPlayer = pServerPlayer ? ( CBasePlayer* )pServerPlayer : UTIL_GetLocalPlayer();
-	if ( pPlayer == NULL )
+	if ( pPlayer == nullptr )
 		return true;
 
 	return pPlayer->GetMoveType() == MOVETYPE_NOCLIP;
@@ -166,7 +166,7 @@ void *CServerTools::NextEntity( void *pEntity )
 {
 	CBaseEntity *pEnt;
 
-	if ( pEntity == NULL )
+	if ( pEntity == nullptr )
 	{
 		pEnt = gEntList.FirstEnt();
 	}
@@ -187,7 +187,7 @@ void *CServerTools::FindEntityByHammerID( int iHammerID )
 			return (void *)pEntity;
 		pEntity = gEntList.NextEnt( pEntity );
 	}
-	return NULL;
+	return nullptr;
 }
 
 bool CServerTools::GetKeyValue( void *pEntity, const char *szField, char *szValue, int iMaxLen )

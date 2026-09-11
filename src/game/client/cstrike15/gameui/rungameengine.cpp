@@ -108,12 +108,12 @@ public:
 	// gets the in-game name of another user, returns NULL if that user doesn't exists
 	virtual const char *GetPlayerName(int trackerID)
 	{
-		return NULL;
+		return nullptr;
 	}
 
 	virtual const char *GetPlayerFriendsName(int trackerID)
 	{
-		return NULL;
+		return nullptr;
 	}
 
 	// return the build number of the engine

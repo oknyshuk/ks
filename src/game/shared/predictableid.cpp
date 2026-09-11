@@ -71,7 +71,7 @@ private:
 		if ( m_nCount >= MAX_ENTRIES )
 		{
 			// assert( 0 );
-			return NULL;
+			return nullptr;
 		}
 
 		entry *e = &m_Entries[ m_nCount++ ];

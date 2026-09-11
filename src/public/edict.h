@@ -370,7 +370,7 @@ inline IServerNetworkable* CBaseEdict::GetNetworkable()
 inline void CBaseEdict::SetEdict( IServerUnknown *pUnk, bool bFullEdict )
 {
 	m_pUnk = pUnk;
-	if ( (pUnk != NULL) && bFullEdict )
+	if ( (pUnk != nullptr) && bFullEdict )
 	{
 		m_fStateFlags = FL_EDICT_FULL;
 	}
@@ -432,7 +432,7 @@ inline ICollideable *edict_t::GetCollideable()
 	if ( pEnt )
 		return pEnt->GetCollideable();
 	else
-		return NULL;
+		return nullptr;
 }
 
 

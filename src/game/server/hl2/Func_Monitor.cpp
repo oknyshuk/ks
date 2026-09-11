@@ -68,7 +68,7 @@ void CFuncMonitor::ReleaseCameraLink()
 	if ( m_hInfoCameraLink )
 	{
 		UTIL_Remove( m_hInfoCameraLink );
-		m_hInfoCameraLink = NULL;
+		m_hInfoCameraLink = nullptr;
 
 		// Keep the target up-to-date for save/load
 		m_target = NULL_STRING;
@@ -82,7 +82,7 @@ void CFuncMonitor::ReleaseCameraLink()
 void CFuncMonitor::SetCameraByName(const char *szName)
 {
 	ReleaseCameraLink();
-	CBaseEntity *pBaseEnt = gEntList.FindEntityByName( NULL, szName );
+	CBaseEntity *pBaseEnt = gEntList.FindEntityByName( nullptr, szName );
 	if( pBaseEnt )
 	{
 		CPointCamera *pCamera = dynamic_cast<CPointCamera *>( pBaseEnt );

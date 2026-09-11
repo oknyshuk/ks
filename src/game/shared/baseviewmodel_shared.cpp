@@ -151,7 +151,7 @@ void CBaseViewModel::SpawnControlPanels()
 
 	CBaseCombatWeapon *weapon = m_hWeapon.Get();
 
-	if ( weapon == NULL )
+	if ( weapon == nullptr )
 	{
 		return;
 	}
@@ -339,7 +339,7 @@ void CBaseViewModel::SetWeaponModel( const char *modelname, CBaseCombatWeapon *w
 	SetModel( modelname );
 #else
 	string_t str;
-	if ( modelname != NULL )
+	if ( modelname != nullptr )
 	{
 		str = MAKE_STRING( modelname );
 	}
@@ -485,7 +485,7 @@ void CBaseViewModel::CalcViewModelView( CBasePlayer *owner, const Vector& eyePos
 
 	CBaseCombatWeapon *pWeapon = m_hWeapon.Get();
 	//Allow weapon lagging
-	if ( pWeapon != NULL )
+	if ( pWeapon != nullptr )
 	{
 		if ( !prediction->InPrediction() )
 		{
@@ -528,7 +528,7 @@ void CBaseViewModel::CalcViewModelLag( Vector& origin, QAngle& angles, QAngle& o
 
 	// Calculate our drift
 	Vector	forward;
-	AngleVectors( angles, &forward, NULL, NULL );
+	AngleVectors( angles, &forward, nullptr, nullptr );
 
 	if ( gpGlobals->frametime != 0.0f )
 	{

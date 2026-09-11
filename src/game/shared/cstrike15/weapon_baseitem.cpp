@@ -83,7 +83,7 @@ bool CWeaponBaseItem::Holster( CBaseCombatWeapon *pSwitchingTo )
 void CWeaponBaseItem::PrimaryAttack( void )
 {
 	CCSPlayer *pPlayer = ToCSPlayer( GetPlayerOwner() );
-	if (pPlayer == NULL)
+	if (pPlayer == nullptr)
 		return;
 
 	if ( m_UseTimer.HasStarted() )
@@ -119,7 +119,7 @@ extern ConVar z_use_belt_item_tolerance;
 void CWeaponBaseItem::SecondaryAttack( void )
 {
 	CCSPlayer *pPlayer = ToCSPlayer( GetPlayerOwner() );
-	if (pPlayer == NULL)
+	if (pPlayer == nullptr)
 		return;
 
 	if ( m_UseTimer.HasStarted() )
@@ -210,7 +210,7 @@ void CWeaponBaseItem::ItemPostFrame( void )
 
 		if ( pPlayer->GetAmmoCount(m_iPrimaryAmmoType) <= 0 )
 		{
-			pPlayer->Weapon_Drop( this, NULL, NULL );
+			pPlayer->Weapon_Drop( this, nullptr, nullptr );
 #ifndef CLIENT_DLL	
 			UTIL_Remove( this );
 #endif

@@ -21,7 +21,7 @@
 ConVar net_showusercmd( "net_showusercmd", "0", 0, "Show user command encoding" );
 #define LogUserCmd( msg, ... ) if ( net_showusercmd.GetInt() ) { ConDMsg( msg, __VA_ARGS__ ); }
 #else
-#define LogUserCmd( msg, ... ) NULL;
+#define LogUserCmd( msg, ... ) nullptr;
 #endif
 
 //-----------------------------------------------------------------------------

@@ -17,7 +17,7 @@
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
-BuyPresetManager *TheBuyPresets = NULL;
+BuyPresetManager *TheBuyPresets = nullptr;
 
 #if USE_BUY_PRESETS
 //--------------------------------------------------------------------------------------------------------------
@@ -196,7 +196,7 @@ void BuyPresetManager::VerifyLoadedTeam( void )
 	KeyValues *data;
 	KeyValues *presetKey;
 	data = new KeyValues( "Presets" );
-	bool fileExists = data->LoadFromFile( filesystem, filename, NULL );
+	bool fileExists = data->LoadFromFile( filesystem, filename, nullptr );
 
 	presetKey = data->GetFirstSubKey();
 	while ( presetKey )
@@ -219,7 +219,7 @@ void BuyPresetManager::VerifyLoadedTeam( void )
 		KeyValues *data;
 		KeyValues *presetKey;
 		data = new KeyValues( "Presets" );
-		data->LoadFromFile( filesystem, filename, NULL );
+		data->LoadFromFile( filesystem, filename, nullptr );
 
 		presetKey = data->GetFirstSubKey();
 		while ( presetKey )
@@ -279,7 +279,7 @@ void BuyPresetManager::ResetEditToDefaults( void )
 	KeyValues *data;
 	KeyValues *presetKey;
 	data = new KeyValues( "Presets" );
-	data->LoadFromFile( filesystem, filename, NULL );
+	data->LoadFromFile( filesystem, filename, nullptr );
 
 	presetKey = data->GetFirstSubKey();
 	while ( presetKey )
@@ -325,7 +325,7 @@ void BuyPresetManager::Save()
 	{
 		m_presets[i].Save( data );
 	}
-	data->SaveToFile( filesystem, filename, NULL );
+	data->SaveToFile( filesystem, filename, nullptr );
 	data->deleteThis();
 #endif // USE_BUY_PRESETS
 }
@@ -339,7 +339,7 @@ const BuyPreset * BuyPresetManager::GetPreset( int index ) const
 {
 	if ( index < 0 || index >= m_presets.Count() )
 	{
-		return NULL;
+		return nullptr;
 	}
 
 	return &(m_presets[index]);
@@ -367,7 +367,7 @@ BuyPreset * BuyPresetManager::GetEditPreset( int index )
 {
 	if ( index < 0 || index >= m_editPresets.Count() )
 	{
-		return NULL;
+		return nullptr;
 	}
 
 	return &(m_editPresets[index]);

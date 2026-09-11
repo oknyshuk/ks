@@ -70,7 +70,7 @@ CTHREADLOCALINT g_nThreadLocalStateIndex CONSTRUCT_EARLY;
 // Implementation
 //////////////////////////////////////////////////////////////////////////
 
-CLoggingSystem *g_pGlobalLoggingSystem = NULL;
+CLoggingSystem *g_pGlobalLoggingSystem = nullptr;
 
 // This function does not get inlined due to the static variable :(
 CLoggingSystem *GetGlobalLoggingSystem_Internal()
@@ -83,7 +83,7 @@ CLoggingSystem *GetGlobalLoggingSystem_Internal()
 // This function can get inlined
 CLoggingSystem *GetGlobalLoggingSystem()
 {
-	return ( g_pGlobalLoggingSystem == NULL ) ? GetGlobalLoggingSystem_Internal() : g_pGlobalLoggingSystem;
+	return ( g_pGlobalLoggingSystem == nullptr ) ? GetGlobalLoggingSystem_Internal() : g_pGlobalLoggingSystem;
 }
 
 CLoggingSystem::CLoggingSystem() : 
@@ -113,7 +113,7 @@ m_nGlobalStateIndex( 0 )
 		m_LoggingStates[i].m_nListenerCount = -1;
 	}
 
-	m_pStateMutex = NULL;
+	m_pStateMutex = nullptr;
 }
 
 CLoggingSystem::~CLoggingSystem()
@@ -140,7 +140,7 @@ LoggingChannelID_t CLoggingSystem::RegisterLoggingChannel( const char *pChannelN
 			{
 				// OK to call the tag registration callback; duplicates will be culled away.
 				// This allows multiple people to register a logging channel, and the union of all tags will be registered.
-				if ( registerTagsFunc != NULL )
+				if ( registerTagsFunc != nullptr )
 				{
 					registerTagsFunc();
 				}
@@ -169,7 +169,7 @@ LoggingChannelID_t CLoggingSystem::RegisterLoggingChannel( const char *pChannelN
 		m_RegisteredChannels[m_nChannelCount].m_SpewColor = spewColor;
 		strncpy( m_RegisteredChannels[m_nChannelCount].m_Name, pChannelName, MAX_LOGGING_IDENTIFIER_LENGTH );
 		
-		if ( registerTagsFunc != NULL ) 
+		if ( registerTagsFunc != nullptr ) 
 		{
 			registerTagsFunc();
 		}
@@ -365,7 +365,7 @@ void CLoggingSystem::SetLoggingResponsePolicy( ILoggingResponsePolicy *pLoggingR
 
 	m_pStateMutex->Lock();
 	LoggingState_t *pState = GetCurrentState();
-	if ( pLoggingResponse == NULL )
+	if ( pLoggingResponse == nullptr )
 	{
 		pState->m_pLoggingResponse = &m_DefaultLoggingResponse;
 	}
@@ -490,7 +490,7 @@ CLoggingSystem::LoggingTag_t *CLoggingSystem::AllocTag( const char *pTagName )
 	Assert( m_nChannelTagCount < MAX_LOGGING_TAG_COUNT );
 	LoggingTag_t *pTag = &m_ChannelTags[m_nChannelTagCount ++];
 	
-	pTag->m_pNextTag = NULL;
+	pTag->m_pNextTag = nullptr;
 	pTag->m_pTagName = m_TagNamePool + m_nTagNamePoolIndex;
 	
 	// Copy string into pool.

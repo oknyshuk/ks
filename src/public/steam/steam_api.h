@@ -312,7 +312,7 @@ template< class T, class P, bool bGameServer = false >
 class CCallbackManual : public CCallback< T, P, bGameServer >
 {
 public:
-	CCallbackManual() : CCallback< T, P, bGameServer >( NULL, NULL ) {}
+	CCallbackManual() : CCallback< T, P, bGameServer >( nullptr, nullptr ) {}
 
 	// Inherits public Register and Unregister functions from base class
 };

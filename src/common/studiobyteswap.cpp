@@ -1495,7 +1495,7 @@ int ByteswapMDL( void *pDestBase, int destBaseSize, const void *pSrcBase, const 
 	SET_OBJECT_POINTERS( pAnimDesc, pData, mstudioanimdesc_t )
 	ITERATE_BLOCK( pAnimDesc, pHdr->numlocalanim )
 	{
-		if ( pAnimDesc->pZeroFrameData( ) != NULL )
+		if ( pAnimDesc->pZeroFrameData( ) != nullptr )
 		{
 			int offset = pAnimDesc->pZeroFrameData( ) - (byte *)pAnimDesc;
 

@@ -61,7 +61,7 @@ public:
 	{
 		m_nBlockSize = 0;
 		m_nCommittedPages = 0;
-		m_pFirstPage = NULL;
+		m_pFirstPage = nullptr;
 	}
 
 	void Init( unsigned nBlockSize );
@@ -89,9 +89,9 @@ private:
 	{
 		PageStatus_t()
 		{
-			m_pPool = NULL;
+			m_pPool = nullptr;
 			m_nAllocated = NOT_COMMITTED;
-			m_pNextPageInPool = NULL;
+			m_pNextPageInPool = nullptr;
 		}
 
 		CSmallBlockPool<CAllocator> *	m_pPool;
@@ -156,7 +156,7 @@ public:
 	void *Realloc( void *p, size_t nBytes );
 	void Free( void *p );
 	size_t GetSize( void *p );
-	void DumpStats( const char *pszTag, FILE *pFile = NULL, IMemAlloc::DumpStatsFormat_t nFormat = IMemAlloc::FORMAT_TEXT );
+	void DumpStats( const char *pszTag, FILE *pFile = nullptr, IMemAlloc::DumpStatsFormat_t nFormat = IMemAlloc::FORMAT_TEXT );
 	void Usage( size_t &bytesCommitted, size_t &bytesAllocated );
 	size_t Compact( bool bIncremental );
 	bool Validate();
@@ -297,7 +297,7 @@ public:
 
 		byte *AllocatePoolMemory()
 		{
-			return NULL;
+			return nullptr;
 		}
 
 		inline size_t GetTotalBytes() const { return TOTAL_BYTES; }
@@ -345,7 +345,7 @@ public:
 	public:
 		byte *AllocatePoolMemory()
 		{
-			return NULL;
+			return nullptr;
 		}
 
 		inline size_t GetTotalBytes() const

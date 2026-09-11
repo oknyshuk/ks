@@ -43,15 +43,15 @@ uint64 GetCPUFreqFromPROC()
 	FILE *fp;
 
 	/* open proc/cpuinfo */
-	if ((fp = fopen("/proc/cpuinfo", "r")) == NULL)
+	if ((fp = fopen("/proc/cpuinfo", "r")) == nullptr)
 	{
 		return 0;
 	}
 
 	/* ignore all lines until we reach MHz information */
-	while (fgets(line, 1024, fp) != NULL)
+	while (fgets(line, 1024, fp) != nullptr)
 	{
-		if (strstr(line, search_str) != NULL)
+		if (strstr(line, search_str) != nullptr)
 		{
 			/* ignore all characters in line up to : */
 			for (s = line; *s && (*s != ':'); ++s)
@@ -63,7 +63,7 @@ uint64 GetCPUFreqFromPROC()
 		}
 	}
 
-	if (fp!=NULL) fclose(fp);
+	if (fp!=nullptr) fclose(fp);
 
 	return (uint64)(mhz*1000000);
 }

@@ -29,7 +29,7 @@ public:
 private:
 };
 
-IMixerControls* g_pMixerControls = NULL;
+IMixerControls* g_pMixerControls = nullptr;
 void InitMixerControls()
 {
 	if ( !g_pMixerControls )
@@ -41,6 +41,6 @@ void InitMixerControls()
 void ShutdownMixerControls()
 {
 	delete g_pMixerControls;
-	g_pMixerControls = NULL;
+	g_pMixerControls = nullptr;
 }
 

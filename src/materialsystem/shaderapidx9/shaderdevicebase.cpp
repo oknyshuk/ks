@@ -59,7 +59,7 @@ static void InitShaderAPICVars( )
 //-----------------------------------------------------------------------------
 CShaderDeviceMgrBase::CShaderDeviceMgrBase()
 {
-	m_pDXSupport = NULL;
+	m_pDXSupport = nullptr;
 }
 
 CShaderDeviceMgrBase::~CShaderDeviceMgrBase()
@@ -90,7 +90,7 @@ void *ShaderDeviceFactory( const char *pName, int *pReturnCode )
 	{
 		*pReturnCode = IFACE_FAILED;
 	}
-	return NULL;	
+	return nullptr;	
 }
 
 //-----------------------------------------------------------------------------
@@ -110,11 +110,11 @@ bool CShaderDeviceMgrBase::Connect( CreateInterfaceFn factory )
 	InitShaderAPICVars();
 	ConnectTier2Libraries( &actualFactory, 1 );
 	if ( !g_pShaderUtil )
-		g_pShaderUtil = (IShaderUtil*)ShaderDeviceFactory( SHADER_UTIL_INTERFACE_VERSION, NULL );
+		g_pShaderUtil = (IShaderUtil*)ShaderDeviceFactory( SHADER_UTIL_INTERFACE_VERSION, nullptr );
 
 	g_pShaderDeviceMgrBase = this;
 
-	s_TempFactory = NULL;
+	s_TempFactory = nullptr;
 
 	if ( !g_pShaderUtil || !g_pFullFileSystem || !g_pShaderDeviceMgrBase )
 	{
@@ -131,8 +131,8 @@ void CShaderDeviceMgrBase::Disconnect()
 {
 	LOCK_SHADERAPI();
 
-	g_pShaderDeviceMgrBase = NULL;
-	g_pShaderUtil = NULL;
+	g_pShaderDeviceMgrBase = nullptr;
+	g_pShaderUtil = nullptr;
 	DisconnectTier2Libraries();
 	ConVar_Unregister();
 	DisconnectTier1Libraries();
@@ -140,7 +140,7 @@ void CShaderDeviceMgrBase::Disconnect()
 	if ( m_pDXSupport )
 	{
 		m_pDXSupport->deleteThis();
-		m_pDXSupport = NULL;
+		m_pDXSupport = nullptr;
 	}
 }
 
@@ -154,7 +154,7 @@ void *CShaderDeviceMgrBase::QueryInterface( const char *pInterfaceName )
 		return ( IShaderDeviceMgr* )this;
 	if ( !Q_stricmp( pInterfaceName, MATERIALSYSTEM_HARDWARECONFIG_INTERFACE_VERSION ) )
 		return ( IMaterialSystemHardwareConfig* )g_pHardwareConfigDx8;
-	return NULL;
+	return nullptr;
 }
 
 
@@ -173,7 +173,7 @@ const HardwareCaps_t& CShaderDeviceMgrBase::GetHardwareCaps( int nAdapter ) cons
 //-----------------------------------------------------------------------------
 static inline int ReadHexValue( KeyValues *pVal, const char *pName )
 {
-	const char *pString = pVal->GetString( pName, NULL );
+	const char *pString = pVal->GetString( pName, nullptr );
 	if (!pString)
 	{
 		return -1;
@@ -253,7 +253,7 @@ KeyValues *CShaderDeviceMgrBase::FindDXLevelSpecificConfig( KeyValues *pKeyValue
 			return pGroup;
 	}
 
-	return NULL;
+	return nullptr;
 }
 
 //-----------------------------------------------------------------------------
@@ -270,7 +270,7 @@ KeyValues *CShaderDeviceMgrBase::FindDXLevelAndVendorSpecificConfig( KeyValues *
 			return pGroup;
 	}
 
-	return NULL;
+	return nullptr;
 }
 
 //-----------------------------------------------------------------------------
@@ -280,7 +280,7 @@ KeyValues *CShaderDeviceMgrBase::FindCPUSpecificConfig( KeyValues *pKeyValues, i
 {
 	for( KeyValues *pGroup = pKeyValues->GetFirstSubKey(); pGroup; pGroup = pGroup->GetNextKey() )
 	{
-		const char *pName = pGroup->GetString( "name", NULL );
+		const char *pName = pGroup->GetString( "name", nullptr );
 		if ( !pName )
 			continue;
 
@@ -296,7 +296,7 @@ KeyValues *CShaderDeviceMgrBase::FindCPUSpecificConfig( KeyValues *pKeyValues, i
 				return pGroup;
 		}
 	}
-	return NULL;
+	return nullptr;
 }
 
 
@@ -315,7 +315,7 @@ KeyValues *CShaderDeviceMgrBase::FindCardSpecificConfig( KeyValues *pKeyValues, 
 			return pGroup;
 	}
 
-	return NULL;
+	return nullptr;
 }
 
 
@@ -337,7 +337,7 @@ KeyValues *CShaderDeviceMgrBase::FindMemorySpecificConfig( KeyValues *pKeyValues
 		if ( nMinMB <= nSystemRamMB && nSystemRamMB < nMaxMB )
 			return pGroup;
 	}
-	return NULL;
+	return nullptr;
 }
 
 
@@ -356,7 +356,7 @@ KeyValues *CShaderDeviceMgrBase::FindVidMemSpecificConfig( KeyValues *pKeyValues
 		if ( nMinMB <= nVideoRamMB && nVideoRamMB < nMaxMB )
 			return pGroup;
 	}
-	return NULL;
+	return nullptr;
 }
 
 
@@ -366,7 +366,7 @@ KeyValues *CShaderDeviceMgrBase::FindVidMemSpecificConfig( KeyValues *pKeyValues
 KeyValues *CShaderDeviceMgrBase::ReadDXSupportKeyValues()
 {
 	if ( CommandLine()->CheckParm( "-ignoredxsupportcfg" ) )
-		return NULL;
+		return nullptr;
 
 	if ( m_pDXSupport )
 		return m_pDXSupport;
@@ -379,7 +379,7 @@ KeyValues *CShaderDeviceMgrBase::ReadDXSupportKeyValues()
 	if ( !pCfg->LoadFromFile( g_pFullFileSystem, SUPPORT_CFG_FILE, pPathID ) )
 	{
 		pCfg->deleteThis();
-		return NULL;
+		return nullptr;
 	}
 
 	m_pDXSupport = pCfg;
@@ -741,7 +741,7 @@ void* CShaderDeviceMgrBase::ShaderInterfaceFactory( const char *pInterfaceName, 
 	{
 		*pReturnCode = IFACE_FAILED;
 	}
-	return NULL;
+	return nullptr;
 }
 
 
@@ -759,8 +759,8 @@ CShaderDeviceBase::CShaderDeviceBase()
 {
 	m_bInitialized = false;
 	m_nAdapter = -1;
-	m_hWnd = NULL;
-	m_hWndCookie = NULL;
+	m_hWnd = nullptr;
+	m_hWndCookie = nullptr;
 	m_dwThreadId = ThreadGetCurrentId();
 }
 
@@ -908,7 +908,7 @@ static LRESULT CALLBACK ShaderDX8WndProc(VD3DHWND hWnd, UINT msg, WPARAM wParam,
 //-----------------------------------------------------------------------------
 void CShaderDeviceBase::InstallWindowHook( void* hWnd )
 {
-	Assert( m_hWndCookie == NULL );
+	Assert( m_hWndCookie == nullptr );
 #ifdef USE_ACTUAL_DX
 	VD3DHWND hParent = GetTopmostParentWindow( (VD3DHWND)hWnd );
 
@@ -929,7 +929,7 @@ void CShaderDeviceBase::InstallWindowHook( void* hWnd )
 
 	// Create the window
 	m_hWndCookie = CreateWindow( "shaderdx8", "shaderdx8", WS_CHILD, 
-		0, 0, 0, 0, hParent, NULL, hInst, NULL );
+		0, 0, 0, 0, hParent, nullptr, hInst, nullptr );
 
 	// Marks it as a material system window
 	SetWindowLongPtr( (VD3DHWND)m_hWndCookie, GWLP_USERDATA, MATERIAL_SYSTEM_WINDOW_ID );

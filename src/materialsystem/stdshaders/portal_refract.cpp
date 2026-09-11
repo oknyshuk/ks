@@ -84,7 +84,7 @@ BEGIN_VS_SHADER( PortalRefract_dx9, "PortalRefract" )
 		}
 
 		// If ( snapshotting ) or ( we need to draw this frame )
-		if ( ( pShaderShadow != NULL ) || ( bDraw == true ) )
+		if ( ( pShaderShadow != nullptr ) || ( bDraw == true ) )
 		{
 			PortalRefractVars_t info;
 			SetupVarsPortalRefract( info );

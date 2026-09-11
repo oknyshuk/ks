@@ -58,7 +58,7 @@ public:
 	virtual int					GetCacheStatus()			{return AUDIO_IS_LOADED;}
 	virtual void				CacheLoad()					{}
 	virtual void				CacheUnload()				{}
-	virtual CSentence			*GetSentence()				{return NULL;}
+	virtual CSentence			*GetSentence()				{return nullptr;}
 	virtual int					GetQuality()				{ return 0; }
 
 	virtual int					ZeroCrossingBefore( int sample )	{return sample;}
@@ -188,7 +188,7 @@ CAudioMixer *CAudioSourceVoice::CreateMixer( int initialStreamPosition, int skip
 	{
 		Assert( false );
 		soundError = SE_CANT_CREATE_MIXER;
-		return NULL;
+		return nullptr;
 	}
 
 	CAudioMixer *pMixer = CreateWaveMixer( pVoice, WAVE_FORMAT_PCM, 1, BYTES_PER_SAMPLE*8, initialStreamPosition, skipInitialSamples, bUpdateDelayForChoreo );
@@ -196,7 +196,7 @@ CAudioMixer *CAudioSourceVoice::CreateMixer( int initialStreamPosition, int skip
 	{
 		delete pVoice;
 		soundError = SE_CANT_CREATE_MIXER;
-		return NULL;
+		return nullptr;
 	}
 
 	ReferenceAdd( pMixer );
@@ -215,7 +215,7 @@ int CAudioSourceVoice::GetOutputData( void **pData, int64 samplePosition, int sa
 	// If there weren't enough bytes in the received data channel, pad it with zeros.
 	if( nSamplesGotten < sampleCount )
 	{
-		if ( copyBuf != NULL )
+		if ( copyBuf != nullptr )
 		{
 			memset( &copyBuf[nSamplesGotten], 0, (sampleCount - nSamplesGotten) * BYTES_PER_SAMPLE );
 		}
@@ -312,7 +312,7 @@ int VoiceSE_StartChannel(
 
 	// Start the sound.
 	CSfxTable *sfx = &g_CVoiceSfx[iChannel];
-	sfx->pSource = NULL;
+	sfx->pSource = nullptr;
 	Vector vOrigin(0,0,0);
 
 	StartSoundParams_t params;
@@ -352,7 +352,7 @@ void VoiceSE_EndChannel(
 
 	// Start the sound.
 	CSfxTable *sfx = &g_CVoiceSfx[iChannel];
-	sfx->pSource = NULL;
+	sfx->pSource = nullptr;
 }
 
 void VoiceSE_StartOverdrive()
@@ -388,7 +388,7 @@ CAudioSource* Voice_SetupAudioSource( int soundsource, int entchannel )
 		return new CAudioSourceVoice( sfx, iChannel );
 	}
 	else
-		return NULL;
+		return nullptr;
 }
 
 

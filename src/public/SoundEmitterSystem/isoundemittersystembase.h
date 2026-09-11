@@ -49,7 +49,7 @@ struct CSoundParameters
 
 		m_nSoundEntryVersion = 1;
 		m_hSoundScriptHash = SOUNDEMITTER_INVALID_HASH;
-		m_pOperatorsKV = NULL;
+		m_pOperatorsKV = nullptr;
 		m_nRandomSeed = -1;
 
 		m_bHRTFFollowEntity = false;

@@ -686,7 +686,7 @@ BEGIN_VS_SHADER( Character, "Help for Character Shader" )
 
 			
 			int nTexCoordCount = 1;
-			pShaderShadow->VertexShaderVertexFormat( flags, nTexCoordCount, NULL, userDataSize );
+			pShaderShadow->VertexShaderVertexFormat( flags, nTexCoordCount, nullptr, userDataSize );
 
 
 			ShadowFilterMode_t nShadowFilterMode = SHADOWFILTERMODE_DEFAULT;
@@ -878,7 +878,7 @@ BEGIN_VS_SHADER( Character, "Help for Character Shader" )
 			}
 			if ( bCSMEnabled )
 			{
-				ITexture *pDepthTextureAtlas = NULL;
+				ITexture *pDepthTextureAtlas = nullptr;
 				const CascadedShadowMappingState_t &cascadeState = pShaderAPI->GetCascadedShadowMappingState( &pDepthTextureAtlas );
 
 				if ( pDepthTextureAtlas )

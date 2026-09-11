@@ -88,7 +88,7 @@ const wchar_t* WeaponIDToDisplayName( CSWeaponID weaponID )
 		if ( weaponDisplayNameInfo[i].id == weaponID )
 			return g_pLocalize->Find( weaponDisplayNameInfo[i].displayName );
 
-	return NULL;
+	return nullptr;
 }
 
 
@@ -96,7 +96,7 @@ const wchar_t* WeaponIDToDisplayName( CSWeaponID weaponID )
 //--------------------------------------------------------------------------------------------------------------
 BuyPresetWeapon::BuyPresetWeapon()
 {
-	m_name = NULL;
+	m_name = nullptr;
 	m_weaponID = WEAPON_NONE;
 	m_ammoType = AMMO_CLIPS;
 	m_ammoAmount = 0;
@@ -329,20 +329,20 @@ CWeaponCSBase *GetWeaponInSlot( int iSlot, int iSlotPos )
 {
 	C_CSPlayer *player = C_CSPlayer::GetLocalCSPlayer();
 	if ( !player )
-		return NULL;
+		return nullptr;
 
 	for ( int i = 0; i < MAX_WEAPONS; i++ )
 	{
 		CWeaponCSBase *pWeapon = assert_cast< CWeaponCSBase * >(player->GetWeapon(i));
 		
-		if ( pWeapon == NULL )
+		if ( pWeapon == nullptr )
 			continue;
 
 		if ( pWeapon->GetSlot() == iSlot && pWeapon->GetPosition() == iSlotPos )
 			return pWeapon;
 	}
 
-	return NULL;
+	return nullptr;
 }
 
 

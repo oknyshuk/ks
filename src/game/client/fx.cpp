@@ -120,12 +120,12 @@ bool FX_GetAttachmentTransform( ClientEntityHandle_t hEntity, int attachmentInde
 	// Validate our input
 	if ( ( hEntity == INVALID_EHANDLE ) || ( attachmentIndex < 1 ) )
 	{
-		if ( origin != NULL )
+		if ( origin != nullptr )
 		{
 			*origin = vec3_origin;
 		}
 		
-		if ( angles != NULL )
+		if ( angles != nullptr )
 		{
 			*angles = QAngle(0,0,0);
 		}
@@ -143,12 +143,12 @@ bool FX_GetAttachmentTransform( ClientEntityHandle_t hEntity, int attachmentInde
 		// Find the attachment's matrix
 		pRenderable->GetAttachment( attachmentIndex, attachOrigin, attachAngles );
 	
-		if ( origin != NULL )
+		if ( origin != nullptr )
 		{
 			*origin = attachOrigin;
 		}
 		
-		if ( angles != NULL )
+		if ( angles != nullptr )
 		{
 			*angles = attachAngles;
 		}
@@ -223,7 +223,7 @@ void FX_MuzzleEffect(
 
 		pParticle = (SimpleParticle *) pSimple->AddParticle( sizeof( SimpleParticle ), pSimple->GetPMaterial( VarArgs( "effects/muzzleflash%d", random->RandomInt(1,4) ) ), offset );
 			
-		if ( pParticle == NULL )
+		if ( pParticle == nullptr )
 			return;
 
 		pParticle->m_flLifetime		= 0.0f;
@@ -308,7 +308,7 @@ void FX_MuzzleEffectAttached(
 	
 	CSmartPtr<CLocalSpaceEmitter> pSimple = CLocalSpaceEmitter::Create( "MuzzleFlash", hEntity, attachmentIndex );
 	Assert( pSimple );
-	if ( pSimple == NULL )
+	if ( pSimple == nullptr )
 		return;
 	
 	// Lock our bounding box
@@ -339,7 +339,7 @@ void FX_MuzzleEffectAttached(
 
 		pParticle = (SimpleParticle *) pSimple->AddParticle( sizeof( SimpleParticle ), g_Mat_SMG_Muzzleflash[random->RandomInt(0,3)], offset );
 			
-		if ( pParticle == NULL )
+		if ( pParticle == nullptr )
 			return;
 
 		pParticle->m_flLifetime		= 0.0f;
@@ -510,8 +510,8 @@ CSmartPtr<CSimpleEmitter> FX_Smoke( const Vector &origin, const Vector &velocity
 	{
 		PMaterialHandle hMaterial = pSimple->GetPMaterial( pMaterial );
 		pParticle = (SimpleParticle *) pSimple->AddParticle( sizeof( SimpleParticle ), hMaterial, origin );			
-		if ( pParticle == NULL )
-			return NULL;
+		if ( pParticle == nullptr )
+			return nullptr;
 
 		pParticle->m_flLifetime = 0.0f;
 		pParticle->m_flDieTime = flDietime;
@@ -653,7 +653,7 @@ public:
 		for ( int i = 0; i < numParticles; i++ )
 		{
 			pParticle = (SimpleParticle *) AddParticle( sizeof( SimpleParticle ), g_Mat_DustPuff[0], vecOrigin );			
-			if ( pParticle == NULL )
+			if ( pParticle == nullptr )
 				break;
 
 			pParticle->m_flLifetime = 0.0f;
@@ -829,7 +829,7 @@ void FX_GunshipMuzzleEffect( const Vector &origin, const QAngle &angles, float s
 
 	pParticle = (SimpleParticle *) pSimple->AddParticle( sizeof( SimpleParticle ), pSimple->GetPMaterial( "effects/gunshipmuzzle" ), offset );
 		
-	if ( pParticle == NULL )
+	if ( pParticle == nullptr )
 		return;
 
 	pParticle->m_flLifetime		= 0.0f;
@@ -1095,7 +1095,7 @@ void FX_Tesla( const CTeslaInfo &teslaInfo )
 				pSimple->SetSortOrigin( vecFlash );
 				SimpleParticle *pParticle;
 				pParticle = (SimpleParticle *) pSimple->AddParticle( sizeof( SimpleParticle ), pSimple->GetPMaterial( "effects/tesla_glow_noz" ), vecFlash );
-				if ( pParticle != NULL )
+				if ( pParticle != nullptr )
 				{
 					pParticle->m_flLifetime = 0.0f;
 					pParticle->m_flDieTime	= RandomFloat( 0.5, 1 );
@@ -1177,7 +1177,7 @@ void FX_BuildTeslaHitbox(
 	beamInfo.m_flBlue = vColor.z * 255.0;
 	beamInfo.m_nSegments = 32;
 	beamInfo.m_bRenderable = true;
-	beamInfo.m_pStartEnt = beamInfo.m_pEndEnt = NULL;
+	beamInfo.m_pStartEnt = beamInfo.m_pEndEnt = nullptr;
 
 	beamInfo.m_nFlags = (FBEAM_USE_HITBOXES);
 
@@ -1218,7 +1218,7 @@ void FX_BuildTeslaHitbox(
 		beamInfo.m_flBlue = vColor.z * 255.0;
 		beamInfo.m_nSegments = 32;
 		beamInfo.m_bRenderable = true;
-		beamInfo.m_pStartEnt = beamInfo.m_pEndEnt = NULL;
+		beamInfo.m_pStartEnt = beamInfo.m_pEndEnt = nullptr;
 
 		beamInfo.m_pStartEnt = pEntity;
 		beamInfo.m_nStartAttachment = nStartAttachment;
@@ -1227,7 +1227,7 @@ void FX_BuildTeslaHitbox(
 	}
 
 	// Create an elight to illuminate the target
-	if ( pEntity != NULL )
+	if ( pEntity != nullptr )
 	{
 		dlight_t *el = effects->CL_AllocElight( LIGHT_INDEX_TE_DYNAMIC + pEntity->entindex() );
 
@@ -1254,7 +1254,7 @@ void FX_BuildTeslaHitbox( const CEffectData &data )
 	Vector vColor( 1, 1, 1 );
 
 	C_BaseEntity *pEntity = ClientEntityList().GetEnt( data.entindex() );
-	C_BaseAnimating *pAnimating = pEntity ? pEntity->GetBaseAnimating() : NULL;
+	C_BaseAnimating *pAnimating = pEntity ? pEntity->GetBaseAnimating() : nullptr;
 	if (!pAnimating)
 		return;
 
@@ -1298,7 +1298,7 @@ void FX_BuildTeslaZap( const CEffectData &data )
 	beamInfo.m_nType = TE_BEAMTESLA;
 	beamInfo.m_pStartEnt = pEntity;
 	beamInfo.m_nStartAttachment = data.m_nAttachmentIndex;
-	beamInfo.m_pEndEnt = NULL;
+	beamInfo.m_pEndEnt = nullptr;
 	beamInfo.m_vecEnd = data.m_vOrigin;
 	beamInfo.m_pszModelName = "sprites/physbeam.vmt";
 	beamInfo.m_flHaloScale = 0.0;

@@ -13,7 +13,7 @@
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
-CStressEntityReg	*CStressEntityReg::s_pHead = NULL;
+CStressEntityReg	*CStressEntityReg::s_pHead = nullptr;
 
 
 // CStressEntityReg::s_pHead in array form for convenient access.

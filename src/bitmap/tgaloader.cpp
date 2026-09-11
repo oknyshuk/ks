@@ -461,7 +461,7 @@ static OutputRowFunc_t GetOutputRowFunc( ImageFormat imageFormat )
 	case IMAGE_FORMAT_BGRX5551:
 		return &OutputRowBGRX5551;
 	default:
-		return NULL;
+		return nullptr;
 		break;
 	}
 }
@@ -779,7 +779,7 @@ static ReadRowFunc_t GetReadRowFunc( TGAHeader_t const& header )
 				break;
 			default:
 				//Error( "unsupported tga colordepth: %d", TGAHeader_t.pixel_size" );
-				return NULL;
+				return nullptr;
 				break;
 			}
 		}

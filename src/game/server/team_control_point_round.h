@@ -56,7 +56,7 @@ public:
 private:
 	void FindControlPoints( void );	//look in the map to find the control points for this round
 	void SetupSpawnPoints( void );
-	int TeamOwnsAllPoints( CTeamControlPoint *pOverridePoint = NULL, int iOverrideNewTeam = TEAM_UNASSIGNED );
+	int TeamOwnsAllPoints( CTeamControlPoint *pOverridePoint = nullptr, int iOverrideNewTeam = TEAM_UNASSIGNED );
 
 	DECLARE_DATADESC();
 

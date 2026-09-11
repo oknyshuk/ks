@@ -63,14 +63,14 @@ static const char *facingName[6] = { "rt", "lf", "bk", "ft", "up", "dn" };
 static IVTex* VTex_Load( CSysModule** pModule )
 {
 	// load the vtex dll
-	IVTex *pIVTex = NULL;
+	IVTex *pIVTex = nullptr;
 	*pModule = FileSystem_LoadModule( "vtex_dll" );
 	if ( *pModule )
 	{
 		CreateInterfaceFn factory = Sys_GetFactory( *pModule );
 		if ( factory )
 		{
-			pIVTex = ( IVTex * )factory( IVTEX_VERSION_STRING, NULL );
+			pIVTex = ( IVTex * )factory( IVTEX_VERSION_STRING, nullptr );
 		}
 	}
 
@@ -98,7 +98,7 @@ static void TakeCubemapSnapshot( const Vector &origin, const char *pFileNameBase
 	if ( g_LostVideoMemory )
 		return;
 
-	ITexture *pSaveRenderTarget = NULL;
+	ITexture *pSaveRenderTarget = nullptr;
 	
 	CMatRenderContextPtr pRenderContext( materials );
 
@@ -106,7 +106,7 @@ static void TakeCubemapSnapshot( const Vector &origin, const char *pFileNameBase
 	if( bPFM )
 	{
 		pSaveRenderTarget = pRenderContext->GetRenderTarget();
-		pRenderContext->SetRenderTarget( NULL );
+		pRenderContext->SetRenderTarget( nullptr );
 	}
 
 	// HACK HACK HACK!!!!  
@@ -293,7 +293,7 @@ void* CubemapsFSFactory( const char *pName, int *pReturnCode )
 	if ( Q_stricmp( pName, FILESYSTEM_INTERFACE_VERSION ) == 0 )
 		return g_pFileSystem;
 
-	return NULL;
+	return nullptr;
 }
 
 
@@ -367,7 +367,7 @@ static void BuildSingleCubemap( const char *pVTFName, const Vector &vecOrigin,
 		ivt->VTex( CubemapsFSFactory, pGameDir, iArg, argv );
 	}
 
-	g_pFileSystem->RemoveFile( pTXTName, NULL );
+	g_pFileSystem->RemoveFile( pTXTName, nullptr );
 
 	const char *pSrcExtension = bHDR ? ".pfm" : ".tga";
 	for( int i = 0; i < 6; i++ )
@@ -375,7 +375,7 @@ static void BuildSingleCubemap( const char *pVTFName, const Vector &vecOrigin,
 		char pTempName[MAX_PATH];
 		Q_snprintf( pTempName, sizeof( pTempName ), "%s%s", pVTFName, facingName[i] );
 		Q_SetExtension( pTempName, pSrcExtension, sizeof(pTempName) );
-		g_pFileSystem->RemoveFile( pTempName, NULL );
+		g_pFileSystem->RemoveFile( pTempName, nullptr );
 	}
 }
 
@@ -540,7 +540,7 @@ CON_COMMAND( lightprobe,
 	Q_snprintf( pTemp, sizeof(pTemp), "materialsrc/lightprobes/%s", args[1] );
 	GetModContentSubdirectory( pTemp, pMaterialSrcPath, sizeof(pMaterialSrcPath) );
 	Q_StripFilename( pMaterialSrcPath );
-	g_pFileSystem->CreateDirHierarchy( pMaterialSrcPath, NULL );
+	g_pFileSystem->CreateDirHierarchy( pMaterialSrcPath, nullptr );
 
 	char pGameDir[MAX_OSPATH];
 	COM_GetGameDir( pGameDir, sizeof( pGameDir ) );
@@ -552,18 +552,18 @@ CON_COMMAND( lightprobe,
 		Q_snprintf( pTemp2, sizeof(pTemp2), "materialsrc/lightprobes/%s_hdr", args[1] );
 
 		GetModContentSubdirectory( pTemp2, pMaterialSrcPath, sizeof(pMaterialSrcPath) );
-		BuildSingleCubemap( pMaterialSrcPath, MainViewOrigin(), nTGASize, true, pGameDir, pIVTex, NULL );
+		BuildSingleCubemap( pMaterialSrcPath, MainViewOrigin(), nTGASize, true, pGameDir, pIVTex, nullptr );
 	}
 
 	GetModContentSubdirectory( pTemp, pMaterialSrcPath, sizeof(pMaterialSrcPath) );
-	BuildSingleCubemap( pMaterialSrcPath, MainViewOrigin(), nTGASize, false, pGameDir, pIVTex, NULL );
+	BuildSingleCubemap( pMaterialSrcPath, MainViewOrigin(), nTGASize, false, pGameDir, pIVTex, nullptr );
 
 	VTex_Unload( pModule );
 
 	// Get the lighting at the point
 	LightingState_t lightingState;
 	LightcacheGetDynamic_Stats stats;
-	LightcacheGetDynamic( MainViewOrigin(), lightingState, stats, NULL );
+	LightcacheGetDynamic( MainViewOrigin(), lightingState, stats, nullptr );
 
 	Q_snprintf( pBasePath, sizeof(pBasePath), "materials/lightprobes/%s", args[1] );
 	WriteLightProbe( pBasePath, lightingState, bHDR );
@@ -581,7 +581,7 @@ static bool LoadSrcVTFFiles( IVTFTexture *pSrcVTFTextures[6], const char *pSkybo
 			Q_snprintf( srcVTFFileName, sizeof( srcVTFFileName ), "materials/skybox/%s%s.vtf", pSkyboxBaseName, facingName[i] );
 
 			CUtlBuffer buf;
-			if ( !g_pFileSystem->ReadFile( srcVTFFileName, NULL, buf ) )
+			if ( !g_pFileSystem->ReadFile( srcVTFFileName, nullptr, buf ) )
 				return false;
 
 			pSrcVTFTextures[i] = CreateVTFTexture();
@@ -1080,7 +1080,7 @@ void R_BuildCubemapSamples( int numIterations )
 		char pMaterialSrcDir[MAX_PATH];
 		GetModContentSubdirectory( pTemp, pMaterialSrcDir, sizeof(pMaterialSrcDir) );
 
-		g_pFileSystem->CreateDirHierarchy( pMaterialSrcDir, NULL );
+		g_pFileSystem->CreateDirHierarchy( pMaterialSrcDir, nullptr );
 		
 		char gameDir[MAX_OSPATH];
 		COM_GetGameDir( gameDir, sizeof( gameDir ) );
@@ -1127,14 +1127,14 @@ void R_BuildCubemapSamples( int numIterations )
 		VTex_Unload( pModule );
 
 		// load the bsppack dll
-		IBSPPack *iBSPPack = NULL;
+		IBSPPack *iBSPPack = nullptr;
 		pModule = FileSystem_LoadModule( "bsppack" );
 		if ( pModule )
 		{
 			CreateInterfaceFn factory = Sys_GetFactory( pModule );
 			if ( factory )
 			{
-				iBSPPack = ( IBSPPack * )factory( IBSPPACK_VERSION_STRING, NULL );
+				iBSPPack = ( IBSPPack * )factory( IBSPPACK_VERSION_STRING, nullptr );
 			}
 		}
 		if( !iBSPPack )

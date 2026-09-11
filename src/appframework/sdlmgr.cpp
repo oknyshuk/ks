@@ -132,7 +132,7 @@ public:
 	virtual void OnFrameRendered();
 
 	// Returns all dependent libraries
-	virtual const AppSystemInfo_t* GetDependencies() {return NULL;}
+	virtual const AppSystemInfo_t* GetDependencies() {return nullptr;}
 
 #if WITH_OVERLAY_CURSOR_VISIBILITY_WORKAROUND
 	virtual void ForceSystemCursorVisible();
@@ -217,11 +217,11 @@ private:
 	bool m_bTextMode;
 };
 
-ILauncherMgr *g_pLauncherMgr = NULL;
+ILauncherMgr *g_pLauncherMgr = nullptr;
 
 void* CreateSDLMgr()
 {
-	if ( g_pLauncherMgr == NULL )
+	if ( g_pLauncherMgr == nullptr )
 	{
 		g_pLauncherMgr = new CSDLMgr();
 	}
@@ -316,7 +316,7 @@ CON_COMMAND( grab_window, "grab/ungrab window." )
 
 CSDLMgr::CSDLMgr()
 {
-	m_Window = NULL;
+	m_Window = nullptr;
 	Init();
 }
 
@@ -324,7 +324,7 @@ InitReturnVal_t CSDLMgr::Init()
 {
 	SDLAPP_FUNC;
 
-	if (m_Window != NULL)
+	if (m_Window != nullptr)
 		return INIT_OK;  // already initialized.
 
 #if ALLOW_TEXT_MODE
@@ -344,7 +344,7 @@ InitReturnVal_t CSDLMgr::Init()
 		if (!SDL_Init(SDL_INIT_VIDEO))
 			Error( "SDL_Init(SDL_INIT_VIDEO) failed: %s", SDL_GetError() );
 
-		if (!SDL_Vulkan_LoadLibrary(NULL))
+		if (!SDL_Vulkan_LoadLibrary(nullptr))
 			Error( "SDL_Vulkan_LoadLibrary(NULL) failed: %s", SDL_GetError() );
 	}
 
@@ -359,12 +359,12 @@ InitReturnVal_t CSDLMgr::Init()
 
 	m_bCursorVisible = true;
 	m_nFramesCursorInvisibleFor = 0;
-	m_hCursor = NULL;
+	m_hCursor = nullptr;
 
 
 	m_bHasFocus = true;
 
-	m_Window = NULL;
+	m_Window = nullptr;
 	m_bFullScreen = false;
 	m_nEventsHead = 0;
 	m_nEventsCount = 0;
@@ -433,7 +433,7 @@ void *CSDLMgr::QueryInterface( const char *pInterfaceName )
 	SDLAPP_FUNC;
 	if ( !Q_stricmp( pInterfaceName, SDLMGR_INTERFACE_VERSION ) )
 		return this;
-	return NULL;
+	return nullptr;
 }
 
 void CSDLMgr::Shutdown()
@@ -569,7 +569,7 @@ bool CSDLMgr::CreateHiddenGameWindow( const char *pTitle, bool bWindowed, int wi
 		m_Window = SDL_CreateWindow( pTitle, width, height, flags );
 	}
 
-	if (m_Window == NULL)
+	if (m_Window == nullptr)
 		Error( "Failed to create SDL window: %s", SDL_GetError() );
 
 	// Publish for every other module; see appframework/sdlwindow.h.
@@ -801,7 +801,7 @@ void CSDLMgr::SetMouseCursor( SDL_Cursor *hCursor )
 		m_hCursor = hCursor;
 
 		// SDL_SetCursor( NULL ) just forces a cursor redraw, so no cursor means hide.
-		SetMouseVisible( hCursor != NULL );
+		SetMouseVisible( hCursor != nullptr );
 
 		// ...and if visibility did not change, the cursor shape still did.
 		ApplyPointerState();
@@ -951,7 +951,7 @@ void CSDLMgr::SetWindowFullScreen( bool bFullScreen, int nWidth, int nHeight, bo
 
 			if ( dList ) SDL_free( dList );
 
-			SDL_SetWindowFullscreenMode( m_Window, NULL );
+			SDL_SetWindowFullscreenMode( m_Window, nullptr );
 		}
 
 		SDL_SetWindowFullscreen( m_Window, bFullScreen );
@@ -1188,8 +1188,8 @@ void CSDLMgr::DestroyGameWindow()
 		SDL_SetWindowFullscreen(m_Window, false);  // just in case.
 		SDL_SetWindowMouseGrab(m_Window, false);  // just in case.
 		SDL_DestroyWindow(m_Window);
-		m_Window = NULL;
-		SetGameSDLWindow( NULL );
+		m_Window = nullptr;
+		SetGameSDLWindow( nullptr );
 	}
 }
 
@@ -1315,10 +1315,10 @@ InputCursorHandle_t CSDLMgr::LoadCursorFromFile( const char *pchFileName )
 	V_strcat( path, ".bmp", sizeof( path ) );
 
 	SDL_Surface *surface = SDL_LoadBMP( path );
-	if ( surface == NULL )
+	if ( surface == nullptr )
 	{
 		Warning( "Failed to load image for cursor from %s: %s\n", path, SDL_GetError() );
-		return NULL;
+		return nullptr;
 	}
 
 	// The cursor resource file contains information on the cursor's
@@ -1331,17 +1331,17 @@ InputCursorHandle_t CSDLMgr::LoadCursorFromFile( const char *pchFileName )
 	int nHotX = 0, nHotY = 0;
 
 	KeyValues *pRes = pCursorResource->FindKey( pchCursorName );
-	if ( pRes != NULL )
+	if ( pRes != nullptr )
 	{
 		nHotX = pRes->GetInt( "hotx" );
 		nHotY = pRes->GetInt( "hoty" );
 	}
 
 	SDL_Cursor *cursor = SDL_CreateColorCursor( surface, nHotX, nHotY );
-	if( cursor == NULL )
+	if( cursor == nullptr )
 	{
 		Warning( "Failed to load cursor from %s: %s\n", path, SDL_GetError() );
-		return NULL;
+		return nullptr;
 	}
 	return reinterpret_cast< InputCursorHandle_t >( cursor );
 }

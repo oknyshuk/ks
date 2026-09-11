@@ -124,25 +124,25 @@ static void* SendProxy_SendPredictableId( const SendProp *pProp, const void *pSt
 {
 	CBaseEntity *pEntity = (CBaseEntity *)pStruct;
 	if ( !pEntity || !pEntity->m_PredictableID->IsActive() )
-		return NULL;
+		return nullptr;
 
 	if ( !pEntity->GetOwnerEntity() )
-		return NULL;
+		return nullptr;
 
 	CBaseEntity *owner = pEntity->GetOwnerEntity();
 	if ( !owner || !owner->IsPlayer() )
-		return NULL;
+		return nullptr;
 
 	CBasePlayer *pOwner = static_cast< CBasePlayer * >( owner );
 	if ( !pOwner )
-		return NULL;
+		return nullptr;
 
 	int id_player_index = pEntity->m_PredictableID->GetPlayer();
 	int owner_player_index = pOwner->entindex() - 1;
 	// Only send to owner player
 	// FIXME:  Is this ever not the case due to the SetOnly call?
 	if ( id_player_index != owner_player_index )
-		return NULL;
+		return nullptr;
 
 	pRecipients->SetOnly( owner_player_index );
 	return ( void * )pVarData;
@@ -433,7 +433,7 @@ CBeam *CBeam::BeamCreatePredictable( const char *module, int line, bool persist,
 
 	return pBeam;
 #else
-	return NULL;
+	return nullptr;
 #endif
 }
 
@@ -568,9 +568,9 @@ CBaseEntity *CBeam::RandomTargetname( const char *szName )
 #if !defined( CLIENT_DLL )
 	int total = 0;
 
-	CBaseEntity *pEntity = NULL;
-	CBaseEntity *pNewEntity = NULL;
-	while ((pNewEntity = gEntList.FindEntityByName( pNewEntity, szName )) != NULL)
+	CBaseEntity *pEntity = nullptr;
+	CBaseEntity *pNewEntity = nullptr;
+	while ((pNewEntity = gEntList.FindEntityByName( pNewEntity, szName )) != nullptr)
 	{
 		total++;
 		if (random->RandomInt(0,total-1) < 1)
@@ -578,7 +578,7 @@ CBaseEntity *CBeam::RandomTargetname( const char *szName )
 	}
 	return pEntity;
 #else
-	return NULL;
+	return nullptr;
 #endif
 }
 
@@ -609,7 +609,7 @@ void CBeam::BeamDamage( trace_t *ptr )
 {
 	RelinkBeam();
 #if !defined( CLIENT_DLL )
-	if ( ptr->fraction != 1.0 && ptr->Ent<CBaseEntity>() != NULL )
+	if ( ptr->fraction != 1.0 && ptr->Ent<CBaseEntity>() != nullptr )
 	{
 		CBaseEntity *pHit = ptr->Ent<CBaseEntity>();
 		if ( pHit )
@@ -848,7 +848,7 @@ void CBeam::OnDataChanged( DataUpdateType_t updateType )
 			{
 				C_BasePlayer *player = ToBasePlayer( pWpn->GetOwner() );
 
-				C_BaseViewModel *pViewModel = player ? player->GetViewModel( 0 ) : NULL;
+				C_BaseViewModel *pViewModel = player ? player->GetViewModel( 0 ) : nullptr;
 				if ( pViewModel )
 				{
 					// Get the viewmodel and use it instead

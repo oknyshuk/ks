@@ -24,7 +24,7 @@
 #define POINT_CAMERA_MSG_SETACTIVE		1
 
 CEntityClassList<CPointCamera> g_PointCameraList;
-template <> CPointCamera *CEntityClassList<CPointCamera>::m_pClassList = NULL;
+template <> CPointCamera *CEntityClassList<CPointCamera>::m_pClassList = nullptr;
 
 CPointCamera* GetPointCameraList()
 {
@@ -133,7 +133,7 @@ void CPointCamera::InputChangeFOV( inputdata_t &inputdata )
 
 	// Get Time
 	float flChangeTime;
-	pszParam = strtok(NULL," ");
+	pszParam = strtok(nullptr," ");
 	if(pszParam)
 	{
 		flChangeTime = atof( pszParam );
@@ -166,7 +166,7 @@ void CPointCamera::ChangeFOVThink( void )
 		if( newFOV <= m_TargetFOV )
 		{
 			newFOV = m_TargetFOV;
-			SetThink( NULL );
+			SetThink( nullptr );
 		}
 	}
 	else
@@ -174,7 +174,7 @@ void CPointCamera::ChangeFOVThink( void )
 		if( newFOV >= m_TargetFOV )
 		{
 			newFOV = m_TargetFOV;
-			SetThink( NULL );
+			SetThink( nullptr );
 		}
 	}
 
@@ -186,8 +186,8 @@ void CPointCamera::ChangeFOVThink( void )
 //-----------------------------------------------------------------------------
 void CPointCamera::InputSetOnAndTurnOthersOff( inputdata_t &inputdata )
 {
-	CBaseEntity *pEntity = NULL;
-	while ((pEntity = gEntList.FindEntityByClassname( pEntity, "point_camera" )) != NULL)
+	CBaseEntity *pEntity = nullptr;
+	while ((pEntity = gEntList.FindEntityByClassname( pEntity, "point_camera" )) != nullptr)
 	{
 		CPointCamera *pCamera = (CPointCamera*)pEntity;
 		pCamera->InputSetOff( inputdata );
@@ -219,8 +219,8 @@ void CPointCamera::InputSetOff( inputdata_t &inputdata )
 //-----------------------------------------------------------------------------
 void CPointCamera::InputForceActive( inputdata_t &inputdata )
 {
-	CBaseEntity *pEntity = NULL;
-	while ((pEntity = gEntList.FindEntityByClassname( pEntity, "point_camera" )) != NULL)
+	CBaseEntity *pEntity = nullptr;
+	while ((pEntity = gEntList.FindEntityByClassname( pEntity, "point_camera" )) != nullptr)
 	{
 		CPointCamera *pCamera = (CPointCamera*)pEntity;
 		pCamera->m_bActive = false;

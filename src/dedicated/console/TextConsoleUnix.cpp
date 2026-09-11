@@ -39,7 +39,7 @@ bool CTextConsoleUnix::Init( )
 
 	sigemptyset (&block_ttou);
 	sigaddset (&block_ttou, SIGTTOU);
-	sigprocmask (SIG_BLOCK, &block_ttou, NULL);
+	sigprocmask (SIG_BLOCK, &block_ttou, nullptr);
 
 	tty = stdout;
 	
@@ -47,15 +47,15 @@ bool CTextConsoleUnix::Init( )
 	// (which is != STDOUT) 
 	if ( isatty(STDIN_FILENO) )
 	{
-		tty = fopen( ctermid( NULL ), "w+" );	
+		tty = fopen( ctermid( nullptr ), "w+" );	
 		if ( !tty )
 		{	
-			printf("Unable to open tty(%s) for output\n", ctermid( NULL ) );
+			printf("Unable to open tty(%s) for output\n", ctermid( nullptr ) );
 			tty = stdout;
 		}
 		else
 		{
-			setbuf( tty, NULL ); // turn buffering off
+			setbuf( tty, nullptr ); // turn buffering off
 		}
 	}
 	else
@@ -80,7 +80,7 @@ bool CTextConsoleUnix::Init( )
 	termNew.c_lflag &= ( ~ECHO );
 
 	tcsetattr( STDIN_FILENO, TCSANOW, &termNew );
-	sigprocmask (SIG_UNBLOCK, &block_ttou, NULL);
+	sigprocmask (SIG_UNBLOCK, &block_ttou, nullptr);
 
 	m_bConDebug = CommandLine()->FindParm( "-condebug" ) != 0;
 	if ( m_bConDebug && CommandLine()->FindParm( "-conclearlog" ) )
@@ -98,9 +98,9 @@ void CTextConsoleUnix::ShutDown( void )
 
  	sigemptyset (&block_ttou);
  	sigaddset (&block_ttou, SIGTTOU);
-	sigprocmask (SIG_BLOCK, &block_ttou, NULL);
+	sigprocmask (SIG_BLOCK, &block_ttou, nullptr);
 	tcsetattr( STDIN_FILENO, TCSANOW, &termStored );
-	sigprocmask (SIG_UNBLOCK, &block_ttou, NULL);
+	sigprocmask (SIG_UNBLOCK, &block_ttou, nullptr);
 
 	CTextConsole::ShutDown();
 }
@@ -121,14 +121,14 @@ int CTextConsoleUnix::kbhit( void )
   tv.tv_usec	= 0;
 
   /* Must be in raw or cbreak mode for this to work correctly. */
-  return select( STDIN_FILENO + 1, &rfds, NULL, NULL, &tv )!=-1 && FD_ISSET( STDIN_FILENO, &rfds );
+  return select( STDIN_FILENO + 1, &rfds, nullptr, nullptr, &tv )!=-1 && FD_ISSET( STDIN_FILENO, &rfds );
 }
 
 
 char * CTextConsoleUnix::GetLine( void )
 {
 	if ( !kbhit() ) // early return for 99.999% case :)
-		return NULL;
+		return nullptr;
 
 	escape_sequence_t es;
 
@@ -138,7 +138,7 @@ char * CTextConsoleUnix::GetLine( void )
  	sigemptyset (&block_ttou);
  	sigaddset (&block_ttou, SIGTTOU);
  	sigaddset (&block_ttou, SIGTTIN);
-	sigprocmask (SIG_BLOCK, &block_ttou, NULL);
+	sigprocmask (SIG_BLOCK, &block_ttou, nullptr);
 
 
 	while ( 1 )
@@ -161,7 +161,7 @@ char * CTextConsoleUnix::GetLine( void )
 			nLen = ReceiveNewline();
 			if ( nLen )
 			{
-				sigprocmask (SIG_UNBLOCK, &block_ttou, NULL);
+				sigprocmask (SIG_UNBLOCK, &block_ttou, nullptr);
 				return m_szConsoleText;	
 			}
 			break;
@@ -265,8 +265,8 @@ char * CTextConsoleUnix::GetLine( void )
 		fflush( stdout );
 	}
 
-	sigprocmask (SIG_UNBLOCK, &block_ttou, NULL);
-	return NULL;
+	sigprocmask (SIG_UNBLOCK, &block_ttou, nullptr);
+	return nullptr;
 }
 
 

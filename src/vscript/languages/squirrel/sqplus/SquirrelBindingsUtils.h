@@ -43,15 +43,15 @@ struct ScriptNamespaceDecl  {
 			return 1; \
 		} \
 		struct ScriptClassMemberDecl __##classname##_members[] = { \
-		{_T("_typeof"),__##classname##__typeof,1,NULL},
+		{_T("_typeof"),__##classname##__typeof,1,nullptr},
 
 #define _BEGIN_NAMESPACE(xnamespace) struct ScriptClassMemberDecl __##xnamespace##_members[] = {
-#define _BEGIN_NAMESPACE_CONSTANTS(xnamespace) {NULL,NULL,0,NULL}}; \
+#define _BEGIN_NAMESPACE_CONSTANTS(xnamespace) {nullptr,nullptr,0,nullptr}}; \
 	struct ScriptConstantDecl __##xnamespace##_constants[] = {
 
 #define _BEGIN_DELEGATE(xnamespace) struct ScriptClassMemberDecl __##xnamespace##_delegate[] = {
 #define _DELEGATE(xnamespace) __##xnamespace##_delegate
-#define _END_DELEGATE(classname) {NULL,NULL,NULL,NULL}};
+#define _END_DELEGATE(classname) {nullptr,nullptr,nullptr,nullptr}};
 
 #define _CONSTANT(name,type,val) {_T(#name),type,val},
 #define _CONSTANT_IMPL(name,type) {_T(#name),type,name},
@@ -59,16 +59,16 @@ struct ScriptNamespaceDecl  {
 #define _MEMBER_FUNCTION(classname,name,nparams,typemask) \
 	{_T(#name),__##classname##_##name,nparams,typemask},
 
-#define _END_NAMESPACE(classname,delegate) {NULL,OT_NULL,0}}; \
+#define _END_NAMESPACE(classname,delegate) {nullptr,OT_NULL,0}}; \
 struct ScriptNamespaceDecl __##classname##_decl = {   \
 	_T(#classname), __##classname##_members,__##classname##_constants,delegate };
 
-#define _END_CLASS(classname) {NULL,NULL,0,NULL}}; \
+#define _END_CLASS(classname) {nullptr,nullptr,0,nullptr}}; \
 struct SquirrelClassDecl __##classname##_decl = {  \
-	_T(#classname), NULL, __##classname##_members };
+	_T(#classname), nullptr, __##classname##_members };
 
 
-#define _END_CLASS_INHERITANCE(classname,base) {NULL,NULL,NULL,NULL}}; \
+#define _END_CLASS_INHERITANCE(classname,base) {nullptr,nullptr,nullptr,nullptr}}; \
 struct SquirrelClassDecl __##classname##_decl = {  \
 	_T(#classname), _T(#base), __##classname##_members };
 
@@ -82,19 +82,19 @@ struct SquirrelClassDecl __##classname##_decl = {  \
 #define _DECL_CLASS(classname) extern struct SquirrelClassDecl __##classname##_decl;
 
 #define _CHECK_SELF(cppclass,scriptclass) \
-	cppclass *self = NULL; \
+	cppclass *self = nullptr; \
 	if(SQ_FAILED(sq_getinstanceup(v,1,(SQUserPointer*)&self,(SQUserPointer)&__##scriptclass##_decl))) { \
 		return sq_throwerror(v,_T("invalid instance type"));\
 	}
 
 #define _CHECK_INST_PARAM(pname,idx,cppclass,scriptclass)  \
-	cppclass *pname = NULL; \
+	cppclass *pname = nullptr; \
 	if(SQ_FAILED(sq_getinstanceup(v,idx,(SQUserPointer*)&pname,(SQUserPointer)&__##scriptclass##_decl))) { \
 		return sq_throwerror(v,_T("invalid instance type"));\
 	} \
 
 #define _CHECK_INST_PARAM_BREAK(pname,idx,cppclass,scriptclass)  \
-	cppclass *pname = NULL; \
+	cppclass *pname = nullptr; \
 	if(SQ_FAILED(sq_getinstanceup(v,idx,(SQUserPointer*)&pname,(SQUserPointer)&__##scriptclass##_decl))) { \
 		break; \
 	} \

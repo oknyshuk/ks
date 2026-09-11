@@ -118,15 +118,15 @@ inline char *MemAlloc_StrDup(const char *pString, const char *pFileName, unsigne
 	char *pMemory;
 	
 	if (!pString)
-		return NULL;
+		return nullptr;
 	
 	size_t len = strlen(pString) + 1;
-	if ((pMemory = (char *)MemAlloc_Alloc(len, pFileName, nLine)) != NULL)
+	if ((pMemory = (char *)MemAlloc_Alloc(len, pFileName, nLine)) != nullptr)
 	{
 		return strcpy( pMemory, pString );
 	}
 	
-	return NULL;
+	return nullptr;
 }
 
 inline wchar_t *MemAlloc_WcStrDup(const wchar_t *pString, const char *pFileName, unsigned nLine)
@@ -134,15 +134,15 @@ inline wchar_t *MemAlloc_WcStrDup(const wchar_t *pString, const char *pFileName,
 	wchar_t *pMemory;
 	
 	if (!pString)
-		return NULL;
+		return nullptr;
 	
 	size_t len = (wcslen(pString) + 1);
-	if ((pMemory = (wchar_t *)MemAlloc_Alloc(len * sizeof(wchar_t), pFileName, nLine)) != NULL)
+	if ((pMemory = (wchar_t *)MemAlloc_Alloc(len * sizeof(wchar_t), pFileName, nLine)) != nullptr)
 	{
 		return wcscpy( pMemory, pString );
 	}
 	
-	return NULL;
+	return nullptr;
 }
 
 #endif // DBMEM_DEFINED_STRDUP
@@ -186,15 +186,15 @@ inline char *MemAlloc_StrDup(const char *pString)
 	char *pMemory;
 
 	if (!pString)
-		return NULL;
+		return nullptr;
 
 	size_t len = strlen(pString) + 1;
-	if ((pMemory = (char *)malloc(len)) != NULL)
+	if ((pMemory = (char *)malloc(len)) != nullptr)
 	{
 		return strcpy( pMemory, pString );
 	}
 
-	return NULL;
+	return nullptr;
 }
 
 inline wchar_t *MemAlloc_WcStrDup(const wchar_t *pString)
@@ -202,15 +202,15 @@ inline wchar_t *MemAlloc_WcStrDup(const wchar_t *pString)
 	wchar_t *pMemory;
 
 	if (!pString)
-		return NULL;
+		return nullptr;
 
 	size_t len = (wcslen(pString) + 1);
-	if ((pMemory = (wchar_t *)malloc(len * sizeof(wchar_t))) != NULL)
+	if ((pMemory = (wchar_t *)malloc(len * sizeof(wchar_t))) != nullptr)
 	{
 		return wcscpy( pMemory, pString );
 	}
 
-	return NULL;
+	return nullptr;
 }
 
 #endif // DBMEM_DEFINED_STRDUP

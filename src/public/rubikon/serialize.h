@@ -22,7 +22,7 @@ schema struct RnSphere_t
 	AABB_t GetBbox() const;
 	AABB_t GetBbox( const CTransform& xform ) const;
 
-	int GetTriangulation( Vector *pVerts = NULL ) const;
+	int GetTriangulation( Vector *pVerts = nullptr ) const;
 	void GetTriangulation( CUtlVector<Vector> &vertices, CUtlVector<uint32> &indices ) const;
 	void GetTriangulation( CUtlVector<Vector> &vertices, CUtlVector<uint32> &indices, int nSides, int nSlices ) const;
 	
@@ -64,7 +64,7 @@ schema struct RnCapsule_t
 	AABB_t GetBbox() const;
 	AABB_t GetBbox( const CTransform& xform ) const;
 
-	int GetTriangulation( Vector *pVerts = NULL ) const;
+	int GetTriangulation( Vector *pVerts = nullptr ) const;
 	void GetTriangulation( CUtlVector<Vector> &vertices, CUtlVector<uint32> &indices ) const;
 	void GetTriangulation( CUtlVector<Vector> &vertices, CUtlVector<uint32> &indices, int nSides, int nSlices ) const;
 	
@@ -200,7 +200,7 @@ schema struct RnHull_t
 	AABB_t GetBbox( void ) const;
 	AABB_t GetBbox( const CTransform& xform ) const;
 
-	int GetTriangulation( Vector *pVerts = NULL ) const;
+	int GetTriangulation( Vector *pVerts = nullptr ) const;
 	void GetTriangulation( CUtlVector<Vector> &vertices, CUtlVector<uint32> &indices, float flScale = 1.0f ) const;
 	
 	float GetVolume( void ) const;
@@ -456,7 +456,7 @@ schema struct RnMesh_t
 	int GetMemory( void ) const;	
 
 	AABB_t GetBbox( void ) const;
-	int GetTriangulation( Vector *pVerts = NULL ) const;
+	int GetTriangulation( Vector *pVerts = nullptr ) const;
 	void GetTriangulation( CUtlVector<Vector> &vertices, CUtlVector<uint32> &indices, const Vector &vScale = Vector( 1, 1, 1 ) ) const;
 	float GetVolume( void ) const { return 0; }
 
@@ -835,7 +835,7 @@ inline int RnNode_t::GetHeight( void ) const
 inline int RnMesh_t::GetHeight( void ) const 
 {
 	const RnNode_t* Root = GetRoot();
-	if ( Root == NULL )
+	if ( Root == nullptr )
 	{
 		return 0;
 	}

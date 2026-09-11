@@ -412,7 +412,7 @@ CBaseEntity	*CBreakableProp::FindEnableMotionFixup()
 			return list[i];
 	}
 
-	return NULL;
+	return nullptr;
 }
 
 bool CBreakableProp::GetEnableMotionPosition( Vector *pPosition, QAngle *pAngles )
@@ -482,8 +482,8 @@ void CBreakableProp::HandleFirstCollisionInteractions( int index, gamevcollision
 		Vector vecPosition;
 		Vector vecVelocity;
 
-		VPhysicsGetObject()->GetVelocity( &vecVelocity, NULL );
-		VPhysicsGetObject()->GetPosition( &vecPosition, NULL );
+		VPhysicsGetObject()->GetVelocity( &vecVelocity, nullptr );
+		VPhysicsGetObject()->GetPosition( &vecPosition, nullptr );
 
 		info.SetDamageForce( vecVelocity );
 		info.SetDamagePosition( vecPosition );
@@ -497,7 +497,7 @@ void CBreakableProp::HandleFirstCollisionInteractions( int index, gamevcollision
 		IPhysicsObject *pObj = VPhysicsGetObject();
  
 		Vector vecPos;
-		pObj->GetPosition( &vecPos, NULL );
+		pObj->GetPosition( &vecPos, nullptr );
  
 		Vector vecVelocity = pEvent->preVelocity[0];
 		VectorNormalize(vecVelocity);
@@ -574,7 +574,7 @@ void CPhysicsProp::HandleAnyCollisionInteractions( int index, gamevcollisioneven
 		}
 		else
 		{
-			GetVectors( &forward, NULL, NULL );
+			GetVectors( &forward, nullptr, nullptr );
 		}
 
 		float speed = DotProduct( forward, vel );
@@ -609,7 +609,7 @@ void CPhysicsProp::HandleAnyCollisionInteractions( int index, gamevcollisioneven
 			}
 
 			Vector vecPos;
-			pObj->GetPosition( &vecPos, NULL );
+			pObj->GetPosition( &vecPos, nullptr );
 
 			// Find the bone for the hitbox we hit
 			trace_t tr;
@@ -623,7 +623,7 @@ void CPhysicsProp::HandleAnyCollisionInteractions( int index, gamevcollisioneven
 				iBone = pNPC->GetHitboxBone( tr.hitbox );
 				pNPC->GetBonePosition( iBone, vecBonePos, vecBoneAngles );
 
-				Teleport( &vecBonePos, NULL, NULL );
+				Teleport( &vecBonePos, nullptr, nullptr );
 				vecImpalePos = vecBonePos;
 			}
 
@@ -648,7 +648,7 @@ void CBreakableProp::StickAtPosition( const Vector &stickPosition, const Vector 
 		return;
 
 	EmitSound("Metal.SawbladeStick");
-	Teleport( &stickPosition, NULL, NULL );
+	Teleport( &stickPosition, nullptr, nullptr );
 	SetEnableMotionPosition( savePosition, saveAngles );  // this uses hierarchy, so it must be set after teleport
 
 	VPhysicsGetObject()->EnableMotion( false );
@@ -710,7 +710,7 @@ void CBreakableProp::HandleInteractionStick( int index, gamevcollisionevent_t *p
 void CC_Prop_Debug( void )
 {
 	// Toggle the prop debug bit on all props
-	for ( CBaseEntity *pEntity = gEntList.FirstEnt(); pEntity != NULL; pEntity = gEntList.NextEnt(pEntity) )
+	for ( CBaseEntity *pEntity = gEntList.FirstEnt(); pEntity != nullptr; pEntity = gEntList.NextEnt(pEntity) )
 	{
 		CBaseProp *pProp = dynamic_cast<CBaseProp*>(pEntity);
 		if ( pProp )
@@ -854,9 +854,9 @@ void CBreakableProp::Spawn()
 		m_nPhysgunState = PHYSGUN_CAN_BE_GRABBED;
 	}
 
-	m_hLastAttacker = NULL;
+	m_hLastAttacker = nullptr;
 
-	m_hBreaker = NULL;
+	m_hBreaker = nullptr;
 
 	SetTouch( &CBreakableProp::BreakablePropTouch );
 }
@@ -1226,7 +1226,7 @@ bool CBreakableProp::OnAttemptPhysGunPickup( CBasePlayer *pPhysGunUser, PhysGunP
 			m_nPhysgunState = PHYSGUN_ANIMATE_IS_PRE_ANIMATING;
 			SetContextThink( &CBreakableProp::AnimateThink, gpGlobals->curtime + 0.1, s_pPropAnimateThink );
 
-			m_OnPhysCannonAnimatePreStarted.FireOutput( NULL,this );
+			m_OnPhysCannonAnimatePreStarted.FireOutput( nullptr,this );
 		}
 		else
 		{
@@ -1234,7 +1234,7 @@ bool CBreakableProp::OnAttemptPhysGunPickup( CBasePlayer *pPhysGunUser, PhysGunP
 			iSequence = SelectWeightedSequence( ACT_PHYSCANNON_ANIMATE );
 			m_nPhysgunState = PHYSGUN_ANIMATE_IS_ANIMATING;
 
-			m_OnPhysCannonAnimatePullStarted.FireOutput( NULL,this );
+			m_OnPhysCannonAnimatePullStarted.FireOutput( nullptr,this );
 		}
 
  		ResetSequence( iSequence );
@@ -1267,12 +1267,12 @@ bool CBreakableProp::OnAttemptPhysGunPickup( CBasePlayer *pPhysGunUser, PhysGunP
 				SetPlaybackRate( 1.0f );
 				ResetClientsideFrame();
 
-				m_OnPhysCannonAnimatePostStarted.FireOutput( NULL,this );
+				m_OnPhysCannonAnimatePostStarted.FireOutput( nullptr,this );
 			}
 			else
 			{
 				m_nPhysgunState = PHYSGUN_ANIMATE_FINISHED;
-				m_OnPhysCannonPullAnimFinished.FireOutput( NULL,this );
+				m_OnPhysCannonPullAnimFinished.FireOutput( nullptr,this );
 			}
 		}
 	}
@@ -1288,7 +1288,7 @@ bool CBreakableProp::OnAttemptPhysGunPickup( CBasePlayer *pPhysGunUser, PhysGunP
 			// We're done, reset the playback rate.
 			SetPlaybackRate( 1.0f );
 			m_nPhysgunState = PHYSGUN_CAN_BE_GRABBED;
-			m_OnPhysCannonDetach.FireOutput( NULL,this );
+			m_OnPhysCannonDetach.FireOutput( nullptr,this );
 		}
 	}
 
@@ -1317,15 +1317,15 @@ void CBreakableProp::AnimateThink( void )
 				SetPlaybackRate( 1.0f );
 				ResetClientsideFrame();
 
-				m_OnPhysCannonAnimatePullStarted.FireOutput( NULL,this );
+				m_OnPhysCannonAnimatePullStarted.FireOutput( nullptr,this );
 			}
 			else
 			{
 				m_nPhysgunState = PHYSGUN_ANIMATE_FINISHED;
-				m_OnPhysCannonPullAnimFinished.FireOutput( NULL,this );
+				m_OnPhysCannonPullAnimFinished.FireOutput( nullptr,this );
 			}
 
-			SetContextThink( NULL, 0, s_pPropAnimateThink );
+			SetContextThink( nullptr, 0, s_pPropAnimateThink );
 		}
 	}
 }
@@ -1348,7 +1348,7 @@ void CBreakableProp::SetPhysicsAttacker( CBasePlayer *pEntity, float flTime )
 void CBreakableProp::ForceFadeScaleToAlwaysVisible()
 {
 	SetGlobalFadeScale( 0.0f );
-	SetContextThink( NULL, gpGlobals->curtime, s_pFadeScaleThink );
+	SetContextThink( nullptr, gpGlobals->curtime, s_pFadeScaleThink );
 }
 
 
@@ -1361,7 +1361,7 @@ void CBreakableProp::RampToDefaultFadeScale()
 	if ( GetGlobalFadeScale() >= m_flDefaultFadeScale )
 	{
 		SetGlobalFadeScale( m_flDefaultFadeScale );
-		SetContextThink( NULL, gpGlobals->curtime, s_pFadeScaleThink );
+		SetContextThink( nullptr, gpGlobals->curtime, s_pFadeScaleThink );
 	}
 	else
 	{
@@ -1441,7 +1441,7 @@ CBasePlayer *CBreakableProp::HasPhysicsAttacker( float dt )
 	{
 		return m_hPhysicsAttacker;
 	}
-	return NULL;
+	return nullptr;
 }
 
 //-----------------------------------------------------------------------------
@@ -1632,7 +1632,7 @@ void CBreakableProp::Break( CBaseEntity *pBreaker, const CTakeDamageInfo &info )
 		Vector velocity; velocity.Init();
 
 		if ( pPhysics )
-			pPhysics->GetVelocity( &velocity, NULL );
+			pPhysics->GetVelocity( &velocity, nullptr );
 
 		switch ( GetMultiplayerBreakMode() )
 		{
@@ -1670,8 +1670,8 @@ void CBreakableProp::Break( CBaseEntity *pBreaker, const CTakeDamageInfo &info )
 		}
 
 		// Find and ignite all NPC's within the radius
-		CBaseEntity *pEntity = NULL;
-		for ( CEntitySphereQuery sphere( origin, m_explodeRadius ); ( pEntity = sphere.GetCurrentEntity() ) != NULL; sphere.NextEntity() )
+		CBaseEntity *pEntity = nullptr;
+		for ( CEntitySphereQuery sphere( origin, m_explodeRadius ); ( pEntity = sphere.GetCurrentEntity() ) != nullptr; sphere.NextEntity() )
 		{
 			if( pEntity && pEntity->MyCombatCharacterPointer() )
 			{
@@ -1693,8 +1693,8 @@ void CBreakableProp::Break( CBaseEntity *pBreaker, const CTakeDamageInfo &info )
 		}
 
 		// Find and freeze all NPC's within the radius
-		CBaseEntity *pEntity = NULL;
-		for ( CEntitySphereQuery sphere( origin, m_explodeRadius ); ( pEntity = sphere.GetCurrentEntity() ) != NULL; sphere.NextEntity() )
+		CBaseEntity *pEntity = nullptr;
+		for ( CEntitySphereQuery sphere( origin, m_explodeRadius ); ( pEntity = sphere.GetCurrentEntity() ) != nullptr; sphere.NextEntity() )
 		{
 			if( pEntity && pEntity->MyCombatCharacterPointer() )
 			{
@@ -2048,7 +2048,7 @@ void CDynamicProp::AnimThink( void )
 		ResetClientsideFrame();
 
 		// Fire output
-		m_pOutputAnimBegun.FireOutput( NULL,this );
+		m_pOutputAnimBegun.FireOutput( nullptr,this );
 
 		m_flNextRandAnim = gpGlobals->curtime + random->RandomFloat( m_flMinRandAnimTime, m_flMaxRandAnimTime );
 	}
@@ -2075,7 +2075,7 @@ void CDynamicProp::AnimThink( void )
 			if ( !m_bAnimationDone )
 			{
 				m_bAnimationDone = true;
-				m_pOutputAnimOver.FireOutput(NULL,this);
+				m_pOutputAnimOver.FireOutput(nullptr,this);
 			}
 
 			// If I'm a random animator, think again when it's time to change sequence
@@ -2157,7 +2157,7 @@ void CDynamicProp::PropSetAnim( const char *szAnim )
 		PropSetSequence( nSequence );
 
 		// Fire output
-		m_pOutputAnimBegun.FireOutput( NULL,this );
+		m_pOutputAnimBegun.FireOutput( nullptr,this );
 	}
 	else
 	{
@@ -2352,7 +2352,7 @@ public:
 
 	void Spawn();
 	void Activate();
-	void AttachTo( const char *pAttachEntity, CBaseEntity *pActivator = NULL, CBaseEntity *pCaller = NULL );
+	void AttachTo( const char *pAttachEntity, CBaseEntity *pActivator = nullptr, CBaseEntity *pCaller = nullptr );
 	void DetachFromOwner();
 
 	// Input handlers
@@ -2375,7 +2375,7 @@ void COrnamentProp::Spawn()
 
 void COrnamentProp::DetachFromOwner()
 {
-	SetOwnerEntity( NULL );
+	SetOwnerEntity( nullptr );
 	AddSolidFlags( FSOLID_NOT_SOLID );
 	SetMoveType( MOVETYPE_NONE );
 	AddEffects( EF_NODRAW );
@@ -2399,7 +2399,7 @@ void COrnamentProp::InputSetAttached( inputdata_t &inputdata )
 void COrnamentProp::AttachTo( const char *pAttachName, CBaseEntity *pActivator, CBaseEntity *pCaller )
 {
 	// find and notify the new parent
-	CBaseEntity *pAttach = gEntList.FindEntityByName( NULL, pAttachName, NULL, pActivator, pCaller );
+	CBaseEntity *pAttach = gEntList.FindEntityByName( nullptr, pAttachName, nullptr, pActivator, pCaller );
 	if ( pAttach )
 	{
 		RemoveEffects( EF_NODRAW );
@@ -2716,7 +2716,7 @@ bool CPhysicsProp::OverridePropdata( void )
 void CPhysicsProp::InputWake( inputdata_t &inputdata )
 {
 	IPhysicsObject *pPhysicsObject = VPhysicsGetObject();
-	if ( pPhysicsObject != NULL )
+	if ( pPhysicsObject != nullptr )
 	{
 		pPhysicsObject->Wake();
 	}
@@ -2728,7 +2728,7 @@ void CPhysicsProp::InputWake( inputdata_t &inputdata )
 void CPhysicsProp::InputSleep( inputdata_t &inputdata )
 {
 	IPhysicsObject *pPhysicsObject = VPhysicsGetObject();
-	if ( pPhysicsObject != NULL )
+	if ( pPhysicsObject != nullptr )
 	{
 		pPhysicsObject->Sleep();
 	}
@@ -2748,7 +2748,7 @@ void CPhysicsProp::InputEnableMotion( inputdata_t &inputdata )
 void CPhysicsProp::InputDisableMotion( inputdata_t &inputdata )
 {
 	IPhysicsObject *pPhysicsObject = VPhysicsGetObject();
-	if ( pPhysicsObject != NULL )
+	if ( pPhysicsObject != nullptr )
 	{
 		pPhysicsObject->EnableMotion( false );
 	}
@@ -2775,7 +2775,7 @@ void CPhysicsProp::EnableMotion( void )
 		{
 			ClearEnableMotionPosition();
 			//pPhysicsObject->SetPosition( pos, angles, true );
-			Teleport( &pos, &angles, NULL );
+			Teleport( &pos, &angles, nullptr );
 		}
 
 		pPhysicsObject->EnableMotion( true );
@@ -2839,11 +2839,11 @@ void CPhysicsProp::OnPhysGunDrop( CBasePlayer *pPhysGunUser, PhysGunDrop_t Reaso
 		if ( HasInteraction( PROPINTER_PHYSGUN_LAUNCH_SPIN_Z ) )
 		{
 			AngularImpulse angVel( 0, 0, 5000.0 );
-			VPhysicsGetObject()->AddVelocity( NULL, &angVel );
+			VPhysicsGetObject()->AddVelocity( nullptr, &angVel );
 			
 			// no angular drag on this object anymore
 			float angDrag = 0.0f;
-			VPhysicsGetObject()->SetDragCoefficient( NULL, &angDrag );
+			VPhysicsGetObject()->SetDragCoefficient( nullptr, &angDrag );
 		}
 
 		PhysSetGameFlags( VPhysicsGetObject(), FVPHYSICS_WAS_THROWN );
@@ -2945,7 +2945,7 @@ bool CPhysicsProp::ShouldDisableMotionOnFreeze( void )
 	IPhysicsObject *pPhysics = VPhysicsGetObject();
 	IPhysicsFrictionSnapshot *pSnapshot = pPhysics->CreateFrictionSnapshot();
 
-	CBaseEntity *pOtherEntity = NULL;					
+	CBaseEntity *pOtherEntity = nullptr;					
 	while ( pSnapshot->IsValid() )
 	{
 		IPhysicsObject *pOther = pSnapshot->GetObject(1);
@@ -3114,7 +3114,7 @@ void CPhysicsProp::ClearFlagsThink( void )
 	if ( VPhysicsGetObject() )
 	{
 		PhysClearGameFlags( VPhysicsGetObject(), FVPHYSICS_WAS_THROWN );
-		SetContextThink( NULL, 0, "PROP_CLEARFLAGS" );
+		SetContextThink( nullptr, 0, "PROP_CLEARFLAGS" );
 	}
 }
 
@@ -3234,7 +3234,7 @@ void CPhysicsProp::VPhysicsCollision( int index, gamevcollisionevent_t *pEvent )
 		CBaseEntity *pHitEntity = pEvent->pEntities[!index];
 		if ( pHitEntity && pHitEntity->MyNPCPointer() )
 		{
-			pHitEntity->MyNPCPointer()->DispatchInteraction( g_interactionHitByPlayerThrownPhysObj, this, NULL );
+			pHitEntity->MyNPCPointer()->DispatchInteraction( g_interactionHitByPlayerThrownPhysObj, this, nullptr );
 			m_bThrownByPlayer = false;
 		}
 	}
@@ -3267,7 +3267,7 @@ int CPhysicsProp::OnTakeDamage( const CTakeDamageInfo &info )
 
 			if( VPhysicsGetObject() )
 			{
-				VPhysicsGetObject()->GetVelocity( &vel, NULL );
+				VPhysicsGetObject()->GetVelocity( &vel, nullptr );
 
 				int dangerRadius = 256; // generous radius to begin with
 
@@ -3315,7 +3315,7 @@ int CPhysicsProp::OnTakeDamage( const CTakeDamageInfo &info )
 		
 		// The damage that enables motion may have been enough damage to kill me if I'm breakable
 		// in which case my physics object is gone.
-		if ( VPhysicsGetObject() != NULL )
+		if ( VPhysicsGetObject() != nullptr )
 		{
 			EnableMotion(); 
 			VPhysicsTakeDamage( info );
@@ -3459,7 +3459,7 @@ static CBreakableProp *BreakModelCreate_Prop( CBaseEntity *pOwner, breakmodel_t 
 		}
 
 		// If we're burning, break into burning pieces
-		CBaseAnimating *pAnimating = pOwner ? pOwner->GetBaseAnimating() : NULL;
+		CBaseAnimating *pAnimating = pOwner ? pOwner->GetBaseAnimating() : nullptr;
 		if ( pAnimating && pAnimating->IsOnFire() )
 		{
 			CEntityFlame *pOwnerFlame = dynamic_cast<CEntityFlame*>( pAnimating->GetEffectEntity() );
@@ -3488,12 +3488,12 @@ static CBaseAnimating *BreakModelCreate_Ragdoll( CBaseEntity *pOwner, breakmodel
 CBaseEntity *BreakModelCreateSingle( CBaseEntity *pOwner, breakmodel_t *pModel, const Vector &position, 
 	const QAngle &angles, const Vector &velocity, const AngularImpulse &angVelocity, int nSkin, const breakablepropparams_t &params )
 {
-	CBaseAnimating *pEntity = NULL;
+	CBaseAnimating *pEntity = nullptr;
 	// stop creating gibs if too many
 	if ( g_ActiveGibCount >= ACTIVE_GIB_LIMIT )
 	{
 		//DevMsg(1,"Gib limit on %s\n", pModel->modelName );
-		return NULL;
+		return nullptr;
 	}
 
 	if ( !pModel->isRagdoll )
@@ -3536,7 +3536,7 @@ CBaseEntity *BreakModelCreateSingle( CBaseEntity *pOwner, breakmodel_t *pModel, 
 		{
 			// failed to create a physics object
 			UTIL_Remove( pEntity );
-			return NULL;
+			return nullptr;
 		}
 	}
 
@@ -3706,7 +3706,7 @@ IMPLEMENT_REFLECT_SERVERCLASS( CBasePropDoor, DT_BasePropDoor )
 
 CBasePropDoor::CBasePropDoor( void )
 {
-	m_hMaster = NULL;
+	m_hMaster = nullptr;
 	m_nPhysicsMaterial = -1;
 }
 
@@ -3752,7 +3752,7 @@ void CBasePropDoor::Spawn()
 		CalculateBlockLOS();
 	}
 
-	SetDoorBlocker( NULL );
+	SetDoorBlocker( nullptr );
 
 	// Fills out the m_Soundxxx members.
 	CalcDoorSounds();
@@ -3810,7 +3810,7 @@ void CBasePropDoor::Activate( void )
 	// If we have a name, we may be linked
 	if ( GetEntityName() != NULL_STRING )
 	{
-		CBaseEntity	*pTarget = NULL;
+		CBaseEntity	*pTarget = nullptr;
 
 		// Find our slaves.
 		// If we have a specified slave name, then use that to find slaves.
@@ -3825,13 +3825,13 @@ void CBasePropDoor::Activate( void )
 			}
 		}
 
-		while ( ( pTarget = gEntList.FindEntityByName( pTarget, iszSearchName ) ) != NULL )
+		while ( ( pTarget = gEntList.FindEntityByName( pTarget, iszSearchName ) ) != nullptr )
 		{
 			if ( pTarget != this )
 			{
 				CBasePropDoor *pDoor = dynamic_cast<CBasePropDoor *>(pTarget);
 
-				if ( pDoor != NULL && pDoor->HasSlaves() == false )
+				if ( pDoor != nullptr && pDoor->HasSlaves() == false )
 				{
 					m_hDoorList.AddToTail( pDoor );
 					pDoor->SetMaster( this );
@@ -3869,7 +3869,7 @@ void CBasePropDoor::HandleAnimEvent(animevent_t *pEvent)
 //-----------------------------------------------------------------------------
 void CBasePropDoor::CalcDoorSounds()
 {
-	ErrorIfNot( GetModel() != NULL, ( "prop_door with no model at %.2f %.2f %.2f\n", GetAbsOrigin().x, GetAbsOrigin().y, GetAbsOrigin().z ) );
+	ErrorIfNot( GetModel() != nullptr, ( "prop_door with no model at %.2f %.2f %.2f\n", GetAbsOrigin().x, GetAbsOrigin().y, GetAbsOrigin().z ) );
 
 	string_t strSoundOpen = NULL_STRING;
 	string_t strSoundClose = NULL_STRING;
@@ -3992,7 +3992,7 @@ void CBasePropDoor::DisableAreaPortalThink( void )
 //-----------------------------------------------------------------------------
 void CBasePropDoor::UpdateAreaPortals(bool isOpen)
 {
-	SetContextThink( NULL, 0, "AreaPortal" );
+	SetContextThink( nullptr, 0, "AreaPortal" );
 
 	if ( !IsAbleToCloseAreaPortals() )
 	{
@@ -4003,8 +4003,8 @@ void CBasePropDoor::UpdateAreaPortals(bool isOpen)
 	if (!name)
 		return;
 	
-	CBaseEntity *pPortal = NULL;
-	while ((pPortal = gEntList.FindEntityByClassname(pPortal, "func_areaportal")) != NULL)
+	CBaseEntity *pPortal = nullptr;
+	while ((pPortal = gEntList.FindEntityByClassname(pPortal, "func_areaportal")) != nullptr)
 	{
 		if (pPortal->HasTarget(name))
 		{
@@ -4022,7 +4022,7 @@ void CBasePropDoor::SetDoorBlocker( CBaseEntity *pBlocker )
 { 
 	m_hBlocker = pBlocker; 
 
-	if ( m_hBlocker == NULL )
+	if ( m_hBlocker == nullptr )
 	{
 		m_bFirstBlocked = false;
 	}
@@ -4036,7 +4036,7 @@ void CBasePropDoor::SetDoorBlocker( CBaseEntity *pBlocker )
 //-----------------------------------------------------------------------------
 void CBasePropDoor::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value)
 {
-	if ( GetMaster() != NULL )
+	if ( GetMaster() != nullptr )
 	{
 		// Tell our owner we've been used
 		GetMaster()->Use( pActivator, pCaller, useType, value );
@@ -4145,7 +4145,7 @@ void CBasePropDoor::InputLock(inputdata_t &inputdata)
 //-----------------------------------------------------------------------------
 void CBasePropDoor::InputOpen(inputdata_t &inputdata)
 {
-	OpenIfUnlocked(inputdata.pActivator, NULL);
+	OpenIfUnlocked(inputdata.pActivator, nullptr);
 }
 
 
@@ -4154,7 +4154,7 @@ void CBasePropDoor::InputOpen(inputdata_t &inputdata)
 //-----------------------------------------------------------------------------
 void CBasePropDoor::InputOpenAwayFrom(inputdata_t &inputdata)
 {
-	CBaseEntity *pOpenAwayFrom = gEntList.FindEntityByName( NULL, inputdata.value.String(), NULL, inputdata.pActivator, inputdata.pCaller );
+	CBaseEntity *pOpenAwayFrom = gEntList.FindEntityByName( nullptr, inputdata.value.String(), nullptr, inputdata.pActivator, inputdata.pCaller );
 	OpenIfUnlocked(inputdata.pActivator, pOpenAwayFrom);
 }
 
@@ -4194,7 +4194,7 @@ void CBasePropDoor::InputToggle(inputdata_t &inputdata)
 		if ( IsDoorLocked() )
 			return; 
 
-		DoorOpen(NULL);
+		DoorOpen(nullptr);
 	}
 	else if (IsDoorOpen())
 	{
@@ -4292,14 +4292,14 @@ void CBasePropDoor::DoorOpen(CBaseEntity *pOpenAwayFrom)
 	{
 		int	numDoors = m_hDoorList.Count();
 
-		CBasePropDoor *pLinkedDoor = NULL;
+		CBasePropDoor *pLinkedDoor = nullptr;
 
 		// Open all linked doors
 		for ( int i = 0; i < numDoors; i++ )
 		{
 			pLinkedDoor = m_hDoorList[i];
 
-			if ( pLinkedDoor != NULL )
+			if ( pLinkedDoor != nullptr )
 			{
 				// If the door isn't already moving, get it moving
 				pLinkedDoor->m_hActivator = m_hActivator;
@@ -4315,7 +4315,7 @@ void CBasePropDoor::DoorOpen(CBaseEntity *pOpenAwayFrom)
 //-----------------------------------------------------------------------------
 void CBasePropDoor::DoorOpenMoveDone(void)
 {
-	SetDoorBlocker( NULL );
+	SetDoorBlocker( nullptr );
 
 	if (!HasSpawnFlags(SF_DOOR_SILENT))
 	{
@@ -4349,7 +4349,7 @@ void CBasePropDoor::DoorOpenMoveDone(void)
 	// Let the leaf class do its thing.
 	OnDoorOpened();
 
-	m_hActivator = NULL;
+	m_hActivator = nullptr;
 }
 
 
@@ -4415,14 +4415,14 @@ void CBasePropDoor::DoorClose(void)
 	{
 		int	numDoors = m_hDoorList.Count();
 
-		CBasePropDoor *pLinkedDoor = NULL;
+		CBasePropDoor *pLinkedDoor = nullptr;
 
 		// Open all linked doors
 		for ( int i = 0; i < numDoors; i++ )
 		{
 			pLinkedDoor = m_hDoorList[i];
 
-			if ( pLinkedDoor != NULL )
+			if ( pLinkedDoor != nullptr )
 			{
 				// If the door isn't already moving, get it moving
 				pLinkedDoor->DoorClose();
@@ -4436,7 +4436,7 @@ void CBasePropDoor::DoorClose(void)
 //-----------------------------------------------------------------------------
 void CBasePropDoor::DoorCloseMoveDone(void)
 {
-	SetDoorBlocker( NULL );
+	SetDoorBlocker( nullptr );
 
 	if (!HasSpawnFlags(SF_DOOR_SILENT))
 	{
@@ -4455,7 +4455,7 @@ void CBasePropDoor::DoorCloseMoveDone(void)
 	// Let the leaf class do its thing.
 	OnDoorClosed();
 
-	m_hActivator = NULL;
+	m_hActivator = nullptr;
 }
 
 //-----------------------------------------------------------------------------
@@ -4468,14 +4468,14 @@ void CBasePropDoor::MasterStartBlocked( CBaseEntity *pOther )
 	{
 		int	numDoors = m_hDoorList.Count();
 
-		CBasePropDoor *pLinkedDoor = NULL;
+		CBasePropDoor *pLinkedDoor = nullptr;
 
 		// Open all linked doors
 		for ( int i = 0; i < numDoors; i++ )
 		{
 			pLinkedDoor = m_hDoorList[i];
 
-			if ( pLinkedDoor != NULL )
+			if ( pLinkedDoor != nullptr )
 			{
 				// If the door isn't already moving, get it moving
 				pLinkedDoor->OnStartBlocked( pOther );
@@ -4495,7 +4495,7 @@ void CBasePropDoor::StartBlocked( CBaseEntity *pOther )
 {
 	m_bFirstBlocked = true;
 
-	if ( GetMaster() != NULL )
+	if ( GetMaster() != nullptr )
 	{
 		GetMaster()->MasterStartBlocked( pOther );
 		return;
@@ -4545,7 +4545,7 @@ void CBasePropDoor::OnStartBlocked( CBaseEntity *pOther )
 
 		CAI_BaseNPC *pNPC = dynamic_cast<CAI_BaseNPC *>(m_hActivator.Get());
 		
-		if ( pNPC != NULL )
+		if ( pNPC != nullptr )
 		{
 			// Notify the NPC that tried to open us.
 			pNPC->OnDoorBlocked( this );
@@ -4653,7 +4653,7 @@ void CBasePropDoor::Blocked(CBaseEntity *pOther)
 //-----------------------------------------------------------------------------
 void CBasePropDoor::EndBlocked( void )
 {
-	if ( GetMaster() != NULL )
+	if ( GetMaster() != nullptr )
 	{
 		GetMaster()->EndBlocked();
 		return;
@@ -4663,14 +4663,14 @@ void CBasePropDoor::EndBlocked( void )
 	{
 		int	numDoors = m_hDoorList.Count();
 
-		CBasePropDoor *pLinkedDoor = NULL;
+		CBasePropDoor *pLinkedDoor = nullptr;
 
 		// Check all links as well
 		for ( int i = 0; i < numDoors; i++ )
 		{
 			pLinkedDoor = m_hDoorList[i];
 
-			if ( pLinkedDoor != NULL )
+			if ( pLinkedDoor != nullptr )
 			{
 				// Make sure they can close as well
 				pLinkedDoor->OnEndBlocked();
@@ -4863,7 +4863,7 @@ IMPLEMENT_REFLECT_SERVERCLASS( CPropDoorRotating, DT_PropDoorRotating )
 CPropDoorRotating::~CPropDoorRotating( void )
 {
 	// Remove our door blocker entity
-	if ( m_hDoorBlocker != NULL )
+	if ( m_hDoorBlocker != nullptr )
 	{
 		UTIL_Remove( m_hDoorBlocker );
 	}
@@ -4929,7 +4929,7 @@ void CPropDoorRotating::Spawn()
 	CalculateDoorVolume( GetLocalAngles(), m_angRotationOpenForward, &m_vecForwardBoundsMin, &m_vecForwardBoundsMax );
 	CalculateDoorVolume( GetLocalAngles(), m_angRotationOpenBack, &m_vecBackBoundsMin, &m_vecBackBoundsMax );
 
-	VisibilityMonitor_AddEntity( this, 600.0f, NULL, &DoorUnlockedFilter );
+	VisibilityMonitor_AddEntity( this, 600.0f, nullptr, &DoorUnlockedFilter );
 }
 
 //-----------------------------------------------------------------------------
@@ -4996,7 +4996,7 @@ bool CPropDoorRotating::IsHingeOnLeft()
 	// If it does, the door is hinged on its left.
 	//
 	Vector vecRight;
-	GetVectors( NULL, &vecRight, NULL );
+	GetVectors( nullptr, &vecRight, nullptr );
 	float flDot = DotProduct( vecPointCheck, vecRight );
 
 	return ( flDot > 0 );
@@ -5017,7 +5017,7 @@ doorCheck_e CPropDoorRotating::GetOpenState( void )
 //-----------------------------------------------------------------------------
 void CPropDoorRotating::OnDoorOpened( void )
 {
-	if ( m_hDoorBlocker != NULL )
+	if ( m_hDoorBlocker != nullptr )
 	{
 		// Allow passage through this blocker while open
 		m_hDoorBlocker->AddSolidFlags( FSOLID_NOT_SOLID );
@@ -5036,7 +5036,7 @@ void CPropDoorRotating::OnDoorClosed( void )
 {
 	BaseClass::OnDoorClosed();
 
-	if ( m_hDoorBlocker != NULL )
+	if ( m_hDoorBlocker != nullptr )
 	{
 		// Destroy the blocker that was preventing NPCs from getting in our way.
 		UTIL_Remove( m_hDoorBlocker );
@@ -5056,7 +5056,7 @@ void CPropDoorRotating::OnDoorClosed( void )
 //-----------------------------------------------------------------------------
 bool CPropDoorRotating::DoorCanClose( bool bAutoClose )
 {
-	if ( GetMaster() != NULL )
+	if ( GetMaster() != nullptr )
 		return GetMaster()->DoorCanClose( bAutoClose );
 	
 	// Check all slaves
@@ -5064,14 +5064,14 @@ bool CPropDoorRotating::DoorCanClose( bool bAutoClose )
 	{
 		int	numDoors = m_hDoorList.Count();
 
-		CPropDoorRotating *pLinkedDoor = NULL;
+		CPropDoorRotating *pLinkedDoor = nullptr;
 
 		// Check all links as well
 		for ( int i = 0; i < numDoors; i++ )
 		{
 			pLinkedDoor = dynamic_cast<CPropDoorRotating *>((CBasePropDoor *)m_hDoorList[i]);
 
-			if ( pLinkedDoor != NULL )
+			if ( pLinkedDoor != nullptr )
 			{
 				if ( !pLinkedDoor->CheckDoorClear( bAutoClose ? DOOR_CHECK_FULL : pLinkedDoor->GetOpenState() ) )
 					return false;
@@ -5189,7 +5189,7 @@ bool CPropDoorRotating::CheckDoorClear( doorCheck_e state )
 	CBaseEntity *m_pActivator = GetActivator();
 
 	// If this is a slave door, use our master's activator
-	if ( GetMaster() && m_pActivator == NULL )
+	if ( GetMaster() && m_pActivator == nullptr )
 	{
 		CPropDoorRotating *m_pMasterDoor = dynamic_cast<CPropDoorRotating *>(GetMaster());
 		if ( m_pMasterDoor )
@@ -5333,7 +5333,7 @@ void CPropDoorRotating::BeginOpening(CBaseEntity *pOpenAwayFrom)
 	}
 	else // Can open either direction, test to see which is appropriate
 	{
-		if (pOpenAwayFrom != NULL)
+		if (pOpenAwayFrom != nullptr)
 		{
 			// Using cross product to determine which side the player is on,
 			// as well as which side "open forward" is on, so we can always try to
@@ -5408,7 +5408,7 @@ void CPropDoorRotating::BeginOpening(CBaseEntity *pOpenAwayFrom)
 		maxs = m_vecBackBoundsMax;		
 	}
 
-	if ( m_hDoorBlocker != NULL )
+	if ( m_hDoorBlocker != nullptr )
 	{
 		UTIL_Remove( m_hDoorBlocker );
 	}
@@ -5435,7 +5435,7 @@ void CPropDoorRotating::BeginOpening(CBaseEntity *pOpenAwayFrom)
 	}
 
 	// Do final setup
-	if ( m_hDoorBlocker != NULL )
+	if ( m_hDoorBlocker != nullptr )
 	{
 		// Only block NPCs
 		m_hDoorBlocker->SetCollisionGroup( COLLISION_GROUP_DOOR_BLOCKER );
@@ -5461,7 +5461,7 @@ void CPropDoorRotating::BeginOpening(CBaseEntity *pOpenAwayFrom)
 //-----------------------------------------------------------------------------
 void CPropDoorRotating::BeginClosing( void )
 {
-	if ( m_hDoorBlocker != NULL )
+	if ( m_hDoorBlocker != nullptr )
 	{
 		// Become solid again unless we're already being blocked
 		if ( CheckDoorClear( GetOpenState() )  )
@@ -5508,7 +5508,7 @@ void CPropDoorRotating::GetNPCOpenData(CAI_BaseNPC *pNPC, opendata_t &opendata)
 	// dvs: TODO: finalize open position, direction, activity
 	Vector vecForward;
 	Vector vecRight;
-	AngleVectors(GetAbsAngles(), &vecForward, &vecRight, NULL);
+	AngleVectors(GetAbsAngles(), &vecForward, &vecRight, nullptr);
 
 	//
 	// Figure out where the NPC should stand to open this door,
@@ -5617,7 +5617,7 @@ void CPropDoorRotating::InputMoveToRotationDistance( inputdata_t &inputdata )
 {
 	InputSetRotationDistance( inputdata );
 
-	BeginOpening(NULL);
+	BeginOpening(nullptr);
 }
 
 // Debug sphere
@@ -5812,7 +5812,7 @@ void CCSPropExplodingBarrel::FadeOut( void )
 	if ( m_hBarrelTop.Get()->m_clrRender->a == 0 )
 	{
 		UTIL_Remove( m_hBarrelTop.Get() );
-		m_hBarrelTop = NULL;
+		m_hBarrelTop = nullptr;
 	}
 	else
 	{
@@ -5902,8 +5902,8 @@ void CPropDoorRotatingBreakable::PrecacheBreakables( void )
 			if ( skin )
 			{
 				int index = 1;
-				const char *damageState = NULL;
-				while ( ( damageState = skin->GetString( str.sprintf( "damage%d", index++ ), NULL ) ) != NULL )
+				const char *damageState = nullptr;
+				while ( ( damageState = skin->GetString( str.sprintf( "damage%d", index++ ), nullptr ) ) != nullptr )
 				{
 					str.sprintf( "models/%s.mdl", damageState );
 					char *modelName = str.Access();
@@ -5954,8 +5954,8 @@ void CPropDoorRotatingBreakable::Spawn( void )
 			if ( skin )
 			{
 				int index = 1;
-				const char *damageState = NULL;
-				while ( ( damageState = skin->GetString( str.sprintf( "damage%d", index++ ), NULL ) ) != NULL )
+				const char *damageState = nullptr;
+				while ( ( damageState = skin->GetString( str.sprintf( "damage%d", index++ ), nullptr ) ) != nullptr )
 				{
 					str.sprintf( "models/%s.mdl", damageState );
 					char *modelName = str.Access();
@@ -6533,7 +6533,7 @@ class [[= ks::reflect::NetTable{ .name = "DT_PhysicsPropMultiplayer" } ]]
 	virtual void ComputeWorldSpaceSurroundingBox( Vector *mins, Vector *maxs )
 	{
 		Assert( m_usingCustomCollisionBounds );
-		Assert( mins != NULL && maxs != NULL );
+		Assert( mins != nullptr && maxs != nullptr );
 		if ( !mins || !maxs )
 			return;
 
@@ -6604,7 +6604,7 @@ void CPhysicsPropRespawnable::Spawn( void )
 		m_flRespawnTime = RESPAWNABLE_PROP_DEFAULT_TIME;
 	}
 
-	SetOwnerEntity( NULL );
+	SetOwnerEntity( nullptr );
 }
 
 void CPhysicsPropRespawnable::Event_Killed( const CTakeDamageInfo &info )
@@ -6633,9 +6633,9 @@ void CPhysicsPropRespawnable::Event_Killed( const CTakeDamageInfo &info )
 		UTIL_Remove( GetEffectEntity() );
 	}
 
-	Teleport( &m_vOriginalSpawnOrigin, &m_vOriginalSpawnAngles, NULL );
+	Teleport( &m_vOriginalSpawnOrigin, &m_vOriginalSpawnAngles, nullptr );
 
-	SetContextThink( NULL, 0, "PROP_CLEARFLAGS" );
+	SetContextThink( nullptr, 0, "PROP_CLEARFLAGS" );
 
 	SetThink( &CPhysicsPropRespawnable::Materialize );
 	SetNextThink( gpGlobals->curtime + m_flRespawnTime );
@@ -6769,16 +6769,16 @@ CPhysicsProp* CreatePhysicsProp( const char *pModelName, const Vector &vTraceSta
 
 	MDLHandle_t h = mdlcache->FindMDL( pModelName );
 	if ( h == MDLHANDLE_INVALID )
-		return NULL;
+		return nullptr;
 
 	// Must have vphysics to place as a physics prop
 	studiohdr_t *pStudioHdr = mdlcache->GetStudioHdr( h );
 	if ( !pStudioHdr )
-		return NULL;
+		return nullptr;
 
 	// Must have vphysics to place as a physics prop
 	if ( bRequireVCollide && !mdlcache->GetVCollide( h ) )
-		return NULL;
+		return nullptr;
 
 	QAngle angles( 0.0f, 0.0f, 0.0f );
 	Vector vecSweepMins = pStudioHdr->hull_min;
@@ -6790,7 +6790,7 @@ CPhysicsProp* CreatePhysicsProp( const char *pModelName, const Vector &vTraceSta
 		    
 	// No hit? We're done.
 	if ( (tr.fraction == 1.0 && (vTraceEnd-vTraceStart).Length() > 0.01) || tr.allsolid )
-		return NULL;
+		return nullptr;
 		    
 	VectorMA( tr.endpos, 1.0f, tr.plane.normal, tr.endpos );
 

@@ -170,7 +170,7 @@ CChoreoScene& CChoreoScene::operator=( const CChoreoScene& src )
 	for ( i = 0; i < src.m_Events.Count(); i++ )
 	{
 		CChoreoEvent *event = src.m_Events[ i ];
-		if ( event->GetActor() == NULL )
+		if ( event->GetActor() == nullptr )
 		{
 			MEM_ALLOC_CREDIT();
 
@@ -227,14 +227,14 @@ CChoreoScene& CChoreoScene::operator=( const CChoreoScene& src )
 void CChoreoScene::Init( IChoreoEventCallback *callback )
 {
 	m_flPrecomputedStopTime = 0.0f;
-	m_pTokenizer			= NULL;
+	m_pTokenizer			= nullptr;
 	m_szMapname[ 0 ] = 0;
 
 	m_flCurrentTime = 0.0f;
 	m_flStartTime = 0.0f;
 	m_flEndTime	= 0.0f;
 	m_flSoundSystemLatency = 0.0f;
-	m_pfnPrint = NULL;
+	m_pfnPrint = nullptr;
 	m_flLastActiveTime = 0.0f;
 	m_flEarliestTime	= 0.0f;
 	m_flLatestTime		= 0.0f;
@@ -484,7 +484,7 @@ CChoreoActor *CChoreoScene::FindActor( const char *name )
 			return a;
 	}
 
-	return NULL;
+	return nullptr;
 }
 
 //-----------------------------------------------------------------------------
@@ -504,7 +504,7 @@ int CChoreoScene::GetNumEvents( void )
 CChoreoEvent *CChoreoScene::GetEvent( int event )
 {
 	if ( event < 0 || event >= m_Events.Count() )
-		return NULL;
+		return nullptr;
 
 	return m_Events[ event ];
 }
@@ -526,7 +526,7 @@ int CChoreoScene::GetNumActors( void )
 CChoreoActor *CChoreoScene::GetActor( int actor )
 {
 	if ( actor < 0 || actor >= GetNumActors() )
-		return NULL;
+		return nullptr;
 	return m_Actors[ actor ];
 }
 
@@ -547,7 +547,7 @@ int CChoreoScene::GetNumChannels( void )
 CChoreoChannel *CChoreoScene::GetChannel( int channel )
 {
 	if ( channel < 0 || channel >= GetNumChannels() )
-		return NULL;
+		return nullptr;
 	return m_Channels[ channel ];
 }
 
@@ -1398,7 +1398,7 @@ bool CChoreoScene::ParseFromBuffer( const char *pFilename, ISceneTokenProcessor 
 
 		if ( !Q_stricmp( m_pTokenizer->CurrentToken(), "event" ) )
 		{
-			ParseEvent( NULL, NULL );
+			ParseEvent( nullptr, nullptr );
 		}
 		else if ( !Q_stricmp( m_pTokenizer->CurrentToken(), "actor" ) )
 		{
@@ -2472,7 +2472,7 @@ CChoreoEvent *CChoreoScene::FindPauseBetweenTimes( float starttime, float endtim
 	}
 
 	// No pause inside the specified time span
-	return NULL;
+	return nullptr;
 }
 
 int CChoreoScene::IsTimeInRange( float t, float starttime, float endtime )
@@ -2506,7 +2506,7 @@ bool ShouldSpew( CChoreoEvent *e )
 	{
 		return true;
 	}
-	return ( V_stristr( e->GetName(), choreo_spew_filter.GetString() ) != NULL );
+	return ( V_stristr( e->GetName(), choreo_spew_filter.GetString() ) != nullptr );
 }
 
 int CChoreoScene::EventThink( CChoreoEvent *e, float frame_start_time, float frame_end_time, bool playing_forward, PROCESSING_TYPE& disposition )
@@ -3239,7 +3239,7 @@ CChoreoEvent *CChoreoScene::FindTargetingEvent( const char *wavname, const char 
 			}
 		}
 	}
-	return NULL;
+	return nullptr;
 }
 
 //-----------------------------------------------------------------------------
@@ -3283,7 +3283,7 @@ CEventRelativeTag *CChoreoScene::FindTagByName( const char *wavname, const char 
 			}
 		}
 	}
-	return NULL;
+	return nullptr;
 }
 
 //-----------------------------------------------------------------------------
@@ -3576,7 +3576,7 @@ bool CChoreoScene::Merge( CChoreoScene *other )
 			CChoreoChannel *ch = a->GetChannel( j );
 
 			bool newChannel = false;
-			CChoreoChannel *destChannel = NULL;
+			CChoreoChannel *destChannel = nullptr;
 			destChannel = destActor->FindChannel( ch->GetName() );
 			if ( !destChannel )
 			{

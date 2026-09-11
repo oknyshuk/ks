@@ -265,7 +265,7 @@ CAnimationLayer* C_BaseAnimatingOverlay::GetAnimOverlay( int i, bool bUseOrder )
 	Assert( i >= 0 && i < MAX_OVERLAYS );
 
 	if ( !m_AnimOverlay.Count() )
-		return NULL;
+		return nullptr;
 
 	if ( bUseOrder )
 	{
@@ -588,7 +588,7 @@ bool C_BaseAnimatingOverlay::UpdateDispatchLayer( CAnimationLayer *pLayer, CStud
 
 void C_BaseAnimatingOverlay::AccumulateInterleavedDispatchedLayers( C_BaseAnimatingOverlay *pWeapon, IBoneSetup &boneSetup, BoneVector pos[], BoneQuaternion q[], float currentTime, bool bSetupInvisibleWeapon /* = false */ )
 {
-	bool bSetupWeapon = pWeapon != NULL && pWeapon->m_pBoneMergeCache != NULL && (pWeapon->IsVisible() || bSetupInvisibleWeapon) ;
+	bool bSetupWeapon = pWeapon != nullptr && pWeapon->m_pBoneMergeCache != nullptr && (pWeapon->IsVisible() || bSetupInvisibleWeapon) ;
 	
 	// reset event frame indices, etc
 	CheckForLayerChanges( boneSetup.GetStudioHdr(), currentTime );
@@ -756,7 +756,7 @@ void C_BaseAnimatingOverlay::RegenerateDispatchedLayers( IBoneSetup &boneSetup, 
 				for ( int i=0; i < pFollow->GetNumAnimOverlays(); i++ )
 				{
 					CAnimationLayer *pLayer = pFollow->GetAnimOverlay( i );
-					if ( pLayer->m_pDispatchedStudioHdr == NULL || pLayer->GetOrder() >= MAX_OVERLAYS || pLayer->GetSequence() == -1 || pLayer->GetWeight() <= 0.0f )
+					if ( pLayer->m_pDispatchedStudioHdr == nullptr || pLayer->GetOrder() >= MAX_OVERLAYS || pLayer->GetSequence() == -1 || pLayer->GetWeight() <= 0.0f )
 						continue;
 
 					// FIXME: why do the CStudioHdr's not match?

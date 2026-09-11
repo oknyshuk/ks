@@ -98,7 +98,7 @@ bool CSysSessionBase::IsServiceSession()
 	if ( !m_pSettings )
 		return true;
 
-	if ( char const *szNetFlag = m_pSettings->GetString( "system/netflag", NULL ) )
+	if ( char const *szNetFlag = m_pSettings->GetString( "system/netflag", nullptr ) )
 	{
 		if ( !Q_stricmp( "teamlink", szNetFlag ) )
 			return true;
@@ -119,7 +119,7 @@ void CSysSessionBase::SendEventsNotification( KeyValues *notify )
 
 void CSysSessionBase::Destroy()
 {
-	Voice_ProcessTalkers( NULL, false );
+	Voice_ProcessTalkers( nullptr, false );
 
 	if ( m_lobby.m_uiLobbyID )
 	{
@@ -224,7 +224,7 @@ void CSysSessionBase::ReplyLanSearch( KeyValues *msg )
 
 	// Reply to sender
 	g_pConnectionlessLanMgr->SendPacket( reply,
-		msg ? msg->GetString( "from", NULL ) : NULL );
+		msg ? msg->GetString( "from", nullptr ) : nullptr );
 }
 
 void CSysSessionBase::SendMessage( KeyValues *msg )
@@ -250,7 +250,7 @@ void CSysSessionBase::SendMessage( KeyValues *msg )
 		}
 	}
 
-	if ( char const *szP2P = msg->GetString( "p2p", NULL ) )
+	if ( char const *szP2P = msg->GetString( "p2p", nullptr ) )
 	{
 		Assert( !IsServiceSession() );
 
@@ -377,7 +377,7 @@ void CSysSessionBase::UnpackAndReceiveMessage( const void *pvBuffer, int numByte
 			if ( !buf.Get( chBuffer2, nSize ) )
 				return;
 
-			kvPtr->SetPtr( NULL, chBuffer2 );
+			kvPtr->SetPtr( nullptr, chBuffer2 );
 		}
 	}
 
@@ -418,7 +418,7 @@ void CSysSessionBase::Steam_OnLobbyChatMsg( LobbyChatMsg_t *pLobbyChatMsg )
 		&ecet );
 
 	// Is this a validated lobby member?
-	bool bValidatedLobbyMember = ( SessionMembersFindPlayer( m_pSettings, steamIDSender.ConvertToUint64() ) != NULL );
+	bool bValidatedLobbyMember = ( SessionMembersFindPlayer( m_pSettings, steamIDSender.ConvertToUint64() ) != nullptr );
 
 	UnpackAndReceiveMessage( chBuffer, numBytes, bValidatedLobbyMember, steamIDSender.ConvertToUint64() );
 }
@@ -710,7 +710,7 @@ void CSysSessionBase::Voice_CaptureAndTransmitLocalVoiceData()
 		if ( v->VoiceUpdateData( iCtrlr ) )
 		{
 			// Capture the voice data buffers
-			const byte *pbVoiceData = NULL;
+			const byte *pbVoiceData = nullptr;
 			unsigned int numBytes = 0;
 			v->GetVoiceData( iCtrlr, &pbVoiceData, &numBytes );
 
@@ -792,7 +792,7 @@ void CSysSessionBase::Voice_UpdateLocalHeadsetsStatus()
 	m_Voice_flLastHeadsetStatusCheck = Plat_FloatTime();
 
 	// Find the local machine
-	KeyValues *pMachine = NULL;
+	KeyValues *pMachine = nullptr;
 	SessionMembersFindPlayer( m_pSettings, m_xuidMachineId, &pMachine );
 	if ( !pMachine )
 		return;
@@ -832,7 +832,7 @@ void CSysSessionBase::Voice_UpdateMutelist()
 	
 	msg->SetUint64( "xuid", m_xuidMachineId );
 
-	if ( KeyValues *pMembers = m_pSettings ? m_pSettings->FindKey( "members" ) : NULL )
+	if ( KeyValues *pMembers = m_pSettings ? m_pSettings->FindKey( "members" ) : nullptr )
 	{
 		int numMachines = pMembers->GetInt( "numMachines" );
 		for ( int i = 0; i < numMachines; ++ i )
@@ -844,7 +844,7 @@ void CSysSessionBase::Voice_UpdateMutelist()
 	}
 
 	// Find current mutelist
-	KeyValues *pLocalMachine = NULL;
+	KeyValues *pLocalMachine = nullptr;
 	SessionMembersFindPlayer( m_pSettings, m_xuidMachineId, &pLocalMachine );
 	if ( pLocalMachine )
 	{
@@ -1001,7 +1001,7 @@ void CSysSessionBase::SetSessionActiveGameplayState( bool bActive, char const *s
 			// If active gameplay session has ended and we were disconnected from Steam
 			// then go back to main menu
 			m_lobby.m_eLobbyState = CSteamLobbyObject::STATE_DEFAULT;
-			Steam_OnServersDisconnected( NULL );
+			Steam_OnServersDisconnected( nullptr );
 		}
 		break;
 	}
@@ -1203,7 +1203,7 @@ void CSysSessionHost::KickPlayer( KeyValues *pCommand )
 	XUID xuid = pCommand->GetUint64( "xuid", 0ull );
 
 	// Locate the machine being kicked
-	KeyValues *pMachine = NULL;
+	KeyValues *pMachine = nullptr;
 	SessionMembersFindPlayer( m_pSettings, xuid, &pMachine );
 	if ( !pMachine )
 		return;
@@ -1427,7 +1427,7 @@ void CSysSessionHost::Steam_OnLobbyEntered( LobbyEnter_t *pLobbyEnter )
 		m_CallbackOnLobbyChatUpdate.Register( this, &CSysSessionBase::Steam_OnLobbyChatUpdate );
 
 		// Setup voice
-		Voice_ProcessTalkers( NULL, true );
+		Voice_ProcessTalkers( nullptr, true );
 
 		m_eState = STATE_IDLE;
 
@@ -1443,8 +1443,8 @@ bool CSysSessionHost::GetLobbyType( KeyValues *kv, ELobbyType *peType, bool *pbJ
 	if ( !peType || !pbJoinable )
 		return false;
 
-	char const *szLock = kv->GetString( "system/lock", NULL );
-	char const *szAccess = kv->GetString( "system/access", NULL );
+	char const *szLock = kv->GetString( "system/lock", nullptr );
+	char const *szAccess = kv->GetString( "system/access", nullptr );
 	if ( !szAccess && !szLock )
 		return false;
 
@@ -1846,7 +1846,7 @@ void CSysSessionHost::Process_VoiceMutelist( KeyValues *msg )
 {
 	XUID xuid = msg->GetUint64( "xuid" );
 	
-	KeyValues *pMachine = NULL;
+	KeyValues *pMachine = nullptr;
 	SessionMembersFindPlayer( m_pSettings, xuid, &pMachine );
 	if ( !pMachine )
 		return;
@@ -2214,7 +2214,7 @@ void CSysSessionClient::Process_ReplyJoinData_Our( KeyValues *msg )
 	KeyValuesDumpAsDevMsg( msg );
 
 	KeyValues *pSettings = msg->FindKey( "settings" );
-	char const *szError = msg->GetString( "error", NULL );
+	char const *szError = msg->GetString( "error", nullptr );
 	if ( !pSettings || szError )
 	{
 		Warning( "CSysSessionClient: Received bad session data from host\n" );
@@ -2247,7 +2247,7 @@ void CSysSessionClient::Process_ReplyJoinData_Our( KeyValues *msg )
 		}
 
 		// Setup voice engine
-		Voice_ProcessTalkers( NULL, true );
+		Voice_ProcessTalkers( nullptr, true );
 		Voice_UpdateMutelist();
 
 		KeyValues *kv = new KeyValues( "mmF->SysSessionUpdate" );
@@ -2262,7 +2262,7 @@ void CSysSessionClient::Process_ReplyJoinData_Our( KeyValues *msg )
 void CSysSessionClient::Process_ReplyJoinData_Other( KeyValues *msg )
 {
 	// Somebody has joined the session
-	char const *szError = msg->GetString( "error", NULL );
+	char const *szError = msg->GetString( "error", nullptr );
 	KeyValues *pSettings = msg->FindKey( "settings" );
 	if ( !pSettings || szError )
 		// connection attempt was rejected
@@ -2339,7 +2339,7 @@ void CSysSessionClient::Process_OnPlayerUpdated( KeyValues *msg )
 
 void CSysSessionClient::Process_OnMachineUpdated( KeyValues *msg )
 {
-	KeyValues *pMachine = NULL;
+	KeyValues *pMachine = nullptr;
 	SessionMembersFindPlayer( m_pSettings, msg->GetUint64( "id" ), &pMachine );
 	if ( !pMachine )
 		return;
@@ -2435,7 +2435,7 @@ void CSysSessionClient::OnPlayerLeave( XUID xuid )
 	}
 
 	// We only care to handle this event further if we are becoming the new host
-	char const *szForcedError = NULL;
+	char const *szForcedError = nullptr;
 
 	XUID xuidNewHost = steamapicontext->SteamMatchmaking()->GetLobbyOwner( m_lobby.m_uiLobbyID ).ConvertToUint64();
 	if ( xuidNewHost != m_xuidMachineId )
@@ -2488,10 +2488,10 @@ void CSysSessionClient::OnPlayerLeave( XUID xuid )
 	{
 		// We are about to migrate and become the new host
 		// See if the title settings mgr wants to chime in
-		if ( KeyValues *pMigrationHdlr = g_pMMF->GetMatchTitleGameSettingsMgr()->PrepareClientLobbyForMigration( m_pSettings, NULL ) )
+		if ( KeyValues *pMigrationHdlr = g_pMMF->GetMatchTitleGameSettingsMgr()->PrepareClientLobbyForMigration( m_pSettings, nullptr ) )
 		{
 			KeyValues::AutoDelete autodelete( pMigrationHdlr );
-			if ( char const *szError = pMigrationHdlr->GetString( "error", NULL ) )
+			if ( char const *szError = pMigrationHdlr->GetString( "error", nullptr ) )
 			{
 				// Title forcing a migration error
 				m_eState = STATE_FAIL;

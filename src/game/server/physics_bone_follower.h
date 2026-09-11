@@ -41,7 +41,7 @@ public:
 
 	// Use either of these to create the bone followers in your entity's CreateVPhysics()
 	void InitBoneFollowers( CBaseAnimating *pParentEntity, int iNumBones, const char **pFollowerBoneNames );
-	void AddBoneFollower( CBaseAnimating *pParentEntity, const char *pFollowerBoneName, solid_t *pSolid = NULL );	// Adds a single bone follower
+	void AddBoneFollower( CBaseAnimating *pParentEntity, const char *pFollowerBoneName, solid_t *pSolid = nullptr );	// Adds a single bone follower
 
 	// Call this after you move your bones
 	void UpdateBoneFollowers( CBaseAnimating *pParentEntity );

@@ -8,11 +8,11 @@
 #endif
 struct SQUserData : SQDelegable
 {
-	SQUserData(SQSharedState *ss){ _delegate = 0; _hook = NULL; INIT_CHAIN(); ADD_TO_CHAIN(&_ss(this)->_gc_chain, this); }
+	SQUserData(SQSharedState *ss){ _delegate = 0; _hook = nullptr; INIT_CHAIN(); ADD_TO_CHAIN(&_ss(this)->_gc_chain, this); }
 	~SQUserData()
 	{
 		REMOVE_FROM_CHAIN(&_ss(this)->_gc_chain, this);
-		SetDelegate(NULL);
+		SetDelegate(nullptr);
 	}
 	static SQUserData* Create(SQSharedState *ss, SQInteger size)
 	{
@@ -24,7 +24,7 @@ struct SQUserData : SQDelegable
 	}
 #ifndef NO_GARBAGE_COLLECTOR
 	void Mark(SQCollectable **chain);
-	void Finalize(){SetDelegate(NULL);}
+	void Finalize(){SetDelegate(nullptr);}
 #endif
 	void Iterate( CSQStateIterator *pIterator );
 

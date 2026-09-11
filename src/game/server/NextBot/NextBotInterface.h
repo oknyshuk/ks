@@ -52,7 +52,7 @@ public:
 	virtual bool IsRemovedOnReset( void ) const { return true; }	// remove this bot when the NextBot manager calls Reset
 
 	virtual CBaseCombatCharacter *GetEntity( void ) const	= 0;
-	virtual class NextBotCombatCharacter *GetNextBotCombatCharacter( void ) const	{ return NULL; }
+	virtual class NextBotCombatCharacter *GetNextBotCombatCharacter( void ) const	{ return nullptr; }
 
 
 	// interfaces are never NULL - return base no-op interfaces at a minimum
@@ -191,7 +191,7 @@ inline void INextBot::SetCurrentPath( const PathFollower *path )
 inline void INextBot::NotifyPathDestruction( const PathFollower *path )
 {
 	if ( m_currentPath == path )
-		m_currentPath = NULL;
+		m_currentPath = nullptr;
 }
 
 
@@ -200,7 +200,7 @@ inline ILocomotion *INextBot::GetLocomotionInterface( void ) const
 	// these base interfaces are lazy-allocated (instead of being fully instanced classes) for two reasons:
 	// 1) so the memory is only used if needed
 	// 2) so the component is registered properly
-	if ( m_baseLocomotion == NULL )
+	if ( m_baseLocomotion == nullptr )
 	{
 		m_baseLocomotion = new ILocomotion( const_cast< INextBot * >( this ) );
 	}
@@ -210,7 +210,7 @@ inline ILocomotion *INextBot::GetLocomotionInterface( void ) const
 
 inline IBody *INextBot::GetBodyInterface( void ) const
 {
-	if ( m_baseBody == NULL )
+	if ( m_baseBody == nullptr )
 	{
 		m_baseBody = new IBody( const_cast< INextBot * >( this ) );
 	}
@@ -220,7 +220,7 @@ inline IBody *INextBot::GetBodyInterface( void ) const
 
 inline IIntention *INextBot::GetIntentionInterface( void ) const
 {
-	if ( m_baseIntention == NULL )
+	if ( m_baseIntention == nullptr )
 	{
 		m_baseIntention = new IIntention( const_cast< INextBot * >( this ) );
 	}
@@ -230,7 +230,7 @@ inline IIntention *INextBot::GetIntentionInterface( void ) const
 
 inline IVision *INextBot::GetVisionInterface( void ) const
 {
-	if ( m_baseVision == NULL )
+	if ( m_baseVision == nullptr )
 	{
 		m_baseVision = new IVision( const_cast< INextBot * >( this ) );
 	}

@@ -112,7 +112,7 @@ void EndTrace( TraceInfo_t *&pTraceInfo )
 	PopTraceVisits( pTraceInfo );
 	Assert( pTraceInfo->m_nCheckDepth == -1 );
 	g_TraceInfoPool.PutObject( pTraceInfo );
-	pTraceInfo = NULL;
+	pTraceInfo = nullptr;
 }
 
 static ConVar map_noareas( "map_noareas", "0", 0, "Disable area to area connection testing." );
@@ -127,7 +127,7 @@ vcollide_t *CM_GetVCollide( int modelIndex )
 {
 	cmodel_t *pModel = CM_InlineModelNumber( modelIndex );
 	if( !pModel )
-		return NULL;
+		return nullptr;
 
 	// return the model's collision data
 	return &pModel->vcollisionData;
@@ -140,7 +140,7 @@ cmodel_t *CM_InlineModel( const char *name )
 {
 	// error checking!
 	if( !name )
-		return NULL;
+		return nullptr;
 
 	// JAYHL2: HACKHACK Get rid of this
 	if( StringHasPrefix( name, "maps/" ) )
@@ -166,7 +166,7 @@ cmodel_t *CM_InlineModelNumber( int index )
 	CCollisionBSPData *pBSPDataData = GetCollisionBSPData();
 
 	if( ( index < 0 ) || ( index > pBSPDataData->numcmodels ) )
-		return NULL;
+		return nullptr;
 
 	return ( &pBSPDataData->map_cmodels[ index ] );
 }
@@ -1446,7 +1446,7 @@ void FASTCALL CM_ClipBoxToBrush( TraceInfo_t * RESTRICT pTraceInfo, const cbrush
 
 	bool getout = false;
 	bool startout = false;
-	cbrushside_t* leadside = NULL;
+	cbrushside_t* leadside = nullptr;
 
 	float dist;
 
@@ -1810,7 +1810,7 @@ FORCEINLINE_TEMPLATE void CM_TraceToBrushList( TraceInfo_t * RESTRICT pTraceInfo
 	// trace ray/box sweep against all brushes in this leaf
 	//
 	CRangeValidatedArray<cbrush_t> & 			map_brushes = pTraceInfo->m_pBSPData->map_brushes;
-	TraceCounter_t * RESTRICT pCounters = NULL;
+	TraceCounter_t * RESTRICT pCounters = nullptr;
 	TraceCounter_t count = 0;
 
 	if ( CHECK_COUNTERS )
@@ -2139,8 +2139,8 @@ void CM_RayLeafnums_r( const Ray_t &ray, CCollisionBSPData *pBSPData, int iNode,
 					  float p1f, float p2f, const Vector &vecPoint1, const Vector &vecPoint2,
 					  int *pLeafList, int nMaxLeafCount, int &nLeafCount )
 {
-	cnode_t		*pNode = NULL;
-	cplane_t	*pPlane = NULL;
+	cnode_t		*pNode = nullptr;
+	cplane_t	*pPlane = nullptr;
 	float		flDist1 = 0.0f, flDist2 = 0.0f;
 	float		flOffset = 0.0f;
 	float		flDist;
@@ -2298,7 +2298,7 @@ void CM_RayLeafnums( const Ray_t &ray, int *pLeafList, int nMaxLeafCount, int &n
 
 bool FASTCALL CM_RecursiveOcclusionPass( COcclusionInfo &oi, int num, const float p1f, const float p2f, const Vector& p1, const Vector& p2 )
 {
-	cnode_t		*node = NULL;
+	cnode_t		*node = nullptr;
 	cplane_t	*plane;
 	float		t1 = 0, t2 = 0, offset = 0;
 	float		frac, frac2;
@@ -2412,7 +2412,7 @@ static void FASTCALL CM_RecursiveHullCheckImpl( TraceInfo_t *pTraceInfo, int num
 	if (pTraceInfo->m_trace.fraction <= p1f)
 		return;		// already hit something nearer
 
-	cnode_t		*node = NULL;
+	cnode_t		*node = nullptr;
 	cplane_t	*plane;
 	float		t1 = 0, t2 = 0, offset = 0;
 	float		frac, frac2;
@@ -2893,7 +2893,7 @@ CON_COMMAND_F( occlusion_test_run, "run occlusion test", FCVAR_CHEAT )
 	const char *pMapName = GetMapName();
 	CFmtStr fileName( "occlusion_records.%s.%04d.ocr", pMapName, V_atoi( args.Arg( 1 ) ) );
 	CUtlBuffer buf;
-	if ( !g_pFullFileSystem->ReadFile( fileName.Get(), NULL, buf ) )
+	if ( !g_pFullFileSystem->ReadFile( fileName.Get(), nullptr, buf ) )
 	{
 		Msg( "Cannot read %s\n", fileName.Get() );
 		return;
@@ -3200,7 +3200,7 @@ const byte *CM_Vis( byte *dest, int destlen, int cluster, int visType )
 	if ( !dest || visType > 2 || visType < 0 )
 	{
 		Sys_Error( "CM_Vis: error");
-		return NULL;
+		return nullptr;
 	}
 
 	if ( cluster == -1 )

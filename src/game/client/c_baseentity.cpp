@@ -72,7 +72,7 @@ void cc_cl_interp_all_changed( IConVar *pConVar, const char *pOldString, float f
 	{
 		C_BaseEntityIterator iterator;
 		C_BaseEntity *pEnt;
-		while ( (pEnt = iterator.Next()) != NULL )	
+		while ( (pEnt = iterator.Next()) != nullptr )	
 		{
 			if ( pEnt->ShouldInterpolate() )
 			{
@@ -89,7 +89,7 @@ static ConVar  cl_interp_all( "cl_interp_all", "0", 0, "Disable interpolation li
 ConVar  r_drawmodeldecals( "r_drawmodeldecals", "1" );
 extern ConVar	cl_showerror;
 int C_BaseEntity::m_nPredictionRandomSeed = -1;
-C_BasePlayer *C_BaseEntity::m_pPredictionPlayer = NULL;
+C_BasePlayer *C_BaseEntity::m_pPredictionPlayer = nullptr;
 bool C_BaseEntity::s_bAbsQueriesValid = true;
 bool C_BaseEntity::s_bAbsRecomputationEnabled = true;
 bool C_BaseEntity::s_bInterpolate = true;
@@ -175,7 +175,7 @@ static C_BaseEntity *FindPreviouslyCreatedEntity( CPredictableId& testId )
 		}
 	}
 #endif
-	return NULL;
+	return nullptr;
 }
 #endif
 
@@ -904,7 +904,7 @@ C_BaseEntity::C_BaseEntity() :
 
 	m_flFadeScale = 0.0f;
 	m_fadeMinDist = m_fadeMaxDist = 0.0f;
-	m_pClientAlphaProperty = NULL;
+	m_pClientAlphaProperty = nullptr;
 	m_nSplitUserPlayerPredictionSlot = 0;
 	m_DataChangeEventRef = -1;
 	m_EntClientFlags = 0;
@@ -918,7 +918,7 @@ C_BaseEntity::C_BaseEntity() :
 
 	m_bSimulatedEveryTick = false;
 	m_bAnimatedEveryTick = false;
-	m_pPhysicsObject = NULL;
+	m_pPhysicsObject = nullptr;
 	m_bDisableSimulationFix = false;
 	m_bSpotted = false;
 	for ( int i = 0; i < kNumSpottedByMask; i++ )
@@ -949,7 +949,7 @@ C_BaseEntity::C_BaseEntity() :
 
 	m_fBBoxVisFlags = 0;
 #if !defined( NO_ENTITY_PREDICTION ) && defined( USE_PREDICTABLEID )
-	m_pPredictionContext = NULL;
+	m_pPredictionContext = nullptr;
 #endif
 	
 	for ( int i = 0; i < NUM_ENTITY_LISTS; i++ )
@@ -988,7 +988,7 @@ void C_BaseEntity::CleanUpAlphaProperty()
 	if ( m_pClientAlphaProperty )
 	{
 		g_pClientAlphaPropertyMgr->DestroyClientAlphaProperty( m_pClientAlphaProperty );
-		m_pClientAlphaProperty = NULL;
+		m_pClientAlphaProperty = nullptr;
 	}
 }
 
@@ -1030,7 +1030,7 @@ void C_BaseEntity::Clear( void )
 	m_pClientAlphaProperty = static_cast< CClientAlphaProperty * >( g_pClientAlphaPropertyMgr->CreateClientAlphaProperty( this ) );
 	SetLocalOrigin( vec3_origin );
 	SetLocalAngles( vec3_angle );
-	model = NULL;
+	model = nullptr;
 	m_vecAbsOrigin.Init();
 	m_angAbsRotation.Init();
 	m_vecVelocity.Init();
@@ -1055,14 +1055,14 @@ void C_BaseEntity::Clear( void )
 	m_flFriction = 0.0f;       
 	m_flGravity = 0.0f;
 	SetCheckUntouch( false );
-	m_ShadowDirUseOtherEntity = NULL;
+	m_ShadowDirUseOtherEntity = nullptr;
 
 	m_nLastThinkTick = gpGlobals->tickcount;
 
 	// Remove prediction context if it exists
 #if !defined( NO_ENTITY_PREDICTION ) && defined( USE_PREDICTABLEID )
 	delete m_pPredictionContext;
-	m_pPredictionContext = NULL;
+	m_pPredictionContext = nullptr;
 #endif
 	// Do not enable this on all entities. It forces bone setup for entities that
 	// don't need it.
@@ -1130,7 +1130,7 @@ bool C_BaseEntity::Init( int entnum, int iSerialNum )
 
 	m_nCreationTick = gpGlobals->tickcount;
 
-	m_hScriptInstance = NULL;
+	m_hScriptInstance = nullptr;
 	
 	return true;
 }
@@ -1142,7 +1142,7 @@ bool C_BaseEntity::InitializeAsClientEntity( const char *pszModelName, bool bRen
 {
 	int nModelIndex;
 
-	if ( pszModelName != NULL )
+	if ( pszModelName != nullptr )
 	{
 		nModelIndex = modelinfo->GetModelIndex( pszModelName );
 		
@@ -1246,7 +1246,7 @@ void C_BaseEntity::Term()
 	if ( m_hScriptInstance )
 	{
 		g_pScriptVM->RemoveInstance( m_hScriptInstance );
-		m_hScriptInstance = NULL;
+		m_hScriptInstance = nullptr;
 	}
 }
 
@@ -1435,7 +1435,7 @@ void C_BaseEntity::VPhysicsCompensateForPredictionErrors( const byte *predicted_
 
 
 	IPhysicsObject *pPhysicsObject = VPhysicsGetObject();
-	IPredictedPhysicsObject *pPredictedObject = pPhysicsObject ? pPhysicsObject->GetPredictedInterface() : NULL;
+	IPredictedPhysicsObject *pPredictedObject = pPhysicsObject ? pPhysicsObject->GetPredictedInterface() : nullptr;
 	if( pPredictedObject )
 	{
 		Vector vPredictedOrigin;
@@ -1506,18 +1506,18 @@ void C_BaseEntity::GetVectors(Vector* pForward, Vector* pRight, Vector* pUp) con
 	// This call is necessary to cause m_rgflCoordinateFrame to be recomputed
 	const matrix3x4_t &entityToWorld = EntityToWorldTransform();
 
-	if (pForward != NULL)
+	if (pForward != nullptr)
 	{
 		MatrixGetColumn( entityToWorld, 0, *pForward ); 
 	}
 
-	if (pRight != NULL)
+	if (pRight != nullptr)
 	{
 		MatrixGetColumn( entityToWorld, 1, *pRight ); 
 		*pRight *= -1.0f;
 	}
 
-	if (pUp != NULL)
+	if (pUp != nullptr)
 	{
 		MatrixGetColumn( entityToWorld, 2, *pUp ); 
 	}
@@ -1528,7 +1528,7 @@ void C_BaseEntity::UpdateVisibilityAllEntities()
 {
 	C_BaseEntityIterator iterator;
 	C_BaseEntity *pEnt;
-	while ( (pEnt = iterator.Next()) != NULL )	
+	while ( (pEnt = iterator.Next()) != nullptr )	
 	{
 		pEnt->UpdateVisibility();	
 	}
@@ -1646,7 +1646,7 @@ bool C_BaseEntity::ShouldDrawForSplitScreenUser( int nSlot )
 IClientModelRenderable*	C_BaseEntity::GetClientModelRenderable()
 {
 	if ( !m_bReadyToDraw || !m_bCanUseBrushModelFastPath )
-		return NULL;
+		return nullptr;
 
 
 	return this; 
@@ -1917,19 +1917,19 @@ void C_BaseEntity::MarkShadowDirty( bool bDirty )
 IClientRenderable *C_BaseEntity::GetShadowParent()
 {
 	C_BaseEntity *pParent = GetMoveParent();
-	return pParent ? pParent->GetClientRenderable() : NULL;
+	return pParent ? pParent->GetClientRenderable() : nullptr;
 }
 
 IClientRenderable *C_BaseEntity::FirstShadowChild()
 {
 	C_BaseEntity *pChild = FirstMoveChild();
-	return pChild ? pChild->GetClientRenderable() : NULL;
+	return pChild ? pChild->GetClientRenderable() : nullptr;
 }
 
 IClientRenderable *C_BaseEntity::NextShadowPeer()
 {
 	C_BaseEntity *pPeer = NextMovePeer();
-	return pPeer ? pPeer->GetClientRenderable() : NULL;
+	return pPeer ? pPeer->GetClientRenderable() : nullptr;
 }
 
 	
@@ -1973,7 +1973,7 @@ const matrix3x4_t &C_BaseEntity::RenderableToWorldTransform()
 
 IPVSNotify* C_BaseEntity::GetPVSNotifyInterface()
 {
-	return NULL;
+	return nullptr;
 }
 
 //-----------------------------------------------------------------------------
@@ -2223,7 +2223,7 @@ int C_BaseEntity::GetRenderFlags( void )
 //-----------------------------------------------------------------------------
 CMouthInfo *C_BaseEntity::GetMouth( void )
 {
-	return NULL;
+	return nullptr;
 }
 
 
@@ -2334,7 +2334,7 @@ float *C_BaseEntity::GetRenderClipPlane( void )
 	if( m_bEnableRenderingClipPlane )
 		return m_fRenderingClipPlane;
 	else
-		return NULL;
+		return nullptr;
 }
 
 
@@ -2610,9 +2610,9 @@ void C_BaseEntity::UnlinkChild( C_BaseEntity *pParent, C_BaseEntity *pChild )
 		pChild->m_pMovePeer->m_pMovePrevPeer = pChild->m_pMovePrevPeer;
 	}
 
-	pChild->m_pMovePeer = NULL;
-	pChild->m_pMovePrevPeer = NULL;
-	pChild->m_pMoveParent = NULL;
+	pChild->m_pMovePeer = nullptr;
+	pChild->m_pMovePrevPeer = nullptr;
+	pChild->m_pMoveParent = nullptr;
 	pChild->RemoveFromAimEntsList();
 	pChild->OnFastReflectionRenderingChanged();
 
@@ -2635,7 +2635,7 @@ void C_BaseEntity::LinkChild( C_BaseEntity *pParent, C_BaseEntity *pChild )
 	}
 #endif
 
-	pChild->m_pMovePrevPeer = NULL;
+	pChild->m_pMovePrevPeer = nullptr;
 	pChild->m_pMovePeer = pParent->m_pMoveChild;
 	if (pChild->m_pMovePeer)
 	{
@@ -3151,7 +3151,7 @@ void C_BaseEntity::CheckShutdownPredictable( const char *context )
 
 	if ( !ShouldPredict() || 
 		!GetPredictionEligible() ||
-		(GetPredictionOwner() == NULL) )
+		(GetPredictionOwner() == nullptr) )
 	{
 		if( IsIntermediateDataAllocated() )
 		{
@@ -3448,7 +3448,7 @@ CStudioHdr *C_BaseEntity::OnNewModel()
 	m_bCanUseBrushModelFastPath = pModel && ( modelinfo->GetModelType( pModel ) == mod_brush ) &&
 		!modelinfo->ModelHasMaterialProxy( pModel );
 
-	return NULL;
+	return nullptr;
 }
 
 void C_BaseEntity::OnNewParticleEffect( const char *pszParticleName, CNewParticleEffect *pNewParticleEffect )
@@ -3670,7 +3670,7 @@ void C_BaseEntity::StopFollowingEntity( )
 {
 	Assert( IsFollowingEntity() );
 
-	SetParent( NULL );
+	SetParent( nullptr );
 	RemoveEffects( EF_BONEMERGE );
 	RemoveSolidFlags( FSOLID_NOT_SOLID );
 	SetMoveType( MOVETYPE_NONE );
@@ -3684,7 +3684,7 @@ bool C_BaseEntity::IsFollowingEntity()
 C_BaseEntity *CBaseEntity::GetFollowedEntity()
 {
 	if (!IsFollowingEntity())
-		return NULL;
+		return nullptr;
 	return GetMoveParent();
 }
 
@@ -3755,7 +3755,7 @@ void C_BaseEntity::InterpolateServerEntities()
 
 		C_BaseEntityIterator iterator;
 		C_BaseEntity *pEnt;
-		while ( (pEnt = iterator.Next()) != NULL )
+		while ( (pEnt = iterator.Next()) != nullptr )
 		{
 			pEnt->Interp_UpdateInterpolationAmounts( pEnt->GetVarMapping() );
 		}
@@ -3774,7 +3774,7 @@ void C_BaseEntity::InterpolateServerEntities()
 		// Clear interp history when we disable interpolation
 		C_BaseEntityIterator iterator;
 		C_BaseEntity *pEnt;
-		while ( (pEnt = iterator.Next()) != NULL )
+		while ( (pEnt = iterator.Next()) != nullptr )
 		{
 			pEnt->ResetLatched();
 		}
@@ -3954,7 +3954,7 @@ void C_BaseEntity::AddStudioDecal( const Ray_t& ray, int hitbox, int decalIndex,
 void C_BaseEntity::AddStudioMaterialDecal( const Ray_t& ray, IMaterial *pDecalMaterial, float flInputRadius, Vector vec_up )
 {
 	
-	if ( !r_drawmodeldecals.GetBool() || pDecalMaterial == NULL )
+	if ( !r_drawmodeldecals.GetBool() || pDecalMaterial == nullptr )
 		return;
 
 	// Found the point, now lets apply the decals
@@ -5154,7 +5154,7 @@ C_BaseEntity *CreateEntityByName( const char *className )
 	}
 
 	Warning( "Can't find factory for entity: %s\n", className );
-	return NULL;
+	return nullptr;
 }
 
 #ifdef _DEBUG
@@ -5255,7 +5255,7 @@ CON_COMMAND_F( dlight_debug, "Creates a dlight in front of the player", FCVAR_CH
 bool C_BaseEntity::IsClientCreated( void ) const
 {
 #if !defined( NO_ENTITY_PREDICTION ) && defined( USE_PREDICTABLEID )
-	if ( m_pPredictionContext != NULL )
+	if ( m_pPredictionContext != nullptr )
 	{
 		// For now can't be both
 		Assert( !GetPredictable() );
@@ -5284,7 +5284,7 @@ C_BaseEntity *C_BaseEntity::CreatePredictedEntityByName( const char *classname, 
 	Assert( player->m_pCurrentCommand );
 	Assert( prediction->InPrediction() );
 
-	C_BaseEntity *ent = NULL;
+	C_BaseEntity *ent = nullptr;
 
 	// What's my birthday (should match server)
 	int command_number	= player->m_pCurrentCommand->command_number;
@@ -5308,14 +5308,14 @@ C_BaseEntity *C_BaseEntity::CreatePredictedEntityByName( const char *classname, 
 			}
 		}
 
-		return NULL;
+		return nullptr;
 	}
 
 	// Try to create it
 	ent = CreateEntityByName( classname );
 	if ( !ent )
 	{
-		return NULL;
+		return nullptr;
 	}
 
 	// It's predictable
@@ -5360,7 +5360,7 @@ C_BaseEntity *C_BaseEntity::CreatePredictedEntityByName( const char *classname, 
 	
 	return ent;
 #else
-	return NULL;
+	return nullptr;
 #endif
 }
 
@@ -5454,7 +5454,7 @@ void C_BaseEntity::UpdateOnRemove( void )
 
 	Assert( !GetMoveParent() );
 	UnlinkFromHierarchy();
-	SetGroundEntity( NULL );
+	SetGroundEntity( nullptr );
 }
 
 //-----------------------------------------------------------------------------
@@ -5531,7 +5531,7 @@ bool C_BaseEntity::BecameDormantThisPacket( void ) const
 bool C_BaseEntity::IsIntermediateDataAllocated( void ) const
 {
 #if !defined( NO_ENTITY_PREDICTION )
-	return m_pOriginalData != NULL ? true : false;
+	return m_pOriginalData != nullptr ? true : false;
 #else
 	return false;
 #endif
@@ -5582,20 +5582,20 @@ void C_BaseEntity::DestroyIntermediateData( void )
 	for ( int i = 0; i < ARRAYSIZE( m_pIntermediateData ); i++ )
 	{
 		delete[] m_pIntermediateData[ i ];
-		m_pIntermediateData[ i ] = NULL;
+		m_pIntermediateData[ i ] = nullptr;
 	}
 
-	if( m_pIntermediateData_FirstPredicted[0] != NULL )
+	if( m_pIntermediateData_FirstPredicted[0] != nullptr )
 	{
 		for ( int i = 0; i < ARRAYSIZE( m_pIntermediateData_FirstPredicted ); i++ )
 		{
 			delete[] m_pIntermediateData_FirstPredicted[ i ];
-			m_pIntermediateData_FirstPredicted[ i ] = NULL;
+			m_pIntermediateData_FirstPredicted[ i ] = nullptr;
 		}		
 	}
 
 	delete[] m_pOriginalData;
-	m_pOriginalData = NULL;
+	m_pOriginalData = nullptr;
 
 	m_nIntermediateDataCount = -1;
 #endif
@@ -5799,11 +5799,11 @@ void *C_BaseEntity::GetPredictedFrame( int framenumber )
 	if ( !m_pOriginalData )
 	{
 		Assert( 0 );
-		return NULL;
+		return nullptr;
 	}
 	return (void *)m_pIntermediateData[ framenumber % ARRAYSIZE( m_pIntermediateData ) ];
 #else
-	return NULL;
+	return nullptr;
 #endif
 }
 
@@ -5815,7 +5815,7 @@ void *C_BaseEntity::GetFirstPredictedFrame( int framenumber )
 
 	return (void *)m_pIntermediateData_FirstPredicted[ framenumber % ARRAYSIZE( m_pIntermediateData_FirstPredicted ) ];
 #else
-	return NULL;
+	return nullptr;
 #endif
 }
 
@@ -5838,11 +5838,11 @@ void *C_BaseEntity::GetOriginalNetworkDataObject( void )
 	if ( !m_pOriginalData )
 	{
 		Assert( 0 );
-		return NULL;
+		return nullptr;
 	}
 	return (void *)m_pOriginalData;
 #else
-	return NULL;
+	return nullptr;
 #endif
 }
 
@@ -5912,7 +5912,7 @@ CBaseEntity *FindEntityInFrontOfLocalPlayer()
 			return tr.Ent<CBaseEntity>();
 		}
 	}
-	return NULL;
+	return nullptr;
 }
 
 //-----------------------------------------------------------------------------
@@ -6377,7 +6377,7 @@ C_AI_BaseNPC *C_BaseEntity::MyNPCPointer( void )
 		return assert_cast<C_AI_BaseNPC *>(this);
 	}
 
-	return NULL;
+	return nullptr;
 }
 
 
@@ -6456,7 +6456,7 @@ void C_BaseEntity::GetToolRecordingState( KeyValues *msg )
 	state.m_vecRenderOrigin = GetRenderOrigin();
 	state.m_vecRenderAngles = GetRenderAngles();
 	state.m_numEffects = 0;
-	state.m_pEffects = NULL;
+	state.m_pEffects = nullptr;
 
 	// use EF_NOINTERP if the owner or a hierarchical parent has NO_INTERP
 	if ( pOwner && pOwner->IsEffectActive( EF_NOINTERP ) )
@@ -6628,7 +6628,7 @@ void C_BaseEntity::AddVar( void *data, IInterpolatedVar *watcher, int type, bool
 	if ( bAddIt )
 	{
 		// watchers must have a debug name set
-		Assert( watcher->GetDebugName() != NULL );
+		Assert( watcher->GetDebugName() != nullptr );
 
 		VarMapEntry_t map;
 		map.data = data;
@@ -6690,7 +6690,7 @@ void C_BaseEntity::CheckCLInterpChanged()
 		// Tell all the existing entities to update their interpolation amounts to account for the change.
 		C_BaseEntityIterator iterator;
 		C_BaseEntity *pEnt;
-		while ( (pEnt = iterator.Next()) != NULL )
+		while ( (pEnt = iterator.Next()) != nullptr )
 		{
 			pEnt->Interp_UpdateInterpolationAmounts( pEnt->GetVarMapping() );
 		}
@@ -6923,8 +6923,8 @@ void CC_CL_Find_Ent( const CCommand& args )
 	const char *pszSubString = args[1];
 	Msg("Searching for client entities with classname containing substring: '%s'\n", pszSubString );
 
-	C_BaseEntity *ent = NULL;
-	while ( (ent = ClientEntityList().NextBaseEntity(ent)) != NULL )
+	C_BaseEntity *ent = nullptr;
+	while ( (ent = ClientEntityList().NextBaseEntity(ent)) != nullptr )
 	{
 		const char *pszClassname = ent->GetClassname();
 
