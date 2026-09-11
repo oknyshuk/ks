@@ -414,3 +414,25 @@ void CallAssertFailedNotifyFunc( const char *pchFile, int nLine, const char *pch
 
 
 
+
+//-----------------------------------------------------------------------------
+// The body the assert macros forward to. See the note in dbg.h for why this is a function rather
+// than the macro it used to be.
+//-----------------------------------------------------------------------------
+void AssertImpl( const tchar *pMsg, bool bFatal, const std::source_location &loc )
+{
+	LoggingResponse_t ret = Log_Assert( "%s (%d) : %s\n", loc.file_name(), (int)loc.line(),
+	                                    static_cast<const char *>( pMsg ) );
+	CallAssertFailedNotifyFunc( loc.file_name(), (int)loc.line(), pMsg );
+
+	if ( ret == LR_DEBUGGER )
+	{
+		if ( ShouldUseNewAssertDialog() )
+		{
+			if ( DbgFlagMacro_DoNewAssertDialog( loc.file_name(), (int)loc.line(), pMsg ) )
+				DebuggerBreak();
+		}
+		if ( bFatal )
+			DbgFlagMacro_ExitOnFatalAssert( loc.file_name(), (int)loc.line() );
+	}
+}

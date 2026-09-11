@@ -18,6 +18,7 @@
 #include <math.h>
 #include <stdio.h>
 #include <stdarg.h>
+#include <source_location>
 
 //-----------------------------------------------------------------------------
 // dll export stuff
@@ -125,53 +126,24 @@ PLATFORM_INTERFACE struct SDL_Window * GetAssertDialogParent();
 
 /* Used to define macros, never use these directly. */
 
-#ifdef _PREFAST_
-	// When doing /analyze builds define _AssertMsg to be __analysis_assume. This tells
-	// the compiler to assume that the condition is true, which helps to suppress many
-	// warnings. This define is done in debug and release builds.
-	// The unfortunate !! is necessary because otherwise /analyze is incapable of evaluating
-	// all of the logical expressions that the regular compiler can handle.
-	// Include _msg in the macro so that format errors in it are detected.
-	#define _AssertMsg( _exp, _msg, _executeExp, _bFatal ) do { __analysis_assume( !!(_exp) ); _msg; } while (0)
-	#define  _AssertMsgOnce( _exp, _msg, _bFatal ) do { __analysis_assume( !!(_exp) ); _msg; } while (0)
-	// Force asserts on for /analyze so that we get a __analysis_assume of all of the constraints.
-	#define DBGFLAG_ASSERT
-	#define DBGFLAG_ASSERTFATAL
-	#define DBGFLAG_ASSERTDEBUG
+	// The assert body lives in dbg.cpp as a function. It used to be a macro threaded with
+	// __TFILE__ and __LINE__ so it could say where the assert fired; source_location::current()
+	// supplies that at the call now, so the macro is a one-line forwarder to something that can be
+	// stepped through and has one copy in the binary.
+	//
+	// _executeExp went with it. Its only values were ((void)0) and (fAsserted = true), and
+	// AssertFunc/AssertFatalFunc -- the only way a caller could pass anything else -- had no call
+	// sites, so the parameter and their two (malformed) definitions are gone as well.
+	PLATFORM_INTERFACE void AssertImpl( const tchar *pMsg, bool bFatal,
+	                                    const std::source_location &loc = std::source_location::current() );
 
-	// Define the Q_ASSERT macro to override the QT assert macro so that its asserts
-	// suppress warnings instead of causing them.
-	#define  Q_ASSERT( _exp )           							_AssertMsg( _exp, _T("Assertion Failed: ") _T(#_exp), ((void)0), false )
-#else
-	#define  _AssertMsg( _exp, _msg, _executeExp, _bFatal )	\
-		do {																\
-			if (!(_exp)) 													\
-			{ 																\
-				LoggingResponse_t ret = Log_Assert( "%s (%d) : %s\n", __TFILE__, __LINE__, static_cast<const char*>( _msg ) );	\
-				CallAssertFailedNotifyFunc( __TFILE__, __LINE__, _msg );								\
-				_executeExp; 												\
-				if ( ret == LR_DEBUGGER )									\
-				{															\
-					if ( ShouldUseNewAssertDialog() )                       \
-					{                                                       \
-						if ( DbgFlagMacro_DoNewAssertDialog( __TFILE__, __LINE__, _msg ) ) \
-							DebuggerBreak();									\
-					}                                                       \
-					if ( _bFatal )											\
-						DbgFlagMacro_ExitOnFatalAssert( __TFILE__, __LINE__ );			\
-				}															\
-			}																\
-		} while (0)
+	#define  _AssertMsg( _exp, _msg, _bFatal )	\
+		do { if ( !(_exp) ) AssertImpl( _msg, _bFatal ); } while (0)
 
-#define  _AssertMsgOnce( _exp, _msg, _bFatal ) \
-	do {																\
-		static bool fAsserted;											\
-		if (!fAsserted )												\
-		{ 																\
-			_AssertMsg( _exp, _msg, (fAsserted = true), _bFatal );		\
-		}																\
-	} while (0)
-#endif
+	// The flag is set before reporting rather than mid-report as the old _executeExp did, so a
+	// recursive assert cannot re-enter the reporter.
+	#define  _AssertMsgOnce( _exp, _msg, _bFatal )	\
+		do { static bool fAsserted; if ( !fAsserted && !(_exp) ) { fAsserted = true; AssertImpl( _msg, _bFatal ); } } while (0)
 
 /* Spew macros... */
 
@@ -182,11 +154,10 @@ PLATFORM_INTERFACE struct SDL_Window * GetAssertDialogParent();
 
 #ifdef DBGFLAG_ASSERTFATAL
 
-#define  AssertFatal( _exp )									_AssertMsg( _exp, _T("Assertion Failed: ") _T(#_exp), ((void)0), true )
+#define  AssertFatal( _exp )									_AssertMsg( _exp, _T("Assertion Failed: ") _T(#_exp), true )
 #define  AssertFatalOnce( _exp )								_AssertMsgOnce( _exp, _T("Assertion Failed: ") _T(#_exp), true )
-#define  AssertFatalMsg( _exp, _msg )							_AssertMsg( _exp, _msg, ((void)0), true )
+#define  AssertFatalMsg( _exp, _msg )							_AssertMsg( _exp, _msg, true )
 #define  AssertFatalMsgOnce( _exp, _msg )						_AssertMsgOnce( _exp, _msg, true )
-#define  AssertFatalFunc( _exp, _f )							_AssertMsg( _exp, _T("Assertion Failed: " _T(#_exp), _f, true )
 #define  AssertFatalEquals( _exp, _expectedValue )				AssertFatalMsg2( (_exp) == (_expectedValue), _T("Expected %d but got %d!"), (_expectedValue), (_exp) ) 
 #define  AssertFatalFloatEquals( _exp, _expectedValue, _tol )   AssertFatalMsg2( fabs((_exp) - (_expectedValue)) <= (_tol), _T("Expected %f but got %f!"), (_expectedValue), (_exp) )
 #define  VerifyFatal( _exp )									AssertFatal( _exp )
@@ -210,7 +181,6 @@ PLATFORM_INTERFACE struct SDL_Window * GetAssertDialogParent();
 #define  AssertFatalOnce( _exp )								((void)0)
 #define  AssertFatalMsg( _exp, _msg )							((void)0)
 #define  AssertFatalMsgOnce( _exp, _msg )						((void)0)
-#define  AssertFatalFunc( _exp, _f )							((void)0)
 #define  AssertFatalEquals( _exp, _expectedValue )				((void)0)
 #define  AssertFatalFloatEquals( _exp, _expectedValue, _tol )	((void)0)
 #define  VerifyFatal( _exp )									(_exp)
@@ -256,11 +226,10 @@ PLATFORM_INTERFACE struct SDL_Window * GetAssertDialogParent();
 // lwss end
 #ifdef DBGFLAG_ASSERT
 
-#define  Assert( _exp )           							_AssertMsg( _exp, _T("Assertion Failed: ") _T(#_exp), ((void)0), false )
-#define  AssertMsg_( _exp, _msg )  							_AssertMsg( _exp, _msg, ((void)0), false )
+#define  Assert( _exp )           							_AssertMsg( _exp, _T("Assertion Failed: ") _T(#_exp), false )
+#define  AssertMsg_( _exp, _msg )  							_AssertMsg( _exp, _msg, false )
 #define  AssertOnce( _exp )       							_AssertMsgOnce( _exp, _T("Assertion Failed: ") _T(#_exp), false )
 #define  AssertMsgOnce( _exp, _msg )  						_AssertMsgOnce( _exp, _msg, false )
-#define  AssertFunc( _exp, _f )   							_AssertMsg( _exp, _T("Assertion Failed: ") _T(#_exp), _f, false )
 #define  AssertEquals( _exp, _expectedValue )              	AssertMsg2( (_exp) == (_expectedValue), _T("Expected %d but got %d!"), (_expectedValue), (_exp) ) 
 #define  AssertFloatEquals( _exp, _expectedValue, _tol )  	AssertMsg2( fabs((_exp) - (_expectedValue)) <= (_tol), _T("Expected %f but got %f!"), (_expectedValue), (_exp) )
 #define  Verify( _exp )           							( _exp )
@@ -298,7 +267,6 @@ PLATFORM_INTERFACE struct SDL_Window * GetAssertDialogParent();
 #define  AssertOnce( _exp )									((void)0)
 #define  AssertMsg( _exp, _msg )							((void)0)
 #define  AssertMsgOnce( _exp, _msg )						((void)0)
-#define  AssertFunc( _exp, _f )								((void)0)
 #define  AssertEquals( _exp, _expectedValue )				((void)0)
 #define  AssertFloatEquals( _exp, _expectedValue, _tol )	((void)0)
 #define  Verify( _exp )										(_exp)
@@ -335,13 +303,10 @@ PLATFORM_INTERFACE struct SDL_Window * GetAssertDialogParent();
 
 // The Always version of the assert macros are defined even when DBGFLAG_ASSERT is not, 
 // so they will be available even in release.
-#define  AssertAlways( _exp )           							_AssertMsg( _exp, _T("Assertion Failed: ") _T(#_exp), ((void)0), false )
-#define  AssertMsgAlways( _exp, _msg )  							_AssertMsg( _exp, _msg, ((void)0), false )
+#define  AssertAlways( _exp )           							_AssertMsg( _exp, _T("Assertion Failed: ") _T(#_exp), false )
+#define  AssertMsgAlways( _exp, _msg )  							_AssertMsg( _exp, _msg, false )
 
 
-#define FILE_LINE_FUNCTION_STRING __FILE__ "(" STRINGIFY(__LINE__) "):" __FUNCTION__ ":"
-#define FILE_LINE_STRING __FILE__ "(" STRINGIFY(__LINE__) "):"
-#define FUNCTION_LINE_STRING __FUNCTION__ "(" STRINGIFY(__LINE__) "): "
 
 
 // Handy define for inserting clickable messages into the build output.
