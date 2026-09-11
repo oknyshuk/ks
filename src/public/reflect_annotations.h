@@ -13,6 +13,7 @@
 #ifndef KS_REFLECT_ANNOTATIONS_H
 #define KS_REFLECT_ANNOTATIONS_H
 
+#include "reflect_wirevar.h"   // WireVar; a leaf header so networkvar.h can reach it cheaply
 #include "datamap.h"
 #include "dt_common.h"   // SPROP_* flags, which Net::flags carries
 #include "mathlib/vector.h"

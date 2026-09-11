@@ -10,6 +10,7 @@
 
 #include "tier0/dbg.h"
 #include "tier0/platform.h"
+#include "reflect_wirevar.h"   // ks::reflect::WireVar, which marks the wrappers below
 #include "convar.h"
 
 #if defined( CLIENT_DLL ) || defined( GAME_DLL )
@@ -298,8 +299,9 @@ inline bool NetworkParanoidUnequal( const double &a, const double &b )
 	return p.u64 != q.u64;
 }
 
+// The wire payload is the single data member this class declares; see reflect_wirevar.h.
 template< class Type, class Changer >
-class CNetworkVarBase : public CNetworkVarFlagsBase
+class [[= ks::reflect::WireVar{} ]] CNetworkVarBase : public CNetworkVarFlagsBase
 {
 public:
 	CNetworkVarBase()
@@ -720,7 +722,7 @@ private:
 	class NetworkVar_##name; \
 	friend class NetworkVar_##name; \
 	typedef ThisClass MakeANetworkVar_##name; \
-	class NetworkVar_##name : public CNetworkVarFlagsBase\
+	class [[= ks::reflect::WireVar{} ]] NetworkVar_##name : public CNetworkVarFlagsBase\
 	{ \
 	public: \
 		operator const char*() const { return m_Value; } \
@@ -753,7 +755,7 @@ private:
 	class NetworkVar_##name; \
 	friend class NetworkVar_##name; \
 	typedef ThisClass MakeANetworkVar_##name; \
-	class NetworkVar_##name \
+	class [[= ks::reflect::WireVar{} ]] NetworkVar_##name \
 	{ \
 	public: \
 		template <typename T> friend int ServerClassInit(T *);	\

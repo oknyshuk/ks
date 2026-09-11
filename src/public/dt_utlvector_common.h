@@ -71,6 +71,29 @@ inline EnsureCapacityFn GetEnsureCapacityTemplate( CUtlVector<T,A> &vec )
 }
 
 
+// The wire-side view of a resizable vector member.
+//
+// Send/RecvPropUtlVector need only an element type and two thunks that reach the vector through
+// (this, offset) and know nothing of its layout. So the table emitters must not name CUtlVector:
+// they ask this trait instead. Wiring a different vector kind is then one specialization, and
+// the reflection layer stops depending on the container layer.
+//
+// The CUtlVector<T,A> partial specialization keys on the container, not on an instance -- the
+// emitters used to default-construct a probe object purely to deduce T and A through the
+// Get*Template overloads above, which also required the member type to be default-constructible.
+template <class V>
+struct WireVec;
+
+template <class T, class A>
+struct WireVec< CUtlVector<T,A> >
+{
+	using elem_type = T;
+
+	static EnsureCapacityFn ensure() { return &UtlVectorTemplate<T,A>::EnsureCapacity; }
+	static ResizeUtlVectorFn resize() { return &UtlVectorTemplate<T,A>::ResizeUtlVector; }
+};
+
+
 // Format and allocate a string.
 char* AllocateStringHelper( PRINTF_FORMAT_STRING const char *pFormat, ... );
 

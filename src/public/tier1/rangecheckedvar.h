@@ -11,6 +11,7 @@
 #include "tier0/dbg.h"
 #include "tier0/threadtools.h"
 #include "mathlib/vector.h"
+#include "reflect_wirevar.h"   // ks::reflect::WireVar, which marks the wrapper below
 #include <float.h>
 
 
@@ -46,8 +47,9 @@ inline void RangeCheck( const Vector &value, int minValue, int maxValue )
 }
 
 
+// The wire payload is the single data member this class declares; see reflect_wirevar.h.
 template< class T, int minValue, int maxValue, int startValue >
-class CRangeCheckedVar
+class [[= ks::reflect::WireVar{} ]] CRangeCheckedVar
 {
 public:
 

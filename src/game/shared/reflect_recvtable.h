@@ -286,37 +286,22 @@ void push_utl_vec( std::vector<RecvProp> &out )
 	static constexpr const char *nm = intern( Member );
 	static constexpr int off = (int)ref.offset;
 	using Vec = typename [: std::meta::type_of( ref.member ) :];
-	Vec probe;   // only to deduce the thunks, as RECVINFO_UTLVECTOR does
+	using WV  = WireVec<Vec>;
 	// The element prop is unnamed and at offset 0 either way; a null Table means the elements are
 	// scalars, whose kind comes from the vector's element type (DT_SceneEntity holds EHANDLEs).
 	RecvProp elem;
 	if constexpr ( Table == nullptr )
 	{
-		static constexpr std::meta::info et = ^^typename Vec::ElemType_t;
+		static constexpr std::meta::info et = ^^typename WV::elem_type;
 		static constexpr PropDesc ed = { nullptr, kind_of_tag( tag_of_type( et ), et, ^^C ), 0, 0 };
 		elem = make_prop( ed );
 	}
 	else
 		elem = RecvPropDataTable( nullptr, 0, 0, Table );
 	out.push_back( RecvPropUtlVector(
-	    nm, off, (int)sizeof( typename Vec::ElemType_t ),
-	    Fn != nullptr ? (ResizeUtlVectorFn)Fn : GetResizeUtlVectorTemplate( probe ),
-	    GetEnsureCapacityTemplate( probe ), Max, elem ) );
-}
-
-// The thunks RECVINFO_UTLVECTOR derives, without the macro's null-deref lvalue.
-template <class Vec>
-inline EnsureCapacityFn ensure_capacity_of()
-{
-	Vec v;
-	return GetEnsureCapacityTemplate( v );
-}
-
-template <class Vec>
-inline ResizeUtlVectorFn resize_utlvector_of()
-{
-	Vec v;
-	return GetResizeUtlVectorTemplate( v );
+	    nm, off, (int)sizeof( typename WV::elem_type ),
+	    Fn != nullptr ? (ResizeUtlVectorFn)Fn : WV::resize(),
+	    WV::ensure(), Max, elem ) );
 }
 
 template <class C> RecvTable &table();

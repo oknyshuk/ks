@@ -17,9 +17,11 @@ using namespace ks::reflect;
 
 struct FireBurst { int count; float interval; };   // embedded, unannotated members
 
-// Shaped like the CNetworkVar family: the payload lives in m_Value.
+// Shaped like the CNetworkVar family: WireVar marks the wrapper and the payload is its single
+// data member. The member is named m_Value here only because the real ones are -- nothing in
+// reflect.h reads the name.
 template <class T>
-struct MockNetworkVar { T m_Value{}; };
+struct [[= WireVar{} ]] MockNetworkVar { T m_Value{}; };
 
 // A class template carrying its own tag -- the shape CHandle will take. Also checks that
 // an annotation on a primary template is visible from a specialization.
@@ -66,6 +68,22 @@ static_assert( tag_of_type( ^^MockVectorDerived ) == FIELD_VECTOR );
 // A class that genuinely has no payload stays itself, so embedded members still resolve.
 static_assert( unwrap( ^^FireBurst ) == ^^FireBurst );
 static_assert( tag_of_type( ^^FireBurst ) == FIELD_EMBEDDED );
+
+// WireVar asserts the wrapper's shape: exactly one data member is the payload. A wrapper that
+// grows a second member is a contract violation rather than the silent misread the old name match
+// produced, and an unrelated type that happens to declare m_Value is no longer peeled at all.
+template <class T>
+consteval bool unwrap_rejected()
+{
+	try { (void)unwrap( ^^T ); return false; }
+	catch ( const std::meta::exception & ) { return true; }
+}
+struct [[= WireVar{} ]] MockTwoMembers { int m_Value; int m_Extra; };
+static_assert( unwrap_rejected<MockTwoMembers>() );
+
+// A type with no annotation is never peeled, however its members are named.
+struct MockUnannotated { int m_Value; };
+static_assert( unwrap( ^^MockUnannotated ) == ^^MockUnannotated );
 
 // ---- participation -----------------------------------------------------------
 static_assert( members<Net,  Weapon>.size() == 3 );
@@ -121,9 +139,9 @@ static_assert( tag_fits( FIELD_POSITION_VECTOR, ^^Vector ) );
 
 // ---- arrays and strings ------------------------------------------------------
 // CNetworkString( name, len ) and CNetworkArray( type, name, count ) make the member an
-// instance of the macro's nested class, whose m_Value is an array. A char array is a
+// instance of the macro's nested class, whose payload is an array. A char array is a
 // string; anything else is an array of the element's tag.
-template <class T, int N> struct MockNetworkArray { T m_Value[N]; };
+template <class T, int N> struct [[= WireVar{} ]] MockNetworkArray { T m_Value[N]; };
 
 static_assert( is_array_member( ^^MockNetworkArray<int, 4> ) );
 static_assert( !is_array_member( ^^MockNetworkVar<int> ) );

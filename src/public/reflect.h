@@ -109,25 +109,33 @@ consteval const char *intern( const name_t &n )
 }
 consteval const char *intern( std::string_view s ) { return std::define_static_string( s ); }
 
-// ---- network var unwrapping --------------------------------------------------
-// CNetworkVar( float, m_flFoo ) declares the member as CNetworkVarBase<float, Notifier>,
-// so a networked member's own type is a wrapper. Every variant in the family
-// (CNetworkVarBase, CNetworkVectorBase, CNetworkHandleBase, ...) stores the payload in
-// m_Value, which is a more robust hook than matching template names. The vector, quaternion
-// and color32 variants inherit m_Value rather than declaring it, and
-// nonstatic_data_members_of does not cross a base, so bases have to be searched too --
-// otherwise every one of them silently reads as FIELD_EMBEDDED.
+// ---- wire var unwrapping -----------------------------------------------------
+// A networked member's declared type is a wrapper, not the value that crosses the wire:
+// CNetworkVar( float, m_flFoo ) declares CNetworkVarBase<float, Notifier>. The wrapper says so
+// itself with WireVar, and its payload is its single data member, found structurally. So the
+// member's name stays private to the wrapper and the wrapper family is replaceable without
+// editing this header.
+//
+// This used to match the member names "m_Value" and "m_Val", which had two costs: renaming a
+// wrapper's payload silently changed every prop kind derived from it, and any unrelated type that
+// happened to declare one of those names was silently peeled.
+//
+// The vector, quaternion, color32 and handle variants inherit the payload rather than declaring
+// it, and nonstatic_data_members_of does not cross a base, so bases have to be searched too --
+// otherwise every one of them reads as FIELD_EMBEDDED.
+consteval std::meta::info payload_member_of( std::meta::info t )
+{
+	auto members = std::meta::nonstatic_data_members_of( t, std::meta::access_context::unchecked() );
+	if ( members.size() != 1 )
+		throw std::meta::exception( "a WireVar type must declare exactly one data member", t );
+	return members[0];
+}
+
 consteval std::meta::info unwrap( std::meta::info t )
 {
 	t = std::meta::remove_cv( t );
 	if ( !std::meta::is_class_type( t ) ) return t;
-	// CNetworkVar and friends hold m_Value; CRangeCheckedVar holds m_Val. The client stores
-	// m_flCycle as CRangeCheckedVar<float,-2,2,0>, and without this its prop kind cannot be
-	// derived at all -- the emitter reported an unhandled kind and the client aborted.
-	for ( auto m : std::meta::nonstatic_data_members_of( t, std::meta::access_context::unchecked() ) )
-		if ( std::meta::has_identifier( m )
-		     && ( std::meta::identifier_of( m ) == "m_Value" || std::meta::identifier_of( m ) == "m_Val" ) )
-			return unwrap( std::meta::type_of( m ) );
+	if ( has<WireVar>( t ) ) return unwrap( std::meta::type_of( payload_member_of( t ) ) );
 	for ( auto b : std::meta::bases_of( t, std::meta::access_context::unchecked() ) )
 	{
 		const std::meta::info u = unwrap( std::meta::type_of( b ) );

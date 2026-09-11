@@ -292,19 +292,19 @@ void push_utl_vec( std::vector<SendProp> &out )
 	static constexpr const char *nm = intern( Member );
 	static constexpr int off = (int)ref.offset;
 	using Vec = typename [: std::meta::type_of( ref.member ) :];
-	Vec probe;   // only to deduce the thunk, as SENDINFO_UTLVECTOR does
+	using WV  = WireVec<Vec>;
 	// The element prop is unnamed and at offset 0 either way; a null Table means the elements are
 	// scalars, whose kind comes from the vector's element type (DT_SceneEntity holds EHANDLEs).
 	if constexpr ( Table == nullptr )
 	{
-		static constexpr std::meta::info et = ^^typename Vec::ElemType_t;
+		static constexpr std::meta::info et = ^^typename WV::elem_type;
 		static constexpr PropDesc ed = { nullptr, kind_of_tag( tag_of_type( et ), et, ^^C ), 0, 0 };
-		out.push_back( SendPropUtlVector( nm, off, (int)sizeof( typename Vec::ElemType_t ),
-		    GetEnsureCapacityTemplate( probe ), Max, make_prop( ed ) ) );
+		out.push_back( SendPropUtlVector( nm, off, (int)sizeof( typename WV::elem_type ),
+		    WV::ensure(), Max, make_prop( ed ) ) );
 	}
 	else
-		out.push_back( SendPropUtlVector( nm, off, (int)sizeof( typename Vec::ElemType_t ),
-		    GetEnsureCapacityTemplate( probe ), Max,
+		out.push_back( SendPropUtlVector( nm, off, (int)sizeof( typename WV::elem_type ),
+		    WV::ensure(), Max,
 		    SendPropDataTable( nullptr, 0, Table ) ) );
 }
 
