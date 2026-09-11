@@ -7,9 +7,6 @@
 
 #ifndef NETWORKSTRINGTABLECLIENT_H
 #define NETWORKSTRINGTABLECLIENT_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 class CUtlBuffer;
 

@@ -6,9 +6,6 @@
 #ifndef ILAUNCHERMGR_H
 #define ILAUNCHERMGR_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 
 // Purpose: The overlay doesn't properly work on OS X 64-bit because a bunch of 
@@ -21,21 +18,15 @@
 #include "appframework/iappsystem.h"
 #include "inputsystem/iinputsystem.h"
 
-#if defined( USE_SDL )
 #include <SDL3/SDL_events.h>
-#endif
 
 // if you rev this version also update materialsystem/cmaterialsystem.cpp CMaterialSystem::Connect as it defines the string directly
-#if defined( USE_SDL )
     #define  SDLMGR_INTERFACE_VERSION "SDLMgrInterface002"
-#endif
 
 
 class GLMDisplayDB;
 
-#if defined( USE_SDL )
 typedef struct SDL_Cursor SDL_Cursor;
-#endif
 
 class ILauncherMgr : public IAppSystem
 {
@@ -50,11 +41,7 @@ public:
 	virtual void Shutdown() = 0;
 	
 	// Create the window.
-#ifdef USE_SDL
 	virtual bool CreateGameWindow( const char *pTitle, bool bWindowed, int width, int height, bool bDesktopFriendlyFullscreen ) = 0;
-#else
-	virtual bool CreateGameWindow( const char *pTitle, bool bWindowed, int width, int height ) = 0;
-#endif
 	
 	// Get the next N buffered SDL events. Returns how many were written.
 	// These are raw SDL events: nothing re-encodes or reinterprets input on the way
@@ -67,11 +54,7 @@ public:
 	// Set the mouse cursor position.
 	virtual void SetCursorPosition( int x, int y ) = 0;
 
-#ifdef USE_SDL
 	virtual void SetWindowFullScreen( bool bFullScreen, int nWidth, int nHeight, bool bDesktopFriendlyFullscreen ) = 0;
-#else
-	virtual void SetWindowFullScreen( bool bFullScreen, int nWidth, int nHeight ) = 0;
-#endif
 	virtual void PumpWindowsMessageLoop() = 0;
 		
 	virtual void DestroyGameWindow() = 0;
@@ -80,12 +63,10 @@ public:
 	virtual void GetMouseDelta( float &x, float &y, bool bIgnoreNextMouseDelta = false ) = 0;
 
 	virtual void SetMouseVisible( bool bState ) = 0;
-#ifdef USE_SDL
 	virtual int GetActiveDisplayIndex() = 0;
 	virtual void SetMouseCursor( SDL_Cursor *hCursor ) = 0;
 	virtual void SetForbidMouseGrab( bool bForbidMouseGrab ) = 0;
 	virtual void OnFrameRendered() = 0;
-#endif		
 
 #if WITH_OVERLAY_CURSOR_VISIBILITY_WORKAROUND
 	virtual void ForceSystemCursorVisible() = 0;

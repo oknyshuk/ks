@@ -7,9 +7,6 @@
 
 #ifndef BONE_SETUP_H
 #define BONE_SETUP_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 
 #include "studio.h"

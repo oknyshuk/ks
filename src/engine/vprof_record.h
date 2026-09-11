@@ -6,9 +6,6 @@
 
 #ifndef VPROF_RECORD_H
 #define VPROF_RECORD_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 
 void VProfRecord_Shutdown();

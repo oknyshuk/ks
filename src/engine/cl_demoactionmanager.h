@@ -7,9 +7,6 @@
 
 #ifndef CL_DEMOACTIONMANAGER_H
 #define CL_DEMOACTIONMANAGER_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 class CUtlBuffer;
 

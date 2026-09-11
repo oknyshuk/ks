@@ -5,11 +5,6 @@
 //===========================================================================//
 
 
-#if defined(_WIN32)
-#include <winsock.h>
-#undef SetPort // winsock screws with the SetPort string... *sigh*
-#define MSG_NOSIGNAL 0
-#else
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -19,7 +14,6 @@
 #define closesocket close
 #define WSAGetLastError() errno
 #define ioctlsocket ioctl
-#endif
 #include <tier0/dbg.h>
 #include "utlbuffer.h"
 #include "server.h"

@@ -6,9 +6,6 @@
 
 #ifndef REPLAYCLIENT_H
 #define REPLAYCLIENT_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "baseclient.h"
 

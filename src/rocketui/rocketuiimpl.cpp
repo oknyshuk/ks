@@ -56,10 +56,8 @@ CON_COMMAND_F(rocket_input_owner, "Name the document that owns mouse input",
 
 RocketUIImpl::RocketUIImpl()
     : m_pDevice(nullptr), m_pDeviceCallbacks(nullptr), m_bDeviceActive(false)
-#ifdef USE_SDL
       ,
       m_pLauncherMgr(nullptr)
-#endif
       ,
       m_pShaderDeviceMgr(nullptr), m_pShaderAPI(nullptr), m_pEngine(nullptr),
       m_fTime(0.0f), m_ctxMenu(nullptr),
@@ -80,9 +78,7 @@ bool RocketUIImpl::Connect(CreateInterfaceFn factory) {
   // were all invisible (and unsettable) before this call existed.
   ConVar_Register();
 
-#ifdef USE_SDL
   m_pLauncherMgr = (ILauncherMgr *)factory(SDLMGR_INTERFACE_VERSION, nullptr);
-#endif
 
   m_pShaderDeviceMgr =
       (IShaderDeviceMgr *)factory(SHADER_DEVICE_MGR_INTERFACE_VERSION, nullptr);
@@ -109,9 +105,7 @@ void RocketUIImpl::Disconnect() {
     }
   }
 
-#ifdef USE_SDL
   m_pLauncherMgr = nullptr;
-#endif
   m_pShaderDeviceMgr = nullptr;
   m_pEngine = nullptr;
   m_pShaderAPI = nullptr;

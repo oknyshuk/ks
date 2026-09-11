@@ -6,11 +6,8 @@
 
 #include "winutils.h"
 
-#ifndef _WIN32
 
-#ifdef USE_SDL
 #include <SDL3/SDL.h>
-#endif
 
 void GlobalMemoryStatus( MEMORYSTATUS *pOut )
 {
@@ -56,11 +53,7 @@ void GetClientRect( void *hWnd, RECT *destRect )
 	// dig in and find out its backbuffer size and use that.
 
 	int width, height;
-#ifdef USE_SDL
     SDL_GetWindowSize( (SDL_Window*)hWnd, &width, &height );
-#else
-#error
-#endif
 	Assert( width!=0 && height!=0 );
 
 	destRect->left = 0;
@@ -69,4 +62,3 @@ void GetClientRect( void *hWnd, RECT *destRect )
 	destRect->bottom = height;		
 }
 
-#endif

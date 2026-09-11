@@ -7,9 +7,6 @@
 #ifndef DEFORMATIONS_H
 #define DEFORMATIONS_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "tier0/platform.h"
 

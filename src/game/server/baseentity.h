@@ -9,9 +9,6 @@
 #define BASEENTITY_H
 
 #include "reflect_annotations.h"
-#ifdef _WIN32
-#pragma once
-#endif
 
 #define TEAMNUM_NUM_BITS	6
 
@@ -81,10 +78,6 @@ using ResponseRules::IResponseSystem;
 class IEntitySaveUtils;
 class CRecipientFilter;
 
-#ifdef PORTAL
-#include "portal_shareddefs.h"
-class CPortal_Base2D;
-#endif // PORTAL 
 
 
 
@@ -146,9 +139,6 @@ class CGlobalEvent;
 
 typedef CUtlVector< CBaseEntity* > EntityList_t;
 
-#ifdef PORTAL2
-class CInfoPlacementHelper;
-#endif
 
 //
 // Structure passed to input handlers.
@@ -649,12 +639,6 @@ public:
 	// capabilities
 	virtual int	ObjectCaps( void );
 
-#if defined ( PORTAL2 )
-	// For portal 2, the use traces are on the client so
-	// we network down entities current use capabilities for validity checking.
-	CNetworkVar( int,			m_iObjectCapsCache );
-	void		UpdateObjectCapsCache();
-#endif 
 
 	// Verifies that the data description is valid in debug builds.
 	#ifdef _DEBUG
@@ -706,9 +690,6 @@ public:
 	[[= ks::reflect::Input{ .name = "RunScriptCode", .type = FIELD_STRING } ]] void InputRunScript( inputdata_t &inputdata );
 	[[= ks::reflect::Input{ .name = "RunScriptFile", .type = FIELD_STRING } ]] void InputRunScriptFile( inputdata_t &inputdata );
 	[[= ks::reflect::Input{ .name = "CallScriptFunction", .type = FIELD_STRING } ]] void InputCallScriptFunction( inputdata_t &inputdata );
-#ifdef PORTAL2
-	void InputRemovePaint( inputdata_t &inputdata );
-#endif
 
 	bool RunScriptFile( const char *pScriptFile, bool bUseRootScope = false );
 	bool RunScript( const char *pScriptText, const char *pDebugFilename = "CBaseEntity::RunScript" );
@@ -1017,9 +998,6 @@ public:
 
 	// Paint helper
 	// Should never be called on anything that doesn't use PropPaintPowerUser, which overrides this.
-#ifdef PORTAL2
-	virtual void UpdatePaintPowersFromContacts() { Assert(0); }
-#endif
 
 	void	ViewPunch( const QAngle &angleOffset );
 	void	VelocityPunch( const Vector &vecForce );
@@ -1127,42 +1105,24 @@ public:
 	void FunctionCheck( inputfunc_t pFunction, const char *name );
 	ENTITYFUNCPTR TouchSet( ENTITYFUNCPTR func, char *name )
 	{ 
-#if defined( __clang__ ) 
-		COMPILE_TIME_ASSERT( sizeof( func ) == sizeof( m_pfnTouch ) );
-#elif defined( GNUC ) || defined( PLATFORM_WINDOWS_PC64 )
         //lwss update: newer compilers will make class member pointers 2x the size of a pointer
 	    COMPILE_TIME_ASSERT( sizeof(func) == 8 || sizeof(func) == 16 );
-#else
-		COMPILE_TIME_ASSERT( sizeof(func) == 4 || sizeof(func) == 8 );
-#endif
 		m_pfnTouch = func; 
 		FunctionCheck( reinterpret_cast<inputfunc_t>(m_pfnTouch), name ); 
 		return func;
 	}
 	USEPTR	UseSet( USEPTR func, char *name ) 
 	{ 
-#if defined( __clang__ ) 
-		COMPILE_TIME_ASSERT( sizeof( func ) == sizeof( m_pfnTouch ) );
-#elif defined( GNUC ) || defined( PLATFORM_WINDOWS_PC64 )
         //lwss update: newer compilers will make class member pointers 2x the size of a pointer
 	    COMPILE_TIME_ASSERT( sizeof(func) == 8 || sizeof(func) == 16 );
-#else
-		COMPILE_TIME_ASSERT( sizeof(func) == 4 || sizeof(func) == 8 );
-#endif
 		m_pfnUse = func; 
 		FunctionCheck( reinterpret_cast<inputfunc_t>(m_pfnUse), name ); 
 		return func;
 	}
 	ENTITYFUNCPTR	BlockedSet( ENTITYFUNCPTR func, char *name ) 
 	{ 
-#if defined( __clang__ ) 
-		COMPILE_TIME_ASSERT( sizeof( func ) == sizeof( m_pfnTouch ) );
-#elif defined( GNUC ) || defined( PLATFORM_WINDOWS_PC64 )
         //lwss update: newer compilers will make class member pointers 2x the size of a pointer
 	    COMPILE_TIME_ASSERT( sizeof(func) == 8 || sizeof(func) == 16 );
-#else
-		COMPILE_TIME_ASSERT( sizeof(func) == 4 || sizeof(func) == 8 );
-#endif
 		m_pfnBlocked = func; 
 		FunctionCheck( reinterpret_cast<inputfunc_t>(m_pfnBlocked), name ); 
 		return func;
@@ -1852,9 +1812,6 @@ protected:
 	CNetworkVar( float, m_flShadowCastDistance, [[= ks::reflect::Key{ .name = "shadowcastdist" } ]] [[= ks::reflect::Net{ .bits = 12, .flags = SPROP_UNSIGNED } ]] );
 	float		m_flDesiredShadowCastDistance;
 
-#ifdef PORTAL2
-	CNetworkVar( string_t, m_iSignifierName );
-#endif // PORTAL2
 
 
 // Methods shared by client and server
@@ -1986,9 +1943,6 @@ public:
 	}
 
 public:
-#ifdef PORTAL
-	virtual void NotifyPortalEvent( PortalEvent_t nEventType, CPortal_Base2D *pNotifier ) { /*Do nothing*/ }
-#endif // PORTAL
 
 public:
 	void	ClearSpotRule( int nRuleFlags );

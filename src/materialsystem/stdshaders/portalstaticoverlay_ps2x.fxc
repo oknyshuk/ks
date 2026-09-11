@@ -9,10 +9,6 @@
 #include "common_ps_fxc.h"
 #include "shader_constant_register_map.h"
 
-#if defined( _X360 )
-	#undef SHADER_SRGB_READ
-	#define SHADER_SRGB_READ 1
-#endif
 
 const float3 g_StaticAmount	: register( c0 ); //x is static, y is 1.0 - static
 

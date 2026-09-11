@@ -643,9 +643,7 @@ public:
 	// is this client running inside the same process as an active server?
 	virtual bool IsClientLocalToActiveServer();
 	
-#if defined( USE_SDL ) || defined ( OSX )
 	virtual void GetMouseDelta( float &x, float &y, bool bIgnoreNextMouseDelta );
-#endif	
 
 	// Callback for LevelInit to tick the progress bar during time consuming operations
 	virtual void TickProgressBar();
@@ -772,13 +770,11 @@ Vector CEngineClient::GetLightForPointFast(const Vector &pos, bool bClamp)
 	return vRet;
 }
 
-#if defined( OSX ) || defined( USE_SDL )
 
 void CEngineClient::GetMouseDelta( float &x, float &y, bool bIgnoreNextMouseDelta )
 {
 	g_pLauncherMgr->GetMouseDelta( x, y, bIgnoreNextMouseDelta );
 }
-#endif
 
 const char *CEngineClient::ParseFile( const char *data, char *token, int maxlen )
 {
@@ -2577,43 +2573,6 @@ void ClientDLL_Init( void )
 						
 			if ( bFailed )
 			{
-#ifdef _WIN32
-				if ( g_pMaterialSystemConfig && materials )
-				{
-					MaterialAdapterInfo_t info;
-					materials->GetDisplayAdapterInfo( materials->GetCurrentAdapter(), info );
-
-					char pDeviceInfo[1024];
-
-					if ( g_pMaterialSystemHardwareConfig )
-					{
-						sprintf_s( pDeviceInfo, "\n\nDevice Info:\nMarked unsupported: %i\nSupports PCF Sampling: %i\nDriverName: \"%s\"\nVendorID: 0x%04X, DeviceID: 0x%04X\nDriverHigh: 0x%08X, DriverLow: 0x%08X\nDXLevel: %u, MinDXSupportLevel: %u, MaxDXSupportLevel: %u\n", 
-							g_pMaterialSystemConfig->IsUnsupported() || (g_pMaterialSystemHardwareConfig->IsUnsupported()),
-							g_pMaterialSystemHardwareConfig->SupportsBilinearPCFSampling(),
-							info.m_pDriverName ? info.m_pDriverName : "?",
-							info.m_VendorID,
-							info.m_DeviceID,
-							info.m_nDriverVersionHigh,
-							info.m_nDriverVersionLow,
-							g_pMaterialSystemHardwareConfig->GetDXSupportLevel(),
-							g_pMaterialSystemHardwareConfig->GetMinDXSupportLevel(),
-							g_pMaterialSystemHardwareConfig->GetMaxDXSupportLevel() );
-					}
-					else
-					{
-						sprintf_s( pDeviceInfo, "\n\nDevice Info:\nMarked unsupported: %i\nDriverName: \"%s\"\nVendorID: 0x%04X, DeviceID: 0x%04X\nDriverHigh: 0x%08X, DriverLow: 0x%08X\n\n", 
-							g_pMaterialSystemConfig->IsUnsupported(),
-							info.m_pDriverName ? info.m_pDriverName : "?",
-							info.m_VendorID,
-							info.m_DeviceID,
-							info.m_nDriverVersionHigh,
-							info.m_nDriverVersionLow
-							);
-
-					}
-					V_strcat( pMessage, pDeviceInfo, sizeof( pMessage ) );
-				}
-#endif
 				Sys_Error( "%s", pMessage );
 			}
 

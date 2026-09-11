@@ -9,9 +9,6 @@
 #define FUNC_BREAKABLESURF_H
 
 #include "reflect_annotations.h"
-#ifdef _WIN32
-#pragma once
-#endif
 
 
 #define MAX_NUM_PANELS 16	//Must match client

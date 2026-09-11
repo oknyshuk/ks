@@ -86,9 +86,6 @@ CBaseViewport::CBaseViewport()
 	m_bHasParent = false;
 	m_pActivePanel = NULL;
 
-#if !defined( CSTRIKE15 )
-	m_pLastActivePanel = NULL;
-#endif
 
 	m_OldSize[ 0 ] = m_OldSize[ 1 ] = -1;
 }
@@ -238,11 +235,7 @@ void CBaseViewport::ShowPanel( IViewPortPanel* pPanel, bool state )
 				// so we can restore it later
 				if ( pPanel->CanReplace( m_pActivePanel->GetName() ) )
 				{
-#if !defined( CSTRIKE15 )
-					m_pLastActivePanel = m_pActivePanel;
-#endif
 
-#ifdef CSTRIKE15 
 					// in cs, if the scoreboard tries to hide the spectator via this method, just skip it
 					IViewPortPanel* pSpecGuiPanel = FindPanelByName(PANEL_SPECGUI);
 					if ( pSpecGuiPanel != m_pActivePanel )
@@ -250,16 +243,9 @@ void CBaseViewport::ShowPanel( IViewPortPanel* pPanel, bool state )
 						DevMsg("CBaseViewport::ShowPanel(0) %s\n", m_pActivePanel->GetName());
 						m_pActivePanel->ShowPanel( false );
 					}
-#else
-					DevMsg("CBaseViewport::ShowPanel(0) %s\n", m_pActivePanel->GetName());
-					m_pActivePanel->ShowPanel( false );
-#endif
 				}
 				else
 				{
-#if !defined( CSTRIKE15 )
-					m_pLastActivePanel = pPanel;
-#endif
 					return;
 				}
 			}
@@ -276,17 +262,6 @@ void CBaseViewport::ShowPanel( IViewPortPanel* pPanel, bool state )
 			m_pActivePanel = NULL;
 		}
 
-#if !defined( CSTRIKE15 )
-		// restore the previous active panel if it exists
-		if( m_pLastActivePanel )
-		{
-			m_pActivePanel = m_pLastActivePanel;
-			m_pLastActivePanel = NULL;
-
-			DevMsg("CBaseViewport::ShowPanel(1) %s\n", m_pActivePanel->GetName());
-			m_pActivePanel->ShowPanel( true );
-		}
-#endif
 	}
 
 	// just show/hide panel
@@ -323,12 +298,6 @@ void CBaseViewport::RecreatePanel( const char *szPanelName )
 			m_pActivePanel = NULL;
 		}
 
-#if !defined( CSTRIKE15 )
-		if ( m_pLastActivePanel == panel )
-		{
-			m_pLastActivePanel = NULL;
-		}
-#endif
 
 		AddNewPanel( CreatePanelByName( szPanelName ), szPanelName );
 	}
@@ -346,9 +315,6 @@ void CBaseViewport::RemoveAllPanels( void)
 	m_Panels.RemoveAll();
 	m_UnorderedPanels.RemoveAll();
 	m_pActivePanel = NULL;
-#if !defined( CSTRIKE15 )
-	m_pLastActivePanel = NULL;
-#endif
 }
 
 CBaseViewport::~CBaseViewport()

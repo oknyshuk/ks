@@ -6,9 +6,6 @@
 
 #ifndef DMXHEADER_H
 #define DMXHEADER_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 //-----------------------------------------------------------------------------
 // data file format info

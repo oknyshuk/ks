@@ -7,9 +7,6 @@
 // Primary header for engine
 #if !defined( QUAKEDEF_H )
 #define QUAKEDEF_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 // OPTIONAL DEFINES
 //#define	PARANOID		// speed sapping error checking

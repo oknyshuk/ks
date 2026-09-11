@@ -6,7 +6,6 @@
 // $NoKeywords: $
 //=============================================================================//
 
-#if !defined(_STATIC_LINKED) || defined(_SHARED_LIB)
 
 #include "collisionutils.h"
 #include "cmodel.h"
@@ -3288,4 +3287,3 @@ bool IntersectRayWithAACylinder( const Ray_t &ray,
 	return true;
 }
 
-#endif // !_STATIC_LINKED || _SHARED_LIB

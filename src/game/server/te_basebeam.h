@@ -18,9 +18,6 @@
 #define TE_BASEBEAM_H
 
 #include "reflect_annotations.h"
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "basetempentity.h"
 

@@ -7,9 +7,6 @@
 
 #ifndef IGAMEUIFUNCS_H
 #define IGAMEUIFUNCS_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "tier0/platform.h"
 #include "inputsystem/ButtonCode.h"

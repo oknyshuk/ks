@@ -31,9 +31,6 @@
 
 #ifndef APPINSTANCE_H
 #define APPINSTANCE_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 
 // check if handle is defined rather than inlcude another header

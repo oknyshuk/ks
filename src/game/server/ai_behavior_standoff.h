@@ -15,9 +15,6 @@
 #include "ai_utils.h"
 #include "ai_hint.h"
 
-#if defined( _WIN32 )
-#pragma once
-#endif
 
 //-----------------------------------------------------------------------------
 

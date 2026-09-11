@@ -6,9 +6,6 @@
 
 #ifndef DT_UTLVECTOR_COMMON_H
 #define DT_UTLVECTOR_COMMON_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 
 #include "utlvector.h"

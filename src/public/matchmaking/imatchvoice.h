@@ -8,9 +8,6 @@
 #ifndef IMATCHVOICE_H
 #define IMATCHVOICE_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 abstract_class IMatchVoice
 {

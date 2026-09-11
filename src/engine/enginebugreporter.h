@@ -6,9 +6,6 @@
 
 #ifndef ENGINEBUGREPORTER_H
 #define ENGINEBUGREPORTER_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 abstract_class IEngineBugReporter
 {

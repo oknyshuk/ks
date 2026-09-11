@@ -18,9 +18,6 @@
 
 #ifndef ETWPROF_H
 #define ETWPROF_H
-#if defined( COMPILER_MSVC )
-#pragma once
-#endif
 
 #include "tier0/platform.h"
 

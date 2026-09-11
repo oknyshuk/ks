@@ -711,11 +711,7 @@ void UTIL_TraceEntity( CBaseEntity *pEntity, const Vector &vecAbsStart, const Ve
 
 	CTraceFilterEntity traceFilter( pEntity, pCollision->GetCollisionGroup() );
 
-#ifdef PORTAL
-	UTIL_Portal_TraceEntity( pEntity, vecAbsStart, vecAbsEnd, mask, &traceFilter, ptr );
-#else
 	enginetrace->SweepCollideable( pCollision, vecAbsStart, vecAbsEnd, pCollision->GetCollisionAngles(), mask, &traceFilter, ptr );
-#endif
 }
 
 void UTIL_TraceEntity( CBaseEntity *pEntity, const Vector &vecAbsStart, const Vector &vecAbsEnd, 
@@ -730,11 +726,7 @@ void UTIL_TraceEntity( CBaseEntity *pEntity, const Vector &vecAbsStart, const Ve
 
 	CTraceFilterEntityIgnoreOther traceFilter( pEntity, pIgnore, nCollisionGroup );
 
-#ifdef PORTAL
- 	UTIL_Portal_TraceEntity( pEntity, vecAbsStart, vecAbsEnd, mask, &traceFilter, ptr );
-#else
 	enginetrace->SweepCollideable( pCollision, vecAbsStart, vecAbsEnd, pCollision->GetCollisionAngles(), mask, &traceFilter, ptr );
-#endif
 }
 
 void UTIL_TraceEntity( CBaseEntity *pEntity, const Vector &vecAbsStart, const Vector &vecAbsEnd, 
@@ -747,11 +739,7 @@ void UTIL_TraceEntity( CBaseEntity *pEntity, const Vector &vecAbsStart, const Ve
 	// because one day, rotated collideables will work!
 	Assert( pCollision->GetCollisionAngles() == vec3_angle );
 
-#ifdef PORTAL
-	UTIL_Portal_TraceEntity( pEntity, vecAbsStart, vecAbsEnd, mask, pFilter, ptr );
-#else
 	enginetrace->SweepCollideable( pCollision, vecAbsStart, vecAbsEnd, pCollision->GetCollisionAngles(), mask, pFilter, ptr );
-#endif
 }
 
 // ----
@@ -949,17 +937,6 @@ void UTIL_BloodDecalTrace( trace_t *pTrace, int bloodColor )
 		{
 			UTIL_DecalTrace( pTrace, "Blood" );
 		}
-#if defined( HL2_EPISODIC )
-		else if ( bloodColor == BLOOD_COLOR_BLOB )
-		{
-			UTIL_DecalTrace( pTrace, "BlobBlood" );
-		}
-		//don't draw a any decals if the blob is frozen
-		else if ( bloodColor == BLOOD_COLOR_BLOB_FROZEN )
-		{
-			return;
-		}
-#endif
 		else if (bloodColor == BLOOD_COLOR_BRIGHTGREEN)
 		{				
 			UTIL_DecalTrace( pTrace, "GreenBlood" );

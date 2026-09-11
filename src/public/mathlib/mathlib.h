@@ -866,70 +866,6 @@ inline float anglemod(float a)
 }
 
 //// CLAMP
-#if defined(__cplusplus) && defined(PLATFORM_PPC)
-
-
-template< >
-inline double clamp( double const &val, double const &minVal, double const &maxVal )
-{
-	float diffmin = val - minVal;
-	float diffmax = maxVal - val;
-	float r;
-	r = __fsel(diffmin, val, minVal);
-	r = __fsel(diffmax, r, maxVal);
-	return r;
-}
-
-template< >
-inline double clamp( double const &val, float const &minVal, float const &maxVal )
-{
-	// these typecasts are actually free since all FPU regs are 64 bit on PPC anyway
-	return clamp ( val, (double) minVal, (double) maxVal );
-}
-template< >
-inline double clamp( double const &val, float const &minVal, double const &maxVal )
-{
-	return clamp ( val, (double) minVal, (double) maxVal );
-}
-template< >
-inline double clamp( double const &val, double const &minVal, float const &maxVal )
-{
-	return clamp ( val, (double) minVal, (double) maxVal );
-}
-
-template< >
-inline float clamp( float const &val, float const &minVal, float const &maxVal )
-{
-	float diffmin = val - minVal;
-	float diffmax = maxVal - val;
-	float r;
-	r = __fsels(diffmin, val, minVal);
-	r = __fsels(diffmax, r, maxVal);
-	return r;
-}
-
-template< >
-inline float clamp( float const &val, double const &minVal, double const &maxVal )
-{
-	float diffmin = val - minVal;
-	float diffmax = maxVal - val;
-	float r;
-	r = __fsels(diffmin, val, minVal);
-	r = __fsels(diffmax, r, maxVal);
-	return r;
-}
-template< >
-inline float clamp( float const &val, double const &minVal, float const &maxVal )
-{
-	return clamp ( val, (float) minVal, maxVal );
-}
-template< >
-inline float clamp( float const &val, float const &minVal, double const &maxVal )
-{
-	return clamp ( val, minVal, (float) maxVal );
-}
-
-#endif
 
 // Remap a value in the range [A,B] to [C,D].
 inline float RemapVal( float val, float A, float B, float C, float D)
@@ -1620,11 +1556,7 @@ FORCEINLINE int Float2Int( float a )
 
 inline int Floor2Int( float a )
 {
-#if defined( PLATFORM_PPC )
-	return (int)floor( a );
-#else
 	return static_cast<int>( floor(a) );
-#endif
 }
 
 //-----------------------------------------------------------------------------
@@ -1654,11 +1586,7 @@ inline float ClampToMsec( float in )
 
 inline int Ceil2Int( float a )
 {
-#if defined( PLATFORM_PPC )
-	return (int)ceil( a );
-#else
 	return static_cast<int>( ceil(a) );
-#endif
 }
 
 

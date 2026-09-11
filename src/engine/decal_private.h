@@ -9,9 +9,6 @@
 #ifndef DECAL_PRIVATE_H
 #define DECAL_PRIVATE_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "gl_model_private.h"
 #include "idispinfo.h"

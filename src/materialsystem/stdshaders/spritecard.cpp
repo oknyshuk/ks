@@ -275,11 +275,7 @@ BEGIN_VS_SHADER_FLAGS( Spritecard, "Help for Spritecard", SHADER_NOT_EDITABLE )
 		bool bExtractGreenAlpha = ( params[EXTRACTGREENALPHA]->GetIntValue() != 0 );
 		int nSplineType = params[SPLINETYPE]->GetIntValue();
 		bool bUseInstancing = false ? ( params[ USEINSTANCING ]->GetIntValue() != 0 ) : false;
-#if defined( CSTRIKE15 )
 		bool bShaderSrgbRead = false && r_shader_srgbread.GetBool();
-#else
-		bool bShaderSrgbRead = ( false && IS_PARAM_DEFINED( SHADERSRGBREAD360 ) && params[SHADERSRGBREAD360]->GetIntValue() );
-#endif
 		bool bCrop = ( params[CROPFACTOR]->GetVecValue()[0] != 1.0f ) || ( params[CROPFACTOR]->GetVecValue()[1] != 1.0f );
 		bool bSecondSequence = params[DUALSEQUENCE]->GetIntValue() != 0;
 		bool bBlendFrames = ( params[BLENDFRAMES]->GetIntValue() != 0 );

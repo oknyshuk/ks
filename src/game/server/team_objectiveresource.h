@@ -6,9 +6,6 @@
 
 #ifndef TEAM_OBJECTIVERESOURCE_H
 #define TEAM_OBJECTIVERESOURCE_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "shareddefs.h"
 #include "const.h"		// MAX_EDICT_BITS, named by the Net annotations below

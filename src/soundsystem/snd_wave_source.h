@@ -10,9 +10,6 @@
 #ifndef SND_WAVE_SOURCE_H
 #define SND_WAVE_SOURCE_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "soundsystem/snd_audio_source.h"
 #include "sentence.h"

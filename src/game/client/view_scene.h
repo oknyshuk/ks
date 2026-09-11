@@ -7,9 +7,6 @@
 
 #ifndef VIEW_SCENE_H
 #define VIEW_SCENE_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 
 #include "convar.h"
@@ -55,9 +52,6 @@ inline void UpdateRefractTexture( int x, int y, int w, int h, bool bForceUpdate 
 		rect.height = h;
 		pRenderContext->CopyRenderTargetToTextureEx( pTexture, 0, &rect, true ? NULL : &rect );
 
-#ifdef PORTAL2
-		g_nRefractUpdatePortalRender = g_nCurrentPortalRender;
-#endif
 		g_viewscene_refractUpdateFrame = gpGlobals->framecount;
 	}
 	pRenderContext->SetFrameBufferCopyTexture( pTexture );

@@ -7,9 +7,6 @@
 
 #ifndef HIERARCHY_H
 #define HIERARCHY_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "utlvector.h"
 

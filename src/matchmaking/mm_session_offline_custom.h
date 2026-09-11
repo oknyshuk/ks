@@ -6,9 +6,6 @@
 
 #ifndef MM_SESSION_OFFLINE_CUSTOM_H
 #define MM_SESSION_OFFLINE_CUSTOM_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 
 //

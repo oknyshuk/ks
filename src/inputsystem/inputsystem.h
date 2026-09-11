@@ -7,31 +7,16 @@
 //===========================================================================//
 #ifndef INPUTSYSTEM_H
 #define INPUTSYSTEM_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #define DONT_DEFINE_DWORD
 
 #include "platform.h"
 #include "basetypes.h"
 
-#ifdef PLATFORM_WINDOWS_PC
-#define OEMRESOURCE //for OCR_* cursor junk
-#define _WIN32_WINNT 0x502
-#include <windows.h>
-#include <zmouse.h>
-#include "../../dx9sdk/include/XInput.h"
-#endif
 
-#if defined( _WIN32 ) && defined( USE_SDL )
-#include "appframework/ilaunchermgr.h"
-#endif
 
-#if defined(PLATFORM_POSIX)
 typedef char xKey_t;
 #include "posix_stubs.h"
-#endif // POSIX
 #include "appframework/ilaunchermgr.h"
 
 #include "inputsystem/iinputsystem.h"
@@ -126,14 +111,9 @@ public:
 	virtual void EnableMouseCapture( PlatWindow_t hWnd );
 	virtual void DisableMouseCapture();
 
-#ifdef PLATFORM_WINDOWS
-	LRESULT WindowProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam );
-#endif
 
-#if defined( USE_SDL )
 	virtual void DisableHardwareCursor( void );
 	virtual void EnableHardwareCursor( void );
-#endif
 	
 	virtual void ResetCursorIcon();
 
@@ -177,15 +157,11 @@ public:
 	
 	struct JoystickInfo_t
 	{
-#if defined(PLATFORM_WINDOWS)
-		JOYINFOEX m_JoyInfoEx;
-#else
 		void *m_pDevice;  // Really an SDL_Gamepad*, NULL if not present.
 		void *m_pHaptic;  // Really an SDL_Haptic*
 		float m_fCurrentRumble;
 		bool m_bRumbleEnabled;
 
-#endif
 		int m_nButtonCount;
 		int m_nAxisFlags;
 		int m_nDeviceId;
@@ -394,9 +370,6 @@ private:
 	void ShutdownCursors();
 
 
-#ifdef WIN32
-	void PollInputState_Windows();
-#endif
 	// Poll input state for different OSes.
 public:
 	void PollInputState_Linux();
@@ -409,9 +382,7 @@ public:
 
 private:
 
-#if defined( USE_SDL ) || defined( OSX )
 	ILauncherMgr *m_pLauncherMgr;
-#endif
 
 	WNDPROC m_ChainedWndProc;
 	HWND m_hAttachedHWnd;

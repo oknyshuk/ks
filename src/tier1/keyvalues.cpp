@@ -6,14 +6,10 @@
 //
 //=============================================================================//
 
-#if defined( _WIN32 )
-#include <windows.h>		// for widechartomultibyte and multibytetowidechar
-#else
 #include <wchar.h> // wcslen()
 #define _alloca alloca
 #define _wtoi(arg) wcstol(arg, NULL, 10)
 #define _wtoi64(arg) wcstoll(arg, NULL, 10)
-#endif
 
 #include <keyvalues.h>
 #include "filesystem.h"
@@ -1553,11 +1549,7 @@ float KeyValues::GetFloat( const char *keyName, float defaultValue )
 		case TYPE_STRING:
 			return (float)atof(dat->m_sValue);
 		case TYPE_WSTRING:
-#ifdef WIN32
-			return (float) _wtof(dat->m_wsValue);		// no wtof
-#else
 			return (float) wcstof( dat->m_wsValue, (wchar_t **)NULL ); 
-#endif
 		case TYPE_FLOAT:
 			return dat->m_flValue;
 		case TYPE_INT:
@@ -2745,7 +2737,6 @@ bool KeyValues::WriteAsBinary( CUtlBuffer &buffer ) const
 			}
 		case TYPE_PTR:
 			{
-#if defined( PLATFORM_64BITS )
 				// We only put an int here, because 32-bit clients do not expect 64 bits. It'll cause them to read the wrong
 				// amount of data and then crash. Longer term, we may bump this up in size on all platforms, but short term 
 				// we don't really have much of a choice other than sticking in something that appears to not be NULL.
@@ -2753,9 +2744,6 @@ bool KeyValues::WriteAsBinary( CUtlBuffer &buffer ) const
 					buffer.PutInt( 31337 ); // Put not 0, but not a valid number. Yuck.
 				else
 					buffer.PutInt( ( (int)(intp)dat->m_pValue ) );
-#else
-				buffer.PutPtr( dat->m_pValue );
-#endif
 				break;
 			}
 
@@ -2868,14 +2856,10 @@ bool KeyValues::ReadAsBinary( CUtlBuffer &buffer, int nStackDepth )
 			}
 		case TYPE_PTR:
 			{
-#if defined( PLATFORM_64BITS )
 				// We need to ensure we only read 32 bits out of the stream because 32 bit clients only wrote 
 				// 32 bits of data there. The actual pointer is irrelevant, all that we really care about here
 				// contractually is whether the pointer is zero or not zero.
 				dat->m_pValue = ( void* )( intp )buffer.GetInt();
-#else
-				dat->m_pValue = buffer.GetPtr();
-#endif
 				break;
 			}
 
@@ -2982,7 +2966,6 @@ bool KeyValues::WriteAsBinaryFiltered( CUtlBuffer &buffer )
 				}
 			case TYPE_PTR:
 				{
-#if defined( PLATFORM_64BITS )
 					// We only put an int here, because 32-bit clients do not expect 64 bits. It'll cause them to read the wrong
 					// amount of data and then crash. Longer term, we may bump this up in size on all platforms, but short term 
 					// we don't really have much of a choice other than sticking in something that appears to not be NULL.
@@ -2990,9 +2973,6 @@ bool KeyValues::WriteAsBinaryFiltered( CUtlBuffer &buffer )
 						buffer.PutInt( 31337 ); // Put not 0, but not a valid number. Yuck.
 					else
 						buffer.PutInt( ( (int)(intp)dat->m_pValue ) );
-#else
-					buffer.PutPtr( dat->m_pValue );
-#endif
 					break;
 				}
 
@@ -3110,14 +3090,10 @@ bool KeyValues::ReadAsBinaryFiltered( CUtlBuffer &buffer, int nStackDepth )
 
 			case TYPE_PTR:
 				{
-#if defined( PLATFORM_64BITS )
 					// We need to ensure we only read 32 bits out of the stream because 32 bit clients only wrote 
 					// 32 bits of data there. The actual pointer is irrelevant, all that we really care about here
 					// contractually is whether the pointer is zero or not zero.
 					void* value = ( void* )( intp )buffer.GetInt();
-#else
-					void* value = buffer.GetPtr();
-#endif
 					SetPtr( name, value );
 				}
 				break;
@@ -3229,14 +3205,10 @@ bool KeyValues::ReadAsBinaryPooledFormat( CUtlBuffer &buffer, IBaseFileSystem *p
 
 		case TYPE_PTR:
 			{
-#if defined( PLATFORM_64BITS )
 				// We need to ensure we only read 32 bits out of the stream because 32 bit clients only wrote 
 				// 32 bits of data there. The actual pointer is irrelevant, all that we really care about here
 				// contractually is whether the pointer is zero or not zero.
 				dat->m_pValue = ( void* )( intp )buffer.GetInt();
-#else
-				dat->m_pValue = buffer.GetPtr();
-#endif
 				break;
 			}
 

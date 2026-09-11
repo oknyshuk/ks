@@ -150,23 +150,6 @@ void C_KeyValueSaver::MarkKeyValuesDirty( const char *pchFileName )
 
 bool C_KeyValueSaver::ReadKeyValues( KeyValueSaverData *pKeyValueData )
 {
-#if !defined( CSTRIKE15 )
-
-	char szFilename[_MAX_PATH];
-	Q_snprintf( szFilename, sizeof( szFilename ), VarArgs( "save/%s", pKeyValueData->szFileName ) );
-	if ( pKeyValueData->pKeyValues )
-	{
-		pKeyValueData->pKeyValues->deleteThis();
-		pKeyValueData->pKeyValues = NULL;
-	}
-
-	pKeyValueData->pKeyValues = new KeyValues( "KeyValueSaverData" );
-
-	if ( pKeyValueData->pKeyValues->LoadFromFile( g_pFullFileSystem, szFilename, NULL ) )
-	{
-		return true;
-	}
-#endif // !CSTRIKE15
 
 	// Couldn't read from the file
 	return false;
@@ -201,21 +184,8 @@ bool C_KeyValueSaver::WriteDirtyKeyValues( KeyValueSaverData *pKeyValueData, boo
 	// Build key values
 	pKeyValueData->funcKeyValueBuilder( pKeyValueData->pKeyValues );
 
-#if defined( CSTRIKE15 )
 	// The key values are saved to the title data block in the callback above.
 	return true;
-#else
-	// Save it!
-	CUtlBuffer buf( 0, 0, CUtlBuffer::TEXT_BUFFER );
-
-	pKeyValueData->pKeyValues->RecursiveSaveToFile( buf, 0 );
-
-	char szFilename[_MAX_PATH];
-	Q_snprintf( szFilename, sizeof( szFilename ), VarArgs( "save/%s", pKeyValueData->szFileName ) );
-	filesystem->CreateDirHierarchy( "save", "MOD" );
-	bool bWriteSuccess = filesystem->WriteFile( szFilename, "MOD", buf );
-	return bWriteSuccess;
-#endif
 }
 
 void C_KeyValueSaver::WriteAllDirtyKeyValues( void )

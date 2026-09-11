@@ -101,9 +101,6 @@
 #include "tier1/functors.h"
 #include "tier0/memdbgon.h"
 
-#if defined( _WIN32 )
-#pragma once
-#endif
 
 #ifdef VSCRIPT_DLL_EXPORT
 #define VSCRIPT_INTERFACE	DLL_EXPORT
@@ -540,14 +537,9 @@ private:
 #define BEGIN_SCRIPTDESC( className, baseClass, description )								BEGIN_SCRIPTDESC_NAMED( className, baseClass, #className, description )
 #define BEGIN_SCRIPTDESC_ROOT( className, description )										BEGIN_SCRIPTDESC_ROOT_NAMED( className, #className, description )
 
-#if defined(_MSC_VER) && (_MSC_VER < 1800)
-	#define DEFINE_SCRIPTDESC_FUNCTION( className, baseClass ) \
-		ScriptClassDesc_t * GetScriptDesc( className * )
-#else
 	#define DEFINE_SCRIPTDESC_FUNCTION( className, baseClass ) \
 		template <> ScriptClassDesc_t * GetScriptDesc<baseClass>( baseClass *); \
 		template <> ScriptClassDesc_t * GetScriptDesc<className>( className *)
-#endif
 
 struct ScriptNoBase_t;
 

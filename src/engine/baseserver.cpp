@@ -11,9 +11,7 @@
 
 
 
-#if defined(_WIN32)
-#include "winlite.h"		// FILETIME
-#elif defined(OSX) || defined(CYGWIN)
+#if   defined(OSX) || defined(CYGWIN)
 #include <time.h>                  
 #include <sys/time.h>                  
 #include <sys/resource.h>                  
@@ -473,22 +471,6 @@ bool CBaseServer::IsSinglePlayerGame() const
 	if ( m_nMaxclients <= 1 )
 		return true;
 
-	#if !defined( PORTAL2 ) && !defined( CSTRIKE15 )
-	//
-	// Portal 2 offline splitscreen games should NOT be paused
-	// transition movies during loading rely on player think functions
-	// See bugbait 81253: https://bugbait.valvesoftware.com/show_bug.cgi?id=81253
-	//
-	if ( IMatchSession *pIMatchSession = g_pMatchFramework->GetMatchSession() )
-	{
-		if ( KeyValues *pSettings = pIMatchSession->GetSessionSettings() )
-		{
-			char const *szNetwork = pSettings->GetString( "system/network", "" );
-			if ( szNetwork && !Q_stricmp( szNetwork, "offline" ) )
-				return true;
-		}
-	}
-	#endif
 #endif
 
 	return false;
@@ -1234,11 +1216,7 @@ bool CBaseServer::ProcessConnectionlessPacket(netpacket_t * packet)
 						  else
 							  buf.PutUnsignedChar( 'l' );	// l = listen server
 
-#if defined(_WIN32)
-						  buf.PutUnsignedChar( 'w' );
-#else // LINUX?
 						  buf.PutUnsignedChar( 'l' );
-#endif
 
 						  // Password?
 						  buf.PutUnsignedChar( GetPassword() ? 1 : 0 );
@@ -1545,11 +1523,7 @@ void CBaseServer::FillServerInfo(ks::net::CSVCMsg_ServerInfo &serverinfo)
 	serverinfo.max_classes = serverclasses;
 	serverinfo.is_dedicated = IsDedicated();
 	
-#ifdef _WIN32
-	serverinfo.c_os = 'W';
-#else
 	serverinfo.c_os = 'L';
-#endif
 
 	// HACK to signal that the server is "new"
 	serverinfo.c_os = tolower( serverinfo.c_os );
@@ -2038,9 +2012,6 @@ void CBaseServer::ReplyReservationRequest( const ns_address &adr, bf_read &msgIn
 					serverGameDLL->ApplyGameSettings( pKV );
 					// adjust the game slots
 					m_numGameSlots = pKV->GetInt( "members/numSlots", 0 );
-		#ifdef PORTAL2	// HACK: PORTAL2 uses maxclients instead of GAMERULES
-					SetMaxClients( m_numGameSlots );
-		#endif
 				}
 			}
 		}
@@ -2323,48 +2294,8 @@ void CBaseServer::CalculateCPUUsage( void )
 	if( Sys_FloatTime () > m_fLastCPUCheckTime+1)
 	// only do this every 1 second
 	{
-#if defined ( _WIN32 ) 
-		static float lastAvg=0;
-		static __int64 lastTotalTime=0,lastNow=0;
-
-		HANDLE handle;
-		FILETIME creationTime, exitTime, kernelTime, userTime, nowTime;
- 		__int64 totalTime,now;
-			
-		handle = GetCurrentProcess ();
-
-		// get CPU time
-		GetProcessTimes (handle, &creationTime, &exitTime,
-						&kernelTime, &userTime);
-		GetSystemTimeAsFileTime(&nowTime);
-
-		if(lastNow==0)
-		{
-			memcpy(&lastNow,&creationTime,sizeof(__int64));;
-		}
-
-
-		memcpy(&totalTime,&userTime,sizeof(__int64));;
-		memcpy(&now,&kernelTime,sizeof(__int64));;
-		totalTime+=now;
-
-		memcpy(&now,&nowTime,sizeof(__int64));;
-
-
-		m_fCPUPercent = (double)(totalTime-lastTotalTime)/(double)(now-lastNow);
-		
-		// now save this away for next time
-		if(Sys_FloatTime () > lastAvg+5) 
-		// only do it every 5 seconds, so we keep a moving average
-		{
-			memcpy(&lastNow,&nowTime,sizeof(__int64));
-			memcpy(&lastTotalTime,&totalTime,sizeof(__int64));
-			lastAvg=m_fLastCPUCheckTime;
-		}
-#else
 		// FAKE
 		m_fCPUPercent = 0.1;
-#endif
 		m_fLastCPUCheckTime=Sys_FloatTime(); 
 	}
 }
@@ -2912,7 +2843,6 @@ void CBaseServer::CheckMasterServerRequestRestart()
 	// hack, vgui console looks for this string; 
 	Msg("%cMasterRequestRestart\n", 3);
 
-#ifndef _WIN32
 	if (CommandLine()->FindParm(AUTO_RESTART))
 	{
 		Msg("Your server is out of date and will be shutdown during hibernation or changelevel, whichever comes first.\n");
@@ -2923,12 +2853,7 @@ void CBaseServer::CheckMasterServerRequestRestart()
 		Cbuf_AddText(CBUF_SERVER, "sv_shutdown\n");
 		Cbuf_Execute();
 	}
-#endif
-#ifdef _WIN32
-	if (g_pFileSystem->IsSteam())
-#else
 	else if ( 1 ) // under linux assume steam
-#endif
 	{
 		Msg("Your server needs to be restarted in order to receive the latest update.\n");
 		Log_Msg( LOG_SERVER_LOG, "Your server needs to be restarted in order to receive the latest update.\n");

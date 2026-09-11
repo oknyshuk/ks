@@ -8,9 +8,6 @@
 #ifndef FILESYSTEM_H
 #define FILESYSTEM_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include <limits.h>
 

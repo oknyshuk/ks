@@ -14,13 +14,8 @@
 
 #pragma comment (lib ,"Ws2_32.lib")
 
-#ifdef _UNICODE
-#define scfprintf fwprintf
-#define scvprintf vwprintf
-#else
 #define scfprintf fprintf
 #define scvprintf vprintf
-#endif
 
 
 void printfunc(HSQUIRRELVM v,const SQChar *s,...)
@@ -68,13 +63,7 @@ int main(int argc, char *argv[])
 			scprintf(_SC("connected\n"));
 
 			const SQChar *fname=NULL;
-#ifdef _UNICODE
-			SQChar sTemp[256];
-			mbstowcs(sTemp,argv[1],(int)strlen(argv[1])+1);
-			fname=sTemp;
-#else
 			fname=argv[1];
-#endif
 			//!!REGISTERS STANDARDS LIBS
 			sq_pushroottable(v);
 			sqstd_register_bloblib(v);

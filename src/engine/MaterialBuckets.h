@@ -8,9 +8,6 @@
 
 #ifndef MATERIALBUCKETS_H
 #define MATERIALBUCKETS_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 // FLASHLIGHTFIXME: Make all of the buckets share the same m_Elements (ie. make m_Elements static)
 

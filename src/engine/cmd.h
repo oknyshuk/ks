@@ -16,9 +16,6 @@
 #ifndef CMD_H
 #define CMD_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "tier1/commandbuffer.h" // cmd_source_t
 

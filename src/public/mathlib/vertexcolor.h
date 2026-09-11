@@ -7,9 +7,6 @@
 #ifndef VERTEXCOLOR_H
 #define VERTEXCOLOR_H
 
-#ifdef COMPILER_MSVC
-#pragma once
-#endif
 
 #include "tier0/platform.h"
 

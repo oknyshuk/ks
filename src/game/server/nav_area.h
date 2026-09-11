@@ -59,13 +59,11 @@ public:
  */
 struct NavConnect
 {
-#if !defined( __clang__ )
 	NavConnect()
 	{
 		id = 0;
 		length = -1;
 	}
-#endif
 
 	union
 	{

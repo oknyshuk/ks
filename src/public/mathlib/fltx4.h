@@ -7,11 +7,7 @@
 #ifndef FLTX4_H
 #define FLTX4_H
 
-#if defined(GNUC)
 #define USE_STDC_FOR_SIMD 0
-#else
-#define USE_STDC_FOR_SIMD 0
-#endif
 
 #if (!defined(PLATFORM_PPC) && (USE_STDC_FOR_SIMD == 0))
 #define _SSE1 1

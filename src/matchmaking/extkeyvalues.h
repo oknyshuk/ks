@@ -6,9 +6,6 @@
 
 #ifndef EXT_KEYVALUES_H
 #define EXT_KEYVALUES_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "mm_framework.h"
 

@@ -26,11 +26,6 @@ def build(bld):
         "vstdlib_strtools.cpp",
     ]
 
-    if bld.env.DEST_OS == "win32":
-        source += ["processutils.cpp"]
-        if bld.env.ALLOW64:
-            source += ["getstackptr64.masm"]
-
     bld.objects(
         source=source,
         target="vstdlib",

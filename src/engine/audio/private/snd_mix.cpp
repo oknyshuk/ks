@@ -15,18 +15,12 @@
 #include "snd_op_sys/sos_system.h"
 #include "tier0/cache_hints.h"
 
-#ifdef GNUC
 // we don't suport the ASM in this file right now under GCC, fallback to C libs
 #undef id386
-#endif
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
-#if defined(_WIN32) && id386
-// warning C4731: frame pointer register 'ebp' modified by inline assembly code
-#pragma warning(disable : 4731)
-#endif
 
 // NOTE: !!!!!! YOU MUST UPDATE SND_MIXA.S IF THIS VALUE IS CHANGED !!!!!
 #define SND_SCALE_BITS		7
@@ -2745,11 +2739,7 @@ void MIX_PaintChannels( int64 endtime, bool bIsUnderwater )
 
 	int64 	end;
 	int		count;
-#ifdef CSTRIKE15
 	bool	b_spatial_delays = false;
-#else
-	bool	b_spatial_delays = dsp_enhance_stereo.GetBool();
-#endif
 
 	bool room_fsurround_sav;
 	bool room_fsurround_center_sav;

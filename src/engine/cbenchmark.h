@@ -8,9 +8,6 @@
 #ifndef CBENCHMARK_H
 #define CBENCHMARK_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 
 //-----------------------------------------------------------------------------

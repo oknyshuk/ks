@@ -9,9 +9,6 @@
 #ifndef IHARDWARECONFIGINTERNAL_H
 #define IHARDWARECONFIGINTERNAL_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 
 #include "materialsystem/imaterialsystemhardwareconfig.h"

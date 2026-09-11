@@ -7,9 +7,6 @@
 
 #ifndef CDLL_CLIENT_INT_H
 #define CDLL_CLIENT_INT_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "iclientnetworkable.h"
 #include "utllinkedlist.h"
@@ -93,14 +90,8 @@ extern IUploadGameStats *gamestatsuploader;
 extern CSteamAPIContext *steamapicontext;
 extern ISoundEmitterSystemBase *soundemitterbase;
 
-#if defined( CSTRIKE15 )
 extern IGameTypes *g_pGameTypes;
-#endif
 
-#ifdef INFESTED_DLL
-class IASW_Mission_Chooser;
-extern IASW_Mission_Chooser *missionchooser;
-#endif
 #if defined( REPLAY_ENABLED )
 extern IReplayHistoryManager *g_pReplayHistoryManager;
 #endif

@@ -7,9 +7,6 @@
 
 #ifndef PURE_SERVER_H
 #define PURE_SERVER_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 
 #include "ifilelist.h"

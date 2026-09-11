@@ -9,9 +9,6 @@
 #ifndef PROTOCOL_H
 #define PROTOCOL_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 
 #define INSTANCE_BASELINE_TABLENAME	"instancebaseline"

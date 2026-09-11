@@ -10,17 +10,9 @@
 #include "tier0/memalloc.h"
 #include "tier0/valve_off.h"
 
-#if defined(_WIN32)
-#define WIN_32_LEAN_AND_MEAN
-#include <windows.h>
-#endif
 
 #include <assert.h>
 
-#ifdef _WIN32
-#pragma warning(disable:4073)
-#pragma init_seg( lib )
-#endif
 
 #pragma warning(push, 1)
 #pragma warning(disable:4786)
@@ -854,11 +846,6 @@ static void DumpSorted( const tchar *pszHeading, double totalTime, bool (*pfnSor
 void CVProfile::OutputReport( int type, const tchar *pszStartNode, int budgetGroupID )
 {
 	Msg( _T("******** BEGIN VPROF REPORT ********\n"));
-#ifdef _MSC_VER
-#if (_MSC_VER < 1300)
-	Msg( _T("  (note: this report exceeds the output capacity of MSVC debug window. Use console window or console log.) \n"));
-#endif
-#endif
 
 	g_TotalFrames = max( NumFramesSampled() - 1, 1 );
 	
@@ -1271,9 +1258,6 @@ CounterGroup_t CVProfile::GetCounterGroup( int index ) const
 
 #ifdef DBGFLAG_VALIDATE
 
-#ifdef _WIN64
-#error the below is presumably broken on 64 bit
-#endif // _WIN64
 
 const int k_cSTLMapAllocOffset = 4;
 #define GET_INTERNAL_MAP_ALLOC_PTR( pMap ) \
@@ -1402,24 +1386,6 @@ static bool TelemetryInitialize()
 
 	char *pGameName = "csgo";
 
-#if defined( IS_WINDOWS_PC )
-	char baseExeFilename[512];
-	if( GetModuleFileName ( GetModuleHandle( NULL ), baseExeFilename, sizeof( baseExeFilename ) ) )
-	{
-		char *pExt = strrchr( baseExeFilename, '.' );
-
-		if( pExt )
-			*pExt = 0;
-
-		char *pSeparator = strrchr( baseExeFilename, '\\' );
-
-		pGameName = pSeparator ? ( pSeparator + 1 ) : baseExeFilename;
-	}
-
-	// If you've got \\perforce\symbols on your _NT_SYMBOL_PATH, tmOpen() can take a massively long
-	//	time in the symInitialize() routine. Since we don't really need that, kill it here.
-	putenv( "_NT_SYMBOL_PATH=" );
-#endif
 
 	const char *pServerAddress = g_Telemetry.ServerAddress[0] ? g_Telemetry.ServerAddress : "localhost";
 	TmConnectionType tmType = TMCT_TCP; // !V_tier0_stricmp( pServerAddress, "FILE" ) ? TMCT_FILE : TMCT_TCP;
@@ -1532,14 +1498,6 @@ PLATFORM_INTERFACE void TelemetrySetLevel( unsigned int Level )
 	}
 }
 
-#if defined( IS_WINDOWS_PC )
-
-#include <psapi.h>
-
-typedef BOOL ( WINAPI *GetProcessMemoryInfo_t )( HANDLE Process, PPROCESS_MEMORY_COUNTERS ppsmemCounters, DWORD cb );
-static CDynamicFunction< GetProcessMemoryInfo_t > DynGetProcessMemoryInfo( "psapi.dll", "GetProcessMemoryInfo" );
-
-#endif
 
 static void TelemetryPlots()
 {

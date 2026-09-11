@@ -6,9 +6,6 @@
 
 #ifndef ISTEAMREMOTESTORAGE_H
 #define ISTEAMREMOTESTORAGE_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "isteamclient.h"
 

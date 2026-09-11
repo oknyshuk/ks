@@ -3,9 +3,6 @@
 #ifndef VOLUME_CULLER_H
 #define VOLUME_CULLER_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "vector.h"
 #include "vplane.h"

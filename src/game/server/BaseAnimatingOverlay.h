@@ -13,9 +13,6 @@
 
 #include "reflect_annotations.h"
 #include "shareddefs.h"
-#ifdef _WIN32
-#pragma once
-#endif
 
 #define ORDER_BITS			4
 

@@ -6,9 +6,6 @@
 
 #ifndef R_DECAL_H
 #define R_DECAL_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "decal_private.h"
 #include "decal_clip.h"

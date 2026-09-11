@@ -6,9 +6,6 @@
 
 #ifndef ISTEAMGAMESTATS_H
 #define ISTEAMGAMESTATS_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 //-----------------------------------------------------------------------------
 // Purpose: Functions for recording game play sessions and details thereof

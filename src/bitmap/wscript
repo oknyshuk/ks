@@ -31,9 +31,6 @@ def build(bld):
         "tgawriter.cpp",
     ]
 
-    if bld.env.DEST_OS == "win32":
-        soruce += ["floatbitmap4.cpp"]
-
     bld.stlib(
         source=source,
         target="bitmap",

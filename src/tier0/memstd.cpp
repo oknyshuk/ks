@@ -23,9 +23,7 @@
 #include "tier0/stacktools.h"
 #include "tier0/minidump.h"
 
-#ifndef _WIN32
 #define IsDebuggerPresent() false
-#endif
 
 #ifdef USE_LIGHT_MEM_DEBUG
 #undef USE_MEM_DEBUG
@@ -34,16 +32,6 @@
 
 #define DEF_REGION 0
 
-#if defined( _WIN32 )
-#define USE_DLMALLOC
-#ifdef PLATFORM_WINDOWS_PC64
-#define MEMALLOC_REGIONS
-#else
-#define MEMALLOC_SEGMENT_MIXED
-#define MBH_SIZE_MB ( 32 + MBYTES_STEAM_MBH_USAGE )
-//#define MEMALLOC_REGIONS
-#endif
-#endif // _WIN32
 
 // Record a list of memory callbacks for printing information
 // about non-heap memory.
@@ -313,17 +301,6 @@ void PrintAllocTimes()
 #define PrintAllocTimes() ((void)0)
 #endif // TIME_ALLOC
 
-#if _MSC_VER < 1400 && defined( MSVC ) && !defined(_STATIC_LINKED) && (defined(_DEBUG) || defined(USE_MEM_DEBUG))
-void *operator new( unsigned int nSize, int nBlockUse, const char *pFileName, int nLine )
-{
-	return ::operator new( nSize );
-}
-
-void *operator new[] ( unsigned int nSize, int nBlockUse, const char *pFileName, int nLine )
-{
-	return ::operator new[]( nSize );
-}
-#endif
 
 #include "mem_impl_type.h"
 #if MEM_IMPL_TYPE_STD
@@ -1134,10 +1111,6 @@ CSmallBlockHeap<CAllocator>::CSmallBlockHeap()
 
 	// Build a lookup table used to find the correct pool based on size
 
-#ifdef _M_X64
-	COMPILE_TIME_ASSERT( sizeof( s_nPoolSizesServer64 ) / sizeof( s_nPoolSizesServer64[ 0 ] ) == NUM_POOLS );
-	InitPools( s_nPoolSizesServer64 );
-#else
 	const int MAX_TABLE = MAX_SBH_BLOCK >> SBH_BLOCK_LOOKUP_GRANULARITY;
 	int i = 0;
 	int nBytesElement = 0;
@@ -1250,7 +1223,6 @@ CSmallBlockHeap<CAllocator>::CSmallBlockHeap()
 	{
 		Error( "SBH configuration error: %d/%d pools initialized\n", iCurPool, NUM_POOLS );
 	}
-#endif
 }
 
 template <typename CAllocator>
@@ -1694,11 +1666,7 @@ void LMDReportInvalidBlock( AllocHeader_t *pHeader, const char *pszMessage )
 	{
 		WriteMiniDump();
 	}
-#ifdef IS_WINDOWS_PC
-	::MessageBox( NULL, szMsg, "Error", MB_SYSTEMMODAL | MB_OK );
-#else
 	Warning( szMsg );
-#endif
 }
 
 void LMDValidateBlock( AllocHeader_t *pHeader, bool bFreeList )
@@ -2395,12 +2363,7 @@ int CStdMemAlloc::CrtDbgReport( int nRptType, const char * szFile,
 
 int CStdMemAlloc::heapchk()
 {
-#ifdef _WIN32
-	CrtCheckMemory();
-	return _HEAPOK;
-#else
 	return 1;
-#endif
 }
 
 void CStdMemAlloc::DumpStats() 
@@ -2410,49 +2373,11 @@ void CStdMemAlloc::DumpStats()
 
 void CStdMemAlloc::DumpStatsFileBase( char const *pchFileBase, DumpStatsFormat_t nFormat )
 {
-#if defined( _WIN32 )
-	char filename[ 512 ];
-	_snprintf( filename, sizeof( filename ) - 1, "%s.txt", pchFileBase );
-	filename[ sizeof( filename ) - 1 ] = 0;
-	FILE *pFile = fopen( filename, "wt" );
-
-#if MEM_SBH_ENABLED
-	if ( pFile )
-		fprintf( pFile, "Fixed Page SBH:\n" );
-	else
-		Msg( "Fixed Page SBH:\n" );
-	m_PrimarySBH.DumpStats("Fixed Page SBH", pFile, nFormat);
-#ifdef MEMALLOC_USE_SECONDARY_SBH
-	if ( pFile )
-		fprintf( pFile, "Secondary Fixed Page SBH:\n" );
-	else
-		Msg( "Secondary Page SBH:\n" );
-	m_SecondarySBH.DumpStats("Secondary Page SBH", pFile);
-#endif // MEMALLOC_USE_SECONDARY_SBH
-#ifndef MEMALLOC_NO_FALLBACK
-	if ( pFile )
-		fprintf( pFile, "\nFallback SBH:\n" );
-	else
-		Msg( "\nFallback SBH:\n" );
-	m_FallbackSBH.DumpStats("Fallback SBH", pFile, nFormat);	// Dump statistics to small block heap
-#endif // MEMALLOC_NO_FALLBACK
-#endif // MEM_SBH_ENABLED
-
-	heapstats_internal( pFile, nFormat );
-
-	if ( pFile )
-		fclose( pFile );
-#endif // _WIN32
 }
 
 IVirtualMemorySection * CStdMemAlloc::AllocateVirtualMemorySection( size_t numMaxBytes )
 {
-#if defined( _WIN32 )
-	extern IVirtualMemorySection * VirtualMemoryManager_AllocateVirtualMemorySection( size_t numMaxBytes );
-	return VirtualMemoryManager_AllocateVirtualMemorySection( numMaxBytes );
-#else
 	return NULL;
-#endif
 }
 
 size_t CStdMemAlloc::ComputeMemoryUsedBy( char const *pchSubStr )
@@ -2655,21 +2580,12 @@ void CStdMemAlloc::SetCRTAllocFailed( size_t nSize )
 	char buffer[256];
 	_snprintf( buffer, sizeof( buffer ), "***** OUT OF MEMORY! attempted allocation size: %u ****\n", nSize );
 
-#if defined(_WIN32 )
-	OutputDebugString( buffer );
-	if ( !Plat_IsInDebugSession() )
-	{
-		WriteMiniDump();
-		abort();
-	}
-#else
 	printf( "%s\n", buffer );
 	if ( !Plat_IsInDebugSession() )
 	{
 		WriteMiniDump();
 		Plat_ExitProcess( EXIT_FAILURE );
 	}
-#endif
 }
 
 size_t CStdMemAlloc::MemoryAllocFailed()

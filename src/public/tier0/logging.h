@@ -11,9 +11,6 @@
 #define LOGGING_H
 
 
-#if defined( COMPILER_MSVC )
-#pragma once
-#endif
 
 #include "color.h"
 #include "icommandline.h"
@@ -279,12 +276,6 @@ public:
 			  }
 #endif
 
-#ifdef _WIN32
-			  if ( !m_bQuietDebugger && Plat_IsInDebugSession() )
-			  {
-				  Plat_DebugString( pMessage );
-			  }
-#endif
 		  }
 	  }
 
@@ -354,12 +345,6 @@ public:
 			}
 		}
 
-#ifdef _WIN32
-		if ( !m_bQuietDebugger && Plat_IsInDebugSession() )
-		{
-			Plat_DebugString( pMessage );
-		}
-#endif
 	}
 
 	Win32ConsoleColorContext_t m_ColorContext;

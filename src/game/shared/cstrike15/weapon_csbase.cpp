@@ -69,13 +69,11 @@
 // NOTE: This has to be the last file included!
 #include "tier0/memdbgon.h"
 
-#if defined( CSTRIKE15 )
 
 extern ConVar crosshair;
 
 extern WeaponRecoilData g_WeaponRecoilData;
 
-#endif
 
 extern ConVar cl_righthand;
 extern ConVar mp_weapons_allow_map_placed;

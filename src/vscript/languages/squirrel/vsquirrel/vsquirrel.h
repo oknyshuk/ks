@@ -7,9 +7,6 @@
 #ifndef VSQUIRREL_H
 #define VSQUIRREL_H
 
-#if defined( _WIN32 )
-#pragma once
-#endif
 
 IScriptVM *ScriptCreateSquirrelVM();
 void ScriptDestroySquirrelVM( IScriptVM *pVM );

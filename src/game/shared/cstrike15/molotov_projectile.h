@@ -9,9 +9,6 @@
 
 #include "reflect_annotations.h"
 
-#if defined( _WIN32 )
-	#pragma once
-#endif
 
 #include "basecsgrenade_projectile.h"
 

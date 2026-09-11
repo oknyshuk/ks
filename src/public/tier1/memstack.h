@@ -7,15 +7,9 @@
 #ifndef MEMSTACK_H
 #define MEMSTACK_H
 
-#if defined( _WIN32 )
-#pragma once
-#endif
 
 #include "tier1/utlvector.h"
 
-#if defined( _WIN32 )
-#define MEMSTACK_VIRTUAL_MEMORY_AVAILABLE
-#endif
 
 //-----------------------------------------------------------------------------
 

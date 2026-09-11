@@ -10,9 +10,6 @@
 #ifndef CUBEMAP_H
 #define CUBEMAP_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "tier0/platform.h"
 #include "tier1/utlmemory.h"

@@ -10,9 +10,6 @@
 #include "tier0/threadtools.h"
 #include "const.h"
 
-#if defined( _WIN32 )
-#pragma once
-#endif
 
 #ifdef SOURCE_MT
 

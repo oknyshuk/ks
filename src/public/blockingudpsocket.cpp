@@ -4,9 +4,6 @@
 //
 //=============================================================================//
 
-#if defined(_WIN32)
-#include <winsock.h>
-#else
 #define INVALID_SOCKET -1
 #define SOCKET_ERROR -1
 #include <sys/types.h>
@@ -14,7 +11,6 @@
 #include <netinet/in.h>
 #include <unistd.h>
 #define closesocket close
-#endif
 
 #include "blockingudpsocket.h"
 
@@ -60,17 +56,10 @@ bool CBlockingUDPSocket::CreateSocket (void)
 		return false;
 	}
 
-#ifdef _WIN32
-	if ( m_pImpl->m_SocketIP.sin_addr.S_un.S_addr == INADDR_ANY )
-	{
-		m_pImpl->m_SocketIP.sin_addr.S_un.S_addr = 0L;
-	}		
-#else
 	if ( m_pImpl->m_SocketIP.sin_addr.s_addr == INADDR_ANY )
 	{
 		m_pImpl->m_SocketIP.sin_addr.s_addr = 0L;
 	}
-#endif
 
 	return true;
 }

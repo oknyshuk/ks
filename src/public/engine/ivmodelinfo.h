@@ -8,9 +8,6 @@
 #ifndef IVMODELINFO_H
 #define IVMODELINFO_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "tier0/platform.h"
 #include "datacache/imdlcache.h"

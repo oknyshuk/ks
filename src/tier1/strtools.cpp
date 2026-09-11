@@ -23,15 +23,10 @@
 #endif
 
 #ifdef _vsnprintf
-#ifdef _WIN32
-	#undef _vsnprintf
-#endif
 #endif
 
 #ifdef vsnprintf
-#ifndef _WIN32
 	#undef vsnprintf
-#endif
 #endif
 
 #if defined( strcat )
@@ -63,11 +58,6 @@
 #define _strtoi64 strtoll
 #define _strtoui64 strtoull
 
-#ifdef _WIN32
-#ifndef CP_UTF8
-#define CP_UTF8 65001
-#endif
-#endif
 #include "tier0/dbg.h"
 #include "tier1/strtools.h"
 #include <string.h>
@@ -887,11 +877,7 @@ int V_snwprintf( OUT_Z_CAP(maxLenInNumWideCharacters) wchar_t *pDest, int maxLen
 	va_list marker;
 
 	va_start( marker, pFormat );
-#ifdef _WIN32
-	int len = _vsnwprintf( pDest, maxLenInNumWideCharacters, pFormat, marker );
-#else
 	int len = vswprintf( pDest, maxLenInNumWideCharacters, pFormat, marker );
-#endif
 	va_end( marker );
 
 	// Len < 0 represents an overflow
@@ -914,11 +900,7 @@ int V_vsnwprintf( OUT_Z_CAP(maxLenInChars) wchar_t *pDest, int maxLenInChars, PR
 	AssertValidWritePtr( pDest, maxLenInChars );
 	AssertValidReadPtr( pFormat );
 
-#ifdef _WIN32
-	int len = _vsnwprintf( pDest, maxLenInChars, pFormat, params );
-#else
 	int len = vswprintf( pDest, maxLenInChars, pFormat, params );
-#endif
 
 	// Len < 0 represents an overflow
 	if ( ( len < 0 ) ||
@@ -939,11 +921,7 @@ int V_snprintf( char *pDest, int maxLen, char const *pFormat, ... )
 	va_list marker;
 
 	va_start( marker, pFormat );
-#ifdef _WIN32
-	int len = _vsnprintf( pDest, maxLen, pFormat, marker );
-#else
 	int len = vsnprintf( pDest, maxLen, pFormat, marker );
-#endif
 	va_end( marker );
 
 	// Len < 0 represents an overflow
@@ -1277,11 +1255,7 @@ int _V_UTF8ToUnicode( const char *pUTF8, wchar_t *pwchDest, int cubDestSizeInByt
 	pwchDest[0] = 0;
 	if ( !pUTF8 )
 		return 0;
-#ifdef _WIN32
-	int cchResult = MultiByteToWideChar( CP_UTF8, 0, pUTF8, -1, pwchDest, cubDestSizeInBytes / sizeof(wchar_t) );
-#else
 	int cchResult = mbstowcs( pwchDest, pUTF8, cubDestSizeInBytes / sizeof(wchar_t) );
-#endif
 	pwchDest[(cubDestSizeInBytes / sizeof(wchar_t)) - 1] = 0;
 	return cchResult;
 }
@@ -1296,13 +1270,9 @@ int _V_UnicodeToUTF8( const wchar_t *pUnicode, char *pUTF8, int cubDestSizeInByt
 		pUTF8[0] = 0;
 	}
 
-#ifdef _WIN32
-	int cchResult = WideCharToMultiByte( CP_UTF8, 0, pUnicode, -1, pUTF8, cubDestSizeInBytes, NULL, NULL );
-#else
 	int cchResult = 0;
 	if ( pUnicode && pUTF8 )
 		cchResult = wcstombs( pUTF8, pUnicode, cubDestSizeInBytes );
-#endif
 
 	if ( cubDestSizeInBytes > 0 )
 	{
@@ -1321,10 +1291,6 @@ int _V_UCS2ToUnicode( const ucs2 *pUCS2, wchar_t *pUnicode, int cubDestSizeInByt
 	Assert( cubDestSizeInBytes >= sizeof( *pUnicode ) );
 	
 	pUnicode[0] = 0;
-#ifdef _WIN32
-	int cchResult = V_wcslen( pUCS2 );
-	V_memcpy( pUnicode, pUCS2, cubDestSizeInBytes );
-#else
 	iconv_t conv_t = iconv_open( "UCS-4LE", "UCS-2LE" );
 	int cchResult = -1;
 	size_t nLenUnicde = cubDestSizeInBytes;
@@ -1341,7 +1307,6 @@ int _V_UCS2ToUnicode( const ucs2 *pUCS2, wchar_t *pUnicode, int cubDestSizeInByt
 		else
 			cchResult = nMaxUTF8;
 	}
-#endif
 	pUnicode[(cubDestSizeInBytes / sizeof(wchar_t)) - 1] = 0;
 	return cchResult;	
 
@@ -1358,16 +1323,6 @@ int _V_UCS2ToUnicode( const ucs2 *pUCS2, wchar_t *pUnicode, int cubDestSizeInByt
 int _V_UnicodeToUCS2( const wchar_t *pUnicode, int cubSrcInBytes, char *pUCS2, int cubDestSizeInBytes )
 {
 	 // TODO: MACMERGE: Figure out how to convert from 2-byte Win32 wchars to platform wchar_t type that can be 4 bytes
-#if defined( _WIN32 )
-	// Figure out which buffer is smaller and convert from bytes to character
-	// counts.
-	int cchResult = MIN(cubSrcInBytes/sizeof(wchar_t), cubDestSizeInBytes/sizeof(wchar_t) );
-	wchar_t *pDest = (wchar_t*)pUCS2;
-	wcsncpy( pDest, pUnicode, cchResult );
-	// Make sure we NULL-terminate.
-	pDest[ cchResult - 1 ] = 0;
-
-#else
 	iconv_t conv_t = iconv_open( "UCS-2LE", "UTF-32LE" );
 	size_t cchResult = -1;
 	size_t nLenUnicde = cubSrcInBytes;
@@ -1384,7 +1339,6 @@ int _V_UnicodeToUCS2( const wchar_t *pUnicode, int cubSrcInBytes, char *pUCS2, i
 		else
 			cchResult = cubSrcInBytes / sizeof( wchar_t );
 	}
-#endif
 	return cchResult;	
 }
 
@@ -1395,10 +1349,6 @@ int _V_UnicodeToUCS2( const wchar_t *pUnicode, int cubSrcInBytes, char *pUCS2, i
 int _V_UCS2ToUTF8( const ucs2 *pUCS2, char *pUTF8, int cubDestSizeInBytes )
 {
 	pUTF8[0] = 0;
-#ifdef _WIN32
-	// under win32 wchar_t == ucs2, sigh
-	int cchResult = WideCharToMultiByte( CP_UTF8, 0, pUCS2, -1, pUTF8, cubDestSizeInBytes, NULL, NULL );
-#else
 	iconv_t conv_t = iconv_open( "UTF-8", "UCS-2LE" );
 	size_t cchResult = -1;
 	size_t nLenUnicde = cubDestSizeInBytes;
@@ -1415,7 +1365,6 @@ int _V_UCS2ToUTF8( const ucs2 *pUCS2, char *pUTF8, int cubDestSizeInBytes )
 		else
 			cchResult = nMaxUTF8;
 	}
-#endif
 	pUTF8[cubDestSizeInBytes - 1] = 0;
 	return cchResult;	
 }
@@ -1428,10 +1377,6 @@ int _V_UTF8ToUCS2( const char *pUTF8, int cubSrcInBytes, ucs2 *pUCS2, int cubDes
 {
 	Assert( cubDestSizeInBytes >= sizeof(pUCS2[0]) );
 	pUCS2[0] = 0;
-#ifdef _WIN32
-	// under win32 wchar_t == ucs2, sigh
-	int cchResult = MultiByteToWideChar( CP_UTF8, 0, pUTF8, -1, pUCS2, cubDestSizeInBytes / sizeof(wchar_t) );
-#else
 	iconv_t conv_t = iconv_open( "UCS-2LE", "UTF-8" );
 	size_t cchResult = -1;
 	size_t nLenUnicde = cubSrcInBytes;
@@ -1449,7 +1394,6 @@ int _V_UTF8ToUCS2( const char *pUTF8, int cubSrcInBytes, ucs2 *pUCS2, int cubDes
 			cchResult = cubSrcInBytes;
 
 	}
-#endif
 	pUCS2[ (cubDestSizeInBytes/sizeof(ucs2)) - 1] = 0;
 	return cchResult;	
 }
@@ -1799,13 +1743,8 @@ void  V_StripFilename (char *path)
 	path[ length ] = 0;
 }
 
-#ifdef _WIN32
-#define CORRECT_PATH_SEPARATOR '\\'
-#define INCORRECT_PATH_SEPARATOR '/'
-#else
 #define CORRECT_PATH_SEPARATOR '/'
 #define INCORRECT_PATH_SEPARATOR '\\'
-#endif
 
 //-----------------------------------------------------------------------------
 // Purpose: Changes all '/' or '\' characters into separator
@@ -2161,11 +2100,7 @@ void V_AppendSlash( char *pStr, int strSize, char separator )
 }
 
 
-#if defined(_MSC_VER) && _MSC_VER >= 1900
-bool
-#else
 void
-#endif
 V_MakeAbsolutePath( char *pOut, int outLen, const char *pPath, const char *pStartingDir )
 {
 	if ( V_IsAbsolutePath( pPath ) )
@@ -2209,9 +2144,6 @@ V_MakeAbsolutePath( char *pOut, int outLen, const char *pPath, const char *pStar
 		bRet = false;
 	}
 
-#if defined(_MSC_VER) && _MSC_VER >= 1900
-	return bRet;
-#endif
 }
 
 
@@ -2339,12 +2271,7 @@ bool V_IsAbsolutePath( const char *pStr )
 	if ( !( pStr[0] && pStr[1] ) )
 		return false;
 	
-#if defined( PLATFORM_WINDOWS )
-	bool bIsAbsolute = ( pStr[0] && pStr[1] == ':' ) || 
-	  ( ( pStr[0] == '/' || pStr[0] == '\\' ) && ( pStr[1] == '/' || pStr[1] == '\\' ) );
-#else
 	bool bIsAbsolute = ( pStr[0] && pStr[1] == ':' ) || pStr[0] == '/' || pStr[0] == '\\';
-#endif
 
 	
 	return bIsAbsolute;
@@ -2730,78 +2657,18 @@ void V_StrRight( const char *pStr, int nChars, char *pOut, int outSize )
 void V_strtowcs( const char *pString, int nInSize, wchar_t *pWString, int nOutSizeInBytes )
 {
 	Assert( nOutSizeInBytes >= sizeof(pWString[0]) );
-#ifdef _WIN32
-	int nOutSizeInChars = nOutSizeInBytes / sizeof(pWString[0]);
-	int result = MultiByteToWideChar( CP_UTF8, 0, pString, nInSize, pWString, nOutSizeInChars );
-	// If the string completely fails to fit then MultiByteToWideChar will return 0.
-	// If the string exactly fits but with no room for a null-terminator then MultiByteToWideChar
-	// will happily fill the buffer and omit the null-terminator, returning nOutSizeInChars.
-	// Either way we need to return an empty string rather than a bogus and possibly not
-	// null-terminated result.
-	if ( result <= 0 || result >= nOutSizeInChars )
-	{
-		// If nInSize includes the null-terminator then a result of nOutSizeInChars is
-		// legal. We check this by seeing if the last character in the output buffer is
-		// a zero.
-		if ( result == nOutSizeInChars && pWString[ nOutSizeInChars - 1 ] == 0)
-		{
-			// We're okay! Do nothing.
-		}
-		else
-		{
-			// The string completely to fit. Null-terminate the buffer.
-			*pWString = L'\0';
-		}
-	}
-	else
-	{
-		// We have successfully converted our string. Now we need to null-terminate it, because
-		// MultiByteToWideChar will only do that if nInSize includes the source null-terminator!
-		pWString[ result ] = 0;
-	}
-#else
 	if ( mbstowcs( pWString, pString, nOutSizeInBytes / sizeof(pWString[0]) ) <= 0 )
 	{
 		*pWString = 0;
 	}
-#endif
 }
 
 void V_wcstostr( const wchar_t *pWString, int nInSize, char *pString, int nOutSizeInChars )
 {
-#ifdef _WIN32
-	int result = WideCharToMultiByte( CP_UTF8, 0, pWString, nInSize, pString, nOutSizeInChars, NULL, NULL );
-	// If the string completely fails to fit then MultiByteToWideChar will return 0.
-	// If the string exactly fits but with no room for a null-terminator then MultiByteToWideChar
-	// will happily fill the buffer and omit the null-terminator, returning nOutSizeInChars.
-	// Either way we need to return an empty string rather than a bogus and possibly not
-	// null-terminated result.
-	if ( result <= 0 || result >= nOutSizeInChars )
-	{
-		// If nInSize includes the null-terminator then a result of nOutSizeInChars is
-		// legal. We check this by seeing if the last character in the output buffer is
-		// a zero.
-		if ( result == nOutSizeInChars && pWString[ nOutSizeInChars - 1 ] == 0)
-		{
-			// We're okay! Do nothing.
-		}
-		else
-		{
-			*pString = '\0';
-		}
-	}
-	else
-	{
-		// We have successfully converted our string. Now we need to null-terminate it, because
-		// MultiByteToWideChar will only do that if nInSize includes the source null-terminator!
-		pString[ result ] = '\0';
-	}
-#else
 	if ( wcstombs( pString, pWString, nOutSizeInChars ) <= 0 )
 	{
 		*pString = '\0';
 	}
-#endif
 }
 
 
@@ -3757,12 +3624,7 @@ void V_LogMultiline( bool input, char const *label, const char *data, size_t len
 }
 
 
-#ifdef WIN32
-// Win32 CRT doesn't support the full range of UChar32, has no extended planes
-inline int V_iswspace( int c ) { return ( c <= 0xFFFF ) ? iswspace( (wint_t)c ) : 0; }
-#else
 #define V_iswspace(x) iswspace(x)
-#endif
 
 
 //-----------------------------------------------------------------------------

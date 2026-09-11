@@ -8,9 +8,6 @@
 #ifndef PRECACHE_REGISTER_H
 #define PRECACHE_REGISTER_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "igamesystem.h"
 #include "tier1/UtlStringMap.h"

@@ -6,9 +6,6 @@
 
 #ifndef REPLAY_RAGDOLL_H
 #define REPLAY_RAGDOLL_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 //--------------------------------------------------------------------------------
 

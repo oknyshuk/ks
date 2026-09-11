@@ -5,10 +5,6 @@
 // $NoKeywords: $
 //==================================================================//
 
-#if defined( _WIN32 )
-#undef PROTECTED_THINGS_ENABLE
-#include <windows.h>
-#endif
 #include "quakedef.h" // for max_ospath
 #include <stdlib.h>
 #include <assert.h>
@@ -174,67 +170,6 @@ bool LoadAddonListFile( const char *pDirectoryName, KeyValues *&pAddons )
 //---------------------------------------------------------------------------------------------------------------------
 void CopyStagedAddons( IFileSystem *pFileSystem, const char *pModPath )
 {
-#if (defined( PLATFORM_WINDOWS ) ) || defined( PLATFORM_OSX )
-
-#ifdef IS_WINDOWS_PC
-	HKEY hKey;
-
-	// Find the Steam installation path in the registry
-	if ( ERROR_SUCCESS == RegOpenKeyEx( HKEY_CURRENT_USER, "Software\\Valve\\Steam", 0, KEY_READ, &hKey) )
-	{
-		DWORD nReadLength = MAX_PATH;
-		char szAddonInstallPath[MAX_PATH];
-
-		if ( ERROR_SUCCESS == RegQueryValueEx( hKey, "SourceModInstallPath", NULL, NULL, (LPBYTE)szAddonInstallPath,  &nReadLength ) )
-		{
-#else
-	{
-		{
-			char szAddonInstallPath[MAX_PATH];
-			char *pszHomeDir = getenv("HOME");
-			V_snprintf( szAddonInstallPath, sizeof(szAddonInstallPath), "%s/Library/Application Support/Steam/SteamApps/sourcemods", pszHomeDir );			
-#endif
-			char szAddonsWildcard[MAX_PATH];
-			FileFindHandle_t findHandleDir;
-			
-			//
-			// Loop through the .vpk files in the staged location 
-			//
-			CUtlVector< CUtlString > vecAddonVPKs;
-			V_snprintf( szAddonsWildcard, sizeof( szAddonsWildcard ), "%s%c%s%c%i%c%s", szAddonInstallPath, CORRECT_PATH_SEPARATOR, ADDONS_DIRNAME, 
-						CORRECT_PATH_SEPARATOR, GetSteamAppID(), CORRECT_PATH_SEPARATOR, "*.vpk" );
-			const char *pFileName = pFileSystem->FindFirst( szAddonsWildcard, &findHandleDir );
-
-			while ( pFileName )
-			{	
-				char szSrcVPKPath[MAX_PATH];
-
-				V_snprintf( szSrcVPKPath, sizeof( szSrcVPKPath), "%s%c%s%c%i%c%s", szAddonInstallPath, CORRECT_PATH_SEPARATOR, ADDONS_DIRNAME, 
-							CORRECT_PATH_SEPARATOR, GetSteamAppID(), CORRECT_PATH_SEPARATOR, pFileName);
-				vecAddonVPKs.AddToTail( CUtlString( szSrcVPKPath ) );
-				pFileName = pFileSystem->FindNext( findHandleDir );
-			}
-
-			pFileSystem->FindClose( findHandleDir );
-
-			//
-			// Copy each of the VPKs to the addons directory
-			//
-			FOR_EACH_VEC( vecAddonVPKs, i )
-			{
-				char szDestPath[MAX_PATH];
-
-				V_snprintf( szDestPath, sizeof( szDestPath ),"%s%s%c%s", pModPath, ADDONS_DIRNAME, CORRECT_PATH_SEPARATOR, V_UnqualifiedFileName( vecAddonVPKs[i] ) );
-				pFileSystem->RemoveFile( szDestPath );
-				pFileSystem->RenameFile( vecAddonVPKs[i], szDestPath );
-			}
-		}
-
-#ifdef IS_WINDOWS_PC
-		RegCloseKey( hKey );
-#endif
-	}
-#endif
 }
 
 //---------------------------------------------------------------------------------------------------------------------

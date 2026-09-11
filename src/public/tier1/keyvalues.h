@@ -8,9 +8,6 @@
 #ifndef KEYVALUES_H
 #define KEYVALUES_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 #ifndef NULL
 #ifdef __cplusplus

@@ -7,9 +7,6 @@
 
 #ifndef SND_WAVE_DATA_H
 #define SND_WAVE_DATA_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "snd_audio_source.h"
 

@@ -7,9 +7,6 @@
 //===========================================================================//
 #if !defined( R_EFXEXTERNH )
 #define R_EFXEXTERNH
-#ifdef _WIN32
-#pragma once
-#endif
 
 struct dlight_t;
 

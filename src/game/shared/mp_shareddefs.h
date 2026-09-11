@@ -5,9 +5,6 @@
 //=============================================================================
 #ifndef MP_SHAREDDEFS_H
 #define MP_SHAREDDEFS_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "shareddefs.h"
 

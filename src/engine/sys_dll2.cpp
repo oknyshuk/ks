@@ -11,10 +11,6 @@
 
 	#include "appframework/ilaunchermgr.h"
 
-#if defined( _WIN32 ) 
-#include "winlite.h"
-#else
-#endif
 #include "quakedef.h"
 #include "idedicatedexports.h"
 #include "engine_launcher_api.h"
@@ -38,9 +34,6 @@
 #include "DevShotGenerator.h"
 #include "gl_shader.h"
 #include "l_studio.h"
-#ifdef _WIN32
-#include "localize/ilocalize.h"
-#endif
 #include "sys_dll.h"
 #include "materialsystem/materialsystem_config.h"
 #include "server.h"
@@ -51,9 +44,6 @@
 #include "inputsystem/iinputsystem.h"
 #include "appframework/IAppSystemGroup.h"
 #include "tier0/systeminformation.h"
-#ifdef _WIN32
-#include "VGuiMatSurface/IMatSystemSurface.h"
-#endif
 #include "steam/steam_api.h"
 
 // This is here just for legacy support of older .dlls!!!
@@ -73,10 +63,6 @@
 
 #include "rocketui/rocketui.h"
 
-#if defined(_WIN32)
-#include <eh.h>
-#include <imm.h>
-#endif
 
 
 
@@ -117,11 +103,7 @@ void COM_InitFilesystem( const char *pFullModPath );
 void Host_ReadPreStartupConfiguration();
 void EditorToggle_f();
 
-#ifdef _WIN32
-HWND *pmainwindow = NULL;
-#else
 void *pmainwindow = NULL;
-#endif
 
 //-----------------------------------------------------------------------------
 // ConVars and console commands
@@ -210,30 +192,8 @@ void ClearIOStates( void )
 
 void MoveConsoleWindowToFront()
 {
-#ifdef _WIN32
-// TODO: remove me!!!!!
-
-	// Move the window to the front.
-	HINSTANCE hInst = LoadLibrary( "kernel32.dll" );
-	if ( hInst )
-	{
-		typedef HWND (*GetConsoleWindowFn)();
-		GetConsoleWindowFn fn = (GetConsoleWindowFn)GetProcAddress( hInst, "GetConsoleWindow" );
-		if ( fn )
-		{
-			HWND hwnd = fn();
-			ShowWindow( hwnd, SW_SHOW );
-			UpdateWindow( hwnd );
-			SetWindowPos( hwnd, HWND_TOP, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW );
-		}
-		FreeLibrary( hInst );
-	}
-#endif
 }
 
-#if defined( _WIN32 )
-#include <conio.h>
-#endif
 CUtlVector<char> g_TextModeLine;
 
 char NextGetch()
@@ -515,9 +475,7 @@ bool CEngineAPI::Connect( CreateInterfaceFn factory )
 		return false;
 	}
 
-#if defined( USE_SDL )
 	g_pLauncherMgr = (ILauncherMgr *)factory( SDLMGR_INTERFACE_VERSION, NULL );
-#endif
 	
 	ConnectMDLCacheNotify();
 
@@ -554,11 +512,7 @@ void *CEngineAPI::QueryInterface( const char *pInterfaceName )
 
 static bool WantsFullMemoryDumps()
 {
-#if defined( _WIN32 )
-	return CommandLine()->FindParm( "-full_memory_dumps" ) ? true : false;
-#else
 	return false;
-#endif
 }
 
 
@@ -773,18 +727,7 @@ void CEngineAPI::ActivateSimulation( bool bActive )
 //-----------------------------------------------------------------------------
 void CEngineAPI::PumpMessages()
 {
-#if defined( WIN32 ) && !defined( USE_SDL )
-	MSG msg;
-	while ( PeekMessageW( &msg, NULL, 0, 0, PM_REMOVE ) )
-	{
-		TranslateMessage( &msg );
-		DispatchMessageW( &msg );
-	}
-#elif defined( OSX ) || defined( USE_SDL )
 	g_pLauncherMgr->PumpWindowsMessageLoop();
-#else
-#error
-#endif
 
 	// Get input from attached devices
 	g_pInputSystem->PollInputState( GetBaseLocalClient().IsActive() );
@@ -850,9 +793,6 @@ bool CEngineAPI::OnStartup( void *pInstance, const char *pStartupModName )
 	// This fixes a bug on certain machines where the input will 
 	// stop coming in for about 1 second when someone hits a key.
 	// (true means to disable priority boost)
-#ifdef WIN32
-	SetThreadPriorityBoost( GetCurrentThread(), true ); 
-#endif
 
 	// FIXME: Turn videomode + game into IAppSystems?
 
@@ -1131,11 +1071,6 @@ public:
 
 	void BuildComment( char const *pchSysErrorText )
 	{
-#ifdef IS_WINDOWS_PC
-		// This warning is not actually true in this context.
-#pragma warning( suppress : 4535 ) // warning C4535: calling _set_se_translator() requires /EHa
-		_se_translator_function curfilter = _set_se_translator( &FailSafe );
-#endif
 
 		try 
 		{
@@ -1259,9 +1194,6 @@ public:
 			// Oh oh
 		}
 		
-#ifdef IS_WINDOWS_PC
-		_set_se_translator( curfilter );
-#endif
 
 	}
 
@@ -1297,37 +1229,8 @@ int CEngineAPI::Run()
 		Host_DisallowSecureServers();
 	}
 
-#if   defined ( _WIN32 )
-	if ( !Plat_IsInDebugSession() && !CommandLine()->FindParm( "-nominidumps") )
-	{
-		// This warning is not actually true in this context.
-#pragma warning( suppress : 4535 ) // warning C4535: calling _set_se_translator() requires /EHa
-		_set_se_translator( WriteMiniDumpUsingExceptionInfo );
-
-		try  // this try block allows the SE translator to work
-		{
-			return RunListenServer();
-		}
-		catch( ... )
-		{
-#if defined(_WIN32)
-			// We don't want global destructors in our process OR in any DLL to get executed.
-			// _exit() avoids calling global destructors in our module, but not in other DLLs.
-			TerminateProcess( GetCurrentProcess(), 100 );
-#else
-			_exit( 100 );
-#endif
-			return RUN_OK;
-		}
-	}
-	else
-	{
-		return RunListenServer();
-	}
-#else
 	Assert( !"Impl minidump handling on Posix" );
 	return RunListenServer();
-#endif
 }
 #endif // DEDICATED
 
@@ -1626,12 +1529,6 @@ void Sys_Version( bool bDedicated )
 		}
 	}
 
-#ifdef _WIN32
-	else
-	{		
-		AssertMsg( !g_pFileSystem->FileExists( "perforce.inf" ), "<mod dir>\\perforce.inf included in a steam cache, remove it!" );
-	}
-#endif // _WIN32
 }
 
 

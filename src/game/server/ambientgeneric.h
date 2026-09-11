@@ -8,9 +8,6 @@
 #define AMBIENTGENERIC_H
 
 #include "reflect_annotations.h"
-#ifdef _WIN32
-#pragma once
-#endif
 
 // runtime pitch shift and volume fadein/out structure
 

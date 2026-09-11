@@ -9,9 +9,6 @@
 
 #include "vscript/ivscript.h"
 
-#if defined( _WIN32 )
-#pragma once
-#endif
 
 DECLARE_LOGGING_CHANNEL( LOG_VScript );
 

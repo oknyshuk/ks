@@ -24,18 +24,11 @@
 FadeData_t g_aFadeData[FADE_MODE_COUNT] = 
 {
 	//	PixelMin	PixelMax	Width		DistScale		FadeMode_t
-#ifdef CSTRIKE15
 	// Ensure fade settings are consistent across CPU levels in CS:GO.
 	{	  0.0f,		  0.0f,		1280.0f,	1.0f	}, //	FADE_MODE_NONE 
 	{	  0.0f,		  0.0f,		1280.0f,	1.0f	}, //	FADE_MODE_LOW
 	{	  0.0f,		  0.0f,		1280.0f,	1.0f	}, //	FADE_MODE_MED
 	{	  0.0f,		  0.0f,		1280.0f,	1.0f	}, //	FADE_MODE_HIGH
-#else
-	{	  0.0f,		  0.0f,		1280.0f,	1.0f	}, //	FADE_MODE_NONE 
-	{	 10.0f,		 15.0f,		 800.0f,	1.0f	}, //	FADE_MODE_LOW
-	{	  5.0f,		 10.0f,		1024.0f,	1.0f	}, //	FADE_MODE_MED
-	{	  0.0f,		  0.0f,		1280.0f,	1.0f	}, //	FADE_MODE_HIGH
-#endif
 
 	{	 0.0f,		0.0f,		1280.0f,	1.0f	}, //	FADE_MODE_360
 	{	 0.0f,		0.0f,		1280.0f,	1.0f	}, //	FADE_MODE_PS3

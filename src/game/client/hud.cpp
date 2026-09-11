@@ -20,10 +20,8 @@
 #include "mempool.h"
 #include <keyvalues.h>
 #include "filesystem.h"
-#if defined( CSTRIKE15 )
 	#include "c_cs_player.h"
 	#include "cs_gamerules.h"
-#endif
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -134,9 +132,6 @@ void CHudElement::InitCHudElementAfterConstruction( const char* pElementName )
     m_bWantLateUpdate = false;
 
 	// Make this for all hud elements, but when its a bit safer
-#if defined( TF_CLIENT_DLL )
-	RegisterForRenderGroup( "global" );
-#endif
 }
 
 
@@ -655,7 +650,6 @@ bool CHud::IsHidden( int iHudFlags )
 	if ( ( iHudFlags & HIDEHUD_NEEDSUIT ) && ( !pPlayer->IsSuitEquipped() ) )
 		return true;
 
-#if defined( CSTRIKE15 )
 	if ( CSGameRules() && CSGameRules()->IsPlayingTraining() )
 	{
 		C_CSPlayer *pCSPlayer = static_cast<C_CSPlayer *>( pPlayer );
@@ -667,7 +661,6 @@ bool CHud::IsHidden( int iHudFlags )
 		if ( ( iHudFlags & HIDEHUD_RADAR ) && ( pCSPlayer && pCSPlayer->IsRadarHidden() ) )
 			return true;
 	}
-#endif
 
 	return ( ( iHudFlags & iHideHud ) != 0 );
 }
@@ -921,9 +914,6 @@ void CHudIcons::Init()
 	LoadHudTextures( textureList, "scripts/mod_textures", NULL );
 	LoadHudTextures( textureList, "scripts/instructor_textures", NULL );
 	LoadHudTextures( textureList, "scripts/instructor_modtextures", NULL );
-#ifdef PORTAL2
-	LoadHudTextures( textureList, "scripts/signifier_textures", NULL );
-#endif
 	// PORTAL2
 
 	int c = textureList.Count();

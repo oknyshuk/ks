@@ -6,9 +6,6 @@
 
 #ifndef INPUTENUMS_H
 #define INPUTENUMS_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "tier0/basetypes.h"
 

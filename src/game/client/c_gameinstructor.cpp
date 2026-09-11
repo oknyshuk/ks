@@ -19,14 +19,9 @@
 #include "matchmaking/imatchframework.h"
 #include "matchmaking/mm_helpers.h"
 
-#if defined( PORTAL2 )
-#include "matchmaking/portal2/imatchext_portal2.h"
-#endif
 
-#if defined( CSTRIKE15 )
 #include "cs_gamerules.h"
 #include "matchmaking/cstrike15/imatchext_cstrike15.h"
-#endif
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -87,12 +82,10 @@ void EnableDisableInstructor( void )
 {
 	bool bEnabled = (!sv_gameinstructor_disable.GetBool() && gameinstructor_enable.GetBool());
 
-#if defined( CSTRIKE15 )
 	if ( CSGameRules() && CSGameRules()->IsPlayingTraining() )
 	{
 		bEnabled = true;
 	}
-#endif
 
 	if ( bEnabled )
 	{
@@ -244,11 +237,7 @@ bool C_GameInstructor::Init( void )
 
 	ACTIVE_SPLITSCREEN_PLAYER_GUARD( m_nSplitScreenSlot );
 
-#if defined( CSTRIKE15 )
 	if ( (!gameinstructor_enable.GetBool() || sv_gameinstructor_disable.GetBool()) && !(CSGameRules() && CSGameRules()->IsPlayingTraining()) )
-#else
-	if ( !gameinstructor_enable.GetBool() || sv_gameinstructor_disable.GetBool() )
-#endif
 	{
 		// Don't init if it's disabled
 		return true;
@@ -300,10 +289,6 @@ bool C_GameInstructor::Init( void )
 	ListenForGameEvent( "game_newmap" );
 
 
-#ifdef TERROR
-	ListenForGameEvent( "player_bot_replace" );
-	ListenForGameEvent( "bot_player_replace" );
-#endif
 
 	ListenForGameEvent( "set_instructor_group_enabled" );
 
@@ -366,11 +351,7 @@ void C_GameInstructor::Update( float frametime )
 
 	UpdateHiddenByOtherElements();
 
-#if defined( CSTRIKE15 )
 	if ( (!gameinstructor_enable.GetBool() || m_bNoDraw || m_bHiddenDueToOtherElements) && !(CSGameRules() && CSGameRules()->IsPlayingTraining()) )
-#else
-	if ( !gameinstructor_enable.GetBool() || m_bNoDraw || m_bHiddenDueToOtherElements )
-#endif
 	{
 		// Don't update if disabled or hidden
 		return;
@@ -627,40 +608,6 @@ void C_GameInstructor::FireGameEvent( IGameEvent *event )
 			m_bNoDraw = false;
 		}
 	}
-#ifdef TERROR
-	else if ( Q_strcmp( name, "player_bot_replace" ) == 0 )
-	{
-		C_BasePlayer *pLocalPlayer = GetLocalPlayer();
-		if ( pLocalPlayer && pLocalPlayer == UTIL_PlayerByUserId( event->GetInt( "player" ) ) )
-		{
-			CloseAllOpenOpportunities();
-		}
-		else
-		{
-			for ( int i = m_OpenOpportunities.Count() - 1; i >= 0; --i )
-			{
-				CBaseLesson *pLesson = m_OpenOpportunities[ i ];
-				pLesson->SwapOutPlayers( event->GetInt( "player" ), event->GetInt( "bot" ) );
-			}
-		}
-	}
-	else if ( Q_strcmp( name, "bot_player_replace" ) == 0 )
-	{
-		C_BasePlayer *pLocalPlayer = GetLocalPlayer();
-		if ( pLocalPlayer && pLocalPlayer == UTIL_PlayerByUserId( event->GetInt( "player" ) ) )
-		{
-			CloseAllOpenOpportunities();
-		}
-		else
-		{
-			for ( int i = m_OpenOpportunities.Count() - 1; i >= 0; --i )
-			{
-				CBaseLesson *pLesson = m_OpenOpportunities[ i ];
-				pLesson->SwapOutPlayers( event->GetInt( "bot" ), event->GetInt( "player" ) );
-			}
-		}
-	}
-#endif
 	else if ( Q_strcmp( name, "set_instructor_group_enabled" ) == 0 )
 	{
 		const char *pszGroup = event->GetString( "group" );
@@ -770,13 +717,6 @@ bool C_GameInstructor::ReadSaveData( void )
 		pLessonVersionNumber->SetSuccessCount( pLessonVersionNumber->GetSuccessLimit() );
 		KeyValueSaver().MarkKeyValuesDirty( GAMEINSTRUCTOR_SAVE_FILE );
 	}
-#ifdef TERROR
-	else if ( IsPressDemoMode() )
-	{
-		ResetDisplaysAndSuccesses();
-		KeyValueSaver().MarkKeyValuesDirty( GAMEINSTRUCTOR_SAVE_FILE );
-	}
-#endif
 
 	return true;
 }

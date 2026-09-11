@@ -9,9 +9,6 @@
 #if !defined ( GAMEEVENTMANAGER_H )
 #define GAMEEVENTMANAGER_H
 
-#ifdef _WIN32
-#pragma once
-#endif 
 
 #include <igameevents.h>
 #include <utlvector.h>

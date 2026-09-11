@@ -10,21 +10,7 @@
 
 #include "tier0/platform.h"
 
-#ifdef _WIN32
-#pragma once
-#endif
 
-#if defined( _WIN32 )
-	#include <io.h>
-	#include <direct.h>
-	#define WIN32_LEAN_AND_MEAN
-	#include <windows.h>
-	#define SUPPORT_VPK
-#undef GetCurrentDirectory
-#undef GetJob
-#undef AddJob
-
-#else
 	#include <unistd.h> // unlink
 	#include "linux_support.h"
 	#define INVALID_HANDLE_VALUE (void *)-1
@@ -37,7 +23,6 @@
 
 	#define SUPPORT_VPK
 
-#endif
 
 #include "tier0/threadtools.h"
 #include <stdio.h>
@@ -71,19 +56,10 @@
 
 #include "tier0/memdbgon.h"
 
-#ifdef _WIN32
-#define CORRECT_PATH_SEPARATOR '\\'
-#define INCORRECT_PATH_SEPARATOR '/'
-#else
 #define CORRECT_PATH_SEPARATOR '/'
 #define INCORRECT_PATH_SEPARATOR '\\'
-#endif
 
-#ifdef	_WIN32
-#define PATHSEPARATOR(c) ((c) == '\\' || (c) == '/')
-#else
 #define PATHSEPARATOR(c) ((c) == '/')
-#endif	//_WIN32
 
 #define MAX_FILEPATH 512
 

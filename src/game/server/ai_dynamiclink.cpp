@@ -332,15 +332,6 @@ void CAI_DynamicLink::PurgeDynamicLinks(void)
 		if (!pDynamicLink->IsLinkValid())
 		{
 			// Didn't find the link, so remove it
-#ifdef _WIN32
-			int nWCSrcID = g_pAINetworkManager->GetEditOps()->m_pNodeIndexTable[pDynamicLink->m_nSrcID];
-			int nWCDstID = g_pAINetworkManager->GetEditOps()->m_pNodeIndexTable[pDynamicLink->m_nDestID];
-			int	status	 = Editor_DeleteNodeLink(nWCSrcID, nWCDstID, false);
-			if (status == Editor_BadCommand)
-			{
-				DevMsg( "Worldcraft failed in PurgeDynamicLinks...\n" );
-			}
-#endif
 			// Safe to remove it here as this happens only after I leave this function
 			UTIL_Remove(pDynamicLink);
 		}

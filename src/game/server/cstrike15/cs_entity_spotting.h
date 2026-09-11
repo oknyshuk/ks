@@ -7,9 +7,6 @@
 
 #ifndef CS_ENTITY_SPOTTING_H
 #define CS_ENTITY_SPOTTING_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "igamesystem.h"
 

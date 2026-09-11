@@ -6,9 +6,6 @@
 
 #ifndef HLTVSERVER_H
 #define HLTVSERVER_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "baseserver.h"
 #include "hltvclient.h"

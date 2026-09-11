@@ -8,9 +8,6 @@
 
 #if !defined( CONCOMMANDHASH_H )
 #define CONCOMMANDHASH_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "utllinkedlist.h"
 #include "generichash.h"

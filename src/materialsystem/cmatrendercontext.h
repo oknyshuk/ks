@@ -7,9 +7,6 @@
 #ifndef CMATERIALRENDERSTATE_H
 #define CMATERIALRENDERSTATE_H
 
-#if defined( _WIN32 )
-#pragma once
-#endif
 
 #include "tier1/delegates.h"
 #include "tier1/utlstack.h"

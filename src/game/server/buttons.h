@@ -8,9 +8,6 @@
 #define BUTTONS_H
 
 #include "reflect_annotations.h"
-#ifdef _WIN32
-#pragma once
-#endif
 
 
 class [[= ks::reflect::NetTable{ .name = "DT_BaseButton" } ]]

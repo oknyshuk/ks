@@ -20,9 +20,7 @@ enum NormalDecodeMode_t
 //-----------------------------------------------------------------------------
 
 // don't bitch that inline functions aren't used!!!!
-#ifndef SPU
 #pragma warning(disable : 4514)
-#endif
 
 enum ImageFormat 
 {

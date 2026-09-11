@@ -9,9 +9,6 @@
 #ifndef TRANSITION_TABLE_H
 #define TRANSITION_TABLE_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "utlvector.h"
 #include "shadershadowdx8.h"

@@ -35,11 +35,7 @@ void BeginDMXContext( )
 
 	if ( !s_bAllocatorInitialized )
 	{
-#ifdef PLATFORM_64BITS
 		const int k_nStackSize = 4 * 1024 * 1024;
-#else
-		const int k_nStackSize = 2 * 1024 * 1024;
-#endif
 		s_DMXAllocator.Init( "DMXAlloc", k_nStackSize, 0, 0, 4 );
 		s_bAllocatorInitialized = true;
 	}
@@ -688,9 +684,6 @@ bool ReadDMXHeader( CUtlBuffer &buf, char *pEncodingName, int nEncodingNameLen, 
 	bool bOk = buf.ParseToken( DMX_VERSION_STARTING_TOKEN, DMX_VERSION_ENDING_TOKEN, header, sizeof( header ) );
 	if ( bOk )
 	{
-#ifdef _WIN32
-		int nAssigned = sscanf_s( header, "encoding %s %d format %s %d\n", pEncodingName, nEncodingNameLen, &nEncodingVersion, pFormatName, nFormatNameLen, &nFormatVersion );
-#else
 		// sscanf considered harmful. We don't have POSIX 2008 support on OS X and "C11 Annex K" is optional... (optional specs considered useful)
 		char pTmpEncodingName[ sizeof( header ) ] = { 0 };
 		char pTmpFormatName  [ sizeof( header ) ] = { 0 };
@@ -698,7 +691,6 @@ bool ReadDMXHeader( CUtlBuffer &buf, char *pEncodingName, int nEncodingNameLen, 
 		bOk = ( V_strlen( pTmpEncodingName ) < nEncodingNameLen ) && ( V_strlen( pTmpFormatName ) < nFormatNameLen );
 		V_strncpy( pEncodingName, pTmpEncodingName, nEncodingNameLen );
 		V_strncpy( pFormatName, pTmpFormatName, nFormatNameLen );
-#endif
 		bOk = bOk && ( nAssigned == 4 );
 		if ( bOk )
 		{

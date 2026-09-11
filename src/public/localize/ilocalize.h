@@ -8,9 +8,6 @@
 #ifndef ILOCALIZE_H
 #define ILOCALIZE_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "appframework/iappsystem.h"
 #include <tier1/keyvalues.h>

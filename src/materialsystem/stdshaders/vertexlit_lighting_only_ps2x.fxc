@@ -18,11 +18,6 @@ PixelShaderLightInfo cLightInfo[3]	: register(c13);
 sampler BumpmapSampler				: register( s0 );
 sampler NormalizeSampler			: register( s1 );
 
-#if defined( _PS3 )
-// Causes the Cg compiler to automatically produce _bx2 modifier on the texture load instead of producing a MAD to range expand the vector, saving one instruction.
-#pragma texsign BumpmapSampler
-#pragma texformat BumpmapSampler RGBA8
-#endif
 
 struct PS_INPUT
 {

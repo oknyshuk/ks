@@ -8,9 +8,6 @@
 // filter.h
 #if !defined( FILTER_H )
 #define FILTER_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "userid.h"
 

@@ -6,9 +6,6 @@
 
 #if !defined( STEAMWORKS_GAMESTATS_H )
 #define STEAMWORKS_GAMESTATS_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "igamesystem.h"
 #include "GameEventListener.h"

@@ -66,11 +66,7 @@
 #define SN_MAIN_OPT_ENABLE
 
 #ifdef __cplusplus
-#if defined( COMPILER_GCC )
 	#include <new>
-#else
-	#include <new.h>
-#endif
 #endif
 
 //-----------------------------------------------------------------------------
@@ -84,27 +80,16 @@
 
 #define OVERRIDE override
 
-#if _MSC_VER >= 1800
-#define	VECTORCALL __vectorcall 
-#else 
 #define	VECTORCALL 
-#endif
 
 
 // C functions for external declarations that call the appropriate C++ methods
 #ifndef EXPORT
-	#ifdef _WIN32
-		#define EXPORT	_declspec( dllexport )
-	#else
 		#define EXPORT	/* */
-	#endif
 #endif
 
 #endif // CROSS_PLATFORM_VERSION < 1
 
-#if defined(_STATIC_LINKED)
-#include "staticlink/system.h"
-#endif
 
 //-----------------------------------------------------------------------------
 // NOTE: All compiler defines are set up in the base VPC scripts
@@ -119,27 +104,6 @@
 //-----------------------------------------------------------------------------
 // Set up platform defines.
 //-----------------------------------------------------------------------------
-#ifdef _WIN32
-	#define IsPlatformLinux()	0
-	#define IsPlatformPosix()	0
-	#define IsPlatformOSX()		0
-	#define IsOSXOpenGL()		0
-	#define PLATFORM_WINDOWS	1
-	#define PLATFORM_OPENGL 0
-	#define IsPlatformWindowsPC() 1
-	#define PLATFORM_WINDOWS_PC 1
-
-	#ifdef _WIN64
-		#define IsPlatformWindowsPC64() 1
-		#define IsPlatformWindowsPC32() 0
-		#define PLATFORM_WINDOWS_PC64 1
-	#else
-		#define IsPlatformWindowsPC64() 0
-		#define IsPlatformWindowsPC32() 1
-		#define PLATFORM_WINDOWS_PC32 1
-	#endif
-
-#else
 	#define IsPlatformWindowsPC()	0
 	#define IsPlatformWindowsPC64()	0
 	#define IsPlatformWindowsPC32()	0
@@ -152,14 +116,9 @@
 		#define PLATFORM_OPENGL 0
 		#define PLATFORM_LINUX 1
 
-#endif
 
 // IsXXXX platform pseudo-functions
-#if ( defined( PLATFORM_WINDOWS ) && ( PLATFORM_WINDOWS ) )
-#define IsPlatformWindows() 1
-#else
 #define IsPlatformWindows() 0
-#endif
 
 
 
@@ -173,21 +132,10 @@
 #define IsPosix()	IsPlatformPosix()
 
 // Setup platform defines.
-#ifdef COMPILER_MSVC
-#define MSVC 1
-#endif
 
-#ifdef COMPILER_GCC
 #define GNUC 1
-#endif
 
-#if defined( _WIN32 )
-#define _WINDOWS 1
-#endif
 
-#ifdef PLATFORM_WINDOWS_PC
-#define IS_WINDOWS_PC 1
-#endif
 
 #endif // CROSS_PLATFORM_VERSION < 2
 
@@ -212,28 +160,6 @@
 typedef unsigned char				uint8;
 typedef signed char					int8;
 
-#if defined( COMPILER_MSVC )
-
-	typedef __int16					int16;
-	typedef unsigned __int16		uint16;
-	typedef __int32					int32;
-	typedef unsigned __int32		uint32;
-	typedef __int64					int64;
-	typedef unsigned __int64		uint64;
-
-	// intp is an integer that can accomodate a pointer
-	// (ie, sizeof(intp) >= sizeof(int) && sizeof(intp) >= sizeof(void *)
-	typedef intptr_t				intp;
-	typedef uintptr_t				uintp;
-
-	// Use this to specify that a function is an override of a virtual function.
-	// This lets the compiler catch cases where you meant to override a virtual
-	// function but you accidentally changed the function signature and created
-	// an overloaded function. Usage in function declarations is like this:
-	// int GetData() const OVERRIDE;
-	#define OVERRIDE override
-
-#else // !COMPILER_MSVC
 
 	typedef short					int16;
 	typedef unsigned short			uint16;
@@ -257,7 +183,6 @@ typedef signed char					int8;
 	#ifndef OVERRIDE // suppress redifinition warning (because we don't have CROSS_PLATFORM_VERSION defined)
 		#define OVERRIDE
 	#endif
-#endif // else COMPILER_MSVC
 
 
 
@@ -267,13 +192,11 @@ typedef double				float64;
 // for when we don't care about how many bits we use
 typedef unsigned int		uint;
 
-#ifdef PLATFORM_POSIX
 typedef unsigned int DWORD;
 typedef unsigned int *LPDWORD;
 typedef unsigned short WORD;
 typedef void * HINSTANCE;
 #define _MAX_PATH PATH_MAX
-#endif
 
 // MSVC CRT uses 0x7fff while gcc uses MAX_INT, leading to mismatches between platforms
 // As a result, we pick the least common denominator here.  This should be used anywhere
@@ -281,45 +204,6 @@ typedef void * HINSTANCE;
 #define VALVE_RAND_MAX 0x7fff
 
 // Maximum and minimum representable values
-#ifdef COMPILER_MSVC
-
-#if _MSC_VER >= 1800 // VS 2013 or higher
-	// Copied from stdint.h
-	#define INT8_MIN         (-127i8 - 1)
-	#define INT16_MIN        (-32767i16 - 1)
-	#define INT32_MIN        (-2147483647i32 - 1)
-	#define INT64_MIN        (-9223372036854775807i64 - 1)
-	#define INT8_MAX         127i8
-	#define INT16_MAX        32767i16
-	#define INT32_MAX        2147483647i32
-	#define INT64_MAX        9223372036854775807i64
-	#define UINT8_MAX        0xffui8
-	#define UINT16_MAX       0xffffui16
-	#define UINT32_MAX       0xffffffffui32
-	#define UINT64_MAX       0xffffffffffffffffui64
-#else // _MSC_VER
-	#define  INT8_MAX			SCHAR_MAX
-	#define  INT16_MAX			SHRT_MAX
-	#define  INT32_MAX			LONG_MAX
-	#define  INT64_MAX			((int64)0x7fffffffffffffffll)
-
-	#define  INT8_MIN			SCHAR_MIN
-	#define  INT16_MIN			SHRT_MIN
-	#define  INT32_MIN			LONG_MIN
-	#define  INT64_MIN			(((int64)1) << 63)
-
-	#define  UINT8_MAX			((uint8)~0)
-	#define  UINT16_MAX			((uint16)~0)
-	#define  UINT32_MAX			((uint32)~0)
-	#define  UINT64_MAX			((uint64)~0)
-#endif
-
-#define  UINT8_MIN			0
-#define  UINT16_MIN			0
-#define  UINT32_MIN			0
-#define  UINT64_MIN			0
-
-#endif // public/tier0/platform.h
 
 #ifndef  UINT_MIN
 #define  UINT_MIN			UINT32_MIN
@@ -348,75 +232,6 @@ typedef void * HINSTANCE;
 //-----------------------------------------------------------------------------
 // Various compiler-specific keywords
 //-----------------------------------------------------------------------------
-#ifdef COMPILER_MSVC
-
-	#ifdef FORCEINLINE
-		#undef FORCEINLINE
-	#endif
-	#define STDCALL					__stdcall
-	#ifndef FASTCALL
-		#define  FASTCALL			__fastcall
-	#endif
-	#define FORCEINLINE				__forceinline
-	#define FORCEINLINE_TEMPLATE	__forceinline
-	#define NULLTERMINATED			__nullterminated
-
-	// This can be used to ensure the size of pointers to members when declaring
-	// a pointer type for a class that has only been forward declared
-	#define SINGLE_INHERITANCE		__single_inheritance
-	#define MULTIPLE_INHERITANCE	__multiple_inheritance
-	#define EXPLICIT				explicit
-	#define NO_VTABLE				__declspec( novtable )
-
-	// gcc doesn't allow storage specifiers on explicit template instatiation, but visual studio needs them to avoid link errors.
-	#define TEMPLATE_STATIC			static
-
-	// Used for dll exporting and importing
-	#define DLL_EXPORT				extern "C" __declspec( dllexport )
-	#define DLL_IMPORT				extern "C" __declspec( dllimport )
-
-	// Can't use extern "C" when DLL exporting a class
-	#define DLL_CLASS_EXPORT		__declspec( dllexport )
-	#define DLL_CLASS_IMPORT		__declspec( dllimport )
-
-	// Can't use extern "C" when DLL exporting a global
-	#define DLL_GLOBAL_EXPORT		extern __declspec( dllexport )
-	#define DLL_GLOBAL_IMPORT		extern __declspec( dllimport )
-
-	// Pass hints to the compiler to prevent it from generating unnessecary / stupid code
-	// in certain situations.  Several compilers other than MSVC also have an equivilent
-	// construct.
-	//
-	// Essentially the 'Hint' is that the condition specified is assumed to be true at
-	// that point in the compilation.  If '0' is passed, then the compiler assumes that
-	// any subsequent code in the same 'basic block' is unreachable, and thus usually
-	// removed.
-	#define HINT(THE_HINT)			__assume((THE_HINT))
-
-	// decls for aligning data
-	#define DECL_ALIGN(x)			__declspec( align( x ) )
-
-	// GCC had a few areas where it didn't construct objects in the same order 
-	// that Windows does. So when CVProfile::CVProfile() would access g_pMemAlloc,
-	// it would crash because the allocator wasn't initalized yet.
-	#define CONSTRUCT_EARLY
-
-	#define SELECTANY				__declspec(selectany)
-
-	#define RESTRICT				__restrict
-	#define RESTRICT_FUNC			__declspec(restrict)
-	#define FMTFUNCTION( a, b )
-	#define NOINLINE
-
-#if !defined( NO_THREAD_LOCAL )
-	#define DECL_THREAD_LOCAL		__declspec(thread)
-#endif 
-
-	#define DISABLE_VC_WARNING( x ) __pragma(warning(disable:4310) )
-	#define DEFAULT_VC_WARNING( x ) __pragma(warning(default:4310) )
-
-
-#elif defined ( COMPILER_GCC )
 
 	#define  STDCALL
 	#define  __stdcall
@@ -457,13 +272,7 @@ typedef void * HINSTANCE;
 	#define DECL_ALIGN(x)			__attribute__( ( aligned( x ) ) )
 	#define CONSTRUCT_EARLY			__attribute__((init_priority(101)))
 	#define SELECTANY				__attribute__((weak))
-#if defined(__clang__)
-	// [will] - clang is very strict about restrict, and we have a bunch of core functions that use the keyword which have issues with it.
-	// This seemed to be a cleaner solution for now so we don't have to fill core code with tons of #ifdefs.
-	#define RESTRICT
-#else
 	#define RESTRICT				__restrict__
-#endif
 	#define RESTRICT_FUNC			RESTRICT_FUNC_NOT_YET_DEFINED_FOR_THIS_COMPILER
 	#define FMTFUNCTION( fmtargnumber, firstvarargnumber ) __attribute__ (( format( printf, fmtargnumber, firstvarargnumber )))
 	#define NOINLINE				__attribute__ ((noinline))
@@ -475,14 +284,7 @@ typedef void * HINSTANCE;
 	#define DISABLE_VC_WARNING( x )
 	#define DEFAULT_VC_WARNING( x )
 
-#else
 
-	#define DECL_ALIGN(x)			/* */
-	#define SELECTANY				static
-
-#endif
-
-#if defined( GNUC )
 // gnuc has the align decoration at the end
 #define ALIGN4
 #define ALIGN8
@@ -496,20 +298,6 @@ typedef void * HINSTANCE;
 #define ALIGN16_POST DECL_ALIGN(16)
 #define ALIGN32_POST DECL_ALIGN(32)
 #define ALIGN128_POST DECL_ALIGN(128)
-#else
-// MSVC has the align at the start of the struct
-#define ALIGN4 DECL_ALIGN(4)
-#define ALIGN8 DECL_ALIGN(8)
-#define ALIGN16 DECL_ALIGN(16)
-#define ALIGN32 DECL_ALIGN(32)
-#define ALIGN128 DECL_ALIGN(128)
-
-#define ALIGN4_POST
-#define ALIGN8_POST
-#define ALIGN16_POST
-#define ALIGN32_POST
-#define ALIGN128_POST
-#endif
 
 
 //-----------------------------------------------------------------------------
@@ -545,11 +333,6 @@ typedef void * HINSTANCE;
 // Why do we need this? It would be nice to make it die die die
 //-----------------------------------------------------------------------------
 // Alloca defined for this platform
-#if defined( COMPILER_MSVC ) && !defined( WINDED )
-	#if defined(_M_IX86)
-		#define __i386__	1
-	#endif
-#endif
 
 #if defined __i386__ && !defined __linux__
 	#define id386	1
@@ -561,45 +344,6 @@ typedef void * HINSTANCE;
 //-----------------------------------------------------------------------------
 // Disable annoying unhelpful warnings
 //-----------------------------------------------------------------------------
-#ifdef COMPILER_MSVC
-// Remove warnings from warning level 4.
-#pragma warning(disable : 4514) // warning C4514: 'acosl' : unreferenced inline function has been removed
-#pragma warning(disable : 4100) // warning C4100: 'hwnd' : unreferenced formal parameter
-#pragma warning(disable : 4127) // warning C4127: conditional expression is constant
-#pragma warning(disable : 4512) // warning C4512: 'InFileRIFF' : assignment operator could not be generated
-#pragma warning(disable : 4611) // warning C4611: interaction between '_setjmp' and C++ object destruction is non-portable
-#pragma warning(disable : 4710) // warning C4710: function 'x' not inlined
-#pragma warning(disable : 4702) // warning C4702: unreachable code
-#pragma warning(disable : 4505) // unreferenced local function has been removed
-#pragma warning(disable : 4239) // nonstandard extension used : 'argument' ( conversion from class Vector to class Vector& )
-#pragma warning(disable : 4097) // typedef-name 'BaseClass' used as synonym for class-name 'CFlexCycler::CBaseFlex'
-#pragma warning(disable : 4324) // Padding was added at the end of a structure
-#pragma warning(disable : 4244) // type conversion warning.
-#pragma warning(disable : 4305)	// truncation from 'const double ' to 'float '
-#pragma warning(disable : 4786)	// Disable warnings about long symbol names
-#pragma warning(disable : 4250) // 'X' : inherits 'Y::Z' via dominance
-#pragma warning(disable : 4201) // nonstandard extension used : nameless struct/union
-#pragma warning(disable : 4481) // warning C4481: nonstandard extension used: override specifier 'override'
-
-#if _MSC_VER >= 1300
-#pragma warning(disable : 4511)	// Disable warnings about private copy constructors
-#pragma warning(disable : 4121)	// warning C4121: 'symbol' : alignment of a member was sensitive to packing
-#pragma warning(disable : 4530)	// warning C4530: C++ exception handler used, but unwind semantics are not enabled. Specify /EHsc (disabled due to std headers having exception syntax)
-#endif
-
-#if _MSC_VER >= 1400
-#pragma warning(disable : 4996)	// functions declared deprecated
-#endif
-
-// When we port to 64 bit, we'll have to resolve the int, ptr vs size_t 32/64 bit problems...
-#if !defined( COMPILER_MSVC64 )
-#if ( CROSS_PLATFORM_VERSION < 1 )
-#pragma warning( disable : 4267 )	// conversion from 'size_t' to 'int', possible loss of data
-#pragma warning( disable : 4311 )	// pointer truncation from 'char *' to 'int'
-#pragma warning( disable : 4312 )	// conversion from 'unsigned int' to 'memhandle_t' of greater size
-#endif
-#endif
-#endif
 // Pull in the /analyze code annotations.
 #include "annotations.h"
 
@@ -617,18 +361,11 @@ typedef void * HINSTANCE;
 //-----------------------------------------------------------------------------
 // Stack-based allocation related helpers
 //-----------------------------------------------------------------------------
-#if defined( COMPILER_GCC )
 
 	#define stackalloc( _size )		alloca( ALIGN_VALUE( _size, 16 ) )
 
 		#define mallocsize( _p )	( malloc_usable_size( _p ) )
 
-#elif defined ( COMPILER_MSVC )
-
-	#define stackalloc( _size )		_alloca( ALIGN_VALUE( _size, 16 ) )
-	#define mallocsize( _p )		( _msize( _p ) )
-
-#endif
 
 #define stackalloc_aligned( _size, _align )		(void*)( ( ((uintp)alloca( ALIGN_VALUE( ( _size ) + (_align ),  ( _align ) ) )) + ( _align ) ) & ~_align )
 
@@ -642,15 +379,7 @@ typedef void * HINSTANCE;
 //-----------------------------------------------------------------------------
 // Used to break into the debugger
 //-----------------------------------------------------------------------------
-#ifdef COMPILER_MSVC64
-	#define DebuggerBreak()		__debugbreak()
-#elif COMPILER_GCC
-		#if   defined( PLATFORM_CYGWIN ) || defined( PLATFORM_POSIX )
 			#define DebuggerBreak()		__asm__( "int $0x3;")
-		#endif
-#else
-#error DebuggerBreak() is not defined for this platform!
-#endif
 
 FORCEINLINE float fsel(float fComparand, float fValGE, float fLT)
 {
@@ -687,11 +416,7 @@ FORCEINLINE double fsel(double fComparand, double fValGE, double fLT)
 //-----------------------------------------------------------------------------
 // Returns true if debugger attached, false otherwise
 //-----------------------------------------------------------------------------
-#if defined( PLATFORM_WINDOWS )
-PLATFORM_INTERFACE void Plat_DebugString( const tchar * );
-#else
 #define Plat_DebugString(s) ((void)0)
-#endif
 
 PLATFORM_INTERFACE bool Plat_IsInDebugSession();
 
@@ -700,17 +425,12 @@ PLATFORM_INTERFACE bool Plat_IsInDebugSession();
 //-----------------------------------------------------------------------------
 // Message Box
 //-----------------------------------------------------------------------------
-#if defined( PLATFORM_WINDOWS_PC )
-PLATFORM_INTERFACE void Plat_MessageBox( const char *pTitle, const tchar *pMessage );
-#else
 #define Plat_MessageBox( t, m ) ((void)0)
-#endif
 
 
 //-----------------------------------------------------------------------------
 // Posix platform helpers
 //-----------------------------------------------------------------------------
-#ifdef PLATFORM_POSIX
 
 // Visual Studio likes to put an underscore in front of anything that looks like a portable function.
 #define _strupr strupr
@@ -763,14 +483,7 @@ typedef void *HANDLE;
 #include <errno.h>
 
 
-#endif // PLATFORM_POSIX
 
-#ifdef PLATFORM_WINDOWS
-#ifndef SOCKLEN_T
-#define SOCKLEN_T
-typedef int socklen_t;
-#endif
-#endif
 
 //-----------------------------------------------------------------------------
 // Generally useful platform-independent macros (move to another file?)
@@ -797,11 +510,7 @@ typedef int socklen_t;
 	#define MAX_PATH  260
 #endif
 
-#ifdef _WIN32
-#define MAX_UNICODE_PATH 32767
-#else
 #define MAX_UNICODE_PATH MAX_PATH
-#endif
 
 #define MAX_UNICODE_PATH_IN_UTF8 MAX_UNICODE_PATH*4
 
@@ -810,13 +519,6 @@ typedef int socklen_t;
 //-----------------------------------------------------------------------------
 //#define CHECK_FLOAT_EXCEPTIONS		1
 
-#if defined( COMPILER_MSVC64 )
-
-	inline void SetupFPUControlWord()
-	{
-	}
-
-#elif defined ( COMPILER_GCC )
 
 	inline void SetupFPUControlWord()
 	{
@@ -827,7 +529,6 @@ typedef int socklen_t;
 		__asm __volatile ("fldcw %0" : : "m" (__cw));
 	}
 
-#endif
 
 //-----------------------------------------------------------------------------
 // Portability casting
@@ -1094,23 +795,10 @@ PLATFORM_INTERFACE size_t Plat_FileSize(const char *pFileName);
 PLATFORM_INTERFACE bool Plat_IsDirectory(const char *pFilepath);
 PLATFORM_INTERFACE bool Plat_FileIsReadOnly(const char *pFileName);
 
-#if   defined( _WIN32 ) && defined( _MSC_VER ) && ( _MSC_VER >= 1400 )
-extern "C" unsigned __int64 __rdtsc();
-#pragma intrinsic(__rdtsc)
-#endif
 
 inline uint64 Plat_Rdtsc()
 {
-#if   defined( _WIN64 )
-	return ( uint64 )__rdtsc();
-#elif defined( _WIN32 )
-#if defined( _MSC_VER ) && ( _MSC_VER >= 1400 )
-	return ( uint64 )__rdtsc();
-#else
-	__asm rdtsc;
-	__asm ret;
-#endif
-#elif defined( __i386__ )
+#if   defined( __i386__ )
 	uint64 val;
 	__asm__ __volatile__ ( "rdtsc" : "=A" (val) );
 	return val;
@@ -1685,7 +1373,6 @@ int	_V_stricmp_NegativeForUnequal	  ( const char *s1, const char *s2 );
 //  - AND:			has same alignment as T
 // [ Thanks to CygnusX1: http://stackoverflow.com/questions/5134217/aligning-data-on-the-stack-c ]
 
-#if defined( GNUC )
 // gnuc has the align decoration at the end
 #define ALIGN4
 #define ALIGN8 
@@ -1701,33 +1388,12 @@ int	_V_stricmp_NegativeForUnequal	  ( const char *s1, const char *s2 );
 #define ALIGN32_POST DECL_ALIGN(32)
 #define ALIGN128_POST DECL_ALIGN(128)
 #define ALIGN_N_POST( _align_ ) DECL_ALIGN( _align_ )
-#else
-// MSVC has the align at the start of the struct
-// PS3 SNC supports both
-#define ALIGN4 DECL_ALIGN(4)
-#define ALIGN8 DECL_ALIGN(8)
-#define ALIGN16 DECL_ALIGN(16)
-#define ALIGN32 DECL_ALIGN(32)
-#define ALIGN128 DECL_ALIGN(128)
-#define ALIGN_N( _align_ ) DECL_ALIGN( _align_ )
-
-#define ALIGN4_POST
-#define ALIGN8_POST
-#define ALIGN16_POST
-#define ALIGN32_POST
-#define ALIGN128_POST
-#define ALIGN_N_POST( _align_ )
-#endif
 
 // !!! NOTE: if you get a compile error here, you are using VALIGNOF on an abstract type :NOTE !!!
 #define VALIGNOF_PORTABLE( type ) ( sizeof( AlignOf_t<type> ) - sizeof( type ) )
 
-#if defined( COMPILER_GCC ) || defined( COMPILER_MSVC )
 #define VALIGNOF( type ) __alignof( type )
 #define VALIGNOF_TEMPLATE_SAFE( type ) VALIGNOF_PORTABLE( type )
-#else
-#error "PORT: Code only tested with MSVC! Must validate with new compiler, and use built-in keyword if available."
-#endif
 
 // Use ValidateAlignment to sanity-check alignment usage when allocating arrays of an aligned type
 #define ALIGN_ASSERT( pred ) { COMPILE_TIME_ASSERT( pred ); }

@@ -8,9 +8,6 @@
 #ifndef SND_MIX_BUF_H
 #define SND_MIX_BUF_H
 
-#if defined( _WIN32 )
-#pragma once
-#endif
 
 // OPTIMIZE: note that making this larger will not increase performance (12/27/03)
 #define	PAINTBUFFER_SIZE		1020	// 44k: was 512

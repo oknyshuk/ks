@@ -6,10 +6,6 @@
 // $Date:         $
 // $NoKeywords: $
 //===========================================================================//
-#if defined( WIN32 )
-#define _WIN32_WINNT 0x0502
-#include <windows.h>
-#endif
 #include "hud.h"
 #include "rocketui/rocketui.h"
 #include "cdll_int.h"
@@ -40,9 +36,6 @@ extern ConVar cl_pitchdown;
 extern ConVar cl_pitchup;
 extern const ConVar *sv_cheats;
 
-#if defined PORTAL
-ConVar cl_mouselook_roll_compensation( "cl_mouselook_roll_compensation", "1", 0, "In Portal and Paint, if your view is being rolled, compensate for that. So mouse movements are always relative to the screen." );
-#endif
 
 
 class ConVar_m_pitch : public ConVar_ServerBounded
@@ -134,9 +127,6 @@ void CInput::ActivateMouse (void)
 	{
 		if ( m_fMouseParmsValid )
 		{
-#if defined( WIN32 ) && !defined( USE_SDL )
-			m_fRestoreSPI = SystemParametersInfo (SPI_SETMOUSE, 0, m_rgNewMouseParms, 0) ? true : false;
-#endif
 		}
 		m_fMouseActive = true;
 
@@ -147,10 +137,8 @@ void CInput::ActivateMouse (void)
 			g_pInputSystem->ResetCursorIcon();
 
 		g_pInputStackSystem->SetCursorIcon( m_hInputContext, INPUT_CURSOR_HANDLE_INVALID );
-#if defined( USE_SDL ) || defined( OSX )
         float dx, dy;
 		engine->GetMouseDelta( dx, dy, true );
-#endif
 		ClearStates();
 	}
 }
@@ -169,16 +157,11 @@ void CInput::DeactivateMouse (void)
 	{
 		if ( m_fRestoreSPI )
 		{
-#if defined( WIN32 ) && !defined( USE_SDL )
-			SystemParametersInfo( SPI_SETMOUSE, 0, m_rgOrigMouseParms, 0 );
-#endif
 		}
 		m_fMouseActive = false;
 		g_pInputStackSystem->SetCursorIcon( m_hInputContext, g_pInputSystem->GetStandardCursor( INPUT_CURSOR_ARROW ) );
-#if defined( USE_SDL ) || defined( OSX )
         // now put the mouse back in the middle of the screen
 		ResetMouse();
-#endif
 
 		// Clear accumulated error, too
 		for ( int hh = 0; hh < MAX_SPLITSCREEN_PLAYERS; ++hh )
@@ -247,9 +230,6 @@ void CInput::CheckMouseAcclerationVars()
 	if ( dirty )
 	{
 		// Update them
-#ifdef WIN32
-		m_fRestoreSPI = SystemParametersInfo( SPI_SETMOUSE, 0, m_rgNewMouseParms, 0 ) ? true : false;
-#endif
 	}
 }
 
@@ -267,11 +247,7 @@ void CInput::Init_Mouse (void)
 
 	if ( CommandLine()->FindParm ("-useforcedmparms" ) ) 
 	{
-#ifdef WIN32
-		m_fMouseParmsValid = SystemParametersInfo( SPI_GETMOUSE, 0, m_rgOrigMouseParms, 0 ) ? true : false;
-#else
 		m_fMouseParmsValid = false;
-#endif
 		if ( m_fMouseParmsValid )
 		{
 			if ( CommandLine()->FindParm ("-noforcemspd" ) ) 
@@ -454,16 +430,6 @@ void CInput::ApplyMouse( int nSlot, QAngle& viewangles, CUserCmd *cmd, float mou
 	//roll the view angles so roll is 0 (the HL2 assumed state) and mouse adjustments are relative to the screen.
 	//Assuming roll is unchanging, we want mouse left to translate to screen left at all times (same for right, up, and down)
 	
-#if defined PORTAL //Portal sometimes rolls the player and we want a understandable way of aiming. 
-	//we want mouse left to translate to screen left at all times (same for right, up, and down)
-	//So we'll be transforming mouse inputs by the roll value
-	Quaternion quatRoll;
-	Quaternion quatInverseRoll;
-	QAngle roll( 0.0f, 0.0f, viewangles[ ROLL ] );
-	QAngle invroll( 0.0f, 0.0f, -viewangles[ ROLL ] );
-	AngleQuaternion( roll, quatRoll );
-	AngleQuaternion( invroll, quatInverseRoll );
-#endif	
 
 	if ( !((in_strafe.GetPerUser( nSlot ).state & 1) || lookstrafe.GetInt()) )
 	{
@@ -483,25 +449,6 @@ void CInput::ApplyMouse( int nSlot, QAngle& viewangles, CUserCmd *cmd, float mou
 		{
 			// Otherwize, use mouse to spin around vertical axis
 
-#if defined PORTAL
-			if( cl_mouselook_roll_compensation.GetBool() ) //for portal, remap yaw/pitch adjustments to be relative to your current view roll so left/right on the mouse is left/right on the screen
-			{
-				QAngle qAngleTemp( 0.0f, -(m_yaw.GetFloat() * mouse_x), 0.0f );			
-
-				Quaternion quatTemp;
-				AngleQuaternion( qAngleTemp, quatTemp );
-
-				Quaternion qRollUndone[2];
-				QuaternionMult( quatTemp, quatInverseRoll, qRollUndone[0] );
-				QuaternionMult( quatRoll, qRollUndone[0], qRollUndone[1] );
-				QuaternionAngles( qRollUndone[1], qAngleTemp );
-
-				viewangles[0] += qAngleTemp[0];
-				viewangles[1] += qAngleTemp[1];
-				viewangles[2] += qAngleTemp[2];
-			}
-			else
-#endif
 			{
 				viewangles[YAW] -= m_yaw.GetFloat() * mouse_x;
 			}
@@ -532,25 +479,6 @@ void CInput::ApplyMouse( int nSlot, QAngle& viewangles, CUserCmd *cmd, float mou
 		}
 		else
 		{
-#if defined PORTAL
-			if( cl_mouselook_roll_compensation.GetBool() ) //for portal, remap yaw/pitch adjustments to be relative to your current view roll so left/right on the mouse is left/right on the screen
-			{
-				QAngle qAngleTemp( m_pitch->GetFloat() * mouse_y, 0.0f, 0.0f );
-
-				Quaternion quatTemp;
-				AngleQuaternion( qAngleTemp, quatTemp );
-
-				Quaternion qRollUndone[2];
-				QuaternionMult( quatTemp, quatInverseRoll, qRollUndone[0] );
-				QuaternionMult( quatRoll, qRollUndone[0], qRollUndone[1] );
-				QuaternionAngles( qRollUndone[1], qAngleTemp );
-
-				viewangles[0] += qAngleTemp[0];
-				viewangles[1] += qAngleTemp[1];
-				viewangles[2] += qAngleTemp[2];
-			}
-			else
-#endif
 			{
 				viewangles[PITCH] += m_pitch->GetFloat() * mouse_y;
 			}
@@ -714,10 +642,8 @@ void CInput::GetFullscreenMousePos( int *mx, int *my, int *unclampedx /*=NULL*/,
 	Assert( mx );
 	Assert( my );
 
-#if !(INFESTED_DLL) && !(DOTA_CLIENT_DLL)
 	if ( g_pInputStackSystem->IsTopmostEnabledContext( m_hInputContext ) )
 		return;
-#endif
 
 	int x, y;
 	GetWindowCenter( x,  y );

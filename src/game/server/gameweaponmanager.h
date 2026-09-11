@@ -9,9 +9,6 @@
 
 #include "reflect_annotations.h"
 
-#if defined( _WIN32 )
-#pragma once
-#endif
 
 void CreateWeaponManager( const char *pWeaponName, int iMaxPieces );
 

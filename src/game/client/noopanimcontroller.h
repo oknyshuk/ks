@@ -1,8 +1,5 @@
 #ifndef NOOPANIMCONTROLLER_H
 #define NOOPANIMCONTROLLER_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 class CNoopAnimController
 {

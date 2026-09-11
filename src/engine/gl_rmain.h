@@ -8,9 +8,6 @@
 #ifndef GL_RMAIN_H
 #define GL_RMAIN_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 
 #include "mathlib/vector.h"

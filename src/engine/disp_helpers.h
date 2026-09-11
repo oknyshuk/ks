@@ -7,9 +7,6 @@
 
 #ifndef DISPINFO_HELPERS_H
 #define DISPINFO_HELPERS_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 
 #include "disp_defs.h"

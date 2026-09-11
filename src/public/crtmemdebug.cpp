@@ -11,7 +11,6 @@
 // $NoKeywords: $
 //=============================================================================//
 
-#if !defined(_STATIC_LINKED) || defined(_SHARED_LIB)
 
 #include "crtmemdebug.h"
 #ifdef USECRTMEMDEBUG
@@ -41,4 +40,3 @@ void InitCRTMemDebug( void )
 #endif
 }
 
-#endif // !_STATIC_LINKED || _SHARED_LIB

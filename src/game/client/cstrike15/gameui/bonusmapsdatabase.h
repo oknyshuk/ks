@@ -7,9 +7,6 @@
 
 #ifndef BONUSMAPSDATABASE_H
 #define BONUSMAPSDATABASE_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 
 #include "utlvector.h"

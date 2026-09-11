@@ -6,9 +6,6 @@
 
 #ifndef ISTEAMHTTP_H
 #define ISTEAMHTTP_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "isteamclient.h"
 #include "steamhttpenums.h"

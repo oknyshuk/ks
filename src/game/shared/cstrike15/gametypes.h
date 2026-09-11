@@ -8,9 +8,6 @@
 #ifndef GAME_TYPES_H
 #define GAME_TYPES_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "gametypes/igametypes.h"
 #include "tier1/keyvalues.h"

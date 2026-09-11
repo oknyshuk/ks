@@ -114,12 +114,6 @@ bool CAI_Pathfinder::UseStrongOptimizations()
 		return false;
 	}
 
-#ifdef HL2_DLL
-	if( GetOuter()->Classify() == CLASS_PLAYER_ALLY_VITAL )
-	{
-		return false;
-	}
-#endif//HL2_DLL
 	return true;
 }
 
@@ -1952,9 +1946,6 @@ AI_Waypoint_t *CAI_Pathfinder::BuildNodeRoute(const Vector &vStart, const Vector
 //-----------------------------------------------------------------------------
 // Test the triangulation route...
 //-----------------------------------------------------------------------------
-#ifdef _WIN32
-#pragma warning (disable:4701)
-#endif
 
 bool CAI_Pathfinder::TestTriangulationRoute( Navigation_t navType, const Vector& vecStart, 
 	const Vector &vecApex, const Vector &vecEnd, const CBaseEntity *pTargetEnt, AIMoveTrace_t *pStartTrace )
@@ -1985,9 +1976,6 @@ bool CAI_Pathfinder::TestTriangulationRoute( Navigation_t navType, const Vector&
 	return bPathClear;
 }
 
-#ifdef _WIN32
-#pragma warning (default:4701)
-#endif
 
 
 //-----------------------------------------------------------------------------

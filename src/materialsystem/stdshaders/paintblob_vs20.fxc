@@ -92,11 +92,6 @@ VS_OUTPUT main( const VS_INPUT i )
 	o.vWorldNormal.w = vProjPosition.z;
 	o.vWorldPos.w    = vProjPosition.w;
 
-#ifdef _PS3
-	// Account for OpenGL's flipped y coordinate and expanded z range [-1,1] instead of [0,1]
-	o.vProjPosition.y = -o.vProjPosition.y;
-	o.vProjPosition.z = 2.0f * o.vProjPosition.z - o.vProjPosition.w;
-#endif // _PS3
 
 	// Seamless texturing UV projections
 	float3 vUVSpacePos = vWorldPosition.xyz - g_vUVProjOffset.xyz;

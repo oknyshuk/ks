@@ -10,9 +10,6 @@
 //=============================================================================
 #if !defined CS_PLAYER_RANK_MGR_H
 #define CS_PLAYER_RANK_MGR_H
-#if defined( COMPILER_MSVC )
-#pragma once
-#endif
 
 #include "matchmaking/imatchframework.h"
 #include "GameEventListener.h"

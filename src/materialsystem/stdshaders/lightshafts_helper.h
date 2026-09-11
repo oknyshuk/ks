@@ -2,9 +2,6 @@
 
 #ifndef LIGHT_SHAFTS_HELPER_H
 #define LIGHT_SHAFTS_HELPER_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include <string.h>
 

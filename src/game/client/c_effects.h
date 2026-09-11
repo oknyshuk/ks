@@ -8,9 +8,6 @@
 #define C_EFFECTS_H
 
 #include "reflect_annotations.h"
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "cbase.h"
 #include "precipitation_shared.h"
@@ -161,9 +158,6 @@ private:
 
 	float			m_flDensity;
 
-#ifdef INFESTED_DLL
-	int m_nSnowDustAmount;
-#endif
 
 	// Some state used in rendering and simulation
 	// Used to modify the rain density and wind from the console

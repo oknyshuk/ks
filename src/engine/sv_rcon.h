@@ -6,9 +6,6 @@
 #ifndef SV_RCON_H
 #define SV_RCON_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "sv_main.h"
 #include "netmessages.h"

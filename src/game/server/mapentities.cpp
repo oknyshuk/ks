@@ -18,10 +18,8 @@
 #include "datacache/imdlcache.h"
 #include "world.h"
 #include "toolframework/iserverenginetools.h"
-#if defined( CSTRIKE15 )
 #include "cs_gamerules.h"
 #include "weapon_csbase.h"
-#endif
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -30,9 +28,7 @@
 static CStringRegistry *g_pClassnameSpawnPriority = NULL;
 extern edict_t *g_pForceAttachEdict;
 
-#if defined( CSTRIKE15 )
 extern ConVar mp_weapons_allow_map_placed;
-#endif
 
 // creates an entity by string name, but does not spawn it
 CBaseEntity *CreateEntityByName( const char *className, int iForceEdictIndex, bool bNotify )
@@ -194,11 +190,7 @@ static void SortSpawnListByHierarchy( int nEntities, HierarchicalSpawn_t *pSpawn
 	// Sort the entities (other than the world) by hierarchy depth, in order to spawn them in
 	// that order. This insures that each entity's parent spawns before it does so that
 	// it can properly set up anything that relies on hierarchy.
-#ifdef _WIN32
-	qsort(&pSpawnList[0], nEntities, sizeof(pSpawnList[0]), (int (__cdecl *)(const void *, const void *))CompareSpawnOrder);
-#else
 	qsort(&pSpawnList[0], nEntities, sizeof(pSpawnList[0]), (int (*)(const void *, const void *))CompareSpawnOrder);
-#endif
 	delete g_pClassnameSpawnPriority;
 	g_pClassnameSpawnPriority = NULL;
 }

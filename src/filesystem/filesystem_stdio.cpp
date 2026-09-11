@@ -7,10 +7,6 @@
 
 #include "tier0/platform.h"
 
-#ifdef _WIN32
-#include <io.h>
-#include <fcntl.h>
-#endif
 
 #include "basefilesystem.h"
 
@@ -20,12 +16,8 @@
 #include "tier0/threadtools.h"
 #include "tier0/icommandline.h"
 
-#ifdef _WIN32
-#include "tier0/tslist.h"
-#else
 #include <fcntl.h>
 #include <sys/file.h>
-#endif
 #include "tier1/convar.h"
 #include "tier0/vprof.h"
 #include "tier1/fmtstr.h"
@@ -174,48 +166,6 @@ CUtlMap< int, CInterlockedInt > CStdioFile::m_LockedFDMap;
 
 //-----------------------------------------------------------------------------
 
-#ifdef _WIN32
-class CWin32ReadOnlyFile : public CStdFilesystemFile
-{
-public:
-	static bool CanOpen( const char *filename, const char *options );
-	static CWin32ReadOnlyFile *FS_fopen( const char *filename, const char *options, int64 *size );
-
-	virtual void FS_setbufsize( unsigned nBytes ) {}
-	virtual void FS_fclose();
-	virtual void FS_fseek( int64 pos, int seekType );
-	virtual long FS_ftell();
-	virtual int FS_feof();
-	virtual size_t FS_fread( void *dest, size_t destSize, size_t size);
-	virtual size_t FS_fwrite( const void *src, size_t size ) { return 0; }
-	virtual bool FS_setmode( FileMode_t mode ) { Error( "Can't set mode, open a second file in right mode\n" ); return false; }
-	virtual size_t FS_vfprintf( const char *fmt, va_list list ) { return 0; }
-	virtual int FS_ferror() { return 0;	}
-	virtual int FS_fflush() { return 0; }
-	virtual char *FS_fgets( char *dest, int destSize );
-	virtual int FS_GetSectorSize() { return m_SectorSize; }
-
-private:
-	CWin32ReadOnlyFile( HANDLE hFileUnbuffered, HANDLE hFileBuffered, int sectorSize, int64 fileSize, bool bOverlapped )
-	 :	m_hFileUnbuffered( hFileUnbuffered ),
-		m_hFileBuffered( hFileBuffered ),
-		m_ReadPos( 0 ),
-		m_Size( fileSize ),
-		m_SectorSize( sectorSize ),
-		m_bOverlapped( bOverlapped )
-	{
-	}
-
-	int64				m_ReadPos;
-	int64				m_Size;
-	HANDLE				m_hFileUnbuffered;
-	HANDLE				m_hFileBuffered;
-	CThreadFastMutex	m_Mutex;
-	int					m_SectorSize;
-	bool				m_bOverlapped;
-};
-
-#endif
 
 
 
@@ -226,12 +176,6 @@ CFileSystem_Stdio g_FileSystem_Stdio;
 
 CAsyncFileSystem g_FileSystem_Async;
 
-#if defined(_WIN32) && defined(DEDICATED)
-CBaseFileSystem *BaseFileSystem_Stdio( void )
-{
-	return &g_FileSystem_Stdio;
-}
-#endif
  
 #if defined( DEDICATED ) && defined( LAUNCHERONLY ) // "hack" to allow us to not export a stdio version of the FILESYSTEM_INTERFACE_VERSION anywhere
 
@@ -425,13 +369,6 @@ FILE *CFileSystem_Stdio::FS_fopen( const char *filename, const char *options, un
 		pInfo->m_bLoadedFromSteamCache = false;
 
 
-#ifdef _WIN32
-	if ( CWin32ReadOnlyFile::CanOpen( filename, options ) )
-	{
-		pFile = CWin32ReadOnlyFile::FS_fopen( filename, options, size );
-		return (FILE *)pFile;
-	}
-#endif
 
 
 	pFile = CStdioFile::FS_fopen( filename, options, size );
@@ -828,21 +765,6 @@ CStdioFile *CStdioFile::FS_fopen( const char *filename, const char *options, int
 //-----------------------------------------------------------------------------
 void CStdioFile::FS_setbufsize( unsigned nBytes )
 {
-#if   defined _WIN32
-	if ( nBytes )
-	{
-		setvbuf( m_pFile, NULL, _IOFBF,  32768 );
-	}
-	else
-	{
-		setvbuf( m_pFile, NULL, _IONBF,  0 );
-		// hack to make microsoft stdio not always read one stray byte on odd sized files
-		// hopefully this isn't needed on vs2015??
-#if (defined(_MSC_VER) && (_MSC_VER < 1900))
-		m_pFile->_bufsiz = 1;
-#endif
-	}
-#endif
 }
 
 //-----------------------------------------------------------------------------
@@ -953,13 +875,7 @@ size_t CStdioFile::FS_fwrite( const void *src, size_t size )
 //-----------------------------------------------------------------------------
 bool CStdioFile::FS_setmode( FileMode_t mode )
 {
-#ifdef _WIN32
-	int fd = _fileno( m_pFile );
-	int newMode = ( mode == FM_BINARY ) ? _O_BINARY : _O_TEXT;
-	return ( _setmode( fd, newMode) != -1 );
-#else
 	return false;
-#endif
 }
 
 //-----------------------------------------------------------------------------
@@ -997,429 +913,5 @@ char *CStdioFile::FS_fgets( char *dest, int destSize )
 //-----------------------------------------------------------------------------
 // 
 //-----------------------------------------------------------------------------
-#ifdef _WIN32
-
-ConVar filesystem_use_overlapped_io( "filesystem_use_overlapped_io", "1", 0, "" );
-#define UseOverlappedIO() filesystem_use_overlapped_io.GetBool()
-
-//-----------------------------------------------------------------------------
-// 
-//-----------------------------------------------------------------------------
-int GetSectorSize( const char *pszFilename )
-{
-	if ( ( !pszFilename[0] || !pszFilename[1] ) ||
-		 ( pszFilename[0] == '\\' && pszFilename[1] == '\\' ) ||
-		 ( pszFilename[0] == '/' && pszFilename[1] == '/' ) )
-	{
-		// Cannot determine sector size with a UNC path (need volume identifier)
-		return 0;
-	}
-
-
-#if defined( _WIN32 ) && !defined( FILESYSTEM_STEAM )
-	char szAbsoluteFilename[MAX_FILEPATH];
-	if ( pszFilename[1] != ':' )
-	{
-		Q_MakeAbsolutePath( szAbsoluteFilename, sizeof(szAbsoluteFilename), pszFilename );
-		pszFilename = szAbsoluteFilename;
-	}
-
-	DWORD sectorSize = 1;
-
-	struct DriveSectorSize_t
-	{
-		char volume;
-		DWORD sectorSize;
-	};
-
-	static DriveSectorSize_t cachedSizes[4];
-
-	char volume = tolower( *pszFilename );
-
-	int i;
-	for ( i = 0; i < ARRAYSIZE(cachedSizes) && cachedSizes[i].volume; i++ )
-	{
-		if ( cachedSizes[i].volume == volume )
-		{
-			sectorSize = cachedSizes[i].sectorSize;
-			break;
-		}
-	}
-
-	if ( sectorSize == 1 )
-	{
-		char root[4] = "X:\\";
-		root[0] = *pszFilename;
-
-		DWORD ignored;
-		if ( !GetDiskFreeSpace( root, &ignored, &sectorSize, &ignored, &ignored ) )
-		{
-			sectorSize = 0;
-		}
-
-		if ( i < ARRAYSIZE(cachedSizes) )
-		{
-			cachedSizes[i].volume = volume;
-			cachedSizes[i].sectorSize = sectorSize;
-		}
-	}
-
-	return sectorSize;
-#else
-	return 0;
-#endif
-}
-
-
-//-----------------------------------------------------------------------------
-// 
-//-----------------------------------------------------------------------------
-
-class CThreadIOEventPool
-{
-public:
-	~CThreadIOEventPool()
-	{
-	}
-
-	CThreadEvent *GetEvent()
-	{
-		return m_Events.GetObject();
-	}
-
-	void ReleaseEvent( CThreadEvent *pEvent )
-	{
-		m_Events.PutObject( pEvent );
-	}
-
-private:
-	CTSPool<CThreadEvent> m_Events;
-};
-
-
-CThreadIOEventPool g_ThreadIOEvents;
-
-
-//-----------------------------------------------------------------------------
-// 
-//-----------------------------------------------------------------------------
-bool CWin32ReadOnlyFile::CanOpen( const char *filename, const char *options )
-{
-	return ( options[0] == 'r' && options[1] == 'b' && options[2] == 0 && filesystem_native.GetBool() );
-}
-
-//-----------------------------------------------------------------------------
-// 
-//-----------------------------------------------------------------------------
-
-static HANDLE OpenWin32File( const char *filename, bool bOverlapped, bool bUnbuffered, int64 *pFileSize )
-{
-	HANDLE hFile;
-
-	DWORD createFlags = FILE_ATTRIBUTE_NORMAL;
-		
-	if ( bOverlapped )
-	{
-		createFlags |= FILE_FLAG_OVERLAPPED;
-	}
-
-	if ( bUnbuffered )
-	{
-		createFlags |= FILE_FLAG_NO_BUFFERING;
-	}
-
-	hFile = ::CreateFile( filename, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, createFlags, NULL );
-	if ( hFile != INVALID_HANDLE_VALUE && !*pFileSize )
-	{
-		LARGE_INTEGER fileSize;
-		if ( !GetFileSizeEx( hFile, &fileSize ) )
-		{
-			CloseHandle( hFile );
-			hFile = INVALID_HANDLE_VALUE;
-		}
-		*pFileSize = fileSize.QuadPart;
-	}
-	return hFile;
-}
-
-CWin32ReadOnlyFile *CWin32ReadOnlyFile::FS_fopen( const char *filename, const char *options, int64 *size )
-{
-	Assert( CanOpen( filename, options ) );
-
-	int sectorSize = 0;
-	bool bTryUnbuffered = ( UseUnbufferedIO() && ( sectorSize = GetSectorSize( filename ) ) != 0 );
-	bool bOverlapped = UseOverlappedIO();
-
-	HANDLE hFileUnbuffered = INVALID_HANDLE_VALUE;
-	int64 fileSize = 0;
-
-	if ( bTryUnbuffered )
-	{
-		hFileUnbuffered = OpenWin32File( filename, bOverlapped, true, &fileSize );
-		if ( hFileUnbuffered == INVALID_HANDLE_VALUE )
-		{
-			return NULL;
-		}
-	}
-
-	HANDLE hFileBuffered = OpenWin32File( filename, bOverlapped, false, &fileSize );
-	if ( hFileBuffered == INVALID_HANDLE_VALUE )
-	{
-		if ( hFileUnbuffered != INVALID_HANDLE_VALUE )
-		{
-			CloseHandle( hFileUnbuffered );
-		}
-		return NULL;
-	}
-
-	if ( size )
-	{
-		*size = fileSize;
-	}
-
-	return new CWin32ReadOnlyFile( hFileUnbuffered, hFileBuffered, ( sectorSize ) ? sectorSize : 1, fileSize, bOverlapped );
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: low-level filesystem wrapper
-//-----------------------------------------------------------------------------
-void CWin32ReadOnlyFile::FS_fclose()
-{
-	if ( m_hFileUnbuffered != INVALID_HANDLE_VALUE )
-	{
-		CloseHandle( m_hFileUnbuffered );
-	}
-
-	if ( m_hFileBuffered != INVALID_HANDLE_VALUE )
-	{
-		CloseHandle( m_hFileBuffered );
-	}
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: low-level filesystem wrapper
-//-----------------------------------------------------------------------------
-void CWin32ReadOnlyFile::FS_fseek( int64 pos, int seekType )
-{
-	switch ( seekType )
-	{
-	case SEEK_SET:
-		m_ReadPos = pos;
-		break;
-
-	case SEEK_CUR:
-		m_ReadPos += pos;
-		break;
-
-	case SEEK_END:
-		m_ReadPos = m_Size - pos;
-		break;
-	}
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: low-level filesystem wrapper
-//-----------------------------------------------------------------------------
-long CWin32ReadOnlyFile::FS_ftell()
-{
-	return m_ReadPos;	
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: low-level filesystem wrapper
-//-----------------------------------------------------------------------------
-int CWin32ReadOnlyFile::FS_feof()
-{
-	return ( m_ReadPos >= m_Size );	
-}
-
-// ends up on a thread's stack, don't blindly increase without awareness of that implication
-// 360 threads have small stacks, using small buffer of the worst case quantum sector size
-#define READ_TEMP_BUFFER	( 32*1024 )
-
-//-----------------------------------------------------------------------------
-// Purpose: low-level filesystem wrapper
-//-----------------------------------------------------------------------------
-size_t CWin32ReadOnlyFile::FS_fread( void *dest, size_t destSize, size_t size )
-{
-	VPROF_BUDGET( "CWin32ReadOnlyFile::FS_fread", VPROF_BUDGETGROUP_OTHER_FILESYSTEM );
-
-	if ( !size || ( m_hFileUnbuffered == INVALID_HANDLE_VALUE && m_hFileBuffered == INVALID_HANDLE_VALUE ) )
-	{
-		return 0;
-	}
-
-	CThreadEvent *pEvent = NULL;
-
-	if ( destSize == (size_t)-1 )
-	{
-		destSize = size;
-	}
-
-	byte tempBuffer[READ_TEMP_BUFFER];
-	HANDLE hReadFile = m_hFileBuffered;
-	int nBytesToRead = size;
-	byte *pDest = (byte *)dest;
-	int64 offset = m_ReadPos;
-
-	if ( m_hFileUnbuffered != INVALID_HANDLE_VALUE )
-	{
-		const int destBaseAlign = ( false ) ? 4 : m_SectorSize;
-		bool bDestBaseIsAligned = ( (DWORD)dest % destBaseAlign == 0 );
-		bool bCanReadUnbufferedDirect = ( bDestBaseIsAligned && ( destSize % m_SectorSize == 0 ) && ( m_ReadPos % m_SectorSize == 0 ) );
-
-		if ( bCanReadUnbufferedDirect )
-		{
-			// fastest path, unbuffered
-			nBytesToRead = AlignValue( size, m_SectorSize );
-			hReadFile = m_hFileUnbuffered;
-		}
-		else
-		{
-			// not properly aligned, snap to alignments
-			// attempt to perform single unbuffered operation using stack buffer
-			int64 alignedOffset = AlignValue( ( m_ReadPos - m_SectorSize ) + 1, m_SectorSize );
-			unsigned int alignedBytesToRead = AlignValue( ( m_ReadPos - alignedOffset ) + size, m_SectorSize );
-			if ( alignedBytesToRead <= sizeof( tempBuffer ) - destBaseAlign )
-			{
-				// read operation can be performed as unbuffered follwed by a post fixup
-				nBytesToRead = alignedBytesToRead;
-				offset = alignedOffset;
-				pDest = AlignValue( tempBuffer, destBaseAlign );
-				hReadFile = m_hFileUnbuffered;
-			}
-		}
-	}
-
-	OVERLAPPED overlapped = { 0 };	
-	if ( m_bOverlapped )
-	{
-		pEvent = g_ThreadIOEvents.GetEvent();
-		overlapped.hEvent = *pEvent;
-	}
-
-#ifdef REPORT_BUFFERED_IO
-	if ( hReadFile == m_hFileBuffered && filesystem_report_buffered_io.GetBool() )
-	{
-		Msg( "Buffered Operation :(\n" );
-	}
-#endif
-
-	// some disk drivers will fail if read is too large
-	static int MAX_READ = filesystem_max_stdio_read.GetInt()*1024*1024;
-	const int MIN_READ = 64*1024;
-	bool bReadOk = true;
-	DWORD nBytesRead = 0;
-	size_t result = 0;
-	int64 currentOffset = offset;
-
-	while ( bReadOk && nBytesToRead > 0 )
-	{
-		int nCurBytesToRead = min( nBytesToRead, MAX_READ );
-		DWORD nCurBytesRead = 0;
-
-		overlapped.Offset = currentOffset & 0xFFFFFFFF;
-		overlapped.OffsetHigh = ( currentOffset >> 32 ) & 0xFFFFFFFF;
-
-		bReadOk = ( ::ReadFile( hReadFile, pDest + nBytesRead, nCurBytesToRead, &nCurBytesRead, &overlapped ) != 0 );
-		if ( !bReadOk )
-		{
-			if ( m_bOverlapped && GetLastError() == ERROR_IO_PENDING )
-			{
-				// Read is pending, we should block until the OS is finished. Otherwise this loop is just a evil spinloop.
-				// (Why are we even using asynchronous I/O in this loop?)
-				if ( GetOverlappedResult( hReadFile, &overlapped, &nCurBytesRead, TRUE ) )
-				{
-					bReadOk = true;
-				}
-			}
-		}
-
-		if ( bReadOk )
-		{
-			nBytesRead += nCurBytesRead;
-			nBytesToRead -= nCurBytesToRead;
-			currentOffset += nCurBytesRead;
-		}
-		 
-		if ( !bReadOk )
-		{
-			DWORD dwError = GetLastError();
-
-
-			if ( dwError == ERROR_NO_SYSTEM_RESOURCES && MAX_READ > MIN_READ )
-			{
-				MAX_READ /= 2;
-				bReadOk = true;
-				DevMsg( "ERROR_NO_SYSTEM_RESOURCES: Reducing max read to %d bytes\n", MAX_READ );
-			}
-			else
-			{
-				DevMsg( "Unknown read error %d\n", dwError );
-			}
-		}
-	}
-
-	if ( bReadOk )
-	{
-		if ( nBytesRead && hReadFile == m_hFileUnbuffered && pDest != dest )
-		{
-			int nBytesExtra = ( m_ReadPos - offset );
-			nBytesRead -= nBytesExtra;
-			if ( nBytesRead )
-			{
-				memcpy( dest, (byte *)pDest + nBytesExtra, size );
-			}
-		}
-
-		result = min( nBytesRead, size );
-	}
-
-	if ( m_bOverlapped )
-	{
-		pEvent->Reset();
-		g_ThreadIOEvents.ReleaseEvent( pEvent );
-	}
-
-	m_ReadPos += result;
-
-	return result;
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: low-level filesystem wrapper
-//-----------------------------------------------------------------------------
-char *CWin32ReadOnlyFile::FS_fgets( char *dest, int destSize ) 
-{  
-	if ( FS_feof() )
-	{
-		return NULL;
-	}
-	int nStartPos = m_ReadPos;
-	int nBytesRead = FS_fread( dest, destSize, destSize );
-	if ( !nBytesRead )
-	{
-		return NULL;
-	}
-
-	dest[min( nBytesRead, destSize - 1)] = 0;
-	char *pNewline = strchr( dest, '\n' );
-	if ( pNewline )
-	{
-		// advance past, leave \n
-		pNewline++;
-		*pNewline = 0;
-	}
-	else
-	{
-		pNewline = &dest[min( nBytesRead, destSize - 1)];
-	}
-	m_ReadPos = nStartPos + ( pNewline - dest ) + 1;
-
-	return dest; 
-}
-
-
-#endif
 
 

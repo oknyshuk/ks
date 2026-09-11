@@ -6,9 +6,6 @@
 
 #ifndef CDLL_INT_H
 #define CDLL_INT_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "basetypes.h"
 #include "interface.h"
@@ -695,10 +692,8 @@ public:
 	virtual void SetGamestatsData( CGamestatsData *pGamestatsData ) = 0;
 	virtual CGamestatsData *GetGamestatsData() = 0;
 
-#if defined( USE_SDL ) || defined( OSX )
 	// we need to pull delta's from the cocoa mgr, the engine vectors this for us
 	virtual void GetMouseDelta( float &x, float &y, bool bIgnoreNextMouseDelta = false ) = 0;
-#endif
 
 	// Given the string pBinding which may be bound to a key, 
 	//  returns the string name of the key to which this string is bound. Returns NULL if no such binding exists
@@ -1050,14 +1045,12 @@ public:
 	virtual void			GetStatus( char *buffer, int bufsize ) = 0;
 
 	// find out if the chat display is up
-#if defined ( CSTRIKE15 )
 	virtual bool			IsChatRaised( void ) = 0;
 	virtual bool			IsRadioPanelRaised( void ) = 0;
 	virtual bool			IsBindMenuRaised( void ) = 0;
 	virtual bool			IsTeamMenuRaised( void ) = 0;
 	virtual bool			IsLoadingScreenRaised( void ) = 0;
 
-#endif
 
 	virtual bool			IsBuildWRThreaded( void ) = 0;
 	virtual void			QueueBuildWorldListJob( CJob* pJob ) = 0;

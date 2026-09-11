@@ -12,9 +12,6 @@
 //=============================================================================//
 #ifndef INFO_H
 #define INFO_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "filesystem.h"
 

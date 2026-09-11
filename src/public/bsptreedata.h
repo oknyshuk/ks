@@ -13,9 +13,6 @@
 
 #if !defined( BSPTREEDATA )
 #define BSPTREEDATA
-#ifdef _WIN32
-#pragma once
-#endif
 
 //-----------------------------------------------------------------------------
 // Forward declarations

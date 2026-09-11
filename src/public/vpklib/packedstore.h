@@ -6,9 +6,6 @@
 
 #ifndef PACKEDSTORE_H
 #define PACKEDSTORE_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 
 #include <tier0/platform.h>
@@ -115,11 +112,7 @@ public:
 #define PACKEDFILE_EXT_HASH_SIZE 15
 
 
-#ifdef _WIN32
-typedef HANDLE PackDataFileHandle_t;
-#else
 typedef FileHandle_t PackDataFileHandle_t;
-#endif
 
 struct FileHandleTracker_t
 {

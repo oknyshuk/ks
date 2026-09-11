@@ -6,9 +6,6 @@
 
 #ifndef C_USER_MESSAGE_REGISTER_H
 #define C_USER_MESSAGE_REGISTER_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 
 #include "usermessages.h"

@@ -6,9 +6,6 @@
 
 #ifndef ISERVER_H
 #define ISERVER_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include <inetmsghandler.h>
 #include <bitvec.h>

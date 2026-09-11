@@ -7,9 +7,6 @@
 
 #ifndef AI_INITUTILS_H
 #define AI_INITUTILS_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 
 #include "ai_basenpc.h"

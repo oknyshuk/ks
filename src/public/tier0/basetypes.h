@@ -8,9 +8,6 @@
 #ifndef BASETYPES_H
 #define BASETYPES_H
 
-#ifdef COMPILER_MSVC
-#pragma once
-#endif
 
 
 // This is a trick to get the DLL extension off the -D option on the command line.
@@ -40,9 +37,7 @@
 #include "tier0/platform.h"
 #include "commonmacros.h"
 #include "wchartypes.h"
-#ifdef PLATFORM_POSIX
 #include <math.h>
-#endif
 
 #include "tier0/valve_off.h"
 
@@ -55,7 +50,6 @@
 #define NULL 0
 #endif
 
-#ifdef PLATFORM_POSIX
 #include <stdint.h>
 
 template<class T>
@@ -66,7 +60,6 @@ T abs( const T &a )
 	else
 		return a;
 }
-#endif
 
 #define ExecuteNTimes( nTimes, x )	\
 	{								\
@@ -232,11 +225,7 @@ typedef uint8 byte;
 typedef uint16 word;
 #endif
 
-#if defined( _WIN32 )
-typedef wchar_t ucs2; // under windows wchar_t is ucs2
-#else
 typedef unsigned short ucs2;
-#endif
 
 enum ThreeState_t
 {
@@ -246,9 +235,6 @@ enum ThreeState_t
 };
 
 typedef float vec_t;
-#ifdef _WIN32
-typedef __int32 vec_t_as_gpr; // a general purpose register type equal in size to a vec_t (in case we have to avoid the fpu for some reason)
-#endif
 
 
 template <typename T>
@@ -297,35 +283,10 @@ inline bool IsFinite( const vec_t &f )
 	return ((FloatBits(f) & 0x7F800000) != 0x7F800000);
 }
 
-#if defined( WIN32 )
-
-//#include <math.h>
-// Just use prototype from math.h
-#ifdef __cplusplus
-extern "C"
-{
-#endif
-	double __cdecl fabs(double);
-	//_CRT_JIT_INTRINSIC  _CRTIMP float  __cdecl fabsf( __in float  _X);
-	float __cdecl fabsf( _In_ float );
-#ifdef __cplusplus
-}
-#endif
-
-// In win32 try to use the intrinsic fabs so the optimizer can do it's thing inline in the code
-#pragma intrinsic( fabs )
-// Also, alias float make positive to use fabs, too
-// NOTE:  Is there a perf issue with double<->float conversion?
-inline float FloatMakePositive( vec_t f )
-{
-	return fabsf( f );
-}
-#else
 inline float FloatMakePositive( vec_t f )
 {
 	return fabsf(f); // was since 2002: BitsToFloat( FloatBits(f) & 0x7FFFFFFF ); fixed in 2010
 }
-#endif
 
 inline float FloatNegate( vec_t f )
 {
@@ -526,11 +487,7 @@ protected:
 #define UID_CAT1(a,c) a ## c
 #define UID_CAT2(a,c) UID_CAT1(a,c)
 #define EXPAND_CONCAT(a,c) UID_CAT1(a,c)
-#ifdef _MSC_VER
-#define UNIQUE_ID UID_CAT2(UID_PREFIX,__COUNTER__)
-#else
 #define UNIQUE_ID UID_CAT2(UID_PREFIX,__LINE__)
-#endif
 
 #define _MKSTRING(arg) #arg
 #define MKSTRING(arg) _MKSTRING(arg)

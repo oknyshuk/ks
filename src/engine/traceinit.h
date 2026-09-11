@@ -6,9 +6,6 @@
 //=============================================================================//
 #if !defined( TRACEINIT_H )
 #define TRACEINIT_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 void TraceInit( const char *i, const char *s, int list );
 void TraceShutdown( const char *s, int list );

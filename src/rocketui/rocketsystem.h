@@ -3,9 +3,7 @@
 
 #include <rocketui/rmlui.h>
 
-#ifdef USE_SDL
 #include <SDL3/SDL.h>
-#endif
 
 class RocketSystem : public Rml::SystemInterface {
 public:

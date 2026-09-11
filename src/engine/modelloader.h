@@ -6,9 +6,6 @@
 //=============================================================================//
 #if !defined( MOD_LOADER_H )
 #define MOD_LOADER_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 struct model_t;
 class IMaterial;

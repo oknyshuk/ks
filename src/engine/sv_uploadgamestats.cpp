@@ -6,11 +6,6 @@
 //
 //=============================================================================//
 
-#ifdef _WIN32
-
-#include <winsock.h>
-
-#else
 #define INVALID_SOCKET -1
 #define SOCKET_ERROR -1
 #include <sys/types.h>
@@ -19,7 +14,6 @@
 #include <pwd.h>
 #define closesocket close
 #include "quakedef.h" // build_number()
-#endif
 
 #include "net.h"
 #include "quakedef.h"
@@ -389,14 +383,6 @@ public:
 			bool bOk = true;
 			char username[ 64 ] = {0};
 
-#if defined( _WIN32 )
-			Q_memset( username, 0, sizeof( username ) );
-			DWORD length = sizeof( username ) - 1;
-			if ( !GetUserName( username, &length ) )
-			{
-				bOk = false;
-			}
-#else
 			struct passwd *pass = getpwuid( getuid() );
 			if ( pass )
 			{
@@ -406,7 +392,6 @@ public:
 			{
 				bOk = false;
 			}
-#endif
 
 
 			// we have a valid user name (on Windows) or password (Not Windows)
@@ -435,12 +420,7 @@ public:
 			if ( !uuid || !*uuid )
 			{
 				// Create a new one
-#ifdef WIN32
-				UUID newId;
-				UuidCreate( &newId );
-#else
 				char newId[32] = {0};	// TODO: add platform-specific UUID generation
-#endif
 				char hex[ 17 ];
 				Q_memset( hex, 0, sizeof( hex ) );
 				Q_binarytohex( (const byte *)&newId, sizeof( newId ), hex, sizeof( hex ) );
@@ -1020,11 +1000,7 @@ EGameStatsUploadStatus Win32UploadGameStatsBlocking
 			sockaddr_in adr;
 			adr.sin_family = AF_INET;
 			adr.sin_port = htons( harvester_port );
-#ifdef _WIN32
-			adr.sin_addr.S_un.S_addr = harvester_ip;
-#else
 			adr.sin_addr.s_addr = harvester_ip;
-#endif
 
 			netadr_t GameStatsHarvesterFSMIPAddress;
 			GameStatsHarvesterFSMIPAddress.SetFromSockadr( (struct sockaddr *)&adr );
@@ -1050,137 +1026,9 @@ EGameStatsUploadStatus Win32UploadGameStatsBlocking
 // Implementation of async uploading
 //
 
-#ifdef IS_WINDOWS_PC
-
-class CAsyncUploaderThread
-{
-public:
-	CAsyncUploaderThread()
-		: m_hThread( NULL ) {}
-	~CAsyncUploaderThread()
-	{
-		if ( m_hThread )
-			ReleaseThreadHandle( m_hThread );
-	}
-
-protected:
-	ThreadHandle_t m_hThread;
-	CThreadFastMutex m_mtx;
-	struct DataEntry
-	{
-		char const *szMapName;
-		uint uiBlobVersion;
-		uint uiBlobSize;
-		void const *pvBlob;
-
-		DataEntry *AllocCopy() const;
-		void Free() { delete [] ( (char*)this ); }
-	};
-	CUtlVector< DataEntry * > m_queue;
-
-	enum {
-		SLEEP_QUEUE_EMPTY		= 60 * 1000,
-		SLEEP_RETRY_UPLOAD		= 10 * 1000,
-		SLEEP_ENTRY_UPLOADED	= 10 * 1000,
-	};
-
-public:
-	static uintp CallbackThreadProc( void *pvParam ) { reinterpret_cast< CAsyncUploaderThread * >( pvParam )->ThreadProc(); return 0; }
-	void ThreadProc();
-	void QueueData( char const *szMapName, uint uiBlobVersion, uint uiBlobSize, const void *pvBlob );
-};
-
-static CAsyncUploaderThread g_AsyncUploader;
-
-CAsyncUploaderThread::DataEntry * CAsyncUploaderThread::DataEntry::AllocCopy() const
-{
-	// Find out how much memory we would need
-	uint lenMapName = ( szMapName ? strlen( szMapName ) : 0 );
-	uint numBytes = sizeof( DataEntry ) + uiBlobSize + lenMapName + 1;
-
-	char *pbData = new char[ numBytes ];
-	DataEntry *pNew = ( DataEntry * )( pbData );
-	if ( !pNew )
-		return NULL;
-
-	pNew->uiBlobVersion = uiBlobVersion;
-	pNew->uiBlobSize = uiBlobSize;
-
-	char *pbWriteMapName = ( char * )( pNew + 1 );
-	pNew->szMapName = pbWriteMapName;
-	memcpy( pbWriteMapName, szMapName, lenMapName );
-	pbWriteMapName[ lenMapName ] = 0;
-
-	char *pbWriteBlob = pbWriteMapName + lenMapName + 1;
-	pNew->pvBlob = pbWriteBlob;
-	memcpy( pbWriteBlob, pvBlob, uiBlobSize );
-
-	return pNew;
-}
-
-void CAsyncUploaderThread::QueueData( char const *szMapName, uint uiBlobVersion, uint uiBlobSize, const void *pvBlob )
-{
-	// DevMsg( 3, "AsyncUploaderThread: Queue [%.*s]\n", uiBlobSize, pvBlob );
-
-	// Prepare for a DataEntry
-	DataEntry de = { szMapName, uiBlobVersion, uiBlobSize, pvBlob };
-	if ( DataEntry *pNew = de.AllocCopy() )
-	{
-		AUTO_LOCK( m_mtx );
-		m_queue.AddToTail( pNew );
-
-		if ( !m_hThread )
-		{
-			m_hThread = CreateSimpleThread( CallbackThreadProc, this );
-		}
-	}
-}
-
-void CAsyncUploaderThread::ThreadProc()
-{
-	for ( ; ; )
-	{
-		// Fetch an item from queue
-		DataEntry *pUpload = NULL;
-		{
-			AUTO_LOCK( m_mtx );
-			if ( m_queue.Count() )
-			{
-				pUpload = m_queue[0];
-				m_queue.Remove( 0 );
-			}
-		}
-
-		// If queue is empty, then sleep
-		if ( !pUpload )
-		{
-			ThreadSleep( SLEEP_QUEUE_EMPTY );
-			continue;
-		}
-
-		// DevMsg( 3, "AsyncUploaderThread: Uploading [%.*s]\n", pUpload->uiBlobSize, pUpload->pvBlob );
-
-		// Attempt to upload the data until successful
-		bool bSuccess = g_pUploadGameStats->UploadGameStats( pUpload->szMapName, pUpload->uiBlobVersion, pUpload->uiBlobSize, pUpload->pvBlob );
-		bSuccess;
-
-		// After the data entry got uploaded, grab the next one
-		// DevMsg( 3, "AsyncUploaderThread: Upload finished (status=%d) for data [%.*s]\n", bSuccess, pUpload->uiBlobSize, pUpload->pvBlob );
-		ThreadSleep( SLEEP_ENTRY_UPLOADED );
-		pUpload->Free();
-	}
-}
-
-void AsyncUpload_QueueData( char const *szMapName, uint uiBlobVersion, uint uiBlobSize, const void *pvBlob )
-{
-	g_AsyncUploader.QueueData( szMapName, uiBlobVersion, uiBlobSize, pvBlob );
-}
-
-#else
 
 void AsyncUpload_QueueData( char const *szMapName, uint uiBlobVersion, uint uiBlobSize, const void *pvBlob )
 {
 	// -- nothing -- g_AsyncUploader.QueueData( szMapName, uiBlobVersion, uiBlobSize, pvBlob );
 }
 
-#endif

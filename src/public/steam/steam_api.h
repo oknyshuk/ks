@@ -6,9 +6,6 @@
 
 #ifndef STEAM_API_H
 #define STEAM_API_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "isteamclient.h"
 #include "isteamuser.h"
@@ -322,10 +319,6 @@ public:
 
 
 
-#ifdef _WIN32
-// disable this warning; this pattern need for steam callback registration
-#pragma warning( disable: 4355 )	// 'this' : used in base member initializer list
-#endif
 
 
 //----------------------------------------------------------------------------------------------------------------------------------------------------------//

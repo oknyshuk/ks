@@ -7,9 +7,6 @@
 
 #ifndef GETINTERSECTINGSURFACES_STRUCT_H
 #define GETINTERSECTINGSURFACES_STRUCT_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 struct model_t;
 class Vector;

@@ -9,9 +9,6 @@
 #ifndef VMODES_H
 #define VMODES_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 
 //-----------------------------------------------------------------------------

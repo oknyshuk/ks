@@ -7,9 +7,6 @@
 
 #ifndef MAT_STUB_H
 #define MAT_STUB_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 
 class IMaterialSystem;

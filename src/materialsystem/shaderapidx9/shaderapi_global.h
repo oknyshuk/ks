@@ -9,9 +9,6 @@
 #ifndef SHADERAPI_GLOBAL_H
 #define SHADERAPI_GLOBAL_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "tier0/threadtools.h"
 

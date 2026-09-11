@@ -8,9 +8,6 @@
 
 #ifndef DXABSTRACT_H
 #define DXABSTRACT_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "materialsystem/IShader.h"
 
@@ -19,9 +16,7 @@
 
 #ifdef USE_ACTUAL_DX
 
-#ifndef WIN32
 #error sorry man
-#endif
 #include <windows.h>
 #include "../../dx9sdk/include/d3d9.h"
 #include "../../dx9sdk/include/d3dx9.h"
@@ -29,9 +24,6 @@ typedef HWND VD3DHWND;
 
 #else
 
-#ifdef WIN32
-#error Gl on win32?
-#endif
 
 #include "tier0/platform.h"
 

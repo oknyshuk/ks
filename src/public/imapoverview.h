@@ -12,9 +12,6 @@
 //=============================================================================//
 #if !defined( IMAPOVERVIEW_H )
 #define IMAPOVERVIEW_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 // #include "interface.h"
 

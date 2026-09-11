@@ -12,9 +12,6 @@
 #include "rope_shared.h"
 #include "baseentity_shared.h"
 #include "videocfg/videocfg.h"
-#ifdef _WIN32
-#pragma once
-#endif
 
 
 #include "baseentity.h"

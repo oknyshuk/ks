@@ -2,9 +2,6 @@
 
 #ifndef MATHLIB_EXPRESSION_CALCULATOR_H
 #define MATHLIB_EXPRESSION_CALCULATOR_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "tier1/utlstring.h"
 #include "tier1/utlstack.h"

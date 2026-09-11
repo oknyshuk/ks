@@ -10,9 +10,6 @@
 #ifndef UTLMEMORY_H
 #define UTLMEMORY_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "tier0/dbg.h"
 #include <string.h>

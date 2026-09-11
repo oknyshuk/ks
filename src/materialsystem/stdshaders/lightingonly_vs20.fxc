@@ -40,9 +40,7 @@ struct VS_OUTPUT
 	float4 vProjPos		: POSITION;	
 	float3 vColor0		: COLOR0;
 
-#if !defined( _X360 )    
 	float  fog			: FOG;
-#endif
 };
 
 

@@ -7,9 +7,6 @@
 
 #ifndef CL_MAIN_H
 #define CL_MAIN_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 
 #include "basetypes.h"

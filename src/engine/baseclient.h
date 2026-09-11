@@ -6,9 +6,6 @@
 
 #ifndef BASECLIENT_H
 #define BASECLIENT_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include <const.h>
 #include <checksum_crc.h>

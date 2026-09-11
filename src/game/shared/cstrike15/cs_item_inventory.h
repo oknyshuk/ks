@@ -6,9 +6,6 @@
 
 #ifndef CS_ITEM_INVENTORY_H
 #define CS_ITEM_INVENTORY_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "item_inventory.h"
 #include "cs_shareddefs.h"

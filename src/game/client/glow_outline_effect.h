@@ -7,9 +7,6 @@
 #ifndef GLOW_OUTLINE_EFFECT_H
 #define GLOW_OUTLINE_EFFECT_H
 
-#if defined( COMPILER_MSVC )
-#pragma once
-#endif
 
 #include "utlvector.h"
 #include "mathlib/vector.h"

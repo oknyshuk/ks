@@ -9,14 +9,10 @@
 #ifndef FILEIO_H
 #define FILEIO_H
 
-#if defined (_WIN32)
-typedef __time64_t time64_t;
-#else
 #include <sys/types.h>
 #include <sys/stat.h>
 typedef int64_t time64_t;
 #include <signal.h>
-#endif
 
 #include "tier0/platform.h"
 #include "tier0/t0constants.h"
@@ -105,14 +101,8 @@ private:
 	bool BValidFilename();
 	bool m_bNoFiles, m_bUsedFirstFile;
 
-#if   defined(_WIN32)
-	HANDLE m_hFind;
-	struct _WIN32_FIND_DATAW *m_pFindData;
-	char m_rgchFileName[MAX_PATH * 4];
-#else
 	int64 m_hFind;
 	struct _finddata_t *m_pFindData;
-#endif
 };
 
 //-----------------------------------------------------------------------------
@@ -143,11 +133,7 @@ public:
 	void Close();
 	uint64 GetBytesWritten();
 
-#ifdef _WIN32
-	static void __stdcall ThreadedWriteFileCompletionFunc( unsigned long dwErrorCode, unsigned long dwBytesTransfered, struct _OVERLAPPED *pOverlapped );
-#else
 	static void __stdcall ThreadedWriteFileCompletionFunc( sigval sigval );
-#endif
 
 	void Sleep( uint nMSec ); // system specific sleep call
 
@@ -198,11 +184,6 @@ private:
 	friend class CDirWatcherFriend;
 
 	void AddFileToChangeList( const char *pchFile );
-#ifdef WIN32
-	// used by callback functions to push a file onto the list
-	void AddFileToChangeList( const char *pchFile );
-	void PostDirWatch();
-#endif
 };
 
 bool CreateDirRecursive( const char *pchPathIn );

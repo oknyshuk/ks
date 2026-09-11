@@ -8,9 +8,6 @@
 #ifndef INTERFACES_H
 #define INTERFACES_H
 
-#if defined( COMPILER_MSVC )
-#pragma once
-#endif
 
 
 //-----------------------------------------------------------------------------

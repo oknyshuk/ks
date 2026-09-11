@@ -9,9 +9,6 @@
 #ifndef ISHADOWMGR_H
 #define ISHADOWMGR_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "tier1/interface.h"
 #include "mathlib/vmatrix.h"

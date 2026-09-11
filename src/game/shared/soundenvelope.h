@@ -10,9 +10,6 @@
 #ifndef SOUNDENVELOPE_H
 #define SOUNDENVELOPE_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "engine/IEngineSound.h"
 

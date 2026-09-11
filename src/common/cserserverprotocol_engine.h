@@ -6,9 +6,6 @@
 
 #ifndef CSERSERVERPROTOCOL_ENGINE_H
 #define CSERSERVERPROTOCOL_ENGINE_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 // NOTE:  These defined must match the ones in Steam's CSERServerProtocol.h!!!
 

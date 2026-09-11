@@ -10,9 +10,6 @@
 #ifndef CMDLIB_H
 #define CMDLIB_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 // cmdlib.h																   
 
@@ -57,17 +54,6 @@ void				CmdLib_TermFileSystem();	// GracefulExit calls this.
 CreateInterfaceFn	CmdLib_GetFileSystemFactory();
 
 
-#ifdef _WIN32
-#pragma warning(disable : 4244)     // MIPS
-#pragma warning(disable : 4136)     // X86
-#pragma warning(disable : 4051)     // ALPHA
-
-#pragma warning(disable : 4018)     // signed/unsigned mismatch
-#pragma warning(disable : 4305)     // truncate from double to float
-
-#pragma warning(disable : 4389)     // singned/unsigned mismatch in ==
-#pragma warning(disable: 4512) // assignment operator could not be generated
-#endif
 
 
 // the dec offsetof macro doesnt work very well...

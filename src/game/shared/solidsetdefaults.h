@@ -6,9 +6,6 @@
 
 #ifndef SOLIDSETDEFAULTS_H
 #define SOLIDSETDEFAULTS_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 // solid_t parsing
 class CSolidSetDefaults : public IVPhysicsKeyHandler

@@ -7,9 +7,6 @@
 
 #ifndef FLEXRENDERDATA_H
 #define FLEXRENDERDATA_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "mathlib/vector.h"
 #include "mathlib/ssemath.h"

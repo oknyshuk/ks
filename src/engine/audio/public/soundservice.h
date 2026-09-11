@@ -8,9 +8,6 @@
 #ifndef SOUNDSERVICE_H
 #define SOUNDSERVICE_H
 
-#if defined( _WIN32 )
-#pragma once
-#endif
 
 class Vector;
 class QAngle;

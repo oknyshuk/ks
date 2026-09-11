@@ -17,10 +17,8 @@
 #include "tier0_strtools.h"
 #include "tier1/strtools.h" // this is included for the definition of V_isspace()
 
-#ifdef PLATFORM_POSIX
 #include <limits.h>
 #define _MAX_PATH PATH_MAX
-#endif
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"

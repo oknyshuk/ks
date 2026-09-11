@@ -10,9 +10,6 @@
 #ifndef SCRIPLIB_H
 #define SCRIPLIB_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 
 enum ScriptPathMode_t

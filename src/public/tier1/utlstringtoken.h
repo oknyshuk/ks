@@ -9,9 +9,6 @@
 #ifndef UTLSTRINGTOKEN_H
 #define UTLSTRINGTOKEN_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include <limits.h>
 #include "tier0/threadtools.h"

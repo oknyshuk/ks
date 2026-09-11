@@ -14,9 +14,6 @@
 
 #include "reflect_annotations.h"
 #include "dt_recv.h"
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "mathlib/vector.h"
 #include "icliententityinternal.h"
@@ -1228,9 +1225,6 @@ public:
 	static void						PrefetchSound( const char *name );
 	void							Remove( ); // UTIL_Remove( this );
 
-#ifdef PORTAL2
-	const char						*GetSignifierName( void );
-#endif // PORTAL2
 
 public:
 
@@ -1755,9 +1749,6 @@ private:
 
 	[[= ks::reflect::Net{} ]] char							m_iName[MAX_PATH];
 
-#ifdef PORTAL2
-	char							m_iSignifierName[MAX_PATH];
-#endif // PORTAL2
 
 public:
 	// Object model index
@@ -1868,9 +1859,6 @@ public:
 	int								GetMaxGPULevel( ) const;
 
 
-#if defined ( PORTAL2 )
-	int								GetServerObjectCaps() { return m_iObjectCapsCache; }
-#endif
 
 protected:
 	// FIXME: Should I move the functions handling these out of C_ClientEntity
@@ -1912,10 +1900,6 @@ protected:
 	bool							IsParentChanging();
 
 
-#if defined ( PORTAL2 )
-	// Received caps from server. Using this for +use validity checking.
-	int								m_iObjectCapsCache;
-#endif
 private:
 	friend void OnRenderStart();
 
@@ -2709,12 +2693,6 @@ inline const char *C_BaseEntity::GetEntityName()
 	return m_iName; 
 }
 
-#ifdef PORTAL2
-inline const char *C_BaseEntity::GetSignifierName()
-{
-	return m_iSignifierName;
-}
-#endif // PORTAL2
 
 class CAbsQueryScopeGuard
 {

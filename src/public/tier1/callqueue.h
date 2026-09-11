@@ -11,9 +11,6 @@
 #include "functors.h"
 #include "vstdlib/jobthread.h"
 
-#if defined( _WIN32 )
-#pragma once
-#endif
 
 //-----------------------------------------------------
 // Avert thy eyes! Imagine rather:

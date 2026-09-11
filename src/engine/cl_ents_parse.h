@@ -7,9 +7,6 @@
 
 #ifndef CL_ENTS_PARSE_H
 #define CL_ENTS_PARSE_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 class CEntityReadInfo;
 namespace ks::net { struct CSVCMsg_PacketEntities; }

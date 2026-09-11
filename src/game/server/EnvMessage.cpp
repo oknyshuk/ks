@@ -84,11 +84,7 @@ void CMessage::InputShowMessage( inputdata_t &inputdata )
 
 	if ( m_spawnflags & SF_MESSAGE_ALL )
 	{
-#ifdef CSTRIKE15
 		UTIL_ClientPrintAll( HUD_PRINTCENTER, STRING( m_iszMessage ) );
-#else
-		UTIL_ShowMessageAll( STRING( m_iszMessage ) );
-#endif
 	}
 	else
 	{
@@ -103,15 +99,11 @@ void CMessage::InputShowMessage( inputdata_t &inputdata )
 
 		if ( pPlayer && pPlayer->IsPlayer() )
 		{
-#ifdef CSTRIKE15
 			CRecipientFilter filterPlayer;
 			filterPlayer.MakeReliable();
 			filterPlayer.AddRecipient( ToBasePlayer( pPlayer ) );
 			UTIL_ClientPrintFilter( filterPlayer, HUD_PRINTCENTER, STRING( m_iszMessage ) );
 			filterPlayer.RemoveAllRecipients();
-#else
-			UTIL_ShowMessage( STRING( m_iszMessage ), ToBasePlayer( pPlayer ) );
-#endif
 		}
 	}
 
@@ -181,7 +173,6 @@ void CCredits::Spawn( void )
 	SetMoveType( MOVETYPE_NONE );
 }
 
-#ifndef PORTAL
 
 static void CreditsDone_f( void )
 {
@@ -195,7 +186,6 @@ static void CreditsDone_f( void )
 
 static ConCommand creditsdone("creditsdone", CreditsDone_f );
 
-#endif // PORTAL
 
 extern ConVar sv_unlockedchapters;
 

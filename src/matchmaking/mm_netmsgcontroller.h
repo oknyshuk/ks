@@ -6,9 +6,6 @@
 
 #ifndef MM_NETMSGCONTROLLER_H
 #define MM_NETMSGCONTROLLER_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "mm_framework.h"
 

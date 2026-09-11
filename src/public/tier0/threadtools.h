@@ -29,32 +29,14 @@
 #define THREAD_PRIORITY_HIGHEST 2
 #endif
 
-#if defined(COMPILER_MSVC)
-// For _ReadWriteBarrier()
-#include <intrin.h>
-#endif
 
 
-#if defined( _WIN32 )
-#pragma once
-#pragma warning(push)
-#pragma warning(disable:4251)
-#endif
 
-#ifdef COMPILER_MSVC64
-#include <intrin.h>
-#endif
 
 // #define THREAD_PROFILER 1
 
 #define THREAD_MUTEX_TRACING_SUPPORTED
-#if defined(_WIN32) && defined(_DEBUG) && !defined(THREAD_MUTEX_TRACING_ENABLED)
-#define THREAD_MUTEX_TRACING_ENABLED
-#endif
 
-#ifdef _WIN32
-typedef void *HANDLE;
-#endif
 
 // maximum number of threads that can wait on one object
 #define CTHREADEVENT_MAX_WAITING_THREADS	4
@@ -62,7 +44,6 @@ typedef void *HANDLE;
 // Start thread running  - error if already running
 enum ThreadPriorityEnum_t
 {
-#if defined( PLATFORM_LINUX )
     // We can use nice on Linux threads to change scheduling.
     // pthreads on Linux only allows priority setting on
     // real-time threads.
@@ -74,26 +55,10 @@ enum ThreadPriorityEnum_t
 	TP_PRIORITY_LOW = 10,
 	TP_PRIORITY_HIGHEST = -20,
 	TP_PRIORITY_LOWEST = 19,
-#else
-	TP_PRIORITY_DEFAULT = 0,	//	THREAD_PRIORITY_NORMAL
-	TP_PRIORITY_NORMAL = 0,	//	THREAD_PRIORITY_NORMAL
-	TP_PRIORITY_HIGH = 1,	//	THREAD_PRIORITY_ABOVE_NORMAL
-	TP_PRIORITY_LOW = -1,	//	THREAD_PRIORITY_BELOW_NORMAL
-	TP_PRIORITY_HIGHEST = 2,	//	THREAD_PRIORITY_HIGHEST
-	TP_PRIORITY_LOWEST = -2,	//	THREAD_PRIORITY_LOWEST
-#endif
 };
 
-#if defined( PLATFORM_LINUX )
 #define TP_IS_PRIORITY_HIGHER( a, b ) ( ( a ) < ( b ) )
-#else
-#define TP_IS_PRIORITY_HIGHER( a, b ) ( ( a ) > ( b ) )
-#endif
 
-#if defined( PLATFORM_WINDOWS_PC ) && !defined( STEAM )
-//Thread parent stack trace linkage requires ALL executing binaries to disable frame pointer omission to operate speedily/successfully. (/Oy-)  "vpc /nofpo"
-#define THREAD_PARENT_STACK_TRACE_SUPPORTED 1 //uncomment to support joining the root of a thread's stack trace to its parent's at time of invocation. Must also set ENABLE_THREAD_PARENT_STACK_TRACING in stacktools.h
-#endif
 
 #if defined( THREAD_PARENT_STACK_TRACE_SUPPORTED )
 #include "tier0/stacktools.h"
@@ -149,26 +114,13 @@ typedef int (*ThreadedLoadLibraryFunc_t)();
 PLATFORM_INTERFACE void SetThreadedLoadLibraryFunc( ThreadedLoadLibraryFunc_t func );
 PLATFORM_INTERFACE ThreadedLoadLibraryFunc_t GetThreadedLoadLibraryFunc();
 
-#if defined( PLATFORM_WINDOWS_PC32 )
-DLL_IMPORT unsigned long STDCALL GetCurrentThreadId();
-#define ThreadGetCurrentId GetCurrentThreadId
-#endif
 
 inline void ThreadPause()
 {
 #if defined( COMPILER_PS3 )
 	__db16cyc();
-#elif defined( COMPILER_GCC )
-	__asm __volatile( "pause" );
-#elif defined ( COMPILER_MSVC64 )
-	_mm_pause();
-#elif defined( COMPILER_MSVCX360 )
-	YieldProcessor(); 
-	__asm { or r0,r0,r0 } 
-	YieldProcessor(); 
-	__asm { or r1,r1,r1 } 
 #else
-#error "implement me"
+	__asm __volatile( "pause" );
 #endif
 }
 
@@ -188,24 +140,12 @@ PLATFORM_INTERFACE int ThreadPinToFastestCores();	// returns the number of CPUs 
 //
 //-----------------------------------------------------------------------------
 
-#ifdef _WIN32
-#define NOINLINE
-#else
 #define NOINLINE __attribute__ ((noinline))
-#endif
 
-#if defined(COMPILER_MSVC)
-// Prevent compiler reordering across this barrier. This is
-// sufficient for most purposes on x86/x64.
-#define ThreadMemoryBarrier() _ReadWriteBarrier()
-#elif defined(COMPILER_GCC)
 // Prevent compiler reordering across this barrier. This is
 // sufficient for most purposes on x86/x64.
 // http://preshing.com/20120625/memory-ordering-at-compile-time
 #define ThreadMemoryBarrier() asm volatile("" ::: "memory")
-#else
-#error Every platform needs to define ThreadMemoryBarrier to at least prevent compiler reordering
-#endif
 
 #define USE_INTRINSIC_INTERLOCKED
 // linux implementation
@@ -283,14 +223,6 @@ inline int64 ThreadInterlockedDecrement64( int64 volatile *p )
 }
 
 
-#ifdef COMPILER_MSVC64
-// 64 bit windows can use intrinsics for these, 32-bit can't
-#pragma intrinsic( _InterlockedCompareExchange64 )
-#pragma intrinsic( _InterlockedExchange64 )
-#pragma intrinsic( _InterlockedExchangeAdd64 ) 
-inline int64 ThreadInterlockedCompareExchange64( int64 volatile *p, int64 value, int64 comparand ) { AssertDbg( (size_t)p % 8 == 0 ); return _InterlockedCompareExchange64( (volatile int64*)p, value, comparand ); }
-inline int64 ThreadInterlockedExchangeAdd64( int64 volatile *p, int64 value )							{ AssertDbg( (size_t)p % 8 == 0 ); return _InterlockedExchangeAdd64( (volatile int64*)p, value ); }
-#endif
 
 inline unsigned ThreadInterlockedExchangeSubtract( uint32 volatile *p, uint32 value )					{ return ThreadInterlockedExchangeAdd( (int32 volatile *)p, value ); }
 
@@ -310,26 +242,14 @@ inline bool ThreadInterlockedAssignIf( uint32 volatile *p, uint32 value, uint32 
 //inline bool ThreadInterlockedAssignIf( int volatile *p, int value, int comperand )	{ return ThreadInterlockedAssignIf( (int32 volatile *)p, value, comperand ); }
 
 
-#if defined( _WIN64 )
-typedef __m128i int128;
-inline int128 int128_zero()	{ return _mm_setzero_si128(); }
-PLATFORM_INTERFACE bool ThreadInterlockedAssignIf128( volatile int128 *pDest, const int128 &value, const int128 &comperand ) NOINLINE;
-#endif
 
 //-----------------------------------------------------------------------------
 // Access to VTune thread profiling
 //-----------------------------------------------------------------------------
-#if defined(_WIN32) && defined(THREAD_PROFILER)
-PLATFORM_INTERFACE void ThreadNotifySyncPrepare(void *p);
-PLATFORM_INTERFACE void ThreadNotifySyncCancel(void *p);
-PLATFORM_INTERFACE void ThreadNotifySyncAcquired(void *p);
-PLATFORM_INTERFACE void ThreadNotifySyncReleasing(void *p);
-#else
 #define ThreadNotifySyncPrepare(p)		((void)0)
 #define ThreadNotifySyncCancel(p)		((void)0)
 #define ThreadNotifySyncAcquired(p)		((void)0)
 #define ThreadNotifySyncReleasing(p)	((void)0)
-#endif
 
 //-----------------------------------------------------------------------------
 // Encapsulation of a thread local datum (needed because THREAD_LOCAL doesn't
@@ -486,14 +406,6 @@ DLL_GLOBAL_IMPORT CTHREADLOCALINT g_nThreadID;
 
 #endif // NO_THREAD_LOCAL
 
-#ifdef _WIN64
-// 64 bit windows can use intrinsics for these, 32-bit can't
-#pragma intrinsic( _InterlockedCompareExchange64 )
-#pragma intrinsic( _InterlockedExchange64 )
-#pragma intrinsic( _InterlockedExchangeAdd64 ) 
-inline int64 ThreadInterlockedIncrement64(int64 volatile *p)										{ AssertDbg((size_t)p % 8 == 0); return _InterlockedIncrement64((volatile int64*)p); }
-inline int64 ThreadInterlockedDecrement64(int64 volatile *p)										{ AssertDbg((size_t)p % 8 == 0); return _InterlockedDecrement64((volatile int64*)p); }
-#endif
 
 //-----------------------------------------------------------------------------
 //
@@ -605,47 +517,6 @@ typedef CInterlockedIntT<int> CInterlockedInt;
 typedef CInterlockedIntT<unsigned> CInterlockedUInt;
 
 //-----------------------------------------------------------------------------
-#ifdef _M_X64
-template <typename T>
-class CInterlockedPtr
-{
-public:
-	CInterlockedPtr() : m_value( 0 ) 				{}
-	CInterlockedPtr( T *value ) : m_value( value ) 	{}
-
-	operator T *() const			{ return m_value; }
-
-	bool operator!() const			{ return ( m_value == 0 ); }
-	bool operator==( T *rhs ) const	{ return ( m_value == rhs ); }
-	bool operator!=( T *rhs ) const	{ return ( m_value != rhs ); }
-
-	T *operator++()					{ return ((T *)_InterlockedExchangeAdd64( (volatile __int64 *)&m_value, sizeof(T) )) + 1; }
-	T *operator++(int)				{ return (T *)_InterlockedExchangeAdd64( (volatile __int64 *)&m_value, sizeof(T) ); }
-
-	T *operator--()					{ return ((T *)_InterlockedExchangeAdd64( (volatile __int64 *)&m_value, -sizeof(T) )) - 1; }
-	T *operator--(int)				{ return (T *)_InterlockedExchangeAdd64( (volatile __int64 *)&m_value, -sizeof(T) ); }
-
-	bool AssignIf( T *conditionValue, T *newValue )	{ return _InterlockedCompareExchangePointer( (void * volatile *)&m_value, newValue, conditionValue ) == conditionValue; }
-
-	T *operator=( T *newValue )		{ _InterlockedExchangePointer( (void * volatile *) &m_value, newValue ); return newValue; }
-
-	void operator+=( int add )		{ _InterlockedExchangeAdd64( (volatile __int64 *)&m_value, add * sizeof(T) ); }
-	void operator-=( int subtract )	{ operator+=( -subtract ); }
-
-	// Atomic add is like += except it returns the previous value as its return value
-	T *AtomicAdd( int add ) { return ( T * )_InterlockedExchangeAdd64( (volatile __int64 *)&m_value, add * sizeof(T) ); }
-
-	T *operator+( int rhs ) const		{ return m_value + rhs; }
-	T *operator-( int rhs ) const		{ return m_value - rhs; }
-	T *operator+( unsigned rhs ) const	{ return m_value + rhs; }
-	T *operator-( unsigned rhs ) const	{ return m_value - rhs; }
-	size_t operator-( T *p ) const		{ return m_value - p; }
-	size_t operator-( const CInterlockedPtr<T> &p ) const	{ return m_value - p.m_value; }
-
-private:
-	T * volatile m_value;
-};
-#else
 template <typename T>
 class CInterlockedPtr
 {
@@ -692,7 +563,6 @@ private:
 
 #undef THREADINTERLOCKEDEXCHANGEADD
 };
-#endif
 
 
 //-----------------------------------------------------------------------------
@@ -743,18 +613,8 @@ private:
 	CThreadMutex( const CThreadMutex & );
 	CThreadMutex &operator=( const CThreadMutex & );
 
-#if defined( _WIN32 )
-	// Efficient solution to breaking the windows.h dependency, invariant is tested.
-#ifdef _WIN64
-	#define TT_SIZEOF_CRITICALSECTION 40
-#else
-	#define TT_SIZEOF_CRITICALSECTION 24
-#endif // _WIN64
-	byte m_CriticalSection[TT_SIZEOF_CRITICALSECTION];
-#else
 	pthread_mutex_t m_Mutex;
 	pthread_mutexattr_t m_Attr;
-#endif
 
 #ifdef THREAD_MUTEX_TRACING_SUPPORTED
 	// Debugging (always herge to allow mixed debug/release builds w/o changing size)
@@ -1016,7 +876,6 @@ template <> struct CAutoLockTypeDeducer<sizeof(CAlignedThreadFastMutex)> {	typed
 #define AUTO_LOCK_( type, mutex ) \
 	CAutoLockT< type > UNIQUE_ID( static_cast<const type &>( mutex ) )
 
-#if defined(GNUC)
 
 template<typename T> T strip_cv_quals_for_mutex(T&);
 template<typename T> T strip_cv_quals_for_mutex(const T&);
@@ -1026,13 +885,6 @@ template<typename T> T strip_cv_quals_for_mutex(const volatile T&);
 #define AUTO_LOCK( mutex ) \
 	AUTO_LOCK_( decltype(::strip_cv_quals_for_mutex(mutex)), mutex )
 
-#elif defined( __clang__ )
-#define AUTO_LOCK( mutex ) \
-	AUTO_LOCK_( typename CAutoLockTypeDeducer<sizeof(mutex)>::Type_t, mutex )
-#else
-#define AUTO_LOCK( mutex ) \
-	AUTO_LOCK_( CAutoLockTypeDeducer<sizeof(mutex)>::Type_t, mutex )
-#endif
 
 
 #define AUTO_LOCK_FM( mutex ) \
@@ -1070,10 +922,6 @@ public:
 	//-----------------------------------------------------
 	// Access handle
 	//-----------------------------------------------------
-#ifdef _WIN32
-	operator HANDLE() { return GetHandle(); }
-	const HANDLE GetHandle() const { return m_hSyncObject; }
-#endif
 	//-----------------------------------------------------
 	// Wait for a signal from the object
 	//-----------------------------------------------------
@@ -1098,17 +946,12 @@ protected:
 	CThreadSyncObject();
 	void AssertUseable();
 
-#ifdef _WIN32
-	HANDLE m_hSyncObject;
-	bool m_bCreatedHandle;
-#else
 	pthread_mutex_t	m_Mutex;
 	pthread_cond_t	m_Condition;
 	bool m_bInitalized;
 	int m_cSet;
 	bool m_bManualReset;
 	bool m_bWakeForEvent;
-#endif
 
 private:
 	CThreadSyncObject( const CThreadSyncObject & );
@@ -1146,36 +989,6 @@ private:
 	CThreadSemaphore &operator=(const CThreadSemaphore &);
 };
 
-#if defined( _WIN32 )
-
-//-----------------------------------------------------------------------------
-//
-// A mutex suitable for out-of-process, multi-processor usage
-//
-//-----------------------------------------------------------------------------
-
-class PLATFORM_CLASS CThreadFullMutex : public CThreadSyncObject
-{
-public:
-	CThreadFullMutex( bool bEstablishInitialOwnership = false, const char * pszName = NULL );
-
-	//-----------------------------------------------------
-	// Release ownership of the mutex
-	//-----------------------------------------------------
-	bool Release();
-
-	// To match regular CThreadMutex:
-	void Lock()							{ Wait(); }
-	void Lock( unsigned timeout )		{ Wait( timeout ); }
-	void Unlock()						{ Release(); }
-	bool AssertOwnedByCurrentThread()	{ return true; }
-	void SetTrace( bool )				{}
-
-private:
-	CThreadFullMutex( const CThreadFullMutex & );
-	CThreadFullMutex &operator=( const CThreadFullMutex & );
-};
-#endif
 
 enum NamedEventResult_t
 {
@@ -1188,12 +1001,6 @@ class PLATFORM_CLASS CThreadEvent : public CThreadSyncObject
 {
 public:
 	CThreadEvent( bool fManualReset = false );
-#ifdef PLATFORM_WINDOWS
-	CThreadEvent( const char *name, bool initialState = false, bool bManualReset = false );
-	static NamedEventResult_t CheckNamedEvent( const char *name, uint32 dwTimeout = 0 );
-
-	CThreadEvent( HANDLE hHandle );
-#endif
 	//-----------------------------------------------------
 	// Set the state to signaled
 	//-----------------------------------------------------
@@ -1258,11 +1065,7 @@ public:
 private:
 	void WaitForRead();
 
-#ifdef WIN32
-	CThreadFastMutex m_mutex;
-#else
 	CThreadMutex m_mutex;	
-#endif
 	CThreadEvent m_CanWrite;
 	CThreadEvent m_CanRead;
 
@@ -1427,9 +1230,6 @@ public:
 	// Access the thread handle directly
 	ThreadHandle_t GetThreadHandle();
 
-#ifdef _WIN32
-	uint GetThreadId();
-#endif
 
 	//-----------------------------------------------------
 
@@ -1497,15 +1297,8 @@ protected:
 	virtual bool WaitForCreateComplete( CThreadEvent *pEvent );
 	const ThreadId_t GetThreadID() const { return (ThreadId_t)m_threadId; }
 
-#ifdef PLATFORM_WINDOWS
-	const ThreadHandle_t GetThreadHandle() const { return (ThreadHandle_t)m_hThread; }
-
-	static unsigned long __stdcall ThreadProc( void * pv );
-	typedef unsigned long (__stdcall *ThreadProc_t)( void * );
-#else
 	static void* ThreadProc( void * pv );
 	typedef void* (*ThreadProc_t)( void * pv );
-#endif
 	static void ThreadProcRunWithMinidumpHandler( void *pv );
 
 	virtual ThreadProc_t GetThreadProc();
@@ -1536,16 +1329,11 @@ private:
 	CThread( const CThread & );
 	CThread &operator=( const CThread & );
 
-#ifdef _WIN32
-	HANDLE 	m_hThread;
-	ThreadId_t m_threadId;
-#else
 	pthread_t m_threadId;
 	volatile pthread_t	m_threadZombieId;
 	//lwss add - Thread params. These were previously allocated on the heap and leaked.
     ThreadInit_t m_threadInit;
     //lwss end
-#endif
 	int		m_result;
 	char	m_szName[32];
 	void *	m_pStackBase;
@@ -1734,18 +1522,6 @@ public:
 //
 //-----------------------------------------------------------------------------
 
-#ifdef MSVC
-typedef struct _RTL_CRITICAL_SECTION RTL_CRITICAL_SECTION;
-typedef RTL_CRITICAL_SECTION CRITICAL_SECTION;
-
-extern "C"
-{
-	void __declspec(dllimport) __stdcall InitializeCriticalSection(CRITICAL_SECTION *);
-	void __declspec(dllimport) __stdcall EnterCriticalSection(CRITICAL_SECTION *);
-	void __declspec(dllimport) __stdcall LeaveCriticalSection(CRITICAL_SECTION *);
-	void __declspec(dllimport) __stdcall DeleteCriticalSection(CRITICAL_SECTION *);
-};
-#endif
 
 //---------------------------------------------------------
 
@@ -2085,8 +1861,5 @@ template<class T> FORCEINLINE T ReadVolatileMemory( T const *pPtr )
 
 //-----------------------------------------------------------------------------
 
-#if defined( _WIN32 )
-#pragma warning(pop)
-#endif
 
 #endif // THREADTOOLS_H

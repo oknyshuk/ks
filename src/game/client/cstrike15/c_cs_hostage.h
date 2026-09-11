@@ -9,9 +9,6 @@
 #define C_CHOSTAGE_H
 
 #include "reflect_annotations.h"
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "c_ai_basenpc.h"
 #include "utlvector.h"

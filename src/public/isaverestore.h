@@ -12,9 +12,6 @@
 #include "datamap.h"
 #include "mathlib/vmatrix.h"
 
-#if defined( _WIN32 )
-#pragma once
-#endif
 
 #ifndef CLIENT_DLL
 class SINGLE_INHERITANCE CBaseEntity;

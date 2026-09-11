@@ -96,21 +96,11 @@
 #if defined( PROTECTED_THINGS_ENABLE )
 #undef PROTECTED_THINGS_ENABLE // from protected_things.h
 #endif
-#if !defined ( _USE_32BIT_TIME_T ) && !defined( PLATFORM_64BITS )
-#define _USE_32BIT_TIME_T // This file assumes 32 bit time_t types
-#endif 
 #include "tier0/platform.h"
-#ifdef IS_WINDOWS_PC
-#define STRICT
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
-#include <tchar.h>
-#else
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <sys/time.h>
 #include <unistd.h>
-#endif
 #include <time.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -2702,38 +2692,6 @@ int inflate(z_streamp z, int f)
 
 
 
-#ifdef _UNICODE
-
-static int GetAnsiFileName(LPCWSTR name, char * buf, int nBufSize)
-{
-	memset(buf, 0, nBufSize);
-
-	int n = WideCharToMultiByte(CP_ACP,	// code page
-								0,						// performance and mapping flags
-								name,					// wide-character string
-								-1,						// number of chars in string
-								buf,					// buffer for new string
-								nBufSize,				// size of buffer
-								NULL,					// default for unmappable chars
-								NULL);					// set when default char used
-	return n;
-}
-
-static int GetUnicodeFileName(const char * name, LPWSTR buf, int nBufSize)
-{
-	memset(buf, 0, nBufSize*sizeof(TCHAR));
-
-	int n = MultiByteToWideChar(CP_ACP,		// code page
-								0,			// character-type options
-								name,		// string to map
-								-1,			// number of bytes in string
-								buf,		// wide-character buffer
-								nBufSize);	// size of buffer
-
-	return n;
-}
-
-#endif
 
 
 // unzip.c -- IO on .zip files using zlib
@@ -2785,12 +2743,8 @@ LUFILE *lufopen(void *z,unsigned int len,DWORD flags,ZRESULT *err)
 		{ 
 			HANDLE hf = z;
 			bool res = false;
-#ifdef _WIN32		
-			res = DuplicateHandle(GetCurrentProcess(),hf,GetCurrentProcess(),&h,0,FALSE,DUPLICATE_SAME_ACCESS) == TRUE;
-#else
 			h = (HANDLE) (intp) dup( size_cast<int>( (intp) hf ) );
 			res = (intp) h >= 0;
-#endif
 			if (!res) 
 			{
 				*err=ZR_NODUPH; 
@@ -2799,26 +2753,16 @@ LUFILE *lufopen(void *z,unsigned int len,DWORD flags,ZRESULT *err)
 		}
 		else
 		{ 
-#ifdef _WIN32
-			h = CreateFile((const TCHAR *)z, GENERIC_READ, FILE_SHARE_READ, 
-					NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-#else
 			h = (void*) (intp) open( (const TCHAR *)z, O_RDONLY );
-#endif
 			if (h == INVALID_HANDLE_VALUE) 
 			{
 				*err = ZR_NOFILE; 
 				return NULL;
 			}
 		}
-#ifdef _WIN32
-		DWORD type = GetFileType(h);
-		canseek = (type==FILE_TYPE_DISK);
-#else
 		struct stat buf;
 		fstat( size_cast< int >( (intp)h ), &buf );
 		canseek = buf.st_mode & S_IFREG;
-#endif
 	}
 	LUFILE *lf = new LUFILE;
 	if (flags==ZIP_HANDLE||flags==ZIP_FILENAME)
@@ -3446,11 +3390,7 @@ int unzLocateFile (unzFile file, const TCHAR *szFileName, int iCaseSensitivity)
 
 	char szFileNameA[MAX_PATH];
 
-#ifdef _UNICODE
-	GetAnsiFileName(szFileName, szFileNameA, MAX_PATH-1);
-#else
 	strcpy(szFileNameA, szFileName);
-#endif
 
 	s=(unz_s*)file;
 	if (!s->current_file_ok)
@@ -3890,22 +3830,6 @@ int unzReadCurrentFile (unzFile file, void *buf, unsigned len);
 int unzCloseCurrentFile (unzFile file);
 
 
-#ifdef _WIN32
-FILETIME timet2filetime(const time_t timer)
-{ struct tm *tm = gmtime(&timer);
-  SYSTEMTIME st;
-  st.wYear = (WORD)(tm->tm_year+1900);
-  st.wMonth = (WORD)(tm->tm_mon+1);
-  st.wDay = (WORD)(tm->tm_mday);
-  st.wHour = (WORD)(tm->tm_hour);
-  st.wMinute = (WORD)(tm->tm_min);
-  st.wSecond = (WORD)(tm->tm_sec);
-  st.wMilliseconds=0;
-  FILETIME ft;
-  SystemTimeToFileTime(&st,&ft);
-  return ft;
-}
-#endif
 
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
@@ -3929,16 +3853,6 @@ ZRESULT TUnzip::Open(void *z,unsigned int len,DWORD flags)
 { 
 	if (uf!=0 || currentfile!=-1) 
 		return ZR_NOTINITED;
-#ifdef _WIN32
-	GetCurrentDirectory(MAX_PATH,rootdir);
-	_tcscat(rootdir,_T("\\"));
-	if (flags==ZIP_HANDLE)
-	{ 
-		DWORD type = GetFileType(z);
-		if (type!=FILE_TYPE_DISK) 
-			return ZR_SEEK;
-	}
-#endif
 	ZRESULT e = 0;
 	LUFILE *f = lufopen(z,len,flags,&e);
 	if (f==NULL) 
@@ -4004,15 +3918,7 @@ ZRESULT TUnzip::Get(int index,ZIPENTRY *ze)
   ze->comp_size = ufi.compressed_size;
   ze->unc_size = ufi.uncompressed_size;
   //
-#ifdef _WIN32
-  WORD dostime = (WORD)(ufi.dosDate&0xFFFF);
-  WORD dosdate = (WORD)((ufi.dosDate>>16)&0xFFFF);
-  FILETIME ft;
-  DosDateTimeToFileTime(dosdate,dostime,&ft);
-  ze->atime=ft; ze->ctime=ft; ze->mtime=ft;
-#else
   ze->atime=ufi.dosDate; ze->ctime=ufi.dosDate; ze->mtime=ufi.dosDate;
-#endif
   // the zip will always have at least that dostime. But if it also has
   // an extra header, then we'll instead get the info from that.
   unsigned int epos=0;
@@ -4027,27 +3933,15 @@ ZRESULT TUnzip::Get(int index,ZIPENTRY *ze)
     epos+=5;
     if (hasmtime)
     { time_t mtime = *(time_t*)(extra+epos); epos+=4;
-#ifdef _WIN32
-      ze->mtime = timet2filetime(mtime);
-#else
 	  ze->mtime = mtime;
-#endif
     }
     if (hasatime)
     { time_t atime = *(time_t*)(extra+epos); epos+=4;
-#ifdef _WIN32
-      ze->atime = timet2filetime(atime);
-#else
 	  ze->atime = atime;
-#endif
     }
     if (hasctime)
     { time_t ctime = *(time_t*)(extra+epos); 
-#ifdef _WIN32
-      ze->ctime = timet2filetime(ctime);
-#else
 	  ze->ctime = ctime;
-#endif
     }
     break;
   }
@@ -4153,13 +4047,7 @@ ZRESULT TUnzip::Unzip(int index,void *dst,unsigned int len,DWORD flags)
 	{ 
 		if (flags==ZIP_HANDLE) 
 			return ZR_OK; // don't do anything
-#ifdef _UNICODE
-		TCHAR uname[MAX_PATH];
-		GetUnicodeFileName(ze.name, uname, MAX_PATH-1);
-		EnsureDirectory(rootdir, uname);
-#else
 		EnsureDirectory(rootdir, ze.name);
-#endif
 		return ZR_OK;
 	}
 
@@ -4189,12 +4077,7 @@ ZRESULT TUnzip::Unzip(int index,void *dst,unsigned int len,DWORD flags)
 			if (!isabsolute) 
 				EnsureDirectory(rootdir,dir);
 		}
-#ifdef _WIN32
-		h = ::CreateFile((const TCHAR*)dst, GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, 
-				ze.attr, NULL);
-#else
 		h = (void*) (intp) open( (const TCHAR*)dst, O_WRONLY | O_CREAT, S_IRWXU | S_IRWXG | S_IRWXO );
-#endif
 	}
 
 	if (h == INVALID_HANDLE_VALUE)  
@@ -4224,28 +4107,18 @@ ZRESULT TUnzip::Unzip(int index,void *dst,unsigned int len,DWORD flags)
 	}
 	bool settime=false;
 
-#ifdef _WIN32
-	DWORD type = GetFileType(h); 
-	if (type==FILE_TYPE_DISK && !haderr) 
-		settime=true;
-#else
 	struct stat sbuf;
 	fstat( size_cast<int>( (intp)h ), &sbuf );
 	settime = ( sbuf.st_mode & S_IFREG );
-#endif
 
 	if (settime) 
 	{
-#ifdef _WIN32
-		SetFileTime(h,&ze.ctime,&ze.atime,&ze.mtime);
-#else
 		struct timeval tv[2];
 		tv[0].tv_sec = ze.atime;
 		tv[0].tv_usec = 0;
 		tv[1].tv_sec = ze.mtime;
 		tv[1].tv_usec = 0;
 		futimes( size_cast< int >( (intp) h ), tv );
-#endif
 	}
 	if (flags!=ZIP_HANDLE) 
 		CloseHandle(h);
@@ -4364,11 +4237,7 @@ ZRESULT GetZipItemW(HZIP hz, int index, ZIPENTRYW *zew)
 		zew->mtime     = ze.mtime;
 		zew->comp_size = ze.comp_size;
 		zew->unc_size  = ze.unc_size;
-#ifdef _UNICODE
-		GetUnicodeFileName(ze.name, zew->name, MAX_PATH-1);
-#else
 		strcpy(zew->name, ze.name);
-#endif
 	}
 	return lasterrorU;
 }
@@ -4416,11 +4285,7 @@ ZRESULT FindZipItemW(HZIP hz, const TCHAR *name, bool ic, int *index, ZIPENTRYW 
 		zew->mtime     = ze.mtime;
 		zew->comp_size = ze.comp_size;
 		zew->unc_size  = ze.unc_size;
-#ifdef _UNICODE
-		GetUnicodeFileName(ze.name, zew->name, MAX_PATH-1);
-#else
 		strcpy(zew->name, ze.name);
-#endif
 	}
 
 	return lasterrorU;

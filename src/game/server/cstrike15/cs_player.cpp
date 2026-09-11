@@ -3892,21 +3892,6 @@ void CCSPlayer::PostThink()
 			UpdateMouseoverHints();
 		}
 	}
-#if !defined( CSTRIKE15 )
-	if ( GetActiveWeapon() && !(m_iDisplayHistoryBits & DHF_AMMO_EXHAUSTED ) )
-	{
-		// The "out of ammo" prompt shouldn't display in GunGame or training, because there are no buy-zones. <-- why doesn't this just check for buyzones in the map?  -mtw
-		if ( !CSGameRules()->IsPlayingGunGame() && !CSGameRules()->IsPlayingTraining() )
-		{
-			CBaseCombatWeapon *pWeapon = GetActiveWeapon();
-			if ( !pWeapon->HasAnyAmmo() && !(pWeapon->GetWpnData().iFlags & ITEM_FLAG_EXHAUSTIBLE ) )
-			{
-				m_iDisplayHistoryBits |= DHF_AMMO_EXHAUSTED;
-				HintMessage( "#Hint_out_of_ammo", false );
-			}
-		}
-	}
-#endif
 
 	if ( !m_bWasInBuyZone && IsInBuyZone() && IsAlive() )
 	{
@@ -8151,10 +8136,8 @@ void CCSPlayer::ConstructRadioFilter( CRecipientFilter& filter )
 				continue;
 
 			bool bTeamOnly = true;
-#if defined ( CSTRIKE15 )
 			if ( CSGameRules() && CSGameRules()->IsPlayingCoopMission() )
 				bTeamOnly = false;
-#endif
 			if ( CSGameRules()->CanPlayerHearTalker( player, this, bTeamOnly ) )
 				filter.AddRecipient( player );
 		}

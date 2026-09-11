@@ -2,9 +2,6 @@
 #ifndef IGAMEUISYSTEMMGR_H
 #define IGAMEUISYSTEMMGR_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 
 

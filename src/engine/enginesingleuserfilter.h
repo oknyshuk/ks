@@ -7,9 +7,6 @@
 
 #ifndef ENGINESINGLEUSERFILTER_H
 #define ENGINESINGLEUSERFILTER_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "irecipientfilter.h"
 #include "bitvec.h"

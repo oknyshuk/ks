@@ -9,9 +9,6 @@
 #ifndef CVTF_H
 #define CVTF_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "s3tc_decode.h"
 #include "vtf/vtf.h"

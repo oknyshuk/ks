@@ -7,9 +7,6 @@
 #ifndef DMXATTRIBUTE_H
 #define DMXATTRIBUTE_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "datamodel/dmattributetypes.h"
 #include "tier1/utlvector.h"

@@ -9,9 +9,6 @@
 #define C_BASETEMPENTITY_H
 
 #include "reflect_annotations.h"
-#ifdef _WIN32
-#pragma once
-#endif
 
 
 #include "client_class.h"

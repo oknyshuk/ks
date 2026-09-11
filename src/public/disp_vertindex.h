@@ -7,9 +7,6 @@
 
 #ifndef DISP_VERTINDEX_H
 #define DISP_VERTINDEX_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 
 #include "tier0/dbg.h"

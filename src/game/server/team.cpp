@@ -12,9 +12,7 @@
 #include "team_spawnpoint.h"
 #include "usermessages.h"
 
-#if defined ( CSTRIKE15 )
 #include "cs_bot.h"
-#endif
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -574,7 +572,6 @@ int CTeam::GetAliveMembers( void )
 	return iAlive;
 }
 
-#if defined ( CSTRIKE15 )
 int CTeam::GetBotMembers( CUtlVector< CCSBot* > *pOutVecBots /*= NULL*/ )
 {
 	int iBots = 0;
@@ -618,4 +615,3 @@ int CTeam::GetHumanMembers( CUtlVector< class CCSPlayer* > *pOutVecPlayers /*= N
 	return iPlayers;
 }
 
-#endif

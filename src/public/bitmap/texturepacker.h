@@ -7,9 +7,6 @@
 
 #ifndef TEXTUREPACKER_H
 #define TEXTUREPACKER_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "utlntree.h"
 

@@ -8,9 +8,6 @@
 #define WEAPON_CSBASE_H
 
 #include "reflect_annotations.h"
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "cs_playeranimstate.h"
 #include "cs_weapon_parse.h"

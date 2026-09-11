@@ -6,9 +6,6 @@
 
 #ifndef HLTVCLIENT_H
 #define HLTVCLIENT_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "baseclient.h"
 

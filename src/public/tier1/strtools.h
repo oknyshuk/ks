@@ -9,9 +9,6 @@
 #ifndef TIER1_STRTOOLS_H
 #define TIER1_STRTOOLS_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "tier0/basetypes.h"
 #include <stdio.h>
@@ -28,11 +25,7 @@
 
 class CUtlBuffer;
 
-#ifdef _WIN64
-#define str_size unsigned int
-#else
 #define str_size size_t
-#endif
 
 
 /// 3d memcpy. Copy (up-to) 3 dimensional data with arbitrary source and destination
@@ -559,63 +552,22 @@ int Q_UTF16ToUChar32( const uchar16 *pUTF16, uchar32 &uValueOut, bool &bErrorOut
 
 
 // NOTE: WString means either UTF32 or UTF16 depending on the platform and compiler settings.
-#if defined( _MSC_VER ) || defined( _WIN32 )
-#define Q_UTF8ToWString Q_UTF8ToUTF16
-#define Q_UTF8CharsToWString Q_UTF8CharsToUTF16
-#define Q_UTF32ToWString Q_UTF32ToUTF16
-#define Q_WStringToUTF8 Q_UTF16ToUTF8
-#define Q_WStringCharsToUTF8 Q_UTF16CharsToUTF8
-#define Q_WStringToUTF32 Q_UTF16ToUTF32
-#else
 #define Q_UTF8ToWString Q_UTF8ToUTF32
 #define Q_UTF8CharsToWString Q_UTF8CharsToUTF32
 #define Q_UTF32ToWString Q_UTF32ToUTF32
 #define Q_WStringToUTF8 Q_UTF32ToUTF8
 #define Q_WStringCharsToUTF8 Q_UTF32CharsToUTF8
 #define Q_WStringToUTF32 Q_UTF32ToUTF32
-#endif
 
 // UNDONE: Find a non-compiler-specific way to do this
-#ifdef _WIN32
-#ifndef _VA_LIST_DEFINED
-
-#ifdef  _M_ALPHA
-
-struct va_list 
-{
-    char *a0;       /* pointer to first homed integer argument */
-    int offset;     /* byte offset of next parameter */
-};
-
-#else  // !_M_ALPHA
-
-typedef char *  va_list;
-
-#endif // !_M_ALPHA
-
-#define _VA_LIST_DEFINED
-
-#endif   // _VA_LIST_DEFINED
-
-#else
 #include <stdarg.h>
-#endif
 
-#ifdef _WIN32
-#define CORRECT_PATH_SEPARATOR '\\'
-#define CORRECT_PATH_SEPARATOR_S "\\"
-#define INCORRECT_PATH_SEPARATOR '/'
-#define INCORRECT_PATH_SEPARATOR_S "/"
-#define CHARACTERS_WHICH_SEPARATE_DIRECTORY_COMPONENTS_IN_PATHNAMES ":/\\"
-#define PATHSEPARATOR(c) ((c) == '\\' || (c) == '/')
-#else
 #define CORRECT_PATH_SEPARATOR '/'
 #define CORRECT_PATH_SEPARATOR_S "/"
 #define INCORRECT_PATH_SEPARATOR '\\'
 #define INCORRECT_PATH_SEPARATOR_S "\\"
 #define CHARACTERS_WHICH_SEPARATE_DIRECTORY_COMPONENTS_IN_PATHNAMES "/"
 #define PATHSEPARATOR(c) ((c) == '/')
-#endif
 
 
 int V_vsnprintf( OUT_Z_CAP(maxLenInCharacters) char *pDest, int maxLenInCharacters, PRINTF_FORMAT_STRING const char *pFormat, va_list params );
@@ -751,11 +703,7 @@ bool V_RemoveDotSlashes( char *pFilename, char separator = CORRECT_PATH_SEPARATO
 // If pPath is a relative path, this function makes it into an absolute path
 // using the current working directory as the base, or pStartingDir if it's non-NULL.
 // Returns false if it runs out of room in the string, or if pPath tries to ".." past the root directory.
-#if defined(_MSC_VER) && _MSC_VER >= 1900
-bool
-#else
 void
-#endif
 V_MakeAbsolutePath( char *pOut, int outLen, const char *pPath, const char *pStartingDir = NULL );
 inline void V_MakeAbsolutePath( char *pOut, int outLen, const char *pPath, const char *pStartingDir, bool bLowercaseName )
 {

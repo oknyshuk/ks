@@ -6,9 +6,6 @@
 #ifndef PAINT_H
 #define PAINT_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "materialsystem/MaterialSystemUtil.h"
 #include "materialsystem/ipaintmapdatamanager.h"

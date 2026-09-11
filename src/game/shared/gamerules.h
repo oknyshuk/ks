@@ -9,9 +9,6 @@
 #define GAMERULES_H
 
 #include "reflect_annotations.h"
-#ifdef _WIN32
-#pragma once
-#endif
 
 // Debug history should be disabled in release builds
 //#define DISABLE_DEBUG_HISTORY
@@ -438,8 +435,5 @@ inline CGameRules* GameRules()
 	return g_pGameRules;
 }
 
-#ifdef PORTAL2
-bool IsGameRulesMultiplayer();
-#endif
 
 #endif // GAMERULES_H

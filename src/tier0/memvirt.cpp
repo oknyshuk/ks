@@ -18,11 +18,6 @@
 #include "tier0/memvirt.h"
 #include "tier0/fasttimer.h"
 #include "mem_helpers.h"
-#ifdef PLATFORM_WINDOWS_PC
-#undef WIN32_LEAN_AND_MEAN
-#include <windows.h>
-#include <crtdbg.h>
-#endif
 
 #include <map>
 #include <set>

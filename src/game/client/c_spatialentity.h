@@ -10,9 +10,6 @@
 
 #include "reflect_annotations.h"
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 #define SPATIAL_ENTITY_FORCED_VALUE_BLEND_DISTANCE 128.0f
 

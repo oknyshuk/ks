@@ -7,9 +7,6 @@
 
 #ifndef ASW_GENERIC_CLASSMAP_H
 #define ASW_GENERIC_CLASSMAP_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 template <class T>
 class CGenericClassmap

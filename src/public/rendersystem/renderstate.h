@@ -9,9 +9,6 @@
 #ifndef RENDERSTATE_H
 #define RENDERSTATE_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "tier1/interface.h"
 #include "tier1/generichash.h"

@@ -6,18 +6,10 @@
 //=============================================================================//
 #include "pch_tier0.h"
 
-#if defined(_WIN32)
-#define WINDOWS_LEAN_AND_MEAN
-#include <windows.h>
-#include "cputopology.h"
-#endif
 
 #include "tier0_strtools.h"
 
 //#include "tier1/strtools.h" // this is included for the definition of V_isspace()
-#ifdef PLATFORM_WINDOWS_PC
-#include <intrin.h>
-#endif
 
 // NOTE: This has to be the last file included!
 #include "tier0/memdbgon.h"
@@ -41,7 +33,6 @@ struct CpuIdResult_t
 
 static bool cpuid( unsigned long function, CpuIdResult_t &out )
 {
-#if   defined(GNUC)
 	unsigned long out_eax,out_ebx,out_ecx,out_edx;
 	asm("mov %%rbx, %%rsi\n\t"
 		"cpuid\n\t"
@@ -58,55 +49,11 @@ static bool cpuid( unsigned long function, CpuIdResult_t &out )
 	out.edx = out_edx;	
 
 	return true;
-#elif defined(_WIN64)
-	int pCPUInfo[4];
-	__cpuid( pCPUInfo, (int)function );
-	out.eax = pCPUInfo[0];
-	out.ebx = pCPUInfo[1];
-	out.ecx = pCPUInfo[2];
-	out.edx = pCPUInfo[3];
-	return true;
-#else
-	bool retval = true;
-	unsigned long out_eax = 0, out_ebx = 0, out_ecx = 0, out_edx = 0;
-	_asm pushad;
-
-	__try
-	{
-        _asm
-		{
-			xor edx, edx		// Clue the compiler that EDX & others is about to be used. 
-			xor ecx, ecx
-			xor ebx, ebx        // <Sergiy> Note: if I don't zero these out, cpuid sometimes won't work, I didn't find out why yet
-            mov eax, function   // set up CPUID to return processor version and features
-								//      0 = vendor string, 1 = version info, 2 = cache info
-            cpuid				// code bytes = 0fh,  0a2h
-            mov out_eax, eax	// features returned in eax
-            mov out_ebx, ebx	// features returned in ebx
-            mov out_ecx, ecx	// features returned in ecx
-            mov out_edx, edx	// features returned in edx
-		}
-    } 
-	__except(EXCEPTION_EXECUTE_HANDLER) 
-	{ 
-		retval = false; 
-	}
-
-	out.eax = out_eax;
-	out.ebx = out_ebx;
-	out.ecx = out_ecx;
-	out.edx = out_edx;
-
-	_asm popad
-
-	return retval;
-#endif
 }
 
 
 static bool cpuidex( unsigned long function, unsigned long subfunction, CpuIdResult_t &out )
 {
-#if   defined(GNUC)
 	unsigned long out_eax, out_ebx, out_ecx, out_edx;
 
 	asm( "mov %%rbx, %%rsi\n\t"
@@ -126,49 +73,6 @@ static bool cpuidex( unsigned long function, unsigned long subfunction, CpuIdRes
 	out.edx = out_edx;
 
 	return true;
-#elif defined(_WIN64)
-	int pCPUInfo[ 4 ];
-	__cpuidex( pCPUInfo, ( int )function, ( int )subfunction );
-	out.eax = pCPUInfo[ 0 ];
-	out.ebx = pCPUInfo[ 1 ];
-	out.ecx = pCPUInfo[ 2 ];
-	out.edx = pCPUInfo[ 3 ];
-	return false;
-#else
-	bool retval = true;
-	unsigned long out_eax = 0, out_ebx = 0, out_ecx = 0, out_edx = 0;
-	_asm pushad;
-
-	__try
-	{
-		_asm
-		{
-			xor edx, edx		// Clue the compiler that EDX & others is about to be used. 
-			mov ecx, subfunction
-			xor ebx, ebx        // <Sergiy> Note: if I don't zero these out, cpuid sometimes won't work, I didn't find out why yet
-			mov eax, function   // set up CPUID to return processor version and features
-			//      0 = vendor string, 1 = version info, 2 = cache info
-			cpuid				// code bytes = 0fh,  0a2h
-			mov out_eax, eax	// features returned in eax
-			mov out_ebx, ebx	// features returned in ebx
-			mov out_ecx, ecx	// features returned in ecx
-			mov out_edx, edx	// features returned in edx
-		}
-	}
-	__except ( EXCEPTION_EXECUTE_HANDLER )
-	{
-		retval = false;
-	}
-
-	out.eax = out_eax;
-	out.ebx = out_ebx;
-	out.ecx = out_ecx;
-	out.edx = out_edx;
-
-	_asm popad
-
-	return retval;
-#endif
 }
 
 
@@ -381,33 +285,12 @@ uint64 CalculateCPUFreq(); // from cpu_linux.cpp
 // for some fraction of a second, then measuring the elapsed number of cycles.
 static int64 CalculateClockSpeed()
 {
-#if defined( _WIN32 )
-	LARGE_INTEGER waitTime, startCount, curCount;
-	CCycleCount start, end;
-
-	// Take 1/32 of a second for the measurement.
-	QueryPerformanceFrequency( &waitTime );
-	int scale = 5;
-	waitTime.QuadPart >>= scale;
-
-	QueryPerformanceCounter( &startCount );
-	start.Sample();
-	do
-	{
-		QueryPerformanceCounter( &curCount );
-	}
-	while ( curCount.QuadPart - startCount.QuadPart < waitTime.QuadPart );
-	end.Sample();
-
-	return (end.m_Int64 - start.m_Int64) << scale;
-#else
 	int64 freq =(int64)CalculateCPUFreq();
 	if ( freq == 0 ) // couldn't calculate clock speed
 	{
 		Error( "Unable to determine CPU Frequency\n" );
 	}
 	return freq;
-#endif
 }
 
 static CPUInformation s_cpuInformation;
@@ -544,38 +427,6 @@ const CPUInformation& GetCPUInformation()
 	bool bAuthenticAMD = ( 0 == V_tier0_stricmp( GetProcessorVendorId(), "AuthenticAMD" ) );
 	bool bGenuineIntel = !bAuthenticAMD && ( 0 == V_tier0_stricmp( GetProcessorVendorId(), "GenuineIntel" ) );
 
-#if defined(_WIN32)
-	SYSTEM_INFO si;
-	ZeroMemory( &si, sizeof(si) );
-
-	GetSystemInfo( &si );
-
-	// Sergiy: fixing: si.dwNumberOfProcessors is the number of logical processors according to experiments on i7, P4 and a DirectX sample (Aug'09)
-	//         this is contrary to MSDN documentation on GetSystemInfo()
-	// 
-	pi.m_nLogicalProcessors = si.dwNumberOfProcessors;
-
-	if ( bAuthenticAMD )
-	{
-		// quick fix for AMD Phenom: it reports 3 logical cores and 4 physical cores;
-		// no AMD CPUs by the end of 2009 have HT, so we'll override HT detection here
-		pi.m_nPhysicalProcessors = pi.m_nLogicalProcessors;
-	}
-	else
-	{
-		CpuTopology topo;
-		pi.m_nPhysicalProcessors = topo.NumberOfSystemCores();
-	}
-
-	// Make sure I always report at least one, when running WinXP with the /ONECPU switch, 
-	// it likes to report 0 processors for some reason.
-	if ( pi.m_nPhysicalProcessors == 0 && pi.m_nLogicalProcessors == 0 )
-	{
-		Assert( !"Sergiy: apparently I didn't fix some CPU detection code completely. Let me know and I'll do my best to fix it soon." );
-		pi.m_nPhysicalProcessors = 1;
-		pi.m_nLogicalProcessors  = 1;
-	}
-#else
 	pi.m_nLogicalProcessors = 0;
 	pi.m_nPhysicalProcessors = 0;
 	const int k_cMaxProcessors = 256;
@@ -630,7 +481,6 @@ const CPUInformation& GetCPUInformation()
 		Assert( !"couldn't read cpu information from /proc/cpuinfo" );
 	}
 
-#endif
 
 	CpuIdResult_t cpuid0 = cpuid( 0 );
 	if ( cpuid0.eax >= 1 )

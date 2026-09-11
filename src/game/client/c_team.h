@@ -7,9 +7,6 @@
 
 #ifndef C_TEAM_H
 #define C_TEAM_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "reflect_annotations.h"
 #include "shareddefs.h"

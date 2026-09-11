@@ -8,13 +8,6 @@
 
 #if SUPPORT_NET_CONSOLE
 
-#if defined(_WIN32)
-#include "winlite.h"
-#include <winsock2.h>
-#undef SetPort // winsock screws with the SetPort string... *sigh*
-#define MSG_NOSIGNAL 0
-
-#else
 
 
 #include <sys/types.h>
@@ -28,7 +21,6 @@
 #define WSAGetLastError() errno
 #define ioctlsocket ioctl
 
-#endif // SUPPORT_NET_CONSOLE
 #include "mathlib/expressioncalculator.h"
 
 #include "client_pch.h"

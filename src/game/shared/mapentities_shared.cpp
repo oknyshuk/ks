@@ -11,7 +11,6 @@
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
-#if !defined(_STATIC_LINKED) || defined(CLIENT_DLL)
 
 static const char *s_BraceChars = "{}()\'";
 static bool s_BraceCharacters[256];
@@ -201,7 +200,6 @@ skipwhite:
 	return data;
 }
 
-#endif // !STATIC_LINKED || CLIENT_DLL
 
 /* ================= CEntityMapData definition ================ */
 

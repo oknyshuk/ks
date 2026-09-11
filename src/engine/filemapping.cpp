@@ -6,12 +6,10 @@
 
 #include "filemapping.h"
 
-#if defined( POSIX )
 #include <fcntl.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <unistd.h>
-#endif
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -23,7 +21,6 @@ bool CFileMapping::Map( const char *pszAbsolutePath )
 	if ( !pszAbsolutePath || !pszAbsolutePath[0] )
 		return false;
 
-#if defined( POSIX )
 	const int fd = ::open( pszAbsolutePath, O_RDONLY | O_CLOEXEC );
 	if ( fd < 0 )
 		return false;
@@ -49,10 +46,6 @@ bool CFileMapping::Map( const char *pszAbsolutePath )
 
 	m_Bytes = { static_cast<const std::byte *>( pBase ), nSize };
 	return true;
-#else
-	// No mapping support on this platform; callers fall back to reads.
-	return false;
-#endif
 }
 
 void CFileMapping::Unmap()
@@ -60,19 +53,15 @@ void CFileMapping::Unmap()
 	if ( m_Bytes.empty() )
 		return;
 
-#if defined( POSIX )
 	::munmap( const_cast<void *>( static_cast<const void *>( m_Bytes.data() ) ), m_Bytes.size() );
-#endif
 
 	m_Bytes = {};
 }
 
 void CFileMapping::PrefetchAll() const
 {
-#if defined( POSIX )
 	if ( !m_Bytes.empty() )
 	{
 		::madvise( const_cast<void *>( static_cast<const void *>( m_Bytes.data() ) ), m_Bytes.size(), MADV_WILLNEED );
 	}
-#endif
 }

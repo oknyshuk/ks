@@ -51,11 +51,6 @@ float4_color_return_type main( PS_INPUT i ) : COLOR
 {
 	float3 baseTimesLightmap = tex2D( BaseTimesLightmapSampler, i.vBaseTexCoord ).xyz;
 
-	#if defined( _X360 )
-	{
-		baseTimesLightmap = SrgbGammaToLinear( baseTimesLightmap );
-	}
-	#endif
 
 	baseTimesLightmap *= ( 1.0f / BASE_TIMES_LIGHTMAP_LINEAR_TONEMAP_SCALE );
 

@@ -9,9 +9,6 @@
 #ifndef INPUTVAR_H
 #define INPUTVAR_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "entitylist.h"
 

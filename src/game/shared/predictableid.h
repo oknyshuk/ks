@@ -7,9 +7,6 @@
 
 #ifndef PREDICTABLEID_H
 #define PREDICTABLEID_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #if defined( USE_PREDICTABLEID )
 #if !defined( NO_ENTITY_PREDICTION )

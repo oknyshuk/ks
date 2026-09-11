@@ -6,9 +6,6 @@
 
 #ifndef POSIX_WIN32STUBS_H
 #define POSIX_WIN32STUBS_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "tier0/basetypes.h"
 #include "tier0/platform.h"

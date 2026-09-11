@@ -9,9 +9,6 @@
 
 #include "reflect_annotations.h"
 
-#if defined( _WIN32 )
-#pragma once
-#endif
 
 #include "ai_goalentity.h"
 #include "ai_behavior.h"

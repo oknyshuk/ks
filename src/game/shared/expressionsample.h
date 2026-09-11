@@ -7,9 +7,6 @@
 
 #ifndef EXPRESSIONSAMPLE_H
 #define EXPRESSIONSAMPLE_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "interpolatortypes.h"
 

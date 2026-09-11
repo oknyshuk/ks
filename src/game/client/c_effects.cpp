@@ -25,14 +25,7 @@
 #include "tier0/vprof.h"
 #include "viewrender.h"
 #include "raytrace.h"
-#ifdef INFESTED_DLL
-#include "c_asw_player.h"
-#include "c_asw_marine.h"
-#include "asw_input.h"
-#endif
-#ifdef CSTRIKE15
 #include "c_cs_player.h"
-#endif
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -72,7 +65,6 @@ ConVar r_RainDebugDuration( "r_RainDebugDuration", "0", FCVAR_CHEAT, "Shows rain
 
 //Precahce the effects
 PRECACHE_REGISTER_BEGIN( GLOBAL, PrecachePrecipitation )
-#ifndef PORTAL2
 	PRECACHE( MATERIAL, "particle/rain" )
 	PRECACHE( MATERIAL, "particle/snow" )
 	PRECACHE( PARTICLE_SYSTEM, "rain_storm" )
@@ -82,14 +74,8 @@ PRECACHE_REGISTER_BEGIN( GLOBAL, PrecachePrecipitation )
 	PRECACHE( PARTICLE_SYSTEM, "rain_outer" )
 	PRECACHE( PARTICLE_SYSTEM, "ash" )
 	PRECACHE( PARTICLE_SYSTEM, "ash_outer" )
-	#ifdef INFESTED_DLL
-		PRECACHE( PARTICLE_SYSTEM, "asw_snow" )
-		PRECACHE( PARTICLE_SYSTEM, "asw_snow_outer" )
-	#else
 		PRECACHE( PARTICLE_SYSTEM, "snow" )
 		PRECACHE( PARTICLE_SYSTEM, "snow_outer" )
-	#endif
-#endif // !PORTAL2
 PRECACHE_REGISTER_END()
 
 CUtlVector< RayTracingEnvironment* > g_RayTraceEnvironments;
@@ -130,8 +116,6 @@ bool ParticleIsBlocked( const Vector &end, const Vector &start )
 
 // Just receive the normal data table stuff
 IMPLEMENT_REFLECT_CLIENTCLASS( CClient_Precipitation, DT_Precipitation, CPrecipitation )
-#ifdef INFESTED_DLL
-#endif
 
 static ConVar r_SnowEnable( "r_SnowEnable", "1", FCVAR_CHEAT, "Snow Enable" );
 static ConVar r_SnowParticles( "r_SnowParticles", "500", FCVAR_CHEAT, "Snow." );
@@ -1005,11 +989,7 @@ void CClient_Precipitation::CreateParticlePrecip( void )
 	{
 		ACTIVE_SPLITSCREEN_PLAYER_GUARD( hh );
 
-#ifdef CSTRIKE15
 		C_CSPlayer *pPlayer = GetLocalOrInEyeCSPlayer();
-#else
-		C_BasePlayer *pPlayer = C_BasePlayer::GetLocalPlayer();
-#endif
 
 		if ( pPlayer == NULL )
 			continue;
@@ -1036,12 +1016,6 @@ void CClient_Precipitation::UpdateParticlePrecip( C_BasePlayer *pPlayer, int nSl
 	Vector vForward;
 	Vector vRight;
 
-#ifdef INFESTED_DLL
-	vForward[PITCH] = 0;
-	vForward[YAW] = ASWInput()->ASW_GetCameraPitch();
-	vForward[ROLL] = -ASWInput()->ASW_GetCameraYaw();
-	vForward.NormalizeInPlace();
-#else
 	pPlayer->GetVectors( &vForward, &vRight, NULL );
 	vForward.z = 0.0f;
 	vForward.NormalizeInPlace();
@@ -1051,23 +1025,10 @@ void CClient_Precipitation::UpdateParticlePrecip( C_BasePlayer *pPlayer, int nSl
 	vForward45Left.NormalizeInPlace();
 	fltx4 TMax = ReplicateX4( 320.0f );
 	SubFloat( TMax, 3 ) = FLT_MAX;
-#endif
 	float curTime = gpGlobals->frametime;
 
 	while ( m_tParticlePrecipTraceTimer[nSlot].NextEvent( curTime ) )
 	{
-#ifdef INFESTED_DLL
-		Vector vPlayerPos = MainViewOrigin( nSlot );
-		Vector vOffsetPos = vPlayerPos + Vector ( 0, 0, 4 );
-		Vector vOffsetPosNear = vPlayerPos + Vector ( 0, 0, 4 ) + ( vForward * 32 );
-		Vector vOffsetPosFar = vPlayerPos + Vector ( 0, 0, 4 ) + ( vForward * 100 );	
-		Vector vDensity = Vector( r_RainParticleDensity.GetFloat(), (float)m_nSnowDustAmount/100.0f, 0 ) * m_flDensity;
-
-		RayTracingEnvironment *RtEnv = g_RayTraceEnvironments.Element( 0 );
-
-		bool bInside = !engine->CullBox( RtEnv->m_MinBound, RtEnv->m_MaxBound );
-		bool bNearby = false;
-#else
 		Vector vPlayerPos = pPlayer->EyePosition();
 		Vector vOffsetPos = vPlayerPos + Vector ( 0, 0, 180 );
 		Vector vOffsetPosNear = vPlayerPos + Vector ( 0, 0, 180 ) + ( vForward * 32 );
@@ -1100,30 +1061,9 @@ void CClient_Precipitation::UpdateParticlePrecip( C_BasePlayer *pPlayer, int nSl
 
 		bool bInside = ( Result.HitIds[3] != -1 && Result.surface_normal.Vec( 3 ).z < 0.0f );
 		bool bNearby = (  IsAnyTrue( CmpGeSIMD ( fl4HitIds, Four_Zeros ) ) && IsAnyTrue( CmpGeSIMD( fl4Tolerance, Result.HitDistance ) ) );
-#endif
 
 		if ( bInside || bNearby )
 		{
-#ifdef INFESTED_DLL
-			//debugoverlay->AddBoxOverlay(vPlayerPos, Vector( -12, -12, -12 ), Vector( 12, 12, 12 ), QAngle( 0, 0, 0 ), 255, 0, 0, 32, 0.2f );
-			//debugoverlay->AddBoxOverlay(vOffsetPosNear, Vector( -10, -10, -10 ), Vector( 10, 10, 10 ), QAngle( 0, 0, 0 ), 0, 255, 0, 32, 0.2f );
-			//debugoverlay->AddBoxOverlay(vOffsetPosFar, Vector( -5, -5, -5 ), Vector( 5, 5, 5 ), QAngle( 0, 0, 0 ), 0, 0, 255, 32, 0.2f );
-
-			// Update if we've already got systems, otherwise, create them.
-			if ( m_pParticlePrecipInnerNear[nSlot] != NULL  && m_pParticlePrecipInnerFar[nSlot] != NULL  &&  m_pParticlePrecipOuter[nSlot] != NULL )
-			{
-				m_pParticlePrecipOuter[nSlot]->SetControlPoint( 1, vOffsetPos );
-				m_pParticlePrecipInnerNear[nSlot]->SetControlPoint( 1, vOffsetPosNear );
-				m_pParticlePrecipInnerFar[nSlot]->SetControlPoint( 1, vOffsetPosFar );
-				m_pParticlePrecipInnerNear[nSlot]->SetControlPoint( 3, vDensity );
-				m_pParticlePrecipInnerFar[nSlot]->SetControlPoint( 3, vDensity );
-				m_pParticlePrecipOuter[nSlot]->SetControlPoint( 3, vDensity );
-			}
-			else
-			{
-				DispatchInnerParticlePrecip( nSlot, pPlayer, vForward );
-			}
-#else
 			//We can see a rain volume, but it's farther than 180 units away, only use far effect.
 			if ( !bInside && SubFloat( FindLowestSIMD3( Result.HitDistance ), 0 ) >= m_flParticleInnerDist )
 			{
@@ -1160,7 +1100,6 @@ void CClient_Precipitation::UpdateParticlePrecip( C_BasePlayer *pPlayer, int nSl
 					DispatchInnerParticlePrecip( nSlot, pPlayer, vForward );
 				}
 			}
-#endif
 		}
 		else  // No rain in the area, kill any leftover systems.
 		{
@@ -1182,17 +1121,10 @@ void CClient_Precipitation::InitializeParticlePrecip( void )
 	}
 	else if ( m_nPrecipType == PRECIPITATION_TYPE_PARTICLESNOW )
 	{
-#ifdef INFESTED_DLL
-		m_pParticleInnerNearDef = "asw_snow";
-		m_pParticleInnerFarDef = "asw_snow";
-		m_pParticleOuterDef = "asw_snow_outer";
-		m_flParticleInnerDist = 240.0;
-#else
 		m_pParticleInnerNearDef = "snow";
 		m_pParticleInnerFarDef = "snow";
 		m_pParticleOuterDef = "snow_outer";
 		m_flParticleInnerDist = 280.0;
-#endif
 	}
 	else if ( m_nPrecipType == PRECIPITATION_TYPE_PARTICLERAINSTORM )
 	{
@@ -1303,13 +1235,8 @@ void CClient_Precipitation::DispatchOuterParticlePrecip( int nSlot, C_BasePlayer
 {
 	DestroyOuterParticlePrecip( nSlot );
 
-#ifdef INFESTED_DLL
-	Vector vDensity = Vector( r_RainParticleDensity.GetFloat(), (float)m_nSnowDustAmount/100.0f, 0 ) * m_flDensity;
-	Vector vPlayerPos = MainViewOrigin( nSlot );
-#else
 	Vector vDensity = Vector( r_RainParticleDensity.GetFloat(), 0, 0 ) * m_flDensity;
 	Vector vPlayerPos = pPlayer->EyePosition();
-#endif
 
 	m_pParticlePrecipOuter[nSlot] = ParticleProp()->Create( m_pParticleOuterDef, PATTACH_ABSORIGIN_FOLLOW );
 	m_pParticlePrecipOuter[nSlot]->SetControlPointEntity( 2, pPlayer );
@@ -1322,19 +1249,11 @@ void CClient_Precipitation::DispatchInnerParticlePrecip( int nSlot, C_BasePlayer
 {
 	DestroyInnerParticlePrecip( nSlot );
 	DestroyOuterParticlePrecip( nSlot );
-#ifdef INFESTED_DLL
-	Vector vPlayerPos = MainViewOrigin( nSlot );
-	Vector vOffsetPos = vPlayerPos + Vector ( 0, 0, 64 );
-	Vector vOffsetPosNear = vPlayerPos + Vector ( 0, 0, 64 ) + ( vForward * 32 );
-	Vector vOffsetPosFar = vPlayerPos + Vector ( 0, 0, 64 ) + ( vForward * m_flParticleInnerDist );
-	Vector vDensity = Vector( r_RainParticleDensity.GetFloat(), (float)m_nSnowDustAmount/100.0f, 0 ) * m_flDensity;
-#else
 	Vector vPlayerPos = pPlayer->EyePosition();
 	Vector vOffsetPos = vPlayerPos + Vector ( 0, 0, 180 );
 	Vector vOffsetPosNear = vPlayerPos + Vector ( 0, 0, 180 ) + ( vForward * 32 );
 	Vector vOffsetPosFar = vPlayerPos + Vector ( 0, 0, 180 ) + ( vForward * m_flParticleInnerDist );  // 100.0
 	Vector vDensity = Vector( r_RainParticleDensity.GetFloat(), 0, 0 ) * m_flDensity;
-#endif
 	
 	m_pParticlePrecipOuter[nSlot] = ParticleProp()->Create( m_pParticleOuterDef, PATTACH_ABSORIGIN_FOLLOW );
 	m_pParticlePrecipInnerNear[nSlot] = ParticleProp()->Create( m_pParticleInnerNearDef, PATTACH_ABSORIGIN_FOLLOW );
@@ -1388,11 +1307,7 @@ void CClient_Precipitation::EmitParticles( float fTimeDelta )
 	{
 		ACTIVE_SPLITSCREEN_PLAYER_GUARD( hh );
 	
-#ifdef CSTRIKE15
 		C_CSPlayer *pPlayer = GetLocalOrInEyeCSPlayer();
-#else
-		C_BasePlayer *pPlayer = C_BasePlayer::GetLocalPlayer();
-#endif
 		if ( !pPlayer )
 			continue;
 	

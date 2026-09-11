@@ -4,9 +4,6 @@
 
 #ifndef IREPLAYHISTORYMANAGER_H
 #define IREPLAYHISTORYMANAGER_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 //----------------------------------------------------------------------------------------
 

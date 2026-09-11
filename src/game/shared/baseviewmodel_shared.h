@@ -12,9 +12,6 @@
 #include "dt_recv.h"
 #include "const.h"
 #include "shareddefs.h"
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "predictable_entity.h"
 #include "utlvector.h"
@@ -22,9 +19,7 @@
 #include "shared_classnames.h"
 #include "ihasowner.h"
 
-#ifdef CSTRIKE15
 #include "cs_shareddefs.h"
-#endif
 
 void RecvProxy_EffectFlags( const CRecvProxyData *pData, void *pStruct, void *pOut );
 
@@ -250,10 +245,6 @@ private:
 
 #endif
 
-#ifdef PORTAL2
-	// We need to always transition because we handle our transition volumes in a different manner
-	virtual int				ObjectCaps( void ) { return BaseClass::ObjectCaps() | FCAP_FORCE_TRANSITION; }
-#endif // PORTAL2
 
 private:
 	typedef CHandle< CBaseCombatWeapon > CBaseCombatWeaponHandle;

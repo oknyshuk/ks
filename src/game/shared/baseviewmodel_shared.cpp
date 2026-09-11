@@ -555,7 +555,6 @@ void CBaseViewModel::CalcViewModelLag( Vector& origin, QAngle& angles, QAngle& o
 		Assert( m_vecLastFacing.IsValid() );
 	}
 
-#if !defined( PORTAL ) //floor/wall floor/floor portals cause a sudden and large pitch change, causing a pop unless we write a bunch of interpolation code. Easier to just disable this
 	Vector right, up;
 	AngleVectors( original_angles, &forward, &right, &up );
 
@@ -569,7 +568,6 @@ void CBaseViewModel::CalcViewModelLag( Vector& origin, QAngle& angles, QAngle& o
 	VectorMA( origin, -pitch * 0.035f,	forward,	origin );
 	VectorMA( origin, -pitch * 0.03f,		right,	origin );
 	VectorMA( origin, -pitch * 0.02f,		up,		origin);
-#endif
 }
 
 //-----------------------------------------------------------------------------

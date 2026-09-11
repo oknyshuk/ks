@@ -6,9 +6,6 @@
 #ifndef MATCHMAKING_STEAM_API_HOOK_H
 #define MATCHMAKING_STEAM_API_HOOK_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 // Steam uses C-runtime calls in headers, need to remap
 	#ifdef strncpy

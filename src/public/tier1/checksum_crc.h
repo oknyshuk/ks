@@ -7,9 +7,6 @@
 #ifndef CHECKSUM_CRC_H
 #define CHECKSUM_CRC_H
 #include <tier0/platform.h>
-#ifdef _WIN32
-#pragma once
-#endif
 
 typedef uint32 CRC32_t;
 

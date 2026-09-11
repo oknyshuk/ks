@@ -8,9 +8,6 @@
 //=============================================================================//
 #if !defined( PACKED_ENTITY_H )
 #define PACKED_ENTITY_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include <const.h>
 #include <basetypes.h>

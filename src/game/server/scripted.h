@@ -8,9 +8,6 @@
 #define SCRIPTED_H
 
 #include "reflect_annotations.h"
-#ifdef _WIN32
-#pragma once
-#endif
 
 #ifndef SCRIPTEVENT_H
 #include "scriptevent.h"

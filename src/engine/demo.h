@@ -6,9 +6,6 @@
 //=============================================================================//
 #ifndef DEMO_H
 #define DEMO_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "utlvector.h"
 

@@ -7,9 +7,6 @@
 
 #ifndef WEAPON_IRONSIGHTCONTROLLER_H
 #define WEAPON_IRONSIGHTCONTROLLER_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "cs_shareddefs.h"
 

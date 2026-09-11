@@ -7,9 +7,6 @@
 
 #ifndef SOUNDEMITTERSYSTEMBASE_H
 #define SOUNDEMITTERSYSTEMBASE_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "SoundEmitterSystem/isoundemittersystembase.h"
 #include "tier1/utldict.h"

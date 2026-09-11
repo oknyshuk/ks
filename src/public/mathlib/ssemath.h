@@ -8,12 +8,8 @@
 
 #include <xmmintrin.h>
 
-#ifndef SPU
 #include "mathlib/vector.h"
 #include "mathlib/mathlib.h"
-#else
-#include "mathlib/math_pfns.h"
-#endif
 
 #include "mathlib/fltx4.h"
 
@@ -70,19 +66,6 @@ FORCEINLINE void TestVPUFlags() {}
 // instructions, saving a load and possible L2
 // miss.)
 
-#if   defined(SPU)
-#define			   Four_Zeros			spu_splats( 0.0f )		// 0 0 0 0
-#define			   Four_Ones			spu_splats( 1.0f )		// 1 1 1 1
-#define			   Four_Twos			spu_splats( 2.0f )		// 2 2 2 2
-#define			   Four_Threes			spu_splats( 3.0f )		// 3 3 3 3
-#define			   Four_Fours			spu_splats( 4.0f )		// guess.
-#define			   Four_Point225s		spu_splats( 0.225f )		// .225 .225 .225 .225
-#define			   Four_PointFives		spu_splats( 0.5f )		// .5 .5 .5 .5
-#define			   Four_Thirds			spu_splats( 0.33333333 );	// 1/3
-#define			   Four_TwoThirds		spu_splats( 0.66666666 );	// 2/3
-#define			   Four_NegativeOnes	spu_splats( -1.0f )		// -1 -1 -1 -1 
-#define			   Four_DegToRad		spu_splats((float)(M_PI_F / 180.f))
-#else
 extern const fltx4 Four_Zeros;									// 0 0 0 0
 extern const fltx4 Four_Ones;									// 1 1 1 1
 extern const fltx4 Four_Twos;									// 2 2 2 2
@@ -94,7 +77,6 @@ extern const fltx4 Four_Thirds;									// 1/3
 extern const fltx4 Four_TwoThirds;								// 2/3
 extern const fltx4 Four_NegativeOnes;							// -1 -1 -1 -1 
 extern const fltx4 Four_DegToRad;								// (float)(M_PI_F / 180.f) times four
-#endif
 extern const fltx4 Four_Epsilons;								// FLT_EPSILON FLT_EPSILON FLT_EPSILON FLT_EPSILON
 extern const fltx4 Four_2ToThe21s;								// (1<<21)..
 extern const fltx4 Four_2ToThe22s;								// (1<<22)..
@@ -149,11 +131,7 @@ extern const int32 ALIGN16 g_SIMD_EveryOtherMask[];				// 0, ~0, 0, ~0
 // a higher level code change. 
 // On the other hand, I'm tired of typing #ifdef _X360
 // all over the place, so this is just a nop on Intel, PS3.
-#ifdef PLATFORM_PPC
-#error Prefetch not defined for this platform!
-#else
 #define PREFETCH360(x,y) // nothing
-#endif
 
 // Here's a handy function to align a pointer to the next
 // sixteen byte boundary -- it'll round it up to the nearest
@@ -163,11 +141,7 @@ extern const int32 ALIGN16 g_SIMD_EveryOtherMask[];				// 0, ~0, 0, ~0
 template<class T>
 inline T *AlignPointer(void * ptr)
 {
-#if defined( __clang__ )
-	uintp temp = (uintp)ptr;
-#else
 	unsigned temp = ptr;
-#endif
 	temp = ALIGN_VALUE(temp, sizeof(T));
 	return (T *)temp;
 }
@@ -1825,12 +1799,6 @@ FORCEINLINE i32x4 IntShiftLeftWordSIMD(const i32x4 &vSrcA, const i32x4 &vSrcB)
 // like this.
 FORCEINLINE void ConvertStoreAsIntsSIMD(intx4 * RESTRICT pDest, const fltx4 &vSrc)
 {
-#if defined(_MSC_VER) && _MSC_VER >= 1900 && defined(COMPILER_MSVC64)
-	(*pDest)[0] = (int)SubFloat(vSrc, 0);
-	(*pDest)[1] = (int)SubFloat(vSrc, 1);
-	(*pDest)[2] = (int)SubFloat(vSrc, 2);
-	(*pDest)[3] = (int)SubFloat(vSrc, 3);
-#else
 	__m64 bottom = _mm_cvttps_pi32( vSrc );
 	__m64 top    = _mm_cvttps_pi32( _mm_movehl_ps(vSrc,vSrc) );
 
@@ -1838,7 +1806,6 @@ FORCEINLINE void ConvertStoreAsIntsSIMD(intx4 * RESTRICT pDest, const fltx4 &vSr
 	*reinterpret_cast<__m64 *>(&(*pDest)[2]) = top;
 
 	_mm_empty();
-#endif
 }
 
 
@@ -1857,7 +1824,6 @@ FORCEINLINE void RotateLeftDoubleSIMD( fltx4 &a, fltx4 &b )
 // Unneccessary on 360, as you already have them from xboxmath.h (same for PS3 PPU and SPU)
 
 
-#ifndef SPU
 // fourplanes_t, Frustrum_t are not supported on SPU
 // It would make sense to support FourVectors on SPU at some point.
 
@@ -1948,7 +1914,6 @@ public:
 	fourplanes_t	planes[2];
 };
 
-#endif
 
 class FourQuaternions;
 /// class FourVectors stores 4 independent vectors for use in SIMD processing. These vectors are
@@ -2879,7 +2844,6 @@ FORCEINLINE fltx4 FracSIMD( const fltx4 &val )
 	return XorSIMD( SubSIMD( fl4Abs, ival ), XorSIMD( val, fl4Abs ) );			// restore sign bits
 }
 
-#ifndef SPU
 // Disable on SPU for the moment as it generates a warning
 // warning: dereferencing type-punned pointer will break strict-aliasing rules
 // This is related to LoadAlignedSIMD( (float *) g_SIMD_lsbmask )
@@ -2891,7 +2855,6 @@ FORCEINLINE fltx4 Mod2SIMD( const fltx4 &val )
 	ival = MaskedAssign( CmpGtSIMD( ival, fl4Abs ), SubSIMD( ival, Four_Twos ), ival );
 	return XorSIMD( SubSIMD( fl4Abs, ival ), XorSIMD( val, fl4Abs ) );			// restore sign bits
 }
-#endif
 
 FORCEINLINE fltx4 Mod2SIMDPositiveInput( const fltx4 &val )
 {
@@ -2976,7 +2939,6 @@ FORCEINLINE fltx4 BiasSIMD( const fltx4 &val, const fltx4 &precalc_param )
 // NOTE: The w component of emins + emaxs must be 1 for this to work
 //-----------------------------------------------------------------------------
 
-#ifndef SPU
 // We don't need this on SPU right now
 
 FORCEINLINE int BoxOnPlaneSideSIMD( const fltx4& emins, const fltx4& emaxs, const cplane_t *p, float tolerance = 0.f )
@@ -3080,7 +3042,6 @@ FORCEINLINE bool KDop32_t::IsEmpty( void ) const
 extern const fltx4 g_KDop32XDirs[4];
 extern const fltx4 g_KDop32YDirs[4];
 extern const fltx4 g_KDop32ZDirs[4];
-#endif
 
 
 // These are not optimized right now for some platforms. We should be able to shuffle the values in some platforms.
@@ -3106,23 +3067,12 @@ FORCEINLINE fltx4 SetWFromZSIMD( const fltx4 & a, const fltx4 & z )
 
 FORCEINLINE fltx4 CrossProductSIMD( const fltx4 &A, const fltx4 &B )
 {
-#if   defined( _WIN32 )
-	fltx4 A1 = _mm_shuffle_ps( A, A, MM_SHUFFLE_REV( 1, 2, 0, 3 ) );
-	fltx4 B1 = _mm_shuffle_ps( B, B, MM_SHUFFLE_REV( 2, 0, 1, 3 ) );
-	fltx4 Result1 = MulSIMD( A1, B1 );
-	fltx4 A2 = _mm_shuffle_ps( A, A, MM_SHUFFLE_REV( 2, 0, 1, 3 ) );
-	fltx4 B2 = _mm_shuffle_ps( B, B, MM_SHUFFLE_REV( 1, 2, 0, 3 ) );
-	fltx4 Result2 = MulSIMD( A2, B2 );
-	return SubSIMD( Result1, Result2 );
-
-#else
 	fltx4 CrossVal;
 	SubFloat( CrossVal, 0 ) = SubFloat( A, 1 )*SubFloat( B, 2 ) - SubFloat( A, 2 )*SubFloat( B, 1 );
 	SubFloat( CrossVal, 1 ) = SubFloat( A, 2 )*SubFloat( B, 0 ) - SubFloat( A, 0 )*SubFloat( B, 2 );
 	SubFloat( CrossVal, 2 ) = SubFloat( A, 0 )*SubFloat( B, 1 ) - SubFloat( A, 1 )*SubFloat( B, 0 );
 	SubFloat( CrossVal, 3 ) = 0;
 	return CrossVal;
-#endif
 }
 
 inline const fltx4 Length3SIMD(const fltx4 vec)
@@ -3145,26 +3095,4 @@ inline const fltx4 Normalized3SIMD (const fltx4 vec)
 // Some convenience operator overloads, which are just aliasing the functions above.
 // Unneccessary on 360, as you already have them from xboxmath.h
 // Componentwise add
-#ifndef COMPILER_GCC
-
-FORCEINLINE fltx4 operator+=( fltx4 &a, FLTX4 b )
-{
-	a = AddSIMD( a, b );
-	return a;
-}
-
-FORCEINLINE fltx4 operator-=( fltx4 &a, FLTX4 b )
-{
-	a = SubSIMD( a, b );
-	return a;
-}
-
-
-FORCEINLINE fltx4 operator*=( fltx4 &a, FLTX4 b )
-{
-	a = MulSIMD( a, b );
-	return a;
-}
-
-#endif
 #endif // _ssemath_h

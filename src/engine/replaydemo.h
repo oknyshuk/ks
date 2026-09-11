@@ -6,9 +6,6 @@
 
 #ifndef REPLAYDEMO_H
 #define REPLAYDEMO_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include <filesystem.h>
 

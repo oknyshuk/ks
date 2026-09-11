@@ -9,9 +9,6 @@
 #ifndef STUDIO_H
 #define STUDIO_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "basetypes.h"
 #include "mathlib/vector2d.h"
@@ -1457,16 +1454,10 @@ struct mstudiotexture_t
 	int						used;
     int						unused1;
 
-#ifdef PLATFORM_64BITS
 	//Having pointers in here really messes up 64 bit. these are only used
 	//on by studiomdl though, will need to figure this out if we want
 	//to port studiomdl to 64 bit.
 	int						unused[12];
-#else
-	mutable IMaterial		*material;  // fixme: this needs to go away . .isn't used by the engine, but is used by studiomdl
-	mutable void			*clientmaterial;	// gary, replace with client material pointer if used
-	int						unused[10];
-#endif
 	
 };
 
@@ -1591,10 +1582,8 @@ struct mstudio_modelvertexdata_t
 	const void			*pExtraData;
 };
 
-#ifdef PLATFORM_64BITS
 // 64b - match 32-bit packing
 #pragma pack( push, 4 )
-#endif
 
 struct mstudio_meshvertexdata_t
 {
@@ -1693,16 +1682,10 @@ struct mstudiomodel_t
 
 	mstudio_modelvertexdata_t vertexdata;
 
-#ifdef PLATFORM_64BITS
  	int					unused[4];		// 64b - mstudio_modelvertexdata_t has 3 naked pointers. 
-#else
-	int					unused[7];		// remove as appropriate
-#endif
 };
 
-#ifdef PLATFORM_64BITS
 #pragma pack( pop )
-#endif
 
 inline bool mstudio_modelvertexdata_t::HasTangentData( void ) const 
 {
@@ -1919,12 +1902,8 @@ struct studiohwdata_t
 			return 0;
 
 		// On low GPU levels, we pull in the LOD transitions with a scale factor
-#ifdef CSTRIKE15
 		// Always slam the LOD transition scale factor to 1.0f in CS:GO. (Not that it should matter, we've disabled model LOD's, but just in case.)
 		float flSwitchPointModifier = 1.0f;
-#else
-		float flSwitchPointModifier = r_lod_switch_scale.IsValid() ? r_lod_switch_scale.GetFloat() : 1.0f;
-#endif
 
 		// shadow lod is specified on the last lod with a negative switch
 		// never consider shadow lod as viable candidate

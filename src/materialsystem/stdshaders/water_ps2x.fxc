@@ -33,13 +33,7 @@
 // basetexture doesn't work with flashlight or lightmapwaterfog.  multitexture doesn't either.  We don't use basetexture or multitexture in newer code and instead use flowmap and flashlight.
 // SKIP: ( $FLASHLIGHT || $LIGHTMAPWATERFOG ) && ( ( $BASETEXTURE && !$FLOWMAP ) || $MULTITEXTURE )
 
-#if defined( _PS3 ) || defined ( _X360 )
-	#define DEPTH_EDGE_FEATHERING 1
-#endif
 
-#ifdef _X360
-	#define SHADER_SRGB_READ 1
-#endif
 
 #include "common_ps_fxc.h"
 #include "common_fog_ps_fxc.h"
@@ -78,10 +72,6 @@ sampler LightmapSampler				: register( s3 );
 	sampler ShadowDepthSampler      : register( s7 );
 	sampler RandRotSampler          : register( s8 );
 	
-#if defined(_PS3)
-	// Needed for optimal shadow filter code generation on PS3.
-	#pragma texformat ShadowDepthSampler DEPTH_COMPONENT24
-#endif
 
 #endif
 
@@ -171,9 +161,6 @@ struct PS_INPUT
 	float2 lightmapTexCoord			: TEXCOORD7_centroid;
 #endif
 
-#if defined( _X360 )
-	 float2 vScreenPos : VPOS;
-#endif
 };
 
 float2 UnpackNormal2D( float2 vNormal )
@@ -211,50 +198,11 @@ float3 ComputeNormalFromRGTexture( float2 vRGPixel )
 
 float3 LightMapSample( sampler LightmapSampler, float2 vTexCoord )
 {
-	#if ( !defined( _X360 ) || !defined( USE_32BIT_LIGHTMAPS_ON_360 ) )
 	{
 		float3 sample = tex2D( LightmapSampler, vTexCoord ).rgb;
 
 		return sample;
 	}
-	#else
-	{
-		#if 0 //1 for cheap sampling, 0 for accurate scaling from the individual samples
-		{
-			float4 sample = tex2D( LightmapSampler, vTexCoord );
-
-			return sample.rgb * sample.a;
-		}
-		#else
-		{
-			float4 Weights;
-			float4 samples_0; //no arrays allowed in inline assembly
-			float4 samples_1;
-			float4 samples_2;
-			float4 samples_3;
-
-			asm {
-				tfetch2D samples_0, vTexCoord.xy, LightmapSampler, OffsetX = -0.5, OffsetY = -0.5, MinFilter=point, MagFilter=point, MipFilter=keep, UseComputedLOD=false
-					tfetch2D samples_1, vTexCoord.xy, LightmapSampler, OffsetX =  0.5, OffsetY = -0.5, MinFilter=point, MagFilter=point, MipFilter=keep, UseComputedLOD=false
-					tfetch2D samples_2, vTexCoord.xy, LightmapSampler, OffsetX = -0.5, OffsetY =  0.5, MinFilter=point, MagFilter=point, MipFilter=keep, UseComputedLOD=false
-					tfetch2D samples_3, vTexCoord.xy, LightmapSampler, OffsetX =  0.5, OffsetY =  0.5, MinFilter=point, MagFilter=point, MipFilter=keep, UseComputedLOD=false
-
-					getWeights2D Weights, vTexCoord.xy, LightmapSampler
-			};
-
-			Weights = float4( (1-Weights.x)*(1-Weights.y), Weights.x*(1-Weights.y), (1-Weights.x)*Weights.y, Weights.x*Weights.y );
-
-			float3 result;
-			result.rgb  = samples_0.rgb * (samples_0.a * Weights.x);
-			result.rgb += samples_1.rgb * (samples_1.a * Weights.y);
-			result.rgb += samples_2.rgb * (samples_2.a * Weights.z);
-			result.rgb += samples_3.rgb * (samples_3.a * Weights.w);
-
-			return result;
-		}
-		#endif
-	}
-	#endif
 }
 
 float3 PosToColor( float3 vScenePositionWs )
@@ -477,16 +425,9 @@ float4_color_return_type main( PS_INPUT i ) : COLOR
 
 	float4 vRefractColor;
 	#if REFRACT
-		#if defined( _X360 )
-		{
-			// deal with the viewport transform for splitscreen
-			vRefractColor = tex2Dsrgb( RefractSampler, g_vInvViewportTransform.zw + vRefractTexCoord * g_vInvViewportTransform.xy );
-		}
-		#else
 		{
 			vRefractColor = tex2Dsrgb( RefractSampler, vRefractTexCoord );
 		}
-		#endif
 		float warpedAlpha = vRefractColor.a;
 		// get the depth value from the refracted sample to be used for fog.
 		#if ABOVEWATER
@@ -705,12 +646,6 @@ float4_color_return_type main( PS_INPUT i ) : COLOR
 				
 	float4_color_return_type vOutput = FinalOutput( float4( vResult.rgb, g_flWaterBlendFactor * flWaterBlendAlpha ), flFogFactor, PIXELFOGTYPE, TONEMAP_SCALE_NONE );
 	
-	#if ( defined( _X360 ) )
-	{
-		vOutput.rgb += ScreenSpaceOrderedDither( i.vScreenPos );
-		vOutput.rgb = LinearToGamma( vOutput.rgb ); // Simulate the sRGB write here since FinalOutupt() above skips this call with TONEMAP_SCALE_NONE
-	}
-	#endif
 	
 	return vOutput;
 }

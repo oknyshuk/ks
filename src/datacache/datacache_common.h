@@ -7,9 +7,6 @@
 #ifndef DATACACHE_COMMON_H
 #define DATACACHE_COMMON_H
 
-#if defined( _WIN32 )
-#pragma once
-#endif
 
 #include "tier3/tier3.h"
 

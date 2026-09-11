@@ -7,9 +7,6 @@
 
 #ifndef BITTOOLS_H
 #define BITTOOLS_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 namespace bittools
 {

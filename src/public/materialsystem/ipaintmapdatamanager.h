@@ -9,9 +9,6 @@
 #ifndef IPaintmapMANIPULATOR_H
 #define IPaintmapMANIPULATOR_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "tier0/platform.h"
 

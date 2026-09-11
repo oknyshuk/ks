@@ -6,9 +6,6 @@
 
 #ifndef LOGOFILE_SHARED_H
 #define LOGOFILE_SHARED_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "checksum_crc.h"
 

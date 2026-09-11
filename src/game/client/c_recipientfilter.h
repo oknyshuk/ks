@@ -7,9 +7,6 @@
 
 #ifndef C_RECIPIENTFILTER_H
 #define C_RECIPIENTFILTER_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "irecipientfilter.h"
 #include "utlvector.h"

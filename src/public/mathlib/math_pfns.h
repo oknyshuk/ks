@@ -33,7 +33,6 @@ enum MatrixAxisType_t
 };
 
 
-#if !(defined( PLATFORM_PPC ) || defined(SPU))
 // If we are not PPC based or SPU based, then assumes it is SSE2. We should make this code cleaner.
 
 #include <xmmintrin.h>
@@ -80,53 +79,5 @@ inline float FastRecip(float x) {return 1.0f / x;}
 inline float FastSqrtEst(float x) { return FastRSqrtFast(x) * x; }
 
 
-#else // !defined( PLATFORM_PPC ) && !defined(_SPU)
-
-#ifndef SPU
-// We may not need this for SPU, so let's not bother for now
-
-FORCEINLINE float _VMX_Sqrt( float x )
-{
-	return __fsqrts( x );
-}
-
-FORCEINLINE double _VMX_RSqrt( double x )
-{
-	double rroot = __frsqrte( x );
-
-	// Single iteration NewtonRaphson on reciprocal square root estimate
-	return (0.5f * rroot) * (3.0f - (x * rroot) * rroot);
-}
-
-FORCEINLINE double _VMX_RSqrtFast( double x )
-{
-	return __frsqrte( x );
-}
-
-
-// the 360 has fixed hw and calls directly
-#define FastSqrt(x)			_VMX_Sqrt(x)
-#define	FastRSqrt(x)		_VMX_RSqrt(x)
-#define FastRSqrtFast(x)	_VMX_RSqrtFast(x)
-#define FastSinCos(x,s,c)	_VMX_SinCos(x,s,c)
-#define FastCos(x)			_VMX_Cos(x)
-
-inline double FastRecip(double x) {return __fres(x);}
-inline double FastSqrtEst(double x) { return __frsqrte(x) * x; }
-
-#endif // !defined( PLATFORM_PPC ) && !defined(_SPU)
-
-
-// if x is infinite, return FLT_MAX
-inline float FastClampInfinity( float x )
-{
-#ifdef PLATFORM_PPC
-	return fsel( std::numeric_limits<float>::infinity() - x, x, FLT_MAX );
-#else
-	return ( x > FLT_MAX ? FLT_MAX : x );
-#endif
-}
-
-#endif	// #ifndef SPU
 
 #endif // _MATH_PFNS_H_

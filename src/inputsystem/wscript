@@ -31,10 +31,7 @@ def build(bld):
         "key_translation.cpp",
     ]
 
-    if bld.env.DEST_OS == "win32":
-        source += ["joystick.cpp", "xcontroller.cpp"]
-    else:
-        source += ["joystick_linux.cpp"]
+    source += ["joystick_linux.cpp"]
 
     bld.objects(
         source=source,

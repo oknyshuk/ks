@@ -659,40 +659,12 @@ void CAppSystemGroup::ShutdownSystems()
 //-----------------------------------------------------------------------------
 void* CAppSystemGroup::CreateAppWindow( void *hInstance, const char *pTitle, bool bWindowed, int w, int h, bool bResizing )
 {
-#if defined( PLATFORM_WINDOWS ) || defined( PLATFORM_OSX )
-	int nFlags = 0;
-	if ( !bWindowed )
-	{
-		nFlags |= WINDOW_CREATE_FULLSCREEN;
-	}
-	if ( bResizing )
-	{
-		nFlags |= WINDOW_CREATE_RESIZING;
-	}
-
-	PlatWindow_t hWnd = Plat_CreateWindow( hInstance, pTitle, w, h, nFlags );
-	if ( hWnd == PLAT_WINDOW_INVALID )
-		return NULL;
-
-	int CenterX, CenterY;
-	Plat_GetDesktopResolution( &CenterX, &CenterY );
-	CenterX = ( CenterX - w ) / 2;
-	CenterY = ( CenterY - h ) / 2;
-	CenterX = (CenterX < 0) ? 0: CenterX;
-	CenterY = (CenterY < 0) ? 0: CenterY;
-
-	// In VCR modes, keep it in the upper left so mouse coordinates are always relative to the window.
-	Plat_SetWindowPos( hWnd, CenterX, CenterY );
-
-	return hWnd;
-#elif defined( PLATFORM_LINUX )
 #ifndef DEDICATED
 
 // PBTODO
 // 	extern IGLXMgr *g_pGLXMgr;
 // 	g_pGLXMgr->CreateWindow( pTitle, bWindowed, w, h );
 	return (void*)Sys_GetFactoryThis();	// Other stuff will query for ICocoaBridge out of this.
-#endif
 #endif
 	return NULL;
 }

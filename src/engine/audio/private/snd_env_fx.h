@@ -8,9 +8,6 @@
 #ifndef SND_ENV_FX_H
 #define SND_ENV_FX_H
 
-#if defined( _WIN32 )
-#pragma once
-#endif
 
 //=====================================================================
 // FX presets

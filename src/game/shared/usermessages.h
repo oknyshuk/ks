@@ -6,9 +6,6 @@
 
 #ifndef USERMESSAGES_H
 #define USERMESSAGES_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include <utldict.h>
 #include <utlvector.h>

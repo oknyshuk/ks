@@ -16,9 +16,6 @@ def build(bld):
 
     source = ["main.cpp"]
 
-    if bld.env.DEST_OS == "win32":
-        source += ["launcher_main.rc"]
-
     bld(
         source=source,
         target="srceng",

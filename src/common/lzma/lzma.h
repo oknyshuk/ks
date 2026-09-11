@@ -27,9 +27,6 @@
 #ifndef LZMA_H
 #define LZMA_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 // power of two, 256k
 #define LZMA_DEFAULT_DICTIONARY 18

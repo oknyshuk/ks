@@ -11,9 +11,6 @@
 #include "tier1/keyvalues.h"
 #include "vscript_shared.h"
 
-#if defined( _WIN32 )
-#pragma once
-#endif
 
 class ISaveRestoreBlockHandler;
 

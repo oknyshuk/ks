@@ -3,9 +3,6 @@
 
 #include "reflect_annotations.h"
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 //------------------------------------------------------------------------------
 // Purpose : Sunlight shadow control entity

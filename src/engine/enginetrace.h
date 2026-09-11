@@ -10,9 +10,6 @@
 #ifndef ENGINETRACE_H
 #define ENGINETRACE_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 
 #include "engine/IEngineTrace.h"

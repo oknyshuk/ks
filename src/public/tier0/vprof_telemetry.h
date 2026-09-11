@@ -10,15 +10,8 @@
 
 #if !defined( MAKE_VPC )
 
-#if !defined( RAD_TELEMETRY_DISABLED ) && ( defined( IS_WINDOWS_PC ) || defined( _LINUX ) )
-// Rad Telemetry profiling is enabled on Win32 and Win64.
-//#define RAD_TELEMETRY_ENABLED
-#endif
 
 
-#ifdef WIN32
-#define __PRETTY_FUNCTION__ __FUNCSIG__
-#endif
 
 #endif // !defined( MAKE_VPC )
 

@@ -33,9 +33,6 @@
 
 
 extern ConVar developer;
-#ifdef _WIN32
-#include <crtdbg.h>
-#endif
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -886,26 +883,8 @@ void CMSurfaceSortList::GetSurfaceListForGroup( CUtlVector<msurface2_t *> &list,
 #ifndef DEDICATED
 IMaterial *GetMaterialAtCrossHair( void )
 {
-#ifdef _WIN32
-	Vector endPoint;
-	Vector lightmapColor;
-
-	// max_range * sqrt(3)
-	VectorMA( MainViewOrigin(), COORD_EXTENT * 1.74f, MainViewForward(), endPoint );
-	
-	SurfaceHandle_t hitSurfID = R_LightVec( MainViewOrigin(), endPoint, false, lightmapColor );
-	if( IS_SURF_VALID( hitSurfID ) )
-	{
-		return MSurf_TexInfo( hitSurfID )->material;
-	}
-	else
-	{
-		return NULL;
-	}
-#else
 	Assert( false );	// return value was not defined for this platform - returning NULL
 	return NULL;
-#endif
 }
 
 // hack
@@ -919,16 +898,6 @@ static float lightmapCoords[2];
 
 void SaveSurfAtCrossHair()
 {
-#ifdef _WIN32
-	Vector endPoint;
-	Vector lightmapColor;
-
-	// max_range * sqrt(3)
-	VectorMA(  MainViewOrigin(), COORD_EXTENT * 1.74f, MainViewForward(), endPoint );
-	
-	s_CrossHairSurfID = R_LightVec( MainViewOrigin(), endPoint, false, lightmapColor, 
-		&textureS, &textureT, &lightmapCoords[0], &lightmapCoords[1] );
-#endif
 }
 
 

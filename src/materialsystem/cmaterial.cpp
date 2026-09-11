@@ -3092,9 +3092,6 @@ bool CMaterial::HasProxy( )	const
 // Main draw method
 //-----------------------------------------------------------------------------
 
-#ifdef _WIN32
-#pragma warning (disable: 4189)
-#endif
 
 StateSnapshot_t CMaterial::GetSnapshotId( int modulation, int renderPass )
 {
@@ -3131,9 +3128,6 @@ void CMaterial::DrawMesh( VertexCompressionType_t vertexCompression, bool bIsAlp
 	}
 }
 
-#ifdef _WIN32
-#pragma warning (default: 4189)
-#endif
 
 IShader *CMaterial::GetShader( ) const
 {

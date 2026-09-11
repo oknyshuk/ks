@@ -17,9 +17,6 @@
 
 #ifndef BRANCHINGSINGLETON_H
 #define BRANCHINGSINGLETON_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 
 #define START_BRANCHING_SINGLETON_DEFINITION_NOBASE( classname ) class classname

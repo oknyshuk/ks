@@ -15,9 +15,6 @@
 #include "utldict.h"
 #include "ai_speechconcept.h"
 
-#if defined( _WIN32 )
-#pragma once
-#endif
 
 class KeyValues;
 
@@ -374,12 +371,10 @@ inline void CAI_ExpresserHost<BASE_NPC>::ModifyOrAppendCriteria( AI_CriteriaSet&
 {
 	BaseClass::ModifyOrAppendCriteria( criteriaSet );
 
-#ifndef TERROR  // no such thing as NPC pointers in L4D
 	if ( this->MyNPCPointer() )
 	{
 		CAI_ExpresserHost_NPC_DoModifyOrAppendCriteria( this->MyNPCPointer(), criteriaSet );
 	}
-#endif
 }
 
 //-----------------------------------------------------------------------------

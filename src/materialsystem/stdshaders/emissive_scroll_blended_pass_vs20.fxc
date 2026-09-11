@@ -62,11 +62,6 @@ VS_OUTPUT main( const VS_INPUT i )
 	float4 vProjPosition = mul( float4( vWorldPosition, 1.0f ), cViewProj );
 	o.vProjPosition = vProjPosition;
 	
-#ifdef _PS3
-	// Account for OpenGL's flipped y coordinate and expanded z range [-1,1] instead of [0,1]
-	o.vProjPosition.y = -o.vProjPosition.y;
-	o.vProjPosition.z = 2.0f * o.vProjPosition.z - o.vProjPosition.w;
-#endif // _PS3
 
 	// Pass through tex coords
 	o.vTexCoord0.xy = i.vTexCoord0.xy;

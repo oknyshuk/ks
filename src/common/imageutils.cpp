@@ -10,12 +10,8 @@
 #undef fopen
 #endif
 
-#if defined( WIN32 )
-#include <windows.h> // SRC only!!
-#else
 #include <stdio.h>
 #include <sys/stat.h>
-#endif
 
 #include "imageutils.h"
 #include "filesystem.h"
@@ -66,13 +62,8 @@ extern void longjmp( jmp_buf, int ) __attribute__((noreturn));
 
 #include "bitmap/tgawriter.h"
 #include "ivtex.h"
-#ifdef WIN32
-#include <io.h>
-#endif
 
-#ifndef WIN32
 #define DeleteFile(s)	remove(s)
-#endif
 
 
 #if ( defined(GAME_DLL) || defined(CLIENT_DLL) )
@@ -306,37 +297,7 @@ ConversionErrorType ImgUtl_ConvertJPEGToTGA( const char *jpegpath, const char *t
 ConversionErrorType ImgUtl_ConvertBMPToTGA(const char *bmpPath, const char *tgaPath)
 {
 
-#ifdef WIN32
-
-	int nWidth, nHeight;
-	ConversionErrorType result;
-	unsigned char *pBufRGBA = ImgUtl_ReadBMPAsRGBA( bmpPath, nWidth, nHeight, result );
-	if ( result != CE_SUCCESS)
-	{
-		Assert( !pBufRGBA );
-		free( pBufRGBA );
-		return result;
-	}
-	Assert( pBufRGBA );
-
-	// write out the TGA file using the RGB data buffer.
-	CUtlBuffer outBuf;
-	bool retval = TGAWriter::WriteToBuffer(pBufRGBA, outBuf, nWidth, nHeight, IMAGE_FORMAT_RGBA8888, IMAGE_FORMAT_RGB888);
-	free( pBufRGBA );
-
-	if ( retval )
-	{
-		if ( !g_pFullFileSystem->WriteFile( tgaPath, NULL, outBuf ) )
-		{
-			retval = false;
-		}
-	}
-
-	return retval ? CE_SUCCESS : CE_ERROR_WRITING_OUTPUT_FILE;
-
-#else // WIN32
 	return CE_SOURCE_FILE_FORMAT_NOT_SUPPORTED;
-#endif
 }
 
 unsigned char *ImgUtl_ReadVTFAsRGBA( const char *vtfPath, int &width, int &height, ConversionErrorType &errcode )
@@ -823,423 +784,14 @@ unsigned char *ImgUtl_ReadPNGAsRGBA( const char *pngPath, int &width, int &heigh
 
 unsigned char		*ImgUtl_ReadPNGAsRGBAFromBuffer( CUtlBuffer &buffer, int &width, int &height, ConversionErrorType &errcode )
 {
-#if defined( WIN32 )
-
-	png_const_bytep pngData = (png_const_bytep)buffer.Base();
-	if (png_sig_cmp( pngData, 0, 8))
-	{
-        errcode = CE_ERROR_PARSING_SOURCE;
-		return NULL;
-	}
-
-	png_structp png_ptr = NULL;
-	png_infop info_ptr = NULL;
-
-    /* could pass pointers to user-defined error handlers instead of NULLs: */
-
-    png_ptr = png_create_read_struct( PNG_LIBPNG_VER_STRING, NULL, NULL, NULL );
-    if (!png_ptr)
-    {
-        errcode = CE_MEMORY_ERROR;
-		return NULL;
-	}
-
-	unsigned char *pResultData = NULL;
-	png_bytepp  row_pointers = NULL;
-
-    info_ptr = png_create_info_struct( png_ptr );
-    if ( !info_ptr ) 
-	{
-        errcode = CE_MEMORY_ERROR;
-fail:
-        png_destroy_read_struct( &png_ptr, &info_ptr, NULL );
-        if ( row_pointers )
-        {
-			free( row_pointers );
-		}
-        if ( pResultData )
-        {
-			free( pResultData );
-		}
-        return NULL;
-    }
-
-    /* setjmp() must be called in every function that calls a PNG-reading
-     * libpng function */
-
-    if ( setjmp( png_jmpbuf(png_ptr)) )
-	{
-        errcode = CE_ERROR_PARSING_SOURCE;
-        goto fail;
-    }
-
-	png_set_read_fn( png_ptr, &buffer, ReadPNGData );
-    png_read_info( png_ptr, info_ptr );  /* read all PNG info up to image data */
-
-
-    /* alternatively, could make separate calls to png_get_image_width(),
-     * etc., but want bit_depth and color_type for later [don't care about
-     * compression_type and filter_type => NULLs] */
-
-	int bit_depth;
-	int color_type;
-	uint32 png_width;
-	uint32 png_height;
-
-	png_get_IHDR( png_ptr, info_ptr, &png_width, &png_height, &bit_depth, &color_type, NULL, NULL, NULL );
-
-	width = png_width;
-	height = png_height;
-
-    png_uint_32 rowbytes;
-
-    /* expand palette images to RGB, low-bit-depth grayscale images to 8 bits,
-     * transparency chunks to full alpha channel; strip 16-bit-per-sample
-     * images to 8 bits per sample; and convert grayscale to RGB[A] */
-
-    if (color_type == PNG_COLOR_TYPE_PALETTE)
-        png_set_expand( png_ptr );
-    if (color_type == PNG_COLOR_TYPE_GRAY && bit_depth < 8)
-        png_set_expand( png_ptr );
-    if (png_get_valid( png_ptr, info_ptr, PNG_INFO_tRNS ) )
-        png_set_expand( png_ptr );
-    if (bit_depth == 16)
-        png_set_strip_16( png_ptr );
-    if (color_type == PNG_COLOR_TYPE_GRAY ||
-        color_type == PNG_COLOR_TYPE_GRAY_ALPHA)
-        png_set_gray_to_rgb( png_ptr );
-
-	// Force in an alpha channel
-	if ( !( color_type & PNG_COLOR_MASK_ALPHA ) )
-	{
-		png_set_add_alpha(png_ptr, 255, PNG_FILLER_AFTER);
-	}
-
-  /*
-	double gamma;
-  if (png_get_gAMA(png_ptr, info_ptr, &gamma))
-        png_set_gamma(png_ptr, display_exponent, gamma);
-
-*/
-    /* all transformations have been registered; now update info_ptr data,
-     * get rowbytes and channels, and allocate image memory */
-
-    png_read_update_info( png_ptr, info_ptr );
-
-    rowbytes = png_get_rowbytes( png_ptr, info_ptr );
-    png_byte channels = (int)png_get_channels( png_ptr, info_ptr );
-	if ( channels != 4 )
-	{
-		Assert( channels == 4 );
-        errcode = CE_SOURCE_FILE_FORMAT_NOT_SUPPORTED;
-        goto fail;
-	}
-
-	row_pointers = (png_bytepp)malloc( height*sizeof(png_bytep) );
-	pResultData = (unsigned char *)malloc( rowbytes*height );
-
-	if ( row_pointers == NULL || pResultData == NULL ) 
-	{
-        errcode = CE_MEMORY_ERROR;
-        goto fail;
-    }
-
-    /* set the individual row_pointers to point at the correct offsets */
-
-    for ( int i = 0;  i < height;  ++i)
-        row_pointers[i] = pResultData + i*rowbytes;
-
-    /* now we can go ahead and just read the whole image */
-
-    png_read_image( png_ptr, row_pointers );
-
-    png_read_end(png_ptr, NULL);
-
-	free( row_pointers );
-	row_pointers = NULL;
-
-	// Clean up
-	png_destroy_read_struct( &png_ptr, &info_ptr, NULL );
-
-	// OK!
-	width = png_width;
-	height = png_height;
-	errcode = CE_SUCCESS;
-	return pResultData;
-
-#else
 	errcode = CE_SOURCE_FILE_FORMAT_NOT_SUPPORTED;
 	return NULL;
-#endif
 }
 
 unsigned char *ImgUtl_ReadBMPAsRGBA( const char *bmpPath, int &width, int &height, ConversionErrorType &errcode )
 {
-#ifdef WIN32
-	// Load up bitmap
-	HBITMAP hBitmap = (HBITMAP)LoadImage(NULL, bmpPath, IMAGE_BITMAP, 0, 0, LR_CREATEDIBSECTION | LR_LOADFROMFILE | LR_DEFAULTSIZE);
-
-	// Handle failure
-	if ( hBitmap == NULL)
-	{
-
-		// !KLUDGE! Try to detect what went wrong
-		FILE *fp = fopen( bmpPath, "rb" );
-		if (fp == NULL)
-		{
-			errcode = CE_CANT_OPEN_SOURCE_FILE;
-		}
-		else
-		{
-			errcode = CE_ERROR_PARSING_SOURCE;
-		}
-		return NULL;
-	}
-
-	BITMAP bitmap;
-
-	GetObject(hBitmap, sizeof(bitmap), &bitmap);
-
-	BITMAPINFO *bitmapInfo;
-
-	bool bUseColorTable = false;
-	if (bitmap.bmBitsPixel == 24 || bitmap.bmBitsPixel == 32)
-	{
-		bitmapInfo = (BITMAPINFO *)malloc(sizeof(BITMAPINFO));
-	}
-	else if (bitmap.bmBitsPixel == 8 || bitmap.bmBitsPixel == 4 || bitmap.bmBitsPixel == 1)
-	{
-		int colorsUsed = 1 << bitmap.bmBitsPixel;
-		bitmapInfo = (BITMAPINFO *)malloc(colorsUsed * sizeof(RGBQUAD) + sizeof(BITMAPINFO));
-		bUseColorTable = true;
-	}
-	else
-	{
-		DeleteObject(hBitmap);
-		errcode = CE_SOURCE_FILE_BMP_FORMAT_NOT_SUPPORTED;
-		return NULL;
-	}
-
-	memset(bitmapInfo, 0, sizeof(BITMAPINFO));
-	bitmapInfo->bmiHeader.biSize = sizeof(bitmapInfo->bmiHeader);
-	if (bUseColorTable)
-	{
-		bitmapInfo->bmiHeader.biBitCount = bitmap.bmBitsPixel; // need to specify the bits per pixel so GDI will generate a color table for us.
-	}
-
-	HDC dc = CreateCompatibleDC(NULL);
-
-	int retcode = GetDIBits(dc, hBitmap, 0, bitmap.bmHeight, NULL, bitmapInfo, DIB_RGB_COLORS);
-
-	DeleteDC(dc);
-
-	if (retcode == 0)
-	{
-		// error getting the bitmap info for some reason.
-		free(bitmapInfo);
-		errcode = CE_SOURCE_FILE_BMP_FORMAT_NOT_SUPPORTED;
-		return NULL;
-	}
-
-	int nDestStride = 4 * bitmap.bmWidth;
-	int mem_required = nDestStride * bitmap.bmHeight;  // mem required for copying the data out into RGBA format.
-
-	unsigned char *buf = (unsigned char *)malloc(mem_required);
-	if (buf == NULL)
-	{
-		free(bitmapInfo);
-		errcode = CE_MEMORY_ERROR;
-		return NULL;
-	}
-
-	if (bitmapInfo->bmiHeader.biBitCount == 32)
-	{
-		for (int y = 0; y < bitmap.bmHeight; ++y)
-		{
-			unsigned char *pDest = buf + nDestStride * ( ( bitmap.bmHeight - 1 ) - y ); // BMPs are stored upside down
-			const unsigned char *pSrc = (unsigned char *)(bitmap.bmBits) + (y * bitmap.bmWidthBytes);
-
-			for (int x = 0; x < bitmap.bmWidth; ++x)
-			{
-
-				// Swap BGR -> RGB while copying data
-				pDest[0] = pSrc[2]; // R
-				pDest[1] = pSrc[1]; // G
-				pDest[2] = pSrc[0]; // B
-				pDest[3] = pSrc[3]; // A
-
-				pSrc += 4;
-				pDest += 4;
-			}
-		}
-	}
-	else if (bitmapInfo->bmiHeader.biBitCount == 24)
-	{
-		for (int y = 0; y < bitmap.bmHeight; ++y)
-		{
-			unsigned char *pDest = buf + nDestStride * ( ( bitmap.bmHeight - 1 ) - y ); // BMPs are stored upside down
-			const unsigned char *pSrc = (unsigned char *)(bitmap.bmBits) + (y * bitmap.bmWidthBytes);
-
-			for (int x = 0; x < bitmap.bmWidth; ++x)
-			{
-
-				// Swap BGR -> RGB while copying data
-				pDest[0] = pSrc[2]; // R
-				pDest[1] = pSrc[1]; // G
-				pDest[2] = pSrc[0]; // B
-				pDest[3] = 0xff; // A
-
-				pSrc += 3;
-				pDest += 4;
-			}
-		}
-	}
-	else if (bitmapInfo->bmiHeader.biBitCount == 8)
-	{
-		// 8-bit 256 color bitmap.
-		for (int y = 0; y < bitmap.bmHeight; ++y)
-		{
-			unsigned char *pDest = buf + nDestStride * ( ( bitmap.bmHeight - 1 ) - y ); // BMPs are stored upside down
-			const unsigned char *pSrc = (unsigned char *)(bitmap.bmBits) + (y * bitmap.bmWidthBytes);
-
-			for (int x = 0; x < bitmap.bmWidth; ++x)
-			{
-
-				// compute the color map entry for this pixel
-				int colorTableEntry = *pSrc;
-
-				// get the color for this color map entry.
-				RGBQUAD *rgbQuad = &(bitmapInfo->bmiColors[colorTableEntry]);
-
-				// copy the color values for this pixel to the destination buffer.
-				pDest[0] = rgbQuad->rgbRed;
-				pDest[1] = rgbQuad->rgbGreen;
-				pDest[2] = rgbQuad->rgbBlue;
-				pDest[3] = 0xff;
-
-				++pSrc;
-				pDest += 4;
-			}
-		}
-	}
-	else if (bitmapInfo->bmiHeader.biBitCount == 4)
-	{
-		// 4-bit 16 color bitmap.
-		for (int y = 0; y < bitmap.bmHeight; ++y)
-		{
-			unsigned char *pDest = buf + nDestStride * ( ( bitmap.bmHeight - 1 ) - y ); // BMPs are stored upside down
-			const unsigned char *pSrc = (unsigned char *)(bitmap.bmBits) + (y * bitmap.bmWidthBytes);
-
-			// Two pixels at a time
-			for (int x = 0; x < bitmap.bmWidth; x += 2)
-			{
-
-				// get the color table entry for this pixel
-				int colorTableEntry = (0xf0 & *pSrc) >> 4;
-
-				// get the color values for this pixel's color table entry.
-				RGBQUAD *rgbQuad = &(bitmapInfo->bmiColors[colorTableEntry]);
-
-				// copy the pixel's color values to the destination buffer.
-				pDest[0] = pSrc[2]; // R
-				pDest[1] = pSrc[1]; // G
-				pDest[2] = pSrc[0]; // B
-				pDest[3] = 0xff; // A
-
-				// make sure we haven't reached the end of the row.
-				if ((x + 1) > bitmap.bmWidth)
-				{
-					break;
-				}
-
-				pDest += 4;
-
-				// get the color table entry for this pixel.
-				colorTableEntry = 0x0f & *pSrc;
-
-				// get the color values for this pixel's color table entry.
-				rgbQuad = &(bitmapInfo->bmiColors[colorTableEntry]);
-
-				// copy the pixel's color values to the destination buffer.
-				pDest[0] = pSrc[2]; // R
-				pDest[1] = pSrc[1]; // G
-				pDest[2] = pSrc[0]; // B
-				pDest[3] = 0xff; // A
-
-				++pSrc;
-				pDest += 4;
-			}
-		}
-	}
-	else if (bitmapInfo->bmiHeader.biBitCount == 1)
-	{
-		// 1-bit monochrome bitmap.
-		for (int y = 0; y < bitmap.bmHeight; ++y)
-		{
-			unsigned char *pDest = buf + nDestStride * ( ( bitmap.bmHeight - 1 ) - y ); // BMPs are stored upside down
-			const unsigned char *pSrc = (unsigned char *)(bitmap.bmBits) + (y * bitmap.bmWidthBytes);
-
-			// Eight pixels at a time
-			int x = 0;
-			while (x < bitmap.bmWidth)
-			{
-
-				RGBQUAD *rgbQuad = NULL;
-				int bitMask = 0x80;
-
-				// go through all 8 bits in this byte to get all 8 pixel colors.
-				do
-				{
-					// get the value of the bit for this pixel.
-					int bit = *pSrc & bitMask;
-
-					// bit will either be 0 or non-zero since there are only two colors.
-					if (bit == 0)
-					{
-						rgbQuad = &(bitmapInfo->bmiColors[0]);
-					}
-					else
-					{
-						rgbQuad = &(bitmapInfo->bmiColors[1]);
-					}
-
-					// copy this pixel's color values into the destination buffer.
-					pDest[0] = pSrc[2]; // R
-					pDest[1] = pSrc[1]; // G
-					pDest[2] = pSrc[0]; // B
-					pDest[3] = 0xff; // A
-					pDest += 4;
-
-					// go to the next pixel.
-					++x;
-					bitMask = bitMask >> 1;
-				} while ((x < bitmap.bmWidth) && (bitMask > 0));
-
-				++pSrc;
-			}
-		}
-	}
-	else
-	{
-		free(bitmapInfo);
-		free(buf);
-		DeleteObject(hBitmap);
-		errcode = CE_SOURCE_FILE_BMP_FORMAT_NOT_SUPPORTED;
-		return NULL;
-	}
-
-	free(bitmapInfo);
-	DeleteObject(hBitmap);
-
-	// OK!
-	width = bitmap.bmWidth;
-	height = bitmap.bmHeight;
-	errcode = CE_SUCCESS;
-	return buf;
-#else
 	errcode = CE_SOURCE_FILE_FORMAT_NOT_SUPPORTED;
 	return NULL;
-#endif
 }
 
 unsigned char *ImgUtl_ReadImageAsRGBA( const char *path, int &width, int &height, ConversionErrorType &errcode )
@@ -1649,9 +1201,7 @@ ConversionErrorType ImgUtl_ConvertTGAToVTF(const char *tgaPath, int nMaxWidth/*=
 
 static void DoCopyFile( const char *source, const char *destination )
 {
-#if defined( WIN32 )
-	CopyFile( source, destination, true );
-#elif defined( ENGINE_DLL )
+#if   defined( ENGINE_DLL )
 	::COM_CopyFile( source, destination );
 #elif REPLAY_DLL
 	g_pEngine->CopyFile( source, destination );
@@ -1662,11 +1212,7 @@ static void DoCopyFile( const char *source, const char *destination )
 
 static void DoDeleteFile( const char *filename )
 {
-#ifdef WIN32
-	DeleteFile( filename );
-#else
 	unlink( filename );
-#endif
 }
 
 ConversionErrorType	ImgUtl_ConvertToVTFAndDumpVMT( const char *pInPath, const char *pMaterialsSubDir, int nMaxWidth/*=-1*/, int nMaxHeight/*=-1*/ )
@@ -1946,86 +1492,7 @@ static void FlushPNGData( png_structp png_ptr )
 
 ConversionErrorType ImgUtl_WriteRGBAAsPNGToBuffer( const unsigned char *pRGBAData, int nWidth, int nHeight, CUtlBuffer &bufOutData, int nStride )
 {
-#if defined( WIN32 )
-	// Auto detect image stride
-	if ( nStride <= 0 )
-	{
-		nStride = nWidth*4;
-	}
-
-    /* could pass pointers to user-defined error handlers instead of NULLs: */
-	png_structp png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING,
-		NULL, NULL, NULL);
-	if (png_ptr == NULL)
-	{
-		return CE_MEMORY_ERROR;
-	}
-
-	ConversionErrorType errcode = CE_MEMORY_ERROR;
-
-	png_bytepp  row_pointers = NULL;
-
-	png_infop info_ptr = png_create_info_struct(png_ptr);
-    if ( !info_ptr ) 
-	{
-        errcode = CE_MEMORY_ERROR;
-fail:
-		if ( row_pointers )
-		{
-			free( row_pointers );
-		}
-        png_destroy_write_struct( &png_ptr, &info_ptr );
-        return errcode;
-    }
-
-	// We'll use the default setjmp / longjmp error handling.
-    if ( setjmp( png_jmpbuf(png_ptr) ) )
-	{
-		// Error "writing".  But since we're writing to a memory bufferm,
-		// that just means we must have run out of memory
-        errcode = CE_MEMORY_ERROR;
-        goto fail;
-    }
-
-	// Setup stream writing callbacks
-	png_set_write_fn(png_ptr, (void *)&bufOutData, WritePNGData, FlushPNGData);
-
-	// Setup info structure
-	png_set_IHDR(png_ptr, info_ptr, nWidth, nHeight, 8, PNG_COLOR_TYPE_RGB_ALPHA,
-		PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT);
-
-	// !FIXME! Here we really should scan for the common case of
-	// an opaque image (all alpha=255) and strip the alpha channel
-	// in that case.
-
-	// Write the file header information.
-	png_write_info(png_ptr, info_ptr);
-
-	row_pointers = (png_bytepp)malloc( nHeight*sizeof(png_bytep) );
-	if ( row_pointers == NULL  ) 
-	{
-        errcode = CE_MEMORY_ERROR;
-        goto fail;
-    }
-
-    /* set the individual row_pointers to point at the correct offsets */
-    for ( int i = 0;  i < nHeight;  ++i)
-        row_pointers[i] = const_cast<unsigned char *>(pRGBAData + i*nStride);
-
-	// Write the image
-	png_write_image(png_ptr, row_pointers);
-
-	/* It is REQUIRED to call this to finish writing the rest of the file */
-	png_write_end(png_ptr, info_ptr);
-
-	// Clean up, and we're done
-	free( row_pointers );
-	row_pointers = NULL;
-	png_destroy_write_struct(&png_ptr, &info_ptr);
-	return CE_SUCCESS;
-#else
 	return CE_SOURCE_FILE_FORMAT_NOT_SUPPORTED;
-#endif
 }
 
 //-----------------------------------------------------------------------------

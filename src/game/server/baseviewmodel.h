@@ -8,9 +8,6 @@
 //=============================================================================//
 #if !defined( BASEVIEWMODEL_H )
 #define BASEVIEWMODEL_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "baseviewmodel_shared.h"
 

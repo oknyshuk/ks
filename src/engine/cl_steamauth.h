@@ -6,9 +6,6 @@
 
 #ifndef CL_STEAMUAUTH_H
 #define CL_STEAMUAUTH_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "steam/steam_api.h"
 

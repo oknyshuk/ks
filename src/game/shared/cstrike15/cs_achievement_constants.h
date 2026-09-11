@@ -8,9 +8,6 @@
 
 #ifndef CS_ACHIEVEMENT_CONSTANTS_H
 #define CS_ACHIEVEMENT_CONSTANTS_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 namespace AchievementConsts
 {

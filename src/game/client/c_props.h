@@ -9,9 +9,6 @@
 #define C_PROPS_H
 
 #include "reflect_annotations.h"
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "c_breakableprop.h"
 #include "props_shared.h"

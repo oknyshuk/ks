@@ -42,11 +42,6 @@ class CSentence;
 // Purpose: 
 //-----------------------------------------------------------------------------
 class [[= ks::reflect::NetTable{ .name = "DT_BaseFlex" } ]]
-#ifdef HL2_CLIENT_DLL
-      [[= ks::reflect::From<"m_vecViewOffset", ks::reflect::Net{ .index = 0 }>{} ]]
-      [[= ks::reflect::From<"m_vecViewOffset", ks::reflect::Net{ .index = 1 }>{} ]]
-      [[= ks::reflect::From<"m_vecViewOffset", ks::reflect::Net{ .index = 2 }>{} ]]
-#endif
       C_BaseFlex : public C_BaseAnimatingOverlay
 {
 	DECLARE_CLASS( C_BaseFlex, C_BaseAnimatingOverlay );
@@ -285,14 +280,6 @@ private:
 	bool			SetupEmphasisBlend( Emphasized_Phoneme *classes, int phoneme );
 	void			ComputeBlendedSetting( Emphasized_Phoneme *classes, float emphasis_intensity );
 
-#ifdef HL2_CLIENT_DLL
-public:
-
-	[[= ks::reflect::Net{} ]] Vector			m_vecLean;
-	CInterpolatedVar< Vector >	m_iv_vecLean;
-	[[= ks::reflect::Net{} ]] Vector			m_vecShift;
-	CInterpolatedVar< Vector >	m_iv_vecShift;
-#endif
 };
 
 

@@ -2,9 +2,6 @@
 
 #ifndef PROTO_ICE_HELPER_H
 #define PROTO_ICE_HELPER_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include <string.h>
 

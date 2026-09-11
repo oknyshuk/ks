@@ -11,9 +11,6 @@
 #include "ai_component.h"
 #include "ai_navtype.h"
 
-#if defined( _WIN32 )
-#pragma once
-#endif
 
 struct AIMoveTrace_t;
 struct OverlayLine_t;

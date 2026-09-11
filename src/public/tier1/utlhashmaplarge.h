@@ -9,9 +9,6 @@
 #ifndef UTLHASHMAPLARGE_H
 #define UTLHASHMAPLARGE_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "tier0/dbg.h"
 #include "bitvec.h"

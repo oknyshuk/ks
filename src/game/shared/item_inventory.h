@@ -6,9 +6,6 @@
 
 #ifndef ITEM_INVENTORY_H
 #define ITEM_INVENTORY_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "steam/steam_api.h"
 

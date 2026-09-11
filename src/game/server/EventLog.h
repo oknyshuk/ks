@@ -9,9 +9,6 @@
 #if !defined EVENTLOG_H
 #define EVENTLOG_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "GameEventListener.h"
 #include <igamesystem.h>

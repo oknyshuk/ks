@@ -6,9 +6,6 @@
 
 #ifndef ISTEAMAPPS_H
 #define ISTEAMAPPS_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 const int k_cubAppProofOfPurchaseKeyMax = 240;			// max supported length of a legacy cd key 
 

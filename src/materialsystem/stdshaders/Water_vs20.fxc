@@ -96,11 +96,6 @@ VS_OUTPUT main( const VS_INPUT v )
 	// Reflection transform
 	o.vReflectXY_vRefractYX = float4( vReflectPos.x, vReflectPos.y, vRefractPos.y, vRefractPos.x );
 
-#ifdef _PS3
-	// Account for OpenGL's flipped y coordinate and expanded z range [-1,1] instead of [0,1]
-	o.vProjPos_POSITION.y = -o.vProjPos_POSITION.y;
-	o.vProjPos_POSITION.z = 2.0f * o.vProjPos_POSITION.z - o.vProjPos_POSITION.w;
-#endif // _PS3
 
 	// Compute fog based on the position
 	o.worldPos = vWorldPos;

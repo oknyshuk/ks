@@ -7,9 +7,6 @@
 #ifndef TEAM_ROUND_TIMER_H
 #define TEAM_ROUND_TIMER_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 #ifdef CLIENT_DLL
 #define CTeamRoundTimer C_TeamRoundTimer

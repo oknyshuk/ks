@@ -8,9 +8,6 @@
 #define C_WORLD_H
 
 #include "reflect_annotations.h"
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "c_baseentity.h"
 
@@ -46,9 +43,6 @@ public:
 	float GetWaveHeight() const;
 	const char *GetDetailSpriteMaterial() const;
 
-#ifdef PORTAL2
-	int GetMaxBlobCount() const { return m_nMaxBlobCount; }
-#endif
 
 public:
 	enum
@@ -70,9 +64,6 @@ public:
 private:
 	char	m_iszDetailSpriteMaterial[MAX_DETAIL_SPRITE_MATERIAL_NAME_LENGTH];
 
-#ifdef PORTAL2
-	int		m_nMaxBlobCount;
-#endif
 };
 
 inline float C_World::GetWaveHeight() const

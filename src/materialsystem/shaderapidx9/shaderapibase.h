@@ -9,9 +9,6 @@
 #ifndef SHADERRENDERBASE_H
 #define SHADERRENDERBASE_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "togl/rendermechanism.h"
 #include "shaderapi/ishaderapi.h"

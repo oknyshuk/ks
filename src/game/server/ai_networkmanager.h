@@ -11,9 +11,6 @@
 #include "bitstring.h"
 #include "threadtools.h"
 
-#if defined( _WIN32 )
-#pragma once
-#endif
 
 class CAI_NetworkEditTools;
 class CAI_Network;

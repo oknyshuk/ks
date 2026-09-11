@@ -8,9 +8,6 @@
 #define POINT_TEMPLATE_H
 
 #include "reflect_annotations.h"
-#ifdef _WIN32
-#pragma once
-#endif
 
 #define MAX_NUM_TEMPLATES		16
 

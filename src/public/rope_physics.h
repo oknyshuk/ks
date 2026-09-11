@@ -7,9 +7,6 @@
 
 #ifndef ROPE_PHYSICS_H
 #define ROPE_PHYSICS_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 
 #include "simple_physics.h"

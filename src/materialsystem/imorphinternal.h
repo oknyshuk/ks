@@ -7,9 +7,6 @@
 #ifndef IMORPHINTERNAL_H
 #define IMORPHINTERNAL_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "materialsystem/imorph.h"
 #include "shaderapi/shareddefs.h"

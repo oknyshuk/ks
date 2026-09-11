@@ -7,9 +7,6 @@
 
 #ifndef BASEAUTOCOMPLETEFILELIST_H
 #define BASEAUTOCOMPLETEFILELIST_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "tier1/convar.h"
 

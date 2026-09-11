@@ -7,9 +7,6 @@
 //=============================================================================//
 #if !defined( MEM_H )
 #define MEM_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 void *Mem_Malloc( size_t size );
 void *Mem_ZeroMalloc( size_t size );

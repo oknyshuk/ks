@@ -1527,11 +1527,7 @@ CON_COMMAND( replay_status, "Show Replay server status." )
 	ConMsg("Online %s, FPS %.1f, Version %i (%s)\n", 
 		COM_FormatSeconds( replay->GetOnlineTime() ), replay->m_flFPS, build_number(),
 
-#ifdef _WIN32
-		"Win32" );
-#else
 		"Linux" );
-#endif
 
 	ConMsg("Master \"%s\", delay %.0f\n", replay->GetName(), replay->GetDirector()->GetDelay() );
 

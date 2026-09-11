@@ -7,9 +7,6 @@
 #ifndef PARTICLES_INTERNAL_H
 #define PARTICLES_INTERNAL_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 
 #include "tier1/UtlStringMap.h"

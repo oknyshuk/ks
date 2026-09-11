@@ -25,29 +25,7 @@ static volatile char const *pDebugString;
 #define DEBUG_LINK_CHECK
 #endif
 
-#if _WIN32
-#define FAST_BIT_SCAN 1
-#include <intrin.h>
-#pragma intrinsic(_BitScanReverse)
-#pragma intrinsic(_BitScanForward)
-
-inline unsigned int CountLeadingZeros(unsigned int x)
-{
-	unsigned long firstBit;
-	if ( _BitScanReverse(&firstBit,x) )
-		return 31 - firstBit;
-	return 32;
-}
-inline unsigned int CountTrailingZeros(unsigned int elem)
-{
-	unsigned long out;
-	if ( _BitScanForward(&out, elem) )
-		return out;
-	return 32;
-}
-#else
 #define FAST_BIT_SCAN 0
-#endif
 
 
 static BitBufErrorHandler g_BitBufErrorHandler = 0;
@@ -228,14 +206,6 @@ void bf_write::WriteSBitLong( int data, int numbits )
 	}
 }
 
-#if _WIN32
-inline unsigned int BitCountNeededToEncode(unsigned int data)
-{
-	unsigned long firstBit;
-	_BitScanReverse(&firstBit,data+1);
-	return firstBit;
-}
-#endif	// _WIN32
 
 // writes an unsigned integer with variable bit length
 void bf_write::WriteUBitVar( unsigned int n )

@@ -768,10 +768,6 @@ void CBaseHudChat::ChatPrintf( int iPlayerIndex, int iFilter, const char *fmt, .
 
 	if ( iFilter != CHAT_FILTER_NONE )
 	{
-#ifdef PORTAL2
-		if ( iFilter & ( CHAT_FILTER_JOINLEAVE | CHAT_FILTER_TEAMCHANGE ) )
-			return;
-#endif
 		if ( !( iFilter & GetFilterFlags() ) )
 			return;
 	}

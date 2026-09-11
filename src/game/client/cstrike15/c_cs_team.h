@@ -9,9 +9,6 @@
 #define C_CS_TEAM_H
 
 #include "reflect_annotations.h"
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "c_team.h"
 #include "shareddefs.h"

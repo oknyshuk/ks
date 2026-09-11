@@ -29,9 +29,6 @@ statically linked.
 
 #ifndef MPAFILE_H
 #define MPAFILE_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #pragma once
 

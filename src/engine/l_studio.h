@@ -8,9 +8,6 @@
 #ifndef L_STUDIO_H
 #define L_STUDIO_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "engine/ivmodelrender.h"
 #include "datacache/imdlcache.h"

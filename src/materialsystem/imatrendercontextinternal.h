@@ -7,9 +7,6 @@
 #ifndef IMATRENDERCONTEXTINTERNAL_H
 #define IMATRENDERCONTEXTINTERNAL_H
 
-#if defined( _WIN32 )
-#pragma once
-#endif
 
 // typedefs to allow use of delegation macros
 typedef Vector4D LightCube_t[6];

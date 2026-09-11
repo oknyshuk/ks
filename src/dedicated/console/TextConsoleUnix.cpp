@@ -9,7 +9,6 @@
 //
 //////////////////////////////////////////////////////////////////////
 
-#ifndef _WIN32
 
 
 #include "TextConsoleUnix.h"
@@ -357,4 +356,3 @@ int CTextConsoleUnix::GetWidth( void )
 } 
 
 
-#endif // ndef _WIN32

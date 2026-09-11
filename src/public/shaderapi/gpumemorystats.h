@@ -9,9 +9,6 @@
 #ifndef GPUMEMORYSTATS_H
 #define GPUMEMORYSTATS_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 //-----------------------------------------------------------------------------
 // Stats on GPU memory usage

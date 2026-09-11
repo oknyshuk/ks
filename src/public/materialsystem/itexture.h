@@ -9,9 +9,6 @@
 #ifndef ITEXTURE_H
 #define ITEXTURE_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "tier0/platform.h"
 #include "bitmap/imageformat.h" // ImageFormat defn.

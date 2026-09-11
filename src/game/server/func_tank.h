@@ -8,9 +8,6 @@
 #define FUNC_TANK_H
 
 #include "reflect_annotations.h"
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "triggers.h"
 

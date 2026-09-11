@@ -7,9 +7,6 @@
 
 #ifndef ICLIENTALPHAPROPERTY_H
 #define ICLIENTALPHAPROPERTY_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "interface.h"
 #include "iclientunknown.h"

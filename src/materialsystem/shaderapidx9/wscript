@@ -51,8 +51,7 @@ def build(bld):
         "vertexshaderdx8.cpp",
     ]
 
-    if bld.env.DEST_OS != "win32":
-        source += ["winutils.cpp"]
+    source += ["winutils.cpp"]
 
     bld.objects(
         source=source,

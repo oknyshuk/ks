@@ -10,9 +10,6 @@
 
 #include "reflect_annotations.h"
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "entityoutput.h"
 #include "player_pickup.h"

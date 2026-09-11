@@ -10,9 +10,6 @@
 
 #ifndef DISP_POWERINFO_H
 #define DISP_POWERINFO_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 
 #include "disp_vertindex.h"

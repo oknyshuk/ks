@@ -9,9 +9,6 @@
 #ifndef MUMBLE_H
 #define MUMBLE_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "igamesystem.h"
 #include "GameEventListener.h"

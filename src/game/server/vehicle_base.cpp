@@ -245,34 +245,6 @@ Vector CPropVehicle::GetSmoothedVelocity( void )
 }
 
 //=============================================================================
-#ifdef HL2_EPISODIC
-
-//-----------------------------------------------------------------------------
-// Purpose: Add an entity to a list which receives physics callbacks from the vehicle
-//-----------------------------------------------------------------------------
-void CPropVehicle::AddPhysicsChild( CBaseEntity *pChild )
-{
-	// Don't add something we already have
-	if ( m_hPhysicsChildren.Find( pChild ) != m_hPhysicsChildren.InvalidIndex() )
-		return ;
-
-	m_hPhysicsChildren.AddToTail( pChild );
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: Removes entity from physics callback list
-//-----------------------------------------------------------------------------
-void CPropVehicle::RemovePhysicsChild( CBaseEntity *pChild )
-{
-	int elemID = m_hPhysicsChildren.Find( pChild );
-
-	if ( m_hPhysicsChildren.IsValidIndex( elemID ) )
-	{
-		m_hPhysicsChildren.Remove( elemID );
-	}
-}
-
-#endif //HL2_EPISODIC
 //=============================================================================
 
 //-----------------------------------------------------------------------------
@@ -780,18 +752,6 @@ void CPropVehicleDriveable::VPhysicsCollision( int index, gamevcollisionevent_t 
 {
 
 //=============================================================================
-#ifdef HL2_EPISODIC
-
-	// Notify all children
-	for ( int i = 0; i < m_hPhysicsChildren.Count(); i++ )
-	{
-		if ( m_hPhysicsChildren[i] == NULL )
-			continue;
-
-		m_hPhysicsChildren[i]->VPhysicsCollision( index, pEvent );
-	}
-
-#endif // HL2_EPISODIC
 //=============================================================================
 
 	// Don't care if we don't have a driver
@@ -888,17 +848,6 @@ void CPropVehicleDriveable::TraceAttack( const CTakeDamageInfo &info, const Vect
 			SetNextThink( gpGlobals->curtime );
 		}
 
-#ifdef HL2_EPISODIC
-		// Notify all children
-		for ( int i = 0; i < m_hPhysicsChildren.Count(); i++ )
-		{
-			if ( m_hPhysicsChildren[i] == NULL )
-				continue;
-
-			variant_t emptyVariant;
-			m_hPhysicsChildren[i]->AcceptInput( "VehiclePunted", info.GetAttacker(), this, emptyVariant, USE_TOGGLE );
-		}
-#endif // HL2_EPISODIC
 
 	}
 
@@ -1001,11 +950,7 @@ CFourWheelServerVehicle::CFourWheelServerVehicle( void )
 	m_ViewSmoothing.flRollCurveLinear	= ROLL_CURVE_LINEAR;
 }
 
-#ifdef HL2_EPISODIC
-ConVar r_JeepFOV( "r_JeepFOV", "82", FCVAR_CHEAT | FCVAR_REPLICATED );
-#else
 ConVar r_JeepFOV( "r_JeepFOV", "90", FCVAR_CHEAT | FCVAR_REPLICATED );
-#endif // HL2_EPISODIC
 
 //-----------------------------------------------------------------------------
 // Purpose: Setup our view smoothing information
@@ -1165,36 +1110,6 @@ void CFourWheelServerVehicle::NPC_SetDriver( CNPC_VehicleDriver *pDriver )
 void CFourWheelServerVehicle::NPC_DriveVehicle( void )
 {
 
-#ifdef HL2_DLL
-	if ( g_debug_vehicledriver.GetInt() )
-	{
-		if ( m_nNPCButtons )
-		{
-			Vector vecForward, vecRight;
-			GetFourWheelVehicle()->GetVectors( &vecForward, &vecRight, NULL );
-			if ( m_nNPCButtons & IN_FORWARD )
-			{
-				NDebugOverlay::Line( GetFourWheelVehicle()->GetAbsOrigin(), GetFourWheelVehicle()->GetAbsOrigin() + vecForward * 200, 0,255,0, true, 0.1 );
-			}
-			if ( m_nNPCButtons & IN_BACK )
-			{
-				NDebugOverlay::Line( GetFourWheelVehicle()->GetAbsOrigin(), GetFourWheelVehicle()->GetAbsOrigin() - vecForward * 200, 0,255,0, true, 0.1 );
-			}
-			if ( m_nNPCButtons & IN_MOVELEFT )
-			{
-				NDebugOverlay::Line( GetFourWheelVehicle()->GetAbsOrigin(), GetFourWheelVehicle()->GetAbsOrigin() - vecRight * 200 * -m_flTurnDegrees, 0,255,0, true, 0.1 );
-			}
-			if ( m_nNPCButtons & IN_MOVERIGHT )
-			{
-				NDebugOverlay::Line( GetFourWheelVehicle()->GetAbsOrigin(), GetFourWheelVehicle()->GetAbsOrigin() + vecRight * 200 * m_flTurnDegrees, 0,255,0, true, 0.1 );
-			}
-			if ( m_nNPCButtons & IN_JUMP )
-			{
-				NDebugOverlay::Box( GetFourWheelVehicle()->GetAbsOrigin(), -Vector(20,20,20), Vector(20,20,20), 0,255,0, true, 0.1 );
-			}
-		}
-	}
-#endif
 
 	int buttonsChanged = m_nPrevNPCButtons ^ m_nNPCButtons;
 	int afButtonPressed = buttonsChanged & m_nNPCButtons;		// The changed ones still down are "pressed"

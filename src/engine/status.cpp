@@ -4,12 +4,6 @@
 //
 //===========================================================================//
 
-#ifdef _WIN32
-#include "winlite.h"
-#include "tier0/memdbgon.h" // needed because in release builds crtdbg.h is handled specially if USE_MEM_DEBUG is defined
-#include "tier0/memdbgoff.h"
-#include <crtdbg.h>   // For getting at current heap size
-#endif
 
 #include "tier0/vprof.h"
 #include "tier0/etwprof.h"
@@ -74,25 +68,6 @@ static void Status_UpdateMemoryStatus( bool bIncludeFullMemoryInfo )
 
 	if ( bIncludeFullMemoryInfo )
 	{
-#ifdef _WIN32
-		MEMORYSTATUSEX	memStat;
-		ZeroMemory(&memStat, sizeof(MEMORYSTATUSEX));
-		memStat.dwLength = sizeof(MEMORYSTATUSEX);
-		if ( GlobalMemoryStatusEx( &memStat ) )
-		{
-			double MbDiv = 1024.0 * 1024.0;
-
-			buf.Printf( "Windows OS memory status:\nmemusage( %d %% )\ntotalPhysical Mb(%.2f)\nfreePhysical Mb(%.2f)\ntotalPaging Mb(%.2f)\nfreePaging Mb(%.2f)\ntotalVirtualMem Mb(%.2f)\nfreeVirtualMem Mb(%.2f)\nextendedVirtualFree Mb(%.2f)\n\n",
-						memStat.dwMemoryLoad,
-						(double)memStat.ullTotalPhys/MbDiv,
-						(double)memStat.ullAvailPhys/MbDiv,
-						(double)memStat.ullTotalPageFile/MbDiv,
-						(double)memStat.ullAvailPageFile/MbDiv,
-						(double)memStat.ullTotalVirtual/MbDiv,
-						(double)memStat.ullAvailVirtual/MbDiv,
-						(double)memStat.ullAvailExtendedVirtual/MbDiv);
-		}
-#endif
 	}
 
 	if ( g_pMemAlloc->MemoryAllocFailed() )

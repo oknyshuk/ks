@@ -5,11 +5,7 @@
 // $NoKeywords: $
 //===========================================================================//
 
-#if defined( _WIN32 ) 
-#include <windows.h>
-#else
 #include <sys/mman.h>
-#endif
 #include "resourcefile/resourcestream.h"
 #include "dbg.h"
 #include "memalloc.h"
@@ -116,12 +112,8 @@ void CResourceStreamVM::ReserveVirtualMemory( uint nAddressSize )
 	m_nReserved = MAX( nAddressSize, COMMIT_STEP );
 	for ( ;; )
 	{
-#if defined( PLATFORM_WINDOWS )
-		m_pData = ( uint8* )VirtualAlloc( NULL, m_nReserved, MEM_RESERVE, PAGE_READWRITE );
-#else
 		int nFlags = MAP_ANONYMOUS | MAP_PRIVATE;
 		m_pData = ( uint8* )::mmap( NULL, m_nReserved, PROT_WRITE | PROT_READ, nFlags, -1, 0 );
-#endif
 		if ( !m_pData )
 		{
 			m_nReserved /= 2;
@@ -142,11 +134,7 @@ void CResourceStreamVM::ReleaseVirtualMemory()
 {
 	if ( m_pData != NULL )
 	{
-#if defined( PLATFORM_WINDOWS )
-		VirtualFree( m_pData, m_nReserved, MEM_RELEASE );
-#else
 		munmap( m_pData, m_nReserved );
-#endif
 	}
 
 	m_pData = NULL;	
@@ -211,11 +199,7 @@ void CResourceStreamVM::Commit( uint nNewCommit )
 	{
 		nNewCommit = ( nNewCommit + COMMIT_STEP - 1 ) & ~( COMMIT_STEP - 1 );
 		// expensive call. Not to be called frequently
-#if defined( PLATFORM_WINDOWS )
-		VirtualAlloc( m_pData + m_nCommitted, nNewCommit - m_nCommitted, MEM_COMMIT, PAGE_READWRITE );
-#else
 		mprotect( m_pData + m_nCommitted, nNewCommit - m_nCommitted, PROT_READ|PROT_WRITE );
-#endif
 		m_nCommitted = nNewCommit;
 	}
 }

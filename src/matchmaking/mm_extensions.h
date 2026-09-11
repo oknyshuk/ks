@@ -6,9 +6,6 @@
 
 #ifndef MM_EXTENSIONS_H
 #define MM_EXTENSIONS_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "UtlStringMap.h"
 

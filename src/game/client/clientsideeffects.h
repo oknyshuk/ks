@@ -6,9 +6,6 @@
 
 #ifndef CLIENTSIDEEFFECTS_H
 #define CLIENTSIDEEFFECTS_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 class	Vector;
 struct	FXQuadData_t;

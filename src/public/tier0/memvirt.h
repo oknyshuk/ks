@@ -6,9 +6,6 @@
 
 #ifndef MEM_VIRT_H
 #define MEM_VIRT_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 
 #define VMM_KB ( 1024 )

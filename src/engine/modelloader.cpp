@@ -2776,7 +2776,6 @@ void Mod_LoadCubemapSamples( void )
 //-----------------------------------------------------------------------------
 void Mod_LoadSimpleWorldModel( const char *pMapBaseName )
 {
-#if defined( CSTRIKE15 )
 	// We only load the world imposter models for specific maps on cstrike15
 	if( !( V_stristr( pMapBaseName, "de_lake" ) ||
 		   V_stristr( pMapBaseName, "de_stmarc" ) ||
@@ -2784,10 +2783,6 @@ void Mod_LoadSimpleWorldModel( const char *pMapBaseName )
 	{
 		return;
 	}
-#else
-	// We only load the world imposter models for multiplayer maps on consoles
-	// Note: This seems super-sketchy, but apparently we use the map name to decide if we are co-op or not in portal 2.
-#endif
 
 	char modelPath[MAX_PATH];
 	V_snprintf( modelPath, MAX_PATH, "models/maps/%s/simpleworldmodel.mdl", pMapBaseName );
@@ -3935,17 +3930,8 @@ model_t	*CModelLoader::LoadModel( model_t *mod, REFERENCETYPE *pReferencetype )
 			// the texture state needs to be established before any loading work
 			if ( mat_excludetextures.GetBool() )
 			{
-#if defined( PORTAL2 )
-				char szExcludePath[MAX_PATH] = "";
-				// PORTAL2: we aren't using per-map excludes, we just need a few textures excluded in SP
-				if ( V_stristr( m_szBaseName, "sp_" ) )
-				{
-					v_snprintf( szExcludePath, sizeof( szExcludePath ), "//MOD/maps/sp_exclude.lst" );
-				}
-#else
 				char szExcludePath[MAX_PATH];
 				V_snprintf( szExcludePath, sizeof( szExcludePath ), "//MOD/maps/%s_exclude.lst", m_szBaseName );
-#endif
 				if ( developer.GetInt() > 1 )
 				{
 					DevMsg( "Setting excluded textures: %s\n", szExcludePath );
@@ -4979,13 +4965,11 @@ void CModelLoader::Map_LoadModelGuts( model_t *mod )
 		Mod_LoadCubemapSamples();
 	}
 
-#if defined( PORTAL2 ) || defined( CSTRIKE15 )
 	{
 		MEM_ALLOC_CREDIT_("Mod_LoadSimpleWorldModel");
 		COM_TimestampedLog( "  Mod_LoadSimpleWorldModel" );
 		Mod_LoadSimpleWorldModel( m_szBaseName );
 	}
-#endif
 	{
 		MEM_ALLOC_CREDIT_("Mod_LoadGameLumpDict");
 		COM_TimestampedLog( "  Mod_LoadGameLumpDict" );
@@ -6977,143 +6961,6 @@ void Mod_LeafAmbientColorAtPos( Vector *pOut, const Vector &pos, int leafIndex )
 	}
 }
 
-#if defined( PLATFORM_WINDOWS_PC )
-
-#if defined( PLATFORM_WINDOWS_PC )
-
-struct xModelList_t
-{
-	char		name[MAX_PATH];
-	int			dataSize;
-	int			numVertices;
-	int			triCount;
-	int			dataSizeLod0;
-	int			numVerticesLod0;
-	int			triCountLod0;
-	int			numBones;
-	int			numParts;
-	int			numLODs;
-	int			numMeshes;
-};
-
-#endif // PLATFORM_WINDOWS_PC
-
-int ComputeSize( studiohwdata_t *hwData, int *numVerts, int *pTriCount, bool onlyTopLod = false )
-{
-	unsigned size = 0;
-	Assert(hwData && numVerts);
-	int max_lod = (onlyTopLod ? 1 : hwData->m_NumLODs);
-	*pTriCount = 0;
-	for ( int i=0; i < max_lod; i++ )
-	{
-		studioloddata_t *pLOD = &hwData->m_pLODs[i];
-		for ( int j = 0; j < hwData->m_NumStudioMeshes; j++ )
-		{
-			studiomeshdata_t *pMeshData = &pLOD->m_pMeshData[j];
-			for ( int k = 0; k < pMeshData->m_NumGroup; k++ )
-			{
-				studiomeshgroup_t *pMeshGroup = &pMeshData->m_pMeshGroup[k];
-				IMesh* mesh = pMeshGroup->m_pMesh;
-				size += mesh->ComputeMemoryUsed();
-
-				// This doesn't seem relevant since it has no bearing on GPU memory, but keeping it here
-				// on the PC, since the reason it's being aded back in is to look at differences between
-				// main and portal2.
-#if defined( PLATFORM_WINDOWS_PC )
-				size += 2 * pMeshGroup->m_NumVertices;	// Size of m_pGroupIndexToMeshIndex[] array
-#endif
-
-				*numVerts += mesh->VertexCount();
-				Assert( mesh->VertexCount() == pMeshGroup->m_NumVertices );
-				for ( int l = 0; l < pMeshGroup->m_NumStrips; ++l )
-				{
-					OptimizedModel::StripHeader_t *pStripData = &pMeshGroup->m_pStripData[l];
-					*pTriCount += pStripData->numIndices / 3;
-				}
-			}
-		}
-	}
-	return size;
-}
-
-// APSFIXME: needs to only do models that are resident, sizes might be wrong, i.e lacking compressed vert state?
-CON_COMMAND( vx_model_list, "Dump models to VXConsole" )
-{
-	CUtlVector< xModelList_t > modelList;
-	modelList.SetCount( modelloader->GetCount() );
-
-	int numActualModels = 0;
-	for ( int i = 0; i < modelList.Count(); i++ )
-	{
-		const char* name = "Unknown";
-		int dataSizeLod0 = 0;
-		int dataSize = 0;
-		int numParts = 0;
-		int numBones = 0;
-		int numVertsLod0 = 0;
-		int numVerts = 0;
-		int numLODs = 0;
-		int numMeshes = 0;
-		int nTriCount = 0;
-		int nTriCountLod0 = 0;
-
-		model_t* model = modelloader->GetModelForIndex( i );
-		if ( model )
-		{
-			// other model types are not interesting
-			if ( model->type != mod_studio )
-				continue;
-
-			name = model->szPathName;
-			studiohwdata_t *hwData = g_pMDLCache->GetHardwareData( model->studio );
-			if ( hwData )
-			{
-				numMeshes = hwData->m_NumStudioMeshes;
-				numLODs = hwData->m_NumLODs;
-				dataSize = ComputeSize( hwData, &numVerts, &nTriCount, false );
-				dataSizeLod0 = ComputeSize( hwData, &numVertsLod0, &nTriCountLod0, true );
-			}
-
-			studiohdr_t *pStudioHdr = (studiohdr_t *)modelloader->GetExtraData( model );
-			numBones = pStudioHdr->numbones;
-			numParts = pStudioHdr->numbodyparts;
-		}
-
-		xModelList_t &modelInfo = modelList[numActualModels];
-		++numActualModels;
-		strcpy( modelInfo.name, name );
-		modelInfo.dataSize = dataSize;
-		modelInfo.numVertices = numVerts;
-		modelInfo.triCount = nTriCount;
-		modelInfo.dataSizeLod0 = dataSizeLod0;
-		modelInfo.numVerticesLod0 = numVertsLod0;
-		modelInfo.triCountLod0 = nTriCountLod0;
-		modelInfo.numParts = numParts;
-		modelInfo.numBones = numBones;
-		modelInfo.numLODs = numLODs;
-		modelInfo.numMeshes = numMeshes;
-	}
-
-#if   defined( PLATFORM_WINDOWS_PC )
-	
-	extern IVEngineClient *engineClient;
-	char csvFileName[ MAX_PATH ];
-	Q_snprintf( csvFileName, MAX_PATH, "modellist_%s.csv", engineClient->GetLevelNameShort() );
-	Msg( "Writing model list to ""%s""...\n", csvFileName );
-	FileHandle_t fileHandle = g_pFullFileSystem->Open( csvFileName, "w" );
-	g_pFullFileSystem->FPrintf( fileHandle, "Model,DataSize,Tris,Verts,DataSize (LOD0),Tris (LOD0),Verts (LOD0),Parts,Bones,LODs,Meshes\n" );
-
-	for ( int i = 0; i < numActualModels; ++ i )
-	{
-		g_pFullFileSystem->FPrintf( fileHandle, "%s,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d\n", 
-			modelList[ i ].name, modelList[ i ].dataSize, modelList[ i ].triCount, modelList[ i ].numVertices, modelList[ i ].dataSizeLod0, modelList[ i ].triCountLod0, modelList[ i ].numVerticesLod0,
-			modelList[ i ].numParts, modelList[ i ].numBones, modelList[ i ].numLODs, modelList[ i ].numMeshes );
-	}
-
-	g_pFullFileSystem->Close( fileHandle );
-#endif // PLATFORM_WINDOWS_PC
-}
-#endif // _X360 || PLATFORM_WINDOWS_PC
 
 
 CON_COMMAND_F( mod_dynamicmodeldebug, "debug spew for dynamic model loading", FCVAR_HIDDEN | FCVAR_DONTRECORD )

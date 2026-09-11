@@ -6,16 +6,6 @@
 
 #include "tier0/fasttimer.h"
 
-#ifdef _WIN32
-#include "tier0/memdbgon.h" // needed because in release builds crtdbg.h is handled specially if USE_MEM_DEBUG is defined
-#include "tier0/memdbgoff.h"
-#include <crtdbg.h>   // For getting at current heap size
-
-// For maximum compatibility use PSAPI v1
-// #define PSAPI_VERSION 1
-// #include "psapi.h"
-// #pragma comment(lib, "psapi.lib")
-#endif
 
 #include "tier1/fmtstr.h"
 #include "vstdlib/jobthread.h"
@@ -167,10 +157,8 @@ int host_currentframetick = 0;
 bool g_bLowViolence = false;
 static bool g_bAllowSecureServers = true;
 
-#ifdef USE_SDL
 	#include "appframework/ilaunchermgr.h"
 	extern ILauncherMgr *g_pLauncherMgr;
-#endif
 
 // Engine player info, no game related infos here
 BEGIN_BYTESWAP_DATADESC( player_info_s )
@@ -373,9 +361,6 @@ void R_Shutdown( void );
 
 bool g_bAbortServerSet = false;
 
-#ifdef _WIN32
-static bool s_bInitPME = false;
-#endif
 
 static ConVar mem_test_quiet( "mem_test_quiet", "0", 0, "Don't print stats when memtesting" );
 static ConVar mem_test_each_frame( "mem_test_each_frame", "0", 0, "Run heap check at end of every frame\n" );
@@ -1434,9 +1419,7 @@ void Host_ReadPreStartupConfiguration()
 		"snd_legacy_surround",		// needed to init the sound system
 		"gameui_xbox",				// needed to initialize the correct UI
 		"save_in_memory",			// needed to preread data from the correct location in UI
-#if defined( USE_SDL )
 		"sdl_displayindex"			// needed to set multimonitor displayindex for SDL
-#endif
 	};
 
 	// loop through looking for all the cvars to apply
@@ -2355,31 +2338,6 @@ void Host_CheckDumpMemoryStats( void )
 	}
 
 
-#if defined(_WIN32)
-	if ( mem_dumpstats.GetInt() <= 0 )
-		return;
-
-	if ( mem_dumpstats.GetInt() == 1 )
-		mem_dumpstats.SetValue( 0 ); // reset cvar, dump stats only once
-
-	_CrtMemState state;
-	Q_memset( &state, 0, sizeof( state ) );
-	_CrtMemCheckpoint( &state );
-
-	unsigned int size = 0;
-
-	for ( int use = 0; use < _MAX_BLOCKS; use++)
-	{
-		size += state.lSizes[ use ];
-	}
-	Msg("MEMORY:  Run-time Heap\n------------------------------------\n");
-
-	Msg( "\tHigh water %s\n", Q_pretifymem( state.lHighWaterCount,4 ) );
-	Msg( "\tCurrent mem %s\n", Q_pretifymem( size,4 ) );
-	Msg("------------------------------------\n");
-	int hunk = Hunk_MallocSize();
-	Msg("\tAllocated outside hunk:  %s\n", Q_pretifymem( size - hunk ) );
-#endif
 }
 
 //-----------------------------------------------------------------------------
@@ -2619,12 +2577,10 @@ void _Host_RunFrame_Render()
 	g_HostTimes.EndFrameSegment( FRAME_SEGMENT_RENDER );
 
 
-#ifdef USE_SDL
 	if ( g_pLauncherMgr )
 	{
 		g_pLauncherMgr->OnFrameRendered();
 	}
-#endif
 
 	mat_norendering.SetValue( nOrgNoRendering );
 #endif
@@ -3110,12 +3066,6 @@ void _Host_RunFrame (float time)
 
 		if ( host_checkheap )
 		{
-#if defined(_WIN32)
-			if ( _heapchk() != _HEAPOK )
-			{
-				Sys_Error( "_Host_RunFrame (top):  _heapchk() != _HEAPOK\n" );
-			}
-#endif
 		}
 
 		static double timeLastMemCompact;
@@ -3644,12 +3594,6 @@ void _Host_RunFrame (float time)
 
 		if ( host_checkheap )
 		{
-#ifdef _WIN32
-			if ( _heapchk() != _HEAPOK )
-			{
-				Sys_Error( "_Host_RunFrame (bottom):  _heapchk() != _HEAPOK\n" );
-			}
-#endif
 		}
 
 		Status_CheckSendETWMark();
@@ -3742,9 +3686,7 @@ bool IsLowViolence_CommandLine()
 bool IsLowViolence_Secure()
 {
 	// CS:GO does not have any low violence regions. Ignore what Steam reports.
-#if defined( CSTRIKE15 )
 	return false;
-#endif
 
 	if ( Steam3Client().SteamApps() )
 	{
@@ -3765,9 +3707,7 @@ bool IsLowViolence_Registry()
 {
 
 // CS:GO does not have any low violence regions. Ignore the registry settings.
-#if defined( CSTRIKE15 )
 	return false;
-#endif
 
 	char szSubKey[128];
 	int nBufferLen;
@@ -3830,9 +3770,6 @@ void Host_CheckGore( void )
 	//
 	// First check the old method of enabling low violence via the registry.
 	//
-#ifdef WIN32
-	bLowViolenceRegistry = IsLowViolence_Registry();
-#endif
 	//
 	// Next check the new method of enabling low violence based on country of purchase
 	// and other means that are inaccessible by the user.
@@ -3935,13 +3872,6 @@ void Host_InitProcessor( void )
 			);
 	}
 
-#if defined( _WIN32 )
-	if ( s_bInitPME )
-	{
-		// Initialize the performance monitoring events code.
-		InitPME();
-	}
-#endif
 }
 
 //-----------------------------------------------------------------------------
@@ -4170,12 +4100,6 @@ void Host_Init( bool bDedicated )
 		g_nForkID = FORK_ID_PARENT_PROCESS;
 	}
 
-#if defined(_WIN32)
-	if ( CommandLine()->FindParm( "-pme" ) )
-	{
-		s_bInitPME = true;
-	}
-#endif
 
 	if ( !bDedicated && Host_IsSecureServerAllowed() )
 	{
@@ -4407,12 +4331,6 @@ void Host_Init( bool bDedicated )
 
 	if ( host_checkheap )
 	{
-#if defined( _WIN32 )
-		if ( _heapchk() != _HEAPOK )
-		{
-			Sys_Error( "Host_Init:  _heapchk() != _HEAPOK\n" );
-		}
-#endif
 	}
 
 	// go directly to run state with no active game
@@ -4867,12 +4785,6 @@ void Host_Shutdown(void)
 {
 	if ( host_checkheap )
 	{
-#ifdef _WIN32
-		if ( _heapchk() != _HEAPOK )
-		{
-			Sys_Error( "Host_Shutdown (top):  _heapchk() != _HEAPOK\n" );
-		}
-#endif
 	}
 
 	// Check for recursive shutdown, should never happen
@@ -5036,21 +4948,9 @@ void Host_Shutdown(void)
 	DTI_Term();
 	ServerDTI_Term();
 
-#if defined(_WIN32)
-	if ( s_bInitPME )
-	{
-		ShutdownPME();
-	}
-#endif
 
 	if ( host_checkheap )
 	{
-#ifdef _WIN32
-		if ( _heapchk() != _HEAPOK )
-		{
-			Sys_Error( "Host_Shutdown (bottom):  _heapchk() != _HEAPOK\n" );
-		}
-#endif
 	}
 }
 

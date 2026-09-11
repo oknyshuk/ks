@@ -6,9 +6,6 @@
 
 #ifndef SOS_OP_H
 #define SOS_OP_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "sos_system.h"
 #include "snd_channels.h"

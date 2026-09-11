@@ -6,9 +6,6 @@
 //=============================================================================//
 #ifndef SYSEXTERNAL_H
 #define SYSEXTERNAL_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 // an error will cause the entire program to exit
 void Sys_Error(PRINTF_FORMAT_STRING const char *psz, ...) FMTFUNCTION( 1, 2 );

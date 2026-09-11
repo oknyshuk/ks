@@ -10,9 +10,6 @@
 #ifndef IDISPINFO_H
 #define IDISPINFO_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 
 //=============================================================================

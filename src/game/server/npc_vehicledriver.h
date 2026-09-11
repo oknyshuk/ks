@@ -8,9 +8,6 @@
 #define NPC_VEHICLEDRIVER_H
 
 #include "reflect_annotations.h"
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "ai_basenpc.h"
 
@@ -153,11 +150,7 @@ public:
 
 	int				BloodColor( void ) { return DONT_BLEED; }
 
-#ifdef HL2_DLL
-	Class_T			Classify( void ) { return CLASS_METROPOLICE; }
-#else
 	Class_T			Classify( void ) { return CLASS_NONE; }
-#endif
 
 	Disposition_t	IRelationType( CBaseEntity *pTarget );
 

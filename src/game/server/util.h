@@ -7,9 +7,6 @@
 
 #ifndef UTIL_H
 #define UTIL_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "ai_activity.h"
 #include "steam/steam_gameserver.h"
@@ -36,12 +33,7 @@ struct levellist_t;
 class IServerNetworkable;
 class IEntityFactory;
 
-#ifdef _WIN32
-	#define SETUP_EXTERNC(mapClassName)\
-		extern "C" _declspec( dllexport ) IServerNetworkable* mapClassName( void );
-#else
 	#define SETUP_EXTERNC(mapClassName)
-#endif
 
 
 #include "tier0/memdbgon.h"
@@ -243,9 +235,6 @@ void		UTIL_GetPlayerConnectionInfo( int playerIndex, int& ping, int &packetloss 
 void		UTIL_SetClientVisibilityPVS( edict_t *pClient, const unsigned char *pvs, int pvssize );
 bool		UTIL_ClientPVSIsExpanded();
 
-#if defined ( PORTAL )
-void		UTIL_SetClientCheckPVS( edict_t *pClient, const unsigned char *pvs, int pvssize );
-#endif
 
 edict_t		*UTIL_FindClientInPVS( edict_t *pEdict );
 edict_t		*UTIL_FindClientInVisibilityPVS( edict_t *pEdict );

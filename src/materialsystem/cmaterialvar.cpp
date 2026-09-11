@@ -4,12 +4,6 @@
 //
 //===========================================================================//
 
-#if defined( _WIN32 )
-#define WIN_32_LEAN_AND_MEAN
-#include <windows.h>
-#define VA_COMMIT_FLAGS MEM_COMMIT
-#define VA_RESERVE_FLAGS MEM_RESERVE
-#endif
 
 #include "materialsystem/imaterialvar.h"
 #include "materialsystem/imaterialsystem.h"

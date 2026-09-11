@@ -10,9 +10,6 @@
 #ifndef GL_LIGHTMAP_H
 #define GL_LIGHTMAP_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 #include "surfacehandle.h"
 
 #define	MAX_LIGHTMAPS	256

@@ -6,9 +6,6 @@
 
 #ifndef GAMEUI_UTIL_H
 #define GAMEUI_UTIL_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 // Set by the player who "owns" the gameui/settings/etc.
 void SetGameUIActiveSplitScreenPlayerSlot( int nSlot );

@@ -1,7 +1,6 @@
 
 #pragma once
 
-#if defined(DX_TO_VK_ABSTRACTION)
 
 // Undefine Source Engine macros that DXVK's windows_base.h will redefine
 #undef TRUE
@@ -24,17 +23,6 @@
 typedef void* VD3DHWND;
 typedef void* VD3DHANDLE;
 
-#else
-	//USE_ACTUAL_DX
-	#ifdef WIN32
-			#include <windows.h>
-			#include "../../dx9sdk/include/d3d9.h"
-			#include "../../dx9sdk/include/d3dx9.h"
-	#endif
-
-typedef HWND VD3DHWND;
-
-#endif // defined(DX_TO_GL_ABSTRACTION)
 
 #define	GLMPRINTF(args)
 #define	GLMPRINTSTR(args)

@@ -6,9 +6,6 @@
 
 #ifndef CS_WEAPON_PARSE_H
 #define CS_WEAPON_PARSE_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 
 #ifdef CLIENT_DLL

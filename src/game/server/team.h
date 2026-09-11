@@ -7,9 +7,6 @@
 
 #ifndef TEAM_H
 #define TEAM_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "shareddefs.h"
 #include "utlvector.h"
@@ -111,10 +108,8 @@ public:
 
 	virtual int GetAliveMembers( void );
 
-#if defined ( CSTRIKE15 )
 	virtual int GetBotMembers( CUtlVector< class CCSBot* > *pOutVecBots = NULL );
 	virtual int GetHumanMembers( CUtlVector< class CCSPlayer* > *pOutVecPlayers = NULL );
-#endif
 
 	float m_flLastPlayerSortTime;
 	static int m_nStaticGGLeader_CT;

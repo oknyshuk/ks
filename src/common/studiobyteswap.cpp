@@ -2631,13 +2631,7 @@ BEGIN_BYTESWAP_DATADESC( mstudiotexture_t )
 	DEFINE_FIELD( used, FIELD_INTEGER ),
 	DEFINE_FIELD( unused1, FIELD_INTEGER ),
 
-#ifdef PLATFORM_64BITS
 	DEFINE_ARRAY( unused, FIELD_INTEGER, 12 ),
-#else
-	DEFINE_FIELD( material, FIELD_INTEGER ),		// IMaterial*
-	DEFINE_FIELD( clientmaterial, FIELD_INTEGER ),	// void*
-	DEFINE_ARRAY( unused, FIELD_INTEGER, 10 ),
-#endif
 END_BYTESWAP_DATADESC()
 
 BEGIN_BYTESWAP_DATADESC( vertexFileHeader_t )

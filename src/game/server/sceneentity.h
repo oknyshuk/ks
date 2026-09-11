@@ -8,9 +8,6 @@
 #define SCENEENTITY_H
 
 #include "reflect_annotations.h"
-#ifdef _WIN32
-#pragma once
-#endif
 
 // List of the last 5 lines of speech from NPCs for bug reports
 #define SPEECH_LIST_MAX_SOUNDS	5

@@ -1,8 +1,5 @@
 #ifndef MISSION_CHOOSER_INT_H
 #define MISSION_CHOOSER_INT_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "appframework/IAppSystem.h"
 #include "utlvector.h"

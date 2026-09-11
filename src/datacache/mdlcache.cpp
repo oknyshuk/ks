@@ -327,20 +327,11 @@ private:
 // to ease fragmentation due to streaming
 //-----------------------------------------------------------------------------
 
-#if defined( CSTRIKE15 )
 
 // CS:GO currently loads 518 anim blocks (most of which are in the 24-32K size range), I've made this 530 to allow for some additional animations that are coming soon.
 #define MAX_ANIMBLOCKS 530
 #define ANIMBLOCK_SIZE 33*1024 // this is set to 33K for now, because one animation is over 32K by a smidge and spews a message and ends up allocating outside the pool, reduce back to 32K when that anim is fixed
 
-#else
-
-// Portal 2 has different requirements. There are a lot of big animations seeking, which creates some issues in term of DVD latencies.
-// On the other hand, there are not a lot of different animations. So we use the 9 MB buffer differently.
-#define MAX_ANIMBLOCKS 137
-#define ANIMBLOCK_SIZE 64*1024
-
-#endif
 
 CFixedBudgetMemoryPool<ANIMBLOCK_SIZE, MAX_ANIMBLOCKS> g_AnimBlockAllocator;
 
@@ -1113,9 +1104,6 @@ bool CMDLCache::Connect( CreateInterfaceFn factory )
 	{
 		g_pMaterialSystem->AddReleaseFunc( ::ReleaseMaterialSystemObjects );
 		g_pMaterialSystem->AddRestoreFunc( ::RestoreMaterialSystemObjects );
-#ifdef PLATFORM_WINDOWS_PC
-		g_pMaterialSystem->AddEndFrameCleanupFunc( ::CleanupMaterialSystemObjects );
-#endif
 	}
 
 	return true;
@@ -1127,9 +1115,6 @@ void CMDLCache::Disconnect()
 	{
 		g_pMaterialSystem->RemoveReleaseFunc( ::ReleaseMaterialSystemObjects );
 		g_pMaterialSystem->RemoveRestoreFunc( ::RestoreMaterialSystemObjects );
-#ifdef PLATFORM_WINDOWS_PC
-		g_pMaterialSystem->RemoveEndFrameCleanupFunc( ::CleanupMaterialSystemObjects );
-#endif
 
 		ShutdownCombiner();
 
@@ -1423,39 +1408,6 @@ void CMDLCache::InitStudioData( MDLHandle_t handle )
 
 void CMDLCache::ShutdownStudioData( MDLHandle_t handle, bool bImmediate )
 {
-#ifdef PLATFORM_WINDOWS_PC
-
-	BeginLock();
-
-	if ( bImmediate == false )
-	{
-#ifdef DEBUG_COMBINER
-		studiodata_t *pStudioData = m_MDLDict[handle];
-
-		if ( ( pStudioData->m_nFlags & ( STUDIODATA_FLAGS_COMBINED_ASSET ) ) == STUDIODATA_FLAGS_COMBINED_ASSET )
-		{
-			Msg( "%p ShutdownStudioData: pStudioData=%p\n", pStudioData->m_pCombinedStudioData, pStudioData );
-		}
-#endif
-
-		m_UnloadHandles.PushItem( m_MDLDict[ handle ] );
-		FlushImmediate( m_MDLDict[ handle ] );
-		m_MDLDict[handle] = NULL;
-	}
-	else
-	{
-		FlushImmediate( m_MDLDict[ handle ] );
-		Flush( handle );
-
-		studiodata_t *pStudioData = m_MDLDict[handle];
-		Assert( pStudioData != NULL );
-		delete pStudioData;
-		m_MDLDict[handle] = NULL;
-	}
-
-	EndLock();
-
-#else
 
 	FlushImmediate( m_MDLDict[ handle ] );
 	Flush( handle );
@@ -1465,7 +1417,6 @@ void CMDLCache::ShutdownStudioData( MDLHandle_t handle, bool bImmediate )
 	delete pStudioData;
 	m_MDLDict[handle] = NULL;
 
-#endif // PLATFORM_WINDOWS
 }
 
 
@@ -2644,12 +2595,8 @@ studiohdr_t *CMDLCache::UnserializeMDL( MDLHandle_t handle, CMDLCacheData &cache
 	if ( !pStudioHdrIn )
 		return NULL;
 			
-#ifdef CSTRIKE15
 	// Slamp root LOD to 0 for CS:GO
 	int nRootLOD = 0;
-#else
-	int nRootLOD = r_rootlod.GetInt();
-#endif	
 
 	if ( nRootLOD > 0 )
 	{

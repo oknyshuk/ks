@@ -10,9 +10,6 @@
 #ifndef IBIK_H
 #define IBIK_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "appframework/iappsystem.h"
 
@@ -116,11 +113,6 @@ public:
 	// Sets the frame for an BINK material (use instead of SetTime)
 	virtual void SetFrame( BIKMaterial_t hMaterial, float flFrame ) = 0;
 
-#ifdef WIN32
-	// Sets the direct sound device that Bink will decode to
-	virtual bool SetDirectSoundDevice( void	*pDevice ) = 0;
-	virtual bool SetMilesSoundDevice( void *pDevice ) = 0;
-#endif
 
 
 	// Pause and unpause the movie playback

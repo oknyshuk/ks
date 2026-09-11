@@ -8,9 +8,6 @@
 #ifndef VTF_DECLARATIONS_H
 #define VTF_DECLARATIONS_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 //-----------------------------------------------------------------------------
 // Forward declarations
@@ -70,14 +67,8 @@ enum CompiledVtfFlags
 
 	TEXTUREFLAGS_BORDER						   = 0x20000000,	// Clamp to border color on all texture coordinates
 
-#if defined SPU
-	// PS3 extensions
-	TEXTUREFLAGS_QUINCUNX                      = 0x40000000,
-	TEXTUREFLAGS_QUINCUNX_ALT                  = 0x80000000,					
-#else
 	TEXTUREFLAGS_UNUSED_40000000		   = 0x40000000,
 	TEXTUREFLAGS_UNUSED_80000000		   = 0x80000000,
-#endif
 };
 
 enum VersionedVtfFlags

@@ -6,9 +6,6 @@
 
 #ifndef TE_SHOTGUN_SHOT_H
 #define TE_SHOTGUN_SHOT_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 
 void TE_FireBullets( 

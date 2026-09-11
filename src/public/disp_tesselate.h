@@ -7,9 +7,6 @@
 
 #ifndef DISP_TESSELATE_H
 #define DISP_TESSELATE_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 
 #include "disp_powerinfo.h"

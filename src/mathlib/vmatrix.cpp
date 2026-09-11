@@ -6,7 +6,6 @@
 //
 //=============================================================================//
 
-#if !defined(_STATIC_LINKED) || defined(_SHARED_LIB)
 
 #include "basetypes.h"
 #include "mathlib/vmatrix.h"
@@ -1325,5 +1324,4 @@ void ExtractClipPlanesFromNonTransposedMatrix( const VMatrix &viewProjMatrix, VP
 	}
 }
 
-#endif // !_STATIC_LINKED || _SHARED_LIB
 

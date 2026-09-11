@@ -6,9 +6,6 @@
 //=============================================================================//
 #ifndef NETWORKSTRINGTABLE_H
 #define NETWORKSTRINGTABLE_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "networkstringtabledefs.h"
 #include "networkstringtableitem.h"

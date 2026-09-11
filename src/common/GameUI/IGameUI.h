@@ -7,9 +7,6 @@
 
 #ifndef IGAMEUI_H
 #define IGAMEUI_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "interface.h"
 

@@ -2374,11 +2374,7 @@ int CMeshDX8::s_nPrims;
 unsigned int CMeshDX8::s_FirstVertex;
 unsigned int CMeshDX8::s_NumVertices;
 
-#if PLATFORM_WINDOWS_PC
-#define PLATFORM_SUPPORTS_TRIANGLE_FANS 1
-#else
 #define PLATFORM_SUPPORTS_TRIANGLE_FANS 0
-#endif
 
 //-----------------------------------------------------------------------------
 // Computes the mode
@@ -3545,9 +3541,7 @@ void CMeshDX8::Draw( CPrimList *pLists, int nLists )
 
 void CMeshDX8::DrawInternal( const Vector4D *pDiffuseModulation, CPrimList *pLists, int nLists )
 {
-#if defined(DX_TO_GL_ABSTRACTION) || defined(DX_TO_VK_ABSTRACTION)
 	HandleLateCreation();
-#endif
 
 	// Make sure there's something to draw..
 	int i;
@@ -3681,9 +3675,7 @@ void CMeshDX8::RenderPass( const unsigned char *pInstanceCommandBuffer )
 	LOCK_SHADERAPI();
 	VPROF( "CMeshDX8::RenderPass" );
 
-#if defined(DX_TO_GL_ABSTRACTION) || defined(DX_TO_VK_ABSTRACTION)
 	HandleLateCreation();
-#endif
 
 	if ( g_nInstanceCount )
 	{
@@ -4010,9 +4002,7 @@ void CDynamicMeshDX8::DrawInternal( const Vector4D *pVecDiffuseModulation, int n
 		( ( m_TotalVertices > 0 ) && ( m_TotalIndices > 0 || m_Type == MATERIAL_POINTS || m_Type == MATERIAL_INSTANCED_QUADS ) ) )
 	{
 		Assert( !m_IsDrawing );
-#if defined(DX_TO_GL_ABSTRACTION) || defined(DX_TO_VK_ABSTRACTION)
 		HandleLateCreation();
-#endif
 
 		// only have a non-zero first vertex when we are using static indices
 		int nFirstVertex = m_VertexOverride ? 0 : m_nFirstVertex;
@@ -5261,13 +5251,8 @@ void CMeshMgr::MarkUnusedVertexFields( unsigned int nFlags, int nTexCoordCount, 
 // Allocate temporary arrays either on the stack, or from the heap. 
 // Prevents using all the stack when *lots* of objects are rendered to CSM's.
 //-----------------------------------------------------------------------------
-#if defined( CSTRIKE15 ) // 7ls
 #define STUDIORENDER_TEMP_DATA_MALLOC( typeName, p, n ) const int nTempDataSize##p = (n); void *pvFree##p = NULL; typeName *p = (typeName *) ( ( nTempDataSize##p < 64*1024 ) ? stackalloc( nTempDataSize##p ) : ( pvFree##p = malloc( nTempDataSize##p ) ) );
 #define STUDIORENDER_TEMP_DATA_FREE( p ) free( pvFree##p )
-#else
-#define STUDIORENDER_TEMP_DATA_MALLOC( typeName, p, n ) typeName *p = (typeName *) stackalloc(n);
-#define STUDIORENDER_TEMP_DATA_FREE( p )
-#endif
 
 
 //-----------------------------------------------------------------------------
@@ -6130,9 +6115,7 @@ void CMeshMgr::DrawInstancedPrims( const unsigned char *pInstanceCommandBuffer )
 			Warning( "CMeshMgr::DrawInstancedPrims: Vertex buffer in not setup properly, mesh will not be rendered." );
 			continue;
 		}
-#if defined(DX_TO_GL_ABSTRACTION) || defined(DX_TO_VK_ABSTRACTION)
 		pVertexMesh->HandleLateCreation();
-#endif
 
 		D3DSetStreamSource( VertexStreamSpec_t::STREAM_FLEXDELTA, 
 			pVertexMesh->m_pVertexBuffer->GetInterface(), 
@@ -6152,9 +6135,7 @@ void CMeshMgr::DrawInstancedPrims( const unsigned char *pInstanceCommandBuffer )
 		if ( pIndexBuffer->GetMesh() )
 		{
 			CMeshDX8 *pMesh = static_cast<CMeshDX8*>( pIndexBuffer );
-#if defined(DX_TO_GL_ABSTRACTION) || defined(DX_TO_VK_ABSTRACTION)
 			pMesh->HandleLateCreation();
-#endif
 			pD3DIndexBuffer = pMesh->m_pIndexBuffer->GetInterface();				
 		}
 		else
@@ -6166,12 +6147,10 @@ void CMeshMgr::DrawInstancedPrims( const unsigned char *pInstanceCommandBuffer )
 		D3DSetIndices( pD3DIndexBuffer );
 
 		CMeshDX8 *pColorMesh = static_cast<CMeshDX8*>( const_cast<IVertexBuffer*>( instance.m_pColorBuffer ) );
-#if defined(DX_TO_GL_ABSTRACTION) || defined(DX_TO_VK_ABSTRACTION)
 		if (pColorMesh)
 		{
 			pColorMesh->HandleLateCreation();
 		}
-#endif
 		CVertexBuffer *pVertexBuffer = pColorMesh ? pColorMesh->GetVertexBuffer() : m_pEmptyColorBuffer;
 		int nVertexOffset = pColorMesh ? instance.m_nColorVertexOffsetInBytes : 0;
 
@@ -6227,9 +6206,7 @@ void CMeshMgr::RenderPassForInstances( const unsigned char *pInstanceCommandBuff
 		// make sure the vertex format is a superset of the current material's
 		// vertex format...
 		CMeshDX8 *pVertexMesh = static_cast<CMeshDX8*>( const_cast<IVertexBuffer*>( instance.m_pVertexBuffer ) );
-#if defined(DX_TO_GL_ABSTRACTION) || defined(DX_TO_VK_ABSTRACTION)
 		pVertexMesh->HandleLateCreation();
-#endif
 
 		Assert( pVertexMesh );
 		VertexFormat_t nMeshFormat = pVertexMesh->GetVertexFormat();
@@ -6250,9 +6227,7 @@ void CMeshMgr::RenderPassForInstances( const unsigned char *pInstanceCommandBuff
 		{
 			CMeshDX8 *pMesh = static_cast<CMeshDX8*>( pIndexBuffer );
 			Assert( pMesh );
-#if defined(DX_TO_GL_ABSTRACTION) || defined(DX_TO_VK_ABSTRACTION)
 			pMesh->HandleLateCreation();
-#endif
 			pMesh->SetIndexStreamState( 0 );
 		}
 		else
@@ -6263,12 +6238,10 @@ void CMeshMgr::RenderPassForInstances( const unsigned char *pInstanceCommandBuff
 		}
 
 		CMeshDX8 *pColorMesh = static_cast<CMeshDX8*>( const_cast<IVertexBuffer*>( instance.m_pColorBuffer ) );
-#if defined(DX_TO_GL_ABSTRACTION) || defined(DX_TO_VK_ABSTRACTION)
 		if ( pColorMesh )
 		{
 			pColorMesh->HandleLateCreation();
 		}
-#endif
 		CVertexBuffer *pVertexBuffer = pColorMesh ? pColorMesh->GetVertexBuffer() : m_pEmptyColorBuffer;
 		int nVertexOffset = pColorMesh ? instance.m_nColorVertexOffsetInBytes : 0;
 		D3DSetStreamSource( VertexStreamSpec_t::STREAM_SPECULAR1, pVertexBuffer->GetInterface(), nVertexOffset, pVertexBuffer->VertexSize() );

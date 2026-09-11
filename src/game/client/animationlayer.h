@@ -6,9 +6,6 @@
 
 #ifndef ANIMATIONLAYER_H
 #define ANIMATIONLAYER_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 
 #include "rangecheckedvar.h"

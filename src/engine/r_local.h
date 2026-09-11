@@ -9,9 +9,6 @@
 #ifndef R_LOCAL_H
 #define R_LOCAL_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "surfacehandle.h"
 #include "bspfile.h"

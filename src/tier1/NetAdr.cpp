@@ -5,23 +5,14 @@
 // NetAdr.cpp: implementation of the CNetAdr class.
 //
 //===========================================================================//
-#if defined( _WIN32 )
-#include <windows.h>
-#endif
 
 #include "tier0/dbg.h"
 #include "netadr.h"
 #include "tier1/strtools.h"
 
-#if defined( _WIN32 )
-#define WIN32_LEAN_AND_MEAN
-#include <winsock.h>
-typedef int socklen_t;
-#else
 #include <netinet/in.h> // ntohs()
 #include <netdb.h>		// gethostbyname()
 #include <sys/socket.h>	// getsockname()
-#endif
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -254,9 +245,6 @@ bool netadr_t::IsBaseAdrValid() const
 		( ip[0] != 0 || ip[1] != 0 || ip[2] != 0 || ip[3] != 0 ) );
 }
 
-#ifdef _WIN32
-#undef SetPort	// get around stupid WINSPOOL.H macro
-#endif
 
 void netadr_t::SetPort(unsigned short newport)
 {

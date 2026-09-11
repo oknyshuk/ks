@@ -151,9 +151,6 @@ void UTIL_DrawPositioningOverlay( float flCrossDistance )
 	Vector pRight;
 	pPlayer->EyeVectors( NULL, &pRight, NULL );
 
-#ifdef _WIN32
-	Vector topPos		= NWCEdit::AirNodePlacementPosition();
-#else
         Vector pForward;
         pPlayer->EyeVectors( &pForward );
 
@@ -166,7 +163,6 @@ void UTIL_DrawPositioningOverlay( float flCrossDistance )
 
         float lookDist = g_pAINetworkManager->GetEditOps()->m_flAirEditDistance/cosAngle;
         Vector topPos = pPlayer->EyePosition()+pForward * lookDist;
-#endif
 
 	Vector bottomPos	= topPos;
 	bottomPos.z			= GetLongFloorZ(bottomPos);

@@ -6,9 +6,6 @@
 
 #ifndef FILESYSTEM_INIT_H
 #define FILESYSTEM_INIT_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 
 #include "filesystem.h"
@@ -23,11 +20,7 @@
 #define	CONTENTROOT_TOKEN	"VContent"
 
 
-#if defined( _WIN32 ) || defined( WIN32 )
-#define PATHSEPARATOR(c) ((c) == '\\' || (c) == '/')
-#else	//_WIN32
 #define PATHSEPARATOR(c) ((c) == '/')
-#endif	//_WIN32
 
 
 enum FSReturnCode_t

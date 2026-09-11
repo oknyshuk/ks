@@ -6,9 +6,6 @@
 
 #ifndef ISTEAMUSERSTATS_H
 #define ISTEAMUSERSTATS_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "isteamclient.h"
 #include "isteamremotestorage.h"

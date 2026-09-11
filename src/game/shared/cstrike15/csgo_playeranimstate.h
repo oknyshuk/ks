@@ -6,9 +6,6 @@
 
 #ifndef CSGO_PLAYERANIMSTATE_H
 #define CSGO_PLAYERANIMSTATE_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "iplayeranimstate.h"
 #include "studio.h"

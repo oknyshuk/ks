@@ -7,9 +7,6 @@
 
 #ifndef FASTTIMER_H
 #define FASTTIMER_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include <assert.h>
 #include "tier0/platform.h"

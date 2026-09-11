@@ -2,9 +2,6 @@
 
 #ifndef BLOB_HELPER_H
 #define BLOB_HELPER_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include <string.h>
 

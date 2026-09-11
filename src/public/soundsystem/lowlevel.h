@@ -200,9 +200,6 @@ extern IAudioDevice2 *Audio_CreateDSoundDevice( const audio_device_init_params_t
 extern IAudioDevice2 *Audio_CreateSDLDevice( const audio_device_init_params_t &params );
 
 extern IAudioDevice2 *Audio_CreateNullDevice();
-#if IS_WINDOWS_PC
-extern bool GetWindowsDefaultAudioDevice( wchar_t *pName, size_t nNameBufSize );
-#endif
 
 // speaker config
 extern int SpeakerConfigValueToChannelCount( int nSpeakerConfig );
@@ -248,12 +245,7 @@ extern float AvergeBufferAmplitude( float flInput[MIX_BUFFER_SIZE] );
 extern void ConvertFloat32Int16_Clamp_Interleave2( short *pOut, float *pflLeft, float *pflRight, int nSampleCount );
 extern void ConvertFloat32Int16_Clamp_InterleaveStride( short *pOut, int nOutputChannelCount, int nChannelStrideFloats, float *pflChannel0, int nInputChannelCount, int nSampleCount );
 
-#if IS_WINDOWS_PC
-void InitCOM();
-void ShutdownCOM();
-#else
 inline void InitCOM() {}
 inline void ShutdownCOM() {}
-#endif
 
 #endif // SOUNDSYSTEM_LOWLEVEL_H

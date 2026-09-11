@@ -12,9 +12,6 @@
 //=============================================================================//
 #if !defined( CLIENT_H )
 #define CLIENT_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include <qlimits.h>
 #include <utllinkedlist.h>

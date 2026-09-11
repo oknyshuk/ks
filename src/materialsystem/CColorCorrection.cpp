@@ -4,11 +4,7 @@
 //
 //==============================================================================
 
-#if defined (WIN32)
-#include <windows.h>
-#else
 #define _cdecl
-#endif
 #include "materialsystem/IColorCorrection.h"
 #include "materialsystem_global.h"
 #include "shaderapi/ishaderapi.h"

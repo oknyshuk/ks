@@ -7,9 +7,6 @@
 #ifndef FILEMAPPING_H
 #define FILEMAPPING_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include <cstddef>
 #include <span>

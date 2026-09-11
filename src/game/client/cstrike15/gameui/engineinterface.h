@@ -9,9 +9,6 @@
 #ifndef ENGINEINTERFACE_H
 #define ENGINEINTERFACE_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 // these stupid set of includes are required to use the cdll_int interface
 #include "mathlib/vector.h"
@@ -25,10 +22,6 @@
 #include "tier2/tier2.h"
 #include "matchmaking/imatchframework.h"
 
-#ifdef SWARM_DLL
-#include "matchmaking/swarm/imatchext_swarm.h"
-extern class IMatchExtSwarm *g_pMatchExtSwarm;
-#endif
 
 #ifdef PORTAL2_UITEST_DLL
 class IMatchExtPortal2

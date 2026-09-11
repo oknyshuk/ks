@@ -6,9 +6,6 @@
 #ifndef SSEQUATMATH_H
 #define SSEQUATMATH_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 
 #include "mathlib/ssemath.h"
@@ -40,9 +37,6 @@
 // permitted only on 360, as we've done careful tuning on its Altivec math.
 // FourQuaternions, however, are always allowed, because vertical ops are
 // fine on SSE.
-#ifdef PLATFORM_PPC
-#define ALLOW_SIMD_QUATERNION_MATH 1  // not on PC!
-#endif
 
 
 

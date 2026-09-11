@@ -6,9 +6,6 @@
 
 #ifndef ISTEAMHTMLSURFACE_H
 #define ISTEAMHTMLSURFACE_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "isteamclient.h"
 

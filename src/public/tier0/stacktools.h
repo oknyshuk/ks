@@ -8,15 +8,9 @@
 #ifndef TIER0_STACKTOOLS_H
 #define TIER0_STACKTOOLS_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "tier0/platform.h"
 
-#if (defined( PLATFORM_WINDOWS )) && !defined( STEAM ) && defined( TCHAR_IS_CHAR ) //designed for windows/x360, not built/tested with wide characters, not intended for release builds (but probably wouldn't damage anything)
-#	define ENABLE_RUNTIME_STACK_TRANSLATION //uncomment to enable runtime stack translation tools. All of which use on-demand loading of necessary dll's and pdb's
-#endif
 
 #if defined( ENABLE_RUNTIME_STACK_TRANSLATION )
 //#define ENABLE_THREAD_PARENT_STACK_TRACING 1 //uncomment to actually enable tracking stack traces from threads and jobs to their parent thread. Must also define THREAD_PARENT_STACK_TRACE_SUPPORTED in threadtools.h

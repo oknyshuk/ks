@@ -7,9 +7,6 @@
 //=============================================================================//
 #if !defined( PROTO_OOB_H )
 #define PROTO_OOB_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 // This is used, unless overridden in the registry
 #define VALVE_MASTER_ADDRESS "207.173.177.10:27011"

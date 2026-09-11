@@ -5,9 +5,6 @@
 //===========================================================================//
 #ifndef SOUND_H
 #define SOUND_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "basetypes.h"
 #include "datamap.h"

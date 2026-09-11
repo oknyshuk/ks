@@ -4,9 +4,6 @@
 
 #ifndef REPLAYHISTORYMANAGER_H
 #define REPLAYHISTORYMANAGER_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 //----------------------------------------------------------------------------------------
 

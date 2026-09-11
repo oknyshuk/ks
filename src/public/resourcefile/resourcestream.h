@@ -20,9 +20,6 @@
 #define RESOURCESTREAM_H
 
 
-#ifdef COMPILER_MSVC
-#pragma once
-#endif
 
 #include "tier0/platform.h"
 #include "tier0/basetypes.h"

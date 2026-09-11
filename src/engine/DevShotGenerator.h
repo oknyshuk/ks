@@ -6,9 +6,6 @@
 
 #ifndef DEVSHOTGENERATOR_H
 #define DEVSHOTGENERATOR_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "filesystem.h"
 #include "utlvector.h"

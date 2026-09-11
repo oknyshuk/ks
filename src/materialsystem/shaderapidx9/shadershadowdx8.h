@@ -9,9 +9,6 @@
 #ifndef SHADERSHADOWDX8_H
 #define SHADERSHADOWDX8_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "togl/rendermechanism.h"
 #include "locald3dtypes.h"

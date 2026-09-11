@@ -7,9 +7,6 @@
 
 #ifndef DATATABLE_INSTRUMENTATION_SERVER_H
 #define DATATABLE_INSTRUMENTATION_SERVER_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "tier0/fasttimer.h"
 #include "iservernetworkable.h"

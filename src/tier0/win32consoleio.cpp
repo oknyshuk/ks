@@ -7,16 +7,6 @@
 #include "pch_tier0.h"
 #include "win32consoleio.h"
 
-#if defined( _WIN32 )
-
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
-#include <io.h>
-#include <fcntl.h>
-
-#include <iostream>
-
-#endif // defined( _WIN32 )
 
 // NOTE: This has to be the last file included!
 #include "tier0/memdbgon.h"
@@ -54,43 +44,9 @@
 //-----------------------------------------------------------------------------
 bool SetupWin32ConsoleIO()
 {
-#if defined( _WIN32 )
-	// Only useful on Windows platforms
-
-	bool newConsole( false );
-
-	if ( GetFileType( GetStdHandle( STD_OUTPUT_HANDLE ) ) == FILE_TYPE_UNKNOWN )
-	{
-
-		HINSTANCE hInst = ::LoadLibrary( "kernel32.dll" );
-		typedef BOOL ( WINAPI * pAttachConsole_t )( DWORD );
-		pAttachConsole_t pAttachConsole( ( BOOL ( _stdcall * )( DWORD ) )GetProcAddress( hInst, "AttachConsole" ) );
-
-		if ( !( pAttachConsole && (*pAttachConsole)( ( DWORD ) - 1 ) ) )
-		{
-			newConsole = true;
-			AllocConsole();
-		}
-
-		*stdout = *_fdopen( _open_osfhandle( reinterpret_cast< intp >( GetStdHandle( STD_OUTPUT_HANDLE ) ), _O_TEXT ), "w" );
-		setvbuf( stdout, NULL, _IONBF, 0 );
-
-		*stdin = *_fdopen( _open_osfhandle( reinterpret_cast< intp >( GetStdHandle( STD_INPUT_HANDLE ) ), _O_TEXT ), "r" );
-		setvbuf( stdin, NULL, _IONBF, 0 );
-
-		*stderr = *_fdopen( _open_osfhandle( reinterpret_cast< intp >( GetStdHandle( STD_ERROR_HANDLE ) ), _O_TEXT ), "w" );
-		setvbuf( stdout, NULL, _IONBF, 0 );
-
-		std::ios_base::sync_with_stdio();
-	}
-
-	return newConsole;
-
-#else // defined( _WIN32 )
 
 	return false;
 
-#endif // defined( _WIN32 )
 }
 
 //-----------------------------------------------------------------------------
@@ -99,25 +55,7 @@ bool SetupWin32ConsoleIO()
 //-----------------------------------------------------------------------------
 void InitWin32ConsoleColorContext( Win32ConsoleColorContext_t *pContext )
 {
-#if PLATFORM_WINDOWS_PC
-	// Get the old background attributes.
-	CONSOLE_SCREEN_BUFFER_INFO oldInfo;
-	GetConsoleScreenBufferInfo( GetStdHandle( STD_OUTPUT_HANDLE ), &oldInfo );
-	pContext->m_InitialColor = pContext->m_LastColor = oldInfo.wAttributes & (FOREGROUND_RED|FOREGROUND_GREEN|FOREGROUND_BLUE|FOREGROUND_INTENSITY);
-	pContext->m_BackgroundFlags = oldInfo.wAttributes & (BACKGROUND_RED|BACKGROUND_GREEN|BACKGROUND_BLUE|BACKGROUND_INTENSITY);
-
-	pContext->m_BadColor = 0;
-	if (pContext->m_BackgroundFlags & BACKGROUND_RED)
-		pContext->m_BadColor |= FOREGROUND_RED;
-	if (pContext->m_BackgroundFlags & BACKGROUND_GREEN)
-		pContext->m_BadColor |= FOREGROUND_GREEN;
-	if (pContext->m_BackgroundFlags & BACKGROUND_BLUE)
-		pContext->m_BadColor |= FOREGROUND_BLUE;
-	if (pContext->m_BackgroundFlags & BACKGROUND_INTENSITY)
-		pContext->m_BadColor |= FOREGROUND_INTENSITY;
-#else
 	pContext->m_InitialColor = 0;
-#endif
 }
 
 //-----------------------------------------------------------------------------
@@ -129,23 +67,7 @@ void InitWin32ConsoleColorContext( Win32ConsoleColorContext_t *pContext )
 //-----------------------------------------------------------------------------
 uint16 SetWin32ConsoleColor( Win32ConsoleColorContext_t *pContext, int nRed, int nGreen, int nBlue, int nIntensity )
 {
-#if PLATFORM_WINDOWS_PC
-	uint16 ret = pContext->m_LastColor;
-	pContext->m_LastColor = 0;
-	if ( nRed )	pContext->m_LastColor |= FOREGROUND_RED;
-	if ( nGreen ) pContext->m_LastColor |= FOREGROUND_GREEN;
-	if ( nBlue )  pContext->m_LastColor |= FOREGROUND_BLUE;
-	if ( nIntensity ) pContext->m_LastColor |= FOREGROUND_INTENSITY;
-
-	// Just use the initial color if there's a match...
-	if ( pContext->m_LastColor == pContext->m_BadColor )
-		pContext->m_LastColor = pContext->m_InitialColor;
-
-	SetConsoleTextAttribute( GetStdHandle( STD_OUTPUT_HANDLE ), pContext->m_LastColor | pContext->m_BackgroundFlags );
-	return ret;
-#else	
 	return 0;
-#endif
 }
 
 //-----------------------------------------------------------------------------
@@ -154,8 +76,4 @@ uint16 SetWin32ConsoleColor( Win32ConsoleColorContext_t *pContext, int nRed, int
 //-----------------------------------------------------------------------------
 void RestoreWin32ConsoleColor( Win32ConsoleColorContext_t *pContext, uint16 prevColor )
 {
-#if PLATFORM_WINDOWS_PC
-	SetConsoleTextAttribute( GetStdHandle( STD_OUTPUT_HANDLE ), prevColor | pContext->m_BackgroundFlags );
-	pContext->m_LastColor = prevColor;
-#endif
 }

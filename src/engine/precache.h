@@ -7,9 +7,6 @@
 
 #ifndef PRECACHE_H
 #define PRECACHE_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "networkstringtabledefs.h"
 

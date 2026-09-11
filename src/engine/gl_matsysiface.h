@@ -11,9 +11,6 @@
 #ifndef GL_MATSYSIFACE_H
 #define GL_MATSYSIFACE_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "ivrenderview.h"
 #include "convar.h"

@@ -1,9 +1,6 @@
 #ifndef RENDERBUFFER_G_H
 #define RENDERBUFFER_G_H
 
-#ifdef COMPILER_MSVC
-#pragma once
-#endif
 
 #include "resourcefile/resourcefile.h"
 #include "resourcefile/resourcetype.h"

@@ -188,10 +188,6 @@ void CAI_NetworkManager::MarkDontSaveGraph()
 
 void CAI_NetworkManager::SaveNetworkGraph( void )
 {
-#if defined( PORTAL2 )
-	// not used
-	return;
-#endif
 
 	if ( m_bDontSaveGraph )
 		return;
@@ -455,10 +451,6 @@ void CAI_NetworkManager::SaveNetworkGraph( void )
 
 void CAI_NetworkManager::LoadNetworkGraph( void )
 {
-#if defined( PORTAL2 )
-	// not used
-	return;
-#endif
 
 	// ---------------------------------------------------
 	// If I'm in edit mode don't load, always recalculate
@@ -980,10 +972,6 @@ static bool SetupEditMode()
 
 void CAI_NetworkManager::DelayedInit( void )
 {
-#if defined( PORTAL2 )
-	SetThink ( NULL );
-	m_fInitalized = true;
-#else
 	if ( !g_pGameRules->FAllowNPCs() )
 	{
 		SetThink ( NULL );
@@ -1024,20 +1012,6 @@ void CAI_NetworkManager::DelayedInit( void )
 		// --------------------------------------------
 		else if ( !m_bDontSaveGraph && ( !CAI_NetworkManager::NetworksLoaded() || engine->IsInEditMode() ) )
 		{
-#ifdef _WIN32
-			// --------------------------------------------------------
-			// If in edit mode start WC session and make sure we are
-			// running the same map in WC and the engine
-			// --------------------------------------------------------
-			if (engine->IsInEditMode())
-			{
-				if ( !SetupEditMode() )
-				{
-					SetThink( NULL );
-					return;
-				}
-			}
-#endif
 			DevMsg( "Node Graph out of Date. Rebuilding...\n" );
 			if ( developer.GetInt() )
 			{
@@ -1062,7 +1036,6 @@ void CAI_NetworkManager::DelayedInit( void )
 
 	if ( g_AI_Manager.NumAIs() != 0 && g_pBigAINet->NumNodes() == 0 )
 		DevMsg( "WARNING: Level contains NPCs but has no path nodes\n" );
-#endif
 }
 
 
@@ -2115,9 +2088,6 @@ CAI_NetworkEditTools::~CAI_NetworkEditTools()
 	// --------------------------------------------------------
 	// If in edit mode tell WC I'm ending my session
 	// --------------------------------------------------------
-#ifdef _WIN32
-	Editor_EndSession(false);
-#endif
 	delete[] m_pNodeIndexTable;
 }
 

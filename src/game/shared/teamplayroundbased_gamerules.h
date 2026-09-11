@@ -9,9 +9,6 @@
 
 #include "reflect_annotations.h"
 #include "dt_recv.h"
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "teamplay_gamerules.h"
 #include "teamplay_round_timer.h"

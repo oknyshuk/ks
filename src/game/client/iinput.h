@@ -7,9 +7,6 @@
 //=============================================================================//
 #if !defined( IINPUT_H )
 #define IINPUT_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 class bf_write;
 class bf_read;
@@ -103,10 +100,6 @@ public:
 	virtual	bool		CAM_IsOrthographic() const = 0;
 	virtual	void		CAM_OrthographicSize( float& w, float& h ) const = 0;
 
-#if defined( HL2_CLIENT_DLL )
-	// IK back channel info
-	virtual void		AddIKGroundContactInfo( int entindex, float minheight, float maxheight ) = 0;
-#endif
 
 	virtual void		LevelInit( void ) = 0;
 

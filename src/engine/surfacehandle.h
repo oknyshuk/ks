@@ -6,9 +6,6 @@
 
 #ifndef SURFACEHANDLE_H
 #define SURFACEHANDLE_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 struct msurface2_t;
 typedef msurface2_t *SurfaceHandle_t;

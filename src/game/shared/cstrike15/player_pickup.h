@@ -6,9 +6,6 @@
 
 #ifndef PLAYER_PICKUP_H
 #define PLAYER_PICKUP_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 // Reasons behind a pickup
 enum PhysGunPickup_t

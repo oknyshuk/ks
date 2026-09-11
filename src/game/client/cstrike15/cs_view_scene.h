@@ -7,9 +7,6 @@
 
 #ifndef CS_VIEW_SCENE_H
 #define CS_VIEW_SCENE_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "viewrender.h"
 

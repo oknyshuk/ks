@@ -10,9 +10,6 @@
 #ifndef UTLBUFFER_H
 #define UTLBUFFER_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "unitlib/unitlib.h" // just here for tests - remove before checking in!!!
 

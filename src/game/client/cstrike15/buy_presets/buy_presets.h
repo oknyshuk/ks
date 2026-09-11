@@ -6,9 +6,6 @@
 
 #ifndef BUY_PRESETS_H
 #define BUY_PRESETS_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #define USE_BUY_PRESETS 1
 

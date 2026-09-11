@@ -6,9 +6,6 @@
 
 #ifndef KEY_TRANSLATION_H
 #define KEY_TRANSLATION_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "inputsystem/ButtonCode.h"
 #include "inputsystem/AnalogCode.h"

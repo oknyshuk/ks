@@ -8,9 +8,6 @@
 
 #ifndef BASEHLCOMBATWEAPON_SHARED_H
 #define BASEHLCOMBATWEAPON_SHARED_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #if defined( CLIENT_DLL )
 #define CBaseHLCombatWeapon C_BaseHLCombatWeapon

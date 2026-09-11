@@ -17,11 +17,9 @@
 // NOTE: This has to be the last file included!
 #include "tier0/memdbgon.h"
 
-#if defined( USE_SDL )
 #include <SDL3/SDL.h>
 #include "appframework/sdlwindow.h"
 static void initKeymap(void);
-#endif
 
 ConVar joy_xcontroller_found( "joy_xcontroller_found", "1", FCVAR_NONE, "Automatically set to 1 if an xcontroller has been detected." );
 ConVar joy_deadzone_mode( "joy_deadzone_mode", "0", FCVAR_NONE, "0 => Cross-shaped deadzone (default), 1 => Square deadzone." );
@@ -35,26 +33,6 @@ static CInputSystem g_InputSystem;
 EXPOSE_SINGLE_INTERFACE_GLOBALVAR( CInputSystem, IInputSystem,
 						INPUTSYSTEM_INTERFACE_VERSION, g_InputSystem );
 
-#if defined( WIN32 )
-typedef BOOL (WINAPI *RegisterRawInputDevices_t)
-(
-	PCRAWINPUTDEVICE pRawInputDevices,
-	UINT uiNumDevices,
-	UINT cbSize
-);
-
-typedef UINT (WINAPI *GetRawInputData_t)
-(
-	HRAWINPUT hRawInput,
-	UINT uiCommand,
-	LPVOID pData,
-	PUINT pcbSize,
-	UINT cbSizeHeader
-);
-
-RegisterRawInputDevices_t pfnRegisterRawInputDevices;
-GetRawInputData_t pfnGetRawInputData;
-#endif
 
 
 
@@ -109,7 +87,6 @@ CInputSystem::CInputSystem()
 	InitPlatfromInputDeviceInfo();
 }
 
-#if defined( USE_SDL ) 
 
 void CInputSystem::DisableHardwareCursor(  )
 {
@@ -121,7 +98,6 @@ void CInputSystem::EnableHardwareCursor( )
 	m_pLauncherMgr->SetMouseVisible(true);
 
 }
-#endif
 
 CInputSystem::~CInputSystem()
 {
@@ -151,15 +127,6 @@ InitReturnVal_t CInputSystem::Init()
 
 	m_StartupTimeTick = Plat_MSTime();
 
-#if !defined( PLATFORM_POSIX )
-	{
-		m_uiMouseWheel = RegisterWindowMessage( "MSWHEEL_ROLLMSG" );
-	}
-
-	m_hEvent = CreateEvent( NULL, FALSE, FALSE, NULL );
-	if ( !m_hEvent )
-		return INIT_FAILED;
-#endif
 
 
 	ButtonCode_InitKeyTranslationTable();
@@ -167,13 +134,6 @@ InitReturnVal_t CInputSystem::Init()
 
 	joy_xcontroller_found.SetValue( 0 );
 
-#if !defined( PLATFORM_POSIX )
-	m_pXInputDLL = Sys_LoadModule( "XInput1_3.dll" );
-	if ( m_pXInputDLL )
-	{
-		InitializeXDevices();
-	}
-#endif
 	if ( !m_nJoystickCount )
 	{
 		// Didn't find any XControllers. See if we can find other joysticks.
@@ -195,9 +155,7 @@ InitReturnVal_t CInputSystem::Init()
 	m_bRawInputSupported = true;
 	
 
-#if defined( USE_SDL )
 	initKeymap();
-#endif
 
     m_unNumSteamControllerConnected = 0;
     m_bSteamController = InitializeSteamControllers();
@@ -210,9 +168,7 @@ bool CInputSystem::Connect( CreateInterfaceFn factory )
 	if ( !BaseClass::Connect( factory ) )
 		return false;
 
-#if defined( USE_SDL )
 	m_pLauncherMgr = (ILauncherMgr *)factory(  SDLMGR_INTERFACE_VERSION, NULL );
-#endif
 
 return true;
 }
@@ -223,13 +179,6 @@ return true;
 //-----------------------------------------------------------------------------
 void CInputSystem::Shutdown()
 {
-#if !defined( PLATFORM_POSIX )
-	if ( m_hEvent != NULL )
-	{
-		CloseHandle( m_hEvent );
-		m_hEvent = NULL;
-	}
-#endif
 
 	ShutdownCursors();
 
@@ -242,16 +191,7 @@ void CInputSystem::Shutdown()
 //-----------------------------------------------------------------------------
 void CInputSystem::SleepUntilInput( int nMaxSleepTimeMS )
 {
-#if defined( USE_SDL ) || defined( OSX )
 	SDL_WaitEventTimeout( NULL, nMaxSleepTimeMS );
-#elif defined( _WIN32 ) 
-	if ( nMaxSleepTimeMS < 0 )
-	{
-		nMaxSleepTimeMS = INFINITE;
-	}
-
-	MsgWaitForMultipleObjects( 1, &m_hEvent, FALSE, nMaxSleepTimeMS, QS_ALLEVENTS );
-#endif
 }
 
 
@@ -281,12 +221,6 @@ PlatWindow_t CInputSystem::GetAttachedWindow() const
 //-----------------------------------------------------------------------------
 // Callback to call into our class
 //-----------------------------------------------------------------------------
-#if !defined( PLATFORM_POSIX )
-static LRESULT CALLBACK InputSystemWindowProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam )
-{
-	return g_InputSystem.WindowProc( hwnd, uMsg, wParam, lParam );
-}
-#endif
 
 
 //-----------------------------------------------------------------------------
@@ -301,26 +235,6 @@ void CInputSystem::AttachToWindow( void* hWnd )
 		return;
 	}
 
-#if defined ( USE_SDL )
-#elif defined( PLATFORM_WINDOWS )
-	m_ChainedWndProc = (WNDPROC)GetWindowLongPtrW( (HWND)hWnd, GWLP_WNDPROC );
-	SetWindowLongPtrW( (HWND)hWnd, GWLP_WNDPROC, (LONG_PTR)InputSystemWindowProc );
-
-	// register to read raw mouse input
-#if !defined(HID_USAGE_PAGE_GENERIC)
-#define HID_USAGE_PAGE_GENERIC         ((USHORT) 0x01)
-#endif
-#if !defined(HID_USAGE_GENERIC_MOUSE)
-#define HID_USAGE_GENERIC_MOUSE        ((USHORT) 0x02)
-#endif
-
-	RAWINPUTDEVICE Rid[1];
-	Rid[0].usUsagePage = HID_USAGE_PAGE_GENERIC;
-	Rid[0].usUsage = HID_USAGE_GENERIC_MOUSE;
-	Rid[0].dwFlags = RIDEV_INPUTSINK;
-	Rid[0].hwndTarget = (HWND)hWnd; // g_InputSystem.m_hAttachedHWnd; // GetHhWnd;
-	::RegisterRawInputDevices(Rid, ARRAYSIZE(Rid), sizeof(Rid[0]));
-#endif
 
 	m_hAttachedHWnd = (HWND)hWnd;
 
@@ -339,13 +253,6 @@ void CInputSystem::DetachFromWindow( )
 
 	ResetInputState();
 
-#if !defined( PLATFORM_POSIX )
-	if ( m_ChainedWndProc )
-	{
-		SetWindowLongPtrW( m_hAttachedHWnd, GWLP_WNDPROC, (LONG_PTR)m_ChainedWndProc );
-		m_ChainedWndProc = 0;
-	}
-#endif
 
 	m_hAttachedHWnd = 0;
 }
@@ -521,16 +428,6 @@ void CInputSystem::PostButtonReleasedEvent( InputEventType_t nType, int nTick, B
 //-----------------------------------------------------------------------------
 void CInputSystem::ProcessEvent( UINT uMsg, WPARAM wParam, LPARAM lParam )
 {
-#if !defined( PLATFORM_POSIX )
-	// To prevent subtle input timing bugs, all button events must be fed 
-	// through the window proc once per frame, same as the keyboard and mouse.
-	HWND hWnd = GetFocus();
-	WNDPROC windowProc = (WNDPROC)GetWindowLongPtrW(hWnd, GWLP_WNDPROC );
-	if ( windowProc )
-	{
-		windowProc( hWnd, uMsg, wParam, lParam );
-	}
-#endif
 }
 
 
@@ -560,37 +457,10 @@ void CInputSystem::CopyInputState( InputState_t *pDest, const InputState_t &src,
 }
 
 
-#if defined( WIN32 ) && !defined( USE_SDL )
-void CInputSystem::PollInputState_Windows()
-{
-	if ( m_bPumpEnabled )
-	{
-		// Poll mouse + keyboard
-		MSG msg;
-		while ( PeekMessage( &msg, NULL, 0, 0, PM_REMOVE ) )
-		{
-			if ( msg.message == WM_QUIT )
-			{
-				PostEvent( IE_Quit, m_nLastSampleTick );
-				break;
-			}
-
-			TranslateMessage( &msg );
-			DispatchMessage( &msg );
-		}
-
-		// NOTE: Under some implementations of Win9x, 
-		// dispatching messages can cause the FPU control word to change
-		SetupFPUControlWord();
-	}
-}
-#endif
 
 
 
-#if defined(OSX) || defined( USE_SDL )
 
-#if defined( USE_SDL )
 static BYTE        scantokey[SDL_SCANCODE_COUNT];
 
 static void initKeymap(void)
@@ -655,9 +525,6 @@ static void initKeymap(void)
     scantokey[SDL_SCANCODE_RGUI] = KEY_RWIN;
 }
 
-#else 
-#error
-#endif
 
 
 // SDL scancode -> Source ButtonCode_t.
@@ -864,7 +731,6 @@ void CInputSystem::PollInputState_Linux()
 		}
 	}
 }
-#endif // PLATFORM_OSX
 
 
 //-----------------------------------------------------------------------------
@@ -939,12 +805,6 @@ void CInputSystem::SampleDevices( void )
 	m_nLastSampleTick = ComputeSampleTick();
 
 	static ConVarRef joystick_force_disabled( "joystick_force_disabled" );
-#if !defined( PLATFORM_POSIX )
-	if ( joystick_force_disabled.IsValid() && joystick_force_disabled.GetBool() == false )
-	{
-		PollXDevices();
-	}
-#endif
 	if ( m_bXController == false && joystick_force_disabled.IsValid() && joystick_force_disabled.GetBool() == false  )
 	{
 		PollJoystick();
@@ -1112,10 +972,6 @@ void CInputSystem::PostUserEvent( const InputEvent_t &event )
 //-----------------------------------------------------------------------------
 inline LRESULT CInputSystem::ChainWindowMessage( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam )
 {
-#if !defined( PLATFORM_POSIX )
-	if ( m_ChainedWndProc )
-		return CallWindowProc( m_ChainedWndProc, hwnd, uMsg, wParam, lParam );
-#endif
 	// FIXME: This comment is lifted from vguimatsurface; 
 	// may not apply in future when the system is completed.
 
@@ -1201,14 +1057,7 @@ void CInputSystem::SetCursorPosition( int x, int y )
 	if ( !m_hAttachedHWnd )
 		return;
 
-#if defined( USE_SDL )
 	m_pLauncherMgr->SetCursorPosition( x, y );
-#elif defined( WIN32 )
-	POINT pt;
-	pt.x = x; pt.y = y;
-	ClientToScreen( (HWND)m_hAttachedHWnd, &pt );
-	SetCursorPos( pt.x, pt.y );
-#endif
 
 	InputState_t &state = m_InputState[ m_bIsPolling ];
 	bool bXChanged = ( state.m_pAnalogValue[ MOUSE_X ] != x );
@@ -1241,15 +1090,8 @@ void CInputSystem::GetCursorPosition( int *pX, int *pY )
 		return;
 	}
 
-#if defined( USE_SDL )
 	*pX = m_InputState[INPUT_STATE_CURRENT].m_pAnalogValue[MOUSE_X];
 	*pY = m_InputState[INPUT_STATE_CURRENT].m_pAnalogValue[MOUSE_Y];
-#elif !defined( PLATFORM_POSIX )
-	POINT pt;
-	::GetCursorPos( &pt );
-	ScreenToClient((HWND)m_hAttachedHWnd, &pt);
-	*pX = pt.x; *pY = pt.y;
-#endif
 }
 
 void CInputSystem::SetMouseCursorVisible( bool bVisible )
@@ -1283,29 +1125,6 @@ void CInputSystem::UpdateMousePositionState( InputState_t &state, short x, short
 }
 
 
-#ifdef PLATFORM_WINDOWS
-//-----------------------------------------------------------------------------
-// Generates LocateMouseClick messages
-//-----------------------------------------------------------------------------
-void CInputSystem::LocateMouseClick( LPARAM lParam )
-{
-	if ( ShouldGenerateUIEvents() )
-	{
-		PostEvent( IE_LocateMouseClick, m_nLastSampleTick, (short)LOWORD(lParam), (short)HIWORD(lParam) );
-	}
-}
-
-
-//-----------------------------------------------------------------------------
-// Handles input messages
-//-----------------------------------------------------------------------------
-LRESULT CInputSystem::WindowProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam )
-{
-
-	return 0;
-
-}
-#endif
 
 
 //-----------------------------------------------------------------------------
@@ -1313,45 +1132,10 @@ LRESULT CInputSystem::WindowProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lP
 //-----------------------------------------------------------------------------
 void CInputSystem::InitCursors()
 {
-#ifdef PLATFORM_WINDOWS
-	// load up all default cursors
-	memset( m_pDefaultCursors, 0, sizeof(m_pDefaultCursors) );
-	m_pDefaultCursors[INPUT_CURSOR_NONE]		= INPUT_CURSOR_HANDLE_INVALID;
-	m_pDefaultCursors[INPUT_CURSOR_ARROW]		= (InputCursorHandle_t)LoadCursor(NULL, (LPCTSTR)OCR_NORMAL);
-	m_pDefaultCursors[INPUT_CURSOR_IBEAM]		= (InputCursorHandle_t)LoadCursor(NULL, (LPCTSTR)OCR_IBEAM);
-	m_pDefaultCursors[INPUT_CURSOR_HOURGLASS]	= (InputCursorHandle_t)LoadCursor(NULL, (LPCTSTR)OCR_WAIT);
-	m_pDefaultCursors[INPUT_CURSOR_CROSSHAIR]	= (InputCursorHandle_t)LoadCursor(NULL, (LPCTSTR)OCR_CROSS);
-	m_pDefaultCursors[INPUT_CURSOR_WAITARROW]	= (InputCursorHandle_t)LoadCursor(NULL, (LPCTSTR)32650);
-	m_pDefaultCursors[INPUT_CURSOR_UP]			= (InputCursorHandle_t)LoadCursor(NULL, (LPCTSTR)OCR_UP);
-	m_pDefaultCursors[INPUT_CURSOR_SIZE_NW_SE]	= (InputCursorHandle_t)LoadCursor(NULL, (LPCTSTR)OCR_SIZENWSE);
-	m_pDefaultCursors[INPUT_CURSOR_SIZE_NE_SW]	= (InputCursorHandle_t)LoadCursor(NULL, (LPCTSTR)OCR_SIZENESW);
-	m_pDefaultCursors[INPUT_CURSOR_SIZE_W_E]	= (InputCursorHandle_t)LoadCursor(NULL, (LPCTSTR)OCR_SIZEWE);
-	m_pDefaultCursors[INPUT_CURSOR_SIZE_N_S]	= (InputCursorHandle_t)LoadCursor(NULL, (LPCTSTR)OCR_SIZENS);
-	m_pDefaultCursors[INPUT_CURSOR_SIZE_ALL]	= (InputCursorHandle_t)LoadCursor(NULL, (LPCTSTR)OCR_SIZEALL);
-	m_pDefaultCursors[INPUT_CURSOR_NO]			= (InputCursorHandle_t)LoadCursor(NULL, (LPCTSTR)OCR_NO);
-	m_pDefaultCursors[INPUT_CURSOR_HAND]		= (InputCursorHandle_t)LoadCursor(NULL, (LPCTSTR)32649);
-#endif
 }
 
 void CInputSystem::ShutdownCursors()
 {
-#ifdef PLATFORM_WINDOWS
-	int nCount = m_UserCursors.GetNumStrings();
-	for ( int i = 0; i < nCount; ++i )
-	{
-		::DestroyCursor( (HCURSOR)m_UserCursors[ i ] );
-	}
-	m_UserCursors.Purge();
-
-	for ( int i = 0; i < ARRAYSIZE( m_pDefaultCursors ); ++i )
-	{
-		if ( m_pDefaultCursors[i] != INPUT_CURSOR_HANDLE_INVALID )
-		{
-			::DestroyCursor( (HCURSOR)m_pDefaultCursors[ i ] );
-			m_pDefaultCursors[ i ] = INPUT_CURSOR_HANDLE_INVALID;
-		}
-	}
-#endif
 }
 
 
@@ -1379,24 +1163,11 @@ InputCursorHandle_t CInputSystem::LoadCursorFromFile( const char *pFileName, con
 
 	g_pFullFileSystem->GetLocalCopy( fn );
 
-#ifdef PLATFORM_WINDOWS
-	char fullpath[ 512 ];
-	g_pFullFileSystem->RelativePathToFullPath( fn, pPathID, fullpath, sizeof( fullpath ) );
-
-	HCURSOR newCursor = (HCURSOR)::LoadCursorFromFile( fullpath );
-	m_UserCursors[ fn ] = (InputCursorHandle_t)newCursor;
-	return (InputCursorHandle_t)newCursor;
-#endif
 	return 0;
 }
 
 void CInputSystem::SetCursorIcon( InputCursorHandle_t hCursor )
 {
-#ifdef PLATFORM_WINDOWS
-	m_hCursor = hCursor;
-	HCURSOR hWindowsCursor = (HCURSOR)hCursor;
-	::SetCursor( hWindowsCursor ); 
-#endif
 }
 
 void CInputSystem::ResetCursorIcon()
@@ -1406,58 +1177,21 @@ void CInputSystem::ResetCursorIcon()
 
 void CInputSystem::EnableMouseCapture( PlatWindow_t hWnd )
 {
-#ifdef PLATFORM_WINDOWS
-	if ( m_hCurrentCaptureWnd == hWnd )
-		return;
-
-	// Determine if we're the foreground window.  If not, force release of the mouse.  Otherwise, we can capture the mouse
-	// while we're in the background and then we never get WM_ACTIVATE messages when trying to click on the app.  This
-	// causes the app to react like it has mouse focus (firing weapons, etc) but doesn't actually come to the foreground
-	// and doesn't accept keyboard input.
-	//
-	// We're using GetForegroundWindow here, but we really want to ask engine or game if they're the ActiveApp.
-	bool bActiveWindow = true;
-
-	HWND hInputWnd = reinterpret_cast< HWND >( hWnd );
-	bActiveWindow = ( hInputWnd == ::GetForegroundWindow() );
-
-	if ( m_hCurrentCaptureWnd != PLAT_WINDOW_INVALID || !bActiveWindow )
-	{
-		::ReleaseCapture();
-	}
-
-	m_hCurrentCaptureWnd = hWnd;
-	if ( m_hCurrentCaptureWnd != PLAT_WINDOW_INVALID && bActiveWindow )
-	{
-		::SetCapture( hInputWnd );
-	}
-#endif
 }
 
 
 void CInputSystem::GetRawMouseAccumulators( float& accumX, float& accumY )
 {
-#if defined( USE_SDL )
 
 	if ( m_pLauncherMgr )
 	{
 		m_pLauncherMgr->GetMouseDelta( accumX, accumY, false );
 	}
 
-#else
-
-	accumX = m_mouseRawAccumX;
-	accumY = m_mouseRawAccumY;
-	m_mouseRawAccumX = m_mouseRawAccumY = 0;
-
-#endif
 }
 
 void CInputSystem::DisableMouseCapture()
 {
-#ifdef PLATFORM_WINDOWS
-	EnableMouseCapture( PLAT_WINDOW_INVALID );
-#endif
 }
 
 
@@ -1477,13 +1211,7 @@ void  CInputSystem::InitPlatfromInputDeviceInfo( void )
 	// the input devices that are assumed to be already installed (as 
 	// opposed to being queried by the inputsystem)
 
-#if defined( PLATFORM_WINDOWS_PC )
 	m_currentlyConnectedInputDevices = INPUT_DEVICE_KEYBOARD_MOUSE;
-#elif defined( PLATFORM_LINUX )
-	m_currentlyConnectedInputDevices = INPUT_DEVICE_KEYBOARD_MOUSE;
-#else
-	m_currentlyConnectedInputDevices = INPUT_DEVICE_NONE;
-#endif
 
 	ResetCurrentInputDevice();
 
@@ -1499,13 +1227,7 @@ void CInputSystem::ResetCurrentInputDevice( void )
 		return;
 	}
 
-#if defined( PLATFORM_WINDOWS_PC )
 	m_currentInputDevice = INPUT_DEVICE_KEYBOARD_MOUSE;
-#elif defined( PLATFORM_LINUX )
-	m_currentInputDevice = INPUT_DEVICE_KEYBOARD_MOUSE;
-#else
-	m_currentInputDevice = INPUT_DEVICE_NONE;
-#endif
 
 }
 

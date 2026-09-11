@@ -16,9 +16,7 @@
 
 #ifdef CLIENT_DLL
 #include "prediction.h"
-#ifdef CSTRIKE15
 #include "c_cs_player.h"
-#endif
 #endif
 
 // memdbgon must be the last include file in a .cpp file!!!
@@ -59,9 +57,7 @@ CPredictedViewModel::~CPredictedViewModel()
 ConVar cl_wpn_sway_interp( "cl_wpn_sway_interp", "0.1", FCVAR_CLIENTDLL );
 ConVar cl_wpn_sway_scale( "cl_wpn_sway_scale", "1.6", FCVAR_CLIENTDLL|FCVAR_CHEAT );
 
-#ifdef CSTRIKE15
 extern ConVar	cl_use_new_headbob;
-#endif //CSTRIKE15
 
 #endif //CLIENT_DLL
 
@@ -70,7 +66,6 @@ extern ConVar	cl_use_new_headbob;
 //-----------------------------------------------------------------------------
 void CPredictedViewModel::AddViewModelBob( CBasePlayer *owner, Vector& eyePosition, QAngle& eyeAngles )
 {
-#ifdef CSTRIKE15
 #ifdef CLIENT_DLL
 	if ( cl_use_new_headbob.GetBool() == false )
 		return;
@@ -82,7 +77,6 @@ void CPredictedViewModel::AddViewModelBob( CBasePlayer *owner, Vector& eyePositi
 		CalcViewModelBobHelper( owner, &m_BobState, 1 );
 		AddViewModelBobHelper( eyePosition, eyeAngles, &m_BobState );
 	}
-#endif
 #endif
 }
 
@@ -248,7 +242,6 @@ void CPredictedViewModel::ApplyViewModelPitchAndDip( CBasePlayer *owner, Vector&
 #endif
 }
 
-#ifdef CSTRIKE15
 
 void CPredictedViewModel::CalcViewModelView( CBasePlayer *owner, const Vector& eyePosition, const QAngle& eyeAngles )
 {
@@ -317,4 +310,3 @@ void CPredictedViewModel::CalcViewModelView( CBasePlayer *owner, const Vector& e
 
 }
 
-#endif //CSTRIKE15

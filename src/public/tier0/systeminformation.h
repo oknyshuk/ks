@@ -9,9 +9,6 @@
 #ifndef SYSTEMINFORMATION_H
 #define SYSTEMINFORMATION_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "tier0/platform.h"
 

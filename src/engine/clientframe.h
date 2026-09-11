@@ -6,9 +6,6 @@
 
 #ifndef CLIENTFRAME_H
 #define CLIENTFRAME_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include <bitvec.h>
 #include <const.h>

@@ -116,11 +116,7 @@ void InitParamsVertexLitGeneric_DX9( CBaseVSShader *pShader, IMaterialVar** para
 	if ( info.m_nBlendWithSmokeGrenadePosSmoke != -1 && !params[info.m_nBlendWithSmokeGrenadePosSmoke]->IsDefined() )
 		params[info.m_nBlendWithSmokeGrenadePosSmoke]->SetVecValue( 0, 0, 0 );
 
-#if defined ( CSTRIKE15 )
 	InitIntParam( info.m_nShaderSrgbRead360, params, 1 );
-#else
-	InitIntParam( info.m_nShaderSrgbRead360, params, 0 );
-#endif
 
 	InitIntParam( info.m_nPhong, params, 0 );
 
@@ -494,11 +490,7 @@ static void DrawVertexLitGeneric_DX9_Internal( CBaseVSShader *pShader, IMaterial
 
 	bool hasDiffuseLighting = bVertexLitGeneric;
 
-#if defined( CSTRIKE15 )
 	bool bShaderSrgbRead = ( false && r_shader_srgbread.GetBool() );
-#else
-	bool bShaderSrgbRead = ( false && IS_PARAM_DEFINED( info.m_nShaderSrgbRead360 ) && ( params[info.m_nShaderSrgbRead360]->GetIntValue() ) );
-#endif
 
 	bool bIsAlphaTested = IS_FLAG_SET( MATERIAL_VAR_ALPHATEST ) != 0;
 	bool bHasDiffuseWarp = (!bHasFlashlight || bSinglePassFlashlight) && hasDiffuseLighting && (info.m_nDiffuseWarpTexture != -1) && params[info.m_nDiffuseWarpTexture]->IsTexture();

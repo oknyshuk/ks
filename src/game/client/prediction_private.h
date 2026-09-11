@@ -12,9 +12,6 @@
 //=============================================================================//
 #if !defined( PREDICTION_PRIVATE_H )
 #define PREDICTION_PRIVATE_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 // point on plane side epsilon
 #define	ON_EPSILON		0.1			

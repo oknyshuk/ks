@@ -7,9 +7,6 @@
 #ifndef SOUNDINFO_H
 #define SOUNDINFO_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "bitbuf.h"
 #include "const.h"

@@ -5,7 +5,6 @@
 // $NoKeywords: $
 // This is what all vs/ps (dx8+) shaders inherit from.
 //===========================================================================//
-#if !defined(_STATIC_LINKED) || defined(STDSHADER_DX9_DLL_EXPORT)
 
 #include "cpp_shader_constant_register_map.h"
 #include "BaseVSShader.h"
@@ -1127,7 +1126,6 @@ void CBaseVSShader::HashShadow2DJitter( const float fJitterSeed, float *fU, floa
 	*fV = nCol / (float) nTexWidth;		// Column
 }
 
-#endif // !_STATIC_LINKED || STDSHADER_DX8_DLL_EXPORT
 
 
 

@@ -7,9 +7,6 @@
 
 #ifndef ICLIENTENTITY_H
 #define ICLIENTENTITY_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 
 #include "iclientrenderable.h"

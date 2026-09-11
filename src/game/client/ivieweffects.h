@@ -12,9 +12,6 @@
 //=============================================================================//
 #if !defined( IVIEWEFFECTS_H )
 #define IVIEWEFFECTS_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 class Vector;
 class QAngle;

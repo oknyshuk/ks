@@ -6,9 +6,6 @@
 
 #ifndef SOS_OP_CONVAR_H
 #define SOS_OP_CONVAR_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "sos_op.h"
 #include "tier1/convar.h"

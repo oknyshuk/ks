@@ -6,9 +6,6 @@
 
 #ifndef SEQUENCE_TRANSITIONER_H
 #define SEQUENCE_TRANSITIONER_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 class CStudioHdr;
 

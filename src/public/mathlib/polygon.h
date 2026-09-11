@@ -7,9 +7,6 @@
 #ifndef POLYGON_H
 #define POLYGON_H
 
-#if defined( COMPILER_MSVC )
-#pragma once
-#endif
 
 #include "utlvector.h"
 

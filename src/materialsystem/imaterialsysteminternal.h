@@ -9,9 +9,6 @@
 #ifndef IMATERIALSYSTEMINTERNAL_H
 #define IMATERIALSYSTEMINTERNAL_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "materialsystem/imaterialsystem.h"
 #include "tier1/callqueue.h"

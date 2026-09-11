@@ -11,9 +11,6 @@
 
 #ifndef HLTVTEST_H
 #define HLTVTEST_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "utlvector.h"
 

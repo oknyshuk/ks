@@ -12,11 +12,7 @@
 #include "memdbgon.h"
 #endif
 
-#ifndef _UNICODE
 #define scstrcpy strcpy
-#else
-#define scstrcpy wcscpy
-#endif
 struct XMLEscape{
 	const SQChar c;
 	const SQChar *esc;
@@ -186,12 +182,7 @@ bool SQDbgServer::IsConnected()
 	if ( _endpoint != INVALID_SOCKET )
 	{
 		fd_set set;
-#if defined(_WIN32)
-		set.fd_count = 1;
-		set.fd_array[0] = _endpoint;
-#else
 		FD_SET( _endpoint, &set );
-#endif
 		timeval timeVal = { 0,0 };
 		if ( select( 0, &set, NULL, NULL, &timeVal ) != SOCKET_ERROR )
 		{
@@ -218,14 +209,8 @@ void SQDbgServer::SendChunk(const SQChar *chunk)
 {
 	char *buf=NULL;
 	int buf_len=0;
-#ifdef _UNICODE
-	buf_len=(int)scstrlen(chunk)+1;
-	buf=(char *)sq_getscratchpad(_v,(buf_len)*3);
-	wcstombs((char *)buf,chunk,buf_len);
-#else
 	buf_len=(int)scstrlen(chunk);
 	buf=(char *)chunk;
-#endif
 	send(_endpoint,(const char*)buf,(int)strlen((const char *)buf),0);
 }
 
@@ -432,15 +417,7 @@ bool SQDbgServer::ParseBreakpoint(const char *msg,BreakPoint &out)
 	*dest='\0';
 	dest++;
 	*dest='\0';
-#ifdef _UNICODE
-	int len=(int)strlen(stemp);
-	SQChar *p=sq_getscratchpad(_v,(SQInteger)(mbstowcs(NULL,stemp,len)+2)*sizeof(SQChar));
-	size_t destlen=mbstowcs(p,stemp,len);
-	p[destlen]=_SC('\0');
-	out._src=( V_strrchr( p, '/' ) ) ? V_strrchr( p, '/' ) + 1 : p;
-#else
 	out._src=( V_strrchr( stemp, '/' ) ) ? V_strrchr( stemp, '/' ) + 1 : stemp;
-#endif
 	return true;
 }
 

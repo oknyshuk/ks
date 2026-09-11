@@ -7,9 +7,6 @@
 #ifndef ENTITYFREEZING_H
 #define ENTITYFREEZING_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 
 #include "reflect_annotations.h"

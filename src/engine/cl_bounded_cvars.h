@@ -6,9 +6,6 @@
 
 #ifndef CL_BOUNDED_CVARS_H
 #define CL_BOUNDED_CVARS_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 
 #include "convar_serverbounded.h"

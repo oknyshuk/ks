@@ -26,11 +26,6 @@
 #endif
 #include "ifilelist.h"
 
-#ifdef IS_WINDOWS_PC
-// Needed for getting file type string
-#define WIN32_LEAN_AND_MEAN
-#include <shellapi.h>
-#endif
 
 #define FS_DVDDEV_REMAP_ROOT ""
 #define FS_DVDDEV_ROOT "dvddev???:::"
@@ -204,13 +199,11 @@ static char const * V_FormatFilenameForSymlinking( char (&tempSymlinkBuffer)[MAX
 
 // Win32 dedicated.dll contains both filesystem_steam.cpp and filesystem_stdio.cpp, so it has two
 // CBaseFileSystem objects.  We'll let it manage BaseFileSystem() itself.
-#if !( defined(_WIN32) && defined(DEDICATED) )
 static CBaseFileSystem *g_pBaseFileSystem;
 CBaseFileSystem *BaseFileSystem()
 {
 	return g_pBaseFileSystem;
 }
-#endif
 
 ConVar filesystem_buffer_size( "filesystem_buffer_size", "0", 0, "Size of per file buffers. 0 for none" );
 
@@ -533,9 +526,7 @@ void CIoStats::Reset()
 CBaseFileSystem::CBaseFileSystem()
 	: m_FileTracker( this ), m_FileWhitelist( NULL ),m_FileTracker2( this )
 {
-#if !( defined(_WIN32) && defined(DEDICATED) )
 	g_pBaseFileSystem = this;
-#endif
 	g_pFullFileSystem = this;			// Left in for non tier Apps, tools, etc...
 
 	m_WhitelistFileTrackingEnabled = -1;
@@ -1020,9 +1011,6 @@ void CBaseFileSystem::AddVPKFile( char const *pBasename, SearchPathAdd_t addType
 #ifdef SUPPORT_VPK
 	char nameBuf[MAX_PATH];
 	Q_MakeAbsolutePath( nameBuf, sizeof( nameBuf ), pBasename );
-#ifdef _WIN32
-	Q_strlower( nameBuf );
-#endif
 	Q_FixSlashes( nameBuf );
 	// see if we already have this vpk file
 	for( int i = 0; i < m_VPKFiles.Count(); i++ )
@@ -1452,9 +1440,6 @@ bool CZipPackFile::FindFile( const char *pFilename, int &nIndex, int64 &nOffset,
 {
 	char szCleanName[MAX_FILEPATH];
 	Q_strncpy( szCleanName, pFilename, sizeof( szCleanName ) );
-#ifdef _WIN32
-	Q_strlower( szCleanName );
-#endif
 	Q_FixSlashes( szCleanName );
  
 	if ( !Q_RemoveDotSlashes( szCleanName ) )
@@ -1877,9 +1862,6 @@ void CBaseFileSystem::AddMapPackFile( const char *pPath, const char *pPathID, Se
 	char newPath[ MAX_FILEPATH ];
 	// +2 for '\0' and potential slash added at end.
 	Q_strncpy( newPath, pPath, sizeof( newPath ) );
-#ifdef _WIN32 // don't do this on linux!
-	Q_strlower( newPath );
-#endif
 	Q_FixSlashes( newPath );
 
 	// Open the .bsp and find the map lump
@@ -2204,9 +2186,6 @@ void CBaseFileSystem::AddSearchPathInternal( const char *pPath, const char *path
 		{
 			Q_MakeAbsolutePath( newPath, sizeof(newPath), pPath );
 		}
-#ifdef _WIN32
-		Q_strlower( newPath );
-#endif
 		AddSeperatorAndFixPath( newPath );
 	}
 
@@ -2592,9 +2571,6 @@ bool CBaseFileSystem::RemoveSearchPath( const char *pPath, const char *pathID )
 	{
 		// +2 for '\0' and potential slash added at end.
 		Q_strncpy( newPath, pPath, sizeof( newPath ) );
-#ifdef _WIN32 // don't do this on linux!
-		Q_strlower( newPath );
-#endif
 		if ( V_stristr( newPath, ".bsp" ) )
 		{
 			Q_FixSlashes( newPath );
@@ -3214,13 +3190,7 @@ void CBaseFileSystem::HandleOpenRegularFile( CFileOpenInfo &openInfo, bool bIsAb
 
 		if ( m_bOutputDebugString )
 		{
-#ifdef _WIN32
-			Plat_DebugString( "fs_debug: " );
-			Plat_DebugString( openInfo.m_AbsolutePath );
-			Plat_DebugString( "\n" );
-#else
 			fprintf(stderr, "fs_debug: %s\n", openInfo.m_AbsolutePath );
-#endif
 		}
 
 		openInfo.m_pFileHandle = new CFileHandle(this);
@@ -3513,9 +3483,6 @@ FileHandle_t CBaseFileSystem::OpenEx( const char *pFileName, const char *pOption
 	char tempFileName[MAX_PATH];
 	Q_strncpy( tempFileName, pFileName, sizeof(tempFileName) );
 	Q_FixSlashes( tempFileName );
-#ifdef _WIN32
-	Q_strlower( tempFileName );
-#endif
 
 	FileHandle_t hFile;
 
@@ -4319,9 +4286,6 @@ long CBaseFileSystem::GetFileTime( const char *pFileName, const char *pPathID )
 	char tempFileName[MAX_PATH];
 	Q_strncpy( tempFileName, pFileName, sizeof(tempFileName) );
 	Q_FixSlashes( tempFileName );
-#ifdef _WIN32
-	Q_strlower( tempFileName );
-#endif
 
 	for ( CSearchPath *pSearchPath = iter.GetFirst(); pSearchPath != NULL; pSearchPath = iter.GetNext() )
 	{
@@ -4360,9 +4324,6 @@ long CBaseFileSystem::GetPathTime( const char *pFileName, const char *pPathID )
 	char tempFileName[MAX_PATH];
 	Q_strncpy( tempFileName, pFileName, sizeof(tempFileName) );
 	Q_FixSlashes( tempFileName );
-#ifdef _WIN32
-	Q_strlower( tempFileName );
-#endif
 
 	long pathTime = 0L;
 	for ( CSearchPath *pSearchPath = iter.GetFirst(); pSearchPath != NULL; pSearchPath = iter.GetNext() )
@@ -4863,11 +4824,7 @@ bool CBaseFileSystem::IsFileWritable( char const *pFileName, char const *pPathID
 
 		if ( FS_stat( bFixed ? fixedFATXFilename : pFileName, &buf ) != -1 )
 		{
-#ifdef WIN32
-			if ( buf.st_mode & _S_IWRITE )
-#else
 			if ( buf.st_mode & S_IWRITE )
-#endif
 			{
 				return true;
 			}
@@ -4887,11 +4844,7 @@ bool CBaseFileSystem::IsFileWritable( char const *pFileName, char const *pPathID
 
 		if ( FS_stat( bFixed ? fixedFATXFilename : tempFileName, &buf ) != -1 )
 		{
-#ifdef WIN32
-			if ( buf.st_mode & _S_IWRITE )
-#else
 			if ( buf.st_mode & S_IWRITE )
-#endif
 			{
 				return true;
 			}
@@ -4905,11 +4858,7 @@ bool CBaseFileSystem::SetFileWritable( char const *pFileName, bool writable, con
 {
 	CHECK_DOUBLE_SLASHES( pFileName );
 
-#ifdef _WIN32
-	int pmode = writable ? ( _S_IWRITE | _S_IREAD ) : ( _S_IREAD );
-#else
 	int pmode = writable ? ( S_IWRITE | S_IREAD ) : ( S_IREAD );
-#endif
 
 	char tempPathID[MAX_PATH];
 	ParsePathID( pFileName, pPathID, tempPathID );
@@ -5060,21 +5009,13 @@ void CBaseFileSystem::CreateDirHierarchy( const char *pRelativePath, const char 
         {
 			char save = *s;
 			*s = '\0';
-#if defined( _WIN32 )
-			_mkdir( szScratchFileName );
-#else
 			mkdir( szScratchFileName, S_IRWXU |  S_IRGRP |  S_IROTH );// owner has rwx, rest have r
-#endif
 			*s = save;
         }
 		s++;
     }
 
-#if defined( _WIN32 )
-	_mkdir( szScratchFileName );
-#else
 	mkdir( szScratchFileName, S_IRWXU |  S_IRGRP |  S_IROTH );
-#endif
 }
 
 
@@ -5651,9 +5592,6 @@ bool CBaseFileSystem::FullPathToRelativePathEx( const char *pFullPath, const cha
 
 	char pInPath[ MAX_FILEPATH ];
 	Q_strncpy( pInPath, pFullPath, sizeof( pInPath ) );
-#ifdef _WIN32
-	Q_strlower( pInPath );
-#endif
 	Q_FixSlashes( pInPath );
 
 	CUtlSymbol lookup;
@@ -5675,9 +5613,6 @@ bool CBaseFileSystem::FullPathToRelativePathEx( const char *pFullPath, const cha
 
 		char pSearchBase[ MAX_FILEPATH ];
 		Q_strncpy( pSearchBase, m_SearchPaths[i].GetPathString(), sizeof( pSearchBase ) );
-#ifdef _WIN32
-		Q_strlower( pSearchBase );
-#endif
 		Q_FixSlashes( pSearchBase );
 		int nSearchLen = Q_strlen( pSearchBase );
 		if ( Q_strnicmp( pSearchBase, pInPath, nSearchLen ) )
@@ -5798,11 +5733,7 @@ bool CBaseFileSystem::RenameFile( char const *pOldPath, char const *pNewPath, co
 //-----------------------------------------------------------------------------
 bool CBaseFileSystem::GetCurrentDirectory( char* pDirectory, int maxlen )
 {
-#if defined( _WIN32 )
-	if ( !::GetCurrentDirectoryA( maxlen, pDirectory ) )
-#else
 	if ( !getcwd( pDirectory, maxlen ) )
-#endif
 		return false;
 
 	Q_FixSlashes(pDirectory);
@@ -5893,9 +5824,6 @@ void CBaseFileSystem::FileSystemWarning( FileWarningLevel_t level, const char *f
 	}
 	else
 	{
-#ifdef _WIN32
-		Plat_DebugString( warningtext );
-#endif
 	}
 }
 
@@ -6061,9 +5989,7 @@ CSysModule *CBaseFileSystem::LoadModule( const char *pFileName, const char *pPat
 		pPathID = "EXECUTABLE_PATH"; // default to the bin dir
 	}
 
-#if defined(POSIX) && defined(PLATFORM_64BITS)
 	bPathIsGameBin = V_strcmp( "GAMEBIN", pPathID ) == 0;
-#endif
 
 	char tempPathID[ MAX_PATH ];
 	ParsePathID( pFileName, pPathID, tempPathID );
@@ -6093,7 +6019,6 @@ CSysModule *CBaseFileSystem::LoadModule( const char *pFileName, const char *pPat
 			// we found the binary in one of our search paths
 			return pModule;
 		}
-#if defined(POSIX) && defined(PLATFORM_64BITS)
 		else if ( bPathIsGameBin )
 		{
 			const char* plat_dir = "linux64";
@@ -6105,7 +6030,6 @@ CSysModule *CBaseFileSystem::LoadModule( const char *pFileName, const char *pPat
 				return pModule;
 			}
 		}
-#endif
 	}
 
 	// couldn't load it from any of the search paths, let LoadLibrary try

@@ -6,9 +6,6 @@
 
 #ifndef MM_FRAMEWORK_H
 #define MM_FRAMEWORK_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 
 #include "tier0/dbg.h"

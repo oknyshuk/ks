@@ -8,9 +8,6 @@
 #ifndef IGAME_TYPES_H
 #define IGAME_TYPES_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "utlvector.h"
 #include "utlstring.h"

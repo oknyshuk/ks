@@ -172,11 +172,7 @@ END_SHADER_PARAMS
 
 		bool bSeamlessMapping = params[SEAMLESS_SCALE]->GetFloatValue() != 0.0;
 
-#if defined( CSTRIKE15 )
 		bool bShaderSrgbRead = ( false && r_shader_srgbread.GetBool() );
-#else
-		bool bShaderSrgbRead = ( false && IS_PARAM_DEFINED( SHADERSRGBREAD360 ) && params[SHADERSRGBREAD360]->GetIntValue() );
-#endif
 
 		SHADOW_STATE
 		{

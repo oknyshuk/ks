@@ -6,9 +6,6 @@
 
 #ifndef ENTITYFLAME_H
 #define ENTITYFLAME_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "ai_planesolver.h"
 

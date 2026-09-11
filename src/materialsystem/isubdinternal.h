@@ -7,9 +7,6 @@
 #ifndef ISUBDINTERNAL_H
 #define ISUBDINTERNAL_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "shaderapi/shareddefs.h"
 #include "itextureinternal.h"

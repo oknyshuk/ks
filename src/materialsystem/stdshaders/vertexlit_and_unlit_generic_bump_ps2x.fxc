@@ -178,16 +178,7 @@ sampler DiffuseWarpSampler					: register( s9 );	// Lighting warp sampler (1D te
 	sampler TintMaskSampler		: register( s13 );
 #endif
 
-#if defined(_PS3)
-// Needed for optimal shadow filter code generation on PS3.
-#pragma texformat ShadowDepthSampler DEPTH_COMPONENT24
-#endif
 
-#if defined( _PS3 )
-// Causes the Cg compiler to automatically produce _bx2 modifier on the texture load instead of producing a MAD to range expand the vector, saving one instruction.
-#pragma texsign BumpmapSampler
-#pragma texformat BumpmapSampler RGBA8
-#endif
 
 struct PS_INPUT
 {
@@ -211,20 +202,10 @@ struct PS_INPUT
 	float4 lightAtten									: COLOR0;		// light attenuation for lights 0 and 1 in .xy (lower precision for sm2_b/OSX), sun percent in .w
 #endif
 
-#if defined( _GAMECONSOLE ) && FLASHLIGHT
-	float4 flashlightSpacePos							: TEXCOORD8;
-#endif
 
-#if defined( _X360 )
-	float2 vScreenPos : VPOS;
-#endif
 };
 
-#if defined( _X360 ) || defined( _PS3 )
-	#define SINGLE_PASS_FLASHLIGHT 1
-#else
 	#define SINGLE_PASS_FLASHLIGHT 0
-#endif
 
 #define FLASHLIGHT_ONLY ( FLASHLIGHT && !SINGLE_PASS_FLASHLIGHT )
 
@@ -244,10 +225,6 @@ struct PS_INPUT
 
 	sampler CSMDepthAtlasSampler : register( s15 );
 	
-	#if defined(_PS3)
-		// Needed for optimal shadow filter code generation on PS3.
-		#pragma texformat CSMDepthAtlasSampler DEPTH_COMPONENT24
-	#endif
 	
 	#if defined( SHADER_MODEL_PS_2_B )
 		#define CSM_VERTEXLIT_AND_UNLIT_GENERIC_BUMP
@@ -496,11 +473,7 @@ float4_color_return_type main( PS_INPUT i ) : COLOR
 
 		worldSpaceNormal = Vec3TangentToWorldNormalized( tangentSpaceNormal.xyz, vWorldNormal, i.vWorldTangent.xyz, vWorldBinormal );
 
-		#if defined ( _GAMECONSOLE )
-			float4 flashlightSpacePosition = i.flashlightSpacePos;
-		#else
 			float4 flashlightSpacePosition = TransformFlashlightWorldToTexture( i.vWorldPos_linearDepth.xyz, g_FlashlightWorldToTexture );
-		#endif
 
 		float3 flashlightColor = DoFlashlight( g_FlashlightPos, i.vWorldPos_linearDepth.xyz, flashlightSpacePosition,
 			worldSpaceNormal, g_FlashlightAttenuationFactors.xyz, 
@@ -513,11 +486,7 @@ float4_color_return_type main( PS_INPUT i ) : COLOR
 					           g_vSmoothOneOverWidth, g_vShearRound.xy, g_aAbB, g_vShearRound.zw );
 		#endif
 
-		#if defined ( _GAMECONSOLE )
 			diffuseLighting += flashlightColor;
-		#else
-			diffuseLighting += flashlightColor;
-		#endif
 	}
 	#endif
 	
@@ -612,11 +581,6 @@ float4_color_return_type main( PS_INPUT i ) : COLOR
 	#else
 		float4_color_return_type vOutput = FinalOutput( float4( result.rgb, alpha ), fogFactor, PIXELFOGTYPE, TONEMAP_SCALE_LINEAR, g_fWriteDepthToAlpha, i.vWorldPos_linearDepth.w );
 			
-		#if ( defined( _X360 ) )
-		{
-			vOutput.xyz += ScreenSpaceOrderedDither( i.vScreenPos );
-		}
-		#endif
 		
 		return vOutput;
 	#endif

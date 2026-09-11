@@ -35,7 +35,6 @@ extern void LoadEquipmentData();
 
 // The sound categories found in the weapon classname.txt files
 // This needs to match the WeaponSound_t enum in weapon_parse.h
-#if !defined(_STATIC_LINKED) || defined(CLIENT_DLL)
 const char *pWeaponSoundCategories[ NUM_SHOOT_SOUND_TYPES ] = 
 {
 	"empty",
@@ -57,9 +56,6 @@ const char *pWeaponSoundCategories[ NUM_SHOOT_SOUND_TYPES ] =
 	"nearlyempty",
 	"fastreload"
 };
-#else
-extern const char *pWeaponSoundCategories[ NUM_SHOOT_SOUND_TYPES ];
-#endif
 
 int GetWeaponSoundFromString( const char *pszString )
 {
@@ -78,7 +74,6 @@ typedef struct
 	const char *m_pFlagName;
 	int m_iFlagValue;
 } itemFlags_t;
-#if !defined(_STATIC_LINKED) || defined(CLIENT_DLL)
 itemFlags_t g_ItemFlags[8] =
 {
 	{ "ITEM_FLAG_SELECTONEMPTY",	ITEM_FLAG_SELECTONEMPTY },
@@ -90,9 +85,6 @@ itemFlags_t g_ItemFlags[8] =
 	{ "ITEM_FLAG_NOAMMOPICKUPS",	ITEM_FLAG_NOAMMOPICKUPS },
 	{ "ITEM_FLAG_NOITEMPICKUP",		ITEM_FLAG_NOITEMPICKUP }
 };
-#else
-extern itemFlags_t g_ItemFlags[7];
-#endif
 
 
 
@@ -328,23 +320,6 @@ void FileWeaponInfo_t::Parse( KeyValues *pKeyValuesData, const char *szWeaponNam
 	m_bAllowFlipping = pKeyValuesData->GetBool( "AllowFlipping", true );
 	m_bMeleeWeapon = pKeyValuesData->GetBool( "MeleeWeapon", false );
 
-#if defined(_DEBUG) && defined(HL2_CLIENT_DLL)
-	// make sure two weapons aren't in the same slot & position
-	if ( iSlot >= MAX_WEAPON_SLOTS ||
-		iPosition >= MAX_WEAPON_POSITIONS )
-	{
-		Warning( "Invalid weapon slot or position [slot %d/%d max], pos[%d/%d max]\n",
-			iSlot, MAX_WEAPON_SLOTS - 1, iPosition, MAX_WEAPON_POSITIONS - 1 );
-	}
-	else
-	{
-		if (g_bUsedWeaponSlots[iSlot][iPosition])
-		{
-			Warning( "Duplicately assigned weapon slots in selection hud:  %s (%d, %d)\n", szPrintName, iSlot, iPosition );
-		}
-		g_bUsedWeaponSlots[iSlot][iPosition] = true;
-	}
-#endif
 
 	// Primary ammo used
 	const char *pAmmo = pKeyValuesData->GetString( "primary_ammo", "None" );

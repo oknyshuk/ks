@@ -6,9 +6,6 @@
 
 #ifndef ISTEAMVIDEO_H
 #define ISTEAMVIDEO_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "isteamclient.h"
 

@@ -6,9 +6,6 @@
 
 #ifndef C_GIB_H
 #define C_GIB_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #define	DEFAULT_GIB_LIFETIME	4.0f
 
@@ -34,31 +31,6 @@ protected:
 	float	m_flTouchDelta;		// Amount of time that must pass before another touch function can be called
 };
 
-#ifdef HL2_CLIENT_DLL
-class CAntlionGibManager : public CAutoGameSystemPerFrame
-{
-public:
-	CAntlionGibManager( char const *name ) : CAutoGameSystemPerFrame( name )
-	{
-	}
-
-	// Methods of IGameSystem
-	virtual void Update( float frametime );
-	virtual void LevelInitPreEntity( void );
-
-	void	AddGib( C_BaseEntity *pEntity ); 
-	void	RemoveGib( C_BaseEntity *pEntity );
-
-private:
-	typedef CHandle<C_BaseEntity> CGibHandle;
-	CUtlLinkedList< CGibHandle > m_LRU; 
-	
-};
-
-
-extern CAntlionGibManager s_AntlionGibManager;
-
-#endif
 
 
 #endif // C_GIB_H

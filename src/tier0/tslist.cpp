@@ -504,11 +504,7 @@ bool RunTSListTests( int nListSize, int nTests )
 
 #ifdef USE_NATIVE_SLIST
 
-#ifdef _WIN64
-	int maxSize = 65536; // FIXME: How should this be computed?
-#else
 	int maxSize = ( 1 << (sizeof( ((TSLHead_t *)(0))->Depth ) * 8) ) - 1;
-#endif
 
 #else
 	int maxSize = ( 1 << (sizeof( ((TSLHead_t *)(0))->value.Depth ) * 8) ) - 1;

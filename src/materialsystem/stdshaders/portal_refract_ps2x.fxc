@@ -10,10 +10,6 @@
 
 //  SKIP: ( $STAGE != 2 ) && ( $TINTED == 1 )
 
-#if defined( _X360 )
-	#undef SHADER_SRGB_READ
-	#define SHADER_SRGB_READ 1
-#endif
 
 #include "common_fog_ps_supportsvertexfog_fxc.h"
 
@@ -152,11 +148,6 @@ float4_color_return_type main( PS_INPUT i ) : COLOR
 		vRefractTexCoord.xy -= vTangentRefract.y * vProjBinormal.xy;
 
 		// Adjust for current viewport
-		#if defined( _X360 ) || defined( _PS3 )
-		{
-			vRefractTexCoord.xy = ( vRefractTexCoord.xy * g_vViewportMad.xy ) + g_vViewportMad.zw;
-		}
-		#endif
 
 		// Fetch color from texture
 		float3 cRefract = tex2Dsrgb( g_tRefractionSampler, vRefractTexCoord.xy ).rgb;

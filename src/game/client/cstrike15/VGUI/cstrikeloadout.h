@@ -7,9 +7,6 @@
 
 #ifndef CSLOADOUT_H
 #define CSLOADOUT_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "cs_item_inventory.h"
 

@@ -7,9 +7,6 @@
 
 #ifndef NETWORKSTRINGTABLESERVER_H
 #define NETWORKSTRINGTABLESERVER_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 void SV_CreateNetworkStringTables( char const *pchMapName );
 

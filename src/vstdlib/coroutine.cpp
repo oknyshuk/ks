@@ -50,11 +50,7 @@
 #ifdef COROUTINE_TRACE
 #include "tier1/fmtstr.h"
 static CFmtStr g_fmtstr;
-#ifdef WIN32
-extern "C"	__declspec(dllimport) void __stdcall OutputDebugStringA( const char * );
-#else
 void OutputDebugStringA( const char *pchMsg ) { fprintf( stderr, pchMsg ); fflush( stderr ); } 
-#endif
 #define CoroutineDbgMsg( fmt, ... ) \
 { \
  g_fmtstr.sprintf( fmt, ##__VA_ARGS__ ); \
@@ -67,24 +63,13 @@ void OutputDebugStringA( const char *pchMsg ) { fprintf( stderr, pchMsg ); fflus
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
-#if defined( _MSC_VER ) && ( _MSC_VER >= 1900 ) && defined( PLATFORM_64BITS )
-//the VS2105 longjmp() seems to freak out jumping back into a coroutine (just like linux if _FORTIFY_SOURCE is defined)
-// I can't find an analogy to _FORTIFY_SOURCE for MSVC at the moment, so I wrote a quick assembly to longjmp() without any safety checks
-extern "C" void Coroutine_LongJmp_Unchecked(jmp_buf buffer, int nResult);
-#define Coroutine_longjmp Coroutine_LongJmp_Unchecked
-#else
 #define Coroutine_longjmp longjmp
-#endif
 
 
 // it *feels* like we should need barriers around our setjmp/longjmp calls, and the memcpy's
 // to make sure the optimizer doesn't reorder us across register load/stores, so I've put them
 // in what seem like the appropriate spots, but we seem to run ok without them, so...
-#ifdef GNUC
 #define RW_MEMORY_BARRIER /* __sync_synchronize() */
-#else
-#define RW_MEMORY_BARRIER /* _ReadWriteBarrier() */
-#endif
 
 #if defined(VALGRIND_HINTING)
 #include <valgrind/valgrind.h>
@@ -104,11 +89,7 @@ extern "C" void Coroutine_LongJmp_Unchecked(jmp_buf buffer, int nResult);
 // it *feels* like we should need barriers around our setjmp/longjmp calls, and the memcpy's
 // to make sure the optimizer doesn't reorder us across register load/stores, so I've put them
 // in what seem like the appropriate spots, but we seem to run ok without them, so...
-#ifdef GNUC
 #define RW_MEMORY_BARRIER /* __sync_synchronize() */
-#else
-#define RW_MEMORY_BARRIER /* _ReadWriteBarrier() */
-#endif
 
 // return values from setjmp()
 static const int k_iSetJmpStateSaved = 0x00;
@@ -124,30 +105,8 @@ static const int k_cubCoroutineStackGapSmall = 64;
 static const int k_cubMaxCoroutineStackSize = (32 * 1024);
 
 
-#ifdef _WIN64
-extern "C" byte *GetStackPtr64();
-#define GetStackPtr( pStackPtr)		byte *pStackPtr = GetStackPtr64();
-#else
-#ifdef WIN32
-#define GetStackPtr( pStackPtr )	byte *pStackPtr;	__asm mov pStackPtr, esp	
-#elif defined(GNUC)
 #define GetStackPtr( pStackPtr )	byte *pStackPtr = (byte*)__builtin_frame_address(0)
-#elif defined(__SNC__)
-#define GetStackPtr( pStackPtr )	byte *pStackPtr = (byte*)__builtin_frame_address(0)
-#else
-#error
-#endif
-#endif
 
-#ifdef _M_X64
-#define _REGISTER_ALIGNMENT 16ull
-
-int CalcAlignOffset( const unsigned char *p )
-{
-	return static_cast<int>( AlignValue( p, _REGISTER_ALIGNMENT ) - p );
-}
-
-#endif
 
 
 //-----------------------------------------------------------------------------
@@ -170,11 +129,7 @@ public:
 #ifdef COROUTINE_TRACE
 		m_hCoroutine = -1;
 #endif
-#ifdef _M_X64
-		m_nAlignmentBytes = CalcAlignOffset( m_rgubRegisters );
-#else
 		memset( &m_Registers, 0, sizeof( m_Registers ) );
-#endif	
 #if defined( VPROF_ENABLED )
 		m_pVProfNodeScope = NULL;
 #endif
@@ -182,23 +137,7 @@ public:
 
 	jmp_buf &GetRegisters()
 	{
-#ifdef _M_X64
-		// Did we get moved in memory in such a way that the registers became unaligned?
-		// If so, fix them up now
-		size_t align = _REGISTER_ALIGNMENT - 1;
-		unsigned char *pRegistersCur = &m_rgubRegisters[m_nAlignmentBytes];
-		if ( (size_t)pRegistersCur & align )
-		{
-			m_nAlignmentBytes = CalcAlignOffset( m_rgubRegisters );
-			unsigned char *pRegistersNew = &m_rgubRegisters[m_nAlignmentBytes];
-			Q_memmove( pRegistersNew, pRegistersCur, sizeof(jmp_buf) );
-			pRegistersCur = pRegistersNew;
-		}
-
-		return *reinterpret_cast<jmp_buf *>( pRegistersCur );
-#else
 		return m_Registers;
-#endif
 	}
 
 	~CCoroutine()
@@ -336,12 +275,7 @@ public:
 	}
 #endif
 
-#ifdef _M_X64
-	unsigned char m_rgubRegisters[sizeof(jmp_buf) + _REGISTER_ALIGNMENT];
-	int m_nAlignmentBytes;
-#else
 	jmp_buf m_Registers;
-#endif
 
 	byte *m_pStackHigh;		// position of initial entry to the coroutine (stack ptr before continue is ran)
 	byte *m_pStackLow;		// low point on the stack we plan on saving (stack ptr when we yield)
@@ -542,21 +476,6 @@ bool Internal_Coroutine_Continue( HCoroutine hCoroutine, const char *pchDebugMsg
 
 	bool bInCoroutineAlready = GCoroutineMgr().IsAnyCoroutineActive();
 
-#ifdef _WIN32
-#ifndef _WIN64
-	// make sure nobody has a try/catch block and then yielded
-	// because we hate that and we will crash
-	uint32 topofexceptionchain;
-	__asm mov eax, dword ptr fs:[0]
-	__asm mov topofexceptionchain, eax
-	if ( GCoroutineMgr().m_topofexceptionchain == 0 )
-		GCoroutineMgr().m_topofexceptionchain = topofexceptionchain;
-	else
-	{
-		Assert( topofexceptionchain == GCoroutineMgr().m_topofexceptionchain );
-	}
-#endif
-#endif
 
 	// start the new coroutine
 	GCoroutineMgr().SetActiveCoroutine( hCoroutine );
@@ -693,25 +612,10 @@ void NOINLINE Coroutine_Launch( CCoroutine &coroutine )
 
 	// set our marker
 	GetStackPtr( pEsp );
-	#ifdef _WIN64
-		// Add a little extra padding, to capture the spill space for the registers
-		// that is required for us to reserve ABOVE the return address), and also
-		// align the stack
-		coroutine.m_pStackHigh = (byte *)( ((uintptr_t)pEsp + 32 + 15) & ~(uintptr_t)15 );
-
-		// On Win64, we need to be able to find an exception handler
-		// if we walk the stack to this point.  Currently,
-		// this is as close to the root as we can go.  If we
-		// try to go higher, we wil fail.  That's actually
-		// OK at run time, because Coroutine_Finish doesn't
-		// return!
-		CatchAndWriteMiniDumpForVoidPtrFn( coroutine.m_pFunc, coroutine.m_pvParam, /*bExitQuietly*/ true );
-	#else
 		coroutine.m_pStackHigh = (byte *)pEsp;
 
 		// run the function directly
 		coroutine.m_pFunc( coroutine.m_pvParam );
-	#endif
 
 	// longjmp back to the main 'thread'
 	Coroutine_Finish();
@@ -774,21 +678,6 @@ void Coroutine_YieldToMain()
 	CCoroutine &coroutine = GCoroutineMgr().GetActiveCoroutine();
 	CoroutineDbgMsg( g_fmtstr.sprintf( "Coroutine_YieldToMain() %s#%x -> %s#%x\n", coroutine.m_pchName, coroutine.m_hCoroutine, coroutinePrev.m_pchName, coroutinePrev.m_hCoroutine ) );
 
-#ifdef _WIN32
-#ifndef _WIN64
-	// make sure nobody has a try/catch block and then yielded
-	// because we hate that and we will crash
-	uint32 topofexceptionchain;
-	__asm mov eax, dword ptr fs:[0]
-	__asm mov topofexceptionchain, eax
-		if ( GCoroutineMgr().m_topofexceptionchain == 0 )
-			GCoroutineMgr().m_topofexceptionchain = topofexceptionchain;
-		else
-		{
-			Assert( topofexceptionchain == GCoroutineMgr().m_topofexceptionchain );
-		}
-#endif
-#endif
 
 	RW_MEMORY_BARRIER;
 	int iResult = setjmp( coroutine.GetRegisters() );

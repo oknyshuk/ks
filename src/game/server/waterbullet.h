@@ -8,9 +8,6 @@
 #define WEAPON_WATERBULLET_H
 
 #include "reflect_annotations.h"
-#ifdef _WIN32
-#pragma once
-#endif
 
 #define WATER_BULLET_BUBBLES_PER_INCH 0.05f
 

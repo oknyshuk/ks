@@ -6,9 +6,6 @@
 
 #ifndef CS_SHAREDDEFS_H
 #define CS_SHAREDDEFS_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "csgo_limits.h"
 
@@ -183,11 +180,9 @@ extern const float CS_PLAYER_HEAVYARMOR_FLINCH_MODIFIER;
 
 extern const float CS_PLAYER_DUCK_SPEED_IDEAL;
 
-#ifdef CSTRIKE15
 #ifdef CLIENT_DLL
 #define OLD_CROUCH_PROTOCOL_INDEX 13546
 inline bool IsPreCrouchUpdateDemo( void ) { return (engine->IsHLTV() || engine->IsPlayingDemo()) && engine->GetConnectionDataProtocol() <= OLD_CROUCH_PROTOCOL_INDEX; }
-#endif
 #endif
 
 template< class T >

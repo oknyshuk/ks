@@ -9,9 +9,6 @@
 #ifndef STRONGHANDLE_H
 #define STRONGHANDLE_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "tier2/tier2.h"
 #include "resourcesystem/iresourcesystem.h"

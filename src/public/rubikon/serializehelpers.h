@@ -2,11 +2,7 @@
 #ifndef SERIALIZE_HELPERS_HDR
 #define SERIALIZE_HELPERS_HDR
 
-#ifdef __clang__
-# define CLANG_ATTR(ATTR) __attribute__((annotate( ATTR )))
-#else
 # define CLANG_ATTR(ATTR)
-#endif
 
 #define AUTO_SERIALIZE_AS( TYPE ) CLANG_ATTR( "auto_serialize_as:" #TYPE )
 #define SERIALIZE_ARRAY_SIZE( SIZE ) CLANG_ATTR( "array_size:" #SIZE )

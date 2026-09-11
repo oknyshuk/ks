@@ -11,9 +11,6 @@
 #ifndef MURMURHASH3_H
 #define MURMURHASH3_H
 
-#if defined(_WIN32)
-#pragma once
-#endif
 
 uint32 MurmurHash3_32( const void *key, size_t len, uint32 seed, bool bCaselessStringVariant = false );
 

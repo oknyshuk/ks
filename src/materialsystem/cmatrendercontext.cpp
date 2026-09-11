@@ -1471,9 +1471,6 @@ void CMatRenderContext::SwapBuffers()
 	g_pOcclusionQueryMgr->AdvanceFrame();
 
 
-#ifdef GCM_ALLOW_TIMESTAMPS
-	OnFrameTimestampAvailableMST(1.0f);
-#endif
 
 	g_pShaderDevice->Present();
 
@@ -2229,7 +2226,6 @@ void CMatRenderContext::CopyTextureToRenderTargetEx( int nRenderTargetID, ITextu
 
 void CMatRenderContext::ClearBuffers( bool bClearColor, bool bClearDepth, bool bClearStencil )
 {
-#if defined( DX_TO_VK_ABSTRACTION )
 	// DXVK: Dx9Device()->Clear() depth-only clears are non-functional.
 	// Route any depth clear through the fullscreen-quad path.
 	if ( bClearDepth )
@@ -2243,7 +2239,6 @@ void CMatRenderContext::ClearBuffers( bool bClearColor, bool bClearDepth, bool b
 		}
 		return;
 	}
-#endif
 	int width, height;
 	GetRenderTargetDimensions( width, height );
 	g_pShaderAPI->ClearBuffers( bClearColor, bClearDepth, bClearStencil, width, height );

@@ -10,9 +10,6 @@
 #ifndef GL_DRAWLIGHTS_H
 #define GL_DRAWLIGHTS_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 // Should we draw light sprites over visible lights?
 bool ActivateLightSprites( bool bActive );

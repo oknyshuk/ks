@@ -6,9 +6,6 @@
 
 #ifndef BUGREPORTER_H
 #define BUGREPORTER_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "interface.h"
 

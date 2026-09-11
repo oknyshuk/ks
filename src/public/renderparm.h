@@ -10,9 +10,7 @@
 #ifndef RENDERPARM_H
 #define RENDERPARM_H
 
-#ifndef _WIN32
 #pragma once
-#endif
 
 enum RenderParamInt_t
 {

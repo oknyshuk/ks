@@ -8,9 +8,6 @@
 #ifndef IMATCHTITLE_H
 #define IMATCHTITLE_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 
 #define TITLE_DATA_PREFIX ""

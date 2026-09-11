@@ -32,9 +32,6 @@
 #include "tier1/refcount.h"
 #include "vstdlib/jobthread.h"
 #include "tier0/microprofiler.h"
-#if !COMPILER_GCC
-#include <atomic>
-#endif
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -2044,11 +2041,9 @@ CON_COMMAND_EXTERN( ray_batch_bench, RayBatchBench, "Time batches of rays" )
 	// normal trace test
 	if ( 1 )
 	{
-#if VPROF_LEVEL > 0 
 		g_VProfCurrentProfile.Start();
 		g_VProfCurrentProfile.Reset();
 		g_VProfCurrentProfile.ResetPeaks();
-#endif
 		double tStart = Plat_FloatTime();
 		trace_t trace;
 		for ( int jj = 0; jj < ITERATION_COUNT; jj++ )
@@ -2092,20 +2087,16 @@ CON_COMMAND_EXTERN( ray_batch_bench, RayBatchBench, "Time batches of rays" )
 						}
 					}
 				}
-#if VPROF_LEVEL > 0 
 				g_VProfCurrentProfile.MarkFrame();
-#endif
 			}
 		}
 		double tEnd = Plat_FloatTime();
 		float ms = (tEnd - tStart) * 1000.0f;
 		if ( ms > 0 )
 			normalTime = ms;
-#if VPROF_LEVEL > 0 
 		g_VProfCurrentProfile.MarkFrame();
 		g_VProfCurrentProfile.Stop();
 		g_VProfCurrentProfile.OutputReport( VPRT_FULL & ~VPRT_HIERARCHY, NULL );
-#endif
 		Msg("NORMAL RAY TEST: %.2fms\n", ms );
 	}
 
@@ -2113,11 +2104,9 @@ CON_COMMAND_EXTERN( ray_batch_bench, RayBatchBench, "Time batches of rays" )
 	// batched trace test
 	if ( 1 )
 	{
-#if VPROF_LEVEL > 0 
 		g_VProfCurrentProfile.Start();
 		g_VProfCurrentProfile.Reset();
 		g_VProfCurrentProfile.ResetPeaks();
-#endif
 		double tStart = Plat_FloatTime();
 		trace_t trace;
 		CTraceFilterHitAll traceFilter;
@@ -2134,9 +2123,7 @@ CON_COMMAND_EXTERN( ray_batch_bench, RayBatchBench, "Time batches of rays" )
 				{
 					s_EngineTraceServer.TraceRayAgainstLeafAndEntityList( s_BenchmarkRays[i], &traceData, MASK_SOLID, &traceFilter, &trace );
 				}
-#if VPROF_LEVEL > 0 
 				g_VProfCurrentProfile.MarkFrame();
-#endif
 			}
 		}
 
@@ -2145,11 +2132,9 @@ CON_COMMAND_EXTERN( ray_batch_bench, RayBatchBench, "Time batches of rays" )
 		if ( ms > 0 )
 			batchedTime = ms;
 
-#if VPROF_LEVEL > 0 
 		g_VProfCurrentProfile.MarkFrame();
 		g_VProfCurrentProfile.Stop();
 		g_VProfCurrentProfile.OutputReport( VPRT_FULL & ~VPRT_HIERARCHY, NULL );
-#endif
 		Msg("LEAFLIST RAY TEST: %.2fms\n", ms );
 	}
 	float improvement = (normalTime - batchedTime) / normalTime;
@@ -2158,11 +2143,9 @@ CON_COMMAND_EXTERN( ray_batch_bench, RayBatchBench, "Time batches of rays" )
 
 CON_COMMAND_EXTERN( ray_bench, RayBench, "Time the rays" )
 {
-#if VPROF_LEVEL > 0 
 	g_VProfCurrentProfile.Start();
 	g_VProfCurrentProfile.Reset();
 	g_VProfCurrentProfile.ResetPeaks();
-#endif
 	{
 		double tStart = Plat_FloatTime();
 		trace_t trace;
@@ -2213,9 +2196,7 @@ CON_COMMAND_EXTERN( ray_bench, RayBench, "Time the rays" )
 				hit++;
 			else
 				miss++;
-#if VPROF_LEVEL > 0 
 			g_VProfCurrentProfile.MarkFrame();
-#endif
 		}
 		double tEnd = Plat_FloatTime();
 		float ms = (tEnd - tStart) * 1000.0f;
@@ -2228,11 +2209,9 @@ CON_COMMAND_EXTERN( ray_bench, RayBench, "Time the rays" )
 		}
 		Msg("RAY TEST: %d hits, %d misses, %.2fms   (%d rays, %d sweeps) (%d ray/prop, %d box/prop)\n", hit, miss, ms, point, swept, rayVsProp, boxVsProp );
 	}
-#if VPROF_LEVEL > 0 
 	g_VProfCurrentProfile.MarkFrame();
 	g_VProfCurrentProfile.Stop();
 	g_VProfCurrentProfile.OutputReport( VPRT_FULL & ~VPRT_HIERARCHY, NULL );
-#endif
 }
 #endif
 
@@ -2567,21 +2546,13 @@ public:
 		uint64 nTicksStarted = GetTimebaseRegister();
 		if ( !m_bCancel )
 		{
-#if COMPILER_GCC
 			__sync_synchronize();
-#else
-			std::atomic_thread_fence( std::memory_order_acquire );
-#endif
 			m_bResult = IsFullyOccluded_WithShadow( m_aabb0, m_aabb1, m_vShadow, occlusion_test_async_move_tolerance.GetFloat() );
 		}
 		uint64 nTicksEnded = GetTimebaseRegister();
 		m_nTicksRcpThroughput = m_bCancel ? 0 : nTicksEnded - nTicksStarted;
 		m_nTicksLatency = nTicksEnded - m_nTicksLatency;
-#if COMPILER_GCC 
 		__sync_synchronize();
-#else
-		std::atomic_thread_fence( std::memory_order_release );
-#endif
 		s_occlusionStats.nQueriesInFlight--;
 		m_bCompleted = true;
 	}
@@ -2714,11 +2685,7 @@ bool CEngineTrace::IsFullyOccluded( int nOcclusionKey, const AABB_t &aabb0, cons
 		{
 			if ( pQuery->m_bCompleted )
 			{
-#if COMPILER_GCC 
 				__sync_synchronize();
-#else
-				std::atomic_thread_fence( std::memory_order_acquire );
-#endif
 				bool bIsOccluded = pQuery->m_bResult;
 				s_occlusionStats.RegisterOcclusion( bIsOccluded );
 				// Optimal case: we can use the results of this job because it's a strict superset of this query and it's completed

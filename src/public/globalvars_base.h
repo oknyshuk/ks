@@ -7,9 +7,6 @@
 #ifndef GLOBALVARS_BASE_H
 #define GLOBALVARS_BASE_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 class CSaveRestoreData;
 

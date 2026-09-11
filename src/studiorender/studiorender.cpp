@@ -1198,50 +1198,14 @@ void CStudioRender::BuildForcedMaterialRenderList( MeshRenderData2_t *pRenderDat
 //-----------------------------------------------------------------------------
 void CStudioRender::RestoreMeshes( int nCount, BaseMeshRenderData_t *pRenderData, int nStride )
 {
-#ifdef	IS_WINDOWS_PC
-
-	// FIXME: Can we build a list of unique studiomeshdata_ts?
-	for ( int i = 0; i < nCount; ++i, pRenderData = (BaseMeshRenderData_t*)( (unsigned char*)pRenderData + nStride ) )
-	{
-		BaseMeshRenderData_t &data = *pRenderData;
-
-		studiomeshgroup_t *pGroup = data.m_pGroup;
-
-		// Older models are merely flexed while new ones are also delta flexed
-		Assert( !( pGroup->m_Flags & MESHGROUP_IS_DELTA_FLEXED ) );
-
-		// Needed when we switch back and forth between hardware + software lighting
-		if ( !pGroup->m_MeshNeedsRestore )
-			continue;
-
-		IMesh *pMesh = pGroup->m_pMesh;
-		VertexCompressionType_t compressionType = CompressionType( pMesh->GetVertexFormat() );
-		switch ( compressionType )
-		{
-		case VERTEX_COMPRESSION_ON:
-			R_StudioRestoreMesh<VERTEX_COMPRESSION_ON>( data.m_pMesh, pGroup );
-			break;
-		case VERTEX_COMPRESSION_NONE:
-		default:
-			R_StudioRestoreMesh<VERTEX_COMPRESSION_NONE>( data.m_pMesh, pGroup );
-			break;
-		}
-		pGroup->m_MeshNeedsRestore = false;
-	}
-#endif
 }
 
 //-----------------------------------------------------------------------------
 // Allocate temporary arrays either on the stack, or from the heap. 
 // Prevents using all the stack when *lots* of objects are rendered to CSM's.
 //-----------------------------------------------------------------------------
-#if defined( CSTRIKE15 ) // 7ls
 	#define STUDIORENDER_TEMP_DATA_MALLOC( typeName, p, n ) const int nTempDataSize##p = (n); void *pvFree##p = NULL; typeName *p = (typeName *) ( ( nTempDataSize##p < 64*1024 ) ? stackalloc( nTempDataSize##p ) : ( pvFree##p = malloc( nTempDataSize##p ) ) );
 	#define STUDIORENDER_TEMP_DATA_FREE( p ) free( pvFree##p )
-#else
-	#define STUDIORENDER_TEMP_DATA_MALLOC( typeName, p, n ) typeName *p = (typeName *) stackalloc(n);
-	#define STUDIORENDER_TEMP_DATA_FREE( p )
-#endif
 
 //-----------------------------------------------------------------------------
 // Draws meshes
@@ -2368,22 +2332,6 @@ void CStudioRender::DrawModelArrayStaticProp( const DrawModelInfo_t& info,
 		{
 			studiomeshgroup_t* pGroup = &pMeshData->m_pMeshGroup[j];
 			// Needed when we switch back and forth between hardware + software lighting
-#ifdef IS_WINDOWS_PC
-			if ( pGroup->m_MeshNeedsRestore )
-			{
-				VertexCompressionType_t compressionType = CompressionType( pGroup->m_pMesh->GetVertexFormat() );
-				switch ( compressionType )
-				{
-				case VERTEX_COMPRESSION_ON:
-					R_StudioRestoreMesh<VERTEX_COMPRESSION_ON>( pmesh, pGroup );
-				case VERTEX_COMPRESSION_NONE:
-				default:
-					R_StudioRestoreMesh<VERTEX_COMPRESSION_NONE>( pmesh, pGroup );
-					break;
-				}
-				pGroup->m_MeshNeedsRestore = false;
-			}
-#endif
 			IMesh *pMesh = pGroup->m_pMesh;
 			for ( int k = 0; k < nInstanceCount; k++ )
 			{

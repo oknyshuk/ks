@@ -59,10 +59,8 @@ public:
 	{
 		m_pch = pch;
 		m_pwch = NULL;
-#if !defined( WIN32 ) && !defined(_WIN32)
 		m_pucs2 = NULL;
 		m_bCreatedUCS2 = false;
-#endif
 		m_bCreatedUTF16 = false;
 	}
 
@@ -71,14 +69,11 @@ public:
 	{
 		m_pch = NULL;
 		m_pwch = pwch;
-#if !defined( WIN32 ) && !defined(_WIN32)
 		m_pucs2 = NULL;
 		m_bCreatedUCS2 = false;
-#endif
 		m_bCreatedUTF16 = true;
 	}
 
-#if !defined(WIN32) && !defined(_WINDOWS) && !defined(_WIN32)
 	explicit CStrAutoEncode( const ucs2 *pwch )
 	{
 		m_pch = NULL;
@@ -87,7 +82,6 @@ public:
 		m_bCreatedUCS2 = true;
 		m_bCreatedUTF16 = false;
 	}
-#endif
 
 	// returns the UTF-8 string, converting on the fly.
 	const char* ToString()
@@ -116,14 +110,12 @@ public:
 		return m_pwch;
 	}
 
-#if !defined( WIN32 ) && !defined(_WIN32)
 	// returns the UTF-16 string, converting on the fly.
 	const ucs2* ToUCS2String()
 	{
 		PopulateUCS2();
 		return m_pucs2;
 	}
-#endif
 
 	// returns the UTF-16 string - a writable pointer.
 	// only use this if you don't want to call const_cast
@@ -147,10 +139,8 @@ public:
 		{
 			delete [] m_pwch;
 		}
-#if !defined( WIN32 ) && !defined(_WIN32)
 		if ( !m_bCreatedUCS2 && m_pucs2 )
 			delete [] m_pucs2;
-#endif
 	}
 
 private:
@@ -220,7 +210,6 @@ private:
 		}
 	}
 
-#if !defined( WIN32 ) && !defined(_WIN32)
 	// ensure we have done any conversion work required to farm out a
 	// UTF-16 encoded string.
 	//
@@ -252,17 +241,14 @@ private:
 			delete [] pwchTemp;
 		}
 	}
-#endif
 
 	// one of these pointers is an owned pointer; whichever
 	// one is the encoding OTHER than the one we were initialized
 	// with is the pointer we've allocated and must free.
 	const char *m_pch;
 	const wchar_t *m_pwch;
-#if !defined( WIN32 ) && !defined(_WIN32)
 	const ucs2 *m_pucs2;
 	bool m_bCreatedUCS2;
-#endif
 	// "created as UTF-16", means our owned string is the UTF-8 string not the UTF-16 one.
 	bool m_bCreatedUTF16;
 

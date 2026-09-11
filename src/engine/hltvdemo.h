@@ -6,9 +6,6 @@
 
 #ifndef HLTVDEMO_H
 #define HLTVDEMO_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include <filesystem.h>
 

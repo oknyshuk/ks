@@ -7,9 +7,6 @@
 #ifndef SHADERCOMBOSEMANTICS_H
 #define SHADERCOMBOSEMANTICS_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 struct ShaderComboInformation_t
 {

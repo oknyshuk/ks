@@ -178,11 +178,7 @@ void InitParamsLightmapped_4WayBlend_DX9( CBaseVSShader *pShader, IMaterialVar**
 	}
 
 	// srgb read 360
-#if defined( CSTRIKE15 )
 	InitIntParam( info.m_nShaderSrgbRead360, params, 1 );
-#else
-	InitIntParam( info.m_nShaderSrgbRead360, params, 0 );
-#endif
 
 	InitFloatParam( info.m_nEnvMapLightScale, params, 0.0f );
 }
@@ -282,11 +278,7 @@ void DrawLightmapped_4WayBlend_DX9( CBaseVSShader *pShader, IMaterialVar** param
 	bool bSinglePassFlashlight = true;
 	bool hasFlashlight = pShader->UsingFlashlight( params );
 	CLightmapped_4WayBlend_DX9_Context *pContextData = reinterpret_cast< CLightmapped_4WayBlend_DX9_Context *> ( *pContextDataPtr );
-#if defined( CSTRIKE15 )
 	bool bShaderSrgbRead = false && r_shader_srgbread.GetBool();
-#else
-	bool bShaderSrgbRead = ( false && IS_PARAM_DEFINED( info.m_nShaderSrgbRead360 ) && params[info.m_nShaderSrgbRead360]->GetIntValue() );
-#endif
 	bool bHDR = g_pHardwareConfig->GetHDRType() != HDR_TYPE_NONE;
 	int nDetailBlendMode = GetIntParam( info.m_nDetailTextureCombineMode, params );
 

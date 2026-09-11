@@ -12,9 +12,6 @@
 //=============================================================================//
 #if !defined( SCREEN_H )
 #define SCREEN_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 void SCR_Init( void );
 void SCR_Shutdown( void );

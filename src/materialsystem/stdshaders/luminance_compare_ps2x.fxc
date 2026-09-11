@@ -21,9 +21,7 @@ float3 g_vComparisonMinMaxScale : register( c0 );
 struct PS_OUTPUT
 {
     float4 color : COLOR0;
-	#ifndef _X360
 	    float depth : DEPTH; // Workaround for ATI driver bug
-	#endif
 };
 
 PS_OUTPUT main( PS_INPUT i )
@@ -44,11 +42,9 @@ PS_OUTPUT main( PS_INPUT i )
 	PS_OUTPUT o;
 	o.color.a = step( g_flComparisonMin, flLuminance ) * step( flLuminance, g_flComparisonMax );
 	o.color.rgb = 1.0f;
-	#ifndef _X360
 	{
 		o.depth = 0.0f; // Workaround for ATI driver bug
 	}
-	#endif
 
 	return o;
 }

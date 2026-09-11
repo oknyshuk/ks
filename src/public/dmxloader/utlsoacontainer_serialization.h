@@ -7,9 +7,6 @@
 #ifndef UTLSOACONTAINER_SERIALIZATION_H
 #define UTLSOACONTAINER_SERIALIZATION_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 //-----------------------------------------------------------------------------
 // Forward declarations

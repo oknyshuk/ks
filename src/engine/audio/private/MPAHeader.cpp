@@ -4,9 +4,6 @@
 //
 //=============================================================================
 
-#if defined( WIN32)
-#include "winlite.h"
-#endif
 #include "tier0/platform.h"
 #include "MPAFile.h"
 

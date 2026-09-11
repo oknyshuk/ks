@@ -7,9 +7,6 @@
 
 #ifndef NETWORKSTRINGTABLEITEM_H
 #define NETWORKSTRINGTABLEITEM_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "utlsymbol.h"
 #include "utlvector.h"

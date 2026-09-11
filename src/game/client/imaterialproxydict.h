@@ -6,9 +6,6 @@
 
 #ifndef IMATERIALPROXYDICT_H
 #define IMATERIALPROXYDICT_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 class IMaterialProxy;
 

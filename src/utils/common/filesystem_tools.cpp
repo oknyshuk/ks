@@ -4,13 +4,7 @@
 //
 //===========================================================================//
 
-#if defined( _WIN32 )
-#include <windows.h>
-#include <direct.h>
-#include <io.h> // _chmod
-#else
 #include <unistd.h>
-#endif
 
 #include <stdio.h>
 #include <sys/stat.h>

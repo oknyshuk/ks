@@ -6,9 +6,6 @@
 
 #ifndef BASECLIENTSTATE_H
 #define BASECLIENTSTATE_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "inetmsghandler.h"
 #include "protocol.h"

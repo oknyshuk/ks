@@ -9,9 +9,6 @@
 #ifndef RESLISTGENERATOR_H
 #define RESLISTGENERATOR_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 class IResListGenerator
 {

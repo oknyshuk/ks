@@ -8,9 +8,6 @@
 //===========================================================================//
 #if !defined( IENGINE_H )
 #define IENGINE_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "interface.h"
 

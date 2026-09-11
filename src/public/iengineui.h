@@ -9,9 +9,6 @@
 #if !defined( IENGINEUI_H )
 #define IENGINEUI_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "interface.h"
 
@@ -34,13 +31,6 @@ public:
 
 #define VENGINE_UI_VERSION	"VEngineUI001"
 
-#if defined(_STATIC_LINKED) && defined(CLIENT_DLL)
-namespace Client
-{
 extern IEngineUI *engineui;
-}
-#else
-extern IEngineUI *engineui;
-#endif
 
 #endif // IENGINEUI_H

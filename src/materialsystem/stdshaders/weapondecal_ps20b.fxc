@@ -224,9 +224,6 @@ void PixelShaderDoAnisotropicSpecularLighting( const float3 worldPos, const floa
 float4_color_return_type main( PS_INPUT i ) : COLOR
 {
 
-#if defined( _X360 ) || defined( _PS3 )
-	float4 cOut = float4( 0.0f, 0.0f, 0.0f, 1.0f );
-#else
 
 	float4 cOut = tex2D( BaseSampler, i.vBaseUV_PatternUV.zw );
 	
@@ -530,6 +527,5 @@ float4_color_return_type main( PS_INPUT i ) : COLOR
 
 	#endif
 
-#endif
 	return FinalOutput( cOut, 0, PIXEL_FOG_TYPE_NONE, TONEMAP_SCALE_LINEAR );
 }

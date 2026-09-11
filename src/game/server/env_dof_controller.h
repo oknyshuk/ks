@@ -3,9 +3,6 @@
 #define ENV_DOF_CONTROLLER_H
 
 #include "reflect_annotations.h"
-#ifdef _WIN32
-#pragma once
-#endif
 
 struct DOFControlSettings_t
 {

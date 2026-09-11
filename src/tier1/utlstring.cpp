@@ -55,11 +55,7 @@ static size_t RemoveWhitespace(char *pszString)
 
 int V_vscprintf(const char *format, va_list params)
 {
-#ifdef _WIN32
-	return _vscprintf(format, params);
-#else
 	return vsnprintf(NULL, 0, format, params);
-#endif
 }
 
 //-----------------------------------------------------------------------------

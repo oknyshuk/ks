@@ -9,9 +9,6 @@
 #ifndef SHADOWMGR_H
 #define SHADOWMGR_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "engine/ishadowmgr.h"
 #include "mathlib/vmatrix.h"

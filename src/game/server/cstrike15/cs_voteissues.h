@@ -7,9 +7,6 @@
 #ifndef CS_VOTEISSUES_H
 #define CS_VOTEISSUES_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "vote_controller.h"
 

@@ -6,9 +6,6 @@
 
 #ifndef SHAREDVAR_H
 #define SHAREDVAR_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 
 #include "convar.h"
@@ -97,11 +94,7 @@ TEMPLATE_STATIC void SharedVar_MakeEmpty( Type *pValue, int iCount = 1 )
 	memset( pValue, 0, sizeof( Type ) * iCount );
 }
 
-#ifdef GNUC
 #define SELECTOR __attribute__((weak))
-#else
-#define SELECTOR
-#endif
 
 // EHANDLE Save/Restore specializations
 template<>

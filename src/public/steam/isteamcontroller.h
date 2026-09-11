@@ -6,9 +6,6 @@
 
 #ifndef ISTEAMCONTROLLER_H
 #define ISTEAMCONTROLLER_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "isteamclient.h"
 

@@ -10,9 +10,6 @@ struct PS_INPUT
 		float4 color					: TEXCOORD0;
 	#endif
 	
-	#if defined( _X360 )
-		float2 vScreenPos : VPOS;
-	#endif
 };
 
 float4_color_return_type main( PS_INPUT i ) : COLOR
@@ -25,11 +22,6 @@ float4_color_return_type main( PS_INPUT i ) : COLOR
 	{
 		float4_color_return_type vColor = i.color;
 		
-		#if ( defined( _X360 ) )
-		{
-			vColor.xyz += ScreenSpaceOrderedDither( i.vScreenPos );
-		}
-		#endif
 		
 		return vColor;
 	}

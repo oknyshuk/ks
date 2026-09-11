@@ -7,9 +7,6 @@
 
 #ifndef CLIENTALPHAPROPERTY_H
 #define CLIENTALPHAPROPERTY_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "iclientalphaproperty.h"
 

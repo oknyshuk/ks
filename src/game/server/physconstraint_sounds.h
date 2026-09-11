@@ -7,9 +7,6 @@
 
 #ifndef PHYSCONSTRAINT_SOUNDS_H
 #define PHYSCONSTRAINT_SOUNDS_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 
 #include <mathlib/ssemath.h>

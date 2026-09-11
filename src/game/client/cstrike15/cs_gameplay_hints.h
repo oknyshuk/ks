@@ -5,9 +5,6 @@
 //=============================================================================
 #if !defined CS_GAMEPLAY_HINTS_H_ 
 #define CS_GAMEPLAY_HINTS_H_ 
-#if defined( COMPILER_MSVC )
-#pragma once
-#endif
 
 struct CSGameplayHint_t;
 class CCSGameplayHints : public CAutoGameSystem

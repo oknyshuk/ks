@@ -6,9 +6,6 @@
 //=============================================================================//
 #ifndef CHECKSUM_H
 #define CHECKSUM_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "checksum_crc.h"
 #include "checksum_md5.h"

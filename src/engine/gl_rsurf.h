@@ -10,9 +10,6 @@
 #ifndef GL_RSURF_H
 #define GL_RSURF_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "mathlib/vector.h"
 #include "bsptreedata.h"

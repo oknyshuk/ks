@@ -5,9 +5,6 @@
 // $NoKeywords: $
 //=============================================================================//
 
-#if defined(_WIN32)
-#include <windows.h>
-#endif
 #include "tier0/platform.h"
 #include "dt_instrumentation.h"
 #include "utlvector.h"
@@ -68,23 +65,6 @@ CUtlLinkedList<CDTIRecvTable*, int> g_DTIRecvTables;
 void DTI_Init()
 {
 
-#if ( defined( IS_WINDOWS_PC ) && (! defined( DEDICATED ) ) )
-	extern IVEngineClient *engineClient;
-	if ( CommandLine()->FindParm( "-dti" ) && !g_bDTIEnabled )
-	{
-		g_bDTIEnabled = true;
-
-		struct tm systemTime;
-		Plat_GetLocalTime( &systemTime );
-
-		char dtiFileName[MAX_PATH];
-		V_snprintf( dtiFileName, ARRAYSIZE( dtiFileName ), "dti_client_%s_%02d%02d%02d-%02d%02d%02d.csv", 
-					engineClient->GetLevelNameShort(),
-					(systemTime.tm_year + 1900) % 100, systemTime.tm_mon, systemTime.tm_wday,
-					systemTime.tm_hour, systemTime.tm_min, systemTime.tm_sec );
-		g_pDTIFilename = COM_StringCopy( dtiFileName );
-	}
-#endif
 }
 
 

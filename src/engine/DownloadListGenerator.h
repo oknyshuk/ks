@@ -6,9 +6,6 @@
 
 #ifndef DOWNLOADLISTGENERATOR_H
 #define DOWNLOADLISTGENERATOR_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "filesystem.h"
 #include "utlvector.h"

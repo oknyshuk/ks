@@ -12,9 +12,6 @@
 //=============================================================================//
 #if !defined( HOST_CMD_H )
 #define HOST_CMD_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "savegame_version.h"
 #include "convar.h"

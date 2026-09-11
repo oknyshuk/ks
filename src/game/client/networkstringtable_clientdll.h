@@ -7,9 +7,6 @@
 
 #ifndef NETWORKSTRINGTABLE_CLIENTDLL_H
 #define NETWORKSTRINGTABLE_CLIENTDLL_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "networkstringtabledefs.h"
 

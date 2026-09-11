@@ -54,37 +54,8 @@ char * BufPrintf(char *buf, int& len, PRINTF_FORMAT_STRING const char *fmt, ...)
 	return buf + strlen(buf);
 }
 
-#ifdef _WIN32
-//--------------------------------------------------------------------------------------------------------------
-wchar_t * BufWPrintf(wchar_t *buf, int& len, PRINTF_FORMAT_STRING const wchar_t *fmt, ...)
-{
-	if (len <= 0)
-		return NULL;
-
-	va_list argptr;
-
-	va_start(argptr, fmt);
-	_vsnwprintf(buf, len, fmt, argptr);
-	va_end(argptr);
-	// Make sure the buffer is null-terminated.
-	buf[ len - 1 ] = 0;
-
-	len -= wcslen(buf);
-	return buf + wcslen(buf);
-}
-#endif
 
 //--------------------------------------------------------------------------------------------------------------
-#ifdef _WIN32
-const wchar_t * NumAsWString( int val )
-{
-	const int BufLen = 16;
-	static wchar_t buf[BufLen];
-	int len = BufLen;
-	BufWPrintf( buf, len, L"%d", val );
-	return buf;
-}
-#endif
 // dgoodenough - PS3 needs this guy as well.
 // PS3_BUILDFIX
 //--------------------------------------------------------------------------------------------------------------

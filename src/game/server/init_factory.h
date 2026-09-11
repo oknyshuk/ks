@@ -7,9 +7,6 @@
 
 #ifndef INIT_FACTORY_H
 #define INIT_FACTORY_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 
 #include "interface.h"

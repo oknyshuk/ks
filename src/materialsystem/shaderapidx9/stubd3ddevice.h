@@ -7,9 +7,6 @@
 
 #ifndef STUBD3DDEVICE_H
 #define STUBD3DDEVICE_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #ifdef STUBD3D
 

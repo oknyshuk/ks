@@ -10,9 +10,6 @@
 #include "simtimer.h"
 #include "ai_component.h"
 
-#if defined( _WIN32 )
-#pragma once
-#endif
 
 //-----------------------------------------------------------------------------
 //

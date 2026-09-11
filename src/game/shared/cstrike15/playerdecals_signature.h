@@ -6,9 +6,6 @@
 
 #ifndef PLAYERDECALS_SIGNATURE_H
 #define PLAYERDECALS_SIGNATURE_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 //
 // We will be using RSA 1024-bit private signing key

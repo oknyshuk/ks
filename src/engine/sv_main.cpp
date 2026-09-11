@@ -750,11 +750,7 @@ void CGameServer::InitMaxClients( void )
     m_nMaxClientsLimit = maxmaxplayers;
 
     // Check for command line override
-#if defined( CSTRIKE15 )
     int newmaxplayers = -HLTV_SERVER_MAX_COUNT; // CStrike doesn't allow command line override for maxplayers
-#else
-	int newmaxplayers = CommandLine()->ParmValue( "-maxplayers", -1 );
-#endif
 
 	for ( int nHltvServerIndex = 0; nHltvServerIndex < HLTV_SERVER_MAX_COUNT; ++nHltvServerIndex )
 	{
@@ -798,10 +794,8 @@ void CGameServer::InitMaxClients( void )
 //-----------------------------------------------------------------------------
 CON_COMMAND( maxplayers, "Change the maximum number of players allowed on this server." )
 {
-#if defined( CSTRIKE15 )
 	ConMsg( "Maxplayers is deprecated, set it in gamemodes_server.txt.example or use -maxplayers_override instead.\n");
 	return;
-#endif
 
     if ( args.ArgC () != 2 )
     {
@@ -2688,9 +2682,6 @@ void CGameServer::ExecGameTypeCfg( const char *mapname )
     if ( numSlots >= 0 )
     {
         m_numGameSlots = numSlots;
-#ifdef PORTAL2	// HACK: PORTAL2 uses maxclients instead of GAMERULES
-        SetMaxClients( numSlots );
-#endif
     }
 }
 
@@ -3049,11 +3040,7 @@ bool CGameServer::SpawnServer( char *mapname, char * mapGroupName, char *startsp
         event->SetString( "mapname", GetMapName() );
         event->SetInt(    "maxplayers", GetMaxClients() );
         event->SetInt(	  "password", 0 );				// TODO
-#if defined( _WIN32 )
-        event->SetString( "os", "WIN32" );
-#else
         event->SetString( "os", "LINUX" );
-#endif
         event->SetInt( "dedicated", IsDedicated() ? 1 : 0 );
 
         g_GameEventManager.FireEvent( event );
@@ -3305,10 +3292,6 @@ void SV_SetSteamCrashComment( void )
 
 		char osversion[ 256 ];
 		osversion[ 0 ] = 0;
-#if defined(WIN32)
-		extern void DisplaySystemVersion( char *osversion, int maxlen );
-		DisplaySystemVersion( osversion, sizeof( osversion ) );
-#endif
 
 		struct tm newtime;
 		char tString[ 128 ];

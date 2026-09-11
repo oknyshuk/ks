@@ -6,9 +6,6 @@ const float g_AlphaThreshold : register( c0 );
 
 struct PS_INPUT
 {
-#ifdef _PS3
-	float unused; // empty structures not supported on Cg??
-#endif // _PS3
 #if ALPHACLIP
 	float2 texCoord0	:	TEXCOORD0;
 #endif

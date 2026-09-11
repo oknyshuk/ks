@@ -9,9 +9,6 @@
 #ifndef IGAME_H
 #define IGAME_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 class IGame
 {

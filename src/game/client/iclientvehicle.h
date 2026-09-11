@@ -7,9 +7,6 @@
 #ifndef ICLIENTVEHICLE_H
 #define ICLIENTVEHICLE_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "IVehicle.h"
 
@@ -46,13 +43,6 @@ public:
 	// Allows vehicles to choose their own curves for players using joysticks
 	virtual int GetJoystickResponseCurve() const = 0;
 
-#ifdef HL2_CLIENT_DLL
-	// Ammo in the vehicles
-	virtual int GetPrimaryAmmoType() const = 0;
-	virtual int GetPrimaryAmmoClip() const = 0;
-	virtual bool PrimaryAmmoUsesClips() const = 0;
-	virtual int GetPrimaryAmmoCount() const = 0;
-#endif
 };
 
 

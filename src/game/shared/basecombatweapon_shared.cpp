@@ -558,9 +558,6 @@ CBaseCombatWeapon::CBaseCombatWeapon()
 
 	m_hWeaponFileInfo = GetInvalidWeaponInfoHandle();
 
-#if defined( TF_DLL )
-	UseClientSideAnimation();
-#endif
 
 	m_WeaponModelClassification = WEAPON_MODEL_IS_UNCLASSIFIED;
 }
@@ -3086,8 +3083,6 @@ REGISTER_SEND_PROXY_NON_MODIFIED_POINTER( SendProxy_SendNonLocalWeaponDataTable 
 //-----------------------------------------------------------------------------
 IMPLEMENT_REFLECT_TABLE_IN( CBaseCombatWeapon, DT_LocalActiveWeaponData );
 #if !defined( CLIENT_DLL )
-#if defined( TF_DLL )
-#endif
 #else
 #endif
 //-----------------------------------------------------------------------------
@@ -3095,8 +3090,6 @@ IMPLEMENT_REFLECT_TABLE_IN( CBaseCombatWeapon, DT_LocalActiveWeaponData );
 //-----------------------------------------------------------------------------
 IMPLEMENT_REFLECT_TABLE_IN( CBaseCombatWeapon, DT_LocalWeaponData );
 #if !defined( CLIENT_DLL )
-#if defined( TF_DLL )
-#endif
 #else
 #endif
 #if defined( CLIENT_DLL )

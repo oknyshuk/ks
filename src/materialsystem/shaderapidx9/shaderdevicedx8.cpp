@@ -278,7 +278,6 @@ void CShaderDeviceMgrDx8::CheckVendorDependentShadowMappingSupport( HardwareCaps
 		pCaps->m_NullTextureFormat = IMAGE_FORMAT_RGB565;
 	}
 
-#if   defined ( DX_TO_VK_ABSTRACTION )
 	pCaps->m_ShadowDepthTextureFormat = IMAGE_FORMAT_D16_SHADOW;
 	pCaps->m_bSupportsShadowDepthTextures = true;
 	pCaps->m_bSupportsFetch4 = false;
@@ -289,7 +288,6 @@ void CShaderDeviceMgrDx8::CheckVendorDependentShadowMappingSupport( HardwareCaps
 		pCaps->m_HighPrecisionShadowDepthTextureFormat = IMAGE_FORMAT_D24X8_SHADOW;
 	}
 	return;
-#endif
 
 	{
 		bool bToolsMode = false;
@@ -426,13 +424,11 @@ void CShaderDeviceMgrDx8::CheckVendorDependentAlphaToCoverage( HardwareCaps_t *p
 	pCaps->m_bSupportsAlphaToCoverage = false;
 
 	// Bail out on OpenGL
-#if   defined( DX_TO_VK_ABSTRACTION )
 	pCaps->m_bSupportsAlphaToCoverage	 = true;
 	pCaps->m_AlphaToCoverageEnableValue	 = TRUE;
 	pCaps->m_AlphaToCoverageDisableValue = FALSE;
 	pCaps->m_AlphaToCoverageState		 = D3DRS_ADAPTIVETESS_Y;
 	return;
-#endif
 
 
 	if ( pCaps->m_VendorID == VENDORID_NVIDIA )
@@ -491,11 +487,9 @@ void CShaderDeviceMgrDx8::CheckVendorDependentAlphaToCoverage( HardwareCaps_t *p
 void CShaderDeviceMgrDx8::CheckVendorDependentDepthResolveSupport( HardwareCaps_t *pCaps, int nAdapter )
 {
 	// Bail out on OpenGL
-#if   defined( DX_TO_VK_ABSTRACTION )
 	pCaps->m_bSupportsRESZ = false;
 	pCaps->m_bSupportsINTZ = false;
 	return;
-#endif
 
 	HRESULT hr;
 	hr = m_pD3D->CheckDeviceFormat( nAdapter, DX8_DEVTYPE, D3DFMT_X8R8G8B8,//D3DFMT_D24S8,
@@ -513,13 +507,8 @@ void CShaderDeviceMgrDx8::CheckVendorDependentDepthResolveSupport( HardwareCaps_
 
 extern ConVar mat_hdr_level;
 
-#if   defined( DX_TO_GL_ABSTRACTION ) || defined( DX_TO_VK_ABSTRACTION )
 #define SHADOWMAP_SLOPESCALEDEPTHBIAS	"8"
 #define SHADOWMAP_DEPTHBIAS				"20"
-#else
-#define SHADOWMAP_SLOPESCALEDEPTHBIAS	"3"
-#define SHADOWMAP_DEPTHBIAS				".000025"
-#endif
 
 ConVar mat_slopescaledepthbias_shadowmap( "mat_slopescaledepthbias_shadowmap", SHADOWMAP_SLOPESCALEDEPTHBIAS, FCVAR_MATERIAL_SYSTEM_THREAD | FCVAR_NONE );
 ConVar mat_depthbias_shadowmap(	"mat_depthbias_shadowmap", SHADOWMAP_DEPTHBIAS, FCVAR_MATERIAL_SYSTEM_THREAD | FCVAR_NONE );
@@ -1050,14 +1039,6 @@ void CShaderDeviceMgrDx8::ComputeDXSupportLevel( HardwareCaps_t &caps )
 	// we require in order to be considered a DX7 board, DX8 board, etc.
 
 		
-#if !defined( CSTRIKE15 )
-	if ( caps.m_bDX10Card ) // Note that we don't tie vertex textures to 30 shaders anymore
-	{
-		caps.m_nMinDXSupportLevel = 92;
-		caps.m_nMaxDXSupportLevel = 100;
-		return;
-	}
-#endif
 
 	if ( caps.m_SupportsShaderModel_3_0 ) // Note that we don't tie vertex textures to 30 shaders anymore
 	{
@@ -1219,7 +1200,6 @@ void CShaderDeviceMgrDx8::GetCurrentModeInfo( ShaderDisplayMode_t* pInfo, int nA
 
 	HRESULT hr;
 	D3DDISPLAYMODE mode;
-#if   defined( LINUX ) && defined( USE_SDL )
 	// On Linux, query SDL for actual window size rather than relying on D3D adapter.
 	// With DXVK and Wayland's FULLSCREEN_DESKTOP, the D3D adapter mode may not match
 	// the actual window/display resolution.
@@ -1246,10 +1226,6 @@ void CShaderDeviceMgrDx8::GetCurrentModeInfo( ShaderDisplayMode_t* pInfo, int nA
 		hr = D3D()->GetAdapterDisplayMode( nAdapter, &mode );
 		Assert( !FAILED(hr) );
 	}
-#else
-	hr = D3D()->GetAdapterDisplayMode( nAdapter, &mode );
-	Assert( !FAILED(hr) );	
-#endif
 
 	pInfo->m_nWidth = mode.Width;
 	pInfo->m_nHeight = mode.Height;
@@ -1350,12 +1326,7 @@ bool CShaderDeviceMgrDx8::ValidateMode( int nAdapter, const ShaderDeviceInfo_t &
 //-----------------------------------------------------------------------------
 int CShaderDeviceMgrDx8::GetVidMemBytes( int nAdapter ) const
 {
-#if   defined (DX_TO_VK_ABSTRACTION)
 	return 1024*1024*1024;
-#else
-	// FIXME: This currently ignores the adapter
-	return ::GetVidMemBytes();
-#endif
 }
 
 
@@ -1555,7 +1526,6 @@ void CShaderDeviceDx8::SetPresentParameters( void* hWnd, int nAdapter, const Sha
 	HRESULT hr;
 	ZeroMemory( &m_PresentParameters, sizeof( m_PresentParameters ) );
 
-#if defined( DX_TO_VK_ABSTRACTION )
 	// Fullscreen is managed by SDL (sdlmgr) — always tell D3D9 we're windowed so
 	// DXVK's WSI layer doesn't call enterFullscreenMode, which double-triggers
 	// fullscreen and causes Wayland compositors to bounce the window between monitors.
@@ -1563,10 +1533,6 @@ void CShaderDeviceDx8::SetPresentParameters( void* hWnd, int nAdapter, const Sha
 	// DXVK: Force COPY to preserve backbuffer content between frames.
 	// DISCARD with Vulkan swapchain rotation causes stale content (dirty rectangles bug).
 	m_PresentParameters.SwapEffect = D3DSWAPEFFECT_COPY;
-#else
-	m_PresentParameters.Windowed = info.m_bWindowed;
-	m_PresentParameters.SwapEffect = info.m_bUsingMultipleWindows ? D3DSWAPEFFECT_COPY : D3DSWAPEFFECT_DISCARD;
-#endif
 
 	// for 360, we want to create it ourselves for hierarchical z support
 	m_PresentParameters.EnableAutoDepthStencil = false ? FALSE : TRUE; 
@@ -2020,11 +1986,9 @@ IDirect3DDevice9* CShaderDeviceDx8::InvokeCreateDevice( void* hWnd, int nAdapter
 	if ( !FAILED( hr ) && pD3DDevice )
 	{
 		g_pShaderDeviceMgrBase->InvokeDeviceResetNotifications( pD3DDevice, &m_PresentParameters, hWnd );
-#ifdef DX_TO_VK_ABSTRACTION
 		// DXVK: flush backbuffer init commands before heavy resource allocation begins.
 		// Without this sync point, vertex explosions occur during map loading.
 		pD3DDevice->Present( NULL, NULL, NULL, NULL );
-#endif
 	}
 	else
 	{
@@ -2078,36 +2042,23 @@ bool CShaderDeviceDx8::CreateD3DDevice( void* pHWnd, int nAdapter, const ShaderD
 	SendIPCMessage( RELEASE_MESSAGE );
 
 	// Create a stereo texture updater so the nvidia dll's can init. Must be BEFORE device creation!
-	#if !defined(DX_TO_GL_ABSTRACTION) && ( IS_WINDOWS_PC )
-	nv::stereo::HL2StereoD3D9 *pStereoD3D9 = new nv::stereo::HL2StereoD3D9;
-	#endif
 
 	// Creates the device
 	IDirect3DDevice9 *pD3DDevice = InvokeCreateDevice( pHWnd, nAdapter, deviceCreationFlags );
 	if ( !pD3DDevice )
 	{
- #if !defined(DX_TO_GL_ABSTRACTION) && ( IS_WINDOWS_PC )
-		delete pStereoD3D9;
-		#endif
 		return false;
 	}
 
 	DetectQuerySupport( pD3DDevice );			// Check to see if query is supported
 
 	// This must happen AFTER device creation
-	#if !defined(DX_TO_GL_ABSTRACTION) && ( IS_WINDOWS_PC )
-	pStereoD3D9->Init( pD3DDevice );
-	#endif
 
 #ifdef STUBD3D
 	Dx9Device() = new CStubD3DDevice( pD3DDevice, g_pFullFileSystem );
 #else
 	Dx9Device()->SetDevicePtr( pD3DDevice, &m_PresentParameters, pHWnd );
 
-	#if !defined(DX_TO_GL_ABSTRACTION) && ( IS_WINDOWS_PC )
-		// Give pointer to d3d_async layer (it will free the memory later)
-		Dx9Device()->SetStereoTextureUpdater( pStereoD3D9 );
-	#endif
 #endif
 
 
@@ -2334,10 +2285,8 @@ bool CShaderDeviceDx8::TryDeviceReset()
 	if ( bResetSuccess )
 	{
 		m_bResourcesReleased = false;
-#ifdef DX_TO_VK_ABSTRACTION
 		// DXVK: flush backbuffer init commands (see InvokeCreateDevice)
 		Dx9Device()->Present( NULL, NULL, NULL, NULL );
-#endif
 		Dx9Device()->ReportDeviceReset();
 	}
 
@@ -2519,11 +2468,7 @@ void CShaderDeviceDx8::CheckDeviceLost( bool bOtherAppInitializing )
 	// but that seems to only make sense if we have resizable windows where 
 	// we do *not* allocate buffers as large as the entire current video mode
 	// which we're not doing
-#ifdef _WIN32
-	m_bIsMinimized = ( static_cast<BOOL>(IsIconic( ( HWND )m_hWnd )) == (BOOL)TRUE );
-#else
 	m_bIsMinimized = ( IsIconic( (VD3DHWND)m_hWnd ) == TRUE );
-#endif
 	m_bOtherAppInitializing = bOtherAppInitializing;
 
 	RECORD_COMMAND( DX8_TEST_COOPERATIVE_LEVEL, 0 );
@@ -2888,11 +2833,7 @@ void CShaderDeviceDx8::Present()
 	}
 
 	// If we're not iconified, try to present (without this check, we can flicker when Alt-Tabbed away)
-#ifdef _WIN32
-	if ( ( IsIconic( ( HWND )m_hWnd ) == 0 && bValidPresent ) )
-#else
 	if ( ( IsIconic( (VD3DHWND)m_hWnd ) == 0 && bValidPresent ) )
-#endif
 	{
 		if ( ( m_IsResizing || ( m_ViewHWnd != (VD3DHWND)m_hWnd ) ) )
 		{
@@ -2946,7 +2887,6 @@ void CShaderDeviceDx8::Present()
 
 	if ( !IsDeactivated() )
 	{
-#if defined( DX_TO_VK_ABSTRACTION )
 		// DXVK: Clear backbuffer at frame start to prevent stale content from
 		// Vulkan swapchain rotation showing through (dirty rectangles bug).
 		// Similar to X360's EDRAM behavior where content doesn't persist after Present.
@@ -2961,12 +2901,6 @@ void CShaderDeviceDx8::Present()
 		// may see minor impact. D3DSWAPEFFECT_COPY alone doesn't suffice because DXVK's
 		// Vulkan swapchain still rotates images underneath.
 		g_pShaderAPIBase->ClearBuffers( true, true, true, -1, -1 );
-#else
-		if ( ( ShaderUtil()->GetConfig().bMeasureFillRate || ShaderUtil()->GetConfig().bVisualizeFillRate ) )
-		{
-			g_pShaderAPIBase->ClearBuffers( true, true, true, -1, -1 );
-		}
-#endif
 
 		Dx9Device()->BeginScene();
 	}
@@ -2982,13 +2916,8 @@ void CShaderDeviceDx8::Present()
 //    used to seeing.
 // TV's generally have a 2.5 gamma, so we need to convert our 2.2 frame buffer into a 2.5 frame buffer for display on a TV
 
-#if defined( CSTRIKE15 )
 ConVar mat_monitorgamma_pwl2srgb( "mat_monitorgamma_pwl2srgb", "0", FCVAR_MATERIAL_SYSTEM_THREAD );
 ConVar mat_monitorgamma_vganonpwlgamma( "mat_monitorgamma_vganonpwlgamma", "2.2", FCVAR_MATERIAL_SYSTEM_THREAD );
-#else
-ConVar mat_monitorgamma_pwl2srgb( "mat_monitorgamma_pwl2srgb", "1", FCVAR_MATERIAL_SYSTEM_THREAD );
-ConVar mat_monitorgamma_vganonpwlgamma( "mat_monitorgamma_vganonpwlgamma", "2.11", FCVAR_MATERIAL_SYSTEM_THREAD );
-#endif
 ConVar mat_monitorgamma_force_480_full_tv_range( "mat_monitorgamma_force_480_full_tv_range", "1", FCVAR_MATERIAL_SYSTEM_THREAD );
 
 void CShaderDeviceDx8::SetHardwareGammaRamp( float fGamma, float fGammaTVRangeMin, float fGammaTVRangeMax, float fGammaTVExponent, bool bTVEnabled )
@@ -3030,8 +2959,6 @@ void CShaderDeviceDx8::SetHardwareGammaRamp( float fGamma, float fGammaTVRangeMi
 			flCorrection = ( flCorrection * ( fGammaTVRangeMax - fGammaTVRangeMin ) / 255.0f ) + ( fGammaTVRangeMin / 255.0f );
 			flCorrection = clamp( flCorrection, 0.0f, 1.0f );
 		}
-#if !defined( CSTRIKE15 )
-#endif
 
 		// Generate final int value
 		unsigned int val = ( int )( flCorrection * 65535.0f );

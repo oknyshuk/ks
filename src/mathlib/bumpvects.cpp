@@ -11,7 +11,6 @@
 // $NoKeywords: $
 //=============================================================================//
 
-#if !defined(_STATIC_LINKED) || defined(_SHARED_LIB)
 
 
 #ifdef QUIVER
@@ -66,4 +65,3 @@ void GetBumpNormals( const Vector& sVect, const Vector& tVect, const Vector& fla
 	}
 }
 
-#endif // !_STATIC_LINKED || _SHARED_LIB

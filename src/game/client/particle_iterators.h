@@ -7,9 +7,6 @@
 
 #ifndef PARTICLE_ITERATORS_H
 #define PARTICLE_ITERATORS_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 
 #include "materialsystem/imesh.h"

@@ -7,9 +7,6 @@
 
 #ifndef RESPONSE_TYPES_INTERNAL_H
 #define RESPONSE_TYPES_INTERNAL_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "responserules/response_types.h"
 #include "utldict.h"

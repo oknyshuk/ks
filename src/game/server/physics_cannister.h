@@ -8,9 +8,6 @@
 #define PHYSICS_CANNISTER_H
 
 #include "reflect_annotations.h"
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "player_pickup.h"
 

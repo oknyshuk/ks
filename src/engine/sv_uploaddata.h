@@ -6,9 +6,6 @@
 
 #ifndef SV_UPLOADDATA_H
 #define SV_UPLOADDATA_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 
 class KeyValues;

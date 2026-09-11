@@ -7,9 +7,6 @@
 
 #ifndef CL_DEMOACTION_H
 #define CL_DEMOACTION_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 // Forward declarations
 #include <keyvalues.h>

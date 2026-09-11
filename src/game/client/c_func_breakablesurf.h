@@ -9,9 +9,6 @@
 #define C_FUNC_BREAKABLESURF_H
 
 #include "reflect_annotations.h"
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "iviewrender.h"
 #include "proxyentity.h"

@@ -8,9 +8,6 @@
 #define PARTICLE_SYSTEM_H
 
 #include "reflect_annotations.h"
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "cbase.h"
 #include "networkstringtable_gamedll.h"

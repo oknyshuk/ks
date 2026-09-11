@@ -5,9 +5,6 @@
 // $NoKeywords: $
 //===========================================================================//
 
-#if defined( WIN32 )
-#include <windows.h>
-#endif
 #include "tier0/platform.h"
 #include "iregistry.h"
 #include "tier0/dbg.h"
@@ -44,9 +41,6 @@ public:
 
 private:
 	bool			m_bValid;
-#ifdef WIN32
-	HKEY			m_hKey;
-#endif
 };
 
 // Creates it and calls Init

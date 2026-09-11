@@ -11,9 +11,6 @@
 #include "ai_navtype.h"
 #include "ai_movetypes.h"
 
-#if defined( _WIN32 )
-#pragma once
-#endif
 
 //-----------------------------------------------------------------------------
 // Purpose: Set of basic tools for probing box movements through space.

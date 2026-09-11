@@ -4,15 +4,10 @@
 //
 //===========================================================================//
 
-#if defined( WIN32 )
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
-#else
 #include <sys/mman.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-#endif
 
 #include "cbase.h"
 #include "shareddefs.h"
@@ -26,13 +21,8 @@ const char *COM_GetModDirectory(); // return the mod dir (rather than the comple
 
 struct MumbleSharedMemory_t
 {
-#ifdef WIN32
-	uint32	uiVersion;
-	ulong	uiTick;
-#else
 	uint32_t uiVersion;
 	uint32_t uiTick;
-#endif
 	float	fAvatarPosition[3];
 	float	fAvatarFront[3];
 	float	fAvatarTop[3];
@@ -41,19 +31,12 @@ struct MumbleSharedMemory_t
 	float	fCameraFront[3];
 	float	fCameraTop[3];
 	wchar_t	identity[256];
-#ifdef WIN32
-	uint32	context_len;
-#else
 	uint32_t context_len;
-#endif
 	unsigned char context[256];
 	wchar_t description[2048];
 };
 
 MumbleSharedMemory_t *g_pMumbleMemory = NULL;
-#ifdef WIN32
-HANDLE g_hMapObject = NULL;
-#endif
 
 ConVar sv_mumble_positionalaudio( "sv_mumble_positionalaudio", "1", FCVAR_REPLICATED, "Allows players using Mumble to have support for positional audio." );
 
@@ -84,19 +67,6 @@ void CMumbleSystem::LevelInitPostEntity()
 	if ( g_pMumbleMemory )
 		return;
 
-#if defined( WIN32 )
-	g_hMapObject = OpenFileMappingW( FILE_MAP_ALL_ACCESS, FALSE, L"MumbleLink" );
-	if ( g_hMapObject == NULL )
-		return;
-
-	g_pMumbleMemory = (MumbleSharedMemory_t *) MapViewOfFile( g_hMapObject, FILE_MAP_ALL_ACCESS, 0, 0, sizeof(MumbleSharedMemory_t) );
-	if ( g_pMumbleMemory == NULL )
-	{
-		CloseHandle( g_hMapObject );
-		g_hMapObject = NULL;
-		return;
-	}
-#else
 	char memname[256];
 	V_sprintf_safe( memname, "/MumbleLink.%d", getuid() );
 
@@ -114,25 +84,15 @@ void CMumbleSystem::LevelInitPostEntity()
 		g_pMumbleMemory = NULL;
 		return;
 	}
-#endif
 }
 
 void CMumbleSystem::LevelShutdownPreEntity()
 {
-#if defined( WIN32 )
-	if ( g_hMapObject )
-	{
-		CloseHandle( g_hMapObject );
-		g_pMumbleMemory = NULL;
-		g_hMapObject = NULL;
-	}
-#else
 	if ( g_pMumbleMemory )
 	{
 		munmap( g_pMumbleMemory, sizeof(struct MumbleSharedMemory_t) );
 		g_pMumbleMemory = NULL;
 	}
-#endif
 }
 
 void VectorToMumbleFloatArray( const Vector &vec, float *rgfl )

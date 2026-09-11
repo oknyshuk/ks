@@ -69,12 +69,6 @@ float4 main( PS_INPUT i ) : COLOR
 	cB = tex2D( cBTextureSampler, i.baseTexCoord.xy ).x;
 //	half a = tex2D( ATextureSampler, i.baseTexCoord.xy );
 
-	#if defined( _X360 )
-	{
-		// Reduce the black level of videos on X360 - this is a workaround for our highly tweaked gamma ramp, which was optimized for 3D content and non-PWL textures.
-		y = saturate( y - 6.0f / 255.0f );
-	}
-	#endif
 	
 	float4 c;
 	c = float4( y, cR, cB, 1.0f );

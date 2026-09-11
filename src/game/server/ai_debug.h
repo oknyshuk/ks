@@ -11,9 +11,6 @@
 #include "fmtstr.h"
 #include "ai_debug_shared.h"
 
-#if defined( _WIN32 )
-#pragma once
-#endif
 
 // This dumps a summary result on exit
 //#define PROFILE_AI 1

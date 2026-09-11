@@ -9,9 +9,6 @@
 #define PHYSOBJ_H
 
 #include "reflect_annotations.h"
-#ifdef _WIN32
-#pragma once
-#endif
 
 #ifndef PHYSICS_H
 #include "physics.h"

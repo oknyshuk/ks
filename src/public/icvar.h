@@ -6,9 +6,6 @@
 
 #ifndef ICVAR_H
 #define ICVAR_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "appframework/iappsystem.h"
 #include "tier1/iconvar.h"

@@ -8,9 +8,6 @@
 #define C_CS_PLAYER_H
 
 #include "reflect_annotations.h"
-#ifdef _WIN32
-#pragma once
-#endif
 
 
 #include "cs_playeranimstate.h"

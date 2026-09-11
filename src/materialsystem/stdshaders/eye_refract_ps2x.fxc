@@ -318,9 +318,7 @@ float4_color_return_type main( PS_INPUT i ) : COLOR
 						         g_vSmoothOneOverWidth, g_vShearRound.xy, g_aAbB, g_vShearRound.zw );
 #endif
 
-#if !defined( _X360 )
 		cFlashlightCookieColor *= vFlashlightTexCoord.www > float3(0,0,0);	// Catch back projection (PC-only)
-#endif
 
 		// Shadow depth map
 #if FLASHLIGHTSHADOWS && !defined( SHADER_MODEL_PS_2_0 )

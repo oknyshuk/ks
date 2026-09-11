@@ -494,30 +494,6 @@ MAX_RELEASE_CHECK_RATE   default: 255 unless not HAVE_MMAP
 #define ABORT do { DebuggerBreakIfDebugging(); *(volatile int*)0xb = 0; } while (0)
 //-----------------------------------------------------------------------------
 
-#ifndef WIN32
-#ifdef _WIN32
-#define WIN32 1
-#endif  /* _WIN32 */
-#endif  /* WIN32 */
-#ifdef WIN32
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
-#define HAVE_MMAP 1
-#define HAVE_MORECORE 0
-#define LACKS_UNISTD_H
-#define LACKS_SYS_PARAM_H
-#define LACKS_SYS_MMAN_H
-#define LACKS_STRING_H
-#define LACKS_STRINGS_H
-#define LACKS_SYS_TYPES_H
-#define LACKS_ERRNO_H
-#define MALLOC_FAILURE_ACTION
-#ifdef _WIN32_WCE /* WINCE reportedly does not clear */
-#define MMAP_CLEARS 0
-#else
-#define MMAP_CLEARS 1
-#endif /* _WIN32_WCE */
-#endif  /* WIN32 */
 
 #if defined(DARWIN) || defined(_DARWIN)
 /* Mac OSX docs advise not to use sbrk; it seems better to use mmap */
@@ -715,15 +691,11 @@ struct mallinfo {
 #ifndef FORCEINLINE
   #if defined(__GNUC__)
 #define FORCEINLINE __inline __attribute__ ((always_inline))
-  #elif defined(_MSC_VER)
-    #define FORCEINLINE __forceinline
   #endif
 #endif
 #ifndef NOINLINE
   #if defined(__GNUC__)
     #define NOINLINE __attribute__ ((noinline))
-  #elif defined(_MSC_VER)
-    #define NOINLINE __declspec(noinline)
   #else
     #define NOINLINE
   #endif
@@ -1248,9 +1220,6 @@ void *determine_mspace(void *mem);
 
 /*------------------------------ internal #includes ---------------------- */
 
-#ifdef WIN32
-#pragma warning( disable : 4146 ) /* no "unsigned" warnings */
-#endif /* WIN32 */
 
 #include <stdio.h>       /* for printing in malloc_stats */
 
@@ -1302,39 +1271,14 @@ extern void*     sbrk(ptrdiff_t);
 
 /* Declarations for locking */
 #if USE_LOCKS
-#ifndef WIN32
 #include <pthread.h>
 #if defined (__SVR4) && defined (__sun)  /* solaris */
 #include <thread.h>
 #endif /* solaris */
-#else
-#pragma intrinsic (_InterlockedCompareExchange)
-#pragma intrinsic (_InterlockedExchange)
-#define interlockedcompareexchange _InterlockedCompareExchange
-#define interlockedexchange _InterlockedExchange
-#endif /* Win32 */
 #endif /* USE_LOCKS */
 
 /* Declarations for bit scanning on win32 */
-#if defined(_MSC_VER) && _MSC_VER>=1300
-#ifndef BitScanForward	/* Try to avoid pulling in WinNT.h */
-#ifdef __cplusplus
-extern "C" {
-#endif /* __cplusplus */
-unsigned char _BitScanForward(unsigned long *index, unsigned long mask);
-unsigned char _BitScanReverse(unsigned long *index, unsigned long mask);
-#ifdef __cplusplus
-}
-#endif /* __cplusplus */
 
-#define BitScanForward _BitScanForward
-#define BitScanReverse _BitScanReverse
-#pragma intrinsic(_BitScanForward)
-#pragma intrinsic(_BitScanReverse)
-#endif /* BitScanForward */
-#endif /* defined(_MSC_VER) && _MSC_VER>=1300 */
-
-#ifndef WIN32
 #ifndef malloc_getpagesize
 #  ifdef _SC_PAGESIZE         /* some SVR4 systems omit an underscore */
 #    ifndef _SC_PAGE_SIZE
@@ -1348,9 +1292,6 @@ unsigned char _BitScanReverse(unsigned long *index, unsigned long mask);
        extern size_t getpagesize();
 #      define malloc_getpagesize getpagesize()
 #    else
-#      ifdef WIN32 /* use supplied emulation of getpagesize */
-#        define malloc_getpagesize getpagesize()
-#      else
 #        ifndef LACKS_SYS_PARAM_H
 #          include <sys/param.h>
 #        endif
@@ -1375,10 +1316,8 @@ unsigned char _BitScanReverse(unsigned long *index, unsigned long mask);
 #            endif
 #          endif
 #        endif
-#      endif
 #    endif
 #  endif
-#endif
 #endif
 
 
@@ -1435,7 +1374,6 @@ unsigned char _BitScanReverse(unsigned long *index, unsigned long mask);
 #define IS_MMAPPED_BIT       (SIZE_T_ONE)
 #define USE_MMAP_BIT         (SIZE_T_ONE)
 
-#if   !defined(WIN32)
 #define CALL_MUNMAP(a, s)    munmap((a), (s))
 #define MMAP_PROT            (PROT_READ|PROT_WRITE)
 #if !defined(MAP_ANONYMOUS) && defined(MAP_ANON)
@@ -1458,43 +1396,6 @@ static int dev_zero_fd = -1; /* Cached file descriptor for /dev/zero. */
 #endif /* MAP_ANONYMOUS */
 
 #define DIRECT_MMAP(s)       CALL_MMAP(s)
-#else /* WIN32 */
-
-/* Win32 MMAP via VirtualAlloc */
-static /*FORCEINLINE*/ void* win32mmap(size_t size) {
-  void* ptr = VirtualAlloc(0, size, MEM_RESERVE|MEM_COMMIT, PAGE_READWRITE);
-  return (ptr != 0)? ptr: MFAIL;
-}
-
-/* For direct MMAP, use MEM_TOP_DOWN to minimize interference */
-static /*FORCEINLINE*/ void* win32direct_mmap(size_t size) {
-  void* ptr = VirtualAlloc(0, size, MEM_RESERVE|MEM_COMMIT|MEM_TOP_DOWN,
-                           PAGE_READWRITE);
-  return (ptr != 0)? ptr: MFAIL;
-}
-
-/* This function supports releasing coalesed segments */
-static /*FORCEINLINE*/ int win32munmap(void* ptr, size_t size) {
-  MEMORY_BASIC_INFORMATION minfo;
-  char* cptr = (char*)ptr;
-  while (size) {
-    if (VirtualQuery(cptr, &minfo, sizeof(minfo)) == 0)
-      return -1;
-    if (minfo.BaseAddress != cptr || minfo.AllocationBase != cptr ||
-        minfo.State != MEM_COMMIT || minfo.RegionSize > size)
-      return -1;
-    if (VirtualFree(cptr, 0, MEM_RELEASE) == 0)
-      return -1;
-    cptr += minfo.RegionSize;
-    size -= minfo.RegionSize;
-  }
-  return 0;
-}
-
-#define CALL_MMAP(s)         win32mmap(s)
-#define CALL_MUNMAP(a, s)    win32munmap((a), (s))
-#define DIRECT_MMAP(s)       win32direct_mmap(s)
-#endif /* WIN32 */
 #endif /* HAVE_MMAP */
 
 #if HAVE_MMAP && HAVE_MREMAP
@@ -1548,7 +1449,6 @@ static /*FORCEINLINE*/ int win32munmap(void* ptr, size_t size) {
 #if USE_LOCKS == 1
 
 #if USE_SPIN_LOCKS
-#ifndef WIN32
 /* Custom pthread-style spin locks on x86 and x64 for gcc */
 struct pthread_mlock_t
 {
@@ -1622,70 +1522,8 @@ static MLOCK_T magic_init_mutex = {0, 0, 0 };
 static MLOCK_T morecore_mutex = {0, 0, 0 };
 #endif /* HAVE_MORECORE */
 
-#else /* WIN32 */
-/* Custom win32-style spin locks on x86 and x64 for MSC */
-struct win32_mlock_t
-{
-  volatile long threadid;
-  volatile unsigned int c;
-  long l;
-};
-#define MLOCK_T struct win32_mlock_t
-#define CURRENT_THREAD        GetCurrentThreadId()
-#define SPINS_PER_YIELD    63
-static FORCEINLINE int win32_acquire_lock (MLOCK_T *sl) {
-  long mythreadid=CURRENT_THREAD;
-  if(mythreadid==sl->threadid)
-    ++sl->c;
-  else {
-    int spins = 0;
-    for (;;) {
-      if (!interlockedexchange(&sl->l, 1)) {
-        assert(!sl->threadid);
-        sl->threadid=mythreadid;
-        sl->c=1;
-        break;
-      }
-      if ((++spins & SPINS_PER_YIELD) == 0)
-        SleepEx(0, FALSE);
-    }
-  }
-  return 0;
-}
-
-static FORCEINLINE void win32_release_lock (MLOCK_T *sl) {
-  assert(CURRENT_THREAD==sl->threadid);
-  if (!--sl->c) {
-    sl->threadid=0;
-    interlockedexchange (&sl->l, 0);
-  }
-}
-
-static FORCEINLINE int win32_try_lock (MLOCK_T *sl) {
-  if (!interlockedexchange(&sl->l, 1)){
-    assert(!sl->threadid);
-    sl->threadid=CURRENT_THREAD;
-    sl->c=1;
-    return 1;
-  }
-  return 0;
-}
-
-#define INITIAL_LOCK(sl)      (memset(sl, 0, sizeof(MLOCK_T)), 0)
-#define ACQUIRE_LOCK(sl)      win32_acquire_lock(sl)
-#define RELEASE_LOCK(sl)      win32_release_lock(sl)
-#define TRY_LOCK(sl)          win32_try_lock(sl)
-#define IS_LOCKED(sl)         ((sl)->l)
-
-static MLOCK_T magic_init_mutex = {0, 0 };
-#if HAVE_MORECORE
-static MLOCK_T morecore_mutex = {0, 0 };
-#endif /* HAVE_MORECORE */
-
-#endif /* WIN32 */
 #else /* USE_SPIN_LOCKS */
 
-#ifndef WIN32
 /* pthreads-based locks */
 struct pthread_mlock_t
 {
@@ -1745,21 +1583,6 @@ static MLOCK_T magic_init_mutex = {0, PTHREAD_MUTEX_INITIALIZER };
 static MLOCK_T morecore_mutex = {0, PTHREAD_MUTEX_INITIALIZER };
 #endif /* HAVE_MORECORE */
 
-#else /* WIN32 */
-/* Win32 critical sections */
-#define MLOCK_T         CRITICAL_SECTION
-#define CURRENT_THREAD  GetCurrentThreadId()
-#define INITIAL_LOCK(s) (!InitializeCriticalSectionAndSpinCount((s), 4000)
-#define ACQUIRE_LOCK(s) ( (!((s))->DebugInfo ? INITIAL_LOCK((s)) : 0), !EnterCriticalSection((s)), 0)
-#define RELEASE_LOCK(s) ( LeaveCriticalSection((s)), 0 )
-#define TRY_LOCK(s)     ( TryEnterCriticalSection((s)) )
-#define IS_LOCKED(s)    ( (s)->LockCount >= 0 )
-#define NULL_LOCK_INITIALIZER
-static MLOCK_T magic_init_mutex;
-#if HAVE_MORECORE
-static MLOCK_T morecore_mutex;
-#endif /* HAVE_MORECORE */
-#endif /* WIN32 */
 #endif /* USE_SPIN_LOCKS */
 #endif /* USE_LOCKS == 1 */
 
@@ -2443,11 +2266,7 @@ static struct malloc_state _gm_;
 
 
 /* For mmap, use granularity alignment on windows, else page-align */
-#ifdef WIN32
-#define mmap_align(S) granularity_align(S)
-#else
 #define mmap_align(S) page_align(S)
-#endif
 
 #define is_page_aligned(S)\
    (((size_t)(S) & (mparams.page_size - SIZE_T_ONE)) == 0)
@@ -2613,20 +2432,6 @@ static size_t traverse_and_check(mstate m);
   }\
 }
 
-#elif defined(_MSC_VER) && _MSC_VER>=1300
-#define compute_tree_index(S, I)\
-{\
-  size_t X = S >> TREEBIN_SHIFT;\
-  if (X == 0)\
-    I = 0;\
-  else if (X > 0xFFFF)\
-    I = NTREEBINS-1;\
-  else {\
-    unsigned int K;\
-    _BitScanReverse((DWORD *) &K, X);\
-    I =  (bindex_t)((K << 1) + ((S >> (K + (TREEBIN_SHIFT-1)) & 1)));\
-  }\
-}
 #else /* GNUC */
 #define compute_tree_index(S, I)\
 {\
@@ -2685,14 +2490,6 @@ static size_t traverse_and_check(mstate m);
   __asm__("bsfl\t%1, %0\n\t" : "=r" (J) : "g" (X));\
   I = (bindex_t)J;\
 }
-#elif defined(_MSC_VER) && _MSC_VER>=1300
-#define compute_bit2idx(X, I)\
-{\
-  unsigned int J;\
-  _BitScanForward((DWORD *) &J, X);\
-  I = (bindex_t)J;\
-}
-
 #else /* GNUC */
 #if  USE_BUILTIN_FFS
 #define compute_bit2idx(X, I) I = ffs(X)-1
@@ -2880,23 +2677,9 @@ static int init_mparams(void) {
     }
     RELEASE_MAGIC_INIT_LOCK();
 
-#if   !defined( WIN32 )
     mparams.page_size = malloc_getpagesize;
     mparams.granularity = ((DEFAULT_GRANULARITY != 0)?
                            DEFAULT_GRANULARITY : mparams.page_size);
-#else /* WIN32 */
-//     {
-//       SYSTEM_INFO system_info;
-//       GetSystemInfo(&system_info);
-//       mparams.page_size = system_info.dwPageSize;
-//       mparams.granularity = system_info.dwAllocationGranularity;
-//     }
-// ---------------- [5/22/2009 tom]
-       mparams.page_size = 64*1024;
-       mparams.granularity = 64*1024;
-// ---------------- [5/22/2009 tom]
-
-#endif /* WIN32 */
 
     /* Sanity-check configuration:
        size_t must be unsigned and as wide as pointer type.

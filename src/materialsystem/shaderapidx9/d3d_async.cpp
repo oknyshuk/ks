@@ -190,12 +190,8 @@ void D3DDeviceWrapper::SetASyncMode( bool onoff )
 			// create thread and init communications
 			memset( RememberedPointerHistory,0,sizeof(RememberedPointerHistory) );
 			SetThreadAffinityMask(GetCurrentThread(), 1);
-#ifdef WIN32
-			m_pASyncThreadHandle = CreateSimpleThread( OurThreadInit, this, 128*1024 );
-#else
 #warning "D3DDeviceWrapper::SetASyncMode might need a beginthread version"
 			Assert( !"Impl D3DDeviceWrapper::SetASyncMode" );
-#endif
 		}
 	}
 	else
@@ -259,24 +255,10 @@ void D3DDeviceWrapper::SubmitIfNotBusy( void )
 
 void D3DDeviceWrapper::UpdateStereoTexture( IDirect3DTexture9 *pTex, bool devLost, bool *pStereoActiveThisFrame )
 {
-#if ( IS_WINDOWS_PC ) && !NO_STEREO_D3D9
-	Assert( m_pStereoTexUpdater );
-	if ( m_pStereoTexUpdater )
-	{
-		if ( pStereoActiveThisFrame != NULL )
-		{
-			*pStereoActiveThisFrame = m_pStereoTexUpdater->IsStereoActive();
-		}
-
-		// We always want to call this so it can deal with a lost device
-		m_pStereoTexUpdater->UpdateStereoTexture( Dx9Device(), pTex, devLost );
-	}
-#else
 	if ( pStereoActiveThisFrame != NULL )
 	{
 		*pStereoActiveThisFrame = false;
 	}
-#endif
 }
 
 void D3DDeviceWrapper::Synchronize( void )

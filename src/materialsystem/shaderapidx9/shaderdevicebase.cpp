@@ -50,13 +50,8 @@ static void InitShaderAPICVars( )
 //-----------------------------------------------------------------------------
 // Read dx support levels
 //-----------------------------------------------------------------------------
-#if defined( PLATFORM_POSIX )
 #define SUPPORT_CFG_FILE "dxsupport_mac.cfg"
 #define SUPPORT_CFG_OVERRIDE_FILE "dxsupport_override.cfg"
-#else
-#define SUPPORT_CFG_FILE "dxsupport.cfg"
-#define SUPPORT_CFG_OVERRIDE_FILE "dxsupport_override.cfg"
-#endif
 
 
 //-----------------------------------------------------------------------------
@@ -537,21 +532,10 @@ void CShaderDeviceMgrBase::LoadConfig( KeyValues *pKeyValues, KeyValues *pConfig
 //-----------------------------------------------------------------------------
 static unsigned long GetRam()
 {
-#if defined(PLATFORM_WINDOWS)
-	MEMORYSTATUSEX statex;
-	statex.dwLength = sizeof( MEMORYSTATUSEX );
-	GlobalMemoryStatusEx( &statex );
-	if ( statex.ullAvailPhys < statex.ullAvailVirtual )
-	{
-		return ( unsigned long )( statex.ullAvailPhys / ( 1024 * 1024 ) );
-	}
-	return ( unsigned long )( statex.ullAvailVirtual / ( 1024 * 1024 ) );
-#else
 	MEMORYSTATUS stat;
 	stat.dwLength = sizeof( MEMORYSTATUS );
 	GlobalMemoryStatus( &stat );
 	return ( unsigned long )( stat.dwTotalPhys / ( 1024 * 1024 ) );
-#endif
 }
 
 //-----------------------------------------------------------------------------
@@ -1074,34 +1058,10 @@ void CShaderDeviceBase::SetView( void* hWnd )
 //-----------------------------------------------------------------------------
 void CShaderDeviceBase::GetWindowSize( int& nWidth, int& nHeight ) const
 {
-#if defined( USE_SDL )
 
 	// this matches up to what the threaded material system does
 	g_pShaderAPIBase->GetBackBufferDimensions( nWidth, nHeight );
 
-#else
-
-	// If the window was minimized last time swap buffers happened, or if it's iconic now, 
-	// return 0 size
-#ifdef _WIN32
-	if ( !m_bIsMinimized && !IsIconic( ( HWND )m_hWnd ) )
-#else
-	if ( !m_bIsMinimized && !IsIconic( (VD3DHWND)m_hWnd ) )
-#endif
-	{
-		// NOTE: Use the 'current view' (which may be the same as the main window) 
-		RECT rect;
-		GetClientRect( ( HWND )m_ViewHWnd, &rect );
-
-		nWidth = rect.right - rect.left;
-		nHeight = rect.bottom - rect.top;
-	}
-	else
-	{
-		nWidth = nHeight = 0;
-	}
-
-#endif
 }
 
 

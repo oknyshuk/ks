@@ -22,9 +22,6 @@
 #include "env_player_surface_trigger.h"
 #include "rumble_shared.h"
 
-#ifdef HL2_DLL
-	#include "hl2_player.h"
-#endif
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -396,11 +393,6 @@ void CBaseServerVehicle::SetPassengerWeapon( bool bUseWeapon, CBaseCombatCharact
 	{
 		pPlayer->ShowCrosshair( true );
 		pWeapon->Deploy();		
-#if defined ( PORTAL2 )
-		int iSeq = pWeapon->LookupSequence( "end_draw" );
-		Assert( iSeq >= 0 );
-		pWeapon->SendViewModelAnim( iSeq );
-#endif
 	}
 	else
 	{
@@ -439,22 +431,6 @@ void CBaseServerVehicle::SetPassenger( int nRole, CBaseCombatCharacter *pPasseng
 
 			GetDrivableVehicle()->EnterVehicle( pPassenger );
 
-#ifdef HL2_DLL
-			// Stop the player sprint and flashlight.
-			CHL2_Player *pHL2Player = dynamic_cast<CHL2_Player*>( pPlayer );
-			if ( pHL2Player )
-			{
-				if ( pHL2Player->IsSprinting() )
-				{
-					pHL2Player->StopSprinting();
-				}
-
-				if ( pHL2Player->FlashlightIsOn() )
-				{
-					pHL2Player->FlashlightTurnOff();
-				}
-			}
-#endif
 		}
 	}
 	else
@@ -1358,9 +1334,6 @@ int CBaseServerVehicle::GetExitAnimToUse( Vector &vecEyeExitEndpoint, bool &bAll
 
 		if ( tr.fraction != 1.0 )
 		{
-#ifdef HL2_EPISODIC
-			if ( ShouldVehicleIgnoreEntity( GetVehicleEnt(), tr.Ent<CBaseEntity>() ) == false )
-#endif //HL2_EPISODIC
 			{
 				if ( g_debug_vehicleexit.GetBool() )
 				{

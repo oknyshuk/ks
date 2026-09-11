@@ -6,9 +6,6 @@
 #ifndef SOCKET_CREATOR_H
 #define SOCKET_CREATOR_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "tier1/utlvector.h"
 #include "tier1/utlbuffer.h"

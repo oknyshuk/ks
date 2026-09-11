@@ -7,9 +7,6 @@
 
 #ifndef SND_MIXGROUP_MANAGER_H
 #define SND_MIXGROUP_MANAGER_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 enum MXRMixGroupFields_t
 {

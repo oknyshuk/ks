@@ -7,9 +7,6 @@
 
 #ifndef DISPNODE_H
 #define DISPNODE_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 //=========== (C) Copyright 2000 Valve, L.L.C. All rights reserved. ===========
 //

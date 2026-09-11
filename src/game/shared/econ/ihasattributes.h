@@ -6,9 +6,6 @@
 
 #ifndef IHASATTRIBUTES_H
 #define IHASATTRIBUTES_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 // Stub interface - econ system removed
 class IHasAttributes

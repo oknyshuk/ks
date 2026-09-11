@@ -11,9 +11,6 @@
 #include "reflect_annotations.h"
 #include "dt_recv.h"
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "studio.h"
 #include "utlvector.h"

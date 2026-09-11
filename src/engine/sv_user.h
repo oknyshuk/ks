@@ -6,9 +6,6 @@
 
 #ifndef SV_USER_H
 #define SV_USER_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 
 // Send a command to the specified client (as though the client typed the command in their console).

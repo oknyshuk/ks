@@ -10,9 +10,6 @@
 #ifndef DISPINFO_H
 #define DISPINFO_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 //=============================================================================
 

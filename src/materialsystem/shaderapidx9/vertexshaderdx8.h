@@ -3,9 +3,6 @@
 #ifndef VERTEXSHADERDX8_H
 #define VERTEXSHADERDX8_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "shaderapi/ishaderapi.h"
 #include "datacache/idatacache.h"

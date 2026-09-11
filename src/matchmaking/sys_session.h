@@ -6,9 +6,6 @@
 
 #ifndef SYS_SESSION_H
 #define SYS_SESSION_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 class CSysSessionBase;
 class CSysSessionHost;

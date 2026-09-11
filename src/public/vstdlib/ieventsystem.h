@@ -9,9 +9,6 @@
 #ifndef IEVENTSYSTEM_H
 #define IEVENTSYSTEM_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "appframework/iappsystem.h"
 #include "tier0/basetypes.h"

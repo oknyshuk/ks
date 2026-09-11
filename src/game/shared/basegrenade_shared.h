@@ -13,9 +13,6 @@
 #include "dt_recv.h"
 #endif
 #include "const.h"
-#ifdef _WIN32
-#pragma once
-#endif
 
 #if defined( CLIENT_DLL )
 

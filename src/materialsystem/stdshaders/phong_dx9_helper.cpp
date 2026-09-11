@@ -108,11 +108,7 @@ void InitParamsPhong_DX9( CBaseVSShader *pShader, IMaterialVar** params, const c
 	InitIntParam( info.m_nSelfIllumFresnel, params, 0 );
 	InitIntParam( info.m_nBaseMapAlphaPhongMask, params, 0 );
 	InitIntParam( info.m_nBaseMapLuminancePhongMask, params, 0 );
-#if defined ( CSTRIKE15 )
 	InitIntParam( info.m_nShaderSrgbRead360, params, 1 );
-#else
-	InitIntParam( info.m_nShaderSrgbRead360, params, 0 );
-#endif
 
 	InitIntParam( info.m_nAllowDiffuseModulation, params, 1 );
 
@@ -309,11 +305,7 @@ void DrawPhong_DX9( CBaseVSShader *pShader, IMaterialVar** params, IShaderDynami
 
 	bool bHDR = g_pHardwareConfig->GetHDRType() != HDR_TYPE_NONE;
 
-#if defined( CSTRIKE15 )
 	bool bShaderSrgbRead = ( false && r_shader_srgbread.GetBool() );
-#else
-	bool bShaderSrgbRead =( false && IS_PARAM_DEFINED( info.m_nShaderSrgbRead360 ) && ( params[info.m_nShaderSrgbRead360]->GetIntValue() ) );
-#endif
 
 	bool bMorphing = ( !pShaderAPI || pShaderAPI->IsHWMorphingEnabled() ) && bSFM && g_pHardwareConfig->HasFastVertexTextures();
 

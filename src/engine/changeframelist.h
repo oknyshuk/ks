@@ -7,9 +7,6 @@
 
 #ifndef CHANGEFRAMELIST_H
 #define CHANGEFRAMELIST_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "mempool.h"
 #include "dt_common.h"

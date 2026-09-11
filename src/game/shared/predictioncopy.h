@@ -7,9 +7,6 @@
 
 #ifndef PREDICTIONCOPY_H
 #define PREDICTIONCOPY_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include <memory.h>
 #include "datamap.h"

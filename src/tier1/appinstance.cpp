@@ -38,9 +38,6 @@
 
 #include "tier0/memdbgon.h"
 
-#ifdef PLATFORM_WINDOWS_PC 
-#include <windows.h>
-#endif
 
 
 
@@ -60,8 +57,6 @@ CSingleAppInstance::CSingleAppInstance( tchar* InstanceName, bool exitOnNotUniqu
 		return;
 	}
 
-#ifdef WIN32
-#endif
 
 }
 
@@ -69,8 +64,6 @@ CSingleAppInstance::CSingleAppInstance( tchar* InstanceName, bool exitOnNotUniqu
 
 CSingleAppInstance::~CSingleAppInstance()
 {
-#ifdef WIN32
-#endif
 }
 
 
@@ -96,8 +89,6 @@ bool CSingleAppInstance::CheckForRunningInstance( tchar* InstanceName )
 	// validate input		
 	Assert( InstanceName != NULL && V_strlen( InstanceName ) > 0 && V_strlen( InstanceName ) < MAX_PATH );
 
-#ifdef WIN32
-#endif
 	
 
 	return false;

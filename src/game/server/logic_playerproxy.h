@@ -20,20 +20,7 @@ class CLogicPlayerProxy : public CLogicalEntity
 
 public:
 	// FIXME: Subclass
-#ifdef PORTAL2
-	COutputEvent m_OnStartSlowingTime;
-	COutputEvent m_OnStopSlowingTime;
-	COutputEvent m_OnCoopPing;
 
-	COutputEvent m_OnPrimaryPortalPlaced;
-	COutputEvent m_OnSecondaryPortalPlaced;
-#endif // PORTAL2
-
-#if defined( HL2_DLL )
-	COutputEvent m_OnFlashlightOn;
-	COutputEvent m_OnFlashlightOff;
-	COutputEvent m_PlayerMissedAR2AltFire; // Player fired a combine ball which did not dissolve any enemies. 
-#endif // HL2_DLL
 
 	COutputEvent m_PlayerHasAmmo;
 	COutputEvent m_PlayerHasNoAmmo;
@@ -45,12 +32,6 @@ public:
 
 	[[= ks::reflect::Key{ .name = "PlayerHealth" } ]] COutputInt m_RequestedPlayerHealth;
 
-#if defined HL2_EPISODIC
-	void InputSetFlashlightSlowDrain( inputdata_t &inputdata );
-	void InputSetFlashlightNormalDrain( inputdata_t &inputdata );
-	void InputLowerWeapon( inputdata_t &inputdata );
-	void InputSetLocatorTargetEntity( inputdata_t &inputdata );
-#endif // HL2_EPISODIC
 
 	void InputRequestPlayerHealth( inputdata_t &inputdata );
 	void InputSetPlayerHealth( inputdata_t &inputdata );
@@ -58,17 +39,6 @@ public:
 	void InputEnableCappedPhysicsDamage( inputdata_t &inputdata );
 	void InputDisableCappedPhysicsDamage( inputdata_t &inputdata );
 
-#if defined ( PORTAL2 )
-	void InputAddPotatosToPortalgun( inputdata_t &inputdata );
-	void InputRemovePotatosFromPortalgun( inputdata_t &inputdata );
-
-	void InputSetDropEnabled( inputdata_t &inputdata );
-	void InputForceVMGrabController( inputdata_t &inputdata );
-	void InputForcePhysicsGrabController( inputdata_t &inputdata );
-	void InputResetGrabControllerBehavior( inputdata_t &inputdata );
-	void InputPaintPlayerWithPortalPaint( inputdata_t &inputdata );
-	void InputSetMotionBlurAmount( inputdata_t &inputdata );
-#endif
 
 	void Activate( void );
 

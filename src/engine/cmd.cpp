@@ -843,10 +843,6 @@ static void HandleExecutionMarker( const char *pCommand, const char *pMarkerCode
 		// REI CSGO: We no longer use execution markers, but I'm leaving this mechanism in here
 		ECmdExecutionMarker command = (ECmdExecutionMarker)(pCommand[0]);
 
-#ifdef _WIN32
-#pragma warning(push)
-#pragma warning(disable: 4065) // switch statement contains 'default' but no 'case' labels
-#endif // _WIN32
 
 		switch(command)
 		{
@@ -854,9 +850,6 @@ static void HandleExecutionMarker( const char *pCommand, const char *pMarkerCode
 			Warning( "Unrecognized execution marker '%c'\n", pCommand[0] );
 		}
 
-#ifdef _WIN32
-#pragma warning(pop)
-#endif
 	}
 	else
 	{

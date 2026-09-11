@@ -27,20 +27,14 @@
 #include "env_wind_shared.h"
 #include "filesystem.h"
 #include "engine/IEngineSound.h"
-#ifdef INFESTED_DLL
-#include "asw_fire.h"
-#else
 #include "fire.h"
-#endif
 #include "te_effect_dispatch.h"
 #include "Sprite.h"
 #include "precipitation_shared.h"
 #include "shot_manipulator.h"
 #include "modelentities.h"
-#if defined( CSTRIKE15 )
 #include "fx_cs_shared.h"
 #include "cs_player.h"
-#endif
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -611,9 +605,6 @@ public:
 	[[= ks::reflect::Key{ .name = "scale" } ]] float m_flGibScale;
 	[[= ks::reflect::Key{ .name = "gibgravityscale" } ]] float m_flGibGravityScale;
 
-#if HL2_EPISODIC
-	float m_flMassOverride;	// allow designer to force a mass for gibs in some cases
-#endif
 };
 
 IMPLEMENT_REFLECT_DATAMAP( CEnvShooter )
@@ -730,17 +721,6 @@ CGib *CEnvShooter::CreateGib ( void )
 		pGib->AddEffects( EF_NOSHADOW );
 	}
 
-#if HL2_EPISODIC
-	// if a mass override is set, apply it to the gib
-	if (m_flMassOverride != 0)
-	{
-		IPhysicsObject *pPhys = pGib->VPhysicsGetObject();
-		if (pPhys)
-		{
-			pPhys->SetMass( m_flMassOverride );
-		}
-	}
-#endif
 
 	return pGib;
 }
@@ -1389,9 +1369,6 @@ public:
 
 	// bits: Q_log2( NUM_PRECIPITATION_TYPES ) + 1, spelled out because Q_log2 is a runtime call.
 	CNetworkVar( PrecipitationType_t, m_nPrecipType, [[= ks::reflect::Net{ .bits = 4, .flags = SPROP_UNSIGNED } ]] [[= ks::reflect::Key{ .name = "preciptype" } ]] );
-#ifdef INFESTED_DLL
-	CNetworkVar( int, m_nSnowDustAmount, [[= ks::reflect::Net{} ]] );
-#endif
 };
 
 LINK_ENTITY_TO_CLASS( func_precipitation, CPrecipitation );
@@ -1405,9 +1382,6 @@ IMPLEMENT_REFLECT_SERVERCLASS( CPrecipitation, DT_Precipitation )
 CPrecipitation::CPrecipitation()
 {
 	m_nPrecipType = PRECIPITATION_TYPE_RAIN; // default to rain.
-#ifdef INFESTED_DLL
-	m_nSnowDustAmount = 0;
-#endif
 }
 
 int CPrecipitation::UpdateTransmitState()
@@ -1533,11 +1507,7 @@ public:
 	DECLARE_SERVERCLASS();
 
 private:
-#ifdef GNUC
 	[[= ks::reflect::Net{} ]] CEnvWindShared m_EnvWindShared; // FIXME - fails to compile as networked var due to operator= problem
-#else
-	CNetworkVarEmbedded( CEnvWindShared, m_EnvWindShared );
-#endif
 };
 
 LINK_ENTITY_TO_CLASS( env_wind, CEnvWind );
@@ -2124,7 +2094,6 @@ void CEnvGunfire::ShootThink()
 
 	Vector vecEnd;
 
-#if defined( CSTRIKE15 )
 
 	CEconItemDefinition *pItemDef = GetItemSchema()->GetItemDefinitionByName( STRING(m_iszWeaponName) );
 	if ( pItemDef && pItemDef->GetDefinitionIndex() != 0 )
@@ -2184,46 +2153,6 @@ void CEnvGunfire::ShootThink()
 			SetNextThink( gpGlobals->curtime + random->RandomFloat( m_flMinBurstDelay, m_flMaxBurstDelay ) );	
 		}
 	}
-#else
-	SetNextThink( gpGlobals->curtime + m_flRateOfFire );
-
-	if( m_bCollide )
-	{
-		trace_t tr;
-
-		UTIL_TraceLine( GetAbsOrigin(), GetAbsOrigin() + vecDir * 8192, MASK_SHOT, this, COLLISION_GROUP_NONE, &tr );
-
-		if( tr.fraction != 1.0 )
-		{
-			DoImpactEffect( tr, DMG_BULLET );
-		}
-
-		vecEnd = tr.endpos;
-	}
-	else
-	{
-		vecEnd = GetAbsOrigin() + vecDir * m_flTargetDist;
-	}
-
-	if( m_iszTracerType != NULL_STRING )
-	{
-		UTIL_Tracer( GetAbsOrigin(), vecEnd, 0, TRACER_DONT_USE_ATTACHMENT, 5000, true, STRING(m_iszTracerType) );
-	}
-	else
-	{
-		UTIL_Tracer( GetAbsOrigin(), vecEnd, 0, TRACER_DONT_USE_ATTACHMENT, 5000, true );
-	}
-
-	EmitSound( STRING(m_iszShootSound) );
-
-	m_iShotsRemaining--;
-
-	if ( m_iShotsRemaining == 0 )
-	{
-		StartShooting();
-		SetNextThink( gpGlobals->curtime + random->RandomFloat( m_flMinBurstDelay, m_flMaxBurstDelay ) );
-	}
-#endif
 
 }
 
@@ -2634,17 +2563,13 @@ CEnvQuadraticBeam *CreateQuadraticBeam( const char *pSpriteName, const Vector &s
 }
 
 PRECACHE_REGISTER_BEGIN( GLOBAL, EffectsPrecache )
-#ifndef DOTA_DLL
 	PRECACHE( GAMESOUND, "Underwater.BulletImpact" )
 	PRECACHE( GAMESOUND, "FX_RicochetSound.Ricochet" )
 	PRECACHE(GAMESOUND, "FX_RicochetSound.Ricochet_Legacy")
 	PRECACHE( GAMESOUND, "Physics.WaterSplash" )
 	PRECACHE( GAMESOUND, "BaseExplosionEffect.Sound" )
 	PRECACHE( GAMESOUND, "Splash.SplashSound" )
-#ifndef _WIN64 // TODO64: PRECACHE_CONDITIONAL is not supported on 64bit , hopefully it's not an issue for the server to not precache a sound
 	PRECACHE_CONDITIONAL( GAMESOUND, "HudChat.Message", gpGlobals->maxClients > 1 )
-#endif
-#endif
 PRECACHE_REGISTER_END()
 
 class CEnvViewPunch : public CPointEntity

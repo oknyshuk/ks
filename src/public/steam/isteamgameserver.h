@@ -6,9 +6,6 @@
 
 #ifndef ISTEAMGAMESERVER_H
 #define ISTEAMGAMESERVER_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "isteamclient.h"
 

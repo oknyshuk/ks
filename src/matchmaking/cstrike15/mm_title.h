@@ -6,9 +6,6 @@
 
 #ifndef MM_TITLE_H
 #define MM_TITLE_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "../mm_framework.h"
 

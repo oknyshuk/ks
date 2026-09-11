@@ -7,9 +7,6 @@
 
 #ifndef PREDICTABLE_ENTITY_H
 #define PREDICTABLE_ENTITY_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 // For introspection
 #include "tier0/platform.h"

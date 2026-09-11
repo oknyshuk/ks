@@ -32,18 +32,10 @@
 #include "fmtstr.h"
 #include "videocfg/videocfg.h"
 
-#if defined( CSTRIKE15 )
 #include "cs_gamerules.h"
 #include "cs_team.h"
-#endif
 
-#ifdef TF_DLL
-#include "tf_player.h"
-#endif
 
-#ifdef HL2_DLL
-#include "weapon_physcannon.h"
-#endif
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -328,7 +320,6 @@ void Host_Say( edict_t *pEdict, const CCommand &args, bool teamonly )
 }
 
 PRECACHE_REGISTER_BEGIN( GLOBAL, ClientPrecache )
-#ifndef DOTA_DLL
 	// Precache cable textures.
 	PRECACHE( MODEL, "cable/phonecable.vmt" )
 	PRECACHE( MODEL, "cable/phonecable_red.vmt" )
@@ -340,10 +331,8 @@ PRECACHE_REGISTER_BEGIN( GLOBAL, ClientPrecache )
 	PRECACHE( MODEL, "sprites/purpleglow1.vmt" )
 	PRECACHE( MODEL, "sprites/purplelaser1.vmt" )
 
-#ifndef _WIN64 // TODO64: do we need to implement conditional precache in 64-bit?
 	PRECACHE_CONDITIONAL( MODEL, "models/germangibs.mdl", g_Language.GetInt() == LANGUAGE_GERMAN )
 	PRECACHE_CONDITIONAL( MODEL, "models/gibs/hgibs.mdl", g_Language.GetInt() != LANGUAGE_GERMAN )
-#endif
 
 	PRECACHE( GAMESOUND, "Error" )
 	PRECACHE( GAMESOUND, "Hud.Hint" )
@@ -371,17 +360,7 @@ PRECACHE_REGISTER_BEGIN( GLOBAL, ClientPrecache )
 
 	PRECACHE( GAMESOUND, "BaseEntity.EnterWater" )
 	PRECACHE( GAMESOUND, "BaseEntity.ExitWater" )
-#endif
 
-#ifdef PORTAL2
-	PRECACHE( GAMESOUND, "GameUI.UiCoopHudActivate" )
-	PRECACHE( GAMESOUND, "GameUI.UiCoopHudClick" )
-	PRECACHE( GAMESOUND, "GameUI.UiCoopHudClickLow" )
-	PRECACHE( GAMESOUND, "GameUI.UiCoopHudClickHigh" )
-	PRECACHE( GAMESOUND, "GameUI.UiCoopHudDeactivate" )
-	PRECACHE( GAMESOUND, "GameUI.UiCoopHudFocus" )
-	PRECACHE( GAMESOUND, "GameUI.UiCoopHudUnfocus" )
-#endif
 
 	// Game Instructor sounds
 	PRECACHE( GAMESOUND, "Instructor.LessonStart" )
@@ -649,7 +628,6 @@ void CPointServerCommand::InputCommand( inputdata_t& inputdata )
 	if ( !inputdata.value.String()[0] )
 		return;
 
-#if defined( CSTRIKE15 )
 	CBasePlayer *player = UTIL_GetListenServerHost();
 	// if we're on a dedicated server or a non-listen server, only accept whitelisted commands
 	if ( engine->IsDedicatedServer() || player == NULL )
@@ -671,7 +649,6 @@ void CPointServerCommand::InputCommand( inputdata_t& inputdata )
 		return;
 	}
 
-#endif
 
 	engine->ServerCommand( UTIL_VarArgs( "%s\n", inputdata.value.String() ) );
 }
@@ -805,7 +782,6 @@ void kill_helper( const CCommand &args, bool bVector, bool bExplode )
 		return;
 	}
 
-#if defined ( CSTRIKE15 )
 	// If we're doing global assassination targets, we have a known assassinate quest and the player who is the target is on the correct team
 	// then don't let them suicide. 
 	if ( CSGameRules() && CSGameRules()->GetActiveAssassinationQuest() )
@@ -817,7 +793,6 @@ void kill_helper( const CCommand &args, bool bVector, bool bExplode )
 			&& ( pCSPlayer->IsAssassinationTarget() ) )
 			return;
 	}
-#endif
 
 	if ( bVector && sv_cheats->GetBool() )
 	{
@@ -1044,39 +1019,6 @@ void CC_Player_TestDispatchEffect( const CCommand &args )
 
 static ConCommand test_dispatcheffect("test_dispatcheffect", CC_Player_TestDispatchEffect, "Test a clientside dispatch effect.\n\tUsage: test_dispatcheffect <effect name> <distance away> <flags> <magnitude> <scale>\n\tDefaults are: <distance 1024> <flags 0> <magnitude 0> <scale 0>\n", FCVAR_CHEAT);
 
-#ifdef HL2_DLL
-//-----------------------------------------------------------------------------
-// Purpose: Quickly switch to the physics cannon, or back to previous item
-//-----------------------------------------------------------------------------
-void CC_Player_PhysSwap( void )
-{
-	CBasePlayer *pPlayer = ToBasePlayer( UTIL_GetCommandClient() );
-	
-	if ( pPlayer )
-	{
-		CBaseCombatWeapon *pWeapon = pPlayer->GetActiveWeapon();
-
-		if ( pWeapon )
-		{
-			// Tell the client to stop selecting weapons
-			engine->ClientCommand( UTIL_GetCommandClient()->edict(), "cancelselect" );
-
-			const char *strWeaponName = pWeapon->GetName();
-
-			if ( !Q_stricmp( strWeaponName, "weapon_physcannon" ) )
-			{
-				PhysCannonForceDrop( pWeapon, NULL );
-				pPlayer->SelectLastItem();
-			}
-			else
-			{
-				pPlayer->SelectItem( "weapon_physcannon" );
-			}
-		}
-	}
-}
-static ConCommand physswap("phys_swap", CC_Player_PhysSwap, "Automatically swaps the current weapon for the physcannon and back again." );
-#endif
 
 //-----------------------------------------------------------------------------
 // Purpose: Quickly switch to the bug bait, or back to previous item
@@ -1593,9 +1535,6 @@ CON_COMMAND_F( setang_exact, "Snap player eyes and orientation to specified pitc
 	pPlayer->Teleport( NULL, &newang, NULL );
 	pPlayer->SnapEyeAngles( newang );
 
-#ifdef TF_DLL
-	static_cast<CTFPlayer*>( pPlayer )->DoAnimationEvent( PLAYERANIMEVENT_SNAP_YAW );
-#endif
 }
 
 

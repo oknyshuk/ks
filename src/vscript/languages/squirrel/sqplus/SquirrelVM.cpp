@@ -14,11 +14,7 @@
 #include "memdbgon.h"
 #endif
 
-#ifdef _MSC_VER
-#define STRLEN(n) _tcslen(n)
-#else
 #define STRLEN(n) strlen(n)
-#endif
 
 HSQUIRRELVM SquirrelVM::_VM = NULL;
 int SquirrelVM::_CallState = -1;

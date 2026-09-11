@@ -61,8 +61,7 @@ def build(bld):
         "memoverride_dummy.cpp",
     ]
 
-    if bld.env.DEST_OS != "win32":
-        source += ["qsort_s.cpp"]
+    source += ["qsort_s.cpp"]
 
     bld.stlib(
         source=source,

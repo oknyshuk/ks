@@ -9,9 +9,6 @@
 #ifndef TEXTUREMANAGER_H
 #define TEXTUREMANAGER_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "itextureinternal.h"
 class ITexture;

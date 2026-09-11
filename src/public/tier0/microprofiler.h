@@ -22,9 +22,6 @@ PLATFORM_INTERFACE void MicroProfilerAddTS( CMicroProfiler *pProfiler, uint64 nu
 PLATFORM_INTERFACE int64 GetHardwareClockReliably();
 
 
-#if   defined( IS_WINDOWS_PC )
-#include <intrin.h>	// get __rdtsc
-#endif
 
 
 
@@ -57,25 +54,7 @@ public:
 };
 
 
-#ifdef IS_WINDOWS_PC
-class CMicroProfilerQpcSample
-{
-	int64 m_nTimeBaseBegin;       // time base is kept here instead of using -= and += for better reliability and to avoid a cache miss at the beginning of the profiled section
-
-public:
-	CMicroProfilerQpcSample()
-	{
-		m_nTimeBaseBegin = GetHardwareClockReliably();
-	}
-
-	int64 GetElapsed()const
-	{
-		return GetHardwareClockReliably() - m_nTimeBaseBegin;
-	}
-};
-#else
 typedef CMicroProfilerSample CMicroProfilerQpcSample;
-#endif
 
 
 class CMicroProfiler

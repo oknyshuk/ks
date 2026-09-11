@@ -8,9 +8,6 @@
 #ifndef RENDER_TO_RT_HELPER_H
 #define RENDER_TO_RT_HELPER_H
 
-#if defined( _WIN32 )
-#pragma once
-#endif
 
 #include "utllinkedlist.h"
 #include "irendertorthelperobject.h"

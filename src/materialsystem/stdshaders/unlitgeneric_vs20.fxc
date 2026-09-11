@@ -96,11 +96,6 @@ VS_OUTPUT main( const VS_INPUT v )
 	
 	o.vProjPos = mul( float4( worldPos, 1 ), cViewProj );
 	
-#ifdef _PS3
-	// Account for OpenGL's flipped y coordinate and expanded z range [-1,1] instead of [0,1]
-	o.vProjPos.y = -o.vProjPos.y;
-	o.vProjPos.z = 2.0f * o.vProjPos.z - o.vProjPos.w;
-#endif // _PS3
 
 	o.worldPos_projPosZ = float4( worldPos.xyz, o.vProjPos.z );
 
@@ -114,13 +109,8 @@ VS_OUTPUT main( const VS_INPUT v )
 	//------------------------------------------------------------------------------
 	// Texture coord transforms
 	//------------------------------------------------------------------------------
-	#ifdef _PS3
-	o.vTexCoord0 = ( cBaseTextureTransform[0].xy   * vTexCoord0.xx ) + ( cBaseTextureTransform[1].xy   * vTexCoord0.yy );
-	o.vTexCoord3 = ( cDetailTextureTransform[0].xy * vTexCoord0.xx ) + ( cDetailTextureTransform[1].xy * vTexCoord0.yy );
-	#else
 	o.vTexCoord0 = mul( vTexCoord0, (float2x4)cBaseTextureTransform );
 	o.vTexCoord3 = mul( vTexCoord0, (float2x4)cDetailTextureTransform );
-	#endif
 
 	o.vColor = cModulationColor;
 

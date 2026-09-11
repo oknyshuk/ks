@@ -7,9 +7,6 @@
 
 #ifndef DATAMAP_H
 #define DATAMAP_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #ifndef VECTOR_H
 #include "mathlib/vector.h"
@@ -116,12 +113,8 @@ DECLARE_FIELD_SIZE( FIELD_TICK,			sizeof(int))
 DECLARE_FIELD_SIZE( FIELD_MODELNAME,	sizeof(int))
 DECLARE_FIELD_SIZE( FIELD_SOUNDNAME,	sizeof(int))
 DECLARE_FIELD_SIZE( FIELD_INPUT,		sizeof(int))
-#if defined(_WIN32)
-DECLARE_FIELD_SIZE( FIELD_FUNCTION,		sizeof(void *))
-#else
 // pointer to members under gnuc are 8bytes if you have a virtual func
 DECLARE_FIELD_SIZE( FIELD_FUNCTION,		2 * sizeof(void *))
-#endif
 DECLARE_FIELD_SIZE( FIELD_VMATRIX,		16 * sizeof(float))
 DECLARE_FIELD_SIZE( FIELD_VMATRIX_WORLDSPACE,	16 * sizeof(float))
 DECLARE_FIELD_SIZE( FIELD_MATRIX3X4_WORLDSPACE,	12 * sizeof(float))

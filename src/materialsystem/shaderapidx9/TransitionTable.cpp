@@ -290,9 +290,6 @@ void CTransitionTable::Reset()
 //-----------------------------------------------------------------------------
 // Sets the texture stage state
 //-----------------------------------------------------------------------------
-#ifdef _WIN32
-#pragma warning( disable : 4189 )
-#endif
 
 static inline void SetTextureStageState( int stage, D3DTEXTURESTAGESTATETYPE state, DWORD val )
 {
@@ -322,9 +319,6 @@ static inline void SetTextureStageState( int stage, D3DTEXTURESTAGESTATETYPE sta
 
 #define SetRenderStateConstMacro( state, val ) SetRenderState( state, val )
 
-#ifdef _WIN32
-#pragma warning( default : 4189 )
-#endif
 
 //-----------------------------------------------------------------------------
 // Methods that actually apply the state

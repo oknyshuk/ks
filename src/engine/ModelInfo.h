@@ -9,9 +9,6 @@
 #ifndef MODELINFO_H
 #define MODELINFO_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "engine/ivmodelinfo.h"
 

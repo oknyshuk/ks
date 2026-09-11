@@ -9,9 +9,6 @@
 #ifndef NETCONSOLE_H
 #define NETCONSOLE_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 #define SUPPORT_NET_CONSOLE 1
 

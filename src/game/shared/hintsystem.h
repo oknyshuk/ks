@@ -6,9 +6,6 @@
 
 #ifndef HINTSYSTEM_H
 #define HINTSYSTEM_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #ifdef CLIENT_DLL
 	#include "c_baseplayer.h"

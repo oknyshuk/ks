@@ -7,9 +7,6 @@
 
 #ifndef HUD_BASECHAT_H
 #define HUD_BASECHAT_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "hudelement.h"
 #include <color.h>

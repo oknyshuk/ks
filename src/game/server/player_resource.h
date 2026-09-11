@@ -9,9 +9,6 @@
 #define PLAYER_RESOURCE_H
 
 #include "reflect_annotations.h"
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "shareddefs.h"
 

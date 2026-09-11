@@ -261,11 +261,7 @@ bool NET_StringToSockaddr( const char *s, struct sockaddr *sadr )
 
 int NET_GetLastError( void )
 {
-#if defined( _WIN32 )
-	net_error = WSAGetLastError();
-#else
 	net_error = errno;
-#endif
 	return net_error;
 }
 
@@ -1612,14 +1608,7 @@ netpacket_t *NET_GetPacket (int sock, byte *scratch )
 	// Check loopback first
 	if ( !NET_GetLoopPacket( &inpacket ) )
 	{
-#ifdef PORTAL2
-		extern IVEngineClient *engineClient;
-		// PORTAL2-specific hack for console perf - don't waste time reading from the actual socket (expensive Steam code)
-		if ( !NET_IsMultiplayer() || engineClient->IsSplitScreenActive() 
-			|| ( sv.IsActive() && !sv.IsMultiplayer() ) )
-#else // PORTAL2
 		if ( !NET_IsMultiplayer() )
-#endif // !PORTAL2
 		{
 			return NULL;
 		}
@@ -2627,67 +2616,6 @@ void NET_FlushAllSockets( void )
 	}
 }
 
-#if defined( IS_WINDOWS_PC )
-#include <Iphlpapi.h>
-
-// Simple helper class to enumerate and cache of IP addresses of local network adapters
-class CBindAddressHelper
-{
-public:
-	CBindAddressHelper() : m_bInitialized( false )
-	{
-	}
-
-	void GetBindAddresses( CUtlVector< CUtlString >& list )
-	{
-		if ( !m_bInitialized )
-		{
-			m_bInitialized = true;
-			BuildBindAddresses( m_CachedAddresses );
-		}
-
-		for ( int i = 0; i < m_CachedAddresses.Count(); ++i )
-		{
-			list.AddToTail( m_CachedAddresses[ i ] );
-		}
-	}
-
-private:
-
-	void BuildBindAddresses( CUtlVector< CUtlString >& list )
-	{
-		IP_ADAPTER_INFO info_temp;
-		ULONG len = 0;
-		if ( GetAdaptersInfo( &info_temp, &len ) != ERROR_BUFFER_OVERFLOW )
-			return;
-		IP_ADAPTER_INFO *infos = new IP_ADAPTER_INFO[ len ];
-		if ( !infos )
-		{
-			Sys_Error( "BuildBindAddresses:  Out of memory allocating %d bytes\n", sizeof( IP_ADAPTER_INFO ) * len );
-			return;
-		}
-
-		if ( GetAdaptersInfo( infos, &len ) == NO_ERROR )
-		{
-			for ( IP_ADAPTER_INFO *info = infos; info != NULL; info = info->Next ) 
-			{
-				if ( info->Type == MIB_IF_TYPE_LOOPBACK )
-					continue;
-				if ( !Q_strcmp( info->IpAddressList.IpAddress.String, "0.0.0.0" ) )
-					continue;
-
-				DevMsg( "NET_GetBindAddresses found %s: '%s'\n", info->IpAddressList.IpAddress.String, info->Description );
-				list.AddToTail( CUtlString( info->IpAddressList.IpAddress.String ) );
-			}
-		}
-		delete[] infos;
-	}
-
-	bool						m_bInitialized;
-	CUtlVector< CUtlString >	m_CachedAddresses;
-};
-static CBindAddressHelper g_BindAddressHelper;
-#endif
 
 static void OpenSocketInternal( int nModule, int nSetPort, int nDefaultPort, const char *pName, int nProtocol, bool bTryAny )
 {
@@ -2704,9 +2632,6 @@ static void OpenSocketInternal( int nModule, int nSetPort, int nDefaultPort, con
 	{
 		vecBindableAddresses.AddToTail( CUtlString( ipname.GetString() ) );
 	}
-#if defined( IS_WINDOWS_PC )
-	g_BindAddressHelper.GetBindAddresses( vecBindableAddresses );
-#endif
 
 	int port = nSetPort ? nSetPort : nDefaultPort;
 	int *handle = NULL;
@@ -3275,15 +3200,6 @@ void NET_Init( bool bIsDedicated )
 	}
 	else
 	{
-#if   defined( _WIN32 )
-		// initialize winsock 2.0
-		WSAData wsaData;
-		if ( WSAStartup( MAKEWORD(2,0), &wsaData ) != 0 )
-		{
-			ConMsg( "Error! Failed to load network socket library.\n");
-			net_noip = true;
-		}
-#endif
 	}
 
 	Assert( NET_MAX_PAYLOAD < (1<<NET_MAX_PAYLOAD_BITS) );
@@ -3392,17 +3308,6 @@ void NET_Shutdown (void)
 	NET_CloseAllSockets();
 	NET_ConfigLoopbackBuffers( false );
 
-#if defined(_WIN32)
-	if ( !net_noip )
-	{
-
-		nError = WSACleanup();
-		if ( nError )
-		{
-			Msg("Failed to complete WSACleanup = 0x%x.\n", nError );
-		}
-	}
-#endif	// _WIN32
 
 	Assert( s_NetChannels.Count() == 0 );
 	Assert( s_PendingSockets.Count() == 0);

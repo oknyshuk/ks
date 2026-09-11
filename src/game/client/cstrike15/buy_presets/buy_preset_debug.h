@@ -6,9 +6,6 @@
 
 #ifndef BUY_PRESET_DEBUG_H
 #define BUY_PRESET_DEBUG_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 //--------------------------------------------------------------------------------------------------------------
 // Utility functions for the debugging macros below

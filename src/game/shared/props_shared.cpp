@@ -160,7 +160,6 @@ struct propdata_interaction_s
 	int m_keyKeyName;
 };
 
-#if !defined(_STATIC_LINKED) || defined(CLIENT_DLL)
 propdata_interaction_s sPropdataInteractionSections[PROPINTER_NUM_INTERACTIONS] =
 {
 	{ "physgun_interactions", "onworldimpact", "stick", -1, -1 },		// PROPINTER_PHYSGUN_WORLD_STICK,
@@ -185,9 +184,6 @@ propdata_interaction_s sPropdataInteractionSections[PROPINTER_NUM_INTERACTIONS] 
 	{ "physgun_interactions", "physgun_notify_children", "yes", -1, -1 },// PROPINTER_PHYSGUN_NOTIFY_CHILDREN,
 	{ "fire_interactions", "melee_immune", "yes", -1, -1 },				// PROPINTER_MELEE_IMMUNE,	
 };
-#else
-extern propdata_interaction_s sPropdataInteractionSections[PROPINTER_NUM_INTERACTIONS];
-#endif
 
 //-----------------------------------------------------------------------------
 // Constructor, destructor
@@ -701,7 +697,6 @@ void BreakModelList( CUtlVector<breakmodel_t> &list, int modelindex, float defBu
 	physcollision->VPhysicsKeyParserDestroy( pParse );
 }
 
-#if !defined(_STATIC_LINKED) || defined(CLIENT_DLL)
 int GetAutoMultiplayerPhysicsMode( Vector size, float mass )
 {
 	float volume = size.x * size.y * size.z;
@@ -719,15 +714,11 @@ int GetAutoMultiplayerPhysicsMode( Vector size, float mass )
 	// full pushbackmode
 	return PHYSICS_MULTIPLAYER_SOLID;
 }
-#else
-extern int GetAutoMultiplayerPhysicsMode( Vector size, float mass );
-#endif
 
 //-----------------------------------------------------------------------------
 // Purpose: Returns a string describing a real-world equivalent mass.
 // Input  : flMass - mass in kg
 //-----------------------------------------------------------------------------
-#if !defined(_STATIC_LINKED) || defined(CLIENT_DLL)
 const char *GetMassEquivalent(float flMass)
 {
 	static struct
@@ -771,9 +762,6 @@ const char *GetMassEquivalent(float flMass)
 
 	return masstext[ sizeof(masstext) / sizeof(masstext[0]) - 1 ].sz;
 }
-#else
-extern const char *GetMassEquivalent(float flMass);
-#endif
 
 #ifdef GAME_DLL
 //=========================================================

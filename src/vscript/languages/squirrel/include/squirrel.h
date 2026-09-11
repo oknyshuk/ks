@@ -51,9 +51,7 @@ extern "C" {
 #define SQUIRREL_API extern
 #endif
 
-#ifdef PLATFORM_64BITS
 #define _SQ64
-#endif
 
 #ifdef _SQ64
 #define SQUSEDOUBLE
@@ -76,11 +74,7 @@ typedef float SQFloat;
 #endif
 
 #if defined(SQUSEDOUBLE) && !defined(_SQ64)
-#ifdef _MSC_VER
-typedef __int64 SQRawObjectVal; //must be 64bits
-#else
 typedef long SQRawObjectVal; //must be 64bits
-#endif
 #define SQ_OBJECT_RAWINIT() { _unVal.raw = 0; }
 #else
 typedef SQUnsignedInteger SQRawObjectVal; //is 32 bits on 32 bits builds and 64 bits otherwise
@@ -108,20 +102,9 @@ struct SQClass;
 struct SQInstance;
 struct SQDelegable;
 
-#ifdef _UNICODE
-#define SQUNICODE
-#endif
 
 #ifdef SQUNICODE
-#if (defined(_MSC_VER) && _MSC_VER >= 1400) // 1400 = VS8
-
-#if defined(wchar_t) //this is if the compiler considers wchar_t as native type
-#define wchar_t unsigned short
-#endif
-
-#else
 typedef unsigned short wchar_t;
-#endif
 
 typedef wchar_t SQChar;
 #define _SC(a) L##a

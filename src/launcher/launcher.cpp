@@ -6,17 +6,11 @@
 //
 //==================================================================//
 
-#if defined( _WIN32 )
-#include <windows.h>
-#include "shlwapi.h" // registry stuff
-#include <direct.h>
-#else
 #define O_EXLOCK 0
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <locale.h>
-#endif
 
 #include "appframework/ilaunchermgr.h"
 #include <stdio.h>
@@ -73,21 +67,13 @@ int MessageBox( HWND hWnd, const char *message, const char *header, unsigned uTy
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
-#if defined ( CSTRIKE15 )
 
 #define DEFAULT_HL2_GAMEDIR	"csgo"
 
-#else
-
-#define DEFAULT_HL2_GAMEDIR	"hl2"
-
-#endif // CSTRIKE15
 
 // A logging channel used during engine initialization
 DEFINE_LOGGING_CHANNEL_NO_TAGS( LOG_EngineInitialization, "EngineInitialization" );
-#if defined( USE_SDL )
 extern void* CreateSDLMgr();
-#endif
 
 
 #define SIXENSE
@@ -119,10 +105,6 @@ static FileAssociationInfo g_FileAssociations[] =
 	{ ".bsp", "map" },
 };
 
-#ifdef _WIN32
-#pragma warning(disable:4073)
-#pragma init_seg(lib)
-#endif
 
 class CLeakDump
 {
@@ -182,15 +164,7 @@ void SetGameDirectory( const char *game )
 //-----------------------------------------------------------------------------
 static bool GetExecutableName( char *out, int outSize )
 {
-#ifdef WIN32
-	if ( !::GetModuleFileName( ( HINSTANCE )GetModuleHandle( NULL ), out, outSize ) )
-	{
-		return false;
-	}
-	return true;
-#else
 	return false;
-#endif
 }
 
 //-----------------------------------------------------------------------------
@@ -202,24 +176,7 @@ const char * GetExecutableFilename()
 	char exepath[MAX_PATH];
 	static char filename[MAX_PATH];
 
-#ifdef WIN32
 	filename[0] = 0;
-	if ( GetExecutableName( exepath, sizeof( exepath ) ) )
-	{
-		_splitpath
-		(
-			exepath, // Input
-			NULL,  // drive
-			NULL,  // dir
-			filename, // filename
-			NULL // extension
-		);
-	}
-
-	Q_strlower( filename );
-#else
-	filename[0] = 0;
-#endif
 	return filename;
 }
 
@@ -265,32 +222,13 @@ void UTIL_ComputeBaseDir()
 		strcpy( g_szBasedir, pOverrideDir );
 	}
 
-#ifdef WIN32
-	Q_strlower( g_szBasedir );
-#endif
 	Q_FixSlashes( g_szBasedir );
 
 }
 
-#ifdef WIN32
-BOOL WINAPI MyHandlerRoutine( DWORD dwCtrlType )
-{
-	TerminateProcess( GetCurrentProcess(), 2 );
-	return TRUE;
-}
-#endif
 
 void InitTextMode()
 {
-#ifdef WIN32
-	AllocConsole();
-
-	SetConsoleCtrlHandler( MyHandlerRoutine, TRUE );
-
-	freopen( "CONIN$", "rb", stdin );		// reopen stdin handle as console window input
-	freopen( "CONOUT$", "wb", stdout );		// reopen stout handle as console window output
-	freopen( "CONOUT$", "wb", stderr );		// reopen stderr handle as console window output
-#endif
 }
 
 void SortResList( char const *pchFileName, char const *pchSearchPath );
@@ -358,9 +296,6 @@ void CLogAllFiles::Init()
 		char szDir[ MAX_PATH ];
 		Q_strncpy( szDir, pszDir, sizeof( szDir ) );
 		Q_StripTrailingSlash( szDir );
-#ifdef WIN32
-		Q_strlower( szDir );
-#endif
 		Q_FixSlashes( szDir );
 		if ( Q_strlen( szDir ) > 0 )
 		{
@@ -372,9 +307,6 @@ void CLogAllFiles::Init()
 	char path[MAX_PATH];
 	Q_snprintf( path, sizeof(path), "%s/%s", GetBaseDirectory(), CommandLine()->ParmValue( "-game", "hl2" ) );
 	Q_FixSlashes( path );
-#ifdef WIN32
-	Q_strlower( path );
-#endif
 	m_sFullGamePath = path;
 
 	// create file to dump out to
@@ -390,14 +322,8 @@ void CLogAllFiles::Init()
 		g_pFullFileSystem->RemoveFile( CFmtStr( "%s\\%s\\%s", m_sFullGamePath.String(), m_sResListDir.String(), ALL_RESLIST_FILE ), "GAME" );
 	}
 
-#ifdef WIN32
-	::GetCurrentDirectory( sizeof(m_szCurrentDir), m_szCurrentDir );
-	Q_strncat( m_szCurrentDir, "\\", sizeof(m_szCurrentDir), 1 );
-	_strlwr( m_szCurrentDir );
-#else
 	getcwd( m_szCurrentDir, sizeof(m_szCurrentDir) );
 	Q_strncat( m_szCurrentDir, "/", sizeof(m_szCurrentDir), 1 );
-#endif
 }
 
 void CLogAllFiles::Shutdown()
@@ -460,9 +386,6 @@ void CLogAllFiles::LogFile(const char *fullPathFileName, const char *options)
 
 		char rel[ MAX_PATH ];
 		Q_strncpy( rel, relative, sizeof( rel ) );
-#ifdef WIN32
-		Q_strlower( rel );
-#endif
 		Q_FixSlashes( rel );
 
 		LogToAllReslist( rel );
@@ -485,39 +408,6 @@ static bool IsWin98OrOlder()
 {
 	bool retval = false;
 
-#if defined( WIN32 )
-	OSVERSIONINFOEX osvi;
-	ZeroMemory(&osvi, sizeof(OSVERSIONINFOEX));
-	osvi.dwOSVersionInfoSize = sizeof(OSVERSIONINFOEX);
-
-	BOOL bOsVersionInfoEx = GetVersionEx ((OSVERSIONINFO *) &osvi);
-	if( !bOsVersionInfoEx )
-	{
-		// If OSVERSIONINFOEX doesn't work, try OSVERSIONINFO.
-		osvi.dwOSVersionInfoSize = sizeof (OSVERSIONINFO);
-		if ( !GetVersionEx ( (OSVERSIONINFO *) &osvi) )
-		{
-			Error( "IsWin98OrOlder:  Unable to get OS version information" );
-		}
-	}
-
-	switch (osvi.dwPlatformId)
-	{
-	case VER_PLATFORM_WIN32_NT:
-		// NT, XP, Win2K, etc. all OK for SSE
-		break;
-	case VER_PLATFORM_WIN32_WINDOWS:
-		// Win95, 98, Me can't do SSE
-		retval = true;
-		break;
-	case VER_PLATFORM_WIN32s:
-		// Can't really run this way I don't think...
-		retval = true;
-		break;
-	default:
-		break;
-	}
-#endif
 
 	return retval;
 }
@@ -528,23 +418,6 @@ static bool IsWin98OrOlder()
 //-----------------------------------------------------------------------------
 void TryToLoadSteamOverlayDLL()
 {
-#if defined( WIN32 )
-	// First, check if the module is already loaded, perhaps because we were run from Steam directly
-	HMODULE hMod = GetModuleHandle( "GameOverlayRenderer.dll" );
-	if ( hMod )
-	{
-		return;
-	}
-
-	const char *pchSteamInstallPath = SteamAPI_GetSteamInstallPath();
-	if ( pchSteamInstallPath )
-	{
-		char rgchSteamPath[MAX_PATH];
-		V_ComposeFileName( pchSteamInstallPath, "GameOverlayRenderer.dll", rgchSteamPath, Q_ARRAYSIZE(rgchSteamPath) );
-		// This could fail, but we can't fix it if it does so just ignore failures
-		LoadLibrary( rgchSteamPath );
-	}
-#endif
 }
 
 
@@ -587,9 +460,6 @@ bool CSourceAppSystemGroup::Create()
 	IFileSystem *pFileSystem = (IFileSystem*)FindSystem( FILESYSTEM_INTERFACE_VERSION );
 	pFileSystem->InstallDirtyDiskReportFunc( ReportDirtyDiskNoMaterialSystem );
 
-#ifdef WIN32
-	CoInitialize( NULL );
-#endif
 
 	static const char * const pBuiltinSystems[] =
 	{
@@ -609,9 +479,7 @@ bool CSourceAppSystemGroup::Create()
 		ROCKETUI_INTERFACE_VERSION,
 	};
 
-#if defined( USE_SDL )
     AddSystem( (IAppSystem *)CreateSDLMgr(),	SDLMGR_INTERFACE_VERSION );
-#endif
 
 	AppModule_t builtinModule = LoadModule( Sys_GetFactoryThis() );
 	for ( const char *pInterfaceName : pBuiltinSystems )
@@ -745,9 +613,6 @@ void CSourceAppSystemGroup::Destroy()
 	g_pEngineAPI = NULL;
 	g_pMaterialSystem = NULL;
 
-#ifdef WIN32
-	CoUninitialize();
-#endif
 }
 
 
@@ -778,38 +643,11 @@ int MessageBox( HWND hWnd, const char *message, const char *header, unsigned uTy
 //-----------------------------------------------------------------------------
 // Allow only one windowed source app to run at a time
 //-----------------------------------------------------------------------------
-#ifdef WIN32
-HANDLE g_hMutex = NULL;
-#else
 int g_lockfd = -1;
 char g_lockFilename[MAX_PATH];
-#endif
 
 bool GrabSourceMutex()
 {
-#ifdef WIN32
-	{
-		// Don't allocate if in multirun mode
-		if( CommandLine()->FindParm( "-allowmultiple" ) || CommandLine()->FindParm( "-multirun" ) )
-		{
-			return true;
-		}
-
-		// don't allow more than one instance to run
-		g_hMutex = ::CreateMutex(NULL, FALSE, TEXT("hl2_singleton_mutex"));
-
-		unsigned int waitResult = ::WaitForSingleObject(g_hMutex, 0);
-
-		// Here, we have the mutex
-		if (waitResult == WAIT_OBJECT_0 || waitResult == WAIT_ABANDONED)
-			return true;
-
-		// couldn't get the mutex, we must be running another instance
-		::CloseHandle(g_hMutex);
-
-		return false;
-	}
-#else
 	// Under OSX use flock in /tmp/source_engine_<game>.lock, create the file if it doesn't exist
 	const char *pchGameParam = CommandLine()->ParmValue( "-game", DEFAULT_HL2_GAMEDIR );
 	CRC32_t gameCRC;
@@ -857,7 +695,6 @@ bool GrabSourceMutex()
 
 	return true;
 
-#endif	// POSIX
 	return true;
 }
 
@@ -869,21 +706,12 @@ void ReleaseSourceMutex()
 		return;
 	}
 
-#ifdef WIN32
-	if ( g_hMutex )
-	{
-		::ReleaseMutex( g_hMutex );
-		::CloseHandle( g_hMutex );
-		g_hMutex = NULL;
-	}
-#else
 	if ( g_lockfd != -1 )
 	{
 		close( g_lockfd );
 		g_lockfd = -1;
 		unlink( g_lockFilename );
 	}
-#endif
 }
 
 // Remove all but the last -game parameter.
@@ -926,9 +754,6 @@ static char const *Cmd_TranslateFileAssociation(char const *param )
 	char temp[ 512 ];
 	Q_strncpy( temp, param, sizeof( temp ) );
 	Q_FixSlashes( temp );
-#ifdef WIN32
-	Q_strlower( temp );
-#endif
 	const char *extension = V_GetFileExtension(temp);
 	// must have an extension to map
 	if (!extension)
@@ -1133,15 +958,8 @@ namespace
 //			nCmdShow -
 // Output : int APIENTRY
 //-----------------------------------------------------------------------------
-#ifdef WIN32
-extern "C" __declspec(dllexport) int LauncherMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow )
-#else
 extern "C" DLL_EXPORT int LauncherMain( int argc, char **argv )
-#endif
 {
-#ifdef WIN32
-	SetAppInstance( hInstance );
-#endif
 
 	// must precede any thread creation: children inherit the affinity mask
 	if ( !CommandLine()->FindParm( "-noaffinity" ) )
@@ -1168,23 +986,12 @@ extern "C" DLL_EXPORT int LauncherMain( int argc, char **argv )
 	// Hook the debug output stuff.
 	LoggingSystem_RegisterLoggingListener( &g_LauncherLoggingListener );
 
-#ifdef WIN32
-	CommandLine()->CreateCmdLine( true ? GetCommandLine() : lpCmdLine );
-#else
 	CommandLine()->CreateCmdLine( argc, argv );
-#endif
 
-#if defined (PLATFORM_OSX) || defined (WIN32)
-	// No -dxlevel or +mat_hdr_level allowed in CSGO
-	CommandLine()->RemoveParm( "-dxlevel" );
-	CommandLine()->RemoveParm( "+mat_hdr_level" );
-	CommandLine()->RemoveParm( "+mat_dxlevel" );
-#endif
 
 	// Figure out the directory the executable is running from
 	UTIL_ComputeBaseDir();
 
-#if defined (CSTRIKE15)
 
 	// GS - If we didn't specify a game name then default to CSGO
 	// This is required for running from a HDD Boot Game package
@@ -1194,7 +1001,6 @@ extern "C" DLL_EXPORT int LauncherMain( int argc, char **argv )
 	}
 
 
-#endif
 
 	bool bDvdDev, bSpewDllInfo, bWaitForConsole;
 	bDvdDev         = CommandLine()->CheckParm( "-dvddev"    ) != NULL;
@@ -1254,17 +1060,6 @@ extern "C" DLL_EXPORT int LauncherMain( int argc, char **argv )
 	// See the function for why we do this.
 	RemoveSpuriousGameParameters();
 
-#ifdef WIN32
-	{
-		// initialize winsock
-		WSAData wsaData;
-		int	nError = ::WSAStartup( MAKEWORD(2,0), &wsaData );
-		if ( nError )
-		{
-			Msg( "Warning! Failed to start Winsock via WSAStartup = 0x%x.\n", nError);
-		}
-	}
-#endif
 
  	// Run in text mode? (No graphics or sound).
  	if ( CommandLine()->CheckParm( "-textmode" ) )
@@ -1274,65 +1069,6 @@ extern "C" DLL_EXPORT int LauncherMain( int argc, char **argv )
  		InitTextMode();
 #endif
  	}
-#ifdef WIN32
-
-#if defined( DEBUG ) && defined( ALLOW_MULTI_CLIENTS_PER_MACHINE )
-	else
-	{
-		Warning("Skipping multiple clients from one machine check! Don't ship this way!\n");
-	}
-#endif
-
-	else
-	{
-		int retval = -1;
-		// Can only run one windowed source app at a time
-		if ( !GrabSourceMutex() )
-		{
-			// We're going to hijack the existing session and load a new savegame into it. This will mainly occur when users click on links in Bugzilla that will automatically copy saves and load them
-			// directly from the web browser. The -hijack command prevents the launcher from objecting that there is already an instance of the game.
-			if (CommandLine()->CheckParm( "-hijack" ))
-			{
-				HWND hwndEngine = FindWindow( "Valve001", NULL );
-
-				// Can't find the engine
-				if ( hwndEngine == NULL )
-				{
-					::MessageBox( NULL, "The modified entity keyvalues could not be sent to the Source Engine because the engine does not appear to be running.", "Source Engine Not Running", MB_OK | MB_ICONEXCLAMATION );
-				}
-				else
-				{
-					const char *szCommand = BuildCommand();
-
-					//
-					// Fill out the data structure to send to the engine.
-					//
-					COPYDATASTRUCT copyData;
-					copyData.cbData = strlen( szCommand ) + 1;
-					copyData.dwData = 0;
-					copyData.lpData = ( void * )szCommand;
-
-					if ( !::SendMessage( hwndEngine, WM_COPYDATA, 0, (LPARAM)&copyData ) )
-					{
-						::MessageBox( NULL, "The Source Engine was found running, but did not accept the request to load a savegame. It may be an old version of the engine that does not support this functionality.", "Source Engine Declined Request", MB_OK | MB_ICONEXCLAMATION );
-					}
-					else
-					{
-						retval = 0;
-					}
-
-					free((void *)szCommand);
-				}
-			}
-			else
-			{
-				::MessageBox(NULL, "Only one instance of the game can be running at one time.", "Source - Warning", MB_ICONINFORMATION | MB_OK);
-			}
-
-			return retval;
-		}
-	}
-#else
 	else
 	{
 		if ( !GrabSourceMutex() )
@@ -1341,19 +1077,7 @@ extern "C" DLL_EXPORT int LauncherMain( int argc, char **argv )
 			return -1;
 		}
 	}
-#endif
 
-#ifdef WIN32
-	// Make low priority?
-	if ( CommandLine()->CheckParm( "-low" ) )
-	{
-		SetPriorityClass( GetCurrentProcess(), IDLE_PRIORITY_CLASS );
-	}
-	else if ( CommandLine()->CheckParm( "-high" ) )
-	{
-		SetPriorityClass( GetCurrentProcess(), HIGH_PRIORITY_CLASS );
-	}
-#endif
 
 	// If game is not run from Steam then add -insecure in order to avoid client timeout message
 	if ( NULL == CommandLine()->CheckParm( "-steam" ) )
@@ -1424,38 +1148,10 @@ extern "C" DLL_EXPORT int LauncherMain( int argc, char **argv )
 		}
 	}
 
-#ifdef WIN32
-	{
-		// shutdown winsock
-		int nError = ::WSACleanup();
-		if ( nError )
-		{
-			Msg( "Warning! Failed to complete WSACleanup = 0x%x.\n", nError );
-		}
-	}
-#endif
 
 	// Allow other source apps to run
 	ReleaseSourceMutex();
 
-#if	defined( WIN32 )
-	// Now that the mutex has been released, check HKEY_CURRENT_USER\Software\Valve\Source\Relaunch URL. If there is a URL here, exec it.
-	// This supports the capability of immediately re-launching the the game via Steam in a different audio language
-	HKEY hKey;
-	if ( RegOpenKeyEx( HKEY_CURRENT_USER, "Software\\Valve\\Source", NULL, KEY_ALL_ACCESS, &hKey) == ERROR_SUCCESS )
-	{
-		char szValue[MAX_PATH];
-		DWORD dwValueLen = MAX_PATH;
-
-		if ( RegQueryValueEx( hKey, "Relaunch URL", NULL, NULL, (unsigned char*)szValue, &dwValueLen ) == ERROR_SUCCESS )
-		{
-			ShellExecute (0, "open", szValue, 0, 0, SW_SHOW);
-			RegDeleteValue( hKey, "Relaunch URL" );
-		}
-
-		RegCloseKey(hKey);
-	}
-#endif
 
 	return 0;
 }

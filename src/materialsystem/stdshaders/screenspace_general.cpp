@@ -100,7 +100,6 @@ BEGIN_VS_SHADER_FLAGS( screenspace_general_dx9, "Help for screenspace_general", 
 
 		if ( params[BASETEXTURE]->IsDefined() )
 		{
-#if defined( PLATFORM_POSIX )
 			ImageFormat fmt = params[BASETEXTURE]->GetTextureValue()->GetImageFormat();
 			bool bSRGB;
 			if ( ( fmt == IMAGE_FORMAT_RGBA16161616F ) || ( fmt == IMAGE_FORMAT_RGBA16161616 ) )
@@ -108,13 +107,9 @@ BEGIN_VS_SHADER_FLAGS( screenspace_general_dx9, "Help for screenspace_general", 
 			else
 				bSRGB = !params[LINEARREAD_BASETEXTURE]->IsDefined() || !params[LINEARREAD_BASETEXTURE]->GetIntValue();
 			LoadTexture( BASETEXTURE, bSRGB ? TEXTUREFLAGS_SRGB : 0 );
-#else
-			LoadTexture( BASETEXTURE );
-#endif // PLATFORM_POSIX
 		}
 		if ( params[TEXTURE1]->IsDefined() )
 		{
-#if defined( PLATFORM_POSIX )
 			ImageFormat fmt = params[TEXTURE1]->GetTextureValue()->GetImageFormat();
 			bool bSRGB;
 			if ( ( fmt == IMAGE_FORMAT_RGBA16161616F ) || ( fmt == IMAGE_FORMAT_RGBA16161616 ) )
@@ -122,13 +117,9 @@ BEGIN_VS_SHADER_FLAGS( screenspace_general_dx9, "Help for screenspace_general", 
 			else
 				bSRGB = !params[LINEARREAD_TEXTURE1]->IsDefined() || !params[LINEARREAD_TEXTURE1]->GetIntValue();
 			LoadTexture( TEXTURE1, bSRGB ? TEXTUREFLAGS_SRGB : 0 );
-#else
-			LoadTexture( TEXTURE1 );
-#endif // PLATFORM_POSIX
 		}
 		if ( params[TEXTURE2]->IsDefined() )
 		{
-#if defined( PLATFORM_POSIX )
 			ImageFormat fmt = params[TEXTURE2]->GetTextureValue()->GetImageFormat();
 			bool bSRGB;
 			if ( ( fmt == IMAGE_FORMAT_RGBA16161616F ) || ( fmt == IMAGE_FORMAT_RGBA16161616 ) )
@@ -136,13 +127,9 @@ BEGIN_VS_SHADER_FLAGS( screenspace_general_dx9, "Help for screenspace_general", 
 			else
 				bSRGB = !params[LINEARREAD_TEXTURE2]->IsDefined() || !params[LINEARREAD_TEXTURE2]->GetIntValue();
 			LoadTexture( TEXTURE2, bSRGB ? TEXTUREFLAGS_SRGB : 0 );
-#else
-			LoadTexture( TEXTURE2 );
-#endif // PLATFORM_POSIX
 		}
 		if ( params[TEXTURE3]->IsDefined() )
 		{
-#if defined( PLATFORM_POSIX )
 			ImageFormat fmt = params[TEXTURE3]->GetTextureValue()->GetImageFormat();
 			bool bSRGB;
 			if ( ( fmt == IMAGE_FORMAT_RGBA16161616F ) || ( fmt == IMAGE_FORMAT_RGBA16161616 ) )
@@ -150,9 +137,6 @@ BEGIN_VS_SHADER_FLAGS( screenspace_general_dx9, "Help for screenspace_general", 
 			else
 				bSRGB = !params[LINEARREAD_TEXTURE3]->IsDefined() || !params[LINEARREAD_TEXTURE3]->GetIntValue();
 			LoadTexture( TEXTURE3, bSRGB ? TEXTUREFLAGS_SRGB : 0 );
-#else
-			LoadTexture( TEXTURE3 );
-#endif // PLATFORM_POSIX
 		}
 	}
 	

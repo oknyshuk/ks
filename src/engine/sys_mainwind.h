@@ -6,9 +6,6 @@
 
 #ifndef SYS_MAINWIND_H
 #define SYS_MAINWIND_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 FORWARD_DECLARE_HANDLE( InputContextHandle_t );
 

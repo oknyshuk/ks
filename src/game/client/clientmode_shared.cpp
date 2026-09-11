@@ -40,13 +40,8 @@
 #include "clientmode_csnormal.h"
 
 
-#ifdef PORTAL2
-#include "c_basehlplayer.h"
-#endif // PORTAL2
 
-#ifdef CSTRIKE15
 #include "c_cs_playerresource.h"
-#endif
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -168,9 +163,6 @@ void ClientModeShared::Init()
 	ListenForGameEvent( "items_gifted" );
 #endif
 
-#if defined( INFESTED_DLL )
-	ListenForGameEvent( "player_fullyjoined" );	
-#endif
 
 
 
@@ -770,9 +762,6 @@ void ClientModeShared::FireGameEvent( IGameEvent *event )
 
 	if ( Q_strcmp( "player_connect", eventname ) == 0 )
 	{
-#ifdef PORTAL2
-		// dont show these message on the console at all
-#endif
 
 		if ( this == GetFullscreenClientMode() )
 			return;
@@ -801,9 +790,6 @@ void ClientModeShared::FireGameEvent( IGameEvent *event )
 	}
 	else if ( Q_strcmp( "player_disconnect", eventname ) == 0 )
 	{
-#ifdef PORTAL2
-		// dont show these message on the console at all
-#endif
 
 		if ( this == GetFullscreenClientMode() )
 			return;
@@ -821,14 +807,9 @@ void ClientModeShared::FireGameEvent( IGameEvent *event )
 
 		{
 
-#ifdef CSTRIKE15
 			wchar_t wszPlayerName[MAX_DECORATED_PLAYER_NAME_LENGTH];
 			C_CS_PlayerResource *pCSPR = ( C_CS_PlayerResource* )GameResources();
 			pCSPR->GetDecoratedPlayerName( pPlayer->entindex(), wszPlayerName, sizeof( wszPlayerName ), ( EDecoratedPlayerNameFlag_t) ( k_EDecoratedPlayerNameFlag_DontUseNameOfControllingPlayer | k_EDecoratedPlayerNameFlag_DontUseAssassinationTargetName ) );
-#else
-			wchar_t wszPlayerName[MAX_PLAYER_NAME_LENGTH];
-			g_pLocalize->ConvertANSIToUnicode( pPlayer->GetPlayerName(), wszPlayerName, sizeof(wszPlayerName) );
-#endif
 
 			wchar_t wszReasonBuf[64];
 			wchar_t const *wszReason = wszReasonBuf;
@@ -851,9 +832,6 @@ void ClientModeShared::FireGameEvent( IGameEvent *event )
 	}
 	else if ( Q_strcmp( "player_fullyjoined", eventname ) == 0 )
 	{
-#ifdef PORTAL2
-		// dont show these message on the console at all
-#endif
 		if ( !hudChat )
 			return;
 		if ( PlayerNameNotSetYet(event->GetString("name")) )

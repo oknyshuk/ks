@@ -71,9 +71,6 @@
 #include "util_shared.h"
 #include "player_voice_listener.h"
 
-#ifdef _WIN32
-#include "iengineui.h"
-#endif
 
 #include "ragdoll_shared.h"
 #include "toolframework/iserverenginetools.h"
@@ -101,40 +98,18 @@
 #include "fmtstr.h"
 #include "mathlib/aabb.h"
 #include "env_cascade_light.h"
-#if defined( CSTRIKE15 )
 #include "cstrike15/cs_player.h"
 #include "gametypes/igametypes.h"
 #include "cs_shareddefs.h"
-#endif
 
-#ifdef INFESTED_DLL
-#include "missionchooser/iasw_mission_chooser.h"
-#include "matchmaking/swarm/imatchext_swarm.h"
-#endif
 
 #ifdef CSTRIKE_DLL // BOTPORT: TODO: move these ifdefs out
 #include "bot/bot.h"
 #endif
 
-#ifdef PORTAL
-#include "portal_base2d_shared.h"
-#include "portal_player.h"
-#endif
 
-#ifdef PORTAL2
-#include "info_placement_helper.h"
-#include "paint_saverestore.h"
-#include "prop_portal_shared.h"
-#include "portal_shareddefs.h"
-#endif // PORTAL2
 
-#ifdef DOTA_DLL
-#include "dota/dota_bot_commander.h"
-#endif
 
-#ifdef _WIN32
-#include "IGameUIFuncs.h"
-#endif
 
 extern IToolFrameworkServer *g_pToolFrameworkServer;
 extern IParticleSystemQuery *g_pParticleSystemQuery;
@@ -179,11 +154,7 @@ CUtlLinkedList<CMapEntityRef, unsigned short> g_MapEntityRefs;
 // Engine interfaces.
 IVEngineServer	*engine = NULL;
 IVoiceServer	*g_pVoiceServer = NULL;
-#if !defined(_STATIC_LINKED)
 IFileSystem		*filesystem = NULL;
-#else
-extern IFileSystem *filesystem;
-#endif
 INetworkStringTableContainer *networkstringtable = NULL;
 IStaticPropMgrServer *staticpropmgr = NULL;
 IUniformRandomStream *random = NULL;
@@ -203,10 +174,6 @@ ISceneFileCache *scenefilecache = NULL;
 IScriptManager *scriptmanager = NULL;
 IBlackBox *blackboxrecorder = NULL;
 
-#ifdef INFESTED_DLL
-IASW_Mission_Chooser *missionchooser = NULL;
-IMatchExtSwarm *g_pMatchExtSwarm = NULL;
-#endif
 
 IGameSystem *SoundEmitterSystem();
 void SoundSystemPreloadSounds( void );
@@ -310,11 +277,7 @@ static bool g_bHeadTrackingEnabled = false;
 
 bool IsHeadTrackingEnabled()
 {
-#if defined( HL2_DLL )
-	return g_bHeadTrackingEnabled;
-#else
 	return false;
-#endif
 }
 
 //-----------------------------------------------------------------------------
@@ -546,9 +509,6 @@ static bool InitGameSystems( CreateInterfaceFn appSystemFactory )
 	// Add HLTV director 
 	IGameSystem::Add( HLTVDirectorSystem() );
 
-#ifdef DOTA_DLL
-	IGameSystem::Add( DOTAPlayerCommanderSystem() );
-#endif
 
 #if defined( REPLAY_ENABLED )
 	// Add Replay director
@@ -668,18 +628,10 @@ bool CServerGameDLL::DLLInit( CreateInterfaceFn appSystemFactory,
 		scriptmanager = (IScriptManager *)appSystemFactory( VSCRIPT_INTERFACE_VERSION, NULL );
 	}
 
-#if defined( CSTRIKE15 )
 	if ( ( g_pGameTypes = (IGameTypes *)appSystemFactory( VENGINE_GAMETYPES_VERSION, NULL )) == NULL )
 		return false;
-#endif
 
 
-#ifdef INFESTED_DLL
-	if ( (missionchooser = (IASW_Mission_Chooser *)appSystemFactory(ASW_MISSION_CHOOSER_VERSION, NULL)) == NULL )
-		return false;
-	if ( (g_pMatchExtSwarm = (IMatchExtSwarm *)appSystemFactory(IMATCHEXT_SWARM_INTERFACE, NULL)) == NULL )
-		return false;
-#endif
 
 	if ( !g_pMatchFramework )
 		return false;
@@ -741,8 +693,6 @@ bool CServerGameDLL::DLLInit( CreateInterfaceFn appSystemFactory,
 	COM_TimestampedLog( "g_pGameSaveRestoreBlockSet" );
 
 
-#if defined( PORTAL2 )
-#endif
 
 	bool bInitSuccess = false;
 	if ( sv_threaded_init.GetBool() )
@@ -783,10 +733,8 @@ bool CServerGameDLL::DLLInit( CreateInterfaceFn appSystemFactory,
 	// init the gamestatsupload connection
 	gamestatsuploader->InitConnection();
 
-#if defined( CSTRIKE15 )
 	// Load the game types.
 	g_pGameTypes->Initialize();
-#endif
 
 	return true;
 }
@@ -811,8 +759,6 @@ void CServerGameDLL::DLLShutdown( void )
 	// Due to dependencies, these are not autogamesystems
 	ModelSoundsCacheShutdown();
 
-#ifdef PORTAL2
-#endif
 
 
 	g_pParticleSystemMgr->Shutdown();
@@ -860,7 +806,6 @@ float CServerGameDLL::GetTickInterval( void ) const
 
 
 // Ignoring this for now, server ops are abusing it
-#if !defined( TF_DLL )
 	// override if tick rate specified in command line
 	if ( CommandLine()->CheckParm( "-tickrate" ) )
 	{
@@ -877,7 +822,6 @@ float CServerGameDLL::GetTickInterval( void ) const
 
 		tickinterval = clamp(tickinterval, MINIMUM_TICK_INTERVAL, MAXIMUM_TICK_INTERVAL);
 	}
-#endif
 
 	return tickinterval;
 }
@@ -1032,9 +976,6 @@ bool CServerGameDLL::LevelInit( const char *pMapName, char const *pMapEntities, 
 			engine->LoadAdjacentEnts( pOldLevel, pLandmarkName );
 		}
 
-#ifdef PORTAL
-		g_OneWayTransition = true;
-#endif
 		if ( g_OneWayTransition )
 		{
 			engine->ClearSaveDirAfterClientLoad();
@@ -1566,31 +1507,6 @@ typedef struct
 // this list gets searched for the first partial match, so some are out of order
 static TITLECOMMENT gTitleComments[] =
 {
-#ifdef PORTAL
-	{ "testchmb_a_00",			"#Portal_Chapter1_Title"  },
-	{ "testchmb_a_01",			"#Portal_Chapter1_Title"  },
-	{ "testchmb_a_02",			"#Portal_Chapter2_Title"  },
-	{ "testchmb_a_03",			"#Portal_Chapter2_Title"  },
-	{ "testchmb_a_04",			"#Portal_Chapter3_Title"  },
-	{ "testchmb_a_05",			"#Portal_Chapter3_Title"  },
-	{ "testchmb_a_06",			"#Portal_Chapter4_Title"  },
-	{ "testchmb_a_07",			"#Portal_Chapter4_Title"  },
-	{ "testchmb_a_08_advanced",	"#Portal_Chapter5_Title"  },
-	{ "testchmb_a_08",			"#Portal_Chapter5_Title"  },
-	{ "testchmb_a_09_advanced",	"#Portal_Chapter6_Title"  },
-	{ "testchmb_a_09",			"#Portal_Chapter6_Title"  },
-	{ "testchmb_a_10_advanced",	"#Portal_Chapter7_Title"  },
-	{ "testchmb_a_10",			"#Portal_Chapter7_Title"  },
-	{ "testchmb_a_11_advanced",	"#Portal_Chapter8_Title"  },
-	{ "testchmb_a_11",			"#Portal_Chapter8_Title"  },
-	{ "testchmb_a_13_advanced",	"#Portal_Chapter9_Title"  },
-	{ "testchmb_a_13",			"#Portal_Chapter9_Title"  },
-	{ "testchmb_a_14_advanced",	"#Portal_Chapter10_Title"  },
-	{ "testchmb_a_14",			"#Portal_Chapter10_Title"  },
-	{ "testchmb_a_15",			"#Portal_Chapter11_Title"  },
-	{ "escape_",				"#Portal_Chapter11_Title"  },
-	{ "background2",			"#Portal_Chapter12_Title"  },
-#else
 	{ "intro", "#HL2_Chapter1_Title" },
 
 	{ "d1_trainstation_05", "#HL2_Chapter2_Title" },
@@ -1669,7 +1585,6 @@ static TITLECOMMENT gTitleComments[] =
 	
 	{ "ep2_outland_12a", "#ep2_Chapter7_Title" },
 	{ "ep2_outland_12", "#ep2_Chapter6_Title" },
-#endif
 };
 
 void CServerGameDLL::GetSaveComment( char *text, int maxlength, float flMinutes, float flSeconds, bool bNoTime )
@@ -2561,14 +2476,12 @@ void CServerGameEnts::CheckTransmit( CCheckTransmitInfo *pInfo, const unsigned s
 
 		CBasePlayer *pPlayer = dynamic_cast< CBasePlayer* >( pEnt );
 
-#if defined( CSTRIKE15 )
 		// Team Lead in gungame should be always visible in counter-strike. Yes, even if he's out of PVS. Yes, even if he's behind the wall.
 		if ( pPlayer && static_cast< CCSPlayer* >( pPlayer )->m_isCurrentGunGameTeamLeader )
 		{ // do not check PVS or occlusion for a gun game team leader
 			pEnt->SetTransmit( pInfo, false );
 			continue;
 		}
-#endif
 
 		bool bInPVS;
 		if ( pPlayer && ( pPlayer->GetAbsOrigin() - pRecipientPlayer->GetAbsOrigin() ).LengthSqr() < Sqr( pvs_min_player_distance.GetFloat() ) )
@@ -2991,50 +2904,6 @@ void CServerGameClients::ClientSettingsChanged( edict_t *pEdict )
 }
 
 
-#ifdef PORTAL
-//-----------------------------------------------------------------------------
-// Purpose: Runs CFuncAreaPortalBase::UpdateVisibility on each portal
-// Input  : pAreaPortal - The Area portal to test for visibility from portals
-// Output : int - 1 if any portal needs this area portal open, 0 otherwise.
-//-----------------------------------------------------------------------------
-int TestAreaPortalVisibilityThroughPortals ( CFuncAreaPortalBase* pAreaPortal, edict_t *pViewEntity, unsigned char *pvs, int pvssize  )
-{
-	int iPortalCount = CPortal_Base2D_Shared::AllPortals.Count();
-	if( iPortalCount == 0 )
-		return 0;
-
-	CPortal_Base2D **pPortals = CPortal_Base2D_Shared::AllPortals.Base();
-
-	for ( int i = 0; i != iPortalCount; ++i )
-	{
-		CPortal_Base2D* pLocalPortal = pPortals[ i ];
-		if ( pLocalPortal && pLocalPortal->IsActive() )
-		{
-			CPortal_Base2D* pRemotePortal = pLocalPortal->m_hLinkedPortal.Get();
-
-			// Make sure this portal's linked portal is in the PVS before we add what it can see
-			if ( pRemotePortal && pRemotePortal->IsActive() && pRemotePortal->NetworkProp() && 
-				pRemotePortal->NetworkProp()->IsInPVS( pViewEntity, pvs, pvssize ) )
-			{
-				bool bIsOpenOnClient = true;
-				float fovDistanceAdjustFactor = 1.0f;
-				Vector portalOrg = pLocalPortal->GetAbsOrigin();
-				CUtlVector< Vector > orgs;
-				orgs.AddToTail( portalOrg );
-				int iPortalNeedsThisPortalOpen = pAreaPortal->UpdateVisibility( orgs, fovDistanceAdjustFactor, bIsOpenOnClient );
-
-				// Stop checking on success, this portal needs to be open
-				if ( iPortalNeedsThisPortalOpen )
-				{
-					return iPortalNeedsThisPortalOpen;
-				}
-			}
-		}
-	}
-	
-	return 0;
-}
-#endif
 
 //-----------------------------------------------------------------------------
 // Purpose: A client can have a separate "view entity" indicating that his/her view should depend on the origin of that
@@ -3125,14 +2994,6 @@ void CServerGameClients::ClientSetupVisibility( edict_t *pViewEntity, edict_t *p
 		portalNums[iOutPortal] = pCur->m_portalNumber;
 		isOpen[iOutPortal] = pCur->UpdateVisibility( areaPortalOrigins, fovDistanceAdjustFactor, bIsOpenOnClient );
 
-#ifdef PORTAL
-		// If the client doesn't need this open, test if portals might need this area portal open
-		if ( isOpen[iOutPortal] == 0 )
-		{
-			isOpen[iOutPortal] = TestAreaPortalVisibilityThroughPortals( pCur, pViewEntity, pvs, pvssize );
-			bIsOpenOnClient |= ( isOpen[iOutPortal] != 0 );
-		}
-#endif
 
 		++iOutPortal;
 		if ( iOutPortal >= ARRAYSIZE( portalNums ) )
@@ -3167,14 +3028,6 @@ void CServerGameClients::ClientSetupVisibility( edict_t *pViewEntity, edict_t *p
 		pPlayer->m_Local.UpdateAreaBits( pPlayer, portalBits );
 	}
 
-#ifdef PORTAL 
-	// *After* the player's view has updated its area bits, add on any other areas seen by portals
-	CPortal_Player* pPortalPlayer = dynamic_cast<CPortal_Player*>( pPlayer );
-	if ( pPortalPlayer )
-	{
-		pPortalPlayer->UpdatePortalViewAreaBits( pvs, pvssize );
-	}
-#endif //PORTAL
 }
 
 
@@ -3403,19 +3256,6 @@ void CServerGameClients::GetBugReportInfo( char *buf, int buflen )
 		}
 	}
 
-#if defined ( PORTAL2 )
-	int iPortalCount = CProp_Portal_Shared::AllPortals.Count();
-	if( iPortalCount != 0 )
-	{
-		CProp_Portal **pPortals = CProp_Portal_Shared::AllPortals.Base();
-		Q_snprintf( buf, buflen, "%sPortal Locations:\n", buf );
-		for( int i = 0; i != iPortalCount; ++i )
-		{
-			CProp_Portal *pTempPortal = pPortals[i];
-			Q_snprintf( buf, buflen, "%slinkid:%d loc: %f %f %f\n", buf, pTempPortal->GetLinkageGroup(), XYZ( pTempPortal->GetAbsOrigin() ) );
-		}
-	}
-#endif
 }
 
 //-----------------------------------------------------------------------------
@@ -3670,9 +3510,6 @@ public:
 	{
 		AddAppSystem( "engine", SOUNDEMITTERSYSTEM_INTERFACE_VERSION );
 		AddAppSystem( "engine", SCENE_FILE_CACHE_INTERFACE_VERSION );
-#ifdef INFESTED_DLL
-		AddAppSystem( "missionchooser", ASW_MISSION_CHOOSER_VERSION );
-#endif
 	}
 
 	virtual int	Count()
@@ -3713,9 +3550,3 @@ void CServerGameTags::GetTaggedConVarList( KeyValues *pCvarTagList )
 	}
 }
 
-#if defined(PORTAL2)
-CON_COMMAND_F( give_promo_helmet, "Gives the gamestop promo helmets for coop bots. Requires a respawn or changelevel to start showing.", FCVAR_DEVELOPMENTONLY )
-{
-	g_nPortal2PromoFlags |= PORTAL2_PROMO_HELMETS;
-}
-#endif

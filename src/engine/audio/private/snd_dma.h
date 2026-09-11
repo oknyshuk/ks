@@ -7,9 +7,6 @@
 
 #ifndef SND_DMA_H
 #define SND_DMA_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 
 extern ConVar snd_obscured_gain_db;

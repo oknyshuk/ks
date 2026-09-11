@@ -68,14 +68,8 @@ const bool g_bExtractGreenAlpha		: register( SHADER_SPECIFIC_BOOL_CONST_2 );
 #define FAR_FADE_FACTOR ( SizeParms2.y )	   // alpha = 1-min(1,max(0, (dist-start_fade)*factor))
 
 // Define stuff for instancing on 360
-#if ( defined( _X360 ) && defined( SHADER_MODEL_VS_2_0 ) )
-#define CONST_PC 
-#define VERTEX_INDEX_PARAM_360 ,int Index:INDEX
-#define DO_INSTANCING 1
-#else
 #define CONST_PC const
 #define VERTEX_INDEX_PARAM_360
-#endif
 
 
 struct VS_INPUT
@@ -485,11 +479,6 @@ VS_OUTPUT main( CONST_PC VS_INPUT v
 	}
 	#endif
 
-#ifdef _PS3
-	// Account for OpenGL's flipped y coordinate and expanded z range [-1,1] instead of [0,1]
-	o.projPos.y = -o.projPos.y;
-	o.projPos.z = 2.0f * o.projPos.z - o.projPos.w;
-#endif // _PS3
 
 	return o;
 }

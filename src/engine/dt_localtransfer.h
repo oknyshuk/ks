@@ -7,9 +7,6 @@
 
 #ifndef DT_LOCALTRANSFER_H
 #define DT_LOCALTRANSFER_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 
 #include "dt_send.h"

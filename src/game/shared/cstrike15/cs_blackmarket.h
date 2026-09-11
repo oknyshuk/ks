@@ -19,9 +19,6 @@
 #endif
 
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 struct blackmarket_items_t
 {

@@ -7,9 +7,6 @@
 
 #ifndef CS_STEAMSTATS_H
 #define CS_STEAMSTATS_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "steam/steam_api.h"
 #include "GameEventListener.h"

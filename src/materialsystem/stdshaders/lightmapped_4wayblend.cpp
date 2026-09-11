@@ -88,11 +88,7 @@ BEGIN_VS_SHADER( Lightmapped_4WayBlend,
 		SHADER_PARAM( ENVMAPANISOTROPY, SHADER_PARAM_TYPE_BOOL, "0", "Enable anisotropic cubemap lookups for macroscopically rough/microscopically smooth surfaces, like wet asphalt" )
 		SHADER_PARAM( ENVMAPANISOTROPYSCALE, SHADER_PARAM_TYPE_FLOAT, "1.0", "Scale anisotropy amount for cubemap lookups" )
 
-#if defined( CSTRIKE15 )
 		SHADER_PARAM( SHADERSRGBREAD360, SHADER_PARAM_TYPE_BOOL, "1", "Simulate srgb read in shader code")
-#else
-		SHADER_PARAM( SHADERSRGBREAD360, SHADER_PARAM_TYPE_BOOL, "0", "Simulate srgb read in shader code")
-#endif
 
 		SHADER_PARAM( ENVMAPLIGHTSCALE, SHADER_PARAM_TYPE_FLOAT, "0.0", "How much the lightmap effects environment map reflection, 0.0 is off, 1.0 will allow complete blackness of the environment map if the lightmap is black" )
 		SHADER_PARAM( ENVMAPLIGHTSCALEMINMAX, SHADER_PARAM_TYPE_VEC2, "[0.0 1.0]", "Thresholds for the lightmap envmap effect.  Setting the min higher increases the minimum light amount at which the envmap gets nerfed to nothing." )

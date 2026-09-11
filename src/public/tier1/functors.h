@@ -35,9 +35,6 @@
 #ifndef FUNCTORS_H
 #define FUNCTORS_H
 
-#if defined( _WIN32 )
-#pragma once
-#endif
 
 #include "tier0/platform.h"
 #include "tier1/refcount.h"

@@ -13,8 +13,6 @@
 #if defined( PS3SDK_INSTALLED ) 
 #define PS3_CROSS_PLAY
 #endif
-#if !defined( CSTRIKE15 )
-#endif // CSTRIKE15
 extern IVEngineClient *engineClient;
 #endif
 

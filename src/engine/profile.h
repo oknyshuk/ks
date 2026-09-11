@@ -12,9 +12,6 @@
 //=============================================================================//
 #if !defined( PROFILE_H )
 #define PROFILE_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 void Host_ResetGlobalConfiguration();
 void Host_ResetConfiguration( const int iController );

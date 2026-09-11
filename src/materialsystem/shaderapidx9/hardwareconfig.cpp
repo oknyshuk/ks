@@ -198,11 +198,7 @@ void CHardwareConfig::SetupHardwareCaps( int nDXLevel, const HardwareCaps_t &act
 	memcpy( &m_UnOverriddenCaps, &actualCaps, sizeof(HardwareCaps_t) );
 
 	// Don't bother with fallbacks for DX10 or consoles
-#if defined( DX_TO_GL_ABSTRACTION ) || defined( DX_TO_VK_ABSTRACTION )
 	if ( nDXLevel >= 100 )
-#else
-	if ( ( nDXLevel >= 100 ) )
-#endif
 		return;
 
 	// Don't bother with fallbacks for consoles.
@@ -389,61 +385,10 @@ ShadowFilterMode_t CHardwareConfig::GetShadowFilterMode( bool bForceLowQualitySh
 	
     const bool bUseLowQualityShadows = ( nGPULevel < 2 ) || ( bForceLowQualityShadows );
 	
-#if PLATFORM_POSIX
 	// Currently Mac or PS3
 	if ( !m_Caps.m_bSupportsShadowDepthTextures )
 		return SHADOWFILTERMODE_DEFAULT;
 
-#else
-	// PC
-	if ( !m_Caps.m_bSupportsShadowDepthTextures || !ShaderUtil()->GetConfig().ShadowDepthTexture() )
-		return SHADOWFILTERMODE_DEFAULT;
-			
-	switch ( m_Caps.m_ShadowDepthTextureFormat )
-	{
-		case IMAGE_FORMAT_D16_SHADOW:
-		case IMAGE_FORMAT_D24X8_SHADOW:
-			if ( ( m_Caps.m_VendorID == VENDORID_NVIDIA ) || ( m_Caps.m_VendorID == VENDORID_INTEL ) )
-			{
-				if ( bUseLowQualityShadows )
-					return NVIDIA_PCF_CHEAP;				// NVIDIA hardware bilinear PCF
-				else
-					return NVIDIA_PCF;						// NVIDIA hardware PCF with larger kernel
-			}
-
-			if ( m_Caps.m_VendorID == VENDORID_ATI )
-			{
-				// PS30 shaders purposely don't support ATI_NOPCF to reduce the combo permutation space.
-				if ( ( !bPS30 ) && ( bUseLowQualityShadows ) )
-				{
-					return ATI_NOPCF;						// Don't bother with a cheap Fetch 4
-				}
-				else
-				{
-					static bool bForceATIFetch4 = CommandLine()->CheckParm( "-forceatifetch4" ) ? true : false;
-
-					// Either PS30, or high quality shadows.
-					if ( m_Caps.m_bDX10Card && !bForceATIFetch4 )
-						return ( bUseLowQualityShadows ) ? NVIDIA_PCF_CHEAP : NVIDIA_PCF;					// ATI wants us to run NVIDIA PCF on DX10 parts (this is the common case)
-					else if ( m_Caps.m_bSupportsFetch4 )
-						return ATI_NO_PCF_FETCH4;			// ATI fetch4 depth texture sampling
-					else if ( bPS30 )
-					{
-						// We can't return ATI_NOPCF when using PS30 shaders. (This path should actually never get hit - either we're on a DX10 card or its fetch10 capable, I think.)
-						return ATI_NO_PCF_FETCH4;
-					}
-					else
-					{
-						return ATI_NOPCF;					// ATI vanilla depth texture sampling
-					}
-				}
-			}
-			break;
-
-		default:
-			return SHADOWFILTERMODE_DEFAULT;
-	}
-#endif
 
 	return SHADOWFILTERMODE_DEFAULT;
 }
@@ -720,9 +665,7 @@ int CHardwareConfig::GetMaxVertexTextureDimension() const
 HDRType_t CHardwareConfig::GetHDRType() const
 {
 	// On MacOS / Linux, this value comes down from the engine, which read it from the registry...which doesn't exist, so we're slamming to true here
-#if defined( DX_TO_GL_ABSTRACTION ) || defined( DX_TO_VK_ABSTRACTION )
 	g_pHardwareConfigDx8->SetHDREnabled( true );
-#endif
 
 	bool enabled = m_bHDREnabled;
 	int dxlev = GetDXSupportLevel();
@@ -835,9 +778,7 @@ CSMQualityMode_t CHardwareConfig::GetCSMQuality( void ) const
 
 bool CHardwareConfig::SupportsBilinearPCFSampling() const
 {
-#if defined( DX_TO_VK_ABSTRACTION )
 	return true;
-#endif
 	if( IsOpenGL() )
 		return true;
 
@@ -890,23 +831,9 @@ bool CHardwareConfig::SupportsResolveDepth( void ) const
 	if ( ( gpu_level.GetInt() >= 2 ) &&
 		 ( mat_resolveFullFrameDepth.GetInt() == 1 ) )
 	{
-#if   defined( DX_TO_VK_ABSTRACTION )
 		{
 			return true;
 		}
-#else
-		{
-			if ( g_pHardwareConfigDx8->ActualCaps().m_bSupportsINTZ &&
-				 ( g_pHardwareConfigDx8->ActualCaps().m_bSupportsRESZ || ( g_pHardwareConfigDx8->ActualCaps().m_VendorID == VENDORID_NVIDIA ) ) )
-			{
-				return true;
-			}
-			else
-			{
-				return false;
-			}
-		}
-#endif
 	}
 	else
 	{

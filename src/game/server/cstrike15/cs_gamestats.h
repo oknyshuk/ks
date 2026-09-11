@@ -7,9 +7,6 @@
 
 #ifndef CS_GAMESTATS_H
 #define CS_GAMESTATS_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "cs_blackmarket.h"
 #include "GameStats.h"

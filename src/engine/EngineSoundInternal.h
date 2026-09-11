@@ -8,9 +8,6 @@
 #ifndef ENGINESOUNDINTERNAL_H
 #define ENGINESOUNDINTERNAL_H
 
-#if defined( _WIN32 )
-#pragma once
-#endif
 
 #include "engine/IEngineSound.h"
 

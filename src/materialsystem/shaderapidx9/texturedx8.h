@@ -9,9 +9,6 @@
 #ifndef TEXTUREDX8_H
 #define TEXTUREDX8_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "togl/rendermechanism.h"
 #include "bitmap/imageformat.h"

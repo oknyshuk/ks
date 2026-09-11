@@ -7,9 +7,6 @@
 //=============================================================================//
 
 
-#if defined(_WIN32)
-#include <windows.h>
-#endif
 
 #include "basetypes.h"
 #include <stdio.h>

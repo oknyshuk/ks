@@ -6,9 +6,6 @@
 
 #ifndef LOCALNETWORKBACKDOOR_H
 #define LOCALNETWORKBACKDOOR_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "quakedef.h"
 #include "cl_localnetworkbackdoor.h"

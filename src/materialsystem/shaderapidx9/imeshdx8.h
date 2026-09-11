@@ -9,9 +9,6 @@
 #ifndef IMESHDX8_H
 #define IMESHDX8_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 
 #include "meshbase.h"

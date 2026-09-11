@@ -6,9 +6,6 @@
 
 #ifndef DEMOFILE_H
 #define DEMOFILE_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #define DEMO_FILE_UTLBUFFER 1
 

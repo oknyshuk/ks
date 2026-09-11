@@ -45,9 +45,6 @@ void DumpPlaneToGlView( const float *pPlane, float fGrayScale, const char *pszFi
 void DumpLineToGLView( const Vector &vPoint1, const Vector &vColor1, const Vector &vPoint2, const Vector &vColor2, float fThickness, FILE *pFile );
 void DumpAABBToGLView( const Vector &vCenter, const Vector &vExtents, const Vector &vColor, FILE *pFile );
 
-#if defined( ENABLE_DEBUG_POLYHEDRON_DUMPS ) && defined( WIN32 )
-#include "winlite.h"
-#endif
 
 static VMatrix s_matIdentity( 1.0f, 0.0f, 0.0f, 0.0f, 
 							 0.0f, 1.0f, 0.0f, 0.0f, 
@@ -79,11 +76,7 @@ static int g_iPolyhedronDumpCounter = 0;
 
 void CreateDumpDirectory( const char *szDirectoryName )
 {
-#if defined( WIN32 )
-	CreateDirectory( szDirectoryName, NULL );
-#else
 	Assert( false ); //TODO: create directories in linux
-#endif
 }
 
 #define DEBUG_POLYHEDRON_CONVERSION 1

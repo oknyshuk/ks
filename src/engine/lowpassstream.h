@@ -7,9 +7,6 @@
 
 #ifndef LOWPASSSTREAM_H
 #define LOWPASSSTREAM_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 
 // ------------------------------------------------------------------ //

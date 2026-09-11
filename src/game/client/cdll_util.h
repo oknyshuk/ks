@@ -9,9 +9,6 @@
 #if !defined( CDLL_UTIL_H )
 #define CDLL_UTIL_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include <soundflags.h>
 #include "mathlib/vector.h"

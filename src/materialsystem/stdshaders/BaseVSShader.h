@@ -9,9 +9,6 @@
 #ifndef BASEVSSHADER_H
 #define BASEVSSHADER_H
 
-#ifdef _WIN32		   
-#pragma once
-#endif
 
 #include "cpp_shader_constant_register_map.h"
 #include "shaderlib/cshader.h"

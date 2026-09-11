@@ -9,9 +9,6 @@
 #ifndef CMATERIAL_QUEUEFRIENDLY_H
 #define CMATERIAL_QUEUEFRIENDLY_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "imaterialinternal.h"
 

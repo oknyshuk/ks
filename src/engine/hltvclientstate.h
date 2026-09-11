@@ -6,9 +6,6 @@
 
 #ifndef HLTVCLIENTSTATE_H
 #define HLTVCLIENTSTATE_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "baseclientstate.h"
 

@@ -8,9 +8,6 @@
 #ifndef IMATCHFRAMEWORK_H
 #define IMATCHFRAMEWORK_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 #define CONTEAMMATCH
 

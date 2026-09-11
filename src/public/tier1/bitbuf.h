@@ -11,9 +11,6 @@
 #ifndef BITBUF_H
 #define BITBUF_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 
 #include "mathlib/mathlib.h"
@@ -1298,13 +1295,6 @@ FORCEINLINE float CBitRead::ReadFloat( void )
 	return * ( ( float * ) &nUval );
 }
 
-#ifdef _WIN32
-#pragma warning(push)
-#pragma warning(disable : 4715)								// disable warning on not all cases
-															// returning a value. throwing default:
-															// in measurably reduces perf in bit
-															// packing benchmark
-#endif
 FORCEINLINE unsigned int CBitRead::ReadUBitVar( void )
 {
 	unsigned int ret = ReadUBitLong( 6 );
@@ -1326,9 +1316,6 @@ FORCEINLINE unsigned int CBitRead::ReadUBitVar( void )
 	}
 	return ret;
 }
-#ifdef _WIN32
-#pragma warning(pop)
-#endif
 
 FORCEINLINE float CBitRead::ReadBitFloat( void )
 {

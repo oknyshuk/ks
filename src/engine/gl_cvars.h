@@ -9,9 +9,6 @@
 #ifndef GL_CVARS_H
 #define GL_CVARS_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "convar.h"
 #include "cmd.h"

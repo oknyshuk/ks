@@ -6,9 +6,6 @@
 #ifndef SV_REMOTEACCESS_H
 #define SV_REMOTEACCESS_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "igameserverdata.h"
 #include "utlbuffer.h"

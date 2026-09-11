@@ -35,9 +35,6 @@
 #endif
 
 
-#ifdef PORTAL2
-#include "radialmenu.h"
-#endif
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -129,10 +126,6 @@ ConVar joy_autosprint("joy_autosprint", "0", 0, "Automatically sprint when movin
 
 static ConVar joy_inverty("joy_inverty", "0", FCVAR_ARCHIVE | FCVAR_ARCHIVE_GAMECONSOLE | FCVAR_SS, "Whether to invert the Y axis of the joystick for looking." );
 
-#if !defined ( CSTRIKE15 )
-static ConVar joy_inverty_default( "joy_inverty_default", "0", FCVAR_ARCHIVE_GAMECONSOLE );				// Extracted & saved from profile
-static ConVar joy_movement_stick_default( "joy_movement_stick_default", "0", FCVAR_ARCHIVE_GAMECONSOLE );	// Extracted & saved from profile
-#endif
 
 // XBox Defaults
 static ConVar joy_yawsensitivity_default( "joy_yawsensitivity_default", "-1.0", FCVAR_NONE );
@@ -190,9 +183,6 @@ extern ConVar cl_yawspeed;
 extern ConVar cl_pitchdown;
 extern ConVar cl_pitchup;
 extern ConVar cl_pitchspeed;
-#ifdef INFESTED_DLL
-extern ConVar asw_cam_marine_yaw;
-#endif
 extern ConVar cam_idealpitch;
 extern ConVar cam_idealyaw;
 extern ConVar thirdperson_platformer;
@@ -959,22 +949,6 @@ void CInput::Joystick_Advanced( bool bSilent )
 		}
 	}
 
-#if defined( SWARM_DLL ) || defined( PORTAL )
-	// Load the xbox controller cfg file if it hasn't been loaded.
-	if ( in_joystick.GetBool() )
-	{
-		if ( joy_xcontroller_cfg_loaded.GetBool() == false )
-		{
-			engine->ClientCmd( "exec joy_configuration" PLATFORM_EXT ".cfg" );
-			joy_xcontroller_cfg_loaded.SetValue( 1 );
-		}
-	}
-	else if ( joy_xcontroller_cfg_loaded.GetBool() )
-	{
-		engine->ClientCmd( "exec undo360controller.cfg" );
-		joy_xcontroller_cfg_loaded.SetValue( 0 );
-	}
-#else // !SWARM_DLL && !PORTAL
 
 
 	// [Forrest] For CStrike 1.5 we want to load 360controller.cfg on Xbox as well as PC.
@@ -1003,7 +977,6 @@ void CInput::Joystick_Advanced( bool bSilent )
 	}
 
 
-#endif // SWARM_DLL
 }
 
 
@@ -1795,10 +1768,6 @@ void CInput::JoyStickMove( float frametime, CUserCmd *cmd )
 	if ( engineui->IsGameUIVisible() )
 		return;
 
-#ifdef PORTAL2
-	if ( IsRadialMenuOpen() )
-		return;
-#endif
 
 	int nSlot = GET_ACTIVE_SPLITSCREEN_SLOT();
 
@@ -1872,11 +1841,7 @@ void CInput::JoyStickApplyMovement( CUserCmd *cmd, float joyForwardMove, float j
 	// apply player motion relative to screen space
 	if ( CAM_IsThirdPerson() && thirdperson_screenspace.GetInt() )
 	{
-#ifdef INFESTED_DLL
-		float ideal_yaw = asw_cam_marine_yaw.GetFloat();
-#else
 		float ideal_yaw = cam_idealyaw.GetFloat();
-#endif
 		float ideal_sin = sin(DEG2RAD(ideal_yaw));
 		float ideal_cos = cos(DEG2RAD(ideal_yaw));
 		float side_movement = ideal_cos*joySideMove - ideal_sin*joyForwardMove;

@@ -13,9 +13,7 @@
 
 #include "convar.h"
 
-#if defined ( CSTRIKE15 )
 #error "DEPRICIATED: Use the gameui_interface in the cstrike15 folder"
-#endif 
 class IGameClientExports;
 class CCommand;
 

@@ -8,9 +8,6 @@
 #ifndef OVERLAY_H
 #define OVERLAY_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 
 // This is a workaround for the fact that we get massive decal flicker

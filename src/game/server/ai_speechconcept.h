@@ -8,9 +8,6 @@
 #ifndef AI_SPEECHCONCEPT_H
 #define AI_SPEECHCONCEPT_H
 
-#if defined( _WIN32 )
-#pragma once
-#endif
 
 #include "../../public/responserules/response_types.h"
 

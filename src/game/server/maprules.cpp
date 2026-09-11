@@ -14,13 +14,11 @@
 #include "entitylist.h"
 #include "ai_hull.h"
 #include "entityoutput.h"
-#if defined( CSTRIKE15 )
 #include "weapon_csbase.h"
 #include "cs_weapon_parse.h"
 #include "cs_shareddefs.h"
 #include "cs_gamerules.h"
 #include "cs_player.h"
-#endif
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -110,10 +108,8 @@ public:
 	inline	void	SetPoints( int points ) { m_Score = points; }
 
 	[[= ks::reflect::Input{ .name = "ApplyScore", .type = FIELD_VOID } ]] void InputApplyScore( inputdata_t &inputdata );
-#if defined( CSTRIKE15 )
 	[[= ks::reflect::Input{ .name = "AddScoreTerrorist", .type = FIELD_VOID } ]] void InputAddScoreTerrorist( inputdata_t &inputdata );
 	[[= ks::reflect::Input{ .name = "AddScoreCT", .type = FIELD_VOID } ]] void InputAddScoreCT( inputdata_t &inputdata );
-#endif
 
 private:
 };
@@ -166,7 +162,6 @@ void CGameScore::InputApplyScore( inputdata_t &inputdata )
 	}
 }
 
-#if defined( CSTRIKE15 )
 void CGameScore::InputAddScoreTerrorist( inputdata_t &inputdata )
 {
 	CCSMatch* match = CSGameRules()->GetMatch();
@@ -185,7 +180,6 @@ void CGameScore::InputAddScoreCT( inputdata_t &inputdata )
 	}
 }
 
-#endif
 
 void CGameScore::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
 {
@@ -295,7 +289,6 @@ void CGameCoopMissionManager::SetMissionCompleted( void )
 // }
 
 
-#if defined( CSTRIKE15 )
 // CGameMoney / game_money	-- award money to player / team 
 
 class CGameMoney : public CRulePointEntity
@@ -371,7 +364,6 @@ void CGameMoney::InputAddTeamMoneyCT( inputdata_t &inputdata )
 	CSGameRules()->AddTeamAccount( TEAM_CT, TeamCashAward::CUSTOM_AWARD, nMoney, STRING(m_strAwardText) );
 }
 
-#endif
 
 // CGameEnd / game_end	-- Ends the game in MP
 
@@ -405,7 +397,6 @@ void CGameEnd::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useT
 	g_pGameRules->EndMultiplayerGame();
 }
 
-#if defined( CSTRIKE15 )
 // CGameEnd / game_round_end	-- Ends the round in MP
 
 class CGameRoundEnd : public CRulePointEntity , public CGameEventListener
@@ -462,7 +453,6 @@ void CGameRoundEnd::InputEndRound_CounterTerroristsWin( inputdata_t &inputdata )
 	float flDelay = inputdata.value.Float();
 	CSGameRules()->IncrementAndTerminateRound( flDelay, CTs_Win );
 }
-#endif
 
 //
 // CGameText / game_text	-- NON-Localized HUD Message (use env_message to display a titles.txt message)

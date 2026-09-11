@@ -8,9 +8,6 @@
 
 #if !defined( ITEMPENTS_H )
 #define ITEMPENTS_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "ipredictionsystem.h"
 #include "shattersurfacetypes.h"

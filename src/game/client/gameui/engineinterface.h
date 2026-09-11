@@ -9,9 +9,6 @@
 #ifndef ENGINEINTERFACE_H
 #define ENGINEINTERFACE_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 // engine interface
 #include "steam/steam_api.h"

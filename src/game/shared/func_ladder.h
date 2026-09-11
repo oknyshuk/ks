@@ -8,9 +8,6 @@
 #define FUNC_LADDER_H
 
 #include "reflect_annotations.h"
-#ifdef _WIN32
-#pragma once
-#endif
 
 #if defined( CLIENT_DLL )
 #define CFuncLadder C_FuncLadder

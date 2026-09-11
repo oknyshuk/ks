@@ -9,9 +9,6 @@
 #ifndef RENDER_H
 #define RENDER_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "mathlib/vector.h"
 

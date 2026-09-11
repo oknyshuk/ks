@@ -8,9 +8,6 @@
 #ifndef IMATCHNETWORKMSG_H
 #define IMATCHNETWORKMSG_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 
 struct MM_QOS_t

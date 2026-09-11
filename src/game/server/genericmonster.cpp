@@ -311,11 +311,7 @@ int CNPC_Furniture::GetSoundInterests( void )
 int	CNPC_Furniture::ObjectCaps( void ) 
 { 
 	// HL2 furniture transitions
-#ifdef HL2_DLL
-	return CAI_BaseNPC::ObjectCaps(); 
-#else
 	return (CAI_BaseNPC::ObjectCaps() & ~FCAP_ACROSS_TRANSITION); 
-#endif
 }
 
 //-----------------------------------------------------------------------------
@@ -340,9 +336,7 @@ Class_T CNPC_Furniture::Classify ( void )
 //------------------------------------------------------------------------------
 bool CNPC_Furniture::CreateVPhysics( void )
 {
-#ifndef HL2_DLL
 	return false;
-#endif
 
 	if ( !m_BoneFollowerManager.GetNumBoneFollowers() )
 	{

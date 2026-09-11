@@ -10,10 +10,6 @@
 
 #include "tier0/platform.h"
 
-#ifdef IS_WINDOWS_PC
-#include "winlite.h"
-
-#endif
 #include "appframework/ilaunchermgr.h"
 #include "appframework/sdlwindow.h"
 #include "keys.h"
@@ -396,19 +392,6 @@ CEngineUI::~CEngineUI()
 bool CEngineUI::SetVGUIDirectories()
 {
 	// add vgui skins directory last
-#if defined(_WIN32)
-	{
-		char temp[ 512 ];
-		char skin[128];
-		skin[0] = 0;
-		Sys_GetRegKeyValue("Software\\Valve\\Steam", "Skin", skin, sizeof(skin), "");
-		if (strlen(skin) > 0)
-		{
-			sprintf( temp, "%s/platform/skins/%s", GetBaseDirectory(), skin );
-			g_pFileSystem->AddSearchPath( temp, "SKIN" );
-		}
-	}
-#endif
 
 	return true;
 }
@@ -627,12 +610,10 @@ void CEngineUI::ActivateGameUI()
 	
 //Reapplying this hack so that the game doesn't pause when the player opens up the menu.
 //This existed initially but was removed with the Portal 2 integration.
-#if defined( CSTRIKE15 )
 	if ( sv.IsPlayingSoloAgainstBots() )
 	{
 		Cbuf_AddText( Cbuf_GetCurrentPlayer(), "pause\n" );
 	}
-#endif
 }
 
 //-----------------------------------------------------------------------------
@@ -1214,11 +1195,6 @@ bool CEngineUI::Key_Event( const InputEvent_t &event )
 		}
 	}
 
-#if defined( _WIN32 )
-	// Ignore alt tilde, since the Japanese IME uses this to toggle itself on/off
-	if ( code == KEY_BACKQUOTE && ( IsAltKeyDown() || IsCtrlKeyDown() ) )
-		return event.m_nType != IE_ButtonReleased;
-#endif
 			   
 	// ESCAPE toggles game ui
 	bool isConsole = false;
@@ -1263,28 +1239,10 @@ void CEngineUI::Simulate()
 		VPROF_BUDGET( "CEngineUI::Simulate", "UI_Simulate" );
 
 		int w = 0, h = 0;
-#if defined( USE_SDL ) || defined( OSX )
 		// Pixel size of the drawable: this feeds the UI viewport, which must match the
 		// backbuffer. (Was ILauncherMgr::RenderedSize(), whose setter nobody ever called,
 		// so this had been silently setting a 0x0 viewport every frame.)
 		SDL_GetWindowSizeInPixels( GetGameSDLWindow(), &w, &h );
-#elif defined( WIN32 ) 
-		if ( ::IsIconic( *pmainwindow ) )
-		{
-			w = videomode->GetModeWidth();
-			h = videomode->GetModeHeight();
-		}
-		else
-		{
-			RECT rect;
-			::GetClientRect(*pmainwindow, &rect);
-
-			w = rect.right;
-			h = rect.bottom;
-		}
-#else
-#error
-#endif
 		// don't hold this reference over RunFrame()
 		{
 			CMatRenderContextPtr pRenderContext( materials );

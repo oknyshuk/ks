@@ -6,10 +6,6 @@
 
 #include "platform.h"
 
-#if !defined( PLATFORM_POSIX )
-#include <wtypes.h>
-#include <winuser.h>
-#endif // WIN32
 
 
 #include "key_translation.h"
@@ -24,9 +20,6 @@ static ButtonCode_t s_pVirtualKeyToButtonCode[256];
 
 static ButtonCode_t s_pSKeytoButtonCode[SK_MAX_KEYS];
 
-#if defined( PLATFORM_WINDOWS ) || defined( _OSX )
-static ButtonCode_t s_pXKeyTrans[XK_MAX_KEYS];
-#endif
 
 static int s_pButtonCodeToVirtual[BUTTON_CODE_LAST];
 
@@ -505,75 +498,6 @@ void ButtonCode_InitKeyTranslationTable()
 	s_pVirtualKeyToButtonCode['X']			=KEY_X;
 	s_pVirtualKeyToButtonCode['Y']			=KEY_Y;
 	s_pVirtualKeyToButtonCode['Z']			=KEY_Z;
-#if !defined( PLATFORM_POSIX )
-	s_pVirtualKeyToButtonCode[VK_NUMPAD0]	=KEY_PAD_0;
-	s_pVirtualKeyToButtonCode[VK_NUMPAD1]	=KEY_PAD_1;
-	s_pVirtualKeyToButtonCode[VK_NUMPAD2]	=KEY_PAD_2;
-	s_pVirtualKeyToButtonCode[VK_NUMPAD3]	=KEY_PAD_3;
-	s_pVirtualKeyToButtonCode[VK_NUMPAD4]	=KEY_PAD_4;
-	s_pVirtualKeyToButtonCode[VK_NUMPAD5]	=KEY_PAD_5;
-	s_pVirtualKeyToButtonCode[VK_NUMPAD6]	=KEY_PAD_6;
-	s_pVirtualKeyToButtonCode[VK_NUMPAD7]	=KEY_PAD_7;
-	s_pVirtualKeyToButtonCode[VK_NUMPAD8]	=KEY_PAD_8;
-	s_pVirtualKeyToButtonCode[VK_NUMPAD9]	=KEY_PAD_9;
-	s_pVirtualKeyToButtonCode[VK_DIVIDE]	=KEY_PAD_DIVIDE;
-	s_pVirtualKeyToButtonCode[VK_MULTIPLY]	=KEY_PAD_MULTIPLY;
-	s_pVirtualKeyToButtonCode[VK_SUBTRACT]	=KEY_PAD_MINUS;
-	s_pVirtualKeyToButtonCode[VK_ADD]		=KEY_PAD_PLUS;
-	s_pVirtualKeyToButtonCode[VK_RETURN]	=KEY_PAD_ENTER;
-	s_pVirtualKeyToButtonCode[VK_DECIMAL]	=KEY_PAD_DECIMAL;
-	s_pVirtualKeyToButtonCode[0xdb]			=KEY_LBRACKET;
-	s_pVirtualKeyToButtonCode[0xdd]			=KEY_RBRACKET;
-	s_pVirtualKeyToButtonCode[0xba]			=KEY_SEMICOLON;
-	s_pVirtualKeyToButtonCode[0xde]			=KEY_APOSTROPHE;
-	s_pVirtualKeyToButtonCode[0xc0]			=KEY_BACKQUOTE;
-	s_pVirtualKeyToButtonCode[0xbc]			=KEY_COMMA;
-	s_pVirtualKeyToButtonCode[0xbe]			=KEY_PERIOD;
-	s_pVirtualKeyToButtonCode[0xbf]			=KEY_SLASH;
-	s_pVirtualKeyToButtonCode[0xdc]			=KEY_BACKSLASH;
-	s_pVirtualKeyToButtonCode[0xbd]			=KEY_MINUS;
-	s_pVirtualKeyToButtonCode[0xbb]			=KEY_EQUAL;
-	s_pVirtualKeyToButtonCode[VK_RETURN]	=KEY_ENTER;
-	s_pVirtualKeyToButtonCode[VK_SPACE]		=KEY_SPACE;
-	s_pVirtualKeyToButtonCode[VK_BACK]		=KEY_BACKSPACE;
-	s_pVirtualKeyToButtonCode[VK_TAB]		=KEY_TAB;
-	s_pVirtualKeyToButtonCode[VK_CAPITAL]	=KEY_CAPSLOCK;
-	s_pVirtualKeyToButtonCode[VK_NUMLOCK]	=KEY_NUMLOCK;
-	s_pVirtualKeyToButtonCode[VK_ESCAPE]	=KEY_ESCAPE;
-	s_pVirtualKeyToButtonCode[VK_SCROLL]	=KEY_SCROLLLOCK;
-	s_pVirtualKeyToButtonCode[VK_INSERT]	=KEY_INSERT;
-	s_pVirtualKeyToButtonCode[VK_DELETE]	=KEY_DELETE;
-	s_pVirtualKeyToButtonCode[VK_HOME]		=KEY_HOME;
-	s_pVirtualKeyToButtonCode[VK_END]		=KEY_END;
-	s_pVirtualKeyToButtonCode[VK_PRIOR]		=KEY_PAGEUP;
-	s_pVirtualKeyToButtonCode[VK_NEXT]		=KEY_PAGEDOWN;
-	s_pVirtualKeyToButtonCode[VK_PAUSE]		=KEY_BREAK;
-	s_pVirtualKeyToButtonCode[VK_SHIFT]		=KEY_RSHIFT;
-	s_pVirtualKeyToButtonCode[VK_SHIFT]		=KEY_LSHIFT;	// SHIFT -> left SHIFT
-	s_pVirtualKeyToButtonCode[VK_MENU]		=KEY_RALT;
-	s_pVirtualKeyToButtonCode[VK_MENU]		=KEY_LALT;		// ALT -> left ALT
-	s_pVirtualKeyToButtonCode[VK_CONTROL]	=KEY_RCONTROL;
-	s_pVirtualKeyToButtonCode[VK_CONTROL]	=KEY_LCONTROL;	// CTRL -> left CTRL
-	s_pVirtualKeyToButtonCode[VK_LWIN]		=KEY_LWIN;
-	s_pVirtualKeyToButtonCode[VK_RWIN]		=KEY_RWIN;
-	s_pVirtualKeyToButtonCode[VK_APPS]		=KEY_APP;
-	s_pVirtualKeyToButtonCode[VK_UP]		=KEY_UP;
-	s_pVirtualKeyToButtonCode[VK_LEFT]		=KEY_LEFT;
-	s_pVirtualKeyToButtonCode[VK_DOWN]		=KEY_DOWN;
-	s_pVirtualKeyToButtonCode[VK_RIGHT]		=KEY_RIGHT;	
-	s_pVirtualKeyToButtonCode[VK_F1]		=KEY_F1;
-	s_pVirtualKeyToButtonCode[VK_F2]		=KEY_F2;
-	s_pVirtualKeyToButtonCode[VK_F3]		=KEY_F3;
-	s_pVirtualKeyToButtonCode[VK_F4]		=KEY_F4;
-	s_pVirtualKeyToButtonCode[VK_F5]		=KEY_F5;
-	s_pVirtualKeyToButtonCode[VK_F6]		=KEY_F6;
-	s_pVirtualKeyToButtonCode[VK_F7]		=KEY_F7;
-	s_pVirtualKeyToButtonCode[VK_F8]		=KEY_F8;
-	s_pVirtualKeyToButtonCode[VK_F9]		=KEY_F9;
-	s_pVirtualKeyToButtonCode[VK_F10]		=KEY_F10;
-	s_pVirtualKeyToButtonCode[VK_F11]		=KEY_F11;
-	s_pVirtualKeyToButtonCode[VK_F12]		=KEY_F12;
-#endif
 
 	// init the xkey translation table
 #if !defined( PLATFORM_POSIX ) || defined( _OSX )
@@ -884,38 +808,6 @@ void ButtonCode_UpdateScanCodeLayout( )
 	// reset the keyboard
 	memcpy( s_pScanToButtonCode, s_pScanToButtonCode_QWERTY, sizeof(s_pScanToButtonCode) );
 
-#if !defined( PLATFORM_POSIX )
-	// fix up keyboard layout for other languages
-	HKL currentKb = ::GetKeyboardLayout( 0 );
-	HKL englishKb = ::LoadKeyboardLayout("00000409", 0);
-
-	if (englishKb && englishKb != currentKb)
-	{
-		for ( int i = 0; i < ARRAYSIZE(s_pScanToButtonCode); i++ )
-		{
-			// take the english/QWERTY
-			ButtonCode_t code = s_pScanToButtonCode_QWERTY[ i ];
-
-			// only remap printable keys
-			if ( code != KEY_NONE && code != KEY_BACKQUOTE && ( IsAlphaNumeric( code ) || IsPunctuation( code ) ) )
-			{
-				// get it's virtual key based on the old layout
-				int vk = ::MapVirtualKeyEx( i, 1, englishKb );
-
-				// turn in into a scancode on the new layout
-				int newScanCode = ::MapVirtualKeyEx( vk, 0, currentKb );
-
-				// strip off any high bits
-				newScanCode &= 0x0000007F;
-
-				// set in the new layout
-				s_pScanToButtonCode[newScanCode] = code;
-			}
-		}
-	}
-
-	s_pScanToButtonCode[0] = KEY_NONE;
-#endif
 }
 
 

@@ -5,13 +5,9 @@
 //=============================================================================//
 
 #include <tier0/platform.h>
-#ifdef IS_WINDOWS_PC
-#include <windows.h>
-#else
 #define INVALID_HANDLE_VALUE (void *)0
 #define FILE_BEGIN SEEK_SET
 #define FILE_END SEEK_END
-#endif
 #include "utlbuffer.h"
 #include "utllinkedlist.h"
 #include "zip_utils.h"
@@ -83,84 +79,6 @@ BEGIN_BYTESWAP_DATADESC( ZIP_PreloadDirectoryEntry )
 	DEFINE_FIELD( DataOffset, FIELD_INTEGER ),
 END_BYTESWAP_DATADESC()
 
-#ifdef WIN32
-//-----------------------------------------------------------------------------
-// For >2 GB File Support
-//-----------------------------------------------------------------------------
-class CWin32File
-{
-public:
-	static HANDLE CreateTempFile( CUtlString &WritePath, CUtlString &FileName )
-	{
-		char tempFileName[MAX_PATH];
-		if ( WritePath.IsEmpty() )
-		{
-			// use a safe name in the cwd
-			char *pBuffer = tmpnam( NULL );
-			if ( !pBuffer )
-			{
-				return INVALID_HANDLE_VALUE;
-			}
-			if ( pBuffer[0] == '\\' )
-			{
-				pBuffer++;
-			}
-			if ( pBuffer[strlen( pBuffer )-1] == '.' )
-			{
-				pBuffer[strlen( pBuffer )-1] = '\0';
-			}
-			V_snprintf( tempFileName, sizeof( tempFileName ), "_%s.tmp", pBuffer );
-		}
-		else
-		{
-			// generate safe name at the desired prefix
-			char uniqueFilename[MAX_PATH];
-			SYSTEMTIME sysTime;                                                       \
-			GetLocalTime( &sysTime );   
-			V_sprintf_safe( uniqueFilename, "%d_%d_%d_%d_%d.tmp", sysTime.wDay, sysTime.wHour, sysTime.wMinute, sysTime.wSecond, sysTime.wMilliseconds );                                                \
-			V_ComposeFileName( WritePath.String(), uniqueFilename, tempFileName, sizeof( tempFileName ) );
-		}
-
-		FileName = tempFileName;
-		HANDLE hFile = CreateFile( tempFileName, GENERIC_READ|GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL );
-		
-		return hFile;
-	}
-
-	static unsigned int FileSeek( HANDLE hFile, unsigned int distance, DWORD MoveMethod )
-	{
-		LARGE_INTEGER li;
-
-		li.QuadPart = distance;
-		li.LowPart = SetFilePointer( hFile, li.LowPart, &li.HighPart, MoveMethod);
-		if ( li.LowPart == INVALID_SET_FILE_POINTER && GetLastError() != NO_ERROR )
-		{
-			li.QuadPart = -1;
-		}
-
-		return ( unsigned int )li.QuadPart;
-	}
-
-	static unsigned int FileTell( HANDLE hFile )
-	{
-		return FileSeek( hFile, 0, FILE_CURRENT );
-	}
-
-	static bool FileRead( HANDLE hFile, void *pBuffer, unsigned int size )
-	{
-		DWORD numBytesRead;
-		BOOL bSuccess = ::ReadFile( hFile, pBuffer, size, &numBytesRead, NULL );
-		return bSuccess && ( numBytesRead == size );
-	}
-
-	static bool FileWrite( HANDLE hFile, void *pBuffer, unsigned int size )
-	{
-		DWORD numBytesWritten;
-		BOOL bSuccess = WriteFile( hFile, pBuffer, size, &numBytesWritten, NULL );
-		return bSuccess && ( numBytesWritten == size );
-	}
-};
-#else
 class CWin32File
 {
 public:
@@ -223,7 +141,6 @@ public:
 		return bytesWrtitten == size;
 	}
 };
-#endif
 
 //-----------------------------------------------------------------------------
 // Purpose: Interface to allow abstraction of zip file output methods, and
@@ -270,13 +187,6 @@ public:
 		{
 			fwrite( pMem, size, 1, m_file ); 
 		}
-#ifdef WIN32
-		else
-		{
-			DWORD numBytesWritten;
-			WriteFile( m_hFile, pMem, size, &numBytesWritten, NULL );
-		}
-#endif
 	}
 
 	// Implementing IWriteStream method
@@ -288,11 +198,7 @@ public:
 		}
 		else
 		{
-#ifdef WIN32
-			return CWin32File::FileTell( m_hFile );
-#else
 			return 0;
-#endif
 		} 
 	}
 
@@ -521,13 +427,8 @@ void CZipFile::Reset( void )
 
 	if ( m_hDiskCacheWriteFile != INVALID_HANDLE_VALUE )
 	{
-#ifdef WIN32
-		CloseHandle( m_hDiskCacheWriteFile );
-		DeleteFile( m_DiskCacheName.String() );
-#else
 		fclose( (FILE *)m_hDiskCacheWriteFile );
 		unlink( m_DiskCacheName.String() );
-#endif
 		m_hDiskCacheWriteFile = INVALID_HANDLE_VALUE;
 	}
 
@@ -737,11 +638,7 @@ void CZipFile::ParseFromBuffer( void *buffer, int bufferlength )
 //-----------------------------------------------------------------------------
 HANDLE CZipFile::ParseFromDisk( const char *pFilename )
 {
-#ifdef WIN32
-	HANDLE hFile = CreateFile( pFilename, GENERIC_READ|GENERIC_WRITE, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL );
-#else
 	HANDLE hFile = fopen( pFilename, "rw+" );
-#endif
 	if ( !hFile )
 	{
 		// not found
@@ -753,11 +650,7 @@ HANDLE CZipFile::ParseFromDisk( const char *pFilename )
 	if ( fileLen < sizeof( ZIP_EndOfCentralDirRecord ) )
 	{
 		// bad format
-#ifdef WIN32
-		CloseHandle( hFile );
-#else
 		fclose( (FILE *)hFile );
-#endif
 		return NULL;
 	}
 
@@ -798,11 +691,7 @@ HANDLE CZipFile::ParseFromDisk( const char *pFilename )
 	if ( numZipFiles <= 0 )
 	{
 		// No files
-#ifdef WIN32
-		CloseHandle( hFile );
-#else
 		fclose( (FILE *)hFile );
-#endif
 		return NULL;
 	}
 
@@ -823,11 +712,7 @@ HANDLE CZipFile::ParseFromDisk( const char *pFilename )
 		if ( zipFileHeader.signature != PKID( 1, 2 ) ||  zipFileHeader.compressionMethod != 0 )
 		{
 			// bad contents
-#ifdef WIN32
-			CloseHandle( hFile );
-#else
 			fclose( (FILE *)hFile );
-#endif
 			return NULL;
 		}
 		
@@ -1382,11 +1267,7 @@ void CZipFile::SaveDirectory( IWriteStream& stream )
 
 	if ( m_hDiskCacheWriteFile != INVALID_HANDLE_VALUE )
 	{
-#ifdef WIN32
-		FlushFileBuffers( m_hDiskCacheWriteFile );
-#else
 		fflush( (FILE *)m_hDiskCacheWriteFile );
-#endif
 	}
 
 	bool bDataWritten = false;

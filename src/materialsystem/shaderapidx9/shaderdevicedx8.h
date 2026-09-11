@@ -9,9 +9,6 @@
 #ifndef SHADERDEVICEDX8_H
 #define SHADERDEVICEDX8_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 
 #include "shaderdevicebase.h"

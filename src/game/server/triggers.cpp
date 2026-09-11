@@ -35,20 +35,9 @@
 #include "ai_behavior_lead.h"
 #include "gameinterface.h"
 #include "fmtstr.h"
-#if defined ( PORTAL2 )
-#include "portal_player.h"
-#endif
 #include "weapon_c4.h"
 
-#ifdef HL2_DLL
-#include "hl2_player.h"
-#endif
 
-#ifdef PORTAL2
-extern const char *ChangeLevel_DestinationMapName( void );
-extern const char *ChangeLevel_OriginMapName( void );
-extern const char *ChangeLevel_GetLandmarkName( void );
-#endif // PORTAL2
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -338,14 +327,6 @@ bool CBaseTrigger::PassesTriggerFilters(CBaseEntity *pOther)
 		(HasSpawnFlags(SF_TRIGGER_ALLOW_NPCS) && (pOther->GetFlags() & FL_NPC)) ||
 		(HasSpawnFlags(SF_TRIGGER_ALLOW_PUSHABLES) && FClassnameIs(pOther, "func_pushable")) ||
 		(HasSpawnFlags(SF_TRIGGER_ALLOW_PHYSICS) && pOther->GetMoveType() == MOVETYPE_VPHYSICS) 
-#if defined( HL2_EPISODIC ) || defined( TF_DLL )		
-		||
-		(	HasSpawnFlags(SF_TRIG_TOUCH_DEBRIS) && 
-			(pOther->GetCollisionGroup() == COLLISION_GROUP_DEBRIS ||
-			pOther->GetCollisionGroup() == COLLISION_GROUP_DEBRIS_TRIGGER || 
-			pOther->GetCollisionGroup() == COLLISION_GROUP_INTERACTIVE_DEBRIS)
-		)
-#endif
 		)
 	{
 		if ( pOther->GetFlags() & FL_NPC )
@@ -1229,13 +1210,6 @@ void CTriggerVolume::Activate( void )
 {
 	BaseClass::Activate();
 
-#ifdef PORTAL2
-	// For simplicity, we always share the name of the landmarks
-	if ( m_iName.Get() == NULL_STRING )
-	{
-		SetName( AllocPooledString( ChangeLevel_GetLandmarkName() ) );
-	}
-#endif // PORTAL2
 }
 
 #define SF_CHANGELEVEL_NOTOUCH		0x0002
@@ -1790,30 +1764,6 @@ int CChangeLevel::InTransitionVolume( CBaseEntity *pEntity, const char *pVolumeN
 //------------------------------------------------------------------------------
 int CChangeLevel::BuildChangeLevelList( levellist_t *pLevelList, int maxList )
 {
-#ifdef PORTAL2
-
-	// Get our origin and destination names
-	const char *lpszDestMapName = ChangeLevel_DestinationMapName();
-	const char *lpszOriginMapName = ChangeLevel_OriginMapName();
-
-	// If these names are valid, we're opting into the streamlined level transition system
-	if ( lpszOriginMapName != NULL && lpszOriginMapName[0] != NULL && lpszDestMapName != NULL && lpszDestMapName[0] != NULL )
-	{
-		// Because this is called symmetrically on both sides of the transition, we need to infer from the names which side we're on
-		bool bAtDestination = !Q_stricmp( STRING(gpGlobals->mapname), lpszDestMapName );
-
-		// Find a landmark on this end of the transition to refer to
-		CBaseEntity *pentLandmark = gEntList.FindEntityByClassname( NULL, (bAtDestination) ? "info_landmark_entry" : "info_landmark_exit" );
-		if ( pentLandmark )
-		{
-			// Landmarks are all named the same thing, we only allow one entry and one exit per level
-			const char *lpszLandmarkName = ChangeLevel_GetLandmarkName();
-			if ( AddTransitionToList( pLevelList, 0, (bAtDestination) ? lpszOriginMapName : lpszDestMapName, lpszLandmarkName, pentLandmark->edict() ) )
-				return 1; // Only one way to go
-		}
-	}
-
-#endif
 
 	int nCount = 0;
 	CBaseEntity *pentChangelevel = gEntList.FindEntityByClassname( NULL, "trigger_changelevel" );
@@ -2290,18 +2240,6 @@ void CTriggerPush::Activate()
 	{
 		m_flPushSpeed = m_flSpeed;
 		
-#ifdef PORTAL2
-		//
-		// DIRTY HACK TO FOLLOW
-		// 
-		// If alternateticks is disabled, our trigger_push values are too low
-		// because the single player game was tuned	with alternateticks on for the most part.
-		//
-		if ( gpGlobals->maxClients == 1 && !IsSimulatingOnAlternateTicks() )
-		{
-			m_flPushSpeed *= 2.0f;
-		}
-#endif // PORTAL 2
 	}
 	
 	BaseClass::Activate();
@@ -2378,18 +2316,6 @@ void CTriggerPush::Touch( CBaseEntity *pOther )
 
 	default:
 		{
-#if defined( HL2_DLL )
-			// HACK HACK  HL2 players on ladders will only be disengaged if the sf is set, otherwise no push occurs.
-			if ( pOther->IsPlayer() && 
-				 pOther->GetMoveType() == MOVETYPE_LADDER )
-			{
-				if ( !HasSpawnFlags(SF_TRIG_PUSH_AFFECT_PLAYER_ON_LADDER) )
-				{
-					// Ignore the push
-					return;
-				}
-			}
-#endif
 
 			Vector vecPush = (m_flPushSpeed * vecAbsDir);
 			if ( pOther->GetFlags() & FL_BASEVELOCITY )
@@ -2975,9 +2901,6 @@ void CAI_ChangeHintGroup::InputActivate( inputdata_t &inputdata )
 #define SF_CAMERA_PLAYER_INTERRUPT		64
 #define SF_CAMERA_PLAYER_SETFOV			128
 
-#if HL2_EPISODIC
-const float CTriggerCamera::kflPosInterpTime = 2.0f;
-#endif
 
 LINK_ENTITY_TO_CLASS( point_viewcontrol, CTriggerCamera );
 
@@ -3233,13 +3156,6 @@ void CTriggerCamera::Enable( void )
 		}
 	}
 
-#if defined ( PORTAL2 )
-	CPortal_Player* pPortalPlayer = ToPortalPlayer( pPlayer );
-	if ( pPortalPlayer && pPortalPlayer->IsZoomed() )
-	{
-		pPortalPlayer->ZoomOut();
-	}
-#endif
 
 	m_nPlayerButtons = pPlayer->m_nButtons;
 
@@ -3312,20 +3228,6 @@ void CTriggerCamera::Enable( void )
 
 	// copy over player information. If we're interpolating from
 	// the player position, do something more elaborate.
-#if HL2_EPISODIC
-	if (m_bInterpolatePosition)
-	{
-		// initialize the values we'll spline between
-		m_vStartPos = m_hPlayer->EyePosition();
-		m_vEndPos = GetAbsOrigin();
-		m_flInterpStartTime = gpGlobals->curtime;
-		UTIL_SetOrigin( this, m_hPlayer->EyePosition() );
-		SetLocalAngles( QAngle( m_hPlayer->GetLocalAngles().x, m_hPlayer->GetLocalAngles().y, 0 ) );
-
-		SetAbsVelocity( vec3_origin );
-	}
-	else
-#endif
 	if (HasSpawnFlags(SF_CAMERA_PLAYER_POSITION ) )
 	{
 		UTIL_SetOrigin( this, m_hPlayer->EyePosition() );
@@ -3660,16 +3562,12 @@ void CTriggerCamera::Move()
 
 	// In vanilla HL2, the camera is either on a path, or doesn't move. In episodic
 	// we add the capacity for interpolation to the start point. 
-#if HL2_EPISODIC
-	if (m_pPath)
-#else
 	// Not moving on a path, return
 	if (!m_pPath)
 	{
 		SetAbsVelocity( vec3_origin );
 		return;
 	}
-#endif
 	{
 		// Subtract movement from the previous frame
 		m_moveDistance -= m_flSpeed * gpGlobals->frametime;
@@ -3706,30 +3604,6 @@ void CTriggerCamera::Move()
 		float fraction = 2 * gpGlobals->frametime;
 		SetAbsVelocity( ((m_vecMoveDir * m_flSpeed) * fraction) + (GetAbsVelocity() * (1-fraction)) );
 	}
-#if HL2_EPISODIC
-	else if (m_bInterpolatePosition)
-	{
-		// get the interpolation parameter [0..1]
-		float tt = (gpGlobals->curtime - m_flInterpStartTime) / kflPosInterpTime;
-		if (tt >= 1.0f)
-		{
-			// we're there, we're done
-			UTIL_SetOrigin( this, m_vEndPos );
-			SetAbsVelocity( vec3_origin );
-
-			m_bInterpolatePosition = false;
-		}
-		else
-		{
-			Assert(tt >= 0);
-
-			Vector nextPos = ( (m_vEndPos - m_vStartPos) * SimpleSpline(tt) ) + m_vStartPos;
-			// rather than stomping origin, set the velocity so that we get there in the proper time
-			Vector desiredVel = (nextPos - GetAbsOrigin()) * (1.0f / gpGlobals->frametime);
-			SetAbsVelocity( desiredVel );
-		}
-	}
-#endif
 }
 
 
@@ -4093,7 +3967,6 @@ void CTriggerCameraMultiplayer::Enable( void )
 {
 	BaseClass::Enable();
 
-#if defined( PORTAL2 ) || defined( CSTRIKE15 )
 	for( int i = 1; i <= gpGlobals->maxClients; ++i )
 	{
 		CBasePlayer *pPlayer = ToBasePlayer( UTIL_PlayerByIndex( i ) );
@@ -4107,7 +3980,6 @@ void CTriggerCameraMultiplayer::Enable( void )
 		if ( m_nTeamNum == -1 || m_nTeamNum == pPlayer->GetTeamNumber() )
 			AddPlayer( pPlayer );
 	}
-#endif // PORTAL2
 
 	DispatchUpdateTransmitState();
 }
@@ -4237,28 +4109,6 @@ void CTriggerViewProxy::InputDisable( inputdata_t &inputdata )
 //------------------------------------------------------------------------------
 void CTriggerViewProxy::InputTeleportPlayerToProxy( inputdata_t &inputdata )
 { 
-#if defined ( PORTAL2 )
-	if( m_hPlayer )
-	{
-		CPortal_Player *pBasePlayer = (CPortal_Player *)m_hPlayer.Get();
-		
-		QAngle vecPlayerView = GetAbsAngles();
-		Vector vecEyeOffset = pBasePlayer->EyePosition() - pBasePlayer->GetAbsOrigin();
-		Vector vecTeleportPosition = GetAbsOrigin() - vecEyeOffset;
-		
-		// try to find a position on the ground - this will prevent a pop
-		trace_t tr;
-		UTIL_TraceLine( GetAbsOrigin(), GetAbsOrigin() - 1.02f*vecEyeOffset, MASK_SOLID, pBasePlayer, COLLISION_GROUP_NONE, &tr );
-		if( tr.fraction != 1.0 )
-		{
-			vecTeleportPosition = tr.endpos;
-		}
-
-		pBasePlayer->SetGroundEntity( NULL );		
-		pBasePlayer->Teleport( &vecTeleportPosition, &vecPlayerView, NULL );
-	}
-	Disable();
-#endif // defined ( PORTAL2 )
 }
 
 //-----------------------------------------------------------------------------
@@ -4308,13 +4158,6 @@ void CTriggerViewProxy::Enable( void )
 	m_nPlayerButtons = pPlayer->m_nButtons;
 	pPlayer->SetDuckEnabled( false );
 
-#if defined ( PORTAL2 )
-	CPortal_Player* pPortalPlayer = ToPortalPlayer( pPlayer );
-	if ( pPortalPlayer && pPortalPlayer->IsZoomed() )
-	{
-		pPortalPlayer->ZoomOut();
-	}
-#endif
 
 	// Make the player invulnerable while under control of the camera.  This will prevent situations where the player dies while under camera control but cannot restart their game due to disabled player inputs.
 	m_nOldTakeDamage = m_hPlayer->m_takedamage;
@@ -4413,47 +4256,6 @@ void CTriggerViewProxy::TranslateViewToProxy( )
 		}
 	}
 	
-#ifdef PORTAL2
-	CPortal_Player *pOtherAsPlayer = (CPortal_Player *)(m_hPlayer.Get());
-	if ( m_bEaseAnglesToCamera )
-	{
-		QAngle playerAngles = pOtherAsPlayer->pl.v_angle;
-
-		float dx = qProxyAngles.x - playerAngles.x;
-		float dy = qProxyAngles.y - playerAngles.y;
-
-		if (dx < -180) 
-			dx += 360;
-		if (dx > 180) 
-			dx = dx - 360;
-		
-		if (dy < -180) 
-			dy += 360;
-		if (dy > 180) 
-			dy = dy - 360;
-
-		dx *= 0.15f;
-		dy *= 0.15f;
-
-		playerAngles.x += dx;
-		playerAngles.y += dy;
-
-		pOtherAsPlayer->Teleport( NULL, &playerAngles, NULL );
-
-		qProxyAngles = QAngle(0, 0, 0);
-	}
-
-	qProxyAngles[PITCH] *= m_flTiltFraction;
-	qProxyAngles[ROLL] *= m_flTiltFraction;
-	
-	VMatrix matRotate;
-	matRotate.SetupMatrixOrgAngles( vec3_origin, qProxyAngles );
-	
-	QAngle qTransformedEyeAngles = TransformAnglesToWorldSpace( pOtherAsPlayer->pl.v_angle, matRotate.As3x4() );
-
-	qGoal = qTransformedEyeAngles;
-	SetAbsAngles( qGoal );
-#endif // PORTAL2
 
 	SetNextThink( gpGlobals->curtime );
 

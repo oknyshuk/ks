@@ -9,9 +9,6 @@
 #ifndef DRAW_H
 #define DRAW_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 class IMaterial;
 IMaterial	*GL_LoadMaterial( const char *pName, const char *pTextureGroupName, bool bPrecache = false );

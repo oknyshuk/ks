@@ -7,9 +7,6 @@
 
 #ifndef DECAL_CLIP_H
 #define DECAL_CLIP_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 
 #include "mathlib/vector.h"

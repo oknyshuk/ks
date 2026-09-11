@@ -7,9 +7,6 @@
 
 #ifndef GAMEUI_H
 #define GAMEUI_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 class IGameUI;
 

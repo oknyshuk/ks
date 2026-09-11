@@ -7,9 +7,6 @@
 
 #ifndef L4D_HUD_LOCATOR_H
 #define L4D_HUD_LOCATOR_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 
 #include "steam/isteamcontroller.h"

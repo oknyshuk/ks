@@ -66,61 +66,6 @@ void R_LightAmbient_4D( const Vector& normal, Vector4D* pLightBoxColor, Vector &
 	VectorMA( lv, normal[2]*normal[2], normal[2] > 0.f ? pLightBoxColor[4].AsVector3D() : pLightBoxColor[5].AsVector3D(), lv );
 }
 
-#if defined( _WIN32 )
-void R_LightAmbient_4D( const FourVectors& normal, Vector4D* pLightBoxColor, FourVectors &lv )
-{
-//	VPROF( "R_LightAmbient" );
-
-	// !!speed!! compute ambient color cube in sse format
-	static fltx4 FourZeros={0.,0.,0.,.0};
-
-	// find the contributions from each axis
-	fltx4 NegMask=CmpLtSIMD(normal.x,FourZeros);
-	fltx4 ColorSelect0=ReplicateX4(pLightBoxColor[0].AsVector3D().x);
-	fltx4 ColorSelect1=ReplicateX4(pLightBoxColor[1].AsVector3D().x);
-	fltx4 DirectionalColor=OrSIMD(AndSIMD(ColorSelect1,NegMask),AndNotSIMD(NegMask,ColorSelect0));
-	fltx4 NormCompSquared=MulSIMD(normal.x,normal.x);
-	lv.x=MulSIMD(DirectionalColor,NormCompSquared);
-	ColorSelect0=ReplicateX4(pLightBoxColor[0].AsVector3D().y);
-	ColorSelect1=ReplicateX4(pLightBoxColor[1].AsVector3D().y);
-	DirectionalColor=OrSIMD(AndSIMD(ColorSelect1,NegMask),AndNotSIMD(NegMask,ColorSelect0));
-	lv.y=MulSIMD(DirectionalColor,NormCompSquared);
-	ColorSelect0=ReplicateX4(pLightBoxColor[0].AsVector3D().z);
-	ColorSelect1=ReplicateX4(pLightBoxColor[1].AsVector3D().z);
-	DirectionalColor=OrSIMD(AndSIMD(ColorSelect1,NegMask),AndNotSIMD(NegMask,ColorSelect0));
-	lv.z=MulSIMD(DirectionalColor,NormCompSquared);
-
-	NegMask=CmpLtSIMD(normal.y,FourZeros);
-	ColorSelect0=ReplicateX4(pLightBoxColor[2].AsVector3D().x);
-	ColorSelect1=ReplicateX4(pLightBoxColor[3].AsVector3D().x);
-	DirectionalColor=OrSIMD(AndSIMD(ColorSelect1,NegMask),AndNotSIMD(NegMask,ColorSelect0));
-	NormCompSquared=MulSIMD(normal.y,normal.y);
-	lv.x=AddSIMD(lv.x,MulSIMD(DirectionalColor,NormCompSquared));
-	ColorSelect0=ReplicateX4(pLightBoxColor[2].AsVector3D().y);
-	ColorSelect1=ReplicateX4(pLightBoxColor[3].AsVector3D().y);
-	DirectionalColor=OrSIMD(AndSIMD(ColorSelect1,NegMask),AndNotSIMD(NegMask,ColorSelect0));
-	lv.y=AddSIMD(lv.y,MulSIMD(DirectionalColor,NormCompSquared));
-	ColorSelect0=ReplicateX4(pLightBoxColor[2].AsVector3D().z);
-	ColorSelect1=ReplicateX4(pLightBoxColor[3].AsVector3D().z);
-	DirectionalColor=OrSIMD(AndSIMD(ColorSelect1,NegMask),AndNotSIMD(NegMask,ColorSelect0));
-	lv.z=AddSIMD(lv.z,MulSIMD(DirectionalColor,NormCompSquared));
-
-	NegMask=CmpLtSIMD(normal.z,FourZeros);
-	ColorSelect0=ReplicateX4(pLightBoxColor[4].AsVector3D().x);
-	ColorSelect1=ReplicateX4(pLightBoxColor[5].AsVector3D().x);
-	DirectionalColor=OrSIMD(AndSIMD(ColorSelect1,NegMask),AndNotSIMD(NegMask,ColorSelect0));
-	NormCompSquared=MulSIMD(normal.z,normal.z);
-	lv.x=AddSIMD(lv.x,MulSIMD(DirectionalColor,NormCompSquared));
-	ColorSelect0=ReplicateX4(pLightBoxColor[4].AsVector3D().y);
-	ColorSelect1=ReplicateX4(pLightBoxColor[5].AsVector3D().y);
-	DirectionalColor=OrSIMD(AndSIMD(ColorSelect1,NegMask),AndNotSIMD(NegMask,ColorSelect0));
-	lv.y=AddSIMD(lv.y,MulSIMD(DirectionalColor,NormCompSquared));
-	ColorSelect0=ReplicateX4(pLightBoxColor[4].AsVector3D().z);
-	ColorSelect1=ReplicateX4(pLightBoxColor[5].AsVector3D().z);
-	DirectionalColor=OrSIMD(AndSIMD(ColorSelect1,NegMask),AndNotSIMD(NegMask,ColorSelect0));
-	lv.z=AddSIMD(lv.z,MulSIMD(DirectionalColor,NormCompSquared));
-}
-#endif
 
 
 //-----------------------------------------------------------------------------
@@ -406,46 +351,6 @@ float FASTCALL R_WorldLightDistanceFalloff( const LightDesc_t *wl, const Vector&
 	return R_WorldLightDistanceFalloffFunctionTable::functions[flags](wl, delta);
 }
 
-#if defined( _WIN32 )
-fltx4 FASTCALL R_WorldLightDistanceFalloff( const LightDesc_t *wl, const FourVectors &delta )
-{
-	// !!speed!!: lights could store m_Attenuation2,m_Attenuation1, and m_Range^2 copies in replicated SSE format.
-
-	// Ensure no invalid flags are set
-	Assert( ! ( wl->m_Flags & ~(LIGHTTYPE_OPTIMIZATIONFLAGS_HAS_ATTENUATION0|LIGHTTYPE_OPTIMIZATIONFLAGS_HAS_ATTENUATION1|LIGHTTYPE_OPTIMIZATIONFLAGS_HAS_ATTENUATION2|LIGHTTYPE_OPTIMIZATIONFLAGS_DERIVED_VALUES_CALCED) ) );
-
-	fltx4 dist2 = delta*delta;
-
-	fltx4 fTotal;
-
-	if( wl->m_Flags & LIGHTTYPE_OPTIMIZATIONFLAGS_HAS_ATTENUATION0 )
-	{
-		fTotal = ReplicateX4(wl->m_Attenuation0);
-	}
-	else
-		fTotal= ReplicateX4(FLT_EPSILON);					// !!speed!! replicate
-
-	if( wl->m_Flags & LIGHTTYPE_OPTIMIZATIONFLAGS_HAS_ATTENUATION1 )
-	{
-		fTotal=AddSIMD(fTotal,MulSIMD(ReplicateX4(wl->m_Attenuation1),SqrtEstSIMD(dist2)));
-	}
-
-	if( wl->m_Flags & LIGHTTYPE_OPTIMIZATIONFLAGS_HAS_ATTENUATION2 )
-	{
-		fTotal=AddSIMD(fTotal,MulSIMD(ReplicateX4(wl->m_Attenuation2),dist2));
-	}
-
-	fTotal=ReciprocalEstSIMD(fTotal);
-	// Cull out light beyond this radius
-	// now, zero out elements for which dist2 was > range^2. !!speed!! lights should store dist^2 in sse format
-	if (wl->m_Range != 0.f)
-	{
-		fltx4 RangeSquared = ReplicateX4(wl->m_Range*wl->m_Range); // !!speed!!
-		fTotal=AndSIMD(fTotal,CmpLtSIMD(dist2,RangeSquared));
-	}
-	return fTotal;
-}
-#endif
 
 
 int CStudioRender::R_LightGlintPosition( int index, const Vector& org, Vector& delta, Vector& intensity )

@@ -233,10 +233,6 @@ sampler SelfIllumMaskSampler	: register( s11 );	// selfillummask
 	sampler TintMaskSampler		: register( s13 );
 #endif
 
-#if defined(_PS3)
-// Needed for optimal shadow filter code generation on PS3.
-#pragma texformat ShadowDepthSampler DEPTH_COMPONENT24
-#endif
 
 struct PS_INPUT
 {
@@ -269,16 +265,9 @@ struct PS_INPUT
 	float3 SeamlessWeights								: COLOR0;			// x y z projection weights
 #endif
 
-#if defined( _X360 )
-	float2 vScreenPos : VPOS;
-#endif
 };
 
-#if defined( _X360 ) || defined( _PS3 )
-	#define SINGLE_PASS_FLASHLIGHT 1
-#else
 	#define SINGLE_PASS_FLASHLIGHT 0
-#endif
 
 #define FLASHLIGHT_ONLY ( FLASHLIGHT && !SINGLE_PASS_FLASHLIGHT )
 
@@ -297,10 +286,6 @@ struct PS_INPUT
 #if ( CSM_ENABLED )
 	sampler CSMDepthAtlasSampler : register( s15 );
 	
-	#if defined(_PS3)
-		// Needed for optimal shadow filter code generation on PS3.
-		#pragma texformat CSMDepthAtlasSampler DEPTH_COMPONENT24
-	#endif
 	
 	#if defined( SHADER_MODEL_PS_2_B )
 		#define CSM_VERTEXLIT_AND_UNLIT_GENERIC
@@ -331,17 +316,6 @@ float4_color_return_type main( PS_INPUT i ) : COLOR
 			i.SeamlessWeights.y * tex2D( BaseTextureSampler, i.baseTexCoord_baseTexCoord2u.zx )+
 			i.SeamlessWeights.z * tex2D( BaseTextureSampler, i.baseTexCoord_baseTexCoord2u.xy );
 
-		#if defined ( _X360 ) && ( SHADER_SRGB_READ == 1 )
-		{
-			// Do this after the blending to save shader ops
-			#if defined ( CSTRIKE15 )
-				// [mariod] - 2.2 reads of srgb textures in cstrike15
-				baseColor.rgb = GammaToLinear( baseColor.rgb );
-			#else
-				baseColor.rgb = X360GammaToLinear( baseColor.rgb );
-			#endif
-		}
-		#endif
 	}
 	#else
 	{
@@ -601,15 +575,9 @@ float4_color_return_type main( PS_INPUT i ) : COLOR
 		#endif
 
 		//add to diffuse in single pass flashlight mode, replace diffuse in additive two pass mode
-		#if defined ( _GAMECONSOLE )
-		{
-			diffuseLighting += flashlightColor;
-		}
-		#else
 		{
 			diffuseLighting = (diffuseLighting * g_EnvmapTint_SPF.a) + flashlightColor;
 		}
-		#endif
 	}
 	#endif
 
@@ -741,11 +709,6 @@ float4_color_return_type main( PS_INPUT i ) : COLOR
 	float4_color_return_type vOutput = FinalOutputHalf( float4( result.rgb, alpha ), fogFactor, PIXELFOGTYPE, TONEMAP_SCALE_LINEAR, g_fWriteDepthToAlpha, i.vProjPos.z );
 	
 
-	#if ( defined( _X360 ) )
-	{
-		vOutput.xyz += ScreenSpaceOrderedDither( i.vScreenPos );
-	}
-	#endif
 
 	return vOutput;
 }

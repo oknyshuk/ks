@@ -8,9 +8,6 @@
 #ifndef TIER0_STACKSTATS_H
 #define TIER0_STACKSTATS_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "tier0/stacktools.h"
 #include "tier0/threadtools.h"

@@ -12,9 +12,6 @@
 #ifndef DEDICATED_H
 #define DEDICATED_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "appframework/tier3app.h"
 

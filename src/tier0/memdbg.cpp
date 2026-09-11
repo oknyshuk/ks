@@ -17,13 +17,6 @@
 #include "tier0/memalloc.h"
 #include "tier0/fasttimer.h"
 #include "mem_helpers.h"
-#ifdef PLATFORM_WINDOWS_PC
-#undef WIN32_LEAN_AND_MEAN
-#include <windows.h>
-#include <crtdbg.h>
-#include <errno.h>
-#include <io.h>
-#endif
 
 #include <map>
 #include <set>
@@ -40,13 +33,6 @@
 
 #if MEM_IMPL_TYPE_DBG
 
-#if defined(_WIN32) && ( !defined(_WIN64) )
-//be sure to disable frame pointer omission for all projects. "vpc /nofpo" when using stack traces
-//#define USE_STACK_TRACES 
-// or:
-//#define USE_STACK_TRACES_DETAILED
-const size_t STACK_TRACE_LENGTH = 32;
-#endif
 
 //prevent stupid bugs from checking one and not the other
 #if defined( USE_STACK_TRACES_DETAILED ) && !defined( USE_STACK_TRACES )
@@ -66,11 +52,7 @@ const size_t STACK_TRACE_LENGTH = 32;
 #define DebugAlloc	malloc
 #define DebugFree	free
 
-#ifdef _WIN32
-int g_DefaultHeapFlags = _CrtSetDbgFlag( _CrtSetDbgFlag(_CRTDBG_REPORT_FLAG) | _CRTDBG_ALLOC_MEM_DF );
-#else
 int g_DefaultHeapFlags = 0;
-#endif // win32
 
 #if defined( _MEMTEST )
 static char s_szStatsMapName[32];
@@ -767,12 +749,7 @@ private:
 
 	virtual IVirtualMemorySection * AllocateVirtualMemorySection( size_t numMaxBytes )
 	{
-#if defined( _WIN32 )
-		extern IVirtualMemorySection * VirtualMemoryManager_AllocateVirtualMemorySection( size_t numMaxBytes );
-		return VirtualMemoryManager_AllocateVirtualMemorySection( numMaxBytes );
-#else
 		return NULL;
-#endif
 	}
 
 	virtual int GetGenericMemoryStats( GenericMemoryStat_t **ppMemoryStats )
@@ -1865,24 +1842,7 @@ void CDbgMemAlloc::DumpStatsFileBase( char const *pchFileBase, DumpStatsFormat_t
 
 #else // _MEMTEST
 
-#if defined( _WIN32 )
-		bool fileExists = true;
-		while (fileExists)
-		{
-			_snprintf( szFileName, sizeof( szFileName ), "%s%s%d.txt", pPath, pchFileBase, s_FileCount );
-			szFileName[ ARRAYSIZE(szFileName) - 1 ] = 0;
-			if (_access_s(szFileName, 0) == ENOENT)
-			{
-				fileExists = false;
-			}
-			else
-			{
-				++s_FileCount;
-			}
-		}
-#else // _WIN32
 		_snprintf( szFileName, sizeof( szFileName ), "%s%s%d.txt", pPath, pchFileBase, s_FileCount );
-#endif // _WIN32
 
 #endif // _MEMTEST
 
@@ -1967,23 +1927,7 @@ void CDbgMemAlloc::DumpCallStackFlow( char const *pchFileBase )
 	
 	char *pPath = "";
 
-#if defined( _MEMTEST ) && defined( _WIN32 )
-	char szXboxName[32];
-	strcpy( szXboxName, "xbox" );
-	DWORD numChars = sizeof( szXboxName );
-	DmGetXboxName( szXboxName, &numChars ); 
-	char *pXboxName = strstr( szXboxName, "_360" );
-	if ( pXboxName )
-	{
-		*pXboxName = '\0';
-	}
-
-	SYSTEMTIME systemTime;
-	GetLocalTime( &systemTime );
-	_snprintf( szFileName, sizeof( szFileName ), "%s%s_%2.2d%2.2d_%2.2d%2.2d%2.2d_%d.csf", pPath, s_szStatsMapName, systemTime.wMonth, systemTime.wDay, systemTime.wHour, systemTime.wMinute, systemTime.wSecond, s_FileCount );
-#else
 	_snprintf( szFileName, sizeof( szFileName ), "%s%s%d.vcsf", pPath, pchFileBase, s_FileCount );
-#endif
 
 	++s_FileCount;
 	m_CallStackStats.DumpToFile( szFileName, false );
@@ -2009,21 +1953,12 @@ void CDbgMemAlloc::SetCRTAllocFailed( size_t nSize )
 	_snprintf( buffer, sizeof( buffer ), "***** OUT OF MEMORY! attempted allocation size: %u ****\n", nSize );
 	buffer[ ARRAYSIZE(buffer) - 1] = 0;
 
-#if   defined(_WIN32 )
-	OutputDebugString( buffer );
-	if ( !Plat_IsInDebugSession() )
-	{
-		AssertFatalMsg( false, buffer );
-		abort();
-	}
-#else
 	printf( "%s\n", buffer );
 	if ( !Plat_IsInDebugSession() )
 	{
 		AssertFatalMsg( false, buffer );
 		exit( 0 );
 	}
-#endif
 }
 
 size_t CDbgMemAlloc::MemoryAllocFailed()

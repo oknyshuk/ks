@@ -9,9 +9,6 @@
 
 #if !defined( VIEW_H )
 #define VIEW_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #if _DEBUG
 extern bool g_bRenderingCameraView;		// For debugging (frustum fix for cameras)...

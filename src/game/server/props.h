@@ -8,9 +8,6 @@
 #define PROPS_H
 
 #include "reflect_annotations.h"
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "props_shared.h"
 #include "baseanimating.h"
@@ -211,9 +208,6 @@ public:
 	void SetPhysicsAttacker( CBasePlayer *pEntity, float flTime );
 
 
-#ifdef HL2_EPISODIC
-	void CreateFlare( float flLifetime );
-#endif //HL2_EPISODIC
 
 protected:
 	void CheckRemoveRagdolls();
@@ -467,9 +461,6 @@ private:
 protected:
 	CNetworkVar( bool, m_bAwake, [[= ks::reflect::Net{} ]] );
 
-#ifdef PORTAL2
-	bool		m_bAllowPortalFunnel;
-#endif // PORTAL2
 };
 
 //--------------------------------------------------------------------------------------------------------
@@ -522,9 +513,5 @@ extern ConVar func_breakdmg_bullet;
 extern ConVar func_breakdmg_club;
 extern ConVar func_breakdmg_explosive;
 
-#ifdef PORTAL2
-bool UTIL_PropIsMotionDisabled( CBaseEntity *pObject );
-void UTIL_SetPropMotionDisabled( CBaseEntity *pObject );
-#endif // PORTAL2
 
 #endif // PROPS_H

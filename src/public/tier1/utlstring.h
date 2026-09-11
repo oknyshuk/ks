@@ -6,9 +6,6 @@
 
 #ifndef UTLSTRING_H
 #define UTLSTRING_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 
 #include "tier1/utlmemory.h"
@@ -1218,10 +1215,6 @@ inline size_t CUtlStringBuilder::VFormat(const char *pFormat, va_list args)
 		return 0;
 
 	int len = 0;
-#ifdef _WIN32
-	// how much space will we need?
-	len = V_vscprintf(pFormat, args);
-#else
 	// ISO spec defines the NULL/0 case as being valid and will return the
 	// needed length. Verified on PS3 as well.  Ignore that bsd/linux/mac
 	// have vasprintf which will allocate a buffer. We'd rather have the
@@ -1234,7 +1227,6 @@ inline size_t CUtlStringBuilder::VFormat(const char *pFormat, va_list args)
 		CReuseVaList ReuseArgs(args);
 		len = V_vsnprintf(NULL, 0, pFormat, ReuseArgs.m_ReuseList);
 	}
-#endif
 	if (len > 0)
 	{
 		// get it
@@ -1273,10 +1265,6 @@ inline size_t CUtlStringBuilder::VAppendFormat(const char *pFormat, va_list args
 		return 0;
 
 	int len = 0;
-#ifdef _WIN32
-	// how much space will we need?
-	len = _vscprintf(pFormat, args);
-#else
 
 	// ISO spec defines the NULL/0 case as being valid and will return the
 	// needed length. Verified on PS3 as well.  Ignore that bsd/linux/mac
@@ -1290,7 +1278,6 @@ inline size_t CUtlStringBuilder::VAppendFormat(const char *pFormat, va_list args
 		CReuseVaList ReuseArgs(args);
 		len = vsnprintf(NULL, 0, pFormat, ReuseArgs.m_ReuseList);
 	}
-#endif
 	size_t nOldLen = Length();
 
 	if (len > 0)
@@ -1462,11 +1449,7 @@ inline void CUtlStringBuilder::Truncate(size_t nChars)
 #ifdef DBGFLAG_VALIDATE
 inline void CUtlStringBuilder::Validate(CValidator &validator, const char *pchName)
 {
-#ifdef _WIN32
-	validator.Push(typeid(*this).raw_name(), this, pchName);
-#else
 	validator.Push(typeid(*this).name(), this, pchName);
-#endif
 
 	if (m_data.IsHeap())
 		validator.ClaimMemory(Access());

@@ -9,9 +9,6 @@
 #ifndef IRESOURCESYSTEM_H
 #define IRESOURCESYSTEM_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "appframework/iappsystem.h"
 #include "resourcefile/resourceintrospection.h"

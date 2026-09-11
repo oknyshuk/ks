@@ -9,9 +9,6 @@
 
 #include "reflect_annotations.h"
 #include "sendprop_priorities.h"
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "basecombatcharacter.h"
 #include "usercmd.h"

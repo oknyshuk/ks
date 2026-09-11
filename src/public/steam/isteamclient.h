@@ -7,9 +7,6 @@
 
 #ifndef ISTEAMCLIENT_H
 #define ISTEAMCLIENT_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "steamtypes.h"
 #include "steamclientpublic.h"

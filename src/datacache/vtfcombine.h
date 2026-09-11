@@ -8,9 +8,6 @@
 #ifndef __VTFCOMBINE_H
 #define __VTFCOMBINE_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "mdlcombine.h"
 

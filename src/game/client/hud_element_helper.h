@@ -7,9 +7,6 @@
 
 #ifndef HUD_ELEMENT_HELPER_H
 #define HUD_ELEMENT_HELPER_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 class CHudElement;
 

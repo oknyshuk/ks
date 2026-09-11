@@ -7,14 +7,7 @@
 #ifndef PCH_MATERIALSYSTEM_H
 #define PCH_MATERIALSYSTEM_H
 
-#if defined( _WIN32 )
-#pragma once
-#endif
 
-#if defined( _WIN32 )
-#define WIN32_LEAN_AND_MEAN 1
-#include "windows.h"
-#endif
 
 #include <malloc.h>
 #include <string.h>

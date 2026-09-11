@@ -10,9 +10,6 @@
 #ifndef GL_MODEL_PRIVATE_H
 #define GL_MODEL_PRIVATE_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "mathlib/vector4d.h"
 #include "tier0/dbg.h"

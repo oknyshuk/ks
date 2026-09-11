@@ -11,9 +11,6 @@
 #include "reflect_annotations.h"
 #include "dt_recv.h"
 #include "recvproxy.h"
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "c_baseentity.h"
 #include "rope_physics.h"

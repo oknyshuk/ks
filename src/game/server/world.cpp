@@ -38,17 +38,9 @@
 #include "model_types.h"
 #include "vscript/ivscript.h"
 #include "vscript_server.h"
-#if defined( TERROR )
-#include "music.h"
-#endif
 
-#if defined( CSTRIKE15 )
 #include "gametypes.h"
-#endif
 
-#ifdef PORTAL2
-#include "paint_stream_manager.h"
-#endif
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -545,13 +537,6 @@ bool CWorld::KeyValue( const char *szKeyName, const char *szValue )
 	{
 		SetTimeOfDay( atoi( szValue ) );
 	}
-#ifdef PORTAL2
-	else if ( FStrEq(szKeyName, "maxblobcount" ) )
-	{
-		m_nMaxBlobCount = atoi( szValue );
-		PaintStreamManager.AllocatePaintBlobPool( m_nMaxBlobCount );
-	}
-#endif
 	else
 		return BaseClass::KeyValue( szKeyName, szValue );
 
@@ -559,8 +544,6 @@ bool CWorld::KeyValue( const char *szKeyName, const char *szValue )
 }
 
 
-#ifdef PORTAL2
-#endif
 
 
 extern bool		g_fGameOver;
@@ -592,9 +575,6 @@ CWorld::~CWorld()
 {
 	// If in edit mode tell Hammer I'm ending my session. This re-enables
 	// the Hammer UI so they can continue editing the map.
-#ifdef _WIN32
-	Editor_EndSession(false);
-#endif
 	
 	EventList_Free();
 	ActivityList_Free();
@@ -649,10 +629,8 @@ void CWorld::Spawn( void )
 	SetModelName( AllocPooledString( modelinfo->GetModelName( GetModel() ) ) );
 	AddFlag( FL_WORLDBRUSH );
 
-#if defined( CSTRIKE15 )
 	// reinitialize all of the game type kv file data because we may have new things availible to us in the filesystem mounted from the bsp that we didn't have when the gamemodes.txt was first parsed
 	g_pGameTypes->Initialize( true );
-#endif
 
 	g_EventQueue.Init();
 	Precache( );
@@ -716,10 +694,8 @@ void CWorld::Precache( void )
 	g_pLastSpawn = NULL;
 	g_Language.SetValue( LANGUAGE_ENGLISH );	// TODO use VGUI to get current language
 
-#ifndef INFESTED_DLL
 	ConVarRef stepsize( "sv_stepsize" );
 	stepsize.SetValue( 18 );
-#endif
 
 	ConVarRef roomtype( "room_type" );
 	roomtype.SetValue( 0 );
@@ -735,9 +711,7 @@ void CWorld::Precache( void )
 	Assert( g_pGameRules );
 	g_pGameRules->Init();
 
-#ifndef DOTA_DLL
 	CSoundEnt::InitSoundEnt();
-#endif
 
 	// UNDONE: Make most of these things server systems or precache_registers
 	// =================================================

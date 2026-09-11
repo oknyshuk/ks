@@ -9,9 +9,6 @@
 #ifndef EIFACE_H
 #define EIFACE_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 
 #include "convar.h"
@@ -70,11 +67,7 @@ typedef struct player_info_s player_info_t;
 // defines
 //-----------------------------------------------------------------------------
 
-#ifdef _WIN32
-#define DLLEXPORT __stdcall
-#else
 #define DLLEXPORT /* */
-#endif
 
 #define INTERFACEVERSION_VENGINESERVER	"VEngineServer023"
 

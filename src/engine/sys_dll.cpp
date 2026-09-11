@@ -7,9 +7,6 @@
 //=============================================================================//
 
 
-#if defined(_WIN32)
-#include "winlite.h"
-#endif
 #include <unistd.h>
 #include <fcntl.h>
 #if !defined(DEDICATED)
@@ -53,9 +50,6 @@
 
 #include "engineui.h"
 #include "tier0/systeminformation.h"
-#ifdef _WIN32
-#include <io.h>
-#endif
 #include "toolframework/itoolframework.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
@@ -307,15 +301,7 @@ void Sys_Printf(const char *fmt, ...)
 		
 	if ( developer.GetInt() )
 	{
-#ifdef _WIN32
-		wchar_t unicode[2048];
-		::MultiByteToWideChar(CP_UTF8, 0, text, -1, unicode, sizeof( unicode ) / sizeof(wchar_t));
-		unicode[(sizeof( unicode ) / sizeof(wchar_t)) - 1] = L'\0';
-		OutputDebugStringW( unicode );
-		Sleep( 0 );
-#else
 		fprintf( stderr, "%s", text );
-#endif
 	}
 
 	if ( s_bIsDedicated )
@@ -327,15 +313,7 @@ void Sys_Printf(const char *fmt, ...)
 
 bool Sys_MessageBox(const char *title, const char *info, bool bShowOkAndCancel)
 {
-#ifdef _WIN32
-
-	if (IDOK == ::MessageBox(NULL, title, info, MB_ICONEXCLAMATION | (bShowOkAndCancel ? MB_OKCANCEL : MB_OK)))
-	{
-		return true;
-	}
-	return false;
-
-#elif defined( LINUX ) && !defined( DEDICATED )
+#if   defined( LINUX ) && !defined( DEDICATED )
 
 	int buttonid = 0;
 	SDL_MessageBoxData messageboxdata = { 0 };
@@ -405,11 +383,7 @@ void Sys_Error_Internal( bool bMinidump, const char *error, va_list argsList )
 	if ( 		 !CommandLine()->FindParm( "-makereslists" ) &&
 		 !CommandLine()->FindParm( "-nomessagebox" ) )
 	{
-#ifdef _WIN32
-		::MessageBox( NULL, text, "Engine Error", MB_OK | MB_TOPMOST );
-#else
 		Sys_MessageBox( "Engine Error", text, false );
-#endif
 	}
 
 	DebuggerBreakIfDebugging();
@@ -418,35 +392,11 @@ void Sys_Error_Internal( bool bMinidump, const char *error, va_list argsList )
 
 	if ( bMinidump && !Plat_IsInDebugSession() && !CommandLine()->FindParm( "-nominidumps") )
 	{
-#ifdef WIN32
-		// MiniDumpWrite() has problems capturing the calling thread's context 
-		// unless it is called with an exception context.  So fake an exception.
-		__try
-		{
-			RaiseException
-				(
-				0,							// dwExceptionCode
-				EXCEPTION_NONCONTINUABLE,	// dwExceptionFlags
-				0,							// nNumberOfArguments,
-				NULL						// const ULONG_PTR* lpArguments
-				);
-
-			// Never get here (non-continuable exception)
-		}
-		// Write the minidump from inside the filter (GetExceptionInformation() is only 
-		// valid in the filter)
-		__except ( SteamAPI_WriteMiniDump( 0, GetExceptionInformation(), build_number() ), EXCEPTION_EXECUTE_HANDLER )
-		{
-			
-			// We always get here because the above filter evaluates to EXCEPTION_EXECUTE_HANDLER
-		}
-#else
 	// Doing this doesn't quite work the way we want because there is no "crashing" thread
 	// and we see "No thread was identified as the cause of the crash; No signature could be created because we do not know which thread crashed" on the back end
 	//SteamAPI_WriteMiniDump( 0, NULL, build_number() );
 	int *p = 0;
 	*p = 0xdeadbeef;
-#endif
 	}
 
 	host_initialized = false;
@@ -510,20 +460,6 @@ void Sys_Sleep( int msec )
 //			lpReserved - 
 // Output : BOOL WINAPI   DllMain
 //-----------------------------------------------------------------------------
-#if defined(_WIN32)
-BOOL WINAPI DllMain(HANDLE hInst, ULONG ulInit, LPVOID lpReserved)
-{
-	InitCRTMemDebug();
-	if (ulInit == DLL_PROCESS_ATTACH)
-	{
-	} 
-	else if (ulInit == DLL_PROCESS_DETACH)
-	{
-	}
-
-	return TRUE;
-}
-#endif
 
 
 //-----------------------------------------------------------------------------
@@ -541,86 +477,7 @@ void Sys_InitMemory( void )
 
 	host_parms.memsize = 0;
 
-#ifdef _WIN32
-#if (_MSC_VER > 1200)
-	// MSVC 6.0 doesn't support GlobalMemoryStatusEx()
-	OSVERSIONINFOEX osvi;
-	ZeroMemory(&osvi, sizeof(OSVERSIONINFOEX));
-	osvi.dwOSVersionInfoSize = sizeof(OSVERSIONINFOEX);
-
-	if ( GetVersionEx ((OSVERSIONINFO *)&osvi) )
-	{
-		if ( osvi.dwPlatformId >= VER_PLATFORM_WIN32_NT && osvi.dwMajorVersion >= 5 )
-		{
-			MEMORYSTATUSEX	memStat;
-			ZeroMemory(&memStat, sizeof(MEMORYSTATUSEX));
-			memStat.dwLength = sizeof(MEMORYSTATUSEX);
-			if ( GlobalMemoryStatusEx( &memStat ) )
-			{
-				if ( memStat.ullTotalPhys > 0xFFFFFFFFUL )
-				{
-					host_parms.memsize = 0xFFFFFFFFUL;
-				}
-				else
-				{
-					host_parms.memsize = memStat.ullTotalPhys;
-				}
-			}
-		}
-	}
-#endif // (_MSC_VER > 1200)
-
-	if ( host_parms.memsize == 0 )
-	{
-		MEMORYSTATUS lpBuffer;
-		// Get OS Memory status
-		lpBuffer.dwLength = sizeof(MEMORYSTATUS);
-		GlobalMemoryStatus( &lpBuffer );
-
-		if ( lpBuffer.dwTotalPhys <= 0 )
-		{
-			host_parms.memsize = MAXIMUM_WIN_MEMORY;
-		}
-		else
-		{
-			host_parms.memsize = lpBuffer.dwTotalPhys;
-		}	
-	}
-	if ( host_parms.memsize < ONE_HUNDRED_TWENTY_EIGHT_MB )
-	{
-		Sys_Error( "Available memory less than 128MB!!! %i\n", host_parms.memsize );
-	}
-
-	// take one quarter the physical memory
-	if ( host_parms.memsize <= 512*1024*1024)
-	{
-		host_parms.memsize >>= 2;
-		// Apply cap of 64MB for 512MB systems
-		// this keeps the code the same as HL2 gold
-		// but allows us to use more memory on 1GB+ systems
-		if (host_parms.memsize > MAXIMUM_DEDICATED_MEMORY)
-		{
-			host_parms.memsize = MAXIMUM_DEDICATED_MEMORY;
-		}
-	}
-	else
-	{
-		// just take one quarter, no cap
-		host_parms.memsize >>= 2;
-	}
-
-	// At least MINIMUM_WIN_MEMORY mb, even if we have to swap a lot.
-	if (host_parms.memsize < MINIMUM_WIN_MEMORY)
-	{
-		host_parms.memsize = MINIMUM_WIN_MEMORY;
-	}
-
-	// Apply cap
-	if (host_parms.memsize > MAXIMUM_WIN_MEMORY)
-	{
-		host_parms.memsize = MAXIMUM_WIN_MEMORY;
-	}
-#elif defined ( DEDICATED )
+#if   defined ( DEDICATED )
 	// hard code 32 mb for dedicated servers
 	host_parms.memsize = MAXIMUM_DEDICATED_MEMORY;
 
@@ -1203,23 +1060,6 @@ void LoadEntityDLLs( const char *szBaseDir, bool bServerOnly )
 	// Load the game .dll
 	char szDllFilename[ MAX_PATH ];
 
-#if defined( _WIN32 )
-	// [mpritchar] cstrike15 - we now look for server_valve.dll { Valve's datacenter specific version of server }
-	//    first and load it if we find it, otherwise load server.dll
-
-	if ( s_bIsDedicatedServer && !CommandLine()->FindParm( "-novalveds" ) )
-	{
-		Q_snprintf( szDllFilename, sizeof( szDllFilename ), "server_valve" DLL_EXT_STRING );
-		LoadThisDll( szDllFilename, bServerOnly );
-	}
-
-	if ( !serverGameDLL )
-	{
-		Q_snprintf( szDllFilename, sizeof( szDllFilename ), "server" DLL_EXT_STRING );
-		LoadThisDll( szDllFilename, bServerOnly );
-	}
-
-#else
 	if ( s_bIsDedicatedServer && !CommandLine()->FindParm( "-novalveds" ) )
 	{
 		Q_snprintf( szDllFilename, sizeof( szDllFilename ), "server_valve" );
@@ -1230,7 +1070,6 @@ void LoadEntityDLLs( const char *szBaseDir, bool bServerOnly )
 		Q_snprintf( szDllFilename, sizeof( szDllFilename ), "server"  );
 		LoadThisDll( szDllFilename, bServerOnly );
 	}
-#endif
 
 
 	if ( serverGameDLL )
@@ -1242,281 +1081,36 @@ void LoadEntityDLLs( const char *szBaseDir, bool bServerOnly )
 //-----------------------------------------------------------------------------
 // Purpose: Retrieves a string value from the registry
 //-----------------------------------------------------------------------------
-#if defined(_WIN32)
-void Sys_GetRegKeyValueUnderRoot( HKEY rootKey, const char *pszSubKey, const char *pszElement, char *pszReturnString, int nReturnLength, const char *pszDefaultValue )
-{
-	LONG lResult;           // Registry function result code
-	HKEY hKey;              // Handle of opened/created key
-	char szBuff[128];       // Temp. buffer
-	ULONG dwDisposition;    // Type of key opening event
-	DWORD dwType;           // Type of key
-	DWORD dwSize;           // Size of element data
-
-	// Assume the worst
-	Q_strncpy(pszReturnString, pszDefaultValue, nReturnLength );
-
-	// Create it if it doesn't exist.  (Create opens the key otherwise)
-	lResult = RegCreateKeyEx(
-		rootKey,	// handle of open key 
-		pszSubKey,			// address of name of subkey to open 
-		0ul,					// DWORD ulOptions,	  // reserved 
-		"String",			// Type of value
-		REG_OPTION_NON_VOLATILE, // Store permanently in reg.
-		KEY_ALL_ACCESS,		// REGSAM samDesired, // security access mask 
-		NULL,
-		&hKey,				// Key we are creating
-		&dwDisposition);    // Type of creation
-	
-	if (lResult != ERROR_SUCCESS)  // Failure
-		return;
-
-	// First time, just set to Valve default
-	if (dwDisposition == REG_CREATED_NEW_KEY)
-	{
-		// Just Set the Values according to the defaults
-		lResult = RegSetValueEx( hKey, pszElement, 0, REG_SZ, (CONST BYTE *)pszDefaultValue, Q_strlen(pszDefaultValue) + 1 ); 
-	}
-	else
-	{
-		// We opened the existing key. Now go ahead and find out how big the key is.
-		dwSize = nReturnLength;
-		lResult = RegQueryValueEx( hKey, pszElement, 0, &dwType, (unsigned char *)szBuff, &dwSize );
-
-		// Success?
-		if (lResult == ERROR_SUCCESS)
-		{
-			// Only copy strings, and only copy as much data as requested.
-			if (dwType == REG_SZ)
-			{
-				Q_strncpy(pszReturnString, szBuff, nReturnLength);
-				pszReturnString[nReturnLength - 1] = '\0';
-			}
-		}
-		else
-		// Didn't find it, so write out new value
-		{
-			// Just Set the Values according to the defaults
-			lResult = RegSetValueEx( hKey, pszElement, 0, REG_SZ, (CONST BYTE *)pszDefaultValue, Q_strlen(pszDefaultValue) + 1 ); 
-		}
-	};
-
-	// Always close this key before exiting.
-	RegCloseKey(hKey);
-
-}
-
-
-//-----------------------------------------------------------------------------
-// Purpose: Retrieves a DWORD value from the registry
-//-----------------------------------------------------------------------------
-void Sys_GetRegKeyValueUnderRootInt( HKEY rootKey, const char *pszSubKey, const char *pszElement, long *plReturnValue, const long lDefaultValue )
-{
-	LONG lResult;           // Registry function result code
-	HKEY hKey;              // Handle of opened/created key
-	ULONG dwDisposition;    // Type of key opening event
-	DWORD dwType;           // Type of key
-	DWORD dwSize;           // Size of element data
-
-	// Assume the worst
-	// Set the return value to the default
-	*plReturnValue = lDefaultValue; 
-
-	// Create it if it doesn't exist.  (Create opens the key otherwise)
-	lResult = RegCreateKeyEx(
-		rootKey,	// handle of open key 
-		pszSubKey,			// address of name of subkey to open 
-		0ul,					// DWORD ulOptions,	  // reserved 
-		"String",			// Type of value
-		REG_OPTION_NON_VOLATILE, // Store permanently in reg.
-		KEY_ALL_ACCESS,		// REGSAM samDesired, // security access mask 
-		NULL,
-		&hKey,				// Key we are creating
-		&dwDisposition);    // Type of creation
-
-	if (lResult != ERROR_SUCCESS)  // Failure
-		return;
-
-	// First time, just set to Valve default
-	if (dwDisposition == REG_CREATED_NEW_KEY)
-	{
-		// Just Set the Values according to the defaults
-		lResult = RegSetValueEx( hKey, pszElement, 0, REG_DWORD, (CONST BYTE *)&lDefaultValue, sizeof( DWORD ) ); 
-	}
-	else
-	{
-		// We opened the existing key. Now go ahead and find out how big the key is.
-		dwSize = sizeof( DWORD );
-		lResult = RegQueryValueEx( hKey, pszElement, 0, &dwType, (unsigned char *)plReturnValue, &dwSize );
-
-		// Success?
-		if (lResult != ERROR_SUCCESS)
-			// Didn't find it, so write out new value
-		{
-			// Just Set the Values according to the defaults
-			lResult = RegSetValueEx( hKey, pszElement, 0, REG_DWORD, (LPBYTE)&lDefaultValue, sizeof( DWORD ) ); 
-		}
-	};
-
-	// Always close this key before exiting.
-	RegCloseKey(hKey);
-
-}
-
-
-void Sys_SetRegKeyValueUnderRoot( HKEY rootKey, const char *pszSubKey, const char *pszElement, const char *pszValue )
-{
-	LONG lResult;           // Registry function result code
-	HKEY hKey;              // Handle of opened/created key
-	//char szBuff[128];       // Temp. buffer
-	ULONG dwDisposition;    // Type of key opening event
-	//DWORD dwType;           // Type of key
-	//DWORD dwSize;           // Size of element data
-
-	// Create it if it doesn't exist.  (Create opens the key otherwise)
-	lResult = RegCreateKeyEx(
-		rootKey,			// handle of open key 
-		pszSubKey,			// address of name of subkey to open 
-		0ul,					// DWORD ulOptions,	  // reserved 
-		"String",			// Type of value
-		REG_OPTION_NON_VOLATILE, // Store permanently in reg.
-		KEY_ALL_ACCESS,		// REGSAM samDesired, // security access mask 
-		NULL,
-		&hKey,				// Key we are creating
-		&dwDisposition);    // Type of creation
-	
-	if (lResult != ERROR_SUCCESS)  // Failure
-		return;
-
-	// First time, just set to Valve default
-	if (dwDisposition == REG_CREATED_NEW_KEY)
-	{
-		// Just Set the Values according to the defaults
-		lResult = RegSetValueEx( hKey, pszElement, 0, REG_SZ, (CONST BYTE *)pszValue, Q_strlen(pszValue) + 1 ); 
-	}
-	else
-	{
-		/*
-		// FIXE:  We might want to support a mode where we only create this key, we don't overwrite values already present
-		// We opened the existing key. Now go ahead and find out how big the key is.
-		dwSize = nReturnLength;
-		lResult = RegQueryValueEx( hKey, pszElement, 0, &dwType, (unsigned char *)szBuff, &dwSize );
-
-		// Success?
-		if (lResult == ERROR_SUCCESS)
-		{
-			// Only copy strings, and only copy as much data as requested.
-			if (dwType == REG_SZ)
-			{
-				Q_strncpy(pszReturnString, szBuff, nReturnLength);
-				pszReturnString[nReturnLength - 1] = '\0';
-			}
-		}
-		else
-		*/
-		// Didn't find it, so write out new value
-		{
-			// Just Set the Values according to the defaults
-			lResult = RegSetValueEx( hKey, pszElement, 0, REG_SZ, (CONST BYTE *)pszValue, Q_strlen(pszValue) + 1 ); 
-		}
-	};
-
-	// Always close this key before exiting.
-	RegCloseKey(hKey);
-}
-#endif
 
 void Sys_GetRegKeyValue( char *pszSubKey, const char *pszElement, char *pszReturnString, int nReturnLength, char *pszDefaultValue )
 {
-#if defined(_WIN32)
-	Sys_GetRegKeyValueUnderRoot( HKEY_CURRENT_USER, pszSubKey, pszElement, pszReturnString, nReturnLength, pszDefaultValue );
-#else
 	//hushed Assert( !"Impl me" );
 	Q_strncpy( pszReturnString, pszDefaultValue, nReturnLength );
-#endif
 }
 
 void Sys_GetRegKeyValueInt( char *pszSubKey, char *pszElement, long *plReturnValue, long lDefaultValue)
 {
-#if defined(_WIN32)
-	Sys_GetRegKeyValueUnderRootInt( HKEY_CURRENT_USER, pszSubKey, pszElement, plReturnValue, lDefaultValue );
-#else
 	//hushed Assert( !"Impl me" );
 	*plReturnValue = lDefaultValue;
-#endif
 }
 
 void Sys_SetRegKeyValue( const char *pszSubKey, const char *pszElement,	const char *pszValue )
 {
-#if defined(_WIN32)
-	Sys_SetRegKeyValueUnderRoot( HKEY_CURRENT_USER, pszSubKey, pszElement, pszValue );
-#else
 	//hushed Assert( !"Impl me" );
-#endif
 }
 
 #define SOURCE_ENGINE_APP_CLASS "Valve.Source"
 
 void Sys_CreateFileAssociations( int count, FileAssociationInfo *list )
 {
-#if defined(_WIN32)
-
-	char appname[ 512 ];
-
-	GetModuleFileName( 0, appname, sizeof( appname ) );
-	Q_FixSlashes( appname );
-	Q_strlower( appname );
-
-	char quoted_appname_with_arg[ 512 ];
-	Q_snprintf( quoted_appname_with_arg, sizeof( quoted_appname_with_arg ), "\"%s\" \"%%1\"", appname );
-	char base_exe_name[ 256 ];
-	Q_FileBase( appname, base_exe_name, sizeof( base_exe_name) );
-	Q_DefaultExtension( base_exe_name, ".exe", sizeof( base_exe_name ) );
-
-	// HKEY_CLASSES_ROOT/Valve.Source/shell/open/command == "u:\tf2\hl2.exe" "%1" quoted
-	Sys_SetRegKeyValueUnderRoot( HKEY_CLASSES_ROOT, va( "%s\\shell\\open\\command", SOURCE_ENGINE_APP_CLASS ), "", quoted_appname_with_arg );
-	// HKEY_CLASSES_ROOT/Applications/hl2.exe/shell/open/command == "u:\tf2\hl2.exe" "%1" quoted
-	Sys_SetRegKeyValueUnderRoot( HKEY_CLASSES_ROOT, va( "Applications\\%s\\shell\\open\\command", base_exe_name ), "", quoted_appname_with_arg );
-
-	for ( int i = 0; i < count ; i++ )
-	{
-		FileAssociationInfo *fa = &list[ i ];
-		char binding[32];
-		binding[0] = 0;
-		// Create file association for our .exe
-		// HKEY_CLASSES_ROOT/.dem == "Valve.Source"
-		Sys_GetRegKeyValueUnderRoot( HKEY_CLASSES_ROOT, fa->extension, "", binding, sizeof(binding), "" );
-		if ( Q_strlen( binding ) == 0 )
-		{
-			Sys_SetRegKeyValueUnderRoot( HKEY_CLASSES_ROOT, fa->extension, "", SOURCE_ENGINE_APP_CLASS );
-		}
-	}
-#endif
 }
 
 void Sys_NoCrashDialog()
 {
-#if defined(_WIN32)
-	::SetErrorMode(SetErrorMode(SEM_NOGPFAULTERRORBOX) | SEM_NOGPFAULTERRORBOX);
-#endif
 }
 
 void Sys_TestSendKey( const char *pKey )
 {
-#if defined(_WIN32)
-	int key = pKey[0];
-	if ( pKey[0] == '\\' && pKey[1] == 'r' )
-	{
-		key = VK_RETURN;
-	}
-
-	HWND hWnd = (HWND)game->GetMainWindow();
-	PostMessageA( hWnd, WM_KEYDOWN, key, 0 );
-	PostMessageA( hWnd, WM_KEYUP, key, 0 );
-
-	//void Key_Event (int key, bool down);
-	//Key_Event( key, 1 );
-	//Key_Event( key, 0 );
-#endif
 }
 
 void Sys_OutputDebugString(const char *msg)

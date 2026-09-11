@@ -7,17 +7,10 @@
 
 #ifndef BASEPLAYER_SHARED_H
 #define BASEPLAYER_SHARED_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 // PlayerUse defines
-#ifdef PORTAL2
-#define	PLAYER_USE_RADIUS	100.f
-#else
 #define	PLAYER_USE_RADIUS	80.f
 #define	PLAYER_USE_BOT_RADIUS	140.f
-#endif // PORTAL2
 
 #define CONE_45_DEGREES		0.707f
 #define CONE_15_DEGREES		0.9659258f

@@ -10,9 +10,6 @@
 #ifndef RAGDOLL_H
 #define RAGDOLL_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "ragdoll_shared.h"
 

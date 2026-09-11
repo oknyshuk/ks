@@ -7,9 +7,6 @@
 #ifndef PSHEET_H
 #define PSHEET_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "tier1/utlobjectreference.h"
 #include "materialsystem/MaterialSystemUtil.h"

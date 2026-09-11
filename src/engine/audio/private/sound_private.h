@@ -29,9 +29,6 @@ class IAudioDevice;
 
 void S_Startup (void);
 void S_FlushSoundData(int rate);
-#ifdef PLATFORM_WINDOWS_PC
-extern HRESULT SetupWindowsMixerPreferences( float flMasterVolume = 1.0f, bool bDuckingOptOut = true );
-#endif
 
 CAudioSource *S_LoadSound( CSfxTable *s, channel_t *ch, SoundError &soundError );
 void S_TouchSound( char *sample );

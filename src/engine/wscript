@@ -342,27 +342,15 @@ def build(bld):
             "toolframework.cpp",
         ]
 
-    if bld.env.DEST_OS == "win32":
-        source += [
-            "ipc_console.cpp",
-            "audio/private/windows_audio.cpp",
-            "audio/private/snd_dev_direct.cpp",
-            "audio/private/voice_mixer_controls.cpp",
-            "audio/private/voice_record_dsound.cpp",
-        ]
-    else:
-        source += ["sys_linuxwind.cpp", "audio/private/snd_posix.cpp"]
+    source += ["sys_linuxwind.cpp", "audio/private/snd_posix.cpp"]
 
-    if not bld.env.DEDICATED or build.env.DEST_OS == "win32":
+    if not bld.env.DEDICATED:
         source += [
             "audio/private/snd_mp3_source.cpp",
             "audio/private/snd_wave_mixer_mp3.cpp",
+            "audio/private/voice_mixer_controls_sdl.cpp",
+            "audio/private/voice_record_sdl.cpp",
         ]
-        if bld.env.DEST_OS != "win32":
-            source += [
-                "audio/private/voice_mixer_controls_sdl.cpp",
-                "audio/private/voice_record_sdl.cpp",
-            ]
 
     bld.shlib(
         source=source,

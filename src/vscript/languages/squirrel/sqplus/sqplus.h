@@ -23,16 +23,6 @@
   #include <malloc.h>
 #endif
 #include <memory.h>
-#if defined(_MSC_VER) || defined(__BORLANDC__) 
-  #include <tchar.h>
-  #ifndef UNICODE
-    #define SCSNPRINTF _snprintf
-    #define SCPUTS puts
-  #else
-    #define SCSNPRINTF _snwprintf
-    #define SCPUTS _putws
-  #endif
-#else
   #ifdef _T
   #undef _T
   #endif
@@ -40,7 +30,6 @@
   #define SCSNPRINTF snprintf
   #include <stdio.h> // for snprintf
   #define SCPUTS puts
-#endif
 
 #ifndef _WINDEF_
   typedef int BOOL;
@@ -1371,9 +1360,6 @@ inline void RegisterInstance(HSQUIRRELVM v,HSQOBJECT hclass,Callee & callee,Func
 } // RegisterInstance
 
 
-#ifdef _MSC_VER
-#pragma warning(disable : 4995) // Deprecated _snprintf
-#endif
 
 // === Register an INSTANCE MEMBER function Variable Arguments ===
 // typeMask: "*" means don't check parameters, typeMask=0 means function takes no arguments (and is type checked for that case).
@@ -1411,9 +1397,6 @@ inline void RegisterInstanceVarArgs(HSQUIRRELVM v,HSQOBJECT hclass,Callee & call
   sq_poptop(v); // Remove hclass.
 } // RegisterInstanceVarArgs
 
-#ifdef _MSC_VER
-#pragma warning(default : 4995)
-#endif
 
 // === Call Squirrel Functions from C/C++ ===
 // No type checking is performed for Squirrel functions as Squirrel types are dynamic:
@@ -1874,9 +1857,6 @@ inline void Push(HSQUIRRELVM v,SquirrelObject & so)  { sq_pushobject(v,so.GetObj
 
 #define USE_ARGUMENT_DEPENDANT_OVERLOADS
 #ifdef USE_ARGUMENT_DEPENDANT_OVERLOADS
-#ifdef _MSC_VER
-#pragma warning (disable:4675) // Disable warning: "resolved overload was found by argument-dependent lookup" when class/struct pointers are used as function arguments.
-#endif
 // === BEGIN Argument Dependent Overloads ===
 inline void Push(HSQUIRRELVM v,bool value)                  { sq_pushbool(v,value); }               // Pass bool as int if USE_ARGUMENT_DEPENDANT_OVERLOADS can't be used by your compiler.
 inline void Push(HSQUIRRELVM v,const void * value)          { sq_pushuserpointer(v,(void*)value); } // Pass SQAnythingPtr instead of void * "                                             "
@@ -1975,9 +1955,6 @@ static int _##CLASSNAME##_constructor(HSQUIRRELVM v) {               \
 #define SQ_REGISTER_INSTANCE_VARIABLE(NEWSQCLASS,CCLASS,VARNAME)     \
   RegisterInstanceVariable(NEWSQCLASS,&((CCLASS *)0)->VARNAME,_T(#VARNAME));
 
-#if defined(USE_ARGUMENT_DEPENDANT_OVERLOADS) && defined(_MSC_VER)
-#pragma warning (default:4675)
-#endif
 
 }; // namespace SqPlus
 

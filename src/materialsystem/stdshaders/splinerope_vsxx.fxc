@@ -66,11 +66,6 @@ VS_OUTPUT main( const VS_INPUT v )
 	posrad.xyz += ofs * ( posrad.w * ( v.vParms.z - .5 ) );
 	o.projPos  = mul( float4(posrad.xyz, 1.0f), cViewProj );
 	
-#ifdef _PS3
-	// Account for OpenGL's flipped y coordinate and expanded z range [-1,1] instead of [0,1]
-	o.projPos.y = -o.projPos.y;
-	o.projPos.z = 2.0f * o.projPos.z - o.projPos.w;
-#endif // _PS3
 
 	o.worldPos_projPosZ.xyz = posrad.xyz;
 	o.worldPos_projPosZ.w = o.projPos.z;

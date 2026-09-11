@@ -8,9 +8,6 @@
 #ifndef MATERIALPROXYFACTORY_H
 #define MATERIALPROXYFACTORY_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "materialsystem/imaterialproxyfactory.h"
 #include "tier1/interface.h"

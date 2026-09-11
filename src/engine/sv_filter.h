@@ -12,9 +12,6 @@
 //=============================================================================//
 #if !defined( SV_FILTER_H )
 #define SV_FILTER_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "utlvector.h"
 #include "userid.h"

@@ -4,12 +4,7 @@
 //
 //===========================================================================//
 
-#ifdef _WIN32
-#include "winlite.h"
-#include <winsock2.h> // INADDR_ANY defn
-#else
 #include <netinet/in.h>
-#endif
 
 #include "sv_steamauth.h"
 #include "sv_filter.h"

@@ -7,9 +7,6 @@
 
 #ifndef IGAMESERVERDATA_H
 #define IGAMESERVERDATA_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "interface.h"
 #include "netadr.h"

@@ -8,9 +8,6 @@
 #ifndef IRENDERTORTHELPEROBJECT_H
 #define IRENDERTORTHELPEROBJECT_H
 
-#if defined( _WIN32 )
-#pragma once
-#endif
 
 #include "materialsystem/imaterialsystem.h"
 #include "mathlib/camera.h"

@@ -7,14 +7,7 @@
 #undef PROTECTED_THINGS_ENABLE
 #undef PROTECT_FILEIO_FUNCTIONS
 
-#if defined( _WIN32 )
-#include <windows.h>
-#include <direct.h>
-#include <io.h>
-#include <process.h>
-#else
 #include <unistd.h>
-#endif
 #include <stdio.h>
 #include <sys/stat.h>
 #include "tier0/platform.h"
@@ -56,18 +49,8 @@ public:
 
 		const char *pValue = NULL;
 
-#if defined( _WIN32 )
-		// Use GetEnvironmentVariable instead of getenv because getenv doesn't pick up changes
-		// to the process environment after the DLL was loaded.
-		char szBuf[ 4096 ];
-		if ( GetEnvironmentVariable( m_pVarName, szBuf, sizeof( szBuf ) ) != 0)
-		{
-			pValue = szBuf;
-		}
-#else
 		// LINUX BUG: see above
 		pValue = getenv( pVarName );
-#endif 
 
 		if ( pValue )
 		{
@@ -107,11 +90,6 @@ public:
 		if ( !pszBuf || ( nBufSize <= 0 ) )
 			return 0;
 	
-#if defined( _WIN32 )
-		// Use GetEnvironmentVariable instead of getenv because getenv doesn't pick up changes
-		// to the process environment after the DLL was loaded.
-		return GetEnvironmentVariable( m_pVarName, pszBuf, nBufSize );
-#else
 		// LINUX BUG: see above
 		const char *pszOut = getenv( m_pVarName );
 		if ( !pszOut )
@@ -122,7 +100,6 @@ public:
 
 		Q_strncpy( pszBuf, pszOut, nBufSize );		
 		return Q_strlen( pszBuf );
-#endif
 	}
 
 	void SetValue( const char *pValue, ... )
@@ -133,24 +110,12 @@ public:
 		Q_vsnprintf( valueString, sizeof( valueString ), pValue, marker );
 		va_end( marker );
 
-#if defined( WIN32 )
-		char str[4096];
-		Q_snprintf( str, sizeof( str ), "%s=%s", m_pVarName, valueString );
-		_putenv( str );
-#else
 		setenv( m_pVarName, valueString, 1 );
-#endif
 	}
 
 	void ClearValue()
 	{
-#if defined( WIN32 )
-		char str[512];
-		Q_snprintf( str, sizeof( str ), "%s=", m_pVarName );
-		_putenv( str );
-#else
 		setenv( m_pVarName, "", 1 );
-#endif
 	}
 
 private:
@@ -191,13 +156,8 @@ public:
 // ---------------------------------------------------------------------------------------------------- //
 void Q_getwd( char *out, int outSize )
 {
-#if defined( _WIN32 ) || defined( WIN32 )
-	_getcwd( out, outSize );
-	Q_strncat( out, "\\", outSize, COPY_ALL_CHARACTERS );
-#else
 	getcwd( out, outSize );
 	strcat( out, "/" );
-#endif
 	Q_FixSlashes( out );
 }
 
@@ -258,18 +218,10 @@ void AddLanguageGameDir( IFileSystem *pFileSystem, const char *pLocation, const 
 	char *tempPtr = NULL, *gameDir = NULL;
 
 	Q_strncpy( baseDir, pLocation, sizeof(baseDir) );
-#ifdef WIN32
-	tempPtr = Q_strstr( baseDir, "\\game\\" );
-#else
 	tempPtr = Q_strstr( baseDir, "/game/" );
-#endif		
 	if ( tempPtr )
 	{
-#ifdef WIN32
-		gameDir = tempPtr + Q_strlen( "\\game\\" );
-#else
 		gameDir = tempPtr + Q_strlen( "/game/" );
-#endif
 		*tempPtr = 0;
 		Q_snprintf( temp, sizeof(temp), "%s%clocalization%c%s_%s", baseDir, CORRECT_PATH_SEPARATOR, CORRECT_PATH_SEPARATOR, gameDir, pLanguage );
 		
@@ -317,21 +269,6 @@ KeyValues* ReadKeyValuesFile( const char *pFilename )
 static bool Sys_GetExecutableName( char *out, int len )
 {
 
-#if defined( _WIN32 )
-
-    if ( !::GetModuleFileName( ( HINSTANCE )GetModuleHandle( NULL ), out, len ) )
-    {
-		return false;
-    }
-	// Fix up the path if Windows gave us a messy one.
-	if ( !Q_RemoveDotSlashes( out ) )
-	{
-		Error( "V_MakeAbsolutePath: tried to \"..\" past the root." );
-		return false;
-	}
-	Q_FixSlashes( out );
-
-#else
 
 	if ( CommandLine()->GetParm(0) )
 	{
@@ -342,7 +279,6 @@ static bool Sys_GetExecutableName( char *out, int len )
 		return false;
 	}
 
-#endif
 	
 	return true;
 }
@@ -402,21 +338,6 @@ static bool FileSystem_GetBaseDir( char *baseDir, int baseDirLen )
 
 void LaunchVConfig()
 {
-#if defined( _WIN32 )
-	char vconfigExe[MAX_PATH];
-	FileSystem_GetExecutableDir( vconfigExe, sizeof( vconfigExe ) );
-	Q_AppendSlash( vconfigExe, sizeof( vconfigExe ) );
-	Q_strncat( vconfigExe, "vconfig.exe", sizeof( vconfigExe ), COPY_ALL_CHARACTERS );
-
-	char *argv[] =
-	{
-		vconfigExe,
-		"-allowdebug",
-		NULL
-	};
-
-	_spawnv( _P_NOWAIT, vconfigExe, argv );
-#endif
 }
 
 const char* GetVProjectCmdLineValue()
@@ -500,45 +421,7 @@ bool IsLowViolenceBuild( void )
 	if ( CommandLine()->FindParm( "-lv" ) != 0 )
 		return true;
 
-#if defined(_WIN32)
-	HKEY hKey;
-	char szValue[64];
-	unsigned long len = sizeof(szValue) - 1;
-	bool retVal = false;
-	
-	if ( RegOpenKeyEx( HKEY_CURRENT_USER, "Software\\Valve\\Source\\Settings", NULL, KEY_READ, &hKey) == ERROR_SUCCESS )
-	{
-		// User Token 2
-		if ( RegQueryValueEx( hKey, "User Token 2", NULL, NULL, (unsigned char*)szValue, &len ) == ERROR_SUCCESS )
-		{
-			if ( Q_strlen( szValue ) > 0 )
-			{
-				retVal = true;
-			}
-		}
-
-		if ( !retVal )
-		{
-			// reset "len" for the next check
-			len = sizeof(szValue) - 1;
-
-			// User Token 3
-			if ( RegQueryValueEx( hKey, "User Token 3", NULL, NULL, (unsigned char*)szValue, &len ) == ERROR_SUCCESS )
-			{
-				if ( Q_strlen( szValue ) > 0 )
-				{
-					retVal = true;
-				}
-			}
-		}
-
-		RegCloseKey(hKey);
-	}
-
-	return retVal;
-#else
 	return false;
-#endif
 }
 
 static void FileSystem_AddLoadedSearchPath( 
@@ -1032,15 +915,11 @@ FSReturnCode_t SetSteamInstallPath( char *steamInstallPath, int steamInstallPath
 	}
 
 	Q_strncpy( steamInstallPath, executablePath, steamInstallPathLen );
-#ifdef WIN32
-	const char *pchSteamDLL = "steam" DLL_EXT_STRING;
-#else
 	const char *pchSteamDLL = "libsteam" DLL_EXT_STRING;
 
 	// under Linux & OSX the bin lives in the bin/ folder, so step back one
 
 	Q_StripLastDir( steamInstallPath, steamInstallPathLen );
-#endif
 	while ( 1 )
 	{
 		// Ignore steamapp.cfg here in case they're debugging. We still need to know the real steam path so we can find their username.
@@ -1067,11 +946,7 @@ FSReturnCode_t SetSteamInstallPath( char *steamInstallPath, int steamInstallPath
 	steamEnvVars.m_Path.GetValue( szPath, sizeof( szPath ) );
 	if ( !DoesPathExistAlready( szPath, steamInstallPath ) )
 	{
-#ifdef WIN32
-#define PATH_SEP ";"
-#else
 #define PATH_SEP ":"
-#endif	
 		steamEnvVars.m_Path.SetValue( "%s%s%s", szPath, PATH_SEP, steamInstallPath );
 	}
 	return FS_OK;
@@ -1256,13 +1131,7 @@ FSReturnCode_t FileSystem_SetupSteamEnvironment( CFSSteamSetupInfo &fsInfo )
 		return ret;
 
 	// This is so that processes spawned by this application will have the same VPROJECT
-#if defined( WIN32 )
-	char pEnvBuf[MAX_PATH+32];
-	Q_snprintf( pEnvBuf, sizeof(pEnvBuf), "%s=%s", GAMEDIR_TOKEN, fsInfo.m_GameInfoPath );
-	_putenv( pEnvBuf );
-#else
 	setenv( GAMEDIR_TOKEN, fsInfo.m_GameInfoPath, 1 );
-#endif
 	
 	CSteamEnvVars steamEnvVars;
 	if ( fsInfo.m_bSteam )

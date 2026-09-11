@@ -12,9 +12,7 @@
 #include "c_physicsprop.h"
 #include "c_physbox.h"
 #include "c_props.h"
-#if defined(CSTRIKE15)
 #include "c_cs_player.h"
-#endif
 #define CPhysBox C_PhysBox
 #define CPhysicsProp C_PhysicsProp
 
@@ -97,7 +95,6 @@ void C_DynamicProp::UpdateGlow( void )
 
 	float flAlpha = 0.9f;
 
-#if defined(CSTRIKE15)
 	// fade the alpha based on distace
 	C_CSPlayer *pPlayer = GetLocalOrInEyeCSPlayer();
 	if ( pPlayer && m_bShouldGlow )
@@ -106,7 +103,6 @@ void C_DynamicProp::UpdateGlow( void )
 		flDistance = ( GetAbsOrigin() - pPlayer->GetAbsOrigin() ).Length();
 		flAlpha = clamp( 1.0 - ( flDistance / m_flGlowMaxDist ), 0.0, 0.9 );
 	}
-#endif
 	//m_nGlowStyle
 
 	GlowRenderStyle_t glowstyle = (GlowRenderStyle_t)m_nGlowStyle;

@@ -9,9 +9,6 @@
 #ifndef ENTITYLIST_H
 #define ENTITYLIST_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 class CBaseEntity;
 class IEntityListener;

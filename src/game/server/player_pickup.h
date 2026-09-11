@@ -6,15 +6,7 @@
 
 #ifndef PLAYER_PICKUP_H
 #define PLAYER_PICKUP_H
-#ifdef _WIN32
-#pragma once
-#endif
 
-#ifdef HL2_DLL
-// Needed for launch velocity
-extern ConVar physcannon_minforce;
-extern ConVar physcannon_maxforce;
-#endif
 
 // Reasons behind a pickup
 enum PhysGunPickup_t

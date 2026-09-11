@@ -8,9 +8,6 @@
 
 #ifndef IINPUTCLIENTSTACK_H
 #define IINPUTCLIENTSTACK_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "appframework/iappsystem.h"
 #include "inputsystem/iinputsystem.h"

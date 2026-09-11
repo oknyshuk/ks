@@ -9,9 +9,6 @@
 #ifndef VERTEXDECL_H
 #define VERTEXDECL_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "locald3dtypes.h"
 #include "materialsystem/imaterial.h"

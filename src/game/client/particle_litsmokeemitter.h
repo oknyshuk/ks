@@ -6,9 +6,6 @@
 
 #ifndef PARTICLE_LITSMOKEEMITTER_H
 #define PARTICLE_LITSMOKEEMITTER_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 
 #include "particles_simple.h"

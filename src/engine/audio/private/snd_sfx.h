@@ -8,9 +8,6 @@
 #ifndef SND_SFX_H
 #define SND_SFX_H
 
-#if defined( _WIN32 )
-#pragma once
-#endif
 
 class CAudioSource;
 

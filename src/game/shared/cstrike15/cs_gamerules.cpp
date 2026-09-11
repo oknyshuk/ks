@@ -1965,11 +1965,7 @@ ConVar mp_display_kill_assists(
 
 ConVar mp_match_end_restart(
     "mp_match_end_restart",
-#if defined (CSTRIKE15)
     "0",
-#else
-    "0",
-#endif
     FCVAR_REPLICATED | FCVAR_RELEASE,
     "At the end of the match, perform a restart instead of loading a new map",
     true, 0,

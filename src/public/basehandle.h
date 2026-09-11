@@ -6,9 +6,6 @@
 
 #ifndef BASEHANDLE_H
 #define BASEHANDLE_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 
 #include "const.h"

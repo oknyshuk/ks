@@ -9,9 +9,6 @@
 
 #ifndef CSTRIKE15_GCCONSTANTS_H
 #define CSTRIKE15_GCCONSTANTS_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 //=============================================================================
 

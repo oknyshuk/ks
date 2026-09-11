@@ -27,9 +27,6 @@
 #include "iservervehicle.h"
 #include "func_break.h"
 
-#if defined(PORTAL2)
-#include "weapon_portalgun.h"
-#endif
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -58,22 +55,9 @@ extern ConVar ai_debug_shoot_positions;
 //-----------------------------------------------------------------------------
 PRECACHE_REGISTER_BEGIN( GLOBAL, WeaponResources )
 
-#if !defined( TF_DLL ) && !defined ( DOTA_DLL ) && !defined ( PORTAL2 ) && !defined ( CSTRIKE15 )
-	PRECACHE_INDEX( MODEL, "sprites/zerogxplode.vmt", g_sModelIndexFireball )
-	PRECACHE_INDEX( MODEL, "sprites/steam1.vmt", g_sModelIndexSmoke )
-	PRECACHE_INDEX( MODEL, "sprites/bubble.vmt", g_sModelIndexBubbles )
-	PRECACHE_INDEX( MODEL, "sprites/laserbeam.vmt", g_sModelIndexLaser )
-	PRECACHE( PARTICLE_SYSTEM, "blood_impact_red_01" )
-	PRECACHE( PARTICLE_SYSTEM, "blood_impact_green_01" )
-	PRECACHE( PARTICLE_SYSTEM, "blood_impact_yellow_01" )
-	PRECACHE( MODEL, "models/weapons/w_bullet.mdl" )
-	PRECACHE( MODEL, "effects/bubble.vmt" )
-#endif // !TF_DLL
 
-#if !defined ( DOTA_DLL ) && !defined ( PORTAL2 )
 	PRECACHE( GAMESOUND, "BaseCombatWeapon.WeaponDrop" )
 	PRECACHE( GAMESOUND, "BaseCombatWeapon.WeaponMaterialize" )
-#endif
 
 PRECACHE_REGISTER_END()
 
@@ -617,12 +601,6 @@ void CBaseCombatWeapon::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_
 		{
 			OnPickedUp( pPlayer );
 		}
-#if defined(PORTAL2)
-		else if ( dynamic_cast<CWeaponPortalgun*>( this ) == NULL )
-		{
-			pPlayer->PickupObject( this );
-		}
-#endif
 	}
 }
 

@@ -7,9 +7,6 @@
 
 #ifndef DATATABLE_RECV_ENG_H
 #define DATATABLE_RECV_ENG_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 
 #include "dt_recv.h"

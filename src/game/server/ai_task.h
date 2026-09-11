@@ -7,9 +7,6 @@
 
 #ifndef AI_TASK_H
 #define AI_TASK_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 class CStringRegistry;
 

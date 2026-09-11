@@ -10,9 +10,6 @@
 #include "reflect_annotations.h"
 #include "networkstringtable_gamedll.h"
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "baseparticleentity.h"
 #include "entityparticletrail_shared.h"

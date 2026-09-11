@@ -6,9 +6,6 @@
 
 #ifndef FILETRACKER_H
 #define FILETRACKER_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 
 #include "ifilelist.h"

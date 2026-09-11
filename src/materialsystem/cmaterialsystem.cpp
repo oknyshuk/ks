@@ -30,9 +30,7 @@
 // NOTE: This must be the last file included!!!
 #include "tier0/memdbgon.h"
 
-#ifdef PLATFORM_POSIX
 #define _finite finite
-#endif
 
 // this is hooked into the engines convar
 ConVar mat_debugalttab( "mat_debugalttab", "0", FCVAR_MATERIAL_SYSTEM_THREAD | FCVAR_CHEAT );
@@ -144,12 +142,10 @@ EXPOSE_INTERFACE_FN( GetICVar, ICVar, CVAR_INTERFACE_VERSION );
 IMaterialSystemInternal *g_pInternalMaterialSystem = &g_MaterialSystem;
 IShaderUtil *g_pShaderUtil = &g_MaterialSystem;
 
-#if defined( USE_SDL ) || defined( OSX )
 
 #include "appframework/ilaunchermgr.h"
 
 
-#endif
 
 //-----------------------------------------------------------------------------
 // Factory used to get at internal interfaces (used by shaderapi + shader dlls)
@@ -167,10 +163,8 @@ void *ShaderFactory( const char *pName, int *pReturnCode )
 	if ( !Q_stricmp( pName, SHADER_UTIL_INTERFACE_VERSION ))
 		return g_pShaderUtil;
 
-#if defined( USE_SDL )
     if ( !Q_stricmp( pName, "SDLMgrInterface002" /*SDLMGR_INTERFACE_VERSION*/ ))
 		return g_pLauncherMgr;
-#endif
 
 
 	void * pInterface = g_MaterialSystem.QueryInterface( pName );
@@ -481,17 +475,9 @@ bool CMaterialSystem::Connect( CreateInterfaceFn factory )
 
 #ifndef DEDICATED
 
-#if defined( USE_SDL )
 
 	g_pLauncherMgr = (ILauncherMgr *)factory( "SDLMgrInterface002", NULL );
 
-#elif defined(_WIN32)
-
-#else
-
-	#error
-
-#endif
 
 #endif // !DEDICATED
 
@@ -632,39 +618,6 @@ InitReturnVal_t CMaterialSystem::Init()
 	// Shader system!
 	ShaderSystem()->Init();
 
-#if defined( WIN32 )
-	// HACKHACK: <sigh> This horrible hack is possibly the only way to reliably detect an old
-	// version of hammer initializing the material system. We need to know this so that we set
-	// up the editor materials properly. If we don't do this, we never allocate the white lightmap,
-	// for example. We can remove this when we update the SDK!!
-	char szExeName[_MAX_PATH];
-	if ( ::GetModuleFileName( ( HINSTANCE )GetModuleHandle( NULL ), szExeName, sizeof( szExeName ) ) )
-	{
-		char szRight[20];
-		Q_StrRight( szExeName, 11, szRight, sizeof( szRight ) );
-		if ( ( !Q_stricmp( szRight, "\\hammer.exe" ) ) || ( !Q_stricmp( szRight, "\\vmview.exe" ) ) )
-		{
-			m_bRequestedEditorMaterials = true;
-			m_bRequestedGBuffers = true;
-		}
-	}
-
-	// HACKHACK: This will go away when we get rid of tools mode in the first place.
-	if ( CommandLine()->FindParm( "-foundrymode" ) != 0 )
-	{
-		m_bRequestedEditorMaterials = true;
-		m_bRequestedGBuffers = true;
-	}
-	if ( CommandLine()->FindParm( "-tools" ) != 0 )
-	{
-		m_bRequestedGBuffers = true;
-	}
-	if ( CommandLine()->FindParm( "-buildcubemaps" ) || CommandLine()->FindParm( "-buildmodelforworld" ) )
-	{
-		mat_queue_mode.SetValue( 0 );
-	}
-
-#endif // WIN32
 
 	m_nConfigurationFlags = 0;
 	if ( m_bRequestedEditorMaterials )
@@ -848,12 +801,8 @@ MaterialThreadMode_t CMaterialSystem::GetThreadMode()
 
 bool CMaterialSystem::IsRenderThreadSafe( )
 {
-#if defined( WIN32 ) && !defined( DX_TO_GL_ABSTRACTION )
-    return true;
-#else
 	return	( m_ThreadMode != MATERIAL_QUEUED_THREADED && ThreadInMainThread() ) ||
 		( m_ThreadMode == MATERIAL_QUEUED_THREADED && m_nRenderThreadID == ThreadGetCurrentId() );
-#endif
 }
 
 void CMaterialSystem::OnDebugEvent( const char * pEvent )
@@ -1627,11 +1576,7 @@ static ConVar mat_normalmaps(		"mat_normalmaps", "0", FCVAR_CHEAT );
 static ConVar mat_measurefillrate(	"mat_measurefillrate", "0", FCVAR_CHEAT );
 static ConVar mat_fillrate(			"mat_fillrate", "0", FCVAR_CHEAT );
 static ConVar mat_reversedepth(		"mat_reversedepth", "0", FCVAR_CHEAT );
-#if defined( PLATFORM_POSIX )
 static ConVar mat_bufferprimitives( "mat_bufferprimitives", "0" );	// I'm not seeing any benefit speed wise for buffered primitives on GLM/POSIX (checked via TF2 timedemo) - default to zero
-#else
-static ConVar mat_bufferprimitives( "mat_bufferprimitives", "1" );
-#endif
 static ConVar mat_drawflat(			"mat_drawflat","0", FCVAR_CHEAT );
 static ConVar mat_softwarelighting( "mat_softwarelighting", "0" );
 static ConVar mat_proxy(			"mat_proxy", "0", FCVAR_CHEAT, "", MatProxyCallback );
@@ -2400,14 +2345,9 @@ IMaterial* CMaterialSystem::FindMaterial( char const *pMaterialName, const char 
 	char *pTemp = (char*)stackalloc( nLen );
 	Q_strncpy( pFixedNameTemp, pMaterialName, nLen );
 	Q_strlower( pFixedNameTemp );
-#ifdef PLATFORM_POSIX
 	// strip extensions needs correct slashing for the OS, so fix it up early for Posix
 	Q_FixSlashes( pFixedNameTemp, '/' );
-#endif
 	Q_StripExtension( pFixedNameTemp, pTemp, nLen );
-#ifndef PLATFORM_POSIX
-	Q_FixSlashes( pTemp, '/' );
-#endif
 	
 	Assert( nLen >= Q_strlen( pTemp ) + 1 );
 
@@ -3370,9 +3310,6 @@ void CMaterialSystem::DestroyMatQueueThreadPool()
 	}
 }
 
-#if GCM_ALLOW_TIMESTAMPS || X360_ALLOW_TIMESTAMPS
-static double s_flMainThreadBeginTimestampSec = 0.0f;
-#endif
 
 //
 // On OSX, Forced Single Threaded needs to last for more frames than windows that the window resizing/switch to 
@@ -3414,26 +3351,10 @@ void CMaterialSystem::EndFrame( void )
 		m_bForcedSingleThreaded = false;
 	}
 
-#if GCM_ALLOW_TIMESTAMPS || X360_ALLOW_TIMESTAMPS
-	{
-		// This is called on the main thread and here the main thread is finished
-		double flMainThreadEndTimestampSec = Plat_FloatTime();
-		double flMainThreadTimeInSeconds = flMainThreadEndTimestampSec - s_flMainThreadBeginTimestampSec;
-		OnFrameTimestampAvailableMain( flMainThreadTimeInSeconds*1000.0f );
-	}
-#endif
 
 	switch ( m_ThreadMode )
 	{
 	case MATERIAL_SINGLE_THREADED:
-#if GCM_ALLOW_TIMESTAMPS || X360_ALLOW_TIMESTAMPS
-		{
-			double flCurrentTime = Plat_FloatTime();
-			OnFrameTimestampAvailableTotal( (flCurrentTime-s_flTotalFrameBeginTimestamp)*1000.0f );
-			s_flTotalFrameBeginTimestamp = flCurrentTime;
-			OnFrameTimestampAvailableMST( 0.0f ); // signals frame start
-		}
-#endif
 		ServiceEndFramePriorToNextContext();
 		break;
 
@@ -3472,13 +3393,6 @@ void CMaterialSystem::EndFrame( void )
 			SafeRelease( m_pActiveAsyncJob );
 
 
-#if GCM_ALLOW_TIMESTAMPS || X360_ALLOW_TIMESTAMPS
-			{
-				double flCurrentTime = Plat_FloatTime();
-				OnFrameTimestampAvailableTotal( (flCurrentTime-s_flTotalFrameBeginTimestamp)*1000.0f );
-				s_flTotalFrameBeginTimestamp = flCurrentTime;
-			}
-#endif
 			ServiceEndFramePriorToNextContext();
 	
 			CMatQueuedRenderContext *pPrevContext = &m_QueuedRenderContexts[m_iCurQueuedContext];
@@ -3523,20 +3437,12 @@ void CMaterialSystem::EndFrame( void )
 
 			g_pShaderAPI->SetDisallowAccess( false );
 			m_pRenderContext = &m_HardwareRenderContext;
-#if GCM_ALLOW_TIMESTAMPS || X360_ALLOW_TIMESTAMPS
-			OnFrameTimestampAvailableMST( 0.0f ); // signals frame start
-#endif
 			m_QueuedRenderContexts[m_iCurQueuedContext].CallQueued();
 
 			// Set up for next frame, we don't cycle through m_iCurQueuedContext though
 			m_QueuedRenderContexts[m_iCurQueuedContext].CycleDynamicBuffers();
 			m_pRenderContext =  &m_QueuedRenderContexts[m_iCurQueuedContext];
 			g_pShaderAPI->SetDisallowAccess( true );
-#if GCM_ALLOW_TIMESTAMPS || X360_ALLOW_TIMESTAMPS
-			double flCurrentTime = Plat_FloatTime();
-			OnFrameTimestampAvailableTotal( (flCurrentTime-s_flTotalFrameBeginTimestamp)*1000.0f );
-			s_flTotalFrameBeginTimestamp = flCurrentTime;
-#endif
 			ServiceEndFramePriorToNextContext();
 				break;
 		}
@@ -3546,9 +3452,6 @@ void CMaterialSystem::EndFrame( void )
 	// for the render thread.
 	g_PerfStats.Tick();
 
-#if GCM_ALLOW_TIMESTAMPS  || X360_ALLOW_TIMESTAMPS
-	s_flMainThreadBeginTimestampSec = Plat_FloatTime();
-#endif
 
 	bool bRelease = false;
 	if ( !bDeviceReady )

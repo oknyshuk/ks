@@ -27,9 +27,6 @@
 #define INCLUDED_STEAM_FINDSTEAMSERVERS_H
 
 
-#if defined(_MSC_VER) && (_MSC_VER > 1000)
-#pragma once
-#endif
 
 #ifdef STEAM_FINDSERVERS_STATIC_LIB
 

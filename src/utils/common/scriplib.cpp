@@ -971,11 +971,6 @@ qboolean GetTokenizerStatus( char **pFilename, int *pLine )
 
 #include <stdio.h>
 #include <stdlib.h>
-#ifdef WIN32
-#include <direct.h>
-#include <io.h>
-#include <sys/utime.h>
-#endif
 #include <time.h>
 #include <fcntl.h>
 #include <sys/stat.h>
@@ -1202,48 +1197,6 @@ int CScriptLib::GetFileList( const char* pDirPath, const char* pPattern, CUtlVec
 		strcat( fullPath, pPattern );
 	}
 
-#ifdef WIN32
-	struct _finddata_t findData;
-	intptr_t h = _findfirst( fullPath, &findData );
-	if ( h == -1 )
-	{
-		return 0;
-	}
-
-	do
-	{
-		// dos attribute complexities i.e. _A_NORMAL is 0
-		if ( bFindDirs )
-		{
-			// skip non dirs
-			if ( !( findData.attrib & _A_SUBDIR ) )
-				continue;
-		}
-		else
-		{
-			// skip dirs
-			if ( findData.attrib & _A_SUBDIR )
-				continue;
-		}
-
-		if ( !stricmp( findData.name, "." ) )
-			continue;
-
-		if ( !stricmp( findData.name, ".." ) )
-			continue;
-
-		char fileName[MAX_PATH];
-		strcpy( fileName, sourcePath );
-		strcat( fileName, findData.name );
-
-		int j = fileList.AddToTail();
-		fileList[j].fileName.Set( fileName );
-		fileList[j].timeWrite = findData.time_write;
-	}
-	while ( !_findnext( h, &findData ) );
-
-	_findclose( h );
-#else
 	FIND_DATA findData;
 	Q_FixSlashes( fullPath );
 	void *h = FindFirstFile( fullPath, &findData );
@@ -1290,7 +1243,6 @@ int CScriptLib::GetFileList( const char* pDirPath, const char* pPattern, CUtlVec
 
 	FindClose( h );
 
-#endif
 	
 
 	return fileList.Count();

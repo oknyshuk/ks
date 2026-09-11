@@ -6,9 +6,6 @@
 
 #ifndef ICOLORCORRECTIONTOOLS_H
 #define ICOLORCORRECTIONTOOLS_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 class IColorOperation;
 

@@ -53,10 +53,6 @@
 #include "BasePropDoor.h"
 #include "phys_controller.h"
 
-#ifdef PORTAL2
-	#include "portal_base2d_shared.h"
-	#include "portal_grabcontroller_shared.h"
-#endif // PORTAL2
 
 #include "vstdlib/ikeyvaluessystem.h"
 
@@ -94,20 +90,8 @@ ConVar func_breakdmg_explosive( "func_breakdmg_explosive", "1.25" );
 
 ConVar sv_turbophysics( "sv_turbophysics", "0", FCVAR_REPLICATED, "Turns on turbo physics" );
 
-#ifdef PORTAL2
-	ConVar	sv_props_funnel_into_portals( "sv_props_funnel_into_portals", "1", FCVAR_CHEAT );
-	ConVar	sv_props_funnel_into_portals_deceleration( "sv_props_funnel_into_portals_deceleration", "2.0f", FCVAR_CHEAT, "When a funneling prop is leaving a portal, decelerate any velocity that is in opposition to funneling by this amount per second" );
-	ConVar prop_break_disable_float( "prop_break_disable_float", "1" );
-#else
 	ConVar prop_break_disable_float( "prop_break_disable_float", "0" );
-#endif // PORTAL2
 
-#ifdef HL2_EPISODIC
-	#define PROP_FLARE_LIFETIME 30.0f
-	#define PROP_FLARE_IGNITE_SUBSTRACT 5.0f
-	CBaseEntity *CreateFlare( Vector vOrigin, QAngle Angles, CBaseEntity *pOwner, float flDuration );
-	void KillFlare( CBaseEntity *pOwnerEntity, CBaseEntity *pEntity, float flKillTime );
-#endif
 
 //-----------------------------------------------------------------------------
 // Purpose: Breakable objects take different levels of damage based upon the damage type.
@@ -277,9 +261,6 @@ void CBaseProp::Precache( void )
 	PrecacheScriptSound( "Metal.SawbladeStick" );
 	PrecacheScriptSound( "PropaneTank.Burst" );
 
-#ifdef HL2_EPISODIC
-	UTIL_PrecacheOther( "env_flare" );
-#endif
 
 	BaseClass::Precache();
 }
@@ -526,12 +507,6 @@ void CBreakableProp::HandleFirstCollisionInteractions( int index, gamevcollision
 
 		if ( tr.Ent<CBaseEntity>() )
 		{
-#ifdef HL2_DLL
-			// Don't paintsplat friendlies
-			int iClassify = tr.Ent<CBaseEntity>()->Classify();
-			if ( iClassify != CLASS_PLAYER_ALLY_VITAL && iClassify != CLASS_PLAYER_ALLY && 
-				 iClassify != CLASS_CITIZEN_PASSIVE && iClassify != CLASS_CITIZEN_REBEL ) 
-#endif
 			{
 				switch( entindex() % 3 )
 				{
@@ -976,24 +951,6 @@ void CBreakableProp::BreakablePropTouch( CBaseEntity *pOther )
 		}
 	}
 
-#ifdef HL2_EPISODIC
-	if ( m_hFlareEnt )
-	{
-		CAI_BaseNPC *pNPC = pOther->MyNPCPointer();
-
-		if ( pNPC && pNPC->AllowedToIgnite() && pNPC->IsOnFire() == false )
-		{
-			pNPC->Ignite( 25.0f );
-			KillFlare( this, m_hFlareEnt, PROP_FLARE_IGNITE_SUBSTRACT );
-			IGameEvent *event = gameeventmanager->CreateEvent( "flare_ignite_npc" );
-			if ( event )
-			{
-				event->SetInt( "entindex", pNPC->entindex() );
-				gameeventmanager->FireEvent( event );
-			}
-		}
-	}
-#endif
 }
 
 //-----------------------------------------------------------------------------
@@ -1400,7 +1357,6 @@ void CBreakableProp::RampToDefaultFadeScale()
 	// This fade scale ramp is performed automatically any time props such as weighted cubes
 	// are picked up, dropped, or launched by catapults. On low-end PC, this turns weighted
 	// cube fade distance back on, which we don't want. Don't do this for Portal 2.
-#if !defined( PORTAL2 )
 	SetGlobalFadeScale( GetGlobalFadeScale() + m_flDefaultFadeScale * TICK_INTERVAL / 2.0f );
 	if ( GetGlobalFadeScale() >= m_flDefaultFadeScale )
 	{
@@ -1411,7 +1367,6 @@ void CBreakableProp::RampToDefaultFadeScale()
 	{
 		SetContextThink( &CBreakableProp::RampToDefaultFadeScale, gpGlobals->curtime + TICK_INTERVAL, s_pFadeScaleThink );
 	}
-#endif
 }
 
 //-----------------------------------------------------------------------------
@@ -1429,17 +1384,6 @@ void CBreakableProp::OnPhysGunPickup( CBasePlayer *pPhysGunUser, PhysGunPickup_t
 		SetContextThink( &CBreakableProp::RampToDefaultFadeScale, gpGlobals->curtime + 2.0f, s_pFadeScaleThink );
 	}
 
-#ifdef PORTAL
-	if ( reason == PICKED_UP_BY_CANNON || reason == PICKED_UP_BY_PLAYER )
-	{
-		// Steal from another player if they were holding the object
-		CBasePlayer* pOtherPlayer = GetPlayerHoldingEntity( this );
-		if ( pOtherPlayer )
-		{
-			pOtherPlayer->ForceDropOfCarriedPhysObjects();
-		}
-	}
-#endif
 
 	if( reason == PUNTED_BY_CANNON )
 	{
@@ -1453,50 +1397,9 @@ void CBreakableProp::OnPhysGunPickup( CBasePlayer *pPhysGunUser, PhysGunPickup_t
 	m_bOriginalBlockLOS = BlocksLOS();
 	SetBlocksLOS( false );
 
-#ifdef HL2_EPISODIC
-	if ( HasInteraction( PROPINTER_PHYSGUN_CREATE_FLARE ) )
-	{
-		CreateFlare( PROP_FLARE_LIFETIME );
-	}
-#endif
 }
 
 
-#ifdef HL2_EPISODIC
-//-----------------------------------------------------------------------------
-// Purpose: Create a flare at the attachment point
-//-----------------------------------------------------------------------------
-void CBreakableProp::CreateFlare( float flLifetime )
-{
-	// Create the flare
-	CBaseEntity *pFlare = ::CreateFlare( GetAbsOrigin(), GetAbsAngles(), this, flLifetime );
-	if ( pFlare )
-	{
-		int iAttachment = LookupAttachment( "fuse" );
-
-		Vector vOrigin;
-		GetAttachment( iAttachment, vOrigin );
-
-		pFlare->SetMoveType( MOVETYPE_NONE );
-		pFlare->SetSolid( SOLID_NONE );
-		pFlare->SetRenderMode( kRenderTransAlpha );
-		pFlare->SetRenderAlpha( 1 );
-		pFlare->SetLocalOrigin( vOrigin );
-		pFlare->SetParent( this, iAttachment );
-		RemoveInteraction( PROPINTER_PHYSGUN_CREATE_FLARE );
-		m_hFlareEnt = pFlare;
-
-		SetThink( &CBreakable::SUB_FadeOut );
-		SetNextThink( gpGlobals->curtime + flLifetime + 5.0f );
-
-		m_nSkin = 1;
-
-		AddEntityToDarknessCheck( pFlare );
-
-		AddEffects( EF_NOSHADOW );
-	}
-}
-#endif // HL2_EPISODIC
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -1698,11 +1601,7 @@ void CBreakableProp::Break( CBaseEntity *pBreaker, const CTakeDamageInfo &info )
 		}
 		else
 		{
-#ifdef PORTAL2
-			float flScale = GetModelHierarchyScale();
-#else
 			float flScale = 1.0f;
-#endif // PORTAL2
 			ExplosionCreate( WorldSpaceCenter(), angles, pAttacker, m_explodeDamage * flScale, m_explodeRadius * flScale,
 				SF_ENVEXPLOSION_NOSPARKS | SF_ENVEXPLOSION_NODLIGHTS | SF_ENVEXPLOSION_NOSMOKE | SF_ENVEXPLOSION_SURFACEONLY,
 				0.0f, this );
@@ -1819,12 +1718,10 @@ void CBreakableProp::Break( CBaseEntity *pBreaker, const CTakeDamageInfo &info )
 //=============================================================================================================
 // DYNAMIC PROPS
 //=============================================================================================================
-#ifndef INFESTED_DLL
 LINK_ENTITY_TO_CLASS( dynamic_prop, CDynamicProp );
 LINK_ENTITY_TO_CLASS( prop_dynamic, CDynamicProp );	
 LINK_ENTITY_TO_CLASS( prop_dynamic_override, CDynamicProp );	
 LINK_ENTITY_TO_CLASS( prop_dynamic_glow, CDynamicProp );	
-#endif
 
 IMPLEMENT_REFLECT_DATAMAP( CDynamicProp )
 
@@ -1869,9 +1766,6 @@ void CDynamicProp::Spawn( )
 
 	BaseClass::Spawn();
 
-#ifdef PORTAL2
-	AddFlag( FL_UNPAINTABLE );
-#endif
 
 	if ( IsMarkedForDeletion() )
 		return;
@@ -2522,11 +2416,9 @@ void COrnamentProp::InputDetach( inputdata_t &inputdata )
 //=============================================================================
 // PHYSICS PROPS
 //=============================================================================
-#ifndef INFESTED_DLL
 LINK_ENTITY_TO_CLASS( physics_prop, CPhysicsProp );
 LINK_ENTITY_TO_CLASS( prop_physics, CPhysicsProp );	
 LINK_ENTITY_TO_CLASS( prop_physics_override, CPhysicsProp );	
-#endif
 
 IMPLEMENT_REFLECT_DATAMAP( CPhysicsProp )
 
@@ -2547,9 +2439,6 @@ CPhysicsProp::CPhysicsProp( void ) :
 	m_bHasBeenAwakened( false ), 
 	m_fNextCheckDisableMotionContactsTime( 0 )
 {
-#ifdef PORTAL2
-	m_bAllowPortalFunnel = true;
-#endif // PORTAL2
 }
 
 CPhysicsProp::~CPhysicsProp()
@@ -3123,145 +3012,6 @@ void CPhysicsProp::VPhysicsUpdate( IPhysicsObject *pPhysics )
 		}
 	}
 
-#ifdef PORTAL2
-
-	const float	FUNNEL_MIN_VELOCITY_THRESHOLD = 64.0f;
-	const float FUNNEL_MIN_DIST_THRESHOLD = 128.0f;
-
-	static float g_flLastPropFunnelTime = 0.0f;
-
-	// Allow props to funnel toward a portal they're falling into
-	if ( sv_props_funnel_into_portals.GetBool() && m_bAllowPortalFunnel )
-	{
-		Vector vVelocity;
-		pPhysics->GetVelocity( &vVelocity, NULL );
-
-		// Make sure we're mostly going straight up or straight down
-		bool bFallingStraightDown = ( vVelocity.Length2DSqr() < Square(FUNNEL_MIN_VELOCITY_THRESHOLD) );
-		bool bFalling = vVelocity[2] < 0.0f;
-
-		if ( (fabs( vVelocity[2] ) >= 1.0f) && bFallingStraightDown )
-		{
-			float flSpeedSqr = vVelocity.Length2DSqr();
-			float flRampPerc = RemapValClamped( flSpeedSqr, Square(FUNNEL_MIN_VELOCITY_THRESHOLD*2), 0.0f, 0.0f, 1.0f );
-
-			Vector vPropOrigin;
-			pPhysics->GetPosition( &vPropOrigin, NULL );
-
-			int iPortalCount = CPortal_Base2D_Shared::AllPortals.Count();
-			if( iPortalCount != 0 )
-			{
-				CPortal_Base2D *pFunnelInto = NULL;
-				Vector vPropToFunnelPortal;
-				float fClosestFunnelPortalDistSqr = FLT_MAX;
-
-				CPortal_Base2D **pPortals = CPortal_Base2D_Shared::AllPortals.Base();
-				for( int i = 0; i != iPortalCount; ++i )
-				{
-					CPortal_Base2D *pTempPortal = pPortals[i];
-					if( pTempPortal->IsActivedAndLinked() )
-					{
-						// Make sure it's a floor or ceiling portal
-						if ( !pTempPortal->IsFloorPortal() )
-							continue;
-
-						Vector vPropToPortal = pTempPortal->m_ptOrigin - vPropOrigin;
-
-						// make sure that the portal isn't too far away and we aren't past it.
-						if ( ( vPropToPortal.z < -1024.0f) || (vPropToPortal.z >= 0.0f) )
-							continue;
-
-						Vector vPortalRight = pTempPortal->m_PortalSimulator.GetInternalData().Placement.vRight;
-						vPortalRight.z = 0.0f;						
-						VectorNormalize( vPortalRight );						
-
-						float fTestDist = pTempPortal->GetHalfWidth() * 1.5f;
-						fTestDist *= fTestDist;
-						// Make sure we're in the 2D portal rectangle
-						if ( ( vPropToPortal.Dot( vPortalRight ) * vPortalRight ).LengthSqr() > fTestDist )
-							continue;
-
-						Vector vPortalUp = pTempPortal->m_PortalSimulator.GetInternalData().Placement.vUp;
-						vPortalUp.z = 0.0f;
-						VectorNormalize( vPortalUp );
-
-						fTestDist = pTempPortal->GetHalfHeight() * 1.5f;
-						fTestDist *= fTestDist;
-						if ( ( vPropToPortal.Dot( vPortalUp ) * vPortalUp ).LengthSqr() > fTestDist )
-							continue;
-
-						float fDistSqr = vPropToPortal.LengthSqr();
-						if( fDistSqr < fClosestFunnelPortalDistSqr )
-						{
-							fClosestFunnelPortalDistSqr = fDistSqr;
-							pFunnelInto = pTempPortal;
-							vPropToFunnelPortal = vPropToPortal;
-						}
-					}
-				}
-
-				if ( pFunnelInto )
-				{
-					
-					if( bFalling )
-					{
-						// Funnel toward the portal
-						float fFunnelX = vPropToFunnelPortal.x - vVelocity[ 0 ];
-						float fFunnelY = vPropToFunnelPortal.y - vVelocity[ 1 ];
-
-						// Ramp out as we get near the portal
-						float flDistRamp = RemapValClamped( vPropToFunnelPortal.z, -FUNNEL_MIN_DIST_THRESHOLD, -FUNNEL_MIN_DIST_THRESHOLD*2.0f, 0.0f, 1.0f );
-
-						vVelocity.x += fFunnelX * ( flRampPerc * flDistRamp );
-						vVelocity.y += fFunnelY * ( flRampPerc * flDistRamp );
-
-						// Take the new velocity
-						pPhysics->SetVelocity( &vVelocity, NULL );
-					}
-					else //shave off outward velocity while the object is going up
-					{
-						const float fMaxDeceleration = sv_props_funnel_into_portals_deceleration.GetFloat();
-						if( fMaxDeceleration > 0.0f )
-						{
-							const VPlane &portalPlane = pFunnelInto->m_PortalSimulator.GetInternalData().Placement.PortalPlane;
-							float fVelocityInPlaneDirection = portalPlane.m_Normal.Dot( vVelocity );
-							Vector vPlanarVelocity = (vVelocity - (portalPlane.m_Normal * fVelocityInPlaneDirection));
-							//to cancel all movement in the plane we would just subtract vPlanarVelocity. But we want to be pickier, and only cancel movement heading away from the portal
-
-							Vector vDistOnPlane = vPropToFunnelPortal - (vPropToFunnelPortal.Dot( portalPlane.m_Normal ) * portalPlane.m_Normal);
-							float fCancelDot = vPlanarVelocity.Dot( vDistOnPlane );
-
-							if( fCancelDot < 0.0f ) //less than zero because the distance vector is prop to portal instead of portal to prop
-							{
-								fCancelDot /= -(vDistOnPlane.Length());
-
-								if( fCancelDot > (fMaxDeceleration * TICK_INTERVAL) )
-								{
-									fCancelDot = (fMaxDeceleration * TICK_INTERVAL);
-								}
-								
-								Vector vCancel = fCancelDot * vDistOnPlane; //project existing velocity onto position offset vector, which is the direction we want to cancel outward movement on
-
-								pPhysics->AddVelocity( &vCancel, NULL ); 
-							}
-						}
-					}
-
-					if ( g_flLastPropFunnelTime < gpGlobals->curtime )
-					{
-						// Msg( "Attempted to funnel physics prop towards approaching portal\n" );
-						g_flLastPropFunnelTime = gpGlobals->curtime + 2.0f;
-					}
-				}
-			}
-		}
-		else
-		{
-			// Reset the counter so we can warn again later
-			g_flLastPropFunnelTime = 0.0f;
-		}
-	}
-#endif // PORTAL2
 }
 
 //-----------------------------------------------------------------------------
@@ -7101,24 +6851,3 @@ static ConCommand ent_rotate("ent_rotate", CC_Ent_Rotate, "Rotates an entity by 
 // This is a dummy. The entity is entirely clientside.
 LINK_ENTITY_TO_CLASS( func_proprrespawnzone, CBaseEntity );
 
-#ifdef PORTAL2
-
-bool UTIL_PropIsMotionDisabled( CBaseEntity *pObject )
-{
-	CPhysicsProp *pProp = dynamic_cast<CPhysicsProp *>(pObject);
-	if ( pProp == NULL )
-		return false;
-
-	return ( pProp->HasSpawnFlags( SF_PHYSPROP_MOTIONDISABLED ) );
-}
-
-void UTIL_SetPropMotionDisabled( CBaseEntity *pObject )
-{
-	CPhysicsProp *pProp = dynamic_cast<CPhysicsProp *>(pObject);
-	if ( pProp == NULL )
-		return;
-
-	pProp->AddSpawnFlags( SF_PHYSPROP_MOTIONDISABLED );
-}
-
-#endif // PORTAL2

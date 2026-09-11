@@ -6,9 +6,6 @@
 
 #ifndef BASESERVER_H
 #define BASESERVER_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include <iserver.h>
 #include <netadr.h>

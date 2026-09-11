@@ -73,16 +73,7 @@ enum PanoramaGameViewPriority_t
 };
 #endif
 
-#if defined( SWARM_DLL )
-
-#include "swarm/basemodpanel.h"
-#include "swarm/basemodui.h"
-typedef BaseModUI::CBaseModPanel UI_BASEMOD_PANEL_CLASS;
-inline UI_BASEMOD_PANEL_CLASS & GetUiBaseModPanelClass() { return UI_BASEMOD_PANEL_CLASS::GetSingleton(); }
-inline UI_BASEMOD_PANEL_CLASS & ConstructUiBaseModPanelClass() { return * new UI_BASEMOD_PANEL_CLASS(); }
-class IMatchExtSwarm *g_pMatchExtSwarm = NULL;
-
-#elif defined( PORTAL2_UITEST_DLL )
+#if   defined( PORTAL2_UITEST_DLL )
 
 #include "portal2uitest/basemodpanel.h"
 #include "portal2uitest/basemodui.h"
@@ -92,20 +83,13 @@ inline UI_BASEMOD_PANEL_CLASS & ConstructUiBaseModPanelClass() { return * new UI
 IMatchExtPortal2 g_MatchExtPortal2;
 class IMatchExtPortal2 *g_pMatchExtPortal2 = &g_MatchExtPortal2;
 
-#elif defined( CSTRIKE15 )
+#else
 
 // VGUI menu shell (CBaseModPanel/CCStrike15BasePanel) removed in VGUI teardown.
 // Menu open/close is routed directly to the RmlUi documents below.
 #include "../RocketUI/rkmenu_main.h"
 #include "../RocketUI/rkhud_pausemenu.h"
 #include "../RocketUI/rkhud_loadingscreen.h"
-
-#else
-
-#include "BasePanel.h"
-typedef CBasePanel UI_BASEMOD_PANEL_CLASS;
-inline UI_BASEMOD_PANEL_CLASS & GetUiBaseModPanelClass() { return *BasePanel(); }
-inline UI_BASEMOD_PANEL_CLASS & ConstructUiBaseModPanelClass() { return *BasePanelSingleton(); }
 
 #endif
 
@@ -231,15 +215,9 @@ void CGameUI::Initialize( CreateInterfaceFn factory )
 	gameuifuncs = (IGameUIFuncs *)factory( VENGINE_GAMEUIFUNCS_VERSION, NULL );
 // dgoodenough - xonline only exists on the 360.
 // PS3_BUILDFIX
-#ifdef SWARM_DLL
-	g_pMatchExtSwarm = ( IMatchExtSwarm * ) factory( IMATCHEXT_SWARM_INTERFACE, NULL );
-#endif
 	bFailed = !gameuifuncs || !engineuifuncs ||
 // dgoodenough - xonline only exists on the 360.
 // PS3_BUILDFIX
-#ifdef SWARM_DLL
-		!g_pMatchExtSwarm ||
-#endif
 		!g_pMatchFramework;
 
 #ifdef PANORAMA_ENABLE
@@ -267,10 +245,6 @@ void CGameUI::Initialize( CreateInterfaceFn factory )
 void CGameUI::PostInit()
 {
 
-#ifdef SWARM_DLL
-	// to know once client dlls have been loaded
-	BaseModUI::CUIGameData::Get()->OnGameUIPostInit();
-#endif
 }
 
 //-----------------------------------------------------------------------------
@@ -295,11 +269,9 @@ void CGameUI::Connect( CreateInterfaceFn gameFactory )
 //-----------------------------------------------------------------------------
 void CGameUI::PlayGameStartupSound()
 {
-#if defined( LEFT4DEAD ) || defined( CSTRIKE15 )                               
 	// CS15 not using this path. using Portal 2 style MP3 looping
 	// L4D not using this path, L4D UI now handling with background menu movies   	
 	return;
-#endif
 
 	if ( CommandLine()->FindParm( "-nostartupsound" ) )
 		return;
@@ -419,15 +391,8 @@ bool CGameUI::FindPlatformDirectory(char *platformDir, int bufferSize)
 	if ( platformDir[0] == '\0' )
 	{
 		// we're not under steam, so setup using path relative to game
-#ifdef WIN32
-		if ( ::GetModuleFileName( ( HINSTANCE )GetModuleHandle( NULL ), platformDir, bufferSize ) )
-#else
 		if ( getcwd( platformDir, bufferSize ) )
-#endif
 		{
-#ifdef WIN32
-			V_StripFilename( platformDir ); // GetModuleFileName returns the exe as well as path
-#endif
 			V_AppendSlash( platformDir, bufferSize );
 			Q_strncat(platformDir, "platform", bufferSize, COPY_ALL_CHARACTERS );
 			V_AppendSlash( platformDir, bufferSize );
@@ -663,14 +628,6 @@ void CGameUI::OnLevelLoadingFinished(bool bError, const char *failureReason, con
 
 	HideLoadingBackgroundDialog();
 
-#if defined( PORTAL )
-	Warning( "HACK: Forcing all of gameui to hide on level load for portal. For some reason it stays open for us and it's annoying. Especially on xbox where it steals our controller focus.\n" );
-	HideGameUI();
-#endif
-#if defined( DOTA_DLL )
-	// Similar story for DOTA.
-	HideGameUI();
-#endif
 #if defined ( CSTRIKE_DLL )
 	// ditto cstrike
 	HideGameUI();
@@ -746,12 +703,6 @@ bool CGameUI::ContinueProgressBar( float progressFraction, bool showDialog )
 void CGameUI::StopProgressBar(bool bError, const char *failureReason, const char *extendedReason)
 {
 // CStrike15 handles error messages elsewhere. (ClientModeCSFullscreen::OnEvent)
-#if !defined( CSTRIKE15 )
-	if ( bError )
-	{
-		ShowMessageDialog( extendedReason, failureReason );
-	}	
-#endif
 }
 
 //-----------------------------------------------------------------------------
@@ -892,16 +843,10 @@ void CGameUI::CreateCommandMsgBoxInSlot( ECommandMsgBoxSlot slot, const char* ps
 
 void CGameUI::NeedConnectionProblemWaitScreen()
 {
-#ifdef SWARM_DLL
-	BaseModUI::CUIGameData::Get()->NeedConnectionProblemWaitScreen();
-#endif
 }
 
 void CGameUI::ShowPasswordUI( char const *pchCurrentPW )
 {
-#ifdef SWARM_DLL
-	BaseModUI::CUIGameData::Get()->ShowPasswordUI( pchCurrentPW );
-#endif
 }
 
 //-----------------------------------------------------------------------------

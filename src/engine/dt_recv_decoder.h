@@ -6,9 +6,6 @@
 
 #ifndef DT_RECV_DECODER_H
 #define DT_RECV_DECODER_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 
 #include "dt.h"

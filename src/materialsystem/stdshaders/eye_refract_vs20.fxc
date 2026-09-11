@@ -137,23 +137,10 @@ VS_OUTPUT main( const VS_INPUT v )
 
 	// Transform into projection space
 	float4 vProjPos = mul( float4( vWorldPosition, 1.0f ), cViewProj );
-	#if defined( _X360 )
-	{
-		// Without the isolate keyword here the output position for the flashlight pass is slightly behind the position of the main pass
-		// and the flashlight pass will be z-culled.
-		[isolate] o.projPos = vProjPos;
-	}
-	#else
 	{
 		o.projPos = vProjPos;
 	}
-	#endif
 
-#ifdef _PS3
-	// Account for OpenGL's flipped y coordinate and expanded z range [-1,1] instead of [0,1]
-	o.projPos.y = -o.projPos.y;
-	o.projPos.z = 2.0f * o.projPos.z - o.projPos.w;
-#endif // _PS3
 
 #if ( WORLD_NORMAL )
 	o.vWorldPosition_ProjPosZ.w = dot( g_vEyeVector, vWorldPosition.xyz - cEyePos.xyz );	// Linear depth

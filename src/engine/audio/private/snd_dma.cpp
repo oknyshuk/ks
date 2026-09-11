@@ -717,12 +717,6 @@ void S_GetAudioDeviceList( CUtlVector<audio_device_description_t> &audioList )
 eSubSystems_t GetDefaultAudioSubsystem()
 {
 	eSubSystems_t nSubsystem = AUDIO_SUBSYSTEM_XAUDIO;
-#if IS_WINDOWS_PC
-	if ( CommandLine()->CheckParm( "-directsound" ) )
-	{
-		nSubsystem = AUDIO_SUBSYSTEM_DSOUND;
-	}
-#endif
 	return nSubsystem;
 }
 
@@ -768,9 +762,6 @@ void S_Startup( void )
 		snd_surround.InstallChangeCallback( &OnSndVarChanged );
 #endif
 
-#if IS_WINDOWS_PC
-		SetupWindowsMixerPreferences();
-#endif
 		bFirst = false;
 	}
 
@@ -915,19 +906,11 @@ void S_Shutdown(void)
 			time(&ltime);
 			localtime(&ltime);*/
 
-#ifdef WIN32
-			SYSTEMTIME time;
-			GetLocalTime(&time);
-		
-			char filename[64];
-			Q_snprintf( filename, 64, "soundlog_%i_%02i_%02i_%02i_%02i.txt", time.wYear, time.wMonth, time.wDay, time.wHour, time.wMinute );
-#else
 			time_t timet = time( NULL );
 			struct tm *tm  = localtime( &timet );
 			char filename[32];
 			Q_snprintf( filename, 32, "soundlog_%i_%02i_%02i_%02i_%02i.txt", tm->tm_year, tm->tm_mon, tm->tm_mday, tm->tm_hour, tm->tm_min );
 			
-#endif
 			DumpFilePaths(filename);
 		}
 
@@ -2501,9 +2484,6 @@ bool SND_IsLongWave( const channel_t *pChannel )
 	// force it to look like everything is streaming, like on the consoles
 	// this gets used in 2 places, if the volume is 0.0 for some reason
 	// and to test if getgainobscured should function
-#ifdef PORTAL2 
-	return true;
-#endif
 
 	CAudioSource *pSource = pChannel->sfx ? pChannel->sfx->pSource : NULL;
 	if ( pSource )
@@ -3514,11 +3494,7 @@ void DAS_SetRoomBounds( das_room_t *proom, Vector &hit, bool bheight )
 // returns false if room parameters are not in good location to place a node
 // note: false occurs if up vector doesn't hit sky, but one or more up diagonal vectors do hit sky
 
-#ifdef PORTAL2
-ConVar  das_process_overhang_spaces( "das_process_overhang_spaces", "1" );
-#else
 ConVar  das_process_overhang_spaces( "das_process_overhang_spaces", "0" );
-#endif
 
 bool DAS_CalcRoomProps( das_room_t *proom )
 {
@@ -3847,11 +3823,7 @@ void DAS_SetTraceHeight( das_room_t *proom, trace_t *ptrU, trace_t *ptrD )
 
 
 // we still want to test for new dsp even if jumping in portal2
-#ifdef PORTAL2
-ConVar das_max_z_trace_length( "das_max_z_trace_length", "100000", FCVAR_NONE, "Maximum height of player and still test for adsp" );
-#else
 ConVar das_max_z_trace_length( "das_max_z_trace_length", "72", FCVAR_NONE, "Maximum height of player and still test for adsp"  );
-#endif
 
 // prepare room struct for new round of checks:
 // clear out struct,
@@ -6041,19 +6013,11 @@ void DumpFilePaths(const char *filename)
 
 	char computername[ 64 ];
 	Q_memset( computername, 0, sizeof( computername ) );
-#if defined ( _WIN32 )
-	DWORD length = sizeof( computername ) - 1;
-	if ( !GetComputerName( computername, &length ) )
-	{
-		Q_strncpy( computername, "???", sizeof( computername )  );
-	}
-#else
 	if ( gethostname( computername, sizeof(computername) ) == -1 )
 	{
 		Q_strncpy( computername, "Linux????", sizeof( computername ) );
 	}
 	computername[sizeof(computername)-1] = '\0';
-#endif
 	// todo: morasky, ugly, fix  this and make generic!
 //	Q_snprintf( szFileName, sizeof(szFileName), "\\\\fileserver\\User\\portal2\\soundlogs\\%s_%s", computername, filename );
 	Q_snprintf( szFileName, sizeof(szFileName), "%s\\%s_%s", snd_store_filepaths.GetString(), computername, filename );

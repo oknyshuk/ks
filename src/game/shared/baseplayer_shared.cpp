@@ -29,10 +29,8 @@
 	#include "c_physicsprop.h"
 	#include "c_physbox.h"
 
-#if defined( CSTRIKE15 )
 	#include "weapon_selection.h"
 	#include "c_cs_player.h"
-#endif
 
 	#define CRecipientFilter C_RecipientFilter
 
@@ -48,17 +46,11 @@
 	#include "props.h"
 	#include "physobj.h"
 
-#if defined( CSTRIKE15 )
 	#include "weapon_c4.h"
 	#include "cs_shareddefs.h"
 	#include "cs_gamerules.h"
 #include "cs_player.h"
-#endif
 
-	#if defined( PORTAL )
-		#include "portal_player.h"
-		#include "physicsshadowclone.h"
-	#endif
 
 	extern int TrainSpeed(int iSpeed, int iMax);
 	
@@ -818,7 +810,6 @@ void CBasePlayer::PlayStepSound( Vector &vecOrigin, surfacedata_t *psurface, flo
 		IPhysicsSurfaceProps *physprops = MoveHelper()->GetSurfaceProps();
 		
 // footstep sounds
-#if defined( CSTRIKE15 )
 		const char *pRawSoundName = physprops->GetString( stepSoundName );
 		const char *pSoundName = NULL;
 		int const nStepCopyLen = V_strlen(pRawSoundName) + 4;
@@ -838,9 +829,6 @@ void CBasePlayer::PlayStepSound( Vector &vecOrigin, surfacedata_t *psurface, flo
 			DevMsg( "Can't find specific footstep sound! (%s) - Using the default instead. (%s)\n", pSoundName, pRawSoundName );
 			pSoundName = pRawSoundName;
 		}
-#else
-		const char *pSoundName = physprops->GetString( stepSoundName );
-#endif
 		if ( !CBaseEntity::GetParametersForSound( pSoundName, params, NULL ) )
 			return;
 
@@ -1378,14 +1366,9 @@ CBaseEntity *CBasePlayer::FindUseEntity()
 			float centerZ = CollisionProp()->WorldSpaceCenter().z;
 			delta.z = IntervalDistance( tr.endpos.z, centerZ + CollisionProp()->OBBMins().z, centerZ + CollisionProp()->OBBMaxs().z );
 			float dist = delta.Length();
-#if defined( CSTRIKE15 )
 			CCSPlayer *pPlayer = dynamic_cast<CCSPlayer*>( pObject );
 			if ( (pPlayer && pPlayer->IsBot() && dist < PLAYER_USE_BOT_RADIUS) || dist < PLAYER_USE_RADIUS )
 			{
-#else
-			if ( dist < PLAYER_USE_RADIUS )
-			{
-#endif
 #ifndef CLIENT_DLL
 
 				if ( sv_debug_player_use.GetBool() )
@@ -1633,7 +1616,6 @@ void CBasePlayer::PlayerUse ( void )
 
 	CBaseEntity *pUseEntity = FindUseEntity();
 
-#if defined( CSTRIKE15 )
 	// in counterstrike 15, we need to allow the buy menu to open more easily
 	// The old code defaulted to using whatever you were pointing at.
 	// This code first checks to see if you're in a buy zone.  If that's true, 
@@ -1766,7 +1748,6 @@ void CBasePlayer::PlayerUse ( void )
 		}
 	}
 
-#endif
 
 	if ( pUseEntity )
 	{
@@ -1796,14 +1777,6 @@ void CBasePlayer::PlayerUse ( void )
 			pUseEntity->AcceptInput( "Use", this, this, emptyVariant, USE_OFF );
 		}
 	}
-#if !defined( CSTRIKE15 )
-	else if ( m_afButtonPressed & IN_USE )
-	{
-		// [sbodenbender] buymenu is mapped to use; bring up buy if nothing to use
-		engine->ClientCommand(edict(),"buymenu\n");
-		//PlayUseDenySound();
-	}
-#endif
 #endif
 }
 
@@ -2267,18 +2240,15 @@ void CBasePlayer::CalcViewRoll( QAngle& eyeAngles )
 	eyeAngles[ROLL] += side;
 }
 
-#if defined( CSTRIKE15 )
 #if defined( CLIENT_DLL )
 extern ConVar cl_use_new_headbob;
 //ConVar cl_headbob_freq( "cl_headbob_freq", "12", FCVAR_CLIENTDLL );
 //ConVar cl_headbob_amp("cl_headbob_amp", "1.5", FCVAR_CLIENTDLL );
 ConVar cl_headbob_land_dip_amt("cl_headbob_land_dip_amt", "4", FCVAR_CLIENTDLL );
 #endif 
-#endif
 
 void CBasePlayer::CalcViewBob( Vector& eyeOrigin )
 {
-#if defined( CSTRIKE15 )
 #if defined( CLIENT_DLL )
 		if ( cl_use_new_headbob.GetBool() == false )
 			return;
@@ -2345,7 +2315,6 @@ void CBasePlayer::CalcViewBob( Vector& eyeOrigin )
 			// Set the old velocity to the new velocity, we check next frame to see if we hit the ground
 			m_Local.m_flOldFallVelocity = m_Local.m_flFallVelocity;
 		}
-#endif
 #endif
 }
 
@@ -2799,20 +2768,7 @@ bool CBasePlayer::ClearUseEntity()
 
 		// Stop controlling the train/object
 		// TODO: Send HUD Update
-#if defined ( PORTAL2 )
-		CPlayerPickupController *pPickup = (CPlayerPickupController*)GetUseEntity();
-		Assert( pPickup );
-		if ( pPickup )
-		{
-			if ( pPickup->UsePickupController( this, this, USE_OFF, 0 ) )
-			{
-				m_hUseEntity = NULL;
-				return true;
-			}
-		}
-#else
 		GetUseEntity()->Use( this, this, USE_OFF, 0 );
-#endif // PORTAL2
 	}
 
 	return false;
@@ -2825,72 +2781,7 @@ bool CBasePlayer::ClearUseEntity()
 bool CBasePlayer::CanPickupObject( CBaseEntity *pObject, float massLimit, float sizeLimit )
 {
 	// UNDONE: Make this virtual and move to HL2 player
-#if defined( HL2_DLL ) || defined( PORTAL2 )
-	//Must be valid
-	if ( pObject == NULL )
-		return false;
-
-	//Must move with physics
-	if ( pObject->GetMoveType() != MOVETYPE_VPHYSICS )
-		return false;
-
-	IPhysicsObject *pList[VPHYSICS_MAX_OBJECT_LIST_COUNT];
-	int count = pObject->VPhysicsGetObjectList( pList, ARRAYSIZE(pList) );
-
-	//Must have a physics object
-	if (!count)
-		return false;
-
-	float objectMass = 0;
-	bool checkEnable = false;
-	for ( int i = 0; i < count; i++ )
-	{
-		objectMass += pList[i]->GetMass();
-		if ( !pList[i]->IsMoveable() )
-		{
-			checkEnable = true;
-		}
-		if ( pList[i]->GetGameFlags() & FVPHYSICS_NO_PLAYER_PICKUP )
-			return false;
-		if ( pList[i]->IsHinged() )
-			return false;
-	}
-
-
-	//Msg( "Target mass: %f\n", pPhys->GetMass() );
-
-	//Must be under our threshold weight
-	if ( massLimit > 0 && objectMass > massLimit )
-		return false;
-
-	if ( checkEnable )
-	{
-		// Allow pickup of phys props that are motion enabled on player pickup
-		CPhysicsProp *pProp = dynamic_cast<CPhysicsProp*>(pObject);
-		CPhysBox *pBox = dynamic_cast<CPhysBox*>(pObject);
-		if ( !pProp && !pBox )
-			return false;
-
-#if !defined ( CLIENT_DLL )
-		if ( pProp && !(pProp->HasSpawnFlags( SF_PHYSPROP_ENABLE_ON_PHYSCANNON )) )
-			return false;
-
-		if ( pBox && !(pBox->HasSpawnFlags( SF_PHYSBOX_ENABLE_ON_PHYSCANNON )) )
-			return false;
-#endif 
-	}
-
-	if ( sizeLimit > 0 )
-	{
-		const Vector &size = pObject->CollisionProp()->OBBSize();
-		if ( size.x > sizeLimit || size.y > sizeLimit || size.z > sizeLimit )
-			return false;
-	}
-
-	return true;
-#else
 	return false;
-#endif
 }
 
 float CBasePlayer::GetHeldObjectMass( IPhysicsObject *pHeldObject )
@@ -3133,77 +3024,6 @@ void CBasePlayer::VPhysicsShadowUpdate( IPhysicsObject *pPhysics )
 		}
 		else
 		{
-#if defined( PORTAL ) && defined( GAME_DLL )
-			CPortal_Player *pPortalPlayer = (CPortal_Player *)this;
-			CPortal_Base2D *pPortalEnvironment = pPortalPlayer->m_hPortalEnvironment.Get();
-			if( pPortalEnvironment != NULL )
-			{
-				trace_t trace;
-
-				Ray_t ray;
-				ray.Init( GetAbsOrigin(), GetAbsOrigin(), WorldAlignMins(), WorldAlignMaxs() );
-
-				CTraceFilterSimple OriginalTraceFilter( this, COLLISION_GROUP_PLAYER_MOVEMENT );
-				CTraceFilterTranslateClones traceFilter( &OriginalTraceFilter );
-
-				enginetrace->TraceRay( ray, MASK_PLAYERSOLID, &traceFilter, &trace );
-
-				if( trace.startsolid )
-				{
-					UTIL_Portal_TraceRay_With( pPortalEnvironment, ray, MASK_PLAYERSOLID, &traceFilter, &trace );
-
-					// current position is not ok, fixup
-					if ( trace.allsolid || trace.startsolid )
-					{
-						//try again with new position
-						ray.Init( newPosition, newPosition, WorldAlignMins(), WorldAlignMaxs() );
-						UTIL_Portal_TraceRay_With( pPortalEnvironment, ray, MASK_PLAYERSOLID, &traceFilter, &trace );
-
-						if( trace.startsolid == false )
-						{
-							SetAbsOrigin( newPosition );
-						}
-						else
-						{
-							Vector vNewCenter = vec3_origin;
-							Vector vExtents = (pPortalPlayer->GetHullMaxs() - pPortalPlayer->GetHullMins()) * 0.5f;
-							Vector vOriginToCenter = (pPortalPlayer->GetHullMaxs() + pPortalPlayer->GetHullMins()) * 0.5f;
-							
-							if( UTIL_FindClosestPassableSpace_InPortal_CenterMustStayInFront( pPortalEnvironment, GetAbsOrigin() + vOriginToCenter, vExtents, pPortalEnvironment->m_plane_Origin.normal, &traceFilter, MASK_PLAYERSOLID, 100, vNewCenter ) &&
-								(pPortalEnvironment->m_plane_Origin.normal.Dot( vNewCenter ) - pPortalEnvironment->m_plane_Origin.dist) >= 0.0f )
-							{
-								SetAbsOrigin( vNewCenter - vOriginToCenter );
-							}
-							else 
-							{
-								VPlane stayInFrontOfPlane;
-								stayInFrontOfPlane.m_Normal = pPortalEnvironment->m_plane_Origin.normal;
-								stayInFrontOfPlane.m_Dist = pPortalEnvironment->m_plane_Origin.dist;
-								if( !(UTIL_FindClosestPassableSpace_CenterMustStayInFrontOfPlane( GetAbsOrigin() + vOriginToCenter, vExtents, newPosition - GetAbsOrigin(), &traceFilter, MASK_PLAYERSOLID, 100, vNewCenter, stayInFrontOfPlane ) &&
-									(pPortalEnvironment->m_plane_Origin.normal.Dot( vNewCenter ) - pPortalEnvironment->m_plane_Origin.dist) >= 0.0f) )
-								{
-									// Try moving the player closer to the center of the portal
-									newPosition += ( pPortalEnvironment->GetAbsOrigin() - WorldSpaceCenter() ) * 0.1f;
-									SetAbsOrigin( newPosition );
-
-									DevMsg( "Hurting the player for FindClosestPassableSpaceFailure!\n" );
-
-									// Deal 1 damage per frame... this will kill a player very fast, but allow for the above correction to fix some cases
-									CTakeDamageInfo info( this, this, vec3_origin, vec3_origin, 1, DMG_CRUSH );
-									OnTakeDamage( info );
-								}
-								else
-								{
-									SetAbsOrigin( vNewCenter - vOriginToCenter );
-								}
-							}
-						}
-						}
-					}
-				}
-			}
-			else
-#endif
 			{
 				bCheckStuck = true;
 			}

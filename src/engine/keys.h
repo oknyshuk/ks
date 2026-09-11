@@ -9,9 +9,6 @@
 #ifndef KEYS_H
 #define KEYS_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "inputsystem/ButtonCode.h"
 #include "cdll_int.h"

@@ -10,9 +10,6 @@
 #ifndef IVIDEOMODE_H
 #define IVIDEOMODE_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "vmodes.h"
 #include "vtf/vtf.h"

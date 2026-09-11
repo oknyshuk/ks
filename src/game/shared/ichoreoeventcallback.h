@@ -6,9 +6,6 @@
 //=============================================================================//
 #ifndef ICHOREOEVENTCALLBACK_H
 #define ICHOREOEVENTCALLBACK_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 class CChoreoEvent;
 class CChoreoChannel;

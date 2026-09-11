@@ -6,9 +6,6 @@
 
 #ifndef MM_TITLE_RICHPRESENCE_H
 #define MM_TITLE_RICHPRESENCE_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "mm_title.h"
 

@@ -113,17 +113,6 @@
 #include "gameui.h"
 #endif
 #ifdef GAMEUI_EMBEDDED
-#if defined( PORTAL2 )
-#ifdef GAMEUI_UISYSTEM2_ENABLED
-#else
-#include "portal2/gameui/portal2/basemodpanel.h"
-#endif
-#elif defined( SWARM_DLL )
-#include "swarm/gameui/swarm/basemodpanel.h"
-#elif defined( CSTRIKE15 )
-#else
-#error "GAMEUI_EMBEDDED"
-#endif
 #endif
 
 #include "game_controls/igameuisystemmgr.h"
@@ -144,9 +133,6 @@
 #include "c_asw_generic_emitter.h"
 #endif
 
-#ifdef INFESTED_DLL
-#include "missionchooser/iasw_mission_chooser.h"
-#endif
 
 #include "clientsteamcontext.h"
 
@@ -199,9 +185,6 @@ IRenderToRTHelper *g_pRenderToRTHelper = NULL;
 
 IUploadGameStats *gamestatsuploader = NULL;
 IBlackBox *blackboxrecorder = NULL;
-#ifdef INFESTED_DLL
-IASW_Mission_Chooser *missionchooser = NULL;
-#endif
 #if defined( REPLAY_ENABLED )
 IReplayHistoryManager *g_pReplayHistoryManager = NULL;
 #endif
@@ -238,11 +221,7 @@ static bool g_bHeadTrackingEnabled = false;
 
 bool IsHeadTrackingEnabled()
 {
-#if defined( HL2_CLIENT_DLL )
-	return g_bHeadTrackingEnabled;
-#else
 	return false;
-#endif
 }
 
 // String tables
@@ -537,9 +516,6 @@ public:
 		
 #ifdef GAMEUI_UISYSTEM2_ENABLED
 		AddAppSystem( "client", GAMEUISYSTEMMGR_INTERFACE_VERSION );
-#endif
-#ifdef INFESTED_DLL
-		AddAppSystem( "missionchooser", ASW_MISSION_CHOOSER_VERSION );
 #endif
 	}
 
@@ -843,13 +819,11 @@ public:
 
 	virtual void			GetStatus( char *buffer, int bufsize );
 
-#if defined ( CSTRIKE15 )
 	virtual bool			IsChatRaised( void );
 	virtual bool			IsRadioPanelRaised( void );
 	virtual bool			IsBindMenuRaised( void );
 	virtual bool			IsTeamMenuRaised( void );
 	virtual bool			IsLoadingScreenRaised( void );
-#endif
 
 	virtual bool			IsBuildWRThreaded( void );
 	virtual void			QueueBuildWorldListJob( CJob* pJob );
@@ -1314,10 +1288,8 @@ int CHLClient::Init( CreateInterfaceFn appSystemFactory, CGlobalVarsBase *pGloba
 	if ( !g_pRenderToRTHelper->Init() )
 		return false;
 
-#if defined( CSTRIKE15 )
 	if ( ( g_pGameTypes = (IGameTypes *)appSystemFactory( VENGINE_GAMETYPES_VERSION, NULL )) == NULL )
 		return false;
-#endif
 
 #if defined( REPLAY_ENABLED )
 	if ( (g_pReplayHistoryManager = (IReplayHistoryManager *)appSystemFactory( REPLAYHISTORYMANAGER_INTERFACE_VERSION, NULL )) == NULL )
@@ -1326,37 +1298,12 @@ int CHLClient::Init( CreateInterfaceFn appSystemFactory, CGlobalVarsBase *pGloba
 	if ( ( gamestatsuploader = (IUploadGameStats *)appSystemFactory( INTERFACEVERSION_UPLOADGAMESTATS, NULL )) == NULL )
 		return false;
 
-#ifdef INFESTED_DLL
-	if ( (missionchooser = (IASW_Mission_Chooser *)appSystemFactory(ASW_MISSION_CHOOSER_VERSION, NULL)) == NULL )
-		return false;
-#endif
 
-#ifdef TERROR
-	if ( ( g_pMatchExtL4D = ( IMatchExtL4D * ) appSystemFactory( IMATCHEXT_L4D_INTERFACE, NULL ) ) == NULL )
-		return false;
-	if ( !g_pMatchFramework )
-		return false;
-//  if client.dll needs to register any matchmaking extensions do it here:
-// 	if ( IMatchExtensions *pIMatchExtensions = g_pMatchFramework->GetMatchExtensions() )
-// 		pIMatchExtensions->RegisterExtensionInterface(
-// 		INTERFACEVERSION_SERVERGAMEDLL, static_cast< IServerGameDLL * >( this ) );
-#endif
 
-#ifdef PORTAL2
+
 	if ( !g_pMatchFramework )
 		return false;
 	GameInstructor_Init();
-	//  if client.dll needs to register any matchmaking extensions do it here:
-	// 	if ( IMatchExtensions *pIMatchExtensions = g_pMatchFramework->GetMatchExtensions() )
-	// 		pIMatchExtensions->RegisterExtensionInterface(
-	// 		INTERFACEVERSION_SERVERGAMEDLL, static_cast< IServerGameDLL * >( this ) );
-#endif // PORTAL2
-
-#ifdef CSTRIKE15
-	if ( !g_pMatchFramework )
-		return false;
-	GameInstructor_Init();
-#endif
 
 	if ( !g_pMatchFramework )
 		return false;
@@ -1403,9 +1350,6 @@ int CHLClient::Init( CreateInterfaceFn appSystemFactory, CGlobalVarsBase *pGloba
 	g_pcv_ThreadMode = g_pCVar->FindVar( "host_thread_mode" );
 
 
-#if defined( PORTAL2 )
-	engine->EnablePaintmapRender();
-#endif
 
 	COM_TimestampedLog( "InitGameSystems" );
 
@@ -1450,10 +1394,8 @@ int CHLClient::Init( CreateInterfaceFn appSystemFactory, CGlobalVarsBase *pGloba
 	g_PuzzleMaker.Init();
 #endif // PORTAL2_PUZZLEMAKER
 
-#if defined( CSTRIKE15 )
 	// Load the game types.
 	g_pGameTypes->Initialize();
-#endif
 
 	COM_TimestampedLog( "ClientDLL Init - Finish" );
 
@@ -1478,10 +1420,8 @@ void CHLClient::PostInit()
 		engine->ExecuteClientCmd( "toggleRdrOpt" );
 	}
 
-#if defined( CSTRIKE15 )
 	// Captures console output, and installs RocketUI's input hook for its lifetime.
 	RkConsole().Initialize();
-#endif
 }
 
 //-----------------------------------------------------------------------------
@@ -1489,19 +1429,14 @@ void CHLClient::PostInit()
 //-----------------------------------------------------------------------------
 void CHLClient::Shutdown( void )
 {
-#if defined( CSTRIKE15 )
 	// RocketUI outlives the client DLL: this also clears its input hook.
 	RkConsole().Shutdown();
-#endif
 
 	if ( g_pRenderToRTHelper )
 	{
 		g_pRenderToRTHelper->Shutdown();
 	}
 
-#ifdef PORTAL2
-	GameInstructor_Shutdown();
-#endif
 
     if ( g_pAchievementsAndStatsInterface )
     {
@@ -1687,66 +1622,6 @@ bool CHLClient::HandleGameUIEvent( const InputEvent_t &inputEvent )
 bool CHLClient::GetSoundSpatialization(  SpatializationInfo_t& info )
 {
 
-#ifdef PORTAL2
-
-// 	Vector vListenerOrigin;
-// 	VectorCopy( info.info.vListenerOrigin, vListenerOrigin );
-
-	Vector vSoundOrigin;
-	if( info.pOrigin )
-	{
-		VectorCopy( *info.pOrigin, vSoundOrigin );
-	}
-	else
-	{
-		VectorCopy( info.info.vOrigin, vSoundOrigin );
-	}
-	UTIL_Portal_VectorToGlobalTransforms( vSoundOrigin, info.m_pUtlVecMultiOrigins );
-	
-
-// 	// portal2
-// 	Vector vListenerOrigin, vSoundOrigin;
-// 
-// 	VectorCopy( info.info.vListenerOrigin, vListenerOrigin );
-// 	if( info.pOrigin )
-// 	{
-// 		VectorCopy( *info.pOrigin, vSoundOrigin );
-// 	}
-// 	else
-// 	{
-// 		VectorCopy( info.info.vOrigin, vSoundOrigin );
-// 	}
-// 
-// 	CPortal_Base2D *pShortestDistPortal_Out = NULL;
-// 	float flMinDist = UTIL_Portal_ShortestDistanceSqr( vListenerOrigin , vSoundOrigin, &pShortestDistPortal_Out  );
-// 
-// 	if( pShortestDistPortal_Out )
-// 	{
-// 		if( pShortestDistPortal_Out->m_bActivated )
-// 		{
-// 			CPortal_Base2D *pLinkedPortal = pShortestDistPortal_Out->m_hLinkedPortal.Get();
-// 			if( pLinkedPortal != NULL )
-// 			{
-// 
-// 				VMatrix matrixFromPortal;
-// 				MatrixInverseTR( pShortestDistPortal_Out->MatrixThisToLinked(), matrixFromPortal );
-// 
-// 				Vector vPoint1Transformed = matrixFromPortal * vSoundOrigin;
-// 				if( info.pOrigin )
-// 				{
-// 					*info.pOrigin = vPoint1Transformed;
-// 				}
-// 				else
-// 				{
-// 					info.info.vOrigin = vPoint1Transformed;
-// 				}
-// 
-// 				//DevMsg("****sound portaled: %f %f %f\n", vPoint1Transformed[0], vPoint1Transformed[1], vPoint1Transformed[2] );
-// 
-// 			}
-// 		}
-// 	}
-#endif
 
 	return true;
 }
@@ -1756,15 +1631,6 @@ bool CHLClient::GetSoundSpatialization(  SpatializationInfo_t& info )
 //-----------------------------------------------------------------------------
 bool CHLClient::ShouldDrawDropdownConsole()
 {
-#if defined( TF_CLIENT_DLL )
-	extern ConVar hud_freezecamhide;
-	extern bool IsTakingAFreezecamScreenshot();
-
-	if ( hud_freezecamhide.GetBool() && IsTakingAFreezecamScreenshot() )
-	{
-		return false;
-	}
-#endif
 
 	return true;
 }
@@ -2110,25 +1976,13 @@ void ConfigureCurrentSystemLevel()
 		nGPUMemLevel = CONSOLE_SYSTEM_LEVEL_PS3;
 	}
 
-#if defined ( TERROR )
-	char szModName[32] = "left4dead";
-#elif defined ( PAINT )
+#if   defined ( PAINT )
 	char szModName[32] = "paint";
-#elif defined ( PORTAL2 )
-	char szModName[32] = "portal2";
-#elif defined( INFESTED_DLL )
-	char szModName[32] = "infested";
-#elif defined ( HL2_EPISODIC )
-	char szModName[32] = "ep2";
-#elif defined ( TF_CLIENT_DLL )
-	char szModName[32] = "tf";
-#elif defined ( DOTA_CLIENT_DLL )
-	char szModName[32] = "dota";
 #elif defined ( SDK_CLIENT_DLL )
 	char szModName[32] = "sdk";
 #elif defined ( SOB_CLIENT_DLL )
 	char szModName[32] = "ep2";
-#elif defined ( CSTRIKE15 )
+#else
 	char szModName[32] = "csgo";
 #endif
 
@@ -2203,18 +2057,10 @@ void CHLClient::LevelInitPreEntity( char const* pMapName )
 
 	//[msmith] Portal 2 wanted to turn off prediction for local clients.
 	//         We want to keep it for CStrike15 (and probably other games) because of the noticable lag without it, particularly when firing a weapon.
-#if defined( PORTAL2 )
-	
-	// don't do prediction if single player!
-	// don't set direct because of FCVAR_USERINFO
-	if ( gpGlobals->IsRemoteClient() && gpGlobals->maxClients > 1 )
-
-#else
 
 	// Turn off prediction if we're in split screen because there are a lot of third person animation and render issues with prediction.
 	if ( !engine->IsSplitScreenActive() )
 
-#endif
 
 	{
 		if ( !cl_predict->GetInt() )
@@ -2853,9 +2699,6 @@ void OnRenderStart()
 	MDLCACHE_CRITICAL_SECTION();
 	MDLCACHE_COARSE_LOCK();
 
-#ifdef PORTAL
-	g_pPortalRender->UpdatePortalPixelVisibility(); //updating this one or two lines before querying again just isn't cutting it. Update as soon as it's cheap to do so.
-#endif
 
 	// [mariod] - testing, see note in c_baseanimating.cpp
 	C_BaseAnimating::EnableInvalidateBoneCache( true );
@@ -3102,9 +2945,6 @@ void CHLClient::FrameStageNotify( ClientFrameStage_t curStage )
 				}
 			}
 			VPROF( "CHLClient::FrameStageNotify FRAME_NET_UPDATE_POSTDATAUPDATE_END" );
-#if defined( PORTAL )
-			ProcessPortalTeleportations();
-#endif
 			PREDICTION_ENDTRACKVALUE();
 			// Let prediction copy off pristine data
 			prediction->PostEntityPacketReceived();
@@ -3371,88 +3211,12 @@ bool CHLClient::CacheReplayRagdolls( const char* pFilename, int nStartTick )
 
 void CHLClient::ReplayUI_SendMessage( KeyValues *pMsg )
 {
-#if defined( REPLAY_ENABLED ) && defined( TF_CLIENT_DLL )
-	const char *pType = pMsg->GetString( "type", NULL );
-	if ( !V_stricmp( pType, "newentry" ) )
-	{
-		if ( pMsg->GetInt( "showinputdlg", 0 ) )
-		{
-			// Get a name for the replay, saves to disk, add thumbnail to replay browser
-			ShowReplayInputPanel( pMsg );
-		}
-		else
-		{
-			// Just add the thumbnail if the replay browser exists
-			CReplayBrowserPanel* pReplayBrowser = ReplayUI_GetBrowserPanel();
-			if ( pReplayBrowser )
-			{
-				pReplayBrowser->SendMessage( pMsg );
-			}
-		}
-	}
-
-	// If we're deleting a replay notify the replay browser if necessary
-	else if ( !V_stricmp( pType, "delete" ) )
-	{
-		CReplayBrowserPanel* pReplayBrowser = ReplayUI_GetBrowserPanel();
-		if ( pReplayBrowser )
-		{
-			pReplayBrowser->SendMessage( pMsg );
-		}
-	}
-
-	// Confirm that the user wants to quit, even if there are unrendered replays
-	else if ( !V_stricmp( pType, "confirmquit" ) )
-	{
-//		ReplayUI_ShowConfirmQuitDlg();
-
-		// Until rendering actually works, just quit - don't display the confirmation dialog
-		engine->ClientCmd_Unrestricted( "quit" );
-	}
-	
-	else if ( !V_stricmp( pType, "display_message" ) )
-	{
-		const char *pLocalizeStr = pMsg->GetString( "localize" );
-
-		// Display a message?
-		if ( pLocalizeStr && pLocalizeStr[0] )
-		{
-			char szLocalized[256];
-			g_pLocalize->ConvertUnicodeToANSI( g_pLocalize->Find( pLocalizeStr ), szLocalized, sizeof(szLocalized) );
-			g_pClientMode->DisplayReplayMessage( szLocalized, -1.0f, NULL, pMsg->GetString( "sound", NULL ), false );
-		}
-	}
-
-	else if ( !V_stricmp( pType, "render_start" ) )
-	{
-		extern void ReplayUI_OpenReplayEditPanel();
-		ReplayUI_OpenReplayEditPanel();
-	}
-
-	else if ( !V_stricmp( pType, "render_complete" ) )
-	{
-		extern void ReplayUI_HideRenderEditPanel();
-		ReplayUI_HideRenderEditPanel();
-		ReplayUI_ReloadBrowser();
-	}
-
-	// Delete the KeyValues unless delete is explicitly set to 0
-	if ( pMsg->GetInt( "should_free", 1 ) )
-	{
-		pMsg->deleteThis();
-	}
-#endif
 }
 
 // Get the client replay factory
 IReplayFactory *CHLClient::GetReplayFactory()
 {
-#if defined( REPLAY_ENABLED ) && defined( TF_CLIENT_DLL ) // FIXME: Need run-time check for whether replay is enabled
-	extern IReplayFactory *g_pReplayFactory;
-	return g_pReplayFactory;
-#else
 	return NULL;
-#endif
 }
 
 // Clear out the local player's replay pointer so it doesn't get deleted
@@ -3484,16 +3248,10 @@ void CHLClient::WriteSaveGameScreenshotOfSize( const char *pFilename, int width,
 
 void CHLClient::WriteReplayScreenshot( WriteReplayScreenshotParams_t &params )
 {
-#if defined( TF_CLIENT_DLL ) && defined( REPLAY_ENABLED ) // FIXME: Need run-time check for whether replay is enabled
-	view->WriteReplayScreenshot( params );
-#endif
 }
 
 void CHLClient::UpdateReplayScreenshotCache()
 {
-#if defined( TF_CLIENT_DLL ) && defined( REPLAY_ENABLED ) // FIXME: Need run-time check for whether replay is enabled
-	view->UpdateReplayScreenshotCache();
-#endif
 }
 
 
@@ -3718,7 +3476,6 @@ void CHLClient::GetStatus( char *buffer, int bufsize )
 	UTIL_GetClientStatusText( buffer, bufsize );
 }
 
-#if defined ( CSTRIKE15 )
 bool CHLClient::IsChatRaised( void )
 {
 	return false;
@@ -3756,7 +3513,6 @@ bool CHLClient::IsLoadingScreenRaised( void )
 	return false;
 }
 
-#endif // CSTRIKE15
 
 bool CHLClient::IsBuildWRThreaded( void )
 {
@@ -4285,11 +4041,6 @@ void CHLClient::EngineGotvSyncPacket( const ks::net::CEngineGotvSyncPacket *pPkt
 
 void CHLClient::OnTickPre( int tickcount )
 {
-#if defined( CSTRIKE15 ) && !defined( CSTRIKE_REL_BUILD )
-	// We always strip this out in REL builds. 
-	// We're about to tick over, notify g_pFatDemoRecorder so it can do its magic.
-	g_pFatDemoRecorder->OnTickPre( tickcount );
-#endif
 }
 
 extern IViewRender *view;

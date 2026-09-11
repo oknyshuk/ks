@@ -6,9 +6,6 @@
 
 #ifndef CS_CLIENT_H
 #define CS_CLIENT_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 
 void respawn( CBaseEntity *pEdict, bool fCopyCorpse );

@@ -12,12 +12,7 @@
 struct RnMaterial_t;
 
 
-#if _MSC_VER >= 1300 // msvc 7.1
-#define RN_DEPRECATED __declspec( deprecated )
-#pragma warning(1 : 4996) // deprecated warning
-#else
 #define RN_DEPRECATED
-#endif
 
 
 //-------------------------------------------------------------------------------------------------

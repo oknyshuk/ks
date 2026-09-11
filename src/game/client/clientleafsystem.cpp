@@ -31,9 +31,6 @@
 #include "iinput.h"
 
 
-#ifdef PORTAL
-#include "portalrender.h"
-#endif
 
 //#include "tier0/miniprofiler.h" 
 
@@ -2011,17 +2008,11 @@ int CClientLeafSystem::ExtractStaticProps( int nCount, RenderableInfo_t **ppRend
 //-----------------------------------------------------------------------------
 int CClientLeafSystem::ExtractSplitscreenRenderables( int nCount, RenderableInfo_t **ppRenderables )
 {
-#ifdef PORTAL2
-	// Ignore splitscreen culling when looking through a portal
-	if ( g_pPortalRender->GetViewRecursionLevel() > 0 )
-		return nCount;
-#else
 	if ( !IsSplitScreenSupported() )
 		return nCount;
 
 	if ( !engine->IsSplitScreenActive() )
 		return nCount;
-#endif
 
 	ASSERT_LOCAL_PLAYER_RESOLVABLE();
 	int nSlotMask = 1 << GET_ACTIVE_SPLITSCREEN_SLOT();
@@ -2531,23 +2522,6 @@ int CClientLeafSystem::ComputeTranslucency( int nFrameNumber, int nViewID, int n
 	}
 
 // CTSRIKE15 only using cascade shadow mapping - code below is for projected shadow
-#ifndef CSTRIKE15
-	// Update shadows
-	for ( int i = 0; i < nCount; ++i )
-	{
-		CClientAlphaProperty *pAlphaProp = pAlphaInfo[i].m_pAlphaProperty;
-		if ( !pAlphaProp || ( pAlphaInfo[i].m_pAlphaProperty->m_hShadowHandle == CLIENTSHADOW_INVALID_HANDLE ) )
-			continue;
-
-		int nAlpha = pRLInfo[i].m_nAlpha;
-		if ( pAlphaProp->m_bShadowAlphaOverride )
-		{
-			nAlpha = pAlphaProp->m_pOuter->GetClientRenderable()->OverrideShadowAlphaModulation( nAlpha );
-			nAlpha = clamp( nAlpha, 0, 255 );
-		}
-		g_pClientShadowMgr->SetFalloffBias( pAlphaInfo[i].m_pAlphaProperty->m_hShadowHandle, (255 - nAlpha) );
-	}
-#endif
 
 	// Strip invisible ones out
 	int nUniqueCount = 0;

@@ -6,9 +6,6 @@
 
 #ifndef S3TC_DECODE_H
 #define S3TC_DECODE_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 
 #include "bitmap/imageformat.h"

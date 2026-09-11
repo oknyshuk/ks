@@ -9,9 +9,6 @@
 
 #ifndef THINK_TRACE_COUNTER_H
 #define THINK_TRACE_COUNTER_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #define THINK_TRACE_COUNTER_COMPILED 1 // without this, all the code is elided.
 

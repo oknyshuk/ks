@@ -7,9 +7,6 @@
 #ifndef ENGINE_MODEL_CLIENT_H
 #define ENGINE_MODEL_CLIENT_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 #define ENGINE_MODEL_CLIENT_MODELFLAG_RENDER_DISABLED		0x0080	// excluded for compliance with government regulations
 

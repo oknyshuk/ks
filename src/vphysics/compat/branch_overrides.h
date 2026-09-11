@@ -46,9 +46,7 @@
 #define override_not_asw override
 #endif
 
-#ifndef GAME_DESOLATION
 using strlen_t = int;
-#endif
 
 #ifndef GAME_CSGO_OR_NEWER
 #define FastASCIIToUpper( c ) ( ( ( (c) >= 'a' ) && ( (c) <= 'z' ) ) ? ( (c) - 32 ) : (c) )

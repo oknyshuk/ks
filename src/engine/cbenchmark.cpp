@@ -6,10 +6,6 @@
 
 #include "client_pch.h"
 
-#ifdef IS_WINDOWS_PC
-#include "winlite.h"
-#include <winsock2.h> // INADDR_ANY defn
-#endif
 #include "cbenchmark.h"
 #include "filesystem_engine.h"
 #include "sys.h"

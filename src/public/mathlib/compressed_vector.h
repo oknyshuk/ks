@@ -9,9 +9,6 @@
 #ifndef COMPRESSED_VECTOR_H
 #define COMPRESSED_VECTOR_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include <math.h>
 #include <float.h>
@@ -356,66 +353,9 @@ inline Quaternion48S& Quaternion48S::operator=(const Quaternion &vOther)
 inline Quaternion48S::operator fltx4 ()	const RESTRICT
 {
 	AssertMsg1( (((uintp) this) & 1) == 0, "Quaternion48S is unaligned at %p\n", this );
-#ifdef PLATFORM_PPC // this algorithm depends heavily on the Altivec permute op, for which there is no analogue in SSE. This function should not be used on PC.
-	// define some vector constants. the shift-scale will be done as a fused multiply-add,
-	// with the scale already distributed onto the shift (the part subtracted)
-	const static fltx4 vrSCALE48S = { (1.0f / SCALE48S), (1.0f / SCALE48S), (1.0f / SCALE48S), (1.0f / SCALE48S) };
-	const static fltx4 vrSHIFT48S = { ((float) -SHIFT48S) / SCALE48S, ((float) -SHIFT48S) / SCALE48S, ((float) -SHIFT48S) / SCALE48S, ((float) -SHIFT48S) / SCALE48S  };
-
-	// start by hoisting the q48 onto a SIMD word. 
-	u32x4 source = (u32x4) LoadUnalignedSIMD( this );
-	const u32x4 ZERO = (u32x4) LoadZeroSIMD();
-	// also hoist the offset into an int word. Hopefully this executes in parallel with the vector ops thanks to SUPERSCALAR!
-	const unsigned int offset = offsetL | ( offsetH << 1 );
-	const bi32x4 vDMask = (bi32x4) LoadAlignedSIMD( g_SIMD_ComponentMask[(offset+3)%4] ); // lets vsel poke D into the right word
-
-
-	// mask out the offset and dneg bits. Because of the packing #pragmas, the one-bit fields are actually at the MSB
-	// of the halfwords, not the LSB as you might expect.
-	ALIGN16 const static uint32 vMaskTopBits[4]  = { 0x80008000, 0x80000000, 0, 0 }; // just the LSB of each the first three halfwords
-	u32x4 abc = AndNotSIMD( (u32x4) LoadAlignedSIMD(vMaskTopBits), source ); // now this is just the A, B, C halfwords. 
-	// Next, unpack abc as unsigned numbers. We can do this with a permute op. In fact, we can exploit
-	// the integer pipe and load the offset while we're loading the SIMD numbers, then use the integer offset to select
-	// the permute, which will therefore also perform the rotate that maps abc to their rightful destinations.
-	// the masks below are for the vperm instruction, which is a byte-by-byte mapping from source to destination. 
-	// it's assumed that the FIRST parameter to vperm will be ZERO, and the second the data.  (that makes the masks a little clearer)
-	// in the simplest case -- imagine each letter below represents one byte; the source vector looks like
-	// AABB CCxx xxxx xxxx. We're going to permute it onto the work register like
-	// 00AA 00BB 00CC 0000
-	ALIGN16 const static uint32 vPermutations[4][4] = {
-		// offset = 0 means  a->x, b->y, c->z, d->w
-		{  0x00001011, 0x00001213, 0x00001415, 0x00000000	}, 
-		// offset = 1 means a->y, b->z, c->w, d->a
-		{  0x00000000, 0x00001011, 0x00001213, 0x00001415 	}, 
-		{  0x00001415, 0x00000000, 0x00001011, 0x00001213   }, 
-		{  0x00001213, 0x00001415, 0x00000000, 0x00001011   }
-	};
-	// compute two permutations on the input data: one where the zero-word is always in the w component,
-	// which lets us do a 3-way rather than 4-way dot product; and another where the zero-word corresponds to
-	// wherever D is supposed to go. 
-	// Even though this seems redundant, the duplicated work ends up fitting into the pipeline bubbles,
-	// and the savings between a 4-way and 3-way dot seem to be about 3ns.
-	u32x4 abcfordot = PermuteVMX( ZERO, abc, LoadAlignedSIMD( vPermutations[0] ) );
-	abc = PermuteVMX( ZERO, abc, LoadAlignedSIMD( vPermutations[offset] ) );
-
-	// turn each of the ints into floats. Because we masked out the one-bit field at the top,
-	// We can think of this as a conversion from fixed-point where there's no fractional bit.
-	// This is done in line with the shift-scale operation, which is itself fused.
-	// we do this twice: once for the vector with the guaranteed zero w-word, and 
-	// once for the vector rotated by the offset. 
-	fltx4 vfDest = AndNotSIMD( vDMask, MaddSIMD( UnsignedFixedIntConvertToFltSIMD( abc, 0 ), vrSCALE48S, vrSHIFT48S ) );
-	fltx4 vfDestForDot = MaddSIMD( UnsignedFixedIntConvertToFltSIMD( abcfordot, 0 ), vrSCALE48S, vrSHIFT48S ) ;
-	// compute magnitude of the vector we know to have a 0 in the w word.
-	const fltx4 vDot = Dot3SIMD( vfDestForDot, vfDestForDot );
-	// recover the "D" word
-	const fltx4 vD = SqrtSIMD( SubSIMD( LoadOneSIMD(), vDot ) );
-	// mask D into the converted-and-offset vector, then return.
-	return MaskedAssign( vDMask, dneg ? NegSIMD(vD) : vD, vfDest );
-#else
 	AssertMsg( false, "Quaternion48S::operator fltx4  is slow on this platform and should not be used.\n" );
 	QuaternionAligned q( (Quaternion) *this );
 	return LoadAlignedSIMD( &q );
-#endif
 }
 
 
@@ -552,11 +492,7 @@ public:
 	// unfortunately, function templates can't have default template parameters in 2010-era C++ 
 	inline static unsigned short ConvertFloatTo16bits( float input )
 	{	// default to branchless on ppc and branchy on x86
-#ifdef PLATFORM_PPC
-		return ConvertFloatTo16bitsNonDefault<true>(input);
-#else
 		return ConvertFloatTo16bitsNonDefault<false>(input);
-#endif
 	}	
 
 protected:
@@ -726,11 +662,7 @@ inline unsigned short float16::ConvertFloatTo16bitsNonDefault( float input )
 		{
 			// else if ( inFloat.bits.biased_exponent==0xff )  // either infinity (biased_exponent is 0xff) or NaN.
 			{
-#ifdef PLATFORM_PPC
-				int mantissamask = __cntlzw( output.bits.mantissa ) - 32; // this is 0 if the mantissa is zero, and negative otherwise
-#else
 				int mantissamask = output.bits.mantissa ? -1 : 0;
-#endif
 				output.bits.mantissa		= isel( mantissamask, 0x3ff, 0 ); //infinity maps to maxfloat, NaN to zero
 				output.bits.biased_exponent = isel( mantissamask, 0x1e, 0 );
 				output.bits.sign = inFloat.bits.sign;

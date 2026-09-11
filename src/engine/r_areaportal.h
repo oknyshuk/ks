@@ -7,9 +7,6 @@
 
 #ifndef R_AREAPORTAL_H
 #define R_AREAPORTAL_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 
 #include "utlvector.h"

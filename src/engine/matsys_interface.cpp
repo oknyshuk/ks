@@ -845,10 +845,6 @@ void InitWellKnownRenderTargets( void )
 	g_QuarterSizedFBTexture1.Init( CreateQuarterSizedFBTexture( 1, 0 ) );			
 	*/
 	g_QuarterSizedFBTexture1.Init( CreateQuarterSizedFBTexture( 1, 0 ) );
-#if ! ( defined( LEFT4DEAD ) || defined( CSTRIKE15 ) )
-	g_QuarterSizedFBTexture2.Init( CreateQuarterSizedFBTexture( 2, 0 ) );
-	g_QuarterSizedFBTexture3.Init( CreateQuarterSizedFBTexture( 3, 0 ) );			
-#endif
 
 
 
@@ -867,15 +863,9 @@ void InitWellKnownRenderTargets( void )
 		mat_resolveFullFrameDepth.SetValue( 0 );
 	}
 
-#if defined( LEFT4DEAD )
-	{
-		g_FullFrameFBTexture1.Init( CreateFullFrameFBTexture( 1 ) );	// save some memory on the 360
-	}
-#else
 
 	g_FullFrameFBTexture1.Init( CreateFullFrameFBTexture( 1, CREATERENDERTARGETFLAGS_TEMP ) );
 
-#endif
 
 	g_FullFrameDepth.Init( CreateFullFrameDepthTexture() );
 

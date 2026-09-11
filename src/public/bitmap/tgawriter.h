@@ -8,9 +8,6 @@
 #ifndef TGAWRITER_H
 #define TGAWRITER_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "tier1/interface.h"
 #include "bitmap/imageformat.h" //ImageFormat enum definition

@@ -5,10 +5,6 @@
 //=============================================================================//
 
 // HACKHACK fix this include
-#if defined( _WIN32 )
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
-#endif
 #include "tier0/vprof.h"
 #include "server.h"
 #include "host_cmd.h"
@@ -399,11 +395,7 @@ void Host_PrintStatus( cmd_source_t commandSource, void ( *print )(const char *f
 		}
 
 		const char *osType =
-#if defined( WIN32 )
-			"Windows";
-#else
 			"Linux";
-#endif
 
 		print( "os      :  %s\n", osType );
 
@@ -1518,17 +1510,9 @@ void Host_PrintMemoryStatus( const char *mapname )
 {
 	const float MB = 1.0f / ( 1024*1024 );
 	Assert( mapname );
-#ifdef PLATFORM_LINUX
 	struct mallinfo memstats = mallinfo( );
 	Msg( "[MEMORYSTATUS] [%s] Operating system reports sbrk size: %.2f MB, Used: %.2f MB, #mallocs = %d\n",
 		mapname, MB*memstats.arena, MB*memstats.uordblks, memstats.hblks );
-#elif defined(PLATFORM_WINDOWS)
-	MEMORYSTATUSEX statex;
-	statex.dwLength = sizeof(statex);
-	GlobalMemoryStatusEx( &statex );
-	Msg( "[MEMORYSTATUSEX] [%s] Operating system reports Physical Available: %.2f MB, Physical Used: %.2f MB, Physical Free: %.2f MB\n Virtual Size: %.2f, Virtual Free: %.2f MB, PageFile Size: %.2f, PageFile Free: %.2f MB\n", 
-		mapname, MB*statex.ullTotalPhys, MB*( statex.ullTotalPhys - statex.ullAvailPhys ),  MB*statex.ullAvailPhys, MB*statex.ullTotalVirtual, MB*statex.ullAvailVirtual, MB*statex.ullTotalPageFile, MB*statex.ullAvailPageFile );
-#endif
 
 	{
 		g_pMemAlloc->SetStatsExtraInfo( mapname, "" );
@@ -1817,12 +1801,8 @@ CON_COMMAND( killserver, "Shutdown the server." )
 }
 
 // [hpe:jason] Enable ENGINE_VOICE for Cstrike 1.5, all platforms
-#if defined( CSTRIKE15 ) 
 	ConVar voice_vox( "voice_vox", "false", FCVAR_DEVELOPMENTONLY ); // Controls open microphone (no push to talk) settings
 	#undef NO_ENGINE_VOICE
-#else
-	#define NO_ENGINE_VOICE
-#endif
 
 #ifdef NO_ENGINE_VOICE
 ConVar voice_ptt( "voice_ptt", "-1.0", FCVAR_DEVELOPMENTONLY ); // Time when ptt key was released, 0 means to keep transmitting voice

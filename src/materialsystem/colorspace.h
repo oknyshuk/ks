@@ -10,9 +10,6 @@
 #ifndef COLORSPACE_H
 #define COLORSPACE_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "mathlib/mathlib.h"
 #include "mathlib/ssemath.h"

@@ -9,15 +9,8 @@
 #include "tier2/tier2.h"
 #include "filesystem.h"
 
-#ifdef IS_WINDOWS_PC
-
-#include <windows.h> // WAVEFORMATEX, WAVEFORMAT and ADPCM WAVEFORMAT!!!
-#include <mmreg.h>
-
-#else
 
 
-#endif
 
 // NOTE: This has to be the last file included!
 #include "tier0/memdbgon.h"

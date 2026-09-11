@@ -2,9 +2,6 @@
 
 #ifndef ishadersystem_declarations_hdr
 #define ishadersystem_declarations_hdr
-#ifdef _WIN32
-#pragma once
-#endif
 //-----------------------------------------------------------------------------
 // Modulation flags
 //-----------------------------------------------------------------------------

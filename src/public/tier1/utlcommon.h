@@ -169,20 +169,13 @@ template <> struct DefaultHashFunctor<signed short> : Mix32HashFunctor { };
 template <> struct DefaultHashFunctor<unsigned short> : Mix32HashFunctor { };
 template <> struct DefaultHashFunctor<signed int> : Mix32HashFunctor { };
 template <> struct DefaultHashFunctor<unsigned int> : Mix32HashFunctor { };
-#if defined(_WIN32)
-template <> struct DefaultHashFunctor<signed long> : Mix32HashFunctor { };
-template <> struct DefaultHashFunctor<unsigned long> : Mix32HashFunctor { };
-#else
 template <> struct DefaultHashFunctor<signed long> : Mix64HashFunctor { };
 template <> struct DefaultHashFunctor<unsigned long> : Mix64HashFunctor { };
-#endif
 template <> struct DefaultHashFunctor<signed long long> : Mix64HashFunctor { };
 template <> struct DefaultHashFunctor<unsigned long long> : Mix64HashFunctor { };
 template <> struct DefaultHashFunctor<void*> : PointerHashFunctor { };
 template <> struct DefaultHashFunctor<const void*> : PointerHashFunctor { };
-#if !defined(_MSC_VER) || defined(_NATIVE_WCHAR_T_DEFINED)
 template <> struct DefaultHashFunctor<wchar_t> : Mix32HashFunctor { };
-#endif
 
 // String specializations. If you want to operate on raw values, use
 // PointerLessFunctor and friends from the "building-block" section above
@@ -272,9 +265,7 @@ template <> struct ArgumentTypeInfo< unsigned long long > : ArgumentTypeInfoImpl
 template <> struct ArgumentTypeInfo< float > : ArgumentTypeInfoImpl< float > { };
 template <> struct ArgumentTypeInfo< double > : ArgumentTypeInfoImpl< double > { };
 template <> struct ArgumentTypeInfo< long double > : ArgumentTypeInfoImpl< long double > { };
-#if !defined(_MSC_VER) || defined(_NATIVE_WCHAR_T_DEFINED)
 template <> struct ArgumentTypeInfo< wchar_t > : ArgumentTypeInfoImpl< wchar_t > { };
-#endif
 
 // Pointers are also most efficiently passed by value.
 template < typename T > struct ArgumentTypeInfo< T* > : ArgumentTypeInfoImpl< T* > { };

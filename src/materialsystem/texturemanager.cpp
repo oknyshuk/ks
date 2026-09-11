@@ -608,16 +608,6 @@ void CTextureManager::Init( int nFlags )
 	color.a = 0;
 	CreateSolidTexture( m_pGreyAlphaZeroTexture, color );
 
-#ifdef IS_WINDOWS_PC
-	if ( g_pShaderAPI->IsStereoSupported() )
-	{
-		// TODO: Call CreateStereoTexture, which should make a similar call onto the ShaderAPI
-		int stereoWidth = 8;
-		int stereoHeight = 1;
-		m_pStereoParamTexture = CreateProceduralTexture( "stereoparam", TEXTURE_GROUP_OTHER,
-			stereoWidth, stereoHeight, 1, IMAGE_FORMAT_R32F, TEXTUREFLAGS_NOMIP | TEXTUREFLAGS_SINGLECOPY | TEXTUREFLAGS_POINTSAMPLE | TEXTUREFLAGS_DEFAULT_POOL);
-	}
-#endif
 
 	if ( HardwareConfig()->GetMaxDXSupportLevel() >= 80 )
 	{

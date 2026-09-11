@@ -11,9 +11,6 @@
 #ifndef RANDOM_FLOATS_H
 #define RANDOM_FLOATS_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 ALIGN16 float s_pRandomFloats[]={
     0.336914,0.671387,0.539307,0.165039,0.258301,0.146973,0.475342,0.993408,

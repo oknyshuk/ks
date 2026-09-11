@@ -6,9 +6,6 @@
 
 #ifndef MM_NETMGR_H
 #define MM_NETMGR_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 class CConnectionlessLanMgr;
 

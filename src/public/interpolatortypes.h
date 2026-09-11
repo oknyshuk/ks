@@ -6,9 +6,6 @@
 
 #ifndef INTERPOLATORTYPES_H
 #define INTERPOLATORTYPES_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 class Quaternion;
 

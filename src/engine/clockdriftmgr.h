@@ -6,9 +6,6 @@
 
 #ifndef CLOCKDRIFTMGR_H
 #define CLOCKDRIFTMGR_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 
 class CClockDriftMgr

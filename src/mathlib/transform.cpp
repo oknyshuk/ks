@@ -6,7 +6,6 @@
 //
 //===========================================================================//
 
-#if !defined(_STATIC_LINKED) || defined(_SHARED_LIB)
 
 #include "mathlib/transform.h"
 #include "mathlib/mathlib.h"
@@ -174,5 +173,4 @@ void TransformToParentSpace( int nRootTransformCount, int nTransformCount, const
 	}
 }
 
-#endif // !_STATIC_LINKED || _SHARED_LIB
 

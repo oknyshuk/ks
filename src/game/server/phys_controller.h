@@ -8,9 +8,6 @@
 #define PHYS_CONTROLLER_H
 
 #include "reflect_annotations.h"
-#ifdef _WIN32
-#pragma once
-#endif
 
 #define SF_THRUST_STARTACTIVE		0x0001
 #define SF_THRUST_FORCE				0x0002

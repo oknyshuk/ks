@@ -9,9 +9,6 @@
 #ifndef ENTITYOUTPUT_H
 #define ENTITYOUTPUT_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 
 

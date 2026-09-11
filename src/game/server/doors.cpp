@@ -282,13 +282,8 @@ void CBaseDoor::Spawn()
 
 void CBaseDoor::MovingSoundThink( void )
 {
-#ifdef PORTAL2
-	// We use a broadcast filter in Portal 2 because the lift design sometimes causes them to be considered inaudiable during multiplayer by DetermineMulticastRecipients.
-	CReliableBroadcastRecipientFilter filter;
-#else
 	CPASAttenuationFilter filter( this );
 	filter.MakeReliable();
-#endif
 
 	EmitSound_t ep;
 	ep.m_nChannel = CHAN_STATIC;
@@ -921,13 +916,8 @@ void CBaseDoor::DoorHitTop( void )
 {
 	if ( !HasSpawnFlags( SF_DOOR_SILENT ) )
 	{
-#ifdef PORTAL2
-		// We use a broadcast filter in Portal 2 because the lift design sometimes causes them to be considered inaudiable during multiplayer by DetermineMulticastRecipients.
-		CReliableBroadcastRecipientFilter filter;
-#else
 		CPASAttenuationFilter filter( this );
 		filter.MakeReliable();
-#endif
 		StopMovingSound();
 
 		EmitSound_t ep;
@@ -1008,13 +998,8 @@ void CBaseDoor::DoorHitBottom( void )
 {
 	if ( !HasSpawnFlags( SF_DOOR_SILENT ) )
 	{
-#ifdef PORTAL2
-		// We use a broadcast filter in Portal 2 because the lift design sometimes causes them to be considered inaudiable during multiplayer by DetermineMulticastRecipients.
-		CReliableBroadcastRecipientFilter filter;
-#else
 		CPASAttenuationFilter filter( this );
 		filter.MakeReliable();
-#endif
 
 		StopMovingSound();
 

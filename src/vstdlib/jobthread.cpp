@@ -4,10 +4,6 @@
 //
 //=============================================================================
 
-#if defined( _WIN32 )
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
-#endif
 
 #include "tier0/dbg.h"
 #include "tier0/tslist.h"
@@ -378,31 +374,6 @@ private:
 	unsigned Wait()
 	{
 		unsigned waitResult;
-#ifdef WIN32
-		enum Event_t
-		{
-			CALL_FROM_MASTER,
-			SHARED_QUEUE,
-			DIRECT_QUEUE,
-			
-			NUM_EVENTS
-		};
-
-		CThreadEvent *waitHandles[NUM_EVENTS];
-		
-		waitHandles[CALL_FROM_MASTER]	= &GetCallHandle();
-		waitHandles[SHARED_QUEUE]		= &m_SharedQueue.GetEventHandle();
-		waitHandles[DIRECT_QUEUE] 		= &m_DirectQueue.GetEventHandle();
-		
-#ifdef _DEBUG
-		while ( ( waitResult = CThreadEvent::WaitForMultiple( ARRAYSIZE(waitHandles), waitHandles , FALSE, 10 ) ) == TW_TIMEOUT )
-		{
-			waitResult = waitResult; // break here
-		}
-#else
-		waitResult = CThreadEvent::WaitForMultiple( ARRAYSIZE(waitHandles), waitHandles , FALSE, TT_INFINITE );
-#endif
-#else // !win32
 		bool bSet = false;
 		int nWaitTime = 100;
 		
@@ -420,7 +391,6 @@ private:
 			waitResult = WAIT_TIMEOUT;
 		else
 			waitResult = WAIT_OBJECT_0;		
-#endif
 		return waitResult;
 	}
 
@@ -1063,9 +1033,6 @@ bool CThreadPool::Start( const ThreadPoolStartParams_t &startParams, const char 
 	{
 		if ( startParams.bIOThreads )
 		{
-#if defined( _WIN32 )
-			priority = THREAD_PRIORITY_HIGHEST;
-#endif
 		}
 		else
 		{
@@ -1121,35 +1088,6 @@ void CThreadPool::Distribute( bool bDistribute, int *pAffinityTable )
 		{
 			if ( !pAffinityTable )
 			{
-#if defined( IS_WINDOWS_PC )
-				// no affinity table, distribution is cycled across all available
-				HINSTANCE hInst = LoadLibrary( "kernel32.dll" );
-				if ( hInst )
-				{
-					typedef DWORD (WINAPI *SetThreadIdealProcessorFn)(ThreadHandle_t hThread, DWORD dwIdealProcessor);
-					SetThreadIdealProcessorFn Thread_SetIdealProcessor = (SetThreadIdealProcessorFn)GetProcAddress( hInst, "SetThreadIdealProcessor" );
-					if ( Thread_SetIdealProcessor )
-					{
-						ThreadHandle_t hMainThread = ThreadGetCurrentHandle();
-						Thread_SetIdealProcessor( hMainThread, 0 );
-						int iProc = 0;
-						for ( int i = 0; i < m_Threads.Count(); i++ )
-						{
-							iProc += nHwThreadsPer;
-							if ( iProc >= ci.m_nLogicalProcessors )
-							{
-								iProc %= ci.m_nLogicalProcessors;
-								if ( nHwThreadsPer > 1 )
-								{
-									iProc = ( iProc + 1 ) % nHwThreadsPer;
-								}
-							}
-							Thread_SetIdealProcessor((ThreadHandle_t)m_Threads[i]->GetThreadHandle(), iProc);
-						}
-					}
-					FreeLibrary( hInst );
-				}
-#else
 				// no affinity table, distribution is cycled across all available
 				int iProc = 0;
 				for ( int i = 0; i < m_Threads.Count(); i++ )
@@ -1165,7 +1103,6 @@ void CThreadPool::Distribute( bool bDistribute, int *pAffinityTable )
 					}
 					ThreadSetAffinity( (ThreadHandle_t)m_Threads[i]->GetThreadHandle(), 1 << iProc );
 				}
-#endif
 			}
 			else
 			{
@@ -1179,16 +1116,6 @@ void CThreadPool::Distribute( bool bDistribute, int *pAffinityTable )
 	}
 	else
 	{
-#if defined( _WIN32 )
-		DWORD_PTR dwProcessAffinity, dwSystemAffinity;
-		if ( GetProcessAffinityMask( GetCurrentProcess(), &dwProcessAffinity, &dwSystemAffinity ) )
-		{
-			for ( int i = 0; i < m_Threads.Count(); i++ )
-			{
-				ThreadSetAffinity( (ThreadHandle_t)m_Threads[i]->GetThreadHandle(), dwProcessAffinity );
-			}
-		}
-#endif
 	}
 }
 
@@ -1202,25 +1129,6 @@ bool CThreadPool::Stop( int timeout )
 	for ( int i = 0; i < m_Threads.Count(); i++ )
 	{
 		arrHandles[i] = m_Threads[i]->GetThreadHandle();
-		#ifdef _WIN32
-		if( arrHandles[i] )
-		{
-			// due to weird legacy reasons, the worker thread keeps its handle ownership.
-			// it closes the handle BEFORE exiting, which renders that handle useless to join on Win32
-			// this leads to (a) invalid handle before the thread exits (b) potentially unmapping the code running worker thread before the thread exits
-			// The worker thread even has a hacky workaround: it sets an event before exiting! Obviously, that event is useless to fix this race condition
-			
-			// The right solution would be to have the worker NOT close its own handle, rendering that handle useful. And make ThreadJoin close that handle,
-			// mimicking pthreads semantics (joinable thread enters zombie state until it's properly joined). But it leads to another problem,
-			// namely handle leak in cases when we potentially stop the workers in other systems, and potentially incorrect joins on closed handles
-			// (because in Win32, it's valid to wait for thread handle twice, but it's not valid in pthreads to join the same thread twice).
-			// So for now, I'm just fixing it with local fix here.
-			// 
-			HANDLE hDup;
-			DuplicateHandle( GetCurrentProcess(), arrHandles[i], GetCurrentProcess(), &hDup, DUPLICATE_SAME_ACCESS, FALSE, 0 );
-			arrHandles[i] = (ThreadHandle_t)hDup;
-		}
-		#endif
 		
 		m_Threads[i]->CallWorker( TPM_EXIT );
 	}
@@ -1231,20 +1139,10 @@ bool CThreadPool::Stop( int timeout )
 		{
 			ThreadJoin( arrHandles[i] );
 
-#ifdef WIN32
-			Assert( !m_Threads[i]->GetThreadHandle() );
-			// because we duplicated the handle above, due to the historical reasons described above, we have to close this handle on Win32
-			CloseHandle( arrHandles[i] );
-#else
 			Assert( !m_Threads[i]->IsAlive() );
-#endif
 		}
 
-#ifdef WIN32
-		while( m_Threads[i]->GetThreadHandle() )
-#else
 		while( m_Threads[i]->IsAlive() )
-#endif
 		{
 			ThreadSleep( 0 );
 		}
@@ -1530,10 +1428,6 @@ void RunThreadPoolTests()
 	RunTSListTests(10000);
 
 	intp mask1=-1;
-#ifdef _WIN32
-	intp mask2 = -1;
-	GetProcessAffinityMask( GetCurrentProcess(), (DWORD_PTR *) &mask1, (DWORD_PTR *) &mask2 );
-#endif
 	Msg( "ThreadPoolTest: Job distribution speed\n" );
 	for ( int i = 0; i < 2; i++ )
 	{
@@ -1571,9 +1465,6 @@ void RunThreadPoolTests()
 			ThreadPoolTest::Test( true, false, bToCompletion, true, !!bMain );
 		}
 	}
-#ifdef _WIN32
-	GetProcessAffinityMask( GetCurrentProcess(), (DWORD_PTR *) &mask1, (DWORD_PTR *) &mask2 );
-#endif
 
 	ThreadPoolTest::TestForcedExecute();
 }

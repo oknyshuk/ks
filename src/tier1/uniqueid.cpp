@@ -9,11 +9,7 @@
 
 #include "tier0/platform.h"
 
-#ifdef IS_WINDOWS_PC
-#include <windows.h> // uuidcreate
-#else
 #include "checksum_crc.h"
-#endif
 #include "tier1/uniqueid.h"
 #include "tier1/utlbuffer.h"
 
@@ -27,13 +23,8 @@
 //-----------------------------------------------------------------------------
 void CreateUniqueId( UniqueId_t *pDest )
 {
-#ifdef IS_WINDOWS_PC
-	Assert( sizeof( UUID ) == sizeof( *pDest ) );
-	UuidCreate( (UUID *)pDest );
-#else
 	// X360/linux TBD: Need a real UUID Implementation
 	Q_memset( pDest, 0, sizeof( UniqueId_t ) );
-#endif
 }
 
 
@@ -61,15 +52,6 @@ bool UniqueIdFromString( UniqueId_t *pDest, const char *pBuf, int nMaxLen )
 		++pTemp;
 	}
 
-#ifdef IS_WINDOWS_PC
-	Assert( sizeof( UUID ) == sizeof( *pDest ) );
-
-	if ( RPC_S_OK != UuidFromString( (unsigned char *)pTemp, (UUID *)pDest ) )
-	{
-		InvalidateUniqueId( pDest );
-		return false;
-	}
-#else
 	// X360TBD: Need a real UUID Implementation
 	// For now, use crc to generate a unique ID from the UUID string.
 	Q_memset( pDest, 0, sizeof( UniqueId_t ) );
@@ -81,7 +63,6 @@ bool UniqueIdFromString( UniqueId_t *pDest, const char *pBuf, int nMaxLen )
 		CRC32_Final( &crc );
 		Q_memcpy( pDest, &crc, sizeof( CRC32_t ) );
 	}
-#endif
 
 	return true;
 }
@@ -112,18 +93,6 @@ void UniqueIdToString( const UniqueId_t &id, char *pBuf, int nMaxLen )
 	pBuf[ 0 ] = 0;
 
 // X360TBD: Need a real UUID Implementation
-#ifdef IS_WINDOWS_PC
-	UUID *self = ( UUID * )&id;
-
-	unsigned char *outstring = NULL;
-
-	UuidToString( self, &outstring );
-	if ( outstring && *outstring )
-	{
-		Q_strncpy( pBuf, (const char *)outstring, nMaxLen );
-		RpcStringFree( &outstring );
-	}
-#endif
 }
 
 void CopyUniqueId( const UniqueId_t &src, UniqueId_t *pDest )
@@ -134,32 +103,7 @@ void CopyUniqueId( const UniqueId_t &src, UniqueId_t *pDest )
 bool Serialize( CUtlBuffer &buf, const UniqueId_t &src )
 {
 // X360TBD: Need a real UUID Implementation
-#ifdef IS_WINDOWS_PC
-	if ( buf.IsText() )
-	{
-		UUID *pId = ( UUID * )&src;
-
-		unsigned char *outstring = NULL;
-
-		UuidToString( pId, &outstring );
-		if ( outstring && *outstring )
-		{
-			buf.PutString( (const char *)outstring );
-			RpcStringFree( &outstring );
-		}
-		else
-		{
-			buf.PutChar( '\0' );
-		}
-	}
-	else
-	{
-		buf.Put( &src, sizeof(UniqueId_t) );
-	}
-	return buf.IsValid();
-#else
 	return false;
-#endif
 }
 
 bool Unserialize( CUtlBuffer &buf, UniqueId_t &dest )

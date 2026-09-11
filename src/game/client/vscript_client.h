@@ -10,9 +10,6 @@
 #include "vscript/ivscript.h"
 #include "vscript_shared.h"
 
-#if defined( _WIN32 )
-#pragma once
-#endif
 
 extern IScriptVM * g_pScriptVM;
 

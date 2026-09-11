@@ -4,9 +4,6 @@
 
 #ifndef DEMOBUFFER_H
 #define DEMOBUFFER_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 //-----------------------------------------------------------------------------
 // Includes

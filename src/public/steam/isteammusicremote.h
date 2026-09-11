@@ -2,9 +2,6 @@
 
 #ifndef ISTEAMMUSICREMOTE_H
 #define ISTEAMMUSICREMOTE_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "isteamclient.h"
 #include "isteammusic.h"

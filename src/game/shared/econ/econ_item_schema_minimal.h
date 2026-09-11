@@ -7,9 +7,6 @@
 
 #ifndef ECON_ITEM_SCHEMA_MINIMAL_H
 #define ECON_ITEM_SCHEMA_MINIMAL_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "tier1/utlhashmaplarge.h"
 #include "tier1/utldict.h"

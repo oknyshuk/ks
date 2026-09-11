@@ -77,14 +77,6 @@ static ConVar async_serialize( "async_serialize", "0", 0, "Force async reads to 
 
 static ConVar vx_do_not_throttle_events( "vx_do_not_throttle_events", "0", 0, "Force VXConsole updates every frame; smoother vprof data on PS3 but at a slight (~0.2ms) perf cost." );
 
-#ifdef WIN32
-static void cpu_frequency_monitoring_callback( IConVar *var, const char *pOldValue, float flOldValue )
-{
-	// Set the specified interval for CPU frequency monitoring
-	SetCPUMonitoringInterval( (unsigned)( ( (ConVar *)var)->GetFloat() * 1000 ) );
-}
-ConVar cpu_frequency_monitoring( "cpu_frequency_monitoring", "0", FCVAR_RELEASE, "Set CPU frequency monitoring interval in seconds. Zero means disabled.", true, 0.0f, true, 10.0f, cpu_frequency_monitoring_callback );
-#endif
 
 float		host_filtered_time_history[128] = { 0 };
 unsigned int host_filtered_time_history_pos = 0;

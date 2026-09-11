@@ -2972,7 +2972,6 @@ void DrawSimpleWorldModel( unsigned long flags )
 
 
 
-#if defined( CSTRIKE15 )
 	if( !r_skybox_draw_last.GetBool() )
 	{
 		// Draw the skybox
@@ -2996,7 +2995,6 @@ void DrawSimpleWorldModel( unsigned long flags )
 			}
 		}
 	}
-#endif
 
 	// Have to save and restore these matrices since DrawModelStaticProp seems to mod them.
 	pRenderContext->MatrixMode( MATERIAL_VIEW );
@@ -3030,7 +3028,6 @@ void DrawSimpleWorldModel( unsigned long flags )
 	OverlayMgr()->RenderAllUnlitOverlays( pRenderContext, MAT_SORT_GROUP_STRICTLY_ABOVEWATER );
 
 
-#if defined( CSTRIKE15 )
 	if( r_skybox_draw_last.GetBool() )
 	{
 		// Draw the skybox
@@ -3054,7 +3051,6 @@ void DrawSimpleWorldModel( unsigned long flags )
 			}
 		}
 	}
-#endif
 
 }
 

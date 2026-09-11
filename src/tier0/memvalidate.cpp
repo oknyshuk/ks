@@ -449,11 +449,7 @@ int CValidateAlloc::heapchk()
 		}
 	}
 
-#ifdef _WIN32
-	return bOk ? _HEAPOK : 0;
-#else
 	return bOk;
-#endif
 }
 
 // Returns the actual debug info

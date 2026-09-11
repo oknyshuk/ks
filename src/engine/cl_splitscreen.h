@@ -7,9 +7,6 @@
 
 #ifndef CL_SPLITSCREEN_H
 #define CL_SPLITSCREEN_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 class INetChannel;
 class ISplitScreen
@@ -61,9 +58,7 @@ private:
 #define SPLIT_SCREEN_STUBS
 #endif
 
-#if defined( CSTRIKE15 ) // // Split screen removed from console.
 #define SPLIT_SCREEN_STUBS
-#endif
 
 #if defined( SPLIT_SCREEN_STUBS )
 #define IS_LOCAL_PLAYER_RESOLVABLE true

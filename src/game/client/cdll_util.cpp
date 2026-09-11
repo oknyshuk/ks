@@ -1085,11 +1085,7 @@ bool UTIL_GetMapLoadCountFileName( int iController, const char *pszFilePrependNa
 	return true;
 }
 
-#ifdef TF_CLIENT_DLL
-#define MAP_KEY_FILE "viewed.res"
-#else
 #define MAP_KEY_FILE "mapkeys.res"
-#endif	
 
 void UTIL_IncrementMapKey( const char *pszCustomKey )
 {
@@ -1247,7 +1243,6 @@ void UTIL_GetClientStatusText( char *buffer, int nSize )
 	if ( !buffer || nSize==0 ) {return;}
 	buffer[0] = 0;
 
-#if defined ( CSTRIKE15 )
 	float g_flReadyToCheckForPCBootInvite = 0.0f;
 	bool bStartupFinished = g_flReadyToCheckForPCBootInvite && ( ( Plat_FloatTime() - g_flReadyToCheckForPCBootInvite ) > 1.5f );
 	if ( bStartupFinished )
@@ -1273,7 +1268,6 @@ void UTIL_GetClientStatusText( char *buffer, int nSize )
 		}
 		buffer[nSize-1]=0;
 	}
-#endif
 }
 
 void UTIL_ClearTrace( trace_t &trace )

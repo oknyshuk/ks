@@ -10,9 +10,6 @@
 #ifndef IPRECACHESYSTEM_H
 #define IPRECACHESYSTEM_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "tier0/dbg.h"
 #include "tier2/tier2.h"

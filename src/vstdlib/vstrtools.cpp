@@ -2,9 +2,6 @@
 #include "vstdlib/vstrtools.h"
 
 
-#if defined( _WIN32 )
-#include <windows.h>
-#endif
 #include <iconv.h>
 
 
@@ -20,9 +17,6 @@ int V_UTF8ToUnicode( const char *pUTF8, wchar_t *pwchDest, int cubDestSizeInByte
 	AssertValidWritePtr(pwchDest);
 
 	pwchDest[0] = 0;
-#ifdef _WIN32
-	int cchResult = MultiByteToWideChar( CP_UTF8, 0, pUTF8, -1, pwchDest, cubDestSizeInBytes / sizeof(wchar_t) );
-#else
 	iconv_t conv_t = iconv_open( "UTF-32LE", "UTF-8" );
 	int cchResult = -1;
 	size_t nLenUnicde = cubDestSizeInBytes;
@@ -40,7 +34,6 @@ int V_UTF8ToUnicode( const char *pUTF8, wchar_t *pwchDest, int cubDestSizeInByte
 		else
 			cchResult = nInputCharCount - nMaxUTF8; // nMaxUTF8 is decremented for each converted character. We want to return the count of conversions to match windows.
 	}
-#endif
 	pwchDest[(cubDestSizeInBytes / sizeof(wchar_t)) - 1] = 0;
 	return cchResult;
 }
@@ -58,9 +51,6 @@ int V_UnicodeToUTF8( const wchar_t *pUnicode, char *pUTF8, int cubDestSizeInByte
 		pUTF8[0] = 0;
 	}
 
-#ifdef _WIN32
-	int cchResult = WideCharToMultiByte( CP_UTF8, 0, pUnicode, -1, pUTF8, cubDestSizeInBytes, NULL, NULL );
-#else
 	int cchResult = 0;
 	if ( pUnicode && pUTF8 )
 	{
@@ -79,7 +69,6 @@ int V_UnicodeToUTF8( const wchar_t *pUnicode, char *pUTF8, int cubDestSizeInByte
 				cchResult = nMaxUTF8;
 		}
 	}
-#endif
 
 	if ( cubDestSizeInBytes > 0 )
 	{
@@ -99,11 +88,6 @@ int V_UCS2ToUnicode( const ucs2 *pUCS2, wchar_t *pUnicode, int cubDestSizeInByte
 	AssertValidReadPtr(pUCS2);
 	
 	pUnicode[0] = 0;
-#if defined( _WIN32 )
-	int lenUCS2 = V_wcslen( pUCS2 );
-	int cchResult = MIN( (lenUCS2+1)*( int )sizeof(ucs2), cubDestSizeInBytes );
-	V_wcsncpy( (wchar_t*)pUCS2, pUnicode, cchResult );
-#else
 	iconv_t conv_t = iconv_open( "UCS-4LE", "UCS-2LE" );
 	int cchResult = -1;
 	size_t nLenUnicde = cubDestSizeInBytes;
@@ -120,7 +104,6 @@ int V_UCS2ToUnicode( const ucs2 *pUCS2, wchar_t *pUnicode, int cubDestSizeInByte
 		else
 			cchResult = nMaxUTF8;
 	}
-#endif
 	pUnicode[(cubDestSizeInBytes / sizeof(wchar_t)) - 1] = 0;
 	return cchResult;	
 
@@ -133,10 +116,6 @@ int V_UCS2ToUnicode( const ucs2 *pUCS2, wchar_t *pUnicode, int cubDestSizeInByte
 int V_UnicodeToUCS2( const wchar_t *pUnicode, int cubSrcInBytes, char *pUCS2, int cubDestSizeInBytes )
 {
 	 // TODO: MACMERGE: Figure out how to convert from 2-byte Win32 wchars to platform wchar_t type that can be 4 bytes
-#if defined( _WIN32 )
-	int cchResult = MIN( cubSrcInBytes, cubDestSizeInBytes );
-	V_wcsncpy( (wchar_t*)pUCS2, pUnicode, cchResult );
-#else
 	iconv_t conv_t = iconv_open( "UCS-2LE", "UTF-32LE" );
 	size_t cchResult = -1;
 	size_t nLenUnicde = cubSrcInBytes;
@@ -153,7 +132,6 @@ int V_UnicodeToUCS2( const wchar_t *pUnicode, int cubSrcInBytes, char *pUCS2, in
 		else
 			cchResult = cubSrcInBytes / sizeof( wchar_t );
 	}
-#endif
 	return cchResult;	
 }
 
@@ -173,10 +151,6 @@ VSTRTOOLS_INTERFACE int V_UCS2ToUTF8( const ucs2 *pUCS2, char *pUTF8, int cubDes
 	Assert( cubDestSizeInBytes >= 1 ); // must have at least 1 byte to write the terminator character
 	
 	pUTF8[0] = '\0';
-#ifdef _WIN32
-	// under win32 wchar_t == ucs2, sigh
-	int cchResult = WideCharToMultiByte( CP_UTF8, 0, pUCS2, -1, pUTF8, cubDestSizeInBytes, NULL, NULL );
-#else
 	iconv_t conv_t = iconv_open( "UTF-8", "UCS-2LE" );
 	size_t cchResult = -1;
 	size_t nLenUnicde = cubDestSizeInBytes;
@@ -193,7 +167,6 @@ VSTRTOOLS_INTERFACE int V_UCS2ToUTF8( const ucs2 *pUCS2, char *pUTF8, int cubDes
 		else
 			cchResult = nMaxUTF8;
 	}
-#endif
 	pUTF8[cubDestSizeInBytes - 1] = '\0';
 	return cchResult;	
 }
@@ -208,10 +181,6 @@ VSTRTOOLS_INTERFACE int V_UTF8ToUCS2( const char *pUTF8, int cubSrcInBytes, ucs2
 	AssertValidReadPtr(pUCS2);
 
 	pUCS2[0] = 0;
-#ifdef _WIN32
-	// under win32 wchar_t == ucs2, sigh
-	int cchResult = MultiByteToWideChar( CP_UTF8, 0, pUTF8, -1, pUCS2, cubDestSizeInBytes / sizeof(wchar_t) );
-#else
 	iconv_t conv_t = iconv_open( "UCS-2LE", "UTF-8" );
 	size_t cchResult = -1;
 	size_t nLenUnicde = cubSrcInBytes;
@@ -229,7 +198,6 @@ VSTRTOOLS_INTERFACE int V_UTF8ToUCS2( const char *pUTF8, int cubSrcInBytes, ucs2
 			cchResult = cubSrcInBytes;
 
 	}
-#endif
 	pUCS2[ (cubDestSizeInBytes/sizeof(ucs2)) - 1] = 0;
 	return cchResult;	
 }

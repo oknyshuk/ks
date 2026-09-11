@@ -138,9 +138,6 @@ struct VS_OUTPUT
 	float4 lightAtten									: COLOR0;		// light attenuation for lights 0 and 1 in .xy (lower precision for sm2_b/OSX)
 #endif
 
-#if defined( _GAMECONSOLE ) && FLASHLIGHT
-	float4 flashlightSpacePos							: TEXCOORD8;
-#endif
 };
 
 float Luminance( float3 cColor )
@@ -265,11 +262,6 @@ VS_OUTPUT main( const VS_INPUT v )
 	// Transform into projection space
 	o.projPos = mul( worldPos, cViewProj );
 
-#ifdef _PS3
-	// Account for OpenGL's flipped y coordinate and expanded z range [-1,1] instead of [0,1]
-	o.projPos.y = -o.projPos.y;
-	o.projPos.z = 2.0f * o.projPos.z - o.projPos.w;
-#endif // _PS3
 
 	o.vWorldNormal_fogFactorW.xyz = worldNormal.xyz;
 
@@ -320,11 +312,6 @@ VS_OUTPUT main( const VS_INPUT v )
 	}
 	#endif
 	
-	#if ( defined( _GAMECONSOLE ) && FLASHLIGHT )
-	{
-		o.flashlightSpacePos = TransformFlashlightWorldToTexture( worldPos.xyz, g_FlashlightWorldToTexture );
-	}
-	#endif
 
 	#if( CASCADED_SHADOW_MAPPING )
 	{

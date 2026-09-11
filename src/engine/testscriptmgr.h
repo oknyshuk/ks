@@ -7,9 +7,6 @@
 
 #ifndef TESTSCRIPTMGR_H
 #define TESTSCRIPTMGR_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 
 #include "filesystem.h"

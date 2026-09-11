@@ -13,9 +13,6 @@
 #include "ai_behavior.h"
 #include "ai_speech.h"
 
-#if defined( _WIN32 )
-#pragma once
-#endif
 
 
 // Speak concepts

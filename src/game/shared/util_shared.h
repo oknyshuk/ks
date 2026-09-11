@@ -8,9 +8,6 @@
 #define UTIL_SHARED_H
 
 #include "reflect_annotations.h"
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "mathlib/vector.h"
 #include "cmodel.h"
@@ -24,9 +21,6 @@
 #include "cdll_client_int.h"
 #endif
 
-#ifdef PORTAL
-#include "portal_util_shared.h"
-#endif
 
 //-----------------------------------------------------------------------------
 // Forward declarations

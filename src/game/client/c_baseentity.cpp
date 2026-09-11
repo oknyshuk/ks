@@ -48,14 +48,9 @@
 #include "gamestringpool.h"
 #include "tier1/callqueue.h"
 
-#if defined ( CSTRIKE15 )
 #include "cs_gamerules.h"
 #include "c_cs_player.h"
-#endif
 
-#ifdef DOTA_DLL
-#include "dota_in_main.h"
-#endif
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -560,10 +555,6 @@ IMPLEMENT_REFLECT_TABLE( C_BaseEntity, DT_BaseEntity );
 #endif
 #if PREDICTION_ERROR_CHECK_LEVEL > 1 
 #else
-#endif
-#if defined ( PORTAL2 )
-#endif
-#if defined ( PORTAL2 )
 #endif
 #if !defined( NO_ENTITY_PREDICTION ) && defined( USE_PREDICTABLEID )
 #endif
@@ -1657,11 +1648,6 @@ IClientModelRenderable*	C_BaseEntity::GetClientModelRenderable()
 	if ( !m_bReadyToDraw || !m_bCanUseBrushModelFastPath )
 		return NULL;
 
-#ifdef PORTAL
-	// Cannot participate if it has a render clip plane
-	if ( GetRenderClipPlane() != NULL )
-		return NULL;
-#endif
 
 	return this; 
 }
@@ -1688,11 +1674,6 @@ bool C_BaseEntity::GetRenderData( void *pData, ModelDataCategory_t nCategory )
 bool C_BaseEntity::ShouldDraw()
 {
 // Only test this in tf2
-#if defined( INVASION_CLIENT_DLL )
-	// Let the client mode (like commander mode) reject drawing entities.
-	if (GetClientMode() && !GetClientMode()->ShouldDrawEntity(this) )
-		return false;
-#endif
 
 	// Some rendermodes prevent rendering
 	if ( m_nRenderMode == kRenderNone )
@@ -5917,10 +5898,6 @@ void C_BaseEntity::SUB_Remove( void )
 
 CBaseEntity *FindEntityInFrontOfLocalPlayer()
 {
-#if DOTA_DLL
-	// Get the entity under our mouse cursor
-	return DOTAInput()->GetCrosshairEntity();
-#endif
 
 	C_BasePlayer *pPlayer = C_BasePlayer::GetLocalPlayer();
 	if ( pPlayer )

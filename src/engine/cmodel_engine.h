@@ -7,9 +7,6 @@
 #ifndef CMODEL_ENGINE_H
 #define CMODEL_ENGINE_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "cmodel.h"
 #include "cmodel_private.h"

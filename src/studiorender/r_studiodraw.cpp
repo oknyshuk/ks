@@ -725,426 +725,14 @@ static void ComputeSkinMatrixToMemory( mstudioboneweight_t &boneweights, matrix3
 void ComputeSkinMatrixToMemorySSE( mstudioboneweight_t &boneweights, matrix3x4_t *pPoseToWorld, matrix3x4_t &result )
 {
 	// NOTE: pPoseToWorld, being cache aligned, doesn't need explicit initialization
-#if defined( _WIN32 ) && !defined( _WIN64 )
-	switch( boneweights.numbones )
-	{
-	default:
-	case 1:
-		memcpy( &result, &pPoseToWorld[boneweights.bone[0]], sizeof(matrix3x4_t) );
-		return;
-
-	case 2:
-		{
-			matrix3x4_t &boneMat0 = pPoseToWorld[boneweights.bone[0]];
-			matrix3x4_t &boneMat1 = pPoseToWorld[boneweights.bone[1]];
-			float *pWeights = boneweights.weight;
-
-			_asm
-			{
-				mov		eax, DWORD PTR [pWeights]
-				movss	xmm6, dword ptr[eax]		; boneweights.weight[0]
-				movss	xmm7, dword ptr[eax + 4]	; boneweights.weight[1]
-
-				mov		eax, DWORD PTR [boneMat0]
-				mov		ecx, DWORD PTR [boneMat1]
-				mov		edi, DWORD PTR [result]
-
-				// Fill xmm6, and 7 with all the bone weights
-				shufps	xmm6, xmm6, 0
-					shufps	xmm7, xmm7, 0
-
-					// Load up all rows of the three matrices
-					movaps	xmm0, XMMWORD PTR [eax]
-				movaps	xmm1, XMMWORD PTR [ecx]
-				movaps	xmm2, XMMWORD PTR [eax + 16]
-				movaps	xmm3, XMMWORD PTR [ecx + 16]
-				movaps	xmm4, XMMWORD PTR [eax + 32]
-				movaps	xmm5, XMMWORD PTR [ecx + 32]
-
-				// Multiply the rows by the weights
-				mulps	xmm0, xmm6
-					mulps	xmm1, xmm7
-					mulps	xmm2, xmm6
-					mulps	xmm3, xmm7
-					mulps	xmm4, xmm6
-					mulps	xmm5, xmm7
-
-					addps	xmm0, xmm1
-					addps	xmm2, xmm3
-					addps	xmm4, xmm5
-
-					movaps	XMMWORD PTR [edi], xmm0
-					movaps	XMMWORD PTR [edi + 16], xmm2
-					movaps	XMMWORD PTR [edi + 32], xmm4
-			}
-		}
-
-	case 3:
-		{
-			matrix3x4_t &boneMat0 = pPoseToWorld[boneweights.bone[0]];
-			matrix3x4_t &boneMat1 = pPoseToWorld[boneweights.bone[1]];
-			matrix3x4_t &boneMat2 = pPoseToWorld[boneweights.bone[2]];
-			float *pWeights = boneweights.weight;
-
-			_asm
-			{
-				mov		eax, DWORD PTR [pWeights]
-				movss	xmm5, dword ptr[eax]		; boneweights.weight[0]
-				movss	xmm6, dword ptr[eax + 4]	; boneweights.weight[1]
-				movss	xmm7, dword ptr[eax + 8]	; boneweights.weight[2]
-
-				mov		eax, DWORD PTR [boneMat0]
-				mov		ecx, DWORD PTR [boneMat1]
-				mov		edx, DWORD PTR [boneMat2]
-				mov		edi, DWORD PTR [result]
-
-				// Fill xmm5, 6, and 7 with all the bone weights
-				shufps	xmm5, xmm5, 0
-					shufps	xmm6, xmm6, 0
-					shufps	xmm7, xmm7, 0
-
-					// Load up the first row of the three matrices
-					movaps	xmm0, XMMWORD PTR [eax]
-				movaps	xmm1, XMMWORD PTR [ecx]
-				movaps	xmm2, XMMWORD PTR [edx]
-
-				// Multiply the rows by the weights
-				mulps	xmm0, xmm5
-					mulps	xmm1, xmm6
-					mulps	xmm2, xmm7
-
-					addps	xmm0, xmm1
-					addps	xmm0, xmm2
-					movaps	XMMWORD PTR [edi], xmm0
-
-					// Load up the second row of the three matrices
-					movaps	xmm0, XMMWORD PTR [eax + 16]
-				movaps	xmm1, XMMWORD PTR [ecx + 16]
-				movaps	xmm2, XMMWORD PTR [edx + 16]
-
-				// Multiply the rows by the weights
-				mulps	xmm0, xmm5
-					mulps	xmm1, xmm6
-					mulps	xmm2, xmm7
-
-					addps	xmm0, xmm1
-					addps	xmm0, xmm2
-					movaps	XMMWORD PTR [edi + 16], xmm0	
-
-					// Load up the third row of the three matrices
-					movaps	xmm0, XMMWORD PTR [eax + 32]
-				movaps	xmm1, XMMWORD PTR [ecx + 32]
-				movaps	xmm2, XMMWORD PTR [edx + 32]
-
-				// Multiply the rows by the weights
-				mulps	xmm0, xmm5
-					mulps	xmm1, xmm6
-					mulps	xmm2, xmm7
-
-					addps	xmm0, xmm1
-					addps	xmm0, xmm2
-					movaps	XMMWORD PTR [edi + 32], xmm0	
-			}
-		}
-
-	case 4:
-		{
-			matrix3x4_t &boneMat0 = pPoseToWorld[boneweights.bone[0]];
-			matrix3x4_t &boneMat1 = pPoseToWorld[boneweights.bone[1]];
-			matrix3x4_t &boneMat2 = pPoseToWorld[boneweights.bone[2]];
-			matrix3x4_t &boneMat3 = pPoseToWorld[boneweights.bone[3]];
-			float *pWeights = boneweights.weight;
-
-			_asm
-			{
-				mov		eax, DWORD PTR [pWeights]
-				movss	xmm4, dword ptr[eax]		; boneweights.weight[0]
-				movss	xmm5, dword ptr[eax + 4]	; boneweights.weight[1]
-				movss	xmm6, dword ptr[eax + 8]	; boneweights.weight[2]
-				movss	xmm7, dword ptr[eax + 12]	; boneweights.weight[3]
-
-				mov		eax, DWORD PTR [boneMat0]
-				mov		ecx, DWORD PTR [boneMat1]
-				mov		edx, DWORD PTR [boneMat2]
-				mov		esi, DWORD PTR [boneMat3]
-				mov		edi, DWORD PTR [result]
-
-				// Fill xmm5, 6, and 7 with all the bone weights
-				shufps	xmm4, xmm4, 0
-					shufps	xmm5, xmm5, 0
-					shufps	xmm6, xmm6, 0
-					shufps	xmm7, xmm7, 0
-
-					// Load up the first row of the four matrices
-					movaps	xmm0, XMMWORD PTR [eax]
-				movaps	xmm1, XMMWORD PTR [ecx]
-				movaps	xmm2, XMMWORD PTR [edx]
-				movaps	xmm3, XMMWORD PTR [esi]
-
-				// Multiply the rows by the weights
-				mulps	xmm0, xmm4
-					mulps	xmm1, xmm5
-					mulps	xmm2, xmm6
-					mulps	xmm3, xmm7
-
-					addps	xmm0, xmm1
-					addps	xmm2, xmm3
-					addps	xmm0, xmm2
-					movaps	XMMWORD PTR [edi], xmm0
-
-					// Load up the second row of the three matrices
-					movaps	xmm0, XMMWORD PTR [eax + 16]
-				movaps	xmm1, XMMWORD PTR [ecx + 16]
-				movaps	xmm2, XMMWORD PTR [edx + 16]
-				movaps	xmm3, XMMWORD PTR [esi + 16]
-
-				// Multiply the rows by the weights
-				mulps	xmm0, xmm4
-					mulps	xmm1, xmm5
-					mulps	xmm2, xmm6
-					mulps	xmm3, xmm7
-
-					addps	xmm0, xmm1
-					addps	xmm2, xmm3
-					addps	xmm0, xmm2
-					movaps	XMMWORD PTR [edi + 16], xmm0	
-
-					// Load up the third row of the three matrices
-					movaps	xmm0, XMMWORD PTR [eax + 32]
-				movaps	xmm1, XMMWORD PTR [ecx + 32]
-				movaps	xmm2, XMMWORD PTR [edx + 32]
-				movaps	xmm3, XMMWORD PTR [esi + 32]
-
-				// Multiply the rows by the weights
-				mulps	xmm0, xmm4
-					mulps	xmm1, xmm5
-					mulps	xmm2, xmm6
-					mulps	xmm3, xmm7
-
-					addps	xmm0, xmm1
-					addps	xmm2, xmm3
-					addps	xmm0, xmm2
-					movaps	XMMWORD PTR [edi + 32], xmm0	
-			}
-		}
-	}
-#else
 	ComputeSkinMatrixToMemory( boneweights, pPoseToWorld, result );
-#endif
 }
 
 matrix3x4_t *ComputeSkinMatrixSSE( mstudioboneweight_t &boneweights, matrix3x4_t *pPoseToWorld, matrix3x4_t &scratchMatrix )
 {
 	// NOTE: pPoseToWorld, being cache aligned, doesn't need explicit initialization
-#if defined( _WIN32 ) && !defined( _WIN64 )
-	switch( boneweights.numbones )
-	{
-	default:
-	case 1:
-		return &pPoseToWorld[boneweights.bone[0]];
-
-	case 2:
-		{
-			matrix3x4_t &boneMat0 = pPoseToWorld[boneweights.bone[0]];
-			matrix3x4_t &boneMat1 = pPoseToWorld[boneweights.bone[1]];
-			float *pWeights = boneweights.weight;
-
-			_asm
-			{
-				mov		eax, DWORD PTR [pWeights]
-				movss	xmm6, dword ptr[eax]		; boneweights.weight[0]
-				movss	xmm7, dword ptr[eax + 4]	; boneweights.weight[1]
-
-				mov		eax, DWORD PTR [boneMat0]
-				mov		ecx, DWORD PTR [boneMat1]
-				mov		edi, DWORD PTR [scratchMatrix]
-
-				// Fill xmm6, and 7 with all the bone weights
-				shufps	xmm6, xmm6, 0
-				shufps	xmm7, xmm7, 0
-
-				// Load up all rows of the three matrices
-				movaps	xmm0, XMMWORD PTR [eax]
-				movaps	xmm1, XMMWORD PTR [ecx]
-				movaps	xmm2, XMMWORD PTR [eax + 16]
-				movaps	xmm3, XMMWORD PTR [ecx + 16]
-				movaps	xmm4, XMMWORD PTR [eax + 32]
-				movaps	xmm5, XMMWORD PTR [ecx + 32]
-
-				// Multiply the rows by the weights
-				mulps	xmm0, xmm6
-				mulps	xmm1, xmm7
-				mulps	xmm2, xmm6
-				mulps	xmm3, xmm7
-				mulps	xmm4, xmm6
-				mulps	xmm5, xmm7
-
-				addps	xmm0, xmm1
-				addps	xmm2, xmm3
-				addps	xmm4, xmm5
-
-				movaps	XMMWORD PTR [edi], xmm0
-				movaps	XMMWORD PTR [edi + 16], xmm2
-				movaps	XMMWORD PTR [edi + 32], xmm4
-			}
-		}
-		return &scratchMatrix;
-
-	case 3:
-		{
-			matrix3x4_t &boneMat0 = pPoseToWorld[boneweights.bone[0]];
-			matrix3x4_t &boneMat1 = pPoseToWorld[boneweights.bone[1]];
-			matrix3x4_t &boneMat2 = pPoseToWorld[boneweights.bone[2]];
-			float *pWeights = boneweights.weight;
-
-			_asm
-			{
-				mov		eax, DWORD PTR [pWeights]
-				movss	xmm5, dword ptr[eax]		; boneweights.weight[0]
-				movss	xmm6, dword ptr[eax + 4]	; boneweights.weight[1]
-				movss	xmm7, dword ptr[eax + 8]	; boneweights.weight[2]
-
-				mov		eax, DWORD PTR [boneMat0]
-				mov		ecx, DWORD PTR [boneMat1]
-				mov		edx, DWORD PTR [boneMat2]
-				mov		edi, DWORD PTR [scratchMatrix]
-
-				// Fill xmm5, 6, and 7 with all the bone weights
-				shufps	xmm5, xmm5, 0
-				shufps	xmm6, xmm6, 0
-				shufps	xmm7, xmm7, 0
-
-				// Load up the first row of the three matrices
-				movaps	xmm0, XMMWORD PTR [eax]
-				movaps	xmm1, XMMWORD PTR [ecx]
-				movaps	xmm2, XMMWORD PTR [edx]
-
-				// Multiply the rows by the weights
-				mulps	xmm0, xmm5
-				mulps	xmm1, xmm6
-				mulps	xmm2, xmm7
-
-				addps	xmm0, xmm1
-				addps	xmm0, xmm2
-				movaps	XMMWORD PTR [edi], xmm0
-				
-				// Load up the second row of the three matrices
-				movaps	xmm0, XMMWORD PTR [eax + 16]
-				movaps	xmm1, XMMWORD PTR [ecx + 16]
-				movaps	xmm2, XMMWORD PTR [edx + 16]
-
-				// Multiply the rows by the weights
-				mulps	xmm0, xmm5
-				mulps	xmm1, xmm6
-				mulps	xmm2, xmm7
-
-				addps	xmm0, xmm1
-				addps	xmm0, xmm2
-				movaps	XMMWORD PTR [edi + 16], xmm0	
-
-				// Load up the third row of the three matrices
-				movaps	xmm0, XMMWORD PTR [eax + 32]
-				movaps	xmm1, XMMWORD PTR [ecx + 32]
-				movaps	xmm2, XMMWORD PTR [edx + 32]
-
-				// Multiply the rows by the weights
-				mulps	xmm0, xmm5
-				mulps	xmm1, xmm6
-				mulps	xmm2, xmm7
-
-				addps	xmm0, xmm1
-				addps	xmm0, xmm2
-				movaps	XMMWORD PTR [edi + 32], xmm0	
-			}
-		}
-		return &scratchMatrix;
-
-	case 4:
-		{
-			matrix3x4_t &boneMat0 = pPoseToWorld[boneweights.bone[0]];
-			matrix3x4_t &boneMat1 = pPoseToWorld[boneweights.bone[1]];
-			matrix3x4_t &boneMat2 = pPoseToWorld[boneweights.bone[2]];
-			matrix3x4_t &boneMat3 = pPoseToWorld[boneweights.bone[3]];
-			float *pWeights = boneweights.weight;
-
-			_asm
-			{
-				mov		eax, DWORD PTR [pWeights]
-				movss	xmm4, dword ptr[eax]		; boneweights.weight[0]
-				movss	xmm5, dword ptr[eax + 4]	; boneweights.weight[1]
-				movss	xmm6, dword ptr[eax + 8]	; boneweights.weight[2]
-				movss	xmm7, dword ptr[eax + 12]	; boneweights.weight[3]
-
-				mov		eax, DWORD PTR [boneMat0]
-				mov		ecx, DWORD PTR [boneMat1]
-				mov		edx, DWORD PTR [boneMat2]
-				mov		esi, DWORD PTR [boneMat3]
-				mov		edi, DWORD PTR [scratchMatrix]
-
-				// Fill xmm5, 6, and 7 with all the bone weights
-				shufps	xmm4, xmm4, 0
-				shufps	xmm5, xmm5, 0
-				shufps	xmm6, xmm6, 0
-				shufps	xmm7, xmm7, 0
-
-				// Load up the first row of the four matrices
-				movaps	xmm0, XMMWORD PTR [eax]
-				movaps	xmm1, XMMWORD PTR [ecx]
-				movaps	xmm2, XMMWORD PTR [edx]
-				movaps	xmm3, XMMWORD PTR [esi]
-
-				// Multiply the rows by the weights
-				mulps	xmm0, xmm4
-				mulps	xmm1, xmm5
-				mulps	xmm2, xmm6
-				mulps	xmm3, xmm7
-
-				addps	xmm0, xmm1
-				addps	xmm2, xmm3
-				addps	xmm0, xmm2
-				movaps	XMMWORD PTR [edi], xmm0
-				
-				// Load up the second row of the three matrices
-				movaps	xmm0, XMMWORD PTR [eax + 16]
-				movaps	xmm1, XMMWORD PTR [ecx + 16]
-				movaps	xmm2, XMMWORD PTR [edx + 16]
-				movaps	xmm3, XMMWORD PTR [esi + 16]
-
-				// Multiply the rows by the weights
-				mulps	xmm0, xmm4
-				mulps	xmm1, xmm5
-				mulps	xmm2, xmm6
-				mulps	xmm3, xmm7
-
-				addps	xmm0, xmm1
-				addps	xmm2, xmm3
-				addps	xmm0, xmm2
-				movaps	XMMWORD PTR [edi + 16], xmm0	
-
-				// Load up the third row of the three matrices
-				movaps	xmm0, XMMWORD PTR [eax + 32]
-				movaps	xmm1, XMMWORD PTR [ecx + 32]
-				movaps	xmm2, XMMWORD PTR [edx + 32]
-				movaps	xmm3, XMMWORD PTR [esi + 32]
-
-				// Multiply the rows by the weights
-				mulps	xmm0, xmm4
-				mulps	xmm1, xmm5
-				mulps	xmm2, xmm6
-				mulps	xmm3, xmm7
-
-				addps	xmm0, xmm1
-				addps	xmm2, xmm3
-				addps	xmm0, xmm2
-				movaps	XMMWORD PTR [edi + 32], xmm0	
-			}
-		}
-		return &scratchMatrix;
-	}
-#else
 
 return ComputeSkinMatrix( boneweights, pPoseToWorld, scratchMatrix );
-#endif
 
 	Assert( 0 );
 	return NULL;
@@ -1180,9 +768,6 @@ inline void CStudioRender::R_ComputeLightAtPoint3( const Vector &pos, const Vect
 
 // define SPECIAL_SSE_MESH_PROCESSOR to enable code which contains a special optimized SSE lighting loop, significantly
 // improving software vertex processing performace.
-#if defined( _WIN32 )
-#define SPECIAL_SSE_MESH_PROCESSOR
-#endif
 
 #ifdef SPECIAL_SSE_MESH_PROCESSOR
 //#define VERIFY_SSE_LIGHTING
@@ -1367,31 +952,14 @@ public:
 		}
 #endif
 
-#if defined( _WIN32 )
-		// Precaches the data
-		_mm_prefetch( (char*)((int)pGroupToMesh & (~0x1F)), _MM_HINT_NTA );
-#endif
 		for ( int i = 0; i < PREFETCH_VERT_COUNT; ++i )
 		{
 			ntemp[i] = pGroupToMesh[i];
-#if defined( _WIN32 )
-			char *pMem = (char*)&pVertices[ntemp[i]];
-			_mm_prefetch( pMem, _MM_HINT_NTA );
-			_mm_prefetch( pMem + 32, _MM_HINT_NTA );
-			if ( nHasTangentSpace )
-			{
-				_mm_prefetch( (char*)&pStudioTangentS[ntemp[i]], _MM_HINT_NTA );
-			}
-#endif
 		}
 
 		int n, idx;
 		for ( int j=0; j < numVertices; ++j )
 		{
-#if defined( _WIN32 )
-			char *pMem = (char*)&pGroupToMesh[j + PREFETCH_VERT_COUNT + 1];
-			_mm_prefetch( (char*)((int)pMem & (~0x1F)), _MM_HINT_NTA );
-#endif
 			idx = j & (PREFETCH_VERT_COUNT-1);
 			n = ntemp[idx];
 
@@ -1431,14 +999,6 @@ public:
 			R_TransformVert( pSrcPos, pSrcNorm, pSrcTangentS, pSkinMat, 
 				*(VectorAligned*)&dstVertex.m_vecPosition, dstVertex.m_vecNormal, *(Vector4DAligned*)&dstVertex.m_vecUserData );
 
-#if defined( _WIN32 )
-			_mm_prefetch( (char*)&pVertices[ntemp[idx]], _MM_HINT_NTA);
-			_mm_prefetch( (char*)&pVertices[ntemp[idx]] + 32, _MM_HINT_NTA );
-			if ( nHasTangentSpace )
-			{
-				_mm_prefetch( (char*)&pStudioTangentS[ntemp[idx]], _MM_HINT_NTA );
-			}
-#endif
 
 			dstVertex.m_vecTexCoord = vert.m_vecTexCoord; 
 
@@ -2052,51 +1612,6 @@ void CStudioRender::R_StudioProcessFlexedMesh( mstudiomesh_t* pmesh, CMeshBuilde
 //-----------------------------------------------------------------------------
 template<VertexCompressionType_t T> void CStudioRender::R_StudioRestoreMesh( mstudiomesh_t* pmesh, studiomeshgroup_t* pMeshData )
 {
-#ifdef IS_WINDOWS_PC
-	Vector4D *pStudioTangentS;
-
-	// get at the vertex data
-	const mstudio_meshvertexdata_t *vertData = GetFatVertexData( pmesh, m_pStudioHdr );
-	if ( !vertData )
-	{
-		// not available
-		return;
-	}
-	mstudiovertex_t *pVertices = vertData->Vertex( 0 );
-
-	if (vertData->HasTangentData())
-	{
-		pStudioTangentS = vertData->TangentS( 0 );
-	}
-	else
-	{
-		pStudioTangentS = NULL;
-	}
-
-	CMeshBuilder meshBuilder;
-
-	meshBuilder.BeginModify( pMeshData->m_pMesh );
-	meshBuilder.SetCompressionType( T );
-	for ( int j=0; j < meshBuilder.VertexCount() ; j++)
-	{
-		meshBuilder.SelectVertex(j);
-		int n = pMeshData->m_pGroupIndexToMeshIndex[j];
-		mstudiovertex_t &vert = pVertices[n];
-
-		meshBuilder.Position3fv( vert.m_vecPosition.Base() );
-		meshBuilder.CompressedNormal3fv<T>( vert.m_vecNormal.Base() );
-		meshBuilder.TexCoord2fv( 0, vert.m_vecTexCoord.Base() );
-
-		if (pStudioTangentS)
-		{
-			Assert( pStudioTangentS[n].w == -1.0f || pStudioTangentS[n].w == 1.0f );
-			meshBuilder.CompressedUserData<T>( pStudioTangentS[n].Base() );
-		}
-
-		meshBuilder.Color4ub( 255, 255, 255, 255 );
-	}
-	meshBuilder.EndModify();
-#endif
 }
 
 
@@ -2264,23 +1779,6 @@ int CStudioRender::R_StudioDrawStaticMesh( IMatRenderContext *pRenderContext, ms
 	}
 
 	// Needed when we switch back and forth between hardware + software lighting
-#ifdef IS_WINDOWS_PC
-	if ( pGroup->m_MeshNeedsRestore )
-	{
-		VertexCompressionType_t compressionType = CompressionType( pGroup->m_pMesh->GetVertexFormat() );
-		switch ( compressionType )
-		{
-			case VERTEX_COMPRESSION_ON:
-				R_StudioRestoreMesh<VERTEX_COMPRESSION_ON>( pmesh, pGroup );
-				break;
-			case VERTEX_COMPRESSION_NONE:
-			default:
-				R_StudioRestoreMesh<VERTEX_COMPRESSION_NONE>( pmesh, pGroup );
-				break;
-		}
-		pGroup->m_MeshNeedsRestore = false;
-	}
-#endif
 
 	// Build separate flex stream containing deltas, which will get copied into another vertex stream
 	bool bUseHWFlex = m_pRC->m_Config.m_bEnableHWMorph && pGroup->m_pMorph && !m_bDrawTranslucentSubModels;

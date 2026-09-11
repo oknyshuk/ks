@@ -6,9 +6,6 @@
 
 #ifndef SOS_OP_ITERATE_MERGE_H
 #define SOS_OP_ITERATE_MERGE_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "sos_op.h"
 

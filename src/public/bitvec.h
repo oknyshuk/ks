@@ -6,9 +6,6 @@
 
 #ifndef BITVEC_H
 #define BITVEC_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include <limits.h>
 #include "tier0/dbg.h"
@@ -36,21 +33,9 @@ private:
 #define LOG2_BITS_PER_INT	5
 #define BITS_PER_INT		32
 
-#if _WIN32
-#include <intrin.h>
-#pragma intrinsic(_BitScanForward)
-#endif
 
 inline int FirstBitInWord( unsigned int elem, int offset )
 {
-#if _WIN32
-	if ( !elem )
-		return -1;
-	unsigned long out;
-	_BitScanForward(&out, elem);
-	return out + offset;
-
-#else
 	static unsigned firstBitLUT[256] = 
 	{
 		0,0,1,0,2,0,1,0,3,0,1,0,2,0,1,0,4,0,1,0,2,0,1,0,3,0,1,0,2,0,1,0,5,0,1,0,2,0,1,0,
@@ -86,7 +71,6 @@ inline int FirstBitInWord( unsigned int elem, int offset )
 		return offset + firstBitLUT[elemByte];
 
 	return -1;
-#endif
 }
 
 //-------------------------------------

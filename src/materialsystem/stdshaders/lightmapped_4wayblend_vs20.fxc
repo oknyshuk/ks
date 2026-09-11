@@ -80,11 +80,6 @@ VS_OUTPUT main( const VS_INPUT v )
 	projPos = mul( float4( worldPos, 1 ), cViewProj );
 	o.projPos = projPos;
 
-#ifdef _PS3
-	// Account for OpenGL's flipped y coordinate and expanded z range [-1,1] instead of [0,1]
-	o.projPos.y = -o.projPos.y;
-	o.projPos.z = 2.0f * o.projPos.z - o.projPos.w;
-#endif // _PS3
 
 	o.worldPos_projPosZ.w = projPos.z;
 	o.worldPos_projPosZ.xyz = worldPos;
@@ -99,18 +94,9 @@ VS_OUTPUT main( const VS_INPUT v )
 	float3 worldTangentS = mul3x3( v.vTangentS, ( const float3x3 )cModel[0] );
 	float3 worldTangentT = mul3x3( v.vTangentT, ( const float3x3 )cModel[0] );
 
-	#if SEAMLESS && BUMPMAP && ( defined( _X360 ) || defined( _PS3 ) )
-		float3 n = normalize( worldNormal );
-		float3 n2 = n * n;           // sums to 1.
-
-		o.tangentSpaceTranspose[0] = normalize( float3( n2.y + n2.z, 0.0f, n2.x ) );
-		o.tangentSpaceTranspose[1] = normalize( float3( 0.0f, n2.x + n2.z, n2.y ) );
-		o.tangentSpaceTranspose[2] = worldNormal;
-	#else
 		o.tangentSpaceTranspose[0] = worldTangentS;
 		o.tangentSpaceTranspose[1] = worldTangentT;
 		o.tangentSpaceTranspose[2] = worldNormal;
-	#endif
 #endif
 
 
@@ -226,10 +212,6 @@ VS_OUTPUT main( const VS_INPUT v )
 #endif
 
 	// On 360/PS3, we have extra iterators and can fold the flashlight into this shader
-#if ( defined( _X360 ) || defined( _PS3 ) ) && FLASHLIGHT
-	o.flashlightSpacePos = TransformFlashlightWorldToTexture( worldPos, g_FlashlightWorldToTexture );
-	o.vProjPos = projPos;
-#endif
 
 	o.vertexBlend = v.vVertexBlends;
 	

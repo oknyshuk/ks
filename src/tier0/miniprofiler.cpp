@@ -15,19 +15,11 @@
 #include <string.h>
 #include <stdio.h>
 
-#if defined( PLATFORM_WINDOWS_PC )
-#define WIN_32_LEAN_AND_MEAN
-#include <windows.h>				// Currently needed for LARGE_INTEGER
-#endif
 
 // NOTE: This has to be the last file included!
 #include "tier0/memdbgon.h"
 
-#ifdef IS_WINDOWS_PC
-CTHREADLOCALPTR( CMiniProfiler ) s_pLastMiniProfilerTS;
-#else
 CMiniProfiler *s_pLastMiniProfilerTS;
-#endif
 
 static CLinkedMiniProfiler *s_pDummyList = NULL;
 
@@ -53,9 +45,6 @@ CRootMiniProfiler g_rootMiniProfiler CONSTRUCT_EARLY;
 int64 GetHardwareClockReliably()
 {
 	int64 res = 0;
-#if ENABLE_MINI_PROFILER && IS_WINDOWS_PC
-	QueryPerformanceCounter( ( LARGE_INTEGER* )&res );
-#endif
 	return res;
 }
 
@@ -239,11 +228,7 @@ void PopMiniProfilerTS( CMiniProfiler *pProfiler )
 
 static void GetPerformanceFrequency( int64 *pFreqOut )
 {
-#ifdef PLATFORM_POSIX
 	*pFreqOut = 2000000000;
-#else
-	QueryPerformanceFrequency( ( LARGE_INTEGER* ) pFreqOut );
-#endif
 }
 
 DLL_EXPORT void PublishAllMiniProfilers(int nHistoryMax)

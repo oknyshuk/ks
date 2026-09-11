@@ -7,9 +7,6 @@
 #ifndef EVENT_FLAGS_H
 #define EVENT_FLAGS_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 
 // Skip local host for event send.

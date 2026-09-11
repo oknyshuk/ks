@@ -305,11 +305,7 @@ void CGlobalEventLog::AddKeyValue( CGlobalEvent *pEvent, bool bVarying, const ch
 
 	va_start( Args, pszValueFormat );
 
-#if defined(_WIN32)
-	nLen = _vscprintf( pszValueFormat, Args ) + 1;
-#else
 	nLen = vsnprintf( NULL, 0, pszValueFormat, Args ) + 1;
-#endif
 	pszBuffer = ( char * )stackalloc( nLen * sizeof( char ) );
 	V_vsnprintf( pszBuffer, nLen, pszValueFormat, Args );
 	

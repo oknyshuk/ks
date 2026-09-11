@@ -9,9 +9,6 @@
 #ifndef APPFRAMEWORK_H
 #define APPFRAMEWORK_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "appframework/IAppSystemGroup.h"
 #include "ilaunchabledll.h"
@@ -61,20 +58,12 @@ void AppShutdown( CAppSystemGroup *pAppSystemGroup );
 	EXPOSE_SINGLE_INTERFACE_GLOBALVAR( CAppLaunchableDLL, ILaunchableDLL, LAUNCHABLE_DLL_INTERFACE_VERSION, __g_AppLaunchableDLL ); 
 
 
-#if   defined( PLATFORM_LINUX )
 #define DEFINE_WINDOWED_APPLICATION_OBJECT_GLOBALVAR( _globalVarName ) \
 	int main( int argc, char **argv )										\
 	{																							\
 		extern int ValveLinuxWindowedMain( int argc, char **argv, CAppSystemGroup *pAppSystemGroup ); \
 		return ValveLinuxWindowedMain( argc, argv, &_globalVarName ); \
 	}
-#else
-#define DEFINE_WINDOWED_APPLICATION_OBJECT_GLOBALVAR( _globalVarName ) \
-	int __stdcall WinMain( struct HINSTANCE__* hInstance, struct HINSTANCE__* hPrevInstance, NULLTERMINATED char *lpCmdLine, int nCmdShow )	\
-	{																							\
-		return AppMain( hInstance, hPrevInstance, lpCmdLine, nCmdShow, &_globalVarName );		\
-	}
-#endif
 
 #define DEFINE_CONSOLE_APPLICATION_OBJECT_GLOBALVAR( _globalVarName ) \
 	int main( int argc, char **argv )			\

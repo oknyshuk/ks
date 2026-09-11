@@ -7,9 +7,6 @@
 
 #ifndef SHAREDDEFS_H
 #define SHAREDDEFS_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "bittools.h"
 
@@ -21,11 +18,7 @@
 #define ROUND_TO_TICKS( t )		( TICK_INTERVAL * TIME_TO_TICKS( t ) )
 #define TICK_NEVER_THINK		(-1)
 
-#if defined( TF_DLL )
-#define ANIMATION_CYCLE_BITS		10
-#else
 #define ANIMATION_CYCLE_BITS		15
-#endif
 #define ANIMATION_CYCLE_MINFRAC		(1.0f / (1<<ANIMATION_CYCLE_BITS))
 
 // These describe how animation state is packed on the wire, so both sides need them: a send
@@ -36,11 +29,7 @@
 #define ANIMATION_SKIN_BITS				10	// 1024 body skin selections FIXME: this seems way high
 #define ANIMATION_BODY_BITS				32	// body combinations
 #define ANIMATION_HITBOXSET_BITS		2	// hit box sets
-#if defined( TF_DLL )
-#define ANIMATION_POSEPARAMETER_BITS	8	// pose parameter resolution
-#else
 #define ANIMATION_POSEPARAMETER_BITS	11	// pose parameter resolution
-#endif
 #define ANIMATION_PLAYBACKRATE_BITS		8	// default playback rate, only used on leading edge detect sequence changes
 
 // Each mod defines these for itself.
@@ -106,15 +95,9 @@ public:
 
 #define MAX_CLIMB_SPEED		200
 
-#if defined(TF_DLL) || defined(TF_CLIENT_DLL) || defined( CSTRIKE15 )
 
 	#define TIME_TO_DUCK_MSECS		200
 
-#else
-
-	#define TIME_TO_DUCK_MSECS		400
-
-#endif 
 
 #define TIME_TO_UNDUCK_MSECS		200
 
@@ -128,17 +111,10 @@ inline float FractionUnDucked( int msecs )
 	return clamp( (float)msecs / (float)TIME_TO_UNDUCK_MSECS, 0.0f, 1.0f );
 }
 
-#if defined( CSTRIKE15 )
 #define MAX_WEAPON_SLOTS		6	// hud item selection slots
 #define MAX_WEAPON_POSITIONS	6	// max number of items within a slot
 #define MAX_ITEM_TYPES			6	// hud item selection slots
 #define MAX_WEAPONS				64	// Max number of weapons available
-#else
-#define MAX_WEAPON_SLOTS		11	// hud item selection slots
-#define MAX_WEAPON_POSITIONS	20	// max number of items within a slot
-#define MAX_ITEM_TYPES			6	// hud item selection slots
-#define MAX_WEAPONS				64	// Max number of weapons available
-#endif 
 
 #define MAX_ITEMS				5	// hard coded item types
 
@@ -347,15 +323,9 @@ enum AmmoPosition_t
 
 // Humans only have left and right hands, though we might have aliens with more
 //  than two, sigh
-#if defined( CSTRIKE15 )
 
 #define MAX_VIEWMODELS			2
 
-#else
-
-#define MAX_VIEWMODELS			2
-
-#endif
 
 #define MAX_BEAM_ENTS			10
 
@@ -435,22 +405,11 @@ enum PLAYER_ANIM
 	PLAYER_LEAVE_AIMING,
 };
 
-#ifdef HL2_DLL
-// HL2 has 600 gravity by default
-// NOTE: The discrete ticks can have quantization error, so these numbers are biased a little to
-// make the heights more exact
-#define PLAYER_FATAL_FALL_SPEED		922.5f // approx 60 feet sqrt( 2 * gravity * 60 * 12 )
-#define PLAYER_MAX_SAFE_FALL_SPEED	526.5f // approx 20 feet sqrt( 2 * gravity * 20 * 12 )
-#define PLAYER_LAND_ON_FLOATING_OBJECT	173 // Can fall another 173 in/sec without getting hurt
-#define PLAYER_MIN_BOUNCE_SPEED		173
-#define PLAYER_FALL_PUNCH_THRESHOLD 303.0f // won't punch player's screen/make scrape noise unless player falling at least this fast - at least a 76" fall (sqrt( 2 * g * 76))
-#else
 #define PLAYER_FATAL_FALL_SPEED		1024 // approx 60 feet
 #define PLAYER_MAX_SAFE_FALL_SPEED	580 // approx 20 feet
 #define PLAYER_LAND_ON_FLOATING_OBJECT	200 // Can go another 200 units without getting hurt
 #define PLAYER_MIN_BOUNCE_SPEED		200
 #define PLAYER_FALL_PUNCH_THRESHOLD (float)350 // won't punch player's screen/make scrape noise unless player falling at least this fast.
-#endif
 #define DAMAGE_FOR_FALL_SPEED		100.0f / ( PLAYER_FATAL_FALL_SPEED - PLAYER_MAX_SAFE_FALL_SPEED ) // damage per unit per second.
 
 
@@ -620,18 +579,7 @@ enum
 	BLOOD_COLOR_GREEN,
 	BLOOD_COLOR_MECH,
 
-#if defined( HL2_EPISODIC )
-	BLOOD_COLOR_ANTLION,		// FIXME: Move to Base HL2
-	BLOOD_COLOR_ZOMBIE,			// FIXME: Move to Base HL2
-	BLOOD_COLOR_ANTLION_WORKER,
-	BLOOD_COLOR_BLOB,
-	BLOOD_COLOR_BLOB_FROZEN,
-#endif // HL2_EPISODIC
 
-#if defined( INFESTED_DLL )
-	BLOOD_COLOR_BLOB,
-	BLOOD_COLOR_BLOB_FROZEN,
-#endif // INFESTED_DLL
 
 	BLOOD_COLOR_BRIGHTGREEN,
 };
@@ -978,19 +926,6 @@ enum
 //-----------------------------------------------------------------------------
 // Commentary Mode
 //-----------------------------------------------------------------------------
-#if defined(TF_DLL) || defined(TF_CLIENT_DLL)
-#define GAME_HAS_NO_USE_KEY
-
-//-----------------------------------------------------------------------------
-// Multiplayer overrides
-//-----------------------------------------------------------------------------
-#if defined( SPROP_COORD )
-#undef SPROP_COORD
-#endif
-
-#define SPROP_COORD SPROP_COORD_MP
-
-#endif
 
 //-----------------------------------------------------------------------------
 // Cell origin values
@@ -1004,33 +939,15 @@ enum
 #ifdef GAME_HAS_NO_USE_KEY
 	#define COMMENTARY_BUTTONS		(IN_ATTACK | IN_ATTACK2 | IN_USE)
 #else
-	#ifdef PORTAL2
-		#define COMMENTARY_BUTTONS	(IN_USE | IN_REMOTE_VIEW)
-	#else
 		#define COMMENTARY_BUTTONS	(IN_USE)
-	#endif
 #endif
 
 bool IsHeadTrackingEnabled();
 
 // If this is defined, all of the scopeguard objects are NULL'd out to reduce overhead
-#if defined( CSTRIKE15 ) // // Split screen removed from console.
 #define SPLIT_SCREEN_STUBS
-#endif
 
-#if defined(TF_DLL) || defined(TF_CLIENT_DLL)
-	#if defined( SPLIT_SCREEN_STUBS )
-		#define MAX_SPLITSCREEN_PLAYERS 1
-	#else
-		#define MAX_SPLITSCREEN_PLAYERS 2
-	#endif
-#elif defined( PORTAL2 )
-	#define MAX_SPLITSCREEN_PLAYERS 2
-#elif defined ( CSTRIKE15 )
 	#define MAX_SPLITSCREEN_PLAYERS 1
-#else
-	#define MAX_SPLITSCREEN_PLAYERS 1
-#endif
 
 inline bool IsSplitScreenSupported()
 {

@@ -12,9 +12,6 @@
 #include "dt_recv.h"
 #include "collisionproperty.h"
 #include "const.h"
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "networkvar.h"
 #include "engine/ICollideable.h"

@@ -9,9 +9,6 @@
 #ifndef MESHBASE_H
 #define MESHBASE_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 
 #include "materialsystem/imesh.h"

@@ -24,8 +24,7 @@ def build(bld):
         "../public/zip_utils.cpp",
     ]
 
-    if bld.env.DEST_OS != "win32":
-        source += ["linux_support.cpp"]
+    source += ["linux_support.cpp"]
 
     bld.objects(
         source=source,

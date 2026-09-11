@@ -9,11 +9,7 @@
 #ifndef ISHADERDYNAMIC_H
 #define ISHADERDYNAMIC_H
 
-#ifndef SPU
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "shaderapi/shareddefs.h"
 #include "materialsystem/imaterial.h"
@@ -55,7 +51,6 @@ struct ShaderColorCorrectionInfo_t
 	float m_pLookupWeights[4];
 };
 
-#endif // SPU
 
 //-----------------------------------------------------------------------------
 // the 3D shader API interface
@@ -129,7 +124,6 @@ enum StandardTextureId_t
 	TEXTURE_MAX_STD_TEXTURES
 };
 
-#ifndef SPU
 
 enum TextureFilterMode_t
 {
@@ -309,6 +303,5 @@ public:
 
 // end class IShaderDynamicAPI
 
-#endif //SPU
 
 #endif // ISHADERDYNAMIC_H

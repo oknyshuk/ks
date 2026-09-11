@@ -7,9 +7,6 @@
 #ifndef DATACACHE_H
 #define DATACACHE_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "datamanager.h"
 #include "utlhash.h"

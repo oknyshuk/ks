@@ -9,9 +9,6 @@
 
 #include "reflect_annotations.h"
 #include "dt_recv.h"
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "player_pickup.h" 
 

@@ -7,12 +7,7 @@
 
 
 #pragma warning( disable: 4018 ) // '==' : signed/unsigned mismatch in rbtree
-#if defined( WIN32 )
-#include <windows.h>
-#include <vadefs.h>
-#else
 #include <iconv.h>
-#endif
 
 #include <wchar.h>
 
@@ -1273,9 +1268,7 @@ wchar_t* CLocalize::GetAsianFrequencySequence( const char * pLanguage )
 }
 
 
-#if defined( GNUC ) || defined( _WIN64 )
 #define _INTSIZEOF(n)   ((sizeof(n) + sizeof(intp) - 1) & ~(sizeof(intp) - 1)) 
-#endif
 
 #define va_argByIndex(ap,t,i)    ( *(t *)(ap + i * _INTSIZEOF(t)) )
 

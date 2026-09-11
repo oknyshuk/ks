@@ -104,11 +104,6 @@ VS_OUTPUT main( const VS_INPUT v )
 	vRefractPos.y = -vProjPos.y; // invert Y
 	vRefractPos = (vRefractPos + vProjPos.w) * 0.5f;
 
-#ifdef _PS3
-	// Account for OpenGL's flipped y coordinate and expanded z range [-1,1] instead of [0,1]
-	vProjPos.y = -vProjPos.y;
-	vProjPos.z = 2.0f * vProjPos.z - vProjPos.w;
-#endif // _PS3
 
 	o.vSetupProjPos = vProjPos;
 

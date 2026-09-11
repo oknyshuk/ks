@@ -11,9 +11,6 @@
 #ifndef UTLSOACONTAINER_H
 #define UTLSOACONTAINER_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 // Suppress GCC warning about SIMD type attributes in templates
 #if defined(__GNUC__) && !defined(__clang__)

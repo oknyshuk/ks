@@ -6,9 +6,6 @@
 //=============================================================================//
 #ifndef CHOREOACTOR_H
 #define CHOREOACTOR_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "tier1/utlvector.h"
 

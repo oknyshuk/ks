@@ -7,9 +7,6 @@
 #ifndef DYNAMICIB_H
 #define DYNAMICIB_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "locald3dtypes.h"
 #include "recording.h"
@@ -24,9 +21,6 @@
 // sim.dietrich@nvidia.com
 /////////////////////////////
 
-#ifdef _WIN32
-#pragma warning (disable:4189)
-#endif
 
 #include "locald3dtypes.h"
 #include "tier1/strtools.h"
@@ -658,9 +652,6 @@ inline int CIndexBuffer::AllocationCount() const
 	return m_IndexCount;
 }
 
-#ifdef _WIN32
-#pragma warning (default:4189)
-#endif
 
 #include "tier0/memdbgoff.h"
 

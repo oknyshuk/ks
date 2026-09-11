@@ -6,9 +6,6 @@
 
 #ifndef __GLOBAL_EVENT_LOG_H
 #define __GLOBAL_EVENT_LOG_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 
 #include "igamesystem.h"

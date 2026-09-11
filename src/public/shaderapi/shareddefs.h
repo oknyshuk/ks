@@ -12,9 +12,6 @@
 #ifndef SHADERAPI_SHAREDDEFS_H
 #define SHADERAPI_SHAREDDEFS_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 
 //-----------------------------------------------------------------------------

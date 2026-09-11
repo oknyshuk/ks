@@ -11,9 +11,6 @@
 #ifndef LOAD_SCREEN_UPDATE_H
 #define LOAD_SCREEN_UPDATE_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "materialsystem/imaterialsystem.h"
 

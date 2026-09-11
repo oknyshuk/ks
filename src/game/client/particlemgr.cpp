@@ -970,8 +970,6 @@ bool CParticleMgr::Init(unsigned long count, IMaterialSystem *pMaterials)
 	// Send true to load the sheets
 	ParseParticleEffects( true );
 
-#ifdef TF_CLIENT_DLL
-#endif
 
 	return true;
 }

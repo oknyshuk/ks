@@ -9,9 +9,6 @@
 #ifndef D3DASYNC_H
 #define D3DASYNC_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 // Set this to 1 to allow d3d calls to be buffered and played back on another thread
 #define SHADERAPI_USE_SMP 1
@@ -29,10 +26,6 @@
 
 #include "tier0/vprof_telemetry.h"
 
-#if ( IS_WINDOWS_PC )
-	#define NO_STEREO_D3D10 1
-	#include "hl2stereo.h"
-#endif
 
 #ifdef NDEBUG
 #define DO_D3D(x) Dx9Device()->x
@@ -162,9 +155,6 @@ private:
 	size_t m_PushBufferFreeSlots;
 #endif
 
-#if ( IS_WINDOWS_PC ) && !NO_STEREO_D3D9
-	nv::stereo::HL2StereoD3D9 *m_pStereoTexUpdater;
-#endif
 
 #if SHADERAPI_BUFFER_D3DCALLS
 	bool m_bBufferingD3DCalls;
@@ -367,43 +357,22 @@ private:
 
 public:
 	D3DDeviceWrapper()
-		#if ( IS_WINDOWS_PC ) && !NO_STEREO_D3D9
-			: m_pStereoTexUpdater( 0 )
-		#endif
 		{ }
 	~D3DDeviceWrapper()
 	{
-		#if ( IS_WINDOWS_PC ) && !NO_STEREO_D3D9
-			delete m_pStereoTexUpdater;
-		#endif
 	}
 	void UpdateStereoTexture( IDirect3DTexture9 *pTex, bool devLost, bool *pStereoActiveThisFrame );
 	
 	bool IsStereoSupported() const
 	{
-		#if ( IS_WINDOWS_PC ) && !NO_STEREO_D3D9
-			// NOTE: This is slow! Can take more than 1 ms!
-			return nv::stereo::IsStereoEnabled();
-		#else
 			return false;
-		#endif
 	}
 
 	bool IsStereoActivated() const 
 	{ 
-		#if ( IS_WINDOWS_PC ) && !NO_STEREO_D3D9
-			return m_pStereoTexUpdater && m_pStereoTexUpdater->IsStereoActive();
-		#else
 			return false;
-		#endif
 	}
 
-#if ( IS_WINDOWS_PC ) && !NO_STEREO_D3D9
-	void SetStereoTextureUpdater( nv::stereo::HL2StereoD3D9 *pStereoTexUpdater )
-	{
-		m_pStereoTexUpdater = pStereoTexUpdater;
-	}
-#endif
 
 #if SHADERAPI_BUFFER_D3DCALLS
 	void ExecuteAllWork( void );

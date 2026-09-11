@@ -7,9 +7,6 @@
 #ifndef _RESOURCEPRECACHER_H
 #define _RESOURCEPRECACHER_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 //-----------------------------------------------------------------------------
 // Resource list

@@ -3500,11 +3500,7 @@ CON_COMMAND( tv_status, "Show GOTV server status." )
 		ConMsg( "--- GOTV[%u] Status ---\n", hltv.GetIndex() );
 		ConMsg( "Online %s, FPS %.1f, Version %i (%s)\n",
 			COM_FormatSeconds( hltv->GetOnlineTime() ), hltv->m_flFPS, build_number(),
-#if defined( _WIN32 )
-			"Win32"
-#else
 			"Linux"
-#endif
 			);
 
 		if ( hltv->IsDemoPlayback() )

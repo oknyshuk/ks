@@ -13,7 +13,6 @@
 #define TEXTCONSOLE_UNIX_H
 
 
-#ifndef _WIN32
 
 
 #include <termios.h>
@@ -53,7 +52,6 @@ private:
 };
 
 
-#endif // _ndef WIN32
 
 
 #endif // !defined

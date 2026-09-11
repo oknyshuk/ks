@@ -7,9 +7,6 @@
 
 #ifndef CS_PLAYER_RESOURCE_H
 #define CS_PLAYER_RESOURCE_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "player_resource.h"
 #include "coordsize.h"   // COORD_INTEGER_BITS, which several props encode with

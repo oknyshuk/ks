@@ -10,9 +10,6 @@
 #ifndef CS_AMMODEF_H
 #define CS_AMMODEF_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "ammodef.h"
 

@@ -8,9 +8,6 @@
 #ifndef IMOVEHELPER_H
 #define IMOVEHELPER_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 
 //-----------------------------------------------------------------------------

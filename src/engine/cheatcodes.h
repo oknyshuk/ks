@@ -9,9 +9,6 @@
 #ifndef CHEATCODES_H
 #define CHEATCODES_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 
 #include "inputsystem/ButtonCode.h"

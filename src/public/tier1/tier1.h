@@ -8,9 +8,6 @@
 #ifndef TIER1_H
 #define TIER1_H
 
-#if defined( _WIN32 )
-#pragma once
-#endif
 
 #include "appframework/iappsystem.h"
 #include "tier1/convar.h"

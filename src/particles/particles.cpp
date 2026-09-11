@@ -2169,26 +2169,14 @@ void CParticleCollection::UpdatePrevControlPoints( float dt )
 
 #if MEASURE_PARTICLE_PERF
 
-#if VPROF_LEVEL > 0
 #define START_OP float flOpStartTime = Plat_FloatTime(); VPROF_ENTER_SCOPE(pOp->GetDefinition()->GetName())
-#else
-#define START_OP float flOpStartTime = Plat_FloatTime();
-#endif
 
-#if VPROF_LEVEL > 0
 #define END_OP  if ( 1 ) {																						\
 	float flETime = Plat_FloatTime() - flOpStartTime;									\
 	IParticleOperatorDefinition *pDef = (IParticleOperatorDefinition *) pOp->m_pDef;	\
 	pDef->RecordExecutionTime( flETime );												\
 } \
 	VPROF_EXIT_SCOPE()
-#else
-#define END_OP  if ( 1 ) {																						\
-	float flETime = Plat_FloatTime() - flOpStartTime;									\
-	IParticleOperatorDefinition *pDef = (IParticleOperatorDefinition *) pOp->m_pDef;	\
-	pDef->RecordExecutionTime( flETime );												\
-}
-#endif
 #else
 #define START_OP
 #define END_OP

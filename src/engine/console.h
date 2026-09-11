@@ -8,9 +8,6 @@
 #ifndef CONSOLE_H
 #define CONSOLE_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 typedef unsigned char byte;
 

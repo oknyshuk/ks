@@ -6,9 +6,6 @@
 
 #ifndef THREADSAFEREFCOUNTEDOBJECT_H
 #define THREADSAFEREFCOUNTEDOBJECT_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 
 // This class can be used for fast access to an object from multiple threads,

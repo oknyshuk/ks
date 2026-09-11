@@ -207,15 +207,9 @@ CON_COMMAND_F( rpt_start, "", FCVAR_DONTRECORD | FCVAR_HIDDEN )
 	RPTClient().CreateListenSocket( rptAddr );
 
 	char pDir[MAX_PATH];
-#ifdef WIN32
-	int nDay, nMonth, nYear;
-	GetCurrentDate( &nDay, &nMonth, &nYear );
-	Q_snprintf( pDir, sizeof(pDir), "rpt/%d_%d_%d", nMonth, nDay, nYear );
-#else
 	time_t now = time(NULL);
 	struct tm *tm = localtime( &now );
 	Q_snprintf( pDir, sizeof(pDir), "rpt/%d_%d_%d", tm->tm_mon, tm->tm_wday, tm->tm_year + 1900 );
-#endif
 	RPTClient().SetRemoteFileDirectory( pDir );
 
 	// Send a command to the server indicating we want to connect to a remote client

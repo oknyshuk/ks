@@ -7,9 +7,6 @@
 
 #ifndef PARTICLES_SIMPLE_H
 #define PARTICLES_SIMPLE_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "particlemgr.h"
 #include "particlesphererenderer.h"

@@ -17,15 +17,6 @@
 #ifndef NVTC_H
 #define NVTC_H
 
-#if defined( _WIN32 )
-#if _MSC_VER >= 1400
-// This assumes that src\public is somewhere on the path
-// ddraw.h doesn't actually live in the system headers in VS2005.
-#include "..\dx9sdk\include\ddraw.h"
-#else
-#include <ddraw.h>
-#endif
-#endif
 
 // RGB encoding types
 #define S3TC_ENCODE_RGB_FULL    		0x0
@@ -40,53 +31,5 @@
 #define _S3TC_ENCODE_ALPHA_MASK			0xff00
 
 
-#if defined( _WIN32 )
-// common encoding types
-//@@@TBD
-
-// error codes
-#define ERROR_ABORTED -1
-
-// Progress Callback for S3TCencode
-typedef BOOL (* LP_S3TC_PROGRESS_CALLBACK)(float fProgress, LPVOID lpUser1, LPVOID lpUser2);
-
-// set alpha reference value for alpha compare encoding
-void S3TCsetAlphaReference(int nRef);
-
-// determine number of bytes needed to compress given source image
-unsigned int S3TCgetEncodeSize(DDSURFACEDESC *lpDesc,	// [in]
-						   unsigned int dwEncodeType 	// [in]
-						   );
-
-// encode (compress) given source image to given destination surface
-void S3TCencode(DDSURFACEDESC *lpSrc,		// [in]
-				PALETTEENTRY *lpPal,		// [in], may be NULL
-				DDSURFACEDESC *lpDest,		// [out]
-				void *lpDestBuf,			// [in]
-				unsigned int dwEncodeType,  // [in]
-				float *weight				// [in]
-				);
-
-int S3TCencodeEx(DDSURFACEDESC *lpSrc,		// [in]
-				PALETTEENTRY *lpPal,		// [in], may be NULL
-				DDSURFACEDESC *lpDest,		// [out]
-				void *lpDestBuf,			// [in]
-				unsigned int dwEncodeType,  // [in]
-				float *weight,				// [in]
-				LP_S3TC_PROGRESS_CALLBACK lpS3TCProgressProc, // [in], may be NULL
-				LPVOID lpArg1,				// in 
-				LPVOID lpArg2				// in 
-				);
-
-// determine number of bytes needed do decompress given compressed image
-unsigned int S3TCgetDecodeSize(DDSURFACEDESC *lpDesc);
-
-// decode (decompress) to ARGB8888
-void S3TCdecode(DDSURFACEDESC *lpSrc,		// [in]
-				DDSURFACEDESC *lpDest,		// [out]
-				void *lpDestBuf				// [in]
-				);
-
-#endif // _WIN32
 
 #endif // NVTC_H

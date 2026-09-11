@@ -1091,7 +1091,6 @@ void C_HLTVCamera::SetPrimaryTarget( int nEntity )
 
 	m_iTarget1 = nEntity;
 
-#if defined ( CSTRIKE15 )
 	// BUG: This uses the values (mode, target, etc) of the local player, not
 	// the hltv camera... These happen to match so it works, but could be the source
 	// of bugs... Could turn the observer lerp code into it's own class and have hltv/replay/csplayer 
@@ -1102,7 +1101,6 @@ void C_HLTVCamera::SetPrimaryTarget( int nEntity )
 		pLocalPlayer->StartObserverInterpolation( m_aCamAngle );
 	}
 
-#endif
 
 	if ( GetMode() == OBS_MODE_ROAMING )
 	{

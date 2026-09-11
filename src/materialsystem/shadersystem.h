@@ -21,9 +21,6 @@
 #ifndef SHADERSYSTEM_H
 #define SHADERSYSTEM_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "materialsystem/ishadersystem.h"
 #include "shaderlib/BaseShader.h"

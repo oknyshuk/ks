@@ -9,9 +9,6 @@
 #ifndef SV_SERVERPLUGIN_H
 #define SV_SERVERPLUGIN_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "eiface.h"
 #include "engine/iserverplugin.h"

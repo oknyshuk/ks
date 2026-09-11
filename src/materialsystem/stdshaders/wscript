@@ -152,31 +152,6 @@ def build(bld):
         "fillrate.cpp",
     ]
 
-    if bld.env.DEST_OS == "win32":
-        source += [
-            "Blob_dx9.cpp",
-            "Blob_helper.cpp",
-            "debugmorphaccumulator_dx9.cpp",
-            "IceSurface_dx9.cpp",
-            "IceSurface_helper.cpp",
-            "lightshafts.cpp",
-            "lightshafts_helper.cpp",
-            "morphaccumulate_dx9.cpp",
-            "morphweight_dx9.cpp",
-            "multiblend.cpp",
-            "multiblend_dx9_helper.cpp",
-            "parallaxtest.cpp",
-            "projected.cpp",
-            "projected_dx9_helper.cpp",
-            "sfm_blurfilterx.cpp",
-            "sfm_blurfiltery.cpp",
-            "sfm_shape.cpp",
-            "sfm_downsample.cpp",
-            "sfm_integercombine.cpp",
-            "sfm_ambientocclusion.cpp",
-            "sfm_ao_blur.cpp",
-        ]
-
     bld.objects(
         source=source,
         target="stdshader_dx9",

@@ -7,9 +7,6 @@
 #ifndef RENDERUTILS_H
 #define RENDERUTILS_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "tier2/tier2.h"
 #include "color.h"

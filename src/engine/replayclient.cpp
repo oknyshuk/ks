@@ -228,11 +228,7 @@ bool CReplayClient::ExecuteStringCommand( const char *pCommandString )
 		ClientPrintf("IP %s:%i, Online %s, Version %i (%s)\n",
 			net_local_adr.ToString( true ), m_pReplay->GetUDPPort(),
 			COM_FormatSeconds( m_pReplay->GetOnlineTime() ), build_number(),
-#ifdef _WIN32
-			"Win32" );
-#else
 			"Linux" );
-#endif
 
 		ClientPrintf("Game Time %s, Mod \"%s\", Map \"%s\", Players %i\n", COM_FormatSeconds( m_pReplay->GetTime() ),
 			gd, m_pReplay->GetMapName(), m_pReplay->GetNumPlayers() );

@@ -11,9 +11,6 @@
 
 #if !defined( FXSTATICLINE_H )
 #define FXSTATICLINE_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "mathlib/vector.h"
 

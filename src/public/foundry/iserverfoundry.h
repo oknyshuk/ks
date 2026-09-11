@@ -6,9 +6,6 @@
 
 #ifndef ISERVERFOUNDRY_H
 #define ISERVERFOUNDRY_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "interface.h"
 

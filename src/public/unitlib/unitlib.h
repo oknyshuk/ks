@@ -9,9 +9,6 @@
 #ifndef UNITLIB_H
 #define UNITLIB_H
 
-#ifdef _WIN32
-#pragma once
-#endif
  
 #include "tier0/platform.h"
 

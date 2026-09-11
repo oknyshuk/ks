@@ -5,10 +5,6 @@
 #include <sqstdio.h> 
 #include <sqstdaux.h> 
 
-#ifdef _MSC_VER
-#pragma comment (lib ,"squirrel.lib")
-#pragma comment (lib ,"sqstdlib.lib")
-#endif
 
 #ifdef SQUNICODE 
 #define scvprintf vwprintf 

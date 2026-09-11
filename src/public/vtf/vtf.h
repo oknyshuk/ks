@@ -8,9 +8,6 @@
 #ifndef VTF_H
 #define VTF_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "bitmap/imageformat.h"
 #include "tier0/platform.h"

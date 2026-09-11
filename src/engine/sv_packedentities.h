@@ -7,9 +7,6 @@
 
 #ifndef SV_PACKEDENTITIES_H
 #define SV_PACKEDENTITIES_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 
 #include "server.h"

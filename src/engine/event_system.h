@@ -12,9 +12,6 @@
 //=============================================================================//
 #if !defined( EVENT_SYSTEM_H )
 #define EVENT_SYSTEM_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "event_flags.h"
 #include "common.h"

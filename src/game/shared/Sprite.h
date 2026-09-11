@@ -10,9 +10,6 @@
 
 #include "reflect_annotations.h"
 #include "dt_recv.h"
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "predictable_entity.h"
 #include "baseentity_shared.h"

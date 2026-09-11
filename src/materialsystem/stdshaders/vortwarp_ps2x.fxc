@@ -53,11 +53,6 @@ sampler NormalizeSampler		: register( s5 );
 sampler SelfIllumMapSampler		: register( s6 );
 sampler FlashlightSampler		: register( s7 );
 
-#if defined( _PS3 )
-// Causes the Cg compiler to automatically produce _bx2 modifier on the texture load instead of producing a MAD to range expand the vector, saving one instruction.
-#pragma texsign BumpmapSampler
-#pragma texformat BumpmapSampler RGBA8
-#endif
 
 struct PS_INPUT
 {

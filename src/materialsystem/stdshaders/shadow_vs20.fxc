@@ -29,10 +29,8 @@ struct VS_OUTPUT
 	float4 worldPos_projPosZ		    : TEXCOORD0;
 	float4 vFalloffParams			: TEXCOORD1;
 	float3 texCoord0_shadowAlpha	: TEXCOORD2;
-#if !defined( _X360 )
 	float4 texCoord1_2				: TEXCOORD3;
 	float4 texCoord3_4				: TEXCOORD4;
-#endif
 };
 
 VS_OUTPUT main( const VS_INPUT v )
@@ -47,11 +45,6 @@ VS_OUTPUT main( const VS_INPUT v )
 	o.projPos = vProjPos;
 
 	
-#ifdef _PS3
-	// Account for OpenGL's flipped y coordinate and expanded z range [-1,1] instead of [0,1]
-	o.projPos.y = -o.projPos.y;
-	o.projPos.z = 2.0f * o.projPos.z - o.projPos.w;
-#endif // _PS3
 	
 #if !defined( _X360 ) && !defined( SHADER_MODEL_VS_3_0 )
 	o.fog = CalcFixedFunctionFog( worldPos, g_FogType );
@@ -65,14 +58,12 @@ VS_OUTPUT main( const VS_INPUT v )
 	texCoord.y = dot( v.vTexCoord0, cBaseTexCoordTransform[1] );
 
 	o.texCoord0_shadowAlpha.xy = texCoord;
-#if !defined( _X360 )
 	{
 		o.texCoord1_2.xy = texCoord + cTextureJitter[0].xy;
 		o.texCoord1_2.wz = texCoord - cTextureJitter[0].xy;
 		o.texCoord3_4.xy = texCoord + cTextureJitter[1].xy;
 		o.texCoord3_4.wz = texCoord - cTextureJitter[1].xy;
 	}
-#endif
 
 	o.texCoord0_shadowAlpha.z = v.vColor.a;
 	return o;
@@ -96,11 +87,7 @@ struct VS_INPUT
 
 struct VS_OUTPUT
 {
-#ifdef _PS3
     float4 projPos				: POSITION;	
-#else
-    float4 projPos				: POSITION;	
-#endif
 	float4 vTexCoordBiasScale	: TEXCOORD0;
 	float4 vProjToTex0			: TEXCOORD1;
 	float4 vProjToTex1			: TEXCOORD2;

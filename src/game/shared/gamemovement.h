@@ -8,9 +8,6 @@
 //=============================================================================//
 #if !defined( GAMEMOVEMENT_H )
 #define GAMEMOVEMENT_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "igamemovement.h"
 #include "cmodel.h"
@@ -197,9 +194,6 @@ protected:
 	// If pmove.origin is in a solid position,
 	// try nudging slightly on all axis to
 	// allow for the cut precision of the net coordinates
-#ifdef PORTAL
-	virtual 
-#endif
 	int				CheckStuck( void );
 	
 	// Check if the point is in water.
@@ -291,11 +285,6 @@ protected:
 	float			m_flStuckCheckTime[MAX_PLAYERS+1][2]; // Last time we did a full test
 
 	// special function for teleport-with-duck for episodic
-#ifdef HL2_EPISODIC
-public:
-	void			ForceDuck( void );
-
-#endif
 	ITraceListData	*m_pTraceListData;
 
 	int				m_nTraceCount;

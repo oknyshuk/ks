@@ -40,11 +40,6 @@ VS_OUTPUT main( const VS_INPUT v )
 		
 	o.vProjPos = mul( float4( worldPos, 1 ), cViewProj );
 	
-#ifdef _PS3
-	// Account for OpenGL's flipped y coordinate and expanded z range [-1,1] instead of [0,1]
-	o.vProjPos.y = -o.vProjPos.y;
-	o.vProjPos.z = 2.0f * o.vProjPos.z - o.vProjPos.w;
-#endif // _PS3
 
 #if !defined( _X360 ) && !defined( SHADER_MODEL_VS_3_0 )
 	o.fog = CalcFixedFunctionFog( worldPos, g_FogType );

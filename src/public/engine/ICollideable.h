@@ -7,9 +7,6 @@
 
 #ifndef ENGINE_ICOLLIDEABLE_H
 #define ENGINE_ICOLLIDEABLE_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 
 enum SolidType_t;

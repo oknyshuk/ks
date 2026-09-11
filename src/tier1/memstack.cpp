@@ -4,22 +4,12 @@
 //
 //=============================================================================//
 
-#if defined( _WIN32 )
-#define WIN_32_LEAN_AND_MEAN
-#include <windows.h>
-#define VA_COMMIT_FLAGS MEM_COMMIT
-#define VA_RESERVE_FLAGS MEM_RESERVE
-#endif
 
 #include "tier0/dbg.h"
 #include "memstack.h"
 #include "utlmap.h"
 #include "tier0/memdbgon.h"
 
-#ifdef _WIN32
-#pragma warning(disable:4073)
-#pragma init_seg(lib)
-#endif
 
 static volatile bool bSpewAllocations = false; // TODO: Register CMemoryStacks with g_pMemAlloc, so it can spew a summary
 
@@ -349,22 +339,7 @@ size_t CMemoryStack::GetHighestBytes() const
 void CMemoryStack::PrintContents() const
 {
 	size_t highest = m_pHighestAllocLimit - m_pBase;
-#ifdef PLATFORM_WINDOWS_PC
-	MEMORY_BASIC_INFORMATION info;
-	char moduleName[260];
-	strcpy( moduleName, "unknown module" );
-	// Because this code is statically linked into each DLL, this function and the PrintStatus
-	// function will be in the DLL that constructed the CMemoryStack object. We can then
-	// retrieve the DLL name to give slightly more verbose memory dumps.
-	if ( VirtualQuery( &PrintStatus, &info, sizeof( info ) ) == sizeof( info ) )
-	{
-		GetModuleFileName( (HMODULE) info.AllocationBase, moduleName, _countof( moduleName ) );
-		moduleName[ _countof( moduleName )-1 ] = 0;
-	}
-	Msg( "CMemoryStack %s in %s\n", m_pszAllocOwner, moduleName );
-#else
 	Msg( "CMemoryStack %s\n", m_pszAllocOwner );
-#endif
 	Msg( "    Total used memory:      %d KB\n", GetUsed() / 1024 );
 	Msg( "    Total committed memory: %d KB\n", GetSize() / 1024 );
 	Msg( "    Max committed memory: %u KB out of %d KB\n", (unsigned)highest / 1024, GetMaxSize() / 1024 );

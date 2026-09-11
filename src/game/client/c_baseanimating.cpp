@@ -60,10 +60,6 @@
 #include "replay_ragdoll.h"
 #include "physics_softbody.h"
 
-#if defined ( PORTAL2 )
-#include "c_portal_player.h"
-#include "portal2/portal_grabcontroller_shared.h"
-#endif
 
 #include "clientalphaproperty.h"
 
@@ -2527,12 +2523,6 @@ void C_BaseAnimating::CalculateIKLocks( float currentTime )
 		}
 	}
 
-#if defined( HL2_CLIENT_DLL )
-	if (minHeight < FLT_MAX)
-	{
-		input->AddIKGroundContactInfo( entindex(), minHeight, maxHeight );
-	}
-#endif
 
 	CBaseEntity::PopEnableAbsRecomputations();
 	::partition->SuppressLists( curSuppressed, true );
@@ -3063,11 +3053,9 @@ bool C_BaseAnimating::SetupBones( matrix3x4a_t *pBoneToWorldOut, int nMaxBones, 
 // NOTE: For model scaling, we need to opt out of IK because it will mark the bones as already being calculated
 // [msmith]: What game is it that want's to do model scaling and needs to opt out of IK?  It seems as if opting out of IK should be the exception and not the rule here.
 // I suggest we change the #ifdef such that only the games that need to kill IK get used here... rather than ORing in all other games that use this engine in the future.
-#if defined( PORTAL2 ) || defined( INFESTED ) || defined( CSTRIKE15 )
 			// only allocate an ik block if the npc can use it
 			if ( !m_pIk && hdr->numikchains() > 0 && !(m_EntClientFlags & ENTCLIENTFLAG_DONTUSEIK) )
 				m_pIk = new CIKContext;
-#endif // PORTAL2
 
 			BoneVector						pos[MAXSTUDIOBONES];
 			BoneQuaternionAligned			q[MAXSTUDIOBONES];
@@ -3478,15 +3466,6 @@ int C_BaseAnimating::DrawModel( int flags, const RenderableInstance_t &instance 
 		}
 	}
 
-#if defined ( PORTAL2 )
-	if ( IsRenderingWithViewModels() )
-	{
-		if ( !UpdateBlending( flags, instance ) )
-		{
-			return 0;
-		}
-	}
-#endif
 
 	int drawn = 0;
 
@@ -3653,10 +3632,6 @@ IClientModelRenderable*	C_BaseAnimating::GetClientModelRenderable()
 	if ( IsFollowingEntity() && !FindFollowedEntity() )
 		return NULL;
 
-#ifdef PORTAL
-	if ( GetRenderClipPlane() != NULL )
-		return NULL;
-#endif
 
 	return this; 
 }
@@ -3912,19 +3887,6 @@ void C_BaseAnimating::DoAnimationEvents( CStudioHdr *pStudioHdr )
 	if ( bIsInvisible && !clienttools->IsInRecordingMode() )
 		return;
 
-#if !defined( CSTRIKE15 )
-	// We already handle muzzle flash events in CSTRIKE15.
-	// Also this code has a bug in that it always uses attachment 1 instead of by name.
-
-	// add in muzzleflash effect
-	if ( ShouldMuzzleFlash() )
-	{
-		DisableMuzzleFlash();
-		
-		ProcessMuzzleFlashEvent();
-	}
-
-#endif
 
 	// If we're invisible, don't process animation events.
 	if ( bIsInvisible )
@@ -5475,7 +5437,6 @@ bool C_BaseAnimating::InitAsClientRagdoll( const matrix3x4_t *pDeltaBones0, cons
 	return InitAsClientRagdoll( pDeltaBones0, pDeltaBones1, pCurrentBonePosition, boneDt, m_vecForce, bleedOut );
 }
 
-#if defined ( CSTRIKE15 )
 
 // [msmith] We want shadows for the following entity classes.
 //          We could probably just get rid of this and turn on rtt shadows for everything that would use them.
@@ -5489,19 +5450,6 @@ static const char* g_pszForceRTTClassnames[] =
 	"class C_CHostage",
 };
 
-#else
-
-// This just looks like portal 2 stuff
-static const char* g_pszForceRTTClassnames[] =
-{
-	"prop_weighted_cube",
-	"class C_NPC_Portal_FloorTurret",
-	"class C_NPC_Personality_Core",
-	"class C_PhysicsProp",
-	//"prop_box_monster",
-};
-
-#endif
 
 void C_BaseAnimating::CheckIfEntityShouldForceRTTShadows( void )
 {
@@ -5689,9 +5637,6 @@ void C_BaseAnimating::UpdateClientSideAnimation()
 		Assert( m_ClientSideAnimationListHandle != INVALID_CLIENTSIDEANIMATION_LIST_HANDLE );
 		if ( GetSequence() != -1 )
 		{
-#ifdef DOTA_DLL
-			if ( IsVisibleToAnyPlayer() )
-#endif
 			{
 				// latch old values
 				OnLatchInterpolatedVariables( LATCH_ANIMATION_VAR );

@@ -9,9 +9,6 @@
 #define WORLD_H
 
 #include "reflect_annotations.h"
-#ifdef _WIN32
-#pragma once
-#endif
 
 enum
 {
@@ -70,9 +67,6 @@ public:
 
 	int GetTimeOfDay()	{ return m_iTimeOfDay; }
 
-#ifdef PORTAL2
-	int GetMaxBlobCount() const { return m_nMaxBlobCount; }
-#endif
 
 private:
 	DECLARE_DATADESC();
@@ -94,9 +88,6 @@ private:
 	CNetworkVar( int, m_iTimeOfDay );
 	[[= ks::reflect::Key{ .name = "gametitle" } ]] bool m_bDisplayTitle;
 
-#ifdef PORTAL2
-	CNetworkVar( int, m_nMaxBlobCount );
-#endif
 };
 
 

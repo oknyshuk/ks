@@ -8,9 +8,6 @@
 
 #ifndef GAMEEVENTTRANSMITTER_H
 #define GAMEEVENTTRANSMITTER_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "igameevents.h"
 #include "tier1/netadr.h"

@@ -11,9 +11,6 @@
 
 #ifndef MODELRENDERSYSTEM_H
 #define MODELRENDERSYSTEM_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "clientleafsystem.h"
 

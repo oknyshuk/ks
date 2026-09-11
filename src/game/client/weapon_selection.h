@@ -6,9 +6,6 @@
 //=============================================================================//
 #if !defined( WEAPON_SELECTION_H )
 #define WEAPON_SELECTION_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "inputsystem/ButtonCode.h"
 #include "hudelement.h"

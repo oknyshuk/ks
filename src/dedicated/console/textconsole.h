@@ -10,9 +10,6 @@
 #define TEXTCONSOLE_H
 #pragma once
 
-#ifdef _WIN32
-#include <windows.h>
-#endif // _WIN32
 
 
 #define MAX_CONSOLE_TEXTLEN 256

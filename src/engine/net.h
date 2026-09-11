@@ -9,9 +9,6 @@
 // For banning IP addresses (or allowing private games)
 #ifndef NET_H
 #define NET_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "common.h"
 #include "bitbuf.h"

@@ -6,9 +6,6 @@
 
 #ifndef ISOUNDSYSTEM_H
 #define ISOUNDSYSTEM_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "appframework/iappsystem.h"
 

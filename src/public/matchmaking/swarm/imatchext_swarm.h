@@ -8,9 +8,6 @@
 #ifndef IMATCHEXT_SWARM_H
 #define IMATCHEXT_SWARM_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 
 //

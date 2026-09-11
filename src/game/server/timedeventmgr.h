@@ -6,9 +6,6 @@
 
 #ifndef TIMEDEVENTMGR_H
 #define TIMEDEVENTMGR_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 
 #include "utlpriorityqueue.h"

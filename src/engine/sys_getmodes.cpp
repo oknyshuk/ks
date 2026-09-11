@@ -4,16 +4,10 @@
 //
 //===========================================================================//
 
-#if defined( USE_SDL )
 #undef PROTECTED_THINGS_ENABLE
 #include <SDL3/SDL.h>
-#endif
 
-#if defined( _WIN32 )
-#include "winlite.h"
-#else
 typedef void *HDC;
-#endif
 
 #include "appframework/ilaunchermgr.h"
 #include "appframework/sdlwindow.h"
@@ -175,10 +169,8 @@ protected:
 	// Renderable surface information
 	int					m_nModeWidth;
 	int					m_nModeHeight;
-#if defined( USE_SDL )
 	int					m_nRenderWidth;
 	int					m_nRenderHeight;
-#endif
  	bool				m_bWindowed;
 	bool				m_bNoWindowBorder;
 	bool				m_bSetModeOnce;
@@ -220,7 +212,6 @@ CVideoMode_Common::CVideoMode_Common( void )
     int desktopWidth = 1920;
     int desktopHeight = 1080;
 
-#if defined( USE_SDL )
     if ( SDL_WasInit( SDL_INIT_VIDEO ) )
     {
         SDL_DisplayID primaryDisplay = SDL_GetPrimaryDisplay();
@@ -231,7 +222,6 @@ CVideoMode_Common::CVideoMode_Common( void )
             desktopHeight = mode->h;
         }
     }
-#endif
 
     DefaultVideoMode().width  = desktopWidth;
     DefaultVideoMode().height = desktopHeight;
@@ -316,7 +306,6 @@ int CVideoMode_Common::GetModeHeight( void ) const
 //-----------------------------------------------------------------------------
 bool CVideoMode_Common::SyncToActualWindowSize()
 {
-#if defined( USE_SDL )
     if ( !g_pLauncherMgr )
         return false;
 
@@ -342,9 +331,6 @@ bool CVideoMode_Common::SyncToActualWindowSize()
     DefaultVideoMode().height = newHeight;
 
     return true;
-#else
-    return false;
-#endif
 }
 
 
@@ -446,13 +432,11 @@ bool CVideoMode_Common::Init( )
 //-----------------------------------------------------------------------------
 int CVideoMode_Common::FindVideoMode( int nDesiredWidth, int nDesiredHeight, bool bWindowed )
 {
-#if defined( USE_SDL )
 
 	// If we want to scale the 3D portion of the game and leave the UI at the same res, then
 	//	re-enable this code. Not that on retina displays the UI will be super small and that
 	//	should probably be fixed.
 
-#endif // USE_SDL
 
     // Check the default window size..
     if ( ( nDesiredWidth == DefaultVideoMode().width) && (nDesiredHeight == DefaultVideoMode().height) )
@@ -648,11 +632,7 @@ bool CVideoMode_Common::SetupStartupGraphic()
 	}
 
 	buf.Clear();
-#if defined( PORTAL2 )
-	const char *pTitleName = "materials/vgui/portal2logo.vtf";
-#else
 	const char *pTitleName = "materials/console/logo.vtf";
-#endif
 		
 	m_pTitleTexture = LoadVTF( buf, pTitleName );
 	if ( !m_pTitleTexture )
@@ -738,22 +718,6 @@ void CVideoMode_Common::DrawStartupGraphic()
     IMaterial *pLoadingMaterial = g_pMaterialSystem->CreateMaterial( "__loading", pVMTKeyValues );
 
 // Don't draw the title text for CSS15
-#if !defined( CSTRIKE15 )
-
-	pVMTKeyValues = new KeyValues( "UnlitGeneric" );
-#if defined( PORTAL2 )
-	pVMTKeyValues->SetString( "$basetexture", "vgui/portal2logo.vtf" );
-#else
-	pVMTKeyValues->SetString( "$basetexture", "console/logo.vtf" );
-#endif // defined( PORTAL2 )
-	pVMTKeyValues->SetInt( "$translucent", 1 );
-	pVMTKeyValues->SetInt( "$ignorez", 1 );
-	pVMTKeyValues->SetInt( "$nofog", 1 );
-	pVMTKeyValues->SetInt( "$no_fullbright", 1 );
-	pVMTKeyValues->SetInt( "$nocull", 1 );
-	IMaterial *pTitleMaterial = g_pMaterialSystem->CreateMaterial( "__title", pVMTKeyValues );
-
-#endif // CSTRIKE15
 
     int w = GetModeWidth();
     int h = GetModeHeight();
@@ -824,7 +788,6 @@ void CVideoMode_Common::DrawStartupGraphic()
 		
 		float depth = 0.5f;
 
-#if defined( CSTRIKE15 )
 		// Apply a custom scaling that mirrors the way we draw the Scaleform background texture
 		Assert( tw == th );
 
@@ -845,12 +808,6 @@ void CVideoMode_Common::DrawStartupGraphic()
 		int halfTW = scaledTW / 2;
 
 		DrawScreenSpaceRectangle( pMaterial, halfW - halfTW, halfH - halfTH, scaledTW, scaledTH, 0, 0, tw-1, th-1, tw, th, NULL,1,1,depth );
-#else
-		
-		DrawScreenSpaceRectangle( pMaterial, 0, 0, w, h, 0, 0, tw-1, th-1, tw, th, NULL,1,1,depth );
-//		DrawScreenSpaceRectangle( pLoadingMaterial, w-lw, h-lh, lw, lh, 0, 0, lw-1, lh-1, lw, lh, NULL,1,1,depth );
-
-#endif // CSTRIKE15
 
 		g_pMaterialSystem->SwapBuffers();
 	}
@@ -873,52 +830,18 @@ void CVideoMode_Common::DrawStartupGraphic()
 //-----------------------------------------------------------------------------
 void CVideoMode_Common::BlitGraphicToHDCWithAlpha(HDC hdc, byte *rgba, int imageWidth, int imageHeight, int x0, int y0, int x1, int y1)
 {
-#ifdef WIN32
-
-    int x = x0;
-    int y = y0;
-    int wide = x1 - x0;
-    int tall = y1 - y0;
-
-    Assert(imageWidth == wide && imageHeight == tall);
-
-    int texwby4 = imageWidth << 2;
-
-    for ( int v = 0; v < tall; v++ )
-    {
-        int *src = (int *)(rgba + (v * texwby4));
-        int xaccum = 0;
-
-        for ( int u = 0; u < wide; u++ )
-        {
-            byte *xsrc = (byte *)(src + xaccum);
-            if (xsrc[3])
-            {
-                ::SetPixel(hdc, x + u, y + v, RGB(xsrc[0], xsrc[1], xsrc[2]));
-            }
-            xaccum += 1;
-        }
-    }
-#else
     Assert( !"Impl me" );
-#endif
 }
 
 void CVideoMode_Common::InvalidateWindow()
 {
     if ( CommandLine()->FindParm( "-noshaderapi" ) )
     {
-#if USE_SDL
         SDL_Event fake;
         memset(&fake, '\0', sizeof (SDL_Event));
         fake.type = SDL_EVENT_WINDOW_EXPOSED;
         fake.window.windowID = SDL_GetWindowID((SDL_Window *) game->GetMainWindow());
         SDL_PushEvent(&fake);
-#elif defined( WIN32 ) 
-        InvalidateRect( (HWND)game->GetMainWindow(), NULL, FALSE );
-#else
-#error
-#endif
     }
 }
 
@@ -930,61 +853,10 @@ void CVideoMode_Common::DrawNullBackground( void *hHDC, int w, int h )
 	// Show a message if running without renderer..
 	if ( CommandLine()->FindParm( "-noshaderapi" ) )
 	{
-#ifdef WIN32
-		HFONT fnt = CreateFontA( -12, 
-		 0,
-		 0,
-		 0,
-		 FW_NORMAL,
-		 FALSE,
-		 FALSE,
-		 FALSE,
-		 ANSI_CHARSET,
-		 OUT_TT_PRECIS,
-		 CLIP_DEFAULT_PRECIS,
-		 ANTIALIASED_QUALITY,
-		 DEFAULT_PITCH,
-		 "Arial" );
-
-		HFONT oldFont = (HFONT)SelectObject( hdc, fnt );
-		int oldBkMode = SetBkMode( hdc, TRANSPARENT );
-		COLORREF oldFgColor = SetTextColor( hdc, RGB( 255, 255, 255 ) );
-
-		HBRUSH br = CreateSolidBrush( RGB( 0, 0, 0  ) );
-		HBRUSH oldBr = (HBRUSH)SelectObject( hdc, br );
-		Rectangle( hdc, 0, 0, w, h );
-		
-		RECT rc;
-		rc.left = 0;
-		rc.top = 0;
-		rc.right = w;
-		rc.bottom = h;
-
-		DrawText( hdc, "Running with -noshaderapi", -1, &rc, DT_NOPREFIX | DT_VCENTER | DT_CENTER | DT_SINGLELINE  );
-
-		rc.top = rc.bottom - 30;
-
-		if ( host_state.worldmodel != NULL )
-		{
-			rc.left += 10;
-			DrawText( hdc, modelloader->GetName( host_state.worldmodel ), -1, &rc, DT_NOPREFIX | DT_VCENTER | DT_SINGLELINE  );
-		}
-
-		SetTextColor( hdc, oldFgColor );
-
-		SelectObject( hdc, oldBr );
-		SetBkMode( hdc, oldBkMode );
-		SelectObject( hdc, oldFont );
-
-		DeleteObject( br );
-		DeleteObject( fnt );
-#else
 		printf ( "%s\n",  modelloader->GetName( host_state.worldmodel ) );
-#endif
 	}
 }
 
-#if !defined( _WIN32 )
 
 typedef unsigned char BYTE;
 
@@ -1030,139 +902,13 @@ typedef struct tagRGBQUAD {
 
 typedef GUID UUID;
 
-#endif //WIN32
 //-----------------------------------------------------------------------------
 // Purpose: Blits an image to the loading window hdc
 //-----------------------------------------------------------------------------
 void CVideoMode_Common::BlitGraphicToHDC(HDC hdc, byte *rgba, int imageWidth, int imageHeight, int x0, int y0, int x1, int y1)
 {
 
-#ifdef WIN32
-    int x = x0;
-    int y = y0;
-    int wide = x1 - x0;
-    int tall = y1 - y0;
-
-    // Needs to be a multiple of 4
-    int dibwide = ( wide + 3 ) & ~3;
-
-    Assert(rgba);
-    int texwby4 = imageWidth << 2;
-
-    double st = Plat_FloatTime();
-
-    void *destBits = NULL;
-
-    HBITMAP bm;
-    BITMAPINFO bmi;
-    Q_memset( &bmi, 0, sizeof( bmi ) );
-
-    BITMAPINFOHEADER *hdr = &bmi.bmiHeader;
-
-    hdr->biSize = sizeof( *hdr );
-    hdr->biWidth = dibwide;
-    hdr->biHeight = -tall;  // top down bitmap
-    hdr->biBitCount = 24;
-    hdr->biPlanes = 1;
-    hdr->biCompression = BI_RGB;
-    hdr->biSizeImage = dibwide * tall * 3;
-    hdr->biXPelsPerMeter = 3780;
-    hdr->biYPelsPerMeter = 3780;
-
-    // Create a "source" DC
-    HDC tempDC = CreateCompatibleDC( hdc );
-
-    // Create the dibsection bitmap
-    bm = CreateDIBSection
-    (
-        tempDC,                     // handle to DC
-        &bmi,                       // bitmap data
-        DIB_RGB_COLORS,             // data type indicator
-        &destBits,                  // bit values
-        NULL,                       // handle to file mapping object
-        0                           // offset to bitmap bit values
-    );
-    
-    // Select it into the source DC
-    HBITMAP oldBitmap = (HBITMAP)SelectObject( tempDC, bm );
-
-    // Setup for bilinaer filtering. If we don't do this filter here, there will be a big
-    // annoying pop when it switches to the vguimatsurface version of the background.
-    // We leave room for 14 bits of integer precision, so the image can be up to 16k x 16k.
-    const int BILINEAR_FIX_SHIFT = 17;
-    const int BILINEAR_FIX_MUL = (1 << BILINEAR_FIX_SHIFT);
-
-    #define FIXED_BLEND( a, b, out, frac ) \
-        out[0] = (a[0]*frac + b[0]*(BILINEAR_FIX_MUL-frac)) >> BILINEAR_FIX_SHIFT; \
-        out[1] = (a[1]*frac + b[1]*(BILINEAR_FIX_MUL-frac)) >> BILINEAR_FIX_SHIFT; \
-        out[2] = (a[2]*frac + b[2]*(BILINEAR_FIX_MUL-frac)) >> BILINEAR_FIX_SHIFT;
-
-    float eps = 0.001f;
-    float uMax = imageWidth - 1 - eps;
-    float vMax = imageHeight - 1 - eps;
-
-    int fixedBilinearV = 0;
-    int bilinearUInc = (int)( (uMax / (dibwide-1)) * BILINEAR_FIX_MUL );
-    int bilinearVInc = (int)( (vMax / (tall-1)) * BILINEAR_FIX_MUL );
-
-    for ( int v = 0; v < tall; v++ )
-    {
-        int iBilinearV = fixedBilinearV >> BILINEAR_FIX_SHIFT;
-        int fixedFractionV = fixedBilinearV & (BILINEAR_FIX_MUL-1);
-        fixedBilinearV += bilinearVInc;
-
-        int fixedBilinearU = 0;
-        byte *dest = (byte *)destBits + ( ( y + v ) * dibwide + x ) * 3;
-
-        for ( int u = 0; u < dibwide; u++, dest+=3 )
-        {
-            int iBilinearU = fixedBilinearU >> BILINEAR_FIX_SHIFT;
-            int fixedFractionU = fixedBilinearU & (BILINEAR_FIX_MUL-1);
-            fixedBilinearU += bilinearUInc;
-        
-            Assert( iBilinearU >= 0 && iBilinearU+1 < imageWidth );
-            Assert( iBilinearV >= 0 && iBilinearV+1 < imageHeight );
-
-            byte *srcTopLine    = rgba + iBilinearV * texwby4;
-            byte *srcBottomLine = rgba + (iBilinearV+1) * texwby4;
-
-            byte *xsrc[4] = {
-                srcTopLine + (iBilinearU+0)*4,    srcTopLine + (iBilinearU+1)*4,
-                srcBottomLine + (iBilinearU+0)*4, srcBottomLine + (iBilinearU+1)*4  };
-
-            int topColor[3], bottomColor[3], finalColor[3];
-            FIXED_BLEND( xsrc[1], xsrc[0], topColor, fixedFractionU );
-            FIXED_BLEND( xsrc[3], xsrc[2], bottomColor, fixedFractionU );
-            FIXED_BLEND( bottomColor, topColor, finalColor, fixedFractionV );
-
-            // Windows wants the colors in reverse order.
-            dest[0] = finalColor[2];
-            dest[1] = finalColor[1];
-            dest[2] = finalColor[0];
-        }
-    }
-    
-    // Now do the Blt
-    BitBlt( hdc, 0, 0, dibwide, tall, tempDC, 0, 0, SRCCOPY );
-
-    // This only draws if running -noshaderapi
-    DrawNullBackground( hdc, dibwide, tall );
-
-    // Restore the old Bitmap
-    SelectObject( tempDC, oldBitmap );
-
-    // Destroy the temporary DC
-    DeleteDC( tempDC );
-
-    // Destroy the DIBSection bitmap
-    DeleteObject( bm );
-
-    double elapsed = Plat_FloatTime() - st;
-
-    COM_TimestampedLog( "BlitGraphicToHDC: new ver took %.4f", elapsed );
-#else
     Assert( !"Impl me" );
-#endif
 }
 
 //-----------------------------------------------------------------------------
@@ -1175,13 +921,6 @@ void CVideoMode_Common::UpdateWindowPosition( void )
     // Get the window from the game ( right place for it? )
     game->GetWindowRect( &x, &y, &w, &h );
 
-#ifdef WIN32
-    RECT window_rect;
-    window_rect.left = x;
-    window_rect.right = x + w;
-    window_rect.top = y;
-    window_rect.bottom = y + h;
-#endif
     // NOTE: We need to feed this back into the video mode stuff
     // esp. in Resizing window mode.
 }
@@ -1232,59 +971,6 @@ void CVideoMode_Common::AdjustWindow( int nWidth, int nHeight, int nBPP, bool bW
     WindowRect.right    = nWidth;
     WindowRect.bottom   = nHeight;
 
-#if defined( WIN32 ) && !defined( USE_SDL )
-	// Get window style
-    DWORD style = GetWindowLong( (HWND)game->GetMainWindow(), GWL_STYLE );
-    DWORD exStyle = GetWindowLong( (HWND)game->GetMainWindow(), GWL_EXSTYLE );
-
-    if ( bWindowed )
-    {
-        // Give it a frame (pretty much WS_OVERLAPPEDWINDOW except for we do not modify the
-        // flags corresponding to resizing-frame and maximize-box)
-		if( !CommandLine()->FindParm( "-noborder" ) && !bNoWindowBorder )
-        {
-            style |= WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX;
-        }
-        else
-        {
-            style &= ~WS_OVERLAPPEDWINDOW;
-        }
-
-        // remove topmost flag
-        exStyle &= ~WS_EX_TOPMOST;
-        SetWindowLong( (HWND)game->GetMainWindow(), GWL_EXSTYLE, exStyle );
-    }
-    else
-    {
-        // Remove window border going into fullscreen mode to avoid Vista sizing issues when DWM is enabled
-        style &= ~WS_OVERLAPPEDWINDOW;
-    }
-
-    SetWindowLong( (HWND)game->GetMainWindow(), GWL_STYLE, style );
-
-    // Compute rect needed for that size client area based on window style
-    AdjustWindowRectEx( &WindowRect, style, FALSE, exStyle );
-
-    // Prepare to set window pos, which is required when toggling between topmost and not window flags
-    HWND hWndAfter = NULL;
-    DWORD dwSwpFlags = 0;
-    if ( bWindowed )
-    {
-        hWndAfter = HWND_NOTOPMOST;
-    }
-    else
-    {
-        hWndAfter = HWND_TOPMOST;
-    }
-    dwSwpFlags = SWP_FRAMECHANGED;
-
-    // Move the window to 0, 0 and the new true size
-    SetWindowPos( (HWND)game->GetMainWindow(),
-                 hWndAfter,
-                 0, 0, WindowRect.right - WindowRect.left,
-                 WindowRect.bottom - WindowRect.top,
-                 SWP_NOREDRAW | dwSwpFlags );
-#endif // WIN32 && !USE_SDL
 	
 	// Now center
 	CenterEngineWindow( game->GetMainWindow(),
@@ -1293,7 +979,6 @@ void CVideoMode_Common::AdjustWindow( int nWidth, int nHeight, int nBPP, bool bW
 	
 
 
-#if defined(USE_SDL)
 	g_pLauncherMgr->SetWindowFullScreen( !bWindowed, nWidth, nHeight, bNoWindowBorder );
 
 	MaterialVideoMode_t vidMode;
@@ -1318,10 +1003,6 @@ void CVideoMode_Common::AdjustWindow( int nWidth, int nHeight, int nBPP, bool bW
 	SDL_SetWindowSize( pGameWindow, WindowRect.right - WindowRect.left, WindowRect.bottom - WindowRect.top );
 	SDL_SyncWindow( pGameWindow );
 
-#elif defined( WIN32 )
-#else
-    Assert( !"Impl me" );
-#endif
 
     game->SetWindowSize( nWidth, nHeight );
 
@@ -1408,7 +1089,6 @@ void CVideoMode_Common::CenterEngineWindow( void *hWndCenter, int width, int hei
 {
     int     CenterX, CenterY;
 
-#if defined(USE_SDL)
 	// Get the displayindex, and center our window on that display.
 	int displayindex = g_pLauncherMgr->GetActiveDisplayIndex();
 
@@ -1451,43 +1131,6 @@ void CVideoMode_Common::CenterEngineWindow( void *hWndCenter, int width, int hei
 
 	game->SetWindowXY( CenterX, CenterY );
 	SDL_SetWindowPosition( GetGameSDLWindow(), CenterX, CenterY );
-#elif defined( WIN32 ) 
-    {
-        // In windowed mode go through game->GetDesktopInfo because system metrics change
-        // when going fullscreen vs windowed.
-        // Use system metrics for fullscreen or when game didn't have a chance to initialize.
-
-        int cxScreen = 0, cyScreen = 0, refreshRate = 0;
-
-        if ( !( WS_EX_TOPMOST & ::GetWindowLong( (HWND)hWndCenter, GWL_EXSTYLE ) ) )
-        {
-            game->GetDesktopInfo( cxScreen, cyScreen, refreshRate );
-        }
-		
-        if ( !cxScreen || !cyScreen )
-        {
-            cxScreen = GetSystemMetrics(SM_CXSCREEN);
-            cyScreen = GetSystemMetrics(SM_CYSCREEN);
-        }
-
-        // Compute top-left corner offset
-        CenterX = (cxScreen - width) / 2;
-        CenterY = (cyScreen - height) / 2;
-        CenterX = (CenterX < 0) ? 0: CenterX;
-        CenterY = (CenterY < 0) ? 0: CenterY;
-    }
-
-    // tweak the x and w positions if the user species them on the command-line
-    CenterX = CommandLine()->ParmValue( "-x", CenterX );
-    CenterY = CommandLine()->ParmValue( "-y", CenterY );
-
-    game->SetWindowXY( CenterX, CenterY );
-
-    SetWindowPos ( (HWND)hWndCenter, NULL, CenterX, CenterY, 0, 0,
-                  SWP_NOSIZE | SWP_NOZORDER | SWP_SHOWWINDOW | SWP_DRAWFRAME);
-#else
-	Assert( !"Impl me" );
-#endif
 
 }
 
@@ -2121,7 +1764,6 @@ bool CVideoMode_MaterialSystem::Init( )
     int nDesktopWidth, nDesktopHeight, nDesktopRefresh;
     game->GetDesktopInfo( nDesktopWidth, nDesktopHeight, nDesktopRefresh );
 
-#ifdef DX_TO_VK_ABSTRACTION
     // Enumerate display modes directly via SDL3 across all monitors.
     // DXVK's D3D9 adapter only queries the default monitor, which misses
     // resolutions available on other displays in multi-monitor setups.
@@ -2178,50 +1820,6 @@ bool CVideoMode_MaterialSystem::Init( )
 
         SDL_free( pDisplays );
     }
-#else
-    {
-        int nAdapter = materials->GetCurrentAdapter();
-        int nModeCount = materials->GetModeCount( nAdapter );
-
-        for ( int i = 0; i < nModeCount; i++ )
-        {
-            MaterialVideoMode_t info;
-            materials->GetModeInfo( nAdapter, i, info );
-
-            if ( info.m_Width < 640 || info.m_Height < 480 )
-            {
-                if ( !bAllowSmallModes )
-                    continue;
-            }
-
-            // make sure we don't already have this mode listed
-            bool bAlreadyInList = false;
-            for ( int j = 0; j < m_nNumModes; j++ )
-            {
-                if ( info.m_Width == m_rgModeList[ j ].width && info.m_Height == m_rgModeList[ j ].height )
-                {
-                    if ( info.m_RefreshRate <= nDesktopRefresh && (m_rgModeList[j].refreshRate > nDesktopRefresh || m_rgModeList[j].refreshRate < info.m_RefreshRate) )
-                    {
-                        m_rgModeList[j].refreshRate = info.m_RefreshRate;
-                    }
-                    bAlreadyInList = true;
-                    break;
-                }
-            }
-
-            if ( bAlreadyInList )
-                continue;
-
-            m_rgModeList[ m_nNumModes ].width = info.m_Width;
-            m_rgModeList[ m_nNumModes ].height = info.m_Height;
-            m_rgModeList[ m_nNumModes ].bpp = bitsperpixel;
-            m_rgModeList[ m_nNumModes ].refreshRate = info.m_RefreshRate;
-
-            if ( ++m_nNumModes >= MAX_MODE_LIST )
-                break;
-        }
-    }
-#endif
 
     // Sort modes for easy searching later
     if ( m_nNumModes > 1 )
@@ -2326,25 +1924,14 @@ void CVideoMode_MaterialSystem::AdjustForModeChange( void )
     // reset the window size
     CMatRenderContextPtr pRenderContext( materials );
 
-#if ( defined ( WIN32 ) )
-	if ( !IsWindowedMode() && bWindowed )
-	{
-		// Release fullscreen before going from windowed to fullscreen to avoid the case on Vista where we go from 
-		// fullscreen 640x480 to a higher reswindowed, but the rendertarget stays at 640x480 and the window is sized arbitrarily.
-		ReleaseFullScreen( );
-		ShowWindow( (HWND)game->GetMainWindow(), SW_SHOWNORMAL );
-	}
-#endif
 
 	ResetCurrentModeForNewResolution( nNewWidth, nNewHeight, bWindowed, bNoWindowBorder );
 	AdjustWindow( GetModeWidth(), GetModeHeight(), GetModeBPP(), IsWindowedMode(), NoWindowBorder() );
 
-#if defined( USE_SDL )
 	// On Linux/Wayland, the actual window size may differ from what we requested
 	// (e.g., FULLSCREEN_DESKTOP uses native resolution regardless of config).
 	// Sync to the actual window size AFTER AdjustWindow so we know the true dimensions.
 	SyncToActualWindowSize();
-#endif
 
     MarkClientViewRectDirty();
     pRenderContext->Viewport( 0, 0, GetModeWidth(), GetModeHeight() );
@@ -2403,14 +1990,10 @@ void CVideoMode_MaterialSystem::RestoreVideo( void )
     if ( IsWindowedMode() )
         return;
 
-#if defined( WIN32 ) && !defined( USE_SDL )
-    ShowWindow( (HWND)game->GetMainWindow(), SW_SHOWNORMAL );
-#else
     // On Wayland the compositor owns window placement and fullscreen state.
     // Re-applying AdjustWindow here (triggered on every focus gain) causes
     // the window to bounce between monitors with different resolutions.
     return;
-#endif
 	AdjustWindow( GetModeWidth(), GetModeHeight(), GetModeBPP(), IsWindowedMode(), NoWindowBorder() );
 }
 
@@ -2424,14 +2007,8 @@ void CVideoMode_MaterialSystem::ReleaseFullScreen( void )
     if ( IsWindowedMode() )
         return;
 
-#if defined( WIN32 ) && !defined( USE_SDL )
-    // Hide the main window
-    ChangeDisplaySettings( NULL, 0 );
-    ShowWindow( (HWND)game->GetMainWindow(), SW_MINIMIZE );
-#else
 //	XUnmapWindow( g_pLauncherMgr->GetDisplay(), (Window)game->GetMainWindow() );
 // !!! FIXME: Unmapping isn't really what we want here.
-#endif
 }
 
 
@@ -2444,33 +2021,7 @@ void CVideoMode_MaterialSystem::ChangeDisplaySettingsToFullscreen( int nWidth, i
     if ( IsWindowedMode() )
         return;
 
-#if defined( USE_SDL )
 	g_pLauncherMgr->SetWindowFullScreen( true, nWidth, nHeight, bDesktopFriendlyFullscreen );
-#elif defined( WIN32 )
-    DEVMODE dm;
-    memset(&dm, 0, sizeof(dm));
-
-    dm.dmSize       = sizeof( dm );
-    dm.dmPelsWidth  = nWidth;
-    dm.dmPelsHeight = nHeight;
-    dm.dmFields     = DM_PELSWIDTH | DM_PELSHEIGHT | DM_BITSPERPEL;
-    dm.dmBitsPerPel = nBPP;
-
-    // FIXME: Fix direct reference of refresh rate from config record
-    int freq = g_pMaterialSystemConfig->m_VideoMode.m_RefreshRate;
-    if ( freq >= 60 )
-    {
-        dm.dmDisplayFrequency = freq;
-        dm.dmFields |= DM_DISPLAYFREQUENCY;
-    }
-
-    ChangeDisplaySettings( &dm, CDS_FULLSCREEN );
-#else
-	if (!CommandLine()->FindParm("-hushasserts"))
-	{
-	Assert( !"Impl me" );
-	}
-#endif
 }
 
 void CVideoMode_MaterialSystem::ReadScreenPixels( int x, int y, int w, int h, void *pBuffer, ImageFormat format )

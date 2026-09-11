@@ -9,9 +9,6 @@
 #ifndef FLOATBITMAP_H
 #define FLOATBITMAP_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "tier0/platform.h"
 #include "tier0/dbg.h"

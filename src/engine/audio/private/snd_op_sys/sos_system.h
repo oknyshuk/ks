@@ -6,9 +6,6 @@
 
 #ifndef SOS_SYSTEM_H
 #define SOS_SYSTEM_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "tier1/UtlStringMap.h"
 #include "tier1/utlstring.h"

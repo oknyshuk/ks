@@ -7,9 +7,6 @@
 
 #ifndef IVOICETWEAK_H
 #define IVOICETWEAK_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 // These provide access to the voice controls.
 typedef enum

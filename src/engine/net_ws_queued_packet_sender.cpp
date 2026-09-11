@@ -90,12 +90,7 @@ bool CQueuedPacketSender::Start( unsigned nBytesStack )
 	if ( CThread::Start( nBytesStack ) )
 	{
 		// Ahhh the perfect cross-platformness of the threads library.
-#ifdef IS_WINDOWS_PC
-		SetPriority( THREAD_PRIORITY_HIGHEST );
-		ThreadSetDebugName( GetThreadHandle(), "CQueuedPacketSender" );
-#else
 		//SetPriority( PRIORITY_MAX );
-#endif
 
 		m_bThreadShouldExit = false;
 
@@ -112,12 +107,6 @@ void CQueuedPacketSender::Shutdown()
 	if ( !IsAlive() )
 		return;
 		
-#ifdef _WIN32
-	if ( !GetThreadHandle() )
-	{
-		Msg( "-->Shutdown %p\n", GetThreadHandle() );
-	}
-#endif
 
 	m_bThreadShouldExit = true;
 	m_hThreadEvent.Set();

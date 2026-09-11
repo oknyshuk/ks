@@ -9,9 +9,6 @@
 #ifndef AI_LINK_H
 #define AI_LINK_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "ai_hull.h"	// For num hulls
 

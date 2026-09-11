@@ -6,9 +6,6 @@
 
 #ifndef VIEWPORT_PANEL_NAMES_H
 #define VIEWPORT_PANEL_NAMES_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 
 // default panel name definitions
@@ -36,8 +33,5 @@
 
 #define PANEL_SURVEY					"surveypanel"
 
-#ifdef PORTAL2
-#define PANEL_RADIAL_MENU "radialmenupanel"
-#endif // PORTAL2
 
 #endif // VIEWPORT_PANEL_NAMES_H

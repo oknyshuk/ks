@@ -6,9 +6,6 @@
 
 #ifndef MAPRESLISTGENERATOR_H
 #define MAPRESLISTGENERATOR_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "filesystem.h"
 #include "utlvector.h"

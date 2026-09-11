@@ -111,12 +111,8 @@
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
-#ifdef CSTRIKE15
 // Slam blobby shadows to disabled in CS:GO (RTT shadows are also disabled too).
 static ConVar r_disable_update_shadow( "r_disable_update_shadow", "1", FCVAR_CHEAT );
-#else
-static ConVar r_disable_update_shadow( "r_disable_update_shadow", "0", FCVAR_CHEAT );
-#endif
 
 static ConVar r_flashlightdrawfrustum( "r_flashlightdrawfrustum", "0" );
 static ConVar r_flashlightdrawfrustumbbox( "r_flashlightdrawfrustumbbox", "0" );
@@ -128,11 +124,7 @@ static ConVar r_shadowfromanyworldlight( "r_shadowfromanyworldlight", "0", FCVAR
 static ConVar r_shadow_shortenfactor( "r_shadow_shortenfactor", "2" , 0, "Makes shadows cast from local lights shorter" );
 
 // Flashlight culling code isn't Portal-aware, so they pop on/off when viewed through portals.		
-#ifdef PORTAL2
-ConVar r_flashlightenableculling( "r_flashlightenableculling", "0", 0, "Enable frustum culling of flashlights");
-#else
 ConVar r_flashlightenableculling( "r_flashlightenableculling", "1", 0, "Enable frustum culling of flashlights");
-#endif
 
 static void HalfUpdateRateCallback( IConVar *var, const char *pOldValue, float flOldValue );
 static ConVar r_shadow_half_update_rate( "r_shadow_half_update_rate", "0", 0, "Updates shadows at half the framerate", HalfUpdateRateCallback );
@@ -152,9 +144,6 @@ ConVar r_flashlightdepthreshigh( "r_flashlightdepthreshigh", "2048" );
 ConVar r_flashlightdepthres( "r_flashlightdepthres", "1024" );
 
 
-#ifdef _WIN32
-#pragma warning( disable: 4701 )
-#endif
 
 
 //-----------------------------------------------------------------------------
@@ -4231,12 +4220,10 @@ void CClientShadowMgr::ReprojectShadows()
 
 	bool bRenderToTextureActive = r_shadowrendertotexture.GetBool();
 
-	#ifdef CSTRIKE15
 	// Slamming this to always disabled in cstrike, because every map has CSM now and this is causing problems with reloading envmaps from BSP's on the 2nd time through maps with a dedicated server.
 	// 3/28 - this is now slammed to 0 in CS:GO's cpu_level.csv
 	//if ( g_CascadeLightManager.IsEnabledAndActive() && engine->MapHasLightMapAlphaData() )
 	bRenderToTextureActive = false;
-	#endif
 
 	if ( !m_RenderToTextureActive && bRenderToTextureActive )
 	{

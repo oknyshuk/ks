@@ -8,11 +8,6 @@
 #ifndef IMATCHEXT_CSTRIKE15_H
 #define IMATCHEXT_CSTRIKE15_H
 
-#ifdef _WIN32
-#pragma once
-#pragma warning( push )
-#pragma warning( disable : 4201 )
-#endif
 
 #define STORAGE_COUNT_FOR_BITS( aStorageType, numBits ) ( ( (numBits) + 8*sizeof( aStorageType ) - 1 ) / sizeof( aStorageType ) )
 
@@ -220,7 +215,4 @@ struct TitleData3
 };
 
 
-#ifdef _WIN32
-#pragma warning( pop )
-#endif
 #endif // IMATCHEXT_CSTRIKE15_H

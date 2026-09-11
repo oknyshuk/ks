@@ -6,9 +6,6 @@
 
 #ifndef MM_EVENTS_H
 #define MM_EVENTS_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "mm_framework.h"
 #include "utlvector.h"

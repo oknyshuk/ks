@@ -7,9 +7,6 @@
 #ifndef ITOOLDICTIONARY_H
 #define ITOOLDICTIONARY_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "appframework/iappsystem.h"
 

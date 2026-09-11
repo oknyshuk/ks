@@ -7,9 +7,6 @@
 
 #ifndef DATATABLE_H
 #define DATATABLE_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 
 #include "dt_common.h"

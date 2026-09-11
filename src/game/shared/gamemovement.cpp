@@ -13,13 +13,7 @@
 #include "rumble_shared.h"
 #include "cstrike15/basecsgrenade_projectile.h"
 
-#if defined(HL2_DLL) || defined(HL2_CLIENT_DLL)
-	#include "hl_movedata.h"
-#endif
 
-#if defined(HL2_EP3) && !defined(CLIENT_DLL)
-	#include "ep3/weapon_icegun.h"
-#endif
 
 #if (PREDICTION_ERROR_CHECK_LEVEL > 0) && (PREDICTION_ERROR_CHECK_STACKS_FOR_MISSING > 0)
 #include "tier0/stacktools.h"
@@ -42,9 +36,6 @@ extern IFileSystem *filesystem;
 	static ConVar dispcoll_drawplane( "dispcoll_drawplane", "0" );
 #endif
 
-#if defined ( PORTAL2 ) &&  !defined ( CLIENT_DLL )
-#include "portal_player.h"
-#endif 
 
 // tickcount currently isn't set during prediction, although gpGlobals->curtime and
 // gpGlobals->frametime are. We should probably set tickcount (to player->m_nTickBase),
@@ -52,13 +43,7 @@ extern IFileSystem *filesystem;
 // player->CurrentCommandNumber() in the meantime.
 #define tickcount USE_PLAYER_CURRENT_COMMAND_NUMBER__INSTEAD_OF_TICKCOUNT
 
-#if defined( HL2_DLL )
-ConVar xc_uncrouch_on_jump( "xc_uncrouch_on_jump", "1", FCVAR_ARCHIVE, "Uncrouch when jump occurs" );
-#endif
 
-#if defined( HL2_DLL ) || defined( HL2_CLIENT_DLL )
-ConVar player_limit_jump_speed( "player_limit_jump_speed", "1", FCVAR_REPLICATED );
-#endif
 
 // [MD] I'll remove this eventually. For now, I want the ability to A/B the optimizations.
 bool g_bMovementOptimizations = true;
@@ -2503,13 +2488,7 @@ void CGameMovement::FullNoClipMove( float factor, float maxacceleration )
 	float wishspeed;
 	float maxspeed = sv_maxspeed.GetFloat() * factor;
 
-#ifdef INFESTED_DLL		// ignore roll component for Alien Swarm, this is used for vertical aiming
-	QAngle vecViewAngles = mv->m_vecViewAngles;
-	vecViewAngles[ROLL] = 0;
-	AngleVectors (vecViewAngles, &forward, &right, &up);  // Determine movement angles
-#else
 	AngleVectors (mv->m_vecViewAngles, &forward, &right, &up);  // Determine movement angles
-#endif
 
 	if ( mv->m_nButtons & IN_SPEED )
 	{
@@ -2650,10 +2629,8 @@ bool CGameMovement::CheckJumpButton( void )
 	}
 
 	// Don't allow jumping when the player is in a stasis field.
-#ifndef HL2_EPISODIC
 	if ( player->m_Local.m_bSlowMovement )
 		return false;
-#endif
 
 	if ( mv->m_nOldButtons & IN_JUMP )
 		return false;		// don't pogo stick
@@ -2683,13 +2660,8 @@ bool CGameMovement::CheckJumpButton( void )
 	float flMul;
 	if ( g_bMovementOptimizations )
 	{
-#if defined(HL2_DLL) || defined(HL2_CLIENT_DLL)
-		Assert( sv_gravity.GetFloat() == 600.0f );
-		flMul = 160.0f;	// approx. 21 units.
-#else
 		Assert( sv_gravity.GetFloat() == 800.0f );
 		flMul = 268.3281572999747f;
-#endif
 
 	}
 	else
@@ -2716,41 +2688,6 @@ bool CGameMovement::CheckJumpButton( void )
 	}
 
 	// Add a little forward velocity based on your current forward velocity - if you are not sprinting.
-#if defined( HL2_DLL ) || defined( HL2_CLIENT_DLL )
-#ifdef PORTAL
-	const bool bAllowBunnyHopperSpeedBoost = true;
-#else
-	bool bAllowBunnyHopperSpeedBoost = ( gpGlobals->maxClients == 1 );
-#endif
-
-	if ( bAllowBunnyHopperSpeedBoost )
-	{
-		CHLMoveData *pMoveData = ( CHLMoveData* )mv;
-		Vector vecForward;
-		AngleVectors( mv->m_vecViewAngles, &vecForward );
-		vecForward.z = 0;
-		VectorNormalize( vecForward );
-		
-		// We give a certain percentage of the current forward movement as a bonus to the jump speed.  That bonus is clipped
-		// to not accumulate over time.
-		float flSpeedBoostPerc = ( !pMoveData->m_bIsSprinting && !player->m_Local.m_bDucked ) ? 0.5f : 0.1f;
-		float flSpeedAddition = fabs( mv->m_flForwardMove * flSpeedBoostPerc );
-		float flMaxSpeed = mv->m_flMaxSpeed + ( mv->m_flMaxSpeed * flSpeedBoostPerc );
-		float flNewSpeed = ( flSpeedAddition + mv->m_vecVelocity.Length2D() );
-
-		// If we're over the maximum, we want to only boost as much as will get us to the goal speed
-		if ( flNewSpeed > flMaxSpeed )
-		{
-			flSpeedAddition -= flNewSpeed - flMaxSpeed;
-		}
-
-		if ( mv->m_flForwardMove < 0.0f )
-			flSpeedAddition *= -1.0f;
-
-		// Add it on
-		VectorAdd( (vecForward*flSpeedAddition), mv->m_vecVelocity, mv->m_vecVelocity );
-	}
-#endif
 
 	FinishGravity();
 
@@ -2761,11 +2698,7 @@ bool CGameMovement::CheckJumpButton( void )
 
 	OnJump(mv->m_outJumpVel.z);
 
-#if !defined( PORTAL2 )
 	bool bSetDuckJump = (gpGlobals->maxClients == 1); //most games we only set duck jump if the game is single player
-#else
-	const bool bSetDuckJump = true; //in portal 2, do it for both single and multiplayer
-#endif
 
 	// Set jump time.
 	if ( bSetDuckJump )
@@ -2774,18 +2707,6 @@ bool CGameMovement::CheckJumpButton( void )
 		player->m_Local.m_bInDuckJump = true;
 	}
 
-#if defined( HL2_DLL )
-
-	if ( xc_uncrouch_on_jump.GetBool() )
-	{
-		// Uncrouch when jumping
-		if ( player->GetToggledDuckState() )
-		{
-			player->ToggleDuck();
-		}
-	}
-
-#endif
 
 	// Flag that we jumped.
 	mv->m_nOldButtons |= IN_JUMP;	// don't jump again until released
@@ -3352,7 +3273,6 @@ bool CGameMovement::LadderMove( void )
 // Input  : axis - 
 // Output : const char
 //-----------------------------------------------------------------------------
-#if !defined(_STATIC_LINKED) || defined(CLIENT_DLL)
 const char *DescribeAxis( int axis )
 {
 	static char sz[ 32 ];
@@ -3373,9 +3293,6 @@ const char *DescribeAxis( int axis )
 
 	return sz;
 }
-#else
-const char *DescribeAxis( int axis );
-#endif
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -3549,13 +3466,8 @@ float CGameMovement::CalcRoll ( const QAngle &angles, const Vector &velocity, fl
 
 #define CHECKSTUCK_MINTIME 0.05  // Don't check again too quickly.
 
-#if !defined(_STATIC_LINKED) || defined(CLIENT_DLL)
 Vector rgv3tStuckTable[54];
-#else
-extern Vector rgv3tStuckTable[54];
-#endif
 
-#if !defined(_STATIC_LINKED) || defined(CLIENT_DLL)
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
@@ -3673,9 +3585,6 @@ void CreateStuckTable( void )
 	}
 	Assert( idx < sizeof(rgv3tStuckTable)/sizeof(rgv3tStuckTable[0]));
 }
-#else
-extern void CreateStuckTable( void );
-#endif
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -4201,12 +4110,6 @@ void CGameMovement::CategorizePosition( void )
 		// Was on ground, but now suddenly am not.  If we hit a steep plane, we are not on ground
 		float flStandableZ = 0.7;
 
-#if defined(HL2_EP3) && !defined(CLIENT_DLL)
-		if ( Icegun_IsPlayerIceSurfing() )
-		{
-			flStandableZ = 0;
-		}
-#endif
 
 		if ( !CheckValidStandableGroundCandidate( pm, flStandableZ ) )
 		{
@@ -4366,7 +4269,6 @@ void CGameMovement::CheckFalling( void )
 		}
 	}
 
-#if defined( CSTRIKE15 )
 	float flFallVel = player->m_Local.m_flFallVelocity;
 	if ( flFallVel > 16.0f && flFallVel <= PLAYER_FATAL_FALL_SPEED )
 	{
@@ -4379,7 +4281,6 @@ void CGameMovement::CheckFalling( void )
 
 		player->SetViewPunchAngle( punchAngle );
 	}
-#endif
 
 	//
 	// Clear the fall velocity so the impact doesn't happen again.
@@ -4820,17 +4721,6 @@ void CGameMovement::Duck( void )
 						trace_t trace;
 						if ( CanUnDuckJump( trace ) )
 						{
-#if defined ( PORTAL2 ) &&  !defined ( CLIENT_DLL )
-							if ( EntityFromEntityHandle( mv->m_nPlayerHandle.Get() ) )
-							{
-								CPortal_Player *pPortalPlayer = (CPortal_Player*)EntityFromEntityHandle( mv->m_nPlayerHandle.Get() );
-								if ( pPortalPlayer && pPortalPlayer->m_hPortalEnvironment.Get() )
-								{
-									Warning( "--===Portal player unduckedjumped near a portal! This could cause the trajectory to go screwy===--\n" );
-								}
-							}
-							
-#endif 
 							FinishUnDuckJump( trace );
 							player->m_Local.m_nDuckJumpTimeMsecs = (int)( ( (float)GAMEMOVEMENT_TIME_TO_UNDUCK_MSECS * ( 1.0f - trace.fraction ) ) + (float)GAMEMOVEMENT_TIME_TO_UNDUCK_MSECS_INV );
 						}
@@ -4969,13 +4859,7 @@ void CGameMovement::PlayerMove( void )
 
 	ReduceTimers();
 
-#ifdef INFESTED_DLL		// ignore roll component for Alien Swarm, this is used for vertical aiming
-	QAngle vecViewAngles = mv->m_vecViewAngles;
-	vecViewAngles[ROLL] = 0;
-	AngleVectors (vecViewAngles, &m_vecForward, &m_vecRight, &m_vecUp);  // Determine movement angles
-#else
 	AngleVectors (mv->m_vecViewAngles, &m_vecForward, &m_vecRight, &m_vecUp );  // Determine movement angles
-#endif
 
 	// Always try and unstick us unless we are using a couple of the movement modes
 	MoveType_t moveType = player->GetMoveType();

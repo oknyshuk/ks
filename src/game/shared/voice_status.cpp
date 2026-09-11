@@ -24,17 +24,12 @@
 #include "cdll_int.h"
 #include "con_nprint.h"
 
-#if defined(PORTAL2)
-#include "c_portal_gamestats.h"
-#endif
 
-#if defined ( CSTRIKE15 )
 #include "c_cs_player.h"
 #include "matchmaking/imatchtitle.h"
 #include "matchmaking/iplayer.h"
 #include "matchmaking/mm_helpers.h"
 #include "matchmaking/imatchframework.h"
-#endif
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -55,10 +50,8 @@ ConVar voice_local_icon( "voice_local_icon", "0", FCVAR_NONE, "Draw local player
 ConVar voice_all_icons( "voice_all_icons", "0", FCVAR_NONE, "Draw all players' voice icons" );
 ConVar voice_icons_method( "voice_icons_method", "2", FCVAR_NONE, "0 = classic style, 1 = particles, 2 = integrated into target ID" );
 
-#if defined ( CSTRIKE15 )
 ConVar cl_mute_enemy_team( "cl_mute_enemy_team", "0", FCVAR_ARCHIVE, "Block all communication from players on the enemy team." );
 ConVar cl_mute_all_but_friends_and_party( "cl_mute_all_but_friends_and_party", "0", FCVAR_ARCHIVE, "Only allow communication from friends and matchmaking party members. Doesn't apply to competitive matchmaking games." );
-#endif
 
 // ---------------------------------------------------------------------- //
 // The voice manager for the client.
@@ -461,16 +454,6 @@ void CVoiceStatus::UpdateSpeakerStatus(int entindex, int iSsSlot, bool bTalking)
 	if( entindex == -1 && iSsSlot >= 0 )
 	{
 		m_bTalking[ iSsSlot ] = !!bTalking;
-#if !defined( CSTRIKE15 )
-		if( bTalking )
-		{
-			// Enable voice for them automatically if they try to talk.
-			char chClientCmd[0xFF];
-			Q_snprintf( chClientCmd, sizeof( chClientCmd ),
-				"cmd%d voice_modenable 1", iSsSlot + 1 );
-			engine->ClientCmd( chClientCmd );
-		}
-#endif
 	}
 	
 	if( entindex == -2 && iSsSlot >= 0 )
@@ -511,12 +494,6 @@ void CVoiceStatus::UpdateSpeakerStatus(int entindex, int iSsSlot, bool bTalking)
 		}
 		else 
 		{
-#if defined( PORTAL2 )
-			if ( m_flTalkTime[ iClient ] > 0.0f )
-			{
-				g_PortalGameStats.Event_MicUsage( entindex, m_flTalkTime[ iClient ], gpGlobals->curtime - m_flTalkTime[ iClient ] );
-			}
-#endif //!defined( _GAMECONSOLE )
 			m_flTalkTime[ iClient ] = 0.0f;
 		}
 		m_flTimeLastUpdate[ iClient ] = gpGlobals->curtime;
@@ -698,7 +675,6 @@ bool IsPartyMember( XUID xuidPlayer )
 
 bool CVoiceStatus::ShouldHideCommunicationFromPlayer( int iPlayerIndex )
 {
-#if defined ( CSTRIKE15 )
 	C_CSPlayer* pLocalPlayer = C_CSPlayer::GetLocalCSPlayer();
 	if ( pLocalPlayer && pLocalPlayer->entindex() == iPlayerIndex )
 		return false;
@@ -727,7 +703,6 @@ bool CVoiceStatus::ShouldHideCommunicationFromPlayer( int iPlayerIndex )
 			return true;
 	}
 
-#endif 
 	return false;
 }
 

@@ -431,10 +431,8 @@ void CSDLMgr::Disconnect()
 void *CSDLMgr::QueryInterface( const char *pInterfaceName )
 {
 	SDLAPP_FUNC;
-#if defined(USE_SDL)
 	if ( !Q_stricmp( pInterfaceName, SDLMGR_INTERFACE_VERSION ) )
 		return this;
-#endif
 	return NULL;
 }
 

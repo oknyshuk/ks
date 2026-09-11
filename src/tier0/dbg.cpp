@@ -8,11 +8,6 @@
 
 #include "tier0/platform.h"
 
-#if defined( PLATFORM_WINDOWS_PC )
-#define WIN_32_LEAN_AND_MEAN
-#include <windows.h>				// Currently needed for IsBadReadPtr and IsBadWritePtr
-#pragma comment(lib,"user32.lib")	// For MessageBox
-#endif
 
 #include "tier0/minidump.h"
 #include "tier0/stacktools.h"
@@ -134,51 +129,27 @@ void _ExitOnFatalAssert( const tchar* pFile, int line )
 //-----------------------------------------------------------------------------
 PLATFORM_INTERFACE void _AssertValidReadPtr( void* ptr, int count/* = 1*/ )
 {
-#if defined( _WIN32 )
-	Assert( !IsBadReadPtr( ptr, count ) );
-#else
 	Assert( !count || ptr );
-#endif
 }
 
 PLATFORM_INTERFACE void _AssertValidWritePtr( void* ptr, int count/* = 1*/ )
 {
-#if defined( _WIN32 )
-	Assert( !IsBadWritePtr( ptr, count ) );
-#else
 	Assert( !count || ptr );
-#endif
 }
 
 PLATFORM_INTERFACE void _AssertValidReadWritePtr( void* ptr, int count/* = 1*/ )
 {
-#if defined( _WIN32 )
-	Assert(!( IsBadWritePtr(ptr, count) || IsBadReadPtr(ptr,count)));
-#else
 	Assert( !count || ptr );
-#endif
 }
 
 PLATFORM_INTERFACE void _AssertValidStringPtr( const tchar* ptr, int maxchar/* = 0xFFFFFF */ )
 {
-#if defined( _WIN32 )
-	#ifdef TCHAR_IS_CHAR
-		Assert( !IsBadStringPtr( ptr, maxchar ) );
-	#else
-		Assert( !IsBadStringPtrW( ptr, maxchar ) );
-	#endif
-#else
 	Assert( ptr );
-#endif
 }
 
 PLATFORM_INTERFACE void AssertValidWStringPtr( const wchar_t* ptr, int maxchar/* = 0xFFFFFF */ )
 {
-#if defined( _WIN32 )
-	Assert( !IsBadStringPtrW( ptr, maxchar ) );
-#else
 	Assert( ptr );
-#endif
 }
 
 void AppendCallStackToLogMessage( tchar *formattedMessage, int iMessageLength, int iAppendCallStackLength )
@@ -442,231 +413,4 @@ void CallAssertFailedNotifyFunc( const char *pchFile, int nLine, const char *pch
 }
 
 
-#ifdef IS_WINDOWS_PC
-
-class CHardwareBreakPoint
-{
-public:
-
-	enum EOpCode
-	{
-		BRK_SET = 0,
-		BRK_UNSET,
-	};
-
-	CHardwareBreakPoint()
-	{
-		m_eOperation = BRK_SET;
-		m_pvAddress = 0;
-		m_hThread = 0;
-		m_hThreadEvent = 0;
-		m_nRegister = 0;
-		m_bSuccess = false;
-	}
-
-	const void				*m_pvAddress;
-	HANDLE					m_hThread;
-	EHardwareBreakpointType m_eType;
-	EHardwareBreakpointSize m_eSize;
-	HANDLE					m_hThreadEvent;
-	int						m_nRegister;
-	EOpCode					m_eOperation;
-	bool					m_bSuccess;
-
-	static void SetBits( DWORD_PTR& dw, int lowBit, int bits, int newValue );
-	static DWORD WINAPI ThreadProc( LPVOID lpParameter );
-};
-
-void CHardwareBreakPoint::SetBits( DWORD_PTR& dw, int lowBit, int bits, int newValue )
-{
-	DWORD_PTR mask = (1 << bits) - 1; 
-	dw = (dw & ~(mask << lowBit)) | (newValue << lowBit);
-}
-
-DWORD WINAPI CHardwareBreakPoint::ThreadProc( LPVOID lpParameter )
-{
-	CHardwareBreakPoint *h = reinterpret_cast< CHardwareBreakPoint * >( lpParameter );
-	SuspendThread( h->m_hThread );
-
-	// Get current context
-	CONTEXT ct = {0};
-	ct.ContextFlags = CONTEXT_DEBUG_REGISTERS;
-	GetThreadContext(h->m_hThread,&ct);
-
-	int FlagBit = 0;
-
-	bool Dr0Busy = false;
-	bool Dr1Busy = false;
-	bool Dr2Busy = false;
-	bool Dr3Busy = false;
-	if (ct.Dr7 & 1)
-		Dr0Busy = true;
-	if (ct.Dr7 & 4)
-		Dr1Busy = true;
-	if (ct.Dr7 & 16)
-		Dr2Busy = true;
-	if (ct.Dr7 & 64)
-		Dr3Busy = true;
-
-	if ( h->m_eOperation == CHardwareBreakPoint::BRK_UNSET )
-	{
-		// Remove
-		if (h->m_nRegister == 0)
-		{
-			FlagBit = 0;
-			ct.Dr0 = 0;
-			Dr0Busy = false;
-		}
-		if (h->m_nRegister == 1)
-		{
-			FlagBit = 2;
-			ct.Dr1 = 0;
-			Dr1Busy = false;
-		}
-		if (h->m_nRegister == 2)
-		{
-			FlagBit = 4;
-			ct.Dr2 = 0;
-			Dr2Busy = false;
-		}
-		if (h->m_nRegister == 3)
-		{
-			FlagBit = 6;
-			ct.Dr3 = 0;
-			Dr3Busy = false;
-		}
-		ct.Dr7 &= ~(1 << FlagBit);
-	}
-	else
-	{
-		if (!Dr0Busy)
-		{
-			h->m_nRegister = 0;
-			ct.Dr0 = (DWORD_PTR)h->m_pvAddress;
-			Dr0Busy = true;
-		}
-		else if (!Dr1Busy)
-		{
-			h->m_nRegister = 1;
-			ct.Dr1 = (DWORD_PTR)h->m_pvAddress;
-			Dr1Busy = true;
-		}
-		else if (!Dr2Busy)
-		{
-			h->m_nRegister = 2;
-			ct.Dr2 = (DWORD_PTR)h->m_pvAddress;
-			Dr2Busy = true;
-		}
-		else if (!Dr3Busy)
-		{
-			h->m_nRegister = 3;
-			ct.Dr3 = (DWORD_PTR)h->m_pvAddress;
-			Dr3Busy = true;
-		}
-		else
-		{
-			h->m_bSuccess = false;
-			ResumeThread(h->m_hThread);
-			SetEvent(h->m_hThreadEvent);
-			return 0;
-		}
-
-		ct.Dr6 = 0;
-		int st = 0;
-		if (h->m_eType == BREAKPOINT_EXECUTE)
-			st = 0;
-		if (h->m_eType == BREAKPOINT_READWRITE)
-			st = 3;
-		if (h->m_eType == BREAKPOINT_WRITE)
-			st = 1;
-
-		int le = 0;
-		if (h->m_eSize == BREAKPOINT_SIZE_1)
-			le = 0;
-		if (h->m_eSize == BREAKPOINT_SIZE_2)
-			le = 1;
-		if (h->m_eSize == BREAKPOINT_SIZE_4)
-			le = 3;
-		if (h->m_eSize == BREAKPOINT_SIZE_8)
-			le = 2;
-
-		SetBits( ct.Dr7, 16 + h->m_nRegister*4, 2, st );
-		SetBits( ct.Dr7, 18 + h->m_nRegister*4, 2, le );
-		SetBits( ct.Dr7, h->m_nRegister*2,1,1);
-	}
-
-	ct.ContextFlags = CONTEXT_DEBUG_REGISTERS;
-	SetThreadContext(h->m_hThread,&ct);
-
-	ResumeThread( h->m_hThread );
-	h->m_bSuccess = true;
-	SetEvent( h->m_hThreadEvent );
-	return 0;
-}
-
-HardwareBreakpointHandle_t SetHardwareBreakpoint( EHardwareBreakpointType eType, EHardwareBreakpointSize eSize, const void *pvLocation )
-{
-	CHardwareBreakPoint *h = new CHardwareBreakPoint();
-	h->m_pvAddress = pvLocation;
-	h->m_eSize = eSize;
-	h->m_eType = eType;
-	HANDLE hThread = GetCurrentThread();
-	h->m_hThread = hThread;
-
-	if ( hThread == GetCurrentThread() )
-	{
-		DWORD nThreadId = GetCurrentThreadId();
-		h->m_hThread = OpenThread( THREAD_ALL_ACCESS, 0, nThreadId );
-	}
-
-	h->m_hThreadEvent = CreateEvent( NULL, FALSE, FALSE, NULL );
-	h->m_eOperation = CHardwareBreakPoint::BRK_SET; // Set Break
-	CreateThread( 0, 0, CHardwareBreakPoint::ThreadProc, (LPVOID)h, 0, 0 );
-	WaitForSingleObject( h->m_hThreadEvent,INFINITE );
-	CloseHandle( h->m_hThreadEvent );
-	h->m_hThreadEvent = 0;
-	if ( hThread == GetCurrentThread() )
-	{
-		CloseHandle( h->m_hThread );
-	}
-	h->m_hThread = hThread;
-	if ( !h->m_bSuccess )
-	{
-		delete h;
-		return (HardwareBreakpointHandle_t)0;
-	}
-	return (HardwareBreakpointHandle_t)h;
-}
-
-bool ClearHardwareBreakpoint( HardwareBreakpointHandle_t handle )
-{
-	CHardwareBreakPoint *h = reinterpret_cast< CHardwareBreakPoint* >( handle );
-	if ( !h )
-	{
-		return false;
-	}
-
-	bool bOpened = false;
-	if ( h->m_hThread == GetCurrentThread() )
-	{
-		DWORD nThreadId = GetCurrentThreadId();
-		h->m_hThread = OpenThread( THREAD_ALL_ACCESS, 0, nThreadId );
-		bOpened = true;
-	}
-
-	h->m_hThreadEvent = CreateEvent( NULL, FALSE, FALSE, NULL );
-	h->m_eOperation = CHardwareBreakPoint::BRK_UNSET; // Remove Break
-	CreateThread( 0,0,CHardwareBreakPoint::ThreadProc, (LPVOID)h, 0,0 );
-	WaitForSingleObject( h->m_hThreadEvent, INFINITE );
-	CloseHandle( h->m_hThreadEvent );
-	h->m_hThreadEvent = 0;
-	if ( bOpened )
-	{
-		CloseHandle( h->m_hThread );
-	}
-	delete h;
-	return true;
-}
-
-#endif // IS_WINDOWS_PC
 

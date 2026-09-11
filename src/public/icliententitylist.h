@@ -9,9 +9,6 @@
 #if !defined( ICLIENTENTITYLIST_H )
 #define ICLIENTENTITYLIST_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "interface.h"
 

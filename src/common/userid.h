@@ -7,9 +7,6 @@
 
 #ifndef USERID_H
 #define USERID_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #if !defined( INCLUDED_STEAM_STEAMUSERIDTYPES_H )
 	#include "SteamCommon.h"

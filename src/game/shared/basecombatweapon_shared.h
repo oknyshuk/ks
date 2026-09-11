@@ -13,9 +13,6 @@
 #endif
 #include "const.h"
 #include "shareddefs.h"
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "sharedInterface.h"
 #include "vphysics_interface.h"

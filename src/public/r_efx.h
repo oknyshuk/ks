@@ -7,9 +7,6 @@
 //===========================================================================//
 #if !defined ( EFXH )
 #define EFXH
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "iefx.h"
 

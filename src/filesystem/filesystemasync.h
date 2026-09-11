@@ -19,9 +19,6 @@
 #ifndef FILESYSTEMASYNC_H
 #define FILESYSTEMASYNC_H
 
-#ifdef _WIN32
-	#pragma once
-#endif
 
 
 class CAsyncGroupRequest;

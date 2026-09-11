@@ -156,10 +156,6 @@ public:
 
 };
 
-#ifdef _WIN32
-#define sqdbg_closesocket(x) closesocket((x))
-#else
 #define sqdbg_closesocket(x) close((x))
-#endif
 
 #endif //_SQ_DBGSERVER_H_

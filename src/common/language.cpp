@@ -167,23 +167,6 @@ const char *GetLangugeCLocaleName( ELanguage eLang )
 	if ( eLang == k_Lang_None )
 		return "";
 
-#ifdef _WIN32
-	// table for Win32 is here: http://msdn.microsoft.com/en-us/library/hzz3tw78(v=VS.80).aspx
-	// shortname works except for chinese
-
-	switch ( eLang )
-	{
-	case k_Lang_Simplified_Chinese:
-		return "chs"; // or "chinese-simplified"
-	case k_Lang_Traditional_Chinese:
-		return "cht"; // or "chinese-traditional"
-	case k_Lang_Korean:
-		return "korean"; // steam likes "koreana" for the name for some reason.
-	default:
-		return GetLanguageShortName( eLang );
-	}
-
-#else
 	switch ( eLang )
 	{
 	case k_Lang_Simplified_Chinese:
@@ -195,7 +178,6 @@ const char *GetLangugeCLocaleName( ELanguage eLang )
 
 	// ICU codes work on linux/osx
 	return GetLanguageICUName( eLang );
-#endif
 }
 
 //-----------------------------------------------------------------------------

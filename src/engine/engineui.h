@@ -8,9 +8,6 @@
 #ifndef ENGINEUI_H
 #define ENGINEUI_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "iengineui.h"
 #include "inputsystem/ButtonCode.h"

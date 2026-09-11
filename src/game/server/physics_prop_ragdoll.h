@@ -8,9 +8,6 @@
 #define PHYSICS_PROP_RAGDOLL_H
 
 #include "reflect_annotations.h"
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "ragdoll_shared.h"
 #include "player_pickup.h"

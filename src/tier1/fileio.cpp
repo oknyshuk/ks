@@ -6,10 +6,6 @@
 //
 //=============================================================================
 
-#if defined(_WIN32)
-#undef _WIN32_WINNT
-#define _WIN32_WINNT 0x0502		// ReadDirectoryChangesW
-#endif
 
 #include <sys/stat.h>
 
@@ -18,19 +14,6 @@
 // Linux hasn't got a good AIO library that we have found yet, so lets punt for now
 #undef ASYNC_FILEIO
 
-#if defined(_WIN32)
-//#include <direct.h>
-#include <io.h>
-// unset to force to use stdio implementation 
-#define WIN32_FILEIO
-
-#if defined(ASYNC_FILEIO) 
-#if defined(_WIN32) && !defined(WIN32_FILEIO)
-#error "trying to use async io without win32 filesystem API usage, that isn't doable"
-#endif
-#endif
-
-#else /* not defined (_WIN32) */
 #include <utime.h>
 #include <dirent.h>
 #include <unistd.h> // for unlink
@@ -109,7 +92,6 @@ int _findnext( const int64 hFind, struct _finddata_t *pFindData );
 bool _findclose( int64 hFind );
 static int FileSelect( const char *name, const char *mask );
 
-#endif 
 
 #include "tier1/fileio.h"
 #include "tier1/utlbuffer.h"
@@ -122,11 +104,7 @@ static int FileSelect( const char *name, const char *mask );
 #endif
 
 #if defined( ASYNC_FILEIO )
-#ifdef _WIN32
-#include "winlite.h"
-#else
 #include <aio.h>
-#endif
 #endif
 
 #define INVALID_HANDLE_VALUE NULL
@@ -277,14 +255,8 @@ CDirIterator::CDirIterator( const char *pchPath, const char *pchPattern )
 		m_bNoFiles = true;
 		m_bUsedFirstFile = true;
 
-#if defined(_WIN32)
-		m_hFind = INVALID_HANDLE_VALUE;
-		m_pFindData = new WIN32_FIND_DATAW;
-		m_rgchFileName[0] = 0;
-#else
 		m_hFind = -1;
 		m_pFindData = new _finddata_t;
-#endif
 		memset( m_pFindData, 0, sizeof(*m_pFindData) );
 
 	}
@@ -307,26 +279,11 @@ void CDirIterator::Init( const char *pchSearchPath )
 {
 	CPathString strBasePath( pchSearchPath );
 
-#if defined(_WIN32)
-	m_pFindData = new WIN32_FIND_DATAW;
-	memset( m_pFindData, 0, sizeof(*m_pFindData) );
-
-	m_rgchFileName[0] = 0;
-	m_hFind = FindFirstFileW( strBasePath.GetWCharPathPrePended(), m_pFindData );
-	bool bSuccess = (m_hFind != INVALID_HANDLE_VALUE);
-	// Conversion should never fail with valid filenames...
-	if (bSuccess && !Q_UnicodeToUTF8( m_pFindData->cFileName, m_rgchFileName, sizeof(m_rgchFileName) ))
-	{
-		AssertMsg( false, "Q_UnicodeToUTF8 failed on m_pFindData->cFileName in CDirIterator" );
-		bSuccess = false;
-	}
-#else
 	m_pFindData = new _finddata_t;
 	memset( m_pFindData, 0, sizeof(*m_pFindData) );
 
 	m_hFind = _findfirst( strBasePath.GetUTF8Path(), m_pFindData );
 	bool bSuccess = (m_hFind != -1);
-#endif
 
 	if (!bSuccess)
 	{
@@ -348,13 +305,6 @@ void CDirIterator::Init( const char *pchSearchPath )
 //-----------------------------------------------------------------------------
 CDirIterator::~CDirIterator()
 {
-#if defined(_WIN32)
-	if (m_hFind != INVALID_HANDLE_VALUE)
-	{
-		FindClose( m_hFind );
-	}
-	delete m_pFindData;
-#else
 	if (m_hFind != -1)
 	{
 		_findclose( m_hFind );
@@ -369,7 +319,6 @@ CDirIterator::~CDirIterator()
 		free( m_pFindData->namelist );
 		delete m_pFindData;
 	}
-#endif
 }
 
 
@@ -378,11 +327,7 @@ CDirIterator::~CDirIterator()
 //-----------------------------------------------------------------------------
 bool CDirIterator::IsValid() const
 {
-#if defined(_WIN32)
-	return m_hFind != INVALID_HANDLE_VALUE;
-#else
 	return m_hFind != -1;
-#endif
 }
 
 //-----------------------------------------------------------------------------
@@ -390,11 +335,7 @@ bool CDirIterator::IsValid() const
 //-----------------------------------------------------------------------------
 bool CDirIterator::BValidFilename()
 {
-#if defined( _WIN32 )
-	const char *pch = m_rgchFileName;
-#else
 	const char *pch = m_pFindData->name;
-#endif
 
 	if ((pch[0] == '.' && pch[1] == 0) ||
 		(pch[0] == '.' && pch[1] == '.' && pch[2] == 0))
@@ -422,17 +363,7 @@ bool CDirIterator::BNextFile()
 	// find the next item
 	for (;;)
 	{
-#if defined( _WIN32 )
-		bool bFound = (FindNextFileW( m_hFind, m_pFindData ) != FALSE);
-		// Conversion should never fail with valid filenames...
-		if (bFound && !Q_UnicodeToUTF8( m_pFindData->cFileName, m_rgchFileName, sizeof(m_rgchFileName) ))
-		{
-			AssertMsg( false, "Q_UnicodeToUTF8 failed on m_pFindData->cFileName in CDirIterator" );
-			bFound = false;
-		}
-#else
 		bool bFound = (_findnext( m_hFind, m_pFindData ) == 0);
-#endif
 
 		if (!bFound)
 		{
@@ -461,11 +392,7 @@ bool CDirIterator::BNextFile()
 //-----------------------------------------------------------------------------
 const char *CDirIterator::CurrentFileName()
 {
-#if defined( _WIN32 )
-	return m_rgchFileName;
-#else
 	return m_pFindData->name;
-#endif
 }
 
 
@@ -474,38 +401,16 @@ const char *CDirIterator::CurrentFileName()
 //-----------------------------------------------------------------------------
 int64 CDirIterator::CurrentFileLength() const
 {
-#if defined( _WIN32 )
-	LARGE_INTEGER li = { { m_pFindData->nFileSizeLow, m_pFindData->nFileSizeHigh } };
-	return li.QuadPart;
-#else
 	return (int64)m_pFindData->size;
-#endif
 }
 
-#if defined( _WIN32 )
-//-----------------------------------------------------------------------------
-// Purpose: utility for converting a system filetime to a regular time
-//-----------------------------------------------------------------------------
-time64_t FileTimeToUnixTime( FILETIME filetime )
-{
-	long long int t = filetime.dwHighDateTime;
-	t <<= 32;
-	t += (unsigned long)filetime.dwLowDateTime;
-	t -= 116444736000000000LL;
-	return t / 10000000;
-}
-#endif
 
 //-----------------------------------------------------------------------------
 // Purpose: returns last write time of the file
 //-----------------------------------------------------------------------------
 time64_t CDirIterator::CurrentFileWriteTime() const
 {
-#if defined( _WIN32 )
-	return FileTimeToUnixTime( m_pFindData->ftLastWriteTime );
-#else
 	return m_pFindData->time_write;
-#endif
 }
 
 
@@ -514,11 +419,7 @@ time64_t CDirIterator::CurrentFileWriteTime() const
 //-----------------------------------------------------------------------------
 time64_t CDirIterator::CurrentFileCreateTime() const
 {
-#if defined( _WIN32 )
-	return FileTimeToUnixTime( m_pFindData->ftCreationTime );
-#else
 	return m_pFindData->time_create;
-#endif
 }
 
 
@@ -527,11 +428,7 @@ time64_t CDirIterator::CurrentFileCreateTime() const
 //-----------------------------------------------------------------------------
 bool CDirIterator::BCurrentIsDir() const
 {
-#if defined( _WIN32 )
-	return (m_pFindData->dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
-#else
 	return (m_pFindData->attrib & _A_SUBDIR ? true : false);
-#endif
 }
 
 
@@ -540,11 +437,7 @@ bool CDirIterator::BCurrentIsDir() const
 //-----------------------------------------------------------------------------
 bool CDirIterator::BCurrentIsHidden() const
 {
-#if defined( _WIN32 )
-	return (m_pFindData->dwFileAttributes & FILE_ATTRIBUTE_HIDDEN) != 0;
-#else
 	return (m_pFindData->attrib & _A_HIDDEN ? true : false);
-#endif
 }
 
 
@@ -553,11 +446,7 @@ bool CDirIterator::BCurrentIsHidden() const
 //-----------------------------------------------------------------------------
 bool CDirIterator::BCurrentIsReadOnly() const
 {
-#if defined( _WIN32 )
-	return (m_pFindData->dwFileAttributes & FILE_ATTRIBUTE_READONLY) != 0;
-#else
 	return (m_pFindData->attrib & _A_RDONLY ? true : false);
-#endif
 }
 
 
@@ -566,11 +455,7 @@ bool CDirIterator::BCurrentIsReadOnly() const
 //-----------------------------------------------------------------------------
 bool CDirIterator::BCurrentIsSystem() const
 {
-#if defined( _WIN32 )
-	return (m_pFindData->dwFileAttributes & FILE_ATTRIBUTE_SYSTEM) != 0;
-#else
 	return (m_pFindData->attrib & _A_SYSTEM ? true : false);
-#endif
 }
 
 
@@ -579,11 +464,7 @@ bool CDirIterator::BCurrentIsSystem() const
 //-----------------------------------------------------------------------------
 bool CDirIterator::BCurrentIsMarkedForArchive() const
 {
-#if defined( _WIN32 )
-	return (m_pFindData->dwFileAttributes & FILE_ATTRIBUTE_ARCHIVE) != 0;
-#else
 	return (m_pFindData->attrib & _A_ARCH ? true : false);
-#endif
 }
 
 //-----------------------------------------------------------------------------
@@ -615,15 +496,6 @@ CFileWriter::~CFileWriter()
 
 
 #ifdef ASYNC_FILEIO
-#ifdef _WIN32
-// our own version of overlapped structure passed through async writes
-struct FileWriterOverlapped_t : public OVERLAPPED
-{
-    CFileWriter *m_pFileWriter;
-    void *m_pvData;
-    size_t m_cubData;
-};
-#else
 // our own version of overlapped structure passed through async writes
 struct FileWriterOverlapped_t : public aiocb
 {
@@ -631,7 +503,6 @@ struct FileWriterOverlapped_t : public aiocb
     void *m_pvData;
     size_t m_cubData;
 };
-#endif
 #endif
 
 
@@ -654,63 +525,6 @@ bool CFileWriter::BSetFile( const char *pchFile, bool bAllowOpenExisting )
 	m_unThreadID = 0;
 	m_cPendingCallbacksFromOtherThreads = 0;
 
-#ifdef _WIN32
-    DWORD dwFlags = FILE_ATTRIBUTE_NORMAL;
-    if ( m_bAsync )
-        dwFlags |= FILE_FLAG_OVERLAPPED;
-
-    // First try to open existing file, if specified that we should allow that
-    if ( bAllowOpenExisting )
-    {
-        m_hFileDest = ::CreateFileW( strPath.GetWCharPathPrePended(), GENERIC_WRITE, FILE_SHARE_READ, NULL, OPEN_EXISTING, dwFlags, NULL );
-        if ( m_hFileDest == INVALID_HANDLE_VALUE )
-        {
-            // clear overlapped and try again
-            dwFlags &= ~FILE_FLAG_OVERLAPPED;
-            m_hFileDest = ::CreateFileW( strPath.GetWCharPathPrePended(), GENERIC_WRITE, FILE_SHARE_READ, NULL, OPEN_EXISTING, dwFlags, NULL );
-            if ( m_hFileDest != INVALID_HANDLE_VALUE )
-            {
-                m_bAsync = false;
-            }
-        }
-
-        if ( m_hFileDest != INVALID_HANDLE_VALUE )
-        {
-            LARGE_INTEGER liOffset;
-            liOffset.QuadPart = 0;
-            LARGE_INTEGER liFilePtr;
-
-            ::SetFilePointerEx( m_hFileDest, liOffset, &liFilePtr, FILE_END );
-            m_cubWritten = liFilePtr.QuadPart;
-        }
-    }
-
-    // If we didn't already open existing, then move on to creation
-    if ( m_hFileDest == INVALID_HANDLE_VALUE )
-    {
-        // make sure the full path to file exists
-        CUtlString strPathCopyUTF8 = strPath.GetUTF8Path();
-        Q_StripFilename( const_cast<char*>(strPathCopyUTF8.Access()) );
-        CreateDirRecursive( strPathCopyUTF8.Access() );
-
-        // Reset back to try overlapped below incase we tried without above
-        if ( m_bAsync )
-            dwFlags |= FILE_FLAG_OVERLAPPED;
-
-        m_hFileDest = ::CreateFileW( strPath.GetWCharPathPrePended(), GENERIC_WRITE, FILE_SHARE_READ, NULL, CREATE_ALWAYS, dwFlags, NULL );
-
-        if ( m_hFileDest == INVALID_HANDLE_VALUE )
-        {
-            // clear overlapped and try again
-            m_bAsync = false;
-            dwFlags &= ~FILE_FLAG_OVERLAPPED;
-            m_hFileDest = ::CreateFileW( strPath.GetWCharPathPrePended(), GENERIC_WRITE, FILE_SHARE_READ, NULL, CREATE_ALWAYS, dwFlags, NULL );
-            if ( m_hFileDest == INVALID_HANDLE_VALUE )
-                return false;
-        }
-    }
-
-#else
 
     int flags = O_WRONLY;
     if ( bAllowOpenExisting )
@@ -724,7 +538,6 @@ bool CFileWriter::BSetFile( const char *pchFile, bool bAllowOpenExisting )
         off_t offset = lseek( (intptr_t)m_hFileDest, 0, SEEK_END );
         m_cubWritten = offset;
     }
-#endif
     
     m_unThreadID = ThreadGetCurrentId();
     return ( m_hFileDest != INVALID_HANDLE_VALUE );
@@ -733,14 +546,10 @@ bool CFileWriter::BSetFile( const char *pchFile, bool bAllowOpenExisting )
 
 void CFileWriter::Sleep( uint nMSec )
 {
-#ifdef _WIN32
-    ::SleepEx( nMSec, TRUE );
-#else
     if ( nMSec == 0 )
         sched_yield();
     else 
         usleep( nMSec * 1000 );
-#endif
 }
 
 //-----------------------------------------------------------------------------
@@ -756,27 +565,6 @@ bool CFileWriter::Seek( uint64 offset, ESeekOrigin eOrigin )
 
     bool bSuccess = false;
 
-#ifdef _WIN32
-    DWORD dwMoveMethod = FILE_BEGIN;
-    switch( eOrigin )
-    {
-    case k_ESeekCur:
-        dwMoveMethod = FILE_CURRENT;
-        break;
-    case k_ESeekEnd:
-        dwMoveMethod = FILE_END;
-        break;
-    default:
-        dwMoveMethod = FILE_BEGIN;
-    }
-
-    LARGE_INTEGER largeIntOffset;
-    largeIntOffset.QuadPart = offset;
-
-    if ( ::SetFilePointerEx( m_hFileDest, largeIntOffset, NULL, dwMoveMethod ) )
-        bSuccess = true;
-
-#else
     int orgin = SEEK_SET;
     switch( eOrigin )
     {
@@ -793,7 +581,6 @@ bool CFileWriter::Seek( uint64 offset, ESeekOrigin eOrigin )
     // fseeko will work on 64 bit file offsets if _FILE_OFFSET_BITS 64 is defined, is this the best way
     // to do this on posix builds?
     bSuccess = lseek( (intptr_t)m_hFileDest, (off_t)offset, orgin ) != -1;
-#endif
 
     return bSuccess;
 }
@@ -831,10 +618,6 @@ bool CFileWriter::Write( const void *pvData, uint32 cubData )
         memcpy( pFileWriterOverlapped->m_pvData, pvData, cubData );
 
         // work out where to write to
-#ifdef _WIN32
-        pFileWriterOverlapped->Offset = ( uint32 ) ( m_cubWritten & 0xffffffff );
-        pFileWriterOverlapped->OffsetHigh = ( uint32 ) ( m_cubWritten >> 32 );
-#else
         pFileWriterOverlapped->aio_offset = m_cubWritten;
         pFileWriterOverlapped->aio_buf = pFileWriterOverlapped->m_pvData;
         pFileWriterOverlapped->aio_nbytes = pFileWriterOverlapped->m_cubData;
@@ -846,17 +629,10 @@ bool CFileWriter::Write( const void *pvData, uint32 cubData )
         pFileWriterOverlapped->aio_sigevent.sigev_notify_attributes = NULL;
         pFileWriterOverlapped->aio_sigevent.sigev_value.sival_ptr = pFileWriterOverlapped;
                  
-#endif
 
       
-#ifdef _WIN32
-        // post write
-        bRet = ::WriteFileEx( m_hFileDest, pFileWriterOverlapped->m_pvData, cubData, pFileWriterOverlapped, &CFileWriter::ThreadedWriteFileCompletionFunc );
-    
-#else
         bRet = aio_write( pFileWriterOverlapped );
         bRet = !bRet; // aio_read returns 0 on success, this func returns success if bRet != 0
-#endif
         if ( bRet )
 		{
 			ThreadInterlockedExchangeAdd( &m_cubOutstanding, cubData );
@@ -878,14 +654,7 @@ bool CFileWriter::Write( const void *pvData, uint32 cubData )
     else
 #endif // ASYNC_FILEIO
     {
-#ifdef _WIN32
-        // normal write
-        DWORD dwBytesWritten = 0;
-        ::WriteFile( m_hFileDest, pvData, cubData, &dwBytesWritten, NULL );
-        bRet = ( dwBytesWritten == cubData );
-#else
         bRet = write( (intptr_t)m_hFileDest, pvData, cubData );
-#endif
     }
 
     // increment
@@ -925,9 +694,6 @@ int CFileWriter::Printf( char *pDest, int bufferLen, char const *pFormat, ... )
 //-----------------------------------------------------------------------------
 void CFileWriter::Flush()
 {
-#ifdef WIN32
-    FlushFileBuffers( m_hFileDest );
-#endif
 
     if ( m_unThreadID == ThreadGetCurrentId() )
 	{
@@ -969,11 +735,7 @@ void CFileWriter::Close()
 		// temp handle to avoid double close in threaded environment
 		HANDLE hFileDest = m_hFileDest;
        	m_hFileDest = INVALID_HANDLE_VALUE; 
-#ifdef _WIN32
-        ::CloseHandle( hFileDest );
-#else
         close( (intptr_t)hFileDest );
-#endif
     }
 
 	// Close has to be called from thread that called BSetFile
@@ -984,22 +746,6 @@ void CFileWriter::Close()
 // Purpose: async callback for when a file write has completed
 //-----------------------------------------------------------------------------
 #ifdef ASYNC_FILEIO
-#ifdef _WIN32
-void CFileWriter::ThreadedWriteFileCompletionFunc( unsigned long dwErrorCode, unsigned long dwBytesTransfered, struct _OVERLAPPED *pOverlapped )
-{
-	FileWriterOverlapped_t *pFileWriterOverlapped = (FileWriterOverlapped_t *)pOverlapped;
-	ThreadInterlockedExchangeAdd( &pFileWriterOverlapped->m_pFileWriter->m_cubOutstanding, (int)(0-pFileWriterOverlapped->m_cubData) );
-	if ( pFileWriterOverlapped->m_pFileWriter->m_unThreadID != ThreadGetCurrentId() )
-	{
-		// this was not the main thread, reduce counter
-		ThreadInterlockedDecrement( &pFileWriterOverlapped->m_pFileWriter->m_cPendingCallbacksFromOtherThreads ); 
-	}
-	FreePv( pFileWriterOverlapped->m_pvData );
-	delete pFileWriterOverlapped;
-
-
-}
-#else
 void CFileWriter::ThreadedWriteFileCompletionFunc( sigval sigval )
 {
 	FileWriterOverlapped_t *pFileWriterOverlapped = (FileWriterOverlapped_t *)sigval.sival_ptr;
@@ -1014,16 +760,9 @@ void CFileWriter::ThreadedWriteFileCompletionFunc( sigval sigval )
 		delete pFileWriterOverlapped;
 	}
 }
-#endif
 #endif // ASYNC_FILEIO
 
 
-#ifdef WIN32
-struct DirWatcherOverlapped : public OVERLAPPED
-{
-	CDirWatcher *m_pDirWatcher;
-};
-#endif
 
 // a buffer full of file names
 static const int k_cubDirWatchBufferSize = 8 * 1024;
@@ -1045,23 +784,6 @@ CDirWatcher::CDirWatcher()
 //-----------------------------------------------------------------------------
 CDirWatcher::~CDirWatcher()
 {
-#ifdef WIN32
-	if ( m_pOverlapped )
-	{
-		// mark the overlapped structure as gone
-		DirWatcherOverlapped *pDirWatcherOverlapped = (DirWatcherOverlapped *)m_pOverlapped;
-		pDirWatcherOverlapped->m_pDirWatcher = NULL;
-	}
-
-	if ( m_hFile )
-	{
-		// make sure we flush any pending I/O's on the handle
-		::CancelIo( m_hFile );
-		::SleepEx( 0, TRUE );
-		// close the handle
-		::CloseHandle( m_hFile );
-	}
-#endif
 	if ( m_pFileInfo )
 	{
 		free( m_pFileInfo );
@@ -1073,52 +795,6 @@ CDirWatcher::~CDirWatcher()
 }
 
 
-#ifdef WIN32
-//-----------------------------------------------------------------------------
-// Purpose: callback watch
-//			gets called on the same thread whenever a SleepEx() occurs
-//-----------------------------------------------------------------------------
-class CDirWatcherFriend
-{
-public:
-	static void WINAPI DirWatchCallback( DWORD dwErrorCode, DWORD dwNumberOfBytesTransfered, OVERLAPPED *pOverlapped )
-	{
-		DirWatcherOverlapped *pDirWatcherOverlapped = (DirWatcherOverlapped *)pOverlapped;
-
-		// see if we've been cancelled
-		if ( !pDirWatcherOverlapped->m_pDirWatcher )
-			return;
-
-		// parse and pass back
-		if ( dwNumberOfBytesTransfered > sizeof(FILE_NOTIFY_INFORMATION) )
-		{
-			FILE_NOTIFY_INFORMATION *pFileNotifyInformation = (FILE_NOTIFY_INFORMATION *)pDirWatcherOverlapped->m_pDirWatcher->m_pFileInfo;
-			do 
-			{
-				// null terminate the string and turn it to UTF-8
-				int cNumWChars = pFileNotifyInformation->FileNameLength / sizeof(wchar_t);
-				wchar_t *pwchT = new wchar_t[cNumWChars + 1];
-				memcpy( pwchT, pFileNotifyInformation->FileName, pFileNotifyInformation->FileNameLength );
-				pwchT[cNumWChars] = 0;
-				CStrAutoEncode strAutoEncode( pwchT );
-
-				// add it to our list
-				pDirWatcherOverlapped->m_pDirWatcher->AddFileToChangeList( strAutoEncode.ToString() );
-				delete[] pwchT;
-				if ( pFileNotifyInformation->NextEntryOffset == 0 )
-					break;
-
-				// move to the next file
-				pFileNotifyInformation = (FILE_NOTIFY_INFORMATION *)(((byte*)pFileNotifyInformation) + pFileNotifyInformation->NextEntryOffset);
-			} while ( 1 );
-		}
-
-
-		// watch again
-		pDirWatcherOverlapped->m_pDirWatcher->PostDirWatch();
-	}
-};
-#endif
 
 //-----------------------------------------------------------------------------
 // Purpose: only one directory can be watched at a time
@@ -1129,36 +805,10 @@ void CDirWatcher::SetDirToWatch( const char *pchDir )
 		return;
 	
 	CPathString strPath( pchDir );
-#ifdef WIN32
-	// open the directory
-	m_hFile = ::CreateFileW( strPath.GetWCharPathPrePended(), FILE_LIST_DIRECTORY, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, NULL, OPEN_EXISTING, FILE_FLAG_OVERLAPPED | FILE_FLAG_BACKUP_SEMANTICS, NULL );
-
-	// create our buffers
-	m_pFileInfo = malloc( k_cubDirWatchBufferSize );
-	m_pOverlapped = malloc( sizeof( DirWatcherOverlapped ) );
-
-	// post a watch
-	PostDirWatch();
-#else
 	Assert( !"Impl me" );
-#endif
 }
 
 
-#ifdef WIN32
-//-----------------------------------------------------------------------------
-// Purpose: used by callback functions to push a file onto the list
-//-----------------------------------------------------------------------------
-void CDirWatcher::PostDirWatch()
-{
-	memset( m_pOverlapped, 0, sizeof(DirWatcherOverlapped) );
-	DirWatcherOverlapped *pDirWatcherOverlapped = (DirWatcherOverlapped *)m_pOverlapped;
-	pDirWatcherOverlapped->m_pDirWatcher = this;
-
-	DWORD dwBytes;
-	::ReadDirectoryChangesW( m_hFile, m_pFileInfo, k_cubDirWatchBufferSize, TRUE, FILE_NOTIFY_CHANGE_LAST_WRITE | FILE_NOTIFY_CHANGE_FILE_NAME, &dwBytes, (OVERLAPPED *)m_pOverlapped, &CDirWatcherFriend::DirWatchCallback );
-}
-#endif
 
 
 //-----------------------------------------------------------------------------
@@ -1182,11 +832,6 @@ void CDirWatcher::AddFileToChangeList( const char *pchFile )
 //-----------------------------------------------------------------------------
 bool CDirWatcher::GetChangedFile( CUtlString *psFile )
 {
-#ifdef WIN32
-	// this will trigger any pending directory reads
-	// this does get hit other places in the code; so the callback can happen at any time
-	::SleepEx( 0, TRUE );
-#endif
 
 	if ( !m_listChangedFiles.Count() )
 		return false;
@@ -1274,15 +919,6 @@ bool CreateDirRecursive( const char *pchPathIn )
 bool BCreateDirectory( const char *path )
 {
 	CPathString pathStr( path );
-#ifdef WIN32
-	if ( ::CreateDirectoryW( pathStr.GetWCharPathPrePended(), NULL ) )
-		return true;
-
-	if ( ::GetLastError() == ERROR_ALREADY_EXISTS )
-		return true;
-
-	return false;
-#else
 	int i = mkdir( pathStr.GetUTF8Path(), S_IRWXU | S_IRWXG | S_IRWXO );
 	if ( i == 0 )
 		return true;
@@ -1290,7 +926,6 @@ bool BCreateDirectory( const char *path )
 		return true;
 
 	return false;
-#endif
 }
 
 //-----------------------------------------------------------------------------
@@ -1330,14 +965,7 @@ bool MakeFileWriteable( const char *pszFileNameIn )
 bool UnlinkFile( const char *pchFileIn )
 {
 	CPathString strPath( pchFileIn );
-#ifdef _WIN32
-	if (::DeleteFileW( strPath.GetWCharPathPrePended() ))
-		return true;
-
-	return false;
-#else
 	return (0 == _unlink( strPath.GetUTF8Path() ));
-#endif
 }
 
 //-----------------------------------------------------------------------------

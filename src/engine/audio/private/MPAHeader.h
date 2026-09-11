@@ -6,9 +6,6 @@
 
 #ifndef MPAHEADER_H
 #define MPAHEADER_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #pragma once
 

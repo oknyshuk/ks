@@ -3,9 +3,6 @@
 #ifndef CSM_PARALLEL_SPLIT_H
 #define CSM_PARALLEL_SPLIT_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "mathlib/volumeculler.h"
 #include "mathlib/camera.h"

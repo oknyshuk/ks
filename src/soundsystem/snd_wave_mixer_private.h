@@ -10,9 +10,6 @@
 #ifndef SND_WAVE_MIXER_PRIVATE_H
 #define SND_WAVE_MIXER_PRIVATE_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "soundsystem/snd_audio_source.h"
 #include "soundsystem/snd_device.h"

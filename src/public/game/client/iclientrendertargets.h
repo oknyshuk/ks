@@ -8,9 +8,6 @@
 
 #ifndef ICLIENTRENDERTARGETS_H
 #define ICLIENTRENDERTARGETS_H
-#ifdef _WIN32
-	#pragma once
-#endif
 
 #include "interface.h"		// For base interface
 

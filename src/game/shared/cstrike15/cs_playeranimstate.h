@@ -6,9 +6,6 @@
 
 #ifndef TF_PLAYERANIMSTATE_H
 #define TF_PLAYERANIMSTATE_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 
 #include "convar.h"

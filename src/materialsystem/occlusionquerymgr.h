@@ -14,9 +14,6 @@
 #error "This file is private to the implementation of IMaterialSystem/IMaterialSystemInternal"
 #endif
 
-#if defined( _WIN32 )
-#pragma once
-#endif
 
 
 #include "tier1/utllinkedlist.h"

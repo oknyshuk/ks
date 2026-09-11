@@ -13,11 +13,6 @@
 
 #include "tier0/valve_off.h"
 
-#if defined( PLATFORM_WINDOWS_PC )
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
-#include <dbghelp.h>
-#endif
 
 
 #include "tier0/valve_on.h"

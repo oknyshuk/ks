@@ -10,11 +10,6 @@
 //-----------------------------------------------------------------------------
 
 #include <stdio.h>
-#ifdef _WIN32
-#include <windows.h>
-#include <assert.h>
-#include <direct.h>
-#else
 #include <stdlib.h>
 #include <dlfcn.h>
 #include <string.h>
@@ -22,17 +17,11 @@
 #include <errno.h>
 #include <unistd.h>
 #define MAX_PATH PATH_MAX
-#endif
 
 #include "tier0/basetypes.h"
 
-#ifdef _WIN32
-typedef int (*DedicatedMain_t)( HINSTANCE hInstance, HINSTANCE hPrevInstance, 
-							  LPSTR lpCmdLine, int nCmdShow );
-#else
 typedef int (*DedicatedMain_t)( int argc, char *argv[] );
 
-#endif
 
 //-----------------------------------------------------------------------------
 // Purpose: Return the directory where this .exe is running from
@@ -69,52 +58,6 @@ static char *GetBaseDir( const char *pszBuffer )
 	return basedir;
 }
 
-#ifdef _WIN32
-int APIENTRY WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow )
-{
-	// Must add 'bin' to the path....
-	char* pPath = getenv("PATH");
-
-	// Use the .EXE name to determine the root directory
-	char moduleName[ MAX_PATH ];
-	char szBuffer[ 4096 ];
-	if ( !GetModuleFileName( hInstance, moduleName, MAX_PATH ) )
-	{
-		MessageBox( 0, "Failed calling GetModuleFileName", "Launcher Error", MB_OK );
-		return 0;
-	}
-
-	// Get the root directory the .exe is in
-	char* pRootDir = GetBaseDir( moduleName );
-
-#ifdef _DEBUG
-	int len = 
-#endif
-	_snprintf( szBuffer, sizeof( szBuffer ) - 1, "PATH=%s\\bin\\;%s", pRootDir, pPath );
-	szBuffer[ sizeof(szBuffer) - 1 ] = 0;
-	assert( len < 4096 );
-	_putenv( szBuffer );
-
-	HINSTANCE launcher = LoadLibrary( "bin\\dedicated" DLL_EXT_STRING ); // STEAM OK ... filesystem not mounted yet
-	if (!launcher)
-	{
-		char *pszError;
-		FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, NULL, GetLastError(), MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPTSTR)&pszError, 0, NULL);
-
-		char szBuf[1024];
-		_snprintf(szBuf, sizeof( szBuf ) - 1, "Failed to load the launcher DLL:\n\n%s", pszError);
-		szBuf[ sizeof(szBuf) - 1 ] = 0;
-		MessageBox( 0, szBuf, "Launcher Error", MB_OK );
-
-		LocalFree(pszError);
-		return 0;
-	}
-
-	DedicatedMain_t main = (DedicatedMain_t)GetProcAddress( launcher, "DedicatedMain" );
-	return main( hInstance, hPrevInstance, lpCmdLine, nCmdShow );
-}
-
-#else
 #define stringize(a) #a
 #define dedicated_binary(a,b,c) a stringize(b) c 
 
@@ -154,4 +97,3 @@ int main( int argc, char *argv[] )
 
 	return main( argc, argv );
 }
-#endif

@@ -7,9 +7,6 @@
 
 #ifndef PLAYERSTATE_H
 #define PLAYERSTATE_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "edict.h"
 #include "networkvar.h"

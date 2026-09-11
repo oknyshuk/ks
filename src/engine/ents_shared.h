@@ -13,9 +13,6 @@
 #include "packed_entity.h"
 #include "iclientnetworkable.h"
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 typedef intp SerializedEntityHandle_t;
 

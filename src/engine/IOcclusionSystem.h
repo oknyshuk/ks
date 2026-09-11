@@ -9,9 +9,6 @@
 #ifndef IOCCLUSIONSYSTEM_H
 #define	IOCCLUSIONSYSTEM_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 
 class Vector;

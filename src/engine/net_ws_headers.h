@@ -6,14 +6,8 @@
 
 #ifndef NET_WS_HEADERS_H
 #define NET_WS_HEADERS_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 
-#ifdef _WIN32
-#include "winlite.h"
-#endif
 
 #include "vstdlib/random.h"
 #include "convar.h"
@@ -29,14 +23,6 @@
 #include "tier1/mempool.h"
 #include "../utils/bzip2/bzlib.h"
 
-#if defined(_WIN32)
-
-#include <winsock2.h>
-
-// #include <process.h>
-typedef int socklen_t;
-
-#else
 
 #include <unistd.h>
 #include <sys/socket.h>
@@ -71,7 +57,6 @@ typedef int socklen_t;
 typedef int SOCKET;
 #define FAR
 
-#endif
 
 #include "sv_rcon.h"
 #ifndef DEDICATED

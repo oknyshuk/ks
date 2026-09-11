@@ -7,9 +7,6 @@
 #ifndef QUADRIC_H
 #define QUADRIC_H
 
-#if defined( COMPILER_MSVC )
-#pragma once
-#endif
 
 #include "vector.h"
 #include "cholesky.h"

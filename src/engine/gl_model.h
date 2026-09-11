@@ -10,9 +10,6 @@
 #ifndef GL_MODEL_H
 #define GL_MODEL_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 struct mnode_t;
 struct mleaf_t;

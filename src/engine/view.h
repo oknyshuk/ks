@@ -10,9 +10,6 @@
 #ifndef VIEW_H
 #define VIEW_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 class CViewSetup;
 class CViewSetupV1;

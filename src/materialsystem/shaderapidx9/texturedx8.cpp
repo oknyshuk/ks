@@ -25,9 +25,6 @@
 
 #include "tier0/memdbgon.h"
 
-#ifdef _WIN32
-#pragma warning (disable:4189 4701)
-#endif
 
 static int s_TextureCount = 0;
 

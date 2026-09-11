@@ -581,10 +581,7 @@ def build(bld):
         "cstrike15/RocketUI/rkpanel_popup.cpp",
     ]
 
-    if bld.env.DEST_OS == "win32":
-        source += ["cstrike15/gameui/logofile.cpp"]
-    else:
-        source += ["../../filesystem/linux_support.cpp"]
+    source += ["../../filesystem/linux_support.cpp"]
 
     bld.shlib(
         source=source,

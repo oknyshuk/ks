@@ -6,9 +6,6 @@
 
 #ifndef NET_CHAN_H
 #define NET_CHAN_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "net.h"
 #include "netadr.h"

@@ -6,9 +6,6 @@
 //=============================================================================//
 #if !defined( ISYS_H )
 #define ISYS_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "interface.h"
 

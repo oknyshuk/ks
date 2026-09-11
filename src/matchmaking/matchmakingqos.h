@@ -8,9 +8,6 @@
 
 #ifndef MATCHMAKING_QOS_H
 #define MATCHMAKING_QOS_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "mm_framework.h"
 

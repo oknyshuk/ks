@@ -7,9 +7,6 @@
 
 #ifndef NETWORKSTRINGTABLE_GAMEDLL_H
 #define NETWORKSTRINGTABLE_GAMEDLL_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "networkstringtabledefs.h"
 

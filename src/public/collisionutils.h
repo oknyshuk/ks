@@ -11,9 +11,6 @@
 
 #include "tier0/platform.h"
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "mathlib/ssemath.h"
 

@@ -10,20 +10,4 @@
 #define WINLITE_H
 #pragma once
 
-#ifdef _WIN32
-// 
-// Prevent tons of unused windows definitions
-//
-#define WIN32_LEAN_AND_MEAN
-#define NOWINRES
-#define NOSERVICE
-#define NOMCX
-#define NOIME
-#pragma warning(push, 1)
-#pragma warning(disable: 4005)
-#include <windows.h>
-#pragma warning(pop)
-#undef PostMessage
-
-#endif // WIN32
 #endif // WINLITE_H

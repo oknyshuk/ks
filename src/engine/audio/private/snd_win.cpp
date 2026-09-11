@@ -6,9 +6,7 @@
 
 #include "audio_pch.h"
 
-#if defined( USE_SDL )
 #include "snd_dev_sdl.h"
-#endif
 
 
 // memdbgon must be the last include file in a .cpp file!!!
@@ -75,17 +73,6 @@ IAudioDevice *IAudioDevice::AutoDetectInit()
 {
 	IAudioDevice *pDevice = NULL;
 
-#if defined( WIN32 ) && !defined( USE_SDL )
-
-	if ( !pDevice )
-	{
-		if ( snd_firsttime )
-		{
-			pDevice = Audio_CreateDirectSoundDevice();
-		}
-	}
-
-#elif defined( USE_SDL )
 	DevMsg( "Trying SDL Audio Interface\n" );
 	pDevice = Audio_CreateSDLAudioDevice();
 
@@ -110,9 +97,6 @@ IAudioDevice *IAudioDevice::AutoDetectInit()
 	}
 #endif // NEVER
 
-#else
-#error
-#endif
 
 	snd_firsttime = false;
 

@@ -7,9 +7,6 @@
 
 #ifndef DISPINFO_DEFS_H
 #define DISPINFO_DEFS_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 
 #include "utlvector.h"

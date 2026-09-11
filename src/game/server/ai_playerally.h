@@ -16,9 +16,6 @@
 #include "ai_speechfilter.h"
 #include "stdstring.h"
 
-#if defined( _WIN32 )
-#pragma once
-#endif
 
 //-----------------------------------------------------------------------------
 
@@ -409,10 +406,6 @@ public:
 
 protected:
 
-#ifdef HL2_DLL
-	// Health regeneration for friendly allies
-	virtual bool ShouldRegenerateHealth( void ) { return ( Classify() == CLASS_PLAYER_ALLY_VITAL ); }
-#endif
 
 	inline bool CanSpeakWhileScripting();
 

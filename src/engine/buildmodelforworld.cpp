@@ -279,7 +279,6 @@ static bool KeepSurface( SurfaceHandle_t surfID )
 		return false;
 	}
 
-#if defined( CSTRIKE15 )
 	if( MSurf_Flags( surfID ) & SURFDRAW_NODRAW )
 	{
 		return false;
@@ -289,7 +288,6 @@ static bool KeepSurface( SurfaceHandle_t surfID )
 	{
 		return false;
 	}
-#endif
 
 	return true;
 }

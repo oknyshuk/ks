@@ -54,14 +54,6 @@ inline char *CloneString( const char *str )
 /**
  * Simple utility function to allocate memory and duplicate a wide string
  */
-#ifdef _WIN32
-extern inline wchar_t *CloneWString( const wchar_t *str );
-// {
-// 	wchar_t *cloneStr = new wchar_t [ wcslen(str)+1 ];
-// 	wcscpy( cloneStr, str );
-// 	return cloneStr;
-// }
-#endif
 
 //--------------------------------------------------------------------------------------------------------------
 /**
@@ -73,17 +65,11 @@ char * BufPrintf(char *buf, int& len, PRINTF_FORMAT_STRING const char *fmt, ...)
 /**
  *  wide char version of BufPrintf
  */
-#ifdef _WIN32
-wchar_t * BufWPrintf(wchar_t *buf, int& len, PRINTF_FORMAT_STRING const wchar_t *fmt, ...);
-#endif
 
 //--------------------------------------------------------------------------------------------------------------
 /**
  *  convenience function that prints an int into a static wchar_t*
  */
-#ifdef _WIN32
-const wchar_t * NumAsWString( int val );
-#endif
 // dgoodenough - PS3 needs this guy as well.
 // PS3_BUILDFIX
 //--------------------------------------------------------------------------------------------------------------

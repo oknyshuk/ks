@@ -51,18 +51,7 @@ def build(bld):
         "win32consoleio.cpp",
     ]
 
-    if bld.env.DEST_OS == "win32":
-        source += [
-            "assert_dialog.rc",
-            "etwprof.cpp",
-            "memprocessheap.cpp",
-            "platform.cpp",
-            "pme.cpp",
-            "PMELib.cpp",
-            "dlmalloc/malloc.cpp",
-        ]
-    else:
-        source += ["cpu_posix.cpp", "platform_posix.cpp", "pme_posix.cpp"]
+    source += ["cpu_posix.cpp", "platform_posix.cpp", "pme_posix.cpp"]
 
     bld.objects(
         source=source,

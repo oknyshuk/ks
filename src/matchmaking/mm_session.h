@@ -6,9 +6,6 @@
 
 #ifndef MM_SESSION_H
 #define MM_SESSION_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 
 class IMatchSessionInternal : public IMatchSession, public IMatchEventsSink

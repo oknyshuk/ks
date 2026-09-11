@@ -16,12 +16,6 @@ SQInteger error_handler(HSQUIRRELVM v);
 HSQREMOTEDBG sq_rdbg_init(HSQUIRRELVM v,unsigned short port,SQBool autoupdate)
 {
 	sockaddr_in bindaddr;
-#ifdef _WIN32
-	WSADATA wsadata;
-	if (WSAStartup (MAKEWORD(1,1), &wsadata) != 0){
-		return NULL;
-	}	
-#endif 
 	SQDbgServer *rdbg = new SQDbgServer(v);
 	rdbg->_autoupdate = autoupdate?true:false;
 	rdbg->_accept = socket(AF_INET,SOCK_STREAM,0);
@@ -70,11 +64,7 @@ SQRESULT sq_rdbg_waitforconnections(HSQREMOTEDBG rdbg)
 
 SQRESULT sq_rdbg_update(HSQREMOTEDBG rdbg)
 {
-#ifdef _WIN32
-	TIMEVAL time;
-#else
 	struct timeval time;
-#endif
 	time.tv_sec=0;
 	time.tv_usec=0;
 	fd_set read_flags;
@@ -166,8 +156,5 @@ SQInteger error_handler(HSQUIRRELVM v)
 SQRESULT sq_rdbg_shutdown(HSQREMOTEDBG rdbg)
 {
 	delete rdbg;
-#ifdef _WIN32
-	WSACleanup();
-#endif
 	return SQ_OK;
 }

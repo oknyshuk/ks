@@ -6,9 +6,6 @@
 
 #ifndef STEAMUAUTHSERVER_H
 #define STEAMUAUTHSERVER_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "baseclient.h"
 #include "utlvector.h"

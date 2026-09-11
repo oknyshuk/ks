@@ -6,9 +6,6 @@
 
 #ifndef SOS_OP_MIXLAYER_H
 #define SOS_OP_MIXLAYER_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "sos_op.h"
 #include "snd_mixgroups.h"

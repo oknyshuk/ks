@@ -6,9 +6,6 @@
 
 #ifndef REFRACT_DX9_HELPER_H
 #define REFRACT_DX9_HELPER_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include <string.h>
 

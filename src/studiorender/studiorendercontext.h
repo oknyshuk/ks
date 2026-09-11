@@ -6,9 +6,6 @@
 
 #ifndef STUDIORENDERCONTEXT_H
 #define STUDIORENDERCONTEXT_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "istudiorender.h"
 #include "tier3/tier3.h"

@@ -10,9 +10,6 @@
 #ifndef BSPLIB_H
 #define BSPLIB_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 
 #include "bspfile.h"

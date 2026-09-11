@@ -96,20 +96,11 @@
 #if defined( PROTECTED_THINGS_ENABLE )
 #undef PROTECTED_THINGS_ENABLE // from protected_things.h
 #endif
-#if !defined ( _USE_32BIT_TIME_T ) && !defined( PLATFORM_64BITS )
-#define _USE_32BIT_TIME_T // this file assumes 32 bit time_t types
-#endif
 #include "tier0/platform.h"
-#ifdef IS_WINDOWS_PC
-#define STRICT
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
-#else
 #define far
 #define near
 #define INVALID_HANDLE_VALUE (void*)-1
 #define _tzset tzset
-#endif
 
 
 
@@ -2205,87 +2196,7 @@ bool HasZipSuffix(const char *fn)
   return false;
 }
 
-#ifdef _WIN32
-time_t filetime2timet(const FILETIME ft)
-{ SYSTEMTIME st; FileTimeToSystemTime(&ft,&st);
-  if (st.wYear<1970) {st.wYear=1970; st.wMonth=1; st.wDay=1;}
-  if (st.wYear>=2038) {st.wYear=2037; st.wMonth=12; st.wDay=31;}
-  struct tm tm;
-  tm.tm_sec = st.wSecond;
-  tm.tm_min = st.wMinute;
-  tm.tm_hour = st.wHour;
-  tm.tm_mday = st.wDay;
-  tm.tm_mon = st.wMonth-1;
-  tm.tm_year = st.wYear-1900;
-  tm.tm_isdst = 0;
-  time_t t = mktime(&tm);
-  return t;
-}
 
-ZRESULT GetFileInfo(HANDLE hf, ulg *attr, long *size, iztimes *times, ulg *timestamp)
-{ 
-  DWORD type=GetFileType(hf);
-  if (type!=FILE_TYPE_DISK) 
-	  return ZR_NOTINITED;
-  // The handle must be a handle to a file
-  // The date and time is returned in a long with the date most significant to allow
-  // unsigned integer comparison of absolute times. The attributes have two
-  // high bytes unix attr, and two low bytes a mapping of that to DOS attr.
-  //struct stat s; int res=stat(fn,&s); if (res!=0) return false;
-  // translate windows file attributes into zip ones.
-  BY_HANDLE_FILE_INFORMATION bhi; 
-  BOOL res=GetFileInformationByHandle(hf,&bhi);
-  if (!res) 
-	  return ZR_NOFILE;
-  FileTimeToLocalFileTime( &bhi.ftLastAccessTime, &bhi.ftLastAccessTime );
-  FileTimeToLocalFileTime( &bhi.ftLastWriteTime, &bhi.ftLastWriteTime );
-  FileTimeToLocalFileTime( &bhi.ftCreationTime, &bhi.ftCreationTime );
-  DWORD fa=bhi.dwFileAttributes; 
-  ulg a=0;
-  // Zip uses the lower word for its interpretation of windows stuff
-  if (fa&FILE_ATTRIBUTE_READONLY) a|=0x01;
-  if (fa&FILE_ATTRIBUTE_HIDDEN)   a|=0x02;
-  if (fa&FILE_ATTRIBUTE_SYSTEM)   a|=0x04;
-  if (fa&FILE_ATTRIBUTE_DIRECTORY)a|=0x10;
-  if (fa&FILE_ATTRIBUTE_ARCHIVE)  a|=0x20;
-  // It uses the upper word for standard unix attr, which we must manually construct
-  if (fa&FILE_ATTRIBUTE_DIRECTORY)a|=0x40000000;  // directory
-  else a|=0x80000000;  // normal file
-  a|=0x01000000;      // readable
-  if (fa&FILE_ATTRIBUTE_READONLY) {}
-  else a|=0x00800000; // writeable
-  // now just a small heuristic to check if it's an executable:
-  DWORD red, hsize=GetFileSize(hf,NULL); if (hsize>40)
-  { SetFilePointer(hf,0,NULL,FILE_BEGIN); unsigned short magic; ReadFile(hf,&magic,sizeof(magic),&red,NULL);
-    SetFilePointer(hf,36,NULL,FILE_BEGIN); unsigned long hpos;  ReadFile(hf,&hpos,sizeof(hpos),&red,NULL);
-    if (magic==0x54AD && hsize>hpos+4+20+28)
-    { SetFilePointer(hf,hpos,NULL,FILE_BEGIN); unsigned long signature; ReadFile(hf,&signature,sizeof(signature),&red,NULL);
-      if (signature==IMAGE_DOS_SIGNATURE || signature==IMAGE_OS2_SIGNATURE
-         || signature==IMAGE_OS2_SIGNATURE_LE || signature==IMAGE_NT_SIGNATURE)
-      { a |= 0x00400000; // executable
-      }
-    }
-  }
-  //
-  if (attr!=NULL) *attr = a;
-  if (size!=NULL) *size = hsize;
-  if (times!=NULL)
-  { // time_t is 32bit number of seconds elapsed since 0:0:0GMT, Jan1, 1970.
-    // but FILETIME is 64bit number of 100-nanosecs since Jan1, 1601
-    times->atime = filetime2timet(bhi.ftLastAccessTime);
-    times->mtime = filetime2timet(bhi.ftLastWriteTime);
-    times->ctime = filetime2timet(bhi.ftCreationTime);
-  }
-  if (timestamp!=NULL)
-  { WORD dosdate,dostime;
-    FileTimeToDosDateTime(&bhi.ftLastWriteTime,&dosdate,&dostime);
-    *timestamp = (WORD)dostime | (((DWORD)dosdate)<<16);
-  }
-  return ZR_OK;
-}
-#endif
-
-#ifndef _WIN32
 int timet_to_timestamp( time_t time )
 {
 	struct tm *tm;
@@ -2307,7 +2218,6 @@ int timet_to_timestamp( time_t time )
 	
 	return time | (date << 16 );
 }
-#endif
 
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -2385,18 +2295,6 @@ ZRESULT TZip::Create(void *z,unsigned int len,DWORD flags)
 			obuf=(char*)z;
 		else
 		{ 
-#ifdef _WIN32
-			hmapout = CreateFileMapping(INVALID_HANDLE_VALUE,NULL,PAGE_READWRITE,0,len,NULL);
-			if (hmapout==NULL) 
-				return ZR_NOALLOC;
-			obuf = (char*)MapViewOfFile(hmapout,FILE_MAP_ALL_ACCESS,0,0,len);
-			if (obuf==0) 
-			{
-				CloseHandle(hmapout); 
-				hmapout=0; 
-				return ZR_NOALLOC;
-			}
-#endif
 			obuf = (char*) calloc( len, 1 );
 			hmapout = (void*)-1; // sentinel to let close know it's a file in posix.
 			if ( !obuf )
@@ -2407,42 +2305,6 @@ ZRESULT TZip::Create(void *z,unsigned int len,DWORD flags)
 		mapsize=len;
 		return ZR_OK;
 	}
-#ifdef _WIN32
-	else if (flags==ZIP_HANDLE)
-	{ 
-		HANDLE hf = (HANDLE)z;
-		BOOL res = DuplicateHandle(GetCurrentProcess(),hf,GetCurrentProcess(),&hfout,0,FALSE,DUPLICATE_SAME_ACCESS);
-		if (!res) 
-			return ZR_NODUPH;
-		// now we have our own hfout, which we must close. And the caller will close hf
-		DWORD type = GetFileType(hfout);
-		ocanseek = (type==FILE_TYPE_DISK);
-		if (type==FILE_TYPE_DISK) 
-			ooffset=SetFilePointer(hfout,0,NULL,FILE_CURRENT);
-		else 
-			ooffset=0;
-		return ZR_OK;
-	}
-	else if (flags==ZIP_FILENAME)
-	{ 
-#ifdef _UNICODE
-		const TCHAR *fn = (const TCHAR*)z;
-		hfout = CreateFileW(fn,GENERIC_WRITE,0,NULL,CREATE_ALWAYS,FILE_ATTRIBUTE_NORMAL,NULL);
-#else
-		const char *fn = (const char*)z;
-		hfout = CreateFileA(fn,GENERIC_WRITE,0,NULL,CREATE_ALWAYS,FILE_ATTRIBUTE_NORMAL,NULL);
-#endif
-
-		if (hfout==INVALID_HANDLE_VALUE) 
-		{
-			hfout=0;
-			return ZR_NOFILE;
-		}
-		ocanseek=true;
-		ooffset=0;
-		return ZR_OK;
-	}
-#endif
 	else 
 		return ZR_ARGS;
 }
@@ -2468,12 +2330,6 @@ unsigned int TZip::write(const char *buf,unsigned int size)
     opos+=size;
     return size;
   }
-#ifdef _WIN32
-  else if (hfout!=0)
-  { DWORD writ; WriteFile(hfout,buf,size,&writ,NULL);
-    return writ;
-  }
-#endif
   oerr=ZR_NOTINITED; return 0;
 }
 
@@ -2484,12 +2340,6 @@ bool TZip::oseek(unsigned int pos)
     opos=pos;
     return true;
   }
-#ifdef _WIN32
-  else if (hfout!=0)
-  { SetFilePointer(hfout,pos+ooffset,NULL,FILE_BEGIN);
-    return true;
-  }
-#endif
   oerr=ZR_NOTINITED; return 0;
 }
 
@@ -2509,15 +2359,8 @@ ZRESULT TZip::Close()
   // then we do it now
   ZRESULT res=ZR_OK; if (!hasputcen) res=AddCentral(); hasputcen=true;
   if (obuf!=0 && hmapout!=0) 
-#ifdef _WIN32
-    UnmapViewOfFile(obuf); 
-#endif
 	free(obuf);
   obuf=0;
-#ifdef _WIN32
-  if (hmapout!=0) CloseHandle(hmapout); hmapout=0;
-  if (hfout!=0) CloseHandle(hfout); hfout=0;
-#endif
   return res;
 }
 
@@ -2528,15 +2371,9 @@ ZRESULT TZip::open_file(const TCHAR *fn)
 { hfin=0; bufin=0; selfclosehf=false; crc=CRCVAL_INITIAL; isize=0; csize=0; ired=0;
   if (fn==0) return ZR_ARGS;
   HANDLE hf = INVALID_HANDLE_VALUE;
-#ifdef _WIN32
-  hf = CreateFile(fn,GENERIC_READ,FILE_SHARE_READ,NULL,OPEN_EXISTING,0,NULL);
-#endif
   if (hf==INVALID_HANDLE_VALUE) return ZR_NOFILE;
   ZRESULT res = open_handle(hf,0);
   if (res!=ZR_OK) {
-#ifdef _WIN32
-    CloseHandle(hf); 
-#endif
     return res;
   }
   selfclosehf=true;
@@ -2545,81 +2382,27 @@ ZRESULT TZip::open_file(const TCHAR *fn)
 ZRESULT TZip::open_handle(HANDLE hf,unsigned int len)
 { hfin=0; bufin=0; selfclosehf=false; crc=CRCVAL_INITIAL; isize=0; csize=0; ired=0;
   if (hf==0 || hf==INVALID_HANDLE_VALUE) return ZR_ARGS;
-#ifdef _WIN32
-  DWORD type = GetFileType(hf);
-  if (type==FILE_TYPE_DISK)
-  { ZRESULT res = GetFileInfo(hf,&attr,&isize,&times,&timestamp);
-    if (res!=ZR_OK) return res;
-    SetFilePointer(hf,0,NULL,FILE_BEGIN); // because GetFileInfo will have screwed it up
-    iseekable=true; hfin=hf;
-    return ZR_OK;
-  }
-  else
-  { attr= 0x81800000;	   // just a normal read/write file
-    isize = -1;            // can't know size until at the end
-    if (len!=0) isize=len; // unless we were told explicitly!
-    iseekable=false;
-    SYSTEMTIME st; GetLocalTime(&st);
-    FILETIME ft;   SystemTimeToFileTime(&st,&ft);
-    WORD dosdate,dostime; FileTimeToDosDateTime(&ft,&dosdate,&dostime);
-    times.atime = filetime2timet(ft);
-    times.mtime = times.atime;
-    times.ctime = times.atime;
-    timestamp = (WORD)dostime | (((DWORD)dosdate)<<16);
-    hfin=hf;
-    return ZR_OK;
-  }
-#else
   return ZR_FAILED;
-#endif
 }
 
 ZRESULT TZip::open_mem(void *src,unsigned int len)
 { hfin=0; bufin=(const char*)src; selfclosehf=false; crc=CRCVAL_INITIAL; ired=0; csize=0; ired=0;
   lenin=len; posin=0;
   if (src==0 || len==0) return ZR_ARGS;
-#ifdef _WIN32
-  attr= 0x81800000; // just a normal read/write file
-  isize = len;
-  iseekable=true;
-  SYSTEMTIME st; GetLocalTime(&st);
-  FILETIME ft;   SystemTimeToFileTime(&st,&ft);
-  WORD dosdate,dostime; FileTimeToDosDateTime(&ft,&dosdate,&dostime);
-  times.atime = filetime2timet(ft);
-  times.mtime = times.atime;
-  times.ctime = times.atime;
-  timestamp = (WORD)dostime | (((DWORD)dosdate)<<16);
-  return ZR_OK;
-#else
 	times.atime = time(NULL);
 	times.mtime = times.atime;
 	times.ctime = times.atime;
 	timestamp = timet_to_timestamp( times.atime );
 	return ZR_OK;
-#endif
 }
 
 ZRESULT TZip::open_dir()
 { hfin=0; bufin=0; selfclosehf=false; crc=CRCVAL_INITIAL; isize=0; csize=0; ired=0;
-#ifdef _WIN32
-  attr= 0x41C00010; // a readable writable directory, and again directory
-  isize = 0;
-  iseekable=false;
-  SYSTEMTIME st; GetLocalTime(&st);
-  FILETIME ft;   SystemTimeToFileTime(&st,&ft);
-  WORD dosdate,dostime; FileTimeToDosDateTime(&ft,&dosdate,&dostime);
-  times.atime = filetime2timet(ft);
-  times.mtime = times.atime;
-  times.ctime = times.atime;
-  timestamp = (WORD)dostime | (((DWORD)dosdate)<<16);
-  return ZR_OK;
-#else
 	times.atime = time(NULL);
 	times.mtime = times.atime;
 	times.ctime = times.atime;
 	timestamp = timet_to_timestamp( times.atime );
 	return ZR_OK;
-#endif
 }
 
 unsigned TZip::sread(TState &s,char *buf,unsigned size)
@@ -2639,24 +2422,11 @@ unsigned TZip::read(char *buf, unsigned size)
     crc = crc32(crc, (uch*)buf, red);
     return red;
   }
-#ifdef _WIN32
-  else if (hfin!=0)
-  { DWORD red;
-    BOOL ok = ReadFile(hfin,buf,size,&red,NULL);
-    if (!ok) return 0;
-    ired += red;
-    crc = crc32(crc, (uch*)buf, red);
-    return red;
-  }
-#endif
   else {oerr=ZR_NOTINITED; return 0;}
 }
 
 ZRESULT TZip::iclose()
 { 
-#ifdef _WIN32
-  if (selfclosehf && hfin!=0) CloseHandle(hfin); 
-#endif
   hfin=0;
   bool mismatch = (isize!=-1 && isize!=ired);
   isize=ired; // and crc has been being updated anyway
@@ -2988,21 +2758,7 @@ ZRESULT ZipAdd(HZIP hz, const TCHAR *dstzn, void *src, unsigned int len, DWORD f
 		char szDest[MAX_PATH*2];
 		memset(szDest, 0, sizeof(szDest));
 
-#ifdef _UNICODE
-		// need to convert Unicode dest to ANSI
-		int nActualChars = WideCharToMultiByte(CP_ACP,	// code page
-								0,						// performance and mapping flags
-								(LPCWSTR) dstzn,		// wide-character string
-								-1,						// number of chars in string
-								szDest,					// buffer for new string
-								MAX_PATH*2-2,			// size of buffer
-								NULL,					// default for unmappable chars
-								NULL);					// set when default char used
-		if (nActualChars == 0)
-			return ZR_ARGS; 
-#else
 		strcpy(szDest, dstzn);
-#endif
 
 		lasterrorZ = zip->Add(szDest, src, len, flags);
 	}

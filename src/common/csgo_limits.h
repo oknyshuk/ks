@@ -6,9 +6,6 @@
 
 #ifndef CSGO_LIMITS_H
 #define CSGO_LIMITS_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #define MAX_CLAN_TAG_LENGTH		16	// max for new tags is actually 12, this allows some backward compat.
 // this must be shared across a lot of projects: client, server, matchmaking, engine

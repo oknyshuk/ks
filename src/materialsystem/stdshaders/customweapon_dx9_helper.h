@@ -2,9 +2,6 @@
 
 #ifndef CUSTOMWEAPON_HELPER_H
 #define CUSTOMWEAPON_HELPER_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include <string.h>
 

@@ -25,11 +25,7 @@
 #include "tier0/basetypes.h"
 
 #include "tier0/valve_off.h"
-	#ifdef COMPILER_MSVC
-		#include <tchar.h>
-	#else
 		#include <wchar.h>
-	#endif
 	#include <string.h>
 		#include <malloc.h>
 #include "tier0/valve_on.h"
@@ -37,13 +33,7 @@
 #include "commonmacros.h"
 #include "memalloc.h"
 
-#ifdef _WIN32
-#ifndef MEMALLOC_REGION
-#define MEMALLOC_REGION 0
-#endif
-#else
 #undef MEMALLOC_REGION
-#endif
 
 #if defined(USE_MEM_DEBUG)
 		#define _NORMAL_BLOCK 1
@@ -109,14 +99,6 @@ extern const char *g_pszModule;
 
 #undef new
 
-#if   !defined( GNUC )
-	#if defined(__AFX_H__) && defined(DEBUG_NEW)
-		#define new DEBUG_NEW
-	#else
-		#define MEMALL_DEBUG_NEW new(_NORMAL_BLOCK, __FILE__, __LINE__)
-		#define new MEMALL_DEBUG_NEW
-	#endif
-#endif
 
 #undef _strdup
 #undef strdup
@@ -240,11 +222,7 @@ inline wchar_t *MemAlloc_WcStrDup(const wchar_t *pString)
 #else
 
 #if defined(USE_MEM_DEBUG)
-#ifndef _STATIC_LINKED
 #pragma message ("Note: file includes crtdbg.h directly, therefore will cannot use memdbgon.h in non-debug build")
-#else
-#error "Error: file includes crtdbg.h directly, therefore will cannot use memdbgon.h in non-debug build. Not recoverable in static build"
-#endif
 #endif
 #endif // _INC_CRTDBG
 

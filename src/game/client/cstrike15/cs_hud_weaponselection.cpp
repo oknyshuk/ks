@@ -483,18 +483,7 @@ void CHudWeaponSelection::CycleToNextWeapon(WEAPON_SELECTION_MODE selectionMode)
 	{
 		SetSelectedWeapon( pNextWeapon );
 
-#if defined ( CSTRIKE15 )
 		SelectWeapon();
-#else
-		if( hud_fastswitch.GetInt() > 0 )
-		{
-			SelectWeapon();
-		}
-		else if ( !IsInSelectionMode() )
-		{
-			OpenSelection();
-		}
-#endif
 
 		// Play the "cycle to next weapon" sound
 		if( m_bPlaySelectionSounds )
@@ -545,18 +534,7 @@ void CHudWeaponSelection::CycleToPrevWeapon( void )
 	{
 		SetSelectedWeapon( pNextWeapon );
 
-#if defined ( CSTRIKE15 )
 		SelectWeapon();
-#else
-		if( hud_fastswitch.GetInt() > 0 )
-		{
-			SelectWeapon();
-		}
-		else if ( !IsInSelectionMode() )
-		{
-			OpenSelection();
-		}
-#endif
 
 		// Play the "cycle to next weapon" sound
 		if( m_bPlaySelectionSounds )
@@ -799,28 +777,12 @@ void CHudWeaponSelection::SelectWeaponSlot( int iSlot )
 			}
 		}
 
-#if defined ( CSTRIKE15 )
 		// only select if only one item in the bucket
 		if( bMultipleWeaponsInSlot == false )
 		{
 			// only one active item in bucket, so change directly to weapon
 			SelectWeapon();
 		}
-#else
-
-		// if fast weapon switch is on, then weapons can be selected in a single keypress
-		// but only if there is only one item in the bucket
-		if( hud_fastswitch.GetInt() > 0 && bMultipleWeaponsInSlot == false )
-		{
-			// only one active item in bucket, so change directly to weapon
-			SelectWeapon();
-		}
-		else if ( !IsInSelectionMode() )
-		{
-			// open the weapon selection
-			OpenSelection();
-		}
-#endif
 	}
 
 	if( m_bPlaySelectionSounds )

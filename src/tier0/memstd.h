@@ -5,12 +5,6 @@
 //-----------------------------------------------------------------------------
 #include "pch_tier0.h"
 
-#if IS_WINDOWS_PC
-#define WIN_32_LEAN_AND_MEAN
-#include <windows.h>
-#define VA_COMMIT_FLAGS MEM_COMMIT
-#define VA_RESERVE_FLAGS MEM_RESERVE
-#endif
 
 //#include <malloc.h>
 #include <algorithm>
@@ -24,45 +18,24 @@
 
 #define MIN_SBH_BLOCK	8
 #define MIN_SBH_ALIGN	8
-#ifdef PLATFORM_WINDOWS_PC64
-#define MAX_SBH_BLOCK	(16*1024*1024)
-#define SBH_BLOCK_LOOKUP_GRANULARITY 4
-#else
 #define MAX_SBH_BLOCK	2048
 #define SBH_BLOCK_LOOKUP_GRANULARITY 2
-#endif
 //#define MAX_POOL_REGION (4*1024*1024)
 
-#if defined( PLATFORM_WINDOWS_PC64 )
-#define SBH_LARGE_MEM 1
-#endif
 
 
 
-#ifdef PLATFORM_WINDOWS_PC64
-#define NUM_POOLS		47 // block sizes are more granular on 64-bit
-#else
 #define NUM_POOLS		42
-#endif
 
-#if defined( _WIN32 )
-// Small block heap on win64 is expecting SLIST_HEADER to look different than it does on win64. It was disabled for a long time because of this.
-#define MEM_SBH_ENABLED 1
-#endif
 
 #if ( defined( PLATFORM_WINDOWS_PC64 ) || DEVELOPMENT_ONLY )
 #define TRACK_SBH_COUNTS
 #endif
 
-#ifdef PLATFORM_WINDOWS_PC64
-// in 64-bit server , with huge pages and many pools, we need a lot to start with, otherwise we'll start falling into fallback SBH right away
-#define MBYTES_PRIMARY_SBH 256
-#else
 // Other platforms use a 48MB primary SBH and a (32MB) fallback SBH
 // CSGO was hitting falling out of the small block heap (many expensive calls
 // to CompactOnFail) with it set to 48 MB, so let's try higher.
 #define MBYTES_PRIMARY_SBH 64
-#endif
 
 #define MEMSTD_COMPILE_TIME_ASSERT( pred )	switch(0){case 0:case pred:;}
 
@@ -324,11 +297,7 @@ public:
 
 		byte *AllocatePoolMemory()
 		{
-#ifdef _WIN32
-			return (byte *)VirtualAlloc( NULL, TOTAL_BYTES, VA_RESERVE_FLAGS, PAGE_NOACCESS );
-#else
 			return NULL;
-#endif
 		}
 
 		inline size_t GetTotalBytes() const { return TOTAL_BYTES; }
@@ -342,20 +311,12 @@ public:
 
 		bool Decommit( void *pPage )
 		{
-#ifdef _WIN32
-			return ( VirtualFree( pPage, BYTES_PAGE, MEM_DECOMMIT ) != 0 );
-#else
 			return false;
-#endif
 		}
 
 		bool Commit( void *pPage )
 		{
-#ifdef _WIN32
-			return ( VirtualAlloc( pPage, BYTES_PAGE, VA_COMMIT_FLAGS, PAGE_READWRITE ) != NULL );
-#else
 			return false;
-#endif
 		}
 	};
 
@@ -384,18 +345,7 @@ public:
 	public:
 		byte *AllocatePoolMemory()
 		{
-#ifdef _WIN32
-			size_t numBytesToAllocate = TOTAL_BYTES;
-			if ( bPhysical )
-			{
-				// Allow command line override
-				extern size_t g_nSBHOverride;
-				numBytesToAllocate = g_nSBHOverride;
-			}
-			return (byte *)VirtualAlloc( NULL, numBytesToAllocate, VA_COMMIT_FLAGS, PAGE_READWRITE );
-#else
 			return NULL;
-#endif
 		}
 
 		inline size_t GetTotalBytes() const

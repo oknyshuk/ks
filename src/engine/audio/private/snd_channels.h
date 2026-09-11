@@ -9,9 +9,6 @@
 
 #include "mathlib/vector.h"
 
-#if defined( _WIN32 )
-#pragma once
-#endif
 
 class CSfxTable;
 class CAudioMixer;

@@ -14,9 +14,6 @@
 #include "gamerules.h"
 #include "datacache/imdlcache.h"
 
-#ifdef TERROR
-#include "func_elevator.h"
-#endif
 
 #include "tier1/lzmaDecoder.h"
 
@@ -931,21 +928,12 @@ Changes all '/' characters into '\' characters, in place.
 */
 inline void COM_FixSlashes( char *pname )
 {
-#ifdef _WIN32
-	while ( *pname ) 
-	{
-		if ( *pname == '/' )
-			*pname = '\\';
-		pname++;
-	}
-#else
 	while ( *pname ) 
 	{
 		if ( *pname == '\\' )
 			*pname = '/';
 		pname++;
 	}
-#endif
 }
 
 static void WarnIfMeshNeedsAnalysis( int version )
@@ -1017,10 +1005,6 @@ bool CNavMesh::Save( void ) const
 		return false;
 	}
 
-#if defined( PORTAL2 )
-	// Nav mesh unused in Portal2, don't want to allocate the 1MB fileBuffer.
-	return false;
-#endif
 
 	CUtlBuffer fileBuffer( 4096, 1024*1024 );
 
@@ -1239,10 +1223,6 @@ const CUtlVector< Place > *CNavMesh::GetPlacesFromNavFile( bool *hasUnnamedPlace
 	char filename[256];
 	Q_snprintf( filename, sizeof( filename ), FORMAT_NAVFILE, STRING( gpGlobals->mapname ) );
 
-#if defined( PORTAL2 )
-	// Nav mesh unused in Portal2, don't want to allocate the 1MB fileBuffer.
-	return NULL;
-#endif
 
 	CUtlBuffer fileBuffer( 4096, 1024*1024, CUtlBuffer::READ_ONLY );
 	if ( !filesystem->ReadFile( filename, "GAME", fileBuffer ) )	// this ignores .nav files embedded in the .bsp ...
@@ -1323,10 +1303,6 @@ NavErrorType CNavMesh::Load( void )
 	char filename[256];
 	Q_snprintf( filename, sizeof( filename ), FORMAT_NAVFILE, STRING( gpGlobals->mapname ) );
 
-#if defined( PORTAL2 )
-	// Nav mesh unused in Portal2, don't want to allocate the 1MB fileBuffer.
-	return NAV_CANT_ACCESS_FILE;
-#endif
 
 	bool navIsInBsp = false;
 	CUtlBuffer fileBuffer( 4096, 1024*1024, CUtlBuffer::READ_ONLY );

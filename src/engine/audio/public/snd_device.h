@@ -34,9 +34,6 @@
 class Vector;
 struct channel_t;
 
-#if defined(_WIN32) || defined(_WIN64)
-#define USE_AUDIO_DEVICE_V1 1
-#endif
 
 #if USE_AUDIO_DEVICE_V1
 // General interface to an audio device

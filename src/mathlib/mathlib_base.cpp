@@ -66,7 +66,6 @@ float _rsqrtf(float x)
 	return 1.f / _sqrtf( x );
 }
 
-#ifndef PLATFORM_PPC
 float VectorNormalize (Vector& vec)
 {
 #ifdef _VPROF_MATHLIB
@@ -84,7 +83,6 @@ float VectorNormalize (Vector& vec)
 	
 	return radius;
 }
-#endif
 
 
 // TODO: Add fast C VectorNormalizeFast.
@@ -3729,10 +3727,6 @@ void MathLib_Init( float gamma, float texGamma, float brightness, int overbright
 {
 	if ( s_bMathlibInitialized )
 		return;
-#ifdef _WIN32
-	Assert( _rotl( 0xC7654321, 1 ) == 0x8ECA8643 );
-	Assert( _rotl64( 0xC7654321ABCDEF00ull, 1 ) == 0x8ECA8643579BDE01ull );
-#endif
 #ifndef NDEBUG
 	pDebugString = "mathlib.lib built debug!";
 #endif

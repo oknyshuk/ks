@@ -7,9 +7,6 @@
 
 #ifndef PLAYERLOCALDATA_H
 #define PLAYERLOCALDATA_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 
 #include "playernet_vars.h"

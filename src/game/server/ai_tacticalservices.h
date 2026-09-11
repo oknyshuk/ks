@@ -7,9 +7,6 @@
 
 #include "ai_component.h"
 
-#if defined( _WIN32 )
-#pragma once
-#endif
 
 class CAI_Network;
 class CAI_Pathfinder;

@@ -5,10 +5,6 @@
 // $NoKeywords: $
 //=============================================================================//
 
-#if IS_WINDOWS_PC
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
-#endif
 #include "bitmap/texturepacker.h"
 
 // memdbgon must be the last include file in a .cpp file!!!

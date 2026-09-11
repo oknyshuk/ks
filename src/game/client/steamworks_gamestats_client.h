@@ -6,9 +6,6 @@
 
 #ifndef STEAMWORKS_GAMESTATS_CLIENT_H
 #define STEAMWORKS_GAMESTATS_CLIENT_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "steamworks_gamestats.h"
 

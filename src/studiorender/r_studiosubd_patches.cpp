@@ -1033,22 +1033,12 @@ FORCEINLINE fltx4 VectorLength( fltx4 &A )
 
 FORCEINLINE fltx4 CrossProduct( const fltx4 &A, const fltx4 &B )
 {
-#if   defined( _WIN32 )
-	fltx4 A1 = _mm_shuffle_ps( A, A, MM_SHUFFLE_REV( 1, 2, 0, 3 ) );
-	fltx4 B1 = _mm_shuffle_ps( B, B, MM_SHUFFLE_REV( 2, 0, 1, 3 ) );
-	fltx4 Result1 = MulSIMD( A1, B1 );
-	fltx4 A2 = _mm_shuffle_ps( A, A, MM_SHUFFLE_REV( 2, 0, 1, 3 ) );
-	fltx4 B2 = _mm_shuffle_ps( B, B, MM_SHUFFLE_REV( 1, 2, 0, 3 ) );
-	fltx4 Result2 = MulSIMD( A2, B2 );
-	return SubSIMD( Result1, Result2 );
-#else
 	fltx4 CrossVal;
 	SubFloat( CrossVal, 0 ) = SubFloat( A, 1 )*SubFloat( B, 2 ) - SubFloat( A, 2 )*SubFloat( B, 1 );
 	SubFloat( CrossVal, 1 ) = SubFloat( A, 2 )*SubFloat( B, 0 ) - SubFloat( A, 0 )*SubFloat( B, 2 );
 	SubFloat( CrossVal, 2 ) = SubFloat( A, 0 )*SubFloat( B, 1 ) - SubFloat( A, 1 )*SubFloat( B, 0 );
 	SubFloat( CrossVal, 3 ) = 0;
 	return CrossVal;
-#endif
 }
 
 FORCEINLINE void ComputeCatmullClarkLimitTangents( int idx, fltx4 *pPos, unsigned short *pOneRing, unsigned short vtx1RingSize,

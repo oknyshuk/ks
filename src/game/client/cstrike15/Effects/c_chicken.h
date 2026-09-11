@@ -9,9 +9,6 @@
 #ifndef C_CHICKEN_H
 #define C_CHICKEN_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "c_props.h"
 

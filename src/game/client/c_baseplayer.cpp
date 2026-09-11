@@ -105,7 +105,6 @@ static ConVar	cl_smoothtime	(
 	true, 2.0
 	 );
 
-#ifdef CSTRIKE15
 ConVar	spec_freeze_time( "spec_freeze_time", "3.0", FCVAR_RELEASE | FCVAR_REPLICATED, "Time spend frozen in observer freeze cam." );
 ConVar	spec_freeze_traveltime( "spec_freeze_traveltime", "0.3", FCVAR_RELEASE | FCVAR_REPLICATED, "Time taken to zoom in to frame a target in observer freeze cam.", true, 0.01, false, 0 );
 ConVar	spec_freeze_traveltime_long( "spec_freeze_traveltime_long", "0.45", FCVAR_CHEAT | FCVAR_REPLICATED, "Time taken to zoom in to frame a target in observer freeze cam when they are far away.", true, 0.01, false, 0 );
@@ -115,12 +114,6 @@ ConVar  spec_freeze_panel_extended_time( "spec_freeze_panel_extended_time", "0.0
 ConVar	spec_freeze_deathanim_time( "spec_freeze_deathanim_time", "0.8", FCVAR_RELEASE | FCVAR_REPLICATED, "The time that the death cam will spend watching the player's ragdoll before going into the freeze death cam." );
 ConVar	spec_freeze_target_fov_long( "spec_freeze_target_fov_long", "90", FCVAR_CHEAT | FCVAR_REPLICATED, "The target FOV that the deathcam should use when the cam zoom far away on the target." );
 ConVar	spec_freeze_target_fov( "spec_freeze_target_fov", "42", FCVAR_CHEAT | FCVAR_REPLICATED, "The target FOV that the deathcam should use." );
-#else
-ConVar	spec_freeze_time( "spec_freeze_time", "4.0",  FCVAR_CHEAT | FCVAR_REPLICATED, "Time spend frozen in observer freeze cam." );
-ConVar	spec_freeze_traveltime( "spec_freeze_traveltime", "0.4", FCVAR_CHEAT | FCVAR_REPLICATED, "Time taken to zoom in to frame a target in observer freeze cam.", true, 0.01, false, 0 );
-ConVar	spec_freeze_distance_min( "spec_freeze_distance_min", "96", FCVAR_CHEAT, "Minimum random distance from the target to stop when framing them in observer freeze cam." );
-ConVar	spec_freeze_distance_max( "spec_freeze_distance_max", "200", FCVAR_CHEAT, "Maximum random distance from the target to stop when framing them in observer freeze cam." );
-#endif
 
 ConVar	cl_player_fullupdate_predicted_origin_fix( "cl_player_fullupdate_predicted_origin_fix", "1" );
 
@@ -158,9 +151,7 @@ IMPLEMENT_REFLECT_PREDMAP_NO_BASE( CPlayerLocalData );
 
 IMPLEMENT_REFLECT_PREDMAP( C_BasePlayer );
 
-#if !defined( PORTAL2 )
 LINK_ENTITY_TO_CLASS( player, C_BasePlayer );
-#endif
 
 // -------------------------------------------------------------------------------- //
 // Functions.
@@ -2115,10 +2106,6 @@ bool C_BasePlayer::ShouldDrawLocalPlayer()
 	nSlot = GetSplitScreenPlayerSlot();
 #endif
 
-#ifdef PORTAL2
-	if( !IsLocalSplitScreenPlayer( (nSlot == -1) ? GET_ACTIVE_SPLITSCREEN_SLOT() : nSlot ) ) //HACKHACK: shortcut, avoid going into input and getting a bunch of asserts if the splitscreen view is not a local player
-		return false;
-#endif
 
 	return ( GetPlayerRenderMode(nSlot) == PLAYER_RENDER_THIRDPERSON ) || input->CAM_IsThirdPerson() || ( ToolsEnabled() && ToolFramework_IsThirdPersonCamera() );
 }
@@ -2129,7 +2116,6 @@ bool C_BasePlayer::ShouldDrawLocalPlayer()
 IClientModelRenderable *C_BasePlayer::GetClientModelRenderable()
 {
 
-#if defined ( CSTRIKE15 )// Since cstrike15 does not do glow, we can go ahead and use fast path for teammates.
 	
 	// We can enable mostly opaque models to cause players to be rendered in both the opaque and the translucent fast paths
 	// allowing both alpha and non alpha materials to show up.
@@ -2139,7 +2125,6 @@ IClientModelRenderable *C_BasePlayer::GetClientModelRenderable()
 	// rendering by returning NULL here.
 	return NULL;
 
-#endif
 
 	// Because of alpha sorting issues with smoke when we have mostlyopaque models.
 	// Honor base class eligibility
@@ -3230,23 +3215,6 @@ bool C_BasePlayer::ShouldRegenerateOriginFromCellBits() const
 {
 	// Don't use cell bits for local players
 	if ( 
-#ifdef PORTAL2
-		// HACK: In Portal 2, when we start recording a demo, the player is removed and recreated.
-		//		 There's a brief window where there is no local player and the non-local data table
-		//		 is sent across for the newly created player, containing the cell origin. This is
-		//		 incorrectly interpreted and copied to the network origin. The new network origin
-		//		 is copied to the local origin, which, among other things, screws up the player's eye
-		//		 position until she moves enough for a network update to fix her position. During this
-		//		 brief time, if we correctly regenerate the origin from the cell bits we received, it
-		//		 prevents this problem. At this point, changing the portal player's network tables
-		//		 could have a significant impact on perf and require a PS3 fix to maintain crossplay
-		//		 compatibility, so this is less risky.
-		//		 - Ted Rivera (2/25/2011)
-		( C_BasePlayer::HasAnyLocalPlayer() ||
-			( !engine->IsPlayingDemo() &&		
-			  !engine->IsRecordingDemo() &&		
-			  !engine->IsPlayingTimeDemo() ) ) &&	
-#endif
 		 (IsLocalPlayer( this ) ||
 		  (!g_pGameRules->IsMultiplayer()) ) ) //SP load fails the IsLocalPlayer() test while creating the player. Resulting in a bad origin until you move
 	{

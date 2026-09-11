@@ -43,9 +43,6 @@ def build(bld):
         "languages/squirrel/sqplus/SquirrelVM.cpp",
     ]
 
-    if bld.env.DEST_OS == "win32":
-        source += ["languages/squirrel/sqplus/SquirrelBindingsUtilsWin32.cpp"]
-
     bld.objects(
         source=source,
         target="vscript",

@@ -7,9 +7,6 @@
 
 #ifndef IPREDICTIONSYSTEM_H
 #define IPREDICTIONSYSTEM_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "predictable_entity.h"
 

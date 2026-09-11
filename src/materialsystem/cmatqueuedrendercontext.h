@@ -16,9 +16,6 @@
 
 #include "tier0/memdbgon.h"
 
-#if defined( _WIN32 )
-#pragma once
-#endif
 
 #ifndef MATSYS_INTERNAL
 #error "This file is private to the implementation of IMaterialSystem/IMaterialSystemInternal"

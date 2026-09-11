@@ -38,9 +38,6 @@
 #include "vstdlib/random.h"
 #include "datacache/idatacache.h"
 #include "materialsystem/materialsystem_config.h"
-#if defined( _WIN32 )
-#include <xmmintrin.h>
-#endif
 #include "staticpropmgr.h"
 #include "materialsystem/hardwareverts.h"
 #include "tier1/callqueue.h"
@@ -2634,12 +2631,8 @@ int CModelRender::DrawModel(
 
 static inline int GetLOD()
 {
-#ifdef CSTRIKE15
 	// Always slamp r_lod to 0 in CS:GO.
 	return 0;
-#else
-	return r_lod.GetInt();
-#endif
 }
 
 int	CModelRender::ComputeLOD( IMatRenderContext *pRenderContext, const ModelRenderInfo_t &info, studiohwdata_t *pStudioHWData )
@@ -3160,12 +3153,6 @@ int CModelRender::DrawStaticPropArrayFast( StaticPropRenderInfo_t *pProps, int c
 	bool bForceCubemap = r_showenvcubemap.GetBool();
 	int drawnCount = 0;
 	int forcedLodSetting = GetLOD();
-#ifndef CSTRIKE15
-	if ( r_staticprop_lod.GetInt() >= 0 )
-	{
-		forcedLodSetting = r_staticprop_lod.GetInt();
-	}
-#endif
 #ifdef VPROF_ENABLED
 	g_VProfCurrentProfile.EnterScope( "build unique model list", 2, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 #endif
@@ -3868,14 +3855,6 @@ void CModelRender::ComputeModelVertexLightingOld( mstudiomodel_t *pModel,
 	{
 		if ( vertData )
 		{
-#ifdef _WIN32
-			if ( bHasSSE )
-			{
-				// hint the next vertex
-				// data is loaded with one extra vertex for read past
-				_mm_prefetch( (char*)&pFatVerts[i+1], _MM_HINT_T0 );
-			}
-#endif
 
 			VectorTransform( pFatVerts[i].m_vecPosition, matrix, worldPos );
 			VectorRotate( pFatVerts[i].m_vecNormal, matrix, worldNormal );

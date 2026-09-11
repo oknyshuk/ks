@@ -6,9 +6,6 @@
 
 #ifndef SOS_ENTRY_MATCH_SYSTEM_H
 #define SOS_ENTRY_MATCH_SYSTEM_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "bitvec.h"
 //#include "snd_channels.h"

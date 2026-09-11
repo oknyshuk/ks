@@ -8,9 +8,6 @@
 #ifndef FILESYSTEM_HELPERS_H
 #define FILESYSTEM_HELPERS_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 
 // Call until it returns NULL. Each time you call it, it will parse out a token.

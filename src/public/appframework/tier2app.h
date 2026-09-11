@@ -14,9 +14,6 @@
 #ifndef TIER2APP_H
 #define TIER2APP_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 
 #include "appframework/AppFramework.h"

@@ -20,10 +20,6 @@
 #undef PROTECT_FILEIO_FUNCTIONS
 #undef fopen
 
-#if defined( WIN32 )
-#include "winlite.h"
-#include <WinInet.h>
-#endif
 
 #include <assert.h>
 

@@ -117,9 +117,6 @@ mat_fullbright 1 doesn't work properly on alpha materials in testroom_standards
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
-#ifdef _WIN32
-#pragma warning (disable:4189)
-#endif
 
 #if ( ( defined( _WIN32 ) || defined( LINUX ) ) && ( !defined( DYNAMIC_SHADER_COMPILE ) ) )
 
@@ -1957,10 +1954,6 @@ private:
 	float32 m_flCurrGameTime;
 
 
-#if defined( _WIN32 )
-	IDirect3DSurface *m_pNVAPI_registeredDepthStencilSurface;
-	IDirect3DTexture *m_pNVAPI_registeredDepthTexture;
-#endif
 };
 
 
@@ -2049,277 +2042,6 @@ void PIXifyName( char *pDest, const char *pSrc )
 	memcpy( pDest, pLastSlash, nBytes );
 }
 
-#ifdef _WIN32
-void PrintError( NvAPI_Status status, uint32 unStage, uint32 unProp, bool bPlus = false )
-{
-	NvAPI_ShortString szDesc = { 0 };
-	NvAPI_GetErrorMessage( status, szDesc );
-#ifdef DEBUG
-	Msg( " NVAPI error: %s\n", szDesc );
-#endif
-	Error( "Failed to initialize NVidia driver!\nDriver error at 0x%08X%s%08X: %s\n\nPlease visit NVidia website to get the most recent version of the graphics drivers and restore your Counter-Strike: Global Offensive driver profile and global driver profile to NVidia defaults.",
-		unStage, ( bPlus ? "+" : "-" ), unProp,
-		szDesc );
-}
-
-#ifdef DEBUG
-void DumpProfileSettings( NvDRSSessionHandle hSession, NvDRSProfileHandle hProfile, int numOfSettings )
-{
-	char szTemp[ 2048 ];
-	size_t nChars = 0;
-
-	if ( numOfSettings > 0 )
-	{
-		NVDRS_SETTING *setArray = new NVDRS_SETTING[ numOfSettings ];
-		V_memset( setArray, 0, sizeof( NVDRS_SETTING ) * numOfSettings );
-		NvU32 numSetRead = numOfSettings;
-		setArray[ 0 ].version = NVDRS_SETTING_VER;
-		NvAPI_Status status = NvAPI_DRS_EnumSettings( hSession, hProfile, 0, &numSetRead, setArray );
-		if (status != NVAPI_OK)
-		{
-			PrintError( status, 0x454e4d53, numOfSettings );
-			return;
-		}
-		for( unsigned int i = 0; i < numSetRead; i++ )
-		{
-			if ( setArray[ i ].settingLocation != NVDRS_CURRENT_PROFILE_LOCATION )
-			{
-				continue;
-			}
-			wcstombs_s( &nChars, szTemp, 2048, (wchar_t*)(setArray[ i ].settingName), 2048 );
-			Msg( "Setting Name: %s\n", szTemp );
-			Msg( "Setting ID: %X\n", setArray[ i ].settingId );
-			Msg( "Setting Type: %X\n", setArray[ i ].settingType );
-			Msg( "Predefined? : %d\n", setArray[ i ].isCurrentPredefined );
-			switch ( setArray[ i ].settingType )
-			{
-				case NVDRS_DWORD_TYPE:
-					Msg( "Setting Value: %X\n\n", setArray[ i ].u32CurrentValue );
-					break;
-				case NVDRS_BINARY_TYPE:
-					{
-						Msg( "Setting Binary (length=%d) :", setArray[ i ].binaryCurrentValue.valueLength );
-						for( unsigned int len = 0; len < setArray[ i ].binaryCurrentValue.valueLength; len++ )
-						{
-							Msg(" %02x", setArray[ i ].binaryCurrentValue.valueData[ len ] );
-						}
-						Msg( "\n\n" );
-					}
-					break;
-				case NVDRS_WSTRING_TYPE:
-					{
-						wcstombs_s( &nChars, szTemp, 2048, ( wchar_t* )( setArray[ i ].wszCurrentValue ), 2048 );
-						Msg( "Setting Value: %s\n\n", szTemp );
-					}
-					break;
-			}
-		}
-	}
-	Msg("\n");
-}
-#endif
-
-void ForceProfileSettings( NvDRSSessionHandle hSession, NvDRSProfileHandle hProfile, int numOfSettings )
-{
-	bool bNeedsSaving = false;
-	uint32 unFirstFixedProp = 0;
-	uint32 unFirstFixedValue = 0;
-	if ( numOfSettings > 0 )
-	{
-		NVDRS_SETTING *setArray = new NVDRS_SETTING[ numOfSettings ];
-		V_memset( setArray, 0, sizeof( NVDRS_SETTING ) * numOfSettings );
-		NvU32 numSetRead = numOfSettings;
-		setArray[ 0 ].version = NVDRS_SETTING_VER;
-		NvAPI_Status status = NvAPI_DRS_EnumSettings( hSession, hProfile, 0, &numSetRead, setArray );
-		if ( status != NVAPI_OK )
-		{
-			// PrintError( status, 0x454e4d53, numOfSettings );
-			return;
-		}
-		for ( unsigned int i = 0; i < numSetRead; i++ )
-		{
-			if ( setArray[ i ].settingLocation != NVDRS_CURRENT_PROFILE_LOCATION )
-			{
-				continue;
-			}
-			bool bNeedsReset = false;
-			switch ( setArray[ i ].settingId )
-			{
-			case 0x002C7F45: // Ambient Occlusion Compatibility
-				switch ( setArray[ i ].u32CurrentValue )
-				{
-				case 0: // disabled
-				case 0x2C: // CS:GO
-					break;
-				default:
-					bNeedsReset = true;
-					break;
-				}
-				break;
-			case 0x00664339: // NVIDIA Predefined Ambient Occlusion Usage
-				switch ( setArray[ i ].u32CurrentValue )
-				{
-				case 1: // Enabled
-					break;
-				default:
-					bNeedsReset = true;
-					break;
-				}
-				break;
-			case 0x00667329: // Ambient Occlusion Setting
-				switch ( setArray[ i ].u32CurrentValue )
-				{
-				case 0: // Off
-					break;
-				default:
-					bNeedsReset = true;
-					break;
-				}
-				break;
-			case 0x00738E8F: // texture filtering LOD bias (DX)
-			case 0x20403F79: // texture filtering LOD bias (GL)
-				switch ( setArray[ i ].u32CurrentValue )
-				{
-				case 0: // Off
-					break;
-				default:
-					bNeedsReset = true;
-					break;
-				}
-				break;
-			}
-			if ( bNeedsReset )
-			{
-#ifdef _DEBUG
-				Msg( "NVIDIA Setting Override Required -- ID: %X Old Value: %X\n", setArray[ i ].settingId, setArray[ i ].u32CurrentValue );
-#endif
-				if ( !bNeedsSaving )
-				{
-					unFirstFixedProp = setArray[ i ].settingId;
-					unFirstFixedValue = setArray[ i ].u32CurrentValue;
-				}
-				status = NvAPI_DRS_RestoreProfileDefaultSetting( hSession, hProfile, setArray[ i ].settingId );
-				if ( status != NVAPI_OK )
-				{
-					PrintError( status, setArray[ i ].settingId, setArray[ i ].u32CurrentValue );
-				}
-				bNeedsSaving = true;
-			}
-		}
-	}
-	
-	if ( bNeedsSaving )
-	{
-		NvAPI_Status status;
-		status = NvAPI_DRS_SaveSettings( hSession );
-		if ( ( status != NVAPI_OK )
-			&& ( status != NVAPI_FILE_NOT_FOUND )
-			&& ( status != NVAPI_ERROR ) )
-		{
-			PrintError( status, unFirstFixedProp, unFirstFixedValue, true );
-		}
-	}
-}
-
-bool CheckAndFixProfileSettings( NvDRSSessionHandle hSession, NvDRSProfileHandle hProfile, bool &bCSGOProfileFound )
-{
-	NvAPI_Status status;
-	NVDRS_PROFILE profileInformation = { 0 };
-	profileInformation.version = NVDRS_PROFILE_VER;
-	status = NvAPI_DRS_GetProfileInfo( hSession, hProfile, &profileInformation );
-	if ( status != NVAPI_OK )
-	{
-		// PrintError( status, 0x50524f46, status );
-		return false;
-	}
-
-	char szTemp[ 2048 ];
-	size_t nChars = 0;
-
-	if ( profileInformation.numOfApps > 0 )
-	{
-		NVDRS_APPLICATION_V1 *appArray = new NVDRS_APPLICATION_V1[ profileInformation.numOfApps ];
-		appArray[ 0 ].version = NVDRS_APPLICATION_VER_V1;
-		NvU32 numAppsRead = profileInformation.numOfApps;
-		status = NvAPI_DRS_EnumApplications( hSession, hProfile, 0, &numAppsRead, reinterpret_cast< NVDRS_APPLICATION * >( appArray ) );
-		if ( status != NVAPI_OK )
-		{
-			// PrintError( status, 0x454e4d41, numAppsRead );
-			delete[] appArray;
-			return false;
-		}
-		for( unsigned int i = 0; i < numAppsRead; i++ )
-		{
-			wcstombs_s( &nChars, szTemp, 2048, ( wchar_t* )( appArray[ i ].appName ), 2048 );
-			if ( V_stristr( szTemp, "csgo.exe" ) != NULL )
-			{
-				bCSGOProfileFound = true;
-#ifdef DEBUG
-				wcstombs_s( &nChars, szTemp, 2048, ( wchar_t* )( profileInformation.profileName ), 2048 );
-				Msg( "Profile Name: %s\n", szTemp );
-				Msg( "Number of Applications associated with the Profile: %d\n", profileInformation.numOfApps );
-				Msg( "Number of Settings associated with the Profile: %d\n", profileInformation.numOfSettings );
-				Msg( "Is Predefined: %d\n\n", profileInformation.isPredefined );
-				Msg( "Executable: %s\n", szTemp);
-				wcstombs_s( &nChars, szTemp, 2048, ( wchar_t* )( appArray[ i ].userFriendlyName ), 2048 );
-				Msg( "User Friendly Name: %s\n", szTemp );
-				Msg( "Is Predefined: %d\n\n", appArray[ i ].isPredefined );
-				DumpProfileSettings( hSession, hProfile, profileInformation.numOfSettings );
-#endif
-				ForceProfileSettings( hSession, hProfile, profileInformation.numOfSettings );
-			}
-		}
-		delete[] appArray;
-	}
-
-	return true;
-}
-
-void ScanAndFixNvDriverProfiles()
-{
-	NvAPI_Status status;
-	status = NvAPI_Initialize();
-	if ( status != NVAPI_OK )
-	{
-		// will get here for any non-Nv drivers or really really old Nv drivers that don't support NvAPI
-		return;
-	}
-
-	NvDRSSessionHandle hSession = 0;
-	status = NvAPI_DRS_CreateSession( &hSession );
-	if ( status == NVAPI_OK )
-	{
-		status = NvAPI_DRS_LoadSettings( hSession );
-		if ( status == NVAPI_OK )
-		{
-			NvDRSProfileHandle hProfile = 0;
-			bool bCSGOProfileFound = false;
-			unsigned int index = 0;
-			while ( ( status = NvAPI_DRS_EnumProfiles( hSession, index, &hProfile ) ) == NVAPI_OK )
-			{
-				CheckAndFixProfileSettings( hSession, hProfile, bCSGOProfileFound );
-				index++;
-			}
-
-			// force global settings
-			status = NvAPI_DRS_GetBaseProfile( hSession, &hProfile );
-			if ( status == NVAPI_OK )
-			{
-				NVDRS_PROFILE profileInformation = { 0 };
-				profileInformation.version = NVDRS_PROFILE_VER;
-				status = NvAPI_DRS_GetProfileInfo( hSession, hProfile, &profileInformation );
-				if ( status == NVAPI_OK )
-				{
-					ForceProfileSettings( hSession, hProfile, profileInformation.numOfSettings );
-				}
-			}
-		}
-	}
-
-	NvAPI_DRS_DestroySession( hSession );
-	hSession = 0; 
-}
-#endif
 
 //-----------------------------------------------------------------------------
 // Constructor, destructor
@@ -2417,11 +2139,6 @@ CShaderAPIDx8::CShaderAPIDx8() :
 	m_bLmapMesh = false;
 	m_bUnlitMesh = false;
 
-#ifdef WIN32
-	ScanAndFixNvDriverProfiles();
-	m_pNVAPI_registeredDepthStencilSurface = NULL;
-	m_pNVAPI_registeredDepthTexture = NULL;
-#endif
 }
 
 
@@ -2592,25 +2309,6 @@ void CShaderAPIDx8::ReleaseInternalRenderTargets( )
 
 	if ( m_pZBufferSurface )
 	{
-#if defined(_WIN32) && !defined( DX_TO_GL_ABSTRACTION )
-		if ( m_pNVAPI_registeredDepthStencilSurface != NULL )
-		{
-			// Unregister old one if there is any
-			SPEW_REFCOUNT( m_pNVAPI_registeredDepthStencilSurface );
-			NvAPI_D3D9_UnregisterResource( m_pNVAPI_registeredDepthStencilSurface );
-			SPEW_REFCOUNT( m_pNVAPI_registeredDepthStencilSurface );
-			m_pNVAPI_registeredDepthStencilSurface = NULL;
-		}
-
-		if ( m_pNVAPI_registeredDepthTexture != NULL )
-		{
-			// Unregister old one if there is any
-			SPEW_REFCOUNT( m_pNVAPI_registeredDepthTexture );
-			NvAPI_D3D9_UnregisterResource( m_pNVAPI_registeredDepthTexture );
-			SPEW_REFCOUNT( m_pNVAPI_registeredDepthTexture );
-			m_pNVAPI_registeredDepthTexture = NULL;
-		}
-#endif
 		SPEW_REFCOUNT_EXPECTED( m_pZBufferSurface, <=, 2 );
 		m_pZBufferSurface->Release();
 		m_pZBufferSurface = NULL;
@@ -7947,19 +7645,6 @@ void CShaderAPIDx8::SetTextureState( Sampler_t sampler, TextureBindFlags_t nBind
 	bool noMipFilter = config.bMipMapTextures == 0;
 
 	// Set SHADOWFILTER or ATI Fetch4
-#if !defined( DX_TO_VK_ABSTRACTION )
-	if ( g_pHardwareConfigDx8->SupportsFetch4() )
-	{
-		const uint nNewFetch4State = ( nBindFlags & TEXTURE_BINDFLAGS_SHADOWDEPTH ) ? ATI_FETCH4_ENABLE : ATI_FETCH4_DISABLE;
-		SETSAMPLESTATEANDMIRROR( sampler, samplerState, ATISAMP_FETCH4, m_bShadowFilterEnable, nNewFetch4State );
-
-		if ( nBindFlags & TEXTURE_BINDFLAGS_SHADOWDEPTH )
-		{
-			noFilter = true;
-			noMipFilter = true;
-		}
-	}
-#endif
 
 	if ( nBindFlags & TEXTURE_BINDFLAGS_NOMIP )
 	{
@@ -9811,165 +9496,6 @@ void CShaderAPIDx8::CopyRenderTargetToTextureEx( ShaderAPITextureHandle_t textur
 		return;
 	}
 
-#if   defined( _WIN32 ) && !defined( DX_TO_GL_ABSTRACTION )
-	static ConVarRef mat_resolveFullFrameDepth( "mat_resolveFullFrameDepth" );
-
-	if ( ( nRenderTargetID == -1 ) && g_pHardwareConfigDx8->SupportsResolveDepth() && g_pHardwareConfigDx8->HasFullResolutionDepthTexture() )
-	{
-		// z buffer resolve tricks
-
-		/*
-		not supporting this path yet
-		benefit is no depth resolve required (if MSAA off)
-		downside is risk of using/modifying depth buffer while rendering (now or in the future), and in managing depth surfaces - resolve at this stage is a much cleaner/safer way of using depth
-		if ( g_pHardwareConfigDx8->ActualCaps().m_bSupportsINTZ && ( config.m_nAASamples <= 1 ) )
-		{
-		// Supports INTZ and MSAA must be OFF
-		// Can 'use' the depth stencil surface as is, without need to resolve
-		// nothing to do here other than to check that the current DepthStencilSurface and DepthTexture are bound with our INTZ texture
-		}
-		else
-		*/
-		if ( g_pHardwareConfigDx8->ActualCaps().m_bSupportsRESZ )
-		{
-			// Supports RESZ (ATI and Intel only)
-			// Use a dummy draw call to set sampler 0 to our destination depth texture 
-			// and set the pointsize renderstate to RESZ_CODE in order to perform the resolve
-			// Works with or without MSAA
-
-			Dx9Device()->SetVertexShader( NULL );
-			Dx9Device()->SetPixelShader( NULL );
-			Dx9Device()->SetFVF( D3DFVF_XYZ );
-
-			// Bind depth stencil texture to texture sampler 0
-			Dx9Device()->SetTexture( 0, pD3DTexture );
-
-			// Perform a dummy draw call to ensure texture sampler 0 is set before the resolve is triggered
-			// Vertex declaration and shaders may need to be adjusted to ensure no debug error message is produced
-			SetRenderStateForce( D3DRS_ZENABLE, FALSE );
-			SetRenderStateForce( D3DRS_ZWRITEENABLE, FALSE );
-			SetRenderStateForce( D3DRS_COLORWRITEENABLE, 0 );
-
-			Dx9Device()->DrawPrimitiveUP_RESZ( &gRESZDummyVB );
-
-			SetRenderStateForce( D3DRS_ZWRITEENABLE, TRUE );
-			SetRenderStateForce( D3DRS_ZENABLE, TRUE );
-			SetRenderStateForce( D3DRS_COLORWRITEENABLE, 0x0F );
-
-			// Trigger the depth buffer resolve; after this call texture sampler 0
-			// will contain the contents of the resolve operation
-			SetRenderStateForce( D3DRS_POINTSIZE, RESZ_CODE );
-
-			// This hack to fix resz hack, has been found by Maksym Bezus
-			// Without this line resz will be resolved only for first frame
-			SetRenderStateForce( D3DRS_POINTSIZE, 0 );
-
-			// reset vertex decl, fvf
-			VertexFormat_t vertexFormat = MeshMgr()->GetCurrentVertexFormat();
-			m_DynamicState.m_pVertexDecl = NULL;
-			SetVertexDecl( vertexFormat, false, false, false, false, NULL );
-
-			// reset VS/PS
-			ShaderManager()->ResetShaderState();
-
-			// reset bound texture
-			SamplerState( 0 ).m_BoundTexture = INVALID_SHADERAPI_TEXTURE_HANDLE;
-			Dx9Device()->SetTexture( 0, 0 );
-		}
-		else if ( g_pHardwareConfigDx8->ActualCaps().m_VendorID == VENDORID_NVIDIA )
-		{
-			// Use NvAPI_D3D9_StretchRectEx to perform the resolve
-			// Works with or without MSAA
-			TM_ZONE( TELEMETRY_LEVEL1, TMZF_NONE, "NVIDIA Setup Resolve" );
-
-			Assert( m_pZBufferSurface );
-
-			if ( m_pNVAPI_registeredDepthStencilSurface != m_pZBufferSurface )
-			{
-				SPEW_REFCOUNT( m_pZBufferSurface );
-				NvAPI_D3D9_RegisterResource( m_pZBufferSurface );
-				SPEW_REFCOUNT( m_pZBufferSurface );
-
-				if ( m_pNVAPI_registeredDepthStencilSurface != NULL )
-				{
-					// Unregister old one if there is any
-					SPEW_REFCOUNT( m_pNVAPI_registeredDepthStencilSurface );
-					NvAPI_D3D9_UnregisterResource( m_pNVAPI_registeredDepthStencilSurface );
-					SPEW_REFCOUNT( m_pNVAPI_registeredDepthStencilSurface );
-				}
-				m_pNVAPI_registeredDepthStencilSurface = m_pZBufferSurface;
-			}
-
-			if ( m_pNVAPI_registeredDepthTexture != pD3DTexture )
-			{
-				SPEW_REFCOUNT( pD3DTexture );
-				NvAPI_D3D9_RegisterResource( pD3DTexture );
-				SPEW_REFCOUNT( pD3DTexture );
-
-				if ( m_pNVAPI_registeredDepthTexture != NULL )
-				{
-					// Unregister old one if there is any
-					SPEW_REFCOUNT( m_pNVAPI_registeredDepthStencilSurface );
-					NvAPI_D3D9_UnregisterResource( m_pNVAPI_registeredDepthTexture );
-					SPEW_REFCOUNT( m_pNVAPI_registeredDepthStencilSurface );
-				}
-				m_pNVAPI_registeredDepthTexture = pD3DTexture;
-			}
-
-			// Resolve
-			SPEW_REFCOUNT( m_pZBufferSurface );
-			Dx9Device()->StretchRectEx_NvAPI( m_pZBufferSurface, NULL, pD3DTexture, NULL, D3DTEXF_POINT );
-			SPEW_REFCOUNT( m_pZBufferSurface );
-		}
-		else
-		{
-			// Fallback, extra depth only pass required
-			// See SSAO_DepthPass()
-		}
-		return;
-	}
-	else
-	{
-		if ( nRenderTargetID == -1 )
-		{
-			// copy depth request
-			// nothing to do here, extra depth pass required
-			return;
-		}
-
-		IDirect3DSurface* pRenderTargetSurface;
-		HRESULT hr = Dx9Device()->GetRenderTarget( nRenderTargetID, &pRenderTargetSurface );
-		if ( FAILED( hr ) )
-		{
-			Assert( 0 );
-			return;
-		}
-
-		IDirect3DSurface *pDstSurf;
-		hr = pD3DTexture->GetSurfaceLevel( 0, &pDstSurf );
-		Assert( !FAILED( hr ) );
-		if ( FAILED( hr ) )
-		{
-			pRenderTargetSurface->Release();
-			return;
-		}
-
-		bool tryblit = true;
-		if ( tryblit )
-		{
-			RECORD_COMMAND( DX8_COPY_FRAMEBUFFER_TO_TEXTURE, 1 );
-			RECORD_INT( textureHandle );
-
-			RECT srcRect, dstRect;
-			hr = Dx9Device()->StretchRect( pRenderTargetSurface, RectToRECT( pSrcRect, srcRect ),
-										   pDstSurf, RectToRECT( pDstRect, dstRect ), D3DTEXF_LINEAR );
-			Assert( !FAILED( hr ) );
-		}
-
-		pDstSurf->Release();
-		pRenderTargetSurface->Release();
-	}
-#else
 	static ConVarRef mat_resolveFullFrameDepth( "mat_resolveFullFrameDepth" );
 
 	if ( ( nRenderTargetID == -1 ) && g_pHardwareConfigDx8->SupportsResolveDepth() && g_pHardwareConfigDx8->HasFullResolutionDepthTexture() )
@@ -10040,7 +9566,6 @@ void CShaderAPIDx8::CopyRenderTargetToTextureEx( ShaderAPITextureHandle_t textur
 		pDstSurf->Release();
 		pRenderTargetSurface->Release();
 	}
-#endif
 }
 
 void CShaderAPIDx8::CopyRenderTargetToTexture( ShaderAPITextureHandle_t textureHandle )
@@ -12141,11 +11666,7 @@ IDirect3DSurface* CShaderAPIDx8::GetFrontBufferImage( ImageFormat& format )
 	
 	POINT pnt;
 	pnt.x = pnt.y = 0;
-#ifdef _WIN32
-	BOOL result = ClientToScreen( ( HWND )m_hWnd, &pnt );
-#else
 	BOOL result = ClientToScreen( (VD3DHWND)m_hWnd, &pnt );
-#endif
 	Assert( result );
 
 	RECT srcRect;

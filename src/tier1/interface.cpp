@@ -3,9 +3,6 @@
 // Purpose: 
 //
 //===========================================================================//
-#if defined( _WIN32 )
-#include <windows.h>
-#endif
 
 #if !defined( DONT_PROTECT_FILEIO_FUNCTIONS )
 #define DONT_PROTECT_FILEIO_FUNCTIONS // for protected_things.h
@@ -26,9 +23,6 @@
 #include "tier0/dbg.h"
 #include "tier0/stacktools.h"
 #include "tier0/threadtools.h"
-#ifdef _WIN32
-#include <direct.h> // getcwd
-#endif
 #include "tier0/platform.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
@@ -116,10 +110,6 @@ void *GetModuleHandle(const char *name)
 	return handle;
 }
 
-#if defined( _WIN32 )
-#define WIN32_LEAN_AND_MEAN
-#include "windows.h"
-#endif
 
 //-----------------------------------------------------------------------------
 // Purpose: returns a pointer to a function, given a module
@@ -129,20 +119,12 @@ void *GetModuleHandle(const char *name)
 static void *Sys_GetProcAddress( const char *pModuleName, const char *pName )
 {
 	HMODULE hModule = (HMODULE)GetModuleHandle( pModuleName );
-#if defined( WIN32 )
-	return (void *)GetProcAddress( hModule, pName );
-#else // !WIN32
 	return (void *)dlsym( (void *)hModule, pName );
-#endif // WIN32
 }
 
 static void *Sys_GetProcAddress( HMODULE hModule, const char *pName )
 {
-#if defined( WIN32 )
-	return (void *)GetProcAddress( hModule, pName );
-#else
 	return (void *)dlsym( (void *)hModule, pName );
-#endif
 }
 
 bool Sys_IsDebuggerPresent()
@@ -158,19 +140,6 @@ struct ThreadedLoadLibaryContext_t
 	ThreadedLoadLibaryContext_t() : m_pLibraryName(NULL), m_hLibrary(0), m_nError(0) {}
 };
 
-#ifdef _WIN32
-
-static HMODULE InternalLoadLibrary( const char *pName )
-{
-	return LoadLibraryEx( pName, NULL, LOAD_WITH_ALTERED_SEARCH_PATH );
-}
-uintp ThreadedLoadLibraryFunc( void *pParam )
-{
-	ThreadedLoadLibaryContext_t *pContext = (ThreadedLoadLibaryContext_t*)pParam;
-	pContext->m_hLibrary = InternalLoadLibrary(pContext->m_pLibraryName);
-	return 0;
-}
-#endif
 
 
 // global to propagate a library load error from thread into Sys_LoadModule
@@ -191,46 +160,6 @@ static HMODULE Sys_LoadLibraryGuts( const char *pLibraryName )
 	}
 	Q_FixSlashes( str );
 
-#ifdef _WIN32
-	ThreadedLoadLibraryFunc_t threadFunc = GetThreadedLoadLibraryFunc();
-	if ( !threadFunc )
-	{
-		HMODULE retVal = InternalLoadLibrary( str );
-		if( retVal )
-		{
-			StackToolsNotify_LoadedLibrary( str );
-		}
-
-		return retVal;
-	}
-
-	ThreadedLoadLibaryContext_t context;
-	context.m_pLibraryName = str;
-	context.m_hLibrary = 0;
-
-	ThreadHandle_t h = CreateSimpleThread( ThreadedLoadLibraryFunc, &context );
-
-	unsigned int nTimeout = 0;
-	while( WaitForSingleObject( (HANDLE)h, nTimeout ) == WAIT_TIMEOUT )
-	{
-		nTimeout = threadFunc();
-	}
-
-	ReleaseThreadHandle( h );
-
-	if( context.m_hLibrary )
-	{
-		g_nLoadLibraryError = 0;
-		StackToolsNotify_LoadedLibrary( str );
-	}
-	else
-	{
-		g_nLoadLibraryError = context.m_nError;
-	}
-
-	return context.m_hLibrary;
-
-#else
 	HMODULE ret = (HMODULE)dlopen( str, RTLD_NOW );
 	if ( ! ret )
 	{
@@ -246,7 +175,6 @@ static HMODULE Sys_LoadLibraryGuts( const char *pLibraryName )
 // 		StackToolsNotify_LoadedLibrary( str );
 
 	return ret;
-#endif
 }
 
 static HMODULE Sys_LoadLibrary( const char *pLibraryName )
@@ -258,12 +186,6 @@ if ( CommandLine()->FindParm( "-valveinternal" ) )
 	{
 		pSuffix = "_valveinternal";
 	}
-#ifdef IS_WINDOWS_PC
-	else if ( CommandLine()->FindParm( "-ds" ) )			// windows DS bins
-	{
-		pSuffix = "_ds";
-	}
-#endif
 	if ( pSuffix )
 	{
 		char nameBuf[MAX_PATH];
@@ -288,16 +210,6 @@ if ( CommandLine()->FindParm( "-valveinternal" ) )
 //-----------------------------------------------------------------------------
 static bool s_bRunningWithDebugModules = false;
 
-#ifdef IS_WINDOWS_PC
-//-----------------------------------------------------------------------------
-// Purpose: Construct a process-specific name for kernel object to track
-// if any debug modules were loaded
-//-----------------------------------------------------------------------------
-static void DebugKernelMemoryObjectName( char *pszNameBuffer )
-{
-	sprintf( pszNameBuffer, "VALVE-MODULE-DEBUG-%08X", GetCurrentProcessId() );
-}
-#endif
 
 //-----------------------------------------------------------------------------
 // Purpose: Loads a DLL/component from disk and returns a handle to it
@@ -335,25 +247,7 @@ CSysModule *Sys_LoadModule( const char *pModuleName )
 		if ( !hDLL )
 		{
 // So you can see what the error is in the debugger...
-#if defined( _WIN32 )
-			char *lpMsgBuf;
-
-			FormatMessage(
-				FORMAT_MESSAGE_ALLOCATE_BUFFER |
-				FORMAT_MESSAGE_FROM_SYSTEM |
-				FORMAT_MESSAGE_IGNORE_INSERTS,
-				NULL,
-				GetLastError(),
-				MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), // Default language
-				(LPTSTR) &lpMsgBuf,
-				0,
-				NULL
-			);
-
-			LocalFree( (HLOCAL)lpMsgBuf );
-#else
 			Msg( "Failed to load %s: %s\n", pModuleName, dlerror() );
-#endif // _WIN32
 		}
 #endif // DEBUG
 	}
@@ -378,17 +272,6 @@ bool Sys_RunningWithDebugModules()
 {
 	if ( !s_bRunningWithDebugModules )
 	{
-#ifdef IS_WINDOWS_PC
-		char chMemoryName[ MAX_PATH ];
-		DebugKernelMemoryObjectName( chMemoryName );
-
-		HANDLE hObject = OpenFileMapping( FILE_MAP_READ, FALSE, chMemoryName );
-		if ( hObject && hObject != INVALID_HANDLE_VALUE )
-		{
-			CloseHandle( hObject );
-			s_bRunningWithDebugModules = true;
-		}
-#endif
 	}
 	return s_bRunningWithDebugModules;
 }
@@ -406,11 +289,7 @@ void Sys_UnloadModule( CSysModule *pModule )
 
 	HMODULE	hDLL = reinterpret_cast<HMODULE>(pModule);
 
-#ifdef _WIN32
-	FreeLibrary( hDLL );
-#else
 //$$$$$$ mikesart: for testing with valgrind don't unload so...	dlclose((void *)hDLL);
-#endif
 }
 
 //-----------------------------------------------------------------------------
@@ -425,9 +304,6 @@ CreateInterfaceFn Sys_GetFactory( CSysModule *pModule )
 		return NULL;
 
 	HMODULE	hDLL = reinterpret_cast<HMODULE>(pModule);
-#ifdef _WIN32
-	return reinterpret_cast<CreateInterfaceFn>(GetProcAddress( hDLL, CREATEINTERFACE_PROCNAME ));
-#else
 	// Linux gives this error:
 	//../public/interface.cpp: In function `IBaseInterface *(*Sys_GetFactory
 	//(CSysModule *)) (const char *, int *)':
@@ -436,7 +312,6 @@ CreateInterfaceFn Sys_GetFactory( CSysModule *pModule )
 	//
 	// so lets get around it :)
 	return (CreateInterfaceFn)(GetProcAddress( (void *)hDLL, CREATEINTERFACE_PROCNAME ));
-#endif
 }
 
 //-----------------------------------------------------------------------------
@@ -455,12 +330,8 @@ CreateInterfaceFn Sys_GetFactoryThis( void )
 //-----------------------------------------------------------------------------
 CreateInterfaceFn Sys_GetFactory( const char *pModuleName )
 {
-#ifdef _WIN32
-	return static_cast<CreateInterfaceFn>( Sys_GetProcAddress( pModuleName, CREATEINTERFACE_PROCNAME ) );
-#else
 	// see Sys_GetFactory( CSysModule *pModule ) for an explanation
 	return (CreateInterfaceFn)( Sys_GetProcAddress( pModuleName, CREATEINTERFACE_PROCNAME ) );
-#endif
 }
 
 //-----------------------------------------------------------------------------

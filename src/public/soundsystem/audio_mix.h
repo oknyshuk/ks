@@ -7,9 +7,6 @@
 #ifndef AUDIO_MIX_H
 #define AUDIO_MIX_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "strtools.h"		// V_memset
 #include "utlstring.h"

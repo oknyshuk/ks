@@ -120,11 +120,6 @@ void *CBaseDemoAction::operator new( size_t sz )
 //-----------------------------------------------------------------------------
 void CBaseDemoAction::operator delete( void *pMem )
 {
-#if defined( WIN32 ) && defined( _DEBUG )
-	// set the memory to a known value
-	int size = _msize( pMem );
-	Q_memset( pMem, 0xcd, size );
-#endif
 
 	// get the engine to free the memory
 	free( pMem );

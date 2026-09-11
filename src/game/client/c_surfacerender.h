@@ -8,9 +8,6 @@
 #ifndef C_SURFACERENDER_H
 #define C_SURFACERENDER_H
 
-#if defined( _WIN32 )
-#pragma once
-#endif
 
 #ifdef USE_BLOBULATOR
 

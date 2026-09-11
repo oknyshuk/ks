@@ -7,9 +7,6 @@
 
 #ifndef DATATABLE_INSTRUMENTATION_H
 #define DATATABLE_INSTRUMENTATION_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "dt_recv_eng.h"
 #include "dt_encode.h"

@@ -9,9 +9,6 @@
 
 #if !defined( BEAM_FLAGS_H )
 #define BEAM_FLAGS_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 enum
 {

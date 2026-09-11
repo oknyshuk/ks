@@ -9,9 +9,6 @@
 #ifndef SHADERAPIDX8_GLOBAL_H
 #define SHADERAPIDX8_GLOBAL_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "tier0/dbg.h"
 #include "tier0/memalloc.h"

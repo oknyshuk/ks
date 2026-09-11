@@ -356,14 +356,6 @@ bool CBaseFlex::ClearSceneEvent( CSceneEventInfo *info, bool fastKill, bool canc
 			{
 				StopSound( info->m_pEvent->GetParameters() );
 
-#ifdef HL2_EPISODIC
-				// If we were holding the semaphore because of this speech, release it
-				CAI_BaseActor *pBaseActor = dynamic_cast<CAI_BaseActor*>(this);
-				if ( pBaseActor )
-				{
-					pBaseActor->GetExpresser()->ForceNotSpeaking();
-				}
-#endif
 			}
 		}
 		return true;
@@ -945,8 +937,6 @@ public:
 		{
 			pFolder = "expressions";
 
-#if defined( PORTAL2 )
-#endif
 		}
 
 		char directory[ MAX_PATH ];
@@ -997,10 +987,6 @@ public:
 		FindSceneFile( NULL, "phonemes", true );
 		FindSceneFile( NULL, "phonemes_weak", true );
 		FindSceneFile( NULL, "phonemes_strong", true );
-#if defined( HL2_DLL )
-		FindSceneFile( NULL, "random", true );
-		FindSceneFile( NULL, "randomAlert", true );
-#endif
 
 		InitRecursive( NULL );
 		return true;
@@ -2178,12 +2164,6 @@ bool CBaseFlex::IsSuppressedFlexAnimation( CSceneEventInfo *info )
 void CBaseFlex::Teleport( const Vector *newPosition, const QAngle *newAngles, const Vector *newVelocity, bool bUseSlowHighAccuracyContacts )
 {
 	BaseClass::Teleport( newPosition, newAngles, newVelocity, bUseSlowHighAccuracyContacts );
-#ifdef HL2_DLL
-
-	// clear out Body Lean
-	m_vecPrevOrigin = vec3_origin;
-
-#endif
 }
 
 //-----------------------------------------------------------------------------
@@ -2192,65 +2172,6 @@ void CBaseFlex::Teleport( const Vector *newPosition, const QAngle *newAngles, co
 
 void CBaseFlex::DoBodyLean( void )
 {
-#ifdef HL2_DLL
-	CAI_BaseNPC *myNpc = MyNPCPointer( );
-
-	if (myNpc)
-	{
-		Vector vecDelta;
-		Vector vecPos;
-		Vector vecOrigin = GetAbsOrigin();
-
-		if (m_vecPrevOrigin == vec3_origin)
-		{
-			m_vecPrevOrigin = vecOrigin;
-		}
-
-		vecDelta = vecOrigin - m_vecPrevOrigin;
-		vecDelta.x = clamp( vecDelta.x, -50, 50 );
-		vecDelta.y = clamp( vecDelta.y, -50, 50 );
-		vecDelta.z = clamp( vecDelta.z, -50, 50 );
-
-		float dt = gpGlobals->curtime - GetLastThink();
-		bool bSkip = ((GetFlags() & (FL_FLY | FL_SWIM)) != 0) || (GetMoveParent() != NULL) || (GetGroundEntity() == NULL) || (GetGroundEntity()->IsMoving());
-		bSkip |= myNpc->TaskRanAutomovement() || (myNpc->GetVehicleEntity() != NULL);
-
-		if (!bSkip)
-		{
-			if (vecDelta.LengthSqr() > m_vecPrevVelocity.LengthSqr())
-			{
-				float decay =  ExponentialDecay( 0.6, 0.1, dt );
-				m_vecPrevVelocity = m_vecPrevVelocity * (decay) + vecDelta * (1.f - decay);
-			}
-			else
-			{
-				float decay =  ExponentialDecay( 0.4, 0.1, dt );
-				m_vecPrevVelocity = m_vecPrevVelocity * (decay) + vecDelta * (1.f - decay);
-			}
-
-			vecPos = m_vecPrevOrigin + m_vecPrevVelocity;
-
-			float decay =  ExponentialDecay( 0.5, 0.1, dt );
-			m_vecShift = m_vecShift * (decay) + (vecOrigin - vecPos) * (1.f - decay); // FIXME: Scale this
-			m_vecLean = (vecOrigin - vecPos) * 1.0; // FIXME: Scale this
-		}
-		else
-		{
-			m_vecPrevVelocity = vecDelta;
-			float decay =  ExponentialDecay( 0.5, 0.1, dt );
-			m_vecShift = m_vecShift * decay;
-			m_vecLean = m_vecLean * decay;
- 		}
-
-		m_vecPrevOrigin = vecOrigin;
-
-		/*
-		DevMsg( "%.2f %.2f %.2f  (%.2f %.2f %.2f)\n", 
-			m_vecLean.Get().x, m_vecLean.Get().y, m_vecLean.Get().z,
-			vecDelta.x, vecDelta.y, vecDelta.z );
-		*/
-	}
-#endif
 }
 
 

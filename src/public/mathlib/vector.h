@@ -9,9 +9,6 @@
 #ifndef VECTOR_H
 #define VECTOR_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include <math.h>
 #include <float.h>
@@ -20,10 +17,8 @@
 #include "tier0/basetypes.h"
 
 
-#if   !defined( PLATFORM_PPC ) // we want our linux with xmm support
 // For MMX intrinsics
 #include <xmmintrin.h>
-#endif
 
 #ifndef ALIGN16_POST
 #define ALIGN16_POST
@@ -53,11 +48,7 @@
 #ifdef VECTOR_PARANOIA
 #define CHECK_VALID( _v)	Assert( (_v).IsValid() )
 #else
-#ifdef GNUC
 #define CHECK_VALID( _v)
-#else
-#define CHECK_VALID( _v)	0
-#endif
 #endif
 
 #define VecToString(v)	(static_cast<const char *>(CFmtStr("(%f, %f, %f)", (v).x, (v).y, (v).z))) // ** Note: this generates a temporary, don't hold reference!
@@ -243,9 +234,6 @@ private:
 // Zero the object -- necessary for CNetworkVar and possibly other cases.
 inline void EnsureValidValue( Vector &x ) { x.Zero(); }
 
-#if defined( PLATFORM_WINDOWS_PC )
-#define USE_M64S 1
-#endif
 
 
 
@@ -438,11 +426,7 @@ public:
 	{
 		// we know we're aligned, so use simd
 		// we can't use the convenient abstract interface coz it gets declared later
-#if   _WIN32
-		_mm_store_ps(Base(), _mm_load_ps( vOther.Base() ));
-#else
 		Init(vOther.x, vOther.y, vOther.z);
-#endif
 		return *this;
 	}
 
@@ -1963,11 +1947,7 @@ public:
 	{
 		// we know we're aligned, so use simd
 		// we can't use the convenient abstract interface coz it gets declared later
-#if   _WIN32
-		_mm_store_ps(Base(), _mm_load_ps( vOther.Base() ));
-#else
 		Init(vOther.x, vOther.y, vOther.z, vOther.w);
-#endif
 		return *this;
 	}
 

@@ -17,7 +17,6 @@
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
-#if !defined(_STATIC_LINKED) || defined(GAME_DLL)
 
 
 static CNonModifiedPointerProxy *s_pNonModifiedPointerProxyHead = NULL;
@@ -899,4 +898,3 @@ void SendTable::Construct( SendProp *pProps, int nProps, const char *pNetTableNa
 	m_bHasPropsEncodedAgainstCurrentTickCount = false;
 }
 
-#endif

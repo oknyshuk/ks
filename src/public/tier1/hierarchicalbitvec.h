@@ -90,12 +90,7 @@ public:
 			uint nBaseLevel1 = nItLevel1 * 32;
 			while( nLevel1Bits )
 			{
-#ifdef COMPILER_GCC
 				uint32 nOffsetLevel1 = __builtin_ctz( nLevel1Bits );
-#else
-				unsigned long nOffsetLevel1;
-				_BitScanForward( &nOffsetLevel1, nLevel1Bits );
-#endif
 				AssertDbg( nLevel1Bits & ( 1 << nOffsetLevel1 ) );
 				nLevel1Bits ^= 1 << nOffsetLevel1;
 
@@ -106,12 +101,7 @@ public:
 					uint nBaseLevel0 = nItLevel0 * 32;
 					do
 					{
-#ifdef COMPILER_GCC
 						uint32 nOffsetLevel0 = __builtin_ctz( nLevel0Bits );
-#else
-						unsigned long nOffsetLevel0;
-						_BitScanForward( &nOffsetLevel0, nLevel0Bits );
-#endif
 						AssertDbg( nLevel0Bits & ( 1 << nOffsetLevel0 ) );
 						nLevel0Bits ^= 1 << nOffsetLevel0;
 						// Perform tree queries for all moving objects

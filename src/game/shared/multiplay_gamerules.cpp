@@ -106,9 +106,7 @@ void cc_SkipNextMapInCycle()
 
 ConCommand skip_next_map( "skip_next_map", cc_SkipNextMapInCycle, "Skips the next map in the map rotation for the server." );
 
-#ifndef TF_DLL		// TF overrides the default value of this convar
 ConVar mp_waitingforplayers_time( "mp_waitingforplayers_time", "0", FCVAR_GAMEDLL, "WaitingForPlayers time length in seconds" );
-#endif
 
 ConVar mp_waitingforplayers_restart( "mp_waitingforplayers_restart", "0", FCVAR_GAMEDLL, "Set to 1 to start or restart the WaitingForPlayers period." );
 ConVar mp_waitingforplayers_cancel( "mp_waitingforplayers_cancel", "0", FCVAR_GAMEDLL, "Set to 1 to end the WaitingForPlayers period." );
@@ -253,7 +251,6 @@ bool CMultiplayRules::Damage_ShouldNotBleed( int iDmgType )
 CMultiplayRules::CMultiplayRules()
 {
 #ifndef CLIENT_DLL
-#ifdef CSTRIKE15
 	// before we exec ANY cfg files or apply any convars, go through the bspconvar whitelist and set all convars in that list to their default value
 	KeyValues::AutoDelete pKV_wl( "convars" );
 	if ( pKV_wl->LoadFromFile( g_pFullFileSystem, "bspconvar_whitelist.txt", "GAME" ) )
@@ -270,7 +267,6 @@ CMultiplayRules::CMultiplayRules()
 			}
 		}
 	}
-#endif
 
 	// 11/8/98
 	// Modified by YWB:  Server .cfg file is now a cvar, so that 
@@ -1141,17 +1137,6 @@ CMultiplayRules::CMultiplayRules()
 			gameeventmanager->FireEvent( event );
 		}
 
-#if !defined( CSTRIKE15 )
-		for ( int i = 1; i <= MAX_PLAYERS; i++ )
-		{
-			CBasePlayer *pPlayer = UTIL_PlayerByIndex( i );
-
-			if ( !pPlayer )
-				continue;
-
-			pPlayer->ShowViewPortPanel( PANEL_SCOREBOARD );
-		}
-#endif
 	}
 
 	void StripChar(char *szBuffer, const char cWhiteSpace )

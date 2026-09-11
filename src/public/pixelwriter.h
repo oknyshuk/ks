@@ -9,15 +9,8 @@
 #ifndef PIXELWRITER_H
 #define PIXELWRITER_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
-#if defined( _WIN32 )
-#define FORCEINLINE_PIXEL FORCEINLINE
-#else
 #define FORCEINLINE_PIXEL inline
-#endif
 
 // This flag allows us to write to formats we we don't support direct pixel access
 // (like DXT1) without spewing errors.  The only actions that are available for

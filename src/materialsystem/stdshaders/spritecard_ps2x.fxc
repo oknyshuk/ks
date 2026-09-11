@@ -327,11 +327,6 @@ float4_color_return_type main( PS_INPUT i ) : COLOR
 	{
 		vOutput =  FinalOutputHalf( result, 0, PIXEL_FOG_TYPE_NONE, TONEMAP_SCALE_LINEAR );
 
-	#if defined( _X360 ) && defined( CSTRIKE15 )
-		// TEMPORARY - fix up properly after PAX
-		// undo the linear to gamma that would have been done in FinalOutput as we have other colour ops to perform
-		vOutput.rgb = GammaToLinear( vOutput.rgb );
-	#endif
 
 	}
 	#endif
@@ -355,11 +350,6 @@ float4_color_return_type main( PS_INPUT i ) : COLOR
 	}
 	#else
 	{
-	#if defined( _X360 ) && defined( CSTRIKE15 )
-		// [mariod] - srgb write required in this shader - after FinalOutput due to other ops - Final output will skip since TONEMAP_SCALE is NONE
-		vOutput.rgb = LinearToGamma( vOutput.rgb );
-		//vOutput.rgb = SrgbLinearToGamma( vOutput.rgb );
-	#endif
 	}
 	#endif
 

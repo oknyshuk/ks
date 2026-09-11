@@ -6,9 +6,6 @@
 
 #ifndef BASEACHIEVEMENT_H
 #define BASEACHIEVEMENT_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "GameEventListener.h"
 #include "../common/xlast_csgo/csgo.spa.h"

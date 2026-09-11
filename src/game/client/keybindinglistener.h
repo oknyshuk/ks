@@ -6,9 +6,6 @@
 
 #ifndef KEYBINDINGLISTENER_H
 #define KEYBINDINGLISTENER_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 enum ButtonCode_t;
 

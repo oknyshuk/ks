@@ -11,9 +11,6 @@
 #ifndef BONE_CONSTRAINTS_H
 #define BONE_CONSTRAINTS_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 
 //-----------------------------------------------------------------------------

@@ -8,9 +8,6 @@
 #ifndef SINGLEPLAYERSHAREDMEMORY_H
 #define SINGLEPLAYERSHAREDMEMORY_H
 
-#if defined( _WIN32 )
-#pragma once
-#endif
 
 #include "basetypes.h"
 #include "ispsharedmemory.h"

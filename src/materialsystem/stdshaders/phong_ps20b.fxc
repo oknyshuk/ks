@@ -102,11 +102,7 @@
 #include "common_decaltexture_fxc.h"
 #include "shader_constant_register_map.h"
 
-#if defined( _X360 ) || defined( _PS3 )
-	#define SINGLE_PASS_FLASHLIGHT 1
-#else
 	#define SINGLE_PASS_FLASHLIGHT 0
-#endif
 
 const float4 g_SelfIllumTint_and_DetailBlendFactorOrPhongAlbedoBoost	: register( PSREG_SELFILLUMTINT );
 
@@ -194,10 +190,6 @@ sampler FlashlightSampler		: register( s6 );	// Flashlight cookie
 sampler SpecExponentSampler		: register( s7 );	// Specular exponent map
 samplerCUBE EnvmapSampler		: register( s8 );	// Cubic environment map
 
-#if defined(_PS3)
-// Needed for optimal shadow filter code generation on PS3.
-#pragma texformat ShadowDepthSampler DEPTH_COMPONENT24
-#endif
 
 #if WRINKLEMAP
 sampler WrinkleSampler			: register( s9 );	// Compression base
@@ -273,10 +265,6 @@ struct PS_INPUT
 #if ( CSM_ENABLED )
 	sampler CSMDepthAtlasSampler	: register( s15 );
 	
-	#if defined(_PS3)
-		// Needed for optimal shadow filter code generation on PS3.
-		#pragma texformat CSMDepthAtlasSampler DEPTH_COMPONENT24
-	#endif
     	
 	#if defined( SHADER_MODEL_PS_2_B )
 		#define CSM_PHONG
@@ -285,16 +273,6 @@ struct PS_INPUT
 	#include "csm_common_fxc.h"
 #endif
 
-#if defined( _X360 )
-	// The compiler runs out of temp registers in certain combos, increase the maximum for now
-	#if ( WRINKLEMAP )
-		[maxtempreg(41)]
-	#elif ( ( NUM_LIGHTS > 2 ) && ( RIMLIGHT == 1 ) )
-		[maxtempreg(39)]
-	#elif ( SHADER_SRGB_READ == 1 ) || ( SELFILLUMFRESNEL == 1 )
-		[maxtempreg(35)]
-	#endif	
-#endif
 
 float3 PhotoshopOverlay( float3 cBase, float3 cBlend )
 {
@@ -694,17 +672,11 @@ float4_color_return_type main( PS_INPUT i ) : COLOR
 	#endif	
 
 	// If the exponent passed in as a constant is zero, use the value from the map as the exponent
-	#if defined( _X360 )
-		[flatten]
-	#endif
 	if ( fSpecExp == 0 )
 		fSpecExp = 1.0f - fSpecExpMap + 150.0f * fSpecExpMap;
 
 	float3 vSpecularTint;
 	// If constant tint is negative, tint with albedo, based upon scalar tint map
-	#if defined( _X360 )
-		[flatten]
-	#endif
 	if ( g_SpecularTint.r < 0 )
 	{
 		#if ( DETAILTEXTURE )
@@ -948,11 +920,6 @@ float4_color_return_type main( PS_INPUT i ) : COLOR
 		}
 		#endif
 
-		#if ( defined( _X360 ) )
-		{
-			vOutput.xyz += ScreenSpaceOrderedDither( i.vPos );
-		}
-		#endif
 	
 		return vOutput;
 	}

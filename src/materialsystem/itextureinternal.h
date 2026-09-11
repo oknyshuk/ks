@@ -9,9 +9,6 @@
 #ifndef ITEXTUREINTERNAL_H
 #define ITEXTUREINTERNAL_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "materialsystem/itexture.h"
 #include "shaderapi/ishaderapi.h"

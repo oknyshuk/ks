@@ -7,11 +7,6 @@
 //===========================================================================//
 
 
-#if defined( PLATFORM_WINDOWS_PC )
-#define WIN32_LEAN_AND_MEAN
-#define _WIN32_WINNT 0x0403
-#include <windows.h>
-#endif
 
 
 
@@ -27,12 +22,10 @@
 #include <limits.h>
 
 #include <stddef.h>
-#ifdef PLATFORM_POSIX
 #include <unistd.h>
 #include <ctype.h>
 #include <limits.h>
 #define _MAX_PATH PATH_MAX
-#endif
 
 #include "tier0/valve_on.h"
 

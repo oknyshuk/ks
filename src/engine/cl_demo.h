@@ -6,9 +6,6 @@
 
 #ifndef CL_DEMO_H
 #define CL_DEMO_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "demofile.h"
 #include "cl_demoactionmanager.h"

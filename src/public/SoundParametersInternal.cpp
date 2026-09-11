@@ -8,7 +8,6 @@
 
 #include "cbase.h"
 
-#if !defined(_STATIC_LINKED) || defined(SOUNDEMITTERSYSTEM_DLL)
 
 #include "SoundEmitterSystem/isoundemittersystembase.h"
 #include "tier2/interval.h"
@@ -621,4 +620,3 @@ void CSoundParametersInternal::AddToTail( SoundFile **pDest, uint16 *pDestCount,
 	}
 }
 
-#endif // !_STATIC_LINKED || SOUNDEMITTERSYSTEM_DLL

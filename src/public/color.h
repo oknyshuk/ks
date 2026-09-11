@@ -8,9 +8,6 @@
 #ifndef COLOR_H
 #define COLOR_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "tier0/basetypes.h"
 

@@ -7,11 +7,7 @@
 #include "tier0/platform.h"
 
 #include "tier0/valve_off.h"
-#if defined( _WIN32 )
-#include <windows.h>
-#else
 char *GetCommandLine();
-#endif
 #include "resource.h"
 #include "tier0/valve_on.h"
 #include "tier0/threadtools.h"
@@ -57,19 +53,12 @@ public:
 	CAssertDisable *m_pNext;
 };
 
-#ifdef _WIN32
-static HINSTANCE g_hTier0Instance = 0;
-#endif
 
 static bool g_bAssertsEnabled = true;
 static bool g_bAssertDialogEnabled = true;
 
 static CAssertDisable *g_pAssertDisables = NULL;
 
-#if defined( _WIN32 )
-static int g_iLastLineRange = 5;
-static int g_nLastIgnoreNumTimes = 1;
-#endif
 
 // Set to true if they want to break in the debugger.
 static bool g_bBreak = false;
@@ -83,17 +72,6 @@ static bool g_bDisableAsserts = false;
 // Internal functions.
 // -------------------------------------------------------------------------------- //
 
-#if defined(_WIN32) && !defined(STATIC_TIER0)
-BOOL WINAPI DllMain(
-  HINSTANCE hinstDLL,  // handle to the DLL module
-  DWORD fdwReason,     // reason for calling function
-  LPVOID lpvReserved   // reserved
-)
-{
-	g_hTier0Instance = hinstDLL;
-	return true;
-}
-#endif
 
 static bool IsDebugBreakEnabled()
 {
@@ -195,155 +173,6 @@ CAssertDisable* IgnoreAssertsNearby( int nRange )
 }
 
 
-#if ( defined( _WIN32 ) )
-INT_PTR CALLBACK AssertDialogProc(
-  HWND hDlg,  // handle to dialog box
-  UINT uMsg,     // message
-  WPARAM wParam, // first message parameter
-  LPARAM lParam  // second message parameter
-)
-{
-	switch( uMsg )
-	{
-		case WM_INITDIALOG:
-		{
-#ifdef TCHAR_IS_WCHAR
-			SetDlgItemTextW( hDlg, IDC_ASSERT_MSG_CTRL, g_Info.m_pExpression );
-			SetDlgItemTextW( hDlg, IDC_FILENAME_CONTROL, g_Info.m_pFilename );
-#else
-			SetDlgItemText( hDlg, IDC_ASSERT_MSG_CTRL, g_Info.m_pExpression );
-			SetDlgItemText( hDlg, IDC_FILENAME_CONTROL, g_Info.m_pFilename );
-#endif
-			SetDlgItemInt( hDlg, IDC_LINE_CONTROL, g_Info.m_iLine, false );
-			SetDlgItemInt( hDlg, IDC_IGNORE_NUMLINES, g_iLastLineRange, false );
-			SetDlgItemInt( hDlg, IDC_IGNORE_NUMTIMES, g_nLastIgnoreNumTimes, false );
-		
-			// Center the dialog.
-			RECT rcDlg, rcDesktop;
-			GetWindowRect( hDlg, &rcDlg );
-			GetWindowRect( GetDesktopWindow(), &rcDesktop );
-			SetWindowPos( 
-				hDlg, 
-				HWND_TOP, 
-				((rcDesktop.right-rcDesktop.left) - (rcDlg.right-rcDlg.left)) / 2,
-				((rcDesktop.bottom-rcDesktop.top) - (rcDlg.bottom-rcDlg.top)) / 2,
-				0,
-				0,
-				SWP_NOSIZE );
-		}
-		return true;
-
-		case WM_COMMAND:
-		{
-			switch( LOWORD( wParam ) )
-			{
-				case IDC_IGNORE_FILE:
-				{
-					IgnoreAssertsInCurrentFile();
-					EndDialog( hDlg, 0 );
-					return true;
-				}
-
-				// Ignore this assert N times.
-				case IDC_IGNORE_THIS:
-				{
-					BOOL bTranslated = false;
-					UINT value = GetDlgItemInt( hDlg, IDC_IGNORE_NUMTIMES, &bTranslated, false );
-					if ( bTranslated && value > 1 )
-					{
-						CAssertDisable *pDisable = IgnoreAssertsNearby( 0 );
-						pDisable->m_nIgnoreTimes = value - 1;
-						g_nLastIgnoreNumTimes = value;
-					}
-
-					EndDialog( hDlg, 0 );
-					return true;
-				}
-
-				// Always ignore this assert.
-				case IDC_IGNORE_ALWAYS:
-				{
-					IgnoreAssertsNearby( 0 );
-					EndDialog( hDlg, 0 );
-					return true;
-				}
-				
-				case IDC_IGNORE_NEARBY:
-				{
-					BOOL bTranslated = false;
-					UINT value = GetDlgItemInt( hDlg, IDC_IGNORE_NUMLINES, &bTranslated, false );
-					if ( !bTranslated || value < 1 )
-						return true;
-
-					IgnoreAssertsNearby( value );
-					EndDialog( hDlg, 0 );
-					return true;
-				}
-
-				case IDC_IGNORE_ALL:
-				{
-					g_bAssertsEnabled = false;
-					EndDialog( hDlg, 0 );
-					return true;
-				}
-
-				case IDC_BREAK:
-				{
-					g_bBreak = true;
-					EndDialog( hDlg, 0 );
-					return true;
-				}
-			}
-
-			case WM_KEYDOWN:
-			{
-				// Escape?
-				if ( wParam == 2 )
-				{
-					// Ignore this assert.
-					EndDialog( hDlg, 0 );
-					return true;
-				}
-			}
-					
-		}
-		return true;
-	}
-
-	return FALSE;
-}
-
-
-static HWND g_hBestParentWindow;
-
-
-static BOOL CALLBACK ParentWindowEnumProc(
-  HWND hWnd,      // handle to parent window
-  LPARAM lParam   // application-defined value
-)
-{
-	if ( IsWindowVisible( hWnd ) )
-	{
-		DWORD procID;
-		GetWindowThreadProcessId( hWnd, &procID );
-		if ( procID == (DWORD)lParam )
-		{
-			g_hBestParentWindow = hWnd;
-			return FALSE; // don't iterate any more.
-		}
-	}
-	return TRUE;
-}
-
-
-static HWND FindLikelyParentWindow()
-{
-	// Enumerate top-level windows and take the first visible one with our processID.
-	g_hBestParentWindow = NULL;
-	EnumWindows( ParentWindowEnumProc, GetCurrentProcessId() );
-	return g_hBestParentWindow;
-}
-#endif
 
 // -------------------------------------------------------------------------------- //
 // Interface functions.
@@ -441,29 +270,6 @@ PLATFORM_INTERFACE bool DoNewAssertDialog( const tchar *pFilename, int line, con
 
 	g_bBreak = false;
 
-#if   defined( _WIN32 )
-
-if ( !g_hTier0Instance || !ThreadInMainThread() )
-{
-	int result = MessageBox( NULL,  pExpression, "Assertion Failed", MB_SYSTEMMODAL | MB_CANCELTRYCONTINUE );
-
-	if ( result == IDCANCEL )
-	{
-		IgnoreAssertsNearby( 0 );
-	}
-	else if ( result == IDCONTINUE )
-	{
-		g_bBreak = true;
-	}
-}
-else
-{
-	HWND hParentWindow = FindLikelyParentWindow();
-
-	DialogBox( g_hTier0Instance, MAKEINTRESOURCE( IDD_ASSERT_DIALOG ), hParentWindow, AssertDialogProc );
-}
-
-#else
 
 	#define COLOR_YELLOW 	"\033[1;33m"
 	#define COLOR_GREEN 	"\033[1;32m"
@@ -476,18 +282,11 @@ else
     static FUNC_SDL_GetKeyboardFocus *pfnSDLGetKeyboardFocus = NULL;
 	if( getenv( "GAME_ASSERT_DIALOG" ) && !pfnSDLShowMessageBox )
 	{
-#if defined( WIN32 )
-        HMODULE ret = LoadLibrary( "SDL3.lib" );
-
-        pfnSDLShowMessageBox = ( FUNC_SDL_ShowMessageBox * )GetProcAddress( ret, "SDL_ShowMessageBox" );
-        pfnSDLGetKeyboardFocus = ( FUNC_SDL_GetKeyboardFocus * )GetProcAddress( ret, "SDL_GetKeyboardFocus" );
-#else
 
         void *ret = dlopen( "libSDL3.so.0", RTLD_LAZY );
 
         pfnSDLShowMessageBox = ( FUNC_SDL_ShowMessageBox * )dlsym( ret, "SDL_ShowMessageBox" );
         pfnSDLGetKeyboardFocus = ( FUNC_SDL_GetKeyboardFocus * )dlsym( ret, "SDL_GetKeyboardFocus" );
-#endif
     }
 
 	if( pfnSDLShowMessageBox )
@@ -548,7 +347,6 @@ else
 		g_bBreak = true;
 	}
 
-#endif
 
 	return g_bBreak;
 }

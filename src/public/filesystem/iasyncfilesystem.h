@@ -9,9 +9,6 @@
 #ifndef IASYNCFILESYSTEM_H
 #define IASYNCFILESYSTEM_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include <limits.h>
 

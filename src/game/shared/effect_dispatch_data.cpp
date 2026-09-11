@@ -46,12 +46,6 @@
 	#include "dt_send.h"
 
 	IMPLEMENT_REFLECT_TABLE( CEffectData, DT_EffectData );
-#ifdef HL2_DLL
-#else
-#endif
-#if defined( TF_DLL )
-#else
-#endif
 
 #endif
 

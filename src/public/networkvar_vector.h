@@ -6,9 +6,6 @@
 
 #ifndef NETWORKVAR_VECTOR_H
 #define NETWORKVAR_VECTOR_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 
 // This is the normal case.. you've got a SendPropVector to match your CNetworkVector

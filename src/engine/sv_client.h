@@ -7,9 +7,6 @@
 #ifndef SV_CLIENT_H
 #define SV_CLIENT_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "const.h"
 #include "bitbuf.h"

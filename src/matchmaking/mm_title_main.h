@@ -6,9 +6,6 @@
 
 #ifndef MM_TITLE_MAIN_H
 #define MM_TITLE_MAIN_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 extern InitReturnVal_t MM_Title_Init();
 extern void MM_Title_Shutdown();

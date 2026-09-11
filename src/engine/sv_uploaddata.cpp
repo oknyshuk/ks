@@ -7,12 +7,8 @@
 //=============================================================================//
 
 
-#if defined(_WIN32)
-#include <winsock.h>
-#else
 #include <sys/socket.h>
 #include <netinet/in.h>
-#endif
 #include "host.h"
 #include "blockingudpsocket.h"
 #include "cserserverprotocol_engine.h"

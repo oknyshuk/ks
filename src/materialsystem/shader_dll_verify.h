@@ -8,9 +8,6 @@
 
 #ifndef SHADER_DLL_VERIFY_H
 #define SHADER_DLL_VERIFY_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "tier0/platform.h"
 #include "tier1/checksum_crc.h"

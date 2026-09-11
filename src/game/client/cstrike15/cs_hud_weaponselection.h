@@ -6,9 +6,6 @@
 
 #ifndef CS_HUD_WEAPONSELECTION_H
 #define CS_HUD_WEAPONSELECTION_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "weapon_selection.h"
 #include "cs_weapon_parse.h"

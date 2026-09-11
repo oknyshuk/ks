@@ -10,9 +10,6 @@
 
 #include "tier0/threadtools.h"
 
-#if defined( _WIN32 )
-#pragma once
-#endif
 
 //-----------------------------------------------------------------------------
 // Purpose:	Implement a standard reference counted interface. Use of this
@@ -348,11 +345,7 @@ public:
 //			referencing problems
 //-----------------------------------------------------------------------------
 
-#if defined( __clang__ )
-template <class BASE_REFCOUNTED, int FINAL_REFS, const char *pszName>
-#else
 template <class BASE_REFCOUNTED, int FINAL_REFS = 0, const char *pszName = (const char *)NULL>
-#endif
 class CRefDebug : public BASE_REFCOUNTED
 {
 public:

@@ -203,7 +203,6 @@ struct ImpactEffect_t
 
 static ImpactEffect_t s_pImpactEffect[26] = 
 {
-#ifndef DOTA_DLL
 	{ NULL,					NULL },							// CHAR_TEX_ANTLION
 	{ NULL,					NULL },							// CHAR_TEX_BLOODYFLESH	
 	{ "impact_concrete",	"impact_concrete" },		// CHAR_TEX_CONCRETE		
@@ -230,12 +229,10 @@ static ImpactEffect_t s_pImpactEffect[26] =
 	{ NULL,					NULL },							// CHAR_TEX_FAKE		
 	{ "impact_glass",		"impact_glass" },			// CHAR_TEX_GLASS			
 	{ NULL,					NULL },							// CHAR_TEX_WARPSHIELD	
-#endif
 };
 
 static ImpactEffect_t s_pImpactEffect2[12] = 
 {
-#ifndef DOTA_DLL
 	{ "impact_clay",		"impact_clay" },			// CHAR_TEX_CLAY
 	{ "impact_plaster",		"impact_plaster" },		// CHAR_TEX_PLASTER	
 	{ "impact_rock",		"impact_rock" },			// CHAR_TEX_ROCK		
@@ -248,7 +245,6 @@ static ImpactEffect_t s_pImpactEffect2[12] =
 	{ "impact_puddle",		"impact_puddle" },		// CHAR_TEX_PUDDLE
 	{ "impact_mud",			"impact_mud" },			// CHAR_TEX_MUD	
 	{ "impact_sandbarrel",	"impact_sandbarrel" },	// CHAR_TEX_SANDBARREL	
-#endif
 };
 
 static int s_pImpactEffectIndex[ ARRAYSIZE( s_pImpactEffect ) ][2];
@@ -425,7 +421,6 @@ void PlayImpactSound( CBaseEntity *pEntity, trace_t &tr, Vector &vecServerOrigin
 			C_BaseEntity::EmitSound( filter, NULL, pbulletImpactSoundName, pdata->soundhandles.bulletImpact, &vecOrigin );
 		}
 
-#if defined( CSTRIKE15 )
 		// play a ricochet based on the material
 		float flRicoChance = 0.0f;
 		switch( pdata->game.material )
@@ -461,7 +456,6 @@ void PlayImpactSound( CBaseEntity *pEntity, trace_t &tr, Vector &vecServerOrigin
 		{
 			FX_RicochetSound( vecOrigin );
 		}
-#endif
 		return;
 	}
 

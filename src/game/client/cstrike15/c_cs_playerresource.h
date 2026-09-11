@@ -7,9 +7,6 @@
 
 #ifndef C_CS_PLAYERRESOURCE_H
 #define C_CS_PLAYERRESOURCE_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "cs_shareddefs.h"
 #include "c_playerresource.h"

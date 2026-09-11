@@ -6,9 +6,6 @@
 
 #ifndef ISTEAMUGC_H
 #define ISTEAMUGC_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "isteamclient.h"
 

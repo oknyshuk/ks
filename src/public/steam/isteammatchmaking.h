@@ -6,9 +6,6 @@
 
 #ifndef ISTEAMMATCHMAKING
 #define ISTEAMMATCHMAKING
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "steamtypes.h"
 #include "steamclientpublic.h"

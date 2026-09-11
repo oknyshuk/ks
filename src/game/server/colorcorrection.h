@@ -10,9 +10,6 @@
 
 #include "reflect_annotations.h"
 #include "dt_common.h"
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include <string.h>
 #include "cbase.h"

@@ -9,9 +9,6 @@
 #ifndef INPUT_DEVICES_H
 #define INPUT_DEVICES_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 
 

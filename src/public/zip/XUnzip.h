@@ -90,11 +90,7 @@
 #define XUNZIP_H
 
 #if !defined( DWORD )
-#if defined( _WIN32 )
-typedef unsigned long DWORD;
-#else
 typedef unsigned int DWORD;
-#endif
 #endif
 
 #if !defined( TCHAR )
@@ -117,14 +113,6 @@ typedef void *HANDLE;
 DECLARE_HANDLE(HZIP);		// An HZIP identifies a zip file that is being created
 #endif
 
-#if defined(_WIN32) && !defined(_WINBASE_) && !defined(_FILETIME_)
-#define _FILETIME_
-typedef struct _FILETIME
-{
-    DWORD dwLowDateTime;
-    DWORD dwHighDateTime;
-} FILETIME, * LPFILETIME, *PFILETIME;
-#endif
 
 typedef time_t FILETIME;
 
@@ -197,11 +185,7 @@ HZIP OpenZip(void *z, unsigned int len, DWORD flags);
 // Returns:     ZRESULT - ZR_OK if success, otherwise some other value
 //
 
-#ifdef _UNICODE
-#define GetZipItem GetZipItemW
-#else
 #define GetZipItem GetZipItemA
-#endif
 
 ZRESULT GetZipItemA(HZIP hz, int index, ZIPENTRY *ze);
 ZRESULT GetZipItemW(HZIP hz, int index, ZIPENTRYW *ze);
@@ -236,11 +220,7 @@ ZRESULT GetZipItemW(HZIP hz, int index, ZIPENTRYW *ze);
 // Returns:     ZRESULT - ZR_OK if success, otherwise some other value
 //
 
-#ifdef _UNICODE
-#define FindZipItem FindZipItemW
-#else
 #define FindZipItem FindZipItemA
-#endif
 
 ZRESULT FindZipItemA(HZIP hz, const TCHAR *name, bool ic, int *index, ZIPENTRY *ze);
 ZRESULT FindZipItemW(HZIP hz, const TCHAR *name, bool ic, int *index, ZIPENTRYW *ze);

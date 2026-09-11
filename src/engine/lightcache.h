@@ -7,9 +7,6 @@
 
 #ifndef LIGHTCACHE_H
 #define LIGHTCACHE_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "mathlib/vector.h"
 #include "tier2/tier2.h"

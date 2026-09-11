@@ -6,9 +6,6 @@
 
 #ifndef ENV_DEBUGHISTORY_H
 #define ENV_DEBUGHISTORY_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 enum debughistorycategories_t
 {

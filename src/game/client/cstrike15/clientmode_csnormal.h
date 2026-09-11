@@ -6,9 +6,6 @@
 
 #ifndef CS_CLIENTMODE_H
 #define CS_CLIENTMODE_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "clientmode_shared.h"
 #include "counterstrikeviewport.h"

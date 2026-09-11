@@ -4,9 +4,6 @@
 
 #ifndef REPLAY_H
 #define REPLAY_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 //----------------------------------------------------------------------------------------
 // Is replay enabled?

@@ -9,9 +9,6 @@
 #define C_AI_BASENPC_H
 
 #include "reflect_annotations.h"
-#ifdef _WIN32
-#pragma once
-#endif
 
 
 #include "c_basecombatcharacter.h"

@@ -6,9 +6,6 @@
 
 #ifndef PARTICLES_ATTRACTOR_H
 #define PARTICLES_ATTRACTOR_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "particles_simple.h"
 

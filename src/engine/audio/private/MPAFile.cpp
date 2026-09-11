@@ -72,25 +72,6 @@ void CMPAException::ShowError()
     }
     strcat( szErrorMsg, m_szErrors[m_ErrorID] );
 
-#if defined(WIN32)
-    if( m_bGetLastError )
-    {
-        // get error message of last system error id
-        LPVOID pMsgBuf;
-        if ( FormatMessage( FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
-                            NULL,
-                            GetLastError(),
-                            MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), // Default language
-                            (LPTSTR) &pMsgBuf,
-                            0,
-                            NULL ))
-        {
-            strcat( szErrorMsg, "\n" );
-            strcat( szErrorMsg, (const char *)pMsgBuf );
-            LocalFree( pMsgBuf );
-        }
-    }
-#endif
     // show error message
     Warning( "%s\n", szErrorMsg );
 }

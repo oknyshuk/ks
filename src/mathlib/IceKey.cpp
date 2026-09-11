@@ -2,7 +2,6 @@
 //			Taken from public domain code, as written by Matthew Kwan - July 1996
 //			http://www.darkside.com.au/ice/
 
-#if !defined(_STATIC_LINKED) || defined(_SHARED_LIB)
 
 #include "mathlib/IceKey.H"
 #include "tier1/strtools.h"
@@ -426,4 +425,3 @@ void DecodeICE( unsigned char *pBuffer, int nSize, const unsigned char *pKey)
 }
 
 
-#endif // !_STATIC_LINKED || _SHARED_LIB

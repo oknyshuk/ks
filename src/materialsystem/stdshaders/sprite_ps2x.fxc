@@ -30,18 +30,7 @@ struct PS_INPUT
 
 float4_color_return_type main( PS_INPUT i ) : COLOR
 {
-#if defined(_X360) && defined( CSTRIKE15 )
-	// [mariod] - gamma appropriate sprites without adding an extra SHADER_SRGB_READ combo (SRGB provides same info implicitly)
-	#if SRGB
-		// fix up properly when SHADER_SRGB_READ is added to this shader
-		float4 result, sample = tex2D( TexSampler, i.baseTexCoord );
-		sample.rgb = GammaToLinear( sample.rgb );
-	#else
-		float4 result, sample = tex2D( TexSampler, i.baseTexCoord );
-	#endif
-#else
 	float4 result, sample = tex2D( TexSampler, i.baseTexCoord );
-#endif
 
 #if VERTEXCOLOR
 	sample *= i.color;

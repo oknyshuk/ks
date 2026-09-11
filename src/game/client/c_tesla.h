@@ -8,9 +8,6 @@
 #define C_TESLA_H
 
 #include "reflect_annotations.h"
-#ifdef _WIN32
-#pragma once
-#endif
 
 
 #include "c_baseentity.h"

@@ -12,9 +12,6 @@
 //=============================================================================//
 #if !defined( IVIEWPORT_H )
 #define IVIEWPORT_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 
 #include "viewport_panel_names.h"

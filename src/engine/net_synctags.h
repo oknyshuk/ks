@@ -7,9 +7,6 @@
 
 #ifndef NET_SYNCTAGS_H
 #define NET_SYNCTAGS_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #ifdef _DEBUG
 

@@ -7,9 +7,6 @@
 
 #ifndef FILESYSTEM_ENGINE_H
 #define FILESYSTEM_ENGINE_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 
 //-----------------------------------------------------------------------------

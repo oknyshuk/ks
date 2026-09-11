@@ -79,9 +79,6 @@ sampler SplatNormalSampler		: register( s7 );
 
 sampler PaintSampler			: register( s9 );
 
-#if defined( _X360 )
-[maxtempreg(36)]
-#endif // _X360
 float4_color_return_type main( PS_INPUT i ) : COLOR
 {
 	float3 worldPos = i.worldPos_projPosZ.xyz;
@@ -157,20 +154,9 @@ float4_color_return_type main( PS_INPUT i ) : COLOR
 	#endif
 
 	// Always simulate srgb reads in shader code for the tex2Dsrgb calls since the paint textures look better when filtered in gamma space
-	#if ( _X360 )
-	{
-		#if defined( CSTRIKE15 )
-			// [mariod] - no PWL for cstrike15
-			cMixedPaint.rgb = GammaToLinear( cMixedPaint.rgb );
-		#else
-		    cMixedPaint.rgb = X360GammaToLinear( cMixedPaint.rgb );
-		#endif
-	}
-	#else
 	{
 		cMixedPaint.rgb = SrgbGammaToLinear( cMixedPaint.rgb );
 	}
-	#endif
 
 	float3 vNormalWs = mul( fvNormalTs.xyz, tangenttranspose );
 	#if ( THICKPAINT )

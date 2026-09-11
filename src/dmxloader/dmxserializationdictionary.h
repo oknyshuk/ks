@@ -7,9 +7,6 @@
 #ifndef DMXSERIALIZATIONDICTIONARY_H
 #define DMXSERIALIZATIONDICTIONARY_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "tier1/utlrbtree.h"
 

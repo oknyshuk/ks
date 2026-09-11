@@ -764,20 +764,8 @@ bool BotPhraseManager::Initialize( const char *filename, int bankIndex )
 				Q_FixSlashes( speak->m_phrase );
 				Q_strlower( speak->m_phrase );
 
-#if defined( CSTRIKE15 )
 				// cstrike15 doesn't use bot chatter this way, the system redirects to RR, so no need to do anything other than slam this
 				speak->m_duration = 1.0f;
-#else
-				speak->m_duration = enginesound->GetSoundDuration( speak->m_phrase );
-				if (speak->m_duration <= 0.0f)
-				{
-					if ( !engine->IsDedicatedServer() )
-					{
-						DevMsg( "Warning: Couldn't get duration of phrase '%s'\n", speak->m_phrase );
-					}
-					speak->m_duration = 1.0f;
-				}		
-#endif
 				BotSpeakableVector * speakables = phrase->m_voiceBank[ bankIndex ];
 				speakables->AddToTail( speak );
 

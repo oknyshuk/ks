@@ -7,9 +7,6 @@
 
 #ifndef MODEL_COMBINER_H
 #define MODEL_COMBINER_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 // Anyone requesting model combines needs to derive from this to get completion callbacks.
 abstract_class IModelCombinerRequesterInterface

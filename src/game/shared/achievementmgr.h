@@ -6,9 +6,6 @@
 
 #ifndef ACHIEVEMENTMGR_H
 #define ACHIEVEMENTMGR_H
-#ifdef _WIN32
-#pragma once
-#endif
 #include "matchmaking/imatchframework.h"
 #include "baseachievement.h"
 #include "GameEventListener.h"

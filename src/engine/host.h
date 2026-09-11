@@ -8,9 +8,6 @@
 //=============================================================================//
 #if !defined( HOST_H )
 #define HOST_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "convar.h"
 

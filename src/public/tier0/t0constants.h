@@ -7,9 +7,6 @@
 
 #ifndef T0CONSTANTS_H
 #define T0CONSTANTS_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 //-----------------------------------------------------------------------------
 // numeric constants to avoid typos with wrong number of zeros

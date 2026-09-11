@@ -60,11 +60,7 @@ BEGIN_VS_SHADER( SplineRope, "Help for SplineRope" )
 
 	SHADER_DRAW
 	{
-#if defined( CSTRIKE15 )
 		bool bShaderSrgbRead = false && r_shader_srgbread.GetBool();
-#else
-		bool bShaderSrgbRead = ( false && params[SHADERSRGBREAD360]->GetIntValue() );
-#endif
 		bool bShadowDepth = ( params[SHADOWDEPTH]->GetIntValue() != 0 );
 
 		bool bUseAlphaTestRef = ( bShadowDepth == false && ( params[ALPHATESTREFERENCE]->GetFloatValue() < 1 ) );

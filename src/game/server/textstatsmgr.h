@@ -7,9 +7,6 @@
 
 #ifndef TEXTSTATSMGR_H
 #define TEXTSTATSMGR_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 
 #include "filesystem.h"

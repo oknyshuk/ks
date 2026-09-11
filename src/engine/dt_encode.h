@@ -7,9 +7,6 @@
 
 #ifndef DATATABLE_ENCODE_H
 #define DATATABLE_ENCODE_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 
 #include "dt_send.h"

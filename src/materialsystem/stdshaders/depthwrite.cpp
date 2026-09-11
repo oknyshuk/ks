@@ -52,9 +52,6 @@ BEGIN_VS_SHADER_FLAGS( DepthWrite, "Help for Depth Write", SHADER_NOT_EDITABLE )
 	{
 		SET_FLAGS2( MATERIAL_VAR2_SUPPORTS_HW_SKINNING );
 
-#if !defined( CSTRIKE15 )
-#else
-#endif
 	}
 
 	SHADER_FALLBACK

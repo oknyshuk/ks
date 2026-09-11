@@ -8,9 +8,6 @@
 #ifndef INETSUPPORT_H
 #define INETSUPPORT_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "tier1/interface.h"
 #include "keyvalues.h"

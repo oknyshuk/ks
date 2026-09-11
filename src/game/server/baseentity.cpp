@@ -73,9 +73,6 @@
 #include "videocfg/videocfg.h"
 #include "tier0/stackstats.h"
 
-#if defined ( PORTAL2 )
-#include "PortalSimulation.h"
-#endif
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -540,15 +537,8 @@ void SendProxy_Angles( const SendProp *pProp, const void *pStruct, const void *p
 IMPLEMENT_REFLECT_SERVERCLASS( CBaseEntity, DT_BaseEntity )
 #if defined(ENABLE_CREATE_TIME)
 #endif
-#ifdef INFESTED_DLL
-#else
-#endif
-#ifdef PORTAL2
-#endif // PORTAL2
 #if PREDICTION_ERROR_CHECK_LEVEL > 1 
 #else
-#endif
-#if defined ( PORTAL2 )
 #endif
 #if !defined( NO_ENTITY_PREDICTION ) && defined( USE_PREDICTABLEID )
 #endif
@@ -667,9 +657,6 @@ CBaseEntity::CBaseEntity( bool bServerOnly )
 #endif
 	m_pEvent = NULL;
 
-#ifdef PORTAL2
-	m_iSignifierName = NULL_STRING;
-#endif // PORTAL2
 
 	m_bSpotted = false;
 	ClearSpottedBy();
@@ -900,9 +887,6 @@ void CBaseEntity::SetClassname( const char *className )
 {
 	m_iClassname = AllocPooledString( className );
 
-#ifdef PORTAL2
-	m_iSignifierName = m_iClassname;
-#endif // PORTAL2
 }
 
 // position to shoot at
@@ -1372,11 +1356,6 @@ int CBaseEntity::DrawDebugTextOverlays(void)
 		EntityText(offset,tempstr,0);
 		offset++;
 
-#if defined ( PORTAL2 )
-		Q_snprintf(tempstr, sizeof(tempstr), "In Portal Environment: %s", (CPortalSimulator::GetSimulatorThatOwnsEntity(this))?("yes"):("no") );
-		EntityText(offset,tempstr,0);
-		offset++;
-#endif
 
 	}
 
@@ -1704,9 +1683,6 @@ void CBaseEntity::Activate( void )
 		AddContext( m_iszResponseContext.ToCStr() );
 	}
 
-#if defined ( PORTAL2 )
-	UpdateObjectCapsCache();
-#endif
 }
 
 ////////////////////////////  old CBaseEntity stuff ///////////////////////////////////
@@ -2260,14 +2236,6 @@ int CBaseEntity::ObjectCaps( void )
 	return 0;
 }
 
-#if defined ( PORTAL2 )
-void CBaseEntity::UpdateObjectCapsCache( void )
-{
-	// Send the first six bits of the object caps to the client
-	// those should be the +use logic capabilities
-	m_iObjectCapsCache = 0x0000003f & ObjectCaps();
-}
-#endif
 
 void CBaseEntity::StartTouch( CBaseEntity *pOther )
 {
@@ -2796,19 +2764,7 @@ void CBaseEntity::VPhysicsCollision( int index, gamevcollisionevent_t *pEvent )
 	}
 	PhysCollisionScreenShake( pEvent, index );
 
-#if HL2_EPISODIC
-	// episodic does something different for when advisor shields are struck
-	if ( phit->game.material == 'Z' || pprops->game.material == 'Z')
-	{
-		PhysCollisionWarpEffect( pEvent, phit );
-	}
-	else
-	{
-		PhysCollisionDust( pEvent, phit );
-	}
-#else
 	PhysCollisionDust( pEvent, phit );
-#endif
 }
 
 void CBaseEntity::VPhysicsFriction( IPhysicsObject *pObject, float energy, int surfaceProps, int surfacePropsHit )
@@ -3300,11 +3256,9 @@ void CBaseEntity::OnRestore()
 
 	// disable touch functions while we recreate the touch links between entities
 	// NOTE: We don't do this on transitions, because we'd miss the OnStartTouch call!
-#if !defined(HL2_DLL) || ( defined(HL2_DLL) && defined(HL2_EPISODIC) )
 	CBaseEntity::sm_bDisableTouchFuncs = ( gpGlobals->eLoadType != MapLoad_Transition );
 	PhysicsTouchTriggers();
 	CBaseEntity::sm_bDisableTouchFuncs = false;
-#endif // HL2_EPISODIC
 
 	//Adrian: If I'm restoring with these fields it means I've become a client side ragdoll.
 	//Don't create another one, just wait until is my time of being removed.
@@ -3557,9 +3511,6 @@ int CBaseEntity::UpdateTransmitState()
 	// instead of UpdateTransmitState.
 	Assert( g_nInsideDispatchUpdateTransmitState > 0 );
 
-#ifdef DOTA_DLL
-	return SetTransmitState( FL_EDICT_FULLCHECK );
-#endif
 	
 	// If an object is the moveparent of something else, don't skip it just because it's marked EF_NODRAW or else
 	//  the client won't have a proper origin for the child since the hierarchy won't be correctly transmitted down
@@ -6747,26 +6698,6 @@ void CBaseEntity::InputCallScriptFunction( inputdata_t& inputdata )
 }
 
 
-#ifdef PORTAL2
-
-//---------------------------------------------------------
-// Remove paint from entity with BSP model.
-//---------------------------------------------------------
-void CBaseEntity::InputRemovePaint( inputdata_t &inputdata )
-{
-	if ( engine->HasPaintmap() && IsBSPModel() )
-	{
-		engine->RemovePaint( GetModel() );
-
-		CBroadcastRecipientFilter filter;
-		filter.MakeReliable();
-		UserMessageBegin( filter, "RemovePaint" );
-		WRITE_EHANDLE( this );
-		MessageEnd();
-	}
-}
-
-#endif
 
 
 // #define VMPROFILE	// define to profile vscript calls
@@ -7010,9 +6941,6 @@ void CBaseEntity::AddContext( const char *contextName )
 	char key[ 128 ];
 	char value[ 128 ];
 	float duration;
-#ifdef TERROR  // from changelist 729204 . Ifdef'd out because not tested outside L4D yet.
-	CWorld * const world = assert_cast< CWorld * >( CBaseEntity::Instance( INDEXENT( 0 ) ) );
-#endif
 
 	const char *p = contextName;
 	while ( p )
@@ -7024,24 +6952,7 @@ void CBaseEntity::AddContext( const char *contextName )
 			duration += gpGlobals->curtime;
 		}
 
-#ifdef TERROR 
-		// Egregious last-minute hack. If a specific context is prefixed with a '$', then 
-		// apply it to the World instead of to this character. The proper way to fix this
-		// would be to do away with this insane mechanism of writing contexts out into a 
-		// string and then parsing it back apart again after calling a member function
-		// on the receiving character; but that's way too big to deal with at this stage
-		// of L4D2.  ( this hack dated 9/4/09 )
-		if ( key[0] == AI_CriteriaSet::kAPPLYTOWORLDPREFIX && world && world != this )
-		{
-			world->AddContext( key+1, value, duration );
-		}
-		else
-		{
-			AddContext( key, value, duration );
-		}
-#else
 		AddContext( key, value, duration );
-#endif
 	}
 }
 
@@ -7122,12 +7033,7 @@ void CBaseEntity::InputClearContext( inputdata_t& inputdata )
 //-----------------------------------------------------------------------------
 IResponseSystem *CBaseEntity::GetResponseSystem()
 {
-#ifndef INFESTED_DLL
 	return NULL;
-#else
-	extern IResponseSystem *g_pResponseSystem;
-	return g_pResponseSystem;
-#endif
 }
 
 //-----------------------------------------------------------------------------
@@ -7802,14 +7708,12 @@ bool CBaseEntity::SUB_AllowedToFade( void )
 	}
 
 	// only keep fading things active on the high end
-#if !defined( PORTAL2 )
 	{
 		CBasePlayer *pPlayer = ( AI_IsSinglePlayer() ) ? UTIL_GetLocalPlayer() : NULL;
 
 		if ( pPlayer && pPlayer->FInViewCone( this ) )
 			return false;
 	}
-#endif
 
 	return true;
 }

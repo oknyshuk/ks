@@ -9,9 +9,6 @@
 #ifndef IRENDERDEVICE_H
 #define IRENDERDEVICE_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "tier1/interface.h"
 #include "appframework/iappsystem.h"

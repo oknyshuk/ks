@@ -71,9 +71,7 @@ int CL_GetHltvReplayDelay() { return g_HltvReplaySystem.GetHltvReplayDelay(); }
 void CHltvReplaySystem::EmitTimeJump()
 {
 	GetHud().OnTimeJump();
-#if defined( CSTRIKE15 )
 	C_BasePlayer::OnTimeJumpAllPlayers();
-#endif
 	//GetHud().UpdateHud( true ); // may call SFUniqueAlerts::ShowHltvReplayAlertPanel
 	//GetHud().ProcessInput( true );
 	//GetHud().OnTimeJump();

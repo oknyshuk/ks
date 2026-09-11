@@ -25,12 +25,6 @@
 	#define WRITE_DEPTH_TO_DESTALPHA 0
 #endif
 
-#ifdef _X360
-	#ifdef SHADER_SRGB_READ
-		#undef SHADER_SRGB_READ
-	#endif
-	#define SHADER_SRGB_READ 1
-#endif
 
 #include "common_ps_fxc.h"
 #include "shader_constant_register_map.h"

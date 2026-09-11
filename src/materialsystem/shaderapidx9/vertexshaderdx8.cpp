@@ -4,8 +4,6 @@
 //
 //===========================================================================//
 #define DISABLE_PROTECTED_THINGS
-#if ( defined(_WIN32) )
-#else
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netdb.h>
@@ -20,7 +18,6 @@ typedef int SOCKET;
 #define SOCKET_ERROR (-1)
 #define SD_SEND 0x01
 #define INVALID_SOCKET (~0)
-#endif
 
 #include "togl/rendermechanism.h"
 #include "vertexshaderdx8.h"
@@ -1834,9 +1831,6 @@ HardwareShader_t CShaderManager::CompileShader( const char *pShaderName,
 	int retriesLeft = 20; 
 	retriesLeft;
 
-#if ( !defined( POSIX ) && !defined( _DEBUG ) )
-retry_compile:
-#endif
 
 	// Try and open the file to see if it exists
 	FileHandle_t fp = g_pFullFileSystem->Open( filename, "r" );

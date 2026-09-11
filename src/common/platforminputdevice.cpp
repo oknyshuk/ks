@@ -99,13 +99,7 @@ int				PlatformInputDevice::s_numberPlatformInputDevices[INPUT_DEVICE_PLATFORM_C
 InputDevice_t	PlatformInputDevice::s_AllInputDevices = INPUT_DEVICE_NONE;
 
 const InputDevicePlatform_t PlatformInputDevice::s_LocalInputPlatform = 
-	#if defined( PLATFORM_WINDOWS_PC )
-		INPUT_DEVICE_PLATFORM_WINDOWS;
-	#elif defined( PLATFORM_LINUX )
 		INPUT_DEVICE_PLATFORM_LINUX;
-	#else
-		INPUT_DEVICE_PLATFORM_NONE;
-	#endif
 
 
 void PlatformInputDevice::InitPlatfromInputDeviceInfo( void )

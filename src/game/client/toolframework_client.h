@@ -7,9 +7,6 @@
 #ifndef TOOLFRAMEWORK_CLIENT_H
 #define TOOLFRAMEWORK_CLIENT_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "toolframework/itoolentity.h"
 #include "vstdlib/ikeyvaluessystem.h"

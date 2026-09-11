@@ -7,9 +7,6 @@
 #ifndef TIER1_LOGGING_H
 #define TIER1_LOGGING_H
 
-#if defined( COMPILER_MSVC )
-#pragma once
-#endif
 
 #include "logging.h"
 #include "utlbuffer.h"

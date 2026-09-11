@@ -20,9 +20,6 @@
 #define INCLUDED_STEAM_INTERFACE_H
 
 
-#if defined(_MSC_VER) && (_MSC_VER > 1000)
-#pragma once
-#endif
 
 #ifndef INCLUDED_STEAM2_USERID_STRUCTS
 	#include "SteamCommon.h"

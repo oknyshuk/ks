@@ -12,9 +12,6 @@
 #ifndef CONVAR_H
 #define CONVAR_H
 
-#if _WIN32
-#pragma once
-#endif
 
 // Suppress GCC warning about offsetof with non-standard-layout types
 // This is used in CON_COMMAND_MEMBER_F and is conditionally-supported behavior
@@ -30,11 +27,7 @@
 #include "color.h"
 #include "icvar.h"
 
-#ifdef _WIN32
-#define FORCEINLINE_CVAR FORCEINLINE
-#else
 #define FORCEINLINE_CVAR inline
-#endif
 
 
 //-----------------------------------------------------------------------------

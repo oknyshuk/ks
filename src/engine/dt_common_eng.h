@@ -6,9 +6,6 @@
 
 #ifndef DT_COMMON_ENG_H
 #define DT_COMMON_ENG_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 class CBaseClientState;
 class ServerClass;

@@ -8,9 +8,6 @@
 #ifndef ENGINESTATS_H
 #define ENGINESTATS_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "utlvector.h"
 #include "sysexternal.h"

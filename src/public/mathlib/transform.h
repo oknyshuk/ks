@@ -9,9 +9,6 @@
 #ifndef TRANSFORM_H
 #define TRANSFORM_H
 
-#ifdef COMPILER_MSVC
-#pragma once
-#endif
 
 #include "tier0/memalloc.h"
 #include "mathlib/vector.h"

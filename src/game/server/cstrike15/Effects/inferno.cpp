@@ -891,13 +891,6 @@ void CInferno::InfernoThink( void )
 		}
 
 		int damageType = GetDamageType();
-#if !defined( CSTRIKE15 )
-		// After the first few seconds of burning, the thrower isn't responsible for teammates who run into the fire.
-		if ( m_activeTimer.GetElapsedTime() > InfernoFriendlyFireDuration.GetFloat() || owner == NULL )
-		{
-			damageType |= DMG_BLAMELESS_FRIENDLY_FIRE; // Add in a flag to prevent FF demerits
-		}
-#endif
 
 		// Note that we expect molotov this value to be an integer (currently it is 40 * 0.2 == 8 damage per tick)
 		// If molotov DPS changes, we may need to also adjust how often damage is applied.

@@ -6,7 +6,6 @@
 //
 //=============================================================================//
 
-#if !defined(_STATIC_LINKED) || defined(_SHARED_LIB)
 
 #include "commonmacros.h"
 #include "basetypes.h"
@@ -1827,4 +1826,3 @@ void CSentence::CreateEventWordDistribution( char const *pszText, float flSenten
 }
 
 
-#endif // !_STATIC_LINKED || _SHARED_LIB

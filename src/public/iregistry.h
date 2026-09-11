@@ -6,9 +6,6 @@
 //===========================================================================//
 #if !defined( UTIL_REGISTRY_H )
 #define UTIL_REGISTRY_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "tier0/platform.h"
 

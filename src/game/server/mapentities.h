@@ -7,9 +7,6 @@
 
 #ifndef MAPENTITIES_H
 #define MAPENTITIES_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "mapentities_shared.h"
 

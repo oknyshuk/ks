@@ -9,9 +9,6 @@
 #ifndef GAMEINTERFACE_H
 #define GAMEINTERFACE_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "mapentities.h"
 

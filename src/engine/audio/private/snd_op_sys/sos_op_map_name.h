@@ -6,9 +6,6 @@
 
 #ifndef SOS_OP_MAPNAME_H
 #define SOS_OP_MAPNAME_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "sos_op.h"
 

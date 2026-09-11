@@ -10,13 +10,6 @@
 #ifndef TSLIST_H
 #define TSLIST_H
 
-#if defined( _WIN32 )
-#pragma once
-// Suppress this spurious warning:
-// warning C4700: uninitialized local variable 'oldHead' used
-#pragma warning( push )
-#pragma warning( disable : 4700 )
-#endif
 
 #if defined( USE_NATIVE_SLIST )
 #define WIN32_LEAN_AND_MEAN
@@ -31,13 +24,8 @@
 
 //-----------------------------------------------------------------------------
 
-#if defined (PLATFORM_WINDOWS)
-//typedef __m128i int128;
-//inline int128 int128_zero()	{ return _mm_setzero_si128(); }
-#else  // PLATFORM_WINDOWS
 typedef __int128_t int128;
 #define int128_zero() 0
-#endif// PLATFORM_WINDOWS
 
 #define TSLIST_HEAD_ALIGNMENT 16
 #define TSLIST_NODE_ALIGNMENT 16
@@ -55,19 +43,10 @@ inline bool ThreadInterlockedAssignIf64x128( volatile int128 *pDest, const int12
 	return ThreadInterlockedAssignIf128( pDest, value, comperand );
 }
 
-#ifdef _MSC_VER
-#define TSLIST_HEAD_ALIGN DECL_ALIGN(TSLIST_HEAD_ALIGNMENT)
-#define TSLIST_NODE_ALIGN DECL_ALIGN(TSLIST_NODE_ALIGNMENT)
-#define TSLIST_HEAD_ALIGN_POST
-#define TSLIST_NODE_ALIGN_POST
-#elif defined( GNUC )
 #define TSLIST_HEAD_ALIGN 
 #define TSLIST_NODE_ALIGN 
 #define TSLIST_HEAD_ALIGN_POST DECL_ALIGN(TSLIST_HEAD_ALIGNMENT)
 #define TSLIST_NODE_ALIGN_POST DECL_ALIGN(TSLIST_NODE_ALIGNMENT)
-#else
-#error
-#endif
 
 //-----------------------------------------------------------------------------
 
@@ -957,10 +936,5 @@ private:
 	CTSListBase m_FreeNodes;
 } TSLIST_NODE_ALIGN_POST;
 
-#if defined( _WIN32 )
-// Suppress this spurious warning:
-// warning C4700: uninitialized local variable 'oldHead' used
-#pragma warning( pop )
-#endif
 
 #endif // TSLIST_H

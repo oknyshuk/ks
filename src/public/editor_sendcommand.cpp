@@ -7,11 +7,7 @@
 // $NoKeywords: $
 //=============================================================================//
 
-#if !defined(_STATIC_LINKED) || defined(_SHARED_LIB)
 
-#if defined(_WIN32)
-#include <windows.h>
-#endif
 #include <stdio.h>
 #include "editor_sendcommand.h"
 #include "tier1/strtools.h"
@@ -181,45 +177,7 @@ EditorSendResult_t Editor_EndSession(bool bShowUI)
 //-----------------------------------------------------------------------------
 EditorSendResult_t Editor_SendCommand(const char *pszCommand, bool bShowUI)
 {
-#ifdef _WIN32
-	HWND hwnd = FindWindow("Worldcraft_ShellMessageWnd", "Worldcraft_ShellMessageWnd");
-	if (hwnd != NULL)
-	{
-		//
-		// Fill out the data structure to send to the editor.
-		//
-
-		COPYDATASTRUCT CopyData;
-		CopyData.cbData = strlen(pszCommand) + 1;
-		CopyData.dwData = 0;
-		CopyData.lpData = (void *)pszCommand;
-		
-		if (!SendMessage(hwnd, WM_COPYDATA, 0, (LPARAM)&CopyData))
-		{
-			if (bShowUI)
-			{
-				char szError[1024];
-				Q_snprintf(szError,sizeof(szError), "Worldcraft did not accept the command: \n\n\"%s\"\n\n Make sure the command is valid and that Worldcraft is still running properly.", pszCommand);
-				MessageBox(NULL, szError, "Editor_SendCommand Error", MB_OK);
-			}
-		
-			return(Editor_BadCommand);
-		}
-	}
-	else
-	{
-		if (bShowUI)
-		{
-			char szError[1024];
-			Q_snprintf(szError,sizeof(szError), "Could not contact Worldcraft to send the command: \n\n\"%s\"\n\n Worldcraft does not appear to be running.", pszCommand);
-			MessageBox(NULL, szError, "Editor_SendCommand Error", MB_OK);
-		}
-
-		return(Editor_NotRunning);
-	}
-#endif
 
 	return(Editor_OK);
 }
 
-#endif // !_STATIC_LINKED || _SHARED_LIB

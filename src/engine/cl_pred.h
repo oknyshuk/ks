@@ -8,9 +8,6 @@
 // cl_pred.h
 #ifndef CL_PRED_H
 #define CL_PRED_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 typedef enum
 {

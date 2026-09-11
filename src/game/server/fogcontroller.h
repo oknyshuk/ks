@@ -8,9 +8,6 @@
 #define FOGCONTROLLER_H
 
 #include "reflect_annotations.h"
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "playernet_vars.h"
 #include "igamesystem.h"

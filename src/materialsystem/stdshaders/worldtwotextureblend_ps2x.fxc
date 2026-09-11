@@ -80,16 +80,7 @@ sampler BumpmapSampler				: register( s4 );
 sampler NormalizeSampler			: register( s6 );
 sampler ShadowDepthSampler			: register( s7 );
 
-#if defined(_PS3)
-// Needed for optimal shadow filter code generation on PS3.
-#pragma texformat ShadowDepthSampler DEPTH_COMPONENT24
-#endif
 
-#if (BUMPMAP == 1) && defined( _PS3 )
-// Causes the Cg compiler to automatically produce _bx2 modifier on the texture load instead of producing a MAD to range expand the vector, saving one instruction.
-#pragma texsign BumpmapSampler
-#pragma texformat BumpmapSampler RGBA8
-#endif
 
 //PS_INPUT defined in common_lightmappedgeneric_fxc.h"
 

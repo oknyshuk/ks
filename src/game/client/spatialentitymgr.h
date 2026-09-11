@@ -8,9 +8,6 @@
 #ifndef SPATIALENTITYMGR_H
 #define SPATIALENTITYMGR_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "igamesystem.h"
 

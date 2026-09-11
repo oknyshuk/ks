@@ -9,9 +9,6 @@
 #ifndef DYNAMICVB_H
 #define DYNAMICVB_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "shaderapidx8_global.h"
 

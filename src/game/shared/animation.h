@@ -8,9 +8,6 @@
 #ifndef ANIMATION_H
 #define ANIMATION_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 
 #define ACTIVITY_NOT_AVAILABLE		-1

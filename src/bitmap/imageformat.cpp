@@ -4,11 +4,6 @@
 //
 //=============================================================================//
 
-#if defined( _WIN32 ) && !defined( DX_TO_GL_ABSTRACTION )
-#include <windows.h>
-#include "../dx9sdk/include/d3d9types.h"
-#include "dx11sdk/d3d11.h"
-#endif
 #include "bitmap/imageformat.h"
 #include "basetypes.h"
 #include "tier0/dbg.h"

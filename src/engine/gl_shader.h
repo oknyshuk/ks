@@ -10,9 +10,6 @@
 #ifndef GL_SHADER_H
 #define GL_SHADER_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 
 void Shader_BeginRendering ();

@@ -6,9 +6,6 @@
 #ifndef CL_RCON_H
 #define CL_RCON_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
 
 #include "sv_main.h"

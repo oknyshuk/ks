@@ -6,7 +6,6 @@
 //
 //=============================================================================//
 
-#if !defined(_STATIC_LINKED) || defined(_SHARED_LIB)
 
 #include "iscratchpad3d.h"
 #include "mathlib/mathlib.h"
@@ -463,5 +462,4 @@ void ScratchPad_DrawAABB(
 }
 
 
-#endif // !_STATIC_LINKED || _SHARED_LIB
 

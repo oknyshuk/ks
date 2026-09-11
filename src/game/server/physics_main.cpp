@@ -7,13 +7,7 @@
 
 
 #include "cbase.h"
-#if defined(_WIN32)
 #include <typeinfo>
-// BUGBUG: typeinfo stomps some of the warning settings (in yvals.h)
-#pragma warning(disable:4244)
-#else
-#include <typeinfo>
-#endif
 
 #include "player.h"
 #include "ai_basenpc.h"
@@ -1179,11 +1173,7 @@ void CBaseEntity::PhysicsDispatchThink( BASEPTR thinkFunc )
 			}
 			else
 			{
-#ifdef _WIN32
-				Msg( "%s(%s) thinking for %.02f ms!!!\n", GetClassname(), typeid(this).raw_name(), time );
-#else
 				Msg( "%s(%s) thinking for %.02f ms!!!\n", GetClassname(), typeid(this).name(), time );
-#endif
 			}
 		}
 	}

@@ -2,9 +2,6 @@
 
 #ifndef WEAPONDECAL_HELPER_H
 #define WEAPONDECAL_HELPER_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include <string.h>
 

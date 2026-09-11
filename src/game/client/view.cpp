@@ -44,29 +44,17 @@
 #include "ScreenSpaceEffects.h"
 #include "clientui.h"
 #include "engine/SndInfo.h"
-#if defined( CSTRIKE15 )
 #include "c_cs_player.h"
-#endif
 #ifdef GAMEUI_UISYSTEM2_ENABLED
 #include "gameui.h"
 #endif
 #ifdef GAMEUI_EMBEDDED
-#if defined( PORTAL2 )
-#elif defined( SWARM_DLL )
-#include "swarm/gameui/swarm/basemodpanel.h"
-#elif defined( CSTRIKE15 )
-#else
-#error "GAMEUI_EMBEDDED"
-#endif
 #endif
 
 #if defined( HL2_CLIENT_DLL ) || defined( CSTRIKE_DLL ) || defined( INFESTED_DLL )
 #define USE_MONITORS
 #endif
 
-#ifdef PORTAL
-#include "C_Prop_Portal.h" //portal surface rendering functions
-#endif
 
 	
 // memdbgon must be the last include file in a .cpp file!!!
@@ -499,11 +487,7 @@ void CViewRender::OnRenderStart()
 		SetUpView();
 
 		// Adjust mouse sensitivity based upon the current FOV
-#if defined( CSTRIKE15 )
 		C_CSPlayer *player = C_CSPlayer::GetLocalCSPlayer();
-#else
-		C_BasePlayer *player = C_BasePlayer::GetLocalPlayer();
-#endif
 		if ( player )
 		{
 			default_fov.SetValue( player->m_iDefaultFOV );
@@ -747,7 +731,6 @@ void CViewRender::SetUpView()
 		GetClientMode()->OverrideView( &GetView() );
 	}
 
-#if defined ( CSTRIKE15 )
 	CBasePlayer *pCameraMan = NULL;
 	if ( g_bEngineIsHLTV )
 		pCameraMan = HLTVCamera()->GetCameraMan();
@@ -758,7 +741,6 @@ void CViewRender::SetUpView()
 		pCSPlayer->InterpolateObserverView( view.origin, view.angles );
 		pCSPlayer->CalcViewModelView( view.origin, view.angles );
 	}
-#endif
 
 	// give the toolsystem a chance to override the view
 	ToolFramework_SetupEngineView( view.origin, view.angles, view.fov );

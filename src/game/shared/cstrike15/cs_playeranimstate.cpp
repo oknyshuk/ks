@@ -902,14 +902,6 @@ int CCSPlayerAnimState::CalcReloadLayerSequence( PlayerAnimEvent_t animEvent )
 	int iReloadSequence = -1;
 
 // Avoid doing this look up since we don't need it for CSGO
-#if !defined( CSTRIKE15 )
-
-	Q_snprintf( szName, sizeof( szName ), "%s_reload_%s%s", prefix, weaponSuffix, reloadSuffix );
-	iReloadSequence = m_pOuter->LookupSequence( szName );
-	if ( iReloadSequence != -1 )
-		return iReloadSequence;
-
-#endif
 
 	// Next, look for reload_<weapon name><_start|_loop|_end>.
 	Q_snprintf( szName, sizeof( szName ), "reload_%s%s", weaponSuffix, reloadSuffix );

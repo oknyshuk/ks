@@ -2453,10 +2453,6 @@ CON_COMMAND_F( cl_showents, "Dump entity list to console.", FCVAR_CHEAT )
 //-----------------------------------------------------------------------------
 bool CL_ShouldLoadBackgroundLevel( const CCommand &args )
 {
-#ifdef PORTAL2
-	// portal2 is not using a background map
-	return false;
-#endif
 
 	if ( CommandLine()->CheckParm("-console") )
 		return false;
@@ -2630,18 +2626,12 @@ unsigned int CL_GetStartupIndex()
 //-----------------------------------------------------------------------------
 void CL_GetStartupImage( char *pOutBuffer, int nOutBufferSize )
 {
-#if defined( CSTRIKE15)
 	// CStrike15 uses a specific startup image instead of the random image.
 	// CSGO always uses a widescreen format image, regardless of the screen resolution,
 	// to match how the Scaleform background is drawn.  CVideoMode_Common::DrawStartupGraphic
 	// takes care of repositioning and scaling this image to match the method
 	// used in Scaleform.
 	V_strncpy( pOutBuffer, "console/background01_widescreen", nOutBufferSize );
-#else
-	const AspectRatioInfo_t &aspectRatioInfo = materials->GetAspectRatioInfo();
-	int nWhich = CL_GetStartupIndex();
-	V_snprintf( pOutBuffer, nOutBufferSize, "console/portal2_product_%d%s", nWhich, ( aspectRatioInfo.m_bIsWidescreen ? "_widescreen" : "" ) );
-#endif // CSTRIKE15
 }
 
 //-----------------------------------------------------------------------------

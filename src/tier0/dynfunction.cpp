@@ -8,21 +8,11 @@
 #include "pch_tier0.h"
 #include "tier0/dynfunction.h"
 
-#if defined(WIN32)
-
-#include <windows.h>
-
-typedef HMODULE LibraryHandle;
-#define LoadLibraryHandle(libname) LoadLibrary(libname)
-#define CloseLibraryHandle(handle) FreeLibrary(handle)
-#define LookupInLibraryHandle(handle, fn) GetProcAddress(handle, fn)
-#else
 #include <dlfcn.h>
 typedef void *LibraryHandle;
 #define LoadLibraryHandle(libname) dlopen(libname, RTLD_NOW)
 #define CloseLibraryHandle(handle) dlclose(handle)
 #define LookupInLibraryHandle(handle, fn) dlsym(handle, fn)
-#endif
 
 #ifndef DEBUG
 static inline void dbgdynfn(const char *fmt, ...) {}

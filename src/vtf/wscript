@@ -16,9 +16,6 @@ def build(bld):
 
     source = ["vtf.cpp"]
 
-    if bld.env.DEST_OS == "win32":
-        source += ["s3tc_decode.cpp"]
-
     bld.stlib(
         source=source,
         target="vtf",

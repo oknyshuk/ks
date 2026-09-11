@@ -7,9 +7,6 @@
 //=============================================================================//
 #ifndef IN_BUTTONS_H
 #define IN_BUTTONS_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #define IN_ATTACK		(1 << 0)
 #define IN_JUMP			(1 << 1)
@@ -38,27 +35,6 @@
 #define IN_GRENADE2		(1 << 24)	// grenade 2
 #define	IN_LOOKSPIN		(1 << 25)
 
-#ifdef PORTAL2
 
-#if USE_SLOWTIME
-	#define	IN_SLOWTIME		(1 << 26)
-#endif // USE_SLOWTIME
-
-#define	IN_COOP_PING	(1 << 27)	
-#define IN_REMOTE_VIEW	(1 << 28)
-#endif // PORTAL2
-
-#ifdef INFESTED_DLL
-#define IN_CURRENT_ABILITY (1 << 22)		// overloading BULLRUSH
-#define IN_PREV_ABILITY (1 << 23)			// overloading GRENADE1
-#define IN_NEXT_ABILITY (1 << 24)			// overloading GRENADE2
-#define IN_MELEE_LOCK	(1 << 26)
-#define IN_MELEE_CONTACT	(1 << 27)
-#define IN_ABILITY1		(1 << 28)
-#define IN_ABILITY2		(1 << 29)
-#define IN_ABILITY3		(1 << 30)
-#define IN_ABILITY4		(1 << 31)
-#define IN_ABILITY5		(1 << 19)			// overloading ZOOM
-#endif // INFESTED_DLL
 
 #endif // IN_BUTTONS_H

@@ -23,10 +23,6 @@
 // VProf is enabled by default in all configurations
 #define VPROF_ENABLED
 
-#ifdef _MSC_VER
-#pragma warning(push)
-#pragma warning(disable:4251)
-#endif
 
 // enable this to get detailed nodes beneath budget
 //#define VPROF_LEVEL 1
@@ -148,51 +144,21 @@
 #endif
 //lwss end
 
-#if VPROF_LEVEL > 0
     //lwss: swap out TM_ZONE if we are using tracy instead
     #ifdef USE_TRACY
         #define	VPROF_1(name,group,assertAccounted,budgetFlags)	TRACY_ZONE( #name ); VPROF_SCOPE_VARIABLE_DECL(name, 1, group, assertAccounted, budgetFlags, __LINE__ );
     #else
         #define	VPROF_1(name,group,assertAccounted,budgetFlags)	TM_ZONE( TELEMETRY_LEVEL3, TMZF_NONE, "(%s)%s", group, name ); VPROF_SCOPE_VARIABLE_DECL(name, 1, group, assertAccounted, budgetFlags, __LINE__ );
     #endif
-#else
-#    define	VPROF_1(name,group,assertAccounted,budgetFlags)	((void)0)
-#endif
 
-#if VPROF_LEVEL > 1
-    #ifdef USE_TRACY
-        #define	VPROF_2(name,group,assertAccounted,budgetFlags)	TRACY_ZONE( #name ); VPROF_SCOPE_VARIABLE_DECL(name, 1, group, assertAccounted, budgetFlags, __LINE__ );
-    #else
-        #define	VPROF_2(name,group,assertAccounted,budgetFlags)	TM_ZONE( TELEMETRY_LEVEL4, TMZF_NONE, "(%s)%s", group, name ); VPROF_SCOPE_VARIABLE_DECL(name, 2, group, assertAccounted, budgetFlags, __LINE__);
-    #endif
-#else
 #    define	VPROF_2(name,group,assertAccounted,budgetFlags)	((void)0)
-#endif
 
-#if VPROF_LEVEL > 2
-#define	VPROF_3(name,group,assertAccounted,budgetFlags)	TM_ZONE( TELEMETRY_LEVEL5, TMZF_NONE, "(%s)%s", group, name ); VPROF_SCOPE_VARIABLE_DECL(name, 3, group, assertAccounted, budgetFlags, __LINE__);
-#else
 #    define	VPROF_3(name,group,assertAccounted,budgetFlags)	((void)0)
-#endif
 
-#if VPROF_LEVEL > 3
-#define	VPROF_4(name,group,assertAccounted,budgetFlags)	TM_ZONE( TELEMETRY_LEVEL6, TMZF_NONE, "(%s)%s", group, name ); VPROF_SCOPE_VARIABLE_DECL(name, 4, group, assertAccounted, budgetFlags, __LINE__);
-#else
 #    define	VPROF_4(name,group,assertAccounted,budgetFlags)	((void)0)
-#endif
 
 //-------------------------------------
 
-#ifdef _MSC_VER
-#define VProfCode( code ) \
-	if ( 0 ) \
-		; \
-	else \
-	{ \
-	VPROF( __FUNCTION__ ": " #code ); \
-		code; \
-	}
-#else
 #define VProfCode( code ) \
 	if ( 0 ) \
 		; \
@@ -201,7 +167,6 @@
 		VPROF( #code ); \
 		code; \
 	} 
-#endif
 
 
 //-------------------------------------
@@ -1157,9 +1122,6 @@ private:
 #define VPROF_BEGIN_PIX_BLOCK( PIXConvar ) {
 #define VPROF_END_PIX_BLOCK() }
 
-#ifdef _MSC_VER
-#pragma warning(pop)
-#endif
 
 
 #endif

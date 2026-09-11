@@ -8,9 +8,6 @@
 #define HEGRENADE_PROJECTILE_H
 
 #include "reflect_annotations.h"
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "basecsgrenade_projectile.h"
 

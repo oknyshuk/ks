@@ -8,9 +8,6 @@
 #ifndef SND_FIXEDINT_H
 #define SND_FIXEDINT_H
 
-#if defined( _WIN32 )
-#pragma once
-#endif
 
 // fixed point stuff for real-time resampling
 #define FIX_BITS			28

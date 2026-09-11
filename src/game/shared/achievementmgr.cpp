@@ -5,9 +5,6 @@
 //=============================================================================
 
 #include "cbase.h"
-#ifdef _WIN32
-#include "winerror.h"
-#endif
 #include "achievementmgr.h"
 #include "icommandline.h"
 #include "keyvalues.h"
@@ -18,9 +15,6 @@
 #ifdef CLIENT_DLL
 #include "c_playerresource.h"
 #include "c_cs_player.h"
-#ifdef TF_CLIENT_DLL
-#include "item_inventory.h"
-#endif //TF_CLIENT_DLL
 #else
 #include "enginecallback.h"
 #endif // CLIENT_DLL
@@ -162,12 +156,6 @@ bool CAchievementMgr::Init()
 	ListenForGameEvent( "write_profile_data" );
 #endif // CLIENT_DLL
 
-#ifdef TF_CLIENT_DLL
-	ListenForGameEvent( "localplayer_changeclass" );
-	ListenForGameEvent( "localplayer_changeteam" );
-	ListenForGameEvent( "teamplay_round_start" );	
-	ListenForGameEvent( "teamplay_round_win" );
-#endif // TF_CLIENT_DLL
 
 	g_pMatchFramework->GetEventsSubscription()->Subscribe( this );
 
@@ -330,10 +318,6 @@ void CAchievementMgr::LevelInitPreEntity()
 
 	// sb: need to make sure we enable achievement manager on the client in split screen??
 
-#if defined( PORTAL2 )
-	// portal 2 can run in both single player and multiplayer modes
-	// achievement manager is on the client
-#else
 #	ifdef GAME_DLL
 		// For single-player games, achievement mgr must live on the server.  (Only the server has detailed knowledge of game state.)
 		Assert( !GameRules()->IsMultiplayer() );
@@ -341,7 +325,6 @@ void CAchievementMgr::LevelInitPreEntity()
 		// For multiplayer games, achievement mgr must live on the client.  (Only the client can read/write player state from Steam/XBox Live.)
 		Assert( GameRules()->IsMultiplayer() );
 #	endif
-#endif
 
 	for ( int i = 0; i < MAX_SPLITSCREEN_PLAYERS; ++i )
 	{
@@ -751,7 +734,6 @@ void CAchievementMgr::AwardAchievement( int iAchievementID, int nUserSlot )
 
 	pAchievement->OnAchieved();
 
-#if defined ( CSTRIKE15 )
 	IGameEvent * event = gameeventmanager->CreateEvent( "achievement_earned_local" , true );
 	if ( event )
 	{
@@ -759,7 +741,6 @@ void CAchievementMgr::AwardAchievement( int iAchievementID, int nUserSlot )
 		event->SetInt( "splitscreenplayer", nUserSlot );
 		gameeventmanager->FireEventClientSide( event );
 	}
-#endif
 
 	if ( cc_achievement_debug.GetInt() > 0 )
 	{

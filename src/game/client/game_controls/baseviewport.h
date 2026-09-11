@@ -76,9 +76,6 @@ protected:
 	bool				m_bFullscreenViewport;
 	IViewPortPanel		*m_pActivePanel;
 
-#if !defined( CSTRIKE15 )
-	IViewPortPanel		*m_pLastActivePanel;
-#endif
 
 	CNoopAnimController	m_AnimController;
 	int					m_OldSize[2];

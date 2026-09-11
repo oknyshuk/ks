@@ -150,22 +150,6 @@ HALF4 GetBloomColor( float2 bloomUV )
 	}
 	#endif
 
-	#if defined( _X360 )
-	{
-		#if defined( CSTRIKE15 )
-		{
-			// [mariod] - no pwl space for CS:GO
-		}
-		#else
-		{
-			// Since bloom is added in gamma space, the 360's PWL gamma space requires an artificial
-			// dim factor to match the look of the PC and PS3. 0.5 works best for portal2
-			vBloomSample.rgb *= 0.5f;
-			vBloomSample.rgb = SrgbLinearToGamma( vBloomSample.rgb );
-		}
-		#endif
-	}
-	#endif
 
 	// Scale bloom by 50% for all platforms
 	vBloomSample.rgb *= 0.5f;
@@ -183,15 +167,9 @@ HALF4 PerformColorCorrection( HALF4 outColor )
 		HALF4 offsetOutColor = outColor * (HALF)(31.0f / 32.0f) + (HALF)(0.5f / 32.0f);
 
 		outColor.rgb  = outColor.rgb * (HALF)ColorCorrectionDefaultWeight;
-		#if ( defined( _PS3 ) )
-		{
-			outColor.rgb += h3tex3D( ColorCorrectionVolumeTexture0, offsetOutColor.rgb ).rgb * (HALF3)ColorCorrectionVolumeWeights.xxx;
-		}
-		#else
 		{
 			outColor.rgb += tex3D( ColorCorrectionVolumeTexture0, offsetOutColor.rgb ).rgb * ColorCorrectionVolumeWeights.xxx;
 		}
-		#endif
 		if ( COL_CORRECT_NUM_LOOKUPS > 1 )
 		{
 			outColor.rgb += tex3D( ColorCorrectionVolumeTexture1, offsetOutColor.rgb ).rgb * ColorCorrectionVolumeWeights.yyy;
@@ -213,12 +191,6 @@ HALF4 PerformColorCorrection( HALF4 outColor )
 float3 PerformVomitBlend( float3 vRefractParams, float3 vFullResColor, float3 vBlurredColor )
 {
 
-	#ifdef _PS3
-		// Compensate for gamma badness.  Turns out that the particle system rendering for the vomit effect
-		// is blending is gamma space on ps3.  Doing this to somewhat compensate for this.
-		// Would do a sqrt here, but it introduces a lot of banding artifacts.
-		vRefractParams.z = saturate( vRefractParams.z * 2.0f );
-	#endif
 
 	float3 vVomitColor = lerp( g_vVomitColor[0].rgb, g_vVomitColor[1].rgb, vRefractParams.z );	// vomit tint
 	
@@ -288,11 +260,7 @@ float4_color_return_type main( PS_INPUT i ) : COLOR
 	}
 	#endif
 
-#if ( defined( _PS3 ) )
-	HALF4 rawColor = h4tex2D( FBTextureSampler, fbTexCoord.xy ).rgba;
-#else
 	HALF4 rawColor = tex2D( FBTextureSampler, fbTexCoord.xy ).rgba;
-#endif
 
 	HALF3 baseColor  = rawColor.rgb;
 	float depthValue = rawColor.a;
@@ -463,18 +431,6 @@ float4_color_return_type main( PS_INPUT i ) : COLOR
 		float2 vTmp = ( vUv.xy * 2.0 ) - 1.0;
 		float flVignette;
 
-		#if ( defined( _X360 ) ) && ( !defined( CSTRIKE15 ) )
-		{
-			// Make title safe and deal with different gamma space
-			flVignette = 1.0 - pow( abs( vTmp.x ), 4.0f );
-			flVignette *= 1.0 - pow( abs( vTmp.y ), 4.0f );
-			flVignette = 1.0 - ( 1.0 - flVignette ) * ( ( saturate( ( 1.0 - vUv.y ) - 0.1 ) / 0.9 ) );
-
-			// This tex2D solves the 3 lines of math above
-			//flVignette = tex2D( VignetteSampler, vUv.xy ).g; // Green is for the 360
-			//flVignette = saturate( flVignette * 0.75 + 0.26 );
-		}
-		#else
 		{
 			flVignette = 1.0 - pow( abs( vTmp.x ), 6.0f );
 			flVignette *= 1.0 - pow( abs( vTmp.y ), 6.0f );
@@ -484,7 +440,6 @@ float4_color_return_type main( PS_INPUT i ) : COLOR
 			//flVignette = tex2D( VignetteSampler, vUv.xy ).r; // Red is for the PC
 			//flVignette = saturate( flVignette * 0.55 + 0.46 );
 		}
-		#endif
 
 		// Artificially lighten the vignette. We may have to tune this differently for the 360.
 		//outColor.rgb *= ( flVignette * 0.75 ) + 0.25;
@@ -506,19 +461,11 @@ float4_color_return_type main( PS_INPUT i ) : COLOR
 		HALF3 vTmp = { 0.2125f, 0.7154f, 0.0721f };
 		float flLuminance = saturate( dot( outColor.rgb, vTmp.rgb ) );
 
-		#if defined( _X360 ) && !defined( CSTRIKE15 ) 
-		{
-			// 360
-			float flNoiseScalar = 0.2f + 1.0f * ( saturate( pow( 1.0 - flLuminance, 64.0 ) ) );
-			outColor.rgb += ( ( flNoiseTexel * 0.3f ) - 0.15f  ) * g_flNoiseScalar * flNoiseScalar;
-		}
-		#else
 		{
 			// PC
 			float flNoiseScalar = 0.2f + 0.8f * ( saturate( pow( 1.0 - flLuminance, 12.0 ) ) );
 			outColor.rgb += ( ( flNoiseTexel * 0.3f ) - 0.15f  ) * g_flNoiseScalar * flNoiseScalar;
 		}
-		#endif
 	}
 	#endif
 

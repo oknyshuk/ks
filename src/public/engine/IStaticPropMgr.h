@@ -7,9 +7,6 @@
 
 #ifndef ISTATICPROPMGR_H
 #define ISTATICPROPMGR_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "interface.h"
 #include "mathlib/vector.h"

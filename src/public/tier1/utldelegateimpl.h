@@ -54,9 +54,6 @@
 #include "tier0/platform.h"
 
 // use #pragma warning push/pop to contain the pragmas in utldelegateimpl so they don't spill out into other code.
-#ifdef _MSC_VER
-#pragma warning( push ) 
-#endif
 
 ////////////////////////////////////////////////////////////////////////////////
 //						Configuration options
@@ -82,33 +79,13 @@
 
 // Compiler identification. It's not easy to identify Visual C++ because
 // many vendors fraudulently define Microsoft's identifiers.
-#if defined(_MSC_VER) && !defined(__MWERKS__) && !defined(__VECTOR_C) && !defined(__ICL) && !defined(__BORLANDC__)
-#define FASTDLGT_ISMSVC
-
-#if (_MSC_VER <1300) // Many workarounds are required for VC6.
-#define FASTDLGT_VC6
-#pragma warning(disable:4786) // disable this ridiculous warning
-#endif
-
-#endif
 
 // Does the compiler uses Microsoft's member function pointer structure?
 // If so, it needs special treatment.
 // Metrowerks CodeWarrior, Intel, and CodePlay fraudulently define Microsoft's 
 // identifier, _MSC_VER. We need to filter Metrowerks out.
-#if defined(_MSC_VER) && !defined(__MWERKS__)
-#define FASTDLGT_MICROSOFT_MFP
-
-#if !defined(__VECTOR_C)
-// CodePlay doesn't have the __single/multi/virtual_inheritance keywords
-#define FASTDLGT_HASINHERITANCE_KEYWORDS
-#endif
-#endif
 
 // Does it allow function declarator syntax? The following compilers are known to work:
-#if defined(FASTDLGT_ISMSVC) && (_MSC_VER >=1310) // VC 7.1
-#define FASTDELEGATE_ALLOW_FUNCTION_TYPE_SYNTAX
-#endif
 
 // Gcc(2.95+), and versions of Digital Mars, Intel and Comeau in common use.
 #if defined (__DMC__) || defined(__GNUC__) || defined(__ICL) || defined(__COMO__)
@@ -349,7 +326,6 @@ struct SimplifyMemFunc<SINGLE_MEMFUNCPTR_SIZE>
 
 // The size of __multiple_inheritance + __virtual_inheritance are the same on MSVC64
 // We can use the __virtual_inheritance code for multiple_inheritance, though, so let's do that!
-#ifndef COMPILER_MSVC64
 
 template<>
 struct SimplifyMemFunc< SINGLE_MEMFUNCPTR_SIZE + sizeof(int) >  
@@ -377,7 +353,6 @@ struct SimplifyMemFunc< SINGLE_MEMFUNCPTR_SIZE + sizeof(int) >
 	}
 };
 
-#endif
 // virtual inheritance is a real nuisance. It's inefficient and complicated.
 // On MSVC and Intel, there isn't enough information in the pointer itself to
 // enable conversion to a closure pointer. Earlier versions of this code didn't
@@ -418,11 +393,6 @@ struct SimplifyMemFunc< sizeof( virtual_inheritance_struct ) >
 	inline static GenericClass *Convert(X *pthis, XFuncType function_to_bind, 
 		GenericMemFuncType &bound_func) 
 	{
-#ifdef COMPILER_MSVC64
-		class __multiple_inheritance TestMultiClass;
-		class __virtual_inheritance TestVirtualClass;
-		COMPILE_TIME_ASSERT( sizeof(void (TestMultiClass::*)()) == sizeof(void (TestVirtualClass::*)()) );
-#endif
 
 		// This exists entirely so we can have an assert about it below.
 		struct legacy_virtual_inheritance_struct
@@ -470,7 +440,6 @@ struct SimplifyMemFunc< sizeof( virtual_inheritance_struct ) >
 };
 
 
-#if (_MSC_VER <1300)
 
 // Nasty hack for Microsoft Visual C++ 6.0
 // unknown_inheritance classes go here
@@ -512,71 +481,6 @@ struct SimplifyMemFunc<SINGLE_MEMFUNCPTR_SIZE + 3*sizeof(int) >
 };
 
 
-#else 
-
-// In VC++ and ICL, an unknown_inheritance member pointer 
-// is internally defined as:
-struct unknown_inheritance_struct
-{
-	typedef void (detail::GenericClass::*FuncAddress_t)(); // arbitrary MFP.
-	FuncAddress_t funcaddress; // points to the actual member function
-	int delta;		// #bytes to be added to the 'this' pointer
-	int vtordisp;		// #bytes to add to 'this' to find the vtable
-	int vtable_index; // or 0 if no virtual inheritance
-};
-
-// Nasty hack for Microsoft and Intel (IA32 and Itanium)
-// unknown_inheritance classes go here 
-// This is probably the ugliest bit of code I've ever written. Look at the casts!
-// There is a compiler bug in MSVC6 which prevents it from using this code.
-template <>
-struct SimplifyMemFunc< sizeof( unknown_inheritance_struct ) >
-{
-	template <class X, class XFuncType, class GenericMemFuncType>
-	inline static GenericClass *Convert(X *pthis, XFuncType function_to_bind, 
-			GenericMemFuncType &bound_func) 
-	{
-		// This exists entirely so we can have an assert about it below.
-		struct legacy_unknown_inheritance_struct
-		{
-			GenericMemFuncType funcaddress;
-			int delta;
-			int vtordisp;
-			int vtable_index;
-		};
-
-		COMPILE_TIME_ASSERT( sizeof( legacy_unknown_inheritance_struct ) == sizeof( unknown_inheritance_struct ) );
-
-		// The member function pointer is 16 bytes long. We can't use a normal cast, but
-		// we can use a union to do the conversion.
-		union 
-		{
-			XFuncType func;
-			unknown_inheritance_struct s;
-		} u;
-		// Check that the horrible_cast will work
-		typedef int ERROR_CantUsehorrible_cast[sizeof(XFuncType)==sizeof(u.s)? 1 : -1];
-		u.func = function_to_bind;
-		bound_func = u.s.funcaddress;
-		int virtual_delta = 0;
-		if (u.s.vtable_index) 
-		{	// Virtual inheritance is used
-			// First, get to the vtable. 
-			// It is 'vtordisp' bytes from the start of the class.
-			const int * vtable = *reinterpret_cast<const int *const*>(
-				reinterpret_cast<const char *>(pthis) + u.s.vtordisp );
-
-			// 'vtable_index' tells us where in the table we should be looking.
-			virtual_delta = u.s.vtordisp + *reinterpret_cast<const int *>( 
-				reinterpret_cast<const char *>(vtable) + u.s.vtable_index);
-		}
-		// The int at 'virtual_delta' gives us the amount to add to 'this'.
-        // Finally we can add the three components together. Phew!
-        return reinterpret_cast<GenericClass *>(
-			reinterpret_cast<char *>(pthis) + u.s.delta + virtual_delta);
-	};
-};
-#endif // MSVC 7 and greater
 
 #endif // MS/Intel hacks
 
@@ -2699,9 +2603,6 @@ CUtlDelegate< FASTDLGT_RETTYPE ( Param1, Param2, Param3, Param4, Param5, Param6,
 
 // clean up after ourselves...
 #undef FASTDLGT_RETTYPE
-#ifdef _MSC_VER
-#pragma warning( pop ) 
-#endif
 
 #endif // !defined(UTLDELEGATEIMPL_H)
 

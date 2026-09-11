@@ -8,9 +8,6 @@
 
 #ifndef C_BASEPLAYER_H
 #define C_BASEPLAYER_H
-#ifdef _WIN32
-#pragma once
-#endif
 
 #include "c_playerlocaldata.h"
 #include "c_basecombatcharacter.h"
@@ -152,9 +149,6 @@ public:
 
 	virtual float GetPlayerMaxSpeed();
 	
-#ifdef PORTAL2
-	bool			ClearUseEntity();
-#endif
 
 	void	SetAnimationExtension( const char *pExtension );
 
@@ -197,11 +191,6 @@ public:
 	CBaseEntity		*FindUseEntity( void );
 	virtual bool	IsUseableEntity( CBaseEntity *pEntity, unsigned int requiredCaps );
 
-#ifdef PORTAL2
-	virtual bool	CanPickupObject( CBaseEntity *pObject, float massLimit, float sizeLimit );
-	virtual float	GetHeldObjectMass( IPhysicsObject *pHeldObject );
-	virtual void	ForceDropOfCarriedPhysObjects(){};
-#endif
 
 	// Data handlers
 	virtual bool	IsPlayer( void ) const { return true; }

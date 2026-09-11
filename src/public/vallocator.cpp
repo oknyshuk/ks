@@ -6,7 +6,6 @@
 //
 //=============================================================================//
 
-#if !defined(_STATIC_LINKED) || defined(_SHARED_LIB)
 
 #include <malloc.h>
 #include "vallocator.h"
@@ -33,4 +32,3 @@ void VStdAllocator::Free(void *ptr)
 	free(ptr);
 }
 
-#endif // !_STATIC_LINKED || _SHARED_LIB
