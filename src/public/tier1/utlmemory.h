@@ -165,6 +165,14 @@ public:
 		m_nMallocGrowSize = nGrowSize;
 	}
 
+	// Neither copy nor move is safe: BaseClass holds a pointer *into* m_pFixedMemory while the
+	// buffer is inline, and after a Grow() it owns heap memory instead. Copying silently left the
+	// copy pointing at the original's array. Refuse both rather than relocate it wrongly.
+	CUtlMemoryFixedGrowable( const CUtlMemoryFixedGrowable & ) = delete;
+	CUtlMemoryFixedGrowable &operator=( const CUtlMemoryFixedGrowable & ) = delete;
+	CUtlMemoryFixedGrowable( CUtlMemoryFixedGrowable && ) = delete;
+	CUtlMemoryFixedGrowable &operator=( CUtlMemoryFixedGrowable && ) = delete;
+
 	void Grow( int nCount = 1 )
 	{
 		if ( this->IsExternallyAllocated() )
@@ -287,6 +295,36 @@ public:
 	}
 	CUtlMemoryConservative( T* pMemory, int numElements )								{ Assert( 0 ); }
 	~CUtlMemoryConservative()								{ if ( m_pMemory ) free( m_pMemory ); }
+
+	// The implicit copy ctor shallow-copied m_pMemory and the destructor above frees it, so
+	// copying one freed the same buffer twice. Move transfers ownership and leaves the source empty.
+	CUtlMemoryConservative( const CUtlMemoryConservative & ) = delete;
+	CUtlMemoryConservative &operator=( const CUtlMemoryConservative & ) = delete;
+
+	CUtlMemoryConservative( CUtlMemoryConservative &&moveFrom )
+		: m_pMemory( moveFrom.m_pMemory )
+	{
+		moveFrom.m_pMemory = nullptr;
+#ifdef REMEMBER_ALLOC_SIZE_FOR_VALGRIND
+		m_nCurAllocSize = moveFrom.m_nCurAllocSize;
+		moveFrom.m_nCurAllocSize = 0;
+#endif
+	}
+
+	CUtlMemoryConservative &operator=( CUtlMemoryConservative &&moveFrom )
+	{
+		if ( this != &moveFrom )
+		{
+			if ( m_pMemory ) free( m_pMemory );
+			m_pMemory = moveFrom.m_pMemory;
+			moveFrom.m_pMemory = nullptr;
+#ifdef REMEMBER_ALLOC_SIZE_FOR_VALGRIND
+			m_nCurAllocSize = moveFrom.m_nCurAllocSize;
+			moveFrom.m_nCurAllocSize = 0;
+#endif
+		}
+		return *this;
+	}
 
 	// Can we use this index?
 	bool IsIdxValid( int i ) const							{ return ( IsDebug() ) ? ( i >= 0 && i < NumAllocated() ) : ( i >= 0 ); }

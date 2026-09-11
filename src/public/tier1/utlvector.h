@@ -65,6 +65,29 @@ public:
 	// Copy the array.
 	CUtlVector<T, A>& operator=( const CUtlVector<T, A> &other );
 
+	// Move. The allocators are now either safely movable or refuse both operations (see
+	// CUtlMemoryFixedGrowable, which holds a pointer into its own inline buffer), so instantiating
+	// this for an allocator that cannot be relocated is a compile error rather than a dangling
+	// pointer. m_Size has to be zeroed by hand: a defaulted move would copy it and leave the
+	// moved-from vector claiming elements whose storage has already gone.
+	CUtlVector( CUtlVector &&moveFrom )
+		: m_Memory( static_cast<CAllocator &&>( moveFrom.m_Memory ) )
+		, m_Size( moveFrom.m_Size )
+	{
+		moveFrom.m_Size = 0;
+		ResetDbgInfo();
+	}
+
+	CUtlVector& operator=( CUtlVector &&moveFrom )
+	{
+		Purge();
+		m_Memory = static_cast<CAllocator &&>( moveFrom.m_Memory );
+		m_Size = moveFrom.m_Size;
+		moveFrom.m_Size = 0;
+		ResetDbgInfo();
+		return *this;
+	}
+
 	// element access
 	T& operator[]( int i );
 	const T& operator[]( int i ) const;

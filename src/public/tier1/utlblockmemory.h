@@ -44,6 +44,15 @@ public:
 	CUtlBlockMemory( int nGrowSize = 0, int nInitSize = 0 );
 	~CUtlBlockMemory();
 
+	// The implicit copy ctor shallow-copied m_pMemory, the array of block pointers, and the
+	// destructor purges every block -- so copying one freed the same blocks twice. Move hands the
+	// block table over instead.
+	CUtlBlockMemory( const CUtlBlockMemory & ) = delete;
+	CUtlBlockMemory &operator=( const CUtlBlockMemory & ) = delete;
+
+	CUtlBlockMemory( CUtlBlockMemory &&moveFrom );
+	CUtlBlockMemory &operator=( CUtlBlockMemory &&moveFrom );
+
 	// Set the size by which the memory grows - round up to the next power of 2
 	void Init( int nGrowSize = 0, int nInitSize = 0 );
 
@@ -123,6 +132,35 @@ template< class T, class I >
 CUtlBlockMemory<T,I>::~CUtlBlockMemory()
 {
 	Purge();
+}
+
+template< class T, class I >
+CUtlBlockMemory<T,I>::CUtlBlockMemory( CUtlBlockMemory &&moveFrom )
+: m_pMemory( moveFrom.m_pMemory ), m_nBlocks( moveFrom.m_nBlocks ),
+  m_nIndexMask( moveFrom.m_nIndexMask ), m_nIndexShift( moveFrom.m_nIndexShift )
+{
+	moveFrom.m_pMemory = 0;
+	moveFrom.m_nBlocks = 0;
+	moveFrom.m_nIndexMask = 0;
+	moveFrom.m_nIndexShift = 0;
+}
+
+template< class T, class I >
+CUtlBlockMemory<T,I> &CUtlBlockMemory<T,I>::operator=( CUtlBlockMemory &&moveFrom )
+{
+	if ( this != &moveFrom )
+	{
+		Purge();
+		m_pMemory = moveFrom.m_pMemory;
+		m_nBlocks = moveFrom.m_nBlocks;
+		m_nIndexMask = moveFrom.m_nIndexMask;
+		m_nIndexShift = moveFrom.m_nIndexShift;
+		moveFrom.m_pMemory = 0;
+		moveFrom.m_nBlocks = 0;
+		moveFrom.m_nIndexMask = 0;
+		moveFrom.m_nIndexShift = 0;
+	}
+	return *this;
 }
 
 
