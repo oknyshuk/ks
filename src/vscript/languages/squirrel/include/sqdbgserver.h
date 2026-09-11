@@ -14,15 +14,18 @@ typedef int SOCKET;
 #define INVALID_SOCKET -1
 #define SOCKET_ERROR   -1
 
-// Parts of squirrel do a #define of type, which leads to compile warnings/errors when STL files are included.
-// -- at least in VS 2013. Luckily we can temporarily #undef it and avoid the problem.
-// VALVE BUILD
+// sqobject.h defines type(obj) as a function-like macro. This header used to replace it with an
+// object-like `type` aliasing SQ_TYPE, which rewrote every `::type` member of any std template
+// parsed afterwards -- common_type<...>::type broke the moment <chrono> was reachable from here.
+// It was already a function-like macro in substance: there is no bare `type` use, only the
+// parameter name `type` in the sqdbg hooks. Keeping it function-like preserves both and stops
+// polluting the identifier space, so the #undef/is-include dance below is only needed to avoid
+// redefining sqobject.h's version with a different body.
 #undef type
 #include <set>
 #include <string>
 #include <vector>
-// Redefine type
-#define type SQ_TYPE
+#define type(obj) SQ_TYPE(obj)
 
 /*
 	see copyright notice in sqrdbg.h

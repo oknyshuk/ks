@@ -20,11 +20,11 @@ def build(bld):
     source = [
         "assert_dialog.cpp",
         "commandline.cpp",
+        "fasttimer.cpp",
         "cpu.cpp",
         "cpumonitoring.cpp",
         "cputopology.cpp",
         "dbg.cpp",
-        "fasttimer.cpp",
         "logging.cpp",
         "mem.cpp",
         "mem_helpers.cpp",

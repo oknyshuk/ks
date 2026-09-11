@@ -890,8 +890,6 @@ static void DefaultHeapReportFunc( char const *pFormat, ... )
 //-----------------------------------------------------------------------------
 CDbgMemAlloc::CDbgMemAlloc() : m_sMemoryAllocFailed( (size_t)0 )
 {
-	CClockSpeedInit::Init();
-
 	m_OutputFunc = DefaultHeapReportFunc;
 	m_bInitialized = true;
 

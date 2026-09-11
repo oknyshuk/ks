@@ -1451,8 +1451,9 @@ void Host_RecomputeSpeed_f( void )
 {
 	ConMsg( "Recomputing clock speed...\n" );
 
-	CClockSpeedInit::Init();
-	ConMsg( "Clock speed: %.0f Mhz\n", CFastTimer::GetClockSpeed() / 1000000.0 );
+	// The timers take their rate from steady_clock now, so there is nothing to recompute. This
+	// reports the CPU's advertised clock, which is what the old global used to be filled from.
+	ConMsg( "Clock speed: %.0f Mhz\n", GetCPUInformation().m_Speed / 1000000.0 );
 }
 
 static ConCommand recompute_speed( "recompute_speed", Host_RecomputeSpeed_f, "Recomputes clock speed (for debugging purposes).", FCVAR_CHEAT );

@@ -10,18 +10,17 @@
 
 #include <assert.h>
 #include "tier0/platform.h"
-inline uint64 sys_time_get_timebase_frequency()
-{
-	DebuggerBreak(); // Error("sys_time_get_timebase_frequency called on non-PS3 platform.");
-	return 1; // this function should never ever be called.
-}
 
-PLATFORM_INTERFACE uint64 g_ClockSpeed;
-PLATFORM_INTERFACE unsigned long g_dwClockSpeed;
+// Monotonic nanoseconds, defined in tier0/fasttimer.cpp. Out of line on purpose: this header is
+// reached from dbg.h, vprof.h and perfstats.h, and <chrono> there is both a compile-time cost and
+// a hazard -- headers included before it in some TUs define macros that mangle the standard
+// library's own template members.
+PLATFORM_INTERFACE uint64 Plat_SteadyNanos();
 
-PLATFORM_INTERFACE double g_ClockSpeedMicrosecondsMultiplier;
-PLATFORM_INTERFACE double g_ClockSpeedMillisecondsMultiplier;
-PLATFORM_INTERFACE double g_ClockSpeedSecondsMultiplier;
+// A count is a duration in nanoseconds, not a hardware cycle count. The g_ClockSpeed* family this
+// used to divide by is gone: it was filled in at static-init time from the CPU's *advertised*
+// clock, which on any part with turbo or boost is not the rate the counter ran at, so every
+// conversion was quietly off by the boost ratio.
 
 class CCycleCount
 {
@@ -67,29 +66,6 @@ public:
 	uint64			m_Int64;
 };
 
-class CClockSpeedInit
-{
-public:
-	CClockSpeedInit()
-	{
-		Init();
-	}
-
-	static void Init()
-	{
-		const CPUInformation& pi = GetCPUInformation();
-
-		{
-			g_ClockSpeed = pi.m_Speed;
-		}
-		g_dwClockSpeed = (unsigned long)g_ClockSpeed;
-
-		g_ClockSpeedMicrosecondsMultiplier = 1000000.0 / (double)g_ClockSpeed;
-		g_ClockSpeedMillisecondsMultiplier = 1000.0 / (double)g_ClockSpeed;
-		g_ClockSpeedSecondsMultiplier = 1.0f / (double)g_ClockSpeed;
-	}
-};
-
 class CFastTimer
 {
 public:
@@ -99,9 +75,6 @@ public:
 
 	const CCycleCount &	GetDuration() const;	// Get the elapsed time between Start and End calls.
 	CCycleCount 		GetDurationInProgress() const; // Call without ending. Not that cheap.
-
-	// Return number of cycles per second on this processor.
-	static inline unsigned long	GetClockSpeed();
 
 private:
 	CCycleCount	m_Duration;
@@ -269,10 +242,7 @@ inline void CCycleCount::Init()
 
 inline void CCycleCount::Init( float initTimeMsec )
 {
-	if ( g_ClockSpeedMillisecondsMultiplier > 0 )
-		Init( (uint64)(initTimeMsec / g_ClockSpeedMillisecondsMultiplier) );
-	else
-		Init( (uint64)0 );
+	Init( (uint64)( (double)initTimeMsec * 1000000.0 ) );
 }
 
 inline void CCycleCount::Init( uint64 cycles )
@@ -282,7 +252,7 @@ inline void CCycleCount::Init( uint64 cycles )
 
 inline void CCycleCount::Sample()
 {
-	m_Int64 = Plat_Rdtsc();
+	m_Int64 = Plat_SteadyNanos();
 }
 
 inline CCycleCount& CCycleCount::operator+=( CCycleCount const &other )
@@ -325,44 +295,45 @@ inline uint64 CCycleCount::GetLongCycles() const
 	return m_Int64;
 }
 
+// m_Int64 is nanoseconds, so each conversion is a fixed divisor.
 inline unsigned long CCycleCount::GetMicroseconds() const
 {
-	return (unsigned long)((m_Int64 * 1000000) / g_ClockSpeed);
+	return (unsigned long)( m_Int64 / 1000 );
 }
 
 inline uint64 CCycleCount::GetUlMicroseconds() const
 {
-	return ((m_Int64 * 1000000) / g_ClockSpeed);
+	return m_Int64 / 1000;
 }
 
 
 inline double CCycleCount::GetMicrosecondsF() const
 {
-	return (double)( m_Int64 * g_ClockSpeedMicrosecondsMultiplier );
+	return (double)m_Int64 / 1.0e3;
 }
 
 
 inline void	CCycleCount::SetMicroseconds( unsigned long nMicroseconds )
 {
-	m_Int64 = ((uint64)nMicroseconds * g_ClockSpeed) / 1000000;
+	m_Int64 = (uint64)nMicroseconds * 1000;
 }
 
 
 inline unsigned long CCycleCount::GetMilliseconds() const
 {
-	return (unsigned long)((m_Int64 * 1000) / g_ClockSpeed);
+	return (unsigned long)( m_Int64 / 1000000 );
 }
 
 
 inline double CCycleCount::GetMillisecondsF() const
 {
-	return (double)( m_Int64 * g_ClockSpeedMillisecondsMultiplier );
+	return (double)m_Int64 / 1.0e6;
 }
 
 
 inline double CCycleCount::GetSeconds() const
 {
-	return (double)( m_Int64 * g_ClockSpeedSecondsMultiplier );
+	return (double)m_Int64 / 1.0e9;
 }
 
 
@@ -399,12 +370,6 @@ inline CCycleCount CFastTimer::GetDurationInProgress() const
 	result.m_Int64 = cnt.m_Int64 - m_Duration.m_Int64;
 	
 	return result;
-}
-
-
-inline unsigned long CFastTimer::GetClockSpeed()
-{
-	return g_dwClockSpeed;
 }
 
 
@@ -493,7 +458,7 @@ public:
 	uint64 CMicroSecLeft() const; 
 
 private:
-	uint64 m_lCycleLimit;
+	uint64 m_lLimit;      // absolute, in nanoseconds, like the counts it is compared against
 };
 
 
@@ -503,10 +468,9 @@ private:
 //-----------------------------------------------------------------------------
 inline void CLimitTimer::SetLimit( uint64 cMicroSecDuration )
 {
-	uint64 dlCycles = ( ( uint64 ) cMicroSecDuration * ( uint64 ) g_dwClockSpeed ) / ( uint64 ) 1000000L;
-	CCycleCount cycleCount;
-	cycleCount.Sample();
-	m_lCycleLimit = cycleCount.GetLongCycles() + dlCycles;
+	CCycleCount now;
+	now.Sample();
+	m_lLimit = now.GetLongCycles() + cMicroSecDuration * 1000;   // microseconds -> nanoseconds
 }
 
 
@@ -516,9 +480,9 @@ inline void CLimitTimer::SetLimit( uint64 cMicroSecDuration )
 //-----------------------------------------------------------------------------
 inline bool CLimitTimer::BLimitReached() const
 {
-	CCycleCount cycleCount;
-	cycleCount.Sample();
-	return ( cycleCount.GetLongCycles() >= m_lCycleLimit );
+	CCycleCount now;
+	now.Sample();
+	return ( now.GetLongCycles() >= m_lLimit );
 }
 
 
@@ -528,14 +492,14 @@ inline bool CLimitTimer::BLimitReached() const
 //-----------------------------------------------------------------------------
 inline int CLimitTimer::CMicroSecOverage() const
 {
-	CCycleCount cycleCount;
-	cycleCount.Sample();
-	uint64 lcCycles = cycleCount.GetLongCycles();
+	CCycleCount now;
+	now.Sample();
+	uint64 lcNow = now.GetLongCycles();
 
-	if ( lcCycles < m_lCycleLimit )
+	if ( lcNow < m_lLimit )
 		return 0;
 
-	return( ( int ) ( ( lcCycles - m_lCycleLimit ) * ( uint64 ) 1000000L / g_dwClockSpeed ) );
+	return( ( int ) ( ( lcNow - m_lLimit ) / 1000 ) );
 }
 
 
@@ -545,14 +509,14 @@ inline int CLimitTimer::CMicroSecOverage() const
 //-----------------------------------------------------------------------------
 inline uint64 CLimitTimer::CMicroSecLeft() const
 {
-	CCycleCount cycleCount;
-	cycleCount.Sample();
-	uint64 lcCycles = cycleCount.GetLongCycles();
+	CCycleCount now;
+	now.Sample();
+	uint64 lcNow = now.GetLongCycles();
 
-	if ( lcCycles >= m_lCycleLimit )
+	if ( lcNow >= m_lLimit )
 		return 0;
 
-	return( ( uint64 ) ( ( m_lCycleLimit - lcCycles ) * ( uint64 ) 1000000L / g_dwClockSpeed ) );
+	return( ( uint64 ) ( ( m_lLimit - lcNow ) / 1000 ) );
 }
 
 
