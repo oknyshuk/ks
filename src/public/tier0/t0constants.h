@@ -1,4 +1,4 @@
-//========= Copyright ©, Valve LLC, All rights reserved. ============
+//========= Copyright (c), Valve LLC, All rights reserved. ============
 //
 // Purpose: declares a variety of constants 
 //

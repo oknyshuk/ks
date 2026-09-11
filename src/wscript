@@ -182,15 +182,9 @@ def configure(conf):
         with open(ccache_conf_path, "w") as f:
             for k, v in {
                 "base_dir": base_dir,
-                "sloppiness": "include_file_mtime,include_file_ctime,time_macros,pch_defines,file_stat_matches,clang_index_store,locale,random_seed",
+                "sloppiness": "include_file_mtime,include_file_ctime,time_macros,file_stat_matches,clang_index_store,locale,random_seed",
                 "hash_dir": "false",
                 "compression_level": "1",
-                # Not depend_mode: that needs the compiler to emit -MD dependency info,
-                # and waf uses its own scanner and passes none. Without it ccache cannot
-                # tell which headers a TU uses, and the mtime sloppiness above removes the
-                # fallback -- so editing a nested header served stale objects, including
-                # stale PCHs. Preprocessor mode hashes the preprocessed source, so nested
-                # header edits are always seen.
                 "depend_mode": "false",
                 "inode_cache": "true",
             }.items():

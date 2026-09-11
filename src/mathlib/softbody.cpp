@@ -1,4 +1,4 @@
-//========= Copyright © Valve Corporation, All rights reserved. ============//
+//========= Copyright (c) Valve Corporation, All rights reserved. ============//
 #include "softbody.h"
 #include "vstdlib/jobthread.h"
 #include "tier1/fmtstr.h"

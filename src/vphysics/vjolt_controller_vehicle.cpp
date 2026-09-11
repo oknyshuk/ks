@@ -1,4 +1,4 @@
-﻿
+
 #include "cbase.h"
 
 #include "vjolt_layers.h"

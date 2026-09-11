@@ -1,4 +1,4 @@
-//========= Copyright © Valve Corporation, All rights reserved. ============//
+//========= Copyright (c) Valve Corporation, All rights reserved. ============//
 #ifndef MATHLIB_SOFTBODY_INL_HDR
 #define MATHLIB_SOFTBODY_INL_HDR
 

@@ -1,4 +1,4 @@
-//========= Copyright © Valve Corporation, All rights reserved. ============//
+//========= Copyright (c) Valve Corporation, All rights reserved. ============//
 #include "mathlib/femodeldesc.h"
 #include "mathlib/femodel.h"
 #include "tier1/heapsort.h"

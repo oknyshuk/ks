@@ -1,4 +1,4 @@
-//========= Copyright © Valve Corporation, All rights reserved. ============//
+//========= Copyright (c) Valve Corporation, All rights reserved. ============//
 #ifndef MATHLIB_CAPSULE_HDR
 #define MATHLIB_CAPSULE_HDR
 

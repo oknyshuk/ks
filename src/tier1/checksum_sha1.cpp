@@ -1,4 +1,4 @@
-//========= Copyright © 2005, Valve Inc, All rights reserved. ==========
+//========= Copyright (c) 2005, Valve Inc, All rights reserved. ==========
 //
 // Purpose: Implementation of SHA-1
 //

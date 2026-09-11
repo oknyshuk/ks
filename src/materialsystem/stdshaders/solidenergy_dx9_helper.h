@@ -1,4 +1,4 @@
-//========= Copyright © Valve Corporation, All rights reserved. ============//
+//========= Copyright (c) Valve Corporation, All rights reserved. ============//
 
 #ifndef SOLIDENERGY_HELPER_H
 #define SOLIDENERGY_HELPER_H

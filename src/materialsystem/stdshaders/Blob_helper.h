@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2007, Valve Corporation, All rights reserved. ============//
+//========= Copyright (c) 1996-2007, Valve Corporation, All rights reserved. ============//
 
 #ifndef BLOB_HELPER_H
 #define BLOB_HELPER_H

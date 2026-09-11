@@ -498,7 +498,7 @@ Celt Codec:
 ************************************************************************************
 SPEEX Codes:
 ************************************************************************************
-	SPEEX  � 2002-2003, Jean-Marc Valin/Xiph.Org Foundation
+	SPEEX  (c) 2002-2003, Jean-Marc Valin/Xiph.Org Foundation
 	Redistribution and use in source and binary forms, with or without modification, are permitted 
 	provided that the following conditions are met: 
 	*	Redistributions of source code must retain the above copyright notice, this list of 

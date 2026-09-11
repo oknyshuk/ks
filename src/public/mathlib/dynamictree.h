@@ -1,4 +1,4 @@
-//========= Copyright © Valve Corporation, All rights reserved. ============//
+//========= Copyright (c) Valve Corporation, All rights reserved. ============//
 #ifndef DYNAMIC_TREE_HDR
 #define DYNAMIC_TREE_HDR
 

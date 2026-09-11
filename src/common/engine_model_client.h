@@ -1,4 +1,4 @@
-//========= Copyright � 1996-2016, Valve Corporation, All rights reserved. ============//
+//========= Copyright (c) 1996-2016, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: Sharing model structures and flags between engine and client
 //

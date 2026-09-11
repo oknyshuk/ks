@@ -1,4 +1,4 @@
-//========== Copyright © 2009, Valve Corporation, All rights reserved. ========
+//========== Copyright (c) 2009, Valve Corporation, All rights reserved. ========
 //
 // file:	filesystem_newasync.cpp
 //

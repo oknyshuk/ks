@@ -1,4 +1,4 @@
-//=========== Copyright © Valve Corporation, All rights reserved. ============//
+//=========== Copyright (c) Valve Corporation, All rights reserved. ============//
 //
 // Purpose: Quadric math functionality used for squared distance error metrics.
 //

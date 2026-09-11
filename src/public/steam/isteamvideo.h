@@ -1,4 +1,4 @@
-//====== Copyright © 1996-2014 Valve Corporation, All rights reserved. =======
+//====== Copyright (c) 1996-2014 Valve Corporation, All rights reserved. =======
 //
 // Purpose: interface to Steam Video
 //

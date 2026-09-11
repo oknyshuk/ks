@@ -1,4 +1,4 @@
-//====== Copyright © Valve Corporation, All rights reserved. =======
+//====== Copyright (c) Valve Corporation, All rights reserved. =======
 #ifndef MODELLIB_CLOTHHELPERS
 #define MODELLIB_CLOTHHELPERS
 

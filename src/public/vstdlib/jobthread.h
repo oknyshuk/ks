@@ -1,4 +1,4 @@
-//========== Copyright � 2005, Valve Corporation, All rights reserved. ========
+//========== Copyright (c) 2005, Valve Corporation, All rights reserved. ========
 //
 // Purpose:	A utility for a discrete job-oriented worker thread.
 //

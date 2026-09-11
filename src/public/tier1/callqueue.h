@@ -1,4 +1,4 @@
-//========== Copyright © 2006, Valve Corporation, All rights reserved. ========
+//========== Copyright (c) 2006, Valve Corporation, All rights reserved. ========
 //
 // Purpose:
 //

@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2008, Valve Corporation, All rights reserved. ============//
+//========= Copyright (c) 1996-2008, Valve Corporation, All rights reserved. ============//
 //
 // Purpose:	Server-side counterpart to C_MemoryLog (see c_memorylog.h)
 //

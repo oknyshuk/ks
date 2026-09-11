@@ -1,4 +1,4 @@
-//========= Copyright © Valve Corporation, All rights reserved. ============//
+//========= Copyright (c) Valve Corporation, All rights reserved. ============//
 //
 // A small subset of CRnWorld
 // Note: mathlib is tentative place for this code. We will probably move it to a separate lib or dll or vphysics.dll

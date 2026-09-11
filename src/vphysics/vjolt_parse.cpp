@@ -1,4 +1,4 @@
-﻿
+
 #include "cbase.h"
 
 #include "vjolt_keyvalues_schema.h"

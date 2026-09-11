@@ -1,4 +1,4 @@
-//========= Copyright © Valve Corporation, All rights reserved. ============//
+//========= Copyright (c) Valve Corporation, All rights reserved. ============//
 #ifndef SERIALIZE_HDR
 #define SERIALIZE_HDR	
 

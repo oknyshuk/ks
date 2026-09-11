@@ -1,4 +1,4 @@
-//========= Copyright © Valve Corporation, All rights reserved. ============//
+//========= Copyright (c) Valve Corporation, All rights reserved. ============//
 #ifndef HIERARCHICAL_BIT_VEC_HDR
 #define HIERARCHICAL_BIT_VEC_HDR
 
