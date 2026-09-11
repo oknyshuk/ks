@@ -212,7 +212,7 @@ def configure(conf):
     conf.env.BUILD_TYPE = build_type
 
     cflags = ["-fvisibility=hidden"] + OPTFLAGS[build_type]
-    cxxflags = cflags + ["-fno-threadsafe-statics"]
+    cxxflags = list(cflags)
 
     linkflags = list(LINKFLAGS[build_type])
     if shutil.which("mold"):

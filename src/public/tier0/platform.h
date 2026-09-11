@@ -559,58 +559,35 @@ template < typename Tdst, typename Tsrc > FORCEINLINE Tdst size_cast( Tsrc val )
 // Purpose: Standard functions for handling endian-ness
 //-----------------------------------------------------------------------------
 
+#include <bit>		// std::endian, std::byteswap, std::bit_cast, std::rotl/rotr
+
 //-------------------------------------
 // Basic swaps
 //-------------------------------------
 
+// std::byteswap is exactly this operation. The old bodies reinterpreted their argument through a
+// differently-typed lvalue (*(uint16 *)&w), which is strict-aliasing UB -- and this header is
+// compiled at -O3 with LTO. The templates stay templated because callers pass signed short and
+// long as well as the fixed-width unsigned types.
 template <typename T>
 inline T WordSwapC( T w )
 {
-   uint16 temp;
-
-   PLAT_COMPILE_TIME_ASSERT( sizeof( T ) == sizeof(uint16) );
-
-   temp  = ((*((uint16 *)&w) & 0xff00) >> 8);
-   temp |= ((*((uint16 *)&w) & 0x00ff) << 8);
-
-   return *((T*)&temp);
+	PLAT_COMPILE_TIME_ASSERT( sizeof( T ) == sizeof(uint16) );
+	return std::bit_cast<T>( std::byteswap( std::bit_cast<uint16>( w ) ) );
 }
 
 template <typename T>
 inline T DWordSwapC( T dw )
 {
-   uint32 temp;
-
-   PLAT_COMPILE_TIME_ASSERT( sizeof( T ) == sizeof(uint32) );
-
-   temp  =   *((uint32 *)&dw) 				>> 24;
-   temp |= ((*((uint32 *)&dw) & 0x00FF0000) >> 8);
-   temp |= ((*((uint32 *)&dw) & 0x0000FF00) << 8);
-   temp |= ((*((uint32 *)&dw) & 0x000000FF) << 24);
-
-   return *((T*)&temp);
+	PLAT_COMPILE_TIME_ASSERT( sizeof( T ) == sizeof(uint32) );
+	return std::bit_cast<T>( std::byteswap( std::bit_cast<uint32>( dw ) ) );
 }
 
 template <typename T>
 inline T QWordSwapC( T dw )
 {
-	// Assert sizes passed to this are already correct, otherwise
-	// the cast to uint64 * below is unsafe and may have wrong results 
-	// or even crash.
-	PLAT_COMPILE_TIME_ASSERT( sizeof( dw ) == sizeof(uint64) );
-
-	uint64 temp;
-
-	temp  =   *((uint64 *)&dw) 				         >> 56;
-	temp |= ((*((uint64 *)&dw) & 0x00FF000000000000ull) >> 40);
-	temp |= ((*((uint64 *)&dw) & 0x0000FF0000000000ull) >> 24);
-	temp |= ((*((uint64 *)&dw) & 0x000000FF00000000ull) >> 8);
-	temp |= ((*((uint64 *)&dw) & 0x00000000FF000000ull) << 8);
-	temp |= ((*((uint64 *)&dw) & 0x0000000000FF0000ull) << 24);
-	temp |= ((*((uint64 *)&dw) & 0x000000000000FF00ull) << 40);
-	temp |= ((*((uint64 *)&dw) & 0x00000000000000FFull) << 56);
-
-	return *((T*)&temp);
+	PLAT_COMPILE_TIME_ASSERT( sizeof( T ) == sizeof(uint64) );
+	return std::bit_cast<T>( std::byteswap( std::bit_cast<uint64>( dw ) ) );
 }
 
 //-------------------------------------
@@ -627,23 +604,30 @@ inline T QWordSwapC( T dw )
 // The typically used methods.
 //-------------------------------------
 
-#if defined( _SGI_SOURCE )
-#define	PLAT_BIG_ENDIAN 1
-#else
+// Little-endian only. Taking that from std::endian rather than a compiler-specific macro means a
+// big-endian target fails to compile instead of quietly reading every big-endian field backwards.
+// PLAT_LITTLE_ENDIAN stays defined because several other headers test it.
+static_assert( std::endian::native == std::endian::little,
+               "the tree assumes a little-endian target" );
 #define PLAT_LITTLE_ENDIAN 1
-#endif
 
 
-// If a swapped float passes through the fpu, the bytes may get changed.
-// Prevent this by swapping floats as DWORDs.
-#define SafeSwapFloat( pOut, pIn )	(*((uint*)pOut) = DWordSwap( *((uint*)pIn) ))
+// If a swapped float passes through the fpu, the bytes may get changed, so swap it as a uint.
+// bit_cast rather than the old `*(uint*)pOut` punning: aliasing a float object through a uint
+// lvalue is UB, and this header is compiled at -O3 -flto.
+inline void SafeSwapFloat( float *pOut, const float *pIn )
+{
+	*pOut = std::bit_cast<float>( std::byteswap( std::bit_cast<uint32>( *pIn ) ) );
+}
 
-#if defined(PLAT_LITTLE_ENDIAN)
+// Little-endian: the Little* forms are the identity and the Big* forms are a byte reversal.
+// The big-endian branch and the runtime `int test = 1` probe branch are gone -- the assert above
+// makes this the only live path, so there is nothing left to select between at run time.
 #define BigShort( val )				WordSwap( val )
 #define BigWord( val )				WordSwap( val )
 #define BigLong( val )				DWordSwap( val )
 #define BigDWord( val )				DWordSwap( val )
-#define BigQWord( val )				QWordSwap( val ) 
+#define BigQWord( val )				QWordSwap( val )
 #define LittleShort( val )			( val )
 #define LittleWord( val )			( val )
 #define LittleLong( val )			( val )
@@ -659,55 +643,6 @@ inline T QWordSwapC( T dw )
 #define BigFloat( pOut, pIn )		SafeSwapFloat( pOut, pIn )
 #define LittleFloat( pOut, pIn )	( *pOut = *pIn )
 #define SwapFloat( pOut, pIn )		BigFloat( pOut, pIn )
-
-#elif defined(PLAT_BIG_ENDIAN)
-
-#define BigShort( val )				( val )
-#define BigWord( val )				( val )
-#define BigLong( val )				( val )
-#define BigDWord( val )				( val )
-#define BigQWord( val )				( val )
-#define LittleShort( val )			WordSwap( val )
-#define LittleWord( val )			WordSwap( val )
-#define LittleLong( val )			DWordSwap( val )
-#define LittleDWord( val )			DWordSwap( val )
-#define LittleQWord( val )			QWordSwap( val )
-#define SwapShort( val )			LittleShort( val )
-#define SwapWord( val )				LittleWord( val )
-#define SwapLong( val )				LittleLong( val )
-#define SwapDWord( val )			LittleDWord( val )
-
-// Pass floats by pointer for swapping to avoid truncation in the fpu
-#define BigFloat( pOut, pIn )		( *pOut = *pIn )
-#define LittleFloat( pOut, pIn )	SafeSwapFloat( pOut, pIn )
-#define SwapFloat( pOut, pIn )		LittleFloat( pOut, pIn )
-
-#else
-
-// @Note (toml 05-02-02): this technique expects the compiler to
-// optimize the expression and eliminate the other path. On any new
-// platform/compiler this should be tested.
-inline short BigShort( short val )		{ int test = 1; return ( *(char *)&test == 1 ) ? WordSwap( val )  : val; }
-inline uint16 BigWord( uint16 val )		{ int test = 1; return ( *(char *)&test == 1 ) ? WordSwap( val )  : val; }
-inline long BigLong( long val )			{ int test = 1; return ( *(char *)&test == 1 ) ? DWordSwap( val ) : val; }
-inline uint32 BigDWord( uint32 val )	{ int test = 1; return ( *(char *)&test == 1 ) ? DWordSwap( val ) : val; }
-inline uint64 BigQWord( uint64 val )	{ int test = 1; return ( *(char *)&test == 1 ) ? QWordSwap( val ) : val; }
-inline short LittleShort( short val )	{ int test = 1; return ( *(char *)&test == 1 ) ? val : WordSwap( val ); }
-inline uint16 LittleWord( uint16 val )	{ int test = 1; return ( *(char *)&test == 1 ) ? val : WordSwap( val ); }
-inline long LittleLong( long val )		{ int test = 1; return ( *(char *)&test == 1 ) ? val : DWordSwap( val ); }
-inline uint32 LittleDWord( uint32 val )	{ int test = 1; return ( *(char *)&test == 1 ) ? val : DWordSwap( val ); }
-inline uint64 LittleQWord( uint64 val )	{ int test = 1; return ( *(char *)&test == 1 ) ? val : QWordSwap( val ); }
-inline short SwapShort( short val )					{ return WordSwap( val ); }
-inline uint16 SwapWord( uint16 val )				{ return WordSwap( val ); }
-inline long SwapLong( long val )					{ return DWordSwap( val ); }
-inline uint32 SwapDWord( uint32 val )				{ return DWordSwap( val ); }
-
-// Pass floats by pointer for swapping to avoid truncation in the fpu
-inline void BigFloat( float *pOut, const float *pIn )		{ int test = 1; ( *(char *)&test == 1 ) ? SafeSwapFloat( pOut, pIn ) : ( *pOut = *pIn ); }
-inline void LittleFloat( float *pOut, const float *pIn )	{ int test = 1; ( *(char *)&test == 1 ) ? ( *pOut = *pIn ) : SafeSwapFloat( pOut, pIn ); }
-inline void SwapFloat( float *pOut, const float *pIn )		{ SafeSwapFloat( pOut, pIn ); }
-
-#endif
 
 inline uint32 LoadLittleDWord( uint32 *base, unsigned int dwordIndex )
 {
@@ -1265,78 +1200,15 @@ PLATFORM_INTERFACE void EndWatchdogTimer( void );
 PLATFORM_INTERFACE void ResetBaseTime( void );							  // reset plat_floattime to 0 for a subprocess
 
 
-#ifdef _rotl64
-/*
-FORCEINLINE uint8 RotateBitsLeft8( uint8 nValue, int nRotateBits )
-{
-	return _rotl8( nValue, nRotateBits );
-}
-FORCEINLINE uint16 RotateBitsLeft16( uint16 nValue, int nRotateBits )
-{
-	return _rotl( nValue, nRotateBits );
-}
-FORCEINLINE uint8 RotateBitsRight8( uint8 nValue, int nRotateBits )
-{
-return _rotr8( nValue, nRotateBits );
-}
-FORCEINLINE uint16 RotateBitsRight16( uint16 nValue, int nRotateBits )
-{
-return _rotr16( nValue, nRotateBits );
-}
-*/
-FORCEINLINE uint32 RotateBitsLeft32( uint32 nValue, int nRotateBits )
-{
-	return _rotl( nValue, nRotateBits );
-}
-FORCEINLINE uint64 RotateBitsLeft64( uint64 nValue, int nRotateBits )
-{
-	return _rotl64( nValue, nRotateBits );
-}
-FORCEINLINE uint32 RotateBitsRight32( uint32 nValue, int nRotateBits )
-{
-	return _rotr( nValue, nRotateBits );
-}
-FORCEINLINE uint64 RotateBitsRight64( uint64 nValue, int nRotateBits )
-{
-	return _rotr64( nValue, nRotateBits );
-}
-#else
-// GCC should compile this all into single instruction
-/*
-FORCEINLINE uint8 RotateBitsLeft8( uint8 nValue, int nRotateBits )
-{
-	return ( nValue << nRotateBits ) | ( nValue >> ( ( -nRotateBits ) & 7 ) );
-}
-FORCEINLINE uint16 RotateBitsLeft16( uint16 nValue, int nRotateBits )
-{
-	return ( nValue << nRotateBits ) | ( nValue >> ( ( -nRotateBits ) & 15 ) );
-}
-FORCEINLINE uint8 RotateBitsRight8( uint8 nValue, int nRotateBits )
-{
-	return ( nValue >> nRotateBits ) | ( nValue << ( ( -nRotateBits ) & 7 ) );
-}
-FORCEINLINE uint16 RotateBitsRight16( uint16 nValue, int nRotateBits )
-{
-	return ( nValue >> nRotateBits ) | ( nValue << ( ( -nRotateBits ) & 15 ) );
-}
-*/
-FORCEINLINE uint32 RotateBitsLeft32( uint32 nValue, int nRotateBits )
-{
-	return ( nValue << nRotateBits ) | ( nValue >> ( ( -nRotateBits ) & 31 ) );
-}
-FORCEINLINE uint64 RotateBitsLeft64( uint64 nValue, int nRotateBits )
-{
-	return ( nValue << nRotateBits ) | ( nValue >> ( ( - nRotateBits ) & 63 ) );
-}
-FORCEINLINE uint32 RotateBitsRight32( uint32 nValue, int nRotateBits )
-{
-	return ( nValue >> nRotateBits ) | ( nValue << ( ( -nRotateBits ) & 31 ) );
-}
-FORCEINLINE uint64 RotateBitsRight64( uint64 nValue, int nRotateBits )
-{
-	return ( nValue >> nRotateBits ) | ( nValue << ( ( - nRotateBits ) & 63 ) );
-}
-#endif
+// std::rotl/std::rotr. The _rotl64 branch was MSVC-only and this header is GCC-only, so the
+// manual shifts under it were what actually compiled -- duplicating what <bit> already provides,
+// with the 8- and 16-bit forms commented out. std::rotl also reduces the count modulo the width,
+// so negative counts, which the manual shifts treated as UB, are well defined.
+FORCEINLINE uint32 RotateBitsLeft32( uint32 nValue, int nRotateBits )  { return std::rotl( nValue, nRotateBits ); }
+FORCEINLINE uint64 RotateBitsLeft64( uint64 nValue, int nRotateBits )  { return std::rotl( nValue, nRotateBits ); }
+FORCEINLINE uint32 RotateBitsRight32( uint32 nValue, int nRotateBits ) { return std::rotr( nValue, nRotateBits ); }
+FORCEINLINE uint64 RotateBitsRight64( uint64 nValue, int nRotateBits ) { return std::rotr( nValue, nRotateBits ); }
+
 PLATFORM_INTERFACE const char * GetPlatformSpecificFileName(const char * FileName);
 
 #include "tier0/valve_on.h"
