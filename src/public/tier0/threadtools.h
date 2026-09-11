@@ -164,7 +164,12 @@ inline int32 ThreadInterlockedDecrement( int32 volatile *p )
 inline int32 ThreadInterlockedExchange( int32 volatile *p, int32 value )
 {
 	Assert( (size_t)p % 4 == 0 );
-	return __sync_lock_test_and_set( p, value );
+	// Not __sync_lock_test_and_set: GCC documents that one as an *acquire* barrier, so it provides
+	// no release edge. Anything using the exchange to publish state -- CThreadFastMutex::Unlock
+	// clearing m_ownerID after writing m_depth, for instance -- then has no happens-before to the
+	// next owner, and ThreadSanitizer reports the published write as a plain-plain race. On x86 the
+	// encoding is the same instruction, so this costs nothing.
+	return __atomic_exchange_n( p, value, __ATOMIC_SEQ_CST );
 }
 
 inline int32 ThreadInterlockedExchangeAdd( int32 volatile *p, int32 value )
@@ -648,7 +653,14 @@ public:
 private:
 	FORCEINLINE bool TryLockInline( const uint32 threadId ) volatile
 	{
-		if ( threadId != m_ownerID && !ThreadInterlockedAssignIf( (volatile int32 *)&m_ownerID, (int32)threadId, 0 ) )
+		// The owner has to be read atomically. Other threads write it with
+		// ThreadInterlockedAssignIf below and clear it with ThreadInterlockedExchange in Unlock,
+		// so a plain load of m_ownerID races with them -- undefined behaviour that happens to
+		// work on x86. ThreadSanitizer reports this as a race in every CThreadFastMutex::Lock
+		// caller. ExchangeAdd( ..., 0 ) is an atomic load with no spurious store.
+		const uint32 owner = (uint32)ThreadInterlockedExchangeAdd( &m_ownerID, 0 );
+
+		if ( threadId != owner && !ThreadInterlockedAssignIf( &m_ownerID, threadId, 0 ) )
 			return false;
 
 		ThreadMemoryBarrier();
@@ -729,7 +741,12 @@ public:
 	bool AssertOwnedByCurrentThread()	{ return true; }
 	void SetTrace( bool )				{}
 
-	uint32 GetOwnerId() const			{ return m_ownerID;	}
+	uint32 GetOwnerId() const
+	{
+		// Diagnostics read this while other threads may be writing it, so it needs the same
+		// atomic load; the method is const, hence the cast.
+		return (uint32)ThreadInterlockedExchangeAdd( const_cast<uint32 volatile *>( &m_ownerID ), 0 );
+	}
 	int	GetDepth() const				{ return m_depth; }
 private:
 	volatile uint32 m_ownerID;

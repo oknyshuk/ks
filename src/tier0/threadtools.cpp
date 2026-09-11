@@ -892,7 +892,7 @@ void CThreadFastMutex::Lock( const uint32 threadId, unsigned nSpinSleepTime ) vo
 #ifdef THREAD_FAST_MUTEX_TIMINGS
 	CAverageCycleCounter sleepTimer;
 	CFastTimer spikeTimer;
-	uint32 currentOwner = m_ownerID;
+	uint32 currentOwner = (uint32)ThreadInterlockedExchangeAdd( &m_ownerID, 0 );
 	spikeTimer.Start();
 	sleepTimer.Init();
 #endif
@@ -1415,12 +1415,14 @@ int CWorkerThread::Call(unsigned dwParam, unsigned timeout, bool fBoostPriority,
 	m_EventComplete.Reset();
 	m_EventSend.Set();
 
-	WaitForReply( timeout, waitFunc );
+	// Return what WaitForReply decided rather than re-reading m_ReturnVal: on the timeout paths
+	// that field was deliberately left alone (see WaitForReply).
+	int iReturnVal = WaitForReply( timeout, waitFunc );
 
 	if (fBoostPriority)
 		SetPriority(iInitialPriority);
 
-	return m_ReturnVal;
+	return iReturnVal;
 }
 
 //---------------------------------------------------------
@@ -1462,20 +1464,26 @@ int CWorkerThread::WaitForReply( unsigned timeout, WaitFunc_t pfnWait )
 
 	if ( result != 0 )
 	{
+		// These return the sentinel directly rather than storing it in m_ReturnVal. The worker
+		// writes that field in Reply(), and Reply() cannot take m_Lock -- Call() holds it while
+		// waiting here, so it would deadlock -- which made this a write-write race with the
+		// worker whenever a call timed out and the worker ran on anyway. On the success path
+		// below the event supplies the ordering; on these paths nothing does, so the caller must
+		// not touch the field.
 		if (result == TW_TIMEOUT)
 		{
-			m_ReturnVal = WTCR_TIMEOUT;
+			return WTCR_TIMEOUT;
 		}
 		else if (result == 1)
 		{
 			DevMsg( 2, "Thread failed to respond, probably exited\n");
 			m_EventSend.Reset();
-			m_ReturnVal = WTCR_TIMEOUT;
+			return WTCR_TIMEOUT;
 		}
 		else
 		{
 			m_EventSend.Reset();
-			m_ReturnVal = WTCR_THREAD_GONE;
+			return WTCR_THREAD_GONE;
 		}
 	}
 

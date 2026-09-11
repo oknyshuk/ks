@@ -173,7 +173,8 @@ public:
 		newHead.value.Padding = 0;
 		for ( ;; )
 		{
-			oldHead.value64x128 = m_Head.value64x128;
+			// Atomic: the head is written by the 128-bit CAS below, so a plain load of it is UB.
+			oldHead.value64x128 = __atomic_load_n( &m_Head.value64x128, __ATOMIC_SEQ_CST );
 			pNode->Next = oldHead.value.Next;
 			newHead.value.Next = pNode;
 
@@ -203,7 +204,8 @@ public:
 		newHead.value.Padding = 0;
 		for ( ;; )
 		{
-			oldHead.value64x128 = m_Head.value64x128;
+			// Atomic: the head is written by the 128-bit CAS below, so a plain load of it is UB.
+			oldHead.value64x128 = __atomic_load_n( &m_Head.value64x128, __ATOMIC_SEQ_CST );
 			if ( !oldHead.value.Next )
 				return nullptr;
 
@@ -236,7 +238,8 @@ public:
 		{
 			ThreadPause();
 
-			oldHead.value64x128 = m_Head.value64x128;
+			// Atomic: the head is written by the 128-bit CAS below, so a plain load of it is UB.
+			oldHead.value64x128 = __atomic_load_n( &m_Head.value64x128, __ATOMIC_SEQ_CST );
 			if ( !oldHead.value.Next )
 				return nullptr;
 
@@ -789,8 +792,8 @@ public:
 
 		for ( ;; )
 		{
-			oldTail.value.sequence = m_Tail.value.sequence;
-			oldTail.value.pNode = m_Tail.value.pNode;
+			oldTail.value.sequence = __atomic_load_n( &m_Tail.value.sequence, __ATOMIC_SEQ_CST );
+			oldTail.value.pNode = __atomic_load_n( &m_Tail.value.pNode, __ATOMIC_SEQ_CST );
 			if ( InterlockedCompareExchangeNode( &(oldTail.value.pNode->pNext), pNode, End() ) == End() )
 			{
 				break;
@@ -826,15 +829,15 @@ public:
 
 		for ( ;; )
 		{
-			head.value.sequence = *pHeadSequence; // must grab sequence first, which allows condition below to ensure pNext is valid
+			head.value.sequence = __atomic_load_n( pHeadSequence, __ATOMIC_SEQ_CST ); // must grab sequence first, which allows condition below to ensure pNext is valid
 			ThreadMemoryBarrier(); // need a barrier to prevent reordering of these assignments
-			head.value.pNode = *pHeadNode;
-			tailSequence = pTail->value.sequence;
-			pNext = head.value.pNode->pNext;
+			head.value.pNode = __atomic_load_n( pHeadNode, __ATOMIC_SEQ_CST );
+			tailSequence = __atomic_load_n( &pTail->value.sequence, __ATOMIC_SEQ_CST );
+			pNext = __atomic_load_n( &head.value.pNode->pNext, __ATOMIC_SEQ_CST );
 
 			// Checking pNext only to force optimizer to not reorder the assignment
 			// to pNext and the compare of the sequence
-			if ( !pNext || head.value.sequence != *pHeadSequence )
+			if ( !pNext || head.value.sequence != __atomic_load_n( pHeadSequence, __ATOMIC_SEQ_CST ) )
 				continue;
 
 			if ( bTestOptimizer )
@@ -846,7 +849,7 @@ public:
 				}
 			}
 
-			if ( head.value.pNode == *pTailNode )
+			if ( head.value.pNode == __atomic_load_n( pTailNode, __ATOMIC_SEQ_CST ) )
 			{
 				if ( pNext == End() )
 					return nullptr;

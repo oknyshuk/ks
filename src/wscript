@@ -6,7 +6,7 @@ import shutil
 import subprocess
 from concurrent.futures import ThreadPoolExecutor
 
-from waflib import Build, Configure, Context, Logs, TaskGen
+from waflib import Build, Configure, Context, Logs, Options, TaskGen
 
 # --- Auto-RPATH based on install location ---
 
@@ -113,18 +113,33 @@ Build.BuildContext.get_taskgen_count = _get_taskgen_count
 
 SANITIZERS = ["-fsanitize=address,undefined", "-pthread"]
 
+# ThreadSanitizer is mutually exclusive with AddressSanitizer, so it gets its own build type rather
+# than joining SANITIZERS. This is the tool for the threading migration: run a workload and see
+# which races the replacement primitives introduce. -O1 rather than -O0 so the timing is close
+# enough to real to surface them.
+TSAN = ["-fsanitize=thread", "-pthread"]
+
 OPTFLAGS = {
     "dev": ["-O1", "-g", "-gsplit-dwarf"],
     # no -ffast-math: under gcc dxbc-spirv shader compiler spins forever translating shaders
     "release": ["-O3", "-flto=auto", "-fno-semantic-interposition"],
     "sanitize": ["-O0", "-g", "-gsplit-dwarf", "-fno-omit-frame-pointer"] + SANITIZERS,
+    "tsan": ["-O1", "-g", "-gsplit-dwarf", "-fno-omit-frame-pointer"] + TSAN,
 }
 
 LINKFLAGS = {
     "dev": ["-gsplit-dwarf"],
     "release": ["-flto=auto", "-fno-semantic-interposition"],
     "sanitize": ["-gsplit-dwarf"] + SANITIZERS,
+    "tsan": ["-gsplit-dwarf"] + TSAN,
 }
+
+# Build types whose binaries are instrumented. These must not reach the shared game prefix by
+# accident: an instrumented client still starts and still loads a map, so every automated check
+# passes and the only symptom is that the game is unusable by hand. waf binds the flags at
+# *configure* time, so one stray `configure -T tsan` leaves every later install from that out dir
+# instrumented.
+INSTRUMENTED = ["sanitize", "tsan"]
 
 
 # --- WAF entry points ---
@@ -149,7 +164,7 @@ def options(opt):
         action="store",
         dest="BUILD_TYPE",
         default="dev",
-        help="build type: dev, release, sanitize",
+        help="build type: dev, release, sanitize, tsan",
     )
     grp.add_option(
         "-w",
@@ -158,6 +173,13 @@ def options(opt):
         dest="NO_WARNINGS",
         default=False,
         help="disable warnings",
+    )
+    grp.add_option(
+        "--install-instrumented",
+        action="store_true",
+        dest="INSTALL_INSTRUMENTED",
+        default=False,
+        help="allow installing a sanitizer build over the shared game prefix",
     )
 
     opt.recurse(PROJECTS)
@@ -310,6 +332,18 @@ def configure(conf):
 
 
 def build(bld):
+    # Refuse the accident that costs a debugging session: instrumented binaries installed over the
+    # dev ones pass every check while the game itself is unusable.
+    if bld.is_install and bld.env.BUILD_TYPE in INSTRUMENTED:
+        if os.path.abspath(bld.env.PREFIX) == default_prefix and not getattr(
+            Options.options, "INSTALL_INSTRUMENTED", False
+        ):
+            bld.fatal(
+                "build type '%s' would install instrumented binaries over the dev prefix %s.\n"
+                "Use --prefix=<dir> to install elsewhere, or --install-instrumented to overwrite "
+                "the dev binaries deliberately." % (bld.env.BUILD_TYPE, bld.env.PREFIX)
+            )
+
     base_dir = bld.srcnode.abspath()
     ccache_conf_path = bld.srcnode.make_node("ccache.conf").abspath()
     if os.path.exists(ccache_conf_path):
@@ -482,6 +516,15 @@ def _report(bld, log, tag, con=None):
         Logs.error("       | full log: %s" % path)
 
 
+def _instrumented(path):
+    """True if a binary references a sanitizer runtime."""
+    try:
+        out = subprocess.run(["nm", "-D", path], capture_output=True, text=True).stdout
+    except OSError:
+        return False
+    return any(s in out for s in ("__tsan_", "__asan_", "__ubsan_"))
+
+
 def smoke(bld):
     import glob, time
     for stale in glob.glob(os.path.join(bld.bldnode.abspath(), "smoke-*.log")):
@@ -498,6 +541,17 @@ def smoke(bld):
     sos = sorted(
         os.path.join(d, f) for d in libdirs for f in os.listdir(d) if f.endswith(".so")
     )
+
+    # An instrumented prefix still passes this whole check -- the client starts and loads a map -- so
+    # the only symptom is a game that freezes when played by hand. Report the real problem instead.
+    exes = [os.path.join(prefix, e) for e in ("srcds", "srceng")]
+    inst = [f for f in sos + exes if os.path.isfile(f) and _instrumented(f)]
+    if inst:
+        bld.fatal(
+            "prefix %s holds instrumented binaries (%s).\nThis prefix was installed from a "
+            "sanitizer build type; reconfigure and rebuild a dev out dir into it before smoking."
+            % (prefix, ", ".join(os.path.basename(f) for f in inst[:3]))
+        )
     env = dict(os.environ, LD_LIBRARY_PATH=os.pathsep.join(libdirs))
 
     bad = 0

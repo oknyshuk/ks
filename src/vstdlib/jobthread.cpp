@@ -172,7 +172,8 @@ public:
 
 private:
 	CTSQueue<CJob *>	m_queues[JP_NUM_PRIORITIES];
-	int					m_nItems;
+	// Read by PrePush/Count without m_mutex, written under it by Push/Pop.
+	std::atomic<int>		m_nItems;
 	int					m_nMaxItems;
 	CThreadMutex	m_mutex;
 	CThreadManualEvent	m_JobAvailableEvent;

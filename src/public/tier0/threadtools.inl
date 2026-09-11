@@ -107,7 +107,12 @@ INLINE_ON_PS3 bool CThread::Start( unsigned nBytesStack, ThreadPriorityEnum_t nP
 		AssertMsg1( 0, "Failed to create thread (error 0x%x)", GetLastError() );
 		return false;
 	}
-	bInitSuccess = true;
+
+	// bInitSuccess is written by the new thread (via init.pfInitSuccess, which points at this
+	// stack slot) just before it signals createComplete, and read below after waiting on that
+	// event -- the event's mutex is what orders the two. There used to be a "bInitSuccess = true;"
+	// here, before the wait: it raced with the worker's write, and because it ran unconditionally
+	// the "Thread failed to initialize" check below could never fire.
 
 
 

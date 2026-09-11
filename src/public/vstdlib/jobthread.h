@@ -28,6 +28,7 @@
 //=============================================================================
 
 #include <limits.h>
+#include <atomic>
 #include "tier0/threadtools.h"
 #include "tier1/refcount.h"
 #include "tier1/utllinkedlist.h"
@@ -531,7 +532,8 @@ private:
 	//-----------------------------------------------------
 	friend class CThreadPool;
 
-	JobStatus_t			m_status;
+	// Written by the servicing thread under m_mutex, read from others without it.
+	std::atomic<JobStatus_t>		m_status;
 	JobPriority_t		m_priority;
 	CThreadMutex		m_mutex;
 	unsigned char		m_flags;
