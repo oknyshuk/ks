@@ -974,7 +974,7 @@ private:
 	void Compress( void );
 
 	CNetworkArray( float, m_flValues, TIMELINE_ARRAY_SIZE, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE } ]] );
-	CNetworkArray( int, m_nValueCounts, TIMELINE_ARRAY_SIZE, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE, .enc = ks::reflect::ENC_FLOAT } ]] );
+	CNetworkArray( int, m_nValueCounts, TIMELINE_ARRAY_SIZE, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE, .enc = ks::reflect::WireEnc::Float } ]] );
 	CNetworkVar( int, m_nBucketCount, [[= ks::reflect::Net{ .bits = NumBitsForCount( TIMELINE_ARRAY_SIZE ), .flags = SPROP_UNSIGNED } ]] );
 	CNetworkVar( float, m_flInterval, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE } ]] );
 	CNetworkVar( float, m_flFinalValue, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE } ]] );

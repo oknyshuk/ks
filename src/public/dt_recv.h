@@ -310,7 +310,7 @@ void DataTableRecvProxy_PointerDataTable(const RecvProp *pProp, void **pOut, voi
 RecvProp RecvPropFloat(
 	const char *pVarName,
 	int offset,
-	int sizeofVar=SIZEOF_IGNORE,	// Handled by RECVINFO macro, but set to SIZEOF_IGNORE if you don't want to bother.
+	int sizeofVar=kSizeofIgnore,	// Handled by RECVINFO macro, but set to kSizeofIgnore if you don't want to bother.
 	int flags=0, 
 	RecvVarProxyFn varProxy=RecvProxy_FloatToFloat
 	);
@@ -318,7 +318,7 @@ RecvProp RecvPropFloat(
 RecvProp RecvPropVector(
 	const char *pVarName,
 	int offset, 
-	int sizeofVar=SIZEOF_IGNORE,	// Handled by RECVINFO macro, but set to SIZEOF_IGNORE if you don't want to bother.
+	int sizeofVar=kSizeofIgnore,	// Handled by RECVINFO macro, but set to kSizeofIgnore if you don't want to bother.
 	int flags=0, 
 	RecvVarProxyFn varProxy=RecvProxy_VectorToVector
 	);
@@ -326,7 +326,7 @@ RecvProp RecvPropVector(
 RecvProp RecvPropVectorXY(
 	const char *pVarName,
 	int offset, 
-	int sizeofVar=SIZEOF_IGNORE,	// Handled by RECVINFO macro, but set to SIZEOF_IGNORE if you don't want to bother.
+	int sizeofVar=kSizeofIgnore,	// Handled by RECVINFO macro, but set to kSizeofIgnore if you don't want to bother.
 	int flags=0, 
 	RecvVarProxyFn varProxy=RecvProxy_VectorXYToVectorXY
 	);
@@ -339,7 +339,7 @@ RecvProp RecvPropVectorXY(
 //RecvProp RecvPropQuaternion(
 //	char *pVarName,
 //	int offset,
-//	int sizeofVar=SIZEOF_IGNORE,	// Handled by RECVINFO macro, but set to SIZEOF_IGNORE if you don't want to bother.
+//	int sizeofVar=kSizeofIgnore,	// Handled by RECVINFO macro, but set to kSizeofIgnore if you don't want to bother.
 //	int flags=0,
 //	RecvVarProxyFn varProxy=RecvProxy_QuaternionToQuaternion
 //	);
@@ -348,7 +348,7 @@ RecvProp RecvPropVectorXY(
 RecvProp RecvPropInt(
 	const char *pVarName,
 	int offset, 
-	int sizeofVar=SIZEOF_IGNORE,	// Handled by RECVINFO macro, but set to SIZEOF_IGNORE if you don't want to bother.
+	int sizeofVar=kSizeofIgnore,	// Handled by RECVINFO macro, but set to kSizeofIgnore if you don't want to bother.
 	int flags=0, 
 	RecvVarProxyFn varProxy=0
 	);

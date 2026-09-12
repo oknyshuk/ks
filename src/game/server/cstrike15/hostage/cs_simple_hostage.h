@@ -189,7 +189,7 @@ private:
 	IMPLEMENT_NETWORK_VAR_FOR_DERIVED( m_lifeState );
 	IMPLEMENT_NETWORK_VAR_FOR_DERIVED( m_fFlags );
 	
-	CNetworkVar( Vector, m_vel, [[= ks::reflect::Net{ .bits = 12, .low = -MAX_HOSTAGE_MOVE_FORCE, .high = MAX_HOSTAGE_MOVE_FORCE, .flags = 0x0, .enc = ks::reflect::ENC_VECTOR } ]] );
+	CNetworkVar( Vector, m_vel, [[= ks::reflect::Net{ .bits = 12, .low = -MAX_HOSTAGE_MOVE_FORCE, .high = MAX_HOSTAGE_MOVE_FORCE, .flags = 0x0, .enc = ks::reflect::WireEnc::Vector } ]] );
 
 	CNetworkVar( bool, m_isRescued, [[= ks::reflect::Net{} ]] );						// true if the hostage has been rescued
 	CNetworkVar( bool, m_jumpedThisFrame, [[= ks::reflect::Net{} ]] );

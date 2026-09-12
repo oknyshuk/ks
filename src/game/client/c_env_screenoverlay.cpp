@@ -42,7 +42,7 @@ public:
 	void	ClientThink( void );
 
 protected:
-	[[= ks::reflect::Net{ .enc = ks::reflect::ENC_STRING, .varlen = true } ]] char	m_iszOverlayNames[ MAX_SCREEN_OVERLAYS ][255];
+	[[= ks::reflect::Net{ .enc = ks::reflect::WireEnc::String, .varlen = true } ]] char	m_iszOverlayNames[ MAX_SCREEN_OVERLAYS ][255];
 	[[= ks::reflect::Net{ .varlen = true } ]] float	m_flOverlayTimes[ MAX_SCREEN_OVERLAYS ];
 	[[= ks::reflect::Net{} ]] float	m_flStartTime;
 	[[= ks::reflect::Net{} ]] int     m_iDesiredOverlay;

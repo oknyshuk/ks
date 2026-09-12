@@ -36,7 +36,7 @@ public:
 	virtual void	Test( const Vector& current_origin, const QAngle& current_angles );
 	
 public:
-	CNetworkVar( int, m_nModelIndex, [[= ks::reflect::Net{ .enc = ks::reflect::ENC_MODELINDEX } ]] );
+	CNetworkVar( int, m_nModelIndex, [[= ks::reflect::Net{ .enc = ks::reflect::WireEnc::ModelIndex } ]] );
 	CNetworkVar( int, m_nReversed, [[= ks::reflect::Net{ .bits = 2, .flags = SPROP_UNSIGNED } ]] );
 };
 

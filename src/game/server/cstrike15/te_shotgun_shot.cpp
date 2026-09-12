@@ -36,7 +36,7 @@ public:
 public:
 	CNetworkVar( int, m_iPlayer, [[= ks::reflect::Net{ .bits = 6, .flags = SPROP_UNSIGNED } ]] );
 	CNetworkVar( uint16, m_nItemDefIndex, [[= ks::reflect::Net{ .bits = 16, .flags = SPROP_UNSIGNED } ]] );
-	CNetworkVector( m_vecOrigin, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD, .enc = ks::reflect::ENC_VECTOR } ]] );
+	CNetworkVector( m_vecOrigin, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD, .enc = ks::reflect::WireEnc::Vector } ]] );
 	CNetworkQAngle( m_vecAngles, [[= ks::reflect::Net{ .bits = 13, .index = 1 } ]]  [[= ks::reflect::Net{ .bits = 13, .index = 0 } ]] );
 	CNetworkVar( int, m_iWeaponID, [[= ks::reflect::Net{ .bits = 6, .flags = SPROP_UNSIGNED } ]] );
 	CNetworkVar( int, m_iMode, [[= ks::reflect::Net{ .bits = 1, .flags = SPROP_UNSIGNED } ]] );
@@ -130,7 +130,7 @@ public:
 
 public:
 	CNetworkVar( int, m_iPlayer, [[= ks::reflect::Net{ .bits = 6, .flags = SPROP_UNSIGNED } ]] );
-	CNetworkVector( m_vecOrigin, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD, .enc = ks::reflect::ENC_VECTOR } ]] );
+	CNetworkVector( m_vecOrigin, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD, .enc = ks::reflect::WireEnc::Vector } ]] );
 	CNetworkVar( PlantBombOption_t, m_option, [[= ks::reflect::Net{ .bits = 1, .flags = SPROP_UNSIGNED } ]] );
 };
 

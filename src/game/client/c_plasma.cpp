@@ -75,8 +75,8 @@ public:
 //From the server
 public:
 	[[= ks::reflect::Net{} ]] float	m_flStartScale;
-	[[= ks::reflect::Net{} ]] [[= ks::reflect::Proxy<RecvProxy_PlasmaScale, ks::reflect::WIRE_RECV>{} ]] float	m_flScale;
-	[[= ks::reflect::Net{} ]] [[= ks::reflect::Proxy<RecvProxy_PlasmaScaleTime, ks::reflect::WIRE_RECV>{} ]] float	m_flScaleTime;
+	[[= ks::reflect::Net{} ]] [[= ks::reflect::Proxy<RecvProxy_PlasmaScale, ks::reflect::WireSide::Recv>{} ]] float	m_flScale;
+	[[= ks::reflect::Net{} ]] [[= ks::reflect::Proxy<RecvProxy_PlasmaScaleTime, ks::reflect::WireSide::Recv>{} ]] float	m_flScaleTime;
 	[[= ks::reflect::Net{} ]] int		m_nFlags;
 	[[= ks::reflect::Net{} ]] int		m_nPlasmaModelIndex;
 	[[= ks::reflect::Net{} ]] int		m_nPlasmaModelIndex2;

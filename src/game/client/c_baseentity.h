@@ -423,9 +423,9 @@ class [[= ks::reflect::NetTable{ .name = "DT_AnimTimeMustBeFirst", .base = false
       [[= ks::reflect::SubTable<"AnimTimeMustBeFirst", &DT_AnimTimeMustBeFirst::g_RecvTable,
             nullptr, true>{} ]]
       [[= ks::reflect::Bare<"movetype",
-            ks::reflect::Net{ .enc = ks::reflect::ENC_INT }, RecvProxy_MoveType>{} ]]
+            ks::reflect::Net{ .enc = ks::reflect::WireEnc::Int }, RecvProxy_MoveType>{} ]]
       [[= ks::reflect::Bare<"movecollide",
-            ks::reflect::Net{ .enc = ks::reflect::ENC_INT }, RecvProxy_MoveCollide>{} ]]
+            ks::reflect::Net{ .enc = ks::reflect::WireEnc::Int }, RecvProxy_MoveCollide>{} ]]
       C_BaseEntity : public IClientEntity, public IClientModelRenderable
 {
 // Construction
@@ -1679,15 +1679,15 @@ private:
 	
 	// Model for rendering
 	const model_t					*model;
-	CNetworkColor32( m_clrRender, [[= ks::reflect::Net{} ]] [[= ks::reflect::Proxy<RecvProxy_ClrRender, ks::reflect::WIRE_RECV>{} ]] );
+	CNetworkColor32( m_clrRender, [[= ks::reflect::Net{} ]] [[= ks::reflect::Proxy<RecvProxy_ClrRender, ks::reflect::WireSide::Recv>{} ]] );
 
 public:
 protected: // Cell data is available to derived classes for RecvProxy issues
-	[[= ks::reflect::Net{} ]] [[= ks::reflect::Proxy<C_BaseEntity::RecvProxy_CellBits, ks::reflect::WIRE_RECV>{} ]] int								m_cellbits;
+	[[= ks::reflect::Net{} ]] [[= ks::reflect::Proxy<C_BaseEntity::RecvProxy_CellBits, ks::reflect::WireSide::Recv>{} ]] int								m_cellbits;
 	int								m_cellwidth;
-	[[= ks::reflect::Net{} ]] [[= ks::reflect::Proxy<C_BaseEntity::RecvProxy_CellX, ks::reflect::WIRE_RECV>{} ]] int								m_cellX;
-	[[= ks::reflect::Net{} ]] [[= ks::reflect::Proxy<C_BaseEntity::RecvProxy_CellY, ks::reflect::WIRE_RECV>{} ]] int								m_cellY;
-	[[= ks::reflect::Net{} ]] [[= ks::reflect::Proxy<C_BaseEntity::RecvProxy_CellZ, ks::reflect::WIRE_RECV>{} ]] int								m_cellZ;
+	[[= ks::reflect::Net{} ]] [[= ks::reflect::Proxy<C_BaseEntity::RecvProxy_CellX, ks::reflect::WireSide::Recv>{} ]] int								m_cellX;
+	[[= ks::reflect::Net{} ]] [[= ks::reflect::Proxy<C_BaseEntity::RecvProxy_CellY, ks::reflect::WireSide::Recv>{} ]] int								m_cellY;
+	[[= ks::reflect::Net{} ]] [[= ks::reflect::Proxy<C_BaseEntity::RecvProxy_CellZ, ks::reflect::WireSide::Recv>{} ]] int								m_cellZ;
 	Vector							m_vecCellOrigin; // cached cell offset position
 // BEGIN PREDICTION DATA COMPACTION (these fields are together to allow for faster copying in prediction system)
 // FTYPEDESC_INSENDTABLE STUFF
@@ -1716,7 +1716,7 @@ private:
 // FTYPEDESC_INSENDTABLE STUFF (end)
 private:
 	// Effects to apply
-	[[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] [[= ks::reflect::Net{} ]] [[= ks::reflect::Proxy<RecvProxy_EffectFlags, ks::reflect::WIRE_RECV>{} ]] int								m_fEffects;
+	[[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] [[= ks::reflect::Net{} ]] [[= ks::reflect::Proxy<RecvProxy_EffectFlags, ks::reflect::WireSide::Recv>{} ]] int								m_fEffects;
 public:
 	// Team Handling
 	[[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] [[= ks::reflect::Net{} ]] int								m_iTeamNum;
@@ -1736,13 +1736,13 @@ private:
 	[[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE | FTYPEDESC_NOERRORCHECK } ]] [[= ks::reflect::Net{ .wire = "m_angRotation" } ]] QAngle							m_angNetworkAngles;
 
 	// Last values to come over the wire. Used for interpolation.
-	[[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE, .tolerance = coordTolerance } ]] [[= ks::reflect::Net{ .wire = "m_vecOrigin" } ]] [[= ks::reflect::Proxy<C_BaseEntity::RecvProxy_CellOrigin, ks::reflect::WIRE_RECV>{} ]] Vector							m_vecNetworkOrigin;
+	[[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE, .tolerance = coordTolerance } ]] [[= ks::reflect::Net{ .wire = "m_vecOrigin" } ]] [[= ks::reflect::Proxy<C_BaseEntity::RecvProxy_CellOrigin, ks::reflect::WireSide::Recv>{} ]] Vector							m_vecNetworkOrigin;
 
 	// Friction.
 	[[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] float							m_flFriction;      
 
 	// The moveparent received from networking data
-	[[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] [[= ks::reflect::Net{ .enc = ks::reflect::ENC_INT, .wire = "moveparent" } ]] [[= ks::reflect::Proxy<RecvProxy_IntToMoveParent, ks::reflect::WIRE_RECV>{} ]] CHandle<C_BaseEntity>			m_hNetworkMoveParent;
+	[[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] [[= ks::reflect::Net{ .enc = ks::reflect::WireEnc::Int, .wire = "moveparent" } ]] [[= ks::reflect::Proxy<RecvProxy_IntToMoveParent, ks::reflect::WireSide::Recv>{} ]] CHandle<C_BaseEntity>			m_hNetworkMoveParent;
 	// The owner!
 	[[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] [[= ks::reflect::Net{} ]] EHANDLE							m_hOwnerEntity;
 	EHANDLE							m_hGroundEntity;
@@ -1768,10 +1768,10 @@ public:
 
 public:
 	// Time animation sequence or frame was last changed
-	[[= ks::reflect::Net{ .enc = ks::reflect::ENC_INT, .table = "DT_AnimTimeMustBeFirst" } ]] [[= ks::reflect::Proxy<RecvProxy_AnimTime, ks::reflect::WIRE_RECV>{} ]] float							m_flAnimTime;
+	[[= ks::reflect::Net{ .enc = ks::reflect::WireEnc::Int, .table = "DT_AnimTimeMustBeFirst" } ]] [[= ks::reflect::Proxy<RecvProxy_AnimTime, ks::reflect::WireSide::Recv>{} ]] float							m_flAnimTime;
 	float							m_flOldAnimTime;
 
-	[[= ks::reflect::Net{ .enc = ks::reflect::ENC_INT } ]] [[= ks::reflect::Proxy<RecvProxy_SimulationTime, ks::reflect::WIRE_RECV>{} ]] float							m_flSimulationTime;
+	[[= ks::reflect::Net{ .enc = ks::reflect::WireEnc::Int } ]] [[= ks::reflect::Proxy<RecvProxy_SimulationTime, ks::reflect::WireSide::Recv>{} ]] float							m_flSimulationTime;
 	float							m_flOldSimulationTime;
 	
 #if defined(ENABLE_CREATE_TIME)
@@ -2079,13 +2079,13 @@ private:
 	bool							m_bIsPlayerSimulated = false;
 #endif
 
-	CNetworkVar( bool, m_bSimulatedEveryTick, [[= ks::reflect::Net{ .enc = ks::reflect::ENC_INT } ]] [[= ks::reflect::Proxy<RecvProxy_InterpolationAmountChanged, ks::reflect::WIRE_RECV>{} ]] );
-	CNetworkVar( bool, m_bAnimatedEveryTick, [[= ks::reflect::Net{ .enc = ks::reflect::ENC_INT } ]] [[= ks::reflect::Proxy<RecvProxy_InterpolationAmountChanged, ks::reflect::WIRE_RECV>{} ]] );
+	CNetworkVar( bool, m_bSimulatedEveryTick, [[= ks::reflect::Net{ .enc = ks::reflect::WireEnc::Int } ]] [[= ks::reflect::Proxy<RecvProxy_InterpolationAmountChanged, ks::reflect::WireSide::Recv>{} ]] );
+	CNetworkVar( bool, m_bAnimatedEveryTick, [[= ks::reflect::Net{ .enc = ks::reflect::WireEnc::Int } ]] [[= ks::reflect::Proxy<RecvProxy_InterpolationAmountChanged, ks::reflect::WireSide::Recv>{} ]] );
 	CNetworkVar( bool, m_bAlternateSorting, [[= ks::reflect::Net{} ]] );
 	//CNetworkVar( bool, m_bSpotted );
 
 	[[= ks::reflect::Net{} ]] bool m_bSpotted;
-	[[= ks::reflect::Net{ .enc = ks::reflect::ENC_INT } ]] [[= ks::reflect::Proxy<C_BaseEntity::RecvProxyOldSpottedByMask, ks::reflect::WIRE_RECV>{} ]] bool m_bSpottedBy[MAX_PLAYERS + 1]; // OBSELETE USED BY OLD DEMOS
+	[[= ks::reflect::Net{ .enc = ks::reflect::WireEnc::Int } ]] [[= ks::reflect::Proxy<C_BaseEntity::RecvProxyOldSpottedByMask, ks::reflect::WireSide::Recv>{} ]] bool m_bSpottedBy[MAX_PLAYERS + 1]; // OBSELETE USED BY OLD DEMOS
 
 	CNetworkArray( uint32, m_bSpottedByMask, kNumSpottedByMask, [[= ks::reflect::Net{} ]] );
 

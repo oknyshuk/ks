@@ -39,9 +39,9 @@ public:
 
 public:
 	CNetworkVar( int, m_nStartEntity, [[= ks::reflect::Net{ .bits = 24, .flags = SPROP_UNSIGNED } ]] );
-	CNetworkVector( m_vecStartPoint, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD, .enc = ks::reflect::ENC_VECTOR } ]] );
+	CNetworkVector( m_vecStartPoint, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD, .enc = ks::reflect::WireEnc::Vector } ]] );
 	CNetworkVar( int, m_nEndEntity, [[= ks::reflect::Net{ .bits = 24, .flags = SPROP_UNSIGNED } ]] );
-	CNetworkVector( m_vecEndPoint, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD, .enc = ks::reflect::ENC_VECTOR } ]] );
+	CNetworkVector( m_vecEndPoint, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD, .enc = ks::reflect::WireEnc::Vector } ]] );
 };
 
 //-----------------------------------------------------------------------------

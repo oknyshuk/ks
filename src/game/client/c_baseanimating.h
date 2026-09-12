@@ -672,7 +672,7 @@ protected:
 	ClientSideAnimationListHandle_t	m_ClientSideAnimationListHandle;
 
 	// Client-side animation
-	[[= ks::reflect::Net{ .enc = ks::reflect::ENC_INT } ]] bool							m_bClientSideFrameReset;
+	[[= ks::reflect::Net{ .enc = ks::reflect::WireEnc::Int } ]] bool							m_bClientSideFrameReset;
 
 	// Bone attachments. Used for attaching one BaseAnimating to another's bones.
 	// Client side only.
@@ -719,7 +719,7 @@ private:
 	float							m_flOldEncodedController[MAXSTUDIOBONECTRLS];
 
 	// Clientside animation
-	[[= ks::reflect::Net{ .enc = ks::reflect::ENC_INT } ]] bool							m_bClientSideAnimation;
+	[[= ks::reflect::Net{ .enc = ks::reflect::WireEnc::Int } ]] bool							m_bClientSideAnimation;
 	bool							m_bLastClientSideFrameReset;
 
 	Vector							m_vecPreRagdollMins;
@@ -729,7 +729,7 @@ private:
 	bool							m_bIsStaticProp;
 
 	// Current animation sequence
-	[[= ks::reflect::Net{} ]] [[= ks::reflect::Proxy<RecvProxy_Sequence, ks::reflect::WIRE_RECV>{} ]] int								m_nSequence;
+	[[= ks::reflect::Net{} ]] [[= ks::reflect::Proxy<RecvProxy_Sequence, ks::reflect::WireSide::Recv>{} ]] int								m_nSequence;
 
 	// Current cycle location from server
 protected:

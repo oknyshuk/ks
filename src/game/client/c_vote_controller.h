@@ -33,10 +33,10 @@ protected:
 	void			ResetData();
 
 	[[= ks::reflect::Net{} ]]
-	[[= ks::reflect::Proxy<RecvProxy_VoteType, ks::reflect::WIRE_RECV>{} ]] int				m_iActiveIssueIndex;
+	[[= ks::reflect::Proxy<RecvProxy_VoteType, ks::reflect::WireSide::Recv>{} ]] int				m_iActiveIssueIndex;
 	[[= ks::reflect::Net{} ]] int				m_iOnlyTeamToVote;
 	[[= ks::reflect::Net{} ]]
-	[[= ks::reflect::Proxy<RecvProxy_VoteOption, ks::reflect::WIRE_RECV>{} ]] int				m_nVoteOptionCount[MAX_VOTE_OPTIONS];
+	[[= ks::reflect::Proxy<RecvProxy_VoteOption, ks::reflect::WireSide::Recv>{} ]] int				m_nVoteOptionCount[MAX_VOTE_OPTIONS];
 	int				m_iVoteChoiceIndex;
 	[[= ks::reflect::Net{} ]] int				m_nPotentialVotes;
 	bool			m_bVotesDirty;	// Received a vote, so remember to tell the Hud

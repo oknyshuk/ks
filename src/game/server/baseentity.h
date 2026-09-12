@@ -822,8 +822,8 @@ public:
 
 	// was pev->animtime:  consider moving to CBaseAnimating
 	float		m_flPrevAnimTime;
-	CNetworkVar( float, m_flAnimTime, [[= ks::reflect::Net{ .bits = 8, .flags = SPROP_UNSIGNED|SPROP_CHANGES_OFTEN|SPROP_ENCODED_AGAINST_TICKCOUNT, .enc = ks::reflect::ENC_INT, .table = "DT_AnimTimeMustBeFirst" } ]] [[= ks::reflect::Proxy<SendProxy_AnimTime, ks::reflect::WIRE_SEND>{} ]] );  // this is the point in time that the client will interpolate to position,angle,frame,etc.
-	CNetworkVar( float, m_flSimulationTime, [[= ks::reflect::Net{ .bits = SIMULATION_TIME_WINDOW_BITS, .flags = SPROP_UNSIGNED|SPROP_CHANGES_OFTEN|SPROP_ENCODED_AGAINST_TICKCOUNT, .enc = ks::reflect::ENC_INT, .priority = SENDPROP_SIMULATION_TIME_PRIORITY } ]] [[= ks::reflect::Proxy<SendProxy_SimulationTime, ks::reflect::WIRE_SEND>{} ]] );
+	CNetworkVar( float, m_flAnimTime, [[= ks::reflect::Net{ .bits = 8, .flags = SPROP_UNSIGNED|SPROP_CHANGES_OFTEN|SPROP_ENCODED_AGAINST_TICKCOUNT, .enc = ks::reflect::WireEnc::Int, .table = "DT_AnimTimeMustBeFirst" } ]] [[= ks::reflect::Proxy<SendProxy_AnimTime, ks::reflect::WireSide::Send>{} ]] );  // this is the point in time that the client will interpolate to position,angle,frame,etc.
+	CNetworkVar( float, m_flSimulationTime, [[= ks::reflect::Net{ .bits = SIMULATION_TIME_WINDOW_BITS, .flags = SPROP_UNSIGNED|SPROP_CHANGES_OFTEN|SPROP_ENCODED_AGAINST_TICKCOUNT, .enc = ks::reflect::WireEnc::Int, .priority = SENDPROP_SIMULATION_TIME_PRIORITY } ]] [[= ks::reflect::Proxy<SendProxy_SimulationTime, ks::reflect::WireSide::Send>{} ]] );
 #if defined(ENABLE_CREATE_TIME)
 	CNetworkVar( float, m_flCreateTime );
 #endif
@@ -1622,9 +1622,9 @@ public:
 	CNetworkVar( unsigned char, m_nRenderFX, [[= ks::reflect::Key{ .name = "renderfx" } ]] [[= ks::reflect::Net{ .bits = 8, .flags = SPROP_UNSIGNED } ]] );
 	// was pev->rendermode
 	CNetworkVar( unsigned char, m_nRenderMode, [[= ks::reflect::Key{ .name = "rendermode" } ]] [[= ks::reflect::Net{ .bits = 8, .flags = SPROP_UNSIGNED } ]] );
-	CNetworkVar( short, m_nModelIndex, [[= ks::reflect::Key{ .name = "modelindex", .global = true } ]] [[= ks::reflect::Net{ .enc = ks::reflect::ENC_MODELINDEX } ]] );
+	CNetworkVar( short, m_nModelIndex, [[= ks::reflect::Key{ .name = "modelindex", .global = true } ]] [[= ks::reflect::Net{ .enc = ks::reflect::WireEnc::ModelIndex } ]] );
 	// was pev->rendercolor
-	CNetworkColor32( m_clrRender, [[= ks::reflect::Key{ .name = "rendercolor" } ]] [[= ks::reflect::Net{ .bits = 32, .flags = SPROP_UNSIGNED } ]] [[= ks::reflect::Proxy<SendProxy_Color32ToInt32, ks::reflect::WIRE_SEND>{} ]] );
+	CNetworkColor32( m_clrRender, [[= ks::reflect::Key{ .name = "rendercolor" } ]] [[= ks::reflect::Net{ .bits = 32, .flags = SPROP_UNSIGNED } ]] [[= ks::reflect::Proxy<SendProxy_Color32ToInt32, ks::reflect::WireSide::Send>{} ]] );
 
 protected:
 	// Which frame did I simulate?
@@ -1777,12 +1777,12 @@ private:
 
 	// Cell of the current origin
 //	CNetworkArray( int, m_cellXY, 2 );
-	CNetworkVar( int, m_cellX, [[= ks::reflect::Net{ .bits = CELL_COUNT_BITS( CELL_BASEENTITY_ORIGIN_CELL_BITS ), .flags = SPROP_UNSIGNED, .priority = SENDPROP_CELL_INFO_PRIORITY } ]] [[= ks::reflect::Proxy<CBaseEntity::SendProxy_CellX, ks::reflect::WIRE_SEND>{} ]] );
-	CNetworkVar( int, m_cellY, [[= ks::reflect::Net{ .bits = CELL_COUNT_BITS( CELL_BASEENTITY_ORIGIN_CELL_BITS ), .flags = SPROP_UNSIGNED, .priority = SENDPROP_CELL_INFO_PRIORITY } ]] [[= ks::reflect::Proxy<CBaseEntity::SendProxy_CellY, ks::reflect::WIRE_SEND>{} ]] );
-	CNetworkVar( int, m_cellZ, [[= ks::reflect::Net{ .bits = CELL_COUNT_BITS( CELL_BASEENTITY_ORIGIN_CELL_BITS ), .flags = SPROP_UNSIGNED, .priority = SENDPROP_CELL_INFO_PRIORITY } ]] [[= ks::reflect::Proxy<CBaseEntity::SendProxy_CellZ, ks::reflect::WIRE_SEND>{} ]] );
+	CNetworkVar( int, m_cellX, [[= ks::reflect::Net{ .bits = CELL_COUNT_BITS( CELL_BASEENTITY_ORIGIN_CELL_BITS ), .flags = SPROP_UNSIGNED, .priority = SENDPROP_CELL_INFO_PRIORITY } ]] [[= ks::reflect::Proxy<CBaseEntity::SendProxy_CellX, ks::reflect::WireSide::Send>{} ]] );
+	CNetworkVar( int, m_cellY, [[= ks::reflect::Net{ .bits = CELL_COUNT_BITS( CELL_BASEENTITY_ORIGIN_CELL_BITS ), .flags = SPROP_UNSIGNED, .priority = SENDPROP_CELL_INFO_PRIORITY } ]] [[= ks::reflect::Proxy<CBaseEntity::SendProxy_CellY, ks::reflect::WireSide::Send>{} ]] );
+	CNetworkVar( int, m_cellZ, [[= ks::reflect::Net{ .bits = CELL_COUNT_BITS( CELL_BASEENTITY_ORIGIN_CELL_BITS ), .flags = SPROP_UNSIGNED, .priority = SENDPROP_CELL_INFO_PRIORITY } ]] [[= ks::reflect::Proxy<CBaseEntity::SendProxy_CellZ, ks::reflect::WireSide::Send>{} ]] );
 
-	CNetworkVectorXY_SeparateZ( m_vecOrigin, [[= ks::reflect::Net{ .bits = CELL_BASEENTITY_ORIGIN_CELL_BITS, .flags = SENDPROP_VECORIGIN_FLAGS, .enc = ks::reflect::ENC_VECTOR } ]] [[= ks::reflect::Proxy<CBaseEntity::SendProxy_CellOrigin, ks::reflect::WIRE_SEND>{} ]] );
-	CNetworkQAngleXYZ( m_angRotation, [[= ks::reflect::Net{ .bits = SENDPROP_ANGROTATION_DEFAULT_BITS, .flags = SPROP_CHANGES_OFTEN, .enc = ks::reflect::ENC_QANGLES } ]] [[= ks::reflect::Proxy<SendProxy_Angles, ks::reflect::WIRE_SEND>{} ]] );
+	CNetworkVectorXY_SeparateZ( m_vecOrigin, [[= ks::reflect::Net{ .bits = CELL_BASEENTITY_ORIGIN_CELL_BITS, .flags = SENDPROP_VECORIGIN_FLAGS, .enc = ks::reflect::WireEnc::Vector } ]] [[= ks::reflect::Proxy<CBaseEntity::SendProxy_CellOrigin, ks::reflect::WireSide::Send>{} ]] );
+	CNetworkQAngleXYZ( m_angRotation, [[= ks::reflect::Net{ .bits = SENDPROP_ANGROTATION_DEFAULT_BITS, .flags = SPROP_CHANGES_OFTEN, .enc = ks::reflect::WireEnc::QAngles } ]] [[= ks::reflect::Proxy<SendProxy_Angles, ks::reflect::WireSide::Send>{} ]] );
 	CBaseHandle m_RefEHandle;
 
 	// was pev->view_ofs ( FIXME:  Move somewhere up the hierarch, CBaseAnimating, etc. )

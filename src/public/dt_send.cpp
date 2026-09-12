@@ -336,7 +336,7 @@ SendProp SendPropFloat(
 	int nBits,			// Number of bits to use when encoding.
 	int flags,
 	float fLowValue,		// For floating point, low and high values.
-	float fHighValue,		// High value. If HIGH_DEFAULT, it's (1<<nBits).
+	float fHighValue,		// High value. If kHighDefault, it's (1<<nBits).
 	SendVarProxyFn varProxy,
 	byte priority
 	)
@@ -357,7 +357,7 @@ SendProp SendPropFloat(
 	}
 	else
 	{
-		if(fHighValue == HIGH_DEFAULT)
+		if(fHighValue == kHighDefault)
 			fHighValue = (1 << nBits);
 
 		if (flags & SPROP_ROUNDDOWN)
@@ -399,7 +399,7 @@ SendProp SendPropVector(
 	int nBits,					// Number of bits to use when encoding.
 	int flags,
 	float fLowValue,			// For floating point, low and high values.
-	float fHighValue,			// High value. If HIGH_DEFAULT, it's (1<<nBits).
+	float fHighValue,			// High value. If kHighDefault, it's (1<<nBits).
 	SendVarProxyFn varProxy,
 	byte priority
 	)
@@ -437,7 +437,7 @@ SendProp SendPropVectorXY(
 	int nBits,					// Number of bits to use when encoding.
 	int flags,
 	float fLowValue,			// For floating point, low and high values.
-	float fHighValue,			// High value. If HIGH_DEFAULT, it's (1<<nBits).
+	float fHighValue,			// High value. If kHighDefault, it's (1<<nBits).
 	SendVarProxyFn varProxy,
 	byte priority
 	)
@@ -476,7 +476,7 @@ SendProp SendPropVectorXY(
 //	int nBits,					// Number of bits to use when encoding.
 //	int flags,
 //	float fLowValue,			// For floating point, low and high values.
-//	float fHighValue,			// High value. If HIGH_DEFAULT, it's (1<<nBits).
+//	float fHighValue,			// High value. If kHighDefault, it's (1<<nBits).
 //	SendVarProxyFn varProxy,
 //	byte priority
 //	)

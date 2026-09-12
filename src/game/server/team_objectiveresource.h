@@ -149,7 +149,7 @@ private:
 	CNetworkArray(	int,	m_iCappingTeam,		MAX_CONTROL_POINTS, [[= ks::reflect::Net{ .bits = 4, .flags = SPROP_UNSIGNED } ]] );
 
 	CNetworkArray(	int,	m_iTeamInZone,		MAX_CONTROL_POINTS, [[= ks::reflect::Net{ .bits = 4, .flags = SPROP_UNSIGNED } ]] );
-	CNetworkArray(	bool,	m_bBlocked,			MAX_CONTROL_POINTS, [[= ks::reflect::Net{ .bits = 1, .flags = SPROP_UNSIGNED, .enc = ks::reflect::ENC_INT } ]] );
+	CNetworkArray(	bool,	m_bBlocked,			MAX_CONTROL_POINTS, [[= ks::reflect::Net{ .bits = 1, .flags = SPROP_UNSIGNED, .enc = ks::reflect::WireEnc::Int } ]] );
 
 	// changes when a point is successfully captured
 	CNetworkArray(  int,    m_iOwner,			MAX_CONTROL_POINTS, [[= ks::reflect::Net{ .bits = 4, .flags = SPROP_UNSIGNED } ]] );

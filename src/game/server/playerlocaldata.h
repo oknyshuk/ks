@@ -65,13 +65,13 @@ public:
 	Vector				m_vecOverViewpoint;			// Viewpoint overriding the real player's viewpoint
 	
 	// Fully ducked
-	CNetworkVar( bool, m_bDucked , [[= ks::reflect::Net{ .bits = 1, .flags = SPROP_UNSIGNED, .enc = ks::reflect::ENC_INT } ]] );
+	CNetworkVar( bool, m_bDucked , [[= ks::reflect::Net{ .bits = 1, .flags = SPROP_UNSIGNED, .enc = ks::reflect::WireEnc::Int } ]] );
 	// In process of ducking
-	CNetworkVar( bool, m_bDucking , [[= ks::reflect::Net{ .bits = 1, .flags = SPROP_UNSIGNED, .enc = ks::reflect::ENC_INT } ]] );
+	CNetworkVar( bool, m_bDucking , [[= ks::reflect::Net{ .bits = 1, .flags = SPROP_UNSIGNED, .enc = ks::reflect::WireEnc::Int } ]] );
 	// Last time the user pressed duck (to handle duck-spam)
 	CNetworkVar( float, m_flLastDuckTime , [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_NOSCALE } ]] );
 	// In process of duck-jumping
-	CNetworkVar( bool, m_bInDuckJump , [[= ks::reflect::Net{ .bits = 1, .flags = SPROP_UNSIGNED, .enc = ks::reflect::ENC_INT } ]] );
+	CNetworkVar( bool, m_bInDuckJump , [[= ks::reflect::Net{ .bits = 1, .flags = SPROP_UNSIGNED, .enc = ks::reflect::WireEnc::Int } ]] );
 	// During ducking process, amount of time before full duc
 	CNetworkVar( int, m_nDuckTimeMsecs , [[= ks::reflect::Net{ .bits = 10, .flags = SPROP_UNSIGNED|SPROP_CHANGES_OFTEN } ]] );
 	CNetworkVar( int, m_nDuckJumpTimeMsecs , [[= ks::reflect::Net{ .bits = 10, .flags = SPROP_UNSIGNED } ]] );
@@ -92,18 +92,18 @@ public:
 	CNetworkQAngleXYZ( m_aimPunchAngle );
 	CNetworkQAngleXYZ( m_aimPunchAngleVel );
 #else
-	CNetworkQAngle( m_viewPunchAngle, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD|SPROP_CHANGES_OFTEN, .enc = ks::reflect::ENC_VECTOR } ]] );
-	CNetworkQAngle( m_aimPunchAngle, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD|SPROP_CHANGES_OFTEN, .enc = ks::reflect::ENC_VECTOR } ]] );
-	CNetworkQAngle( m_aimPunchAngleVel, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD|SPROP_CHANGES_OFTEN, .enc = ks::reflect::ENC_VECTOR } ]] );
+	CNetworkQAngle( m_viewPunchAngle, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD|SPROP_CHANGES_OFTEN, .enc = ks::reflect::WireEnc::Vector } ]] );
+	CNetworkQAngle( m_aimPunchAngle, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD|SPROP_CHANGES_OFTEN, .enc = ks::reflect::WireEnc::Vector } ]] );
+	CNetworkQAngle( m_aimPunchAngleVel, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD|SPROP_CHANGES_OFTEN, .enc = ks::reflect::WireEnc::Vector } ]] );
 #endif
 	// Draw view model for the player
-	CNetworkVar( bool, m_bDrawViewmodel , [[= ks::reflect::Net{ .bits = 1, .flags = SPROP_UNSIGNED, .enc = ks::reflect::ENC_INT } ]] );
+	CNetworkVar( bool, m_bDrawViewmodel , [[= ks::reflect::Net{ .bits = 1, .flags = SPROP_UNSIGNED, .enc = ks::reflect::WireEnc::Int } ]] );
 
 	// Is the player wearing the HEV suit
-	CNetworkVar( bool, m_bWearingSuit , [[= ks::reflect::Net{ .bits = 1, .flags = SPROP_UNSIGNED, .enc = ks::reflect::ENC_INT } ]] );
+	CNetworkVar( bool, m_bWearingSuit , [[= ks::reflect::Net{ .bits = 1, .flags = SPROP_UNSIGNED, .enc = ks::reflect::WireEnc::Int } ]] );
 	CNetworkVar( bool, m_bPoisoned , [[= ks::reflect::Net{  } ]] );
 	CNetworkVar( float, m_flStepSize , [[= ks::reflect::Net{ .bits = 16, .low = 0.0f, .high = 128.0f, .flags = SPROP_ROUNDUP } ]] );
-	CNetworkVar( bool, m_bAllowAutoMovement , [[= ks::reflect::Net{ .bits = 1, .flags = SPROP_UNSIGNED, .enc = ks::reflect::ENC_INT } ]] );
+	CNetworkVar( bool, m_bAllowAutoMovement , [[= ks::reflect::Net{ .bits = 1, .flags = SPROP_UNSIGNED, .enc = ks::reflect::WireEnc::Int } ]] );
 
 	// Autoaim
 	CNetworkVar( bool,	m_bAutoAimTarget );

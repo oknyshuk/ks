@@ -37,8 +37,8 @@ public:
 
 public:
 
-	CNetworkVector( m_vecOrigin, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD, .enc = ks::reflect::ENC_VECTOR } ]] );
-	CNetworkVector( m_vecNormal, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD, .enc = ks::reflect::ENC_VECTOR } ]] );	//NOTENOTE: In a multi-play setup we'll probably want non-oriented effects for bandwidth
+	CNetworkVector( m_vecOrigin, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD, .enc = ks::reflect::WireEnc::Vector } ]] );
+	CNetworkVector( m_vecNormal, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD, .enc = ks::reflect::WireEnc::Vector } ]] );	//NOTENOTE: In a multi-play setup we'll probably want non-oriented effects for bandwidth
 	CNetworkVar( int, m_iType, [[= ks::reflect::Net{ .bits = 32, .flags = SPROP_UNSIGNED } ]] );
 };
 

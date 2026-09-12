@@ -19,12 +19,12 @@ void SendProxy_Angles( const SendProp *pProp, const void *pStruct,
 // Purpose: An entity that spawns and controls a particle system
 //-----------------------------------------------------------------------------
 class [[= ks::reflect::NetTable{ .name = "DT_ParticleSystem", .base = false } ]]
-      [[= ks::reflect::From<"m_vecOrigin", ks::reflect::Net{ .bits = -1, .low = 0.0f, .high = HIGH_DEFAULT, .flags = SPROP_COORD|SPROP_CHANGES_OFTEN, .enc = ks::reflect::ENC_VECTOR }, SendProxy_Origin>{} ]]
+      [[= ks::reflect::From<"m_vecOrigin", ks::reflect::Net{ .bits = -1, .low = 0.0f, .high = kHighDefault, .flags = SPROP_COORD|SPROP_CHANGES_OFTEN, .enc = ks::reflect::WireEnc::Vector }, SendProxy_Origin>{} ]]
       [[= ks::reflect::From<"m_fEffects", ks::reflect::Net{ .bits = EF_MAX_BITS, .flags = SPROP_UNSIGNED }>{} ]]
       [[= ks::reflect::From<"m_hOwnerEntity", ks::reflect::Net{}>{} ]]
       [[= ks::reflect::From<"m_hMoveParent", ks::reflect::Net{ .wire = "moveparent" }>{} ]]
       [[= ks::reflect::From<"m_iParentAttachment", ks::reflect::Net{ .bits = NUM_PARENTATTACHMENT_BITS, .flags = SPROP_UNSIGNED }>{} ]]
-      [[= ks::reflect::From<"m_angRotation", ks::reflect::Net{ .bits = 13, .flags = SPROP_CHANGES_OFTEN, .enc = ks::reflect::ENC_QANGLES }, SendProxy_Angles>{} ]]
+      [[= ks::reflect::From<"m_angRotation", ks::reflect::Net{ .bits = 13, .flags = SPROP_CHANGES_OFTEN, .enc = ks::reflect::WireEnc::QAngles }, SendProxy_Angles>{} ]]
       CParticleSystem : public CBaseEntity
 {
 	DECLARE_CLASS( CParticleSystem, CBaseEntity );

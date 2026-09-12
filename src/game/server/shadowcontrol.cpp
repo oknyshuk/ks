@@ -40,8 +40,8 @@ public:
 	DECLARE_DATADESC();
 
 private:
-	CNetworkVector( m_shadowDirection, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_NOSCALE, .enc = ks::reflect::ENC_VECTOR } ]] [[= ks::reflect::Key{ .name = "direction", .input = true } ]] );
-	CNetworkColor32( m_shadowColor, [[= ks::reflect::Net{ .bits = 32, .flags = SPROP_UNSIGNED } ]] [[= ks::reflect::Proxy<SendProxy_Color32ToInt32, ks::reflect::WIRE_SEND>{} ]] [[= ks::reflect::Key{ .name = "color", .input = true } ]] );
+	CNetworkVector( m_shadowDirection, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_NOSCALE, .enc = ks::reflect::WireEnc::Vector } ]] [[= ks::reflect::Key{ .name = "direction", .input = true } ]] );
+	CNetworkColor32( m_shadowColor, [[= ks::reflect::Net{ .bits = 32, .flags = SPROP_UNSIGNED } ]] [[= ks::reflect::Proxy<SendProxy_Color32ToInt32, ks::reflect::WireSide::Send>{} ]] [[= ks::reflect::Key{ .name = "color", .input = true } ]] );
 	CNetworkVar( float, m_flShadowMaxDist, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE } ]] [[= ks::reflect::Key{ .name = "distance" } ]] [[= ks::reflect::Key{ .name = "SetDistance", .input = true } ]] );
 	CNetworkVar( bool, m_bDisableShadows, [[= ks::reflect::Net{} ]] [[= ks::reflect::Key{ .name = "disableallshadows" } ]] [[= ks::reflect::Key{ .name = "SetShadowsDisabled", .input = true } ]] );
 	CNetworkVar( bool, m_bEnableLocalLightShadows, [[= ks::reflect::Net{} ]] [[= ks::reflect::Key{ .name = "enableshadowsfromlocallights" } ]] [[= ks::reflect::Key{ .name = "SetShadowsFromLocalLightsEnabled", .input = true } ]] );

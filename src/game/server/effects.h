@@ -54,8 +54,8 @@ public:
 	}
 
 private:
-	CNetworkVector( m_targetPosition, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD, .enc = ks::reflect::ENC_VECTOR } ]] );
-	CNetworkVector( m_controlPosition, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD, .enc = ks::reflect::ENC_VECTOR } ]] );
+	CNetworkVector( m_targetPosition, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD, .enc = ks::reflect::WireEnc::Vector } ]] );
+	CNetworkVector( m_controlPosition, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD, .enc = ks::reflect::WireEnc::Vector } ]] );
 	CNetworkVar( float, m_scrollRate, [[= ks::reflect::Net{ .bits = 8, .low = -4, .high = 4 } ]] );
 	CNetworkVar( float, m_flWidth, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_NOSCALE } ]] );
 

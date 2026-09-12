@@ -252,8 +252,8 @@ public:
 	CNetworkVar( int, m_nBoostTimeLeft, [[= ks::reflect::Net{ .bits = 8 } ]] );
 	CNetworkVar( int, m_nHasBoost, [[= ks::reflect::Net{ .bits = 1, .flags = SPROP_UNSIGNED } ]] );
 
-	CNetworkVector( m_vecEyeExitEndpoint, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD, .enc = ks::reflect::ENC_VECTOR } ]] );
-	CNetworkVector( m_vecGunCrosshair, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD, .enc = ks::reflect::ENC_VECTOR } ]] );
+	CNetworkVector( m_vecEyeExitEndpoint, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD, .enc = ks::reflect::WireEnc::Vector } ]] );
+	CNetworkVector( m_vecGunCrosshair, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD, .enc = ks::reflect::WireEnc::Vector } ]] );
 	CNetworkVar( bool, m_bUnableToFire, [[= ks::reflect::Net{ .bits = 1, .flags = SPROP_UNSIGNED } ]] );
 	CNetworkVar( bool, m_bHasGun, [[= ks::reflect::Net{} ]] [[= ks::reflect::Key{ .name = "EnableGun", .input = true } ]] );
 

@@ -386,11 +386,11 @@ void SendProxy_FuncRotatingSimulationTime( const SendProp *pProp, const void *pS
     const void *pData, DVariant *pOut, int iElement, int objectID );
 
 class [[= ks::reflect::NetTable{ .name = "DT_FuncRotating" } ]]
-      [[= ks::reflect::From<"m_vecOrigin", ks::reflect::Net{ .bits = -1, .low = 0.0f, .high = HIGH_DEFAULT, .flags = SPROP_COORD|SPROP_CHANGES_OFTEN, .enc = ks::reflect::ENC_VECTOR }, SendProxy_FuncRotatingOrigin>{} ]]
+      [[= ks::reflect::From<"m_vecOrigin", ks::reflect::Net{ .bits = -1, .low = 0.0f, .high = kHighDefault, .flags = SPROP_COORD|SPROP_CHANGES_OFTEN, .enc = ks::reflect::WireEnc::Vector }, SendProxy_FuncRotatingOrigin>{} ]]
       [[= ks::reflect::From<"m_angRotation", ks::reflect::Net{ .bits = 13, .flags = SPROP_CHANGES_OFTEN, .index = 0 }, SendProxy_FuncRotatingAngle>{} ]]
       [[= ks::reflect::From<"m_angRotation", ks::reflect::Net{ .bits = 13, .flags = SPROP_CHANGES_OFTEN, .index = 1 }, SendProxy_FuncRotatingAngle>{} ]]
       [[= ks::reflect::From<"m_angRotation", ks::reflect::Net{ .bits = 13, .flags = SPROP_CHANGES_OFTEN, .index = 2 }, SendProxy_FuncRotatingAngle>{} ]]
-      [[= ks::reflect::From<"m_flSimulationTime", ks::reflect::Net{ .bits = SIMULATION_TIME_WINDOW_BITS, .flags = SPROP_UNSIGNED|SPROP_CHANGES_OFTEN|SPROP_ENCODED_AGAINST_TICKCOUNT, .enc = ks::reflect::ENC_INT }, SendProxy_FuncRotatingSimulationTime>{} ]]
+      [[= ks::reflect::From<"m_flSimulationTime", ks::reflect::Net{ .bits = SIMULATION_TIME_WINDOW_BITS, .flags = SPROP_UNSIGNED|SPROP_CHANGES_OFTEN|SPROP_ENCODED_AGAINST_TICKCOUNT, .enc = ks::reflect::WireEnc::Int }, SendProxy_FuncRotatingSimulationTime>{} ]]
       [[= ks::reflect::Exclude{ .table = "DT_BaseEntity", .prop = "m_angRotation" } ]]
       [[= ks::reflect::Exclude{ .table = "DT_BaseEntity", .prop = "m_vecOrigin" } ]]
       [[= ks::reflect::Exclude{ .table = "DT_BaseEntity", .prop = "m_flSimulationTime" } ]]

@@ -171,13 +171,13 @@ enum WeaponModelClassification_t
 };
 
 class [[= ks::reflect::NetTable{ .name = "DT_BaseWeaponWorldModel", .base = false } ]]
-      [[= ks::reflect::From<"m_nModelIndex", ks::reflect::Net{ .enc = ks::reflect::ENC_MODELINDEX, .side = ks::reflect::WIRE_SEND }>{} ]]
-      [[= ks::reflect::From<"m_nModelIndex", ks::reflect::Net{ .side = ks::reflect::WIRE_RECV }, RecvProxy_WeaponWorldmodel>{} ]]
+      [[= ks::reflect::From<"m_nModelIndex", ks::reflect::Net{ .enc = ks::reflect::WireEnc::ModelIndex, .side = ks::reflect::WireSide::Send }>{} ]]
+      [[= ks::reflect::From<"m_nModelIndex", ks::reflect::Net{ .side = ks::reflect::WireSide::Recv }, RecvProxy_WeaponWorldmodel>{} ]]
       [[= ks::reflect::From<"m_nBody", ks::reflect::Net{ .bits = ANIMATION_BODY_BITS }>{} ]]
-      [[= ks::reflect::From<"m_fEffects", ks::reflect::Net{ .bits = EF_MAX_BITS, .flags = SPROP_UNSIGNED, .side = ks::reflect::WIRE_SEND }>{} ]]
-      [[= ks::reflect::From<"m_fEffects", ks::reflect::Net{ .side = ks::reflect::WIRE_RECV }, RecvProxy_EffectFlagsWeaponWorldmodel>{} ]]
-      [[= ks::reflect::From<"m_hMoveParent", ks::reflect::Net{ .side = ks::reflect::WIRE_SEND, .wire = "moveparent" }>{} ]]
-      [[= ks::reflect::From<"m_hNetworkMoveParent", ks::reflect::Net{ .side = ks::reflect::WIRE_RECV, .wire = "moveparent" }, RecvProxy_IntToMoveParent>{} ]]
+      [[= ks::reflect::From<"m_fEffects", ks::reflect::Net{ .bits = EF_MAX_BITS, .flags = SPROP_UNSIGNED, .side = ks::reflect::WireSide::Send }>{} ]]
+      [[= ks::reflect::From<"m_fEffects", ks::reflect::Net{ .side = ks::reflect::WireSide::Recv }, RecvProxy_EffectFlagsWeaponWorldmodel>{} ]]
+      [[= ks::reflect::From<"m_hMoveParent", ks::reflect::Net{ .side = ks::reflect::WireSide::Send, .wire = "moveparent" }>{} ]]
+      [[= ks::reflect::From<"m_hNetworkMoveParent", ks::reflect::Net{ .side = ks::reflect::WireSide::Recv, .wire = "moveparent" }, RecvProxy_IntToMoveParent>{} ]]
       [[= ks::reflect::PredFrom<"m_nModelIndex", ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE | FTYPEDESC_MODELINDEX } >{} ]]
       [[= ks::reflect::PredFrom<"m_nBody", ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } >{} ]]
       [[= ks::reflect::PredFrom<"m_fEffects", ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE | FTYPEDESC_OVERRIDE } >{} ]]
@@ -229,7 +229,7 @@ public:
 	bool HasDormantOwner( void );
 
 	typedef CHandle<CBaseCombatWeapon> CBaseCombatWeaponHandle;
-	CNetworkVar( CBaseCombatWeaponHandle, m_hCombatWeaponParent, [[= ks::reflect::Net{} ]] [[= ks::reflect::Proxy<RecvProxy_WeaponWorldmodelCosmetics, ks::reflect::WIRE_RECV>{} ]]);
+	CNetworkVar( CBaseCombatWeaponHandle, m_hCombatWeaponParent, [[= ks::reflect::Net{} ]] [[= ks::reflect::Proxy<RecvProxy_WeaponWorldmodelCosmetics, ks::reflect::WireSide::Recv>{} ]]);
 
 private:
 	WeaponHoldsPlayerAnimCapability_t m_nHoldsPlayerAnims;
@@ -677,10 +677,10 @@ public:
 	CNetworkVar( float, m_flNextSecondaryAttack, [[= ks::reflect::Net{ .table = "DT_LocalActiveWeaponData" } ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE, .tolerance = TD_MSECTOLERANCE } ]] );						// soonest time ItemPostFrame will call SecondaryAttack
 
 	// Weapon art
-	CNetworkVar( int, m_iViewModelIndex , [[= ks::reflect::Net{ .enc = ks::reflect::ENC_MODELINDEX } ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE | FTYPEDESC_MODELINDEX } ]] );
-	CNetworkVar( int, m_iWorldModelIndex , [[= ks::reflect::Net{ .enc = ks::reflect::ENC_MODELINDEX } ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE | FTYPEDESC_MODELINDEX } ]] );
+	CNetworkVar( int, m_iViewModelIndex , [[= ks::reflect::Net{ .enc = ks::reflect::WireEnc::ModelIndex } ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE | FTYPEDESC_MODELINDEX } ]] );
+	CNetworkVar( int, m_iWorldModelIndex , [[= ks::reflect::Net{ .enc = ks::reflect::WireEnc::ModelIndex } ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE | FTYPEDESC_MODELINDEX } ]] );
 
-	CNetworkVar( int, m_iWorldDroppedModelIndex , [[= ks::reflect::Net{ .enc = ks::reflect::ENC_MODELINDEX } ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE | FTYPEDESC_MODELINDEX } ]] );
+	CNetworkVar( int, m_iWorldDroppedModelIndex , [[= ks::reflect::Net{ .enc = ks::reflect::WireEnc::ModelIndex } ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE | FTYPEDESC_MODELINDEX } ]] );
 
 	CNetworkVar( int, m_iWeaponModule , [[= ks::reflect::Net{ .bits = 8, .table = "DT_LocalWeaponData" } ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] );
 
@@ -697,11 +697,11 @@ public:
 			
 public:
 	// Weapon data
-	CNetworkVar( int, m_iState , [[= ks::reflect::Net{ .bits = 2, .flags = SPROP_UNSIGNED } ]] [[= ks::reflect::Proxy<RecvProxy_State, ks::reflect::WIRE_RECV>{} ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] );				// See WEAPON_* definition
+	CNetworkVar( int, m_iState , [[= ks::reflect::Net{ .bits = 2, .flags = SPROP_UNSIGNED } ]] [[= ks::reflect::Proxy<RecvProxy_State, ks::reflect::WireSide::Recv>{} ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] );				// See WEAPON_* definition
 	CNetworkVar( int, m_iPrimaryAmmoType , [[= ks::reflect::Net{ .bits = 8, .table = "DT_LocalWeaponData" } ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] );		// "primary" ammo index into the ammo info array 
 	CNetworkVar( int, m_iSecondaryAmmoType , [[= ks::reflect::Net{ .bits = 8, .table = "DT_LocalWeaponData" } ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] );	// "secondary" ammo index into the ammo info array
-	CNetworkVar( int, m_iClip1 , [[= ks::reflect::Net{ .bits = 8, .flags = SPROP_UNSIGNED } ]] [[= ks::reflect::Proxy<SendProxy_IntAddOne, ks::reflect::WIRE_SEND>{} ]] [[= ks::reflect::Proxy<RecvProxy_IntSubOne, ks::reflect::WIRE_RECV>{} ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] );				// number of shots left in the primary weapon clip, -1 it not used
-	CNetworkVar( int, m_iClip2 , [[= ks::reflect::Net{ .bits = 8, .flags = SPROP_UNSIGNED } ]] [[= ks::reflect::Proxy<SendProxy_IntAddOne, ks::reflect::WIRE_SEND>{} ]] [[= ks::reflect::Proxy<RecvProxy_IntSubOne, ks::reflect::WIRE_RECV>{} ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] );				// number of shots left in the secondary weapon clip, -1 it not used
+	CNetworkVar( int, m_iClip1 , [[= ks::reflect::Net{ .bits = 8, .flags = SPROP_UNSIGNED } ]] [[= ks::reflect::Proxy<SendProxy_IntAddOne, ks::reflect::WireSide::Send>{} ]] [[= ks::reflect::Proxy<RecvProxy_IntSubOne, ks::reflect::WireSide::Recv>{} ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] );				// number of shots left in the primary weapon clip, -1 it not used
+	CNetworkVar( int, m_iClip2 , [[= ks::reflect::Net{ .bits = 8, .flags = SPROP_UNSIGNED } ]] [[= ks::reflect::Proxy<SendProxy_IntAddOne, ks::reflect::WireSide::Send>{} ]] [[= ks::reflect::Proxy<RecvProxy_IntSubOne, ks::reflect::WireSide::Recv>{} ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] );				// number of shots left in the secondary weapon clip, -1 it not used
 
 	CNetworkVar( int, m_iPrimaryReserveAmmoCount, [[= ks::reflect::Net{ .bits = 10 } ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]]);	// amount of reserve ammo. This used to be on the player ( m_iAmmo ) but we're moving it to the weapon.
 	CNetworkVar( int, m_iSecondaryReserveAmmoCount, [[= ks::reflect::Net{ .bits = 10 } ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]]);	// amount of reserve ammo. This used to be on the player ( m_iAmmo ) but we're moving it to the weapon.

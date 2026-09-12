@@ -79,7 +79,7 @@ private:
 // Vars from server.
 public:
 
-	[[= ks::reflect::Net{} ]] [[= ks::reflect::Proxy<RecvProxy_Int32ToColor32, ks::reflect::WIRE_RECV>{} ]] color32			m_Color;
+	[[= ks::reflect::Net{} ]] [[= ks::reflect::Proxy<RecvProxy_Int32ToColor32, ks::reflect::WireSide::Recv>{} ]] color32			m_Color;
 	[[= ks::reflect::Net{} ]] int				m_SpawnRate;
 	
 	[[= ks::reflect::Net{} ]] float			m_flSizeMin;

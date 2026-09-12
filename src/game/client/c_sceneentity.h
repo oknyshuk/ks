@@ -95,7 +95,7 @@ private:
 	[[= ks::reflect::Net{} ]] bool		m_bPaused;
 	[[= ks::reflect::Net{} ]] bool		m_bMultiplayer;
 	float		m_flCurrentTime;
-	[[= ks::reflect::Net{} ]] [[= ks::reflect::Proxy<RecvProxy_ForcedClientTime, ks::reflect::WIRE_RECV>{} ]] float		m_flForceClientTime;
+	[[= ks::reflect::Net{} ]] [[= ks::reflect::Proxy<RecvProxy_ForcedClientTime, ks::reflect::WireSide::Recv>{} ]] float		m_flForceClientTime;
 	[[= ks::reflect::Net{} ]] int			m_nSceneStringIndex;
 	bool		m_bClientOnly;
 

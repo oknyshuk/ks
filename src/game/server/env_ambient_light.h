@@ -25,7 +25,7 @@ public:
 private:
 	[[= ks::reflect::Key{ .name = "Color" } ]] color32	m_Color;
 
-	CNetworkVector( m_vecColor, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE, .enc = ks::reflect::ENC_VECTOR } ]] );
+	CNetworkVector( m_vecColor, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE, .enc = ks::reflect::WireEnc::Vector } ]] );
 };
 
 #endif // _INCLUDED_ENV_AMBIENT_LIGHT_H

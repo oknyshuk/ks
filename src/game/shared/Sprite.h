@@ -273,7 +273,7 @@ private:
 	CNetworkVar( int, m_nBrightness, [[= ks::reflect::Net{ .bits = 8, .flags = SPROP_UNSIGNED } ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] );
 	CNetworkVar( float, m_flBrightnessTime, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE } ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] );
 	
-	CNetworkVar( float, m_flSpriteScale, [[= ks::reflect::Net{ .bits = 8, .low = 0.0f, .high = MAX_SPRITE_SCALE, .flags = SPROP_ROUNDUP } ]] [[= ks::reflect::Proxy<RecvProxy_SpriteScale, ks::reflect::WIRE_RECV>{} ]] [[= ks::reflect::Key{ .name = "scale" } ]] [[= ks::reflect::Key{ .name = "SetScale", .input = true } ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]]);
+	CNetworkVar( float, m_flSpriteScale, [[= ks::reflect::Net{ .bits = 8, .low = 0.0f, .high = MAX_SPRITE_SCALE, .flags = SPROP_ROUNDUP } ]] [[= ks::reflect::Proxy<RecvProxy_SpriteScale, ks::reflect::WireSide::Recv>{} ]] [[= ks::reflect::Key{ .name = "scale" } ]] [[= ks::reflect::Key{ .name = "SetScale", .input = true } ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]]);
 	CNetworkVar( float, m_flScaleTime, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE } ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] );
 	CNetworkVar( bool, m_bWorldSpaceScale, [[= ks::reflect::Net{} ]] );
 	CNetworkVar( float, m_flGlowProxySize, [[= ks::reflect::Net{ .bits = 6, .low = 0.0f, .high = MAX_GLOW_PROXY_SIZE, .flags = SPROP_ROUNDUP } ]] [[= ks::reflect::Key{ .name = "GlowProxySize" } ]] );

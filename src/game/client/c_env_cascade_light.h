@@ -50,8 +50,8 @@ private:
 	[[= ks::reflect::Net{} ]] Vector m_envLightShadowDirection;
 	[[= ks::reflect::Net{} ]] bool m_bEnabled;
 	[[= ks::reflect::Net{} ]] bool m_bUseLightEnvAngles;
-	[[= ks::reflect::Net{} ]] [[= ks::reflect::Proxy<RecvProxy_Int32ToColor32, ks::reflect::WIRE_RECV>{} ]] color32	m_LightColor;
-	[[= ks::reflect::Net{} ]] [[= ks::reflect::Proxy<RecvProxy_Int32ToInt32, ks::reflect::WIRE_RECV>{} ]] int	m_LightColorScale;
+	[[= ks::reflect::Net{} ]] [[= ks::reflect::Proxy<RecvProxy_Int32ToColor32, ks::reflect::WireSide::Recv>{} ]] color32	m_LightColor;
+	[[= ks::reflect::Net{} ]] [[= ks::reflect::Proxy<RecvProxy_Int32ToInt32, ks::reflect::WireSide::Recv>{} ]] int	m_LightColorScale;
 	[[= ks::reflect::Net{} ]] float m_flMaxShadowDist;
 };
 

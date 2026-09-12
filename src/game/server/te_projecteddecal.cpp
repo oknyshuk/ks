@@ -35,10 +35,10 @@ public:
 	DECLARE_SERVERCLASS();
 
 public:
-	CNetworkVector( m_vecOrigin, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD, .enc = ks::reflect::ENC_VECTOR } ]] );
+	CNetworkVector( m_vecOrigin, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD, .enc = ks::reflect::WireEnc::Vector } ]] );
 	CNetworkVar( int, m_nIndex, [[= ks::reflect::Net{ .bits = 9, .flags = SPROP_UNSIGNED } ]] );
 	CNetworkVar( float, m_flDistance, [[= ks::reflect::Net{ .bits = 10, .low = 0, .high = 1024, .flags = SPROP_ROUNDUP } ]] );
-	CNetworkQAngle( m_angRotation, [[= ks::reflect::Net{ .bits = 10, .enc = ks::reflect::ENC_QANGLES } ]] );
+	CNetworkQAngle( m_angRotation, [[= ks::reflect::Net{ .bits = 10, .enc = ks::reflect::WireEnc::QAngles } ]] );
 };
 
 //-----------------------------------------------------------------------------

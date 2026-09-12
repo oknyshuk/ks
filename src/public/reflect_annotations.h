@@ -15,6 +15,8 @@
 
 #include "reflect_wirevar.h"   // WireVar; a leaf header so networkvar.h can reach it cheaply
 #include "datamap.h"
+#include <limits>
+
 #include "dt_common.h"   // SPROP_* flags, which Net::flags carries
 #include "mathlib/vector.h"
 
@@ -59,7 +61,7 @@ struct As { fieldtype_t type = FIELD_VOID; };
 // Wire parameters, reproducing the SendProp arguments. These cannot be derived because
 // they are bandwidth decisions. `wire` covers the SENDINFO_NAME cases.
 //
-// bits = BITS_DEFAULT means "whatever the factory would have defaulted to", which differs by
+// bits = kBitsDefault means "whatever the factory would have defaulted to", which differs by
 // kind. -1 is *not* usable as that sentinel: call sites pass it literally (CColorCorrection's
 // origin does), and it reaches AssignRangeMultiplier's `1 << nBits` as a negative shift.
 //
@@ -67,29 +69,31 @@ struct As { fieldtype_t type = FIELD_VOID; };
 // int sent as a model index, or a QAngle sent through SendPropVector rather than
 // SendPropQAngles -- the two differ in range and rounding, and the member type does not say
 // which the table wants. Both are bandwidth decisions, so they belong here.
-enum { BITS_DEFAULT = -2147483647 - 1 };
-enum WireEnc { ENC_AUTO, ENC_ANGLE, ENC_MODELINDEX, ENC_VECTOR, ENC_QANGLES, ENC_INT,
-               ENC_FLOAT,
-               // Send/RecvPropVectorXY: the z component is sent separately, usually as its own
-               // component prop, so this cannot be derived from the member type.
-               ENC_VECTORXY,
-               // The element of a char[N][M] or string_t[N] array: Send/RecvPropString, which no
-               // element type can imply -- char[M] tags as FIELD_CHARACTER, i.e. an int.
-               ENC_STRING };
+inline constexpr int kBitsDefault = std::numeric_limits<int>::min();
+enum class WireEnc
+{
+	Auto, Angle, ModelIndex, Vector, QAngles, Int, Float,
+	// Send/RecvPropVectorXY: the z component is sent separately, usually as its own
+	// component prop, so this cannot be derived from the member type.
+	VectorXY,
+	// The element of a char[N][M] or string_t[N] array: Send/RecvPropString, which no
+	// element type can imply -- char[M] tags as FIELD_CHARACTER, i.e. an int.
+	String,
+};
 
 // A shared member need not appear in both tables. m_iRecoilIndex's SendPropInt is commented out
 // while its RecvPropInt is live, and one annotation on the member serves both directions, so the
 // annotation is what says which side it is for.
-enum WireSide { WIRE_BOTH, WIRE_SEND, WIRE_RECV };
+enum class WireSide { Both, Send, Recv };
 
 struct Net
 {
-	int   bits  = BITS_DEFAULT;
+	int   bits  = kBitsDefault;
 	float low   = 0.f;
-	float high  = HIGH_DEFAULT;
+	float high  = kHighDefault;
 	int   flags = 0;
-	WireEnc enc = ENC_AUTO;
-	WireSide side = WIRE_BOTH;
+	WireEnc enc = WireEnc::Auto;
+	WireSide side = WireSide::Both;
 	name_t wire{};
 	// Which of the class's tables this member belongs to; empty means the primary one. A class
 	// can send several tables (CBaseCombatCharacter has DT_BCCLocalPlayerExclusive and
@@ -134,7 +138,7 @@ consteval Net wire_from_path( Net n, const name_t &path )
 
 consteval bool on_side( const Net &n, WireSide want )
 {
-	return n.side == WIRE_BOTH || n.side == want;
+	return n.side == WireSide::Both || n.side == want;
 }
 
 // A map keyvalue; an empty name means use the identifier. DEFINE_INPUT is the same field also
@@ -166,7 +170,7 @@ struct Pred { int flags = 0; float tolerance = 0.f; };
 // A proxy can differ per side, and a member carries one annotation for both: m_flSpriteScale sends
 // with no proxy and receives through RecvProxy_SpriteScale. Extracting a recv proxy as a send one
 // would not merely be wrong, it would fail to compile, so the side is part of the annotation.
-template <auto F, WireSide S = WIRE_BOTH> struct Proxy {};
+template <auto F, WireSide S = WireSide::Both> struct Proxy {};
 
 // A sub-table prop named directly rather than through a member. "localdata" is not a member of
 // CBasePlayer: it is the name the wire gives DT_LocalPlayerExclusive, and the proxy decides which
@@ -177,7 +181,7 @@ template <auto F, WireSide S = WIRE_BOTH> struct Proxy {};
 template <name_t Name, auto Table, auto Fn = nullptr, bool AtHead = false> struct SubTable {};
 
 // A scalar prop named by a bare string with no member behind it: the proxy writes wherever it
-// likes. C_Sun and C_LightGlow both receive RecvPropFloat( "HDRColorScale", 0, SIZEOF_IGNORE, 0,
+// likes. C_Sun and C_LightGlow both receive RecvPropFloat( "HDRColorScale", 0, kSizeofIgnore, 0,
 // RecvProxy_HDRColorScale ), which fans one wire value out into two overlay structs. There is no
 // member to annotate, so the kind cannot be derived: N.enc must name it.
 template <name_t Name, Net N = Net{}, auto Fn = nullptr> struct Bare {};

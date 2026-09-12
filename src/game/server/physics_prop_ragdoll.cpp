@@ -1143,8 +1143,8 @@ private:
 	void Detach();
 	CNetworkVar( int, m_boneIndexAttached, [[= ks::reflect::Net{ .bits = MAXSTUDIOBONEBITS, .flags = SPROP_UNSIGNED } ]] );
 	CNetworkVar( int, m_ragdollAttachedObjectIndex, [[= ks::reflect::Net{ .bits = RAGDOLL_INDEX_BITS, .flags = SPROP_UNSIGNED } ]] );
-	CNetworkVector( m_attachmentPointBoneSpace, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD, .enc = ks::reflect::ENC_VECTOR } ]] );
-	CNetworkVector( m_attachmentPointRagdollSpace, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD, .enc = ks::reflect::ENC_VECTOR } ]] );
+	CNetworkVector( m_attachmentPointBoneSpace, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD, .enc = ks::reflect::WireEnc::Vector } ]] );
+	CNetworkVector( m_attachmentPointRagdollSpace, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD, .enc = ks::reflect::WireEnc::Vector } ]] );
 	bool		m_bShouldDetach;
 	IPhysicsConstraint	*m_pAttachConstraint;
 };

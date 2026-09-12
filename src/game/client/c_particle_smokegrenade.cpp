@@ -169,7 +169,7 @@ private:
 public:
 	
 	[[= ks::reflect::Net{} ]]
-	[[= ks::reflect::Proxy<RecvProxy_CurrentStage, ks::reflect::WIRE_RECV>{} ]] unsigned char		m_CurrentStage;
+	[[= ks::reflect::Proxy<RecvProxy_CurrentStage, ks::reflect::WireSide::Recv>{} ]] unsigned char		m_CurrentStage;
 	Vector				m_SmokeBasePos;
 
 	// What time the effect was initially created

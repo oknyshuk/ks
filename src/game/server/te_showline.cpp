@@ -35,7 +35,7 @@ public:
 
 
 public:
-	CNetworkVector( m_vecEnd, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD, .enc = ks::reflect::ENC_VECTOR } ]] );
+	CNetworkVector( m_vecEnd, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD, .enc = ks::reflect::WireEnc::Vector } ]] );
 };
 
 //-----------------------------------------------------------------------------

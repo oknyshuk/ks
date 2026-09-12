@@ -40,6 +40,7 @@ VERSION = "0.01"
 APPNAME = "CSGO"
 top = "."
 default_prefix = os.path.abspath("../game")
+DEFAULT_JOBS = 4
 
 Context.Context.line_just = 60
 
@@ -113,10 +114,6 @@ Build.BuildContext.get_taskgen_count = _get_taskgen_count
 
 SANITIZERS = ["-fsanitize=address,undefined", "-pthread"]
 
-# ThreadSanitizer is mutually exclusive with AddressSanitizer, so it gets its own build type rather
-# than joining SANITIZERS. This is the tool for the threading migration: run a workload and see
-# which races the replacement primitives introduce. -O1 rather than -O0 so the timing is close
-# enough to real to surface them.
 TSAN = ["-fsanitize=thread", "-pthread"]
 
 OPTFLAGS = {
@@ -134,11 +131,6 @@ LINKFLAGS = {
     "tsan": ["-gsplit-dwarf"] + TSAN,
 }
 
-# Build types whose binaries are instrumented. These must not reach the shared game prefix by
-# accident: an instrumented client still starts and still loads a map, so every automated check
-# passes and the only symptom is that the game is unusable by hand. waf binds the flags at
-# *configure* time, so one stray `configure -T tsan` leaves every later install from that out dir
-# instrumented.
 INSTRUMENTED = ["sanitize", "tsan"]
 
 
@@ -181,6 +173,8 @@ def options(opt):
         default=False,
         help="allow installing a sanitizer build over the shared game prefix",
     )
+
+    opt.parser.get_option("-j").default = DEFAULT_JOBS
 
     opt.recurse(PROJECTS)
 

@@ -31,7 +31,7 @@ void SendProxy_Origin( const SendProp *pProp, const void *pStruct,
     const void *pData, DVariant *pOut, int iElement, int objectID );
 
 class [[= ks::reflect::NetTable{ .name = "DT_ColorCorrection", .base = false } ]]
-      [[= ks::reflect::From<"m_vecOrigin", ks::reflect::Net{ .bits = -1, .low = 0.0f, .high = HIGH_DEFAULT, .flags = SPROP_NOSCALE, .enc = ks::reflect::ENC_VECTOR }, SendProxy_Origin>{} ]]
+      [[= ks::reflect::From<"m_vecOrigin", ks::reflect::Net{ .bits = -1, .low = 0.0f, .high = kHighDefault, .flags = SPROP_NOSCALE, .enc = ks::reflect::WireEnc::Vector }, SendProxy_Origin>{} ]]
       CColorCorrection : public CBaseEntity
 {
 	DECLARE_CLASS( CColorCorrection, CBaseEntity );

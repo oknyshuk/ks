@@ -83,14 +83,14 @@ private:
 	void	SearchForDismountPoints();
 
 	// Movement vector from "bottom" to "top" of ladder
-	CNetworkVector( m_vecLadderDir, [[= ks::reflect::Net{ .bits = SPROP_COORD, .flags = SPROP_NOSCALE, .enc = ks::reflect::ENC_VECTOR } ]] );
+	CNetworkVector( m_vecLadderDir, [[= ks::reflect::Net{ .bits = SPROP_COORD, .flags = SPROP_NOSCALE, .enc = ks::reflect::WireEnc::Vector } ]] );
 
 	// Dismount points near top/bottom of ladder, precomputed
 	CUtlVector< CInfoLadderDismountHandle > m_Dismounts;
 
 	// Endpoints for checking for mount/dismount
-	CNetworkVector( m_vecPlayerMountPositionTop, [[= ks::reflect::Net{ .bits = SPROP_COORD, .flags = SPROP_NOSCALE, .enc = ks::reflect::ENC_VECTOR } ]] [[= ks::reflect::Key{ .name = "point0" } ]] );
-	CNetworkVector( m_vecPlayerMountPositionBottom, [[= ks::reflect::Net{ .bits = SPROP_COORD, .flags = SPROP_NOSCALE, .enc = ks::reflect::ENC_VECTOR } ]] [[= ks::reflect::Key{ .name = "point1" } ]] );
+	CNetworkVector( m_vecPlayerMountPositionTop, [[= ks::reflect::Net{ .bits = SPROP_COORD, .flags = SPROP_NOSCALE, .enc = ks::reflect::WireEnc::Vector } ]] [[= ks::reflect::Key{ .name = "point0" } ]] );
+	CNetworkVector( m_vecPlayerMountPositionBottom, [[= ks::reflect::Net{ .bits = SPROP_COORD, .flags = SPROP_NOSCALE, .enc = ks::reflect::WireEnc::Vector } ]] [[= ks::reflect::Key{ .name = "point1" } ]] );
 
 	[[= ks::reflect::Key{ .name = "StartDisabled" } ]] bool		m_bDisabled;
 	CNetworkVar( bool,	m_bFakeLadder, [[= ks::reflect::Net{} ]] );

@@ -94,8 +94,8 @@ protected:
 	[[= ks::reflect::Net{} ]] Vector	m_bombsiteCenterA;	
 	[[= ks::reflect::Net{} ]] Vector	m_bombsiteCenterB;	
 
-	[[= ks::reflect::Net{ .enc = ks::reflect::ENC_INT } ]] bool	m_bHostageAlive[MAX_HOSTAGES];
-	[[= ks::reflect::Net{ .enc = ks::reflect::ENC_INT } ]] bool	m_isHostageFollowingSomeone[MAX_HOSTAGES];
+	[[= ks::reflect::Net{ .enc = ks::reflect::WireEnc::Int } ]] bool	m_bHostageAlive[MAX_HOSTAGES];
+	[[= ks::reflect::Net{ .enc = ks::reflect::WireEnc::Int } ]] bool	m_isHostageFollowingSomeone[MAX_HOSTAGES];
 	[[= ks::reflect::Net{} ]] int		m_iHostageEntityIDs[MAX_HOSTAGES];
 
 	[[= ks::reflect::Net{} ]] int		m_hostageRescueX[MAX_HOSTAGE_RESCUES];
@@ -103,8 +103,8 @@ protected:
 	[[= ks::reflect::Net{} ]] int		m_hostageRescueZ[MAX_HOSTAGE_RESCUES];
 
 	[[= ks::reflect::Net{} ]] int		m_iMVPs[ MAX_PLAYERS + 1 ];
-	[[= ks::reflect::Net{ .enc = ks::reflect::ENC_INT } ]] bool	m_bHasDefuser[ MAX_PLAYERS + 1 ];
-	[[= ks::reflect::Net{ .enc = ks::reflect::ENC_INT } ]] bool	m_bHasHelmet[ MAX_PLAYERS + 1 ];
+	[[= ks::reflect::Net{ .enc = ks::reflect::WireEnc::Int } ]] bool	m_bHasDefuser[ MAX_PLAYERS + 1 ];
+	[[= ks::reflect::Net{ .enc = ks::reflect::WireEnc::Int } ]] bool	m_bHasHelmet[ MAX_PLAYERS + 1 ];
 	[[= ks::reflect::Net{} ]] int		m_iArmor[ MAX_PLAYERS + 1 ];
 	[[= ks::reflect::Net{} ]] int		m_iScore[ MAX_PLAYERS + 1 ];
 	[[= ks::reflect::Net{} ]] int		m_iCompetitiveRanking[ MAX_PLAYERS + 1 ];
@@ -113,14 +113,14 @@ protected:
 
 
 #if CS_CONTROLLABLE_BOTS_ENABLED
-	[[= ks::reflect::Net{ .enc = ks::reflect::ENC_INT } ]] bool	m_bControllingBot[ MAX_PLAYERS + 1 ];
+	[[= ks::reflect::Net{ .enc = ks::reflect::WireEnc::Int } ]] bool	m_bControllingBot[ MAX_PLAYERS + 1 ];
 	[[= ks::reflect::Net{} ]] int		m_iControlledPlayer[ MAX_PLAYERS + 1 ];
 	[[= ks::reflect::Net{} ]] int		m_iControlledByPlayer[ MAX_PLAYERS + 1 ];
 	char	m_szPlayerNames[ MAX_PLAYERS + 1 ][ MAX_PLAYER_NAME_LENGTH ];
 #endif
 
 	[[= ks::reflect::Net{} ]] int		m_iBotDifficulty[ MAX_PLAYERS + 1 ];	// Difficulty level of a bot ( -1 if not applicable )
-	[[= ks::reflect::Net{ .enc = ks::reflect::ENC_STRING } ]] char	m_szClan[MAX_PLAYERS+1][MAX_CLAN_TAG_LENGTH];
+	[[= ks::reflect::Net{ .enc = ks::reflect::WireEnc::String } ]] char	m_szClan[MAX_PLAYERS+1][MAX_CLAN_TAG_LENGTH];
 	[[= ks::reflect::Net{} ]] int		m_iTotalCashSpent[ MAX_PLAYERS + 1 ];
 	[[= ks::reflect::Net{} ]] int		m_iCashSpentThisRound[ MAX_PLAYERS + 1 ];
 	[[= ks::reflect::Net{} ]] int		m_nEndMatchNextMapVotes[ MAX_PLAYERS + 1 ];

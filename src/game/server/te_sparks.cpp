@@ -30,7 +30,7 @@ public:
 	
 	CNetworkVar( int, m_nMagnitude, [[= ks::reflect::Net{ .bits = 4, .flags = SPROP_UNSIGNED } ]] );
 	CNetworkVar( int, m_nTrailLength, [[= ks::reflect::Net{ .bits = 4, .flags = SPROP_UNSIGNED } ]] );
-	CNetworkVector( m_vecDir, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD, .enc = ks::reflect::ENC_VECTOR } ]] );
+	CNetworkVector( m_vecDir, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD, .enc = ks::reflect::WireEnc::Vector } ]] );
 };
 
 //-----------------------------------------------------------------------------

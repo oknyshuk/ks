@@ -665,11 +665,11 @@ void* SendProxy_DataTablePtrToDataTable( const SendProp *pProp, const void *pStr
 SendProp SendPropFloat(
 	const char *pVarName,		// Variable name.
 	int offset,					// Offset into container structure.
-	int sizeofVar=SIZEOF_IGNORE,
+	int sizeofVar=kSizeofIgnore,
 	int nBits=32,				// Number of bits to use when encoding.
 	int flags=0,
 	float fLowValue=0.0f,			// For floating point, low and high values.
-	float fHighValue=HIGH_DEFAULT,	// High value. If HIGH_DEFAULT, it's (1<<nBits).
+	float fHighValue=kHighDefault,	// High value. If kHighDefault, it's (1<<nBits).
 	SendVarProxyFn varProxy=SendProxy_FloatToFloat,
 	byte priority = SENDPROP_DEFAULT_PRIORITY
 	);
@@ -677,11 +677,11 @@ SendProp SendPropFloat(
 SendProp SendPropVector(
 	const char *pVarName,
 	int offset,
-	int sizeofVar=SIZEOF_IGNORE,
+	int sizeofVar=kSizeofIgnore,
 	int nBits=32,					// Number of bits (for each floating-point component) to use when encoding.
 	int flags=SPROP_NOSCALE,
 	float fLowValue=0.0f,			// For floating point, low and high values.
-	float fHighValue=HIGH_DEFAULT,	// High value. If HIGH_DEFAULT, it's (1<<nBits).
+	float fHighValue=kHighDefault,	// High value. If kHighDefault, it's (1<<nBits).
 	SendVarProxyFn varProxy=SendProxy_VectorToVector,
 	byte priority = SENDPROP_DEFAULT_PRIORITY
 	);
@@ -689,11 +689,11 @@ SendProp SendPropVector(
 SendProp SendPropVectorXY(
 	const char *pVarName,
 	int offset,
-	int sizeofVar=SIZEOF_IGNORE,
+	int sizeofVar=kSizeofIgnore,
 	int nBits=32,					// Number of bits (for each floating-point component) to use when encoding.
 	int flags=SPROP_NOSCALE,
 	float fLowValue=0.0f,			// For floating point, low and high values.
-	float fHighValue=HIGH_DEFAULT,	// High value. If HIGH_DEFAULT, it's (1<<nBits).
+	float fHighValue=kHighDefault,	// High value. If kHighDefault, it's (1<<nBits).
 	SendVarProxyFn varProxy=SendProxy_VectorXYToVectorXY,
 	byte priority = SENDPROP_DEFAULT_PRIORITY
 	);
@@ -702,11 +702,11 @@ SendProp SendPropVectorXY(
 //SendProp SendPropQuaternion(
 //	char *pVarName,
 //	int offset,
-//	int sizeofVar=SIZEOF_IGNORE,
+//	int sizeofVar=kSizeofIgnore,
 //	int nBits=32,					// Number of bits (for each floating-point component) to use when encoding.
 //	int flags=SPROP_NOSCALE,
 //	float fLowValue=0.0f,			// For floating point, low and high values.
-//	float fHighValue=HIGH_DEFAULT,	// High value. If HIGH_DEFAULT, it's (1<<nBits).
+//	float fHighValue=kHighDefault,	// High value. If kHighDefault, it's (1<<nBits).
 //	SendVarProxyFn varProxy=SendProxy_QuaternionToQuaternion,
 //	byte priority = SENDPROP_DEFAULT_PRIORITY
 //	);
@@ -715,7 +715,7 @@ SendProp SendPropVectorXY(
 SendProp SendPropAngle(
 	const char *pVarName,
 	int offset,
-	int sizeofVar=SIZEOF_IGNORE,
+	int sizeofVar=kSizeofIgnore,
 	int nBits=32,
 	int flags=0,
 	SendVarProxyFn varProxy=SendProxy_AngleToFloat,
@@ -725,7 +725,7 @@ SendProp SendPropAngle(
 SendProp SendPropQAngles(
 	const char *pVarName,
 	int offset,
-	int sizeofVar=SIZEOF_IGNORE,
+	int sizeofVar=kSizeofIgnore,
 	int nBits=32,
 	int flags=0,
 	SendVarProxyFn varProxy=SendProxy_QAngles,
@@ -735,14 +735,14 @@ SendProp SendPropQAngles(
 SendProp SendPropInt(
 	const char *pVarName,
 	int offset,
-	int sizeofVar=SIZEOF_IGNORE,	// Handled by SENDINFO macro.
+	int sizeofVar=kSizeofIgnore,	// Handled by SENDINFO macro.
 	int nBits=-1,					// Set to -1 to automatically pick (max) number of bits based on size of element.
 	int flags=0,
 	SendVarProxyFn varProxy=0,
 	byte priority = SENDPROP_DEFAULT_PRIORITY
 	);
 
-inline SendProp SendPropModelIndex( const char *pVarName, int offset, int sizeofVar=SIZEOF_IGNORE )
+inline SendProp SendPropModelIndex( const char *pVarName, int offset, int sizeofVar=kSizeofIgnore )
 {
 	return SendPropInt( pVarName, offset, sizeofVar, SP_MODEL_INDEX_BITS, 0 );
 }

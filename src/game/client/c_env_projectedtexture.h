@@ -65,7 +65,7 @@ private:
 	[[= ks::reflect::Net{} ]] bool		m_bLightWorld;
 	[[= ks::reflect::Net{} ]] bool		m_bCameraSpace;
 	[[= ks::reflect::Net{} ]] float		m_flBrightnessScale;
-	[[= ks::reflect::Net{} ]] [[= ks::reflect::Proxy<RecvProxy_Int32ToColor32, ks::reflect::WIRE_RECV>{} ]] color32		m_LightColor;
+	[[= ks::reflect::Net{} ]] [[= ks::reflect::Proxy<RecvProxy_Int32ToColor32, ks::reflect::WireSide::Recv>{} ]] color32		m_LightColor;
 	Vector		m_CurrentLinearFloatLightColor;
 	float		m_flCurrentLinearFloatLightAlpha;
 	[[= ks::reflect::Net{} ]] float		m_flColorTransitionTime;

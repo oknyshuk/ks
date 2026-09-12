@@ -19,7 +19,7 @@
 #include "positionwatcher.h"
 
 class [[= ks::reflect::NetTable{ .name = "DT_RopeKeyframe", .base = false } ]]
-      [[= ks::reflect::From<"m_vecOrigin", ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD, .enc = ks::reflect::ENC_VECTOR }>{} ]]
+      [[= ks::reflect::From<"m_vecOrigin", ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD, .enc = ks::reflect::WireEnc::Vector }>{} ]]
       [[= ks::reflect::From<"m_hMoveParent", ks::reflect::Net{ .wire = "moveparent" }>{} ]]
       [[= ks::reflect::From<"m_iParentAttachment", ks::reflect::Net{ .bits = NUM_PARENTATTACHMENT_BITS, .flags = SPROP_UNSIGNED }>{} ]]
       [[= ks::reflect::From<"m_nMinCPULevel", ks::reflect::Net{ .bits = CPU_LEVEL_BIT_COUNT, .flags = SPROP_UNSIGNED }>{} ]]

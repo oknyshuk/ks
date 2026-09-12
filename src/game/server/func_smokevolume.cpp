@@ -32,8 +32,8 @@ public:
 	void SetDensity( float density );
 
 private:
-	CNetworkVar( color32, m_Color1, [[= ks::reflect::Net{ .bits = 32, .flags = SPROP_UNSIGNED } ]] [[= ks::reflect::Proxy<SendProxy_Color32ToInt32, ks::reflect::WIRE_SEND>{} ]] [[= ks::reflect::Key{ .name = "Color1" } ]] );
-	CNetworkVar( color32, m_Color2, [[= ks::reflect::Net{ .bits = 32, .flags = SPROP_UNSIGNED } ]] [[= ks::reflect::Proxy<SendProxy_Color32ToInt32, ks::reflect::WIRE_SEND>{} ]] [[= ks::reflect::Key{ .name = "Color2" } ]] );
+	CNetworkVar( color32, m_Color1, [[= ks::reflect::Net{ .bits = 32, .flags = SPROP_UNSIGNED } ]] [[= ks::reflect::Proxy<SendProxy_Color32ToInt32, ks::reflect::WireSide::Send>{} ]] [[= ks::reflect::Key{ .name = "Color1" } ]] );
+	CNetworkVar( color32, m_Color2, [[= ks::reflect::Net{ .bits = 32, .flags = SPROP_UNSIGNED } ]] [[= ks::reflect::Proxy<SendProxy_Color32ToInt32, ks::reflect::WireSide::Send>{} ]] [[= ks::reflect::Key{ .name = "Color2" } ]] );
 	CNetworkString( m_MaterialName, 255, [[= ks::reflect::Net{} ]] );
 	[[= ks::reflect::Key{ .name = "Material" } ]] string_t m_String_tMaterialName;
 	CNetworkVar( float, m_ParticleDrawWidth, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE } ]] [[= ks::reflect::Key{ .name = "ParticleDrawWidth" } ]] );

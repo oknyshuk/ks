@@ -22,7 +22,7 @@ void RecvProxyArrayLength_PlayerArray( void *pStruct, int objectID, int currentA
 
 class [[= ks::reflect::NetTable{ .name = "DT_Team", .base = false } ]]
       [[= ks::reflect::BareArray<"player_array_element", "\"player_array\"", MAX_PLAYERS, 0,
-            SIZEOF_IGNORE, ks::reflect::Net{},
+            kSizeofIgnore, ks::reflect::Net{},
             RecvProxy_PlayerList, RecvProxyArrayLength_PlayerArray>{} ]]
       C_Team : public C_BaseEntity
 {

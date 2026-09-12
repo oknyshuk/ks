@@ -66,15 +66,15 @@ private:
 #define VIEWMODEL_INDEX_BITS 1
 
 class [[= ks::reflect::NetTable{ .name = "DT_BaseViewModel", .base = false } ]]
-      [[= ks::reflect::From<"m_nModelIndex", ks::reflect::Net{ .enc = ks::reflect::ENC_MODELINDEX, .side = ks::reflect::WIRE_SEND }>{} ]]
-      [[= ks::reflect::From<"m_nModelIndex", ks::reflect::Net{ .side = ks::reflect::WIRE_RECV }, RecvProxy_Viewmodel>{} ]]
+      [[= ks::reflect::From<"m_nModelIndex", ks::reflect::Net{ .enc = ks::reflect::WireEnc::ModelIndex, .side = ks::reflect::WireSide::Send }>{} ]]
+      [[= ks::reflect::From<"m_nModelIndex", ks::reflect::Net{ .side = ks::reflect::WireSide::Recv }, RecvProxy_Viewmodel>{} ]]
       [[= ks::reflect::From<"m_nBody", ks::reflect::Net{ .bits = ANIMATION_BODY_BITS }>{} ]]
       [[= ks::reflect::From<"m_nSkin", ks::reflect::Net{ .bits = 10 }>{} ]]
-      [[= ks::reflect::From<"m_nSequence", ks::reflect::Net{ .bits = 8, .flags = SPROP_UNSIGNED, .side = ks::reflect::WIRE_SEND }>{} ]]
-      [[= ks::reflect::From<"m_nSequence", ks::reflect::Net{ .side = ks::reflect::WIRE_RECV }, RecvProxy_ViewmodelSequenceNum>{} ]]
+      [[= ks::reflect::From<"m_nSequence", ks::reflect::Net{ .bits = 8, .flags = SPROP_UNSIGNED, .side = ks::reflect::WireSide::Send }>{} ]]
+      [[= ks::reflect::From<"m_nSequence", ks::reflect::Net{ .side = ks::reflect::WireSide::Recv }, RecvProxy_ViewmodelSequenceNum>{} ]]
       [[= ks::reflect::From<"m_flPlaybackRate", ks::reflect::Net{ .bits = 8, .low = -4.0, .high = 12.0f, .flags = SPROP_ROUNDUP }>{} ]]
-      [[= ks::reflect::From<"m_fEffects", ks::reflect::Net{ .bits = EF_MAX_BITS, .flags = SPROP_UNSIGNED, .side = ks::reflect::WIRE_SEND }>{} ]]
-      [[= ks::reflect::From<"m_fEffects", ks::reflect::Net{ .side = ks::reflect::WIRE_RECV }, RecvProxy_EffectFlags>{} ]]
+      [[= ks::reflect::From<"m_fEffects", ks::reflect::Net{ .bits = EF_MAX_BITS, .flags = SPROP_UNSIGNED, .side = ks::reflect::WireSide::Send }>{} ]]
+      [[= ks::reflect::From<"m_fEffects", ks::reflect::Net{ .side = ks::reflect::WireSide::Recv }, RecvProxy_EffectFlags>{} ]]
       [[= ks::reflect::From<"m_nNewSequenceParity", ks::reflect::Net{ .bits = EF_PARITY_BITS, .flags = SPROP_UNSIGNED }>{} ]]
       [[= ks::reflect::From<"m_nResetEventsParity", ks::reflect::Net{ .bits = EF_PARITY_BITS, .flags = SPROP_UNSIGNED }>{} ]]
       [[= ks::reflect::From<"m_nMuzzleFlashParity", ks::reflect::Net{ .bits = EF_MUZZLEFLASH_BITS, .flags = SPROP_UNSIGNED }>{} ]]
@@ -252,10 +252,10 @@ private:
 	CNetworkVar( int, m_nViewModelIndex, [[= ks::reflect::Net{ .bits = VIEWMODEL_INDEX_BITS, .flags = SPROP_UNSIGNED } ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] );		// Which viewmodel is it?
 	// Used to force restart on client, only needs a few bits
 	CNetworkVar( int, m_nAnimationParity, [[= ks::reflect::Net{ .bits = 3, .flags = SPROP_UNSIGNED } ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] );
-	CNetworkVar( CBaseCombatWeaponHandle, m_hWeapon, [[= ks::reflect::Net{} ]] [[= ks::reflect::Proxy<RecvProxy_Weapon, ks::reflect::WIRE_RECV>{} ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] );
+	CNetworkVar( CBaseCombatWeaponHandle, m_hWeapon, [[= ks::reflect::Net{} ]] [[= ks::reflect::Proxy<RecvProxy_Weapon, ks::reflect::WireSide::Recv>{} ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] );
 // FTYPEDESC_INSENDTABLE STUFF (end)
 
-	CNetworkHandle( CBaseEntity, m_hOwner, [[= ks::reflect::Net{} ]] [[= ks::reflect::Proxy<RecvProxy_Owner, ks::reflect::WIRE_RECV>{} ]] );				// Player or AI carrying this weapon
+	CNetworkHandle( CBaseEntity, m_hOwner, [[= ks::reflect::Net{} ]] [[= ks::reflect::Proxy<RecvProxy_Owner, ks::reflect::WireSide::Recv>{} ]] );				// Player or AI carrying this weapon
 
 	// soonest time Update will call WeaponIdle
 	float					m_flTimeWeaponIdle;							

@@ -51,7 +51,7 @@ private:
 
 	[[= ks::reflect::Net{} ]] float		m_flGlowMaxDist;
 	[[= ks::reflect::Net{} ]] bool		m_bShouldGlow;
-	[[= ks::reflect::Net{} ]] [[= ks::reflect::Proxy<RecvProxy_Int32ToColor32, ks::reflect::WIRE_RECV>{} ]] color32		m_clrGlow;
+	[[= ks::reflect::Net{} ]] [[= ks::reflect::Proxy<RecvProxy_Int32ToColor32, ks::reflect::WireSide::Recv>{} ]] color32		m_clrGlow;
 	[[= ks::reflect::Net{} ]] int			m_nGlowStyle;
 };
 

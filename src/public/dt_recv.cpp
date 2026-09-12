@@ -271,7 +271,7 @@ RecvProp RecvPropVectorXY(
 //RecvProp RecvPropQuaternion(
 //	const char *pVarName,
 //	int offset,
-//	int sizeofVar,	// Handled by RECVINFO macro, but set to SIZEOF_IGNORE if you don't want to bother.
+//	int sizeofVar,	// Handled by RECVINFO macro, but set to kSizeofIgnore if you don't want to bother.
 //	int flags,
 //	RecvVarProxyFn varProxy
 //	)

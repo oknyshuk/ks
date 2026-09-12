@@ -18,10 +18,10 @@
 
 class [[= ks::reflect::NetTable{ .name = "DT_TestTraceline", .base = false } ]]
       [[= ks::reflect::From<"m_clrRender", ks::reflect::Net{ .bits = 32, .flags = SPROP_UNSIGNED }, SendProxy_Color32ToInt32>{} ]]
-      [[= ks::reflect::From<"m_vecOrigin", ks::reflect::Net{ .bits = 19, .low = MIN_COORD_INTEGER, .high = MAX_COORD_INTEGER, .enc = ks::reflect::ENC_VECTOR }>{} ]]
-      [[= ks::reflect::From<"m_angRotation", ks::reflect::Net{ .bits = 19, .low = MIN_COORD_INTEGER, .high = MAX_COORD_INTEGER, .enc = ks::reflect::ENC_FLOAT, .index = 0 }>{} ]]
-      [[= ks::reflect::From<"m_angRotation", ks::reflect::Net{ .bits = 19, .low = MIN_COORD_INTEGER, .high = MAX_COORD_INTEGER, .enc = ks::reflect::ENC_FLOAT, .index = 1 }>{} ]]
-      [[= ks::reflect::From<"m_angRotation", ks::reflect::Net{ .bits = 19, .low = MIN_COORD_INTEGER, .high = MAX_COORD_INTEGER, .enc = ks::reflect::ENC_FLOAT, .index = 2 }>{} ]]
+      [[= ks::reflect::From<"m_vecOrigin", ks::reflect::Net{ .bits = 19, .low = MIN_COORD_INTEGER, .high = MAX_COORD_INTEGER, .enc = ks::reflect::WireEnc::Vector }>{} ]]
+      [[= ks::reflect::From<"m_angRotation", ks::reflect::Net{ .bits = 19, .low = MIN_COORD_INTEGER, .high = MAX_COORD_INTEGER, .enc = ks::reflect::WireEnc::Float, .index = 0 }>{} ]]
+      [[= ks::reflect::From<"m_angRotation", ks::reflect::Net{ .bits = 19, .low = MIN_COORD_INTEGER, .high = MAX_COORD_INTEGER, .enc = ks::reflect::WireEnc::Float, .index = 1 }>{} ]]
+      [[= ks::reflect::From<"m_angRotation", ks::reflect::Net{ .bits = 19, .low = MIN_COORD_INTEGER, .high = MAX_COORD_INTEGER, .enc = ks::reflect::WireEnc::Float, .index = 2 }>{} ]]
       [[= ks::reflect::From<"m_hMoveParent", ks::reflect::Net{ .wire = "moveparent" }>{} ]]
       CTestTraceline : public CPointEntity
 {

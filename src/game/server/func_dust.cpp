@@ -21,7 +21,7 @@
 #include "tier0/memdbgon.h"
 
 class [[= ks::reflect::NetTable{ .name = "DT_Func_Dust", .base = false } ]]
-      [[= ks::reflect::From<"m_nModelIndex", ks::reflect::Net{ .enc = ks::reflect::ENC_MODELINDEX } >{} ]]
+      [[= ks::reflect::From<"m_nModelIndex", ks::reflect::Net{ .enc = ks::reflect::WireEnc::ModelIndex } >{} ]]
       [[= ks::reflect::From<"m_Collision", ks::reflect::Net{}, nullptr, &REFERENCE_SEND_TABLE( DT_CollisionProperty )>{} ]]
       CFunc_Dust : public CBaseEntity
 {
@@ -54,7 +54,7 @@ public:
 public:
 
 	CNetworkVar( color32, m_Color, [[= ks::reflect::Net{ .bits = 32, .flags = SPROP_UNSIGNED } ]]
-	                              [[= ks::reflect::Proxy<SendProxy_Color32ToInt32, ks::reflect::WIRE_SEND>{} ]] [[= ks::reflect::Key{ .name = "Color" } ]] );
+	                              [[= ks::reflect::Proxy<SendProxy_Color32ToInt32, ks::reflect::WireSide::Send>{} ]] [[= ks::reflect::Key{ .name = "Color" } ]] );
 	CNetworkVar( int, m_SpawnRate, [[= ks::reflect::Net{ .bits = 12, .flags = SPROP_UNSIGNED } ]] [[= ks::reflect::Key{ .name = "SpawnRate" } ]] );
 	
 	CNetworkVar( float, m_flSizeMin, [[= ks::reflect::Net{ .flags = SPROP_NOSCALE } ]] [[= ks::reflect::Key{ .name = "SizeMin" } ]] );
@@ -233,7 +233,7 @@ public:
 	
 	CNetworkVar( float, m_flSize, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD } ]] );
 	CNetworkVar( float, m_flSpeed, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD } ]] );
-	CNetworkVector( m_vecDirection, [[= ks::reflect::Net{ .bits = 4, .low = -1.0f, .high = 1.0f, .enc = ks::reflect::ENC_VECTOR } ]] );
+	CNetworkVector( m_vecDirection, [[= ks::reflect::Net{ .bits = 4, .low = -1.0f, .high = 1.0f, .enc = ks::reflect::WireEnc::Vector } ]] );
 };
 
 CTEDust::CTEDust( const char *name ) : BaseClass( name )

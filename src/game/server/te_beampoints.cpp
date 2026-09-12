@@ -37,8 +37,8 @@ public:
 	virtual void	Test( const Vector& current_origin, const QAngle& current_angles );
 	
 public:
-	CNetworkVector( m_vecStartPoint, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD, .enc = ks::reflect::ENC_VECTOR } ]] );
-	CNetworkVector( m_vecEndPoint, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD, .enc = ks::reflect::ENC_VECTOR } ]] );
+	CNetworkVector( m_vecStartPoint, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD, .enc = ks::reflect::WireEnc::Vector } ]] );
+	CNetworkVector( m_vecEndPoint, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD, .enc = ks::reflect::WireEnc::Vector } ]] );
 };
 
 //-----------------------------------------------------------------------------

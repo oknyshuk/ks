@@ -41,8 +41,8 @@ private:
 	CHandle<C_BaseAnimating> m_hHolidayHatAddon;
 	Activity m_lastActivity;
 
-	CNetworkVar( bool, m_jumpedThisFrame, [[= ks::reflect::Net{ .enc = ks::reflect::ENC_INT } ]]
-	                    [[= ks::reflect::Proxy<RecvProxy_Jumped, ks::reflect::WIRE_RECV>{} ]] );
+	CNetworkVar( bool, m_jumpedThisFrame, [[= ks::reflect::Net{ .enc = ks::reflect::WireEnc::Int } ]]
+	                    [[= ks::reflect::Proxy<RecvProxy_Jumped, ks::reflect::WireSide::Recv>{} ]] );
 	CNetworkVar( EHANDLE, m_leader, [[= ks::reflect::Net{} ]] );				// who we are following, or NULL
 
 };

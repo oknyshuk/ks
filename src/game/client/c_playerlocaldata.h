@@ -124,21 +124,21 @@ public:
 	[[= ks::reflect::Net{} ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] float					m_flStepSize;
 
 	CNetworkQAngle( m_viewPunchAngle, [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE, .tolerance = 0.125f } ]]
-	                    [[= ks::reflect::Net{ .enc = ks::reflect::ENC_VECTOR } ]] );			// auto-decaying view angle adjustment
+	                    [[= ks::reflect::Net{ .enc = ks::reflect::WireEnc::Vector } ]] );			// auto-decaying view angle adjustment
 	CNetworkQAngle( m_aimPunchAngle, [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE, .tolerance = 0.125f } ]]
-	                    [[= ks::reflect::Net{ .enc = ks::reflect::ENC_VECTOR } ]] );			// auto-decaying aim angle adjustment
+	                    [[= ks::reflect::Net{ .enc = ks::reflect::WireEnc::Vector } ]] );			// auto-decaying aim angle adjustment
 	CNetworkQAngle( m_aimPunchAngleVel, [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE, .tolerance = 0.125f } ]]
-	                    [[= ks::reflect::Net{ .enc = ks::reflect::ENC_VECTOR } ]] );		// velocity of auto-decaying aim angle adjustment
+	                    [[= ks::reflect::Net{ .enc = ks::reflect::WireEnc::Vector } ]] );		// velocity of auto-decaying aim angle adjustment
 
-	[[= ks::reflect::Net{ .enc = ks::reflect::ENC_INT } ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] bool					m_bDucked;			// Set exactly between FinishDuck() and FinishUnDuck(); marks that our position may have been moved by ducking
-	[[= ks::reflect::Net{ .enc = ks::reflect::ENC_INT } ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] bool					m_bDucking;			// Set if we are currently in a duck transition (that is, m_bDucked != the state of the user-pressed duck button)
+	[[= ks::reflect::Net{ .enc = ks::reflect::WireEnc::Int } ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] bool					m_bDucked;			// Set exactly between FinishDuck() and FinishUnDuck(); marks that our position may have been moved by ducking
+	[[= ks::reflect::Net{ .enc = ks::reflect::WireEnc::Int } ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] bool					m_bDucking;			// Set if we are currently in a duck transition (that is, m_bDucked != the state of the user-pressed duck button)
 	[[= ks::reflect::Net{} ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] float					m_flLastDuckTime;	// last time the player pressed duck
 
-	[[= ks::reflect::Net{ .enc = ks::reflect::ENC_INT } ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] bool					m_bInDuckJump;
-	[[= ks::reflect::Net{ .enc = ks::reflect::ENC_INT } ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] bool					m_bDrawViewmodel;
-	[[= ks::reflect::Net{ .enc = ks::reflect::ENC_INT } ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] bool					m_bWearingSuit;
+	[[= ks::reflect::Net{ .enc = ks::reflect::WireEnc::Int } ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] bool					m_bInDuckJump;
+	[[= ks::reflect::Net{ .enc = ks::reflect::WireEnc::Int } ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] bool					m_bDrawViewmodel;
+	[[= ks::reflect::Net{ .enc = ks::reflect::WireEnc::Int } ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] bool					m_bWearingSuit;
 	[[= ks::reflect::Net{} ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] bool					m_bPoisoned;
-	[[= ks::reflect::Net{ .enc = ks::reflect::ENC_INT } ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] bool					m_bAllowAutoMovement;
+	[[= ks::reflect::Net{ .enc = ks::reflect::WireEnc::Int } ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] bool					m_bAllowAutoMovement;
 // END PREDICTION DATA COMPACTION
 
 	bool					m_bInLanding;

@@ -42,7 +42,7 @@ public:
 
 public:
 	CNetworkVector( m_vecOrigin, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD } ]] );
-	CNetworkQAngle( m_vecAngles, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD, .enc = ks::reflect::ENC_VECTOR } ]] );
+	CNetworkQAngle( m_vecAngles, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD, .enc = ks::reflect::WireEnc::Vector } ]] );
 	CNetworkVector( m_vecForce, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD } ]] );
 	CNetworkVector( m_vecForcePos, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD } ]] );
 	CNetworkVar( float, m_flWidth, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE } ]] );

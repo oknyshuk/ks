@@ -529,7 +529,7 @@ void CGameServer::CreateEngineStringTables( void )
 
     m_pInstanceBaselineTable = m_StringTables->CreateStringTable(
         INSTANCE_BASELINE_TABLENAME,
-        MAX_DATATABLES );
+        kMaxDatatables );
 
     m_pLightStyleTable = m_StringTables->CreateStringTable( 
         LIGHT_STYLES_TABLENAME, 
@@ -855,7 +855,7 @@ int SV_BuildSendTablesArray( ServerClass *pClasses, SendTable **pTables, int nMa
 // Builds an alternate copy of the datatable for any classes that have datatables with props excluded.
 void SV_InitSendTables( ServerClass *pClasses )
 {
-    SendTable *pTables[MAX_DATATABLES];
+    SendTable *pTables[kMaxDatatables];
     int nTables = SV_BuildSendTablesArray( pClasses, pTables, ARRAYSIZE( pTables ) );
 
     SendTable_Init( pTables, nTables );

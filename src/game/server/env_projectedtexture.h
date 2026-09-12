@@ -61,7 +61,7 @@ private:
 	CNetworkVar( bool, m_bLightWorld, [[= ks::reflect::Net{} ]] [[= ks::reflect::Key{ .name = "lightworld" } ]] );
 	CNetworkVar( bool, m_bCameraSpace, [[= ks::reflect::Net{} ]] [[= ks::reflect::Key{ .name = "cameraspace" } ]] );
 	CNetworkVar( float, m_flBrightnessScale, [[= ks::reflect::Net{ .bits = 32 } ]] [[= ks::reflect::Key{ .name = "brightnessscale" } ]] );
-	CNetworkColor32( m_LightColor, [[= ks::reflect::Net{ .bits = 32, .flags = SPROP_UNSIGNED } ]] [[= ks::reflect::Proxy<SendProxy_Color32ToInt32, ks::reflect::WIRE_SEND>{} ]] );
+	CNetworkColor32( m_LightColor, [[= ks::reflect::Net{ .bits = 32, .flags = SPROP_UNSIGNED } ]] [[= ks::reflect::Proxy<SendProxy_Color32ToInt32, ks::reflect::WireSide::Send>{} ]] );
 	CNetworkVar( float, m_flColorTransitionTime, [[= ks::reflect::Net{ .bits = 32 } ]] [[= ks::reflect::Key{ .name = "colortransitiontime" } ]] );
 	CNetworkVar( float, m_flAmbient, [[= ks::reflect::Net{ .bits = 32 } ]] [[= ks::reflect::Key{ .name = "ambient" } ]] );
 	CNetworkString( m_SpotlightTextureName, MAX_PATH, [[= ks::reflect::Net{} ]] );

@@ -41,7 +41,7 @@ private:
 	[[= ks::reflect::Net{} ]] bool m_bEnabled;
 	[[= ks::reflect::Net{} ]] char m_TextureName[ MAX_PATH ];
 	CTextureReference m_SpotlightTexture;
-	[[= ks::reflect::Net{} ]] [[= ks::reflect::Proxy<RecvProxy_Int32ToColor32, ks::reflect::WIRE_RECV>{} ]] color32	m_LightColor;
+	[[= ks::reflect::Net{} ]] [[= ks::reflect::Proxy<RecvProxy_Int32ToColor32, ks::reflect::WireSide::Recv>{} ]] color32	m_LightColor;
 	Vector m_CurrentLinearFloatLightColor;
 	float m_flCurrentLinearFloatLightAlpha;
 	[[= ks::reflect::Net{} ]] float m_flColorTransitionTime;

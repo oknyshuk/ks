@@ -101,7 +101,7 @@ private:
 	CNetworkVar( float, m_flStartWidthVariance, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE } ]] );	// The starting scale
 	CNetworkVar( float, m_flTextureRes, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE } ]] );	// Texture resolution along the trail
 	CNetworkVar( float, m_flMinFadeLength, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE } ]] );	// The end of the trail must fade out for this many units
-	CNetworkVector( m_vecSkyboxOrigin, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE, .enc = ks::reflect::ENC_VECTOR } ]] );	// What's our skybox origin?
+	CNetworkVector( m_vecSkyboxOrigin, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE, .enc = ks::reflect::WireEnc::Vector } ]] );	// What's our skybox origin?
 	CNetworkVar( float, m_flSkyboxScale, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE } ]] );	// What's our skybox scale?
 
 	[[= ks::reflect::Key{ .name = "spritename" } ]] string_t m_iszSpriteName;

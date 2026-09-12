@@ -56,7 +56,7 @@ public:
 	CNetworkVar( float, m_flTranslucencyLimit, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE } ]] [[= ks::reflect::Key{ .name = "TranslucencyLimit" } ]] );
 
 	[[= ks::reflect::Key{ .name = "BackgroundBModel" } ]] string_t 		m_iBackgroundBModelName;	// string name of background bmodel
-	CNetworkVar( int, m_iBackgroundModelIndex, [[= ks::reflect::Net{ .enc = ks::reflect::ENC_MODELINDEX } ]] );
+	CNetworkVar( int, m_iBackgroundModelIndex, [[= ks::reflect::Net{ .enc = ks::reflect::WireEnc::ModelIndex } ]] );
 
 	//Input handlers
 	[[= ks::reflect::Input{ .name = "SetFadeStartDistance", .type = FIELD_FLOAT } ]] void InputSetFadeStartDistance( inputdata_t &inputdata );

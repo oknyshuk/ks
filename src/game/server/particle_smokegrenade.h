@@ -63,8 +63,8 @@ public:
 	// When to fade in and out.
 	CNetworkVar( float, m_FadeStartTime, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE } ]] );
 	CNetworkVar( float, m_FadeEndTime, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE } ]] );
-	CNetworkVar( Vector, m_MinColor, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE, .enc = ks::reflect::ENC_VECTOR } ]] );
-	CNetworkVar( Vector, m_MaxColor, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE, .enc = ks::reflect::ENC_VECTOR } ]] );
+	CNetworkVar( Vector, m_MinColor, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE, .enc = ks::reflect::WireEnc::Vector } ]] );
+	CNetworkVar( Vector, m_MaxColor, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE, .enc = ks::reflect::WireEnc::Vector } ]] );
 
 protected:
     

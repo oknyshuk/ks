@@ -40,9 +40,9 @@ public:
 public:
 
 	//Client-side
-	CNetworkVar( int, m_nPlasmaModelIndex, [[= ks::reflect::Net{ .enc = ks::reflect::ENC_MODELINDEX } ]] );
-	CNetworkVar( int, m_nPlasmaModelIndex2, [[= ks::reflect::Net{ .enc = ks::reflect::ENC_MODELINDEX } ]] );
-	CNetworkVar( int, m_nGlowModelIndex, [[= ks::reflect::Net{ .enc = ks::reflect::ENC_MODELINDEX } ]] );
+	CNetworkVar( int, m_nPlasmaModelIndex, [[= ks::reflect::Net{ .enc = ks::reflect::WireEnc::ModelIndex } ]] );
+	CNetworkVar( int, m_nPlasmaModelIndex2, [[= ks::reflect::Net{ .enc = ks::reflect::WireEnc::ModelIndex } ]] );
+	CNetworkVar( int, m_nGlowModelIndex, [[= ks::reflect::Net{ .enc = ks::reflect::WireEnc::ModelIndex } ]] );
 
 	//Server-side
 };

@@ -6543,8 +6543,8 @@ class [[= ks::reflect::NetTable{ .name = "DT_PhysicsPropMultiplayer" } ]]
 
 private:
 	bool m_usingCustomCollisionBounds;
-	CNetworkVector( m_collisionMins, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE, .enc = ks::reflect::ENC_VECTOR } ]] );
-	CNetworkVector( m_collisionMaxs, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE, .enc = ks::reflect::ENC_VECTOR } ]] );
+	CNetworkVector( m_collisionMins, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE, .enc = ks::reflect::WireEnc::Vector } ]] );
+	CNetworkVector( m_collisionMaxs, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE, .enc = ks::reflect::WireEnc::Vector } ]] );
 };
 
 LINK_ENTITY_TO_CLASS( prop_physics_multiplayer, CPhysicsPropMultiplayer );

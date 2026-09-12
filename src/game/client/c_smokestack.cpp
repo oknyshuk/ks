@@ -109,7 +109,7 @@ public:
 	[[= ks::reflect::Net{} ]] Vector			m_vWind;
 	[[= ks::reflect::Net{} ]] float			m_flTwist;
 	[[= ks::reflect::Net{} ]]
-	[[= ks::reflect::Proxy<RecvProxy_IntSubOne, ks::reflect::WIRE_RECV>{} ]] int				m_iMaterialModel;
+	[[= ks::reflect::Proxy<RecvProxy_IntSubOne, ks::reflect::WireSide::Recv>{} ]] int				m_iMaterialModel;
 
 private:
 	C_SmokeStack( const C_SmokeStack & );

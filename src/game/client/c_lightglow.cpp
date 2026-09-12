@@ -88,10 +88,10 @@ class [[= ks::reflect::NetTable{ .name = "DT_LightGlow", .base = false } ]]
       [[= ks::reflect::From<"m_vecNetworkOrigin", ks::reflect::Net{ .wire = "m_vecOrigin" }>{} ]]
       [[= ks::reflect::From<"m_angNetworkAngles", ks::reflect::Net{ .wire = "m_angRotation" }>{} ]]
       [[= ks::reflect::From<"m_hNetworkMoveParent",
-            ks::reflect::Net{ .enc = ks::reflect::ENC_INT, .wire = "moveparent" },
+            ks::reflect::Net{ .enc = ks::reflect::WireEnc::Int, .wire = "moveparent" },
             RecvProxy_IntToMoveParent>{} ]]
       [[= ks::reflect::Bare<"HDRColorScale",
-            ks::reflect::Net{ .enc = ks::reflect::ENC_FLOAT }, RecvProxy_HDRColorScale>{} ]]
+            ks::reflect::Net{ .enc = ks::reflect::WireEnc::Float }, RecvProxy_HDRColorScale>{} ]]
       C_LightGlow : public C_BaseEntity
 {
 public:

@@ -32,7 +32,7 @@ public:
 
 private:
 	[[= ks::reflect::Net{} ]] Vector m_shadowDirection;
-	[[= ks::reflect::Net{} ]] [[= ks::reflect::Proxy<RecvProxy_Int32ToColor32, ks::reflect::WIRE_RECV>{} ]] color32 m_shadowColor;
+	[[= ks::reflect::Net{} ]] [[= ks::reflect::Proxy<RecvProxy_Int32ToColor32, ks::reflect::WireSide::Recv>{} ]] color32 m_shadowColor;
 	[[= ks::reflect::Net{} ]] float m_flShadowMaxDist;
 	[[= ks::reflect::Net{} ]] bool m_bDisableShadows;
 	[[= ks::reflect::Net{} ]] bool m_bEnableLocalLightShadows;

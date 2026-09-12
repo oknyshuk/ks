@@ -28,7 +28,7 @@ class CFishPool;
  * Simple ambient fish
  */
 class [[= ks::reflect::NetTable{ .name = "DT_CFish", .base = false } ]]
-      [[= ks::reflect::From<"m_nModelIndex", ks::reflect::Net{ .enc = ks::reflect::ENC_MODELINDEX }>{} ]]
+      [[= ks::reflect::From<"m_nModelIndex", ks::reflect::Net{ .enc = ks::reflect::WireEnc::ModelIndex }>{} ]]
       [[= ks::reflect::From<"m_lifeState", ks::reflect::Net{ .bits = -1 }>{} ]]
       CFish : public CBaseAnimating
 {
@@ -66,12 +66,12 @@ private:
 	CNetworkVar( float, m_y, [[= ks::reflect::Net{ .bits = 7, .low = -255.0f, .high = 255.0f } ]] );							///< have to send position coordinates separately since Z is unused
 	CNetworkVar( float, m_z, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD } ]] );							///< only sent once since fish always swim at the same depth
 
-	CNetworkVar( float, m_angle, [[= ks::reflect::Net{ .bits = 7, .low = 0.0f, .high = 360.0f } ]] [[= ks::reflect::Proxy<SendProxy_FishAngle, ks::reflect::WIRE_SEND>{} ]] );						///< only yaw changes
+	CNetworkVar( float, m_angle, [[= ks::reflect::Net{ .bits = 7, .low = 0.0f, .high = 360.0f } ]] [[= ks::reflect::Proxy<SendProxy_FishAngle, ks::reflect::WireSide::Send>{} ]] );						///< only yaw changes
 	float m_angleChange;
 	Vector m_forward;
 	Vector m_perp;
 
-	CNetworkVector( m_poolOrigin, [[= ks::reflect::Net{ .bits = -1, .low = 0.0f, .high = HIGH_DEFAULT, .flags = SPROP_COORD, .enc = ks::reflect::ENC_VECTOR } ]] );				///< used to efficiently network our relative position
+	CNetworkVector( m_poolOrigin, [[= ks::reflect::Net{ .bits = -1, .low = 0.0f, .high = kHighDefault, .flags = SPROP_COORD, .enc = ks::reflect::WireEnc::Vector } ]] );				///< used to efficiently network our relative position
 	CNetworkVar( float, m_waterLevel, [[= ks::reflect::Net{ .bits = 32 } ]] );
 
 	float m_speed;

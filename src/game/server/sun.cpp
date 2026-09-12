@@ -38,7 +38,7 @@ public:
 	virtual int UpdateTransmitState();
 
 public:
-	CNetworkVector( m_vDirection, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NORMAL, .enc = ks::reflect::ENC_VECTOR } ]] );
+	CNetworkVector( m_vDirection, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NORMAL, .enc = ks::reflect::WireEnc::Vector } ]] );
 	
 	[[= ks::reflect::Key{ .name = "material" } ]] string_t	m_strMaterial;
 	[[= ks::reflect::Key{ .name = "overlaymaterial" } ]] string_t	m_strOverlayMaterial;
@@ -49,7 +49,7 @@ public:
 	
 	CNetworkVar( int, m_nSize, [[= ks::reflect::Net{ .bits = 10, .flags = SPROP_UNSIGNED } ]] [[= ks::reflect::Key{ .name = "size" } ]] );		// Size of the main core image
 	CNetworkVar( int, m_nOverlaySize, [[= ks::reflect::Net{ .bits = 10, .flags = SPROP_UNSIGNED } ]] [[= ks::reflect::Key{ .name = "overlaysize" } ]] ); // Size for the glow overlay
-	CNetworkVar( color32, m_clrOverlay, [[= ks::reflect::Net{ .bits = 32, .flags = SPROP_UNSIGNED } ]] [[= ks::reflect::Proxy<SendProxy_Color32ToInt32, ks::reflect::WIRE_SEND>{} ]] [[= ks::reflect::Key{ .name = "overlaycolor" } ]] );
+	CNetworkVar( color32, m_clrOverlay, [[= ks::reflect::Net{ .bits = 32, .flags = SPROP_UNSIGNED } ]] [[= ks::reflect::Proxy<SendProxy_Color32ToInt32, ks::reflect::WireSide::Send>{} ]] [[= ks::reflect::Key{ .name = "overlaycolor" } ]] );
 	CNetworkVar( bool, m_bOn, [[= ks::reflect::Net{ .bits = 1, .flags = SPROP_UNSIGNED } ]] );
 	CNetworkVar( int, m_nMaterial, [[= ks::reflect::Net{ .bits = 32, .flags = SPROP_UNSIGNED } ]] );
 	CNetworkVar( int, m_nOverlayMaterial, [[= ks::reflect::Net{ .bits = 32, .flags = SPROP_UNSIGNED } ]] );

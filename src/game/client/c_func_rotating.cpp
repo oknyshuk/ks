@@ -20,7 +20,7 @@ void RecvProxy_SimulationTime( const CRecvProxyData *pData, void *pStruct, void 
 class [[= ks::reflect::NetTable{ .name = "DT_FuncRotating" } ]]
       [[= ks::reflect::From<"m_vecNetworkOrigin", ks::reflect::Net{ .wire = "m_vecOrigin" }>{} ]]
       [[= ks::reflect::From<"m_angNetworkAngles", ks::reflect::Net{ .wire = "m_angRotation", .index = 0 }>{} ]]
-      [[= ks::reflect::From<"m_flSimulationTime", ks::reflect::Net{ .enc = ks::reflect::ENC_INT }, RecvProxy_SimulationTime>{} ]]
+      [[= ks::reflect::From<"m_flSimulationTime", ks::reflect::Net{ .enc = ks::reflect::WireEnc::Int }, RecvProxy_SimulationTime>{} ]]
       [[= ks::reflect::From<"m_angNetworkAngles", ks::reflect::Net{ .wire = "m_angRotation", .index = 1 }>{} ]]
       [[= ks::reflect::From<"m_angNetworkAngles", ks::reflect::Net{ .wire = "m_angRotation", .index = 2 }>{} ]]
       C_FuncRotating : public C_BaseEntity

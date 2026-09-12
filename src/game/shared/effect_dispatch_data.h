@@ -61,7 +61,7 @@ class [[= ks::reflect::NetTable{ .name = "DT_EffectData", .base = false } ]]
       // "entindex" is not a member: the legacy prop is RecvPropInt( "entindex", 0, ... ) whose
       // proxy writes m_hEntity itself, so it is anchored on m_vOrigin, the member at offset 0.
       [[= ks::reflect::From<"m_vOrigin",
-            ks::reflect::Net{ .enc = ks::reflect::ENC_INT, .wire = "entindex" },
+            ks::reflect::Net{ .enc = ks::reflect::WireEnc::Int, .wire = "entindex" },
             RecvProxy_EntIndex>{} ]]
 #endif
       CEffectData
@@ -86,10 +86,10 @@ public:
 	// default proxy, and this call site overrides it -- with a different function on each side.
 #ifdef CLIENT_DLL
 	[[= ks::reflect::Net{ .bits = 8, .flags = SPROP_UNSIGNED } ]]
-	[[= ks::reflect::Proxy<RecvProxy_ShortSubOne, ks::reflect::WIRE_RECV>{} ]]
+	[[= ks::reflect::Proxy<RecvProxy_ShortSubOne, ks::reflect::WireSide::Recv>{} ]]
 #else
 	[[= ks::reflect::Net{ .bits = 8, .flags = SPROP_UNSIGNED } ]]
-	[[= ks::reflect::Proxy<SendProxy_ShortAddOne, ks::reflect::WIRE_SEND>{} ]]
+	[[= ks::reflect::Proxy<SendProxy_ShortAddOne, ks::reflect::WireSide::Send>{} ]]
 #endif
 	short	m_nSurfaceProp;
 

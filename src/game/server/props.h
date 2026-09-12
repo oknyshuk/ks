@@ -257,7 +257,7 @@ private:
 	CNetworkVar( bool, m_noGhostCollision );
 	bool					m_bUsePuntSound;
 protected:
-	CNetworkQAngle( m_qPreferredPlayerCarryAngles, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE, .enc = ks::reflect::ENC_QANGLES } ]] [[= ks::reflect::Proxy<SendProxy_UnmodifiedQAngles, ks::reflect::WIRE_SEND>{} ]] );
+	CNetworkQAngle( m_qPreferredPlayerCarryAngles, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE, .enc = ks::reflect::WireEnc::QAngles } ]] [[= ks::reflect::Proxy<SendProxy_UnmodifiedQAngles, ks::reflect::WireSide::Send>{} ]] );
 	CNetworkVar( bool, m_bClientPhysics, [[= ks::reflect::Net{} ]] );
 };
 
@@ -351,7 +351,7 @@ public:
 
 	CNetworkVar( float, m_flGlowMaxDist, [[= ks::reflect::Net{ .bits = 32 } ]] [[= ks::reflect::Key{ .name = "glowdist" } ]] );
 	CNetworkVar( bool, m_bShouldGlow, [[= ks::reflect::Net{} ]] [[= ks::reflect::Key{ .name = "glowenabled" } ]] );
-	CNetworkColor32( m_clrGlow, [[= ks::reflect::Net{ .bits = 32, .flags = SPROP_UNSIGNED } ]] [[= ks::reflect::Proxy<SendProxy_Color32ToInt32, ks::reflect::WIRE_SEND>{} ]] [[= ks::reflect::Key{ .name = "glowcolor" } ]] );
+	CNetworkColor32( m_clrGlow, [[= ks::reflect::Net{ .bits = 32, .flags = SPROP_UNSIGNED } ]] [[= ks::reflect::Proxy<SendProxy_Color32ToInt32, ks::reflect::WireSide::Send>{} ]] [[= ks::reflect::Key{ .name = "glowcolor" } ]] );
 	CNetworkVar( int, m_nGlowStyle, [[= ks::reflect::Net{ .bits = -1 } ]] [[= ks::reflect::Key{ .name = "glowstyle" } ]] );
 
 protected:

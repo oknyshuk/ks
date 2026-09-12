@@ -66,8 +66,8 @@ public:
 
 	CNetworkVar( bool, m_bShatter, [[= ks::reflect::Net{} ]] );
 	CNetworkVar( int, m_nShatterFlags, [[= ks::reflect::Net{ .bits = 3 } ]] );
-	CNetworkVector( m_vShatterPosition, [[= ks::reflect::Net{ .bits = 32, .flags = SPROP_NOSCALE, .enc = ks::reflect::ENC_VECTOR } ]] );
-	CNetworkVector( m_vShatterForce, [[= ks::reflect::Net{ .bits = 32, .flags = SPROP_NOSCALE, .enc = ks::reflect::ENC_VECTOR } ]] );
+	CNetworkVector( m_vShatterPosition, [[= ks::reflect::Net{ .bits = 32, .flags = SPROP_NOSCALE, .enc = ks::reflect::WireEnc::Vector } ]] );
+	CNetworkVector( m_vShatterForce, [[= ks::reflect::Net{ .bits = 32, .flags = SPROP_NOSCALE, .enc = ks::reflect::WireEnc::Vector } ]] );
 
 	const CUtlVector<outer_collision_obb_t>	*m_pInitOBBs;
 };

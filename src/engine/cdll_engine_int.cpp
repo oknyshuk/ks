@@ -2370,13 +2370,13 @@ ClientClass *ClientDLL_GetAllClasses( void )
 static void ClientDLL_InitRecvTableMgr()
 {
 	// Register all the receive tables.
-	RecvTable *pRecvTables[MAX_DATATABLES];
+	RecvTable *pRecvTables[kMaxDatatables];
 	int nRecvTables = 0;
 	for ( ClientClass *pCur = ClientDLL_GetAllClasses(); pCur; pCur=pCur->m_pNext )
 	{
 		ErrorIfNot( 
 			nRecvTables < ARRAYSIZE( pRecvTables ), 
-			("ClientDLL_InitRecvTableMgr: overflowed MAX_DATATABLES")
+			("ClientDLL_InitRecvTableMgr: overflowed kMaxDatatables")
 			);
 		
 		pRecvTables[nRecvTables] = pCur->m_pRecvTable;

@@ -37,8 +37,8 @@ public:
 	virtual void	Test( const Vector& current_origin, const QAngle& current_angles ) = 0;
 	
 public:
-	CNetworkVar( int, m_nModelIndex, [[= ks::reflect::Net{ .enc = ks::reflect::ENC_MODELINDEX } ]] );
-	CNetworkVar( int, m_nHaloIndex, [[= ks::reflect::Net{ .enc = ks::reflect::ENC_MODELINDEX } ]] );
+	CNetworkVar( int, m_nModelIndex, [[= ks::reflect::Net{ .enc = ks::reflect::WireEnc::ModelIndex } ]] );
+	CNetworkVar( int, m_nHaloIndex, [[= ks::reflect::Net{ .enc = ks::reflect::WireEnc::ModelIndex } ]] );
 	CNetworkVar( int, m_nStartFrame, [[= ks::reflect::Net{ .bits = 8, .flags = SPROP_UNSIGNED } ]] );
 	CNetworkVar( int, m_nFrameRate, [[= ks::reflect::Net{ .bits = 8, .flags = SPROP_UNSIGNED } ]] );
 	CNetworkVar( float, m_fLife, [[= ks::reflect::Net{ .bits = 8, .low = 0.0, .high = 25.6 } ]] );

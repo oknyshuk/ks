@@ -302,10 +302,10 @@ static CPhysicsPlayerCallback playerCallback;
 // -------------------------------------------------------------------------------- //
 
 class [[= ks::reflect::NetTable{ .name = "DT_CSRagdoll", .base = false } ]]
-      [[= ks::reflect::From<"m_vecOrigin", ks::reflect::Net{ .bits = -1, .low = 0.0f, .high = HIGH_DEFAULT, .flags = SPROP_COORD|SPROP_CHANGES_OFTEN, .enc = ks::reflect::ENC_VECTOR }, SendProxy_Origin>{} ]]
-      [[= ks::reflect::From<"m_nModelIndex", ks::reflect::Net{ .enc = ks::reflect::ENC_MODELINDEX }>{} ]]
+      [[= ks::reflect::From<"m_vecOrigin", ks::reflect::Net{ .bits = -1, .low = 0.0f, .high = kHighDefault, .flags = SPROP_COORD|SPROP_CHANGES_OFTEN, .enc = ks::reflect::WireEnc::Vector }, SendProxy_Origin>{} ]]
+      [[= ks::reflect::From<"m_nModelIndex", ks::reflect::Net{ .enc = ks::reflect::WireEnc::ModelIndex }>{} ]]
       [[= ks::reflect::From<"m_nForceBone", ks::reflect::Net{ .bits = 8 }>{} ]]
-      [[= ks::reflect::From<"m_vecForce", ks::reflect::Net{ .bits = 32, .flags = SPROP_NOSCALE, .enc = ks::reflect::ENC_VECTOR }>{} ]]
+      [[= ks::reflect::From<"m_vecForce", ks::reflect::Net{ .bits = 32, .flags = SPROP_NOSCALE, .enc = ks::reflect::WireEnc::Vector }>{} ]]
       [[= ks::reflect::From<"m_iTeamNum", ks::reflect::Net{ .bits = TEAMNUM_NUM_BITS }>{} ]]
       [[= ks::reflect::From<"m_bClientSideAnimation", ks::reflect::Net{ .bits = 1, .flags = SPROP_UNSIGNED }>{} ]]
       CCSRagdoll : public CBaseAnimatingOverlay
@@ -343,8 +343,8 @@ public:
 	// In case the client doesn't have it, we transmit the player's model index, origin, and angles
 	// so they can create a ragdoll in the right place.
 	CNetworkHandle( CBaseEntity, m_hPlayer, [[= ks::reflect::Net{} ]] );	// networked entity handle
-	CNetworkVector( m_vecRagdollVelocity, [[= ks::reflect::Net{ .bits = 32, .flags = SPROP_NOSCALE, .enc = ks::reflect::ENC_VECTOR } ]] );
-	CNetworkVector( m_vecRagdollOrigin, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD, .enc = ks::reflect::ENC_VECTOR } ]] );
+	CNetworkVector( m_vecRagdollVelocity, [[= ks::reflect::Net{ .bits = 32, .flags = SPROP_NOSCALE, .enc = ks::reflect::WireEnc::Vector } ]] );
+	CNetworkVector( m_vecRagdollOrigin, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD, .enc = ks::reflect::WireEnc::Vector } ]] );
 	CNetworkVar(int, m_iDeathPose, [[= ks::reflect::Net{ .bits = ANIMATION_SEQUENCE_BITS, .flags = SPROP_UNSIGNED } ]] );
 	CNetworkVar(int, m_iDeathFrame, [[= ks::reflect::Net{ .bits = 5 } ]] );
 	CNetworkVar(float, m_flDeathYaw, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE } ]] );

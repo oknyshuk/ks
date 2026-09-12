@@ -32,26 +32,26 @@ SendProp SendPropEHandle(
 	const char *pVarName,
 	int offset,
 	int flags = 0,
-	int sizeofVar=SIZEOF_IGNORE,
+	int sizeofVar=kSizeofIgnore,
 	SendVarProxyFn proxyFn=SendProxy_EHandleToInt );
 
 SendProp SendPropTime(
 	const char *pVarName,
 	int offset,
-	int sizeofVar=SIZEOF_IGNORE );
+	int sizeofVar=kSizeofIgnore );
 
 #if !defined( NO_ENTITY_PREDICTION ) && defined( USE_PREDICTABLEID )
 SendProp SendPropPredictableId(
 	const char *pVarName,
 	int offset,
-	int sizeofVar=SIZEOF_IGNORE	);
+	int sizeofVar=kSizeofIgnore	);
 #endif
 
 SendProp SendPropIntWithMinusOneFlag(
 	const char *pVarName,
 	int offset,
 	int bits,
-	int sizeofVar=SIZEOF_IGNORE,
+	int sizeofVar=kSizeofIgnore,
 	SendVarProxyFn proxyFn=SendProxy_IntAddOne );
 
 

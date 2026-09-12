@@ -49,7 +49,7 @@ private:
 	CNetworkVar( float, m_Resolution, [[= ks::reflect::Net{ .flags = SPROP_NOSCALE } ]] [[= ks::reflect::Key{ .name = "resolution" } ]] );
 	CNetworkVar( bool, m_bFogEnable, [[= ks::reflect::Net{} ]] [[= ks::reflect::Key{ .name = "fogEnable" } ]] );
 	CNetworkColor32( m_FogColor, [[= ks::reflect::Net{ .bits = 32, .flags = SPROP_UNSIGNED } ]]
-	                             [[= ks::reflect::Proxy<SendProxy_Color32ToInt32, ks::reflect::WIRE_SEND>{} ]] [[= ks::reflect::Key{ .name = "fogColor" } ]] );
+	                             [[= ks::reflect::Proxy<SendProxy_Color32ToInt32, ks::reflect::WireSide::Send>{} ]] [[= ks::reflect::Key{ .name = "fogColor" } ]] );
 	CNetworkVar( float, m_flFogStart, [[= ks::reflect::Net{ .flags = SPROP_NOSCALE } ]] [[= ks::reflect::Key{ .name = "fogStart" } ]] );
 	CNetworkVar( float, m_flFogEnd, [[= ks::reflect::Net{ .flags = SPROP_NOSCALE } ]] [[= ks::reflect::Key{ .name = "fogEnd" } ]] );
 	CNetworkVar( float, m_flFogMaxDensity, [[= ks::reflect::Net{ .flags = SPROP_NOSCALE } ]] [[= ks::reflect::Key{ .name = "fogMaxDensity" } ]] );

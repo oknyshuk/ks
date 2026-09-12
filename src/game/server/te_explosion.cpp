@@ -37,11 +37,11 @@ public:
 	
 
 public:
-	CNetworkVar( int, m_nModelIndex, [[= ks::reflect::Net{ .enc = ks::reflect::ENC_MODELINDEX } ]] );
+	CNetworkVar( int, m_nModelIndex, [[= ks::reflect::Net{ .enc = ks::reflect::WireEnc::ModelIndex } ]] );
 	CNetworkVar( float, m_fScale, [[= ks::reflect::Net{ .bits = 9, .low = 0.0, .high = 51.2 } ]] );
 	CNetworkVar( int, m_nFrameRate, [[= ks::reflect::Net{ .bits = 8, .flags = SPROP_UNSIGNED } ]] );
 	CNetworkVar( int, m_nFlags, [[= ks::reflect::Net{ .bits = 10, .flags = SPROP_UNSIGNED } ]] );
-	CNetworkVector( m_vecNormal, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD, .enc = ks::reflect::ENC_VECTOR } ]] );
+	CNetworkVector( m_vecNormal, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD, .enc = ks::reflect::WireEnc::Vector } ]] );
 	CNetworkVar( unsigned char, m_chMaterialType, [[= ks::reflect::Net{ .bits = 8, .flags = SPROP_UNSIGNED } ]] );
 	CNetworkVar( int, m_nRadius, [[= ks::reflect::Net{ .bits = 32, .flags = SPROP_UNSIGNED } ]] );
 	CNetworkVar( int, m_nMagnitude, [[= ks::reflect::Net{ .bits = 32, .flags = SPROP_UNSIGNED } ]] );

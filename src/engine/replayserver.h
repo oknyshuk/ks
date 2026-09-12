@@ -178,7 +178,7 @@ public:
 	float			m_flFPS;		// FPS the proxy is running;
 	int				m_nGameServerMaxClients; // max clients on game server
 	float			m_fNextSendUpdateTime;	// time to send next Replay status messages 
-	RecvTable		*m_pRecvTables[MAX_DATATABLES];
+	RecvTable		*m_pRecvTables[kMaxDatatables];
 	int				m_nRecvTables;
 	Vector			m_vPVSOrigin; 
 	bool			m_bMasterOnlyMode;

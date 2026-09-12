@@ -85,8 +85,8 @@ protected:
 	[[= ks::reflect::Net{} ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_PRIVATE } ]] int		m_iAssists[MAX_PLAYERS+1];
 	[[= ks::reflect::Net{} ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_PRIVATE } ]] int		m_iDeaths[MAX_PLAYERS+1];
 	[[= ks::reflect::Net{} ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_PRIVATE } ]] bool	m_bConnected[MAX_PLAYERS+1];
-	[[= ks::reflect::Net{} ]] [[= ks::reflect::Proxy<RecvProxy_ChangedTeam, ks::reflect::WIRE_RECV>{} ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_PRIVATE } ]] int		m_iTeam[MAX_PLAYERS+1];
-	[[= ks::reflect::Net{} ]] [[= ks::reflect::Proxy<RecvProxy_ChangedTeam, ks::reflect::WIRE_RECV>{} ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_PRIVATE } ]] int		m_iPendingTeam[MAX_PLAYERS+1];
+	[[= ks::reflect::Net{} ]] [[= ks::reflect::Proxy<RecvProxy_ChangedTeam, ks::reflect::WireSide::Recv>{} ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_PRIVATE } ]] int		m_iTeam[MAX_PLAYERS+1];
+	[[= ks::reflect::Net{} ]] [[= ks::reflect::Proxy<RecvProxy_ChangedTeam, ks::reflect::WireSide::Recv>{} ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_PRIVATE } ]] int		m_iPendingTeam[MAX_PLAYERS+1];
 	[[= ks::reflect::Net{} ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_PRIVATE } ]] bool	m_bAlive[MAX_PLAYERS+1];
 	[[= ks::reflect::Net{} ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_PRIVATE } ]] int		m_iHealth[MAX_PLAYERS+1];
 	Color	m_Colors[MAX_TEAMS];

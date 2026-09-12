@@ -45,15 +45,15 @@ public:
 	void SetEnabled( bool bEnable );
 
 private:
-	CNetworkVector( m_shadowDirection, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_NOSCALE, .enc = ks::reflect::ENC_VECTOR } ]] );
-	CNetworkVector( m_envLightShadowDirection, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_NOSCALE, .enc = ks::reflect::ENC_VECTOR } ]] );
+	CNetworkVector( m_shadowDirection, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_NOSCALE, .enc = ks::reflect::WireEnc::Vector } ]] );
+	CNetworkVector( m_envLightShadowDirection, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_NOSCALE, .enc = ks::reflect::WireEnc::Vector } ]] );
 
 	CNetworkVar( bool, m_bEnabled, [[= ks::reflect::Net{} ]] [[= ks::reflect::Key{ .name = "enabled" } ]] );
 	[[= ks::reflect::Key{ .name = "StartDisabled" } ]] bool m_bStartDisabled;
 	CNetworkVar( bool, m_bUseLightEnvAngles, [[= ks::reflect::Net{} ]] );
 
-	CNetworkColor32( m_LightColor, [[= ks::reflect::Net{ .bits = 32, .flags = SPROP_UNSIGNED } ]] [[= ks::reflect::Proxy<SendProxy_Color32ToInt32, ks::reflect::WIRE_SEND>{} ]] );
-	CNetworkVar( int, m_LightColorScale, [[= ks::reflect::Net{ .bits = 32 } ]] [[= ks::reflect::Proxy<SendProxy_Int32ToInt32, ks::reflect::WIRE_SEND>{} ]] );
+	CNetworkColor32( m_LightColor, [[= ks::reflect::Net{ .bits = 32, .flags = SPROP_UNSIGNED } ]] [[= ks::reflect::Proxy<SendProxy_Color32ToInt32, ks::reflect::WireSide::Send>{} ]] );
+	CNetworkVar( int, m_LightColorScale, [[= ks::reflect::Net{ .bits = 32 } ]] [[= ks::reflect::Proxy<SendProxy_Int32ToInt32, ks::reflect::WireSide::Send>{} ]] );
 	CNetworkVar( float, m_flMaxShadowDist, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE } ]] );
 
 	void UpdateEnvLight();

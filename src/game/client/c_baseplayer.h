@@ -735,7 +735,7 @@ protected:
 	bool			JustEnteredVehicle();
 
 // DATA
-	[[= ks::reflect::Net{} ]] [[= ks::reflect::Proxy<C_BasePlayer::RecvProxy_ObserverMode, ks::reflect::WIRE_RECV>{} ]] int				m_iObserverMode;	// if in spectator mode != 0
+	[[= ks::reflect::Net{} ]] [[= ks::reflect::Proxy<C_BasePlayer::RecvProxy_ObserverMode, ks::reflect::WireSide::Recv>{} ]] int				m_iObserverMode;	// if in spectator mode != 0
 	[[= ks::reflect::Net{} ]] bool			m_bActiveCameraMan;
 	[[= ks::reflect::Net{} ]] bool			m_bCameraManXRay;
 	[[= ks::reflect::Net{} ]] bool			m_bCameraManOverview;
@@ -747,7 +747,7 @@ protected:
 	bool			m_bLastCameraManScoreBoardState;
 	uint8			m_uLastCameraManGraphsState;
 	int				m_iOldObserverMode;
-	[[= ks::reflect::Net{} ]] [[= ks::reflect::Proxy<C_BasePlayer::RecvProxy_ObserverTarget, ks::reflect::WIRE_RECV>{} ]] EHANDLE			m_hObserverTarget;	// current observer target
+	[[= ks::reflect::Net{} ]] [[= ks::reflect::Proxy<C_BasePlayer::RecvProxy_ObserverTarget, ks::reflect::WireSide::Recv>{} ]] EHANDLE			m_hObserverTarget;	// current observer target
 	float			m_flObserverChaseDistance; // last distance to observer traget
 	float			m_flObserverChaseApproach;
 	Vector			m_vecObserverEyeDirPrevious;

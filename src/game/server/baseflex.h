@@ -175,7 +175,7 @@ private:
 	CNetworkArray( float, m_flexWeight, MAXSTUDIOFLEXCTRL, [[= ks::reflect::Net{ .bits = 12, .low = 0.0f, .high = 1.0f, .flags = SPROP_ROUNDDOWN } ]] );	// indexed by model local flexcontroller
 
 	// Vector from actor to eye target
-	CNetworkVector( m_viewtarget, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD, .enc = ks::reflect::ENC_VECTOR } ]] );
+	CNetworkVector( m_viewtarget, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD, .enc = ks::reflect::WireEnc::Vector } ]] );
 
 	// Blink state
 	CNetworkVar( int, m_blinktoggle, [[= ks::reflect::Net{ .bits = 1, .flags = SPROP_UNSIGNED } ]] );

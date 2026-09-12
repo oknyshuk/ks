@@ -27,8 +27,8 @@ public:
 					DECLARE_SERVERCLASS();
 
 	// The client shoots a ray out and starts creating fire where it hits.
-	CNetworkVector( m_vOrigin, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_COORD, .enc = ks::reflect::ENC_VECTOR } ]] );
-	CNetworkVector( m_vDirection, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE, .enc = ks::reflect::ENC_VECTOR } ]] );
+	CNetworkVector( m_vOrigin, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_COORD, .enc = ks::reflect::WireEnc::Vector } ]] );
+	CNetworkVector( m_vDirection, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE, .enc = ks::reflect::WireEnc::Vector } ]] );
 };
 
 

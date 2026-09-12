@@ -89,8 +89,9 @@ struct WireVec< CUtlVector<T,A> >
 {
 	using elem_type = T;
 
-	static EnsureCapacityFn ensure() { return &UtlVectorTemplate<T,A>::EnsureCapacity; }
-	static ResizeUtlVectorFn resize() { return &UtlVectorTemplate<T,A>::ResizeUtlVector; }
+	// constexpr so the emitters can describe a table at compile time rather than at load time.
+	static constexpr EnsureCapacityFn ensure() { return &UtlVectorTemplate<T,A>::EnsureCapacity; }
+	static constexpr ResizeUtlVectorFn resize() { return &UtlVectorTemplate<T,A>::ResizeUtlVector; }
 };
 
 

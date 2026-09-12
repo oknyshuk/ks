@@ -76,15 +76,15 @@ public:
 	int		m_nDispatchedDst;
 
 private:
-	[[= ks::reflect::Net{} ]] [[= ks::reflect::Proxy<RecvProxy_OrderChanged, ks::reflect::WIRE_RECV>{} ]] int		m_nOrder;
-	[[= ks::reflect::Net{} ]] [[= ks::reflect::Proxy<RecvProxy_SequenceChanged, ks::reflect::WIRE_RECV>{} ]] CRangeCheckedVar<int, -1, 65535, 0>		m_nSequence;
+	[[= ks::reflect::Net{} ]] [[= ks::reflect::Proxy<RecvProxy_OrderChanged, ks::reflect::WireSide::Recv>{} ]] int		m_nOrder;
+	[[= ks::reflect::Net{} ]] [[= ks::reflect::Proxy<RecvProxy_SequenceChanged, ks::reflect::WireSide::Recv>{} ]] CRangeCheckedVar<int, -1, 65535, 0>		m_nSequence;
 	[[= ks::reflect::Net{} ]] CRangeCheckedVar<float, -2, 2, 0>		m_flPrevCycle;
-	[[= ks::reflect::Net{} ]] [[= ks::reflect::Proxy<RecvProxy_WeightChanged, ks::reflect::WIRE_RECV>{} ]] CRangeCheckedVar<float, -5, 5, 0>		m_flWeight;
-	[[= ks::reflect::Net{} ]] [[= ks::reflect::Proxy<RecvProxy_WeightDeltaRateChanged, ks::reflect::WIRE_RECV>{} ]] CRangeCheckedVar<float, -5, 5, 0>		m_flWeightDeltaRate;
+	[[= ks::reflect::Net{} ]] [[= ks::reflect::Proxy<RecvProxy_WeightChanged, ks::reflect::WireSide::Recv>{} ]] CRangeCheckedVar<float, -5, 5, 0>		m_flWeight;
+	[[= ks::reflect::Net{} ]] [[= ks::reflect::Proxy<RecvProxy_WeightDeltaRateChanged, ks::reflect::WireSide::Recv>{} ]] CRangeCheckedVar<float, -5, 5, 0>		m_flWeightDeltaRate;
 
 	// used for automatic crossfades between sequence changes
-	[[= ks::reflect::Net{} ]] [[= ks::reflect::Proxy<RecvProxy_PlaybackRateChanged, ks::reflect::WIRE_RECV>{} ]] CRangeCheckedVar<float, -50, 50, 1>		m_flPlaybackRate;
-	[[= ks::reflect::Net{} ]] [[= ks::reflect::Proxy<RecvProxy_CycleChanged, ks::reflect::WIRE_RECV>{} ]] CRangeCheckedVar<float, -2, 2, 0>		m_flCycle;
+	[[= ks::reflect::Net{} ]] [[= ks::reflect::Proxy<RecvProxy_PlaybackRateChanged, ks::reflect::WireSide::Recv>{} ]] CRangeCheckedVar<float, -50, 50, 1>		m_flPlaybackRate;
+	[[= ks::reflect::Net{} ]] [[= ks::reflect::Proxy<RecvProxy_CycleChanged, ks::reflect::WireSide::Recv>{} ]] CRangeCheckedVar<float, -2, 2, 0>		m_flCycle;
 
 #ifdef CLIENT_DLL
 	C_BaseAnimatingOverlay	*m_pOwner;

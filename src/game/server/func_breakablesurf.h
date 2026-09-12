@@ -50,8 +50,8 @@ public:
 	CNetworkVar( int, m_nNumHigh, [[= ks::reflect::Net{ .bits = 8, .flags = SPROP_UNSIGNED } ]] );
 	CNetworkVar( float, m_flPanelWidth, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE } ]] );
 	CNetworkVar( float, m_flPanelHeight, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE } ]] );
-	CNetworkVector( m_vNormal, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD, .enc = ks::reflect::ENC_VECTOR } ]] );
-	CNetworkVector( m_vCorner, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD, .enc = ks::reflect::ENC_VECTOR } ]] );
+	CNetworkVector( m_vNormal, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD, .enc = ks::reflect::WireEnc::Vector } ]] );
+	CNetworkVector( m_vCorner, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD, .enc = ks::reflect::WireEnc::Vector } ]] );
 	CNetworkVar( bool, m_bIsBroken, [[= ks::reflect::Net{ .bits = 1, .flags = SPROP_UNSIGNED } ]] );
 	CNetworkVar( ShatterSurface_t, m_nSurfaceType, [[= ks::reflect::Net{ .bits = 2, .flags = SPROP_UNSIGNED } ]] [[= ks::reflect::Key{ .name = "surfacetype" } ]] );
 	int					m_nNumBrokenPanes;

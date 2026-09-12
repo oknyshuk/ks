@@ -81,7 +81,7 @@ public:
 	CNetworkVar( float, m_flTwist, [[= ks::reflect::Key{ .name = "Twist" } ]] [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE } ]] );
 	
 	string_t		m_strMaterialModel;
-	CNetworkVar( int, m_iMaterialModel, [[= ks::reflect::Net{ .bits = 16, .flags = SPROP_UNSIGNED } ]] [[= ks::reflect::Proxy<SendProxy_IntAddOne, ks::reflect::WIRE_SEND>{} ]] );
+	CNetworkVar( int, m_iMaterialModel, [[= ks::reflect::Net{ .bits = 16, .flags = SPROP_UNSIGNED } ]] [[= ks::reflect::Proxy<SendProxy_IntAddOne, ks::reflect::WireSide::Send>{} ]] );
 
 	[[= ks::reflect::Key{ .name = "WindAngle" } ]] int				m_WindAngle;
 	[[= ks::reflect::Key{ .name = "WindSpeed" } ]] int				m_WindSpeed;

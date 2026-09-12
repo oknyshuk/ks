@@ -45,7 +45,7 @@ protected:
 	[[= ks::reflect::Net{} ]] float m_FOV;
 	[[= ks::reflect::Net{} ]] float m_Resolution;
 	[[= ks::reflect::Net{} ]] bool m_bFogEnable;
-	[[= ks::reflect::Net{} ]] [[= ks::reflect::Proxy<RecvProxy_Int32ToColor32, ks::reflect::WIRE_RECV>{} ]] color32 m_FogColor;
+	[[= ks::reflect::Net{} ]] [[= ks::reflect::Proxy<RecvProxy_Int32ToColor32, ks::reflect::WireSide::Recv>{} ]] color32 m_FogColor;
 	[[= ks::reflect::Net{} ]] float m_flFogStart;
 	[[= ks::reflect::Net{} ]] float m_flFogEnd;
 	[[= ks::reflect::Net{} ]] float m_flFogMaxDensity;

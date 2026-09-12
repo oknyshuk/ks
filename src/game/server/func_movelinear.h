@@ -20,7 +20,7 @@ class IPhysicsFluidController;
 
 
 class [[= ks::reflect::NetTable{ .name = "DT_FuncMoveLinear" } ]]
-      [[= ks::reflect::From<"m_vecVelocity", ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE, .enc = ks::reflect::ENC_VECTOR }>{} ]]
+      [[= ks::reflect::From<"m_vecVelocity", ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE, .enc = ks::reflect::WireEnc::Vector }>{} ]]
       [[= ks::reflect::From<"m_fFlags", ks::reflect::Net{ .bits = 0, .flags = SPROP_UNSIGNED }>{} ]]
       CFuncMoveLinear : public CBaseToggle
 {

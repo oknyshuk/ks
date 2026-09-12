@@ -79,8 +79,8 @@ consteval std::meta::info proxy_arg_of( std::meta::info m, WireSide want )
 		if ( !std::meta::has_template_arguments( t ) || std::meta::template_of( t ) != ^^Proxy )
 			continue;
 		const auto args = std::meta::template_arguments_of( t );
-		const WireSide s = args.size() > 1 ? std::meta::extract<WireSide>( args[1] ) : WIRE_BOTH;
-		if ( s == WIRE_BOTH || s == want )
+		const WireSide s = args.size() > 1 ? std::meta::extract<WireSide>( args[1] ) : WireSide::Both;
+		if ( s == WireSide::Both || s == want )
 			return args[0];
 	}
 	return std::meta::info{};

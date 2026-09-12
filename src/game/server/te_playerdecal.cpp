@@ -39,9 +39,9 @@ public:
 
 public:
 	CNetworkVar( int, m_nPlayer, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_UNSIGNED } ]] );
-	CNetworkVector( m_vecOrigin, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD, .enc = ks::reflect::ENC_VECTOR } ]] );
-	CNetworkVector( m_vecStart, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD, .enc = ks::reflect::ENC_VECTOR } ]] );
-	CNetworkVector( m_vecRight, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD, .enc = ks::reflect::ENC_VECTOR } ]] );
+	CNetworkVector( m_vecOrigin, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD, .enc = ks::reflect::WireEnc::Vector } ]] );
+	CNetworkVector( m_vecStart, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD, .enc = ks::reflect::WireEnc::Vector } ]] );
+	CNetworkVector( m_vecRight, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD, .enc = ks::reflect::WireEnc::Vector } ]] );
 	CNetworkVar( int, m_nEntity, [[= ks::reflect::Net{ .bits = MAX_EDICT_BITS, .flags = SPROP_UNSIGNED } ]] );
 	CNetworkVar( int, m_nHitbox, [[= ks::reflect::Net{ .bits = 16, .flags = SPROP_UNSIGNED } ]] );
 };
@@ -113,10 +113,10 @@ public:
 	CNetworkVar( uint32, m_unAccountID, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_UNSIGNED } ]] );
 	CNetworkVar( uint32, m_unTraceID, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_UNSIGNED } ]] );
 	CNetworkVar( uint32, m_rtGcTime, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_UNSIGNED } ]] );
-	CNetworkVector( m_vecEndPos, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_NOSCALE, .enc = ks::reflect::ENC_VECTOR } ]] );
-	CNetworkVector( m_vecStart, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_NOSCALE, .enc = ks::reflect::ENC_VECTOR } ]] );
-	CNetworkVector( m_vecRight, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_NOSCALE, .enc = ks::reflect::ENC_VECTOR } ]] );
-	CNetworkVector( m_vecNormal, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_NOSCALE, .enc = ks::reflect::ENC_VECTOR } ]] );
+	CNetworkVector( m_vecEndPos, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_NOSCALE, .enc = ks::reflect::WireEnc::Vector } ]] );
+	CNetworkVector( m_vecStart, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_NOSCALE, .enc = ks::reflect::WireEnc::Vector } ]] );
+	CNetworkVector( m_vecRight, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_NOSCALE, .enc = ks::reflect::WireEnc::Vector } ]] );
+	CNetworkVector( m_vecNormal, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_NOSCALE, .enc = ks::reflect::WireEnc::Vector } ]] );
 	CNetworkVar( int, m_nPlayer, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_UNSIGNED } ]] );
 	CNetworkVar( int, m_nEntity, [[= ks::reflect::Net{ .bits = MAX_EDICT_BITS, .flags = SPROP_UNSIGNED } ]] );
 	CNetworkVar( int, m_nHitbox, [[= ks::reflect::Net{ .bits = 16, .flags = SPROP_UNSIGNED } ]] );

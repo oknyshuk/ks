@@ -74,8 +74,8 @@ public:
 public:
 
 	//Client-side
-	CNetworkVar( int, m_nFlameModelIndex, [[= ks::reflect::Net{ .enc = ks::reflect::ENC_MODELINDEX } ]] );
-	CNetworkVar( int, m_nFlameFromAboveModelIndex, [[= ks::reflect::Net{ .enc = ks::reflect::ENC_MODELINDEX } ]] );
+	CNetworkVar( int, m_nFlameModelIndex, [[= ks::reflect::Net{ .enc = ks::reflect::WireEnc::ModelIndex } ]] );
+	CNetworkVar( int, m_nFlameFromAboveModelIndex, [[= ks::reflect::Net{ .enc = ks::reflect::WireEnc::ModelIndex } ]] );
 
 	//Server-side
 };

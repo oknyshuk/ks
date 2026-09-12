@@ -42,8 +42,8 @@ public:
 	
 protected:
 	CNetworkArray( string_t, m_iszOverlayNames, MAX_SCREEN_OVERLAYS, [[= ks::reflect::Key{ .name = "OverlayName10", .index = 9 } ]]  [[= ks::reflect::Key{ .name = "OverlayName9", .index = 8 } ]]  [[= ks::reflect::Key{ .name = "OverlayName8", .index = 7 } ]]  [[= ks::reflect::Key{ .name = "OverlayName7", .index = 6 } ]]  [[= ks::reflect::Key{ .name = "OverlayName6", .index = 5 } ]]  [[= ks::reflect::Key{ .name = "OverlayName5", .index = 4 } ]]  [[= ks::reflect::Key{ .name = "OverlayName4", .index = 3 } ]]  [[= ks::reflect::Key{ .name = "OverlayName3", .index = 2 } ]]  [[= ks::reflect::Key{ .name = "OverlayName2", .index = 1 } ]]  [[= ks::reflect::Key{ .name = "OverlayName1", .index = 0 } ]]
-	               [[= ks::reflect::Net{ .enc = ks::reflect::ENC_STRING, .varlen = true } ]]
-	               [[= ks::reflect::Proxy<SendProxy_String_tToString, ks::reflect::WIRE_SEND>{} ]] );
+	               [[= ks::reflect::Net{ .enc = ks::reflect::WireEnc::String, .varlen = true } ]]
+	               [[= ks::reflect::Proxy<SendProxy_String_tToString, ks::reflect::WireSide::Send>{} ]] );
 	CNetworkArray( float, m_flOverlayTimes, MAX_SCREEN_OVERLAYS, [[= ks::reflect::Key{ .name = "OverlayTime10", .index = 9 } ]]  [[= ks::reflect::Key{ .name = "OverlayTime9", .index = 8 } ]]  [[= ks::reflect::Key{ .name = "OverlayTime8", .index = 7 } ]]  [[= ks::reflect::Key{ .name = "OverlayTime7", .index = 6 } ]]  [[= ks::reflect::Key{ .name = "OverlayTime6", .index = 5 } ]]  [[= ks::reflect::Key{ .name = "OverlayTime5", .index = 4 } ]]  [[= ks::reflect::Key{ .name = "OverlayTime4", .index = 3 } ]]  [[= ks::reflect::Key{ .name = "OverlayTime3", .index = 2 } ]]  [[= ks::reflect::Key{ .name = "OverlayTime2", .index = 1 } ]]  [[= ks::reflect::Key{ .name = "OverlayTime1", .index = 0 } ]]
 	               [[= ks::reflect::Net{ .bits = 11, .low = -1.0f, .high = 63.0f, .flags = SPROP_ROUNDDOWN, .varlen = true } ]] );
 	CNetworkVar( float, m_flStartTime, [[= ks::reflect::Net{ .bits = 32, .flags = SPROP_NOSCALE } ]] );

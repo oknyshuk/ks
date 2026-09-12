@@ -46,7 +46,7 @@ public:
 	const QAngle &GetNetworkedPreferredPlayerCarryAngles( void ) { return m_qPreferredPlayerCarryAngles; }
 
 protected:
-	[[= ks::reflect::Net{ .enc = ks::reflect::ENC_QANGLES } ]] [[= ks::reflect::Proxy<RecvProxy_UnmodifiedQAngles, ks::reflect::WIRE_RECV>{} ]] QAngle m_qPreferredPlayerCarryAngles;
+	[[= ks::reflect::Net{ .enc = ks::reflect::WireEnc::QAngles } ]] [[= ks::reflect::Proxy<RecvProxy_UnmodifiedQAngles, ks::reflect::WireSide::Recv>{} ]] QAngle m_qPreferredPlayerCarryAngles;
 
 private:
 	[[= ks::reflect::Net{} ]] bool m_bClientPhysics;

@@ -28,8 +28,8 @@ void SendProxy_Angles( const SendProp *pProp, const void *pStruct,
 class [[= ks::reflect::NetTable{ .name = "DT_LightGlow", .base = false } ]]
       [[= ks::reflect::From<"m_clrRender", ks::reflect::Net{ .bits = 32, .flags = SPROP_UNSIGNED }, SendProxy_Color32ToInt32>{} ]]
       [[= ks::reflect::From<"m_spawnflags", ks::reflect::Net{ .bits = 8, .flags = SPROP_UNSIGNED }>{} ]]
-      [[= ks::reflect::From<"m_vecOrigin", ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD, .enc = ks::reflect::ENC_VECTOR }>{} ]]
-      [[= ks::reflect::From<"m_angRotation", ks::reflect::Net{ .bits = 13, .enc = ks::reflect::ENC_QANGLES }, SendProxy_Angles>{} ]]
+      [[= ks::reflect::From<"m_vecOrigin", ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD, .enc = ks::reflect::WireEnc::Vector }>{} ]]
+      [[= ks::reflect::From<"m_angRotation", ks::reflect::Net{ .bits = 13, .enc = ks::reflect::WireEnc::QAngles }, SendProxy_Angles>{} ]]
       [[= ks::reflect::From<"m_hMoveParent", ks::reflect::Net{ .wire = "moveparent" }>{} ]]
       CLightGlow : public CBaseEntity
 {

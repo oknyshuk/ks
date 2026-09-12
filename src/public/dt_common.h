@@ -19,12 +19,12 @@
 #define offsetof(s,m)	(size_t)&(((s *)0)->m)
 
 // Max number of properties in a datatable and its children.
-#define MAX_DATATABLES		1024	// must be a power of 2.
+inline constexpr int kMaxDatatables = 1024;   // must be a power of 2.
 #define MAX_DATATABLE_PROPS	4096
 
 #define MAX_ARRAY_ELEMENTS	2048		// a network array should have more that 1024 elements
 
-#define HIGH_DEFAULT		-121121.121121f
+inline constexpr float kHighDefault = -121121.121121f;
 
 #define BITS_FULLRES	-1	// Use the full resolution of the type being encoded.
 #define BITS_WORLDCOORD	-2	// Encode as a world coordinate.
@@ -91,7 +91,7 @@
 #define SPROP_NUMFLAGBITS				21
 
 // Used by the SendProp and RecvProp functions to disable debug checks on type sizes.
-#define SIZEOF_IGNORE		-1
+inline constexpr int kSizeofIgnore = -1;
 
 
 // Use this to extern send and receive datatables, and reference them.

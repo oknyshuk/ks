@@ -107,10 +107,10 @@ private:
 	
 	CNetworkVar( Vector, m_vel, [[= ks::reflect::Net{} ]] );
 
-	CNetworkVar( bool, m_isRescued, [[= ks::reflect::Net{ .enc = ks::reflect::ENC_INT } ]]
-	                    [[= ks::reflect::Proxy<RecvProxy_Rescued, ks::reflect::WIRE_RECV>{} ]] );
-	CNetworkVar( bool, m_jumpedThisFrame, [[= ks::reflect::Net{ .enc = ks::reflect::ENC_INT } ]]
-	                    [[= ks::reflect::Proxy<RecvProxy_Jumped, ks::reflect::WIRE_RECV>{} ]] );
+	CNetworkVar( bool, m_isRescued, [[= ks::reflect::Net{ .enc = ks::reflect::WireEnc::Int } ]]
+	                    [[= ks::reflect::Proxy<RecvProxy_Rescued, ks::reflect::WireSide::Recv>{} ]] );
+	CNetworkVar( bool, m_jumpedThisFrame, [[= ks::reflect::Net{ .enc = ks::reflect::WireEnc::Int } ]]
+	                    [[= ks::reflect::Proxy<RecvProxy_Jumped, ks::reflect::WireSide::Recv>{} ]] );
 
 	CNetworkVar( int, m_nHostageState, [[= ks::reflect::Net{} ]] );
 

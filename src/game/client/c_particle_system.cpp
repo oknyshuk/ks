@@ -28,7 +28,7 @@ class [[= ks::reflect::NetTable{ .name = "DT_ParticleSystem", .base = false } ]]
       [[= ks::reflect::From<"m_hOwnerEntity", ks::reflect::Net{}>{} ]]
       [[= ks::reflect::From<"m_hNetworkMoveParent", ks::reflect::Net{ .wire = "moveparent" }, RecvProxy_IntToMoveParent>{} ]]
       [[= ks::reflect::From<"m_iParentAttachment", ks::reflect::Net{}>{} ]]
-      [[= ks::reflect::From<"m_angNetworkAngles", ks::reflect::Net{ .enc = ks::reflect::ENC_QANGLES, .wire = "m_angRotation" }>{} ]]
+      [[= ks::reflect::From<"m_angNetworkAngles", ks::reflect::Net{ .enc = ks::reflect::WireEnc::QAngles, .wire = "m_angRotation" }>{} ]]
       C_ParticleSystem : public C_BaseEntity
 {
 	DECLARE_CLASS( C_ParticleSystem, C_BaseEntity );

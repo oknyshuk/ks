@@ -267,11 +267,11 @@ private:
 	CBaseEntity *m_pOuter;
 
 // BEGIN PREDICTION DATA COMPACTION (these fields are together to allow for faster copying in prediction system)
-	CNetworkVector( m_vecMins, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE, .enc = ks::reflect::ENC_VECTOR } ]] [[= ks::reflect::Proxy<RecvProxy_OBBMins, ks::reflect::WIRE_RECV>{} ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]]);
-	CNetworkVector( m_vecMaxs, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE, .enc = ks::reflect::ENC_VECTOR } ]] [[= ks::reflect::Proxy<RecvProxy_OBBMaxs, ks::reflect::WIRE_RECV>{} ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]]);
-	CNetworkVar( unsigned short, m_usSolidFlags, [[= ks::reflect::Net{ .bits = FSOLID_MAX_BITS, .flags = SPROP_UNSIGNED } ]] [[= ks::reflect::Proxy<SendProxy_SolidFlags, ks::reflect::WIRE_SEND>{} ]] [[= ks::reflect::Proxy<RecvProxy_SolidFlags, ks::reflect::WIRE_RECV>{} ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]]);
+	CNetworkVector( m_vecMins, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE, .enc = ks::reflect::WireEnc::Vector } ]] [[= ks::reflect::Proxy<RecvProxy_OBBMins, ks::reflect::WireSide::Recv>{} ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]]);
+	CNetworkVector( m_vecMaxs, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE, .enc = ks::reflect::WireEnc::Vector } ]] [[= ks::reflect::Proxy<RecvProxy_OBBMaxs, ks::reflect::WireSide::Recv>{} ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]]);
+	CNetworkVar( unsigned short, m_usSolidFlags, [[= ks::reflect::Net{ .bits = FSOLID_MAX_BITS, .flags = SPROP_UNSIGNED } ]] [[= ks::reflect::Proxy<SendProxy_SolidFlags, ks::reflect::WireSide::Send>{} ]] [[= ks::reflect::Proxy<RecvProxy_SolidFlags, ks::reflect::WireSide::Recv>{} ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]]);
 	// One of the SOLID_ defines. Use GetSolid/SetSolid.
-	CNetworkVar( unsigned char, m_nSolidType, [[= ks::reflect::Net{ .bits = 3, .flags = SPROP_UNSIGNED } ]] [[= ks::reflect::Key{ .name = "solid" } ]] [[= ks::reflect::Proxy<SendProxy_Solid, ks::reflect::WIRE_SEND>{} ]] [[= ks::reflect::Proxy<RecvProxy_Solid, ks::reflect::WIRE_RECV>{} ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]]);			
+	CNetworkVar( unsigned char, m_nSolidType, [[= ks::reflect::Net{ .bits = 3, .flags = SPROP_UNSIGNED } ]] [[= ks::reflect::Key{ .name = "solid" } ]] [[= ks::reflect::Proxy<SendProxy_Solid, ks::reflect::WireSide::Send>{} ]] [[= ks::reflect::Proxy<RecvProxy_Solid, ks::reflect::WireSide::Recv>{} ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]]);			
 	CNetworkVar( unsigned char , m_triggerBloat, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_UNSIGNED } ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] );
 // END PREDICTION DATA COMPACTION
 
@@ -279,13 +279,13 @@ private:
 
 	// Spatial partition
 	SpatialPartitionHandle_t m_Partition;
-	CNetworkVar( unsigned char, m_nSurroundType, [[= ks::reflect::Net{ .bits = SURROUNDING_TYPE_BIT_COUNT, .flags = SPROP_UNSIGNED } ]] [[= ks::reflect::Proxy<RecvProxy_IntDirtySurround, ks::reflect::WIRE_RECV>{} ]]);
+	CNetworkVar( unsigned char, m_nSurroundType, [[= ks::reflect::Net{ .bits = SURROUNDING_TYPE_BIT_COUNT, .flags = SPROP_UNSIGNED } ]] [[= ks::reflect::Proxy<RecvProxy_IntDirtySurround, ks::reflect::WireSide::Recv>{} ]]);
 
 	// SUCKY: We didn't use to have to store this previously
 	// but storing it here means that we can network it + avoid a ton of
 	// client-side mismatch problems
-	CNetworkVector( m_vecSpecifiedSurroundingMins, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE, .enc = ks::reflect::ENC_VECTOR } ]] );
-	CNetworkVector( m_vecSpecifiedSurroundingMaxs, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE, .enc = ks::reflect::ENC_VECTOR } ]] [[= ks::reflect::Proxy<RecvProxy_VectorDirtySurround, ks::reflect::WIRE_RECV>{} ]]);
+	CNetworkVector( m_vecSpecifiedSurroundingMins, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE, .enc = ks::reflect::WireEnc::Vector } ]] );
+	CNetworkVector( m_vecSpecifiedSurroundingMaxs, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE, .enc = ks::reflect::WireEnc::Vector } ]] [[= ks::reflect::Proxy<RecvProxy_VectorDirtySurround, ks::reflect::WireSide::Recv>{} ]]);
 
 	// Cached off world-aligned surrounding bounds
 	Vector	m_vecSurroundingMins;

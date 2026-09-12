@@ -228,7 +228,7 @@ protected:
 
 	// data variables
 	[[= ks::reflect::Net{ .varlen = true } ]] Vector		m_vCPPositions[MAX_CONTROL_POINTS];
-	[[= ks::reflect::Net{ .enc = ks::reflect::ENC_INT } ]] bool		m_bCPIsVisible[MAX_CONTROL_POINTS];
+	[[= ks::reflect::Net{ .enc = ks::reflect::WireEnc::Int } ]] bool		m_bCPIsVisible[MAX_CONTROL_POINTS];
 	[[= ks::reflect::Net{} ]] float		m_flLazyCapPerc[MAX_CONTROL_POINTS];
 	float		m_flOldLazyCapPerc[MAX_CONTROL_POINTS];
 	[[= ks::reflect::Net{} ]] int			m_iTeamIcons[MAX_CONTROL_POINTS * MAX_CONTROL_POINT_TEAMS];
@@ -241,15 +241,15 @@ protected:
 	[[= ks::reflect::Net{} ]] int			m_iBaseControlPoints[MAX_TEAMS];
 	[[= ks::reflect::Net{} ]] bool		m_bInMiniRound[MAX_CONTROL_POINTS];
 	[[= ks::reflect::Net{} ]] int			m_iWarnOnCap[MAX_CONTROL_POINTS];
-	[[= ks::reflect::Net{ .enc = ks::reflect::ENC_STRING, .varlen = true } ]] char		m_iszWarnSound[MAX_CONTROL_POINTS][255];
+	[[= ks::reflect::Net{ .enc = ks::reflect::WireEnc::String, .varlen = true } ]] char		m_iszWarnSound[MAX_CONTROL_POINTS][255];
 	[[= ks::reflect::Net{} ]] float		m_flPathDistance[MAX_CONTROL_POINTS];
 
 	// state variables
 	[[= ks::reflect::Net{} ]] int		m_iNumTeamMembers[MAX_CONTROL_POINTS * MAX_CONTROL_POINT_TEAMS];
-	[[= ks::reflect::Net{} ]] [[= ks::reflect::Proxy<RecvProxy_CappingTeam, ks::reflect::WIRE_RECV>{} ]] int		m_iCappingTeam[MAX_CONTROL_POINTS];
+	[[= ks::reflect::Net{} ]] [[= ks::reflect::Proxy<RecvProxy_CappingTeam, ks::reflect::WireSide::Recv>{} ]] int		m_iCappingTeam[MAX_CONTROL_POINTS];
 	[[= ks::reflect::Net{} ]] int		m_iTeamInZone[MAX_CONTROL_POINTS];
-	[[= ks::reflect::Net{ .enc = ks::reflect::ENC_INT } ]] bool	m_bBlocked[MAX_CONTROL_POINTS];
-	[[= ks::reflect::Net{} ]] [[= ks::reflect::Proxy<RecvProxy_ObjectiveResourceOwner, ks::reflect::WIRE_RECV>{} ]] int		m_iOwner[MAX_CONTROL_POINTS];
+	[[= ks::reflect::Net{ .enc = ks::reflect::WireEnc::Int } ]] bool	m_bBlocked[MAX_CONTROL_POINTS];
+	[[= ks::reflect::Net{} ]] [[= ks::reflect::Proxy<RecvProxy_ObjectiveResourceOwner, ks::reflect::WireSide::Recv>{} ]] int		m_iOwner[MAX_CONTROL_POINTS];
 
 	// client calculated state
 	float	m_flCapTimeLeft[MAX_CONTROL_POINTS];
@@ -257,7 +257,7 @@ protected:
 
 	bool	m_bWarnedOnFinalCap[MAX_CONTROL_POINTS];
 	float	m_flLastCapWarningTime[MAX_CONTROL_POINTS];
-	[[= ks::reflect::Net{} ]] [[= ks::reflect::Proxy<RecvProxy_CapLayout, ks::reflect::WIRE_RECV>{} ]] char	m_pszCapLayoutInHUD[MAX_CAPLAYOUT_LENGTH];
+	[[= ks::reflect::Net{} ]] [[= ks::reflect::Proxy<RecvProxy_CapLayout, ks::reflect::WireSide::Recv>{} ]] char	m_pszCapLayoutInHUD[MAX_CAPLAYOUT_LENGTH];
 };
 
 extern C_BaseTeamObjectiveResource *g_pObjectiveResource;

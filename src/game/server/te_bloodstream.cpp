@@ -35,7 +35,7 @@ public:
 	DECLARE_SERVERCLASS();
 
 public:
-	CNetworkVector( m_vecDirection, [[= ks::reflect::Net{ .bits = 11, .low = -10.0, .high = 10.0, .enc = ks::reflect::ENC_VECTOR } ]] );
+	CNetworkVector( m_vecDirection, [[= ks::reflect::Net{ .bits = 11, .low = -10.0, .high = 10.0, .enc = ks::reflect::WireEnc::Vector } ]] );
 	CNetworkVar( int, r, [[= ks::reflect::Net{ .bits = 8, .flags = SPROP_UNSIGNED } ]] );
 	CNetworkVar( int, g, [[= ks::reflect::Net{ .bits = 8, .flags = SPROP_UNSIGNED } ]] );
 	CNetworkVar( int, b, [[= ks::reflect::Net{ .bits = 8, .flags = SPROP_UNSIGNED } ]] );

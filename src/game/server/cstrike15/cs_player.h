@@ -275,20 +275,20 @@ namespace DT_CSNonLocalPlayerExclusive { extern SendTable g_SendTable; }
 class
       [[= ks::reflect::NetTable{ .name = "DT_CSLocalPlayerExclusive", .base = false } ]]
       [[= ks::reflect::From<"m_vecOrigin",
-            ks::reflect::Net{ .bits = -1, .low = 0.0f, .high = HIGH_DEFAULT, .flags = SPROP_NOSCALE|SPROP_CHANGES_OFTEN,
-                     .enc = ks::reflect::ENC_VECTORXY, .table = "DT_CSLocalPlayerExclusive", .priority = SENDPROP_LOCALPLAYER_ORIGINXY_PRIORITY },
+            ks::reflect::Net{ .bits = -1, .low = 0.0f, .high = kHighDefault, .flags = SPROP_NOSCALE|SPROP_CHANGES_OFTEN,
+                     .enc = ks::reflect::WireEnc::VectorXY, .table = "DT_CSLocalPlayerExclusive", .priority = SENDPROP_LOCALPLAYER_ORIGINXY_PRIORITY },
             SendProxy_OriginXY>{} ]]
       [[= ks::reflect::From<"m_vecOrigin",
-            ks::reflect::Net{ .bits = -1, .low = 0.0f, .high = HIGH_DEFAULT, .flags = SPROP_NOSCALE|SPROP_CHANGES_OFTEN,
+            ks::reflect::Net{ .bits = -1, .low = 0.0f, .high = kHighDefault, .flags = SPROP_NOSCALE|SPROP_CHANGES_OFTEN,
                      .table = "DT_CSLocalPlayerExclusive", .index = 2, .priority = SENDPROP_LOCALPLAYER_ORIGINZ_PRIORITY },
             SendProxy_OriginZ>{} ]]
       [[= ks::reflect::NetTable{ .name = "DT_CSNonLocalPlayerExclusive", .base = false } ]]
       [[= ks::reflect::From<"m_vecOrigin",
-            ks::reflect::Net{ .bits = -1, .low = 0.0f, .high = HIGH_DEFAULT, .flags = SPROP_NOSCALE|SPROP_CHANGES_OFTEN,
-                     .enc = ks::reflect::ENC_VECTORXY, .table = "DT_CSNonLocalPlayerExclusive", .priority = SENDPROP_NONLOCALPLAYER_ORIGINXY_PRIORITY },
+            ks::reflect::Net{ .bits = -1, .low = 0.0f, .high = kHighDefault, .flags = SPROP_NOSCALE|SPROP_CHANGES_OFTEN,
+                     .enc = ks::reflect::WireEnc::VectorXY, .table = "DT_CSNonLocalPlayerExclusive", .priority = SENDPROP_NONLOCALPLAYER_ORIGINXY_PRIORITY },
             SendProxy_OriginXY>{} ]]
       [[= ks::reflect::From<"m_vecOrigin",
-            ks::reflect::Net{ .bits = -1, .low = 0.0f, .high = HIGH_DEFAULT, .flags = SPROP_NOSCALE|SPROP_CHANGES_OFTEN,
+            ks::reflect::Net{ .bits = -1, .low = 0.0f, .high = kHighDefault, .flags = SPROP_NOSCALE|SPROP_CHANGES_OFTEN,
                      .table = "DT_CSNonLocalPlayerExclusive", .index = 2, .priority = SENDPROP_NONLOCALPLAYER_ORIGINZ_PRIORITY },
             SendProxy_OriginZ>{} ]]
       [[= ks::reflect::NetTable{ .name = "DT_CSPlayer" } ]]
@@ -1216,9 +1216,9 @@ private:
 	// Copyed from EyeAngles() so we can send it to the client.
 	CNetworkVectorXYZ( m_angEyeAngles,
 	    [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_NOSCALE | SPROP_CHANGES_OFTEN,
-	                 .enc = ks::reflect::ENC_ANGLE, .index = 0 } ]]
+	                 .enc = ks::reflect::WireEnc::Angle, .index = 0 } ]]
 	    [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_NOSCALE | SPROP_CHANGES_OFTEN,
-	                 .enc = ks::reflect::ENC_ANGLE, .index = 1 } ]] );
+	                 .enc = ks::reflect::WireEnc::Angle, .index = 1 } ]] );
 
 	bool m_bVCollisionInitted;
 

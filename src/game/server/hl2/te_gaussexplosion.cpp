@@ -29,7 +29,7 @@ public:
 	virtual void	Test( const Vector& current_origin, const QAngle& current_angles ) { };
 
 	CNetworkVar( int, m_nType, [[= ks::reflect::Net{ .bits = 2, .flags = SPROP_UNSIGNED } ]] );
-	CNetworkVector( m_vecDirection, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD, .enc = ks::reflect::ENC_VECTOR } ]] );
+	CNetworkVector( m_vecDirection, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD, .enc = ks::reflect::WireEnc::Vector } ]] );
 };
 
 

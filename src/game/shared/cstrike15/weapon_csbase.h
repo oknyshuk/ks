@@ -355,7 +355,7 @@ public:
 #endif
 	float m_fAccuracySmoothedForZoom;
 	float m_fScopeZoomEndTime;
-	CNetworkVar( int, m_iRecoilIndex, [[= ks::reflect::Net{ .side = ks::reflect::WIRE_RECV } ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] );	// DEPRECATED. Kept for old demo compatibility.
+	CNetworkVar( int, m_iRecoilIndex, [[= ks::reflect::Net{ .side = ks::reflect::WireSide::Recv } ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] );	// DEPRECATED. Kept for old demo compatibility.
 	CNetworkVar( float, m_flRecoilIndex, [[= ks::reflect::Net{ .bits = 32 } ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] );
 	CNetworkVar( bool, m_bBurstMode, [[= ks::reflect::Net{} ]] );
 

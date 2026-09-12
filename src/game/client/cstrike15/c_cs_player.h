@@ -256,12 +256,12 @@ class
       [[= ks::reflect::PredFrom<"m_flCycle", ks::reflect::Pred{ .flags = FTYPEDESC_OVERRIDE | FTYPEDESC_PRIVATE | FTYPEDESC_NOERRORCHECK } >{} ]]
       [[= ks::reflect::NetTable{ .name = "DT_CSLocalPlayerExclusive", .base = false } ]]
       [[= ks::reflect::From<"m_vecNetworkOrigin",
-            ks::reflect::Net{ .enc = ks::reflect::ENC_VECTORXY, .wire = "m_vecOrigin", .table = "DT_CSLocalPlayerExclusive" }>{} ]]
+            ks::reflect::Net{ .enc = ks::reflect::WireEnc::VectorXY, .wire = "m_vecOrigin", .table = "DT_CSLocalPlayerExclusive" }>{} ]]
       [[= ks::reflect::From<"m_vecNetworkOrigin",
             ks::reflect::Net{ .wire = "m_vecOrigin", .table = "DT_CSLocalPlayerExclusive", .index = 2 }>{} ]]
       [[= ks::reflect::NetTable{ .name = "DT_CSNonLocalPlayerExclusive", .base = false } ]]
       [[= ks::reflect::From<"m_vecNetworkOrigin",
-            ks::reflect::Net{ .enc = ks::reflect::ENC_VECTORXY, .wire = "m_vecOrigin", .table = "DT_CSNonLocalPlayerExclusive" }>{} ]]
+            ks::reflect::Net{ .enc = ks::reflect::WireEnc::VectorXY, .wire = "m_vecOrigin", .table = "DT_CSNonLocalPlayerExclusive" }>{} ]]
       [[= ks::reflect::From<"m_vecNetworkOrigin",
             ks::reflect::Net{ .wire = "m_vecOrigin", .table = "DT_CSNonLocalPlayerExclusive", .index = 2 }>{} ]]
       [[= ks::reflect::NetTable{ .name = "DT_CSPlayer" } ]]
@@ -715,7 +715,7 @@ public:
 	CNetworkVar( int, m_nNumFastDucks, [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] [[= ks::reflect::Net{ .table = "DT_CSLocalPlayerExclusive" } ]] ); // UNUSED.  Kept for backwards demo compatibility.  $$$REI TODO: Investigate safely removing variables
 	CNetworkVar( bool, m_bDuckOverride, [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] [[= ks::reflect::Net{ .table = "DT_CSLocalPlayerExclusive" } ]] ); // force the player to duck regardless of if they're holding crouch
 	
-	CNetworkVar( bool, m_bNightVisionOn, [[= ks::reflect::Net{ .enc = ks::reflect::ENC_INT } ]] [[= ks::reflect::Proxy<RecvProxy_NightVision, ks::reflect::WIRE_RECV>{} ]] );
+	CNetworkVar( bool, m_bNightVisionOn, [[= ks::reflect::Net{ .enc = ks::reflect::WireEnc::Int } ]] [[= ks::reflect::Proxy<RecvProxy_NightVision, ks::reflect::WireSide::Recv>{} ]] );
 	CNetworkVar( bool, m_bHasNightVision, [[= ks::reflect::Net{} ]] );
 	CNetworkVar( float, m_flVelocityModifier, [[= ks::reflect::Net{ .table = "DT_CSLocalPlayerExclusive" } ]] );
 	CNetworkVar( float, m_flGroundAccelLinearFracLastTime, [[= ks::reflect::Net{} ]] );
@@ -773,7 +773,7 @@ public:
 
 	bool IsBlinded( void ) { return (m_flFlashBangTime - 1.0f) > gpGlobals->curtime; }
 	CNetworkVar( float, m_flFlashMaxAlpha, [[= ks::reflect::Net{} ]] );
-	CNetworkVar( float, m_flFlashDuration, [[= ks::reflect::Net{} ]] [[= ks::reflect::Proxy<RecvProxy_FlashTime, ks::reflect::WIRE_RECV>{} ]] );	
+	CNetworkVar( float, m_flFlashDuration, [[= ks::reflect::Net{} ]] [[= ks::reflect::Proxy<RecvProxy_FlashTime, ks::reflect::WireSide::Recv>{} ]] );	
 
 	float GetLastFiredWeaponTime( void ) { return m_flLastFiredWeaponTime; }
 	float m_flLastFiredWeaponTime;
@@ -921,7 +921,7 @@ private:
 	[[= ks::reflect::Net{} ]] int		m_iClass;
 	[[= ks::reflect::Net{} ]] int		m_ArmorValue;
 	[[= ks::reflect::Net{} ]] QAngle	m_angEyeAngles;
-	[[= ks::reflect::Net{ .enc = ks::reflect::ENC_INT } ]] [[= ks::reflect::Proxy<RecvProxy_HasDefuser, ks::reflect::WIRE_RECV>{} ]] bool	m_bHasDefuser;
+	[[= ks::reflect::Net{ .enc = ks::reflect::WireEnc::Int } ]] [[= ks::reflect::Proxy<RecvProxy_HasDefuser, ks::reflect::WireSide::Recv>{} ]] bool	m_bHasDefuser;
 	[[= ks::reflect::Net{} ]] bool	m_bInHostageRescueZone;
 	float	m_fNextThinkPushAway;
 
@@ -1000,7 +1000,7 @@ private:
 	CUtlReference<CNewParticleEffect> m_hC4AddonLED;
 	CUtlReference<CNewParticleEffect> m_hC4WeaponLED;
 
-	[[= ks::reflect::Net{} ]] [[= ks::reflect::Proxy<&C_CSPlayer::RecvProxy_CycleLatch, ks::reflect::WIRE_RECV>{} ]] int m_cycleLatch;				// server periodically updates this to fix up our anims, here it is a 4 bit fixed point
+	[[= ks::reflect::Net{} ]] [[= ks::reflect::Proxy<&C_CSPlayer::RecvProxy_CycleLatch, ks::reflect::WireSide::Recv>{} ]] int m_cycleLatch;				// server periodically updates this to fix up our anims, here it is a 4 bit fixed point
 	float m_serverIntendedCycle;	// server periodically updates this to fix up our anims, here it is the float we want, or -1 for no override
 
 	// [tj] Network variables that track who are dominating and being dominated by

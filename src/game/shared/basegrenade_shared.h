@@ -46,7 +46,7 @@ class [[= ks::reflect::NetTable{ .name = "DT_BaseGrenade" } ]]
       [[= ks::reflect::From<"m_DmgRadius", ks::reflect::Net{ .bits = 10, .low = 0.0, .high = 1024.0f, .flags = SPROP_ROUNDDOWN }>{} ]]
       [[= ks::reflect::From<"m_bIsLive", ks::reflect::Net{ .bits = 1, .flags = SPROP_UNSIGNED }>{} ]]
       [[= ks::reflect::From<"m_hThrower", ks::reflect::Net{}>{} ]]
-      [[= ks::reflect::From<"m_vecVelocity", ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE, .enc = ks::reflect::ENC_VECTOR }>{} ]]
+      [[= ks::reflect::From<"m_vecVelocity", ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE, .enc = ks::reflect::WireEnc::Vector }>{} ]]
       [[= ks::reflect::From<"m_fFlags", ks::reflect::Net{ .bits = PLAYER_FLAG_BITS, .flags = SPROP_UNSIGNED }, SendProxy_CropFlagsToPlayerFlagBitsLength>{} ]]
       [[= ks::reflect::Exclude{ .table = "DT_AnimTimeMustBeFirst", .prop = "m_flAnimTime" } ]]
       CBaseGrenade : public CBaseAnimating, public CDefaultPlayerPickupVPhysics

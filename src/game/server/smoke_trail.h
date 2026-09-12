@@ -32,8 +32,8 @@ public:
 
 public:
 	// Effect parameters. These will assume default values but you can change them.
-	CNetworkVector( m_StartColor, [[= ks::reflect::Net{ .bits = 8, .low = 0, .high = 1, .enc = ks::reflect::ENC_VECTOR } ]] );			// Fade between these colors.
-	CNetworkVector( m_EndColor, [[= ks::reflect::Net{ .bits = 8, .low = 0, .high = 1, .enc = ks::reflect::ENC_VECTOR } ]] );
+	CNetworkVector( m_StartColor, [[= ks::reflect::Net{ .bits = 8, .low = 0, .high = 1, .enc = ks::reflect::WireEnc::Vector } ]] );			// Fade between these colors.
+	CNetworkVector( m_EndColor, [[= ks::reflect::Net{ .bits = 8, .low = 0, .high = 1, .enc = ks::reflect::WireEnc::Vector } ]] );
 	CNetworkVar( float, m_Opacity, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_NOSCALE } ]] [[= ks::reflect::Key{ .name = "opacity" } ]] );
 
 	CNetworkVar( float, m_SpawnRate, [[= ks::reflect::Net{ .bits = 8, .low = 1, .high = 1024 } ]] [[= ks::reflect::Key{ .name = "spawnrate" } ]] );			// How many particles per second.
@@ -69,8 +69,8 @@ public:
 
 public:
 	// Effect parameters. These will assume default values but you can change them.
-	CNetworkVector( m_StartColor, [[= ks::reflect::Net{ .bits = 8, .low = 0, .high = 1, .enc = ks::reflect::ENC_VECTOR } ]] );			// Fade between these colors.
-	CNetworkVector( m_EndColor, [[= ks::reflect::Net{ .bits = 8, .low = 0, .high = 1, .enc = ks::reflect::ENC_VECTOR } ]] );
+	CNetworkVector( m_StartColor, [[= ks::reflect::Net{ .bits = 8, .low = 0, .high = 1, .enc = ks::reflect::WireEnc::Vector } ]] );			// Fade between these colors.
+	CNetworkVector( m_EndColor, [[= ks::reflect::Net{ .bits = 8, .low = 0, .high = 1, .enc = ks::reflect::WireEnc::Vector } ]] );
 	CNetworkVar( float, m_Opacity, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_NOSCALE } ]] );
 
 	CNetworkVar( float, m_SpawnRate, [[= ks::reflect::Net{ .bits = 8, .low = 1, .high = 1024 } ]] );			// How many particles per second.
@@ -109,7 +109,7 @@ public:
 //Data members
 public:
 
-	CNetworkVector( m_vecEndColor, [[= ks::reflect::Net{ .bits = 8, .low = 0, .high = 1, .enc = ks::reflect::ENC_VECTOR } ]] );
+	CNetworkVector( m_vecEndColor, [[= ks::reflect::Net{ .bits = 8, .low = 0, .high = 1, .enc = ks::reflect::WireEnc::Vector } ]] );
 
 	CNetworkVar( float, m_flSpawnRate, [[= ks::reflect::Net{ .bits = 8, .low = 1, .high = 1024 } ]] );
 	CNetworkVar( float, m_flParticleLifetime, [[= ks::reflect::Net{ .bits = 16, .low = 0.1, .high = 100, .flags = SPROP_ROUNDUP } ]] );
@@ -193,7 +193,7 @@ public:
 
 public:
 	// Effect parameters. These will assume default values but you can change them.
-	CNetworkVector( m_Color, [[= ks::reflect::Net{ .bits = 8, .low = 0, .high = 1, .enc = ks::reflect::ENC_VECTOR } ]] );
+	CNetworkVector( m_Color, [[= ks::reflect::Net{ .bits = 8, .low = 0, .high = 1, .enc = ks::reflect::WireEnc::Vector } ]] );
 	CNetworkVar( float, m_Opacity, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_NOSCALE } ]] [[= ks::reflect::Key{ .name = "opacity" } ]] );
 
 	CNetworkVar( float, m_SpawnRate, [[= ks::reflect::Net{ .bits = 8, .low = 1, .high = 1024 } ]] [[= ks::reflect::Key{ .name = "spawnrate" } ]] );			// How many particles per second.

@@ -319,7 +319,7 @@ void CReplayServer::InitClientRecvTables()
 
 		ErrorIfNot( 
 			m_nRecvTables < ARRAYSIZE( m_pRecvTables ), 
-			("AddRecvTableR: overflowed MAX_DATATABLES")
+			("AddRecvTableR: overflowed kMaxDatatables")
 			);
 	}
 
@@ -328,7 +328,7 @@ void CReplayServer::InitClientRecvTables()
 	{
 		ErrorIfNot( 
 			m_nRecvTables < ARRAYSIZE( m_pRecvTables ), 
-			("ClientDLL_InitRecvTableMgr: overflowed MAX_DATATABLES")
+			("ClientDLL_InitRecvTableMgr: overflowed kMaxDatatables")
 			);
 
 		// find top receive table for class

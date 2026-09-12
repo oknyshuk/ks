@@ -443,7 +443,7 @@ public:
 	bool AreTeamsUnbalanced( int &iHeaviestTeam, int &iLightestTeam );
 
 protected:
-	CNetworkVar( gamerules_roundstate_t, m_iRoundState, [[= ks::reflect::Net{ .bits = 5 } ]] [[= ks::reflect::Proxy<RecvProxy_TeamplayRoundState, ks::reflect::WIRE_RECV>{} ]]);
+	CNetworkVar( gamerules_roundstate_t, m_iRoundState, [[= ks::reflect::Net{ .bits = 5 } ]] [[= ks::reflect::Proxy<RecvProxy_TeamplayRoundState, ks::reflect::WireSide::Recv>{} ]]);
 	CNetworkVar( bool, m_bInOvertime, [[= ks::reflect::Net{} ]] ); // Are we currently in overtime?
 	CNetworkVar( bool, m_bInSetup, [[= ks::reflect::Net{} ]] ); // Are we currently in setup?
 	CNetworkVar( bool, m_bSwitchedTeamsThisRound, [[= ks::reflect::Net{} ]] );

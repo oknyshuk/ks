@@ -94,7 +94,7 @@ public:
 	static CBoneFollower *Create( CBaseEntity *pOwner, const char *pModelName, solid_t &solid, const Vector &position, const QAngle &orientation );
 
 private:
-	CNetworkVar( int, m_modelIndex, [[= ks::reflect::Net{ .enc = ks::reflect::ENC_MODELINDEX } ]] );
+	CNetworkVar( int, m_modelIndex, [[= ks::reflect::Net{ .enc = ks::reflect::WireEnc::ModelIndex } ]] );
 	CNetworkVar( int, m_solidIndex, [[= ks::reflect::Net{ .bits = 6, .flags = SPROP_UNSIGNED } ]] );
 	int		m_physicsBone;
 	int		m_hitGroup;

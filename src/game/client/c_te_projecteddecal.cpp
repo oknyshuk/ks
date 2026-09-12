@@ -41,7 +41,7 @@ public:
 
 public:
 	[[= ks::reflect::Net{} ]] Vector			m_vecOrigin;
-	[[= ks::reflect::Net{ .enc = ks::reflect::ENC_QANGLES } ]] QAngle			m_angRotation;
+	[[= ks::reflect::Net{ .enc = ks::reflect::WireEnc::QAngles } ]] QAngle			m_angRotation;
 	[[= ks::reflect::Net{} ]] float			m_flDistance;
 	[[= ks::reflect::Net{} ]] int				m_nIndex;
 };

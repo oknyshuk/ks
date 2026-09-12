@@ -396,7 +396,7 @@ public:
 public:
 
 	CNetworkVar( int, m_nForceBone, [[= ks::reflect::Net{ .bits = 8 } ]] );
-	CNetworkVector( m_vecForce, [[= ks::reflect::Net{ .bits = 32, .flags = SPROP_NOSCALE, .enc = ks::reflect::ENC_VECTOR } ]] );
+	CNetworkVector( m_vecForce, [[= ks::reflect::Net{ .bits = 32, .flags = SPROP_NOSCALE, .enc = ks::reflect::WireEnc::Vector } ]] );
 
 	CNetworkVar( int, m_nSkin, [[= ks::reflect::Net{ .bits = ANIMATION_SKIN_BITS } ]] [[= ks::reflect::Key{ .name = "ModelSkin" } ]] [[= ks::reflect::Key{ .name = "skin", .input = true } ]] );
 	CNetworkVar( int, m_nBody, [[= ks::reflect::Net{ .bits = ANIMATION_BODY_BITS } ]] [[= ks::reflect::Key{ .name = "body" } ]] [[= ks::reflect::Key{ .name = "SetBodyGroup", .input = true } ]] );
