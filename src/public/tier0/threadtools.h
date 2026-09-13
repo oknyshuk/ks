@@ -60,12 +60,6 @@ enum ThreadPriorityEnum_t
 #define TP_IS_PRIORITY_HIGHER( a, b ) ( ( a ) < ( b ) )
 
 
-#if defined( THREAD_PARENT_STACK_TRACE_SUPPORTED )
-#include "tier0/stacktools.h"
-#	if defined( ENABLE_THREAD_PARENT_STACK_TRACING ) //stacktools.h opted in
-#		define THREAD_PARENT_STACK_TRACE_ENABLED 1 //both threadtools.h and stacktools.h have opted into the feature, enable it
-#	endif
-#endif
 
 extern bool gbCheckNotMultithreaded;
 
@@ -639,7 +633,6 @@ private:
 //
 //-----------------------------------------------------------------------------
 
-#if !defined(THREAD_PROFILER)
 
 class CThreadFastMutex
 {
@@ -678,19 +671,10 @@ private:
 public:
 	bool TryLock() volatile
 	{
-#ifdef _DEBUG
-		if ( m_depth == INT_MAX )
-			DebuggerBreak();
-
-		if ( m_depth < 0 )
-			DebuggerBreak();
-#endif
 		return TryLockInline( ThreadGetCurrentId() );
 	}
 
-#ifndef _DEBUG 
 	FORCEINLINE 
-#endif
 	void Lock( unsigned int nSpinSleepTime = 0 ) volatile
 	{
 		const uint32 threadId = ThreadGetCurrentId();
@@ -700,30 +684,11 @@ public:
 			ThreadPause();
 			Lock( threadId, nSpinSleepTime );
 		}
-#ifdef _DEBUG
-		if ( m_ownerID != (int32)ThreadGetCurrentId() )
-			DebuggerBreak();
-
-		if ( m_depth == INT_MAX )
-			DebuggerBreak();
-
-		if ( m_depth < 0 )
-			DebuggerBreak();
-#endif
 	}
 
-#ifndef _DEBUG
 	FORCEINLINE 
-#endif
 	void Unlock() volatile
 	{
-#ifdef _DEBUG
-		if ( m_ownerID != (int32)ThreadGetCurrentId() )
-			DebuggerBreak();
-
-		if ( m_depth <= 0 )
-			DebuggerBreak();
-#endif
 
 		m_depth = m_depth - 1;
 		if ( !m_depth )
@@ -765,23 +730,6 @@ private:
 	uint8 pad[128-sizeof(CThreadFastMutex)];
 };
 
-#else
-
-typedef CThreadMutex CThreadFastMutex;
-
-class ALIGN128 CAlignedThreadFastMutex : public CThreadFastMutex
-{
-public:
-	CAlignedThreadFastMutex()
-	{
-		Assert( (size_t)this % 128 == 0 && sizeof(*this) == 128 );
-	}
-
-private:
-	uint8 pad[128-sizeof(CThreadFastMutex)];
-};
-
-#endif
 
 //-----------------------------------------------------------------------------
 //
@@ -882,12 +830,8 @@ typedef CAutoLockT<CThreadMutex> CAutoLock;
 template <int size>	struct CAutoLockTypeDeducer {};
 template <> struct CAutoLockTypeDeducer<sizeof(CThreadMutex)> {	typedef CThreadMutex Type_t; };
 template <> struct CAutoLockTypeDeducer<sizeof(CThreadNullMutex)> {	typedef CThreadNullMutex Type_t; };
-#if !defined(THREAD_PROFILER)
 template <> struct CAutoLockTypeDeducer<sizeof(CThreadFastMutex)> {	typedef CThreadFastMutex Type_t; };
 template <> struct CAutoLockTypeDeducer<sizeof(CAlignedThreadFastMutex)> {	typedef CAlignedThreadFastMutex Type_t; };
-#else
-template <> struct CAutoLockTypeDeducer<sizeof(CAlignedThreadFastMutex)> {	typedef CAlignedThreadFastMutex Type_t; };
-#endif
 
 
 #define AUTO_LOCK_( type, mutex ) \
@@ -1097,7 +1041,6 @@ private:
 //
 //-----------------------------------------------------------------------------
 
-#ifndef OLD_SPINRWLOCK
 class ALIGN8 PLATFORM_CLASS CThreadSpinRWLock
 {
 public:
@@ -1105,9 +1048,6 @@ public:
 	{ 
 		m_lockInfo.m_i32 = 0;
 		m_writerId = 0;
-#ifdef REENTRANT_THREAD_SPIN_RW_LOCK
-		m_iWriteDepth = 0;
-#endif
 	}
 
 	bool IsLockedForWrite();
@@ -1158,58 +1098,8 @@ private:
 
 	LockInfo_t	m_lockInfo;
 	ThreadId_t		m_writerId;
-#ifdef REENTRANT_THREAD_SPIN_RW_LOCK
-	int			m_iWriteDepth;
-	uint32		pad;
-#endif
 } ALIGN8_POST;
 
-#else
-
-/* (commented out to reduce distraction in colorized editor, remove entirely when new implementation settles)
-class ALIGN8 PLATFORM_CLASS CThreadSpinRWLock
-{
-public:
-	CThreadSpinRWLock()	{ COMPILE_TIME_ASSERT( sizeof( LockInfo_t ) == sizeof( int64 ) ); Assert( (intp)this % 8 == 0 ); memset( this, 0, sizeof( *this ) ); }
-
-	bool TryLockForWrite();
-	bool TryLockForRead();
-
-	void LockForRead();
-	void UnlockRead();
-	void LockForWrite();
-	void UnlockWrite();
-
-	bool TryLockForWrite() const { return const_cast<CThreadSpinRWLock *>(this)->TryLockForWrite(); }
-	bool TryLockForRead() const { return const_cast<CThreadSpinRWLock *>(this)->TryLockForRead(); }
-	void LockForRead() const { const_cast<CThreadSpinRWLock *>(this)->LockForRead(); }
-	void UnlockRead() const { const_cast<CThreadSpinRWLock *>(this)->UnlockRead(); }
-	void LockForWrite() const { const_cast<CThreadSpinRWLock *>(this)->LockForWrite(); }
-	void UnlockWrite() const { const_cast<CThreadSpinRWLock *>(this)->UnlockWrite(); }
-
-private:
-	// This structure is used as an atomic & exchangeable 64-bit value. It would probably be better to just have one 64-bit value
-	// and accessor functions that make/break it, but at this late stage of development, I'm just wrapping it into union
-	// Beware of endianness: on Xbox/PowerPC m_writerId is high-word of m_i64; on PC, it's low-dword of m_i64
-	union LockInfo_t
-	{
-		struct
-		{
-			uint32	m_writerId;
-			int		m_nReaders;
-		};
-		int64 m_i64;
-	};
-
-	bool AssignIf( const LockInfo_t &newValue, const LockInfo_t &comperand );
-	bool TryLockForWrite( const uint32 threadId );
-	void SpinLockForWrite( const uint32 threadId );
-
-	volatile LockInfo_t m_lockInfo;
-	CInterlockedInt m_nWriters;
-} ALIGN8_POST;
-*/
-#endif
 
 //-----------------------------------------------------------------------------
 //
@@ -1337,9 +1227,6 @@ private:
 		CThread *     pThread;
 		CThreadEvent *pInitCompleteEvent;
 		bool *        pfInitSuccess;
-#if defined( THREAD_PARENT_STACK_TRACE_ENABLED )
-		void *        ParentStackTrace[THREAD_PARENT_STACK_TRACE_LENGTH];
-#endif
 	};
 
 	// make copy constructor and assignment operator inaccessible
@@ -1642,13 +1529,8 @@ inline void CThreadRWLock::UnlockRead()
 //
 //-----------------------------------------------------------------------------
 
-#ifndef OLD_SPINRWLOCK
 
-#if defined(TEST_THREAD_SPIN_RW_LOCK)
-#define RWLAssert( exp ) if ( exp ) ; else DebuggerBreak();
-#else
 #define RWLAssert( exp ) ((void)0)
-#endif
 
 inline bool CThreadSpinRWLock::IsLockedForWrite()
 {
@@ -1668,9 +1550,6 @@ FORCEINLINE bool CThreadSpinRWLock::TryLockForWrite()
 		ThreadMemoryBarrier();
 		RWLAssert( m_iWriteDepth == 0 && m_writerId == 0 );
 		m_writerId = ThreadGetCurrentId();
-#ifdef REENTRANT_THREAD_SPIN_RW_LOCK
-		m_iWriteDepth++;
-#endif
 		return true;
 	}
 
@@ -1684,16 +1563,7 @@ inline bool CThreadSpinRWLock::TryLockForWrite_UnforcedInline()
 		return true;
 	}
 
-#ifdef REENTRANT_THREAD_SPIN_RW_LOCK
-	if ( m_writerId != ThreadGetCurrentId() )
-	{
-		return false;
-	}
-	m_iWriteDepth++;
-	return true;
-#else
 	return false;
-#endif
 }
 
 FORCEINLINE void CThreadSpinRWLock::LockForWrite()
@@ -1726,18 +1596,6 @@ FORCEINLINE bool CThreadSpinRWLock::TryLockForRead()
 
 inline bool CThreadSpinRWLock::TryLockForRead_UnforcedInline()
 {
-#ifdef REENTRANT_THREAD_SPIN_RW_LOCK
-	if ( m_lockInfo.m_i32 & 0x00010000 ) // m_lockInfo.m_fWriting
-	{
-		if ( m_writerId == ThreadGetCurrentId() )
-		{
-			m_lockInfo.m_nReaders++;
-			return true;
-		}
-
-		return false;
-	}
-#endif
 	return TryLockForRead();
 }
 
@@ -1752,9 +1610,6 @@ FORCEINLINE void CThreadSpinRWLock::LockForRead()
 FORCEINLINE void CThreadSpinRWLock::UnlockWrite()
 {
 	RWLAssert( m_writerId == ThreadGetCurrentId() );
-#ifdef REENTRANT_THREAD_SPIN_RW_LOCK
-	if ( --m_iWriteDepth == 0 )
-#endif
 	{
 		m_writerId = 0;
 		ThreadMemoryBarrier();
@@ -1762,111 +1617,17 @@ FORCEINLINE void CThreadSpinRWLock::UnlockWrite()
 	}
 }
 
-#ifndef REENTRANT_THREAD_SPIN_RW_LOCK
 FORCEINLINE
-#else
-inline
-#endif
 void CThreadSpinRWLock::UnlockRead()
 {
 	RWLAssert( m_writerId == 0 || ( m_writerId == ThreadGetCurrentId() && m_lockInfo.m_fWriting ) );
-#ifdef REENTRANT_THREAD_SPIN_RW_LOCK
-	if ( !( m_lockInfo.m_i32 & 0x00010000 ) ) // !m_lockInfo.m_fWriting
-#endif
 	{
 		ThreadMemoryBarrier();
 		ThreadInterlockedDecrement( &m_lockInfo.m_i32 );
 		RWLAssert( m_writerId == 0 && !m_lockInfo.m_fWriting );
 	}
-#ifdef REENTRANT_THREAD_SPIN_RW_LOCK
-	else if ( m_writerId == ThreadGetCurrentId() )
-	{
-		m_lockInfo.m_nReaders--;
-	}
-	else
-	{
-		RWLAssert( 0 );
-	}
-#endif
 }
 
-#else
-/* (commented out to reduce distraction in colorized editor, remove entirely when new implementation settles)
-inline bool CThreadSpinRWLock::AssignIf( const LockInfo_t &newValue, const LockInfo_t &comperand )
-{
-	// Note: using unions guarantees no aliasing bugs. Casting structures through *(int64*)& 
-	//       may create hard-to-catch bugs because when you do that, compiler doesn't know that the newly computed pointer
-	//       is actually aliased with LockInfo_t structure. It's rarely a problem in practice, but when it is, it's a royal pain to debug.
-	return ThreadInterlockedAssignIf64( &m_lockInfo.m_i64, newValue.m_i64, comperand.m_i64 );
-}
-
-FORCEINLINE bool CThreadSpinRWLock::TryLockForWrite( const uint32 threadId )
-{
-	// In order to grab a write lock, there can be no readers and no owners of the write lock
-	if ( m_lockInfo.m_nReaders > 0 || ( m_lockInfo.m_writerId && m_lockInfo.m_writerId != threadId ) )
-	{
-		return false;
-	}
-
-	static const LockInfo_t oldValue = { {0, 0} };
-	LockInfo_t newValue = { { threadId, 0 } };
-	if ( AssignIf( newValue, oldValue ) )
-	{
-		ThreadMemoryBarrier();
-		return true;
-	}
-	return false;
-}
-
-inline bool CThreadSpinRWLock::TryLockForWrite()
-{
-	m_nWriters++;
-	if ( !TryLockForWrite( ThreadGetCurrentId() ) )
-	{
-		m_nWriters--;
-		return false;
-	}
-	return true;
-}
-
-FORCEINLINE bool CThreadSpinRWLock::TryLockForRead()
-{
-	if ( m_nWriters != 0 )
-	{
-		return false;
-	}
-	// In order to grab a write lock, the number of readers must not change and no thread can own the write
-	LockInfo_t oldValue;
-	LockInfo_t newValue;
-
-	// this is the original code that worked here for a while
-	oldValue.m_nReaders = m_lockInfo.m_nReaders;
-	oldValue.m_writerId = 0;
-	newValue.m_nReaders = oldValue.m_nReaders + 1;
-	newValue.m_writerId = 0;
-
-	if ( AssignIf( newValue, oldValue ) )
-	{
-		ThreadMemoryBarrier();
-		return true;
-	}
-	return false;
-}
-
-inline void CThreadSpinRWLock::LockForWrite()
-{
-	const uint32 threadId = ThreadGetCurrentId();
-
-	m_nWriters++;
-
-	if ( !TryLockForWrite( threadId ) )
-	{
-		ThreadPause();
-		SpinLockForWrite( threadId );
-	}
-}
-*/
-#endif
 
 // read data from a memory address
 template<class T> FORCEINLINE T ReadVolatileMemory( T const *pPtr )

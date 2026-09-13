@@ -1599,18 +1599,11 @@ void QuaternionAlign( const Quaternion &p, const Quaternion &q, Quaternion &qt )
 void QuaternionBlend( const Quaternion &p, const Quaternion &q, float t, Quaternion &qt )
 {
 	Assert( s_bMathlibInitialized );
-#if ALLOW_SIMD_QUATERNION_MATH
 	fltx4 psimd, qsimd, qtsimd;
 	psimd = LoadUnalignedSIMD( p.Base() );
 	qsimd = LoadUnalignedSIMD( q.Base() );
 	qtsimd = QuaternionBlendSIMD( psimd, qsimd, t );
 	StoreUnalignedSIMD( qt.Base(), qtsimd );
-#else
-	// decide if one of the quaternions is backwards
-	Quaternion q2;
-	QuaternionAlign( p, q, q2 );
-	QuaternionBlendNoAlign( p, q2, t, qt );
-#endif
 }
 
 

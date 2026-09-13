@@ -62,7 +62,6 @@ FORCEINLINE void StoreAlignedSIMD( QuaternionAligned * RESTRICT pSIMD, const flt
 }
 
 
-#if ALLOW_SIMD_QUATERNION_MATH
 //---------------------------------------------------------------------
 // Make sure quaternions are within 180 degrees of one another, if not, reverse q
 //---------------------------------------------------------------------
@@ -81,24 +80,6 @@ FORCEINLINE fltx4 QuaternionAlignSIMD( const fltx4 &p, const fltx4 &q )
 //---------------------------------------------------------------------
 // Normalize Quaternion
 //---------------------------------------------------------------------
-#if USE_STDC_FOR_SIMD
-
-FORCEINLINE fltx4 QuaternionNormalizeSIMD( const fltx4 &q )
-{
-	fltx4 radius, result;
-	radius = Dot4SIMD( q, q );
-
-	if ( SubFloat( radius, 0 ) ) // > FLT_EPSILON && ((radius < 1.0f - 4*FLT_EPSILON) || (radius > 1.0f + 4*FLT_EPSILON))
-	{
-		float iradius = 1.0f / sqrt( SubFloat( radius, 0 ) );
-		result = ReplicateX4( iradius );
-		result = MulSIMD( result, q );
-		return result;
-	}
-	return q;
-}
-
-#else
 
 // SSE + X360 implementation
 FORCEINLINE fltx4 QuaternionNormalizeSIMD( const fltx4 &q )
@@ -111,7 +92,6 @@ FORCEINLINE fltx4 QuaternionNormalizeSIMD( const fltx4 &q )
 	return MaskedAssign( mask, q, result );	// if radius was 0, just return q
 }
 
-#endif
 
 
 //---------------------------------------------------------------------
@@ -202,66 +182,6 @@ FORCEINLINE fltx4 QuaternionScaleSIMD( const fltx4 &p, float t )
 //-----------------------------------------------------------------------------
 
 // SSE and STDC
-FORCEINLINE fltx4 QuaternionSlerpNoAlignSIMD( const fltx4 &p, const fltx4 &q, float t )
-{
-	float omega, cosom, sinom, sclp, sclq;
-
-	fltx4 result;
-
-	// 0.0 returns p, 1.0 return q.
-	cosom = SubFloat( p, 0 ) * SubFloat( q, 0 ) + SubFloat( p, 1 ) * SubFloat( q, 1 ) + 
-		SubFloat( p, 2 ) * SubFloat( q, 2 ) + SubFloat( p, 3 ) * SubFloat( q, 3 );
-
-	if ( (1.0f + cosom ) > 0.000001f ) 
-	{
-		if ( (1.0f - cosom ) > 0.000001f ) 
-		{
-			omega = acos( cosom );
-			sinom = sin( omega );
-			sclp = sin( (1.0f - t)*omega) / sinom;
-			sclq = sin( t*omega ) / sinom;
-		}
-		else 
-		{
-			// TODO: add short circuit for cosom == 1.0f?
-			sclp = 1.0f - t;
-			sclq = t;
-		}
-		SubFloat( result, 0 ) = sclp * SubFloat( p, 0 ) + sclq * SubFloat( q, 0 );
-		SubFloat( result, 1 ) = sclp * SubFloat( p, 1 ) + sclq * SubFloat( q, 1 );
-		SubFloat( result, 2 ) = sclp * SubFloat( p, 2 ) + sclq * SubFloat( q, 2 );
-		SubFloat( result, 3 ) = sclp * SubFloat( p, 3 ) + sclq * SubFloat( q, 3 );
-	}
-	else 
-	{
-		SubFloat( result, 0 ) = -SubFloat( q, 1 );
-		SubFloat( result, 1 ) =  SubFloat( q, 0 );
-		SubFloat( result, 2 ) = -SubFloat( q, 3 );
-		SubFloat( result, 3 ) =  SubFloat( q, 2 );
-		sclp = sin( (1.0f - t) * (0.5f * M_PI));
-		sclq = sin( t * (0.5f * M_PI));
-		SubFloat( result, 0 ) = sclp * SubFloat( p, 0 ) + sclq * SubFloat( result, 0 );
-		SubFloat( result, 1 ) = sclp * SubFloat( p, 1 ) + sclq * SubFloat( result, 1 );
-		SubFloat( result, 2 ) = sclp * SubFloat( p, 2 ) + sclq * SubFloat( result, 2 );
-	}
-
-	return result;
-}
-
-
-
-FORCEINLINE fltx4 QuaternionSlerpSIMD( const fltx4 &p, const fltx4 &q, float t )
-{
-	fltx4 q2, result;
-	q2 = QuaternionAlignSIMD( p, q );
-	result = QuaternionSlerpNoAlignSIMD( p, q2, t );
-	return result;
-}
-
-
-#endif // ALLOW_SIMD_QUATERNION_MATH
-
-
 /// class FourVectors stores 4 independent vectors for use in SIMD processing. These vectors are
 /// stored in the format x x x x y y y y z z z z so that they can be efficiently SIMD-accelerated.
 class ALIGN16 FourQuaternions
