@@ -11,7 +11,6 @@
 #include "tier1/fmtstr.h"
 #include "filesystem.h"
 #include "characterset.h"
-#include "isaverestore.h"
 #include "gamerules.h"
 
 #include "vscript_client_nut.h"

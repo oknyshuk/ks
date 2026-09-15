@@ -13,8 +13,6 @@
 #include "vprof.h"
 #include "tier0/icommandline.h"
 #include "iclientmode.h"
-#include "isaverestore.h"
-#include "saverestoretypes.h"
 
 #include "matchmaking/imatchframework.h"
 #include "matchmaking/mm_helpers.h"

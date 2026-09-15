@@ -138,11 +138,7 @@ public:
 
 	virtual int  DrawDebugTextOverlays( int text_offset );
 
-	virtual bool ShouldNPCSave() { return true; }
 	virtual void OnRestore() {}
-
-	static void SaveBehaviors(ISave &save, CAI_BehaviorBase *pCurrentBehavior, CAI_BehaviorBase **ppBehavior, int nBehaviors, bool bTestIfNPCSave = true );
-	static int RestoreBehaviors(IRestore &restore, CAI_BehaviorBase **ppBehavior, int nBehaviors, bool bTestIfNPCSave = true ); // returns index of "current" behavior, or -1
 
 public:
 	//

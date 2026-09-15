@@ -10,7 +10,6 @@
 #include "reflect_annotations.h"
 #include "ai_basenpc.h"
 #include "player.h"
-#include "saverestore.h"
 #include "gamerules.h"
 #include "entityapi.h"
 #include "entitylist.h"
@@ -19,7 +18,6 @@
 #include "filters.h"
 #include "vstdlib/random.h"
 #include "triggers.h"
-#include "saverestoretypes.h"
 #include "hierarchy.h"
 #include "bspfile.h"
 #include "te_effect_dispatch.h"
@@ -1791,6 +1789,11 @@ int CChangeLevel::BuildChangeLevelList( levellist_t *pLevelList, int maxList )
 	return nCount;
 }
 
+
+// Entity transition flags. These used to live with the save/restore entity table;
+// the save system is gone but the changelevel transition list still tags entities.
+#define FENTTABLE_MOVEABLE		0x20000000
+#define FENTTABLE_GLOBAL		0x10000000
 
 //------------------------------------------------------------------------------
 // Adds a single entity to the transition list, if appropriate. Returns the new count

@@ -260,38 +260,3 @@ const char *JoltPhysicsSurfaceProps::GetReservedMaterialName( int nMaterialIndex
 //-------------------------------------------------------------------------------------------------
 
 JoltPhysicsMaterialIndexSaveOps JoltPhysicsMaterialIndexSaveOps::s_Instance;
-
-void JoltPhysicsMaterialIndexSaveOps::Save( const SaveRestoreFieldInfo_t &fieldInfo, ISave *pSave )
-{
-	int *pMaterialIdx = reinterpret_cast<int*>( fieldInfo.pField );
-
-	const char *pMaterialName = JoltPhysicsSurfaceProps::GetInstance().GetPropName( *pMaterialIdx );
-	if ( !pMaterialName )
-		pMaterialName = JoltPhysicsSurfaceProps::GetInstance().GetPropName( 0 );
-
-	int nMaterialNameLength = V_strlen( pMaterialName ) + 1;
-	pSave->WriteInt( &nMaterialNameLength );
-	pSave->WriteString( pMaterialName );
-}
-
-void JoltPhysicsMaterialIndexSaveOps::Restore( const SaveRestoreFieldInfo_t &fieldInfo, IRestore *pRestore )
-{
-	int nMaterialNameLength = pRestore->ReadInt();
-	char szMaterialName[ 2048 ];
-	pRestore->ReadString( szMaterialName, sizeof( szMaterialName ), nMaterialNameLength );
-
-	int *pMaterialIdx = reinterpret_cast<int*>( fieldInfo.pField );
-	*pMaterialIdx = Max( JoltPhysicsSurfaceProps::GetInstance().GetSurfaceIndex( szMaterialName ), 0 );
-}
-
-bool JoltPhysicsMaterialIndexSaveOps::IsEmpty( const SaveRestoreFieldInfo_t &fieldInfo )
-{
-	int *pMaterialIdx = reinterpret_cast<int*>( fieldInfo.pField );
-	return !*pMaterialIdx;
-}
-
-void JoltPhysicsMaterialIndexSaveOps::MakeEmpty( const SaveRestoreFieldInfo_t &fieldInfo )
-{
-	int* pMaterialIdx = reinterpret_cast<int*>( fieldInfo.pField );
-	*pMaterialIdx = 0;
-}

@@ -12,8 +12,6 @@
 #include "vscript_shared.h"
 
 
-class ISaveRestoreBlockHandler;
-
 bool VScriptServerReplaceClosures( const char *pszScriptName, HSCRIPT hScope, bool bWarnMissing = false );
 
 

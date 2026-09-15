@@ -1,6 +1,8 @@
 
 #pragma once
 
+#include "isaverestore.h"
+
 struct JoltSurfaceProp
 {
 	surfacedata_t data;
@@ -9,12 +11,6 @@ struct JoltSurfaceProp
 class JoltPhysicsMaterialIndexSaveOps : public CDefSaveRestoreOps
 {
 public:
-	void Save( const SaveRestoreFieldInfo_t &fieldInfo, ISave *pSave ) override;
-	void Restore( const SaveRestoreFieldInfo_t& fieldInfo, IRestore* pRestore ) override;
-
-	bool IsEmpty( const SaveRestoreFieldInfo_t &fieldInfo ) override;
-	void MakeEmpty( const SaveRestoreFieldInfo_t &fieldInfo ) override;
-
 	static JoltPhysicsMaterialIndexSaveOps& GetInstance() { return s_Instance; }
 
 private:

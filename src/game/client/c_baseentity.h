@@ -52,8 +52,6 @@ class CDamageModifier;
 class IRecipientFilter;
 class CUserCmd;
 struct solid_t;
-class ISave;
-class IRestore;
 class C_BaseAnimating;
 class C_BaseAnimatingOverlay;
 class C_AI_BaseNPC;

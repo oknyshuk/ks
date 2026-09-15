@@ -5,6 +5,7 @@
 //============================================================================//
 
 #include "cbase.h"
+#include "isaverestore.h"
 #include "reflect_annotations.h"
 #include "reflect_datamap.h"
 
@@ -1191,41 +1192,6 @@ CUtlDict< int, int > CScriptedIconLesson::LessonActionMap;
 class CGameInstructorSymbolSaveRestoreOps : public CDefSaveRestoreOps
 {
 public:
-	virtual void Save( const SaveRestoreFieldInfo_t &fieldInfo, ISave *pSave )
-	{
-		pSave->StartBlock();
-
-		CGameInstructorSymbol *pSymbol = (CGameInstructorSymbol*)fieldInfo.pField;
-
-		int nNumChars = pSymbol->String() != nullptr ? V_strlen( pSymbol->String() ) + 1 : 0;
-		pSave->WriteInt( &nNumChars );
-
-		if ( nNumChars > 0 )
-		{
-			pSave->WriteData( pSymbol->String(), nNumChars );
-		}
-
-		pSave->EndBlock();
-	}
-
-	virtual void Restore( const SaveRestoreFieldInfo_t &fieldInfo, IRestore *pRestore )
-	{
-		pRestore->StartBlock();
-
-		int nNumChars;
-		pRestore->ReadInt( &nNumChars );
-
-		if ( nNumChars > 0 )
-		{
-			char *pchTemp = ((char*)stackalloc(nNumChars));
-			pRestore->ReadData( pchTemp, nNumChars, nNumChars );
-
-			CGameInstructorSymbol *pSymbol = (CGameInstructorSymbol*)fieldInfo.pField;
-			*pSymbol = pchTemp;
-		}
-
-		pRestore->EndBlock();
-	}
 };
 
 static CGameInstructorSymbolSaveRestoreOps s_GameInstructorSymbolSaveRestoreOps;

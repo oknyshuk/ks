@@ -14,7 +14,6 @@
 #include "game.h"
 #include "entityapi.h"
 #include "client.h"
-#include "saverestore.h"
 #include "entitylist.h"
 #include "gamerules.h"
 #include "soundent.h"
@@ -38,7 +37,6 @@
 #include "ispatialpartition.h"
 #include "textstatsmgr.h"
 #include "bitbuf.h"
-#include "saverestoretypes.h"
 #include "tier0/vprof.h"
 #include "effect_dispatch_data.h"
 #include "engine/IStaticPropMgr.h"
@@ -690,10 +688,6 @@ bool CServerGameDLL::DLLInit( CreateInterfaceFn appSystemFactory,
 
 	sv_maxreplay = g_pCVar->FindVar( "sv_maxreplay" );
 
-	COM_TimestampedLog( "g_pGameSaveRestoreBlockSet" );
-
-
-
 	bool bInitSuccess = false;
 	if ( sv_threaded_init.GetBool() )
 	{
@@ -930,11 +924,6 @@ void BeginRestoreEntities()
 bool CServerGameDLL::IsRestoring()
 {
 	return g_InRestore;
-}
-
-bool CServerGameDLL::SupportsSaveRestore()
-{
-	return false;
 }
 
 // Called any time a new level is started (after GameInit() also on level transitions within a game)
@@ -1421,57 +1410,6 @@ void CServerGameDLL::CreateNetworkStringTables( void )
 	// Set up save/load utilities for string tables
 }
 
-CSaveRestoreData *CServerGameDLL::SaveInit( int size )
-{
-	return nullptr;
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: Saves data from a struct into a saverestore object, to be saved to disk
-// Input  : *pSaveData - the saverestore object
-//			char *pname - the name of the data to write
-//			*pBaseData - the struct into which the data is to be read
-//			*pFields - pointer to an array of data field descriptions
-//			fieldCount - the size of the array (number of field descriptions)
-//-----------------------------------------------------------------------------
-void CServerGameDLL::SaveWriteFields( CSaveRestoreData *pSaveData, const char *pname, void *pBaseData, datamap_t *pMap, typedescription_t *pFields, int fieldCount )
-{
-}
-
-
-//-----------------------------------------------------------------------------
-// Purpose: Reads data from a save/restore block into a structure
-// Input  : *pSaveData - the saverestore object
-//			char *pname - the name of the data to extract from
-//			*pBaseData - the struct into which the data is to be restored
-//			*pFields - pointer to an array of data field descriptions
-//			fieldCount - the size of the array (number of field descriptions)
-//-----------------------------------------------------------------------------
-
-//-----------------------------------------------------------------------------
-
-void CServerGameDLL::SaveReadFields( CSaveRestoreData *pSaveData, const char *pname, void *pBaseData, datamap_t *pMap, typedescription_t *pFields, int fieldCount )
-{
-}
-
-//-----------------------------------------------------------------------------
-
-void CServerGameDLL::SaveGlobalState( CSaveRestoreData *s )
-{
-}
-
-void CServerGameDLL::RestoreGlobalState(CSaveRestoreData *s)
-{
-}
-
-void CServerGameDLL::Save( CSaveRestoreData *s )
-{
-}
-
-void CServerGameDLL::Restore( CSaveRestoreData *s, bool b)
-{
-}
-
 //-----------------------------------------------------------------------------
 // Purpose: 
 // Input  : msg_type - 
@@ -1484,15 +1422,6 @@ void CServerGameDLL::Restore( CSaveRestoreData *s, bool b)
 CStandardSendProxies* CServerGameDLL::GetStandardSendProxies()
 {
 	return &g_StandardSendProxies;
-}
-
-int	CServerGameDLL::CreateEntityTransitionList( CSaveRestoreData *s, int a)
-{
-	return 0;
-}
-
-void CServerGameDLL::PreSave( CSaveRestoreData *s )
-{
 }
 
 #include "client_textmessage.h"
@@ -1586,18 +1515,6 @@ static TITLECOMMENT gTitleComments[] =
 	{ "ep2_outland_12a", "#ep2_Chapter7_Title" },
 	{ "ep2_outland_12", "#ep2_Chapter6_Title" },
 };
-
-void CServerGameDLL::GetSaveComment( char *text, int maxlength, float flMinutes, float flSeconds, bool bNoTime )
-{
-}
-
-void CServerGameDLL::WriteSaveHeaders( CSaveRestoreData *s )
-{
-}
-
-void CServerGameDLL::ReadRestoreHeaders( CSaveRestoreData *s )
-{
-}
 
 void CServerGameDLL::PreSaveGameLoaded( char const *pSaveName, bool bInGame )
 {
@@ -1783,18 +1700,6 @@ void CServerGameDLL::GetMatchmakingTags( char *buf, size_t bufSize )
 void CServerGameDLL::ServerHibernationUpdate( bool bHibernating )
 {
 	m_bIsHibernating = bHibernating;
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: Called during a transition, to build a map adjacency list
-//-----------------------------------------------------------------------------
-void CServerGameDLL::BuildAdjacentMapList( void )
-{
-	// retrieve the pointer to the save data
-	CSaveRestoreData *pSaveData = gpGlobals->pSaveData;
-
-	if ( pSaveData )
-		pSaveData->levelInfo.connectionCount = BuildChangeList( pSaveData->levelInfo.levelList, MAX_LEVEL_CONNECTIONS );
 }
 
 //-----------------------------------------------------------------------------

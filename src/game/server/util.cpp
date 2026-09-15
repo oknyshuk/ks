@@ -6,7 +6,6 @@
 //=============================================================================//
 
 #include "cbase.h"
-#include "saverestore.h"
 #include "globalstate.h"
 #include <stdarg.h>
 #include "shake.h"
@@ -21,7 +20,6 @@
 #include "soundflags.h"
 #include "ispatialpartition.h"
 #include "igamesystem.h"
-#include "saverestoretypes.h"
 #include "checksum_crc.h"
 #include "hierarchy.h"
 #include "iservervehicle.h"

@@ -7,7 +7,6 @@
 #include "cbase.h"
 #include "reflect_annotations.h"
 #include "reflect_datamap.h"
-#include "isaverestore.h"
 #include "ai_debug.h"
 #include "ai_memory.h"
 #include "ai_basenpc.h"

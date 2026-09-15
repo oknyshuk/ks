@@ -61,7 +61,6 @@
 #include "bspfile.h"
 #include "cmodel.h"
 #include "const.h"
-#include "isaverestore.h"
 #include "vcollide_parse.h"
 
 // VPhysics Interface

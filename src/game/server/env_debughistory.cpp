@@ -4,7 +4,6 @@
 //
 //=============================================================================
 #include "cbase.h"
-#include "isaverestore.h"
 #include "env_debughistory.h"
 #include "tier0/vprof.h"
 

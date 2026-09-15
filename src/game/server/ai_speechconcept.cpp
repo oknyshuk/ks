@@ -14,7 +14,6 @@
 #include "keyvalues.h"
 #include "ai_basenpc.h"
 #include "ai_criteria.h"
-#include "isaverestore.h"
 #include "sceneentity.h"
 
 // memdbgon must be the last include file in a .cpp file!!!

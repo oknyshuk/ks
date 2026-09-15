@@ -84,10 +84,7 @@ OUTPUTS:
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
-extern ISaveRestoreOps *variantFuncs;	// function pointer set for save/restoring variants
-
 IMPLEMENT_REFLECT_DATAMAP_SIMPLE( CEventAction )
-
 
 // ID Stamp used to uniquely identify every output
 int CEventAction::s_iNextIDStamp = 0;
@@ -435,23 +432,6 @@ void CBaseEntityOutput::DeleteAllElements( void )
 
 class CEventsSaveDataOps : public ISaveRestoreOps
 {
-	virtual void Save( const SaveRestoreFieldInfo_t &fieldInfo, ISave *pSave )
-	{
-	}
-
-	virtual void Restore( const SaveRestoreFieldInfo_t &fieldInfo, IRestore *pRestore )
-	{
-	}
-
-	virtual bool IsEmpty( const SaveRestoreFieldInfo_t &fieldInfo )
-	{
-		return true;
-	}
-
-	virtual void MakeEmpty( const SaveRestoreFieldInfo_t &fieldInfo )
-	{
-	}
-
 	virtual bool Parse( const SaveRestoreFieldInfo_t &fieldInfo, char const* szValue )
 	{
 		CBaseEntityOutput *ev = (CBaseEntityOutput*)fieldInfo.pField;
@@ -1350,32 +1330,6 @@ typedescription_t variant_t::m_SaveMatrix3x4Worldspace[] =
 {
 };
 #undef classNameTypedef
-
-class CVariantSaveDataOps : public CDefSaveRestoreOps
-{
-	// saves the entire array of variables
-	virtual void Save( const SaveRestoreFieldInfo_t &fieldInfo, ISave *pSave )
-	{
-	}
-
-	// restores a single instance of the variable
-	virtual void Restore( const SaveRestoreFieldInfo_t &fieldInfo, IRestore *pRestore )
-	{
-	}
-
-
-	virtual bool IsEmpty( const SaveRestoreFieldInfo_t &fieldInfo )
-	{
-		return true;
-	}
-
-	virtual void MakeEmpty( const SaveRestoreFieldInfo_t &fieldInfo )
-	{
-	}
-};
-
-CVariantSaveDataOps g_VariantSaveDataOps;
-ISaveRestoreOps *variantFuncs = &g_VariantSaveDataOps;
 
 /////////////////////// entitylist /////////////////////
 

@@ -75,7 +75,6 @@ namespace ResponseRules
 	class IResponseSystem;
 };
 using ResponseRules::IResponseSystem;
-class IEntitySaveUtils;
 class CRecipientFilter;
 
 
@@ -103,11 +102,7 @@ typedef CHandle<CBaseEntity> EHANDLE;
 		inline void Set##accessorName##( type *pType ) { varName = pType; m_NetStateMgr.StateChanged(); }
 
 
-// saverestore.h declarations
-class CSaveRestoreData;
 struct typedescription_t;
-class ISave;
-class IRestore;
 class CBaseEntity;
 class CEntityMapData;
 class CBaseCombatWeapon;
@@ -724,10 +719,6 @@ public:
 	// save/restore
 	// only overload these if you have special data to serialize
 	virtual bool ShouldSavePhysics();
-
-	// handler to reset stuff before you are restored
-	// NOTE: Always chain to base class when implementing this!
-	virtual void OnSave( IEntitySaveUtils *pSaveUtils );
 
 	// handler to reset stuff after you are restored
 	// called after all entities have been loaded from all affected levels

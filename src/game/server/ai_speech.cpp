@@ -16,7 +16,6 @@
 #include "keyvalues.h"
 #include "ai_basenpc.h"
 #include "ai_criteria.h"
-#include "isaverestore.h"
 #include "sceneentity.h"
 #include "ai_speechqueue.h"
 #include "cs_gamerules.h"

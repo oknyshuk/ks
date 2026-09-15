@@ -50,8 +50,6 @@
 #include "gamestringpool.h"
 #include "c_user_message_register.h"
 #include "IGameUIFuncs.h"
-#include "saverestoretypes.h"
-#include "saverestore.h"
 #include "igameevents.h"
 #include "datacache/idatacache.h"
 #include "datacache/imdlcache.h"
@@ -724,15 +722,6 @@ public:
 
 	virtual bool					DispatchUserMessage( int msg_type, int32 nFlags, int size, const void *msg );
 
-	// Save/restore system hooks
-	virtual CSaveRestoreData  *SaveInit( int size );
-	virtual void			SaveWriteFields( CSaveRestoreData *, const char *, void *, datamap_t *, typedescription_t *, int );
-	virtual void			SaveReadFields( CSaveRestoreData *, const char *, void *, datamap_t *, typedescription_t *, int );
-	virtual void			PreSave( CSaveRestoreData * );
-	virtual void			Save( CSaveRestoreData * );
-	virtual void			WriteSaveHeaders( CSaveRestoreData * );
-	virtual void			ReadRestoreHeaders( CSaveRestoreData * );
-	virtual void			Restore( CSaveRestoreData *, bool );
 	virtual void			DispatchOnRestore();
 	virtual void			WriteSaveGameScreenshot( const char *pFilename );
 
@@ -2970,42 +2959,6 @@ void CHLClient::FrameStageNotify( ClientFrameStage_t curStage )
 		}
 		break;
 	}
-}
-
-CSaveRestoreData *SaveInit( int size );
-
-// Save/restore system hooks
-CSaveRestoreData  *CHLClient::SaveInit( int size )
-{
-	return nullptr;
-}
-
-void CHLClient::SaveWriteFields( CSaveRestoreData *pSaveData, const char *pname, void *pBaseData, datamap_t *pMap, typedescription_t *pFields, int fieldCount )
-{
-}
-
-void CHLClient::SaveReadFields( CSaveRestoreData *pSaveData, const char *pname, void *pBaseData, datamap_t *pMap, typedescription_t *pFields, int fieldCount )
-{
-}
-
-void CHLClient::PreSave( CSaveRestoreData *s )
-{
-}
-
-void CHLClient::Save( CSaveRestoreData *s )
-{
-}
-
-void CHLClient::WriteSaveHeaders( CSaveRestoreData *s )
-{
-}
-
-void CHLClient::ReadRestoreHeaders( CSaveRestoreData *s )
-{
-}
-
-void CHLClient::Restore( CSaveRestoreData *s, bool b )
-{
 }
 
 static CUtlVector<EHANDLE> g_RestoredEntities;

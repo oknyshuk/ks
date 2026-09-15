@@ -9,7 +9,6 @@
 #include "reflect_annotations.h"
 #include "reflect_datamap.h"
 
-#include "isaverestore.h"
 #include "ai_behavior.h"
 #include "scripted.h"
 #include "env_debughistory.h"

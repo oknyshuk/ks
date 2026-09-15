@@ -105,28 +105,7 @@ public:
   virtual const char *GetGameDescription(void);
   virtual void CreateNetworkStringTables(void);
 
-  // Save/restore system hooks
-  virtual CSaveRestoreData *SaveInit(int size);
-  virtual void SaveWriteFields(CSaveRestoreData *, char const *, void *,
-                               datamap_t *, typedescription_t *, int);
-  virtual void SaveReadFields(CSaveRestoreData *, char const *, void *,
-                              datamap_t *, typedescription_t *, int);
-  virtual void SaveGlobalState(CSaveRestoreData *);
-  virtual void RestoreGlobalState(CSaveRestoreData *);
-  virtual int CreateEntityTransitionList(CSaveRestoreData *, int);
-  virtual void BuildAdjacentMapList(void);
-
-  virtual void PreSave(CSaveRestoreData *);
-  virtual void Save(CSaveRestoreData *);
-  virtual void GetSaveComment(char *comment, int maxlength, float flMinutes,
-                              float flSeconds, bool bNoTime = false);
-
-  virtual void WriteSaveHeaders(CSaveRestoreData *);
-
-  virtual void ReadRestoreHeaders(CSaveRestoreData *);
-  virtual void Restore(CSaveRestoreData *, bool);
   virtual bool IsRestoring();
-  virtual bool SupportsSaveRestore();
 
   virtual CStandardSendProxies *GetStandardSendProxies();
 

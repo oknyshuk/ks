@@ -91,7 +91,4 @@ extern int ActivityList_HighestIndex();
 // Implemented in shared code
 extern void ActivityList_RegisterSharedActivities( void );
 
-class ISaveRestoreOps;
-extern ISaveRestoreOps* ActivityDataOps();
-
 #endif // ACTIVITYLIST_H

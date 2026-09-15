@@ -75,7 +75,6 @@ public:
 	// Damage passing
 	virtual void	SetDamageEntity( CBaseEntity *pEntity );
 	virtual int		OnTakeDamage( const CTakeDamageInfo &info );
-	virtual void OnSave( IEntitySaveUtils *pUtils );
 	virtual void OnRestore();
 
 	// Purpose: CDefaultPlayerPickupVPhysics

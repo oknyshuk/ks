@@ -9,7 +9,6 @@
 #include "ai_activity.h"
 #include "activitylist.h"
 #include "stringregistry.h"
-#include "isaverestore.h"
 
 #include "filesystem.h"
 #include <keyvalues.h>

@@ -116,11 +116,6 @@ public:
 	void CleanupDeleteList() override;
 	void EnableDeleteQueue( bool enable ) override;
 
-	bool Save( const physsaveparams_t& params ) override;
-	void PreRestore( const physprerestoreparams_t& params ) override;
-	bool Restore( const physrestoreparams_t& params ) override;
-	void PostRestore() override;
-
 	bool IsCollisionModelUsed( CPhysCollide* pCollide ) const override;
 
 	void TraceRay( const Ray_t& ray, unsigned int fMask, IPhysicsTraceFilter* pTraceFilter, trace_t* pTrace ) override;
@@ -174,12 +169,6 @@ private:
 	void RemoveBodyAndDeleteObject( JoltPhysicsObject* pObject );
 	void DeleteDeadObjects();
 
-	template <typename T>
-	void AddPhysicsSaveRestorePointer( uintp oldPtr, T* newPtr );
-
-	template <typename T>
-	T* LookupPhysicsSaveRestorePointer( uintp oldPtr );
-
 	void HandleDebugDumpingEnvironment( void* pReturnAddress );
 
 	bool m_bSimulating = false;
@@ -216,8 +205,6 @@ private:
 	std::vector< CPhysCollide * > m_pDeadObjectCollides;
 
 	std::vector< IJoltPhysicsController * > m_pPhysicsControllers;
-
-	std::unordered_map< uintp, void * > m_SaveRestorePointerMap;
 
 	// The physics system that simulates the world
 	// The debug overlay to render with (if it was ever passed to us)

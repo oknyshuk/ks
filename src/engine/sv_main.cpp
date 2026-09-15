@@ -36,7 +36,6 @@
 #include "sv_packedentities.h"
 #include "testscriptmgr.h"
 #include "PlayerState.h"
-#include "saverestoretypes.h"
 #include "tier0/vprof.h"
 #include "proto_oob.h"
 #include "staticpropmgr.h"

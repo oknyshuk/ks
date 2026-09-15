@@ -29,7 +29,6 @@
 #include "materialsystem/imaterialsystem.h"
 #include "soundinfo.h"
 #include "mathlib/vmatrix.h"
-#include "isaverestore.h"
 #include "tier2/interval.h"
 #include "engine/ivdebugoverlay.h"
 #include "c_ai_basenpc.h"

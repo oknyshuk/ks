@@ -564,72 +564,8 @@ inline void SendTable::SetHasPropsEncodedAgainstTickcount( bool bState )
 }
 
 // ------------------------------------------------------------------------------------------------------ //
-// Use BEGIN_SEND_TABLE if you want to declare a SendTable and have it inherit all the properties from
-// its base class. There are two requirements for this to work:
-
-// 1. Its base class must have a static SendTable pointer member variable called m_pClassSendTable which
-//    points to its send table. The DECLARE_SERVERCLASS and IMPLEMENT_SERVERCLASS macros do this automatically.
-
-// 2. Your class must typedef its base class as BaseClass. So it would look like this:
-//    class Derived : public CBaseEntity
-//    {
-//    typedef CBaseEntity BaseClass;
-//    };
-
-// If you don't want to interit a base class's properties, use BEGIN_SEND_TABLE_NOBASE.
+// Send tables are built by reflection now; see reflect_sendtable.h. No macro DSL exists any more.
 // ------------------------------------------------------------------------------------------------------ //
-
-#define BEGIN_SEND_TABLE_NOBASE(className, tableName) \
-	template <typename T> int ServerClassInit(T *); \
-	namespace tableName { \
-		struct ignored; \
-	} \
-	template <> int ServerClassInit<tableName::ignored>(tableName::ignored *); \
-	namespace tableName { \
-		SendTable g_SendTable;\
-		int g_SendTableInit = ServerClassInit((tableName::ignored *)nullptr); \
-	} \
-	template <> int ServerClassInit<tableName::ignored>(tableName::ignored *) \
-	{ \
-		typedef className currentSendDTClass; \
-		static const char *g_pSendTableName = #tableName; \
-		SendTable &sendTable = tableName::g_SendTable; \
-		static SendProp g_SendProps[] = { \
-			SendPropInt("should_never_see_this", 0, sizeof(int)),		// It adds a dummy property at the start so you can define "empty" SendTables.
-
-#define END_SEND_TABLE() \
-		};\
-		sendTable.Construct(g_SendProps+1, sizeof(g_SendProps) / sizeof(SendProp) - 1, g_pSendTableName);\
-		return 1; \
-	} 
-
-
-// These can simplify creating the variables.
-// Note: currentSendDTClass::MakeANetworkVar_##varName equates to currentSendDTClass. It's
-// there as a check to make sure all networked variables use the CNetworkXXXX macros in network_var.h.
-#define SENDINFO(varName)					#varName, (int)offsetof(currentSendDTClass::MakeANetworkVar_##varName, varName) | NETWORKVAR_OFFSET_FLAGS( currentSendDTClass, varName ), (int)sizeof(((currentSendDTClass*)0)->varName)
-#define SENDINFO_ARRAY(varName)				#varName, (int)offsetof(currentSendDTClass::MakeANetworkVar_##varName, varName), (int)sizeof(((currentSendDTClass*)0)->varName[0])
-#define SENDINFO_ARRAY3(varName)			#varName, (int)offsetof(currentSendDTClass::MakeANetworkVar_##varName, varName), (int)sizeof(((currentSendDTClass*)0)->varName[0]), (int)(sizeof(((currentSendDTClass*)0)->varName)/sizeof(((currentSendDTClass*)0)->varName[0]))
-#define SENDINFO_ARRAYELEM(varName, i)		#varName "[" #i "]", (int)offsetof(currentSendDTClass::MakeANetworkVar_##varName, varName[i]), (int)sizeof(((currentSendDTClass*)0)->varName[0])
-#define SENDINFO_NETWORKARRAYELEM(varName, i)#varName "[" #i "]", (int)offsetof(currentSendDTClass::MakeANetworkVar_##varName, varName.m_Value[i]), (int)sizeof(((currentSendDTClass*)0)->varName.m_Value[0])
-
-// NOTE: Be VERY careful to specify any other vector elems for the same vector IN ORDER and 
-// right after each other, otherwise it might miss the Y or Z component in SP.
-//
-// Note: this macro specifies a negative offset so the engine can detect it and setup m_pNext
-#define SENDINFO_VECTORELEM(varName, i)		#varName "[" #i "]", (int)offsetof(currentSendDTClass::MakeANetworkVar_##varName, varName.m_Value[i]) | NETWORKVAR_OFFSET_FLAGS( currentSendDTClass, varName ), (int)sizeof(((currentSendDTClass*)0)->varName.m_Value[0])
-
-#define SENDINFO_STRUCTELEM(className, structVarName, varName)		#structVarName "." #varName, (int)offsetof(currentSendDTClass, structVarName.varName) | NETWORKVAR_OFFSET_FLAGS( className, varName ), (int)sizeof(((currentSendDTClass*)0)->structVarName.varName.m_Value)
-#define SENDINFO_STRUCTARRAYELEM(varName, i)#varName "[" #i "]", (int)offsetof(currentSendDTClass, varName.m_Value[i]), (int)sizeof(((currentSendDTClass*)0)->varName.m_Value[0])
-
-// Use this when you're not using a CNetworkVar to represent the data you're sending.
-#define SENDINFO_NOCHECK(varName)						#varName, (int)offsetof(currentSendDTClass, varName), (int)sizeof(((currentSendDTClass*)0)->varName)
-#define SENDINFO_STRING_NOCHECK(varName)				#varName, (int)offsetof(currentSendDTClass, varName)
-#define SENDINFO_DT(varName)							#varName, (int)offsetof(currentSendDTClass, varName)
-#define SENDINFO_DT_NAME(varName, remoteVarName)		#remoteVarName, (int)offsetof(currentSendDTClass, varName)
-#define SENDINFO_NAME(varName,remoteVarName)			#remoteVarName, (int)offsetof(currentSendDTClass, varName), (int)sizeof(((currentSendDTClass*)0)->varName)
-
-
 
 
 // ------------------------------------------------------------------------ //

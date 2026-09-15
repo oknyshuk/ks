@@ -83,8 +83,6 @@ public:
 	void InitialiseFixed( IPhysicsConstraintGroup *pGroup, const constraint_fixedparams_t &fixed );
 	void InitialiseLength( IPhysicsConstraintGroup *pGroup, const constraint_lengthparams_t &length );
 
-	void SaveConstraintSettings( JPH::StateRecorder &recorder );
-
 private:
 
 	friend class JoltPhysicsConstraintGroup; // [CS_PATCH]

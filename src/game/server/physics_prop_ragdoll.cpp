@@ -126,22 +126,6 @@ void CRagdollProp::SetSourceClassName( const char *pClassname )
 }
 
 
-void CRagdollProp::OnSave( IEntitySaveUtils *pUtils )
-{
-	if ( !m_ragdoll.listCount )
-		return;
-
-	// Don't save ragdoll element 0, base class saves the pointer in 
-	// m_pPhysicsObject
-	Assert( m_ragdoll.list[0].parentIndex == -1 );
-	Assert( m_ragdoll.list[0].pConstraint == nullptr );
-	Assert( m_ragdoll.list[0].originParentSpace == vec3_origin );
-	Assert( m_ragdoll.list[0].pObject != nullptr );
-	VPhysicsSetObject( nullptr );	// squelch a warning message
-	VPhysicsSetObject( m_ragdoll.list[0].pObject );	// make sure object zero is saved by CBaseEntity
-	BaseClass::OnSave( pUtils );
-}
-
 void CRagdollProp::OnRestore()
 {
 	// rebuild element 0 since it isn't saved

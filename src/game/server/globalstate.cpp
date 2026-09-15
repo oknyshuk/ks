@@ -9,7 +9,6 @@
 #include "reflect_annotations.h"
 #include "reflect_datamap.h"
 #include "basetypes.h"
-#include "saverestore.h"
 #include "globalstate.h"
 #include "igamesystem.h"
 
@@ -278,16 +277,6 @@ void CGlobalState::Reset( void )
 {
 	m_list.Purge();
 	m_nameList.RemoveAll();
-}
-
-
-void SaveGlobalState( CSaveRestoreData *pSaveData )
-{
-}
-
-
-void RestoreGlobalState( CSaveRestoreData *pSaveData )
-{
 }
 
 

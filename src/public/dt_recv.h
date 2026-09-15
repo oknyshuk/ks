@@ -249,44 +249,8 @@ inline bool RecvTable::IsInMainList() const
 
 
 // ------------------------------------------------------------------------------------------------------ //
-// See notes on BEGIN_SEND_TABLE for a description. These macros work similarly.
+// Recv tables are built by reflection now; see reflect_recvtable.h. No macro DSL exists any more.
 // ------------------------------------------------------------------------------------------------------ //
-
-#define BEGIN_RECV_TABLE_NOBASE(className, tableName) \
-	template <typename T> int ClientClassInit(T *); \
-	namespace tableName { \
-		struct ignored; \
-	} \
-	template <> int ClientClassInit<tableName::ignored>(tableName::ignored *); \
-	namespace tableName {	\
-		RecvTable g_RecvTable; \
-		int g_RecvTableInit = ClientClassInit((tableName::ignored *)nullptr); \
-	} \
-	template <> int ClientClassInit<tableName::ignored>(tableName::ignored *) \
-	{ \
-		typedef className currentRecvDTClass; \
-		const char *pRecvTableName = #tableName; \
-		RecvTable &RecvTable = tableName::g_RecvTable; \
-		static RecvProp RecvProps[] = { \
-			RecvPropInt("should_never_see_this", 0, sizeof(int)),		// It adds a dummy property at the start so you can define "empty" SendTables.
-
-#define END_RECV_TABLE() \
-			}; \
-		RecvTable.Construct(RecvProps+1, sizeof(RecvProps) / sizeof(RecvProp) - 1, pRecvTableName); \
-		return 1; \
-	}
-
-
-#define RECVINFO(varName)						#varName, (int)_offsetof(currentRecvDTClass, varName), (int)sizeof(((currentRecvDTClass*)0)->varName)
-#define RECVINFO_NAME(varName, remoteVarName)	#remoteVarName, (int)_offsetof(currentRecvDTClass, varName), (int)sizeof(((currentRecvDTClass*)0)->varName)
-#define RECVINFO_STRING(varName)				#varName, (int)_offsetof(currentRecvDTClass, varName), (int)STRINGBUFSIZE(currentRecvDTClass, varName)
-#define RECVINFO_BASECLASS(tableName)			RecvPropDataTable("this", 0, 0, &REFERENCE_RECV_TABLE(tableName))
-#define RECVINFO_ARRAY(varName)					#varName, (int)_offsetof(currentRecvDTClass, varName), (int)sizeof(((currentRecvDTClass*)0)->varName[0]), (int)(sizeof(((currentRecvDTClass*)0)->varName)/sizeof(((currentRecvDTClass*)0)->varName[0]))
-
-// Just specify the name and offset. Used for strings and data tables.
-#define RECVINFO_NOSIZE(varName)				#varName, (int)_offsetof(currentRecvDTClass, varName)
-#define RECVINFO_DT(varName)					RECVINFO_NOSIZE(varName)
-#define RECVINFO_DTNAME(varName,remoteVarName)	#remoteVarName, (int)_offsetof(currentRecvDTClass, varName)
 
 
 void RecvProxy_FloatToFloat  ( const CRecvProxyData *pData, void *pStruct, void *pOut );

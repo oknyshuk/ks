@@ -86,9 +86,6 @@ struct physics_performanceparams_t;
 struct virtualmeshparams_t;
 
 //enum PhysInterfaceId_t;
-struct physsaveparams_t;
-struct physrestoreparams_t;
-struct physprerestoreparams_t;
 
 enum PhysInterfaceId_t 
 {
@@ -106,10 +103,6 @@ enum PhysInterfaceId_t
 
 	PIID_NUM_TYPES
 };
-
-
-class ISave;
-class IRestore;
 
 
 #define VPHYSICS_DEBUG_OVERLAY_INTERFACE_VERSION	"VPhysicsDebugOverlay001"
@@ -634,12 +627,6 @@ public:
 
 	virtual void			CleanupDeleteList( void ) = 0;
 	virtual void			EnableDeleteQueue( bool enable ) = 0;
-
-	// Save/Restore methods
-	virtual bool			Save( const physsaveparams_t &params ) = 0;
-	virtual void			PreRestore( const physprerestoreparams_t &params ) = 0;
-	virtual bool			Restore( const physrestoreparams_t &params ) = 0;
-	virtual void			PostRestore() = 0;
 
 	// Debugging:
 	virtual bool IsCollisionModelUsed( CPhysCollide *pCollide ) const = 0;
@@ -1170,40 +1157,6 @@ struct convertconvexparams_t
 //
 // Note that right now the order of the enum also defines the order of save/load
 
-
-//-----------------------------------------------------------------------------
-// Purpose: parameter blocks for save and load operations
-//-----------------------------------------------------------------------------
-struct physsaveparams_t
-{
-	ISave 				*pSave;
-	void 				*pObject;
-	PhysInterfaceId_t 	type;
-};
-
-struct physrestoreparams_t
-{
-	IRestore 			*pRestore;
-	void 				**ppObject;
-	PhysInterfaceId_t 	type;
-	void 				*pGameData;
-	const char			*pName;				// used only for debugging
-	const CPhysCollide 	*pCollisionModel;
-	IPhysicsEnvironment *pEnvironment;
-	IPhysicsGameTrace	*pGameTrace;
-};
-
-struct physrecreateparams_t
-{
-	void *pOldObject;
-	void *pNewObject;
-};
-
-struct physprerestoreparams_t
-{
-	int recreatedObjectCount;
-	physrecreateparams_t recreatedObjectList[1];
-};
 
 //-------------------------------------
 

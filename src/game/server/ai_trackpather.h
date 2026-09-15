@@ -50,7 +50,6 @@ protected:
 
 	float			GetPathMaxSpeed() const					{ return m_flPathMaxSpeed;		}
 
-	void			OnSave( IEntitySaveUtils *pUtils );
 	void			OnRestore( void );
 
 protected:

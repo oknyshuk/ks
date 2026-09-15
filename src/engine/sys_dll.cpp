@@ -29,7 +29,6 @@
 #include "sv_log.h"
 #include "sv_main.h"
 #include "traceinit.h"
-#include "dt_test.h"
 #include "keys.h"
 #include "gl_matsysiface.h"
 #include "tier0/icommandline.h"
@@ -865,15 +864,6 @@ int Sys_InitGame( CreateInterfaceFn appSystemFactory, const char* pBaseDir, void
 
 	// Initialize clock
 	TRACEINIT( Sys_Init(), Sys_Shutdown() );
-
-#if defined(_DEBUG)
-	{
-		if( !CommandLine()->FindParm( "-nodttest" ) && !CommandLine()->FindParm( "-dti" ) )
-		{
-			RunDataTableTest();	
-		}
-	}
-#endif
 
 	// NOTE: Can't use COM_CheckParm here because it hasn't been set up yet.
 	SeedRandomNumberGenerator( CommandLine()->FindParm( "-random_invariant" ) != 0 );

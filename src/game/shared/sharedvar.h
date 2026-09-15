@@ -11,7 +11,6 @@
 #include "convar.h"
 #include "ispsharedmemory.h"
 #include "basehandle.h"
-#include "isaverestore.h"
 
 
 #pragma warning( disable : 4284 ) // warning C4284: return type for 'CNetworkVarT<int>::operator ->' is 'int *' (ie; not a UDT or reference to a UDT.  Will produce errors if applied using infix notation)
@@ -52,114 +51,8 @@
 #endif
 
 
-class CSharedVarSaveDataOps;
-
-
-// Templated save/restore functions for shared vars (add specializations as needed)
-template< class Type >
-TEMPLATE_STATIC void SharedVar_Save( ISave *pSave, Type *pValue, int iCount = 1 )
-{
-	int iNumBytes = sizeof( Type ) * iCount;
-	pSave->WriteInt( &iNumBytes );
-	pSave->WriteData( (char*)( (void*)(pValue) ), iNumBytes );
-}
-
-template< class Type >
-TEMPLATE_STATIC void SharedVar_Restore( IRestore *pRestore, Type *pValue )
-{
-	int iNumBytes = pRestore->ReadInt();
-	pRestore->ReadData( (char*)( (void*)(pValue) ), iNumBytes, 0 );
-}
-
-template< class Type >
-TEMPLATE_STATIC bool SharedVar_IsEmpty( Type *pValue, int iCount = 1 )
-{
-	char *pChar = (char*)( (void*)(pValue) );
-	int iNumBytes = sizeof( Type ) * iCount;
-
-	for ( int i = 0; i < iNumBytes; ++i )
-	{
-		if ( pChar[i] )
-		{
-			return false;
-		}
-	}
-
-	return true;
-}
-
-template< class Type >
-TEMPLATE_STATIC void SharedVar_MakeEmpty( Type *pValue, int iCount = 1 )
-{
-	memset( pValue, 0, sizeof( Type ) * iCount );
-}
-
-#define SELECTOR __attribute__((weak))
-
-// EHANDLE Save/Restore specializations
-template<>
-SELECTOR TEMPLATE_STATIC void SharedVar_Save<EHANDLE>( ISave *pSave, EHANDLE *pValue, int iCount )
-{
-	pSave->WriteInt( &iCount );
-	pSave->WriteEHandle( pValue, iCount );
-}
-
-template<>
-SELECTOR TEMPLATE_STATIC void SharedVar_Restore<EHANDLE>( IRestore *pRestore, EHANDLE *pValue )
-{
-	int iCount = pRestore->ReadInt();
-	pRestore->ReadEHandle( pValue, iCount );
-}
-
-// UtlVector Save/Restore specializations
-template< class Type > void SharedVar_SaveUtlVector( ISave *pSave, CUtlVector<Type> *pValue, int iCount = 1 )
-{
-	Assert( iCount == 1 );
-
-	int iNumBytes = sizeof( Type ) * pValue->Count();
-	pSave->WriteInt( &iNumBytes );
-	pSave->WriteData( (char*)( (void*)(pValue->Base()) ), iNumBytes );
-}
-
-template< class Type > void SharedVar_RestoreUtlVector( IRestore *pRestore, CUtlVector<Type> *pValue )
-{
-	int iNumBytes = pRestore->ReadInt();
-	pValue->SetCount( iNumBytes / sizeof( Type ) );
-	pRestore->ReadData( (char*)( (void*)(pValue->Base()) ), iNumBytes, 0 );
-}
-
-template< class Type >
-TEMPLATE_STATIC bool SharedVar_IsEmptyUtlVector( CUtlVector<Type> *pValue, int iCount = 1 )
-{
-	Assert( iCount == 1 );
-
-	return ( pValue->Count() == 0 );
-}
-
-template< class Type >
-TEMPLATE_STATIC void SharedVar_MakeEmptyUtlVector( CUtlVector<Type> *pValue, int iCount = 1 )
-{
-	Assert( iCount == 1 );
-
-	pValue->SetCount( 0 );
-}
-
-
-abstract_class ISharedVarBase
-{
-private:
-	virtual void _Save( ISave *pSave ) = 0;
-	virtual void _Restore( IRestore *pRestore ) = 0;
-	virtual bool _IsEmpty( void ) = 0;
-	virtual void _MakeEmpty( void ) = 0;
-
-public:
-	friend class CSharedVarSaveDataOps;
-};
-
-
 template< class Type, class Changer >
-class CSharedVarBase : public ISharedVarBase
+class CSharedVarBase
 {
 public:
 	CSharedVarBase( void )
@@ -308,11 +201,6 @@ public:
 	}
 
 private:
-	virtual void _Save( ISave *pSave ) { SharedVar_Save<Type>( pSave, m_pValue ); }
-	virtual void _Restore( IRestore *pRestore ) { SharedVar_Restore<Type>( pRestore, m_pValue ); }
-	virtual bool _IsEmpty( void ) { return SharedVar_IsEmpty<Type>( m_pValue ); }
-	virtual void _MakeEmpty( void ) { SharedVar_MakeEmpty<Type>( m_pValue ); }
-
 public:
 	ISPSharedMemory		*m_pSharedMemory;
 	Type				*m_pValue;
@@ -551,7 +439,7 @@ public:
 
 // Prevent Shared Vars from using handle templates without the handle wrapper
 template< class Type, class Changer >
-class CSharedVarBase< CHandle<Type>, Changer > : public ISharedVarBase
+class CSharedVarBase< CHandle<Type>, Changer >
 {
 public:
 	CSharedVarBase( void )
@@ -580,7 +468,7 @@ public:
 
 // Prevent Shared Vars from using handle templates without the handle wrapper
 template< class Changer >
-class CSharedVarBase< CBaseHandle, Changer > : public ISharedVarBase
+class CSharedVarBase< CBaseHandle, Changer >
 {
 public:
 	CSharedVarBase( void )
@@ -696,32 +584,6 @@ private:
 		return static_cast< Type* >( GetHandle_Internal().Get() );
 	}
 
-	void UpdateClientIndex( void )
-	{
-		*m_piClientIndex = Server_EHandleToInt( *(CSharedHandleBase<Type,Changer>::m_pValue) );
-	}
-
-	virtual void _Save( ISave *pSave )
-	{
-		SharedVar_Save<EHANDLE>( pSave, this->m_pValue );
-	}
-
-	virtual void _Restore( IRestore *pRestore )
-	{
-		SharedVar_Restore<EHANDLE>( pRestore, this->m_pValue );
-		UpdateClientIndex();
-	}
-
-	virtual bool _IsEmpty( void )
-	{
-		return SharedVar_IsEmpty<EHANDLE>( this->m_pValue );
-	}
-
-	virtual void _MakeEmpty( void )
-	{
-		SharedVar_MakeEmpty<EHANDLE>( this->m_pValue );
-	}
-
 public:
 	int		*m_piClientIndex;	// Pointer to ints for Client handle translations
 };
@@ -789,26 +651,6 @@ public:
 	#endif
 
 private:
-	virtual void _Save( ISave *pSave )
-	{
-		SharedVar_Save<Type>( pSave, CSharedArrayBase<Type,Changer>::m_pValue, m_iCount );
-	}
-
-	virtual void _Restore( IRestore *pRestore )
-	{
-		SharedVar_Restore<Type>( pRestore, CSharedArrayBase<Type,Changer>::m_pValue );
-	}
-
-	virtual bool _IsEmpty( void )
-	{
-		return SharedVar_IsEmpty<Type>( CSharedArrayBase<Type,Changer>::m_pValue, m_iCount );
-	}
-
-	virtual void _MakeEmpty( void )
-	{
-		SharedVar_MakeEmpty<Type>( CSharedArrayBase<Type,Changer>::m_pValue, m_iCount );
-	}
-
 public:
 	int		m_iCount;
 };
@@ -879,21 +721,6 @@ private:
 		return static_cast< Type* >( GetHandle_Internal(i).Get() );
 	}
 
-private:
-	void UpdateClientIndices( void )
-	{
-		for ( int i = 0; i < this->m_iConcept; ++i )
-		{
-			m_piClientIndex[i] = Server_EHandleToInt( CSharedHandleBase<Type,Changer>::m_pValue[i] );
-		}
-	}
-
-	virtual void _Restore( IRestore *pRestore )
-	{
-		SharedVar_Restore<EHANDLE>( pRestore, CSharedHandleArrayBase<Type,Changer>::m_pValue );
-		UpdateClientIndices();
-	}
-
 public:
 	int		*m_piClientIndex;	// Pointer to ints for Client handle translations
 };
@@ -901,7 +728,7 @@ public:
 
 // Prevent Shared Vars from using UtlVector templates without the UtlVector wrapper
 template< class Type, class Changer >
-class CSharedVarBase< CUtlVector<Type>, Changer > : public ISharedVarBase
+class CSharedVarBase< CUtlVector<Type>, Changer >
 {
 public:
 	CSharedVarBase( void )
@@ -1013,25 +840,6 @@ protected:
 	virtual void Shared_CUtlVector_Vars_Must_Use_CSharedUtlVector() {}
 
 private:
-	virtual void _Save( ISave *pSave )
-	{
-		SharedVar_SaveUtlVector<Type>( pSave, CSharedUtlVectorBase<Type,Changer>::m_pValue, 1 );
-	}
-
-	virtual void _Restore( IRestore *pRestore )
-	{
-		SharedVar_RestoreUtlVector<Type>( pRestore, CSharedUtlVectorBase<Type,Changer>::m_pValue );
-	}
-
-	virtual bool _IsEmpty( void )
-	{
-		return SharedVar_IsEmptyUtlVector<Type>( CSharedUtlVectorBase<Type,Changer>::m_pValue, 1 );
-	}
-
-	virtual void _MakeEmpty( void )
-	{
-		SharedVar_MakeEmptyUtlVector<Type>( CSharedUtlVectorBase<Type,Changer>::m_pValue, 1 );
-	}
 };
 
 
@@ -1111,44 +919,6 @@ private:
 
 #define SharedPropArray( var ) \
 	var.Initialize( "SharedVar_"#var, entindex(), m_SharedArray_count_##var );
-
-
-// Save/Restore handling
-class CSharedVarSaveDataOps : public CDefSaveRestoreOps
-{
-	// saves the entire array of variables
-	virtual void Save( const SaveRestoreFieldInfo_t &fieldInfo, ISave *pSave )
-	{
-		ISharedVarBase *pSharedVar = (ISharedVarBase *)fieldInfo.pField;
-		pSharedVar->_Save( pSave );
-	}
-
-	// restores a single instance of the variable
-	virtual void Restore( const SaveRestoreFieldInfo_t &fieldInfo, IRestore *pRestore )
-	{
-		ISharedVarBase *pSharedVar = (ISharedVarBase *)fieldInfo.pField;
-		pSharedVar->_Restore( pRestore );
-	}
-
-
-	virtual bool IsEmpty( const SaveRestoreFieldInfo_t &fieldInfo )
-	{
-		ISharedVarBase *pSharedVar = (ISharedVarBase *)fieldInfo.pField;
-		return pSharedVar->_IsEmpty();
-	}
-
-	virtual void MakeEmpty( const SaveRestoreFieldInfo_t &fieldInfo )
-	{
-		ISharedVarBase *pSharedVar = (ISharedVarBase *)fieldInfo.pField;
-		return pSharedVar->_MakeEmpty();
-	}
-};
-
-static CSharedVarSaveDataOps g_SharedVarSaveDataOps;
-
-
-#define DEFINE_SHARED_FIELD(name)	\
-	{ FIELD_CUSTOM, #name, (int)offsetof(classNameTypedef, name), 1, FTYPEDESC_SAVE, nullptr, &g_SharedVarSaveDataOps, nullptr }
 
 
 #endif // SHAREDVAR_H

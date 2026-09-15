@@ -8,8 +8,6 @@
 #define GLOBALVARS_BASE_H
 
 
-class CSaveRestoreData;
-
 //-----------------------------------------------------------------------------
 // Purpose: Global variables used by shared code
 //-----------------------------------------------------------------------------
@@ -70,9 +68,6 @@ public:
 	int				simTicksThisFrame;
 
 	int				network_protocol;
-
-	// current saverestore data
-	CSaveRestoreData *pSaveData;
 
 private:
 	// Set to true in client code.

@@ -595,16 +595,6 @@ void JoltPhysicsConstraint::InitialiseLength( IPhysicsConstraintGroup *pGroup, c
 
 //-------------------------------------------------------------------------------------------------
 
-void JoltPhysicsConstraint::SaveConstraintSettings( JPH::StateRecorder &recorder )
-{
-	recorder.Write( m_ConstraintType );
-	auto settings = m_pConstraint->GetConstraintSettings();
-	settings->SaveBinaryState( recorder );
-	m_pConstraint->SaveState( recorder );
-}
-
-//-------------------------------------------------------------------------------------------------
-
 void JoltPhysicsConstraint::SetGroup( IPhysicsConstraintGroup *pGroup )
 {
 	if ( m_pGroup )

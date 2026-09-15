@@ -163,11 +163,6 @@ public:
 class CAI_AddOnBehaviorBase : public CAI_SimpleBehavior
 {
 public:
-	virtual bool ShouldNPCSave() 
-	{ 
-		return false; 
-	}
-
 	virtual CAI_AddOn **GetAddOnsBase() { return nullptr; }
 	const CAI_AddOn **GetAddOnsBase() const { return (const CAI_AddOn **)const_cast<CAI_AddOnBehaviorBase *>(this)->GetAddOnsBase(); }
 	virtual int NumAddOns() const { return 0; }

@@ -10,7 +10,6 @@
 
 #include "ai_agent.h"
 #include "datacache/imdlcache.h"
-#include "isaverestore.h"
 #include "game.h"
 #include "env_debughistory.h"
 #include "checksum_crc.h"

@@ -9,7 +9,6 @@
 #include "reflect_sendtable.h"
 #include "reflect_annotations.h"
 #include "globalstate.h"
-#include "isaverestore.h"
 #include "client.h"
 #include "decals.h"
 #include "gamerules.h"
@@ -41,7 +40,6 @@
 #include "ai_responsesystem.h"
 #include "world.h"
 #include "globals.h"
-#include "saverestoretypes.h"
 #include "SkyCamera.h"
 #include "sceneentity.h"
 #include "game.h"
@@ -3226,17 +3224,6 @@ Vector CBaseEntity::GetSoundEmissionOrigin() const
 	return WorldSpaceCenter();
 }
 
-
-//-----------------------------------------------------------------------------
-// handler to do stuff before you are saved
-//-----------------------------------------------------------------------------
-void CBaseEntity::OnSave( IEntitySaveUtils *pUtils )
-{
-	// Here, we must force recomputation of all abs data so it gets saved correctly
-	// We can't leave the dirty bits set because the loader can't cope with it.
-	CalcAbsolutePosition();
-	CalcAbsoluteVelocity();
-}
 
 //-----------------------------------------------------------------------------
 // handler to do stuff after you are restored

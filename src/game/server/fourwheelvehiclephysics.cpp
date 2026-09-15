@@ -15,7 +15,6 @@
 #include "player.h"
 #include "IEffects.h"
 #include "vehicle_base.h"
-#include "isaverestore.h"
 #include "movevars_shared.h"
 #include "te_effect_dispatch.h"
 #include "particle_parse.h"

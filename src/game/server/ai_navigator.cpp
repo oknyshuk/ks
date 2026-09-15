@@ -15,7 +15,6 @@
 #include "animation.h"		// for NOMOTION
 #include "collisionutils.h"
 #include "ndebugoverlay.h"
-#include "isaverestore.h"
 
 #include "ai_navigator.h"
 #include "ai_node.h"

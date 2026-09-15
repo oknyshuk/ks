@@ -38,7 +38,6 @@
 #include "movevars_shared.h"
 #include "RagdollBoogie.h"
 #include "rumble_shared.h"
-#include "saverestoretypes.h"
 #include "nav_mesh.h"
 
 

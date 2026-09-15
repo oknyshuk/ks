@@ -1,5 +1,6 @@
 #include "cbase.h"
 #include "datamap.h"
+#include "isaverestore.h"
 #include "gamestringpool.h"
 
 // memdbgon must be the last include file in a .cpp file!!!

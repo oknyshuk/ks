@@ -10,7 +10,6 @@
 #ifndef TEMPLATEENTITIES_H
 #define TEMPLATEENTITIES_H
 
-#include "isaverestore.h"
 
 class CBaseEntity;
 class CPointTemplate;

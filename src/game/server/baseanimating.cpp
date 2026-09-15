@@ -20,7 +20,6 @@
 #include "ndebugoverlay.h"
 #include "tier1/strtools.h"
 #include "npcevent.h"
-#include "isaverestore.h"
 #include "keyvalues.h"
 #include "tier0/vprof.h"
 #include "EntityFlame.h"

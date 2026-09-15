@@ -302,10 +302,6 @@ JOB_INTERFACE void DestroyThreadPool( IThreadPool *pPool )
 
 //-----------------------------------------------------------------------------
 
-// Ceiling on the global pool's worker count when -threads is not given.
-// Other subsystems size themselves against this via GetGlobalThreadPoolWidth().
-static constexpr int kGlobalThreadPoolMaxThreads = 4;
-
 //-----------------------------------------------------------------------------
 // Default worker count for a compute pool. Single source of truth so that
 // subsystems sizing themselves against the global pool cannot drift from what
@@ -323,6 +319,34 @@ static int DefaultComputeWorkerCount()
 	return nThreads;
 }
 
+//-----------------------------------------------------------------------------
+// Width of the engine's global job pool.
+//
+// If the process was pinned to its fastest cores, size against that cluster rather than
+// against every logical processor: the main thread and the latency-sensitive work live
+// there, and Distribute() hands the first workers the low-numbered CPUs, which are the
+// fast ones. Counting slow cores as equivalent overstates the pool and pushes workers
+// onto them -- on a 2 P-core + 10 E-core hybrid, "logical" is 14 but the fast cluster is
+// only 4 hardware threads.
+//
+// With no pinning (a dedicated server, or a uniform CPU), scale with the machine instead
+// of using the old flat three, which left big machines with a starved engine pool. The
+// physics job system subtracts this width from the box, so it self-corrects either way.
+// -threads overrides outright.
+//-----------------------------------------------------------------------------
+static int DefaultGlobalWorkerCount()
+{
+	const int nFast = GetPinnedFastCoreCount();
+	if ( nFast > 1 )
+	{
+		return nFast - 1;
+	}
+
+	const int nLogical = GetCPUInformation().m_nLogicalProcessors;
+	const int nSplit = ( nLogical - 1 ) / 3;
+	return ( nSplit > 3 ) ? nSplit : 3;
+}
+
 class CGlobalThreadPool : public CThreadPool
 {
 public:
@@ -337,8 +361,7 @@ public:
 		}
 		else
 		{
-			// Cap the GlobPool threads.
-			startParams.nThreadsMax = kGlobalThreadPoolMaxThreads;
+			startParams.nThreads = DefaultGlobalWorkerCount();
 		}
 		return CThreadPool::Start( startParams, "GlobPool" );
 	}
@@ -486,8 +509,7 @@ int GetGlobalThreadPoolWidth()
 	if ( nCmdLine >= 0 )
 		return nCmdLine;
 
-	const int nDefault = DefaultComputeWorkerCount();
-	return clamp( nDefault, 0, kGlobalThreadPoolMaxThreads );
+	return DefaultGlobalWorkerCount();
 }
 IThreadPool *g_pAlternateThreadPool;
 

@@ -13,7 +13,6 @@
 #include "soundenvelope.h"
 #include "engine/IEngineSound.h"
 #include "IEffects.h"
-#include "isaverestore.h"
 #include "gamestringpool.h"
 #include "igamesystem.h"
 #include "utlpriorityqueue.h"

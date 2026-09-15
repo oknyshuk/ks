@@ -46,7 +46,6 @@ class CViewSetup;
 class CEngineSprite;
 class CGlobalVarsBase;
 class CPhysCollide;
-class CSaveRestoreData;
 class INetChannelInfo;
 struct datamap_t;
 struct typedescription_t;

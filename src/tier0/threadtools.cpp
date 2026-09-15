@@ -280,6 +280,10 @@ void ThreadSetAffinity( ThreadHandle_t hThread, int nAffinityMask )
 
 //-----------------------------------------------------------------------------
 
+// How many CPUs the process was pinned to by ThreadPinToFastestCores(), or 0 if it was
+// not pinned. Subsystems that size themselves around the fast cluster read this.
+static int s_nPinnedFastCores = 0;
+
 int ThreadPinToFastestCores()
 {
 	constexpr int kMaxCPUs = 256;
@@ -316,7 +320,18 @@ int ThreadPinToFastestCores()
 	if ( nFast == nCPUs || nFast < 4 )
 		return 0;
 
-	return sched_setaffinity( 0, sizeof( cpuSet ), &cpuSet ) == 0 ? nFast : 0;
+	if ( sched_setaffinity( 0, sizeof( cpuSet ), &cpuSet ) != 0 )
+		return 0;
+
+	s_nPinnedFastCores = nFast;
+	return nFast;
+}
+
+//-----------------------------------------------------------------------------
+
+int GetPinnedFastCoreCount()
+{
+	return s_nPinnedFastCores;
 }
 
 //-----------------------------------------------------------------------------

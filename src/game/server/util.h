@@ -28,8 +28,19 @@
 #include "util_shared.h"
 #include "shareddefs.h"
 #include "networkvar.h"
+#include "const.h"
 
-struct levellist_t;
+// A map transition target, used by trigger_changelevel and BuildChangeList.
+// It used to live in the save/restore header; the save system is gone but the
+// changelevel machinery still needs the type.
+struct levellist_t
+{
+	char	mapName[ MAX_MAP_NAME ];
+	char	landmarkName[ 32 ];
+	edict_t	*pentLandmark;
+	Vector	vecLandmarkOrigin;
+};
+
 class IServerNetworkable;
 class IEntityFactory;
 

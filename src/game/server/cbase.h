@@ -70,10 +70,6 @@
 #include "basetoggle.h"
 #include "igameevents.h"
 
-// saverestore.h declarations
-class ISave;
-class IRestore;
-
 // maximum number of targets a single multi_manager entity may be assigned.
 #define MAX_MULTI_TARGETS	16 
 

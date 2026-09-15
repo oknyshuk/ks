@@ -149,7 +149,6 @@ def build(bld):
         "../public/dt_send.cpp",
         "dt_send_eng.cpp",
         "dt_stack.cpp",
-        "dt_test.cpp",
         "../public/dt_utlvector_recv.cpp",
         "../public/dt_utlvector_send.cpp",
         "enginesingleuserfilter.cpp",

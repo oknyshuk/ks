@@ -103,21 +103,6 @@ void CAI_TrackPather::OnRestore( void )
 
 
 //-----------------------------------------------------------------------------
-// Purpose: 
-//-----------------------------------------------------------------------------
-void CAI_TrackPather::OnSave( IEntitySaveUtils *pUtils )
-{
-	BaseClass::OnSave( pUtils );
-
-	// Stash all the paths into strings for restoration later
-	m_strCurrentPathName = ( m_pCurrentPathTarget != nullptr ) ? m_pCurrentPathTarget->GetEntityName() : NULL_STRING;
-	m_strDestPathName = ( m_pDestPathTarget != nullptr ) ? m_pDestPathTarget->GetEntityName() : NULL_STRING;
-	m_strLastPathName = ( m_pLastPathTarget != nullptr ) ? m_pLastPathTarget->GetEntityName() : NULL_STRING;
-	m_strTargetNearestPathName = ( m_pTargetNearestPath != nullptr ) ? m_pTargetNearestPath->GetEntityName() : NULL_STRING;
-}
-
-
-//-----------------------------------------------------------------------------
 // Leading distance
 //-----------------------------------------------------------------------------
 void CAI_TrackPather::EnableLeading( bool bEnable )

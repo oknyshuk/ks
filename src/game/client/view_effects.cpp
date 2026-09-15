@@ -10,12 +10,10 @@
 #include "ivieweffects.h"
 #include "shake.h"
 #include "hud_macros.h"
-#include "isaverestore.h"
 #include "view_shared.h"
 #include "iviewrender.h"
 #include "viewrender.h"
 #include "con_nprint.h"
-#include "saverestoretypes.h"
 #include "c_rumble.h"
 
 // memdbgon must be the last include file in a .cpp file!!!

@@ -13,7 +13,6 @@
 #include "eventqueue.h"
 #include "characterset.h"
 #include "sceneentity.h"		// for exposing scene precache function
-#include "isaverestore.h"
 #include "gamerules.h"
 #include "particle_parse.h"
 //lwss - hardcode nut file here instead of regenerating it each time. I don't think it will change for now.
