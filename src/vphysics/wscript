@@ -6,8 +6,6 @@ def options(opt):
 
 
 def configure(conf):
-    conf.define("JPH_DISABLE_CUSTOM_ALLOCATOR", True)
-    conf.define("JPH_DEBUG_RENDERER", True)
     conf.define("GAME_PORTAL2", True)
 
 
@@ -23,8 +21,6 @@ def build(bld):
         "mathlib",
         "joltphysics",
     ]
-
-    includes = ["../thirdparty/JoltPhysics-4.0.2"]
 
     source = [
         "vjolt_collide.cpp",
@@ -52,7 +48,6 @@ def build(bld):
         target="vphysics",
         features="pch cxx",
         headers="cbase.h",
-        includes=includes,
         use=libs,
         idx=bld.get_taskgen_count(),
     )

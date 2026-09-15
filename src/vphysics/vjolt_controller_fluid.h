@@ -3,7 +3,7 @@
 
 #include "vjolt_internal_listeners.h"
 
-class JoltPhysicsFluidController final : public IPhysicsFluidController, public IJoltObjectDestroyedListener, public IJoltPhysicsController
+class JoltPhysicsFluidController final : public IPhysicsFluidController, public IJoltObjectListener, public IJoltPhysicsController
 {
 public:
 	JoltPhysicsFluidController( JPH::PhysicsSystem *pPhysicsSystem, JoltPhysicsObject *pFluidObject, const fluidparams_t *pParams );
@@ -19,7 +19,7 @@ public:
 
 public:
 
-	// IJoltObjectDestroyedListener
+	// IJoltObjectListener
 	void OnJoltPhysicsObjectDestroyed( JoltPhysicsObject *pObject ) override;
 	// IJoltPhysicsController
 	void OnPreSimulate( float flDeltaTime ) override;

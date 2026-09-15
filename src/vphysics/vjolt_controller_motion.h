@@ -4,7 +4,7 @@
 #include "vjolt_object.h"
 #include "vjolt_environment.h"
 
-class JoltPhysicsMotionController : public IPhysicsMotionController, public IJoltObjectDestroyedListener, public IJoltPhysicsController
+class JoltPhysicsMotionController : public IPhysicsMotionController, public IJoltObjectListener, public IJoltPhysicsController
 {
 public:
 	JoltPhysicsMotionController( IMotionEvent *pHandler );

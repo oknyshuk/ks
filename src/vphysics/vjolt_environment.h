@@ -11,10 +11,6 @@
 #include "vjolt_constraints.h"
 #include "vjolt_listener_contact.h"
 
-class JoltBroadPhaseLayerInterface;
-class JoltObjectVsBroadPhaseLayerFilter;
-class JoltObjectLayerPairFilter;
-
 // StateRecorder implementation that saves to a fixed buffer
 class VJoltStateRecorder final : public JPH::StateRecorder, public CUtlBuffer
 {
@@ -30,7 +26,7 @@ public:
 	bool IsEOF() const override { return false; }
 
 	// StreamOut
-	void WriteBytes( const void* inData, size_t inNumBytes )
+	void WriteBytes( const void* inData, size_t inNumBytes ) override
 	{
 		Put( inData, static_cast<int>( inNumBytes ) );
 	}
@@ -179,10 +175,6 @@ private:
 	float m_flStepTime = 1.0f / 60.0f;
 	float m_flAirDensity = 2.0f;
 
-	static JoltBroadPhaseLayerInterface s_BroadPhaseLayerInterface;
-	static JoltObjectVsBroadPhaseLayerFilter s_BroadPhaseFilter;
-	static JoltObjectLayerPairFilter s_LayerPairFilter;
-
 	// For GetObjectList
 	mutable JPH::BodyIDVector m_CachedBodies;
 	mutable std::vector< const IPhysicsObject * > m_CachedObjects;
@@ -208,7 +200,7 @@ private:
 
 	// The physics system that simulates the world
 	// The debug overlay to render with (if it was ever passed to us)
-	IVJoltDebugOverlay *m_pDebugOverlay = nullptr;
+	IVPhysicsDebugOverlay *m_pDebugOverlay = nullptr;
 
 	JoltPhysicsContactListener m_ContactListener;
 	IPhysicsConstraintEvent *m_pConstraintListener = nullptr;

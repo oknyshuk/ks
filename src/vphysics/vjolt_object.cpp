@@ -66,8 +66,8 @@ JoltPhysicsObject::~JoltPhysicsObject()
 
 	// Josh:
 	// Iterate over this in reverse as we could remove a listener from inside this callback
-	for ( int i = m_destroyedListeners.Count() - 1; i >= 0; i-- )
-		m_destroyedListeners[ i ]->OnJoltPhysicsObjectDestroyed( this );
+	for ( int i = m_Listeners.Count() - 1; i >= 0; i-- )
+		m_Listeners[ i ]->OnJoltPhysicsObjectDestroyed( this );
 
 	m_pEnvironment->RemoveDirtyStaticBody( GetBodyID() );
 
@@ -438,6 +438,9 @@ void JoltPhysicsObject::SetPosition( const Vector &worldPosition, const QAngle &
 	JPH::BodyInterface &bodyInterface = m_pPhysicsSystem->GetBodyInterfaceNoLock();
 
 	bodyInterface.SetPositionAndRotation( m_pBody->GetID(), joltPosition, joltRotation, JPH::EActivation::DontActivate );
+
+	if ( isTeleport )
+		NotifyTeleported();
 }
 
 void JoltPhysicsObject::SetPositionMatrix( const matrix3x4_t &matrix, bool isTeleport )
@@ -976,7 +979,7 @@ void JoltPhysicsObject::RemoveTrigger()
 
 		m_pPhysicsSystem->GetNarrowPhaseQueryNoLock().CollideShape(
 			pShape, JPH::Vec3::sReplicate( 1.0f ), queryTransform, collideSettings, JPH::Vec3::sZero(), collector,
-			JPH::SpecifiedBroadPhaseLayerFilter( BroadPhaseLayers::MOVING ), JPH::SpecifiedObjectLayerFilter( Layers::MOVING ), body_filter );
+			JPH::SpecifiedBroadPhaseLayerFilter( Layers::BroadPhase( Layers::MOVING ) ), JPH::SpecifiedObjectLayerFilter( Layers::MOVING ), body_filter );
 	}
 
 	m_pBody->SetIsSensor( false );
@@ -1062,14 +1065,24 @@ void JoltPhysicsObject::UpdateEnvironment( JoltPhysicsEnvironment *pEnvironment 
 	m_pPhysicsSystem = pEnvironment->GetPhysicsSystem();
 }
 
-void JoltPhysicsObject::AddDestroyedListener( IJoltObjectDestroyedListener *pListener )
+void JoltPhysicsObject::AddListener( IJoltObjectListener *pListener )
 {
-	m_destroyedListeners.AddToTail( pListener );
+	m_Listeners.AddToTail( pListener );
 }
 
-void JoltPhysicsObject::RemoveDestroyedListener( IJoltObjectDestroyedListener *pListener )
+void JoltPhysicsObject::RemoveListener( IJoltObjectListener *pListener )
 {
-	m_destroyedListeners.FindAndRemove( pListener );
+	m_Listeners.FindAndRemove( pListener );
+}
+
+// Source hands us an isTeleport flag on the interface and we have always ignored it. It marks
+// the moves the solver could not have predicted, which is exactly when carrying impulses over
+// from the previous frame stops being a good guess. Jolt warns that resetting warm start when
+// nothing much changed leaves constraints soft, so this fires on teleports only.
+void JoltPhysicsObject::NotifyTeleported()
+{
+	for ( IJoltObjectListener *pListener : m_Listeners )
+		pListener->OnJoltPhysicsObjectTeleported( this );
 }
 
 void JoltPhysicsObject::AddToPosition( JPH::Vec3Arg addPos )
@@ -1240,7 +1253,7 @@ void JoltPhysicsObject::UpdateLayer()
 	}
 
 	// Update layer
-	uint8 layer = Layers::MOVING;
+	JPH::ObjectLayer layer = Layers::MOVING;
 
 	if ( bDebris )
 		layer = Layers::DEBRIS;

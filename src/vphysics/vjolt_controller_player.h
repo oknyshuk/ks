@@ -4,7 +4,7 @@
 #include "vjolt_object.h"
 #include "vjolt_environment.h"
 
-class JoltPhysicsPlayerController : public IPhysicsPlayerController, public IJoltObjectDestroyedListener, public IJoltPhysicsController
+class JoltPhysicsPlayerController : public IPhysicsPlayerController, public IJoltObjectListener, public IJoltPhysicsController
 {
 public:
 	JoltPhysicsPlayerController( JoltPhysicsObject *pObject );
@@ -34,7 +34,7 @@ public:
 
 	uint32 GetContactState( uint16 nGameFlags ) override_portal2;
 
-	// IJoltObjectDestroyedListener
+	// IJoltObjectListener
 	void OnJoltPhysicsObjectDestroyed( JoltPhysicsObject *pObject ) override;
 	// IJoltPhysicsController
 	void OnPreSimulate( float flDeltaTime ) override;

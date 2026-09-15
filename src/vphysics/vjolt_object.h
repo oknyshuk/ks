@@ -8,7 +8,7 @@
 
 class IPredictedPhysicsObject;
 
-class IJoltObjectDestroyedListener;
+class IJoltObjectListener;
 class JoltPhysicsShadowController;
 class JoltPhysicsFluidController;
 class JoltPhysicsEnvironment;
@@ -162,8 +162,11 @@ public:
 
 	void UpdateEnvironment( JoltPhysicsEnvironment *pEnvironment );
 
-	void AddDestroyedListener( IJoltObjectDestroyedListener *pListener );
-	void RemoveDestroyedListener( IJoltObjectDestroyedListener *pListener );
+	void AddListener( IJoltObjectListener *pListener );
+	void RemoveListener( IJoltObjectListener *pListener );
+
+	// Tells every listener the object moved discontinuously.
+	void NotifyTeleported();
 
 	// Grabs the position, adds addPos and teleports the object
 	void AddToPosition( JPH::Vec3Arg addPos );
@@ -265,7 +268,7 @@ private:
 	unsigned short m_GameMaterial = 0;
 
 
-	CUtlVector< IJoltObjectDestroyedListener * > m_destroyedListeners;
+	CUtlVector< IJoltObjectListener * > m_Listeners;
 
 	// Shadow variables
 	JoltPhysicsShadowController *m_pShadowController = nullptr;

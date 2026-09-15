@@ -259,12 +259,6 @@ T *ToDanglingRef( const JPH::Ref< T >& ref )
 	return pPtr;
 }
 
-template < typename T >
-bool VectorContains( const std::vector< T >& vector, const T &object )
-{
-	return std::find(vector.begin(), vector.end(), object) != vector.end();
-}
-
 inline const JPH::Shape* UndecorateShape( const JPH::Shape *pShape )
 {
 	if ( pShape->GetType() == JPH::EShapeType::Decorated )
@@ -317,17 +311,4 @@ constexpr void Erase( T &c, const Value &value )
 {
 	auto it = std::remove( c.begin(), c.end(), value );
 	c.erase( it, c.end() );
-}
-
-template< typename T, typename Pred >
-constexpr void EraseIf( T &c, Pred pred )
-{
-	auto it = std::remove_if( c.begin(), c.end(), pred );
-	c.erase( it, c.end() );
-}
-
-template< typename T, typename Value >
-constexpr bool Contains( const T &c, const Value &value )
-{
-	return c.find( value ) != c.end();
 }

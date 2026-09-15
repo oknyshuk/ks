@@ -1,65 +1,23 @@
 
 #pragma once
 
-class IMesh;
-
 #ifdef JPH_DEBUG_RENDERER
 
-class JoltPhysicsDebugRenderer final : public JPH::DebugRenderer
+#include <Jolt/Renderer/DebugRendererSimple.h>
+
+// The engine's physics debug overlay draws lines and text, nothing else. DebugRendererSimple
+// reduces everything Jolt asks for -- shapes, arrows, markers, coordinate frames -- to those
+// two primitives, so those are the only calls we have to implement.
+class JoltPhysicsDebugRenderer final : public JPH::DebugRendererSimple
 {
 public:
-	JoltPhysicsDebugRenderer();
-	~JoltPhysicsDebugRenderer() override;
-
-	///////////////////////////////////////////
-	// JPH::DebugRenderer + Draw Implementation
-	///////////////////////////////////////////
-
-	void DrawLine( JPH::Vec3Arg inFrom, JPH::Vec3Arg inTo, JPH::ColorArg inColor ) override;
-
-	void DrawTriangle( JPH::Vec3Arg inV1, JPH::Vec3Arg inV2, JPH::Vec3Arg inV3, JPH::ColorArg inColor, ECastShadow inCastShadow ) override;
-
-	Batch CreateTriangleBatch( const Triangle *inTriangles, int inTriangleCount ) override;
-	Batch CreateTriangleBatch( const Vertex *inVertices, int inVertexCount, const uint32 *inIndices, int inIndexCount ) override;
-
-	// This parameter list sucks
-	void DrawGeometry( JPH::Mat44Arg inModelMatrix, const JPH::AABox &inWorldSpaceBounds, float inLODScaleSq, JPH::ColorArg inModelColor, const GeometryRef &inGeometry, ECullMode inCullMode = ECullMode::CullBackFace, ECastShadow inCastShadow = ECastShadow::On, EDrawMode inDrawMode = EDrawMode::Solid ) override;
-
-	void DrawText3D( JPH::Vec3Arg inPosition, const std::string_view &inString, JPH::ColorArg inColor = JPH::Color::sWhite, float inHeight = 0.5f ) override;
-
-	///////////////////////////////////////////
-	// Hehe
-	///////////////////////////////////////////
-
-	void DrawJoltTVText();
-
-	///////////////////////////////////////////
-	// Main Interface
-	///////////////////////////////////////////
+	void DrawLine( JPH::RVec3Arg inFrom, JPH::RVec3Arg inTo, JPH::ColorArg inColor ) override;
+	void DrawText3D( JPH::RVec3Arg inPosition, const std::string_view &inString, JPH::ColorArg inColor, float inHeight ) override;
 
 	void RenderPhysicsSystem( JPH::PhysicsSystem &physicsSystem );
 
-	static JoltPhysicsDebugRenderer& GetInstance();
-
-	static IVJoltDebugOverlay *GetDebugOverlay();
-
-private:
-	class BatchImpl final : public JPH::RefTargetVirtual, public JPH::RefTarget<BatchImpl>
-	{
-	public:
-		BatchImpl( IMesh *pMesh )
-			: m_pMesh( pMesh ) { }
-
-		void AddRef() override { JPH::RefTarget<BatchImpl>::AddRef(); }
-		void Release() override { JPH::RefTarget<BatchImpl>::Release(); }
-
-		IMesh* GetMesh() const { return m_pMesh; }
-
-	private:
-		IMesh *m_pMesh;
-	};
-
-	bool m_bShouldClear = false;
+	static JoltPhysicsDebugRenderer &GetInstance();
+	static IVPhysicsDebugOverlay *GetDebugOverlay();
 };
 
 #endif

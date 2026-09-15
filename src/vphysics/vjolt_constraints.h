@@ -47,7 +47,7 @@ private:
 	constraint_groupparams_t				m_ErrorParams = {};
 };
 
-class JoltPhysicsConstraint final : public IPhysicsConstraint, public IJoltObjectDestroyedListener
+class JoltPhysicsConstraint final : public IPhysicsConstraint, public IJoltObjectListener
 {
 public:
 	JoltPhysicsConstraint( JoltPhysicsEnvironment *pPhysicsEnvironment, IPhysicsObject *pReferenceObject, IPhysicsObject *pAttachedObject, constraintType_t Type = CONSTRAINT_UNKNOWN, JPH::Constraint* pConstraint = nullptr, void *pGameData = nullptr );
@@ -71,8 +71,9 @@ public:
 
 	void			OutputDebugInfo() override;
 
-	// IJoltObjectDestroyedListener
+	// IJoltObjectListener
 	void OnJoltPhysicsObjectDestroyed( JoltPhysicsObject *pObject ) override;
+	void OnJoltPhysicsObjectTeleported( JoltPhysicsObject *pObject ) override;
 
 public:
 	bool InitialiseHingeFromRagdoll( IPhysicsConstraintGroup* pGroup, const constraint_ragdollparams_t& ragdoll );

@@ -158,30 +158,28 @@ def _mojoal(bld):
 
 def _jolt(bld):
     root = _tree(bld, "JoltPhysics-*")
-    jolt = root.find_dir("Jolt")
-    defines = ["JPH_DISABLE_CUSTOM_ALLOCATOR", "JPH_DEBUG_RENDERER"]
-
-    # Memory.cpp defines allocator symbols that clash with vphysics in unity mode
-    memory = jolt.find_node("Core/Memory.cpp")
-    bld.objects(
-        source=[memory],
-        target="joltphysics_memory",
-        features="cxx",
-        includes=[root],
-        defines=defines,
-        idx=bld.get_taskgen_count(),
-    )
+    # Compute/<backend> is Jolt 5.6's GPU compute layer (DX12/Vulkan/Metal/CPU) and
+    # Shaders holds the HLSL hair kernels and their CPU wrappers. Nothing here drives
+    # Jolt on the GPU, so those translation units are left out -- upstream gates them
+    # behind JPH_USE_DX12 and friends. Only the sources are dropped: Physics/Hair still
+    # includes the Shaders headers, and the abstract ComputeSystem still compiles.
+    #
+    # The defines change Jolt's ABI and are baked into JPH_VERSION_ID, which Jolt checks
+    # at startup, so consumers must see exactly the set the library was built with. They
+    # travel with it through `use` rather than being repeated per project.
+    defines = ["JPH_DEBUG_RENDERER"]
     _lib(
         bld,
         "joltphysics",
-        jolt,
-        excl=["Core/Memory.cpp"],
+        root.find_dir("Jolt"),
+        excl=["Compute/*/**", "Shaders/**"],
         root=root,
         includes=["."],
         defines=defines,
+        export_includes=[root],
+        export_defines=defines,
         features="cxx unity",
         unity_size=30,
-        use=["joltphysics_memory"],
     )
 
 

@@ -1,11 +1,15 @@
 
 #pragma once
 
-class JoltPhysicsObjectPairHash : public IPhysicsObjectPairHash
+#include <unordered_map>
+#include <unordered_set>
+
+// An undirected graph over opaque object pointers, stored as an adjacency map. VPhysics
+// calls this a "hash" because IVP hand-rolled its buckets; std::unordered_map already is
+// one, so a neighbour set per object answers every query in the interface directly.
+class JoltPhysicsObjectPairHash final : public IPhysicsObjectPairHash
 {
 public:
-	JoltPhysicsObjectPairHash();
-
 	void AddObjectPair( void *pObject0, void *pObject1 ) override;
 	void RemoveObjectPair( void *pObject0, void *pObject1 ) override;
 	bool IsObjectPairInHash( void *pObject0, void *pObject1 ) override;
@@ -16,34 +20,10 @@ public:
 	int GetPairListForObject( void *pObject0, int nMaxCount, void **ppObjectList ) override;
 
 private:
+	using Neighbours = std::unordered_set< void * >;
 
-	struct PointerHasher
-	{
-		template < typename T >
-		static void HashCombine( size_t& seed, const T& v )
-		{
-			std::hash< T > hasher;
-			seed ^= hasher( v ) + 0x9e3779b9 + ( seed << 6 ) + ( seed >> 2 );
-		}
+	// nullptr when the object has no pairs, so the lookups below share one code path.
+	const Neighbours *Find( void *pObject ) const;
 
-		size_t operator() ( const std::pair< void*, void* >& val ) const
-		{
-			size_t hash = 0;
-			HashCombine( hash, val.first );
-			HashCombine( hash, val.second );
-			return hash;
-		}
-	};
-
-	static constexpr size_t HashSize = 1024;
-	static constexpr size_t GetHashArrayIndex( size_t hash )
-	{
-		return hash & ( HashSize - 1u );
-	}
-
-	using HashEntries = std::unordered_set< std::pair< void*, void* >, PointerHasher >;
-
-	std::array< HashEntries, HashSize > m_PairHashes;
-	std::array< HashEntries, HashSize > m_ObjectHashes;
-	std::unordered_multiset< void* > m_Objects;
+	std::unordered_map< void *, Neighbours > m_Pairs;
 };

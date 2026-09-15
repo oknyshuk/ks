@@ -6,22 +6,9 @@
 
 #pragma once
 
+#include <unordered_map>
+
 //-------------------------------------------------------------------------------------------------
-
-// Whether to use the VPhysics debug overlay (legacy compatible) or the fully featured IVDebugOverlay
-// In Desolation, IVDebugOverlay has new members that allow us to draw IMesh objects, without this
-// debugoverlay rendering is incredibly inefficient (and may run the materialsystem mempool out of memory)
-#define VJOLT_USE_PHYSICS_DEBUG_OVERLAY
-
-#ifdef VJOLT_USE_PHYSICS_DEBUG_OVERLAY
-class IVPhysicsDebugOverlay;
-using IVJoltDebugOverlay = IVPhysicsDebugOverlay;
-#define VJOLT_DEBUG_OVERLAY_VERSION VPHYSICS_DEBUG_OVERLAY_INTERFACE_VERSION
-#else
-class IVDebugOverlay;
-using IVJoltDebugOverlay = IVDebugOverlay;
-#define VJOLT_DEBUG_OVERLAY_VERSION VDEBUG_OVERLAY_INTERFACE_VERSION
-#endif
 
 // Call this in stubbed functions to spew when they're hit
 #define Log_Stub( Channel )
@@ -95,8 +82,8 @@ public:
 	JPH::TempAllocator *GetTempAllocator() { return m_pTempAllocator; }
 	JPH::JobSystem *GetJobSystem() { return m_pJobSystem; }
 
-	void SetDebugOverlay( IVJoltDebugOverlay *pOverlay ) { if ( m_pDebugOverlay != pOverlay ) m_pDebugOverlay = pOverlay; }
-	IVJoltDebugOverlay *GetDebugOverlay() { return m_pDebugOverlay; }
+	void SetDebugOverlay( IVPhysicsDebugOverlay *pOverlay ) { if ( m_pDebugOverlay != pOverlay ) m_pDebugOverlay = pOverlay; }
+	IVPhysicsDebugOverlay *GetDebugOverlay() { return m_pDebugOverlay; }
 
 private:
 	static void OnTrace( const char *fmt, ... );
@@ -117,7 +104,7 @@ private:
 	JPH::JobSystem *m_pJobSystem;
 
 	// For debugging stuff in collide and such.
-	IVJoltDebugOverlay *m_pDebugOverlay = nullptr;
+	IVPhysicsDebugOverlay *m_pDebugOverlay = nullptr;
 
 	static JoltPhysicsInterface s_PhysicsInterface;
 };

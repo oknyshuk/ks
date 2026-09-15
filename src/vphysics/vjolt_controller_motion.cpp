@@ -16,7 +16,7 @@ JoltPhysicsMotionController::JoltPhysicsMotionController( IMotionEvent *pHandler
 JoltPhysicsMotionController::~JoltPhysicsMotionController()
 {
 	for ( JoltPhysicsObject *pObject : m_pObjects )
-		pObject->RemoveDestroyedListener( this );
+		pObject->RemoveListener( this );
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -32,10 +32,10 @@ void JoltPhysicsMotionController::AttachObject( IPhysicsObject *pObject, bool bC
 		return;
 
 	JoltPhysicsObject *pPhysicsObject = static_cast< JoltPhysicsObject * >( pObject );
-	if ( bCheckIfAlreadyAttached && VectorContains( m_pObjects, pPhysicsObject ) )
+	if ( bCheckIfAlreadyAttached && std::ranges::contains( m_pObjects, pPhysicsObject ) )
 		return;
 
-	pPhysicsObject->AddDestroyedListener( this );
+	pPhysicsObject->AddListener( this );
 	m_pObjects.push_back( pPhysicsObject );
 }
 
@@ -46,7 +46,7 @@ void JoltPhysicsMotionController::DetachObject( IPhysicsObject *pObject )
 
 	JoltPhysicsObject *pPhysicsObject = static_cast< JoltPhysicsObject * >( pObject );
 	Erase( m_pObjects, pPhysicsObject );
-	pPhysicsObject->RemoveDestroyedListener( this );
+	pPhysicsObject->RemoveListener( this );
 }
 
 //-------------------------------------------------------------------------------------------------

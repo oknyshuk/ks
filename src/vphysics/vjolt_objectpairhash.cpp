@@ -8,89 +8,72 @@
 
 //-------------------------------------------------------------------------------------------------
 
-static std::pair< void *, void * > CreateSortedPair( void *pObject0, void *pObject1 )
+const JoltPhysicsObjectPairHash::Neighbours *JoltPhysicsObjectPairHash::Find( void *pObject ) const
 {
-    return std::make_pair(
-        pObject0 <= pObject1 ? pObject0 : pObject1,
-        pObject0 <= pObject1 ? pObject1 : pObject0 );
-}
-
-//-------------------------------------------------------------------------------------------------
-
-JoltPhysicsObjectPairHash::JoltPhysicsObjectPairHash()
-{
+	const auto it = m_Pairs.find( pObject );
+	return it != m_Pairs.end() ? &it->second : nullptr;
 }
 
 //-------------------------------------------------------------------------------------------------
 
 void JoltPhysicsObjectPairHash::AddObjectPair( void *pObject0, void *pObject1 )
 {
-    auto pair = CreateSortedPair( pObject0, pObject1 );
-
-    if ( IsObjectPairInHash( pObject0, pObject1 ) )
-        return;
-
-    m_PairHashes[ GetHashArrayIndex( PointerHasher{}( pair ) ) ].emplace( pair );
-    m_ObjectHashes[ GetHashArrayIndex( std::hash< void* >()( pObject0 ) ) ].emplace( pair );
-    m_ObjectHashes[ GetHashArrayIndex( std::hash< void* >()( pObject1 ) ) ].emplace( pair );
-    m_Objects.emplace( pObject0 );
-    m_Objects.emplace( pObject1 );
+	m_Pairs[ pObject0 ].insert( pObject1 );
+	m_Pairs[ pObject1 ].insert( pObject0 );
 }
 
 void JoltPhysicsObjectPairHash::RemoveObjectPair( void *pObject0, void *pObject1 )
 {
-    auto pair = CreateSortedPair( pObject0, pObject1 );
-
-    if ( !IsObjectPairInHash( pObject0, pObject1 ) )
-        return;
-
-    m_PairHashes[ GetHashArrayIndex( PointerHasher{}( pair ) ) ].erase( pair );
-    m_ObjectHashes[ GetHashArrayIndex( std::hash< void* >()( pObject0 ) ) ].erase( pair );
-    m_ObjectHashes[ GetHashArrayIndex( std::hash< void* >()( pObject1 ) ) ].erase( pair );
-    m_Objects.erase( pObject0 );
-    m_Objects.erase( pObject1 );
+	// Drop objects that lose their last pair, so IsObjectInHash stays a plain lookup.
+	for ( auto [ pFrom, pTo ] : { std::pair{ pObject0, pObject1 }, std::pair{ pObject1, pObject0 } } )
+	{
+		const auto it = m_Pairs.find( pFrom );
+		if ( it != m_Pairs.end() && it->second.erase( pTo ) && it->second.empty() )
+			m_Pairs.erase( it );
+	}
 }
 
 bool JoltPhysicsObjectPairHash::IsObjectPairInHash( void *pObject0, void *pObject1 )
 {
-    auto pair = CreateSortedPair( pObject0, pObject1 );
-	return Contains( m_PairHashes[GetHashArrayIndex( PointerHasher{}( pair ) )], pair );
+	const Neighbours *pNeighbours = Find( pObject0 );
+	return pNeighbours && pNeighbours->contains( pObject1 );
 }
 
 void JoltPhysicsObjectPairHash::RemoveAllPairsForObject( void *pObject0 )
 {
-    auto &objectHashes = m_ObjectHashes[ GetHashArrayIndex( std::hash< void* >()( pObject0 ) ) ];
+	const auto it = m_Pairs.find( pObject0 );
+	if ( it == m_Pairs.end() )
+		return;
 
-    for ( auto it = objectHashes.begin(); it != objectHashes.end(); )
-    {
-        auto pair = *it++;
+	// Take the neighbours out first: unlinking the back references mutates the map, and
+	// would invalidate this entry underneath us if the object was ever paired with itself.
+	const Neighbours neighbours = std::move( it->second );
+	m_Pairs.erase( it );
 
-        RemoveObjectPair( pair.first, pair.second );
-    }
+	for ( void *pOther : neighbours )
+		RemoveObjectPair( pObject0, pOther );
 }
 
 bool JoltPhysicsObjectPairHash::IsObjectInHash( void *pObject0 )
 {
-	return Contains( m_Objects, pObject0 );
+	return Find( pObject0 ) != nullptr;
 }
 
 //-------------------------------------------------------------------------------------------------
 
 int JoltPhysicsObjectPairHash::GetPairCountForObject( void *pObject0 )
 {
-    return int( m_Objects.count( pObject0 ) );
+	const Neighbours *pNeighbours = Find( pObject0 );
+	return pNeighbours ? int( pNeighbours->size() ) : 0;
 }
 
 int JoltPhysicsObjectPairHash::GetPairListForObject( void *pObject0, int nMaxCount, void **ppObjectList )
 {
-    auto& objectHashes = m_ObjectHashes[GetHashArrayIndex( std::hash< void* >()( pObject0 ) )];
+	const Neighbours *pNeighbours = Find( pObject0 );
+	if ( !pNeighbours )
+		return 0;
 
-    int nCount = 0;
-    for ( auto it = objectHashes.begin(); it != objectHashes.end() && nCount < nMaxCount; ++it, ++nCount )
-    {
-        auto pair = *it;
-        ppObjectList[ nCount ] = pair.second != pObject0 ? pair.second : pair.first;
-    }
-
-    return nCount;
+	const int nCount = Min( nMaxCount, int( pNeighbours->size() ) );
+	std::copy_n( pNeighbours->begin(), nCount, ppObjectList );
+	return nCount;
 }

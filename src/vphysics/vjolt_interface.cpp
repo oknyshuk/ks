@@ -42,33 +42,19 @@ EXPOSE_SINGLE_INTERFACE_GLOBALVAR( JoltPhysicsInterface, IPhysics, VPHYSICS_INTE
 
 //-------------------------------------------------------------------------------------------------
 
-// Slart:
-// Instead of using Jolt's allocator override functionality, we disable it and just define the
-// functions here, all of Jolt's memory allocation goes through here, besides new and delete
-// which use the Valve overrides in memoverride.cpp.
-// For Desolation we use mi-malloc rather than dlmalloc, that also gets built into the statically
-// linked releases for gmod (along with all of tier0 and vstdlib).
-namespace JPH {
-
-	void *Allocate( size_t inSize )
-	{
-		return MemAlloc_Alloc( inSize );
-	}
-
-	void Free( void *inBlock )
-	{
-		MemAlloc_Free( inBlock );
-	}
-
-	void *AlignedAllocate( size_t inSize, size_t inAlignment )
-	{
-		return MemAlloc_AllocAligned( inSize, inAlignment );
-	}
-
-	void AlignedFree( void *inBlock )
-	{
-		MemAlloc_FreeAligned( inBlock );
-	}
+// Route every Jolt allocation through tier0 instead of the CRT, so physics memory is
+// visible to the engine's allocator (and to its leak tracking). `new`/`delete` already
+// land there via the Valve overrides in memoverride.cpp.
+//
+// Reallocate goes straight to g_pMemAlloc because memalloc.h has no MemAlloc_Realloc
+// wrapper; like C realloc it has to accept a null block, which tier0 handles.
+static void InstallJoltAllocator()
+{
+	JPH::Allocate        = []( size_t size )                         { return MemAlloc_Alloc( size ); };
+	JPH::Reallocate      = []( void *block, size_t, size_t newSize ) { return g_pMemAlloc->Realloc( block, newSize ); };
+	JPH::Free            = []( void *block )                         { MemAlloc_Free( block ); };
+	JPH::AlignedAllocate = []( size_t size, size_t alignment )       { return MemAlloc_AllocAligned( size, alignment ); };
+	JPH::AlignedFree     = []( void *block )                         { MemAlloc_FreeAligned( block ); };
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -83,7 +69,8 @@ InitReturnVal_t JoltPhysicsInterface::Init()
 
 	MathLib_Init();
 
-	// Install callbacks
+	// Install callbacks. The allocator has to be in place before anything else touches Jolt.
+	InstallJoltAllocator();
 	JPH::Trace = JoltPhysicsInterface::OnTrace;
 	JPH_IF_ENABLE_ASSERTS( JPH::AssertFailed = JoltPhysicsInterface::OnAssert; )
 

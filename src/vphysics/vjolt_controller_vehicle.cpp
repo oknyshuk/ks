@@ -62,7 +62,7 @@ JoltPhysicsVehicleController::JoltPhysicsVehicleController( JoltPhysicsEnvironme
 
 	m_Tester = CreateVehicleCollisionTester( nVehicleType, m_InternalState.LargestWheelRadius );
 
-	m_pCarBodyObject->AddDestroyedListener( this );
+	m_pCarBodyObject->AddListener( this );
 	m_VehicleConstraint = new JPH::VehicleConstraint( *m_pCarBodyObject->GetBody(), vehicle );
 	m_pPhysicsSystem->AddConstraint( m_VehicleConstraint );
 	m_pPhysicsSystem->AddStepListener( m_VehicleConstraint );
@@ -331,7 +331,7 @@ void JoltPhysicsVehicleController::OnPostSimulate( float flDeltaTime )
 		else
 			m_OperatingParams.wheelsNotInContact++;
 
-		IVJoltDebugOverlay *pDebugOverlay = JoltPhysicsInterface::GetInstance().GetDebugOverlay();
+		IVPhysicsDebugOverlay *pDebugOverlay = JoltPhysicsInterface::GetInstance().GetDebugOverlay();
 		if ( vjolt_vehicle_wheel_debug.GetBool() && pDebugOverlay )
 		{
 			const Vector vecWheelPos = JoltToSource::Distance( wheelTransform.GetTranslation() );
@@ -534,7 +534,7 @@ void JoltPhysicsVehicleController::DetachObject()
 {
 	if ( m_pCarBodyObject )
 	{
-		m_pCarBodyObject->RemoveDestroyedListener( this );
+		m_pCarBodyObject->RemoveListener( this );
 
 		// Remove the listeners and constraint now, we can never
 		// attach to another body.

@@ -19,6 +19,7 @@
 static ConVar vjolt_ragdoll_hinge_optimization( "vjolt_ragdoll_hinge_optimization", "1", FCVAR_REPLICATED,
 	"Optimizes ragdolls to use hinge constraints for joints with 1 degree of freedom. Additionally fixes legs going back on themselves. Currently breaks ragdolls of NPCs killed in a pose (they inherit the pose).");
 
+
 //-------------------------------------------------------------------------------------------------
 
 JoltPhysicsConstraintGroup::JoltPhysicsConstraintGroup()
@@ -96,8 +97,8 @@ JoltPhysicsConstraint::JoltPhysicsConstraint( JoltPhysicsEnvironment *pPhysicsEn
 	, m_pConstraint( pConstraint )
 	, m_pGameData( pGameData )
 {
-	m_pObjReference->AddDestroyedListener( this );
-	m_pObjAttached->AddDestroyedListener( this );
+	m_pObjReference->AddListener( this );
+	m_pObjAttached->AddListener( this );
 }
 
 JoltPhysicsConstraint::~JoltPhysicsConstraint()
@@ -256,6 +257,15 @@ void JoltPhysicsConstraint::OnJoltPhysicsObjectDestroyed( JoltPhysicsObject *pOb
 
 	// Normal VPhysics calls ConstraintBroken when an object being killed destroys the constraint.
 	m_pPhysicsEnvironment->NotifyConstraintDisabled( this );
+}
+
+void JoltPhysicsConstraint::OnJoltPhysicsObjectTeleported( JoltPhysicsObject *pObject )
+{
+	// One of our bodies moved somewhere the last frame's impulses say nothing useful about, so
+	// warm starting from them would just fight the new configuration. A ragdoll hits this every
+	// time the game repositions it.
+	if ( m_pConstraint )
+		m_pConstraint->ResetWarmStart();
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -608,12 +618,12 @@ void JoltPhysicsConstraint::DestroyConstraint()
 {
 	if ( m_pObjAttached )
 	{
-		m_pObjAttached->RemoveDestroyedListener( this );
+		m_pObjAttached->RemoveListener( this );
 		m_pObjAttached = nullptr;
 	}
 	if ( m_pObjReference )
 	{
-		m_pObjReference->RemoveDestroyedListener( this );
+		m_pObjReference->RemoveListener( this );
 		m_pObjReference = nullptr;
 	}
 

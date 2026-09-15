@@ -50,10 +50,7 @@ public:
 		JoltPhysicsObject* pObject1 = reinterpret_cast<JoltPhysicsObject*>( inBody1.GetUserData() );
 		JoltPhysicsObject* pObject2 = reinterpret_cast<JoltPhysicsObject*>( inBody2.GetUserData() );
 
-		bool bShouldCollide = ShouldCollide( pObject1, pObject2 );
-		// If the game says we shouldn't collide, we will treat this as a sensor
-		// to satisfy the StartTouch/EndTouch events.
-		ioSettings.mIsSensor = !bShouldCollide || ioSettings.mIsSensor;
+		const bool bShouldCollide = ResolveSensorContact( pObject1, pObject2, ioSettings );
 
 		if ( !m_pGameListener )
 			return;
@@ -126,10 +123,7 @@ public:
 		JoltPhysicsObject* pObject1 = reinterpret_cast<JoltPhysicsObject*>( inBody1.GetUserData() );
 		JoltPhysicsObject* pObject2 = reinterpret_cast<JoltPhysicsObject*>( inBody2.GetUserData() );
 
-		bool bShouldCollide = ShouldCollide( pObject1, pObject2 );
-		// If the game says we shouldn't collide, we will treat this as a sensor
-		// to satisfy the StartTouch/EndTouch events.
-		ioSettings.mIsSensor = !bShouldCollide || ioSettings.mIsSensor;
+		ResolveSensorContact( pObject1, pObject2, ioSettings );
 
 		if ( !m_pGameListener )
 			return;
@@ -206,6 +200,25 @@ public:
 		// to retrieve the contact point and normal, then just never uses it
 		// so we can return anything we want and it will change *nothing*!
 		m_EndTouchEvents.EmplaceBack( uThreadId, JoltPhysicsCollisionInfo( pObject1, pObject2 ) );
+	}
+
+	// Decides whether a contact gets a physical response, and reports it as a sensor contact
+	// if it does not, so the game still gets its StartTouch/EndTouch pair. Returns whether
+	// the two objects actually collide.
+	//
+	// Jolt fills in mIsSensor from Body::IsSensor on both bodies before calling us, and it
+	// forbids clearing it. So when it arrives set, the answer is already decided and there is
+	// no reason to ask the game -- which matters because that question takes a lock and calls
+	// into non-thread-safe game code, and triggers and water are precisely the big volumes
+	// that hold contacts against half the props in the level.
+	bool ResolveSensorContact( JoltPhysicsObject *pObject0, JoltPhysicsObject *pObject1, JPH::ContactSettings &ioSettings )
+	{
+		if ( ioSettings.mIsSensor )
+			return false;
+
+		const bool bShouldCollide = ShouldCollide( pObject0, pObject1 );
+		ioSettings.mIsSensor = !bShouldCollide;
+		return bShouldCollide;
 	}
 
 	bool ShouldCollide( JoltPhysicsObject *pObject0, JoltPhysicsObject *pObject1 )

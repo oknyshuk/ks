@@ -1,7 +1,7 @@
 
 #pragma once
 
-#include "vjolt_object.h" // IJoltObjectDestroyedListener
+#include "vjolt_object.h" // IJoltObjectListener
 #include "vjolt_environment.h" // IJoltPhysicsController
 
 struct JoltPhysicsWheel
@@ -19,7 +19,7 @@ struct JoltPhysicsInternalVehicleState
 	float LargestWheelRadius = 0.0f;
 };
 
-class JoltPhysicsVehicleController final : public IPhysicsVehicleController, public IJoltObjectDestroyedListener, public IJoltPhysicsController
+class JoltPhysicsVehicleController final : public IPhysicsVehicleController, public IJoltObjectListener, public IJoltPhysicsController
 {
 public:
 	static constexpr int MaxWheels = VEHICLE_MAX_WHEEL_COUNT;
@@ -48,7 +48,7 @@ public:
 	void				VehicleDataReload() override;
 
 public:
-	// IJoltObjectDestroyedListener
+	// IJoltObjectListener
 	void OnJoltPhysicsObjectDestroyed( JoltPhysicsObject *pObject ) override;
 
 	float GetSpeed();

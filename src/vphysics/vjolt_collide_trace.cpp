@@ -59,7 +59,7 @@ static void PrintTrace( const trace_t *tr, JoltPhysicsDebugRenderer &debugRender
 	constexpr int b = 255;
 	constexpr int a = 255;
 
-	IVJoltDebugOverlay *pDebugOverlay = debugRenderer.GetDebugOverlay();
+	IVPhysicsDebugOverlay *pDebugOverlay = debugRenderer.GetDebugOverlay();
 
 	pDebugOverlay->AddTextOverlayRGB( textPos, 0, dur, r,g,b,a, "startpos   : [ %g %g %g ]",	tr->startpos.x, tr->startpos.y, tr->startpos.z );
 	pDebugOverlay->AddTextOverlayRGB( textPos, 1, dur, r,g,b,a, "endpos     : [ %g %g %g ]",	tr->endpos.x, tr->endpos.y, tr->endpos.z );
@@ -74,26 +74,94 @@ static void PrintTrace( const trace_t *tr, JoltPhysicsDebugRenderer &debugRender
 #endif
 
 //
+// Source's trace API is driven by a contents mask; Jolt's is not. Bridging the two means
+// mapping the sub shape that was hit back to the game's contents bits, and that mapping is
+// the whole of the adaptation -- so it lives here once rather than in every collector.
+//
+// The game data lives on the leaf shape: per convex for brushes (SetConvexGameData) and per
+// ledge for studio models. Geometry that arrives without an IConvexInfo -- a displacement
+// mesh, for instance -- has nothing to map and is simply solid.
+//
+static uint32 SubShapeContents( const JPH::Shape *pShape, const JPH::SubShapeID &subShapeID, IConvexInfo *pConvexInfo )
+{
+	const uint32 gameData = static_cast<uint32>( pShape->GetSubShapeUserData( subShapeID ) );
+	return pConvexInfo ? pConvexInfo->GetContents( gameData ) : CONTENTS_SOLID;
+}
+
+//
+// Shared state for the collectors below: what we are tracing against, what the caller asked
+// for, and the hit fields every one of them reports.
+//
+template < typename CollectorBase >
+class ContentsCollector : public CollectorBase
+{
+public:
+	ContentsCollector( const JPH::Shape *pShape, uint32 contentsMask, IConvexInfo *pConvexInfo )
+		: m_pShape( pShape ), m_ContentsMask( contentsMask ), m_pConvexInfo( pConvexInfo ) {}
+
+	// Outputs (only use if m_DidHit is true)
+	JPH::SubShapeID		m_SubShapeID;					// SubShapeID that we hit
+	uint32				m_ResultContents = 0;			// Contents of the subshape that we hit
+	bool				m_DidHit = false;
+
+protected:
+	uint32 Contents( const JPH::SubShapeID &subShapeID ) const
+	{
+		return SubShapeContents( m_pShape, subShapeID, m_pConvexInfo );
+	}
+
+	bool PassesMask( uint32 contents ) const			{ return !!( contents & m_ContentsMask ); }
+
+private:
+	const JPH::Shape *	m_pShape = nullptr;
+	uint32				m_ContentsMask = 0;
+	IConvexInfo *		m_pConvexInfo = nullptr;
+};
+
+//
+// Filter for generic shape casts or collides
+// Ensures that objects which do not fit within the contents mask are excluded
+//
+class ContentsFilter_Shape final : public JPH::ShapeFilter
+{
+public:
+	ContentsFilter_Shape( uint32 contentsMask, IConvexInfo *pConvexInfo )
+		: m_ContentsMask( contentsMask ), m_pConvexInfo( pConvexInfo ) {}
+
+	// Unlike the collectors, the shape here is the leaf being tested and the ID is relative
+	// to it, so the lookup starts from inShape2 rather than from the root of the trace.
+	bool ShouldCollide( const JPH::Shape *inShape2, const JPH::SubShapeID& inSubShapeID2 ) const override
+	{
+		return !!( SubShapeContents( inShape2, inSubShapeID2, m_pConvexInfo ) & m_ContentsMask );
+	}
+
+	bool ShouldCollide( const JPH::Shape *inShape1, const JPH::SubShapeID &inSubShapeIDOfShape1, const JPH::Shape *inShape2, const JPH::SubShapeID &inSubShapeIDOfShape2 ) const override
+	{
+		return ShouldCollide( inShape2, inSubShapeIDOfShape2 );
+	}
+
+private:
+	uint32				m_ContentsMask = 0;
+	IConvexInfo *		m_pConvexInfo = nullptr;
+};
+
+//
 // Collector for VJolt_CastRay
 // Returns the closest hit within the contents mask
 //
-class ContentsCollector_CastRay final : public JPH::CastRayCollector
+class ContentsCollector_CastRay final : public ContentsCollector< JPH::CastRayCollector >
 {
 public:
-	ContentsCollector_CastRay( const JPH::Shape *pShape, uint32 contentsMask, IConvexInfo *pConvexInfo )
-		: m_pShape( pShape ), m_ContentsMask( contentsMask ), m_pConvexInfo( pConvexInfo ) {}
+	using ContentsCollector::ContentsCollector;
 
 	void AddHit( const JPH::RayCastResult &inResult ) override
 	{
 		// Test if this collision is closer than the previous one
 		const float theirEarlyOut = inResult.GetEarlyOutFraction();
-		const float ourEarlyOut = GetEarlyOutFraction();
-		if ( !m_DidHit || theirEarlyOut < ourEarlyOut )
+		if ( !m_DidHit || theirEarlyOut < GetEarlyOutFraction() )
 		{
-			const uint32 gameData = static_cast<uint32>( m_pShape->GetSubShapeUserData( inResult.mSubShapeID2 ) );
-			const uint32 contents = m_pConvexInfo ? m_pConvexInfo->GetContents( gameData ) : CONTENTS_SOLID;
-
-			if ( contents & m_ContentsMask )
+			const uint32 contents = Contents( inResult.mSubShapeID2 );
+			if ( PassesMask( contents ) )
 			{
 				// Update our early out fraction
 				UpdateEarlyOutFraction( theirEarlyOut );
@@ -108,30 +176,17 @@ public:
 		}
 	}
 
-private:
-	// Inputs
-	const JPH::Shape *	m_pShape = nullptr;
-	uint32				m_ContentsMask = 0;
-	IConvexInfo *		m_pConvexInfo = nullptr;
-
-public:
-	// Outputs (only use if m_DidHit is true)
 	float				m_Fraction = 1.0f;			// Use this instead of GetEarlyOutFraction
-	JPH::SubShapeID		m_SubShapeID;				// Subshape hit
-	uint32				m_ResultContents = 0;		// Contents of hit subshape
-
-	bool				m_DidHit = false;
 };
 
 //
 // Collector for VJolt_CollidePoint
 // Returns the first hit within the contents mask
 //
-class ContentsCollector_CollidePoint final : public JPH::CollidePointCollector
+class ContentsCollector_CollidePoint final : public ContentsCollector< JPH::CollidePointCollector >
 {
 public:
-	ContentsCollector_CollidePoint( const JPH::Shape *pShape, uint32 contentsMask, IConvexInfo *pConvexInfo )
-		: m_pShape( pShape ), m_ContentsMask( contentsMask ), m_pConvexInfo( pConvexInfo ) {}
+	using ContentsCollector::ContentsCollector;
 
 	void AddHit( const JPH::CollidePointResult &inResult ) override
 	{
@@ -139,84 +194,35 @@ public:
 		if ( m_DidHit )
 			return;
 
-		const uint32 gameData = static_cast<uint32>( m_pShape->GetSubShapeUserData( inResult.mSubShapeID2 ) );
-		const uint32 contents = m_pConvexInfo ? m_pConvexInfo->GetContents( gameData ) : CONTENTS_SOLID;
-
-		if ( contents & m_ContentsMask )
+		const uint32 contents = Contents( inResult.mSubShapeID2 );
+		if ( PassesMask( contents ) )
 		{
-			// Store hit info locally
 			m_SubShapeID = inResult.mSubShapeID2;
 			m_ResultContents = contents;
 
 			m_DidHit = true;
 		}
 	}
-
-private:
-	// Inputs
-	const JPH::Shape *	m_pShape = nullptr;
-	uint32				m_ContentsMask = 0;
-	IConvexInfo *		m_pConvexInfo = nullptr;
-
-public:
-	// Outputs (only use if m_DidHit is true)
-	JPH::SubShapeID		m_SubShapeID;				// Subshape hit
-	uint32				m_ResultContents = 0;		// Contents of hit subshape
-
-	bool				m_DidHit = false;
-};
-
-//
-// Filter for generic shape casts or collides
-// Ensures that objects which do not fit within the contents mask are excluded
-//
-class ContentsFilter_Shape final : public JPH::ShapeFilter
-{
-public:
-	ContentsFilter_Shape( const JPH::Shape *pShape, uint32 contentsMask, IConvexInfo *pConvexInfo )
-		: m_pShape( pShape ), m_ContentsMask( contentsMask ), m_pConvexInfo( pConvexInfo ) {}
-
-	bool ShouldCollide( const JPH::Shape *inShape2, const JPH::SubShapeID& inSubShapeID2 ) const override
-	{
-		const uint32 gameData = static_cast<uint32>( inShape2->GetSubShapeUserData( inSubShapeID2 ) );
-		const uint32 contents = m_pConvexInfo ? m_pConvexInfo->GetContents( gameData ) : CONTENTS_SOLID;
-
-		return !!( contents & m_ContentsMask );
-	}
-
-	bool ShouldCollide( const JPH::Shape *inShape1, const JPH::SubShapeID &inSubShapeIDOfShape1, const JPH::Shape *inShape2, const JPH::SubShapeID &inSubShapeIDOfShape2 ) const override
-	{
-		return ShouldCollide( inShape2, inSubShapeIDOfShape2 );
-	}
-
-public:
-	// Input
-	const JPH::Shape *	m_pShape = nullptr;
-	uint32				m_ContentsMask = 0;
-	IConvexInfo *		m_pConvexInfo = nullptr;
 };
 
 //
 // Collector for generic shape casts
 //
-class ContentsCollector_CastShape final : public JPH::CastShapeCollector
+class ContentsCollector_CastShape final : public ContentsCollector< JPH::CastShapeCollector >
 {
 public:
-	ContentsCollector_CastShape( const JPH::Shape *pShape, uint32 contentsMask, IConvexInfo *pConvexInfo )
-		: m_pShape( pShape ), m_ContentsMask( contentsMask ), m_pConvexInfo( pConvexInfo ) {}
+	using ContentsCollector::ContentsCollector;
 
 	void AddHit( const JPH::ShapeCastResult &inResult ) override
 	{
-		const uint32 gameData = static_cast<uint32>( m_pShape->GetSubShapeUserData( inResult.mSubShapeID2 ) );
-		const uint32 contents = m_pConvexInfo ? m_pConvexInfo->GetContents( gameData ) : CONTENTS_SOLID;
+		const uint32 contents = Contents( inResult.mSubShapeID2 );
 
 		// Ensure that the contents filter was used
-		VJoltAssert( contents & m_ContentsMask );
+		VJoltAssert( PassesMask( contents ) );
 
 		// Test if this collision is closer than the previous one
 		const float theirEarlyOut = inResult.GetEarlyOutFraction();
-		const float ourEarlyOut = GetEarlyOutFraction();
-		if ( !m_DidHit || theirEarlyOut < ourEarlyOut )
+		if ( !m_DidHit || theirEarlyOut < GetEarlyOutFraction() )
 		{
 			// Update our early out fraction
 			UpdateEarlyOutFraction( theirEarlyOut );
@@ -233,42 +239,28 @@ public:
 		}
 	}
 
-private:
-	// Input
-	const JPH::Shape *	m_pShape = nullptr;
-	uint32				m_ContentsMask = 0;
-	IConvexInfo *		m_pConvexInfo = nullptr;
-
-public:
 	// Outputs (only use if m_DidHit is true)
 	float				m_Fraction = 1.0f;
-	uint32				m_ResultContents = 0;			// Contents of the subshape that we hit
-	JPH::SubShapeID		m_SubShapeID;					// SubShapeID that we hit
 	JPH::Vec3			m_ContactPoint;					// Point of impact relative to the COM of the object we hit
 	JPH::Vec3			m_PenetrationAxis;
 	float				m_PenetrationDepth = 0.0f;
-
-	bool				m_DidHit = false;				// Set to true if we hit anything
 	bool				m_HitBackFace = false;			// Set to true if the hit was against a backface
 };
 
 //
 // Collector for generic shape collides
 //
-class ContentsCollector_CollideShape final : public JPH::CollideShapeCollector
+class ContentsCollector_CollideShape final : public ContentsCollector< JPH::CollideShapeCollector >
 {
 public:
-	ContentsCollector_CollideShape( const JPH::Shape *pShape, uint32 contentsMask, IConvexInfo *pConvexInfo )
-		: m_pShape( pShape ), m_ContentsMask( contentsMask ), m_pConvexInfo( pConvexInfo ) {}
+	using ContentsCollector::ContentsCollector;
 
 	// Called whenever a hit occurs, for compound objects this can be called multiple times
 	void AddHit( const JPH::CollideShapeResult &inResult ) override
 	{
-		// Get the contents of the subshape that we hit
-		const uint32 gameData = static_cast<uint32>( m_pShape->GetSubShapeUserData( inResult.mSubShapeID2 ) );
-		const uint32 contents = m_pConvexInfo ? m_pConvexInfo->GetContents( gameData ) : CONTENTS_SOLID;
+		const uint32 contents = Contents( inResult.mSubShapeID2 );
 
-		VJoltAssert( contents & m_ContentsMask );
+		VJoltAssert( PassesMask( contents ) );
 
 		if ( inResult.GetEarlyOutFraction() < GetEarlyOutFraction() )
 		{
@@ -284,21 +276,10 @@ public:
 		}
 	}
 
-private:
-	// Input
-	const JPH::Shape *	m_pShape = nullptr;
-	uint32				m_ContentsMask = 0;
-	IConvexInfo *		m_pConvexInfo = nullptr;
-
-public:
-	// Output, only valid if m_didHit is true
-	uint32				m_ResultContents = 0;			// Contents of the subshape that we hit
-	JPH::SubShapeID		m_SubShapeID;					// SubShapeID that we hit
+	// Outputs (only use if m_DidHit is true)
 	JPH::Vec3			m_ContactPoint;					// Point of impact relative to the COM of the object we hit
 	JPH::Vec3			m_PenetrationAxis;
 	float				m_PenetrationDepth = 0.0f;
-
-	bool				m_DidHit = false;				// Set to true if we hit anything
 };
 
 //
@@ -339,7 +320,7 @@ static void CastRay( const Ray_t &ray, uint32 contentsMask, IConvexInfo *pConvex
 
 	// Set-up the settings
 	JPH::RayCastSettings settings;
-	settings.mBackFaceMode = JPH::EBackFaceMode::CollideWithBackFaces;
+	settings.SetBackFaceMode( JPH::EBackFaceMode::CollideWithBackFaces );
 	settings.mTreatConvexAsSolid = true;
 
 	//
@@ -380,7 +361,7 @@ static void CastRay( const Ray_t &ray, uint32 contentsMask, IConvexInfo *pConvex
 #if defined JPH_DEBUG_RENDERER
 
 	// Debug trace visualizing
-	IVJoltDebugOverlay *pOverlay = JoltPhysicsInterface::GetInstance().GetDebugOverlay();
+	IVPhysicsDebugOverlay *pOverlay = JoltPhysicsInterface::GetInstance().GetDebugOverlay();
 	if ( vjolt_trace_debug.GetBool() && vjolt_trace_debug_castray.GetBool() && pOverlay )
 	{
 		JoltPhysicsDebugRenderer &debugRenderer = JoltPhysicsDebugRenderer::GetInstance();
@@ -431,7 +412,7 @@ static void CollidePoint( const Ray_t &ray, uint32 contentsMask, IConvexInfo *pC
 #if defined JPH_DEBUG_RENDERER
 
 	// Debug trace visualizing
-	IVJoltDebugOverlay *pOverlay = JoltPhysicsInterface::GetInstance().GetDebugOverlay();
+	IVPhysicsDebugOverlay *pOverlay = JoltPhysicsInterface::GetInstance().GetDebugOverlay();
 	if ( vjolt_trace_debug.GetBool() && vjolt_trace_debug_collidepoint.GetBool() && pOverlay )
 	{
 		JoltPhysicsDebugRenderer &debugRenderer = JoltPhysicsDebugRenderer::GetInstance();
@@ -498,7 +479,7 @@ static void CastBoxVsShape( const Ray_t &ray, uint32 contentsMask, IConvexInfo *
 	settings.mUseShrunkenShapeAndConvexRadius = true;
 	settings.mReturnDeepestPoint = true;
 
-	ContentsFilter_Shape filter( pShape, contentsMask, pConvexInfo );
+	ContentsFilter_Shape filter( contentsMask, pConvexInfo );
 	ContentsCollector_CastShape collector( pShape, contentsMask, pConvexInfo );
 	JPH::CollisionDispatch::sCastShapeVsShapeWorldSpace( shapeCast, settings, pShape, JPH::Vec3::sReplicate( 1.0f ), filter, queryTransform, JPH::SubShapeIDCreator(), JPH::SubShapeIDCreator(), collector );
 
@@ -540,7 +521,7 @@ static void CastBoxVsShape( const Ray_t &ray, uint32 contentsMask, IConvexInfo *
 #if defined JPH_DEBUG_RENDERER
 
 	// Debug trace visualizing
-	IVJoltDebugOverlay *pOverlay = JoltPhysicsInterface::GetInstance().GetDebugOverlay();
+	IVPhysicsDebugOverlay *pOverlay = JoltPhysicsInterface::GetInstance().GetDebugOverlay();
 	if ( vjolt_trace_debug.GetBool() && vjolt_trace_debug_castbox.GetBool() && pOverlay )
 	{
 		JoltPhysicsDebugRenderer &debugRenderer = JoltPhysicsDebugRenderer::GetInstance();
@@ -609,7 +590,7 @@ static void CollideBoxVsShape( const Ray_t &ray, uint32 contentsMask, IConvexInf
 #if defined JPH_DEBUG_RENDERER
 
 	// Debug trace visualizing
-	IVJoltDebugOverlay *pOverlay = JoltPhysicsInterface::GetInstance().GetDebugOverlay();
+	IVPhysicsDebugOverlay *pOverlay = JoltPhysicsInterface::GetInstance().GetDebugOverlay();
 	if ( vjolt_trace_debug.GetBool() && vjolt_trace_debug_collidebox.GetBool() && pOverlay )
 	{
 		JoltPhysicsDebugRenderer &debugRenderer = JoltPhysicsDebugRenderer::GetInstance();
@@ -670,7 +651,7 @@ static void CollideShapeVsShape( const Vector &start, const Vector &end, const C
 		JPH::AABox collideAABB = pCollideShape->GetWorldSpaceBounds( collideTransform, JPH::Vec3::sReplicate( 1.0f ) );
 
 		// Debug trace visualizing
-		IVJoltDebugOverlay *pOverlay = JoltPhysicsInterface::GetInstance().GetDebugOverlay();
+		IVPhysicsDebugOverlay *pOverlay = JoltPhysicsInterface::GetInstance().GetDebugOverlay();
 		if ( vjolt_trace_debug.GetBool() && pOverlay && !pTrace->allsolid )
 		{
 			Vector mins, maxs;

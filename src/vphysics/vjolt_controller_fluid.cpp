@@ -39,7 +39,7 @@ JoltPhysicsFluidController::JoltPhysicsFluidController( JPH::PhysicsSystem *pPhy
 {
 	m_pFluidObject->BecomeTrigger();
 	m_pFluidObject->SetFluidController( this );
-	m_pFluidObject->AddDestroyedListener( this );
+	m_pFluidObject->AddListener( this );
 }
 
 JoltPhysicsFluidController::~JoltPhysicsFluidController()
@@ -48,7 +48,7 @@ JoltPhysicsFluidController::~JoltPhysicsFluidController()
 
 	if ( m_pFluidObject )
 	{
-		m_pFluidObject->RemoveDestroyedListener( this );
+		m_pFluidObject->RemoveListener( this );
 		m_pFluidObject->SetFluidController( nullptr );
 		m_pFluidObject->RemoveTrigger();
 	}
@@ -200,10 +200,10 @@ void JoltPhysicsFluidController::OnPreSimulate( float deltaTime )
 
 	m_pPhysicsSystem->GetNarrowPhaseQueryNoLock().CollideShape(
 		pShape, JPH::Vec3::sReplicate( 1.0f ), queryTransform, collideSettings, JPH::Vec3::sZero(), collector,
-		JPH::SpecifiedBroadPhaseLayerFilter( BroadPhaseLayers::MOVING ), JPH::SpecifiedObjectLayerFilter( Layers::MOVING ), body_filter );
+		JPH::SpecifiedBroadPhaseLayerFilter( Layers::BroadPhase( Layers::MOVING ) ), JPH::SpecifiedObjectLayerFilter( Layers::MOVING ), body_filter );
 
 	for ( JoltPhysicsObject *pObject : m_ObjectsInShape )
-		pObject->AddDestroyedListener( this );
+		pObject->AddListener( this );
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -227,7 +227,7 @@ void JoltPhysicsFluidController::ClearCachedObjectsInShape()
 	// TODO(Josh):  This could maybe be made more efficient by having two vectors
 	// and only updating the listeners on the ones we need to, then std::move-ing.
 	for ( JoltPhysicsObject *pObject : m_ObjectsInShape )
-		pObject->RemoveDestroyedListener( this );
+		pObject->RemoveListener( this );
 
 	m_ObjectsInShape.clear();
 }

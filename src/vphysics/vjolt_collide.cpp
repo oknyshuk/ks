@@ -4,6 +4,9 @@
 #include "coordsize.h"
 #include "mathlib/polyhedron.h"
 
+// Shape.h only forward declares the set behind Shape::VisitedShapes
+#include <Jolt/Core/UnorderedSet.h>
+
 #include "vjolt_parse.h"
 #include "vjolt_querymodel.h"
 
@@ -16,6 +19,12 @@
 
 // Also in vjolt_collide_trace.cpp, should unify or just remove entirely
 static constexpr float kMaxConvexRadius = JPH::cDefaultConvexRadius;
+
+// Displacements and virtual meshes are traced against constantly, so their trees are built
+// for query speed rather than map load speed. This is Jolt's default, spelled out because
+// it is a deliberate trade rather than an oversight.
+static constexpr JPH::MeshShapeSettings::EBuildQuality kMeshBuildQuality =
+	JPH::MeshShapeSettings::EBuildQuality::FavorRuntimePerformance;
 
 JoltPhysicsCollision JoltPhysicsCollision::s_PhysicsCollision;
 EXPOSE_SINGLE_INTERFACE_GLOBALVAR( JoltPhysicsCollision, IPhysicsCollision, VPHYSICS_COLLISION_INTERFACE_VERSION, JoltPhysicsCollision::GetInstance() );
@@ -162,6 +171,7 @@ CPhysCollide *JoltPhysicsCollision::ConvertPolysoupToCollide( CPhysPolysoup *pSo
 
 	// ConvertPolysoupToCollide does NOT free the Polysoup.
 	JPH::MeshShapeSettings settings( pSoup->Triangles );
+	settings.mBuildQuality = kMeshBuildQuality;
 	return ShapeSettingsToPhysCollide( settings );
 }
 
@@ -504,7 +514,9 @@ namespace ivp_compat
 		COLLIDE_VIRTUAL = 3,
 	};
 
-	JPH::ConvexShape *IVPLedgeToConvexShape( const compactledge_t *pLedge )
+	// Builds the convex hull for one IVP ledge, or nullptr if the ledge is degenerate.
+	// Callers decide what a missing piece means; see DeserializeIVP_Poly.
+	JPH::Shape *IVPLedgeToShape( const compactledge_t *pLedge )
 	{
 		if ( !pLedge->n_triangles )
 			return nullptr;
@@ -533,25 +545,12 @@ namespace ivp_compat
 
 		JPH::ConvexHullShapeSettings settings{ verts.get(), nVertCount, kMaxConvexRadius, nullptr /* material */ };
 		settings.mHullTolerance = 0.0f;
-		JPH::ConvexShape *pConvexShape = ShapeSettingsToShape< JPH::ConvexShape >( settings );
-		if ( !pConvexShape )
-		{
-			// Wow that sucks, just mock up a small sphere to subsitute.
-			// This can happen for models with extremely broken collision hulls.
-			// If we don't do this, we'll crash later on because older versions of Source are missing
-			// an important nullptr check.
-			// A better solution would be to generate a valid convex hull from the points provided.
-			JPH::SphereShapeSettings sphereSettings( 1.0f );
-			pConvexShape = ShapeSettingsToShape< JPH::ConvexShape >( sphereSettings );
-			if ( !pConvexShape )
-			{
-				// This should never fail, but catching anyway
-				return nullptr;
-			}
-		}
-		
-		pConvexShape->SetUserData( pLedge->client_data );
-		return pConvexShape;
+		JPH::Shape *pShape = ShapeSettingsToShape< JPH::Shape >( settings );
+		if ( !pShape )
+			return nullptr;
+
+		pShape->SetUserData( pLedge->client_data );
+		return pShape;
 	}
 
 	void GetAllIVPEdges( const compactledgenode_t *pNode, CUtlVector< const compactledge_t * >& vecOut )
@@ -578,27 +577,31 @@ namespace ivp_compat
 
 		VJoltAssert( !ledges.IsEmpty() );
 
-		if ( ledges.Count() != 1 )
+		// One convex per ledge. Models with broken collision hulls have ledges Jolt cannot
+		// build a hull from; those are dropped, so such a prop is missing a piece rather
+		// than gaining a piece it never had -- the old fallback substituted a 1 metre sphere,
+		// which is about 39 units of invisible collision sitting in the level.
+		JPH::StaticCompoundShapeSettings settings{};
+		JPH::Shape *pLastShape = nullptr;
+		for ( int i = 0; i < ledges.Count(); i++ )
 		{
-			JPH::StaticCompoundShapeSettings settings{};
-			// One compound convex per ledge.
-			for ( int i = 0; i < ledges.Count(); i++ )
+			if ( JPH::Shape *pShape = IVPLedgeToShape( ledges[ i ] ) )
 			{
-				const JPH::Shape* pShape = IVPLedgeToConvexShape( ledges[i] );
-				// Josh:
-				// Some models have degenerate convexes which fails to make
-				// a subshape in Jolt, so we need to ignore those ledges.
-				if ( pShape )
-					settings.AddShape( JPH::Vec3::sZero(), JPH::Quat::sIdentity(), pShape );
+				pLastShape = pShape;
+				settings.AddShape( JPH::Vec3::sZero(), JPH::Quat::sIdentity(), pShape );
 			}
-			CPhysCollide* pCollide = ShapeSettingsToPhysCollide( settings );
-			return pCollide;
 		}
-		else
-		{
-			JPH::ConvexShape *pShape = IVPLedgeToConvexShape( ledges[ 0 ] );
-			return CPhysConvex::FromConvexShape( pShape )->ToPhysCollide();
-		}
+
+		// A lone ledge does not need wrapping in a compound.
+		if ( settings.mSubShapes.size() == 1 )
+			return CPhysCollide::FromShape( pLastShape );
+
+		// Every ledge was degenerate. Some branches of Source do not null check the solid
+		// they get back, so hand over a shape that is simply never touched by anything.
+		if ( settings.mSubShapes.empty() )
+			return ShapeSettingsToPhysCollide( JPH::EmptyShapeSettings{} );
+
+		return ShapeSettingsToPhysCollide( settings );
 	}
 
 	CPhysCollide *DeserializeIVP_Poly( const collideheader_t *pCollideHeader )
@@ -818,27 +821,28 @@ CPhysCollide *JoltPhysicsCollision::CreateVirtualMesh( const virtualmeshparams_t
 	event->GetVirtualMesh( params.userData, &meshList );
 
 	JPH::VertexList vertexList;
-	vertexList.resize( meshList.vertexCount );
+	vertexList.reserve( meshList.vertexCount );
 	for ( int i = 0; i < meshList.vertexCount; ++i )
-		vertexList[i] = SourceToJolt::DistanceFloat3( meshList.pVerts[i] );
+		vertexList.push_back( SourceToJolt::DistanceFloat3( meshList.pVerts[ i ] ) );
 
-	JPH::IndexedTriangleList indexedTriangleList;
-	indexedTriangleList.resize( meshList.indexCount * 2 );
-
+	// Both windings, to make the mesh two-faced. Probably doesn't matter too much, but it
+	// matches what used to happen. Appending rather than filling a pre-sized list keeps the
+	// count and the fill in step: JPH::Array leaves the tail of a resize() uninitialised, so
+	// an unwritten triangle indexes the vertex list with garbage.
+	JPH::IndexedTriangleList triangleList;
+	triangleList.reserve( meshList.triangleCount * 2 );
 	for ( int i = 0; i < meshList.triangleCount; ++i )
 	{
-		// Add both windings to make this two-faced.
-		// Probably doesn't matter too much but matches what used to happen.
-		indexedTriangleList[i*2+0].mIdx[0] = meshList.indices[i*3+0];
-		indexedTriangleList[i*2+0].mIdx[1] = meshList.indices[i*3+1];
-		indexedTriangleList[i*2+0].mIdx[2] = meshList.indices[i*3+2];
+		const uint32 a = meshList.indices[ i * 3 + 0 ];
+		const uint32 b = meshList.indices[ i * 3 + 1 ];
+		const uint32 c = meshList.indices[ i * 3 + 2 ];
 
-		indexedTriangleList[i*2+1].mIdx[2] = meshList.indices[i*3+0];
-		indexedTriangleList[i*2+1].mIdx[1] = meshList.indices[i*3+1];
-		indexedTriangleList[i*2+1].mIdx[0] = meshList.indices[i*3+2];
+		triangleList.emplace_back( a, b, c, 0 /* material index */ );
+		triangleList.emplace_back( c, b, a, 0 /* material index */ );
 	}
 
-	JPH::MeshShapeSettings settings( vertexList, indexedTriangleList );
+	JPH::MeshShapeSettings settings( vertexList, triangleList );
+	settings.mBuildQuality = kMeshBuildQuality;
 
 	return ShapeSettingsToPhysCollide( settings );
 }

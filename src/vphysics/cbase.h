@@ -55,9 +55,6 @@
 #include "tier1/utlbuffer.h"
 
 // Misc
-#ifdef JPH_DEBUG_RENDERER
-#include "engine/ivdebugoverlay.h"
-#endif
 #include "bspfile.h"
 #include "cmodel.h"
 #include "const.h"
@@ -108,6 +105,7 @@
 #include <Jolt/Physics/Collision/Shape/MeshShape.h>
 #include <Jolt/Physics/Collision/Shape/StaticCompoundShape.h>
 #include <Jolt/Physics/Collision/Shape/ConvexHullShape.h>
+#include <Jolt/Physics/Collision/Shape/EmptyShape.h>
 #include <Jolt/Physics/Collision/Shape/RotatedTranslatedShape.h>
 #include <Jolt/Physics/Collision/Shape/OffsetCenterOfMassShape.h>
 #include <Jolt/Physics/Ragdoll/Ragdoll.h>

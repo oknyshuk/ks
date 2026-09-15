@@ -58,123 +58,6 @@ static ConVar vjolt_baumgarte_factor( "vjolt_baumgarte_factor", "0.2", FCVAR_NON
 
 //-------------------------------------------------------------------------------------------------
 
-class JoltObjectLayerPairFilter final : public JPH::ObjectLayerPairFilter
-{
-public:
-	// Function that determines if two object layers can collide
-	bool ShouldCollide( JPH::ObjectLayer inObject1, JPH::ObjectLayer inObject2 ) const override
-	{
-		switch ( inObject1 )
-		{
-		// NO_COLLIDE collides with nothing.
-		case Layers::NO_COLLIDE:
-			return	false;
-		// NON_MOVING collides with moving objects and debris.
-		case Layers::NON_MOVING_WORLD:
-		case Layers::NON_MOVING_OBJECT:
-			return	inObject2 == Layers::MOVING ||
-					inObject2 == Layers::DEBRIS;
-		// MOVING collides with moving and non-moving objects.
-		case Layers::MOVING:
-			return	inObject2 == Layers::MOVING ||
-					inObject2 == Layers::NON_MOVING_WORLD ||
-					inObject2 == Layers::NON_MOVING_OBJECT;
-	
-		// DEBRIS only collides with non-moving objects.
-		case Layers::DEBRIS:
-			return	inObject2 == Layers::NON_MOVING_WORLD || inObject2 == Layers::NON_MOVING_OBJECT;
-		default:
-			VJoltAssert( false );
-			return false;
-	}
-};
-
-private:
-};
-
-// BroadPhaseLayerInterface implementation
-// This defines a mapping between object and broadphase layers.
-class JoltBroadPhaseLayerInterface final : public JPH::BroadPhaseLayerInterface
-{
-public:
-	JoltBroadPhaseLayerInterface()
-	{
-		// Create a mapping table from object to broad phase layer
-		mObjectToBroadPhase[Layers::NON_MOVING_WORLD] = BroadPhaseLayers::NON_MOVING_WORLD;
-		mObjectToBroadPhase[Layers::NON_MOVING_OBJECT] = BroadPhaseLayers::NON_MOVING_OBJECT;
-		mObjectToBroadPhase[Layers::MOVING] = BroadPhaseLayers::MOVING;
-		mObjectToBroadPhase[Layers::NO_COLLIDE] = BroadPhaseLayers::NO_COLLIDE;
-		mObjectToBroadPhase[Layers::DEBRIS] = BroadPhaseLayers::DEBRIS;
-	}
-
-	uint GetNumBroadPhaseLayers() const override
-	{
-		return Layers::NUM_LAYERS;
-	}
-
-	JPH::BroadPhaseLayer GetBroadPhaseLayer( JPH::ObjectLayer inLayer ) const override
-	{
-		VJoltAssert( inLayer < Layers::NUM_LAYERS );
-		return mObjectToBroadPhase[inLayer];
-	}
-
-#if defined( JPH_EXTERNAL_PROFILE ) || defined( JPH_PROFILE_ENABLED )
-	const char *GetBroadPhaseLayerName( JPH::BroadPhaseLayer inLayer ) const override
-	{
-		switch ( (JPH::BroadPhaseLayer::Type)inLayer )
-		{
-		case (JPH::BroadPhaseLayer::Type)BroadPhaseLayers::NON_MOVING_WORLD:	return "NON_MOVING_WORLD";
-		case (JPH::BroadPhaseLayer::Type)BroadPhaseLayers::NON_MOVING_OBJECT:	return "NON_MOVING_OBJECT";
-		case (JPH::BroadPhaseLayer::Type)BroadPhaseLayers::NO_COLLIDE:			return "NO_COLLIDE";
-		case (JPH::BroadPhaseLayer::Type)BroadPhaseLayers::DEBRIS:				return "DEBRIS";
-		case (JPH::BroadPhaseLayer::Type)BroadPhaseLayers::MOVING:				return "MOVING";
-		default:																VJoltAssert( false ); return "INVALID";
-		}
-	}
-#endif
-
-private:
-	JPH::BroadPhaseLayer mObjectToBroadPhase[Layers::NUM_LAYERS];
-};
-
-class JoltObjectVsBroadPhaseLayerFilter final : public JPH::ObjectVsBroadPhaseLayerFilter
-{
-public:
-	// Function that determines if two broadphase layers can collide
-	bool ShouldCollide( JPH::ObjectLayer inLayer1, JPH::BroadPhaseLayer inLayer2 ) const override
-	{
-		switch (inLayer1)
-		{
-		// NO_COLLIDE collides with nothing.
-		case Layers::NO_COLLIDE:
-			return false;
-
-		// NON_MOVING collides with moving objects and debris.
-		case Layers::NON_MOVING_WORLD:
-		case Layers::NON_MOVING_OBJECT:
-			return inLayer2 == BroadPhaseLayers::MOVING ||
-				   inLayer2 == BroadPhaseLayers::DEBRIS;
-
-		// MOVING collides with moving and non-moving objects.
-		case Layers::MOVING:
-			return inLayer2 == BroadPhaseLayers::MOVING ||
-				   inLayer2 == BroadPhaseLayers::NON_MOVING_WORLD ||
-				   inLayer2 == BroadPhaseLayers::NON_MOVING_OBJECT;
-	
-		// DEBRIS only collides with non-moving objects.
-		case Layers::DEBRIS:
-			return inLayer2 == BroadPhaseLayers::NON_MOVING_WORLD || inLayer2 == BroadPhaseLayers::NON_MOVING_OBJECT;
-
-		default:
-			VJoltAssert( false );
-			return false;
-		}
-	}
-private:
-};
-
-//-------------------------------------------------------------------------------------------------
-
 static char s_szNextEnvironmentDumpPath[ MAX_PATH ];
 static bool s_bShouldDumpEnvironmentClient = false;
 static bool s_bShouldDumpEnvironmentServer = false;
@@ -193,18 +76,18 @@ CON_COMMAND( vjolt_environment_dump_server, "Dumps the next simulated environmen
 
 //-------------------------------------------------------------------------------------------------
 
-JoltBroadPhaseLayerInterface JoltPhysicsEnvironment::s_BroadPhaseLayerInterface;
-JoltObjectVsBroadPhaseLayerFilter JoltPhysicsEnvironment::s_BroadPhaseFilter;
-JoltObjectLayerPairFilter JoltPhysicsEnvironment::s_LayerPairFilter;
+
+//-------------------------------------------------------------------------------------------------
 
 JoltPhysicsEnvironment::JoltPhysicsEnvironment()
 	: m_ContactListener( m_PhysicsSystem )
 {
 	m_PerformanceParams.Defaults();
 
+	const JoltCollisionLayers &layers = JoltCollisionLayers::Get();
 	m_PhysicsSystem.Init(
 		kMaxBodies, kNumBodyMutexes, kMaxBodyPairs, kMaxContactConstraints,
-		s_BroadPhaseLayerInterface, s_BroadPhaseFilter, s_LayerPairFilter);
+		layers.broadPhase, layers.objectVsBroadPhase, layers.objectPairs );
 
 	{
 		JPH::PhysicsSettings settings = m_PhysicsSystem.GetPhysicsSettings();
@@ -263,7 +146,7 @@ void JoltPhysicsEnvironment::SetDebugOverlay( CreateInterfaceFn debugOverlayFact
 	m_pDebugOverlay = nullptr;
 	if ( debugOverlayFactory )
 	{
-		m_pDebugOverlay = (IVJoltDebugOverlay *)debugOverlayFactory( VJOLT_DEBUG_OVERLAY_VERSION, nullptr );
+		m_pDebugOverlay = (IVPhysicsDebugOverlay *)debugOverlayFactory( VPHYSICS_DEBUG_OVERLAY_INTERFACE_VERSION, nullptr );
 
 		JoltPhysicsInterface::GetInstance().SetDebugOverlay( m_pDebugOverlay );
 	}
@@ -338,6 +221,11 @@ IPhysicsObject *JoltPhysicsEnvironment::CreatePolyObject( const CPhysCollide *pC
 	if ( m_bUseLinearCast )
 		settings.mMotionQuality = JPH::EMotionQuality::LinearCast;
 
+	// Source geometry is triangle soup, and a contact against an internal edge of it shoves a
+	// body along a normal that does not exist. Without this, sliding across brush and
+	// displacement seams gains energy and sinks the body below the surface it rests on.
+	settings.mEnhancedInternalEdgeRemoval = true;
+
 	JPH::BodyInterface &bodyInterface = m_PhysicsSystem.GetBodyInterfaceNoLock();
 	JPH::Body *pBody = bodyInterface.CreateBody( settings );
 	bodyInterface.AddBody( pBody->GetID(), JPH::EActivation::DontActivate );
@@ -382,6 +270,8 @@ IPhysicsObject *JoltPhysicsEnvironment::CreateSphereObject( float radius, int ma
 		settings.mMassPropertiesOverride.mMass = params.mass;
 		//settings.mMassPropertiesOverride.mInertia = JPH::Mat44::sIdentity() * params.inertia;
 		settings.mOverrideMassProperties = JPH::EOverrideMassProperties::CalculateInertia;//JPH::EOverrideMassProperties::MassAndInertiaProvided;
+
+		settings.mEnhancedInternalEdgeRemoval = true;
 	}
 
 	JPH::BodyInterface &bodyInterface = m_PhysicsSystem.GetBodyInterfaceNoLock();
@@ -434,7 +324,7 @@ void JoltPhysicsEnvironment::DestroyFluidController( IPhysicsFluidController *pF
 
 //-------------------------------------------------------------------------------------------------
 
-class JoltPhysicsSpring final : public IPhysicsSpring, public IJoltObjectDestroyedListener
+class JoltPhysicsSpring final : public IPhysicsSpring, public IJoltObjectListener
 {
 public:
 	JoltPhysicsSpring( JPH::PhysicsSystem *pPhysicsSystem, JoltPhysicsObject *pObjectStart, JoltPhysicsObject *pObjectEnd, springparams_t *pParams );
@@ -487,17 +377,17 @@ JoltPhysicsSpring::JoltPhysicsSpring( JPH::PhysicsSystem *pPhysicsSystem, JoltPh
 
 	m_pPhysicsSystem->AddConstraint( m_pConstraint );
 
-	m_pObjectStart->AddDestroyedListener( this );
-	m_pObjectEnd->AddDestroyedListener( this );
+	m_pObjectStart->AddListener( this );
+	m_pObjectEnd->AddListener( this );
 }
 
 JoltPhysicsSpring::~JoltPhysicsSpring()
 {
 	if ( m_pObjectStart )
-		m_pObjectStart->RemoveDestroyedListener( this );
+		m_pObjectStart->RemoveListener( this );
 
 	if ( m_pObjectEnd )
-		m_pObjectEnd->RemoveDestroyedListener( this );
+		m_pObjectEnd->RemoveListener( this );
 
 	m_pPhysicsSystem->RemoveConstraint( m_pConstraint );
 }
@@ -808,6 +698,8 @@ void JoltPhysicsEnvironment::Simulate( float deltaTime )
 		// Move things around!
 		m_PhysicsSystem.Update( deltaTime, nCollisionSubSteps, tempAllocator, jobSystem );
 	}
+
+
 	m_ContactListener.FlushCallbacks();
 
 	// Run post-simulation controllers
@@ -1187,7 +1079,7 @@ void JoltPhysicsEnvironment::DestroyCollideOnDeadObjectFlush( CPhysCollide *pCol
 	{
 		if ( pObject->GetCollide() == pCollide )
 		{
-			if ( !VectorContains( m_pDeadObjectCollides, pCollide ) )
+			if ( !std::ranges::contains( m_pDeadObjectCollides, pCollide ) )
 				m_pDeadObjectCollides.push_back( pCollide );
 			return;
 		}
