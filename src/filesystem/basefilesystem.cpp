@@ -1525,8 +1525,7 @@ bool CZipPackFile::Prepare( int64 fileLen, int64 nFileOfs )
 		return false;
 	}
 
-	// Pack files are always little-endian
-	m_swap.ActivateByteSwapping( false);
+	// Pack files are always little-endian, which is the platform-native byte order.
 
 	m_FileLength = fileLen;
 	m_nBaseOffset = nFileOfs;
@@ -1544,7 +1543,6 @@ bool CZipPackFile::Prepare( int64 fileLen, int64 nFileOfs )
 		for ( ; offset >= 0; offset-- )
 		{
 			ReadFromPack( -1, (void*)&rec, -1, sizeof( rec ), offset );
-			m_swap.SwapFieldsToTargetEndian( &rec );
 			if ( rec.signature == PKID( 5, 6 ) )
 			{
 				bCentralDirRecord = true;
@@ -1573,7 +1571,6 @@ bool CZipPackFile::Prepare( int64 fileLen, int64 nFileOfs )
 	// read central directory into memory and parse
 	CUtlBuffer zipDirBuff( 0, rec.centralDirectorySize, 0 );
 	zipDirBuff.EnsureCapacity( rec.centralDirectorySize );
-	zipDirBuff.ActivateByteSwapping( false );
 	ReadFromPack( -1, zipDirBuff.Base(), -1, rec.centralDirectorySize, rec.startOfCentralDirOffset );
 	zipDirBuff.SeekPut( CUtlBuffer::SEEK_HEAD, rec.centralDirectorySize );
 

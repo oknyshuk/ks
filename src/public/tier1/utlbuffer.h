@@ -14,9 +14,8 @@
 #include "unitlib/unitlib.h" // just here for tests - remove before checking in!!!
 
 #include "tier1/utlmemory.h"
-#include "tier1/byteswap.h"
+#include "tier1/strtools.h"	// V_memset
 #include <stdarg.h>
-
 
 //-----------------------------------------------------------------------------
 // Forward declarations
@@ -198,16 +197,6 @@ public:
 	void			Swap( CUtlBuffer &buf );
 	void			Swap( CUtlMemory<uint8> &mem );
 
-
-	FORCEINLINE void ActivateByteSwappingIfBigEndian( void )
-	{
-	}
-
-
-	// Controls endian-ness of binary utlbufs - default matches the current platform
-	void			ActivateByteSwapping( bool bActivate );
-	void			SetBigEndian( bool bigEndian );
-	bool			IsBigEndian( void );
 
 	// Resets the buffer; but doesn't free memory
 	void			Clear();
@@ -460,8 +449,6 @@ protected:
 
 	UtlBufferOverflowFunc_t m_GetOverflowFunc;
 	UtlBufferOverflowFunc_t m_PutOverflowFunc;
-
-	CByteswap	m_Byteswap;
 };
 
 
@@ -636,14 +623,7 @@ inline void CUtlBuffer::GetObject( T *dest )
 {
 	if ( CheckGet( sizeof(T) ) )
 	{
-		if ( !m_Byteswap.IsSwappingBytes() || ( sizeof( T ) == 1 ) )
-		{
-			*dest = *(T *)PeekGet();
-		}
-		else
-		{
-			m_Byteswap.SwapFieldsToTargetEndian<T>( dest, (T*)PeekGet() );
-		}
+		*dest = *(T *)PeekGet();
 		m_Get += sizeof(T);	
 	}
 	else
@@ -668,14 +648,7 @@ inline void CUtlBuffer::GetTypeBin( T &dest )
 {
 	if ( CheckGet( sizeof(T) ) )
 	{
-		if ( !m_Byteswap.IsSwappingBytes() || ( sizeof( T ) == 1 ) )
-		{
-			dest = *(T *)PeekGet();
-		}
-		else
-		{
-			m_Byteswap.SwapBufferToTargetEndian<T>( &dest, (T*)PeekGet() );
-		}
+		dest = *(T *)PeekGet();
 		m_Get += sizeof(T);	
 	}		
 	else
@@ -692,10 +665,6 @@ inline void CUtlBuffer::GetTypeBin< float >( float &dest )
 		uintp pData = (uintp)PeekGet();
 		// aligned read
 		dest = *(float *)pData;
-		if ( m_Byteswap.IsSwappingBytes() )
-		{
-			m_Byteswap.SwapBufferToTargetEndian< float >( &dest, &dest );
-		}
 		m_Get += sizeof( float );	
 	}		
 	else
@@ -712,10 +681,6 @@ inline void CUtlBuffer::GetTypeBin< double >( double &dest )
 		uintp pData = (uintp)PeekGet();
 		// aligned read
 		dest = *(double *)pData;
-		if ( m_Byteswap.IsSwappingBytes() )
-		{
-			m_Byteswap.SwapBufferToTargetEndian< double >( &dest, &dest );
-		}
 		m_Get += sizeof( double );	
 	}		
 	else
@@ -979,14 +944,7 @@ inline void CUtlBuffer::PutObject( T *src )
 {
 	if ( CheckPut( sizeof(T) ) )
 	{
-		if ( !m_Byteswap.IsSwappingBytes() || ( sizeof( T ) == 1 ) )
-		{
-			*(T *)PeekPut() = *src;
-		}
-		else
-		{
-			m_Byteswap.SwapFieldsToTargetEndian<T>( (T*)PeekPut(), src );
-		}
+		*(T *)PeekPut() = *src;
 		m_Put += sizeof(T);
 		AddNullTermination( m_Put );
 	}
@@ -1008,14 +966,7 @@ inline void CUtlBuffer::PutTypeBin( T src )
 {
 	if ( CheckPut( sizeof(T) ) )
 	{
-		if ( !m_Byteswap.IsSwappingBytes() || ( sizeof( T ) == 1 ) )
-		{
-			*(T *)PeekPut() = src;
-		}
-		else
-		{
-			m_Byteswap.SwapBufferToTargetEndian<T>( (T*)PeekPut(), &src );
-		}
+		*(T *)PeekPut() = src;
 		m_Put += sizeof(T);
 		AddNullTermination( m_Put );
 	}
@@ -1295,7 +1246,6 @@ inline void CUtlBuffer::SwapCopy(  CUtlBuffer &other  )
 	m_nOffset = other.m_nOffset;
 	m_GetOverflowFunc = other.m_GetOverflowFunc;
 	m_PutOverflowFunc = other.m_PutOverflowFunc;
-	m_Byteswap = other.m_Byteswap;
 
 	m_Memory.Swap( other.m_Memory );
 }

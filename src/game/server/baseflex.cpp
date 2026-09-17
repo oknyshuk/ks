@@ -25,7 +25,6 @@
 #include "sceneentity.h"
 #include "ai_baseactor.h"
 #include "datacache/imdlcache.h"
-#include "tier1/byteswap.h"
 #include "toolframework/itoolframework.h"
 #include "flexcycler.h"
 
@@ -2618,13 +2617,4 @@ void CFlexCycler::ProcessSceneEvents( void )
 	// Don't do anything since we handle facial stuff in Think()
 }
 
-
-BEGIN_BYTESWAP_DATADESC( flexsettinghdr_t )
-END_BYTESWAP_DATADESC()
-
-BEGIN_BYTESWAP_DATADESC( flexsetting_t )
-END_BYTESWAP_DATADESC()
-
-BEGIN_BYTESWAP_DATADESC( flexweight_t )
-END_BYTESWAP_DATADESC()
 

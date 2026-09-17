@@ -43,7 +43,7 @@ private:
 //-----------------------------------------------------------------------------
 class CLogicEventListenerItemEquip : public CLogicEventListener
 {
-	DECLARE_CLASS( CLogicEventListenerItemEquip, CLogicalEntity );
+	DECLARE_CLASS( CLogicEventListenerItemEquip, CLogicEventListener );
 	DECLARE_DATADESC();
 
 public:

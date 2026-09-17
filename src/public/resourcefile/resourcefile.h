@@ -45,7 +45,6 @@ typedef uint32 ResourceBlockId_t;
 //-----------------------------------------------------------------------------
 struct ResourceBlockEntry_t
 {
-	DECLARE_BYTESWAP_DATADESC();
 
 	ResourceBlockId_t m_nBlockType;
 	CResourcePointer<void> m_pBlockData;
@@ -62,7 +61,6 @@ enum ResourceFileHeaderVersion_t
 
 struct ResourceFileHeader_t
 {
-	DECLARE_BYTESWAP_DATADESC();
 
 	uint32 m_nVersion;			// see ResourceFileHeaderVersion_t
 	uint32 m_nSizeInBytes;		// Size in bytes of entire file

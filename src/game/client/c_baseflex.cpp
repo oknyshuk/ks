@@ -1995,12 +1995,3 @@ float CSceneEventInfo::UpdateWeight( C_BaseFlex *pActor )
 	return m_flWeight;
 }
 
-BEGIN_BYTESWAP_DATADESC( flexsettinghdr_t )
-END_BYTESWAP_DATADESC()
-
-BEGIN_BYTESWAP_DATADESC( flexsetting_t )
-END_BYTESWAP_DATADESC()
-
-BEGIN_BYTESWAP_DATADESC( flexweight_t )
-END_BYTESWAP_DATADESC()
-

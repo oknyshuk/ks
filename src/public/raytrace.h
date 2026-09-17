@@ -11,7 +11,6 @@
 #include <tier1/utlvector.h>
 #include <tier1/utlbuffer.h>
 #include <mathlib/mathlib.h>
-#include <bspfile.h>
 
 // fast SSE-ONLY ray tracing module. Based upon various "real time ray tracing" research.
 //#define DEBUG_RAYTRACE 1
@@ -383,12 +382,6 @@ public:
 
 	void AddInfinitePointLight(Vector position,				// light center
 							   Vector intensity);			// rgb amount
-
-	// use the global variables set by LoadBSPFile to populated the RayTracingEnvironment with
-	// faces.
-	void InitializeFromLoadedBSP(void);
-
-	void AddBSPFace(int id,dface_t const &face);
 
 	// MakeRoomForTriangles - a hint telling it how many triangles we are going to add so that
 	// the utl vectors used can be pre-allocated

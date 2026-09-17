@@ -13,7 +13,6 @@
 #include "tier1/utlbuffer.h"
 #include "filesystem.h"
 #include "tier2/tier2.h"
-#include "byteswap.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -133,22 +132,6 @@ static bool ReadFile( char const* pFileName, CTempImage& image, int maxbytes = -
 static void ReadHeader( CUtlBuffer& buf, TGAHeader_t& header )
 {
 	buf.Get( &header, sizeof(TGAHeader_t) );
-
-	if ( CByteswap::IsMachineBigEndian() )
-	{
-		CByteswap bs;
-		bs.ActivateByteSwapping( true ); // Assume that TGAs are Win32-little-endian
-
-#pragma warning( push )
-#pragma warning( disable : 4366 ) // warning C4366: The result of the unary '&' operator may be unaligned
-		bs.SwapBuffer( &header.colormap_index );
-		bs.SwapBuffer( &header.colormap_length );
-		bs.SwapBuffer( &header.x_origin );
-		bs.SwapBuffer( &header.y_origin );
-		bs.SwapBuffer( &header.width );
-		bs.SwapBuffer( &header.height );
-#pragma warning( pop )
-	}
 }
 
 

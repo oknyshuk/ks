@@ -216,7 +216,6 @@ void CSysSessionBase::ReplyLanSearch( KeyValues *msg )
 
 	// Compose the binary encoding of game details
 	CUtlBuffer bufGameDetails;
-	bufGameDetails.ActivateByteSwapping( !CByteswap::IsMachineBigEndian() );
 	g_pMatchFramework->GetMatchNetworkMsgController()->PackageGameDetailsForQOS( m_pSettings, bufGameDetails );
 
 	reply->SetPtr( "binary/ptr", bufGameDetails.Base() );
@@ -231,7 +230,6 @@ void CSysSessionBase::SendMessage( KeyValues *msg )
 {
 
 	CUtlBuffer buf;
-	buf.ActivateByteSwapping( !CByteswap::IsMachineBigEndian() );
 	buf.PutInt( g_pMatchExtensions->GetINetSupport()->GetEngineBuildNumber() );
 
 	msg->WriteAsBinary( buf );
@@ -351,7 +349,6 @@ void CSysSessionBase::UnpackAndReceiveMessage( const void *pvBuffer, int numByte
 		return;
 
 	CUtlBuffer buf( pvBuffer, numBytes, CUtlBuffer::READ_ONLY );
-	buf.ActivateByteSwapping( !CByteswap::IsMachineBigEndian() );
 	if ( buf.GetInt() != g_pMatchExtensions->GetINetSupport()->GetEngineBuildNumber() )
 		return;
 
@@ -2685,7 +2682,6 @@ void CSysSessionConTeamHost::SendReservationRequest()
 	DevMsg( "Sending res request with teamResKey == %llx\n ", teamResKey );
 
 	CUtlBuffer buf;
-	buf.ActivateByteSwapping( !CByteswap::IsMachineBigEndian() );
 	buf.PutInt( g_pMatchExtensions->GetINetSupport()->GetEngineBuildNumber() );
 	reservation->WriteAsBinary( buf );
 

@@ -87,48 +87,12 @@ void CDemoFile::ReadSequenceInfo(int &nSeqNrIn, int &nSeqNrOut)
 }
 
 
-inline void ByteSwap_democmdinfo_t( democmdinfo_t &cmdInfo )
-{
-	for ( int i = 0; i < MAX_SPLITSCREEN_CLIENTS; ++i )
-	{
-		democmdinfo_t::Split_t &swap = cmdInfo.u[ i ];
-
-		swap.flags = LittleDWord( swap.flags );
-
-		LittleFloat( &swap.viewOrigin.x, &swap.viewOrigin.x );
-		LittleFloat( &swap.viewOrigin.y, &swap.viewOrigin.y );
-		LittleFloat( &swap.viewOrigin.z, &swap.viewOrigin.z );
-
-		LittleFloat( &swap.viewAngles.x, &swap.viewAngles.x );
-		LittleFloat( &swap.viewAngles.y, &swap.viewAngles.y );
-		LittleFloat( &swap.viewAngles.z, &swap.viewAngles.z );
-
-		LittleFloat( &swap.localViewAngles.x, &swap.localViewAngles.x );
-		LittleFloat( &swap.localViewAngles.y, &swap.localViewAngles.y );
-		LittleFloat( &swap.localViewAngles.z, &swap.localViewAngles.z );
-
-		LittleFloat( &swap.viewOrigin2.x, &swap.viewOrigin2.x );
-		LittleFloat( &swap.viewOrigin2.y, &swap.viewOrigin2.y );
-		LittleFloat( &swap.viewOrigin2.z, &swap.viewOrigin2.z );
-
-		LittleFloat( &swap.viewAngles2.x, &swap.viewAngles2.x );
-		LittleFloat( &swap.viewAngles2.y, &swap.viewAngles2.y );
-		LittleFloat( &swap.viewAngles2.z, &swap.viewAngles2.z );
-
-		LittleFloat( &swap.localViewAngles2.x, &swap.localViewAngles2.x );
-		LittleFloat( &swap.localViewAngles2.y, &swap.localViewAngles2.y );
-		LittleFloat( &swap.localViewAngles2.z, &swap.localViewAngles2.z );
-	}
-}
-
 void CDemoFile::WriteCmdInfo( democmdinfo_t& info )
 {
 	DemoFileDbg( "WriteCmdInfo()\n" );
-	democmdinfo_t littleEndianInfo = info;
-	ByteSwap_democmdinfo_t( littleEndianInfo );
 
 	Assert( m_pBuffer && m_pBuffer->IsInitialized() );
-	m_pBuffer->Put( &littleEndianInfo, sizeof(democmdinfo_t) );
+	m_pBuffer->Put( &info, sizeof(democmdinfo_t) );
 }
 
 //-----------------------------------------------------------------------------
@@ -138,8 +102,6 @@ void CDemoFile::ReadCmdInfo( democmdinfo_t& info )
 {
 	Assert( m_pBuffer && m_pBuffer->IsInitialized() );
 	m_pBuffer->Get( &info, sizeof(democmdinfo_t) );
-
-	ByteSwap_democmdinfo_t( info );
 }
 
 
@@ -494,8 +456,6 @@ demoheader_t *CDemoFile::ReadDemoHeader( CDemoPlaybackParameters_t const *pPlayb
 	m_pBuffer->SeekGet( true, pPlaybackParameters ? pPlaybackParameters->m_uiHeaderPrefixLength : 0 );
 	m_pBuffer->Get( &m_DemoHeader, sizeof(demoheader_t) );
 	bOk = m_pBuffer->IsValid();
-
-	ByteSwap_demoheader_t( m_DemoHeader );
 
 	if ( !bOk )
 		return nullptr;  // reading failed

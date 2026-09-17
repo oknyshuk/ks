@@ -920,11 +920,6 @@ bool CClientState::SVCMsg_PaintmapData( const ks::net::CSVCMsg_PaintmapData& msg
 	bf_read dataIn;
 	dataIn.ReadBits( const_cast<char*>(msg.paintmap->data()), msg.paintmap->size() );
 	
-	//handle endian issue between platforms
-	CByteswap swap;
-	swap.ActivateByteSwapping( !CByteswap::IsMachineBigEndian() );
-	swap.SwapBufferToTargetEndian( data.Base(), data.Base(), nDword );
-
 	if ( data.Count() > 0 )
 	{
 		g_PaintManager.LoadPaintmapDataRLE( data );

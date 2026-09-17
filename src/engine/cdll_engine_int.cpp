@@ -924,11 +924,6 @@ bool CEngineClient::GetPlayerInfo( int ent_num, player_info_t *pinfo )
 		Q_memcpy( pinfo, pi, sizeof( player_info_t ) );
 	}
 
-	// Fixup from network order (big endian)
-	CByteswap byteswap;
-	byteswap.SetTargetBigEndian( true );
-	byteswap.SwapFieldsToTargetEndian( pinfo );
-
 	return true;
 }
 

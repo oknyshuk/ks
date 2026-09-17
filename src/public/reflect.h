@@ -364,6 +364,52 @@ consteval std::meta::info base_with_static_member( std::meta::info cls, std::str
 	throw std::meta::exception( "no base with that static member", cls );
 }
 
+// Whether the base walk resolves to the same m_DataMap the legacy chain did.
+//
+// The legacy emitters set baseMap = &BaseClass::m_DataMap, which names wherever the member is
+// declared -- an ancestor, when BaseClass only inherits it. The reflective emitter walks bases_of
+// and then calls static_member_of on the result, which recurses the same way. What has to agree is
+// therefore the declaration the two paths land on, not the base class each starts from: for
+// CHostage the walk starts at CAI_ExpresserHost<CHostageExpresserShim> and BaseClass names
+// CHostageExpresserShim, but both resolve to CBaseCombatCharacter::m_DataMap.
+//
+// Comparing the declarations directly depends on how std::meta::info identity is implemented, so
+// this compares the class each is declared in -- which is the datamap_t the chain walks to, and so
+// the property that actually matters at runtime.
+//
+// `B` is a template parameter rather than a value because reaching a private typedef is only
+// well-formed where the class gives access, which is not namespace scope.
+template <class B>
+consteval std::meta::info legacy_base_map()
+{
+	return static_member_of( ^^B, "m_DataMap" );
+}
+
+template <class Class>
+consteval std::meta::info reflective_base_map()
+{
+	return static_member_of( base_with_static_member( ^^Class, "m_DataMap" ), "m_DataMap" );
+}
+
+template <class B>
+consteval std::meta::info legacy_base_owner()
+{
+	return std::meta::parent_of( legacy_base_map<B>() );
+}
+
+template <class Class>
+consteval std::meta::info reflective_base_owner()
+{
+	return std::meta::parent_of( reflective_base_map<Class>() );
+}
+
+template <class Class, class B>
+consteval bool base_owner_matches()
+{
+	return reflective_base_owner<Class>() == legacy_base_owner<B>();
+}
+
+
 // The types of every From<...> annotation on a class, in order, so a caller can read their
 // template arguments.
 consteval std::vector<std::meta::info> from_annotations( std::meta::info cls )

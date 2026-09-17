@@ -281,8 +281,7 @@ bool UpdateTargetFile_VCD( SceneFile_t *pEntry, const char *pSourceName, const c
 	pEntry->lastspeak_msecs = (unsigned int)( pChoreoScene->FindLastSpeakTime() * 1000.0f + 0.5f );
 
 	pEntry->compiledBuffer.Clear();
-	// compile to binary buffer
-	pEntry->compiledBuffer.SetBigEndian( !bLittleEndian );
+	// compile to binary buffer in the platform-native byte order
 	pChoreoScene->SaveToBinaryBuffer( pEntry->compiledBuffer, crcSource, &g_ChoreoStringPool );
 
 	unsigned int compressedSize;

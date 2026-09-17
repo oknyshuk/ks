@@ -473,9 +473,6 @@ class SmokeContext(Build.BuildContext):
     fun = "smoke"
 
 
-# A truncated diff list is worse than none: reading the first few lines and inferring that the
-# rest matched is how 30 datamaps got converted on a false premise. So print every gate diff, and
-# always print the gate's own summary count -- and dump the whole log where it can be read.
 # The engine loads a map and then tears it down on a datatable mismatch. Host_NewGame alone
 # therefore proves nothing; these are the aborts worth naming.
 def _aborted(log):
@@ -488,26 +485,16 @@ def _aborted(log):
     return None
 
 def _report(bld, log, tag, con=None):
-    from waflib import Logs
     import os, time
-    diffs = [l for l in log.splitlines() if "reflect table:" in l]
     path = os.path.join(bld.bldnode.abspath(), "smoke-%s.log" % tag)
     # this file is written only on failure, so a stale copy from an earlier run reads as a
     # current one. Stamp it, and clear any previous copy at the start of every smoke.
     with open(path, "w") as f:
         f.write("=== %s smoke failure, %s ===\n" % (tag, time.strftime("%Y-%m-%d %H:%M:%S")))
         f.write(log)
-    shown = diffs if len(diffs) <= 40 else diffs[:40]
-    for line in shown:
+    for line in ((con or log).splitlines()[-3:]):
         Logs.error("       | " + line)
-    if len(diffs) > len(shown):
-        Logs.error("       | ... %d more gate diffs" % (len(diffs) - len(shown)))
-    if diffs:
-        Logs.error("       | %d gate diff line(s) total; full log: %s" % (len(diffs), path))
-    else:
-        for line in ((con or log).splitlines()[-3:]):
-            Logs.error("       | " + line)
-        Logs.error("       | full log: %s" % path)
+    Logs.error("       | full log: %s" % path)
 
 
 def _instrumented(path):
@@ -577,8 +564,7 @@ def smoke(bld):
                 return b.decode("utf-8", "replace") if isinstance(b, bytes) else b
             try:
                 r = subprocess.run(argv, cwd=prefix, capture_output=True, text=True, errors="replace", timeout=secs)
-                # A gate reports on stderr and exits 70. Taking only stdout left a server-side
-                # failure as a bare "exit 70" with no diff lines at all.
+                # Failures report on stderr, so it has to be folded into the log.
                 rc, log = r.returncode, (r.stdout or "") + (r.stderr or "")
             except subprocess.TimeoutExpired as e:
                 rc, log = 124, _dec(e.stdout) + _dec(e.stderr)
@@ -612,8 +598,7 @@ def smoke(bld):
         ]
         try:
             r = subprocess.run(argv, cwd=prefix, capture_output=True, text=True, errors="replace", timeout=secs * 3)
-            # A gate aborts through stderr, so dropping it made a gate failure indistinguishable
-            # from a silent early exit.
+            # The client reports failures on stderr, so it has to be folded into the log.
             rc, log = r.returncode, (r.stdout or "") + (r.stderr or "")
         except subprocess.TimeoutExpired as e:
             def dec(b):

@@ -18,7 +18,6 @@ def build(bld):
         "appinstance.cpp",
         "bitbuf.cpp",
         "newbitbuf.cpp",
-        "byteswap.cpp",
         "characterset.cpp",
         "checksum_crc.cpp",
         "checksum_md5.cpp",

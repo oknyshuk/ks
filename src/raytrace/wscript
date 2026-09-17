@@ -12,9 +12,12 @@ def configure(conf):
 def build(bld):
     libs = []
 
+    # raytrace.cpp includes filesystem_tools.h and cmdlib.h from utils/common. trace3.cpp used to
+    # live here too, and was the only reason this library reached into bsplib.h (and so the only
+    # reason the client compiled bsplib.cpp).
     includes = ["../utils/common"]
 
-    source = ["raytrace.cpp", "trace2.cpp", "trace3.cpp"]
+    source = ["raytrace.cpp", "trace2.cpp"]
 
     bld.stlib(
         source=source,

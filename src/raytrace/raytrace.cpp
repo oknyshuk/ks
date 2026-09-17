@@ -1043,7 +1043,6 @@ size_t RayTracingEnvironment::GetSerializationNumBytes( uint32 nSerializationFla
 
 void RayTracingEnvironment::Serialize( CUtlBuffer &outbuf, uint32 nSerializationFlags ) const
 {
-	outbuf.ActivateByteSwappingIfBigEndian();
 	RayTracingSerializationHeader hdr;
 	hdr.m_nSerializationFlags = nSerializationFlags;
 	hdr.m_nNumKDNodes = OptimizedKDTree.Count();
@@ -1094,7 +1093,6 @@ void RayTracingEnvironment::Serialize( CUtlBuffer &outbuf, uint32 nSerialization
 
 void RayTracingEnvironment::UnSerialize( CUtlBuffer &inbuf )
 {
-	inbuf.ActivateByteSwappingIfBigEndian();
 	RayTracingSerializationHeader hdr;
 	hdr.Get( inbuf );
 	m_MinBound = hdr.m_vMinBound;

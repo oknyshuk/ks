@@ -1006,10 +1006,6 @@ void Callback_DemoScanUserInfoChanged( void *object, INetworkStringTable *string
 		return; // player left the game
 	}
 
-	CByteswap byteswap;
-	byteswap.SetTargetBigEndian( true );
-	byteswap.SwapFieldsToTargetEndian( player );
-
 	if ( s_demoUserInfo.Count() <= stringNumber )
 	{
 		s_demoUserInfo.SetCountNonDestructively( stringNumber + 1 );

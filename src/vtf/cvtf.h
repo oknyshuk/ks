@@ -12,7 +12,6 @@
 
 #include "s3tc_decode.h"
 #include "vtf/vtf.h"
-#include "byteswap.h"
 #include "filesystem.h"
 
 class CEdgePos
@@ -338,9 +337,6 @@ private:
 	// Computes the location of a particular face, frame, and mip level
 	int GetImageOffset( int iFrame, int iFace, int iMipLevel, ImageFormat fmt ) const;
 
-	// Determines if the vtf or vtfx file needs to be swapped to the current platform
-	bool SetupByteSwap( CUtlBuffer &buf );
-
 	// Locates the resource entry info if it's present
 	ResourceEntryInfo *FindResourceEntryInfo( unsigned int eType );
 	ResourceEntryInfo const *FindResourceEntryInfo( unsigned int eType ) const;
@@ -388,8 +384,6 @@ private:
 	float			m_flAlphaThreshhold;
 	float			m_flAlphaHiFreqThreshhold;
 
-	CByteswap		m_Swap;
-
 	CUtlVector< ResourceEntryInfo > m_arrResourcesInfo;
 
 	struct ResourceMemorySection
@@ -401,7 +395,7 @@ private:
 		unsigned char	*m_pData;
 
 		bool AllocateData( int nMemorySize );
-		bool LoadData( CUtlBuffer &buf, CByteswap &byteSwap );
+		bool LoadData( CUtlBuffer &buf );
 		bool WriteData( CUtlBuffer &buf ) const;
 	};
 	CUtlVector< ResourceMemorySection > m_arrResourcesData;

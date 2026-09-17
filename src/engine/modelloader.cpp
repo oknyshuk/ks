@@ -196,20 +196,6 @@ void NotifyHunkBeginMapLoad( const char *pszMapName )
 // FIXME/TODO:  Right now Host_FreeToLowMark unloads all models including studio
 //  models that have Cache_Alloc data, too.  This needs to be fixed before shipping
 
-BEGIN_BYTESWAP_DATADESC( lump_t )
-	DEFINE_FIELD( fileofs, FIELD_INTEGER ),
-	DEFINE_FIELD( filelen, FIELD_INTEGER ),
-	DEFINE_FIELD( version, FIELD_INTEGER ),
-	DEFINE_ARRAY( fourCC, FIELD_CHARACTER, 4 ),
-END_BYTESWAP_DATADESC()
-
-BEGIN_BYTESWAP_DATADESC( BSPHeader_t )
-	DEFINE_FIELD( ident, FIELD_INTEGER ),
-	DEFINE_FIELD( m_nVersion, FIELD_INTEGER ),
-	DEFINE_EMBEDDED_ARRAY( lumps, HEADER_LUMPS ),
-	DEFINE_FIELD( mapRevision, FIELD_INTEGER ),
-END_BYTESWAP_DATADESC()
-
 bool Model_LessFunc( FileNameHandle_t const &a, FileNameHandle_t const &b )
 {
 	return a < b;

@@ -59,16 +59,6 @@ struct demoheader_t
 	int		signonlength;					// length of sigondata in bytes
 };
 
-inline void ByteSwap_demoheader_t( demoheader_t &swap )
-{
-	swap.demoprotocol = LittleDWord( swap.demoprotocol );
-	swap.networkprotocol = LittleDWord( swap.networkprotocol );
-	LittleFloat( &swap.playback_time, &swap.playback_time );
-	swap.playback_ticks = LittleDWord( swap.playback_ticks );
-	swap.playback_frames = LittleDWord( swap.playback_frames );
-	swap.signonlength = LittleDWord( swap.signonlength );
-}
-
 #define FDEMO_NORMAL		0
 #define FDEMO_USE_ORIGIN2	(1<<0)
 #define FDEMO_USE_ANGLES2	(1<<1)

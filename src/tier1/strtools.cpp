@@ -3098,6 +3098,7 @@ bool V_BinToString( char*pString, void *pBin, uint nBinSize )
 // The following characters are not allowed to begin a line for Asian language line-breaking
 // purposes.  They include the right parenthesis/bracket, space character, period, exclamation, 
 // question mark, and a number of language-specific characters for Chinese, Japanese, and Korean
+#define SIZE_OF_ARRAY( p )	( sizeof( p ) / sizeof( p[0] ) )
 static const wchar_t wszCantBeginLine[] =
 {
 	0x0020, 0x0021, 0x0025, 0x0029,	0x002c, 0x002e, 0x003a, 0x003b,

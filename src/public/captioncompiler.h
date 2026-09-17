@@ -20,7 +20,6 @@
 #pragma pack(1)
 struct CompiledCaptionHeader_t
 {
-	DECLARE_BYTESWAP_DATADESC()
 	int				magic;
 	int				version;
 	int				numblocks;
@@ -31,7 +30,6 @@ struct CompiledCaptionHeader_t
 
 struct CaptionLookup_t
 {
-	DECLARE_BYTESWAP_DATADESC()
 	unsigned int	hash;
 	int				blockNum;
 	unsigned short	offset;
@@ -66,9 +64,5 @@ struct CaptionBlock_t
 {
 	byte	data[ MAX_BLOCK_SIZE ];
 };
-
-// For swapping compiled caption files
-bool	SwapClosecaptionFile( void *pData );
-int		UpdateOrCreateCaptionFile( const char *pSourceName, char *pTargetName, int targetLen, bool bForce = false );
 
 #endif // CAPTIONCOMPILER_H

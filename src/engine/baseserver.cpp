@@ -1473,11 +1473,6 @@ bool CBaseServer::GetPlayerInfo( int nClientIndex, player_info_t *pinfo )
 
 	Q_memcpy( pinfo, pi, sizeof( player_info_t ) );
 
-	// Fixup from network order (big endian)
-	CByteswap byteswap;
-	byteswap.SetTargetBigEndian( true );
-	byteswap.SwapFieldsToTargetEndian( pinfo );
-
 	return true;
 }
 
@@ -1492,11 +1487,6 @@ void CBaseServer::UserInfoChanged( int nClientIndex )
 	bool oldlock = networkStringTableContainerServer->Lock( false );
 	if ( m_Clients[ nClientIndex ]->FillUserInfo( pi ) )
 	{
-		// Fixup to network order (big endian)
-		CByteswap byteswap;
-		byteswap.SetTargetBigEndian( true );
-		byteswap.SwapFieldsToTargetEndian( &pi );
-
 		// update user info settings
 		m_pUserInfoTable->SetStringUserData( nClientIndex, sizeof(pi), &pi );
 	}

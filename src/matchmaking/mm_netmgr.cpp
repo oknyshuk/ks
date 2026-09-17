@@ -62,7 +62,6 @@ KeyValues * CConnectionlessLanMgr::UnpackPacket( netpacket_t *packet )
 	m_buffer.EnsureCapacity( nDataLen );
 	packet->message.ReadBytes( m_buffer.Base(), nDataLen );
 	m_buffer.SeekPut( CUtlBuffer::SEEK_HEAD, nDataLen );
-	m_buffer.ActivateByteSwapping( !CByteswap::IsMachineBigEndian() );
 
 	// Unpack key values
 	KeyValues *pMsg = new KeyValues( "" );
@@ -117,7 +116,6 @@ void CConnectionlessLanMgr::SendPacket( KeyValues *pMsg, char const *szAddress /
 	msg.WriteLong( g_pMatchExtensions->GetINetSupport()->GetEngineBuildNumber() );
 
 	CUtlBuffer data;
-	data.ActivateByteSwapping( !CByteswap::IsMachineBigEndian() );
 	pMsg->WriteAsBinary( data );
 
 	msg.WriteLong( data.TellMaxPut() );

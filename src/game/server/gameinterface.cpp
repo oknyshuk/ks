@@ -7,7 +7,6 @@
 //===========================================================================//
 
 #include "cbase.h"
-#include "reflect_table_check.h"
 
 #include "gamestringpool.h"
 #include "mapentities_shared.h"
@@ -561,8 +560,6 @@ bool CServerGameDLL::DLLInit( CreateInterfaceFn appSystemFactory,
 	ConnectTier3Libraries( &appSystemFactory, 1 );
 
 	COM_TimestampedLog( "ConnectTier1/2/3Libraries - Finish" );
-
-	ks::reflect::RunAllVerifications();
 
 	// Connected in ConnectTier1Libraries
 	if ( cvar == nullptr )

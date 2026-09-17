@@ -113,7 +113,6 @@ struct DemoImportantTick_t
 // cdll_client_int.cpp and cdll_engine_int.cpp
 typedef struct player_info_s
 {
-	DECLARE_BYTESWAP_DATADESC();
 	// version for future compatibility
 	uint64			version;
 	// network xuid

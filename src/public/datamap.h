@@ -126,42 +126,6 @@ DECLARE_FIELD_SIZE( FIELD_MATERIALINDEX,	sizeof(int) )
 #define ARRAYSIZE2D(p)		(sizeof(p)/sizeof(p[0][0]))
 #define SIZE_OF_ARRAY(p)	_ARRAYSIZE(p)
 
-#define _FIELD(name,fieldtype,count,flags,mapname,tolerance)		{ fieldtype, #name, (int)offsetof(classNameTypedef, name), count, flags, mapname, nullptr, nullptr, nullptr, (int)sizeof( ((classNameTypedef *)0)->name ), nullptr, 0, tolerance }
-#define DEFINE_FIELD_NULL	{ FIELD_VOID,0,0,0,0,0,0,0,0}
-#define DEFINE_FIELD(name,fieldtype)			_FIELD(name, fieldtype, 1,  FTYPEDESC_SAVE, nullptr, 0 )
-#define DEFINE_FIELD_NOT_SAVED(name,fieldtype)			_FIELD(name, fieldtype, 1, 0, nullptr, 0 )
-
-#define DEFINE_AUTO_ARRAY(name,fieldtype)		_FIELD(name, fieldtype, SIZE_OF_ARRAY(((classNameTypedef *)0)->name), FTYPEDESC_SAVE, nullptr, 0 )
-#define DEFINE_ARRAY(name,fieldtype, count)		_FIELD(name, fieldtype, count, FTYPEDESC_SAVE, nullptr, 0 )
-#define DEFINE_ARRAY_NOT_SAVED(name,fieldtype, count)		_FIELD(name, fieldtype, count, 0, nullptr, 0 )
-#define DEFINE_GLOBAL_FIELD(name,fieldtype)	_FIELD(name, fieldtype, 1,  FTYPEDESC_GLOBAL | FTYPEDESC_SAVE, nullptr, 0 )
-#define DEFINE_CUSTOM_FIELD(name,datafuncs)	{ FIELD_CUSTOM, #name, (int)offsetof(classNameTypedef, name), 1, FTYPEDESC_SAVE, nullptr, datafuncs, nullptr }
-#define DEFINE_AUTO_ARRAY2D(name,fieldtype)		_FIELD(name, fieldtype, ARRAYSIZE2D(((classNameTypedef *)0)->name), FTYPEDESC_SAVE, nullptr, 0 )
-// Used by byteswap datadescs
-#define DEFINE_BITFIELD(name,fieldtype,bitcount)	DEFINE_ARRAY(name,fieldtype,((bitcount+FIELD_BITS(fieldtype)-1)&~(FIELD_BITS(fieldtype)-1)) / FIELD_BITS(fieldtype) )
-#define DEFINE_INDEX(name,fieldtype)			_FIELD(name, fieldtype, 1,  FTYPEDESC_INDEX, nullptr, 0 )
-
-#define DEFINE_EMBEDDED( name )						\
-	{ FIELD_EMBEDDED, #name, (int)offsetof(classNameTypedef, name), 1, FTYPEDESC_SAVE, nullptr, nullptr, nullptr, &(((classNameTypedef *)0)->name.m_DataMap), (int)sizeof( ((classNameTypedef *)0)->name ), nullptr, 0, 0.0f }
-
-#define DEFINE_EMBEDDED_OVERRIDE( name, overridetype )	\
-	{ FIELD_EMBEDDED, #name, (int)offsetof(classNameTypedef, name), 1, FTYPEDESC_SAVE, nullptr, nullptr, nullptr, &((overridetype *)0)->m_DataMap, (int)sizeof( ((classNameTypedef *)0)->name ), nullptr, 0, 0.0f }
-
-#define DEFINE_EMBEDDEDBYREF( name )					\
-	{ FIELD_EMBEDDED, #name, (int)offsetof(classNameTypedef, name), 1, FTYPEDESC_SAVE | FTYPEDESC_PTR, nullptr, nullptr, nullptr, &(((classNameTypedef *)0)->name->m_DataMap), (int)sizeof( *(((classNameTypedef *)0)->name) ), nullptr, 0, 0.0f }
-
-#define DEFINE_EMBEDDED_ARRAY( name, count )			\
-	{ FIELD_EMBEDDED, #name, (int)offsetof(classNameTypedef, name), count, FTYPEDESC_SAVE, nullptr, nullptr, nullptr, &(((classNameTypedef *)0)->name->m_DataMap), (int)sizeof( ((classNameTypedef *)0)->name[0] ), nullptr, 0, 0.0f  }
-
-#define DEFINE_EMBEDDED_AUTO_ARRAY( name )			\
-	{ FIELD_EMBEDDED, #name, (int)offsetof(classNameTypedef, name), SIZE_OF_ARRAY( ((classNameTypedef *)0)->name ), FTYPEDESC_SAVE, nullptr, nullptr, nullptr, &(((classNameTypedef *)0)->name->m_DataMap), (int)sizeof( ((classNameTypedef *)0)->name[0] ), nullptr, 0, 0.0f  }
-
-#ifndef NO_ENTITY_PREDICTION
-
-// FTYPEDESC_KEY tells the prediction copy system to report the full nameof the field when reporting errors
-
-#endif
-
 // Extensions to datamap.h macros for predicted entities only
 // Predictable macros, which include a tolerance for floating point values...
 
@@ -291,82 +255,24 @@ struct datamap_t
 //
 // Macros used to implement datadescs
 //
-#define DECLARE_FRIEND_DATADESC_ACCESS()	\
-	template <typename T> friend void DataMapAccess(T *, datamap_t **p); \
-	template <typename T> friend datamap_t *DataMapInit(T *);
-
+// What remains of the legacy layer is the declaration of m_DataMap. The emitters in
+// reflect_datamap.h define it out of line, and reach the base map and the member itself through
+// reflection, so no friend accessor and no GetBaseMap()/DataMapInit machinery is needed.
 #define DECLARE_SIMPLE_DATADESC() \
-	static datamap_t m_DataMap; \
-	static datamap_t *GetBaseMap(); \
-	template <typename T> friend void DataMapAccess(T *, datamap_t **p); \
-	template <typename T> friend datamap_t *DataMapInit(T *);
+	static datamap_t m_DataMap;
 
 
+// Historically distinct from DECLARE_SIMPLE_DATADESC because it friended a namespace-qualified
+// DataMapAccess. That accessor is gone, so it declares exactly the same thing; kept as a name
+// because it documents that the class lives in a namespace.
 #define DECLARE_SIMPLE_DATADESC_INSIDE_NAMESPACE() \
-	static datamap_t m_DataMap; \
-	static datamap_t *GetBaseMap(); \
-	template <typename T> friend void ::DataMapAccess(T *, datamap_t **p); 
+	DECLARE_SIMPLE_DATADESC()
 
 
 #define	DECLARE_DATADESC() \
 	DECLARE_SIMPLE_DATADESC() \
 	virtual datamap_t *GetDataDescMap( void );
 
-
-
-#define BEGIN_SIMPLE_DATADESC( className ) \
-	datamap_t className::m_DataMap = { 0, 0, #className, nullptr }; \
-	datamap_t *className::GetBaseMap() { return nullptr; } \
-	BEGIN_DATADESC_GUTS( className )
-
-#define BEGIN_SIMPLE_DATADESC_( className, BaseClass ) \
-	datamap_t className::m_DataMap = { 0, 0, #className, nullptr }; \
-	datamap_t *className::GetBaseMap() { datamap_t *pResult; DataMapAccess((BaseClass *)nullptr, &pResult); return pResult; } \
-	BEGIN_DATADESC_GUTS( className )
-
-#define BEGIN_DATADESC_GUTS( className ) \
-	template <typename T> datamap_t *DataMapInit(T *); \
-	template <> datamap_t *DataMapInit<className>( className * ); \
-	namespace className##_DataDescInit \
-	{ \
-		datamap_t *g_DataMapHolder = DataMapInit<className>( (className *)nullptr ); /* This can/will be used for some clean up duties later */ \
-	} \
-	\
-	template <> datamap_t *DataMapInit<className>( className * ) \
-	{ \
-		typedef className classNameTypedef; \
-		static CDatadescGeneratedNameHolder nameHolder(#className); \
-		className::m_DataMap.baseMap = className::GetBaseMap(); \
-		static typedescription_t dataDesc[] = \
-		{ \
-		{ FIELD_VOID,0,0,0,0,0,0,0,0}, /* so you can define "empty" tables */
-
-
-
-#define END_DATADESC() \
-		}; \
-		\
-		if ( sizeof( dataDesc ) > sizeof( dataDesc[0] ) ) \
-		{ \
-			classNameTypedef::m_DataMap.dataNumFields = SIZE_OF_ARRAY( dataDesc ) - 1; \
-			classNameTypedef::m_DataMap.dataDesc 	  = &dataDesc[1]; \
-		} \
-		else \
-		{ \
-			classNameTypedef::m_DataMap.dataNumFields = 1; \
-			classNameTypedef::m_DataMap.dataDesc 	  = dataDesc; \
-		} \
-		return &classNameTypedef::m_DataMap; \
-	}
-
-// used for when there is no data description
-#define IMPLEMENT_NULL_SIMPLE_DATADESC( derivedClass ) \
-	BEGIN_SIMPLE_DATADESC( derivedClass ) \
-	END_DATADESC()
-
-#define IMPLEMENT_NULL_SIMPLE_DATADESC_( derivedClass, baseClass ) \
-	BEGIN_SIMPLE_DATADESC_( derivedClass, baseClass ) \
-	END_DATADESC()
 
 
 // helps get the offset of a bitfield
@@ -380,62 +286,6 @@ struct datamap_t
 #define END_BITFIELD() \
 		}; \
 	};
-
-//-----------------------------------------------------------------------------
-// Forward compatability with potential seperate byteswap datadescs
-
-#define DECLARE_BYTESWAP_DATADESC() DECLARE_SIMPLE_DATADESC()
-#define BEGIN_BYTESWAP_DATADESC(name) BEGIN_SIMPLE_DATADESC(name) 
-#define BEGIN_BYTESWAP_DATADESC_(name,base) BEGIN_SIMPLE_DATADESC_(name,base) 
-#define END_BYTESWAP_DATADESC() END_DATADESC()
-
-//-----------------------------------------------------------------------------
-
-template <typename T> 
-inline void DataMapAccess(T *ignored, datamap_t **p)
-{
-	*p = &T::m_DataMap;
-}
-
-//-----------------------------------------------------------------------------
-
-class CDatadescGeneratedNameHolder
-{
-public:
-	explicit CDatadescGeneratedNameHolder( const char *pszBase )
-	 : m_pszBase(pszBase)
-	{
-		m_nLenBase = strlen( m_pszBase );
-	}
-	
-	~CDatadescGeneratedNameHolder()
-	{
-		for ( int i = 0; i < m_Names.Count(); i++ )
-		{
-			delete m_Names[i];
-		}
-	}
-	
-	const char *GenerateName( const char *pszIdentifier )
-	{
-		char *pBuf = new char[m_nLenBase + strlen(pszIdentifier) + 1];
-		strcpy( pBuf, m_pszBase );
-		strcat( pBuf, pszIdentifier );
-		m_Names.AddToTail( pBuf );
-		return pBuf;
-	}
-	
-private:
-	const char *m_pszBase;
-	size_t m_nLenBase;
-	CUtlVector<char *> m_Names;
-};
-
-//-----------------------------------------------------------------------------
-
-// Compiler can require the global-namespace template friend to be declared
-// before DECLARE_SIMPLE_DATADESC_INSIDE_NAMESPACE() can be used
-template <typename T> datamap_t *DataMapInit(T *);
 
 #include "tier0/memdbgoff.h"
 

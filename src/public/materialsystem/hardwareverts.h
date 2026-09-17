@@ -27,7 +27,6 @@ namespace HardwareVerts
 
 struct MeshHeader_t
 {
-	DECLARE_BYTESWAP_DATADESC();
 
 	// this mesh is part of this lod
 	unsigned int m_nLod;
@@ -43,7 +42,6 @@ struct MeshHeader_t
 
 struct FileHeader_t
 {
-	DECLARE_BYTESWAP_DATADESC();
 
 	// file version as defined by VHV_VERSION
 	int m_nVersion;

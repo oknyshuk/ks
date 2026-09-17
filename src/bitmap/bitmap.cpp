@@ -561,15 +561,11 @@ bool PFMGetInfo_AndAdvanceToTextureBits( CUtlBuffer &pfmBuffer, int &nWidth, int
 	}
 
 	int nScale = ReadIntFromUtlBuffer( pfmBuffer );
+	( void )nScale;
 
 	// eat crap until the next newline
 	while( pfmBuffer.IsValid() && pfmBuffer.GetChar() != 0xa )
 	{
-	}
-
-	if ( nScale > 0 )
-	{
-		pfmBuffer.SetBigEndian( true );
 	}
 
 	// Here, the buffer should be at the start of the texture data

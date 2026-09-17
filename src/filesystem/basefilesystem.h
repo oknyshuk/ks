@@ -49,7 +49,6 @@
 #include "bspfile.h"
 #include "tier1/utldict.h"
 #include "tier1/tier1.h"
-#include "byteswap.h"
 #include "threadsaferefcountedobject.h"
 #include "filetracker.h"
 
@@ -360,7 +359,6 @@ protected:
 	unsigned short*				m_pPreloadRemapTable;
 	ZIP_PreloadDirectoryEntry	*m_pPreloadDirectory;
 	void*						m_pPreloadData;
-	CByteswap					m_swap;
 
 	CRC32_t						m_KVPoolKey;
 	CUtlFilenameSymbolTable		m_KVStringPool;

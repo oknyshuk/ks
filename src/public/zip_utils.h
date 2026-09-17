@@ -62,10 +62,6 @@ public:
 
 	virtual unsigned int	GetAlignment() = 0;
 
-	// Sets the endianess of the zip
-	virtual void			SetBigEndian( bool bigEndian ) = 0;
-	virtual void			ActivateByteSwapping( bool bActivate ) = 0;
-
 	// Create/Release additional instances
 	// Disk Caching is necessary for large zips
 	static IZip *CreateZip( const char *pDiskCacheWritePath = nullptr, bool bSortByName = false );

@@ -17,7 +17,6 @@
 #include "dt_utlvector_recv.h"
 #include "recvproxy.h"
 #include "client_class.h"
-#include "reflect_table_check.h"
 
 #include <span>
 #include <vector>
@@ -666,15 +665,6 @@ RecvTable &table()
 	RecvTable *clientClassName::m_pClassRecvTable = &dataTable::g_RecvTable;                       \
 	int clientClassName::YouForgotToImplementOrDeclareClientClass() { return 0; }                  \
 	ClientClass *clientClassName::GetClientClass() { return &__g_##clientClassName##ClientClass; } \
-	static void ReflectCheckRecv_##clientClassName()                                              \
-	{                                                                                            \
-		const int expect = (int)ks::reflect::recv::table_props<clientClassName>().size();           \
-		if ( dataTable::g_RecvTable.GetNumProps() != expect )                                       \
-			ks::reflect::ReportDiff( #dataTable, "(table)", "live",                                \
-			                         "reflect recv table was not constructed" );                   \
-	}                                                                                            \
-	static ks::reflect::VerifyRegistrar                                                           \
-	    g_ReflectCheckRecv_##clientClassName( ReflectCheckRecv_##clientClassName );
 
 // A client event class: one static singleton rather than a per-entity allocation, and the factory
 // goes in the ClientClass's third slot, not its second. Temp entities use this for all 32 of their
@@ -698,15 +688,6 @@ RecvTable &table()
 	RecvTable *clientClassName::m_pClassRecvTable = &dataTable::g_RecvTable;                       \
 	int clientClassName::YouForgotToImplementOrDeclareClientClass() { return 0; }                  \
 	ClientClass *clientClassName::GetClientClass() { return &__g_##clientClassName##ClientClass; } \
-	static void ReflectCheckRecv_##clientClassName()                                              \
-	{                                                                                            \
-		const int expect = (int)ks::reflect::recv::table_props<clientClassName>().size();           \
-		if ( dataTable::g_RecvTable.GetNumProps() != expect )                                       \
-			ks::reflect::ReportDiff( #dataTable, "(table)", "live",                                \
-			                         "reflect recv table was not constructed" );                   \
-	}                                                                                            \
-	static ks::reflect::VerifyRegistrar                                                           \
-	    g_ReflectCheckRecv_##clientClassName( ReflectCheckRecv_##clientClassName );
 
 // One of a class's *secondary* tables: the members that name it, rather than the class's own set.
 // CBaseCombatCharacter sends DT_BCCLocalPlayerExclusive and DT_BCCNonLocalPlayerExclusive besides
@@ -719,15 +700,6 @@ RecvTable &table()
 		tableName::g_RecvTable.Construct( p.data(), (int)p.size(), #tableName );                    \
 		return 1;                                                                                \
 	}();                                                                                         \
-	static void ReflectCheck_##className##_##tableName()                                          \
-	{                                                                                            \
-		const int expect = (int)ks::reflect::recv::table_props_in<className, #tableName>().size();    \
-		if ( tableName::g_RecvTable.GetNumProps() != expect )                                      \
-			ks::reflect::ReportDiff( #tableName, "(table)", "live",                               \
-			                         "reflect recv table was not constructed" );                 \
-	}                                                                                            \
-	static ks::reflect::VerifyRegistrar                                                           \
-	    g_ReflectCheck_##className##_##tableName( ReflectCheck_##className##_##tableName );
 
 // The client half of IMPLEMENT_REFLECT_TABLE; see the send emitter for why one name is
 // defined in both. INTERNAL_IMPLEMENT_CLIENTCLASS_PROLOGUE supplies everything but the table.
@@ -739,13 +711,5 @@ RecvTable &table()
 		tableName::g_RecvTable.Construct( p.data(), (int)p.size(), #tableName );                  \
 		return 1;                                                                                \
 	}();                                                                                         \
-	static void ReflectCheckRecv_##className()                                                   \
-	{                                                                                            \
-		const int expect = (int)ks::reflect::recv::table_props<className>().size();                 \
-		if ( tableName::g_RecvTable.GetNumProps() != expect )                                      \
-			ks::reflect::ReportDiff( #tableName, "(table)", "live",                               \
-			                         "reflect recv table was not constructed" );                 \
-	}                                                                                            \
-	static ks::reflect::VerifyRegistrar g_ReflectCheckRecv_##className( ReflectCheckRecv_##className );
 
 #endif // KS_REFLECT_RECVTABLE_H

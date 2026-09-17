@@ -13,7 +13,6 @@
 #include "zip_utils.h"
 #include "zip_uncompressed.h"
 #include "checksum_crc.h"
-#include "byteswap.h"
 #include "utlstring.h"
 
 // NOTE: This has to be the last file included!
@@ -22,63 +21,6 @@
 
 // Data descriptions for byte swapping - only needed
 // for structures that are written to file for use by the game.
-BEGIN_BYTESWAP_DATADESC( ZIP_EndOfCentralDirRecord )
-	DEFINE_FIELD( signature, FIELD_INTEGER ),
-	DEFINE_FIELD( numberOfThisDisk, FIELD_SHORT ),
-	DEFINE_FIELD( numberOfTheDiskWithStartOfCentralDirectory, FIELD_SHORT ),
-	DEFINE_FIELD( nCentralDirectoryEntries_ThisDisk, FIELD_SHORT ),
-	DEFINE_FIELD( nCentralDirectoryEntries_Total, FIELD_SHORT ),
-	DEFINE_FIELD( centralDirectorySize, FIELD_INTEGER ),
-	DEFINE_FIELD( startOfCentralDirOffset, FIELD_INTEGER ),
-	DEFINE_FIELD( commentLength, FIELD_SHORT ),
-END_BYTESWAP_DATADESC()
-
-BEGIN_BYTESWAP_DATADESC( ZIP_FileHeader )
-	DEFINE_FIELD( signature, FIELD_INTEGER ),
-	DEFINE_FIELD( versionMadeBy, FIELD_SHORT ),
-	DEFINE_FIELD( versionNeededToExtract, FIELD_SHORT ),
-	DEFINE_FIELD( flags, FIELD_SHORT ),
-	DEFINE_FIELD( compressionMethod, FIELD_SHORT ),
-	DEFINE_FIELD( lastModifiedTime, FIELD_SHORT ),
-	DEFINE_FIELD( lastModifiedDate, FIELD_SHORT ),
-	DEFINE_FIELD( crc32, FIELD_INTEGER ),
-	DEFINE_FIELD( compressedSize, FIELD_INTEGER ),
-	DEFINE_FIELD( uncompressedSize, FIELD_INTEGER ),
-	DEFINE_FIELD( fileNameLength, FIELD_SHORT ),
-	DEFINE_FIELD( extraFieldLength, FIELD_SHORT ),
-	DEFINE_FIELD( fileCommentLength, FIELD_SHORT ),
-	DEFINE_FIELD( diskNumberStart, FIELD_SHORT ),
-	DEFINE_FIELD( internalFileAttribs, FIELD_SHORT ),
-	DEFINE_FIELD( externalFileAttribs, FIELD_INTEGER ),
-	DEFINE_FIELD( relativeOffsetOfLocalHeader, FIELD_INTEGER ),
-END_BYTESWAP_DATADESC()
-
-BEGIN_BYTESWAP_DATADESC( ZIP_LocalFileHeader )
-	DEFINE_FIELD( signature, FIELD_INTEGER ),
-	DEFINE_FIELD( versionNeededToExtract, FIELD_SHORT ),
-	DEFINE_FIELD( flags, FIELD_SHORT ),
-	DEFINE_FIELD( compressionMethod, FIELD_SHORT ),
-	DEFINE_FIELD( lastModifiedTime, FIELD_SHORT ),
-	DEFINE_FIELD( lastModifiedDate, FIELD_SHORT ),
-	DEFINE_FIELD( crc32, FIELD_INTEGER ),
-	DEFINE_FIELD( compressedSize, FIELD_INTEGER ),
-	DEFINE_FIELD( uncompressedSize, FIELD_INTEGER ),
-	DEFINE_FIELD( fileNameLength, FIELD_SHORT ),
-	DEFINE_FIELD( extraFieldLength, FIELD_SHORT ),
-END_BYTESWAP_DATADESC()
-
-BEGIN_BYTESWAP_DATADESC( ZIP_PreloadHeader )
-	DEFINE_FIELD( Version, FIELD_INTEGER ),
-	DEFINE_FIELD( DirectoryEntries, FIELD_INTEGER ),
-	DEFINE_FIELD( PreloadDirectoryEntries, FIELD_INTEGER ),
-	DEFINE_FIELD( Alignment, FIELD_INTEGER ),
-END_BYTESWAP_DATADESC()
-
-BEGIN_BYTESWAP_DATADESC( ZIP_PreloadDirectoryEntry )
-	DEFINE_FIELD( Length, FIELD_INTEGER ),
-	DEFINE_FIELD( DataOffset, FIELD_INTEGER ),
-END_BYTESWAP_DATADESC()
-
 class CWin32File
 {
 public:
@@ -265,9 +207,6 @@ public:
 
 	unsigned int	GetAlignment();
 
-	void			SetBigEndian( bool bigEndian );
-	void			ActivateByteSwapping( bool bActivate );
-
 private:
 	enum
 	{
@@ -281,7 +220,6 @@ private:
 		int					filelen;
 	} TmpFileInfo_t;
 
-	CByteswap		m_Swap;
 	unsigned int	m_AlignmentSize;
 	bool			m_bForceAlignment;
 	bool			m_bCompatibleFormat;
@@ -489,16 +427,6 @@ unsigned int CZipFile::GetAlignment()
 	return m_AlignmentSize;
 }
 
-void CZipFile::SetBigEndian( bool bigEndian )
-{
-	m_Swap.SetTargetBigEndian( bigEndian );
-}
-
-void CZipFile::ActivateByteSwapping( bool bActivate )
-{
-	m_Swap.ActivateByteSwapping( bActivate );
-}
-
 //-----------------------------------------------------------------------------
 // Purpose: Load pak file from raw buffer
 // Input  : *buffer - 
@@ -513,7 +441,6 @@ void CZipFile::ParseFromBuffer( void *buffer, int bufferlength )
 	CUtlBuffer buf( 0, bufferlength +1  );					// +1 for null termination
 
 	// need to swap bytes, so set the buffer opposite the machine's endian
-	buf.ActivateByteSwapping( m_Swap.IsSwappingBytes() );
 
 	buf.Put( buffer, bufferlength );
 
@@ -664,7 +591,6 @@ HANDLE CZipFile::ParseFromDisk( const char *pFilename )
 		CWin32File::FileSeek( hFile, offset, FILE_BEGIN );
 		
 		CWin32File::FileRead( hFile, &rec, sizeof( rec ) );
-		m_Swap.SwapFieldsToTargetEndian( &rec );
 
 		if ( rec.signature == PKID( 5, 6 ) )
 		{
@@ -699,7 +625,6 @@ HANDLE CZipFile::ParseFromDisk( const char *pFilename )
 
 	// read entire central dir into memory
 	CUtlBuffer zipDirBuff( 0, rec.centralDirectorySize, 0 );
-	zipDirBuff.ActivateByteSwapping( m_Swap.IsSwappingBytes() );
 	CWin32File::FileRead( hFile, zipDirBuff.Base(), rec.centralDirectorySize );
 	zipDirBuff.SeekPut( CUtlBuffer::SEEK_HEAD, rec.centralDirectorySize );
 
@@ -1314,7 +1239,6 @@ void CZipFile::SaveDirectory( IWriteStream& stream )
 			int extraFieldLength = hdr.extraFieldLength;
 			
 			// Swap header in place
-			m_Swap.SwapFieldsToTargetEndian( &hdr );
 			stream.Put( &hdr, sizeof( hdr ) );
 			stream.Put( pFilename, strlen( pFilename ) );
 			stream.Put( pPaddingBuffer, extraFieldLength );
@@ -1387,7 +1311,6 @@ void CZipFile::SaveDirectory( IWriteStream& stream )
 			int extraFieldLength = hdr.extraFieldLength;
 
 			// Swap the header in place
-			m_Swap.SwapFieldsToTargetEndian( &hdr );
 			stream.Put( &hdr, sizeof( hdr ) );
 			stream.Put( e->m_Name.String(), strlen( e->m_Name.String() ) );
 			if ( m_bCompatibleFormat )
@@ -1432,7 +1355,6 @@ void CZipFile::SaveDirectory( IWriteStream& stream )
 	rec.commentLength = commentLength;
 
 	// Swap the header in place
-	m_Swap.SwapFieldsToTargetEndian( &rec );
 	stream.Put( &rec, sizeof( rec ) );
 	stream.Put( commentString, commentLength );
 
@@ -1493,10 +1415,6 @@ public:
 	// Return to using files' individual alignment sizes by passing FALSE.
 	virtual void			ForceAlignment( bool aligned, bool bCompatibleFormat, unsigned int alignmentSize );
 
-	// Sets the endianess of the zip
-	virtual void			SetBigEndian( bool bigEndian );
-	virtual void			ActivateByteSwapping( bool bActivate );
-
 	virtual unsigned int	GetAlignment();
 
 private:
@@ -1527,16 +1445,6 @@ CZip::CZip( const char *pDiskCacheWritePath, bool bSortByName ) : m_ZipFile( pDi
 
 CZip::~CZip()
 {
-}
-
-void CZip::SetBigEndian( bool bigEndian )
-{
-	m_ZipFile.SetBigEndian( bigEndian );
-}
-
-void CZip::ActivateByteSwapping( bool bActivate )
-{
-	m_ZipFile.ActivateByteSwapping( bActivate );
 }
 
 void CZip::AddFileToZip( const char *relativename, const char *fullpath )

@@ -1813,11 +1813,6 @@ public:
 
 		if ( data.Count() > 0 )
 		{
-			//handle endian issue between platforms
-			CByteswap swap;
-			swap.ActivateByteSwapping( !CByteswap::IsMachineBigEndian() );
-			swap.SwapBufferToTargetEndian( data.Base(), data.Base(), data.Count() );
-
 			CSVCMsg_PaintmapData_t svcPaintmap;
 			int nBytes = data.Count() * sizeof( data.Base()[0] );
 			svcPaintmap.paintmap = std::string( ( const char * ) (void*)data.Base(), nBytes );

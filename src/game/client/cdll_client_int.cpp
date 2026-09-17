@@ -4,7 +4,6 @@
 //===============================================================================
 
 #include "cbase.h"
-#include "reflect_table_check.h"
 #include "cdll_int.h"
 #include "tier1/fmtstr.h"
 #include <crtmemdebug.h>
@@ -1387,9 +1386,6 @@ int CHLClient::Init( CreateInterfaceFn appSystemFactory, CGlobalVarsBase *pGloba
 	g_pGameTypes->Initialize();
 
 	COM_TimestampedLog( "ClientDLL Init - Finish" );
-
-	// Late: at the top of Init the client crashes, before its factories are connected.
-	ks::reflect::RunAllVerifications();
 
 	return true;
 }

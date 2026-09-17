@@ -178,7 +178,6 @@ KeyValues * CMatchNetworkMsgControllerBase::UnpackGameDetailsFromQOS( MM_GameDet
 	// Check if we have correct header
 	//
 	CUtlBuffer bufQos( pvQosReply->m_pvData, pvQosReply->m_numDataBytes, CUtlBuffer::READ_ONLY );
-	bufQos.ActivateByteSwapping( !CByteswap::IsMachineBigEndian() );
 	int iProtocol = bufQos.GetInt();
 	int iVersion = bufQos.GetInt();
 

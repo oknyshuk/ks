@@ -30,7 +30,6 @@
 #include "mempool.h"
 #include "vphysics_interface.h"
 #include "phyfile.h"
-#include "studiobyteswap.h"
 #include "tier2/fileutils.h"
 #include "tier1/lzmaDecoder.h"
 #include "datacache/iresourceaccesscontrol.h"
@@ -725,10 +724,7 @@ private:
 	virtual bool GetAsyncLoad( MDLCacheDataType_t type );
 	virtual bool SetAsyncLoad( MDLCacheDataType_t type, bool bAsync );
 
-	// Creates the 360 file if it doesn't exist or is out of date
-	int UpdateOrCreate( studiohdr_t *pHdr, const char *pFilename, char *pX360Filename, int maxLen, const char *pPathID, bool bForce = false );
-
-	// Attempts to read the platform native file - on 360 it can read and swap Win32 file as a fallback
+	// Attempts to read the platform native file
 	bool ReadFileNative( char *pFileName, const char *pPath, CUtlBuffer &buf, int nMaxBytes = 0 );
 
 	// Creates a thin cache entry (to be used for model decals) from fat vertex data
@@ -2520,52 +2516,6 @@ void CMDLCache::MarkAsLoaded( MDLHandle_t handle )
 	}
 }
 
-
-//-----------------------------------------------------------------------------
-// Callback for UpdateOrCreate utility function - swaps any studiomdl file type.
-//-----------------------------------------------------------------------------
-static bool MdlcacheCreateCallback( const char *pSourceName, const char *pTargetName, const char *pPathID, void *pHdr )
-{
-	// Missing studio files are permissible and not spewed as errors
-	bool retval = false;
-	CUtlBuffer sourceBuf;
-	bool bOk = g_pFullFileSystem->ReadFile( pSourceName, nullptr, sourceBuf );
-	if ( bOk )
-	{
-		CUtlBuffer targetBuf;
-		targetBuf.EnsureCapacity( sourceBuf.TellPut() + BYTESWAP_ALIGNMENT_PADDING );
-
-		int bytes = StudioByteSwap::ByteswapStudioFile( pTargetName, targetBuf.Base(), targetBuf.Size(), sourceBuf.Base(), sourceBuf.TellPut(), (studiohdr_t*)pHdr );
-		if ( bytes )
-		{
-			// If the file was an .mdl, attempt to swap the .ani as well
-			if ( Q_stristr( pSourceName, ".mdl" ) )
-			{
-				char szANISourceName[ MAX_PATH ];
-				Q_StripExtension( pSourceName, szANISourceName, sizeof( szANISourceName ) );
-				Q_strncat( szANISourceName, ".ani", sizeof( szANISourceName ), COPY_ALL_CHARACTERS );
-				UpdateOrCreate( szANISourceName, nullptr, 0, pPathID, MdlcacheCreateCallback, true, targetBuf.Base() );
-			}
-
-			targetBuf.SeekPut( CUtlBuffer::SEEK_HEAD, bytes );
-			g_pFullFileSystem->WriteFile( pTargetName, pPathID, targetBuf );
-			retval = true;
-		}
-		else
-		{
-			Warning( "Failed to create %s\n", pTargetName );
-		}
-	}
-	return retval;
-}
-
-//-----------------------------------------------------------------------------
-// Calls utility function to create .360 version of a file.
-//-----------------------------------------------------------------------------
-int CMDLCache::UpdateOrCreate( studiohdr_t *pHdr, const char *pSourceName, char *pTargetName, int targetLen, const char *pPathID, bool bForce )
-{
-	return ::UpdateOrCreate( pSourceName, pTargetName, targetLen, pPathID, MdlcacheCreateCallback, bForce, pHdr );
-}
 
 //-----------------------------------------------------------------------------
 // Purpose: Attempts to read a file native to the current platform

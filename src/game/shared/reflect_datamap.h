@@ -14,7 +14,6 @@
 
 #include "reflect.h"
 #include "reflect_fielddesc.h"
-#include "reflect_table_check.h"
 #include "datamap.h"
 #ifdef GAME_DLL
 #include "entityoutput.h"
@@ -186,19 +185,22 @@ std::vector<typedescription_t> &fields()
 } // namespace ks::reflect::dmap
 
 
-// Replaces BEGIN_DATADESC/END_DATADESC once the equality gate has proven the generated map
-// interchangeable with the legacy one. The three definitions are what BEGIN_DATADESC provided; the
-// map is filled in a static initializer, which is when BEGIN_DATADESC_GUTS filled its own, so the
-// timing is unchanged. m_DataMap is reached through unchecked reflection because DECLARE_DATADESC
-// leaves it in whatever access section the class happens to be in -- usually private.
+// Replaces the legacy BEGIN_DATADESC/END_DATADESC emitters, which are gone. The two definitions
+// are what BEGIN_DATADESC provided; the map is filled in a static initializer, which is when the
+// legacy DataMapInit ran, so the timing is unchanged. m_DataMap is reached through unchecked
+// reflection because DECLARE_DATADESC leaves it in whatever access section the class happens to be
+// in -- usually private. The base map is taken from bases_of for the same reason, rather than from
+// the class's BaseClass typedef, which is private in some classes.
 #define IMPLEMENT_REFLECT_DATAMAP( className )                                                  \
-	datamap_t className::m_DataMap = { 0, 0, #className, nullptr };                                  \
-	datamap_t *className::GetDataDescMap( void ) { return &m_DataMap; }                            \
-	datamap_t *className::GetBaseMap()                                                            \
+	datamap_t className::m_DataMap = { .dataClassName = #className };                                  \
+	datamap_t *className::GetDataDescMap( void )                                                   \
 	{                                                                                             \
-		datamap_t *pResult;                                                                       \
-		DataMapAccess( (BaseClass *)nullptr, &pResult );                                             \
-		return pResult;                                                                           \
+		/* BaseClass is a private typedef in places, so this member is the one scope that can    \
+		   name it. See base_owner_matches: the reflective walk and the legacy chain must        \
+		   resolve to the same declaring class. */                                               \
+		static_assert( ks::reflect::base_owner_matches<className, BaseClass>(),                    \
+		               "reflective base map is declared in a different class than BaseClass's" ); \
+		return &m_DataMap;                                                                         \
 	}                                                                                             \
 	namespace className##_ReflectDataDescInit                                                     \
 	{                                                                                             \
@@ -214,20 +216,11 @@ std::vector<typedescription_t> &fields()
 			    "m_DataMap" ) :];                                                                   \
 			return true;                                                                           \
 		}();                                                                                     \
-		static void CheckFilled()                                                                 \
-		{                                                                                         \
-			if ( !Map().dataDesc || Map().dataNumFields <= 0 )                                     \
-				ks::reflect::ReportDiff( #className, "(map)", "live",                             \
-				                         "reflect datamap is empty at runtime" );                  \
-		}                                                                                         \
-		static ks::reflect::VerifyRegistrar g_check( CheckFilled );                                \
 	}
 
-// The base-less mirror: BEGIN_SIMPLE_DATADESC / BEGIN_DATADESC_NO_BASE both set GetBaseMap() to
-// return NULL rather than walk BaseClass, since a class using either has none to walk.
+// The base-less mirror: BEGIN_SIMPLE_DATADESC / BEGIN_DATADESC_NO_BASE both have no base to walk.
 #define IMPLEMENT_REFLECT_DATAMAP_SIMPLE( className )                                             \
-	datamap_t className::m_DataMap = { 0, 0, #className, nullptr };                                  \
-	datamap_t *className::GetBaseMap() { return nullptr; }                                           \
+	datamap_t className::m_DataMap = { .dataClassName = #className };                                  \
 	namespace className##_ReflectDataDescInit                                                     \
 	{                                                                                             \
 		static datamap_t &Map() { return [: ks::reflect::static_member_of(                         \
@@ -239,29 +232,16 @@ std::vector<typedescription_t> &fields()
 			Map().dataNumFields = (int)f.size();                                                   \
 			return true;                                                                           \
 		}();                                                                                     \
-		static void CheckFilled()                                                                 \
-		{                                                                                         \
-			if ( !Map().dataDesc || Map().dataNumFields <= 0 )                                     \
-				ks::reflect::ReportDiff( #className, "(map)", "live",                             \
-				                         "reflect datamap is empty at runtime" );                  \
-		}                                                                                         \
-		static ks::reflect::VerifyRegistrar g_check( CheckFilled );                                \
 	}
 
 
 // BEGIN_SIMPLE_DATADESC_ is the one form that walks a named base *without* defining the virtual
-// GetDataDescMap() -- so it is neither _SIMPLE (GetBaseMap returns NULL) nor _NO_BASE (which does
-// define the virtual). baseMap is assigned here because BEGIN_DATADESC_GUTS assigned it too, and
-// through DataMapAccess rather than className::GetBaseMap(): that member is protected, and unlike
-// the legacy DataMapInit this lambda is not a friend.
+// GetDataDescMap() -- so it is neither _SIMPLE (no base) nor _NO_BASE (which does define the
+// virtual). baseMap is assigned here because the legacy BEGIN_DATADESC_GUTS assigned it too.
 #define IMPLEMENT_REFLECT_DATAMAP_SIMPLE_( className, baseClass )                                  \
-	datamap_t className::m_DataMap = { 0, 0, #className, nullptr };                                  \
-	datamap_t *className::GetBaseMap()                                                            \
-	{                                                                                             \
-		datamap_t *pResult;                                                                       \
-		DataMapAccess( (baseClass *)nullptr, &pResult );                                             \
-		return pResult;                                                                           \
-	}                                                                                             \
+	static_assert( ks::reflect::base_owner_matches<className, baseClass>(),                     \
+	               "reflective base map is declared in a different class than the named base" ); \
+	datamap_t className::m_DataMap = { .dataClassName = #className };                                  \
 	namespace className##_ReflectDataDescInit                                                     \
 	{                                                                                             \
 		static datamap_t &Map() { return [: ks::reflect::static_member_of(                         \
@@ -271,18 +251,11 @@ std::vector<typedescription_t> &fields()
 			auto &f = ks::reflect::dmap::fields<className>();                                     \
 			Map().dataDesc      = f.data();                                                       \
 			Map().dataNumFields = (int)f.size();                                                   \
-			datamap_t *pBase = nullptr;                                                              \
-			DataMapAccess( (baseClass *)nullptr, &pBase );                                           \
-			Map().baseMap       = pBase;                                                          \
+			Map().baseMap       = &[: ks::reflect::static_member_of(                              \
+			    ks::reflect::base_with_static_member( ^^className, "m_DataMap" ),                  \
+			    "m_DataMap" ) :];                                                                  \
 			return true;                                                                           \
 		}();                                                                                     \
-		static void CheckFilled()                                                                 \
-		{                                                                                         \
-			if ( !Map().dataDesc || Map().dataNumFields <= 0 )                                     \
-				ks::reflect::ReportDiff( #className, "(map)", "live",                             \
-				                         "reflect datamap is empty at runtime" );                  \
-		}                                                                                         \
-		static ks::reflect::VerifyRegistrar g_check( CheckFilled );                                \
 	}
 
 
@@ -292,9 +265,8 @@ std::vector<typedescription_t> &fields()
 // virtual's key-function homing without a definition, and the linker reported the whole vtable
 // missing rather than one function: undefined symbol: _ZTV24CFourWheelVehiclePhysics.
 #define IMPLEMENT_REFLECT_DATAMAP_NO_BASE( className )                                             \
-	datamap_t className::m_DataMap = { 0, 0, #className, nullptr };                                  \
+	datamap_t className::m_DataMap = { .dataClassName = #className };                                  \
 	datamap_t *className::GetDataDescMap( void ) { return &m_DataMap; }                            \
-	datamap_t *className::GetBaseMap() { return nullptr; }                                           \
 	namespace className##_ReflectDataDescInit                                                     \
 	{                                                                                             \
 		static datamap_t &Map() { return [: ks::reflect::static_member_of(                         \
@@ -306,13 +278,6 @@ std::vector<typedescription_t> &fields()
 			Map().dataNumFields = (int)f.size();                                                   \
 			return true;                                                                           \
 		}();                                                                                     \
-		static void CheckFilled()                                                                 \
-		{                                                                                         \
-			if ( !Map().dataDesc || Map().dataNumFields <= 0 )                                     \
-				ks::reflect::ReportDiff( #className, "(map)", "live",                             \
-				                         "reflect datamap is empty at runtime" );                  \
-		}                                                                                         \
-		static ks::reflect::VerifyRegistrar g_check( CheckFilled );                                \
 	}
 
 #endif // KS_REFLECT_DATAMAP_H

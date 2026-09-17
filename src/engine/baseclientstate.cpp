@@ -3373,11 +3373,7 @@ void CBaseClientState::BuildReserveServerPayload( bf_write &msg, int nChallengeN
 
 	int nSettingsLength = 0;
 	CUtlBuffer buf;
-	//this buffer needs to be endian compliant sot he X360 can talk correctly to the PC Dedicated server.
-	if( buf.IsBigEndian() )
-	{
-		buf.SetBigEndian( false );
-	}
+	// binary keyvalues are written in the platform-native byte order
 	if ( m_pKVGameSettings )
 	{
 		// if we have KeyValues with game settings, convert to binary blob

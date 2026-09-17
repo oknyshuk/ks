@@ -31,7 +31,6 @@ def build(bld):
         "resourceaccesscontrol.cpp",
         "precachesystem.cpp",
         "../public/studio_virtualmodel.cpp",
-        "../common/studiobyteswap.cpp",
         "../utils/common/datalinker.cpp",
     ]
 

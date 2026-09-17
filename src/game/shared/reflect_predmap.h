@@ -11,7 +11,6 @@
 
 #include "reflect.h"
 #include "reflect_fielddesc.h"
-#include "reflect_table_check.h"
 
 #include <vector>
 
@@ -111,7 +110,7 @@ std::vector<typedescription_t> &fields()
 // because the initialiser of a static data member is in its class's scope, which is how the macro
 // this replaces spelled it too.
 #define IMPLEMENT_REFLECT_PREDMAP_BASE( className, base )                                         \
-	datamap_t className::m_PredMap = { 0, 0, #className, base };                                   \
+	datamap_t className::m_PredMap = { .dataClassName = #className, .baseMap = base };                                   \
 	datamap_t *className::GetPredDescMap( void ) { return &m_PredMap; }                            \
 	namespace className##_ReflectPredInit                                                          \
 	{                                                                                              \
@@ -122,14 +121,6 @@ std::vector<typedescription_t> &fields()
 			className::m_PredMap.dataNumFields = (int)f.size();                                        \
 			return true;                                                                               \
 		}();                                                                                        \
-		static void CheckFilled()                                                                    \
-		{                                                                                            \
-			const int expect = (int)ks::reflect::pred::fields<className>().size();                      \
-			if ( className::m_PredMap.dataNumFields != expect )                                        \
-				ks::reflect::ReportDiff( #className, "(predmap)", "live",                                \
-				                         "reflect prediction map was not filled" );                      \
-		}                                                                                            \
-		static ks::reflect::VerifyRegistrar g_check( CheckFilled );                                   \
 	}
 
 #define IMPLEMENT_REFLECT_PREDMAP( className )                                                     \

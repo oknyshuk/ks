@@ -11,7 +11,6 @@
 #include "cmd.h"
 #include "filesystem_engine.h"
 #include "vprof_record.h"
-#include "tier1/byteswap.h"
 
 #ifdef VPROF_ENABLED
 
@@ -45,8 +44,6 @@ public:
 		m_nQueuedStarts = 0;
 		m_nQueuedStops = 0;
 		m_iPlaybackTick = -1;
-		// Set up byte-swapping for this platform so that we can query later if we need to swap on reading and writing or not.
-		m_Byteswap.SetTargetBigEndian( false );
 	}
 
 	~CVProfRecorder()
@@ -56,32 +53,12 @@ public:
 
 	template <typename T> void Write( T *pData )
 	{
-		if ( m_Byteswap.IsSwappingBytes() )
-		{
-			T swapped;
-			m_Byteswap.SwapBuffer( &swapped, pData );
-			g_pFileSystem->Write( &swapped, sizeof( T ), m_hFile );
-		}
-		else
-		{
-			g_pFileSystem->Write( pData, sizeof( T ), m_hFile );
-		}
+		g_pFileSystem->Write( pData, sizeof( T ), m_hFile );
 	}
 
 	template <typename T> int Read( T *pData )
 	{
-		int ret;
-		if ( m_Byteswap.IsSwappingBytes() )
-		{
-			T tmp;
-			ret = g_pFileSystem->Read( &tmp, sizeof( T ), m_hFile );
-			m_Byteswap.SwapBuffer( pData, &tmp );
-		}
-		else
-		{
-			ret = g_pFileSystem->Read( pData, sizeof( T ), m_hFile );
-		}
-		return ret;
+		return g_pFileSystem->Read( pData, sizeof( T ), m_hFile );
 	}
 
 	void Shutdown()
@@ -870,7 +847,6 @@ private:
 	int m_nQueuedStops;
 
 	bool m_bPlaybackPaused;
-	CByteswap m_Byteswap;
 };
 
 

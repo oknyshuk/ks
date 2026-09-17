@@ -16,7 +16,6 @@
 #include "utlvector.h"
 #include "utlstring.h"
 #include "utllinkedlist.h"
-#include "byteswap.h"
 #include "mathlib/vector4d.h"
 #ifdef ENGINE_DLL
 #include "zone.h"
@@ -203,11 +202,6 @@ void				RemoveFileFromPak( IZip *pak, const char *pRelativeName );
 int					GetNextFilename( IZip *pak, int id, char *pBuffer, int bufferSize, int &fileSize );
 void				ForceAlignment( IZip *pak, bool bAlign, bool bCompatibleFormat, unsigned int alignmentSize );
 
-typedef bool (*CompressFunc_t)( CUtlBuffer &inputBuffer, CUtlBuffer &outputBuffer );
-typedef bool (*VTFConvertFunc_t)( const char *pDebugName, CUtlBuffer &sourceBuf, CUtlBuffer &targetBuf, CompressFunc_t pCompressFunc, int nMaxMip );
-typedef bool (*VHVFixupFunc_t)( const char *pVhvFilename, const char *pModelName, CUtlBuffer &sourceBuf, CUtlBuffer &targetBuf );
-typedef bool (*StudioConvertFunc_t)( const char *pDebugName, CUtlBuffer &sourceBuf, CUtlBuffer &targetBuf /*, CompressFunc_t pCompressFunc */ );
-
 //-----------------------------------------------------------------------------
 // Game lump memory storage
 //-----------------------------------------------------------------------------
@@ -239,7 +233,6 @@ public:
 	int					GetGameLumpVersion( GameLumpHandle_t handle );
 	void				ComputeGameLumpSizeAndCount( int& size, int& clumpCount );
 	void				ParseGameLump( BSPHeader_t *pHeader );
-	void				SwapGameLump( GameLumpId_t id, int version, byte *dest, byte *src, int size );
 
 
 	//-----------------------------------------------------------------------------
@@ -269,13 +262,6 @@ private:
 };
 
 extern CGameLump	g_GameLumps;
-extern CByteswap	g_Swap;
-
-//-----------------------------------------------------------------------------
-// Helper for the bspzip tool
-//-----------------------------------------------------------------------------
-void ExtractZipFileFromBSP( char *pBSPFileName, char *pZipFileName );
-
 
 //-----------------------------------------------------------------------------
 // String table methods
@@ -295,9 +281,6 @@ void	WriteBSPFile( const char *filename, char *pUnused = nullptr );
 void	PrintBSPFileSizes(void);
 void	PrintBSPPackDirectory(void);
 void	ReleasePakFileLumps(void);
-bool	SwapBSPFile( const char *filename, const char *swapFilename, bool bSwapOnLoad, VTFConvertFunc_t pVTFConvertFunc, VHVFixupFunc_t pVHVFixupFunc, StudioConvertFunc_t pStudioConvertFunc, CompressFunc_t pCompressFunc, char const *szPlatform );
-bool	GetPakFileLump( const char *pBSPFilename, void **pPakData, int *pPakSize );
-bool	SetPakFileLump( const char *pBSPFilename, const char *pNewFilename, void *pPakData, int pakSize );
 void	WriteLumpToFile( char *filename, int lump );
 bool	GetBSPDependants( const char *pBSPFilename, CUtlVector< CUtlString > *pList );
 void	UnloadBSPFile();

@@ -4159,7 +4159,6 @@ bool CParticleSystemMgr::ReadParticleConfigFile( const char *pFileName, bool bPr
 		bool bHaveParticles = g_pFullFileSystem->ReadFile( szTargetName, "GAME", fileBuffer );
 		if ( bHaveParticles )
 		{			
-			fileBuffer.SetBigEndian( false );
 			return ReadParticleConfigFile( fileBuffer, bPrecache, bDecommitTempMemory, szTargetName );
 		}
 		else

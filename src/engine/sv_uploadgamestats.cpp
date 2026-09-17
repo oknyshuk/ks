@@ -695,7 +695,6 @@ bool CWin32UploadGameStats::ConnectToHarvesterServer( EGameStatsUploadStatus& st
 bool CWin32UploadGameStats::SendProtocolVersion( EGameStatsUploadStatus& status, CUtlBuffer& buf )
 {
 	UpdateProgress( m_rCrashParameters, "Sending game stats harvester protocol info." );
-	buf.SetBigEndian( true );
 	// Send protocol version
 	buf.Purge();
 	buf.PutInt( cuCurrentProtocolVersion );
@@ -913,8 +912,6 @@ EGameStatsUploadStatus Win32UploadGameStatsBlocking
 	CUtlBuffer buf( rGameStatsParameters.m_uStatsBlobSize + 4096 );
 
 	UpdateProgress( rGameStatsParameters, "Creating initial report." );
-
-	buf.SetBigEndian( false );
 
 	buf.Purge();
 	buf.PutChar( C2M_REPORT_GAMESTATISTICS );

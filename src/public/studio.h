@@ -129,7 +129,6 @@ struct ALIGN4 serializedstudioptr_t
 
 struct mstudioaxisinterpbone_t
 {
-	DECLARE_BYTESWAP_DATADESC();
 	int				control;// local transformation of this bone used to calc 3 point blend
 	int				axis;	// axis to check
 	Vector			pos[6];	// X+, X-, Y+, Y-, Z+, Z-
@@ -144,7 +143,6 @@ private:
 
 struct mstudioquatinterpinfo_t
 {
-	DECLARE_BYTESWAP_DATADESC();
 	float			inv_tolerance;	// 1 / radian angle of trigger influence
 	Quaternion		trigger;	// angle to match
 	Vector			pos;		// new position
@@ -158,7 +156,6 @@ private:
 
 struct mstudioquatinterpbone_t
 {
-	DECLARE_BYTESWAP_DATADESC();
 	int				control;// local transformation to check
 	int				numtriggers;
 	int				triggerindex;
@@ -181,7 +178,6 @@ private:
 
 struct mstudiojigglebone_t
 {
-	DECLARE_BYTESWAP_DATADESC();
 
 	int				flags;
 
@@ -233,7 +229,6 @@ private:
 
 struct mstudioaimatbone_t
 {
-	DECLARE_BYTESWAP_DATADESC();
 
 	int				parent;
 	int				aim;		// Might be bone or attach
@@ -253,7 +248,6 @@ private:
 //-----------------------------------------------------------------------------
 struct mstudiotwistbonetarget_t
 {
-	DECLARE_BYTESWAP_DATADESC();
 
 	int				m_nBone;
 	float			m_flWeight;
@@ -272,7 +266,6 @@ private:
 //-----------------------------------------------------------------------------
 struct mstudiotwistbone_t
 {
-	DECLARE_BYTESWAP_DATADESC();
 
 	bool			m_bInverse;				// False: Apply child rotation to twist targets True: Apply parent rotation to twist targets
 	Vector			m_vUpVector;			// In parent space, projected into plane defined by vector between parent & child
@@ -296,7 +289,6 @@ private:
 //-----------------------------------------------------------------------------
 struct mstudioconstraintslave_t
 {
-	DECLARE_BYTESWAP_DATADESC();
 
 	int				m_nBone;
 	Vector			m_vBasePosition;
@@ -314,7 +306,6 @@ private:
 //-----------------------------------------------------------------------------
 struct mstudioconstrainttarget_t
 {
-	DECLARE_BYTESWAP_DATADESC();
 
 	int				m_nBone;
 	float			m_flWeight;
@@ -333,7 +324,6 @@ private:
 //-----------------------------------------------------------------------------
 struct mstudiopointconstraint_t
 {
-	DECLARE_BYTESWAP_DATADESC();
 
 	mstudioconstraintslave_t m_slave;	// DEFINE_EMBEDDED
 
@@ -353,7 +343,6 @@ private:
 //-----------------------------------------------------------------------------
 struct mstudioorientconstraint_t
 {
-	DECLARE_BYTESWAP_DATADESC();
 
 	mstudioconstraintslave_t m_slave;	// DEFINE_EMBEDDED
 
@@ -373,7 +362,6 @@ private:
 //-----------------------------------------------------------------------------
 struct mstudioaimconstraint_t
 {
-	DECLARE_BYTESWAP_DATADESC();
 
 	mstudioconstraintslave_t m_slave;	// DEFINE_EMBEDDED
 
@@ -399,7 +387,6 @@ private:
 //-----------------------------------------------------------------------------
 struct mstudioikconstraint_t
 {
-	DECLARE_BYTESWAP_DATADESC();
 
 	mstudioikconstraint_t() {}
 private:
@@ -413,7 +400,6 @@ private:
 //-----------------------------------------------------------------------------
 struct mstudioparentconstraint_t
 {
-	DECLARE_BYTESWAP_DATADESC();
 
 	mstudioconstraintslave_t m_slave;	// DEFINE_EMBEDDED
 
@@ -431,7 +417,6 @@ private:
 // bones
 struct mstudiobone_t
 {
-	DECLARE_BYTESWAP_DATADESC();
 	int					sznameindex;
 	inline char * const pszName( void ) const { return ((char *)this) + sznameindex; }
 	int		 			parent;		// parent bone
@@ -468,7 +453,6 @@ private:
 
 struct mstudiolinearbone_t	
 {
-	DECLARE_BYTESWAP_DATADESC();
 
 	int numbones;
 
@@ -526,7 +510,6 @@ enum StudioBoneFlexComponent_t
 //-----------------------------------------------------------------------------
 struct mstudioboneflexdrivercontrol_t
 {
-	DECLARE_BYTESWAP_DATADESC();
 
 	int m_nBoneComponent;		// Bone component that drives flex, StudioBoneFlexComponent_t
 	int m_nFlexControllerIndex;	// Flex controller to drive
@@ -545,7 +528,6 @@ private:
 //-----------------------------------------------------------------------------
 struct mstudioboneflexdriver_t
 {
-	DECLARE_BYTESWAP_DATADESC();
 
 	int m_nBoneIndex;			// Bone to drive flex controller
 	int m_nControlCount;		// Number of flex controllers being driven
@@ -605,7 +587,6 @@ private:
 // bone controllers
 struct mstudiobonecontroller_t
 {
-	DECLARE_BYTESWAP_DATADESC();
 	int					bone;	// -1 == 0
 	int					type;	// X, Y, Z, XR, YR, ZR, M
 	float				start;
@@ -618,7 +599,6 @@ struct mstudiobonecontroller_t
 // intersection boxes
 struct mstudiobbox_t
 {
-	DECLARE_BYTESWAP_DATADESC();
 	int					bone;
 	int					group;				// intersection group
 	Vector				bbmin;				// bounding box, or the ends of the capsule if flCapsuleRadius > 0 
@@ -646,7 +626,6 @@ private:
 // demand loaded sequence groups
 struct mstudiomodelgroup_t
 {
-	DECLARE_BYTESWAP_DATADESC();
 	int					szlabelindex;	// textual name
 	inline char * const pszLabel( void ) const { return ((char *)this) + szlabelindex; }
 	int					sznameindex;	// file name
@@ -662,7 +641,6 @@ struct mstudiomodelgrouplookup_t
 // animtags
 struct mstudioanimtag_t
 {
-	DECLARE_BYTESWAP_DATADESC();
 	int					tag;
 	float				cycle;
 	
@@ -674,7 +652,6 @@ struct mstudioanimtag_t
 // NOTE: If you modify this struct you MUST also modify mstudioevent_for_client_server_t in npcevent.h!!!
 struct mstudioevent_t
 {
-	DECLARE_BYTESWAP_DATADESC();
 	float				cycle;
 	int					event;
 	int					type;
@@ -690,7 +667,6 @@ struct mstudioevent_t
 // attachment
 struct mstudioattachment_t
 {
-	DECLARE_BYTESWAP_DATADESC();
 	int					sznameindex;
 	inline char * const pszName( void ) const { return ((char *)this) + sznameindex; }
 	unsigned int		flags;
@@ -708,7 +684,6 @@ struct mstudioattachment_t
 
 struct mstudioikerror_t
 {
-	DECLARE_BYTESWAP_DATADESC();
 	Vector		pos;
 	Quaternion	q;
 
@@ -723,7 +698,6 @@ union mstudioanimvalue_t;
 
 struct mstudiocompressedikerror_t
 {
-	DECLARE_BYTESWAP_DATADESC();
 	float	scale[6];
 	short	offset[6];
 	inline mstudioanimvalue_t *pAnimvalue( int i ) const { if (offset[i] > 0) return  (mstudioanimvalue_t *)(((byte *)this) + offset[i]); else return nullptr; };
@@ -736,7 +710,6 @@ private:
 
 struct mstudioikrule_t
 {
-	DECLARE_BYTESWAP_DATADESC();
 	int			index;
 
 	int			type;
@@ -799,7 +772,6 @@ struct mstudioikrulezeroframe_t
 
 struct mstudioiklock_t
 {
-	DECLARE_BYTESWAP_DATADESC();
 	int			chain;
 	float		flPosWeight;
 	float		flLocalQWeight;
@@ -811,7 +783,6 @@ struct mstudioiklock_t
 
 struct mstudiolocalhierarchy_t
 {
-	DECLARE_BYTESWAP_DATADESC();
 	int			iBone;			// bone being adjusted
 	int			iNewParent;		// the bones new parent
 
@@ -843,7 +814,6 @@ union mstudioanimvalue_t
 
 struct mstudioanim_valueptr_t
 {
-	DECLARE_BYTESWAP_DATADESC();
 	short	offset[3];
 	inline mstudioanimvalue_t *pAnimvalue( int i ) const { if (offset[i] > 0) return  (mstudioanimvalue_t *)(((byte *)this) + offset[i]); else return nullptr; };
 };
@@ -858,7 +828,6 @@ struct mstudioanim_valueptr_t
 // per bone per animation DOF and weight pointers, RLE encoded
 struct mstudio_rle_anim_t
 {
-	DECLARE_BYTESWAP_DATADESC();
 	byte				bone;
 	byte				flags;		// weighing options
 
@@ -889,7 +858,6 @@ struct mstudio_rle_anim_t
 
 struct mstudio_frame_anim_t
 {
-	DECLARE_BYTESWAP_DATADESC();
 
 	inline byte		*pBoneFlags( void ) const { return (((byte *)this) + sizeof( struct mstudio_frame_anim_t )); };
 	
@@ -907,7 +875,6 @@ struct mstudio_frame_anim_t
 
 struct mstudiomovement_t
 {
-	DECLARE_BYTESWAP_DATADESC();
 	int					endframe;				
 	int					motionflags;
 	float				v0;			// velocity at start of block
@@ -925,21 +892,18 @@ private:
 // used for piecewise loading of animation data
 struct mstudioanimblock_t
 {
-	DECLARE_BYTESWAP_DATADESC();
 	int					datastart;
 	int					dataend;
 };
 
 struct mstudioanimsections_t
 {
-	DECLARE_BYTESWAP_DATADESC();
 	int					animblock;
 	int					animindex;
 };
 
 struct mstudioanimdesc_t
 {
-	DECLARE_BYTESWAP_DATADESC();
 	int					baseptr;
 	inline studiohdr_t	*pStudiohdr( void ) const { return (studiohdr_t *)(((byte *)this) + baseptr); }
 
@@ -997,7 +961,6 @@ struct mstudioikrule_t;
 
 struct mstudioautolayer_t
 {
-	DECLARE_BYTESWAP_DATADESC();
 //private:
 	short				iSequence;
 	short				iPose;
@@ -1011,7 +974,6 @@ struct mstudioautolayer_t
 
 struct mstudioactivitymodifier_t
 {
-	DECLARE_BYTESWAP_DATADESC();
 	
 	int					sznameindex;
 	inline char			*pszName() { return (sznameindex) ? (char *)(((byte *)this) + sznameindex ) : nullptr; }
@@ -1020,7 +982,6 @@ struct mstudioactivitymodifier_t
 // sequence descriptions
 struct mstudioseqdesc_t
 {
-	DECLARE_BYTESWAP_DATADESC();
 	int					baseptr;
 	inline studiohdr_t	*pStudiohdr( void ) const { return (studiohdr_t *)(((byte *)this) + baseptr); }
 
@@ -1134,7 +1095,6 @@ private:
 
 struct mstudioposeparamdesc_t
 {
-	DECLARE_BYTESWAP_DATADESC();
 	int					sznameindex;
 	inline char * const pszName( void ) const { return ((char *)this) + sznameindex; }
 	int					flags;	// ????
@@ -1145,7 +1105,6 @@ struct mstudioposeparamdesc_t
 
 struct mstudioflexdesc_t
 {
-	DECLARE_BYTESWAP_DATADESC();
 	int					szFACSindex;
 	inline char * const pszFACS( void ) const { return ((char *)this) + szFACSindex; }
 };
@@ -1154,7 +1113,6 @@ struct mstudioflexdesc_t
 
 struct mstudioflexcontroller_t
 {
-	DECLARE_BYTESWAP_DATADESC();
 	int					sztypeindex;
 	inline char * const pszType( void ) const { return ((char *)this) + sztypeindex; }
 	int					sznameindex;
@@ -1177,7 +1135,6 @@ enum FlexControllerRemapType_t
 class CStudioHdr;
 struct mstudioflexcontrollerui_t
 {
-	DECLARE_BYTESWAP_DATADESC();
 	int					sznameindex;
 	inline char * const pszName( void ) const { return ((char *)this) + sznameindex; }
 
@@ -1234,7 +1191,6 @@ struct mstudioflexcontrollerui_t
 // this is the memory image of vertex anims (16-bit fixed point)
 struct mstudiovertanim_t
 {
-	DECLARE_BYTESWAP_DATADESC();
 	unsigned short		index;
 	byte				speed;	// 255/max_length_in_flex
 	byte				side;	// 255/left_right
@@ -1334,7 +1290,6 @@ public:
 // this is the memory image of vertex anims (16-bit fixed point)
 struct mstudiovertanim_wrinkle_t : public mstudiovertanim_t
 {
-	DECLARE_BYTESWAP_DATADESC();
 
 	short	wrinkledelta;
 
@@ -1370,7 +1325,6 @@ enum StudioVertAnimType_t
 
 struct mstudioflex_t
 {
-	DECLARE_BYTESWAP_DATADESC();
 	int					flexdesc;	// input value
 
 	float				target0;	// zero
@@ -1397,7 +1351,6 @@ struct mstudioflex_t
 
 struct mstudioflexop_t
 {
-	DECLARE_BYTESWAP_DATADESC();
 	int		op;
 	union 
 	{
@@ -1408,7 +1361,6 @@ struct mstudioflexop_t
 
 struct mstudioflexrule_t
 {
-	DECLARE_BYTESWAP_DATADESC();
 	int					flex;
 	int					numops;
 	int					opindex;
@@ -1418,7 +1370,6 @@ struct mstudioflexrule_t
 // 16 bytes
 struct mstudioboneweight_t
 {
-	DECLARE_BYTESWAP_DATADESC();
 	float	weight[MAX_NUM_BONES_PER_VERT];
 	byte	bone[MAX_NUM_BONES_PER_VERT]; 
 	byte	numbones;
@@ -1431,7 +1382,6 @@ struct mstudioboneweight_t
 // NOTE: This is exactly 48 bytes
 struct mstudiovertex_t
 {
-	DECLARE_BYTESWAP_DATADESC();
 	mstudioboneweight_t	m_BoneWeights;
 	Vector				m_vecPosition;
 	Vector				m_vecNormal;
@@ -1447,7 +1397,6 @@ private:
 // skin info
 struct mstudiotexture_t
 {
-	DECLARE_BYTESWAP_DATADESC();
 	int						sznameindex;
 	inline char * const		pszName( void ) const { return ((char *)this) + sznameindex; }
 	int						flags;
@@ -1464,7 +1413,6 @@ struct mstudiotexture_t
 // eyeball
 struct mstudioeyeball_t
 {
-	DECLARE_BYTESWAP_DATADESC();
 	int					sznameindex;
 	inline char * const pszName( void ) const { return ((char *)this) + sznameindex; }
 	int		bone;
@@ -1501,7 +1449,6 @@ private:
 // ikinfo
 struct mstudioiklink_t
 {
-	DECLARE_BYTESWAP_DATADESC();
 	int		bone;
 	Vector	kneeDir;	// ideal bending direction (per link, if applicable)
 	Vector	unused0;	// unused
@@ -1514,7 +1461,6 @@ private:
 
 struct mstudioikchain_t
 {
-	DECLARE_BYTESWAP_DATADESC();
 	int				sznameindex;
 	inline char * const pszName( void ) const { return ((char *)this) + sznameindex; }
 	int				linktype;
@@ -1563,7 +1509,6 @@ struct mstudiomodel_t;
 
 struct mstudio_modelvertexdata_t
 {
-	DECLARE_BYTESWAP_DATADESC();
 	Vector				*Position( int i ) const;
 	Vector				*Normal( int i ) const;
 	Vector4D			*TangentS( int i ) const;
@@ -1587,7 +1532,6 @@ struct mstudio_modelvertexdata_t
 
 struct mstudio_meshvertexdata_t
 {
-	DECLARE_BYTESWAP_DATADESC();
 	Vector				*Position( int i ) const;
 	Vector				*Normal( int i ) const;
 	Vector4D			*TangentS( int i ) const;
@@ -1610,7 +1554,6 @@ struct mstudio_meshvertexdata_t
 
 struct mstudiomesh_t
 {
-	DECLARE_BYTESWAP_DATADESC();
 	int					material;
 
 	int					modelindex;
@@ -1649,7 +1592,6 @@ private:
 // studio models
 struct mstudiomodel_t
 {
-	DECLARE_BYTESWAP_DATADESC();
 	inline const char * pszName( void ) const { return name; }
 	char				name[64];
 
@@ -1947,7 +1889,6 @@ struct studiohwdata_t
 // body part index
 struct mstudiobodyparts_t
 {
-	DECLARE_BYTESWAP_DATADESC();
 	int					sznameindex;
 	inline char * const pszName( void ) const { return ((char *)this) + sznameindex; }
 	int					nummodels;
@@ -1959,7 +1900,6 @@ struct mstudiobodyparts_t
 // body group preset
 struct mstudiobodygrouppreset_t
 {
-	DECLARE_BYTESWAP_DATADESC();
 	int					sznameindex;
 	inline char * const pszName( void ) const { return ((char *)this) + sznameindex; }
 	int					iValue;
@@ -1968,7 +1908,6 @@ struct mstudiobodygrouppreset_t
 
 struct mstudiomouth_t
 {
-	DECLARE_BYTESWAP_DATADESC();
 	int					bone;
 	Vector				forward;
 	int					flexdesc;
@@ -1981,7 +1920,6 @@ private:
 
 struct mstudiohitboxset_t
 {
-	DECLARE_BYTESWAP_DATADESC();
 	int					sznameindex;
 	inline char * const	pszName( void ) const { return ((char *)this) + sznameindex; }
 	int					numhitboxes;
@@ -1996,7 +1934,6 @@ struct mstudiohitboxset_t
 //-----------------------------------------------------------------------------
 struct mstudiosrcbonetransform_t
 {
-	DECLARE_BYTESWAP_DATADESC();
 
 	int			sznameindex;
 	inline const char *pszName( void ) const { return ((char *)this) + sznameindex; }
@@ -2232,7 +2169,6 @@ private:
 
 struct vertexStreamFileHeader_t
 {
-	DECLARE_BYTESWAP_DATADESC();
 	int		id;								// MODEL_STREAM_FILE_ID
 	int		version;						// MODEL_STREAM_FILE_VERSION
 	int		checksum;						// same as studiohdr_t, ensures sync
@@ -2271,7 +2207,6 @@ struct PhysFeModelDesc_t;
 
 struct vertexFileHeader_t
 {
-	DECLARE_BYTESWAP_DATADESC();
 	int		id;								// MODEL_VERTEX_FILE_ID
 	int		version;						// MODEL_VERTEX_FILE_VERSION
 	int		checksum;						// same as studiohdr_t, ensures sync
@@ -2322,7 +2257,6 @@ public:
 // apply sequentially to lod sorted vertex and tangent pools to re-establish mesh order
 struct vertexFileFixup_t
 {
-	DECLARE_BYTESWAP_DATADESC();
 	int		lod;				// used to skip culled root lod
 	int		sourceVertexID;		// absolute index from start of vertex/tangent blocks
 	int		numVertexes;
@@ -2435,7 +2369,6 @@ struct studiohdr2_t
 	// NOTE: For forward compat, make sure any methods in this struct
 	// are also available in studiohdr_t so no leaf code ever directly references
 	// a studiohdr2_t structure
-	DECLARE_BYTESWAP_DATADESC();
 	int numsrcbonetransform;
 	int srcbonetransformindex;
 
@@ -2474,7 +2407,6 @@ struct studiohdr2_t
 
 struct studiohdr_t
 {
-	DECLARE_BYTESWAP_DATADESC();
 	int					id;
 	int					version;
 
@@ -3304,7 +3236,6 @@ private:
 
 struct flexweight_t
 {
-	DECLARE_BYTESWAP_DATADESC();
 	int					key;
 	float				weight;
 	float				influence;
@@ -3312,7 +3243,6 @@ struct flexweight_t
 
 struct flexsetting_t
 {
-	DECLARE_BYTESWAP_DATADESC();
 	int					nameindex;
 
 	inline char *pszName( void ) const
@@ -3349,7 +3279,6 @@ struct flexsetting_t
 
 struct flexsettinghdr_t
 {
-	DECLARE_BYTESWAP_DATADESC();
 	int					id;
 	int					version;
 

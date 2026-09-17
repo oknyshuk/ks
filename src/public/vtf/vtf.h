@@ -292,7 +292,6 @@ bool GetVTFPreloadPS3Data( const char *pDebugName, CUtlBuffer &fileBufferIn, CUt
 
 struct VTFFileBaseHeader_t
 {
-	DECLARE_BYTESWAP_DATADESC();
 	char fileTypeString[4]; // "VTF" Valve texture file
 	int version[2]; 		// version[0].version[1]
 	int headerSize;
@@ -300,7 +299,6 @@ struct VTFFileBaseHeader_t
 
 struct VTFFileHeaderV7_1_t : public VTFFileBaseHeader_t 
 {
-	DECLARE_BYTESWAP_DATADESC();
 	uint16	width;
 	uint16	height;
 	uint32	flags;
@@ -320,7 +318,6 @@ struct VTFFileHeaderV7_1_t : public VTFFileBaseHeader_t
 
 struct VTFFileHeaderV7_2_t : public VTFFileHeaderV7_1_t
 {
-	DECLARE_BYTESWAP_DATADESC();
 
 	uint16 depth;
 };
@@ -366,7 +363,6 @@ struct ResourceEntryInfo
 
 struct VTFFileHeaderV7_3_t : public VTFFileHeaderV7_2_t
 {
-	DECLARE_BYTESWAP_DATADESC();
 
 	char			pad4[3];
 	uint32	numResources;
@@ -381,14 +377,12 @@ struct VTFFileHeaderV7_3_t : public VTFFileHeaderV7_2_t
 
 struct VTFFileHeader_t : public VTFFileHeaderV7_3_t
 {
-	DECLARE_BYTESWAP_DATADESC();
 };
 
 #define VTF_X360_MAJOR_VERSION	0x0360
 #define VTF_X360_MINOR_VERSION	8
 struct VTFFileHeaderX360_t : public VTFFileBaseHeader_t 
 {
-	DECLARE_BYTESWAP_DATADESC();
 	uint32	flags;
 	uint16	width;					// actual width of data in file
 	uint16	height;					// actual height of data in file
@@ -411,7 +405,6 @@ struct VTFFileHeaderX360_t : public VTFFileBaseHeader_t
 #define VTF_PS3_MINOR_VERSION	8
 struct ALIGN16 VTFFileHeaderPS3_t : public VTFFileBaseHeader_t 
 {
-	DECLARE_BYTESWAP_DATADESC();
 	uint32	flags;
 	uint16	width;					// actual width of data in file
 	uint16	height;					// actual height of data in file

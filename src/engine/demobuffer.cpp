@@ -76,9 +76,7 @@ public:
 		m_pBuffer->EnsureCapacity( DISK_DEMO_BUFFER_TOTAL_SIZE );
 #endif
 
-		// Demo files are always little endian
-		m_pBuffer->SetBigEndian( false );
-		m_bufDecoded.SetBigEndian( false );
+		// Demo files are always little endian, which is the platform-native byte order.
 
 		// Open the file
 //		m_pBuffer->Open( pParams->pFilename, pParams->pszPath, pParams->nFlags, pParams->nOpenFileFlags );	// For main integration...
@@ -102,10 +100,6 @@ public:
 
 	virtual void WriteHeader( void const *pData, int nSize )
 	{
-		// Byteswap
-		demoheader_t littleEndianHeader = *((demoheader_t*)pData);
-		ByteSwap_demoheader_t( littleEndianHeader );
-
 		// Goto file start
 		SeekPut( true, 0 );
 
@@ -544,16 +538,13 @@ public:
 					const DataChunk_t *pHead = lstFrames.Element( itHead );
 					const DataChunk_t *pTail = lstFrames.Element( itTail );
 
-					demoheader_t littleEndianHeader = m_Header;
-					littleEndianHeader.playback_time = TICKS_TO_TIME( pTail->nTickcount - pHead->nTickcount );
-					littleEndianHeader.playback_ticks = pTail->nTickcount - pHead->nTickcount;
-					littleEndianHeader.playback_frames = lstFrames.Count();
-
-					// Byteswap
-					ByteSwap_demoheader_t( littleEndianHeader );
+					demoheader_t header = m_Header;
+					header.playback_time = TICKS_TO_TIME( pTail->nTickcount - pHead->nTickcount );
+					header.playback_ticks = pTail->nTickcount - pHead->nTickcount;
+					header.playback_frames = lstFrames.Count();
 
 					// Write header
-					buf.Put( &littleEndianHeader, sizeof( littleEndianHeader ) );
+					buf.Put( &header, sizeof( header ) );
 
 					// Write signon data
 					AssertValidReadPtr( m_pDemobuffer->m_pSignonData );

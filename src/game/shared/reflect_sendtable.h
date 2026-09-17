@@ -21,7 +21,6 @@
 #include "dt_utlvector_send.h"
 #include "sendproxy.h"
 #include "networkvar.h"
-#include "reflect_table_check.h"
 
 #include <span>
 #include <vector>
@@ -710,15 +709,7 @@ SendTable &table()
 	static ServerClass g_##className##_ClassReg( #className, &tableName::g_SendTable );           \
 	ServerClass *className::GetServerClass() { return &g_##className##_ClassReg; }                \
 	SendTable *className::m_pClassSendTable = &tableName::g_SendTable;                             \
-	int className::YouForgotToImplementOrDeclareServerClass() { return 0; }                        \
-	static void ReflectCheckSend_##className()                                                   \
-	{                                                                                            \
-		const int expect = (int)ks::reflect::net::table_props<className>().size();                 \
-		if ( tableName::g_SendTable.GetNumProps() != expect )                                      \
-			ks::reflect::ReportDiff( #tableName, "(table)", "live",                               \
-			                         "reflect send table was not constructed" );                 \
-	}                                                                                            \
-	static ks::reflect::VerifyRegistrar g_ReflectCheckSend_##className( ReflectCheckSend_##className );
+	int className::YouForgotToImplementOrDeclareServerClass() { return 0; }
 
 // One of a class's *secondary* tables: the members that name it, rather than the class's own set.
 // CBaseCombatCharacter sends DT_BCCLocalPlayerExclusive and DT_BCCNonLocalPlayerExclusive besides
@@ -730,16 +721,7 @@ SendTable &table()
 		auto &p = ks::reflect::net::table_props_in<className, #tableName>();                        \
 		tableName::g_SendTable.Construct( p.data(), (int)p.size(), #tableName );                    \
 		return 1;                                                                                \
-	}();                                                                                         \
-	static void ReflectCheck_##className##_##tableName()                                          \
-	{                                                                                            \
-		const int expect = (int)ks::reflect::net::table_props_in<className, #tableName>().size();    \
-		if ( tableName::g_SendTable.GetNumProps() != expect )                                      \
-			ks::reflect::ReportDiff( #tableName, "(table)", "live",                               \
-			                         "reflect send table was not constructed" );                 \
-	}                                                                                            \
-	static ks::reflect::VerifyRegistrar                                                           \
-	    g_ReflectCheck_##className##_##tableName( ReflectCheck_##className##_##tableName );
+	}();
 
 // The table alone, for a class whose registration is written separately -- which is every form that
 // opens a table without declaring a class: BEGIN_NETWORK_TABLE in shared code, and a bare
@@ -756,14 +738,6 @@ SendTable &table()
 		auto &p = ks::reflect::net::table_props<className>();                                    \
 		tableName::g_SendTable.Construct( p.data(), (int)p.size(), #tableName );                  \
 		return 1;                                                                                \
-	}();                                                                                         \
-	static void ReflectCheckSend_##className()                                                   \
-	{                                                                                            \
-		const int expect = (int)ks::reflect::net::table_props<className>().size();                 \
-		if ( tableName::g_SendTable.GetNumProps() != expect )                                      \
-			ks::reflect::ReportDiff( #tableName, "(table)", "live",                               \
-			                         "reflect send table was not constructed" );                 \
-	}                                                                                            \
-	static ks::reflect::VerifyRegistrar g_ReflectCheckSend_##className( ReflectCheckSend_##className );
+	}();
 
 #endif // KS_REFLECT_SENDTABLE_H

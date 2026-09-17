@@ -26,7 +26,6 @@
 #include "sceneentity.h"
 #include "ai_baseactor.h"
 #include "datacache/imdlcache.h"
-#include "tier1/byteswap.h"
 */
 
 // memdbgon must be the last include file in a .cpp file!!!

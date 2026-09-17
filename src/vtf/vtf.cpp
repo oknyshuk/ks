@@ -20,70 +20,6 @@
 #include "tier0/memdbgon.h"
 
 // byteswap data descriptions
-BEGIN_BYTESWAP_DATADESC( VTFFileBaseHeader_t )
-	DEFINE_ARRAY( fileTypeString, FIELD_CHARACTER, 4 ),
-	DEFINE_ARRAY( version, FIELD_INTEGER, 2 ),
-	DEFINE_FIELD( headerSize, FIELD_INTEGER ),
-END_DATADESC()
-
-BEGIN_BYTESWAP_DATADESC_( VTFFileHeaderV7_1_t, VTFFileBaseHeader_t )
-	DEFINE_FIELD( width, FIELD_SHORT ),
-	DEFINE_FIELD( height, FIELD_SHORT ),
-	DEFINE_FIELD( flags, FIELD_INTEGER ),
-	DEFINE_FIELD( numFrames, FIELD_SHORT ),
-	DEFINE_FIELD( startFrame, FIELD_SHORT ),
-	DEFINE_FIELD( reflectivity, FIELD_VECTOR ),
-	DEFINE_FIELD( bumpScale, FIELD_FLOAT ),
-	DEFINE_FIELD( imageFormat, FIELD_INTEGER ),
-	DEFINE_FIELD( numMipLevels, FIELD_CHARACTER ),
-	DEFINE_FIELD( lowResImageFormat, FIELD_INTEGER ),
-	DEFINE_FIELD( lowResImageWidth, FIELD_CHARACTER ),
-	DEFINE_FIELD( lowResImageHeight, FIELD_CHARACTER ),
-END_DATADESC()
-
-BEGIN_BYTESWAP_DATADESC_( VTFFileHeaderV7_2_t, VTFFileHeaderV7_1_t )
-	DEFINE_FIELD( depth, FIELD_SHORT ),
-END_DATADESC()
-
-BEGIN_BYTESWAP_DATADESC_( VTFFileHeaderV7_3_t, VTFFileHeaderV7_2_t )
-	DEFINE_FIELD( numResources, FIELD_INTEGER ),
-END_DATADESC()
-
-BEGIN_BYTESWAP_DATADESC_( VTFFileHeader_t, VTFFileHeaderV7_2_t )
-END_DATADESC()
-
-BEGIN_BYTESWAP_DATADESC_( VTFFileHeaderX360_t, VTFFileBaseHeader_t )
-	DEFINE_FIELD( flags, FIELD_INTEGER ),
-	DEFINE_FIELD( width, FIELD_SHORT ),
-	DEFINE_FIELD( height, FIELD_SHORT ),
-	DEFINE_FIELD( depth, FIELD_SHORT ),
-	DEFINE_FIELD( numFrames, FIELD_SHORT ),
-	DEFINE_FIELD( preloadDataSize, FIELD_SHORT ),
-	DEFINE_FIELD( mipSkipCount, FIELD_CHARACTER ),
-	DEFINE_FIELD( numResources, FIELD_CHARACTER ),
-	DEFINE_FIELD( reflectivity, FIELD_VECTOR ),
-	DEFINE_FIELD( bumpScale, FIELD_FLOAT ),
-	DEFINE_FIELD( imageFormat, FIELD_INTEGER ),
-	DEFINE_ARRAY( lowResImageSample, FIELD_CHARACTER, 4 ),
-	DEFINE_FIELD( compressedSize, FIELD_INTEGER ),
-END_DATADESC()
-
-BEGIN_BYTESWAP_DATADESC_( VTFFileHeaderPS3_t, VTFFileBaseHeader_t )
-	DEFINE_FIELD( flags, FIELD_INTEGER ),
-	DEFINE_FIELD( width, FIELD_SHORT ),
-	DEFINE_FIELD( height, FIELD_SHORT ),
-	DEFINE_FIELD( depth, FIELD_SHORT ),
-	DEFINE_FIELD( numFrames, FIELD_SHORT ),
-	DEFINE_FIELD( preloadDataSize, FIELD_SHORT ),
-	DEFINE_FIELD( mipSkipCount, FIELD_CHARACTER ),
-	DEFINE_FIELD( numResources, FIELD_CHARACTER ),
-	DEFINE_FIELD( reflectivity, FIELD_VECTOR ),
-	DEFINE_FIELD( bumpScale, FIELD_FLOAT ),
-	DEFINE_FIELD( imageFormat, FIELD_INTEGER ),
-	DEFINE_ARRAY( lowResImageSample, FIELD_CHARACTER, 4 ),
-	DEFINE_FIELD( compressedSize, FIELD_INTEGER ),
-END_DATADESC()
-
 // stub functions
 const char* S3TC_GetBlock(
         const void *pCompressed,
@@ -842,12 +778,11 @@ unsigned int CVTFTexture::GetResourceTypes( unsigned int *arrTypesBuffer, int nu
 //-----------------------------------------------------------------------------
 // Serialization/Unserialization of resource data
 //-----------------------------------------------------------------------------
-bool CVTFTexture::ResourceMemorySection::LoadData( CUtlBuffer &buf, CByteswap &byteSwap )
+bool CVTFTexture::ResourceMemorySection::LoadData( CUtlBuffer &buf )
 {
 	// Read the size
 	int iDataSize = 0;
 	buf.Get( &iDataSize, sizeof( iDataSize ) );
-	byteSwap.SwapBufferToTargetEndian( &iDataSize );
 
 	// Read the actual data
 	if ( !AllocateData( iDataSize ) )
@@ -872,21 +807,6 @@ bool CVTFTexture::ResourceMemorySection::WriteData( CUtlBuffer &buf ) const
 	return buf.IsValid();
 }
 
-
-//-----------------------------------------------------------------------------
-// Checks if the file data needs to be swapped
-//-----------------------------------------------------------------------------
-bool CVTFTexture::SetupByteSwap( CUtlBuffer &buf )
-{
-	VTFFileBaseHeader_t *header = (VTFFileBaseHeader_t*)buf.PeekGet();
-
-	if ( header->version[0] == SwapLong( VTF_MAJOR_VERSION ) )
-	{
-		m_Swap.ActivateByteSwapping( true );
-		return true;
-	}
-	return false;
-}
 
 //-----------------------------------------------------------------------------
 // Unserialization
@@ -1144,7 +1064,7 @@ bool CVTFTexture::LoadNewResources( CUtlBuffer &buf )
 
 			default:
 				buf.SeekGet( CUtlBuffer::SEEK_HEAD, rei.resData );
-				if ( !rms.LoadData( buf, m_Swap ) )
+				if ( !rms.LoadData( buf ) )
 					return false;
 			}
 		}

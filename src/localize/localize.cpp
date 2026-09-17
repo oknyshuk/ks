@@ -20,7 +20,6 @@
 #include "tier1/utlstring.h"
 #include "UnicodeFileHelpers.h"
 #include "tier0/icommandline.h"
-#include "byteswap.h"
 #include "exprevaluator.h"
 #include "iregistry.h"
 #include <vstdlib/vstrtools.h>
@@ -339,9 +338,6 @@ bool CLocalize::ReadLocalizationFile( const char *pRelativePath, const char *pPa
 	}
 
 	// ensure little-endian unicode reads correctly on all platforms
-	CByteswap byteSwap;
-	byteSwap.SetTargetBigEndian( false );
-	byteSwap.SwapBufferToTargetEndian( data, data, fileSize / sizeof(ucs2) );
 
 	// skip past signature
 	data++;

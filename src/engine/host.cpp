@@ -159,24 +159,6 @@ static bool g_bAllowSecureServers = true;
 	#include "appframework/ilaunchermgr.h"
 	extern ILauncherMgr *g_pLauncherMgr;
 
-// Engine player info, no game related infos here
-BEGIN_BYTESWAP_DATADESC( player_info_s )
-	DEFINE_FIELD( version, FIELD_INTEGER64 ),
-	DEFINE_FIELD( xuid, FIELD_INTEGER64 ),
-	DEFINE_ARRAY( name, FIELD_CHARACTER, MAX_PLAYER_NAME_LENGTH ),
-	DEFINE_FIELD( userID, FIELD_INTEGER ),
-	DEFINE_ARRAY( guid, FIELD_CHARACTER, SIGNED_GUID_LEN + 1 ),
-	DEFINE_FIELD( friendsID, FIELD_INTEGER ),
-	DEFINE_ARRAY( friendsName, FIELD_CHARACTER, MAX_PLAYER_NAME_LENGTH ),
-	DEFINE_FIELD( fakeplayer, FIELD_BOOLEAN ),
-	DEFINE_FIELD( ishltv, FIELD_BOOLEAN ),
-#if defined( REPLAY_ENABLED )
-	DEFINE_FIELD( isreplay, FIELD_BOOLEAN ),
-#endif
-	DEFINE_ARRAY( customFiles, FIELD_INTEGER, MAX_CUSTOM_FILES ),
-	DEFINE_FIELD( filesDownloaded, FIELD_INTEGER ),
-END_BYTESWAP_DATADESC()
-
 //------------------------------------------
 enum
 {

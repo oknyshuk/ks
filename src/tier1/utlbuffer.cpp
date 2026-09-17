@@ -250,7 +250,6 @@ CUtlBuffer::CUtlBuffer( const CUtlBuffer& copyFrom )
 , m_nOffset( copyFrom.m_nOffset )
 , m_GetOverflowFunc( copyFrom.m_GetOverflowFunc )
 , m_PutOverflowFunc( copyFrom.m_PutOverflowFunc )
-, m_Byteswap( copyFrom.m_Byteswap )
 {
 	if(copyFrom.m_Memory.Count() > 0)
 	{
@@ -285,7 +284,6 @@ CUtlBuffer& CUtlBuffer::operator=( const CUtlBuffer& copyFrom )
 	m_nOffset = copyFrom.m_nOffset;
 	m_GetOverflowFunc = copyFrom.m_GetOverflowFunc;
 	m_PutOverflowFunc = copyFrom.m_PutOverflowFunc;
-	m_Byteswap = copyFrom.m_Byteswap;
 
 	return *this;
 }
@@ -303,7 +301,6 @@ CUtlBuffer::CUtlBuffer( CUtlBuffer&& moveFrom ) // = default
 , m_nOffset( Move( moveFrom.m_nOffset ) )
 , m_GetOverflowFunc( Move( moveFrom.m_GetOverflowFunc ) )
 , m_PutOverflowFunc( Move( moveFrom.m_PutOverflowFunc ) )
-, m_Byteswap( Move( moveFrom.m_Byteswap ) )
 {}
 
 CUtlBuffer& CUtlBuffer::operator=( CUtlBuffer&& moveFrom ) // = default
@@ -319,7 +316,6 @@ CUtlBuffer& CUtlBuffer::operator=( CUtlBuffer&& moveFrom ) // = default
 	m_nOffset = Move( moveFrom.m_nOffset );
 	m_GetOverflowFunc = Move( moveFrom.m_GetOverflowFunc );
 	m_PutOverflowFunc = Move( moveFrom.m_PutOverflowFunc );
-	m_Byteswap = Move( moveFrom.m_Byteswap );
 
 	return *this;
 }
@@ -1674,22 +1670,6 @@ void CUtlBuffer::SeekPut( SeekType_t type, int offset )
 	m_Put = nNextPut;
 
 	AddNullTermination( m_Put );
-}
-
-
-void CUtlBuffer::ActivateByteSwapping( bool bActivate )
-{
-	m_Byteswap.ActivateByteSwapping( bActivate );
-}
-
-void CUtlBuffer::SetBigEndian( bool bigEndian )
-{
-	m_Byteswap.SetTargetBigEndian( bigEndian );
-}
-
-bool CUtlBuffer::IsBigEndian( void )
-{
-	return m_Byteswap.IsTargetBigEndian();
 }
 
 

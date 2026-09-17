@@ -26,7 +26,6 @@ CSheet::CSheet( void )
 CSheet::CSheet( CUtlBuffer &buf )
 {
 	// lets read a sheet
-	buf.ActivateByteSwappingIfBigEndian();
 	int nVersion = buf.GetInt();								// version#
 	int nNumCoordsPerFrame = (nVersion)?MAX_IMAGES_PER_FRAME_ON_DISK:1;
 
