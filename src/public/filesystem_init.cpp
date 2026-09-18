@@ -478,8 +478,11 @@ static void FileSystem_AddLoadedSearchPath(
 	
 		if ( bDoAllPaths )
 		{
-			// add the game bin
-			AddGameBinDir( initInfo.m_pFileSystem, fullLocationPath );
+			// Game dlls are installed in the engine's own bin dir, next to libengine.so,
+			// so the mod's bin/ is deliberately not searched -- it would shadow them.
+			char binBase[MAX_PATH];
+			if ( FileSystem_GetBaseDir( binBase, sizeof( binBase ) ) )
+				AddGameBinDir( initInfo.m_pFileSystem, binBase );
 		}
 	}
 

@@ -27,6 +27,7 @@ extern "C" void __cxa_pure_virtual() { VPurecallHandler(); }
 
 #include "tier0/dbg.h"
 #include "tier0/memalloc.h"
+#include <new>
 #include <string.h>
 #include <stdio.h>
 #include "memdbgoff.h"
@@ -38,78 +39,73 @@ extern "C" void __cxa_pure_virtual() { VPurecallHandler(); }
 #define inline
 #endif
 
-const char *g_pszModule = MKSTRING( MEMOVERRIDE_MODULE );
-inline void *AllocUnattributed( size_t nSize )
-{
-#if !defined(USE_LIGHT_MEM_DEBUG) && !defined(USE_MEM_DEBUG)
-	return MemAlloc_Alloc(nSize);
-#else
-	return MemAlloc_Alloc(nSize, ::g_pszModule, 0);
-#endif
-}
-
-inline void *ReallocUnattributed( void *pMem, size_t nSize )
-{
-#if !defined(USE_LIGHT_MEM_DEBUG) && !defined(USE_MEM_DEBUG)
-	return g_pMemAlloc->Realloc(pMem, nSize);
-#else
-	return g_pMemAlloc->Realloc(pMem, nSize, ::g_pszModule, 0);
-#endif
-}
-
-#undef inline
-
-
 //-----------------------------------------------------------------------------
-// Standard functions in the CRT that we're going to override to call our allocator
-//-----------------------------------------------------------------------------
-
-
-//-----------------------------------------------------------------------------
-// Prevents us from using an inappropriate new or delete method,
-// ensures they are here even when linking against debug or release static libs
+// Every replaceable global operator, so that a new/delete pair can never
+// straddle two allocators.
+//
+// The sized (C++14) and aligned (C++17) forms are the ones that matter: the
+// compiler emits them routinely, and left to libstdc++ they release with the C
+// library's free() while the matching new went through g_pMemAlloc. That is
+// harmless only for as long as the backend *is* the C library's allocator.
+//
+// Out of memory is g_pMemAlloc's problem: its fail handler dumps and exits.
 //-----------------------------------------------------------------------------
 #ifndef NO_MEMOVERRIDE_NEW_DELETE
 
-void *__cdecl operator new( size_t nSize )
+namespace
 {
-	return AllocUnattributed( nSize );
+	inline void *AllocMem( size_t nSize ) noexcept
+	{
+		return MemAlloc_Alloc( nSize );
+	}
+
+	// IMemAlloc only exposes AllocAlign when MEMALLOC_SUPPORTS_ALIGNED_ALLOCATIONS
+	// is set, so aligned requests take the over-allocate-and-stash-the-base-pointer
+	// path instead.
+	inline void *AllocMemAligned( size_t nSize, size_t nAlign ) noexcept
+	{
+		return MemAlloc_AllocAligned( nSize, nAlign );
+	}
+
+	inline void FreeMem( void *pMem ) noexcept
+	{
+		if ( pMem )
+		{
+			g_pMemAlloc->Free( pMem );
+		}
+	}
 }
 
-void *__cdecl operator new( size_t nSize, int nBlockUse, const char *pFileName, int nLine )
-{
-	return MemAlloc_Alloc(nSize, pFileName, nLine );
-}
+void *operator new( size_t nSize ) { return AllocMem( nSize ); }
+void *operator new[]( size_t nSize ) { return AllocMem( nSize ); }
+void *operator new( size_t nSize, const std::nothrow_t & ) noexcept { return AllocMem( nSize ); }
+void *operator new[]( size_t nSize, const std::nothrow_t & ) noexcept { return AllocMem( nSize ); }
 
-void *__cdecl operator new[] ( size_t nSize )
-{
-	return AllocUnattributed( nSize );
-}
+void *operator new( size_t nSize, std::align_val_t nAlign ) { return AllocMemAligned( nSize, (size_t)nAlign ); }
+void *operator new[]( size_t nSize, std::align_val_t nAlign ) { return AllocMemAligned( nSize, (size_t)nAlign ); }
+void *operator new( size_t nSize, std::align_val_t nAlign, const std::nothrow_t & ) noexcept { return AllocMemAligned( nSize, (size_t)nAlign ); }
+void *operator new[]( size_t nSize, std::align_val_t nAlign, const std::nothrow_t & ) noexcept { return AllocMemAligned( nSize, (size_t)nAlign ); }
 
-void *__cdecl operator new[] ( size_t nSize, int nBlockUse, const char *pFileName, int nLine )
-{
-	return MemAlloc_Alloc(nSize, pFileName, nLine);
-}
+void operator delete( void *pMem ) noexcept { FreeMem( pMem ); }
+void operator delete[]( void *pMem ) noexcept { FreeMem( pMem ); }
+void operator delete( void *pMem, size_t ) noexcept { FreeMem( pMem ); }
+void operator delete[]( void *pMem, size_t ) noexcept { FreeMem( pMem ); }
+void operator delete( void *pMem, const std::nothrow_t & ) noexcept { FreeMem( pMem ); }
+void operator delete[]( void *pMem, const std::nothrow_t & ) noexcept { FreeMem( pMem ); }
 
+void operator delete( void *pMem, std::align_val_t ) noexcept { MemAlloc_FreeAligned( pMem ); }
+void operator delete[]( void *pMem, std::align_val_t ) noexcept { MemAlloc_FreeAligned( pMem ); }
+void operator delete( void *pMem, size_t, std::align_val_t ) noexcept { MemAlloc_FreeAligned( pMem ); }
+void operator delete[]( void *pMem, size_t, std::align_val_t ) noexcept { MemAlloc_FreeAligned( pMem ); }
+void operator delete( void *pMem, std::align_val_t, const std::nothrow_t & ) noexcept { MemAlloc_FreeAligned( pMem ); }
+void operator delete[]( void *pMem, std::align_val_t, const std::nothrow_t & ) noexcept { MemAlloc_FreeAligned( pMem ); }
 
-void __cdecl operator delete( void *pMem ) throw()
-{
-#if !defined(USE_LIGHT_MEM_DEBUG) && !defined(USE_MEM_DEBUG)
-	g_pMemAlloc->Free(pMem);
-#else
-	g_pMemAlloc->Free(pMem, ::g_pszModule, 0 );
-#endif
-}
+// MSVC debug CRT placement form. Dormant -- there is no debug build type -- but
+// memdbgon.h still declares it.
+void *operator new( size_t nSize, int, const char *, int ) { return AllocMem( nSize ); }
+void *operator new[]( size_t nSize, int, const char *, int ) { return AllocMem( nSize ); }
 
-void __cdecl operator delete[] ( void *pMem ) throw()
-{
-#if !defined(USE_LIGHT_MEM_DEBUG) && !defined(USE_MEM_DEBUG)
-	g_pMemAlloc->Free(pMem);
-#else
-	g_pMemAlloc->Free(pMem, ::g_pszModule, 0 );
-#endif
-}
-#endif
+#endif // NO_MEMOVERRIDE_NEW_DELETE
 
 
 //-----------------------------------------------------------------------------

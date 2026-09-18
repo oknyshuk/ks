@@ -1,14 +1,12 @@
-#! /usr/bin/env python
-
-import json
+import glob
 import os
 import shutil
 import subprocess
-from concurrent.futures import ThreadPoolExecutor
+import time
 
-from waflib import Build, Configure, Context, Logs, Options, TaskGen
+from waflib import Build, Configure, Logs, Options, TaskGen
 
-# --- Auto-RPATH based on install location ---
+default_prefix = os.path.abspath("../game")
 
 
 @TaskGen.feature("cxxprogram", "cprogram", "cxxshlib", "cshlib")
@@ -18,31 +16,14 @@ def add_rpath_for_install(self):
     if not install_path or getattr(self, "rpath", None):
         return
 
-    prefix = self.env.PREFIX
-    binpath = self.env.BINPATH
-    gamebin = self.env.GAMEBIN
-
-    rpath = []
-    if install_path == prefix:
-        rpath = ["$ORIGIN/bin", "$ORIGIN/csgo/bin"]
-    elif install_path == binpath:
-        rpath = ["$ORIGIN"]
-    elif install_path == gamebin:
-        rpath = ["$ORIGIN", "$ORIGIN/../../bin"]
+    rpath = {
+        self.env.PREFIX: ["$ORIGIN/bin"],
+        self.env.BINPATH: ["$ORIGIN"],
+    }.get(install_path)
 
     if rpath:
         self.env.append_unique("RPATH", rpath)
 
-
-# --- Project metadata ---
-
-VERSION = "0.01"
-APPNAME = "CSGO"
-top = "."
-default_prefix = os.path.abspath("../game")
-DEFAULT_JOBS = 4
-
-Context.Context.line_just = 60
 
 PROJECTS = [
     "appframework",
@@ -95,53 +76,44 @@ PROJECTS = [
 ]
 
 
-# --- Build ordering helper (used by all subprojects via idx=) ---
-
-
 def _get_taskgen_count(self):
-    try:
-        idx = self.tg_idx_count
-    except AttributeError:
-        idx = 0
-    return idx
+    """waf's global taskgen counter; a context has none until it creates one."""
+    return getattr(self, "tg_idx_count", 0)
 
 
-Configure.ConfigurationContext.get_taskgen_count = _get_taskgen_count
-Build.BuildContext.get_taskgen_count = _get_taskgen_count
+for _cls in (Configure.ConfigurationContext, Build.BuildContext):
+    _cls.get_taskgen_count = _get_taskgen_count
 
-
-# --- Optimization flag tables ---
 
 SANITIZERS = ["-fsanitize=address,undefined", "-pthread"]
 
 TSAN = ["-fsanitize=thread", "-pthread"]
 
-OPTFLAGS = {
-    "dev": ["-O1", "-g", "-gsplit-dwarf"],
+BUILD_TYPES = {
+    "dev": (["-O1", "-g", "-gsplit-dwarf"], ["-gsplit-dwarf"]),
     # no -ffast-math: under gcc dxbc-spirv shader compiler spins forever translating shaders
-    "release": ["-O3", "-flto=auto", "-fno-semantic-interposition"],
-    "sanitize": ["-O0", "-g", "-gsplit-dwarf", "-fno-omit-frame-pointer"] + SANITIZERS,
-    "tsan": ["-O1", "-g", "-gsplit-dwarf", "-fno-omit-frame-pointer"] + TSAN,
-}
-
-LINKFLAGS = {
-    "dev": ["-gsplit-dwarf"],
-    "release": ["-flto=auto", "-fno-semantic-interposition"],
-    "sanitize": ["-gsplit-dwarf"] + SANITIZERS,
-    "tsan": ["-gsplit-dwarf"] + TSAN,
+    "release": (
+        ["-O3", "-flto=auto", "-fno-semantic-interposition"],
+        ["-flto=auto", "-fno-semantic-interposition"],
+    ),
+    "sanitize": (
+        ["-O0", "-g", "-gsplit-dwarf", "-fno-omit-frame-pointer"] + SANITIZERS,
+        ["-gsplit-dwarf"] + SANITIZERS,
+    ),
+    "tsan": (
+        ["-O1", "-g", "-gsplit-dwarf", "-fno-omit-frame-pointer"] + TSAN,
+        ["-gsplit-dwarf"] + TSAN,
+    ),
 }
 
 INSTRUMENTED = ["sanitize", "tsan"]
-
-
-# --- WAF entry points ---
 
 
 def _vendored(conf, pattern, *subdirs):
     """Absolute paths inside the one vendored tree matching e.g. "dxvk-*"."""
     trees = conf.path.ant_glob("thirdparty/" + pattern, dir=True, src=True, maxdepth=1)
     if len(trees) != 1:
-        conf.fatal("expected exactly one thirdparty/%s, found %r" % (pattern, trees))
+        conf.fatal(f"expected exactly one thirdparty/{pattern}, found {trees!r}")
     return [trees[0].find_dir(s).abspath() for s in subdirs]
 
 
@@ -159,14 +131,6 @@ def options(opt):
         help="build type: dev, release, sanitize, tsan",
     )
     grp.add_option(
-        "-w",
-        "--no-warnings",
-        action="store_true",
-        dest="NO_WARNINGS",
-        default=False,
-        help="disable warnings",
-    )
-    grp.add_option(
         "--install-instrumented",
         action="store_true",
         dest="INSTALL_INSTRUMENTED",
@@ -174,19 +138,16 @@ def options(opt):
         help="allow installing a sanitizer build over the shared game prefix",
     )
 
-    opt.parser.get_option("-j").default = DEFAULT_JOBS
+    opt.parser.get_option("-j").default = 4
 
     opt.recurse(PROJECTS)
 
 
 def configure(conf):
     conf.env.BINPATH = conf.env.PREFIX + "/bin"
-    conf.env.GAMEBIN = conf.env.PREFIX + "/csgo/bin"
 
-    # --- Compiler detection ---
     conf.load("compiler_c compiler_cxx")
 
-    # --- CCache (auto-enable if on PATH) ---
     ccache_path = shutil.which("ccache")
     if ccache_path:
         conf.env.CC = [ccache_path] + conf.env.CC
@@ -196,22 +157,23 @@ def configure(conf):
         base_dir = conf.srcnode.abspath()
         ccache_conf_path = conf.srcnode.make_node("ccache.conf").abspath()
         with open(ccache_conf_path, "w") as f:
-            for k, v in {
-                "base_dir": base_dir,
-                "sloppiness": "include_file_mtime,include_file_ctime,time_macros,file_stat_matches,clang_index_store,locale,random_seed",
-                "hash_dir": "false",
-                "compression_level": "1",
-                "depend_mode": "false",
-                "inode_cache": "true",
-            }.items():
-                f.write(f"{k} = {v}\n")
+            f.writelines(
+                f"{k} = {v}\n"
+                for k, v in {
+                    "base_dir": base_dir,
+                    "sloppiness": "include_file_mtime,include_file_ctime,time_macros,file_stat_matches,clang_index_store,locale,random_seed",
+                    "hash_dir": "false",
+                    "compression_level": "1",
+                    "depend_mode": "false",
+                    "inode_cache": "true",
+                }.items()
+            )
         os.environ["CCACHE_CONFIGPATH"] = ccache_conf_path
         os.environ["CCACHE_BASEDIR"] = base_dir
 
     conf.load("clang_compilation_database")
     conf.load("pch")
 
-    # --- PIC for all code ---
     for var in [
         "CFLAGS_cshlib",
         "CXXFLAGS_cxxshlib",
@@ -220,17 +182,18 @@ def configure(conf):
     ]:
         conf.env.append_unique(var, ["-fPIC"])
 
-    # --- Optimization flags ---
     build_type = conf.options.BUILD_TYPE
-    if build_type not in OPTFLAGS:
-        conf.fatal(f"Invalid build type '{build_type}'. Valid: {', '.join(OPTFLAGS)}")
+    if build_type not in BUILD_TYPES:
+        conf.fatal(
+            f"Invalid build type '{build_type}'. Valid: {', '.join(BUILD_TYPES)}"
+        )
     conf.msg("Build type", build_type)
     conf.env.BUILD_TYPE = build_type
 
-    cflags = ["-fvisibility=hidden"] + OPTFLAGS[build_type]
+    optflags, linkflags = BUILD_TYPES[build_type]
+    cflags = ["-march=x86-64-v3", "-fvisibility=hidden"] + optflags
     cxxflags = list(cflags)
-
-    linkflags = list(LINKFLAGS[build_type])
+    linkflags = list(linkflags)
     if shutil.which("mold"):
         linkflags.append("-fuse-ld=mold")
 
@@ -245,11 +208,6 @@ def configure(conf):
     conf.env.append_unique("CXXFLAGS", cxxflags)
     conf.env.append_unique("LINKFLAGS", linkflags)
 
-    # --- Optional flags ---
-    if conf.options.NO_WARNINGS:
-        conf.env.append_unique("CFLAGS", ["-w"])
-        conf.env.append_unique("CXXFLAGS", ["-w"])
-
     conf.env.append_unique("CFLAGS", ["-fdiagnostics-color=always"])
     conf.env.append_unique(
         "CXXFLAGS", ["-fdiagnostics-color=always", "-std=c++26", "-freflection"]
@@ -258,10 +216,9 @@ def configure(conf):
     conf.env.append_unique(
         "CXXFLAGS", ["-Wno-invalid-offsetof", "-Wno-free-nonheap-object"]
     )
-    # Source Engine was written for MSVC which permits narrowing in brace init
+    # Source was written for MSVC which permits narrowing in brace init
     conf.env.append_unique("CXXFLAGS", ["-Wno-narrowing"])
 
-    # --- Includes ---
     includes = [
         os.path.abspath("public"),
         os.path.abspath("public/tier0"),
@@ -269,21 +226,23 @@ def configure(conf):
         os.path.abspath("common"),
     ]
 
-    # --- Defines ---
-    conf.define("COMPILER_GCC", True)
-    conf.define("_POSIX", True)
-    conf.define("POSIX", True)
-    conf.define("USE_SDL", True)
-    conf.define("_LINUX", True)
-    conf.define("LINUX", True)
-    conf.define("GNUC", True)
-    conf.define("_DLL_EXT", ".so", quote=False)
-    conf.define("CSTRIKE15", True)
-    conf.define("CSTRIKE_REL_BUILD", True)
-    conf.define("VPROF_LEVEL", True)
-    conf.define("RAD_TELEMETRY_DISABLED", True)
-    conf.define("DX_TO_VK_ABSTRACTION", True)
-    conf.define("PLATFORM_64BITS", True)
+    for name, value in (
+        ("COMPILER_GCC", 1),
+        ("_POSIX", 1),
+        ("POSIX", 1),
+        ("USE_SDL", 1),
+        ("_LINUX", 1),
+        ("LINUX", 1),
+        ("GNUC", 1),
+        ("_DLL_EXT", ".so"),
+        ("CSTRIKE15", 1),
+        ("CSTRIKE_REL_BUILD", 1),
+        ("VPROF_LEVEL", 1),
+        ("RAD_TELEMETRY_DISABLED", 1),
+        ("DX_TO_VK_ABSTRACTION", 1),
+        ("PLATFORM_64BITS", 1),
+    ):
+        conf.define(name, value, quote=not isinstance(value, str))
 
     if build_type == "debug":
         conf.define("DEBUG", 1)
@@ -291,7 +250,6 @@ def configure(conf):
     else:
         conf.define("NDEBUG", 1)
 
-    # --- Dependencies (pkg-config) ---
     conf.check_cfg(package="sdl3", args="--cflags --libs", uselib_store="SDL3")
     includes += conf.env.INCLUDES_SDL3
     conf.check_cfg(package="freetype2", args="--cflags --libs", uselib_store="FREETYPE")
@@ -300,23 +258,16 @@ def configure(conf):
     conf.check_cfg(package="libjpeg", args="--cflags --libs", uselib_store="JPEG")
     conf.check_cfg(package="libpng", args="--cflags --libs", uselib_store="PNG")
 
-    # Vendored header directories needed project-wide. The version lives in the
-    # directory name, so it is globbed rather than spelled out; see
-    # thirdparty/wscript for how the trees are built.
-    includes += _vendored(conf, "dxvk-*", "include/native/windows", "include/native/directx")
+    includes += _vendored(
+        conf, "dxvk-*", "include/native/windows", "include/native/directx"
+    )
 
     conf.env.append_unique("INCLUDES", includes)
 
-    # System includes (suppress warnings in thirdparty headers)
     for sysinc in _vendored(conf, "DirectXMath-*", "Inc"):
         flag = f"-isystem{sysinc}"
         conf.env.append_unique("CFLAGS", [flag])
         conf.env.append_unique("CXXFLAGS", [flag])
-
-    # Target architecture (override via MARCH env var, default: native)
-    march = os.environ.get("MARCH", "native")
-    conf.env.append_unique("CFLAGS", [f"-march={march}"])
-    conf.env.append_unique("CXXFLAGS", [f"-march={march}"])
 
     root_env = conf.env
     for prj in PROJECTS:
@@ -326,17 +277,18 @@ def configure(conf):
 
 
 def build(bld):
-    # Refuse the accident that costs a debugging session: instrumented binaries installed over the
-    # dev ones pass every check while the game itself is unusable.
-    if bld.is_install and bld.env.BUILD_TYPE in INSTRUMENTED:
-        if os.path.abspath(bld.env.PREFIX) == default_prefix and not getattr(
-            Options.options, "INSTALL_INSTRUMENTED", False
-        ):
-            bld.fatal(
-                "build type '%s' would install instrumented binaries over the dev prefix %s.\n"
-                "Use --prefix=<dir> to install elsewhere, or --install-instrumented to overwrite "
-                "the dev binaries deliberately." % (bld.env.BUILD_TYPE, bld.env.PREFIX)
-            )
+    if (
+        bld.is_install
+        and bld.env.BUILD_TYPE in INSTRUMENTED
+        and os.path.abspath(bld.env.PREFIX) == default_prefix
+        and not getattr(Options.options, "INSTALL_INSTRUMENTED", False)
+    ):
+        bld.fatal(
+            f"build type '{bld.env.BUILD_TYPE}' would install instrumented binaries over the "
+            f"dev prefix {bld.env.PREFIX}.\n"
+            "Use --prefix=<dir> to install elsewhere, or --install-instrumented to overwrite "
+            "the dev binaries deliberately."
+        )
 
     base_dir = bld.srcnode.abspath()
     ccache_conf_path = bld.srcnode.make_node("ccache.conf").abspath()
@@ -346,7 +298,6 @@ def build(bld):
 
     root_env = bld.env
 
-    # --- Shared compilation units (compiled once, linked into many targets) ---
     bld.objects(
         source="public/tier0/memoverride.cpp",
         target="memoverride",
@@ -381,91 +332,6 @@ def build(bld):
     bld.env = root_env
 
 
-# --- `waf check`: syntax-only check of locally modified sources -------------
-# Far cheaper than a full build, and catches what mechanical source edits break.
-
-
-class CheckContext(Build.BuildContext):
-    """syntax-check sources modified since HEAD (no codegen, no link)"""
-
-    cmd = "check"
-    fun = "check"
-
-
-def check(bld):
-    cdb = bld.path.get_bld().find_node("compile_commands.json")
-    if not cdb:
-        bld.fatal("no compile_commands.json; run `waf build` once first")
-
-    db = {}
-    for e in json.loads(cdb.read()):
-        cmd = e.get("command") or " ".join(e.get("arguments", []))
-        db[os.path.realpath(os.path.join(e.get("directory", "."), e["file"]))] = (
-            e.get("directory", "."),
-            cmd,
-        )
-
-    top = bld.srcnode.parent.abspath()
-    changed = subprocess.run(
-        ["git", "diff", "--name-only", "HEAD"],
-        cwd=top,
-        capture_output=True,
-        text=True,
-    ).stdout.split()
-
-    targets = []
-    for f in changed:
-        if not f.endswith((".cpp", ".c")):
-            continue
-        p = os.path.realpath(os.path.join(top, f))
-        if os.path.isfile(p) and p in db:
-            targets.append(p)
-
-    if not targets:
-        Logs.info("check: no modified compilable sources")
-        return
-
-    def one(p):
-        cwd, cmd = db[p]
-        toks = cmd.split()
-        argv, skip = [], False
-        for t in toks:
-            if skip:
-                skip = False
-                continue
-            # a stale PCH is irrelevant to a syntax check, and blocks it
-            if t == "-include":
-                skip = True
-                continue
-            if t in ("-c", "-o") or t.endswith((".o", ".pch")):
-                continue
-            argv.append(t)
-        argv.append("-fsyntax-only")
-        r = subprocess.run(argv, cwd=cwd, capture_output=True, text=True)
-        return p, r.returncode, r.stderr
-
-    bad = 0
-    with ThreadPoolExecutor(max_workers=os.cpu_count()) as ex:
-        for p, rc, err in ex.map(one, targets):
-            if rc:
-                bad += 1
-                Logs.error("FAIL %s" % os.path.relpath(p, top))
-                for line in [x for x in err.splitlines() if " error: " in x][:4]:
-                    Logs.error("    " + line.strip())
-
-    Logs.info("check: %d/%d ok" % (len(targets) - bad, len(targets)))
-    if bad:
-        bld.fatal("%d file(s) failed" % bad)
-
-
-# --- `waf smoke`: headless regression smoke (symbols + a few seconds of srcds) --
-# Every shipped .so is checked for unresolved symbols, then srcds loads a map
-# and runs for a few seconds. Catches the "compiles fine, dies on startup" class.
-#
-#   waf smoke                            de_dust2, 12s (+ client)
-#   SECS=30 MAPS="de_nuke cs_office" waf smoke
-
-
 class SmokeContext(Build.BuildContext):
     """run every shipped .so through ldd -r, then srcds through a few maps"""
 
@@ -473,28 +339,30 @@ class SmokeContext(Build.BuildContext):
     fun = "smoke"
 
 
-# The engine loads a map and then tears it down on a datatable mismatch. Host_NewGame alone
-# therefore proves nothing; these are the aborts worth naming.
 def _aborted(log):
-    for probe in ("CreateDecoders failed", "Missing RecvProp", "RecvProp type doesn't match",
-                  "Host_EndGame"):
+    for probe in (
+        "CreateDecoders failed",
+        "Missing RecvProp",
+        "RecvProp type doesn't match",
+        "Host_EndGame",
+    ):
         if probe in log:
             for line in log.splitlines():
                 if probe in line:
                     return line.strip()[:160]
     return None
 
+
 def _report(bld, log, tag, con=None):
-    import os, time
-    path = os.path.join(bld.bldnode.abspath(), "smoke-%s.log" % tag)
+    path = os.path.join(bld.bldnode.abspath(), f"smoke-{tag}.log")
     # this file is written only on failure, so a stale copy from an earlier run reads as a
     # current one. Stamp it, and clear any previous copy at the start of every smoke.
     with open(path, "w") as f:
-        f.write("=== %s smoke failure, %s ===\n" % (tag, time.strftime("%Y-%m-%d %H:%M:%S")))
+        f.write(f"=== {tag} smoke failure, {time.strftime('%Y-%m-%d %H:%M:%S')} ===\n")
         f.write(log)
-    for line in ((con or log).splitlines()[-3:]):
+    for line in (con or log).splitlines()[-3:]:
         Logs.error("       | " + line)
-    Logs.error("       | full log: %s" % path)
+    Logs.error(f"       | full log: {path}")
 
 
 def _instrumented(path):
@@ -506,49 +374,56 @@ def _instrumented(path):
     return any(s in out for s in ("__tsan_", "__asan_", "__ubsan_"))
 
 
+def _dec(b):
+    """TimeoutExpired hands back bytes even when text=True was asked for."""
+    return b.decode("utf-8", "replace") if isinstance(b, bytes) else b or ""
+
+
 def smoke(bld):
-    import glob, time
     for stale in glob.glob(os.path.join(bld.bldnode.abspath(), "smoke-*.log")):
-        os.remove( stale )
+        os.remove(stale)
     prefix = bld.env.PREFIX
     srcds = os.path.join(prefix, "srcds")
     if not os.path.isfile(srcds):
-        bld.fatal("no srcds at %s; run `waf install` first" % srcds)
+        bld.fatal(f"no srcds at {srcds}; run `waf install` first")
 
     secs = int(os.environ.get("SECS", "12"))
     maps = os.environ.get("MAPS", "de_dust2").split()
 
-    libdirs = [os.path.join(prefix, "bin"), os.path.join(prefix, "csgo", "bin")]
+    libdirs = [bld.env.BINPATH]
     sos = sorted(
         os.path.join(d, f) for d in libdirs for f in os.listdir(d) if f.endswith(".so")
     )
 
-    # An instrumented prefix still passes this whole check -- the client starts and loads a map -- so
-    # the only symptom is a game that freezes when played by hand. Report the real problem instead.
     exes = [os.path.join(prefix, e) for e in ("srcds", "srceng")]
     inst = [f for f in sos + exes if os.path.isfile(f) and _instrumented(f)]
     if inst:
         bld.fatal(
-            "prefix %s holds instrumented binaries (%s).\nThis prefix was installed from a "
-            "sanitizer build type; reconfigure and rebuild a dev out dir into it before smoking."
-            % (prefix, ", ".join(os.path.basename(f) for f in inst[:3]))
+            f"prefix {prefix} holds instrumented binaries "
+            f"({', '.join(os.path.basename(f) for f in inst[:3])}).\n"
+            "This prefix was installed from a sanitizer build type; reconfigure and rebuild a dev "
+            "out dir into it before smoking."
         )
     env = dict(os.environ, LD_LIBRARY_PATH=os.pathsep.join(libdirs))
 
     bad = 0
     for so in sos:
-        out = subprocess.run(["ldd", "-r", so], capture_output=True, text=True, env=env).stdout
-        hits = [l for l in out.splitlines() if "undefined symbol" in l or "not found" in l]
+        out = subprocess.run(
+            ["ldd", "-r", so], capture_output=True, text=True, env=env
+        ).stdout
+        hits = [
+            line
+            for line in out.splitlines()
+            if "undefined symbol" in line or "not found" in line
+        ]
         if hits:
             bad += 1
-            Logs.error("FAIL %s" % so)
-            for l in hits[:5]:
-                Logs.error("       " + l.strip())
+            Logs.error(f"FAIL {so}")
+            for line in hits[:5]:
+                Logs.error("       " + line.strip())
     if not bad:
-        Logs.info("ok   %d libraries" % len(sos))
+        Logs.info(f"ok   {len(sos)} libraries")
 
-    # servercfgfile is exec'd at level init, after the gamemode cfgs, so it is
-    # the only place these stick.
     cfg = os.path.join(prefix, "csgo", "cfg", "ks_smoke.cfg")
     with open(cfg, "w") as f:
         f.write("sv_hibernate_when_empty 0\nbot_join_after_player 0\nbot_quota 10\n")
@@ -556,33 +431,46 @@ def smoke(bld):
     try:
         for m in maps:
             argv = [
-                srcds, "-game", "csgo", "-console", "-insecure",
-                "+sv_lan", "1", "+servercfgfile", "ks_smoke.cfg", "+map", m,
+                srcds,
+                "-game",
+                "csgo",
+                "-console",
+                "-insecure",
+                "+sv_lan",
+                "1",
+                "+servercfgfile",
+                "ks_smoke.cfg",
+                "+map",
+                m,
             ]
-            def _dec(b):
-                if not b: return ""
-                return b.decode("utf-8", "replace") if isinstance(b, bytes) else b
             try:
-                r = subprocess.run(argv, cwd=prefix, capture_output=True, text=True, errors="replace", timeout=secs)
-                # Failures report on stderr, so it has to be folded into the log.
+                r = subprocess.run(
+                    argv,
+                    cwd=prefix,
+                    capture_output=True,
+                    text=True,
+                    errors="replace",
+                    timeout=secs,
+                )
                 rc, log = r.returncode, (r.stdout or "") + (r.stderr or "")
             except subprocess.TimeoutExpired as e:
                 rc, log = 124, _dec(e.stdout) + _dec(e.stderr)
 
+            lines = log.count("\n")
             if rc != 124:
                 bad += 1
-                Logs.error("FAIL %s (exit %s)" % (m, rc))
+                Logs.error(f"FAIL {m} (exit {rc})")
                 _report(bld, log, m)
-            elif ("Host_NewGame on map %s" % m) not in log:
+            elif f"Host_NewGame on map {m}" not in log:
                 bad += 1
-                Logs.error("FAIL %s (never loaded)" % m)
+                Logs.error(f"FAIL {m} (never loaded)")
                 _report(bld, log, m)
-            elif _aborted(log):
+            elif abort := _aborted(log):
                 bad += 1
-                Logs.error("FAIL %s (loaded then aborted: %s)" % (m, _aborted(log)))
+                Logs.error(f"FAIL {m} (loaded then aborted: {abort})")
                 _report(bld, log, m)
             else:
-                Logs.info("ok   %-16s %5d lines" % (m, log.count("\n")))
+                Logs.info(f"ok   {m:<16} {lines:5d} lines")
     finally:
         os.remove(cfg)
 
@@ -590,21 +478,35 @@ def smoke(bld):
         conlog = os.path.join(prefix, "csgo", "console.log")
         at = os.path.getsize(conlog) if os.path.isfile(conlog) else 0
         argv = [
-            os.path.join(prefix, "srceng"), "-game", "csgo", "-novid",
-            "-windowed", "-w", "640", "-h", "480", "+sv_lan", "1",
-            # DevWarning names the offending prop on a decoder mismatch; without this the
-            # engine aborts with no clue which table is wrong.
-            "-dev", "+developer", "1", "+map", maps[0],
+            os.path.join(prefix, "srceng"),
+            "-game",
+            "csgo",
+            "-novid",
+            "-windowed",
+            "-w",
+            "640",
+            "-h",
+            "480",
+            "+sv_lan",
+            "1",
+            "-dev",
+            "+developer",
+            "1",
+            "+map",
+            maps[0],
         ]
         try:
-            r = subprocess.run(argv, cwd=prefix, capture_output=True, text=True, errors="replace", timeout=secs * 3)
-            # The client reports failures on stderr, so it has to be folded into the log.
+            r = subprocess.run(
+                argv,
+                cwd=prefix,
+                capture_output=True,
+                text=True,
+                errors="replace",
+                timeout=secs * 3,
+            )
             rc, log = r.returncode, (r.stdout or "") + (r.stderr or "")
         except subprocess.TimeoutExpired as e:
-            def dec(b):
-                if not b: return ""
-                return b.decode("utf-8", "replace") if isinstance(b, bytes) else b
-            rc, log = 124, dec(e.stdout) + dec(e.stderr)
+            rc, log = 124, _dec(e.stdout) + _dec(e.stderr)
 
         con = ""
         if os.path.isfile(conlog):
@@ -612,21 +514,23 @@ def smoke(bld):
                 f.seek(at)
                 con = f.read()
 
-        rendered = ("Host_NewGame on map %s" % maps[0]) in con
-        if not rendered:
+        lines = con.count("\n")
+        if f"Host_NewGame on map {maps[0]}" not in con:
             bad += 1
-            Logs.error("FAIL client (never rendered %s, exit %s)" % (maps[0], rc))
+            Logs.error(f"FAIL client (never rendered {maps[0]}, exit {rc})")
             _report(bld, log, "client", con)
-        elif _aborted(con):
+        elif abort := _aborted(con):
             bad += 1
-            Logs.error("FAIL client (loaded then aborted: %s)" % _aborted(con))
+            Logs.error(f"FAIL client (loaded then aborted: {abort})")
             _report(bld, log + "\n" + con, "client", con)
         elif rc < 0:
-            Logs.warn("ok   %-16s %5d lines (crashed on shutdown, signal %d)"
-                      % ("client", con.count("\n"), -rc))
+            Logs.warn(
+                f"ok   {'client':<16} {lines:5d} lines "
+                f"(crashed on shutdown, signal {-rc})"
+            )
         else:
-            Logs.info("ok   %-16s %5d lines" % ("client", con.count("\n")))
+            Logs.info(f"ok   {'client':<16} {lines:5d} lines")
 
     if bad:
-        bld.fatal("smoke: %d check(s) failed" % bad)
+        bld.fatal(f"smoke: {bad} check(s) failed")
     Logs.info("smoke: PASS")

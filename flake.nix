@@ -56,10 +56,9 @@
                 pkgs.writeShellScript "ks" ''
                   set -euo pipefail
                   dir="''${1:-game}"
-                  mkdir -p "$dir/bin" "$dir/csgo/bin"
+                  mkdir -p "$dir/bin"
                   install -m755 ${ks}/srceng "$dir/"
                   install -m755 -t "$dir/bin/" ${ks}/bin/*
-                  install -m755 -t "$dir/csgo/bin/" ${ks}/csgo/bin/*
                   export LD_LIBRARY_PATH="${runtimePath}''${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
                   export XDG_DATA_DIRS="${pkgs.mesa}/share''${XDG_DATA_DIRS:+:$XDG_DATA_DIRS}"
                   cd "$dir"
@@ -88,7 +87,6 @@
 
           devShells.default = stdenv.mkDerivation {
             name = "ks-dev";
-            NIX_ENFORCE_NO_NATIVE = false;
             nativeBuildInputs = nativeBuildInputs ++ [
               pkgs.waf
               pkgs.ccache
