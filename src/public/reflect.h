@@ -109,6 +109,24 @@ consteval const char *intern( const name_t &n )
 }
 consteval const char *intern( std::string_view s ) { return std::define_static_string( s ); }
 
+// The name SENDINFO_VECTORELEM and RECVINFO( m_x[0] ) stringify to, e.g. "m_angRotation[1]". Written
+// in decimal: Key indices reach 62, and the old `'0' + index` produced ':' at 10.
+consteval const char *indexed_wire_name( std::meta::info where, std::string_view id, int index )
+{
+	char digits[12];
+	int  n = 0;
+	do digits[n++] = static_cast<char>( '0' + index % 10 ); while ( index /= 10 );
+	if ( id.size() + n + 2 >= sizeof( name_t::data ) )
+		throw std::meta::exception( "indexed wire name does not fit in name_t", where );
+	name_t      out;
+	std::size_t k = 0;
+	for ( char c : id ) out.data[k++] = c;
+	out.data[k++] = '[';
+	while ( n ) out.data[k++] = digits[--n];
+	out.data[k++] = ']';
+	return intern( out );
+}
+
 // ---- wire var unwrapping -----------------------------------------------------
 // A networked member's declared type is a wrapper, not the value that crosses the wire:
 // CNetworkVar( float, m_flFoo ) declares CNetworkVarBase<float, Notifier>. The wrapper says so
@@ -136,6 +154,7 @@ consteval std::meta::info unwrap( std::meta::info t )
 	t = std::meta::remove_cv( t );
 	if ( !std::meta::is_class_type( t ) ) return t;
 	if ( has<WireVar>( t ) ) return unwrap( std::meta::type_of( payload_member_of( t ) ) );
+
 	for ( auto b : std::meta::bases_of( t, std::meta::access_context::unchecked() ) )
 	{
 		const std::meta::info u = unwrap( std::meta::type_of( b ) );
@@ -278,7 +297,9 @@ struct PathSegment
 consteval PathSegment split_subscript( std::string_view seg )
 {
 	const std::size_t open = seg.find( '[' );
-	if ( open == std::string_view::npos || seg.back() != ']' ) return PathSegment{ seg, -1 };
+	// At least one digit: "m_arr[]" used to resolve to element 0.
+	if ( open == std::string_view::npos || seg.back() != ']' || seg.size() - open < 3 )
+		return PathSegment{ seg, -1 };
 	int n = 0;
 	for ( std::size_t i = open + 1; i + 1 < seg.size(); ++i )
 	{
@@ -581,6 +602,48 @@ consteval NetTable primary_net_table()
 	throw std::meta::exception( "every NetTable on this class is claimed by a member", ^^C );
 }
 
+// ---- shared by the send and recv emitters ------------------------------------
+// NetworkVarEmbedded<T> derives from T instead of boxing it, so descend through any class that adds
+// no members of its own.
+consteval std::meta::info embedded_class_of( std::meta::info t )
+{
+	t = std::meta::remove_cv( t );
+	if ( !std::meta::nonstatic_data_members_of( t, std::meta::access_context::unchecked() ).empty() )
+		return t;
+	auto bases = std::meta::bases_of( t, std::meta::access_context::unchecked() );
+	if ( bases.size() == 1 ) return embedded_class_of( std::meta::type_of( bases[0] ) );
+	return t;
+}
+
+template <class C>
+consteval const char *table_name()
+{
+	if ( !primary_net_table<C>().name.empty() ) return intern( primary_net_table<C>().name );
+	throw std::meta::exception( "class needs a NetTable annotation naming its table", ^^C );
+}
+
+// A class may send several tables; each member names the one it belongs to.
+template <name_t Table, class C>
+consteval std::vector<std::meta::info> members_in( WireSide want )
+{
+	std::vector<std::meta::info> out;
+	for ( auto m : tagged_members<Net>( ^^C ) )
+		if ( same_name( get<Net>( m ).table, Table ) && on_side( get<Net>( m ), want ) )
+			out.push_back( m );
+	return out;
+}
+
+// SENDINFO_VECTORELEM props must stay in order: the engine finds components two and three by offset.
+template <std::meta::info M>
+consteval std::vector<Net> indexed_nets( WireSide want )
+{
+	std::vector<Net> out;
+	for ( const Net &n : all<Net>( M ) )
+		if ( n.index >= 0 && on_side( n, want ) )
+			out.push_back( n );
+	return out;
+}
+
 
 // Member functions carrying A, in declaration order. DEFINE_INPUTFUNC names a function rather
 // than a field, so inputs need this rather than tagged_members.
@@ -592,11 +655,6 @@ consteval std::vector<std::meta::info> tagged_functions( std::meta::info cls )
 		if ( std::meta::is_function( m ) && has<A>( m ) ) out.push_back( m );
 	return out;
 }
-
-// An embedded member becomes one entry pointing at a sub-table, in both SendTables
-// (SendPropDataTable) and datamaps (DEFINE_EMBEDDED). So recursion happens in the
-// emitter, per nested type -- descriptors never flatten.
-consteval bool is_embedded( std::meta::info m ) { return tag_of( m ) == FIELD_EMBEDDED; }
 
 // CNetworkString( name, len ) and CNetworkArray( type, name, count ) both store an array
 // in m_Value, but a char array is a string prop and anything else is an array prop, so the
@@ -617,29 +675,6 @@ consteval std::size_t array_extent_of( std::meta::info t )
 consteval std::size_t array_element_size( std::meta::info t )
 {
 	return std::meta::size_of( std::meta::remove_extent( unwrap( t ) ) );
-}
-
-// ---- leaf walk ---------------------------------------------------------------
-// Flattening to scalar leaves, with accumulated offsets. This is *not* how tables are
-// shaped; it is for walking a live object -- hashing or diffing world state.
-struct Leaf
-{
-	const char *name;
-	fieldtype_t type;
-	std::size_t offset;
-	std::size_t size;
-};
-
-consteval void leaf_walk( std::meta::info type, std::size_t base, std::string_view name,
-                          std::vector<Leaf> &out )
-{
-	if ( tag_of_type( type ) != FIELD_EMBEDDED )
-	{
-		out.push_back( Leaf{ intern( name ), tag_of_type( type ), base, std::meta::size_of( type ) } );
-		return;
-	}
-	for ( auto m : std::meta::nonstatic_data_members_of( type, std::meta::access_context::unchecked() ) )
-		leaf_walk( std::meta::type_of( m ), base + byte_offset_of( m ), std::meta::identifier_of( m ), out );
 }
 
 } // namespace ks::reflect

@@ -99,8 +99,8 @@ static_assert( tag_of( members<Key,  Weapon>[0] ) == FIELD_INTEGER );
 static_assert( tag_of( members<Key,  Weapon>[1] ) == FIELD_EMBEDDED );
 
 // an embedded member is one table entry, not its leaves
-static_assert( is_embedded( members<Key, Weapon>[1] ) );
-static_assert( !is_embedded( members<Key, Weapon>[0] ) );
+static_assert( tag_of( members<Key, Weapon>[1] ) == FIELD_EMBEDDED );
+static_assert( tag_of( members<Key, Weapon>[0] ) != FIELD_EMBEDDED );
 
 // a semantic type costs no space over the type it refines
 static_assert( sizeof( GameTime ) == sizeof( float ) );
@@ -151,18 +151,21 @@ static_assert( array_extent_of( ^^MockNetworkArray<int, 4> ) == 4 );
 static_assert( array_element_size( ^^MockNetworkArray<int, 4> ) == sizeof( int ) );
 static_assert( tag_of_type( ^^MockNetworkArray<int, 4> ) == FIELD_INTEGER );   // element's tag
 
-// ---- leaf walk: for hashing a live object, not for shaping tables ------------
-consteval std::vector<Leaf> burst_leaves()
-{
-	std::vector<Leaf> out;
-	leaf_walk( ^^FireBurst, 0, "m_burst", out );
-	return out;
-}
-inline constexpr auto burst = std::define_static_array( burst_leaves() );
-static_assert( burst.size() == 2 );
-static_assert( std::string_view{ burst[0].name } == "count" );
-static_assert( burst[0].type == FIELD_INTEGER && burst[0].offset == 0 );
-static_assert( burst[1].type == FIELD_FLOAT && burst[1].offset == 4 );
+// ---- indexed names and paths --------------------------------------------------
+// `'0' + index` was only right up to 9.
+static_assert( std::string_view{ indexed_wire_name( ^^Weapon, "m_x", 0 ) } == "m_x[0]" );
+static_assert( std::string_view{ indexed_wire_name( ^^Weapon, "m_x", 9 ) } == "m_x[9]" );
+static_assert( std::string_view{ indexed_wire_name( ^^Weapon, "m_x", 12 ) } == "m_x[12]" );
+static_assert( std::string_view{ indexed_wire_name( ^^Weapon, "m_x", 62 ) } == "m_x[62]" );
+
+// "m_arr[]" used to resolve to element 0.
+static_assert( split_subscript( "m_arr[3]" ).elem == 3 );
+static_assert( std::string_view{ split_subscript( "m_arr[3]" ).id } == "m_arr" );
+static_assert( split_subscript( "m_arr[]" ).elem == -1 );
+static_assert( split_subscript( "m_arr[x]" ).elem == -1 );
+
+// 63 characters still fit; 64 would not compile.
+static_assert( std::string_view{ intern( name_t{ "012345678901234567890123456789012345678901234567890123456789012" } ) }.size() == 63 );
 
 // ---- splices reach the members a walk names ----------------------------------
 // The member form is p.[:m:]; there is no type-scope form. Vector is deliberately

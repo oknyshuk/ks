@@ -102,18 +102,6 @@ consteval int networkvar_flags()
 	else return 0;
 }
 
-// NetworkVarEmbedded<T,...> derives from T instead of boxing it in m_Value, so the members
-// belong to the base. Descend through any class that adds no members of its own.
-consteval std::meta::info embedded_class_of( std::meta::info t )
-{
-	t = std::meta::remove_cv( t );
-	if ( !std::meta::nonstatic_data_members_of( t, std::meta::access_context::unchecked() ).empty() )
-		return t;
-	auto bases = std::meta::bases_of( t, std::meta::access_context::unchecked() );
-	if ( bases.size() == 1 ) return embedded_class_of( std::meta::type_of( bases[0] ) );
-	return t;
-}
-
 consteval PropKind kind_of_tag( fieldtype_t tag, std::meta::info payload, std::meta::info where )
 {
 	switch ( tag )
@@ -181,17 +169,7 @@ consteval const char *wire_name_of( std::meta::info m, const Net &n )
 	if ( !n.wire.empty() ) return intern( n.wire );
 	// SENDINFO_VECTORELEM stringifies to "m_angRotation[1]", so an indexed prop is named for its
 	// component rather than for the member.
-	if ( n.index >= 0 )
-	{
-		name_t indexed;
-		const std::string_view id = std::meta::identifier_of( m );
-		int k = 0;
-		for ( ; k < (int)id.size() && k < 60; ++k ) indexed.data[k] = id[k];
-		indexed.data[k++] = '[';
-		indexed.data[k++] = (char)( '0' + n.index );
-		indexed.data[k++] = ']';
-		return intern( indexed );
-	}
+	if ( n.index >= 0 ) return indexed_wire_name( m, std::meta::identifier_of( m ), n.index );
 	return intern( std::meta::identifier_of( m ) );
 }
 
@@ -220,18 +198,6 @@ consteval int default_bits( PropKind k )
 // One entry, from a member reflection plus the wire parameters that apply to it. The offset is
 // passed in because a From<> entry's offset is relative to the sending class, not the declaring
 // one, and only the caller knows which.
-// The indexed Net annotations of a member, in declaration order. SENDINFO_VECTORELEM props must
-// stay in order and adjacent: the engine detects the second and third components by their offsets.
-template <std::meta::info M>
-consteval std::vector<Net> indexed_nets()
-{
-	std::vector<Net> out;
-	for ( const Net &n : all<Net>( M ) )
-		if ( n.index >= 0 && on_side( n, WireSide::Send ) )
-			out.push_back( n );
-	return out;
-}
-
 template <std::meta::info M>
 consteval PropDesc desc_of( Net n, int offset, SendVarProxyFn proxy )
 {
@@ -367,16 +333,6 @@ template <class C> SendTable &table();
 // DT_LocalPlayerExclusive as its "localdata" prop. Each member says which one it belongs to, so
 // the wire spec stays on the member; a table is then the members that name it.
 template <name_t Table, class C>
-consteval std::vector<std::meta::info> members_in()
-{
-	std::vector<std::meta::info> out;
-	for ( auto m : tagged_members<Net>( ^^C ) )
-		if ( same_name( get<Net>( m ).table, Table ) && on_side( get<Net>( m ), WireSide::Send ) )
-			out.push_back( m );
-	return out;
-}
-
-template <name_t Table, class C>
 consteval const NetTable table_annotation()
 {
 	for ( auto t : all<NetTable>( ^^C ) )
@@ -385,21 +341,25 @@ consteval const NetTable table_annotation()
 	throw std::meta::exception( "no NetTable annotation names that table", ^^C );
 }
 
-template <class C>
-consteval const char *table_name()
-{
-	if ( !primary_net_table<C>().name.empty() ) return intern( primary_net_table<C>().name );
-	throw std::meta::exception( "class needs a NetTable annotation naming its send table", ^^C );
-}
-
 // One member's contribution to a table. The primary and named-table generators each had their own
 // copy of this, and they diverged: the named one called make_prop directly, so the first array
 // member in a secondary table (CCSPlayer::m_bPlayerDominated) exited 70 on an unhandled kind.
 template <std::meta::info M>
 constexpr void push_member_prop( std::vector<PropDesc> &out )
 {
-	constexpr PropDesc d = desc_of<M>( get<Net>( M ),
-	                                   offset_with_nv_flags<M>( byte_offset_of( M ) ),
+	// Indexed props are handled here, as on the recv side, not by build_desc's loop.
+	if constexpr ( !indexed_nets<M>( WireSide::Send ).empty() )
+	{
+		template for ( constexpr auto n : std::define_static_array( indexed_nets<M>( WireSide::Send ) ) )
+			out.push_back( desc_of<M>(
+			    n, offset_with_nv_flags<M>( byte_offset_of( M )
+			        + n.index * (int)( std::meta::size_of( unwrap( std::meta::type_of( M ) ) ) / 3 ) ),
+			    proxy_of<M>() ) );
+		return;
+	}
+
+	constexpr Net n = get<Net>( M );
+	constexpr PropDesc d = desc_of<M>( n, offset_with_nv_flags<M>( byte_offset_of( M ) ),
 	                                   proxy_of<M>() );
 	if constexpr ( d.kind == PropKind::Table )
 	{
@@ -413,15 +373,15 @@ constexpr void push_member_prop( std::vector<PropDesc> &out )
 	{
 		// Both array forms want the same element description; they differ in where it goes.
 		constexpr PropDesc elem = [] {
-			PropDesc e = desc_of<M>( get<Net>( M ), byte_offset_of( M ), proxy_of<M>() );
+			constexpr Net mn = get<Net>( M );
+			PropDesc e = desc_of<M>( mn, byte_offset_of( M ), proxy_of<M>() );
 			e.kind = element_kind_of( M );
 			e.size = e.stride;
-			e.bits = get<Net>( M ).bits == kBitsDefault ? default_bits( e.kind )
-			                                           : get<Net>( M ).bits;
+			e.bits = mn.bits == kBitsDefault ? default_bits( e.kind ) : mn.bits;
 			return e;
 		}();
 
-		if constexpr ( get<Net>( M ).varlen )
+		if constexpr ( n.varlen )
 		{
 			// SendPropArray == SendPropVariableLengthArray: the element template is a real prop of the
 			// table, carrying the array's own name and offset, and the array prop follows it.
@@ -547,20 +507,8 @@ consteval std::vector<PropDesc> build_desc()
 	}
 
 	// Only the members that do not single out another of the class's tables.
-	template for ( constexpr auto m : std::define_static_array( members_in<Table, C>() ) )
-	{
-		if constexpr ( !indexed_nets<m>().empty() )
-		{
-			template for ( constexpr auto n : std::define_static_array( indexed_nets<m>() ) )
-				out.push_back( desc_of<m>(
-				    n, offset_with_nv_flags<m>( byte_offset_of( m )
-				        + n.index * (int)( std::meta::size_of(
-				              unwrap( std::meta::type_of( m ) ) ) / 3 ) ),
-				    proxy_of<m>() ) );
-			continue;
-		}
+	template for ( constexpr auto m : std::define_static_array( members_in<Table, C>( WireSide::Send ) ) )
 		push_member_prop<m>( out );
-	}
 
 	// Members declared in a base that this table sends itself. Appended rather than
 	// interleaved: the compare is keyed by name, so position does not matter.

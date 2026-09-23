@@ -104,18 +104,6 @@ consteval PropDesc sub_table_prop()
 }
 
 
-// NetworkVarEmbedded<T,...> derives from T instead of boxing it in m_Value; descend through
-// any class that adds no members of its own.
-consteval std::meta::info embedded_class_of( std::meta::info t )
-{
-	t = std::meta::remove_cv( t );
-	if ( !std::meta::nonstatic_data_members_of( t, std::meta::access_context::unchecked() ).empty() )
-		return t;
-	auto bases = std::meta::bases_of( t, std::meta::access_context::unchecked() );
-	if ( bases.size() == 1 ) return embedded_class_of( std::meta::type_of( bases[0] ) );
-	return t;
-}
-
 consteval PropKind kind_of_tag( fieldtype_t tag, std::meta::info payload, std::meta::info where )
 {
 	switch ( tag )
@@ -177,11 +165,6 @@ consteval PropKind kind_of_member( std::meta::info m, const Net &n )
 	return kind_of_tag( tag_of( m ), unwrap( t ), m );
 }
 
-consteval PropKind kind_of( std::meta::info m )
-{
-	return kind_of_member( m, get<Net>( m ) );
-}
-
 // A shared class carries one Net annotation for both directions, and the send side fills in the
 // wire encoding. Those flags describe how a value is packed, which is the sender's business: the
 // legacy RecvProp for such a member passes no flags at all, so applying them here made every
@@ -200,15 +183,9 @@ constexpr int SEND_ONLY_FLAGS =
 // compare is keyed by name, so unlike the send side the order these are emitted in does not matter.
 consteval const char *indexed_name( std::meta::info m, Net n )
 {
-	name_t out;
 	const std::string_view id = n.wire.empty() ? std::meta::identifier_of( m )
-	                                            : std::string_view( n.wire.data );
-	int k = 0;
-	for ( ; k < (int)id.size() && k < 60; ++k ) out.data[k] = id[k];
-	out.data[k++] = '[';
-	out.data[k++] = (char)( '0' + n.index );
-	out.data[k++] = ']';
-	return intern( out );
+	                                           : std::string_view( n.wire.data );
+	return indexed_wire_name( m, id, n.index );
 }
 
 consteval int component_size( std::meta::info t )
@@ -219,15 +196,6 @@ consteval int component_size( std::meta::info t )
 	return (int)( std::meta::size_of( unwrap( t ) ) / 3 );
 }
 
-template <std::meta::info M>
-consteval std::vector<Net> indexed_nets()
-{
-	std::vector<Net> out;
-	for ( const Net &n : all<Net>( M ) )
-		if ( n.index >= 0 && on_side( n, WireSide::Recv ) )
-			out.push_back( n );
-	return out;
-}
 
 template <std::meta::info M>
 consteval PropDesc desc_from( Net n, int offset, RecvVarProxyFn proxy )
@@ -266,13 +234,13 @@ template <std::meta::info M>
 consteval PropDesc desc_of()
 {
 	const std::meta::info t = std::meta::type_of( M );
+	constexpr Net n = get<Net>( M );
 
 	PropDesc d;
-	d.kind   = kind_of( M );
-	d.name   = get<Net>( M ).index >= 0 ? indexed_name( M, get<Net>( M ) )
-	                                    : external_name<Net>( M );
+	d.kind   = kind_of_member( M, n );
+	d.name   = n.index >= 0 ? indexed_name( M, n ) : external_name<Net>( M );
 	d.offset = static_cast<int>( byte_offset_of( M ) );
-	d.flags  = get<Net>( M ).flags & ~SEND_ONLY_FLAGS;
+	d.flags  = n.flags & ~SEND_ONLY_FLAGS;
 	if constexpr ( has_proxy( M, WireSide::Recv ) )
 		d.proxy = std::meta::extract<RecvVarProxyFn>( proxy_arg_of( M, WireSide::Recv ) );
 
@@ -285,7 +253,7 @@ consteval PropDesc desc_of()
 	else
 	{
 		d.size = static_cast<int>( std::meta::size_of( t ) );
-		if ( get<Net>( M ).index >= 0 ) d.size = component_size( t );
+		if ( n.index >= 0 ) d.size = component_size( t );
 	}
 	return d;
 }
@@ -365,21 +333,14 @@ constexpr void push_utl_vec( std::vector<PropDesc> &out )
 
 template <class C> RecvTable &table();
 
-template <class C>
-consteval const char *table_name()
-{
-	if ( !primary_net_table<C>().name.empty() ) return intern( primary_net_table<C>().name );
-	throw std::meta::exception( "class needs a NetTable annotation naming its table", ^^C );
-}
-
 // One member's contribution to a table. Both generators had their own copy of this and the send
 // side's copies had already drifted apart, so this is shared deliberately.
 template <std::meta::info M>
 constexpr void push_member_prop( std::vector<PropDesc> &out )
 {
-	if constexpr ( !indexed_nets<M>().empty() )
+	if constexpr ( !indexed_nets<M>( WireSide::Recv ).empty() )
 	{
-		template for ( constexpr auto n : std::define_static_array( indexed_nets<M>() ) )
+		template for ( constexpr auto n : std::define_static_array( indexed_nets<M>( WireSide::Recv ) ) )
 		{
 			PropDesc e = desc_of<M>();
 			e.name   = indexed_name( M, n );
@@ -436,19 +397,6 @@ constexpr void push_member_prop( std::vector<PropDesc> &out )
 	{
 		out.push_back( d );
 	}
-}
-
-// One of the class's named tables. Symmetric with the send side: the member says which table it
-// belongs to, so a class can receive several (C_BaseCombatCharacter has its exclusive pair) while
-// each member keeps its own spec.
-template <name_t Table, class C>
-consteval std::vector<std::meta::info> members_in()
-{
-	std::vector<std::meta::info> out;
-	for ( auto m : tagged_members<Net>( ^^C ) )
-		if ( same_name( get<Net>( m ).table, Table ) && on_side( get<Net>( m ), WireSide::Recv ) )
-			out.push_back( m );
-	return out;
 }
 
 // One table's descriptions become the engine's props, in order. A nested descriptor is the input
@@ -528,7 +476,7 @@ consteval std::vector<PropDesc> build_desc()
 		}
 
 	// Only the members that do not single out another of the class's tables.
-	template for ( constexpr auto m : std::define_static_array( members_in<Table, C>() ) )
+	template for ( constexpr auto m : std::define_static_array( members_in<Table, C>( WireSide::Recv ) ) )
 		push_member_prop<m>( out );
 
 	if constexpr ( Primary )

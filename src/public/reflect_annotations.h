@@ -15,6 +15,7 @@
 
 #include "reflect_wirevar.h"   // WireVar; a leaf header so networkvar.h can reach it cheaply
 #include "datamap.h"
+#include <cstddef>
 #include <limits>
 
 #include "dt_common.h"   // SPROP_* flags, which Net::flags carries
@@ -30,7 +31,14 @@ struct name_t
 {
 	char data[64]{};
 	consteval name_t() = default;
-	consteval name_t( const char *s ) { for ( int i = 0; s[i] && i < 63; ++i ) data[i] = s[i]; }
+	// By reference, so an over-long name fails to compile instead of being truncated. There is no
+	// <meta> here for std::meta::exception, hence the static_assert.
+	template <std::size_t N>
+	consteval name_t( const char ( &s )[N] )
+	{
+		static_assert( N <= sizeof( data ), "name_t holds at most 63 characters" );
+		for ( std::size_t i = 0; i + 1 < N; ++i ) data[i] = s[i];
+	}
 	consteval bool empty() const { return data[0] == '\0'; }
 };
 
