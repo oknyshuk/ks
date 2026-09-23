@@ -330,8 +330,7 @@ static int DefaultComputeWorkerCount()
 // only 4 hardware threads.
 //
 // With no pinning (a dedicated server, or a uniform CPU), scale with the machine instead
-// of using the old flat three, which left big machines with a starved engine pool. The
-// physics job system subtracts this width from the box, so it self-corrects either way.
+// of using the old flat three, which left big machines with a starved engine pool.
 // -threads overrides outright.
 //-----------------------------------------------------------------------------
 static int DefaultGlobalWorkerCount()
@@ -496,21 +495,6 @@ private:
 CGlobalThreadPool g_ThreadPool;
 IThreadPool *g_pThreadPool = &g_ThreadPool;
 
-int GetGlobalThreadPoolWidth()
-{
-	// Once started, the pool itself is authoritative.
-	const int nRunning = g_ThreadPool.NumThreads();
-	if ( nRunning > 0 )
-		return nRunning;
-
-	// Otherwise mirror what Start() is going to decide, so callers that
-	// initialize before Host_Init still get the right answer.
-	const int nCmdLine = CommandLine()->ParmValue( "-threads", -1 ) - 1;
-	if ( nCmdLine >= 0 )
-		return nCmdLine;
-
-	return DefaultGlobalWorkerCount();
-}
 IThreadPool *g_pAlternateThreadPool;
 
 //-----------------------------------------------------------------------------

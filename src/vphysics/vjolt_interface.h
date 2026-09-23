@@ -98,9 +98,8 @@ private:
 	// malloc / free.
 	JPH::TempAllocator *m_pTempAllocator;
 
-	// We need a job system that will execute physics jobs on multiple threads. Typically
-	// you would implement the JobSystem interface yourself and let Jolt Physics run on top
-	// of your own job scheduler. JobSystemThreadPool is an example implementation.
+	// Not Jolt's own thread pool: physics dispatches onto the engine's global pool, so the
+	// two cannot each size themselves against the whole machine. See CEngineJobSystem.
 	JPH::JobSystem *m_pJobSystem;
 
 	// For debugging stuff in collide and such.

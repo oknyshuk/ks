@@ -444,16 +444,6 @@ JOB_INTERFACE void RunThreadPoolTests();
 JOB_INTERFACE IThreadPool *g_pThreadPool;
 
 //-----------------------------------------------------------------------------
-// Number of worker threads the global pool runs, or will run once started.
-//
-// Subsystems that start their own worker threads need this to avoid sizing
-// themselves to the whole machine while the global pool does the same. It is
-// answerable before the pool starts, because some of those subsystems are
-// initialized earlier than Host_Init.
-//-----------------------------------------------------------------------------
-JOB_INTERFACE int GetGlobalThreadPoolWidth();
-
-//-----------------------------------------------------------------------------
 // Class to combine the metadata for an operation and the ability to perform
 // the operation. Meant for inheritance. All functions inline, defers to executor
 //-----------------------------------------------------------------------------

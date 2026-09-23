@@ -400,8 +400,8 @@ public:
 private:
 
 	// Number of distinct threads that can accumulate physics events at once.
-	// Bounded by m_Mask being a single uint64 in JoltPhysicsEventTracker, and by
-	// kMaxPhysicsThreads in vjolt_interface.cpp.
+	// Bounded by m_Mask being a single uint64 in JoltPhysicsEventTracker, and by the
+	// width of the engine's global pool, which is what now runs physics jobs.
 	static constexpr uint32 kMaxEventThreads = 64;
 
 	static uint32 GetThreadId()
@@ -443,9 +443,9 @@ private:
 				return nIndex;
 		}
 
-		// More than 64 threads are alive and touching physics events at once, which
-		// kMaxPhysicsThreads already declares unsupported. Sharing the last slot
-		// races, but it stays in bounds; the old code corrupted memory instead.
+		// More than 64 threads are alive and touching physics events at once, which takes
+		// a global pool wider than this bound (-threads can ask for that). Sharing the
+		// last slot races, but it stays in bounds; the old code corrupted memory instead.
 		Assert( !"Ran out of physics event thread slots" );
 		return kMaxEventThreads - 1;
 	}

@@ -88,7 +88,8 @@
 #include <Jolt/RegisterTypes.h>
 
 #include <Jolt/Core/TempAllocator.h>
-#include <Jolt/Core/JobSystemThreadPool.h>
+#include <Jolt/Core/JobSystemWithBarrier.h>
+#include <Jolt/Core/FixedSizeFreeList.h>
 #include <Jolt/Core/Factory.h>
 
 #include <Jolt/Skeleton/Skeleton.h>

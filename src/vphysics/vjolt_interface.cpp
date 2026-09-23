@@ -25,15 +25,6 @@
 // I don't think we've tuned this value. It's just a big number that we probably won't ever hit.
 static constexpr uint kTempAllocSize = 64 * 1024 * 1024;
 
-// Josh:
-// We cannot support more than 64 threads doing physics work because
-// of the code I wrote in vjolt_listener_contact to dispatch events.
-// It uses a single uint64_t bitmask that is iterated on for the thread-local
-// event vectors.
-// This isn't an issue, the benefits of more threads tends to trail off between
-// 8-16 threads anyway.
-static constexpr uint kMaxPhysicsThreads = 64;
-
 DEFINE_LOGGING_CHANNEL_NO_TAGS( LOG_VJolt, "VJolt", 0, LS_MESSAGE, Color( 205, 142, 212, 255 ) );
 DEFINE_LOGGING_CHANNEL_NO_TAGS( LOG_JoltInternal, "Jolt" );
 
@@ -56,6 +47,111 @@ static void InstallJoltAllocator()
 	JPH::AlignedAllocate = []( size_t size, size_t alignment )       { return MemAlloc_AllocAligned( size, alignment ); };
 	JPH::AlignedFree     = []( void *block )                         { MemAlloc_FreeAligned( block ); };
 }
+
+//-------------------------------------------------------------------------------------------------
+//
+// Jolt on the engine's thread pool.
+//
+// JobSystemThreadPool starts and sizes its own workers, so physics and the engine's global pool
+// each sized themselves against the whole machine and had to be reconciled by hand: vphysics
+// subtracted GetGlobalThreadPoolWidth() from hardware_concurrency(), arithmetic that had to be
+// kept in step with DefaultGlobalWorkerCount() in vstdlib.
+//
+// JobSystemWithBarrier is Jolt's supported hook for a host scheduler. It implements the barrier
+// half of the interface, leaving only job storage and queueing to us, so physics can ride
+// g_pThreadPool and the process has exactly one worker count.
+//
+class CEngineJobSystem final : public JPH::JobSystemWithBarrier
+{
+public:
+	explicit CEngineJobSystem( uint inMaxJobs )
+	{
+		Init( JPH::cMaxPhysicsBarriers );
+		m_Jobs.Init( inMaxJobs, inMaxJobs );
+	}
+
+	JobHandle CreateJob( const char *inName, JPH::ColorArg inColor, const JobFunction &inJobFunction, JPH::uint32 inNumDependencies = 0 ) override
+	{
+		JPH::uint32 iJob;
+		while ( ( iJob = m_Jobs.ConstructObject( inName, inColor, this, inJobFunction, inNumDependencies ) ) == AvailableJobs::cInvalidObjectIndex )
+		{
+			// cMaxPhysicsJobs is a hard ceiling: running out means jobs leaked, not that the
+			// caller should cope.
+			VJoltAssertMsg( false, "Jolt: no jobs available" );
+			ThreadSleep( 0 );
+		}
+
+		Job *pJob = &m_Jobs.Get( iJob );
+
+		// Takes a reference of its own; the job may complete as soon as it is queued.
+		JobHandle handle( pJob );
+		if ( inNumDependencies == 0 )
+		{
+			QueueJob( pJob );
+		}
+
+		return handle;
+	}
+
+	int GetMaxConcurrency() const override
+	{
+		// The barrier's waiting thread runs jobs too. With no pool running this is 1 and the
+		// barrier executes every job itself, so physics still progresses, just unthreaded.
+		return ( g_pThreadPool != nullptr ? Max( 1, g_pThreadPool->NumThreads() ) : 1 ) + 1;
+	}
+
+protected:
+	void QueueJob( Job *inJob ) override
+	{
+		// Nowhere to queue it; the barrier will run it on the thread waiting for it.
+		if ( g_pThreadPool == nullptr || g_pThreadPool->NumThreads() == 0 )
+		{
+			return;
+		}
+
+		inJob->AddRef();		// the queue holds this until the bridge below dies
+		CJobBridge *pBridge = new CJobBridge( inJob );
+		g_pThreadPool->AddJob( pBridge );
+
+		// AddJob does not consume the caller's reference: queued leaves the queue's own, and an
+		// inline run (no idle workers) is freed by this. See CThreadPool::AddFunctorInternal.
+		pBridge->Release();
+	}
+
+	void QueueJobs( Job **inJobs, JPH::uint inNumJobs ) override
+	{
+		for ( JPH::uint i = 0; i < inNumJobs; ++i )
+		{
+			QueueJob( inJobs[i] );
+		}
+	}
+
+	void FreeJob( Job *inJob ) override { m_Jobs.DestructObject( inJob ); }
+
+private:
+	// A physics job wrapped for the engine pool. Job::Execute is idempotent -- it CASes the
+	// dependency counter to an executing state -- so a job the waiting thread already ran through
+	// BarrierImpl::Wait() is a no-op if a worker reaches it first. That is what makes queueing to
+	// a second scheduler safe rather than a double execution.
+	class CJobBridge final : public CJob
+	{
+	public:
+		explicit CJobBridge( Job *inJob ) : m_pJob( inJob ) {}
+
+		// Releases on destruction rather than in DoExecute: the pool can also discard a queued job
+		// without servicing it (AbortAll, queue flush at Stop), and the reference has to come back
+		// exactly once on every path.
+		~CJobBridge() override { m_pJob->Release(); }
+
+		JobStatus_t DoExecute() override { m_pJob->Execute(); return JOB_OK; }
+
+	private:
+		Job *m_pJob;
+	};
+
+	using AvailableJobs = JPH::FixedSizeFreeList<Job>;
+	AvailableJobs m_Jobs;
+};
 
 //-------------------------------------------------------------------------------------------------
 
@@ -83,22 +179,12 @@ InitReturnVal_t JoltPhysicsInterface::Init()
 	// Create an allocator for temporary allocations during physics simulations
 	m_pTempAllocator = new JPH::TempAllocatorImpl( kTempAllocSize );
 
-	// Josh:
-	// We may want to replace this with a better heuristic, or add a launch arg for this in future.
-	// Right now, this does what -1 does in Jolt, but limits it to 64 threads, as we cannot support
-	// more than this (see above).
-	//
-	// oknyshuk: hardware_concurrency() - 1 assumed physics was the only thing on the machine. The
-	// engine's global pool is already running its own workers, so both pools sized themselves to
-	// the whole box and together oversubscribed it (measured: 16 compute workers on 14 cores).
-	// Leave room for the main thread and for the engine pool's workers instead.
-	const uint32 nEngineWorkers = static_cast<uint32>( Max( 0, GetGlobalThreadPoolWidth() ) );
-	const uint32 nAvailable = Max( 1u, std::thread::hardware_concurrency() ) - 1;
-	const uint32 threadCount = Min( Max( 1u, nAvailable - Min( nAvailable - 1, nEngineWorkers ) ), kMaxPhysicsThreads );
-	m_pJobSystem = new JPH::JobSystemThreadPool( JPH::cMaxPhysicsJobs, JPH::cMaxPhysicsBarriers, threadCount );
+	// Physics jobs run on the engine's global worker pool rather than on a pool of their own, so
+	// the two cannot each size themselves against the whole machine. See CEngineJobSystem above.
+	m_pJobSystem = new CEngineJobSystem( JPH::cMaxPhysicsJobs );
 
-	Log_Msg( LOG_VJolt, "Physics job system: %u threads (%u logical processors, %u engine pool workers)\n",
-		threadCount, std::thread::hardware_concurrency(), nEngineWorkers );
+	Log_Msg( LOG_VJolt, "Physics job system: engine global pool (%d workers, %d concurrent jobs)\n",
+		g_pThreadPool != nullptr ? g_pThreadPool->NumThreads() : 0, m_pJobSystem->GetMaxConcurrency() );
 
 	return INIT_OK;
 }
